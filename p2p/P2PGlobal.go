@@ -1,5 +1,8 @@
 package p2p
-import "hyperchain.cn/app/jsonrpc/model"
+
+import (
+	"hyperchain-alpha/jsonrpc/model"
+)
 
 //全局节点存储
 var GLOBALNODES model.Nodes

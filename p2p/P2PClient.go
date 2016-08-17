@@ -4,7 +4,7 @@ import (
 	"net/rpc"
 	"log"
 	"fmt"
-	"hyperchain.cn/app/jsonrpc/model"
+	"hyperchain-alpha/jsonrpc/model"
 	"strconv"
 )
 

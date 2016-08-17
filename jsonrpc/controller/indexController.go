@@ -2,7 +2,7 @@ package controller
 import (
 	"net/http"
 	"html/template"
-	"hyperchain.cn/app/jsonrpc/model"
+	"hyperchain-alpha/jsonrpc/model"
 )
 
 //type Transaction struct{

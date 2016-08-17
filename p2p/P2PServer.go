@@ -6,8 +6,8 @@ import (
 	"log"
 	"net/http"
 	"fmt"
-	"hyperchain.cn/app/jsonrpc/model"
 	"strconv"
+	"hyperchain-alpha/jsonrpc/model"
 )
 
 //服务器需要对外提供两个方法，RemoteGetNodes 和RemoteGetTransaction

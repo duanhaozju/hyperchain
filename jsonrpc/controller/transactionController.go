@@ -2,13 +2,13 @@ package controller
 
 import (
 	"encoding/json"
-	"hyperchain.cn/app/jsonrpc/model"
 	"github.com/gorilla/mux"
 	"fmt"
 	"net/http"
-	"hyperchain.cn/app/p2p"
 	"strconv"
 	"time"
+	"hyperchain-alpha/jsonrpc/model"
+	"hyperchain-alpha/p2p"
 )
 
 func TransactionIndex(w http.ResponseWriter, r *http.Request) {

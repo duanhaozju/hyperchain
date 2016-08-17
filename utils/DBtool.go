@@ -1,9 +1,6 @@
 package utils
 import(
-	//"hyperchain.cn/app/config"
 	"github.com/syndtr/goleveldb/leveldb"
-	//"fmt"
-	//"encoding/json"
 )
 type DBPath struct {
 	Base string

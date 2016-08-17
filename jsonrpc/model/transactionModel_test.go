@@ -4,7 +4,6 @@ import (
 	"testing"
 	"fmt"
 	"time"
-	//"github.com/hashicorp/hcl/hcl/token"
 	"strconv"
 )
 

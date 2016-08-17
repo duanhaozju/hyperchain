@@ -5,12 +5,12 @@ import (
 	//"github.com/syndtr/goleveldb/leveldb"
 	//"fmt"
 	"encoding/json"
-	"hyperchain.cn/app/utils"
 	//"fmt"
 	"strconv"
 	//"fmt"
 	"crypto/sha256"
 	"encoding/hex"
+	"hyperchain-alpha/utils"
 )
 
 type Transaction struct {
