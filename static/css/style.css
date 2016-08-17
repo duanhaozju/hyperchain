@@ -1,0 +1,43 @@
+body{
+    margin: 0;
+}
+header{
+    background: #242424;
+    color: white;
+    font-size:20px;
+}
+header div{
+    padding: 20px 0 20px 100px;
+}
+.container{
+    width: 900px;
+    margin: 0 auto;
+    padding-top:20px;
+}
+form{
+
+}
+input{
+    padding:5px;
+    margin:8px 0
+}
+input[type=submit]{
+    padding:5px 20px;
+    background: cadetblue;
+    color:white;
+    border: none;
+}
+.list{
+    background: #eeeeee;
+}
+table{
+    width:80%;
+
+}
+table tr td,table tr th{
+    border-bottom:1px solid silver;
+    margin:5px;
+    padding:10px 0;
+    width:20%;
+    text-align: center;
+}
