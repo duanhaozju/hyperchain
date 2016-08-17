@@ -9,7 +9,9 @@ change log:
 Todo List:
 - [ ] 加入block/chain结构
 - [ ] 加入`getBalance`功能
--[ ]
+- [ ] 加入节点和账户地址
+- [ ] 加入`merktree`
+- [ ] 加入`checktransaction` 交易校验
 
 ##项目设置
 **go path**
