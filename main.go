@@ -4,12 +4,12 @@ import (
 	"log"
 	"net/http"
 	"github.com/mkideal/cli"
-	"hyperchain.cn/app/p2p"
-	"hyperchain.cn/app/jsonrpc/routers"
 	"fmt"
 	"strconv"
-	"hyperchain.cn/app/utils"
-	"hyperchain.cn/app/jsonrpc/model"
+	"hyperchain-alpha/p2p"
+	"hyperchain-alpha/utils"
+	"hyperchain-alpha/jsonrpc/model"
+	"hyperchain-alpha/jsonrpc/routers"
 )
 
 type argT struct {
