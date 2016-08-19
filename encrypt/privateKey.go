@@ -22,7 +22,7 @@ func GetPrivateKey()  dsa.PrivateKey{
 	return *privatekey
 }
 //编码私钥并进行存储
-func EncodePrivateKey(privateKey *dsa.PublicKey)string{
+func EncodePrivateKey(privateKey *dsa.PrivateKey)string{
 	data,_ := json.Marshal(*privateKey)
 	hexdata := hex.EncodeToString(data)
 	return hexdata
@@ -32,12 +32,12 @@ func DecodePrivateKey(privateKeyString string) (p dsa.PrivateKey){
 	dehexdata,err:= hex.DecodeString(privateKeyString)
 	if err!=nil{
 		fmt.Errorf("Error: %v",err)
-		return nil
+		return
 	}
 	err = json.Unmarshal(dehexdata, &p)
 	if err!=nil{
 		fmt.Errorf("Error: %v",err)
-		return nil
+		return
 	}
 	return p
 }

@@ -25,7 +25,9 @@ type Node struct {
 
 }
 
-func NewNode(P2PIP string,P2PPORT string,HttpPort int) Node{
+type Nodes []Node
+
+func NewNode(P2PIP string,P2PPORT int,HttpPort int) Node{
 	privatekey := encrypt.GetPrivateKey()
 	publickey := encrypt.GetPublicKey(privatekey)
 	coinbase :=  encrypt.EncodePublicKey(publickey)

@@ -7,6 +7,7 @@ package types
 import (
 	"time"
 	"hyperchain-alpha/encrypt"
+	"strconv"
 )
 
 type Transaction struct {
@@ -19,6 +20,8 @@ type Transaction struct {
 	//Signedhash string //整体签名
 }
 
+type Transactions []Transaction
+
 //需要将签名字符串反序列化 signUndecoded => encrypt.Signature
 func NewTransaction(from string,to string,value int,signUndecoded string){
 
@@ -26,4 +29,9 @@ func NewTransaction(from string,to string,value int,signUndecoded string){
 //验证交易
 func (t *Transaction)Verify()bool{
 
+}
+
+func (t *Transaction) Hash() string{
+	self := t
+	return encrypt.GetHash([]byte(self.From + self.To + strconv.Itoa(self.Value)+ string(self.TimeStamp)))
 }
