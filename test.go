@@ -1,12 +1,14 @@
 package main
 
 import (
-	"hyperchain.cn/app/jsonrpc/model"
 	//"time"
 	"fmt"
+	"hyperchain-alpha/jsonrpc/model"
 )
 
 func main() {
+
+	//model.InitDB(8989)
 	// t := model.Transaction{
 	//	 From:"jddd",
 	//	 To:"snail",
