@@ -1,24 +1,24 @@
 package main
 
 import (
-	"encoding/json"
+	//"hyperchain.cn/app/jsonrpc/model"
+	//"time"
 	"fmt"
 )
 
-type Person struct{
-	Name string
-	Age int
-}
-
 func main() {
+	// t := model.Transaction{
+	//	 From:"jddd",
+	//	 To:"snail",
+	//	 Value: 3243,
+	//	 TimeStamp:time.Now(),
+	// }
+	//
+	//model.PutTransactionToDB("dd", t)
 
-	var zhangsan = Person{Name:"zhansgsan",Age:10}
-	zhangsans , _:= json.Marshal(zhangsan)
-	fmt.Println(string(zhangsans))
+	/*t, _ := model.GetTransactionFromDB("dd")
+	fmt.Println(t)*/
 
-	var i interface{}
-	json.Unmarshal(zhangsans, &i)
-	fmt.Println(i)
-	lisi := i.(Person)
-	fmt.Println("lisi: ", lisi)
+	var d []byte = []byte("中文")
+	fmt.Println(string(d))
 }
