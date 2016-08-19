@@ -1,5 +1,8 @@
 package types
 
-type Chain struct {
+import "math/big"
 
+type Chain struct {
+	LastestBlockHash string
+	Height big.Int
 }

@@ -3,7 +3,7 @@
 // 这个文件定义了交易(transaction)的结构信息
 
 package types
-
 type Transaction struct {
-
+	A string
+	B int
 }
