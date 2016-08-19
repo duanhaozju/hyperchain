@@ -12,14 +12,8 @@ godep go run main.go
 第二个节点:
 godep go run main.go -i localhost -p 8001 -s 8004 -o 8005
 
-curl -l -H "Content-type: application/json" -X POST -d '{"hash":"hashstring","from":"zhansgan","to":"lisi","value":120,"time":"1257894000"}' http://localhost:8080/trans
+测试命令
+curl --data "from=zhansgan&to=lisi&value=120"  http://localhost:8003/trans
 
-{"hash":"hashstring","from':"zhansgan","to":"lisi","value":120,"time":"1257894000"}
 
-type Transaction struct {
-	Hash string `json:"hash"`
-	From      string    `json:"from"`
-	To string      `json:"to"`
-	Value  int    `json:"value"`
-	TimeStamp  time.Time `json:"timestamp"`
-}
+

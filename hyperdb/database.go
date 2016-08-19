@@ -1,4 +1,4 @@
-package storage
+package hyperdb
 
 import "hyperchain-alpha/core/node"
 
