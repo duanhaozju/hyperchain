@@ -7,6 +7,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"os"
 	"strconv"
+	"hyperchain-alpha/core/node"
 )
 
 //-- 这里定义了各种结构在数据库或内存中存取key的前缀
@@ -14,6 +15,8 @@ var (
 	TransactionHeaderKey = []byte("transactionHeader")
 	BlockHeaderKey = []byte("blockHeader")
 	BalanceHeaderKey = []byte("balanceHeader")
+	ChainHeaderKey = []byte("chainHeaderKey")
+	NodeHeaderKey = []byte("nodeHeaderKey")
 )
 
 //TODO 改变成更高效的方式编码 解码
@@ -157,4 +160,69 @@ func DeleteBalance(db hyperdb.Database, key []byte) error {
 	return db.Delete(keyFact)
 }
 
-//-- --------------------- Block END ----------------------------------
+//-- --------------------- Balance END ----------------------------------
+
+
+//-- ------------------- Chain ---------------------------------
+func PutChain(db hyperdb.Database, key []byte, t types.Chain) error {
+	data, err := encodeToBytes(t)
+	if err != nil {
+		return err
+	}
+	//-- 给key加上前缀,用于区分,实际存放的key
+	keyFact := append(ChainHeaderKey, key...)
+	if err := db.Put(keyFact, data); err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetChain(db hyperdb.Database, key []byte) (types.Chain, error){
+	var Chain types.Chain
+	keyFact := append(ChainHeaderKey, key...)
+	data, err := db.Get(keyFact)
+	if len(data) == 0 {
+		return Chain, err
+	}
+	err = decondeFromBytes(data, &Chain)
+	return Chain, err
+}
+
+func DeleteChain(db hyperdb.Database, key []byte) error {
+	keyFact := append(ChainHeaderKey, key...)
+	return db.Delete(keyFact)
+}
+
+//-- --------------------- Chain END ----------------------------------
+
+//-- ------------------- Node ---------------------------------
+func PutNode(db hyperdb.Database, key []byte, t node.Node) error {
+	data, err := encodeToBytes(t)
+	if err != nil {
+		return err
+	}
+	//-- 给key加上前缀,用于区分,实际存放的key
+	keyFact := append(NodeHeaderKey, key...)
+	if err := db.Put(keyFact, data); err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetNode(db hyperdb.Database, key []byte) (node.Node, error){
+	var Node node.Node
+	keyFact := append(NodeHeaderKey, key...)
+	data, err := db.Get(keyFact)
+	if len(data) == 0 {
+		return Node, err
+	}
+	err = decondeFromBytes(data, &Node)
+	return Node, err
+}
+
+func DeleteNode(db hyperdb.Database, key []byte) error {
+	keyFact := append(NodeHeaderKey, key...)
+	return db.Delete(keyFact)
+}
+
+//-- --------------------- Node END ----------------------------------
