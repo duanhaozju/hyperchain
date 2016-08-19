@@ -1,14 +1,12 @@
 package main
 
 import (
+	//"hyperchain.cn/app/jsonrpc/model"
 	//"time"
 	"fmt"
-	"hyperchain-alpha/jsonrpc/model"
 )
 
 func main() {
-
-	//model.InitDB(8989)
 	// t := model.Transaction{
 	//	 From:"jddd",
 	//	 To:"snail",
@@ -18,6 +16,9 @@ func main() {
 	//
 	//model.PutTransactionToDB("dd", t)
 
-	t, _ := model.GetTransactionFromDB("dd")
-	fmt.Println(t)
+	/*t, _ := model.GetTransactionFromDB("dd")
+	fmt.Println(t)*/
+
+	var d []byte = []byte("中文")
+	fmt.Println(string(d))
 }
