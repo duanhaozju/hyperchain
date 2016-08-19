@@ -42,7 +42,7 @@ func SaveNode(serverAddress string,localNode model.Node) model.Nodes{
 	fmt.Println( nodes)
 	return nodes
 }
-
+//从远端取得节点信息
 func GetNodes(serverAddress string,localNode model.Node) model.Nodes {
 	var client = establishConn(serverAddress)
 	defer client.Close()
@@ -58,7 +58,7 @@ func GetNodes(serverAddress string,localNode model.Node) model.Nodes {
 
 	return nodes
 }
-
+//向远端保存交易信息
 func SaveTrans(serverNode model.Node,localNode model.Node,tx model.Transaction) model.Transactions{
 	//同步调用
 	var trans model.Transactions

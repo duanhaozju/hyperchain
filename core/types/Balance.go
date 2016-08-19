@@ -1,5 +1,5 @@
 package types
 
-type Balance struct {
+type BalanceTable struct {
 
 }
