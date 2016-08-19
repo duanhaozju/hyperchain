@@ -1,19 +1,59 @@
 package core
 
-//import "hyperchain-alpha/core/types"
+import (
+	"hyperchain-alpha/hyperdb"
+	"hyperchain-alpha/core/types"
+)
 
-/*
-func PutBlockToLDB(key string, b types.Block) error{
 
-	return nil
+//-- 将Block存入ldb数据库
+func PutBlockToLDB(key string, t types.Block) error{
+	ldb, err := hyperdb.NewLDBDataBase(LDBPath)
+	defer ldb.Close()
+	if err != nil {
+		return err
+	}
+	return PutBlock(ldb, []byte(key), t)
 }
 
+//-- 在ldb中 根据Key获取的Block
 func GetBlockFromLDB(key string) (types.Block, error){
 
-	return nil, nil
+	ldb, err := hyperdb.NewLDBDataBase(LDBPath)
+	defer ldb.Close()
+	if err != nil {
+		return types.Block{},err
+	}
+	return GetBlock(ldb, []byte(key))
 }
 
-
+//-- 从ldb中删除Block
 func DeleteBlockFromLDB(key string) error {
-	return nil
-}*/
+	ldb, err := hyperdb.NewLDBDataBase(LDBPath)
+	defer ldb.Close()
+	if err != nil {
+		return err
+	}
+	return DeleteBlock(ldb, []byte(key))
+}
+
+//-- 从ldb中获取所有Block
+func GetAllBlockFromLDB() ([]types.Block, error) {
+	var ts []types.Block
+	ldb, err := hyperdb.NewLDBDataBase(LDBPath)
+	defer ldb.Close()
+	if err != nil {
+		return ts, err
+	}
+
+	iter := ldb.NewIterator()
+	for iter.Next() {
+		var t types.Block
+		value := iter.Value()
+		err = decondeFromBytes(value, &t)
+		ts = append(ts, t)
+	}
+	iter.Release()
+	err = iter.Error()
+	return ts, err
+}

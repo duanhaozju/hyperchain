@@ -9,8 +9,11 @@ import (
 	"strconv"
 )
 
+//-- 这里定义了各种结构在数据库或内存中存取key的前缀
 var (
 	TransactionHeaderKey = []byte("transactionHeader")
+	BlockHeaderKey = []byte("blockHeader")
+	BalanceHeaderKey = []byte("balanceHeader")
 )
 
 //TODO 改变成更高效的方式编码 解码
@@ -26,10 +29,12 @@ func decondeFromBytes(data []byte, v interface{}) error {
 	return json.Unmarshal(data, v)
 }
 
-//-- 初始化ldb 和memdb
+//-- 初始化ldb 和 memdb
 //-- 应该在程序开始初始化
+//-- port为端口号
 func InitDB(port int) {
 	LDBPath = BaseLDBPath + strconv.Itoa(port)
+	MemDB, _ = hyperdb.NewMemDatabase()
 }
 
 //-- --------------- about ldb -----------------------
@@ -49,6 +54,13 @@ func GetLDBConnection()(*leveldb.DB,error){
 }
 //-- ------------------ ldb end ----------------------
 
+//-- --------------- about memdb -----------------------
+//-- 这里定义了操作MemDB的
+var (
+	MemDB *hyperdb.MemDatabase;
+)
+
+//-- ------------------ memdb end ----------------------
 
 //-- ------------------- Transaction ---------------------------------
 func PutTransaction(db hyperdb.Database, key []byte, t types.Transaction) error {
@@ -81,3 +93,68 @@ func DeleteTransaction(db hyperdb.Database, key []byte) error {
 }
 
 //-- --------------------- Transaction END -----------------------------------
+
+
+//-- ------------------- Block ---------------------------------
+func PutBlock(db hyperdb.Database, key []byte, t types.Block) error {
+	data, err := encodeToBytes(t)
+	if err != nil {
+		return err
+	}
+	//-- 给key加上前缀,用于区分,实际存放的key
+	keyFact := append(BlockHeaderKey, key...)
+	if err := db.Put(keyFact, data); err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetBlock(db hyperdb.Database, key []byte) (types.Block, error){
+	var block types.Block
+	keyFact := append(BlockHeaderKey, key...)
+	data, err := db.Get(keyFact)
+	if len(data) == 0 {
+		return block, err
+	}
+	err = decondeFromBytes(data, &block)
+	return block, err
+}
+
+func DeleteBlock(db hyperdb.Database, key []byte) error {
+	keyFact := append(BlockHeaderKey, key...)
+	return db.Delete(keyFact)
+}
+
+//-- --------------------- Block END ----------------------------------
+
+//-- ------------------- Balance ---------------------------------
+func PutBalance(db hyperdb.Database, key []byte, t types.Balance) error {
+	data, err := encodeToBytes(t)
+	if err != nil {
+		return err
+	}
+	//-- 给key加上前缀,用于区分,实际存放的key
+	keyFact := append(BalanceHeaderKey, key...)
+	if err := db.Put(keyFact, data); err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetBalance(db hyperdb.Database, key []byte) (types.Balance, error){
+	var balance types.Balance
+	keyFact := append(BalanceHeaderKey, key...)
+	data, err := db.Get(keyFact)
+	if len(data) == 0 {
+		return balance, err
+	}
+	err = decondeFromBytes(data, &balance)
+	return balance, err
+}
+
+func DeleteBalance(db hyperdb.Database, key []byte) error {
+	keyFact := append(BalanceHeaderKey, key...)
+	return db.Delete(keyFact)
+}
+
+//-- --------------------- Block END ----------------------------------

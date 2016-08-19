@@ -70,6 +70,7 @@ func (db *MemDatabase) Delete(key []byte) error {
 	return nil
 }
 
+
 func (db *MemDatabase) Close() {}
 
 func (db *MemDatabase) NewBatch() Batch {
