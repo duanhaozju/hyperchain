@@ -21,7 +21,7 @@ input{
     padding:5px;
     margin:8px 0
 }
-input[type=submit]{
+input[type=button],input[type=reset]{
     padding:5px 20px;
     background: cadetblue;
     color:white;
