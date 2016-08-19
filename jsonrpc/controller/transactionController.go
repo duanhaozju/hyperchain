@@ -44,8 +44,11 @@ func TransactionCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	//1. 本地存储数据
 	transaction = model.SaveTransction(transaction)
+	//本地
 
 	//2. 远程同步数据
+
+
 	//遍历节点
 	for _,remoteNode := range p2p.GLOBALNODES{
 		if remoteNode != p2p.LOCALNODE{
