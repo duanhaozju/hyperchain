@@ -10,7 +10,7 @@ type Signature struct {
 	R big.Int
 	S big.Int
 }
-func NewSignature(r,s big.Int) Signature{
+func newSignature(r,s big.Int) Signature{
 	signature := Signature{
 		R:r,
 		S:s,
@@ -22,4 +22,12 @@ func (s Signature)String() string{
 	signature := s.R.Bytes()
 	signature = append(signature, s.S.Bytes()...)
 	return hex.EncodeToString(signature)
+}
+
+func EncodeSignature(sig Signature) string{
+	return nil
+}
+
+func DecodeSignature(sigString string) *Signature{
+	return nil
 }

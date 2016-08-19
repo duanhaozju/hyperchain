@@ -49,7 +49,7 @@ func Sign(privateKey dsa.PrivateKey, toSignData []byte) (sign Signature,datahash
 		fmt.Println(err)
 	}
 
-	signature := NewSignature(*r,*s)
+	signature := newSignature(*r,*s)
 
 	//fmt.Printf("数字签名:\n%v\n",signature)
 	return signature,signhash
