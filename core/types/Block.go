@@ -1,5 +1,16 @@
 package types
-type Block struct {
 
+import (
+	"time"
+	"github.com/ethereum/go-ethereum/node"
+)
+
+type Block struct {
+	ParentHash string
+	BlockHash string
+	Transactions []Transaction
+	TimeStramp time.Time
+	coinBase node.Node // 打包该Block的地址
+	merkleRoot string // merkleRoot 的hash值
 }
 
