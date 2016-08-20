@@ -16,7 +16,6 @@ function getFormData($form){
 
 $(document).ready(function(){
     $("input[type=button]").click(function(){
-        console.log("????????????");
         var url = $("input[name='address']").val();
         var $form = $("form");
 
@@ -28,7 +27,7 @@ $(document).ready(function(){
             type:"POST",
             dataType: "text",
             url: "http://"+url+"/trans",
-            data: $form.serialize(),
+            data: getFormData($form),
             success: function( result ) {
                 alert("success !!");
 //                    $("input[type=reset]").trigger("click");

@@ -23,9 +23,11 @@ type Transaction struct {
 type Transactions []Transaction
 
 //需要将签名字符串反序列化 signUndecoded => encrypt.Signature
-func NewTransaction(from string,to string,value int,signUndecoded string){
+func NewTransaction(from string,to string,value int,signUndecoded string) *Transaction{
 
+	return nil
 }
+
 //验证交易
 func (t *Transaction)Verify()bool{
 	return true
