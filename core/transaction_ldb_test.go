@@ -33,7 +33,7 @@ func TestPutTransactionToLDB(t *testing.T) {
 func TestGetTransactionFromLDB(t *testing.T) {
 	for i, ca := range transactionCases {
 		trans, _ := GetTransactionFromLDB("key"+strconv.Itoa(i))
-		if trans.TimeStamp != ca.TimeStamp && trans.Signedhash != trans.Signedhash{
+		if trans.TimeStamp != ca.TimeStamp{
 			t.Error("GetTransactionFromLDB is fail")
 		}else {
 			fmt.Println("GetTransactionFromLDB is successful")
