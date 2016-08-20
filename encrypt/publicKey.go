@@ -23,12 +23,12 @@ func DecodePublicKey(publicKeyString string) (p dsa.PublicKey){
 	dehexdata,err:= hex.DecodeString(publicKeyString)
 	if err!=nil{
 		fmt.Errorf("Error: %v",err)
-		return nil
+		return
 	}
 	err = json.Unmarshal(dehexdata, &p)
 	if err!=nil{
 		fmt.Errorf("Error: %v",err)
-		return nil
+		return
 	}
 	return p
 }

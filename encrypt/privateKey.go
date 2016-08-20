@@ -32,12 +32,12 @@ func DecodePrivateKey(privateKeyString string) (p dsa.PrivateKey){
 	dehexdata,err:= hex.DecodeString(privateKeyString)
 	if err!=nil{
 		fmt.Errorf("Error: %v",err)
-		return nil
+		return
 	}
 	err = json.Unmarshal(dehexdata, &p)
 	if err!=nil{
 		fmt.Errorf("Error: %v",err)
-		return nil
+		return
 	}
 	return p
 }
