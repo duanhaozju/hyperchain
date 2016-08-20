@@ -3,8 +3,8 @@ import (
 	"net/http"
 	"html/template"
 	"hyperchain-alpha/core"
-	"hyperchain-alpha/utils"
 	"path"
+	"os"
 )
 
 //type Transaction struct{
@@ -20,7 +20,8 @@ import (
 
 // 处理请求 : GET "/"
 func Index(w http.ResponseWriter, r *http.Request) {
-	indexpath := path.Join(utils.GetBasePath(),"./jsonrpc/static/tmpl/index.html")
+	pwd, _ := os.Getwd()
+	indexpath := path.Join(pwd,"./jsonrpc/static/tmpl/index.html")
 
 	var tmpl = template.Must(template.ParseFiles(indexpath))
 
