@@ -6,7 +6,7 @@
 *.so
 
 test.go
-
+core/chche
 # Folders
 _obj
 _test

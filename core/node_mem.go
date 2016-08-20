@@ -19,35 +19,37 @@ func newMemNode() *memNode {
 var memNodeMap *memNode;
 
 //-- 将Node存入内存
-func PutNodeToMEM(key string, t node.Node){
+func PutNodeToMEM(key string, t node.Node) error{
 	memNodeMap.lock.Lock()
 	defer memNodeMap.lock.Unlock()
 	memNodeMap.data[key] = t
+	return nil
 }
 
 //-- 在MEM中 根据Key获取的Node
-func GetNodeFromMEM(key string) node.Node{
+func GetNodeFromMEM(key string) (node.Node, error){
 	memNodeMap.lock.RLock()
 	defer memNodeMap.lock.RUnlock()
-	return memNodeMap.data[key]
+	return memNodeMap.data[key], nil
 }
 
 //-- 从MEM中删除Node
-func DeleteNodeFromMEM(key string) {
+func DeleteNodeFromMEM(key string) error {
 	memNodeMap.lock.Lock()
 	defer memNodeMap.lock.Unlock()
 	delete(memNodeMap.data, key)
+	return nil
 }
 
 //-- 从MEM中获取所有Node
-func GetAllNodeFromMEM() ([]node.Node) {
+func GetAllNodeFromMEM() ([]node.Node, error) {
 	memNodeMap.lock.RLock()
 	defer memNodeMap.lock.RUnlock()
 	var ts []node.Node
 	for _, m := range memNodeMap.data {
 		ts = append(ts, m)
 	}
-	return ts
+	return ts, nil
 }
 
 /*//-- 将Node存入内存

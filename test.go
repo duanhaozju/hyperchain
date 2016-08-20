@@ -114,10 +114,10 @@ func main() {
 	p := Person{"snail", b}
 	str, _ := json.Marshal(p)
 	fmt.Println(string(str))*/
-	core.InitDB(555)
+	/*core.InitDB(555)
 	balance := types.Balance{"snail",8976}
 	core.PutBalanceToMEM("yin", balance)
 	core.PutBalanceToMEM("yid", balance)
 	fmt.Println(core.GetBalanceFromMEM("yin"))
-	fmt.Println(core.GetAllBalanceFromMEM())
+	fmt.Println(core.GetAllBalanceFromMEM())*/
 }
