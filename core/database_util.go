@@ -12,11 +12,11 @@ import (
 
 //-- 这里定义了各种结构在数据库或内存中存取key的前缀
 var (
-	TransactionHeaderKey = []byte("transactionHeader")
-	BlockHeaderKey = []byte("blockHeader")
-	BalanceHeaderKey = []byte("balanceHeader")
-	ChainHeaderKey = []byte("chainHeaderKey")
-	NodeHeaderKey = []byte("nodeHeaderKey")
+	transactionHeaderKey = []byte("transactionHeader")
+	blockHeaderKey = []byte("blockHeader")
+	balanceHeaderKey = []byte("balanceHeader")
+	chainHeaderKey = []byte("chainHeaderKey") 
+	nodeHeaderKey = []byte("nodeHeaderKey")
 )
 
 //TODO 改变成更高效的方式编码 解码
@@ -36,8 +36,11 @@ func decondeFromBytes(data []byte, v interface{}) error {
 //-- 应该在程序开始初始化
 //-- port为端口号
 func InitDB(port int) {
-	LDBPath = BaseLDBPath + strconv.Itoa(port)
-	MemDB, _ = hyperdb.NewMemDatabase()
+	lDBPath = baseLDBPath + strconv.Itoa(port)
+	memDB, _ = hyperdb.NewMemDatabase()  //-- 暂时没用
+	memBalanceMap = newMemBalance()
+	memChainMap = newMemChain()
+	memNodeMap = newMemNode()
 }
 
 //-- --------------- about ldb -----------------------
@@ -48,11 +51,11 @@ func getBasePath() string {
 }
 
 var (
-	BaseLDBPath = getBasePath() + "/cache/"
-	LDBPath string
+	baseLDBPath = getBasePath() + "/cache/"
+	lDBPath string
 )
-func GetLDBConnection()(*leveldb.DB,error){
-	db, err := leveldb.OpenFile(LDBPath, nil )
+func getLDBConnection()(*leveldb.DB,error){
+	db, err := leveldb.OpenFile(lDBPath, nil )
 	return db, err
 }
 //-- ------------------ ldb end ----------------------
@@ -60,28 +63,28 @@ func GetLDBConnection()(*leveldb.DB,error){
 //-- --------------- about memdb -----------------------
 //-- 这里定义了操作MemDB的
 var (
-	MemDB *hyperdb.MemDatabase;
+	memDB *hyperdb.MemDatabase;
 )
 
 //-- ------------------ memdb end ----------------------
 
 //-- ------------------- Transaction ---------------------------------
-func PutTransaction(db hyperdb.Database, key []byte, t types.Transaction) error {
+func putTransaction(db hyperdb.Database, key []byte, t types.Transaction) error {
 	data, err := encodeToBytes(t)
 	if err != nil {
 		return err
 	}
 	//-- 给key加上前缀,用于区分,实际存放的key
-	keyFact := append(TransactionHeaderKey, key...)
+	keyFact := append(transactionHeaderKey, key...)
 	if err := db.Put(keyFact, data); err != nil {
 		return err
 	}
 	return nil
 }
 
-func GetTransaction(db hyperdb.Database, key []byte) (types.Transaction, error){
+func getTransaction(db hyperdb.Database, key []byte) (types.Transaction, error){
 	var transaction types.Transaction
-	keyFact := append(TransactionHeaderKey, key...)
+	keyFact := append(transactionHeaderKey, key...)
 	data, err := db.Get(keyFact)
 	if len(data) == 0 {
 		return transaction, err
@@ -90,8 +93,8 @@ func GetTransaction(db hyperdb.Database, key []byte) (types.Transaction, error){
 	return transaction, err
 }
 
-func DeleteTransaction(db hyperdb.Database, key []byte) error {
-	keyFact := append(TransactionHeaderKey, key...)
+func deleteTransaction(db hyperdb.Database, key []byte) error {
+	keyFact := append(transactionHeaderKey, key...)
 	return db.Delete(keyFact)
 }
 
@@ -99,22 +102,22 @@ func DeleteTransaction(db hyperdb.Database, key []byte) error {
 
 
 //-- ------------------- Block ---------------------------------
-func PutBlock(db hyperdb.Database, key []byte, t types.Block) error {
+func putBlock(db hyperdb.Database, key []byte, t types.Block) error {
 	data, err := encodeToBytes(t)
 	if err != nil {
 		return err
 	}
 	//-- 给key加上前缀,用于区分,实际存放的key
-	keyFact := append(BlockHeaderKey, key...)
+	keyFact := append(blockHeaderKey, key...)
 	if err := db.Put(keyFact, data); err != nil {
 		return err
 	}
 	return nil
 }
 
-func GetBlock(db hyperdb.Database, key []byte) (types.Block, error){
+func getBlock(db hyperdb.Database, key []byte) (types.Block, error){
 	var block types.Block
-	keyFact := append(BlockHeaderKey, key...)
+	keyFact := append(blockHeaderKey, key...)
 	data, err := db.Get(keyFact)
 	if len(data) == 0 {
 		return block, err
@@ -123,30 +126,30 @@ func GetBlock(db hyperdb.Database, key []byte) (types.Block, error){
 	return block, err
 }
 
-func DeleteBlock(db hyperdb.Database, key []byte) error {
-	keyFact := append(BlockHeaderKey, key...)
+func deleteBlock(db hyperdb.Database, key []byte) error {
+	keyFact := append(blockHeaderKey, key...)
 	return db.Delete(keyFact)
 }
 
 //-- --------------------- Block END ----------------------------------
 
 //-- ------------------- Balance ---------------------------------
-func PutBalance(db hyperdb.Database, key []byte, t types.Balance) error {
+func putBalance(db hyperdb.Database, key []byte, t types.Balance) error {
 	data, err := encodeToBytes(t)
 	if err != nil {
 		return err
 	}
 	//-- 给key加上前缀,用于区分,实际存放的key
-	keyFact := append(BalanceHeaderKey, key...)
+	keyFact := append(balanceHeaderKey, key...)
 	if err := db.Put(keyFact, data); err != nil {
 		return err
 	}
 	return nil
 }
 
-func GetBalance(db hyperdb.Database, key []byte) (types.Balance, error){
+func getBalance(db hyperdb.Database, key []byte) (types.Balance, error){
 	var balance types.Balance
-	keyFact := append(BalanceHeaderKey, key...)
+	keyFact := append(balanceHeaderKey, key...)
 	data, err := db.Get(keyFact)
 	if len(data) == 0 {
 		return balance, err
@@ -155,8 +158,8 @@ func GetBalance(db hyperdb.Database, key []byte) (types.Balance, error){
 	return balance, err
 }
 
-func DeleteBalance(db hyperdb.Database, key []byte) error {
-	keyFact := append(BalanceHeaderKey, key...)
+func deleteBalance(db hyperdb.Database, key []byte) error {
+	keyFact := append(balanceHeaderKey, key...)
 	return db.Delete(keyFact)
 }
 
@@ -164,22 +167,22 @@ func DeleteBalance(db hyperdb.Database, key []byte) error {
 
 
 //-- ------------------- Chain ---------------------------------
-func PutChain(db hyperdb.Database, key []byte, t types.Chain) error {
+func putChain(db hyperdb.Database, key []byte, t types.Chain) error {
 	data, err := encodeToBytes(t)
 	if err != nil {
 		return err
 	}
 	//-- 给key加上前缀,用于区分,实际存放的key
-	keyFact := append(ChainHeaderKey, key...)
+	keyFact := append(chainHeaderKey, key...)
 	if err := db.Put(keyFact, data); err != nil {
 		return err
 	}
 	return nil
 }
 
-func GetChain(db hyperdb.Database, key []byte) (types.Chain, error){
+func getChain(db hyperdb.Database, key []byte) (types.Chain, error){
 	var Chain types.Chain
-	keyFact := append(ChainHeaderKey, key...)
+	keyFact := append(chainHeaderKey, key...)
 	data, err := db.Get(keyFact)
 	if len(data) == 0 {
 		return Chain, err
@@ -188,30 +191,30 @@ func GetChain(db hyperdb.Database, key []byte) (types.Chain, error){
 	return Chain, err
 }
 
-func DeleteChain(db hyperdb.Database, key []byte) error {
-	keyFact := append(ChainHeaderKey, key...)
+func deleteChain(db hyperdb.Database, key []byte) error {
+	keyFact := append(chainHeaderKey, key...)
 	return db.Delete(keyFact)
 }
 
 //-- --------------------- Chain END ----------------------------------
 
 //-- ------------------- Node ---------------------------------
-func PutNode(db hyperdb.Database, key []byte, t node.Node) error {
+func putNode(db hyperdb.Database, key []byte, t node.Node) error {
 	data, err := encodeToBytes(t)
 	if err != nil {
 		return err
 	}
 	//-- 给key加上前缀,用于区分,实际存放的key
-	keyFact := append(NodeHeaderKey, key...)
+	keyFact := append(nodeHeaderKey, key...)
 	if err := db.Put(keyFact, data); err != nil {
 		return err
 	}
 	return nil
 }
 
-func GetNode(db hyperdb.Database, key []byte) (node.Node, error){
+func getNode(db hyperdb.Database, key []byte) (node.Node, error){
 	var Node node.Node
-	keyFact := append(NodeHeaderKey, key...)
+	keyFact := append(nodeHeaderKey, key...)
 	data, err := db.Get(keyFact)
 	if len(data) == 0 {
 		return Node, err
@@ -220,8 +223,8 @@ func GetNode(db hyperdb.Database, key []byte) (node.Node, error){
 	return Node, err
 }
 
-func DeleteNode(db hyperdb.Database, key []byte) error {
-	keyFact := append(NodeHeaderKey, key...)
+func deleteNode(db hyperdb.Database, key []byte) error {
+	keyFact := append(nodeHeaderKey, key...)
 	return db.Delete(keyFact)
 }
 

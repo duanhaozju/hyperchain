@@ -7,10 +7,10 @@ package types
 import "time"
 
 type Transaction struct {
-	from string //从发起账户公钥hash之后的值
-	publickey string //携带公钥
-	to string //直接公钥
-	value int // 交易值
-	timeStamp time.Time //时间戳
-	signedhash string //整体签名
+	From string //从发起账户公钥hash之后的值
+	Publickey string //携带公钥
+	To string //直接公钥
+	Value int // 交易值
+	TimeStamp time.Time //时间戳
+	Signedhash string //整体签名
 }
