@@ -54,7 +54,7 @@ func main(){
 			//实例化路由
 			router := routers.NewRouter()
 			// 指定静态文件目录
-			router.PathPrefix("/").Handler(http.FileServer(http.Dir(".")))
+			router.PathPrefix("/").Handler(http.FileServer(http.Dir("./jsonrpc/")))
 
 			//启动http服务
 			ctx.String("启动http服务...\n")
