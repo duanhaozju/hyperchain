@@ -8,39 +8,39 @@ import (
 
 //-- 将Block存入ldb数据库
 func PutBlockToLDB(key string, t types.Block) error{
-	ldb, err := hyperdb.NewLDBDataBase(LDBPath)
+	ldb, err := hyperdb.NewLDBDataBase(lDBPath)
 	defer ldb.Close()
 	if err != nil {
 		return err
 	}
-	return PutBlock(ldb, []byte(key), t)
+	return putBlock(ldb, []byte(key), t)
 }
 
 //-- 在ldb中 根据Key获取的Block
 func GetBlockFromLDB(key string) (types.Block, error){
 
-	ldb, err := hyperdb.NewLDBDataBase(LDBPath)
+	ldb, err := hyperdb.NewLDBDataBase(lDBPath)
 	defer ldb.Close()
 	if err != nil {
 		return types.Block{},err
 	}
-	return GetBlock(ldb, []byte(key))
+	return getBlock(ldb, []byte(key))
 }
 
 //-- 从ldb中删除Block
 func DeleteBlockFromLDB(key string) error {
-	ldb, err := hyperdb.NewLDBDataBase(LDBPath)
+	ldb, err := hyperdb.NewLDBDataBase(lDBPath)
 	defer ldb.Close()
 	if err != nil {
 		return err
 	}
-	return DeleteBlock(ldb, []byte(key))
+	return deleteBlock(ldb, []byte(key))
 }
 
 //-- 从ldb中获取所有Block
 func GetAllBlockFromLDB() ([]types.Block, error) {
 	var ts []types.Block
-	ldb, err := hyperdb.NewLDBDataBase(LDBPath)
+	ldb, err := hyperdb.NewLDBDataBase(lDBPath)
 	defer ldb.Close()
 	if err != nil {
 		return ts, err
