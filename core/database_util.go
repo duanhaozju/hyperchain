@@ -46,7 +46,8 @@ func InitDB(port int) {
 //-- --------------- about ldb -----------------------
 
 func getBasePath() string {
-	path, _ := os.Getwd()
+	//path, _ := os.Getwd()
+	path := os.TempDir()
 	return path
 }
 
