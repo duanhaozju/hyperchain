@@ -96,3 +96,34 @@
 23:39:37.344189 db@close closing
 23:39:37.454876 table-move@commit exiting
 23:39:37.455039 db@close done T·110.846708ms
+=============== Aug 20, 2016 (CST) ===============
+13:40:50.779485 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+13:40:50.779662 version@stat F·[5 1] S·1KiB[1KiB 289B] Sc·[1.25 0.00]
+13:40:50.779676 db@open opening
+13:40:50.779742 journal@recovery F·2
+13:40:50.780254 journal@recovery recovering @20
+13:40:50.780345 journal@recovery recovering @58
+13:40:50.780722 version@stat F·[5 1] S·1KiB[1KiB 289B] Sc·[1.25 0.00]
+13:40:50.855197 memdb@flush created L0@60 N·1 S·289B "tra..]J\xd6,v13":"tra..]J\xd6,v13"
+13:40:50.856347 version@stat F·[6 1] S·1KiB[1KiB 289B] Sc·[1.50 0.00]
+13:40:50.912581 db@janitor F·9 G·0
+13:40:50.912649 db@open done T·132.957189ms
+13:40:50.912827 table@move L0@60 -> L1
+13:40:50.913031 version@stat F·[5 2] S·1KiB[1KiB 578B] Sc·[1.25 0.00]
+13:40:50.913651 db@close closing
+13:40:50.989357 table-move@commit exiting
+13:40:50.989603 db@close done T·75.941472ms
+=============== Aug 20, 2016 (CST) ===============
+13:46:48.247493 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+13:46:48.248313 version@stat F·[5 2] S·1KiB[1KiB 578B] Sc·[1.25 0.00]
+13:46:48.248353 db@open opening
+13:46:48.248425 journal@recovery F·1
+13:46:48.249042 journal@recovery recovering @61
+13:46:48.250223 version@stat F·[5 2] S·1KiB[1KiB 578B] Sc·[1.25 0.00]
+13:46:48.250873 db@janitor F·9 G·0
+13:46:48.250895 db@open done T·2.532544ms
+13:46:48.250947 table@move L0@7 -> L1
+13:46:48.251041 version@stat F·[4 3] S·1KiB[1KiB 867B] Sc·[1.00 0.00]
+13:46:48.251309 db@close closing
+13:46:48.304073 table-move@commit exiting
+13:46:48.304157 db@close done T·52.844839ms
