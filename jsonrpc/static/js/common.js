@@ -26,7 +26,7 @@ $(document).ready(function(){
         $.ajax({
             type:"POST",
             dataType: "text",
-            url: "http://"+url+"/trans",
+            url: "/trans",
             data: getFormData($form),
             success: function( result ) {
                 alert("success !!");

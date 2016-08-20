@@ -35,6 +35,8 @@ func main(){
 
 		//存储本地节点
 		p2p.LOCALNODE = node.NewNode(localIp,argv.LocalPort,argv.HttpServerPORT)
+		// 初始化keystore
+		utils.GenKeypair()
 
 		//将本机地址加入Nodes列表中
 		core.PutNodeToMEM(p2p.LOCALNODE.CoinBase,p2p.LOCALNODE)
@@ -42,23 +44,23 @@ func main(){
 		fmt.Println("本机初始化拥有节点",allNodes)
 
 		//如果传入了对端节点地址，则首先向远程节点同步
-			if argv.PeerIp != "" && argv.PeerPort !=0{
+		if argv.PeerIp != "" && argv.PeerPort !=0{
 				peerNode := node.NewNode(argv.PeerIp,argv.PeerPort,0)
 				p2p.NodeSync(&peerNode)
 				p2p.TransSync(peerNode)
 			}
 
-			//启用p2p服务
-			p2p.StratP2PServer(argv.LocalPort)
+		//启用p2p服务
+		p2p.StratP2PServer(argv.LocalPort)
 
-			//实例化路由
-			router := routers.NewRouter()
-			// 指定静态文件目录
-			router.PathPrefix("/").Handler(http.FileServer(http.Dir(".")))
+		//实例化路由
+		router := routers.NewRouter()
+		// 指定静态文件目录
+		router.PathPrefix("/").Handler(http.FileServer(http.Dir(".")))
 
-			//启动http服务
-			ctx.String("启动http服务...\n")
-			log.Fatal(http.ListenAndServe(":"+strconv.Itoa(argv.HttpServerPORT),router))
+		//启动http服务
+		ctx.String("启动http服务...\n")
+		log.Fatal(http.ListenAndServe(":"+strconv.Itoa(argv.HttpServerPORT),router))
 
 		return nil
 	})

@@ -47,7 +47,7 @@ func GenKeypair(){
 	writeAccountsTOFile(accFilePath,accounts)
 }
 
-const accountsFilePath = "/cache/keystore.txt"
+const accountsFilePath = "../keystore/keystore.txt"
 func writeAccountsTOFile(filepath string,accounts Accounts){
 	fmt.Println("keystore路径",filepath)
 	//for idx,account := range accounts{

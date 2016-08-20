@@ -114,6 +114,7 @@ func GetTrans(serverNode node.Node) types.Transactions{
 	return trans
 }
 
+//从对端节点同步取得相应信息
 func NodeSync(peerNode *node.Node) ([]node.Node,error){
 	serverAddress :=string(peerNode.P2PIP +":"+ strconv.Itoa(peerNode.P2PPort))
 	//取得所有远程节点
@@ -161,9 +162,19 @@ func NodeSync(peerNode *node.Node) ([]node.Node,error){
 	return AllNodes,nil
 }
 
-
+//从对端节点同步取得相应信息
 func TransSync(peerNode node.Node){
 	GetTrans(peerNode)
+}
+
+//向全网节点广播信息
+func BroadCast(envelope *Envelope)int,err{
+	allNodes,_:=core.GetAllNodeFromMEM()
+	for _,remoteNode := range allNodes{
+		if remoteNode != p2p.LOCALNODE{
+			p2p.TransSync(new p2p.Envelope{})
+		}
+	}
 }
 
 // 异步调用
