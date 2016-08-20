@@ -34,7 +34,7 @@ func TransacionShow(w http.ResponseWriter, r *http.Request) {
 func TransactionCreate(w http.ResponseWriter, r *http.Request) {
 	var transaction types.Transaction
 	r.ParseForm()
-
+	//TODO 转成处理JSON MXM
 	value,_ := strconv.Atoi(r.Form["value"][0])
 	transaction = types.Transaction{
 		From: r.Form["from"][0],
@@ -42,21 +42,13 @@ func TransactionCreate(w http.ResponseWriter, r *http.Request) {
 		Value: value,
 		TimeStamp: time.Now(),
 	}
-	//1. 本地存储数据
-	core.PutTransactionToLDB(transaction.Hash(),transaction)
-	//本地
-
-	//2. 远程同步数据
 
 
-	//遍历节点
-	//for _,remoteNode := range p2p.GLOBALNODES{
-	//	if remoteNode != p2p.LOCALNODE{
-	//		p2p.SaveTrans(remoteNode,p2p.LOCALNODE,transaction)
-	//	}
-	//}
+	//TODO Sendtransaction(jsondata) MXM 签名验证
 
-	//w.Header().Set("Access-Control-Allow-Origin", "*")//允许访问所有域
+
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")//允许访问所有域
 	w.Header().Add("Access-Control-Allow-Headers","Content-Type")//header的类型
 	w.Header().Set("content-type","application/json")
 	fmt.Fprintf(w,"success")
