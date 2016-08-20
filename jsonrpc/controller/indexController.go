@@ -21,6 +21,9 @@ func Index(w http.ResponseWriter, r *http.Request) {
 
 	var tmpl = template.Must(template.ParseFiles(path+"index.html"))
 
+	//TODO 读取keystore文件夹，包括公钥、私钥、用户名，有个用户名与私钥的map对应表 map[string]string
+
+
 	Transacctions,_ := model.GetAllTransaction()
 
 	tmpl.Execute(w,Transacctions)
@@ -38,7 +41,6 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	//		"20160909",
 	//	},
 	//})
-
 }
 
 
