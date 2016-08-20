@@ -41,6 +41,7 @@ func InitDB(port int) {
 	memBalanceMap = newMemBalance()
 	memChainMap = newMemChain()
 	memNodeMap = newMemNode()
+	memTxPoolMap = newMemTxPool()
 }
 
 //-- --------------- about ldb -----------------------

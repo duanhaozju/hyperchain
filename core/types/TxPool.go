@@ -1,6 +1,6 @@
 package types
 
 type TxPool struct {
-	Max int
+	MaxCapacity int
 	Transactions []Transaction
 }
