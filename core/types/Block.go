@@ -10,7 +10,7 @@ type Block struct {
 	BlockHash string
 	Transactions []Transaction
 	TimeStramp time.Time
-	coinBase node.Node // 打包该Block的地址
-	merkleRoot string // merkleRoot 的hash值
+	CoinBase node.Node // 打包该Block的地址
+	MerkleRoot string // merkleRoot 的hash值
 }
 

@@ -8,39 +8,39 @@ import (
 
 //-- 将Transaction存入ldb数据库
 func PutTransactionToLDB(key string, t types.Transaction) error{
-	ldb, err := hyperdb.NewLDBDataBase(LDBPath)
+	ldb, err := hyperdb.NewLDBDataBase(lDBPath)
 	defer ldb.Close()
 	if err != nil {
 		return err
 	}
-	return PutTransaction(ldb, []byte(key), t)
+	return putTransaction(ldb, []byte(key), t)
 }
 
 //-- 在ldb中 根据Key获取的Transaction
 func GetTransactionFromLDB(key string) (types.Transaction, error){
 
-	ldb, err := hyperdb.NewLDBDataBase(LDBPath)
+	ldb, err := hyperdb.NewLDBDataBase(lDBPath)
 	defer ldb.Close()
 	if err != nil {
 		return types.Transaction{},err
 	}
-	return GetTransaction(ldb, []byte(key))
+	return getTransaction(ldb, []byte(key))
 }
 
 //-- 从ldb中删除Transaction
 func DeleteTransactionFromLDB(key string) error {
-	ldb, err := hyperdb.NewLDBDataBase(LDBPath)
+	ldb, err := hyperdb.NewLDBDataBase(lDBPath)
 	defer ldb.Close()
 	if err != nil {
 		return err
 	}
-	return DeleteTransaction(ldb, []byte(key))
+	return deleteTransaction(ldb, []byte(key))
 }
 
 //-- 从ldb中获取所有Transaction
 func GetAllTransactionFromLDB() ([]types.Transaction, error) {
 	var ts []types.Transaction
-	ldb, err := hyperdb.NewLDBDataBase(LDBPath)
+	ldb, err := hyperdb.NewLDBDataBase(lDBPath)
 	defer ldb.Close()
 	if err != nil {
 		return ts, err
