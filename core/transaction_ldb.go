@@ -4,10 +4,9 @@ import "hyperchain-alpha/hyperdb"
 
 import (
 	"hyperchain-alpha/core/types"
-	"encoding/json"
 )
 
-
+//-- 将Transaction存入ldb数据库
 func PutTransactionToLDB(key string, t types.Transaction) error{
 	ldb, err := hyperdb.NewLDBDataBase(LDBPath)
 	defer ldb.Close()
@@ -17,6 +16,7 @@ func PutTransactionToLDB(key string, t types.Transaction) error{
 	return PutTransaction(ldb, []byte(key), t)
 }
 
+//-- 在ldb中 根据Key获取的Transaction
 func GetTransactionFromLDB(key string) (types.Transaction, error){
 
 	ldb, err := hyperdb.NewLDBDataBase(LDBPath)
@@ -27,6 +27,7 @@ func GetTransactionFromLDB(key string) (types.Transaction, error){
 	return GetTransaction(ldb, []byte(key))
 }
 
+//-- 从ldb中删除Transaction
 func DeleteTransactionFromLDB(key string) error {
 	ldb, err := hyperdb.NewLDBDataBase(LDBPath)
 	defer ldb.Close()
@@ -36,6 +37,7 @@ func DeleteTransactionFromLDB(key string) error {
 	return DeleteTransaction(ldb, []byte(key))
 }
 
+//-- 从ldb中获取所有Transaction
 func GetAllTransactionFromLDB() ([]types.Transaction, error) {
 	var ts []types.Transaction
 	ldb, err := hyperdb.NewLDBDataBase(LDBPath)
@@ -48,7 +50,7 @@ func GetAllTransactionFromLDB() ([]types.Transaction, error) {
 	for iter.Next() {
 		var t types.Transaction
 		value := iter.Value()
-		err = json.Unmarshal(value, &t)
+		err = decondeFromBytes(value, &t)
 		ts = append(ts, t)
 	}
 	iter.Release()

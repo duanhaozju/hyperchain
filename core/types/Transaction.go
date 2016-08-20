@@ -28,10 +28,10 @@ func NewTransaction(from string,to string,value int,signUndecoded string){
 }
 //验证交易
 func (t *Transaction)Verify()bool{
-
+	return true
 }
 
 func (t *Transaction) Hash() string{
 	self := t
-	return encrypt.GetHash([]byte(self.From + self.To + strconv.Itoa(self.Value)+ string(self.TimeStamp)))
+	return string(encrypt.GetHash([]byte(self.From + self.To + strconv.Itoa(self.Value)+ string(self.TimeStamp.Format("2006-01-02 15:04:05")))))
 }

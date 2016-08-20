@@ -7,15 +7,15 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-	"hyperchain-alpha/jsonrpc/model"
-	"hyperchain-alpha/p2p"
+	"hyperchain-alpha/core"
+	"hyperchain-alpha/core/types"
 )
 
 func TransactionIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 	// TODO 取得所有的交易记录
-	allTransaction,_ := model.GetAllTransaction()
+	allTransaction,_ := core.GetAllTransactionFromLDB()
 	if err := json.NewEncoder(w).Encode(allTransaction); err != nil {
 		panic(err)
 	}
@@ -32,29 +32,29 @@ func TransacionShow(w http.ResponseWriter, r *http.Request) {
 // TODO 增加一条记录
 // 处理请求 : POST "/trans"
 func TransactionCreate(w http.ResponseWriter, r *http.Request) {
-	var transaction model.Transaction
+	var transaction types.Transaction
 	r.ParseForm()
 
 	value,_ := strconv.Atoi(r.Form["value"][0])
-	transaction = model.Transaction{
+	transaction = types.Transaction{
 		From: r.Form["from"][0],
 		To: r.Form["to"][0],
 		Value: value,
 		TimeStamp: time.Now(),
 	}
 	//1. 本地存储数据
-	transaction = model.SaveTransction(transaction)
+	core.PutTransactionToLDB(transaction.Hash(),transaction)
 	//本地
 
 	//2. 远程同步数据
 
 
 	//遍历节点
-	for _,remoteNode := range p2p.GLOBALNODES{
-		if remoteNode != p2p.LOCALNODE{
-			p2p.SaveTrans(remoteNode,p2p.LOCALNODE,transaction)
-		}
-	}
+	//for _,remoteNode := range p2p.GLOBALNODES{
+	//	if remoteNode != p2p.LOCALNODE{
+	//		p2p.SaveTrans(remoteNode,p2p.LOCALNODE,transaction)
+	//	}
+	//}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")//允许访问所有域
 	w.Header().Add("Access-Control-Allow-Headers","Content-Type")//header的类型

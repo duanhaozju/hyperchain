@@ -2,7 +2,7 @@ package types
 
 import (
 	"time"
-	"github.com/ethereum/go-ethereum/node"
+	"hyperchain-alpha/core/node"
 )
 
 type Block struct {

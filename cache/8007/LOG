@@ -1,0 +1,59 @@
+=============== Aug 19, 2016 (CST) ===============
+23:39:37.456259 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+23:39:37.456588 db@open opening
+23:39:37.457362 version@stat F·[] S·0B[] Sc·[]
+23:39:37.533423 db@janitor F·2 G·0
+23:39:37.533479 db@open done T·76.86933ms
+23:39:37.533709 db@close closing
+23:39:37.533774 db@close done T·57.862µs
+=============== Aug 19, 2016 (CST) ===============
+23:39:37.533912 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+23:39:37.534015 version@stat F·[] S·0B[] Sc·[]
+23:39:37.534026 db@open opening
+23:39:37.534069 journal@recovery F·1
+23:39:37.534656 journal@recovery recovering @1
+23:39:37.595880 memdb@flush created L0@2 N·1 S·289B "tra..\x8d\xc8m,v1":"tra..\x8d\xc8m,v1"
+23:39:37.596994 version@stat F·[1] S·289B[289B] Sc·[0.25]
+23:39:37.597665 db@janitor F·3 G·0
+23:39:37.597684 db@open done T·63.650985ms
+23:39:37.597779 db@close closing
+23:39:37.597811 db@close done T·29.982µs
+=============== Aug 19, 2016 (CST) ===============
+23:39:37.597907 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+23:39:37.597992 version@stat F·[1] S·289B[289B] Sc·[0.25]
+23:39:37.598002 db@open opening
+23:39:37.598047 journal@recovery F·1
+23:39:37.598858 journal@recovery recovering @3
+23:39:37.729753 memdb@flush created L0@5 N·1 S·288B "tra..s=Y,v3":"tra..s=Y,v3"
+23:39:37.731831 version@stat F·[2] S·577B[577B] Sc·[0.50]
+23:39:37.732250 db@janitor F·4 G·0
+23:39:37.732288 db@open done T·134.27611ms
+23:39:37.732450 db@close closing
+23:39:37.732504 db@close done T·48.507µs
+=============== Aug 19, 2016 (CST) ===============
+23:39:37.732616 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+23:39:37.732712 version@stat F·[2] S·577B[577B] Sc·[0.50]
+23:39:37.732721 db@open opening
+23:39:37.732763 journal@recovery F·1
+23:39:37.733731 journal@recovery recovering @6
+23:39:37.829441 memdb@flush created L0@8 N·1 S·289B "tra..\x8e\xa5\xb2,v5":"tra..\x8e\xa5\xb2,v5"
+23:39:37.830816 version@stat F·[3] S·866B[866B] Sc·[0.75]
+23:39:37.831598 db@janitor F·5 G·0
+23:39:37.831627 db@open done T·98.895557ms
+23:39:37.831733 db@close closing
+23:39:37.831767 db@close done T·32.124µs
+=============== Aug 19, 2016 (CST) ===============
+23:39:37.831904 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+23:39:37.832030 version@stat F·[3] S·866B[866B] Sc·[0.75]
+23:39:37.832045 db@open opening
+23:39:37.832153 journal@recovery F·1
+23:39:37.833458 journal@recovery recovering @9
+23:39:37.929871 memdb@flush created L0@11 N·1 S·289B "tra..\xebZ\xe3,v7":"tra..\xebZ\xe3,v7"
+23:39:37.931289 version@stat F·[4] S·1KiB[1KiB] Sc·[1.00]
+23:39:37.932123 db@janitor F·6 G·0
+23:39:37.932172 db@open done T·100.115071ms
+23:39:37.932252 table@move L0@11 -> L1
+23:39:37.932288 db@close closing
+23:39:37.932375 version@stat F·[3 1] S·1KiB[866B 289B] Sc·[0.75 0.00]
+23:39:38.019274 table-move@commit exiting
+23:39:38.019434 db@close done T·87.123008ms

@@ -2,7 +2,7 @@ package controller
 import (
 	"net/http"
 	"html/template"
-	"hyperchain-alpha/jsonrpc/model"
+	"hyperchain-alpha/core"
 )
 
 //type Transaction struct{
@@ -21,7 +21,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 
 	var tmpl = template.Must(template.ParseFiles(path+"index.html"))
 
-	Transacctions,_ := model.GetAllTransaction()
+	Transacctions,_ := core.GetAllTransactionFromLDB()
 
 	tmpl.Execute(w,Transacctions)
 	//tmpl.Execute(w,Transacctions{
