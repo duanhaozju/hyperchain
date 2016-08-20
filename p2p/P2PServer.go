@@ -61,8 +61,8 @@ func (r *RemoteNode) RemoteGetNodes(envelope *Envelope,retNodes *node.Nodes) err
 			fmt.Println(inNode)
 			core.PutNodeToMEM(inNode.CoinBase,inNode)
 		}
-
-	fmt.Println(core.GetAllNodeFromMEM())
+	NowAllNodes,_ := core.GetAllNodeFromMEM()
+	fmt.Println("当前拥有节点：",NowAllNodes)
 	*retNodes,_= core.GetAllNodeFromMEM()
 	return nil
 }
@@ -73,7 +73,7 @@ func (r *RemoteNode) RemoteGetNodes(envelope *Envelope,retNodes *node.Nodes) err
 func (r *RemoteNode) RemoteSaveTransaction(envelope *Envelope,trans *types.Transactions) error {
 	remoteNode := envelope.Nodes[0]
 	for _,tx := range envelope.Transactions{
-		fmt.Printf("获取远端新交易数据,请求来源：%v,\t交易数据为%v\t\n",remoteNode,tx)
+		fmt.Printf("获取远端新交易数据,请求来源：%s,\t交易数据为%v\t\n",remoteNode,tx)
 		err := core.PutTransactionToLDB(tx.Hash(),tx)
 		if err != nil{
 			return err
@@ -85,7 +85,7 @@ func (r *RemoteNode) RemoteSaveTransaction(envelope *Envelope,trans *types.Trans
 func (r *RemoteNode) RemoteGetTransaction(envelope *Envelope,trans *types.Transactions) error{
 	remoteNode := envelope.Nodes[0]
 	//TODO 远程取得交易信息
-	fmt.Printf("远端请求同步,请求来源：%v\n",remoteNode)
+	fmt.Printf("远端请求同步,请求来源：%s\n",remoteNode)
 	var err = new(error)
 	*trans,*err = core.GetAllTransactionFromLDB()
 	return *err

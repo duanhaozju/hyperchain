@@ -5,7 +5,8 @@ package node
 
 import (
 	"hyperchain-alpha/encrypt"
-	"crypto/dsa"
+	//"crypto/dsa"
+	"strconv"
 )
 
 // Node的结构定义
@@ -19,12 +20,16 @@ type Node struct {
 	// 节点对外公布的地址,用于打包的时候展示
 	CoinBase string
 	//私钥对外不可见
-	privateKey dsa.PrivateKey
+	//privateKey dsa.PrivateKey
 	//公钥对外可见
-	publicKey dsa.PublicKey
+	//publicKey dsa.PublicKey
 
 }
 type Nodes []Node
+
+func (n Node)String() string{
+	return "HyperNode://"+n.P2PIP+":"+strconv.Itoa(n.P2PPort)+"$"+strconv.Itoa(n.HttpPort)
+}
 
 func NewNode(P2PIP string,P2PPORT int,HttpPort int) Node{
 	privatekey := encrypt.GetPrivateKey()
@@ -36,8 +41,8 @@ func NewNode(P2PIP string,P2PPORT int,HttpPort int) Node{
 		P2PPort:P2PPORT,
 		HttpPort:HttpPort,
 		CoinBase:coinbase,
-		privateKey:privatekey,
-		publicKey:publickey,
+		//privateKey:privatekey,
+		//publicKey:publickey,
 	}
 	return newNode
 }

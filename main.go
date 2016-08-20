@@ -34,15 +34,17 @@ func main(){
 		core.InitDB(argv.LocalPort)
 
 		//存储本地节点
-		p2p.LOCALNODE = node.NewNode(argv.PeerIp,argv.PeerPort,argv.HttpServerPORT)
+		p2p.LOCALNODE = node.NewNode(localIp,argv.LocalPort,argv.HttpServerPORT)
 
 		//将本机地址加入Nodes列表中
 		core.PutNodeToMEM(p2p.LOCALNODE.CoinBase,p2p.LOCALNODE)
+		allNodes,_ := core.GetAllNodeFromMEM()
+		fmt.Println("本机初始化拥有节点",allNodes)
 
 		//如果传入了对端节点地址，则首先向远程节点同步
 			if argv.PeerIp != "" && argv.PeerPort !=0{
 				peerNode := node.NewNode(argv.PeerIp,argv.PeerPort,0)
-				p2p.NodeSync(peerNode)
+				p2p.NodeSync(&peerNode)
 				p2p.TransSync(peerNode)
 			}
 

@@ -85,3 +85,6 @@ tags
 
 #project specfic
 db/*
+
+# cache
+cache/*

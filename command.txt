@@ -14,6 +14,8 @@ godep go run main.go -i localhost -p 8001 -s 8004 -o 8005
 
 测试命令
 curl --data "from=zhansgan&to=lisi&value=120"  http://localhost:8003/trans
+curl --data '{"from":"zhansgan","to":"lisi","value":"120"}'  http://localhost:8003/trans
+
 
 
 
