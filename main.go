@@ -126,4 +126,7 @@ func CreateInitBlock()  {
 	core.PutBlockToLDB(block.BlockHash, block)
 	//-- 将初始block的BlockHash存如Chain
 	core.UpdateChain(block.BlockHash)
+
+	//-- 初始初始化balance
+	core.UpdateBalance(block)
 }

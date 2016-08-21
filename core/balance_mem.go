@@ -51,6 +51,19 @@ func GetAllBalanceFromMEM() ([]types.Balance) {
 	return ts
 }
 
+func UpdateBalance(block types.Block)  {
+	memBalanceMap.lock.Lock()
+	defer memBalanceMap.lock.Unlock()
+	for _, trans := range block.Transactions {
+		memBalanceMap.data[trans.From] -= trans.Value
+		if _, ok := memBalanceMap.data[trans.To]; ok {
+			memBalanceMap.data[trans.To] += trans.Value
+		}else {
+			memBalanceMap.data[trans.To] = trans.Value
+		}
+	}
+}
+
 /*
 //-- 将Balance存入内存
 func PutBalanceToMEM(key string, t types.Balance) error{
