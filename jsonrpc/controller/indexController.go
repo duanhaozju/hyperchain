@@ -30,7 +30,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 
 	var tmpl = template.Must(template.ParseFiles(indexpath))
 
-	//TODO 读取keystore文件夹，包括公钥、私钥、用户名，有个用户名与私钥的map对应表 map[string]string
+	// 得到所有账户
 	accounts,_ := utils.GetAccount()
 
 	transactions,_ := core.GetAllTransactionFromLDB()
