@@ -79,7 +79,8 @@ func SendTransaction(args TxArgs) ResData {
 
 		// 提交到交易池
 		core.AddTransactionToTxPool(*tx)
-		core.PutTransactionToLDB(txHash,*tx)
+		//存到交易池的不存到数据库
+		//core.PutTransactionToLDB(txHash,*tx)
 
 		var transactions types.Transactions
 
@@ -96,8 +97,11 @@ func SendTransaction(args TxArgs) ResData {
 			core.UpdateBalance(*block)
 
 			// （没有验证区块）区块存进数据库
-			// TODO 未验证区块不存入数据库！！！
-			//core.PutBlockToLDB(block.BlockHash,*block)
+			core.PutBlockToLDB(block.BlockHash,*block)
+			// review 遍历最新区块并存储
+			for _,trans := range block.Transactions{
+				core.PutTransactionToLDB(trans.Hash(),trans)
+			}
 
 			// 更新全局最新一个区块的HASH
 			core.UpdateChain(block.BlockHash)
