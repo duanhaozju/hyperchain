@@ -7,6 +7,7 @@ package types
 import (
 	"hyperchain-alpha/encrypt"
 	"strconv"
+	"time"
 )
 
 type Transaction struct {
@@ -21,18 +22,48 @@ type Transaction struct {
 
 type Transactions []Transaction
 
-//需要将签名字符串反序列化 signUndecoded => encrypt.Signature
-func NewTransaction(from string,to string,value int,signUndecoded string) *Transaction{
-
-	return nil
+func NewTransaction(from string,to string,value int) *Transaction{
+	return &Transaction{
+		From: from,
+		To: to,
+		Value: value,
+		TimeStamp: time.Now().Unix(),
+	}
 }
 
-//验证交易
-func (t *Transaction)Verify()bool{
-	return true
+
+// 验证交易.from是否存在,余额是否足够,判断getBalance还有tx pool中这个from的交易，进行加减
+func (tx *Transaction) VerifyTransaction(balance Balance,txPoolsTrans Transactions) bool {
+	self := tx
+
+	return self.isValid(balance,txPoolsTrans)
 }
 
-func (t *Transaction) Hash() string{
-	self := t
-	return string(encrypt.GetHash([]byte(self.From + self.To + strconv.Itoa(self.Value)+ strconv.FormatInt(self.TimeStamp,10))))
+func (tx *Transaction) Hash() string{
+	self := tx
+	return string(encrypt.GetHash([]byte(self.From + self.To + strconv.Itoa(self.Value)+ strconv.FormatInt(self.TimeStamp, 10))))
+}
+
+// 检查余额
+func (tx *Transaction) isValid(balance Balance,txPoolsTrans []Transaction) bool{
+
+	self := tx
+	fund := balance.Value
+
+	from := self.From
+	amount := self.Value  // balance和交易池中的资金是否足够
+
+	for _,t := range txPoolsTrans{
+
+		if (t.From == from) {
+			fund = fund - t.Value
+		}
+
+		if (t.To == from) {
+			fund = fund + t.Value
+		}
+	}
+
+
+	return amount <= fund
 }

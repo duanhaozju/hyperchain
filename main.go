@@ -48,8 +48,8 @@ func main(){
 		log.Println("本机初始化拥有节点",allNodes)
 
 		//如果传入了对端节点地址，则首先向远程节点同步
-		if argv.PeerIp != "" && argv.PeerPort !=0{
-				peerNode := node.NewNode(argv.PeerIp,argv.PeerPort,0)
+		//if argv.PeerIp != "" && argv.PeerPort !=0{
+				//peerNode := node.NewNode(argv.PeerIp,argv.PeerPort,0)
 				// 同步节点
 				p2p.NodeSync(&peerNode)
 				//从远端节点同步区块
@@ -59,7 +59,7 @@ func main(){
 				// 同步交易池
 				p2p.TxPoolSync(&peerNode)
 				//p2p.TransSync(peerNode)
-		}else{
+		//}else{
 			//未传入地址，则自己需要初始化创世区块
 			// TODO 构造创世区块
 			CreateInitBlock()
@@ -71,7 +71,7 @@ func main(){
 		//实例化路由
 		router := routers.NewRouter()
 		// 指定静态文件目录
-		router.PathPrefix("/").Handler(http.FileServer(http.Dir(".")))
+		router.PathPrefix("/").Handler(http.FileServer(http.Dir("./jsonrpc/")))
 
 		//启动http服务
 		ctx.String("启动http服务...\n")

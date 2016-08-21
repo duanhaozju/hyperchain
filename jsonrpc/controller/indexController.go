@@ -6,7 +6,7 @@ import (
 	"path"
 	"os"
 	"hyperchain-alpha/utils"
-	"fmt"
+	"hyperchain-alpha/core/types"
 )
 
 //type Transaction struct{
@@ -18,7 +18,10 @@ import (
 //
 //type Transacctions []Transaction
 
-
+type data struct{
+	Trans types.Transactions
+	Accounts utils.Accounts
+}
 
 // 处理请求 : GET "/"
 func Index(w http.ResponseWriter, r *http.Request) {
@@ -27,28 +30,16 @@ func Index(w http.ResponseWriter, r *http.Request) {
 
 	var tmpl = template.Must(template.ParseFiles(indexpath))
 
-	account,_ := utils.GetAccount()
-	fmt.Println(account)
-
+	//TODO 读取keystore文件夹，包括公钥、私钥、用户名，有个用户名与私钥的map对应表 map[string]string
+	accounts,_ := utils.GetAccount()
 
 	transactions,_ := core.GetAllTransactionFromLDB()
 
-	tmpl.Execute(w,transactions)
-	//tmpl.Execute(w,Transacctions{
-	//	Transaction{
-	//		"mxxim",
-	//		"sammy",
-	//		10,
-	//		"20160909",
-	//	},
-	//	Transaction{
-	//		"sammy",
-	//		"mxxim",
-	//		10,
-	//		"20160909",
-	//	},
-	//})
-
+	//tmpl.Execute(w,transactions)
+	tmpl.Execute(w,data{
+		Trans:transactions,
+		Accounts:accounts,
+	})
 }
 
 

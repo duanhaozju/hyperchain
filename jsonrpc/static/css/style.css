@@ -21,7 +21,7 @@ input{
     padding:5px;
     margin:8px 0
 }
-input[type=button],input[type=reset]{
+input[type=button],input[type=reset],select{
     padding:5px 20px;
     background: cadetblue;
     color:white;

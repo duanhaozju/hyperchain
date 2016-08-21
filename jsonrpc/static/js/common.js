@@ -16,12 +16,12 @@ function getFormData($form){
 
 $(document).ready(function(){
     $("input[type=button]").click(function(){
-        var url = $("input[name='address']").val();
+        // var url = $("input[name='address']").val();
         var $form = $("form");
 
-        if(!url){
-            url = location.host
-        }
+        // if(!url){
+        //     url = location.host
+        // }
 
         $.ajax({
             type:"POST",
