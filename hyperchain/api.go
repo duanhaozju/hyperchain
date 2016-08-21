@@ -96,7 +96,8 @@ func SendTransaction(args TxArgs) ResData {
 			core.UpdateBalance(*block)
 
 			// （没有验证区块）区块存进数据库
-			core.PutBlockToLDB(block.BlockHash,*block)
+			// TODO 未验证区块不存入数据库！！！
+			//core.PutBlockToLDB(block.BlockHash,*block)
 
 			// 更新全局最新一个区块的HASH
 			core.UpdateChain(block.BlockHash)

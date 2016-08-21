@@ -38,7 +38,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	godAccounts := utils.GetGodAccount()
 	godpubkey := godAccounts[0]["god"].PubKey
 	transactions,_ := core.GetAllTransactionFromLDB()
-
+	transactions = append(transactions,core.GetTransactionsFromTxPool()...)
 
 	for i,tx := range transactions{
 		from := tx.From
