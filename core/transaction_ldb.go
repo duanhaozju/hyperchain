@@ -4,12 +4,10 @@ import "hyperchain-alpha/hyperdb"
 
 import (
 	"hyperchain-alpha/core/types"
-	"fmt"
 )
 
 //-- 将Transaction存入ldb数据库
 func PutTransactionToLDB(key string, t types.Transaction) error{
-	fmt.Println(t)
 	ldb, err := hyperdb.NewLDBDataBase(lDBPath)
 	defer ldb.Close()
 	if err != nil {
@@ -50,10 +48,13 @@ func GetAllTransactionFromLDB() ([]types.Transaction, error) {
 
 	iter := ldb.NewIterator()
 	for iter.Next() {
-		var t types.Transaction
-		value := iter.Value()
-		err = decondeFromBytes(value, &t)
-		ts = append(ts, t)
+		key := iter.Key()
+		if string(key[:len(transactionHeaderKey)]) == string(transactionHeaderKey) {
+			var t types.Transaction
+			value := iter.Value()
+			err = decondeFromBytes(value, &t)
+			ts = append(ts, t)
+		}
 	}
 	iter.Release()
 	err = iter.Error()

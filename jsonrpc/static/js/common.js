@@ -30,7 +30,7 @@ $(document).ready(function(){
             data: getFormData($form),
             success: function( result ) {
                 console.log(result);
-                if(result.code == 1){
+                if(result.Code == 1){
                     alert("提交成功!");
                 } else {
                     alert("提交失败！");
