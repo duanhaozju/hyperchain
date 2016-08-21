@@ -5,10 +5,8 @@ import (
 	"github.com/gorilla/mux"
 	"fmt"
 	"net/http"
-	//"strconv"
-	//"time"
 	"hyperchain-alpha/core"
-	//"hyperchain-alpha/core/types"
+	"hyperchain-alpha/hyperchain"
 )
 
 func TransactionIndex(w http.ResponseWriter, r *http.Request) {
@@ -32,9 +30,9 @@ func TransacionShow(w http.ResponseWriter, r *http.Request) {
 // TODO 增加一条记录
 // 处理请求 : POST "/trans"
 func TransactionCreate(w http.ResponseWriter, r *http.Request) {
-	//var transaction types.Transaction
+
+	// 解析url传递的参数，对于POST则解析响应包的主体（request body）
 	r.ParseForm()
-	//TODO 转成处理JSON MXM
 	//value,_ := strconv.Atoi(r.Form["value"][0])
 	//transaction = types.Transaction{
 	//	From: r.Form["from"][0],
@@ -44,8 +42,7 @@ func TransactionCreate(w http.ResponseWriter, r *http.Request) {
 	//}
 
 
-	//TODO Sendtransaction(jsondata) MXM 签名验证
-
+	hyperchain.SendTransaction(r.Form)
 
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")//允许访问所有域

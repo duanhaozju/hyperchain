@@ -1,4 +1,4 @@
-package hyper
+package hyperchain
 
 import (
 	"time"
@@ -8,6 +8,9 @@ import (
 	"strconv"
 	"crypto/dsa"
 	//"hyperchain-alpha/p2p"
+	"hyperchain-alpha/utils"
+	"hyperchain-alpha/core"
+	"hyperchain-alpha/p2p"
 )
 
 type TxArgs struct{
@@ -17,74 +20,108 @@ type TxArgs struct{
 	Timestamp time.Time `json:"timestamp"`
 }
 
-type TransactionPoolAPI struct{
+//type TransactionPoolAPI struct{
+//
+//}
 
+type key struct {
+	privateKey dsa.PrivateKey
+	publicKey dsa.PublicKey
 }
 
+const MAXCOUNT = 5
 
-var pri2pub map[dsa.PublicKey]dsa.PrivateKey
+var name2key map[string]key
 
 // 生成一张私钥与公钥的映射表
-func init() {
+func initial() {
 	//TODO 读取公私钥对
-
+	accounts,_ := utils.GetAccount()
+	for ac,_ := range accounts{
+		for key,value := range ac{
+			name2key[key] = value
+		}
+	}
 }
 
-// name2key是 name 与 privateKey 的 key-value
-func sign(publicKey dsa.PublicKey,dataHash []byte) (encrypt.Signature,[]byte){
-
-	privateKey := pri2pub[publicKey]
-
-	return encrypt.Sign(privateKey,dataHash)
-}
-
-// 参数是一个json对象，
+// 参数是一个json对象
 // TODO 发送一个交易
-func (t *TransactionPoolAPI) SendTransaction(args TxArgs) error {
+func SendTransaction(args TxArgs) error {
 
 	var tx types.Transaction
 
-	//init()
+
+	initial()
+
+	// 将公钥转换为string类型
+	fromPubKey := encrypt.EncodePublicKey(name2key[args["from"]])
+	toPubKey := encrypt.EncodePublicKey(name2key[args["to"]])
 
 	// 构造 transaction 实例
-	tx = types.NewTransaction(args.From,args.To,args.Value,args.Timestamp)
+	tx = types.NewTransaction(fromPubKey,toPubKey,strconv.Atoi(args["value"]),time.Now())
 
-	//TODO 生成一个签名
-	signature,_ := sign(args.From,[]byte(args.From + args.To + strconv.Itoa(args.Value) + args.Timestamp))
+	// 生成一个签名
+	signature,_ := encrypt.Sign(name2key[args["from"]].privateKey,tx.Hash())
 
-	//TODO 签名交易
-	tx.Singnature = signature // 已经签名的交易
-
-	//TODO 验证交易，发送者是否存在，余额是否足够,判断getBalance还有tx pool中这个from的交易，进行加减
+	// 已经签名的交易
+	tx.Singnature = signature
 
 
-	// TODO  数据 存储到交易池
-	//core.PutTransactionToLDB(transaction.Hash(),transaction)
-	//TODO 判断交易池是否满
-	//TODO if ture
-	// TODO 1.打包区块 2.清空交易池 MXM ====
+	// 验证交易
+	if (tx.VerifyTransaction()) {
 
-	//TODO 3. 远程同步数据
+		// 验证通过
+		var envelopes p2p.Envelope
+		// 提交到交易池
+		core.AddTransactionToTxPool(tx)
 
-	//提供一个信封容器
-	//var envelope  p2p.Envelope
-	//TODO 将区块和交易信息装入信封
+		transactions := make(types.Transactions,1)
+		transactions = append(transactions,tx)
 
-	//同步信息
-	//p2p.BroadCast(envelope)
+		// 判断交易池是否已满
+		if(core.GetTxPoolCapacity() == MAXCOUNT){
 
+			// 若已满，打包区块
+			trans := core.GetTransactionsFromTxPool()
+			block := types.NewBlock(trans,p2p.LOCALNODE,time.Now())
+
+
+			// 则清空交易池
+			core.ClearTxPool()
+
+			// 将交易和区块信息传入信封
+			blocks := make([]types.Block,1)
+			blocks = append(blocks,block)
+
+			envelopes = p2p.Envelope{
+				Transactions: transactions,
+				Blocks: blocks,
+			}
+
+		} else {
+			// 将交易信息传入信封
+			envelopes = p2p.Envelope{
+				Transactions: transactions,
+			}
+
+		}
+
+		// 远程同步信封数据
+		p2p.BroadCast(envelopes)
+
+	}
 	return nil
 }
 
 
 // TODO 获取某个用户地址的所有交易
-func (t *TransactionPoolAPI) GetTransactions(addr []byte) []types.Transaction {
+func GetTransactions(addr []byte) []types.Transaction {
 
 	return nil
 }
 
 // TODO 获取某个指定区块
-func (t *TransactionPoolAPI) GetBlcok(number int) types.Block {
+func GetBlcok(number int) types.Block {
 
 	return nil
 }

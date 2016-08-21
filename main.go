@@ -36,7 +36,7 @@ func main(){
 		//存储本地节点
 		p2p.LOCALNODE = node.NewNode(localIp,argv.LocalPort,argv.HttpServerPORT)
 		// 初始化keystore
-		utils.GenKeypair()
+		utils.GenKeypair("#"+localIp+"&"+strconv.Itoa(argv.LocalPort))
 
 		//将本机地址加入Nodes列表中
 		core.PutNodeToMEM(p2p.LOCALNODE.CoinBase,p2p.LOCALNODE)
@@ -44,11 +44,21 @@ func main(){
 		fmt.Println("本机初始化拥有节点",allNodes)
 
 		//如果传入了对端节点地址，则首先向远程节点同步
-		if argv.PeerIp != "" && argv.PeerPort !=0{
-				peerNode := node.NewNode(argv.PeerIp,argv.PeerPort,0)
-				p2p.NodeSync(&peerNode)
-				p2p.TransSync(peerNode)
-			}
+		//if argv.PeerIp != "" && argv.PeerPort !=0{
+				//peerNode := node.NewNode(argv.PeerIp,argv.PeerPort,0)
+				// 同步节点
+				//p2p.NodeSync(&peerNode)
+				//TODO 从远端节点同步区块
+				//p2p.BlockSync(&peerNode)
+				//TODO 同步最新区块的Hash
+				//p2p.BlockHeaderSync(&peerNode)
+				//TODO 同步交易池
+				//p2p.TxPoolSync(&peerNode)
+				//p2p.TransSync(peerNode)
+		//}else{
+			//未传入地址，则自己需要初始化创世区块
+			// TODO 构造创世区块
+		//}
 
 		//启用p2p服务
 		p2p.StratP2PServer(argv.LocalPort)

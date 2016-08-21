@@ -22,14 +22,18 @@ type Transaction struct {
 
 type Transactions []Transaction
 
-//需要将签名字符串反序列化 signUndecoded => encrypt.Signature
-func NewTransaction(from string,to string,value int,signUndecoded string) *Transaction{
-
-	return nil
+func NewTransaction(from string,to string,value int, timestamp time.Time) *Transaction{
+	return &Transaction{
+		From: from,
+		To: to,
+		Value: value,
+		TimeStamp: timestamp,
+	}
 }
 
-//验证交易
-func (t *Transaction)Verify()bool{
+//TODO 验证交易，发送者是否存在,余额是否足够,判断getBalance还有tx pool中这个from的交易，进行加减
+func (t *Transaction)VerifyTransaction()bool{
+	//self := t
 	return true
 }
 

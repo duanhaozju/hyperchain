@@ -48,7 +48,7 @@ func SaveNode(serverAddress string) node.Nodes{
 	return nodes
 }
 //从远端取得节点信息
-func GetNodes(serverAddress string) node.Nodes {
+func getNodes(serverAddress string) node.Nodes {
 	var client = establishConn(serverAddress)
 	defer client.Close()
 	//存储返回值
@@ -63,7 +63,7 @@ func GetNodes(serverAddress string) node.Nodes {
 		// TODO 如果出现错误，则无法连接目标节点
 	}
 	fmt.Println( nodes)
-
+//GetBasePath
 	return nodes
 }
 //向远端保存交易信息
@@ -86,7 +86,7 @@ func SaveTrans(serverNode node.Node,localNode node.Node,tx types.Transaction) ty
 	return trans
 }
 //与远端同步交易信息
-func GetTrans(serverNode node.Node) types.Transactions{
+func getTrans(serverNode node.Node) types.Transactions{
 	var client =establishConn(serverNode.P2PIP+":"+strconv.Itoa(serverNode.P2PPort))
 	defer client.Close()
 	// 存储交易的容器
@@ -95,7 +95,7 @@ func GetTrans(serverNode node.Node) types.Transactions{
 	var messageEnvelope = new (Envelope)
 	messageEnvelope.Nodes = append(messageEnvelope.Nodes,LOCALNODE)
 
-	err := client.Call("RemoteNode.RemoteGetTransaction", &messageEnvelope, &trans)
+	err := client.Call("RemoteNode.RemoteGetTransactions", &messageEnvelope, &trans)
 	fmt.Printf("\n从节点%s,同步交易数据:\n",serverNode)
 
 	//获取交易之后自动存入数据库
@@ -118,11 +118,11 @@ func GetTrans(serverNode node.Node) types.Transactions{
 func NodeSync(peerNode *node.Node) ([]node.Node,error){
 	serverAddress :=string(peerNode.P2PIP +":"+ strconv.Itoa(peerNode.P2PPort))
 	//取得所有远程节点
-	remotesNodes := GetNodes(serverAddress)
+	remotesNodes := getNodes(serverAddress)
 	fmt.Println("对端返回节点数据：",remotesNodes)
 	//将对端节点数据进行更新,对端存储的第一个节点都是对端节点的完整信息
 	*peerNode = remotesNodes[0]
-	fmt.Println("更换之后的对端节点信息",peerNode)
+	fmt.Println("交换之后的对端节点信息",peerNode)
 	//取得所有本地节点
 	AllNodes,_ := core.GetAllNodeFromMEM()
 	//检查节点是否已经存在
@@ -132,11 +132,6 @@ func NodeSync(peerNode *node.Node) ([]node.Node,error){
 			if localNode.P2PIP == remoteNode.P2PIP && localNode.P2PPort == remoteNode.P2PPort{
 				existFlag = true
 			}
-			//如果是指定对端节点
-			//if remoteNode.P2PIP == peerNode.P2PIP && remoteNode.P2PPort == peerNode.P2PPort{
-			//	peerNode.HttpPort = remoteNode.HttpPort
-			//	fmt.Println("修改对端节点信息：",peerNode)
-			//}
 		}
 		if !existFlag{
 			core.PutNodeToMEM(remoteNode.CoinBase,remoteNode)
@@ -164,20 +159,48 @@ func NodeSync(peerNode *node.Node) ([]node.Node,error){
 
 //从对端节点同步取得相应信息
 func TransSync(peerNode node.Node){
-	GetTrans(peerNode)
+	getTrans(peerNode)
 }
 
 //向全网节点广播信息
-//func BroadCast(envelope *Envelope) (int,error){
-//	allNodes,_:=core.GetAllNodeFromMEM()
-//	for _,remoteNode := range allNodes{
-//		if remoteNode != p2p.LOCALNODE{
-//			p2p.TransSync(new p2p.Envelope{})
-//		}
-//	}
-//	return nil,nil
-//}
+func BroadCast(envelope *Envelope)(int,error){
+	allNodes,_:=core.GetAllNodeFromMEM()
+	for _,remoteNode := range allNodes{
+		if remoteNode != LOCALNODE{
+			//TransSync(new p2p.Envelope{})
+			returnEnvelope,err := dataTransfer(envelope,remoteNode)
+			if err != nil{
+				panic(err)
+			}else{
+				fmt.Println("节点返回数据：",returnEnvelope)
+			}
+		}
+	}
+	return 0,nil
+}
 
+func dataTransfer(envelop *Envelope, peerNode node.Node)(Envelope,error){
+	serverAddress :=string(peerNode.P2PIP +":"+ strconv.Itoa(peerNode.P2PPort))
+	var client =establishConn(serverAddress)
+	defer client.Close()
+	//用于存储返回信息
+	var returnMessage Envelope
+	err := client.Call("RemoteNode.RemoteDataTransfer", &envelop, &returnMessage)
+	return returnMessage,err
+}
+
+//
+//func BlockSync(peerNode *node.Node) ([]types.Block,error){
+//	//TODO 区块同步，由于没有顺序，所以只是将区块信息从对端节点同步回来
+//}
+//
+//func BlockHeaderSync(peerNode *node.Node)(string,error){
+//	//TODO 将latestBlock的Hash同步回来
+//}
+//
+//func TxPoolSync(peerNode *node.Nodes)(types.Transactions,error){
+//	// TODO 将对端交易池中的数据同步回来
+//}
 // 异步调用
 //quotient := new(Quotient)
 //divCall := client.Go("Arith.Divide", args, quotient, nil)

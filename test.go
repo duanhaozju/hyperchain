@@ -120,4 +120,30 @@ func main() {
 	core.PutBalanceToMEM("yid", balance)
 	fmt.Println(core.GetBalanceFromMEM("yin"))
 	fmt.Println(core.GetAllBalanceFromMEM())*/
+
+	core.InitDB(1000)
+	trans := types.Transaction{
+		From:"345456",
+	}
+	core.AddTransactionToTxPool(trans)
+	fmt.Println(core.GetTxPoolCapacity())
+	core.AddTransactionToTxPool(trans)
+	fmt.Println(core.GetTxPoolCapacity())
+	core.AddTransactionToTxPool(trans)
+	fmt.Println(core.GetTxPoolCapacity())
+	core.AddTransactionToTxPool(trans)
+	fmt.Println(core.GetTxPoolCapacity())
+	core.AddTransactionToTxPool(trans)
+
+	fmt.Println(core.GetTxPoolCapacity())
+
+	fmt.Println(core.TxPoolIsFull())
+	fmt.Println(core.GetTxPool())
+	core.ClearTxPool()
+	fmt.Println(core.GetTxPoolCapacity())
+	core.AddTransactionToTxPool(trans)
+	fmt.Println(core.GetTxPoolCapacity())
+	core.AddTransactionToTxPool(trans)
+	fmt.Println(core.GetTxPoolCapacity())
+
 }

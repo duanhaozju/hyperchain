@@ -26,8 +26,9 @@ var usernames = []string{ "张三",
 					"赵六",
 					"钱七",
 					}
+const accountsFilePath = "./keystore.txt"
 
-func GenKeypair(){
+func GenKeypair(prefix string){
 	var accounts Accounts
 	//生成五个账户
 	for _,username := range usernames{
@@ -47,7 +48,6 @@ func GenKeypair(){
 	writeAccountsTOFile(accFilePath,accounts)
 }
 
-const accountsFilePath = "./keystore/keystore.txt"
 func writeAccountsTOFile(filepath string,accounts Accounts){
 	fmt.Println("keystore路径",filepath)
 	//for idx,account := range accounts{

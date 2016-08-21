@@ -7,6 +7,7 @@ import (
 	"os"
 	"hyperchain-alpha/utils"
 	"hyperchain-alpha/core/types"
+	"fmt"
 )
 
 //type Transaction struct{
@@ -32,7 +33,6 @@ func Index(w http.ResponseWriter, r *http.Request) {
 
 	//TODO 读取keystore文件夹，包括公钥、私钥、用户名，有个用户名与私钥的map对应表 map[string]string
 	accounts,_ := utils.GetAccount()
-	//TODO 传入页面模板
 
 	transactions,_ := core.GetAllTransactionFromLDB()
 
@@ -41,22 +41,6 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		Trans:transactions,
 		Accounts:accounts,
 	})
-
-	//tmpl.Execute(w,Transacctions{
-	//	Transaction{
-	//		"mxxim",
-	//		"sammy",
-	//		10,
-	//		"20160909",
-	//	},
-	//	Transaction{
-	//		"sammy",
-	//		"mxxim",
-	//		10,
-	//		"20160909",
-	//	},
-	//})
-
 }
 
 
