@@ -48,8 +48,8 @@ func main(){
 		log.Println("本机初始化拥有节点",allNodes)
 
 		//如果传入了对端节点地址，则首先向远程节点同步
-		//if argv.PeerIp != "" && argv.PeerPort !=0{
-				//peerNode := node.NewNode(argv.PeerIp,argv.PeerPort,0)
+		if argv.PeerIp != "" && argv.PeerPort !=0{
+				peerNode := node.NewNode(argv.PeerIp,argv.PeerPort,0)
 				// 同步节点
 				p2p.NodeSync(&peerNode)
 				//从远端节点同步区块

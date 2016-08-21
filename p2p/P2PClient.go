@@ -241,7 +241,7 @@ func TxPoolSync(peerNode *node.Node)(types.Transactions,error){
 	//获取交易之后自动存入数据库
 	for _,tx := range trans{
 		//验证
-		if tx.Verify() {
+		if tx.VerifyTransaction(core.GetBalanceFromMEM(tx.From),core.GetTransactionsFromTxPool()) {
 			//先放入池子中
 			core.AddTransactionToTxPool(tx)
 			//判断是否满

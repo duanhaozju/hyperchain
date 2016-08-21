@@ -130,7 +130,7 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 	//首先处理transaction
 	for _,tran := range trans{
 		//先验证
-		if tran.Verify(){
+		if tran.VerifyTransaction(core.GetBalanceFromMEM(tran.From),core.GetTransactionsFromTxPool()){
 			//先存储 tran
 			core.AddTransactionToTxPool(tran)
 			// 判断txPool是否满
