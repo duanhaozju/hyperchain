@@ -177,7 +177,6 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 
 	//处理返回值
 	retEnvelope.Chain = core.GetChain()
-
 	return nil
 }
 func StratP2PServer(p2pServerPort int){
