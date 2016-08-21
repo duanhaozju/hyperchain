@@ -10,6 +10,10 @@ import (
 	"hyperchain-alpha/jsonrpc/routers"
 	"hyperchain-alpha/core"
 	"hyperchain-alpha/core/node"
+	"hyperchain-alpha/core/types"
+	"hyperchain-alpha/encrypt"
+	"time"
+	"encoding/json"
 )
 
 type argT struct {
@@ -57,6 +61,7 @@ func main(){
 		}else{
 			//未传入地址，则自己需要初始化创世区块
 			// TODO 构造创世区块
+			CreateInitBlock()
 		}
 
 		//启用p2p服务
@@ -73,4 +78,48 @@ func main(){
 
 		return nil
 	})
+}
+
+//-- 创建初始块
+func CreateInitBlock()  {
+	//-- 获取创世快from用户
+	godAccount := utils.GetGodAccount()[0]
+	//-- 获取所有的提前生成好的account
+	accounts, err := utils.GetAccount()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	//-- 为account分别构造transaction 五个)
+	//-- from 为上面的from用户
+	//-- value 为10000, 20000, 30000 ...
+	var transactions types.Transactions
+	for i, account := range accounts {
+		t := types.Transaction {
+			From: encrypt.EncodePublicKey(godAccount["god"].PubKey),
+			To: encrypt.EncodePublicKey(account[0].PubKey),
+			Value: (i+1) * 10000,
+			TimeStamp: time.Now().Unix(),
+		}
+		by := []byte(t.From + t.To + strconv.Itoa(t.Value) + strconv.FormatInt(t.TimeStamp, 10))
+		signature, _ := encrypt.Sign(godAccount["god"].PriKey, by)
+		t.Signature = signature
+		transactions = append(transactions, t)
+	}
+
+	//-- 打包创世块
+	block := types.Block{
+		ParentHash: encrypt.GetHash("0"),
+		Transactions: transactions,
+		TimeStramp: time.Now().Unix(),
+		CoinBase: p2p.LOCALNODE,
+		MerkleRoot: "root",
+	}
+	txBStr, _ := json.Marshal(block.Transactions)
+	coinbaseBStr , _ := json.Marshal(block.CoinBase)
+	block.BlockHash = encrypt.GetHash([]byte(block.ParentHash + string(txBStr) + strconv.FormatInt(block.TimeStramp, 10) + string(coinbaseBStr)) + block.MerkleRoot)
+	//-- 将创世块存入数据库
+	core.PutBlockToLDB(block.BlockHash, block)
+	//-- 将初始block的BlockHash存如Chain
+	core.UpdateChain(block.BlockHash)
 }

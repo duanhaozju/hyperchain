@@ -125,20 +125,59 @@ func (r *RemoteNode) RemoteGetPoolTransactions(envelop *Envelope,retEnvelop *Env
 
 //接收广播数据并进行处理的方法
 func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope) error{
-	//blocks := envelope.Blocks
-	//trans    := envelope.Transactions
+	blocks := envelope.Blocks
+	trans    := envelope.Transactions
 	//首先处理transaction
-	//for _,tran := range trans{
-		//先存储 tran
-		// 判断txPool是否满
-		//如果满
-		//1. 取出trans 池子中所有数据
-		//2. 打包成Block
-		//3. 清空txPool
-		//4. 存储 Block
-		
-		//如果非满，直接判断结束
-	//}
+	for _,tran := range trans{
+		//先验证
+		if tran.Verify(){
+			//先存储 tran
+			core.AddTransactionToTxPool(tran)
+			// 判断txPool是否满
+			if core.TxPoolIsFull(){
+				//如果满
+				//1. 取出trans 池子中所有数据\
+				transaction := core.GetTransactionsFromTxPool()
+				//2. 打包成Block
+				// 打包成一个区块
+				newBlock := types.NewBlock(transaction,core.GetLashestBlockHash(),LOCALNODE)
+				//3. 清空txPool
+				core.ClearTxPool()
+				//4. 存储 Block
+				core.PutBlockToLDB(newBlock.BlockHash,newBlock)
+				//5.  更新整个chain
+				core.UpdateChain(newBlock.BlockHash)
+				//review 是否需要对外广播新打包的区块
+				//review 需要防止广播风暴
+				//var envelope Envelope
+				//envelope.Blocks = append(envelope.Blocks,newBlock)
+				// review 服务端调用客户端方法，这是会导致循环的，正确处理方式是，将block数据返回给客户端，让客户端再发起一次广播
+				//BroadCast(envelope)
+
+			}else{
+				//如果非满，直接判断结束
+			}
+		}else{
+			log.Fatalln("交易验证失败，签名无效",tran)
+		}
+	}
+
+	// 然后处理block
+	for _,block := range blocks {
+		//需要验证block是否存在
+		if ok,_ := core.GetBlockFromLDB(block.BlockHash); ok != nil{
+			//block存在
+		}else{
+			//block不存在
+			core.PutBlockToLDB(block.BlockHash,block)
+			// TODO更新整个chain
+			core.UpdateChain(block.BlockHash)
+		}
+	}
+
+	//处理返回值
+	retEnvelope.Chain = core.GetChain()
+
 	return nil
 }
 func StratP2PServer(p2pServerPort int){

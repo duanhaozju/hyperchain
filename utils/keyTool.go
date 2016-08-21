@@ -79,3 +79,11 @@ func check(e error){
 		panic(e)
 	}
 }
+
+func GetGodAccount()Accounts{
+	accFilePath := path.Join(GetBasePath(),"./godaccount")
+	accountData := readAccountFromFile(accFilePath)
+	var accounts Accounts
+	json.Unmarshal(accountData,&accounts)
+	return accounts
+}

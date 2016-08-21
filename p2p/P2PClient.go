@@ -249,8 +249,9 @@ func TxPoolSync(peerNode *node.Node)(types.Transactions,error){
 				//panic(error.Error("同步区块错误，远端交易池已满，在单线程条件下不允许发生"))
 				log.Fatalln("同步区块错误，远端交易池已满，在单线程条件下不允许发生")
 				//transactions := core.GetTransactionsFromTxPool()
-				// TODO 打包区块
-				// TODO 广播区块
+				// review 是否需要打包区块？
+
+				// review 是否需要广播区块？
 
 			}else{
 				log.Println("同步得到交易数据并存储到交易池",tx)
