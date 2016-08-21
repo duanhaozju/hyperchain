@@ -52,9 +52,24 @@ func GetAllBalanceFromMEM() ([]types.Balance) {
 }
 
 func UpdateBalance(block types.Block)  {
-	//for _, trans := range block.Transactions {
-	//
-	//}
+	memBalanceMap.lock.Lock()
+	defer memBalanceMap.lock.Unlock()
+	for _, trans := range block.Transactions {
+		b := memBalanceMap.data[trans.From]
+		b.Value -= trans.Value
+		memBalanceMap.data[trans.From] = b
+		if _, ok := memBalanceMap.data[trans.To]; ok {
+			b = memBalanceMap.data[trans.To]
+			b.Value += trans.Value
+			memBalanceMap.data[trans.To] = b
+		}else {
+			b = types.Balance{
+				AccountPublicKeyHash: trans.To,
+				Value: trans.Value,
+			}
+			memBalanceMap.data[trans.To] = b
+		}
+	}
 }
 
 /*
