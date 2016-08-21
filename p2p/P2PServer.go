@@ -82,7 +82,8 @@ func (r *RemoteNode) RemoteSaveTransaction(envelope *Envelope,trans *types.Trans
 	return nil
 }
 
-func (r *RemoteNode) RemoteGetTransaction(envelope *Envelope,trans *types.Transactions) error{
+//让客户端远程调用的方法，用于客户端同步现有交易信息
+func (r *RemoteNode) RemoteGetTransactions(envelope *Envelope,trans *types.Transactions) error{
 	remoteNode := envelope.Nodes[0]
 	//TODO 远程取得交易信息
 	fmt.Printf("远端请求同步,请求来源：%s\n",remoteNode)
@@ -91,6 +92,23 @@ func (r *RemoteNode) RemoteGetTransaction(envelope *Envelope,trans *types.Transa
 	return *err
 }
 
+//接收广播数据并进行处理的方法
+func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope) error{
+	blocks := envelope.Blocks
+	trans    := envelope.Transactions
+	//首先处理transaction
+	for _,tran := range trans{
+		//先存储 tran
+		// 判断txPool是否满
+		//如果满
+		//1. 取出trans 池子中所有数据
+		//2. 打包成Block
+		//3. 清空txPool
+		//4. 存储 Block
+		
+		//如果非满，直接判断结束
+	}
+}
 func StratP2PServer(p2pServerPort int){
 	remoteNode := new(RemoteNode)
 	rpc.Register(remoteNode)

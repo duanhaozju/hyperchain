@@ -5,10 +5,10 @@ import (
 	"github.com/gorilla/mux"
 	"fmt"
 	"net/http"
-	"strconv"
-	"time"
+	//"strconv"
+	//"time"
 	"hyperchain-alpha/core"
-	"hyperchain-alpha/core/types"
+	//"hyperchain-alpha/core/types"
 )
 
 func TransactionIndex(w http.ResponseWriter, r *http.Request) {
@@ -32,16 +32,16 @@ func TransacionShow(w http.ResponseWriter, r *http.Request) {
 // TODO 增加一条记录
 // 处理请求 : POST "/trans"
 func TransactionCreate(w http.ResponseWriter, r *http.Request) {
-	var transaction types.Transaction
-	r.ParseForm()
+	//var transaction types.Transaction
+	//r.ParseForm()
 	//TODO 转成处理JSON MXM
-	value,_ := strconv.Atoi(r.Form["value"][0])
-	transaction = types.Transaction{
-		From: r.Form["from"][0],
-		To: r.Form["to"][0],
-		Value: value,
-		TimeStamp: time.Now(),
-	}
+	//value,_ := strconv.Atoi(r.Form["value"][0])
+	//transaction = types.Transaction{
+	//	From: r.Form["from"][0],
+	//	To: r.Form["to"][0],
+	//	Value: value,
+	//	TimeStamp: time.Now(),
+	//}
 
 
 	//TODO Sendtransaction(jsondata) MXM 签名验证

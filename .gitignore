@@ -88,3 +88,6 @@ db/*
 
 # cache
 cache/*
+
+# keystore
+#keystore.txt
