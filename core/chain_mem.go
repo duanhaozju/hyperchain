@@ -6,81 +6,38 @@ import (
 )
 
 type memChain struct {
-	data map[string]types.Chain
+	data types.Chain
 	lock sync.RWMutex
 }
 
 func newMemChain() *memChain {
 	return &memChain{
-		data: make(map[string]types.Chain),
+		data: types.Chain{
+			Height: 0,
+		},
 	}
 }
-
 var memChainMap *memChain;
 
-//-- 将Chain存入内存
-func PutChainToMEM(key string, t types.Chain){
-	memChainMap.lock.Lock()
-	defer memChainMap.lock.Unlock()
-	memChainMap.data[key] = t
-}
-
-/*GetLastestBlockHash()
-UpdateChain(hash)*/
-//-- 在MEM中 根据Key获取的Chain
-func GetChainFromMEM(key string) types.Chain{
+//-- 获取最新的blockhash
+func GetLashestBlockHash() string {
 	memChainMap.lock.RLock()
 	defer memChainMap.lock.RUnlock()
-	return memChainMap.data[key]
+	return memChainMap.data.LastestBlockHash
 }
 
-//-- 从MEM中删除Chain
-func DeleteChainFromMEM(key string) {
+//-- 更新Chain，即更新最新的blockhash 并将height加1
+//-- blockHash为最新区块的hash
+func UpdateChain(blockHash string)  {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
-	delete(memChainMap.data, key)
+	memChainMap.data.LastestBlockHash = blockHash
+	memChainMap.data.Height += 1
 }
 
-//-- 从MEM中获取所有Chain
-func GetAllChainFromMEM() ([]types.Chain) {
+//-- 获取区块的高度
+func GetHeightOfChain() int {
 	memChainMap.lock.RLock()
 	defer memChainMap.lock.RUnlock()
-	var ts []types.Chain
-	for _, m := range memChainMap.data {
-		ts = append(ts, m)
-	}
-	return ts
+	return memChainMap.data.Height
 }
-
-/*
-//-- 将Chain存入内存
-func PutChainToMEM(key string, t types.Chain) error{
-	return putChain(memDB, []byte(key), t)
-}
-
-//-- 在MEM中 根据Key获取的Chain
-func GetChainFromMEM(key string) (types.Chain, error){
-	return getChain(memDB, []byte(key))
-}
-
-//-- 从MEM中删除Chain
-func DeleteChainFromMEM(key string) error {
-	return deleteChain(memDB, []byte(key))
-}
-
-//-- 从MEM中获取所有Chain
-func GetAllChainFromMEM() ([]types.Chain, error) {
-	var ts []types.Chain
-
-	Keys := memDB.Keys()
-	var err error
-	for _, key := range Keys {
-		if string(key[:len(chainHeaderKey)]) == string(chainHeaderKey) {
-			var t types.Chain
-			value, _ := memDB.Get(key)
-			err = decondeFromBytes(value, &t)
-			ts = append(ts, t)
-		}
-	}
-	return ts, err
-}*/
