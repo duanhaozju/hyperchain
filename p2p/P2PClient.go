@@ -40,9 +40,8 @@ func SaveNode(serverAddress string) node.Nodes{
 
 	err := client.Call("RemoteNode.RemoteSaveNodes", &messageEnvelope, &nodes)
 	if err != nil {
+		//review 如果出现错误，就删除该节点
 		log.Fatal("Remote error:", err)
-		// TODO 如果出现错误，就删除该节点
-		//
 	}
 	fmt.Println( nodes)
 	return nodes
@@ -59,8 +58,9 @@ func getNodes(serverAddress string) node.Nodes {
 
 	err := client.Call("RemoteNode.RemoteGetNodes", &messageEnvelope, &nodes)
 	if err != nil {
+		//review 如果出现错误，则无法连接目标节点
 		log.Fatal("Remote error:", err)
-		// TODO 如果出现错误，则无法连接目标节点
+
 	}
 	fmt.Println( nodes)
 //GetBasePath
@@ -138,7 +138,7 @@ func NodeSync(peerNode *node.Node) ([]node.Node,error){
 		}
 	}
 
-	//TODO GetNodes方法只在刚刚加入时调用，需要向所有的取得节点发送自己的节点消息
+	//review GetNodes方法只在刚刚加入时调用，需要向所有的取得节点发送自己的节点消息
 	//向所有新取得的列表中的节点广播自己的信息
 	for _,remoteNode := range AllNodes{
 		//如果是本地节点
@@ -189,22 +189,84 @@ func dataTransfer(envelop *Envelope, peerNode node.Node)(Envelope,error){
 	return returnMessage,err
 }
 
-
+// block同步方法，从服务端节点将服务端的block同步下来
 func BlockSync(peerNode *node.Node) ([]types.Block,error){
-	//TODO 区块同步，由于没有顺序，所以只是将区块信息从对端节点同步回来
-	return nil,nil
+	//review 区块同步，由于没有顺序，所以只是将区块信息从对端节点同步回来
+	// 连接对端
+	serverAddress :=string(peerNode.P2PIP +":"+ strconv.Itoa(peerNode.P2PPort))
+	var client =establishConn(serverAddress)
+	defer client.Close()
+	//用于发送信息
+	var envelop Envelope
+	envelop.Nodes = append(envelop.Nodes,LOCALNODE)
+	//用于存储返回信息
+	var returnEnvelop Envelope
+	err := client.Call("RemoteNode.RemoteGetBlocks", &envelop, &returnEnvelop)
+	return returnEnvelop.Blocks,err
 }
 
-func BlockHeaderSync(peerNode *node.Node)(string,error){
-	//TODO 将latestBlock的Hash同步回来
-	return "",nil
+// block Header 同步方法，用于将Chain数据同步回来，用于实现数据回溯
+func ChainSync(peerNode *node.Node)(types.Chain,error){
+	//review 将Chain信息同步回来
+	// 连接对端
+	serverAddress :=string(peerNode.P2PIP +":"+ strconv.Itoa(peerNode.P2PPort))
+	var client =establishConn(serverAddress)
+	defer client.Close()
+	//用于发送信息
+	var envelop Envelope
+	envelop.Nodes = append(envelop.Nodes,LOCALNODE)
+	//用于存储返回信息
+	var returnEnvelop Envelope
+	err := client.Call("RemoteNode.RemoteGetChain", &envelop, &returnEnvelop)
+	return returnEnvelop.Chain,err
 }
 
-func TxPoolSync(peerNode *node.Nodes)(types.Transactions,error){
-	// TODO 将对端交易池中的数据同步回来
-	return nil,nil
+func TxPoolSync(peerNode *node.Node)(types.Transactions,error){
+	// review 将对端交易池中的数据同步回来
+	serverAddress :=string(peerNode.P2PIP +":"+ strconv.Itoa(peerNode.P2PPort))
+	var client =establishConn(serverAddress)
+	defer client.Close()
+	// 存储交易的容器
+	var trans types.Transactions
+	//信息传输信封
+	var messageEnvelope = new (Envelope)
+	messageEnvelope.Nodes = append(messageEnvelope.Nodes,LOCALNODE)
+
+	var retEnvelope Envelope
+
+	err := client.Call("RemoteNode.RemoteGetPoolTransactions", &messageEnvelope, &retEnvelope)
+
+	//从信封中取出数据
+	trans = retEnvelope.Transactions
+	//获取交易之后自动存入数据库
+	for _,tx := range trans{
+		//验证
+		if tx.Verify() {
+			//先放入池子中
+			core.AddTransactionToTxPool(tx)
+			//判断是否满
+			if (core.TxPoolIsFull()){
+				//panic(error.Error("同步区块错误，远端交易池已满，在单线程条件下不允许发生"))
+				log.Fatalln("同步区块错误，远端交易池已满，在单线程条件下不允许发生")
+				//transactions := core.GetTransactionsFromTxPool()
+				// TODO 打包区块
+				// TODO 广播区块
+
+			}else{
+				log.Println("同步得到交易数据并存储到交易池",tx)
+			}
+		}else{
+			log.Fatalf("\n交易验证失败，无法存储！%v\n",tx)
+		}
+	}
+	if err != nil {
+		log.Fatal("服务器错误:", err)
+	}
+	return trans,err
 }
-// 异步调用
+
+
+// 当异步调用时候可以采用以下方法，可以大幅提高效率
 //quotient := new(Quotient)
 //divCall := client.Go("Arith.Divide", args, quotient, nil)
 //replyCall := <-divCall.Done	// will be equal to divCall

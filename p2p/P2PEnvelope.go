@@ -13,4 +13,5 @@ type Envelope struct {
 	Transactions []types.Transaction
 	Blocks []types.Block
 	Nodes []node.Node
+	Chain types.Chain
 }

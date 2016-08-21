@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 	"github.com/mkideal/cli"
-	"fmt"
 	"strconv"
 	"hyperchain-alpha/p2p"
 	"hyperchain-alpha/utils"
@@ -28,7 +27,7 @@ func main(){
 		ctx.String("P2P_ip=%s, \tP2P_port=%d,\t本地http端口:%d,\t本地P2P监听端口:%d,\tTest Flag:%v\n", argv.PeerIp, argv.PeerPort,argv.HttpServerPORT,argv.LocalPort,argv.Test)
 		//正常启动相应服务
 		localIp := utils.GetIpAddr()
-		fmt.Printf("本机ip地址为："+localIp+ "\n")
+		log.Printf("本机ip地址为："+localIp+ "\n")
 
 		//初始化数据库,传入数据库地址自动生成数据库文件
 		core.InitDB(argv.LocalPort)
@@ -41,19 +40,19 @@ func main(){
 		//将本机地址加入Nodes列表中
 		core.PutNodeToMEM(p2p.LOCALNODE.CoinBase,p2p.LOCALNODE)
 		allNodes,_ := core.GetAllNodeFromMEM()
-		fmt.Println("本机初始化拥有节点",allNodes)
+		log.Println("本机初始化拥有节点",allNodes)
 
 		//如果传入了对端节点地址，则首先向远程节点同步
 		if argv.PeerIp != "" && argv.PeerPort !=0{
 				peerNode := node.NewNode(argv.PeerIp,argv.PeerPort,0)
 				// 同步节点
 				p2p.NodeSync(&peerNode)
-				//TODO 从远端节点同步区块
+				//从远端节点同步区块
 				p2p.BlockSync(&peerNode)
-				//TODO 同步最新区块的Hash
-				p2p.BlockHeaderSync(&peerNode)
-				//TODO 同步交易池
-				//p2p.TxPoolSync(&peerNode)
+				// TODO 同步最新区块的Hash 即同步chain
+				//p2p.ChainSync(&peerNode)
+				// 同步交易池
+				p2p.TxPoolSync(&peerNode)
 				//p2p.TransSync(peerNode)
 		}else{
 			//未传入地址，则自己需要初始化创世区块

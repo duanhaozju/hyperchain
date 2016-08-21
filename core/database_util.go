@@ -19,7 +19,6 @@ var (
 	nodeHeaderKey = []byte("nodeHeaderKey")
 )
 
-//TODO 改变成更高效的方式编码 解码
 //-- 将一个对象编码成[]byte
 //-- 这个版本先用json.Marshal序列化
 func encodeToBytes(val interface{}) ([]byte, error) {

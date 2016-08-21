@@ -85,12 +85,43 @@ func (r *RemoteNode) RemoteSaveTransaction(envelope *Envelope,trans *types.Trans
 //让客户端远程调用的方法，用于客户端同步现有交易信息
 func (r *RemoteNode) RemoteGetTransactions(envelope *Envelope,trans *types.Transactions) error{
 	remoteNode := envelope.Nodes[0]
-	//TODO 远程取得交易信息
+	//远程取得交易信息
 	fmt.Printf("远端请求同步,请求来源：%s\n",remoteNode)
 	var err = new(error)
 	*trans,*err = core.GetAllTransactionFromLDB()
 	return *err
 }
+
+//客户端请求block信息，需要携带自己的节点信息
+func (r *RemoteNode) RemoteGetBlocks(envelop *Envelope,retEnvelop *Envelope) error{
+	// 将blocks信息返回给请求节点，如果block数据太多的话，数据的传输由底层rpc实现控制
+	//请求的节点
+	peerNode := envelop.Nodes[0]
+	log.Println("请求来自对端：",peerNode)
+	blocks,err := core.GetAllBlockFromLDB()
+	(*retEnvelop).Blocks = blocks
+	return err
+
+}
+//客户端请求chain信息，需要携带自己的节点信息
+func (r *RemoteNode) RemoteGetChain(envelop *Envelope,retEnvelop *Envelope) error{
+	//请求的节点
+	peerNode := envelop.Nodes[0]
+	log.Println("请求来自对端：",peerNode)
+	chain := core.GetAllChainFromMEM()
+	(*retEnvelop).Chain = chain[0]
+	return nil
+}
+
+func (r *RemoteNode) RemoteGetPoolTransactions(envelop *Envelope,retEnvelop *Envelope) error{
+	peerNode := envelop.Nodes[0]
+	log.Println("请求来自对端：",peerNode)
+	var transactions types.Transactions
+	transactions = core.GetTransactionsFromTxPool()
+	(*retEnvelop).Transactions = transactions
+	return nil
+}
+
 
 //接收广播数据并进行处理的方法
 func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope) error{
