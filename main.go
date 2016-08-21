@@ -113,6 +113,7 @@ func CreateInitBlock()  {
 		by := []byte(t.From + t.To + strconv.Itoa(t.Value) + strconv.FormatInt(t.TimeStamp, 10))
 		signature, _ := encrypt.Sign(godAccount["god"].PriKey, by)
 		t.Signature = signature
+		core.PutTransactionToLDB(t.Hash(), t)
 		transactions = append(transactions, t)
 	}
 
@@ -134,5 +135,6 @@ func CreateInitBlock()  {
 
 	//-- 初始初始化balance
 	core.UpdateBalance(block)
-	fmt.Println(core.GetAllBalanceFromMEM())
+
+	fmt.Println(core.GetAllTransactionFromLDB())
 }
