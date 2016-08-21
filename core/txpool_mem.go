@@ -23,7 +23,7 @@ func newMemTxPool() *memTxPool {
 }
 
 //-- 获取TxPool中所有的交易
-func GetTransactionsFromTxPool() []types.Transactions {
+func GetTransactionsFromTxPool() types.Transactions {
 	memTxPoolMap.lock.RLock()
 	defer memTxPoolMap.lock.RUnlock()
 	return memTxPoolMap.txPool.Transactions

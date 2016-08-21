@@ -94,10 +94,10 @@ func (r *RemoteNode) RemoteGetTransactions(envelope *Envelope,trans *types.Trans
 
 //接收广播数据并进行处理的方法
 func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope) error{
-	blocks := envelope.Blocks
-	trans    := envelope.Transactions
+	//blocks := envelope.Blocks
+	//trans    := envelope.Transactions
 	//首先处理transaction
-	for _,tran := range trans{
+	//for _,tran := range trans{
 		//先存储 tran
 		// 判断txPool是否满
 		//如果满
@@ -107,7 +107,8 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 		//4. 存储 Block
 		
 		//如果非满，直接判断结束
-	}
+	//}
+	return nil
 }
 func StratP2PServer(p2pServerPort int){
 	remoteNode := new(RemoteNode)

@@ -192,14 +192,17 @@ func dataTransfer(envelop *Envelope, peerNode node.Node)(Envelope,error){
 
 func BlockSync(peerNode *node.Node) ([]types.Block,error){
 	//TODO 区块同步，由于没有顺序，所以只是将区块信息从对端节点同步回来
+	return nil,nil
 }
 
 func BlockHeaderSync(peerNode *node.Node)(string,error){
 	//TODO 将latestBlock的Hash同步回来
+	return "",nil
 }
 
 func TxPoolSync(peerNode *node.Nodes)(types.Transactions,error){
 	// TODO 将对端交易池中的数据同步回来
+	return nil,nil
 }
 // 异步调用
 //quotient := new(Quotient)

@@ -7,7 +7,7 @@ import (
 )
 
 func TestGenKeypair(t *testing.T) {
-	GenKeypair()
+	GenKeypair("123")
 }
 
 func TestGetAccount(t *testing.T) {
