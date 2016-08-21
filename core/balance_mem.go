@@ -55,11 +55,19 @@ func UpdateBalance(block types.Block)  {
 	memBalanceMap.lock.Lock()
 	defer memBalanceMap.lock.Unlock()
 	for _, trans := range block.Transactions {
-		memBalanceMap.data[trans.From] -= trans.Value
+		b := memBalanceMap.data[trans.From]
+		b.Value -= trans.Value
+		memBalanceMap.data[trans.From] = b
 		if _, ok := memBalanceMap.data[trans.To]; ok {
-			memBalanceMap.data[trans.To] += trans.Value
+			b = memBalanceMap.data[trans.To]
+			b.Value += trans.Value
+			memBalanceMap.data[trans.To] = b
 		}else {
-			memBalanceMap.data[trans.To] = trans.Value
+			b = types.Balance{
+				AccountPublicKeyHash: trans.To,
+				Value: trans.Value,
+			}
+			memBalanceMap.data[trans.To] = b
 		}
 	}
 }

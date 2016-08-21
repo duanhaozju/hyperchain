@@ -135,4 +135,5 @@ func CreateInitBlock()  {
 
 	//-- 初始初始化balance
 	core.UpdateBalance(block)
+	fmt.Println(core.GetAllBalanceFromMEM())
 }
