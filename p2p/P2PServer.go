@@ -147,6 +147,8 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 				core.PutBlockToLDB(newBlock.BlockHash,*newBlock)
 				//5.  更新整个chain
 				core.UpdateChain(newBlock.BlockHash)
+				//6. TODO 更新balance表
+				//review core.UpdateBalance(newBlock)
 				//review 是否需要对外广播新打包的区块
 				//review 需要防止广播风暴
 				//var envelope Envelope
@@ -168,8 +170,10 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 		if _,ok := core.GetBlockFromLDB(block.BlockHash); ok != nil{
 			//block不存在
 			core.PutBlockToLDB(block.BlockHash,block)
-			// TODO更新整个chain
+			// review 更新整个chain
 			core.UpdateChain(block.BlockHash)
+			// TODO 更新balance表
+			//review core.UpdateBalance(block)
 		}else{
 			//block存在
 		}
