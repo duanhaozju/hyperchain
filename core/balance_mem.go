@@ -19,24 +19,25 @@ func newMemBalance() *memBalance {
 var memBalanceMap *memBalance;
 
 //-- 将Balance存入内存
-func PutBalanceToMEM(key string, t types.Balance){
+func PutBalanceToMEM(t types.Balance){
 	memBalanceMap.lock.Lock()
 	defer memBalanceMap.lock.Unlock()
+	key := t.AccountPublicKeyHash
 	memBalanceMap.data[key] = t
 }
 
 //-- 在MEM中 根据Key获取的Balance
-func GetBalanceFromMEM(key string) types.Balance{
+func GetBalanceFromMEM(accountPublicKeyHash string) types.Balance{
 	memBalanceMap.lock.RLock()
 	defer memBalanceMap.lock.RUnlock()
-	return memBalanceMap.data[key]
+	return memBalanceMap.data[accountPublicKeyHash]
 }
 
 //-- 从MEM中删除Balance
-func DeleteBalanceFromMEM(key string) {
+func DeleteBalanceFromMEM(accountPublicKeyHash string) {
 	memBalanceMap.lock.Lock()
 	defer memBalanceMap.lock.Unlock()
-	delete(memBalanceMap.data, key)
+	delete(memBalanceMap.data, accountPublicKeyHash)
 }
 
 //-- 从MEM中获取所有Balance

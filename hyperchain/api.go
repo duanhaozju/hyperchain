@@ -53,13 +53,13 @@ func (t *TransactionPoolAPI) SendTransaction(args TxArgs) error {
 	signature,_ := sign(args.From,[]byte(args.From + args.To + strconv.Itoa(args.Value) + args.Timestamp))
 
 	//TODO 签名交易
-	tx.Singnature = signature // 已经签名的交易
+	tx.Signature = signature // 已经签名的交易
 
 	//TODO 验证交易，发送者是否存在，余额是否足够
 
 
 	// TODO  数据 存储到交易池
-	core.PutTransactionToLDB(transaction.Hash(),transaction)
+	core.PutTransactionToLDB(tx.Hash(),tx)
 	//TODO 判断交易池是否满
 	//TODO if ture
 	// TODO 1.打包区块 2.清空交易池 MXM ====

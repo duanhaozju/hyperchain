@@ -11,6 +11,10 @@ import (
 	"hyperchain-alpha/jsonrpc/routers"
 	"hyperchain-alpha/core"
 	"hyperchain-alpha/core/node"
+	"hyperchain-alpha/core/types"
+	"hyperchain-alpha/encrypt"
+	"time"
+	"encoding/json"
 )
 
 type argT struct {
@@ -74,4 +78,41 @@ func main(){
 
 		return nil
 	})
+}
+
+//-- 创建初始块
+func CreateInitBlock()  {
+	godAccount := utils.GetGodAccount()[0]
+	accounts, err := utils.GetAccount()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	var transactions types.Transactions
+	for i, account := range accounts {
+		t := types.Transaction {
+			From: encrypt.EncodePublicKey(godAccount["god"].PubKey),
+			To: encrypt.EncodePublicKey(account[0].PubKey),
+			Value: (i+1) * 10000,
+			TimeStamp: time.Now().Unix(),
+		}
+		by := []byte(t.From + t.To + strconv.Itoa(t.Value) + strconv.FormatInt(t.TimeStamp, 10))
+		signature, _ := encrypt.Sign(godAccount["god"].PriKey, by)
+		t.Signature = signature
+		transactions = append(transactions, t)
+	}
+
+	block := types.Block{
+		ParentHash: encrypt.GetHash("0"),
+		Transactions: transactions,
+		TimeStramp: time.Now().Unix(),
+		CoinBase: p2p.LOCALNODE,
+		MerkleRoot: "root",
+	}
+	txBStr, _ := json.Marshal(block.Transactions)
+	coinbaseBStr , _ := json.Marshal(block.CoinBase)
+	block.BlockHash = encrypt.GetHash([]byte(block.ParentHash + string(txBStr) + strconv.FormatInt(block.TimeStramp, 10) + string(coinbaseBStr)) + block.MerkleRoot)
+	core.PutBlockToLDB(block.BlockHash, block)
+
+	//todo 将初始block的BlockHash存如Chain
 }
