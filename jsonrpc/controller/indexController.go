@@ -7,7 +7,6 @@ import (
 	"os"
 	"hyperchain-alpha/utils"
 	"hyperchain-alpha/core/types"
-	"fmt"
 	"hyperchain-alpha/encrypt"
 )
 
