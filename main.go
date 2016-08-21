@@ -59,7 +59,7 @@ func main(){
 				// 同步交易池
 				p2p.TxPoolSync(&peerNode)
 				//p2p.TransSync(peerNode)
-		//}else{
+		}else{
 			//未传入地址，则自己需要初始化创世区块
 			// TODO 构造创世区块
 			CreateInitBlock()
@@ -83,6 +83,7 @@ func main(){
 
 //-- 创建初始块
 func CreateInitBlock()  {
+	fmt.Println("======================================")
 	//-- 获取创世快from用户
 	godAccount := utils.GetGodAccount()[0]
 	//-- 获取所有的提前生成好的account
@@ -126,4 +127,11 @@ func CreateInitBlock()  {
 	core.PutBlockToLDB(block.BlockHash, block)
 	//-- 将初始block的BlockHash存如Chain
 	core.UpdateChain(block.BlockHash)
+
+}
+
+func UpdateBalance(block types.Block)  {
+	for _, trans := range block.Transactions {
+
+	}
 }

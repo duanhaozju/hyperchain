@@ -164,6 +164,7 @@ func TransSync(peerNode node.Node){
 
 //向全网节点广播信息
 func BroadCast(envelope *Envelope)(int,error){
+	fmt.Println("=====================================BroadCast")
 	allNodes,_:=core.GetAllNodeFromMEM()
 	for _,remoteNode := range allNodes{
 		if remoteNode != LOCALNODE{

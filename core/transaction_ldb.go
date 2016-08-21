@@ -4,10 +4,12 @@ import "hyperchain-alpha/hyperdb"
 
 import (
 	"hyperchain-alpha/core/types"
+	"fmt"
 )
 
 //-- 将Transaction存入ldb数据库
 func PutTransactionToLDB(key string, t types.Transaction) error{
+	fmt.Println(t)
 	ldb, err := hyperdb.NewLDBDataBase(lDBPath)
 	defer ldb.Close()
 	if err != nil {

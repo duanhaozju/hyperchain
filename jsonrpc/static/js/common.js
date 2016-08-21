@@ -25,10 +25,11 @@ $(document).ready(function(){
 
         $.ajax({
             type:"POST",
-            dataType: "text",
+            dataType: "json",
             url: "/trans",
             data: getFormData($form),
             success: function( result ) {
+                console.log(result);
                 alert("success !!");
 //                    $("input[type=reset]").trigger("click");
                 location.reload();

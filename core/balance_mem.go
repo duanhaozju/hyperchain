@@ -51,6 +51,12 @@ func GetAllBalanceFromMEM() ([]types.Balance) {
 	return ts
 }
 
+func UpdateBalance(block types.Block)  {
+	//for _, trans := range block.Transactions {
+	//
+	//}
+}
+
 /*
 //-- 将Balance存入内存
 func PutBalanceToMEM(key string, t types.Balance) error{

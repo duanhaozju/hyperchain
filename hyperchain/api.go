@@ -17,13 +17,18 @@ type TxArgs struct{
 	Timestamp time.Time `json:"timestamp"`
 }
 
+type ResData struct{
+	Data interface{}
+	Code int
+}
+
 //type TransactionPoolAPI struct{
 //
 //}
 
 const MAXCOUNT = 5
 
-var name2key map[string]utils.KeyPair
+var name2key = make(map[string]utils.KeyPair)
 
 // 生成一张私钥与公钥的映射表
 func initial() {
@@ -37,7 +42,7 @@ func initial() {
 }
 
 // 参数是一个json对象
-func SendTransaction(args TxArgs) error {
+func SendTransaction(args TxArgs) ResData {
 
 	var tx *types.Transaction
 
@@ -67,7 +72,7 @@ func SendTransaction(args TxArgs) error {
 	txPoolsTrans := core.GetTransactionsFromTxPool()
 
 	if (tx.VerifyTransaction(balance,txPoolsTrans)) {
-
+		fmt.Println("=======================================valid")
 		// 验证通过
 
 		var envelopes *p2p.Envelope
@@ -85,6 +90,9 @@ func SendTransaction(args TxArgs) error {
 			// 若已满，生成一个新的区块
 			trans := core.GetTransactionsFromTxPool()
 			block := types.NewBlock(trans,core.GetLashestBlockHash(),p2p.LOCALNODE)
+
+			// 更新balance表
+			core.UpdateBalance(*block)
 
 			// （没有验证区块）区块存进数据库
 			core.PutBlockToLDB(block.BlockHash,*block)
@@ -115,8 +123,17 @@ func SendTransaction(args TxArgs) error {
 		// 远程同步信封数据
 		p2p.BroadCast(envelopes)
 
+		return ResData{
+			Data: nil,
+			Code:1,
+		}
+
 	}
-	return nil
+
+	return ResData{
+		Data: nil,
+		Code: 0,
+	}
 }
 
 
