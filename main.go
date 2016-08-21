@@ -14,6 +14,7 @@ import (
 	"hyperchain-alpha/encrypt"
 	"time"
 	"encoding/json"
+	"fmt"
 )
 
 type argT struct {
@@ -94,10 +95,13 @@ func CreateInitBlock()  {
 	//-- from 为上面的from用户
 	//-- value 为10000, 20000, 30000 ...
 	var transactions types.Transactions
-	for i, account := range accounts {
+	for i, _ := range accounts {
+		fmt.Printf("%#v\n",godAccount["god"].PubKey)
 		t := types.Transaction {
-			From: encrypt.EncodePublicKey(godAccount["god"].PubKey),
-			To: encrypt.EncodePublicKey(account[0].PubKey),
+			//From: encrypt.EncodePublicKey(&(godAccount["god"].PubKey)),
+			From: "1222",
+			//To: encrypt.EncodePublicKey(&account[0].PubKey),
+			To: "1212",
 			Value: (i+1) * 10000,
 			TimeStamp: time.Now().Unix(),
 		}
@@ -109,7 +113,7 @@ func CreateInitBlock()  {
 
 	//-- 打包创世块
 	block := types.Block{
-		ParentHash: encrypt.GetHash("0"),
+		ParentHash: string(encrypt.GetHash([]byte("0"))),
 		Transactions: transactions,
 		TimeStramp: time.Now().Unix(),
 		CoinBase: p2p.LOCALNODE,
@@ -117,7 +121,7 @@ func CreateInitBlock()  {
 	}
 	txBStr, _ := json.Marshal(block.Transactions)
 	coinbaseBStr , _ := json.Marshal(block.CoinBase)
-	block.BlockHash = encrypt.GetHash([]byte(block.ParentHash + string(txBStr) + strconv.FormatInt(block.TimeStramp, 10) + string(coinbaseBStr)) + block.MerkleRoot)
+	block.BlockHash = string(encrypt.GetHash([]byte(block.ParentHash + string(txBStr) + strconv.FormatInt(block.TimeStramp, 10) + string(coinbaseBStr) + block.MerkleRoot)))
 	//-- 将创世块存入数据库
 	core.PutBlockToLDB(block.BlockHash, block)
 	//-- 将初始block的BlockHash存如Chain

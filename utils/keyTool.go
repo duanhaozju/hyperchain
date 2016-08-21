@@ -81,7 +81,7 @@ func check(e error){
 }
 
 func GetGodAccount()Accounts{
-	accFilePath := path.Join(GetBasePath(),"./godaccount")
+	accFilePath := path.Join(GetBasePath(),"./godaccount.txt")
 	accountData := readAccountFromFile(accFilePath)
 	var accounts Accounts
 	json.Unmarshal(accountData,&accounts)

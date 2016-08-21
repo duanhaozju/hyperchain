@@ -108,8 +108,8 @@ func (r *RemoteNode) RemoteGetChain(envelop *Envelope,retEnvelop *Envelope) erro
 	//请求的节点
 	peerNode := envelop.Nodes[0]
 	log.Println("请求来自对端：",peerNode)
-	chain := core.GetAllChainFromMEM()
-	(*retEnvelop).Chain = chain[0]
+	chain := core.GetChain()
+	(*retEnvelop).Chain = *chain
 	return nil
 }
 
@@ -144,7 +144,7 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 				//3. 清空txPool
 				core.ClearTxPool()
 				//4. 存储 Block
-				core.PutBlockToLDB(newBlock.BlockHash,newBlock)
+				core.PutBlockToLDB(newBlock.BlockHash,*newBlock)
 				//5.  更新整个chain
 				core.UpdateChain(newBlock.BlockHash)
 				//review 是否需要对外广播新打包的区块
@@ -165,18 +165,18 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 	// 然后处理block
 	for _,block := range blocks {
 		//需要验证block是否存在
-		if ok,_ := core.GetBlockFromLDB(block.BlockHash); ok != nil{
-			//block存在
-		}else{
+		if _,ok := core.GetBlockFromLDB(block.BlockHash); ok != nil{
 			//block不存在
 			core.PutBlockToLDB(block.BlockHash,block)
 			// TODO更新整个chain
 			core.UpdateChain(block.BlockHash)
+		}else{
+			//block存在
 		}
 	}
 
 	//处理返回值
-	retEnvelope.Chain = core.GetChain()
+	retEnvelope.Chain = *core.GetChain()
 	return nil
 }
 func StratP2PServer(p2pServerPort int){
