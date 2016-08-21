@@ -31,6 +31,6 @@ func NewBlock(trans Transactions, ParentHash string, coinBase node.Node) *Block 
 	}
 	txBStr, _ := json.Marshal(block.Transactions)
 	coinbaseBStr , _ := json.Marshal(block.CoinBase)
-	block.BlockHash = encrypt.GetHash([]byte(block.ParentHash + string(txBStr) + strconv.FormatInt(block.TimeStramp, 10) + string(coinbaseBStr)) + block.MerkleRoot)
+	block.BlockHash = string(encrypt.GetHash( []byte(block.ParentHash + string(txBStr) + strconv.FormatInt(block.TimeStramp, 10) + string(coinbaseBStr) + block.MerkleRoot)))
 	return &block
 }

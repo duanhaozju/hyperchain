@@ -109,7 +109,7 @@ func CreateInitBlock()  {
 
 	//-- 打包创世块
 	block := types.Block{
-		ParentHash: encrypt.GetHash("0"),
+		ParentHash: string(encrypt.GetHash("0")),
 		Transactions: transactions,
 		TimeStramp: time.Now().Unix(),
 		CoinBase: p2p.LOCALNODE,
@@ -117,7 +117,7 @@ func CreateInitBlock()  {
 	}
 	txBStr, _ := json.Marshal(block.Transactions)
 	coinbaseBStr , _ := json.Marshal(block.CoinBase)
-	block.BlockHash = encrypt.GetHash([]byte(block.ParentHash + string(txBStr) + strconv.FormatInt(block.TimeStramp, 10) + string(coinbaseBStr)) + block.MerkleRoot)
+	block.BlockHash = string(encrypt.GetHash([]byte(block.ParentHash + string(txBStr) + strconv.FormatInt(block.TimeStramp, 10) + string(coinbaseBStr) + block.MerkleRoot)))
 	//-- 将创世块存入数据库
 	core.PutBlockToLDB(block.BlockHash, block)
 	//-- 将初始block的BlockHash存如Chain

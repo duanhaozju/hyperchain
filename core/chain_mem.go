@@ -41,3 +41,13 @@ func GetHeightOfChain() int {
 	defer memChainMap.lock.RUnlock()
 	return memChainMap.data.Height
 }
+
+//-- 获取chain的拷贝
+func GetChain() *types.Chain {
+	memChainMap.lock.RLock()
+	defer memChainMap.lock.RUnlock()
+	return &types.Chain{
+		LastestBlockHash: memChainMap.data.LastestBlockHash,
+		Height: memChainMap.data.Height,
+	}
+}
