@@ -31,9 +31,9 @@ $(document).ready(function(){
             success: function( result ) {
                 console.log(result);
                 if(result.code == 1){
-                    alert("success !!");
+                    alert("提交成功!");
                 } else {
-                    alert("error !!");
+                    alert("提交失败！");
                 }
 
 //                    $("input[type=reset]").trigger("click");
