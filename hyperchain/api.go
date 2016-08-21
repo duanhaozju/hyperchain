@@ -81,7 +81,8 @@ func SendTransaction(args TxArgs) ResData {
 		core.AddTransactionToTxPool(*tx)
 		core.PutTransactionToLDB(txHash,*tx)
 
-		transactions := make(types.Transactions,1)
+		var transactions types.Transactions
+
 		transactions = append(transactions,*tx)
 
 		// 判断交易池是否已满
@@ -95,7 +96,8 @@ func SendTransaction(args TxArgs) ResData {
 			core.UpdateBalance(*block)
 
 			// （没有验证区块）区块存进数据库
-			core.PutBlockToLDB(block.BlockHash,*block)
+			// TODO 未验证区块不存入数据库！！！
+			//core.PutBlockToLDB(block.BlockHash,*block)
 
 			// 更新全局最新一个区块的HASH
 			core.UpdateChain(block.BlockHash)
@@ -104,7 +106,7 @@ func SendTransaction(args TxArgs) ResData {
 			core.ClearTxPool()
 
 			// 将交易和区块信息传入信封
-			blocks := make([]types.Block,1)
+			var blocks []types.Block
 			blocks = append(blocks,*block)
 
 			envelopes = &p2p.Envelope{
@@ -120,6 +122,7 @@ func SendTransaction(args TxArgs) ResData {
 
 		}
 
+		//log.Println("网页封装rans lengs",len(envelopes.Transactions))
 		// 远程同步信封数据
 		p2p.BroadCast(envelopes)
 

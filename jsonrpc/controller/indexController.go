@@ -36,12 +36,9 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	accounts,_ := utils.GetAccount()
 
 	godAccounts := utils.GetGodAccount()
-	log.Println("取得上帝账户...")
 	godpubkey := godAccounts[0]["god"].PubKey
-	log.Println("取得上帝账户的公钥...")
 	transactions,_ := core.GetAllTransactionFromLDB()
-	log.Println("取得目前所有交易信息...")
-
+	transactions = append(transactions,core.GetTransactionsFromTxPool()...)
 
 	for i,tx := range transactions{
 		from := tx.From
