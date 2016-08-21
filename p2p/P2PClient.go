@@ -8,6 +8,7 @@ import (
 	"hyperchain-alpha/core/node"
 	"hyperchain-alpha/core/types"
 	"hyperchain-alpha/core"
+	"encoding/hex"
 )
 
 // 全局变量
@@ -26,9 +27,10 @@ func establishConn(serverAddress string) *rpc.Client{
 }
 
 //向远程监听节点写入自己的节点数据，并获取对方的节点列表
-func SaveNode(serverAddress string) node.Nodes{
+func SaveNode(remoteNode node.Node) node.Nodes{
 	//同步调用
-
+	serverAddress := remoteNode.P2PIP+":"+strconv.Itoa(remoteNode.P2PPort)
+	log.Println("向远程节点同步自己的节点信息...")
 	var client =establishConn(serverAddress)
 	defer client.Close()
 
@@ -116,6 +118,7 @@ func getTrans(serverNode node.Node) types.Transactions{
 
 //从对端节点同步取得相应信息
 func NodeSync(peerNode *node.Node) ([]node.Node,error){
+	log.Println("同步节点...")
 	serverAddress :=string(peerNode.P2PIP +":"+ strconv.Itoa(peerNode.P2PPort))
 	//取得所有远程节点
 	remotesNodes := getNodes(serverAddress)
@@ -137,7 +140,8 @@ func NodeSync(peerNode *node.Node) ([]node.Node,error){
 			core.PutNodeToMEM(remoteNode.CoinBase,remoteNode)
 		}
 	}
-
+	// 重新取得节点信息
+	AllNodes,_ = core.GetAllNodeFromMEM()
 	//review GetNodes方法只在刚刚加入时调用，需要向所有的取得节点发送自己的节点消息
 	//向所有新取得的列表中的节点广播自己的信息
 	for _,remoteNode := range AllNodes{
@@ -150,7 +154,7 @@ func NodeSync(peerNode *node.Node) ([]node.Node,error){
 			continue
 		}
 		//向其它节点告知
-		SaveNode(remoteNode.P2PIP+":"+strconv.Itoa(remoteNode.P2PPort))
+		SaveNode(remoteNode)
 	}
 
 	fmt.Printf("同步对端数据节点成功，%s\n",AllNodes)
@@ -164,16 +168,17 @@ func TransSync(peerNode node.Node){
 
 //向全网节点广播信息
 func BroadCast(envelope *Envelope)(int,error){
-	fmt.Println("=====================================BroadCast")
+	fmt.Println("===============广播数据=============")
 	allNodes,_:=core.GetAllNodeFromMEM()
 	for _,remoteNode := range allNodes{
-		if remoteNode != LOCALNODE{
-			//TransSync(new p2p.Envelope{})
+		if remoteNode.P2PIP == LOCALNODE.P2PIP && remoteNode.P2PPort == LOCALNODE.P2PPort && remoteNode.HttpPort == LOCALNODE.HttpPort{
+			log.Println("节点忽略..",remoteNode,LOCALNODE)
+		}else{
 			returnEnvelope,err := dataTransfer(envelope,remoteNode)
 			if err != nil{
 				panic(err)
 			}else{
-				fmt.Println("节点返回数据：",returnEnvelope)
+				log.Println("节点返回数据：",returnEnvelope)
 			}
 		}
 	}
@@ -192,6 +197,7 @@ func dataTransfer(envelop *Envelope, peerNode node.Node)(Envelope,error){
 
 // block同步方法，从服务端节点将服务端的block同步下来
 func BlockSync(peerNode *node.Node) ([]types.Block,error){
+	log.Println("同步区块...")
 	//review 区块同步，由于没有顺序，所以只是将区块信息从对端节点同步回来
 	// 连接对端
 	serverAddress :=string(peerNode.P2PIP +":"+ strconv.Itoa(peerNode.P2PPort))
@@ -203,11 +209,25 @@ func BlockSync(peerNode *node.Node) ([]types.Block,error){
 	//用于存储返回信息
 	var returnEnvelop Envelope
 	err := client.Call("RemoteNode.RemoteGetBlocks", &envelop, &returnEnvelop)
+	//review 完成balance表的更新
+	for _,block := range returnEnvelop.Blocks{
+		core.UpdateBalance(block)
+		//将block中的交易存储起来
+		for _,tran :=range block.Transactions{
+			log.Println("存储交易："+hex.EncodeToString([]byte(tran.Hash()))+"\n")
+			core.PutTransactionToLDB(tran.Hash(),tran)
+		}
+	}
+
+	if len(returnEnvelop.Blocks) >0{
+		log.Println("同步区块个数：",len(returnEnvelop.Blocks))
+	}
 	return returnEnvelop.Blocks,err
 }
 
 // block Header 同步方法，用于将Chain数据同步回来，用于实现数据回溯
 func ChainSync(peerNode *node.Node)(types.Chain,error){
+	log.Println("同步chain信息...")
 	//review 将Chain信息同步回来
 	// 连接对端
 	serverAddress :=string(peerNode.P2PIP +":"+ strconv.Itoa(peerNode.P2PPort))
@@ -219,10 +239,15 @@ func ChainSync(peerNode *node.Node)(types.Chain,error){
 	//用于存储返回信息
 	var returnEnvelop Envelope
 	err := client.Call("RemoteNode.RemoteGetChain", &envelop, &returnEnvelop)
+
+	log.Println("chain信息：",returnEnvelop.Chain)
+	//更新本地chain信息
+	core.UpdateChain(returnEnvelop.Chain.LastestBlockHash)
 	return returnEnvelop.Chain,err
 }
 
 func TxPoolSync(peerNode *node.Node)(types.Transactions,error){
+	log.Println("同步交易池信息...")
 	// review 将对端交易池中的数据同步回来
 	serverAddress :=string(peerNode.P2PIP +":"+ strconv.Itoa(peerNode.P2PPort))
 	var client =establishConn(serverAddress)
@@ -245,6 +270,8 @@ func TxPoolSync(peerNode *node.Node)(types.Transactions,error){
 		if tx.VerifyTransaction(core.GetBalanceFromMEM(tx.From),core.GetTransactionsFromTxPool()) {
 			//先放入池子中
 			core.AddTransactionToTxPool(tx)
+			//
+
 			//判断是否满
 			if (core.TxPoolIsFull()){
 				//panic(error.Error("同步区块错误，远端交易池已满，在单线程条件下不允许发生"))
@@ -264,6 +291,7 @@ func TxPoolSync(peerNode *node.Node)(types.Transactions,error){
 	if err != nil {
 		log.Fatal("服务器错误:", err)
 	}
+	log.Println("交易池信息同步结束，共有：",len(trans),"条信息")
 	return trans,err
 }
 

@@ -2,6 +2,9 @@ package p2p
 import (
 	"hyperchain-alpha/core/types"
 	"hyperchain-alpha/core/node"
+	"strconv"
+	"time"
+	"encoding/hex"
 )
 //信息传输时候的信封，包括各类信息
 // 节点之间交换的信息的格式定义
@@ -14,4 +17,12 @@ type Envelope struct {
 	Blocks []types.Block
 	Nodes []node.Node
 	Chain types.Chain
+}
+
+func (envelope Envelope)String() string{
+	printString := "\n"
+	printString += time.Now().Format("2016/01/02 15:03:04 ") + "交易数据一共："+ strconv.Itoa(len(envelope.Transactions)) +"\n"
+	printString += time.Now().Format("2016/01/02 15:03:04 ") + "节点一共有：" + strconv.Itoa(len(envelope.Nodes)) +"\n"
+	printString += time.Now().Format("2016/01/02 15:03:04 ") + "节点最新Chain Header Hash：" + hex.EncodeToString([]byte(envelope.Chain.LastestBlockHash)) +"\n"
+	return printString
 }

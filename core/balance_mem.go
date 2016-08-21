@@ -3,6 +3,7 @@ package core
 import (
 	"hyperchain-alpha/core/types"
 	"sync"
+	"log"
 )
 
 type memBalance struct {
@@ -52,6 +53,7 @@ func GetAllBalanceFromMEM() ([]types.Balance) {
 }
 
 func UpdateBalance(block types.Block)  {
+	log.Println("更新余额表...")
 	memBalanceMap.lock.Lock()
 	defer memBalanceMap.lock.Unlock()
 	for _, trans := range block.Transactions {

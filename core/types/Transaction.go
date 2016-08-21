@@ -8,6 +8,7 @@ import (
 	"hyperchain-alpha/encrypt"
 	"strconv"
 	"time"
+	"encoding/hex"
 )
 
 type Transaction struct {
@@ -66,4 +67,8 @@ func (tx *Transaction) isValid(balance Balance,txPoolsTrans []Transaction) bool{
 
 
 	return amount <= fund
+}
+
+func (tx Transaction) String()string{
+	return hex.EncodeToString([]byte(tx.Hash()))
 }
