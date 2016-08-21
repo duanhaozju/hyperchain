@@ -5,24 +5,24 @@
 package types
 
 import (
-	"time"
 	"hyperchain-alpha/encrypt"
 	"strconv"
+	"hyperchain-alpha/core"
 )
 
 type Transaction struct {
-	From string //从发起账户公钥hash之后的值
-	//Publickey string //携带公钥
-	To string //送达账户公钥hash之后的值
-	Value int // 交易值
-	TimeStamp time.Time //时间戳
-	Singnature encrypt.Signature //数字签名
-	//Signedhash string //整体签名
+	From      string            //从发起账户公钥hash之后的值
+								//Publickey string //携带公钥
+	To        string            //送达账户公钥hash之后的值
+	Value     int               // 交易值
+	TimeStamp int64             //时间戳
+	Signature encrypt.Signature //数字签名
+								//Signedhash string //整体签名
 }
 
 type Transactions []Transaction
 
-func NewTransaction(from string,to string,value int, timestamp time.Time) *Transaction{
+func NewTransaction(from string,to string,value int, timestamp int64) *Transaction{
 	return &Transaction{
 		From: from,
 		To: to,
@@ -31,13 +31,41 @@ func NewTransaction(from string,to string,value int, timestamp time.Time) *Trans
 	}
 }
 
-//TODO 验证交易，发送者是否存在,余额是否足够,判断getBalance还有tx pool中这个from的交易，进行加减
-func (t *Transaction)VerifyTransaction()bool{
-	//self := t
-	return true
+// 验证交易.from是否存在,余额是否足够,判断getBalance还有tx pool中这个from的交易，进行加减
+func (tx *Transaction) VerifyTransaction() bool {
+	self := tx
+
+	balance := core.GetBalanceFromMEM(self.From)
+	txPoolsTrans := core.GetTransactionsFromTxPool()
+
+	return self.isValid(balance,txPoolsTrans)
 }
 
-func (t *Transaction) Hash() string{
-	self := t
-	return string(encrypt.GetHash([]byte(self.From + self.To + strconv.Itoa(self.Value)+ string(self.TimeStamp.Format("2006-01-02 15:04:05")))))
+func (tx *Transaction) Hash() string{
+	self := tx
+	return string(encrypt.GetHash([]byte(self.From + self.To + strconv.Itoa(self.Value)+ self.TimeStamp)))
+}
+
+// 检查余额
+func (tx *Transaction) isValid(balance Balance,txPoolsTrans []Transaction) bool{
+
+	self := tx
+	fund := balance
+
+	from := self.From
+	amount := self.Value  // balance和交易池中的资金是否足够
+
+	for _,t := range txPoolsTrans{
+
+		if (t.From == from) {
+			fund = fund - t.Value
+		}
+
+		if (t.To == from) {
+			fund = fund + t.Value
+		}
+	}
+
+
+	return amount <= fund
 }

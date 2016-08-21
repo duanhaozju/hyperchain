@@ -55,8 +55,8 @@ func Sign(privateKey dsa.PrivateKey, toSignData []byte) (sign Signature,datahash
 	return signature,signhash
 }
 // 签名验证方法
-// publicKey 为公钥，toVerifiedMessage 需要检查的数据，sign 同时携带的数字签名
-func Verify(publicKey dsa.PublicKey,toVerifiedMessage []byte,sign Signature) bool{
+// publicKey 为公钥，toVerifiedDataHash 需要检查的数据的Hash，sign 同时携带的数字签名
+func Verify(publicKey dsa.PublicKey,toVerifiedDataHash []byte,sign Signature) bool{
 	//验证签名过程
 	//我们用 ( r', s', M' ) 来表示验证方通过某种途径获得的签名结果，之所以这样表示是因为你不能保证你这个签名结果一定是发送方生成的真签名，相反有可能被人窜改过，甚至掉了包。为了描述简便，下面仍用 (r ,s ,M) 代替 (r', s', M') 。
 	//为了验证( r, s, M )的签名是否确由发送方所签，验证方需要有 (g, p, q, y) ，验证过程如下：
@@ -72,7 +72,7 @@ func Verify(publicKey dsa.PublicKey,toVerifiedMessage []byte,sign Signature) boo
 	// 1、验证通过说明： 签名( r, s )有效，即(r , s , M )确为发送方的真实签名结果，真实性可以高度信任， M 未被窜改，为有效信息。
 	// 2、验证失败说明：签名( r , s )无效，即(r, s , M) 不可靠，或者M被窜改过，或者签名是伪造的，或者M的签名有误，M 为无效信息。
 
-	verifystatus := dsa.Verify(&publicKey, toVerifiedMessage, &sign.R, &sign.S)
+	verifystatus := dsa.Verify(&publicKey, toVerifiedDataHash, &sign.R, &sign.S)
 	//fmt.Println(verifystatus) // should be true
 	return verifystatus
 }

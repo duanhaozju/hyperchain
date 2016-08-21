@@ -35,7 +35,6 @@ var name2key map[string]key
 
 // 生成一张私钥与公钥的映射表
 func initial() {
-	//TODO 读取公私钥对
 	accounts,_ := utils.GetAccount()
 	for ac,_ := range accounts{
 		for key,value := range ac{
@@ -45,7 +44,6 @@ func initial() {
 }
 
 // 参数是一个json对象
-// TODO 发送一个交易
 func SendTransaction(args TxArgs) error {
 
 	var tx types.Transaction
@@ -58,13 +56,13 @@ func SendTransaction(args TxArgs) error {
 	toPubKey := encrypt.EncodePublicKey(name2key[args["to"]])
 
 	// 构造 transaction 实例
-	tx = types.NewTransaction(fromPubKey,toPubKey,strconv.Atoi(args["value"]),time.Now())
+	tx = types.NewTransaction(fromPubKey,toPubKey,strconv.Atoi(args["value"]),time.Now().Unix())
 
 	// 生成一个签名
 	signature,_ := encrypt.Sign(name2key[args["from"]].privateKey,tx.Hash())
 
 	// 已经签名的交易
-	tx.Singnature = signature
+	tx.Signature = signature
 
 
 	// 验证交易
@@ -83,7 +81,7 @@ func SendTransaction(args TxArgs) error {
 
 			// 若已满，打包区块
 			trans := core.GetTransactionsFromTxPool()
-			block := types.NewBlock(trans,p2p.LOCALNODE,time.Now())
+			block := types.NewBlock(trans,p2p.LOCALNODE,time.Now().Unix())
 
 
 			// 则清空交易池
@@ -113,17 +111,17 @@ func SendTransaction(args TxArgs) error {
 	return nil
 }
 
-
-// TODO 获取某个用户地址的所有交易
-func GetTransactions(addr []byte) []types.Transaction {
-
-	return nil
-}
-
-// TODO 获取某个指定区块
-func GetBlcok(number int) types.Block {
-
-	return nil
-}
+//
+//// TODO 获取某个用户地址的所有交易
+//func GetTransactions(addr []byte) []types.Transaction {
+//
+//	return nil
+//}
+//
+//// TODO 获取某个指定区块
+//func GetBlcok(number int) types.Block {
+//
+//	return nil
+//}
 
 

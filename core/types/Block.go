@@ -1,7 +1,6 @@
 package types
 
 import (
-	"time"
 	"hyperchain-alpha/core/node"
 	"hyperchain-alpha/encrypt"
 )
@@ -10,22 +9,28 @@ type Block struct {
 	ParentHash string
 	BlockHash string
 	Transactions []Transaction
-	TimeStramp time.Time
-	CoinBase node.Node // 打包该Block的地址
-	MerkleRoot string // merkleRoot 的hash值
+	TimeStramp int64
+	CoinBase node.Node  // 打包该Block的地址
+	MerkleRoot string   // merkleRoot 的hash值
 }
 
+//todo TimeStramp 写错了 应该该掉
 // TODO 构造一个新的区块
-func NewBlock(trans Transactions,node node.Node,timestamp time.Time) *Block{
+func NewBlock(trans Transactions,node node.Node,timestamp int64) *Block{
 
+	//TODO 得到最新区块HASH
 
-	return &Block{
+	var block = &Block{
 		ParentHash: "",
-		BlockHash: ,
+		BlockHash: "",
 		Transactions: trans,
 		CoinBase: node,
 		TimeStramp: timestamp,
 	}
+
+
+
+	return block
 }
 
 func (b *Block) Hash() string{

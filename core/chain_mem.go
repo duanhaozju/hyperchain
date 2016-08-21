@@ -25,6 +25,8 @@ func PutChainToMEM(key string, t types.Chain){
 	memChainMap.data[key] = t
 }
 
+/*GetLastestBlockHash()
+UpdateChain(hash)*/
 //-- 在MEM中 根据Key获取的Chain
 func GetChainFromMEM(key string) types.Chain{
 	memChainMap.lock.RLock()
