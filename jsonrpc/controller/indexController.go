@@ -8,7 +8,6 @@ import (
 	"hyperchain-alpha/utils"
 	"hyperchain-alpha/core/types"
 	"hyperchain-alpha/encrypt"
-	"log"
 )
 
 //type Transaction struct{
