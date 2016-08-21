@@ -83,8 +83,6 @@ func main(){
 
 //-- 创建初始块
 func CreateInitBlock()  {
-	ddd, _ := core.GetAllTransactionFromLDB()
-	fmt.Println(len(ddd))
 	log.Println("构造创世区块")
 	//-- 获取创世快from用户
 	godAccount := utils.GetGodAccount()[0]
@@ -136,6 +134,4 @@ func CreateInitBlock()  {
 
 	//-- 初始初始化balance
 	core.UpdateBalance(block)
-	ddd, _ = core.GetAllTransactionFromLDB()
-	fmt.Println(len(ddd))
 }
