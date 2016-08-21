@@ -15,6 +15,7 @@ import (
 	"time"
 	"encoding/json"
 	"fmt"
+	"crypto/dsa"
 )
 
 type argT struct {
@@ -55,7 +56,7 @@ func main(){
 				//从远端节点同步区块
 				p2p.BlockSync(&peerNode)
 				// TODO 同步最新区块的Hash 即同步chain
-				//p2p.ChainSync(&peerNode)
+				p2p.ChainSync(&peerNode)
 				// 同步交易池
 				p2p.TxPoolSync(&peerNode)
 				//p2p.TransSync(peerNode)
@@ -83,7 +84,7 @@ func main(){
 
 //-- 创建初始块
 func CreateInitBlock()  {
-	fmt.Println("======================================")
+	log.Println("构造创世区块")
 	//-- 获取创世快from用户
 	godAccount := utils.GetGodAccount()[0]
 	//-- 获取所有的提前生成好的account
@@ -96,13 +97,17 @@ func CreateInitBlock()  {
 	//-- from 为上面的from用户
 	//-- value 为10000, 20000, 30000 ...
 	var transactions types.Transactions
-	for i, _ := range accounts {
-		fmt.Printf("%#v\n",godAccount["god"].PubKey)
+	for i, account_map := range accounts {
+		var account_publicKey dsa.PublicKey
+		for i,acc := range account_map{
+			if i ==0{
+				account_publicKey = acc.PubKey
+				break
+			}
+		}
 		t := types.Transaction {
-			//From: encrypt.EncodePublicKey(&(godAccount["god"].PubKey)),
-			From: "1222",
-			//To: encrypt.EncodePublicKey(&account[0].PubKey),
-			To: "1212",
+			From: encrypt.EncodePublicKey(&(godAccount["god"].PubKey)),
+			To: encrypt.EncodePublicKey(&account_publicKey),
 			Value: (i+1) * 10000,
 			TimeStamp: time.Now().Unix(),
 		}
@@ -127,5 +132,4 @@ func CreateInitBlock()  {
 	core.PutBlockToLDB(block.BlockHash, block)
 	//-- 将初始block的BlockHash存如Chain
 	core.UpdateChain(block.BlockHash)
-
 }
