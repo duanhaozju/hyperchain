@@ -14,7 +14,6 @@ import (
 	"hyperchain-alpha/encrypt"
 	"time"
 	"encoding/json"
-	"fmt"
 	"crypto/dsa"
 )
 
@@ -99,14 +98,13 @@ func CreateInitBlock()  {
 	var transactions types.Transactions
 	for i, account_map := range accounts {
 		var account_publicKey dsa.PublicKey
-		for i,acc := range account_map{
-			if i ==0{
-				account_publicKey = acc.PubKey
-				break
-			}
+		for _,acc := range account_map{
+			account_publicKey = acc.PubKey
+			break
 		}
+		god_PublicKey := godAccount["god"].PubKey
 		t := types.Transaction {
-			From: encrypt.EncodePublicKey(&(godAccount["god"].PubKey)),
+			From: encrypt.EncodePublicKey(&god_PublicKey),
 			To: encrypt.EncodePublicKey(&account_publicKey),
 			Value: (i+1) * 10000,
 			TimeStamp: time.Now().Unix(),
