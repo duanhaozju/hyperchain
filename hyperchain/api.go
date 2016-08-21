@@ -72,7 +72,7 @@ func SendTransaction(args TxArgs) ResData {
 	txPoolsTrans := core.GetTransactionsFromTxPool()
 
 	if (tx.VerifyTransaction(balance,txPoolsTrans)) {
-		fmt.Println("=======================================valid")
+		fmt.Println(time.Now().Format("2006/01/02 15:04:05") + " 用户提交交易验证有效...")
 		// 验证通过
 
 		var envelopes *p2p.Envelope

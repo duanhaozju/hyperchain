@@ -45,11 +45,10 @@ func GetAllTransactionFromLDB() ([]types.Transaction, error) {
 	if err != nil {
 		return ts, err
 	}
-
 	iter := ldb.NewIterator()
 	for iter.Next() {
 		key := iter.Key()
-		if string(key[:len(transactionHeaderKey)]) == string(transactionHeaderKey) {
+		if len(string(key)) >= len(transactionHeaderKey) && string(key[:len(transactionHeaderKey)]) == string(transactionHeaderKey) {
 			var t types.Transaction
 			value := iter.Value()
 			err = decondeFromBytes(value, &t)

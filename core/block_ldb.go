@@ -49,7 +49,7 @@ func GetAllBlockFromLDB() ([]types.Block, error) {
 	iter := ldb.NewIterator()
 	for iter.Next() {
 		key := iter.Key()
-		if string(key[:len(blockHeaderKey)]) == string(blockHeaderKey) {
+		if len(string(key)) >= len(blockHeaderKey) && string(key[:len(blockHeaderKey)]) == string(blockHeaderKey) {
 			var t types.Block
 			value := iter.Value()
 			err = decondeFromBytes(value, &t)

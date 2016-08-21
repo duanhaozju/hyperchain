@@ -10,6 +10,7 @@ import (
 	"hyperchain-alpha/core/node"
 	"hyperchain-alpha/core/types"
 	"hyperchain-alpha/core"
+	"encoding/hex"
 )
 
 //服务器需要对外提供两个方法，RemoteGetNodes 和RemoteGetTransaction
@@ -131,24 +132,30 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 	for _,tran := range trans{
 		//先验证
 		if tran.VerifyTransaction(core.GetBalanceFromMEM(tran.From),core.GetTransactionsFromTxPool()){
+			log.Println("交易验证成功，签名有效")
 			//先存储 tran
 			core.AddTransactionToTxPool(tran)
 			// 判断txPool是否满
 			if core.TxPoolIsFull(){
 				//如果满
-				//1. 取出trans 池子中所有数据\
+				//1. 取出trans 池子中所有数据
 				transaction := core.GetTransactionsFromTxPool()
 				//2. 打包成Block
 				// 打包成一个区块
 				newBlock := types.NewBlock(transaction,core.GetLashestBlockHash(),LOCALNODE)
+				for _,tran :=range newBlock.Transactions{
+					log.Println("存储交易："+hex.EncodeToString([]byte(tran.Hash()))+"\n")
+					core.PutTransactionToLDB(tran.Hash(),tran)
+				}
 				//3. 清空txPool
 				core.ClearTxPool()
 				//4. 存储 Block
 				core.PutBlockToLDB(newBlock.BlockHash,*newBlock)
 				//5.  更新整个chain
 				core.UpdateChain(newBlock.BlockHash)
-				//6. TODO 更新balance表
-				//review core.UpdateBalance(newBlock)
+				//6. REVIEW 更新balance表
+				core.UpdateBalance(*newBlock)
+				log.Println("当前最新区块hash:"+hex.EncodeToString([]byte(core.GetChain().LastestBlockHash)))
 				//review 是否需要对外广播新打包的区块
 				//review 需要防止广播风暴
 				//var envelope Envelope
@@ -158,6 +165,7 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 
 			}else{
 				//如果非满，直接判断结束
+				log.Println("交易池未满，将交易数据存储到交易池...",tran)
 			}
 		}else{
 			log.Fatalln("交易验证失败，签名无效",tran)
@@ -172,14 +180,17 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 			core.PutBlockToLDB(block.BlockHash,block)
 			// review 更新整个chain
 			core.UpdateChain(block.BlockHash)
-			// TODO 更新balance表
-			//review core.UpdateBalance(block)
+			log.Println("当前最新区块hash:"+hex.EncodeToString([]byte(core.GetChain().LastestBlockHash)))
+			// REVIEW 更新balance表
+			core.UpdateBalance(block)
 		}else{
 			//block存在
 		}
 	}
 
 	//处理返回值
+	retEnvelope.Blocks,_ = core.GetAllBlockFromLDB()
+	retEnvelope.Nodes,_  = core.GetAllNodeFromMEM()
 	retEnvelope.Chain = *core.GetChain()
 	return nil
 }
