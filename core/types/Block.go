@@ -16,10 +16,9 @@ type Block struct {
 }
 
 //todo TimeStramp 写错了 应该该掉
-// TODO 构造一个新的区块
+
 func NewBlock(trans Transactions,node node.Node,timestamp int64) *Block{
 
-	//TODO 得到最新区块HASH
 
 	var block = &Block{
 		ParentHash: core.GetLashestBlockHash(),
