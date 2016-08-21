@@ -33,14 +33,6 @@ func TransactionCreate(w http.ResponseWriter, r *http.Request) {
 
 	// 解析url传递的参数，对于POST则解析响应包的主体（request body）
 	r.ParseForm()
-	//value,_ := strconv.Atoi(r.Form["value"][0])
-	//transaction = types.Transaction{
-	//	From: r.Form["from"][0],
-	//	To: r.Form["to"][0],
-	//	Value: value,
-	//	TimeStamp: time.Now(),
-	//}
-
 
 	hyperchain.SendTransaction(r.Form)
 
@@ -50,7 +42,6 @@ func TransactionCreate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type","application/json")
 	fmt.Fprintf(w,"success")
 
-	//w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	//w.WriteHeader(http.StatusCreated)
 	//if err := json.NewEncoder(w).Encode(t); err != nil {
 	//	panic(err)

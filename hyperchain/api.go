@@ -2,12 +2,10 @@ package hyperchain
 
 import (
 	"time"
-	//"hyperchain-alpha/core"
 	"hyperchain-alpha/core/types"
 	"hyperchain-alpha/encrypt"
 	"strconv"
 	"crypto/dsa"
-	//"hyperchain-alpha/p2p"
 	"hyperchain-alpha/utils"
 	"hyperchain-alpha/core"
 	"hyperchain-alpha/p2p"
@@ -59,19 +57,23 @@ func SendTransaction(args TxArgs) error {
 	tx = types.NewTransaction(fromPubKey,toPubKey,strconv.Atoi(args["value"]),time.Now().Unix())
 
 	// 生成一个签名
-	signature,_ := encrypt.Sign(name2key[args["from"]].privateKey,tx.Hash())
+	txHash := tx.Hash()
+	signature,_ := encrypt.Sign(name2key[args["from"]].privateKey,txHash)
 
 	// 已经签名的交易
 	tx.Signature = signature
 
 
-	// 验证交易
+	// 验证用户余额，交易是否合法
 	if (tx.VerifyTransaction()) {
 
 		// 验证通过
+
 		var envelopes p2p.Envelope
+
 		// 提交到交易池
 		core.AddTransactionToTxPool(tx)
+		tx.SubmitTransaction(txHash)
 
 		transactions := make(types.Transactions,1)
 		transactions = append(transactions,tx)
@@ -79,10 +81,17 @@ func SendTransaction(args TxArgs) error {
 		// 判断交易池是否已满
 		if(core.GetTxPoolCapacity() == MAXCOUNT){
 
-			// 若已满，打包区块
+			// 若已满，生成一个新的区块
 			trans := core.GetTransactionsFromTxPool()
 			block := types.NewBlock(trans,p2p.LOCALNODE,time.Now().Unix())
 
+			blockHash := block.Hash()
+
+			// （没有验证区块）区块存进数据库
+			block.SubmitBlock(blockHash)
+
+			// 更新全局最新一个区块的HASH
+			block.UpdateLastestBlockHS()
 
 			// 则清空交易池
 			core.ClearTxPool()
@@ -110,6 +119,8 @@ func SendTransaction(args TxArgs) error {
 	}
 	return nil
 }
+
+
 
 //
 //// TODO 获取某个用户地址的所有交易

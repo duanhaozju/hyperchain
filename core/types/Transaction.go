@@ -31,6 +31,10 @@ func NewTransaction(from string,to string,value int, timestamp int64) *Transacti
 	}
 }
 
+func (tx *Transaction) SubmitTransaction(txHash string) {
+	core.PutTransactionToLDB(txHash,tx)
+}
+
 // 验证交易.from是否存在,余额是否足够,判断getBalance还有tx pool中这个from的交易，进行加减
 func (tx *Transaction) VerifyTransaction() bool {
 	self := tx
