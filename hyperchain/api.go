@@ -91,6 +91,7 @@ func SendTransaction(args TxArgs) ResData {
 
 			// 若已满，生成一个新的区块
 			trans := core.GetTransactionsFromTxPool()
+
 			block := types.NewBlock(trans,core.GetLashestBlockHash(),p2p.LOCALNODE)
 
 			// 更新balance表
