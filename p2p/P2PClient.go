@@ -101,7 +101,7 @@ func getTrans(serverNode node.Node) types.Transactions{
 	//获取交易之后自动存入数据库
 	for _,tx := range trans{
 		core.PutTransactionToLDB(tx.Hash(),tx)
-		if tx.VerifyTransaction() {
+		if tx.VerifyTransaction(core.GetBalanceFromMEM(tx.From),core.GetTransactionsFromTxPool()) {
 			fmt.Printf("\n从%s同步得到交易数据%v\n",serverNode,tx)
 		}else{
 			fmt.Printf("\n存储失败！%v\n",tx)

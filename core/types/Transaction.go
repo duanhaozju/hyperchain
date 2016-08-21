@@ -7,6 +7,7 @@ package types
 import (
 	"hyperchain-alpha/encrypt"
 	"strconv"
+	"time"
 )
 
 type Transaction struct {
@@ -21,12 +22,12 @@ type Transaction struct {
 
 type Transactions []Transaction
 
-func NewTransaction(from string,to string,value int, timestamp int64) *Transaction{
+func NewTransaction(from string,to string,value int) *Transaction{
 	return &Transaction{
 		From: from,
 		To: to,
 		Value: value,
-		TimeStamp: timestamp,
+		TimeStamp: time.Now().Unix(),
 	}
 }
 
@@ -40,14 +41,14 @@ func (tx *Transaction) VerifyTransaction(balance Balance,txPoolsTrans Transactio
 
 func (tx *Transaction) Hash() string{
 	self := tx
-	return string(encrypt.GetHash([]byte(self.From + self.To + strconv.Itoa(self.Value)+ self.TimeStamp)))
+	return string(encrypt.GetHash([]byte(self.From + self.To + strconv.Itoa(self.Value)+ strconv.FormatInt(self.TimeStamp, 10))))
 }
 
 // 检查余额
 func (tx *Transaction) isValid(balance Balance,txPoolsTrans []Transaction) bool{
 
 	self := tx
-	fund := balance
+	fund := balance.Value
 
 	from := self.From
 	amount := self.Value  // balance和交易池中的资金是否足够

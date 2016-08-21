@@ -3,6 +3,9 @@ package types
 import (
 	"hyperchain-alpha/core/node"
 	"hyperchain-alpha/encrypt"
+	"time"
+	"encoding/json"
+	"strconv"
 )
 
 type Block struct {
@@ -16,25 +19,20 @@ type Block struct {
 
 //todo TimeStramp 写错了 应该该掉
 
-func NewBlock(trans Transactions,node node.Node,timestamp int64,parentHash string) *Block{
-
-
-	var block = &Block{
-		ParentHash: parentHash,
+//-- 根据Transactions 打包成一个block
+func NewBlock(trans Transactions, ParentHash string, coinBase node.Node) *Block {
+	//-- 打包创世块
+	block := Block{
+		ParentHash: ParentHash,
 		Transactions: trans,
-		CoinBase: node,
-		TimeStramp: timestamp,
-		MerkleRoot: "test",
+		TimeStramp: time.Now().Unix(),
+		CoinBase: coinBase,
+		MerkleRoot: "root",
 	}
+	txBStr, _ := json.Marshal(block.Transactions)
+	coinbaseBStr , _ := json.Marshal(block.CoinBase)
 
-	bHash := block.Hash()
+	block.BlockHash = string(encrypt.GetHash([]byte(block.ParentHash + string(txBStr) + strconv.FormatInt(block.TimeStramp, 10) + string(coinbaseBStr) + string(block.MerkleRoot))))
 
-	block.BlockHash = bHash
-
-	return block
+	return &block
 }
-
-func (b *Block) Hash() string{
-	return string(encrypt.GetHash([]byte(b.ParentHash + b.Transactions + b.TimeStramp + b.CoinBase + b.MerkleRoot)))
-}
-

@@ -4,11 +4,10 @@ import (
 	"time"
 	"hyperchain-alpha/core/types"
 	"hyperchain-alpha/encrypt"
-	"strconv"
-	"crypto/dsa"
 	"hyperchain-alpha/utils"
 	"hyperchain-alpha/core"
 	"hyperchain-alpha/p2p"
+	"fmt"
 )
 
 type TxArgs struct{
@@ -22,19 +21,15 @@ type TxArgs struct{
 //
 //}
 
-type key struct {
-	privateKey dsa.PrivateKey
-	publicKey dsa.PublicKey
-}
-
 const MAXCOUNT = 5
 
-var name2key map[string]key
+var name2key map[string]utils.KeyPair
 
 // 生成一张私钥与公钥的映射表
 func initial() {
 	accounts,_ := utils.GetAccount()
-	for ac,_ := range accounts{
+
+	for _,ac := range accounts{
 		for key,value := range ac{
 			name2key[key] = value
 		}
@@ -44,21 +39,24 @@ func initial() {
 // 参数是一个json对象
 func SendTransaction(args TxArgs) error {
 
-	var tx types.Transaction
+	var tx *types.Transaction
 
-
+	fmt.Println(args)
 	initial()
 
+	pubFrom := name2key[args.From].PubKey
+	pubTo := name2key[args.To].PubKey
+
 	// 将公钥转换为string类型
-	fromPubKey := encrypt.EncodePublicKey(name2key[args["from"]])
-	toPubKey := encrypt.EncodePublicKey(name2key[args["to"]])
+	fromPubKey := encrypt.EncodePublicKey(&pubFrom)
+	toPubKey := encrypt.EncodePublicKey(&pubTo)
 
 	// 构造 transaction 实例
-	tx = types.NewTransaction(fromPubKey,toPubKey,strconv.Atoi(args["value"]),time.Now().Unix())
+	tx = types.NewTransaction(fromPubKey,toPubKey,args.Value)
 
 	// 生成一个签名
 	txHash := tx.Hash()
-	signature,_ := encrypt.Sign(name2key[args["from"]].privateKey,txHash)
+	signature,_ := encrypt.Sign(name2key[args.From].PriKey,[]byte(txHash))
 
 	// 已经签名的交易
 	tx.Signature = signature
@@ -72,45 +70,43 @@ func SendTransaction(args TxArgs) error {
 
 		// 验证通过
 
-		var envelopes p2p.Envelope
+		var envelopes *p2p.Envelope
 
 		// 提交到交易池
-		core.AddTransactionToTxPool(tx)
-		core.PutTransactionToLDB(txHash,tx)
+		core.AddTransactionToTxPool(*tx)
+		core.PutTransactionToLDB(txHash,*tx)
 
 		transactions := make(types.Transactions,1)
-		transactions = append(transactions,tx)
+		transactions = append(transactions,*tx)
 
 		// 判断交易池是否已满
 		if(core.GetTxPoolCapacity() == MAXCOUNT){
 
 			// 若已满，生成一个新的区块
 			trans := core.GetTransactionsFromTxPool()
-			block := types.NewBlock(trans,p2p.LOCALNODE,time.Now().Unix(),core.GetLashestBlockHash())
-
-			blockHash := block.Hash()
+			block := types.NewBlock(trans,core.GetLashestBlockHash(),p2p.LOCALNODE)
 
 			// （没有验证区块）区块存进数据库
-			core.PutBlockToLDB(blockHash,block)
+			core.PutBlockToLDB(block.BlockHash,*block)
 
 			// 更新全局最新一个区块的HASH
-			core.UpdateChain(blockHash)
+			core.UpdateChain(block.BlockHash)
 
 			// 则清空交易池
 			core.ClearTxPool()
 
 			// 将交易和区块信息传入信封
 			blocks := make([]types.Block,1)
-			blocks = append(blocks,block)
+			blocks = append(blocks,*block)
 
-			envelopes = p2p.Envelope{
+			envelopes = &p2p.Envelope{
 				Transactions: transactions,
 				Blocks: blocks,
 			}
 
 		} else {
 			// 将交易信息传入信封
-			envelopes = p2p.Envelope{
+			envelopes = &p2p.Envelope{
 				Transactions: transactions,
 			}
 

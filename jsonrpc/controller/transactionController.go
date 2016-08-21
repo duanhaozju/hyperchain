@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"hyperchain-alpha/core"
 	"hyperchain-alpha/hyperchain"
+	"strconv"
 )
 
 func TransactionIndex(w http.ResponseWriter, r *http.Request) {
@@ -34,7 +35,13 @@ func TransactionCreate(w http.ResponseWriter, r *http.Request) {
 	// 解析url传递的参数，对于POST则解析响应包的主体（request body）
 	r.ParseForm()
 
-	hyperchain.SendTransaction(r.Form)
+	val, _ := strconv.Atoi(r.Form["value"][0])
+
+	hyperchain.SendTransaction(hyperchain.TxArgs{
+		From: r.Form["from"][0],
+		To: r.Form["to"][0],
+		Value: val,
+	})
 
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")//允许访问所有域
