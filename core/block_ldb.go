@@ -48,10 +48,13 @@ func GetAllBlockFromLDB() ([]types.Block, error) {
 
 	iter := ldb.NewIterator()
 	for iter.Next() {
-		var t types.Block
-		value := iter.Value()
-		err = decondeFromBytes(value, &t)
-		ts = append(ts, t)
+		key := iter.Key()
+		if string(key[:len(blockHeaderKey)]) == string(blockHeaderKey) {
+			var t types.Block
+			value := iter.Value()
+			err = decondeFromBytes(value, &t)
+			ts = append(ts, t)
+		}
 	}
 	iter.Release()
 	err = iter.Error()
