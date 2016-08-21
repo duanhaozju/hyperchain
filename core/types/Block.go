@@ -3,7 +3,6 @@ package types
 import (
 	"hyperchain-alpha/core/node"
 	"hyperchain-alpha/encrypt"
-	"hyperchain-alpha/core"
 )
 
 type Block struct {
@@ -17,11 +16,11 @@ type Block struct {
 
 //todo TimeStramp 写错了 应该该掉
 
-func NewBlock(trans Transactions,node node.Node,timestamp int64) *Block{
+func NewBlock(trans Transactions,node node.Node,timestamp int64,parentHash string) *Block{
 
 
 	var block = &Block{
-		ParentHash: core.GetLashestBlockHash(),
+		ParentHash: parentHash,
 		Transactions: trans,
 		CoinBase: node,
 		TimeStramp: timestamp,
@@ -36,14 +35,6 @@ func NewBlock(trans Transactions,node node.Node,timestamp int64) *Block{
 }
 
 func (b *Block) Hash() string{
-
 	return string(encrypt.GetHash([]byte(b.ParentHash + b.Transactions + b.TimeStramp + b.CoinBase + b.MerkleRoot)))
 }
 
-func (b *Block) UpdateLastestBlockHS() {
-	core.UpdateChain(b.BlockHash)
-}
-
-func (b *Block) SubmitBlock(blockHash string) {
-	core.PutBlockToLDB(blockHash,b)
-}

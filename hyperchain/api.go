@@ -65,7 +65,10 @@ func SendTransaction(args TxArgs) error {
 
 
 	// 验证用户余额，交易是否合法
-	if (tx.VerifyTransaction()) {
+	balance := core.GetBalanceFromMEM(tx.From)
+	txPoolsTrans := core.GetTransactionsFromTxPool()
+
+	if (tx.VerifyTransaction(balance,txPoolsTrans)) {
 
 		// 验证通过
 
@@ -73,7 +76,7 @@ func SendTransaction(args TxArgs) error {
 
 		// 提交到交易池
 		core.AddTransactionToTxPool(tx)
-		tx.SubmitTransaction(txHash)
+		core.PutTransactionToLDB(txHash,tx)
 
 		transactions := make(types.Transactions,1)
 		transactions = append(transactions,tx)
@@ -83,15 +86,15 @@ func SendTransaction(args TxArgs) error {
 
 			// 若已满，生成一个新的区块
 			trans := core.GetTransactionsFromTxPool()
-			block := types.NewBlock(trans,p2p.LOCALNODE,time.Now().Unix())
+			block := types.NewBlock(trans,p2p.LOCALNODE,time.Now().Unix(),core.GetLashestBlockHash())
 
 			blockHash := block.Hash()
 
 			// （没有验证区块）区块存进数据库
-			block.SubmitBlock(blockHash)
+			core.PutBlockToLDB(blockHash,block)
 
 			// 更新全局最新一个区块的HASH
-			block.UpdateLastestBlockHS()
+			core.UpdateChain(blockHash)
 
 			// 则清空交易池
 			core.ClearTxPool()
