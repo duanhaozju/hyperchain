@@ -129,9 +129,3 @@ func CreateInitBlock()  {
 	core.UpdateChain(block.BlockHash)
 
 }
-
-func UpdateBalance(block types.Block)  {
-	for _, trans := range block.Transactions {
-
-	}
-}

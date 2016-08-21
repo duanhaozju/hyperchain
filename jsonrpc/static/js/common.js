@@ -30,7 +30,12 @@ $(document).ready(function(){
             data: getFormData($form),
             success: function( result ) {
                 console.log(result);
-                alert("success !!");
+                if(result.code == 1){
+                    alert("success !!");
+                } else {
+                    alert("error !!");
+                }
+
 //                    $("input[type=reset]").trigger("click");
                 location.reload();
             },
