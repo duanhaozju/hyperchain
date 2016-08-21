@@ -168,7 +168,9 @@ func TransSync(peerNode node.Node){
 
 //向全网节点广播信息
 func BroadCast(envelope *Envelope)(int,error){
-	fmt.Println("===============广播数据=============")
+	log.Println("===============广播数据=============")
+	e := *envelope
+	log.Println("需要广播的数据：",e)
 	allNodes,_:=core.GetAllNodeFromMEM()
 	for _,remoteNode := range allNodes{
 		if remoteNode.P2PIP == LOCALNODE.P2PIP && remoteNode.P2PPort == LOCALNODE.P2PPort && remoteNode.HttpPort == LOCALNODE.HttpPort{
@@ -191,6 +193,7 @@ func dataTransfer(envelop *Envelope, peerNode node.Node)(Envelope,error){
 	defer client.Close()
 	//用于存储返回信息
 	var returnMessage Envelope
+	log.Println("客户端发起trans len",len(envelop.Transactions))
 	err := client.Call("RemoteNode.RemoteDataTransfer", &envelop, &returnMessage)
 	return returnMessage,err
 }

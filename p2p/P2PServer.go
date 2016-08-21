@@ -129,7 +129,9 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 	blocks := envelope.Blocks
 	trans    := envelope.Transactions
 	//首先处理transaction
+	log.Println("接收到的trans len ",len(trans))
 	for _,tran := range trans{
+
 		//先验证
 		if tran.VerifyTransaction(core.GetBalanceFromMEM(tran.From),core.GetTransactionsFromTxPool()){
 			log.Println("交易验证成功，签名有效")
@@ -164,8 +166,10 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 				//BroadCast(envelope)
 
 			}else{
+
 				//如果非满，直接判断结束
 				log.Println("交易池未满，将交易数据存储到交易池...",tran)
+				log.Println("交易池大小为：",core.GetTxPoolCapacity())
 			}
 		}else{
 			log.Fatalln("交易验证失败，签名无效",tran)
