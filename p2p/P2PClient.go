@@ -168,14 +168,15 @@ func TransSync(peerNode node.Node){
 }
 
 //向全网节点广播信息
-func BroadCast(envelope *Envelope)int,err{
-	allNodes,_:=core.GetAllNodeFromMEM()
-	for _,remoteNode := range allNodes{
-		if remoteNode != p2p.LOCALNODE{
-			p2p.TransSync(new p2p.Envelope{})
-		}
-	}
-}
+//func BroadCast(envelope *Envelope) (int,error){
+//	allNodes,_:=core.GetAllNodeFromMEM()
+//	for _,remoteNode := range allNodes{
+//		if remoteNode != p2p.LOCALNODE{
+//			p2p.TransSync(new p2p.Envelope{})
+//		}
+//	}
+//	return nil,nil
+//}
 
 // 异步调用
 //quotient := new(Quotient)

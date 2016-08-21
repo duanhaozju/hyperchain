@@ -2,12 +2,12 @@ package hyper
 
 import (
 	"time"
-	"hyperchain-alpha/core"
+	//"hyperchain-alpha/core"
 	"hyperchain-alpha/core/types"
 	"hyperchain-alpha/encrypt"
 	"strconv"
 	"crypto/dsa"
-	"hyperchain-alpha/p2p"
+	//"hyperchain-alpha/p2p"
 )
 
 type TxArgs struct{
@@ -55,11 +55,11 @@ func (t *TransactionPoolAPI) SendTransaction(args TxArgs) error {
 	//TODO 签名交易
 	tx.Singnature = signature // 已经签名的交易
 
-	//TODO 验证交易，发送者是否存在，余额是否足够
+	//TODO 验证交易，发送者是否存在，余额是否足够,判断getBalance还有tx pool中这个from的交易，进行加减
 
 
 	// TODO  数据 存储到交易池
-	core.PutTransactionToLDB(transaction.Hash(),transaction)
+	//core.PutTransactionToLDB(transaction.Hash(),transaction)
 	//TODO 判断交易池是否满
 	//TODO if ture
 	// TODO 1.打包区块 2.清空交易池 MXM ====
@@ -67,11 +67,11 @@ func (t *TransactionPoolAPI) SendTransaction(args TxArgs) error {
 	//TODO 3. 远程同步数据
 
 	//提供一个信封容器
-	var envelope  p2p.Envelope
+	//var envelope  p2p.Envelope
 	//TODO 将区块和交易信息装入信封
 
 	//同步信息
-	p2p.BroadCast(envelope)
+	//p2p.BroadCast(envelope)
 
 	return nil
 }

@@ -14,9 +14,25 @@
 <div class="container">
     <div class="form">
         <form name="form">
-            <input name="from" placeholder="sender"/><br/>
-            <input name="to" placeholder="receiver"/><br>
-            <input name="value" placeholder="value"/><br>
+            发送方：
+            <select name="from">
+                <option value="">选择一个用户</option>
+                {{range .Accounts}}
+                {{range $key,$value := .}}
+                    <option value="{{$key}}">{{$key}}</option>
+                {{end}}
+                {{end}}
+            </select><br/><br/>
+            接收方：
+            <select name="from">
+                <option value="">选择一个用户</option>
+                {{range .Accounts}}
+                {{range $key,$value := .}}
+                <option value="{{$key}}">{{$key}}</option>
+                {{end}}
+                {{end}}
+            </select><br/><br/>
+            金&emsp;额：<input name="value" placeholder="value"/><br>
             <!--<input name="address" placeholder="for example localhost:9000"/><br>-->
             <input type="button" id="button" value="提交">
             <input type="reset">
@@ -33,6 +49,7 @@
             </tr>
             </thead>
             <tbody>
+            {{with .Trans}}
             {{range .}}
                 <tr>
                     <td>{{.From}}</td>
@@ -40,6 +57,7 @@
                     <td>{{.Value}}</td>
                     <td>{{.TimeStamp}}</td>
                 </tr>
+            {{end}}
             {{end}}
             </tbody>
 
