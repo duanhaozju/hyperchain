@@ -4,7 +4,6 @@ import (
 	"hyperchain-alpha/core/types"
 	"sync"
 	"log"
-	"fmt"
 )
 
 type memBalance struct {
