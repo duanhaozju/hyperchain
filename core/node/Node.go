@@ -28,7 +28,7 @@ type Node struct {
 type Nodes []Node
 
 func (n Node)String() string{
-	return "HyperNode://"+n.P2PIP+":"+strconv.Itoa(n.P2PPort)+"$"+strconv.Itoa(n.HttpPort)
+	return "趣链节点://"+n.P2PIP+":"+strconv.Itoa(n.P2PPort)+"$"+strconv.Itoa(n.HttpPort)
 }
 
 func NewNode(P2PIP string,P2PPORT int,HttpPort int) Node{
@@ -45,4 +45,12 @@ func NewNode(P2PIP string,P2PPORT int,HttpPort int) Node{
 		//publicKey:publickey,
 	}
 	return newNode
+}
+func (ns Nodes) String()string{
+	retString := ""
+	for _,n := range ns{
+		retString +="\n趣链节点://"+n.P2PIP+":"+strconv.Itoa(n.P2PPort)+"$"+strconv.Itoa(n.HttpPort)
+	}
+	return retString
+
 }

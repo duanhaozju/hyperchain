@@ -116,14 +116,14 @@ func getTrans(serverNode node.Node) types.Transactions{
 
 //从对端节点同步取得相应信息
 func NodeSync(peerNode *node.Node) ([]node.Node,error){
-	log.Println("同步节点...")
+	log.Println("=================同步节点======================")
 	serverAddress :=string(peerNode.P2PIP +":"+ strconv.Itoa(peerNode.P2PPort))
 	//取得所有远程节点
 	remotesNodes := getNodes(serverAddress)
-	log.Println("对端返回节点数据：",remotesNodes)
+	//log.Println("对端返回节点数据：",remotesNodes)
 	//将对端节点数据进行更新,对端存储的第一个节点都是对端节点的完整信息
 	*peerNode = remotesNodes[0]
-	log.Println("交换之后的对端节点信息",peerNode)
+	log.Println("更新对端节点",peerNode)
 	//取得所有本地节点
 	AllNodes,_ := core.GetAllNodeFromMEM()
 	//检查节点是否已经存在
@@ -154,8 +154,10 @@ func NodeSync(peerNode *node.Node) ([]node.Node,error){
 		//向其它节点告知
 		SaveNode(remoteNode)
 	}
-
-	log.Printf("同步对端数据节点成功，%s\n",AllNodes)
+	var NowAllNode node.Nodes
+	NowAllNode = AllNodes
+	log.Println("同步对端数据节点成功:",NowAllNode)
+	log.Println("=================同步节点结束====================")
 	return AllNodes,nil
 }
 
@@ -166,7 +168,7 @@ func TransSync(peerNode node.Node){
 
 //向全网节点广播信息
 func BroadCast(envelope *Envelope)(int,error){
-	log.Println("<<<<<广播数据>>>>>")
+	log.Println("<<<<<<<<<<<<广播数据>>>>>>>>>>>>>")
 	e := *envelope
 	log.Println("需要广播的数据：",e)
 	allNodes,_:=core.GetAllNodeFromMEM()
@@ -182,6 +184,7 @@ func BroadCast(envelope *Envelope)(int,error){
 			}
 		}
 	}
+	log.Println("<<<<<<<<<<广播数据结束>>>>>>>>>>>")
 	return 0,nil
 }
 
@@ -191,14 +194,13 @@ func dataTransfer(envelop *Envelope, peerNode node.Node)(Envelope,error){
 	defer client.Close()
 	//用于存储返回信息
 	var returnMessage Envelope
-	log.Println("客户端发起trans len",len(envelop.Transactions))
-	err := client.Call("RemoteNode.RemoteDataTransfer", &envelop, &returnMessage)
+		err := client.Call("RemoteNode.RemoteDataTransfer", &envelop, &returnMessage)
 	return returnMessage,err
 }
 
 // block同步方法，从服务端节点将服务端的block同步下来
 func BlockSync(peerNode *node.Node) ([]types.Block,error){
-	log.Println("同步区块...")
+	log.Println("=================同步区块======================")
 	//review 区块同步，由于没有顺序，所以只是将区块信息从对端节点同步回来
 	// 连接对端
 	serverAddress :=string(peerNode.P2PIP +":"+ strconv.Itoa(peerNode.P2PPort))
@@ -218,7 +220,7 @@ func BlockSync(peerNode *node.Node) ([]types.Block,error){
 		core.UpdateBalance(block)
 		//将block中的交易存储起来
 		for _,tran :=range block.Transactions{
-			log.Println("存储交易："+hex.EncodeToString([]byte(tran.Hash()))+"\n")
+			log.Println("存储交易："+hex.EncodeToString([]byte(tran.Hash())))
 			core.PutTransactionToLDB(tran.Hash(),tran)
 		}
 	}
@@ -226,12 +228,13 @@ func BlockSync(peerNode *node.Node) ([]types.Block,error){
 	if len(returnEnvelop.Blocks) >0{
 		log.Println("同步区块个数：",len(returnEnvelop.Blocks))
 	}
+	log.Println("=================同步区块结束===================")
 	return returnEnvelop.Blocks,err
 }
 
 // block Header 同步方法，用于将Chain数据同步回来，用于实现数据回溯
 func ChainSync(peerNode *node.Node)(types.Chain,error){
-	log.Println("同步chain信息...")
+	log.Println("=================同步Chain======================")
 	//review 将Chain信息同步回来
 	// 连接对端
 	serverAddress :=string(peerNode.P2PIP +":"+ strconv.Itoa(peerNode.P2PPort))
@@ -247,11 +250,12 @@ func ChainSync(peerNode *node.Node)(types.Chain,error){
 	log.Println("chain信息：",returnEnvelop.Chain)
 	//更新本地chain信息
 	core.UpdateChain(returnEnvelop.Chain.LastestBlockHash)
+	log.Println("=================同步Chain结束==================")
 	return returnEnvelop.Chain,err
 }
 
 func TxPoolSync(peerNode *node.Node)(types.Transactions,error){
-	log.Println("同步交易池信息...")
+	log.Println("=================同步交易池======================")
 	// review 将对端交易池中的数据同步回来
 	serverAddress :=string(peerNode.P2PIP +":"+ strconv.Itoa(peerNode.P2PPort))
 	var client =establishConn(serverAddress)
@@ -296,6 +300,7 @@ func TxPoolSync(peerNode *node.Node)(types.Transactions,error){
 		log.Fatal("服务器错误:", err)
 	}
 	log.Println("交易池信息同步结束，共有：",len(trans),"条信息")
+	log.Println("=================同步交易池结束======================")
 	return trans,err
 }
 

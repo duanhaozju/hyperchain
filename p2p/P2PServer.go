@@ -127,16 +127,18 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 	blocks := envelope.Blocks
 	trans    := envelope.Transactions
 	//首先处理transaction
-	log.Println("接收到的trans len ",len(trans))
+	//log.Println("接收到的trans len ",len(trans))
 	for _,tran := range trans{
-
+		log.Println("<<<<<<<<<<<<<<<<<<有新交易>>>>>>>>>>>>>>>>>>")
 		//先验证
 		if tran.VerifyTransaction(core.GetBalanceFromMEM(tran.From),core.GetTransactionsFromTxPool()){
-			log.Println("交易验证成功，签名有效")
+
+			log.Println("交易验证成功，签名有效,处理交易...")
 			//先存储 tran
 			core.AddTransactionToTxPool(tran)
 			// 判断txPool是否满
 			if core.TxPoolIsFull(){
+				log.Println("交易池已满,需要存储交易:")
 				//如果满
 				//1. 取出trans 池子中所有数据
 				transaction := core.GetTransactionsFromTxPool()
@@ -144,7 +146,7 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 				// 打包成一个区块
 				newBlock := types.NewBlock(transaction,core.GetLashestBlockHash(),LOCALNODE)
 				for _,tran :=range newBlock.Transactions{
-					log.Println("存储交易："+hex.EncodeToString([]byte(tran.Hash()))+"\n")
+					log.Println("存储交易："+hex.EncodeToString([]byte(tran.Hash())))
 					core.PutTransactionToLDB(tran.Hash(),tran)
 				}
 				//3. 清空txPool
@@ -155,7 +157,7 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 				core.UpdateChain(newBlock.BlockHash)
 				//6. REVIEW 更新balance表 无条件接受对方打包出来的区块,自己的区块抛弃不用
 				// core.UpdateBalance(*newBlock)
-				log.Println("当前本地打包区块(抛弃)hash:"+hex.EncodeToString([]byte(core.GetChain().LastestBlockHash)))
+				//log.Println("当前本地打包区块(抛弃)hash:"+hex.EncodeToString([]byte(core.GetChain().LastestBlockHash)))
 				log.Println("当前本地打包出来的区块(抛弃)\n",newBlock)
 				//review 是否需要对外广播新打包的区块
 				//review 需要防止广播风暴
@@ -167,12 +169,14 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 			}else{
 
 				//如果非满，直接判断结束
-				log.Println("交易池未满，将交易数据存储到交易池...",tran)
-				log.Println("交易池大小为：",core.GetTxPoolCapacity())
+				log.Println("交易池未满，大小为：",core.GetTxPoolCapacity())
+				log.Println("将交易数据存储到交易池:")
+				log.Println(tran)
 			}
 		}else{
 			log.Fatalln("交易验证失败，签名无效",tran)
 		}
+		log.Println("<<<<<<<<<<<<<<<<<<交易处理结束>>>>>>>>>>>>>>>")
 	}
 
 	// 然后处理block
@@ -183,7 +187,8 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 			core.PutBlockToLDB(block.BlockHash,block)
 			// REVIEW 更新整个chain 只接受对方广播过来的区块，不采用本身打包出来的区块，这里采用一致性算法解决
 			core.UpdateChain(block.BlockHash)
-			log.Println("当前最新区块hash:"+hex.EncodeToString([]byte(core.GetChain().LastestBlockHash)))
+			//log.Println("当前最新区块hash:"+hex.EncodeToString([]byte(core.GetChain().LastestBlockHash)))
+			log.Println("别的节点广播过来的区块(无条件接受)\n",block)
 			// REVIEW 更新balance表 无条件接受对方发送的block信息，并更新balance表
 			core.UpdateBalance(block)
 		}else{
