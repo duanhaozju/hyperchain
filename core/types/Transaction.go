@@ -13,9 +13,9 @@ import (
 )
 
 type Transaction struct {
-	From      string            //从发起账户公钥hash之后的值
-								//Publickey string //携带公钥
-	To        string            //送达账户公钥hash之后的值
+	From      string            //从发起账户公钥
+				    // Publickey string //携带公钥
+	To        string            //送达账户公钥
 	Value     int               // 交易值
 	TimeStamp int64             //时间戳
 	Signature encrypt.Signature //数字签名
