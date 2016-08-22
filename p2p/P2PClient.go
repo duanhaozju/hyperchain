@@ -210,6 +210,9 @@ func BlockSync(peerNode *node.Node) ([]types.Block,error){
 	//用于存储返回信息
 	var returnEnvelop Envelope
 	err := client.Call("RemoteNode.RemoteGetBlocks", &envelop, &returnEnvelop)
+	if err != nil {
+		log.Fatalln("同步区块失败",err)
+	}
 	//review 完成balance表的更新
 	for _,block := range returnEnvelop.Blocks{
 		core.UpdateBalance(block)
