@@ -41,12 +41,12 @@ func NewBlock(trans Transactions, ParentHash string, coinBase node.Node) *Block 
 func (blk Block) String()string{
 	this := blk
 	retString :="\n======================BLOCK<STRAT>==============\n"
-	retString +="= ParentHasht:" + hex.EncodeToString([]byte(this.ParentHash))+"\n"
-	retString +="= BlockHash\t:"+ hex.EncodeToString([]byte(this.BlockHash))+"\n"
-	retString +="= Transactions\t:"	+ strconv.Itoa(len(this.Transactions))+"\n"
-	retString +="= TimeStramp\t:"+ strconv.FormatInt(this.TimeStramp,10)+"\n"
-	retString +="= CoinBase\t:"+ this.CoinBase.String()+"\n"
-	retString +="= MerkleRoot\t:"+ this.MerkleRoot	+"\n"
+	retString +="= ParentHasht\t: " + hex.EncodeToString([]byte(this.ParentHash))+"\n"
+	retString +="= BlockHash\t: "+ hex.EncodeToString([]byte(this.BlockHash))+"\n"
+	retString +="= Transactions\t: "	+ strconv.Itoa(len(this.Transactions))+"\n"
+	retString +="= TimeStramp\t: "+ strconv.FormatInt(this.TimeStramp,10)+"\n"
+	retString +="= CoinBase\t: "+ this.CoinBase.String()+"\n"
+	retString +="= MerkleRoot\t: "+ this.MerkleRoot	+"\n"
 	retString +="======================BLOCK<END>================\n"
 	return retString
 }
