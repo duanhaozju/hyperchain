@@ -67,7 +67,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		pubKeyHash := balance.AccountPublicKeyHash
 		for _,account := range accounts{
 			for name,keypair := range account{
-				if(len(pubKeyHash) == 0){
+				if(encrypt.EncodePublicKey(&godpubkey) == pubKeyHash){
 					balances[i].AccountPublicKeyHash = "god"
 				}else if(encrypt.EncodePublicKey(&keypair.PubKey)== pubKeyHash){
 					balances[i].AccountPublicKeyHash = name
