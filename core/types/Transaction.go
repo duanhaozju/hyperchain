@@ -17,7 +17,7 @@ type Transaction struct {
 	To        string            //送达账户公钥hash之后的值
 	Value     int               // 交易值
 	TimeStamp int64             //时间戳
-	Signature encrypt.Signature //数字签名
+	Signature string            //数字签名
 								//Signedhash string //整体签名
 }
 

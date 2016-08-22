@@ -59,7 +59,7 @@ func SendTransaction(args TxArgs) error {
 	signature,_ := encrypt.Sign(name2key[args.From].PriKey,[]byte(txHash))
 
 	// 已经签名的交易
-	tx.Signature = signature
+	tx.Signature = encrypt.EncodeSignature(&signature)
 
 
 	// 验证用户余额，交易是否合法
