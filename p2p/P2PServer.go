@@ -153,9 +153,9 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 				core.PutBlockToLDB(newBlock.BlockHash,*newBlock)
 				//5.  更新整个chain
 				core.UpdateChain(newBlock.BlockHash)
-				//6. REVIEW 更新balance表
-				core.UpdateBalance(*newBlock)
-				log.Println("当前最新区块hash:"+hex.EncodeToString([]byte(core.GetChain().LastestBlockHash)))
+				//6. REVIEW 更新balance表 无条件接受对方打包出来的区块,自己的区块抛弃不用
+				// core.UpdateBalance(*newBlock)
+				log.Println("当前本地打包区块(抛弃)hash:"+hex.EncodeToString([]byte(core.GetChain().LastestBlockHash)))
 				//review 是否需要对外广播新打包的区块
 				//review 需要防止广播风暴
 				//var envelope Envelope
@@ -180,10 +180,10 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 		if _,ok := core.GetBlockFromLDB(block.BlockHash); ok != nil{
 			//block不存在
 			core.PutBlockToLDB(block.BlockHash,block)
-			// review 更新整个chain
+			// REVIEW 更新整个chain 只接受对方广播过来的区块，不采用本身打包出来的区块，这里采用一致性算法解决
 			core.UpdateChain(block.BlockHash)
 			log.Println("当前最新区块hash:"+hex.EncodeToString([]byte(core.GetChain().LastestBlockHash)))
-			// REVIEW 更新balance表
+			// REVIEW 更新balance表 无条件接受对方发送的block信息，并更新balance表
 			core.UpdateBalance(block)
 		}else{
 			//block存在
