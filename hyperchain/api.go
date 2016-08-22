@@ -54,13 +54,8 @@ func SendTransaction(args TxArgs) error {
 	// 构造 transaction 实例
 	tx = types.NewTransaction(fromPubKey,toPubKey,args.Value)
 
-	// 生成一个签名
-	txHash := tx.Hash()
-	signature,_ := encrypt.Sign(name2key[args.From].PriKey,[]byte(txHash))
-
-	// 已经签名的交易
-	tx.Signature = encrypt.EncodeSignature(&signature)
-
+	// 给交易签名
+	tx.WithSignTransaction(name2key[args.From].PriKey)
 
 	// 验证用户余额，交易是否合法
 	balance := core.GetBalanceFromMEM(tx.From)
