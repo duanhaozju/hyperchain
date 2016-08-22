@@ -3,7 +3,6 @@ package p2p
 import (
 	"net/rpc"
 	"log"
-	"fmt"
 	"strconv"
 	"hyperchain-alpha/core/node"
 	"hyperchain-alpha/core/types"
@@ -21,7 +20,7 @@ func establishConn(serverAddress string) *rpc.Client{
 	if err != nil {
 		log.Fatal("dialing:", err)
 	}
-	fmt.Println("connection has been established")
+	log.Println("P2P连接已经建立...")
 	//defer client.Close()
 	return client
 }
@@ -45,7 +44,7 @@ func SaveNode(remoteNode node.Node) node.Nodes{
 		//review 如果出现错误，就删除该节点
 		log.Fatal("Remote error:", err)
 	}
-	fmt.Println( nodes)
+	log.Println("对端返回节点列表",nodes)
 	return nodes
 }
 //从远端取得节点信息
@@ -64,7 +63,7 @@ func getNodes(serverAddress string) node.Nodes {
 		log.Fatal("Remote error:", err)
 
 	}
-	fmt.Println( nodes)
+	log.Println("对端返回节点列表",nodes)
 //GetBasePath
 	return nodes
 }
@@ -84,7 +83,7 @@ func SaveTrans(serverNode node.Node,localNode node.Node,tx types.Transaction) ty
 	if err != nil {
 		log.Fatal("Remote Error:", err)
 	}
-	fmt.Printf("远端返回交易信息为: %v \n",trans)
+	log.Printf("远端返回交易信息为: %v \n",trans)
 	return trans
 }
 //与远端同步交易信息
@@ -98,21 +97,20 @@ func getTrans(serverNode node.Node) types.Transactions{
 	messageEnvelope.Nodes = append(messageEnvelope.Nodes,LOCALNODE)
 
 	err := client.Call("RemoteNode.RemoteGetTransactions", &messageEnvelope, &trans)
-	fmt.Printf("\n从节点%s,同步交易数据:\n",serverNode)
+	log.Printf("\n从节点%s,同步交易数据:\n",serverNode)
 
 	//获取交易之后自动存入数据库
 	for _,tx := range trans{
 		core.PutTransactionToLDB(tx.Hash(),tx)
 		if tx.VerifyTransaction(core.GetBalanceFromMEM(tx.From),core.GetTransactionsFromTxPool()) {
-			fmt.Printf("\n从%s同步得到交易数据%v\n",serverNode,tx)
+			log.Printf("\n从%s同步得到交易数据%v\n",serverNode,tx)
 		}else{
-			fmt.Printf("\n存储失败！%v\n",tx)
+			log.Printf("\n存储失败！%v\n",tx)
 		}
 	}
 	if err != nil {
 		log.Fatal("Remote Error:", err)
 	}
-	//fmt.Printf("RemoteNodes: %v\n ",trans)
 	return trans
 }
 
@@ -122,10 +120,10 @@ func NodeSync(peerNode *node.Node) ([]node.Node,error){
 	serverAddress :=string(peerNode.P2PIP +":"+ strconv.Itoa(peerNode.P2PPort))
 	//取得所有远程节点
 	remotesNodes := getNodes(serverAddress)
-	fmt.Println("对端返回节点数据：",remotesNodes)
+	log.Println("对端返回节点数据：",remotesNodes)
 	//将对端节点数据进行更新,对端存储的第一个节点都是对端节点的完整信息
 	*peerNode = remotesNodes[0]
-	fmt.Println("交换之后的对端节点信息",peerNode)
+	log.Println("交换之后的对端节点信息",peerNode)
 	//取得所有本地节点
 	AllNodes,_ := core.GetAllNodeFromMEM()
 	//检查节点是否已经存在
@@ -157,7 +155,7 @@ func NodeSync(peerNode *node.Node) ([]node.Node,error){
 		SaveNode(remoteNode)
 	}
 
-	fmt.Printf("同步对端数据节点成功，%s\n",AllNodes)
+	log.Printf("同步对端数据节点成功，%s\n",AllNodes)
 	return AllNodes,nil
 }
 
