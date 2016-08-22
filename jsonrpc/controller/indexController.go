@@ -9,6 +9,7 @@ import (
 	"hyperchain-alpha/core/types"
 	"hyperchain-alpha/encrypt"
 	"hyperchain-alpha/hyperchain"
+	"sort"
 )
 
 //type Transaction struct{
@@ -43,6 +44,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	balances,_ := hyperchain.GetAllAccountBalances()
 
 	transactions = append(transactions,core.GetTransactionsFromTxPool()...)
+	sort.Sort(types.Transactions(transactions))
 
 	for i,tx := range transactions{
 		from := tx.From
