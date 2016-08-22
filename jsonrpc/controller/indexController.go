@@ -9,6 +9,7 @@ import (
 	"hyperchain-alpha/core/types"
 	"hyperchain-alpha/encrypt"
 	"hyperchain-alpha/hyperchain"
+	"sort"
 )
 
 //type Transaction struct{
@@ -43,6 +44,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	balances,_ := hyperchain.GetAllAccountBalances()
 
 	transactions = append(transactions,core.GetTransactionsFromTxPool()...)
+	sort.Sort(types.Transactions(transactions))
 
 	for i,tx := range transactions{
 		from := tx.From
@@ -65,7 +67,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		pubKeyHash := balance.AccountPublicKeyHash
 		for _,account := range accounts{
 			for name,keypair := range account{
-				if(encrypt.EncodePublicKey(&godpubkey) == pubKeyHash){
+				if(len(pubKeyHash) == 0){
 					balances[i].AccountPublicKeyHash = "god"
 				}else if(encrypt.EncodePublicKey(&keypair.PubKey)== pubKeyHash){
 					balances[i].AccountPublicKeyHash = name
