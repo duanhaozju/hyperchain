@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 	"encoding/hex"
+	"crypto/dsa"
 )
 
 type Transaction struct {
@@ -45,6 +46,15 @@ func NewTransaction(from string,to string,value int) *Transaction{
 	}
 }
 
+func (tx *Transaction) WithSignTransaction(priKey dsa.PrivateKey) *Transaction {
+
+	signature,_ := encrypt.Sign(priKey,[]byte(tx.From + tx.To + strconv.Itoa(tx.Value) + strconv.FormatInt(tx.TimeStamp, 10)))
+
+	tx.Signature = signature
+
+	return tx
+
+}
 
 // 验证交易.from是否存在,余额是否足够,判断getBalance还有tx pool中这个from的交易，进行加减
 func (tx *Transaction) VerifyTransaction(balance Balance,txPoolsTrans Transactions) bool {
