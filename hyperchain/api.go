@@ -8,18 +8,14 @@ import (
 	"hyperchain-alpha/core"
 	"hyperchain-alpha/p2p"
 	"fmt"
+	"errors"
 )
 
 type TxArgs struct{
 	From string `json:"from"`
 	To string `json:"to"`
 	Value int `json:"value"`
-	Timestamp time.Time `json:"timestamp"`
-}
-
-type ResData struct{
-	Data interface{}
-	Code int
+	Timestamp int64 `json:"timestamp"`
 }
 
 //type TransactionPoolAPI struct{
@@ -42,7 +38,7 @@ func initial() {
 }
 
 // 参数是一个json对象
-func SendTransaction(args TxArgs) ResData {
+func SendTransaction(args TxArgs) error {
 
 	var tx *types.Transaction
 
@@ -131,17 +127,37 @@ func SendTransaction(args TxArgs) ResData {
 		// 远程同步信封数据
 		p2p.BroadCast(envelopes)
 
-		return ResData{
-			Data: nil,
-			Code:1,
-		}
+		return nil
 
 	}
 
-	return ResData{
-		Data: nil,
-		Code: 0,
+	return errors.New("余额不足")
+}
+
+func GetAllTransactions() (types.Transactions,error) {
+
+	var txs types.Transactions
+
+	txs,err := core.GetAllTransactionFromLDB()
+
+	if (err != nil) {
+		return nil,err
 	}
+
+	return txs,nil
+
+}
+
+func GetAllAccountBalances() ([]types.Balance,error) {
+
+	var bals []types.Balance
+	fmt.Println(len(bals))
+
+	bals = core.GetAllBalanceFromMEM()
+	fmt.Println(len(bals))
+
+	return bals,nil
+
 }
 
 
