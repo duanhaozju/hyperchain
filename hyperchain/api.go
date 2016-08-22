@@ -23,8 +23,6 @@ type TxArgs struct{
 //
 //}
 
-const MAXCOUNT = 5
-
 var name2key = make(map[string]utils.KeyPair)
 
 // 生成一张私钥与公钥的映射表
@@ -84,7 +82,7 @@ func SendTransaction(args TxArgs) error {
 		transactions = append(transactions,*tx)
 
 		// 判断交易池是否已满
-		if(core.GetTxPoolCapacity() == MAXCOUNT){
+		if(core.TxPoolIsFull()){
 
 			// 若已满，生成一个新的区块
 			trans := core.GetTransactionsFromTxPool()
