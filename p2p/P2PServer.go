@@ -184,7 +184,7 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 			// REVIEW 更新整个chain 只接受对方广播过来的区块，不采用本身打包出来的区块，这里采用一致性算法解决
 			core.UpdateChain(block.BlockHash)
 			log.Println("当前最新区块hash:"+hex.EncodeToString([]byte(core.GetChain().LastestBlockHash)))
-			log.Println("当前本地打包出来的区块(无条件接受)\n",block)
+			log.Println("别的节点广播过来的区块(无条件接受)\n",block)
 			// REVIEW 更新balance表 无条件接受对方发送的block信息，并更新balance表
 			core.UpdateBalance(block)
 		}else{
