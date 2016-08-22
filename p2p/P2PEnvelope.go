@@ -3,7 +3,6 @@ import (
 	"hyperchain-alpha/core/types"
 	"hyperchain-alpha/core/node"
 	"strconv"
-	"time"
 	"encoding/hex"
 	"hyperchain-alpha/core"
 )
@@ -22,10 +21,10 @@ type Envelope struct {
 
 func (envelope Envelope)String() string{
 	printString := "\n================<ENVELOPE>======================\n"
-	printString +=  "DATA TO EXCHANGE:\t交易数据一共："+ strconv.Itoa(len(envelope.Transactions)) +"\n"
-	printString +=  "DATA TO EXCHANGE:\t节点一共有：" + strconv.Itoa(len(envelope.Nodes)) +"\n"
-	printString +=  "DATA TO EXCHANGE:\t区块一共有：" + strconv.Itoa(len(envelope.Blocks)) +"\n"
-	printString +=  "DATA TO EXCHANGE:\t节点最新Chain Header Hash：" + hex.EncodeToString([]byte(core.GetChain().LastestBlockHash)) +"\n"
-	printString +=  "=================</ENVELOPE>=====================\n"
+	printString +=  "| 交易数据一共："+ strconv.Itoa(len(envelope.Transactions)) +"\n"
+	printString +=  "| 节点一共有：" + strconv.Itoa(len(envelope.Nodes)) +"\n"
+	printString +=  "| 区块一共有：" + strconv.Itoa(len(envelope.Blocks)) +"\n"
+	printString +=  "| 节点最新Chain Header Hash：" + hex.EncodeToString([]byte(core.GetChain().LastestBlockHash)) +"\n"
+	printString +=  "=================</ENVELOPE>====================="
 	return printString
 }
