@@ -8,6 +8,7 @@ import (
 	"hyperchain-alpha/core"
 	"hyperchain-alpha/p2p"
 	"fmt"
+	"log"
 )
 
 type TxArgs struct{
@@ -128,6 +129,13 @@ func SendTransaction(args TxArgs) ResData {
 		}
 
 		//log.Println("网页封装rans lengs",len(envelopes.Transactions))
+		//输出封装的信息
+		for _,tran := range envelopes.Transactions{
+			log.Println("即将广播的交易信息：",tran)
+		}
+		for _,blk := range envelopes.Blocks{
+			log.Println("即将广播的区块信息：",blk)
+		}
 		// 远程同步信封数据
 		p2p.BroadCast(envelopes)
 

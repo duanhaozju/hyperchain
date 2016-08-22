@@ -74,7 +74,7 @@ func main(){
 		router.PathPrefix("/").Handler(http.FileServer(http.Dir("./jsonrpc/")))
 
 		//启动http服务
-		ctx.String("启动http服务...\n")
+		log.Println("启动http服务...\n")
 		log.Fatal(http.ListenAndServe(":"+strconv.Itoa(argv.HttpServerPORT),router))
 
 		return nil
