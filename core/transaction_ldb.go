@@ -51,7 +51,8 @@ func GetAllTransactionFromLDB() ([]types.Transaction, error) {
 		if len(string(key)) >= len(transactionHeaderKey) && string(key[:len(transactionHeaderKey)]) == string(transactionHeaderKey) {
 			var t types.Transaction
 			value := iter.Value()
-			err = decondeFromBytes(value, &t)
+			//err = decondeFromBytes(value, &t)
+			err = t.UnMarShalJSON(value)
 			ts = append(ts, t)
 		}
 	}

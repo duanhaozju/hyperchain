@@ -50,3 +50,62 @@ func (blk Block) String()string{
 	retString +="======================BLOCK<END>================\n"
 	return retString
 }
+
+//-- 将Block序列化
+func (self Block) MarshalJSON() ([]byte, error) {
+	type BlockJSON struct {
+		ParentHash string
+		BlockHash string
+		Transactions [][]byte  //-- []byte表示一个交易
+		TimeStramp int64 //unix时间戳
+		CoinBase node.Node // 打包该Block的地址
+		MerkleRoot string // merkleRoot 的hash值
+	}
+
+	var trans [][]byte
+	for _, t := range self.Transactions {
+		tstrb, _ := t.MarshalJSON()
+		trans = append(trans, tstrb)
+	}
+
+	bJSON := BlockJSON{
+		ParentHash: self.ParentHash,
+		BlockHash: self.BlockHash,
+		Transactions: trans,
+		TimeStramp: self.TimeStramp,
+		CoinBase: self.CoinBase,
+		MerkleRoot: self.MerkleRoot,
+	}
+	return json.Marshal(bJSON)
+}
+
+
+//-- 将BlocK反序列化， self为接收容器
+func (self *Block) UnMarShalJSON(data []byte) error {
+	type BlockJSON struct {
+		ParentHash string
+		BlockHash string
+		Transactions [][]byte  //-- []byte表示一个交易
+		TimeStramp int64 //unix时间戳
+		CoinBase node.Node // 打包该Block的地址
+		MerkleRoot string // merkleRoot 的hash值
+	}
+	var bJSON BlockJSON
+	json.Unmarshal(data, &bJSON)
+
+	var ts []Transaction
+	for _, v := range bJSON.Transactions  {
+		var t Transaction
+		if err := t.UnMarShalJSON(v); err != nil {
+			return err
+		}
+		ts = append(ts, t)
+	}
+	self.ParentHash = bJSON.ParentHash
+	self.BlockHash = bJSON.BlockHash
+	self.Transactions = ts
+	self.TimeStramp = bJSON.TimeStramp
+	self.CoinBase = bJSON.CoinBase
+	self.MerkleRoot = bJSON.MerkleRoot
+	return nil
+}

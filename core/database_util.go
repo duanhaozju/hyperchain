@@ -78,7 +78,8 @@ var (
 
 //-- ------------------- Transaction ---------------------------------
 func putTransaction(db hyperdb.Database, key []byte, t types.Transaction) error {
-	data, err := encodeToBytes(t)
+	//data, err := encodeToBytes(t)
+	data, err := t.MarshalJSON()
 	if err != nil {
 		return err
 	}
@@ -97,7 +98,8 @@ func getTransaction(db hyperdb.Database, key []byte) (types.Transaction, error){
 	if len(data) == 0 {
 		return transaction, err
 	}
-	err = decondeFromBytes(data, &transaction)
+	//err = decondeFromBytes(data, &transaction)
+	err = transaction.UnMarShalJSON(data)
 	return transaction, err
 }
 
@@ -111,7 +113,8 @@ func deleteTransaction(db hyperdb.Database, key []byte) error {
 
 //-- ------------------- Block ---------------------------------
 func putBlock(db hyperdb.Database, key []byte, t types.Block) error {
-	data, err := encodeToBytes(t)
+	//data, err := encodeToBytes(t)
+	data, err := t.MarshalJSON()
 	if err != nil {
 		return err
 	}
@@ -130,7 +133,8 @@ func getBlock(db hyperdb.Database, key []byte) (types.Block, error){
 	if len(data) == 0 {
 		return block, err
 	}
-	err = decondeFromBytes(data, &block)
+	//err = decondeFromBytes(data, &block)
+	err = block.UnMarShalJSON(data)
 	return block, err
 }
 

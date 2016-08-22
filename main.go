@@ -111,7 +111,7 @@ func CreateInitBlock()  {
 		}
 		by := []byte(t.From + t.To + strconv.Itoa(t.Value) + strconv.FormatInt(t.TimeStamp, 10))
 		signature, _ := encrypt.Sign(godAccount["god"].PriKey, by)
-		t.Signature = encrypt.EncodeSignature(&signature)
+		t.Signature = signature
 		core.PutTransactionToLDB(t.Hash(), t)
 		transactions = append(transactions, t)
 	}

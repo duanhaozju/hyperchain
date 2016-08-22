@@ -10,6 +10,7 @@ import (
 	"time"
 	"encoding/hex"
 	"crypto/dsa"
+	"encoding/json"
 )
 
 type Transaction struct {
@@ -18,7 +19,7 @@ type Transaction struct {
 	To        string            //送达账户公钥hash之后的值
 	Value     int               // 交易值
 	TimeStamp int64             //时间戳
-	Signature string            //数字签名
+	Signature encrypt.Signature //数字签名
 								//Signedhash string //整体签名
 }
 
@@ -100,3 +101,51 @@ func (tx *Transaction) isValidSign() bool {
 func (tx Transaction) String()string{
 	return hex.EncodeToString([]byte(tx.Hash()))
 }
+
+
+//-- 将Transaction序列化
+func (self Transaction) MarshalJSON() ([]byte, error) {
+	type TransactionJson struct {
+		From      string            //从发起账户公钥hash之后的值
+									//Publickey string //携带公钥
+		To        string            //送达账户公钥hash之后的值
+		Value     int               // 交易值
+		TimeStamp int64             //时间戳
+		Signature string            //数字签名json形式
+									//Signedhash string //整体签名
+	}
+	tJSON := TransactionJson{
+		From: self.From,
+		To: self.To,
+		Value: self.Value,
+		TimeStamp: self.TimeStamp,
+		Signature: encrypt.EncodeSignature(&self.Signature),
+	}
+	return json.Marshal(tJSON)
+}
+
+//-- 将data反序列化为Tranaction,self为接收的容器
+func (self *Transaction) UnMarShalJSON(data []byte) error {
+	type TransactionJson struct {
+		From      string            //从发起账户公钥hash之后的值
+									//Publickey string //携带公钥
+		To        string            //送达账户公钥hash之后的值
+		Value     int               // 交易值
+		TimeStamp int64             //时间戳
+		Signature string            //数字签名json形式
+									//Signedhash string //整体签名
+	}
+	var tJSON TransactionJson
+	if err := json.Unmarshal(data, &tJSON); err != nil {
+		return err
+	}
+	self.From = tJSON.From
+	self.To = tJSON.To
+	self.Value = tJSON.Value
+	self.TimeStamp = self.TimeStamp
+	var sign encrypt.Signature
+	encrypt.DecodeSignature(tJSON.Signature, &sign)
+	self.Signature = sign
+	return nil
+}
+

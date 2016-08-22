@@ -52,7 +52,8 @@ func GetAllBlockFromLDB() ([]types.Block, error) {
 		if len(string(key)) >= len(blockHeaderKey) && string(key[:len(blockHeaderKey)]) == string(blockHeaderKey) {
 			var t types.Block
 			value := iter.Value()
-			err = decondeFromBytes(value, &t)
+			//err = decondeFromBytes(value, &t)
+			err = t.UnMarShalJSON(value)
 			ts = append(ts, t)
 		}
 	}
