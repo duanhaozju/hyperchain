@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>P2P</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script type="text/javascript" src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/common.js"></script>
+</head>
+<body>
+<header>
+    <div>P2P</div>
+</header>
+<div class="container">
+    <div class="form">
+        <form name="form">
+            发送方：
+            <select name="from">
+                <option value="">选择一个用户</option>
+                {{range .Accounts}}
+                {{range $key,$value := .}}
+                    <option value="{{$key}}">{{$key}}</option>
+                {{end}}
+                {{end}}
+            </select><br/><br/>
+            接收方：
+            <select name="to">
+                <option value="">选择一个用户</option>
+                {{range .Accounts}}
+                {{range $key,$value := .}}
+                <option value="{{$key}}">{{$key}}</option>
+                {{end}}
+                {{end}}
+            </select><br/><br/>
+            金&emsp;额：<input name="value" placeholder="value"/><br>
+            <!--<input name="address" placeholder="for example localhost:9000"/><br>-->
+            <input type="button" id="button" value="提交">
+            <input type="reset">
+        </form>
+    </div>
+    <div class="list">
+        <table class="trans">
+            <thead>
+            <tr>
+                <th>From</th>
+                <th>To</th>
+                <th>Value</th>
+                <th>TimeStamp</th>
+            </tr>
+            </thead>
+            <tbody>
+            {{with .Trans}}
+            {{range .}}
+                <tr>
+                    <td>{{.From}}</td>
+                    <td>{{.To}}</td>
+                    <td>{{.Value}}</td>
+                    <td>{{.TimeStamp}}</td>
+                </tr>
+            {{end}}
+            {{end}}
+            </tbody>
+        </table>
+        <table class="balances">
+            <thead>
+            <tr>
+                <th>Account</th>
+                <th>Balance</th>
+            </tr>
+            </thead>
+            <tbody>
+            {{with .Balances}}
+            {{range .}}
+            <tr>
+                <td>{{.AccountPublicKeyHash}}</td>
+                <td>{{.Value}}</td>
+            </tr>
+            {{end}}
+            {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
