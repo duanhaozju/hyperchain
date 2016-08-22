@@ -8,6 +8,8 @@ import (
 	"os"
 	"strconv"
 	"hyperchain-alpha/core/node"
+	"log"
+	"hyperchain-alpha/utils"
 )
 
 //-- 这里定义了各种结构在数据库或内存中存取key的前缀
@@ -36,6 +38,11 @@ func decondeFromBytes(data []byte, v interface{}) error {
 //-- port为端口号
 func InitDB(port int) {
 	lDBPath = baseLDBPath + strconv.Itoa(port)
+
+	log.Println("删除现有本地数据库数据...")
+	utils.RemoveContents(lDBPath)
+	log.Println("初始化本地数据库...")
+
 	memDB, _ = hyperdb.NewMemDatabase()  //-- 暂时没用
 	memBalanceMap = newMemBalance()
 	memChainMap = newMemChain()

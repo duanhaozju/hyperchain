@@ -74,7 +74,7 @@ func main(){
 		router.PathPrefix("/").Handler(http.FileServer(http.Dir("./jsonrpc/")))
 
 		//启动http服务
-		ctx.String("启动http服务...\n")
+		log.Println("启动http服务...")
 		log.Fatal(http.ListenAndServe(":"+strconv.Itoa(argv.HttpServerPORT),router))
 
 		return nil
@@ -96,7 +96,7 @@ func CreateInitBlock()  {
 	//-- from 为上面的from用户
 	//-- value 为10000, 20000, 30000 ...
 	var transactions types.Transactions
-	for i, account_map := range accounts {
+	for _, account_map := range accounts {
 		var account_publicKey dsa.PublicKey
 		for _,acc := range account_map{
 			account_publicKey = acc.PubKey
@@ -106,7 +106,7 @@ func CreateInitBlock()  {
 		t := types.Transaction {
 			From: encrypt.EncodePublicKey(&god_PublicKey),
 			To: encrypt.EncodePublicKey(&account_publicKey),
-			Value: (i+1) * 10000,
+			Value: 10000,
 			TimeStamp: time.Now().Unix(),
 		}
 		by := []byte(t.From + t.To + strconv.Itoa(t.Value) + strconv.FormatInt(t.TimeStamp, 10))

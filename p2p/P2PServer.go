@@ -5,7 +5,6 @@ import (
 	"net"
 	"log"
 	"net/http"
-	"fmt"
 	"strconv"
 	"hyperchain-alpha/core/node"
 	"hyperchain-alpha/core/types"
@@ -28,20 +27,19 @@ func (r *RemoteNode) RemoteSaveNodes(envelope *Envelope, retNodes *node.Nodes) e
 	for _,inNode:= range envelope.Nodes{
 		for  _,localNode := range AllNodes{
 			if localNode.P2PIP== inNode.P2PIP && localNode.P2PPort == inNode.P2PPort{
-				fmt.Println("节点已经存在")
+				log.Println("节点已经存在",inNode)
 				existFlag = true
 			}
 		}
 		if !existFlag{
-			fmt.Println("节点不存在")
-			fmt.Println(inNode)
+			log.Println("节点不存在",inNode)
 			//向内存中存储的节点列表添加节点
 			core.PutNodeToMEM(inNode.CoinBase,inNode)
 		}
 	}
 	var err = new(error)
 	*retNodes,*err = core.GetAllNodeFromMEM()
-	fmt.Println(*retNodes)
+	log.Println(*retNodes)
 	return *err
 }
 
@@ -53,17 +51,17 @@ func (r *RemoteNode) RemoteGetNodes(envelope *Envelope,retNodes *node.Nodes) err
 		AllNodes,_ := core.GetAllNodeFromMEM()
 		for  _,localNode := range AllNodes{
 			if localNode.P2PIP == inNode.P2PIP && localNode.P2PPort == inNode.P2PPort{
-				fmt.Println("节点已经存在")
+				log.Println("节点已经存在",inNode)
 				existFlag = true
 			}
 		}
 		if !existFlag{
-			fmt.Println("节点不存在")
-			fmt.Println(inNode)
+			log.Println("节点不存在:",inNode)
+			log.Println(inNode)
 			core.PutNodeToMEM(inNode.CoinBase,inNode)
 		}
 	NowAllNodes,_ := core.GetAllNodeFromMEM()
-	fmt.Println("当前拥有节点：",NowAllNodes)
+	log.Println("当前拥有节点：",NowAllNodes)
 	*retNodes,_= core.GetAllNodeFromMEM()
 	return nil
 }
@@ -74,7 +72,7 @@ func (r *RemoteNode) RemoteGetNodes(envelope *Envelope,retNodes *node.Nodes) err
 func (r *RemoteNode) RemoteSaveTransaction(envelope *Envelope,trans *types.Transactions) error {
 	remoteNode := envelope.Nodes[0]
 	for _,tx := range envelope.Transactions{
-		fmt.Printf("获取远端新交易数据,请求来源：%s,\t交易数据为%v\t\n",remoteNode,tx)
+		log.Printf("获取远端新交易数据,请求来源：%s,\t交易数据为%v\t\n",remoteNode,tx)
 		err := core.PutTransactionToLDB(tx.Hash(),tx)
 		if err != nil{
 			return err
@@ -87,7 +85,7 @@ func (r *RemoteNode) RemoteSaveTransaction(envelope *Envelope,trans *types.Trans
 func (r *RemoteNode) RemoteGetTransactions(envelope *Envelope,trans *types.Transactions) error{
 	remoteNode := envelope.Nodes[0]
 	//远程取得交易信息
-	fmt.Printf("远端请求同步,请求来源：%s\n",remoteNode)
+	log.Printf("远端请求同步,请求来源：%s\n",remoteNode)
 	var err = new(error)
 	*trans,*err = core.GetAllTransactionFromLDB()
 	return *err
@@ -155,9 +153,9 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 				core.PutBlockToLDB(newBlock.BlockHash,*newBlock)
 				//5.  更新整个chain
 				core.UpdateChain(newBlock.BlockHash)
-				//6. REVIEW 更新balance表
-				core.UpdateBalance(*newBlock)
-				log.Println("当前最新区块hash:"+hex.EncodeToString([]byte(core.GetChain().LastestBlockHash)))
+				//6. REVIEW 更新balance表 无条件接受对方打包出来的区块,自己的区块抛弃不用
+				// core.UpdateBalance(*newBlock)
+				log.Println("当前本地打包区块(抛弃)hash:"+hex.EncodeToString([]byte(core.GetChain().LastestBlockHash)))
 				//review 是否需要对外广播新打包的区块
 				//review 需要防止广播风暴
 				//var envelope Envelope
@@ -182,10 +180,10 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 		if _,ok := core.GetBlockFromLDB(block.BlockHash); ok != nil{
 			//block不存在
 			core.PutBlockToLDB(block.BlockHash,block)
-			// review 更新整个chain
+			// REVIEW 更新整个chain 只接受对方广播过来的区块，不采用本身打包出来的区块，这里采用一致性算法解决
 			core.UpdateChain(block.BlockHash)
 			log.Println("当前最新区块hash:"+hex.EncodeToString([]byte(core.GetChain().LastestBlockHash)))
-			// REVIEW 更新balance表
+			// REVIEW 更新balance表 无条件接受对方发送的block信息，并更新balance表
 			core.UpdateBalance(block)
 		}else{
 			//block存在
@@ -206,6 +204,6 @@ func StratP2PServer(p2pServerPort int){
 	if e != nil {
 		log.Fatal("listen error:", e)
 	}
-	fmt.Println("启动P2P远程调用服务...")
+	log.Println("开启P2P远程调用服务...")
 	go http.Serve(l, nil)
 }
