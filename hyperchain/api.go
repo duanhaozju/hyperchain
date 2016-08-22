@@ -9,6 +9,7 @@ import (
 	"hyperchain-alpha/p2p"
 	"fmt"
 	"errors"
+	"log"
 )
 
 type TxArgs struct{
