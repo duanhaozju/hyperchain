@@ -7,9 +7,10 @@ import (
 	"hyperchain-alpha/common"
 	"sync"
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/logger"
-	"github.com/ethereum/go-ethereum/logger/glog"
+
+
 	"hyperchain-alpha/event"
+
 )
 
 type txPool interface {
@@ -87,7 +88,7 @@ func (self *TxPool) AddTransactions(txs []*types.Transaction) {
 	defer self.mu.Unlock()
 
 	for _, tx := range txs {
-		glog.V(logger.Debug).Infoln(tx)
+
 		//self.pending=tx
 		//TODO添加tx到pool中
 		go self.eventMux.Post(event.TxPreEvent{tx})

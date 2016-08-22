@@ -1,15 +1,17 @@
 package manager
 
 import (
-	"github.com/ethereum/go-ethereum/core"
+
 	"sync"
 	"github.com/ethereum/go-ethereum/eth/fetcher"
 
 	"hyperchain-alpha/event"
 
-	"github.com/ethereum/go-ethereum/core/types"
 	"hyperchain-alpha/common"
 
+
+	"hyperchain-alpha/block"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 
@@ -22,6 +24,9 @@ type ProtocolManager struct {
 	fetcher    *fetcher.Fetcher
 
 
+	BlockMaker *block.BlockMaker
+	newPeerCh   chan *peer
+	noMorePeers chan struct{}
 	txsyncCh    chan *txsync
 	eventMux      *event.TypeMux
 	txSub         event.Subscription
@@ -56,10 +61,10 @@ func NewProtocolManager( mux *event.TypeMux, txpool txPool) (*ProtocolManager, e
 func (pm *ProtocolManager) Start() {
 	//监听本节点中产生的消息,然后广播给其它节点(主要广播)
 	// broadcast transactions
-	pm.txSub = pm.eventMux.Subscribe(core.TxPreEvent{})
+	pm.txSub = pm.eventMux.Subscribe(event.TxPreEvent{})
 	go pm.txBroadcastLoop()
 	// broadcast mined blocks
-	pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
+	pm.minedBlockSub = pm.eventMux.Subscribe(event.NewMinedBlockEvent{})
 	go pm.minedBroadcastLoop()
 
 	// start sync handlers,同步监听handle中传来的消息,然后处理
@@ -78,7 +83,7 @@ func (self *ProtocolManager) minedBroadcastLoop() {
 	// automatically stops if unsubscribe
 	for obj := range self.minedBlockSub.Chan() {
 		switch ev := obj.Data.(type) {
-		case core.NewMinedBlockEvent:
+		case event.NewMinedBlockEvent:
 
 			self.BroadcastBlock(ev.Block)
 		}
@@ -87,7 +92,7 @@ func (self *ProtocolManager) minedBroadcastLoop() {
 func (self *ProtocolManager) txBroadcastLoop() {
 	// automatically stops if unsubscribe
 	for obj := range self.txSub.Chan() {
-		event := obj.Data.(core.TxPreEvent)
+		event := obj.Data.(event.TxPreEvent)
 		self.BroadcastTx(event.Tx.Hash(), event.Tx)
 	}
 }

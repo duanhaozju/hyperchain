@@ -1,20 +1,20 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/miner"
-	"github.com/ethereum/go-ethereum/common/httpclient"
-	"github.com/ethereum/ethash"
-	"github.com/ethereum/go-ethereum/accounts"
+
+
 
 	"sync"
-	"github.com/ethereum/go-ethereum/ethdb"
+
 	"hyperchain-alpha/event"
 	"hyperchain-alpha/common"
 	"hyperchain-alpha/manager"
 
-	"github.com/ethereum/go-ethereum/core"
+
 	"hyperchain-alpha/transaction"
-	"hyperchain-alpha/config"
+
+	"hyperchain-alpha/block"
+
 )
 
 type Ethereum struct {
@@ -23,23 +23,23 @@ type Ethereum struct {
 	shutdownChan chan bool
 
 			       // DB interfaces
-	chainDb ethdb.Database // Block chain database
+	//chainDb ethdb.Database // Block chain database
 
 
 			       // Handlers
-	txPool          *core.TxPool
+	txPool          *transaction.TxPool
 	txMu            sync.Mutex
-	blockchain      *core.BlockChain
-	accountManager  *accounts.Manager
-	pow             *ethash.Ethash
+	//blockchain      *core.BlockChain
+	//accountManager  *accounts.Manager
+	//pow             *ethash.Ethash
 	protocolManager *manager.ProtocolManager
 
 
 
-	httpclient *httpclient.HTTPClient
+	//httpclient *httpclient.HTTPClient
 
 	eventMux *event.TypeMux
-	miner    *miner.Miner
+	blockMaker    *block.BlockMaker
 
 	Mining        bool
 	MinerThreads  int
@@ -56,12 +56,15 @@ func New(eventMux *event.TypeMux) (*Ethereum, error) {
 
 	}
 
+
 	newPool := transaction.NewTxPool(eventMux)
 	eth.txPool = newPool
 	if eth.protocolManager, err = manager.NewProtocolManager(eth.eventMux, eth.txPool); err != nil {
 		return nil, err
 	}
 	eth.protocolManager.Start()
-	eth.miner = miner.New(eth,  eth.eventMux)
+	eth.blockMaker =block.New(eth,  eth.eventMux)
 	return eth, nil
 }
+
+

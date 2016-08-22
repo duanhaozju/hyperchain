@@ -3,8 +3,15 @@ package manager
 import (
 	"github.com/ethereum/go-ethereum/core/types"
 
-)
+	"time"
 
+	"hyperchain-alpha/block"
+)
+const (
+	forceSyncCycle      = 10 * time.Second // Time interval to force syncs, even if few peers are available
+
+
+)
 type txsync struct {
 	p   *peer
 	txs []*types.Transaction
@@ -28,12 +35,32 @@ func (pm *ProtocolManager) txsyncLoop() {
 func (pm *ProtocolManager) syncer() {
 
 	// Start and ensure cleanup of sync mechanisms
+
 	pm.fetcher.Start()
+	// Wait for different events to fire synchronisation operations
+	forceSync := time.Tick(forceSyncCycle)
+	for {
+		select {
+		case <-pm.newPeerCh:
+		// Make sure we have peers to select from, then sync
+
+			go pm.BlockMaker.Start()
+
+		case <-forceSync:
+		// Force a sync even if not enough peers are present
+			go pm.BlockMaker.SyncWithPeer()
+
+		case <-pm.noMorePeers:
+			return
+		}
+	}
 
 }
 
 
 
+
+//跟节点握手后,同步tx
 func (pm *ProtocolManager) syncTransactions(p *peer) {
 	txs := pm.txpool.GetTransactions()
 	if len(txs) == 0 {
@@ -44,3 +71,4 @@ func (pm *ProtocolManager) syncTransactions(p *peer) {
 	case <-pm.quitSync:
 	}
 }
+
