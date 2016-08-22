@@ -39,7 +39,7 @@
         </form>
     </div>
     <div class="list">
-        <table>
+        <table class="trans">
             <thead>
             <tr>
                 <th>From</th>
@@ -60,8 +60,24 @@
             {{end}}
             {{end}}
             </tbody>
-
-
+        </table>
+        <table class="balances">
+            <thead>
+            <tr>
+                <th>Account</th>
+                <th>Balance</th>
+            </tr>
+            </thead>
+            <tbody>
+            {{with .Balances}}
+            {{range .}}
+            <tr>
+                <td>{{.AccountPublicKeyHash}}</td>
+                <td>{{.Value}}</td>
+            </tr>
+            {{end}}
+            {{end}}
+            </tbody>
         </table>
     </div>
 </div>

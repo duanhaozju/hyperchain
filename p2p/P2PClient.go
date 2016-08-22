@@ -166,13 +166,13 @@ func TransSync(peerNode node.Node){
 
 //向全网节点广播信息
 func BroadCast(envelope *Envelope)(int,error){
-	log.Println("===============广播数据=============")
+	log.Println("<<<<<广播数据>>>>>")
 	e := *envelope
 	log.Println("需要广播的数据：",e)
 	allNodes,_:=core.GetAllNodeFromMEM()
 	for _,remoteNode := range allNodes{
 		if remoteNode.P2PIP == LOCALNODE.P2PIP && remoteNode.P2PPort == LOCALNODE.P2PPort && remoteNode.HttpPort == LOCALNODE.HttpPort{
-			log.Println("节点忽略..",remoteNode,LOCALNODE)
+			log.Println("节点忽略，远程：",remoteNode,"本地：",LOCALNODE)
 		}else{
 			returnEnvelope,err := dataTransfer(envelope,remoteNode)
 			if err != nil{
