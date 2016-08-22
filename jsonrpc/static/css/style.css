@@ -12,7 +12,7 @@ header div{
 .container{
     width: 900px;
     margin: 0 auto;
-    padding-top:20px;
+    padding:20px 0;
 }
 form{
 
@@ -28,10 +28,12 @@ input[type=button],input[type=reset],select{
     border: none;
 }
 .list{
-    background: #eeeeee;
+    display: flex;
+    justify-content: space-around;
 }
 table{
-    width:80%;
+    background: #eeeeee;
+    padding: 10px 20px;
 
 }
 table tr td,table tr th{

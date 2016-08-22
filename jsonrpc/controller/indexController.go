@@ -8,6 +8,7 @@ import (
 	"hyperchain-alpha/utils"
 	"hyperchain-alpha/core/types"
 	"hyperchain-alpha/encrypt"
+	"hyperchain-alpha/hyperchain"
 )
 
 //type Transaction struct{
@@ -22,6 +23,7 @@ import (
 type data struct{
 	Trans types.Transactions
 	Accounts utils.Accounts
+	Balances []types.Balance
 }
 
 // 处理请求 : GET "/"
@@ -36,7 +38,10 @@ func Index(w http.ResponseWriter, r *http.Request) {
 
 	godAccounts := utils.GetGodAccount()
 	godpubkey := godAccounts[0]["god"].PubKey
-	transactions,_ := core.GetAllTransactionFromLDB()
+
+	transactions,_ := hyperchain.GetAllTransactions()
+	balances,_ := hyperchain.GetAllAccountBalances()
+
 	transactions = append(transactions,core.GetTransactionsFromTxPool()...)
 
 	for i,tx := range transactions{
@@ -56,10 +61,24 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	for i,balance := range balances{
+		pubKeyHash := balance.AccountPublicKeyHash
+		for _,account := range accounts{
+			for name,keypair := range account{
+				if(encrypt.EncodePublicKey(&godpubkey) == pubKeyHash){
+					balances[i].AccountPublicKeyHash = "god"
+				}else if(encrypt.EncodePublicKey(&keypair.PubKey)== pubKeyHash){
+					balances[i].AccountPublicKeyHash = name
+				}
+			}
+		}
+	}
+
 	//tmpl.Execute(w,transactions)
 	tmpl.Execute(w,data{
 		Trans:transactions,
 		Accounts:accounts,
+		Balances: balances,
 	})
 }
 
