@@ -74,6 +74,31 @@ func Ripemd160(data []byte) []byte {
 
 	return ripemd.Sum(nil)
 }*/
+type NodeID [512 / 8]byte
+func PubkeyID(pub *ecdsa.PublicKey) NodeID {
+	var id NodeID
+	pbytes := elliptic.Marshal(pub.Curve, pub.X, pub.Y)
+	if len(pbytes)-1 != len(id) {
+		panic(fmt.Errorf("need %d bit pubkey, got %d bits", (len(id)+1)*8, len(pbytes)))
+	}
+	copy(id[:], pbytes[1:])
+	return id
+}
+
+func recoverNodeID(hash, sig []byte) (id NodeID, err error) {
+	pubkey, err := secp256k1.RecoverPubkey(hash, sig)
+	if err != nil {
+		return id, err
+	}
+	if len(pubkey)-1 != len(id) {
+		return id, fmt.Errorf("recovered pubkey has %d bits, want %d bits", len(pubkey)*8, (len(id)+1)*8)
+	}
+	for i := range id {
+		id[i] = pubkey[i+1]
+	}
+	return id, nil
+}
+
 func CreateAddress(b common.Address, nonce uint64) common.Address {
 	data, _ := rlp.EncodeToBytes([]interface{}{b, nonce})
 	return common.BytesToAddress(Keccak256(data)[12:])

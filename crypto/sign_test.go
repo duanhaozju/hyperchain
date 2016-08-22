@@ -24,6 +24,8 @@ import (
 	"math/big"
 
 	"hyperchain-alpha/common"
+
+	"crypto/elliptic"
 )
 
 func TestBox(t *testing.T) {
@@ -32,6 +34,7 @@ func TestBox(t *testing.T) {
 	SaveECDSA("./testFile",key)
 	priv,err:=LoadECDSA("./testFile")
 	pub := key.PublicKey
+
 
 
 	fmt.Println("public key is :")
@@ -43,15 +46,40 @@ func TestBox(t *testing.T) {
 	//common.HexToAddress()
 
 
+	//fmt.Println(PubkeyID(&pub))
+	h := tx.SigHash()
+	sig, err := Sign(h[:], key)
+	//sig, err := Sign(tx.SigHash()[:], key)
+	recpub, err := recoverNodeID(h[:], sig)
+	pub1 := PubkeyID(&key.PublicKey)
+	fmt.Println(recpub)
+	fmt.Println(pub1)
+	pbytes := elliptic.Marshal(pub.Curve, pub.X, pub.Y)
+
+
+	fmt.Println(Keccak256(pbytes[1:])[12:])
+
+
+
+
 	from, err := tx.From()
+	fmt.Println(from)
+	//var id NodeID
+	//for i := range id {
+	//	id[i] = from[i+1]
+	//}
+
+	//fmt.Println(id)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
 	}
 
-	fmt.Println(from.Hex())
 
-	fmt.Println(from)
+
+
+
+	//fmt.Println(from)
 
 
 
