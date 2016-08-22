@@ -157,15 +157,9 @@ func GetAllTransactions() (types.Transactions,error) {
 }
 
 func GetAllAccountBalances() ([]types.Balance,error) {
-
 	var bals []types.Balance
-	fmt.Println(len(bals))
-
 	bals = core.GetAllBalanceFromMEM()
-	fmt.Println(len(bals))
-
 	return bals,nil
-
 }
 
 
