@@ -156,6 +156,7 @@ func (r *RemoteNode)RemoteDataTransfer(envelope *Envelope,retEnvelope *Envelope)
 				//6. REVIEW 更新balance表 无条件接受对方打包出来的区块,自己的区块抛弃不用
 				// core.UpdateBalance(*newBlock)
 				log.Println("当前本地打包区块(抛弃)hash:"+hex.EncodeToString([]byte(core.GetChain().LastestBlockHash)))
+				log.Println("当前本地打包出来的区块(抛弃)\n",newBlock)
 				//review 是否需要对外广播新打包的区块
 				//review 需要防止广播风暴
 				//var envelope Envelope
