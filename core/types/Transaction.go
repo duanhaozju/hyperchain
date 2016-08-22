@@ -60,7 +60,7 @@ func (tx *Transaction) WithSignTransaction(priKey dsa.PrivateKey) *Transaction {
 func (tx *Transaction) VerifyTransaction(balance Balance,txPoolsTrans Transactions) bool {
 	self := tx
 
-	return self.isValid(balance,txPoolsTrans)
+	return self.isValidBalance(balance,txPoolsTrans) && self.isValidSign()
 }
 
 func (tx *Transaction) Hash() string{
@@ -69,7 +69,7 @@ func (tx *Transaction) Hash() string{
 }
 
 // 检查余额
-func (tx *Transaction) isValid(balance Balance,txPoolsTrans []Transaction) bool{
+func (tx *Transaction) isValidBalance(balance Balance,txPoolsTrans []Transaction) bool{
 
 	self := tx
 	fund := balance.Value
@@ -90,6 +90,11 @@ func (tx *Transaction) isValid(balance Balance,txPoolsTrans []Transaction) bool{
 
 
 	return amount <= fund
+}
+
+// 检查签名
+func (tx *Transaction) isValidSign() bool {
+	return encrypt.Verify(encrypt.DecodePublicKey(tx.From),[]byte(tx.Hash()),tx.Signature)
 }
 
 func (tx Transaction) String()string{

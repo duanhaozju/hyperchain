@@ -57,13 +57,6 @@ func SendTransaction(args TxArgs) error {
 	// 给交易签名
 	tx.WithSignTransaction(name2key[args.From].PriKey)
 
-	//txHash := tx.Hash(name2key[args.From].PriKey)
-	//signature,_ := encrypt.Sign(name2key[args.From].PriKey,[]byte(txHash))
-
-	// 已经签名的交易
-	//tx.Signature = signature
-
-
 	// 验证用户余额，交易是否合法
 	balance := core.GetBalanceFromMEM(tx.From)
 	txPoolsTrans := core.GetTransactionsFromTxPool()
