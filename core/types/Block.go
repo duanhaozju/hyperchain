@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"strconv"
 	"encoding/hex"
+	"math/big"
 )
 
 type Block struct {
@@ -16,6 +17,8 @@ type Block struct {
 	TimeStramp int64 //unix时间戳
 	CoinBase node.Node // 打包该Block的地址
 	MerkleRoot string // merkleRoot 的hash值
+	Number      *big.Int       // The block number
+
 }
 
 //todo TimeStramp 写错了 应该该掉

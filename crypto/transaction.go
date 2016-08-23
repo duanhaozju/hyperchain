@@ -29,9 +29,10 @@ import (
 
 
 
-	"hyperChain/rlp"
+	//"hyperChain/rlp"
 	"hyperchain-alpha/crypto/sha3"
 	"hyperchain-alpha/common"
+	"encoding/json"
 )
 
 var ErrInvalidSig = errors.New("invalid v, r, s values")
@@ -76,9 +77,15 @@ func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.Amo
 
 //hash 方法
 func rlpHash(x interface{}) (h common.Hash) {
-	hw := sha3.NewKeccak256()
 
-	rlp.Encode(hw, x)
+	hw := sha3.NewKeccak256()
+	data,err :=json.Marshal(x)
+	hw.Write(data)
+	if err!=nil{
+		fmt.Print("2")
+	}
+
+	//rlp.Encode(hw, x)
 	hw.Sum(h[:0])
 	return h
 }

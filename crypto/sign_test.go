@@ -47,13 +47,13 @@ func TestBox(t *testing.T) {
 
 
 	//fmt.Println(PubkeyID(&pub))
-	h := tx.SigHash()
+/*	h := tx.SigHash()
 	sig, err := Sign(h[:], key)
 	//sig, err := Sign(tx.SigHash()[:], key)
 	recpub, err := recoverNodeID(h[:], sig)
 	pub1 := PubkeyID(&key.PublicKey)
 	fmt.Println(recpub)
-	fmt.Println(pub1)
+	fmt.Println(pub1)*/
 	pbytes := elliptic.Marshal(pub.Curve, pub.X, pub.Y)
 
 

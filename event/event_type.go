@@ -9,16 +9,16 @@ import (
 
 )
 
+
+type ConsensusEvent struct{ Msg *types.Msg }
+
 // TxPreEvent is posted when a transaction enters the transaction pool.
 type TxPreEvent struct{ Tx *types.Transaction }
 
 // TxPostEvent is posted when a transaction has been processed.
 type TxPostEvent struct{ Tx *types.Transaction }
 
-// PendingLogsEvent is posted pre mining and notifies of pending logs.
-//type PendingLogsEvent struct {
-//	Logs vm.Logs
-//}
+
 
 // PendingStateEvent is posted pre mining and notifies of pending state changes.
 type PendingStateEvent struct{}

@@ -3,16 +3,17 @@ package manager
 import (
 
 	"sync"
-	"github.com/ethereum/go-ethereum/eth/fetcher"
+
 
 	"hyperchain-alpha/event"
 
 	"hyperchain-alpha/common"
 
-
 	"hyperchain-alpha/block"
 
 	"hyperchain-alpha/core/types"
+
+	"hyperchain-alpha/transaction"
 )
 
 type peerSet struct {
@@ -23,17 +24,17 @@ type peerSet struct {
 type ProtocolManager struct {
 	networkId int
 
-	txpool      txPool
+	txpool      *transaction.TxPool
 
 
-	fetcher    *fetcher.Fetcher
+	fetcher    *Fetcher
 	peers      *peerSet
 
 
 	BlockMaker *block.BlockMaker
 	newPeerCh   chan *peer
 	noMorePeers chan struct{}
-	txsyncCh    chan *txsync
+
 	eventMux      *event.TypeMux
 	txSub         event.Subscription
 	minedBlockSub event.Subscription
@@ -54,9 +55,6 @@ func NewProtocolManager( mux *event.TypeMux, txpool txPool) (*ProtocolManager) {
 	manager := &ProtocolManager{
 		eventMux:    mux,
 		txpool:      txpool,
-
-
-		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
 	}
 	return manager
@@ -65,18 +63,44 @@ func NewProtocolManager( mux *event.TypeMux, txpool txPool) (*ProtocolManager) {
 
 //启动内部监听
 func (pm *ProtocolManager) Start() {
-	//监听本节点中产生的消息,然后广播给其它节点(主要广播)
-	// broadcast transactions
-	pm.txSub = pm.eventMux.Subscribe(event.TxPreEvent{})
-	go pm.txBroadcastLoop()
-	// broadcast mined blocks
-	pm.minedBlockSub = pm.eventMux.Subscribe(event.NewMinedBlockEvent{})
-	go pm.minedBroadcastLoop()
 
-	// start sync handlers,同步监听handle中传来的消息,然后处理
-	go pm.syncer()
-	go pm.txsyncLoop()
+
+
+	go pm.fetcher.Start()
+/*	pm.txSub = pm.eventMux.Subscribe(event.TxPreEvent{})
+	go pm.txBroadcastLoop()*/
+	// broadcast mined blocks
+	pm.minedBlockSub = pm.eventMux.Subscribe(event.NewMinedBlockEvent{},event.TxPreEvent{})
+	go pm.BroadcastLoop()
+	go pm.BlockMaker.Start()
+	go pm.txpool.Start()
+
+
+
 }
+
+
+
+// Mined broadcast loop
+func (self *ProtocolManager) BroadcastLoop() {
+	// automatically stops if unsubscribe
+	for obj := range self.minedBlockSub.Chan() {
+		switch ev := obj.Data.(type) {
+		case event.NewMinedBlockEvent:
+			self.fetcher.Enqueue( ev.Block)
+			self.BroadcastBlock(ev.Block)
+		case event.TxPreEvent:
+			//event := obj.Data.(event.TxPreEvent)
+			self.BroadcastTx(ev.Tx.Hash(), ev.Tx)
+		case event.ConsensusEvent:
+			//event := obj.Data.(event.TxPreEvent)
+			self.BroadcastConsensusEvent(ev.Msg)
+		}
+		//pm.fetcher.Enqueue(p.id, request.Block)
+	}
+}
+
+
 
 func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) {
 	// Broadcast transaction to a batch of peers not knowing about it
@@ -84,23 +108,11 @@ func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) 
 
 }
 
-// Mined broadcast loop
-func (self *ProtocolManager) minedBroadcastLoop() {
-	// automatically stops if unsubscribe
-	for obj := range self.minedBlockSub.Chan() {
-		switch ev := obj.Data.(type) {
-		case event.NewMinedBlockEvent:
 
-			self.BroadcastBlock(ev.Block)
-		}
-	}
-}
-func (self *ProtocolManager) txBroadcastLoop() {
-	// automatically stops if unsubscribe
-	for obj := range self.txSub.Chan() {
-		event := obj.Data.(event.TxPreEvent)
-		self.BroadcastTx(event.Tx.Hash(), event.Tx)
-	}
+func (pm *ProtocolManager) BroadcastConsensusEvent(msg *types.Msg) {
+	// Broadcast transaction to a batch of peers not knowing about it
+
+
 }
 
 //广播发送消息给其它连接的节点

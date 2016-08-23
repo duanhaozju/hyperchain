@@ -1,7 +1,7 @@
 package transaction
 
 import (
-	"math/big"
+
 
 
 	"hyperchain-alpha/common"
@@ -25,8 +25,8 @@ type TxPool struct {
 
 
 
-	gasLimit     func() *big.Int // The current gas limit function callback
-	minGasPrice  *big.Int
+
+
 	eventMux     *event.TypeMux
 	events       event.Subscription
 
@@ -48,13 +48,12 @@ func NewTxPool( eventMux *event.TypeMux) *TxPool {
 		eventMux:     eventMux,
 
 
-		minGasPrice:  new(big.Int),
+
 
 		events:       eventMux.Subscribe(event.ChainHeadEvent{},  event.RemovedTransactionEvent{}),
 	}
 
-	pool.wg.Add(1)
-	go pool.eventLoop()
+
 
 	return pool
 }
@@ -84,13 +83,13 @@ func (self *TxPool) AddTransactions(txs []*types.Transaction) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	for _, tx := range txs {
-
-		//self.pending=tx
-		//TODO添加tx到pool中
-		go self.eventMux.Post(event.TxPreEvent{tx})
-
-	}
+	//for _, tx := range txs {
+	//
+	//	//self.pending=tx
+	//	//TODO添加tx到pool中
+	//	//go self.eventMux.Post(event.TxPreEvent{tx})
+	//
+	//}
 
 }
 
@@ -113,3 +112,10 @@ func (self *TxPool) GetTransactions() (txs types.Transactions) {
 	}
 	return txs
 }
+
+func (self *TxPool) Start() {
+
+	go self.eventLoop()
+
+}
+
