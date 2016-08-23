@@ -56,12 +56,9 @@ func New(eventMux *event.TypeMux) (*Ethereum, error) {
 
 	}
 
-
 	newPool := transaction.NewTxPool(eventMux)
 	eth.txPool = newPool
-	if eth.protocolManager, err = manager.NewProtocolManager(eth.eventMux, eth.txPool); err != nil {
-		return nil, err
-	}
+	eth.protocolManager = manager.NewProtocolManager(eventMux, eth.txPool)
 	eth.protocolManager.Start()
 	eth.blockMaker =block.New(eth,  eth.eventMux)
 	return eth, nil

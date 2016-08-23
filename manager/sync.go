@@ -1,11 +1,11 @@
 package manager
 
 import (
-	"github.com/ethereum/go-ethereum/core/types"
+
 
 	"time"
 
-	"hyperchain-alpha/block"
+	"hyperchain-alpha/core/types"
 )
 const (
 	forceSyncCycle      = 10 * time.Second // Time interval to force syncs, even if few peers are available
@@ -44,7 +44,7 @@ func (pm *ProtocolManager) syncer() {
 		case <-pm.newPeerCh:
 		// Make sure we have peers to select from, then sync
 
-			go pm.BlockMaker.Start()
+			go pm.BlockMaker.SyncWithPeer()
 
 		case <-forceSync:
 		// Force a sync even if not enough peers are present

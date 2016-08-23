@@ -11,10 +11,15 @@ import (
 
 
 	"hyperchain-alpha/block"
-	"github.com/ethereum/go-ethereum/core/types"
+
+	"hyperchain-alpha/core/types"
 )
 
-
+type peerSet struct {
+	peers  map[string]*peer
+	lock   sync.RWMutex
+	closed bool
+}
 type ProtocolManager struct {
 	networkId int
 
@@ -22,6 +27,7 @@ type ProtocolManager struct {
 
 
 	fetcher    *fetcher.Fetcher
+	peers      *peerSet
 
 
 	BlockMaker *block.BlockMaker
@@ -43,7 +49,7 @@ type ProtocolManager struct {
 	badBlockReportingEnabled bool
 }
 
-func NewProtocolManager( mux *event.TypeMux, txpool txPool) (*ProtocolManager, error) {
+func NewProtocolManager( mux *event.TypeMux, txpool txPool) (*ProtocolManager) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		eventMux:    mux,
@@ -53,7 +59,7 @@ func NewProtocolManager( mux *event.TypeMux, txpool txPool) (*ProtocolManager, e
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
 	}
-	return manager, nil
+	return manager
 }
 
 

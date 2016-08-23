@@ -2,7 +2,8 @@ package manager
 
 import (
 	"math/big"
-	"github.com/ethereum/go-ethereum/core/types"
+
+	"hyperchain-alpha/core/types"
 )
 
 const (

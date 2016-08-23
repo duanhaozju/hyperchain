@@ -8,9 +8,8 @@ import (
 
 	"hyperchain-alpha/rlp"
 	"fmt"
-	"github.com/ethereum/go-ethereum/logger/glog"
-	"github.com/ethereum/go-ethereum/logger"
-	"github.com/ethereum/go-ethereum/core/types"
+
+	"hyperchain-alpha/core/types"
 )
 //远程节点
 type peer struct {
@@ -47,7 +46,7 @@ func (pm *ProtocolManager) handle(p *peer,msg Msg) error {
 
 	if err := Handshake(); err != nil {
 		//glog.V(logger.Info).Infof("enter handshake failed")
-		glog.V(logger.Debug).Infof("%v: handshake failed: %v", p, err)
+		//glog.V(logger.Debug).Infof("%v: handshake failed: %v", p, err)
 		return err
 	}
 
@@ -60,7 +59,7 @@ func (pm *ProtocolManager) handle(p *peer,msg Msg) error {
 	// main loop. handle incoming messages.
 	for {
 		if err := pm.handleMsg(p,msg); err != nil {
-			glog.V(logger.Debug).Infof("%v: message handling failed: %v", p, err)
+			//glog.V(logger.Debug).Infof("%v: message handling failed: %v", p, err)
 			return err
 		}
 	}

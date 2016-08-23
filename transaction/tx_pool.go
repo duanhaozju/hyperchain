@@ -3,14 +3,13 @@ package transaction
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/core/types"
+
 	"hyperchain-alpha/common"
 	"sync"
-	"github.com/ethereum/go-ethereum/core/state"
-
 
 	"hyperchain-alpha/event"
 
+	"hyperchain-alpha/core/types"
 )
 
 type txPool interface {
@@ -25,7 +24,7 @@ type txPool interface {
 type TxPool struct {
 
 
-	pendingState *state.ManagedState
+
 	gasLimit     func() *big.Int // The current gas limit function callback
 	minGasPrice  *big.Int
 	eventMux     *event.TypeMux
@@ -40,6 +39,7 @@ type TxPool struct {
 	homestead bool
 }
 
+//new 一个tx pool,然后循环监听中的事件
 func NewTxPool( eventMux *event.TypeMux) *TxPool {
 	pool := &TxPool{
 
@@ -49,8 +49,8 @@ func NewTxPool( eventMux *event.TypeMux) *TxPool {
 
 
 		minGasPrice:  new(big.Int),
-		pendingState: nil,
-		events:       eventMux.Subscribe(event.ChainHeadEvent{}, event.GasPriceChanged{}, event.RemovedTransactionEvent{}),
+
+		events:       eventMux.Subscribe(event.ChainHeadEvent{},  event.RemovedTransactionEvent{}),
 	}
 
 	pool.wg.Add(1)
@@ -72,10 +72,7 @@ func (pool *TxPool) eventLoop() {
 			//TODO
 			//pool.resetState()
 			pool.mu.Unlock()
-		case event.GasPriceChanged:
-			pool.mu.Lock()
-			pool.minGasPrice = ev.Price
-			pool.mu.Unlock()
+
 		case event.RemovedTransactionEvent:
 			pool.AddTransactions(ev.Txs)
 		}
