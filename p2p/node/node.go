@@ -8,28 +8,27 @@ package Server
 import (
 	pb "hyperchain-alpha/p2p/peermessage"
 	"golang.org/x/net/context"
-	"hyperchain-alpha/utils"
-
 	"net"
 	"log"
 	"google.golang.org/grpc"
 
 	"strconv"
+	"hyperchain-alpha/p2p/peerComm"
 )
 
-type ChatServer struct {
+type Node struct {
 	address pb.PeerAddress
 	grpcServer *grpc.Server
 }
-var globalChatServer ChatServer
+var globalChatServer Node
 const DefaultgRpcPort = 8001
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
-func NewChatServer(port int32) *ChatServer{
+func NewNode(port int32) *Node {
 	if globalChatServer.address.Ip != "" && globalChatServer.address.Port !=0 {
 		return &globalChatServer
 	}else{
-		globalChatServer.address.Ip = utils.GetIpAddr()
+		globalChatServer.address.Ip = peerComm.GetIpLocalIpAddr()
 		globalChatServer.address.Port = port
 		globalChatServer.startServer()
 		return &globalChatServer
@@ -37,13 +36,13 @@ func NewChatServer(port int32) *ChatServer{
 
 }
 func GetChatServerAddr() pb.PeerAddress{
-	return NewChatServer(DefaultgRpcPort).address
+	return NewNode(DefaultgRpcPort).address
 }
 
 // Chat Implements the ServerSide Function
-func (chatServer *ChatServer) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error){
+func (chatServer *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error){
 	MeAddress := pb.PeerAddress{
-		Ip:utils.GetIpAddr(),
+		Ip:peerComm.GetIpLocalIpAddr(),
 		Port:8001,
 	}
 	var response pb.Message
@@ -66,7 +65,7 @@ func (chatServer *ChatServer) Chat(ctx context.Context, msg *pb.Message) (*pb.Me
 }
 
 // StartServer start the gRPC server
-func (chatServer *ChatServer)startServer(){
+func (chatServer *Node)startServer(){
 	this := chatServer
 	log.Println("Starting the grpc listening server")
 	lis, err := net.Listen("tcp",":"+strconv.Itoa(int(this.address.Port)))
@@ -82,7 +81,7 @@ func (chatServer *ChatServer)startServer(){
 
 //StopServer stops the gRPC server gracefully. It stops the server to accept new
 // connections and RPCs and blocks until all the pending RPCs are finished.
-func (chatServer *ChatServer)StopServer(){
+func (chatServer *Node)StopServer(){
 	this := chatServer
 	this.grpcServer.GracefulStop()
 }
