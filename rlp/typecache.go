@@ -54,6 +54,19 @@ type typekey struct {
 type decoder func(*Stream, reflect.Value) error
 
 type writer func(reflect.Value, *encbuf) error
+func CachedTypeInfo(typ reflect.Type, tags tags) (*typeinfo, error) {
+	typeCacheMutex.RLock()
+	info := typeCache[typekey{typ, tags}]
+	typeCacheMutex.RUnlock()
+	if info != nil {
+		return info, nil
+	}
+	// not in the cache, need to generate info for this type.
+	typeCacheMutex.Lock()
+	defer typeCacheMutex.Unlock()
+	return cachedTypeInfo1(typ, tags)
+}
+
 
 func cachedTypeInfo(typ reflect.Type, tags tags) (*typeinfo, error) {
 	typeCacheMutex.RLock()

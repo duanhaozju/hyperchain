@@ -113,8 +113,10 @@ func EncodeToReader(val interface{}) (size int, r io.Reader, err error) {
 	eb := encbufPool.Get().(*encbuf)
 	eb.reset()
 	if err := eb.encode(val); err != nil {
+
 		return 0, nil, err
 	}
+
 	return eb.size(), &encReader{buf: eb}, nil
 }
 
@@ -181,8 +183,10 @@ func (w *encbuf) Write(b []byte) (int, error) {
 
 func (w *encbuf) encode(val interface{}) error {
 	rval := reflect.ValueOf(val)
+
 	ti, err := cachedTypeInfo(rval.Type(), tags{})
 	if err != nil {
+
 		return err
 	}
 	return ti.writer(rval, w)

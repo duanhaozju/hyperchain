@@ -66,7 +66,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := p.msg.Decode(&request); err != nil {
 			return errResp(ErrDecode, "%v: %v", p.msg, err)
 		}
-		pm.fetcher.Enqueue(p.id, request.Block)
+		//Todo
+		//pm.fetcher.Enqueue(p.id, request.Block)
 
 
 	case p.msg.Type == TxMsg:
@@ -82,7 +83,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 
 		}
-		pm.txpool.AddTransactions(txs)
+		//Todo
+		//pm.txpool.AddTransactions(txs)
 
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", p.msg.Type)

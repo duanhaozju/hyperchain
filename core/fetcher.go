@@ -1,4 +1,4 @@
-package manager
+package core
 
 import (
 
@@ -7,6 +7,7 @@ import (
 
 	"hyperchain-alpha/common"
 	"errors"
+
 )
 
 type Fetcher struct {
@@ -28,6 +29,22 @@ var (
 type inject struct {
 
 	block  *types.Block
+}
+
+func NewFetcher() *Fetcher {
+
+
+	return &Fetcher{
+
+		inject:         make(chan *inject),
+
+		quit:           make(chan struct{}),
+
+		queue:          prque.New(),
+		queues:         make(map[string]int),
+		queued:         make(map[common.Hash]*inject),
+
+	}
 }
 
 func (f *Fetcher) Start() {

@@ -1,18 +1,30 @@
 package types
 
-import "hyperchain-alpha/rlp"
+import (
+	"io"
+
+)
+
+const (
+	// Protocol messages
+	StatusMsg                   = 0x00
+
+	TxMsg                       = 0x01
+
+	NewBlockMsg                 = 0x02
+
+)
 
 type Msg struct {
-	Type       uint64
-	Size uint32
+	Type    uint64
+	Size    uint32
 
-	Payload  []byte
+	Payload io.Reader
+}
 
-}
-func (msg *Msg) Decode(val interface{}) error {
-	s := rlp.NewStream(msg.Payload, uint64(msg.Size))
-	if err := s.Decode(val); err != nil {
-		panic("invalid error code")
-	}
-	return nil
-}
+
+
+
+
+
+

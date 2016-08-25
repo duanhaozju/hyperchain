@@ -75,7 +75,7 @@ func NewTransaction(nonce uint64, to common.Address, amount, gasLimit, gasPrice 
 func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.Amount) }
 
 
-//hash 方法
+
 func rlpHash(x interface{}) (h common.Hash) {
 
 	hw := sha3.NewKeccak256()
