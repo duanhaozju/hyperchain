@@ -1,0 +1,32 @@
+// message defination for network transaction
+syntax="proto3";
+
+package peermessage;
+
+import "google/protobuf/timestamp.proto";
+
+message Message{
+    // From the message source 
+    PeerAddress From     = 1;
+    MsgType MessageType  = 2;
+    bytes  Payload       = 3;
+    google.protobuf.Timestamp MsgTimeStamp = 15;
+
+    //MsgType message type during data transfer 
+    enum MsgType {
+        HELLO       = 0;
+        RESPONSE    = 1;
+        CONSUS      = 2;
+    }
+}
+
+//PeerAddress the peer address
+message PeerAddress {
+        string Ip      =   1;
+        int32 Port     =   2;
+}
+
+service Chat {
+    // double arrow data tranfer
+    rpc Chat(Message) returns(Message){}
+}
