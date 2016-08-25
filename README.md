@@ -7,11 +7,11 @@ change log:
 - alpha 0.1 完成了基本的节点连接数据同步和节点信息同步　2016/08/17 
 - alpha 0.2 TODO
 Todo List:
-- [ ] 加入block/chain结构
-- [ ] 加入`getBalance`功能
-- [ ] 加入节点和账户地址
+- [x] 加入block/chain结构
+- [x] 加入`getBalance`功能
+- [x] 加入节点和账户地址
 - [ ] 加入`merktree`
-- [ ] 加入`checktransaction` 交易校验
+- [x] 加入`checktransaction` 交易校验
 
 ##项目设置
 **go path**
