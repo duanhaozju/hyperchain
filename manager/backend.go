@@ -21,6 +21,7 @@ func New(eventMux *event.TypeMux, peerManager p2p.PeerManager, node node.Node) (
 
 
 
+
 	allAlive := peerManager.JudgeAlivePeers()
 
 	if allAlive {
