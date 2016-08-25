@@ -1,13 +1,17 @@
 package p2p
 
-import "hyperchain-alpha/core/types"
-
+import (
+	"hyperchain-alpha/core/types"
+	"hyperchain-alpha/common"
+)
+// manager grpc connect,client stands for local node,peers stand for remote servers
 type PeerManager interface {
 
 	// judge all peer are connected and return them
 	JudgeAlivePeers()(bool)
 	GetAllPeers()([]*Peer)
 	Start()
+	GetClientId()common.Hash
 	BroadcastPeers(msg *types.Msg)
 
 }
