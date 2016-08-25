@@ -1,13 +1,15 @@
 package peerPool
 
 import (
-	"hyperchain-alpha/p2p/peer"
+
 	pb "hyperchain-alpha/p2p/peermessage"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"fmt"
 	//"strings"
 	//"strconv"
 	//"log"
+	"google.golang.org/grpc/peer"
+
 )
 
 
