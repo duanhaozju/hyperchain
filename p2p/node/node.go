@@ -24,12 +24,12 @@ var globalChatServer Node
 const DefaultgRpcPort = 8001
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
-func NewNode(port int32) *Node {
+func NewNode(port int) *Node {
 	if globalChatServer.address.Ip != "" && globalChatServer.address.Port !=0 {
 		return &globalChatServer
 	}else{
 		globalChatServer.address.Ip = peerComm.GetIpLocalIpAddr()
-		globalChatServer.address.Port = port
+		globalChatServer.address.Port = int32(port)
 		globalChatServer.startServer()
 		return &globalChatServer
 	}

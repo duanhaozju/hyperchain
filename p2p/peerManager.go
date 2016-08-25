@@ -3,51 +3,66 @@ package p2p
 import (
 	"hyperchain-alpha/core/types"
 	"hyperchain-alpha/common"
+	peer "hyperchain-alpha/p2p/peer"
+	pb "hyperchain-alpha/p2p/peermessage"
+	"hyperchain-alpha/p2p/peerEventManager"
+	node "hyperchain-alpha/p2p/node"
+	"time"
 )
 
-// TODO init the peer
-// TODO init eventManager
-// TODO init the handler
-// TODO init the event register
+
 
 type PeerManager interface {
-
 	// judge all peer are connected and return them
 	JudgeAlivePeers()(bool)
-	GetAllPeers()([]*Peer)
-	Start()
+	GetAllPeers()([]*peer.Peer)
+	Start(port int)
 	GetClientId()common.Hash
 	BroadcastPeers(msg *types.Msg)
 
 }
 
-type Peer struct {
 
-
-}
 
 type  GrpcPeerManager struct{
-	Message int
 
+	EventManager *peerEventManager.PeerEventManager
+	localNode *node.Node
 
 }
 
-func (self *GrpcPeerManager)GetClientId()common.Hash{
+func (this *GrpcPeerManager)GetClientId()common.Hash{
 	return *new(common.Hash)
 
 }
-func (self *GrpcPeerManager)Start()  {
+func (this *GrpcPeerManager)Start(port int)  {
+	// start the grpc server
+	this.localNode = node.NewNode(port)
+
+	// init the event manager
+	this.EventManager = peerEventManager.NewPeerEventManager()
+	this.EventManager.RegisterEvent(pb.Message_HELLO,NewHelloHandler())
+	this.EventManager.RegisterEvent(pb.Message_CONSUS,NewBroadCastHandler())
+	this.EventManager.Start()
 
 }
-func (self *GrpcPeerManager)JudgeAlivePeers() bool  {
-
+func (this *GrpcPeerManager)JudgeAlivePeers() bool  {
+	//TODO 判断所有的节点是否存活
 	return true
 }
 
-func (self *GrpcPeerManager)GetAllPeers()([]*Peer)  {
+func (this *GrpcPeerManager)GetAllPeers()([]*peer.Peer)  {
 	return nil
 }
 
-func (self *GrpcPeerManager)BroadcastPeers(msg *types.Msg)  {
+func (this *GrpcPeerManager)BroadcastPeers(msg *types.Msg)  {
+	var broadCastMessage = pb.Message{
+		MessageType:pb.Message_CONSUS,
+		From:this.localNode,
+		// TODO packaging the msg into payload
+		Payload:[]byte("hhhh"),
+		MsgTimeStamp: time.Now().Unix(),
+	}
+	this.EventManager.PostEvent(pb.Message_CONSUS,broadCastMessage)
 
 }

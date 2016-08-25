@@ -4,19 +4,23 @@ import (
 	"testing"
 	"hyperchain-alpha/p2p/peermessage"
 	"fmt"
-	"hyperchain-alpha/p2p/node"
+
 	"log"
-	"hyperchain-alpha/p2p/peer"
+
 	"strconv"
+
+	node "hyperchain-alpha/p2p/node"
+	peer "hyperchain-alpha/p2p/peer"
+
 )
 
 func TestPeersPool_PutPeer(t *testing.T) {
 	portRange := 8002
 	//get the client
 	//start the server
-	server := node.NewChatServer(int32(portRange))
+	server := node.NewNode(int32(portRange))
 
-	chatClient, err := peer.NewChatClient("localhost:"+ strconv.Itoa(portRange))
+	chatClient, err := peer.NewPeer("localhost:"+ strconv.Itoa(portRange))
 	if err != nil {
 		log.Fatalln("连接失败")
 	}
@@ -64,9 +68,9 @@ func TestPeersPool_GetPeer(t *testing.T) {
 	portRange := 8001
 	//get the client
 	//start the server
-	server := node.NewChatServer(int32(portRange))
+	server := node.NewNode(int32(portRange))
 
-	chatClient, err := peer.NewChatClient("localhost:"+ strconv.Itoa(portRange))
+	chatClient, err := peer.NewPeer("localhost:"+ strconv.Itoa(portRange))
 	if err != nil {
 		log.Fatalln("连接失败")
 	}
