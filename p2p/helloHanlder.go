@@ -1,3 +1,10 @@
+// gRPC manager
+// author: Quan Chen
+// date: 2016-08-25
+// last modified:2016-08-25 Quan Chen
+// change log:	define the hello message handler struct
+// 		this is used to handle the local hello message
+//
 package p2p
 
 import (

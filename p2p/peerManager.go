@@ -1,11 +1,12 @@
 // gRPC manager
 // author: Lizhong kuang
 // date: 2016-08-24
-// last modified:2016-08-25
+// last modified:2016-08-25 Quan Chen
+// change log:	modified the  PeerManager interface definition
+//		implements GrpcPeerManager methods
 package p2p
 
 import (
-	"hyperchain-alpha/core/types"
 	"hyperchain-alpha/common"
 	peer "hyperchain-alpha/p2p/peer"
 	pb "hyperchain-alpha/p2p/peermessage"
@@ -25,10 +26,6 @@ type PeerManager interface {
 
 }
 
-type Peer struct {
-
-
-}
 
 type  GrpcPeerManager struct{
 	Message int
@@ -49,6 +46,7 @@ func (this *GrpcPeerManager)Start(port int)  {
 	// init the event manager
 	this.EventManager = peerEventManager.NewPeerEventManager()
 	this.EventManager.RegisterEvent(pb.Message_HELLO,NewHelloHandler())
+	this.EventManager.RegisterEvent(pb.Message_RESPONSE,NewResponseHandler())
 	this.EventManager.RegisterEvent(pb.Message_CONSUS,NewBroadCastHandler())
 	this.EventManager.Start()
 
@@ -62,12 +60,12 @@ func (this *GrpcPeerManager)GetAllPeers()([]*peer.Peer)  {
 	return nil
 }
 
-func (this *GrpcPeerManager)BroadcastPeers(msg *types.Msg)  {
+func (this *GrpcPeerManager)BroadcastPeers(payLoad []byte)  {
 	var broadCastMessage = pb.Message{
 		MessageType:pb.Message_CONSUS,
 		From:this.localNode,
 		// TODO packaging the msg into payload
-		Payload:[]byte("hhhh"),
+		Payload:payLoad,
 		MsgTimeStamp: time.Now().Unix(),
 	}
 	this.EventManager.PostEvent(pb.Message_CONSUS,broadCastMessage)
