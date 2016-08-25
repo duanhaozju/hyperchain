@@ -1,43 +1,44 @@
 package types
 
 import (
-	"hyperchain-alpha/core/node"
-	"hyperchain-alpha/encrypt"
+
 	"time"
-	"encoding/json"
-	"strconv"
-	"encoding/hex"
+
+	"math/big"
+	"hyperchain-alpha/common"
 )
 
 type Block struct {
-	ParentHash string
-	BlockHash string
+	ParentHash common.Hash
+	BlockHash common.Hash
 	Transactions []Transaction
-	TimeStramp int64 //unix时间戳
-	CoinBase node.Node // 打包该Block的地址
-	MerkleRoot string // merkleRoot 的hash值
+	TimeStamp int64 //unix时间戳
+	MerkleRoot common.Hash // merkleRoot 的hash值
+	Number      *big.Int       // The block number
+
 }
 
 //todo TimeStramp 写错了 应该该掉
 
 //-- 根据Transactions 打包成一个block
-func NewBlock(trans Transactions, ParentHash string, coinBase node.Node) *Block {
+func NewBlock(trans Transactions, ParentHash string) *Block {
 	//-- 打包创世块
 	block := Block{
 		ParentHash: ParentHash,
 		Transactions: trans,
-		TimeStramp: time.Now().Unix(),
-		CoinBase: coinBase,
+		TimeStamp: time.Now().Unix(),
+
 		MerkleRoot: "root",
 	}
-	txBStr, _ := json.Marshal(block.Transactions)
-	coinbaseBStr , _ := json.Marshal(block.CoinBase)
+	//txBStr, _ := json.Marshal(block.Transactions)
 
-	block.BlockHash = string(encrypt.GetHash([]byte(block.ParentHash + string(txBStr) + strconv.FormatInt(block.TimeStramp, 10) + string(coinbaseBStr) + string(block.MerkleRoot))))
+
+	//block.BlockHash = string(encrypt.GetHash([]byte(block.ParentHash + string(txBStr) + strconv.FormatInt(block.TimeStramp, 10) + string(coinbaseBStr) + string(block.MerkleRoot))))
 
 	return &block
 }
 
+/*
 func (blk Block) String()string{
 	this := blk
 	retString :="\n======================BLOCK<STRAT>==============\n"
@@ -49,4 +50,4 @@ func (blk Block) String()string{
 	retString +="= MerkleRoot\t: "+ this.MerkleRoot	+"\n"
 	retString +="======================BLOCK<END>================\n"
 	return retString
-}
+}*/
