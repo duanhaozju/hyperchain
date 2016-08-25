@@ -1,8 +1,8 @@
 package peerPool
 
 import (
-	"hyperchain-alpha/peer/client"
-	pb "hyperchain-alpha/peer/peermessage"
+	"hyperchain-alpha/p2p/peer"
+	pb "hyperchain-alpha/p2p/peermessage"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"fmt"
 	//"strings"
@@ -12,7 +12,7 @@ import (
 
 
 type PeersPool struct {
-	peers    map[string]*client.ChatClient
+	peers    map[string]*peer.ChatClient
 	peerAddr map[string]pb.PeerAddress
 	peerKeys map[pb.PeerAddress]string
 }
@@ -21,7 +21,7 @@ var prPoolIns PeersPool
 
 //initialize the peers pool
 func init(){
-	prPoolIns.peers = make(map[string]*client.ChatClient)
+	prPoolIns.peers = make(map[string]*peer.ChatClient)
 	prPoolIns.peerAddr = make(map[string]pb.PeerAddress)
 	prPoolIns.peerKeys = make(map[pb.PeerAddress]string)
 }
@@ -29,7 +29,7 @@ func init(){
 func NewPeerPool(isNewInstance bool) PeersPool {
 	if isNewInstance{
 		var newPrPoolIns PeersPool
-		newPrPoolIns.peers = make(map[string]*client.ChatClient)
+		newPrPoolIns.peers = make(map[string]*peer.ChatClient)
 		newPrPoolIns.peerAddr = make(map[string]pb.PeerAddress)
 		newPrPoolIns.peerKeys = make(map[pb.PeerAddress]string)
 		return newPrPoolIns
@@ -38,7 +38,7 @@ func NewPeerPool(isNewInstance bool) PeersPool {
 	}
 }
 
-func (pp *PeersPool)PutPeer(addr pb.PeerAddress,client *client.ChatClient)( *client.ChatClient,error){
+func (pp *PeersPool)PutPeer(addr pb.PeerAddress,client *peer.ChatClient)( *peer.ChatClient,error){
 	this := pp
 	addrString := addr.String()
 	fmt.Println(addrString)
@@ -54,7 +54,7 @@ func (pp *PeersPool)PutPeer(addr pb.PeerAddress,client *client.ChatClient)( *cli
 
 }
 
-func (pp *PeersPool)GetPeer(addr pb.PeerAddress) *client.ChatClient{
+func (pp *PeersPool)GetPeer(addr pb.PeerAddress) *peer.ChatClient{
 	this:=pp
 	if clientName,ok := this.peerKeys[addr];ok{
 		client := this.peers[clientName]

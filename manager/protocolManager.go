@@ -21,32 +21,30 @@ import (
 
 
 	"hyperchain-alpha/core"
-	"hyperchain-alpha/node"
 	"fmt"
 
 )
 
 type ProtocolManager struct {
-	networkId int
+	networkId    int
 
-	fetcher    *core.Fetcher
-	peerManager           p2p.PeerManager
-	node  node.Node
+	fetcher      *core.Fetcher
+	peerManager  p2p.PeerManager
 
-	newPeerCh   chan *p2p.Peer
-	noMorePeers chan struct{}
-	eventMux      *event.TypeMux
-	txSub         event.Subscription
-	newBlockSub event.Subscription
+	newPeerCh    chan *p2p.Peer
+	noMorePeers  chan struct{}
+	eventMux     *event.TypeMux
+	txSub        event.Subscription
+	newBlockSub  event.Subscription
 	consensusSub event.Subscription
-	quitSync    chan struct{}
+	quitSync     chan struct{}
 
-	wg sync.WaitGroup
+	wg           sync.WaitGroup
 
 }
 
 
-func NewProtocolManager(mux *event.TypeMux, peerManager p2p.PeerManager,node node.Node,fetcher *core.Fetcher) (*ProtocolManager) {
+func NewProtocolManager(mux *event.TypeMux, peerManager p2p.PeerManager,fetcher *core.Fetcher) (*ProtocolManager) {
 
 	//eventmux:=new(event.TypeMux)
 	manager := &ProtocolManager{
@@ -54,7 +52,6 @@ func NewProtocolManager(mux *event.TypeMux, peerManager p2p.PeerManager,node nod
 		quitSync:    make(chan struct{}),
 
 		peerManager:  peerManager,
-		node:node,
 		fetcher:fetcher,
 
 	}

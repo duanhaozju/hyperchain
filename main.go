@@ -9,11 +9,9 @@ import (
 
 	"hyperchain-alpha/manager"
 	"hyperchain-alpha/event"
-
-	"hyperchain-alpha/node"
 	"hyperchain-alpha/core/types"
 
-
+	//"hyperchain-alpha/jsonrpc"
 )
 
 type argT struct {
@@ -33,15 +31,8 @@ func main(){
 			Message:1,
 
 		}
-		grpcNode:=&node.GrpcNode{
-			Id:1,
 
-		}
-
-
-
-
-		manager.New(eventmux,grpcPeerMgr,grpcNode)
+		manager.New(eventmux,grpcPeerMgr)
 		msg:=&types.Msg{
 			Type:1,
 			Size:2,
@@ -49,7 +40,7 @@ func main(){
 		}
 		eventmux.Post(event.ConsensusEvent{msg})
 
-
+		//jsonrpc.StartHttp(1234)
 
 		/*jobs := make(chan int, 100)
 		<-jobs*/

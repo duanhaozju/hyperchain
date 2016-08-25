@@ -4,7 +4,12 @@ import (
 	"hyperchain-alpha/core/types"
 	"hyperchain-alpha/common"
 )
-// manager grpc connect,client stands for local node,peers stand for remote servers
+
+// TODO init the peer
+// TODO init eventManager
+// TODO init the handler
+// TODO init the event register
+
 type PeerManager interface {
 
 	// judge all peer are connected and return them
@@ -16,14 +21,19 @@ type PeerManager interface {
 
 }
 
-
 type Peer struct {
 
-	
+
 }
+
 type  GrpcPeerManager struct{
 	Message int
-	
+
+
+}
+
+func (self *GrpcPeerManager)GetClientId()common.Hash{
+	return *new(common.Hash)
 
 }
 func (self *GrpcPeerManager)Start()  {
@@ -41,4 +51,3 @@ func (self *GrpcPeerManager)GetAllPeers()([]*Peer)  {
 func (self *GrpcPeerManager)BroadcastPeers(msg *types.Msg)  {
 
 }
-

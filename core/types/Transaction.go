@@ -6,7 +6,7 @@ package types
 
 import (
 
-	"time"
+	//"time"
 
 	"hyperchain-alpha/common"
 )
@@ -36,14 +36,14 @@ func (tx Transactions) Less(i,j int) bool {
 }
 
 
-func NewTransaction(from string,to string,value int) *Transaction{
-	return &Transaction{
-		From: from,
-		To: to,
-		Value: value,
-		TimeStamp: time.Now().Unix(),
-	}
-}
+//func NewTransaction(from string,to string,value int) *Transaction{
+//	return &Transaction{
+//		From: from,
+//		To: to,
+//		Value: value,
+//		TimeStamp: time.Now().Unix(),
+//	}
+//}
 
 /*func (tx *Transaction) WithSignTransaction(priKey dsa.PrivateKey) *Transaction {
 
@@ -69,28 +69,28 @@ func NewTransaction(from string,to string,value int) *Transaction{
 }*/
 
 // 检查余额
-func (tx *Transaction) isValidBalance(balance Balance,txPoolsTrans []Transaction) bool{
-
-	self := tx
-	fund := balance.Value
-
-	from := self.From
-	amount := self.Value  // balance和交易池中的资金是否足够
-
-	for _,t := range txPoolsTrans{
-
-		if (t.From == from) {
-			fund = fund - t.Value
-		}
-
-		if (t.To == from) {
-			fund = fund + t.Value
-		}
-	}
-
-
-	return amount <= fund
-}
+//func (tx *Transaction) isValidBalance(balance Balance,txPoolsTrans []Transaction) bool{
+//
+//	self := tx
+//	fund := balance.Value
+//
+//	from := self.From
+//	amount := self.Value  // balance和交易池中的资金是否足够
+//
+//	for _,t := range txPoolsTrans{
+//
+//		if (t.From == from) {
+//			fund = fund - t.Value
+//		}
+//
+//		if (t.To == from) {
+//			fund = fund + t.Value
+//		}
+//	}
+//
+//
+//	return amount <= fund
+//}
 
 // 检查签名
 /*func (tx *Transaction) isValidSign() bool {
