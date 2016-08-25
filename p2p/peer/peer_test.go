@@ -15,11 +15,11 @@ import (
 func TestNewChatClient(t *testing.T) {
 	//start the server
 	server := node.NewNode(8002)
-	go func() {
+	/*go func() {
 		for now := range time.Tick(3 * time.Second) {
 			fmt.Println(now)
 		}
-	}()
+	}()*/
 
 
 	chatClient,err := NewPeer("localhost:8002")

@@ -1,3 +1,7 @@
+// gRPC manager
+// author: Lizhong kuang
+// date: 2016-08-24
+// last modified:2016-08-25
 package p2p
 
 import (
@@ -11,20 +15,23 @@ import (
 )
 
 
-
 type PeerManager interface {
 	// judge all peer are connected and return them
-	JudgeAlivePeers()(bool)
+	JudgeAlivePeers(num int)(bool)
 	GetAllPeers()([]*peer.Peer)
 	Start(port int)
 	GetClientId()common.Hash
-	BroadcastPeers(msg *types.Msg)
+	BroadcastPeers(payLoad []byte)
 
 }
 
+type Peer struct {
 
+
+}
 
 type  GrpcPeerManager struct{
+	Message int
 
 	EventManager *peerEventManager.PeerEventManager
 	localNode *node.Node
