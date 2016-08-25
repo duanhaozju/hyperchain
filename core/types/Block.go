@@ -2,7 +2,7 @@ package types
 
 import (
 
-	"time"
+	//"time"
 
 	"math/big"
 	"hyperchain-alpha/common"
@@ -21,22 +21,18 @@ type Block struct {
 //todo TimeStramp 写错了 应该该掉
 
 //-- 根据Transactions 打包成一个block
-func NewBlock(trans Transactions, ParentHash string) *Block {
-	//-- 打包创世块
-	block := Block{
-		ParentHash: ParentHash,
-		Transactions: trans,
-		TimeStamp: time.Now().Unix(),
-
-		MerkleRoot: "root",
-	}
-	//txBStr, _ := json.Marshal(block.Transactions)
-
-
-	//block.BlockHash = string(encrypt.GetHash([]byte(block.ParentHash + string(txBStr) + strconv.FormatInt(block.TimeStramp, 10) + string(coinbaseBStr) + string(block.MerkleRoot))))
-
-	return &block
-}
+//func NewBlock(trans Transactions, ParentHash string) *Block {
+//	//-- 打包创世块
+//	block := Block{
+//		ParentHash: ParentHash,
+//		Transactions: trans,
+//		TimeStamp: time.Now().Unix(),
+//
+//		MerkleRoot: "root",
+//	}
+//
+//	return &block
+//}
 
 /*
 func (blk Block) String()string{

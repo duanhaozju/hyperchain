@@ -8,7 +8,6 @@ import (
 	"hyperchain-alpha/core"
 	//"hyperchain-alpha/hyperchain"
 	//"strconv"
-	"hyperchain-alpha/hyperchain"
 	"strconv"
 )
 

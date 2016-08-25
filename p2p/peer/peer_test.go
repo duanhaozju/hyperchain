@@ -2,13 +2,13 @@ package client
 
 import (
 	"testing"
-	"hyperchain-alpha/peer/peermessage"
+	"hyperchain-alpha/p2p/peermessage"
 	"log"
 	//"time"
 	"fmt"
 	//"hyperchain-alpha/peer/Server"
 	"time"
-	"hyperchain-alpha/peer/Server"
+	"hyperchain-alpha/p2p/node"
 )
 
 
@@ -28,7 +28,7 @@ import (
 //}
 func TestNewChatClient(t *testing.T) {
 	//start the server
-	server := Server.NewChatServer(8001)
+	server := node.NewChatServer(8001)
 	go func() {
 		for now := range time.Tick(3 * time.Second) {
 			fmt.Println(now)
@@ -58,7 +58,7 @@ func TestNewChatClient(t *testing.T) {
 
 func TestChatClient_Close(t *testing.T) {
 	//start the server
-	server := Server.NewChatServer(8001)
+	server := node.NewChatServer(8001)
 	go func() {
 		for now := range time.Tick(3 * time.Second) {
 			fmt.Println(now)

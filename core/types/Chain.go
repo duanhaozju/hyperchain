@@ -1,8 +1,8 @@
 package types
 
 import (
-	"encoding/hex"
-	"strconv"
+	//"encoding/hex"
+	//"strconv"
 
 	"hyperchain-alpha/common"
 )
@@ -12,7 +12,7 @@ type Chain struct {
 	Height int
 }
 
-func (chain Chain) String()string{
-	hash := hex.EncodeToString(chain.LatestBlockHash)
-	return hash + "&" + strconv.Itoa(chain.Height)
-}
+//func (chain Chain) String()string{
+//	hash := hex.EncodeToString(chain.LatestBlockHash)
+//	return hash + "&" + strconv.Itoa(chain.Height)
+//}

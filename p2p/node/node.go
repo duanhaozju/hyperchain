@@ -6,7 +6,7 @@
 package Server
 
 import (
-	pb "hyperchain-alpha/peer/peermessage"
+	pb "hyperchain-alpha/p2p/peermessage"
 	"golang.org/x/net/context"
 	"hyperchain-alpha/utils"
 

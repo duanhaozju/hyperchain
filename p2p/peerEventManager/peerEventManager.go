@@ -1,11 +1,11 @@
 package peerEventManager
 
 import (
-	pb "hyperchain-alpha/peer/peermessage"
-	"hyperchain-alpha/peer/peerComm"
+	pb "hyperchain-alpha/p2p/peermessage"
+	"hyperchain-alpha/p2p/peerComm"
 	"errors"
 	"log"
-	eventHandler "hyperchain-alpha/peer/peerEventHandler"
+	eventHandler "hyperchain-alpha/p2p/peerEventHandler"
 )
 //the message queue
 

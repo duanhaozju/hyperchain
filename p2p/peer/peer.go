@@ -2,7 +2,7 @@ package client
 
 import (
 	"google.golang.org/grpc"
-	pb "hyperchain-alpha/peer/peermessage"
+	pb "hyperchain-alpha/p2p/peermessage"
 	"errors"
 	"golang.org/x/net/context"
 	"log"
