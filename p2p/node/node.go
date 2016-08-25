@@ -35,8 +35,8 @@ func NewNode(port int) *Node {
 	}
 
 }
-func GetChatServerAddr() pb.PeerAddress{
-	return NewNode(DefaultgRpcPort).address
+func GetNodeAddr() pb.PeerAddress{
+	return globalChatServer.address
 }
 
 // Chat Implements the ServerSide Function
