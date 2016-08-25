@@ -1,6 +1,12 @@
 package types
 
+import (
+	"math/big"
+
+	"hyperchain-alpha/common"
+)
+
 type Balance struct {
-	AccountPublicKeyHash string
-	Value int
+	AccountPublicKeyHash common.Hash
+	Value *big.Int
 }

@@ -13,7 +13,7 @@ import (
 	"hyperchain-alpha/node"
 	"hyperchain-alpha/core/types"
 
-	"hyperchain-alpha/crypto"
+
 )
 
 type argT struct {
@@ -39,9 +39,6 @@ func main(){
 		}
 
 
-		eh:=&crypto.EtheEny{
-
-		}
 
 
 		manager.New(eventmux,grpcPeerMgr,grpcNode)

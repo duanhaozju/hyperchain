@@ -9,11 +9,11 @@ import (
 )
 
 type Block struct {
-	ParentHash string
+	ParentHash common.Hash
 	BlockHash common.Hash
 	Transactions []Transaction
-	TimeStramp int64 //unix时间戳
-	MerkleRoot string // merkleRoot 的hash值
+	TimeStamp int64 //unix时间戳
+	MerkleRoot common.Hash // merkleRoot 的hash值
 	Number      *big.Int       // The block number
 
 }
@@ -26,7 +26,7 @@ func NewBlock(trans Transactions, ParentHash string) *Block {
 	block := Block{
 		ParentHash: ParentHash,
 		Transactions: trans,
-		TimeStramp: time.Now().Unix(),
+		TimeStamp: time.Now().Unix(),
 
 		MerkleRoot: "root",
 	}

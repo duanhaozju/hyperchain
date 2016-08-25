@@ -1,25 +1,21 @@
 package core
 
 import (
-
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"hyperchain-alpha/core/types"
 
 	"hyperchain-alpha/common"
 	"errors"
-
 )
 
 type Fetcher struct {
-
 	queues map[string]int          // Per peer block counts to prevent memory exhaustion
 
 	queued map[common.Hash]*inject // Set of already queued blocks (to dedup imports)
 
 	inject chan *inject
 	queue  *prque.Prque
-	quit chan struct{}
-
+	quit   chan struct{}
 }
 
 var (
@@ -27,12 +23,10 @@ var (
 )
 
 type inject struct {
-
-	block  *types.Block
+	block *types.Block
 }
 
 func NewFetcher() *Fetcher {
-
 
 	return &Fetcher{
 
@@ -49,11 +43,7 @@ func NewFetcher() *Fetcher {
 
 func (f *Fetcher) Start() {
 
-
-
-
-
-	for{
+	for {
 
 		for !f.queue.Empty() {
 
@@ -61,19 +51,24 @@ func (f *Fetcher) Start() {
 
 			// If too high up the chain or phase, continue later
 
-			f.insert( op.block)
+			f.insert(op.block)
 		}
+
+		select {
+		case op := <-f.inject:
+
+			f.enqueue( op.block)}
 	}
 
 }
 
-func (f *Fetcher) insert( block *types.Block) {
+func (f *Fetcher) insert(block *types.Block) {
 	//TODO
 
 }
 
 // Enqueue tries to fill gaps the the fetcher's future import queue.
-func (f *Fetcher) Enqueue( block *types.Block) error {
+func (f *Fetcher) Enqueue(block *types.Block) error {
 	op := &inject{
 
 		block:  block,
@@ -85,23 +80,19 @@ func (f *Fetcher) Enqueue( block *types.Block) error {
 		return errTerminated
 	}
 }
-// enqueue schedules a new future import operation, if the block to be imported
-// has not yet been seen.
-func (f *Fetcher) enqueue(peer string, block *types.Block) {
+
+func (f *Fetcher) enqueue(block *types.Block) {
 	hash := block.BlockHash
 
 
-	count := f.queues[peer] + 1
-	// Schedule the block for future importing
 	if _, ok := f.queued[hash]; !ok {
 		op := &inject{
 
 			block:  block,
 		}
-		f.queues[peer] = count
+
 		f.queued[hash] = op
 		f.queue.Push(op, -float32(block.Number.Uint64()))
-
 
 	}
 }

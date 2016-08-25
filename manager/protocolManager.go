@@ -29,22 +29,16 @@ import (
 type ProtocolManager struct {
 	networkId int
 
-
 	fetcher    *core.Fetcher
 	peerManager           p2p.PeerManager
 	node  node.Node
 
-
 	newPeerCh   chan *p2p.Peer
 	noMorePeers chan struct{}
-
 	eventMux      *event.TypeMux
 	txSub         event.Subscription
 	newBlockSub event.Subscription
-
 	consensusSub event.Subscription
-
-
 	quitSync    chan struct{}
 
 	wg sync.WaitGroup
@@ -73,7 +67,6 @@ func (pm *ProtocolManager) Start() {
 
 
 
-
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{},event.BroadcastConsensusEvent{})
@@ -97,9 +90,9 @@ func (self *ProtocolManager) NewBlockLoop() {
 
 		switch ev := obj.Data.(type) {
 		case event.NewBlockEvent:
-			//self.eventMux.Post(event.ConsensusEvent{ev.Msg})
+
 			self.fetcher.Enqueue(ev.Block)
-			//self.BroadcastBlock(ev.Block)
+
 
 		}
 	}
@@ -120,8 +113,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			//call consensus module
 
 		}
-		//self.eventMux.Post(event.ConsensusEvent{ev.Msg})
-		//pm.fetcher.Enqueue(p.id, request.Block)
+
 	}
 }
 

@@ -7,16 +7,15 @@ import (
 
 )
 
-
+//consensus event incoming from outer
 type ConsensusEvent struct{ Msg *types.Msg }
 
+// send consensus event to outer peers
 type BroadcastConsensusEvent struct{ Msg *types.Msg }
 
 
 
-
-
-// NewBlockEvent is posted when a block has been imported.
+//receive new block event from node consensus event
 type NewBlockEvent struct{ Block *types.Block }
 
 
