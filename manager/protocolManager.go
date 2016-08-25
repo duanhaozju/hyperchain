@@ -23,6 +23,7 @@ import (
 	"hyperchain-alpha/core"
 	"hyperchain-alpha/node"
 	"fmt"
+
 )
 
 type ProtocolManager struct {
@@ -71,11 +72,16 @@ func NewProtocolManager(mux *event.TypeMux, peerManager p2p.PeerManager,node nod
 func (pm *ProtocolManager) Start() {
 
 
+
+
+	pm.wg.Add(1)
 	go pm.fetcher.Start()
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{},event.BroadcastConsensusEvent{})
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
+	pm.wg.Wait()
+
 
 
 
@@ -85,6 +91,7 @@ func (pm *ProtocolManager) Start() {
 
 //commit block into local db
 func (self *ProtocolManager) NewBlockLoop() {
+
 
 	for obj := range self.newBlockSub.Chan() {
 

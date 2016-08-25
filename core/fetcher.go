@@ -8,7 +8,6 @@ import (
 	"hyperchain-alpha/common"
 	"errors"
 
-	"fmt"
 )
 
 type Fetcher struct {
@@ -50,8 +49,11 @@ func NewFetcher() *Fetcher {
 
 func (f *Fetcher) Start() {
 
+
+
+
+
 	for{
-		fmt.Print("1")
 
 		for !f.queue.Empty() {
 

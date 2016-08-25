@@ -9,12 +9,17 @@ import (
 
 	"hyperchain-alpha/core"
 
+	"hyperchain-alpha/crypto"
 )
 
-func New(eventMux *event.TypeMux, peerManager p2p.PeerManager, node node.Node) (error) {
+func New(eventMux *event.TypeMux, peerManager p2p.PeerManager, node node.Node, enSign crypto.Encryption) (error) {
+
+	//var wg sync.WaitGroup
+
 
 	peerManager.Start()
 	node.Start()
+	enSign.Sign(tx)
 
 	allAlive := peerManager.JudgeAlivePeers()
 
@@ -24,7 +29,9 @@ func New(eventMux *event.TypeMux, peerManager p2p.PeerManager, node node.Node) (
 		protocolManager := NewProtocolManager(eventMux, peerManager, node, fetcher)
 
 		protocolManager.Start()
+
 	}
+
 
 	return nil
 }

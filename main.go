@@ -12,6 +12,8 @@ import (
 
 	"hyperchain-alpha/node"
 	"hyperchain-alpha/core/types"
+
+	"hyperchain-alpha/crypto"
 )
 
 type argT struct {
@@ -35,6 +37,13 @@ func main(){
 			Id:1,
 
 		}
+
+
+		eh:=&crypto.EtheEny{
+
+		}
+
+
 		manager.New(eventmux,grpcPeerMgr,grpcNode)
 		msg:=&types.Msg{
 			Type:1,
@@ -42,6 +51,11 @@ func main(){
 
 		}
 		eventmux.Post(event.ConsensusEvent{msg})
+
+
+
+		/*jobs := make(chan int, 100)
+		<-jobs*/
 		/*argv := ctx.Argv().(*argT)
 		ctx.String("P2P_ip=%s, \tP2P_port=%d,\t本地http端口:%d,\t本地P2P监听端口:%d,\tTest Flag:%v\n", argv.PeerIp, argv.PeerPort,argv.HttpServerPORT,argv.LocalPort,argv.Test)
 		//正常启动相应服务
