@@ -1,21 +1,23 @@
+// Hash interface defined
+// author: Lizhong kuang
+// date: 2016-08-25
+// last modified:2016-08-25
 package core
 
-import (
+
+var (
 
 
-	"hyperchain-alpha/common"
-	"hyperchain-alpha/hyperdb"
-	"github.com/ethereum/go-ethereum/logger/glog"
+	blockPrefix    = []byte("block-")
+
+
+
+	bodySuffix   = []byte("-body")
+
+
+	txMetaSuffix        = []byte{0x01}
+
 )
 
 
 
-
-// WriteHeadBlockHash stores the head block's hash.
-func WriteBlockHash(db hyperdb.Database, hash common.Hash) error {
-	if err := db.Put(hash, hash.Bytes()); err != nil {
-		glog.Fatalf("failed to store last block's hash into database: %v", err)
-		return err
-	}
-	return nil
-}

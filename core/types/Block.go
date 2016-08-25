@@ -11,7 +11,6 @@ import (
 	"math/big"
 	"hyperchain-alpha/common"
 
-	"time"
 	"hyperchain-alpha/crypto"
 )
 
@@ -28,8 +27,8 @@ type Block struct {
 
 
 //general block
-func NewBlock(txs Transactions, ParentHash common.Hash) *Block {
-	ParentHash = new(common.Hash)
+/*func NewBlock(txs Transactions, ParentHash common.Hash) *Block {
+
 	block := Block{
 		ParentHash: ParentHash,
 		Transactions: txs,
@@ -39,7 +38,7 @@ func NewBlock(txs Transactions, ParentHash common.Hash) *Block {
 	}
 
 	return &block
-}
+}*/
 
 // hash block
 func (h *Block) Hash(hash crypto.CommonHash) common.Hash {
