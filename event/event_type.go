@@ -20,7 +20,7 @@ type BroadcastConsensusEvent struct{ Payload []byte }
 
 
 //receive new block event from node consensus event
-type NewBlockEvent struct{ Block *types.Block }
+type NewBlockEvent struct{ Payload []byte  }
 
 
 

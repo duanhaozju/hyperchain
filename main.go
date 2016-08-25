@@ -28,8 +28,6 @@ func main(){
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 
 
-		a:=common.BytesToHash([]byte{0x00, 0x00, 0x03, 0xe8}  )
-		fmt.Print(a)
 		eventmux:=new(event.TypeMux)
 		grpcPeerMgr:=&p2p.GrpcPeerManager{
 
@@ -42,6 +40,7 @@ func main(){
 		manager.New(eventmux,grpcPeerMgr)
 
 		eventmux.Post(event.ConsensusEvent{[]byte{0x00, 0x00, 0x03, 0xe8}})
+
 
 		//jsonrpc.StartHttp(1234)
 
