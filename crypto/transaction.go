@@ -1,12 +1,12 @@
-package hyperencrypt
+package crypto
 
 import (
 	"sync/atomic"
 	"math/big"
-	"crypto/ecdsa"
 	"fmt"
-	"errors"
 	"hyperchain-alpha/common"
+	thecrypto "hyperchain-alpha/hypercrypto"
+	"errors"
 )
 type Transaction struct {
 	data txdata
@@ -20,7 +20,6 @@ type txdata struct  {
 	Amount *big.Int
 	signature []byte
 }
-
 func NewTransaction(to common.Address,amount *big.Int) *Transaction {
 	d:=txdata{
 		Recipient:	&to,
@@ -35,12 +34,14 @@ func (tx *Transaction) Hash() common.Hash{
 	if hash := tx.hash.Load(); hash != nil {
 		return hash.(common.Hash)
 	}
-	v := Fix32Hash(tx)
+	s256 := NewKeccak256Hash("Keccak256")
+	v := s256.Hash(tx)
 	tx.hash.Store(v)
 	return v
 }
 func (tx *Transaction)SigHash() common.Hash  {
-	return Fix32Hash([]interface{}{
+	s256 := NewKeccak256Hash("Keccak256")
+	return s256.Hash([]interface{}{
 		tx.data.Recipient,
 		tx.data.Amount,
 	})
@@ -53,14 +54,14 @@ func (tx *Transaction) WithSignature(sig []byte) (*Transaction,error){
 	cpy.data.signature = sig
 	return cpy,nil
 }
-func (tx *Transaction)SignECDSA(prv *ecdsa.PrivateKey) (*Transaction,error) {
-	h := tx.SigHash()
-	sig,err :=Sign(h[:],prv)
-	if err!=nil{
-		 return nil,err
-	 }
-	return tx.WithSignature(sig)
-}
+//func (tx *Transaction)SignECDSA(prv *ecdsa.PrivateKey) (*Transaction,error) {
+//	h := tx.SigHash()
+//	sig,err :=Sign(h[:],prv)
+//	if err!=nil{
+//		 return nil,err
+//	 }
+//	return tx.WithSignature(sig)
+//}
 func (tx *Transaction) From() (common.Address,error){
 	return doFrom(tx,true)
 }
@@ -73,7 +74,7 @@ func  doFrom(tx *Transaction,homestead bool) (common.Address,error){
 		return common.Address{},err
 	}
 	var addr common.Address
-	copy(addr[:],Keccak256(pubKey[1:])[12:])
+	copy(addr[:],thecrypto.Keccak256(pubKey[1:])[12:])
 	tx.from.Store(addr)
 	return addr,nil
 
@@ -82,7 +83,7 @@ func (tx *Transaction)publicKey(homestead bool)([]byte,error)  {
 	sig := make([]byte,65)
 	copy(sig[:],tx.data.signature)
 	hash := tx.SigHash()
-	pub,err := Ecrecover(hash[:],sig)
+	pub,err := thecrypto.Ecrecover(hash[:],sig)
 	if err != nil {
 		//glog.V(logger.Error).Infof("Could not get pubkey from signature: ", err)
 		return nil, err

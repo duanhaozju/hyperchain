@@ -1,4 +1,4 @@
-package hyperencrypt
+package crypto
 
 
 type Block struct {
