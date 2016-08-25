@@ -8,27 +8,13 @@ import (
 	"fmt"
 	//"hyperchain-alpha/peer/Server"
 	"time"
-	"hyperchain-alpha/p2p/node"
+	node "hyperchain-alpha/p2p/node"
 )
 
 
-//func init(){
-//	server := Server.NewChatServer(8001)
-//	tickCount := 0
-//	go func(){
-//		for now:=range  time.Tick(3*time.Second){
-//		fmt.Println(now)
-//		tickCount +=1
-//		if tickCount >30{
-//			break
-//		}
-//	}
-//	server.StopServer()
-//	}()
-//}
 func TestNewChatClient(t *testing.T) {
 	//start the server
-	server := node.NewChatServer(8001)
+	server := node.NewNode(8002)
 	go func() {
 		for now := range time.Tick(3 * time.Second) {
 			fmt.Println(now)
@@ -36,7 +22,7 @@ func TestNewChatClient(t *testing.T) {
 	}()
 
 
-	chatClient,err := NewChatClient("localhost:8001")
+	chatClient,err := NewPeer("localhost:8002")
 	if err != nil{
 		log.Fatalln("连接失败")
 		server.StopServer()
@@ -58,7 +44,7 @@ func TestNewChatClient(t *testing.T) {
 
 func TestChatClient_Close(t *testing.T) {
 	//start the server
-	server := node.NewChatServer(8001)
+	server := node.NewNode(8001)
 	go func() {
 		for now := range time.Tick(3 * time.Second) {
 			fmt.Println(now)
@@ -66,7 +52,7 @@ func TestChatClient_Close(t *testing.T) {
 	}()
 
 
-	chatClient,err := NewChatClient("localhost:8001")
+	chatClient,err := NewPeer("localhost:8001")
 	if err != nil{
 		log.Fatalln("连接失败")
 		server.StopServer()
