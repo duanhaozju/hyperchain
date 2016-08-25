@@ -37,16 +37,16 @@ func (ee *EcdsaEncrypto)Sign(hash []byte,  prv interface{})(sig []byte, err erro
 	sig, err = secp256k1.Sign(hash, seckey)
 	return
 }
-func (ee *EcdsaEncrypto)UnSign(args ...interface{})([]byte, error)  {
+func (ee *EcdsaEncrypto)UnSign(args ...interface{})(common.Address, error)  {
 	if len(args)!=2{
 		err :=errors.New("paramas invalid")
-		return nil,err
+		return common.Address{},err
 	}
-	hash := args[0].([]byte)
+	hash := args[0].(common.Hash)
 	sig := args[1].([]byte)
-	pubBytes,err := secp256k1.RecoverPubkey(hash, sig)
+	pubBytes,err := secp256k1.RecoverPubkey(hash[:], sig)
 	if err!=nil{
-		return nil,err
+		return common.Address{},err
 	}
 	var addr common.Address
 	copy(addr[:],ee.Keccak256(pubBytes[1:])[12:])

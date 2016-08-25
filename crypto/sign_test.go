@@ -11,9 +11,9 @@ import (
 
 func TestSigntx(t *testing.T)  {
 	ee := NewEcdsaEncrypto("ECDSAEncryto")
-	key, err := ee.GenerateKey()
+	key, _:= ee.GenerateKey()
 	ee.SaveECDSA("./testFile",key)
-	priv,err:=ee.LoadECDSA("./testFile")
+	priv,_:=ee.LoadECDSA("./testFile")
 	pub := key.PublicKey
 	//priv := key
 
@@ -31,23 +31,24 @@ func TestSigntx(t *testing.T)  {
 	//签名交易
 	tx:= NewTransaction(common.Address{},big.NewInt(100))
 	hash := tx.SigHash()
-	signature,_ := ee.Sign(hash[:],*priv)
-	signedTx, _ := tx.WithSignature(signature)
+	signature,err := ee.Sign(hash[:],*priv)
+	if err != nil {
+		t.Error(err)
+		t.FailNow()
+
+	}
+	//signedTx, _ := tx.WithSignature(signature)
 
 	//验证签名
-	from, err := signedTx.From()
+	from,err:= ee.UnSign(hash,signature)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
 	}
 
-	fmt.Println(from.Hex())
-
 	fmt.Println(from)
 	fmt.Println(addr)
-	
-	addr_from_unsign,_ := ee.UnSign(hash,signature)
-	fmt.Println(addr_from_unsign)
+
 
 
 }

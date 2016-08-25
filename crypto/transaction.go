@@ -5,8 +5,6 @@ import (
 	"math/big"
 	"fmt"
 	"hyperchain-alpha/common"
-	thecrypto "hyperchain-alpha/hypercrypto"
-	"errors"
 )
 type Transaction struct {
 	data txdata
@@ -62,34 +60,34 @@ func (tx *Transaction) WithSignature(sig []byte) (*Transaction,error){
 //	 }
 //	return tx.WithSignature(sig)
 //}
-func (tx *Transaction) From() (common.Address,error){
-	return doFrom(tx,true)
-}
-func  doFrom(tx *Transaction,homestead bool) (common.Address,error){
-	if from := tx.from.Load();from!=nil{
-		return from.(common.Address),nil
-	}
-	pubKey,err := tx.publicKey(homestead)
-	if err!=nil{
-		return common.Address{},err
-	}
-	var addr common.Address
-	copy(addr[:],thecrypto.Keccak256(pubKey[1:])[12:])
-	tx.from.Store(addr)
-	return addr,nil
-
-}
-func (tx *Transaction)publicKey(homestead bool)([]byte,error)  {
-	sig := make([]byte,65)
-	copy(sig[:],tx.data.signature)
-	hash := tx.SigHash()
-	pub,err := thecrypto.Ecrecover(hash[:],sig)
-	if err != nil {
-		//glog.V(logger.Error).Infof("Could not get pubkey from signature: ", err)
-		return nil, err
-	}
-	if len(pub) == 0 || pub[0] != 4 {
-		return nil, errors.New("invalid public key")
-	}
-	return pub, nil
-}
+//func (tx *Transaction) From() (common.Address,error){
+//	return doFrom(tx,true)
+//}
+//func  doFrom(tx *Transaction,homestead bool) (common.Address,error){
+//	if from := tx.from.Load();from!=nil{
+//		return from.(common.Address),nil
+//	}
+//	pubKey,err := tx.publicKey(homestead)
+//	if err!=nil{
+//		return common.Address{},err
+//	}
+//	var addr common.Address
+//	copy(addr[:],Keccak256(pubKey[1:])[12:])
+//	tx.from.Store(addr)
+//	return addr,nil
+//
+//}
+//func (tx *Transaction)publicKey(homestead bool)([]byte,error)  {
+//	sig := make([]byte,65)
+//	copy(sig[:],tx.data.signature)
+//	hash := tx.SigHash()
+//	pub,err := Ecrecover(hash[:],sig)
+//	if err != nil {
+//		//glog.V(logger.Error).Infof("Could not get pubkey from signature: ", err)
+//		return nil, err
+//	}
+//	if len(pub) == 0 || pub[0] != 4 {
+//		return nil, errors.New("invalid public key")
+//	}
+//	return pub, nil
+//}
