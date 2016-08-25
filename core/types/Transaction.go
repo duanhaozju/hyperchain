@@ -11,7 +11,7 @@ import (
 	"hyperchain-alpha/common"
 )
 
-type Transaction struct {
+type Transactionsl struct {
 	From      common.Hash            //从发起账户公钥hash之后的值
 								//Publickey string //携带公钥
 	To        common.Hash            //送达账户公钥hash之后的值
@@ -31,9 +31,11 @@ func (tx Transactions) Swap(i,j int){
 	tx[i],tx[j] = tx[j],tx[i]
 }
 
+/*
 func (tx Transactions) Less(i,j int) bool {
 	return tx[j].TimeStamp < tx[i].TimeStamp
 }
+*/
 
 
 //func NewTransaction(from string,to string,value int) *Transaction{

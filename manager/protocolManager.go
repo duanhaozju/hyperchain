@@ -89,6 +89,10 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 		case event.BroadcastConsensusEvent:
 			self.BroadcastConsensus(ev.Payload)
+		case event.NewTxEvent:
+			//call consensus module
+			//Todo
+			fmt.Println("to call consensus")
 
 		case event.ConsensusEvent:
 			//call consensus module

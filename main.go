@@ -10,9 +10,6 @@ import (
 	"hyperchain-alpha/manager"
 	"hyperchain-alpha/event"
 
-
-	"hyperchain-alpha/common"
-	"fmt"
 )
 
 type argT struct {

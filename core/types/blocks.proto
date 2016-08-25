@@ -1,0 +1,14 @@
+// message defination for network transaction
+syntax="proto3";
+
+package types;
+
+message Transaction{
+    // From the message source 
+
+    bytes  Payload       = 3;
+
+}
+
+
+
