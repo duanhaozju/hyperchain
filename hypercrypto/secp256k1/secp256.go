@@ -47,13 +47,6 @@ import (
 
 //#define USE_FIELD_5X64
 
-/*
-   TODO:
-   > store private keys in buffer and shuffle (deters persistance on swap disc)
-   > byte permutation (changing)
-   > xor with chaning random block (to deter scanning memory for 0x63) (stream cipher?)
-*/
-
 // holds ptr to secp256k1_context_struct (see secp256k1/include/secp256k1.h)
 var (
 	context *C.secp256k1_context
@@ -77,60 +70,6 @@ var (
 	ErrInvalidSignatureLen = errors.New("invalid signature length")
 	ErrInvalidRecoveryID   = errors.New("invalid signature recovery id")
 )
-
-func GenerateKeyPair() ([]byte, []byte) {
-	var seckey []byte = randentropy.GetEntropyCSPRNG(32)
-	var seckey_ptr *C.uchar = (*C.uchar)(unsafe.Pointer(&seckey[0]))
-	var pubkey64 []byte = make([]byte, 64) // secp256k1_pubkey
-	var pubkey65 []byte = make([]byte, 65) // 65 byte uncompressed pubkey
-	pubkey64_ptr := (*C.secp256k1_pubkey)(unsafe.Pointer(&pubkey64[0]))
-	pubkey65_ptr := (*C.uchar)(unsafe.Pointer(&pubkey65[0]))
-
-	ret := C.secp256k1_ec_pubkey_create(
-		context,
-		pubkey64_ptr,
-		seckey_ptr,
-	)
-
-	if ret != C.int(1) {
-		return GenerateKeyPair() // invalid secret, try again
-	}
-
-	var output_len C.size_t
-
-	C.secp256k1_ec_pubkey_serialize( // always returns 1
-		context,
-		pubkey65_ptr,
-		&output_len,
-		pubkey64_ptr,
-		0, // SECP256K1_EC_COMPRESSED
-	)
-
-	return pubkey65, seckey
-}
-
-func GeneratePubKey(seckey []byte) ([]byte, error) {
-	if err := VerifySeckeyValidity(seckey); err != nil {
-		return nil, err
-	}
-
-	var pubkey []byte = make([]byte, 64)
-	var pubkey_ptr *C.secp256k1_pubkey = (*C.secp256k1_pubkey)(unsafe.Pointer(&pubkey[0]))
-
-	var seckey_ptr *C.uchar = (*C.uchar)(unsafe.Pointer(&seckey[0]))
-
-	ret := C.secp256k1_ec_pubkey_create(
-		context,
-		pubkey_ptr,
-		seckey_ptr,
-	)
-
-	if ret != C.int(1) {
-		return nil, errors.New("Unable to generate pubkey from seckey")
-	}
-
-	return pubkey, nil
-}
 
 func Sign(msg []byte, seckey []byte) ([]byte, error) {
 	msg_ptr := (*C.uchar)(unsafe.Pointer(&msg[0]))
@@ -176,18 +115,6 @@ func Sign(msg []byte, seckey []byte) ([]byte, error) {
 
 	return sig_serialized, nil
 
-}
-
-func VerifySeckeyValidity(seckey []byte) error {
-	if len(seckey) != 32 {
-		return errors.New("priv key is not 32 bytes")
-	}
-	var seckey_ptr *C.uchar = (*C.uchar)(unsafe.Pointer(&seckey[0]))
-	ret := C.secp256k1_ec_seckey_verify(context, seckey_ptr)
-	if int(ret) != 1 {
-		return errors.New("invalid seckey")
-	}
-	return nil
 }
 
 // RecoverPubkey returns the the public key of the signer.

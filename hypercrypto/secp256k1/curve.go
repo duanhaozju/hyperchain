@@ -33,7 +33,6 @@ package secp256k1
 
 import (
 	"crypto/elliptic"
-	"io"
 	"math/big"
 	"sync"
 	"unsafe"
@@ -188,7 +187,6 @@ func (BitCurve *BitCurve) Double(x1, y1 *big.Int) (*big.Int, *big.Int) {
 // returns its double, also in Jacobian form.
 func (BitCurve *BitCurve) doubleJacobian(x, y, z *big.Int) (*big.Int, *big.Int, *big.Int) {
 	// See http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#doubling-dbl-2009-l
-
 	a := new(big.Int).Mul(x, x) //X1²
 	b := new(big.Int).Mul(y, y) //Y1²
 	c := new(big.Int).Mul(b, b) //B²
@@ -255,61 +253,6 @@ func (BitCurve *BitCurve) ScalarMult(Bx, By *big.Int, scalar []byte) (*big.Int, 
 // an integer in big-endian form.
 func (BitCurve *BitCurve) ScalarBaseMult(k []byte) (*big.Int, *big.Int) {
 	return BitCurve.ScalarMult(BitCurve.Gx, BitCurve.Gy, k)
-}
-
-var mask = []byte{0xff, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f}
-
-//TODO: double check if it is okay
-// GenerateKey returns a public/private key pair. The private key is generated
-// using the given reader, which must return random data.
-func (BitCurve *BitCurve) GenerateKey(rand io.Reader) (priv []byte, x, y *big.Int, err error) {
-	byteLen := (BitCurve.BitSize + 7) >> 3
-	priv = make([]byte, byteLen)
-
-	for x == nil {
-		_, err = io.ReadFull(rand, priv)
-		if err != nil {
-			return
-		}
-		// We have to mask off any excess bits in the case that the size of the
-		// underlying field is not a whole number of bytes.
-		priv[0] &= mask[BitCurve.BitSize%8]
-		// This is because, in tests, rand will return all zeros and we don't
-		// want to get the point at infinity and loop forever.
-		priv[1] ^= 0x42
-		x, y = BitCurve.ScalarBaseMult(priv)
-	}
-	return
-}
-
-// Marshal converts a point into the form specified in section 4.3.6 of ANSI
-// X9.62.
-func (BitCurve *BitCurve) Marshal(x, y *big.Int) []byte {
-	byteLen := (BitCurve.BitSize + 7) >> 3
-
-	ret := make([]byte, 1+2*byteLen)
-	ret[0] = 4 // uncompressed point
-
-	xBytes := x.Bytes()
-	copy(ret[1+byteLen-len(xBytes):], xBytes)
-	yBytes := y.Bytes()
-	copy(ret[1+2*byteLen-len(yBytes):], yBytes)
-	return ret
-}
-
-// Unmarshal converts a point, serialised by Marshal, into an x, y pair. On
-// error, x = nil.
-func (BitCurve *BitCurve) Unmarshal(data []byte) (x, y *big.Int) {
-	byteLen := (BitCurve.BitSize + 7) >> 3
-	if len(data) != 1+2*byteLen {
-		return
-	}
-	if data[0] != 4 { // uncompressed form
-		return
-	}
-	x = new(big.Int).SetBytes(data[1 : 1+byteLen])
-	y = new(big.Int).SetBytes(data[1+byteLen:])
-	return
 }
 
 var (
