@@ -18,9 +18,11 @@ import (
 	"hyperchain-alpha/core/types"
 
 	"hyperchain-alpha/p2p"
-	"github.com/ethereum/go-ethereum/node"
+
 
 	"hyperchain-alpha/core"
+	"hyperchain-alpha/node"
+	"fmt"
 )
 
 type ProtocolManager struct {
@@ -32,8 +34,7 @@ type ProtocolManager struct {
 	node  node.Node
 
 
-	blockMaker *core.BlockMaker
-	newPeerCh   chan *peer
+	newPeerCh   chan *p2p.Peer
 	noMorePeers chan struct{}
 
 	eventMux      *event.TypeMux
@@ -47,17 +48,16 @@ type ProtocolManager struct {
 
 	wg sync.WaitGroup
 
-	badBlockReportingEnabled bool
 }
 
 
-func NewProtocolManager(mux *event.TypeMux, blockMaker *core.BlockMaker,peerManager p2p.PeerManager,node node.Node,fetcher *core.Fetcher) (*ProtocolManager) {
+func NewProtocolManager(mux *event.TypeMux, peerManager p2p.PeerManager,node node.Node,fetcher *core.Fetcher) (*ProtocolManager) {
 
 	//eventmux:=new(event.TypeMux)
 	manager := &ProtocolManager{
 		eventMux:    mux,
 		quitSync:    make(chan struct{}),
-		blockMaker:   blockMaker,
+
 		peerManager:  peerManager,
 		node:node,
 		fetcher:fetcher,
@@ -71,13 +71,11 @@ func NewProtocolManager(mux *event.TypeMux, blockMaker *core.BlockMaker,peerMana
 func (pm *ProtocolManager) Start() {
 
 
-
 	go pm.fetcher.Start()
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{},event.BroadcastConsensusEvent{})
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
-	go pm.blockMaker.Start()
 
 
 
@@ -88,7 +86,6 @@ func (pm *ProtocolManager) Start() {
 //commit block into local db
 func (self *ProtocolManager) NewBlockLoop() {
 
-	// automatically stops if unsubscribe
 	for obj := range self.newBlockSub.Chan() {
 
 		switch ev := obj.Data.(type) {
@@ -112,6 +109,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			//event := obj.Data.(event.TxPreEvent)
 			self.BroadcastConsensus(ev.Msg)
 		case event.ConsensusEvent:
+			fmt.Println("hahahahha")
 			//call consensus module
 
 		}

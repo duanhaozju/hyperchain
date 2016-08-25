@@ -2,19 +2,16 @@
 package main
 import (
 	"log"
-	"net/http"
+
 	"github.com/mkideal/cli"
-	"strconv"
+
 	"hyperchain-alpha/p2p"
-	"hyperchain-alpha/utils"
-	"hyperchain-alpha/jsonrpc/routers"
-	"hyperchain-alpha/core"
-	"hyperchain-alpha/core/node"
+
+	"hyperchain-alpha/manager"
+	"hyperchain-alpha/event"
+
+	"hyperchain-alpha/node"
 	"hyperchain-alpha/core/types"
-	"hyperchain-alpha/encrypt"
-	"time"
-	"encoding/json"
-	"crypto/dsa"
 )
 
 type argT struct {
@@ -28,27 +25,44 @@ type argT struct {
 
 func main(){
 	cli.Run(new(argT), func(ctx *cli.Context) error {
-		argv := ctx.Argv().(*argT)
+		eventmux:=new(event.TypeMux)
+		grpcPeerMgr:=&p2p.GrpcPeerManager{
+
+			Message:1,
+
+		}
+		grpcNode:=&node.GrpcNode{
+			Id:1,
+
+		}
+		manager.New(eventmux,grpcPeerMgr,grpcNode)
+		msg:=&types.Msg{
+			Type:1,
+			Size:2,
+
+		}
+		eventmux.Post(event.ConsensusEvent{msg})
+		/*argv := ctx.Argv().(*argT)
 		ctx.String("P2P_ip=%s, \tP2P_port=%d,\t本地http端口:%d,\t本地P2P监听端口:%d,\tTest Flag:%v\n", argv.PeerIp, argv.PeerPort,argv.HttpServerPORT,argv.LocalPort,argv.Test)
 		//正常启动相应服务
 		localIp := utils.GetIpAddr()
-		log.Printf("本机ip地址为："+localIp+ "\n")
+		log.Printf("本机ip地址为："+localIp+ "\n")*/
 
 		//初始化数据库,传入数据库地址自动生成数据库文件
-		core.InitDB(argv.LocalPort)
+		//core.InitDB(argv.LocalPort)
 
 		//存储本地节点
-		p2p.LOCALNODE = node.NewNode(localIp,argv.LocalPort,argv.HttpServerPORT)
+		//p2p.LOCALNODE = node.NewNode(localIp,argv.LocalPort,argv.HttpServerPORT)
 		// 初始化keystore
 		//utils.GenKeypair("#"+localIp+"&"+strconv.Itoa(argv.LocalPort))
 
 		//将本机地址加入Nodes列表中
-		core.PutNodeToMEM(p2p.LOCALNODE.CoinBase,p2p.LOCALNODE)
-		allNodes,_ := core.GetAllNodeFromMEM()
-		log.Println("本机初始化拥有节点",allNodes)
+		//core.PutNodeToMEM(p2p.LOCALNODE.CoinBase,p2p.LOCALNODE)
+		//allNodes,_ := core.GetAllNodeFromMEM()
+		//log.Println("本机初始化拥有节点",allNodes)
 
 		//如果传入了对端节点地址，则首先向远程节点同步
-		if argv.PeerIp != "" && argv.PeerPort !=0{
+		/*if argv.PeerIp != "" && argv.PeerPort !=0{
 				peerNode := node.NewNode(argv.PeerIp,argv.PeerPort,0)
 				// 同步节点
 				p2p.NodeSync(&peerNode)
@@ -63,25 +77,27 @@ func main(){
 			//未传入地址，则自己需要初始化创世区块
 			// TODO 构造创世区块
 			CreateInitBlock()
-		}
+		}*/
 
-		//启用p2p服务
+		/*//启用p2p服务
 		p2p.StratP2PServer(argv.LocalPort)
 
 		//实例化路由
 		router := routers.NewRouter()
 		// 指定静态文件目录
 		router.PathPrefix("/").Handler(http.FileServer(http.Dir("./jsonrpc/")))
-
+*/
 		//启动http服务
-		log.Println("启动http服务...")
-		log.Fatal(http.ListenAndServe(":"+strconv.Itoa(argv.HttpServerPORT),router))
 
+		log.Println("启动http服务...")
+		/*log.Fatal(http.ListenAndServe(":"+strconv.Itoa(argv.HttpServerPORT),router))
+*/
 		return nil
 	})
 }
 
 //-- 创建初始块
+/*
 func CreateInitBlock()  {
 	log.Println("构造创世区块")
 	//-- 获取创世快from用户
@@ -134,4 +150,4 @@ func CreateInitBlock()  {
 
 	//-- 初始初始化balance
 	core.UpdateBalance(block)
-}
+}*/

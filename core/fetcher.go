@@ -8,6 +8,7 @@ import (
 	"hyperchain-alpha/common"
 	"errors"
 
+	"fmt"
 )
 
 type Fetcher struct {
@@ -49,13 +50,18 @@ func NewFetcher() *Fetcher {
 
 func (f *Fetcher) Start() {
 
+	for{
+		fmt.Print("1")
+
 		for !f.queue.Empty() {
+
 			op := f.queue.PopItem().(*inject)
 
 			// If too high up the chain or phase, continue later
 
 			f.insert( op.block)
 		}
+	}
 
 }
 
@@ -65,7 +71,7 @@ func (f *Fetcher) insert( block *types.Block) {
 }
 
 // Enqueue tries to fill gaps the the fetcher's future import queue.
-func (f *Fetcher) Enqueue(peer string, block *types.Block) error {
+func (f *Fetcher) Enqueue( block *types.Block) error {
 	op := &inject{
 
 		block:  block,
@@ -92,7 +98,7 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 		}
 		f.queues[peer] = count
 		f.queued[hash] = op
-		f.queue.Push(op, -float32(block.Number))
+		f.queue.Push(op, -float32(block.Number.Uint64()))
 
 
 	}

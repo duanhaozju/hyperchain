@@ -5,3 +5,11 @@ type Node interface {
 
 
 }
+
+type GrpcNode struct {
+	Id int
+}
+
+func (self *GrpcNode)Start()  {
+
+}

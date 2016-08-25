@@ -17,16 +17,24 @@ type Peer struct {
 
 	
 }
-type  GrpcPeer struct{
+type  GrpcPeerManager struct{
+	Message int
 	
 
 }
+func (self *GrpcPeerManager)Start()  {
 
-func (self *GrpcPeer)GetAlivePeers()  {
-	
+}
+func (self *GrpcPeerManager)JudgeAlivePeers() bool  {
+
+	return true
 }
 
-func (self *GrpcPeer)BroadCastMsg()  {
+func (self *GrpcPeerManager)GetAllPeers()([]*Peer)  {
+	return nil
+}
+
+func (self *GrpcPeerManager)BroadcastPeers(msg *types.Msg)  {
 
 }
 

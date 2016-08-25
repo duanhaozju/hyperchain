@@ -2,9 +2,7 @@ package event
 
 import (
 
-	"math/big"
 
-	"hyperchain-alpha/common"
 	"hyperchain-alpha/core/types"
 
 )

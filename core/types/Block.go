@@ -1,18 +1,16 @@
 package types
 
 import (
-	"hyperchain-alpha/core/node"
-	"hyperchain-alpha/encrypt"
+
 	"time"
-	"encoding/json"
-	"strconv"
-	"encoding/hex"
+
 	"math/big"
+	"hyperchain-alpha/common"
 )
 
 type Block struct {
 	ParentHash string
-	BlockHash string
+	BlockHash common.Hash
 	Transactions []Transaction
 	TimeStramp int64 //unix时间戳
 	MerkleRoot string // merkleRoot 的hash值
@@ -32,14 +30,15 @@ func NewBlock(trans Transactions, ParentHash string) *Block {
 
 		MerkleRoot: "root",
 	}
-	txBStr, _ := json.Marshal(block.Transactions)
+	//txBStr, _ := json.Marshal(block.Transactions)
 
 
-	block.BlockHash = string(encrypt.GetHash([]byte(block.ParentHash + string(txBStr) + strconv.FormatInt(block.TimeStramp, 10) + string(coinbaseBStr) + string(block.MerkleRoot))))
+	//block.BlockHash = string(encrypt.GetHash([]byte(block.ParentHash + string(txBStr) + strconv.FormatInt(block.TimeStramp, 10) + string(coinbaseBStr) + string(block.MerkleRoot))))
 
 	return &block
 }
 
+/*
 func (blk Block) String()string{
 	this := blk
 	retString :="\n======================BLOCK<STRAT>==============\n"
@@ -51,4 +50,4 @@ func (blk Block) String()string{
 	retString +="= MerkleRoot\t: "+ this.MerkleRoot	+"\n"
 	retString +="======================BLOCK<END>================\n"
 	return retString
-}
+}*/

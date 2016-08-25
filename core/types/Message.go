@@ -1,9 +1,6 @@
 package types
 
-import (
-	"io"
 
-)
 
 const (
 	// Protocol messages
@@ -19,7 +16,7 @@ type Msg struct {
 	Type    uint64
 	Size    uint32
 
-	Payload io.Reader
+	Payload []byte
 }
 
 
