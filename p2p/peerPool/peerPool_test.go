@@ -4,10 +4,12 @@ import (
 	"testing"
 	"hyperchain-alpha/p2p/peermessage"
 	"fmt"
-	"hyperchain-alpha/p2p/node"
+	node "hyperchain-alpha/p2p/node"
 	"log"
-	"hyperchain-alpha/p2p/peer"
+	peer "hyperchain-alpha/p2p/peer"
 	"strconv"
+	/*"github.com/ethereum/go-ethereum/node"
+	"google.golang.org/grpc/peer"*/
 )
 
 func TestPeersPool_PutPeer(t *testing.T) {

@@ -1,23 +1,23 @@
+// gRPC manager
+// author: Lizhong kuang
+// date: 2016-08-24
+// last modified:2016-08-25
 package p2p
 
 import (
-	"hyperchain-alpha/core/types"
+
 	"hyperchain-alpha/common"
 )
 
-// TODO init the peer
-// TODO init eventManager
-// TODO init the handler
-// TODO init the event register
 
 type PeerManager interface {
 
 	// judge all peer are connected and return them
-	JudgeAlivePeers()(bool)
+	JudgeAlivePeers(num int)(bool)
 	GetAllPeers()([]*Peer)
-	Start()
+	Start(path string,isFirst bool)
 	GetClientId()common.Hash
-	BroadcastPeers(msg *types.Msg)
+	BroadcastPeers(payLoad []byte)
 
 }
 
@@ -36,10 +36,10 @@ func (self *GrpcPeerManager)GetClientId()common.Hash{
 	return *new(common.Hash)
 
 }
-func (self *GrpcPeerManager)Start()  {
+func (self *GrpcPeerManager)Start(path string,isFirst bool)  {
 
 }
-func (self *GrpcPeerManager)JudgeAlivePeers() bool  {
+func (self *GrpcPeerManager)JudgeAlivePeers(num int) bool  {
 
 	return true
 }
@@ -48,6 +48,6 @@ func (self *GrpcPeerManager)GetAllPeers()([]*Peer)  {
 	return nil
 }
 
-func (self *GrpcPeerManager)BroadcastPeers(msg *types.Msg)  {
+func (self *GrpcPeerManager)BroadcastPeers(payLoad []byte)  {
 
 }
