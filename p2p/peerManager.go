@@ -15,7 +15,7 @@ type PeerManager interface {
 	// judge all peer are connected and return them
 	JudgeAlivePeers(num int)(bool)
 	GetAllPeers()([]*Peer)
-	Start()
+	Start(path string,isFirst bool)
 	GetClientId()common.Hash
 	BroadcastPeers(payLoad []byte)
 
@@ -36,7 +36,7 @@ func (self *GrpcPeerManager)GetClientId()common.Hash{
 	return *new(common.Hash)
 
 }
-func (self *GrpcPeerManager)Start()  {
+func (self *GrpcPeerManager)Start(path string,isFirst bool)  {
 
 }
 func (self *GrpcPeerManager)JudgeAlivePeers(num int) bool  {
