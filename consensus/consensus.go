@@ -24,6 +24,8 @@ func init() {
 func NewConsenter(id uint64) Consenter {
 	plugin := "pbft"
 	logger.Infof("Creating consensus plugin %s", plugin)
-	var msgQ *event.TypeMux
+	//var msgQ *event.TypeMux
+	eventmux:=new(event.TypeMux)
+	eventmux.Post(event.ConsensusEvent{[]byte{0x00, 0x00, 0x03, 0xe8}})
 	return pbft.GetPlugin(id, msgQ)
 }

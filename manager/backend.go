@@ -10,15 +10,19 @@ import (
 	"hyperchain-alpha/core"
 )
 
-func New(eventMux *event.TypeMux, peerManager p2p.PeerManager) (error) {
+func New(eventMux *event.TypeMux, peerManager p2p.PeerManager, path string, isFirst bool) (error) {
 
 	//var wg sync.WaitGroup
 
-	peerManager.Start()
+	aliveChan := make(chan bool)
+	peerManager.Start(path, isFirst,aliveChan)
 
-	allAlive := peerManager.JudgeAlivePeers()
 
-	if allAlive {
+
+	//peerManager.JudgeAlivePeers()
+	select {
+
+	case <-aliveChan:
 
 		fetcher := core.NewFetcher()
 		protocolManager := NewProtocolManager(eventMux, peerManager, fetcher)

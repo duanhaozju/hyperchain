@@ -25,7 +25,8 @@ func main(){
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 
 
-		eventmux:=new(event.TypeMux)
+		//argv := ctx.Argv().(*argT)
+
 		grpcPeerMgr:=&p2p.GrpcPeerManager{
 
 			Message:1,
@@ -33,11 +34,11 @@ func main(){
 		}
 		grpcPeerMgr=new(p2p.GrpcPeerManager)
 
-
-		manager.New(eventmux,grpcPeerMgr)
-
+		eventmux:=new(event.TypeMux)
+		manager.New(eventmux,grpcPeerMgr,4,1)
+		/*eventmux:=new(event.TypeMux)
 		eventmux.Post(event.ConsensusEvent{[]byte{0x00, 0x00, 0x03, 0xe8}})
-
+*/
 
 		//jsonrpc.StartHttp(1234)
 
