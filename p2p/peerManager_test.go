@@ -13,7 +13,7 @@ import (
 
 func TestGrpcPeerManager_Start(t *testing.T){
 
-	path := "/home/chenquan/Workspace/IdeaProjects/hyperchain-go/src/hyperchain-alpha/p2p/peerconfig.json"
+	path := "/home/chenquan/Workspace/IdeaProjects/hyperchain-go/src/hyperchain/p2p/peerconfig.json"
 	var sc sync.WaitGroup
 	grpcPeerMgr := new(GrpcPeerManager)
 	aliveChan := make(chan bool)

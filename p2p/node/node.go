@@ -6,14 +6,14 @@
 package Server
 
 import (
-	pb "hyperchain-alpha/p2p/peermessage"
+	pb "hyperchain/p2p/peermessage"
 	"golang.org/x/net/context"
 	"net"
 	"log"
 	"google.golang.org/grpc"
 
 	"strconv"
-	"hyperchain-alpha/p2p/peerComm"
+	"hyperchain/p2p/peerComm"
 )
 
 type Node struct {

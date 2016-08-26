@@ -7,17 +7,17 @@
 package p2p
 
 import (
-	"hyperchain-alpha/common"
-	node "hyperchain-alpha/p2p/node"
-	peer "hyperchain-alpha/p2p/peer"
-	peerComm "hyperchain-alpha/p2p/peerComm"
-	"hyperchain-alpha/p2p/peerEventHandler"
-	"hyperchain-alpha/p2p/peerEventManager"
-	pb "hyperchain-alpha/p2p/peermessage"
+	"hyperchain/common"
+	node "hyperchain/p2p/node"
+	peer "hyperchain/p2p/peer"
+	peerComm "hyperchain/p2p/peerComm"
+	"hyperchain/p2p/peerEventHandler"
+	"hyperchain/p2p/peerEventManager"
+	pb "hyperchain/p2p/peermessage"
 	"strconv"
 	"time"
 	//"github.com/labstack/gommon/log"
-	"hyperchain-alpha/p2p/peerPool"
+	"hyperchain/p2p/peerPool"
 	"log"
 	"sync"
 )

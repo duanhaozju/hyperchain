@@ -9,8 +9,8 @@ package peerPool
 import (
 	"errors"
 	"fmt"
-	peer "hyperchain-alpha/p2p/peer"
-	pb "hyperchain-alpha/p2p/peermessage"
+	peer "hyperchain/p2p/peer"
+	pb "hyperchain/p2p/peermessage"
 	"log"
 	"time"
 )
