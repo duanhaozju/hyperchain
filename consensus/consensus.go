@@ -3,7 +3,7 @@ package consensus
 import (
 	"hyperchain-alpha/consensus/pbft"
 	"hyperchain-alpha/event"
-
+	"hyperchain-alpha/consensus/helper"
 	"github.com/op/go-logging"
 )
 
@@ -24,6 +24,7 @@ func init() {
 func NewConsenter(id uint64) Consenter {
 	plugin := "pbft"
 	logger.Infof("Creating consensus plugin %s", plugin)
-	var msgQ *event.TypeMux
-	return pbft.GetPlugin(id, msgQ)
+	msgQ := new(event.TypeMux)
+	h := helper.NewHelper(msgQ)
+	return pbft.GetPlugin(id, h)
 }
