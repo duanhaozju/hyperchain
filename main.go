@@ -1,4 +1,7 @@
-//main 入口函数，用于处理命令行入口
+// init ProtocolManager
+// author: Lizhong kuang
+// date: 2016-08-23
+// last modified:2016-08-26
 package main
 import (
 	"log"
@@ -8,15 +11,17 @@ import (
 	"hyperchain-alpha/p2p"
 
 	"hyperchain-alpha/manager"
-	"hyperchain-alpha/event"
 
-
-	"hyperchain-alpha/common"
-	"fmt"
+	"hyperchain-alpha/consensus"
+	"hyperchain-alpha/jsonrpc"
+	"hyperchain-alpha/core"
 )
 
 type argT struct {
 	cli.Helper
+	NodePath string
+	IsFirst bool
+	ConsensusNum int
 	PeerIp string `cli:"i,peerip" usage:"对端节点地址" dft:""`
 	PeerPort int  `cli:"p,peerport" usage:"对端节点监听端口" dft:"0"`
 	LocalPort int `cli:"o,hostport" usage:"本地RPC监听端口" dft:"8001"`
@@ -28,21 +33,34 @@ func main(){
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 
 
-		eventmux:=new(event.TypeMux)
-		grpcPeerMgr:=&p2p.GrpcPeerManager{
 
-			Message:1,
+		/*init peer manager object,consensus object*/
 
-		}
-		grpcPeerMgr=new(p2p.GrpcPeerManager)
+		argv := ctx.Argv().(*argT)
+
+		//init peer manager to start grpc server and client
+		grpcPeerMgr:=new(p2p.GrpcPeerManager)
+
+		//init fetcher to accept block
+		fetcher := core.NewFetcher()
 
 
-		manager.New(eventmux,grpcPeerMgr)
+		//init pbft consensus
+		cs:=consensus.NewConsenter(argv.ConsensusNum)
 
+		// init http server for web call
+		jsonrpc.StartHttp(argv.LocalPort)
+
+
+		manager.New(grpcPeerMgr,cs,fetcher,argv.NodePath,argv.IsFirst)
+
+
+
+		/*eventmux:=new(event.TypeMux)
 		eventmux.Post(event.ConsensusEvent{[]byte{0x00, 0x00, 0x03, 0xe8}})
+*/
 
-
-		//jsonrpc.StartHttp(1234)
+		//
 
 		/*jobs := make(chan int, 100)
 		<-jobs*/

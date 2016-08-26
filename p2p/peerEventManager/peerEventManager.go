@@ -1,3 +1,9 @@
+// author: chenquan
+// date: 16-8-25
+// last modified: 16-8-25 20:01
+// last Modified Author: chenquan
+// change log:
+//
 package peerEventManager
 
 import (
@@ -6,6 +12,8 @@ import (
 	"errors"
 	"log"
 	eventHandler "hyperchain-alpha/p2p/peerEventHandler"
+	"sync"
+	"encoding/pem"
 )
 //the message queue
 
@@ -14,6 +22,7 @@ type PeerEventManager struct {
 	peerEventChain chan pb.Message
 	eventQueue *peerComm.Queue
 	eventListener map[pb.Message_MsgType] eventHandler.PeerEventHandler
+	syncMux sync.Mutex
 }
 
 //提供一个事件管理器实例
@@ -26,8 +35,7 @@ func NewPeerEventManager() *PeerEventManager{
 }
 
 //注册事件监听器
-func (pem *PeerEventManager)RegisterEvent(msgType pb.Message_MsgType,eHandler eventHandler.PeerEventHandler)error{
-	this := pem
+func (this *PeerEventManager)RegisterEvent(msgType pb.Message_MsgType,eHandler eventHandler.PeerEventHandler)error{
 	if _,ok := this.eventListener[msgType];ok{
 		return errors.New("This event type already has been registered!")
 	}else{
@@ -37,8 +45,9 @@ func (pem *PeerEventManager)RegisterEvent(msgType pb.Message_MsgType,eHandler ev
 }
 
 // PostEvent 将事件发送到监听线程
-func (pem *PeerEventManager) PostEvent(msgType pb.Message_MsgType,message pb.Message)error{
-	this := pem
+func (this *PeerEventManager) PostEvent(msgType pb.Message_MsgType,message pb.Message)error{
+	this.syncMux.Lock()
+	defer this.syncMux.Unlock()
 	if _,ok := this.eventListener[msgType];ok{
 		this.peerEventChain <- message
 		return nil
@@ -49,12 +58,11 @@ func (pem *PeerEventManager) PostEvent(msgType pb.Message_MsgType,message pb.Mes
 }
 
 // Start 开启事件监听
-func(pem *PeerEventManager)Start(){
-	go pem.eventLoop()
+func(this *PeerEventManager)Start(){
+	go this.eventLoop()
 }
 
-func (pem *PeerEventManager)eventLoop(){
-	this := pem
+func (this *PeerEventManager)eventLoop(){
 	//如果发送方关闭将无法range
 	for msg := range this.peerEventChain {
 		if handler, ok := this.eventListener[msg.MessageType];ok {

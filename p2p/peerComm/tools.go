@@ -1,8 +1,17 @@
+// author: chenquan
+// date: 16-8-25
+// last modified: 16-8-25 20:01
+// last Modified Author: chenquan
+// change log:
+//
 package peerComm
 
 import (
 	"net"
 	"fmt"
+	"io/ioutil"
+	"encoding/json"
+	"github.com/labstack/gommon/log"
 )
 
 func GetIpLocalIpAddr()string{
@@ -24,4 +33,17 @@ func GetIpLocalIpAddr()string{
 		}
 	}
 	return "localhost"
+}
+
+func GetConfig(path string) map[string]interface{}{
+	content,fileErr := ioutil.ReadFile(path)
+	if fileErr != nil {
+		log.Fatal(fileErr)
+	}
+	var configs map[string]interface{}
+	UmErr := json.Unmarshal(content,&configs)
+	if UmErr != nil {
+		log.Fatal(UmErr)
+	}
+	return configs
 }

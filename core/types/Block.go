@@ -12,6 +12,7 @@ import (
 	"hyperchain-alpha/common"
 
 	"hyperchain-alpha/crypto"
+
 )
 
 type Block struct {
@@ -42,6 +43,8 @@ type Block struct {
 
 // hash block
 func (h *Block) Hash(hash crypto.CommonHash) common.Hash {
+
+
 	return hash.Hash(h)
 }
 

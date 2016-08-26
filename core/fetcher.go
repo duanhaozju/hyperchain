@@ -68,6 +68,7 @@ func (f *Fetcher) Start() {
 
 //insert into db
 func (f *Fetcher) insert(block *types.Block) {
+
 	//TODO
 
 }
