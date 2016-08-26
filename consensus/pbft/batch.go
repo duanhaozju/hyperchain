@@ -191,6 +191,10 @@ func newBatch(id uint64, config *viper.Viper, h *helper.Stack) *batch{
 	return batchObj
 }
 
+func (batch *batch) getHelper() helper.Stack {
+	return batch.helperImpl
+}
+
 
 
 

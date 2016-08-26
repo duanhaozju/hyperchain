@@ -47,7 +47,6 @@ type pbftMessageEvent pbftMessage
 // nullRequestEvent provides "keep-alive" null requests
 type nullRequestEvent struct{}
 
-
 // This structure is used for incoming PBFT bound messages
 type pbftMessage struct {
 	sender uint64
@@ -56,7 +55,7 @@ type pbftMessage struct {
 
 type pbftCore struct {
 	//internal data
-	consumer helper.Stack
+	helper helper.Stack
 
 	// PBFT data
 	byzantine     bool              // whether this node is intentionally acting as Byzantine; useful for debugging on the testnet
@@ -126,11 +125,11 @@ func (a sortableUint64Slice) Less(i, j int) bool {
 // constructors
 // =============================================================================
 
-func newPbftCore(id uint64, config *viper.Viper, consumer innerStack, etf events.TimerFactory) *pbftCore {
+func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerFactory) *pbftCore {
 	var err error
 	instance := &pbftCore{}
 	instance.id = id
-	instance.consumer = consumer
+	instance.helper = batch.getHelper()
 
 	instance.nullRequestTimer = etf.CreateTimer()
 
@@ -161,7 +160,6 @@ func newPbftCore(id uint64, config *viper.Viper, consumer innerStack, etf events
 
 	instance.replicaCount = instance.N
 
-	logger.Infof("PBFT type = %T", instance.consumer)
 	logger.Infof("PBFT Max number of validating peers (N) = %v", instance.N)
 	logger.Infof("PBFT Max number of failing peers (f) = %v", instance.f)
 	logger.Infof("PBFT byzantine flag = %v", instance.byzantine)
@@ -594,7 +592,7 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
 
-		instance.executeOutstanding()
+		instance.helper.Execute()
 	}
 
 	return nil
@@ -647,7 +645,7 @@ func (instance *pbftCore) executeOne(idx msgID) bool {
 		logger.Infof("Replica %d executing/committing request batch for view=%d/seqNo=%d and digest %s",
 			instance.id, idx.v, idx.n, digest)
 		// synchronously execute, it is the other side's responsibility to execute in the background if needed
-		instance.consumer.execute(idx.n, reqBatch)
+		instance.helper.Execute(reqBatch)
 	}
 	return true
 }
