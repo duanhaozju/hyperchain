@@ -2,15 +2,12 @@ package pbft
 
 import (
 	"fmt"
-	"math/rand"
 	"time"
 
 	"hyperchain-alpha/consensus/helper"
 	"hyperchain-alpha/consensus/events"
-	_ "github.com/hyperledger/fabric/core" // Needed for logging format init
 
 	"github.com/op/go-logging"
-	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
 )
 
@@ -23,11 +20,6 @@ var logger *logging.Logger // package-level logger
 func init() {
 	logger = logging.MustGetLogger("consensus/pbft")
 }
-
-const (
-	// UnreasonableTimeout is an ugly thing, we need to create timers, then stop them before they expire, so use a large timeout
-	UnreasonableTimeout = 100 * time.Hour
-)
 
 // =============================================================================
 // custom interfaces and structure definitions
@@ -213,12 +205,8 @@ func (instance *pbftCore) ProcessEvent(e events.Event) events.Event {
 		err = instance.recvPrepare(et)
 	case *Commit:
 		err = instance.recvCommit(et)
-	case execDoneEvent:
-		instance.execDoneSync()
 	case nullRequestEvent:
 		instance.nullRequestHandler()
-	case workEvent:
-		et() // Used to allow the caller to steal use of the main thread, to be removed
 	default:
 		logger.Warningf("Replica %d received an unknown message type %T", instance.id, et)
 	}
@@ -432,7 +420,7 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 	cert := instance.getCert(instance.view, n)
 	cert.prePrepare = preprep
 	cert.digest = digest
-	instance.innerBroadcast(&Message{Payload: &Message_PrePrepare{PrePrepare: preprep}})
+	instance.helper.InnerBroadcast(&Message{Payload: &Message_PrePrepare{PrePrepare: preprep}})
 	instance.maybeSendCommit(digest, instance.view, n)
 }
 
@@ -517,7 +505,7 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 		}
 		cert.sentPrepare = true
 		instance.recvPrepare(prep)
-		return instance.innerBroadcast(&Message{Payload: &Message_Prepare{Prepare: prep}})
+		return instance.helper.InnerBroadcast(&Message{Payload: &Message_Prepare{Prepare: prep}})
 	}
 
 	return nil
@@ -565,7 +553,7 @@ func (instance *pbftCore) maybeSendCommit(digest string, v uint64, n uint64) err
 		}
 		cert.sentCommit = true
 		instance.recvCommit(commit)
-		return instance.innerBroadcast(&Message{&Message_Commit{commit}})
+		return instance.helper.InnerBroadcast(&Message{&Message_Commit{commit}})
 	}
 	return nil
 }
@@ -598,130 +586,6 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 	return nil
 }
 
-func (instance *pbftCore) executeOutstanding() {
-	if instance.currentExec != nil {
-		logger.Debugf("Replica %d not attempting to executeOutstanding because it is currently executing %d", instance.id, *instance.currentExec)
-		return
-	}
-	logger.Debugf("Replica %d attempting to executeOutstanding", instance.id)
-
-	for idx := range instance.certStore {
-		if instance.executeOne(idx) {
-			break
-		}
-	}
-
-	logger.Debugf("Replica %d certstore %+v", instance.id, instance.certStore)
-
-	instance.startTimerIfOutstandingRequests()
-}
-
-func (instance *pbftCore) executeOne(idx msgID) bool {
-	cert := instance.certStore[idx]
-
-	if idx.n != instance.lastExec+1 || cert == nil || cert.prePrepare == nil {
-		return false
-	}
-
-	// we now have the right sequence number that doesn't create holes
-
-	digest := cert.digest
-	reqBatch := instance.reqBatchStore[digest]
-
-	if !instance.committed(digest, idx.v, idx.n) {
-		return false
-	}
-
-	// we have a commit certificate for this request batch
-	currentExec := idx.n
-	instance.currentExec = &currentExec
-
-	// null request
-	if digest == "" {
-		logger.Infof("Replica %d executing/committing null request for view=%d/seqNo=%d",
-			instance.id, idx.v, idx.n)
-		instance.execDoneSync()
-	} else {
-		logger.Infof("Replica %d executing/committing request batch for view=%d/seqNo=%d and digest %s",
-			instance.id, idx.v, idx.n, digest)
-		// synchronously execute, it is the other side's responsibility to execute in the background if needed
-		instance.helper.Execute(reqBatch)
-	}
-	return true
-}
-
-func (instance *pbftCore) execDoneSync() {
-	if instance.currentExec != nil {
-		logger.Infof("Replica %d finished execution %d, trying next", instance.id, *instance.currentExec)
-		instance.lastExec = *instance.currentExec
-
-	} else {
-		// XXX This masks a bug, this should not be called when currentExec is nil
-		logger.Warningf("Replica %d had execDoneSync called, flagging ourselves as out of date", instance.id)
-	}
-	instance.currentExec = nil
-
-	instance.executeOutstanding()
-}
-
-// =============================================================================
-// Misc. methods go here
-// =============================================================================
-
-// Marshals a Message and hands it to the Stack. If toSelf is true,
-// the message is also dispatched to the local instance's RecvMsgSync.
-func (instance *pbftCore) innerBroadcast(msg *Message) error {
-	msgRaw, err := proto.Marshal(msg)
-	if err != nil {
-		return fmt.Errorf("Cannot marshal message %s", err)
-	}
-
-	doByzantine := false
-	if instance.byzantine {
-		rand1 := rand.New(rand.NewSource(time.Now().UnixNano()))
-		doIt := rand1.Intn(3) // go byzantine about 1/3 of the time
-		if doIt == 1 {
-			doByzantine = true
-		}
-	}
-
-	// testing byzantine fault.
-	if doByzantine {
-		rand2 := rand.New(rand.NewSource(time.Now().UnixNano()))
-		ignoreidx := rand2.Intn(instance.N)
-		for i := 0; i < instance.N; i++ {
-			if i != ignoreidx && uint64(i) != instance.id { //Pick a random replica and do not send message
-				instance.consumer.unicast(msgRaw, uint64(i))
-			} else {
-				logger.Debugf("PBFT byzantine: not broadcasting to replica %v", i)
-			}
-		}
-	} else {
-		instance.consumer.broadcast(msgRaw)
-	}
-	return nil
-}
-
-func (instance *pbftCore) startTimerIfOutstandingRequests() {
-
-	if len(instance.outstandingReqBatches) > 0 {
-		getOutstandingDigests := func() []string {
-			var digests []string
-			for digest := range instance.outstandingReqBatches {
-				digests = append(digests, digest)
-			}
-			return digests
-		}()
-		instance.softStartTimer(instance.requestTimeout, fmt.Sprintf("outstanding request batches %v", getOutstandingDigests))
-	} else if instance.nullRequestTimeout > 0 {
-		timeout := instance.nullRequestTimeout
-		if instance.primary(instance.view) != instance.id {
-			// we're waiting for the primary to deliver a null request - give it a bit more time
-			timeout += instance.requestTimeout
-		}
-		instance.nullRequestTimer.Reset(timeout, nullRequestEvent{})
-	}
-}
 
 func (instance *pbftCore) softStartTimer(timeout time.Duration, reason string) {
 	logger.Debugf("Replica %d soft starting new view timer for %s: %s", instance.id, timeout, reason)

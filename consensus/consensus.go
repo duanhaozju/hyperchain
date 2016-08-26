@@ -21,7 +21,7 @@ func init() {
 }
 
 // NewConsenter constructs a Consenter object if not already present
-func (consenter *Consenter) Start(id uint64) Consenter {
+func NewConsenter(id uint64) Consenter {
 	plugin := "pbft"
 	logger.Infof("Creating consensus plugin %s", plugin)
 	msgQ := new(event.TypeMux)
