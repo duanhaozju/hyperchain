@@ -11,7 +11,7 @@ import (
 	"hyperchain-alpha/common"
 )
 
-type Transactionsl struct {
+type Transaction struct {
 	From      common.Hash            //从发起账户公钥hash之后的值
 								//Publickey string //携带公钥
 	To        common.Hash            //送达账户公钥hash之后的值
