@@ -1,9 +1,9 @@
 package helper
 
 import (
-	"hyperchain-alpha/event"
-	pb "hyperchain-alpha/protos"
-	"hyperchain-alpha/consensus/pbft"
+	"hyperchain/event"
+	pb "hyperchain/protos"
+	"hyperchain/consensus/pbft"
 	"github.com/golang/protobuf/proto"
 )
 type helper struct {

@@ -3,13 +3,12 @@ package pbft
 import (
 	"time"
 	"fmt"
-	"hyperchain-alpha/consensus/helper"
+	"hyperchain/consensus/helper"
 
-	"hyperchain-alpha/consensus/events"
+	"hyperchain/consensus/events"
 	pb "github.com/hyperledger/fabric/protos"
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
-	"hyperchain-alpha/event"
 )
 
 type batch struct {

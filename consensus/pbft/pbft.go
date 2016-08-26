@@ -6,9 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"hyperchain-alpha/consensus"
-	"hyperchain-alpha/event"
-	"hyperchain-alpha/consensus/helper"
+	"hyperchain/consensus"
+	"hyperchain/consensus/helper"
 
 	"github.com/spf13/viper"
 )
@@ -23,11 +22,7 @@ func init() {
 }
 
 // GetPlugin returns the handle to the Consenter singleton
-<<<<<<< HEAD
-func GetPlugin(id uint64, msgQ event.TypeMux) consensus.Consenter {
-=======
 func GetPlugin(id uint64, h helper.Stack) consensus.Consenter {
->>>>>>> e0e36f6ba3e89a1ec153f1f17441eca934d83e77
 	if pluginInstance == nil {
 		pluginInstance = New(id, h)
 	}
@@ -36,11 +31,7 @@ func GetPlugin(id uint64, h helper.Stack) consensus.Consenter {
 
 // New creates a new Obc* instance that provides the Consenter interface.
 // Internally, it uses an opaque pbft-core instance.
-<<<<<<< HEAD
-func New(id uint64, msgQ event.TypeMux) consensus.Consenter {
-=======
 func New(id uint64, h *helper.Stack) consensus.Consenter {
->>>>>>> e0e36f6ba3e89a1ec153f1f17441eca934d83e77
 	switch strings.ToLower(config.GetString("general.mode")) {
 	case "batch":
 		return newBatch(id, config, h)
