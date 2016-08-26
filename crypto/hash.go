@@ -27,5 +27,3 @@ func (k256 *Keccak256Hash)Hash(x interface{}) (h common.Hash) {
 
 	return h
 }
-
-
