@@ -5,12 +5,12 @@
 package core
 
 import (
-	"hyperchain-alpha/hyperdb"
+	"hyperchain/hyperdb"
 	"log"
 	"os"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/golang/protobuf/proto"
-	"hyperchain-alpha/core/types"
+	"hyperchain/core/types"
 	"sync"
 	"strconv"
 )
