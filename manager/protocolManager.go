@@ -9,12 +9,12 @@ import "sync"
 
 
 import (
-	"hyperchain-alpha/event"
+	"hyperchain/event"
 
-	"hyperchain-alpha/p2p"
+	"hyperchain/p2p"
 
-	"hyperchain-alpha/core"
-	"hyperchain-alpha/consensus"
+	"hyperchain/core"
+	"hyperchain/consensus"
 )
 
 type ProtocolManager struct {

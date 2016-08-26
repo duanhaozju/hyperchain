@@ -6,9 +6,9 @@ package core
 
 import (
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"hyperchain-alpha/core/types"
+	"hyperchain/core/types"
 
-	"hyperchain-alpha/common"
+	"hyperchain/common"
 	"errors"
 )
 

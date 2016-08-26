@@ -1,6 +1,6 @@
 package core
 
-import "hyperchain-alpha/core/types"
+import "hyperchain/core/types"
 
 type TxPool struct {
 	MaxCapacity int

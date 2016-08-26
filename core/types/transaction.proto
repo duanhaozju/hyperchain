@@ -1,0 +1,10 @@
+syntax = "proto3";
+package types;
+
+message Transaction {
+	bytes from = 1;
+	bytes to = 2;
+	bytes value = 3;
+	int64 timeStamp = 4;
+	bytes signature = 5;
+}

@@ -2,13 +2,12 @@ package client
 
 import (
 	"testing"
-	"hyperchain-alpha/p2p/peermessage"
+	"hyperchain/p2p/peermessage"
 	"log"
 	//"time"
 	"fmt"
 	//"hyperchain-alpha/peer/Server"
-	"time"
-	node "hyperchain-alpha/p2p/node"
+	node "hyperchain/p2p/node"
 )
 
 
