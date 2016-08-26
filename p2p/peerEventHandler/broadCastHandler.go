@@ -4,7 +4,7 @@
 // last Modified Author: chenquan
 // change log:
 //
-package p2p
+package peerEventHandler
 
 import (
 	"hyperchain-alpha/p2p/peermessage"

@@ -4,20 +4,22 @@
 // last Modified Author: chenquan
 // change log:
 //
-package p2p
+package peerEventHandler
 
 import (
 	"hyperchain-alpha/p2p/peermessage"
 	"log"
 )
-// HelloHandler hello message handler
-type HelloHandler struct{
+
+type ResponseHandler struct{
 
 }
-func (this *HelloHandler)ProcessEvent(msg *peermessage.Message)error{
+
+func (this *ResponseHandler)ProcessEvent(msg *peermessage.Message)error{
 	log.Println(msg.MessageType)
 	return nil
 }
-func NewHelloHandler()*HelloHandler{
+
+func NewResponseHandler()*HelloHandler{
 	return &HelloHandler{}
 }

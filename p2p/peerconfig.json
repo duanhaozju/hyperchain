@@ -1,6 +1,10 @@
 {
-  "node0":"localhost:8001",
-  "node1":"localhost:8002",
-  "node2":"localhost:8003",
-  "node3":"localhost:8004"
+  "port1":8001,
+  "port2":8002,
+  "port3":8003,
+  "port4":8004,
+  "node0":"localhost",
+  "node1":"localhost",
+  "node2":"localhost",
+  "node3":"localhost"
 }

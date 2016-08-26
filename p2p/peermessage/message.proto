@@ -22,6 +22,7 @@ message Message{
         HELLO       = 0;
         RESPONSE    = 1;
         CONSUS      = 2;
+        KEEPALIVE   = 3;
     }
 }
 
