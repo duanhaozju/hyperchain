@@ -27,14 +27,3 @@ func (k256 *Keccak256Hash)Hash(x interface{}) (h common.Hash) {
 
 	return h
 }
-//func Keccak256Hash(x interface{}) (h common.Hash){
-//	serialize_data,err := json.Marshal(x)
-//	if err!=nil{
-//		panic(err)
-//	}
-//	hw := sha3.NewKeccak256()
-//	hw.Write(serialize_data)
-//	hw.Sum(h[:0])
-//	return h
-//}
-

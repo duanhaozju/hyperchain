@@ -7,7 +7,28 @@ import (
 	"crypto/elliptic"
 	"hyperchain-alpha/common"
 	"hyperchain-alpha/crypto/secp256k1"
+	"sync/atomic"
 )
+type Transaction struct {
+	data txdata
+	// caches
+	from atomic.Value
+}
+type txdata struct  {
+	Recipient *common.Address
+	Amount *big.Int
+	signature []byte
+}
+func NewTransaction(to common.Address,amount *big.Int) *Transaction {
+	d:=txdata{
+		Recipient:	&to,
+		Amount:		new(big.Int),
+	}
+	if amount != nil{
+		d.Amount.Set(amount)
+	}
+	return &Transaction{data:d}
+}
 
 func TestSigntx(t *testing.T)  {
 	ee := NewEcdsaEncrypto("ECDSAEncryto")
@@ -15,11 +36,8 @@ func TestSigntx(t *testing.T)  {
 	ee.SaveECDSA("./testFile",key)
 	priv,_:=ee.LoadECDSA("./testFile")
 	pub := key.PublicKey
-	//priv := key
-
 
 	var addr common.Address
-	//addr = thecrypto.PubkeyToAddress(priv.PublicKey)
 	pubBytes := elliptic.Marshal(secp256k1.S256(), pub.X, pub.Y)
 	addr = common.BytesToAddress(ee.Keccak256(pubBytes[1:])[12:])
 
@@ -30,15 +48,14 @@ func TestSigntx(t *testing.T)  {
 
 	//签名交易
 	tx:= NewTransaction(common.Address{},big.NewInt(100))
-	hash := tx.SigHash()
+	s256 := NewKeccak256Hash("Keccak256")
+	hash := s256.Hash([]interface{}{tx.data.Amount,tx.data.Recipient})
 	signature,err := ee.Sign(hash[:],*priv)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
 
 	}
-	//signedTx, _ := tx.WithSignature(signature)
-
 	//验证签名
 	from,err:= ee.UnSign(hash,signature)
 	if err != nil {
@@ -48,7 +65,5 @@ func TestSigntx(t *testing.T)  {
 
 	fmt.Println(from)
 	fmt.Println(addr)
-
-
 
 }
