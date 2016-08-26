@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"time"
 
-	"hyperchain-alpha/consensus"
+	"hyperchain-alpha/consensus/helper"
 	"hyperchain-alpha/consensus/events"
 	_ "github.com/hyperledger/fabric/core" // Needed for logging format init
 
@@ -47,23 +47,6 @@ type pbftMessageEvent pbftMessage
 // nullRequestEvent provides "keep-alive" null requests
 type nullRequestEvent struct{}
 
-// Unless otherwise noted, all methods consume the PBFT thread, and should therefore
-// not rely on PBFT accomplishing any work while that thread is being held
-type innerStack interface {
-	broadcast(msgPayload []byte)
-	unicast(msgPayload []byte, receiverID uint64) (err error)
-	execute(seqNo uint64, reqBatch *RequestBatch) // This is invoked on a separate thread
-	getState() []byte
-	getLastSeqNo() (uint64, error)
-	skipTo(seqNo uint64, snapshotID []byte, peers []uint64)
-
-	sign(msg []byte) ([]byte, error)
-	verify(senderID uint64, signature []byte, message []byte) error
-
-	invalidateState()
-	validateState()
-}
-
 // This structure is used for incoming PBFT bound messages
 type pbftMessage struct {
 	sender uint64
@@ -72,7 +55,7 @@ type pbftMessage struct {
 
 type pbftCore struct {
 	//internal data
-	consumer innerStack
+	helper helper.Stack
 
 	// PBFT data
 	byzantine     bool              // whether this node is intentionally acting as Byzantine; useful for debugging on the testnet
@@ -142,11 +125,11 @@ func (a sortableUint64Slice) Less(i, j int) bool {
 // constructors
 // =============================================================================
 
-func newPbftCore(id uint64, config *viper.Viper, consumer innerStack, etf events.TimerFactory) *pbftCore {
+func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerFactory) *pbftCore {
 	var err error
 	instance := &pbftCore{}
 	instance.id = id
-	instance.consumer = consumer
+	instance.helper = batch.getHelper()
 
 	instance.nullRequestTimer = etf.CreateTimer()
 
@@ -177,7 +160,6 @@ func newPbftCore(id uint64, config *viper.Viper, consumer innerStack, etf events
 
 	instance.replicaCount = instance.N
 
-	logger.Infof("PBFT type = %T", instance.consumer)
 	logger.Infof("PBFT Max number of validating peers (N) = %v", instance.N)
 	logger.Infof("PBFT Max number of failing peers (f) = %v", instance.f)
 	logger.Infof("PBFT byzantine flag = %v", instance.byzantine)
@@ -610,7 +592,7 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
 
-		instance.consumer.execute()
+		instance.helper.Execute()
 	}
 
 	return nil
@@ -663,7 +645,7 @@ func (instance *pbftCore) executeOne(idx msgID) bool {
 		logger.Infof("Replica %d executing/committing request batch for view=%d/seqNo=%d and digest %s",
 			instance.id, idx.v, idx.n, digest)
 		// synchronously execute, it is the other side's responsibility to execute in the background if needed
-		instance.consumer.execute(idx.n, reqBatch)
+		instance.helper.Execute(reqBatch)
 	}
 	return true
 }

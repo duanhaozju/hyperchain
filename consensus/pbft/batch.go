@@ -3,7 +3,8 @@ package pbft
 import (
 	"time"
 	"fmt"
-	"hyperchain-alpha/consensus"
+	"hyperchain-alpha/consensus/helper"
+
 	"hyperchain-alpha/consensus/events"
 	pb "github.com/hyperledger/fabric/protos"
 	"github.com/golang/protobuf/proto"
@@ -17,10 +18,10 @@ type batch struct {
 	batchTimeout     time.Duration
 	batchSize        int
 	batchStore       []*Request
-
-
+	helperImpl       *helper.Stack
 	manager          events.Manager
-	pbft        *pbftCore
+	pbft             *pbftCore
+	localID           uint64
 
 	c                chan int8 //ToDo for test
 }
@@ -78,7 +79,7 @@ func (op *batch) processMessage(ocMsg *pb.Message, senderHandle *pb.PeerID) even
 		op.startTimerIfOutstandingRequests()
 		return nil
 	} else if pbftMsg := batchMsg.GetPbftMessage(); pbftMsg != nil {
-		senderID, err := getValidatorID(senderHandle) // who sent this?
+		senderID := getValidatorID(senderHandle) // who sent this?
 		if err != nil {
 			panic("Cannot map sender's PeerID to a valid replica ID")
 		}
@@ -149,11 +150,13 @@ func (op *batch) stopBatchTimer() {
 
 
 
-func newBatch(id uint64, config *viper.Viper, msgQ *event.TypeMux) *batch{
+func newBatch(id uint64, config *viper.Viper, h *helper.Stack) *batch{
 	var err error
 	fmt.Println("new batch")
 	batchObj:=&batch{
 		manager:events.NewManagerImpl(),
+		localID:id,
+		helperImpl:h,
 		c:c,//TODO   for test
 	}
 
@@ -186,6 +189,10 @@ func newBatch(id uint64, config *viper.Viper, msgQ *event.TypeMux) *batch{
 
 
 	return batchObj
+}
+
+func (batch *batch) getHelper() helper.Stack {
+	return batch.helperImpl
 }
 
 
