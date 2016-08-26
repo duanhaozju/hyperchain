@@ -5,7 +5,7 @@
 package manager
 
 import (
-	"hyperchain-alpha/event"
+
 	"hyperchain-alpha/p2p"
 	"hyperchain-alpha/core"
 	"hyperchain-alpha/consensus"

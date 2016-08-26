@@ -11,7 +11,7 @@ import (
 
 )
 
-//consensus event incoming from outer
+//consensus event incoming from outer,peers post
 type ConsensusEvent struct{Payload []byte }
 
 // send consensus event to outer peers
