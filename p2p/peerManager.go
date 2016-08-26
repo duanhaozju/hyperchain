@@ -16,8 +16,10 @@ import (
 	pb "hyperchain-alpha/p2p/peermessage"
 	"time"
 	"strconv"
-	"github.com/labstack/gommon/log"
+	//"github.com/labstack/gommon/log"
 	"hyperchain-alpha/p2p/peerPool"
+	"log"
+
 )
 
 const MAXPEERNODE = 4
@@ -55,7 +57,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int) {
 		peerAddr := configs["node"+strconv.Itoa(NodeId)].(string) + ":" +configs["port"+strconv.Itoa(NodeId)].(string)
 		peer,peerErr := peer.NewPeer(configs["node"+strconv.Itoa(NodeId)].(string) + ":" +configs["port"+strconv.Itoa(NodeId)].(string))
 		if peerErr != nil {
-			log.Error("节点:" + peerAddr +"无法连接\n",peerErr)
+			log.Println("节点:" + peerAddr +"无法连接\n",peerErr)
 			continue
 		}else{
 			peerPool.PutPeer(pb.PeerAddress{
