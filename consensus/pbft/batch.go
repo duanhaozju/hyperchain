@@ -150,12 +150,13 @@ func (op *batch) stopBatchTimer() {
 
 
 
-func newBatch(id uint64, config *viper.Viper, msgQ *event.TypeMux) *batch{
+func newBatch(id uint64, config *viper.Viper, h *helper.Stack) *batch{
 	var err error
 	fmt.Println("new batch")
 	batchObj:=&batch{
 		manager:events.NewManagerImpl(),
 		localID:id,
+		helperImpl:h,
 		c:c,//TODO   for test
 	}
 
