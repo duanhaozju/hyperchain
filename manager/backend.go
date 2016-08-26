@@ -6,9 +6,9 @@ package manager
 
 import (
 
-	"hyperchain-alpha/p2p"
-	"hyperchain-alpha/core"
-	"hyperchain-alpha/consensus"
+	"hyperchain/p2p"
+	"hyperchain/core"
+	"hyperchain/consensus"
 )
 
 // init protocol manager params and start

@@ -8,13 +8,13 @@ import (
 
 	"github.com/mkideal/cli"
 
-	"hyperchain-alpha/p2p"
+	"hyperchain/p2p"
 
-	"hyperchain-alpha/manager"
+	"hyperchain/manager"
 
-	"hyperchain-alpha/consensus"
-	"hyperchain-alpha/jsonrpc"
-	"hyperchain-alpha/core"
+	"hyperchain/consensus"
+	"hyperchain/jsonrpc"
+	"hyperchain/core"
 )
 
 type argT struct {
