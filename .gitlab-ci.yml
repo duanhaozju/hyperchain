@@ -1,0 +1,22 @@
+stages:
+  - test
+  - build
+
+job-00:
+  stage: test
+  script:
+    - go version
+    - pwd
+  only:
+    - test
+  tags:
+    - alpha
+
+job-01:
+  stage: build
+  script:
+    - echo "Hello"
+  only:
+    - test
+  tags:
+    - alpha
