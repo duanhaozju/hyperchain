@@ -1,3 +1,7 @@
+// init ProtocolManager
+// author: Lizhong kuang
+// date: 2016-08-24
+// last modified:2016-08-24
 package manager
 
 import (
@@ -17,7 +21,7 @@ func New(eventMux *event.TypeMux, peerManager p2p.PeerManager) (error) {
 	if allAlive {
 
 		fetcher := core.NewFetcher()
-		protocolManager := NewProtocolManager(eventMux, peerManager , fetcher)
+		protocolManager := NewProtocolManager(eventMux, peerManager, fetcher)
 
 		protocolManager.Start()
 

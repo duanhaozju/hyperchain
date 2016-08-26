@@ -1,3 +1,7 @@
+// fetcher implements block operate
+// author: Lizhong kuang
+// date: 2016-08-24
+// last modified:2016-08-25
 package core
 
 import (
@@ -62,7 +66,9 @@ func (f *Fetcher) Start() {
 
 }
 
+//insert into db
 func (f *Fetcher) insert(block *types.Block) {
+
 	//TODO
 
 }
@@ -81,6 +87,7 @@ func (f *Fetcher) Enqueue(block *types.Block) error {
 	}
 }
 
+//put block into queue
 func (f *Fetcher) enqueue(block *types.Block) {
 	hash := block.BlockHash
 

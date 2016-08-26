@@ -1,28 +1,20 @@
+// implement ProtocolManager
+// author: Lizhong kuang
+// date: 2016-08-24
+// last modified:2016-08-25
 package manager
-
 
 import "sync"
 
 
 
 import (
-
-
-
-
 	"hyperchain-alpha/event"
-
-	"hyperchain-alpha/common"
-
-
-	"hyperchain-alpha/core/types"
 
 	"hyperchain-alpha/p2p"
 
-
 	"hyperchain-alpha/core"
 	"fmt"
-
 )
 
 type ProtocolManager struct {
@@ -40,11 +32,9 @@ type ProtocolManager struct {
 	quitSync     chan struct{}
 
 	wg           sync.WaitGroup
-
 }
 
-
-func NewProtocolManager(mux *event.TypeMux, peerManager p2p.PeerManager,fetcher *core.Fetcher) (*ProtocolManager) {
+func NewProtocolManager(mux *event.TypeMux, peerManager p2p.PeerManager, fetcher *core.Fetcher) (*ProtocolManager) {
 
 	//eventmux:=new(event.TypeMux)
 	manager := &ProtocolManager{
@@ -59,42 +49,37 @@ func NewProtocolManager(mux *event.TypeMux, peerManager p2p.PeerManager,fetcher 
 }
 
 
-
+// start listen new block msg and consensus msg
 func (pm *ProtocolManager) Start() {
-
-
 
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
-	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{},event.BroadcastConsensusEvent{})
+	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.BroadcastConsensusEvent{},event.NewTxEvent{})
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
 	pm.wg.Wait()
 
-
-
-
 }
 
 
 
-//commit block into local db
+// listen block msg
 func (self *ProtocolManager) NewBlockLoop() {
-
 
 	for obj := range self.newBlockSub.Chan() {
 
 		switch ev := obj.Data.(type) {
 		case event.NewBlockEvent:
-
-			self.fetcher.Enqueue(ev.Block)
+			//commit block into local db
+			self.fetcher.Enqueue(ev.Payload)
 
 
 		}
 	}
 }
 
+//listen consensus msg
 func (self *ProtocolManager) ConsensusLoop() {
 
 	// automatically stops if unsubscribe
@@ -103,11 +88,17 @@ func (self *ProtocolManager) ConsensusLoop() {
 		switch ev := obj.Data.(type) {
 
 		case event.BroadcastConsensusEvent:
-			//event := obj.Data.(event.TxPreEvent)
-			self.BroadcastConsensus(ev.Msg)
-		case event.ConsensusEvent:
-			fmt.Println("hahahahha")
+			self.BroadcastConsensus(ev.Payload)
+		case event.NewTxEvent:
 			//call consensus module
+			//Todo
+			fmt.Println("to call consensus")
+
+		case event.ConsensusEvent:
+			//call consensus module
+			//Todo
+			fmt.Println("to call consensus")
+
 
 		}
 
@@ -115,19 +106,10 @@ func (self *ProtocolManager) ConsensusLoop() {
 }
 
 
-func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) {
-	// Broadcast transaction to a batch of peers not knowing about it
 
-
-}
-
-
-func (pm *ProtocolManager) BroadcastConsensus(msg *types.Msg) {
-	pm.peerManager.BroadcastPeers(msg)
-
-
-	// Broadcast transaction to a batch of peers not knowing about it
-
+// Broadcast consensus msg to a batch of peers not knowing about it
+func (pm *ProtocolManager) BroadcastConsensus(payload []byte) {
+	pm.peerManager.BroadcastPeers(payload)
 
 }
 

@@ -9,9 +9,7 @@ import (
 
 	"hyperchain-alpha/manager"
 	"hyperchain-alpha/event"
-	"hyperchain-alpha/core/types"
 
-	//"hyperchain-alpha/jsonrpc"
 )
 
 type argT struct {
@@ -25,20 +23,21 @@ type argT struct {
 
 func main(){
 	cli.Run(new(argT), func(ctx *cli.Context) error {
+
+
 		eventmux:=new(event.TypeMux)
 		grpcPeerMgr:=&p2p.GrpcPeerManager{
 
 			Message:1,
 
 		}
+		grpcPeerMgr=new(p2p.GrpcPeerManager)
+
 
 		manager.New(eventmux,grpcPeerMgr)
-		msg:=&types.Msg{
-			Type:1,
-			Size:2,
 
-		}
-		eventmux.Post(event.ConsensusEvent{msg})
+		eventmux.Post(event.ConsensusEvent{[]byte{0x00, 0x00, 0x03, 0xe8}})
+
 
 		//jsonrpc.StartHttp(1234)
 
@@ -99,8 +98,8 @@ func main(){
 }
 
 //-- 创建初始块
-/*
-func CreateInitBlock()  {
+
+/*func CreateInitBlock()  {
 	log.Println("构造创世区块")
 	//-- 获取创世快from用户
 	godAccount := utils.GetGodAccount()[0]

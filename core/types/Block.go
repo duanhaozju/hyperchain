@@ -1,3 +1,7 @@
+// common event defined
+// author: Lizhong kuang
+// date: 2016-08-25
+// last modified:2016-08-25
 package types
 
 import (
@@ -6,6 +10,9 @@ import (
 
 	"math/big"
 	"hyperchain-alpha/common"
+
+	"hyperchain-alpha/crypto"
+
 )
 
 type Block struct {
@@ -18,21 +25,28 @@ type Block struct {
 
 }
 
-//todo TimeStramp 写错了 应该该掉
 
-//-- 根据Transactions 打包成一个block
-//func NewBlock(trans Transactions, ParentHash string) *Block {
-//	//-- 打包创世块
-//	block := Block{
-//		ParentHash: ParentHash,
-//		Transactions: trans,
-//		TimeStamp: time.Now().Unix(),
-//
-//		MerkleRoot: "root",
-//	}
-//
-//	return &block
-//}
+
+//general block
+/*func NewBlock(txs Transactions, ParentHash common.Hash) *Block {
+
+	block := Block{
+		ParentHash: ParentHash,
+		Transactions: txs,
+		TimeStamp: time.Now().Unix(),
+
+		MerkleRoot: "root",
+	}
+
+	return &block
+}*/
+
+// hash block
+func (h *Block) Hash(hash crypto.CommonHash) common.Hash {
+
+
+	return hash.Hash(h)
+}
 
 /*
 func (blk Block) String()string{

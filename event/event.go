@@ -1,3 +1,7 @@
+// common event implement
+// author: Lizhong kuang
+// date: 2016-08-24
+// last modified:2016-08-24
 package event
 
 import (
