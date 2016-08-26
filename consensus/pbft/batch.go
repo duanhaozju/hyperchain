@@ -8,6 +8,7 @@ import (
 	pb "github.com/hyperledger/fabric/protos"
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
+	"hyperchain-alpha/event"
 )
 
 type batch struct {
@@ -148,7 +149,7 @@ func (op *batch) stopBatchTimer() {
 
 
 
-func newBatch(id uint64,config *viper.Viper,stack consensus.Stack) *batch{
+func newBatch(id uint64, config *viper.Viper, msgQ *event.TypeMux) *batch{
 	var err error
 	fmt.Println("new batch")
 	batchObj:=&batch{

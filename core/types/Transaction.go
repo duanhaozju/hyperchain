@@ -31,9 +31,11 @@ func (tx Transactions) Swap(i,j int){
 	tx[i],tx[j] = tx[j],tx[i]
 }
 
+/*
 func (tx Transactions) Less(i,j int) bool {
 	return tx[j].TimeStamp < tx[i].TimeStamp
 }
+*/
 
 
 //func NewTransaction(from string,to string,value int) *Transaction{
