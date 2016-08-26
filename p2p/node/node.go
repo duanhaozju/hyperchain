@@ -25,6 +25,7 @@ const DefaultgRpcPort = 8001
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
 func NewNode(port int) *Node {
+	log.Println("startting local node, port",port)
 	if globalChatServer.address.Ip != "" && globalChatServer.address.Port !=0 {
 		return &globalChatServer
 	}else{

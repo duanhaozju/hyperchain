@@ -13,7 +13,6 @@ import (
 	"log"
 	eventHandler "hyperchain-alpha/p2p/peerEventHandler"
 	"sync"
-	"encoding/pem"
 )
 //the message queue
 

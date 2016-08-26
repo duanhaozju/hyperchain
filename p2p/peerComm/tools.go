@@ -35,12 +35,12 @@ func GetIpLocalIpAddr()string{
 	return "localhost"
 }
 
-func GetConfig(path string) map[string]interface{}{
+func GetConfig(path string) map[string]string{
 	content,fileErr := ioutil.ReadFile(path)
 	if fileErr != nil {
 		log.Fatal(fileErr)
 	}
-	var configs map[string]interface{}
+	var configs map[string]string
 	UmErr := json.Unmarshal(content,&configs)
 	if UmErr != nil {
 		log.Fatal(UmErr)
