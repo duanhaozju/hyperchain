@@ -62,8 +62,6 @@ type innerStack interface {
 
 	invalidateState()
 	validateState()
-
-	consensus.MessageQueue
 }
 
 // This structure is used for incoming PBFT bound messages
@@ -612,7 +610,7 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
 
-		instance.executeOutstanding()
+		instance.consumer.execute()
 	}
 
 	return nil

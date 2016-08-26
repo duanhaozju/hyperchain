@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+package proto;
+
 // This message type is used between consensus and outside
 message Message {
     enum Type {

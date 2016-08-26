@@ -10,7 +10,6 @@ import (
 	"hyperchain-alpha/event"
 
 	"github.com/spf13/viper"
-	"github.com/go-stack/stack"
 )
 
 const configPrefix = "CORE_PBFT"
@@ -23,7 +22,7 @@ func init() {
 }
 
 // GetPlugin returns the handle to the Consenter singleton
-func GetPlugin(id uint64, msgQ *event.TypeMux) consensus.Consenter {
+func GetPlugin(id uint64, msgQ event.TypeMux) consensus.Consenter {
 	if pluginInstance == nil {
 		pluginInstance = New(id, msgQ)
 	}
@@ -32,7 +31,7 @@ func GetPlugin(id uint64, msgQ *event.TypeMux) consensus.Consenter {
 
 // New creates a new Obc* instance that provides the Consenter interface.
 // Internally, it uses an opaque pbft-core instance.
-func New(id uint64, msgQ *event.TypeMux) consensus.Consenter {
+func New(id uint64, msgQ event.TypeMux) consensus.Consenter {
 	switch strings.ToLower(config.GetString("general.mode")) {
 	case "batch":
 		return newBatch(id, config, msgQ)
