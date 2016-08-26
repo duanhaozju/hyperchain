@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"hyperchain-alpha/consensus/helper"
-	"hyperchain-alpha/consensus/events"
+	"hyperchain/consensus/helper"
+	"hyperchain/consensus/events"
 
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"

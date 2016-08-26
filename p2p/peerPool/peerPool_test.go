@@ -8,15 +8,15 @@ package peerPool
 
 import (
 	"testing"
-	"hyperchain-alpha/p2p/peermessage"
+	"hyperchain/p2p/peermessage"
 	"fmt"
 
 	"log"
 
 	"strconv"
 
-	node "hyperchain-alpha/p2p/node"
-	peer "hyperchain-alpha/p2p/peer"
+	node "hyperchain/p2p/node"
+	peer "hyperchain/p2p/peer"
 
 	"time"
 )

@@ -7,7 +7,7 @@
 package peerEventHandler
 
 import (
-	"hyperchain-alpha/p2p/peermessage"
+	"hyperchain/p2p/peermessage"
 	"log"
 )
 // HelloHandler hello message handler

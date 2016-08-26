@@ -1,9 +1,9 @@
 package consensus
 
 import (
-	"hyperchain-alpha/consensus/pbft"
-	"hyperchain-alpha/event"
-	"hyperchain-alpha/consensus/helper"
+	"hyperchain/consensus/pbft"
+	"hyperchain/event"
+	"hyperchain/consensus/helper"
 	"github.com/op/go-logging"
 )
 
