@@ -23,9 +23,11 @@ func NewEcdsaEncrypto(name string) *EcdsaEncrypto  {
 	ee := &EcdsaEncrypto{name:name}
 	return ee
 }
+
 func (ee *EcdsaEncrypto)GenerateKey()(*ecdsa.PrivateKey,error)  {
 	return ecdsa.GenerateKey(secp256k1.S256(), rand.Reader)
 }
+
 func (ee *EcdsaEncrypto)Sign(hash []byte,  prv interface{})(sig []byte, err error)  {
 	privateKey := prv.(ecdsa.PrivateKey)
 	if len(hash) != 32 {
@@ -37,14 +39,16 @@ func (ee *EcdsaEncrypto)Sign(hash []byte,  prv interface{})(sig []byte, err erro
 	sig, err = secp256k1.Sign(hash, seckey)
 	return
 }
+
+//UnSign recovers commom.Address from txhash and signature
 func (ee *EcdsaEncrypto)UnSign(args ...interface{})(common.Address, error)  {
 	if len(args)!=2{
 		err :=errors.New("paramas invalid")
 		return common.Address{},err
 	}
-	hash := args[0].(common.Hash)
+	hash := args[0].([]byte)
 	sig := args[1].([]byte)
-	pubBytes,err := secp256k1.RecoverPubkey(hash[:], sig)
+	pubBytes,err := secp256k1.RecoverPubkey(hash, sig)
 	if err!=nil{
 		return common.Address{},err
 	}
@@ -52,6 +56,9 @@ func (ee *EcdsaEncrypto)UnSign(args ...interface{})(common.Address, error)  {
 	copy(addr[:],ee.Keccak256(pubBytes[1:])[12:])
 	return addr,nil
 }
+
+// LoadECDSA loads a secp256k1 private key from the given file.
+// The key data is expected to be hex-encoded.
 func (ee *EcdsaEncrypto)LoadECDSA(file string) (*ecdsa.PrivateKey, error) {
 	buf := make([]byte, 64)
 	fd, err := os.Open(file)
@@ -82,6 +89,7 @@ func (ee *EcdsaEncrypto)ToECDSA(prv []byte) *ecdsa.PrivateKey {
 	priv.PublicKey.X, priv.PublicKey.Y = secp256k1.S256().ScalarBaseMult(prv)
 	return priv
 }
+
 func (ee *EcdsaEncrypto)FromECDSA(prv *ecdsa.PrivateKey) []byte {
 	if prv == nil {
 		return nil
@@ -94,9 +102,7 @@ func (ee *EcdsaEncrypto)SaveECDSA(file string, key *ecdsa.PrivateKey) error {
 	k := hex.EncodeToString(ee.FromECDSA(key))
 	return ioutil.WriteFile(file, []byte(k), 0600)
 }
-func (ee *EcdsaEncrypto)Ecrecover(hash, sig []byte) ([]byte, error) {
-	return secp256k1.RecoverPubkey(hash, sig)
-}
+
 func (ee *EcdsaEncrypto)PubkeyToAddress(p ecdsa.PublicKey) common.Address {
 	pubBytes := ee.FromECDSAPub(&p)
 	return common.BytesToAddress(ee.Keccak256(pubBytes[1:])[12:])
