@@ -4,7 +4,7 @@
 // last modified:2016-08-25
 package crypto
 
-import "hyperchain-alpha/common"
+import "hyperchain/common"
 
 // hash interface
 type CommonHash interface {

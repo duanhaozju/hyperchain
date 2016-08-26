@@ -2,7 +2,7 @@ package crypto
 
 import (
 	"fmt"
-	"hyperchain-alpha/common"
+	"hyperchain/common"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"github.com/syndtr/goleveldb/leveldb/errors"
@@ -11,8 +11,8 @@ import (
 	"encoding/hex"
 	"io/ioutil"
 	"crypto/elliptic"
-	"hyperchain-alpha/crypto/sha3"
-	"hyperchain-alpha/crypto/secp256k1"
+	"hyperchain/crypto/sha3"
+	"hyperchain/crypto/secp256k1"
 )
 
 type EcdsaEncrypto struct{

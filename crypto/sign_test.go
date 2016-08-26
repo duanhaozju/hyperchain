@@ -5,8 +5,8 @@ import (
 	"math/big"
 	"fmt"
 	"crypto/elliptic"
-	"hyperchain-alpha/common"
-	"hyperchain-alpha/crypto/secp256k1"
+	"hyperchain/common"
+	"hyperchain/crypto/secp256k1"
 	"sync/atomic"
 )
 type Transaction struct {
