@@ -57,7 +57,7 @@ func TestSigntx(t *testing.T)  {
 
 	}
 	//验证签名
-	from,err:= ee.UnSign(hash,signature)
+	from,err:= ee.UnSign(hash[:],signature)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
