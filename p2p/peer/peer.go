@@ -2,7 +2,7 @@ package client
 
 import (
 	"google.golang.org/grpc"
-	pb "hyperchain-alpha/p2p/peermessage"
+	pb "hyperchain/p2p/peermessage"
 	"errors"
 	"golang.org/x/net/context"
 	"log"
@@ -44,7 +44,7 @@ func NewPeer(address string)(*Peer,error){
 	if err2 != nil{
 		errors.New("cannot establish a connection!无法建立通讯")
 		log.Println("无法建立通讯 err:",err2)
-		return nil,err
+		return nil,err2
 	}else{
 		if retMessage.MessageType == pb.Message_RESPONSE {
 			return &peer,nil

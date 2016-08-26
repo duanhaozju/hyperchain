@@ -7,13 +7,12 @@
 package peerEventManager
 
 import (
-	pb "hyperchain-alpha/p2p/peermessage"
-	"hyperchain-alpha/p2p/peerComm"
+	pb "hyperchain/p2p/peermessage"
+	"hyperchain/p2p/peerComm"
 	"errors"
 	"log"
-	eventHandler "hyperchain-alpha/p2p/peerEventHandler"
+	eventHandler "hyperchain/p2p/peerEventHandler"
 	"sync"
-	"encoding/pem"
 )
 //the message queue
 

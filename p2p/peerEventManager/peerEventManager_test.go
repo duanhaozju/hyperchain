@@ -8,7 +8,7 @@ package peerEventManager
 
 import "testing"
 import (
-	"hyperchain-alpha/p2p/peermessage"
+	"hyperchain/p2p/peermessage"
 	"log"
 	"time"
 )
