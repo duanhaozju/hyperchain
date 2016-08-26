@@ -10,7 +10,7 @@ job-00:
   only:
     - test
   tags:
-    - alpha
+    - golang
 
 job-01:
   stage: build
@@ -19,4 +19,4 @@ job-01:
   only:
     - test
   tags:
-    - alpha
+    - golang
