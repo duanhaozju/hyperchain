@@ -28,7 +28,7 @@ type PeerManager interface {
 	// judge all peer are connected and return them
 	JudgeAlivePeers(*chan int)
 	GetAllPeers() []*peer.Peer
-	Start(path string, NodeId int)
+	Start(path string, NodeId int,aliveChan chan  bool)
 	GetClientId() common.Hash
 	BroadcastPeers(payLoad []byte)
 }
@@ -43,7 +43,7 @@ func (this *GrpcPeerManager) GetClientId() common.Hash {
 
 }
 
-func (this *GrpcPeerManager) Start(path string, NodeId int) {
+func (this *GrpcPeerManager) Start(path string, NodeId int,aliveChan chan  bool) {
 	configs := peerComm.GetConfig(path)
 	port := configs["port"+strconv.Itoa(NodeId)].(int)
 	this.localNode = node.NewNode(port)
