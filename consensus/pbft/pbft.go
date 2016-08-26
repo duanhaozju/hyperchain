@@ -8,9 +8,9 @@ import (
 
 	"hyperchain-alpha/consensus"
 	"hyperchain-alpha/event"
+	"hyperchain-alpha/consensus/helper"
 
 	"github.com/spf13/viper"
-	"github.com/go-stack/stack"
 )
 
 const configPrefix = "CORE_PBFT"
@@ -23,19 +23,19 @@ func init() {
 }
 
 // GetPlugin returns the handle to the Consenter singleton
-func GetPlugin(id uint64, msgQ *event.TypeMux) consensus.Consenter {
+func GetPlugin(id uint64, h helper.Stack) consensus.Consenter {
 	if pluginInstance == nil {
-		pluginInstance = New(id, msgQ)
+		pluginInstance = New(id, h)
 	}
 	return pluginInstance
 }
 
 // New creates a new Obc* instance that provides the Consenter interface.
 // Internally, it uses an opaque pbft-core instance.
-func New(id uint64, msgQ *event.TypeMux) consensus.Consenter {
+func New(id uint64, h *helper.Stack) consensus.Consenter {
 	switch strings.ToLower(config.GetString("general.mode")) {
 	case "batch":
-		return newBatch(id, config, msgQ)
+		return newBatch(id, config, h)
 	default:
 		panic(fmt.Errorf("Invalid PBFT mode: %s", config.GetString("general.mode")))
 	}

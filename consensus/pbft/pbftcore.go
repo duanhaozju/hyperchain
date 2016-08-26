@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"time"
 
-	"hyperchain-alpha/consensus"
+	"hyperchain-alpha/consensus/helper"
 	"hyperchain-alpha/consensus/events"
 	_ "github.com/hyperledger/fabric/core" // Needed for logging format init
 
@@ -47,24 +47,6 @@ type pbftMessageEvent pbftMessage
 // nullRequestEvent provides "keep-alive" null requests
 type nullRequestEvent struct{}
 
-// Unless otherwise noted, all methods consume the PBFT thread, and should therefore
-// not rely on PBFT accomplishing any work while that thread is being held
-type innerStack interface {
-	broadcast(msgPayload []byte)
-	unicast(msgPayload []byte, receiverID uint64) (err error)
-	execute(seqNo uint64, reqBatch *RequestBatch) // This is invoked on a separate thread
-	getState() []byte
-	getLastSeqNo() (uint64, error)
-	skipTo(seqNo uint64, snapshotID []byte, peers []uint64)
-
-	sign(msg []byte) ([]byte, error)
-	verify(senderID uint64, signature []byte, message []byte) error
-
-	invalidateState()
-	validateState()
-
-	consensus.MessageQueue
-}
 
 // This structure is used for incoming PBFT bound messages
 type pbftMessage struct {
@@ -74,7 +56,7 @@ type pbftMessage struct {
 
 type pbftCore struct {
 	//internal data
-	consumer innerStack
+	consumer helper.Stack
 
 	// PBFT data
 	byzantine     bool              // whether this node is intentionally acting as Byzantine; useful for debugging on the testnet
