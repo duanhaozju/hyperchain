@@ -27,12 +27,6 @@ func init() {
 
 // Event Types
 
-// workEvent is a temporary type, to inject work
-type workEvent func()
-
-// execDoneEvent is sent when an execution completes
-type execDoneEvent struct{}
-
 // pbftMessageEvent is sent when a consensus messages is received to be sent to pbft
 type pbftMessageEvent pbftMessage
 
@@ -420,7 +414,8 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 	cert := instance.getCert(instance.view, n)
 	cert.prePrepare = preprep
 	cert.digest = digest
-	instance.helper.InnerBroadcast(&Message{Payload: &Message_PrePrepare{PrePrepare: preprep}})
+	msg := qMsgHelper(preprep, instance.id)
+	instance.helper.InnerBroadcast(msg)
 	instance.maybeSendCommit(digest, instance.view, n)
 }
 
@@ -505,7 +500,8 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 		}
 		cert.sentPrepare = true
 		instance.recvPrepare(prep)
-		return instance.helper.InnerBroadcast(&Message{Payload: &Message_Prepare{Prepare: prep}})
+		msg := pMsgHelper(prep, instance.id)
+		return instance.helper.InnerBroadcast(msg)
 	}
 
 	return nil
@@ -553,7 +549,8 @@ func (instance *pbftCore) maybeSendCommit(digest string, v uint64, n uint64) err
 		}
 		cert.sentCommit = true
 		instance.recvCommit(commit)
-		return instance.helper.InnerBroadcast(&Message{&Message_Commit{commit}})
+		msg := cMsgHelper(commit, instance.id)
+		return instance.helper.InnerBroadcast(msg)
 	}
 	return nil
 }
@@ -579,8 +576,8 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 
 	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
-
-		instance.helper.Execute()
+		reqBatch := instance.reqBatchStore[commit.BatchDigest]
+		instance.helper.Execute(reqBatch)
 	}
 
 	return nil
