@@ -15,7 +15,7 @@ type PeerManager interface {
 	// judge all peer are connected and return them
 	JudgeAlivePeers(num int)(bool)
 	GetAllPeers()([]*Peer)
-	Start(path string,isFirst bool)
+	Start(path string,isFirst bool, aliveChan chan bool)
 	GetClientId()common.Hash
 	BroadcastPeers(payLoad []byte)
 
