@@ -15,6 +15,9 @@ type ResponseHandler struct{
 
 }
 
+// response message has two conditions:
+// inner system need to response the peer keep alive/hello message
+
 func (this *ResponseHandler)ProcessEvent(msg *peermessage.Message)error{
 	log.Println(msg.MessageType)
 	return nil

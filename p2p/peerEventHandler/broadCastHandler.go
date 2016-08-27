@@ -19,6 +19,7 @@ func NewBroadCastHandler()*BroadCastHandler{
 	return &BroadCastHandler{}
 }
 
+// this is the most important handler
 func (this *BroadCastHandler)ProcessEvent(msg *peermessage.Message)error{
 	log.Println(msg.MessageType)
 	// TODO 将消息广播出去
