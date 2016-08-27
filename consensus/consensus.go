@@ -1,26 +1,30 @@
 package consensus
 
 import (
-	pb "github.com/hyperledger/fabric/protos"
+	"hyperchain/consensus/pbft"
+	"hyperchain/event"
+	"hyperchain/consensus/helper"
+	"github.com/op/go-logging"
 )
 
 
 // Consenter is used to receive messages from the network
 // Every consensus plugin needs to implement this interface
 type Consenter interface {
-	RecvMsg(msg *pb.Message, peerID uint64) error // Called serially with incoming messages from gRPC
+	RecvMsg(msg []byte) error // Called serially with incoming messages from gRPC
 }
 
-// Message queue outside consensus
-type MessageQueue interface {
-	GetMessageQueue() (msgQ chan *pb.Message)
+var logger *logging.Logger // package-level logger
+
+func init() {
+	logger = logging.MustGetLogger("consensus/controller")
 }
 
-type PeerID interface {
-	GetPeerID() (peerID uint64)
-}
-
-type Stack interface {
-	MessageQueue
-	PeerID
+// NewConsenter constructs a Consenter object if not already present
+func NewConsenter(id uint64) Consenter {
+	plugin := "pbft"
+	logger.Infof("Creating consensus plugin %s", plugin)
+	msgQ := new(event.TypeMux)
+	h := helper.NewHelper(msgQ)
+	return pbft.GetPlugin(id, h)
 }

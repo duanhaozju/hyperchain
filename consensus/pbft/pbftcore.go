@@ -2,15 +2,12 @@ package pbft
 
 import (
 	"fmt"
-	"math/rand"
 	"time"
 
-	"hyperchain-alpha/consensus"
-	"hyperchain-alpha/consensus/events"
-	_ "github.com/hyperledger/fabric/core" // Needed for logging format init
+	"hyperchain/consensus/helper"
+	"hyperchain/consensus/events"
 
 	"github.com/op/go-logging"
-	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
 )
 
@@ -24,47 +21,17 @@ func init() {
 	logger = logging.MustGetLogger("consensus/pbft")
 }
 
-const (
-	// UnreasonableTimeout is an ugly thing, we need to create timers, then stop them before they expire, so use a large timeout
-	UnreasonableTimeout = 100 * time.Hour
-)
-
 // =============================================================================
 // custom interfaces and structure definitions
 // =============================================================================
 
 // Event Types
 
-// workEvent is a temporary type, to inject work
-type workEvent func()
-
-// execDoneEvent is sent when an execution completes
-type execDoneEvent struct{}
-
 // pbftMessageEvent is sent when a consensus messages is received to be sent to pbft
 type pbftMessageEvent pbftMessage
 
 // nullRequestEvent provides "keep-alive" null requests
 type nullRequestEvent struct{}
-
-// Unless otherwise noted, all methods consume the PBFT thread, and should therefore
-// not rely on PBFT accomplishing any work while that thread is being held
-type innerStack interface {
-	broadcast(msgPayload []byte)
-	unicast(msgPayload []byte, receiverID uint64) (err error)
-	execute(seqNo uint64, reqBatch *RequestBatch) // This is invoked on a separate thread
-	getState() []byte
-	getLastSeqNo() (uint64, error)
-	skipTo(seqNo uint64, snapshotID []byte, peers []uint64)
-
-	sign(msg []byte) ([]byte, error)
-	verify(senderID uint64, signature []byte, message []byte) error
-
-	invalidateState()
-	validateState()
-
-	consensus.MessageQueue
-}
 
 // This structure is used for incoming PBFT bound messages
 type pbftMessage struct {
@@ -74,7 +41,7 @@ type pbftMessage struct {
 
 type pbftCore struct {
 	//internal data
-	consumer innerStack
+	helper helper.Stack
 
 	// PBFT data
 	byzantine     bool              // whether this node is intentionally acting as Byzantine; useful for debugging on the testnet
@@ -144,11 +111,11 @@ func (a sortableUint64Slice) Less(i, j int) bool {
 // constructors
 // =============================================================================
 
-func newPbftCore(id uint64, config *viper.Viper, consumer innerStack, etf events.TimerFactory) *pbftCore {
+func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerFactory) *pbftCore {
 	var err error
 	instance := &pbftCore{}
 	instance.id = id
-	instance.consumer = consumer
+	instance.helper = batch.getHelper()
 
 	instance.nullRequestTimer = etf.CreateTimer()
 
@@ -179,7 +146,6 @@ func newPbftCore(id uint64, config *viper.Viper, consumer innerStack, etf events
 
 	instance.replicaCount = instance.N
 
-	logger.Infof("PBFT type = %T", instance.consumer)
 	logger.Infof("PBFT Max number of validating peers (N) = %v", instance.N)
 	logger.Infof("PBFT Max number of failing peers (f) = %v", instance.f)
 	logger.Infof("PBFT byzantine flag = %v", instance.byzantine)
@@ -233,12 +199,8 @@ func (instance *pbftCore) ProcessEvent(e events.Event) events.Event {
 		err = instance.recvPrepare(et)
 	case *Commit:
 		err = instance.recvCommit(et)
-	case execDoneEvent:
-		instance.execDoneSync()
 	case nullRequestEvent:
 		instance.nullRequestHandler()
-	case workEvent:
-		et() // Used to allow the caller to steal use of the main thread, to be removed
 	default:
 		logger.Warningf("Replica %d received an unknown message type %T", instance.id, et)
 	}
@@ -452,7 +414,8 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 	cert := instance.getCert(instance.view, n)
 	cert.prePrepare = preprep
 	cert.digest = digest
-	instance.innerBroadcast(&Message{Payload: &Message_PrePrepare{PrePrepare: preprep}})
+	msg := qMsgHelper(preprep, instance.id)
+	instance.helper.InnerBroadcast(msg)
 	instance.maybeSendCommit(digest, instance.view, n)
 }
 
@@ -537,7 +500,8 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 		}
 		cert.sentPrepare = true
 		instance.recvPrepare(prep)
-		return instance.innerBroadcast(&Message{Payload: &Message_Prepare{Prepare: prep}})
+		msg := pMsgHelper(prep, instance.id)
+		return instance.helper.InnerBroadcast(msg)
 	}
 
 	return nil
@@ -585,7 +549,8 @@ func (instance *pbftCore) maybeSendCommit(digest string, v uint64, n uint64) err
 		}
 		cert.sentCommit = true
 		instance.recvCommit(commit)
-		return instance.innerBroadcast(&Message{&Message_Commit{commit}})
+		msg := cMsgHelper(commit, instance.id)
+		return instance.helper.InnerBroadcast(msg)
 	}
 	return nil
 }
@@ -611,137 +576,13 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 
 	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
-
-		instance.executeOutstanding()
+		reqBatch := instance.reqBatchStore[commit.BatchDigest]
+		instance.helper.Execute(reqBatch)
 	}
 
 	return nil
 }
 
-func (instance *pbftCore) executeOutstanding() {
-	if instance.currentExec != nil {
-		logger.Debugf("Replica %d not attempting to executeOutstanding because it is currently executing %d", instance.id, *instance.currentExec)
-		return
-	}
-	logger.Debugf("Replica %d attempting to executeOutstanding", instance.id)
-
-	for idx := range instance.certStore {
-		if instance.executeOne(idx) {
-			break
-		}
-	}
-
-	logger.Debugf("Replica %d certstore %+v", instance.id, instance.certStore)
-
-	instance.startTimerIfOutstandingRequests()
-}
-
-func (instance *pbftCore) executeOne(idx msgID) bool {
-	cert := instance.certStore[idx]
-
-	if idx.n != instance.lastExec+1 || cert == nil || cert.prePrepare == nil {
-		return false
-	}
-
-	// we now have the right sequence number that doesn't create holes
-
-	digest := cert.digest
-	reqBatch := instance.reqBatchStore[digest]
-
-	if !instance.committed(digest, idx.v, idx.n) {
-		return false
-	}
-
-	// we have a commit certificate for this request batch
-	currentExec := idx.n
-	instance.currentExec = &currentExec
-
-	// null request
-	if digest == "" {
-		logger.Infof("Replica %d executing/committing null request for view=%d/seqNo=%d",
-			instance.id, idx.v, idx.n)
-		instance.execDoneSync()
-	} else {
-		logger.Infof("Replica %d executing/committing request batch for view=%d/seqNo=%d and digest %s",
-			instance.id, idx.v, idx.n, digest)
-		// synchronously execute, it is the other side's responsibility to execute in the background if needed
-		instance.consumer.execute(idx.n, reqBatch)
-	}
-	return true
-}
-
-func (instance *pbftCore) execDoneSync() {
-	if instance.currentExec != nil {
-		logger.Infof("Replica %d finished execution %d, trying next", instance.id, *instance.currentExec)
-		instance.lastExec = *instance.currentExec
-
-	} else {
-		// XXX This masks a bug, this should not be called when currentExec is nil
-		logger.Warningf("Replica %d had execDoneSync called, flagging ourselves as out of date", instance.id)
-	}
-	instance.currentExec = nil
-
-	instance.executeOutstanding()
-}
-
-// =============================================================================
-// Misc. methods go here
-// =============================================================================
-
-// Marshals a Message and hands it to the Stack. If toSelf is true,
-// the message is also dispatched to the local instance's RecvMsgSync.
-func (instance *pbftCore) innerBroadcast(msg *Message) error {
-	msgRaw, err := proto.Marshal(msg)
-	if err != nil {
-		return fmt.Errorf("Cannot marshal message %s", err)
-	}
-
-	doByzantine := false
-	if instance.byzantine {
-		rand1 := rand.New(rand.NewSource(time.Now().UnixNano()))
-		doIt := rand1.Intn(3) // go byzantine about 1/3 of the time
-		if doIt == 1 {
-			doByzantine = true
-		}
-	}
-
-	// testing byzantine fault.
-	if doByzantine {
-		rand2 := rand.New(rand.NewSource(time.Now().UnixNano()))
-		ignoreidx := rand2.Intn(instance.N)
-		for i := 0; i < instance.N; i++ {
-			if i != ignoreidx && uint64(i) != instance.id { //Pick a random replica and do not send message
-				instance.consumer.unicast(msgRaw, uint64(i))
-			} else {
-				logger.Debugf("PBFT byzantine: not broadcasting to replica %v", i)
-			}
-		}
-	} else {
-		instance.consumer.broadcast(msgRaw)
-	}
-	return nil
-}
-
-func (instance *pbftCore) startTimerIfOutstandingRequests() {
-
-	if len(instance.outstandingReqBatches) > 0 {
-		getOutstandingDigests := func() []string {
-			var digests []string
-			for digest := range instance.outstandingReqBatches {
-				digests = append(digests, digest)
-			}
-			return digests
-		}()
-		instance.softStartTimer(instance.requestTimeout, fmt.Sprintf("outstanding request batches %v", getOutstandingDigests))
-	} else if instance.nullRequestTimeout > 0 {
-		timeout := instance.nullRequestTimeout
-		if instance.primary(instance.view) != instance.id {
-			// we're waiting for the primary to deliver a null request - give it a bit more time
-			timeout += instance.requestTimeout
-		}
-		instance.nullRequestTimer.Reset(timeout, nullRequestEvent{})
-	}
-}
 
 func (instance *pbftCore) softStartTimer(timeout time.Duration, reason string) {
 	logger.Debugf("Replica %d soft starting new view timer for %s: %s", instance.id, timeout, reason)

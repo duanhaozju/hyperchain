@@ -6,14 +6,14 @@
 package Server
 
 import (
-	pb "hyperchain-alpha/p2p/peermessage"
+	pb "hyperchain/p2p/peermessage"
 	"golang.org/x/net/context"
 	"net"
 	"log"
 	"google.golang.org/grpc"
 
 	"strconv"
-	"hyperchain-alpha/p2p/peerComm"
+	"hyperchain/p2p/peerComm"
 )
 
 type Node struct {
@@ -25,6 +25,7 @@ const DefaultgRpcPort = 8001
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
 func NewNode(port int) *Node {
+	log.Println("startting local node, port",port)
 	if globalChatServer.address.Ip != "" && globalChatServer.address.Port !=0 {
 		return &globalChatServer
 	}else{
@@ -35,8 +36,8 @@ func NewNode(port int) *Node {
 	}
 
 }
-func GetChatServerAddr() pb.PeerAddress{
-	return NewNode(DefaultgRpcPort).address
+func GetNodeAddr() pb.PeerAddress{
+	return globalChatServer.address
 }
 
 // Chat Implements the ServerSide Function

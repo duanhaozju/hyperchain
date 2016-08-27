@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package protos;
+
+// This message type is used between consensus and outside
+message Message {
+    enum Type {
+        TRANSACTION = 0;
+        CONSENSUS = 1;
+    }
+    Type type = 1;
+    int64 timestamp = 2;
+    bytes payload = 3;
+    uint64 id = 4;
+}

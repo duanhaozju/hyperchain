@@ -1,3 +1,9 @@
+// author: chenquan
+// date: 16-8-25
+// last modified: 16-8-25 20:01
+// last Modified Author: chenquan
+// change log:
+//
 // message defination for network transaction
 syntax="proto3";
 
@@ -16,6 +22,7 @@ message Message{
         HELLO       = 0;
         RESPONSE    = 1;
         CONSUS      = 2;
+        KEEPALIVE    = 3;
     }
 }
 

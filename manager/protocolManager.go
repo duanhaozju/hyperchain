@@ -9,21 +9,22 @@ import "sync"
 
 
 import (
-	"hyperchain-alpha/event"
+	"hyperchain/event"
 
-	"hyperchain-alpha/p2p"
+	"hyperchain/p2p"
 
-	"hyperchain-alpha/core"
-	"fmt"
+	"hyperchain/core"
+	"hyperchain/consensus"
 )
 
 type ProtocolManager struct {
-	networkId    int
 
 	fetcher      *core.Fetcher
 	peerManager  p2p.PeerManager
+	consenter    consensus.Consenter
 
-	newPeerCh    chan *p2p.Peer
+
+
 	noMorePeers  chan struct{}
 	eventMux     *event.TypeMux
 	txSub        event.Subscription
@@ -34,13 +35,13 @@ type ProtocolManager struct {
 	wg           sync.WaitGroup
 }
 
-func NewProtocolManager(mux *event.TypeMux, peerManager p2p.PeerManager, fetcher *core.Fetcher) (*ProtocolManager) {
+func NewProtocolManager(peerManager p2p.PeerManager, fetcher *core.Fetcher, consenter consensus.Consenter) (*ProtocolManager) {
 
-	//eventmux:=new(event.TypeMux)
+	eventMux := new(event.TypeMux)
 	manager := &ProtocolManager{
-		eventMux:    mux,
+		eventMux:    eventMux,
 		quitSync:    make(chan struct{}),
-
+		consenter:consenter,
 		peerManager:  peerManager,
 		fetcher:fetcher,
 
@@ -54,7 +55,7 @@ func (pm *ProtocolManager) Start() {
 
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
-	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.BroadcastConsensusEvent{})
+	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
@@ -72,8 +73,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 		switch ev := obj.Data.(type) {
 		case event.NewBlockEvent:
 			//commit block into local db
-			self.fetcher.Enqueue(ev.Block)
-
+			self.fetcher.Enqueue(ev.Payload)
 
 		}
 	}
@@ -89,11 +89,15 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 		case event.BroadcastConsensusEvent:
 			self.BroadcastConsensus(ev.Payload)
+		case event.NewTxEvent:
+			//call consensus module
+			//Todo
+			self.consenter.RecvMsg(ev.Payload)
 
 		case event.ConsensusEvent:
 			//call consensus module
 			//Todo
-			fmt.Println("to call consensus")
+			self.consenter.RecvMsg(ev.Payload)
 
 
 		}

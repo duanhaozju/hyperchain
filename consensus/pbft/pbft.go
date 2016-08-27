@@ -6,7 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"hyperchain-alpha/consensus"
+	"hyperchain/consensus"
+	"hyperchain/consensus/helper"
 
 	"github.com/spf13/viper"
 )
@@ -21,21 +22,19 @@ func init() {
 }
 
 // GetPlugin returns the handle to the Consenter singleton
-func GetPlugin(stack consensus.Stack) consensus.Consenter {
+func GetPlugin(id uint64, h helper.Stack) consensus.Consenter {
 	if pluginInstance == nil {
-		pluginInstance = New(stack)
+		pluginInstance = New(id, h)
 	}
 	return pluginInstance
 }
 
 // New creates a new Obc* instance that provides the Consenter interface.
 // Internally, it uses an opaque pbft-core instance.
-func New(stack consensus.Stack) consensus.Consenter {
-	id := stack.GetPeerID()
-	msgQ := stack.GetMessageQueue()
+func New(id uint64, h *helper.Stack) consensus.Consenter {
 	switch strings.ToLower(config.GetString("general.mode")) {
 	case "batch":
-		return newBatch(id, msgQ)
+		return newBatch(id, config, h)
 	default:
 		panic(fmt.Errorf("Invalid PBFT mode: %s", config.GetString("general.mode")))
 	}
