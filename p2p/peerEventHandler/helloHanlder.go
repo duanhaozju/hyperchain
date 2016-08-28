@@ -14,6 +14,7 @@ import (
 type HelloHandler struct{
 
 }
+// peer send a hello message should handled here
 func (this *HelloHandler)ProcessEvent(msg *peermessage.Message)error{
 	log.Println(msg.MessageType)
 	return nil

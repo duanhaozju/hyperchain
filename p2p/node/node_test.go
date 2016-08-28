@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewChatServer(t *testing.T) {
-	server := NewNode(8001)
+	server := NewNode(8001,true)
 	tickCount := 0
 	for now:=range  time.Tick(3*time.Second){
 		fmt.Println(now)

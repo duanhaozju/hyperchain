@@ -11,8 +11,8 @@ import (
 	"fmt"
 	peer "hyperchain/p2p/peer"
 	pb "hyperchain/p2p/peermessage"
-	"log"
 	"time"
+	"log"
 )
 
 type PeersPool struct {
@@ -31,34 +31,9 @@ func init() {
 	prPoolIns.peerAddr = make(map[string]pb.PeerAddress)
 	prPoolIns.peerKeys = make(map[pb.PeerAddress]string)
 	prPoolIns.aliveNodes = 0
-	//Open a keep alive go routine
-	//Set interval to post keep alive event to event manager
-	//go func(){
-	//	for tick := range time.Tick(15 * time.Second){
-	//		log.Println("Keep alive go routine information")
-	//		log.Println("Keep alive:",tick)
-	//		for nodeName,p := range prPoolIns.peers{
-	//			log.Println(nodeName)
-	//			msg,err := p.Chat(&pb.Message{
-	//				MessageType:pb.Message_HELLO,
-	//				Payload:[]byte("Hello"),
-	//				MsgTimeStamp:time.Now().Unix(),
-	//			})
-	//			if err != nil{
-	//				log.Println("Node:",p.Addr,"is dead and need to reconnect ",err )
-	//				//TODO RECALL THE DEAD NODE
-	//				prPoolIns.aliveNodes -= 1
-	//			}else{
-	//				log.Println("Node:",p.Addr,"Message",msg.MessageType)
-	//				prPoolIns.aliveNodes += 1
-	//			}
-	//
-	//		}
-	//	}
-	//}()
 }
 
-func NewPeerPool(isNewInstance bool) PeersPool {
+func NewPeerPool(isNewInstance bool,isKeepAlive bool) PeersPool {
 	if isNewInstance {
 		var newPrPoolIns PeersPool
 		newPrPoolIns.peers = make(map[string]*peer.Peer)
@@ -66,25 +41,32 @@ func NewPeerPool(isNewInstance bool) PeersPool {
 		newPrPoolIns.peerKeys = make(map[pb.PeerAddress]string)
 		//Open a keep alive go routine
 		//Set interval to post keep alive event to event manager
-		go func() {
-			for tick := range time.Tick(15 * time.Second) {
-				log.Println("Keep alive go routine information")
-				log.Println("Keep alive:", tick)
-				for nodeName, p := range newPrPoolIns.peers {
-					log.Println(nodeName)
-					msg, err := p.Chat(&pb.Message{
-						MessageType:  pb.Message_HELLO,
-						Payload:      []byte("Hello"),
-						MsgTimeStamp: time.Now().Unix(),
-					})
-					if err != nil {
-						log.Fatal("Node:", p.Addr, "is dead need to recall ", err)
-						//TODO RECALL THE DEAD NODE
+		/////////////////////////////////////////////////////
+		//                                                 //
+		//       THIS PART IS USED FOR KEEP ALIVE          //
+		//                                                 //
+		/////////////////////////////////////////////////////
+		if isKeepAlive{
+			go func() {
+				for tick := range time.Tick(15 * time.Second) {
+					log.Println("Keep alive go routine information")
+					log.Println("Keep alive:", tick)
+					for nodeName, p := range newPrPoolIns.peers {
+						log.Println(nodeName)
+						msg, err := p.Chat(&pb.Message{
+							MessageType:  pb.Message_HELLO,
+							Payload:      []byte("Hello"),
+							MsgTimeStamp: time.Now().Unix(),
+						})
+						if err != nil {
+							log.Fatal("Node:", p.Addr, "is dead need to recall ", err)
+							//TODO RECALL THE DEAD NODE
+						}
+						log.Println("Node:", p.Addr, "Message", msg.MessageType)
 					}
-					log.Println("Node:", p.Addr, "Message", msg.MessageType)
 				}
-			}
-		}()
+			}()
+		}
 		return newPrPoolIns
 	} else {
 		return prPoolIns
