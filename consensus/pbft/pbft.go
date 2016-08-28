@@ -31,7 +31,7 @@ func GetPlugin(id uint64, h helper.Stack) consensus.Consenter {
 
 // New creates a new Obc* instance that provides the Consenter interface.
 // Internally, it uses an opaque pbft-core instance.
-func New(id uint64, h *helper.Stack) consensus.Consenter {
+func New(id uint64, h helper.Stack) consensus.Consenter {
 	switch strings.ToLower(config.GetString("general.mode")) {
 	case "batch":
 		return newBatch(id, config, h)

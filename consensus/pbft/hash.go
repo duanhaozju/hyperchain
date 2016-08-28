@@ -4,11 +4,8 @@ import (
 	"encoding/base64"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/op/go-logging"
 	"golang.org/x/crypto/sha3"
 )
-
-var logger *logging.Logger
 
 func hash(msg interface{}) string {
 	var raw []byte
