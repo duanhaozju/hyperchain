@@ -4,10 +4,10 @@ package pbft
 import (
 	"testing"
 	"fmt"
-	"hyperchain-alpha/event"
+	"hyperchain/event"
 	"github.com/golang/protobuf/proto"
-	"hyperchain-alpha/protos"
-	"hyperchain-alpha/consensus/helper"
+	"hyperchain/protos"
+	"hyperchain/consensus/helper"
 )
 
 func TestEvent(t *testing.T){
