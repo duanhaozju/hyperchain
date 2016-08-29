@@ -22,18 +22,6 @@ var routes = Routes{
 		controller.Index,
 	},
 	Route{
-		"TransactionIndex",
-		"GET",
-		"/trans",
-		controller.TransactionIndex,
-	},
-	Route{
-		"TransactionShow",
-		"GET",
-		"/trans/{transId}",
-		controller.TransacionShow,
-	},
-	Route{
 		"TransactionCreate",
 		"POST",
 		"/trans",

@@ -24,4 +24,3 @@ func pbftMsgHelper(msg *Message, id uint64) *pb.Message {
 	pbMsg := batchMsgHelper(batchMsg, id)
 	return pbMsg
 }
-

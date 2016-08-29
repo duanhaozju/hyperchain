@@ -43,6 +43,7 @@ type pbftMessage struct {
 type pbftCore struct {
 	//internal data
 	helper helper.Stack
+	batchcore *batch
 
 	// PBFT data
 	byzantine     bool              // whether this node is intentionally acting as Byzantine; useful for debugging on the testnet
@@ -118,7 +119,7 @@ func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerF
 	instance := &pbftCore{}
 	instance.id = id
 	instance.helper = batch.getHelper()
-
+	instance.batchcore=batch
 	instance.nullRequestTimer = etf.CreateTimer()
 
 	instance.N = config.GetInt("general.N")
@@ -416,8 +417,10 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 	cert := instance.getCert(instance.view, n)
 	cert.prePrepare = preprep
 	cert.digest = digest
+
 	msg := pbftMsgHelper(&Message{Payload: &Message_PrePrepare{PrePrepare: preprep}}, instance.id)
 	instance.helper.InnerBroadcast(msg)
+
 	instance.maybeSendCommit(digest, instance.view, n)
 }
 

@@ -236,7 +236,8 @@ func (op *batch) stopBatchTimer() {
 
 func (op *batch) submitToLeader(req *Request) events.Event {
 	// Broadcast the request to the network, in case we're in the wrong view
-	batchMsgHelper(&BatchMessage{Payload: &BatchMessage_Request{Request: req}}, op.pbft.id)
+	pbMsg := batchMsgHelper(&BatchMessage{Payload: &BatchMessage_Request{Request: req}}, op.pbft.id)
+	op.helperImpl.InnerBroadcast(pbMsg)
 	op.reqStore.storeOutstanding(req)
 	op.startTimerIfOutstandingRequests()
 	if op.pbft.primary(op.pbft.view) == op.pbft.id {
@@ -244,8 +245,6 @@ func (op *batch) submitToLeader(req *Request) events.Event {
 	}
 	return nil
 }
-
-
 
 
 
