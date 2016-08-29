@@ -11,7 +11,7 @@ type helper struct {
 
 type Stack interface {
 	InnerBroadcast(e *pb.Message) error
-	Execute(reqBatch *pb.ExeMessage)
+	Execute(reqBatch *pb.ExeMessage) error
 }
 
 func (h *helper) InnerBroadcast(e *pb.Message) error{

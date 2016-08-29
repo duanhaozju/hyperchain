@@ -12,7 +12,7 @@ import (
 
 const configPrefix = "CORE_PBFT"
 
-var pluginInstance consensus.Consenter // singleton service
+var pluginInstance *consensus.Consenter // singleton service
 var config *viper.Viper
 
 func init() {
@@ -21,7 +21,7 @@ func init() {
 
 // GetPlugin returns the handle to the Consenter singleton
 
-func GetPlugin(id uint64, h *helper.Stack) consensus.Consenter {
+func GetPlugin(id uint64, h helper.Stack) consensus.Consenter {
 	if pluginInstance == nil {
 		pluginInstance = New(id, h)
 	}
@@ -31,7 +31,7 @@ func GetPlugin(id uint64, h *helper.Stack) consensus.Consenter {
 // New creates a new Obc* instance that provides the Consenter interface.
 // Internally, it uses an opaque pbft-core instance.
 
-func New(id uint64, h *helper.Stack) consensus.Consenter {
+func  New(id uint64, h helper.Stack) consensus.Consenter {
 	switch strings.ToLower(config.GetString("general.mode")) {
 	case "batch":
 		return newBatch(id, config, h)
