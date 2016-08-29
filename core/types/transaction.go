@@ -4,9 +4,7 @@ import (
 	"hyperchain/crypto"
 	"hyperchain/common"
 	"time"
-	"hyperchain/core"
-	"log"
-	"math/big"
+
 )
 
 func (self *Transaction)Hash(ch crypto.CommonHash) common.Hash {
@@ -39,6 +37,7 @@ func NewTransaction(from []byte,to []byte,value []byte) *Transaction{
 
 // VerifyTransaction is to verify balance of the tranaction
 // If the balance is not enough, returns false
+/*
 func (tx *Transaction) VerifyBalance() bool{
 	var balance big.Int
 	var value big.Int
@@ -59,4 +58,4 @@ func (tx *Transaction) VerifyBalance() bool{
 	}
 
 	return true
-}
+}*/

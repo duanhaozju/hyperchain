@@ -13,7 +13,6 @@ import (
 
 	"hyperchain/crypto"
 
-	"fmt"
 
 	"hyperchain/event"
 )
