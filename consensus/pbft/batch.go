@@ -82,8 +82,8 @@ func newBatch(id uint64, config *viper.Viper, h helper.Stack) consensus.Consente
 	return batchObj
 }
 
-func (batch *batch) getHelper() helper.Stack {
-	return batch.helperImpl
+func (op *batch) getHelper() helper.Stack {
+	return op.helperImpl
 }
 
 func (op *batch) ProcessEvent(e events.Event) events.Event{
@@ -236,7 +236,7 @@ func (op *batch) stopBatchTimer() {
 
 func (op *batch) submitToLeader(req *Request) events.Event {
 	// Broadcast the request to the network, in case we're in the wrong view
-	op.helperImpl.InnerBroadcast(req)
+	batchMsgHelper(&BatchMessage{Payload: &BatchMessage_Request{Request: req}}, op.pbft.id)
 	op.reqStore.storeOutstanding(req)
 	op.startTimerIfOutstandingRequests()
 	if op.pbft.primary(op.pbft.view) == op.pbft.id {

@@ -39,8 +39,8 @@ func newDeduplicator() *deduplicator {
 // request.
 func (d *deduplicator) Request(req *Request) bool {
 	reqTime := req.Timestamp
-	if !(reqTime >= d.reqTimestamps[req.ReplicaId]) ||
-		!(reqTime >= d.execTimestamps[req.ReplicaId]) {
+	if reqTime <= d.reqTimestamps[req.ReplicaId] ||
+		reqTime <= d.execTimestamps[req.ReplicaId] {
 		return false
 	}
 	d.reqTimestamps[req.ReplicaId] = reqTime
@@ -53,7 +53,7 @@ func (d *deduplicator) Request(req *Request) bool {
 // indicating a stale request.
 func (d *deduplicator) Execute(req *Request) bool {
 	reqTime := req.Timestamp
-	if !(reqTime >= d.execTimestamps[req.ReplicaId]) {
+	if reqTime <= d.execTimestamps[req.ReplicaId] {
 		return false
 	}
 	d.execTimestamps[req.ReplicaId] = reqTime
