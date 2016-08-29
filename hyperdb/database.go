@@ -3,7 +3,6 @@ package hyperdb
 import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
-	"sync"
 )
 
 // the Database for LevelDB
@@ -11,42 +10,6 @@ import (
 type LDBDatabase struct {
 	path string
 	db   *leveldb.DB
-	state statedb
-	dbsync sync.Mutex
-}
-
-type statedb int32
-
-const (
-	closed statedb  = iota
-	opened
-)
-
-var ldbDatabase = &LDBDatabase{
-	state: closed,
-}
-
-func getDBPath() string {
-	return ""
-}
-
-// GetLDBDatabase get a single instance of LDBDatabase
-// if LDBDatabase state is open, return db directly
-// if LDBDatabase state id close,
-func GetLDBDatabase() (*LDBDatabase, error) {
-	ldbDatabase.dbsync.Lock()
-	defer ldbDatabase.dbsync.Unlock()
-	if ldbDatabase.state == opened {
-		return ldbDatabase, nil
-	}
-	db, err := leveldb.OpenFile(getDBPath(), nil)
-	if err != nil {
-		return ldbDatabase, err
-	}
-	ldbDatabase.db = db
-	ldbDatabase.path = getDBPath()
-	ldbDatabase.state = opened
-	return ldbDatabase, nil
 }
 
 // NewLDBDataBase new a LDBDatabase instance
