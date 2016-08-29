@@ -6,19 +6,20 @@ package core
 
 import (
 	"hyperchain/hyperdb"
-	"log"
 	"os"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"
 	"sync"
 	"strconv"
+	"encoding/json"
 )
 
 var (
 	transactionPrefix   = []byte("transaction-")
 	blockPrefix    = []byte("block-")
 	chainKey            = []byte("chain-key")
+	balanceKey = []byte("balance-key")
 	bodySuffix   = []byte("-body")
 	txMetaSuffix        = []byte{0x01}
 )
@@ -31,7 +32,6 @@ func InitDB(port int) {
 	/*log.Println("删除现有本地数据库数据...")
 	utils.RemoveContents(lDBPath)
 	log.Println("初始化本地数据库...")*/
-	balanceInstance = newMemBalance()
 	memChainMap = newMemChain()
 	memTxPoolMap = newMemTxPool()
 }
@@ -52,15 +52,11 @@ func getLDBConnection()(*leveldb.DB,error){
 	return db, err
 }
 
-func GetDBPath() string {
-	return
-}
-
 //-- ------------------ ldb end ----------------------
 
 //-- ------------------- Transaction ---------------------------------
 func PutTransaction(db hyperdb.Database, key []byte, t types.Transaction) error {
-	data, err := proto.Marshal(t)
+	data, err := proto.Marshal(&t)
 	if err != nil {
 		return err
 	}
@@ -88,12 +84,29 @@ func DeleteTransaction(db hyperdb.Database, key []byte) error {
 	return db.Delete(keyFact)
 }
 
+func GetAllTransaction(db *hyperdb.LDBDatabase) ([]types.Transaction, error) {
+	var ts []types.Transaction
+	iter := db.NewIterator()
+	for iter.Next() {
+		key := iter.Key()
+		if len(string(key)) >= len(transactionPrefix) && string(key[:len(transactionPrefix)]) == string(transactionPrefix) {
+			var t types.Transaction
+			value := iter.Value()
+			//err = decondeFromBytes(value, &t)
+			proto.Unmarshal(value, &t)
+			ts = append(ts, t)
+		}
+	}
+	iter.Release()
+	err := iter.Error()
+	return ts, err
+}
 //-- --------------------- Transaction END -----------------------------------
 
 
 //-- ------------------- Block ---------------------------------
 func PutBlock(db hyperdb.Database, key []byte, t types.Block) error {
-	data, err := proto.Marshal(t)
+	data, err := proto.Marshal(&t)
 	if err != nil {
 		return err
 	}
@@ -123,6 +136,28 @@ func DeleteBlock(db hyperdb.Database, key []byte) error {
 
 //-- --------------------- Block END ----------------------------------
 
+//-- --------------------- BalanceMap ------------------------------------
+func PutDBBalance(db hyperdb.Database, balance_db BalanceMap) error {
+	data, err := json.Marshal(balance_db)
+	if err != nil {
+		return err
+	}
+	return db.Put(balanceKey, data)
+}
+
+func GetDBBalance(db hyperdb.Database) (BalanceMap, error) {
+	var b BalanceMap
+	data, err := db.Get(balanceKey)
+	if err != nil {
+		return b, err
+	}
+	if err = json.Unmarshal(data, &b); err != nil {
+		return b, err
+	}
+	return b, nil
+}
+//-- --------------------- BalanceMap END---------------------------------
+
 //-- ------------------- Chain ----------------------------------------
 
 type memChain struct {
@@ -143,7 +178,7 @@ var memChainMap *memChain;
 func GetLatestBlockHash() string {
 	memChainMap.lock.RLock()
 	defer memChainMap.lock.RUnlock()
-	return memChainMap.data.LatestBlockHash
+	return string(memChainMap.data.LatestBlockHash)
 }
 
 //-- 更新Chain，即更新最新的blockhash 并将height加1
@@ -151,12 +186,12 @@ func GetLatestBlockHash() string {
 func UpdateChain(blockHash string)  {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
-	memChainMap.data.LatestBlockHash = blockHash
+	memChainMap.data.LatestBlockHash = []byte(blockHash)
 	memChainMap.data.Height += 1
 }
 
 //-- 获取区块的高度
-func GetHeightOfChain() int {
+func GetHeightOfChain() int64 {
 	memChainMap.lock.RLock()
 	defer memChainMap.lock.RUnlock()
 	return memChainMap.data.Height
@@ -173,7 +208,7 @@ func GetChain() *types.Chain {
 }
 
 func putChain(db hyperdb.Database, t types.Chain) error {
-	data, err := proto.Marshal(t)
+	data, err := proto.Marshal(&t)
 	if err != nil {
 		return err
 	}
