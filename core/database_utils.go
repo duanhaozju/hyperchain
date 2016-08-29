@@ -183,10 +183,10 @@ func GetLatestBlockHash() string {
 
 //-- 更新Chain，即更新最新的blockhash 并将height加1
 //-- blockHash为最新区块的hash
-func UpdateChain(blockHash string)  {
+func UpdateChain(blockHash []byte)  {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
-	memChainMap.data.LatestBlockHash = []byte(blockHash)
+	memChainMap.data.LatestBlockHash = blockHash
 	memChainMap.data.Height += 1
 }
 

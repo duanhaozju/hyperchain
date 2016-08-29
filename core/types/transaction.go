@@ -33,10 +33,3 @@ func NewTransaction(from []byte,to []byte,value []byte) *Transaction{
 
 	return transaction
 }
-
-
-// VerifyTransaction is to verify balance of the tranaction
-// If the balance is not enough, returns false
-func (tx *Transaction) VerifyTransaction() bool{
-	return false
-}

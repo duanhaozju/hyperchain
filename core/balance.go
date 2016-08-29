@@ -8,6 +8,7 @@ import (
 	"hyperchain/common"
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/big"
+
 )
 
 //-- --------------------- Balance ------------------------------------\
@@ -201,4 +202,31 @@ func (self *Balance)UpdateCacheBalance(trans *types.Transaction) {
 		self.cacheBalance[common.BytesToAddress(trans.To)] = []byte(transValue.String())
 	}
 }
+
+
+// VerifyTransaction is to verify balance of the tranaction
+// If the balance is not enough, returns false
+func VerifyBalance(tx *types.Transaction) bool{
+	var balance big.Int
+	var value big.Int
+
+	balanceIns, err := GetBalanceIns()
+
+	if err != nil {
+		log.Fatalf("GetBalanceIns error, %v", err)
+	}
+
+	bal := balanceIns.GetCacheBalance(common.BytesToAddress(tx.From))
+
+	balance.SetString(string(bal), 10)
+	value.SetString(string(tx.Value), 10)
+
+	if value.Cmp(&balance) == 1 {
+		return false
+	}
+
+	return true
+}
+
+
 //-- --------------------- Balance END --------------------------------
