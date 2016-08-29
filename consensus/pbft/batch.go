@@ -3,12 +3,13 @@ package pbft
 import (
 	"time"
 	"fmt"
-	"hyperchain/consensus/helper"
-	"hyperchain/consensus/events"
-	pb "github.com/hyperledger/fabric/protos"
+	"hyperchain-alpha/consensus/helper"
 
+	"hyperchain-alpha/consensus/events"
+	pb "github.com/hyperledger/fabric/protos"
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
+	"hyperchain-alpha/protos"
 )
 
 type batch struct {
@@ -35,8 +36,10 @@ type batchTimerEvent struct{}
 
 type batchMessage struct {
 	msg    *pb.Message
-	sender *pb.PeerID
+	sender uint64
 }
+
+const configPrefix = "CORE_PBFT"
 
 
 func (b *batch) ProcessEvent(e events.Event) events.Event{
@@ -44,7 +47,7 @@ func (b *batch) ProcessEvent(e events.Event) events.Event{
 	switch et:=e.(type) {
 	case *testEvent:
 		fmt.Println("lalalla")
-		b.c <- 1
+		b.c <- 1//ToDo for test
 	case batchMessageEvent:
 		ocMsg := et
 		return b.processMessage(ocMsg.msg,  ocMsg.sender)
@@ -60,7 +63,7 @@ func (b *batch) ProcessEvent(e events.Event) events.Event{
 }
 
 
-func (op *batch) processMessage(ocMsg *pb.Message, senderHandle *pb.PeerID) events.Event {
+func (op *batch) processMessage(ocMsg *pb.Message, id uint64) events.Event {
 
 	batchMsg := &BatchMessage{}
 	err := proto.Unmarshal(ocMsg.Payload, batchMsg)
@@ -76,7 +79,7 @@ func (op *batch) processMessage(ocMsg *pb.Message, senderHandle *pb.PeerID) even
 		op.startTimerIfOutstandingRequests()
 		return nil
 	} else if pbftMsg := batchMsg.GetPbftMessage(); pbftMsg != nil {
-		senderID := getValidatorID(senderHandle) // who sent this?
+		senderID :=  id
 		if err != nil {
 			panic("Cannot map sender's PeerID to a valid replica ID")
 		}
@@ -137,7 +140,26 @@ func (op *batch) startBatchTimer() {
 }
 func (b *batch) RecvMsg(e events.Event){
 	fmt.Println("RecvMsg")
-	b.manager.Queue()<- e
+	switch e.(type) {
+	case protos.Message:
+		msg:=protos.Message(e)
+		b.manager.Queue()<-  b.parseMsg(msg)
+	default:
+		return nil
+	}
+
+}
+
+func  (b *batch) parseMsg(m protos.Message)  *batchMessageEvent{
+	bme:=&batchMessageEvent{
+		msg: &pb.Message{
+			Type:m.Type,
+			Timestamp:m.Timestamp,
+			Payload:m.Payload,
+		},
+		sender:m.Id,
+	}
+	return bme
 }
 func (op *batch) stopBatchTimer() {
 	op.batchTimer.Stop()
@@ -147,14 +169,13 @@ func (op *batch) stopBatchTimer() {
 
 
 
-func newBatch(id uint64, config *viper.Viper, h helper.Stack) *batch{
+func newBatch(id uint64, config *viper.Viper, h *helper.Stack) *batch{
 	var err error
 	fmt.Println("new batch")
 	batchObj:=&batch{
 		manager:events.NewManagerImpl(),
 		localID:id,
 		helperImpl:h,
-		c:c,//TODO   for test
 	}
 
 
