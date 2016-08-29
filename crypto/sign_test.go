@@ -7,6 +7,7 @@ import (
 	"crypto/elliptic"
 	"hyperchain/crypto/secp256k1"
 	"sync/atomic"
+
 )
 type Transaction struct {
 	data txdata
@@ -31,9 +32,11 @@ func NewTransaction(to []byte,amount *big.Int) *Transaction {
 
 func TestSigntx(t *testing.T)  {
 	ee := NewEcdsaEncrypto("ECDSAEncryto")
-	key, _:= ee.GenerateKey()
-	ee.SaveECDSA("./testFile",key)
-	priv,_:=ee.LoadECDSA("./testFile")
+	key, err:= ee.GeneralKey("5002")
+	if err!=nil{
+		panic(err)
+	}
+	priv,_:=ee.GetKey("5002")
 	pub := key.PublicKey
 
 	var addr []byte

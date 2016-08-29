@@ -13,8 +13,11 @@ import (
 	"crypto/elliptic"
 	"hyperchain/crypto/sha3"
 	"hyperchain/crypto/secp256k1"
+	"path/filepath"
 )
 
+//const keystoredir  = "/home/huhu/go/src/hyperchain/keystore/"
+//
 type EcdsaEncrypto struct{
 	name string
 }
@@ -56,9 +59,31 @@ func (ee *EcdsaEncrypto)UnSign(args ...interface{})([]byte, error)  {
 	addr := ee.Keccak256(pubBytes[1:])[12:]
 	return addr,nil
 }
+func (ee *EcdsaEncrypto)GeneralKey(port string)(*ecdsa.PrivateKey,error) {
+	key,err := ee.GenerateKey()
+	if err!=nil{
+		return nil,err
+	}
+	k := hex.EncodeToString(ee.FromECDSA(key))
+	abspath,_ := os.Getwd()
+	current := filepath.Base(abspath)
+	file := abspath[0:len(abspath)-len(current)]+"keystore/"+port
+	if err:=ioutil.WriteFile(file, []byte(k), 0600);err!=nil{
+		return key,err
+	}
+	return key,nil
+
+}
+//load key by given port
+func (ee *EcdsaEncrypto)GetKey(port string) (*ecdsa.PrivateKey,error) {
+	abspath,_ := os.Getwd()
+	current := filepath.Base(abspath)
+	file := abspath[0:len(abspath)-len(current)]+"keystore/"+port
+	return ee.LoadECDSA(file)
+}
 
 // LoadECDSA loads a secp256k1 private key from the given file.
-// The key data is expected to be hex-encoded.
+// key data is expected to be hex-encoded.
 func (ee *EcdsaEncrypto)LoadECDSA(file string) (*ecdsa.PrivateKey, error) {
 	buf := make([]byte, 64)
 	fd, err := os.Open(file)
