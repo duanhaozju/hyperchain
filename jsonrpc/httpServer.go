@@ -24,3 +24,6 @@ func StartHttp(httpPort int){
 // eventmux:=new(event.TypeMux)
 // eventmux.Post(event.NewTxEvent{[]byte{0x00, 0x00, 0x03, 0xe8}})
 
+// TODO GetAllTransactions
+
+// TODO GetAllBalances
