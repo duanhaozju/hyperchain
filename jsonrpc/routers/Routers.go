@@ -2,7 +2,7 @@ package routers
 
 import (
 	"net/http"
-	"hyperchain-alpha/jsonrpc/controller"
+	"hyperchain/jsonrpc/controller"
 )
 
 type Route struct {

@@ -4,8 +4,7 @@ import (
 	"hyperchain/crypto"
 	"hyperchain/common"
 	"time"
-	"crypto/ecdsa"
-	"log"
+
 )
 
 func (self *Transaction)Hash(ch crypto.CommonHash) common.Hash {
