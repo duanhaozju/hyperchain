@@ -10,7 +10,7 @@ import (
 	"hyperchain/common"
 	node "hyperchain/p2p/node"
 	peer "hyperchain/p2p/peer"
-	peerComm "hyperchain/p2p/peerComm"
+	"hyperchain/p2p/peerComm"
 	"hyperchain/p2p/peerEventHandler"
 	"hyperchain/p2p/peerEventManager"
 	pb "hyperchain/p2p/peermessage"
@@ -18,6 +18,7 @@ import (
 	"time"
 	"hyperchain/p2p/peerPool"
 	"log"
+	"encoding/hex"
 )
 
 const MAXPEERNODE = 4
@@ -38,7 +39,9 @@ type GrpcPeerManager struct {
 }
 
 func (this *GrpcPeerManager) GetClientId() common.Hash {
-	return *new(common.Hash)
+	addr := node.GetNodeAddr()
+	return common.BytesToHash([]byte(addr.String()))
+	//return *new(common.Hash)
 
 }
 
@@ -47,16 +50,17 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 	port, _ := strconv.Atoi(configs["port"+strconv.Itoa(NodeId)])
 	// start local node
 	this.localNode = node.NewNode(port,isTest)
+	log.Println("本地节点HASH:",hex.EncodeToString(this.GetClientId().Bytes()))
 	//
 	this.aliveChain = &aliveChan
 
 	// init the event manager
 	this.EventManager = peerEventManager.NewPeerEventManager()
 
-	this.EventManager.RegisterEvent(pb.Message_HELLO, peerEventHandler.NewHelloHandler())
-	this.EventManager.RegisterEvent(pb.Message_RESPONSE, peerEventHandler.NewResponseHandler())
-	this.EventManager.RegisterEvent(pb.Message_CONSUS, peerEventHandler.NewBroadCastHandler())
-	this.EventManager.RegisterEvent(pb.Message_KEEPALIVE, peerEventHandler.NewKeepAliveHandler())
+	this.EventManager.RegisterEvent(pb.Message_HELLO, peerEventHandler.NewHelloHandler(this.EventManager))
+	this.EventManager.RegisterEvent(pb.Message_RESPONSE, peerEventHandler.NewResponseHandler(this.EventManager))
+	this.EventManager.RegisterEvent(pb.Message_CONSUS, peerEventHandler.NewBroadCastHandler(this.EventManager))
+	this.EventManager.RegisterEvent(pb.Message_KEEPALIVE, peerEventHandler.NewKeepAliveHandler(this.EventManager))
 
 	this.EventManager.Start()
 
@@ -67,12 +71,13 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 	for i := 1; i <= MAXPEERNODE; i++ {
 		if i == NodeId {
 			alivePeerMap[i] = true
+		}else{
+			alivePeerMap[i] = false
 		}
-		alivePeerMap[i] = false
 	}
-
+	log.Println("Status map:",alivePeerMap)
 	// connect other peers
-	for peerPool.GetAliveNodeNum() < MAXPEERNODE {
+	for peerPool.GetAliveNodeNum() < MAXPEERNODE - 1{
 		log.Println("node:",NodeId,"connecting...")
 		nid := 1
 		for range time.Tick(3 * time.Second) {
@@ -99,7 +104,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 				}
 			}
 			nid += 1
-			if nid > MAXPEERNODE {
+			if nid > MAXPEERNODE{
 				break
 			}
 		}
@@ -145,5 +150,6 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 		MsgTimeStamp: time.Now().Unix(),
 	}
 	this.EventManager.PostEvent(pb.Message_CONSUS, broadCastMessage)
+
 
 }
