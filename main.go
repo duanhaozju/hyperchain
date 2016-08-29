@@ -8,27 +8,26 @@ import (
 	"github.com/mkideal/cli"
 	"hyperchain/p2p"
 	"hyperchain/manager"
-	"hyperchain/jsonrpc"
+
 	"hyperchain/core"
-	"hyperchain/common"
+
 	"hyperchain/crypto"
-	"hyperchain/consensus/controller"
+
+	"fmt"
 
 )
 
 type argT struct {
 	cli.Helper
-	NodePath string
-	IsFirst bool
-	ConsensusNum int
-	from common.Hash
-	to common.Hash
-	PeerIp string `cli:"i,peerip" usage:"对端节点地址" dft:""`
-	PeerPort int  `cli:"p,peerport" usage:"对端节点监听端口" dft:"0"`
-	LocalPort int `cli:"o,hostport" usage:"本地RPC监听端口" dft:"8001"`
-	HttpServerPORT int `cli:"s,httpport" usage:"启动本地http服务的端口，默认值为8003" dft:"8003"`
-	Test bool `cli:"t" usage:"用于测试" dft:"false"`
+	//NodePath string `cli:"o,hostport" usage:"本地RPC监听端口" dft:"8001"`
+	NodeId int `cli:"o,nodeid" usage:"本地RPC监听端口" dft:"8001"`
+	ConsensusNum uint64
+
+	LocalPort int `cli:"l,LocalPort" usage:"本地RPC监听端口" dft:"8001"`
+	//HttpServerPORT int `cli:"s,httpport" usage:"启动本地http服务的端口，默认值为8003" dft:"8003"`
+
 }
+
 
 func main(){
 	cli.Run(new(argT), func(ctx *cli.Context) error {
@@ -46,34 +45,41 @@ func main(){
 		fetcher := core.NewFetcher()
 
 
+
+
 		//init pbft consensus
-		cs:=controller.NewConsenter(argv.ConsensusNum)
+		//cs:=controller.NewConsenter(argv.ConsensusNum)
 
 		// init http server for web call
 		//jsonrpc.StartHttp(argv.LocalPort)
 
 
 		//init encryption object
+
+
 		encryption :=crypto.NewEcdsaEncrypto("ecdsa")
-		encryption.GeneralKey(argv.LocalPort)
+		encryption.GeneralKey(string(argv.LocalPort))
+
 
 
 		//init hash object
 		kec256Hash:=crypto.NewKeccak256Hash("keccak256")
 
+		 nodePath:="./p2p/peerconfig.json"
 		//init db
 		core.InitDB(argv.LocalPort)
+		fmt.Print("2")
+		fmt.Print(nodePath)
+		fmt.Print(argv.NodeId)
 
 
 		//init manager
-		manager.New(grpcPeerMgr,cs,fetcher,encryption,kec256Hash,
-			argv.NodePath,argv.IsFirst)
+		manager.New(grpcPeerMgr,nil,fetcher,encryption,kec256Hash,
+			nodePath,argv.NodeId)
 
 
 
-		/*eventmux:=new(event.TypeMux)
-		eventmux.Post(event.ConsensusEvent{[]byte{0x00, 0x00, 0x03, 0xe8}})
-*/
+
 
 		//
 

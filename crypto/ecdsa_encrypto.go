@@ -60,10 +60,11 @@ func (ee *EcdsaEncrypto)UnSign(args ...interface{})([]byte, error)  {
 	addr := ee.Keccak256(pubBytes[1:])[12:]
 	return addr,nil
 }
-func (ee *EcdsaEncrypto)GeneralKey(port string)(*ecdsa.PrivateKey,error) {
+func (ee *EcdsaEncrypto)GeneralKey(port string)(ecdsa.PrivateKey,error) {
+
 	key,err := ee.GenerateKey()
 	if err!=nil{
-		return nil,err
+		return ecdsa.PrivateKey{},err
 	}
 	ee.port=port
 	k := hex.EncodeToString(ee.FromECDSA(key))
@@ -71,9 +72,9 @@ func (ee *EcdsaEncrypto)GeneralKey(port string)(*ecdsa.PrivateKey,error) {
 	current := filepath.Base(abspath)
 	file := abspath[0:len(abspath)-len(current)]+"keystore/"+port
 	if err:=ioutil.WriteFile(file, []byte(k), 0600);err!=nil{
-		return key,err
+		return *key,err
 	}
-	return key,nil
+	return *key,nil
 
 }
 //load key by given port

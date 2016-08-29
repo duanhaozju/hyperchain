@@ -1,14 +1,14 @@
 package controller
 
 import (
-	"encoding/json"
+	//"encoding/json"
 	"github.com/gorilla/mux"
 	"fmt"
 	"net/http"
-	"hyperchain/core"
+	//"hyperchain/core"
 	//"hyperchain-alpha/hyperchain"
 	//"strconv"
-	"strconv"
+	//"strconv"
 )
 
 type ResData struct{
@@ -16,6 +16,7 @@ type ResData struct{
 	Code int
 }
 
+/*
 func TransactionIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
@@ -25,6 +26,7 @@ func TransactionIndex(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 }
+*/
 
 // 处理请求 : GET "/trans"
 
@@ -36,7 +38,7 @@ func TransacionShow(w http.ResponseWriter, r *http.Request) {
 
 
 // 处理请求 : POST "/trans"
-func TransactionCreate(w http.ResponseWriter, r *http.Request) {
+/*func TransactionCreate(w http.ResponseWriter, r *http.Request) {
 
 	var res ResData
 
@@ -77,4 +79,4 @@ func TransactionCreate(w http.ResponseWriter, r *http.Request) {
 	//if err := json.NewEncoder(w).Encode(t); err != nil {
 	//	panic(err)
 	//}
-}
+}*/

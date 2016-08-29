@@ -3,8 +3,7 @@ package jsonrpc
 import (
 	"hyperchain/core/types"
 	"fmt"
-	"hyperchain/event"
-	"github.com/golang/protobuf/proto"
+
 )
 
 type TxArgs struct{
@@ -33,8 +32,8 @@ func SendTransaction(args TxArgs) ResData {
 	if (tx.VerifyTransaction()) {
 		// 余额足够
 		// 抛 NewTxEvent 事件
-		 eventmux:=new(event.TypeMux)
-		 eventmux.Post(event.NewTxEvent{Payload: proto.Marshal(*tx)})
+		/* eventmux:=new(event.TypeMux)
+		 eventmux.Post(event.NewTxEvent{Payload: proto.Marshal(*tx)})*/
 
 		return ResData{
 			Data: nil,

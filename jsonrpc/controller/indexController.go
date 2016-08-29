@@ -1,5 +1,5 @@
 package controller
-import (
+/*import (
 	"net/http"
 	"html/template"
 	"hyperchain/core"
@@ -7,7 +7,8 @@ import (
 	"os"
 	"hyperchain/core/types"
 	"sort"
-)
+	"github.com/ethereum/go-ethereum/cmd/utils"
+)*/
 
 //type Transaction struct{
 //	From string
@@ -18,14 +19,14 @@ import (
 //
 //type Transacctions []Transaction
 
-type data struct{
+/*type data struct{
 	Trans types.Transactions
 	Accounts utils.Accounts
 	Balances []types.Balance
-}
+}*/
 
 // 处理请求 : GET "/"
-func Index(w http.ResponseWriter, r *http.Request) {
+/*func Index(w http.ResponseWriter, r *http.Request) {
 	pwd, _ := os.Getwd()
 	indexpath := path.Join(pwd,"./jsonrpc/static/tmpl/index.html")
 
@@ -79,7 +80,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		Accounts:accounts,
 		Balances: balances,
 	})
-}
+}*/
 
 
 

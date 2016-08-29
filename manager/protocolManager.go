@@ -4,9 +4,6 @@
 // last modified:2016-08-25
 package manager
 
-import "sync"
-
-
 
 import (
 	"hyperchain/event"
@@ -19,6 +16,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"
 	"fmt"
+	"sync"
+
 )
 
 type ProtocolManager struct {
@@ -60,12 +59,24 @@ encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 // start listen new block msg and consensus msg
 func (pm *ProtocolManager) Start() {
 
+	fmt.Println("enenen111")
+
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
+
+	for i :=0;i<100;i+=1{
+		fmt.Println("enenen")
+		eventmux:=new(event.TypeMux)
+		eventmux.Post(event.BroadcastConsensusEvent{[]byte{0x00, 0x00, 0x03, 0xe8}})
+
+	}
+
+
+
 	pm.wg.Wait()
 
 }
@@ -95,6 +106,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 		switch ev := obj.Data.(type) {
 
 		case event.BroadcastConsensusEvent:
+			fmt.Println("enter broadcast")
 			self.BroadcastConsensus(ev.Payload)
 		case event.NewTxEvent:
 			//call consensus module
@@ -104,8 +116,12 @@ func (self *ProtocolManager) ConsensusLoop() {
 			proto.Unmarshal(ev.Payload, transaction)
 			//hash tx
 			h := transaction.SighHash(self.commonHash)
+			key,err:=self.encryption.GetKey()
+			if err != nil {
+				return
+			}
 			//sign tx
-			sign, err := self.encryption.Sign(h[:], self.encryption.GetKey())
+			sign, err := self.encryption.Sign(h[:], key)
 			if err != nil {
 				fmt.Print(err)
 			}
