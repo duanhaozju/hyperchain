@@ -14,12 +14,13 @@ import (
 
 // init protocol manager params and start
 func New(peerManager p2p.PeerManager,consenter consensus.Consenter,fetcher *core.Fetcher,
-encryption crypto.Encryption ,commonHash crypto.CommonHash,path string, isFirst bool) (error) {
+encryption crypto.Encryption ,commonHash crypto.CommonHash,path string, isFirst int) (error) {
 
 
 
 	aliveChan := make(chan bool)
 	peerManager.Start(path, isFirst,aliveChan,false)
+
 
 
 	//peerManager.JudgeAlivePeers()

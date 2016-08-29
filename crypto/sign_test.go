@@ -36,7 +36,7 @@ func TestSigntx(t *testing.T)  {
 	if err!=nil{
 		panic(err)
 	}
-	priv,_:=ee.GetKey("5002")
+	priv,_:=ee.GetKey()
 	pub := key.PublicKey
 
 	var addr []byte

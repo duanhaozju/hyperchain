@@ -10,6 +10,7 @@ import (
 	"errors"
 
 	"hyperchain/common"
+	"github.com/golang/protobuf/proto"
 )
 
 type Fetcher struct {
@@ -74,7 +75,9 @@ func (f *Fetcher) insert(block *types.Block) {
 }
 
 // Enqueue tries to fill gaps the the fetcher's future import queue.
-func (f *Fetcher) Enqueue(block *types.Block) error {
+func (f *Fetcher) Enqueue(payLoad []byte) error {
+	var block *types.Block
+	proto.Unmarshal(payLoad,block)
 	op := &inject{
 
 		block:  block,

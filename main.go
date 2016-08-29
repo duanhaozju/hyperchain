@@ -50,15 +50,19 @@ func main(){
 		cs:=controller.NewConsenter(argv.ConsensusNum)
 
 		// init http server for web call
-		jsonrpc.StartHttp(argv.LocalPort)
+		//jsonrpc.StartHttp(argv.LocalPort)
 
 
 		//init encryption object
 		encryption :=crypto.NewEcdsaEncrypto("ecdsa")
+		encryption.GeneralKey(argv.LocalPort)
 
 
 		//init hash object
 		kec256Hash:=crypto.NewKeccak256Hash("keccak256")
+
+		//init db
+		core.InitDB(argv.LocalPort)
 
 
 		//init manager
@@ -82,7 +86,7 @@ func main(){
 		log.Printf("本机ip地址为："+localIp+ "\n")*/
 
 		//初始化数据库,传入数据库地址自动生成数据库文件
-		core.InitDB(argv.LocalPort)
+
 
 		//存储本地节点
 		//p2p.LOCALNODE = node.NewNode(localIp,argv.LocalPort,argv.HttpServerPORT)
@@ -129,7 +133,6 @@ func main(){
 	})
 }
 
-//-- 创建初始块
 
 
 

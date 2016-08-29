@@ -12,7 +12,7 @@ import (
 
 const configPrefix = "CORE_PBFT"
 
-var pluginInstance *consensus.Consenter // singleton service
+var pluginInstance consensus.Consenter // singleton service
 var config *viper.Viper
 
 func init() {

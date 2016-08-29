@@ -100,19 +100,23 @@ func (self *ProtocolManager) ConsensusLoop() {
 			//call consensus module
 			//Todo
 			var transaction *types.Transaction
-			proto.Unmarshal(ev.Payload, &transaction)
-
-			self.encryption.GetKey()
-
-			sign, err := self.encryption.Sign(transaction.SighHash(
-				self.commonHash), self.encryption.GetKey())
+			//decode tx
+			proto.Unmarshal(ev.Payload, transaction)
+			//hash tx
+			h := transaction.SighHash(self.commonHash)
+			//sign tx
+			sign, err := self.encryption.Sign(h[:], self.encryption.GetKey())
 			if err != nil {
 				fmt.Print(err)
 			}
 			transaction.Signature = sign
-			proto.Marshal(transaction)
+			//encode tx
+			payLoad,err:=proto.Marshal(transaction)
+			if err!=nil{
+				return
+			}
 
-			self.consenter.RecvMsg(transaction)
+			self.consenter.RecvMsg(payLoad)
 
 		case event.ConsensusEvent:
 			//call consensus module
@@ -132,5 +136,7 @@ func (pm *ProtocolManager) BroadcastConsensus(payload []byte) {
 	pm.peerManager.BroadcastPeers(payload)
 
 }
+
+
 
 
