@@ -2,7 +2,7 @@ package crypto
 
 import (
 	"testing"
-	"hyperchain-alpha/common"
+	"hyperchain/common"
 	"math/big"
 	"fmt"
 )

@@ -5,8 +5,8 @@ import (
 	"math/big"
 	"fmt"
 	"crypto/elliptic"
-	"hyperchain-alpha/common"
-	"hyperchain-alpha/crypto/secp256k1"
+	"hyperchain/common"
+	"hyperchain/crypto/secp256k1"
 	"sync/atomic"
 )
 type Transaction struct {
@@ -65,5 +65,6 @@ func TestSigntx(t *testing.T)  {
 
 	fmt.Println(from)
 	fmt.Println(addr)
+	ee.SaveNodeInfo("./addressInfo","0.0.0.0",addr,key)
 
 }

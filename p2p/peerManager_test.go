@@ -8,18 +8,39 @@ package p2p
 
 import (
 	"testing"
-	"sync"
+	"log"
 )
 
 func TestGrpcPeerManager_Start(t *testing.T){
 
 	path := "/home/chenquan/Workspace/IdeaProjects/hyperchain-go/src/hyperchain/p2p/peerconfig.json"
-	var sc sync.WaitGroup
+
+
 	grpcPeerMgr := new(GrpcPeerManager)
 	aliveChan := make(chan bool)
-	grpcPeerMgr.Start(path, sc,3, aliveChan)
-	<-aliveChan
+	go grpcPeerMgr.Start(path,1, aliveChan,true)
 
-	sc.Add(4)
-	sc.Wait()
+	grpcPeerMgr2 := new(GrpcPeerManager)
+
+	go grpcPeerMgr2.Start(path,2, aliveChan,true)
+
+	grpcPeerMgr3 := new(GrpcPeerManager)
+
+	go grpcPeerMgr3.Start(path,3, aliveChan,true)
+
+	grpcPeerMgr4 := new(GrpcPeerManager)
+
+	go grpcPeerMgr4.Start(path,4, aliveChan,true)
+	// wait the sub thread done
+	nodeCount := 0
+	for flag := range aliveChan{
+		if flag{
+			log.Println("一个节点完成连接")
+			nodeCount += 1
+		}
+		if nodeCount >=4{
+			break
+		}
+	}
+
 }

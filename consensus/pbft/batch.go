@@ -4,9 +4,9 @@ import (
 	"time"
 	"fmt"
 	"hyperchain/consensus/helper"
-
 	"hyperchain/consensus/events"
 	pb "github.com/hyperledger/fabric/protos"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
 )
@@ -37,8 +37,6 @@ type batchMessage struct {
 	msg    *pb.Message
 	sender *pb.PeerID
 }
-
-const configPrefix = "CORE_PBFT"
 
 
 func (b *batch) ProcessEvent(e events.Event) events.Event{
@@ -149,7 +147,7 @@ func (op *batch) stopBatchTimer() {
 
 
 
-func newBatch(id uint64, config *viper.Viper, h *helper.Stack) *batch{
+func newBatch(id uint64, config *viper.Viper, h helper.Stack) *batch{
 	var err error
 	fmt.Println("new batch")
 	batchObj:=&batch{

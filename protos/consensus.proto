@@ -13,3 +13,7 @@ message Message {
     bytes payload = 3;
     uint64 id = 4;
 }
+
+message ExeMessage {
+    repeated Message batch = 1;
+}

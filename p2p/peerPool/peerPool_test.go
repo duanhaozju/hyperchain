@@ -25,7 +25,7 @@ func TestPeersPool_PutPeer(t *testing.T) {
 	portRange := 8002
 	//get the client
 	//start the server
-	server := node.NewNode(portRange)
+	server := node.NewNode(portRange,true)
 
 	chatClient, err := peer.NewPeer("localhost:"+ strconv.Itoa(portRange))
 	if err != nil {
@@ -41,7 +41,7 @@ func TestPeersPool_PutPeer(t *testing.T) {
 		log.Fatalln("发送消息失败")
 	} else {
 		fmt.Println(msg)
-		peerPool := NewPeerPool(true)
+		peerPool := NewPeerPool(true,false)
 		//here test the peer pool
 		_,err := peerPool.PutPeer(chatClient.Addr, chatClient)
 		if err == nil {
@@ -74,7 +74,7 @@ func TestPeersPool_GetPeer(t *testing.T) {
 	portRange := 8001
 	//get the client
 	//start the server
-	server := node.NewNode(int(portRange))
+	server := node.NewNode(int(portRange),true)
 
 	chatClient, err := peer.NewPeer("localhost:"+ strconv.Itoa(portRange))
 	if err != nil {
@@ -90,7 +90,7 @@ func TestPeersPool_GetPeer(t *testing.T) {
 		log.Fatalln("发送消息失败")
 	} else {
 		fmt.Println(msg)
-		peerPool := NewPeerPool(true)
+		peerPool := NewPeerPool(true,false)
 		//here test the peer pool
 		_,err := peerPool.PutPeer(chatClient.Addr, chatClient)
 		if err == nil {
