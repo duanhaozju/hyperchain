@@ -1,8 +1,8 @@
 // author: chenquan
 // date: 16-8-25
-// last modified: 16-8-25 20:01
+// last modified: 16-8-29 13:58
 // last Modified Author: chenquan
-// change log:
+// change log: add a comment of this file function
 //
 package peerComm
 
@@ -13,7 +13,8 @@ import (
 	"encoding/json"
 	"github.com/labstack/gommon/log"
 )
-
+// GetIpLocalIpAddr this function is used to get the real internal net ip address
+// to use this make sure your net are valid
 func GetIpLocalIpAddr()string{
 	addrs, err := net.InterfaceAddrs()
 
@@ -34,7 +35,8 @@ func GetIpLocalIpAddr()string{
 	}
 	return "localhost"
 }
-
+// GetConfig this is a tool function for get the json file config
+// configs return a map[string]string
 func GetConfig(path string) map[string]string{
 	content,fileErr := ioutil.ReadFile(path)
 	if fileErr != nil {

@@ -1,6 +1,6 @@
 // author: chenquan
 // date: 16-8-25
-// last modified: 16-8-25 20:01
+// last modified: 16-8-29 13:23
 // last Modified Author: chenquan
 // change log:
 //
@@ -21,6 +21,7 @@ import (
 	"time"
 )
 
+// test the peer pool to put peer
 func TestPeersPool_PutPeer(t *testing.T) {
 	portRange := 8002
 	//get the client

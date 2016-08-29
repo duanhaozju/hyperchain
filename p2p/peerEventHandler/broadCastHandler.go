@@ -10,17 +10,15 @@ import (
 	"hyperchain/p2p/peermessage"
 	"log"
 	"hyperchain/p2p/peerPool"
-	"hyperchain/p2p/peerEventManager"
-	pb "hyperchain/p2p/peermessage"
 )
 // HelloHandler hello message handler
 type BroadCastHandler struct{
-	eventManager *peerEventManager.PeerEventManager
+
 
 }
 
-func NewBroadCastHandler(eventManager *peerEventManager.PeerEventManager)*BroadCastHandler{
-	return &BroadCastHandler{eventManager:eventManager}
+func NewBroadCastHandler()*BroadCastHandler{
+	return &BroadCastHandler{}
 }
 
 // this is the most important handler
@@ -35,7 +33,7 @@ func (this *BroadCastHandler)ProcessEvent(msg *peermessage.Message)error{
 			log.Println("Broadcast failed,Node",peer.Addr)
 		}else{
 			log.Println("resMsg:",string(resMsg.Payload))
-			this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
+			//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
 		}
 	}
 
