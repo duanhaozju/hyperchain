@@ -1,3 +1,10 @@
+// author: chenquan
+// date: 16-8-25
+// last modified: 16-8-29 13:58
+// last Modified Author: chenquan
+// change log: add a comment of this file function
+//
+
 package client
 
 import (
@@ -14,16 +21,10 @@ import (
 func TestNewChatClient(t *testing.T) {
 	//start the server
 	server := node.NewNode(8002,true)
-	/*go func() {
-		for now := range time.Tick(3 * time.Second) {
-			fmt.Println(now)
-		}
-	}()*/
-
 
 	chatClient,err := NewPeer("localhost:8002")
 	if err != nil{
-		log.Fatalln("连接失败")
+		log.Fatalln("Connect failed")
 		server.StopServer()
 	}
 
@@ -33,7 +34,7 @@ func TestNewChatClient(t *testing.T) {
 	})
 
 	if err2 != nil{
-		log.Fatalln("发送消息失败")
+		log.Fatalln("Failed to send a message")
 		server.StopServer()
 	}else{
 		fmt.Println(msg)

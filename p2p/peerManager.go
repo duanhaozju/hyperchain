@@ -32,12 +32,14 @@ type PeerManager interface {
 	BroadcastPeers(payLoad []byte)
 }
 
+// gRPC peer manager struct, which to manage the gRPC peers
 type GrpcPeerManager struct {
 	EventManager *peerEventManager.PeerEventManager
 	localNode    *node.Node
 	aliveChain   *chan bool
 }
 
+// GetClientId GetLocalClientId
 func (this *GrpcPeerManager) GetClientId() common.Hash {
 	addr := node.GetNodeAddr()
 	return common.BytesToHash([]byte(addr.String()))
@@ -45,22 +47,23 @@ func (this *GrpcPeerManager) GetClientId() common.Hash {
 
 }
 
+// Start start the Normal local listen server
 func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,isTest bool) {
 	configs := peerComm.GetConfig(path)
 	port, _ := strconv.Atoi(configs["port"+strconv.Itoa(NodeId)])
 	// start local node
 	this.localNode = node.NewNode(port,isTest)
-	log.Println("本地节点HASH:",hex.EncodeToString(this.GetClientId().Bytes()))
+	log.Println("Local Node hash:",hex.EncodeToString(this.GetClientId().Bytes()))
 	//
 	this.aliveChain = &aliveChan
 
 	// init the event manager
 	this.EventManager = peerEventManager.NewPeerEventManager()
 
-	this.EventManager.RegisterEvent(pb.Message_HELLO, peerEventHandler.NewHelloHandler(this.EventManager))
-	this.EventManager.RegisterEvent(pb.Message_RESPONSE, peerEventHandler.NewResponseHandler(this.EventManager))
-	this.EventManager.RegisterEvent(pb.Message_CONSUS, peerEventHandler.NewBroadCastHandler(this.EventManager))
-	this.EventManager.RegisterEvent(pb.Message_KEEPALIVE, peerEventHandler.NewKeepAliveHandler(this.EventManager))
+	this.EventManager.RegisterEvent(pb.Message_HELLO, peerEventHandler.NewHelloHandler())
+	this.EventManager.RegisterEvent(pb.Message_RESPONSE, peerEventHandler.NewResponseHandler())
+	this.EventManager.RegisterEvent(pb.Message_CONSUS, peerEventHandler.NewBroadCastHandler())
+	this.EventManager.RegisterEvent(pb.Message_KEEPALIVE, peerEventHandler.NewKeepAliveHandler())
 
 	this.EventManager.Start()
 
@@ -86,11 +89,11 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 			if !status {
 				//if this node is not online connect it
 				peerAddr := configs["node"+strconv.Itoa(nid)] + ":" + configs["port"+strconv.Itoa(nid)]
-				log.Println("连接到:", peerAddr)
+				log.Println("Connect to: ", peerAddr)
 				peer, peerErr := peer.NewPeer(peerAddr)
 				if peerErr != nil {
 					// cannot connect to other peer
-					log.Println("节点:"+peerAddr+"无法连接\n", peerErr)
+					log.Println("Node: "+peerAddr+"can not connect!\n", peerErr)
 					//continue
 				} else {
 					// add  peer to peer pool
@@ -109,14 +112,14 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 			}
 		}
 	}
-	log.Println("完成同步啦...")
+	log.Println("Finish full node connection...")
 	*this.aliveChain <- true
 }
 
 //tell the main thread the peers are already
 
 //func (this *GrpcPeerManager) JudgeAlivePeers(c *chan bool){
-//	//TODO 判断所有的节点是否存活
+//	//TODO 判断所有节点是否存活
 //	var keepAliveMessage = pb.Message{
 //		MessageType: pb.Message_KEEPALIVE,
 //		From:        node.GetNodeAddr(),
@@ -135,12 +138,14 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 //
 //}
 
+// GetAllPeers get all connected peer in the peer pool
 func (this *GrpcPeerManager) GetAllPeers() []*peer.Peer {
 	peerPool := peerPool.NewPeerPool(false,false)
 	return peerPool.GetPeers()
 }
 
 
+// BroadcastPeers Broadcast Massage to connected peers
 func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 	localNodeAddr := node.GetNodeAddr()
 	var broadCastMessage = pb.Message{
