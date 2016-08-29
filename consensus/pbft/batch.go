@@ -244,8 +244,21 @@ func (op *batch) submitToLeader(req *Request) events.Event {
 	}
 	return nil
 }
-
-
+func (op *batch) wrapMessage(msgPayload []byte) *pb.Message {
+	batchMsg := &BatchMessage{Payload: &BatchMessage_PbftMessage{PbftMessage: msgPayload}}
+	timestamp := time.Now().Unix()
+	packedBatchMsg, _ := proto.Marshal(batchMsg)
+	ocMsg := &pb.Message{
+		Type:    pb.Message_CONSENSUS,
+		Payload: packedBatchMsg,
+		Id:op.localID,
+		Timestamp:timestamp,
+	}
+	return ocMsg
+}
+func (op *batch) Broadcast(msgPayload []byte) {
+	op.helperImpl.InnerBroadcast(op.wrapMessage(msgPayload))
+}
 
 
 

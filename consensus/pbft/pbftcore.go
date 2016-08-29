@@ -10,6 +10,7 @@ import (
 
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
+	"github.com/golang/protobuf/proto"
 )
 
 // =============================================================================
@@ -43,6 +44,7 @@ type pbftMessage struct {
 type pbftCore struct {
 	//internal data
 	helper helper.Stack
+	batchcore *batch
 
 	// PBFT data
 	byzantine     bool              // whether this node is intentionally acting as Byzantine; useful for debugging on the testnet
@@ -118,7 +120,7 @@ func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerF
 	instance := &pbftCore{}
 	instance.id = id
 	instance.helper = batch.getHelper()
-
+	instance.batchcore=batch
 	instance.nullRequestTimer = etf.CreateTimer()
 
 	instance.N = config.GetInt("general.N")
@@ -416,8 +418,13 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 	cert := instance.getCert(instance.view, n)
 	cert.prePrepare = preprep
 	cert.digest = digest
-	msg := qMsgHelper(preprep, instance.id)
-	instance.helper.InnerBroadcast(msg)
+	//msg := qMsgHelper(preprep, instance.id)
+	msg,err:=proto.Marshal(&Message{Payload:&Message_PrePrepare{PrePrepare: preprep}})
+	if err!=nil{
+		return nil
+	}
+
+	instance.batchcore.Broadcast(msg)
 	instance.maybeSendCommit(digest, instance.view, n)
 }
 
