@@ -26,6 +26,7 @@ type ProtocolManager struct {
 	peerManager  p2p.PeerManager
 	consenter    consensus.Consenter
 	encryption  crypto.Encryption
+	commonHash crypto.CommonHash
 
 
 
@@ -39,7 +40,8 @@ type ProtocolManager struct {
 	wg           sync.WaitGroup
 }
 
-func NewProtocolManager(peerManager p2p.PeerManager, fetcher *core.Fetcher, consenter consensus.Consenter,encryption crypto.Encryption) (*ProtocolManager) {
+func NewProtocolManager(peerManager p2p.PeerManager, fetcher *core.Fetcher, consenter consensus.Consenter,
+encryption crypto.Encryption,commonHash crypto.CommonHash) (*ProtocolManager) {
 
 	eventMux := new(event.TypeMux)
 	manager := &ProtocolManager{
@@ -49,6 +51,7 @@ func NewProtocolManager(peerManager p2p.PeerManager, fetcher *core.Fetcher, cons
 		peerManager:  peerManager,
 		fetcher:fetcher,
 		encryption:encryption,
+		commonHash:commonHash,
 
 
 	}
@@ -100,6 +103,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			//Todo
 			var transaction types.Transaction
 			proto.Unmarshal(ev.Payload,&transaction)
+
 
 
 

@@ -59,7 +59,13 @@ func main(){
 		//init encryption object
 		encryption :=crypto.NewEcdsaEncrypto("ecdsa")
 
-		manager.New(grpcPeerMgr,cs,fetcher,encryption,argv.NodePath,argv.IsFirst)
+
+		//init hash object
+		kec256Hash:=crypto.NewKeccak256Hash("keccak256")
+
+
+		//init manager
+		manager.New(grpcPeerMgr,cs,fetcher,encryption,kec256Hash,argv.NodePath,argv.IsFirst)
 
 
 
