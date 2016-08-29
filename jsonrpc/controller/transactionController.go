@@ -5,7 +5,7 @@ import (
 	"github.com/gorilla/mux"
 	"fmt"
 	"net/http"
-	"hyperchain-alpha/core"
+	"hyperchain/core"
 	//"hyperchain-alpha/hyperchain"
 	//"strconv"
 	"strconv"

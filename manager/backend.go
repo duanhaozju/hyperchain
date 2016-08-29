@@ -9,15 +9,18 @@ import (
 	"hyperchain/p2p"
 	"hyperchain/core"
 	"hyperchain/consensus"
+	"hyperchain/crypto"
 )
 
 // init protocol manager params and start
-func New(peerManager p2p.PeerManager,consenter consensus.Consenter,fetcher *core.Fetcher, path string, isFirst bool) (error) {
+func New(peerManager p2p.PeerManager,consenter consensus.Consenter,fetcher *core.Fetcher,
+encryption crypto.Encryption ,commonHash crypto.CommonHash,path string, isFirst int) (error) {
 
 
 
 	aliveChan := make(chan bool)
-	peerManager.Start(path, isFirst,aliveChan)
+	peerManager.Start(path, isFirst,aliveChan,false)
+
 
 
 	//peerManager.JudgeAlivePeers()
@@ -27,7 +30,7 @@ func New(peerManager p2p.PeerManager,consenter consensus.Consenter,fetcher *core
 	case <-aliveChan:
 
 
-		protocolManager := NewProtocolManager( peerManager, fetcher,consenter)
+		protocolManager := NewProtocolManager(peerManager, fetcher,consenter,encryption,commonHash)
 
 		protocolManager.Start()
 

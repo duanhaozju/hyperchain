@@ -11,8 +11,7 @@ import (
 	"log"
 )
 
-type KeepAliveHandler struct{
-
+type KeepAliveHandler struct {
 }
 // keep live message only peer can send so should send a response message to peer
 
@@ -22,6 +21,6 @@ func (this *KeepAliveHandler)ProcessEvent(msg *peermessage.Message)error{
 	return nil
 }
 
-func NewKeepAliveHandler()*HelloHandler{
-	return &HelloHandler{}
+func NewKeepAliveHandler()*KeepAliveHandler{
+	return &KeepAliveHandler{}
 }

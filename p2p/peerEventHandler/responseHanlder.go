@@ -12,7 +12,6 @@ import (
 )
 
 type ResponseHandler struct{
-
 }
 
 // response message has two conditions:
@@ -20,6 +19,7 @@ type ResponseHandler struct{
 
 func (this *ResponseHandler)ProcessEvent(msg *peermessage.Message)error{
 	log.Println(msg.MessageType)
+	log.Println(string(msg.Payload))
 	return nil
 }
 

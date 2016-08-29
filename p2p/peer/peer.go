@@ -1,3 +1,10 @@
+// author: chenquan
+// date: 16-8-25
+// last modified: 16-8-29 13:58
+// last Modified Author: chenquan
+// change log: add a comment of this file function
+//
+
 package client
 
 import (

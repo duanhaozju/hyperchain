@@ -13,6 +13,8 @@ import (
 	"hyperchain/core/types"
 	"sync"
 	"strconv"
+
+	"hyperchain/common"
 )
 
 var (
@@ -53,13 +55,13 @@ func getLDBConnection()(*leveldb.DB,error){
 }
 
 func GetDBPath() string {
-	return
+	return "1"
 }
 
 //-- ------------------ ldb end ----------------------
 
 //-- ------------------- Transaction ---------------------------------
-func PutTransaction(db hyperdb.Database, key []byte, t types.Transaction) error {
+func PutTransaction(db hyperdb.Database, key []byte, t *types.Transaction) error {
 	data, err := proto.Marshal(t)
 	if err != nil {
 		return err
@@ -92,7 +94,7 @@ func DeleteTransaction(db hyperdb.Database, key []byte) error {
 
 
 //-- ------------------- Block ---------------------------------
-func PutBlock(db hyperdb.Database, key []byte, t types.Block) error {
+func PutBlock(db hyperdb.Database, key []byte, t *types.Block) error {
 	data, err := proto.Marshal(t)
 	if err != nil {
 		return err
@@ -140,7 +142,7 @@ func newMemChain() *memChain {
 var memChainMap *memChain;
 
 //-- 获取最新的blockhash
-func GetLatestBlockHash() string {
+func GetLatestBlockHash() []byte {
 	memChainMap.lock.RLock()
 	defer memChainMap.lock.RUnlock()
 	return memChainMap.data.LatestBlockHash
@@ -148,7 +150,7 @@ func GetLatestBlockHash() string {
 
 //-- 更新Chain，即更新最新的blockhash 并将height加1
 //-- blockHash为最新区块的hash
-func UpdateChain(blockHash string)  {
+func UpdateChain(blockHash []byte)  {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
 	memChainMap.data.LatestBlockHash = blockHash
@@ -156,7 +158,7 @@ func UpdateChain(blockHash string)  {
 }
 
 //-- 获取区块的高度
-func GetHeightOfChain() int {
+func GetHeightOfChain() int64 {
 	memChainMap.lock.RLock()
 	defer memChainMap.lock.RUnlock()
 	return memChainMap.data.Height
@@ -172,7 +174,7 @@ func GetChain() *types.Chain {
 	}
 }
 
-func putChain(db hyperdb.Database, t types.Chain) error {
+func putChain(db hyperdb.Database, t *types.Chain) error {
 	data, err := proto.Marshal(t)
 	if err != nil {
 		return err
@@ -196,13 +198,13 @@ func getChain(db hyperdb.Database) (types.Chain, error){
 
 //-- --------------------- Balance ------------------------------------
 type memBalance struct {
-	data map[string]types.Balance
+	data map[common.Address]types.Balance
 	lock sync.RWMutex
 }
 
 func newMemBalance() *memBalance {
 	return &memBalance{
-		data: make(map[string]types.Balance),
+		data: make(map[common.Address]types.Balance),
 	}
 }
 
@@ -212,19 +214,19 @@ var memBalanceMap *memBalance;
 func PutBalanceToMEM(t types.Balance){
 	memBalanceMap.lock.Lock()
 	defer memBalanceMap.lock.Unlock()
-	key := t.AccountPublicKeyHash
+	key := common.BytesToAddress(t.AccountPublicKeyHash)
 	memBalanceMap.data[key] = t
 }
 
 //-- 在MEM中 根据Key获取的Balance
-func GetBalanceFromMEM(accountPublicKeyHash string) types.Balance{
+func GetBalanceFromMEM(accountPublicKeyHash common.Address) types.Balance{
 	memBalanceMap.lock.RLock()
 	defer memBalanceMap.lock.RUnlock()
 	return memBalanceMap.data[accountPublicKeyHash]
 }
 
 //-- 从MEM中删除Balance
-func DeleteBalanceFromMEM(accountPublicKeyHash string) {
+func DeleteBalanceFromMEM(accountPublicKeyHash common.Address) {
 	memBalanceMap.lock.Lock()
 	defer memBalanceMap.lock.Unlock()
 	delete(memBalanceMap.data, accountPublicKeyHash)
@@ -251,24 +253,24 @@ func UpdateBalance(block types.Block)  {
 		//-- 如果余额表中没有这个From(实际上不可能，因为余额表中没有这个From，不可能会验证通过
 		//-- 但是上帝用户例外，因为上帝用户可能会出现负数)，则新建一个
 		//-- 如果余额表中有这个From，则覆盖publickey(覆盖的Publickey是一样的，实际上没改)
-		b := memBalanceMap.data[trans.From]
-		b.Value -= trans.Value
+		b := memBalanceMap.data[common.BytesToAddress(trans.From)]
+		//b.Value -= trans.Value
 		b.AccountPublicKeyHash = trans.From
-		memBalanceMap.data[trans.From] = b
+		memBalanceMap.data[common.BytesToAddress(trans.From)] = b
 		//-- 将交易中的To(账户中的publickey)余额加上value
 		//-- 如果余额表中没有这个To(就是所有publickey不含有To)
 		//-- 新建一个balance，将交易的value直接赋给balance.value
 		//-- 如果余额表中有这个To,则直接加上交易中的value
-		if _, ok := memBalanceMap.data[trans.To]; ok {
-			b = memBalanceMap.data[trans.To]
-			b.Value += trans.Value
-			memBalanceMap.data[trans.To] = b
+		if _, ok := memBalanceMap.data[common.BytesToAddress(trans.To)]; ok {
+			b = memBalanceMap.data[common.BytesToAddress(trans.To)]
+			//b.Value += trans.Value
+			memBalanceMap.data[common.BytesToAddress(trans.To)] = b
 		}else {
 			b = types.Balance{
 				AccountPublicKeyHash: trans.To,
-				Value: trans.Value,
+				//Value: trans.Value,
 			}
-			memBalanceMap.data[trans.To] = b
+			memBalanceMap.data[common.BytesToAddress(trans.To)] = b
 		}
 	}
 }

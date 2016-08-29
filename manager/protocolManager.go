@@ -15,15 +15,18 @@ import (
 
 	"hyperchain/core"
 	"hyperchain/consensus"
+	"hyperchain/crypto"
+	"github.com/golang/protobuf/proto"
+	"hyperchain/core/types"
+	"fmt"
 )
 
 type ProtocolManager struct {
-
 	fetcher      *core.Fetcher
 	peerManager  p2p.PeerManager
 	consenter    consensus.Consenter
-
-
+	encryption   crypto.Encryption
+	commonHash   crypto.CommonHash
 
 	noMorePeers  chan struct{}
 	eventMux     *event.TypeMux
@@ -35,7 +38,8 @@ type ProtocolManager struct {
 	wg           sync.WaitGroup
 }
 
-func NewProtocolManager(peerManager p2p.PeerManager, fetcher *core.Fetcher, consenter consensus.Consenter) (*ProtocolManager) {
+func NewProtocolManager(peerManager p2p.PeerManager, fetcher *core.Fetcher, consenter consensus.Consenter,
+encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 
 	eventMux := new(event.TypeMux)
 	manager := &ProtocolManager{
@@ -44,6 +48,9 @@ func NewProtocolManager(peerManager p2p.PeerManager, fetcher *core.Fetcher, cons
 		consenter:consenter,
 		peerManager:  peerManager,
 		fetcher:fetcher,
+		encryption:encryption,
+		commonHash:commonHash,
+
 
 	}
 	return manager
@@ -92,7 +99,24 @@ func (self *ProtocolManager) ConsensusLoop() {
 		case event.NewTxEvent:
 			//call consensus module
 			//Todo
-			self.consenter.RecvMsg(ev.Payload)
+			var transaction *types.Transaction
+			//decode tx
+			proto.Unmarshal(ev.Payload, transaction)
+			//hash tx
+			h := transaction.SighHash(self.commonHash)
+			//sign tx
+			sign, err := self.encryption.Sign(h[:], self.encryption.GetKey())
+			if err != nil {
+				fmt.Print(err)
+			}
+			transaction.Signature = sign
+			//encode tx
+			payLoad,err:=proto.Marshal(transaction)
+			if err!=nil{
+				return
+			}
+
+			self.consenter.RecvMsg(payLoad)
 
 		case event.ConsensusEvent:
 			//call consensus module
@@ -112,5 +136,7 @@ func (pm *ProtocolManager) BroadcastConsensus(payload []byte) {
 	pm.peerManager.BroadcastPeers(payload)
 
 }
+
+
 
 

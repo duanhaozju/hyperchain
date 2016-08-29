@@ -7,9 +7,10 @@ package core
 import (
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"hyperchain/core/types"
+	"errors"
 
 	"hyperchain/common"
-	"errors"
+	"github.com/golang/protobuf/proto"
 )
 
 type Fetcher struct {
@@ -74,7 +75,9 @@ func (f *Fetcher) insert(block *types.Block) {
 }
 
 // Enqueue tries to fill gaps the the fetcher's future import queue.
-func (f *Fetcher) Enqueue(block *types.Block) error {
+func (f *Fetcher) Enqueue(payLoad []byte) error {
+	var block *types.Block
+	proto.Unmarshal(payLoad,block)
 	op := &inject{
 
 		block:  block,
@@ -92,14 +95,14 @@ func (f *Fetcher) enqueue(block *types.Block) {
 	hash := block.BlockHash
 
 
-	if _, ok := f.queued[hash]; !ok {
+	if _, ok := f.queued[common.BytesToHash(hash)]; !ok {
 		op := &inject{
 
 			block:  block,
 		}
 
-		f.queued[hash] = op
-		f.queue.Push(op, -float32(block.Number.Uint64()))
+		f.queued[common.BytesToHash(hash)] = op
+		f.queue.Push(op, -float32(block.Number))
 
 	}
 }
