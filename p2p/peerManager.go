@@ -16,10 +16,8 @@ import (
 	pb "hyperchain/p2p/peermessage"
 	"strconv"
 	"time"
-	//"github.com/labstack/gommon/log"
 	"hyperchain/p2p/peerPool"
 	"log"
-	"sync"
 )
 
 const MAXPEERNODE = 4
@@ -28,7 +26,7 @@ type PeerManager interface {
 	// judge all peer are connected and return them
 	//JudgeAlivePeers(*chan bool)
 	GetAllPeers() []*peer.Peer
-	Start(path string, NodeId int, aliveChan chan bool)
+	Start(path string, NodeId int, aliveChan chan bool,isTest bool)
 	GetClientId() common.Hash
 	BroadcastPeers(payLoad []byte)
 }
@@ -44,24 +42,27 @@ func (this *GrpcPeerManager) GetClientId() common.Hash {
 
 }
 
-func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,sc sync.WaitGroup) {
+func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,isTest bool) {
 	configs := peerComm.GetConfig(path)
 	port, _ := strconv.Atoi(configs["port"+strconv.Itoa(NodeId)])
 	// start local node
-	this.localNode = node.NewNode(port)
+	this.localNode = node.NewNode(port,isTest)
 	//
 	this.aliveChain = &aliveChan
 
 	// init the event manager
 	this.EventManager = peerEventManager.NewPeerEventManager()
+
 	this.EventManager.RegisterEvent(pb.Message_HELLO, peerEventHandler.NewHelloHandler())
 	this.EventManager.RegisterEvent(pb.Message_RESPONSE, peerEventHandler.NewResponseHandler())
 	this.EventManager.RegisterEvent(pb.Message_CONSUS, peerEventHandler.NewBroadCastHandler())
 	this.EventManager.RegisterEvent(pb.Message_KEEPALIVE, peerEventHandler.NewKeepAliveHandler())
+
 	this.EventManager.Start()
 
 	// connect to peer
-	peerPool := peerPool.NewPeerPool(false)
+	// 如果进行单元测试,需要将参数设置为true
+	peerPool := peerPool.NewPeerPool(isTest,!isTest)
 	alivePeerMap := make(map[int]bool)
 	for i := 1; i <= MAXPEERNODE; i++ {
 		if i == NodeId {
@@ -72,7 +73,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 
 	// connect other peers
 	for peerPool.GetAliveNodeNum() < MAXPEERNODE {
-		log.Println("connecting...")
+		log.Println("node:",NodeId,"connecting...")
 		nid := 1
 		for range time.Tick(3 * time.Second) {
 			status := alivePeerMap[nid]
@@ -105,7 +106,6 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 	}
 	log.Println("完成同步啦...")
 	*this.aliveChain <- true
-	sc.Done()
 }
 
 //tell the main thread the peers are already
@@ -131,9 +131,10 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 //}
 
 func (this *GrpcPeerManager) GetAllPeers() []*peer.Peer {
-	peerPool := peerPool.NewPeerPool(false)
+	peerPool := peerPool.NewPeerPool(false,false)
 	return peerPool.GetPeers()
 }
+
 
 func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 	localNodeAddr := node.GetNodeAddr()

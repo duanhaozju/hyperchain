@@ -2,7 +2,7 @@ package crypto
 
 import (
 	"fmt"
-	"hyperchain-alpha/common"
+	"hyperchain/common"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"github.com/syndtr/goleveldb/leveldb/errors"
@@ -11,8 +11,8 @@ import (
 	"encoding/hex"
 	"io/ioutil"
 	"crypto/elliptic"
-	"hyperchain-alpha/crypto/sha3"
-	"hyperchain-alpha/crypto/secp256k1"
+	"hyperchain/crypto/sha3"
+	"hyperchain/crypto/secp256k1"
 )
 
 type EcdsaEncrypto struct{
@@ -102,7 +102,26 @@ func (ee *EcdsaEncrypto)SaveECDSA(file string, key *ecdsa.PrivateKey) error {
 	k := hex.EncodeToString(ee.FromECDSA(key))
 	return ioutil.WriteFile(file, []byte(k), 0600)
 }
+//SaveNodeInfo saves the info of node into local file
+//ip addr and pri
+func (ee *EcdsaEncrypto)SaveNodeInfo(file string, ip string ,addr common.Address, pri *ecdsa.PrivateKey) error {
+	prikey := hex.EncodeToString(ee.FromECDSA(pri))
+	content := ip +" "+addr.Hex()+" "+prikey+" \n"
 
+	f, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_RDWR,0600)
+	if err != nil {
+		return err
+	}
+	n, err := f.Write([]byte(content))
+	if err == nil && n < len([]byte(content)) {
+		err = io.ErrShortWrite
+	}
+	if err1 := f.Close(); err == nil {
+		err = err1
+	}
+	return err
+
+}
 func (ee *EcdsaEncrypto)PubkeyToAddress(p ecdsa.PublicKey) common.Address {
 	pubBytes := ee.FromECDSAPub(&p)
 	return common.BytesToAddress(ee.Keccak256(pubBytes[1:])[12:])

@@ -2,8 +2,8 @@ package crypto
 
 import (
 	"encoding/json"
-	"hyperchain-alpha/common"
-	"hyperchain-alpha/crypto/sha3"
+	"hyperchain/common"
+	"hyperchain/crypto/sha3"
 
 )
 

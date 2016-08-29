@@ -9,8 +9,9 @@ package peerComm
 import (
 	"log"
 	"testing"
-
 	"github.com/stretchr/testify/assert"
+	"os"
+	"path"
 )
 
 func TestGetIpLocalIpAddr(t *testing.T) {
@@ -22,8 +23,10 @@ func TestGetIpLocalIpAddr(t *testing.T) {
 }
 
 func TestGetConfig(t *testing.T) {
-	configs := GetConfig("/home/chenquan/Workspace/IdeaProjects/hyperchain-go/src/hyperchain-alpha/p2p/peerconfig.json")
-	log.Println(configs["port"])
-	log.Println(configs["seednode"])
-
+	filepath,_ := os.Getwd()
+	filepath = path.Join(filepath,"../peerconfig.json")
+	log.Println(filepath)
+	configs := GetConfig(filepath)
+	log.Println(configs["port1"])
+	log.Println(configs["node1"])
 }

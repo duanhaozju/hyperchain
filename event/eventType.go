@@ -4,22 +4,17 @@
 // last modified:2016-08-25
 package event
 
-import (
 
-
-	"hyperchain-alpha/core/types"
-
-)
 
 //consensus event incoming from outer,peers post
 type ConsensusEvent struct{Payload []byte }
 
-// send consensus event to outer peers
+// send consensus event to outer peers for consensus module
 type BroadcastConsensusEvent struct{ Payload []byte }
 
 
 
-//receive new block event from node consensus event
+//receive new block event from node consensus event for consensus module
 type NewBlockEvent struct{ Payload []byte  }
 
 //general tx local

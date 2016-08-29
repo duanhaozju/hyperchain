@@ -13,7 +13,7 @@ import (
 
 func TestNewChatClient(t *testing.T) {
 	//start the server
-	server := node.NewNode(8002)
+	server := node.NewNode(8002,true)
 	/*go func() {
 		for now := range time.Tick(3 * time.Second) {
 			fmt.Println(now)
