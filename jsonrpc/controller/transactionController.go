@@ -7,11 +7,6 @@ import (
 	"hyperchain/jsonrpc/hyperchain"
 )
 
-type ResData struct{
-	Data interface{}
-	Code int
-}
-
 // 处理请求 : POST "/trans"
 func TransactionCreate(w http.ResponseWriter, r *http.Request) {
 
