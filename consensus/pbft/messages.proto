@@ -4,8 +4,6 @@ Copyright Hyperchain Corp. 2016 All Rights Reserved.
 
 syntax = "proto3";
 
-import "google/protobuf/timestamp.proto";
-
 package pbft;
 
 /*
@@ -37,7 +35,7 @@ message message {
 }
 
 message request {
-    google.protobuf.Timestamp timestamp = 1;  // Generated at the client level. Ensures that client's requests are atomically ordered.
+    int64 timestamp = 1;  // Generated at the client level. Ensures that client's requests are atomically ordered.
     bytes payload = 2;  // opaque payload
     uint64 replica_id = 3;
     bytes signature = 4;

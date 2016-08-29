@@ -9,10 +9,11 @@ package peerEventHandler
 import (
 	"hyperchain/p2p/peermessage"
 	"log"
+	"hyperchain/p2p/peerEventManager"
 )
 
 type KeepAliveHandler struct{
-
+	eventManager *peerEventManager.PeerEventManager
 }
 // keep live message only peer can send so should send a response message to peer
 
@@ -22,6 +23,6 @@ func (this *KeepAliveHandler)ProcessEvent(msg *peermessage.Message)error{
 	return nil
 }
 
-func NewKeepAliveHandler()*HelloHandler{
-	return &HelloHandler{}
+func NewKeepAliveHandler(eventManager *peerEventManager.PeerEventManager)*HelloHandler{
+	return &HelloHandler{eventManager:eventManager}
 }

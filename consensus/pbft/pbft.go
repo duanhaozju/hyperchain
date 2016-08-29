@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"hyperchain-alpha/consensus"
-	"hyperchain-alpha/consensus/helper"
+	"hyperchain/consensus"
+	"hyperchain/consensus/helper"
 	"github.com/spf13/viper"
 )
 
@@ -21,7 +21,7 @@ func init() {
 
 // GetPlugin returns the handle to the Consenter singleton
 
-func GetPlugin(id uint64, h helper.Stack) consensus.Consenter {
+func GetPlugin(id uint64, h *helper.Stack) consensus.Consenter {
 	if pluginInstance == nil {
 		pluginInstance = New(id, h)
 	}

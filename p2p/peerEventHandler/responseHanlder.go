@@ -9,9 +9,11 @@ package peerEventHandler
 import (
 	"hyperchain/p2p/peermessage"
 	"log"
+	"hyperchain/p2p/peerEventManager"
 )
 
 type ResponseHandler struct{
+	eventManager *peerEventManager.PeerEventManager
 
 }
 
@@ -20,9 +22,10 @@ type ResponseHandler struct{
 
 func (this *ResponseHandler)ProcessEvent(msg *peermessage.Message)error{
 	log.Println(msg.MessageType)
+	log.Println(string(msg.Payload))
 	return nil
 }
 
-func NewResponseHandler()*ResponseHandler{
-	return &ResponseHandler{}
+func NewResponseHandler(eventManager *peerEventManager.PeerEventManager)*ResponseHandler{
+	return &ResponseHandler{eventManager:eventManager}
 }
