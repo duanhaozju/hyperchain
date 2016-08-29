@@ -1,4 +1,4 @@
-package jsonrpc
+package controller
 
 import (
 	"hyperchain/core/types"
@@ -39,7 +39,7 @@ func SendTransaction(args TxArgs) bool {
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
 
 	// 判断交易余额是否足够
-	if (tx.VerifyBalance()) {
+	if (verifyBalance(tx)) {
 		// 余额足够
 		// 抛 NewTxEvent 事件
 		 eventmux:=new(event.TypeMux)
@@ -51,6 +51,30 @@ func SendTransaction(args TxArgs) bool {
 		// 余额不足
 		return false
 	}
+}
+
+// verifyBalance is to verify balance of the tranaction
+// If the balance is not enough, returns false
+func verifyBalance(tx *Transaction) bool{
+	var balance big.Int
+	var value big.Int
+
+	balanceIns, err := core.GetBalanceIns()
+
+	if err != nil {
+		log.Fatalf("GetBalanceIns error, %v", err)
+	}
+
+	bal := balanceIns.GetCacheBalance(common.BytesToAddress(tx.From))
+
+	balance.SetString(string(bal), 10)
+	value.SetString(string(tx.Value), 10)
+
+	if value.Cmp(balance) == 1 {
+		return false
+	}
+
+	return true
 }
 
 // GetAllTransactions return all transactions in the chain/db
