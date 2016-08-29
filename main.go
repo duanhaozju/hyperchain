@@ -15,6 +15,8 @@ import (
 	"hyperchain/consensus"
 	"hyperchain/jsonrpc"
 	"hyperchain/core"
+	"hyperchain/common"
+	"hyperchain/crypto"
 )
 
 type argT struct {
@@ -22,6 +24,8 @@ type argT struct {
 	NodePath string
 	IsFirst bool
 	ConsensusNum int
+	from common.Hash
+	to common.Hash
 	PeerIp string `cli:"i,peerip" usage:"对端节点地址" dft:""`
 	PeerPort int  `cli:"p,peerport" usage:"对端节点监听端口" dft:"0"`
 	LocalPort int `cli:"o,hostport" usage:"本地RPC监听端口" dft:"8001"`
@@ -49,10 +53,19 @@ func main(){
 		cs:=consensus.NewConsenter(argv.ConsensusNum)
 
 		// init http server for web call
-		jsonrpc.StartHttp(argv.LocalPort)
+		jsonrpc.StartHttp(argv.LocalPort,argv.from,argv.to)
 
 
-		manager.New(grpcPeerMgr,cs,fetcher,argv.NodePath,argv.IsFirst)
+		//init encryption object
+		encryption :=crypto.NewEcdsaEncrypto("ecdsa")
+
+
+		//init hash object
+		kec256Hash:=crypto.NewKeccak256Hash("keccak256")
+
+
+		//init manager
+		manager.New(grpcPeerMgr,cs,fetcher,encryption,kec256Hash,argv.NodePath,argv.IsFirst)
 
 
 

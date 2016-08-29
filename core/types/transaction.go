@@ -8,13 +8,19 @@ import (
 	"log"
 )
 
-func (tx *Transaction)Hash() common.Hash {
-	this := *tx
-
-	s256 := crypto.NewKeccak256Hash("Keccak256")
-
-	return s256.Hash(this)
+func (self *Transaction)Hash(ch crypto.CommonHash) common.Hash {
+	return ch.Hash(self)
 }
+
+func (self *Transaction)SighHash(ch crypto.CommonHash) common.Hash {
+	return ch.Hash([]interface{}{
+		self.Value,
+		self.TimeStamp,
+		self.From,
+		self.To,
+	})
+}
+
 
 // NewTransaction returns a new transaction
 func NewTransaction(from []byte,to []byte,value []byte) *Transaction{
@@ -29,21 +35,6 @@ func NewTransaction(from []byte,to []byte,value []byte) *Transaction{
 	return transaction
 }
 
-// WriteSignature returns the transaction with signature
-func (tx *Transaction) WriteSignature(priv *ecdsa.PrivateKey) *Transaction{
-	ee := crypto.NewEcdsaEncrypto("ECDSAEncryto")
-
-	sig, err := ee.Sign(tx.Hash(), *priv)
-
-	if err != nil {
-		log.Fatalf("sign transaction error: %v",err)
-	}
-
-	tx.Signature = sig
-
-	return tx
-
-}
 
 // VerifyTransaction is to verify balance of the tranaction
 // If the balance is not enough, returns false
