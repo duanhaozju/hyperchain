@@ -7,10 +7,10 @@ import (
 	"hyperchain/jsonrpc/hyperchain"
 )
 
-type ResData struct{
+/*type ResData struct{
 	Data interface{}
 	Code int
-}
+}*/
 
 type data struct{
 	Trans []hyperchain.Transaction

@@ -15,12 +15,13 @@ import (
 
 
 	"hyperchain/event"
+	"hyperchain/jsonrpc"
 )
 
 type argT struct {
 	cli.Helper
 	//NodePath string `cli:"o,hostport" usage:"本地RPC监听端口" dft:"8001"`
-	NodeId int `cli:"o,nodeid" usage:"本地RPC监听端口" dft:"8001"`
+	NodeId int `cli:"o,nodeId" usage:"本地RPC监听端口" dft:"8001"`
 
 	LocalPort int `cli:"l,LocalPort" usage:"本地RPC监听端口" dft:"8001"`
 	//HttpServerPORT int `cli:"s,httpport" usage:"启动本地http服务的端口，默认值为8003" dft:"8003"`
@@ -52,7 +53,7 @@ func main(){
 		//cs:=controller.NewConsenter(argv.ConsensusNum)
 
 		// init http server for web call
-		//jsonrpc.StartHttp(argv.LocalPort)
+		jsonrpc.StartHttp(argv.LocalPort)
 
 
 		//init encryption object
