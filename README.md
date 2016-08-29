@@ -1,17 +1,18 @@
-# hyperChain Aplha
+# hyperChain Alpha
 
 HyperChain 原型实现 
 
 内部迭代版本: alpha 0.1
 change log:
 - alpha 0.1 完成了基本的节点连接数据同步和节点信息同步　2016/08/17 
-- alpha 0.2 TODO
+- alpha 0.2 
 Todo List:
 - [x] 加入block/chain结构
 - [x] 加入`getBalance`功能
 - [x] 加入节点和账户地址
 - [ ] 加入`merktree`
 - [x] 加入`checktransaction` 交易校验
+- alpha 0.3 Doing
 
 ##项目设置
 **go path**
