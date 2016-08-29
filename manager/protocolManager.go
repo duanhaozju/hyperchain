@@ -18,17 +18,15 @@ import (
 	"hyperchain/crypto"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"
+	"fmt"
 )
 
 type ProtocolManager struct {
-
 	fetcher      *core.Fetcher
 	peerManager  p2p.PeerManager
 	consenter    consensus.Consenter
-	encryption  crypto.Encryption
-	commonHash crypto.CommonHash
-
-
+	encryption   crypto.Encryption
+	commonHash   crypto.CommonHash
 
 	noMorePeers  chan struct{}
 	eventMux     *event.TypeMux
@@ -41,7 +39,7 @@ type ProtocolManager struct {
 }
 
 func NewProtocolManager(peerManager p2p.PeerManager, fetcher *core.Fetcher, consenter consensus.Consenter,
-encryption crypto.Encryption,commonHash crypto.CommonHash) (*ProtocolManager) {
+encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 
 	eventMux := new(event.TypeMux)
 	manager := &ProtocolManager{
@@ -101,13 +99,20 @@ func (self *ProtocolManager) ConsensusLoop() {
 		case event.NewTxEvent:
 			//call consensus module
 			//Todo
-			var transaction types.Transaction
-			proto.Unmarshal(ev.Payload,&transaction)
+			var transaction *types.Transaction
+			proto.Unmarshal(ev.Payload, &transaction)
 
+			self.encryption.GetKey()
 
+			sign, err := self.encryption.Sign(transaction.SighHash(
+				self.commonHash), self.encryption.GetKey())
+			if err != nil {
+				fmt.Print(err)
+			}
+			transaction.Signature = sign
+			proto.Marshal(transaction)
 
-
-			self.consenter.RecvMsg(ev.Payload)
+			self.consenter.RecvMsg(transaction)
 
 		case event.ConsensusEvent:
 			//call consensus module

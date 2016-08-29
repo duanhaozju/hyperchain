@@ -13,6 +13,8 @@ type Encryption interface {
 	UnSign(args ...interface{})([]common.Address, error)
 	//general private key and save into file
 	GeneralKey() interface{}
+	GetKey()interface{}
+
 }
 
 

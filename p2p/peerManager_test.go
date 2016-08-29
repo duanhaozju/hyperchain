@@ -10,6 +10,18 @@ import (
 	"testing"
 	"log"
 )
+//
+//func TestGrpcPeerManager_GetClientId(t *testing.T) {
+//	path := "/home/chenquan/Workspace/IdeaProjects/hyperchain-go/src/hyperchain/p2p/peerconfig.json"
+//	TODO CANNOT TEST Very Easy -_-!!
+//	grpcPeerMgr := new(GrpcPeerManager)
+//	aliveChan := make(chan bool)
+//	go grpcPeerMgr.Start(path,1, aliveChan,true)
+//
+//	<- aliveChan
+//
+//
+//}
 
 func TestGrpcPeerManager_Start(t *testing.T){
 

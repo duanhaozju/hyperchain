@@ -8,6 +8,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/crypto/secp256k1"
 	"sync/atomic"
+	"github.com/golang/protobuf/proto"
 )
 type Transaction struct {
 	data txdata
@@ -62,6 +63,7 @@ func TestSigntx(t *testing.T)  {
 		t.Error(err)
 		t.FailNow()
 	}
+
 
 	fmt.Println(from)
 	fmt.Println(addr)
