@@ -2,7 +2,6 @@ package crypto
 
 import (
 	"testing"
-	"hyperchain/common"
 	"math/big"
 	"fmt"
 )
@@ -23,7 +22,7 @@ func NewBlock(txs []*Transaction, ParentHash string) *Block {
 }
 
 func TestHash(t *testing.T) {
-	tx := NewTransaction(common.Address{},big.NewInt(2))
+	tx := NewTransaction([]byte{},big.NewInt(2))
 	txs := make([]*Transaction,1)
 	txs[0] = tx
 	block := NewBlock(txs,"parenthash")

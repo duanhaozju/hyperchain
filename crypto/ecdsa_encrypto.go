@@ -13,8 +13,11 @@ import (
 	"crypto/elliptic"
 	"hyperchain/crypto/sha3"
 	"hyperchain/crypto/secp256k1"
+	"path/filepath"
 )
 
+//const keystoredir  = "/home/huhu/go/src/hyperchain/keystore/"
+//
 type EcdsaEncrypto struct{
 	name string
 }
@@ -41,25 +44,46 @@ func (ee *EcdsaEncrypto)Sign(hash []byte,  prv interface{})(sig []byte, err erro
 	return
 }
 
-//UnSign recovers commom.Address from txhash and signature
-func (ee *EcdsaEncrypto)UnSign(args ...interface{})(common.Address, error)  {
+//UnSign recovers Address from txhash and signature
+func (ee *EcdsaEncrypto)UnSign(args ...interface{})([]byte, error)  {
 	if len(args)!=2{
 		err :=errors.New("paramas invalid")
-		return common.Address{},err
+		return nil,err
 	}
 	hash := args[0].([]byte)
 	sig := args[1].([]byte)
 	pubBytes,err := secp256k1.RecoverPubkey(hash, sig)
 	if err!=nil{
-		return common.Address{},err
+		return nil,err
 	}
-	var addr common.Address
-	copy(addr[:],ee.Keccak256(pubBytes[1:])[12:])
+	addr := ee.Keccak256(pubBytes[1:])[12:]
 	return addr,nil
+}
+func (ee *EcdsaEncrypto)GeneralKey(port string)(*ecdsa.PrivateKey,error) {
+	key,err := ee.GenerateKey()
+	if err!=nil{
+		return nil,err
+	}
+	k := hex.EncodeToString(ee.FromECDSA(key))
+	abspath,_ := os.Getwd()
+	current := filepath.Base(abspath)
+	file := abspath[0:len(abspath)-len(current)]+"keystore/"+port
+	if err:=ioutil.WriteFile(file, []byte(k), 0600);err!=nil{
+		return key,err
+	}
+	return key,nil
+
+}
+//load key by given port
+func (ee *EcdsaEncrypto)GetKey(port string) (*ecdsa.PrivateKey,error) {
+	abspath,_ := os.Getwd()
+	current := filepath.Base(abspath)
+	file := abspath[0:len(abspath)-len(current)]+"keystore/"+port
+	return ee.LoadECDSA(file)
 }
 
 // LoadECDSA loads a secp256k1 private key from the given file.
-// The key data is expected to be hex-encoded.
+// key data is expected to be hex-encoded.
 func (ee *EcdsaEncrypto)LoadECDSA(file string) (*ecdsa.PrivateKey, error) {
 	buf := make([]byte, 64)
 	fd, err := os.Open(file)
@@ -105,9 +129,9 @@ func (ee *EcdsaEncrypto)SaveECDSA(file string, key *ecdsa.PrivateKey) error {
 }
 //SaveNodeInfo saves the info of node into local file
 //ip addr and pri
-func (ee *EcdsaEncrypto)SaveNodeInfo(file string, ip string ,addr common.Address, pri *ecdsa.PrivateKey) error {
+func (ee *EcdsaEncrypto)SaveNodeInfo(file string, ip string ,addr []byte, pri *ecdsa.PrivateKey) error {
 	prikey := hex.EncodeToString(ee.FromECDSA(pri))
-	content := ip +" "+addr.Hex()+" "+prikey+" \n"
+	content := ip +" "+string(addr)+" "+prikey+" \n"
 
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_RDWR,0600)
 	if err != nil {
