@@ -72,10 +72,10 @@
             </thead>
             <tbody>
             {{with .Balances}}
-            {{range .}}
+            {{range $key,$value := .}}
             <tr>
-                <td>{{.AccountPublicKeyHash}}</td>
-                <td>{{.Value}}</td>
+                <td>{{$key}}</td>
+                <td>{{$value}</td>
             </tr>
             {{end}}
             {{end}}

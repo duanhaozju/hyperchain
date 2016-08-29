@@ -15,7 +15,7 @@ type ResData struct{
 
 type data struct{
 	Trans []jsonrpc.Transaction
-	Balances core.BalanceMap
+	Balances jsonrpc.Balance
 }
 
 // 处理请求 : GET "/"
