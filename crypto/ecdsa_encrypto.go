@@ -41,20 +41,19 @@ func (ee *EcdsaEncrypto)Sign(hash []byte,  prv interface{})(sig []byte, err erro
 	return
 }
 
-//UnSign recovers commom.Address from txhash and signature
-func (ee *EcdsaEncrypto)UnSign(args ...interface{})(common.Address, error)  {
+//UnSign recovers Address from txhash and signature
+func (ee *EcdsaEncrypto)UnSign(args ...interface{})([]byte, error)  {
 	if len(args)!=2{
 		err :=errors.New("paramas invalid")
-		return common.Address{},err
+		return nil,err
 	}
 	hash := args[0].([]byte)
 	sig := args[1].([]byte)
 	pubBytes,err := secp256k1.RecoverPubkey(hash, sig)
 	if err!=nil{
-		return common.Address{},err
+		return nil,err
 	}
-	var addr common.Address
-	copy(addr[:],ee.Keccak256(pubBytes[1:])[12:])
+	addr := ee.Keccak256(pubBytes[1:])[12:]
 	return addr,nil
 }
 
@@ -105,9 +104,9 @@ func (ee *EcdsaEncrypto)SaveECDSA(file string, key *ecdsa.PrivateKey) error {
 }
 //SaveNodeInfo saves the info of node into local file
 //ip addr and pri
-func (ee *EcdsaEncrypto)SaveNodeInfo(file string, ip string ,addr common.Address, pri *ecdsa.PrivateKey) error {
+func (ee *EcdsaEncrypto)SaveNodeInfo(file string, ip string ,addr []byte, pri *ecdsa.PrivateKey) error {
 	prikey := hex.EncodeToString(ee.FromECDSA(pri))
-	content := ip +" "+addr.Hex()+" "+prikey+" \n"
+	content := ip +" "+string(addr)+" "+prikey+" \n"
 
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_RDWR,0600)
 	if err != nil {
