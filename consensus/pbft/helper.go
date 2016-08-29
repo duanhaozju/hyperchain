@@ -9,7 +9,12 @@ import (
 
 func qMsgHelper(prePrepare *PrePrepare, id uint64) *pb.Message {
 	timestamp := time.Now().Unix()
-	msg := &Message{Payload: &Message_PrePrepare{PrePrepare: prePrepare}}
+	msg := BatchMessage_PbftMessage{
+			PbftMessage:&Message{
+				Payload:&Message_PrePrepare{PrePrepare: prePrepare},
+			},
+		}
+
 	payload, err := proto.Marshal(msg)
 	if err != nil {
 		logger.Errorf("qMsg marshal error")
@@ -25,26 +30,25 @@ func qMsgHelper(prePrepare *PrePrepare, id uint64) *pb.Message {
 }
 
 
-func pMsgHelper(prepare *Prepare, id uint64) *pb.Message {
-	timestamp := time.Now().Unix()
-	msg := &Message{Payload: &Message_Prepare{Prepare: prepare}}
+func pMsgHelper(prepare *Prepare, id uint64) *Message {
+	msg := &Message{Payload:&Message_Prepare{Prepare: prepare}}
+
 	payload, err := proto.Marshal(msg)
 	if err != nil {
 		logger.Errorf("pMsg marshal error")
 		return nil
 	}
-	pMsg := &pb.Message{
-		Type:		pb.Message_CONSENSUS,
-		Timestamp: 	timestamp,
-		Payload:	payload,
-		Id:		id,
-	}
+
 	return pMsg
 }
 
 func cMsgHelper(commit *Commit, id uint64) *pb.Message {
 	timestamp := time.Now().Unix()
-	msg := &Message{Payload: &Message_Commit{Commit: commit}}
+	msg := BatchMessage_PbftMessage{
+		PbftMessage:&Message{
+			Payload:&Message_Commit{Commit: commit},
+		},
+	}
 	payload, err := proto.Marshal(msg)
 	if err != nil {
 		logger.Errorf("cMsg marshal error")
