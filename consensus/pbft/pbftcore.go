@@ -6,6 +6,7 @@ import (
 
 	"hyperchain/consensus/helper"
 	"hyperchain/consensus/events"
+	pb "hyperchain/protos"
 
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
@@ -68,6 +69,7 @@ type pbftCore struct {
 	nullRequestTimeout time.Duration // duration for this timeout
 						       // implementation of PBFT `in`
 	reqBatchStore   map[string]*RequestBatch // track request batches
+	currentReqBatch *pb.ExeMessage
 	certStore       map[msgID]*msgCert       // track quorum certificates for requests
 }
 
@@ -576,7 +578,7 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 
 	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
-		reqBatch := instance.reqBatchStore[commit.BatchDigest]
+		reqBatch := instance.currentReqBatch
 		instance.helper.Execute(reqBatch)
 	}
 

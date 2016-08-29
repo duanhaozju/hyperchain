@@ -3,13 +3,13 @@ package pbft
 import (
 	"time"
 	"fmt"
-	"hyperchain-alpha/consensus/helper"
+	"hyperchain/consensus/helper"
 
-	"hyperchain-alpha/consensus/events"
+	"hyperchain/consensus/events"
 	pb "github.com/hyperledger/fabric/protos"
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
-	"hyperchain-alpha/protos"
+	"hyperchain/protos"
 )
 
 type batch struct {
@@ -38,8 +38,6 @@ type batchMessage struct {
 	msg    *pb.Message
 	sender uint64
 }
-
-const configPrefix = "CORE_PBFT"
 
 
 func (b *batch) ProcessEvent(e events.Event) events.Event{
@@ -138,7 +136,7 @@ func (op *batch) startBatchTimer() {
 	logger.Debugf("Replica %d started the batch timer", op.pbft.id)
 	op.batchTimerActive = true
 }
-func (b *batch) RecvMsg(e events.Event){
+func (b *batch) RecvMsg(e events.Event) error {
 	fmt.Println("RecvMsg")
 	switch e.(type) {
 	case protos.Message:
