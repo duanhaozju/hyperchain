@@ -26,7 +26,7 @@ func TestHash(t *testing.T) {
 		Signature:	b,
 	}
 
-	reqBatch := []*Request{req1, req2}
+	reqBatch := &RequestBatch{Batch: []*Request{req1, req2}}
 
 	hashReq := hash(req1)
 	hashReqBatch := hash(reqBatch)

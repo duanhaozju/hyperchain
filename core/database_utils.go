@@ -6,21 +6,20 @@ package core
 
 import (
 	"hyperchain/hyperdb"
-	"log"
 	"os"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"
 	"sync"
 	"strconv"
-
-	"hyperchain/common"
+	"encoding/json"
 )
 
 var (
 	transactionPrefix   = []byte("transaction-")
 	blockPrefix    = []byte("block-")
 	chainKey            = []byte("chain-key")
+	balanceKey = []byte("balance-key")
 	bodySuffix   = []byte("-body")
 	txMetaSuffix        = []byte{0x01}
 )
@@ -33,7 +32,6 @@ func InitDB(port int) {
 	/*log.Println("删除现有本地数据库数据...")
 	utils.RemoveContents(lDBPath)
 	log.Println("初始化本地数据库...")*/
-	memBalanceMap = newMemBalance()
 	memChainMap = newMemChain()
 	memTxPoolMap = newMemTxPool()
 }
@@ -54,15 +52,11 @@ func getLDBConnection()(*leveldb.DB,error){
 	return db, err
 }
 
-func GetDBPath() string {
-	return "1"
-}
-
 //-- ------------------ ldb end ----------------------
 
 //-- ------------------- Transaction ---------------------------------
-func PutTransaction(db hyperdb.Database, key []byte, t *types.Transaction) error {
-	data, err := proto.Marshal(t)
+func PutTransaction(db hyperdb.Database, key []byte, t types.Transaction) error {
+	data, err := proto.Marshal(&t)
 	if err != nil {
 		return err
 	}
@@ -90,12 +84,29 @@ func DeleteTransaction(db hyperdb.Database, key []byte) error {
 	return db.Delete(keyFact)
 }
 
+func GetAllTransaction(db *hyperdb.LDBDatabase) ([]types.Transaction, error) {
+	var ts []types.Transaction
+	iter := db.NewIterator()
+	for iter.Next() {
+		key := iter.Key()
+		if len(string(key)) >= len(transactionPrefix) && string(key[:len(transactionPrefix)]) == string(transactionPrefix) {
+			var t types.Transaction
+			value := iter.Value()
+			//err = decondeFromBytes(value, &t)
+			proto.Unmarshal(value, &t)
+			ts = append(ts, t)
+		}
+	}
+	iter.Release()
+	err := iter.Error()
+	return ts, err
+}
 //-- --------------------- Transaction END -----------------------------------
 
 
 //-- ------------------- Block ---------------------------------
-func PutBlock(db hyperdb.Database, key []byte, t *types.Block) error {
-	data, err := proto.Marshal(t)
+func PutBlock(db hyperdb.Database, key []byte, t types.Block) error {
+	data, err := proto.Marshal(&t)
 	if err != nil {
 		return err
 	}
@@ -125,6 +136,28 @@ func DeleteBlock(db hyperdb.Database, key []byte) error {
 
 //-- --------------------- Block END ----------------------------------
 
+//-- --------------------- BalanceMap ------------------------------------
+func PutDBBalance(db hyperdb.Database, balance_db BalanceMap) error {
+	data, err := json.Marshal(balance_db)
+	if err != nil {
+		return err
+	}
+	return db.Put(balanceKey, data)
+}
+
+func GetDBBalance(db hyperdb.Database) (BalanceMap, error) {
+	var b BalanceMap
+	data, err := db.Get(balanceKey)
+	if err != nil {
+		return b, err
+	}
+	if err = json.Unmarshal(data, &b); err != nil {
+		return b, err
+	}
+	return b, nil
+}
+//-- --------------------- BalanceMap END---------------------------------
+
 //-- ------------------- Chain ----------------------------------------
 
 type memChain struct {
@@ -142,18 +175,18 @@ func newMemChain() *memChain {
 var memChainMap *memChain;
 
 //-- 获取最新的blockhash
-func GetLatestBlockHash() []byte {
+func GetLatestBlockHash() string {
 	memChainMap.lock.RLock()
 	defer memChainMap.lock.RUnlock()
-	return memChainMap.data.LatestBlockHash
+	return string(memChainMap.data.LatestBlockHash)
 }
 
 //-- 更新Chain，即更新最新的blockhash 并将height加1
 //-- blockHash为最新区块的hash
-func UpdateChain(blockHash []byte)  {
+func UpdateChain(blockHash string)  {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
-	memChainMap.data.LatestBlockHash = blockHash
+	memChainMap.data.LatestBlockHash = []byte(blockHash)
 	memChainMap.data.Height += 1
 }
 
@@ -174,8 +207,8 @@ func GetChain() *types.Chain {
 	}
 }
 
-func putChain(db hyperdb.Database, t *types.Chain) error {
-	data, err := proto.Marshal(t)
+func putChain(db hyperdb.Database, t types.Chain) error {
+	data, err := proto.Marshal(&t)
 	if err != nil {
 		return err
 	}
@@ -196,85 +229,6 @@ func getChain(db hyperdb.Database) (types.Chain, error){
 }
 //-- --------------------- Chain END ----------------------------------
 
-//-- --------------------- Balance ------------------------------------
-type memBalance struct {
-	data map[common.Address]types.Balance
-	lock sync.RWMutex
-}
-
-func newMemBalance() *memBalance {
-	return &memBalance{
-		data: make(map[common.Address]types.Balance),
-	}
-}
-
-var memBalanceMap *memBalance;
-
-//-- 将Balance存入内存
-func PutBalanceToMEM(t types.Balance){
-	memBalanceMap.lock.Lock()
-	defer memBalanceMap.lock.Unlock()
-	key := common.BytesToAddress(t.AccountPublicKeyHash)
-	memBalanceMap.data[key] = t
-}
-
-//-- 在MEM中 根据Key获取的Balance
-func GetBalanceFromMEM(accountPublicKeyHash common.Address) types.Balance{
-	memBalanceMap.lock.RLock()
-	defer memBalanceMap.lock.RUnlock()
-	return memBalanceMap.data[accountPublicKeyHash]
-}
-
-//-- 从MEM中删除Balance
-func DeleteBalanceFromMEM(accountPublicKeyHash common.Address) {
-	memBalanceMap.lock.Lock()
-	defer memBalanceMap.lock.Unlock()
-	delete(memBalanceMap.data, accountPublicKeyHash)
-}
-
-//-- 从MEM中获取所有Balance
-func GetAllBalanceFromMEM() ([]types.Balance) {
-	memBalanceMap.lock.RLock()
-	defer memBalanceMap.lock.RUnlock()
-	var ts []types.Balance
-	for _, m := range memBalanceMap.data {
-		ts = append(ts, m)
-	}
-	return ts
-}
-
-//-- 更新balance表 需要一个新的区块
-func UpdateBalance(block types.Block)  {
-	log.Println("更新余额表...")
-	memBalanceMap.lock.Lock()
-	defer memBalanceMap.lock.Unlock()
-	for _, trans := range block.Transactions {
-		//-- 将交易里的From(账户的publickey)余额减去value
-		//-- 如果余额表中没有这个From(实际上不可能，因为余额表中没有这个From，不可能会验证通过
-		//-- 但是上帝用户例外，因为上帝用户可能会出现负数)，则新建一个
-		//-- 如果余额表中有这个From，则覆盖publickey(覆盖的Publickey是一样的，实际上没改)
-		b := memBalanceMap.data[common.BytesToAddress(trans.From)]
-		//b.Value -= trans.Value
-		b.AccountPublicKeyHash = trans.From
-		memBalanceMap.data[common.BytesToAddress(trans.From)] = b
-		//-- 将交易中的To(账户中的publickey)余额加上value
-		//-- 如果余额表中没有这个To(就是所有publickey不含有To)
-		//-- 新建一个balance，将交易的value直接赋给balance.value
-		//-- 如果余额表中有这个To,则直接加上交易中的value
-		if _, ok := memBalanceMap.data[common.BytesToAddress(trans.To)]; ok {
-			b = memBalanceMap.data[common.BytesToAddress(trans.To)]
-			//b.Value += trans.Value
-			memBalanceMap.data[common.BytesToAddress(trans.To)] = b
-		}else {
-			b = types.Balance{
-				AccountPublicKeyHash: trans.To,
-				//Value: trans.Value,
-			}
-			memBalanceMap.data[common.BytesToAddress(trans.To)] = b
-		}
-	}
-}
-//-- --------------------- Balance END --------------------------------
 
 //-- --------------------- TxPool -------------------------------------
 type memTxPool struct {

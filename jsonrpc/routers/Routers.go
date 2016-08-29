@@ -15,28 +15,16 @@ type Route struct {
 type Routes []Route
 
 var routes = Routes{
-	/*Route{
+	Route{
 		"Index",
 		"GET",
 		"/",
 		controller.Index,
 	},
 	Route{
-		"TransactionIndex",
-		"GET",
-		"/trans",
-		controller.TransactionIndex,
-	},*/
-	Route{
-		"TransactionShow",
-		"GET",
-		"/trans/{transId}",
-		controller.TransacionShow,
-	},
-	/*Route{
 		"TransactionCreate",
 		"POST",
 		"/trans",
 		controller.TransactionCreate,
-	},*/
+	},
 }
