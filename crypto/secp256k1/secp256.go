@@ -42,7 +42,7 @@ import (
 	"math/big"
 	"unsafe"
 
-
+	"hyperchain/crypto/randentropy"
 )
 
 //#define USE_FIELD_5X64

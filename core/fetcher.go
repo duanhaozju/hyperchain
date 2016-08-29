@@ -8,12 +8,14 @@ import (
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"hyperchain/core/types"
 	"errors"
+
+	"hyperchain/common"
 )
 
 type Fetcher struct {
 	queues map[string]int          // Per peer block counts to prevent memory exhaustion
 
-	queued map[[]byte]*inject // Set of already queued blocks (to dedup imports)
+	queued map[common.Hash]*inject // Set of already queued blocks (to dedup imports)
 
 	inject chan *inject
 	queue  *prque.Prque
@@ -38,7 +40,7 @@ func NewFetcher() *Fetcher {
 
 		queue:          prque.New(),
 		queues:         make(map[string]int),
-		queued:         make(map[[]byte]*inject),
+		queued:         make(map[common.Hash]*inject),
 
 	}
 }
@@ -90,13 +92,13 @@ func (f *Fetcher) enqueue(block *types.Block) {
 	hash := block.BlockHash
 
 
-	if _, ok := f.queued[hash]; !ok {
+	if _, ok := f.queued[common.BytesToHash(hash)]; !ok {
 		op := &inject{
 
 			block:  block,
 		}
 
-		f.queued[hash] = op
+		f.queued[common.BytesToHash(hash)] = op
 		f.queue.Push(op, -float32(block.Number))
 
 	}

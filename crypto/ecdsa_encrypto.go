@@ -123,7 +123,7 @@ func (ee *EcdsaEncrypto)SaveNodeInfo(file string, ip string ,addr common.Address
 	return err
 
 }
-func (ee *EcdsaEncrypto)PubkeyToAddress(p ecdsa.PublicKey) []byte {
+func (ee *EcdsaEncrypto)PubkeyToAddress(p ecdsa.PublicKey) common.Address {
 	pubBytes := ee.FromECDSAPub(&p)
 	return common.BytesToAddress(ee.Keccak256(pubBytes[1:])[12:])
 }
