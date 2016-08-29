@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"hyperchain/jsonrpc/hyperchain"
 )
 
 type ResData struct{
@@ -19,7 +20,7 @@ func TransactionCreate(w http.ResponseWriter, r *http.Request) {
 	// 解析url传递的参数，对于POST则解析响应包的主体（request body）
 	r.ParseForm()
 
-	isSuccess := SendTransaction(TxArgs{
+	isSuccess := hyperchain.SendTransaction(hyperchain.TxArgs{
 		From: r.Form["from"][0],
 		To: r.Form["to"][0],
 		Value: r.Form["value"][0],

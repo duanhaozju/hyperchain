@@ -212,7 +212,7 @@ func (self *Balance)UpdateCacheBalance(trans *types.Transaction) {
 
 // VerifyTransaction is to verify balance of the tranaction
 // If the balance is not enough, returns false
-func VerifyBalance(tx types.Transaction) bool{
+func VerifyBalance(tx *types.Transaction) bool{
 	var balance big.Int
 	var value big.Int
 
