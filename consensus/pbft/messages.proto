@@ -128,6 +128,6 @@ message batch_message {
 
 // consensus metadata
 
-message metadata {
-    uint64 seqNo = 1;
-}
+//message metadata {
+//    uint64 seqNo = 1;
+//}

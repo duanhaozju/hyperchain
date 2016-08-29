@@ -3,6 +3,7 @@ package helper
 import (
 	"hyperchain/event"
 	pb "hyperchain/protos"
+
 	"github.com/golang/protobuf/proto"
 )
 type helper struct {
@@ -10,36 +11,35 @@ type helper struct {
 }
 
 type Stack interface {
-	InnerBroadcast(e *pb.Message) error
+	InnerBroadcast(msg *pb.Message) error
 	Execute(reqBatch *pb.ExeMessage) error
 }
 
-func (h *helper) InnerBroadcast(e *pb.Message) error{
-	tmpMsg,err:=proto.Marshal(e)
-	if err!=nil {
+func (h *helper) InnerBroadcast(msg *pb.Message) error{
+	tmpMsg, err := proto.Marshal(msg)
+	if err != nil {
 		return err
 	}
-	wrapMessage:=&event.BroadcastConsensusEvent{
-		Payload:tmpMsg,
+	broadcastEvent := &event.BroadcastConsensusEvent{
+		Payload: tmpMsg,
 	}
-	h.msgQ.Post(wrapMessage)
+	h.msgQ.Post(broadcastEvent)
 	return nil
 }
-
 
 func (h *helper) Execute(reqBatch *pb.ExeMessage) error{
 	tmpMsg,err:=proto.Marshal(reqBatch)
 	if err!=nil {
 		return err
 	}
-	wrapMessage:=&event.NewBlockEvent{
+	exeEvent:=&event.NewBlockEvent{
 		Payload:tmpMsg,
 	}
-	h.msgQ.Post(wrapMessage)
+	h.msgQ.Post(exeEvent)
 	return nil
 }
 
-func NewHelper(m *event.TypeMux) (*helper){
+func NewHelper(m *event.TypeMux) *helper {
 	h:=&helper{
 		msgQ:m,
 	}
