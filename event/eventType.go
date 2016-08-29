@@ -9,6 +9,8 @@ package event
 //consensus event incoming from outer,peers post
 type ConsensusEvent struct{Payload []byte }
 
+type AliveEvent struct{Payload bool}
+
 // send consensus event to outer peers for consensus module
 type BroadcastConsensusEvent struct{ Payload []byte }
 

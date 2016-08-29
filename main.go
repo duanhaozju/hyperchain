@@ -15,6 +15,7 @@ import (
 
 	"fmt"
 
+	"hyperchain/event"
 )
 
 type argT struct {
@@ -37,6 +38,8 @@ func main(){
 		/*init peer manager object,consensus object*/
 
 		argv := ctx.Argv().(*argT)
+
+		eventMux := new(event.TypeMux)
 
 		//init peer manager to start grpc server and client
 		grpcPeerMgr:=new(p2p.GrpcPeerManager)
@@ -68,13 +71,11 @@ func main(){
 		 nodePath:="./p2p/peerconfig.json"
 		//init db
 		core.InitDB(argv.LocalPort)
-		fmt.Print("2")
-		fmt.Print(nodePath)
-		fmt.Print(argv.NodeId)
 
 
 		//init manager
-		manager.New(grpcPeerMgr,nil,fetcher,encryption,kec256Hash,
+
+		manager.New(eventMux,grpcPeerMgr,nil,fetcher,encryption,kec256Hash,
 			nodePath,argv.NodeId)
 
 

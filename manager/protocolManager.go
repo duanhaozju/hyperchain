@@ -4,12 +4,9 @@
 // last modified:2016-08-25
 package manager
 
-
 import (
 	"hyperchain/event"
-
 	"hyperchain/p2p"
-
 	"hyperchain/core"
 	"hyperchain/consensus"
 	"hyperchain/crypto"
@@ -32,15 +29,16 @@ type ProtocolManager struct {
 	txSub        event.Subscription
 	newBlockSub  event.Subscription
 	consensusSub event.Subscription
+
+	aLiveSub     event.Subscription
 	quitSync     chan struct{}
 
 	wg           sync.WaitGroup
 }
 
-func NewProtocolManager(peerManager p2p.PeerManager, fetcher *core.Fetcher, consenter consensus.Consenter,
+func NewProtocolManager(peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
 encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 
-	eventMux := new(event.TypeMux)
 	manager := &ProtocolManager{
 		eventMux:    eventMux,
 		quitSync:    make(chan struct{}),
@@ -59,7 +57,7 @@ encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 // start listen new block msg and consensus msg
 func (pm *ProtocolManager) Start() {
 
-	fmt.Println("enenen111")
+	//commit block into local db
 
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
@@ -68,14 +66,12 @@ func (pm *ProtocolManager) Start() {
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
 
-	for i :=0;i<100;i+=1{
+	/*for i := 0; i < 100; i += 1 {
 		fmt.Println("enenen")
-		eventmux:=new(event.TypeMux)
+		eventmux := new(event.TypeMux)
 		eventmux.Post(event.BroadcastConsensusEvent{[]byte{0x00, 0x00, 0x03, 0xe8}})
 
-	}
-
-
+	}*/
 
 	pm.wg.Wait()
 
@@ -116,7 +112,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			proto.Unmarshal(ev.Payload, transaction)
 			//hash tx
 			h := transaction.SighHash(self.commonHash)
-			key,err:=self.encryption.GetKey()
+			key, err := self.encryption.GetKey()
 			if err != nil {
 				return
 			}
@@ -127,8 +123,8 @@ func (self *ProtocolManager) ConsensusLoop() {
 			}
 			transaction.Signature = sign
 			//encode tx
-			payLoad,err:=proto.Marshal(transaction)
-			if err!=nil{
+			payLoad, err := proto.Marshal(transaction)
+			if err != nil {
 				return
 			}
 
