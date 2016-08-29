@@ -26,15 +26,15 @@ const MAXCOUNT = 5
 var name2key = make(map[string]utils.KeyPair)
 
 // 生成一张私钥与公钥的映射表
-func initial() {
-	accounts,_ := utils.GetAccount()
-
-	for _,ac := range accounts{
-		for key,value := range ac{
-			name2key[key] = value
-		}
-	}
-}
+//func initial() {
+//	accounts,_ := utils.GetAccount()
+//
+//	for _,ac := range accounts{
+//		for key,value := range ac{
+//			name2key[key] = value
+//		}
+//	}
+//}
 
 // 参数是一个json对象
 func SendTransaction(args TxArgs) ResData {
@@ -42,14 +42,14 @@ func SendTransaction(args TxArgs) ResData {
 	var tx *types.Transaction
 
 	fmt.Println(args)
-	initial()
+	//initial()
 
-	pubFrom := name2key[args.From].PubKey
-	pubTo := name2key[args.To].PubKey
+	//pubFrom := name2key[args.From].PubKey
+	//pubTo := name2key[args.To].PubKey
 
 	// 将公钥转换为string类型
-	fromPubKey := encrypt.EncodePublicKey(&pubFrom)
-	toPubKey := encrypt.EncodePublicKey(&pubTo)
+	//fromPubKey := encrypt.EncodePublicKey(&pubFrom)
+	//toPubKey := encrypt.EncodePublicKey(&pubTo)
 
 	// 构造 transaction 实例
 	tx = types.NewTransaction(fromPubKey,toPubKey,args.Value)
