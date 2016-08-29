@@ -5,18 +5,19 @@
 package main
 import (
 	"log"
-
 	"github.com/mkideal/cli"
-
 	"hyperchain/p2p"
-
 	"hyperchain/manager"
-
-	"hyperchain/consensus"
 	"hyperchain/jsonrpc"
 	"hyperchain/core"
 	"hyperchain/common"
 	"hyperchain/crypto"
+	"hyperchain/consensus/controller"
+	"encoding/json"
+	"hyperchain/core/types"
+	"io/ioutil"
+	"fmt"
+
 )
 
 type argT struct {
@@ -50,10 +51,10 @@ func main(){
 
 
 		//init pbft consensus
-		cs:=consensus.NewConsenter(argv.ConsensusNum)
+		cs:=controller.NewConsenter(argv.ConsensusNum)
 
 		// init http server for web call
-		jsonrpc.StartHttp(argv.LocalPort,argv.from,argv.to)
+		jsonrpc.StartHttp(argv.LocalPort)
 
 
 		//init encryption object
@@ -65,7 +66,8 @@ func main(){
 
 
 		//init manager
-		manager.New(grpcPeerMgr,cs,fetcher,encryption,kec256Hash,argv.NodePath,argv.IsFirst)
+		manager.New(grpcPeerMgr,cs,fetcher,encryption,kec256Hash,
+			argv.NodePath,argv.IsFirst)
 
 
 
@@ -84,7 +86,7 @@ func main(){
 		log.Printf("本机ip地址为："+localIp+ "\n")*/
 
 		//初始化数据库,传入数据库地址自动生成数据库文件
-		//core.InitDB(argv.LocalPort)
+		core.InitDB(argv.LocalPort)
 
 		//存储本地节点
 		//p2p.LOCALNODE = node.NewNode(localIp,argv.LocalPort,argv.HttpServerPORT)
@@ -133,20 +135,78 @@ func main(){
 
 //-- 创建初始块
 
-/*func CreateInitBlock()  {
+
+
+func CreateInitBlock(filename string)  {
+
+	type Genesis struct {
+
+		Timestamp  int64
+		ParentHash  string
+		BlockHash  string
+		Coinbase    string
+		Number int64
+		Alloc       map[string]struct {
+			Code    string
+			Storage map[string]string
+			Balance string
+		}
+
+	}
+
+	var genesis = map[string]Genesis{}
+
+	bytes, err := ioutil.ReadFile(filename)
+
+	if err != nil {
+		fmt.Println("ReadFile: ", err.Error())
+		return nil, err
+	}
+
+	if err := json.Unmarshal(bytes, &genesis); err != nil {
+		fmt.Println("Unmarshal: ", err.Error())
+		return nil, err
+	}
+
+
+	for addr, account := range genesis["test1"].Alloc {
+		address := common.HexToAddress(addr)
+
+		balance:=types.Balance{
+			AccountPublicKeyHash:address,
+			Value:account,
+		}
+		core.PutBalanceToMEM(balance)
+		//.AddBalance(address, common.String2Big(account.Balance))
+
+
+	}
+
+
+
+	block := types.Block{
+		ParentHash: common.HexToHash(genesis["test1"].ParentHash),
+		Timestamp:   genesis["test1"].Timestamp,
+		BlockHash: common.HexToHash(genesis["test1"].BlockHash),
+		Number:   genesis["test1"].Number,
+		MerkleRoot:       "root",
+	}
+
+
+
 	log.Println("构造创世区块")
 	//-- 获取创世快from用户
-	godAccount := utils.GetGodAccount()[0]
+/*	godAccount := utils.GetGodAccount()[0]
 	//-- 获取所有的提前生成好的account
 	accounts, err := utils.GetAccount()
 	if err != nil {
 		log.Fatal(err)
 		return
-	}
+	}*/
 	//-- 为account分别构造transaction 五个)
 	//-- from 为上面的from用户
 	//-- value 为10000, 20000, 30000 ...
-	var transactions types.Transactions
+	/*var transactions types.Transactions
 	for _, account_map := range accounts {
 		var account_publicKey dsa.PublicKey
 		for _,acc := range account_map{
@@ -165,10 +225,10 @@ func main(){
 		t.Signature = signature
 		core.PutTransactionToLDB(t.Hash(), t)
 		transactions = append(transactions, t)
-	}
+	}*/
 
 	//-- 打包创世块
-	block := types.Block{
+	/*block := types.Block{
 		ParentHash: string(encrypt.GetHash([]byte("0"))),
 		Transactions: transactions,
 		TimeStramp: time.Now().Unix(),
@@ -179,10 +239,10 @@ func main(){
 	coinbaseBStr , _ := json.Marshal(block.CoinBase)
 	block.BlockHash = string(encrypt.GetHash([]byte(block.ParentHash + string(txBStr) + strconv.FormatInt(block.TimeStramp, 10) + string(coinbaseBStr) + block.MerkleRoot)))
 	//-- 将创世块存入数据库
-	core.PutBlockToLDB(block.BlockHash, block)
+	core.PutBlockToLDB(block.BlockHash, block)*/
 	//-- 将初始block的BlockHash存如Chain
 	core.UpdateChain(block.BlockHash)
 
 	//-- 初始初始化balance
-	core.UpdateBalance(block)
-}*/
+	//core.UpdateBalance(block)
+}

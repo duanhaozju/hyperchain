@@ -1,8 +1,8 @@
 // author: chenquan
 // date: 16-8-25
-// last modified: 16-8-25 20:01
+// last modified: 16-8-29 13:23
 // last Modified Author: chenquan
-// change log:
+// change log: given a test param into the new peer pool, this is the convenience to test
 //
 package peerPool
 
@@ -13,6 +13,8 @@ import (
 	pb "hyperchain/p2p/peermessage"
 	"time"
 	"log"
+	"strings"
+	"strconv"
 )
 
 type PeersPool struct {
@@ -33,6 +35,7 @@ func init() {
 	prPoolIns.aliveNodes = 0
 }
 
+// NewPeerPool get a new peer pool instance
 func NewPeerPool(isNewInstance bool,isKeepAlive bool) PeersPool {
 	if isNewInstance {
 		var newPrPoolIns PeersPool
@@ -73,6 +76,7 @@ func NewPeerPool(isNewInstance bool,isKeepAlive bool) PeersPool {
 	}
 }
 
+// PutPeer put a peer into the peer pool and get a peer point
 func (this *PeersPool) PutPeer(addr pb.PeerAddress, client *peer.Peer) (*peer.Peer, error) {
 	addrString := addr.String()
 	fmt.Println(addrString)
@@ -89,6 +93,7 @@ func (this *PeersPool) PutPeer(addr pb.PeerAddress, client *peer.Peer) (*peer.Pe
 
 }
 
+// GetPeer get a peer point by the peer address
 func (this *PeersPool) GetPeer(addr pb.PeerAddress) *peer.Peer {
 	if clientName, ok := this.peerKeys[addr]; ok {
 		client := this.peers[clientName]
@@ -98,27 +103,30 @@ func (this *PeersPool) GetPeer(addr pb.PeerAddress) *peer.Peer {
 	}
 }
 
+// GetAliveNodeNum get all alive node num
 func (this *PeersPool) GetAliveNodeNum() int {
 	return this.aliveNodes
 }
 
 // GetPeerByString get peer by address string
-//func GetPeerByString(addr string)*client.ChatClient{
-//	address := strings.Split(addr,":")
-//	p,err := strconv.Atoi(address[1])
-//	if err != nil{
-//		log.Fatalln("the string is not like localhost:8888")
-//	}
-//	pAddr := pb.PeerAddress{
-//		Ip:address[0],
-//		Port:int32(p),
-//	}
-//	if peerAddr,ok := prPoolIns.peerAddr[pAddr.String()];ok{
-//		return prPoolIns.peers[prPoolIns.peerKeys[peerAddr]]
-//	}else{
-//		return nil
-//	}
-//}
+func GetPeerByString(addr string)*peer.Peer{
+	address := strings.Split(addr,":")
+	p,err := strconv.Atoi(address[1])
+	if err != nil{
+		log.Println(`given string is not like "localhost:1234", pls check it`)
+		return nil
+	}
+	pAddr := pb.PeerAddress{
+		Ip:address[0],
+		Port:int32(p),
+	}
+	if peerAddr,ok := prPoolIns.peerAddr[pAddr.String()];ok{
+		return prPoolIns.peers[prPoolIns.peerKeys[peerAddr]]
+	}else{
+		return nil
+	}
+}
+
 // GetPeers  get peers from the peer pool
 func (this *PeersPool) GetPeers() []*peer.Peer {
 	var clients []*peer.Peer
@@ -128,6 +136,7 @@ func (this *PeersPool) GetPeers() []*peer.Peer {
 	return clients
 }
 
+// DelPeer delete a peer by the given peer address (Not Used)
 func DelPeer(addr pb.PeerAddress) {
 	delete(prPoolIns.peers, prPoolIns.peerKeys[addr])
 }

@@ -3,6 +3,7 @@
 // last modified: 16-8-26 13:08
 // last Modified Author: chenquan
 // change log:
+// comment: this file can not test easily, so just waiting the integration test
 //
 package p2p
 
@@ -13,7 +14,7 @@ import (
 //
 //func TestGrpcPeerManager_GetClientId(t *testing.T) {
 //	path := "/home/chenquan/Workspace/IdeaProjects/hyperchain-go/src/hyperchain/p2p/peerconfig.json"
-//	TODO CANNOT TEST Very Easy -_-!!
+//	TODO CANNOT TEST Easily -_-!!
 //	grpcPeerMgr := new(GrpcPeerManager)
 //	aliveChan := make(chan bool)
 //	go grpcPeerMgr.Start(path,1, aliveChan,true)

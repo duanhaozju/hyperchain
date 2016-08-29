@@ -2,6 +2,8 @@
 // author: Chen Quan
 // date: 2016-08-24
 // last modified:2016-08-24
+// change log:  1. add a header comment of this file
+//		2. modified the hello message handler, DO NOT save the peer into the peer pool
 
 package Server
 
@@ -63,14 +65,10 @@ func (chatServer *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message,
 	case pb.Message_HELLO :{
 		response.MessageType = pb.Message_RESPONSE
 		response.Payload = []byte("Hi")
-		 //TODO save the peer information to peer pool
 		 //REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
 		return &response, nil
 	}
 	case pb.Message_CONSUS:{
-		//TODO Post to high layer event manager
-		//TODO and return a response type message
-		//TODO get the payload inner message and post higher layer
 		response.MessageType = pb.Message_RESPONSE
 		response.Payload = []byte("Consus has already received!")
 		//post payload to high layer

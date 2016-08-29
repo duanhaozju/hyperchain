@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func StartHttp(httpPort int,from common.Hash){
+func StartHttp(httpPort int){
 	//实例化路由
 	router := routers.NewRouter()
 	// 指定静态文件目录

@@ -147,7 +147,7 @@ func (ee *EcdsaEncrypto)SaveNodeInfo(file string, ip string ,addr []byte, pri *e
 	return err
 
 }
-func (ee *EcdsaEncrypto)PubkeyToAddress(p ecdsa.PublicKey) common.Address {
+func (ee *EcdsaEncrypto)PubkeyToAddress(p ecdsa.PublicKey) []byte {
 	pubBytes := ee.FromECDSAPub(&p)
 	return common.BytesToAddress(ee.Keccak256(pubBytes[1:])[12:])
 }

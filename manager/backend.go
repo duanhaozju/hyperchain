@@ -19,7 +19,7 @@ encryption crypto.Encryption ,commonHash crypto.CommonHash,path string, isFirst 
 
 
 	aliveChan := make(chan bool)
-	peerManager.Start(path, isFirst,aliveChan)
+	peerManager.Start(path, isFirst,aliveChan,false)
 
 
 	//peerManager.JudgeAlivePeers()
