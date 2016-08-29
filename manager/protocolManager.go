@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"sync"
 
+	"crypto/ecdsa"
 )
 
 type ProtocolManager struct {
@@ -35,7 +36,7 @@ type ProtocolManager struct {
 
 	wg           sync.WaitGroup
 }
-
+var eventMuxAll *event.TypeMux
 func NewProtocolManager(peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
 encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 
@@ -50,7 +51,13 @@ encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 
 
 	}
+	eventMuxAll=eventMux
 	return manager
+}
+
+
+func GetEventObject() *event.TypeMux {
+	return eventMuxAll
 }
 
 
@@ -107,28 +114,34 @@ func (self *ProtocolManager) ConsensusLoop() {
 		case event.NewTxEvent:
 			//call consensus module
 			//Todo
+			fmt.Println("get new TxEvent")
 			var transaction *types.Transaction
 			//decode tx
 			proto.Unmarshal(ev.Payload, transaction)
 			//hash tx
 			h := transaction.SighHash(self.commonHash)
 			key, err := self.encryption.GetKey()
+			switch key.(type){
+			case ecdsa.PrivateKey:
+				actualKey:=key.(ecdsa.PrivateKey)
+				sign, err := self.encryption.Sign(h[:], actualKey)
+				if err != nil {
+					fmt.Print(err)
+				}
+				transaction.Signature = sign
+				//encode tx
+				payLoad, err := proto.Marshal(transaction)
+				if err != nil {
+					return
+				}
+
+				self.consenter.RecvMsg(payLoad)
+			}
 			if err != nil {
 				return
 			}
 			//sign tx
-			sign, err := self.encryption.Sign(h[:], key)
-			if err != nil {
-				fmt.Print(err)
-			}
-			transaction.Signature = sign
-			//encode tx
-			payLoad, err := proto.Marshal(transaction)
-			if err != nil {
-				return
-			}
 
-			self.consenter.RecvMsg(payLoad)
 
 		case event.ConsensusEvent:
 			//call consensus module

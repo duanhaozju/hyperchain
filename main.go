@@ -29,8 +29,11 @@ type argT struct {
 }
 
 
+
 func main(){
 	cli.Run(new(argT), func(ctx *cli.Context) error {
+
+
 
 
 
@@ -53,7 +56,11 @@ func main(){
 		//cs:=controller.NewConsenter(argv.ConsensusNum)
 
 		// init http server for web call
-		jsonrpc.StartHttp(argv.LocalPort)
+		go jsonrpc.StartHttp(argv.LocalPort,eventMux)
+
+		core.InitDB(123)
+		core.CreateInitBlock("./core/genesis.json")
+
 
 
 		//init encryption object

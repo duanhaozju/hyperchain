@@ -7,10 +7,11 @@ import (
 	"hyperchain/jsonrpc/hyperchain"
 )
 
-/*type ResData struct{
+
+type ResData struct{
 	Data interface{}
 	Code int
-}*/
+}
 
 type data struct{
 	Trans []hyperchain.Transaction
@@ -20,7 +21,7 @@ type data struct{
 // 处理请求 : GET "/"
 func Index(w http.ResponseWriter, r *http.Request) {
 	pwd, _ := os.Getwd()
-	indexpath := path.Join(pwd,"./static/tmpl/index.html")
+	indexpath := path.Join(pwd,"./jsonrpc/static/tmpl/index.html")
 
 	var tmpl = template.Must(template.ParseFiles(indexpath))
 

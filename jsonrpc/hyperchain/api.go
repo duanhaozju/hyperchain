@@ -10,6 +10,7 @@ import (
 	"hyperchain/core"
 	"math/big"
 	"hyperchain/common"
+	"hyperchain/manager"
 )
 
 type TxArgs struct{
@@ -42,14 +43,15 @@ func SendTransaction(args TxArgs) bool {
 	if (core.VerifyBalance(tx)) {
 		// 余额足够
 		// 抛 NewTxEvent 事件
-		eventmux:=new(event.TypeMux)
+		//eventmux:=new(event.TypeMux)
 
 		txBytes, err := proto.Marshal(tx)
 		if err != nil {
 			log.Fatalf("proto.Marshal(tx) error: %v",err)
 		}
 
-		eventmux.Post(event.NewTxEvent{Payload: txBytes})
+
+		manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 
 		return true
 
