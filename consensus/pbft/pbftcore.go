@@ -60,7 +60,7 @@ type pbftCore struct {
 	pset          map[uint64]*ViewChange_PQ
 	qset          map[qidx]*ViewChange_PQ
 
-	currentExec           *uint64                  // currently executing request
+	//currentExec           *uint64                  // currently executing request
 	timerActive           bool                     // is the timer running?
 	requestTimeout        time.Duration            // progress timeout for requests
 	outstandingReqBatches map[string]*RequestBatch // track whether we are waiting for request batches to execute
@@ -137,11 +137,11 @@ func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerF
 
 	instance.byzantine = config.GetBool("general.byzantine")
 
-	instance.requestTimeout, err = time.ParseDuration(config.GetString("general.timeout.request"))
+	instance.requestTimeout, err = time.ParseDuration(config.GetString("timeout.request"))
 	if err != nil {
 		panic(fmt.Errorf("Cannot parse request timeout: %s", err))
 	}
-	instance.nullRequestTimeout, err = time.ParseDuration(config.GetString("general.timeout.nullrequest"))
+	instance.nullRequestTimeout, err = time.ParseDuration(config.GetString("timeout.nullrequest"))
 	if err != nil {
 		instance.nullRequestTimeout = 0
 	}
