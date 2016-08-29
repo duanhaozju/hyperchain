@@ -3,7 +3,6 @@ package helper
 import (
 	"hyperchain/event"
 	pb "hyperchain/protos"
-
 	"github.com/golang/protobuf/proto"
 )
 type helper struct {
@@ -12,7 +11,7 @@ type helper struct {
 
 type Stack interface {
 	InnerBroadcast(e *pb.Message) error
-	Execute(batch *pb.ExeMessage) error
+	Execute(reqBatch *pb.ExeMessage) error
 }
 
 func (h *helper) InnerBroadcast(e *pb.Message) error{

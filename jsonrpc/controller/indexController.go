@@ -2,10 +2,10 @@ package controller
 import (
 	"net/http"
 	"html/template"
-	"hyperchain-alpha/core"
+	"hyperchain/core"
 	"path"
 	"os"
-	"hyperchain-alpha/core/types"
+	"hyperchain/core/types"
 	"sort"
 )
 
