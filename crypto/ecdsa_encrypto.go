@@ -24,6 +24,7 @@ func NewEcdsaEncrypto(name string) *EcdsaEncrypto  {
 	return ee
 }
 
+
 func (ee *EcdsaEncrypto)GenerateKey()(*ecdsa.PrivateKey,error)  {
 	return ecdsa.GenerateKey(secp256k1.S256(), rand.Reader)
 }
