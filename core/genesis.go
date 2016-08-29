@@ -69,8 +69,6 @@ func CreateInitBlock(filename string)  {
 		balanceIns.PutCacheBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
 
 
-		//PutBalanceToMEM(balance)
-		//.AddBalance(address, common.String2Big(account.Balance))
 
 
 	}
@@ -95,7 +93,4 @@ func CreateInitBlock(filename string)  {
 	fmt.Print(balanceIns.GetCacheBalance(common.BytesToAddress([]byte("0000000000000000000000000000000000000002"))))
 
 
-
-	//-- 初始初始化balance
-	//core.UpdateBalance(block)
 }
