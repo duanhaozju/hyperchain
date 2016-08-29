@@ -1,22 +1,30 @@
 stages:
-  - test
   - build
+  - test
 
-job-00:
-  stage: test
-  script:
-    - go version
-    - pwd
-  only:
-    - test
-  tags:
-    - golang
-
-job-01:
+build-my-project:
   stage: build
   script:
-    - echo "Hello"
+    - mkdir -p /builds/chenquan/goenv/
+    - pwd
+    - export GOPATH=/builds/chenquan/goenv/
+    - go get -u github.com/Masterminds/glide
+    - glide install
+    - go env
+    - go test
   only:
     - test
   tags:
     - golang
+
+test-my-project:
+  stage: test
+  script:
+    - go get -u github.com/Masterminds/glide
+    - glide install
+    - go test -v ./...
+  only:
+    - test
+  tags:
+    - golang
+
