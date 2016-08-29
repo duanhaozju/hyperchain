@@ -82,8 +82,8 @@ func newBatch(id uint64, config *viper.Viper, h helper.Stack) consensus.Consente
 	return batchObj
 }
 
-func (batch *batch) getHelper() helper.Stack {
-	return batch.helperImpl
+func (op *batch) getHelper() helper.Stack {
+	return op.helperImpl
 }
 
 func (op *batch) ProcessEvent(e events.Event) events.Event{
@@ -236,28 +236,14 @@ func (op *batch) stopBatchTimer() {
 
 func (op *batch) submitToLeader(req *Request) events.Event {
 	// Broadcast the request to the network, in case we're in the wrong view
-	op.helperImpl.InnerBroadcast(req)
+	pbMsg := batchMsgHelper(&BatchMessage{Payload: &BatchMessage_Request{Request: req}}, op.pbft.id)
+	op.helperImpl.InnerBroadcast(pbMsg)
 	op.reqStore.storeOutstanding(req)
 	op.startTimerIfOutstandingRequests()
 	if op.pbft.primary(op.pbft.view) == op.pbft.id {
 		return op.leaderProcReq(req)
 	}
 	return nil
-}
-func (op *batch) wrapMessage(msgPayload []byte) *pb.Message {
-	batchMsg := &BatchMessage{Payload: &BatchMessage_PbftMessage{PbftMessage: msgPayload}}
-	timestamp := time.Now().Unix()
-	packedBatchMsg, _ := proto.Marshal(batchMsg)
-	ocMsg := &pb.Message{
-		Type:    pb.Message_CONSENSUS,
-		Payload: packedBatchMsg,
-		Id:op.localID,
-		Timestamp:timestamp,
-	}
-	return ocMsg
-}
-func (op *batch) Broadcast(msgPayload []byte) {
-	op.helperImpl.InnerBroadcast(op.wrapMessage(msgPayload))
 }
 
 

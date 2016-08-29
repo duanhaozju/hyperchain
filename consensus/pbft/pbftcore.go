@@ -10,7 +10,6 @@ import (
 
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
-	"github.com/golang/protobuf/proto"
 )
 
 // =============================================================================
@@ -418,13 +417,10 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 	cert := instance.getCert(instance.view, n)
 	cert.prePrepare = preprep
 	cert.digest = digest
-	//msg := qMsgHelper(preprep, instance.id)
-	msg,err:=proto.Marshal(&Message{Payload:&Message_PrePrepare{PrePrepare: preprep}})
-	if err!=nil{
-		return nil
-	}
 
-	instance.batchcore.Broadcast(msg)
+	msg := pbftMsgHelper(&Message{Payload: &Message_PrePrepare{PrePrepare: preprep}}, instance.id)
+	instance.helper.InnerBroadcast(msg)
+
 	instance.maybeSendCommit(digest, instance.view, n)
 }
 
@@ -509,7 +505,7 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 		}
 		cert.sentPrepare = true
 		instance.recvPrepare(prep)
-		msg := pMsgHelper(prep, instance.id)
+		msg := pbftMsgHelper(&Message{Payload: &Message_Prepare{Prepare: prep}}, instance.id)
 		return instance.helper.InnerBroadcast(msg)
 	}
 
@@ -558,7 +554,7 @@ func (instance *pbftCore) maybeSendCommit(digest string, v uint64, n uint64) err
 		}
 		cert.sentCommit = true
 		instance.recvCommit(commit)
-		msg := cMsgHelper(commit, instance.id)
+		msg := pbftMsgHelper(&Message{Payload: &Message_Commit{Commit: commit}}, instance.id)
 		return instance.helper.InnerBroadcast(msg)
 	}
 	return nil
