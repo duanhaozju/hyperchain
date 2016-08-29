@@ -4,9 +4,10 @@ import (
 	"time"
 	"fmt"
 	"hyperchain/consensus/helper"
+	"hyperchain/consensus"
 
 	"hyperchain/consensus/events"
-	pb "github.com/hyperledger/fabric/protos"
+	pb "hyperchain/protos"
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
 	"hyperchain/protos"
@@ -18,7 +19,7 @@ type batch struct {
 	batchTimeout     time.Duration
 	batchSize        int
 	batchStore       []*Request
-	helperImpl       *helper.Stack
+	helperImpl       helper.Stack
 	manager          events.Manager
 	pbft             *pbftCore
 	localID           uint64
@@ -136,19 +137,20 @@ func (op *batch) startBatchTimer() {
 	logger.Debugf("Replica %d started the batch timer", op.pbft.id)
 	op.batchTimerActive = true
 }
-func (b *batch) RecvMsg(e events.Event) error {
-	fmt.Println("RecvMsg")
-	switch e.(type) {
-	case protos.Message:
-		msg:=protos.Message(e)
-		b.manager.Queue()<-  b.parseMsg(msg)
-	default:
-		return nil
+func (b *batch) RecvMsg(e []byte) error {
+	tempMsg:=&protos.Message{}
+	err:=proto.Unmarshal(e,tempMsg)
+	if err!=nil {
+		return err
 	}
+	fmt.Println("RecvMsg")
 
+	b.manager.Queue()<-  b.parseMsg(tempMsg)
+
+        return nil
 }
 
-func  (b *batch) parseMsg(m protos.Message)  *batchMessageEvent{
+func  (b *batch) parseMsg(m *protos.Message)  *batchMessageEvent{
 	bme:=&batchMessageEvent{
 		msg: &pb.Message{
 			Type:m.Type,
@@ -167,7 +169,7 @@ func (op *batch) stopBatchTimer() {
 
 
 
-func newBatch(id uint64, config *viper.Viper, h *helper.Stack) *batch{
+func newBatch(id uint64, config *viper.Viper, h helper.Stack) consensus.Consenter{
 	var err error
 	fmt.Println("new batch")
 	batchObj:=&batch{
