@@ -1,4 +1,4 @@
-package controller
+package hyperchain
 
 import (
 	"hyperchain/core/types"
@@ -39,11 +39,17 @@ func SendTransaction(args TxArgs) bool {
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
 
 	// 判断交易余额是否足够
-	if (verifyBalance(tx)) {
+	if (core.VerifyBalance(tx)) {
 		// 余额足够
 		// 抛 NewTxEvent 事件
-		 eventmux:=new(event.TypeMux)
-		 eventmux.Post(event.NewTxEvent{Payload: proto.Marshal(tx)})
+		eventmux:=new(event.TypeMux)
+
+		txBytes, err := proto.Marshal(tx)
+		if err != nil {
+			log.Fatalf("proto.Marshal(tx) error: %v",err)
+		}
+
+		eventmux.Post(event.NewTxEvent{Payload: txBytes})
 
 		return true
 
@@ -51,30 +57,6 @@ func SendTransaction(args TxArgs) bool {
 		// 余额不足
 		return false
 	}
-}
-
-// verifyBalance is to verify balance of the tranaction
-// If the balance is not enough, returns false
-func verifyBalance(tx *Transaction) bool{
-	var balance big.Int
-	var value big.Int
-
-	balanceIns, err := core.GetBalanceIns()
-
-	if err != nil {
-		log.Fatalf("GetBalanceIns error, %v", err)
-	}
-
-	bal := balanceIns.GetCacheBalance(common.BytesToAddress(tx.From))
-
-	balance.SetString(string(bal), 10)
-	value.SetString(string(tx.Value), 10)
-
-	if value.Cmp(balance) == 1 {
-		return false
-	}
-
-	return true
 }
 
 // GetAllTransactions return all transactions in the chain/db

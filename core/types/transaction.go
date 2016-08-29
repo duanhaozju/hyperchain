@@ -33,29 +33,3 @@ func NewTransaction(from []byte,to []byte,value []byte) *Transaction{
 
 	return transaction
 }
-
-
-// VerifyTransaction is to verify balance of the tranaction
-// If the balance is not enough, returns false
-/*
-func (tx *Transaction) VerifyBalance() bool{
-	var balance big.Int
-	var value big.Int
-
-	balanceIns, err := core.GetBalanceIns()
-
-	if err != nil {
-		log.Fatalf("GetBalanceIns error, %v", err)
-	}
-
-	bal := balanceIns.GetCacheBalance(common.BytesToAddress(tx.From))
-
-	balance.SetString(string(bal), 10)
-	value.SetString(string(tx.Value), 10)
-
-	if value.Cmp(balance) == 1 {
-		return false
-	}
-
-	return true
-}*/
