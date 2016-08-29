@@ -65,5 +65,6 @@ func TestSigntx(t *testing.T)  {
 
 	fmt.Println(from)
 	fmt.Println(addr)
+	ee.SaveNodeInfo("./addressInfo","0.0.0.0",addr,key)
 
 }
