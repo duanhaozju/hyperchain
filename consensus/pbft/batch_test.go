@@ -14,7 +14,7 @@ func TestEvent(t *testing.T){
 	msgQ :=new(event.TypeMux)
 	h:=helper.NewHelper(msgQ)
 	c:=GetPlugin(3, h)
-	msg:=protos.Message{
+	msg:=&protos.Message{
 		Type      :0 ,
 		Timestamp :233333,
 		Payload   : []byte {'a', 'b', 'c', 'd'},
@@ -25,5 +25,4 @@ func TestEvent(t *testing.T){
 		fmt.Println("recvMsg")
 		c.RecvMsg(b)
 	}
-
 }
