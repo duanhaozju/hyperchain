@@ -13,7 +13,8 @@ import (
 )
 
 // init protocol manager params and start
-func New(peerManager p2p.PeerManager,consenter consensus.Consenter,fetcher *core.Fetcher,encryption crypto.Encryption ,path string, isFirst bool) (error) {
+func New(peerManager p2p.PeerManager,consenter consensus.Consenter,fetcher *core.Fetcher,
+encryption crypto.Encryption ,commonHash crypto.CommonHash,path string, isFirst bool) (error) {
 
 
 
@@ -28,7 +29,7 @@ func New(peerManager p2p.PeerManager,consenter consensus.Consenter,fetcher *core
 	case <-aliveChan:
 
 
-		protocolManager := NewProtocolManager( peerManager, fetcher,consenter,encryption)
+		protocolManager := NewProtocolManager(peerManager, fetcher,consenter,encryption,commonHash)
 
 		protocolManager.Start()
 
