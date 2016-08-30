@@ -14,7 +14,7 @@ import (
 
 	"log"
 
-
+	"hyperchain/hyperdb"
 )
 
 
@@ -48,7 +48,7 @@ func CreateInitBlock(filename string)  {
 		fmt.Println("Unmarshal: ", err.Error())
 		return
 	}
-
+	
 	balanceIns, err := GetBalanceIns()
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
@@ -67,11 +67,15 @@ func CreateInitBlock(filename string)  {
 		}*/
 
 		balanceIns.PutCacheBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
-
+		balanceIns.PutDBBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
 
 
 	}
-
+	db,err:=hyperdb.GetLDBDatabase()
+	PutDBBalance(db,balanceIns.dbBalance)
+	if err!=nil{
+		log.Fatal(err)
+	}
 
 
 	block := types.Block{
@@ -87,9 +91,5 @@ func CreateInitBlock(filename string)  {
 	log.Println("构造创世区块")
 
 	UpdateChain(block.BlockHash)
-
-
-	fmt.Println(balanceIns.GetCacheBalance(common.BytesToAddress([]byte("0000000000000000000000000000000000000002"))))
-
 
 }

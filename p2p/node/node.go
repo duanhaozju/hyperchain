@@ -16,7 +16,8 @@ import (
 	"strconv"
 	"hyperchain/p2p/peerComm"
 	"hyperchain/event"
-	)
+
+)
 
 type Node struct {
 	address            pb.PeerAddress
@@ -69,7 +70,11 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	case pb.Message_CONSUS:{
 		response.MessageType = pb.Message_RESPONSE
 		response.Payload = []byte("Consensus broadcast has already received!")
+		log.Println("get a Consus message")
 		//post payload to high layer
+	/*	manager.GetEventObject().Post(event.ConsensusEvent{
+			Payload:msg.Payload,
+		})*/
 		this.higherEventManager.Post(event.ConsensusEvent{
 			Payload:msg.Payload,
 		})

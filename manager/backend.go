@@ -11,6 +11,7 @@ import (
 	"hyperchain/crypto"
 
 	"hyperchain/event"
+
 )
 
 // init protocol manager params and start
@@ -30,6 +31,7 @@ func New(eventMux *event.TypeMux, peerManager p2p.PeerManager, consenter consens
 			protocolManager := NewProtocolManager(peerManager, eventMux, fetcher, consenter, encryption, commonHash)
 
 			protocolManager.Start()
+
 		}
 	}
 

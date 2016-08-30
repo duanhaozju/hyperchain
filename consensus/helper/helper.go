@@ -5,6 +5,8 @@ import (
 	pb "hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"
+	"fmt"
+	"hyperchain/manager"
 )
 type helper struct {
 	msgQ *event.TypeMux
@@ -16,14 +18,19 @@ type Stack interface {
 }
 
 func (h *helper) InnerBroadcast(msg *pb.Message) error{
+	fmt.Println("enter inner broad cast")
 	tmpMsg, err := proto.Marshal(msg)
 	if err != nil {
 		return err
 	}
-	broadcastEvent := &event.BroadcastConsensusEvent{
+	broadcastEvent := event.BroadcastConsensusEvent{
 		Payload: tmpMsg,
 	}
-	h.msgQ.Post(broadcastEvent)
+	fmt.Println("broadcast")
+	//manager.GetEventObject().Post(event.NewTxEvent{Payload: []byte{0x00, 0x00, 0x03, 0xe8}})
+
+	manager.GetEventObject().Post(broadcastEvent)
+	//h.msgQ.Post(broadcastEvent)
 	return nil
 }
 

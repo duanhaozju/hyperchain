@@ -5,12 +5,12 @@ import (
 	"fmt"
 
 	"hyperchain/consensus/helper"
-	"hyperchain/consensus"
 	"hyperchain/consensus/events"
 	pb "hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
+	"reflect"
 )
 
 type batch struct {
@@ -42,16 +42,16 @@ type batchMessage struct {
 	sender uint64
 }
 
-func newBatch(id uint64, config *viper.Viper, h helper.Stack) consensus.Consenter{
+func newBatch(id uint64, config *viper.Viper, h helper.Stack) *batch{
 	var err error
 	fmt.Println("new batch")
+
 	batchObj:=&batch{
-		manager:	events.NewManagerImpl(),
 		localID:	id,
 		helperImpl:	h,
 	}
 
-
+	batchObj.manager = events.NewManagerImpl()
 	batchObj.manager.SetReceiver(batchObj)
 	batchObj.manager.Start()
 
@@ -94,6 +94,7 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 	//	b.test_c <- 1//ToDo for test
 	case batchMessageEvent:
 		ocMsg := event
+		logger.Info("**********>  batchMessageEvent message:",reflect.TypeOf(ocMsg),ocMsg.msg.Type)
 		return op.processMessage(ocMsg.msg,  ocMsg.sender)
 	case batchTimerEvent:
 		logger.Infof("Replica %d batch timer expired", op.pbft.id)
@@ -108,8 +109,9 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 
 
 func (op *batch) processMessage(msg *pb.Message, id uint64) events.Event {
-
+	fmt.Println("enter batch processMessage")
 	if msg.Type == pb.Message_TRANSACTION {
+		logger.Info("**********>  processMessage Message_TRANSACTION:",reflect.TypeOf(msg),msg.Type)
 		req := op.txToReq(msg)
 		return op.submitToLeader(req)
 	}
@@ -118,23 +120,27 @@ func (op *batch) processMessage(msg *pb.Message, id uint64) events.Event {
 		logger.Errorf("Unexpected message type: %s", msg.Type)
 		return nil
 	}
-
+	fmt.Println("batch processMessage")
 	batchMsg := &BatchMessage{}
 	err := proto.Unmarshal(msg.Payload, batchMsg)
 	if err != nil {
 		logger.Errorf("Error unmarshaling message: %s", err)
 		return nil
 	}
-
+	logger.Info("**********>  processMessage Message_TRANSACTION:",reflect.TypeOf(batchMsg),batchMsg.Payload)
 	if req := batchMsg.GetRequest(); req != nil {
-		if !op.deduplicator.IsNew(req) {
-			logger.Warningf("Replica %d ignoring request as it is too old", op.pbft.id)
-			return nil
-		}
+		fmt.Println("batch processMessage request")
+		//if !op.deduplicator.IsNew(req) {
+		//	fmt.Println("2")
+		//	logger.Warningf("Replica %d ignoring request as it is too old", op.pbft.id)
+		//	return nil
+		//}
 		op.reqStore.storeOutstanding(req)
 		if (op.pbft.primary(op.pbft.view) == op.pbft.id) {
+			fmt.Println("3")
 			return op.leaderProcReq(req)
 		}
+		fmt.Println("4")
 		op.startTimerIfOutstandingRequests()
 		return nil
 	} else if pbftMsg := batchMsg.GetPbftMessage(); pbftMsg != nil {
@@ -207,7 +213,8 @@ func (op *batch) startBatchTimer() {
 	logger.Debugf("Replica %d started the batch timer", op.pbft.id)
 	op.batchTimerActive = true
 }
-func (b *batch) RecvMsg(e []byte) error {
+func (op *batch) RecvMsg(e []byte) error {
+	fmt.Println("RecvMsg")
 	tempMsg := &pb.Message{}
 	err := proto.Unmarshal(e,tempMsg)
 	if err!=nil {
@@ -215,17 +222,12 @@ func (b *batch) RecvMsg(e []byte) error {
 	}
 	fmt.Println("RecvMsg")
 
-	b.manager.Queue()<-  b.parseMsg(tempMsg)
+	op.manager.Queue() <- batchMessageEvent{
+		msg: 	tempMsg,
+		sender:	tempMsg.Id,
+	}
 
         return nil
-}
-
-func  (b *batch) parseMsg(m *pb.Message)  *batchMessageEvent {
-	bme := &batchMessageEvent{
-		msg: 	m,
-		sender:	m.Id,
-	}
-	return bme
 }
 
 func (op *batch) stopBatchTimer() {
@@ -238,6 +240,7 @@ func (op *batch) submitToLeader(req *Request) events.Event {
 	// Broadcast the request to the network, in case we're in the wrong view
 	pbMsg := batchMsgHelper(&BatchMessage{Payload: &BatchMessage_Request{Request: req}}, op.pbft.id)
 	op.helperImpl.InnerBroadcast(pbMsg)
+	logger.Info("**********>  submitToLeader pbMsg:",reflect.TypeOf(pbMsg),pbMsg.Type)
 	op.reqStore.storeOutstanding(req)
 	op.startTimerIfOutstandingRequests()
 	if op.pbft.primary(op.pbft.view) == op.pbft.id {

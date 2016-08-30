@@ -6,7 +6,6 @@ import (
 
 	"hyperchain/consensus/helper"
 	"hyperchain/consensus/events"
-	pb "hyperchain/protos"
 
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
@@ -70,7 +69,7 @@ type pbftCore struct {
 	nullRequestTimeout time.Duration // duration for this timeout
 						       // implementation of PBFT `in`
 	reqBatchStore   map[string]*RequestBatch // track request batches
-	currentReqBatch *pb.ExeMessage
+	exeBatch	*RequestBatch
 	certStore       map[msgID]*msgCert       // track quorum certificates for requests
 }
 
@@ -221,7 +220,7 @@ func (instance *pbftCore) ProcessEvent(e events.Event) events.Event {
 
 // Given a certain view n, what is the expected primary?
 func (instance *pbftCore) primary(n uint64) uint64 {
-	return n % uint64(instance.replicaCount)
+	return (n % uint64(instance.replicaCount) + 1)
 }
 
 // Is the sequence number between watermarks?
@@ -414,6 +413,7 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 		RequestBatch:   reqBatch,
 		ReplicaId:      instance.id,
 	}
+	instance.exeBatch = reqBatch
 	cert := instance.getCert(instance.view, n)
 	cert.prePrepare = preprep
 	cert.digest = digest
@@ -422,36 +422,6 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 	instance.helper.InnerBroadcast(msg)
 
 	instance.maybeSendCommit(digest, instance.view, n)
-}
-
-func (instance *pbftCore) resubmitRequestBatches() {
-	if instance.primary(instance.view) != instance.id {
-		return
-	}
-
-	var submissionOrder []*RequestBatch
-
-	outer:
-	for d, reqBatch := range instance.outstandingReqBatches {
-		for _, cert := range instance.certStore {
-			if cert.digest == d {
-				logger.Debugf("Replica %d already has certificate for request batch %s - not going to resubmit", instance.id, d)
-				continue outer
-			}
-		}
-		logger.Debugf("Replica %d has detected request batch %s must be resubmitted", instance.id, d)
-		submissionOrder = append(submissionOrder, reqBatch)
-	}
-
-	if len(submissionOrder) == 0 {
-		return
-	}
-
-	for _, reqBatch := range submissionOrder {
-		// This is a request batch that has not been pre-prepared yet
-		// Trigger request batch processing again
-		instance.recvRequestBatch(reqBatch)
-	}
 }
 
 func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
@@ -503,6 +473,7 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 			BatchDigest:    preprep.BatchDigest,
 			ReplicaId:      instance.id,
 		}
+		instance.exeBatch = preprep.RequestBatch
 		cert.sentPrepare = true
 		instance.recvPrepare(prep)
 		msg := pbftMsgHelper(&Message{Payload: &Message_Prepare{Prepare: prep}}, instance.id)
@@ -581,7 +552,7 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 
 	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
-		reqBatch := instance.currentReqBatch
+		reqBatch := exeBatchHelper(instance.exeBatch)
 		instance.helper.Execute(reqBatch)
 	}
 

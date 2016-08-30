@@ -1,4 +1,4 @@
-package api
+package hyperchain
 
 import (
 	"hyperchain/core/types"

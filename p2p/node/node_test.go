@@ -17,7 +17,7 @@ import (
 
 func TestNewChatServer(t *testing.T) {
 	eventMux := new(event.TypeMux)
-	server := NewNode(8001,true,eventMux)
+	server := NewNode(8010,true,eventMux)
 	tickCount := 0
 	for now:=range  time.Tick(3*time.Second){
 		fmt.Println(now)

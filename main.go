@@ -15,6 +15,10 @@ import (
 
 
 	"hyperchain/event"
+
+	"strconv"
+
+	"hyperchain/consensus/controller"
 	"hyperchain/jsonrpc"
 )
 
@@ -50,15 +54,11 @@ func main(){
 		fetcher := core.NewFetcher()
 
 
-
-
 		//init pbft consensus
-		//cs:=controller.NewConsenter(argv.ConsensusNum)
+		cs:=controller.NewConsenter(uint64(argv.NodeId),eventMux)
 
-		// init http server for web call
-		go jsonrpc.StartHttp(argv.LocalPort,eventMux)
-
-		core.InitDB(123)
+		//init db
+		core.InitDB(argv.LocalPort)
 		core.CreateInitBlock("./core/genesis.json")
 
 
@@ -67,22 +67,24 @@ func main(){
 
 
 		encryption :=crypto.NewEcdsaEncrypto("ecdsa")
-		encryption.GeneralKey(string(argv.LocalPort))
+		encryption.GeneralKey(strconv.Itoa(argv.LocalPort))
+
 
 
 
 		//init hash object
 		kec256Hash:=crypto.NewKeccak256Hash("keccak256")
 
-		 nodePath:="./p2p/peerconfig.json"
-		//init db
-		core.InitDB(argv.LocalPort)
+		nodePath:="./p2p/peerconfig.json"
+
+
 
 
 		//init manager
-
-		manager.New(eventMux,grpcPeerMgr,nil,fetcher,encryption,kec256Hash,
+		go jsonrpc.StartHttp(argv.LocalPort,eventMux)
+		manager.New(eventMux,grpcPeerMgr,cs,fetcher,encryption,kec256Hash,
 			nodePath,argv.NodeId)
+
 
 
 

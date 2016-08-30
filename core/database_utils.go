@@ -10,6 +10,7 @@ import (
 	"hyperchain/core/types"
 	"sync"
 	"encoding/json"
+	"hyperchain/common"
 )
 
 var (
@@ -112,8 +113,16 @@ func DeleteBlock(db hyperdb.Database, key []byte) error {
 //-- --------------------- Block END ----------------------------------
 
 //-- --------------------- BalanceMap ------------------------------------
+type balanceMapJson map[string][]byte
+
 func PutDBBalance(db hyperdb.Database, balance_db BalanceMap) error {
-	data, err := json.Marshal(balance_db)
+
+	var bJson = make(balanceMapJson)
+	for key, value := range balance_db{
+		bJson[key.Str()] = value
+	}
+
+	data, err := json.Marshal(bJson)
 	if err != nil {
 		return err
 	}
@@ -121,13 +130,17 @@ func PutDBBalance(db hyperdb.Database, balance_db BalanceMap) error {
 }
 
 func GetDBBalance(db hyperdb.Database) (BalanceMap, error) {
-	var b BalanceMap
+	var bJson balanceMapJson
+	var b = make(BalanceMap)
 	data, err := db.Get(balanceKey)
 	if err != nil {
 		return b, err
 	}
-	if err = json.Unmarshal(data, &b); err != nil {
+	if err = json.Unmarshal(data, &bJson); err != nil {
 		return b, err
+	}
+	for key, value := range bJson {
+		b[common.StringToAddress(key)] = value
 	}
 	return b, nil
 }
