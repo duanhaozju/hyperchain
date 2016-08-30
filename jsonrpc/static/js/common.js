@@ -10,6 +10,7 @@ function getFormData($form){
         indexed_array[n['name']] = n['value'];
     });
 
+    console.log(indexed_array)
     return indexed_array;
 }
 
@@ -24,6 +25,7 @@ $(document).ready(function(){
         // }
 
         $.ajax({
+            // contentType: "application/json; charset=utf-8",
             type:"POST",
             dataType: "json",
             url: "/trans",
@@ -42,7 +44,6 @@ $(document).ready(function(){
             error: function(err){
                 if(err){
                     console.log(err);
-                    alert("the "+url+" dont open server");
                     $("input[type=reset]").trigger("click");
                 }
                 return false;
