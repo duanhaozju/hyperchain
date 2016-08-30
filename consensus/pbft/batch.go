@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"hyperchain/consensus/helper"
-	"hyperchain/consensus"
 	"hyperchain/consensus/events"
 	pb "hyperchain/protos"
 
@@ -43,7 +42,7 @@ type batchMessage struct {
 	sender uint64
 }
 
-func newBatch(id uint64, config *viper.Viper, h helper.Stack) consensus.Consenter{
+func newBatch(id uint64, config *viper.Viper, h helper.Stack) *batch{
 	var err error
 	fmt.Println("new batch")
 
@@ -110,7 +109,7 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 
 
 func (op *batch) processMessage(msg *pb.Message, id uint64) events.Event {
-
+	fmt.Println("enter batch processMessage")
 	if msg.Type == pb.Message_TRANSACTION {
 		logger.Info("**********>  processMessage Message_TRANSACTION:",reflect.TypeOf(msg),msg.Type)
 		req := op.txToReq(msg)
@@ -121,15 +120,15 @@ func (op *batch) processMessage(msg *pb.Message, id uint64) events.Event {
 		logger.Errorf("Unexpected message type: %s", msg.Type)
 		return nil
 	}
-
+	fmt.Println("batch processMessage")
 	batchMsg := &BatchMessage{}
 	err := proto.Unmarshal(msg.Payload, batchMsg)
 	if err != nil {
 		logger.Errorf("Error unmarshaling message: %s", err)
 		return nil
 	}
-
 	if req := batchMsg.GetRequest(); req != nil {
+		fmt.Println("batch processMessage request")
 		if !op.deduplicator.IsNew(req) {
 			logger.Warningf("Replica %d ignoring request as it is too old", op.pbft.id)
 			return nil
@@ -211,6 +210,7 @@ func (op *batch) startBatchTimer() {
 	op.batchTimerActive = true
 }
 func (op *batch) RecvMsg(e []byte) error {
+	fmt.Println("RecvMsg")
 	tempMsg := &pb.Message{}
 	err := proto.Unmarshal(e,tempMsg)
 	if err!=nil {

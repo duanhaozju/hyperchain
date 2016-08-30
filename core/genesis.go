@@ -48,7 +48,7 @@ func CreateInitBlock(filename string)  {
 		fmt.Println("Unmarshal: ", err.Error())
 		return
 	}
-
+	
 	balanceIns, err := GetBalanceIns()
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)

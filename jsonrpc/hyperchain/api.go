@@ -102,6 +102,7 @@ func GetAllBalances() Balance{
 	var balances Balance
 
 	balanceIns, err := core.GetBalanceIns()
+	//fmt.Println("get balance")
 
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
@@ -109,12 +110,15 @@ func GetAllBalances() Balance{
 
 	balMap := balanceIns.GetAllDBBalance()
 
-	for key, value := range balMap {
+	if balMap==nil{
+		for key, value := range balMap {
 
-		val.SetString(string(value),10)
+			val.SetString(string(value),10)
 
-		balances[key] = val
+			balances[key] = val
+		}
 	}
+
 
 	return balances
 }

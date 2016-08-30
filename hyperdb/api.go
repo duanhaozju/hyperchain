@@ -5,6 +5,7 @@ import (
 	"sync"
 	"strconv"
 
+
 )
 
 type stateldb int32
@@ -52,6 +53,7 @@ func getDBPath() string {
 // if LDBDatabase state is open, return db directly
 // if LDBDatabase state id close,
 func GetLDBDatabase() (*LDBDatabase, error) {
+
 
 	ldbInstance.dbsync.Lock()
 	defer ldbInstance.dbsync.Unlock()

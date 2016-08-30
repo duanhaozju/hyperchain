@@ -57,7 +57,7 @@ func main(){
 		//init pbft consensus
 		cs:=controller.NewConsenter(uint64(argv.NodeId),eventMux)
 
-
+		//init db
 		core.InitDB(argv.LocalPort)
 		core.CreateInitBlock("./core/genesis.json")
 
@@ -76,15 +76,15 @@ func main(){
 		kec256Hash:=crypto.NewKeccak256Hash("keccak256")
 
 		nodePath:="./p2p/peerconfig.json"
-		//init db
-		core.InitDB(argv.LocalPort)
+
+
 
 
 		//init manager
-
+		go jsonrpc.StartHttp(argv.LocalPort,eventMux)
 		manager.New(eventMux,grpcPeerMgr,cs,fetcher,encryption,kec256Hash,
 			nodePath,argv.NodeId)
-		go jsonrpc.StartHttp(argv.LocalPort,eventMux)
+
 
 
 

@@ -16,7 +16,8 @@ import (
 	"sync"
 	"crypto/ecdsa"
 	"log"
-
+	"hyperchain/protos"
+	"time"
 )
 
 type ProtocolManager struct {
@@ -38,10 +39,13 @@ type ProtocolManager struct {
 
 	wg           sync.WaitGroup
 }
+
 var eventMuxAll *event.TypeMux
+
 func NewProtocolManager(peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
 encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
-
+     fmt.Println("enter parotocol manager")
+	fmt.Println(consenter)
 	manager := &ProtocolManager{
 
 		eventMux:    eventMux,
@@ -54,10 +58,9 @@ encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 
 
 	}
-	eventMuxAll=eventMux
+	eventMuxAll = eventMux
 	return manager
 }
-
 
 func GetEventObject() *event.TypeMux {
 	return eventMuxAll
@@ -101,7 +104,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 			//commit block into local db
 			log.Println(ev.Payload)
 			log.Println("write block success")
-			//self.fetcher.Enqueue(ev.Payload)
+		//self.fetcher.Enqueue(ev.Payload)
 
 		}
 	}
@@ -119,46 +122,32 @@ func (self *ProtocolManager) ConsensusLoop() {
 			fmt.Println("enter broadcast")
 			self.BroadcastConsensus(ev.Payload)
 		case event.NewTxEvent:
+			fmt.Println("receiver new tx")
 			//call consensus module
 			//Todo
-			/*fmt.Println("get new TxEvent")
-			var transaction *types.Transaction
-			//decode tx
-			proto.Unmarshal(ev.Payload, transaction)
-			//hash tx
-			h := transaction.SighHash(self.commonHash)
-			key, err := self.encryption.GetKey()
-			switch key.(type){
-			case ecdsa.PrivateKey:
-				actualKey:=key.(ecdsa.PrivateKey)
-				sign, err := self.encryption.Sign(h[:], actualKey)
-				if err != nil {
-					fmt.Print(err)
-				}
-				transaction.Signature = sign
-				//encode tx
-				payLoad, err := proto.Marshal(transaction)
-				if err != nil {
-					return
-				}
 
-				self.consenter.RecvMsg(payLoad)
-			}
-			if err != nil {
-				return
-			}*/
 
 			/*payLoad:=self.transformTx(ev.Payload)
 			if payLoad==nil{
 				log.Fatal("payLoad nil")
 			}*/
-			self.consenter.RecvMsg(ev.Payload)
-			//sign tx
+
+			fmt.Println(ev.Payload)
+			msg := &protos.Message{
+				Type: protos.Message_TRANSACTION,
+				Payload: ev.Payload,
+				Timestamp: time.Now().Unix(),
+				Id: 0,
+			}
+			payload,_ := proto.Marshal(msg)
+			self.consenter.RecvMsg(payload)
+		//sign tx
 
 
 		case event.ConsensusEvent:
 			//call consensus module
 			//Todo
+			fmt.Println("enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 
 
@@ -186,7 +175,7 @@ func (pm *ProtocolManager)transformTx(payLoad []byte) []byte {
 	key, err := pm.encryption.GetKey()
 	switch key.(type){
 	case ecdsa.PrivateKey:
-		actualKey:=key.(ecdsa.PrivateKey)
+		actualKey := key.(ecdsa.PrivateKey)
 		sign, err := pm.encryption.Sign(h[:], actualKey)
 		if err != nil {
 			fmt.Print(err)
