@@ -16,9 +16,9 @@ func TransactionCreate(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	isBalanceEnough := api.SendTransaction(api.TxArgs{
-		From: r.Form("from")[0],
-		To: r.Form("to")[0],
-		Value: r.Form("value")[0],
+		From: r.Form["from"][0],
+		To: r.Form["to"][0],
+		Value: r.Form["value"][0],
 
 	})
 
