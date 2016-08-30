@@ -1,25 +1,31 @@
 stages:
-  - build
   - test
+  - build
 
-build-my-project:
-  stage: build
-  script:
-    - go get -u github.com/Masterminds/glide
-    - glide install
-    - go build
-  only: 
-    - test
-  tags:
-    - golang
 test-my-project:
   stage: test
   script:
-    - go get -u github.com/Masterminds/glide
-    - glide install
-    - go test -v ./...
+    - mkdir -p /builds/hyperchain/goenv/
+    - export GOPATH=/builds/hyperchain/goenv/
+    - go env
+    - go get -u github.com/kardianos/govendor
+    - govender sync
+    - govender test +local
+  only: 
+    - develop
+  tags:
+    - golang
+build-my-project:
+  stage: build
+  script:
+    - mkdir -p /builds/hyperchain/goenv/
+    - export GOPATH=/builds/hyperchain/goenv/
+    - go env
+    - go get -u github.com/kardianos/govendor
+    - govender sync
+    - govender test +local
   only:
-    - test
+    - develop
   tags:
     - golang
 
