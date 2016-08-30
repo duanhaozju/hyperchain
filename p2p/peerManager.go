@@ -51,7 +51,7 @@ func (this *GrpcPeerManager) GetClientId() common.Hash {
 // Start start the Normal local listen server
 func (this *GrpcPeerManager) Start(path string, NodeId uint64, aliveChan chan bool,isTest bool,eventMux *event.TypeMux) {
 	configs := peerComm.GetConfig(path)
-	port, _ := strconv.Atoi(configs["port"+strconv.Itoa(NodeId)])
+	port, _ := strconv.Atoi(configs["port"+strconv.FormatUint(NodeId,10)])
 	// start local node
 	this.localNode = node.NewNode(port,isTest,eventMux)
 	log.Println("Local Node hash:",hex.EncodeToString(this.GetClientId().Bytes()))
