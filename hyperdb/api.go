@@ -4,7 +4,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"sync"
 	"strconv"
-	"fmt"
+
 )
 
 type stateldb int32
@@ -52,9 +52,10 @@ func getDBPath() string {
 // if LDBDatabase state is open, return db directly
 // if LDBDatabase state id close,
 func GetLDBDatabase() (*LDBDatabase, error) {
+
 	ldbInstance.dbsync.Lock()
 	defer ldbInstance.dbsync.Unlock()
-	fmt.Println(getDBPath())
+	//fmt.Println(getDBPath())
 	if ldbInstance.state == opened {
 		return ldbInstance.ldb, nil
 	}

@@ -27,6 +27,9 @@ type Encryption interface {
 	GetKey()(interface{},error)
 
 
+	PrivKeyToAddress(prv interface{})[]byte
+
+
 }
 
 
