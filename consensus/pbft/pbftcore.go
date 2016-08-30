@@ -220,7 +220,7 @@ func (instance *pbftCore) ProcessEvent(e events.Event) events.Event {
 
 // Given a certain view n, what is the expected primary?
 func (instance *pbftCore) primary(n uint64) uint64 {
-	return n % uint64(instance.replicaCount)
+	return (n % uint64(instance.replicaCount) + 1)
 }
 
 // Is the sequence number between watermarks?
