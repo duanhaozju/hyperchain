@@ -15,12 +15,14 @@ import (
 	"fmt"
 	//"hyperchain-alpha/peer/Server"
 	node "hyperchain/p2p/node"
-)
+	"hyperchain/event"
+	)
 
 
 func TestNewChatClient(t *testing.T) {
 	//start the server
-	server := node.NewNode(8002,true)
+	eventMux := new(event.TypeMux)
+	server := node.NewNode(8011,true,eventMux)
 
 	chatClient,err := NewPeer("localhost:8002")
 	if err != nil{

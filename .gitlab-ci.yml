@@ -1,25 +1,24 @@
 stages:
-  - build
   - test
+  - build
 
-build-my-project:
-  stage: build
-  script:
-    - go get -u github.com/Masterminds/glide
-    - glide install
-    - go build
-  only: 
-    - test
-  tags:
-    - golang
 test-my-project:
   stage: test
   script:
-    - go get -u github.com/Masterminds/glide
-    - glide install
-    - go test -v ./...
+    - go env
+    - go get -d
+    - go test
+  only: 
+    - develop
+  tags:
+    - golang
+build-my-project:
+  stage: build
+  script:
+    - go env
+    - go get -d
   only:
-    - test
+    - develop
   tags:
     - golang
 
