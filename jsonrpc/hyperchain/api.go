@@ -2,15 +2,14 @@ package hyperchain
 
 import (
 	"hyperchain/core/types"
-	"fmt"
 	"hyperchain/event"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/hyperdb"
 	"log"
 	"hyperchain/core"
 	"math/big"
-	"hyperchain/common"
 	"hyperchain/manager"
+	"fmt"
 )
 
 type TxArgs struct{
@@ -26,7 +25,7 @@ type Transaction struct {
 	TimeStamp int64
 }
 
-type Balance map[common.Address]big.Int
+type BalanceShow map[string]string
 
 // SendTransaction is to build a transaction object,and then post event NewTxEvent,
 // if the sender's balance is not enough, return false
@@ -96,29 +95,20 @@ func GetAllTransactions()  []Transaction{
 }
 
 // GetAllBalances retrun all account's balance in the db,NOT CACHE DB!
-func GetAllBalances() Balance{
+func GetAllBalances() BalanceShow {
 
-	var val big.Int
-	var balances Balance
+	var balances = make(BalanceShow)
 
 	balanceIns, err := core.GetBalanceIns()
-	//fmt.Println("get balance")
 
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
 	}
 
 	balMap := balanceIns.GetAllDBBalance()
-
-	if balMap==nil{
-		for key, value := range balMap {
-
-			val.SetString(string(value),10)
-
-			balances[key] = val
-		}
+	for key, value := range balMap {
+		balances[key.Str()] = string(value)
 	}
-
 
 	return balances
 }

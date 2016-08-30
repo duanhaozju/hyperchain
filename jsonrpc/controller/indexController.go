@@ -15,7 +15,7 @@ type ResData struct{
 
 type data struct{
 	Trans []hyperchain.Transaction
-	Balances hyperchain.Balance
+	Balances hyperchain.BalanceShow
 }
 
 // 处理请求 : GET "/"
