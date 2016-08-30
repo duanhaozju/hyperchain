@@ -1,3 +1,7 @@
+// fetcher implements block operate
+// author: Lizhong kuang
+// date: 2016-08-29
+// last modified:2016-08-29
 package core
 
 import (
@@ -10,10 +14,12 @@ import (
 
 	"log"
 
+
 )
 
 
 func CreateInitBlock(filename string)  {
+	log.Println("genesis start")
 
 	type Genesis struct {
 
@@ -22,7 +28,7 @@ func CreateInitBlock(filename string)  {
 		BlockHash  string
 		Coinbase    string
 		Number int64
-		Alloc       map[string]int64
+		Alloc       map[string]string
 
 
 
@@ -43,23 +49,25 @@ func CreateInitBlock(filename string)  {
 		return
 	}
 
+	balanceIns, err := GetBalanceIns()
+	if err != nil {
+		log.Fatalf("GetBalanceIns error, %v", err)
+	}
 	for addr, account := range genesis["test1"].Alloc {
 		//address := common.HexToAddress(addr)
 
 		//value, err := strconv.ParseInt(account.Balance, 10, 64)
-		/*fmt.Println(addr)
-		fmt.Println([]byte(addr))
-		fmt.Println(common.BytesToHash([]byte(addr)))
-		fmt.Println(common.BytesToHash([]byte("0000000000000000000000000000000000000002")))
-		*/balance:=types.Balance{
+		//fmt.Println(addr)
+		//fmt.Println([]byte(addr))
+		//fmt.Println(common.BytesToHash([]byte(addr)))
+		//fmt.Println(common.BytesToAddress([]byte("0000000000000000000000000000000000000002")))
+		/*balance:=types.Balance{
 			AccountPublicKeyHash:[]byte(addr),
 			Value:account,
-		}
-		if err!=nil{
-			return
-		}
-		PutBalanceToMEM(balance)
-		//.AddBalance(address, common.String2Big(account.Balance))
+		}*/
+
+		balanceIns.PutCacheBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
+
 
 
 	}
@@ -81,10 +89,7 @@ func CreateInitBlock(filename string)  {
 	UpdateChain(block.BlockHash)
 
 
-	fmt.Print(GetBalanceFromMEM(common.BytesToAddress([]byte("0000000000000000000000000000000000000002"))).Value)
+	fmt.Println(balanceIns.GetCacheBalance(common.BytesToAddress([]byte("0000000000000000000000000000000000000002"))))
 
 
-
-	//-- 初始初始化balance
-	//core.UpdateBalance(block)
 }

@@ -4,21 +4,18 @@
 // last modified:2016-08-25
 package manager
 
-import "sync"
-
-
-
 import (
 	"hyperchain/event"
-
 	"hyperchain/p2p"
-
 	"hyperchain/core"
 	"hyperchain/consensus"
 	"hyperchain/crypto"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"
 	"fmt"
+	"sync"
+
+	"crypto/ecdsa"
 )
 
 type ProtocolManager struct {
@@ -33,15 +30,16 @@ type ProtocolManager struct {
 	txSub        event.Subscription
 	newBlockSub  event.Subscription
 	consensusSub event.Subscription
+
+	aLiveSub     event.Subscription
 	quitSync     chan struct{}
 
 	wg           sync.WaitGroup
 }
-
-func NewProtocolManager(peerManager p2p.PeerManager, fetcher *core.Fetcher, consenter consensus.Consenter,
+var eventMuxAll *event.TypeMux
+func NewProtocolManager(peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
 encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 
-	eventMux := new(event.TypeMux)
 	manager := &ProtocolManager{
 		eventMux:    eventMux,
 		quitSync:    make(chan struct{}),
@@ -53,12 +51,20 @@ encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 
 
 	}
+	eventMuxAll=eventMux
 	return manager
+}
+
+
+func GetEventObject() *event.TypeMux {
+	return eventMuxAll
 }
 
 
 // start listen new block msg and consensus msg
 func (pm *ProtocolManager) Start() {
+
+	//commit block into local db
 
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
@@ -66,6 +72,14 @@ func (pm *ProtocolManager) Start() {
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
+
+	/*for i := 0; i < 100; i += 1 {
+		fmt.Println("enenen")
+		eventmux := new(event.TypeMux)
+		eventmux.Post(event.BroadcastConsensusEvent{[]byte{0x00, 0x00, 0x03, 0xe8}})
+
+	}*/
+
 	pm.wg.Wait()
 
 }
@@ -95,28 +109,39 @@ func (self *ProtocolManager) ConsensusLoop() {
 		switch ev := obj.Data.(type) {
 
 		case event.BroadcastConsensusEvent:
+			fmt.Println("enter broadcast")
 			self.BroadcastConsensus(ev.Payload)
 		case event.NewTxEvent:
 			//call consensus module
 			//Todo
+			fmt.Println("get new TxEvent")
 			var transaction *types.Transaction
 			//decode tx
 			proto.Unmarshal(ev.Payload, transaction)
 			//hash tx
 			h := transaction.SighHash(self.commonHash)
-			//sign tx
-			sign, err := self.encryption.Sign(h[:], self.encryption.GetKey())
-			if err != nil {
-				fmt.Print(err)
+			key, err := self.encryption.GetKey()
+			switch key.(type){
+			case ecdsa.PrivateKey:
+				actualKey:=key.(ecdsa.PrivateKey)
+				sign, err := self.encryption.Sign(h[:], actualKey)
+				if err != nil {
+					fmt.Print(err)
+				}
+				transaction.Signature = sign
+				//encode tx
+				payLoad, err := proto.Marshal(transaction)
+				if err != nil {
+					return
+				}
+
+				self.consenter.RecvMsg(payLoad)
 			}
-			transaction.Signature = sign
-			//encode tx
-			payLoad,err:=proto.Marshal(transaction)
-			if err!=nil{
+			if err != nil {
 				return
 			}
+			//sign tx
 
-			self.consenter.RecvMsg(payLoad)
 
 		case event.ConsensusEvent:
 			//call consensus module

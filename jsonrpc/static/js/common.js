@@ -33,7 +33,7 @@ $(document).ready(function(){
                 if(result.Code == 1){
                     alert("提交成功!");
                 } else {
-                    alert("交易验证失败，您没有足够的金额或者交易签名未通过！");
+                    alert("交易验证失败，您没有足够的金额！");
                 }
 
 //                    $("input[type=reset]").trigger("click");
