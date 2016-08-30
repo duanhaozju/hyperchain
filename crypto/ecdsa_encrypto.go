@@ -68,11 +68,12 @@ func (ee *EcdsaEncrypto)GeneralKey(port string)(interface{},error) {
 	ee.port=port
 	k := hex.EncodeToString(ee.FromECDSA(key))
 	_, error := os.Stat(keystoredir)
-	if !(error == nil || os.IsExist(error)){
+	if error == nil || os.IsExist(error){
+		fmt.Println("directory exists")
+
+	}else {
 		fmt.Println("no")
 		os.MkdirAll(keystoredir,0777)
-	}else {
-		fmt.Println("directory exists")
 	}
 	file := keystoredir+port
 	if err:=ioutil.WriteFile(file, []byte(k), 0600);err!=nil{

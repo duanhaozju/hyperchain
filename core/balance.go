@@ -8,7 +8,6 @@ import (
 	"hyperchain/common"
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/big"
-
 )
 
 //-- --------------------- Balance ------------------------------------\
