@@ -57,7 +57,7 @@ func loadConfig() (config *viper.Viper) {
 	// Path to look for the config file in based on GOPATH
 	gopath := os.Getenv("GOPATH")
 	for _, p := range filepath.SplitList(gopath) {
-		pbftpath := filepath.Join(p, "src/github.com/hyperchain/hyperchain/consensus/pbft")
+		pbftpath := filepath.Join(p, "src/hyperchain/consensus/pbft")
 		config.AddConfigPath(pbftpath)
 	}
 

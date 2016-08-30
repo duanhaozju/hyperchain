@@ -16,10 +16,14 @@ import (
 	"sync"
 
 	"crypto/ecdsa"
-	"github.com/labstack/gommon/log"
+
+	"log"
+
+	"hyperchain/jsonrpc"
 )
 
 type ProtocolManager struct {
+	serverPort   int
 	fetcher      *core.Fetcher
 	peerManager  p2p.PeerManager
 	consenter    consensus.Consenter
@@ -38,10 +42,11 @@ type ProtocolManager struct {
 	wg           sync.WaitGroup
 }
 var eventMuxAll *event.TypeMux
-func NewProtocolManager(peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
+func NewProtocolManager(serverPort int,peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
 encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 
 	manager := &ProtocolManager{
+		serverPort:serverPort,
 		eventMux:    eventMux,
 		quitSync:    make(chan struct{}),
 		consenter:consenter,
@@ -67,12 +72,14 @@ func (pm *ProtocolManager) Start() {
 
 	//commit block into local db
 
+	go jsonrpc.StartHttp(pm.serverPort,pm.eventMux)
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
+
 
 	/*for i := 0; i < 100; i += 1 {
 		fmt.Println("enenen")
@@ -95,7 +102,9 @@ func (self *ProtocolManager) NewBlockLoop() {
 		switch ev := obj.Data.(type) {
 		case event.NewBlockEvent:
 			//commit block into local db
-			self.fetcher.Enqueue(ev.Payload)
+			log.Println(ev.Payload)
+			log.Println("write block success")
+			//self.fetcher.Enqueue(ev.Payload)
 
 		}
 	}
@@ -142,11 +151,11 @@ func (self *ProtocolManager) ConsensusLoop() {
 				return
 			}*/
 
-			payLoad:=self.transformTx(ev.Payload)
+			/*payLoad:=self.transformTx(ev.Payload)
 			if payLoad==nil{
 				log.Fatal("payLoad nil")
-			}
-			self.consenter.RecvMsg(payLoad)
+			}*/
+			self.consenter.RecvMsg(ev.Payload)
 			//sign tx
 
 

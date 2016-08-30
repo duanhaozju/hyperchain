@@ -16,7 +16,7 @@ import (
 // init protocol manager params and start
 func New(eventMux *event.TypeMux, peerManager p2p.PeerManager, consenter consensus.Consenter, fetcher *core.Fetcher,
           encryption crypto.Encryption, commonHash crypto.CommonHash,
-        path string, nodeId uint64) (error) {
+        path string, nodeId uint64,serverPort int) (error) {
 
 
 	aliveChan := make(chan bool)
@@ -27,7 +27,7 @@ func New(eventMux *event.TypeMux, peerManager p2p.PeerManager, consenter consens
 	case <-aliveChan:
 		{
 
-			protocolManager := NewProtocolManager(peerManager, eventMux, fetcher, consenter, encryption, commonHash)
+			protocolManager := NewProtocolManager(serverPort,peerManager, eventMux, fetcher, consenter, encryption, commonHash)
 
 			protocolManager.Start()
 		}
