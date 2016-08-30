@@ -1,4 +1,4 @@
-package jsonrpc
+package hyperchain
 
 import (
 	"hyperchain/core/types"
@@ -9,6 +9,8 @@ import (
 	"log"
 	"hyperchain/core"
 	"math/big"
+	"hyperchain/common"
+	"hyperchain/manager"
 )
 
 type TxArgs struct{
@@ -24,6 +26,8 @@ type Transaction struct {
 	TimeStamp int64
 }
 
+type Balance map[common.Address]big.Int
+
 // SendTransaction is to build a transaction object,and then post event NewTxEvent,
 // if the sender's balance is not enough, return false
 func SendTransaction(args TxArgs) bool {
@@ -36,11 +40,18 @@ func SendTransaction(args TxArgs) bool {
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
 
 	// 判断交易余额是否足够
-	if (tx.VerifyBalance()) {
+	if (core.VerifyBalance(tx)) {
 		// 余额足够
 		// 抛 NewTxEvent 事件
-		 eventmux:=new(event.TypeMux)
-		 eventmux.Post(event.NewTxEvent{Payload: proto.Marshal(tx)})
+		//eventmux:=new(event.TypeMux)
+
+		txBytes, err := proto.Marshal(tx)
+		if err != nil {
+			log.Fatalf("proto.Marshal(tx) error: %v",err)
+		}
+
+
+		manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 
 		return true
 
@@ -50,7 +61,8 @@ func SendTransaction(args TxArgs) bool {
 	}
 }
 
-func GetAllTransactions()  []types.Transaction{
+// GetAllTransactions return all transactions in the chain/db
+func GetAllTransactions()  []Transaction{
 
 	db, err := hyperdb.GetLDBDatabase()
 
@@ -81,8 +93,11 @@ func GetAllTransactions()  []types.Transaction{
 	return transactions
 }
 
+// GetAllBalances retrun all account's balance in the db,NOT CACHE DB!
+func GetAllBalances() Balance{
 
-func GetAllBalances() core.BalanceMap{
+	var val big.Int
+	var balances Balance
 
 	balanceIns, err := core.GetBalanceIns()
 
@@ -92,7 +107,14 @@ func GetAllBalances() core.BalanceMap{
 
 	balMap := balanceIns.GetAllDBBalance()
 
-	return balMap
+	for key, value := range balMap {
+
+		val.SetString(string(value),10)
+
+		balances[key] = val
+	}
+
+	return balances
 }
 
 

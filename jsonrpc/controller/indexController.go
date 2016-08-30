@@ -2,11 +2,11 @@ package controller
 import (
 	"net/http"
 	"html/template"
-	"hyperchain/core"
 	"path"
 	"os"
-	"hyperchain/jsonrpc"
+	"hyperchain/jsonrpc/hyperchain"
 )
+
 
 type ResData struct{
 	Data interface{}
@@ -14,8 +14,8 @@ type ResData struct{
 }
 
 type data struct{
-	Trans []jsonrpc.Transaction
-	Balances core.BalanceMap
+	Trans []hyperchain.Transaction
+	Balances hyperchain.Balance
 }
 
 // 处理请求 : GET "/"
@@ -25,8 +25,8 @@ func Index(w http.ResponseWriter, r *http.Request) {
 
 	var tmpl = template.Must(template.ParseFiles(indexpath))
 
-	transactions := jsonrpc.GetAllTransactions()
-	balances := jsonrpc.GetAllBalances()
+	transactions := hyperchain.GetAllTransactions()
+	balances := hyperchain.GetAllBalances()
 
 	//sort.Sort(types.Transactions(transactions)) // 交易排序
 

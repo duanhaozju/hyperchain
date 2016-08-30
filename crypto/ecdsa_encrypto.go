@@ -20,7 +20,7 @@ import (
 //
 type EcdsaEncrypto struct{
 	name string
-        port string
+	port string
 }
 
 func NewEcdsaEncrypto(name string) *EcdsaEncrypto  {
@@ -60,11 +60,12 @@ func (ee *EcdsaEncrypto)UnSign(args ...interface{})([]byte, error)  {
 	addr := ee.Keccak256(pubBytes[1:])[12:]
 	return addr,nil
 }
-func (ee *EcdsaEncrypto)GeneralKey(port string)(*ecdsa.PrivateKey,error) {
+func (ee *EcdsaEncrypto)GeneralKey(port string)(interface{},error) {
 	key,err := ee.GenerateKey()
 	if err!=nil{
 		return nil,err
 	}
+
 	ee.port=port
 	k := hex.EncodeToString(ee.FromECDSA(key))
 	abspath,_ := os.Getwd()
@@ -77,7 +78,7 @@ func (ee *EcdsaEncrypto)GeneralKey(port string)(*ecdsa.PrivateKey,error) {
 
 }
 //load key by given port
-func (ee *EcdsaEncrypto)GetKey() (*ecdsa.PrivateKey,error) {
+func (ee *EcdsaEncrypto)GetKey() (interface{},error) {
 	abspath,_ := os.Getwd()
 	current := filepath.Base(abspath)
 	file := abspath[0:len(abspath)-len(current)]+"keystore/"+ee.port
