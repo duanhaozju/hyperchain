@@ -14,7 +14,7 @@ import (
 
 	"log"
 
-
+	"hyperchain/hyperdb"
 )
 
 
@@ -67,6 +67,14 @@ func CreateInitBlock(filename string)  {
 		}*/
 
 		balanceIns.PutCacheBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
+		balanceIns.PutDBBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
+
+		db,err:=hyperdb.GetLDBDatabase()
+		PutDBBalance(db,balanceIns.dbBalance)
+		if err!=nil{
+			return
+		}
+
 
 
 
