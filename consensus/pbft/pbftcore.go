@@ -424,36 +424,6 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 	instance.maybeSendCommit(digest, instance.view, n)
 }
 
-func (instance *pbftCore) resubmitRequestBatches() {
-	if instance.primary(instance.view) != instance.id {
-		return
-	}
-
-	var submissionOrder []*RequestBatch
-
-	outer:
-	for d, reqBatch := range instance.outstandingReqBatches {
-		for _, cert := range instance.certStore {
-			if cert.digest == d {
-				logger.Debugf("Replica %d already has certificate for request batch %s - not going to resubmit", instance.id, d)
-				continue outer
-			}
-		}
-		logger.Debugf("Replica %d has detected request batch %s must be resubmitted", instance.id, d)
-		submissionOrder = append(submissionOrder, reqBatch)
-	}
-
-	if len(submissionOrder) == 0 {
-		return
-	}
-
-	for _, reqBatch := range submissionOrder {
-		// This is a request batch that has not been pre-prepared yet
-		// Trigger request batch processing again
-		instance.recvRequestBatch(reqBatch)
-	}
-}
-
 func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d",
 		instance.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber)

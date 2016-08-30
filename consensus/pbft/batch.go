@@ -45,13 +45,13 @@ type batchMessage struct {
 func newBatch(id uint64, config *viper.Viper, h helper.Stack) consensus.Consenter{
 	var err error
 	fmt.Println("new batch")
+
 	batchObj:=&batch{
-		manager:	events.NewManagerImpl(),
 		localID:	id,
 		helperImpl:	h,
 	}
 
-
+	batchObj.manager = events.NewManagerImpl()
 	batchObj.manager.SetReceiver(batchObj)
 	batchObj.manager.Start()
 
@@ -93,6 +93,7 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 	//	fmt.Println("lalalla")
 	//	b.test_c <- 1//ToDo for test
 	case batchMessageEvent:
+		logger.Info("start processEvent of batchMessageEvent")
 		ocMsg := event
 		return op.processMessage(ocMsg.msg,  ocMsg.sender)
 	case batchTimerEvent:
@@ -207,7 +208,7 @@ func (op *batch) startBatchTimer() {
 	logger.Debugf("Replica %d started the batch timer", op.pbft.id)
 	op.batchTimerActive = true
 }
-func (b *batch) RecvMsg(e []byte) error {
+func (op *batch) RecvMsg(e []byte) error {
 	tempMsg := &pb.Message{}
 	err := proto.Unmarshal(e,tempMsg)
 	if err!=nil {
@@ -215,17 +216,12 @@ func (b *batch) RecvMsg(e []byte) error {
 	}
 	fmt.Println("RecvMsg")
 
-	b.manager.Queue()<-  b.parseMsg(tempMsg)
+	op.manager.Queue() <- batchMessageEvent{
+		msg: 	tempMsg,
+		sender:	tempMsg.Id,
+	}
 
         return nil
-}
-
-func  (b *batch) parseMsg(m *pb.Message)  *batchMessageEvent {
-	bme := &batchMessageEvent{
-		msg: 	m,
-		sender:	m.Id,
-	}
-	return bme
 }
 
 func (op *batch) stopBatchTimer() {
