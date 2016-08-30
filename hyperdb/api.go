@@ -53,6 +53,8 @@ func getDBPath() string {
 // if LDBDatabase state is open, return db directly
 // if LDBDatabase state id close,
 func GetLDBDatabase() (*LDBDatabase, error) {
+	fmt.Println("get db path")
+	fmt.Println(getDBPath())
 	ldbInstance.dbsync.Lock()
 	defer ldbInstance.dbsync.Unlock()
 	fmt.Println(getDBPath())
