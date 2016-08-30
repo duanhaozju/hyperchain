@@ -18,6 +18,8 @@ import (
 
 	"strconv"
 
+	"hyperchain/consensus/controller"
+	"hyperchain/jsonrpc"
 )
 
 type argT struct {
@@ -53,7 +55,7 @@ func main(){
 
 
 		//init pbft consensus
-		//cs:=controller.NewConsenter(argv.NodeId,eventMux)
+		cs:=controller.NewConsenter(uint64(argv.NodeId),eventMux)
 
 
 		core.InitDB(argv.LocalPort)
@@ -80,8 +82,9 @@ func main(){
 
 		//init manager
 
-		manager.New(argv.LocalPort,eventMux,grpcPeerMgr,nil,fetcher,encryption,kec256Hash,
-			nodePath,argv.NodeId,)
+		manager.New(eventMux,grpcPeerMgr,cs,fetcher,encryption,kec256Hash,
+			nodePath,argv.NodeId)
+		go jsonrpc.StartHttp(argv.LocalPort,eventMux)
 
 
 
