@@ -8,6 +8,7 @@ import (
 	"hyperchain/crypto/secp256k1"
 	"sync/atomic"
 
+	"crypto/ecdsa"
 )
 type Transaction struct {
 	data txdata
@@ -32,13 +33,13 @@ func NewTransaction(to []byte,amount *big.Int) *Transaction {
 
 func TestSigntx(t *testing.T)  {
 	ee := NewEcdsaEncrypto("ECDSAEncryto")
-	key, err:= ee.GeneralKey("5002")
+	k, err:= ee.GeneralKey("5002")
 	if err!=nil{
 		panic(err)
 	}
-	priv,_:=ee.GetKey()
-	pub := key.PublicKey
 
+	key := k.(*ecdsa.PrivateKey)
+	pub := key.PublicKey
 	var addr []byte
 	pubBytes := elliptic.Marshal(secp256k1.S256(), pub.X, pub.Y)
 	addr = ee.Keccak256(pubBytes[1:])[12:]
@@ -47,12 +48,20 @@ func TestSigntx(t *testing.T)  {
 	fmt.Println(pub)
 	fmt.Println("private key is :")
 	fmt.Println(key)
+	ee.SaveNodeInfo("./addressInfo","0.0.0.0",addr,key)
+
+	p,err:=ee.GetKey()
+	if err!=nil{
+		panic(err)
+	}
+	priv := p.(*ecdsa.PrivateKey)
 
 	//签名交易
 	tx:= NewTransaction([]byte{},big.NewInt(100))
 	s256 := NewKeccak256Hash("Keccak256")
 	hash := s256.Hash([]interface{}{tx.data.Amount,tx.data.Recipient})
-	signature,err := ee.Sign(hash[:],*priv)
+	signature,err := ee.Sign(hash[:],priv)
+
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
@@ -65,9 +74,8 @@ func TestSigntx(t *testing.T)  {
 		t.FailNow()
 	}
 
-
 	fmt.Println(from)
 	fmt.Println(addr)
-	ee.SaveNodeInfo("./addressInfo","0.0.0.0",addr,key)
+
 
 }

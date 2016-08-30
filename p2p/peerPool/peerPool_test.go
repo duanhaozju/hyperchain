@@ -19,14 +19,16 @@ import (
 	peer "hyperchain/p2p/peer"
 
 	"time"
-)
+	"hyperchain/event"
+	)
 
 // test the peer pool to put peer
 func TestPeersPool_PutPeer(t *testing.T) {
 	portRange := 8002
 	//get the client
 	//start the server
-	server := node.NewNode(portRange,true)
+	eventMux := new(event.TypeMux)
+	server := node.NewNode(portRange,true,eventMux)
 
 	chatClient, err := peer.NewPeer("localhost:"+ strconv.Itoa(portRange))
 	if err != nil {
@@ -61,21 +63,14 @@ func TestPeersPool_PutPeer(t *testing.T) {
 		}
 	}
 	server.StopServer()
-	//if isClosed,err := chatClient.Close(); isClosed{
-	//	server.StopServer()
-	//}else{
-	//	if err != nil {
-	//		t.Errorf("关闭client错误", err)
-	//	}
-	//	server.StopServer()
-	//}
 }
 
 func TestPeersPool_GetPeer(t *testing.T) {
 	portRange := 8001
 	//get the client
 	//start the server
-	server := node.NewNode(int(portRange),true)
+	eventMux := new(event.TypeMux)
+	server := node.NewNode(portRange,true,eventMux)
 
 	chatClient, err := peer.NewPeer("localhost:"+ strconv.Itoa(portRange))
 	if err != nil {
