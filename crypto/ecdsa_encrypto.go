@@ -34,7 +34,7 @@ func (ee *EcdsaEncrypto)GenerateKey()(*ecdsa.PrivateKey,error)  {
 }
 
 func (ee *EcdsaEncrypto)Sign(hash []byte,  prv interface{})(sig []byte, err error)  {
-	privateKey := prv.(ecdsa.PrivateKey)
+	privateKey := prv.(*ecdsa.PrivateKey)
 	if len(hash) != 32 {
 		return nil, fmt.Errorf("hash is required to be exactly 32 bytes (%d)", len(hash))
 	}
