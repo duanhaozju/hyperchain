@@ -11,6 +11,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
+	"reflect"
 )
 
 type batch struct {
@@ -29,7 +30,7 @@ type batch struct {
 	//test_c                chan int8 //ToDo for test
 }
 
-//type testEvent struct {} //ToDo for test
+type testEvent struct {} //ToDo for test
 
 // batchMessageEvent is sent when a consensus message is received that is then to be sent to pbft
 type batchMessageEvent batchMessage
@@ -44,19 +45,16 @@ type batchMessage struct {
 
 func newBatch(id uint64, config *viper.Viper, h helper.Stack) consensus.Consenter{
 	var err error
-	fmt.Println("new batch")
 	batchObj:=&batch{
-		manager:	events.NewManagerImpl(),
 		localID:	id,
 		helperImpl:	h,
 	}
 
-
+	batchObj.manager=events.NewManagerImpl()
 	batchObj.manager.SetReceiver(batchObj)
-	batchObj.manager.Start()
-
 	etf := events.NewTimerFactoryImpl(batchObj.manager)
 	batchObj.pbft = newPbftCore(id, config, batchObj, etf)
+	batchObj.manager.Start()
 
 	batchObj.batchTimer = etf.CreateTimer()
 	batchObj.batchSize = config.GetInt("general.batchsize")
@@ -88,11 +86,13 @@ func (op *batch) getHelper() helper.Stack {
 
 func (op *batch) ProcessEvent(e events.Event) events.Event{
 	logger.Debugf("Replica %d batch main thread looping", op.pbft.id)
+	logger.Info("**********>  ProcessEvent1:")
 	switch event:=e.(type) {
 	//case *testEvent:
 	//	fmt.Println("lalalla")
 	//	b.test_c <- 1//ToDo for test
-	case batchMessageEvent:
+	case *batchMessageEvent:
+		logger.Info("**********>  ProcessEvent:",reflect.TypeOf(event))
 		ocMsg := event
 		return op.processMessage(ocMsg.msg,  ocMsg.sender)
 	case batchTimerEvent:
@@ -108,6 +108,7 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 
 
 func (op *batch) processMessage(msg *pb.Message, id uint64) events.Event {
+	logger.Infof("**********>  proccess message:",reflect.TypeOf(msg),msg.Type)
 
 	if msg.Type == pb.Message_TRANSACTION {
 		req := op.txToReq(msg)
@@ -207,20 +208,21 @@ func (op *batch) startBatchTimer() {
 	logger.Debugf("Replica %d started the batch timer", op.pbft.id)
 	op.batchTimerActive = true
 }
-func (b *batch) RecvMsg(e []byte) error {
+func (op *batch) RecvMsg(e []byte) error {
 	tempMsg := &pb.Message{}
 	err := proto.Unmarshal(e,tempMsg)
 	if err!=nil {
+		logger.Info("**********> Unmarshal error:",err)
 		return err
 	}
-	fmt.Println("RecvMsg")
+	event:=op.parseMsg(tempMsg)
 
-	b.manager.Queue()<-  b.parseMsg(tempMsg)
-
+	op.manager.Queue()<-struct{}{}
+	logger.Info("**********> parseMsg type:",reflect.TypeOf(event))
         return nil
 }
 
-func  (b *batch) parseMsg(m *pb.Message)  *batchMessageEvent {
+func  (op *batch) parseMsg(m *pb.Message)  *batchMessageEvent {
 	bme := &batchMessageEvent{
 		msg: 	m,
 		sender:	m.Id,
@@ -236,7 +238,8 @@ func (op *batch) stopBatchTimer() {
 
 func (op *batch) submitToLeader(req *Request) events.Event {
 	// Broadcast the request to the network, in case we're in the wrong view
-	pbMsg := batchMsgHelper(&BatchMessage{Payload: &BatchMessage_Request{Request: req}}, op.pbft.id)
+
+	pbMsg := requestMsgHelper(req, op.pbft.id)
 	op.helperImpl.InnerBroadcast(pbMsg)
 	op.reqStore.storeOutstanding(req)
 	op.startTimerIfOutstandingRequests()
@@ -246,5 +249,10 @@ func (op *batch) submitToLeader(req *Request) events.Event {
 	return nil
 }
 
+// Close tells us to release resources we are holding
+func (op *batch) Close() {
+	op.batchTimer.Halt()
+	op.pbft.close()
+}
 
 

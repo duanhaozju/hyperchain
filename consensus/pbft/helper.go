@@ -25,3 +25,8 @@ func pbftMsgHelper(msg *Message, id uint64) *pb.Message {
 	return pbMsg
 }
 
+func requestMsgHelper(req *Request, id uint64) *pb.Message{
+	batchMsg := &BatchMessage{Payload: &BatchMessage_Request{Request: req}}
+	pbMsg := batchMsgHelper(batchMsg, id)
+	return pbMsg
+}
