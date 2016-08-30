@@ -6,9 +6,8 @@ test-my-project:
   stage: test
   script:
     - go env
-    - go get -u github.com/kardianos/govendor
-    - govendor sync
-    - govendor test +local
+    - go get -d
+    - go test
   only: 
     - develop
   tags:
@@ -17,9 +16,7 @@ build-my-project:
   stage: build
   script:
     - go env
-    - go get -u github.com/kardianos/govendor
-    - govendor sync
-    - govendor test +local
+    - go get -d
   only:
     - develop
   tags:
