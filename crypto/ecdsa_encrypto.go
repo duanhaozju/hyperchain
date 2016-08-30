@@ -150,9 +150,12 @@ func (ee *EcdsaEncrypto)SaveNodeInfo(file string, ip string ,addr []byte, pri *e
 	return err
 
 }
-func (ee *EcdsaEncrypto)PubkeyToAddress(p ecdsa.PublicKey) common.Address {
+func (ee *EcdsaEncrypto)PubkeyToAddress(p ecdsa.PublicKey) []byte {
 	pubBytes := ee.FromECDSAPub(&p)
 	return ee.Keccak256(pubBytes[1:])[12:]
+}
+func (ee *EcdsaEncrypto)PrivKeyToAddress(p ecdsa.PrivateKey)[]byte  {
+	return ee.PubkeyToAddress(p.PublicKey)
 }
 func (ee *EcdsaEncrypto)Keccak256(data ...[]byte) []byte {
 	d := sha3.NewKeccak256()
