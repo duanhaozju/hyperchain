@@ -18,7 +18,7 @@ func StartHttp(httpPort int,eventMux *event.TypeMux){
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./jsonrpc")))
 
 	//启动http服务
-		log.Println("启动http服务...")
+	log.Println("启动http服务...")
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(httpPort),router))
 }
 
