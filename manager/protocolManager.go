@@ -103,7 +103,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 		case event.NewBlockEvent:
 			//commit block into local db
 			log.Println(ev.Payload)
-			 msgList:= &protos.ExeMessage{}
+			/* msgList:= &protos.ExeMessage{}
 			proto.Unmarshal(ev.Payload,msgList)
 			block:=new(types.Block)
 			for _, item := range msgList.Batch{
@@ -116,6 +116,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 			block.ParentHash=currentChain.LatestBlockHash
 			block.Timestamp=time.Now().Unix()
 			//block.BlockHash=
+			block.BlockHash=block.Hash(self.commonHash).Bytes()*/
 
 
 			log.Println("write block success")
@@ -212,6 +213,10 @@ func (pm *ProtocolManager)transformTx(payLoad []byte) []byte {
 	return nil
 
 }
+
+/*func() commitBlock()  {
+
+}*/
 
 
 
