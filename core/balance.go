@@ -216,7 +216,14 @@ func VerifyBalance(tx *types.Transaction) bool{
 		log.Fatalf("GetBalanceIns error, %v", err)
 	}
 
+	//log.Println(tx.From)
+	//log.Println(common.BytesToAddress(tx.From))
 	bal := balanceIns.GetCacheBalance(common.BytesToAddress(tx.From))
+	bal2 := balanceIns.GetCacheBalance(common.BytesToAddress([]byte("0000000000000000000000000000000000000002")))
+	log.Println(bal)
+	log.Println(bal2)
+	//log.Println(common.Bytes2Hex(bal))
+
 
 	balance.SetString(string(bal), 10)
 	value.SetString(string(tx.Value), 10)

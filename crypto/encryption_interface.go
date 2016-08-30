@@ -4,7 +4,11 @@
 // last modified:2016-08-25
 package crypto
 
-import "crypto/ecdsa"
+
+type KeyType interface {
+	sign()
+
+}
 
 type Encryption interface {
 
@@ -12,9 +16,16 @@ type Encryption interface {
 	Sign(hash []byte,  prv interface{})(sig []byte, err error)
 	UnSign(args ...interface{})([]byte, error)
 	//general private key and save into file
-	//GeneralKey(path string) (interface{},error)
-	GeneralKey(path string)(ecdsa.PrivateKey,error)
-	GetKey()(*ecdsa.PrivateKey,error)
+
+
+	GeneralKey(path string) (interface{},error)
+
+
+	//GeneralKey(path string)(*ecdsa.PrivateKey,error)
+
+
+	GetKey()(interface{},error)
+
 
 }
 

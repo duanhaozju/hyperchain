@@ -7,6 +7,7 @@ import (
 	"hyperchain/jsonrpc/hyperchain"
 )
 
+
 type ResData struct{
 	Data interface{}
 	Code int

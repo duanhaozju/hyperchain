@@ -19,6 +19,7 @@ import (
 
 
 func CreateInitBlock(filename string)  {
+	log.Println("genesis start")
 
 	type Genesis struct {
 
@@ -56,11 +57,10 @@ func CreateInitBlock(filename string)  {
 		//address := common.HexToAddress(addr)
 
 		//value, err := strconv.ParseInt(account.Balance, 10, 64)
-		/*fmt.Println(addr)
-		fmt.Println([]byte(addr))
-		fmt.Println(common.BytesToHash([]byte(addr)))
-		fmt.Println(common.BytesToHash([]byte("0000000000000000000000000000000000000002")))
-		*/
+		//fmt.Println(addr)
+		//fmt.Println([]byte(addr))
+		//fmt.Println(common.BytesToHash([]byte(addr)))
+		//fmt.Println(common.BytesToAddress([]byte("0000000000000000000000000000000000000002")))
 		/*balance:=types.Balance{
 			AccountPublicKeyHash:[]byte(addr),
 			Value:account,
@@ -68,9 +68,6 @@ func CreateInitBlock(filename string)  {
 
 		balanceIns.PutCacheBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
 
-
-		//PutBalanceToMEM(balance)
-		//.AddBalance(address, common.String2Big(account.Balance))
 
 
 	}
@@ -92,10 +89,7 @@ func CreateInitBlock(filename string)  {
 	UpdateChain(block.BlockHash)
 
 
-	fmt.Print(balanceIns.GetCacheBalance(common.BytesToAddress([]byte("0000000000000000000000000000000000000002"))))
+	fmt.Println(balanceIns.GetCacheBalance(common.BytesToAddress([]byte("0000000000000000000000000000000000000002"))))
 
 
-
-	//-- 初始初始化balance
-	//core.UpdateBalance(block)
 }

@@ -47,3 +47,27 @@ func newEvent(manager *ProtocolManager)  {
 	}
 
 }
+
+
+func TestDecodeTx(t *testing.T){
+	manager := &ProtocolManager{
+		eventMux:    new(event.TypeMux),
+		quitSync:    make(chan struct{}),
+
+
+
+	}
+	manager.aLiveSub = manager.eventMux.Subscribe(event.AliveEvent{})
+
+	go newEvent(manager)
+
+	for obj := range manager.aLiveSub.Chan() {
+
+		switch ev := obj.Data.(type) {
+		case event.AliveEvent:
+			fmt.Print(ev.Payload)
+		}
+	}
+
+
+}
