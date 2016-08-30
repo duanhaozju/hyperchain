@@ -5,8 +5,6 @@ stages:
 test-my-project:
   stage: test
   script:
-    - mkdir -p /builds/hyperchain/goenv/
-    - export GOPATH=/builds/hyperchain/goenv/
     - go env
     - go get -u github.com/kardianos/govendor
     - govendor sync
@@ -18,8 +16,6 @@ test-my-project:
 build-my-project:
   stage: build
   script:
-    - mkdir -p /builds/hyperchain/goenv/
-    - export GOPATH=/builds/hyperchain/goenv/
     - go env
     - go get -u github.com/kardianos/govendor
     - govendor sync
