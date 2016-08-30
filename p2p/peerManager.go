@@ -19,6 +19,7 @@ import (
 	"hyperchain/p2p/peerPool"
 	"log"
 	"encoding/hex"
+	"hyperchain/event"
 )
 
 const MAXPEERNODE = 4
@@ -27,7 +28,7 @@ type PeerManager interface {
 	// judge all peer are connected and return them
 	//JudgeAlivePeers(*chan bool)
 	GetAllPeers() []*peer.Peer
-	Start(path string, NodeId int, aliveChan chan bool,isTest bool)
+	Start(path string, NodeId int, aliveChan chan bool,isTest bool,eventMux *event.TypeMux)
 	GetClientId() common.Hash
 	BroadcastPeers(payLoad []byte)
 }
@@ -48,7 +49,7 @@ func (this *GrpcPeerManager) GetClientId() common.Hash {
 }
 
 // Start start the Normal local listen server
-func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,isTest bool) {
+func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,isTest bool,eventMux *event.TypeMux) {
 	configs := peerComm.GetConfig(path)
 	port, _ := strconv.Atoi(configs["port"+strconv.Itoa(NodeId)])
 	// start local node
@@ -113,6 +114,10 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 		}
 	}
 	log.Println("Finish full node connection...")
+
+
+	//eventMux.Post(event.AliveEvent{true})
+
 	*this.aliveChain <- true
 }
 

@@ -70,7 +70,7 @@ func (chatServer *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message,
 	}
 	case pb.Message_CONSUS:{
 		response.MessageType = pb.Message_RESPONSE
-		response.Payload = []byte("Consus has already received!")
+		response.Payload = []byte("Consensus broadcast has already received!")
 		//post payload to high layer
 		eventmux := new(event.TypeMux)
 		eventmux.Post(event.ConsensusEvent{

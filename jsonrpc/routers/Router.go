@@ -3,7 +3,7 @@ package routers
 import (
 	"github.com/gorilla/mux"
 	"net/http"
-	"hyperchain-alpha/jsonrpc/logger"
+	"hyperchain/jsonrpc/logger"
 )
 func NewRouter() *mux.Router {
 
@@ -18,6 +18,8 @@ func NewRouter() *mux.Router {
 			Path(route.Pattern).
 			Name(route.Name).
 			Handler(handler)
+
+
 	}
 
 	return router

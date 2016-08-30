@@ -1,27 +1,95 @@
+// fetcher implements block operate
+// author: Lizhong kuang
+// date: 2016-08-29
+// last modified:2016-08-29
 package core
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/logger/glog"
 	"hyperchain/core/types"
+	"io/ioutil"
+	"encoding/json"
+
+	"hyperchain/common"
+
+	"log"
+
+
 )
 
-func TestNetGenesisBlock() string {
-	return fmt.Sprintf(`{
-		"nonce": "0x%x",
-		"difficulty": "0x20000",
-		"mixhash": "0x00000000000000000000000000000000000000647572616c65787365646c6578",
-		"coinbase": "0x0000000000000000000000000000000000000000",
-		"timestamp": "0x00",
-		"parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-		"extraData": "0x",
-		"gasLimit": "0x2FEFD8",
-		"alloc": {
-			"0000000000000000000000000000000000000001": { "balance": "1" },
-			"0000000000000000000000000000000000000002": { "balance": "1" },
-			"0000000000000000000000000000000000000003": { "balance": "1" },
-			"0000000000000000000000000000000000000004": { "balance": "1" },
-			"102e61f5d8f9bc71d0ad4a084df4e65e05ce0e1c": { "balance": "1606938044258990275541962092341162602522202993782792835301376" }
-		}
-	}`, types.EncodeNonce(0x6d6f7264656e))
+
+func CreateInitBlock(filename string)  {
+	log.Println("genesis start")
+
+	type Genesis struct {
+
+		Timestamp  int64
+		ParentHash  string
+		BlockHash  string
+		Coinbase    string
+		Number int64
+		Alloc       map[string]string
+
+
+
+
+	}
+
+	var genesis = map[string]Genesis{}
+
+	bytes, err := ioutil.ReadFile(filename)
+
+	if err != nil {
+		fmt.Println("ReadFile: ", err.Error())
+		return
+	}
+
+	if err := json.Unmarshal(bytes, &genesis); err != nil {
+		fmt.Println("Unmarshal: ", err.Error())
+		return
+	}
+
+	balanceIns, err := GetBalanceIns()
+	if err != nil {
+		log.Fatalf("GetBalanceIns error, %v", err)
+	}
+	for addr, account := range genesis["test1"].Alloc {
+		//address := common.HexToAddress(addr)
+
+		//value, err := strconv.ParseInt(account.Balance, 10, 64)
+		//fmt.Println(addr)
+		//fmt.Println([]byte(addr))
+		//fmt.Println(common.BytesToHash([]byte(addr)))
+		//fmt.Println(common.BytesToAddress([]byte("0000000000000000000000000000000000000002")))
+		/*balance:=types.Balance{
+			AccountPublicKeyHash:[]byte(addr),
+			Value:account,
+		}*/
+
+		balanceIns.PutCacheBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
+
+
+
+	}
+
+
+
+	block := types.Block{
+		ParentHash: common.FromHex(genesis["test1"].ParentHash),
+		Timestamp:   genesis["test1"].Timestamp,
+		BlockHash: common.FromHex(genesis["test1"].BlockHash),
+		Number:   genesis["test1"].Number,
+		//MerkleRoot:       "root",
+	}
+
+
+
+	log.Println("构造创世区块")
+
+	UpdateChain(block.BlockHash)
+
+
+	fmt.Println(balanceIns.GetCacheBalance(common.BytesToAddress([]byte("0000000000000000000000000000000000000002"))))
+
+
 }

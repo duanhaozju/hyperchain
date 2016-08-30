@@ -1,4 +1,4 @@
-# hyperChain Aplha
+# hyperChain Alpha
 
 HyperChain 原型实现 
 

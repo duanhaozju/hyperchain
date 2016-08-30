@@ -2,7 +2,7 @@ package routers
 
 import (
 	"net/http"
-	"hyperchain-alpha/jsonrpc/controller"
+	"hyperchain/jsonrpc/controller"
 )
 
 type Route struct {
@@ -20,18 +20,6 @@ var routes = Routes{
 		"GET",
 		"/",
 		controller.Index,
-	},
-	Route{
-		"TransactionIndex",
-		"GET",
-		"/trans",
-		controller.TransactionIndex,
-	},
-	Route{
-		"TransactionShow",
-		"GET",
-		"/trans/{transId}",
-		controller.TransacionShow,
 	},
 	Route{
 		"TransactionCreate",

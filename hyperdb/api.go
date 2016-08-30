@@ -3,6 +3,9 @@ package hyperdb
 import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"sync"
+	"os"
+	"strconv"
+	"fmt"
 )
 
 type stateldb int32
@@ -22,9 +25,29 @@ var ldbInstance = &LDBInstance{
 	state: closed,
 }
 
-func getDBPath() string {
-	return "cache/db"
+//-- --------------- about ldb -----------------------
+
+func getBaseDir() string {
+	path := os.TempDir()
+	return path
 }
+
+var (
+	baseLDBPath = getBaseDir() + "/cache/"
+	portLDBPath = "db"  //different port has different db path, default "db"
+)
+
+func SetLDBPath(port int)  {
+	portLDBPath = strconv.Itoa(port)
+}
+
+func getDBPath() string {
+	return baseLDBPath + portLDBPath
+}
+
+//-- ------------------ ldb end ----------------------
+
+
 
 // GetLDBDatabase get a single instance of LDBDatabase
 // if LDBDatabase state is open, return db directly
@@ -32,6 +55,7 @@ func getDBPath() string {
 func GetLDBDatabase() (*LDBDatabase, error) {
 	ldbInstance.dbsync.Lock()
 	defer ldbInstance.dbsync.Unlock()
+	fmt.Println(getDBPath())
 	if ldbInstance.state == opened {
 		return ldbInstance.ldb, nil
 	}

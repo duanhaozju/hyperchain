@@ -20,6 +20,7 @@ import (
 //
 type EcdsaEncrypto struct{
 	name string
+	port string
 }
 
 func NewEcdsaEncrypto(name string) *EcdsaEncrypto  {
@@ -59,11 +60,13 @@ func (ee *EcdsaEncrypto)UnSign(args ...interface{})([]byte, error)  {
 	addr := ee.Keccak256(pubBytes[1:])[12:]
 	return addr,nil
 }
-func (ee *EcdsaEncrypto)GeneralKey(port string)(*ecdsa.PrivateKey,error) {
+func (ee *EcdsaEncrypto)GeneralKey(port string)(interface{},error) {
 	key,err := ee.GenerateKey()
 	if err!=nil{
 		return nil,err
 	}
+
+	ee.port=port
 	k := hex.EncodeToString(ee.FromECDSA(key))
 	abspath,_ := os.Getwd()
 	current := filepath.Base(abspath)
@@ -75,10 +78,10 @@ func (ee *EcdsaEncrypto)GeneralKey(port string)(*ecdsa.PrivateKey,error) {
 
 }
 //load key by given port
-func (ee *EcdsaEncrypto)GetKey(port string) (*ecdsa.PrivateKey,error) {
+func (ee *EcdsaEncrypto)GetKey() (interface{},error) {
 	abspath,_ := os.Getwd()
 	current := filepath.Base(abspath)
-	file := abspath[0:len(abspath)-len(current)]+"keystore/"+port
+	file := abspath[0:len(abspath)-len(current)]+"keystore/"+ee.port
 	return ee.LoadECDSA(file)
 }
 
@@ -147,7 +150,7 @@ func (ee *EcdsaEncrypto)SaveNodeInfo(file string, ip string ,addr []byte, pri *e
 	return err
 
 }
-func (ee *EcdsaEncrypto)PubkeyToAddress(p ecdsa.PublicKey) []byte {
+func (ee *EcdsaEncrypto)PubkeyToAddress(p ecdsa.PublicKey) common.Address {
 	pubBytes := ee.FromECDSAPub(&p)
 	return ee.Keccak256(pubBytes[1:])[12:]
 }

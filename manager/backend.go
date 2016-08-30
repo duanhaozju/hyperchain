@@ -5,35 +5,35 @@
 package manager
 
 import (
-
 	"hyperchain/p2p"
 	"hyperchain/core"
 	"hyperchain/consensus"
 	"hyperchain/crypto"
+
+	"hyperchain/event"
 )
 
 // init protocol manager params and start
-func New(peerManager p2p.PeerManager,consenter consensus.Consenter,fetcher *core.Fetcher,
-encryption crypto.Encryption ,commonHash crypto.CommonHash,path string, isFirst bool) (error) {
-
+func New(eventMux *event.TypeMux, peerManager p2p.PeerManager, consenter consensus.Consenter, fetcher *core.Fetcher,
+          encryption crypto.Encryption, commonHash crypto.CommonHash,
+        path string, nodeId int) (error) {
 
 
 	aliveChan := make(chan bool)
-	peerManager.Start(path, isFirst,aliveChan,false)
+	go peerManager.Start(path, nodeId, aliveChan, false, eventMux)
 
-
-	//peerManager.JudgeAlivePeers()
 	//wait for all peer are connected
 	select {
-
 	case <-aliveChan:
+		{
 
+			protocolManager := NewProtocolManager(peerManager, eventMux, fetcher, consenter, encryption, commonHash)
 
-		protocolManager := NewProtocolManager(peerManager, fetcher,consenter,encryption,commonHash)
-
-		protocolManager.Start()
-
+			protocolManager.Start()
+		}
 	}
+
+
 
 	return nil
 }
