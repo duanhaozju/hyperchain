@@ -11,6 +11,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
+	"reflect"
 )
 
 type batch struct {
@@ -93,8 +94,8 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 	//	fmt.Println("lalalla")
 	//	b.test_c <- 1//ToDo for test
 	case batchMessageEvent:
-		logger.Info("start processEvent of batchMessageEvent")
 		ocMsg := event
+		logger.Info("**********>  batchMessageEvent message:",reflect.TypeOf(ocMsg),ocMsg.msg.Type)
 		return op.processMessage(ocMsg.msg,  ocMsg.sender)
 	case batchTimerEvent:
 		logger.Infof("Replica %d batch timer expired", op.pbft.id)
@@ -111,6 +112,7 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 func (op *batch) processMessage(msg *pb.Message, id uint64) events.Event {
 
 	if msg.Type == pb.Message_TRANSACTION {
+		logger.Info("**********>  processMessage Message_TRANSACTION:",reflect.TypeOf(msg),msg.Type)
 		req := op.txToReq(msg)
 		return op.submitToLeader(req)
 	}
@@ -234,6 +236,7 @@ func (op *batch) submitToLeader(req *Request) events.Event {
 	// Broadcast the request to the network, in case we're in the wrong view
 	pbMsg := batchMsgHelper(&BatchMessage{Payload: &BatchMessage_Request{Request: req}}, op.pbft.id)
 	op.helperImpl.InnerBroadcast(pbMsg)
+	logger.Info("**********>  submitToLeader pbMsg:",reflect.TypeOf(pbMsg),pbMsg.Type)
 	op.reqStore.storeOutstanding(req)
 	op.startTimerIfOutstandingRequests()
 	if op.pbft.primary(op.pbft.view) == op.pbft.id {

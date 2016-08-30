@@ -22,7 +22,7 @@ import (
 func TestNewChatClient(t *testing.T) {
 	//start the server
 	eventMux := new(event.TypeMux)
-	server := node.NewNode(8002,true,eventMux)
+	server := node.NewNode(8011,true,eventMux)
 
 	chatClient,err := NewPeer("localhost:8002")
 	if err != nil{

@@ -64,7 +64,7 @@ func TestReceivePrePrePare(t *testing.T){
 func TestClientRequest(t *testing.T){
 	msgQ :=new(event.TypeMux)
 	h:=helper.NewHelper(msgQ)
-	batch:=GetPlugin(3, h)
+	batch:=GetPlugin(0, h)
 
 	msg0:=&protos.Message{
 		Type      :0 ,
@@ -81,7 +81,7 @@ func TestClientRequest(t *testing.T){
 	logger.Info("**********>  send message:",reflect.TypeOf(msg0),msg0.Type)
 	batch.RecvMsg(b0)
 
-	time.Sleep(100*time.Second)
+	time.Sleep(10*time.Second)
 	//batch.Close()
 }
 
