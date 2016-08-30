@@ -171,7 +171,7 @@ func (pm *ProtocolManager) BroadcastConsensus(payload []byte) {
 
 //receive tx from web,sign it and marshal it,then give it to consensus module
 func (pm *ProtocolManager)transformTx(payLoad []byte) []byte {
-	fmt.Println("get new TxEvent")
+
 	var transaction *types.Transaction
 	//decode tx
 	proto.Unmarshal(payLoad, transaction)

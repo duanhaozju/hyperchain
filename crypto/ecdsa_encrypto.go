@@ -14,7 +14,7 @@ import (
 	"hyperchain/crypto/sha3"
 	"hyperchain/crypto/secp256k1"
 	"path/filepath"
-	"log"
+
 )
 
 //const keystoredir  = "/home/huhu/go/src/hyperchain/keystore/"
