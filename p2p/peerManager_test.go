@@ -10,6 +10,7 @@ package p2p
 import (
 	"testing"
 	"log"
+	"hyperchain/event"
 )
 //
 //func TestGrpcPeerManager_GetClientId(t *testing.T) {
@@ -31,19 +32,20 @@ func TestGrpcPeerManager_Start(t *testing.T){
 
 	grpcPeerMgr := new(GrpcPeerManager)
 	aliveChan := make(chan bool)
-	go grpcPeerMgr.Start(path,1, aliveChan,true)
+	eventMux := new(event.TypeMux)
+	go grpcPeerMgr.Start(path,1, aliveChan,true,eventMux )
 
 	grpcPeerMgr2 := new(GrpcPeerManager)
 
-	go grpcPeerMgr2.Start(path,2, aliveChan,true)
+	go grpcPeerMgr2.Start(path,2, aliveChan,true,eventMux)
 
 	grpcPeerMgr3 := new(GrpcPeerManager)
 
-	go grpcPeerMgr3.Start(path,3, aliveChan,true)
+	go grpcPeerMgr3.Start(path,3, aliveChan,true,eventMux)
 
 	grpcPeerMgr4 := new(GrpcPeerManager)
 
-	go grpcPeerMgr4.Start(path,4, aliveChan,true)
+	go grpcPeerMgr4.Start(path,4, aliveChan,true,eventMux)
 	// wait the sub thread done
 	nodeCount := 0
 	for flag := range aliveChan{

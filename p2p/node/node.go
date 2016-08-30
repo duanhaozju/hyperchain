@@ -21,6 +21,7 @@ import (
 type Node struct {
 	address    pb.PeerAddress
 	grpcServer *grpc.Server
+	higerEventManager *event.TypeMux
 }
 
 var globalChatServer Node
@@ -28,12 +29,13 @@ var globalChatServer Node
 const DEFAULT_GRPC_PORT = 8001
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
-func NewNode(port int, isTest bool) *Node {
+func NewNode(port int, isTest bool,hEventManager *event.TypeMux) *Node {
 	if isTest {
 		log.Println("Unit test: start local node, port", port)
 		var TestNode Node
 		TestNode.address.Ip = peerComm.GetIpLocalIpAddr()
 		TestNode.address.Port = int32(port)
+		TestNode.higerEventManager = hEventManager
 		TestNode.startServer()
 		return &TestNode
 	}
@@ -43,6 +45,7 @@ func NewNode(port int, isTest bool) *Node {
 	} else {
 		globalChatServer.address.Ip = peerComm.GetIpLocalIpAddr()
 		globalChatServer.address.Port = int32(port)
+		globalChatServer.higerEventManager = hEventManager
 		globalChatServer.startServer()
 		return &globalChatServer
 	}
@@ -53,7 +56,7 @@ func GetNodeAddr() pb.PeerAddress {
 }
 
 // Chat Implements the ServerSide Function
-func (chatServer *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error) {
+func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error) {
 	MeAddress := pb.PeerAddress{
 		Ip:peerComm.GetIpLocalIpAddr(),
 		Port:8001,
@@ -72,8 +75,7 @@ func (chatServer *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message,
 		response.MessageType = pb.Message_RESPONSE
 		response.Payload = []byte("Consensus broadcast has already received!")
 		//post payload to high layer
-		eventmux := new(event.TypeMux)
-		eventmux.Post(event.ConsensusEvent{
+		this.higerEventManager.Post(event.ConsensusEvent{
 			Payload:msg.Payload,
 		})
 		return &response, nil
