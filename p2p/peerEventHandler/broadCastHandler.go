@@ -10,6 +10,7 @@ import (
 	"hyperchain/p2p/peermessage"
 	"log"
 	"hyperchain/p2p/peerPool"
+	"fmt"
 )
 // HelloHandler hello message handler
 type BroadCastHandler struct{
@@ -27,7 +28,11 @@ func (this *BroadCastHandler)ProcessEvent(msg *peermessage.Message)error{
 	log.Println(msg.MessageType)
 	// TODO 将消息广播出去
 	pPool := peerPool.NewPeerPool(false,false)
+	fmt.Println("现在有节点数目:",pPool.GetAliveNodeNum())
+	ps := pPool.GetPeers()
+	fmt.Println("现在有节点数目:",len(ps))
 	for _,peer := range pPool.GetPeers(){
+		fmt.Println("广播....")
 		resMsg,err :=peer.Chat(msg)
 		if err != nil{
 			log.Println("Broadcast failed,Node",peer.Addr)

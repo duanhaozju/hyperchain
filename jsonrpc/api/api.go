@@ -1,15 +1,14 @@
-package hyperchain
+package api
 
 import (
 	"hyperchain/core/types"
+	"fmt"
 	"hyperchain/event"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/hyperdb"
 	"log"
 	"hyperchain/core"
-	"math/big"
 	"hyperchain/manager"
-	"fmt"
 )
 
 type TxArgs struct{
@@ -18,10 +17,10 @@ type TxArgs struct{
 	Value string `json:"value"`
 }
 
-type Transaction struct {
-	From      []byte
-	To        []byte
-	Value     big.Int
+type TransactionShow struct {
+	From      string
+	To        string
+	Value     string
 	TimeStamp int64
 }
 
@@ -42,7 +41,6 @@ func SendTransaction(args TxArgs) bool {
 	if (core.VerifyBalance(tx)) {
 		// 余额足够
 		// 抛 NewTxEvent 事件
-		//eventmux:=new(event.TypeMux)
 
 		txBytes, err := proto.Marshal(tx)
 		if err != nil {
@@ -50,9 +48,11 @@ func SendTransaction(args TxArgs) bool {
 		}
 
 
-		fmt.Println(txBytes)
+		err = manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 
-		manager.GetEventObject().Post(event.NewTxEvent{Payload: []byte{0x00, 0x00, 0x03, 0xe8}})
+		if err != nil {
+			log.Fatalf("Post event.NewTxEvent{Payload: txBytes} error: %v",err)
+		}
 
 		return true
 
@@ -63,7 +63,7 @@ func SendTransaction(args TxArgs) bool {
 }
 
 // GetAllTransactions return all transactions in the chain/db
-func GetAllTransactions()  []Transaction{
+func GetAllTransactions()  []TransactionShow{
 
 	db, err := hyperdb.GetLDBDatabase()
 
@@ -77,17 +77,14 @@ func GetAllTransactions()  []Transaction{
 		log.Fatalf("GetAllTransaction error: %v", err)
 	}
 
-	var val big.Int
-	var transactions []Transaction
+	var transactions []TransactionShow
 
 	// 将交易金额转换为整型
 	for index, tx := range txs {
 
-		val.SetString(string(tx.Value),10)
-
-		transactions[index].Value = val
-		transactions[index].From = tx.From
-		transactions[index].To = tx.To
+		transactions[index].Value = string(tx.Value)
+		transactions[index].From = string(tx.From)
+		transactions[index].To = string(tx.To)
 		transactions[index].TimeStamp = tx.TimeStamp
 	}
 
@@ -95,7 +92,7 @@ func GetAllTransactions()  []Transaction{
 }
 
 // GetAllBalances retrun all account's balance in the db,NOT CACHE DB!
-func GetAllBalances() BalanceShow {
+func GetAllBalances() BalanceShow{
 
 	var balances = make(BalanceShow)
 
@@ -106,7 +103,9 @@ func GetAllBalances() BalanceShow {
 	}
 
 	balMap := balanceIns.GetAllDBBalance()
+
 	for key, value := range balMap {
+
 		balances[key.Str()] = string(value)
 	}
 

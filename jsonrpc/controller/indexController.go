@@ -4,7 +4,7 @@ import (
 	"html/template"
 	"path"
 	"os"
-	"hyperchain/jsonrpc/hyperchain"
+	"hyperchain/jsonrpc/api"
 )
 
 
@@ -14,22 +14,32 @@ type ResData struct{
 }
 
 type data struct{
-	Trans []hyperchain.Transaction
-	Balances hyperchain.BalanceShow
+	Trans    []api.TransactionShow
+	Balances api.BalanceShow
 }
+
+var Testing bool = false
 
 // 处理请求 : GET "/"
 func Index(w http.ResponseWriter, r *http.Request) {
+
+	var indexpath string
+
 	pwd, _ := os.Getwd()
-	indexpath := path.Join(pwd,"./jsonrpc/static/tmpl/index.html")
+
+	if Testing {
+		indexpath = path.Join(pwd,"./static/tmpl/index.html")
+	} else {
+		indexpath = path.Join(pwd,"./jsonrpc/static/tmpl/index.html")
+	}
+
 
 	var tmpl = template.Must(template.ParseFiles(indexpath))
 
-	transactions := hyperchain.GetAllTransactions()
-	balances := hyperchain.GetAllBalances()
+	transactions := api.GetAllTransactions()
+	balances := api.GetAllBalances()
 
 	//sort.Sort(types.Transactions(transactions)) // 交易排序
-
 
 	tmpl.Execute(w,data{
 		Trans:transactions,

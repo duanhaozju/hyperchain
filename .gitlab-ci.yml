@@ -1,24 +1,24 @@
-stages:
-  - test
-  - build
+before_script:
+  - GO_NAMESPACE="$GOPATH/src/git.hyperchain.cn/$CI_PROJECT_NAMESPACE"
+  - GO_DIR="$GO_NAMESPACE/$CI_PROJECT_NAME"
+  - echo $GO_NAMESPACE
+  - echo $GO_DIR
+  - mkdir -p $GO_NAMESPACE
+  - ln -sfv "$(pwd -P)" "$GO_DIR"
+  - cd "$GO_DIR"
 
-test-my-project:
-  stage: test
-  script:
-    - go env
-    - go get -d
-    - go test
-  only: 
-    - develop
-  tags:
-    - golang
-build-my-project:
+stages:
+  - build
+  - test
+  - deploy
+
+job-00:
   stage: build
   script:
-    - go env
-    - go get -d
+    - go get
+    - go build
+    - ./example
   only:
-    - develop
+    - master
   tags:
     - golang
-
