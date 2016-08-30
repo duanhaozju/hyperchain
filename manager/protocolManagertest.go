@@ -41,9 +41,8 @@ func TestAliveEvent(t *testing.T){
 }
 func newEvent(manager *ProtocolManager)  {
 	fmt.Println("1")
-	for i := 0; i < 100; i += 1 {
-
-
+	for i := 0; i < 5; i += 1 {
+		fmt.Println("hahah")
 		//var transaction types.Transaction
 		transaction:=types.Transaction{
 			From:[]byte{0x00, 0x00, 0x03, 0xe8},
@@ -63,7 +62,7 @@ func newEvent(manager *ProtocolManager)  {
 
 
 		//manager.eventMux.Post(event.ConsensusEvent{[]byte{0x00, 0x00, 0x03, 0xe8}})
-		time.Sleep(20000002222)
+		time.Sleep(2)
 
 	}
 

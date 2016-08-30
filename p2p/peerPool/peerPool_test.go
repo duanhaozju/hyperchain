@@ -24,7 +24,7 @@ import (
 
 // test the peer pool to put peer
 func TestPeersPool_PutPeer(t *testing.T) {
-	portRange := 8002
+	portRange := 8015
 	//get the client
 	//start the server
 	eventMux := new(event.TypeMux)
