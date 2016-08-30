@@ -5,6 +5,10 @@
 package crypto
 
 
+type KeyType interface {
+	sign()
+
+}
 
 type Encryption interface {
 
@@ -15,6 +19,8 @@ type Encryption interface {
 
 
 	GeneralKey(path string) (interface{},error)
+
+
 	//GeneralKey(path string)(*ecdsa.PrivateKey,error)
 
 
