@@ -56,7 +56,7 @@ func main(){
 
 
 		//init pbft consensus
-		cs:=controller.NewConsenter(argv.NodeId,eventMux)
+		//cs:=controller.NewConsenter(argv.NodeId,eventMux)
 
 		// init http server for web call
 		go jsonrpc.StartHttp(argv.LocalPort,eventMux)
@@ -86,7 +86,7 @@ func main(){
 
 		//init manager
 
-		manager.New(eventMux,grpcPeerMgr,cs,fetcher,encryption,kec256Hash,
+		manager.New(eventMux,grpcPeerMgr,nil,fetcher,encryption,kec256Hash,
 			nodePath,argv.NodeId)
 
 

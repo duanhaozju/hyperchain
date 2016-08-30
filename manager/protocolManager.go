@@ -16,7 +16,8 @@ import (
 	"sync"
 
 	"crypto/ecdsa"
-	"github.com/labstack/gommon/log"
+
+	"log"
 )
 
 type ProtocolManager struct {
@@ -95,7 +96,9 @@ func (self *ProtocolManager) NewBlockLoop() {
 		switch ev := obj.Data.(type) {
 		case event.NewBlockEvent:
 			//commit block into local db
-			self.fetcher.Enqueue(ev.Payload)
+			ev.Payload
+			log.Println("write block success")
+			//self.fetcher.Enqueue(ev.Payload)
 
 		}
 	}
