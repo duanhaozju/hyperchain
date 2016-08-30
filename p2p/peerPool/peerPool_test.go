@@ -20,7 +20,7 @@ import (
 
 	"time"
 	"hyperchain/event"
-)
+	)
 
 // test the peer pool to put peer
 func TestPeersPool_PutPeer(t *testing.T) {

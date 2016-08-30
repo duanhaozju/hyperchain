@@ -16,17 +16,15 @@ import (
 	"strconv"
 	"hyperchain/p2p/peerComm"
 	"hyperchain/event"
-)
+	)
 
 type Node struct {
-	address    pb.PeerAddress
-	grpcServer *grpc.Server
-	higerEventManager *event.TypeMux
+	address            pb.PeerAddress
+	gRPCServer         *grpc.Server
+	higherEventManager *event.TypeMux
 }
 
-var globalChatServer Node
-
-const DEFAULT_GRPC_PORT = 8001
+var globalNode Node
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
 func NewNode(port int, isTest bool,hEventManager *event.TypeMux) *Node {
@@ -35,47 +33,44 @@ func NewNode(port int, isTest bool,hEventManager *event.TypeMux) *Node {
 		var TestNode Node
 		TestNode.address.Ip = peerComm.GetIpLocalIpAddr()
 		TestNode.address.Port = int32(port)
-		TestNode.higerEventManager = hEventManager
+		TestNode.higherEventManager = hEventManager
 		TestNode.startServer()
 		return &TestNode
 	}
 	log.Println("start local node, port", port)
-	if globalChatServer.address.Ip != "" && globalChatServer.address.Port != 0 {
-		return &globalChatServer
+	if globalNode.address.Ip != "" && globalNode.address.Port != 0 {
+		return &globalNode
 	} else {
-		globalChatServer.address.Ip = peerComm.GetIpLocalIpAddr()
-		globalChatServer.address.Port = int32(port)
-		globalChatServer.higerEventManager = hEventManager
-		globalChatServer.startServer()
-		return &globalChatServer
+		globalNode.address.Ip = peerComm.GetIpLocalIpAddr()
+		globalNode.address.Port = int32(port)
+		globalNode.higherEventManager = hEventManager
+		globalNode.startServer()
+		return &globalNode
 	}
 
 }
 func GetNodeAddr() pb.PeerAddress {
-	return globalChatServer.address
+	return globalNode.address
 }
 
 // Chat Implements the ServerSide Function
 func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error) {
-	MeAddress := pb.PeerAddress{
-		Ip:peerComm.GetIpLocalIpAddr(),
-		Port:8001,
-	}
 	var response pb.Message
-	response.From = &MeAddress
+	response.From = &this.address
 	//handle the message
 	switch msg.MessageType {
 	case pb.Message_HELLO :{
 		response.MessageType = pb.Message_RESPONSE
 		response.Payload = []byte("Hi")
 		 //REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
+		 //REVIEW This no need to call hello event handler
 		return &response, nil
 	}
 	case pb.Message_CONSUS:{
 		response.MessageType = pb.Message_RESPONSE
 		response.Payload = []byte("Consensus broadcast has already received!")
 		//post payload to high layer
-		this.higerEventManager.Post(event.ConsensusEvent{
+		this.higherEventManager.Post(event.ConsensusEvent{
 			Payload:msg.Payload,
 		})
 		return &response, nil
@@ -86,6 +81,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		// client may send a keep alive request, just response A response type message
 		response.MessageType = pb.Message_RESPONSE
 		response.Payload = []byte("RESPONSE FROM SERVER")
+
 		return &response, nil
 
 	}
@@ -101,23 +97,21 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 }
 
 // StartServer start the gRPC server
-func (chatServer *Node)startServer() {
-	this := chatServer
+func (this *Node)startServer() {
 	log.Println("Starting the grpc listening server")
 	lis, err := net.Listen("tcp", ":" + strconv.Itoa(int(this.address.Port)))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 		log.Fatal("PLS RESTART THE SERVER NODE")
 	}
-	this.grpcServer = grpc.NewServer()
-	pb.RegisterChatServer(this.grpcServer, this)
+	this.gRPCServer = grpc.NewServer()
+	pb.RegisterChatServer(this.gRPCServer, this)
 	log.Println("listening rpc request...")
-	go this.grpcServer.Serve(lis)
+	go this.gRPCServer.Serve(lis)
 }
 
 //StopServer stops the gRPC server gracefully. It stops the server to accept new
 // connections and RPCs and blocks until all the pending RPCs are finished.
-func (chatServer *Node)StopServer() {
-	this := chatServer
-	this.grpcServer.GracefulStop()
+func (this *Node)StopServer() {
+	this.gRPCServer.GracefulStop()
 }

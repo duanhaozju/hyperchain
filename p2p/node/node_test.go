@@ -12,6 +12,7 @@ import (
 	"time"
 	"fmt"
 	"hyperchain/event"
+
 )
 
 func TestNewChatServer(t *testing.T) {

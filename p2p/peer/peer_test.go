@@ -16,7 +16,7 @@ import (
 	//"hyperchain-alpha/peer/Server"
 	node "hyperchain/p2p/node"
 	"hyperchain/event"
-)
+	)
 
 
 func TestNewChatClient(t *testing.T) {
