@@ -1,6 +1,6 @@
 package hyperdb
 
-import (
+/*import (
 	"testing"
 	"os"
 	"log"
@@ -55,4 +55,4 @@ func TestLDBDatabase(t *testing.T) {
 			log.Println(err)
 		}
 	}
-}
+}*/
