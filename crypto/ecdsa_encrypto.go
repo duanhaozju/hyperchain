@@ -13,7 +13,6 @@ import (
 	"crypto/elliptic"
 	"hyperchain/crypto/sha3"
 	"hyperchain/crypto/secp256k1"
-	"path/filepath"
 )
 
 //const keystoredir  = "/home/huhu/go/src/hyperchain/keystore/"
@@ -68,9 +67,15 @@ func (ee *EcdsaEncrypto)GeneralKey(port string)(interface{},error) {
 
 	ee.port=port
 	k := hex.EncodeToString(ee.FromECDSA(key))
-	abspath,_ := os.Getwd()
-	current := filepath.Base(abspath)
-	file := abspath[0:len(abspath)-len(current)]+"keystore/"+port
+	abspath := "/tmp/hyperchain/cache/keystore/"
+	_, error := os.Stat(abspath)
+	if !(error == nil || os.IsExist(error)){
+		fmt.Println("no")
+		os.MkdirAll(abspath,0777)
+	}else {
+		fmt.Println("directory exists")
+	}
+	file := abspath+port
 	if err:=ioutil.WriteFile(file, []byte(k), 0600);err!=nil{
 		return key,err
 	}
@@ -79,9 +84,8 @@ func (ee *EcdsaEncrypto)GeneralKey(port string)(interface{},error) {
 }
 //load key by given port
 func (ee *EcdsaEncrypto)GetKey() (interface{},error) {
-	abspath,_ := os.Getwd()
-	current := filepath.Base(abspath)
-	file := abspath[0:len(abspath)-len(current)]+"keystore/"+ee.port
+	abspath:="/tmp/hyperchain/cache/keystore/"
+	file := abspath+ee.port
 	return ee.LoadECDSA(file)
 }
 
@@ -133,6 +137,7 @@ func (ee *EcdsaEncrypto)SaveECDSA(file string, key *ecdsa.PrivateKey) error {
 //SaveNodeInfo saves the info of node into local file
 //ip addr and pri
 func (ee *EcdsaEncrypto)SaveNodeInfo(file string, ip string ,addr []byte, pri *ecdsa.PrivateKey) error {
+	fmt.Println(file)
 	prikey := hex.EncodeToString(ee.FromECDSA(pri))
 	content := ip +" "+string(addr)+" "+prikey+" \n"
 
