@@ -51,7 +51,8 @@ func SendTransaction(args TxArgs) bool {
 		}
 
 
-		manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+		fmt.Println(txBytes)
+		manager.GetEventObject().Post(event.NewTxEvent{Payload: []byte{0x00, 0x00, 0x03, 0xe8}})
 
 		return true
 
