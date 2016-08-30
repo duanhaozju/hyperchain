@@ -103,6 +103,21 @@ func (self *ProtocolManager) NewBlockLoop() {
 		case event.NewBlockEvent:
 			//commit block into local db
 			log.Println(ev.Payload)
+			 msgList:= &protos.ExeMessage{}
+			proto.Unmarshal(ev.Payload,msgList)
+			block:=new(types.Block)
+			for _, item := range msgList.Batch{
+				tx:=&types.Transaction{}
+				proto.Unmarshal(item.Payload,tx)
+				block.Transactions=append(block.Transactions,tx)
+			}
+			currentChain:=core.GetChainCopy()
+			block.Number=currentChain.Height+1
+			block.ParentHash=currentChain.LatestBlockHash
+			block.Timestamp=time.Now().Unix()
+			//block.BlockHash=
+
+
 			log.Println("write block success")
 		//self.fetcher.Enqueue(ev.Payload)
 
@@ -167,7 +182,8 @@ func (pm *ProtocolManager) BroadcastConsensus(payload []byte) {
 //receive tx from web,sign it and marshal it,then give it to consensus module
 func (pm *ProtocolManager)transformTx(payLoad []byte) []byte {
 
-	var transaction *types.Transaction
+	//var transaction types.Transaction
+	transaction := &types.Transaction{}
 	//decode tx
 	proto.Unmarshal(payLoad, transaction)
 	//hash tx
