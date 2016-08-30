@@ -3,7 +3,6 @@ package hyperdb
 import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"sync"
-	"os"
 	"strconv"
 	"fmt"
 )
@@ -28,12 +27,12 @@ var ldbInstance = &LDBInstance{
 //-- --------------- about ldb -----------------------
 
 func getBaseDir() string {
-	path := os.TempDir()
-	return path
+	//path := os.TempDir()
+	return "/tmp"
 }
 
 var (
-	baseLDBPath = getBaseDir() + "/cache/"
+	baseLDBPath = getBaseDir() + "/hyperchain/cache/"
 	portLDBPath = "db"  //different port has different db path, default "db"
 )
 
