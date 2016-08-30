@@ -9,8 +9,8 @@ test-my-project:
     - export GOPATH=/builds/hyperchain/goenv/
     - go env
     - go get -u github.com/kardianos/govendor
-    - govender sync
-    - govender test +local
+    - govendor sync
+    - govendor test +local
   only: 
     - develop
   tags:
@@ -22,8 +22,8 @@ build-my-project:
     - export GOPATH=/builds/hyperchain/goenv/
     - go env
     - go get -u github.com/kardianos/govendor
-    - govender sync
-    - govender test +local
+    - govendor sync
+    - govendor test +local
   only:
     - develop
   tags:
