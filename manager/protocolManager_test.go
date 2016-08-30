@@ -99,6 +99,7 @@ func TestDecodeTx(t *testing.T){
 			h := transaction.SighHash(manager.commonHash)
 			fmt.Println(h[:])
 			key, err := manager.encryption.GetKey()
+
 			//if value, ok := key.(*ecdsa.PrivateKey); ok {
 
 
@@ -106,16 +107,18 @@ func TestDecodeTx(t *testing.T){
 			case *ecdsa.PrivateKey:
 				actualKey:=key.(*ecdsa.PrivateKey)
 				sign, err := manager.encryption.Sign(h[:], actualKey)
-				fmt.Println(actualKey)
+
+				fmt.Println(manager.encryption.PrivKeyToAddress(*actualKey))
+				/*fmt.Println(actualKey)
 				fmt.Println(h[:])
-				fmt.Println(sign)
+				fmt.Println(sign)*/
 				if err != nil {
 					fmt.Print(err)
 				}
 				//fmt.Println(manager.encryption.)
 
 				//fmt.Println(sign)
-				//fmt.Println(manager.encryption.UnSign(h[:],sign))
+				fmt.Println(manager.encryption.UnSign(h[:],sign))
 				transaction.Signature = sign
 				//encode tx
 				payLoad, err := proto.Marshal(&transaction)

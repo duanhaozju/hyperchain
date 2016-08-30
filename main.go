@@ -16,6 +16,8 @@ import (
 
 	"hyperchain/event"
 	"hyperchain/jsonrpc"
+	"fmt"
+	"strconv"
 )
 
 type argT struct {
@@ -58,16 +60,18 @@ func main(){
 		// init http server for web call
 		go jsonrpc.StartHttp(argv.LocalPort,eventMux)
 
-		core.InitDB(123)
+		core.InitDB(argv.LocalPort)
 		core.CreateInitBlock("./core/genesis.json")
 
 
 
 		//init encryption object
 
-
+		fmt.Println("enter")
+		fmt.Println(strconv.Itoa(argv.LocalPort))
 		encryption :=crypto.NewEcdsaEncrypto("ecdsa")
-		encryption.GeneralKey(string(argv.LocalPort))
+		encryption.GeneralKey(strconv.Itoa(argv.LocalPort))
+
 
 
 

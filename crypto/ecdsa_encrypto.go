@@ -14,6 +14,7 @@ import (
 	"hyperchain/crypto/sha3"
 	"hyperchain/crypto/secp256k1"
 	"path/filepath"
+	"log"
 )
 
 //const keystoredir  = "/home/huhu/go/src/hyperchain/keystore/"
@@ -71,6 +72,7 @@ func (ee *EcdsaEncrypto)GeneralKey(port string)(interface{},error) {
 	abspath,_ := os.Getwd()
 	current := filepath.Base(abspath)
 	file := abspath[0:len(abspath)-len(current)]+"keystore/"+port
+	//log.Print(file)
 	if err:=ioutil.WriteFile(file, []byte(k), 0600);err!=nil{
 		return key,err
 	}
@@ -154,7 +156,8 @@ func (ee *EcdsaEncrypto)PubkeyToAddress(p ecdsa.PublicKey) []byte {
 	pubBytes := ee.FromECDSAPub(&p)
 	return ee.Keccak256(pubBytes[1:])[12:]
 }
-func (ee *EcdsaEncrypto)PrivKeyToAddress(p ecdsa.PrivateKey)[]byte  {
+func (ee *EcdsaEncrypto)PrivKeyToAddress(prv interface{})[]byte  {
+	p := prv.(ecdsa.PrivateKey)
 	return ee.PubkeyToAddress(p.PublicKey)
 }
 func (ee *EcdsaEncrypto)Keccak256(data ...[]byte) []byte {
