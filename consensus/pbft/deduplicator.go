@@ -16,6 +16,8 @@ limitations under the License.
 
 package pbft
 
+import "fmt"
+
 // deduplicator maintains the most recent Request timestamp for each
 // replica.  Two timestamps are maintained per replica.  One timestamp
 // tracks the most recent Request received from a replica, the other
@@ -63,6 +65,7 @@ func (d *deduplicator) Execute(req *Request) bool {
 // IsNew returns true if this Request is newer than any previously
 // executed request of the submitting replica.
 func (d *deduplicator) IsNew(req *Request) bool {
+	fmt.Println("enetr is new")
 	reqTime := req.Timestamp
 	return (reqTime >= d.execTimestamps[req.ReplicaId])
 }

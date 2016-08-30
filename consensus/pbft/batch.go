@@ -127,16 +127,20 @@ func (op *batch) processMessage(msg *pb.Message, id uint64) events.Event {
 		logger.Errorf("Error unmarshaling message: %s", err)
 		return nil
 	}
+	logger.Info("**********>  processMessage Message_TRANSACTION:",reflect.TypeOf(batchMsg),batchMsg.Payload)
 	if req := batchMsg.GetRequest(); req != nil {
 		fmt.Println("batch processMessage request")
-		if !op.deduplicator.IsNew(req) {
-			logger.Warningf("Replica %d ignoring request as it is too old", op.pbft.id)
-			return nil
-		}
+		//if !op.deduplicator.IsNew(req) {
+		//	fmt.Println("2")
+		//	logger.Warningf("Replica %d ignoring request as it is too old", op.pbft.id)
+		//	return nil
+		//}
 		op.reqStore.storeOutstanding(req)
 		if (op.pbft.primary(op.pbft.view) == op.pbft.id) {
+			fmt.Println("3")
 			return op.leaderProcReq(req)
 		}
+		fmt.Println("4")
 		op.startTimerIfOutstandingRequests()
 		return nil
 	} else if pbftMsg := batchMsg.GetPbftMessage(); pbftMsg != nil {
