@@ -24,3 +24,18 @@ func pbftMsgHelper(msg *Message, id uint64) *pb.Message {
 	pbMsg := batchMsgHelper(batchMsg, id)
 	return pbMsg
 }
+
+func exeBatchHelper(reqBatch *RequestBatch) *pb.ExeMessage {
+	batches := []*pb.Message{}
+	var req *Request
+	for req = range reqBatch.Batch {
+		batch := &pb.Message{
+			Timestamp:	req.Timestamp,
+			Payload:	req.Payload,
+			Id:		req.ReplicaId,
+		}
+		batches = append(batches, batch)
+	}
+	exeMsg := &pb.ExeMessage{Batch: batches}
+	return exeMsg
+}
