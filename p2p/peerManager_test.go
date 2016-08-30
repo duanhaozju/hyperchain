@@ -28,6 +28,7 @@ import (
 func TestGrpcPeerManager_Start(t *testing.T){
 
 	path := "/home/chenquan/Workspace/IdeaProjects/hyperchain-go/src/hyperchain/p2p/peerconfig.json"
+	//path := "./peerconfig.json"
 
 
 	grpcPeerMgr := new(GrpcPeerManager)

@@ -15,7 +15,7 @@ import (
 	"hyperchain/crypto/secp256k1"
 )
 
-//const keystoredir  = "/home/huhu/go/src/hyperchain/keystore/"
+const keystoredir  = "/tmp/hyperchain/cache/keystore/"
 //
 type EcdsaEncrypto struct{
 	name string
@@ -67,15 +67,14 @@ func (ee *EcdsaEncrypto)GeneralKey(port string)(interface{},error) {
 
 	ee.port=port
 	k := hex.EncodeToString(ee.FromECDSA(key))
-	abspath := "/tmp/hyperchain/cache/keystore/"
-	_, error := os.Stat(abspath)
+	_, error := os.Stat(keystoredir)
 	if !(error == nil || os.IsExist(error)){
 		fmt.Println("no")
-		os.MkdirAll(abspath,0777)
+		os.MkdirAll(keystoredir,0777)
 	}else {
 		fmt.Println("directory exists")
 	}
-	file := abspath+port
+	file := keystoredir+port
 	if err:=ioutil.WriteFile(file, []byte(k), 0600);err!=nil{
 		return key,err
 	}
@@ -84,8 +83,7 @@ func (ee *EcdsaEncrypto)GeneralKey(port string)(interface{},error) {
 }
 //load key by given port
 func (ee *EcdsaEncrypto)GetKey() (interface{},error) {
-	abspath:="/tmp/hyperchain/cache/keystore/"
-	file := abspath+ee.port
+	file := keystoredir+ee.port
 	return ee.LoadECDSA(file)
 }
 
@@ -136,10 +134,10 @@ func (ee *EcdsaEncrypto)SaveECDSA(file string, key *ecdsa.PrivateKey) error {
 }
 //SaveNodeInfo saves the info of node into local file
 //ip addr and pri
-func (ee *EcdsaEncrypto)SaveNodeInfo(file string, ip string ,addr []byte, pri *ecdsa.PrivateKey) error {
-	fmt.Println(file)
+func (ee *EcdsaEncrypto)SaveNodeInfo(file string, port string ,addr []byte, pri *ecdsa.PrivateKey) error {
 	prikey := hex.EncodeToString(ee.FromECDSA(pri))
-	content := ip +" "+string(addr)+" "+prikey+" \n"
+	content := port +" "+common.ToHex(addr)+" "+prikey+" \n"
+	fmt.Println(content)
 
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_RDWR,0600)
 	if err != nil {
@@ -159,7 +157,8 @@ func (ee *EcdsaEncrypto)PubkeyToAddress(p ecdsa.PublicKey) []byte {
 	pubBytes := ee.FromECDSAPub(&p)
 	return ee.Keccak256(pubBytes[1:])[12:]
 }
-func (ee *EcdsaEncrypto)PrivKeyToAddress(p ecdsa.PrivateKey)[]byte  {
+func (ee *EcdsaEncrypto)PrivKeyToAddress(prv interface {})[]byte  {
+	p := prv.(ecdsa.PrivateKey)
 	return ee.PubkeyToAddress(p.PublicKey)
 }
 func (ee *EcdsaEncrypto)Keccak256(data ...[]byte) []byte {

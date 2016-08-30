@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 
 	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/common"
 )
 type Transaction struct {
 	data txdata
@@ -48,7 +49,7 @@ func TestSigntx(t *testing.T)  {
 	fmt.Println(pub)
 	fmt.Println("private key is :")
 	fmt.Println(key)
-	ee.SaveNodeInfo("./addressInfo","0.0.0.0",addr,key)
+	ee.SaveNodeInfo("./port_address_privatekey","5004",addr,key)
 
 	p,err:=ee.GetKey()
 	if err!=nil{
@@ -77,5 +78,7 @@ func TestSigntx(t *testing.T)  {
 	fmt.Println(from)
 	fmt.Println(addr)
 
+	fmt.Println(common.ToHex(from))
+	fmt.Println(common.ToHex(addr))
 
 }
