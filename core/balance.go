@@ -149,8 +149,8 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 		//-- 如果余额表中有这个From，则覆盖publickey(覆盖的Publickey是一样的，实际上没改)
 		var transValue big.Int
 		transValue.SetString(string(trans.Value), 10)
-		fromBalance := self.cacheBalance[common.BytesToAddress(trans.From)]
-		toBalance := self.cacheBalance[common.BytesToAddress(trans.To)]
+		fromBalance := self.dbBalance[common.BytesToAddress(trans.From)]
+		toBalance := self.dbBalance[common.BytesToAddress(trans.To)]
 		var fromValue big.Int
 		var toValue big.Int
 
@@ -158,19 +158,16 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 		toValue.SetString(string(toBalance), 10)
 		//b -= value
 		fromValue.Sub(&fromValue, &transValue)
-		self.cacheBalance[common.BytesToAddress(trans.From)] = []byte(fromValue.String())
+		self.dbBalance[common.BytesToAddress(trans.From)] = []byte(fromValue.String())
 		//-- 将交易中的To(账户中的publickey)余额加上value
 		//-- 如果余额表中没有这个To(就是所有publickey不含有To)
 		//-- 新建一个balance，将交易的value直接赋给balance.value
 		//-- 如果余额表中有这个To,则直接加上交易中的value
-		if _, ok := self.cacheBalance[common.BytesToAddress(trans.To)]; ok {
-			//fromBalance = self.cacheBalance[trans.To]
-			//fromBalance += value
+		if _, ok := self.dbBalance[common.BytesToAddress(trans.To)]; ok {
 			toValue.Add(&toValue, &transValue)
-			self.cacheBalance[common.BytesToAddress(trans.To)] = []byte(toValue.String())
+			self.dbBalance[common.BytesToAddress(trans.To)] = []byte(toValue.String())
 		} else {
-			//fromBalance = value
-			self.cacheBalance[common.BytesToAddress(trans.To)] = []byte(transValue.String())
+			self.dbBalance[common.BytesToAddress(trans.To)] = []byte(transValue.String())
 		}
 	}
 	//-- 此时balance_cache与balance_db一致
@@ -199,12 +196,9 @@ func (self *Balance)UpdateCacheBalance(trans *types.Transaction) {
 	fromValue.Sub(&fromValue, &transValue)
 	self.cacheBalance[common.BytesToAddress(trans.From)] = []byte(fromValue.String())
 	if _, ok := self.cacheBalance[common.BytesToAddress(trans.To)]; ok {
-		//fromBalance = self.cacheBalance[trans.To]
-		//fromBalance += value
 		toValue.Add(&toValue, &transValue)
 		self.cacheBalance[common.BytesToAddress(trans.To)] = []byte(toValue.String())
 	} else {
-		//fromBalance = value
 		self.cacheBalance[common.BytesToAddress(trans.To)] = []byte(transValue.String())
 	}
 }
