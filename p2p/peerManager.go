@@ -28,7 +28,7 @@ type PeerManager interface {
 	// judge all peer are connected and return them
 	//JudgeAlivePeers(*chan bool)
 	GetAllPeers() []*peer.Peer
-	Start(path string, NodeId uint64, aliveChan chan bool,isTest bool,eventMux *event.TypeMux)
+	Start(path string, NodeId int, aliveChan chan bool,isTest bool,eventMux *event.TypeMux)
 	GetClientId() common.Hash
 	BroadcastPeers(payLoad []byte)
 }
@@ -49,9 +49,8 @@ func (this *GrpcPeerManager) GetClientId() common.Hash {
 }
 
 // Start start the Normal local listen server
-func (this *GrpcPeerManager) Start(path string, nodeId uint64, aliveChan chan bool,isTest bool,eventMux *event.TypeMux) {
-	var NodeId int
-	NodeId = int(NodeId)
+func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,isTest bool,eventMux *event.TypeMux) {
+
 	configs := peerComm.GetConfig(path)
 	port, _ := strconv.Atoi(configs["port"+strconv.Itoa(NodeId)])
 	// start local node
