@@ -30,6 +30,14 @@ func TestHash(t *testing.T) {
 
 	hashReq := hash(req1)
 	hashReqBatch := hash(reqBatch)
-	t.Logf("hashReq is: %s", hashReq)
-	t.Logf("hashReq is: %s", hashReqBatch)
+	if hashReq == "" {
+		t.Errorf("Hash Reqest error")
+	} else {
+		t.Logf("Hash Reqest pass, hashReq is: %s", hashReq)
+	}
+	if hashReqBatch == "" {
+		t.Errorf("Hash ReqBatch error")
+	} else {
+		t.Logf("Hash ReqBatch pass, hashReqBatch is: %s", hashReqBatch)
+	}
 }
