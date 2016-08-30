@@ -127,7 +127,7 @@ func (op *batch) processMessage(msg *pb.Message, id uint64) events.Event {
 		logger.Errorf("Error unmarshaling message: %s", err)
 		return nil
 	}
-	logger.Info("**********>  processMessage Message_TRANSACTION:",reflect.TypeOf(batchMsg),batchMsg.Payload)
+	logger.Info("**********>  processMessage Message_CONSENSUS:",reflect.TypeOf(batchMsg),batchMsg.Payload)
 	if req := batchMsg.GetRequest(); req != nil {
 		fmt.Println("batch processMessage request")
 		//if !op.deduplicator.IsNew(req) {

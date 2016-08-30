@@ -39,10 +39,11 @@ func (h *helper) Execute(reqBatch *pb.ExeMessage) error{
 	if err!=nil {
 		return err
 	}
-	exeEvent:=&event.NewBlockEvent{
+	exeEvent := event.NewBlockEvent{
 		Payload:tmpMsg,
 	}
-	h.msgQ.Post(exeEvent)
+	manager.GetEventObject().Post(exeEvent)
+	//h.msgQ.Post(exeEvent)
 	return nil
 }
 

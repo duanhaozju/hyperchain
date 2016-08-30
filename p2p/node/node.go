@@ -17,6 +17,7 @@ import (
 	"hyperchain/p2p/peerComm"
 	"hyperchain/event"
 
+	"fmt"
 )
 
 type Node struct {
@@ -59,6 +60,9 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	var response pb.Message
 	response.From = &this.address
 	//handle the message
+	fmt.Println(msg.MessageType)
+	fmt.Println(msg)
+
 	switch msg.MessageType {
 	case pb.Message_HELLO :{
 		response.MessageType = pb.Message_RESPONSE
