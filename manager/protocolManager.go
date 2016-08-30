@@ -16,6 +16,7 @@ import (
 	"sync"
 
 	"crypto/ecdsa"
+	"github.com/labstack/gommon/log"
 )
 
 type ProtocolManager struct {
@@ -114,7 +115,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 		case event.NewTxEvent:
 			//call consensus module
 			//Todo
-			fmt.Println("get new TxEvent")
+			/*fmt.Println("get new TxEvent")
 			var transaction *types.Transaction
 			//decode tx
 			proto.Unmarshal(ev.Payload, transaction)
@@ -139,7 +140,13 @@ func (self *ProtocolManager) ConsensusLoop() {
 			}
 			if err != nil {
 				return
+			}*/
+
+			payLoad:=self.transformTx(ev.Payload)
+			if payLoad==nil{
+				log.Fatal("payLoad nil")
 			}
+			self.consenter.RecvMsg(payLoad)
 			//sign tx
 
 
@@ -159,6 +166,39 @@ func (self *ProtocolManager) ConsensusLoop() {
 // Broadcast consensus msg to a batch of peers not knowing about it
 func (pm *ProtocolManager) BroadcastConsensus(payload []byte) {
 	pm.peerManager.BroadcastPeers(payload)
+
+}
+
+//receive tx from web,sign it and marshal it,then give it to consensus module
+func (pm *ProtocolManager)transformTx(payLoad []byte) []byte {
+	fmt.Println("get new TxEvent")
+	var transaction *types.Transaction
+	//decode tx
+	proto.Unmarshal(payLoad, transaction)
+	//hash tx
+	h := transaction.SighHash(pm.commonHash)
+	key, err := pm.encryption.GetKey()
+	switch key.(type){
+	case ecdsa.PrivateKey:
+		actualKey:=key.(ecdsa.PrivateKey)
+		sign, err := pm.encryption.Sign(h[:], actualKey)
+		if err != nil {
+			fmt.Print(err)
+		}
+		transaction.Signature = sign
+		//encode tx
+		payLoad, err := proto.Marshal(transaction)
+		if err != nil {
+			return
+		}
+		return payLoad
+
+
+	}
+	if err != nil {
+		return
+	}
+	return nil
 
 }
 
