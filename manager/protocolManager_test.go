@@ -106,15 +106,15 @@ func TestDecodeTx(t *testing.T){
 			case *ecdsa.PrivateKey:
 				actualKey:=key.(*ecdsa.PrivateKey)
 				sign, err := manager.encryption.Sign(h[:], actualKey)
-				fmt.Println(actualKey)
-				fmt.Println(h[:])
-				fmt.Println(sign)
+				//fmt.Println(actualKey)
+				//fmt.Println(h[:])
+				//fmt.Println(sign)
 				if err != nil {
 					fmt.Print(err)
 				}
 
 				//fmt.Println(sign)
-				//fmt.Println(manager.encryption.UnSign(h[:],sign))
+				fmt.Println(manager.encryption.UnSign(h[:],sign))
 				transaction.Signature = sign
 				//encode tx
 				payLoad, err := proto.Marshal(&transaction)

@@ -189,14 +189,14 @@ func (pm *ProtocolManager)transformTx(payLoad []byte) []byte {
 		//encode tx
 		payLoad, err := proto.Marshal(transaction)
 		if err != nil {
-			return
+			return nil
 		}
 		return payLoad
 
 
 	}
 	if err != nil {
-		return
+		return nil
 	}
 	return nil
 
