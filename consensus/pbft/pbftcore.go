@@ -87,7 +87,8 @@ type msgID struct { // our index through certStore
 }
 
 type msgCert struct {
-	batchCount	int //Todo for test
+	batchCount  int //Todo for test
+	exeCount    int //Todo for test
 	digest      string
 	prePrepare  *PrePrepare
 	sentPrepare bool
@@ -514,7 +515,7 @@ func (instance *pbftCore) recvPrepare(prep *Prepare) error {
 
 	for _, prevPrep := range cert.prepare {
 		if prevPrep.ReplicaId == prep.ReplicaId {
-			logger.Warningf("Ignoring duplicate prepare from %d, -------batchCount: %d-------", prep.ReplicaId, instance.batchCount)
+			logger.Warningf("Ignoring duplicate prepare from %d, -------batchCount: %d-------", prep.ReplicaId, cert.batchCount)
 			return nil
 		}
 	}
@@ -556,7 +557,7 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 	cert := instance.getCert(commit.View, commit.SequenceNumber)
 	for _, prevCommit := range cert.commit {
 		if prevCommit.ReplicaId == commit.ReplicaId {
-			logger.Warningf("Ignoring duplicate commit from %d, -------batchCount: %d-------", commit.ReplicaId, instance.batchCount)
+			logger.Warningf("Ignoring duplicate commit from %d, -------batchCount: %d-------", commit.ReplicaId, cert.batchCount)
 			return nil
 		}
 	}
@@ -564,7 +565,7 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 
 	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) && cert.executed == false {
 		instance.exeCount += 1
-		logger.Infof("------begin execute------batchCount: %d------exeCount: %d--------", instance.batchCount, instance.exeCount)
+		logger.Infof("------begin execute------batchCount: %d------exeCount: %d--------view=%d/seqNo=%d--------", cert.batchCount, cert.exeCount, commit.View, commit.SequenceNumber)
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
 		reqBatch := exeBatchHelper(instance.exeBatch)
 		instance.helper.Execute(reqBatch)
