@@ -17,7 +17,11 @@ type BroadcastConsensusEvent struct{ Payload []byte }
 
 
 //receive new block event from node consensus event for consensus module
-type NewBlockEvent struct{ Payload []byte  }
+type NewBlockEvent struct{
+	Payload []byte
+	Now	uint64
+	Pre	uint64
+}
 
 //general tx local
 type NewTxEvent struct{ Payload []byte  }
