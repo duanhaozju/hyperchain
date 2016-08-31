@@ -1,5 +1,5 @@
 before_script:
-  - GO_NAMESPACE="$GOPATH/src/git.hyperchain.cn/$CI_PROJECT_NAMESPACE"
+  - GO_NAMESPACE="$GOPATH/src"
   - GO_DIR="$GO_NAMESPACE/$CI_PROJECT_NAME"
   - echo $GO_NAMESPACE
   - echo $GO_DIR
@@ -15,10 +15,11 @@ stages:
 job-00:
   stage: build
   script:
+    - pwd
+    - go env
     - go get
-    - go build
-    - ./example
+    - go test
   only:
-    - master
+    - develop
   tags:
     - golang
