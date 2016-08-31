@@ -100,10 +100,9 @@ func (self *ProtocolManager) NewBlockLoop() {
 			//commit block into local db
 			//log.Println(ev.Payload)
 
-			countBlock=countBlock+1
+
 
 			log.Println(time.Now().UnixNano())
-			log.Println("block number is ",countBlock)
 			log.Println("write block success")
 			self.commitNewBlock(ev.Payload)
 		//self.fetcher.Enqueue(ev.Payload)
@@ -231,6 +230,7 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
 		block.Transactions = append(block.Transactions, tx)
 	}
 	currentChain := core.GetChainCopy()
+	log.Println("current chain block number is",currentChain.Height)
 	block.Number = currentChain.Height + 1
 	block.ParentHash = currentChain.LatestBlockHash
 
