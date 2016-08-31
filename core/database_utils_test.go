@@ -177,3 +177,26 @@ func TestDeleteBlock(t *testing.T) {
 		t.Errorf("block delete fail, TestDeleteBlock fail")
 	}
 }
+
+var blockHashcases = [][]byte{
+	[]byte("blockhash1"),
+	[]byte("blockhash2"),
+	[]byte("blockhash3"),
+	[]byte("blockhash4"),
+}
+
+// TestUpdateChain tests for UpdateChain
+func TestUpdateChain(t *testing.T) {
+	log.Println("test =============> > > TestUpdateChain")
+	for i, hash := range blockHashcases {
+		UpdateChain(hash)
+		lasthash := GetLatestBlockHash()
+		if string(lasthash) != string(hash) {
+			t.Errorf("TestUpdateChain fail")
+		}
+		if GetHeightOfChain() != int64 (i + 1) {
+			t.Errorf("TestUpdateChain fail")
+		}
+	}
+}
+
