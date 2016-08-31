@@ -48,13 +48,12 @@ func SendTransaction(args TxArgs) bool {
 		}
 
 
-		//err =
 		go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 
-		//if err != nil {
-		//	log.Fatalf("Post event.NewTxEvent{Payload: txBytes} error: %v",err)
-		//}
-
+		/*if err != nil {
+			log.Fatalf("Post event.NewTxEvent{Payload: txBytes} error: %v",err)
+		}
+*/
 		return true
 
 	} else {
