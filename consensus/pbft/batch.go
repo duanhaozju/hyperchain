@@ -10,7 +10,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
-	"reflect"
 )
 
 type batch struct {
@@ -93,7 +92,7 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 	case *batchMessageEvent:
 		logger.Info("**********>  ProcessEvent:",reflect.TypeOf(event))
 		ocMsg := event
-		logger.Info("**********>  batchMessageEvent message:",reflect.TypeOf(ocMsg),ocMsg.msg.Type)
+		//logger.Info("**********>  batchMessageEvent message:",reflect.TypeOf(ocMsg),ocMsg.msg.Type)
 		return op.processMessage(ocMsg.msg,  ocMsg.sender)
 	case batchTimerEvent:
 		logger.Infof("Replica %d batch timer expired", op.pbft.id)
@@ -108,11 +107,15 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 
 
 func (op *batch) processMessage(msg *pb.Message, id uint64) events.Event {
+<<<<<<< HEAD
 
 	logger.Infof("**********>  proccess message:",reflect.TypeOf(msg),msg.Type)
 
+=======
+	fmt.Println("enter processMessage")
+>>>>>>> c20a1ab165009930fe99e8462a7c828163bb2c23
 	if msg.Type == pb.Message_TRANSACTION {
-		logger.Info("**********>  processMessage Message_TRANSACTION:",reflect.TypeOf(msg),msg.Type)
+		//logger.Info("**********>  processMessage Message_TRANSACTION:",reflect.TypeOf(msg),msg.Type)
 		req := op.txToReq(msg)
 		return op.submitToLeader(req)
 	}
@@ -121,21 +124,15 @@ func (op *batch) processMessage(msg *pb.Message, id uint64) events.Event {
 		logger.Errorf("Unexpected message type: %s", msg.Type)
 		return nil
 	}
-	fmt.Println("batch processMessage")
+	//fmt.Println("batch processMessage")
 	batchMsg := &BatchMessage{}
 	err := proto.Unmarshal(msg.Payload, batchMsg)
 	if err != nil {
 		logger.Errorf("Error unmarshaling message: %s", err)
 		return nil
 	}
-	logger.Info("**********>  processMessage Message_TRANSACTION:",reflect.TypeOf(batchMsg),batchMsg.Payload)
+	//logger.Info("**********>  processMessage Message_CONSENSUS:",reflect.TypeOf(batchMsg),batchMsg.Payload)
 	if req := batchMsg.GetRequest(); req != nil {
-		fmt.Println("batch processMessage request")
-		//if !op.deduplicator.IsNew(req) {
-		//	fmt.Println("2")
-		//	logger.Warningf("Replica %d ignoring request as it is too old", op.pbft.id)
-		//	return nil
-		//}
 		op.reqStore.storeOutstanding(req)
 		if (op.pbft.primary(op.pbft.view) == op.pbft.id) {
 			fmt.Println("3")
@@ -177,8 +174,8 @@ func (op *batch) txToReq(tx *pb.Message) *Request {
 }
 
 func (op *batch) leaderProcReq(req *Request) events.Event {
-	digest := hash(req)
-	logger.Debugf("Batch primary %d queueing new request %s", op.pbft.id, digest)
+	//digest := hash(req)
+	logger.Debugf("Batch primary %d queueing new request %s", op.pbft.id)
 	op.batchStore = append(op.batchStore, req)
 
 	if !op.batchTimerActive {
@@ -222,8 +219,6 @@ func (op *batch) RecvMsg(e []byte) error {
 		logger.Info("**********> Unmarshal error:",err)
 		return err
 	}
-	fmt.Println("RecvMsg")
-
 	op.manager.Queue() <- batchMessageEvent{
 		msg: 	tempMsg,
 		sender:	tempMsg.Id,

@@ -1,4 +1,4 @@
-package hyperchain
+package api
 
 import (
 	"hyperchain/core/types"
@@ -8,8 +8,6 @@ import (
 	"hyperchain/hyperdb"
 	"log"
 	"hyperchain/core"
-	"math/big"
-	"hyperchain/common"
 	"hyperchain/manager"
 )
 
@@ -19,14 +17,14 @@ type TxArgs struct{
 	Value string `json:"value"`
 }
 
-type Transaction struct {
-	From      []byte
-	To        []byte
-	Value     big.Int
+type TransactionShow struct {
+	From      string
+	To        string
+	Value     string
 	TimeStamp int64
 }
 
-type Balance map[common.Address]big.Int
+type BalanceShow map[string]string
 
 // SendTransaction is to build a transaction object,and then post event NewTxEvent,
 // if the sender's balance is not enough, return false
@@ -43,7 +41,6 @@ func SendTransaction(args TxArgs) bool {
 	if (core.VerifyBalance(tx)) {
 		// 余额足够
 		// 抛 NewTxEvent 事件
-		//eventmux:=new(event.TypeMux)
 
 		txBytes, err := proto.Marshal(tx)
 		if err != nil {
@@ -51,10 +48,12 @@ func SendTransaction(args TxArgs) bool {
 		}
 
 
-		fmt.Println(txBytes)
+		go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 
-		manager.GetEventObject().Post(event.NewTxEvent{Payload: []byte{0x00, 0x00, 0x03, 0xe8}})
-
+		/*if err != nil {
+			log.Fatalf("Post event.NewTxEvent{Payload: txBytes} error: %v",err)
+		}
+*/
 		return true
 
 	} else {
@@ -64,7 +63,7 @@ func SendTransaction(args TxArgs) bool {
 }
 
 // GetAllTransactions return all transactions in the chain/db
-func GetAllTransactions()  []Transaction{
+func GetAllTransactions()  []TransactionShow{
 
 	db, err := hyperdb.GetLDBDatabase()
 
@@ -78,17 +77,15 @@ func GetAllTransactions()  []Transaction{
 		log.Fatalf("GetAllTransaction error: %v", err)
 	}
 
-	var val big.Int
-	var transactions []Transaction
+	var transactions []TransactionShow
 
 	// 将交易金额转换为整型
+	fmt.Println(txs)
 	for index, tx := range txs {
 
-		val.SetString(string(tx.Value),10)
-
-		transactions[index].Value = val
-		transactions[index].From = tx.From
-		transactions[index].To = tx.To
+		transactions[index].Value = string(tx.Value)
+		transactions[index].From = string(tx.From)
+		transactions[index].To = string(tx.To)
 		transactions[index].TimeStamp = tx.TimeStamp
 	}
 
@@ -96,13 +93,11 @@ func GetAllTransactions()  []Transaction{
 }
 
 // GetAllBalances retrun all account's balance in the db,NOT CACHE DB!
-func GetAllBalances() Balance{
+func GetAllBalances() BalanceShow{
 
-	var val big.Int
-	var balances Balance
+	var balances = make(BalanceShow)
 
 	balanceIns, err := core.GetBalanceIns()
-	//fmt.Println("get balance")
 
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
@@ -110,15 +105,10 @@ func GetAllBalances() Balance{
 
 	balMap := balanceIns.GetAllDBBalance()
 
-	if balMap==nil{
-		for key, value := range balMap {
+	for key, value := range balMap {
 
-			val.SetString(string(value),10)
-
-			balances[key] = val
-		}
+		balances[key.Str()] = string(value)
 	}
-
 
 	return balances
 }

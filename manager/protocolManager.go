@@ -18,6 +18,7 @@ import (
 	"log"
 	"hyperchain/protos"
 	"time"
+
 )
 
 type ProtocolManager struct {
@@ -44,7 +45,7 @@ var eventMuxAll *event.TypeMux
 
 func NewProtocolManager(peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
 encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
-     fmt.Println("enter parotocol manager")
+	fmt.Println("enter parotocol manager")
 	fmt.Println(consenter)
 	manager := &ProtocolManager{
 
@@ -81,12 +82,6 @@ func (pm *ProtocolManager) Start() {
 	go pm.ConsensusLoop()
 
 
-	/*for i := 0; i < 100; i += 1 {
-		fmt.Println("enenen")
-		eventmux := new(event.TypeMux)
-		eventmux.Post(event.BroadcastConsensusEvent{[]byte{0x00, 0x00, 0x03, 0xe8}})
-
-	}*/
 
 	pm.wg.Wait()
 
@@ -103,21 +98,6 @@ func (self *ProtocolManager) NewBlockLoop() {
 		case event.NewBlockEvent:
 			//commit block into local db
 			log.Println(ev.Payload)
-			/* msgList:= &protos.ExeMessage{}
-			proto.Unmarshal(ev.Payload,msgList)
-			block:=new(types.Block)
-			for _, item := range msgList.Batch{
-				tx:=&types.Transaction{}
-				proto.Unmarshal(item.Payload,tx)
-				block.Transactions=append(block.Transactions,tx)
-			}
-			currentChain:=core.GetChainCopy()
-			block.Number=currentChain.Height+1
-			block.ParentHash=currentChain.LatestBlockHash
-			block.Timestamp=time.Now().Unix()
-			//block.BlockHash=
-			block.BlockHash=block.Hash(self.commonHash).Bytes()*/
-
 
 			log.Println("write block success")
 		//self.fetcher.Enqueue(ev.Payload)
@@ -152,10 +132,10 @@ func (self *ProtocolManager) ConsensusLoop() {
 			msg := &protos.Message{
 				Type: protos.Message_TRANSACTION,
 				Payload: ev.Payload,
-				Timestamp: time.Now().Unix(),
+				Timestamp: time.Now().UnixNano(),
 				Id: 0,
 			}
-			payload,_ := proto.Marshal(msg)
+			payload, _ := proto.Marshal(msg)
 			self.consenter.RecvMsg(payload)
 		//sign tx
 
@@ -163,7 +143,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 		case event.ConsensusEvent:
 			//call consensus module
 			//Todo
-			fmt.Println("enter ConsensusEvent")
+			fmt.Println("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 
 
@@ -214,7 +194,28 @@ func (pm *ProtocolManager)transformTx(payLoad []byte) []byte {
 
 }
 
-/*func() commitBlock()  {
+/*func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
+
+	msgList := &protos.ExeMessage{}
+	proto.Unmarshal(payload, msgList)
+	block := new(types.Block)
+	for _, item := range msgList.Batch {
+		tx := &types.Transaction{}
+		proto.Unmarshal(item.Payload, tx)
+		block.Transactions = append(block.Transactions, tx)
+	}
+	currentChain := core.GetChainCopy()
+	block.Number = currentChain.Height + 1
+	block.ParentHash = currentChain.LatestBlockHash
+	block.Timestamp = time.Now().Unix()
+	//block.BlockHash=
+	block.BlockHash = block.Hash(pm.commonHash).Bytes()
+	db,err:=hyperdb.GetLDBDatabase()
+
+	if err!=nil{
+		return
+	}
+	core.PutBlock(db,block.BlockHash,block)
 
 }*/
 

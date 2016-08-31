@@ -59,7 +59,7 @@ func NewPeerPool(isNewInstance bool,isKeepAlive bool) PeersPool {
 						msg, err := p.Chat(&pb.Message{
 							MessageType:  pb.Message_HELLO,
 							Payload:      []byte("Hello"),
-							MsgTimeStamp: time.Now().Unix(),
+							MsgTimeStamp: time.Now().UnixNano(),
 						})
 						if err != nil {
 							log.Fatal("Node:", p.Addr, "is dead need to recall ", err)

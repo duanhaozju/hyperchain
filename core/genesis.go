@@ -69,17 +69,13 @@ func CreateInitBlock(filename string)  {
 		balanceIns.PutCacheBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
 		balanceIns.PutDBBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
 
-		db,err:=hyperdb.GetLDBDatabase()
-		PutDBBalance(db,balanceIns.dbBalance)
-		if err!=nil{
-			return
-		}
-
-
-
 
 	}
-
+	db,err:=hyperdb.GetLDBDatabase()
+	PutDBBalance(db,balanceIns.dbBalance)
+	if err!=nil{
+		log.Fatal(err)
+	}
 
 
 	block := types.Block{
@@ -96,8 +92,25 @@ func CreateInitBlock(filename string)  {
 
 	UpdateChain(block.BlockHash)
 
+}
 
-	fmt.Println(balanceIns.GetCacheBalance(common.BytesToAddress([]byte("0000000000000000000000000000000000000002"))))
-
-
+// WriteBlock need:
+// 1. put block db
+// 2. update chain
+// 3. update balance
+func WriteBlock(block types.Block)  {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = PutBlock(db, block.BlockHash, block)
+	if err != nil {
+		log.Fatal(err)
+	}
+	UpdateChain(block.BlockHash)
+	balance, err := GetBalanceIns()
+	if err != nil {
+		log.Fatal(err)
+	}
+	balance.UpdateDBBalance(&block)
 }

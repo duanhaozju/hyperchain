@@ -17,6 +17,8 @@ import (
 	"hyperchain/p2p/peerComm"
 	"hyperchain/event"
 
+	"fmt"
+	//"hyperchain/p2p/peerPool"
 )
 
 type Node struct {
@@ -59,6 +61,9 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	var response pb.Message
 	response.From = &this.address
 	//handle the message
+	fmt.Println(msg.MessageType)
+	fmt.Println(msg)
+
 	switch msg.MessageType {
 	case pb.Message_HELLO :{
 		response.MessageType = pb.Message_RESPONSE
@@ -71,13 +76,11 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		response.MessageType = pb.Message_RESPONSE
 		response.Payload = []byte("Consensus broadcast has already received!")
 		log.Println("get a Consus message")
-		//post payload to high layer
-	/*	manager.GetEventObject().Post(event.ConsensusEvent{
-			Payload:msg.Payload,
-		})*/
-		this.higherEventManager.Post(event.ConsensusEvent{
+
+		go this.higherEventManager.Post(event.ConsensusEvent{
 			Payload:msg.Payload,
 		})
+
 		return &response, nil
 
 	}
