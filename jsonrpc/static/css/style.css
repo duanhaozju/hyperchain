@@ -10,7 +10,7 @@ header div{
     padding: 20px 0 20px 100px;
 }
 .container{
-    width: 900px;
+    width: 1000px;
     margin: 0 auto;
     padding:20px 0;
 }
@@ -34,7 +34,13 @@ input[type=button],input[type=reset],select{
 table{
     background: #eeeeee;
     padding: 10px 20px;
-
+}
+table.trans{
+    width:70%
+}
+table.balances{
+    width: 40%;
+    margin-left:5px
 }
 table tr td,table tr th{
     border-bottom:1px solid silver;
