@@ -13,14 +13,14 @@ func TestHash(t *testing.T) {
 	copy(b[:], "def")
 
 	req1 := &Request{
-		Timestamp:	time.Now().Unix(),
+		Timestamp:	time.Now().UnixNano(),
 		Payload:	a,
 		ReplicaId:	0,
 		Signature:	a,
 	}
 
 	req2 := &Request{
-		Timestamp:	time.Now().Unix(),
+		Timestamp:	time.Now().UnixNano(),
 		Payload:	b,
 		ReplicaId:	1,
 		Signature:	b,

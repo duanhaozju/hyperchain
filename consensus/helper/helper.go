@@ -42,7 +42,7 @@ func (h *helper) Execute(reqBatch *pb.ExeMessage) error{
 	exeEvent := event.NewBlockEvent{
 		Payload:tmpMsg,
 	}
-	manager.GetEventObject().Post(exeEvent)
+	go manager.GetEventObject().Post(exeEvent)
 	//h.msgQ.Post(exeEvent)
 	return nil
 }

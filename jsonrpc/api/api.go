@@ -48,11 +48,12 @@ func SendTransaction(args TxArgs) bool {
 		}
 
 
-		err = manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+		//err =
+		go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 
-		if err != nil {
-			log.Fatalf("Post event.NewTxEvent{Payload: txBytes} error: %v",err)
-		}
+		//if err != nil {
+		//	log.Fatalf("Post event.NewTxEvent{Payload: txBytes} error: %v",err)
+		//}
 
 		return true
 
@@ -80,6 +81,7 @@ func GetAllTransactions()  []TransactionShow{
 	var transactions []TransactionShow
 
 	// 将交易金额转换为整型
+	fmt.Println(txs)
 	for index, tx := range txs {
 
 		transactions[index].Value = string(tx.Value)

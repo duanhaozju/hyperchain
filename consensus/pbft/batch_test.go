@@ -22,7 +22,7 @@ func TestReceivePrePrePare(t *testing.T){
 
 
 	req:=&Request{
-		Timestamp :time.Now().Unix(),
+		Timestamp :time.Now().UnixNano(),
 		Payload   :[]byte{},
 		ReplicaId :2,
 		Signature :[]byte{},

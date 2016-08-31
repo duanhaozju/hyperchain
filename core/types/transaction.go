@@ -28,7 +28,7 @@ func NewTransaction(from []byte,to []byte,value []byte) *Transaction{
 		From: from,
 		To: to,
 		Value: value,
-		TimeStamp: time.Now().Unix(),
+		TimeStamp: time.Now().UnixNano(),
 	}
 
 	return transaction
