@@ -80,10 +80,9 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 			alivePeerMap[i] = false
 		}
 	}
-	log.Println("Status map:",alivePeerMap)
 	// connect other peers
 	for peerPool.GetAliveNodeNum() < MAXPEERNODE - 1{
-		log.Println("node:",NodeId,"connecting...")
+		log.Println("node:",NodeId,"process connecting task...")
 		nid := 1
 		for range time.Tick(3 * time.Second) {
 			status := alivePeerMap[nid]
@@ -91,7 +90,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 			if !status {
 				//if this node is not online connect it
 				peerAddr := configs["node"+strconv.Itoa(nid)] + ":" + configs["port"+strconv.Itoa(nid)]
-				log.Println("Connect to: ", peerAddr)
+				log.Println("Connecting to: ", peerAddr)
 				peer, peerErr := peer.NewPeer(peerAddr)
 				if peerErr != nil {
 					// cannot connect to other peer
@@ -105,7 +104,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 						Port: int32(peerPort),
 					}, peer)
 					alivePeerMap[nid] = true
-					log.Println("Alive Peer Node num:", peerPool.GetAliveNodeNum())
+					log.Println("Alive Peer Node ID:", peerPool.GetAliveNodeNum())
 				}
 			}
 			nid += 1
@@ -114,10 +113,8 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 			}
 		}
 	}
-	log.Println("Finish full node connection...")
+	log.Println("All the ndes have been connected...")
 
-
-	//eventMux.Post(event.AliveEvent{true})
 
 	*this.aliveChain <- true
 }
@@ -150,7 +147,6 @@ func (this *GrpcPeerManager) GetAllPeers() []*peer.Peer {
 	return peerPool.GetPeers()
 }
 
-
 // BroadcastPeers Broadcast Massage to connected peers
 func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 	localNodeAddr := node.GetNodeAddr()
@@ -160,21 +156,6 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 		Payload:      payLoad,
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
+
 	go this.EventManager.PostEvent(pb.Message_CONSUS, broadCastMessage)
-	//pPool := peerPool.NewPeerPool(false,false)
-	//fmt.Println("现在有节点数目:",pPool.GetAliveNodeNum())
-	//ps := pPool.GetPeers()
-	//fmt.Println("现在有节点数目:",len(ps))
-	//for _,peer := range pPool.GetPeers(){
-	//	fmt.Println("广播....")
-	//	resMsg,err :=peer.Chat(&broadCastMessage)
-	//	if err != nil{
-	//		log.Println("Broadcast failed,Node",peer.Addr)
-	//	}else{
-	//		log.Println("resMsg:",string(resMsg.Payload))
-	//		//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
-	//	}
-	//}
-
-
 }

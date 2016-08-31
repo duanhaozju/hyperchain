@@ -34,7 +34,7 @@ func NewPeer(address string)(*Peer,error){
 	}
 	conn, err := grpc.Dial(address, grpc.WithInsecure())
 	if err != nil {
-		errors.New("cannot establish a connection!")
+		errors.New("Cannot establish a connection!")
 		log.Println("err:",err)
 		return nil,err
 	}
@@ -69,7 +69,6 @@ func (this *Peer)Chat(msg *pb.Message) (*pb.Message, error){
 }
 
 func (this *Peer)Close()(bool,error){
-
 	err := this.Connection.Close()
 	if err != nil{
 		log.Println("err:",err)
