@@ -8,18 +8,19 @@ before_script:
   - cd "$GO_DIR"
 
 stages:
-  - build
   - test
+  - build
   - deploy
 
-job-00:
-  stage: build
+job-test:
+  stage: test
   script:
     - pwd
     - go env
     - go get -u github.com/kardianos/govendor
     - govendor list
-    - go test
+    - govendor sync
+    - govendor test +local
   only:
     - develop
   tags:
