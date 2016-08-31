@@ -458,6 +458,7 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 	cert.prePrepare = preprep
 	cert.digest = preprep.BatchDigest
 	//Todo for test
+	instance.batchCount += 1
 	cert.batchCount = instance.batchCount
 
 	// Store the request batch if, for whatever reason, we haven't received it from an earlier broadcast
