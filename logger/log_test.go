@@ -5,7 +5,7 @@ import (
 )
 
 func TestOpenLogFile(t *testing.T) {
-	NewLogger("8002")
+	NewLogger(8002)
 
 	O.Println("hahahahah")
 
