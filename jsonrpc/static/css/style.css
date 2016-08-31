@@ -49,3 +49,9 @@ table tr td,table tr th{
     width:20%;
     text-align: center;
 }
+.status{
+    height:15px;
+    line-height:15px;
+    width:100%;
+    color:red;
+}
