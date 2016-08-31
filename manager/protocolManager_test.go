@@ -16,12 +16,7 @@ import (
 	"fmt"
 
 	"time"
-	"hyperchain/protos"
-	"github.com/golang/protobuf/proto"
 
-	"hyperchain/core/types"
-
-	"hyperchain/core"
 )
 
 
@@ -68,7 +63,7 @@ func TestAliveEvent(t *testing.T) {
 	}
 }
 
-func TestCommitNewBlock(t *testing.T) {
+/*func TestCommitNewBlock(t *testing.T) {
 
 	transaction := &types.Transaction{
 		TimeStamp:12,
@@ -94,35 +89,9 @@ func TestCommitNewBlock(t *testing.T) {
 		quitSync:    make(chan struct{}),
 
 	}
-	manager.commitNewBlock(payload)
-}
+	//manager.commitNewBlock(payload)
+}*/
 
-func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
-
-	msgList := &protos.ExeMessage{}
-	proto.Unmarshal(payload, msgList)
-	fmt.Println(msgList)
-	block := new(types.Block)
-	for _, item := range msgList.Batch {
-		tx := &types.Transaction{}
-		proto.Unmarshal(item.Payload, tx)
-		block.Transactions = append(block.Transactions, tx)
-	}
-	fmt.Println(block.Number)
-	/*currentChain := core.GetChainCopy()
-	block.Number = currentChain.Height + 1
-	block.ParentHash = currentChain.LatestBlockHash
-	block.Timestamp = time.Now().Unix()
-	//block.BlockHash=
-	block.BlockHash = block.Hash(pm.commonHash).Bytes()*/
-	/*db,err:=hyperdb.GetLDBDatabase()
-
-	if err!=nil{
-		return
-	}*/
-	core.WriteBlock(block)
-
-}
 
 
 
