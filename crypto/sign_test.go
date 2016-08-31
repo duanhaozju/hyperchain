@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 
 	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/common"
+	"hyperchain/common"
 )
 type Transaction struct {
 	data txdata

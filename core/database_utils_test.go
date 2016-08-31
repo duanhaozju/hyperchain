@@ -8,7 +8,6 @@ import (
 	"hyperchain/hyperdb"
 	"log"
 	"strconv"
-	"fmt"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -47,17 +46,14 @@ func isDirExists(path string) bool {
 
 // TestInitDB tests for InitDB
 func TestInitDB(t *testing.T) {
-	fmt.Println("test =============> > > TestInitDB")
+	log.Println("test =============> > > TestInitDB")
 	InitDB(2048)
 	hyperdb.GetLDBDatabase()
-	if !isDirExists("/tmp/hyperchain/cache/2048") {
-		t.Errorf("TestInitDB fail")
-	}
 }
 
 // TestPutTransaction tests for PutTransaction
 func TestPutTransaction(t *testing.T) {
-	fmt.Println("test =============> > > TestPutTransaction")
+	log.Println("test =============> > > TestPutTransaction")
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
@@ -73,7 +69,7 @@ func TestPutTransaction(t *testing.T) {
 
 // TestGetTransaction tests for GetTransaction
 func TestGetTransaction(t *testing.T) {
-	fmt.Println("test =============> > > TestGetTransaction")
+	log.Println("test =============> > > TestGetTransaction")
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
@@ -91,7 +87,7 @@ func TestGetTransaction(t *testing.T) {
 }
 // TestGetAllTransaction tests for GetAllTransaction
 func TestGetAllTransaction(t *testing.T) {
-	fmt.Println("test =============> > > TestGetAllTransaction")
+	log.Println("test =============> > > TestGetAllTransaction")
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
@@ -115,7 +111,7 @@ func TestGetAllTransaction(t *testing.T) {
 
 // TestDeleteTransaction tests for DeleteTransaction
 func TestDeleteTransaction(t *testing.T) {
-	fmt.Println("test =============> > > TestDeleteTransaction")
+	log.Println("test =============> > > TestDeleteTransaction")
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
@@ -141,7 +137,7 @@ var blockUtilsCase = types.Block{
 
 // TestPutBlock tests for PutBlock
 func TestPutBlock(t *testing.T) {
-	fmt.Println("test =============> > > TestPutBlock")
+	log.Println("test =============> > > TestPutBlock")
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
@@ -154,7 +150,7 @@ func TestPutBlock(t *testing.T) {
 
 // TestGetBlock tests for GetBlock
 func TestGetBlock(t *testing.T) {
-	fmt.Println("test =============> > > TestGetBlock")
+	log.Println("test =============> > > TestGetBlock")
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
@@ -170,7 +166,7 @@ func TestGetBlock(t *testing.T) {
 
 // TestDeleteBlock tests for DeleteBlock
 func TestDeleteBlock(t *testing.T) {
-	fmt.Println("test =============> > > TestDeleteBlock")
+	log.Println("test =============> > > TestDeleteBlock")
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
@@ -181,3 +177,26 @@ func TestDeleteBlock(t *testing.T) {
 		t.Errorf("block delete fail, TestDeleteBlock fail")
 	}
 }
+
+var blockHashcases = [][]byte{
+	[]byte("blockhash1"),
+	[]byte("blockhash2"),
+	[]byte("blockhash3"),
+	[]byte("blockhash4"),
+}
+
+// TestUpdateChain tests for UpdateChain
+func TestUpdateChain(t *testing.T) {
+	log.Println("test =============> > > TestUpdateChain")
+	for i, hash := range blockHashcases {
+		UpdateChain(hash)
+		lasthash := GetLatestBlockHash()
+		if string(lasthash) != string(hash) {
+			t.Errorf("TestUpdateChain fail")
+		}
+		if GetHeightOfChain() != int64 (i + 1) {
+			t.Errorf("TestUpdateChain fail")
+		}
+	}
+}
+

@@ -10,9 +10,9 @@ package Server
 import (
 	"testing"
 	"time"
-	"fmt"
 	"hyperchain/event"
 
+	"log"
 )
 
 func TestNewChatServer(t *testing.T) {
@@ -20,7 +20,7 @@ func TestNewChatServer(t *testing.T) {
 	server := NewNode(8010,true,eventMux)
 	tickCount := 0
 	for now:=range  time.Tick(3*time.Second){
-		fmt.Println(now)
+		log.Println(now)
 		tickCount +=1
 		if tickCount >3{
 			break

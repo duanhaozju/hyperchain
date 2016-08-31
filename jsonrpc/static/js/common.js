@@ -23,7 +23,7 @@ $(document).ready(function(){
         // if(!url){
         //     url = location.host
         // }
-        for(var i=1;i<100;i++){
+        //for(var i=1;i<500;i++){
 
         $.ajax({
             // contentType: "application/json; charset=utf-8",
@@ -37,7 +37,7 @@ $(document).ready(function(){
                     //alert("提交成功!");
                     $(".status").html("提交成功")
                 } else {
-                    $(".status").html("提交成功")
+                    $(".status").html("提交失败，余额不足")
 //                    alert("交易验证失败，您没有足够的金额！");
                 }
 
@@ -51,6 +51,6 @@ $(document).ready(function(){
                 }
                 return false;
             }
-        });}
+        });
     });
 });
