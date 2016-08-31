@@ -33,9 +33,11 @@ $(document).ready(function(){
             success: function( result ) {
                 console.log(result);
                 if(result.Code == 1){
-                    alert("提交成功!");
+                    //alert("提交成功!");
+                    $(".status").html("提交成功")
                 } else {
-                    alert("交易验证失败，您没有足够的金额！");
+                    $(".status").html("提交成功")
+//                    alert("交易验证失败，您没有足够的金额！");
                 }
 
 //                    $("input[type=reset]").trigger("click");

@@ -108,7 +108,7 @@ func WriteBlock(block types.Block)  {
 		log.Fatal(err)
 	}
 	UpdateChain(block.BlockHash)
-	balance, err != GetBalanceIns()
+	balance, err := GetBalanceIns()
 	if err != nil {
 		log.Fatal(err)
 	}
