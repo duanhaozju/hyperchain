@@ -552,7 +552,7 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 		logger.Infof("--------begin execute--------view=%d/seqNo=%d--------", commit.View, commit.SequenceNumber)
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
 		reqBatch := exeBatchHelper(cert.prePrepare.RequestBatch)
-		instance.helper.Execute(reqBatch)
+		instance.helper.Execute(reqBatch, commit.SequenceNumber, commit.SequenceNumber-1)
 		cert.executed = true
 	}
 
