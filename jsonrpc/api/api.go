@@ -48,7 +48,9 @@ func SendTransaction(args TxArgs) bool {
 		}
 
 
-		go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+		//for i := 0; i < 500; i += 1 {
+			go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+		//}
 
 		/*if err != nil {
 			log.Fatalf("Post event.NewTxEvent{Payload: txBytes} error: %v",err)

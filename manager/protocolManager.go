@@ -42,6 +42,7 @@ type ProtocolManager struct {
 }
 
 var eventMuxAll *event.TypeMux
+var countBlock int
 
 func NewProtocolManager(peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
 encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
@@ -94,12 +95,17 @@ func (self *ProtocolManager) NewBlockLoop() {
 
 	for obj := range self.newBlockSub.Chan() {
 
-		switch ev := obj.Data.(type) {
+		switch  ev :=obj.Data.(type) {
 		case event.NewBlockEvent:
 			//commit block into local db
-			log.Println(ev.Payload)
+			//log.Println(ev.Payload)
 
+			countBlock=countBlock+1
+
+			log.Println(time.Now().UnixNano())
+			log.Println("block number is ",countBlock)
 			log.Println("write block success")
+			self.commitNewBlock(ev.Payload)
 		//self.fetcher.Enqueue(ev.Payload)
 
 		}
@@ -194,30 +200,31 @@ func (pm *ProtocolManager)transformTx(payLoad []byte) []byte {
 
 }
 
-/*func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
+
+
+func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
 
 	msgList := &protos.ExeMessage{}
 	proto.Unmarshal(payload, msgList)
 	block := new(types.Block)
 	for _, item := range msgList.Batch {
 		tx := &types.Transaction{}
+
 		proto.Unmarshal(item.Payload, tx)
+		block.Timestamp = item.Timestamp
 		block.Transactions = append(block.Transactions, tx)
 	}
 	currentChain := core.GetChainCopy()
 	block.Number = currentChain.Height + 1
 	block.ParentHash = currentChain.LatestBlockHash
-	block.Timestamp = time.Now().Unix()
+
 	//block.BlockHash=
 	block.BlockHash = block.Hash(pm.commonHash).Bytes()
-	db,err:=hyperdb.GetLDBDatabase()
+	fmt.Println(block)
 
-	if err!=nil{
-		return
-	}
-	core.PutBlock(db,block.BlockHash,block)
+	core.WriteBlock(*block)
 
-}*/
+}
 
 
 
