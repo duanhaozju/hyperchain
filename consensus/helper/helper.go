@@ -18,7 +18,7 @@ type Stack interface {
 }
 
 func (h *helper) InnerBroadcast(msg *pb.Message) error{
-	fmt.Println("enter inner broad cast")
+	fmt.Println("enter innerbroad cast")
 	tmpMsg, err := proto.Marshal(msg)
 	if err != nil {
 		return err
@@ -26,7 +26,7 @@ func (h *helper) InnerBroadcast(msg *pb.Message) error{
 	broadcastEvent := event.BroadcastConsensusEvent{
 		Payload: tmpMsg,
 	}
-	fmt.Println("broadcast")
+	//fmt.Println("broadcast")
 	//manager.GetEventObject().Post(event.NewTxEvent{Payload: []byte{0x00, 0x00, 0x03, 0xe8}})
 
 	go manager.GetEventObject().Post(broadcastEvent)
