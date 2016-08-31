@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
+	"reflect"
 )
 
 type batch struct {
@@ -107,13 +108,9 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 
 
 func (op *batch) processMessage(msg *pb.Message, id uint64) events.Event {
-<<<<<<< HEAD
 
 	logger.Infof("**********>  proccess message:",reflect.TypeOf(msg),msg.Type)
 
-=======
-	fmt.Println("enter processMessage")
->>>>>>> c20a1ab165009930fe99e8462a7c828163bb2c23
 	if msg.Type == pb.Message_TRANSACTION {
 		//logger.Info("**********>  processMessage Message_TRANSACTION:",reflect.TypeOf(msg),msg.Type)
 		req := op.txToReq(msg)
