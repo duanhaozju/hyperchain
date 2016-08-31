@@ -17,8 +17,7 @@ type HelloHandler struct{
 }
 // peer send a hello message should handled here
 func (this *HelloHandler)ProcessEvent(msg *peermessage.Message)error{
-	log.Println(msg.MessageType)
-	//TODO add the peer into PeerPool
+	log.Println("Node: "+msg.From.String()+" connected request received.")
 	return nil
 }
 func NewHelloHandler()*HelloHandler{

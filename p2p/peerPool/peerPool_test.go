@@ -9,15 +9,10 @@ package peerPool
 import (
 	"testing"
 	"hyperchain/p2p/peermessage"
-	"fmt"
-
 	"log"
-
 	"strconv"
-
 	node "hyperchain/p2p/node"
 	peer "hyperchain/p2p/peer"
-
 	"time"
 	"hyperchain/event"
 	)
@@ -43,7 +38,7 @@ func TestPeersPool_PutPeer(t *testing.T) {
 	if err2 != nil {
 		log.Fatalln("发送消息失败")
 	} else {
-		fmt.Println(msg)
+		log.Println(msg)
 		peerPool := NewPeerPool(true,false)
 		//here test the peer pool
 		_,err := peerPool.PutPeer(chatClient.Addr, chatClient)
@@ -55,18 +50,26 @@ func TestPeersPool_PutPeer(t *testing.T) {
 		}
 	}
 	tickCount := 0
-	for tick := range time.Tick(3 *time.Second){
+	for tick := range time.Tick(1 *time.Second){
 		tickCount += 1
 		log.Println(tick)
-		if tickCount >5{
+		if tickCount >2{
 			break
 		}
 	}
-	server.StopServer()
+
+
+	if isClosed,err := chatClient.Close(); isClosed{
+		t.Log("关闭client成功")
+		server.StopServer()
+	}else{
+		t.Errorf("关闭client错误", err)
+	}
+
 }
 
 func TestPeersPool_GetPeer(t *testing.T) {
-	portRange := 8001
+	portRange := 8016
 	//get the client
 	//start the server
 	eventMux := new(event.TypeMux)
@@ -85,7 +88,7 @@ func TestPeersPool_GetPeer(t *testing.T) {
 	if err2 != nil {
 		log.Fatalln("发送消息失败")
 	} else {
-		fmt.Println(msg)
+		log.Println(msg)
 		peerPool := NewPeerPool(true,false)
 		//here test the peer pool
 		_,err := peerPool.PutPeer(chatClient.Addr, chatClient)
@@ -93,7 +96,7 @@ func TestPeersPool_GetPeer(t *testing.T) {
 			//测试取出
 			pAddr := peermessage.PeerAddress{
 				Ip:"localhost",
-				Port:int32(8001),
+				Port:int32(portRange),
 			}
 			client := peerPool.GetPeer(pAddr)
 			retMessage, err := client.Chat(&peermessage.Message{
@@ -117,12 +120,11 @@ func TestPeersPool_GetPeer(t *testing.T) {
 	}
 
 	if isClosed,err := chatClient.Close(); isClosed{
+		t.Log("关闭client成功")
 		server.StopServer()
 	}else{
-		if err != nil {
-			t.Errorf("关闭client错误", err)
-		}
-		server.StopServer()
+		t.Errorf("关闭client错误", err)
 	}
+
 }
 
