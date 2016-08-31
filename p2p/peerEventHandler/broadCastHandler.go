@@ -27,7 +27,6 @@ func NewBroadCastHandler()*BroadCastHandler{
 // 广播消息只会来自本地触发,外部广播信息只需要接收上报即可
 func (this *BroadCastHandler)ProcessEvent(msg *peermessage.Message)error{
 	log.Println(msg.MessageType)
-	// TODO 将消息广播出去
 	pPool := peerPool.NewPeerPool(false,false)
 	fmt.Println("现在有节点数目:",pPool.GetAliveNodeNum())
 	ps := pPool.GetPeers()

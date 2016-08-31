@@ -11,9 +11,6 @@ import (
 	"testing"
 	"hyperchain/p2p/peermessage"
 	"log"
-	//"time"
-	"fmt"
-	//"hyperchain-alpha/peer/Server"
 	node "hyperchain/p2p/node"
 	"hyperchain/event"
 	)
@@ -39,7 +36,7 @@ func TestNewChatClient(t *testing.T) {
 		log.Fatalln("Failed to send a message")
 		server.StopServer()
 	}else{
-		fmt.Println(msg)
+		log.Println(msg)
 		server.StopServer()
 	}
 }

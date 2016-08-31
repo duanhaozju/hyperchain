@@ -16,9 +16,6 @@ import (
 	"strconv"
 	"hyperchain/p2p/peerComm"
 	"hyperchain/event"
-
-	"fmt"
-	//"hyperchain/p2p/peerPool"
 )
 
 type Node struct {
@@ -40,7 +37,6 @@ func NewNode(port int, isTest bool,hEventManager *event.TypeMux) *Node {
 		TestNode.startServer()
 		return &TestNode
 	}
-	log.Println("start local node, port", port)
 	if globalNode.address.Ip != "" && globalNode.address.Port != 0 {
 		return &globalNode
 	} else {
@@ -61,8 +57,6 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	var response pb.Message
 	response.From = &this.address
 	//handle the message
-	fmt.Println(msg.MessageType)
-	fmt.Println(msg)
 
 	switch msg.MessageType {
 	case pb.Message_HELLO :{
@@ -74,8 +68,8 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	}
 	case pb.Message_CONSUS:{
 		response.MessageType = pb.Message_RESPONSE
-		response.Payload = []byte("Consensus broadcast has already received!")
-		log.Println("get a Consus message")
+		response.Payload = []byte("Consensus has received, response from " + strconv.Itoa(int(GetNodeAddr().Port)))
+		log.Println("<<<< GOT A CONSUS MESSAGE >>>>")
 
 		go this.higherEventManager.Post(event.ConsensusEvent{
 			Payload:msg.Payload,
@@ -106,15 +100,15 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 
 // StartServer start the gRPC server
 func (this *Node)startServer() {
-	log.Println("Starting the grpc listening server")
+	log.Println("Starting the grpc listening server...")
 	lis, err := net.Listen("tcp", ":" + strconv.Itoa(int(this.address.Port)))
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-		log.Fatal("PLS RESTART THE SERVER NODE")
+		log.Fatalf("Failed to listen: %v", err)
+		log.Fatal("PLEASE RESTART THE SERVER NODE!")
 	}
 	this.gRPCServer = grpc.NewServer()
 	pb.RegisterChatServer(this.gRPCServer, this)
-	log.Println("listening rpc request...")
+	log.Println("Listening gRPC request...")
 	go this.gRPCServer.Serve(lis)
 }
 
@@ -122,4 +116,5 @@ func (this *Node)startServer() {
 // connections and RPCs and blocks until all the pending RPCs are finished.
 func (this *Node)StopServer() {
 	this.gRPCServer.GracefulStop()
+
 }
