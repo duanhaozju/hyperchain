@@ -24,7 +24,7 @@ func TestNewChatClient(t *testing.T) {
 	eventMux := new(event.TypeMux)
 	server := node.NewNode(8011,true,eventMux)
 
-	chatClient,err := NewPeer("localhost:8002")
+	chatClient,err := NewPeer("localhost:8011")
 	if err != nil{
 		log.Fatalln("Connect failed")
 		server.StopServer()
