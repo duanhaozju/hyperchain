@@ -29,7 +29,7 @@ func (h *helper) InnerBroadcast(msg *pb.Message) error{
 	fmt.Println("broadcast")
 	//manager.GetEventObject().Post(event.NewTxEvent{Payload: []byte{0x00, 0x00, 0x03, 0xe8}})
 
-	manager.GetEventObject().Post(broadcastEvent)
+	go manager.GetEventObject().Post(broadcastEvent)
 	//h.msgQ.Post(broadcastEvent)
 	return nil
 }

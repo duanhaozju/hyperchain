@@ -160,7 +160,21 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 		Payload:      payLoad,
 		MsgTimeStamp: time.Now().Unix(),
 	}
-	this.EventManager.PostEvent(pb.Message_CONSUS, broadCastMessage)
+	go this.EventManager.PostEvent(pb.Message_CONSUS, broadCastMessage)
+	//pPool := peerPool.NewPeerPool(false,false)
+	//fmt.Println("现在有节点数目:",pPool.GetAliveNodeNum())
+	//ps := pPool.GetPeers()
+	//fmt.Println("现在有节点数目:",len(ps))
+	//for _,peer := range pPool.GetPeers(){
+	//	fmt.Println("广播....")
+	//	resMsg,err :=peer.Chat(&broadCastMessage)
+	//	if err != nil{
+	//		log.Println("Broadcast failed,Node",peer.Addr)
+	//	}else{
+	//		log.Println("resMsg:",string(resMsg.Payload))
+	//		//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
+	//	}
+	//}
 
 
 }
