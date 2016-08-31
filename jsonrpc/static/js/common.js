@@ -23,6 +23,7 @@ $(document).ready(function(){
         // if(!url){
         //     url = location.host
         // }
+        for(var i=1;i<100;i++){
 
         $.ajax({
             // contentType: "application/json; charset=utf-8",
@@ -41,7 +42,7 @@ $(document).ready(function(){
                 }
 
 //                    $("input[type=reset]").trigger("click");
-                location.reload();
+               // location.reload();
             },
             error: function(err){
                 if(err){
@@ -50,6 +51,6 @@ $(document).ready(function(){
                 }
                 return false;
             }
-        });
+        });}
     });
 });
