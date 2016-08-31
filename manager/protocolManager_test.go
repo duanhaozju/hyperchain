@@ -16,6 +16,12 @@ import (
 	"fmt"
 
 	"time"
+	"hyperchain/protos"
+	"github.com/golang/protobuf/proto"
+
+	"hyperchain/core/types"
+
+	"hyperchain/core"
 )
 
 
@@ -60,6 +66,62 @@ func TestAliveEvent(t *testing.T) {
 		go newEvent(manager)
 
 	}
+}
+
+func TestCommitNewBlock(t *testing.T) {
+
+	transaction := &types.Transaction{
+		TimeStamp:12,
+	}
+	payLoadT, _ := proto.Marshal(transaction)
+
+	msg := &protos.Message{
+		Type: protos.Message_TRANSACTION,
+		Payload: payLoadT,
+		Timestamp: time.Now().UnixNano(),
+		Id: 0,
+	}
+	var Batch []*protos.Message
+	Batch=append(Batch,msg)
+
+     msgList := &protos.ExeMessage{
+	     Batch:Batch,
+     }
+	payload, _ := proto.Marshal(msgList)
+
+	manager := &ProtocolManager{
+		eventMux:    new(event.TypeMux),
+		quitSync:    make(chan struct{}),
+
+	}
+	manager.commitNewBlock(payload)
+}
+
+func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
+
+	msgList := &protos.ExeMessage{}
+	proto.Unmarshal(payload, msgList)
+	fmt.Println(msgList)
+	block := new(types.Block)
+	for _, item := range msgList.Batch {
+		tx := &types.Transaction{}
+		proto.Unmarshal(item.Payload, tx)
+		block.Transactions = append(block.Transactions, tx)
+	}
+	fmt.Println(block.Number)
+	/*currentChain := core.GetChainCopy()
+	block.Number = currentChain.Height + 1
+	block.ParentHash = currentChain.LatestBlockHash
+	block.Timestamp = time.Now().Unix()
+	//block.BlockHash=
+	block.BlockHash = block.Hash(pm.commonHash).Bytes()*/
+	/*db,err:=hyperdb.GetLDBDatabase()
+
+	if err!=nil{
+		return
+	}*/
+	core.WriteBlock(block)
+
 }
 
 
