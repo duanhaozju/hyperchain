@@ -26,6 +26,7 @@ type batch struct {
 	reqStore	*requestStore	//received messages
 	deduplicator	*deduplicator
 	//test_c                chan int8 //ToDo for test
+	batchCount	int //ToDo for test
 }
 
 //type testEvent struct {} //ToDo for test
@@ -193,7 +194,7 @@ func (op *batch) sendBatch() events.Event {
 
 	reqBatch := &RequestBatch{Batch: op.batchStore}
 	op.batchStore = nil
-	logger.Infof("Creating batch with %d requests", len(reqBatch.Batch))
+	logger.Infof("Creating batch with %d requests, batchCount: %d", len(reqBatch.Batch), op.batchCount+1)
 	return reqBatch
 }
 

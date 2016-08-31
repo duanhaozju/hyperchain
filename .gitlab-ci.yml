@@ -18,7 +18,6 @@ job-test:
     - pwd
     - go env
     - go get -u github.com/kardianos/govendor
-    - govendor list
     - govendor sync
     - govendor test +local
   only:
