@@ -80,6 +80,7 @@ func GetAllTransactions()  []TransactionShow{
 	var transactions []TransactionShow
 
 	// 将交易金额转换为整型
+	fmt.Println(txs)
 	for index, tx := range txs {
 
 		transactions[index].Value = string(tx.Value)

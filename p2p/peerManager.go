@@ -158,7 +158,7 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 		MessageType:  pb.Message_CONSUS,
 		From:         &localNodeAddr,
 		Payload:      payLoad,
-		MsgTimeStamp: time.Now().Unix(),
+		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	go this.EventManager.PostEvent(pb.Message_CONSUS, broadCastMessage)
 	//pPool := peerPool.NewPeerPool(false,false)

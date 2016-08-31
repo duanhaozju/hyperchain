@@ -81,23 +81,6 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			Payload:msg.Payload,
 		})
 
-		//pPool := peerPool.NewPeerPool(false,false)
-		//fmt.Println("现在有节点数目:",pPool.GetAliveNodeNum())
-		//ps := pPool.GetPeers()
-		//fmt.Println("现在有节点数目:",len(ps))
-		//for _,peer := range pPool.GetPeers(){
-		//	fmt.Println("广播....")
-		//	resMsg,err :=peer.Chat(msg)
-		//	if err != nil{
-		//		log.Println("Broadcast failed,Node",peer.Addr)
-		//	}else{
-		//		log.Println("resMsg:",string(resMsg.Payload))
-		//		//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
-		//	}
-		//}
-
-
-
 		return &response, nil
 
 	}

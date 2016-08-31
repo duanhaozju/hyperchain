@@ -132,7 +132,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			msg := &protos.Message{
 				Type: protos.Message_TRANSACTION,
 				Payload: ev.Payload,
-				Timestamp: time.Now().Unix(),
+				Timestamp: time.Now().UnixNano(),
 				Id: 0,
 			}
 			payload, _ := proto.Marshal(msg)

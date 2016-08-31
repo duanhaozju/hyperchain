@@ -17,20 +17,20 @@ var transactionCases = []*types.Transaction{
 		From: []byte("zhangsan"),
 		To: []byte("wangwu"),
 		Value: []byte("100"),
-		TimeStamp: time.Now().Unix(),
+		TimeStamp: time.Now().UnixNano(),
 		Signature: []byte("signature1"),
 	},
 	&types.Transaction{
 		From: []byte("zhangsan"),
 		To: []byte("lisi"),
-		Value: []byte("100"),TimeStamp: time.Now().Unix(),
+		Value: []byte("100"),TimeStamp: time.Now().UnixNano(),
 		Signature: []byte("signature2"),
 	},
 	&types.Transaction{
 		From: []byte("lisi"),
 		To: []byte("wangwu"),
 		Value: []byte("700"),
-		TimeStamp: time.Now().Unix(),
+		TimeStamp: time.Now().UnixNano(),
 		Signature: []byte("signature3"),
 	},
 }
@@ -134,7 +134,7 @@ var blockUtilsCase = types.Block{
 	ParentHash: []byte("parenthash"),
 	BlockHash: []byte("blockhash"),
 	Transactions: transactionCases,
-	Timestamp    : time.Now().Unix(),
+	Timestamp    : time.Now().UnixNano(),
 	MerkleRoot  : []byte("merkeleroot"),
 	Number       : 1,
 }
