@@ -177,10 +177,10 @@ func newMemChain() *memChain {
 var memChainMap *memChain;
 
 //-- 获取最新的blockhash
-func GetLatestBlockHash() string {
+func GetLatestBlockHash() []byte {
 	memChainMap.lock.RLock()
 	defer memChainMap.lock.RUnlock()
-	return string(memChainMap.data.LatestBlockHash)
+	return memChainMap.data.LatestBlockHash
 }
 
 //-- 更新Chain，即更新最新的blockhash 并将height加1,
