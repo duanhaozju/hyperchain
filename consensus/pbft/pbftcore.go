@@ -69,7 +69,6 @@ type pbftCore struct {
 	nullRequestTimeout time.Duration // duration for this timeout
 						       // implementation of PBFT `in`
 	reqBatchStore   map[string]*RequestBatch // track request batches
-	exeBatch	*RequestBatch
 	certStore       map[msgID]*msgCert       // track quorum certificates for requests
 
 	batchCount	int //Todo for test
@@ -421,7 +420,6 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 		RequestBatch:   reqBatch,
 		ReplicaId:      instance.id,
 	}
-	instance.exeBatch = reqBatch
 	cert := instance.getCert(instance.view, n)
 	cert.prePrepare = preprep
 	cert.digest = digest
@@ -486,7 +484,6 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 			BatchDigest:    preprep.BatchDigest,
 			ReplicaId:      instance.id,
 		}
-		instance.exeBatch = preprep.RequestBatch
 		cert.sentPrepare = true
 		instance.recvPrepare(prep)
 		msg := pbftMsgHelper(&Message{Payload: &Message_Prepare{Prepare: prep}}, instance.id)
@@ -565,9 +562,10 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 
 	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) && cert.executed == false {
 		instance.exeCount += 1
+		cert.exeCount = instance.exeCount
 		logger.Infof("------begin execute------batchCount: %d------exeCount: %d--------view=%d/seqNo=%d--------", cert.batchCount, cert.exeCount, commit.View, commit.SequenceNumber)
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
-		reqBatch := exeBatchHelper(instance.exeBatch)
+		reqBatch := exeBatchHelper(cert.prePrepare.RequestBatch)
 		instance.helper.Execute(reqBatch)
 		cert.executed = true
 	}
