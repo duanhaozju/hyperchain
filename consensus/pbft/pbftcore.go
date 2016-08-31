@@ -94,6 +94,7 @@ type msgCert struct {
 	prepare     []*Prepare
 	sentCommit  bool
 	commit      []*Commit
+	executed    bool
 }
 
 type vcidx struct {
@@ -558,12 +559,14 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 	}
 	cert.commit = append(cert.commit, commit)
 
-	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
+	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) || cert.executed == false {
 		instance.exeCount += 1
 		logger.Infof("------begin execute------batchCount: %d------exeCount: %d--------", instance.batchCount, instance.exeCount)
+		instance
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
 		reqBatch := exeBatchHelper(instance.exeBatch)
 		instance.helper.Execute(reqBatch)
+		cert.executed == true
 	}
 
 	return nil
