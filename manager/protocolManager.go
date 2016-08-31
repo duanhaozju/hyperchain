@@ -1,7 +1,7 @@
 // implement ProtocolManager
 // author: Lizhong kuang
 // date: 2016-08-24
-// last modified:2016-08-25
+// last modified:2016-08-31
 package manager
 
 import (
@@ -134,15 +134,21 @@ func (self *ProtocolManager) ConsensusLoop() {
 				log.Fatal("payLoad nil")
 			}*/
 
-			//fmt.Println(ev.Payload)
-			msg := &protos.Message{
+			//send msg to consensus
+			/*msg := &protos.Message{
 				Type: protos.Message_TRANSACTION,
 				Payload: ev.Payload,
 				Timestamp: time.Now().UnixNano(),
 				Id: 0,
 			}
 			payload, _ := proto.Marshal(msg)
-			self.consenter.RecvMsg(payload)
+			self.consenter.RecvMsg(payload)*/
+			//for i:=0;i<500;i+=1{
+				self.sendMsg(ev.Payload)
+			//}
+
+
+
 		//sign tx
 
 
@@ -158,6 +164,16 @@ func (self *ProtocolManager) ConsensusLoop() {
 	}
 }
 
+func (self *ProtocolManager)sendMsg(payload []byte)  {
+	msg := &protos.Message{
+		Type: protos.Message_TRANSACTION,
+		Payload: payload,
+		Timestamp: time.Now().UnixNano(),
+		Id: 0,
+	}
+	msgSend, _ := proto.Marshal(msg)
+	self.consenter.RecvMsg(msgSend)
+}
 
 
 // Broadcast consensus msg to a batch of peers not knowing about it
