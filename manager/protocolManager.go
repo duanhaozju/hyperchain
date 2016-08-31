@@ -121,10 +121,10 @@ func (self *ProtocolManager) ConsensusLoop() {
 		switch ev := obj.Data.(type) {
 
 		case event.BroadcastConsensusEvent:
-			fmt.Println("enter broadcast")
+			log.Println("######enter broadcast")
 			self.BroadcastConsensus(ev.Payload)
 		case event.NewTxEvent:
-			fmt.Println("receiver new tx")
+			log.Println("######receiver new tx")
 			//call consensus module
 			//Todo
 
@@ -134,7 +134,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 				log.Fatal("payLoad nil")
 			}*/
 
-			fmt.Println(ev.Payload)
+			//fmt.Println(ev.Payload)
 			msg := &protos.Message{
 				Type: protos.Message_TRANSACTION,
 				Payload: ev.Payload,
@@ -149,7 +149,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 		case event.ConsensusEvent:
 			//call consensus module
 			//Todo
-			fmt.Println("###### enter ConsensusEvent")
+			log.Println("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 
 
