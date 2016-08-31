@@ -10,56 +10,59 @@ import (
 
 	"hyperchain/event"
 
-	"github.com/golang/protobuf/proto"
 
-	"hyperchain/core/types"
-	"hyperchain/crypto"
 
+
+	"fmt"
+
+	"time"
 )
 
 
-func TestAliveEvent(t *testing.T){
+
+func newEvent(manager *ProtocolManager) {
+	for i := 0; i < 5; i += 1 {
+
+
+		manager.eventMux.Post(event.AliveEvent{true})
+
+
+	}
+
+}
+
+func receive(manager *ProtocolManager){
+
+	manager.aLiveSub = manager.eventMux.Subscribe(event.AliveEvent{})
+	for obj := range manager.aLiveSub.Chan() {
+		switch ev := obj.Data.(type) {
+
+		case event.AliveEvent:
+			fmt.Println(ev.Payload)
+		}
+
+	}
+}
+func TestAliveEvent(t *testing.T) {
 	manager := &ProtocolManager{
 		eventMux:    new(event.TypeMux),
 		quitSync:    make(chan struct{}),
 
-
+	}
+	go receive(manager)
+	for i := 0; i < 100; i += 1 {
+		if i==0{
+			time.Sleep(1234589112)
+		}
+		go newEvent(manager)
+		go newEvent(manager)
+		go newEvent(manager)
+		go newEvent(manager)
 
 	}
-	manager.aLiveSub = manager.eventMux.Subscribe(event.AliveEvent{})
-
-	//go newEvent(manager)
-
-
-
 }
-/*func newEvent(manager *ProtocolManager)  {
-	for i := 0; i < 5; i += 1 {
 
 
-		//var transaction types.Transaction
-
-		transaction:=types.Transaction{
-			From:[]byte("0x3e514052d804d4934e2ad0fc0818b9fc1431201d"),
-			To:[]byte{0x00, 0x00, 0x03},
-		}
-
-		payLoad, err := proto.Marshal(&transaction)
-
-		if err != nil {
-			return
-		}
-
-
-
-		manager.eventMux.Post(event.ConsensusEvent{payLoad})
-
-
-
-
-	}
-
-}*/
 
 
 /*func TestDecodeTx(t *testing.T){
@@ -127,7 +130,7 @@ func TestAliveEvent(t *testing.T){
 
 }*/
 
-func TestTransformTx(t *testing.T){
+/*func TestTransformTx(t *testing.T){
 
 	kec256Hash:=crypto.NewKeccak256Hash("keccak256")
 	encryption :=crypto.NewEcdsaEncrypto("ecdsa")
@@ -153,4 +156,4 @@ func TestTransformTx(t *testing.T){
 	}
 	manager.transformTx(payLoad)
 
-}
+}*/

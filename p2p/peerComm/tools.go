@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"github.com/labstack/gommon/log"
+	"time"
 )
 // GetIpLocalIpAddr this function is used to get the real internal net ip address
 // to use this make sure your net are valid
@@ -48,4 +49,8 @@ func GetConfig(path string) map[string]string{
 		log.Fatal(UmErr)
 	}
 	return configs
+}
+
+func GenUnixTimeStamp() int64{
+	return time.Now().Unix()
 }

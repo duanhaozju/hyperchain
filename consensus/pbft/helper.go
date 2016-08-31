@@ -12,7 +12,7 @@ func batchMsgHelper(msg *BatchMessage, id uint64) *pb.Message {
 	pbMsg := &pb.Message{
 		Type:		pb.Message_CONSENSUS,
 		Payload:	msgPayload,
-		Timestamp:	time.Now().Unix(),
+		Timestamp:	time.Now().UnixNano(),
 		Id:		id,
 	}
 	return pbMsg

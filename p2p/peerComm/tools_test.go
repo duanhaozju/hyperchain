@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"os"
 	"path"
+	"fmt"
+	"time"
 )
 
 func TestGetIpLocalIpAddr(t *testing.T) {
@@ -29,4 +31,9 @@ func TestGetConfig(t *testing.T) {
 	configs := GetConfig(filepath)
 	log.Println(configs["port1"])
 	log.Println(configs["node1"])
+}
+
+func TestGenUnixTimeStamp(t *testing.T) {
+	fmt.Println(time.Now().UnixNano())
+	fmt.Println(GenUnixTimeStamp())
 }
