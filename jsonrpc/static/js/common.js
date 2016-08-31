@@ -37,7 +37,7 @@ $(document).ready(function(){
                     //alert("提交成功!");
                     $(".status").html("提交成功")
                 } else {
-                    $(".status").html("提交成功")
+                    $(".status").html("提交失败，余额不足")
 //                    alert("交易验证失败，您没有足够的金额！");
                 }
 

@@ -71,6 +71,9 @@ type pbftCore struct {
 	reqBatchStore   map[string]*RequestBatch // track request batches
 	exeBatch	*RequestBatch
 	certStore       map[msgID]*msgCert       // track quorum certificates for requests
+
+	batchCount	int //Todo for test
+	exeCount	int //Todo for test
 }
 
 type qidx struct {
@@ -84,12 +87,15 @@ type msgID struct { // our index through certStore
 }
 
 type msgCert struct {
+	batchCount  int //Todo for test
+	exeCount    int //Todo for test
 	digest      string
 	prePrepare  *PrePrepare
 	sentPrepare bool
 	prepare     []*Prepare
 	sentCommit  bool
 	commit      []*Commit
+	executed    bool
 }
 
 type vcidx struct {
@@ -372,7 +378,9 @@ func (instance *pbftCore) recvMsg(msg *Message, senderID uint64) (interface{}, e
 
 func (instance *pbftCore) recvRequestBatch(reqBatch *RequestBatch) error {
 	digest := hash(reqBatch)
-	logger.Debugf("Replica %d received request batch %s", instance.id, digest)
+	//Todo for test
+	instance.batchCount += 1
+	logger.Debugf("Replica %d received request batch %s, -------batchCount: %d-------", instance.id, digest, instance.batchCount)
 
 	instance.reqBatchStore[digest] = reqBatch
 	instance.outstandingReqBatches[digest] = reqBatch
@@ -381,7 +389,7 @@ func (instance *pbftCore) recvRequestBatch(reqBatch *RequestBatch) error {
 		instance.nullRequestTimer.Stop()
 		instance.sendPrePrepare(reqBatch, digest)
 	} else {
-		logger.Debugf("Replica %d is backup, not sending pre-prepare for request batch %s", instance.id, digest)
+		logger.Debugf("Replica %d is backup, not sending pre-prepare for request batch %s, -------batchCount: %d-------", instance.id, digest, instance.batchCount)
 	}
 	return nil
 }
@@ -404,7 +412,7 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 		return
 	}
 
-	logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d and digest %s", instance.id, instance.view, n, digest)
+	logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d, -------batchCount: %d-------", instance.id, instance.view, n, instance.batchCount)
 	instance.seqNo = n
 	preprep := &PrePrepare{
 		View:           instance.view,
@@ -417,6 +425,8 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 	cert := instance.getCert(instance.view, n)
 	cert.prePrepare = preprep
 	cert.digest = digest
+	//Todo for test
+	cert.batchCount = instance.batchCount
 
 	msg := pbftMsgHelper(&Message{Payload: &Message_PrePrepare{PrePrepare: preprep}}, instance.id)
 	instance.helper.InnerBroadcast(msg)
@@ -448,6 +458,9 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 
 	cert.prePrepare = preprep
 	cert.digest = preprep.BatchDigest
+	//Todo for test
+	instance.batchCount += 1
+	cert.batchCount = instance.batchCount
 
 	// Store the request batch if, for whatever reason, we haven't received it from an earlier broadcast
 	if _, ok := instance.reqBatchStore[preprep.BatchDigest]; !ok && preprep.BatchDigest != "" {
@@ -502,7 +515,7 @@ func (instance *pbftCore) recvPrepare(prep *Prepare) error {
 
 	for _, prevPrep := range cert.prepare {
 		if prevPrep.ReplicaId == prep.ReplicaId {
-			logger.Warningf("Ignoring duplicate prepare from %d", prep.ReplicaId)
+			logger.Warningf("Ignoring duplicate prepare from %d, -------batchCount: %d-------", prep.ReplicaId, cert.batchCount)
 			return nil
 		}
 	}
@@ -544,17 +557,19 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 	cert := instance.getCert(commit.View, commit.SequenceNumber)
 	for _, prevCommit := range cert.commit {
 		if prevCommit.ReplicaId == commit.ReplicaId {
-			logger.Warningf("Ignoring duplicate commit from %d", commit.ReplicaId)
+			logger.Warningf("Ignoring duplicate commit from %d, -------batchCount: %d-------", commit.ReplicaId, cert.batchCount)
 			return nil
 		}
 	}
 	cert.commit = append(cert.commit, commit)
 
-	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
-		logger.Info("------------begin execute------------")
+	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) && cert.executed == false {
+		instance.exeCount += 1
+		logger.Infof("------begin execute------batchCount: %d------exeCount: %d--------view=%d/seqNo=%d--------", cert.batchCount, cert.exeCount, commit.View, commit.SequenceNumber)
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
 		reqBatch := exeBatchHelper(instance.exeBatch)
 		instance.helper.Execute(reqBatch)
+		cert.executed = true
 	}
 
 	return nil
