@@ -169,7 +169,7 @@ func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerF
 
 	// initialize state transfer
 	instance.outstandingReqBatches = make(map[string]*RequestBatch)
-
+	logger.Infof("--------PBFT finish start, nodeID: %d--------", instance.id)
 	return instance
 }
 
@@ -267,12 +267,13 @@ func (instance *pbftCore) prePrepared(digest string, v uint64, n uint64) bool {
 	_, mInLog := instance.reqBatchStore[digest]
 
 	if digest != "" && !mInLog {
+		logger.Debugf("Replica %d hava ")
 		return false
 	}
 
-	if q, ok := instance.qset[qidx{digest, n}]; ok && q.View == v {
-		return true
-	}
+	//if q, ok := instance.qset[qidx{digest, n}]; ok && q.View == v {
+	//	return true
+	//}
 
 	cert := instance.certStore[msgID{v, n}]
 	if cert != nil {
@@ -291,9 +292,9 @@ func (instance *pbftCore) prepared(digest string, v uint64, n uint64) bool {
 		return false
 	}
 
-	if p, ok := instance.pset[n]; ok && p.View == v && p.BatchDigest == digest {
-		return true
-	}
+	//if p, ok := instance.pset[n]; ok && p.View == v && p.BatchDigest == digest {
+	//	return true
+	//}
 
 	quorum := 0
 	cert := instance.certStore[msgID{v, n}]

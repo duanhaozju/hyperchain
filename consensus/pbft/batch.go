@@ -213,12 +213,19 @@ func (op *batch) RecvMsg(e []byte) error {
 	if err!=nil {
 		return err
 	}
-	op.manager.Queue() <- batchMessageEvent{
+
+	event := batchMessageEvent{
 		msg: 	tempMsg,
 		sender:	tempMsg.Id,
 	}
 
+	go op.postEvent(event)
+
         return nil
+}
+
+func (op *batch) postEvent(event batchMessageEvent) {
+	op.manager.Queue() <- event
 }
 
 func (op *batch) stopBatchTimer() {
