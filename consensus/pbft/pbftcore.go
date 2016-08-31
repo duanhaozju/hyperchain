@@ -379,7 +379,7 @@ func (instance *pbftCore) recvRequestBatch(reqBatch *RequestBatch) error {
 	digest := hash(reqBatch)
 	//Todo for test
 	instance.batchCount += 1
-	logger.Debugf("Replica %d received request batch %s, batchCount: d%", instance.id, digest, instance.batchCount)
+	logger.Debugf("Replica %d received request batch %s, -------batchCount: %d-------", instance.id, digest, instance.batchCount)
 
 	instance.reqBatchStore[digest] = reqBatch
 	instance.outstandingReqBatches[digest] = reqBatch
@@ -562,11 +562,10 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) || cert.executed == false {
 		instance.exeCount += 1
 		logger.Infof("------begin execute------batchCount: %d------exeCount: %d--------", instance.batchCount, instance.exeCount)
-		instance
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
 		reqBatch := exeBatchHelper(instance.exeBatch)
 		instance.helper.Execute(reqBatch)
-		cert.executed == true
+		cert.executed = true
 	}
 
 	return nil
