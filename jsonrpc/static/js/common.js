@@ -23,7 +23,7 @@ $(document).ready(function(){
         // if(!url){
         //     url = location.host
         // }
-        for(var i=1;i<100;i++){
+        //for(var i=1;i<500;i++){
 
         $.ajax({
             // contentType: "application/json; charset=utf-8",
@@ -51,6 +51,6 @@ $(document).ready(function(){
                 }
                 return false;
             }
-        });}
+        });
     });
 });

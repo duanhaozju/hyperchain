@@ -16,6 +16,7 @@ import (
 	"fmt"
 
 	"time"
+
 )
 
 
@@ -61,6 +62,36 @@ func TestAliveEvent(t *testing.T) {
 
 	}
 }
+
+/*func TestCommitNewBlock(t *testing.T) {
+
+	transaction := &types.Transaction{
+		TimeStamp:12,
+	}
+	payLoadT, _ := proto.Marshal(transaction)
+
+	msg := &protos.Message{
+		Type: protos.Message_TRANSACTION,
+		Payload: payLoadT,
+		Timestamp: time.Now().UnixNano(),
+		Id: 0,
+	}
+	var Batch []*protos.Message
+	Batch=append(Batch,msg)
+
+     msgList := &protos.ExeMessage{
+	     Batch:Batch,
+     }
+	payload, _ := proto.Marshal(msgList)
+
+	manager := &ProtocolManager{
+		eventMux:    new(event.TypeMux),
+		quitSync:    make(chan struct{}),
+
+	}
+	//manager.commitNewBlock(payload)
+}*/
+
 
 
 
