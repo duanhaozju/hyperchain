@@ -17,7 +17,8 @@ job-00:
   script:
     - pwd
     - go env
-    - go get
+    - go get -u github.com/kardianos/govendor
+    - govendor list
     - go test
   only:
     - develop
