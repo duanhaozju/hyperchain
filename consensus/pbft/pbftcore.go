@@ -94,6 +94,7 @@ type msgCert struct {
 	prepare     []*Prepare
 	sentCommit  bool
 	commit      []*Commit
+	executed    bool
 }
 
 type vcidx struct {
@@ -378,7 +379,7 @@ func (instance *pbftCore) recvRequestBatch(reqBatch *RequestBatch) error {
 	digest := hash(reqBatch)
 	//Todo for test
 	instance.batchCount += 1
-	logger.Debugf("Replica %d received request batch %s, batchCount: d%", instance.id, digest, instance.batchCount)
+	logger.Debugf("Replica %d received request batch %s, -------batchCount: %d-------", instance.id, digest, instance.batchCount)
 
 	instance.reqBatchStore[digest] = reqBatch
 	instance.outstandingReqBatches[digest] = reqBatch
@@ -387,7 +388,7 @@ func (instance *pbftCore) recvRequestBatch(reqBatch *RequestBatch) error {
 		instance.nullRequestTimer.Stop()
 		instance.sendPrePrepare(reqBatch, digest)
 	} else {
-		logger.Debugf("Replica %d is backup, not sending pre-prepare for request batch %s", instance.id, digest)
+		logger.Debugf("Replica %d is backup, not sending pre-prepare for request batch %s, -------batchCount: %d-------", instance.id, digest, instance.batchCount)
 	}
 	return nil
 }
@@ -456,6 +457,9 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 
 	cert.prePrepare = preprep
 	cert.digest = preprep.BatchDigest
+	//Todo for test
+	instance.batchCount += 1
+	cert.batchCount = instance.batchCount
 
 	// Store the request batch if, for whatever reason, we haven't received it from an earlier broadcast
 	if _, ok := instance.reqBatchStore[preprep.BatchDigest]; !ok && preprep.BatchDigest != "" {
@@ -558,12 +562,13 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 	}
 	cert.commit = append(cert.commit, commit)
 
-	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
+	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) && cert.executed == false {
 		instance.exeCount += 1
 		logger.Infof("------begin execute------batchCount: %d------exeCount: %d--------", instance.batchCount, instance.exeCount)
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
 		reqBatch := exeBatchHelper(instance.exeBatch)
 		instance.helper.Execute(reqBatch)
+		cert.executed = true
 	}
 
 	return nil
