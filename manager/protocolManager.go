@@ -142,7 +142,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			}
 			payload, _ := proto.Marshal(msg)
 			self.consenter.RecvMsg(payload)*/
-			for i:=0;i<6;i+=1{
+			for i:=0;i<10;i+=1{
 				go self.sendMsg(ev.Payload)
 			}
 
