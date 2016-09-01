@@ -193,7 +193,7 @@ func UpdateChain(blockHash []byte) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
 	memChainMap.data.LatestBlockHash = blockHash
-	if!genesis{
+	if !genesis {
 		memChainMap.data.Height += 1
 	}
 	db, err := hyperdb.GetLDBDatabase()
