@@ -90,15 +90,8 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 	//case *testEvent:
 	//	fmt.Println("lalalla")
 	//	b.test_c <- 1//ToDo for test
-	case *batchMessageEvent:
-		batchMsg := event.msg
-		if batchMsg.Type == pb.Message_TRANSACTION {
-			return op.processMessageTransaction(batchMsg)
-		}
-		if batchMsg.Type != pb.Message_CONSENSUS {
-			return nil
-		}
-		return op.processMessageConsensus(batchMsg,  event.sender)
+	case batchMessageEvent:
+		return op.processMessage(event.msg,  event.sender)
 	case batchTimerEvent:
 		logger.Infof("Replica %d batch timer expired", op.pbft.id)
 		if  (len(op.batchStore) > 0) {
@@ -111,13 +104,14 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 	return nil
 }
 
-func (op *batch) processMessageTransaction(msg *pb.Message) events.Event {
-	req := op.txToReq(msg)
-	return op.submitToLeader(req)
-}
-
-func (op *batch) processMessageConsensus(msg *pb.Message, id uint64) events.Event {
-
+func (op *batch) processMessage(msg *pb.Message, id uint64) events.Event {
+	if msg.Type == pb.Message_TRANSACTION {
+		req := op.txToReq(msg)
+		return op.submitToLeader(req)
+	}
+	if msg.Type != pb.Message_CONSENSUS {
+		return nil
+	}
 	batchMsg := &BatchMessage{}
 	err := proto.Unmarshal(msg.Payload, batchMsg)
 	if err != nil {

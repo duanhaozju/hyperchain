@@ -18,10 +18,7 @@ import (
 	"log"
 	"hyperchain/protos"
 	"time"
-
-	"io/ioutil"
-	"strconv"
-	"os"
+	
 )
 
 type ProtocolManager struct {
