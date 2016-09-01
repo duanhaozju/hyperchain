@@ -34,14 +34,11 @@ func SendTransaction(args TxArgs) bool {
 
 	fmt.Println(args)
 
-	// 构造 transaction 实例
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
 
-	// 判断交易余额是否足够
 	if (core.VerifyBalance(tx)) {
-		// 余额足够
-		// 抛 NewTxEvent 事件
 
+		// Balance is enough
 		txBytes, err := proto.Marshal(tx)
 		if err != nil {
 			log.Fatalf("proto.Marshal(tx) error: %v",err)
@@ -52,14 +49,10 @@ func SendTransaction(args TxArgs) bool {
 			go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 		//}
 
-		/*if err != nil {
-			log.Fatalf("Post event.NewTxEvent{Payload: txBytes} error: %v",err)
-		}
-*/
 		return true
 
 	} else {
-		// 余额不足
+		// Balance isn't enough
 		return false
 	}
 }
@@ -81,7 +74,6 @@ func GetAllTransactions()  []TransactionShow{
 
 	var transactions []TransactionShow
 
-	// 将交易金额转换为整型
 	fmt.Println(txs)
 	for index, tx := range txs {
 
@@ -94,7 +86,7 @@ func GetAllTransactions()  []TransactionShow{
 	return transactions
 }
 
-// GetAllBalances retrun all account's balance in the db,NOT CACHE DB!
+// GetAllBalances retruns all account's balance in the db,NOT CACHE DB!
 func GetAllBalances() BalanceShow{
 
 	var balances = make(BalanceShow)

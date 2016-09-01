@@ -43,7 +43,9 @@ func TestManager(t *testing.T) {
 	fmt.Println(key.Address)
 	fmt.Println(key.Auth)
 	fmt.Println(key.PrivateKey)
-	kk, err:= am.GetAccountKey(key.Address,key.Auth)
+
+
+	kk, err:= am.GetAccountKey(key.Address,am.addrPassMap[key.Address])
 	if err != nil{
 		t.Error(err)
 		t.FailNow()

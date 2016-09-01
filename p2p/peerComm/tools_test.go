@@ -17,7 +17,7 @@ import (
 )
 
 func TestGetIpLocalIpAddr(t *testing.T) {
-	if assert.IsType(t, string(""), GetIpLocalIpAddr()) {
+	if assert.IsType(t, string(""), GetLocalIp()) {
 
 	} else {
 		t.Fail()
@@ -36,4 +36,5 @@ func TestGetConfig(t *testing.T) {
 func TestGenUnixTimeStamp(t *testing.T) {
 	fmt.Println(time.Now().UnixNano())
 	fmt.Println(GenUnixTimeStamp())
+
 }

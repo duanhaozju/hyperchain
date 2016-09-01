@@ -114,8 +114,11 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 			}
 		}
 	}
-	log.Println("All the ndes have been connected...")
-
+	log.Println("##########################################")
+	log.Println("#                                        #")
+	log.Println("# All the nodes have been connected...   #")
+	log.Println("#                                        #")
+	log.Println("##########################################")
 
 	*this.aliveChain <- true
 }

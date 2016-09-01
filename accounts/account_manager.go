@@ -13,6 +13,7 @@ import (
 type Manager struct {
 	keyStore KeyStore
 	encryption *crypto.EcdsaEncrypto
+	addrPassMap map[string]string
 }
 
 const keydir = "/tmp/hyperchain/cache/keystore/"
@@ -21,6 +22,7 @@ func NewManager() *Manager {
 	am := &Manager{
 		keyStore: &keyStorePlain{},
 		encryption: crypto.NewEcdsaEncrypto("ecdsa"),
+		addrPassMap:make(map[string]string),
 	}
 	return am
 }
@@ -39,6 +41,7 @@ func (am *Manager)NewAccount(passphrase string) (*Key,error) {
 	if err :=am.keyStore.StoreKey(keydir,key);err!=nil{
 		return key,err
 	}
+	am.addrPassMap[key.Address] = key.Auth
 	return key,nil
 }
 
