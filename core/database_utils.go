@@ -70,6 +70,7 @@ func GetAllTransaction(db *hyperdb.LDBDatabase) ([]types.Transaction, error) {
 		if len(string(key)) >= len(transactionPrefix) && string(key[:len(transactionPrefix)]) == string(transactionPrefix) {
 			var t types.Transaction
 			value := iter.Value()
+			//err = decondeFromBytes(value, &t)
 			proto.Unmarshal(value, &t)
 			ts = append(ts, t)
 		}
@@ -87,6 +88,7 @@ func PutBlock(db hyperdb.Database, key []byte, t types.Block) error {
 	if err != nil {
 		return err
 	}
+	//-- 给key加上前缀,用于区分,实际存放的key
 	keyFact := append(blockPrefix, key...)
 	if err := db.Put(keyFact, data); err != nil {
 		return err
@@ -191,7 +193,9 @@ func UpdateChain(blockHash []byte) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
 	memChainMap.data.LatestBlockHash = blockHash
-	memChainMap.data.Height += 1
+	if!genesis{
+		memChainMap.data.Height += 1
+	}
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		return err
@@ -206,7 +210,7 @@ func GetHeightOfChain() uint64 {
 	return memChainMap.data.Height
 }
 
-//-- GetChainCopy get copy of chain
+// GetChainCopy get copy of chain
 func GetChainCopy() *types.Chain {
 	memChainMap.lock.RLock()
 	defer memChainMap.lock.RUnlock()

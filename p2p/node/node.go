@@ -31,7 +31,7 @@ func NewNode(port int, isTest bool,hEventManager *event.TypeMux) *Node {
 	if isTest {
 		log.Println("Unit test: start local node, port", port)
 		var TestNode Node
-		TestNode.address.Ip = peerComm.GetIpLocalIpAddr()
+		TestNode.address.Ip = peerComm.GetLocalIp()
 		TestNode.address.Port = int32(port)
 		TestNode.higherEventManager = hEventManager
 		TestNode.startServer()
@@ -40,7 +40,7 @@ func NewNode(port int, isTest bool,hEventManager *event.TypeMux) *Node {
 	if globalNode.address.Ip != "" && globalNode.address.Port != 0 {
 		return &globalNode
 	} else {
-		globalNode.address.Ip = peerComm.GetIpLocalIpAddr()
+		globalNode.address.Ip = peerComm.GetLocalIp()
 		globalNode.address.Port = int32(port)
 		globalNode.higherEventManager = hEventManager
 		globalNode.startServer()

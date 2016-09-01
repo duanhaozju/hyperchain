@@ -5,10 +5,12 @@ import (
 	"log"
 	"strconv"
 	"time"
+
 )
 //const logFileDir  = "/tmp/hyperchain/cache/logs/"
 const logFileDir  = "./logs/"
 var logger *log.Logger
+
 
 func NewLogger(port int) *log.Logger{
 	timestamp := time.Now().Unix()

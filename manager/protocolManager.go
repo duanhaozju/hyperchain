@@ -27,6 +27,7 @@ import (
 
 type ProtocolManager struct {
 	serverPort   int
+	blockPool    *core.BlockPool
 	fetcher      *core.Fetcher
 	peerManager  p2p.PeerManager
 	consenter    consensus.Consenter
@@ -48,12 +49,14 @@ type ProtocolManager struct {
 var eventMuxAll *event.TypeMux
 var countBlock int
 
-func NewProtocolManager(peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
+func NewProtocolManager(blockPool *core.BlockPool,peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
 encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 	fmt.Println("enter parotocol manager")
 	fmt.Println(consenter)
 	manager := &ProtocolManager{
 
+
+		blockPool: blockPool,
 		eventMux:    eventMux,
 		quitSync:    make(chan struct{}),
 		consenter:consenter,
@@ -134,14 +137,10 @@ func (self *ProtocolManager) ConsensusLoop() {
 			myLogger.GetLogger().Println("######receiver new tx")
 			//call consensus module
 			//send msg to consensus
-			for i:=0;i<1000;i+=1{
+			for i:=0;i<100;i+=1{
 				go self.sendMsg(ev.Payload)
 				time.Sleep(100*time.Microsecond)
 			}
-
-
-
-
 
 
 		case event.ConsensusEvent:
@@ -233,7 +232,8 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
 	block.BlockHash = block.Hash(pm.commonHash).Bytes()
 	//fmt.Println(block)
 
-	core.WriteBlock(*block)
+	pm.blockPool.AddBlock(block)
+	//core.WriteBlock(*block)
 
 }
 

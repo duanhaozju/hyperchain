@@ -8,7 +8,6 @@ package peerComm
 
 import (
 	"net"
-	"fmt"
 	"io/ioutil"
 	"encoding/json"
 	"github.com/labstack/gommon/log"
@@ -16,25 +15,20 @@ import (
 )
 // GetIpLocalIpAddr this function is used to get the real internal net ip address
 // to use this make sure your net are valid
-func GetIpLocalIpAddr()string{
+func GetLocalIp()string{
 	addrs, err := net.InterfaceAddrs()
-
 	if err != nil {
-		fmt.Println(err)
-		return "localhost"
+		return ""
 	}
-
 	for _, address := range addrs {
-		// 检查ip地址判断是否回环地址
+		// check the address type and if it is not a loopback then display it
 		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 			if ipnet.IP.To4() != nil {
-				//fmt.Println(ipnet.IP.String())
 				return ipnet.IP.String()
 			}
-
 		}
 	}
-	return "localhost"
+	return ""
 }
 // GetConfig this is a tool function for get the json file config
 // configs return a map[string]string
