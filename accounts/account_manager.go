@@ -6,6 +6,7 @@ package accounts
 import (
 	"hyperchain/crypto"
 	"hyperchain/common"
+	"encoding/hex"
 )
 
 // Manager manages a key storage directory on disk.
@@ -30,9 +31,10 @@ func (am *Manager)NewAccount(passphrase string) (*Key,error) {
 		return nil,err
 	}
 	key := &Key{
-		auth:passphrase,
-		address:am.encryption.PrivKeyToAddress(*priv),
-		priv:priv,
+		Auth:passphrase,
+		Address:common.ToHex(am.encryption.PrivKeyToAddress(*priv)),
+		Priv:hex.EncodeToString(priv.D.Bytes()),
+		PrivateKey:priv,
 	}
 	if err :=am.keyStore.StoreKey(keydir,key);err!=nil{
 		return key,err
@@ -40,7 +42,17 @@ func (am *Manager)NewAccount(passphrase string) (*Key,error) {
 	return key,nil
 }
 
-func (am *Manager)GetAccountKey(address []byte,auth string)(*Key,error)  {
-	filename := keydir + common.ToHex(address)
-	return am.keyStore.GetKey(filename,address,auth)
+func (am *Manager)GetAccountKey(address string,auth string)(*Key,error)  {
+	filename := keydir +address
+	k,err :=am.keyStore.GetKey(filename,address,auth)
+	if err!=nil{
+		return nil,err
+	}
+	keybyte,_ := hex.DecodeString(k.Priv.(string))
+	return &Key{
+		Address:k.Address,
+		Auth:k.Auth,
+		Priv:k.Priv,
+		PrivateKey:am.encryption.ToECDSA(keybyte),
+	},nil
 }
