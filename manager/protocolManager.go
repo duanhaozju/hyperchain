@@ -98,7 +98,6 @@ func (self *ProtocolManager) NewBlockLoop() {
 		switch  ev :=obj.Data.(type) {
 		case event.NewBlockEvent:
 			//commit block into local db
-			//log.Println(ev.Payload)
 
 			countBlock=countBlock+1
 
@@ -123,7 +122,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 		case event.BroadcastConsensusEvent:
 			log.Println("######enter broadcast")
-			self.BroadcastConsensus(ev.Payload)
+			go self.BroadcastConsensus(ev.Payload)
 		case event.NewTxEvent:
 			log.Println("######receiver new tx")
 			//call consensus module
@@ -136,14 +135,6 @@ func (self *ProtocolManager) ConsensusLoop() {
 			}*/
 
 			//send msg to consensus
-			/*msg := &protos.Message{
-				Type: protos.Message_TRANSACTION,
-				Payload: ev.Payload,
-				Timestamp: time.Now().UnixNano(),
-				Id: 0,
-			}
-			payload, _ := proto.Marshal(msg)
-			self.consenter.RecvMsg(payload)*/
 			for i:=0;i<1000;i+=1{
 				go self.sendMsg(ev.Payload)
 				time.Sleep(100*time.Microsecond)
@@ -151,14 +142,13 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 
 
-		//sign tx
+
 
 
 		case event.ConsensusEvent:
 			//call consensus module
-			//Todo
 			log.Println("###### enter ConsensusEvent")
-			self.consenter.RecvMsg(ev.Payload)
+			go self.consenter.RecvMsg(ev.Payload)
 
 
 		}
@@ -167,6 +157,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 }
 
 func (self *ProtocolManager)sendMsg(payload []byte)  {
+	//Todo sign tx
 	msg := &protos.Message{
 		Type: protos.Message_TRANSACTION,
 		Payload: payload,
@@ -185,12 +176,12 @@ func (pm *ProtocolManager) BroadcastConsensus(payload []byte) {
 }
 
 //receive tx from web,sign it and marshal it,then give it to consensus module
-func (pm *ProtocolManager)transformTx(payLoad []byte) []byte {
+func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 
 	//var transaction types.Transaction
 	transaction := &types.Transaction{}
 	//decode tx
-	proto.Unmarshal(payLoad, transaction)
+	proto.Unmarshal(payload, transaction)
 	//hash tx
 	h := transaction.SighHash(pm.commonHash)
 	key, err := pm.encryption.GetKey()
