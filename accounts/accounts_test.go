@@ -56,6 +56,8 @@ func TestManager(t *testing.T) {
 	tx:= NewTransaction([]byte{},big.NewInt(100))
 	s256 := crypto.NewKeccak256Hash("Keccak256")
 	hash := s256.Hash([]interface{}{tx.data.Amount,tx.data.Recipient})
+
+	//签名交易
 	signature,err := am.encryption.Sign(hash[:],kk.PrivateKey)
 
 	if err != nil {
