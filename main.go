@@ -46,7 +46,7 @@ func main(){
 		argv := ctx.Argv().(*argT)
 
 		//init logger
-		logger.NewLogger(argv.LocalPort)
+		myLogger.NewLogger(argv.LocalPort)
 
 		eventMux := new(event.TypeMux)
 

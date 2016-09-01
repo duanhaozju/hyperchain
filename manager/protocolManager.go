@@ -19,8 +19,10 @@ import (
 	"hyperchain/protos"
 	"time"
 
-	//"hyperchain/logger"
+
 	"log"
+	"hyperchain/logger"
+
 )
 
 type ProtocolManager struct {
@@ -103,9 +105,9 @@ func (self *ProtocolManager) NewBlockLoop() {
 
 			countBlock=countBlock+1
 
-			/*logger.GetLogger().Println(time.Now().UnixNano())
-			logger.GetLogger().Println("block number is ",countBlock)
-			logger.GetLogger().Println("write block success")*/
+			myLogger.GetLogger().Println(time.Now().UnixNano())
+			myLogger.GetLogger().Println("block number is ",countBlock)
+			myLogger.GetLogger().Println("write block success")
 			log.Println("write block success")
 			//ioutil.WriteFile("./123.txt",[]byte(strconv.FormatInt(time.Now().UnixNano(),10)+"\n"),os.ModeAppend)
 			self.commitNewBlock(ev.Payload)
@@ -125,11 +127,11 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 		case event.BroadcastConsensusEvent:
 			log.Println("######enter broadcast")
-			//logger.GetLogger().Println("######enter broadcast")
+			myLogger.GetLogger().Println("######enter broadcast")
 			go self.BroadcastConsensus(ev.Payload)
 		case event.NewTxEvent:
 			log.Println("######receiver new tx")
-			//logger.GetLogger().Println("######receiver new tx")
+			myLogger.GetLogger().Println("######receiver new tx")
 			//call consensus module
 			//send msg to consensus
 			for i:=0;i<1000;i+=1{
