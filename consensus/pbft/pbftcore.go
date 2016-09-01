@@ -69,11 +69,7 @@ type pbftCore struct {
 	nullRequestTimeout time.Duration // duration for this timeout
 						       // implementation of PBFT `in`
 	reqBatchStore   map[string]*RequestBatch // track request batches
-	exeBatch	*RequestBatch
 	certStore       map[msgID]*msgCert       // track quorum certificates for requests
-
-	batchCount	int //Todo for test
-	exeCount	int //Todo for test
 }
 
 type qidx struct {
@@ -87,8 +83,6 @@ type msgID struct { // our index through certStore
 }
 
 type msgCert struct {
-	batchCount  int //Todo for test
-	exeCount    int //Todo for test
 	digest      string
 	prePrepare  *PrePrepare
 	sentPrepare bool
@@ -175,7 +169,7 @@ func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerF
 
 	// initialize state transfer
 	instance.outstandingReqBatches = make(map[string]*RequestBatch)
-
+	logger.Infof("--------PBFT finish start, nodeID: %d--------", instance.id)
 	return instance
 }
 
@@ -273,12 +267,13 @@ func (instance *pbftCore) prePrepared(digest string, v uint64, n uint64) bool {
 	_, mInLog := instance.reqBatchStore[digest]
 
 	if digest != "" && !mInLog {
+		logger.Debugf("Replica %d havan't store the reqBatch")
 		return false
 	}
 
-	if q, ok := instance.qset[qidx{digest, n}]; ok && q.View == v {
-		return true
-	}
+	//if q, ok := instance.qset[qidx{digest, n}]; ok && q.View == v {
+	//	return true
+	//}
 
 	cert := instance.certStore[msgID{v, n}]
 	if cert != nil {
@@ -297,9 +292,9 @@ func (instance *pbftCore) prepared(digest string, v uint64, n uint64) bool {
 		return false
 	}
 
-	if p, ok := instance.pset[n]; ok && p.View == v && p.BatchDigest == digest {
-		return true
-	}
+	//if p, ok := instance.pset[n]; ok && p.View == v && p.BatchDigest == digest {
+	//	return true
+	//}
 
 	quorum := 0
 	cert := instance.certStore[msgID{v, n}]
@@ -378,9 +373,7 @@ func (instance *pbftCore) recvMsg(msg *Message, senderID uint64) (interface{}, e
 
 func (instance *pbftCore) recvRequestBatch(reqBatch *RequestBatch) error {
 	digest := hash(reqBatch)
-	//Todo for test
-	instance.batchCount += 1
-	logger.Debugf("Replica %d received request batch %s, -------batchCount: %d-------", instance.id, digest, instance.batchCount)
+	logger.Debugf("Replica %d received request batch %s", instance.id, digest)
 
 	instance.reqBatchStore[digest] = reqBatch
 	instance.outstandingReqBatches[digest] = reqBatch
@@ -389,7 +382,7 @@ func (instance *pbftCore) recvRequestBatch(reqBatch *RequestBatch) error {
 		instance.nullRequestTimer.Stop()
 		instance.sendPrePrepare(reqBatch, digest)
 	} else {
-		logger.Debugf("Replica %d is backup, not sending pre-prepare for request batch %s, -------batchCount: %d-------", instance.id, digest, instance.batchCount)
+		logger.Debugf("Replica %d is backup, not sending pre-prepare for request batch %s", instance.id, digest)
 	}
 	return nil
 }
@@ -412,7 +405,7 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 		return
 	}
 
-	logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d, -------batchCount: %d-------", instance.id, instance.view, n, instance.batchCount)
+	logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", instance.id, instance.view, n)
 	instance.seqNo = n
 	preprep := &PrePrepare{
 		View:           instance.view,
@@ -421,12 +414,9 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 		RequestBatch:   reqBatch,
 		ReplicaId:      instance.id,
 	}
-	instance.exeBatch = reqBatch
 	cert := instance.getCert(instance.view, n)
 	cert.prePrepare = preprep
 	cert.digest = digest
-	//Todo for test
-	cert.batchCount = instance.batchCount
 
 	msg := pbftMsgHelper(&Message{Payload: &Message_PrePrepare{PrePrepare: preprep}}, instance.id)
 	instance.helper.InnerBroadcast(msg)
@@ -435,8 +425,8 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 }
 
 func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
-	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d",
-		instance.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber)
+	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
+		instance.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
 	if instance.primary(instance.view) != preprep.ReplicaId {
 		logger.Warningf("Pre-prepare from other than primary: got %d, should be %d", preprep.ReplicaId, instance.primary(instance.view))
@@ -458,9 +448,6 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 
 	cert.prePrepare = preprep
 	cert.digest = preprep.BatchDigest
-	//Todo for test
-	instance.batchCount += 1
-	cert.batchCount = instance.batchCount
 
 	// Store the request batch if, for whatever reason, we haven't received it from an earlier broadcast
 	if _, ok := instance.reqBatchStore[preprep.BatchDigest]; !ok && preprep.BatchDigest != "" {
@@ -486,7 +473,6 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 			BatchDigest:    preprep.BatchDigest,
 			ReplicaId:      instance.id,
 		}
-		instance.exeBatch = preprep.RequestBatch
 		cert.sentPrepare = true
 		instance.recvPrepare(prep)
 		msg := pbftMsgHelper(&Message{Payload: &Message_Prepare{Prepare: prep}}, instance.id)
@@ -515,7 +501,7 @@ func (instance *pbftCore) recvPrepare(prep *Prepare) error {
 
 	for _, prevPrep := range cert.prepare {
 		if prevPrep.ReplicaId == prep.ReplicaId {
-			logger.Warningf("Ignoring duplicate prepare from %d, -------batchCount: %d-------", prep.ReplicaId, cert.batchCount)
+			logger.Warningf("Ignoring duplicate prepare from %d, --------view=%d/seqNo=%d--------", prep.ReplicaId, prep.View, prep.SequenceNumber)
 			return nil
 		}
 	}
@@ -557,18 +543,17 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 	cert := instance.getCert(commit.View, commit.SequenceNumber)
 	for _, prevCommit := range cert.commit {
 		if prevCommit.ReplicaId == commit.ReplicaId {
-			logger.Warningf("Ignoring duplicate commit from %d, -------batchCount: %d-------", commit.ReplicaId, cert.batchCount)
+			logger.Warningf("Ignoring duplicate commit from %d, --------view=%d/seqNo=%d--------", commit.ReplicaId, commit.View, commit.SequenceNumber)
 			return nil
 		}
 	}
 	cert.commit = append(cert.commit, commit)
 
 	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) && cert.executed == false {
-		instance.exeCount += 1
-		logger.Infof("------begin execute------batchCount: %d------exeCount: %d--------view=%d/seqNo=%d--------", cert.batchCount, cert.exeCount, commit.View, commit.SequenceNumber)
+		logger.Infof("--------begin execute--------view=%d/seqNo=%d--------", commit.View, commit.SequenceNumber)
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
-		reqBatch := exeBatchHelper(instance.exeBatch)
-		instance.helper.Execute(reqBatch)
+		reqBatch := exeBatchHelper(cert.prePrepare.RequestBatch)
+		instance.helper.Execute(reqBatch, commit.SequenceNumber, commit.SequenceNumber-1)
 		cert.executed = true
 	}
 

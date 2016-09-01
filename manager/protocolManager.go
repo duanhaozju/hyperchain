@@ -15,9 +15,13 @@ import (
 	"fmt"
 	"sync"
 	"crypto/ecdsa"
-	"log"
+
 	"hyperchain/protos"
 	"time"
+
+
+	"log"
+	"hyperchain/logger"
 
 )
 
@@ -98,13 +102,14 @@ func (self *ProtocolManager) NewBlockLoop() {
 		switch  ev :=obj.Data.(type) {
 		case event.NewBlockEvent:
 			//commit block into local db
-			//log.Println(ev.Payload)
 
 			countBlock=countBlock+1
 
-			log.Println(time.Now().UnixNano())
-			log.Println("block number is ",countBlock)
+			myLogger.GetLogger().Println(time.Now().UnixNano())
+			myLogger.GetLogger().Println("block number is ",countBlock)
+			myLogger.GetLogger().Println("write block success")
 			log.Println("write block success")
+			//ioutil.WriteFile("./123.txt",[]byte(strconv.FormatInt(time.Now().UnixNano(),10)+"\n"),os.ModeAppend)
 			self.commitNewBlock(ev.Payload)
 		//self.fetcher.Enqueue(ev.Payload)
 
@@ -122,41 +127,28 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 		case event.BroadcastConsensusEvent:
 			log.Println("######enter broadcast")
-			self.BroadcastConsensus(ev.Payload)
+			myLogger.GetLogger().Println("######enter broadcast")
+			go self.BroadcastConsensus(ev.Payload)
 		case event.NewTxEvent:
 			log.Println("######receiver new tx")
+			myLogger.GetLogger().Println("######receiver new tx")
 			//call consensus module
-			//Todo
-
-
-			/*payLoad:=self.transformTx(ev.Payload)
-			if payLoad==nil{
-				log.Fatal("payLoad nil")
-			}*/
-
 			//send msg to consensus
-			/*msg := &protos.Message{
-				Type: protos.Message_TRANSACTION,
-				Payload: ev.Payload,
-				Timestamp: time.Now().UnixNano(),
-				Id: 0,
-			}
-			payload, _ := proto.Marshal(msg)
-			self.consenter.RecvMsg(payload)*/
-			for i:=0;i<6;i+=1{
+			for i:=0;i<1000;i+=1{
 				go self.sendMsg(ev.Payload)
+				time.Sleep(100*time.Microsecond)
 			}
 
 
 
-		//sign tx
+
 
 
 		case event.ConsensusEvent:
 			//call consensus module
-			//Todo
 			log.Println("###### enter ConsensusEvent")
-			self.consenter.RecvMsg(ev.Payload)
+			//logger.GetLogger().Println("###### enter ConsensusEvent")
+			go self.consenter.RecvMsg(ev.Payload)
 
 
 		}
@@ -165,6 +157,11 @@ func (self *ProtocolManager) ConsensusLoop() {
 }
 
 func (self *ProtocolManager)sendMsg(payload []byte)  {
+	//Todo sign tx
+	/*payLoad:=self.transformTx(ev.Payload)
+			if payLoad==nil{
+				log.Fatal("payLoad nil")
+			}*/
 	msg := &protos.Message{
 		Type: protos.Message_TRANSACTION,
 		Payload: payload,
@@ -183,12 +180,12 @@ func (pm *ProtocolManager) BroadcastConsensus(payload []byte) {
 }
 
 //receive tx from web,sign it and marshal it,then give it to consensus module
-func (pm *ProtocolManager)transformTx(payLoad []byte) []byte {
+func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 
 	//var transaction types.Transaction
 	transaction := &types.Transaction{}
 	//decode tx
-	proto.Unmarshal(payLoad, transaction)
+	proto.Unmarshal(payload, transaction)
 	//hash tx
 	h := transaction.SighHash(pm.commonHash)
 	key, err := pm.encryption.GetKey()
@@ -233,10 +230,8 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
 	currentChain := core.GetChainCopy()
 	block.Number = currentChain.Height + 1
 	block.ParentHash = currentChain.LatestBlockHash
-
-	//block.BlockHash=
 	block.BlockHash = block.Hash(pm.commonHash).Bytes()
-	fmt.Println(block)
+	//fmt.Println(block)
 
 	core.WriteBlock(*block)
 

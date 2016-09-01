@@ -8,7 +8,6 @@ package peerPool
 
 import (
 	"errors"
-	"fmt"
 	peer "hyperchain/p2p/peer"
 	pb "hyperchain/p2p/peermessage"
 	"time"
@@ -62,7 +61,7 @@ func NewPeerPool(isNewInstance bool,isKeepAlive bool) PeersPool {
 							MsgTimeStamp: time.Now().UnixNano(),
 						})
 						if err != nil {
-							log.Fatal("Node:", p.Addr, "is dead need to recall ", err)
+							log.Fatal("Node:", p.Addr, "was down and need to recall ", err)
 							//TODO RECALL THE DEAD NODE
 						}
 						log.Println("Node:", p.Addr, "Message", msg.MessageType)
@@ -79,7 +78,7 @@ func NewPeerPool(isNewInstance bool,isKeepAlive bool) PeersPool {
 // PutPeer put a peer into the peer pool and get a peer point
 func (this *PeersPool) PutPeer(addr pb.PeerAddress, client *peer.Peer) (*peer.Peer, error) {
 	addrString := addr.String()
-	fmt.Println(addrString)
+	log.Println("Add a peer:",addrString)
 	if _, ok := this.peerKeys[addr]; ok {
 		// the pool already has this client
 		return this.peers[addrString], errors.New("The client already in")

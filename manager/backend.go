@@ -1,7 +1,7 @@
 // init ProtocolManager
 // author: Lizhong kuang
 // date: 2016-08-24
-// last modified:2016-08-25
+// last modified:2016-08-29
 package manager
 
 import (
@@ -11,14 +11,12 @@ import (
 	"hyperchain/crypto"
 
 	"hyperchain/event"
-
 )
 
 // init protocol manager params and start
 func New(eventMux *event.TypeMux, peerManager p2p.PeerManager, consenter consensus.Consenter, fetcher *core.Fetcher,
-          encryption crypto.Encryption, commonHash crypto.CommonHash,
-        path string, nodeId int) (error) {
-
+encryption crypto.Encryption, commonHash crypto.CommonHash,
+path string, nodeId int) (error) {
 
 	aliveChan := make(chan bool)
 	go peerManager.Start(path, nodeId, aliveChan, false, eventMux)
@@ -29,13 +27,10 @@ func New(eventMux *event.TypeMux, peerManager p2p.PeerManager, consenter consens
 		{
 
 			protocolManager := NewProtocolManager(peerManager, eventMux, fetcher, consenter, encryption, commonHash)
-
 			protocolManager.Start()
 
 		}
 	}
-
-
 
 	return nil
 }

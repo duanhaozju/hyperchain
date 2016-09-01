@@ -51,7 +51,7 @@ func TestGrpcPeerManager_Start(t *testing.T){
 	nodeCount := 0
 	for flag := range aliveChan{
 		if flag{
-			log.Println("一个节点完成连接")
+			log.Println("A peer has connected")
 			nodeCount += 1
 		}
 		if nodeCount >=4{

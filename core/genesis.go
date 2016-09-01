@@ -15,6 +15,7 @@ import (
 	"log"
 
 	"hyperchain/hyperdb"
+
 )
 
 
@@ -86,6 +87,7 @@ func CreateInitBlock(filename string)  {
 	log.Println("构造创世区块")
 
 	UpdateChain(block.BlockHash)
+	log.Println("current chain block number is",GetChainCopy().Height)
 
 }
 
