@@ -39,8 +39,6 @@ func main(){
 
 
 
-
-
 		/*init peer manager object,consensus object*/
 
 		argv := ctx.Argv().(*argT)

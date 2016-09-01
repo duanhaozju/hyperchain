@@ -23,6 +23,7 @@ import (
 
 type ProtocolManager struct {
 	serverPort   int
+	blockPool    *core.BlockPool
 	fetcher      *core.Fetcher
 	peerManager  p2p.PeerManager
 	consenter    consensus.Consenter
@@ -42,7 +43,6 @@ type ProtocolManager struct {
 }
 
 var eventMuxAll *event.TypeMux
-var countBlock int
 
 func NewProtocolManager(peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
 encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
@@ -51,6 +51,7 @@ encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 	manager := &ProtocolManager{
 
 		eventMux:    eventMux,
+
 		quitSync:    make(chan struct{}),
 		consenter:consenter,
 		peerManager:  peerManager,
@@ -72,9 +73,10 @@ func GetEventObject() *event.TypeMux {
 // start listen new block msg and consensus msg
 func (pm *ProtocolManager) Start() {
 
-	//commit block into local db
 
-
+	//add block pool
+	/*blockPool:=core.NewBlockPool(pm.eventMux)
+	pm.blockPool=blockPool*/
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
@@ -100,11 +102,9 @@ func (self *ProtocolManager) NewBlockLoop() {
 			//commit block into local db
 			//log.Println(ev.Payload)
 
-
-
 			log.Println(time.Now().UnixNano())
 			log.Println("write block success")
-			self.commitNewBlock(ev.Payload)
+			self.commitNewBlock(ev.Payload,ev.Now,ev.Pre)
 		//self.fetcher.Enqueue(ev.Payload)
 
 		}
@@ -217,7 +217,7 @@ func (pm *ProtocolManager)transformTx(payLoad []byte) []byte {
 
 
 
-func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
+func (pm *ProtocolManager) commitNewBlock(payload[]byte,now uint64,pre uint64) {
 
 	msgList := &protos.ExeMessage{}
 	proto.Unmarshal(payload, msgList)
@@ -236,7 +236,10 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
 
 	//block.BlockHash=
 	block.BlockHash = block.Hash(pm.commonHash).Bytes()
-	fmt.Println(block)
+	block.Number=now
+
+	log.Println(block)
+	//pm.blockPool.AddBlock(block)
 
 	core.WriteBlock(*block)
 

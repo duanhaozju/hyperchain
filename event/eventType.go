@@ -27,5 +27,8 @@ type NewBlockEvent struct{
 type NewTxEvent struct{ Payload []byte  }
 
 
+type NewBlockPoolEvent struct{ Payload []byte  }
+
+
 
 
