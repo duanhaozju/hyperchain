@@ -8,5 +8,5 @@ message Block {
 	repeated Transaction transactions = 3;
 	int64 timestamp = 4;
 	bytes merkleRoot = 5;
-	int64 number = 6;
+	uint64 number = 6;
 }

@@ -15,7 +15,7 @@ var _ = math.Inf
 
 type Chain struct {
 	LatestBlockHash []byte `protobuf:"bytes,1,opt,name=latestBlockHash,proto3" json:"latestBlockHash,omitempty"`
-	Height          int64  `protobuf:"varint,2,opt,name=height" json:"height,omitempty"`
+	Height          uint64  `protobuf:"varint,2,opt,name=height" json:"height,omitempty"`
 }
 
 func (m *Chain) Reset()                    { *m = Chain{} }

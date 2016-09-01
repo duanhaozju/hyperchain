@@ -22,17 +22,12 @@ func CreateInitBlock(filename string)  {
 	log.Println("genesis start")
 
 	type Genesis struct {
-
 		Timestamp  int64
-		ParentHash  string
+		ParentHash string
 		BlockHash  string
-		Coinbase    string
-		Number int64
-		Alloc       map[string]string
-
-
-
-
+		Coinbase   string
+		Number     uint64
+		Alloc      map[string]string
 	}
 
 	var genesis = map[string]Genesis{}
