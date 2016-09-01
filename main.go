@@ -20,6 +20,8 @@ import (
 
 	"hyperchain/consensus/controller"
 	"hyperchain/jsonrpc"
+
+	"hyperchain/logger"
 )
 
 type argT struct {
@@ -43,6 +45,9 @@ func main(){
 
 		argv := ctx.Argv().(*argT)
 
+		//init logger
+		logger.NewLogger(argv.LocalPort)
+
 		eventMux := new(event.TypeMux)
 
 		//init peer manager to start grpc server and client
@@ -58,6 +63,8 @@ func main(){
 		//init db
 		core.InitDB(argv.LocalPort)
 		core.CreateInitBlock("./core/genesis.json")
+
+
 
 
 
