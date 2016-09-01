@@ -232,7 +232,6 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte,now uint64) {
 	block.Number=now
 	//block.ParentHash = currentChain.LatestBlockHash
 	//block.BlockHash = block.Hash(pm.commonHash).Bytes()
-	log.Println("block is",block)
 
 	log.Println("now is ",now)
 	pm.blockPool.AddBlock(block,pm.commonHash)
