@@ -3,6 +3,7 @@ package pbft
 import (
 	"time"
 	"fmt"
+	"sync"
 
 	"hyperchain/consensus/helper"
 	"hyperchain/consensus/events"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
-	"sync"
 )
 
 type batch struct {
@@ -30,7 +30,7 @@ type batch struct {
 	mux		sync.Mutex
 }
 
-//type testEvent struct {} //ToDo for test
+type testEvent struct {} //ToDo for test
 
 // batchMessageEvent is sent when a consensus message is received that is then to be sent to pbft
 type batchMessageEvent batchMessage
@@ -45,19 +45,16 @@ type batchMessage struct {
 
 func newBatch(id uint64, config *viper.Viper, h helper.Stack) *batch{
 	var err error
-	fmt.Println("new batch")
-
 	batchObj:=&batch{
 		localID:	id,
 		helperImpl:	h,
 	}
 
-	batchObj.manager = events.NewManagerImpl()
+	batchObj.manager=events.NewManagerImpl()
 	batchObj.manager.SetReceiver(batchObj)
-	batchObj.manager.Start()
-
 	etf := events.NewTimerFactoryImpl(batchObj.manager)
 	batchObj.pbft = newPbftCore(id, config, batchObj, etf)
+	batchObj.manager.Start()
 
 	batchObj.batchTimer = etf.CreateTimer()
 	batchObj.batchSize = config.GetInt("general.batchsize")
@@ -93,10 +90,15 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 	//case *testEvent:
 	//	fmt.Println("lalalla")
 	//	b.test_c <- 1//ToDo for test
-	case batchMessageEvent:
-		ocMsg := event
-		//logger.Info("**********>  batchMessageEvent message:",reflect.TypeOf(ocMsg),ocMsg.msg.Type)
-		return op.processMessage(ocMsg.msg,  ocMsg.sender)
+	case *batchMessageEvent:
+		batchMsg := event.msg
+		if batchMsg.Type == pb.Message_TRANSACTION {
+			return op.processMessageTransaction(batchMsg)
+		}
+		if batchMsg.Type != pb.Message_CONSENSUS {
+			return nil
+		}
+		return op.processMessageConsensus(batchMsg,  event.sender)
 	case batchTimerEvent:
 		logger.Infof("Replica %d batch timer expired", op.pbft.id)
 		if  (len(op.batchStore) > 0) {
@@ -109,27 +111,20 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 	return nil
 }
 
+func (op *batch) processMessageTransaction(msg *pb.Message) events.Event {
+	req := op.txToReq(msg)
+	return op.submitToLeader(req)
+}
 
-func (op *batch) processMessage(msg *pb.Message, id uint64) events.Event {
-	fmt.Println("enter processMessage")
-	if msg.Type == pb.Message_TRANSACTION {
-		//logger.Info("**********>  processMessage Message_TRANSACTION:",reflect.TypeOf(msg),msg.Type)
-		req := op.txToReq(msg)
-		return op.submitToLeader(req)
-	}
+func (op *batch) processMessageConsensus(msg *pb.Message, id uint64) events.Event {
 
-	if msg.Type != pb.Message_CONSENSUS {
-		logger.Errorf("Unexpected message type: %s", msg.Type)
-		return nil
-	}
-	//fmt.Println("batch processMessage")
 	batchMsg := &BatchMessage{}
 	err := proto.Unmarshal(msg.Payload, batchMsg)
 	if err != nil {
 		logger.Errorf("Error unmarshaling message: %s", err)
 		return nil
 	}
-	//logger.Info("**********>  processMessage Message_CONSENSUS:",reflect.TypeOf(batchMsg),batchMsg.Payload)
+
 	if req := batchMsg.GetRequest(); req != nil {
 		op.reqStore.storeOutstanding(req)
 		if (op.pbft.primary(op.pbft.view) == op.pbft.id) {
@@ -210,10 +205,11 @@ func (op *batch) startBatchTimer() {
 	op.batchTimerActive = true
 }
 func (op *batch) RecvMsg(e []byte) error {
-	fmt.Println("RecvMsg")
+
 	tempMsg := &pb.Message{}
 	err := proto.Unmarshal(e,tempMsg)
 	if err!=nil {
+		logger.Info("**********> Unmarshal error:",err)
 		return err
 	}
 
@@ -221,6 +217,7 @@ func (op *batch) RecvMsg(e []byte) error {
 		msg: 	tempMsg,
 		sender:	tempMsg.Id,
 	}
+
 
 	go op.postEvent(event)
 
@@ -241,9 +238,9 @@ func (op *batch) stopBatchTimer() {
 
 func (op *batch) submitToLeader(req *Request) events.Event {
 	// Broadcast the request to the network, in case we're in the wrong view
-	pbMsg := batchMsgHelper(&BatchMessage{Payload: &BatchMessage_Request{Request: req}}, op.pbft.id)
+
+	pbMsg := batchMsgHelper(&BatchMessage{Payload: &BatchMessage_Request{Request:req}}, op.pbft.id)
 	op.helperImpl.InnerBroadcast(pbMsg)
-	//logger.Info("**********>  submitToLeader pbMsg:",reflect.TypeOf(pbMsg),pbMsg.Type)
 	op.reqStore.storeOutstanding(req)
 	op.startTimerIfOutstandingRequests()
 	if op.pbft.primary(op.pbft.view) == op.pbft.id {
@@ -252,5 +249,10 @@ func (op *batch) submitToLeader(req *Request) events.Event {
 	return nil
 }
 
+// Close tells us to release resources we are holding
+func (op *batch) Close() {
+	op.batchTimer.Halt()
+	op.pbft.close()
+}
 
 
