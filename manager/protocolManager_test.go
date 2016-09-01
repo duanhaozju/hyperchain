@@ -53,7 +53,7 @@ func TestAliveEvent(t *testing.T) {
 	go receive(manager)
 	for i := 0; i < 100; i += 1 {
 		if i==0{
-			time.Sleep(1234589112)
+			time.Sleep(100*time.Microsecond)
 		}
 		go newEvent(manager)
 		go newEvent(manager)
