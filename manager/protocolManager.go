@@ -18,12 +18,11 @@ import (
 	"log"
 	"hyperchain/protos"
 	"time"
-
+	
 )
 
 type ProtocolManager struct {
 	serverPort   int
-	blockPool    *core.BlockPool
 	fetcher      *core.Fetcher
 	peerManager  p2p.PeerManager
 	consenter    consensus.Consenter
@@ -43,6 +42,7 @@ type ProtocolManager struct {
 }
 
 var eventMuxAll *event.TypeMux
+var countBlock int
 
 func NewProtocolManager(peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
 encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
@@ -51,7 +51,6 @@ encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 	manager := &ProtocolManager{
 
 		eventMux:    eventMux,
-
 		quitSync:    make(chan struct{}),
 		consenter:consenter,
 		peerManager:  peerManager,
@@ -73,10 +72,9 @@ func GetEventObject() *event.TypeMux {
 // start listen new block msg and consensus msg
 func (pm *ProtocolManager) Start() {
 
+	//commit block into local db
 
-	//add block pool
-	/*blockPool:=core.NewBlockPool(pm.eventMux)
-	pm.blockPool=blockPool*/
+
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
@@ -102,9 +100,13 @@ func (self *ProtocolManager) NewBlockLoop() {
 			//commit block into local db
 			//log.Println(ev.Payload)
 
+			countBlock=countBlock+1
+
 			log.Println(time.Now().UnixNano())
+			log.Println("block number is ",countBlock)
 			log.Println("write block success")
-			self.commitNewBlock(ev.Payload,ev.Now,ev.Pre)
+			//ioutil.WriteFile("./123.txt",[]byte(strconv.FormatInt(time.Now().UnixNano(),10)+"\n"),os.ModeAppend)
+			self.commitNewBlock(ev.Payload)
 		//self.fetcher.Enqueue(ev.Payload)
 
 		}
@@ -142,8 +144,9 @@ func (self *ProtocolManager) ConsensusLoop() {
 			}
 			payload, _ := proto.Marshal(msg)
 			self.consenter.RecvMsg(payload)*/
-			for i:=0;i<10;i+=1{
+			for i:=0;i<1000;i+=1{
 				go self.sendMsg(ev.Payload)
+				time.Sleep(100*time.Microsecond)
 			}
 
 
@@ -217,7 +220,7 @@ func (pm *ProtocolManager)transformTx(payLoad []byte) []byte {
 
 
 
-func (pm *ProtocolManager) commitNewBlock(payload[]byte,now uint64,pre uint64) {
+func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
 
 	msgList := &protos.ExeMessage{}
 	proto.Unmarshal(payload, msgList)
@@ -230,16 +233,12 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte,now uint64,pre uint64) {
 		block.Transactions = append(block.Transactions, tx)
 	}
 	currentChain := core.GetChainCopy()
-	log.Println("current chain block number is",currentChain.Height)
 	block.Number = currentChain.Height + 1
 	block.ParentHash = currentChain.LatestBlockHash
 
 	//block.BlockHash=
 	block.BlockHash = block.Hash(pm.commonHash).Bytes()
-	block.Number=now
-
-	log.Println(block)
-	//pm.blockPool.AddBlock(block)
+	//fmt.Println(block)
 
 	core.WriteBlock(*block)
 

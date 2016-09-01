@@ -2,7 +2,7 @@ package events
 
 import (
 	"time"
-	"fmt"
+
 	"github.com/op/go-logging"
 )
 
@@ -81,7 +81,6 @@ func (em *managerImpl) SetReceiver(receiver Receiver) {
 
 // Start creates the go routine necessary to deliver events
 func (em *managerImpl) Start() {
-	fmt.Println("manager Service start")
 	go em.eventLoop()
 }
 
@@ -92,8 +91,6 @@ func (em *managerImpl) Queue() chan<- Event {
 
 // SendEvent performs the event loop on a receiver to completion
 func SendEvent(receiver Receiver, event Event) {
-	fmt.Println("----SendEvent")
-
 	next := event
 	for {
 		// If an event returns something non-nil, then process it as a new event
@@ -116,7 +113,7 @@ func (em *managerImpl) eventLoop() {
 	for {
 		select {
 		case next := <-em.events:
-			fmt.Println("----eventLoop")
+			logger.Info("**********> new request!")
 			em.Inject(next)
 		case <-em.exit:
 			logger.Debug("eventLoop told to exit")
