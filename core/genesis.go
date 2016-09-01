@@ -96,6 +96,7 @@ func CreateInitBlock(filename string)  {
 // 2. update chain
 // 3. update balance
 func WriteBlock(block types.Block)  {
+	log.Println("block number is ",block.Number)
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)

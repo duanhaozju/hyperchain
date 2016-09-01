@@ -137,7 +137,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			myLogger.GetLogger().Println("######receiver new tx")
 			//call consensus module
 			//send msg to consensus
-			for i:=0;i<10000;i+=1{
+			for i:=0;i<5000;i+=1{
 				go self.sendMsg(ev.Payload)
 				time.Sleep(100*time.Microsecond)
 			}

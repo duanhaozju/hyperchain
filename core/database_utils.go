@@ -11,6 +11,7 @@ import (
 	"sync"
 	"encoding/json"
 	"hyperchain/common"
+	"log"
 )
 
 // the prefix of key, use to save to db
@@ -84,6 +85,7 @@ func GetAllTransaction(db *hyperdb.LDBDatabase) ([]types.Transaction, error) {
 
 //-- ------------------- Block ---------------------------------
 func PutBlock(db hyperdb.Database, key []byte, t types.Block) error {
+	log.Println("write success in db")
 	data, err := proto.Marshal(&t)
 	if err != nil {
 		return err
