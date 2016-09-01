@@ -7,12 +7,12 @@ import (
 	"hyperchain/jsonrpc/api"
 )
 
-// 处理请求 : POST "/trans"
+// TransactionCreate is the handler of "/trans", POST
 func TransactionCreate(w http.ResponseWriter, r *http.Request) {
 
 	var res ResData
 
-	// 解析url传递的参数，对于POST则解析响应包的主体（request body）
+	// Parse parameter
 	r.ParseForm()
 
 	isBalanceEnough := api.SendTransaction(api.TxArgs{
@@ -34,8 +34,8 @@ func TransactionCreate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")//允许访问所有域
-	w.Header().Add("Access-Control-Allow-Headers","Content-Type")//header的类型
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Add("Access-Control-Allow-Headers","Content-Type")
 	w.Header().Set("content-type","application/json")
 
 	b,_ := json.Marshal(res)

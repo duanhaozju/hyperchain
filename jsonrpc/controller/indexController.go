@@ -20,7 +20,7 @@ type data struct{
 
 var Testing bool = false
 
-// 处理请求 : GET "/"
+// Index function is the handler of "/", GET
 func Index(w http.ResponseWriter, r *http.Request) {
 
 	var indexpath string
@@ -39,7 +39,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	transactions := api.GetAllTransactions()
 	balances := api.GetAllBalances()
 
-	//sort.Sort(types.Transactions(transactions)) // 交易排序
+	//sort.Sort(types.Transactions(transactions)) // sort transactions
 
 	tmpl.Execute(w,data{
 		Trans:transactions,
