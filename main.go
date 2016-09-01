@@ -56,6 +56,8 @@ func main(){
 		//init fetcher to accept block
 		fetcher := core.NewFetcher()
 
+		blockPool:=core.NewBlockPool(eventMux)
+
 
 		//init pbft consensus
 		cs:=controller.NewConsenter(uint64(argv.NodeId),eventMux)
@@ -87,7 +89,7 @@ func main(){
 
 		//init manager
 		go jsonrpc.StartHttp(argv.LocalPort,eventMux)
-		manager.New(eventMux,grpcPeerMgr,cs,fetcher,encryption,kec256Hash,
+		manager.New(eventMux,blockPool,grpcPeerMgr,cs,fetcher,encryption,kec256Hash,
 			nodePath,argv.NodeId)
 
 

@@ -185,11 +185,13 @@ func GetLatestBlockHash() []byte {
 
 //-- 更新Chain，即更新最新的blockhash 并将height加1,
 //-- blockHash为最新区块的hash
-func UpdateChain(blockHash []byte) error {
+func UpdateChain(blockHash []byte,genesis bool) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
 	memChainMap.data.LatestBlockHash = blockHash
-	memChainMap.data.Height += 1
+	if!genesis{
+	memChainMap.data.Height +=
+		1}
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		return err

@@ -14,7 +14,7 @@ import (
 )
 
 // init protocol manager params and start
-func New(eventMux *event.TypeMux, peerManager p2p.PeerManager, consenter consensus.Consenter, fetcher *core.Fetcher,
+func New(eventMux *event.TypeMux,blockPool *core.BlockPool, peerManager p2p.PeerManager, consenter consensus.Consenter, fetcher *core.Fetcher,
 encryption crypto.Encryption, commonHash crypto.CommonHash,
 path string, nodeId int) (error) {
 
@@ -26,7 +26,7 @@ path string, nodeId int) (error) {
 	case <-aliveChan:
 		{
 
-			protocolManager := NewProtocolManager(peerManager, eventMux, fetcher, consenter, encryption, commonHash)
+			protocolManager := NewProtocolManager(blockPool,peerManager, eventMux, fetcher, consenter, encryption, commonHash)
 			protocolManager.Start()
 
 		}

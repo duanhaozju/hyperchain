@@ -189,7 +189,7 @@ var blockHashcases = [][]byte{
 func TestUpdateChain(t *testing.T) {
 	log.Println("test =============> > > TestUpdateChain")
 	for i, hash := range blockHashcases {
-		UpdateChain(hash)
+		UpdateChain(hash, false)
 		lasthash := GetLatestBlockHash()
 		if string(lasthash) != string(hash) {
 			t.Errorf("TestUpdateChain fail")

@@ -5,6 +5,8 @@ import (
 	"hyperchain/event"
 
 	"hyperchain/core/types"
+	"hyperchain/logger"
+
 )
 
 const (
@@ -25,6 +27,8 @@ type BlockPool struct {
 func NewBlockPool(eventMux *event.TypeMux) *BlockPool {
 	pool := &BlockPool{
 		eventMux:     eventMux,
+
+		queue  :make(map[uint64]*types.Block),
 
 		events:       eventMux.Subscribe(event.NewBlockPoolEvent{}),
 	}
@@ -53,25 +57,41 @@ func (pool *BlockPool) eventLoop() {
 	}
 }
 
-/*
+//check block sequence and validate in chain
 func (pool *BlockPool)AddBlock(block *types.Block) {
 	if (block.Number == 0) {
 		WriteBlock(*block)
 		return
 	}
-	if (uint64(block.Number) > pool.maxNum) {
-		pool.maxNum = uint64(block.Number)
-	}
-	currentChain := GetChainCopy()
 
-	if(currentChain.Height>block.Number - 1) {
+	if (block.Number > pool.maxNum) {
+		pool.maxNum = block.Number
+	}
+	if _, ok := pool.queue[block.Number ]; ok {
+		myLogger.GetLogger().Println("replated block number,number is: ",block.Number)
+		return
+	}
+
+
+
+	currentChain := GetChainCopy()
+	if (currentChain.Height>=block.Number) {
+
+		myLogger.GetLogger().Println("replated block number,number is: ",block.Number)
+		return
+	}
+
+	if(currentChain.Height==block.Number - 1) {
+
 
 		WriteBlock(*block)
-		if (pool.demandNumber == uint64(block.Number)) {
-			pool.demandNumber == uint64(block.Number) - 1
-			for i := uint64(block.Number) + 1; i < pool.maxNum; i += 1 {
-				if (pool.queue[uint64(block.Number) + 1]) {
-					WriteBlock(pool.queue[uint64(block.Number) + 1])
+		if (pool.demandNumber == block.Number) {
+			pool.demandNumber = block.Number - 1
+			for i := block.Number + 1; i < pool.maxNum; i += 1 {
+				if _, ok := pool.queue[block.Number + 1]; ok {//存在}
+
+				//if (pool.queue[block.Number + 1]) {
+					WriteBlock(*pool.queue[block.Number + 1])
 
 				} else {
 					pool.demandNumber = i
@@ -84,12 +104,12 @@ func (pool *BlockPool)AddBlock(block *types.Block) {
 
 		return
 	} else {
-		if (pool.demandNumber == uint64(block.Number)) {
-			pool.demandNumber == uint64(block.Number) - 1
+		if (pool.demandNumber == block.Number) {
+			pool.demandNumber = block.Number - 1
 
 		}
-		pool.queue[uint64(block.Number)] = block
+		pool.queue[block.Number] = block
 
 	}
 
-}*/
+}
