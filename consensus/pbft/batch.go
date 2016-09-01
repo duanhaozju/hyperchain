@@ -20,7 +20,8 @@ type batch struct {
 	batchSize        int
 	batchStore       []*Request 	//ordered message batch
 	helperImpl       helper.Stack
-	manager          events.Manager
+	batchManager     events.Manager
+	pbftManager      events.Manager
 	pbft             *pbftCore
 	localID           uint64
 
@@ -32,66 +33,150 @@ type batch struct {
 
 type testEvent struct {} //ToDo for test
 
-// batchMessageEvent is sent when a consensus message is received that is then to be sent to pbft
-type batchMessageEvent batchMessage
-
 // batchTimerEvent is sent when the batch timer expires
 type batchTimerEvent struct{}
 
-type batchMessage struct {
-	msg    *pb.Message
-	sender uint64
-}
-
 func newBatch(id uint64, config *viper.Viper, h helper.Stack) *batch{
 	var err error
-	batchObj:=&batch{
+	op:=&batch{
 		localID:	id,
 		helperImpl:	h,
 	}
 
-	batchObj.manager=events.NewManagerImpl()
-	batchObj.manager.SetReceiver(batchObj)
-	etf := events.NewTimerFactoryImpl(batchObj.manager)
-	batchObj.pbft = newPbftCore(id, config, batchObj, etf)
-	batchObj.manager.Start()
+	op.pbftManager = events.NewManagerImpl()
+	op.pbftManager.SetReceiver(op)
+	pbftTimerFactory := events.NewTimerFactoryImpl(op.pbftManager)
+	op.pbft = newPbftCore(id, config, op, pbftTimerFactory)
+	op.pbftManager.Start()
 
-	batchObj.batchTimer = etf.CreateTimer()
-	batchObj.batchSize = config.GetInt("general.batchsize")
-	batchObj.batchStore = nil
-	batchObj.batchTimeout, err = time.ParseDuration(config.GetString("timeout.batch"))
+	op.batchManager = events.NewManagerImpl()
+	op.batchManager.SetReceiver(op)
+	etf := events.NewTimerFactoryImpl(op.batchManager)
+	op.batchManager.Start()
+
+	op.batchTimer = etf.CreateTimer()
+	op.batchSize = config.GetInt("general.batchsize")
+	op.batchStore = nil
+	op.batchTimeout, err = time.ParseDuration(config.GetString("timeout.batch"))
 
 	if err != nil {
 		panic(fmt.Errorf("Cannot parse batch timeout: %s", err))
 	}
-	if batchObj.batchTimeout >= batchObj.pbft.requestTimeout {
-		batchObj.pbft.requestTimeout = 3 * batchObj.batchTimeout / 2
-		logger.Warningf("Configured request timeout must be greater than batch timeout, setting to %v", batchObj.pbft.requestTimeout)
+	if op.batchTimeout >= op.pbft.requestTimeout {
+		op.pbft.requestTimeout = 3 * op.batchTimeout / 2
+		logger.Warningf("Configured request timeout must be greater than batch timeout, setting to %v", op.pbft.requestTimeout)
 	}
-	if batchObj.pbft.requestTimeout >= batchObj.pbft.nullRequestTimeout && batchObj.pbft.nullRequestTimeout != 0 {
-		batchObj.pbft.nullRequestTimeout = 3 * batchObj.pbft.requestTimeout / 2
-		logger.Warningf("Configured null request timeout must be greater than request timeout, setting to %v", batchObj.pbft.nullRequestTimeout)
+	if op.pbft.requestTimeout >= op.pbft.nullRequestTimeout && op.pbft.nullRequestTimeout != 0 {
+		op.pbft.nullRequestTimeout = 3 * op.pbft.requestTimeout / 2
+		logger.Warningf("Configured null request timeout must be greater than request timeout, setting to %v", op.pbft.nullRequestTimeout)
 	}
-	logger.Infof("PBFT Batch size = %d", batchObj.batchSize)
-	logger.Infof("PBFT Batch timeout = %v", batchObj.batchTimeout)
+	logger.Infof("PBFT Batch size = %d", op.batchSize)
+	logger.Infof("PBFT Batch timeout = %v", op.batchTimeout)
 
-	batchObj.reqStore = newRequestStore()
+	op.reqStore = newRequestStore()
 
-	return batchObj
+	return op
 }
 
-func (op *batch) getHelper() helper.Stack {
-	return op.helperImpl
+// This function is used by outer to send message to consensus
+func (op *batch) RecvMsg(e []byte) error {
+
+	msg := &pb.Message{}
+	err := proto.Unmarshal(e,msg)
+	
+	if err!=nil {
+		logger.Info("**********> Unmarshal error: can not unmarshal pb.Message", err)
+		return err
+	}
+
+	if msg.Type == pb.Message_TRANSACTION {
+		return op.processTransaction(msg)
+	} else if msg.Type == pb.Message_CONSENSUS {
+		return op.processConsensus(msg)
+	}
+
+	logger.Errorf("Unknown recvMsg: %+v", msg)
+
+	return nil
+}
+
+func (op *batch) processTransaction(msg *pb.Message) error {
+
+	// Parse the trasaction message to request
+	req := op.txToReq(msg)
+
+	// Broadcast request to other peer
+	consensusMsg := &ConsensusMessage{Payload: &ConsensusMessage_Request{Request: req}}
+	pbMsg := consensusMsgHelper(consensusMsg, op.pbft.id)
+	op.helperImpl.InnerBroadcast(pbMsg)
+
+	// Post a requestEvent
+	go op.postRequestEvent(req)
+
+	return nil
+}
+
+func (op *batch) txToReq(tx *pb.Message) *Request {
+
+	req := &Request{
+		Timestamp: 	tx.Timestamp,
+		Payload:   	tx.Payload,
+		ReplicaId: 	op.pbft.id,
+	}
+
+	return req
+}
+
+func (op *batch) postRequestEvent(event *Request) {
+
+	op.mux.Lock()
+	defer op.mux.Unlock()
+	op.batchManager.Queue() <- event
+
+}
+
+func (op *batch) processConsensus(msg *pb.Message) error {
+
+	consensus := &ConsensusMessage{}
+	err := proto.Unmarshal(msg.Payload, consensus)
+
+	if err != nil {
+		logger.Info("**********> Unmarshal error: can not unmarshal ConsensusMessage", err)
+		return err
+	}
+
+	if req := consensus.GetRequest(); req != nil {
+		go op.postRequestEvent(req)
+		return nil
+	} else if pbft := consensus.GetPbftMessage(); pbft != nil {
+		event := pbftMessageEvent{
+			msg:	pbft,
+			sender:	msg.Id,
+		}
+		op.postPbftEvent(event)
+		return nil
+	}
+
+	logger.Errorf("Unknown ConsensusMessage: %+v", msg)
+
+	return nil
+}
+
+func (op *batch) postPbftEvent(event pbftMessageEvent) {
+	//op.mux.Lock()
+	//defer op.mux.Unlock()
+	op.pbftManager.Queue() <- event
 }
 
 func (op *batch) ProcessEvent(e events.Event) events.Event{
-	logger.Debugf("Replica %d batch main thread looping", op.pbft.id)
+
+	logger.Debugf("Replica %d start solve event", op.pbft.id)
+
 	switch event:=e.(type) {
-	//case *testEvent:
-	//	fmt.Println("lalalla")
-	//	b.test_c <- 1//ToDo for test
-	case batchMessageEvent:
-		return op.processMessage(event.msg,  event.sender)
+
+	case *Request:
+		req := event
+		return op.processRequest(req)
 	case batchTimerEvent:
 		logger.Infof("Replica %d batch timer expired", op.pbft.id)
 		if  (len(op.batchStore) > 0) {
@@ -104,64 +189,19 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 	return nil
 }
 
-func (op *batch) processMessage(msg *pb.Message, id uint64) events.Event {
-	if msg.Type == pb.Message_TRANSACTION {
-		req := op.txToReq(msg)
-		return op.submitToLeader(req)
-	}
-	if msg.Type != pb.Message_CONSENSUS {
-		return nil
-	}
-	batchMsg := &BatchMessage{}
-	err := proto.Unmarshal(msg.Payload, batchMsg)
-	if err != nil {
-		logger.Errorf("Error unmarshaling message: %s", err)
-		return nil
-	}
+func (op *batch) processRequest(req *Request) events.Event {
 
-	if req := batchMsg.GetRequest(); req != nil {
-		op.reqStore.storeOutstanding(req)
-		if (op.pbft.primary(op.pbft.view) == op.pbft.id) {
-			fmt.Println("3")
-			return op.leaderProcReq(req)
-		}
-		fmt.Println("4")
-		op.startTimerIfOutstandingRequests()
-		return nil
-	} else if pbftMsg := batchMsg.GetPbftMessage(); pbftMsg != nil {
-		senderID :=  id
-		if err != nil {
-			panic("Cannot map sender's PeerID to a valid replica ID")
-		}
-		msg := &Message{}
-		err = proto.Unmarshal(pbftMsg, msg)
-		if err != nil {
-			logger.Errorf("Error unpacking payload from message: %s", err)
-			return nil
-		}
-		return pbftMessageEvent{
-			msg:    msg,
-			sender: senderID,
-		}
+	op.reqStore.storeOutstanding(req)
+	op.startTimerIfOutstandingRequests()
+	if (op.pbft.primary(op.pbft.view) == op.pbft.id) {
+		return op.leaderProcReq(req)
 	}
-
-	logger.Errorf("Unknown request: %+v", batchMsg)
 
 	return nil
 }
 
-func (op *batch) txToReq(tx *pb.Message) *Request {
-	req := &Request{
-		Timestamp: 	tx.Timestamp,
-		Payload:   	tx.Payload,
-		ReplicaId: 	op.pbft.id,
-	}
-	// XXX sign req
-	return req
-}
-
 func (op *batch) leaderProcReq(req *Request) events.Event {
-	//digest := hash(req)
+	
 	logger.Debugf("Batch primary %d queueing new request", op.pbft.id)
 	op.batchStore = append(op.batchStore, req)
 
@@ -177,7 +217,9 @@ func (op *batch) leaderProcReq(req *Request) events.Event {
 }
 
 func (op *batch) sendBatch() events.Event {
+	
 	op.stopBatchTimer()
+	
 	if len(op.batchStore) == 0 {
 		logger.Error("Told to send an empty batch store for ordering, ignoring")
 		return nil
@@ -186,7 +228,14 @@ func (op *batch) sendBatch() events.Event {
 	reqBatch := &RequestBatch{Batch: op.batchStore}
 	op.batchStore = nil
 	logger.Infof("Creating batch with %d requests", len(reqBatch.Batch))
+
 	return reqBatch
+	
+}
+
+
+func (op *batch) getHelper() helper.Stack {
+	return op.helperImpl
 }
 
 func (op *batch) startTimerIfOutstandingRequests() {
@@ -198,31 +247,6 @@ func (op *batch) startBatchTimer() {
 	logger.Debugf("Replica %d started the batch timer", op.pbft.id)
 	op.batchTimerActive = true
 }
-func (op *batch) RecvMsg(e []byte) error {
-
-	tempMsg := &pb.Message{}
-	err := proto.Unmarshal(e,tempMsg)
-	if err!=nil {
-		logger.Info("**********> Unmarshal error:",err)
-		return err
-	}
-
-	event := batchMessageEvent{
-		msg: 	tempMsg,
-		sender:	tempMsg.Id,
-	}
-
-
-	go op.postEvent(event)
-
-        return nil
-}
-
-func (op *batch) postEvent(event batchMessageEvent) {
-	op.mux.Lock()
-	defer op.mux.Unlock()
-	op.manager.Queue() <- event
-}
 
 func (op *batch) stopBatchTimer() {
 	op.batchTimer.Stop()
@@ -230,18 +254,6 @@ func (op *batch) stopBatchTimer() {
 	op.batchTimerActive = false
 }
 
-func (op *batch) submitToLeader(req *Request) events.Event {
-	// Broadcast the request to the network, in case we're in the wrong view
-
-	pbMsg := batchMsgHelper(&BatchMessage{Payload: &BatchMessage_Request{Request:req}}, op.pbft.id)
-	op.helperImpl.InnerBroadcast(pbMsg)
-	op.reqStore.storeOutstanding(req)
-	op.startTimerIfOutstandingRequests()
-	if op.pbft.primary(op.pbft.view) == op.pbft.id {
-		return op.leaderProcReq(req)
-	}
-	return nil
-}
 
 // Close tells us to release resources we are holding
 func (op *batch) Close() {

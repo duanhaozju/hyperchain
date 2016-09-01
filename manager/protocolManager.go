@@ -18,7 +18,7 @@ import (
 	"log"
 	"hyperchain/protos"
 	"time"
-	
+
 )
 
 type ProtocolManager struct {
@@ -144,7 +144,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			}
 			payload, _ := proto.Marshal(msg)
 			self.consenter.RecvMsg(payload)*/
-			for i:=0;i<1000;i+=1{
+			for i:=0;i<200;i+=1{
 				go self.sendMsg(ev.Payload)
 				time.Sleep(100*time.Microsecond)
 			}
