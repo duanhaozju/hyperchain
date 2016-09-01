@@ -189,7 +189,7 @@ func GetLatestBlockHash() []byte {
 
 // UpdateChain update latest blockHash as given blockHash
 // and the height of chain add 1
-func UpdateChain(blockHash []byte) error {
+func UpdateChain(blockHash []byte, genesis bool) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
 	memChainMap.data.LatestBlockHash = blockHash
