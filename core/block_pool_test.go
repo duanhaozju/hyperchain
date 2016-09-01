@@ -17,7 +17,7 @@ import (
 
 func TestBlockPool(t *testing.T){
 	myLogger.NewLogger(12)
-	InitDB(8081)
+	InitDB(8082)
 	//CreateInitBlock("./genesis.json")
 	//eventMux:=new(event.TypeMux)
 	/*bx:=NewBlockPool(eventMux)
@@ -29,6 +29,7 @@ func TestBlockPool(t *testing.T){
 	bx.AddBlock(block)*/
 	currentChain := GetChainCopy()
 	fmt.Println("final number",currentChain.Height)
+	fmt.Println("final hash",currentChain.LatestBlockHash)
 
 
 

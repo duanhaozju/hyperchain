@@ -109,11 +109,11 @@ func (self *ProtocolManager) NewBlockLoop() {
 			countBlock=countBlock+1
 
 			myLogger.GetLogger().Println(time.Now().UnixNano())
-			myLogger.GetLogger().Println("block number is ",countBlock)
+			//myLogger.GetLogger().Println("block number is ",countBlock)
 			myLogger.GetLogger().Println("write block success")
 			log.Println("write block success")
 			//ioutil.WriteFile("./123.txt",[]byte(strconv.FormatInt(time.Now().UnixNano(),10)+"\n"),os.ModeAppend)
-			self.commitNewBlock(ev.Payload)
+			self.commitNewBlock(ev.Payload,ev.Now)
 		//self.fetcher.Enqueue(ev.Payload)
 
 		}
@@ -215,7 +215,7 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 
 
 
-func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
+func (pm *ProtocolManager) commitNewBlock(payload[]byte,now uint64) {
 
 	msgList := &protos.ExeMessage{}
 	proto.Unmarshal(payload, msgList)
@@ -227,13 +227,15 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
 		block.Timestamp = item.Timestamp
 		block.Transactions = append(block.Transactions, tx)
 	}
-	currentChain := core.GetChainCopy()
-	block.Number = currentChain.Height + 1
-	block.ParentHash = currentChain.LatestBlockHash
-	block.BlockHash = block.Hash(pm.commonHash).Bytes()
-	//fmt.Println(block)
+	//currentChain := core.GetChainCopy()
+	//block.Number = currentChain.Height + 1
+	block.Number=now
+	//block.ParentHash = currentChain.LatestBlockHash
+	//block.BlockHash = block.Hash(pm.commonHash).Bytes()
+	log.Println("block is",block)
 
-	pm.blockPool.AddBlock(block)
+	log.Println("now is ",now)
+	pm.blockPool.AddBlock(block,pm.commonHash)
 	//core.WriteBlock(*block)
 
 }
