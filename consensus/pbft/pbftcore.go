@@ -267,7 +267,7 @@ func (instance *pbftCore) prePrepared(digest string, v uint64, n uint64) bool {
 	_, mInLog := instance.reqBatchStore[digest]
 
 	if digest != "" && !mInLog {
-		logger.Debugf("Replica %d hava ")
+		logger.Debugf("Replica %d havan't store the reqBatch")
 		return false
 	}
 
@@ -425,8 +425,8 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 }
 
 func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
-	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d",
-		instance.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber)
+	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
+		instance.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
 	if instance.primary(instance.view) != preprep.ReplicaId {
 		logger.Warningf("Pre-prepare from other than primary: got %d, should be %d", preprep.ReplicaId, instance.primary(instance.view))

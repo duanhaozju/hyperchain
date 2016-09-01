@@ -19,6 +19,9 @@ import (
 	"hyperchain/protos"
 	"time"
 
+	"io/ioutil"
+	"strconv"
+	"os"
 )
 
 type ProtocolManager struct {
@@ -105,6 +108,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 			log.Println(time.Now().UnixNano())
 			log.Println("block number is ",countBlock)
 			log.Println("write block success")
+			//ioutil.WriteFile("./123.txt",[]byte(strconv.FormatInt(time.Now().UnixNano(),10)+"\n"),os.ModeAppend)
 			self.commitNewBlock(ev.Payload)
 		//self.fetcher.Enqueue(ev.Payload)
 
@@ -143,8 +147,9 @@ func (self *ProtocolManager) ConsensusLoop() {
 			}
 			payload, _ := proto.Marshal(msg)
 			self.consenter.RecvMsg(payload)*/
-			for i:=0;i<6;i+=1{
+			for i:=0;i<1000;i+=1{
 				go self.sendMsg(ev.Payload)
+				time.Sleep(100*time.Microsecond)
 			}
 
 
@@ -236,7 +241,7 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
 
 	//block.BlockHash=
 	block.BlockHash = block.Hash(pm.commonHash).Bytes()
-	fmt.Println(block)
+	//fmt.Println(block)
 
 	core.WriteBlock(*block)
 

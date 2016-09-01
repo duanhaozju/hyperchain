@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
+	"sync"
 )
 
 type batch struct {
@@ -26,6 +27,7 @@ type batch struct {
 	reqStore	*requestStore	//received messages
 	deduplicator	*deduplicator
 	//test_c                chan int8 //ToDo for test
+	mux		sync.Mutex
 }
 
 //type testEvent struct {} //ToDo for test
@@ -101,6 +103,7 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 			return op.sendBatch()
 		}
 	default:
+		logger.Info("batch processEvent, default: ")
 		return op.pbft.ProcessEvent(event)
 	}
 	return nil
@@ -170,7 +173,7 @@ func (op *batch) txToReq(tx *pb.Message) *Request {
 
 func (op *batch) leaderProcReq(req *Request) events.Event {
 	//digest := hash(req)
-	logger.Debugf("Batch primary %d queueing new request %s", op.pbft.id)
+	logger.Debugf("Batch primary %d queueing new request", op.pbft.id)
 	op.batchStore = append(op.batchStore, req)
 
 	if !op.batchTimerActive {
@@ -225,6 +228,8 @@ func (op *batch) RecvMsg(e []byte) error {
 }
 
 func (op *batch) postEvent(event batchMessageEvent) {
+	op.mux.Lock()
+	defer op.mux.Unlock()
 	op.manager.Queue() <- event
 }
 
