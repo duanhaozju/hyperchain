@@ -42,6 +42,7 @@ func (am *Manager)NewAccount(passphrase string) (*Key,error) {
 	return key,nil
 }
 
+//get the key matching the given address and passphrase
 func (am *Manager)GetAccountKey(address string,auth string)(*Key,error)  {
 	filename := keydir +address
 	k,err :=am.keyStore.GetKey(filename,address,auth)
