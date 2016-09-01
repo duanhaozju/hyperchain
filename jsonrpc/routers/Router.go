@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"hyperchain/jsonrpc/logger"
 )
+
+// NewRouter creates new router and returns it
 func NewRouter() *mux.Router {
 
 	router := mux.NewRouter().StrictSlash(true)
