@@ -15,6 +15,7 @@ import (
 	"log"
 
 	"hyperchain/hyperdb"
+
 )
 
 
@@ -22,17 +23,12 @@ func CreateInitBlock(filename string)  {
 	log.Println("genesis start")
 
 	type Genesis struct {
-
 		Timestamp  int64
-		ParentHash  string
+		ParentHash string
 		BlockHash  string
-		Coinbase    string
-		Number int64
-		Alloc       map[string]string
-
-
-
-
+		Coinbase   string
+		Number     uint64
+		Alloc      map[string]string
 	}
 
 	var genesis = map[string]Genesis{}
@@ -91,6 +87,7 @@ func CreateInitBlock(filename string)  {
 	log.Println("构造创世区块")
 
 	UpdateChain(block.BlockHash)
+	log.Println("current chain block number is",GetChainCopy().Height)
 
 }
 

@@ -69,10 +69,10 @@ func (ee *EcdsaEncrypto)GeneralKey(port string)(interface{},error) {
 	k := hex.EncodeToString(ee.FromECDSA(key))
 	_, error := os.Stat(keystoredir)
 	if error == nil || os.IsExist(error){
-		fmt.Println("directory exists")
+		//fmt.Println("directory exists")
 
 	}else {
-		fmt.Println("no")
+		//fmt.Println("no")
 		os.MkdirAll(keystoredir,0777)
 	}
 	file := keystoredir+port

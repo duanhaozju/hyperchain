@@ -198,7 +198,7 @@ func UpdateChain(blockHash []byte) error {
 }
 
 //-- 获取区块的高度
-func GetHeightOfChain() int64 {
+func GetHeightOfChain() uint64 {
 	memChainMap.lock.RLock()
 	defer memChainMap.lock.RUnlock()
 	return memChainMap.data.Height
