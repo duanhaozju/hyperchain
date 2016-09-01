@@ -137,7 +137,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			myLogger.GetLogger().Println("######receiver new tx")
 			//call consensus module
 			//send msg to consensus
-			for i:=0;i<100;i+=1{
+			for i:=0;i<10000;i+=1{
 				go self.sendMsg(ev.Payload)
 				time.Sleep(100*time.Microsecond)
 			}
@@ -174,6 +174,7 @@ func (self *ProtocolManager)sendMsg(payload []byte)  {
 
 // Broadcast consensus msg to a batch of peers not knowing about it
 func (pm *ProtocolManager) BroadcastConsensus(payload []byte) {
+	log.Println("begin call broadcast")
 	pm.peerManager.BroadcastPeers(payload)
 
 }

@@ -32,7 +32,14 @@ func (this *BroadCastHandler)ProcessEvent(msg *peermessage.Message)error{
 	ps := pPool.GetPeers()
 	fmt.Println("现在有节点数目:",len(ps))
 	for _,peer := range pPool.GetPeers(){
-		go broadcast(msg,peer)
+		fmt.Println("广播....")
+		resMsg,err := peer.Chat(msg)
+		if err != nil{
+			log.Println("Broadcast failed,Node",peer.Addr)
+		}else{
+			log.Println("resMsg:",string(resMsg.Payload))
+			//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
+		}
 	}
 	return nil
 }
