@@ -88,7 +88,6 @@ func PutBlock(db hyperdb.Database, key []byte, t types.Block) error {
 	if err != nil {
 		return err
 	}
-	//-- 给key加上前缀,用于区分,实际存放的key
 	keyFact := append(blockPrefix, key...)
 	if err := db.Put(keyFact, data); err != nil {
 		return err
