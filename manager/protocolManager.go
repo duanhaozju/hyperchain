@@ -144,9 +144,9 @@ func (self *ProtocolManager) ConsensusLoop() {
 			}
 			payload, _ := proto.Marshal(msg)
 			self.consenter.RecvMsg(payload)*/
-			for i:=0;i<200;i+=1{
+			for i:=0;i<10000;i+=1{
 				go self.sendMsg(ev.Payload)
-				time.Sleep(100*time.Microsecond)
+				time.Sleep(50*time.Microsecond)
 			}
 
 
@@ -158,6 +158,9 @@ func (self *ProtocolManager) ConsensusLoop() {
 			//call consensus module
 			//Todo
 			log.Println("###### enter ConsensusEvent")
+			log.Println("###############################")
+			log.Println("#         outer recvMsg       #")
+			log.Println("###############################")
 			self.consenter.RecvMsg(ev.Payload)
 
 
@@ -174,6 +177,9 @@ func (self *ProtocolManager)sendMsg(payload []byte)  {
 		Id: 0,
 	}
 	msgSend, _ := proto.Marshal(msg)
+	log.Println("###############################")
+	log.Println("#         outer recvMsg       #")
+	log.Println("###############################")
 	self.consenter.RecvMsg(msgSend)
 }
 

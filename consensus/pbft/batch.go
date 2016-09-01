@@ -81,6 +81,10 @@ func newBatch(id uint64, config *viper.Viper, h helper.Stack) *batch{
 // This function is used by outer to send message to consensus
 func (op *batch) RecvMsg(e []byte) error {
 
+	logger.Info("###############################")
+	logger.Info("#         inner recvMsg       #")
+	logger.Info("###############################")
+
 	msg := &pb.Message{}
 	err := proto.Unmarshal(e,msg)
 	
@@ -230,7 +234,6 @@ func (op *batch) sendBatch() events.Event {
 	logger.Infof("Creating batch with %d requests", len(reqBatch.Batch))
 
 	return reqBatch
-	
 }
 
 

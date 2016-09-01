@@ -419,12 +419,18 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 	cert.digest = digest
 
 	msg := pbftMsgHelper(&Message{Payload: &Message_PrePrepare{PrePrepare: preprep}}, instance.id)
+	logger.Info("###############################")
+	logger.Info("#        sendPrePrepare       #")
+	logger.Info("###############################")
 	instance.helper.InnerBroadcast(msg)
 
 	instance.maybeSendCommit(digest, instance.view, n)
 }
 
 func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
+	logger.Info("###############################")
+	logger.Info("#        recvPrePrepare       #")
+	logger.Info("###############################")
 	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
 		instance.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
@@ -475,6 +481,9 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 		}
 		cert.sentPrepare = true
 		instance.recvPrepare(prep)
+		logger.Info("###############################")
+		logger.Info("#         sendPrepare         #")
+		logger.Info("###############################")
 		msg := pbftMsgHelper(&Message{Payload: &Message_Prepare{Prepare: prep}}, instance.id)
 		return instance.helper.InnerBroadcast(msg)
 	}
@@ -483,6 +492,9 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 }
 
 func (instance *pbftCore) recvPrepare(prep *Prepare) error {
+	logger.Info("###############################")
+	logger.Info("#          recvPrepare        #")
+	logger.Info("###############################")
 	logger.Debugf("Replica %d received prepare from replica %d for view=%d/seqNo=%d",
 		instance.id, prep.ReplicaId, prep.View, prep.SequenceNumber)
 
@@ -524,6 +536,9 @@ func (instance *pbftCore) maybeSendCommit(digest string, v uint64, n uint64) err
 		}
 		cert.sentCommit = true
 		instance.recvCommit(commit)
+		logger.Info("###############################")
+		logger.Info("#          sendCommit         #")
+		logger.Info("###############################")
 		msg := pbftMsgHelper(&Message{Payload: &Message_Commit{Commit: commit}}, instance.id)
 		return instance.helper.InnerBroadcast(msg)
 	}
@@ -531,6 +546,9 @@ func (instance *pbftCore) maybeSendCommit(digest string, v uint64, n uint64) err
 }
 
 func (instance *pbftCore) recvCommit(commit *Commit) error {
+	logger.Info("###############################")
+	logger.Info("#         recvCommit          #")
+	logger.Info("###############################")
 	logger.Debugf("Replica %d received commit from replica %d for view=%d/seqNo=%d",
 		instance.id, commit.ReplicaId, commit.View, commit.SequenceNumber)
 
