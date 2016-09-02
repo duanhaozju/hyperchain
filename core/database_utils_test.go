@@ -215,9 +215,6 @@ func TestUpdateChain(t *testing.T) {
 		if string(lasthash) != string(hash) {
 			t.Errorf("TestUpdateChain fail")
 		}
-		if GetHeightOfChain() != uint64 (i + 1) {
-			t.Errorf("TestUpdateChain fail")
-		}
 	}
 }
 
