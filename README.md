@@ -12,10 +12,11 @@
 
 `develop`
 
-##SETTINGS
+## SETTINGS
 
 **go path**
-Please clone the project in to `$GOPATH/src` to ensure running rightly
+
+clone project in to `$GOPATH/src` to ensure running rightly
 
 ## CLONE
 
