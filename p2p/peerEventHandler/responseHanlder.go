@@ -8,18 +8,16 @@ package peerEventHandler
 
 import (
 	"hyperchain/p2p/peermessage"
-	"log"
 )
 
 type ResponseHandler struct{
 }
-
 // response message has two conditions:
 // inner system need to response the peer keep alive/hello message
 
 func (this *ResponseHandler)ProcessEvent(msg *peermessage.Message)error{
-	log.Println(msg.MessageType)
-	log.Println(string(msg.Payload))
+	log.Info(msg.MessageType)
+	log.Info(string(msg.Payload))
 	return nil
 }
 

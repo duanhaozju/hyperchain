@@ -17,12 +17,13 @@ import (
 	"strconv"
 	"time"
 	"hyperchain/p2p/peerPool"
-	log "github.com/Sirupsen/logrus"
 	"encoding/hex"
 	"hyperchain/event"
-	//"git.hyperchain.cn/hyperchain/hyperchain/crypto"
 	"hyperchain/crypto"
+
+	"github.com/op/go-logging"
 )
+
 
 const MAXPEERNODE = 4
 
@@ -42,8 +43,9 @@ type GrpcPeerManager struct {
 	aliveChain   *chan bool
 }
 
-func init(){
-	common.LoggerInit()
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("p2p")
 }
 
 // GetClientId GetLocalClientId
@@ -90,7 +92,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 	}
 	// connect other peers
 	for peerPool.GetAliveNodeNum() < MAXPEERNODE - 1{
-		log.Info("node:",NodeId,"process connecting task...")
+		log.Debug("node:",NodeId,"process connecting task...")
 		nid := 1
 		for range time.Tick(3 * time.Second) {
 			status := alivePeerMap[nid]
@@ -127,7 +129,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 						Port: int32(peerPort),
 					}, peer)
 					alivePeerMap[nid] = true
-					log.Info("Peer Node hash:", peerNodeHash)
+					log.Debug("Peer Node hash:", peerNodeHash)
 				}
 			}
 			nid += 1
@@ -136,11 +138,11 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 			}
 		}
 	}
-	log.Info("┌────────────────────────────────────────┐")
-	log.Info("│                                        │")
-	log.Info("│        All NODES WERE CONNECTED        │")
-	log.Info("│                                        │")
-	log.Info("└────────────────────────────────────────┘")
+	log.Debug("┌────────────────────────────────────────┐")
+	log.Debug("│                                        │")
+	log.Debug("│        All NODES WERE CONNECTED        │")
+	log.Debug("│                                        │")
+	log.Debug("└────────────────────────────────────────┘")
 
 	*this.aliveChain <- true
 }

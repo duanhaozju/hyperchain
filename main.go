@@ -20,8 +20,8 @@ import (
 
 	"hyperchain/consensus/controller"
 	"hyperchain/jsonrpc"
-
-	"hyperchain/logger"
+	"hyperchain/common"
+	"github.com/op/go-logging"
 )
 
 type argT struct {
@@ -35,18 +35,17 @@ type argT struct {
 }
 
 
-
 func main(){
 	cli.Run(new(argT), func(ctx *cli.Context) error {
-
-
 
 		/*init peer manager object,consensus object*/
 
 		argv := ctx.Argv().(*argT)
 
+		common.InitLog(logging.INFO,"./logs2/",argv.LocalPort)
+
 		//init logger
-		myLogger.NewLogger(argv.LocalPort)
+		//myLogger.NewLogger(argv.LocalPort)
 
 		eventMux := new(event.TypeMux)
 
