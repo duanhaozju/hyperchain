@@ -93,9 +93,10 @@ func CreateInitBlock(filename string)  {
 }
 
 // WriteBlock need:
-// 1. put block db
-// 2. update chain
-// 3. update balance
+// 1. Put block into db
+// 2. Put transactions in block into db
+// 3. Update chain
+// 4. Update balance
 func WriteBlock(block types.Block, commonHash crypto.CommonHash)  {
 	currentChain := GetChainCopy()
 	log.Println("block number is ",block.Number)
@@ -106,10 +107,11 @@ func WriteBlock(block types.Block, commonHash crypto.CommonHash)  {
 		log.Fatal(err)
 	}
 	err = PutBlock(db, block.BlockHash, block)
+	PutTransactions(db, commonHash, block.Transactions)
 	if err != nil {
 		log.Fatal(err)
 	}
-	UpdateChain(block.BlockHash,false)
+	UpdateChain(block.BlockHash, false)
 	balance, err := GetBalanceIns()
 	if err != nil {
 		log.Fatal(err)

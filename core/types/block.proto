@@ -9,4 +9,5 @@ message Block {
 	int64 timestamp = 4;
 	bytes merkleRoot = 5;
 	uint64 number = 6;
+	int64 writeTime = 7;
 }

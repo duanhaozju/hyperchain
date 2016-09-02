@@ -34,15 +34,13 @@ func (h *helper) InnerBroadcast(msg *pb.Message) error{
 	return nil
 }
 
-func (h *helper) Execute(reqBatch *pb.ExeMessage, now uint64, pre uint64) error{
+func (h *helper) Execute(reqBatch *pb.ExeMessage) error{
 	tmpMsg,err:=proto.Marshal(reqBatch)
 	if err!=nil {
 		return err
 	}
 	exeEvent := event.NewBlockEvent{
 		Payload:	tmpMsg,
-		Now:		now,
-		Pre:		pre,
 	}
 	go manager.GetEventObject().Post(exeEvent)
 	//h.msgQ.Post(exeEvent)

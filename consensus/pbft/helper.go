@@ -28,7 +28,7 @@ func pbftMsgHelper(msg *Message, id uint64) *pb.Message {
 	return pbMsg
 }
 
-func exeBatchHelper(reqBatch *RequestBatch) *pb.ExeMessage {
+func exeBatchHelper(reqBatch *RequestBatch, no uint64) *pb.ExeMessage {
 
 	batches := []*pb.Message{}
 	requests := reqBatch.Batch
@@ -40,7 +40,11 @@ func exeBatchHelper(reqBatch *RequestBatch) *pb.ExeMessage {
 		}
 		batches = append(batches, batch)
 	}
-	exeMsg := &pb.ExeMessage{Batch: batches}
-	return exeMsg
+	exeMsg := &pb.ExeMessage{
+		Batch:		batches,
+		Timestamp:	time.Now().UnixNano(),
+		No:		no,
+	}
 
+	return exeMsg
 }
