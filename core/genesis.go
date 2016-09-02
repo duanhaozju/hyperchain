@@ -12,8 +12,6 @@ import (
 
 	"hyperchain/common"
 
-	"log"
-
 	"hyperchain/hyperdb"
 
 	"hyperchain/crypto"
@@ -22,7 +20,7 @@ import (
 
 
 func CreateInitBlock(filename string)  {
-	log.Println("genesis start")
+	log.Info("genesis start")
 
 	type Genesis struct {
 		Timestamp  int64
@@ -86,10 +84,10 @@ func CreateInitBlock(filename string)  {
 
 
 
-	log.Println("构造创世区块")
+	log.Info("构造创世区块")
 
 	UpdateChain(block.BlockHash,true)
-	log.Println("current chain block number is",GetChainCopy().Height)
+	log.Info("current chain block number is",GetChainCopy().Height)
 
 }
 
@@ -100,7 +98,7 @@ func CreateInitBlock(filename string)  {
 // 4. Update balance
 func WriteBlock(block types.Block, commonHash crypto.CommonHash)  {
 
-	log.Println("block number is ",block.Number)
+	log.Info("block number is ",block.Number)
 	currentChain := GetChainCopy()
 	block.ParentHash = currentChain.LatestBlockHash
 	block.BlockHash = block.Hash(commonHash).Bytes()

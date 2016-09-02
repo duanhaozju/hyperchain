@@ -19,11 +19,12 @@ import (
 	"hyperchain/protos"
 	"time"
 
-
-	"log"
-	"hyperchain/logger"
-
+	"github.com/op/go-logging"
 )
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("manager")
+}
 
 type ProtocolManager struct {
 	serverPort   int
@@ -51,7 +52,7 @@ var countBlock int
 
 func NewProtocolManager(blockPool *core.BlockPool,peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
 encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
-	log.Println("enter parotocol manager")
+	log.Info("enter parotocol manager")
 	manager := &ProtocolManager{
 
 
@@ -104,9 +105,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 			//accept msg from consensus module
 			//commit block into block pool
 
-			myLogger.GetLogger().Println(time.Now().UnixNano())
-			myLogger.GetLogger().Println("write block success")
-			log.Println("write block success")
+			log.Info("write block success")
 			self.commitNewBlock(ev.Payload)
 		//self.fetcher.Enqueue(ev.Payload)
 
@@ -123,12 +122,11 @@ func (self *ProtocolManager) ConsensusLoop() {
 		switch ev := obj.Data.(type) {
 
 		case event.BroadcastConsensusEvent:
-			log.Println("######enter broadcast")
-			myLogger.GetLogger().Println("######enter broadcast")
+			log.Info("######enter broadcast")
+
 			go self.BroadcastConsensus(ev.Payload)
 		case event.NewTxEvent:
-			log.Println("######receiver new tx")
-			myLogger.GetLogger().Println("######receiver new tx")
+			log.Info("######receiver new tx")
 			//call consensus module
 			//send msg to consensus
 			for i:=0;i<5000;i+=1{
@@ -139,7 +137,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 		case event.ConsensusEvent:
 			//call consensus module
-			log.Println("###### enter ConsensusEvent")
+			log.Info("###### enter ConsensusEvent")
 			//logger.GetLogger().Println("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 
@@ -168,7 +166,7 @@ func (self *ProtocolManager)sendMsg(payload []byte)  {
 
 // Broadcast consensus msg to a batch of peers not knowing about it
 func (pm *ProtocolManager) BroadcastConsensus(payload []byte) {
-	log.Println("begin call broadcast")
+	log.Info("begin call broadcast")
 	pm.peerManager.BroadcastPeers(payload)
 
 }
@@ -225,7 +223,7 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
 
 	block.Number=msgList.No
 
-	log.Println("now is ",msgList.No)
+	log.Info("now is ",msgList.No)
 	pm.blockPool.AddBlock(block,pm.commonHash)
 	//core.WriteBlock(*block)
 

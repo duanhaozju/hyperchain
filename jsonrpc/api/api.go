@@ -6,10 +6,9 @@ import (
 	"hyperchain/event"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/hyperdb"
-	"log"
 	"hyperchain/core"
 	"hyperchain/manager"
-	"hyperchain/logger"
+	"github.com/op/go-logging"
 )
 
 type TxArgs struct{
@@ -30,6 +29,11 @@ type BalanceShow map[string]string
 type LastestBlockShow struct{
 	Number uint64
 	Hash []byte
+}
+
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("jsonrpc/api")
 }
 
 // SendTransaction is to build a transaction object,and then post event NewTxEvent,
@@ -80,7 +84,6 @@ func GetAllTransactions()  []TransactionShow{
 
 	var transactions []TransactionShow
 
-	myLogger.GetLogger().Println(txs)
 	for _, tx := range txs {
 		var ts = TransactionShow{
 			Value: string(tx.Value),

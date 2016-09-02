@@ -9,9 +9,6 @@ import (
 	"hyperchain/event"
 
 	"hyperchain/core/types"
-	"hyperchain/logger"
-
-	"log"
 	"hyperchain/crypto"
 )
 
@@ -80,18 +77,18 @@ func (pool *BlockPool)AddBlock(block *types.Block,commonHash crypto.CommonHash) 
 		pool.maxNum = block.Number
 	}
 	if _, ok := pool.queue[block.Number ]; ok {
-		myLogger.GetLogger().Println("replated block number,number is: ",block.Number)
+		log.Info("replated block number,number is: ",block.Number)
 		return
 	}
 
 
-	log.Println("number is ",block.Number)
+	log.Info("number is ",block.Number)
 
 	currentChain := GetChainCopy()
 
 	if (currentChain.Height>=block.Number) {
 
-		myLogger.GetLogger().Println("replated block number,number is: ",block.Number)
+		log.Info("replated block number,number is: ",block.Number)
 		return
 	}
 
@@ -101,7 +98,7 @@ func (pool *BlockPool)AddBlock(block *types.Block,commonHash crypto.CommonHash) 
 		pool.mu.RLock()
 
 		pool.demandNumber+=1
-		log.Println("current demandNumber is ",pool.demandNumber)
+		log.Info("current demandNumber is ",pool.demandNumber)
 		WriteBlock(*block,commonHash)
 
 		pool.mu.RUnlock()
@@ -112,7 +109,7 @@ func (pool *BlockPool)AddBlock(block *types.Block,commonHash crypto.CommonHash) 
 
 					pool.mu.RLock()
 					pool.demandNumber+=1
-					log.Println("current demandNumber is ",pool.demandNumber)
+					log.Info("current demandNumber is ",pool.demandNumber)
 					WriteBlock(*pool.queue[i],commonHash)
 					delete(pool.queue,i)
 					pool.mu.RUnlock()

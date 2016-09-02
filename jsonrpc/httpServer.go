@@ -4,12 +4,15 @@ import (
 	"hyperchain/jsonrpc/routers"
 	"strconv"
 	"net/http"
-	"log"
 
 	"hyperchain/event"
 	"hyperchain/jsonrpc/controller"
+	"github.com/op/go-logging"
 )
-
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("jsonrpc")
+}
 func StartHttp(httpPort int,eventMux *event.TypeMux){
 
 	eventMux=eventMux
@@ -26,7 +29,7 @@ func StartHttp(httpPort int,eventMux *event.TypeMux){
 
 
 	// Start http server
-	log.Println("启动http服务...")
+	log.Info("启动http服务...")
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(httpPort),router))
 }
 

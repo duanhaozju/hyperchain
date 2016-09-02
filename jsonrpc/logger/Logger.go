@@ -1,11 +1,14 @@
 package logger
 
 import (
-	"log"
 	"net/http"
 	"time"
+	"github.com/op/go-logging"
 )
-
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("jsonrpc/logger")
+}
 // Logger prints the message log of http request
 func Logger(inner http.Handler, name string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -13,7 +16,7 @@ func Logger(inner http.Handler, name string) http.Handler {
 
 		inner.ServeHTTP(w, r)
 
-		log.Printf(
+		log.Info(
 			"%s\t%s\t%s\t%s",
 			r.Method,
 			r.RequestURI,

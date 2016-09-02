@@ -3,11 +3,10 @@ package core
 import (
 	"testing"
 	"hyperchain/crypto"
-	"log"
 )
 
 func TestCalcResponseCount(t *testing.T) {
-	log.Println("test =============> > > TestInitDB")
+	log.Info("test =============> > > TestInitDB")
 	InitDB(100000)
 	blockUtilsCase.Number = GetHeightOfChain() + 1
 	commonHash := crypto.NewKeccak256Hash("keccak256")
