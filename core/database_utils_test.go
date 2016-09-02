@@ -9,6 +9,7 @@ import (
 	"log"
 	"strconv"
 	"github.com/syndtr/goleveldb/leveldb"
+	"hyperchain/crypto"
 )
 
 var transactionCases = []*types.Transaction{
@@ -135,7 +136,8 @@ func TestPutTransactions(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	PutTransactions(db, transactionCases)
+	commonHash := crypto.NewKeccak256Hash("keccak256")
+	PutTransactions(db, commonHash, transactionCases)
 	trs, err := GetAllTransaction(db)
 	if err != nil {
 		log.Fatal(err)

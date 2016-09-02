@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"hyperchain/common"
 	"hyperchain/crypto"
-	"log"
 )
 
 // the prefix of key, use to save to db
@@ -49,9 +48,8 @@ func PutTransaction(db hyperdb.Database, key []byte, t types.Transaction) error 
 }
 
 // PutTransactions put transaction into database using Batch
-// Each Transaction's key is its keccak256 hash
-func PutTransactions(db hyperdb.Database, ts []*types.Transaction) error {
-	commonHash := crypto.NewKeccak256Hash("keccak256")
+// Each Transaction's key is its hash
+func PutTransactions(db hyperdb.Database, commonHash crypto.CommonHash ,ts []*types.Transaction) error {
 	batch := db.NewBatch()
 	for _, trans := range ts {
 		key := trans.Hash(commonHash).Bytes()
@@ -103,7 +101,6 @@ func GetAllTransaction(db *hyperdb.LDBDatabase) ([]types.Transaction, error) {
 
 //-- ------------------- Block ---------------------------------
 func PutBlock(db hyperdb.Database, key []byte, t types.Block) error {
-	log.Println("write success in db")
 	data, err := proto.Marshal(&t)
 	if err != nil {
 		return err

@@ -102,14 +102,12 @@ func WriteBlock(block types.Block, commonHash crypto.CommonHash)  {
 	log.Println("block number is ",block.Number)
 	block.ParentHash = currentChain.LatestBlockHash
 	block.BlockHash = block.Hash(commonHash).Bytes()
-
-func WriteBlock(block types.Block)  {
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
 	err = PutBlock(db, block.BlockHash, block)
-	PutTransactions(db, block.Transactions)
+	PutTransactions(db, commonHash, block.Transactions)
 	if err != nil {
 		log.Fatal(err)
 	}
