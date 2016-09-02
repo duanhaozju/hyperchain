@@ -17,7 +17,7 @@ var transactionCases = []*types.Transaction{
 		From: []byte("zhangsan"),
 		To: []byte("wangwu"),
 		Value: []byte("100"),
-		TimeStamp: time.Now().UnixNano(),
+		TimeStamp: time.Now().UnixNano() - int64(time.Second),
 		Signature: []byte("signature1"),
 	},
 	&types.Transaction{
@@ -153,6 +153,7 @@ var blockUtilsCase = types.Block{
 	Timestamp    : time.Now().UnixNano(),
 	MerkleRoot  : []byte("merkeleroot"),
 	Number       : 1,
+	WriteTime: time.Now().UnixNano() + int64(time.Second)/2,
 }
 
 // TestPutBlock tests for PutBlock
@@ -208,13 +209,10 @@ var blockHashcases = [][]byte{
 // TestUpdateChain tests for UpdateChain
 func TestUpdateChain(t *testing.T) {
 	log.Println("test =============> > > TestUpdateChain")
-	for i, hash := range blockHashcases {
+	for _, hash := range blockHashcases {
 		UpdateChain(hash, false)
 		lasthash := GetLatestBlockHash()
 		if string(lasthash) != string(hash) {
-			t.Errorf("TestUpdateChain fail")
-		}
-		if GetHeightOfChain() != uint64 (i + 1) {
 			t.Errorf("TestUpdateChain fail")
 		}
 	}

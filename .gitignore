@@ -91,3 +91,5 @@ cache/*
 
 # keystore
 #keystore.txt
+hyperchain
+/logs

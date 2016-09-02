@@ -17,6 +17,7 @@ import (
 	"hyperchain/hyperdb"
 
 	"hyperchain/crypto"
+	"time"
 )
 
 
@@ -94,7 +95,7 @@ func CreateInitBlock(filename string)  {
 
 // WriteBlock need:
 // 1. Put block into db
-// 2. Put transactions in block into db
+// 2. Put transactions in block into db  (-- cancel --)
 // 3. Update chain
 // 4. Update balance
 func WriteBlock(block types.Block, commonHash crypto.CommonHash)  {
@@ -103,12 +104,13 @@ func WriteBlock(block types.Block, commonHash crypto.CommonHash)  {
 	currentChain := GetChainCopy()
 	block.ParentHash = currentChain.LatestBlockHash
 	block.BlockHash = block.Hash(commonHash).Bytes()
+	block.WriteTime = time.Now().UnixNano()
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
 	err = PutBlock(db, block.BlockHash, block)
-	PutTransactions(db, commonHash, block.Transactions)
+	//PutTransactions(db, commonHash, block.Transactions)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"hyperchain/common"
 	"hyperchain/crypto"
+	"strconv"
 )
 
 // the prefix of key, use to save to db
@@ -110,8 +111,14 @@ func PutBlock(db hyperdb.Database, key []byte, t types.Block) error {
 	if err := db.Put(keyFact, data); err != nil {
 		return err
 	}
-	//err = db.Put(append(blockNumPrefix, t.Number...))?
+	keyNum := strconv.FormatInt(int64(t.Number), 10)
+	err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
 	return err
+}
+
+func GetBlockHash(db hyperdb.Database, blockNumber uint64) ([]byte, error) {
+	keyNum := strconv.FormatInt(int64(blockNumber), 10)
+	return db.Get(append(blockNumPrefix, keyNum...))
 }
 
 func GetBlock(db hyperdb.Database, key []byte) (types.Block, error){
