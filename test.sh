@@ -1,14 +1,14 @@
 #!/bin/bash
 echo "##########################"
-echo "#   TEST FOR Hyperchain   "
+echo "#   TEST FOR HYPERCHAIN  #"
 echo "##########################"
 
 echo "kill the bind port process"
 
-kill -9 $(lsof -i :8001 | awk 'NR=2{print $2}')
-kill -9 $(lsof -i :8002 | awk 'NR=2{print $2}')
-kill -9 $(lsof -i :8003 | awk 'NR=2{print $2}')
-kill -9 $(lsof -i :8004 | awk 'NR=2{print $2}')
+kill -9 $(lsof -i :8001 | awk 'NR>=2{print $2}')
+kill -9 $(lsof -i :8002 | awk 'NR>=2{print $2}')
+kill -9 $(lsof -i :8003 | awk 'NR>=2{print $2}')
+kill -9 $(lsof -i :8004 | awk 'NR>=2{print $2}')
 
 #rebuild the application
 echo "rebuild the application"
