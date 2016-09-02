@@ -20,6 +20,7 @@ var (
 	blockPrefix         = []byte("block-")
 	chainKey            = []byte("chain-key")
 	balanceKey          = []byte("balance-key")
+	blockNumPrefix      = []byte("blockNum-")
 	bodySuffix          = []byte("-body")
 	txMetaSuffix        = []byte{0x01}
 )
@@ -109,7 +110,8 @@ func PutBlock(db hyperdb.Database, key []byte, t types.Block) error {
 	if err := db.Put(keyFact, data); err != nil {
 		return err
 	}
-	return nil
+	//err = db.Put(append(blockNumPrefix, t.Number...))?
+	return err
 }
 
 func GetBlock(db hyperdb.Database, key []byte) (types.Block, error){
