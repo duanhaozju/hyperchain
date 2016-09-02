@@ -107,7 +107,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 			myLogger.GetLogger().Println(time.Now().UnixNano())
 			myLogger.GetLogger().Println("write block success")
 			log.Println("write block success")
-			self.commitNewBlock(ev.Payload,ev.Now)
+			self.commitNewBlock(ev.Payload)
 		//self.fetcher.Enqueue(ev.Payload)
 
 		}
@@ -209,7 +209,7 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 
 
 // add new block into block pool
-func (pm *ProtocolManager) commitNewBlock(payload[]byte,now uint64) {
+func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
 
 	msgList := &protos.ExeMessage{}
 	proto.Unmarshal(payload, msgList)
@@ -218,13 +218,14 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte,now uint64) {
 		tx := &types.Transaction{}
 
 		proto.Unmarshal(item.Payload, tx)
-		block.Timestamp = item.Timestamp
+
 		block.Transactions = append(block.Transactions, tx)
 	}
+	block.Timestamp = msgList.Timestamp
 
-	block.Number=now
+	block.Number=msgList.No
 
-	log.Println("now is ",now)
+	log.Println("now is ",msgList.No)
 	pm.blockPool.AddBlock(block,pm.commonHash)
 	//core.WriteBlock(*block)
 
