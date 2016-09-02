@@ -1,27 +1,34 @@
-# hyperChain Alpha
+# hyperChain
 
-HyperChain 原型实现 
+HyperChain Proto 
 
-内部迭代版本: alpha 0.1
+>Internal version: alpha 0.2.1
+
 change log:
-- alpha 0.1 完成了基本的节点连接数据同步和节点信息同步　2016/08/17 
-- alpha 0.2 
-Todo List:
-- [x] 加入block/chain结构
-- [x] 加入`getBalance`功能
-- [x] 加入节点和账户地址
-- [ ] 加入`merktree`
-- [x] 加入`checktransaction` 交易校验
-- alpha 0.3 Doing
+- alpha 0.1 Finished the basic node connection and information sync　2016/08/17 
+- alpha 0.2 Finished a single thread proto system.
+- alpha 0.3 to finish a multi-thread proto system, which based on PBFT.
 
-##项目设置
+## LATEST BRANCH
+`develop`
+
+##SETTINGS
 **go path**
-请将项目克隆到`$GOPATH/src`目录下，这样能够确保项目能够正常运行
+Please clone the project in to `$GOPATH/src` to ensure running rightly
 
-##克隆项目
-`git clone git@git.hyperchain.cn:chenquan/hyperchain-alpha.git`
+## CLONE
+`git@git.hyperchain.cn:hyperchain/hyperchain.git`
 
-## 修复依赖
-`godep restore`
+## DEPENDENCY
+`go get -u github.com/kardianos/govendor`
+`govendor sync`
 
-Ｐ.S. 在修复依赖的时候会有一些无法下载的问题，如果有pkg/golang.org/x/sys/unix 而且有go文件就不需要管，直接就可以正常运行
+## BUILD
+`govendor build`
+
+## QUICK START 
+Ubuntu:
+`bash ubuntu.sh`
+Mac:
+`bash mac.sh`
+
