@@ -1,3 +1,7 @@
+// implementblock pool
+// author: Lizhong kuang
+// date: 2016-08-29
+// last modified:2016-09-01
 package core
 
 import (
@@ -7,6 +11,8 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/logger"
 
+	"log"
+	"hyperchain/crypto"
 )
 
 const (
@@ -21,6 +27,7 @@ type BlockPool struct {
 	eventMux     *event.TypeMux
 	events       event.Subscription
 	mu           sync.RWMutex
+	stateLock    sync.Mutex
 	wg           sync.WaitGroup // for shutdown sync
 }
 
@@ -33,9 +40,12 @@ func NewBlockPool(eventMux *event.TypeMux) *BlockPool {
 		events:       eventMux.Subscribe(event.NewBlockPoolEvent{}),
 	}
 
+
 	//pool.wg.Add(1)
 	//go pool.eventLoop()
 
+	currentChain := GetChainCopy()
+	pool.demandNumber=currentChain.Height+1
 	return pool
 }
 
@@ -57,10 +67,12 @@ func (pool *BlockPool) eventLoop() {
 	}
 }
 
+
 //check block sequence and validate in chain
-func (pool *BlockPool)AddBlock(block *types.Block) {
+func (pool *BlockPool)AddBlock(block *types.Block,commonHash crypto.CommonHash) {
+
 	if (block.Number == 0) {
-		WriteBlock(*block)
+		WriteBlock(*block,commonHash)
 		return
 	}
 
@@ -73,43 +85,55 @@ func (pool *BlockPool)AddBlock(block *types.Block) {
 	}
 
 
+	log.Println("number is ",block.Number)
 
 	currentChain := GetChainCopy()
+
 	if (currentChain.Height>=block.Number) {
 
 		myLogger.GetLogger().Println("replated block number,number is: ",block.Number)
 		return
 	}
 
-	if(currentChain.Height==block.Number - 1) {
+	if(pool.demandNumber==block.Number) {
 
 
-		WriteBlock(*block)
-		if (pool.demandNumber == block.Number) {
-			pool.demandNumber = block.Number - 1
-			for i := block.Number + 1; i < pool.maxNum; i += 1 {
-				if _, ok := pool.queue[block.Number + 1]; ok {//存在}
+		pool.mu.RLock()
 
-				//if (pool.queue[block.Number + 1]) {
-					WriteBlock(*pool.queue[block.Number + 1])
+		pool.demandNumber+=1
+		log.Println("current demandNumber is ",pool.demandNumber)
+		WriteBlock(*block,commonHash)
+		pool.mu.RUnlock()
+
+
+			for i := block.Number + 1; i <= pool.maxNum; i += 1 {
+				if _, ok := pool.queue[i]; ok {//存在}
+
+					//if (pool.queue[block.Number + 1]) {
+					pool.mu.RLock()
+					pool.demandNumber+=1
+					log.Println("current demandNumber is ",pool.demandNumber)
+					WriteBlock(*pool.queue[i],commonHash)
+					pool.mu.RUnlock()
+
 
 				} else {
-					pool.demandNumber = i
 					break
 				}
 
 			}
 
-		}
+
 
 		return
 	} else {
-		if (pool.demandNumber == block.Number) {
-			pool.demandNumber = block.Number - 1
 
-		}
-		pool.queue[block.Number] = block
+			pool.queue[block.Number] = block
+
+
+
 
 	}
 
 }
+

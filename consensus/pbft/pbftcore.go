@@ -183,8 +183,8 @@ func (instance *pbftCore) ProcessEvent(e events.Event) events.Event {
 	var err error
 	logger.Debugf("Replica %d processing event", instance.id)
 	switch et := e.(type) {
-	case *pbftMessage:
-		return pbftMessageEvent(*et)
+	//case *pbftMessage:
+	//	return pbftMessageEvent(*et)
 	case pbftMessageEvent:
 		msg := et
 		logger.Debugf("Replica %d received incoming message from %v", instance.id, msg.sender)
@@ -552,8 +552,8 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) && cert.executed == false {
 		logger.Infof("--------begin execute--------view=%d/seqNo=%d--------", commit.View, commit.SequenceNumber)
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
-		reqBatch := exeBatchHelper(cert.prePrepare.RequestBatch)
-		instance.helper.Execute(reqBatch, commit.SequenceNumber, commit.SequenceNumber-1)
+		reqBatch := exeBatchHelper(cert.prePrepare.RequestBatch, commit.SequenceNumber)
+		instance.helper.Execute(reqBatch)
 		cert.executed = true
 	}
 

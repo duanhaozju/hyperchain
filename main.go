@@ -56,7 +56,7 @@ func main(){
 		//init fetcher to accept block
 		fetcher := core.NewFetcher()
 
-		blockPool:=core.NewBlockPool(eventMux)
+
 
 
 		//init pbft consensus
@@ -84,6 +84,7 @@ func main(){
 
 		nodePath:="./p2p/peerconfig.json"
 
+		blockPool:=core.NewBlockPool(eventMux)
 
 
 

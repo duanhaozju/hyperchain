@@ -16,6 +16,7 @@ import (
 
 	"hyperchain/hyperdb"
 
+	"hyperchain/crypto"
 )
 
 
@@ -96,6 +97,12 @@ func CreateInitBlock(filename string)  {
 // 2. Put transactions in block into db
 // 3. Update chain
 // 4. Update balance
+func WriteBlock(block types.Block, commonHash crypto.CommonHash)  {
+	currentChain := GetChainCopy()
+	log.Println("block number is ",block.Number)
+	block.ParentHash = currentChain.LatestBlockHash
+	block.BlockHash = block.Hash(commonHash).Bytes()
+
 func WriteBlock(block types.Block)  {
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
@@ -111,5 +118,8 @@ func WriteBlock(block types.Block)  {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Println("final number",currentChain.Height)
+	fmt.Println("final hash",currentChain.LatestBlockHash)
 	balance.UpdateDBBalance(&block)
 }
