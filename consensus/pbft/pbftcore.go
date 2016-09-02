@@ -183,8 +183,8 @@ func (instance *pbftCore) ProcessEvent(e events.Event) events.Event {
 	var err error
 	logger.Debugf("Replica %d processing event", instance.id)
 	switch et := e.(type) {
-	case *pbftMessage:
-		return pbftMessageEvent(*et)
+	//case *pbftMessage:
+	//	return pbftMessageEvent(*et)
 	case pbftMessageEvent:
 		msg := et
 		logger.Debugf("Replica %d received incoming message from %v", instance.id, msg.sender)

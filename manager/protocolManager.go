@@ -51,8 +51,7 @@ var countBlock int
 
 func NewProtocolManager(blockPool *core.BlockPool,peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
 encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
-	fmt.Println("enter parotocol manager")
-	fmt.Println(consenter)
+	log.Println("enter parotocol manager")
 	manager := &ProtocolManager{
 
 
@@ -109,10 +108,8 @@ func (self *ProtocolManager) NewBlockLoop() {
 			countBlock=countBlock+1
 
 			myLogger.GetLogger().Println(time.Now().UnixNano())
-			//myLogger.GetLogger().Println("block number is ",countBlock)
 			myLogger.GetLogger().Println("write block success")
 			log.Println("write block success")
-			//ioutil.WriteFile("./123.txt",[]byte(strconv.FormatInt(time.Now().UnixNano(),10)+"\n"),os.ModeAppend)
 			self.commitNewBlock(ev.Payload,ev.Now)
 		//self.fetcher.Enqueue(ev.Payload)
 
@@ -147,7 +144,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			//call consensus module
 			log.Println("###### enter ConsensusEvent")
 			//logger.GetLogger().Println("###### enter ConsensusEvent")
-			go self.consenter.RecvMsg(ev.Payload)
+			self.consenter.RecvMsg(ev.Payload)
 
 
 		}
@@ -214,7 +211,7 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 }
 
 
-
+// add new block into block pool
 func (pm *ProtocolManager) commitNewBlock(payload[]byte,now uint64) {
 
 	msgList := &protos.ExeMessage{}
