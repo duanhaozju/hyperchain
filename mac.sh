@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
 echo "##########################"
 echo "#   TEST FOR HYPERCHAIN  #"
 echo "##########################"
@@ -16,10 +17,10 @@ echo "rebuild the application"
 govendor build
 
 echo "run the application"
-
-./hyperchain -o 1 -l 8081 > ./node_1_log.txt &
-./hyperchain -o 2 -l 8082 > ./node_2_log.txt &
-./hyperchain -o 3 -l 8083 > ./node_3_log.txt &
-./hyperchain -o 4 -l 8084 > ./node_4_log.txt &
+# change the terminal program here!!!
+gnome-terminal -x bash -c "(./hyperchain -o 1 -l 8081)"
+gnome-terminal -x bash -c "(./hyperchain -o 2 -l 8082)"
+gnome-terminal -x bash -c "(./hyperchain -o 3 -l 8083)"
+gnome-terminal -x bash -c "(./hyperchain -o 4 -l 8084)"
 
 echo "All process are running background"

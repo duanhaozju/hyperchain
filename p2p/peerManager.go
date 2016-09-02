@@ -20,7 +20,6 @@ import (
 	"log"
 	"encoding/hex"
 	"hyperchain/event"
-	"fmt"
 )
 
 const MAXPEERNODE = 4
@@ -167,7 +166,7 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 
 func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 	for _, peer := range pPool.GetPeers() {
-		fmt.Println("((((((广播/Broadcast))))))")
+		log.Println("((((((广播/Broadcast))))))")
 		resMsg, err := peer.Chat(&broadCastMessage)
 		if err != nil {
 			log.Println("Broadcast failed,Node", peer.Addr)
