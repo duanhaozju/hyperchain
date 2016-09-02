@@ -28,7 +28,7 @@ func NewEcdsaEncrypto(name string) *EcdsaEncrypto  {
 }
 
 
-func (ee *EcdsaEncrypto)GenerateKey()(*ecdsa.PrivateKey,error)  {
+func GenerateKey()(*ecdsa.PrivateKey,error)  {
 	return ecdsa.GenerateKey(secp256k1.S256(), rand.Reader)
 }
 
@@ -56,20 +56,20 @@ func (ee *EcdsaEncrypto)UnSign(args ...interface{})([]byte, error)  {
 	if err!=nil{
 		return nil,err
 	}
-	addr := ee.Keccak256(pubBytes[1:])[12:]
+	addr := Keccak256(pubBytes[1:])[12:]
 	return addr,nil
 }
 func (ee *EcdsaEncrypto)GeneralKey(port string)(interface{},error) {
-	key,err := ee.GenerateKey()
+	key,err := GenerateKey()
 	if err!=nil{
 		return nil,err
 	}
 
 	ee.port=port
-	k := hex.EncodeToString(ee.FromECDSA(key))
+	k := hex.EncodeToString(FromECDSA(key))
 	_, error := os.Stat(keystoredir)
 	if error == nil || os.IsExist(error){
-		fmt.Println("directory exists")
+		//("directory exists")
 
 	}else {
 		fmt.Println("no")
@@ -85,12 +85,16 @@ func (ee *EcdsaEncrypto)GeneralKey(port string)(interface{},error) {
 //load key by given port
 func (ee *EcdsaEncrypto)GetKey() (interface{},error) {
 	file := keystoredir+ee.port
-	return ee.LoadECDSA(file)
+	return LoadECDSA(file)
 }
 
+func (ee *EcdsaEncrypto)PrivKeyToAddress(prv interface {})[]byte  {
+	p := prv.(ecdsa.PrivateKey)
+	return PubkeyToAddress(p.PublicKey)
+}
 // LoadECDSA loads a secp256k1 private key from the given file.
 // key data is expected to be hex-encoded.
-func (ee *EcdsaEncrypto)LoadECDSA(file string) (*ecdsa.PrivateKey, error) {
+func LoadECDSA(file string) (*ecdsa.PrivateKey, error) {
 	buf := make([]byte, 64)
 	fd, err := os.Open(file)
 	if err != nil {
@@ -106,10 +110,10 @@ func (ee *EcdsaEncrypto)LoadECDSA(file string) (*ecdsa.PrivateKey, error) {
 		return nil, err
 	}
 
-	return ee.ToECDSA(key), nil
+	return ToECDSA(key), nil
 }
 // New methods using proper ecdsa keys from the stdlib
-func (ee *EcdsaEncrypto)ToECDSA(prv []byte) *ecdsa.PrivateKey {
+func ToECDSA(prv []byte) *ecdsa.PrivateKey {
 	if len(prv) == 0 {
 		return nil
 	}
@@ -121,7 +125,7 @@ func (ee *EcdsaEncrypto)ToECDSA(prv []byte) *ecdsa.PrivateKey {
 	return priv
 }
 
-func (ee *EcdsaEncrypto)FromECDSA(prv *ecdsa.PrivateKey) []byte {
+func FromECDSA(prv *ecdsa.PrivateKey) []byte {
 	if prv == nil {
 		return nil
 	}
@@ -129,14 +133,14 @@ func (ee *EcdsaEncrypto)FromECDSA(prv *ecdsa.PrivateKey) []byte {
 }
 // SaveECDSA saves a secp256k1 private key to the given file with
 // restrictive permissions. The key data is saved hex-encoded.
-func (ee *EcdsaEncrypto)SaveECDSA(file string, key *ecdsa.PrivateKey) error {
-	k := hex.EncodeToString(ee.FromECDSA(key))
+func SaveECDSA(file string, key *ecdsa.PrivateKey) error {
+	k := hex.EncodeToString(FromECDSA(key))
 	return ioutil.WriteFile(file, []byte(k), 0600)
 }
 //SaveNodeInfo saves the info of node into local file
 //ip addr and pri
-func (ee *EcdsaEncrypto)SaveNodeInfo(file string, port string ,addr []byte, pri *ecdsa.PrivateKey) error {
-	prikey := hex.EncodeToString(ee.FromECDSA(pri))
+func SaveNodeInfo(file string, port string ,addr []byte, pri *ecdsa.PrivateKey) error {
+	prikey := hex.EncodeToString(FromECDSA(pri))
 	content := port +" "+common.ToHex(addr)+" "+prikey+" \n"
 	fmt.Println(content)
 
@@ -154,22 +158,19 @@ func (ee *EcdsaEncrypto)SaveNodeInfo(file string, port string ,addr []byte, pri 
 	return err
 
 }
-func (ee *EcdsaEncrypto)PubkeyToAddress(p ecdsa.PublicKey) []byte {
-	pubBytes := ee.FromECDSAPub(&p)
-	return ee.Keccak256(pubBytes[1:])[12:]
+func PubkeyToAddress(p ecdsa.PublicKey) []byte {
+	pubBytes := FromECDSAPub(&p)
+	return Keccak256(pubBytes[1:])[12:]
 }
-func (ee *EcdsaEncrypto)PrivKeyToAddress(prv interface {})[]byte  {
-	p := prv.(ecdsa.PrivateKey)
-	return ee.PubkeyToAddress(p.PublicKey)
-}
-func (ee *EcdsaEncrypto)Keccak256(data ...[]byte) []byte {
+
+func Keccak256(data ...[]byte) []byte {
 	d := sha3.NewKeccak256()
 	for _, b := range data {
 		d.Write(b)
 	}
 	return d.Sum(nil)
 }
-func (ee *EcdsaEncrypto)FromECDSAPub(pub *ecdsa.PublicKey) []byte {
+func FromECDSAPub(pub *ecdsa.PublicKey) []byte {
 	if pub == nil || pub.X == nil || pub.Y == nil {
 		return nil
 	}
