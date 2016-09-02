@@ -9,6 +9,7 @@ import (
 	"log"
 	"hyperchain/core"
 	"hyperchain/manager"
+	"hyperchain/logger"
 )
 
 type TxArgs struct{
@@ -79,7 +80,7 @@ func GetAllTransactions()  []TransactionShow{
 
 	var transactions []TransactionShow
 
-	fmt.Println(txs)
+	myLogger.GetLogger().Println(txs)
 	for index, tx := range txs {
 
 		transactions[index].Value = string(tx.Value)

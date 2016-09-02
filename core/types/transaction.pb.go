@@ -24,15 +24,15 @@ type Transaction struct {
 func (m *Transaction) Reset()                    { *m = Transaction{} }
 func (m *Transaction) String() string            { return proto.CompactTextString(m) }
 func (*Transaction) ProtoMessage()               {}
-func (*Transaction) Descriptor() ([]byte, []int) { return fileDescriptor3, []int{0} }
+func (*Transaction) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{0} }
 
 func init() {
 	proto.RegisterType((*Transaction)(nil), "types.Transaction")
 }
 
-func init() { proto.RegisterFile("transaction.proto", fileDescriptor3) }
+func init() { proto.RegisterFile("transaction.proto", fileDescriptor2) }
 
-var fileDescriptor3 = []byte{
+var fileDescriptor2 = []byte{
 	// 144 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0x12, 0x2c, 0x29, 0x4a, 0xcc,
 	0x2b, 0x4e, 0x4c, 0x2e, 0xc9, 0xcc, 0xcf, 0xd3, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x2d,

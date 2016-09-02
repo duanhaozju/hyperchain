@@ -17,9 +17,10 @@ import (
 	"strconv"
 	"time"
 	"hyperchain/p2p/peerPool"
-	"log"
+	log "github.com/Sirupsen/logrus"
 	"encoding/hex"
 	"hyperchain/event"
+	"git.hyperchain.cn/hyperchain/hyperchain/crypto"
 )
 
 const MAXPEERNODE = 4
@@ -40,10 +41,16 @@ type GrpcPeerManager struct {
 	aliveChain   *chan bool
 }
 
+func init(){
+	common.LoggerInit()
+}
+
 // GetClientId GetLocalClientId
-func (this *GrpcPeerManager) GetClientId() common.Hash {
+func (this *GrpcPeerManager) GetClientId() common.Hash{
 	addr := node.GetNodeAddr()
-	return common.BytesToHash([]byte(addr.String()))
+	addrString := addr.String()
+	hasher := crypto.NewKeccak256Hash("keccak256Hanser")
+	return hasher.Hash(addrString)
 	//return *new(common.Hash)
 
 }
@@ -55,7 +62,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 	port, _ := strconv.Atoi(configs["port"+strconv.Itoa(NodeId)])
 	// start local node
 	this.localNode = node.NewNode(port,isTest,eventMux)
-	log.Println("Local Node hash:",hex.EncodeToString(this.GetClientId().Bytes()))
+	log.Info("Local Node Hash:",hex.EncodeToString(this.GetClientId().Bytes()))
 	//
 	this.aliveChain = &aliveChan
 
@@ -82,19 +89,34 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 	}
 	// connect other peers
 	for peerPool.GetAliveNodeNum() < MAXPEERNODE - 1{
-		log.Println("node:",NodeId,"process connecting task...")
+		log.Info("node:",NodeId,"process connecting task...")
 		nid := 1
 		for range time.Tick(3 * time.Second) {
 			status := alivePeerMap[nid]
 			//log.Println("status map", nid, status)
 			if !status {
-				//if this node is not online connect it
-				peerAddr := configs["node"+strconv.Itoa(nid)] + ":" + configs["port"+strconv.Itoa(nid)]
-				log.Println("Connecting to: ", peerAddr)
-				peer, peerErr := peer.NewPeer(peerAddr)
+				//if this node is not online, connect it
+				peerIp   := configs["node"+strconv.Itoa(nid)]
+				peerPort_s := configs["port"+strconv.Itoa(nid)]
+				peerPort_i,err := strconv.Atoi(peerPort_s)
+				if err != nil{
+					log.Error("port cannot convert into int",err)
+				}
+				peerPort_i32 := int32(peerPort_i)
+				peerAddress := pb.PeerAddress{
+					Ip:peerIp,
+					Port:peerPort_i32,
+				}
+				peerAddrString := peerIp + ":" + peerPort_s
+				log.Info("Connecting to: ", peerAddrString)
+				hasher := crypto.NewKeccak256Hash("keccak256Hanser")
+				peerNodeHash := hex.EncodeToString(hasher.Hash(peerAddress.String()).Bytes())
+
+				peer, peerErr := peer.NewPeerByString(peerAddrString)
 				if peerErr != nil {
 					// cannot connect to other peer
-					log.Println("Node: "+peerAddr+"can not connect!\n", peerErr)
+					log.Error("Node: "+peerAddrString+" can not connect!\n", peerErr)
+
 					//continue
 				} else {
 					// add  peer to peer pool
@@ -104,7 +126,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 						Port: int32(peerPort),
 					}, peer)
 					alivePeerMap[nid] = true
-					log.Println("Alive Peer Node ID:", peerPool.GetAliveNodeNum())
+					log.Info("Peer Node hash:", peerNodeHash)
 				}
 			}
 			nid += 1
@@ -113,11 +135,11 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 			}
 		}
 	}
-	log.Println("##########################################")
-	log.Println("#                                        #")
-	log.Println("# All the nodes have been connected...   #")
-	log.Println("#                                        #")
-	log.Println("##########################################")
+	log.Info("┌────────────────────────────────────────┐")
+	log.Info("│                                        │")
+	log.Info("│        All NODES WERE CONNECTED        │")
+	log.Info("│                                        │")
+	log.Info("└────────────────────────────────────────┘")
 
 	*this.aliveChain <- true
 }
@@ -166,12 +188,12 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 
 func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 	for _, peer := range pPool.GetPeers() {
-		log.Println("((((((广播/Broadcast))))))")
-		resMsg, err := peer.Chat(&broadCastMessage)
+		//log.Println("((((((广播/Broadcast))))))")
+		_, err := peer.Chat(&broadCastMessage)
 		if err != nil {
-			log.Println("Broadcast failed,Node", peer.Addr)
+			log.Error("Broadcast failed,Node", peer.Addr)
 		} else {
-			log.Println("resMsg:", string(resMsg.Payload))
+			//log.Println("resMsg:", string(resMsg.Payload))
 			//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
 		}
 	}
