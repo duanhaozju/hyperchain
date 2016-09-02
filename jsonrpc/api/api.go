@@ -26,6 +26,11 @@ type TransactionShow struct {
 
 type BalanceShow map[string]string
 
+type LastestBlockShow struct{
+	Number uint64
+	Hash []byte
+}
+
 // SendTransaction is to build a transaction object,and then post event NewTxEvent,
 // if the sender's balance is not enough, return false
 func SendTransaction(args TxArgs) bool {
@@ -105,6 +110,18 @@ func GetAllBalances() BalanceShow{
 	}
 
 	return balances
+}
+
+// LastestBlock returns the number and hash of the lastest block
+func LastestBlock() LastestBlockShow{
+	currentChain := core.GetChainCopy()
+
+
+
+	return LastestBlockShow{
+		Number: currentChain.Height,
+		Hash: currentChain.LatestBlockHash,
+	}
 }
 
 

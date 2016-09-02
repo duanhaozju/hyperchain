@@ -19,9 +19,12 @@
             金&emsp;额：<input name="value" placeholder="value"value="1"/><br>
             <!--<input name="address" placeholder="for example localhost:9000"/><br>-->
             <input type="button" id="button" value="提交">
-            <input type="reset">
+            <input type="reset">&emsp;<span class="status"></span>
         </form>
-        <div class="status"></div>
+        <div class="info">
+            <div>最新区块：{{.LastestBlock.Number}}</div>
+            <div>最新区块Hash: {{.LastestBlock.Hash}}</div>
+        </div>
     </div>
     <div class="list">
         <table class="trans">

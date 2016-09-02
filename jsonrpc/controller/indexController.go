@@ -16,6 +16,7 @@ type ResData struct{
 type data struct{
 	Trans    []api.TransactionShow
 	Balances api.BalanceShow
+	LastestBlock api.LastestBlockShow
 }
 
 var Testing bool = false
@@ -36,14 +37,17 @@ func Index(w http.ResponseWriter, r *http.Request) {
 
 	var tmpl = template.Must(template.ParseFiles(indexpath))
 
+
 	transactions := api.GetAllTransactions()
 	balances := api.GetAllBalances()
+	lastestBlock := api.LastestBlock()
 
 	//sort.Sort(types.Transactions(transactions)) // sort transactions
 
 	tmpl.Execute(w,data{
 		Trans:transactions,
 		Balances: balances,
+		LastestBlock: lastestBlock,
 	})
 }
 
