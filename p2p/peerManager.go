@@ -113,8 +113,11 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 			}
 		}
 	}
-	log.Println("All the ndes have been connected...")
-
+	log.Println("##########################################")
+	log.Println("#                                        #")
+	log.Println("# All the nodes have been connected...   #")
+	log.Println("#                                        #")
+	log.Println("##########################################")
 
 	*this.aliveChain <- true
 }
@@ -156,6 +159,20 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 		Payload:      payLoad,
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
+	pPool := peerPool.NewPeerPool(false, false)
+	//go this.EventManager.PostEvent(pb.Message_CONSUS, broadCastMessage)
+	go broadcast(broadCastMessage,&pPool)
+}
 
-	go this.EventManager.PostEvent(pb.Message_CONSUS, broadCastMessage)
+func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
+	for _, peer := range pPool.GetPeers() {
+		log.Println("((((((广播/Broadcast))))))")
+		resMsg, err := peer.Chat(&broadCastMessage)
+		if err != nil {
+			log.Println("Broadcast failed,Node", peer.Addr)
+		} else {
+			log.Println("resMsg:", string(resMsg.Payload))
+			//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
+		}
+	}
 }

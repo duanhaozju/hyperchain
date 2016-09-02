@@ -5,4 +5,5 @@ package consensus
 // Every consensus plugin needs to implement this interface
 type Consenter interface {
 	RecvMsg(msgPayload []byte) error // Called serially with incoming messages from gRPC
+	Close()
 }

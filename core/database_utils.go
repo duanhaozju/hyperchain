@@ -11,19 +11,22 @@ import (
 	"sync"
 	"encoding/json"
 	"hyperchain/common"
+	"log"
 )
 
+// the prefix of key, use to save to db
 var (
 	transactionPrefix   = []byte("transaction-")
-	blockPrefix    = []byte("block-")
+	blockPrefix         = []byte("block-")
 	chainKey            = []byte("chain-key")
-	balanceKey = []byte("balance-key")
-	bodySuffix   = []byte("-body")
+	balanceKey          = []byte("balance-key")
+	bodySuffix          = []byte("-body")
 	txMetaSuffix        = []byte{0x01}
 )
-//-- 初始化ldb 和 memdb
-//-- 应该在程序开始初始化
-//-- port为端口号
+
+// InitDB initialization ldb and memdb
+// should be called while programming start-up
+// port: the server port
 func InitDB(port int) {
 	hyperdb.SetLDBPath(port)
 	memChainMap = newMemChain()
@@ -36,7 +39,7 @@ func PutTransaction(db hyperdb.Database, key []byte, t types.Transaction) error 
 	if err != nil {
 		return err
 	}
-	//-- 给key加上前缀,用于区分,实际存放的key
+	// add key by prefix to identification for a key-value database
 	keyFact := append(transactionPrefix, key...)
 	if err := db.Put(keyFact, data); err != nil {
 		return err
@@ -82,11 +85,11 @@ func GetAllTransaction(db *hyperdb.LDBDatabase) ([]types.Transaction, error) {
 
 //-- ------------------- Block ---------------------------------
 func PutBlock(db hyperdb.Database, key []byte, t types.Block) error {
+	log.Println("write success in db")
 	data, err := proto.Marshal(&t)
 	if err != nil {
 		return err
 	}
-	//-- 给key加上前缀,用于区分,实际存放的key
 	keyFact := append(blockPrefix, key...)
 	if err := db.Put(keyFact, data); err != nil {
 		return err
@@ -153,6 +156,8 @@ type memChain struct {
 	lock sync.RWMutex
 }
 
+// newMenChain new a memChain instance
+// it read from db firstly, if not exist, create a empty chain
 func newMemChain() *memChain {
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
@@ -176,20 +181,22 @@ func newMemChain() *memChain {
 }
 var memChainMap *memChain;
 
-//-- 获取最新的blockhash
+// GetLatestBlockHash get latest blockHash
 func GetLatestBlockHash() []byte {
 	memChainMap.lock.RLock()
 	defer memChainMap.lock.RUnlock()
 	return memChainMap.data.LatestBlockHash
 }
 
-//-- 更新Chain，即更新最新的blockhash 并将height加1,
-//-- blockHash为最新区块的hash
-func UpdateChain(blockHash []byte) error {
+// UpdateChain update latest blockHash as given blockHash
+// and the height of chain add 1
+func UpdateChain(blockHash []byte, genesis bool) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
 	memChainMap.data.LatestBlockHash = blockHash
-	memChainMap.data.Height += 1
+	if !genesis {
+		memChainMap.data.Height += 1
+	}
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		return err
@@ -197,14 +204,14 @@ func UpdateChain(blockHash []byte) error {
 	return putChain(db, memChainMap.data)
 }
 
-//-- 获取区块的高度
-func GetHeightOfChain() int64 {
+// GetHeightOfChain get height of chain
+func GetHeightOfChain() uint64 {
 	memChainMap.lock.RLock()
 	defer memChainMap.lock.RUnlock()
 	return memChainMap.data.Height
 }
 
-//-- 获取chain的拷贝
+// GetChainCopy get copy of chain
 func GetChainCopy() *types.Chain {
 	memChainMap.lock.RLock()
 	defer memChainMap.lock.RUnlock()

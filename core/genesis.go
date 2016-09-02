@@ -15,6 +15,8 @@ import (
 	"log"
 
 	"hyperchain/hyperdb"
+
+	"hyperchain/crypto"
 )
 
 
@@ -22,17 +24,12 @@ func CreateInitBlock(filename string)  {
 	log.Println("genesis start")
 
 	type Genesis struct {
-
 		Timestamp  int64
-		ParentHash  string
+		ParentHash string
 		BlockHash  string
-		Coinbase    string
-		Number int64
-		Alloc       map[string]string
-
-
-
-
+		Coinbase   string
+		Number     uint64
+		Alloc      map[string]string
 	}
 
 	var genesis = map[string]Genesis{}
@@ -90,7 +87,8 @@ func CreateInitBlock(filename string)  {
 
 	log.Println("构造创世区块")
 
-	UpdateChain(block.BlockHash)
+	UpdateChain(block.BlockHash,true)
+	log.Println("current chain block number is",GetChainCopy().Height)
 
 }
 
@@ -98,7 +96,11 @@ func CreateInitBlock(filename string)  {
 // 1. put block db
 // 2. update chain
 // 3. update balance
-func WriteBlock(block types.Block)  {
+func WriteBlock(block types.Block, commonHash crypto.CommonHash)  {
+	currentChain := GetChainCopy()
+	log.Println("block number is ",block.Number)
+	block.ParentHash = currentChain.LatestBlockHash
+	block.BlockHash = block.Hash(commonHash).Bytes()
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
@@ -107,10 +109,13 @@ func WriteBlock(block types.Block)  {
 	if err != nil {
 		log.Fatal(err)
 	}
-	UpdateChain(block.BlockHash)
+	UpdateChain(block.BlockHash,false)
 	balance, err := GetBalanceIns()
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Println("final number",currentChain.Height)
+	fmt.Println("final hash",currentChain.LatestBlockHash)
 	balance.UpdateDBBalance(&block)
 }

@@ -18,7 +18,7 @@ type Stack interface {
 }
 
 func (h *helper) InnerBroadcast(msg *pb.Message) error{
-	fmt.Println("enter innerbroad cast")
+	fmt.Println("enter innerbroad cast#######")
 	tmpMsg, err := proto.Marshal(msg)
 	if err != nil {
 		return err

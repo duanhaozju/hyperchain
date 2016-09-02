@@ -21,8 +21,9 @@ func initPM() *manager.ProtocolManager{
 	encryption :=crypto.NewEcdsaEncrypto("ecdsa")
 	encryption.GeneralKey(string(8012))
 	commonHash:=crypto.NewKeccak256Hash("keccak256")
+	//blockPool:=core.NewBlockPool(eventMux)
 
-	return manager.NewProtocolManager(peerManager, eventMux, fetcher, nil, encryption, commonHash)
+	return manager.NewProtocolManager(nil,peerManager, eventMux, fetcher, nil, encryption, commonHash)
 }
 
 func TestSendTransaction(t *testing.T) {

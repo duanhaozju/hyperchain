@@ -19,7 +19,7 @@ type Block struct {
 	Transactions []*Transaction `protobuf:"bytes,3,rep,name=transactions" json:"transactions,omitempty"`
 	Timestamp    int64          `protobuf:"varint,4,opt,name=timestamp" json:"timestamp,omitempty"`
 	MerkleRoot   []byte         `protobuf:"bytes,5,opt,name=merkleRoot,proto3" json:"merkleRoot,omitempty"`
-	Number       int64          `protobuf:"varint,6,opt,name=number" json:"number,omitempty"`
+	Number       uint64          `protobuf:"varint,6,opt,name=number" json:"number,omitempty"`
 }
 
 func (m *Block) Reset()                    { *m = Block{} }

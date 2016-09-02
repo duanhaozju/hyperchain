@@ -20,6 +20,8 @@ import (
 
 	"hyperchain/consensus/controller"
 	"hyperchain/jsonrpc"
+
+	"hyperchain/logger"
 )
 
 type argT struct {
@@ -39,11 +41,12 @@ func main(){
 
 
 
-
-
 		/*init peer manager object,consensus object*/
 
 		argv := ctx.Argv().(*argT)
+
+		//init logger
+		myLogger.NewLogger(argv.LocalPort)
 
 		eventMux := new(event.TypeMux)
 
@@ -54,12 +57,16 @@ func main(){
 		fetcher := core.NewFetcher()
 
 
+
+
 		//init pbft consensus
 		cs:=controller.NewConsenter(uint64(argv.NodeId),eventMux)
 
 		//init db
 		core.InitDB(argv.LocalPort)
 		core.CreateInitBlock("./core/genesis.json")
+
+
 
 
 
@@ -77,12 +84,13 @@ func main(){
 
 		nodePath:="./p2p/peerconfig.json"
 
+		blockPool:=core.NewBlockPool(eventMux)
 
 
 
 		//init manager
 		go jsonrpc.StartHttp(argv.LocalPort,eventMux)
-		manager.New(eventMux,grpcPeerMgr,cs,fetcher,encryption,kec256Hash,
+		manager.New(eventMux,blockPool,grpcPeerMgr,cs,fetcher,encryption,kec256Hash,
 			nodePath,argv.NodeId)
 
 
