@@ -55,3 +55,7 @@ table tr td,table tr th{
     width:100%;
     color:red;
 }
+.info{
+    padding: 8px 5px;
+    color: #5a5757;
+}
