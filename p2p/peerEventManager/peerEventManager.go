@@ -12,7 +12,8 @@ import (
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/peerComm"
 	"errors"
-	"log"
+	log "github.com/Sirupsen/logrus"
+
 	eventHandler "hyperchain/p2p/peerEventHandler"
 	"sync"
 )
