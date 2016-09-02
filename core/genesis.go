@@ -17,6 +17,7 @@ import (
 	"hyperchain/hyperdb"
 
 	"hyperchain/crypto"
+	"time"
 )
 
 
@@ -103,6 +104,7 @@ func WriteBlock(block types.Block, commonHash crypto.CommonHash)  {
 	currentChain := GetChainCopy()
 	block.ParentHash = currentChain.LatestBlockHash
 	block.BlockHash = block.Hash(commonHash).Bytes()
+	block.WriteTime = time.Now().UnixNano()
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
