@@ -7,7 +7,8 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-func batchMsgHelper(msg *BatchMessage, id uint64) *pb.Message {
+func consensusMsgHelper(msg *ConsensusMessage, id uint64) *pb.Message {
+
 	msgPayload, _ := proto.Marshal(msg)
 	pbMsg := &pb.Message{
 		Type:		pb.Message_CONSENSUS,
@@ -15,17 +16,20 @@ func batchMsgHelper(msg *BatchMessage, id uint64) *pb.Message {
 		Timestamp:	time.Now().UnixNano(),
 		Id:		id,
 	}
+
 	return pbMsg
 }
 
 func pbftMsgHelper(msg *Message, id uint64) *pb.Message {
-	pbftPayload, _ := proto.Marshal(msg)
-	batchMsg := &BatchMessage{Payload: &BatchMessage_PbftMessage{PbftMessage: pbftPayload}}
-	pbMsg := batchMsgHelper(batchMsg, id)
+
+	consensusMsg := &ConsensusMessage{Payload: &ConsensusMessage_PbftMessage{PbftMessage: msg}}
+	pbMsg := consensusMsgHelper(consensusMsg, id)
+
 	return pbMsg
 }
 
 func exeBatchHelper(reqBatch *RequestBatch) *pb.ExeMessage {
+
 	batches := []*pb.Message{}
 	requests := reqBatch.Batch
 	for i := 0; i < len(requests); i++ {
@@ -38,4 +42,5 @@ func exeBatchHelper(reqBatch *RequestBatch) *pb.ExeMessage {
 	}
 	exeMsg := &pb.ExeMessage{Batch: batches}
 	return exeMsg
+
 }

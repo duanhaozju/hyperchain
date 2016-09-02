@@ -114,11 +114,9 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 			}
 		}
 	}
-	log.Println("##########################################")
-	log.Println("#                                        #")
-	log.Println("# All the nodes have been connected...   #")
-	log.Println("#                                        #")
-	log.Println("##########################################")
+
+	log.Println("----------------All the nodes have been connected-----------------")
+
 
 	*this.aliveChain <- true
 }
@@ -153,7 +151,6 @@ func (this *GrpcPeerManager) GetAllPeers() []*peer.Peer {
 
 // BroadcastPeers Broadcast Massage to connected peers
 func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
-	log.Println("enter peer manager broadcast")
 	localNodeAddr := node.GetNodeAddr()
 	var broadCastMessage = pb.Message{
 		MessageType:  pb.Message_CONSUS,
@@ -162,22 +159,21 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 
-	go this.EventManager.PostEvent(pb.Message_CONSUS, broadCastMessage)
-	go func() {
-		log.Println(broadCastMessage.MessageType)
-		pPool := peerPool.NewPeerPool(false, false)
-		fmt.Println("现在有节点数目:", pPool.GetAliveNodeNum())
-		ps := pPool.GetPeers()
-		fmt.Println("现在有节点数目:", len(ps))
-		for _, peer := range pPool.GetPeers() {
-			fmt.Println("广播....")
-			resMsg, err := peer.Chat(&broadCastMessage)
-			if err != nil {
-				log.Println("Broadcast failed,Node", peer.Addr)
-			} else {
-				log.Println("resMsg:", string(resMsg.Payload))
-				//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
-			}
+	//go this.EventManager.PostEvent(pb.Message_CONSUS, broadCastMessage)
+	go func(){log.Println(broadCastMessage.MessageType)
+	pPool := peerPool.NewPeerPool(false,false)
+	fmt.Println("现在有节点数目:",pPool.GetAliveNodeNum())
+	ps := pPool.GetPeers()
+	fmt.Println("现在有节点数目:",len(ps))
+	for _,peer := range pPool.GetPeers(){
+		fmt.Println("广播....")
+		resMsg,err := peer.Chat(&broadCastMessage)
+		if err != nil{
+			log.Println("Broadcast failed,Node",peer.Addr)
+		}else{
+			log.Println("resMsg:",string(resMsg.Payload))
+			//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
 		}
+	}
 	}()
 }
