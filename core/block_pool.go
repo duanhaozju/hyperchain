@@ -103,6 +103,7 @@ func (pool *BlockPool)AddBlock(block *types.Block,commonHash crypto.CommonHash) 
 		pool.demandNumber+=1
 		log.Println("current demandNumber is ",pool.demandNumber)
 		WriteBlock(*block,commonHash)
+
 		pool.mu.RUnlock()
 
 
@@ -113,6 +114,7 @@ func (pool *BlockPool)AddBlock(block *types.Block,commonHash crypto.CommonHash) 
 					pool.demandNumber+=1
 					log.Println("current demandNumber is ",pool.demandNumber)
 					WriteBlock(*pool.queue[i],commonHash)
+					delete(pool.queue,i)
 					pool.mu.RUnlock()
 
 
@@ -121,8 +123,6 @@ func (pool *BlockPool)AddBlock(block *types.Block,commonHash crypto.CommonHash) 
 				}
 
 			}
-
-
 
 		return
 	} else {

@@ -221,11 +221,8 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte,now uint64) {
 		block.Timestamp = item.Timestamp
 		block.Transactions = append(block.Transactions, tx)
 	}
-	//currentChain := core.GetChainCopy()
-	//block.Number = currentChain.Height + 1
+
 	block.Number=now
-	//block.ParentHash = currentChain.LatestBlockHash
-	//block.BlockHash = block.Hash(pm.commonHash).Bytes()
 
 	log.Println("now is ",now)
 	pm.blockPool.AddBlock(block,pm.commonHash)
