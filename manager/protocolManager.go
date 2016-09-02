@@ -78,8 +78,6 @@ func GetEventObject() *event.TypeMux {
 // start listen new block msg and consensus msg
 func (pm *ProtocolManager) Start() {
 
-	//commit block into local db
-
 
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
@@ -103,9 +101,8 @@ func (self *ProtocolManager) NewBlockLoop() {
 
 		switch  ev :=obj.Data.(type) {
 		case event.NewBlockEvent:
-			//commit block into local db
-
-			countBlock=countBlock+1
+			//accept msg from consensus module
+			//commit block into block pool
 
 			myLogger.GetLogger().Println(time.Now().UnixNano())
 			myLogger.GetLogger().Println("write block success")
