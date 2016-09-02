@@ -162,12 +162,12 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 	}
 	pPool := peerPool.NewPeerPool(false, false)
 	//go this.EventManager.PostEvent(pb.Message_CONSUS, broadCastMessage)
-	go broadcast(broadCastMessage,pPool)
+	go broadcast(broadCastMessage,&pPool)
 }
 
 func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 	for _, peer := range pPool.GetPeers() {
-		fmt.Println("广播....")
+		fmt.Println("((((((广播/Broadcast))))))")
 		resMsg, err := peer.Chat(&broadCastMessage)
 		if err != nil {
 			log.Println("Broadcast failed,Node", peer.Addr)
