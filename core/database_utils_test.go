@@ -9,6 +9,7 @@ import (
 	"log"
 	"strconv"
 	"github.com/syndtr/goleveldb/leveldb"
+	"hyperchain/crypto"
 )
 
 var transactionCases = []*types.Transaction{
@@ -16,7 +17,7 @@ var transactionCases = []*types.Transaction{
 		From: []byte("zhangsan"),
 		To: []byte("wangwu"),
 		Value: []byte("100"),
-		TimeStamp: time.Now().UnixNano(),
+		TimeStamp: time.Now().UnixNano() - int64(time.Second),
 		Signature: []byte("signature1"),
 	},
 	&types.Transaction{
@@ -66,6 +67,8 @@ func TestPutTransaction(t *testing.T) {
 		}
 	}
 }
+
+
 
 // TestGetTransaction tests for GetTransaction
 func TestGetTransaction(t *testing.T) {
@@ -126,6 +129,23 @@ func TestDeleteTransaction(t *testing.T) {
 	}
 }
 
+// TestPutTransactions tests for PutTransactions
+func TestPutTransactions(t *testing.T) {
+	log.Println("test =============> > > TestPutTransactions")
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+	commonHash := crypto.NewKeccak256Hash("keccak256")
+	PutTransactions(db, commonHash, transactionCases)
+	trs, err := GetAllTransaction(db)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(trs) < 3 {
+		t.Errorf("TestPutTransactions fail")
+	}
+}
 var blockUtilsCase = types.Block{
 	ParentHash: []byte("parenthash"),
 	BlockHash: []byte("blockhash"),
@@ -133,6 +153,7 @@ var blockUtilsCase = types.Block{
 	Timestamp    : time.Now().UnixNano(),
 	MerkleRoot  : []byte("merkeleroot"),
 	Number       : 1,
+	WriteTime: time.Now().UnixNano() + int64(time.Second)/2,
 }
 
 // TestPutBlock tests for PutBlock

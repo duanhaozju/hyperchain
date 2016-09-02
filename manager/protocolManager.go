@@ -78,8 +78,6 @@ func GetEventObject() *event.TypeMux {
 // start listen new block msg and consensus msg
 func (pm *ProtocolManager) Start() {
 
-	//commit block into local db
-
 
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
@@ -103,14 +101,13 @@ func (self *ProtocolManager) NewBlockLoop() {
 
 		switch  ev :=obj.Data.(type) {
 		case event.NewBlockEvent:
-			//commit block into local db
-
-			countBlock=countBlock+1
+			//accept msg from consensus module
+			//commit block into block pool
 
 			myLogger.GetLogger().Println(time.Now().UnixNano())
 			myLogger.GetLogger().Println("write block success")
 			log.Println("write block success")
-			self.commitNewBlock(ev.Payload,ev.Now)
+			self.commitNewBlock(ev.Payload)
 		//self.fetcher.Enqueue(ev.Payload)
 
 		}
@@ -212,7 +209,7 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 
 
 // add new block into block pool
-func (pm *ProtocolManager) commitNewBlock(payload[]byte,now uint64) {
+func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
 
 	msgList := &protos.ExeMessage{}
 	proto.Unmarshal(payload, msgList)
@@ -221,16 +218,14 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte,now uint64) {
 		tx := &types.Transaction{}
 
 		proto.Unmarshal(item.Payload, tx)
-		block.Timestamp = item.Timestamp
+
 		block.Transactions = append(block.Transactions, tx)
 	}
-	//currentChain := core.GetChainCopy()
-	//block.Number = currentChain.Height + 1
-	block.Number=now
-	//block.ParentHash = currentChain.LatestBlockHash
-	//block.BlockHash = block.Hash(pm.commonHash).Bytes()
+	block.Timestamp = msgList.Timestamp
 
-	log.Println("now is ",now)
+	block.Number=msgList.No
+
+	log.Println("now is ",msgList.No)
 	pm.blockPool.AddBlock(block,pm.commonHash)
 	//core.WriteBlock(*block)
 

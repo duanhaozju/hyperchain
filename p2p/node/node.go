@@ -11,7 +11,7 @@ import (
 	pb "hyperchain/p2p/peermessage"
 	"golang.org/x/net/context"
 	"net"
-	"log"
+	log "github.com/Sirupsen/logrus"
 	"google.golang.org/grpc"
 	"strconv"
 	"hyperchain/p2p/peerComm"
@@ -69,7 +69,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	case pb.Message_CONSUS:{
 		response.MessageType = pb.Message_RESPONSE
 		response.Payload = []byte("Consensus has received, response from " + strconv.Itoa(int(GetNodeAddr().Port)))
-		log.Println("<<<< GOT A CONSUS MESSAGE >>>>")
+		log.Info("<<<< GOT A CONSUS MESSAGE >>>>")
 
 		go this.higherEventManager.Post(event.ConsensusEvent{
 			Payload:msg.Payload,

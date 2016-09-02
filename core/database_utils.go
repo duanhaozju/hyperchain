@@ -11,7 +11,8 @@ import (
 	"sync"
 	"encoding/json"
 	"hyperchain/common"
-	"log"
+	"hyperchain/crypto"
+	"strconv"
 )
 
 // the prefix of key, use to save to db
@@ -20,6 +21,7 @@ var (
 	blockPrefix         = []byte("block-")
 	chainKey            = []byte("chain-key")
 	balanceKey          = []byte("balance-key")
+	blockNumPrefix      = []byte("blockNum-")
 	bodySuffix          = []byte("-body")
 	txMetaSuffix        = []byte{0x01}
 )
@@ -45,6 +47,22 @@ func PutTransaction(db hyperdb.Database, key []byte, t types.Transaction) error 
 		return err
 	}
 	return nil
+}
+
+// PutTransactions put transaction into database using Batch
+// Each Transaction's key is its hash
+func PutTransactions(db hyperdb.Database, commonHash crypto.CommonHash ,ts []*types.Transaction) error {
+	batch := db.NewBatch()
+	for _, trans := range ts {
+		key := trans.Hash(commonHash).Bytes()
+		keyFact := append(transactionPrefix, key...)
+		value, err := proto.Marshal(trans)
+		if err != nil {
+			return nil
+		}
+		batch.Put(keyFact, value)
+	}
+	return batch.Write()
 }
 
 func GetTransaction(db hyperdb.Database, key []byte) (types.Transaction, error){
@@ -85,7 +103,6 @@ func GetAllTransaction(db *hyperdb.LDBDatabase) ([]types.Transaction, error) {
 
 //-- ------------------- Block ---------------------------------
 func PutBlock(db hyperdb.Database, key []byte, t types.Block) error {
-	log.Println("write success in db")
 	data, err := proto.Marshal(&t)
 	if err != nil {
 		return err
@@ -94,7 +111,14 @@ func PutBlock(db hyperdb.Database, key []byte, t types.Block) error {
 	if err := db.Put(keyFact, data); err != nil {
 		return err
 	}
-	return nil
+	keyNum := strconv.FormatInt(int64(t.Number), 10)
+	err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
+	return err
+}
+
+func GetBlockHash(db hyperdb.Database, blockNumber uint64) ([]byte, error) {
+	keyNum := strconv.FormatInt(int64(blockNumber), 10)
+	return db.Get(append(blockNumPrefix, keyNum...))
 }
 
 func GetBlock(db hyperdb.Database, key []byte) (types.Block, error){
