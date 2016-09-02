@@ -24,7 +24,7 @@ type Peer struct {
 	Idetity string
 }
 
-func NewPeer(address string)(*Peer,error){
+func NewPeerByString(address string)(*Peer,error){
 	var peer Peer
 	arr := strings.Split(address,":")
 	p,_ := strconv.Atoi(arr[1])

@@ -84,12 +84,15 @@ func main(){
 
 		nodePath:="./p2p/peerconfig.json"
 
+		//init block pool to save block
 		blockPool:=core.NewBlockPool(eventMux)
 
 
 
-		//init manager
+		//start http server
 		go jsonrpc.StartHttp(argv.LocalPort,eventMux)
+
+		//init manager
 		manager.New(eventMux,blockPool,grpcPeerMgr,cs,fetcher,encryption,kec256Hash,
 			nodePath,argv.NodeId)
 
