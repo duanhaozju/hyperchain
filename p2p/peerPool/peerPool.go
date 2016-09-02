@@ -78,7 +78,7 @@ func NewPeerPool(isNewInstance bool,isKeepAlive bool) PeersPool {
 // PutPeer put a peer into the peer pool and get a peer point
 func (this *PeersPool) PutPeer(addr pb.PeerAddress, client *peer.Peer) (*peer.Peer, error) {
 	addrString := addr.String()
-	log.Println("Add a peer:",addrString)
+	//log.Println("Add a peer:",addrString)
 	if _, ok := this.peerKeys[addr]; ok {
 		// the pool already has this client
 		return this.peers[addrString], errors.New("The client already in")
