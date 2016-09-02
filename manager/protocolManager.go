@@ -158,9 +158,6 @@ func (self *ProtocolManager) ConsensusLoop() {
 			//call consensus module
 			//Todo
 			log.Println("###### enter ConsensusEvent")
-			log.Println("###############################")
-			log.Println("#         outer recvMsg       #")
-			log.Println("###############################")
 			self.consenter.RecvMsg(ev.Payload)
 
 
@@ -177,9 +174,6 @@ func (self *ProtocolManager)sendMsg(payload []byte)  {
 		Id: 0,
 	}
 	msgSend, _ := proto.Marshal(msg)
-	log.Println("###############################")
-	log.Println("#         outer recvMsg       #")
-	log.Println("###############################")
 	self.consenter.RecvMsg(msgSend)
 }
 
