@@ -114,6 +114,7 @@ func (a sortableUint64Slice) Less(i, j int) bool {
 // =============================================================================
 
 func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerFactory) *pbftCore {
+
 	var err error
 	instance := &pbftCore{}
 	instance.id = id
@@ -123,6 +124,7 @@ func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerF
 
 	instance.N = config.GetInt("general.N")
 	instance.f = config.GetInt("general.f")
+
 	if instance.f*3+1 > instance.N {
 		panic(fmt.Sprintf("need at least %d enough replicas to tolerate %d byzantine faults, but only %d replicas configured", instance.f*3+1, instance.f, instance.N))
 	}
@@ -133,15 +135,17 @@ func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerF
 	if instance.logMultiplier < 2 {
 		panic("Log multiplier must be greater than or equal to 2")
 	}
+
 	instance.L = instance.logMultiplier * instance.K // log size
-
 	instance.byzantine = config.GetBool("general.byzantine")
-
 	instance.requestTimeout, err = time.ParseDuration(config.GetString("timeout.request"))
+
 	if err != nil {
 		panic(fmt.Errorf("Cannot parse request timeout: %s", err))
 	}
+
 	instance.nullRequestTimeout, err = time.ParseDuration(config.GetString("timeout.nullrequest"))
+
 	if err != nil {
 		instance.nullRequestTimeout = 0
 	}
@@ -155,6 +159,7 @@ func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerF
 	logger.Infof("PBFT Checkpoint period (K) = %v", instance.K)
 	logger.Infof("PBFT Log multiplier = %v", instance.logMultiplier)
 	logger.Infof("PBFT log size (L) = %v", instance.L)
+
 	if instance.nullRequestTimeout > 0 {
 		logger.Infof("PBFT null requests timeout = %v", instance.nullRequestTimeout)
 	} else {
@@ -170,6 +175,7 @@ func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerF
 	// initialize state transfer
 	instance.outstandingReqBatches = make(map[string]*RequestBatch)
 	logger.Infof("--------PBFT finish start, nodeID: %d--------", instance.id)
+
 	return instance
 }
 
@@ -180,8 +186,10 @@ func (instance *pbftCore) close() {
 
 // allow the view-change protocol to kick-off when the timer expires
 func (instance *pbftCore) ProcessEvent(e events.Event) events.Event {
+
 	var err error
 	logger.Debugf("Replica %d processing event", instance.id)
+
 	switch et := e.(type) {
 	//case *pbftMessage:
 	//	return pbftMessageEvent(*et)
@@ -236,14 +244,17 @@ func (instance *pbftCore) inWV(v uint64, n uint64) bool {
 // Given a digest/view/seq, is there an entry in the certLog?
 // If so, return it. If not, create it.
 func (instance *pbftCore) getCert(v uint64, n uint64) (cert *msgCert) {
+
 	idx := msgID{v, n}
 	cert, ok := instance.certStore[idx]
+
 	if ok {
 		return
 	}
 
 	cert = &msgCert{}
 	instance.certStore[idx] = cert
+
 	return
 }
 
@@ -264,6 +275,7 @@ func (instance *pbftCore) committedReplicasQuorum() int {
 // =============================================================================
 
 func (instance *pbftCore) prePrepared(digest string, v uint64, n uint64) bool {
+
 	_, mInLog := instance.reqBatchStore[digest]
 
 	if digest != "" && !mInLog {
@@ -276,18 +288,22 @@ func (instance *pbftCore) prePrepared(digest string, v uint64, n uint64) bool {
 	//}
 
 	cert := instance.certStore[msgID{v, n}]
+
 	if cert != nil {
 		p := cert.prePrepare
 		if p != nil && p.View == v && p.SequenceNumber == n && p.BatchDigest == digest {
 			return true
 		}
 	}
+
 	logger.Debugf("Replica %d does not have view=%d/seqNo=%d pre-prepared",
 		instance.id, v, n)
+
 	return false
 }
 
 func (instance *pbftCore) prepared(digest string, v uint64, n uint64) bool {
+
 	if !instance.prePrepared(digest, v, n) {
 		return false
 	}
@@ -298,6 +314,7 @@ func (instance *pbftCore) prepared(digest string, v uint64, n uint64) bool {
 
 	quorum := 0
 	cert := instance.certStore[msgID{v, n}]
+
 	if cert == nil {
 		return false
 	}
@@ -315,12 +332,14 @@ func (instance *pbftCore) prepared(digest string, v uint64, n uint64) bool {
 }
 
 func (instance *pbftCore) committed(digest string, v uint64, n uint64) bool {
+
 	if !instance.prepared(digest, v, n) {
 		return false
 	}
 
 	quorum := 0
 	cert := instance.certStore[msgID{v, n}]
+
 	if cert == nil {
 		return false
 	}
@@ -347,9 +366,11 @@ func (instance *pbftCore) nullRequestHandler() {
 	// pre-prepare with null digest
 	logger.Info("Primary %d null request timer expired, sending null request", instance.id)
 	instance.sendPrePrepare(nil, "")
+
 }
 
 func (instance *pbftCore) recvMsg(msg *Message, senderID uint64) (interface{}, error) {
+
 	if reqBatch := msg.GetRequestBatch(); reqBatch != nil {
 		return reqBatch, nil
 	} else if preprep := msg.GetPrePrepare(); preprep != nil {
@@ -368,26 +389,31 @@ func (instance *pbftCore) recvMsg(msg *Message, senderID uint64) (interface{}, e
 		}
 		return commit, nil
 	}
+
 	return nil, fmt.Errorf("Invalid message: %v", msg)
 }
 
 func (instance *pbftCore) recvRequestBatch(reqBatch *RequestBatch) error {
+
 	digest := hash(reqBatch)
 	logger.Debugf("Replica %d received request batch %s", instance.id, digest)
 
 	instance.reqBatchStore[digest] = reqBatch
 	instance.outstandingReqBatches[digest] = reqBatch
 	//instance.persistRequestBatch(digest)
+
 	if instance.primary(instance.view) == instance.id {
 		instance.nullRequestTimer.Stop()
 		instance.sendPrePrepare(reqBatch, digest)
 	} else {
 		logger.Debugf("Replica %d is backup, not sending pre-prepare for request batch %s", instance.id, digest)
 	}
+
 	return nil
 }
 
 func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) {
+
 	logger.Debugf("Replica %d is primary, issuing pre-prepare for request batch %s", instance.id, digest)
 
 	n := instance.seqNo + 1
@@ -425,6 +451,7 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 }
 
 func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
+
 	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
 		instance.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
@@ -441,6 +468,7 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 	}
 
 	cert := instance.getCert(preprep.View, preprep.SequenceNumber)
+
 	if cert.digest != "" && cert.digest != preprep.BatchDigest {
 		logger.Warningf("Pre-prepare found for same view/seqNo but different digest: received %s, stored %s", preprep.BatchDigest, cert.digest)
 		return nil
@@ -483,6 +511,7 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 }
 
 func (instance *pbftCore) recvPrepare(prep *Prepare) error {
+
 	logger.Debugf("Replica %d received prepare from replica %d for view=%d/seqNo=%d",
 		instance.id, prep.ReplicaId, prep.View, prep.SequenceNumber)
 
@@ -505,6 +534,7 @@ func (instance *pbftCore) recvPrepare(prep *Prepare) error {
 			return nil
 		}
 	}
+
 	cert.prepare = append(cert.prepare, prep)
 
 	return instance.maybeSendCommit(prep.BatchDigest, prep.View, prep.SequenceNumber)
@@ -512,7 +542,9 @@ func (instance *pbftCore) recvPrepare(prep *Prepare) error {
 
 //
 func (instance *pbftCore) maybeSendCommit(digest string, v uint64, n uint64) error {
+
 	cert := instance.getCert(v, n)
+
 	if instance.prepared(digest, v, n) && !cert.sentCommit {
 		logger.Debugf("Replica %d broadcasting commit for view=%d/seqNo=%d",
 			instance.id, v, n)
@@ -527,10 +559,12 @@ func (instance *pbftCore) maybeSendCommit(digest string, v uint64, n uint64) err
 		msg := pbftMsgHelper(&Message{Payload: &Message_Commit{Commit: commit}}, instance.id)
 		return instance.helper.InnerBroadcast(msg)
 	}
+
 	return nil
 }
 
 func (instance *pbftCore) recvCommit(commit *Commit) error {
+
 	logger.Debugf("Replica %d received commit from replica %d for view=%d/seqNo=%d",
 		instance.id, commit.ReplicaId, commit.View, commit.SequenceNumber)
 
@@ -562,6 +596,8 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 
 
 func (instance *pbftCore) softStartTimer(timeout time.Duration, reason string) {
+
 	logger.Debugf("Replica %d soft starting new view timer for %s: %s", instance.id, timeout, reason)
 	instance.timerActive = true
+
 }
