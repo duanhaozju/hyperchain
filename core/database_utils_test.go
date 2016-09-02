@@ -209,7 +209,7 @@ var blockHashcases = [][]byte{
 // TestUpdateChain tests for UpdateChain
 func TestUpdateChain(t *testing.T) {
 	log.Println("test =============> > > TestUpdateChain")
-	for i, hash := range blockHashcases {
+	for _, hash := range blockHashcases {
 		UpdateChain(hash, false)
 		lasthash := GetLatestBlockHash()
 		if string(lasthash) != string(hash) {
