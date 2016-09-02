@@ -15,14 +15,19 @@ import (
 	"fmt"
 	"sync"
 	"crypto/ecdsa"
-	"log"
+
 	"hyperchain/protos"
 	"time"
-	
+
+
+	"log"
+	"hyperchain/logger"
+
 )
 
 type ProtocolManager struct {
 	serverPort   int
+	blockPool    *core.BlockPool
 	fetcher      *core.Fetcher
 	peerManager  p2p.PeerManager
 	consenter    consensus.Consenter
@@ -44,12 +49,13 @@ type ProtocolManager struct {
 var eventMuxAll *event.TypeMux
 var countBlock int
 
-func NewProtocolManager(peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
+func NewProtocolManager(blockPool *core.BlockPool,peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
 encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
-	fmt.Println("enter parotocol manager")
-	fmt.Println(consenter)
+	log.Println("enter parotocol manager")
 	manager := &ProtocolManager{
 
+
+		blockPool: blockPool,
 		eventMux:    eventMux,
 		quitSync:    make(chan struct{}),
 		consenter:consenter,
@@ -98,15 +104,13 @@ func (self *ProtocolManager) NewBlockLoop() {
 		switch  ev :=obj.Data.(type) {
 		case event.NewBlockEvent:
 			//commit block into local db
-			//log.Println(ev.Payload)
 
 			countBlock=countBlock+1
 
-			log.Println(time.Now().UnixNano())
-			log.Println("block number is ",countBlock)
+			myLogger.GetLogger().Println(time.Now().UnixNano())
+			myLogger.GetLogger().Println("write block success")
 			log.Println("write block success")
-			//ioutil.WriteFile("./123.txt",[]byte(strconv.FormatInt(time.Now().UnixNano(),10)+"\n"),os.ModeAppend)
-			self.commitNewBlock(ev.Payload)
+			self.commitNewBlock(ev.Payload,ev.Now)
 		//self.fetcher.Enqueue(ev.Payload)
 
 		}
@@ -123,41 +127,23 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 		case event.BroadcastConsensusEvent:
 			log.Println("######enter broadcast")
-			self.BroadcastConsensus(ev.Payload)
+			myLogger.GetLogger().Println("######enter broadcast")
+			go self.BroadcastConsensus(ev.Payload)
 		case event.NewTxEvent:
 			log.Println("######receiver new tx")
+			myLogger.GetLogger().Println("######receiver new tx")
 			//call consensus module
-			//Todo
-
-
-			/*payLoad:=self.transformTx(ev.Payload)
-			if payLoad==nil{
-				log.Fatal("payLoad nil")
-			}*/
-
 			//send msg to consensus
-			/*msg := &protos.Message{
-				Type: protos.Message_TRANSACTION,
-				Payload: ev.Payload,
-				Timestamp: time.Now().UnixNano(),
-				Id: 0,
-			}
-			payload, _ := proto.Marshal(msg)
-			self.consenter.RecvMsg(payload)*/
-			for i:=0;i<1000;i+=1{
+			for i:=0;i<5000;i+=1{
 				go self.sendMsg(ev.Payload)
 				time.Sleep(100*time.Microsecond)
 			}
 
 
-
-		//sign tx
-
-
 		case event.ConsensusEvent:
 			//call consensus module
-			//Todo
 			log.Println("###### enter ConsensusEvent")
+			//logger.GetLogger().Println("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 
 
@@ -167,6 +153,11 @@ func (self *ProtocolManager) ConsensusLoop() {
 }
 
 func (self *ProtocolManager)sendMsg(payload []byte)  {
+	//Todo sign tx
+	/*payLoad:=self.transformTx(ev.Payload)
+			if payLoad==nil{
+				log.Fatal("payLoad nil")
+			}*/
 	msg := &protos.Message{
 		Type: protos.Message_TRANSACTION,
 		Payload: payload,
@@ -180,17 +171,18 @@ func (self *ProtocolManager)sendMsg(payload []byte)  {
 
 // Broadcast consensus msg to a batch of peers not knowing about it
 func (pm *ProtocolManager) BroadcastConsensus(payload []byte) {
+	log.Println("begin call broadcast")
 	pm.peerManager.BroadcastPeers(payload)
 
 }
 
 //receive tx from web,sign it and marshal it,then give it to consensus module
-func (pm *ProtocolManager)transformTx(payLoad []byte) []byte {
+func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 
 	//var transaction types.Transaction
 	transaction := &types.Transaction{}
 	//decode tx
-	proto.Unmarshal(payLoad, transaction)
+	proto.Unmarshal(payload, transaction)
 	//hash tx
 	h := transaction.SighHash(pm.commonHash)
 	key, err := pm.encryption.GetKey()
@@ -219,8 +211,8 @@ func (pm *ProtocolManager)transformTx(payLoad []byte) []byte {
 }
 
 
-
-func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
+// add new block into block pool
+func (pm *ProtocolManager) commitNewBlock(payload[]byte,now uint64) {
 
 	msgList := &protos.ExeMessage{}
 	proto.Unmarshal(payload, msgList)
@@ -232,15 +224,15 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
 		block.Timestamp = item.Timestamp
 		block.Transactions = append(block.Transactions, tx)
 	}
-	currentChain := core.GetChainCopy()
-	block.Number = currentChain.Height + 1
-	block.ParentHash = currentChain.LatestBlockHash
+	//currentChain := core.GetChainCopy()
+	//block.Number = currentChain.Height + 1
+	block.Number=now
+	//block.ParentHash = currentChain.LatestBlockHash
+	//block.BlockHash = block.Hash(pm.commonHash).Bytes()
 
-	//block.BlockHash=
-	block.BlockHash = block.Hash(pm.commonHash).Bytes()
-	//fmt.Println(block)
-
-	core.WriteBlock(*block)
+	log.Println("now is ",now)
+	pm.blockPool.AddBlock(block,pm.commonHash)
+	//core.WriteBlock(*block)
 
 }
 
