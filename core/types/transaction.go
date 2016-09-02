@@ -5,6 +5,7 @@ import (
 	"hyperchain/common"
 	"time"
 
+	"fmt"
 )
 
 func (self *Transaction)Hash(ch crypto.CommonHash) common.Hash {
@@ -20,6 +21,19 @@ func (self *Transaction)SighHash(ch crypto.CommonHash) common.Hash {
 	})
 }
 
+func (self *Transaction)FString() string {
+	return fmt.Sprintf(`
+	From : %s
+	To : %s
+	Value : %s
+	TimeStamp : %d
+	Signature : %s`,
+		self.From,
+		self.To,
+		self.Value,
+		self.TimeStamp,
+		self.Signature)
+}
 
 // NewTransaction returns a new transaction
 func NewTransaction(from []byte,to []byte,value []byte) *Transaction{

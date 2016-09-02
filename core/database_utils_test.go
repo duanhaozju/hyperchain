@@ -67,6 +67,8 @@ func TestPutTransaction(t *testing.T) {
 	}
 }
 
+
+
 // TestGetTransaction tests for GetTransaction
 func TestGetTransaction(t *testing.T) {
 	log.Println("test =============> > > TestGetTransaction")
@@ -126,6 +128,22 @@ func TestDeleteTransaction(t *testing.T) {
 	}
 }
 
+// TestPutTransactions tests for PutTransactions
+func TestPutTransactions(t *testing.T) {
+	log.Println("test =============> > > TestPutTransactions")
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+	PutTransactions(db, transactionCases)
+	trs, err := GetAllTransaction(db)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(trs) < 3 {
+		t.Errorf("TestPutTransactions fail")
+	}
+}
 var blockUtilsCase = types.Block{
 	ParentHash: []byte("parenthash"),
 	BlockHash: []byte("blockhash"),
