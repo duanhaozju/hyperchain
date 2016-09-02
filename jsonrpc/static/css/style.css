@@ -6,7 +6,7 @@ header{
     color: white;
     font-size:20px;
 }
-header div{
+header .logo{
     padding: 20px 0 20px 100px;
 }
 .container{
@@ -27,26 +27,28 @@ input[type=button],input[type=reset],select{
     color:white;
     border: none;
 }
-.list{
-    display: flex;
-    justify-content: space-around;
+input[name="from"],input[name="to"]{
+    width: 300px;
 }
+input[name="value"]{
+    width: 50px;
+}
+/*.list{*/
+    /*display: flex;*/
+    /*justify-content: space-around;*/
+/*}*/
 table{
     background: #eeeeee;
     padding: 10px 20px;
 }
-table.trans{
-    width:70%
-}
-table.balances{
-    width: 40%;
-    margin-left:5px
+table{
+    width:100%
 }
 table tr td,table tr th{
     border-bottom:1px solid silver;
     margin:5px;
-    padding:10px 0;
-    width:20%;
+    padding:10px 8px;
+    /*width:20%;*/
     text-align: center;
 }
 .status{
@@ -58,4 +60,21 @@ table tr td,table tr th{
 .info{
     padding: 8px 5px;
     color: #5a5757;
+}
+.tabs {
+    margin: 10px 0;
+    border-bottom: 1px solid silver;
+}
+.tabs span{
+    background:silver;
+    color:white;
+    padding: 5px 10px;
+    box-sizing: border-box;
+    display: inline-block;
+    cursor: pointer;
+}
+.tabs span.selected{
+    background:#545151;
+    color:white;
+    padding: 10px
 }

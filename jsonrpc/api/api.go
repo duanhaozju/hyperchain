@@ -81,12 +81,14 @@ func GetAllTransactions()  []TransactionShow{
 	var transactions []TransactionShow
 
 	myLogger.GetLogger().Println(txs)
-	for index, tx := range txs {
-
-		transactions[index].Value = string(tx.Value)
-		transactions[index].From = string(tx.From)
-		transactions[index].To = string(tx.To)
-		transactions[index].TimeStamp = tx.TimeStamp
+	for _, tx := range txs {
+		var ts = TransactionShow{
+			Value: string(tx.Value),
+			From: string(tx.From),
+			To: string(tx.To),
+			TimeStamp: tx.TimeStamp,
+		}
+		transactions = append(transactions,ts)
 	}
 
 	return transactions
