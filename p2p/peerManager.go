@@ -20,7 +20,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"encoding/hex"
 	"hyperchain/event"
-	"git.hyperchain.cn/hyperchain/hyperchain/crypto"
+	//"git.hyperchain.cn/hyperchain/hyperchain/crypto"
+	"hyperchain/crypto"
 )
 
 const MAXPEERNODE = 4
