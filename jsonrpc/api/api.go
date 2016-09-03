@@ -2,7 +2,6 @@ package api
 
 import (
 	"hyperchain/core/types"
-	"fmt"
 	"hyperchain/event"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/hyperdb"
@@ -42,7 +41,7 @@ func SendTransaction(args TxArgs) bool {
 
 	var tx *types.Transaction
 
-	fmt.Println(args)
+	log.Info(args)
 
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
 
