@@ -22,6 +22,10 @@ import (
 
 func CreateInitBlock(filename string)  {
 	log.Println("genesis start")
+	if(GetChainCopy().Height>0){
+		log.Println("already genesis")
+		return
+	}
 
 	type Genesis struct {
 		Timestamp  int64
@@ -51,17 +55,6 @@ func CreateInitBlock(filename string)  {
 		log.Fatalf("GetBalanceIns error, %v", err)
 	}
 	for addr, account := range genesis["test1"].Alloc {
-		//address := common.HexToAddress(addr)
-
-		//value, err := strconv.ParseInt(account.Balance, 10, 64)
-		//fmt.Println(addr)
-		//fmt.Println([]byte(addr))
-		//fmt.Println(common.BytesToHash([]byte(addr)))
-		//fmt.Println(common.BytesToAddress([]byte("0000000000000000000000000000000000000002")))
-		/*balance:=types.Balance{
-			AccountPublicKeyHash:[]byte(addr),
-			Value:account,
-		}*/
 
 		balanceIns.PutCacheBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
 		balanceIns.PutDBBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
