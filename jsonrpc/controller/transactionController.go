@@ -23,14 +23,14 @@ func TransactionCreate(w http.ResponseWriter, r *http.Request) {
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Fatalf("Error: "+err+"\n")
+		log.Fatalf("Error: %v",err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	err = json.Unmarshal(body, &p)
 	if err != nil {
-		log.Fatalf("Error: "+err+"\n")
+		log.Fatalf("Error: %v",err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
