@@ -8,9 +8,9 @@ import (
 
 	"github.com/op/go-logging"
 )
-var log *logging.Logger // package-level logger
+var logger *logging.Logger // package-level logger
 func init() {
-	log = logging.MustGetLogger("consensus/controller")
+	logger = logging.MustGetLogger("consensus/controller")
 }
 
 
@@ -18,7 +18,8 @@ func init() {
 func NewConsenter(id uint64, msgQ *event.TypeMux) consensus.Consenter {
 
 	plugin := "pbft"
-	log.Infof("Creating consensus plugin %s", plugin)
+	logger.Infof("Creating consensus plugin %s", plugin)
 	h := helper.NewHelper(msgQ)
+
 	return pbft.GetPlugin(id, h)
 }
