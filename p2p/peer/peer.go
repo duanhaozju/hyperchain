@@ -12,9 +12,9 @@ import (
 	pb "hyperchain/p2p/peermessage"
 	"errors"
 	"golang.org/x/net/context"
-	"log"
 	"strings"
 	"strconv"
+	"github.com/op/go-logging"
 )
 
 type Peer struct {
@@ -22,6 +22,10 @@ type Peer struct {
 	Connection *grpc.ClientConn
 	Client pb.ChatClient
 	Idetity string
+}
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("p2p/Server")
 }
 
 func NewPeerByString(address string)(*Peer,error){
@@ -35,7 +39,7 @@ func NewPeerByString(address string)(*Peer,error){
 	conn, err := grpc.Dial(address, grpc.WithInsecure())
 	if err != nil {
 		errors.New("Cannot establish a connection!")
-		log.Println("err:",err)
+		log.Error("err:",err)
 		return nil,err
 	}
 	peer.Connection = conn
@@ -50,7 +54,7 @@ func NewPeerByString(address string)(*Peer,error){
 	retMessage,err2 := peer.Client.Chat(context.Background(),&helloMessage)
 	if err2 != nil{
 		errors.New("cannot establish a connection!无法建立通讯")
-		log.Println("无法建立通讯 err:",err2)
+		log.Error("无法建立通讯 err:",err2)
 		return nil,err2
 	}else{
 		if retMessage.MessageType == pb.Message_RESPONSE {
@@ -63,7 +67,7 @@ func NewPeerByString(address string)(*Peer,error){
 func (this *Peer)Chat(msg *pb.Message) (*pb.Message, error){
 	r,err := this.Client.Chat(context.Background(),msg)
 	if err != nil{
-		log.Println("err:",err)
+		log.Error("err:",err)
 	}
 	return r,err
 }
@@ -71,7 +75,7 @@ func (this *Peer)Chat(msg *pb.Message) (*pb.Message, error){
 func (this *Peer)Close()(bool,error){
 	err := this.Connection.Close()
 	if err != nil{
-		log.Println("err:",err)
+		log.Error("err:",err)
 		return false,err
 	}else{
 		return true,nil

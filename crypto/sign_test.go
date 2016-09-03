@@ -43,13 +43,13 @@ func TestSigntx(t *testing.T)  {
 	pub := key.PublicKey
 	var addr []byte
 	pubBytes := elliptic.Marshal(secp256k1.S256(), pub.X, pub.Y)
-	addr = ee.Keccak256(pubBytes[1:])[12:]
+	addr = Keccak256(pubBytes[1:])[12:]
 
 	fmt.Println("public key is :")
 	fmt.Println(pub)
 	fmt.Println("private key is :")
 	fmt.Println(key)
-	ee.SaveNodeInfo("./port_address_privatekey","5004",addr,key)
+	SaveNodeInfo("./port_address_privatekey","5004",addr,key)
 
 	p,err:=ee.GetKey()
 	if err!=nil{

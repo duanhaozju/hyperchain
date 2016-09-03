@@ -11,13 +11,17 @@ import (
 	pb "hyperchain/p2p/peermessage"
 	"golang.org/x/net/context"
 	"net"
-	log "github.com/Sirupsen/logrus"
 	"google.golang.org/grpc"
 	"strconv"
 	"hyperchain/p2p/peerComm"
 	"hyperchain/event"
+	"github.com/op/go-logging"
 )
 
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("p2p/Server")
+}
 type Node struct {
 	address            pb.PeerAddress
 	gRPCServer         *grpc.Server
@@ -29,7 +33,7 @@ var globalNode Node
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
 func NewNode(port int, isTest bool,hEventManager *event.TypeMux) *Node {
 	if isTest {
-		log.Println("Unit test: start local node, port", port)
+		log.Info("Unit test: start local node, port", port)
 		var TestNode Node
 		TestNode.address.Ip = peerComm.GetLocalIp()
 		TestNode.address.Port = int32(port)
@@ -89,7 +93,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	}
 	case pb.Message_RESPONSE:{
 		// client couldn't send a response message to server, so server should never receive a response type message
-		log.Println("Client Send a Response Message to Server, this is not allowed!")
+		log.Info("Client Send a Response Message to Server, this is not allowed!")
 		return &response, nil
 	}
 	default:
@@ -100,7 +104,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 
 // StartServer start the gRPC server
 func (this *Node)startServer() {
-	log.Println("Starting the grpc listening server...")
+	log.Info("Starting the grpc listening server...")
 	lis, err := net.Listen("tcp", ":" + strconv.Itoa(int(this.address.Port)))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
@@ -108,7 +112,7 @@ func (this *Node)startServer() {
 	}
 	this.gRPCServer = grpc.NewServer()
 	pb.RegisterChatServer(this.gRPCServer, this)
-	log.Println("Listening gRPC request...")
+	log.Info("Listening gRPC request...")
 	go this.gRPCServer.Serve(lis)
 }
 

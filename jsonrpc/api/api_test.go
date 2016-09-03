@@ -3,7 +3,6 @@ package api
 import (
 	"testing"
 	"hyperchain/core"
-	"log"
 	"hyperchain/common"
 	"hyperchain/manager"
 	"hyperchain/p2p"

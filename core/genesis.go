@@ -12,20 +12,15 @@ import (
 
 	"hyperchain/common"
 
-	"log"
-
 	"hyperchain/hyperdb"
 
 	"hyperchain/crypto"
+	"time"
 )
 
 
 func CreateInitBlock(filename string)  {
-	log.Println("genesis start")
-	if(GetChainCopy().Height>0){
-		log.Println("already genesis")
-		return
-	}
+	log.Info("genesis start")
 
 	type Genesis struct {
 		Timestamp  int64
@@ -55,6 +50,17 @@ func CreateInitBlock(filename string)  {
 		log.Fatalf("GetBalanceIns error, %v", err)
 	}
 	for addr, account := range genesis["test1"].Alloc {
+		//address := common.HexToAddress(addr)
+
+		//value, err := strconv.ParseInt(account.Balance, 10, 64)
+		//fmt.Println(addr)
+		//fmt.Println([]byte(addr))
+		//fmt.Println(common.BytesToHash([]byte(addr)))
+		//fmt.Println(common.BytesToAddress([]byte("0000000000000000000000000000000000000002")))
+		/*balance:=types.Balance{
+			AccountPublicKeyHash:[]byte(addr),
+			Value:account,
+		}*/
 
 		balanceIns.PutCacheBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
 		balanceIns.PutDBBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
@@ -78,30 +84,31 @@ func CreateInitBlock(filename string)  {
 
 
 
-	log.Println("构造创世区块")
+	log.Info("构造创世区块")
 
 	UpdateChain(block.BlockHash,true)
-	log.Println("current chain block number is",GetChainCopy().Height)
+	log.Info("current chain block number is",GetChainCopy().Height)
 
 }
 
 // WriteBlock need:
 // 1. Put block into db
-// 2. Put transactions in block into db
+// 2. Put transactions in block into db  (-- cancel --)
 // 3. Update chain
 // 4. Update balance
 func WriteBlock(block types.Block, commonHash crypto.CommonHash)  {
 
-	log.Println("block number is ",block.Number)
+	log.Info("block number is ",block.Number)
 	currentChain := GetChainCopy()
 	block.ParentHash = currentChain.LatestBlockHash
 	block.BlockHash = block.Hash(commonHash).Bytes()
+	block.WriteTime = time.Now().UnixNano()
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
 	err = PutBlock(db, block.BlockHash, block)
-	PutTransactions(db, commonHash, block.Transactions)
+	//PutTransactions(db, commonHash, block.Transactions)
 	if err != nil {
 		log.Fatal(err)
 	}

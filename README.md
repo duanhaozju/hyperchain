@@ -41,3 +41,26 @@ Mac:
 
 `bash mac.sh`
 
+## LOGGER PACKAGE USAGE
+- add those lines before your codes:
+
+```
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("p2p")
+}
+```
+
+> Note: `MustGetLogger` 的参数需要本文件的包名,是相对于`hyperchain`文件夹的包名,例如 `p2p/peer` , `consensus/pbtf` etc.
+> IMPORTANT: 在一个包中仅仅需要执行一次上述代码,一般将上述代码放在一个单独文件中或者放在包的第一个文件中.在Test文件中请不要再重新声明!!
+
+
+- log level
+```
+   High CRITICAL
+        ERROR
+        WARNING
+        NOTICE
+        INFO
+   Low  DEBUG
+```

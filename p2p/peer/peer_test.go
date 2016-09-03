@@ -10,10 +10,9 @@ package client
 import (
 	"testing"
 	"hyperchain/p2p/peermessage"
-	"log"
 	node "hyperchain/p2p/node"
 	"hyperchain/event"
-	)
+)
 
 
 func TestNewChatClient(t *testing.T) {
@@ -23,7 +22,7 @@ func TestNewChatClient(t *testing.T) {
 
 	chatClient,err := NewPeerByString("localhost:8011")
 	if err != nil{
-		log.Fatalln("Connect failed")
+		log.Fatal("Connect failed")
 		server.StopServer()
 	}
 
@@ -33,10 +32,10 @@ func TestNewChatClient(t *testing.T) {
 	})
 
 	if err2 != nil{
-		log.Fatalln("Failed to send a message")
+		log.Fatal("Failed to send a message")
 		server.StopServer()
 	}else{
-		log.Println(msg)
+		log.Info(msg)
 		server.StopServer()
 	}
 }

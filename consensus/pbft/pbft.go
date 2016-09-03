@@ -21,27 +21,32 @@ func init() {
 }
 
 // GetPlugin returns the handle to the Consenter singleton
-
 func GetPlugin(id uint64, h helper.Stack) consensus.Consenter {
+
 	if pluginInstance == nil {
 		pluginInstance = New(id, h)
 	}
+
 	return pluginInstance
 }
 
-// New creates a new Obc* instance that provides the Consenter interface.
+// New creates a new *batch instance that provides the Consenter interface.
 // Internally, it uses an opaque pbft-core instance.
-
 func New(id uint64, h helper.Stack) consensus.Consenter {
+
 	switch strings.ToLower(config.GetString("general.mode")) {
 	case "batch":
 		return newBatch(id, config, h)
 	default:
 		panic(fmt.Errorf("Invalid PBFT mode: %s", config.GetString("general.mode")))
 	}
+
 }
 
+
+// loadConfig load the config in the config.yaml
 func loadConfig() (config *viper.Viper) {
+
 	config = viper.New()
 
 	// for environment variables
@@ -65,5 +70,6 @@ func loadConfig() (config *viper.Viper) {
 	if err != nil {
 		panic(fmt.Errorf("Error reading %s plugin config: %s", configPrefix, err))
 	}
+
 	return
 }

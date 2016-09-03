@@ -91,3 +91,7 @@ cache/*
 
 # keystore
 #keystore.txt
+hyperchain
+logs/
+cache/
+crypto/addressInfo

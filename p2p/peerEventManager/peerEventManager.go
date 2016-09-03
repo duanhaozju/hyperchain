@@ -12,10 +12,9 @@ import (
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/peerComm"
 	"errors"
-	log "github.com/Sirupsen/logrus"
-
 	eventHandler "hyperchain/p2p/peerEventHandler"
 	"sync"
+	"github.com/op/go-logging"
 )
 
 // PeerEventManager is a peer event manager which can handle the broadcast event etc.
@@ -26,6 +25,12 @@ type PeerEventManager struct {
 	eventListener map[pb.Message_MsgType] eventHandler.PeerEventHandler
 	syncMux sync.Mutex
 }
+
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("p2p/peerEventManager")
+}
+
 
 // NewPeerEventManager offer a Event Manager instance 提供一个事件管理器实例
 func NewPeerEventManager() *PeerEventManager{
@@ -70,7 +75,7 @@ func (this *PeerEventManager)eventLoop(){
 		if handler, ok := this.eventListener[msg.MessageType];ok {
 			handler.ProcessEvent(&msg)
 		} else {
-			log.Fatalln("错误,该事件未绑定/ERROR,the Event hasn't register")
+			log.Fatal("错误,该事件未绑定/ERROR,the Event hasn't register")
 		}
 	}
 }

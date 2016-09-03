@@ -4,10 +4,10 @@ import (
 	"sync"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
-	"log"
 	"hyperchain/common"
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/big"
+	"github.com/op/go-logging"
 )
 
 //-- --------------------- Balance ------------------------------------\
@@ -35,6 +35,11 @@ type Balance struct {
 var balance = &Balance{
 	state: closed,
 }
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("core")
+}
+
 
 // GetBalanceIns get balance singleton instance
 // if there is no balance instance, it will create one. creating process:
@@ -218,8 +223,8 @@ func VerifyBalance(tx *types.Transaction) bool {
 	//log.Println(common.BytesToAddress(tx.From))
 	bal := balanceIns.GetCacheBalance(common.BytesToAddress(tx.From))
 	bal2 := balanceIns.GetCacheBalance(common.BytesToAddress([]byte("0000000000000000000000000000000000000002")))
-	log.Println(bal)
-	log.Println(bal2)
+	log.Info(bal)
+	log.Info(bal2)
 	//log.Println(common.Bytes2Hex(bal))
 
 

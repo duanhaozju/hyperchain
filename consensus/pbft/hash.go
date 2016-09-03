@@ -7,7 +7,9 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
+// encode the []byte to string
 func hash(msg interface{}) string {
+
 	var raw []byte
 	switch converted := msg.(type) {
 	case *Request:
@@ -18,8 +20,8 @@ func hash(msg interface{}) string {
 		logger.Errorf("Asked to hash non-supported message type, ignoring")
 		return ""
 	}
-	return base64.StdEncoding.EncodeToString(computeCryptoHash(raw))
 
+	return base64.StdEncoding.EncodeToString(computeCryptoHash(raw))
 }
 
 func computeCryptoHash(data []byte) (hash []byte) {

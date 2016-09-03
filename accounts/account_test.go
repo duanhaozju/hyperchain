@@ -1,16 +1,18 @@
 /**
- * Created by Meiling Hu on 8/31/16.
+ * Created by Meiling Hu on 9/2/16.
  */
 package accounts
 
 import (
 	"testing"
 	"fmt"
-	"math/big"
-	"sync/atomic"
+	"encoding/hex"
 	"hyperchain/crypto"
 	"hyperchain/common"
+	"sync/atomic"
+	"math/big"
 )
+
 type Transaction struct {
 	data txdata
 	// caches
@@ -32,35 +34,34 @@ func NewTransaction(to []byte,amount *big.Int) *Transaction {
 	return &Transaction{data:d}
 }
 
-func TestManager(t *testing.T) {
-	am := NewManager()
-	key ,err :=am.NewAccount("123")
-	if err != nil{
+func TestManager(t *testing.T)  {
+	scryptN := StandardScryptN
+	scryptP := StandardScryptP
+
+	keydir := "/tmp/hyperchain/cache/keystore/"
+
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	am := NewManager(keydir,encryption, scryptN, scryptP)
+	account,err := am.NewAccount("123")
+	if err!=nil{
 		t.Error(err)
 		t.FailNow()
 	}
-	fmt.Println("******newaccount*******")
+	fmt.Println("------new account------")
+	fmt.Println(account.Address)
+	fmt.Println(common.ToHex(account.Address))
+
+	fmt.Println("------get key according to the given account------")
+	key,_ := am.GetDecryptedKey(account)
 	fmt.Println(key.Address)
-	fmt.Println(key.Auth)
+	fmt.Println(hex.EncodeToString(key.Address))
 	fmt.Println(key.PrivateKey)
 
-
-	kk, err:= am.GetAccountKey(key.Address,am.addrPassMap[key.Address])
-	if err != nil{
-		t.Error(err)
-		t.FailNow()
-	}
-	fmt.Println("******getkeyreturn*******")
-	fmt.Println(kk.Address)
-	fmt.Println(kk.Auth)
-	fmt.Println(kk.PrivateKey)
-
+	//签名交易
 	tx:= NewTransaction([]byte{},big.NewInt(100))
 	s256 := crypto.NewKeccak256Hash("Keccak256")
 	hash := s256.Hash([]interface{}{tx.data.Amount,tx.data.Recipient})
-
-	//签名交易
-	signature,err := am.encryption.Sign(hash[:],kk.PrivateKey)
+	signature,err := am.encryption.Sign(hash[:],key.PrivateKey)
 
 	if err != nil {
 		t.Error(err)

@@ -10,9 +10,14 @@ import (
 	"net"
 	"io/ioutil"
 	"encoding/json"
-	"github.com/labstack/gommon/log"
 	"time"
+	"github.com/op/go-logging"
 )
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("p2p/peerComm")
+}
+
 // GetIpLocalIpAddr this function is used to get the real internal net ip address
 // to use this make sure your net are valid
 func GetLocalIp()string{
