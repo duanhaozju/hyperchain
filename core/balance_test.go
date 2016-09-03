@@ -9,7 +9,7 @@ import (
 
 // TestGetBalanceIns tests for GetBalanceIns
 func TestGetBalanceIns(t *testing.T) {
-	log.Println("test =============> > > TestGetBalanceIns")
+	log.Info("test =============> > > TestGetBalanceIns")
 	quit := make(chan int)
 	GetBalanceIns()
 	for i := 0; i < 10; i++ {
