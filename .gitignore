@@ -92,4 +92,6 @@ cache/*
 # keystore
 #keystore.txt
 hyperchain
-/logs
+logs/
+cache/
+crypto/addressInfo

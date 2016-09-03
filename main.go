@@ -42,7 +42,7 @@ func main(){
 
 		argv := ctx.Argv().(*argT)
 
-		common.InitLog(logging.DEBUG,"./logs2/",argv.LocalPort)
+		common.InitLog(logging.DEBUG,"./logs/",argv.LocalPort)
 
 		//init logger
 		//myLogger.NewLogger(argv.LocalPort)
