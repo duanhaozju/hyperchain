@@ -132,7 +132,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			log.Infof("##################Start Request Time###################", time.Now().Unix())
 			//time := now + time.Minute * 30
 			start := time.Now().Unix()
-			for ; start < start + 10*3600 ; start = time.Now().Unix() {
+			for ; start < start + 10*60 ; start = time.Now().Unix() {
 				for i:=0;i<1500;i++{
 					go self.sendMsg(ev.Payload)
 					time.Sleep(666*time.Microsecond)
