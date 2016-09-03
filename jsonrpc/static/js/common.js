@@ -24,11 +24,11 @@ $(document).ready(function(){
         for(var i = 1;i <= count;i++) {
 
             $.ajax({
-                // contentType: "application/json; charset=utf-8",
+                contentType: "application/json",
                 type: "POST",
                 dataType: "json",
                 url: "/trans",
-                data: data,
+                data: JSON.stringify(data),
                 success: function (result) {
                     console.log(result);
                     if (result.Code == 1) {
