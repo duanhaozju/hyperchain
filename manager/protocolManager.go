@@ -129,22 +129,16 @@ func (self *ProtocolManager) ConsensusLoop() {
 			log.Info("######receiver new tx")
 			//call consensus module
 			//send msg to consensus
-			log.Infof("##################Start Request Time###################", time.Now().UnixNano())
+			log.Infof("##################Start Request Time###################", time.Now().Unix())
 			//time := now + time.Minute * 30
-			time_count := 0
-			for range time.Tick(time.Minute*10){
-				time_count ++
-				for range time.Tick(time.Second){
-					for i:=0;i<1500;i++{
-						go self.sendMsg(ev.Payload)
-						time.Sleep(666*time.Microsecond)
-					}
-				}
-				if time_count >1{
-					break
+			start := time.Now().Unix()
+			for ; start < start + 10*3600 ; start = time.Now().Unix() {
+				for i:=0;i<1500;i++{
+					go self.sendMsg(ev.Payload)
+					time.Sleep(666*time.Microsecond)
 				}
 			}
-			log.Infof("##################Finish Request Time###################", time.Now().UnixNano())
+			log.Infof("##################Finish Request Time###################", time.Now().Unix())
 
 		case event.ConsensusEvent:
 			//call consensus module
