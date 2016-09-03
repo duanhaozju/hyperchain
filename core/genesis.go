@@ -16,6 +16,7 @@ import (
 
 	"hyperchain/crypto"
 	"time"
+	"encoding/hex"
 )
 
 
@@ -119,7 +120,7 @@ func WriteBlock(block types.Block, commonHash crypto.CommonHash)  {
 	}
 
 	newChain := GetChainCopy()
-	fmt.Println("final number",newChain.Height)
-	fmt.Println("final hash",newChain.LatestBlockHash)
+	fmt.Println("Block number",currentChain.Height)
+	fmt.Println("Block hash",hex.EncodeToString(currentChain.LatestBlockHash))
 	balance.UpdateDBBalance(&block)
 }
