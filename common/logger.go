@@ -36,7 +36,7 @@ func InitLog(level logging.Level,loggerDir string,port int){
 	backend_stderr := logging.NewLogBackend(os.Stderr, "", 0)
 	backend_file := logging.NewLogBackend(logFile, "", 0)
 	var format_stderr = logging.MustStringFormatter(
-		`%{color}[%{level:.5s}]%{time:15:04:05.000} %{shortfile}%{message}%{color:reset}`,
+		`%{color}[%{level:.5s}]%{time:15:04:05.000} %{shortfile}%{message}%{color:reset} `,
 	)
 	var format_file = logging.MustStringFormatter(
 		`{"level":"%{level}","time":"%{time:2006-01-02 15:04:05.000}","message":"%{message}"},`,
