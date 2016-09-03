@@ -120,7 +120,7 @@ func WriteBlock(block types.Block, commonHash crypto.CommonHash)  {
 	}
 
 	newChain := GetChainCopy()
-	fmt.Println("Block number",currentChain.Height)
-	fmt.Println("Block hash",hex.EncodeToString(currentChain.LatestBlockHash))
+	fmt.Println("Block number",newChain.Height)
+	fmt.Println("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
 	balance.UpdateDBBalance(&block)
 }
