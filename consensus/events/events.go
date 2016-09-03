@@ -113,7 +113,6 @@ func (em *managerImpl) eventLoop() {
 	for {
 		select {
 		case next := <-em.events:
-			logger.Info("**********> new request!")
 			em.Inject(next)
 		case <-em.exit:
 			logger.Debug("eventLoop told to exit")
