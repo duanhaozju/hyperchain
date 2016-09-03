@@ -1,6 +1,6 @@
 # HYPERCHAIN
 
->HyperChain Proto  Internal version: alpha 0.2.1
+>HyperChain Proto  Internal version: alpha 0.3.0
 
 ## CHANGE LOG:
 
