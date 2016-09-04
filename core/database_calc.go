@@ -52,6 +52,5 @@ func CalcResponseAVGTime(from, to uint64) int64 {
 		}
 	}
 
-
-	return sum / ((to - from + 1) * 500 * int64(time.Millisecond))
+	return sum / (int64(to - from + 1) * 500 * int64(time.Millisecond))
 }
