@@ -16,6 +16,7 @@ import (
 
 	"hyperchain/crypto"
 	"time"
+	"encoding/hex"
 )
 
 
@@ -84,7 +85,7 @@ func CreateInitBlock(filename string)  {
 
 
 
-	log.Info("构造创世区块")
+	log.Debug("构造创世区块")
 
 	UpdateChain(block.BlockHash,true)
 	log.Info("current chain block number is",GetChainCopy().Height)
@@ -119,7 +120,7 @@ func WriteBlock(block types.Block, commonHash crypto.CommonHash)  {
 	}
 
 	newChain := GetChainCopy()
-	fmt.Println("final number",newChain.Height)
-	fmt.Println("final hash",newChain.LatestBlockHash)
+	fmt.Println("Block number",newChain.Height)
+	fmt.Println("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
 	balance.UpdateDBBalance(&block)
 }

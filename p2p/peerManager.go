@@ -192,11 +192,11 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 	for _, peer := range pPool.GetPeers() {
 		//log.Println("((((((广播/Broadcast))))))")
-		_, err := peer.Chat(&broadCastMessage)
+		resMsg, err := peer.Chat(&broadCastMessage)
 		if err != nil {
 			log.Error("Broadcast failed,Node", peer.Addr)
 		} else {
-			//log.Println("resMsg:", string(resMsg.Payload))
+			log.Info("resMsg:", string(resMsg.Payload))
 			//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
 		}
 	}
