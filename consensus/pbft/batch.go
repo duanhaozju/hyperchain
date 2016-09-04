@@ -169,7 +169,7 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 	return nil
 }
 
-func (op *batch) processRequest(req *Request) events.Event {
+func (op *batch) processRequest(req *Request) error {
 
 	op.reqStore.storeOutstanding(req)
 	op.startTimerIfOutstandingRequests()
@@ -204,7 +204,7 @@ func (op *batch) postPbftEvent(event pbftMessageEvent) {
 	op.pbftManager.Queue() <- event
 }
 
-func (op *batch) leaderProcReq(req *Request) events.Event {
+func (op *batch) leaderProcReq(req *Request) error {
 	
 	logger.Debugf("Batch primary %d queueing new request", op.pbft.id)
 	op.batchStore = append(op.batchStore, req)
@@ -220,7 +220,7 @@ func (op *batch) leaderProcReq(req *Request) events.Event {
 	return nil
 }
 
-func (op *batch) sendBatch() events.Event {
+func (op *batch) sendBatch() error {
 	
 	op.stopBatchTimer()
 	
@@ -233,7 +233,9 @@ func (op *batch) sendBatch() events.Event {
 	op.batchStore = nil
 	logger.Infof("Creating batch with %d requests", len(reqBatch.Batch))
 
-	return reqBatch
+	op.pbftManager.Queue() <- reqBatch
+
+	return nil
 }
 
 

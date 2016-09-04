@@ -87,8 +87,6 @@ func (pm *ProtocolManager) Start() {
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
 
-
-
 	pm.wg.Wait()
 
 }
@@ -105,7 +103,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 			//accept msg from consensus module
 			//commit block into block pool
 
-			log.Info("write block success")
+			//log.Debug("write block success")
 			self.commitNewBlock(ev.Payload)
 		//self.fetcher.Enqueue(ev.Payload)
 
@@ -122,22 +120,23 @@ func (self *ProtocolManager) ConsensusLoop() {
 		switch ev := obj.Data.(type) {
 
 		case event.BroadcastConsensusEvent:
-			log.Debug("######enter broadcast")
+			//log.Debug("######enter broadcast")
 
 			go self.BroadcastConsensus(ev.Payload)
 		case event.NewTxEvent:
-			log.Debug("######receiver new tx")
+			//log.Debug("######receiver new tx")
 			//call consensus module
 			//send msg to consensus
-			for i:=0;i<50000;i+=1{
-				go self.sendMsg(ev.Payload)
-				time.Sleep(100*time.Microsecond)
-			}
+			//for i:=0;i<10000;i+=1{
+			//	go self.sendMsg(ev.Payload)
+			//	//time.Sleep(100*time.Microsecond)
+			//}
 
+			go self.sendMsg(ev.Payload)
 
 		case event.ConsensusEvent:
 			//call consensus module
-			log.Debug("###### enter ConsensusEvent")
+			//log.Debug("###### enter ConsensusEvent")
 			//logger.GetLogger().Println("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 
@@ -166,7 +165,7 @@ func (self *ProtocolManager)sendMsg(payload []byte)  {
 
 // Broadcast consensus msg to a batch of peers not knowing about it
 func (pm *ProtocolManager) BroadcastConsensus(payload []byte) {
-	log.Debug("begin call broadcast")
+	//log.Debug("begin call broadcast")
 	pm.peerManager.BroadcastPeers(payload)
 
 }
@@ -223,7 +222,7 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
 
 	block.Number=msgList.No
 
-	log.Debug("now is ",msgList.No)
+	log.Info("now is ",msgList.No)
 	pm.blockPool.AddBlock(block,pm.commonHash)
 	//core.WriteBlock(*block)
 

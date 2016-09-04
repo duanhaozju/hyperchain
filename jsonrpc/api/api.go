@@ -2,13 +2,13 @@ package api
 
 import (
 	"hyperchain/core/types"
-	"fmt"
 	"hyperchain/event"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/hyperdb"
 	"hyperchain/core"
 	"hyperchain/manager"
 	"github.com/op/go-logging"
+	"time"
 )
 
 type TxArgs struct{
@@ -42,7 +42,7 @@ func SendTransaction(args TxArgs) bool {
 
 	var tx *types.Transaction
 
-	fmt.Println(args)
+	log.Info(args)
 
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
 
@@ -54,10 +54,18 @@ func SendTransaction(args TxArgs) bool {
 			log.Fatalf("proto.Marshal(tx) error: %v",err)
 		}
 
+		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 
-		//for i := 0; i < 500; i += 1 {
-			go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-		//}
+		log.Infof("############# %d: start send request#############", time.Now().Unix())
+
+		for start := time.Now().Unix() ; start < start + 600; start = time.Now().Unix() {
+			for i := 0; i < 1500; i++ {
+				go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+				time.Sleep(666 * time.Microsecond)
+			}
+		}
+
+		log.Infof("############# %d: end send request#############", time.Now().Unix())
 
 		return true
 

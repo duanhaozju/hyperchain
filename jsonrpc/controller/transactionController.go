@@ -5,22 +5,43 @@ import (
 	"fmt"
 	"net/http"
 	"hyperchain/jsonrpc/api"
+	"github.com/op/go-logging"
+	"io/ioutil"
 )
+
+
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("jsonrpc/api")
+}
 
 // TransactionCreate is the handler of "/trans", POST
 func TransactionCreate(w http.ResponseWriter, r *http.Request) {
 
 	var res ResData
+	var p = api.TxArgs{}
 
-	// Parse parameter
-	r.ParseForm()
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Fatalf("Error: %v",err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err = json.Unmarshal(body, &p)
+	if err != nil {
+		log.Fatalf("Error: %v",err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	isBalanceEnough := api.SendTransaction(api.TxArgs{
-		From: r.Form["from"][0],
-		To: r.Form["to"][0],
-		Value: r.Form["value"][0],
+		From: p.From,
+		To: p.To,
+		Value: p.Value,
 
 	})
+
 
 	if (!isBalanceEnough) {
 		res = ResData{
@@ -36,14 +57,9 @@ func TransactionCreate(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Add("Access-Control-Allow-Headers","Content-Type")
-	w.Header().Set("content-type","application/json")
+	w.Header().Set("Content-Type","application/json")
 
 	b,_ := json.Marshal(res)
 
 	fmt.Fprintf(w,string(b))
-
-	//w.WriteHeader(http.StatusCreated)
-	//if err := json.NewEncoder(w).Encode(t); err != nil {
-	//	panic(err)
-	//}
 }
