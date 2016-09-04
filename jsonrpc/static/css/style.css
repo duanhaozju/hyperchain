@@ -51,7 +51,7 @@ table tr td,table tr th{
     /*width:20%;*/
     text-align: center;
 }
-.status{
+.status,.time{
     height:15px;
     line-height:15px;
     width:100%;

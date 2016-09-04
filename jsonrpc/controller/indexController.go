@@ -6,6 +6,7 @@ import (
 	"os"
 	"hyperchain/jsonrpc/api"
 	"encoding/json"
+	"io/ioutil"
 )
 
 
@@ -99,6 +100,44 @@ func TransactionGet(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type","application/json")
 	w.Write(data)
+}
+
+func ExuteTimeQuery(w http.ResponseWriter, r *http.Request) {
+	var res ResData
+	var p = api.TxArgs{}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Fatalf("Error: %v",err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err = json.Unmarshal(body, &p)
+	if err != nil {
+		log.Fatalf("Error: %v",err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	time := api.QueryExcuteTime(api.TxArgs{
+		From: p.From,
+		To: p.To,
+	})
+
+
+	res = ResData{
+		Data: time,
+		Code:1,
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Add("Access-Control-Allow-Headers","Content-Type")
+	w.Header().Set("Content-Type","application/json")
+
+	b,_ := json.Marshal(res)
+
+	w.Write(b)
 }
 
 
