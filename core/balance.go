@@ -134,7 +134,7 @@ func (self *Balance)GetAllDBBalance() (BalanceMap) {
 	return bs
 }
 
-//-- 更新balance表 需要一个新的区块
+// UpdateDBBalance update dbBalance require a latest block
 func (self *Balance)UpdateDBBalance(block *types.Block) error {
 	self.lock.Lock()
 	defer self.lock.Unlock()
@@ -165,9 +165,9 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 			self.dbBalance[common.BytesToAddress(trans.To)] = []byte(transValue.String())
 		}
 	}
-	//-- 此时balance_cache与balance_db一致
+	// cacheBalance keep correspondence with dbBalance
 	self.cacheBalance = self.dbBalance
-	//-- 将balance_db更新到数据库中
+	// put dbBalance into database
 	err = PutDBBalance(db, self.dbBalance)
 	if err != nil {
 		return err
