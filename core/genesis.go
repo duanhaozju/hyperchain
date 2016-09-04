@@ -84,7 +84,7 @@ func CreateInitBlock(filename string)  {
 
 
 
-	log.Info("构造创世区块")
+	log.Debug("构造创世区块")
 
 	UpdateChain(block.BlockHash,true)
 	log.Info("current chain block number is",GetChainCopy().Height)

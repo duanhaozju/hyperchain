@@ -223,8 +223,8 @@ func VerifyBalance(tx *types.Transaction) bool {
 	//log.Println(common.BytesToAddress(tx.From))
 	bal := balanceIns.GetCacheBalance(common.BytesToAddress(tx.From))
 	bal2 := balanceIns.GetCacheBalance(common.BytesToAddress([]byte("0000000000000000000000000000000000000002")))
-	log.Info(bal)
-	log.Info(bal2)
+	log.Debug(bal)
+	log.Debug(bal2)
 	//log.Println(common.Bytes2Hex(bal))
 
 
