@@ -73,7 +73,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	case pb.Message_CONSUS:{
 		response.MessageType = pb.Message_RESPONSE
 		response.Payload = []byte("Consensus has received, response from " + strconv.Itoa(int(GetNodeAddr().Port)))
-		log.Debug("<<<< GOT A CONSUS MESSAGE >>>>")
+		log.Info("<<<< GOT A CONSUS MESSAGE >>>>")
 
 		go this.higherEventManager.Post(event.ConsensusEvent{
 			Payload:msg.Payload,
