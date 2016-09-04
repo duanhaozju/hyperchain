@@ -16,8 +16,8 @@
 <div class="container">
     <div class="form">
         <form name="form">
-            发送方：<input type="text" name="from" value="0000000000000000000000000000000000000002" placeholder="输入发送方地址"/><br/>
-            接收方：<input type="text" name="to" value="0000000000000000000000000000000000000003" placeholder="输入接收方地址"/><br/>
+            发送方：<input type="text" name="from" value="cd2a3d9f938e13cd947ec05abc7fe734df8dd822" placeholder="输入发送方地址"/><br/>
+            接收方：<input type="text" name="to" value="0000000000000000000000000000000000000002" placeholder="输入接收方地址"/><br/>
             金&emsp;额：<input name="value" placeholder="value" value="1"/><br/>
             <!--<input name="address" placeholder="for example localhost:9000"/><br>-->
             提交次数：<input type="text" name="count" placeholder="若为空，则默认提交一次"/><br/>
@@ -34,49 +34,57 @@
         <div class="tabs">
             <span class="selected" id="tab_tx">所有交易</span>
             <span id="tab_bal">DB余额</span>
+            <span id="tab_block">所有区块</span>
         </div>
-        <div class="trans">
-            <table class="trans">
-                <thead>
-                <tr>
-                    <th>From</th>
-                    <th>To</th>
-                    <th>Value</th>
-                    <th>TimeStamp</th>
-                </tr>
-                </thead>
-                <tbody>
-                {{range .Trans}}
-                <tr>
-                    <td>{{.From}}</td>
-                    <td>{{.To}}</td>
-                    <td>{{.Value}}</td>
-                    <td>{{.TimeStamp}}</td>
-                </tr>
-                {{end}}
-                </tbody>
-            </table>
+        <div>
+            <div class="trans">
+                <table class="trans">
+                    <thead>
+                    <tr>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Value</th>
+                        <th>TimeStamp</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {{range .Trans}}
+                    <tr>
+                        <td>{{.From}}</td>
+                        <td>{{.To}}</td>
+                        <td>{{.Value}}</td>
+                        <td>{{.TimeStamp}}</td>
+                    </tr>
+                    {{end}}
+                    </tbody>
+                </table>
+            </div>
+            <div class="balances" style="display: none">
+                <table class="balances">
+                    <thead>
+                    <tr>
+                        <th>Account</th>
+                        <th>Balance</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="blocks" style="display: none">
+                <table class="blocks">
+                    <thead>
+                    <tr>
+                        <th>Height</th>
+                        <th>Transactions</th>
+                        <th>WriteTime</th>
+                        <th>&lt; 1s</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
         </div>
-        <div class="balances" style="display: none">
-            <table class="balances">
-                <thead>
-                <tr>
-                    <th>Account</th>
-                    <th>Balance</th>
-                </tr>
-                </thead>
-                <tbody>
-                {{with .Balances}}
-                {{range $key,$value := .}}
-                <tr>
-                    <td>{{$key}}</td>
-                    <td>{{$value}}</td>
-                </tr>
-                {{end}}
-                {{end}}
-                </tbody>
-            </table>
-        </div>
+
     </div>
 </div>
 </body>

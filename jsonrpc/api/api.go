@@ -31,6 +31,13 @@ type LastestBlockShow struct{
 	Hash []byte
 }
 
+type BlockShow struct{
+        Height uint64
+        TxCounts uint64
+	WriteTime int64
+        Counts int64
+}
+
 var log *logging.Logger // package-level logger
 func init() {
 	log = logging.MustGetLogger("jsonrpc/api")
@@ -138,4 +145,46 @@ func LastestBlock() LastestBlockShow{
 	}
 }
 
+
+func GetAllBlocks() []BlockShow{
+
+	var blocks []BlockShow
+
+	height := LastestBlock().Number
+
+	for height > 0 {
+		blocks = append(blocks,blockShow(height))
+		height--
+	}
+
+	return blocks
+}
+
+func blockShow(height uint64) BlockShow{
+
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Fatalf("Open database error: %v", err)
+	}
+
+	blockHash, err := core.GetBlockHash(db,height)
+	if err != nil {
+		log.Fatalf("GetBlockHash error: %v", err)
+	}
+
+	block, err := core.GetBlock(db,blockHash)
+	if err != nil {
+		log.Fatalf("GetBlock error: %v", err)
+	}
+
+	txCounts := uint64(len(block.Transactions))
+
+	return BlockShow{
+			Height: height,
+			TxCounts: txCounts,
+			WriteTime: block.WriteTime,
+			Counts: core.CalcResponseCount(height, int64(1000)),
+		}
+
+}
 
