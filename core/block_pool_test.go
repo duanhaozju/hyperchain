@@ -8,7 +8,7 @@ import (
 	"testing"
 	"fmt"
 
-
+	"encoding/hex"
 )
 
 
@@ -24,8 +24,8 @@ func TestBlockPool(t *testing.T){
 	}
 	bx.AddBlock(block)*/
 	currentChain := GetChainCopy()
-	fmt.Println("final number",currentChain.Height)
-	fmt.Println("final hash",currentChain.LatestBlockHash)
+	fmt.Println("Block number",currentChain.Height)
+	fmt.Println("Block hash",hex.EncodeToString(currentChain.LatestBlockHash))
 
 
 
