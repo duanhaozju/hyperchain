@@ -56,19 +56,26 @@ func SendTransaction(args TxArgs) bool {
 	if (core.VerifyBalance(tx)) {
 
 		// Balance is enough
-		txBytes, err := proto.Marshal(tx)
+		/*txBytes, err := proto.Marshal(tx)
 		if err != nil {
 			log.Fatalf("proto.Marshal(tx) error: %v",err)
-		}
+		}*/
 
 		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
+		start := time.Now().Unix()
+		end:=start+60
 
-		for start := time.Now().Unix() ; start < start + 600; start = time.Now().Unix() {
-			for i := 0; i < 1500; i++ {
+		for start := start ; start < end; start = time.Now().Unix() {
+			for i := 0; i < 5000; i++ {
+				tx.TimeStamp=time.Now().UnixNano()
+				txBytes, err := proto.Marshal(tx)
+				if err != nil {
+					log.Fatalf("proto.Marshal(tx) error: %v",err)
+				}
 				go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-				time.Sleep(666 * time.Microsecond)
+				time.Sleep(2 * time.Microsecond)
 			}
 		}
 
