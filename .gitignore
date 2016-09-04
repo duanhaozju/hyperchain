@@ -95,4 +95,4 @@ hyperchain
 logs/
 cache/
 crypto/addressInfo
-logs2/
+p2p/local_peerconfig.json
