@@ -9,12 +9,9 @@ package peerEventManager
 import "testing"
 import (
 	"hyperchain/p2p/peermessage"
-	"log"
 	"time"
 	"hyperchain/p2p/peerEventHandler"
 )
-
-
 
 func TestPeerEventManager_PostEvent(t *testing.T) {
 	pem := NewPeerEventManager()
@@ -27,24 +24,24 @@ func TestPeerEventManager_PostEvent(t *testing.T) {
 	for range time.Tick(3* time.Second){
 		tickCount += 1
 		var msg  peermessage.Message
-		log.Println("Event HEllo")
+		log.Info("Event HEllo")
 		msg.MessageType = peermessage.Message_HELLO
 		msg.Payload = []byte("hello")
 		pem.PostEvent(peermessage.Message_HELLO,msg)
 		//log.Println(now)
-		log.Println("Event Keep Alive")
+		log.Info("Event Keep Alive")
 		msg.MessageType = peermessage.Message_KEEPALIVE
 		msg.Payload = []byte("keep alive")
 		pem.PostEvent(peermessage.Message_KEEPALIVE,msg)
 		//log.Println(now)
 
-		log.Println("Event Message_RESPONSE")
+		log.Info("Event Message_RESPONSE")
 		msg.MessageType = peermessage.Message_RESPONSE
 		msg.Payload = []byte("Message_RESPONSE")
 		pem.PostEvent(peermessage.Message_RESPONSE,msg)
 		//log.Println(now)
 
-		log.Println("Event Message_CONSUS")
+		log.Info("Event Message_CONSUS")
 		msg.MessageType = peermessage.Message_CONSUS
 		msg.Payload = []byte("Message_CONSUS")
 		pem.PostEvent(peermessage.Message_CONSUS,msg)

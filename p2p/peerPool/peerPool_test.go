@@ -9,14 +9,12 @@ package peerPool
 import (
 	"testing"
 	"hyperchain/p2p/peermessage"
-	"log"
 	"strconv"
 	node "hyperchain/p2p/node"
 	peer "hyperchain/p2p/peer"
 	"time"
 	"hyperchain/event"
-	)
-
+)
 
 // test the peer pool to put peer
 func TestPeersPool_PutPeer(t *testing.T) {
@@ -28,7 +26,7 @@ func TestPeersPool_PutPeer(t *testing.T) {
 
 	chatClient, err := peer.NewPeerByString("localhost:"+ strconv.Itoa(portRange))
 	if err != nil {
-		log.Fatalln("连接失败")
+		log.Fatal("连接失败")
 	}
 
 	msg, err2 := chatClient.Chat(&peermessage.Message{
@@ -37,9 +35,9 @@ func TestPeersPool_PutPeer(t *testing.T) {
 	})
 
 	if err2 != nil {
-		log.Fatalln("发送消息失败")
+		log.Fatal("发送消息失败")
 	} else {
-		log.Println(msg)
+		log.Debug(msg)
 		peerPool := NewPeerPool(true,false)
 		//here test the peer pool
 		_,err := peerPool.PutPeer(chatClient.Addr, chatClient)
@@ -53,7 +51,7 @@ func TestPeersPool_PutPeer(t *testing.T) {
 	tickCount := 0
 	for tick := range time.Tick(1 *time.Second){
 		tickCount += 1
-		log.Println(tick)
+		log.Info(tick)
 		if tickCount >2{
 			break
 		}
@@ -78,7 +76,7 @@ func TestPeersPool_GetPeer(t *testing.T) {
 
 	chatClient, err := peer.NewPeerByString("localhost:"+ strconv.Itoa(portRange))
 	if err != nil {
-		log.Fatalln("连接失败")
+		log.Fatal("连接失败")
 	}
 
 	msg, err2 := chatClient.Chat(&peermessage.Message{
@@ -87,9 +85,9 @@ func TestPeersPool_GetPeer(t *testing.T) {
 	})
 
 	if err2 != nil {
-		log.Fatalln("发送消息失败")
+		log.Fatal("发送消息失败")
 	} else {
-		log.Println(msg)
+		log.Info(msg)
 		peerPool := NewPeerPool(true,false)
 		//here test the peer pool
 		_,err := peerPool.PutPeer(chatClient.Addr, chatClient)

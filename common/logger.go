@@ -7,40 +7,45 @@
 package common
 
 import (
-	"github.com/Sirupsen/logrus"
-	"path"
-	"runtime"
-	"strings"
+	"github.com/op/go-logging"
+	"os"
+	"time"
+	"strconv"
+	"log"
 )
 
-type ContextHook struct{}
+func InitLog(level logging.Level,loggerDir string,port int){
+	timestamp := time.Now().Unix()
+	tm := time.Unix(timestamp, 0)
 
-func (hook ContextHook) Levels() []logrus.Level {
-	return logrus.AllLevels
-}
+	_, error := os.Stat(loggerDir)
+	if error == nil || os.IsExist(error){
+		//fmt.Println("directory exists")
 
-func (hook ContextHook) Fire(entry *logrus.Entry) error {
-	pc := make([]uintptr, 3, 3)
-	cnt := runtime.Callers(6, pc)
-
-	for i := 0; i < cnt; i++ {
-		fu := runtime.FuncForPC(pc[i] - 1)
-		name := fu.Name()
-		if !strings.Contains(name, "github.com/Sirupsen/logrus") {
-			file, line := fu.FileLine(pc[i] - 1)
-			entry.Data["file"] = path.Base(file)
-			entry.Data["func"] = path.Base(name)
-			entry.Data["line"] = line
-			//entry.Data["time"] = time.Now().Format("15:04:05")
-			break
-		}
+	}else {
+		//fmt.Println("no")
+		os.MkdirAll(loggerDir,0777)
 	}
-	return nil
-}
 
-
-func LoggerInit(){
-	logrus.AddHook(ContextHook{})
-	//logrus.SetFormatter(&logrus.JSONFormatter{})
-	logrus.SetLevel(logrus.DebugLevel)
+	fileName :=loggerDir+strconv.Itoa(port) +tm.Format("-2006-01-02-15:04:05 PM")+ ".log"
+	logFile,err  := os.Create(fileName)
+	//defer logFile.Close()
+	if err != nil {
+		log.Fatalln("open file error !")
+	}
+	backend_stderr := logging.NewLogBackend(os.Stderr, "", 0)
+	backend_file := logging.NewLogBackend(logFile, "", 0)
+	var format_stderr = logging.MustStringFormatter(
+		`%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}%{color:reset}`,
+	)
+	var format_file = logging.MustStringFormatter(
+		`{"level":"%{level}","time":"%{time:2006-01-02 15:04:05.000}","message":"%{message}"},`,
+	)
+	backendFormatter := logging.NewBackendFormatter(backend_stderr, format_stderr)
+	backendStderr := logging.AddModuleLevel(backendFormatter)
+	backendFileFormatter := logging.NewBackendFormatter(backend_file, format_file)
+	backendFile := logging.AddModuleLevel(backendFileFormatter)
+	backendStderr.SetLevel(level, "")
+	backendFile.SetLevel(level, "")
+	logging.SetBackend(backendStderr,backendFile)
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// batch is used to construct reqbatch, the middle layer between outer to pbft
 type batch struct {
 	batchTimer       events.Timer
 	batchTimerActive bool
@@ -26,34 +27,34 @@ type batch struct {
 	localID           uint64
 
 	reqStore	*requestStore	//received messages
-	deduplicator	*deduplicator
-	//test_c                chan int8 //ToDo for test
 	mux		sync.Mutex
 }
-
-type testEvent struct {} //ToDo for test
 
 // batchTimerEvent is sent when the batch timer expires
 type batchTimerEvent struct{}
 
-func newBatch(id uint64, config *viper.Viper, h helper.Stack) *batch{
+// newBatch initializes a batch
+func newBatch(id uint64, config *viper.Viper, h helper.Stack) *batch {
 	var err error
 	op:=&batch{
 		localID:	id,
 		helperImpl:	h,
 	}
 
+	// pbftManager is used to solve pbft message
 	op.pbftManager = events.NewManagerImpl()
 	op.pbftManager.SetReceiver(op)
 	pbftTimerFactory := events.NewTimerFactoryImpl(op.pbftManager)
 	op.pbft = newPbftCore(id, config, op, pbftTimerFactory)
 	op.pbftManager.Start()
 
+	// batchManager is used to solve batch message, like *Request
 	op.batchManager = events.NewManagerImpl()
 	op.batchManager.SetReceiver(op)
 	etf := events.NewTimerFactoryImpl(op.batchManager)
 	op.batchManager.Start()
 
+	// initialize the batchTimeout
 	op.batchTimer = etf.CreateTimer()
 	op.batchSize = config.GetInt("general.batchsize")
 	op.batchStore = nil
@@ -62,30 +63,32 @@ func newBatch(id uint64, config *viper.Viper, h helper.Stack) *batch{
 	if err != nil {
 		panic(fmt.Errorf("Cannot parse batch timeout: %s", err))
 	}
+
 	if op.batchTimeout >= op.pbft.requestTimeout {
 		op.pbft.requestTimeout = 3 * op.batchTimeout / 2
 		logger.Warningf("Configured request timeout must be greater than batch timeout, setting to %v", op.pbft.requestTimeout)
 	}
+
 	if op.pbft.requestTimeout >= op.pbft.nullRequestTimeout && op.pbft.nullRequestTimeout != 0 {
 		op.pbft.nullRequestTimeout = 3 * op.pbft.requestTimeout / 2
 		logger.Warningf("Configured null request timeout must be greater than request timeout, setting to %v", op.pbft.nullRequestTimeout)
 	}
+
 	logger.Infof("PBFT Batch size = %d", op.batchSize)
 	logger.Infof("PBFT Batch timeout = %v", op.batchTimeout)
-
 	op.reqStore = newRequestStore()
 
 	return op
 }
 
-// This function is used by outer to send message to consensus
+// RecvMsg is used by outer to send message to consensus
 func (op *batch) RecvMsg(e []byte) error {
 
 	msg := &pb.Message{}
 	err := proto.Unmarshal(e,msg)
 	
 	if err!=nil {
-		logger.Info("**********> Unmarshal error: can not unmarshal pb.Message", err)
+		logger.Errorf("Inner RecvMsg Unmarshal error: can not unmarshal pb.Message", err)
 		return err
 	}
 
@@ -100,6 +103,7 @@ func (op *batch) RecvMsg(e []byte) error {
 	return nil
 }
 
+// process the trasaction message
 func (op *batch) processTransaction(msg *pb.Message) error {
 
 	// Parse the trasaction message to request
@@ -116,32 +120,14 @@ func (op *batch) processTransaction(msg *pb.Message) error {
 	return nil
 }
 
-func (op *batch) txToReq(tx *pb.Message) *Request {
-
-	req := &Request{
-		Timestamp: 	tx.Timestamp,
-		Payload:   	tx.Payload,
-		ReplicaId: 	op.pbft.id,
-	}
-
-	return req
-}
-
-func (op *batch) postRequestEvent(event *Request) {
-
-	op.mux.Lock()
-	defer op.mux.Unlock()
-	op.batchManager.Queue() <- event
-
-}
-
+// process the consensus message
 func (op *batch) processConsensus(msg *pb.Message) error {
 
 	consensus := &ConsensusMessage{}
 	err := proto.Unmarshal(msg.Payload, consensus)
 
 	if err != nil {
-		logger.Info("**********> Unmarshal error: can not unmarshal ConsensusMessage", err)
+		logger.Errorf("processConsensus, unmarshal error: can not unmarshal ConsensusMessage", err)
 		return err
 	}
 
@@ -162,12 +148,6 @@ func (op *batch) processConsensus(msg *pb.Message) error {
 	return nil
 }
 
-func (op *batch) postPbftEvent(event pbftMessageEvent) {
-	//op.mux.Lock()
-	//defer op.mux.Unlock()
-	op.pbftManager.Queue() <- event
-}
-
 func (op *batch) ProcessEvent(e events.Event) events.Event{
 
 	logger.Debugf("Replica %d start solve event", op.pbft.id)
@@ -178,18 +158,18 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 		req := event
 		return op.processRequest(req)
 	case batchTimerEvent:
-		logger.Infof("Replica %d batch timer expired", op.pbft.id)
+		logger.Debugf("Replica %d batch timer expired", op.pbft.id)
 		if  (len(op.batchStore) > 0) {
 			return op.sendBatch()
 		}
 	default:
-		logger.Info("batch processEvent, default: ")
+		logger.Debugf("batch processEvent, default: ")
 		return op.pbft.ProcessEvent(event)
 	}
 	return nil
 }
 
-func (op *batch) processRequest(req *Request) events.Event {
+func (op *batch) processRequest(req *Request) error {
 
 	op.reqStore.storeOutstanding(req)
 	op.startTimerIfOutstandingRequests()
@@ -200,7 +180,31 @@ func (op *batch) processRequest(req *Request) events.Event {
 	return nil
 }
 
-func (op *batch) leaderProcReq(req *Request) events.Event {
+// covert the transaction to request
+func (op *batch) txToReq(tx *pb.Message) *Request {
+
+	req := &Request{
+		Timestamp: 	tx.Timestamp,
+		Payload:   	tx.Payload,
+		ReplicaId: 	op.pbft.id,
+	}
+
+	return req
+}
+
+func (op *batch) postRequestEvent(event *Request) {
+
+	op.mux.Lock()
+	defer op.mux.Unlock()
+	op.batchManager.Queue() <- event
+
+}
+
+func (op *batch) postPbftEvent(event pbftMessageEvent) {
+	op.pbftManager.Queue() <- event
+}
+
+func (op *batch) leaderProcReq(req *Request) error {
 	
 	logger.Debugf("Batch primary %d queueing new request", op.pbft.id)
 	op.batchStore = append(op.batchStore, req)
@@ -216,7 +220,7 @@ func (op *batch) leaderProcReq(req *Request) events.Event {
 	return nil
 }
 
-func (op *batch) sendBatch() events.Event {
+func (op *batch) sendBatch() error {
 	
 	op.stopBatchTimer()
 	
@@ -229,7 +233,9 @@ func (op *batch) sendBatch() events.Event {
 	op.batchStore = nil
 	logger.Infof("Creating batch with %d requests", len(reqBatch.Batch))
 
-	return reqBatch
+	op.pbftManager.Queue() <- reqBatch
+
+	return nil
 }
 
 
@@ -252,7 +258,6 @@ func (op *batch) stopBatchTimer() {
 	logger.Debugf("Replica %d stopped the batch timer", op.pbft.id)
 	op.batchTimerActive = false
 }
-
 
 // Close tells us to release resources we are holding
 func (op *batch) Close() {

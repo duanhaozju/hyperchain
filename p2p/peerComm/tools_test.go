@@ -7,7 +7,6 @@
 package peerComm
 
 import (
-	"log"
 	"testing"
 	"github.com/stretchr/testify/assert"
 	"os"
@@ -27,10 +26,10 @@ func TestGetIpLocalIpAddr(t *testing.T) {
 func TestGetConfig(t *testing.T) {
 	filepath,_ := os.Getwd()
 	filepath = path.Join(filepath,"../peerconfig.json")
-	log.Println(filepath)
+	log.Info(filepath)
 	configs := GetConfig(filepath)
-	log.Println(configs["port1"])
-	log.Println(configs["node1"])
+	log.Info(configs["port1"])
+	log.Info(configs["node1"])
 }
 
 func TestGenUnixTimeStamp(t *testing.T) {

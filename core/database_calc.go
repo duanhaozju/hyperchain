@@ -2,7 +2,6 @@ package core
 
 import (
 	"hyperchain/hyperdb"
-	"log"
 	"time"
 )
 

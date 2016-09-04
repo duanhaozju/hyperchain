@@ -2,7 +2,6 @@ package core
 
 import (
 	"testing"
-	"log"
 	"hyperchain/common"
 	"hyperchain/core/types"
 )
@@ -10,7 +9,7 @@ import (
 
 // TestGetBalanceIns tests for GetBalanceIns
 func TestGetBalanceIns(t *testing.T) {
-	log.Println("test =============> > > TestGetBalanceIns")
+	log.Info("test =============> > > TestGetBalanceIns")
 	quit := make(chan int)
 	GetBalanceIns()
 	for i := 0; i < 10; i++ {
@@ -35,7 +34,7 @@ var balanceCases = BalanceMap{
 
 // TestBalance_PutCacheBalance tests for PutCacheBalance
 func TestBalance_PutCacheBalance(t *testing.T) {
-	log.Println("test =============> > > TestBalance_PutCacheBalance")
+	log.Info("test =============> > > TestBalance_PutCacheBalance")
 	b, err := GetBalanceIns()
 	if err != nil {
 		log.Fatal(err)
@@ -47,7 +46,7 @@ func TestBalance_PutCacheBalance(t *testing.T) {
 
 // TestBalance_GetCacheBalance tests for GetCacheBalance
 func TestBalance_GetCacheBalance(t *testing.T) {
-	log.Println("test =============> > > TestBalance_GetCacheBalance")
+	log.Info("test =============> > > TestBalance_GetCacheBalance")
 	b, err := GetBalanceIns()
 	if err != nil {
 		log.Fatal(err)
@@ -62,7 +61,7 @@ func TestBalance_GetCacheBalance(t *testing.T) {
 
 // TestBalance_GetAllCacheBalance tests for GetAllCacheBalance
 func TestBalance_GetAllCacheBalance(t *testing.T) {
-	log.Println("test =============> > > TestBalance_GetAllCacheBalance")
+	log.Info("test =============> > > TestBalance_GetAllCacheBalance")
 	b, err := GetBalanceIns()
 	if err != nil {
 		log.Fatal(err)
@@ -77,7 +76,7 @@ func TestBalance_GetAllCacheBalance(t *testing.T) {
 }
 
 func TestBalance_DeleteCacheBalance(t *testing.T) {
-	log.Println("test =============> > > TestBalance_DeleteCacheBalance")
+	log.Info("test =============> > > TestBalance_DeleteCacheBalance")
 	b, err := GetBalanceIns()
 	if err != nil {
 		log.Fatal(err)
@@ -93,7 +92,7 @@ func TestBalance_DeleteCacheBalance(t *testing.T) {
 
 // TestBalance_PutDBBalance tests for PutDBBalance
 func TestBalance_PutDBBalance(t *testing.T) {
-	log.Println("test =============> > > TestBalance_PutDBBalance")
+	log.Info("test =============> > > TestBalance_PutDBBalance")
 	b, err := GetBalanceIns()
 	if err != nil {
 		log.Fatal(err)
@@ -105,7 +104,7 @@ func TestBalance_PutDBBalance(t *testing.T) {
 
 // TestBalance_GetDBBalance tests for GetDBBalance
 func TestBalance_GetDBBalance(t *testing.T) {
-	log.Println("test =============> > > TestBalance_GetDBBalance")
+	log.Info("test =============> > > TestBalance_GetDBBalance")
 	b, err := GetBalanceIns()
 	if err != nil {
 		log.Fatal(err)
@@ -120,7 +119,7 @@ func TestBalance_GetDBBalance(t *testing.T) {
 
 // TestBalance_GetAllDBBalance tests for GetAllDBBalance
 func TestBalance_GetAllDBBalance(t *testing.T) {
-	log.Println("test =============> > > TestBalance_GetAllDBBalance")
+	log.Info("test =============> > > TestBalance_GetAllDBBalance")
 	b, err := GetBalanceIns()
 	if err != nil {
 		log.Fatal(err)
@@ -135,7 +134,7 @@ func TestBalance_GetAllDBBalance(t *testing.T) {
 }
 
 func TestBalance_DeleteDBBalance(t *testing.T) {
-	log.Println("test =============> > > TestBalance_DeleteDBBalance")
+	log.Info("test =============> > > TestBalance_DeleteDBBalance")
 	b, err := GetBalanceIns()
 	if err != nil {
 		log.Fatal(err)
@@ -168,7 +167,7 @@ var transCases = []*types.Transaction{
 }
 
 func TestBalance_UpdateCacheBalance(t *testing.T) {
-	log.Println("test =============> > > TestBalance_UpdateCacheBalance")
+	log.Info("test =============> > > TestBalance_UpdateCacheBalance")
 	b, err := GetBalanceIns()
 	if err != nil {
 		log.Fatal(err)
@@ -197,7 +196,7 @@ var blockCase = &types.Block{
 }
 
 func TestBalance_UpdateDBBalance(t *testing.T) {
-	log.Println("test =============> > > TestBalance_UpdateCacheBalance")
+	log.Info("test =============> > > TestBalance_UpdateCacheBalance")
 	b, err := GetBalanceIns()
 	if err != nil {
 		log.Fatal(err)

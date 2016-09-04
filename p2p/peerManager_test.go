@@ -9,22 +9,8 @@ package p2p
 
 import (
 	"testing"
-	"log"
 	"hyperchain/event"
 )
-//
-//func TestGrpcPeerManager_GetClientId(t *testing.T) {
-//	path := "/home/chenquan/Workspace/IdeaProjects/hyperchain-go/src/hyperchain/p2p/peerconfig.json"
-//	TODO CANNOT TEST Easily -_-!!
-//	grpcPeerMgr := new(GrpcPeerManager)
-//	aliveChan := make(chan bool)
-//	go grpcPeerMgr.Start(path,1, aliveChan,true)
-//
-//	<- aliveChan
-//
-//
-//}
-
 func TestGrpcPeerManager_Start(t *testing.T){
 
 	//path := "/home/chenquan/Workspace/IdeaProjects/hyperchain-go/src/hyperchain/p2p/peerconfig.json"
@@ -51,7 +37,7 @@ func TestGrpcPeerManager_Start(t *testing.T){
 	nodeCount := 0
 	for flag := range aliveChan{
 		if flag{
-			log.Println("A peer has connected")
+			log.Info("A peer has connected")
 			nodeCount += 1
 		}
 		if nodeCount >=4{

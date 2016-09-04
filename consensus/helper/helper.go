@@ -5,9 +5,8 @@ import (
 	pb "hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"
-	"fmt"
-	"hyperchain/manager"
 )
+
 type helper struct {
 	msgQ *event.TypeMux
 }
@@ -17,39 +16,50 @@ type Stack interface {
 	Execute(reqBatch *pb.ExeMessage) error
 }
 
+// InnerBroadcast broadcast the consensus message between vp nodes
 func (h *helper) InnerBroadcast(msg *pb.Message) error{
-	fmt.Println("enter innerbroad cast#######")
+
 	tmpMsg, err := proto.Marshal(msg)
+
 	if err != nil {
 		return err
 	}
+
 	broadcastEvent := event.BroadcastConsensusEvent{
 		Payload: tmpMsg,
 	}
-	//fmt.Println("broadcast")
-	//manager.GetEventObject().Post(event.NewTxEvent{Payload: []byte{0x00, 0x00, 0x03, 0xe8}})
 
-	go manager.GetEventObject().Post(broadcastEvent)
-	//h.msgQ.Post(broadcastEvent)
+	// Post the event to outer
+	go h.msgQ.Post(broadcastEvent)
+
 	return nil
 }
 
+// Execute transfers the transactions decided by consensus to outer
 func (h *helper) Execute(reqBatch *pb.ExeMessage) error{
+
 	tmpMsg,err:=proto.Marshal(reqBatch)
+
 	if err!=nil {
 		return err
 	}
+
 	exeEvent := event.NewBlockEvent{
 		Payload:	tmpMsg,
 	}
-	go manager.GetEventObject().Post(exeEvent)
-	//h.msgQ.Post(exeEvent)
+
+	// Post the event to outer
+	go h.msgQ.Post(exeEvent)
+
 	return nil
 }
 
+// NewHelper initializes a helper object
 func NewHelper(m *event.TypeMux) *helper {
+
 	h:=&helper{
-		msgQ:m,
+		msgQ: m,
 	}
+
 	return h
 }

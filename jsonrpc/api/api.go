@@ -2,14 +2,13 @@ package api
 
 import (
 	"hyperchain/core/types"
-	"fmt"
 	"hyperchain/event"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/hyperdb"
-	"log"
 	"hyperchain/core"
 	"hyperchain/manager"
-	"hyperchain/logger"
+	"github.com/op/go-logging"
+	"time"
 )
 
 type TxArgs struct{
@@ -32,13 +31,18 @@ type LastestBlockShow struct{
 	Hash []byte
 }
 
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("jsonrpc/api")
+}
+
 // SendTransaction is to build a transaction object,and then post event NewTxEvent,
 // if the sender's balance is not enough, return false
 func SendTransaction(args TxArgs) bool {
 
 	var tx *types.Transaction
 
-	fmt.Println(args)
+	log.Info(args)
 
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
 
@@ -50,10 +54,18 @@ func SendTransaction(args TxArgs) bool {
 			log.Fatalf("proto.Marshal(tx) error: %v",err)
 		}
 
+		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 
-		//for i := 0; i < 500; i += 1 {
-			go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-		//}
+		log.Infof("############# %d: start send request#############", time.Now().Unix())
+
+		for start := time.Now().Unix() ; start < start + 600; start = time.Now().Unix() {
+			for i := 0; i < 1500; i++ {
+				go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+				time.Sleep(666 * time.Microsecond)
+			}
+		}
+
+		log.Infof("############# %d: end send request#############", time.Now().Unix())
 
 		return true
 
@@ -80,13 +92,14 @@ func GetAllTransactions()  []TransactionShow{
 
 	var transactions []TransactionShow
 
-	myLogger.GetLogger().Println(txs)
-	for index, tx := range txs {
-
-		transactions[index].Value = string(tx.Value)
-		transactions[index].From = string(tx.From)
-		transactions[index].To = string(tx.To)
-		transactions[index].TimeStamp = tx.TimeStamp
+	for _, tx := range txs {
+		var ts = TransactionShow{
+			Value: string(tx.Value),
+			From: string(tx.From),
+			To: string(tx.To),
+			TimeStamp: tx.TimeStamp,
+		}
+		transactions = append(transactions,ts)
 	}
 
 	return transactions

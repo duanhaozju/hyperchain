@@ -11,9 +11,9 @@ import (
 	peer "hyperchain/p2p/peer"
 	pb "hyperchain/p2p/peermessage"
 	"time"
-	"log"
 	"strings"
 	"strconv"
+	"github.com/op/go-logging"
 )
 
 type PeersPool struct {
@@ -25,9 +25,11 @@ type PeersPool struct {
 
 // the peers pool instance
 var prPoolIns PeersPool
+var log *logging.Logger // package-level logger
 
 //initialize the peers pool
 func init() {
+	log = logging.MustGetLogger("p2p/peerPool")
 	prPoolIns.peers = make(map[string]*peer.Peer)
 	prPoolIns.peerAddr = make(map[string]pb.PeerAddress)
 	prPoolIns.peerKeys = make(map[pb.PeerAddress]string)
@@ -51,10 +53,10 @@ func NewPeerPool(isNewInstance bool,isKeepAlive bool) PeersPool {
 		if isKeepAlive{
 			go func() {
 				for tick := range time.Tick(15 * time.Second) {
-					log.Println("Keep alive go routine information")
-					log.Println("Keep alive:", tick)
+					log.Debug("Keep alive go routine information")
+					log.Debug("Keep alive:", tick)
 					for nodeName, p := range newPrPoolIns.peers {
-						log.Println(nodeName)
+						log.Info(nodeName)
 						msg, err := p.Chat(&pb.Message{
 							MessageType:  pb.Message_HELLO,
 							Payload:      []byte("Hello"),
@@ -64,7 +66,7 @@ func NewPeerPool(isNewInstance bool,isKeepAlive bool) PeersPool {
 							log.Fatal("Node:", p.Addr, "was down and need to recall ", err)
 							//TODO RECALL THE DEAD NODE
 						}
-						log.Println("Node:", p.Addr, "Message", msg.MessageType)
+						log.Info("Node:", p.Addr, "Message", msg.MessageType)
 					}
 				}
 			}()
@@ -112,7 +114,7 @@ func GetPeerByString(addr string)*peer.Peer{
 	address := strings.Split(addr,":")
 	p,err := strconv.Atoi(address[1])
 	if err != nil{
-		log.Println(`given string is not like "localhost:1234", pls check it`)
+		log.Error(`given string is not like "localhost:1234", pls check it`)
 		return nil
 	}
 	pAddr := pb.PeerAddress{

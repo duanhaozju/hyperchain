@@ -9,7 +9,30 @@ import (
 	"encoding/hex"
 	"hyperchain/crypto"
 	"hyperchain/common"
+	"sync/atomic"
+	"math/big"
 )
+
+type Transaction struct {
+	data txdata
+	// caches
+	from atomic.Value
+}
+type txdata struct  {
+	Recipient *[]byte
+	Amount *big.Int
+	signature []byte
+}
+func NewTransaction(to []byte,amount *big.Int) *Transaction {
+	d:=txdata{
+		Recipient:	&to,
+		Amount:		new(big.Int),
+	}
+	if amount != nil{
+		d.Amount.Set(amount)
+	}
+	return &Transaction{data:d}
+}
 
 func TestManager(t *testing.T)  {
 	scryptN := StandardScryptN
@@ -33,5 +56,26 @@ func TestManager(t *testing.T)  {
 	fmt.Println(key.Address)
 	fmt.Println(hex.EncodeToString(key.Address))
 	fmt.Println(key.PrivateKey)
+
+	//签名交易
+	tx:= NewTransaction([]byte{},big.NewInt(100))
+	s256 := crypto.NewKeccak256Hash("Keccak256")
+	hash := s256.Hash([]interface{}{tx.data.Amount,tx.data.Recipient})
+	signature,err := am.encryption.Sign(hash[:],key.PrivateKey)
+
+	if err != nil {
+		t.Error(err)
+		t.FailNow()
+
+	}
+	//验证签名
+	from,err:= am.encryption.UnSign(hash[:],signature)
+	if err != nil {
+		t.Error(err)
+		t.FailNow()
+	}
+
+	fmt.Println(from)
+	fmt.Println(common.ToHex(from))
 
 }

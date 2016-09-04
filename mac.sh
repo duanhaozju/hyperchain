@@ -18,7 +18,8 @@ echo "rebuild the application"
 
 echo "run the application"
 # change the terminal program here!!
-open -n -a Terminal "(./hyperchain -o 1 -l 8081)"
+#open -n -a Terminal
+#go run main.go -o 1 -l 8081
 #gnome-terminal -x bash -c "(./hyperchain -o 1 -l 8081)"
 #gnome-terminal -x bash -c "(./hyperchain -o 1 -l 8081)"
 #gnome-terminal -x bash -c "(./hyperchain -o 2 -l 8082)"

@@ -6,17 +6,13 @@ package core
 
 import (
 	"testing"
-
-
-
 	"fmt"
-	"hyperchain/logger"
+
 
 )
 
 
 func TestBlockPool(t *testing.T){
-	myLogger.NewLogger(12)
 	InitDB(8082)
 	//CreateInitBlock("./genesis.json")
 	//eventMux:=new(event.TypeMux)
