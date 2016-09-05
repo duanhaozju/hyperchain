@@ -634,8 +634,9 @@ func (instance *pbftCore) execOutstanding(exeBatch *pb.ExeMessage) {
 
 }
 
-func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) events.Event {
-	return
+func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) error {
+
+	return nil
 }
 
 func (instance *pbftCore) softStartTimer(timeout time.Duration, reason string) {
