@@ -5,6 +5,7 @@
     <title>P2P</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <script type="text/javascript" src="/static/js/jquery.min.js"></script>
+    <script type="text/javascript" src="/static/js/utils/pagination.js"></script>
     <script src="/static/js/common.js"></script>
 </head>
 <body>
@@ -54,17 +55,9 @@
                         <th>TimeStamp</th>
                     </tr>
                     </thead>
-                    <tbody>
-                    {{range .Trans}}
-                    <tr>
-                        <td>{{.From}}</td>
-                        <td>{{.To}}</td>
-                        <td>{{.Value}}</td>
-                        <td>{{.TimeStamp}}</td>
-                    </tr>
-                    {{end}}
-                    </tbody>
+                    <tbody class="data-container"></tbody>
                 </table>
+                <div class="pagination-container"></div>
             </div>
             <div class="balances" style="display: none">
                 <table class="balances">
@@ -74,8 +67,9 @@
                         <th>Balance</th>
                     </tr>
                     </thead>
-                    <tbody></tbody>
+                    <tbody class="data-container"></tbody>
                 </table>
+                <div class="pagination-container"></div>
             </div>
             <div class="blocks" style="display: none">
                 <table class="blocks">
@@ -84,11 +78,12 @@
                         <th>Height</th>
                         <th>Transactions</th>
                         <th>WriteTime</th>
-                        <th>&lt; 300ms</th>
+                        <th>处理 &lt; 300ms的交易数</th>
                     </tr>
                     </thead>
-                    <tbody></tbody>
+                    <tbody class="data-container"></tbody>
                 </table>
+                <div class="pagination-container"></div>
             </div>
         </div>
 
