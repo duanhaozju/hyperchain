@@ -23,6 +23,10 @@ import (
 func CreateInitBlock(filename string)  {
 	log.Info("genesis start")
 
+	if(GetHeightOfChain()>0){
+		log.Info("already genesis")
+		return
+	}
 	type Genesis struct {
 		Timestamp  int64
 		ParentHash string
