@@ -16,6 +16,11 @@ import (
 	"sync"
 	"github.com/op/go-logging"
 )
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("p2p/peerEventManager")
+}
+
 
 // PeerEventManager is a peer event manager which can handle the broadcast event etc.
 type PeerEventManager struct {
@@ -26,13 +31,7 @@ type PeerEventManager struct {
 	syncMux sync.Mutex
 }
 
-var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("p2p/peerEventManager")
-}
-
-
-// NewPeerEventManager offer a Event Manager instance 提供一个事件管理器实例
+// NewPeerEventManager offer a Event Manager instance
 func NewPeerEventManager() *PeerEventManager{
 	var peereventManager PeerEventManager
 	peereventManager.peerEventChain = make(chan pb.Message)
@@ -41,7 +40,7 @@ func NewPeerEventManager() *PeerEventManager{
 	return &peereventManager
 }
 
-//RegisterEvent regisiter the event handler 注册事件监听器
+//RegisterEvent register the event handler
 func (this *PeerEventManager)RegisterEvent(msgType pb.Message_MsgType,eHandler eventHandler.PeerEventHandler)error{
 	if _,ok := this.eventListener[msgType];ok{
 		return errors.New("This event type already has been registered!(duplicate)")
@@ -51,7 +50,7 @@ func (this *PeerEventManager)RegisterEvent(msgType pb.Message_MsgType,eHandler e
 	}
 }
 
-// PostEvent post the event into listen thread 将事件发送到监听线程
+// PostEvent post the event into listen thread
 func (this *PeerEventManager) PostEvent(msgType pb.Message_MsgType,message pb.Message)error{
 	this.syncMux.Lock()
 	defer this.syncMux.Unlock()
@@ -64,13 +63,13 @@ func (this *PeerEventManager) PostEvent(msgType pb.Message_MsgType,message pb.Me
 	}
 }
 
-// Start start the listen thread 开启事件监听
+// Start start the listen thread
 func(this *PeerEventManager)Start(){
 	go this.eventLoop()
 }
 
 func (this *PeerEventManager)eventLoop(){
-	//如果发送方关闭将无法range, if the send side close the channel, this loop will be break
+	//if the send peer close the channel, this loop will be break
 	for msg := range this.peerEventChain {
 		if handler, ok := this.eventListener[msg.MessageType];ok {
 			handler.ProcessEvent(&msg)

@@ -49,7 +49,3 @@ func GetConfig(path string) map[string]string{
 	}
 	return configs
 }
-
-func GenUnixTimeStamp() int64{
-	return time.Now().Unix()
-}

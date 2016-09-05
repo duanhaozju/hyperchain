@@ -31,9 +31,3 @@ func TestGetConfig(t *testing.T) {
 	log.Info(configs["port1"])
 	log.Info(configs["node1"])
 }
-
-func TestGenUnixTimeStamp(t *testing.T) {
-	fmt.Println(time.Now().UnixNano())
-	fmt.Println(GenUnixTimeStamp())
-
-}
