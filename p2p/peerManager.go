@@ -138,11 +138,9 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 			}
 		}
 	}
-	log.Info("┌────────────────────────────────────────┐")
-	log.Info("│                                        │")
-	log.Info("│        All NODES WERE CONNECTED        │")
-	log.Info("│                                        │")
-	log.Info("└────────────────────────────────────────┘")
+	log.Info("┌────────────────────────────┐")
+	log.Info("│  All NODES WERE CONNECTED  │")
+	log.Info("└────────────────────────────┘")
 
 	*this.aliveChain <- true
 }
@@ -189,9 +187,9 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 	go broadcast(broadCastMessage,&pPool)
 }
 
+// inner the broadcast method which serve BroadcastPeers function
 func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 	for _, peer := range pPool.GetPeers() {
-		//log.Println("((((((广播/Broadcast))))))")
 		resMsg, err := peer.Chat(&broadCastMessage)
 		if err != nil {
 			log.Error("Broadcast failed,Node", peer.Addr)
