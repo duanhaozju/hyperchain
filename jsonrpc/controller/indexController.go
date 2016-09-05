@@ -69,8 +69,6 @@ func BalancesGet(w http.ResponseWriter, r *http.Request) {
 func BlocksGet(w http.ResponseWriter, r *http.Request) {
 	blocks := api.GetAllBlocks()
 
-	log.Info(blocks)
-
 	data, err := json.Marshal(ResData{
 		Data: blocks,
 		Code: 1,
@@ -102,7 +100,7 @@ func TransactionGet(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-func ExuteTimeQuery(w http.ResponseWriter, r *http.Request) {
+func ExecuteTimeQuery(w http.ResponseWriter, r *http.Request) {
 	var res ResData
 	var p = api.TxArgs{}
 
