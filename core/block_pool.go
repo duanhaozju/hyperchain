@@ -98,7 +98,7 @@ func (pool *BlockPool)AddBlock(block *types.Block,commonHash crypto.CommonHash) 
 		pool.demandNumber+=1
 		log.Info("current demandNumber is ",pool.demandNumber)
 
-		WriteBlock(*block,commonHash)
+		WriteBlock(block,commonHash)
 
 
 		pool.mu.RUnlock()
