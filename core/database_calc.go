@@ -36,6 +36,7 @@ func CalcResponseAVGTime(from, to uint64) int64 {
 		log.Fatal(err)
 	}
 	var sum int64 = 0
+	var length int64 = 0
 	for i := from; i <= to; i ++ {
 		blockHash, err := GetBlockHash(db, i)
 		if err != nil {
@@ -50,7 +51,8 @@ func CalcResponseAVGTime(from, to uint64) int64 {
 		for _, trans := range block.Transactions {
 			sum += block.WriteTime - trans.TimeStamp
 		}
+		length += int64(len(block.Transactions))
 	}
 
-	return sum / (int64(to - from + 1) * 500 * int64(time.Millisecond))
+	return sum / (length * int64(time.Millisecond))
 }
