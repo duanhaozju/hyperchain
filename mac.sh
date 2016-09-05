@@ -1,26 +1,39 @@
-#!/usr/bin/env bash
+#!/bin/bash
+echo "┌─────────────────────────────────┐"
+echo "│    LOCAL TEST FOR HYPERCHAIN    │"
+echo "└─────────────────────────────────┘"
 
-echo "##########################"
-echo "#   TEST FOR HYPERCHAIN  #"
-echo "##########################"
+# Stop on first error
+set -e
+
+#set -x
+
 
 echo "kill the bind port process"
-
-kill -9 $(lsof -i :8001 | awk 'NR>=2{print $2}')
-kill -9 $(lsof -i :8002 | awk 'NR>=2{print $2}')
-kill -9 $(lsof -i :8003 | awk 'NR>=2{print $2}')
-kill -9 $(lsof -i :8004 | awk 'NR>=2{print $2}')
+ports1=`lsof -i :8001 | awk 'NR>=2{print $2}'`
+if [ x"$ports1" != x"" ];then
+    kill -9 $ports1
+fi
+ports2=`lsof -i :8002 | awk 'NR>=2{print $2}'`
+if [ x"$ports2" != x"" ];then
+    kill -9 $ports2
+fi
+ports3=`lsof -i :8003 | awk 'NR>=2{print $2}'`
+if [ x"$ports3" != x"" ];then
+    kill -9 $ports3
+fi
+ports4=`lsof -i :8004 | awk 'NR>=2{print $2}'`
+if [ x"$ports4" != x"" ];then
+    kill -9 $ports4
+fi
 
 #rebuild the application
 echo "rebuild the application"
+govendor build
 
-#govendor build
 
 echo "run the application"
-# change the terminal program here!!
-#open -n -a Terminal
-#go run main.go -o 1 -l 8081
-#gnome-terminal -x bash -c "(./hyperchain -o 1 -l 8081)"
+
 #gnome-terminal -x bash -c "(./hyperchain -o 1 -l 8081)"
 #gnome-terminal -x bash -c "(./hyperchain -o 2 -l 8082)"
 #gnome-terminal -x bash -c "(./hyperchain -o 3 -l 8083)"
