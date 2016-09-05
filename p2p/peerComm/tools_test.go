@@ -11,8 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"os"
 	"path"
-	"fmt"
-	"time"
 )
 
 func TestGetIpLocalIpAddr(t *testing.T) {
