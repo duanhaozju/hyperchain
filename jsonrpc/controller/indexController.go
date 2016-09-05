@@ -5,6 +5,8 @@ import (
 	"path"
 	"os"
 	"hyperchain/jsonrpc/api"
+	"encoding/json"
+	"io/ioutil"
 )
 
 
@@ -15,7 +17,6 @@ type ResData struct{
 
 type data struct{
 	Trans    []api.TransactionShow
-	Balances api.BalanceShow
 	LastestBlock api.LastestBlockShow
 }
 
@@ -39,18 +40,105 @@ func Index(w http.ResponseWriter, r *http.Request) {
 
 
 	transactions := api.GetAllTransactions()
-	balances := api.GetAllBalances()
 	lastestBlock := api.LastestBlock()
-
-	//sort.Sort(types.Transactions(transactions)) // sort transactions
 
 	tmpl.Execute(w,data{
 		Trans:transactions,
-		Balances: balances,
 		LastestBlock: lastestBlock,
 	})
 }
 
+// BalancesGet function is the handler of "/balances", GET
+func BalancesGet(w http.ResponseWriter, r *http.Request) {
+	balances := api.GetAllBalances()
+
+	data, err := json.Marshal(ResData{
+		Data: balances,
+		Code: 1,
+	})
+	if err != nil {
+		log.Fatalf("Error: %v",err)
+		return
+	}
+
+	w.Header().Set("Content-Type","application/json")
+	w.Write(data)
+}
+
+// BlocksGet function is the handler of "/blocks", GET
+func BlocksGet(w http.ResponseWriter, r *http.Request) {
+	blocks := api.GetAllBlocks()
+
+	log.Info(blocks)
+
+	data, err := json.Marshal(ResData{
+		Data: blocks,
+		Code: 1,
+	})
+	if err != nil {
+		log.Fatalf("Error: %v",err)
+		return
+	}
+
+	w.Header().Set("Content-Type","application/json")
+	w.Write(data)
+}
+
+// TransactionGet function is the handler of "/trans", GET
+func TransactionGet(w http.ResponseWriter, r *http.Request) {
+	transactions := api.GetAllTransactions()
+
+	data, err := json.Marshal(ResData{
+		Data: transactions,
+		Code: 1,
+	})
+
+	if err != nil {
+		log.Fatalf("Error: %v",err)
+		return
+	}
+
+	w.Header().Set("Content-Type","application/json")
+	w.Write(data)
+}
+
+func ExuteTimeQuery(w http.ResponseWriter, r *http.Request) {
+	var res ResData
+	var p = api.TxArgs{}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Fatalf("Error: %v",err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err = json.Unmarshal(body, &p)
+	if err != nil {
+		log.Fatalf("Error: %v",err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	time := api.QueryExcuteTime(api.TxArgs{
+		From: p.From,
+		To: p.To,
+	})
+
+
+	res = ResData{
+		Data: time,
+		Code:1,
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Add("Access-Control-Allow-Headers","Content-Type")
+	w.Header().Set("Content-Type","application/json")
+
+	b,_ := json.Marshal(res)
+
+	w.Write(b)
+}
 
 
 

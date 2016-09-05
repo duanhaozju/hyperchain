@@ -27,4 +27,29 @@ var routes = Routes{
 		"/trans",
 		controller.TransactionCreate,
 	},
+	Route{
+		"TransactionGet",
+		"GET",
+		"/trans",
+		controller.TransactionGet,
+	},
+	Route{
+		"BalancesGet",
+		"GET",
+		"/balances",
+		controller.BalancesGet,
+	},
+	Route{
+		"BlocksGet",
+		"GET",
+		"/blocks",
+		controller.BlocksGet,
+	},
+	Route{
+		"ExuteTimeQuery",
+		"POST",
+		"/query",
+		controller.ExuteTimeQuery,
+	},
+
 }
