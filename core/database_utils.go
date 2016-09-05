@@ -212,12 +212,20 @@ func GetLatestBlockHash() []byte {
 	return memChainMap.data.LatestBlockHash
 }
 
+// GetParentBlockHash get the latest block's parentHash
+func GetParentBlockHash() []byte {
+	memChainMap.lock.RLock()
+	defer memChainMap.lock.RUnlock()
+	return memChainMap.data.ParentBlockHash
+}
+
 // UpdateChain update latest blockHash as given blockHash
 // and the height of chain add 1
-func UpdateChain(blockHash []byte, genesis bool) error {
+func UpdateChain(block *types.Block, genesis bool) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
-	memChainMap.data.LatestBlockHash = blockHash
+	memChainMap.data.LatestBlockHash = block.BlockHash
+	memChainMap.data.ParentBlockHash = block.ParentHash
 	if !genesis {
 		memChainMap.data.Height += 1
 	}
@@ -241,6 +249,7 @@ func GetChainCopy() *types.Chain {
 	defer memChainMap.lock.RUnlock()
 	return &types.Chain{
 		LatestBlockHash: memChainMap.data.LatestBlockHash,
+		ParentBlockHash: memChainMap.data.ParentBlockHash,
 		Height: memChainMap.data.Height,
 	}
 }
