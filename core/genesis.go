@@ -97,7 +97,7 @@ func CreateInitBlock(filename string)  {
 // 2. Put transactions in block into db  (-- cancel --)
 // 3. Update chain
 // 4. Update balance
-func WriteBlock(block types.Block, commonHash crypto.CommonHash)  {
+func WriteBlock(block *types.Block, commonHash crypto.CommonHash)  {
 
 	log.Info("block number is ",block.Number)
 	currentChain := GetChainCopy()
@@ -113,7 +113,7 @@ func WriteBlock(block types.Block, commonHash crypto.CommonHash)  {
 	if err != nil {
 		log.Fatal(err)
 	}
-	UpdateChain(&block, false)
+	UpdateChain(block, false)
 	balance, err := GetBalanceIns()
 	if err != nil {
 		log.Fatal(err)
@@ -122,5 +122,5 @@ func WriteBlock(block types.Block, commonHash crypto.CommonHash)  {
 	newChain := GetChainCopy()
 	fmt.Println("Block number",newChain.Height)
 	fmt.Println("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
-	balance.UpdateDBBalance(&block)
+	balance.UpdateDBBalance(block)
 }

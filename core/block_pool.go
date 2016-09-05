@@ -69,7 +69,7 @@ func (pool *BlockPool) eventLoop() {
 func (pool *BlockPool)AddBlock(block *types.Block,commonHash crypto.CommonHash) {
 
 	if (block.Number == 0) {
-		WriteBlock(*block,commonHash)
+		WriteBlock(block,commonHash)
 		return
 	}
 
@@ -99,7 +99,7 @@ func (pool *BlockPool)AddBlock(block *types.Block,commonHash crypto.CommonHash) 
 
 		pool.demandNumber+=1
 		log.Info("current demandNumber is ",pool.demandNumber)
-		WriteBlock(*block,commonHash)
+		WriteBlock(block,commonHash)
 
 		pool.mu.RUnlock()
 
@@ -110,7 +110,7 @@ func (pool *BlockPool)AddBlock(block *types.Block,commonHash crypto.CommonHash) 
 					pool.mu.RLock()
 					pool.demandNumber+=1
 					log.Info("current demandNumber is ",pool.demandNumber)
-					WriteBlock(*pool.queue[i],commonHash)
+					WriteBlock(pool.queue[i],commonHash)
 					delete(pool.queue,i)
 					pool.mu.RUnlock()
 

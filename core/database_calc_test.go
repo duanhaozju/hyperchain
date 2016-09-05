@@ -13,7 +13,7 @@ func TestCalcResponseCount(t *testing.T) {
 	InitDB(8089)
 	blockUtilsCase.Number = GetHeightOfChain() + 1
 	commonHash := crypto.NewKeccak256Hash("keccak256")
-	WriteBlock(blockUtilsCase, commonHash)
+	WriteBlock(&blockUtilsCase, commonHash)
 	fmt.Println(GetHeightOfChain())
 	count := CalcResponseCount(GetHeightOfChain(), 10000)
 		/*if count != 2 {
