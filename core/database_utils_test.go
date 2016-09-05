@@ -60,7 +60,7 @@ func TestPutTransaction(t *testing.T) {
 	}
 	for i, trans := range transactionCases {
 		key := []byte("key" + strconv.Itoa(i))
-		err = PutTransaction(db, key, *trans)
+		err = PutTransaction(db, key, trans)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -162,7 +162,7 @@ func TestPutBlock(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = PutBlock(db, blockUtilsCase.BlockHash, blockUtilsCase)
+	err = PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
 	if err != nil {
 		log.Fatal(err)
 	}
