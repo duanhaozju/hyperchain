@@ -87,7 +87,7 @@ func CreateInitBlock(filename string)  {
 
 	log.Debug("构造创世区块")
 
-	UpdateChain(block.BlockHash,true)
+	UpdateChain(&block,true)
 	log.Info("current chain block number is",GetChainCopy().Height)
 
 }
@@ -113,7 +113,7 @@ func WriteBlock(block types.Block, commonHash crypto.CommonHash)  {
 	if err != nil {
 		log.Fatal(err)
 	}
-	UpdateChain(block.BlockHash, false)
+	UpdateChain(&block, false)
 	balance, err := GetBalanceIns()
 	if err != nil {
 		log.Fatal(err)
