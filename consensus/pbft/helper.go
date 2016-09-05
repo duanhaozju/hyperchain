@@ -54,7 +54,7 @@ func exeBatchHelper(reqBatch *RequestBatch, no uint64) *pb.ExeMessage {
 
 	exeMsg := &pb.ExeMessage{
 		Batch:		batches,
-		Timestamp:	time.Now().UnixNano(),
+		Timestamp:	reqBatch.Timestamp,
 		No:		no,
 	}
 

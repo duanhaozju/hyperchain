@@ -45,4 +45,11 @@ var routes = Routes{
 		"/blocks",
 		controller.BlocksGet,
 	},
+	Route{
+		"ExuteTimeQuery",
+		"POST",
+		"/query",
+		controller.ExuteTimeQuery,
+	},
+
 }

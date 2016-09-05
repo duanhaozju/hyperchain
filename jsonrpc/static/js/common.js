@@ -23,6 +23,8 @@ $(document).ready(function(){
             count = 1
         }
 
+        $(".status").html("请求发送中...")
+
         for(var i = 1;i <= count;i++) {
 
             $.ajax({
@@ -34,6 +36,7 @@ $(document).ready(function(){
                 success: function (result) {
                     console.log(result);
                     if (result.Code == 1) {
+                        //alert("提交成功!");
                         //alert("提交成功!");
                         $(".status").html("提交成功")
                     } else {
@@ -53,8 +56,33 @@ $(document).ready(function(){
         }
     };
     
-    $("input[type=button]").click(submitForm);
+    
+    $("#submit").click(submitForm);
 
+    $("#query").click(function(){
+        $.ajax({
+            contentType: "application/json",
+            type: "POST",
+            dataType: "json",
+            url: "/query",
+            data: JSON.stringify({
+                from: $("input[name='from_block']").val(),
+                to: $("input[name='to_block']").val()
+            }),
+            success: function (result) {
+                if (result.Code == 1) {
+                    $("#time").html(result.Data)
+                } 
+            },
+            error: function (err) {
+                if (err) {
+                    console.log(err);
+                }
+                return false;
+            }
+        });
+    });
+    
     $tab_tx.click({div: $div_trans, url: "/trans"},tabClickHandler);
     $tab_bal.click({div: $div_balances, url: "/balances"},tabClickHandler);
     $tab_block.click({div: $div_blocks, url: "/blocks"},tabClickHandler);

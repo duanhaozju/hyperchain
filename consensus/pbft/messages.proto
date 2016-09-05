@@ -50,6 +50,7 @@ message message {
 
 message request_batch {
     repeated request batch = 1;
+    int64 timestamp = 2;
 }
 
 message pre_prepare {
@@ -123,7 +124,13 @@ message fetch_request_batch {
 }
 
 // consensus metadata
-
 message metadata {
     uint64 seqNo = 1;
+}
+
+// BlockchainInfo, getState()
+message BlockchainInfo {
+    uint64 height = 1;
+    bytes currentBlockHash = 2;
+    bytes previousBlockHash = 3;
 }

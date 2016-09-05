@@ -9,6 +9,8 @@ import (
 	"hyperchain/manager"
 	"github.com/op/go-logging"
 	"time"
+	"encoding/hex"
+	"math/big"
 )
 
 type TxArgs struct{
@@ -21,20 +23,20 @@ type TransactionShow struct {
 	From      string
 	To        string
 	Value     string
-	TimeStamp int64
+	TimeStamp string
 }
 
 type BalanceShow map[string]string
 
 type LastestBlockShow struct{
 	Number uint64
-	Hash []byte
+	Hash string
 }
 
 type BlockShow struct{
         Height uint64
         TxCounts uint64
-	WriteTime int64
+	WriteTime string
         Counts int64
 }
 
@@ -111,7 +113,7 @@ func GetAllTransactions()  []TransactionShow{
 			Value: string(tx.Value),
 			From: string(tx.From),
 			To: string(tx.To),
-			TimeStamp: tx.TimeStamp,
+			TimeStamp: time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
 		}
 		transactions = append(transactions,ts)
 	}
@@ -133,7 +135,7 @@ func GetAllBalances() BalanceShow{
 	balMap := balanceIns.GetAllDBBalance()
 
 	for key, value := range balMap {
-
+		log.Info(key.Str())
 		balances[key.Str()] = string(value)
 	}
 
@@ -148,7 +150,7 @@ func LastestBlock() LastestBlockShow{
 
 	return LastestBlockShow{
 		Number: currentChain.Height,
-		Hash: currentChain.LatestBlockHash,
+		Hash: hex.EncodeToString(currentChain.LatestBlockHash),
 	}
 }
 
@@ -165,6 +167,17 @@ func GetAllBlocks() []BlockShow{
 	}
 
 	return blocks
+}
+
+func QueryExcuteTime(args TxArgs) int64{
+
+	var from big.Int
+	var to big.Int
+	from.SetString(args.From, 10)
+	to.SetString(args.To, 10)
+
+
+	return core.CalcResponseAVGTime(from.Uint64(),to.Uint64())
 }
 
 func blockShow(height uint64) BlockShow{
@@ -189,8 +202,8 @@ func blockShow(height uint64) BlockShow{
 	return BlockShow{
 			Height: height,
 			TxCounts: txCounts,
-			WriteTime: block.WriteTime,
-			Counts: core.CalcResponseCount(height, int64(1000)),
+			WriteTime: time.Unix(block.WriteTime / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+			Counts: core.CalcResponseCount(height, int64(300)),
 		}
 
 }
