@@ -1,0 +1,9 @@
+syntax = "proto3";
+package types;
+
+message TransactionValue {
+	uint64 price = 1;
+	uint64 gasLimit = 2;
+	uint64 amount = 3;
+	bytes payload = 4;
+}
