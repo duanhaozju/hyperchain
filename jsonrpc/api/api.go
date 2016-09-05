@@ -77,7 +77,6 @@ func SendTransaction(args TxArgs) bool {
 					log.Fatalf("proto.Marshal(tx) error: %v",err)
 				}
 				go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-				time.Sleep(2 * time.Microsecond)
 			}
 		}
 
