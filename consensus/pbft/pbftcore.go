@@ -6,9 +6,11 @@ import (
 
 	"hyperchain/consensus/helper"
 	"hyperchain/consensus/events"
+	pb "hyperchain/protos"
 
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
+
 )
 
 // =============================================================================
@@ -234,6 +236,8 @@ func (instance *pbftCore) ProcessEvent(e events.Event) events.Event {
 		err = instance.recvPrepare(et)
 	case *Commit:
 		err = instance.recvCommit(et)
+	case *Checkpoint:
+		err = instance.recvCheckpoint(et)
 	case nullRequestEvent:
 		instance.nullRequestHandler()
 	default:
@@ -413,6 +417,11 @@ func (instance *pbftCore) recvMsg(msg *Message, senderID uint64) (interface{}, e
 			return nil, fmt.Errorf("Sender ID included in commit message (%v) doesn't match ID corresponding to the receiving stream (%v)", commit.ReplicaId, senderID)
 		}
 		return commit, nil
+	} else if chkpt := msg.GetCheckpoint(); chkpt != nil {
+		if senderID != chkpt.ReplicaId {
+			return nil, fmt.Errorf("Sender ID included in checkpoint message (%v) doesn't match ID corresponding to the receiving stream (%v)", chkpt.ReplicaId, senderID)
+		}
+		return chkpt, nil
 	}
 
 	return nil, fmt.Errorf("Invalid message: %v", msg)
@@ -611,14 +620,23 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) && cert.executed == false {
 		logger.Infof("--------begin execute--------view=%d/seqNo=%d--------", commit.View, commit.SequenceNumber)
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
-		reqBatch := exeBatchHelper(cert.prePrepare.RequestBatch, commit.SequenceNumber)
-		instance.helper.Execute(reqBatch)
+		exeBatch := exeBatchHelper(cert.prePrepare.RequestBatch, commit.SequenceNumber)
+		instance.execOutstanding(exeBatch)
+		//instance.helper.Execute(reqBatch)
 		cert.executed = true
+
 	}
 
 	return nil
 }
 
+func (instance *pbftCore) execOutstanding(exeBatch *pb.ExeMessage) {
+
+}
+
+func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) events.Event {
+	return
+}
 
 func (instance *pbftCore) softStartTimer(timeout time.Duration, reason string) {
 

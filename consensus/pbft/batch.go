@@ -229,7 +229,10 @@ func (op *batch) sendBatch() error {
 		return nil
 	}
 
-	reqBatch := &RequestBatch{Batch: op.batchStore}
+	reqBatch := &RequestBatch{
+		Batch:		op.batchStore,
+		Timestamp:	time.Now().UnixNano(),
+	}
 	op.batchStore = nil
 	logger.Infof("Creating batch with %d requests", len(reqBatch.Batch))
 
