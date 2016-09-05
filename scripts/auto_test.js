@@ -8,8 +8,8 @@
  */
 
  var http  = require('http')
- var config = require('./p2p/peerconfig.json')
- var genesis = require('./core/genesis.json')
+ var config = require('../p2p/peerconfig.json')
+ var genesis = require('../core/genesis.json')
  var address = genesis.test1.alloc
  var addresses = Object.keys(address)
  var params = {form:"",to:"",value:1}

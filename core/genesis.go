@@ -114,7 +114,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash)  {
 	}
 	err = PutBlock(db, block.BlockHash, block)
 	// write transaction
-	PutTransactions(db, commonHash, block.Transactions)
+	//PutTransactions(db, commonHash, block.Transactions)
 	if err != nil {
 		log.Fatal(err)
 	}
