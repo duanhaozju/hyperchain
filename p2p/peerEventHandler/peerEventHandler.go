@@ -9,7 +9,7 @@ package peerEventHandler
 import (
 	"hyperchain/p2p/peermessage"
 )
-// PeerEventHandler
+// PeerEventHandler interface define
 type PeerEventHandler interface {
 	ProcessEvent(*peermessage.Message) error
 }

@@ -3,5 +3,6 @@ package types;
 
 message Chain {
 	bytes latestBlockHash = 1;
-	uint64 height = 2;
+	bytes parentBlockHash = 2;
+	uint64 height = 3;
 }

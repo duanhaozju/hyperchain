@@ -1,10 +1,19 @@
 {
   "port1":"8001",
-  "port2":"8001",
-  "port3":"8001",
-  "port4":"8001",
+  "port2":"8002",
+  "port3":"8003",
+  "port4":"8004",
+
   "node1":"10.24.24.37",
   "node2":"10.25.3.44",
   "node3":"10.25.3.55",
-  "node4":"10.26.93.156"
+  "node4":"10.26.93.156",
+  "external_node1":"cn6.hyperchain.cn",
+  "external_node2":"cn7.hyperchain.cn",
+  "external_node3":"cn8.hyperchain.cn",
+  "external_node4":"cn9.hyperchain.cn",
+  "external_port1":"8081",
+  "external_port2":"8081",
+  "external_port3":"8081",
+  "external_port4":"8081"
 }

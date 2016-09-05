@@ -36,8 +36,8 @@ func InitDB(port int) {
 
 
 //-- ------------------- Transaction ---------------------------------
-func PutTransaction(db hyperdb.Database, key []byte, t types.Transaction) error {
-	data, err := proto.Marshal(&t)
+func PutTransaction(db hyperdb.Database, key []byte, t *types.Transaction) error {
+	data, err := proto.Marshal(t)
 	if err != nil {
 		return err
 	}
@@ -65,15 +65,15 @@ func PutTransactions(db hyperdb.Database, commonHash crypto.CommonHash ,ts []*ty
 	return batch.Write()
 }
 
-func GetTransaction(db hyperdb.Database, key []byte) (types.Transaction, error){
+func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error){
 	var transaction types.Transaction
 	keyFact := append(transactionPrefix, key...)
 	data, err := db.Get(keyFact)
 	if len(data) == 0 {
-		return transaction, err
+		return &transaction, err
 	}
 	err = proto.Unmarshal(data, &transaction)
-	return transaction, err
+	return &transaction, err
 }
 
 func DeleteTransaction(db hyperdb.Database, key []byte) error {
@@ -81,17 +81,16 @@ func DeleteTransaction(db hyperdb.Database, key []byte) error {
 	return db.Delete(keyFact)
 }
 
-func GetAllTransaction(db *hyperdb.LDBDatabase) ([]types.Transaction, error) {
-	var ts []types.Transaction
+func GetAllTransaction(db *hyperdb.LDBDatabase) ([]*types.Transaction, error) {
+	var ts []*types.Transaction = make([]*types.Transaction, 0)
 	iter := db.NewIterator()
 	for iter.Next() {
 		key := iter.Key()
 		if len(string(key)) >= len(transactionPrefix) && string(key[:len(transactionPrefix)]) == string(transactionPrefix) {
 			var t types.Transaction
 			value := iter.Value()
-			//err = decondeFromBytes(value, &t)
 			proto.Unmarshal(value, &t)
-			ts = append(ts, t)
+			ts = append(ts, &t)
 		}
 	}
 	iter.Release()
@@ -102,8 +101,8 @@ func GetAllTransaction(db *hyperdb.LDBDatabase) ([]types.Transaction, error) {
 
 
 //-- ------------------- Block ---------------------------------
-func PutBlock(db hyperdb.Database, key []byte, t types.Block) error {
-	data, err := proto.Marshal(&t)
+func PutBlock(db hyperdb.Database, key []byte, t *types.Block) error {
+	data, err := proto.Marshal(t)
 	if err != nil {
 		return err
 	}
@@ -121,15 +120,15 @@ func GetBlockHash(db hyperdb.Database, blockNumber uint64) ([]byte, error) {
 	return db.Get(append(blockNumPrefix, keyNum...))
 }
 
-func GetBlock(db hyperdb.Database, key []byte) (types.Block, error){
+func GetBlock(db hyperdb.Database, key []byte) (*types.Block, error){
 	var block types.Block
 	keyFact := append(blockPrefix, key...)
 	data, err := db.Get(keyFact)
 	if len(data) == 0 {
-		return block, err
+		return &block, err
 	}
 	err = proto.Unmarshal(data, &block)
-	return block, err
+	return &block, err
 }
 
 func DeleteBlock(db hyperdb.Database, key []byte) error {
@@ -194,7 +193,7 @@ func newMemChain() *memChain {
 	chain, err := getChain(db)
 	if err == nil {
 		return &memChain{
-			data: chain,
+			data: *chain,
 		}
 	}
 	return &memChain{
@@ -212,12 +211,20 @@ func GetLatestBlockHash() []byte {
 	return memChainMap.data.LatestBlockHash
 }
 
+// GetParentBlockHash get the latest block's parentHash
+func GetParentBlockHash() []byte {
+	memChainMap.lock.RLock()
+	defer memChainMap.lock.RUnlock()
+	return memChainMap.data.ParentBlockHash
+}
+
 // UpdateChain update latest blockHash as given blockHash
 // and the height of chain add 1
-func UpdateChain(blockHash []byte, genesis bool) error {
+func UpdateChain(block *types.Block, genesis bool) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
-	memChainMap.data.LatestBlockHash = blockHash
+	memChainMap.data.LatestBlockHash = block.BlockHash
+	memChainMap.data.ParentBlockHash = block.ParentHash
 	if !genesis {
 		memChainMap.data.Height += 1
 	}
@@ -225,7 +232,7 @@ func UpdateChain(blockHash []byte, genesis bool) error {
 	if err != nil {
 		return err
 	}
-	return putChain(db, memChainMap.data)
+	return putChain(db, &memChainMap.data)
 }
 
 // GetHeightOfChain get height of chain
@@ -241,13 +248,14 @@ func GetChainCopy() *types.Chain {
 	defer memChainMap.lock.RUnlock()
 	return &types.Chain{
 		LatestBlockHash: memChainMap.data.LatestBlockHash,
+		ParentBlockHash: memChainMap.data.ParentBlockHash,
 		Height: memChainMap.data.Height,
 	}
 }
 
 // putChain put chain database
-func putChain(db hyperdb.Database, t types.Chain) error {
-	data, err := proto.Marshal(&t)
+func putChain(db hyperdb.Database, t *types.Chain) error {
+	data, err := proto.Marshal(t)
 	if err != nil {
 		return err
 	}
@@ -258,13 +266,13 @@ func putChain(db hyperdb.Database, t types.Chain) error {
 }
 
 // getChain get chain from database
-func getChain(db hyperdb.Database) (types.Chain, error){
+func getChain(db hyperdb.Database) (*types.Chain, error){
 	var chain types.Chain
 	data, err := db.Get(chainKey)
 	if len(data) == 0 {
-		return chain, err
+		return &chain, err
 	}
 	err = proto.Unmarshal(data, &chain)
-	return chain, err
+	return &chain, err
 }
 //-- --------------------- Chain END ----------------------------------

@@ -86,7 +86,7 @@ func (pm *ProtocolManager) Start() {
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
-	go pm.ConsensusLoop()
+	//go pm.ConsensusLoop()
 
 
 	pm.wg.Wait()
@@ -138,7 +138,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 		case event.ConsensusEvent:
 			//call consensus module
-			log.Debug("###### enter ConsensusEvent")
+			log.Info("###### enter ConsensusEvent")
 			//logger.GetLogger().Println("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 

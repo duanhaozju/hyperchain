@@ -2,15 +2,17 @@
  * Created by sammy on 16-8-16.
  */
 
+var selectedClassName = "selected";
+
 $(document).ready(function(){
 
-    var $tab_tx  = $("#tab_tx"),
-        $tab_bal = $("#tab_bal");
+    var $tab_tx    = $("#tab_tx"),
+        $tab_bal   = $("#tab_bal"),
+        $tab_block = $("#tab_block");
 
     var $div_trans    =  $("div.trans"),
-        $div_balances = $("div.balances");
-
-    var selectedClassName = "selected";
+        $div_balances = $("div.balances"),
+        $div_blocks   = $("div.blocks");
 
     var submitForm = function(){
         var $form = $("form");
@@ -20,6 +22,8 @@ $(document).ready(function(){
         if (!count) {
             count = 1
         }
+
+        $(".status").html("请求发送中...")
 
         for(var i = 1;i <= count;i++) {
 
@@ -32,6 +36,7 @@ $(document).ready(function(){
                 success: function (result) {
                     console.log(result);
                     if (result.Code == 1) {
+                        //alert("提交成功!");
                         //alert("提交成功!");
                         $(".status").html("提交成功")
                     } else {
@@ -49,23 +54,41 @@ $(document).ready(function(){
                 }
             });
         }
-    }
+    };
     
     
-    $("input[type=button]").click(submitForm);
+    $("#submit").click(submitForm);
 
-    $tab_tx.click(function(){
-        $div_trans.show();
-        $div_balances.hide();
-        $(this).addClass(selectedClassName).siblings().removeClass(selectedClassName)
+    $("#query").click(function(){
+        $.ajax({
+            contentType: "application/json",
+            type: "POST",
+            dataType: "json",
+            url: "/query",
+            data: JSON.stringify({
+                from: $("input[name='from_block']").val(),
+                to: $("input[name='to_block']").val()
+            }),
+            success: function (result) {
+                if (result.Code == 1) {
+                    $("#time").html(result.Data)
+                } 
+            },
+            error: function (err) {
+                if (err) {
+                    console.log(err);
+                }
+                return false;
+            }
+        });
+    });
+    
+    $tab_tx.click({div: $div_trans, url: "/trans"},tabClickHandler);
+    $tab_bal.click({div: $div_balances, url: "/balances"},tabClickHandler);
+    $tab_block.click({div: $div_blocks, url: "/blocks"},tabClickHandler);
 
-    });
-    $tab_bal.click(function(){
-        $div_trans.hide();
-        $div_balances.show();
-        $(this).addClass(selectedClassName).siblings().removeClass(selectedClassName)
-    });
 });
+
 
 function getFormData($form){
     var unindexed_array = $form.serializeArray();
@@ -77,3 +100,73 @@ function getFormData($form){
 
     return indexed_array;
 }
+
+// Tab click event Handler
+function tabClickHandler(event) {
+
+    // console.log(event.data);
+    var _this = $(this);
+
+    var $div = $(event.data.div[0]);
+
+    $.ajax({
+        contentType: "application/json",
+        type: "GET",
+        dataType: "json",
+        url: event.data.url,
+        success: function (result) {
+            // console.log(result);
+
+            if (result.Code == 0) {
+                alert("error");
+                return
+            }
+            var $tbody = $div.find("tbody");
+            $tbody.html("");
+
+            if (result.Data instanceof Array) {
+                // Array
+                for (var i = 0; i < result.Data.length; i++) {
+                    var $tr = $("<tr>");
+
+                    for (var col in result.Data[i]) {
+                        var $td = $("<td>");
+
+                        $td.html(result.Data[i][col]);
+
+                        $tr.append($td);
+                    }
+
+                    $tbody.append($tr);
+                }
+            } else {
+                // Object
+                for (var key in result.Data) {
+                    var $tr = $("<tr>");
+                    var $td1 = $("<td>");
+                    var $td2 = $("<td>");
+
+                    $td1.html(key);
+                    $td2.html(result.Data[key]);
+
+                    $tr.append($td1);
+                    $tr.append($td2);
+
+                    $tbody.append($tr);
+                }
+            }
+
+            $div.show().siblings().hide();
+            _this.addClass(selectedClassName).siblings().removeClass(selectedClassName)
+        },
+        error: function (err) {
+            if (err) {
+                console.log(err);
+            }
+            return false;
+        }
+    });
+
+}
+
+

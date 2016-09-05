@@ -22,3 +22,37 @@ func CalcResponseCount(blockNumber uint64, millTime int64) int64 {
 	}
 	return count
 }
+
+// CalcResponseAVGTime calculate response avg time of blocks
+// whose blockNumber from 'from' to 'to', include 'from' and 'to'
+// return : avg Millisecond
+func CalcResponseAVGTime(from, to uint64) int64 {
+	if from > to {
+		log.Error("from less than to")
+		return -1
+	}
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+	var sum int64 = 0
+	var length int64 = 0
+	for i := from; i <= to; i ++ {
+		blockHash, err := GetBlockHash(db, i)
+		if err != nil {
+			log.Error(err)
+			return -1
+		}
+		block, err := GetBlock(db, blockHash)
+		if err != nil {
+			log.Error(err)
+			return -1
+		}
+		for _, trans := range block.Transactions {
+			sum += block.WriteTime - trans.TimeStamp
+		}
+		length += int64(len(block.Transactions))
+	}
+
+	return sum / (length * int64(time.Millisecond))
+}

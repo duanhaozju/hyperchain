@@ -19,6 +19,7 @@ func (this *KeepAliveHandler)ProcessEvent(msg *peermessage.Message)error{
 	return nil
 }
 
+// return a keepAliveHandler
 func NewKeepAliveHandler()*KeepAliveHandler{
 	return &KeepAliveHandler{}
 }
