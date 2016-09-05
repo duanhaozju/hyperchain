@@ -18,6 +18,8 @@ func (this *HelloHandler)ProcessEvent(msg *peermessage.Message)error{
 	log.Info("Node: "+msg.From.String()+" connected request received.")
 	return nil
 }
+
+// NewHelloHandler return a HelloHandler instance
 func NewHelloHandler()*HelloHandler{
 	return &HelloHandler{}
 }

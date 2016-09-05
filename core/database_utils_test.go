@@ -60,7 +60,7 @@ func TestPutTransaction(t *testing.T) {
 	}
 	for i, trans := range transactionCases {
 		key := []byte("key" + strconv.Itoa(i))
-		err = PutTransaction(db, key, *trans)
+		err = PutTransaction(db, key, trans)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -162,7 +162,7 @@ func TestPutBlock(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = PutBlock(db, blockUtilsCase.BlockHash, blockUtilsCase)
+	err = PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -208,12 +208,14 @@ var blockHashcases = [][]byte{
 // TestUpdateChain tests for UpdateChain
 func TestUpdateChain(t *testing.T) {
 	log.Info("test =============> > > TestUpdateChain")
-	for _, hash := range blockHashcases {
-		UpdateChain(hash, false)
-		lasthash := GetLatestBlockHash()
-		if string(lasthash) != string(hash) {
-			t.Errorf("TestUpdateChain fail")
-		}
+	UpdateChain(&blockUtilsCase, false)
+	lasthash := GetLatestBlockHash()
+	parentHash := GetParentBlockHash()
+	if string(lasthash) != string(blockUtilsCase.BlockHash) {
+		t.Errorf("TestUpdateChain fail")
+	}
+	if string(parentHash) != string(blockUtilsCase.ParentHash) {
+		t.Errorf("TestUpdateChain fail")
 	}
 }
 

@@ -1,6 +1,10 @@
 package peerComm
 
 import "errors"
+// this file define a normal queue
+// this queue struct is used for peer pool
+// but hasn't used because of queue can't optimize the performance
+// last modify: 2016-09-05
 
 const(
 	defaultQueueSize = 10
@@ -14,7 +18,7 @@ type Queue struct{
 	elements []interface{}
 }
 
-//指定大小进行初始化
+//NewQueueBySize init the queue by clearly size
 func NewQueueBySize(size int) *Queue{
 	queueSize = size
 	return &Queue{
@@ -26,7 +30,7 @@ func NewQueueBySize(size int) *Queue{
 }
 
 
-//用默认大小进行初始化
+//NewQueue return a default size queue instance
 func NewQueue()*Queue{
 	return NewQueueBySize(defaultQueueSize)
 }
@@ -34,13 +38,13 @@ func NewQueue()*Queue{
 func ProbeNext(i int) int{
 	return (i+1)%queueSize
 }
-//清空队列
+//Clear clear the queue
 func (queue *Queue)Clear(){
 	queue.front = 0;
 	queue.rear = queueSize -1;
 	queue.currentCount = 0;
 }
-//是否为空队列
+//IsEmpty judge the queue is empty or not
 func(queue *Queue) IsEmpty() bool{
 	if ProbeNext(queue.rear) == queue.front{
 		return true
@@ -48,7 +52,7 @@ func(queue *Queue) IsEmpty() bool{
 	return false
 }
 
-//队列是否满
+//IsFull judge the queue is full or not
 func (queue *Queue) IsFull()bool{
 	if ProbeNext(ProbeNext(queue.rear)) == queue.front{
 		return true
@@ -57,7 +61,7 @@ func (queue *Queue) IsFull()bool{
 	}
 }
 
-// 入队
+// Enqueue enqueue
 func(queue *Queue)Enqueue(ele interface{}) error{
 	if queue.IsFull() {
 		return errors.New("the queue is full")
@@ -67,7 +71,7 @@ func(queue *Queue)Enqueue(ele interface{}) error{
 	queue.currentCount = queue.currentCount + 1
 	return nil
 }
-// 出队
+// Dequeue dequeue
 func(queue *Queue) Dequeue()(interface{},error){
 	if queue.IsEmpty(){
 		return nil,errors.New("the queue is empty")

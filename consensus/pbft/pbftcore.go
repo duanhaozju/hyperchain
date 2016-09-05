@@ -6,9 +6,11 @@ import (
 
 	"hyperchain/consensus/helper"
 	"hyperchain/consensus/events"
+	pb "hyperchain/protos"
 
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
+
 )
 
 // =============================================================================
@@ -39,6 +41,16 @@ type pbftMessage struct {
 	msg    *Message
 }
 
+type checkpointMessage struct {
+	seqNo uint64
+	id    []byte
+}
+
+type stateUpdateTarget struct {
+	checkpointMessage
+	replicas []uint64
+}
+
 type pbftCore struct {
 	//internal data
 	helper helper.Stack
@@ -57,19 +69,27 @@ type pbftCore struct {
 	replicaCount  int               // number of replicas; PBFT `|R|`
 	seqNo         uint64            // PBFT "n", strictly monotonic increasing sequence number
 	view          uint64            // current view
+	chkpts        map[uint64]string // state checkpoints; map lastExec to global hash
 	pset          map[uint64]*ViewChange_PQ
 	qset          map[qidx]*ViewChange_PQ
 
-	//currentExec           *uint64                  // currently executing request
+	skipInProgress    bool               // Set when we have detected a fall behind scenario until we pick a new starting point
+	stateTransferring bool               // Set when state transfer is executing
+	highStateTarget   *stateUpdateTarget // Set to the highest weak checkpoint cert we have observed
+	hChkpts           map[uint64]uint64  // highest checkpoint sequence number observed for each replica
+
+	currentExec           *uint64                  // currently executing request
 	timerActive           bool                     // is the timer running?
 	requestTimeout        time.Duration            // progress timeout for requests
 	outstandingReqBatches map[string]*RequestBatch // track whether we are waiting for request batches to execute
 
 	nullRequestTimer   events.Timer  // timeout triggering a null request
 	nullRequestTimeout time.Duration // duration for this timeout
-						       // implementation of PBFT `in`
+
+	// implementation of PBFT `in`
 	reqBatchStore   map[string]*RequestBatch // track request batches
 	certStore       map[msgID]*msgCert       // track quorum certificates for requests
+	checkpointStore map[Checkpoint]bool      // track checkpoints as set
 }
 
 type qidx struct {
@@ -169,11 +189,18 @@ func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerF
 	// init the logs
 	instance.certStore = make(map[msgID]*msgCert)
 	instance.reqBatchStore = make(map[string]*RequestBatch)
+	instance.checkpointStore = make(map[Checkpoint]bool)
+	instance.chkpts = make(map[uint64]string)
 	instance.pset = make(map[uint64]*ViewChange_PQ)
 	instance.qset = make(map[qidx]*ViewChange_PQ)
 
 	// initialize state transfer
+	instance.hChkpts = make(map[uint64]uint64)
+
+	instance.chkpts[0] = "XXX GENESIS"
+
 	instance.outstandingReqBatches = make(map[string]*RequestBatch)
+
 	logger.Infof("--------PBFT finish start, nodeID: %d--------", instance.id)
 
 	return instance
@@ -209,6 +236,8 @@ func (instance *pbftCore) ProcessEvent(e events.Event) events.Event {
 		err = instance.recvPrepare(et)
 	case *Commit:
 		err = instance.recvCommit(et)
+	case *Checkpoint:
+		err = instance.recvCheckpoint(et)
 	case nullRequestEvent:
 		instance.nullRequestHandler()
 	default:
@@ -388,6 +417,11 @@ func (instance *pbftCore) recvMsg(msg *Message, senderID uint64) (interface{}, e
 			return nil, fmt.Errorf("Sender ID included in commit message (%v) doesn't match ID corresponding to the receiving stream (%v)", commit.ReplicaId, senderID)
 		}
 		return commit, nil
+	} else if chkpt := msg.GetCheckpoint(); chkpt != nil {
+		if senderID != chkpt.ReplicaId {
+			return nil, fmt.Errorf("Sender ID included in checkpoint message (%v) doesn't match ID corresponding to the receiving stream (%v)", chkpt.ReplicaId, senderID)
+		}
+		return chkpt, nil
 	}
 
 	return nil, fmt.Errorf("Invalid message: %v", msg)
@@ -586,14 +620,24 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) && cert.executed == false {
 		logger.Infof("--------begin execute--------view=%d/seqNo=%d--------", commit.View, commit.SequenceNumber)
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
-		reqBatch := exeBatchHelper(cert.prePrepare.RequestBatch, commit.SequenceNumber)
-		instance.helper.Execute(reqBatch)
+		exeBatch := exeBatchHelper(cert.prePrepare.RequestBatch, commit.SequenceNumber)
+		//instance.execOutstanding(exeBatch)
+		instance.helper.Execute(exeBatch)
 		cert.executed = true
+
 	}
 
 	return nil
 }
 
+func (instance *pbftCore) execOutstanding(exeBatch *pb.ExeMessage) {
+
+}
+
+func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) error {
+
+	return nil
+}
 
 func (instance *pbftCore) softStartTimer(timeout time.Duration, reason string) {
 
