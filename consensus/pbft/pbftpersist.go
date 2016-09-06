@@ -65,17 +65,17 @@ func (instance *pbftCore) persistDelRequestBatch(digest string) {
 	persist.DelState("reqBatch."+digest)
 }
 
-//func (instance *pbftCore) persistDelAllRequestBatches() {
-//	reqBatches, err := persist.ReadStateSet("reqBatch.")
-//	if err != nil {
-//		logger.Errorf("Read State Set Error %s", err)
-//		return
-//	} else {
-//		for k := range reqBatches {
-//			persist.DelState(k)
-//		}
-//	}
-//}
+func (instance *pbftCore) persistDelAllRequestBatches() {
+	reqBatches, err := persist.ReadStateSet("reqBatch.")
+	if err != nil {
+		logger.Errorf("Read State Set Error %s", err)
+		return
+	} else {
+		for k := range reqBatches {
+			persist.DelState(k)
+		}
+	}
+}
 
 func (instance *pbftCore) persistCheckpoint(seqNo uint64, id []byte) {
 	key := fmt.Sprintf("chkpt.%d", seqNo)

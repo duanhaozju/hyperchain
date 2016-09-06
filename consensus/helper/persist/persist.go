@@ -1,14 +1,9 @@
 package persist
 
 import (
-	//"fmt"
-	//"bytes"
-
 	"hyperchain/hyperdb"
 	"hyperchain/core"
 	"hyperchain/core/types"
-
-	//"github.com/pkg/errors"
 )
 
 // Helper provides an abstraction to access the Persist column family
@@ -41,25 +36,22 @@ func ReadState(key string) ([]byte, error) {
 	return db.Get([]byte("consensus."+key))
 }
 
-//// ReadStateSet retrieves all key-value pairs where the key starts with prefix
-//func ReadStateSet(prefix string) (map[string][]byte, error) {
-//	db, _ := hyperdb.GetLDBDatabase()
-//	prefixRaw := []byte("consensus." + prefix)
-//
-//	ret := make(map[string][]byte)
-//	it := db.NewIterator()
-//	defer it.Release()
-//	if !it.Seek(prefixRaw) {
-//		err := errors.New(fmt.Sprintf("Cannot find key with %s in database", prefixRaw))
-//		return nil, err
-//	}
-//	for ; bytes.HasPrefix(it.Key(), prefixRaw); it.Next() {
-//		key := it.Key()
-//		key = key[len("consensus."):]
-//		ret[key] = append([]byte(nil), it.Value())
-//	}
-//	return ret, nil
-//}
+// ReadStateSet retrieves all key-value pairs where the key starts with prefix
+func ReadStateSet(prefix string) (map[string][]byte, error) {
+	db, _ := hyperdb.GetLDBDatabase()
+	prefixRaw := []byte("consensus." + prefix)
+
+	ret := make(map[string][]byte)
+	it := db.NewIterator()
+	for it.Next() {
+		key := it.Key()
+		if len(key) > len(prefixRaw) && string(key[0 : len(prefixRaw)]) == string(prefixRaw) {
+			ret[string(key)] = it.Value()
+		}
+	}
+	it.Release()
+	return ret, nil
+}
 
 func GetBlockchainInfo() *types.Chain {
 	bcInfo := core.GetChainCopy()

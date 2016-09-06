@@ -682,6 +682,13 @@ func (instance *pbftCore) executeOutstanding(v uint64, n uint64) {
 	logger.Infof("--------call execute--------view=%d/seqNo=%d--------", v, n)
 
 	//if n % instance.K == 0 {
+	//	bcInfo := getBlockchainInfo()
+	//	height := bcInfo.Height
+	//	if height == n {
+	//		instance.checkpoint(n, bcInfo)
+	//	} else if height / instance.K * instance.K {
+	//
+	//	}
 	//	instance.checkpoint(n, getBlockchainInfo())
 	//}
 
