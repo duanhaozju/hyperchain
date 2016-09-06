@@ -172,7 +172,7 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 func (op *batch) processRequest(req *Request) error {
 
 	op.reqStore.storeOutstanding(req)
-	op.startTimerIfOutstandingRequests()
+	//op.startTimerIfOutstandingRequests()
 
 	if (op.pbft.primary(op.pbft.view) == op.pbft.id) && op.pbft.activeView {
 		return op.leaderProcReq(req)
