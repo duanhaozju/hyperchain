@@ -33,10 +33,12 @@ func ReadStateSet(prefix string) (map[string][]byte, error) {
 
 	ret := make(map[string][]byte)
 	it := db.NewIterator()
-	for it.Next() {
+	for ok := it.Seek(prefixRaw); ok; ok = it.Next() {
 		key := it.Key()
 		if len(key) > len(prefixRaw) && string(key[0 : len(prefixRaw)]) == string(prefixRaw) {
 			ret[string(key)] = it.Value()
+		} else {
+			break
 		}
 	}
 	it.Release()
