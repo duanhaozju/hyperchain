@@ -67,9 +67,8 @@ func SendTransaction(args TxArgs) bool {
 
 		log.Notice("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
-		end:=start+6
+		end:=start+600
 
-		//go func(){
 			for start := start ; start < end; start = time.Now().Unix() {
 			for i := 0; i < 5000; i++ {
 				tx.TimeStamp=time.Now().UnixNano()
@@ -79,26 +78,10 @@ func SendTransaction(args TxArgs) bool {
 				}
 
 				go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-				time.Sleep(1 * time.Nanosecond)
+				time.Sleep(2 * time.Microsecond)
 
 			}
 		}
-		//}()
-		//go func(){
-		//	for start := start ; start < end; start = time.Now().Unix() {
-		//		for i := 0; i < 5000; i++ {
-		//			tx.TimeStamp=time.Now().UnixNano()
-		//			txBytes, err := proto.Marshal(tx)
-		//			if err != nil {
-		//				log.Fatalf("proto.Marshal(tx) error: %v",err)
-		//			}
-		//
-		//			go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-		//			//time.Sleep(2 * time.Microsecond)
-		//
-		//		}
-		//	}
-		//}()
 
 
 		log.Notice("############# %d: end send request#############", time.Now().Unix())
