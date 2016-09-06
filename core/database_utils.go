@@ -84,13 +84,15 @@ func DeleteTransaction(db hyperdb.Database, key []byte) error {
 func GetAllTransaction(db *hyperdb.LDBDatabase) ([]*types.Transaction, error) {
 	var ts []*types.Transaction = make([]*types.Transaction, 0)
 	iter := db.NewIterator()
-	for iter.Next() {
+	for ok := iter.Seek(transactionPrefix); ok; ok = iter.Next() {
 		key := iter.Key()
 		if len(string(key)) >= len(transactionPrefix) && string(key[:len(transactionPrefix)]) == string(transactionPrefix) {
 			var t types.Transaction
 			value := iter.Value()
 			proto.Unmarshal(value, &t)
 			ts = append(ts, &t)
+		} else {
+			break
 		}
 	}
 	iter.Release()
@@ -276,3 +278,22 @@ func getChain(db hyperdb.Database) (*types.Chain, error){
 	return &chain, err
 }
 //-- --------------------- Chain END ----------------------------------
+
+// GetCurrentAndParentBlockHash get current blockHash and parent blockHash
+// for given blockNumber if there are any error, it will be return
+func GetCurrentAndParentBlockHash(blockNumber uint64) (currentHash, parentHash []byte, err error) {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		return nil, nil, err
+	}
+	currentHash, err = GetBlockHash(db, blockNumber)
+	if err != nil {
+		return nil, nil, err
+	}
+	block, err := GetBlock(db, currentHash)
+	if err != nil {
+		return nil, nil, err
+	}
+	parentHash = block.ParentHash
+	return
+}
