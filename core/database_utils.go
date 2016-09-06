@@ -276,3 +276,22 @@ func getChain(db hyperdb.Database) (*types.Chain, error){
 	return &chain, err
 }
 //-- --------------------- Chain END ----------------------------------
+
+// GetCurrentAndParentBlockHash get current blockHash and parent blockHash
+// for given blockNumber if there are any error, it will be return
+func GetCurrentAndParentBlockHash(blockNumber uint64) (currentHash, parentHash []byte, err error) {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		return nil, nil, err
+	}
+	currentHash, err = GetBlockHash(db, blockNumber)
+	if err != nil {
+		return nil, nil, err
+	}
+	block, err := GetBlock(db, currentHash)
+	if err != nil {
+		return nil, nil, err
+	}
+	parentHash = block.ParentHash
+	return
+}
