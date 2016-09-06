@@ -71,7 +71,7 @@ func SendTransaction(args TxArgs) bool {
 		end:=start+600
 
 			for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 5000; i++ {
+			for i := 0; i < 1500; i++ {
 				tx.TimeStamp=time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
@@ -79,7 +79,7 @@ func SendTransaction(args TxArgs) bool {
 				}
 
 				go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-				time.Sleep(2 * time.Microsecond)
+				time.Sleep(666 * time.Microsecond)
 
 			}
 		}
