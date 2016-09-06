@@ -6,16 +6,6 @@ import (
 	"hyperchain/core/types"
 )
 
-// Helper provides an abstraction to access the Persist column family
-// in the database.
-//type Helper struct{}
-//
-//type persistStack interface {
-//	StoreState(key string, value []byte) error
-//	DelState(key string) error
-//	ReadState(key string) ([]byte, error)
-//	ReadStateSet(prefix string) (map[string][]byte, error)
-//}
 
 // StoreState stores a key,value pair
 func StoreState(key string, value []byte) error {

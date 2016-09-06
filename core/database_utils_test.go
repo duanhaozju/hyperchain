@@ -219,3 +219,6 @@ func TestUpdateChain(t *testing.T) {
 	}
 }
 
+func TestGetCurrentAndParentBlockHash(t *testing.T) {
+
+}
