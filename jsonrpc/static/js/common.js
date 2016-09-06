@@ -3,6 +3,7 @@
  */
 
 var selectedClassName = "selected";
+var flag = true;
 
 $(document).ready(function(){
 
@@ -55,8 +56,12 @@ $(document).ready(function(){
             });
         }
     };
-    
-    
+
+    $.extend($.fn.pagination.defaults, {
+        pageSize: 50,
+        className: 'paginationjs-big'
+    });
+
     $("#submit").click(submitForm);
 
     $("#query").click(function(){
@@ -82,10 +87,16 @@ $(document).ready(function(){
             }
         });
     });
-    
-    $tab_tx.click({div: $div_trans, url: "/trans"},tabClickHandler);
-    $tab_bal.click({div: $div_balances, url: "/balances"},tabClickHandler);
-    $tab_block.click({div: $div_blocks, url: "/blocks"},tabClickHandler);
+
+    $tab_tx.on('click',{div: $div_trans, url: "/trans"},tabClickHandler).trigger('click');
+    $tab_bal.on('click',{div: $div_balances, url: "/balances"},tabClickHandler);
+    $tab_block.on('click',{div: $div_blocks, url: "/blocks"},tabClickHandler);
+
+
+
+    // $tab_tx.click({div: $div_trans, url: "/trans"},tabClickHandler);
+    // $tab_bal.click({div: $div_balances, url: "/balances"},tabClickHandler);
+    // $tab_block.click({div: $div_blocks, url: "/blocks"},tabClickHandler);
 
 });
 
@@ -104,69 +115,86 @@ function getFormData($form){
 // Tab click event Handler
 function tabClickHandler(event) {
 
-    // console.log(event.data);
-    var _this = $(this);
+    if (flag) {
+        console.log(event.data);
+        var _this = $(this);
 
-    var $div = $(event.data.div[0]);
+        var $div = $(event.data.div[0]);
+        var $tbody = $div.find("tbody");
 
-    $.ajax({
-        contentType: "application/json",
-        type: "GET",
-        dataType: "json",
-        url: event.data.url,
-        success: function (result) {
-            // console.log(result);
+        flag = false;
 
-            if (result.Code == 0) {
-                alert("error");
-                return
-            }
-            var $tbody = $div.find("tbody");
-            $tbody.html("");
+        _this.addClass(selectedClassName).siblings().removeClass(selectedClassName);
+        $div.show().siblings().hide();
+        $tbody.html("数据加载中，请稍等......");
 
-            if (result.Data instanceof Array) {
-                // Array
-                for (var i = 0; i < result.Data.length; i++) {
-                    var $tr = $("<tr>");
-
-                    for (var col in result.Data[i]) {
-                        var $td = $("<td>");
-
-                        $td.html(result.Data[i][col]);
-
-                        $tr.append($td);
+        setTimeout(function(){
+            $.ajax({
+                contentType: "application/json",
+                type: "GET",
+                dataType: "json",
+                url: event.data.url,
+                success: function (result) {
+                    // console.log(result);
+                    flag = true;
+                    if (result.Code == 0) {
+                        alert("error");
+                        return
                     }
+                    // var $tbody = $div.find("tbody");
+                    $tbody.html("");
 
-                    $tbody.append($tr);
+                    if (result.Data instanceof Array) {
+                        // Array
+                        $div.find('.pagination-container').pagination({
+                            dataSource: result.Data,
+                            // pageSize: 50,
+                            callback: function(data, pagination) {
+                                var html = render(data);
+                                $div.find('.data-container').html(html);
+                            }
+                        });
+                    } else {
+                        // Object
+                        for (var key in result.Data) {
+                            var $tr = $("<tr>");
+                            var $td1 = $("<td>");
+                            var $td2 = $("<td>");
+
+                            $td1.html(key);
+                            $td2.html(result.Data[key]);
+
+                            $tr.append($td1);
+                            $tr.append($td2);
+
+                            $tbody.append($tr);
+                        }
+                    }
+                },
+                error: function (err) {
+                    if (err) {
+                        console.log(err);
+                    }
+                    flag = true;
+                    return false;
                 }
-            } else {
-                // Object
-                for (var key in result.Data) {
-                    var $tr = $("<tr>");
-                    var $td1 = $("<td>");
-                    var $td2 = $("<td>");
+            });
+        },500);
 
-                    $td1.html(key);
-                    $td2.html(result.Data[key]);
-
-                    $tr.append($td1);
-                    $tr.append($td2);
-
-                    $tbody.append($tr);
-                }
-            }
-
-            $div.show().siblings().hide();
-            _this.addClass(selectedClassName).siblings().removeClass(selectedClassName)
-        },
-        error: function (err) {
-            if (err) {
-                console.log(err);
-            }
-            return false;
-        }
-    });
-
+    }
 }
 
+function render(data){
+    var html = '';
 
+    for (var i = 0; i < data.length; i++) {
+        html += "<tr>";
+
+        for (var col in data[i]) {
+            html += "<td>"+data[i][col]+"</td>";
+        }
+
+        html += "</tr>"
+    }
+    return html;
+}
