@@ -1,11 +1,8 @@
 package persist
 
 import (
-	"fmt"
 	"hyperchain/hyperdb"
 	"hyperchain/core"
-	"bytes"
-	"github.com/pkg/errors"
 	"hyperchain/core/types"
 )
 
@@ -36,21 +33,17 @@ func ReadStateSet(prefix string) (map[string][]byte, error) {
 
 	ret := make(map[string][]byte)
 	it := db.NewIterator()
-	defer it.Release()
-	if !it.Seek(prefixRaw) {
-		err := errors.New(fmt.Sprintf("Cannot find key with %s in database", prefixRaw))
-		return nil, err
+	for it.Next() {
+		key := it.Key()
+		if len(key) > len(prefixRaw) && string(key[0 : len(prefixRaw)]) == string(prefixRaw) {
+			ret[string(key)] = it.Value()
+		}
 	}
-	for ; bytes.HasPrefix(it.Key(), prefixRaw); it.Next() {
-		key := string(it.Key())
-		key = key[len("consensus."):]
-		ret[key] = append([]byte(nil), it.Value()...)
-	}
+	it.Release()
 	return ret, nil
 }
 
 func GetBlockchainInfo() *types.Chain {
 	bcInfo := core.GetChainCopy()
-
 	return bcInfo
 }
