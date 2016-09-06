@@ -39,10 +39,12 @@ func ReadStateSet(prefix string) (map[string][]byte, error) {
 		err := errors.New(fmt.Sprintf("Cannot find key with %s in database", prefixRaw))
 		return nil, err
 	}
-	for it.Next() {
+	for ok := it.Seek(prefixRaw); ok; ok = it.Next() {
 		key := it.Key()
 		if len(key) > len(prefixRaw) && string(key[0 : len(prefixRaw)]) == string(prefixRaw) {
 			ret[string(key)] = it.Value()
+		} else {
+			break
 		}
 	}
 	it.Release()
