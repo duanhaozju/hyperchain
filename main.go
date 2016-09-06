@@ -22,6 +22,7 @@ import (
 	"hyperchain/jsonrpc"
 	"hyperchain/common"
 	"github.com/op/go-logging"
+	"hyperchain/accounts"
 )
 
 type argT struct {
@@ -57,7 +58,6 @@ func main(){
 
 
 
-
 		//init pbft consensus
 		cs:=controller.NewConsenter(uint64(argv.NodeId),eventMux)
 
@@ -68,14 +68,16 @@ func main(){
 
 
 
-
 		//init encryption object
 
 
 		encryption :=crypto.NewEcdsaEncrypto("ecdsa")
 		encryption.GeneralKey(strconv.Itoa(argv.LocalPort))
 
-
+		scryptN := accounts.StandardScryptN
+		scryptP := accounts.StandardScryptP
+		keydir := "./keystore/"
+		am := accounts.NewAccountManager(keydir,encryption, scryptN, scryptP)
 
 
 		//init hash object
@@ -92,8 +94,12 @@ func main(){
 		go jsonrpc.StartHttp(argv.LocalPort,eventMux)
 
 		//init manager
-		manager.New(eventMux,blockPool,grpcPeerMgr,cs,fetcher,encryption,kec256Hash,
+		manager.New(eventMux,blockPool,grpcPeerMgr,cs,fetcher,am,kec256Hash,
 			nodePath,argv.NodeId)
+
+		////init manager
+		//manager.New(eventMux,blockPool,grpcPeerMgr,cs,fetcher,encryption,kec256Hash,
+		//	nodePath,argv.NodeId)
 
 
 

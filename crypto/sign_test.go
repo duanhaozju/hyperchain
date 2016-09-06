@@ -78,7 +78,9 @@ func TestSigntx(t *testing.T)  {
 	fmt.Println(from)
 	fmt.Println(addr)
 
+	hex := common.ToHex(from)
 	fmt.Println(common.ToHex(from))
 	fmt.Println(common.ToHex(addr))
+	fmt.Println(common.FromHex(hex))
 
 }
