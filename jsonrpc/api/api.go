@@ -79,7 +79,7 @@ func SendTransaction(args TxArgs) bool {
 				}
 
 				go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-				//time.Sleep(2 * time.Microsecond)
+				time.Sleep(2 * time.Microsecond)
 
 			}
 		}
