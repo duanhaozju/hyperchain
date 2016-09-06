@@ -681,16 +681,19 @@ func (instance *pbftCore) executeOutstanding(v uint64, n uint64) {
 	cert.sentExecute = true
 	logger.Infof("--------call execute--------view=%d/seqNo=%d--------", v, n)
 
-	//if n % instance.K == 0 {
-	//	bcInfo := getBlockchainInfo()
-	//	height := bcInfo.Height
-	//	if height == n {
-	//		instance.checkpoint(n, bcInfo)
-	//	} else if height / instance.K * instance.K {
-	//
-	//	}
-	//	instance.checkpoint(n, getBlockchainInfo())
-	//}
+	// Every K block checkpoint
+	if n % instance.K == 0 {
+		bcInfo := getBlockchainInfo()
+		height := bcInfo.Height
+		if height == n {
+			logger.Debugf("Call the checkpoint, view=%d, seqNo=%d, block height=%d", v, n, height)
+			instance.checkpoint(n, bcInfo)
+		} else  {
+			// reqBatch call execute but have not done with execute
+			logger.Debugf("Retry call the checkpoint, view=%d, seqNo=%d, block height=%d", v, n, height)
+			instance.retryCheckpoint(n)
+		}
+	}
 
 }
 
@@ -719,6 +722,25 @@ func (instance *pbftCore) checkpoint(n uint64, info *BlockchainInfo) {
 	instance.recvCheckpoint(chkpt)
 	msg := pbftMsgHelper(&Message{Payload: &Message_Checkpoint{Checkpoint: chkpt}}, instance.id)
 	instance.helper.InnerBroadcast(msg)
+}
+
+func (instance *pbftCore) retryCheckpoint(n uint64) {
+
+	if n % instance.K != 0 {
+		return
+	}
+	bcInfo := getBlockchainInfo()
+	height := bcInfo.Height
+	if height == n {
+		logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", n, height)
+		instance.checkpoint(n, bcInfo)
+	} else {
+		// reqBatch call execute but have not done with execute
+		logger.Debugf("Retry call the checkpoint, seqNo=%d, block height=%d", n, height)
+		instance.retryCheckpoint(n)
+	}
+
+
 }
 
 func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) events.Event {
