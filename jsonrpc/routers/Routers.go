@@ -49,7 +49,7 @@ var routes = Routes{
 		"ExuteTimeQuery",
 		"POST",
 		"/query",
-		controller.ExuteTimeQuery,
+		controller.ExecuteTimeQuery,
 	},
 
 }

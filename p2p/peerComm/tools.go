@@ -10,7 +10,6 @@ import (
 	"net"
 	"io/ioutil"
 	"encoding/json"
-	"time"
 	"github.com/op/go-logging"
 )
 var log *logging.Logger // package-level logger
@@ -48,8 +47,4 @@ func GetConfig(path string) map[string]string{
 		log.Fatal(UmErr)
 	}
 	return configs
-}
-
-func GenUnixTimeStamp() int64{
-	return time.Now().Unix()
 }

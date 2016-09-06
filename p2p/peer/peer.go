@@ -17,17 +17,27 @@ import (
 	"github.com/op/go-logging"
 )
 
+// init the package-level logger system,
+// after this declare and init function,
+// you can use the `log` whole the package scope
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("p2p/Server")
+}
 type Peer struct {
 	Addr pb.PeerAddress
 	Connection *grpc.ClientConn
 	Client pb.ChatClient
 	Idetity string
 }
-var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("p2p/Server")
-}
 
+
+// NewPeerByString to create a Peer which with a connection,
+// this connection address string format is '192.168.1.1:8001'
+// you can also create a Peer by function `NewPeerByAddress(peerMessage.address)`
+// the peer will auto store into the peer pool.
+// when creating a peer, the client instance will create a message whose type is HELLO
+// if get a response, save the peer into singleton peer pool instance
 func NewPeerByString(address string)(*Peer,error){
 	var peer Peer
 	arr := strings.Split(address,":")
@@ -53,17 +63,21 @@ func NewPeerByString(address string)(*Peer,error){
 	}
 	retMessage,err2 := peer.Client.Chat(context.Background(),&helloMessage)
 	if err2 != nil{
-		errors.New("cannot establish a connection!无法建立通讯")
-		log.Error("无法建立通讯 err:",err2)
+		errors.New("cannot establish a connection!")
+		log.Error("cannot establish a connection,errinfo: ",err2)
 		return nil,err2
 	}else{
 		if retMessage.MessageType == pb.Message_RESPONSE {
 			return &peer,nil
 		}
 	}
-	return nil,errors.New("无法建立连接")
+	return nil,errors.New("cannot establish a connection")
 }
 
+// Chat is a function to send a message to peer,
+// this function invokes the remote function peer-to-peer,
+// which implements the service that prototype file declares
+//
 func (this *Peer)Chat(msg *pb.Message) (*pb.Message, error){
 	r,err := this.Client.Chat(context.Background(),msg)
 	if err != nil{
@@ -72,6 +86,9 @@ func (this *Peer)Chat(msg *pb.Message) (*pb.Message, error){
 	return r,err
 }
 
+// Close the peer connection
+// this function should ensure no thread use this thead
+// this is not thread safety
 func (this *Peer)Close()(bool,error){
 	err := this.Connection.Close()
 	if err != nil{
