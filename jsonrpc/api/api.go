@@ -65,7 +65,7 @@ func SendTransaction(args TxArgs) bool {
 
 		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 
-		log.Infof("############# %d: start send request#############", time.Now().Unix())
+		log.Notice("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
 		end:=start+6
 
@@ -101,7 +101,7 @@ func SendTransaction(args TxArgs) bool {
 		//}()
 
 
-		log.Infof("############# %d: end send request#############", time.Now().Unix())
+		log.Notice("############# %d: end send request#############", time.Now().Unix())
 
 		//tx.TimeStamp=time.Now().UnixNano()
 		//txBytes, err := proto.Marshal(tx)
