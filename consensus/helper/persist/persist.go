@@ -1,6 +1,10 @@
 package persist
 
 import (
+	"fmt"
+	"errors"
+	"bytes"
+
 	"hyperchain/hyperdb"
 	"hyperchain/core"
 	"hyperchain/core/types"
@@ -33,14 +37,23 @@ func ReadStateSet(prefix string) (map[string][]byte, error) {
 
 	ret := make(map[string][]byte)
 	it := db.NewIterator()
-	for ok := it.Seek(prefixRaw); ok; ok = it.Next() {
-		key := it.Key()
-		if len(key) > len(prefixRaw) && string(key[0 : len(prefixRaw)]) == string(prefixRaw) {
-			ret[string(key)] = it.Value()
-		} else {
-			break
-		}
+	if !it.Seek(prefixRaw) {
+		err := errors.New(fmt.Sprintf("Cannot find key with %s in database", prefixRaw))
+		return nil, err
 	}
+	for ; bytes.HasPrefix(it.Key(), prefixRaw); it.Next() {
+		key := string(it.Key())
+		key = key[len("consensus."):]
+		ret[key] = append([]byte(nil), it.Value()...)
+	}
+	//for ok := it.Seek(prefixRaw); ok; ok = it.Next() {
+	//	key := it.Key()
+	//	if len(key) > len(prefixRaw) && string(key[0 : len(prefixRaw)]) == string(prefixRaw) {
+	//		ret[string(key)] = it.Value()
+	//	} else {
+	//		break
+	//	}
+	//}
 	it.Release()
 	return ret, nil
 }
