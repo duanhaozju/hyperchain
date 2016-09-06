@@ -6,6 +6,7 @@ import (
 	pb "hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"
+	"hyperchain/consensus/helper/persist"
 )
 
 // consensusMsgHelper help convert the ConsensusMessage to pb.Message
@@ -59,4 +60,19 @@ func exeBatchHelper(reqBatch *RequestBatch, no uint64) *pb.ExeMessage {
 	}
 
 	return exeMsg
+}
+
+func getBlockchainInfo() *BlockchainInfo {
+
+	bcInfo := persist.GetBlockchainInfo()
+
+	height := bcInfo.Height
+	curBlkHash := bcInfo.LatestBlockHash
+	preBlkHash := bcInfo.ParentBlockHash
+
+	return &BlockchainInfo{
+		Height:	height,
+		CurrentBlockHash: curBlkHash,
+		PreviousBlockHash: preBlkHash,
+	}
 }

@@ -5,7 +5,6 @@
 package core
 
 import (
-	"fmt"
 	"hyperchain/core/types"
 	"io/ioutil"
 	"encoding/json"
@@ -17,12 +16,17 @@ import (
 	"hyperchain/crypto"
 	"time"
 	"encoding/hex"
+
 )
 
 
 func CreateInitBlock(filename string)  {
 	log.Info("genesis start")
 
+	if(GetHeightOfChain()>0){
+		log.Info("already genesis")
+		return
+	}
 	type Genesis struct {
 		Timestamp  int64
 		ParentHash string
@@ -37,12 +41,12 @@ func CreateInitBlock(filename string)  {
 	bytes, err := ioutil.ReadFile(filename)
 
 	if err != nil {
-		fmt.Println("ReadFile: ", err.Error())
+		log.Error("ReadFile: ", err.Error())
 		return
 	}
 
 	if err := json.Unmarshal(bytes, &genesis); err != nil {
-		fmt.Println("Unmarshal: ", err.Error())
+		log.Error("Unmarshal: ", err.Error())
 		return
 	}
 	
@@ -109,7 +113,8 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash)  {
 		log.Fatal(err)
 	}
 	err = PutBlock(db, block.BlockHash, block)
-	//PutTransactions(db, commonHash, block.Transactions)
+	// write transaction
+	PutTransactions(db, commonHash, block.Transactions)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -120,7 +125,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash)  {
 	}
 
 	newChain := GetChainCopy()
-	fmt.Println("Block number",newChain.Height)
-	fmt.Println("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
+	log.Info("Block number",newChain.Height)
+	log.Info("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
 	balance.UpdateDBBalance(block)
 }

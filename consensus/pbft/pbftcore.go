@@ -3,14 +3,15 @@ package pbft
 import (
 	"fmt"
 	"time"
+	"sort"
 
 	"hyperchain/consensus/helper"
 	"hyperchain/consensus/events"
-	pb "hyperchain/protos"
 
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
-
+	"encoding/base64"
+	"github.com/golang/protobuf/proto"
 )
 
 // =============================================================================
@@ -28,6 +29,9 @@ func init() {
 // =============================================================================
 
 // Event Types
+
+// viewChangeTimerEvent is sent when the view change timer expires
+type viewChangeTimerEvent struct{}
 
 // pbftMessageEvent is sent when a consensus messages is received to be sent to pbft
 type pbftMessageEvent pbftMessage
@@ -53,43 +57,45 @@ type stateUpdateTarget struct {
 
 type pbftCore struct {
 	//internal data
-	helper helper.Stack
-	batchcore *batch
+	helper	helper.Stack
 
 	// PBFT data
-	byzantine     bool              // whether this node is intentionally acting as Byzantine; useful for debugging on the testnet
-	f             int               // max. number of faults we can tolerate
-	N             int               // max.number of validators in the network
-	h             uint64            // low watermark
-	id            uint64            // replica ID; PBFT `i`
-	K             uint64            // checkpoint period
-	logMultiplier uint64            // use this value to calculate log size : k*logMultiplier
-	L             uint64            // log size
-	lastExec      uint64            // last request we executed
-	replicaCount  int               // number of replicas; PBFT `|R|`
-	seqNo         uint64            // PBFT "n", strictly monotonic increasing sequence number
-	view          uint64            // current view
-	chkpts        map[uint64]string // state checkpoints; map lastExec to global hash
-	pset          map[uint64]*ViewChange_PQ
-	qset          map[qidx]*ViewChange_PQ
+	activeView	bool	// view change happening
+	byzantine	bool	// whether this node is intentionally acting as Byzantine; useful for debugging on the testnet
+	f		int	// max. number of faults we can tolerate
+	N		int	// max.number of validators in the network
+	h		uint64	// low watermark
+	id		uint64	// replica ID; PBFT `i`
+	K		uint64	// checkpoint period
+	logMultiplier	uint64	// use this value to calculate log size : k*logMultiplier
+	L		uint64	// log size
+	//lastExec	uint64	// last request we executed
+	replicaCount	int	// number of replicas; PBFT `|R|`
+	seqNo		uint64	// PBFT "n", strictly monotonic increasing sequence number
+	view		uint64	// current view
 
-	skipInProgress    bool               // Set when we have detected a fall behind scenario until we pick a new starting point
-	stateTransferring bool               // Set when state transfer is executing
-	highStateTarget   *stateUpdateTarget // Set to the highest weak checkpoint cert we have observed
-	hChkpts           map[uint64]uint64  // highest checkpoint sequence number observed for each replica
+	chkpts		map[uint64]string		// state checkpoints; map lastExec to global hash
+	pset		map[uint64]*ViewChange_PQ	// state checkpoints; map lastExec to global hash
+	qset		map[qidx]*ViewChange_PQ		// state checkpoints; map lastExec to global hash
 
-	currentExec           *uint64                  // currently executing request
-	timerActive           bool                     // is the timer running?
-	requestTimeout        time.Duration            // progress timeout for requests
-	outstandingReqBatches map[string]*RequestBatch // track whether we are waiting for request batches to execute
+	skipInProgress    bool			// Set when we have detected a fall behind scenario until we pick a new starting point
+	stateTransferring bool			// Set when state transfer is executing
+	highStateTarget   *stateUpdateTarget	// Set to the highest weak checkpoint cert we have observed
+	hChkpts           map[uint64]uint64	// highest checkpoint sequence number observed for each replica
 
-	nullRequestTimer   events.Timer  // timeout triggering a null request
-	nullRequestTimeout time.Duration // duration for this timeout
+	//currentExec		*uint64				// currently executing request
+	timerActive		bool				// is the timer running?
+	requestTimeout		time.Duration            	// progress timeout for requests
+	outstandingReqBatches	map[string]*RequestBatch	// track whether we are waiting for request batches to execute
+	newViewTimer		events.Timer			// track the timeout for each requestBatch
+	newViewTimerReason	string				// what triggered the timer
+	nullRequestTimer	events.Timer			// timeout triggering a null request
+	nullRequestTimeout	time.Duration			// duration for this timeout
 
 	// implementation of PBFT `in`
-	reqBatchStore   map[string]*RequestBatch // track request batches
-	certStore       map[msgID]*msgCert       // track quorum certificates for requests
-	checkpointStore map[Checkpoint]bool      // track checkpoints as set
+	reqBatchStore	map[string]*RequestBatch	// track request batches
+	certStore	map[msgID]*msgCert		// track quorum certificates for requests
+	checkpointStore	map[Checkpoint]bool		// track checkpoints as set
 }
 
 type qidx struct {
@@ -103,13 +109,13 @@ type msgID struct { // our index through certStore
 }
 
 type msgCert struct {
-	digest      string
-	prePrepare  *PrePrepare
-	sentPrepare bool
-	prepare     []*Prepare
-	sentCommit  bool
-	commit      []*Commit
-	executed    bool
+	digest		string
+	prePrepare	*PrePrepare
+	sentPrepare	bool
+	prepare		[]*Prepare
+	sentCommit	bool
+	commit		[]*Commit
+	sentExecute	bool
 }
 
 type vcidx struct {
@@ -139,8 +145,8 @@ func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerF
 	instance := &pbftCore{}
 	instance.id = id
 	instance.helper = batch.getHelper()
-	instance.batchcore=batch
 	instance.nullRequestTimer = etf.CreateTimer()
+	instance.newViewTimer = etf.CreateTimer()
 
 	instance.N = config.GetInt("general.N")
 	instance.f = config.GetInt("general.f")
@@ -156,7 +162,7 @@ func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerF
 		panic("Log multiplier must be greater than or equal to 2")
 	}
 
-	instance.L = instance.logMultiplier * instance.K // log size
+	instance.L = instance.logMultiplier * (instance.K+1) // log size
 	instance.byzantine = config.GetBool("general.byzantine")
 	instance.requestTimeout, err = time.ParseDuration(config.GetString("timeout.request"))
 
@@ -170,6 +176,7 @@ func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerF
 		instance.nullRequestTimeout = 0
 	}
 
+	instance.activeView = true
 	instance.replicaCount = instance.N
 
 	logger.Infof("PBFT Max number of validating peers (N) = %v", instance.N)
@@ -237,7 +244,7 @@ func (instance *pbftCore) ProcessEvent(e events.Event) events.Event {
 	case *Commit:
 		err = instance.recvCommit(et)
 	case *Checkpoint:
-		err = instance.recvCheckpoint(et)
+		return instance.recvCheckpoint(et)
 	case nullRequestEvent:
 		instance.nullRequestHandler()
 	default:
@@ -262,7 +269,7 @@ func (instance *pbftCore) primary(n uint64) uint64 {
 
 // Is the sequence number between watermarks?
 func (instance *pbftCore) inW(n uint64) bool {
-	return n-instance.h > 0 && n-instance.h <= instance.L
+	return n > instance.h && n-instance.h <= instance.L
 }
 
 // Is the view right? And is the sequence number between watermarks?
@@ -297,6 +304,13 @@ func (instance *pbftCore) preparedReplicasQuorum() int {
 
 func (instance *pbftCore) committedReplicasQuorum() int {
 	return (2 * instance.f + 1)
+}
+
+// intersectionQuorum returns the number of replicas that have to
+// agree to guarantee that at least one correct replica is shared by
+// two intersection quora
+func (instance *pbftCore) intersectionQuorum() int {
+	return (instance.N + instance.f + 2) / 2
 }
 
 // =============================================================================
@@ -391,6 +405,9 @@ func (instance *pbftCore) committed(digest string, v uint64, n uint64) bool {
 
 func (instance *pbftCore) nullRequestHandler() {
 
+	if !instance.activeView {
+		return
+	}
 	// time for the primary to send a null request
 	// pre-prepare with null digest
 	logger.Info("Primary %d null request timer expired, sending null request", instance.id)
@@ -434,9 +451,11 @@ func (instance *pbftCore) recvRequestBatch(reqBatch *RequestBatch) error {
 
 	instance.reqBatchStore[digest] = reqBatch
 	instance.outstandingReqBatches[digest] = reqBatch
-	//instance.persistRequestBatch(digest)
-
-	if instance.primary(instance.view) == instance.id {
+	instance.persistRequestBatch(digest)
+	if instance.activeView {
+		instance.softStartTimer(instance.requestTimeout, fmt.Sprintf("new request batch %s", digest))
+	}
+	if instance.primary(instance.view) == instance.id && instance.activeView {
 		instance.nullRequestTimer.Stop()
 		instance.sendPrePrepare(reqBatch, digest)
 	} else {
@@ -489,6 +508,10 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
 		instance.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
+	if !instance.activeView {
+		logger.Debugf("Replica %d ignoring pre-prepare as we sre in view change", instance.id)
+	}
+
 	if instance.primary(instance.view) != preprep.ReplicaId {
 		logger.Warningf("Pre-prepare from other than primary: got %d, should be %d", preprep.ReplicaId, instance.primary(instance.view))
 		return nil
@@ -521,7 +544,7 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 		instance.reqBatchStore[digest] = preprep.GetRequestBatch()
 		logger.Debugf("Replica %d storing request batch %s in outstanding request batch store", instance.id, digest)
 		instance.outstandingReqBatches[digest] = preprep.GetRequestBatch()
-		//instance.persistRequestBatch(digest)
+		instance.persistRequestBatch(digest)
 	}
 
 	instance.softStartTimer(instance.requestTimeout, fmt.Sprintf("new pre-prepare for request batch %s", preprep.BatchDigest))
@@ -617,31 +640,384 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 	}
 	cert.commit = append(cert.commit, commit)
 
-	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) && cert.executed == false {
-		logger.Infof("--------begin execute--------view=%d/seqNo=%d--------", commit.View, commit.SequenceNumber)
+	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) && cert.sentExecute == false {
+		instance.stopTimer(commit.SequenceNumber)
 		delete(instance.outstandingReqBatches, commit.BatchDigest)
-		exeBatch := exeBatchHelper(cert.prePrepare.RequestBatch, commit.SequenceNumber)
-		instance.execOutstanding(exeBatch)
-		//instance.helper.Execute(reqBatch)
-		cert.executed = true
-
+		instance.executeOutstanding(commit.View, commit.SequenceNumber)
 	}
 
 	return nil
 }
 
-func (instance *pbftCore) execOutstanding(exeBatch *pb.ExeMessage) {
+func (instance *pbftCore) executeOutstanding(v uint64, n uint64) {
+
+	cert := instance.getCert(v, n)
+
+	if cert == nil || cert.prePrepare == nil {
+		return
+	}
+
+	// skipInProgress == true, then this replica is in viewchange, not reply or execute
+	if instance.skipInProgress {
+		logger.Infof("Replica %d currently picking a starting point to resume, will not execute", instance.id)
+		return
+	}
+
+	digest := cert.digest
+	reqBatch := instance.reqBatchStore[digest]
+
+	// check if committed
+	if !instance.committed(digest, v, n) {
+		return
+	}
+
+	// check if already executed
+	if cert.sentExecute == true {
+		return
+	}
+
+	exeBatch := exeBatchHelper(reqBatch, n)
+	instance.helper.Execute(exeBatch)
+	cert.sentExecute = true
+	logger.Infof("--------call execute--------view=%d/seqNo=%d--------", v, n)
+
+	//if n % instance.K == 0 {
+	//	instance.checkpoint(n, getBlockchainInfo())
+	//}
 
 }
 
-func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) error {
+func (instance *pbftCore) checkpoint(n uint64, info *BlockchainInfo) {
+
+	if n % instance.K != 0 {
+		logger.Errorf("Attempted to checkpoint a sequence number (%d) which is not a multiple of the checkpoint interval (%d)", n, instance.K)
+		return
+	}
+
+	id, _ := proto.Marshal(info)
+	idAsString := base64.StdEncoding.EncodeToString(id)
+	seqNo := n
+
+	logger.Infof("Replica %d preparing checkpoint for view=%d/seqNo=%d and b64 id of %s",
+		instance.id, instance.view, seqNo, idAsString)
+
+	chkpt := &Checkpoint{
+		SequenceNumber: seqNo,
+		ReplicaId:      instance.id,
+		Id:             idAsString,
+	}
+	instance.chkpts[seqNo] = idAsString
+
+	instance.persistCheckpoint(seqNo, id)
+	instance.recvCheckpoint(chkpt)
+	msg := pbftMsgHelper(&Message{Payload: &Message_Checkpoint{Checkpoint: chkpt}}, instance.id)
+	instance.helper.InnerBroadcast(msg)
+}
+
+func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) events.Event {
+
+	logger.Infof("Replica %d received checkpoint from replica %d, seqNo %d, digest %s",
+		instance.id, chkpt.ReplicaId, chkpt.SequenceNumber, chkpt.Id)
+
+	if instance.weakCheckpointSetOutOfRange(chkpt) {
+		return nil
+	}
+
+	if !instance.inW(chkpt.SequenceNumber) {
+		if chkpt.SequenceNumber != instance.h && !instance.skipInProgress {
+			// It is perfectly normal that we receive checkpoints for the watermark we just raised, as we raise it after 2f+1, leaving f replies left
+			logger.Warningf("Checkpoint sequence number outside watermarks: seqNo %d, low-mark %d", chkpt.SequenceNumber, instance.h)
+		} else {
+			logger.Debugf("Checkpoint sequence number outside watermarks: seqNo %d, low-mark %d", chkpt.SequenceNumber, instance.h)
+		}
+		return nil
+	}
+
+	instance.checkpointStore[*chkpt] = true
+
+	matching := 0
+	for testChkpt := range instance.checkpointStore {
+		if testChkpt.SequenceNumber == chkpt.SequenceNumber && testChkpt.Id == chkpt.Id {
+			matching++
+		}
+	}
+	logger.Infof("Replica %d found %d matching checkpoints for seqNo %d, digest %s",
+		instance.id, matching, chkpt.SequenceNumber, chkpt.Id)
+
+	if matching == instance.f+1 {
+		// We do have a weak cert
+		instance.witnessCheckpointWeakCert(chkpt)
+	}
+
+	if matching < instance.intersectionQuorum() {
+		// We do not have a quorum yet
+		return nil
+	}
+
+	// It is actually just fine if we do not have this checkpoint
+	// and should not trigger a state transfer
+	// Imagine we are executing sequence number k-1 and we are slow for some reason
+	// then everyone else finishes executing k, and we receive a checkpoint quorum
+	// which we will agree with very shortly, but do not move our watermarks until
+	// we have reached this checkpoint
+	// Note, this is not divergent from the paper, as the paper requires that
+	// the quorum certificate must contain 2f+1 messages, including its own
+	chkptID, ok := instance.chkpts[chkpt.SequenceNumber]
+	if !ok {
+		logger.Infof("Replica %d found checkpoint quorum for seqNo %d, digest %s, but it has not reached this checkpoint itself yet",
+			instance.id, chkpt.SequenceNumber, chkpt.Id)
+		if instance.skipInProgress {
+			logSafetyBound := instance.h + instance.L/2
+			// As an optimization, if we are more than half way out of our log and in state transfer, move our watermarks so we don't lose track of the network
+			// if needed, state transfer will restart on completion to a more recent point in time
+			if chkpt.SequenceNumber >= logSafetyBound {
+				logger.Infof("Replica %d is in state transfer, but, the network seems to be moving on past %d, moving our watermarks to stay with it", instance.id, logSafetyBound)
+				instance.moveWatermarks(chkpt.SequenceNumber)
+			}
+		}
+		return nil
+	}
+
+	logger.Infof("Replica %d found checkpoint quorum for seqNo %d, digest %s",
+		instance.id, chkpt.SequenceNumber, chkpt.Id)
+
+	if chkptID != chkpt.Id {
+		logger.Criticalf("Replica %d generated a checkpoint of %s, but a quorum of the network agrees on %s. This is almost definitely non-deterministic chaincode.",
+			instance.id, chkptID, chkpt.Id)
+		instance.stateTransfer(nil)
+	}
+
+	instance.moveWatermarks(chkpt.SequenceNumber)
 
 	return nil
 }
 
+func (instance *pbftCore) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
+	H := instance.h + instance.L
+
+	// Track the last observed checkpoint sequence number if it exceeds our high watermark, keyed by replica to prevent unbounded growth
+	if chkpt.SequenceNumber < H {
+		// For non-byzantine nodes, the checkpoint sequence number increases monotonically
+		delete(instance.hChkpts, chkpt.ReplicaId)
+	} else {
+		// We do not track the highest one, as a byzantine node could pick an arbitrarilly high sequence number
+		// and even if it recovered to be non-byzantine, we would still believe it to be far ahead
+		instance.hChkpts[chkpt.ReplicaId] = chkpt.SequenceNumber
+
+		// If f+1 other replicas have reported checkpoints that were (at one time) outside our watermarks
+		// we need to check to see if we have fallen behind.
+		if len(instance.hChkpts) >= instance.f+1 {
+			chkptSeqNumArray := make([]uint64, len(instance.hChkpts))
+			index := 0
+			for replicaID, hChkpt := range instance.hChkpts {
+				chkptSeqNumArray[index] = hChkpt
+				index++
+				if hChkpt < H {
+					delete(instance.hChkpts, replicaID)
+				}
+			}
+			sort.Sort(sortableUint64Slice(chkptSeqNumArray))
+
+			// If f+1 nodes have issued checkpoints above our high water mark, then
+			// we will never record 2f+1 checkpoints for that sequence number, we are out of date
+			// (This is because all_replicas - missed - me = 3f+1 - f - 1 = 2f)
+			if m := chkptSeqNumArray[len(chkptSeqNumArray)-(instance.f+1)]; m > H {
+				logger.Warningf("Replica %d is out of date, f+1 nodes agree checkpoint with seqNo %d exists but our high water mark is %d", instance.id, chkpt.SequenceNumber, H)
+				instance.reqBatchStore = make(map[string]*RequestBatch) // Discard all our requests, as we will never know which were executed, to be addressed in #394
+				//instance.persistDelAllRequestBatches()
+				instance.moveWatermarks(m)
+				instance.outstandingReqBatches = make(map[string]*RequestBatch)
+				instance.skipInProgress = true
+				//instance.consumer.invalidateState()
+				instance.stopTimer(chkpt.SequenceNumber)
+
+				// TODO, reprocess the already gathered checkpoints, this will make recovery faster, though it is presently correct
+
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func (instance *pbftCore) witnessCheckpointWeakCert(chkpt *Checkpoint) {
+
+	// Only ever invoked for the first weak cert, so guaranteed to be f+1
+	checkpointMembers := make([]uint64, instance.f+1)
+	i := 0
+	for testChkpt := range instance.checkpointStore {
+		if testChkpt.SequenceNumber == chkpt.SequenceNumber && testChkpt.Id == chkpt.Id {
+			checkpointMembers[i] = testChkpt.ReplicaId
+			logger.Infof("Replica %d adding replica %d (handle %v) to weak cert", instance.id, testChkpt.ReplicaId, checkpointMembers[i])
+			i++
+		}
+	}
+
+	snapshotID, err := base64.StdEncoding.DecodeString(chkpt.Id)
+	if err != nil {
+		err = fmt.Errorf("Replica %d received a weak checkpoint cert which could not be decoded (%s)", instance.id, chkpt.Id)
+		logger.Error(err.Error())
+		return
+	}
+
+	target := &stateUpdateTarget{
+		checkpointMessage:	checkpointMessage{
+			seqNo:	chkpt.SequenceNumber,
+			id:	snapshotID,
+		},
+		replicas: 		checkpointMembers,
+	}
+	instance.updateHighStateTarget(target)
+
+	if instance.skipInProgress {
+		logger.Infof("Replica %d is catching up and witnessed a weak certificate for checkpoint %d, weak cert attested to by %d of %d (%v)",
+			instance.id, chkpt.SequenceNumber, i, instance.replicaCount, checkpointMembers)
+		// The view should not be set to active, this should be handled by the yet unimplemented SUSPECT, see https://github.com/hyperledger/fabric/issues/1120
+		instance.retryStateTransfer(target)
+	}
+}
+
+func (instance *pbftCore) moveWatermarks(n uint64) {
+
+	// round down n to previous low watermark
+	h := n / instance.K * instance.K
+
+	for idx, cert := range instance.certStore {
+		if idx.n <= h {
+			logger.Infof("Replica %d cleaning quorum certificate for view=%d/seqNo=%d",
+				instance.id, idx.v, idx.n)
+			instance.persistDelRequestBatch(cert.digest)
+			delete(instance.reqBatchStore, cert.digest)
+			delete(instance.certStore, idx)
+		}
+	}
+
+	for testChkpt := range instance.checkpointStore {
+		if testChkpt.SequenceNumber <= h {
+			logger.Infof("Replica %d cleaning checkpoint message from replica %d, seqNo %d, b64 snapshot id %s",
+				instance.id, testChkpt.ReplicaId, testChkpt.SequenceNumber, testChkpt.Id)
+			delete(instance.checkpointStore, testChkpt)
+		}
+	}
+
+	for n := range instance.pset {
+		if n <= h {
+			delete(instance.pset, n)
+			//instance.persistDelPSet(n)
+		}
+	}
+
+	for idx := range instance.qset {
+		if idx.n <= h {
+			delete(instance.qset, idx)
+			//instance.persistDelQSet(idx)
+		}
+	}
+
+	for n := range instance.chkpts {
+		if n < h {
+			delete(instance.chkpts, n)
+			instance.persistDelCheckpoint(n)
+		}
+	}
+
+	instance.h = h
+
+	logger.Infof("Replica %d updated low watermark to %d",
+		instance.id, instance.h)
+
+	instance.resubmitRequestBatches()
+}
+
+func (instance *pbftCore) updateHighStateTarget(target *stateUpdateTarget) {
+	if instance.highStateTarget != nil && instance.highStateTarget.seqNo >= target.seqNo {
+		logger.Infof("Replica %d not updating state target to seqNo %d, has target for seqNo %d", instance.id, target.seqNo, instance.highStateTarget.seqNo)
+		return
+	}
+
+	instance.highStateTarget = target
+}
+
+func (instance *pbftCore) stateTransfer(optional *stateUpdateTarget) {
+
+	if !instance.skipInProgress {
+		logger.Debugf("Replica %d is out of sync, pending state transfer", instance.id)
+		instance.skipInProgress = true
+		//instance.consumer.invalidateState()
+	}
+
+	instance.retryStateTransfer(optional)
+}
+
+func (instance *pbftCore) retryStateTransfer(optional *stateUpdateTarget) {
+
+	if instance.stateTransferring {
+		logger.Debugf("Replica %d is currently mid state transfer, it must wait for this state transfer to complete before initiating a new one", instance.id)
+		return
+	}
+
+	target := optional
+	if target == nil {
+		if instance.highStateTarget == nil {
+			logger.Debugf("Replica %d has no targets to attempt state transfer to, delaying", instance.id)
+			return
+		}
+		target = instance.highStateTarget
+	}
+
+	instance.stateTransferring = true
+
+	logger.Debugf("Replica %d is initiating state transfer to seqNo %d", instance.id, target.seqNo)
+	//instance.consumer.skipTo(target.seqNo, target.id, target.replicas)
+
+}
+
+func (instance *pbftCore) resubmitRequestBatches() {
+	if instance.primary(instance.view) != instance.id {
+		return
+	}
+
+	var submissionOrder []*RequestBatch
+
+	outer:
+	for d, reqBatch := range instance.outstandingReqBatches {
+		for _, cert := range instance.certStore {
+			if cert.digest == d {
+				logger.Debugf("Replica %d already has certificate for request batch %s - not going to resubmit", instance.id, d)
+				continue outer
+			}
+		}
+		logger.Infof("Replica %d has detected request batch %s must be resubmitted", instance.id, d)
+		submissionOrder = append(submissionOrder, reqBatch)
+	}
+
+	if len(submissionOrder) == 0 {
+		return
+	}
+
+	for _, reqBatch := range submissionOrder {
+		// This is a request batch that has not been pre-prepared yet
+		// Trigger request batch processing again
+		instance.recvRequestBatch(reqBatch)
+	}
+}
+
 func (instance *pbftCore) softStartTimer(timeout time.Duration, reason string) {
-
 	logger.Debugf("Replica %d soft starting new view timer for %s: %s", instance.id, timeout, reason)
+	instance.newViewTimerReason = reason
 	instance.timerActive = true
+	instance.newViewTimer.SoftReset(timeout, viewChangeTimerEvent{})
+}
 
+func (instance *pbftCore) startTimer(n uint64, timeout time.Duration, reason string) {
+	logger.Debugf("Replica %d starting new view timer for %s: %s", instance.id, timeout, reason)
+	instance.timerActive = true
+	instance.newViewTimer.Reset(timeout, viewChangeTimerEvent{})
+}
+
+func (instance *pbftCore) stopTimer(n uint64) {
+	logger.Debugf("Replica %d stopping a running new view timer", instance.id)
+	instance.timerActive = false
+	instance.newViewTimer.Stop()
 }

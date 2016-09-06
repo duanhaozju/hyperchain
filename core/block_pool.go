@@ -94,15 +94,14 @@ func (pool *BlockPool)AddBlock(block *types.Block,commonHash crypto.CommonHash) 
 
 	if(pool.demandNumber==block.Number) {
 
-
 		pool.mu.RLock()
-
 		pool.demandNumber+=1
 		log.Info("current demandNumber is ",pool.demandNumber)
+
 		WriteBlock(block,commonHash)
 
-		pool.mu.RUnlock()
 
+		pool.mu.RUnlock()
 
 			for i := block.Number + 1; i <= pool.maxNum; i += 1 {
 				if _, ok := pool.queue[i]; ok {//存在}

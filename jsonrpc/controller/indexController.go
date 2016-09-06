@@ -39,11 +39,11 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	var tmpl = template.Must(template.ParseFiles(indexpath))
 
 
-	transactions := api.GetAllTransactions()
+	//transactions := api.GetAllTransactions()
 	lastestBlock := api.LastestBlock()
 
 	tmpl.Execute(w,data{
-		Trans:transactions,
+		//Trans:transactions,
 		LastestBlock: lastestBlock,
 	})
 }
@@ -68,8 +68,6 @@ func BalancesGet(w http.ResponseWriter, r *http.Request) {
 // BlocksGet function is the handler of "/blocks", GET
 func BlocksGet(w http.ResponseWriter, r *http.Request) {
 	blocks := api.GetAllBlocks()
-
-	log.Info(blocks)
 
 	data, err := json.Marshal(ResData{
 		Data: blocks,
@@ -102,7 +100,8 @@ func TransactionGet(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-func ExuteTimeQuery(w http.ResponseWriter, r *http.Request) {
+// ExecuteTimeQuery function is the handler of "/query", POST
+func ExecuteTimeQuery(w http.ResponseWriter, r *http.Request) {
 	var res ResData
 	var p = api.TxArgs{}
 

@@ -11,7 +11,6 @@ import (
 	"hyperchain/p2p/peermessage"
 	"hyperchain/p2p/peerPool"
 	peer "hyperchain/p2p/peer"
-	"fmt"
 	"github.com/op/go-logging"
 )
 
