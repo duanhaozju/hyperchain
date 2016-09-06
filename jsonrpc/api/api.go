@@ -68,7 +68,7 @@ func SendTransaction(args TxArgs) bool {
 
 		log.Notice("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
-		end:=start+600
+		end:=start+6
 
 			for start := start ; start < end; start = time.Now().Unix() {
 			for i := 0; i < 1500; i++ {
