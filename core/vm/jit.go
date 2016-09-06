@@ -1,31 +1,13 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package vm
 
 import (
 	"fmt"
 	"math/big"
 	"sync/atomic"
-	"time"
-	"MyEVM/vm/common"
-	"EVMTest/go-ethereum/crypto"
-	"EVMTest/go-ethereum/logger"
-	"EVMTest/go-ethereum/logger/glog"
-	"EVMTest/go-ethereum/params"
+	//"time"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/hashicorp/golang-lru"
 )
 
@@ -135,13 +117,14 @@ func CompileProgram(program *Program) (err error) {
 			atomic.StoreInt32(&program.status, int32(progReady))
 		}
 	}()
+	/*
 	if glog.V(logger.Debug) {
 		glog.Infof("compiling %x\n", program.Id[:4])
 		tstart := time.Now()
 		defer func() {
 			glog.Infof("compiled  %x instrc: %d time: %v\n", program.Id[:4], len(program.instructions), time.Since(tstart))
 		}()
-	}
+	}*/
 
 	// loop thru the opcodes and "compile" in to instructions
 	for pc := uint64(0); pc < uint64(len(program.code)); pc++ {
@@ -309,14 +292,13 @@ func runProgram(program *Program, pcstart uint64, mem *Memory, stack *stack, env
 		pc         uint64 = program.mapping[pcstart]
 		instrCount        = 0
 	)
-
-	if glog.V(logger.Debug) {
+	/*if glog.V(logger.Debug) {
 		glog.Infof("running JIT program %x\n", program.Id[:4])
 		tstart := time.Now()
 		defer func() {
 			glog.Infof("JIT program %x done. time: %v instrc: %v\n", program.Id[:4], time.Since(tstart), instrCount)
 		}()
-	}
+	}*/
 
 	homestead := env.RuleSet().IsHomestead(env.BlockNumber())
 	for pc < uint64(len(program.instructions)) {

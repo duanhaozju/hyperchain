@@ -1,32 +1,16 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package runtime
 
 import (
 	"math/big"
 
-	"MyEVM/vm/common"
-	"MyEVM/core"
-	"MyEVM/core/state"
-	"MyEVM/vm"
+	"hyperchain/common"
+	"hyperchain/core"
+	"hyperchain/core/state"
+	"hyperchain/core/vm"
 )
 
 // Env is a basic runtime environment required for running the EVM.
-// 测试用
+// just for test
 type Env struct {
 	ruleSet vm.RuleSet
 	depth   int
@@ -92,9 +76,6 @@ func (self *Env) GasLimit() *big.Int       { return self.gasLimit }
 func (self *Env) VmType() vm.Type          { return vm.StdVmTy }
 func (self *Env) GetHash(n uint64) common.Hash {
 	return self.getHashFn(n)
-}
-func (self *Env) AddLog(log *vm.Log) {
-	self.state.AddLog(log)
 }
 func (self *Env) Depth() int     { return self.depth }
 func (self *Env) SetDepth(i int) { self.depth = i }

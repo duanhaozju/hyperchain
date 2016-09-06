@@ -28,10 +28,8 @@ import (
 	"regexp"
 	"strings"
 
-	"MyEVM/vm/common"
-	"EVMTest/go-ethereum/crypto"
-	"EVMTest/go-ethereum/logger"
-	"EVMTest/go-ethereum/logger/glog"
+	"hyperchain/common"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 var (
@@ -111,7 +109,7 @@ func NewCompiler(solcPath string) (sol *Solidity, err error) {
 		fullVersion: fullVersion,
 		legacy:      legacy,
 	}
-	glog.V(logger.Info).Infoln(sol.Info())
+	//glog.V(logger.Info).Infoln(sol.Info())
 	return
 }
 

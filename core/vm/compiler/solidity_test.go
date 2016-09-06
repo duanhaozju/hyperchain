@@ -23,7 +23,7 @@ import (
 	"path"
 	"testing"
 
-	"MyEVM/vm/common"
+	"hyperchain/common"
 )
 
 const solcVersion = "0.1.1"

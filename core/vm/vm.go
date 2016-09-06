@@ -1,31 +1,14 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package vm
 
 import (
 	"fmt"
 	"math/big"
-	"time"
+	//"time"
 
-	"MyEVM/vm/common"
-	"EVMTest/go-ethereum/crypto"
-	"EVMTest/go-ethereum/logger"
-	"EVMTest/go-ethereum/logger/glog"
-	"EVMTest/go-ethereum/params"
+	"hyperchain/common"
+	//gloging "github.com/op/go-logging"
+	"github.com/ethereum/go-ethereum/crypto"
+	"hyperchain/core/vm/params"
 )
 
 // Config are the configuration options for the EVM
@@ -99,7 +82,7 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 				if perr == nil {
 					return RunProgram(program, evm.env, contract, input)
 				}
-				glog.V(logger.Info).Infoln("error compiling program", err)
+				//gloging.INFO("error compiling program", err)
 			} else {
 				// create and compile the program. Compilation
 				// is done in a separate goroutine
@@ -107,7 +90,7 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 				go func() {
 					err := CompileProgram(program)
 					if err != nil {
-						glog.V(logger.Info).Infoln("error compiling program", err)
+						//gloging.INFO("error compiling program", err)
 						return
 					}
 				}()
@@ -153,13 +136,13 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 		}
 	}()
 
-	if glog.V(logger.Debug) {
-		glog.Infof("running byte VM %x\n", codehash[:4])
+	/*if gloging.DEBUG {
+		gloging.INFO("running byte VM %x\n", codehash[:4])
 		tstart := time.Now()
 		defer func() {
-			glog.Infof("byte VM %x done. time: %v instrc: %v\n", codehash[:4], time.Since(tstart), instrCount)
+			gloging.INFO("byte VM %x done. time: %v instrc: %v\n", codehash[:4], time.Since(tstart), instrCount)
 		}()
-	}
+	}*/
 
 	for ; ; instrCount++ {
 		/*
