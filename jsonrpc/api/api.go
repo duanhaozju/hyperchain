@@ -36,6 +36,7 @@ type LastestBlockShow struct{
 type BlockShow struct{
         Height uint64
         TxCounts uint64
+	BatchTIme string
 	WriteTime string
         Counts int64
 }
@@ -209,6 +210,7 @@ func blockShow(height uint64) BlockShow{
 	return BlockShow{
 			Height: height,
 			TxCounts: txCounts,
+			BatchTIme: time.Unix(block.Timestamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
 			WriteTime: time.Unix(block.WriteTime / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
 			Counts: core.CalcResponseCount(height, int64(300)),
 		}
