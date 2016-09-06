@@ -4,6 +4,8 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/core"
 	"hyperchain/core/types"
+	"fmt"
+	"errors"
 )
 
 
@@ -33,6 +35,10 @@ func ReadStateSet(prefix string) (map[string][]byte, error) {
 
 	ret := make(map[string][]byte)
 	it := db.NewIterator()
+	if !it.Seek(prefixRaw) {
+		err := errors.New(fmt.Sprintf("Cannot find key with %s in database", prefixRaw))
+		return nil, err
+	}
 	for it.Next() {
 		key := it.Key()
 		if len(key) > len(prefixRaw) && string(key[0 : len(prefixRaw)]) == string(prefixRaw) {
