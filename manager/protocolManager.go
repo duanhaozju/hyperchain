@@ -87,6 +87,7 @@ func (pm *ProtocolManager) Start() {
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
 	go pm.ConsensusLoop()
+	go pm.ConsensusLoop()
 
 
 	pm.wg.Wait()
