@@ -84,13 +84,15 @@ func DeleteTransaction(db hyperdb.Database, key []byte) error {
 func GetAllTransaction(db *hyperdb.LDBDatabase) ([]*types.Transaction, error) {
 	var ts []*types.Transaction = make([]*types.Transaction, 0)
 	iter := db.NewIterator()
-	for iter.Next() {
+	for ok := iter.Seek(transactionPrefix); ok; ok = iter.Next() {
 		key := iter.Key()
 		if len(string(key)) >= len(transactionPrefix) && string(key[:len(transactionPrefix)]) == string(transactionPrefix) {
 			var t types.Transaction
 			value := iter.Value()
 			proto.Unmarshal(value, &t)
 			ts = append(ts, &t)
+		} else {
+			break
 		}
 	}
 	iter.Release()

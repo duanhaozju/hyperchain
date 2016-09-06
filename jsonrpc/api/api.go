@@ -143,8 +143,8 @@ func GetAllBalances() BalanceShow{
 	balMap := balanceIns.GetAllDBBalance()
 
 	for key, value := range balMap {
-		log.Info(key.Str())
-		balances[key.Str()] = string(value)
+		log.Info(key.Hex())
+		balances[key.Hex()] = string(value)
 	}
 
 	return balances
