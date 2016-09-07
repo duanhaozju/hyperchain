@@ -72,7 +72,6 @@ func (ee *EcdsaEncrypto)GeneralKey(port string)(interface{},error) {
 		//("directory exists")
 
 	}else {
-		fmt.Println("no")
 		os.MkdirAll(keystoredir,0777)
 	}
 	file := keystoredir+port

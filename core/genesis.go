@@ -126,7 +126,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 	}
 
 	newChain := GetChainCopy()
-	log.Info("Block number",newChain.Height)
-	log.Info("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
+	log.Notice("Block number",newChain.Height)
+	log.Notice("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
 	balance.UpdateDBBalance(block)
 }

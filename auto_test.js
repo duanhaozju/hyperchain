@@ -29,8 +29,8 @@ function testRequest(opt){
 var options = {
     host: opt.url,
     port: opt.port,
-    path: '/',
-    method: 'GET',
+    path: '/trans',
+    method: 'POST',
     headers: {
           'Content-Type': 'application/json',
     }
@@ -48,7 +48,7 @@ console.log(options);
     post_req.on('error',function(err){
         console.log(err);
     })
-//    post_req.write(post_data);
+    post_req.write(post_data);
     post_req.end();
 }
 
