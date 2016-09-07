@@ -9,6 +9,7 @@ import (
 	"hyperchain/event"
 	"hyperchain/crypto"
 	"github.com/stretchr/testify/assert"
+	"hyperchain/accounts"
 )
 
 //var pm *manager.ProtocolManager
@@ -17,12 +18,19 @@ func initPM() *manager.ProtocolManager{
 	eventMux := new(event.TypeMux)
 	peerManager := new(p2p.GrpcPeerManager)
 	fetcher := core.NewFetcher()
-	encryption :=crypto.NewEcdsaEncrypto("ecdsa")
-	encryption.GeneralKey(string(8012))
 	commonHash:=crypto.NewKeccak256Hash("keccak256")
 	//blockPool:=core.NewBlockPool(eventMux)
 
-	return manager.NewProtocolManager(nil,peerManager, eventMux, fetcher, nil, encryption, commonHash)
+	//init encryption object
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	encryption.GeneralKey("8012")
+
+	scryptN := accounts.StandardScryptN
+	scryptP := accounts.StandardScryptP
+	keydir := "../keystore/"
+	am := accounts.NewAccountManager(keydir,encryption, scryptN, scryptP)
+
+	return manager.NewProtocolManager(nil, peerManager, eventMux, fetcher, nil, am, commonHash)
 }
 
 func TestSendTransaction(t *testing.T) {
