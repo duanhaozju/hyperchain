@@ -166,7 +166,7 @@ func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerF
 		panic("Log multiplier must be greater than or equal to 2")
 	}
 
-	instance.L = instance.logMultiplier * (instance.K+1) // log size
+	instance.L = instance.logMultiplier * instance.K // log size
 	instance.byzantine = config.GetBool("general.byzantine")
 	instance.requestTimeout, err = time.ParseDuration(config.GetString("timeout.request"))
 
@@ -250,6 +250,8 @@ func (instance *pbftCore) ProcessEvent(e events.Event) events.Event {
 		err = instance.recvCommit(et)
 	case *Checkpoint:
 		return instance.recvCheckpoint(et)
+	//case stateUpdateEvent:
+	//	Todo for stateUpdateEvent
 	case nullRequestEvent:
 		instance.nullRequestHandler()
 	default:
@@ -1059,6 +1061,7 @@ func (instance *pbftCore) retryStateTransfer(optional *stateUpdateTarget) {
 	instance.stateTransferring = true
 
 	logger.Debugf("Replica %d is initiating state transfer to seqNo %d", instance.id, target.seqNo)
+	//instance.batch.pbftManager.Queue() <- stateUpdateEvent // Todo for stateupdate
 	//instance.consumer.skipTo(target.seqNo, target.id, target.replicas)
 
 }
