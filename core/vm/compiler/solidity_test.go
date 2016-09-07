@@ -7,7 +7,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
+	"hyperchain/common"
 )
 
 const solcVersion = "0.1.1"

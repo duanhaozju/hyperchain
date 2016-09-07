@@ -3,7 +3,7 @@ package core
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
+	"hyperchain/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"hyperchain/core/vm"

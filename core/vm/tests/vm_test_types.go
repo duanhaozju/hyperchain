@@ -7,13 +7,13 @@ import (
 	"math/big"
 	"os"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
+	"hyperchain/common"
+	"hyperchain/core"
 	//"hyperchain/core"
 	"hyperchain/core/state"
 	"hyperchain/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
-	ethdb "hyperchain/hyperdb"
+	"hyperchain/core/crypto"
+	"hyperchain/hyperdb"
 )
 
 var (
@@ -87,7 +87,7 @@ func (self Log) Topics() [][]byte {
 	return t
 }
 
-func StateObjectFromAccount(db ethdb.Database, addr string, account Account) *state.StateObject {
+func StateObjectFromAccount(db hyperdb.Database, addr string, account Account) *state.StateObject {
 	obj := state.NewStateObject(common.HexToAddress(addr), db)
 	obj.SetBalance(common.Big(account.Balance))
 

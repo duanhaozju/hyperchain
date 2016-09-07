@@ -39,7 +39,7 @@ import (
 	"unsafe"
 
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/crypto"
+	"hyperchain/core/crypto"
 	"hyperchain/core/vm/params"
 )
 

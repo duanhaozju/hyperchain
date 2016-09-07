@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
+	"hyperchain/common"
 )
 
 // Disassemble disassembles the byte code and returns the string

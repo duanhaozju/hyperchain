@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
+	"hyperchain/common"
 	"hyperchain/core/vm"
 	//"github.com/ethereum/go-ethereum/ethdb"
 	"hyperchain/hyperdb"

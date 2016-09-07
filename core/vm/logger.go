@@ -22,7 +22,7 @@ import (
 	"os"
 	"unicode"
 
-	"github.com/ethereum/go-ethereum/common"
+	"hyperchain/common"
 )
 
 type Storage map[common.Hash]common.Hash

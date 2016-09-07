@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
+	"hyperchain/common"
 	"hyperchain/hyperdb"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )

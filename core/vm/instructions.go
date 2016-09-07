@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
+	"hyperchain/common"
+	"hyperchain/core/crypto"
 	"hyperchain/core/vm/params"
 )
 

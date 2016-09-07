@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common"
+	"hyperchain/common"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 

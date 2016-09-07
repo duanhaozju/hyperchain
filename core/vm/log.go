@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ethereum/go-ethereum/common"
+	"hyperchain/common"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 

@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/ethereum/go-ethereum/common"
+	"hyperchain/common"
 	"hyperchain/core/state"
 	"hyperchain/core/vm"
 	//"github.com/ethereum/go-ethereum/ethdb"

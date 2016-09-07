@@ -4,7 +4,7 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	glog "github.com/op/go-logging"
-	"github.com/ethereum/go-ethereum/common"
+	"hyperchain/common"
 )
 type Code []byte
 var logger = glog.Logger{}
