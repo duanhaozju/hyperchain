@@ -23,8 +23,8 @@ import (
 
 	"hyperchain/common"
 	"hyperchain/core/crypto"
-	"github.com/ethereum/go-ethereum/logger"
-	"github.com/ethereum/go-ethereum/logger/glog"
+	"hyperchain/logger"
+	"hyperchain/logger/glog"
 	"hyperchain/core/vm/params"
 )
 

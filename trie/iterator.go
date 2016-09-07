@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"hyperchain/common"
-	"github.com/ethereum/go-ethereum/logger"
-	"github.com/ethereum/go-ethereum/logger/glog"
+	"hyperchain/logger"
+	"hyperchain/logger/glog"
 )
 
 // Iterator is a key-value trie iterator to traverse the data contents.
