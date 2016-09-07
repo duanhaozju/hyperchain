@@ -30,22 +30,21 @@ func TestSendTransaction(t *testing.T) {
 	initPM()
 
 	isSuccess := SendTransaction(TxArgs{
-		From: "addressFrom",
-		To: "addressTo",
+		From: "000000000000000000000000000000adressFrom",
+		To: "00000000000000000000000000000000adressTo",
 		Value: "12",
 	})
-
 	assert.Equal(t,false, isSuccess, "they should be equal")
 
 	balanceIns,err := core.GetBalanceIns()
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	balanceIns.PutCacheBalance(common.BytesToAddress([]byte("addressFrom")),[]byte("13"))
+	balanceIns.PutCacheBalance(common.BytesToAddress([]byte("000000000000000000000000000000adressFrom")),[]byte("13"))
 
 	isSuccess2 := SendTransaction(TxArgs{
-		From: "addressFrom",
-		To: "addressTo",
+		From: "000000000000000000000000000000adressFrom",
+		To: "00000000000000000000000000000000adressTo",
 		Value: "12",
 	})
 
@@ -54,7 +53,7 @@ func TestSendTransaction(t *testing.T) {
 
 //func TestGetAllTransactions(t *testing.T) {
 //
-//	tx := types.NewTransaction([]byte("addressFrom"),[]byte("addressTo"),[]byte("12"))
+//	tx := types.NewTransaction([]byte("00000000000000000000000000000adressFrom"),[]byte("addressTo"),[]byte("12"))
 //	tx.TimeStamp = time.Now().Unix()
 //
 //	pm := initPM()

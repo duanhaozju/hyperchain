@@ -128,7 +128,7 @@ func GetAllTransactions()  []TransactionShow{
 	return transactions
 }
 
-// GetAllBalances retruns all account's balance in the db,NOT CACHE DB!
+// GetAllBalances returns all account's balance in the db,NOT CACHE DB!
 func GetAllBalances() BalanceShow{
 
 	var balances = make(BalanceShow)
