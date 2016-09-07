@@ -38,44 +38,44 @@ var (
 type Account struct {
 	Address []byte // Ethereum account address derived from the key
 
-	// File contains the key file name.
-	// When Acccount is used as an argument to select a key, File can be left blank to
-	// select just by address or set to the basename or absolute path of a file in the key
-	// directory. Accounts returned by Manager will always contain an absolute path.
+		       // File contains the key file name.
+		       // When Acccount is used as an argument to select a key, File can be left blank to
+		       // select just by address or set to the basename or absolute path of a file in the key
+		       // directory. Accounts returned by AccountManager will always contain an absolute path.
 	File string
 }
 
-// Manager manages a key storage directory on disk.
-type Manager struct {
-	keyStore keyStore
-	encryption crypto.Encryption
-	addrPassMap map[string]string
+// AccountAccountManager manages a key storage directory on disk.
+type AccountManager struct {
+	KeyStore keyStore
+	Encryption crypto.Encryption
+	AddrPassMap map[string]string
 }
 
-// NewManager creates a manager for the given directory.
-func NewManager(keydir string,encryp crypto.Encryption, scryptN, scryptP int) *Manager {
+// NewAccountManager creates a AccountManager for the given directory.
+func NewAccountManager(keydir string,encryp crypto.Encryption, scryptN, scryptP int) *AccountManager {
 	keydir, _ = filepath.Abs(keydir)
-	am := &Manager{
-		keyStore: &keyStorePassphrase{keydir, scryptN, scryptP},
-		addrPassMap:make(map[string]string),
-		encryption:encryp,
+	am := &AccountManager{
+		KeyStore: &keyStorePassphrase{keydir, scryptN, scryptP},
+		AddrPassMap:make(map[string]string),
+		Encryption:encryp,
 	}
 	return am
 }
 
-func (am *Manager) GetDecryptedKey(a Account) (*Key, error) {
-	key, err := am.keyStore.GetKey(a.Address, a.File, am.addrPassMap[common.ToHex(a.Address)])
+func (am *AccountManager) GetDecryptedKey(a Account) (*Key, error) {
+	key, err := am.KeyStore.GetKey(a.Address, a.File, "123")
 	return key, err
 }
 
 // NewAccount generates a new key and stores it into the key directory,
 // encrypting it with the passphrase.
-func (am *Manager) NewAccount(passphrase string) (Account, error) {
+func (am *AccountManager) NewAccount(passphrase string) (Account, error) {
 	_, account, err := storeNewKey(am, crand.Reader, passphrase)
 	if err != nil {
 		return Account{}, err
 	}
-	am.addrPassMap[common.ToHex(account.Address)] = passphrase
+	am.AddrPassMap[common.ToHex(account.Address)] = passphrase
 	storeNewAddrToFile(account)
 	return account, nil
 }

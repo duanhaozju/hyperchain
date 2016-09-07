@@ -192,12 +192,10 @@ func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byt
 	if err != nil {
 		return nil, err
 	}
-
 	iv, err := hex.DecodeString(keyProtected.Crypto.CipherParams.IV)
 	if err != nil {
 		return nil, err
 	}
-
 	cipherText, err := hex.DecodeString(keyProtected.Crypto.CipherText)
 	if err != nil {
 		return nil, err
@@ -209,6 +207,7 @@ func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byt
 	}
 
 	calculatedMAC := crypto.Keccak256(derivedKey[16:32], cipherText)
+
 	if !bytes.Equal(calculatedMAC, mac) {
 		return nil, ErrDecrypt
 	}
@@ -217,6 +216,7 @@ func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byt
 	if err != nil {
 		return nil, err
 	}
+
 	return plainText, err
 }
 
