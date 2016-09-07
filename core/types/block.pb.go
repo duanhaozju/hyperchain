@@ -16,7 +16,6 @@ package types
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import types1 "."
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -32,7 +31,7 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 type Block struct {
 	ParentHash   []byte                `protobuf:"bytes,1,opt,name=parentHash,proto3" json:"parentHash,omitempty"`
 	BlockHash    []byte                `protobuf:"bytes,2,opt,name=blockHash,proto3" json:"blockHash,omitempty"`
-	Transactions []*types1.Transaction `protobuf:"bytes,3,rep,name=transactions" json:"transactions,omitempty"`
+	Transactions []*Transaction `protobuf:"bytes,3,rep,name=transactions" json:"transactions,omitempty"`
 	Timestamp    int64                 `protobuf:"varint,4,opt,name=timestamp" json:"timestamp,omitempty"`
 	MerkleRoot   []byte                `protobuf:"bytes,5,opt,name=merkleRoot,proto3" json:"merkleRoot,omitempty"`
 	Number       uint64                `protobuf:"varint,6,opt,name=number" json:"number,omitempty"`
@@ -45,7 +44,7 @@ func (m *Block) String() string            { return proto.CompactTextString(m) }
 func (*Block) ProtoMessage()               {}
 func (*Block) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
-func (m *Block) GetTransactions() []*types1.Transaction {
+func (m *Block) GetTransactions() []*Transaction {
 	if m != nil {
 		return m.Transactions
 	}

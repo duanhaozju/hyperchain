@@ -5,6 +5,7 @@ import (
 	//"hyperchain/crypto"
 	"fmt"
 
+	//"hyperchain/crypto"
 	"hyperchain/crypto"
 )
 
@@ -13,12 +14,12 @@ func TestCalcResponseCount(t *testing.T) {
 	InitDB(8089)
 	blockUtilsCase.Number = GetHeightOfChain() + 1
 	commonHash := crypto.NewKeccak256Hash("keccak256")
-	WriteBlock(&blockUtilsCase, commonHash)
+	WriteBlock(&blockUtilsCase, commonHash,122)
 	fmt.Println(GetHeightOfChain())
 	count := CalcResponseCount(GetHeightOfChain(), 10000)
-		/*if count != 2 {
+		if count != 2 {
 			t.Errorf("%d not equal 2, TestCalcResponseCount fail", count)
-		}*/
+		}
 	fmt.Println(count)
 }
 
@@ -29,8 +30,8 @@ func TestCalcResponseCount(t *testing.T) {
 	//commonHash := crypto.NewKeccak256Hash("keccak256")
 	//WriteBlock(blockUtilsCase, commonHash)
 	fmt.Println(GetHeightOfChain())
-	count := CalcResponseCount(5, 10000)
-*//*	if count != 2 {
+	count := CalcResponseCount(5, int64(300))
+	*//*if count != 2 {
 		t.Errorf("%d not equal 2, TestCalcResponseCount fail", count)
 	}*//*
 	fmt.Println(count)
