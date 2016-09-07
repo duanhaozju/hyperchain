@@ -8,7 +8,7 @@ import (
 	"hyperchain/core/vm"
 	//"github.com/ethereum/go-ethereum/ethdb"
 	"hyperchain/hyperdb"
-	"github.com/ethereum/go-ethereum/rlp"
+	"hyperchain/logger/rlp"
 	"hyperchain/trie"
 )
 

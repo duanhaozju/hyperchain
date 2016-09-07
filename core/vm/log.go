@@ -22,7 +22,7 @@ import (
 	"io"
 
 	"hyperchain/common"
-	"github.com/ethereum/go-ethereum/rlp"
+	"hyperchain/logger/rlp"
 )
 
 type Log struct {

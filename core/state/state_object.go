@@ -10,7 +10,7 @@ import (
 	"hyperchain/core/crypto"
 	//"hyperchain/logger"
 	//"hyperchain/logger/glog"
-	"github.com/ethereum/go-ethereum/rlp"
+	"hyperchain/logger/rlp"
 	"hyperchain/trie"
 )
 

@@ -9,7 +9,7 @@ import (
 	"hyperchain/crypto/sha3"
 	"hyperchain/logger"
 	"hyperchain/logger/glog"
-	"github.com/ethereum/go-ethereum/rlp"
+	"hyperchain/logger/rlp"
 )
 
 // Prove constructs a merkle proof for key. The result contains all

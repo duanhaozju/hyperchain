@@ -10,7 +10,7 @@ import (
 	"hyperchain/crypto/sha3"
 	"hyperchain/logger"
 	"hyperchain/logger/glog"
-	"github.com/ethereum/go-ethereum/rlp"
+	"hyperchain/logger/rlp"
 )
 
 const defaultCacheCapacity = 800
