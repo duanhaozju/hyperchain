@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	//"hyperchain/core"
 	"hyperchain/core/state"
 	"hyperchain/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"

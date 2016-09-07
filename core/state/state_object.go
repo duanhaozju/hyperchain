@@ -11,7 +11,7 @@ import (
 	//"github.com/ethereum/go-ethereum/logger"
 	//"github.com/ethereum/go-ethereum/logger/glog"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/trie"
+	"hyperchain/trie"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)

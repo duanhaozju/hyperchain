@@ -9,7 +9,7 @@ import (
 	//"github.com/ethereum/go-ethereum/ethdb"
 	"hyperchain/hyperdb"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/trie"
+	"hyperchain/trie"
 )
 
 // The starting nonce determines the default nonce when new accounts are being
