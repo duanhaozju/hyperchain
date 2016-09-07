@@ -20,6 +20,8 @@ import (
 	"time"
 
 	"github.com/op/go-logging"
+	"hyperchain/accounts"
+	"hyperchain/common"
 )
 var log *logging.Logger // package-level logger
 func init() {
@@ -32,7 +34,8 @@ type ProtocolManager struct {
 	fetcher      *core.Fetcher
 	peerManager  p2p.PeerManager
 	consenter    consensus.Consenter
-	encryption   crypto.Encryption
+	//encryption   crypto.Encryption
+	accountManager	*accounts.AccountManager
 	commonHash   crypto.CommonHash
 
 	noMorePeers  chan struct{}
@@ -51,7 +54,8 @@ var eventMuxAll *event.TypeMux
 var countBlock int
 
 func NewProtocolManager(blockPool *core.BlockPool,peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
-encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
+//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
+am *accounts.AccountManager, commonHash crypto.CommonHash) (*ProtocolManager) {
 	log.Debug("enter parotocol manager")
 	manager := &ProtocolManager{
 
@@ -62,7 +66,8 @@ encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 		consenter:consenter,
 		peerManager:  peerManager,
 		fetcher:fetcher,
-		encryption:encryption,
+		//encryption:encryption,
+		accountManager:am,
 		commonHash:commonHash,
 
 
@@ -70,6 +75,7 @@ encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 	eventMuxAll = eventMux
 	return manager
 }
+
 
 func GetEventObject() *event.TypeMux {
 	return eventMuxAll
@@ -150,13 +156,16 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 func (self *ProtocolManager)sendMsg(payload []byte)  {
 	//Todo sign tx
-	/*payLoad:=self.transformTx(ev.Payload)
-			if payLoad==nil{
-				log.Fatal("payLoad nil")
-			}*/
+	payLoad:=self.transformTx(payload)
+	if payLoad==nil{
+		//log.Fatal("payLoad nil")
+		log.Error("payLoad nil")
+		return
+	}
 	msg := &protos.Message{
 		Type: protos.Message_TRANSACTION,
-		Payload: payload,
+		//Payload: payload,
+		Payload: payLoad,
 		Timestamp: time.Now().UnixNano(),
 		Id: 0,
 	}
@@ -181,11 +190,28 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 	proto.Unmarshal(payload, transaction)
 	//hash tx
 	h := transaction.SighHash(pm.commonHash)
-	key, err := pm.encryption.GetKey()
-	switch key.(type){
-	case ecdsa.PrivateKey:
-		actualKey := key.(ecdsa.PrivateKey)
-		sign, err := pm.encryption.Sign(h[:], actualKey)
+	log.Info("***",string(transaction.From))
+	addrHex := string(transaction.From)
+	addr := common.FromHex(addrHex)
+	account := accounts.Account{
+		Address:addr,
+		File:pm.accountManager.KeyStore.JoinPath(accounts.KeyFileName(addr)),
+	}
+	log.Info(account)
+	key, err := pm.accountManager.GetDecryptedKey(account)
+	if err!=nil{
+		log.Error(err)
+		return nil
+	}
+	//key, err := pm.encryption.GetKey()
+	//switch key.(type){
+	switch key.PrivateKey.(type){
+	//case ecdsa.PrivateKey:
+	case *ecdsa.PrivateKey:
+		//actualKey := key.(ecdsa.PrivateKey)
+		//sign, err := pm.encryption.Sign(h[:], actualKey)
+		actualKey := key.PrivateKey.(*ecdsa.PrivateKey)
+		sign, err := pm.accountManager.Encryption.Sign(h[:], actualKey)
 		if err != nil {
 			fmt.Print(err)
 		}
