@@ -3,7 +3,7 @@ package vm
 import (
 	"math"
 	"math/big"
-	"hyperchain/common"
+	"github.com/ethereum/go-ethereum/common"
 	"hyperchain/core/vm/params"
 )
 

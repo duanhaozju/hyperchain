@@ -1,9 +1,27 @@
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+
 package core
 
 import (
 	"math/big"
-	"hyperchain/common"
+
+	"github.com/ethereum/go-ethereum/common"
 	"hyperchain/core/vm"
+	"github.com/ethereum/go-ethereum/crypto"
 	"hyperchain/core/vm/params"
 )
 
@@ -42,8 +60,7 @@ func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPric
 }
 
 func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
-	// gas and gasPrice should be set after
-
+	evm := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
 	// 深度检查代码,如果超过limit则只消耗gas
@@ -52,47 +69,55 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 
 		return nil, common.Address{}, vm.DepthError
 	}
+
 	// 判断是否能够交易,转移
 	if !env.CanTransfer(caller.Address(), value) {
 		caller.ReturnGas(gas, gasPrice)
-		return nil, common.Address{}, nil
+		return nil, common.Address{}, ValueTransferErr("insufficient funds to transfer value. Req %v, has %v", value, env.Db().GetBalance(caller.Address()))
 	}
 
-	var (
-		evm = env.Vm()
-		statedb = env.Db()
-		input []byte        // input 应该存在tx中
-		fromAddress = caller.Address()
-		toAddress = *address
-		fromAccount = statedb.GetAccount(fromAddress)
-		toAccount vm.Account
-		createAccount bool
-	)
-
-	if toAddress == nil {
-		// create a new addr of to save contract
-		// TODO 设置db的nonce,生成新的address
-		toAddress = ([]byte)(nil)
-		toAccount = statedb.CreateAccount(toAddress)
+	var createAccount bool
+	if address == nil {
+		// Create a new account on the state
+		nonce := env.Db().GetNonce(caller.Address())
+		env.Db().SetNonce(caller.Address(), nonce+1)
+		addr = crypto.CreateAddress(caller.Address(), nonce)
+		address = &addr
 		createAccount = true
-	}else {
-		if !statedb.Exist(toAddress) {
-			toAccount = statedb.CreateAccount(toAddress)
-		} else {
-			toAccount = statedb.GetAccount(toAddress)
-		}
-		createAccount = false
 	}
-	env.Transfer(fromAccount,toAccount,value)
-	// get a snapshot to recovery
-	snapshotPreTransfer := env.MakeSnapshot()
 
-	contract := vm.NewContract(fromAccount, toAccount, value, nil, nil)
-	contract.SetCallCode(codeAddr, statedb.GetCode(toAddress))
+	snapshotPreTransfer := env.MakeSnapshot()
+	var (
+		from = env.Db().GetAccount(caller.Address())
+		to   vm.Account
+	)
+	if createAccount {
+		to = env.Db().CreateAccount(*address)
+	} else {
+		if !env.Db().Exist(*address) {
+			to = env.Db().CreateAccount(*address)
+		} else {
+			to = env.Db().GetAccount(*address)
+		}
+	}
+	env.Transfer(from, to, value)
+
+	// initialise a new contract and set the code that is to be used by the
+	// EVM. The contract is a scoped environment for this execution context
+	// only.
+	// 初始化一个新合约同时设置code(已经被EVM使用过),该合约仅仅是该上下文的一个作用域环境
+	contract := vm.NewContract(caller, to, value, gas, gasPrice)
+	contract.SetCallCode(codeAddr, code)
 	defer contract.Finalise()
 
+	// very important 执行contract和input
 	ret, err = evm.Run(contract, input)
-
+	// if the contract creation ran successfully and no errors were returned
+	// calculate the gas required to store the code. If the code could not
+	// be stored due to not enough gas set an error and let it be handled
+	// by the error checking condition below.
+	// 如果合约创建成功且没有error,计算gas来保存code,如果code因为gas不够不能保存,让它
+	// 通过以下条件检查
 	if err == nil && createAccount {
 		dataGas := big.NewInt(int64(len(ret)))
 		dataGas.Mul(dataGas, params.CreateDataGas)
@@ -110,20 +135,21 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// 此外,当我们处于homestead,这个也会计算code storage gas errors
 	if err != nil && (env.RuleSet().IsHomestead(env.BlockNumber()) || err != vm.CodeStoreOutOfGasError) {
 		contract.UseGas(contract.Gas)
+
 		env.SetSnapshot(snapshotPreTransfer)
 	}
 
-	return ret,toAddress,err
+	return ret, addr, err
 }
 
 func execDelegateCall(env vm.Environment, caller vm.ContractRef, originAddr, toAddr, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
 	evm := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
-	//if env.Depth() > int(params.CallCreateDepth.Int64()) {
-	//	caller.ReturnGas(gas, gasPrice)
-	//	return nil, common.Address{}, vm.DepthError
-	//}
+	if env.Depth() > int(params.CallCreateDepth.Int64()) {
+		caller.ReturnGas(gas, gasPrice)
+		return nil, common.Address{}, vm.DepthError
+	}
 
 	snapshot := env.MakeSnapshot()
 

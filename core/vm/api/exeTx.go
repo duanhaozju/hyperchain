@@ -3,15 +3,14 @@ package api
 import (
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
-	"hyperchain/core"
-	"hyperchain/hyperdb"
 	glog "github.com/op/go-logging"
+	"github.com/ethereum/go-ethereum/common"
 )
 type Code []byte
 var logger = glog.Logger{}
 var(
-	leveldb,err = hyperdb.GetLDBDatabase()
-	env = core.NewEnv(leveldb,new(vm.Config))
+	//leveldb,err = hyperdb.GetLDBDatabase()
+	//env = core.NewEnv(leveldb,new(vm.Config))
 )
 // 这个地方主要是执行交易里的代码,我们只考虑合约情况
 // TODO 1 we don't have gas in tx when I program this func,but it should be add
@@ -23,7 +22,7 @@ func ExecBlock(block types.Block,env vm.Environment)(err error){
 		return err
 	}
 	for _,tx := range block.Transactions{
-		_,err = ExecTransaction(env,tx)
+		_,err = ExecTransaction(env,*tx)
 	}
 	return
 }
@@ -33,9 +32,11 @@ func ExecTransaction(env vm.Environment,tx types.Transaction)(ret []byte,err err
 	contractCreation := (tx.To == nil)
 
 	var(
-		sender = env.Db().GetAccount(tx.From)
-		data = ([]byte)(nil)
+		sender = env.Db().GetAccount(common.BytesToAddress(tx.From))
+		//sender = common.BytesToAddress(tx.From)
+		to = common.BytesToAddress(tx.To)
 		// TODO these there parameters should be added into the tx
+		data = tx.Payload()
 		gas = tx.Gas()
 		gasPrice = tx.GasPrice()
 		value = tx.Amount()
@@ -50,10 +51,11 @@ func ExecTransaction(env vm.Environment,tx types.Transaction)(ret []byte,err err
 			logger.Error("VM create err:",err)
 		}
 	} else {
-		ret,err = env.Call(sender,tx.To,data,gas,gasPrice,value)
+		ret,err = env.Call(sender,to,data,gas,gasPrice,value)
 		if err != nil{
 			logger.Error("VM call err:",err)
 		}
 	}
 	return ret,err
 }
+

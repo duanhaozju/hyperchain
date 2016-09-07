@@ -1,10 +1,28 @@
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+
 package vm
 
 import (
 	"math/big"
-	"hyperchain/common"
+
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	//logging "github.com/op/go-logging"
+	"github.com/ethereum/go-ethereum/logger"
+	"github.com/ethereum/go-ethereum/logger/glog"
 	"hyperchain/core/vm/params"
 )
 
@@ -77,7 +95,7 @@ func ecrecoverFunc(in []byte) []byte {
 
 	// tighter sig s values in homestead only apply to tx sigs
 	if !crypto.ValidateSignatureValues(v, r, s, false) {
-		//logging.DEBUG("EC RECOVER FAIL: v, r or s value invalid")
+		glog.V(logger.Debug).Infof("EC RECOVER FAIL: v, r or s value invalid")
 		return nil
 	}
 
@@ -88,7 +106,7 @@ func ecrecoverFunc(in []byte) []byte {
 	pubKey, err := crypto.Ecrecover(in[:32], rsv)
 	// make sure the public key is a valid one
 	if err != nil {
-		//logging.ERROR("EC RECOVER FAIL: ", err)
+		glog.V(logger.Error).Infof("EC RECOVER FAIL: ", err)
 		return nil
 	}
 

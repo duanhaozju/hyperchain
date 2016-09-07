@@ -49,25 +49,23 @@ func NewTransaction(from []byte,to []byte,value []byte) *Transaction{
 	return transaction
 }
 
-
-
 func (tx *Transaction) Payload() []byte       {
 	transactionValue := &TransactionValue{}
-	proto.Unmarshal(tx.Value(),transactionValue)
+	proto.Unmarshal(tx.Value,transactionValue)
 	return common.CopyBytes(transactionValue.Payload)
 }
 func (tx *Transaction) Gas() *big.Int      {
 	transactionValue := &TransactionValue{}
-	proto.Unmarshal(tx.Value(),transactionValue)
-	return new(big.Int).Set(transactionValue.GasLimit)
+	proto.Unmarshal(tx.Value,transactionValue)
+	return new(big.Int).Set(big.NewInt(transactionValue.GasLimit))
 }
 func (tx *Transaction) GasPrice() *big.Int {
 	transactionValue := &TransactionValue{}
-	proto.Unmarshal(tx.Value(),transactionValue)
-	return new(big.Int).Set(transactionValue.Price)
+	proto.Unmarshal(tx.Value,transactionValue)
+	return new(big.Int).Set(big.NewInt(transactionValue.Price))
 }
 func (tx *Transaction) Amount() *big.Int    {
 	transactionValue := &TransactionValue{}
-	proto.Unmarshal(tx.Value(),transactionValue)
-	return new(big.Int).Set(transactionValue.Amount)
+	proto.Unmarshal(tx.Value,transactionValue)
+	return new(big.Int).Set(big.NewInt(transactionValue.Amount))
 }

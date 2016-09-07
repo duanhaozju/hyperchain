@@ -1,12 +1,16 @@
 package state
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"math/big"
 
-	"hyperchain/common"
-	"hyperchain/crypto"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	//"github.com/ethereum/go-ethereum/logger"
+	//"github.com/ethereum/go-ethereum/logger/glog"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 )
 
@@ -80,14 +84,25 @@ func NewStateObject(address common.Address, db trie.Database) *StateObject {
 func (self *StateObject) MarkForDeletion() {
 	self.remove = true
 	self.dirty = true
+
+	/*if glog.V(logger.Core) {
+		glog.Infof("%x: #%d %v X\n", self.Address(), self.nonce, self.balance)
+	}*/
 }
 
 func (c *StateObject) getAddr(addr common.Hash) common.Hash {
 	var ret []byte
+	rlp.DecodeBytes(c.trie.Get(addr[:]), &ret)
 	return common.BytesToHash(ret)
 }
 
 func (c *StateObject) setAddr(addr, value common.Hash) {
+	v, err := rlp.EncodeToBytes(bytes.TrimLeft(value[:], "\x00"))
+	if err != nil {
+		// if RLPing failed we better panic and not fail silently. This would be considered a consensus issue
+		panic(err)
+	}
+	c.trie.Update(addr[:], v)
 }
 
 func (self *StateObject) Storage() Storage {
@@ -125,11 +140,17 @@ func (self *StateObject) Update() {
 func (c *StateObject) AddBalance(amount *big.Int) {
 	c.SetBalance(new(big.Int).Add(c.balance, amount))
 
+	/*if glog.V(logger.Core) {
+		glog.Infof("%x: #%d %v (+ %v)\n", c.Address(), c.nonce, c.balance, amount)
+	}*/
 }
 
 func (c *StateObject) SubBalance(amount *big.Int) {
 	c.SetBalance(new(big.Int).Sub(c.balance, amount))
 
+	/*if glog.V(logger.Core) {
+		glog.Infof("%x: #%d %v (- %v)\n", c.Address(), c.nonce, c.balance, amount)
+	}*/
 }
 
 func (c *StateObject) SetBalance(amount *big.Int) {
@@ -232,10 +253,29 @@ type extStateObject struct {
 
 // EncodeRLP implements rlp.Encoder.
 func (c *StateObject) EncodeRLP(w io.Writer) error {
-	return nil
+	return rlp.Encode(w, []interface{}{c.nonce, c.balance, c.Root(), c.codeHash})
 }
 
 // DecodeObject decodes an RLP-encoded state object.
 func DecodeObject(address common.Address, db trie.Database, data []byte) (*StateObject, error) {
-	return nil, nil
+	var (
+		obj = &StateObject{address: address, db: db, storage: make(Storage)}
+		ext extStateObject
+		err error
+	)
+	if err = rlp.DecodeBytes(data, &ext); err != nil {
+		return nil, err
+	}
+	if obj.trie, err = trie.NewSecure(ext.Root, db); err != nil {
+		return nil, err
+	}
+	if !bytes.Equal(ext.CodeHash, emptyCodeHash) {
+		if obj.code, err = db.Get(ext.CodeHash); err != nil {
+			return nil, fmt.Errorf("can't get code for hash %x: %v", ext.CodeHash, err)
+		}
+	}
+	obj.nonce = ext.Nonce
+	obj.balance = ext.Balance
+	obj.codeHash = ext.CodeHash
+	return obj, nil
 }

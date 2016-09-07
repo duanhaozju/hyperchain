@@ -1,13 +1,30 @@
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+
 package vm
 
 import (
 	"fmt"
 	"math/big"
-	//"time"
+	"time"
 
-	"hyperchain/common"
-	//gloging "github.com/op/go-logging"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/logger"
+	"github.com/ethereum/go-ethereum/logger/glog"
 	"hyperchain/core/vm/params"
 )
 
@@ -48,9 +65,11 @@ func New(env Environment, cfg Config) *EVM {
 
 // Run loops and evaluates the contract's code with the given input data
 func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
+	// 1.设置虚拟机深度+1
 	evm.env.SetDepth(evm.env.Depth() + 1)
 	defer evm.env.SetDepth(evm.env.Depth() - 1)
 
+	// 2.判断CodeAddr是否为空,如果不为空就去找已编译好的合约地址,然后运行该原生的智能合约
 	if contract.CodeAddr != nil {
 		if p := Precompiled[contract.CodeAddr.Str()]; p != nil {
 			return evm.RunPrecompiled(p, input, contract)
@@ -58,6 +77,7 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 	}
 
 	// Don't bother with the execution if there's no code.
+	// 3.如果合约代码为空则返回空
 	if len(contract.Code) == 0 {
 		return nil, nil
 	}
@@ -66,15 +86,18 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 		codehash = crypto.Keccak256Hash(contract.Code) // codehash is used when doing jump dest caching
 		program  *Program
 	)
+	// 4.如果可以使用JIT运行时编译
 	if evm.cfg.EnableJit {
 		// If the JIT is enabled check the status of the JIT program,
 		// if it doesn't exist compile a new program in a separate
 		// goroutine or wait for compilation to finish if the JIT is
 		// forced.
 		switch GetProgramStatus(codehash) {
+		// 判断是否已经可用,如果可用直接用找
 		case progReady:
 			return RunProgram(GetProgram(codehash), evm.env, contract, input)
 		case progUnknown:
+			// 如果不可用,且强制jit,则顺序执行且立刻执行
 			if evm.cfg.ForceJit {
 				// Create and compile program
 				program = NewProgram(contract.Code)
@@ -82,15 +105,16 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 				if perr == nil {
 					return RunProgram(program, evm.env, contract, input)
 				}
-				//gloging.INFO("error compiling program", err)
+				glog.V(logger.Info).Infoln("error compiling program", err)
 			} else {
+				// 否则可以另开一个线程
 				// create and compile the program. Compilation
 				// is done in a separate goroutine
 				program = NewProgram(contract.Code)
 				go func() {
 					err := CompileProgram(program)
 					if err != nil {
-						//gloging.INFO("error compiling program", err)
+						glog.V(logger.Info).Infoln("error compiling program", err)
 						return
 					}
 				}()
@@ -136,14 +160,15 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 		}
 	}()
 
-	/*if gloging.DEBUG {
-		gloging.INFO("running byte VM %x\n", codehash[:4])
+	if glog.V(logger.Debug) {
+		glog.Infof("running byte VM %x\n", codehash[:4])
 		tstart := time.Now()
 		defer func() {
-			gloging.INFO("byte VM %x done. time: %v instrc: %v\n", codehash[:4], time.Since(tstart), instrCount)
+			glog.Infof("byte VM %x done. time: %v instrc: %v\n", codehash[:4], time.Since(tstart), instrCount)
 		}()
-	}*/
+	}
 
+	// 一个指令一个指令执行
 	for ; ; instrCount++ {
 		/*
 			if EnableJit && it%100 == 0 {
@@ -157,8 +182,10 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 		*/
 
 		// Get the memory location of pc
+		// 得到pc的内存地址
 		op = contract.GetOp(pc)
 		// calculate the new memory size and gas price for the current executing opcode
+		// 对当前执行的操作码计算新的内存大小和gas价格
 		newMemSize, cost, err = calculateGasAndSize(evm.env, contract, caller, op, statedb, mem, stack)
 		if err != nil {
 			return nil, err
