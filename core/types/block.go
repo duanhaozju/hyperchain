@@ -8,3 +8,4 @@ import (
 func (self Block)Hash(ch crypto.CommonHash) common.Hash {
 	return ch.Hash(self)
 }
+
