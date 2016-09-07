@@ -101,13 +101,14 @@ func CreateInitBlock(filename string)  {
 // 2. Put transactions in block into db  (-- cancel --)
 // 3. Update chain
 // 4. Update balance
-func WriteBlock(block *types.Block, commonHash crypto.CommonHash)  {
+func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int64)  {
 
 	log.Info("block number is ",block.Number)
 	currentChain := GetChainCopy()
 	block.ParentHash = currentChain.LatestBlockHash
 	block.BlockHash = block.Hash(commonHash).Bytes()
 	block.WriteTime = time.Now().UnixNano()
+	block.CommitTime = commitTime
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)

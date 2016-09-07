@@ -734,6 +734,7 @@ func (instance *pbftCore) execDoneSync(idx msgID) {
 			height := bcInfo.Height
 			if height == instance.lastExec {
 				logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", instance.lastExec, height)
+				//time.Sleep(3*time.Millisecond)
 				instance.checkpoint(instance.lastExec, bcInfo)
 			} else  {
 				// reqBatch call execute but have not done with execute
