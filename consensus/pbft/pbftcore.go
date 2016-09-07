@@ -680,13 +680,18 @@ func (instance *pbftCore) executeOne(idx msgID) bool {
 
 	cert := instance.certStore[idx]
 
+	if cert == nil || cert.prePrepare == nil {
+		logger.Debugf("Replica %d already checkpoint for view=%d/seqNo=%d", instance.id, idx.v, idx.n)
+		return false
+	}
+
 	// check if already executed
 	if cert.sentExecute == true {
 		logger.Debugf("Replica %d already execute for view=%d/seqNo=%d", instance.id, idx.v, idx.n)
 		return false
 	}
 
-	if idx.n != instance.lastExec+1 || cert == nil || cert.prePrepare == nil {
+	if idx.n != instance.lastExec+1 {
 		logger.Debugf("Replica %d hasn't done with last execute %d, seq=%d", instance.id, instance.lastExec, idx.n)
 		return false
 	}
