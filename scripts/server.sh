@@ -5,6 +5,8 @@
 # usage: bash server.sh 1
 
 set -e
-git pull origin master
+cd ../
+rm -rf /tmp/hyperchain/*
+git pull origin develop
 govendor build
 ./hyperchain -o $1 -l 8081

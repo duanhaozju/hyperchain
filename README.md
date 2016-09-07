@@ -2,6 +2,9 @@
 
 >HyperChain Proto  Internal version: alpha 0.3.0
 
+## IMPORTANT BUG
+- 内存泄露 missing check point
+
 ## CHANGE LOG:
 
 - alpha 0.1 Finished the basic node connection and information sync　2016/08/17 
@@ -64,3 +67,21 @@ func init() {
         INFO
    Low  DEBUG
 ```
+
+## AUTO TEST SCRIPT
+1. 辅助自动化本地测试脚本:
+`ubuntu.sh` 
+`mac.sh`
+
+请确保`p2p/peerconfig.json`中的`node1-4`配置为`localhost`
+
+2. 辅助服务器自动化测试脚本:
+`server.sh`
+使用方式:
+`server.sh 1-4`
+
+3. 本地http请求自动化脚本:
+`auto_test.js`
+
+使用方式:
+`node auto_test.js`

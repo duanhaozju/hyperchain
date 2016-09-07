@@ -5,6 +5,7 @@ import (
 	pb "hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"
+	"time"
 )
 
 type helper struct {
@@ -46,6 +47,7 @@ func (h *helper) Execute(reqBatch *pb.ExeMessage) error{
 
 	exeEvent := event.NewBlockEvent{
 		Payload:	tmpMsg,
+		CommitTime:	time.Now().UnixNano(),
 	}
 
 	// Post the event to outer

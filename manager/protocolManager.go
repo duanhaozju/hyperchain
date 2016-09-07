@@ -86,7 +86,7 @@ func (pm *ProtocolManager) Start() {
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
-	//go pm.ConsensusLoop()
+
 
 
 	pm.wg.Wait()
@@ -106,7 +106,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 			//commit block into block pool
 
 			log.Debug("write block success")
-			self.commitNewBlock(ev.Payload)
+			self.commitNewBlock(ev.Payload,ev.CommitTime)
 		//self.fetcher.Enqueue(ev.Payload)
 
 		}
@@ -208,7 +208,7 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 
 
 // add new block into block pool
-func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
+func (pm *ProtocolManager) commitNewBlock(payload[]byte,commitTime int64) {
 
 	msgList := &protos.ExeMessage{}
 	proto.Unmarshal(payload, msgList)
@@ -221,11 +221,12 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte) {
 		block.Transactions = append(block.Transactions, tx)
 	}
 	block.Timestamp = msgList.Timestamp
+	//block.CommitTime =commitTime
 
 	block.Number=msgList.No
 
 	log.Info("now is ",msgList.No)
-	pm.blockPool.AddBlock(block,pm.commonHash)
+	pm.blockPool.AddBlock(block,pm.commonHash,commitTime)
 	//core.WriteBlock(*block)
 
 }
