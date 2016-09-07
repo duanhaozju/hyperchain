@@ -24,7 +24,7 @@ import (
 	"hyperchain/core/state"
 	"hyperchain/core/vm"
 	"hyperchain/core/crypto"
-	//"github.com/ethereum/go-ethereum/ethdb"
+	//"hyperchain/hyperdb"
 	"hyperchain/hyperdb"
 )
 

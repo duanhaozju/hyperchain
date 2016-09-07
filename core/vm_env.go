@@ -4,8 +4,8 @@ import (
 	"math/big"
 
 	"hyperchain/common"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
+	"hyperchain/core/state"
+	"hyperchain/core/types"
 	"hyperchain/core/vm"
 )
 

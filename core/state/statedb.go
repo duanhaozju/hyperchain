@@ -6,7 +6,7 @@ import (
 
 	"hyperchain/common"
 	"hyperchain/core/vm"
-	//"github.com/ethereum/go-ethereum/ethdb"
+	//"hyperchain/hyperdb"
 	"hyperchain/hyperdb"
 	"hyperchain/logger/rlp"
 	"hyperchain/trie"

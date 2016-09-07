@@ -38,7 +38,7 @@ import (
 	"math/big"
 	"unsafe"
 
-	"github.com/ethereum/go-ethereum/core/state"
+	"hyperchain/core/state"
 	"hyperchain/core/crypto"
 	"hyperchain/core/vm/params"
 )

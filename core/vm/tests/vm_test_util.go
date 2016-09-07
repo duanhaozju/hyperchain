@@ -9,7 +9,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/state"
 	"hyperchain/core/vm"
-	//"github.com/ethereum/go-ethereum/ethdb"
+	//"hyperchain/hyperdb"
 	//"hyperchain/hyperdb"
 	"hyperchain/core/vm/params"
 	/*"hyperchain/core/vm/api"
