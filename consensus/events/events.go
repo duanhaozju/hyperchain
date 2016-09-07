@@ -82,6 +82,8 @@ func (em *managerImpl) SetReceiver(receiver Receiver) {
 // Start creates the go routine necessary to deliver events
 func (em *managerImpl) Start() {
 	go em.eventLoop()
+	go em.eventLoop()
+	go em.eventLoop()
 }
 
 // queue returns a write only reference to the event queue
