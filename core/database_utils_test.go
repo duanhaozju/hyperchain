@@ -13,21 +13,21 @@ import (
 
 var transactionCases = []*types.Transaction{
 	&types.Transaction{
-		From: []byte("zhangsan"),
-		To: []byte("wangwu"),
+		From: []byte("0000000000000000000000000000000000000001"),
+		To: []byte("0000000000000000000000000000000000000003"),
 		Value: []byte("100"),
 		TimeStamp: time.Now().UnixNano() - int64(time.Second),
 		Signature: []byte("signature1"),
 	},
 	&types.Transaction{
-		From: []byte("zhangsan"),
-		To: []byte("lisi"),
+		From: []byte("0000000000000000000000000000000000000001"),
+		To: []byte("0000000000000000000000000000000000000002"),
 		Value: []byte("100"),TimeStamp: time.Now().UnixNano(),
 		Signature: []byte("signature2"),
 	},
 	&types.Transaction{
-		From: []byte("lisi"),
-		To: []byte("wangwu"),
+		From: []byte("0000000000000000000000000000000000000002"),
+		To: []byte("0000000000000000000000000000000000000003"),
 		Value: []byte("700"),
 		TimeStamp: time.Now().UnixNano(),
 		Signature: []byte("signature3"),

@@ -8,6 +8,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/big"
 	"github.com/op/go-logging"
+	"fmt"
 )
 
 //-- --------------------- Balance ------------------------------------\
@@ -231,6 +232,8 @@ func VerifyBalance(tx *types.Transaction) bool {
 	balance.SetString(string(bal), 10)
 	value.SetString(string(tx.Value), 10)
 
+	fmt.Println("value: ", value.String())
+	fmt.Println("balance: ", balance.String())
 	if value.Cmp(&balance) == 1 {
 		return false
 	}

@@ -7,6 +7,6 @@
 set -e
 cd ../
 rm -rf /tmp/hyperchain/*
-git pull origin master
+git pull origin develop
 govendor build
 ./hyperchain -o $1 -l 8081
