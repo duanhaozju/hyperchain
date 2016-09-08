@@ -151,8 +151,8 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 	for _, trans := range block.Transactions {
 		var transValue big.Int
 		transValue.SetString(string(trans.Value), 10)
-		fromBalance := self.dbBalance[common.BytesToAddress(trans.From)]
-		toBalance := self.dbBalance[common.BytesToAddress(trans.To)]
+		fromBalance := self.dbBalance[common.HexToAddress(string(trans.From))]
+		toBalance := self.dbBalance[common.HexToAddress(string(trans.To))]
 		var fromValue big.Int
 		var toValue big.Int
 		fromValue.SetString(string(fromBalance), 10)
@@ -160,15 +160,15 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 		fromValue.Sub(&fromValue, &transValue)
 
 		// Update Transaction.From account(sub the From account balance by value)
-		self.dbBalance[common.BytesToAddress(trans.From)] = []byte(fromValue.String())
+		self.dbBalance[common.HexToAddress(string(trans.From))] = []byte(fromValue.String())
 
 		// Update Transaction.To account(add the To account balance by value)
 		// if Transaction.To account not exist, it will be created, initial account balance is 0
-		if _, ok := self.dbBalance[common.BytesToAddress(trans.To)]; ok {
+		if _, ok := self.dbBalance[common.HexToAddress(string(trans.To))]; ok {
 			toValue.Add(&toValue, &transValue)
-			self.dbBalance[common.BytesToAddress(trans.To)] = []byte(toValue.String())
+			self.dbBalance[common.HexToAddress(string(trans.To))] = []byte(toValue.String())
 		} else {
-			self.dbBalance[common.BytesToAddress(trans.To)] = []byte(transValue.String())
+			self.dbBalance[common.HexToAddress(string(trans.To))] = []byte(transValue.String())
 		}
 	}
 	// cacheBalance keep correspondence with dbBalance
@@ -186,8 +186,8 @@ func (self *Balance)UpdateCacheBalance(trans *types.Transaction) {
 	defer self.lock.Unlock()
 	var transValue big.Int
 	transValue.SetString(string(trans.Value), 10)
-	fromBalance := self.cacheBalance[common.BytesToAddress(trans.From)]
-	toBalance := self.cacheBalance[common.BytesToAddress(trans.To)]
+	fromBalance := self.cacheBalance[common.HexToAddress(string(trans.From))]
+	toBalance := self.cacheBalance[common.HexToAddress(string(trans.To))]
 	var fromValue big.Int
 	var toValue big.Int
 	fromValue.SetString(string(fromBalance), 10)
@@ -198,12 +198,12 @@ func (self *Balance)UpdateCacheBalance(trans *types.Transaction) {
 
 	// Update Transaction.To account(add the To account balance by value)
 	// if Transaction.To account not exist, it will be created, initial account balance is 0
-	self.cacheBalance[common.BytesToAddress(trans.From)] = []byte(fromValue.String())
-	if _, ok := self.cacheBalance[common.BytesToAddress(trans.To)]; ok {
+	self.cacheBalance[common.HexToAddress(string(trans.From))] = []byte(fromValue.String())
+	if _, ok := self.cacheBalance[common.HexToAddress(string(trans.To))]; ok {
 		toValue.Add(&toValue, &transValue)
-		self.cacheBalance[common.BytesToAddress(trans.To)] = []byte(toValue.String())
+		self.cacheBalance[common.HexToAddress(string(trans.To))] = []byte(toValue.String())
 	} else {
-		self.cacheBalance[common.BytesToAddress(trans.To)] = []byte(transValue.String())
+		self.cacheBalance[common.HexToAddress(string(trans.To))] = []byte(transValue.String())
 	}
 }
 
@@ -220,10 +220,8 @@ func VerifyBalance(tx *types.Transaction) bool {
 		log.Fatalf("GetBalanceIns error, %v", err)
 	}
 
-	//log.Println(tx.From)
-	//log.Println(common.BytesToAddress(tx.From))
-	bal := balanceIns.GetCacheBalance(common.BytesToAddress(tx.From))
-	bal2 := balanceIns.GetCacheBalance(common.BytesToAddress([]byte("0000000000000000000000000000000000000002")))
+	bal := balanceIns.GetCacheBalance(common.HexToAddress(string(tx.From)))
+	bal2 := balanceIns.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000002"))
 	log.Debug(bal)
 	log.Debug(bal2)
 	//log.Println(common.Bytes2Hex(bal))

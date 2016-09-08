@@ -187,34 +187,41 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 	//var transaction types.Transaction
 	transaction := &types.Transaction{}
 	//decode tx
+	log.Info("*****1*****")
 	proto.Unmarshal(payload, transaction)
+	log.Info("*****2*****")
 	//hash tx
 	h := transaction.SighHash(pm.commonHash)
-	log.Info("***",string(transaction.From))
+	log.Info("*****3*****")
 	addrHex := string(transaction.From)
 	addr := common.FromHex(addrHex)
 	account := accounts.Account{
 		Address:addr,
 		File:pm.accountManager.KeyStore.JoinPath(accounts.KeyFileName(addr)),
 	}
-	log.Info(account)
+	//log.Info(account)
+	log.Info("*****4*****")
 	key, err := pm.accountManager.GetDecryptedKey(account)
+	log.Info("*****5*****")
 	if err!=nil{
 		log.Error(err)
 		return nil
 	}
 	//key, err := pm.encryption.GetKey()
 	//switch key.(type){
+	log.Info("*****6*****")
 	switch key.PrivateKey.(type){
 	//case ecdsa.PrivateKey:
 	case *ecdsa.PrivateKey:
 		//actualKey := key.(ecdsa.PrivateKey)
 		//sign, err := pm.encryption.Sign(h[:], actualKey)
+		log.Info("*****7*****")
 		actualKey := key.PrivateKey.(*ecdsa.PrivateKey)
 		sign, err := pm.accountManager.Encryption.Sign(h[:], actualKey)
 		if err != nil {
 			fmt.Print(err)
 		}
+		log.Info("*****8*****")
 		transaction.Signature = sign
 		//encode tx
 		payLoad, err := proto.Marshal(transaction)

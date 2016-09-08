@@ -31,6 +31,7 @@ fi
 echo "rebuild the application"
 govendor build
 
+rm -rf /tmp/hyperchain/cache/808*
 
 echo "run the application"
 

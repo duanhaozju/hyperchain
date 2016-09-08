@@ -27,8 +27,14 @@ import (
 	"path/filepath"
 	"hyperchain/crypto"
 	"hyperchain/common"
+	"sync"
+	"time"
+	"github.com/op/go-logging"
 )
-
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("accounts")
+}
 var (
 	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
 )
@@ -50,6 +56,7 @@ type AccountManager struct {
 	KeyStore keyStore
 	Encryption crypto.Encryption
 	AddrPassMap map[string]string
+	lock sync.Mutex
 }
 
 // NewAccountManager creates a AccountManager for the given directory.
@@ -64,7 +71,12 @@ func NewAccountManager(keydir string,encryp crypto.Encryption, scryptN, scryptP 
 }
 
 func (am *AccountManager) GetDecryptedKey(a Account) (*Key, error) {
+	am.lock.Lock()
+	defer am.lock.Unlock()
+	time1 := time.Now().UnixNano()
 	key, err := am.KeyStore.GetKey(a.Address, a.File, "123")
+	time2 := time.Now().UnixNano()
+	log.Info("-------------------", time2-time1)
 	return key, err
 }
 

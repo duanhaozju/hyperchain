@@ -33,7 +33,7 @@ func TestSendTransaction(t *testing.T) {
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	balanceIns.DeleteCacheBalance(common.BytesToAddress([]byte("000000000000000000000000000000adressFrom")))
+	balanceIns.DeleteCacheBalance(common.HexToAddress("000000000000000000000000000000adressFrom"))
 
 	isSuccess := SendTransaction(TxArgs{
 		From: "000000000000000000000000000000adressFrom",
@@ -43,7 +43,7 @@ func TestSendTransaction(t *testing.T) {
 	assert.Equal(t,false, isSuccess, "they should be equal")
 
 
-	balanceIns.PutCacheBalance(common.BytesToAddress([]byte("000000000000000000000000000000adressFrom")),[]byte("13"))
+	balanceIns.PutCacheBalance(common.HexToAddress("000000000000000000000000000000adressFrom"),[]byte("13"))
 
 	isSuccess2 := SendTransaction(TxArgs{
 		From: "000000000000000000000000000000adressFrom",

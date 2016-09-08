@@ -67,8 +67,8 @@ func CreateInitBlock(filename string)  {
 			Value:account,
 		}*/
 
-		balanceIns.PutCacheBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
-		balanceIns.PutDBBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
+		balanceIns.PutCacheBalance(common.HexToAddress(addr),[]byte(account))
+		balanceIns.PutDBBalance(common.HexToAddress(addr),[]byte(account))
 
 
 	}
