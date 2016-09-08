@@ -8,7 +8,6 @@ set -e
 
 #set -x
 
-
 echo "kill the bind port process"
 ports1=`lsof -i :8001 | awk 'NR>=2{print $2}'`
 if [ x"$ports1" != x"" ];then
@@ -32,6 +31,9 @@ echo "rebuild the application"
 govendor build
 
 rm -rf /tmp/hyperchain/cache/808*
+
+echo "remote tmp data"
+rm -rf /tmp/hyperchain/*
 
 echo "run the application"
 

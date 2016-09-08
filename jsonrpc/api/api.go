@@ -55,7 +55,6 @@ func SendTransaction(args TxArgs) bool {
 	log.Info(args)
 
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
-
 	if (core.VerifyBalance(tx)) {
 
 		// Balance is enough
@@ -77,19 +76,16 @@ func SendTransaction(args TxArgs) bool {
 				if err != nil {
 					log.Fatalf("proto.Marshal(tx) error: %v",err)
 				}
-				go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+				if manager.GetEventObject() != nil{
+					go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+				}else{
+					log.Warning("manager is Nil")
+				}
 				time.Sleep(200 * time.Microsecond)
 			}
 		//}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
-
-		//tx.TimeStamp=time.Now().UnixNano()
-		//txBytes, err := proto.Marshal(tx)
-		//if err != nil {
-		//	log.Fatalf("proto.Marshal(tx) error: %v",err)
-		//}
-		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 
 		return true
 

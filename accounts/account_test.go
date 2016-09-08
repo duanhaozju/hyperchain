@@ -38,7 +38,7 @@ func TestManager(t *testing.T)  {
 	scryptN := StandardScryptN
 	scryptP := StandardScryptP
 
-	keydir := "/home/huhu/go/src/hyperchain/keystore/"
+	keydir := "../keystore/"
 
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	am := NewAccountManager(keydir,encryption, scryptN, scryptP)
