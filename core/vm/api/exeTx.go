@@ -5,12 +5,17 @@ import (
 	"hyperchain/core/vm"
 	glog "github.com/op/go-logging"
 	"hyperchain/common"
+	"math/big"
+	"hyperchain/hyperdb"
+	//"hyperchain/core/state"
 )
 type Code []byte
 var logger = glog.Logger{}
 var(
-	//leveldb,err = hyperdb.GetLDBDatabase()
-	//env = core.NewEnv(leveldb,new(vm.Config))
+	//TODO set the vm.config
+	memdb,err = hyperdb.NewMemDatabase()
+	//statedb,_ := state.New(common.Hash{}, memdb)
+	//env = core.NewEnv(statedb)
 )
 // 这个地方主要是执行交易里的代码,我们只考虑合约情况
 // TODO 1 we don't have gas in tx when I program this func,but it should be add
@@ -29,7 +34,6 @@ func ExecBlock(block types.Block,env vm.Environment)(err error){
 
 // 这一块相当于ethereum里的TransitionDB
 func ExecTransaction(env vm.Environment,tx types.Transaction)(ret []byte,err error) {
-	contractCreation := (tx.To == nil)
 
 	var(
 		sender = env.Db().GetAccount(common.BytesToAddress(tx.From))
@@ -41,9 +45,15 @@ func ExecTransaction(env vm.Environment,tx types.Transaction)(ret []byte,err err
 		gasPrice = tx.GasPrice()
 		value = tx.Amount()
 	)
+	return Exec(env,sender,&to,data,gas,gasPrice,value)
+}
 
+func Exec(env vm.Environment,sender vm.ContractRef, to *common.Address, data []byte, gas,
+	gasPrice, value *big.Int)(ret []byte,err error){
+
+	contractCreation := (nil == to)
+	//ret,err = env.Call(sender,*to,data,gas,gasPrice,value)
 	// 判断是否能够交易,转移,这一步可以考虑在外部执行
-
 	if contractCreation{
 		ret,_,err = env.Create(sender,data,gas,gasPrice,value)
 		if err != nil{
@@ -51,11 +61,10 @@ func ExecTransaction(env vm.Environment,tx types.Transaction)(ret []byte,err err
 			logger.Error("VM create err:",err)
 		}
 	} else {
-		ret,err = env.Call(sender,to,data,gas,gasPrice,value)
+		ret,err = env.Call(sender,*to,data,gas,gasPrice,value)
 		if err != nil{
 			logger.Error("VM call err:",err)
 		}
 	}
 	return ret,err
 }
-

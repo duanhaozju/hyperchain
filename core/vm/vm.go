@@ -230,13 +230,13 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 				case RETURN:
 					offset, size := stack.pop(), stack.pop()
 					ret := mem.GetPtr(offset.Int64(), size.Int64())
-
 					return ret, nil
 				case SUICIDE:
 					opSuicide(instruction{}, nil, evm.env, contract, mem, stack)
 
 					fallthrough
 				case STOP: // Stop the contract
+					fmt.Println("We are ready",ret)
 					return nil, nil
 				}
 			}

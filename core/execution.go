@@ -7,6 +7,7 @@ import (
 	"hyperchain/core/vm"
 	"hyperchain/core/crypto"
 	"hyperchain/core/vm/params"
+	"fmt"
 )
 
 // Call executes within the given contract
@@ -34,10 +35,8 @@ func DelegateCall(env vm.Environment, caller vm.ContractRef, addr common.Address
 // Create creates a new contract with the given code
 func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPrice, value *big.Int) (ret []byte, address common.Address, err error) {
 	ret, address, err = exec(env, caller, nil, nil, nil, code, gas, gasPrice, value)
-	// Here we get an error if we run into maximum stack depth,
-	// See: https://github.com/ethereum/yellowpaper/pull/131
-	// and YP definitions for CREATE instruction
 	if err != nil {
+		fmt.Println("it is err",err)
 		return nil, address, err
 	}
 	return ret, address, err
@@ -55,10 +54,10 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	}
 
 	// 判断是否能够交易,转移
-	if !env.CanTransfer(caller.Address(), value) {
-		caller.ReturnGas(gas, gasPrice)
-		return nil, common.Address{}, ValueTransferErr("insufficient funds to transfer value. Req %v, has %v", value, env.Db().GetBalance(caller.Address()))
-	}
+	//if !env.CanTransfer(caller.Address(), value) {
+	//	caller.ReturnGas(gas, gasPrice)
+	//	return nil, common.Address{}, ValueTransferErr("insufficient funds to transfer value. Req %v, has %v", value, env.Db().GetBalance(caller.Address()))
+	//}
 
 	var createAccount bool
 	if address == nil {
@@ -95,7 +94,9 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	defer contract.Finalise()
 
 	// very important 执行contract和input
+	fmt.Println("start run")
 	ret, err = evm.Run(contract, input)
+	fmt.Println("end run")
 	// if the contract creation ran successfully and no errors were returned
 	// calculate the gas required to store the code. If the code could not
 	// be stored due to not enough gas set an error and let it be handled
@@ -110,6 +111,11 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		} else {
 			err = vm.CodeStoreOutOfGasError
 		}
+	}
+	if err == nil{
+		fmt.Println("no err")
+	}else {
+		fmt.Println("has err",err)
 	}
 
 	// When an error was returned by the EVM or when setting the creation code
