@@ -67,8 +67,8 @@ func CreateInitBlock(filename string)  {
 			Value:account,
 		}*/
 
-		balanceIns.PutCacheBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
-		balanceIns.PutDBBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
+		balanceIns.PutCacheBalance(common.HexToAddress(addr),[]byte(account))
+		balanceIns.PutDBBalance(common.HexToAddress(addr),[]byte(account))
 
 
 	}
@@ -126,7 +126,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 	}
 
 	newChain := GetChainCopy()
-	log.Info("Block number",newChain.Height)
-	log.Info("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
+	log.Notice("Block number",newChain.Height)
+	log.Notice("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
 	balance.UpdateDBBalance(block)
 }

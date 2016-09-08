@@ -47,7 +47,7 @@ func (h *helper) Execute(reqBatch *pb.ExeMessage) error{
 
 	exeEvent := event.NewBlockEvent{
 		Payload:	tmpMsg,
-		CommitTime:	time.Now().Unix(),
+		CommitTime:	time.Now().UnixNano(),
 	}
 
 	// Post the event to outer

@@ -55,7 +55,6 @@ func SendTransaction(args TxArgs) bool {
 	log.Info(args)
 
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
-
 	if (core.VerifyBalance(tx)) {
 
 		// Balance is enough
@@ -67,29 +66,26 @@ func SendTransaction(args TxArgs) bool {
 		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		start := time.Now().Unix()
-		end:=start+6
+		//start := time.Now().Unix()
+		//end:=start+1
 
-		for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 5000; i++ {
+		//for start := start ; start < end; start = time.Now().Unix() {
+			for i := 0; i < 500; i++ {
 				tx.TimeStamp=time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
 					log.Fatalf("proto.Marshal(tx) error: %v",err)
 				}
-				go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+				if manager.GetEventObject() != nil{
+					go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+				}else{
+					log.Warning("manager is Nil")
+				}
 				time.Sleep(200 * time.Microsecond)
 			}
-		}
+		//}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
-
-		//tx.TimeStamp=time.Now().UnixNano()
-		//txBytes, err := proto.Marshal(tx)
-		//if err != nil {
-		//	log.Fatalf("proto.Marshal(tx) error: %v",err)
-		//}
-		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 
 		return true
 
@@ -129,7 +125,7 @@ func GetAllTransactions()  []TransactionShow{
 	return transactions
 }
 
-// GetAllBalances retruns all account's balance in the db,NOT CACHE DB!
+// GetAllBalances returns all account's balance in the db,NOT CACHE DB!
 func GetAllBalances() BalanceShow{
 
 	var balances = make(BalanceShow)

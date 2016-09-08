@@ -24,9 +24,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"time"
 
 	"hyperchain/crypto"
+	"hyperchain/common"
 )
 
 const (
@@ -34,15 +34,15 @@ const (
 )
 
 type Key struct {
-	Address []byte
+	Address		common.Address
 	// we only store privkey as pubkey/address can be derived from it
 	// privkey in this struct is always in plaintext
-	PrivateKey interface{}
+	PrivateKey	interface{}
 }
 
 type keyStore interface {
 	// Loads and decrypts the key from disk.
-	GetKey(addr []byte, filename string, auth string) (*Key, error)
+	GetKey(addr common.Address, filename string, auth string) (*Key, error)
 	// Writes and encrypts the key.
 	StoreKey(filename string, k *Key, auth string) error
 	// Joins filename with the key directory unless it is already absolute.
@@ -88,8 +88,8 @@ type scryptParamsJSON struct {
 	Salt  string `json:"salt"`
 }
 
-func newKey(am *Manager,rand io.Reader) (*Key, error) {
-	privKey, err := am.encryption.GeneralKey("123")
+func newKey(am *AccountManager,rand io.Reader) (*Key, error) {
+	privKey, err := am.Encryption.GeneralKey("123")
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func newKey(am *Manager,rand io.Reader) (*Key, error) {
 	return nil,nil
 }
 func storeNewAddrToFile(a Account) error {
-	addr := hex.EncodeToString(a.Address)+"\n"
+	addr := hex.EncodeToString(a.Address[:])+"\n"
 	dir := filepath.Dir(a.File)
 	file := dir+"/address"
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_RDWR,0600)
@@ -121,15 +121,15 @@ func storeNewAddrToFile(a Account) error {
 	}
 	return err
 }
-func storeNewKey(am *Manager, rand io.Reader, auth string) (*Key, Account, error) {
+func storeNewKey(am *AccountManager, rand io.Reader, auth string) (*Key, Account, error) {
 	key, err := newKey(am,rand)
 	if err != nil {
 		return nil, Account{}, err
 	}
 	switch key.PrivateKey.(type) {
 	case *ecdsa.PrivateKey:
-		a := Account{Address: key.Address, File:am.keyStore.JoinPath(keyFileName(key.Address))}
-		if err := am.keyStore.StoreKey(a.File, key, auth); err != nil {
+		a := Account{Address: key.Address, File:am.KeyStore.JoinPath(KeyFileName(key.Address[:]))}
+		if err := am.KeyStore.StoreKey(a.File, key, auth); err != nil {
 			zeroKey(key.PrivateKey.(*ecdsa.PrivateKey))
 			return nil, a, err
 		}
@@ -141,7 +141,7 @@ func storeNewKey(am *Manager, rand io.Reader, auth string) (*Key, Account, error
 func writeKeyFile(file string, content []byte) error {
 	// Create the keystore directory with appropriate permissions
 	// in case it is not present yet.
-	const dirPerm = 0700
+	const dirPerm = 0777
 	if err := os.MkdirAll(filepath.Dir(file), dirPerm); err != nil {
 		return err
 	}
@@ -162,18 +162,19 @@ func writeKeyFile(file string, content []byte) error {
 
 // keyFileName implements the naming convention for keyfiles:
 // UTC--<created_at UTC ISO8601>-<address hex>
-func keyFileName(keyAddr []byte) string {
-	ts := time.Now().UTC()
-	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(keyAddr))
+func KeyFileName(keyAddr []byte) string {
+	//ts := time.Now().UTC()
+	//return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(keyAddr))
+	return fmt.Sprintf("%s", hex.EncodeToString(keyAddr))
 }
 
-func toISO8601(t time.Time) string {
-	var tz string
-	name, offset := t.Zone()
-	if name == "UTC" {
-		tz = "Z"
-	} else {
-		tz = fmt.Sprintf("%03d00", offset/3600)
-	}
-	return fmt.Sprintf("%04d-%02d-%02dT%02d-%02d-%02d.%09d%s", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), tz)
-}
+//func toISO8601(t time.Time) string {
+//	//var tz string
+//	//name, offset := t.Zone()
+//	//if name == "UTC" {
+//	//	tz = "Z"
+//	//} else {
+//	//	tz = fmt.Sprintf("%03d00", offset/3600)
+//	//}
+//	return fmt.Sprintf("%04d-%02d-%02dT%02d-%02d-%02d%s", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond())
+//}
