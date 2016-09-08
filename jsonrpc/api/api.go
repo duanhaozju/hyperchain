@@ -70,7 +70,7 @@ func SendTransaction(args TxArgs) bool {
 		//end:=start+1
 
 		//for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 500; i++ {
+			for i := 0; i < 5000; i++ {
 				tx.TimeStamp=time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
