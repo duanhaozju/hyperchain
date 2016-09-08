@@ -16,6 +16,7 @@ import (
 	"hyperchain/p2p/peerComm"
 	"hyperchain/event"
 	"github.com/op/go-logging"
+	"hyperchain/p2p/transport"
 )
 
 var log *logging.Logger // package-level logger
@@ -29,6 +30,7 @@ type Node struct {
 }
 
 var globalNode Node
+var DESKEY = []byte("sfe023f_sefiel#fi32lf3e!")
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
 func NewNode(port int, isTest bool,hEventManager *event.TypeMux) *Node {
@@ -65,18 +67,34 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	switch msg.MessageType {
 	case pb.Message_HELLO :{
 		response.MessageType = pb.Message_RESPONSE
-		response.Payload = []byte("Hi")
+
+		result, err := transport.TripleDesEncrypt([]byte(("Hi")), DESKEY)
+		if err!=nil{
+			log.Error(err)
+			log.Fatal("TripleDesEncrypt Failed!")
+
+		}
+		response.Payload = result
 		 //REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
 		 //REVIEW This no need to call hello event handler
 		return &response, nil
 	}
 	case pb.Message_CONSUS:{
 		response.MessageType = pb.Message_RESPONSE
-		response.Payload = []byte("Consensus has received, response from " + strconv.Itoa(int(GetNodeAddr().Port)))
-		log.Debug("<<<< GOT A CONSUS MESSAGE >>>>")
 
+		result, err := transport.TripleDesEncrypt([]byte("Consensus has received, response from " + strconv.Itoa(int(GetNodeAddr().Port))), DESKEY)
+		if err!=nil{
+			log.Fatal("TripleDesEncrypt Failed!")
+		}
+
+		response.Payload = result
+		log.Debug("<<<< GOT A CONSUS MESSAGE >>>>")
+		origData, err := transport.TripleDesDecrypt(msg.Payload, DESKEY)
+		if err != nil {
+			panic(err)
+		}
 		go this.higherEventManager.Post(event.ConsensusEvent{
-			Payload:msg.Payload,
+			Payload:origData,
 		})
 
 		return &response, nil

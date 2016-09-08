@@ -96,6 +96,8 @@ func (op *batch) RecvMsg(e []byte) error {
 		return op.processTransaction(msg)
 	} else if msg.Type == pb.Message_CONSENSUS {
 		return op.processConsensus(msg)
+	} else if msg.Type == pb.Message_STATE_UPDATED {
+		return op.processStateUpdated(msg)
 	}
 
 	logger.Errorf("Unknown recvMsg: %+v", msg)
@@ -145,6 +147,24 @@ func (op *batch) processConsensus(msg *pb.Message) error {
 
 	logger.Errorf("Unknown ConsensusMessage: %+v", msg)
 
+	return nil
+}
+
+// process the state update message
+func (op *batch) processStateUpdated(msg *pb.Message) error {
+
+	stateUpdatedMsg := &pb.StateUpdatedMessage{}
+	err := proto.Unmarshal(msg.Payload, stateUpdatedMsg)
+
+	if err != nil {
+		logger.Errorf("processStateUpdate, unmarshal error: can not unmarshal UpdateStateMessage", err)
+		return err
+	}
+
+	event := stateUpdatedEvent{
+		seqNo: stateUpdatedMsg.SeqNo,
+	}
+	op.ProcessEvent(&event)
 	return nil
 }
 
