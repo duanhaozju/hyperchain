@@ -22,10 +22,15 @@ import (
 	"hyperchain/crypto"
 
 	"github.com/op/go-logging"
+	"hyperchain/p2p/transport"
 )
 
 
 const MAXPEERNODE = 4
+
+var DESKEY = []byte("sfe023f_sefiel#fi32lf3e!")
+
+
 
 type PeerManager interface {
 	// judge all peer are connected and return them
@@ -175,11 +180,15 @@ func (this *GrpcPeerManager) GetAllPeers() []*peer.Peer {
 
 // BroadcastPeers Broadcast Massage to connected peers
 func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
+	result, err := transport.TripleDesEncrypt(payLoad, DESKEY)
+	if err!=nil{
+		log.Fatal("TripleDesEncrypt Failed!")
+	}
 	localNodeAddr := node.GetNodeAddr()
 	var broadCastMessage = pb.Message{
 		MessageType:  pb.Message_CONSUS,
 		From:         &localNodeAddr,
-		Payload:      payLoad,
+		Payload:      result,
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	pPool := peerPool.NewPeerPool(false, false)
@@ -194,6 +203,7 @@ func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 		if err != nil {
 			log.Error("Broadcast failed,Node", peer.Addr)
 		} else {
+
 			log.Info("resMsg:", string(resMsg.Payload))
 			//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
 		}
