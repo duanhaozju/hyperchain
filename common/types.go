@@ -116,7 +116,7 @@ func BytesToAddress(b []byte) Address {
 }
 func StringToAddress(s string) Address { return BytesToAddress([]byte(s)) }
 func BigToAddress(b *big.Int) Address  { return BytesToAddress(b.Bytes()) }
-func HexToAddress(s string) Address    { return BytesToAddress(FromHex(s)) }
+func HexToAddress(s string) Address    { return BytesToAddress([]byte(s[2:])) }
 
 // IsHexAddress verifies whether a string can represent a valid hex-encoded
 // Ethereum address or not.

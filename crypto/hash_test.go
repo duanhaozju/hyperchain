@@ -35,5 +35,8 @@ func TestHash(t *testing.T) {
 	fmt.Println(s256.Hash([]interface{}{tx.data.Amount,tx.data.Recipient}))
 	fmt.Println("block hash")
 	fmt.Println(s256.Hash(block))
+
+	fmt.Println(s256.ByteHash([]byte{12,43},[]byte{12,43}))
+	fmt.Println(Keccak256([]byte{12,43},[]byte{12,43}))
 }
 

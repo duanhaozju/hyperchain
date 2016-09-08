@@ -29,3 +29,14 @@ func (k256 *Keccak256Hash)Hash(x interface{}) (h common.Hash) {
 
 	return h
 }
+//ByteHash deals with params which has already been []byte
+func (k256 *Keccak256Hash)ByteHash(data ...[]byte) (h common.Hash) {
+
+	hw := sha3.NewKeccak256()
+	for _,d :=range data {
+		hw.Write(d)
+	}
+	hw.Sum(h[:0])
+
+	return h
+}
