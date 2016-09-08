@@ -212,13 +212,6 @@ func (self *Env) AddLog(log *vm.Log) {
 func (self *Env) Depth() int     { return self.depth }
 func (self *Env) SetDepth(i int) { self.depth = i }
 func (self *Env) CanTransfer(from common.Address, balance *big.Int) bool {
-	if self.skipTransfer {
-		if self.initial {
-			self.initial = false
-			return true
-		}
-	}
-
 	return self.state.GetBalance(from).Cmp(balance) >= 0
 }
 func (self *Env) MakeSnapshot() vm.Database {
@@ -229,18 +222,10 @@ func (self *Env) SetSnapshot(copy vm.Database) {
 }
 
 func (self *Env) Transfer(from, to vm.Account, amount *big.Int) {
-	if self.skipTransfer {
-		return
-	}
 	core.Transfer(from, to, amount)
 }
 
 func (self *Env) Call(caller vm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int) ([]byte, error) {
-	if self.vmTest && self.depth > 0 {
-		caller.ReturnGas(gas, price)
-
-		return nil, nil
-	}
 	ret, err := core.Call(self, caller, addr, data, gas, price, value)
 	self.Gas = gas
 
@@ -248,34 +233,15 @@ func (self *Env) Call(caller vm.ContractRef, addr common.Address, data []byte, g
 
 }
 func (self *Env) CallCode(caller vm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int) ([]byte, error) {
-	if self.vmTest && self.depth > 0 {
-		caller.ReturnGas(gas, price)
-
-		return nil, nil
-	}
 	return core.CallCode(self, caller, addr, data, gas, price, value)
 }
 
 func (self *Env) DelegateCall(caller vm.ContractRef, addr common.Address, data []byte, gas, price *big.Int) ([]byte, error) {
-	if self.vmTest && self.depth > 0 {
-		caller.ReturnGas(gas, price)
-
-		return nil, nil
-	}
 	return core.DelegateCall(self, caller, addr, data, gas, price)
 }
 
 func (self *Env) Create(caller vm.ContractRef, data []byte, gas, price, value *big.Int) ([]byte, common.Address, error) {
-	if self.vmTest {
-		caller.ReturnGas(gas, price)
-
-		nonce := self.state.GetNonce(caller.Address())
-		obj := self.state.GetOrNewStateObject(crypto.CreateAddress(caller.Address(), nonce))
-
-		return nil, obj.Address(), nil
-	} else {
-		return core.Create(self, caller, data, gas, price, value)
-	}
+	return core.Create(self, caller, data, gas, price, value)
 }
 
 type Message struct {

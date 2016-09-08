@@ -5,6 +5,21 @@ import (
 	"testing"
 )
 
+func TestMyAPI(t *testing.T)  {
+	fn := filepath.Join("", "/Users/zhuohaizhen/Desktop/myTest.json")
+	if err := RunVmTest(fn, StateSkipTests); err != nil {
+		t.Error(err)
+	}
+}
+
+
+func TestStateTransition(t *testing.T) {
+	fn := filepath.Join(stateTestDir, "stTransitionTest.json")
+	if err := RunVmTest(fn, StateSkipTests); err != nil {
+		t.Error(err)
+	}
+}
+
 func TestVMArithmetic(t *testing.T) {
 	fn := filepath.Join(vmTestDir, "vmArithmeticTest.json")
 	if err := RunVmTest(fn, VmSkipTests); err != nil {
