@@ -191,10 +191,10 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 	//hash tx
 	h := transaction.SighHash(pm.commonHash)
 	addrHex := string(transaction.From)
-	addr := common.FromHex(addrHex)
+	addr := common.HexToAddress(addrHex)
 	account := accounts.Account{
 		Address:addr,
-		File:pm.accountManager.KeyStore.JoinPath(accounts.KeyFileName(addr)),
+		File:pm.accountManager.KeyStore.JoinPath(accounts.KeyFileName(addr[:])),
 	}
 	key, err := pm.accountManager.GetDecryptedKey(account)
 	if err!=nil{

@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"hyperchain/crypto"
 	"sync"
+	"hyperchain/common"
 )
 
 var (
@@ -36,7 +37,7 @@ var (
 // Account represents a stored key.
 // When used as an argument, it selects a unique key file to act on.
 type Account struct {
-	Address []byte // Ethereum account address derived from the key
+	Address common.Address // Ethereum account address derived from the key
 
 		       // File contains the key file name.
 		       // When Acccount is used as an argument to select a key, File can be left blank to

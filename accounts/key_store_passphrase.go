@@ -39,8 +39,8 @@ import (
 	"golang.org/x/crypto/scrypt"
 	"hyperchain/crypto/randentropy"
 	"hyperchain/crypto"
-	"reflect"
 	"crypto/ecdsa"
+	"hyperchain/common"
 )
 
 const (
@@ -64,7 +64,7 @@ type keyStorePassphrase struct {
 	scryptP     int
 }
 
-func (ks keyStorePassphrase) GetKey(addr []byte, filename, auth string) (*Key, error) {
+func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) (*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 	keyjson, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -75,7 +75,7 @@ func (ks keyStorePassphrase) GetKey(addr []byte, filename, auth string) (*Key, e
 		return nil, err
 	}
 	// Make sure we're really operating on the requested key (no swap attacks)
-	if !(reflect.DeepEqual(key.Address,addr)) {
+	if key.Address!=addr {
 		return nil, fmt.Errorf("key content mismatch: have account %x, want %x", key.Address, addr)
 	}
 	return key, nil

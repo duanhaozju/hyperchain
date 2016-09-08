@@ -45,18 +45,19 @@ func (ee *EcdsaEncrypto)Sign(hash []byte,  prv interface{})(sig []byte, err erro
 }
 
 //UnSign recovers Address from txhash and signature
-func (ee *EcdsaEncrypto)UnSign(args ...interface{})([]byte, error)  {
+func (ee *EcdsaEncrypto)UnSign(args ...interface{})(common.Address, error)  {
 	if len(args)!=2{
 		err :=errors.New("paramas invalid")
-		return nil,err
+		return common.Address{},err
 	}
 	hash := args[0].([]byte)
 	sig := args[1].([]byte)
 	pubBytes,err := secp256k1.RecoverPubkey(hash, sig)
 	if err!=nil{
-		return nil,err
+		return common.Address{},err
 	}
-	addr := Keccak256(pubBytes[1:])[12:]
+	var addr common.Address
+	copy(addr[:],Keccak256(pubBytes[1:])[12:])
 	return addr,nil
 }
 func (ee *EcdsaEncrypto)GeneralKey(port string)(interface{},error) {
@@ -66,18 +67,18 @@ func (ee *EcdsaEncrypto)GeneralKey(port string)(interface{},error) {
 	}
 
 	ee.port=port
-	k := hex.EncodeToString(FromECDSA(key))
-	_, error := os.Stat(keystoredir)
-	if error == nil || os.IsExist(error){
-		//("directory exists")
-
-	}else {
-		os.MkdirAll(keystoredir,0777)
-	}
-	file := keystoredir+port
-	if err:=ioutil.WriteFile(file, []byte(k), 0600);err!=nil{
-		return key,err
-	}
+	//k := hex.EncodeToString(FromECDSA(key))
+	//_, error := os.Stat(keystoredir)
+	//if error == nil || os.IsExist(error){
+	//	//("directory exists")
+	//
+	//}else {
+	//	os.MkdirAll(keystoredir,0777)
+	//}
+	//file := keystoredir+port
+	//if err:=ioutil.WriteFile(file, []byte(k), 0600);err!=nil{
+	//	return key,err
+	//}
 	return key,nil
 
 }
@@ -87,7 +88,7 @@ func (ee *EcdsaEncrypto)GetKey() (interface{},error) {
 	return LoadECDSA(file)
 }
 
-func (ee *EcdsaEncrypto)PrivKeyToAddress(prv interface {})[]byte  {
+func (ee *EcdsaEncrypto)PrivKeyToAddress(prv interface {})common.Address  {
 	p := prv.(ecdsa.PrivateKey)
 	return PubkeyToAddress(p.PublicKey)
 }
@@ -138,9 +139,9 @@ func SaveECDSA(file string, key *ecdsa.PrivateKey) error {
 }
 //SaveNodeInfo saves the info of node into local file
 //ip addr and pri
-func SaveNodeInfo(file string, port string ,addr []byte, pri *ecdsa.PrivateKey) error {
+func SaveNodeInfo(file string, port string ,addr common.Address, pri *ecdsa.PrivateKey) error {
 	prikey := hex.EncodeToString(FromECDSA(pri))
-	content := port +" "+common.ToHex(addr)+" "+prikey+" \n"
+	content := port +" "+common.ToHex(addr[:])+" "+prikey+" \n"
 	fmt.Println(content)
 
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_RDWR,0600)
@@ -157,9 +158,9 @@ func SaveNodeInfo(file string, port string ,addr []byte, pri *ecdsa.PrivateKey) 
 	return err
 
 }
-func PubkeyToAddress(p ecdsa.PublicKey) []byte {
+func PubkeyToAddress(p ecdsa.PublicKey) common.Address {
 	pubBytes := FromECDSAPub(&p)
-	return Keccak256(pubBytes[1:])[12:]
+	return common.BytesToAddress(Keccak256(pubBytes[1:])[12:])
 }
 
 func Keccak256(data ...[]byte) []byte {

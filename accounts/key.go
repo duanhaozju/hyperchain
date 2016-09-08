@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 
 	"hyperchain/crypto"
+	"hyperchain/common"
 )
 
 const (
@@ -33,15 +34,15 @@ const (
 )
 
 type Key struct {
-	Address []byte
+	Address		common.Address
 	// we only store privkey as pubkey/address can be derived from it
 	// privkey in this struct is always in plaintext
-	PrivateKey interface{}
+	PrivateKey	interface{}
 }
 
 type keyStore interface {
 	// Loads and decrypts the key from disk.
-	GetKey(addr []byte, filename string, auth string) (*Key, error)
+	GetKey(addr common.Address, filename string, auth string) (*Key, error)
 	// Writes and encrypts the key.
 	StoreKey(filename string, k *Key, auth string) error
 	// Joins filename with the key directory unless it is already absolute.
@@ -104,7 +105,7 @@ func newKey(am *AccountManager,rand io.Reader) (*Key, error) {
 	return nil,nil
 }
 func storeNewAddrToFile(a Account) error {
-	addr := hex.EncodeToString(a.Address)+"\n"
+	addr := hex.EncodeToString(a.Address[:])+"\n"
 	dir := filepath.Dir(a.File)
 	file := dir+"/address"
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_RDWR,0600)
@@ -127,7 +128,7 @@ func storeNewKey(am *AccountManager, rand io.Reader, auth string) (*Key, Account
 	}
 	switch key.PrivateKey.(type) {
 	case *ecdsa.PrivateKey:
-		a := Account{Address: key.Address, File:am.KeyStore.JoinPath(KeyFileName(key.Address))}
+		a := Account{Address: key.Address, File:am.KeyStore.JoinPath(KeyFileName(key.Address[:]))}
 		if err := am.KeyStore.StoreKey(a.File, key, auth); err != nil {
 			zeroKey(key.PrivateKey.(*ecdsa.PrivateKey))
 			return nil, a, err
