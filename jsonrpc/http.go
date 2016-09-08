@@ -24,7 +24,7 @@ func (hrw *httpReadWrite) Close() error{
 }
 
 func Start(httpPort int,eventMux *event.TypeMux) error{
-	log.Info("=============enter Start()=================")
+	//log.Info("=============enter Start()=================")
 	eventMux = eventMux
 
 	server := NewServer()
@@ -45,7 +45,7 @@ func Start(httpPort int,eventMux *event.TypeMux) error{
 }
 
 func startHttp(httpPort int, srv *Server) {
-	log.Info("=============enter startHttp()=================")
+	//log.Info("=============enter startHttp()=================")
 	// TODO AllowedOrigins should be a parameter
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
@@ -59,7 +59,7 @@ func startHttp(httpPort int, srv *Server) {
 }
 
 func newJSONHTTPHandler(srv *Server) http.HandlerFunc{
-	log.Info("=============enter newJSONHTTPHandler()=================")
+	//log.Info("=============enter newJSONHTTPHandler()=================")
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.ContentLength > maxHTTPRequestContentLength {
 			http.Error(w,

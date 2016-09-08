@@ -116,11 +116,9 @@ func (c *jsonCodec) ReadRequestHeaders() ([]rpcRequest, bool, RPCError) {
 
 	var incomingMsg json.RawMessage
 	if err := c.d.Decode(&incomingMsg); err != nil {
-		log.Info(string(incomingMsg))
-		log.Info(err)
 		return nil, false, &invalidRequestError{err.Error()}
 	}
-	log.Info(string(incomingMsg))
+	//log.Info(string(incomingMsg))
 	if isBatch(incomingMsg) {
 		return parseBatchRequest(incomingMsg)
 	}
@@ -152,7 +150,7 @@ func parseRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, RPCError) {
 	if err := json.Unmarshal(incomingMsg, &in); err != nil {
 		return nil, false, &invalidMessageError{err.Error()}
 	}
-	log.Info(in)
+	//log.Info(in)
 	if err := checkReqId(in.Id); err != nil {
 		return nil, false, &invalidMessageError{err.Error()}
 	}
@@ -253,15 +251,10 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, RPCErro
 // ParseRequestArguments tries to parse the given params (json.RawMessage) with the given types. It returns the parsed
 // values or an error when the parsing failed.
 func (c *jsonCodec) ParseRequestArguments(argTypes []reflect.Type, params interface{}) ([]reflect.Value, RPCError) {
-	log.Info("==================enter ParseRequestArguments()==================")
+	//log.Info("==================enter ParseRequestArguments()==================")
 	if args, ok := params.(json.RawMessage); !ok {
-		log.Info(args)
-		log.Info(ok)
 		return nil, &invalidParamsError{"Invalid params supplied"}
 	} else {
-		log.Info(args)
-		log.Info(string(args))
-		log.Info(argTypes)
 		return parsePositionalArguments(args, argTypes)
 	}
 }
@@ -270,14 +263,11 @@ func (c *jsonCodec) ParseRequestArguments(argTypes []reflect.Type, params interf
 // It returns the parsed values or an error when the args could not be parsed. Missing optional arguments
 // are returned as reflect.Zero values.
 func parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type) ([]reflect.Value, RPCError) {
-	log.Info("===================enter parsePositionalArguments()====================")
-	log.Info(len(callbackArgs))
+	//log.Info("===================enter parsePositionalArguments()====================")
 	params := make([]interface{}, 0, len(callbackArgs))
 	for _, t := range callbackArgs {
-		log.Info(reflect.New(t).Interface())
 		params = append(params, reflect.New(t).Interface()) // Interface()转换为原来的类型
 	}
-	log.Info(params)
 	if err := json.Unmarshal(args, &params); err != nil {
 		log.Info(err)
 		return nil, &invalidParamsError{err.Error()}

@@ -23,8 +23,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/logger"
-	"github.com/ethereum/go-ethereum/logger/glog"
 	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
 )
@@ -149,13 +147,13 @@ func hasOption(option CodecOption, options []CodecOption) bool {
 // requests until the codec returns an error when reading a request (in most cases
 // an EOF). It executes requests in parallel when singleShot is false.
 func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecOption) error {
-	log.Info("============enter serveRequest()=================")
+	//log.Info("============enter serveRequest()=================")
 	defer func() {
 		if err := recover(); err != nil {
 			const size = 64 << 10
 			buf := make([]byte, size)
 			buf = buf[:runtime.Stack(buf, false)]
-			glog.Errorln(string(buf))
+			log.Errorf(string(buf))
 		}
 
 		s.codecsMu.Lock()
@@ -185,10 +183,8 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 	// test if the server is ordered to stop
 	for atomic.LoadInt32(&s.run) == 1 {
 		reqs, batch, err := s.readRequest(codec)
-		log.Info(reqs)
-		log.Info(err)
 		if err != nil {
-			glog.V(logger.Debug).Infof("%v\n", err)
+			log.Debugf("%v\n", err)
 			codec.Write(codec.CreateErrorResponse(nil, err))
 			return nil
 		}
@@ -244,7 +240,7 @@ func (s *Server) ServeSingleRequest(codec ServerCodec, options CodecOption) {
 // close all codecs which will cancels pending requests/subscriptions.
 func (s *Server) Stop() {
 	if atomic.CompareAndSwapInt32(&s.run, 1, 0) {
-		glog.V(logger.Debug).Infoln("RPC Server shutdown initiatied")
+		log.Debug("RPC Server shutdown initiatied")
 		time.AfterFunc(stopPendingRequestTimeout, func() {
 			s.codecsMu.Lock()
 			defer s.codecsMu.Unlock()
@@ -272,7 +268,7 @@ func (s *Server) createSubscription(ctx context.Context, c ServerCodec, req *ser
 
 // handle executes a request and returns the response from the callback.
 func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverRequest) (interface{}, func()) {
-	log.Info("=========================enter handle()============================")
+	//log.Info("=========================enter handle()============================")
 	if req.err != nil {
 		return codec.CreateErrorResponse(&req.id, req.err), nil
 	}
@@ -326,11 +322,7 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 	}
 
 	// execute RPC method and return result
-	log.Info("============start to call method====================")
 	reply := req.callb.method.Func.Call(arguments)
-	log.Info("============end====================")
-	log.Info(reply)
-	log.Info(len(reply))
 	if len(reply) == 0 {
 		return codec.CreateResponse(req.id, nil), nil
 	}
@@ -347,10 +339,10 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 
 // exec executes the given request and writes the result back using the codec.
 func (s *Server) exec(ctx context.Context, codec ServerCodec, req *serverRequest) {
-	log.Info("=============enter exec()=================")
+	//log.Info("=============enter exec()=================")
 	var response interface{}
 	var callback func()
-	log.Info(req.err)
+
 	if req.err != nil {
 		response = codec.CreateErrorResponse(&req.id, req.err)
 	} else {
@@ -358,7 +350,7 @@ func (s *Server) exec(ctx context.Context, codec ServerCodec, req *serverRequest
 	}
 
 	if err := codec.Write(response); err != nil {
-		glog.V(logger.Error).Infof("%v\n", err)
+		log.Errorf("%v\n", err)
 		codec.Close()
 	}
 
@@ -385,7 +377,7 @@ func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*s
 	}
 
 	if err := codec.Write(responses); err != nil {
-		glog.V(logger.Error).Infof("%v\n", err)
+		log.Errorf("%v\n", err)
 		codec.Close()
 	}
 
@@ -399,12 +391,11 @@ func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*s
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.
 func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, RPCError) {
-	log.Info("============enter readRequest()=================")
+	//log.Info("============enter readRequest()=================")
 	reqs, batch, err := codec.ReadRequestHeaders()
 	if err != nil {
 		return nil, batch, err
 	}
-	log.Info(reqs)
 	requests := make([]*serverRequest, len(reqs))
 
 	// verify requests
@@ -448,11 +439,7 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, RPCErro
 
 		if callb, ok := svc.callbacks[r.method]; ok { // lookup RPC method
 			requests[i] = &serverRequest{id: r.id, svcname: svc.name, callb: callb}
-			log.Info(r.params)
-			log.Info(callb.argTypes)
-			log.Info(len(callb.argTypes))
 			if r.params != nil && len(callb.argTypes) > 0 {
-				log.Info("--------------------------------------")
 				if args, err := codec.ParseRequestArguments(callb.argTypes, r.params); err == nil {
 					requests[i].args = args
 				} else {
@@ -464,6 +451,5 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, RPCErro
 
 		requests[i] = &serverRequest{id: r.id, err: &methodNotFoundError{r.service, r.method}}
 	}
-	log.Info("============leave readRequest()=================")
 	return requests, batch, nil
 }
