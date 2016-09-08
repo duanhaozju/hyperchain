@@ -1,6 +1,6 @@
 package api
 
-import (
+/*import (
 	"testing"
 	"hyperchain/core"
 	"hyperchain/common"
@@ -32,5 +32,5 @@ func TestSendTransaction(t *testing.T) {
 	})
 
 	assert.Equal(t,true, isSuccess2, "they should be equal")
-}
+}*/
 
