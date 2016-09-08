@@ -33,3 +33,7 @@ func StartHttp(httpPort int,eventMux *event.TypeMux){
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(httpPort),router))
 }
 
+func start() {
+
+}
+
