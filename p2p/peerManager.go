@@ -23,6 +23,7 @@ import (
 
 	"github.com/op/go-logging"
 	"hyperchain/p2p/transport"
+	"hyperchain/recovery"
 )
 
 
@@ -39,7 +40,7 @@ type PeerManager interface {
 	Start(path string, NodeId int, aliveChan chan bool,isTest bool,eventMux *event.TypeMux)
 	GetClientId() common.Hash
 	BroadcastPeers(payLoad []byte)
-	SendMsgToPeers(payLoad []byte,peerList []uint64,MessageType int)
+	SendMsgToPeers(payLoad []byte,peerList []uint64,MessageType recovery.Message_MsgType)
 
 }
 
