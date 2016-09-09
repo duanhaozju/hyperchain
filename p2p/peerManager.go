@@ -39,6 +39,8 @@ type PeerManager interface {
 	Start(path string, NodeId int, aliveChan chan bool,isTest bool,eventMux *event.TypeMux)
 	GetClientId() common.Hash
 	BroadcastPeers(payLoad []byte)
+	SendMsgToPeers(payLoad []byte,peerList []uint64)
+
 }
 
 // gRPC peer manager struct, which to manage the gRPC peers

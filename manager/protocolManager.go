@@ -14,14 +14,11 @@ import (
 	"hyperchain/core/types"
 	"fmt"
 	"sync"
-
 	"hyperchain/protos"
 	"time"
-
 	"github.com/op/go-logging"
 	"hyperchain/accounts"
 	"hyperchain/common"
-
 )
 
 var log *logging.Logger // package-level logger
@@ -30,29 +27,32 @@ func init() {
 }
 
 type ProtocolManager struct {
-	serverPort     int
-	blockPool      *core.BlockPool
-	fetcher        *core.Fetcher
-	peerManager    p2p.PeerManager
-	consenter      consensus.Consenter
+	serverPort        int
+	blockPool         *core.BlockPool
+	fetcher           *core.Fetcher
+	peerManager       p2p.PeerManager
+	consenter         consensus.Consenter
 	//encryption   crypto.Encryption
-	accountManager *accounts.AccountManager
-	commonHash     crypto.CommonHash
+	accountManager    *accounts.AccountManager
+	commonHash        crypto.CommonHash
 
-	noMorePeers    chan struct{}
-	eventMux       *event.TypeMux
-	txSub          event.Subscription
-	newBlockSub    event.Subscription
-	consensusSub   event.Subscription
+	noMorePeers       chan struct{}
+	eventMux          *event.TypeMux
+	txSub             event.Subscription
+	newBlockSub       event.Subscription
+	consensusSub      event.Subscription
 
-	aLiveSub       event.Subscription
-	quitSync       chan struct{}
+	aLiveSub          event.Subscription
 
-	wg             sync.WaitGroup
+	syncCheckpointSub event.Subscription
+
+	syncBlockSub      event.Subscription
+	quitSync          chan struct{}
+
+	wg                sync.WaitGroup
 }
 
 var eventMuxAll *event.TypeMux
-var countBlock int
 
 func NewProtocolManager(blockPool *core.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
 //encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
@@ -89,13 +89,49 @@ func (pm *ProtocolManager) Start() {
 	go pm.fetcher.Start()
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
+	pm.syncBlockSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
+	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
+	go pm.syncBlockLoop()
+	go pm.syncCheckpointLoop()
 
 	pm.wg.Wait()
 
 }
 
+func (self *ProtocolManager) syncBlockLoop() {
+
+	for obj := range self.syncBlockSub.Chan() {
+
+		switch  ev := obj.Data.(type) {
+		case event.StateUpdateEvent:
+
+			log.Debug("write block success")
+		case event.SendCheckpointSyncEvent:
+
+
+
+		}
+	}
+}
+
+func (self *ProtocolManager) syncCheckpointLoop() {
+
+	for obj := range self.syncCheckpointSub.Chan() {
+
+		switch  ev := obj.Data.(type) {
+		case event.ReceiveSyncBlockEvent:
+
+
+
+			self.commitNewBlock(ev.Payload)
+
+
+
+		}
+	}
+}
 
 
 // listen block msg
@@ -153,8 +189,8 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 func (self *ProtocolManager)sendMsg(payload []byte) {
 	//Todo sign tx
-	payLoad:=self.transformTx(payload)
-	if payLoad==nil{
+	payLoad := self.transformTx(payload)
+	if payLoad == nil {
 		//log.Fatal("payLoad nil")
 		log.Error("payLoad nil")
 		return
@@ -190,40 +226,40 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 	h := transaction.SighHash(pm.commonHash)
 	addrHex := string(transaction.From)
 	addr := common.HexToAddress(addrHex)
-/*<<<<<<< HEAD
-	account := accounts.Account{
-		Address:addr,
-		File:pm.accountManager.KeyStore.JoinPath(accounts.KeyFileName(addr[:])),
-	}
-	key, err := pm.accountManager.GetDecryptedKey(account)
-	if err != nil {
-		log.Error(err)
-		return nil
-	}
-	//key, err := pm.encryption.GetKey()
-	//switch key.(type){
-	switch key.PrivateKey.(type){
-	//case ecdsa.PrivateKey:
-	case *ecdsa.PrivateKey:
-		//actualKey := key.(ecdsa.PrivateKey)
-		//sign, err := pm.encryption.Sign(h[:], actualKey)
-		actualKey := key.PrivateKey.(*ecdsa.PrivateKey)
-		sign, err := pm.accountManager.Encryption.Sign(h[:], actualKey)
-		if err != nil {
-			fmt.Print(err)
+	/*<<<<<<< HEAD
+		account := accounts.Account{
+			Address:addr,
+			File:pm.accountManager.KeyStore.JoinPath(accounts.KeyFileName(addr[:])),
 		}
-		transaction.Signature = sign
-		//encode tx
-		payLoad, err := proto.Marshal(transaction)
+		key, err := pm.accountManager.GetDecryptedKey(account)
 		if err != nil {
+			log.Error(err)
 			return nil
 		}
-		return payLoad
+		//key, err := pm.encryption.GetKey()
+		//switch key.(type){
+		switch key.PrivateKey.(type){
+		//case ecdsa.PrivateKey:
+		case *ecdsa.PrivateKey:
+			//actualKey := key.(ecdsa.PrivateKey)
+			//sign, err := pm.encryption.Sign(h[:], actualKey)
+			actualKey := key.PrivateKey.(*ecdsa.PrivateKey)
+			sign, err := pm.accountManager.Encryption.Sign(h[:], actualKey)
+			if err != nil {
+				fmt.Print(err)
+			}
+			transaction.Signature = sign
+			//encode tx
+			payLoad, err := proto.Marshal(transaction)
+			if err != nil {
+				return nil
+			}
+			return payLoad
 
-=======
->>>>>>> b69aa5a31c5590bea3262cc823929b28478fd913*/
+	=======
+	>>>>>>> b69aa5a31c5590bea3262cc823929b28478fd913*/
 
-	sign, err := pm.accountManager.Sign(addr,h[:])
+	sign, err := pm.accountManager.Sign(addr, h[:])
 	if err != nil {
 		fmt.Print(err)
 	}
