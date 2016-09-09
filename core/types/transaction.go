@@ -35,6 +35,15 @@ func (self *Transaction)FString() string {
 		self.TimeStamp,
 		self.Signature)
 }
+//validates the signature
+//if addr recovered from signature != tx.from return false
+func (self *Transaction)ValidateSign(encryption crypto.Encryption,ch crypto.CommonHash)  bool{
+
+	hash := self.SighHash(ch)
+	addr,_ := encryption.UnSign(hash[:],self.Signature)
+	from := common.HexToAddress(string(self.From))
+	return addr==from
+}
 
 // NewTransaction returns a new transaction
 func NewTransaction(from []byte,to []byte,value []byte) *Transaction{
