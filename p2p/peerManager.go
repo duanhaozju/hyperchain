@@ -37,7 +37,7 @@ type PeerManager interface {
 	// judge all peer are connected and return them
 	//JudgeAlivePeers(*chan bool)
 	GetAllPeers() []*peer.Peer
-	Start(path string, NodeId uint64, aliveChan chan bool,isTest bool,eventMux *event.TypeMux)
+	Start(path string, NodeId int, aliveChan chan bool,isTest bool,eventMux *event.TypeMux)
 	GetClientId() common.Hash
 	BroadcastPeers(payLoad []byte)
 	SendMsgToPeers(payLoad []byte,peerList []uint64,MessageType recovery.Message_MsgType)
@@ -67,7 +67,7 @@ func (this *GrpcPeerManager) GetClientId() common.Hash{
 }
 
 // Start start the Normal local listen server
-func (this *GrpcPeerManager) Start(path string, NodeId uint64, aliveChan chan bool,isTest bool,eventMux *event.TypeMux) {
+func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,isTest bool,eventMux *event.TypeMux) {
 
 	configs := peerComm.GetConfig(path)
 	port, _ := strconv.Atoi(configs["port"+strconv.Itoa(NodeId)])
@@ -218,7 +218,7 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,Mes
 	// broadcast to special peers
 	go func(){for _, peer := range pPool.GetPeers() {
 		for nodeID := range peerList{
-			nid := strconv.FormatUint(nodeID,10)
+			nid := strconv.Itoa(nodeID)
 			if peer.Idetity == nid {
 				resMsg, err := peer.Chat(&broadCastMessage)
 				if err != nil {

@@ -20,7 +20,7 @@ func New(eventMux *event.TypeMux, blockPool *core.BlockPool, peerManager p2p.Pee
 am *accounts.AccountManager, commonHash crypto.CommonHash,path string, nodeId int) (error) {
 
 	aliveChan := make(chan bool)
-	go peerManager.Start(path, uint64(nodeId), aliveChan, false, eventMux)
+	go peerManager.Start(path,nodeId, aliveChan, false, eventMux)
 
 	//wait for all peer are connected
 	select {
