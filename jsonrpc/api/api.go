@@ -67,7 +67,7 @@ func SendTransaction(args TxArgs) bool {
 
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
-		end:=start+60
+		end:=start+6
 
 		for start := start ; start < end; start = time.Now().Unix() {
 			for i := 0; i < 5000; i++ {
@@ -76,19 +76,17 @@ func SendTransaction(args TxArgs) bool {
 				if err != nil {
 					log.Fatalf("proto.Marshal(tx) error: %v",err)
 				}
-				go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-				time.Sleep(2 * time.Microsecond)
+				if manager.GetEventObject() != nil{
+					go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+				}else{
+					log.Warning("manager is Nil")
+				}
+				time.Sleep(200 * time.Nanosecond)
 			}
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
 
-		//tx.TimeStamp=time.Now().UnixNano()
-		//txBytes, err := proto.Marshal(tx)
-		//if err != nil {
-		//	log.Fatalf("proto.Marshal(tx) error: %v",err)
-		//}
-		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 
 		return true
 

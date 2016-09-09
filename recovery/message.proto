@@ -1,0 +1,31 @@
+
+syntax="proto3";
+
+package recovery;
+
+
+message Message{
+    // From the message source
+    MsgType MessageType  = 1;
+    bytes  Payload       = 2;
+    int64 MsgTimeStamp = 15;
+
+    //MsgType message type during data transfer 
+    enum MsgType {
+        SYNCCHECKPOINT       = 0;
+        SYNCBLOCK    = 1;
+
+    }
+}
+
+message CheckPointMessage{
+    // From the message source
+    uint64  currentNumber       = 1;
+    uint64 requiredNumber = 2;
+
+}
+
+
+
+
+

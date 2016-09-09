@@ -111,6 +111,18 @@ func (self *ProtocolManager) syncBlockLoop() {
 		case event.SendCheckpointSyncEvent:
 
 
+			UpdateStateMessage:= &protos.UpdateStateMessage{}
+			proto.Unmarshal(ev.Payload, UpdateStateMessage)
+
+			blockChainInfo:=&protos.BlockchainInfo{}
+			proto.Unmarshal(UpdateStateMessage.TargetId,blockChainInfo)
+			/*UpdateStateMessage.Replicas
+			blockChainInfo.CurrentBlockHash
+			blockChainInfo.Height*/
+
+
+
+
 
 		}
 	}
@@ -125,7 +137,8 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 
 
 
-			self.commitNewBlock(ev.Payload)
+			fmt.Println(ev.Payload)
+			//self.commitNewBlock(ev.Payload)
 
 
 

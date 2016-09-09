@@ -24,8 +24,9 @@ func init() {
 	log = logging.MustGetLogger("p2p/Server")
 }
 type Node struct {
-	address            pb.PeerAddress
-	gRPCServer         *grpc.Server
+	address		pb.PeerAddress
+	gRPCServer	*grpc.Server
+	NodeID		string
 	higherEventManager *event.TypeMux
 }
 
@@ -33,13 +34,14 @@ var globalNode Node
 var DESKEY = []byte("sfe023f_sefiel#fi32lf3e!")
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
-func NewNode(port int, isTest bool,hEventManager *event.TypeMux) *Node {
+func NewNode(port int, isTest bool,hEventManager *event.TypeMux,nodeID int) *Node {
 	if isTest {
 		log.Info("Unit test: start local node, port", port)
 		var TestNode Node
 		TestNode.address.Ip = peerComm.GetLocalIp()
 		TestNode.address.Port = int32(port)
 		TestNode.higherEventManager = hEventManager
+		TestNode.NodeID = strconv.Itoa(nodeID)
 		TestNode.startServer()
 		return &TestNode
 	}
@@ -48,6 +50,7 @@ func NewNode(port int, isTest bool,hEventManager *event.TypeMux) *Node {
 	} else {
 		globalNode.address.Ip = peerComm.GetLocalIp()
 		globalNode.address.Port = int32(port)
+		globalNode.NodeID = strconv.Itoa(nodeID)
 		globalNode.higherEventManager = hEventManager
 		globalNode.startServer()
 		return &globalNode
@@ -57,23 +60,26 @@ func NewNode(port int, isTest bool,hEventManager *event.TypeMux) *Node {
 func GetNodeAddr() pb.PeerAddress {
 	return globalNode.address
 }
-
+// GetNodeID which init by new function
+func GetNodeID() string{
+	return globalNode.NodeID
+}
 // Chat Implements the ServerSide Function
 func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error) {
 	var response pb.Message
 	response.From = &this.address
 	//handle the message
-
 	switch msg.MessageType {
 	case pb.Message_HELLO :{
 		response.MessageType = pb.Message_RESPONSE
 
-		result, err := transport.TripleDesEncrypt([]byte(("Hi")), DESKEY)
+		result, err := transport.TripleDesEncrypt([]byte(this.NodeID), DESKEY)
 		if err!=nil{
 			log.Error(err)
 			log.Fatal("TripleDesEncrypt Failed!")
 
 		}
+		//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
 		response.Payload = result
 		 //REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
 		 //REVIEW This no need to call hello event handler
