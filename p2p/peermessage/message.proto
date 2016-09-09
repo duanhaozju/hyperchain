@@ -23,8 +23,7 @@ message Message{
         RESPONSE    = 1;
         CONSUS      = 2;
         KEEPALIVE   = 3;
-        UPDATESTATE = 4;
-        RECIVESYNCBLOCK = 5;
+        SYNCMSG     = 4;
     }
 }
 
