@@ -20,6 +20,7 @@ var(
 	env = make(map[string]string)
 	vmenv = (*core.Env)(nil)
 )
+
 func init(){
 	env["currentNumber"] = "1"
 	env["currentGasLimit"] = "10000000"
@@ -62,7 +63,6 @@ func Exec(env vm.Environment,from, to *common.Address, data []byte, gas,
 	gasPrice, value *big.Int)(ret []byte,err error){
 
 	sender := env.Db().GetAccount(*from)
-
 	contractCreation := (nil == to)
 	//ret,err = env.Call(sender,*to,data,gas,gasPrice,value)
 	// 判断是否能够交易,转移,这一步可以考虑在外部执行

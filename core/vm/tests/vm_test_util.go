@@ -3,8 +3,6 @@ package tests
 import (
 	"fmt"
 	"math/big"
-	"strconv"
-
 	"hyperchain/common"
 	"hyperchain/core/state"
 	"hyperchain/core/vm"
@@ -62,19 +60,11 @@ func runVmTest(test VmTest) error {
 			obj.SetState(common.HexToHash(a), common.HexToHash(v))
 		}
 	}
-	env := make(map[string]string)
-	env["currentGasLimit"] = test.Env.CurrentGasLimit
-	env["currentNumber"] = test.Env.CurrentNumber
-	if n, ok := test.Env.CurrentTimestamp.(float64); ok {
-		env["currentTimestamp"] = strconv.Itoa(int(n))
-	} else {
-		env["currentTimestamp"] = test.Env.CurrentTimestamp.(string)
-	}
-	RunVm(statedb, env, test.Exec)
+	RunVm(statedb, test.Exec)
 	return nil
 }
 
-func RunVm(state *state.StateDB, env, exec map[string]string) ([]byte, vm.Logs, *big.Int, error) {
+func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.Int, error) {
 	var (
 		to    = common.HexToAddress(exec["address"])
 		from  = common.HexToAddress(exec["caller"])
@@ -84,9 +74,20 @@ func RunVm(state *state.StateDB, env, exec map[string]string) ([]byte, vm.Logs, 
 		value = common.Big(exec["value"])
 		data2 = common.FromHex(exec["data"])
 	)
+
 	vmenv := api.GetVMEnv()
 	state = vmenv.State()
 	ret,err := api.Exec(vmenv,&from,nil, data, gas, price, value)
+	ret,err = api.Exec(vmenv,&from,nil, data, gas, price, value)
+	ret,err = api.Exec(vmenv,&from,nil, data, gas, price, value)
+	ret,err = api.Exec(vmenv,&from,nil, data, gas, price, value)
+	ret,err = api.Exec(vmenv,&from,nil, data, gas, price, value)
+	ret,err = api.Exec(vmenv,&from,nil, data, gas, price, value)
+
+	for k,v := range state.GetAccounts(){
+		fmt.Println("k:",k,"---------,v:",v.Balance())
+	}
+
 	addr := state.GetLeastAccount().Address()
 	for a, v := range state.GetStateObject(addr).Storage() {
 		fmt.Println(a,"----",v)

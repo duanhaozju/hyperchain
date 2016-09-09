@@ -11,6 +11,7 @@ import (
 var emptyCodeHash = crypto.Keccak256(nil)
 
 type Code []byte
+type ABI []byte
 
 func (self Code) String() string {
 	return string(self) //strings.Join(Disassemble(self), " ")
@@ -45,11 +46,11 @@ type StateObject struct {
 	codeHash []byte
 			   // The code for this account
 	code Code
+			      // The ABI for this account
+	abi ABI
 			   // Cached storage (flushed when updated)
 	storage Storage
-			   // Mark for deletion
-			   // When an object is marked for deletion it will be delete from the trie
-			   // during the "update" phase of the state transition
+
 	remove  bool
 	deleted bool
 	dirty   bool
@@ -57,7 +58,6 @@ type StateObject struct {
 
 func NewStateObject(address common.Address, db hyperdb.Database) *StateObject {
 	object := &StateObject{
-		db:       db,
 		address:  address,
 		balance:  new(big.Int),
 		dirty:    true,

@@ -53,12 +53,6 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		return nil, common.Address{}, vm.DepthError
 	}
 
-	// 判断是否能够交易,转移
-	//if !env.CanTransfer(caller.Address(), value) {
-	//	caller.ReturnGas(gas, gasPrice)
-	//	return nil, common.Address{}, ValueTransferErr("insufficient funds to transfer value. Req %v, has %v", value, env.Db().GetBalance(caller.Address()))
-	//}
-
 	var createAccount bool
 	if address == nil {
 		// Create a new account on the state
