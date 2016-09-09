@@ -22,38 +22,40 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/accounts"
 	"hyperchain/common"
+	"hyperchain/p2p/peermessage"
 )
+
 var log *logging.Logger // package-level logger
 func init() {
 	log = logging.MustGetLogger("manager")
 }
 
 type ProtocolManager struct {
-	serverPort   int
-	blockPool    *core.BlockPool
-	fetcher      *core.Fetcher
-	peerManager  p2p.PeerManager
-	consenter    consensus.Consenter
+	serverPort     int
+	blockPool      *core.BlockPool
+	fetcher        *core.Fetcher
+	peerManager    p2p.PeerManager
+	consenter      consensus.Consenter
 	//encryption   crypto.Encryption
-	accountManager	*accounts.AccountManager
-	commonHash   crypto.CommonHash
+	accountManager *accounts.AccountManager
+	commonHash     crypto.CommonHash
 
-	noMorePeers  chan struct{}
-	eventMux     *event.TypeMux
-	txSub        event.Subscription
-	newBlockSub  event.Subscription
-	consensusSub event.Subscription
+	noMorePeers    chan struct{}
+	eventMux       *event.TypeMux
+	txSub          event.Subscription
+	newBlockSub    event.Subscription
+	consensusSub   event.Subscription
 
-	aLiveSub     event.Subscription
-	quitSync     chan struct{}
+	aLiveSub       event.Subscription
+	quitSync       chan struct{}
 
-	wg           sync.WaitGroup
+	wg             sync.WaitGroup
 }
 
 var eventMuxAll *event.TypeMux
 var countBlock int
 
-func NewProtocolManager(blockPool *core.BlockPool,peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
+func NewProtocolManager(blockPool *core.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
 //encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 am *accounts.AccountManager, commonHash crypto.CommonHash) (*ProtocolManager) {
 	log.Debug("enter parotocol manager")
@@ -76,7 +78,6 @@ am *accounts.AccountManager, commonHash crypto.CommonHash) (*ProtocolManager) {
 	return manager
 }
 
-
 func GetEventObject() *event.TypeMux {
 	return eventMuxAll
 }
@@ -85,15 +86,12 @@ func GetEventObject() *event.TypeMux {
 // start listen new block msg and consensus msg
 func (pm *ProtocolManager) Start() {
 
-
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
-
-
 
 	pm.wg.Wait()
 
@@ -106,13 +104,13 @@ func (self *ProtocolManager) NewBlockLoop() {
 
 	for obj := range self.newBlockSub.Chan() {
 
-		switch  ev :=obj.Data.(type) {
+		switch  ev := obj.Data.(type) {
 		case event.NewBlockEvent:
 			//accept msg from consensus module
 			//commit block into block pool
 
 			log.Debug("write block success")
-			self.commitNewBlock(ev.Payload,ev.CommitTime)
+			self.commitNewBlock(ev.Payload, ev.CommitTime)
 		//self.fetcher.Enqueue(ev.Payload)
 
 		}
@@ -154,7 +152,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 	}
 }
 
-func (self *ProtocolManager)sendMsg(payload []byte)  {
+func (self *ProtocolManager)sendMsg(payload []byte) {
 	//Todo sign tx
 	//payLoad:=self.transformTx(payload)
 	//if payLoad==nil{
@@ -171,6 +169,7 @@ func (self *ProtocolManager)sendMsg(payload []byte)  {
 	}
 	msgSend, _ := proto.Marshal(msg)
 	self.consenter.RecvMsg(msgSend)
+
 }
 
 
@@ -197,7 +196,7 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 		File:pm.accountManager.KeyStore.JoinPath(accounts.KeyFileName(addr[:])),
 	}
 	key, err := pm.accountManager.GetDecryptedKey(account)
-	if err!=nil{
+	if err != nil {
 		log.Error(err)
 		return nil
 	}
@@ -232,7 +231,7 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 
 
 // add new block into block pool
-func (pm *ProtocolManager) commitNewBlock(payload[]byte,commitTime int64) {
+func (pm *ProtocolManager) commitNewBlock(payload[]byte, commitTime int64) {
 
 	msgList := &protos.ExeMessage{}
 	proto.Unmarshal(payload, msgList)
@@ -247,10 +246,10 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte,commitTime int64) {
 	block.Timestamp = msgList.Timestamp
 	//block.CommitTime =commitTime
 
-	block.Number=msgList.No
+	block.Number = msgList.No
 
-	log.Info("now is ",msgList.No)
-	pm.blockPool.AddBlock(block,pm.commonHash,commitTime)
+	log.Info("now is ", msgList.No)
+	pm.blockPool.AddBlock(block, pm.commonHash, commitTime)
 	//core.WriteBlock(*block)
 
 }

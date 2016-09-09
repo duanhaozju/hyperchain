@@ -26,6 +26,15 @@ type NewTxEvent struct{ Payload []byte  }
 
 type NewBlockPoolEvent struct{ Payload []byte  }
 
+//receive event from consensus module
+type sendCheckpointSyncEvent struct{Payload []byte }
+
+//node receive checkpoint sync event and then,check db and send block require request to peers
+type StateUpdateEvent struct{Payload []byte }
+
+// after get all required block,send this block to node
+type ReceiveSyncBlockEvent struct{Payload []byte }
+
 
 
 
