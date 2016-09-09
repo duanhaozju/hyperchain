@@ -20,6 +20,7 @@ import (
 	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/recovery"
+	"hyperchain/hyperdb"
 )
 
 var log *logging.Logger // package-level logger
@@ -90,8 +91,8 @@ func (pm *ProtocolManager) Start() {
 	go pm.fetcher.Start()
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
-	pm.syncBlockSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
-	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
+	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
+	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
 	go pm.syncBlockLoop()
@@ -100,74 +101,126 @@ func (pm *ProtocolManager) Start() {
 	pm.wg.Wait()
 
 }
+func (self *ProtocolManager) syncCheckpointLoop() {
+
+	for obj := range self.syncCheckpointSub.Chan() {
+
+		switch  ev := obj.Data.(type) {
+		case event.StateUpdateEvent:
+			/*
+			get required block from db and send to peer
+			 */
+
+			receiveMessage := &recovery.Message{}
+			proto.Unmarshal(ev.Payload, receiveMessage)
+
+			checkpointMsg := &recovery.CheckPointMessage{}
+			proto.Unmarshal(receiveMessage.Payload, checkpointMsg)
+
+			db, _ := hyperdb.GetLDBDatabase()
+
+			 blocks:= &types.Blocks{}
+			for i := checkpointMsg.CurrentNumber + 1; i <= checkpointMsg.RequiredNumber; i += 1 {
+				block, err := core.GetBlockByNumber(db, checkpointMsg.CurrentNumber + 1)
+				if err != nil {
+					log.Warning("no required block number")
+				}
+				blocks.Batch = append(blocks.Batch, block)
+			}
+			payload, _ := proto.Marshal(blocks)
+			message := &recovery.Message{
+				MessageType:recovery.Message_SYNCBLOCK,
+				MsgTimeStamp:time.Now().UnixNano(),
+				Payload:payload,
+
+			}
+			var peers []uint64
+			peers = append(peers, checkpointMsg.PeerId)
+			broadcastMsg, _ := proto.Marshal(message)
+
+			self.peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_SYNCCHECKPOINT)
+
+
+
+		case event.SendCheckpointSyncEvent:
+
+			/*
+			request  the consensus module required block to other peers
+			 */
+			UpdateStateMessage := &protos.UpdateStateMessage{}
+			proto.Unmarshal(ev.Payload, UpdateStateMessage)
+
+			blockChainInfo := &protos.BlockchainInfo{}
+			proto.Unmarshal(UpdateStateMessage.TargetId, blockChainInfo)
+
+			required := &recovery.CheckPointMessage{
+				RequiredNumber:blockChainInfo.Height,
+				CurrentNumber:core.GetChainCopy().Height,
+			}
+			core.UpdateRequire(blockChainInfo.Height, blockChainInfo.CurrentBlockHash)
+
+			payload, _ := proto.Marshal(required)
+			message := &recovery.Message{
+				MessageType:recovery.Message_SYNCCHECKPOINT,
+				MsgTimeStamp:time.Now().UnixNano(),
+				Payload:payload,
+
+			}
+			broadcastMsg, _ := proto.Marshal(message)
+			self.peerManager.SendMsgToPeers(broadcastMsg, UpdateStateMessage.Replicas, recovery.Message_SYNCCHECKPOINT)
+
+
+
+
+		}
+	}
+}
+
 
 func (self *ProtocolManager) syncBlockLoop() {
 
 	for obj := range self.syncBlockSub.Chan() {
 
 		switch  ev := obj.Data.(type) {
-		case event.StateUpdateEvent:
-
-			message:=&recovery.Message{}
-			proto.Unmarshal(ev.Payload, message)
-			/*message.Payload
-			blockChainInfo:=&protos.BlockchainInfo{}
-			proto.Unmarshal(UpdateStateMessage.TargetId,blockChainInfo)*/
-			log.Debug("write block success")
-
-		case event.SendCheckpointSyncEvent:
-
-
-			UpdateStateMessage:= &protos.UpdateStateMessage{}
-			proto.Unmarshal(ev.Payload, UpdateStateMessage)
-
-			blockChainInfo:=&protos.BlockchainInfo{}
-			proto.Unmarshal(UpdateStateMessage.TargetId,blockChainInfo)
-
-			required:=&recovery.CheckPointMessage{
-				CurrentNumber:blockChainInfo.Height,
-				RequiredNumber:blockChainInfo.CurrentBlockHash,
-			}
-
-			payload,_ :=proto.Marshal(required)
-			message:=&recovery.Message{
-				MessageType:recovery.Message_SYNCCHECKPOINT,
-				MsgTimeStamp:time.Now().UnixNano(),
-				Payload:payload,
-
-			}
-			broadcastMsg,_:=proto.Marshal(message)
-			fmt.Println(broadcastMsg)
-
-			/*UpdateStateMessage.Replicas
-			blockChainInfo.CurrentBlockHash
-			blockChainInfo.Height*/
-
-
-
-
-
-		}
-	}
-}
-
-func (self *ProtocolManager) syncCheckpointLoop() {
-
-	for obj := range self.syncCheckpointSub.Chan() {
-
-		switch  ev := obj.Data.(type) {
 		case event.ReceiveSyncBlockEvent:
+			if(core.GetChainCopy().RequiredBlockNum!=0){
+			message := &recovery.Message{}
+			proto.Unmarshal(ev.Payload, message)
+			blocks:=&types.Blocks{}
+			proto.Unmarshal(message.Payload, blocks)
+			if(common.Bytes2Hex(blocks.Batch[0].ParentHash)!=common.Bytes2Hex(core.GetChainCopy().LatestBlockHash)){
+				log.Warning("receiver first block error")
+
+			}
+			/*for i := 0; i < len(blocks); i += 1 {
+				blocks[i+1].BlockHash=blocks[i].HashBlock(self.commonHash)
+			}*/
+			db, _ := hyperdb.GetLDBDatabase()
+			for _, block := range blocks.Batch {
+
+				//TODO  validate receive block chain
+			    core.PutBlock(db,block.BlockHash,block)
 
 
+			}
+			core.UpdateRequire(0, []byte{})
 
-			fmt.Println(ev.Payload)
-			//self.commitNewBlock(ev.Payload)
-
-
-
+		}
 		}
 	}
 }
+
+/*func ParseBlockHash(blocks types.Blocks,number uint64,max uint64,blockHash []byte)  {
+
+	if(number==max){
+
+
+		log.Info("11")
+	}else{
+		bh=blocks.Batch[number].HashBlock()
+		ParseBlockHash(blocks,number+uint64(1),max,bh)
+	}
+}*/
 
 
 // listen block msg
@@ -262,38 +315,6 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 	h := transaction.SighHash(pm.commonHash)
 	addrHex := string(transaction.From)
 	addr := common.HexToAddress(addrHex)
-	/*<<<<<<< HEAD
-		account := accounts.Account{
-			Address:addr,
-			File:pm.accountManager.KeyStore.JoinPath(accounts.KeyFileName(addr[:])),
-		}
-		key, err := pm.accountManager.GetDecryptedKey(account)
-		if err != nil {
-			log.Error(err)
-			return nil
-		}
-		//key, err := pm.encryption.GetKey()
-		//switch key.(type){
-		switch key.PrivateKey.(type){
-		//case ecdsa.PrivateKey:
-		case *ecdsa.PrivateKey:
-			//actualKey := key.(ecdsa.PrivateKey)
-			//sign, err := pm.encryption.Sign(h[:], actualKey)
-			actualKey := key.PrivateKey.(*ecdsa.PrivateKey)
-			sign, err := pm.accountManager.Encryption.Sign(h[:], actualKey)
-			if err != nil {
-				fmt.Print(err)
-			}
-			transaction.Signature = sign
-			//encode tx
-			payLoad, err := proto.Marshal(transaction)
-			if err != nil {
-				return nil
-			}
-			return payLoad
-
-	=======
-	>>>>>>> b69aa5a31c5590bea3262cc823929b28478fd913*/
 
 	sign, err := pm.accountManager.Sign(addr, h[:])
 	if err != nil {
@@ -308,57 +329,6 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 	return payLoad
 
 }
-//func (pm *ProtocolManager)transformTx(payload []byte) []byte {
-//
-//	//var transaction types.Transaction
-//	transaction := &types.Transaction{}
-//	//decode tx
-//	proto.Unmarshal(payload, transaction)
-//	//hash tx
-//	h := transaction.SighHash(pm.commonHash)
-//	addrHex := string(transaction.From)
-//	addr := common.HexToAddress(addrHex)
-//	account := accounts.Account{
-//		Address:addr,
-//		File:pm.accountManager.KeyStore.JoinPath(accounts.KeyFileName(addr[:])),
-//	}
-//	time1 := time.Now().UnixNano()
-//	key, err := pm.accountManager.GetDecryptedKeyCache(account)
-//	time2 := time.Now().UnixNano()
-//	log.Info(">>>>>>>>>>>>>>",time2-time1)
-//	if err!=nil{
-//		log.Error(err)
-//		return nil
-//	}
-//	//key, err := pm.encryption.GetKey()
-//	//switch key.(type){
-//	switch key.PrivateKey.(type){
-//	//case ecdsa.PrivateKey:
-//	case *ecdsa.PrivateKey:
-//		//actualKey := key.(ecdsa.PrivateKey)
-//		//sign, err := pm.encryption.Sign(h[:], actualKey)
-//		actualKey := key.PrivateKey.(*ecdsa.PrivateKey)
-//		sign, err := pm.accountManager.Encryption.Sign(h[:], actualKey)
-//		if err != nil {
-//			fmt.Print(err)
-//		}
-//		transaction.Signature = sign
-//		//encode tx
-//		payLoad, err := proto.Marshal(transaction)
-//		if err != nil {
-//			return nil
-//		}
-//		return payLoad
-//
-//
-//	}
-//	if err != nil {
-//		return nil
-//	}
-//	return nil
-//
-//}
-
 
 // add new block into block pool
 func (pm *ProtocolManager) commitNewBlock(payload[]byte, commitTime int64) {

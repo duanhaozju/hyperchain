@@ -133,6 +133,16 @@ func GetBlock(db hyperdb.Database, key []byte) (*types.Block, error){
 	return &block, err
 }
 
+func GetBlockByNumber(db hyperdb.Database, blockNumber uint64) (*types.Block, error) {
+	hash , err := GetBlockHash(db , blockNumber)
+	if err != nil {
+		return nil, err
+
+	}
+	return GetBlock(db, hash)
+}
+
+
 func DeleteBlock(db hyperdb.Database, key []byte) error {
 	keyFact := append(blockPrefix, key...)
 	return db.Delete(keyFact)
