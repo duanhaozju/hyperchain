@@ -21,6 +21,49 @@ contract test {
    }
 }
 `
+	source2 = `
+	contract mortal {
+     /* Define variable owner of the type address*/
+     address owner;
+
+     /* this function is executed at initialization and sets the owner of the contract */
+     function mortal() {
+         owner = msg.sender;
+     }
+
+     /* Function to recover the funds on the contract */
+     function kill() {
+         if (msg.sender == owner)
+             selfdestruct(owner);
+     }
+ }
+
+
+ contract greeter is mortal {
+     /* define variable greeting of the type string */
+     string greeting;
+
+     /* this runs when the contract is executed */
+     function greeter(string _greeting) public {
+         greeting = _greeting;
+     }
+
+     /* main function */
+     function greet() constant returns (string) {
+         return greeting;
+     }
+ }`
+
+	source3 = `
+	contract mortal {
+    int32 sum=5;
+    function myStateChangingMethod(byte[] a){
+        if(a.length>1){
+            sum = sum+1;
+        }
+        sum = sum+2;
+    }
+}`
 	code = "0x6060604052602a8060106000396000f3606060405260e060020a6000350463c6888fa18114601a575b005b6007600435026060908152602090f3"
 	info = `{"source":"\ncontract test {\n   /// @notice Will multiply ` + "`a`" + ` by 7.\n   function multiply(uint a) returns(uint d) {\n       return a * 7;\n   }\n}\n","language":"Solidity","languageVersion":"0.1.1","compilerVersion":"0.1.1","compilerOptions":"--binary file --json-abi file --natspec-user file --natspec-dev file --add-std 1","abiDefinition":[{"constant":false,"inputs":[{"name":"a","type":"uint256"}],"name":"multiply","outputs":[{"name":"d","type":"uint256"}],"type":"function"}],"userDoc":{"methods":{"multiply(uint256)":{"notice":"Will multiply ` + "`a`" + ` by 7."}}},"developerDoc":{"methods":{}}}`
 
@@ -28,23 +71,15 @@ contract test {
 )
 
 func TestCompiler(t *testing.T) {
-	sol, err := NewCompiler("")
+
+	abis,bins,err := CompileSourcefile(source3)
 	if err != nil {
-		t.Skipf("solc not found: %v", err)
-	}
-	contracts, err := sol.Compile(source)
-	if err != nil {
-		t.Errorf("error compiling source. result %v: %v", contracts, err)
 		return
 	}
 
-	if len(contracts) != 1 {
-		t.Errorf("one contract expected, got %d", len(contracts))
-	}
-
-	if contracts["test"].Code != code {
-		t.Errorf("wrong code, expected\n%s, got\n%s", code, contracts["test"].Code)
-	}
+	t.Log(abis)
+	t.Log("--------")
+	t.Log(bins)
 
 }
 

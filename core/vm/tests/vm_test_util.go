@@ -77,12 +77,12 @@ func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.
 
 	vmenv := api.GetVMEnv()
 	state = vmenv.State()
-	ret,err := api.Exec(vmenv,&from,nil, data, gas, price, value)
-	ret,err = api.Exec(vmenv,&from,nil, data, gas, price, value)
-	ret,err = api.Exec(vmenv,&from,nil, data, gas, price, value)
-	ret,err = api.Exec(vmenv,&from,nil, data, gas, price, value)
-	ret,err = api.Exec(vmenv,&from,nil, data, gas, price, value)
-	ret,err = api.Exec(vmenv,&from,nil, data, gas, price, value)
+	ret,err := api.Exec(&from,nil, data, gas, price, value)
+	ret,err = api.Exec(&from,nil, data, gas, price, value)
+	ret,err = api.Exec(&from,nil, data, gas, price, value)
+	ret,err = api.Exec(&from,nil, data, gas, price, value)
+	ret,err = api.Exec(&from,nil, data, gas, price, value)
+	ret,err = api.Exec(&from,nil, data, gas, price, value)
 
 	for k,v := range state.GetAccounts(){
 		fmt.Println("k:",k,"---------,v:",v.Balance())
@@ -95,26 +95,26 @@ func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.
 	fmt.Println("addr---------------",addr)
 	fmt.Println("ret--------",ret)
 
-	ret,err = api.Exec(vmenv,&from, &to, data, gas, price, value)
+	ret,err = api.Exec(&from, &to, data, gas, price, value)
 	fmt.Println("ret--------",ret)
 	for a, v := range state.GetStateObject(addr).Storage() {
 		fmt.Println(a,"++++++",v)
 	}
 
 	to = addr
-	ret,err = api.Exec(vmenv,&from, &to, data2, gas, price, value)
+	ret,err = api.Exec(&from, &to, data2, gas, price, value)
 	fmt.Println("ret--------",ret)
 	for a, v := range state.GetStateObject(addr).Storage() {
 		fmt.Println(a,"++++++",v)
 	}
 
-	ret,err = api.Exec(vmenv,&from, &to, data2, gas, price, value)
+	ret,err = api.Exec(&from, &to, data2, gas, price, value)
 	fmt.Println("ret--------",ret)
 	for a, v := range state.GetStateObject(addr).Storage() {
 		fmt.Println(a,"++++++",v)
 	}
 
-	ret,err = api.Exec(vmenv,&from, &to, data2, gas, price, value)
+	ret,err = api.Exec(&from, &to, data2, gas, price, value)
 	fmt.Println("ret--------",ret)
 	for a, v := range state.GetStateObject(addr).Storage() {
 		fmt.Println(a,"++++++",v)

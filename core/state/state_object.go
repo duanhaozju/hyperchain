@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"hyperchain/common"
 	"hyperchain/core/crypto"
-	"hyperchain/hyperdb"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -35,7 +34,6 @@ func (self Storage) Copy() Storage {
 }
 
 type StateObject struct {
-	db   hyperdb.Database // State database for storing state changes
 			   // Address belonging to this account
 	address common.Address
 			   // The balance of the account
@@ -56,7 +54,7 @@ type StateObject struct {
 	dirty   bool
 }
 
-func NewStateObject(address common.Address, db hyperdb.Database) *StateObject {
+func NewStateObject(address common.Address) *StateObject {
 	object := &StateObject{
 		address:  address,
 		balance:  new(big.Int),
@@ -114,7 +112,7 @@ func (c *StateObject) SetBalance(amount *big.Int) {
 func (c *StateObject) ReturnGas(gas, price *big.Int) {}
 
 func (self *StateObject) Copy() *StateObject {
-	stateObject := NewStateObject(self.Address(), self.db)
+	stateObject := NewStateObject(self.Address())
 	stateObject.balance.Set(self.balance)
 	stateObject.codeHash = common.CopyBytes(self.codeHash)
 	stateObject.nonce = self.nonce

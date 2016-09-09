@@ -33,18 +33,18 @@ func init(){
 // TODO 2 consider use a snapshot, so we can easily to recovery
 //func ExecBlock(block types.Block,db,hashfucn)(err error){
 // 得到虚拟机VM
-func ExecBlock(block types.Block,env vm.Environment)(err error){
+func ExecBlock(block types.Block)(err error){
 	if(err != nil || env == nil){
 		return err
 	}
 	for _,tx := range block.Transactions{
-		_,err = ExecTransaction(env,*tx)
+		_,err = ExecTransaction(*tx)
 	}
 	return
 }
 
 // 这一块相当于ethereum里的TransitionDB
-func ExecTransaction(env vm.Environment,tx types.Transaction)(ret []byte,err error) {
+func ExecTransaction(tx types.Transaction)(ret []byte,err error) {
 
 	var(
 		from = common.BytesToAddress(tx.From)
@@ -56,24 +56,24 @@ func ExecTransaction(env vm.Environment,tx types.Transaction)(ret []byte,err err
 		gasPrice = tx.GasPrice()
 		value = tx.Amount()
 	)
-	return Exec(env,&from,&to,data,gas,gasPrice,value)
+	return Exec(&from,&to,data,gas,gasPrice,value)
 }
 
-func Exec(env vm.Environment,from, to *common.Address, data []byte, gas,
+func Exec(from, to *common.Address, data []byte, gas,
 	gasPrice, value *big.Int)(ret []byte,err error){
 
-	sender := env.Db().GetAccount(*from)
+	sender := vmenv.Db().GetAccount(*from)
 	contractCreation := (nil == to)
 	//ret,err = env.Call(sender,*to,data,gas,gasPrice,value)
 	// 判断是否能够交易,转移,这一步可以考虑在外部执行
 	if contractCreation{
-		ret,_,err = env.Create(sender,data,gas,gasPrice,value)
+		ret,_,err = vmenv.Create(sender,data,gas,gasPrice,value)
 		if err != nil{
 			ret = nil
 			logger.Error("VM create err:",err)
 		}
 	} else {
-		ret,err = env.Call(sender,*to,data,gas,gasPrice,value)
+		ret,err = vmenv.Call(sender,*to,data,gas,gasPrice,value)
 		if err != nil{
 			logger.Error("VM call err:",err)
 		}
