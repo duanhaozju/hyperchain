@@ -1,17 +1,16 @@
 package state
 
 import (
-	"fmt"
 	"math/big"
-
 	"hyperchain/common"
 	"hyperchain/core/vm"
-	//"hyperchain/hyperdb"
 	"hyperchain/hyperdb"
-	"hyperchain/logger/rlp"
-	"hyperchain/trie"
+	"github.com/op/go-logging"
 )
-
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("p2p")
+}
 // The starting nonce determines the default nonce when new accounts are being
 // created.
 var StartingNonce uint64
@@ -23,27 +22,19 @@ var StartingNonce uint64
 // * Accounts
 type StateDB struct {
 	db   hyperdb.Database
-	trie *trie.SecureTrie
-
 	stateObjects map[string]*StateObject
-
 	refund *big.Int
-
 	thash, bhash common.Hash
 	txIndex      int
 	logs         map[common.Hash]vm.Logs
 	logSize      uint
+	leastStateObject *StateObject
 }
 
 // Create a new state from a given trie
-func New(root common.Hash, db hyperdb.Database) (*StateDB, error) {
-	tr, err := trie.NewSecure(root, db)
-	if err != nil {
-		return nil, err
-	}
+func New(db hyperdb.Database) (*StateDB, error) {
 	return &StateDB{
 		db:           db,
-		trie:         tr,
 		stateObjects: make(map[string]*StateObject),
 		refund:       new(big.Int),
 		logs:         make(map[common.Hash]vm.Logs),
@@ -52,31 +43,9 @@ func New(root common.Hash, db hyperdb.Database) (*StateDB, error) {
 
 // Reset clears out all emphemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
-func (self *StateDB) Reset(root common.Hash) error {
-	var (
-		err error
-		tr  = self.trie
-	)
-	if self.trie.Hash() != root {
-		if tr, err = trie.NewSecure(root, self.db); err != nil {
-			return err
-		}
-	}
-	*self = StateDB{
-		db:           self.db,
-		trie:         tr,
-		stateObjects: make(map[string]*StateObject),
-		refund:       new(big.Int),
-		logs:         make(map[common.Hash]vm.Logs),
-	}
-	return nil
-}
+func (self *StateDB) Reset(root common.Hash) error { return nil }
 
-func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
-	self.thash = thash
-	self.bhash = bhash
-	self.txIndex = ti
-}
+func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {}
 
 func (self *StateDB) AddLog(log *vm.Log) {
 	log.TxHash = self.thash
@@ -87,9 +56,7 @@ func (self *StateDB) AddLog(log *vm.Log) {
 	self.logSize++
 }
 
-func (self *StateDB) GetLogs(hash common.Hash) vm.Logs {
-	return self.logs[hash]
-}
+func (self *StateDB) GetLogs(hash common.Hash) vm.Logs { return self.logs[hash] }
 
 func (self *StateDB) Logs() vm.Logs {
 	var logs vm.Logs
@@ -100,11 +67,7 @@ func (self *StateDB) Logs() vm.Logs {
 }
 
 func (self *StateDB) AddRefund(gas *big.Int) {
-	self.refund.Add(self.refund, gas)
-}
-
-func (self *StateDB) HasAccount(addr common.Address) bool {
-	return self.GetStateObject(addr) != nil
+	self.refund.Add(self.refund,gas)
 }
 
 func (self *StateDB) Exist(addr common.Address) bool {
@@ -112,9 +75,16 @@ func (self *StateDB) Exist(addr common.Address) bool {
 }
 
 func (self *StateDB) GetAccount(addr common.Address) vm.Account {
-	return self.GetStateObject(addr)
+	return self.GetOrNewStateObject(addr)
 }
 
+func (self *StateDB) GetLeastAccount() vm.Account {
+	return self.leastStateObject
+}
+
+func (self *StateDB) GetAccounts() map[string]*StateObject {
+	return self.stateObjects
+}
 // Retrieve the balance from the given address or 0 if object not found
 func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 	stateObject := self.GetStateObject(addr)
@@ -130,7 +100,6 @@ func (self *StateDB) GetNonce(addr common.Address) uint64 {
 	if stateObject != nil {
 		return stateObject.nonce
 	}
-
 	return StartingNonce
 }
 
@@ -139,7 +108,6 @@ func (self *StateDB) GetCode(addr common.Address) []byte {
 	if stateObject != nil {
 		return stateObject.code
 	}
-
 	return nil
 }
 
@@ -148,7 +116,6 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 	if stateObject != nil {
 		return stateObject.GetState(b)
 	}
-
 	return common.Hash{}
 }
 
@@ -193,61 +160,35 @@ func (self *StateDB) SetState(addr common.Address, key common.Hash, value common
 }
 
 func (self *StateDB) Delete(addr common.Address) bool {
+	// TODO delete the StateObject from the
 	stateObject := self.GetStateObject(addr)
-	if stateObject != nil {
+	if stateObject != nil{
 		stateObject.MarkForDeletion()
 		stateObject.balance = new(big.Int)
-
 		return true
 	}
 
 	return false
 }
 
-//
-// Setting, updating & deleting state object methods
-//
-
 // Update the given state object and apply it to state trie
 func (self *StateDB) UpdateStateObject(stateObject *StateObject) {
-	addr := stateObject.Address()
-	data, err := rlp.EncodeToBytes(stateObject)
-	if err != nil {
-		panic(fmt.Errorf("can't encode object at %x: %v", addr[:], err))
-	}
-	self.trie.Update(addr[:], data)
+	// TODO update the StateDB
 }
 
 // Delete the given state object and delete it from the state trie
 func (self *StateDB) DeleteStateObject(stateObject *StateObject) {
 	stateObject.deleted = true
-
-	addr := stateObject.Address()
-	self.trie.Delete(addr[:])
-	//delete(self.stateObjects, addr.Str())
 }
 
 // Retrieve a state object given my the address. Nil if not found
 func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObject) {
 	stateObject = self.stateObjects[addr.Str()]
-	if stateObject != nil {
+	if stateObject != nil{
 		if stateObject.deleted {
 			stateObject = nil
 		}
-
-		return stateObject
 	}
-
-	data := self.trie.Get(addr[:])
-	if len(data) == 0 {
-		return nil
-	}
-	stateObject, err := DecodeObject(addr, self.db, data)
-	if err != nil {
-		//glog.Errorf("can't decode object at %x: %v", addr[:], err)
-		return nil
-	}
-	self.SetStateObject(stateObject)
 	return stateObject
 }
 
@@ -261,17 +202,11 @@ func (self *StateDB) GetOrNewStateObject(addr common.Address) *StateObject {
 	if stateObject == nil || stateObject.deleted {
 		stateObject = self.CreateStateObject(addr)
 	}
-
 	return stateObject
 }
 
 // NewStateObject create a state object whether it exist in the trie or not
 func (self *StateDB) newStateObject(addr common.Address) *StateObject {
-
-	/*if glog.V(logger.Core) {
-		glog.Infof("(+) %x\n", addr)
-	}*/
-
 	stateObject := NewStateObject(addr, self.db)
 	stateObject.SetNonce(StartingNonce)
 	self.stateObjects[addr.Str()] = stateObject
@@ -290,7 +225,7 @@ func (self *StateDB) CreateStateObject(addr common.Address) *StateObject {
 	if so != nil {
 		newSo.balance = so.balance
 	}
-
+	self.leastStateObject = newSo
 	return newSo
 }
 
@@ -303,78 +238,18 @@ func (self *StateDB) CreateAccount(addr common.Address) vm.Account {
 //
 
 func (self *StateDB) Copy() *StateDB {
-	// ignore error - we assume state-to-be-copied always exists
-	state, _ := New(common.Hash{}, self.db)
-	state.trie = self.trie
-	for k, stateObject := range self.stateObjects {
-		state.stateObjects[k] = stateObject.Copy()
-	}
-
-	state.refund.Set(self.refund)
-
-	for hash, logs := range self.logs {
-		state.logs[hash] = make(vm.Logs, len(logs))
-		copy(state.logs[hash], logs)
-	}
-	state.logSize = self.logSize
-
-	return state
+	return self
 }
 
 func (self *StateDB) Set(state *StateDB) {
-	self.trie = state.trie
-	self.stateObjects = state.stateObjects
 
-	self.refund = state.refund
-	self.logs = state.logs
-	self.logSize = state.logSize
 }
 
 func (self *StateDB) GetRefund() *big.Int {
 	return self.refund
 }
 
-// IntermediateRoot computes the current root hash of the state trie.
-// It is called in between transactions to get the root hash that
-// goes into transaction receipts.
-// IntermediateRoot会计算当前状态树的root hash,它将会在交易在得到root hash的
-// 这段时间内被调用(正在进入到交易receipt状态)
-func (s *StateDB) IntermediateRoot() common.Hash {
-	s.refund = new(big.Int)
-	for _, stateObject := range s.stateObjects {
-		if stateObject.dirty {
-			if stateObject.remove {
-				s.DeleteStateObject(stateObject)
-			} else {
-				stateObject.Update()
-				s.UpdateStateObject(stateObject)
-			}
-			stateObject.dirty = false
-		}
-	}
-	return s.trie.Hash()
-}
 
-// DeleteSuicides flags the suicided objects for deletion so that it
-// won't be referenced again when called / queried up on.
-//
-// DeleteSuicides should not be used for consensus related updates
-// under any circumstances.
-func (s *StateDB) DeleteSuicides() {
-	// Reset refund so that any used-gas calculations can use
-	// this method.
-	s.refund = new(big.Int)
-	for _, stateObject := range s.stateObjects {
-		if stateObject.dirty {
-			// If the object has been removed by a suicide
-			// flag the object as deleted.
-			if stateObject.remove {
-				stateObject.deleted = true
-			}
-			stateObject.dirty = false
-		}
-	}
-}
 
 // Commit commits all state changes to the database.
 func (s *StateDB) Commit() (root common.Hash, err error) {
@@ -382,57 +257,7 @@ func (s *StateDB) Commit() (root common.Hash, err error) {
 	return root, batch.Write()
 }
 
-// CommitBatch commits all state changes to a write batch but does not
-// execute the batch. It is used to validate state changes against
-// the root hash stored in a block.
 func (s *StateDB) CommitBatch() (root common.Hash, batch hyperdb.Batch) {
 	batch = s.db.NewBatch()
-	root, _ = s.commit(batch)
 	return root, batch
-}
-
-func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
-	s.refund = new(big.Int)
-
-	for _, stateObject := range s.stateObjects {
-		if stateObject.remove {
-			// If the object has been removed, don't bother syncing it
-			// and just mark it for deletion in the trie.
-			s.DeleteStateObject(stateObject)
-		} else {
-			// Write any contract code associated with the state object
-			if len(stateObject.code) > 0 {
-				if err := db.Put(stateObject.codeHash, stateObject.code); err != nil {
-					return common.Hash{}, err
-				}
-			}
-			// Write any storage changes in the state object to its trie.
-			stateObject.Update()
-
-			// Commit the trie of the object to the batch.
-			// This updates the trie root internally, so
-			// getting the root hash of the storage trie
-			// through UpdateStateObject is fast.
-			if _, err := stateObject.trie.CommitTo(db); err != nil {
-				return common.Hash{}, err
-			}
-			// Update the object in the account trie.
-			s.UpdateStateObject(stateObject)
-		}
-		stateObject.dirty = false
-	}
-	return s.trie.CommitTo(db)
-}
-
-func (self *StateDB) Refunds() *big.Int {
-	return self.refund
-}
-
-// Debug stuff
-func (self *StateDB) CreateOutputForDiff() {
-/*
-for _, stateObject := range self.stateObjects {
-		stateObject.CreateOutputForDiff()
-	}
-	*/
 }

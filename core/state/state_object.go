@@ -1,17 +1,11 @@
 package state
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"math/big"
-
 	"hyperchain/common"
 	"hyperchain/core/crypto"
-	//"hyperchain/logger"
-	//"hyperchain/logger/glog"
-	"hyperchain/logger/rlp"
-	"hyperchain/trie"
+	"hyperchain/hyperdb"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -28,7 +22,6 @@ func (self Storage) String() (str string) {
 	for key, value := range self {
 		str += fmt.Sprintf("%X : %X\n", key, value)
 	}
-
 	return
 }
 
@@ -37,14 +30,11 @@ func (self Storage) Copy() Storage {
 	for key, value := range self {
 		cpy[key] = value
 	}
-
 	return cpy
 }
 
 type StateObject struct {
-	db   trie.Database // State database for storing state changes
-	trie *trie.SecureTrie
-
+	db   hyperdb.Database // State database for storing state changes
 			   // Address belonging to this account
 	address common.Address
 			   // The balance of the account
@@ -55,11 +45,8 @@ type StateObject struct {
 	codeHash []byte
 			   // The code for this account
 	code Code
-			   // Temporarily initialisation code
-	initCode Code
 			   // Cached storage (flushed when updated)
 	storage Storage
-
 			   // Mark for deletion
 			   // When an object is marked for deletion it will be delete from the trie
 			   // during the "update" phase of the state transition
@@ -68,7 +55,7 @@ type StateObject struct {
 	dirty   bool
 }
 
-func NewStateObject(address common.Address, db trie.Database) *StateObject {
+func NewStateObject(address common.Address, db hyperdb.Database) *StateObject {
 	object := &StateObject{
 		db:       db,
 		address:  address,
@@ -77,47 +64,21 @@ func NewStateObject(address common.Address, db trie.Database) *StateObject {
 		codeHash: emptyCodeHash,
 		storage:  make(Storage),
 	}
-	object.trie, _ = trie.NewSecure(common.Hash{}, db)
 	return object
 }
 
 func (self *StateObject) MarkForDeletion() {
 	self.remove = true
 	self.dirty = true
-
-	/*if glog.V(logger.Core) {
-		glog.Infof("%x: #%d %v X\n", self.Address(), self.nonce, self.balance)
-	}*/
 }
 
-func (c *StateObject) getAddr(addr common.Hash) common.Hash {
-	var ret []byte
-	rlp.DecodeBytes(c.trie.Get(addr[:]), &ret)
-	return common.BytesToHash(ret)
-}
-
-func (c *StateObject) setAddr(addr, value common.Hash) {
-	v, err := rlp.EncodeToBytes(bytes.TrimLeft(value[:], "\x00"))
-	if err != nil {
-		// if RLPing failed we better panic and not fail silently. This would be considered a consensus issue
-		panic(err)
-	}
-	c.trie.Update(addr[:], v)
-}
 
 func (self *StateObject) Storage() Storage {
 	return self.storage
 }
 
 func (self *StateObject) GetState(key common.Hash) common.Hash {
-	value, exists := self.storage[key]
-	if !exists {
-		value = self.getAddr(key)
-		if (value != common.Hash{}) {
-			self.storage[key] = value
-		}
-	}
-
+	value, _ := self.storage[key]
 	return value
 }
 
@@ -130,36 +91,23 @@ func (self *StateObject) SetState(key, value common.Hash) {
 func (self *StateObject) Update() {
 	for key, value := range self.storage {
 		if (value == common.Hash{}) {
-			self.trie.Delete(key[:])
 			continue
 		}
-		self.setAddr(key, value)
+		self.SetState(key, value)
 	}
 }
 
 func (c *StateObject) AddBalance(amount *big.Int) {
 	c.SetBalance(new(big.Int).Add(c.balance, amount))
-
-	/*if glog.V(logger.Core) {
-		glog.Infof("%x: #%d %v (+ %v)\n", c.Address(), c.nonce, c.balance, amount)
-	}*/
 }
 
 func (c *StateObject) SubBalance(amount *big.Int) {
 	c.SetBalance(new(big.Int).Sub(c.balance, amount))
-
-	/*if glog.V(logger.Core) {
-		glog.Infof("%x: #%d %v (- %v)\n", c.Address(), c.nonce, c.balance, amount)
-	}*/
 }
 
 func (c *StateObject) SetBalance(amount *big.Int) {
 	c.balance = amount
 	c.dirty = true
-}
-
-func (c *StateObject) St() Storage {
-	return c.storage
 }
 
 // Return the gas back to the origin. Used by the Virtual machine or Closures
@@ -170,14 +118,11 @@ func (self *StateObject) Copy() *StateObject {
 	stateObject.balance.Set(self.balance)
 	stateObject.codeHash = common.CopyBytes(self.codeHash)
 	stateObject.nonce = self.nonce
-	stateObject.trie = self.trie
 	stateObject.code = common.CopyBytes(self.code)
-	stateObject.initCode = common.CopyBytes(self.initCode)
 	stateObject.storage = self.storage.Copy()
 	stateObject.remove = self.remove
 	stateObject.dirty = self.dirty
 	stateObject.deleted = self.deleted
-
 	return stateObject
 }
 
@@ -194,13 +139,6 @@ func (c *StateObject) Address() common.Address {
 	return c.address
 }
 
-func (self *StateObject) Trie() *trie.SecureTrie {
-	return self.trie
-}
-
-func (self *StateObject) Root() []byte {
-	return self.trie.Root()
-}
 
 func (self *StateObject) Code() []byte {
 	return self.code
@@ -234,48 +172,4 @@ func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) {
 		cb(h, value)
 	}
 
-	it := self.trie.Iterator()
-	for it.Next() {
-		// ignore cached values
-		key := common.BytesToHash(self.trie.GetKey(it.Key))
-		if _, ok := self.storage[key]; !ok {
-			cb(key, common.BytesToHash(it.Value))
-		}
-	}
-}
-
-type extStateObject struct {
-	Nonce    uint64
-	Balance  *big.Int
-	Root     common.Hash
-	CodeHash []byte
-}
-
-// EncodeRLP implements rlp.Encoder.
-func (c *StateObject) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{c.nonce, c.balance, c.Root(), c.codeHash})
-}
-
-// DecodeObject decodes an RLP-encoded state object.
-func DecodeObject(address common.Address, db trie.Database, data []byte) (*StateObject, error) {
-	var (
-		obj = &StateObject{address: address, db: db, storage: make(Storage)}
-		ext extStateObject
-		err error
-	)
-	if err = rlp.DecodeBytes(data, &ext); err != nil {
-		return nil, err
-	}
-	if obj.trie, err = trie.NewSecure(ext.Root, db); err != nil {
-		return nil, err
-	}
-	if !bytes.Equal(ext.CodeHash, emptyCodeHash) {
-		if obj.code, err = db.Get(ext.CodeHash); err != nil {
-			return nil, fmt.Errorf("can't get code for hash %x: %v", ext.CodeHash, err)
-		}
-	}
-	obj.nonce = ext.Nonce
-	obj.balance = ext.Balance
-	obj.codeHash = ext.CodeHash
-	return obj, nil
 }

@@ -7,16 +7,26 @@ import (
 	"hyperchain/common"
 	"math/big"
 	"hyperchain/hyperdb"
-	//"hyperchain/core/state"
+	"hyperchain/core/state"
+	"hyperchain/core"
+	"hyperchain/core/vm/params"
 )
 type Code []byte
 var logger = glog.Logger{}
 var(
 	//TODO set the vm.config
-	memdb,err = hyperdb.NewMemDatabase()
-	//statedb,_ := state.New(common.Hash{}, memdb)
-	//env = core.NewEnv(statedb)
+	db,err = hyperdb.GetLDBDatabase()
+	statedb,_  = state.New(db)
+	env = make(map[string]string)
+	vmenv = (*core.Env)(nil)
 )
+func init(){
+	env["currentNumber"] = "1"
+	env["currentGasLimit"] = "10000000"
+	vm.Precompiled = make(map[string]*vm.PrecompiledAccount)
+	vmenv = core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
+}
+
 // 这个地方主要是执行交易里的代码,我们只考虑合约情况
 // TODO 1 we don't have gas in tx when I program this func,but it should be add
 // TODO 2 consider use a snapshot, so we can easily to recovery
@@ -36,7 +46,7 @@ func ExecBlock(block types.Block,env vm.Environment)(err error){
 func ExecTransaction(env vm.Environment,tx types.Transaction)(ret []byte,err error) {
 
 	var(
-		sender = env.Db().GetAccount(common.BytesToAddress(tx.From))
+		from = common.BytesToAddress(tx.From)
 		//sender = common.BytesToAddress(tx.From)
 		to = common.BytesToAddress(tx.To)
 		// TODO these there parameters should be added into the tx
@@ -45,11 +55,13 @@ func ExecTransaction(env vm.Environment,tx types.Transaction)(ret []byte,err err
 		gasPrice = tx.GasPrice()
 		value = tx.Amount()
 	)
-	return Exec(env,sender,&to,data,gas,gasPrice,value)
+	return Exec(env,&from,&to,data,gas,gasPrice,value)
 }
 
-func Exec(env vm.Environment,sender vm.ContractRef, to *common.Address, data []byte, gas,
+func Exec(env vm.Environment,from, to *common.Address, data []byte, gas,
 	gasPrice, value *big.Int)(ret []byte,err error){
+
+	sender := env.Db().GetAccount(*from)
 
 	contractCreation := (nil == to)
 	//ret,err = env.Call(sender,*to,data,gas,gasPrice,value)
@@ -67,4 +79,12 @@ func Exec(env vm.Environment,sender vm.ContractRef, to *common.Address, data []b
 		}
 	}
 	return ret,err
+}
+
+func SetVMEnv(new_env *core.Env)  {
+	vmenv = new_env
+}
+
+func GetVMEnv()  *core.Env{
+	return vmenv
 }
