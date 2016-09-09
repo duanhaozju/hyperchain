@@ -43,7 +43,7 @@ type Key struct {
 type keyStore interface {
 	// Loads and decrypts the key from disk.
 	GetKey(addr common.Address, filename string, auth string) (*Key, error)
-	GetKeyFromCache(addr common.Address,keyjson *[]byte,auth string)(*Key,error)
+	//GetKeyFromCache(addr common.Address,keyjson *[]byte,auth string)(*Key,error)
 	// Writes and encrypts the key.
 	StoreKey(filename string, k *Key, auth string) error
 	// Joins filename with the key directory unless it is already absolute.
