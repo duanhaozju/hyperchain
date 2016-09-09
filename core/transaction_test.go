@@ -17,9 +17,9 @@ func TestUnsign(t *testing.T) {
 	scryptP := accounts.StandardScryptP
 	keydir := "../keystore/"
 	am := accounts.NewAccountManager(keydir,encryption, scryptN, scryptP)
-	key1,_ := am.GetDecryptedKey(accounts.Account{Address:common.FromHex("0x6201cb0448964ac597faf6fdf1f472edf2a22b89"),
+	key1,_ := am.GetDecryptedKey(accounts.Account{Address:common.HexToAddress("0x6201cb0448964ac597faf6fdf1f472edf2a22b89"),
 		File:"../keystore/6201cb0448964ac597faf6fdf1f472edf2a22b89"})
-	key2,_ := am.GetDecryptedKey(accounts.Account{Address:common.FromHex("0xb18c8575e3284e79b92100025a31378feb8100d6"),
+	key2,_ := am.GetDecryptedKey(accounts.Account{Address:common.HexToAddress("0xb18c8575e3284e79b92100025a31378feb8100d6"),
 		File:"../keystore/b18c8575e3284e79b92100025a31378feb8100d6"})
 	prv1:=key1.PrivateKey.(*ecdsa.PrivateKey)
 	prv2:=key2.PrivateKey.(*ecdsa.PrivateKey)

@@ -281,6 +281,14 @@ func putChain(db hyperdb.Database, t *types.Chain) error {
 	return nil
 }
 
+// UpdateRequire updates requireBlockNum and requireBlockHash
+func UpdateRequire(num uint64, hash []byte)  {
+	memChainMap.lock.Lock()
+	defer memChainMap.lock.Unlock()
+	memChainMap.data.RequiredBlockNum = num
+	memChainMap.data.RequireBlockHash = hash
+}
+
 // getChain get chain from database
 func getChain(db hyperdb.Database) (*types.Chain, error){
 	var chain types.Chain
