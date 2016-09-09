@@ -19,6 +19,7 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/accounts"
 	"hyperchain/common"
+	"hyperchain/recovery"
 )
 
 var log *logging.Logger // package-level logger
@@ -107,7 +108,13 @@ func (self *ProtocolManager) syncBlockLoop() {
 		switch  ev := obj.Data.(type) {
 		case event.StateUpdateEvent:
 
+			message:=&recovery.Message{}
+			proto.Unmarshal(ev.Payload, message)
+			/*message.Payload
+			blockChainInfo:=&protos.BlockchainInfo{}
+			proto.Unmarshal(UpdateStateMessage.TargetId,blockChainInfo)*/
 			log.Debug("write block success")
+
 		case event.SendCheckpointSyncEvent:
 
 
@@ -116,6 +123,22 @@ func (self *ProtocolManager) syncBlockLoop() {
 
 			blockChainInfo:=&protos.BlockchainInfo{}
 			proto.Unmarshal(UpdateStateMessage.TargetId,blockChainInfo)
+
+			required:=&recovery.CheckPointMessage{
+				CurrentNumber:blockChainInfo.Height,
+				RequiredNumber:blockChainInfo.CurrentBlockHash,
+			}
+
+			payload,_ :=proto.Marshal(required)
+			message:=&recovery.Message{
+				MessageType:recovery.Message_SYNCCHECKPOINT,
+				MsgTimeStamp:time.Now().UnixNano(),
+				Payload:payload,
+
+			}
+			broadcastMsg,_:=proto.Marshal(message)
+			fmt.Println(broadcastMsg)
+
 			/*UpdateStateMessage.Replicas
 			blockChainInfo.CurrentBlockHash
 			blockChainInfo.Height*/
