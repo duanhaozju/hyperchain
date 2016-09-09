@@ -193,7 +193,7 @@ func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 
 // SendMsgToPeers Send msg to specific peer peerlist
 func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,MessageType recovery.Message_MsgType){
-	var mpPaylod = recovery.Message{
+	var mpPaylod = &recovery.Message{
 		MessageType:MessageType,
 		MsgTimeStamp:time.Now().UnixNano(),
 		Payload:payLoad,
@@ -218,7 +218,7 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,Mes
 	// broadcast to special peers
 	go func(){for _, peer := range pPool.GetPeers() {
 		for nodeID := range peerList{
-			nid := strconv.FormatUint(nodeID,10)
+			nid := strconv.Itoa(nodeID)
 			if peer.Idetity == nid {
 				resMsg, err := peer.Chat(&broadCastMessage)
 				if err != nil {
