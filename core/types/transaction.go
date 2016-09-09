@@ -40,8 +40,8 @@ func (self *Transaction)ValidateSign(encryption crypto.Encryption,ch crypto.Comm
 
 	hash := self.SighHash(ch)
 	addr,_ := encryption.UnSign(hash[:],self.Signature)
-
-	return addr==self.From
+	from := common.HexToAddress(string(self.From))
+	return addr==from
 }
 
 // NewTransaction returns a new transaction
