@@ -210,15 +210,15 @@ func (self *ProtocolManager) syncBlockLoop() {
 	}
 }
 
-/*func ParseBlockHash(blocks types.Blocks,number uint64,max uint64,blockHash []byte)  {
+/*func ParseBlockHash(blocks types.Blocks,number uint64,max uint64,blockHash []byte,required string)  {
 
-	if(number==max){
+	if(number==max||common.Bytes2Hex(blockHash)==required){
 
-
-		log.Info("11")
+		log.Info("success")
 	}else{
-		bh=blocks.Batch[number].HashBlock()
-		ParseBlockHash(blocks,number+uint64(1),max,bh)
+		blocks.Batch[number].ParentHash=blockHash
+		bh:=blocks.Batch[number].HashBlock()
+		ParseBlockHash(blocks,number+uint64(1),max,bh,required)
 	}
 }*/
 
