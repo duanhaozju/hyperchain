@@ -6,6 +6,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/crypto"
 	"hyperchain/hyperdb"
+	"encoding/json"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -65,6 +66,71 @@ func NewStateObject(address common.Address, db hyperdb.Database) *StateObject {
 		storage:  make(Storage),
 	}
 	return object
+}
+
+func (self StateObject) MarshalJSON() ([]byte, error) {
+	type ext struct {
+		Address common.Address
+		Balance *big.Int
+		Nonce uint64
+		CodeHash []byte
+		Code Code
+		Abi ABI
+		Storage map[string]string
+		Remove  bool
+		Deleted bool
+		Dirty   bool
+	}
+	e := ext {
+		Address: self.address,
+		Balance: self.balance,
+		Nonce: self.nonce,
+		CodeHash: self.codeHash,
+		Code: self.code,
+		Abi: self.abi,
+		Remove: self.remove,
+		Deleted: self.deleted,
+		Dirty: self.dirty,
+	}
+	sMap := make(map[string]string)
+	for key, value := range self.storage {
+		sMap[key.Str()] = value.Str()
+	}
+	e.Storage = sMap
+	return json.Marshal(e)
+}
+
+func (self *StateObject) UnmarshalJSON(data []byte) error {
+	type ext struct {
+		Address common.Address
+		Balance *big.Int
+		Nonce uint64
+		CodeHash []byte
+		Code Code
+		Abi ABI
+		Storage map[string]string
+		Remove  bool
+		Deleted bool
+		Dirty   bool
+	}
+	var e ext
+	err := json.Unmarshal(data, &e)
+	if err != nil { return err }
+	self.address = e.Address
+	self.balance = e.Balance
+	self.nonce = e.Nonce
+	self.codeHash = e.CodeHash
+	self.code = e.Code
+	self.abi = e.Abi
+	self.remove = e.Remove
+	self.deleted = e.Deleted
+	self.dirty = e.Dirty
+	self.storage = make(Storage)
+	for key, value := range e.Storage {
+		self.storage[common.StringToHash(key)] = common.StringToHash(value)
+	}
+
+	return nil
 }
 
 func (self *StateObject) MarkForDeletion() {

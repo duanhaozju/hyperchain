@@ -182,7 +182,8 @@ func GetDBBalance(db hyperdb.Database) (BalanceMap, error) {
 type memChain struct {
 	data   types.Chain   // chain
 	lock   sync.RWMutex  // the lock of chain
-	cpChan chan struct{} // when data.Height reach check point, will be writed
+	cpChan chan types.Chain // when data.Height reach check point, will be writed
+	k int
 }
 
 // newMenChain new a memChain instance
@@ -194,21 +195,24 @@ func newMemChain() *memChain {
 			data: types.Chain{
 				Height: 0,
 			},
-			cpChan: make(chan struct{}),
+			cpChan: make(chan types.Chain),
+			k : 10,
 		}
 	}
 	chain, err := getChain(db)
 	if err == nil {
 		return &memChain{
 			data: *chain,
-			cpChan: make(chan struct{}),
+			cpChan: make(chan types.Chain),
+			k : 10,
 		}
 	}
 	return &memChain{
 		data: types.Chain{
 			Height: 0,
 		},
-		cpChan:make(chan struct{}),
+		cpChan:make(chan types.Chain),
+		k : 10,
 	}
 }
 var memChainMap *memChain;
@@ -241,6 +245,9 @@ func UpdateChain(block *types.Block, genesis bool) error {
 	if err != nil {
 		return err
 	}
+	if memChainMap.data.Height != 0 && memChainMap.data.Height % uint64(memChainMap.k) == 0 {
+
+	}
 	return putChain(db, &memChainMap.data)
 }
 
@@ -263,10 +270,9 @@ func GetChainCopy() *types.Chain {
 }
 
 // WaitUtilHeightChan wait until chain height is 10. if not, the func will wait
-func WaitUtilHeightChan() {
-	memChainMap.lock.RLock()
-	defer memChainMap.lock.RUnlock()
-	memChainMap.cpChan <- struct {}{}
+func GetUntil() *types.Chain {
+	chain := <- memChainMap.cpChan
+	return &chain
 }
 
 // putChain put chain database
@@ -282,11 +288,14 @@ func putChain(db hyperdb.Database, t *types.Chain) error {
 }
 
 // UpdateRequire updates requireBlockNum and requireBlockHash
-func UpdateRequire(num uint64, hash []byte)  {
+func UpdateRequire(num uint64, hash []byte) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
 	memChainMap.data.RequiredBlockNum = num
 	memChainMap.data.RequireBlockHash = hash
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {return err}
+	return putChain(db, &memChainMap.data)
 }
 
 // getChain get chain from database
