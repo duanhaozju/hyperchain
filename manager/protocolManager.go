@@ -104,11 +104,26 @@ func (self *ProtocolManager) syncBlockLoop() {
 
 	for obj := range self.syncBlockSub.Chan() {
 
-		switch  ev := obj.Data.(type){
+		switch  ev := obj.Data.(type) {
 		case event.StateUpdateEvent:
-			log.Debug("write block success",ev)
+
+			log.Debug("write block success")
 		case event.SendCheckpointSyncEvent:
-			log.Debug("SendCheckpointSyncEvent success")
+
+
+			UpdateStateMessage:= &protos.UpdateStateMessage{}
+			proto.Unmarshal(ev.Payload, UpdateStateMessage)
+
+			blockChainInfo:=&protos.BlockchainInfo{}
+			proto.Unmarshal(UpdateStateMessage.TargetId,blockChainInfo)
+			/*UpdateStateMessage.Replicas
+			blockChainInfo.CurrentBlockHash
+			blockChainInfo.Height*/
+
+
+
+
+
 		}
 	}
 }
@@ -119,7 +134,14 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 
 		switch  ev := obj.Data.(type) {
 		case event.ReceiveSyncBlockEvent:
-			self.commitNewBlock(ev.Payload,time.Now().UnixNano())
+
+
+
+			fmt.Println(ev.Payload)
+			//self.commitNewBlock(ev.Payload)
+
+
+
 		}
 	}
 }

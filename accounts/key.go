@@ -43,7 +43,7 @@ type Key struct {
 type keyStore interface {
 	// Loads and decrypts the key from disk.
 	GetKey(addr common.Address, filename string, auth string) (*Key, error)
-	GetKeyFromCache(addr common.Address,keyjson *[]byte,auth string)(*Key,error)
+	//GetKeyFromCache(addr common.Address,keyjson *[]byte,auth string)(*Key,error)
 	// Writes and encrypts the key.
 	StoreKey(filename string, k *Key, auth string) error
 	// Joins filename with the key directory unless it is already absolute.
@@ -139,17 +139,17 @@ func storeNewKey(am *AccountManager, rand io.Reader, auth string) (*Key, Account
 	return nil,Account{},nil
 }
 
-func listAllKeyFile(path string) []string {
-	files, _ := ioutil.ReadDir(path)
-	fileList :=[]string{}
-	for _, fi := range files {
-		if !fi.IsDir() {
-			fileList = append(fileList,path + "/" + fi.Name())
-		}
-	}
-
-	return fileList
-}
+//func listAllKeyFile(path string) []string {
+//	files, _ := ioutil.ReadDir(path)
+//	fileList :=[]string{}
+//	for _, fi := range files {
+//		if !fi.IsDir() {
+//			fileList = append(fileList,path + "/" + fi.Name())
+//		}
+//	}
+//
+//	return fileList
+//}
 func writeKeyFile(file string, content []byte) error {
 	// Create the keystore directory with appropriate permissions
 	// in case it is not present yet.

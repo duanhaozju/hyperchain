@@ -87,8 +87,10 @@ func SendTransaction(args TxArgs) bool {
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
 
+
 		return true
-	}else {
+
+	} else {
 		// Balance isn't enough
 		return false
 	}

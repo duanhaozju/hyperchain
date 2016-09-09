@@ -28,8 +28,6 @@ import (
 	"hyperchain/crypto"
 	"sync"
 	"hyperchain/common"
-	"io/ioutil"
-	"encoding/json"
 	"time"
 	"math/big"
 	"os"
@@ -60,7 +58,7 @@ type AccountManager struct {
 	Encryption	crypto.Encryption
 	//AddrPassMap	map[string]string
 	mu		sync.RWMutex
-	keycache	map[common.Address]*[]byte
+	//keycache	map[common.Address]*[]byte
 	unlocked map[common.Address]*unlocked
 }
 type unlocked struct {
@@ -73,40 +71,18 @@ func NewAccountManager(keydir string,encryp crypto.Encryption, scryptN, scryptP 
 	am := &AccountManager{
 		KeyStore: &keyStorePassphrase{keydir, scryptN, scryptP},
 		//AddrPassMap:make(map[string]string),
-		keycache:make(map[common.Address]*[]byte),
+		//keycache:make(map[common.Address]*[]byte),
 		unlocked:make(map[common.Address]*unlocked),
 		Encryption:encryp,
 	}
-	//fileList := listAllKeyFile(keydir)
-	//if err:=am.cacheAllKey(fileList);err!=nil{
-	//	return nil
-	//}
+
 	am.unlockAllAccount(keydir)
 	return am
 }
 func (am *AccountManager)unlockAllAccount(keydir string){
 	var accounts []Account
 	addressdir := keydir+"/addresses/address"
-	//inputFile, inputError := os.Open(addressdir)
-	//if inputError != nil {
-	//
-	//	return // exit the function on error
-	//}
-	//defer inputFile.Close()
-	//
-	//inputReader := bufio.NewReader(inputFile)
-	//for {
-	//	addrHex, readerError := inputReader.ReadString('\n')
-	//	if readerError == io.EOF {
-	//		break
-	//	}
-	//	addr := common.HexToAddress(string(addrHex)[:40])
-	//	account := Account{
-	//		Address:addr,
-	//		File:keydir+"/"+addrHex,
-	//	}
-	//	accounts = append(accounts,account)
-	//}
+
 	fp, _ := os.Open(addressdir)
 	scanner := bufio.NewScanner(fp)
 	scanner.Split(bufio.ScanLines)
@@ -126,22 +102,22 @@ func (am *AccountManager)unlockAllAccount(keydir string){
 	}
 
 }
-func (am *AccountManager)cacheAllKey(fileList []string) error {
-	for _,filename := range fileList{
-		keyjson, err := ioutil.ReadFile(filename)
-		if err != nil {
-			return err
-		}
-		m:= make(map[string]interface{})
-		if err := json.Unmarshal(keyjson,&m);err!=nil{
-			return err
-		}
-		addrHex := m["address"]
-		addr := common.HexToAddress("0x"+addrHex.(string))
-		am.keycache[addr] = &keyjson
-	}
-	return nil
-}
+//func (am *AccountManager)cacheAllKey(fileList []string) error {
+//	for _,filename := range fileList{
+//		keyjson, err := ioutil.ReadFile(filename)
+//		if err != nil {
+//			return err
+//		}
+//		m:= make(map[string]interface{})
+//		if err := json.Unmarshal(keyjson,&m);err!=nil{
+//			return err
+//		}
+//		addrHex := m["address"]
+//		addr := common.HexToAddress("0x"+addrHex.(string))
+//		am.keycache[addr] = &keyjson
+//	}
+//	return nil
+//}
 // Sign signs hash with an unlocked private key matching the given address.
 func (am *AccountManager) Sign(addr common.Address, hash []byte) (signature []byte, err error) {
 	am.mu.RLock()
@@ -213,13 +189,13 @@ func (am *AccountManager) GetDecryptedKey(a Account) (*Key, error) {
 	key, err := am.KeyStore.GetKey(a.Address, a.File, "123")
 	return key, err
 }
-func (am *AccountManager) GetDecryptedKeyCache(a Account) (*Key, error) {
-	am.mu.Lock()
-	defer am.mu.Unlock()
-	key, err := am.KeyStore.GetKeyFromCache(a.Address, am.keycache[a.Address], "123")
-
-	return key, err
-}
+//func (am *AccountManager) GetDecryptedKeyCache(a Account) (*Key, error) {
+//	am.mu.Lock()
+//	defer am.mu.Unlock()
+//	key, err := am.KeyStore.GetKeyFromCache(a.Address, am.keycache[a.Address], "123")
+//
+//	return key, err
+//}
 func (am *AccountManager) expire(addr common.Address, u *unlocked, timeout time.Duration) {
 	t := time.NewTimer(timeout)
 	defer t.Stop()
