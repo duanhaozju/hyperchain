@@ -180,8 +180,9 @@ func GetDBBalance(db hyperdb.Database) (BalanceMap, error) {
 
 // memChain manage safe chain
 type memChain struct {
-	data types.Chain  // chain
-	lock sync.RWMutex // the lock of chain
+	data   types.Chain   // chain
+	lock   sync.RWMutex  // the lock of chain
+	cpChan chan struct{} // when data.Height reach check point, will be writed
 }
 
 // newMenChain new a memChain instance
@@ -193,18 +194,21 @@ func newMemChain() *memChain {
 			data: types.Chain{
 				Height: 0,
 			},
+			cpChan: make(chan struct{}),
 		}
 	}
 	chain, err := getChain(db)
 	if err == nil {
 		return &memChain{
 			data: *chain,
+			cpChan: make(chan struct{}),
 		}
 	}
 	return &memChain{
 		data: types.Chain{
 			Height: 0,
 		},
+		cpChan:make(chan struct{}),
 	}
 }
 var memChainMap *memChain;
@@ -256,6 +260,13 @@ func GetChainCopy() *types.Chain {
 		ParentBlockHash: memChainMap.data.ParentBlockHash,
 		Height: memChainMap.data.Height,
 	}
+}
+
+// WaitUtilHeightChan wait until chain height is 10. if not, the func will wait
+func WaitUtilHeightChan() {
+	memChainMap.lock.RLock()
+	defer memChainMap.lock.RUnlock()
+	memChainMap.cpChan <- struct {}{}
 }
 
 // putChain put chain database
