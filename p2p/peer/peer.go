@@ -15,6 +15,7 @@ import (
 	"strings"
 	"strconv"
 	"github.com/op/go-logging"
+	"hyperchain/p2p/transport"
 )
 
 // init the package-level logger system,
@@ -24,6 +25,9 @@ var log *logging.Logger // package-level logger
 func init() {
 	log = logging.MustGetLogger("p2p/Server")
 }
+var DESKEY = []byte("sfe023f_sefiel#fi32lf3e!")
+
+
 type Peer struct {
 	Addr pb.PeerAddress
 	Connection *grpc.ClientConn
@@ -67,6 +71,14 @@ func NewPeerByString(address string)(*Peer,error){
 		return nil,err2
 	}else{
 		if retMessage.MessageType == pb.Message_RESPONSE {
+			// get the peer id
+			origData, err := transport.TripleDesDecrypt(retMessage.Payload, DESKEY)
+			log.Notice(string(origData))
+			if err != nil{
+				log.Error("cannot decrypt the nodeidinfo!")
+				errors.New("Decrypt ERROR")
+			}
+			peer.Idetity = string(origData)
 			return &peer,nil
 		}
 	}

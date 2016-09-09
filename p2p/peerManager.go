@@ -23,6 +23,7 @@ import (
 
 	"github.com/op/go-logging"
 	"hyperchain/p2p/transport"
+	"hyperchain/recovery"
 )
 
 
@@ -39,7 +40,7 @@ type PeerManager interface {
 	Start(path string, NodeId int, aliveChan chan bool,isTest bool,eventMux *event.TypeMux)
 	GetClientId() common.Hash
 	BroadcastPeers(payLoad []byte)
-	SendMsgToPeers(payLoad []byte,peerList []uint64)
+	SendMsgToPeers(payLoad []byte,peerList []uint64,MessageType recovery.Message_MsgType)
 
 }
 
@@ -71,7 +72,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 	configs := peerComm.GetConfig(path)
 	port, _ := strconv.Atoi(configs["port"+strconv.Itoa(NodeId)])
 	// start local node
-	this.localNode = node.NewNode(port,isTest,eventMux)
+	this.localNode = node.NewNode(port,isTest,eventMux,NodeId)
 	log.Info("Local Node Hash:",hex.EncodeToString(this.GetClientId().Bytes()))
 	//
 	this.aliveChain = &aliveChan
@@ -152,28 +153,6 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 	*this.aliveChain <- true
 }
 
-//tell the main thread the peers are already
-
-//func (this *GrpcPeerManager) JudgeAlivePeers(c *chan bool){
-//	//TODO 判断所有节点是否存活
-//	var keepAliveMessage = pb.Message{
-//		MessageType: pb.Message_KEEPALIVE,
-//		From:        node.GetNodeAddr(),
-//		Payload:      []byte("KeepAliveMessage"),
-//		MsgTimeStamp: time.Now().Unix(),
-//	}
-//	this.EventManager.PostEvent(pb.Message_KEEPALIVE, keepAliveMessage)
-//	peerPool := peerPool.NewPeerPool(false)
-//	for {
-//		if peerPool.GetAliveNodeNum() == MAXPEERNODE{
-//			c <- true
-//			break
-//		}
-//	}
-//
-//
-//}
-
 // GetAllPeers get all connected peer in the peer pool
 func (this *GrpcPeerManager) GetAllPeers() []*peer.Peer {
 	peerPool := peerPool.NewPeerPool(false,false)
@@ -205,9 +184,27 @@ func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 		if err != nil {
 			log.Error("Broadcast failed,Node", peer.Addr)
 		} else {
-
 			log.Info("resMsg:", string(resMsg.Payload))
 			//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
 		}
 	}
+}
+// SendMsgToPeers Send msg to specific peer peerlist
+func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64){
+	result, err := transport.TripleDesEncrypt(payLoad, DESKEY)
+	if err!=nil{
+		log.Fatal("TripleDesEncrypt Failed!")
+	}
+	localNodeAddr := node.GetNodeAddr()
+	var broadCastMessage = pb.Message{
+		MessageType:  pb.Message_CONSUS,
+		From:         &localNodeAddr,
+		Payload:      result,
+		MsgTimeStamp: time.Now().UnixNano(),
+	}
+	pPool := peerPool.NewPeerPool(false, false)
+	//go this.EventManager.PostEvent(pb.Message_CONSUS, broadCastMessage)
+	go broadcast(broadCastMessage,&pPool)
+
+
 }
