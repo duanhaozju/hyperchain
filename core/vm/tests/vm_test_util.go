@@ -14,6 +14,41 @@ var log *logging.Logger // package-level logger
 func init() {
 	log = logging.MustGetLogger("p2p")
 }
+var sourcecode = `
+contract mortal {
+     /* Define variable owner of the type address*/
+     address owner;
+
+     /* this function is executed at initialization and sets the owner of the contract */
+     function mortal() {
+         owner = msg.sender;
+     }
+
+     /* Function to recover the funds on the contract */
+     function kill() {
+         if (msg.sender == owner)
+             selfdestruct(owner);
+     }
+ }
+
+
+ contract greeter is mortal {
+     /* define variable greeting of the type string */
+     string greeting;
+    uint32 sum;
+     /* this runs when the contract is executed */
+     function greeter(string _greeting) public {
+         greeting = _greeting;
+     }
+
+     /* main function */
+     function greet() constant returns (string) {
+         return greeting;
+     }
+    function add(uint32 num1,uint32 num2) {
+        sum = sum+num1+num2;
+    }
+ }`
 type bconf struct {
 	name    string
 	precomp bool
@@ -77,12 +112,12 @@ func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.
 
 	vmenv := api.GetVMEnv()
 	state = vmenv.State()
-	ret,err := api.Exec(&from,nil, data, gas, price, value)
-	ret,err = api.Exec(&from,nil, data, gas, price, value)
-	ret,err = api.Exec(&from,nil, data, gas, price, value)
-	ret,err = api.Exec(&from,nil, data, gas, price, value)
-	ret,err = api.Exec(&from,nil, data, gas, price, value)
-	ret,err = api.Exec(&from,nil, data, gas, price, value)
+	ret,err := api.Exec(&from,nil,([]byte)(sourcecode), gas, price, value)
+	//ret,err = api.Exec(&from,nil, data, gas, price, value)
+	//ret,err = api.Exec(&from,nil, data, gas, price, value)
+	//ret,err = api.Exec(&from,nil, data, gas, price, value)
+	//ret,err = api.Exec(&from,nil, data, gas, price, value)
+	//ret,err = api.Exec(&from,nil, data, gas, price, value)
 
 	for k,v := range state.GetAccounts(){
 		fmt.Println("k:",k,"---------,v:",v.Balance())

@@ -30,8 +30,6 @@ func CompileSourcefile(source string)  ([]string,[]string, error) {
 	}
 	// Gather all non-excluded contract for binding
 	for name, contract := range contracts {
-		fmt.Println(contract.Code)
-
 		if exclude[strings.ToLower(name)] {
 			continue
 		}

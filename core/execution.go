@@ -8,7 +8,7 @@ import (
 	"hyperchain/core/crypto"
 	"hyperchain/core/vm/params"
 	"fmt"
-	//"hyperchain/core/vm/compiler"
+	"hyperchain/core/vm/compiler"
 )
 
 // Call executes within the given contract
@@ -83,9 +83,22 @@ func exec(env vm.Environment, caller vm.ContractRef, toAddress, codeAddr *common
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
 	contract := vm.NewContract(caller, to, value, gas, gasPrice)
-	// compiledContract,_ := compiler.CompileSourcefile(code)
-	contract.SetCallCode(codeAddr, code)
+	if createAccount{
+		abis,bins,err := compiler.CompileSourcefile(string(code))
+		//_,_,err := compiler.CompileSourcefile(sourcecode)
+		if err != nil{
+			return nil,common.Address{},err
+		}
+		log.Info("abis:",abis)
+		log.Info("bins:",bins)
+		log.Info("--------------")
 
+		// TODO this is only for one contract
+		contract.SetABI(common.FromHex(abis[0]))
+		contract.SetCallCode(codeAddr,common.FromHex(bins[0]))
+	}else {
+		contract.SetCallCode(codeAddr, code)
+	}
 	defer contract.Finalise()
 
 	// very important 执行contract和input

@@ -137,6 +137,14 @@ func (c *StateObject) Address() common.Address {
 	return c.address
 }
 
+func (self *StateObject) ABI() []byte {
+	return self.abi
+}
+
+func (self *StateObject) SetABI(abi []byte) {
+	self.abi = abi
+	self.dirty = true
+}
 
 func (self *StateObject) Code() []byte {
 	return self.code
@@ -169,5 +177,4 @@ func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) {
 	for h, value := range self.storage {
 		cb(h, value)
 	}
-
 }

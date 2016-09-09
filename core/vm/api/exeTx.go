@@ -28,7 +28,6 @@ func init(){
 	vmenv = core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
 }
 
-// 这个地方主要是执行交易里的代码,我们只考虑合约情况
 // TODO 1 we don't have gas in tx when I program this func,but it should be add
 // TODO 2 consider use a snapshot, so we can easily to recovery
 //func ExecBlock(block types.Block,db,hashfucn)(err error){
@@ -79,6 +78,10 @@ func Exec(from, to *common.Address, data []byte, gas,
 		}
 	}
 	return ret,err
+}
+
+func CommitStatedbToBlockchain(){
+	vmenv.State().Commit()
 }
 
 func SetVMEnv(new_env *core.Env)  {

@@ -22,7 +22,7 @@ contract test {
 }
 `
 	source2 = `
-	contract mortal {
+contract mortal {
      /* Define variable owner of the type address*/
      address owner;
 
@@ -42,7 +42,7 @@ contract test {
  contract greeter is mortal {
      /* define variable greeting of the type string */
      string greeting;
-
+    uint32 sum;
      /* this runs when the contract is executed */
      function greeter(string _greeting) public {
          greeting = _greeting;
@@ -52,18 +52,19 @@ contract test {
      function greet() constant returns (string) {
          return greeting;
      }
+    function add(uint32 num1,uint32 num2) {
+        sum = sum+num1+num2;
+    }
  }`
 
 	source3 = `
-	contract mortal {
-    int32 sum=5;
-    function myStateChangingMethod(byte[] a){
-        if(a.length>1){
-            sum = sum+1;
-        }
-        sum = sum+2;
+contract mortal {
+    uint32 sum;
+    function add(uint32 num1,uint32 num2) {
+        sum = sum+num1+num2;
     }
-}`
+}
+`
 	code = "0x6060604052602a8060106000396000f3606060405260e060020a6000350463c6888fa18114601a575b005b6007600435026060908152602090f3"
 	info = `{"source":"\ncontract test {\n   /// @notice Will multiply ` + "`a`" + ` by 7.\n   function multiply(uint a) returns(uint d) {\n       return a * 7;\n   }\n}\n","language":"Solidity","languageVersion":"0.1.1","compilerVersion":"0.1.1","compilerOptions":"--binary file --json-abi file --natspec-user file --natspec-dev file --add-std 1","abiDefinition":[{"constant":false,"inputs":[{"name":"a","type":"uint256"}],"name":"multiply","outputs":[{"name":"d","type":"uint256"}],"type":"function"}],"userDoc":{"methods":{"multiply(uint256)":{"notice":"Will multiply ` + "`a`" + ` by 7."}}},"developerDoc":{"methods":{}}}`
 
@@ -72,14 +73,13 @@ contract test {
 
 func TestCompiler(t *testing.T) {
 
-	abis,bins,err := CompileSourcefile(source3)
+	abis,bins,err := CompileSourcefile(source2)
 	if err != nil {
 		return
 	}
-
-	t.Log(abis)
+	t.Log("abis:",string(abis))
 	t.Log("--------")
-	t.Log(bins)
+	t.Log("bins",string(bins))
 
 }
 
