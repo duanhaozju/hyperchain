@@ -150,7 +150,6 @@ func PutDBBalance(db hyperdb.Database, balance_db BalanceMap) error {
 	for key, value := range balance_db{
 		bJson[key.Str()] = value
 	}
-
 	data, err := json.Marshal(bJson)
 	if err != nil {
 		return err
@@ -183,7 +182,6 @@ type memChain struct {
 	data   types.Chain   // chain
 	lock   sync.RWMutex  // the lock of chain
 	cpChan chan types.Chain // when data.Height reach check point, will be writed
-	k int
 }
 
 // newMenChain new a memChain instance
@@ -196,7 +194,6 @@ func newMemChain() *memChain {
 				Height: 0,
 			},
 			cpChan: make(chan types.Chain),
-			k : 10,
 		}
 	}
 	chain, err := getChain(db)
@@ -204,7 +201,6 @@ func newMemChain() *memChain {
 		return &memChain{
 			data: *chain,
 			cpChan: make(chan types.Chain),
-			k : 10,
 		}
 	}
 	return &memChain{
@@ -212,7 +208,6 @@ func newMemChain() *memChain {
 			Height: 0,
 		},
 		cpChan:make(chan types.Chain),
-		k : 10,
 	}
 }
 var memChainMap *memChain;
@@ -245,8 +240,19 @@ func UpdateChain(block *types.Block, genesis bool) error {
 	if err != nil {
 		return err
 	}
-	if memChainMap.data.Height != 0 && memChainMap.data.Height % uint64(memChainMap.k) == 0 {
+	return putChain(db, &memChainMap.data)
+}
 
+//　根据blockNumber更新chain,chain的height直接赋值为block.Number
+func updateChainByBlcokNum(block *types.Block) error {
+	memChainMap.lock.Lock()
+	defer memChainMap.lock.Unlock()
+	memChainMap.data.LatestBlockHash = block.BlockHash
+	memChainMap.data.ParentBlockHash = block.ParentHash
+	memChainMap.data.Height = block.Number
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		return err
 	}
 	return putChain(db, &memChainMap.data)
 }
@@ -269,10 +275,15 @@ func GetChainCopy() *types.Chain {
 	}
 }
 
-// WaitUtilHeightChan wait until chain height is 10. if not, the func will wait
-func GetUntil() *types.Chain {
+// WaitUtilHeightChan get chain from channel. if channel is empty, the func will be blocked
+func GetChainUntil() *types.Chain {
 	chain := <- memChainMap.cpChan
 	return &chain
+}
+
+// WriteChain to channel, if the channel is not read, will be blocked
+func WriteChainChan()  {
+	memChainMap.cpChan <- memChainMap.data
 }
 
 // putChain put chain database

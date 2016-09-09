@@ -9,11 +9,13 @@ It is generated from these files:
 	block.proto
 	chain.proto
 	transaction.proto
+	transaction_value.proto
 
 It has these top-level messages:
 	Block
 	Chain
 	Transaction
+	TransactionValue
 */
 package types
 

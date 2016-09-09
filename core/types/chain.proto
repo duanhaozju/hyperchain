@@ -7,4 +7,5 @@ message Chain {
 	uint64 height = 3;
 	uint64 requiredBlockNum = 4;
 	bytes requireBlockHash = 5;
+	uint64 recoveryNum = 6;
 }
