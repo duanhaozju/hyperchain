@@ -62,6 +62,18 @@ func exeBatchHelper(reqBatch *RequestBatch, no uint64) *pb.ExeMessage {
 	return exeMsg
 }
 
+// StateUpdateHelper help convert checkPointInfo, blockchainInfo, replicas to pb.UpdateStateMessage
+func stateUpdateHelper(seqNo uint64, id []byte, replicaId []uint64) *pb.UpdateStateMessage {
+
+	stateUpdateMsg := &pb.UpdateStateMessage{
+		SeqNo: seqNo,
+		TargetId: id,
+		Replicas: replicaId,
+
+	}
+	return stateUpdateMsg
+}
+
 func getBlockchainInfo() *BlockchainInfo {
 
 	bcInfo := persist.GetBlockchainInfo()
