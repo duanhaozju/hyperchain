@@ -27,9 +27,9 @@ func TestGetBalanceIns(t *testing.T) {
 }
 
 var balanceCases = BalanceMap{
-	common.StringToAddress("0000000000000000000000000000000000000001"): []byte("1000"),
-	common.StringToAddress("0000000000000000000000000000000000000002") : []byte("2000"),
-	common.StringToAddress("0000000000000000000000000000000000000003") : []byte("3000"),
+	common.HexToAddress("0000000000000000000000000000000000000001"): []byte("1000"),
+	common.HexToAddress("0000000000000000000000000000000000000002") : []byte("2000"),
+	common.HexToAddress("0000000000000000000000000000000000000003") : []byte("3000"),
 }
 
 // TestBalance_PutCacheBalance tests for PutCacheBalance
@@ -178,9 +178,9 @@ func TestBalance_UpdateCacheBalance(t *testing.T) {
 	for _, trans := range transCases {
 		b.UpdateCacheBalance(trans)
 	}
-	zhangsan := b.GetCacheBalance(common.StringToAddress("0000000000000000000000000000000000000001"))
-	lisi := b.GetCacheBalance(common.StringToAddress("0000000000000000000000000000000000000002"))
-	wangwu := b.GetCacheBalance(common.StringToAddress("0000000000000000000000000000000000000003"))
+	zhangsan := b.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000001"))
+	lisi := b.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000002"))
+	wangwu := b.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000003"))
 
 	if string(zhangsan) != "800" || string(lisi) != "1400" || string(wangwu) != "3800"{
 		t.Errorf("TestBalance_UpdateCacheBalance fail")
@@ -207,13 +207,13 @@ func TestBalance_UpdateDBBalance(t *testing.T) {
 	}
 	b.UpdateDBBalance(blockCase)
 
-	zhangsan1 := b.GetCacheBalance(common.StringToAddress("0000000000000000000000000000000000000001"))
-	lisi1 := b.GetCacheBalance(common.StringToAddress("0000000000000000000000000000000000000002"))
-	wangwu1 := b.GetCacheBalance(common.StringToAddress("0000000000000000000000000000000000000003"))
+	zhangsan1 := b.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000001"))
+	lisi1 := b.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000002"))
+	wangwu1 := b.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000003"))
 
-	zhangsan2 := b.GetCacheBalance(common.StringToAddress("0000000000000000000000000000000000000001"))
-	lisi2 := b.GetCacheBalance(common.StringToAddress("0000000000000000000000000000000000000002"))
-	wangwu2 := b.GetCacheBalance(common.StringToAddress("0000000000000000000000000000000000000003"))
+	zhangsan2 := b.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000001"))
+	lisi2 := b.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000002"))
+	wangwu2 := b.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000003"))
 
 	if string(zhangsan1) != "800" || string(lisi1) != "1400" || string(wangwu1) != "3800"{
 		t.Errorf("TestBalance_UpdateDBBalance fail")

@@ -39,8 +39,8 @@ import (
 	"golang.org/x/crypto/scrypt"
 	"hyperchain/crypto/randentropy"
 	"hyperchain/crypto"
-	"reflect"
 	"crypto/ecdsa"
+	"hyperchain/common"
 )
 
 const (
@@ -64,7 +64,7 @@ type keyStorePassphrase struct {
 	scryptP     int
 }
 
-func (ks keyStorePassphrase) GetKey(addr []byte, filename, auth string) (*Key, error) {
+func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) (*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 	keyjson, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -75,11 +75,23 @@ func (ks keyStorePassphrase) GetKey(addr []byte, filename, auth string) (*Key, e
 		return nil, err
 	}
 	// Make sure we're really operating on the requested key (no swap attacks)
-	if !(reflect.DeepEqual(key.Address,addr)) {
+	if key.Address!=addr {
 		return nil, fmt.Errorf("key content mismatch: have account %x, want %x", key.Address, addr)
 	}
 	return key, nil
 }
+
+//func (ks keyStorePassphrase)GetKeyFromCache(addr common.Address,keyjson *[]byte,auth string)(*Key,error)  {
+//	key, err := DecryptKey(*keyjson, auth)
+//	if err != nil {
+//		return nil, err
+//	}
+//	// Make sure we're really operating on the requested key (no swap attacks)
+//	if key.Address!=addr {
+//		return nil, fmt.Errorf("key content mismatch: have account %x, want %x", key.Address, addr)
+//	}
+//	return key, nil
+//}
 
 func (ks keyStorePassphrase) StoreKey(filename string, key *Key, auth string) error {
 	keyjson, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
@@ -150,6 +162,7 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 	if err := json.Unmarshal(keyjson, &m); err != nil {
 		return nil, err
 	}
+
 	// Depending on the version try to parse one way or another
 	var (
 		keyBytes []byte
@@ -161,12 +174,14 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 			return nil, err
 		}
 		keyBytes, err = decryptKeyV1(k, auth)
+
 	} else {
 		k := new(encryptedKeyJSONV3)
 		if err := json.Unmarshal(keyjson, k); err != nil {
 			return nil, err
 		}
 		keyBytes, err = decryptKeyV3(k, auth)
+
 	}
 	// Handle any decryption errors and return the key
 	if err != nil {
@@ -192,12 +207,10 @@ func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byt
 	if err != nil {
 		return nil, err
 	}
-
 	iv, err := hex.DecodeString(keyProtected.Crypto.CipherParams.IV)
 	if err != nil {
 		return nil, err
 	}
-
 	cipherText, err := hex.DecodeString(keyProtected.Crypto.CipherText)
 	if err != nil {
 		return nil, err
@@ -209,6 +222,7 @@ func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byt
 	}
 
 	calculatedMAC := crypto.Keccak256(derivedKey[16:32], cipherText)
+
 	if !bytes.Equal(calculatedMAC, mac) {
 		return nil, ErrDecrypt
 	}
@@ -217,6 +231,7 @@ func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byt
 	if err != nil {
 		return nil, err
 	}
+
 	return plainText, err
 }
 

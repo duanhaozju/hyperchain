@@ -4,6 +4,7 @@ import (
 	"testing"
 	"math/big"
 	"fmt"
+	"hyperchain/common"
 )
 
 type Block struct {
@@ -22,7 +23,7 @@ func NewBlock(txs []*Transaction, ParentHash string) *Block {
 }
 
 func TestHash(t *testing.T) {
-	tx := NewTransaction([]byte{},big.NewInt(2))
+	tx := NewTransaction(common.Address{},big.NewInt(2))
 	txs := make([]*Transaction,1)
 	txs[0] = tx
 	block := NewBlock(txs,"parenthash")
@@ -35,5 +36,8 @@ func TestHash(t *testing.T) {
 	fmt.Println(s256.Hash([]interface{}{tx.data.Amount,tx.data.Recipient}))
 	fmt.Println("block hash")
 	fmt.Println(s256.Hash(block))
+
+	fmt.Println(s256.ByteHash([]byte{12,43},[]byte{12,43}))
+	fmt.Println(Keccak256([]byte{12,43},[]byte{12,43}))
 }
 

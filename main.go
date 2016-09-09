@@ -21,6 +21,7 @@ import (
 	"hyperchain/jsonrpc"
 	"hyperchain/common"
 	"github.com/op/go-logging"
+	"hyperchain/accounts"
 )
 
 type argT struct {
@@ -57,9 +58,16 @@ func main() {
 		//init genesis
 		core.CreateInitBlock("./core/genesis.json")
 
+
 		//init encryption object
 		encryption := crypto.NewEcdsaEncrypto("ecdsa")
 		encryption.GeneralKey(strconv.Itoa(argv.LocalPort))
+
+		scryptN := accounts.StandardScryptN
+		scryptP := accounts.StandardScryptP
+		keydir := "./keystore/"
+		am := accounts.NewAccountManager(keydir,encryption, scryptN, scryptP)
+
 
 		//init hash object
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
@@ -73,8 +81,15 @@ func main() {
 		go jsonrpc.Start(argv.LocalPort, eventMux)
 
 		//init manager
-		manager.New(eventMux, blockPool, grpcPeerMgr, cs, fetcher, encryption, kec256Hash,
-			nodePath, argv.NodeId)
+
+		manager.New(eventMux,blockPool,grpcPeerMgr,cs,fetcher,am,kec256Hash,
+			nodePath,argv.NodeId)
+
+		////init manager
+		//manager.New(eventMux,blockPool,grpcPeerMgr,cs,fetcher,encryption,kec256Hash,
+		//	nodePath,argv.NodeId)
+
+
 
 		return nil
 	})

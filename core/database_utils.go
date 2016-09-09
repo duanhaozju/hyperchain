@@ -143,6 +143,7 @@ func DeleteBlock(db hyperdb.Database, key []byte) error {
 //-- --------------------- BalanceMap ------------------------------------
 type balanceMapJson map[string][]byte
 
+// PutDBBalance put dbBalance into database
 func PutDBBalance(db hyperdb.Database, balance_db BalanceMap) error {
 
 	var bJson = make(balanceMapJson)
@@ -157,6 +158,7 @@ func PutDBBalance(db hyperdb.Database, balance_db BalanceMap) error {
 	return db.Put(balanceKey, data)
 }
 
+// GetDBBalance get dbBalance from database
 func GetDBBalance(db hyperdb.Database) (BalanceMap, error) {
 	var bJson balanceMapJson
 	var b = make(BalanceMap)
@@ -176,9 +178,11 @@ func GetDBBalance(db hyperdb.Database) (BalanceMap, error) {
 
 //-- ------------------- Chain ----------------------------------------
 
+// memChain manage safe chain
 type memChain struct {
-	data types.Chain
-	lock sync.RWMutex
+	data   types.Chain   // chain
+	lock   sync.RWMutex  // the lock of chain
+	cpChan chan struct{} // when data.Height reach check point, will be writed
 }
 
 // newMenChain new a memChain instance
@@ -190,18 +194,21 @@ func newMemChain() *memChain {
 			data: types.Chain{
 				Height: 0,
 			},
+			cpChan: make(chan struct{}),
 		}
 	}
 	chain, err := getChain(db)
 	if err == nil {
 		return &memChain{
 			data: *chain,
+			cpChan: make(chan struct{}),
 		}
 	}
 	return &memChain{
 		data: types.Chain{
 			Height: 0,
 		},
+		cpChan:make(chan struct{}),
 	}
 }
 var memChainMap *memChain;
@@ -255,6 +262,13 @@ func GetChainCopy() *types.Chain {
 	}
 }
 
+// WaitUtilHeightChan wait until chain height is 10. if not, the func will wait
+func WaitUtilHeightChan() {
+	memChainMap.lock.RLock()
+	defer memChainMap.lock.RUnlock()
+	memChainMap.cpChan <- struct {}{}
+}
+
 // putChain put chain database
 func putChain(db hyperdb.Database, t *types.Chain) error {
 	data, err := proto.Marshal(t)
@@ -265,6 +279,14 @@ func putChain(db hyperdb.Database, t *types.Chain) error {
 		return err
 	}
 	return nil
+}
+
+// UpdateRequire updates requireBlockNum and requireBlockHash
+func UpdateRequire(num uint64, hash []byte)  {
+	memChainMap.lock.Lock()
+	defer memChainMap.lock.Unlock()
+	memChainMap.data.RequiredBlockNum = num
+	memChainMap.data.RequireBlockHash = hash
 }
 
 // getChain get chain from database
