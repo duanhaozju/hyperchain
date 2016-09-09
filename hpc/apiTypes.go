@@ -11,9 +11,15 @@ type API struct {
 func GetAPIs() []API{
 	return []API{
 		{
-			Namespace: "hpc",
+			Namespace: "tx",
 			Version: "0.4",
 			Service: NewPublicTransactionAPI(),
+			Public: true,
+		},
+		{
+			Namespace: "node",
+			Version: "0.4",
+			Service: NewPublicNodeAPI(),
 			Public: true,
 		},
 	}
