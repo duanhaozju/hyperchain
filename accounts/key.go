@@ -139,17 +139,17 @@ func storeNewKey(am *AccountManager, rand io.Reader, auth string) (*Key, Account
 	return nil,Account{},nil
 }
 
-func listAllKeyFile(path string) []string {
-	files, _ := ioutil.ReadDir(path)
-	fileList :=[]string{}
-	for _, fi := range files {
-		if !fi.IsDir() {
-			fileList = append(fileList,path + "/" + fi.Name())
-		}
-	}
-
-	return fileList
-}
+//func listAllKeyFile(path string) []string {
+//	files, _ := ioutil.ReadDir(path)
+//	fileList :=[]string{}
+//	for _, fi := range files {
+//		if !fi.IsDir() {
+//			fileList = append(fileList,path + "/" + fi.Name())
+//		}
+//	}
+//
+//	return fileList
+//}
 func writeKeyFile(file string, content []byte) error {
 	// Create the keystore directory with appropriate permissions
 	// in case it is not present yet.

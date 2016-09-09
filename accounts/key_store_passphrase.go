@@ -81,17 +81,17 @@ func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) 
 	return key, nil
 }
 
-func (ks keyStorePassphrase)GetKeyFromCache(addr common.Address,keyjson *[]byte,auth string)(*Key,error)  {
-	key, err := DecryptKey(*keyjson, auth)
-	if err != nil {
-		return nil, err
-	}
-	// Make sure we're really operating on the requested key (no swap attacks)
-	if key.Address!=addr {
-		return nil, fmt.Errorf("key content mismatch: have account %x, want %x", key.Address, addr)
-	}
-	return key, nil
-}
+//func (ks keyStorePassphrase)GetKeyFromCache(addr common.Address,keyjson *[]byte,auth string)(*Key,error)  {
+//	key, err := DecryptKey(*keyjson, auth)
+//	if err != nil {
+//		return nil, err
+//	}
+//	// Make sure we're really operating on the requested key (no swap attacks)
+//	if key.Address!=addr {
+//		return nil, fmt.Errorf("key content mismatch: have account %x, want %x", key.Address, addr)
+//	}
+//	return key, nil
+//}
 
 func (ks keyStorePassphrase) StoreKey(filename string, key *Key, auth string) error {
 	keyjson, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
