@@ -143,6 +143,7 @@ func DeleteBlock(db hyperdb.Database, key []byte) error {
 //-- --------------------- BalanceMap ------------------------------------
 type balanceMapJson map[string][]byte
 
+// PutDBBalance put dbBalance into database
 func PutDBBalance(db hyperdb.Database, balance_db BalanceMap) error {
 
 	var bJson = make(balanceMapJson)
@@ -157,6 +158,7 @@ func PutDBBalance(db hyperdb.Database, balance_db BalanceMap) error {
 	return db.Put(balanceKey, data)
 }
 
+// GetDBBalance get dbBalance from database
 func GetDBBalance(db hyperdb.Database) (BalanceMap, error) {
 	var bJson balanceMapJson
 	var b = make(BalanceMap)
@@ -176,9 +178,10 @@ func GetDBBalance(db hyperdb.Database) (BalanceMap, error) {
 
 //-- ------------------- Chain ----------------------------------------
 
+// memChain manage safe chain
 type memChain struct {
-	data types.Chain
-	lock sync.RWMutex
+	data types.Chain  // chain
+	lock sync.RWMutex // the lock of chain
 }
 
 // newMenChain new a memChain instance

@@ -20,10 +20,11 @@ type BalanceMap map[common.Address][]byte
 type stateType int32
 
 const (
-	closed stateType = iota
+	closed stateType = iota // the instance is closed (be not)
 	opened
 )
 
+// Balance is store all accounts' balance, it is a goroutine safe struct
 type Balance struct {
 	dbBalance    BalanceMap   // store in db, synchronization with block
 	cacheBalance BalanceMap   // synchronization with transaction
@@ -33,9 +34,12 @@ type Balance struct {
 	stateLock    sync.Mutex   // the lock of get balance instance
 }
 
+// balance is a instance of Balance, balance.state is closed
+// when initially, indicate the initial balance instance is not Initialization
 var balance = &Balance{
 	state: closed,
 }
+
 var log *logging.Logger // package-level logger
 func init() {
 	log = logging.MustGetLogger("core")
@@ -140,7 +144,8 @@ func (self *Balance)GetAllDBBalance() (BalanceMap) {
 	return bs
 }
 
-// UpdateDBBalance update dbBalance require a latest block
+// UpdateDBBalance update dbBalance require a latest block,
+// after updating dbBalance, cacheBalance will be equal with dbBalance
 func (self *Balance)UpdateDBBalance(block *types.Block) error {
 	self.lock.Lock()
 	defer self.lock.Unlock()
@@ -181,6 +186,7 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 	return nil
 }
 
+// UpdateCacheBalance　updates cacheBalance by transactions
 func (self *Balance)UpdateCacheBalance(trans *types.Transaction) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
