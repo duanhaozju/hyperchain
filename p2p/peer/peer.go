@@ -31,7 +31,6 @@ type Peer struct {
 	Idetity string
 }
 
-
 // NewPeerByString to create a Peer which with a connection,
 // this connection address string format is '192.168.1.1:8001'
 // you can also create a Peer by function `NewPeerByAddress(peerMessage.address)`

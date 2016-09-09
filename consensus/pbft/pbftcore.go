@@ -36,6 +36,11 @@ type viewChangeTimerEvent struct{}
 // pbftMessageEvent is sent when a consensus messages is received to be sent to pbft
 type pbftMessageEvent pbftMessage
 
+// stateUpdatedEvent  when stateUpdate is executed and return the result
+type stateUpdatedEvent struct {
+	seqNo uint64
+}
+
 // nullRequestEvent provides "keep-alive" null requests
 type nullRequestEvent struct{}
 
@@ -98,6 +103,8 @@ type pbftCore struct {
 	certStore	map[msgID]*msgCert		// track quorum certificates for requests
 	checkpointStore	map[Checkpoint]bool		// track checkpoints as set
 	committedCert	map[msgID]string
+
+	valid		bool // whether we believe the state is up to date
 }
 
 type qidx struct {
@@ -166,7 +173,7 @@ func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerF
 		panic("Log multiplier must be greater than or equal to 2")
 	}
 
-	instance.L = instance.logMultiplier * (instance.K+1) // log size
+	instance.L = instance.logMultiplier * instance.K // log size
 	instance.byzantine = config.GetBool("general.byzantine")
 	instance.requestTimeout, err = time.ParseDuration(config.GetString("timeout.request"))
 
@@ -250,6 +257,13 @@ func (instance *pbftCore) ProcessEvent(e events.Event) events.Event {
 		err = instance.recvCommit(et)
 	case *Checkpoint:
 		return instance.recvCheckpoint(et)
+
+	//case stateUpdateEvent:
+	//	Todo for stateUpdateEvent
+
+	case *stateUpdatedEvent:
+		err = instance.recvStateUpdatedEvent(et)
+
 	case nullRequestEvent:
 		instance.nullRequestHandler()
 	default:
@@ -448,6 +462,36 @@ func (instance *pbftCore) recvMsg(msg *Message, senderID uint64) (interface{}, e
 	}
 
 	return nil, fmt.Errorf("Invalid message: %v", msg)
+}
+
+func (instance *pbftCore) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
+
+
+	instance.stateTransferring = false
+	// If state transfer did not complete successfully, or if it did not reach our low watermark, do it again
+	if et.seqNo < instance.h {
+		logger.Warningf("Replica %d recovered to seqNo %d but our low watermark has moved to %d", instance.id, et.seqNo, instance.h)
+		if instance.highStateTarget == nil {
+			logger.Debugf("Replica %d has no state targets, cannot resume state transfer yet", instance.id)
+		} else if et.seqNo < instance.highStateTarget.seqNo {
+			logger.Debugf("Replica %d has state target for %d, transferring", instance.id, instance.highStateTarget.seqNo)
+			instance.retryStateTransfer(nil)
+		} else {
+			logger.Debugf("Replica %d has no state target above %d, highest is %d", instance.id, et.seqNo, instance.highStateTarget.seqNo)
+		}
+		return nil
+	}
+
+	logger.Infof("Replica %d application caught up via state transfer, lastExec now %d", instance.id, et.seqNo)
+	// XXX create checkpoint
+	instance.lastExec = et.seqNo
+	instance.moveWatermarks(instance.lastExec) // The watermark movement handles moving this to a checkpoint boundary
+	instance.skipInProgress = false
+	instance.validateState()
+	instance.executeOutstanding()
+
+	return nil
+
 }
 
 func (instance *pbftCore) recvRequestBatch(reqBatch *RequestBatch) error {
@@ -681,7 +725,7 @@ func (instance *pbftCore) executeOne(idx msgID) bool {
 	cert := instance.certStore[idx]
 
 	if cert == nil || cert.prePrepare == nil {
-		logger.Debugf("Replica %d has no cert, already checkpoint, seq=%d", instance.id, instance.lastExec, idx.n)
+		logger.Debugf("Replica %d already checkpoint for view=%d/seqNo=%d", instance.id, idx.v, idx.n)
 		return false
 	}
 
@@ -882,6 +926,8 @@ func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) events.Event {
 	return nil
 }
 
+func (instance *pbftCore) recvStateUpdate() {}
+
 func (instance *pbftCore) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 	H := instance.h + instance.L
 
@@ -918,7 +964,7 @@ func (instance *pbftCore) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 				instance.moveWatermarks(m)
 				instance.outstandingReqBatches = make(map[string]*RequestBatch)
 				instance.skipInProgress = true
-				//instance.consumer.invalidateState()
+				instance.invalidateState()
 				instance.stopTimer(chkpt.SequenceNumber)
 
 				// TODO, reprocess the already gathered checkpoints, this will make recovery faster, though it is presently correct
@@ -1034,7 +1080,7 @@ func (instance *pbftCore) stateTransfer(optional *stateUpdateTarget) {
 	if !instance.skipInProgress {
 		logger.Debugf("Replica %d is out of sync, pending state transfer", instance.id)
 		instance.skipInProgress = true
-		//instance.consumer.invalidateState()
+		instance.invalidateState()
 	}
 
 	instance.retryStateTransfer(optional)
@@ -1059,7 +1105,12 @@ func (instance *pbftCore) retryStateTransfer(optional *stateUpdateTarget) {
 	instance.stateTransferring = true
 
 	logger.Debugf("Replica %d is initiating state transfer to seqNo %d", instance.id, target.seqNo)
+
+	//instance.batch.pbftManager.Queue() <- stateUpdateEvent // Todo for stateupdate
 	//instance.consumer.skipTo(target.seqNo, target.id, target.replicas)
+
+	instance.skipTo(target.seqNo, target.id, target.replicas)
+
 
 }
 
@@ -1136,3 +1187,39 @@ func (instance *pbftCore) stopTimer(n uint64) {
 	instance.timerActive = false
 	instance.newViewTimer.Stop()
 }
+
+func (instance *pbftCore) skipTo(seqNo uint64, id []byte, replicas []uint64) {
+	info := &BlockchainInfo{}
+	err := proto.Unmarshal(id, info)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Error unmarshaling: %s", err))
+		return
+	}
+	//instance.UpdateState(&checkpointMessage{seqNo, id}, info, replicas)
+	instance.UpdateState(seqNo, id, replicas)
+}
+
+// invalidateState is invoked to tell us that consensus realizes the ledger is out of sync
+func (instance *pbftCore) invalidateState() {
+	logger.Debug("Invalidating the current state")
+	instance.valid = false
+}
+
+// validateState is invoked to tell us that consensus has the ledger back in sync
+func (instance *pbftCore) validateState() {
+	logger.Debug("Validating the current state")
+	instance.valid = true
+}
+
+// UpdateState attempts to synchronize state to a particular target, implicitly calls rollback if needed
+func (instance *pbftCore) UpdateState(seqNo uint64, targetId []byte, replicaId []uint64) {
+	//if instance.valid {
+	//	logger.Warning("State transfer is being called for, but the state has not been invalidated")
+	//}
+
+
+	updateStateMsg := stateUpdateHelper(seqNo, targetId, replicaId)
+	instance.helper.UpdateState(updateStateMsg) // TODO: stateUpdateEvent
+
+}
+

@@ -14,7 +14,6 @@ import (
 	"hyperchain/core/types"
 	"fmt"
 	"sync"
-	"crypto/ecdsa"
 
 	"hyperchain/protos"
 	"time"
@@ -187,57 +186,75 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 	//var transaction types.Transaction
 	transaction := &types.Transaction{}
 	//decode tx
-	log.Info("*****1*****")
 	proto.Unmarshal(payload, transaction)
-	log.Info("*****2*****")
 	//hash tx
 	h := transaction.SighHash(pm.commonHash)
-	log.Info("*****3*****")
 	addrHex := string(transaction.From)
-	addr := common.FromHex(addrHex)
-	account := accounts.Account{
-		Address:addr,
-		File:pm.accountManager.KeyStore.JoinPath(accounts.KeyFileName(addr)),
-	}
-	//log.Info(account)
-	log.Info("*****4*****")
-	key, err := pm.accountManager.GetDecryptedKey(account)
-	log.Info("*****5*****")
-	if err!=nil{
-		log.Error(err)
-		return nil
-	}
-	//key, err := pm.encryption.GetKey()
-	//switch key.(type){
-	log.Info("*****6*****")
-	switch key.PrivateKey.(type){
-	//case ecdsa.PrivateKey:
-	case *ecdsa.PrivateKey:
-		//actualKey := key.(ecdsa.PrivateKey)
-		//sign, err := pm.encryption.Sign(h[:], actualKey)
-		log.Info("*****7*****")
-		actualKey := key.PrivateKey.(*ecdsa.PrivateKey)
-		sign, err := pm.accountManager.Encryption.Sign(h[:], actualKey)
-		if err != nil {
-			fmt.Print(err)
-		}
-		log.Info("*****8*****")
-		transaction.Signature = sign
-		//encode tx
-		payLoad, err := proto.Marshal(transaction)
-		if err != nil {
-			return nil
-		}
-		return payLoad
+	addr := common.HexToAddress(addrHex)
 
-
+	sign, err := pm.accountManager.Sign(addr,h[:])
+	if err != nil {
+		fmt.Print(err)
 	}
+	transaction.Signature = sign
+	//encode tx
+	payLoad, err := proto.Marshal(transaction)
 	if err != nil {
 		return nil
 	}
-	return nil
+	return payLoad
 
 }
+//func (pm *ProtocolManager)transformTx(payload []byte) []byte {
+//
+//	//var transaction types.Transaction
+//	transaction := &types.Transaction{}
+//	//decode tx
+//	proto.Unmarshal(payload, transaction)
+//	//hash tx
+//	h := transaction.SighHash(pm.commonHash)
+//	addrHex := string(transaction.From)
+//	addr := common.HexToAddress(addrHex)
+//	account := accounts.Account{
+//		Address:addr,
+//		File:pm.accountManager.KeyStore.JoinPath(accounts.KeyFileName(addr[:])),
+//	}
+//	time1 := time.Now().UnixNano()
+//	key, err := pm.accountManager.GetDecryptedKeyCache(account)
+//	time2 := time.Now().UnixNano()
+//	log.Info(">>>>>>>>>>>>>>",time2-time1)
+//	if err!=nil{
+//		log.Error(err)
+//		return nil
+//	}
+//	//key, err := pm.encryption.GetKey()
+//	//switch key.(type){
+//	switch key.PrivateKey.(type){
+//	//case ecdsa.PrivateKey:
+//	case *ecdsa.PrivateKey:
+//		//actualKey := key.(ecdsa.PrivateKey)
+//		//sign, err := pm.encryption.Sign(h[:], actualKey)
+//		actualKey := key.PrivateKey.(*ecdsa.PrivateKey)
+//		sign, err := pm.accountManager.Encryption.Sign(h[:], actualKey)
+//		if err != nil {
+//			fmt.Print(err)
+//		}
+//		transaction.Signature = sign
+//		//encode tx
+//		payLoad, err := proto.Marshal(transaction)
+//		if err != nil {
+//			return nil
+//		}
+//		return payLoad
+//
+//
+//	}
+//	if err != nil {
+//		return nil
+//	}
+//	return nil
+//
+//}
 
 
 // add new block into block pool
