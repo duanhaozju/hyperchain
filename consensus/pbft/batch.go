@@ -84,10 +84,8 @@ func newBatch(id uint64, config *viper.Viper, h helper.Stack) *batch {
 // RecvMsg is used by outer to send message to consensus
 func (op *batch) RecvMsg(e []byte) error {
 
-	logger.Notice("------------Enter recvMsg-------------")
 	msg := &pb.Message{}
 	err := proto.Unmarshal(e,msg)
-	logger.Notice("--------------", msg.Type)
 	if err!=nil {
 		logger.Errorf("Inner RecvMsg Unmarshal error: can not unmarshal pb.Message", err)
 		return err

@@ -799,7 +799,7 @@ func (instance *pbftCore) execDoneSync(idx msgID) {
 			} else  {
 				// reqBatch call execute but have not done with execute
 				logger.Errorf("Fail to call the checkpoint, seqNo=%d, block height=%d", instance.lastExec, height)
-				//instance.retryCheckpoint(instance.lastExec)
+				instance.retryCheckpoint(instance.lastExec)
 			}
 		}
 	} else {
@@ -839,25 +839,25 @@ func (instance *pbftCore) checkpoint(n uint64, info *pb.BlockchainInfo) {
 	instance.helper.InnerBroadcast(msg)
 }
 
-//func (instance *pbftCore) retryCheckpoint(n uint64) {
-//
-//	if n % instance.K != 0 {
-//		return
-//	}
-//
-//	bcInfo := getBlockchainInfo()
-//	height := bcInfo.Height
-//	if height == n {
-//		logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", n, height)
-//		instance.checkpoint(n, bcInfo)
-//	} else {
-//		// reqBatch call execute but have not done with execute
-//		logger.Warningf("Fail to call the checkpoint, seqNo=%d, block height=%d", n, height)
-//		instance.retryCheckpoint(instance.lastExec)
-//	}
-//
-//
-//}
+func (instance *pbftCore) retryCheckpoint(n uint64) {
+
+	if n % instance.K != 0 {
+		return
+	}
+
+	bcInfo := getBlockchainInfo()
+	height := bcInfo.Height
+	if height == n {
+		logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", n, height)
+		instance.checkpoint(n, bcInfo)
+	} else {
+		// reqBatch call execute but have not done with execute
+		logger.Warningf("Fail to call the checkpoint, seqNo=%d, block height=%d", n, height)
+		instance.retryCheckpoint(instance.lastExec)
+	}
+
+
+}
 
 func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) events.Event {
 
