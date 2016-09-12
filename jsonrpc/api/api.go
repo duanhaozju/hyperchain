@@ -70,7 +70,7 @@ func SendTransaction(args TxArgs) bool {
 		end:=start+600
 
 		for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 5000; i++ {
+			for i := 0; i < 1500; i++ {
 				tx.TimeStamp=time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
@@ -81,7 +81,7 @@ func SendTransaction(args TxArgs) bool {
 				}else{
 					log.Warning("manager is Nil")
 				}
-				time.Sleep(200 * time.Nanosecond)
+				time.Sleep(2 * time.Millisecond)
 			}
 		}
 
