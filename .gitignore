@@ -96,3 +96,5 @@ logs/
 cache/
 crypto/addressInfo
 p2p/local_peerconfig.json
+
+*.tar

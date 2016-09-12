@@ -6,6 +6,7 @@ import (
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
 	"github.com/op/go-logging"
+	"encoding/json"
 )
 var log *logging.Logger // package-level logger
 func init() {
@@ -207,7 +208,7 @@ func (self *StateDB) GetOrNewStateObject(addr common.Address) *StateObject {
 
 // NewStateObject create a state object whether it exist in the trie or not
 func (self *StateDB) newStateObject(addr common.Address) *StateObject {
-	stateObject := NewStateObject(addr, self.db)
+	stateObject := NewStateObject(addr)
 	stateObject.SetNonce(StartingNonce)
 	self.stateObjects[addr.Str()] = stateObject
 
@@ -249,15 +250,21 @@ func (self *StateDB) GetRefund() *big.Int {
 	return self.refund
 }
 
-
+var stateObjectPrefix = []byte("stateObject-")
 
 // Commit commits all state changes to the database.
+// TODO test
 func (s *StateDB) Commit() (root common.Hash, err error) {
-	root, batch := s.CommitBatch()
-	return root, batch.Write()
-}
-
-func (s *StateDB) CommitBatch() (root common.Hash, batch hyperdb.Batch) {
-	batch = s.db.NewBatch()
-	return root, batch
+	batch := s.db.NewBatch()
+	for addr, stateObject := range s.stateObjects {
+		if stateObject.dirty {
+			data, err := json.Marshal(stateObject)
+			if err != nil {
+				// err
+			}
+			keyFact := append(stateObjectPrefix, []byte(addr)...)
+			batch.Put(keyFact, data)
+		}
+	}
+	return common.Hash{},batch.Write()
 }

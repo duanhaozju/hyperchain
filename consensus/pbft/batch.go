@@ -86,7 +86,6 @@ func (op *batch) RecvMsg(e []byte) error {
 
 	msg := &pb.Message{}
 	err := proto.Unmarshal(e,msg)
-	
 	if err!=nil {
 		logger.Errorf("Inner RecvMsg Unmarshal error: can not unmarshal pb.Message", err)
 		return err
@@ -164,7 +163,7 @@ func (op *batch) processStateUpdated(msg *pb.Message) error {
 	event := stateUpdatedEvent{
 		seqNo: stateUpdatedMsg.SeqNo,
 	}
-	op.ProcessEvent(&event)
+	op.postPbftEvent(event)
 	return nil
 }
 
@@ -221,7 +220,7 @@ func (op *batch) postRequestEvent(event *Request) {
 
 }
 
-func (op *batch) postPbftEvent(event pbftMessageEvent) {
+func (op *batch) postPbftEvent(event interface{}) {
 	op.pbftManager.Queue() <- event
 }
 

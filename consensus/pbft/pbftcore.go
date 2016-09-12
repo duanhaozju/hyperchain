@@ -7,6 +7,7 @@ import (
 
 	"hyperchain/consensus/helper"
 	"hyperchain/consensus/events"
+	pb "hyperchain/protos"
 
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
@@ -220,6 +221,8 @@ func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerF
 
 	instance.outstandingReqBatches = make(map[string]*RequestBatch)
 
+	instance.restoreState()
+
 	logger.Infof("--------PBFT finish start, nodeID: %d--------", instance.id)
 
 	return instance
@@ -257,13 +260,9 @@ func (instance *pbftCore) ProcessEvent(e events.Event) events.Event {
 		err = instance.recvCommit(et)
 	case *Checkpoint:
 		return instance.recvCheckpoint(et)
-
-	//case stateUpdateEvent:
-	//	Todo for stateUpdateEvent
-
 	case *stateUpdatedEvent:
+		instance.batch.reqStore = newRequestStore()
 		err = instance.recvStateUpdatedEvent(et)
-
 	case nullRequestEvent:
 		instance.nullRequestHandler()
 	default:
@@ -568,8 +567,12 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 	}
 
 	if !instance.inWV(preprep.View, preprep.SequenceNumber) {
-		// This is perfectly normal
-		logger.Debugf("Replica %d pre-prepare view different, or sequence number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d", instance.id, preprep.View, instance.primary(instance.view), preprep.SequenceNumber, instance.h)
+		if preprep.SequenceNumber != instance.h && !instance.skipInProgress {
+			logger.Warningf("Replica %d pre-prepare view different, or sequence number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d", instance.id, preprep.View, instance.primary(instance.view), preprep.SequenceNumber, instance.h)
+		} else {
+			// This is perfectly normal
+			logger.Debugf("Replica %d pre-prepare view different, or sequence number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d", instance.id, preprep.View, instance.primary(instance.view), preprep.SequenceNumber, instance.h)
+		}
 
 		return nil
 	}
@@ -628,8 +631,12 @@ func (instance *pbftCore) recvPrepare(prep *Prepare) error {
 	}
 
 	if !instance.inWV(prep.View, prep.SequenceNumber) {
-		// This is perfectly normal
-		logger.Debugf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", instance.id, prep.View, prep.SequenceNumber, instance.view, instance.h)
+		if prep.SequenceNumber != instance.h && !instance.skipInProgress {
+			logger.Warningf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", instance.id, prep.View, prep.SequenceNumber, instance.view, instance.h)
+		} else {
+			// This is perfectly normal
+			logger.Debugf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", instance.id, prep.View, prep.SequenceNumber, instance.view, instance.h)
+		}
 		return nil
 	}
 
@@ -676,8 +683,12 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 		instance.id, commit.ReplicaId, commit.View, commit.SequenceNumber)
 
 	if !instance.inWV(commit.View, commit.SequenceNumber) {
-		// This is perfectly normal
-		logger.Debugf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, high water mark %d", instance.id, commit.View, commit.SequenceNumber, instance.view, instance.h)
+		if commit.SequenceNumber != instance.h && !instance.skipInProgress {
+			logger.Warningf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, high water mark %d", instance.id, commit.View, commit.SequenceNumber, instance.view, instance.h)
+		} else {
+			// This is perfectly normal
+			logger.Debugf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, high water mark %d", instance.id, commit.View, commit.SequenceNumber, instance.view, instance.h)
+		}
 		return nil
 	}
 
@@ -787,8 +798,8 @@ func (instance *pbftCore) execDoneSync(idx msgID) {
 				instance.checkpoint(instance.lastExec, bcInfo)
 			} else  {
 				// reqBatch call execute but have not done with execute
-				logger.Debugf("Retry call the checkpoint, seqNo=%d, block height=%d", instance.lastExec, height)
-				instance.retryCheckpoint(instance.lastExec)
+				logger.Errorf("Fail to call the checkpoint, seqNo=%d, block height=%d", instance.lastExec, height)
+				//instance.retryCheckpoint(instance.lastExec)
 			}
 		}
 	} else {
@@ -801,7 +812,7 @@ func (instance *pbftCore) execDoneSync(idx msgID) {
 
 }
 
-func (instance *pbftCore) checkpoint(n uint64, info *BlockchainInfo) {
+func (instance *pbftCore) checkpoint(n uint64, info *pb.BlockchainInfo) {
 
 	if n % instance.K != 0 {
 		logger.Errorf("Attempted to checkpoint a sequence number (%d) which is not a multiple of the checkpoint interval (%d)", n, instance.K)
@@ -925,8 +936,6 @@ func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) events.Event {
 
 	return nil
 }
-
-func (instance *pbftCore) recvStateUpdate() {}
 
 func (instance *pbftCore) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 	H := instance.h + instance.L
@@ -1189,7 +1198,7 @@ func (instance *pbftCore) stopTimer(n uint64) {
 }
 
 func (instance *pbftCore) skipTo(seqNo uint64, id []byte, replicas []uint64) {
-	info := &BlockchainInfo{}
+	info := &pb.BlockchainInfo{}
 	err := proto.Unmarshal(id, info)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Error unmarshaling: %s", err))
@@ -1216,7 +1225,6 @@ func (instance *pbftCore) UpdateState(seqNo uint64, targetId []byte, replicaId [
 	//if instance.valid {
 	//	logger.Warning("State transfer is being called for, but the state has not been invalidated")
 	//}
-
 
 	updateStateMsg := stateUpdateHelper(seqNo, targetId, replicaId)
 	instance.helper.UpdateState(updateStateMsg) // TODO: stateUpdateEvent

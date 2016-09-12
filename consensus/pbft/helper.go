@@ -74,7 +74,7 @@ func stateUpdateHelper(seqNo uint64, id []byte, replicaId []uint64) *pb.UpdateSt
 	return stateUpdateMsg
 }
 
-func getBlockchainInfo() *BlockchainInfo {
+func getBlockchainInfo() *pb.BlockchainInfo {
 
 	bcInfo := persist.GetBlockchainInfo()
 
@@ -82,7 +82,7 @@ func getBlockchainInfo() *BlockchainInfo {
 	curBlkHash := bcInfo.LatestBlockHash
 	preBlkHash := bcInfo.ParentBlockHash
 
-	return &BlockchainInfo{
+	return &pb.BlockchainInfo{
 		Height:	height,
 		CurrentBlockHash: curBlkHash,
 		PreviousBlockHash: preBlkHash,

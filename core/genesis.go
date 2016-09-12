@@ -16,8 +16,8 @@ import (
 	"hyperchain/crypto"
 	"time"
 	"encoding/hex"
+	//"hyperchain/core/vm/api"
 
-	"github.com/ethereum/go-ethereum/core"
 )
 
 
@@ -132,8 +132,15 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 	log.Notice("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
 	balance.UpdateDBBalance(block)
 
+
 	if block.Number%10==0 && block.Number!=0{
 		WriteChainChan()
 
 	}
+
+
+	// update our stateObject and statedb to blockchain
+	//api.ExecBlock(block)
+	//api.CommitStatedbToBlockchain()
+
 }
