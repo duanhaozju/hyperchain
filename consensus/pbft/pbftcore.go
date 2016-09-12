@@ -257,13 +257,8 @@ func (instance *pbftCore) ProcessEvent(e events.Event) events.Event {
 		err = instance.recvCommit(et)
 	case *Checkpoint:
 		return instance.recvCheckpoint(et)
-
-	//case stateUpdateEvent:
-	//	Todo for stateUpdateEvent
-
 	case *stateUpdatedEvent:
 		err = instance.recvStateUpdatedEvent(et)
-
 	case nullRequestEvent:
 		instance.nullRequestHandler()
 	default:
