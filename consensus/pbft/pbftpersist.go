@@ -38,6 +38,32 @@ func (instance *pbftCore) persistPQSet(key string, set []*ViewChange_PQ) {
 	persist.StoreState(key, raw)
 }
 
+func (instance *pbftCore) persistDelPSet() {
+	pSet, err := persist.ReadStateSet("pset")
+
+	if err != nil {
+		logger.Errorf("Read State Set Error %s", err)
+		return
+	} else {
+		for key := range pSet {
+			persist.DelState(key)
+		}
+	}
+}
+
+func (instance *pbftCore) persistDelQSet() {
+	qSet, err := persist.ReadStateSet("qset")
+
+	if err!= nil {
+		logger.Errorf("Read State Set Error %s", err)
+		return
+	} else {
+		for key := range qSet {
+			persist.DelState(key)
+		}
+	}
+}
+
 func (instance *pbftCore) restorePQSet(key string) []*ViewChange_PQ {
 	raw, err := persist.ReadState(key)
 	if err != nil {
