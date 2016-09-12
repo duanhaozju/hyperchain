@@ -24,11 +24,12 @@ func TestCalcResponseCount(t *testing.T) {
 	//commonHash := crypto.NewKeccak256Hash("keccak256")
 	//WriteBlock(blockUtilsCase, commonHash)
 	fmt.Println(GetHeightOfChain())
-	count := CalcResponseCount(5, int64(300))
-	if count != 2 {
-		t.Errorf("%d not equal 2, TestCalcResponseCount fail", count)
+	for i := uint64(0); i <= GetHeightOfChain(); i += 1 {
+		count := CalcResponseCount(i, int64(300))
+
+		fmt.Println(count)
 	}
-	fmt.Println(count)
+
 }
 
 /*func TestGetBlockHash(t *testing.T) {

@@ -22,8 +22,8 @@ func CalcResponseCount(blockNumber uint64, millTime int64) int64 {
 			count ++
 		}
 	}
-	fmt.Println(block.CommitTime)
-	fmt.Println(block.WriteTime)*//*
+	fmt.Println(block.Number)
+
 	fmt.Println("commit time is ",(block.CommitTime-block.Timestamp)/int64(time.Millisecond))
 
 	fmt.Println("write time is ",(block.WriteTime-block.CommitTime)/ int64(time.Millisecond))
