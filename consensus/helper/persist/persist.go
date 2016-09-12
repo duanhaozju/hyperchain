@@ -59,7 +59,7 @@ func ReadStateSet(prefix string) (map[string][]byte, error) {
 }
 
 func GetBlockchainInfo() *types.Chain {
-	bcInfo := core.GetChainCopy()
+	bcInfo := core.GetChainUntil()
 	return bcInfo
 }
 

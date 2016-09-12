@@ -543,7 +543,7 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 	cert := instance.getCert(instance.view, n)
 	cert.prePrepare = preprep
 	cert.digest = digest
-	instance.persistQSet()
+	//instance.persistQSet()
 	msg := pbftMsgHelper(&Message{Payload: &Message_PrePrepare{PrePrepare: preprep}}, instance.id)
 	instance.helper.InnerBroadcast(msg)
 
@@ -610,7 +610,7 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 			ReplicaId:      instance.id,
 		}
 		cert.sentPrepare = true
-		instance.persistQSet()
+		//instance.persistQSet()
 		instance.recvPrepare(prep)
 		msg := pbftMsgHelper(&Message{Payload: &Message_Prepare{Prepare: prep}}, instance.id)
 		return instance.helper.InnerBroadcast(msg)
@@ -649,7 +649,7 @@ func (instance *pbftCore) recvPrepare(prep *Prepare) error {
 	}
 
 	cert.prepare = append(cert.prepare, prep)
-	instance.persistPSet()
+	//instance.persistPSet()
 
 	return instance.maybeSendCommit(prep.BatchDigest, prep.View, prep.SequenceNumber)
 }
@@ -799,7 +799,7 @@ func (instance *pbftCore) execDoneSync(idx msgID) {
 			} else  {
 				// reqBatch call execute but have not done with execute
 				logger.Errorf("Fail to call the checkpoint, seqNo=%d, block height=%d", instance.lastExec, height)
-				instance.retryCheckpoint(instance.lastExec)
+				//instance.retryCheckpoint(instance.lastExec)
 			}
 		}
 	} else {
