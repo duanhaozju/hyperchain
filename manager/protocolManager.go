@@ -12,7 +12,6 @@ import (
 	"hyperchain/crypto"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"
-	"fmt"
 	"sync"
 	"hyperchain/protos"
 	"time"
@@ -106,41 +105,6 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 	for obj := range self.syncCheckpointSub.Chan() {
 
 		switch  ev := obj.Data.(type) {
-		case event.StateUpdateEvent:
-			log.Error("########enter StateUpdateEvent")
-			/*
-			get required block from db and send to outer peers
-			 */
-
-			receiveMessage := &recovery.Message{}
-			proto.Unmarshal(ev.Payload, receiveMessage)
-
-			checkpointMsg := &recovery.CheckPointMessage{}
-			proto.Unmarshal(receiveMessage.Payload, checkpointMsg)
-
-			db, _ := hyperdb.GetLDBDatabase()
-
-			blocks := &types.Blocks{}
-			for i := checkpointMsg.CurrentNumber + 1; i <= checkpointMsg.RequiredNumber; i += 1 {
-				block, err := core.GetBlockByNumber(db, checkpointMsg.CurrentNumber + 1)
-				if err != nil {
-					log.Warning("no required block number")
-				}
-				blocks.Batch = append(blocks.Batch, block)
-			}
-			payload, _ := proto.Marshal(blocks)
-			message := &recovery.Message{
-				MessageType:recovery.Message_SYNCBLOCK,
-				MsgTimeStamp:time.Now().UnixNano(),
-				Payload:payload,
-
-			}
-			var peers []uint64
-			peers = append(peers, checkpointMsg.PeerId)
-			broadcastMsg, _ := proto.Marshal(message)
-
-			self.peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_SYNCBLOCK)
-
 
 
 		case event.SendCheckpointSyncEvent:
@@ -156,11 +120,13 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 			blockChainInfo := &protos.BlockchainInfo{}
 			proto.Unmarshal(UpdateStateMessage.TargetId, blockChainInfo)
 
+			log.Error("##########receive ",core.GetChainCopy().Height)
 			required := &recovery.CheckPointMessage{
 				RequiredNumber:blockChainInfo.Height,
 				CurrentNumber:core.GetChainCopy().Height,
-				//PeerId:UpdateStateMessage.,
+				PeerId:UpdateStateMessage.Id,
 			}
+			log.Error(required.PeerId)
 			core.UpdateRequire(blockChainInfo.Height, blockChainInfo.CurrentBlockHash, blockChainInfo.Height)
 
 			payload, _ := proto.Marshal(required)
@@ -172,6 +138,58 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 			}
 			broadcastMsg, _ := proto.Marshal(message)
 			self.peerManager.SendMsgToPeers(broadcastMsg, UpdateStateMessage.Replicas, recovery.Message_SYNCCHECKPOINT)
+
+
+		case event.StateUpdateEvent:
+			log.Error("########enter StateUpdateEvent")
+			/*
+			get required block from db and send to outer peers
+			 */
+
+			receiveMessage := &recovery.Message{}
+			proto.Unmarshal(ev.Payload, receiveMessage)
+
+			checkpointMsg := &recovery.CheckPointMessage{}
+			proto.Unmarshal(receiveMessage.Payload, checkpointMsg)
+
+			db, _ := hyperdb.GetLDBDatabase()
+
+			blocks := &types.Blocks{}
+			for i := checkpointMsg.RequiredNumber; i > checkpointMsg.CurrentNumber; i -= 1 {
+			//for i := checkpointMsg.CurrentNumber + 1; i <= checkpointMsg.RequiredNumber; i += 1 {
+				block, err := core.GetBlockByNumber(db, i)
+				log.Error("####### current block number is ",checkpointMsg.CurrentNumber + 1)
+				if err != nil {
+					log.Warning("no required block number")
+				}
+
+				if blocks.Batch ==nil{
+					blocks.Batch = append(blocks.Batch, block)
+				}else {
+					blocks.Batch[0] = block
+
+				}
+
+				log.Error("####### current block number2 is ",blocks.Batch[0].Number)
+
+				//blocks.Batch=
+				//blocks.Batch = append(blocks.Batch, block)
+
+				payload, _ := proto.Marshal(blocks)
+				message := &recovery.Message{
+					MessageType:recovery.Message_SYNCBLOCK,
+					MsgTimeStamp:time.Now().UnixNano(),
+					Payload:payload,
+
+				}
+				var peers []uint64
+				peers = append(peers, checkpointMsg.PeerId)
+				log.Error(peers)
+				broadcastMsg, _ := proto.Marshal(message)
+
+				self.peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_SYNCBLOCK)
+			}
+
 
 
 
@@ -196,28 +214,46 @@ func (self *ProtocolManager) syncBlockLoop() {
 				proto.Unmarshal(ev.Payload, message)
 				blocks := &types.Blocks{}
 				proto.Unmarshal(message.Payload, blocks)
-				if (common.Bytes2Hex(blocks.Batch[0].ParentHash) != common.Bytes2Hex(core.GetChainCopy().LatestBlockHash)) {
+				/*if (common.Bytes2Hex(blocks.Batch[0].ParentHash) != common.Bytes2Hex(core.GetChainCopy().LatestBlockHash)) {
 					log.Warning("receiver first block error")
 
-				}
+				}*/
 				db, _ := hyperdb.GetLDBDatabase()
 
 				for i := len(blocks.Batch) - 1; i >= 0; i -= 1 {
+					log.Error("###########enter for ")
+					log.Error("receive block number is ",blocks.Batch[i].Number)
+					log.Error("receive required block number is ",core.GetChainCopy().RequiredBlockNum)
 					if blocks.Batch[i].Number == core.GetChainCopy().RequiredBlockNum {
+						log.Error("###########enter receive msg2211")
 						acceptHash := blocks.Batch[i].HashBlock(self.commonHash).Bytes()
+						//todo compare receive blockHash and acceptHash
 						if (common.Bytes2Hex(acceptHash) == common.Bytes2Hex(core.GetChainCopy().RequireBlockHash)) {
+							log.Error("###########enter receive msg2212")
 							core.UpdateRequire(blocks.Batch[i].Number - 1, blocks.Batch[i].ParentHash, core.GetChainCopy().RecoveryNum)
+							core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
 							// receive all block in chain
 							if (common.Bytes2Hex(blocks.Batch[i].ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash)) {
 								core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum)
 
+								log.Error("###########enter receive msg221234")
 								core.UpdateRequire(uint64(0), []byte{}, uint64(0))
 								payload := &protos.StateUpdatedMessage{
 									SeqNo:core.GetChainCopy().Height,
 								}
 								msg, _ := proto.Marshal(payload)
+								msgSend:=&protos.Message{
+									Type:protos.Message_STATE_UPDATED,
+									Timestamp:time.Now().UnixNano(),
+									Payload:msg,
+									Id:1,
+								}
 								log.Error("###########enter receive msg333")
-								self.sendMsg(msg)
+								msgPayload,err:=proto.Marshal(msgSend)
+								if err!=nil{
+									log.Error(err)
+								}
+								self.consenter.RecvMsg(msgPayload)
 								break
 							}
 						}
@@ -337,7 +373,8 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 	sign, err := pm.accountManager.SignWithPassphrase(addr, h[:],"123")
 	//sign, err := pm.accountManager.Sign(addr, h[:])
 	if err != nil {
-		fmt.Print(err)
+		log.Error(err)
+
 		return nil
 	}
 	transaction.Signature = sign

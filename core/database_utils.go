@@ -282,6 +282,9 @@ func GetChainCopy() *types.Chain {
 		LatestBlockHash: memChainMap.data.LatestBlockHash,
 		ParentBlockHash: memChainMap.data.ParentBlockHash,
 		Height: memChainMap.data.Height,
+		RequiredBlockNum:memChainMap.data.RequiredBlockNum,
+		RequireBlockHash:memChainMap.data.RequireBlockHash,
+		RecoveryNum:memChainMap.data.RecoveryNum,
 	}
 }
 
