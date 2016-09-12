@@ -799,7 +799,7 @@ func (instance *pbftCore) execDoneSync(idx msgID) {
 			} else  {
 				// reqBatch call execute but have not done with execute
 				logger.Errorf("Fail to call the checkpoint, seqNo=%d, block height=%d", instance.lastExec, height)
-				//instance.retryCheckpoint(instance.lastExec)
+				instance.retryCheckpoint(instance.lastExec)
 			}
 		}
 	} else {
