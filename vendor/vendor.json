@@ -22,6 +22,18 @@
 			"revisionTime": "2016-08-16T05:15:41Z"
 		},
 		{
+			"checksumSHA1": "d9PxF1XQGLMJZRct2R8qVM/eYlE=",
+			"path": "github.com/hashicorp/golang-lru",
+			"revision": "0a025b7e63adc15a622f29b0b2c4c3848243bbf6",
+			"revisionTime": "2016-08-13T22:13:03Z"
+		},
+		{
+			"checksumSHA1": "9hffs0bAIU6CquiRhKQdzjHnKt0=",
+			"path": "github.com/hashicorp/golang-lru/simplelru",
+			"revision": "0a025b7e63adc15a622f29b0b2c4c3848243bbf6",
+			"revisionTime": "2016-08-13T22:13:03Z"
+		},
+		{
 			"checksumSHA1": "8E3sekKdBZ38W0UFwONoZb0txbE=",
 			"path": "github.com/hashicorp/hcl",
 			"revision": "baeb59c710717b06aac1dbe2270e8192ec593244",
@@ -201,6 +213,12 @@
 			"path": "golang.org/x/crypto/pbkdf2",
 			"revision": "c2f4947f41766b144bb09066e919466da5eddeae",
 			"revisionTime": "2016-06-10T11:13:04Z"
+		},
+		{
+			"checksumSHA1": "y/oIaxq2d3WPizRZfVjo8RCRYTU=",
+			"path": "golang.org/x/crypto/ripemd160",
+			"revision": "0e31b188fd38db611d4fbab7de9373a95f36aae5",
+			"revisionTime": "2016-09-09T01:05:11Z"
 		},
 		{
 			"checksumSHA1": "edxT+Mb+lwGCasYeIZ46a2B+4k8=",

@@ -7,6 +7,7 @@ import (
 
 	"hyperchain/consensus/helper"
 	"hyperchain/consensus/events"
+	pb "hyperchain/protos"
 
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
@@ -785,8 +786,8 @@ func (instance *pbftCore) execDoneSync(idx msgID) {
 				instance.checkpoint(instance.lastExec, bcInfo)
 			} else  {
 				// reqBatch call execute but have not done with execute
-				logger.Debugf("Retry call the checkpoint, seqNo=%d, block height=%d", instance.lastExec, height)
-				instance.retryCheckpoint(instance.lastExec)
+				logger.Errorf("Fail to call the checkpoint, seqNo=%d, block height=%d", instance.lastExec, height)
+				//instance.retryCheckpoint(instance.lastExec)
 			}
 		}
 	} else {
@@ -799,7 +800,7 @@ func (instance *pbftCore) execDoneSync(idx msgID) {
 
 }
 
-func (instance *pbftCore) checkpoint(n uint64, info *BlockchainInfo) {
+func (instance *pbftCore) checkpoint(n uint64, info *pb.BlockchainInfo) {
 
 	if n % instance.K != 0 {
 		logger.Errorf("Attempted to checkpoint a sequence number (%d) which is not a multiple of the checkpoint interval (%d)", n, instance.K)
@@ -826,25 +827,25 @@ func (instance *pbftCore) checkpoint(n uint64, info *BlockchainInfo) {
 	instance.helper.InnerBroadcast(msg)
 }
 
-func (instance *pbftCore) retryCheckpoint(n uint64) {
-
-	if n % instance.K != 0 {
-		return
-	}
-
-	bcInfo := getBlockchainInfo()
-	height := bcInfo.Height
-	if height == n {
-		logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", n, height)
-		instance.checkpoint(n, bcInfo)
-	} else {
-		// reqBatch call execute but have not done with execute
-		logger.Warningf("Fail to call the checkpoint, seqNo=%d, block height=%d", n, height)
-		instance.retryCheckpoint(instance.lastExec)
-	}
-
-
-}
+//func (instance *pbftCore) retryCheckpoint(n uint64) {
+//
+//	if n % instance.K != 0 {
+//		return
+//	}
+//
+//	bcInfo := getBlockchainInfo()
+//	height := bcInfo.Height
+//	if height == n {
+//		logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", n, height)
+//		instance.checkpoint(n, bcInfo)
+//	} else {
+//		// reqBatch call execute but have not done with execute
+//		logger.Warningf("Fail to call the checkpoint, seqNo=%d, block height=%d", n, height)
+//		instance.retryCheckpoint(instance.lastExec)
+//	}
+//
+//
+//}
 
 func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) events.Event {
 
@@ -1185,7 +1186,7 @@ func (instance *pbftCore) stopTimer(n uint64) {
 }
 
 func (instance *pbftCore) skipTo(seqNo uint64, id []byte, replicas []uint64) {
-	info := &BlockchainInfo{}
+	info := &pb.BlockchainInfo{}
 	err := proto.Unmarshal(id, info)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Error unmarshaling: %s", err))

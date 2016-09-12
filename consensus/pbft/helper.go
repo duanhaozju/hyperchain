@@ -74,7 +74,7 @@ func stateUpdateHelper(seqNo uint64, id []byte, replicaId []uint64) *pb.UpdateSt
 	return stateUpdateMsg
 }
 
-func getBlockchainInfo() *BlockchainInfo {
+func getBlockchainInfo() *pb.BlockchainInfo {
 
 	bcInfo := persist.GetBlockchainInfo()
 

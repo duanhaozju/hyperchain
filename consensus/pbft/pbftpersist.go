@@ -173,6 +173,6 @@ func (instance *pbftCore) getLastSeqNo() (uint64, error) {
 		return h, err
 	}
 
-	return h-1, nil
+	return h, nil
 }
 
