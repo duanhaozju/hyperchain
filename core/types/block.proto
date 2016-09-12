@@ -10,4 +10,11 @@ message Block {
 	bytes merkleRoot = 5;
 	uint64 number = 6;
 	int64 writeTime = 7;
+	int64 commitTime = 8;
+}
+
+message Blocks{
+    repeated Block batch = 1;
+
+
 }

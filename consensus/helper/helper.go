@@ -5,6 +5,7 @@ import (
 	pb "hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"
+	"time"
 )
 
 type helper struct {
@@ -14,6 +15,7 @@ type helper struct {
 type Stack interface {
 	InnerBroadcast(msg *pb.Message) error
 	Execute(reqBatch *pb.ExeMessage) error
+	UpdateState(updateState *pb.UpdateStateMessage) error
 }
 
 // InnerBroadcast broadcast the consensus message between vp nodes
@@ -46,10 +48,29 @@ func (h *helper) Execute(reqBatch *pb.ExeMessage) error{
 
 	exeEvent := event.NewBlockEvent{
 		Payload:	tmpMsg,
+		CommitTime:	time.Now().UnixNano(),
 	}
 
 	// Post the event to outer
 	go h.msgQ.Post(exeEvent)
+
+	return nil
+}
+
+// UpdateState transfers the UpdateStateEvent to outer
+func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
+
+	tmpMsg, err := proto.Marshal(updateState)
+
+	if err != nil {
+		return err
+	}
+
+	updateStateEvent := event.SendCheckpointSyncEvent {
+		Payload:	tmpMsg,
+	}
+
+	go h.msgQ.Post(updateStateEvent)
 
 	return nil
 }

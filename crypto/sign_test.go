@@ -17,11 +17,11 @@ type Transaction struct {
 	from atomic.Value
 }
 type txdata struct  {
-	Recipient *[]byte
+	Recipient *common.Address
 	Amount *big.Int
 	signature []byte
 }
-func NewTransaction(to []byte,amount *big.Int) *Transaction {
+func NewTransaction(to common.Address,amount *big.Int) *Transaction {
 	d:=txdata{
 		Recipient:	&to,
 		Amount:		new(big.Int),
@@ -41,9 +41,9 @@ func TestSigntx(t *testing.T)  {
 
 	key := k.(*ecdsa.PrivateKey)
 	pub := key.PublicKey
-	var addr []byte
+	var addr common.Address
 	pubBytes := elliptic.Marshal(secp256k1.S256(), pub.X, pub.Y)
-	addr = Keccak256(pubBytes[1:])[12:]
+	copy(addr[:],Keccak256(pubBytes[1:])[12:])
 
 	fmt.Println("public key is :")
 	fmt.Println(pub)
@@ -58,7 +58,7 @@ func TestSigntx(t *testing.T)  {
 	priv := p.(*ecdsa.PrivateKey)
 
 	//签名交易
-	tx:= NewTransaction([]byte{},big.NewInt(100))
+	tx:= NewTransaction(common.Address{},big.NewInt(100))
 	s256 := NewKeccak256Hash("Keccak256")
 	hash := s256.Hash([]interface{}{tx.data.Amount,tx.data.Recipient})
 	signature,err := ee.Sign(hash[:],priv)
@@ -78,7 +78,9 @@ func TestSigntx(t *testing.T)  {
 	fmt.Println(from)
 	fmt.Println(addr)
 
-	fmt.Println(common.ToHex(from))
-	fmt.Println(common.ToHex(addr))
+	hex := common.ToHex(from.Bytes())
+	fmt.Println(common.ToHex(from[:]))
+	fmt.Println(common.ToHex(addr[:]))
+	fmt.Println(common.FromHex(hex))
 
 }

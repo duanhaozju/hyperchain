@@ -36,6 +36,7 @@ type LastestBlockShow struct{
 type BlockShow struct{
         Height uint64
         TxCounts uint64
+	BatchTIme string
 	WriteTime string
         Counts int64
 }
@@ -54,7 +55,6 @@ func SendTransaction(args TxArgs) bool {
 	log.Info(args)
 
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
-
 	if (core.VerifyBalance(tx)) {
 
 		// Balance is enough
@@ -76,21 +76,17 @@ func SendTransaction(args TxArgs) bool {
 				if err != nil {
 					log.Fatalf("proto.Marshal(tx) error: %v",err)
 				}
-
-				go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-				time.Sleep(3 * time.Microsecond)
-
+				if manager.GetEventObject() != nil{
+					go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+				}else{
+					log.Warning("manager is Nil")
+				}
+				time.Sleep(200 * time.Nanosecond)
 			}
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
 
-		//tx.TimeStamp=time.Now().UnixNano()
-		//txBytes, err := proto.Marshal(tx)
-		//if err != nil {
-		//	log.Fatalf("proto.Marshal(tx) error: %v",err)
-		//}
-		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 
 		return true
 
@@ -130,7 +126,7 @@ func GetAllTransactions()  []TransactionShow{
 	return transactions
 }
 
-// GetAllBalances retruns all account's balance in the db,NOT CACHE DB!
+// GetAllBalances returns all account's balance in the db,NOT CACHE DB!
 func GetAllBalances() BalanceShow{
 
 	var balances = make(BalanceShow)
@@ -144,8 +140,8 @@ func GetAllBalances() BalanceShow{
 	balMap := balanceIns.GetAllDBBalance()
 
 	for key, value := range balMap {
-		log.Info(key.Str())
-		balances[key.Str()] = string(value)
+		log.Info(key.Hex())
+		balances[key.Hex()] = string(value)
 	}
 
 	return balances
@@ -211,6 +207,7 @@ func blockShow(height uint64) BlockShow{
 	return BlockShow{
 			Height: height,
 			TxCounts: txCounts,
+			BatchTIme: time.Unix(block.Timestamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
 			WriteTime: time.Unix(block.WriteTime / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
 			Counts: core.CalcResponseCount(height, int64(300)),
 		}

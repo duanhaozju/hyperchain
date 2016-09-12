@@ -66,10 +66,10 @@ func (pool *BlockPool) eventLoop() {
 
 
 //check block sequence and validate in chain
-func (pool *BlockPool)AddBlock(block *types.Block,commonHash crypto.CommonHash) {
+func (pool *BlockPool)AddBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int64) {
 
 	if (block.Number == 0) {
-		WriteBlock(block,commonHash)
+		WriteBlock(block,commonHash,commitTime)
 		return
 	}
 
@@ -98,7 +98,7 @@ func (pool *BlockPool)AddBlock(block *types.Block,commonHash crypto.CommonHash) 
 		pool.demandNumber+=1
 		log.Info("current demandNumber is ",pool.demandNumber)
 
-		WriteBlock(block,commonHash)
+		WriteBlock(block,commonHash,commitTime)
 
 
 		pool.mu.RUnlock()
@@ -109,7 +109,7 @@ func (pool *BlockPool)AddBlock(block *types.Block,commonHash crypto.CommonHash) 
 					pool.mu.RLock()
 					pool.demandNumber+=1
 					log.Info("current demandNumber is ",pool.demandNumber)
-					WriteBlock(pool.queue[i],commonHash)
+					WriteBlock(pool.queue[i],commonHash,commitTime)
 					delete(pool.queue,i)
 					pool.mu.RUnlock()
 

@@ -96,6 +96,8 @@ func (op *batch) RecvMsg(e []byte) error {
 		return op.processTransaction(msg)
 	} else if msg.Type == pb.Message_CONSENSUS {
 		return op.processConsensus(msg)
+	} else if msg.Type == pb.Message_STATE_UPDATED {
+		return op.processStateUpdated(msg)
 	}
 
 	logger.Errorf("Unknown recvMsg: %+v", msg)
@@ -148,6 +150,24 @@ func (op *batch) processConsensus(msg *pb.Message) error {
 	return nil
 }
 
+// process the state update message
+func (op *batch) processStateUpdated(msg *pb.Message) error {
+
+	stateUpdatedMsg := &pb.StateUpdatedMessage{}
+	err := proto.Unmarshal(msg.Payload, stateUpdatedMsg)
+
+	if err != nil {
+		logger.Errorf("processStateUpdate, unmarshal error: can not unmarshal UpdateStateMessage", err)
+		return err
+	}
+
+	event := stateUpdatedEvent{
+		seqNo: stateUpdatedMsg.SeqNo,
+	}
+	op.ProcessEvent(&event)
+	return nil
+}
+
 func (op *batch) ProcessEvent(e events.Event) events.Event{
 
 	logger.Debugf("Replica %d start solve event", op.pbft.id)
@@ -159,7 +179,7 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 		return op.processRequest(req)
 	case batchTimerEvent:
 		logger.Debugf("Replica %d batch timer expired", op.pbft.id)
-		if  (len(op.batchStore) > 0) {
+		if  op.pbft.activeView && (len(op.batchStore) > 0) {
 			return op.sendBatch()
 		}
 	default:
@@ -172,8 +192,9 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 func (op *batch) processRequest(req *Request) error {
 
 	op.reqStore.storeOutstanding(req)
-	op.startTimerIfOutstandingRequests()
-	if (op.pbft.primary(op.pbft.view) == op.pbft.id) {
+	//op.startTimerIfOutstandingRequests()
+
+	if (op.pbft.primary(op.pbft.view) == op.pbft.id) && op.pbft.activeView {
 		return op.leaderProcReq(req)
 	}
 
@@ -241,13 +262,8 @@ func (op *batch) sendBatch() error {
 	return nil
 }
 
-
 func (op *batch) getHelper() helper.Stack {
 	return op.helperImpl
-}
-
-func (op *batch) startTimerIfOutstandingRequests() {
-	op.pbft.softStartTimer(op.pbft.requestTimeout, "Batch outstanding requests")
 }
 
 func (op *batch) startBatchTimer() {
@@ -260,6 +276,21 @@ func (op *batch) stopBatchTimer() {
 	op.batchTimer.Stop()
 	logger.Debugf("Replica %d stopped the batch timer", op.pbft.id)
 	op.batchTimerActive = false
+}
+
+func (op *batch) startTimerIfOutstandingRequests() {
+	if op.pbft.skipInProgress || !op.pbft.activeView {
+		// Do not start view change timer if some background event is in progress
+		logger.Debugf("Replica %d not starting timer because skip in progress or current exec or in view change", op.pbft.id)
+		return
+	}
+
+	if !op.reqStore.hasNonPending() {
+		// Only start a timer if we are aware of outstanding requests
+		logger.Debugf("Replica %d not starting timer because all outstanding requests are pending", op.pbft.id)
+		return
+	}
+	op.pbft.softStartTimer(op.pbft.requestTimeout, "Batch outstanding requests")
 }
 
 // Close tells us to release resources we are holding
