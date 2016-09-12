@@ -14,7 +14,7 @@ import (
 func TestEncryption(t *testing.T){
 	encryption :=NewEcdsaEncrypto("ecdsa")
 	encryption.GeneralKey("123")
-	encryption.GetKey()
+	//encryption.GetKey()
 	fmt.Print(encryption.port)
 
 
