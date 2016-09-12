@@ -82,7 +82,7 @@ func getBlockchainInfo() *BlockchainInfo {
 	curBlkHash := bcInfo.LatestBlockHash
 	preBlkHash := bcInfo.ParentBlockHash
 
-	return &BlockchainInfo{
+	return &pb.BlockchainInfo{
 		Height:	height,
 		CurrentBlockHash: curBlkHash,
 		PreviousBlockHash: preBlkHash,

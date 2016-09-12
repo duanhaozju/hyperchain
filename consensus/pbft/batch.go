@@ -164,7 +164,7 @@ func (op *batch) processStateUpdated(msg *pb.Message) error {
 	event := stateUpdatedEvent{
 		seqNo: stateUpdatedMsg.SeqNo,
 	}
-	op.ProcessEvent(&event)
+	op.postPbftEvent(event)
 	return nil
 }
 
@@ -221,7 +221,7 @@ func (op *batch) postRequestEvent(event *Request) {
 
 }
 
-func (op *batch) postPbftEvent(event pbftMessageEvent) {
+func (op *batch) postPbftEvent(event interface{}) {
 	op.pbftManager.Queue() <- event
 }
 
