@@ -4,6 +4,7 @@
 
 ## IMPORTANT BUG
 - 内存泄露 missing check point
+- 加入EVM代码后，tx的value不再是代表balance，而是新的Transaction_value unmarshal的结果，同时里面的payload不是编译后的代码，而是合约源码。
 
 ## CHANGE LOG:
 
