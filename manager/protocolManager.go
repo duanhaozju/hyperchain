@@ -200,10 +200,12 @@ func (self *ProtocolManager) syncBlockLoop() {
 
 				//TODO  validate receive block chain
 			    core.PutBlock(db,block.BlockHash,block)
+				core.UpdateChain(block, false)
 
 
 			}
 			core.UpdateRequire(0, []byte{})
+				core.GetChainCopy().Height
 
 		}
 		}
