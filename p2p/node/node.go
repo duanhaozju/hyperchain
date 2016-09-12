@@ -96,7 +96,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		response.Payload =result
 		log.Debug("<<<< GOT A CONSUS MESSAGE >>>>")
 		origData, err := transport.TripleDesDecrypt(msg.Payload, DESKEY)
-		log.Notice(origData)
+		log.Notice(string(origData))
 		if err != nil {
 			panic(err)
 		}
