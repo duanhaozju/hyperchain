@@ -40,7 +40,7 @@ func (instance *pbftCore) persistPQSet(key string, set []*ViewChange_PQ) {
 }
 
 //func (instance *pbftCore) persistDelPSet(n uint64) {
-//	raw, err := persist.ReadStateSet("pset")
+//	raw, err := persist.ReadState("pset")
 //
 //	if err != nil {
 //		logger.Errorf("Read State Set Error %s", err)
@@ -52,18 +52,20 @@ func (instance *pbftCore) persistPQSet(key string, set []*ViewChange_PQ) {
 //			return
 //		} else {
 //			pset := pqset.GetSet()
-//			for key := range pset {
-//				if key == n {
-//					delete(pset, key)
+//			var newPset []*ViewChange_PQ
+//			for _, p := range pset {
+//				if p.SequenceNumber == n {
+//					continue
 //				}
+//				newPset = append(newPset, p)
 //			}
-//			instance.persistPQSet("pset", pset)
+//			instance.persistPQSet("pset", newPset)
 //		}
 //	}
 //}
 //
 //func (instance *pbftCore) persistDelQSet(idx qidx) {
-//	raw, err := persist.ReadStateSet("qset")
+//	raw, err := persist.ReadState("qset")
 //
 //	if err!= nil {
 //		logger.Errorf("Read State Set Error %s", err)
@@ -75,12 +77,14 @@ func (instance *pbftCore) persistPQSet(key string, set []*ViewChange_PQ) {
 //			return
 //		} else {
 //			qset := pqset.GetSet()
-//			for key := range qset {
-//				if reflect.DeepEqual(key, idx) {
-//					delete(qset, key)
+//			var newQset []*ViewChange_PQ
+//			for _, q := range qset {
+//				if idx.d == q.BatchDigest && idx.n == q.SequenceNumber {
+//					continue
 //				}
+//				newQset = append(newQset, q)
 //			}
-//			instance.persistPQSet("qset", qset)
+//			instance.persistPQSet("qset", newQset)
 //		}
 //	}
 //}
