@@ -6,13 +6,13 @@ import (
 )
 
 func TestMyAPI(t *testing.T)  {
-	fn := filepath.Join("", "/Users/zhuohaizhen/Desktop/myTest.json")
+	fn := filepath.Join("", "myTest.json")
 	if err := RunVmTest(fn, StateSkipTests); err != nil {
 		t.Error(err)
 	}
 }
 
-
+/*
 func TestStateTransition(t *testing.T) {
 	fn := filepath.Join(stateTestDir, "stTransitionTest.json")
 	if err := RunVmTest(fn, StateSkipTests); err != nil {
@@ -119,3 +119,4 @@ func TestVMRandom(t *testing.T) {
 		}
 	}
 }
+*/
