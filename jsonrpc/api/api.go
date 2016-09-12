@@ -81,7 +81,7 @@ func SendTransaction(args TxArgs) bool {
 				}else{
 					log.Warning("manager is Nil")
 				}
-				time.Sleep(2 * time.Millisecond)
+				time.Sleep(200 * time.Nanosecond)
 			}
 		}
 
