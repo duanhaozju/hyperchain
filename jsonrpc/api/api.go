@@ -11,6 +11,7 @@ import (
 	"time"
 	"encoding/hex"
 	"math/big"
+	"strconv"
 )
 
 type TxArgs struct{
@@ -39,6 +40,7 @@ type BlockShow struct{
 	BatchTIme string
 	WriteTime string
         Counts int64
+	Percents string
 }
 
 var log *logging.Logger // package-level logger
@@ -203,13 +205,16 @@ func blockShow(height uint64) BlockShow{
 	}
 
 	txCounts := uint64(len(block.Transactions))
+	count,percent := core.CalcResponseCount(height, int64(200))
 
 	return BlockShow{
 			Height: height,
 			TxCounts: txCounts,
 			BatchTIme: time.Unix(block.Timestamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
 			WriteTime: time.Unix(block.WriteTime / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
-			Counts: core.CalcResponseCount(height, int64(300)),
+			Counts: count,
+			Percents:strconv.FormatFloat(percent*100, 'f', 2, 32)+"%",
+
 		}
 
 }
