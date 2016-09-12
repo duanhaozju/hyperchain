@@ -48,16 +48,14 @@ func main() {
 		fetcher := core.NewFetcher()
 
 
-
-		//init pbft consensus
-		cs := controller.NewConsenter(uint64(argv.NodeId), eventMux)
-
 		//init db
 		core.InitDB(argv.LocalPort)
 
 		//init genesis
 		core.CreateInitBlock("./core/genesis.json")
 
+		//init pbft consensus
+		cs := controller.NewConsenter(uint64(argv.NodeId), eventMux)
 
 		//init encryption object
 		encryption := crypto.NewEcdsaEncrypto("ecdsa")
