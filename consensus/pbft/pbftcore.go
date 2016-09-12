@@ -1205,7 +1205,7 @@ func (instance *pbftCore) skipTo(seqNo uint64, id []byte, replicas []uint64) {
 		return
 	}
 	//instance.UpdateState(&checkpointMessage{seqNo, id}, info, replicas)
-	instance.UpdateState(seqNo, id, replicas)
+	instance.updateState(seqNo, id, replicas)
 }
 
 // invalidateState is invoked to tell us that consensus realizes the ledger is out of sync
@@ -1221,12 +1221,12 @@ func (instance *pbftCore) validateState() {
 }
 
 // UpdateState attempts to synchronize state to a particular target, implicitly calls rollback if needed
-func (instance *pbftCore) UpdateState(seqNo uint64, targetId []byte, replicaId []uint64) {
+func (instance *pbftCore) updateState(seqNo uint64, targetId []byte, replicaId []uint64) {
 	//if instance.valid {
 	//	logger.Warning("State transfer is being called for, but the state has not been invalidated")
 	//}
 
-	updateStateMsg := stateUpdateHelper(seqNo, targetId, replicaId)
+	updateStateMsg := stateUpdateHelper(instance.id, seqNo, targetId, replicaId)
 	instance.helper.UpdateState(updateStateMsg) // TODO: stateUpdateEvent
 
 }
