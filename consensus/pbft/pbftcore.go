@@ -220,6 +220,8 @@ func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerF
 
 	instance.outstandingReqBatches = make(map[string]*RequestBatch)
 
+	instance.restoreState()
+
 	logger.Infof("--------PBFT finish start, nodeID: %d--------", instance.id)
 
 	return instance
@@ -262,6 +264,7 @@ func (instance *pbftCore) ProcessEvent(e events.Event) events.Event {
 	//	Todo for stateUpdateEvent
 
 	case *stateUpdatedEvent:
+		instance.reqBatchStore = newRequestStore()
 		err = instance.recvStateUpdatedEvent(et)
 
 	case nullRequestEvent:
@@ -1216,7 +1219,6 @@ func (instance *pbftCore) UpdateState(seqNo uint64, targetId []byte, replicaId [
 	//if instance.valid {
 	//	logger.Warning("State transfer is being called for, but the state has not been invalidated")
 	//}
-
 
 	updateStateMsg := stateUpdateHelper(seqNo, targetId, replicaId)
 	instance.helper.UpdateState(updateStateMsg) // TODO: stateUpdateEvent

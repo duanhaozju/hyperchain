@@ -62,3 +62,7 @@ func GetBlockchainInfo() *types.Chain {
 	bcInfo := core.GetChainCopy()
 	return bcInfo
 }
+
+func GetHeightofChain() uint64 {
+	return core.GetHeightOfChain()
+}
