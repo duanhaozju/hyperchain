@@ -10,6 +10,7 @@ package p2p
 import (
 	"testing"
 	"hyperchain/event"
+	"fmt"
 )
 func TestGrpcPeerManager_Start(t *testing.T){
 
@@ -44,5 +45,12 @@ func TestGrpcPeerManager_Start(t *testing.T){
 			break
 		}
 	}
+
+}
+
+func TestGrpcPeerManager_Start2(t *testing.T) {
+	a := 1
+	b := uint64(a)
+	fmt.Println(b)
 
 }

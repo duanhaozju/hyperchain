@@ -133,6 +133,16 @@ func GetBlock(db hyperdb.Database, key []byte) (*types.Block, error){
 	return &block, err
 }
 
+func GetBlockByNumber(db hyperdb.Database, blockNumber uint64) (*types.Block, error) {
+	hash , err := GetBlockHash(db , blockNumber)
+	if err != nil {
+		return nil, err
+
+	}
+	return GetBlock(db, hash)
+}
+
+
 func DeleteBlock(db hyperdb.Database, key []byte) error {
 	keyFact := append(blockPrefix, key...)
 	return db.Delete(keyFact)
@@ -150,7 +160,6 @@ func PutDBBalance(db hyperdb.Database, balance_db BalanceMap) error {
 	for key, value := range balance_db{
 		bJson[key.Str()] = value
 	}
-
 	data, err := json.Marshal(bJson)
 	if err != nil {
 		return err
@@ -180,8 +189,9 @@ func GetDBBalance(db hyperdb.Database) (BalanceMap, error) {
 
 // memChain manage safe chain
 type memChain struct {
-	data types.Chain  // chain
-	lock sync.RWMutex // the lock of chain
+	data   types.Chain   // chain
+	lock   sync.RWMutex  // the lock of chain
+	cpChan chan types.Chain // when data.Height reach check point, will be writed
 }
 
 // newMenChain new a memChain instance
@@ -193,18 +203,21 @@ func newMemChain() *memChain {
 			data: types.Chain{
 				Height: 0,
 			},
+			cpChan: make(chan types.Chain),
 		}
 	}
 	chain, err := getChain(db)
 	if err == nil {
 		return &memChain{
 			data: *chain,
+			cpChan: make(chan types.Chain),
 		}
 	}
 	return &memChain{
 		data: types.Chain{
 			Height: 0,
 		},
+		cpChan:make(chan types.Chain),
 	}
 }
 var memChainMap *memChain;
@@ -240,6 +253,20 @@ func UpdateChain(block *types.Block, genesis bool) error {
 	return putChain(db, &memChainMap.data)
 }
 
+//　根据blockNumber更新chain,chain的height直接赋值为block.Number
+func updateChainByBlcokNum(block *types.Block) error {
+	memChainMap.lock.Lock()
+	defer memChainMap.lock.Unlock()
+	memChainMap.data.LatestBlockHash = block.BlockHash
+	memChainMap.data.ParentBlockHash = block.ParentHash
+	memChainMap.data.Height = block.Number
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		return err
+	}
+	return putChain(db, &memChainMap.data)
+}
+
 // GetHeightOfChain get height of chain
 func GetHeightOfChain() uint64 {
 	memChainMap.lock.RLock()
@@ -258,6 +285,17 @@ func GetChainCopy() *types.Chain {
 	}
 }
 
+// WaitUtilHeightChan get chain from channel. if channel is empty, the func will be blocked
+func GetChainUntil() *types.Chain {
+	chain := <- memChainMap.cpChan
+	return &chain
+}
+
+// WriteChain to channel, if the channel is not read, will be blocked
+func WriteChainChan()  {
+	memChainMap.cpChan <- memChainMap.data
+}
+
 // putChain put chain database
 func putChain(db hyperdb.Database, t *types.Chain) error {
 	data, err := proto.Marshal(t)
@@ -268,6 +306,17 @@ func putChain(db hyperdb.Database, t *types.Chain) error {
 		return err
 	}
 	return nil
+}
+
+// UpdateRequire updates requireBlockNum and requireBlockHash
+func UpdateRequire(num uint64, hash []byte) error {
+	memChainMap.lock.Lock()
+	defer memChainMap.lock.Unlock()
+	memChainMap.data.RequiredBlockNum = num
+	memChainMap.data.RequireBlockHash = hash
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {return err}
+	return putChain(db, &memChainMap.data)
 }
 
 // getChain get chain from database
