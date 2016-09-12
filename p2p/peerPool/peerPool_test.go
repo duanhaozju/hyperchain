@@ -22,7 +22,7 @@ func TestPeersPool_PutPeer(t *testing.T) {
 	//get the client
 	//start the server
 	eventMux := new(event.TypeMux)
-	server := node.NewNode(portRange,true,eventMux)
+	server := node.NewNode(portRange,true,eventMux,3)
 
 	chatClient, err := peer.NewPeerByString("localhost:"+ strconv.Itoa(portRange))
 	if err != nil {
@@ -72,7 +72,7 @@ func TestPeersPool_GetPeer(t *testing.T) {
 	//get the client
 	//start the server
 	eventMux := new(event.TypeMux)
-	server := node.NewNode(portRange,true,eventMux)
+	server := node.NewNode(portRange,true,eventMux,3)
 
 	chatClient, err := peer.NewPeerByString("localhost:"+ strconv.Itoa(portRange))
 	if err != nil {
