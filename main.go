@@ -61,10 +61,9 @@ func main() {
 		encryption := crypto.NewEcdsaEncrypto("ecdsa")
 		encryption.GeneralKey(strconv.Itoa(argv.LocalPort))
 
-		scryptN := accounts.StandardScryptN
-		scryptP := accounts.StandardScryptP
+
 		keydir := "./keystore/"
-		am := accounts.NewAccountManager(keydir,encryption, scryptN, scryptP)
+		am := accounts.NewAccountManager(keydir,encryption)
 
 
 		//init hash object

@@ -318,6 +318,7 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 	addr := common.HexToAddress(addrHex)
 
 	sign, err := pm.accountManager.SignWithPassphrase(addr, h[:],"123")
+	//sign, err := pm.accountManager.Sign(addr, h[:])
 	if err != nil {
 		fmt.Print(err)
 		return nil

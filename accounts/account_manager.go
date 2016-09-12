@@ -44,10 +44,10 @@ type unlocked struct {
 	abort chan struct{}
 }
 // NewAccountManager creates a AccountManager for the given directory.
-func NewAccountManager(keydir string,encryp crypto.Encryption, scryptN, scryptP int) *AccountManager {
+func NewAccountManager(keydir string,encryp crypto.Encryption) *AccountManager {
 	keydir, _ = filepath.Abs(keydir)
 	am := &AccountManager{
-		KeyStore: &keyStorePassphrase{keydir, scryptN, scryptP},
+		KeyStore: &keyStorePassphrase{keydir, StandardScryptN, StandardScryptP},
 		unlocked:make(map[common.Address]*unlocked),
 		Encryption:encryp,
 	}
@@ -80,15 +80,15 @@ func (am *AccountManager)unlockAllAccount(keydir string){
 }
 
 // Sign signs hash with an unlocked private key matching the given address.
-//func (am *AccountManager) Sign(addr common.Address, hash []byte) (signature []byte, err error) {
-//	am.mu.RLock()
-//	defer am.mu.RUnlock()
-//	unlockedKey, found := am.unlocked[addr]
-//	if !found {
-//		return nil, ErrLocked
-//	}
-//	return am.Encryption.Sign(hash, unlockedKey.PrivateKey)
-//}
+func (am *AccountManager) Sign(addr common.Address, hash []byte) (signature []byte, err error) {
+	am.mu.RLock()
+	defer am.mu.RUnlock()
+	unlockedKey, found := am.unlocked[addr]
+	if !found {
+		return nil, ErrLocked
+	}
+	return am.Encryption.Sign(hash, unlockedKey.PrivateKey)
+}
 // SignWithPassphrase signs hash if the private key matching the given address can be
 // decrypted with the given passphrase.
 func (am *AccountManager) SignWithPassphrase(addr common.Address, hash []byte, passphrase string) (signature []byte, err error) {
@@ -100,10 +100,17 @@ func (am *AccountManager) SignWithPassphrase(addr common.Address, hash []byte, p
 		if err != nil {
 			return nil, err
 		}
-		unlockedKey = key
+		switch key.PrivateKey.(type) {
+		case *ecdsa.PrivateKey:
+			actualPriKey := key.PrivateKey.(*ecdsa.PrivateKey)
+			unlockedKey.Key = &Key{
+				Address:    crypto.PubkeyToAddress(actualPriKey.PublicKey),
+				PrivateKey: actualPriKey,
+			}
+			defer zeroKey(actualPriKey)
+		}
 	}
 
-	defer zeroKey(unlockedKey.PrivateKey)
 	return am.Encryption.Sign(hash, unlockedKey.PrivateKey)
 }
 // Unlock unlocks the given account indefinitely.
