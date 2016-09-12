@@ -465,7 +465,6 @@ func (instance *pbftCore) recvMsg(msg *Message, senderID uint64) (interface{}, e
 
 func (instance *pbftCore) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 
-
 	instance.stateTransferring = false
 	// If state transfer did not complete successfully, or if it did not reach our low watermark, do it again
 	if et.seqNo < instance.h {
@@ -490,7 +489,6 @@ func (instance *pbftCore) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 	instance.executeOutstanding()
 
 	return nil
-
 }
 
 func (instance *pbftCore) recvRequestBatch(reqBatch *RequestBatch) error {
@@ -545,7 +543,7 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 	cert := instance.getCert(instance.view, n)
 	cert.prePrepare = preprep
 	cert.digest = digest
-
+	instance.persistQSet()
 	msg := pbftMsgHelper(&Message{Payload: &Message_PrePrepare{PrePrepare: preprep}}, instance.id)
 	instance.helper.InnerBroadcast(msg)
 
@@ -612,6 +610,7 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 			ReplicaId:      instance.id,
 		}
 		cert.sentPrepare = true
+		instance.persistQSet()
 		instance.recvPrepare(prep)
 		msg := pbftMsgHelper(&Message{Payload: &Message_Prepare{Prepare: prep}}, instance.id)
 		return instance.helper.InnerBroadcast(msg)
@@ -650,6 +649,7 @@ func (instance *pbftCore) recvPrepare(prep *Prepare) error {
 	}
 
 	cert.prepare = append(cert.prepare, prep)
+	instance.persistPSet()
 
 	return instance.maybeSendCommit(prep.BatchDigest, prep.View, prep.SequenceNumber)
 }
@@ -1205,7 +1205,7 @@ func (instance *pbftCore) skipTo(seqNo uint64, id []byte, replicas []uint64) {
 		return
 	}
 	//instance.UpdateState(&checkpointMessage{seqNo, id}, info, replicas)
-	instance.UpdateState(seqNo, id, replicas)
+	instance.updateState(seqNo, id, replicas)
 }
 
 // invalidateState is invoked to tell us that consensus realizes the ledger is out of sync
@@ -1221,12 +1221,12 @@ func (instance *pbftCore) validateState() {
 }
 
 // UpdateState attempts to synchronize state to a particular target, implicitly calls rollback if needed
-func (instance *pbftCore) UpdateState(seqNo uint64, targetId []byte, replicaId []uint64) {
+func (instance *pbftCore) updateState(seqNo uint64, targetId []byte, replicaId []uint64) {
 	//if instance.valid {
 	//	logger.Warning("State transfer is being called for, but the state has not been invalidated")
 	//}
 
-	updateStateMsg := stateUpdateHelper(seqNo, targetId, replicaId)
+	updateStateMsg := stateUpdateHelper(instance.id, seqNo, targetId, replicaId)
 	instance.helper.UpdateState(updateStateMsg) // TODO: stateUpdateEvent
 
 }

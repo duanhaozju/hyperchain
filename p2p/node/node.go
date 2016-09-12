@@ -135,7 +135,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 
 		}
 		case recovery.Message_SYNCCHECKPOINT:{
-			go this.higherEventManager.Post(event.SendCheckpointSyncEvent{
+			go this.higherEventManager.Post(event.StateUpdateEvent{
 				Payload:SyncMsg.Payload,
 			})
 

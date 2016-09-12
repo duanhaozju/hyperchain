@@ -197,7 +197,9 @@ func (instance *pbftCore) restoreState() {
 	}
 
 	instance.restoreLastSeqNo() // assign value to lastExec
-
+	if instance.seqNo < instance.lastExec {
+		instance.seqNo = instance.lastExec
+	}
 	logger.Infof("Replica %d restored state: view: %d, seqNo: %d, pset: %d, qset: %d, reqBatches: %d, chkpts: %d",
 		instance.id, instance.view, instance.seqNo, len(instance.pset), len(instance.qset), len(instance.reqBatchStore), len(instance.chkpts))
 }
