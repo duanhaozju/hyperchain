@@ -107,6 +107,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 
 		switch  ev := obj.Data.(type) {
 		case event.StateUpdateEvent:
+			log.Error("########enter StateUpdateEvent")
 			/*
 			get required block from db and send to outer peers
 			 */
@@ -138,12 +139,13 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 			peers = append(peers, checkpointMsg.PeerId)
 			broadcastMsg, _ := proto.Marshal(message)
 
-			self.peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_SYNCCHECKPOINT)
+			self.peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_SYNCBLOCK)
 
 
 
 		case event.SendCheckpointSyncEvent:
 
+			log.Error("########enter SendCheckpointSyncEvent")
 			/*
 
 			receive request  from the consensus module required block and send to  outer peers
@@ -157,6 +159,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 			required := &recovery.CheckPointMessage{
 				RequiredNumber:blockChainInfo.Height,
 				CurrentNumber:core.GetChainCopy().Height,
+				//PeerId:UpdateStateMessage.,
 			}
 			core.UpdateRequire(blockChainInfo.Height, blockChainInfo.CurrentBlockHash, blockChainInfo.Height)
 
@@ -186,7 +189,9 @@ func (self *ProtocolManager) syncBlockLoop() {
 			/*
 			receive block from outer peers
 			 */
+			log.Error("###########enter receive msg111")
 			if (core.GetChainCopy().RequiredBlockNum != 0) {
+				log.Error("###########enter receive msg222")
 				message := &recovery.Message{}
 				proto.Unmarshal(ev.Payload, message)
 				blocks := &types.Blocks{}
@@ -211,6 +216,7 @@ func (self *ProtocolManager) syncBlockLoop() {
 									SeqNo:core.GetChainCopy().Height,
 								}
 								msg, _ := proto.Marshal(payload)
+								log.Error("###########enter receive msg333")
 								self.sendMsg(msg)
 								break
 							}
