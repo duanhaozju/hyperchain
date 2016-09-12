@@ -203,6 +203,7 @@ func (am *AccountManager) NewAccount(passphrase string) (Account, error) {
 	}
 	//am.AddrPassMap[common.ToHex(account.Address)] = passphrase
 	storeNewAddrToFile(account)
+	am.Unlock(account,"123")
 	return account, nil
 }
 
@@ -212,4 +213,8 @@ func zeroKey(k *ecdsa.PrivateKey) {
 	for i := range b {
 		b[i] = 0
 	}
+}
+
+func ValidateMatchAddrPass(from []byte, password string)  {
+
 }
