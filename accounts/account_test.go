@@ -35,13 +35,11 @@ func NewTransaction(to common.Address,amount *big.Int) *Transaction {
 }
 
 func TestManager(t *testing.T)  {
-	scryptN := StandardScryptN
-	scryptP := StandardScryptP
 
 	keydir := "../keystore/"
 
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
-	am := NewAccountManager(keydir,encryption, scryptN, scryptP)
+	am := NewAccountManager(keydir,encryption)
 
 	//account,err := am.NewAccount("123")
 	//if err!=nil{
@@ -63,7 +61,7 @@ func TestManager(t *testing.T)  {
 	}
 	//fmt.Println(ac)
 	time1 := time.Now()
-	key,_ := am.GetDecryptedKey(ac)
+	key,_ := am.GetDecryptedKey(ac,"123")
 	fmt.Println(time.Since(time1))
 	fmt.Println(key.Address)
 	fmt.Println(common.ToHex(key.Address[:]))
