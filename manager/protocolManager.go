@@ -143,7 +143,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 
 
 		case event.SendCheckpointSyncEvent:
-
+			log.Error("-------------recv SendCheckpointSyncEvent-----------")
 			/*
 			request  the consensus module required block to other peers
 			 */
