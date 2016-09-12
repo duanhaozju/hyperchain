@@ -5,8 +5,6 @@ import (
 	"math/big"
 	"hyperchain/common"
 	"hyperchain/core/crypto"
-	"hyperchain/hyperdb"
-	"encoding/json"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -36,7 +34,6 @@ func (self Storage) Copy() Storage {
 }
 
 type StateObject struct {
-	db   hyperdb.Database // State database for storing state changes
 			   // Address belonging to this account
 	address common.Address
 			   // The balance of the account
@@ -57,7 +54,7 @@ type StateObject struct {
 	dirty   bool
 }
 
-func NewStateObject(address common.Address, db hyperdb.Database) *StateObject {
+func NewStateObject(address common.Address) *StateObject {
 	object := &StateObject{
 		address:  address,
 		balance:  new(big.Int),
@@ -66,71 +63,6 @@ func NewStateObject(address common.Address, db hyperdb.Database) *StateObject {
 		storage:  make(Storage),
 	}
 	return object
-}
-
-func (self StateObject) MarshalJSON() ([]byte, error) {
-	type ext struct {
-		Address common.Address
-		Balance *big.Int
-		Nonce uint64
-		CodeHash []byte
-		Code Code
-		Abi ABI
-		Storage map[string]string
-		Remove  bool
-		Deleted bool
-		Dirty   bool
-	}
-	e := ext {
-		Address: self.address,
-		Balance: self.balance,
-		Nonce: self.nonce,
-		CodeHash: self.codeHash,
-		Code: self.code,
-		Abi: self.abi,
-		Remove: self.remove,
-		Deleted: self.deleted,
-		Dirty: self.dirty,
-	}
-	sMap := make(map[string]string)
-	for key, value := range self.storage {
-		sMap[key.Str()] = value.Str()
-	}
-	e.Storage = sMap
-	return json.Marshal(e)
-}
-
-func (self *StateObject) UnmarshalJSON(data []byte) error {
-	type ext struct {
-		Address common.Address
-		Balance *big.Int
-		Nonce uint64
-		CodeHash []byte
-		Code Code
-		Abi ABI
-		Storage map[string]string
-		Remove  bool
-		Deleted bool
-		Dirty   bool
-	}
-	var e ext
-	err := json.Unmarshal(data, &e)
-	if err != nil { return err }
-	self.address = e.Address
-	self.balance = e.Balance
-	self.nonce = e.Nonce
-	self.codeHash = e.CodeHash
-	self.code = e.Code
-	self.abi = e.Abi
-	self.remove = e.Remove
-	self.deleted = e.Deleted
-	self.dirty = e.Dirty
-	self.storage = make(Storage)
-	for key, value := range e.Storage {
-		self.storage[common.StringToHash(key)] = common.StringToHash(value)
-	}
-
-	return nil
 }
 
 func (self *StateObject) MarkForDeletion() {
@@ -180,7 +112,7 @@ func (c *StateObject) SetBalance(amount *big.Int) {
 func (c *StateObject) ReturnGas(gas, price *big.Int) {}
 
 func (self *StateObject) Copy() *StateObject {
-	stateObject := NewStateObject(self.Address(), self.db)
+	stateObject := NewStateObject(self.Address())
 	stateObject.balance.Set(self.balance)
 	stateObject.codeHash = common.CopyBytes(self.codeHash)
 	stateObject.nonce = self.nonce
@@ -205,6 +137,14 @@ func (c *StateObject) Address() common.Address {
 	return c.address
 }
 
+func (self *StateObject) ABI() []byte {
+	return self.abi
+}
+
+func (self *StateObject) SetABI(abi []byte) {
+	self.abi = abi
+	self.dirty = true
+}
 
 func (self *StateObject) Code() []byte {
 	return self.code
@@ -237,5 +177,4 @@ func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) {
 	for h, value := range self.storage {
 		cb(h, value)
 	}
-
 }

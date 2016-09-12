@@ -236,7 +236,6 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 
 					fallthrough
 				case STOP: // Stop the contract
-					fmt.Println("We are ready",ret)
 					return nil, nil
 				}
 			}

@@ -2,12 +2,11 @@ package core
 
 import (
 	"math/big"
-
 	"hyperchain/common"
 	"hyperchain/core/vm"
 	"hyperchain/core/crypto"
 	"hyperchain/core/vm/params"
-	"fmt"
+	"hyperchain/core/vm/compiler"
 )
 
 // Call executes within the given contract
@@ -36,30 +35,29 @@ func DelegateCall(env vm.Environment, caller vm.ContractRef, addr common.Address
 func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPrice, value *big.Int) (ret []byte, address common.Address, err error) {
 	ret, address, err = exec(env, caller, nil, nil, nil, code, gas, gasPrice, value)
 	if err != nil {
-		fmt.Println("it is err",err)
+		log.Error("it is err",err)
 		return nil, address, err
 	}
 	return ret, address, err
 }
 
-func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
+func exec(env vm.Environment, caller vm.ContractRef, toAddress, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
 	evm := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
 	// 深度检查代码,如果超过limit则只消耗gas
 	if env.Depth() > int(params.CallCreateDepth.Int64()) {
 		caller.ReturnGas(gas, gasPrice)
-
 		return nil, common.Address{}, vm.DepthError
 	}
 
 	var createAccount bool
-	if address == nil {
+	if toAddress == nil {
 		// Create a new account on the state
 		nonce := env.Db().GetNonce(caller.Address())
 		env.Db().SetNonce(caller.Address(), nonce+1)
 		addr = crypto.CreateAddress(caller.Address(), nonce)
-		address = &addr
+		toAddress = &addr
 		createAccount = true
 	}
 
@@ -69,12 +67,12 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		to   vm.Account
 	)
 	if createAccount {
-		to = env.Db().CreateAccount(*address)
+		to = env.Db().CreateAccount(*toAddress)
 	} else {
-		if !env.Db().Exist(*address) {
-			to = env.Db().CreateAccount(*address)
+		if !env.Db().Exist(*toAddress) {
+			to = env.Db().CreateAccount(*toAddress)
 		} else {
-			to = env.Db().GetAccount(*address)
+			to = env.Db().GetAccount(*toAddress)
 		}
 	}
 	env.Transfer(from, to, value)
@@ -82,35 +80,41 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
-	// 初始化一个新合约同时设置code(已经被EVM使用过),该合约仅仅是该上下文的一个作用域环境
 	contract := vm.NewContract(caller, to, value, gas, gasPrice)
-	contract.SetCallCode(codeAddr, code)
+	if createAccount{
+		abis,bins,err := compiler.CompileSourcefile(string(code))
+		//_,_,err := compiler.CompileSourcefile(sourcecode)
+		if err != nil{
+			return nil,common.Address{},err
+		}
+		log.Info("abis:",abis)
+		log.Info("bins:",bins)
+		log.Info("--------------")
+
+		// TODO this is only for one contract
+		contract.SetABI(common.FromHex(abis[0]))
+		contract.SetCallCode(codeAddr,common.FromHex(bins[0]))
+	}else {
+		contract.SetCallCode(codeAddr, code)
+	}
 	defer contract.Finalise()
 
 	// very important 执行contract和input
-	fmt.Println("start run")
 	ret, err = evm.Run(contract, input)
-	fmt.Println("end run")
 	// if the contract creation ran successfully and no errors were returned
 	// calculate the gas required to store the code. If the code could not
 	// be stored due to not enough gas set an error and let it be handled
 	// by the error checking condition below.
-	// 如果合约创建成功且没有error,计算gas来保存code,如果code因为gas不够不能保存,让它
-	// 通过以下条件检查
 	if err == nil && createAccount {
 		dataGas := big.NewInt(int64(len(ret)))
 		dataGas.Mul(dataGas, params.CreateDataGas)
 		if contract.UseGas(dataGas) {
-			env.Db().SetCode(*address, ret)
+			env.Db().SetCode(*toAddress, ret)
 		} else {
 			err = vm.CodeStoreOutOfGasError
 		}
 	}
-	if err == nil{
-		fmt.Println("no err")
-	}else {
-		fmt.Println("has err",err)
-	}
+
 
 	// When an error was returned by the EVM or when setting the creation code
 	// above we revert to the snapshot and consume any gas remaining. Additionally
