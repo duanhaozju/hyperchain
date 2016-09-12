@@ -7,7 +7,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"encoding/base64"
 	"github.com/pkg/errors"
-	"reflect"
+	//"reflect"
 )
 
 func (instance *pbftCore) persistQSet() {
