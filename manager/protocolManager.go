@@ -108,7 +108,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 		switch  ev := obj.Data.(type) {
 		case event.StateUpdateEvent:
 			/*
-			get required block from db and send to peer
+			get required block from db and send to outer peers
 			 */
 
 			receiveMessage := &recovery.Message{}
@@ -145,7 +145,8 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 		case event.SendCheckpointSyncEvent:
 
 			/*
-			request  the consensus module required block to other peers
+
+			receive request  from the consensus module required block and send to  outer peers
 			 */
 			UpdateStateMessage := &protos.UpdateStateMessage{}
 			proto.Unmarshal(ev.Payload, UpdateStateMessage)
@@ -157,7 +158,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 				RequiredNumber:blockChainInfo.Height,
 				CurrentNumber:core.GetChainCopy().Height,
 			}
-			core.UpdateRequire(blockChainInfo.Height, blockChainInfo.CurrentBlockHash)
+			core.UpdateRequire(blockChainInfo.Height, blockChainInfo.CurrentBlockHash, blockChainInfo.Height)
 
 			payload, _ := proto.Marshal(required)
 			message := &recovery.Message{
@@ -182,6 +183,9 @@ func (self *ProtocolManager) syncBlockLoop() {
 
 		switch  ev := obj.Data.(type) {
 		case event.ReceiveSyncBlockEvent:
+			/*
+			receive block from outer peers
+			 */
 			if (core.GetChainCopy().RequiredBlockNum != 0) {
 				message := &recovery.Message{}
 				proto.Unmarshal(ev.Payload, message)
@@ -192,19 +196,37 @@ func (self *ProtocolManager) syncBlockLoop() {
 
 				}
 				db, _ := hyperdb.GetLDBDatabase()
-				for _, block := range blocks.Batch {
+
+				for i := len(blocks.Batch) - 1; i >= 0; i -= 1 {
+					if blocks.Batch[i].Number == core.GetChainCopy().RequiredBlockNum {
+						acceptHash := blocks.Batch[i].HashBlock(self.commonHash).Bytes()
+						if (common.Bytes2Hex(acceptHash) == common.Bytes2Hex(core.GetChainCopy().RequireBlockHash)) {
+							core.UpdateRequire(blocks.Batch[i].Number - 1, blocks.Batch[i].ParentHash, core.GetChainCopy().RecoveryNum)
+							// receive all block in chain
+							if (common.Bytes2Hex(blocks.Batch[i].ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash)) {
+								core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum)
+
+								core.UpdateRequire(uint64(0), []byte{}, uint64(0))
+								payload := &protos.StateUpdatedMessage{
+									SeqNo:core.GetChainCopy().Height,
+								}
+								msg, _ := proto.Marshal(payload)
+								self.sendMsg(msg)
+								break
+							}
+						}
+					}
+
+				}
+				/*for _, block := range blocks.Batch {
+
 
 					//TODO  validate receive block chain
 					core.PutBlock(db, block.BlockHash, block)
 					core.UpdateChain(block, false)
 
-				}
-				core.UpdateRequire(0, []byte{})
-				payload := &protos.StateUpdatedMessage{
-					SeqNo:core.GetChainCopy().Height,
-				}
-				msg, _ := proto.Marshal(payload)
-				self.sendMsg(msg)
+				}*/
+
 
 			}
 		}

@@ -17,6 +17,7 @@ import (
 	"time"
 	"encoding/hex"
 
+	"github.com/ethereum/go-ethereum/core"
 )
 
 
@@ -104,6 +105,7 @@ func CreateInitBlock(filename string)  {
 func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int64)  {
 
 	log.Info("block number is ",block.Number)
+
 	currentChain := GetChainCopy()
 	block.ParentHash = currentChain.LatestBlockHash
 	block.BlockHash = block.Hash(commonHash).Bytes()
@@ -129,4 +131,9 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 	log.Notice("Block number",newChain.Height)
 	log.Notice("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
 	balance.UpdateDBBalance(block)
+
+	if block.Number%10==0 && block.Number!=0{
+		WriteChainChan()
+
+	}
 }
