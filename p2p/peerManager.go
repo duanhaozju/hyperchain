@@ -184,7 +184,7 @@ func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 		if err != nil {
 			log.Error("Broadcast failed,Node", peer.Addr)
 		} else {
-			log.Info("resMsg:", string(resMsg.Payload))
+			log.Debug("resMsg:", string(resMsg.Payload))
 			//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
 		}
 	}
