@@ -119,7 +119,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 
 			db, _ := hyperdb.GetLDBDatabase()
 
-			 blocks:= &types.Blocks{}
+			blocks := &types.Blocks{}
 			for i := checkpointMsg.CurrentNumber + 1; i <= checkpointMsg.RequiredNumber; i += 1 {
 				block, err := core.GetBlockByNumber(db, checkpointMsg.CurrentNumber + 1)
 				if err != nil {
@@ -176,36 +176,37 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 	}
 }
 
-
 func (self *ProtocolManager) syncBlockLoop() {
 
 	for obj := range self.syncBlockSub.Chan() {
 
 		switch  ev := obj.Data.(type) {
 		case event.ReceiveSyncBlockEvent:
-			if(core.GetChainCopy().RequiredBlockNum!=0){
-			message := &recovery.Message{}
-			proto.Unmarshal(ev.Payload, message)
-			blocks:=&types.Blocks{}
-			proto.Unmarshal(message.Payload, blocks)
-			if(common.Bytes2Hex(blocks.Batch[0].ParentHash)!=common.Bytes2Hex(core.GetChainCopy().LatestBlockHash)){
-				log.Warning("receiver first block error")
+			if (core.GetChainCopy().RequiredBlockNum != 0) {
+				message := &recovery.Message{}
+				proto.Unmarshal(ev.Payload, message)
+				blocks := &types.Blocks{}
+				proto.Unmarshal(message.Payload, blocks)
+				if (common.Bytes2Hex(blocks.Batch[0].ParentHash) != common.Bytes2Hex(core.GetChainCopy().LatestBlockHash)) {
+					log.Warning("receiver first block error")
+
+				}
+				db, _ := hyperdb.GetLDBDatabase()
+				for _, block := range blocks.Batch {
+
+					//TODO  validate receive block chain
+					core.PutBlock(db, block.BlockHash, block)
+					core.UpdateChain(block, false)
+
+				}
+				core.UpdateRequire(0, []byte{})
+				payload := &protos.StateUpdatedMessage{
+					SeqNo:core.GetChainCopy().Height,
+				}
+				msg, _ := proto.Marshal(payload)
+				self.sendMsg(msg)
 
 			}
-			/*for i := 0; i < len(blocks); i += 1 {
-				blocks[i+1].BlockHash=blocks[i].HashBlock(self.commonHash)
-			}*/
-			db, _ := hyperdb.GetLDBDatabase()
-			for _, block := range blocks.Batch {
-
-				//TODO  validate receive block chain
-			    core.PutBlock(db,block.BlockHash,block)
-
-
-			}
-			core.UpdateRequire(0, []byte{})
-
-		}
 		}
 	}
 }

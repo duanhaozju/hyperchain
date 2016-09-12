@@ -66,7 +66,7 @@ func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
 		return err
 	}
 
-	updateStateEvent := event.ConsensusEvent {
+	updateStateEvent := event.SendCheckpointSyncEvent {
 		Payload:	tmpMsg,
 	}
 
