@@ -107,6 +107,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 
 		switch  ev := obj.Data.(type) {
 		case event.StateUpdateEvent:
+			log.Error("-------------recv StateUpdateEvent-----------")
 			/*
 			get required block from db and send to peer
 			 */
@@ -138,7 +139,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 			peers = append(peers, checkpointMsg.PeerId)
 			broadcastMsg, _ := proto.Marshal(message)
 
-			self.peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_SYNCCHECKPOINT)
+			self.peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_SYNCBLOCK)
 
 
 
