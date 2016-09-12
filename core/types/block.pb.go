@@ -7,10 +7,16 @@ Package types is a generated protocol buffer package.
 
 It is generated from these files:
 	block.proto
+	chain.proto
+	transaction.proto
+	transaction_value.proto
 
 It has these top-level messages:
 	Block
 	Blocks
+	Chain
+	Transaction
+	TransactionValue
 */
 package types
 
@@ -30,14 +36,14 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type Block struct {
-	ParentHash   []byte                `protobuf:"bytes,1,opt,name=parentHash,proto3" json:"parentHash,omitempty"`
-	BlockHash    []byte                `protobuf:"bytes,2,opt,name=blockHash,proto3" json:"blockHash,omitempty"`
+	ParentHash   []byte         `protobuf:"bytes,1,opt,name=parentHash,proto3" json:"parentHash,omitempty"`
+	BlockHash    []byte         `protobuf:"bytes,2,opt,name=blockHash,proto3" json:"blockHash,omitempty"`
 	Transactions []*Transaction `protobuf:"bytes,3,rep,name=transactions" json:"transactions,omitempty"`
-	Timestamp    int64                 `protobuf:"varint,4,opt,name=timestamp" json:"timestamp,omitempty"`
-	MerkleRoot   []byte                `protobuf:"bytes,5,opt,name=merkleRoot,proto3" json:"merkleRoot,omitempty"`
-	Number       uint64                `protobuf:"varint,6,opt,name=number" json:"number,omitempty"`
-	WriteTime    int64                 `protobuf:"varint,7,opt,name=writeTime" json:"writeTime,omitempty"`
-	CommitTime   int64                 `protobuf:"varint,8,opt,name=commitTime" json:"commitTime,omitempty"`
+	Timestamp    int64          `protobuf:"varint,4,opt,name=timestamp" json:"timestamp,omitempty"`
+	MerkleRoot   []byte         `protobuf:"bytes,5,opt,name=merkleRoot,proto3" json:"merkleRoot,omitempty"`
+	Number       uint64         `protobuf:"varint,6,opt,name=number" json:"number,omitempty"`
+	WriteTime    int64          `protobuf:"varint,7,opt,name=writeTime" json:"writeTime,omitempty"`
+	CommitTime   int64          `protobuf:"varint,8,opt,name=commitTime" json:"commitTime,omitempty"`
 }
 
 func (m *Block) Reset()                    { *m = Block{} }
