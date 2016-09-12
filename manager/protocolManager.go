@@ -182,7 +182,9 @@ func (self *ProtocolManager) syncBlockLoop() {
 
 		switch  ev := obj.Data.(type) {
 		case event.ReceiveSyncBlockEvent:
+			log.Error("############sendMsg111")
 			if (core.GetChainCopy().RequiredBlockNum != 0) {
+				log.Error("############sendMsg222")
 				message := &recovery.Message{}
 				proto.Unmarshal(ev.Payload, message)
 				blocks := &types.Blocks{}
@@ -204,6 +206,7 @@ func (self *ProtocolManager) syncBlockLoop() {
 					SeqNo:core.GetChainCopy().Height,
 				}
 				msg, _ := proto.Marshal(payload)
+				log.Error("############sendMsg333")
 				self.sendMsg(msg)
 
 			}
