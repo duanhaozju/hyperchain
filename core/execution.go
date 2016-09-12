@@ -2,12 +2,10 @@ package core
 
 import (
 	"math/big"
-
 	"hyperchain/common"
 	"hyperchain/core/vm"
 	"hyperchain/core/crypto"
 	"hyperchain/core/vm/params"
-	"fmt"
 	"hyperchain/core/vm/compiler"
 )
 
@@ -37,7 +35,7 @@ func DelegateCall(env vm.Environment, caller vm.ContractRef, addr common.Address
 func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPrice, value *big.Int) (ret []byte, address common.Address, err error) {
 	ret, address, err = exec(env, caller, nil, nil, nil, code, gas, gasPrice, value)
 	if err != nil {
-		fmt.Println("it is err",err)
+		log.Error("it is err",err)
 		return nil, address, err
 	}
 	return ret, address, err
@@ -102,9 +100,7 @@ func exec(env vm.Environment, caller vm.ContractRef, toAddress, codeAddr *common
 	defer contract.Finalise()
 
 	// very important 执行contract和input
-	fmt.Println("start run")
 	ret, err = evm.Run(contract, input)
-	fmt.Println("end run")
 	// if the contract creation ran successfully and no errors were returned
 	// calculate the gas required to store the code. If the code could not
 	// be stored due to not enough gas set an error and let it be handled
@@ -118,11 +114,7 @@ func exec(env vm.Environment, caller vm.ContractRef, toAddress, codeAddr *common
 			err = vm.CodeStoreOutOfGasError
 		}
 	}
-	if err == nil{
-		fmt.Println("no err")
-	}else {
-		fmt.Println("has err",err)
-	}
+
 
 	// When an error was returned by the EVM or when setting the creation code
 	// above we revert to the snapshot and consume any gas remaining. Additionally

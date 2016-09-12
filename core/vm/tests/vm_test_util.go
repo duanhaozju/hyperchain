@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"fmt"
 	"math/big"
 	"hyperchain/common"
 	"hyperchain/core/state"
@@ -9,6 +8,7 @@ import (
 	"hyperchain/core/vm/api"
 	"hyperchain/hyperdb"
 	"github.com/op/go-logging"
+	"fmt"
 )
 var log *logging.Logger // package-level logger
 func init() {
@@ -120,39 +120,39 @@ func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.
 	//ret,err = api.Exec(&from,nil, data, gas, price, value)
 
 	for k,v := range state.GetAccounts(){
-		fmt.Println("k:",k,"---------,v:",v.Balance())
+		log.Info("Account key:",k,"----------value:",v)
 	}
 
 	addr := state.GetLeastAccount().Address()
 	for a, v := range state.GetStateObject(addr).Storage() {
-		fmt.Println(a,"----",v)
+		log.Info("StateObject key:",a,"----------value:",v)
 	}
-	fmt.Println("addr---------------",addr)
-	fmt.Println("ret--------",ret)
+	log.Info("addr---------------",addr)
+	log.Info("ret--------",ret)
 
 	ret,err = api.Exec(&from, &to, data, gas, price, value)
-	fmt.Println("ret--------",ret)
+	log.Info("ret--------",ret)
 	for a, v := range state.GetStateObject(addr).Storage() {
-		fmt.Println(a,"++++++",v)
+		log.Info("StateObject key:",a,"----------value:",v)
 	}
 
 	to = addr
 	ret,err = api.Exec(&from, &to, data2, gas, price, value)
-	fmt.Println("ret--------",ret)
+	log.Info("ret--------",ret)
 	for a, v := range state.GetStateObject(addr).Storage() {
-		fmt.Println(a,"++++++",v)
+		log.Info("StateObject key:",a,"----------value:",v)
 	}
 
 	ret,err = api.Exec(&from, &to, data2, gas, price, value)
-	fmt.Println("ret--------",ret)
+	log.Info("ret--------",ret)
 	for a, v := range state.GetStateObject(addr).Storage() {
-		fmt.Println(a,"++++++",v)
+		log.Info("StateObject key:",a,"----------value:",v)
 	}
 
 	ret,err = api.Exec(&from, &to, data2, gas, price, value)
-	fmt.Println("ret--------",ret)
+	log.Info("ret--------",ret)
 	for a, v := range state.GetStateObject(addr).Storage() {
-		fmt.Println(a,"++++++",v)
+		log.Info("StateObject key:",a,"----------value:",v)
 	}
 	if err != nil{
 		log.Error("VM call err:",err)
