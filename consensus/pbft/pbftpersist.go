@@ -39,51 +39,51 @@ func (instance *pbftCore) persistPQSet(key string, set []*ViewChange_PQ) {
 	persist.StoreState(key, raw)
 }
 
-func (instance *pbftCore) persistDelPSet(n uint64) {
-	raw, err := persist.ReadStateSet("pset")
-
-	if err != nil {
-		logger.Errorf("Read State Set Error %s", err)
-		return
-	} else {
-		pqset := &PQset{}
-		if umErr := proto.Unmarshal(raw, pqset); umErr != nil {
-			logger.Error(umErr)
-			return
-		} else {
-			pset := pqset.GetSet()
-			for key := range pset {
-				if key == n {
-					delete(pset, key)
-				}
-			}
-			instance.persistPQSet("pset", pset)
-		}
-	}
-}
-
-func (instance *pbftCore) persistDelQSet(idx qidx) {
-	raw, err := persist.ReadStateSet("qset")
-
-	if err!= nil {
-		logger.Errorf("Read State Set Error %s", err)
-		return
-	} else {
-		pqset := &PQset{}
-		if umErr := proto.Unmarshal(raw, pqset); umErr != nil {
-			logger.Error(umErr)
-			return
-		} else {
-			qset := pqset.GetSet()
-			for key := range qset {
-				if reflect.DeepEqual(key, idx) {
-					delete(qset, key)
-				}
-			}
-			instance.persistPQSet("qset", qset)
-		}
-	}
-}
+//func (instance *pbftCore) persistDelPSet(n uint64) {
+//	raw, err := persist.ReadStateSet("pset")
+//
+//	if err != nil {
+//		logger.Errorf("Read State Set Error %s", err)
+//		return
+//	} else {
+//		pqset := &PQset{}
+//		if umErr := proto.Unmarshal(raw, pqset); umErr != nil {
+//			logger.Error(umErr)
+//			return
+//		} else {
+//			pset := pqset.GetSet()
+//			for key := range pset {
+//				if key == n {
+//					delete(pset, key)
+//				}
+//			}
+//			instance.persistPQSet("pset", pset)
+//		}
+//	}
+//}
+//
+//func (instance *pbftCore) persistDelQSet(idx qidx) {
+//	raw, err := persist.ReadStateSet("qset")
+//
+//	if err!= nil {
+//		logger.Errorf("Read State Set Error %s", err)
+//		return
+//	} else {
+//		pqset := &PQset{}
+//		if umErr := proto.Unmarshal(raw, pqset); umErr != nil {
+//			logger.Error(umErr)
+//			return
+//		} else {
+//			qset := pqset.GetSet()
+//			for key := range qset {
+//				if reflect.DeepEqual(key, idx) {
+//					delete(qset, key)
+//				}
+//			}
+//			instance.persistPQSet("qset", qset)
+//		}
+//	}
+//}
 
 func (instance *pbftCore) restorePQSet(key string) []*ViewChange_PQ {
 	raw, err := persist.ReadState(key)
