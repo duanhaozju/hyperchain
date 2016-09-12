@@ -498,7 +498,7 @@ func (instance *pbftCore) recvRequestBatch(reqBatch *RequestBatch) error {
 
 	instance.reqBatchStore[digest] = reqBatch
 	instance.outstandingReqBatches[digest] = reqBatch
-	instance.persistRequestBatch(digest)
+	//instance.persistRequestBatch(digest)
 	if instance.activeView {
 		instance.softStartTimer(instance.requestTimeout, fmt.Sprintf("new request batch %s", digest))
 	}
@@ -595,7 +595,7 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 		instance.reqBatchStore[digest] = preprep.GetRequestBatch()
 		logger.Debugf("Replica %d storing request batch %s in outstanding request batch store", instance.id, digest)
 		instance.outstandingReqBatches[digest] = preprep.GetRequestBatch()
-		instance.persistRequestBatch(digest)
+		//instance.persistRequestBatch(digest)
 	}
 
 	instance.softStartTimer(instance.requestTimeout, fmt.Sprintf("new pre-prepare for request batch %s", preprep.BatchDigest))
@@ -833,7 +833,7 @@ func (instance *pbftCore) checkpoint(n uint64, info *pb.BlockchainInfo) {
 	}
 	instance.chkpts[seqNo] = idAsString
 
-	instance.persistCheckpoint(seqNo, id)
+	//instance.persistCheckpoint(seqNo, id)
 	instance.recvCheckpoint(chkpt)
 	msg := pbftMsgHelper(&Message{Payload: &Message_Checkpoint{Checkpoint: chkpt}}, instance.id)
 	instance.helper.InnerBroadcast(msg)
@@ -1032,7 +1032,7 @@ func (instance *pbftCore) moveWatermarks(n uint64) {
 		if idx.n <= h {
 			logger.Debugf("Replica %d cleaning quorum certificate for view=%d/seqNo=%d",
 				instance.id, idx.v, idx.n)
-			instance.persistDelRequestBatch(cert.digest)
+			//instance.persistDelRequestBatch(cert.digest)
 			delete(instance.reqBatchStore, cert.digest)
 			delete(instance.certStore, idx)
 		}
@@ -1063,7 +1063,7 @@ func (instance *pbftCore) moveWatermarks(n uint64) {
 	for n := range instance.chkpts {
 		if n < h {
 			delete(instance.chkpts, n)
-			instance.persistDelCheckpoint(n)
+			//instance.persistDelCheckpoint(n)
 		}
 	}
 
