@@ -261,7 +261,7 @@ func (instance *pbftCore) ProcessEvent(e events.Event) events.Event {
 	case *Checkpoint:
 		return instance.recvCheckpoint(et)
 	case *stateUpdatedEvent:
-		instance.reqBatchStore = newRequestStore()
+		instance.batch.reqStore = newRequestStore()
 		err = instance.recvStateUpdatedEvent(et)
 	case nullRequestEvent:
 		instance.nullRequestHandler()
@@ -567,8 +567,12 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 	}
 
 	if !instance.inWV(preprep.View, preprep.SequenceNumber) {
-		// This is perfectly normal
-		logger.Debugf("Replica %d pre-prepare view different, or sequence number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d", instance.id, preprep.View, instance.primary(instance.view), preprep.SequenceNumber, instance.h)
+		if preprep.SequenceNumber != instance.h && !instance.skipInProgress {
+			logger.Warningf("Replica %d pre-prepare view different, or sequence number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d", instance.id, preprep.View, instance.primary(instance.view), preprep.SequenceNumber, instance.h)
+		} else {
+			// This is perfectly normal
+			logger.Debugf("Replica %d pre-prepare view different, or sequence number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d", instance.id, preprep.View, instance.primary(instance.view), preprep.SequenceNumber, instance.h)
+		}
 
 		return nil
 	}
@@ -627,8 +631,12 @@ func (instance *pbftCore) recvPrepare(prep *Prepare) error {
 	}
 
 	if !instance.inWV(prep.View, prep.SequenceNumber) {
-		// This is perfectly normal
-		logger.Debugf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", instance.id, prep.View, prep.SequenceNumber, instance.view, instance.h)
+		if prep.SequenceNumber != instance.h && !instance.skipInProgress {
+			logger.Warningf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", instance.id, prep.View, prep.SequenceNumber, instance.view, instance.h)
+		} else {
+			// This is perfectly normal
+			logger.Debugf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", instance.id, prep.View, prep.SequenceNumber, instance.view, instance.h)
+		}
 		return nil
 	}
 
@@ -675,8 +683,12 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 		instance.id, commit.ReplicaId, commit.View, commit.SequenceNumber)
 
 	if !instance.inWV(commit.View, commit.SequenceNumber) {
-		// This is perfectly normal
-		logger.Debugf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, high water mark %d", instance.id, commit.View, commit.SequenceNumber, instance.view, instance.h)
+		if commit.SequenceNumber != instance.h && !instance.skipInProgress {
+			logger.Warningf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, high water mark %d", instance.id, commit.View, commit.SequenceNumber, instance.view, instance.h)
+		} else {
+			// This is perfectly normal
+			logger.Debugf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, high water mark %d", instance.id, commit.View, commit.SequenceNumber, instance.view, instance.h)
+		}
 		return nil
 	}
 
