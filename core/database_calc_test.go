@@ -11,7 +11,7 @@ func TestCalcResponseCount(t *testing.T) {
 	blockUtilsCase.Number = GetHeightOfChain() + 1
 	commonHash := crypto.NewKeccak256Hash("keccak256")
 	WriteBlock(&blockUtilsCase, commonHash, 122)
-	count := CalcResponseCount(GetHeightOfChain(), 1000)
+	count, _ := CalcResponseCount(GetHeightOfChain(), 1000)
 	if count != 2 {
 		t.Errorf("%d not equal 2, TestCalcResponseCount fail", count)
 	}
