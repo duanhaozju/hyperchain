@@ -86,7 +86,6 @@ func (op *batch) RecvMsg(e []byte) error {
 
 	msg := &pb.Message{}
 	err := proto.Unmarshal(e,msg)
-	
 	if err!=nil {
 		logger.Errorf("Inner RecvMsg Unmarshal error: can not unmarshal pb.Message", err)
 		return err
