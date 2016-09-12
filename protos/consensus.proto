@@ -22,9 +22,10 @@ message ExeMessage {
 }
 
 message UpdateStateMessage {
-    uint64 seqNo = 1;
-    bytes targetId = 2;
-    repeated uint64 replicas = 3;
+    uint64 id = 1;
+    uint64 seqNo = 2;
+    bytes targetId = 3;
+    repeated uint64 replicas = 4;
 }
 
 message StateUpdatedMessage {

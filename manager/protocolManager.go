@@ -107,6 +107,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 
 		switch  ev := obj.Data.(type) {
 		case event.StateUpdateEvent:
+			log.Error("-------------recv StateUpdateEvent-----------")
 			/*
 			get required block from db and send to peer
 			 */
@@ -138,12 +139,12 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 			peers = append(peers, checkpointMsg.PeerId)
 			broadcastMsg, _ := proto.Marshal(message)
 
-			self.peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_SYNCCHECKPOINT)
+			self.peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_SYNCBLOCK)
 
 
 
 		case event.SendCheckpointSyncEvent:
-
+			log.Error("-------------recv SendCheckpointSyncEvent-----------")
 			/*
 			request  the consensus module required block to other peers
 			 */
@@ -182,7 +183,9 @@ func (self *ProtocolManager) syncBlockLoop() {
 
 		switch  ev := obj.Data.(type) {
 		case event.ReceiveSyncBlockEvent:
+			log.Error("############sendMsg111")
 			if (core.GetChainCopy().RequiredBlockNum != 0) {
+				log.Error("############sendMsg222")
 				message := &recovery.Message{}
 				proto.Unmarshal(ev.Payload, message)
 				blocks := &types.Blocks{}
@@ -204,6 +207,7 @@ func (self *ProtocolManager) syncBlockLoop() {
 					SeqNo:core.GetChainCopy().Height,
 				}
 				msg, _ := proto.Marshal(payload)
+				log.Error("############sendMsg333")
 				self.sendMsg(msg)
 
 			}
