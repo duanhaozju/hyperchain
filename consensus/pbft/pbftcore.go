@@ -465,7 +465,6 @@ func (instance *pbftCore) recvMsg(msg *Message, senderID uint64) (interface{}, e
 
 func (instance *pbftCore) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 
-
 	instance.stateTransferring = false
 	// If state transfer did not complete successfully, or if it did not reach our low watermark, do it again
 	if et.seqNo < instance.h {
@@ -490,7 +489,6 @@ func (instance *pbftCore) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 	instance.executeOutstanding()
 
 	return nil
-
 }
 
 func (instance *pbftCore) recvRequestBatch(reqBatch *RequestBatch) error {
