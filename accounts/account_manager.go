@@ -36,9 +36,7 @@ type Account struct {
 type AccountManager struct {
 	KeyStore	keyStore
 	Encryption	crypto.Encryption
-	//AddrPassMap	map[string]string
 	mu		sync.RWMutex
-	//keycache	map[common.Address]*[]byte
 	unlocked map[common.Address]*unlocked
 }
 type unlocked struct {
@@ -50,8 +48,6 @@ func NewAccountManager(keydir string,encryp crypto.Encryption, scryptN, scryptP 
 	keydir, _ = filepath.Abs(keydir)
 	am := &AccountManager{
 		KeyStore: &keyStorePassphrase{keydir, scryptN, scryptP},
-		//AddrPassMap:make(map[string]string),
-		//keycache:make(map[common.Address]*[]byte),
 		unlocked:make(map[common.Address]*unlocked),
 		Encryption:encryp,
 	}
@@ -82,30 +78,32 @@ func (am *AccountManager)unlockAllAccount(keydir string){
 	}
 
 }
-//func (am *AccountManager)cacheAllKey(fileList []string) error {
-//	for _,filename := range fileList{
-//		keyjson, err := ioutil.ReadFile(filename)
-//		if err != nil {
-//			return err
-//		}
-//		m:= make(map[string]interface{})
-//		if err := json.Unmarshal(keyjson,&m);err!=nil{
-//			return err
-//		}
-//		addrHex := m["address"]
-//		addr := common.HexToAddress("0x"+addrHex.(string))
-//		am.keycache[addr] = &keyjson
-//	}
-//	return nil
-//}
+
 // Sign signs hash with an unlocked private key matching the given address.
-func (am *AccountManager) Sign(addr common.Address, hash []byte) (signature []byte, err error) {
+//func (am *AccountManager) Sign(addr common.Address, hash []byte) (signature []byte, err error) {
+//	am.mu.RLock()
+//	defer am.mu.RUnlock()
+//	unlockedKey, found := am.unlocked[addr]
+//	if !found {
+//		return nil, ErrLocked
+//	}
+//	return am.Encryption.Sign(hash, unlockedKey.PrivateKey)
+//}
+// SignWithPassphrase signs hash if the private key matching the given address can be
+// decrypted with the given passphrase.
+func (am *AccountManager) SignWithPassphrase(addr common.Address, hash []byte, passphrase string) (signature []byte, err error) {
 	am.mu.RLock()
 	defer am.mu.RUnlock()
 	unlockedKey, found := am.unlocked[addr]
 	if !found {
-		return nil, ErrLocked
+		key, err := am.GetDecryptedKey(Account{Address: addr}, passphrase)
+		if err != nil {
+			return nil, err
+		}
+		unlockedKey = key
 	}
+
+	defer zeroKey(unlockedKey.PrivateKey)
 	return am.Encryption.Sign(hash, unlockedKey.PrivateKey)
 }
 // Unlock unlocks the given account indefinitely.
@@ -135,7 +133,7 @@ func (am *AccountManager) Lock(addr common.Address) error {
 // shortens the active unlock timeout. If the address was previously unlocked
 // indefinitely the timeout is not altered.
 func (am *AccountManager) TimedUnlock(a Account, passphrase string, timeout time.Duration) error {
-	key, err := am.GetDecryptedKey(a)
+	key, err := am.GetDecryptedKey(a,passphrase)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -163,19 +161,13 @@ func (am *AccountManager) TimedUnlock(a Account, passphrase string, timeout time
 	am.unlocked[a.Address] = u
 	return nil
 }
-func (am *AccountManager) GetDecryptedKey(a Account) (*Key, error) {
-	am.mu.Lock()
-	defer am.mu.Unlock()
-	key, err := am.KeyStore.GetKey(a.Address, a.File, "123")
+func (am *AccountManager) GetDecryptedKey(a Account,auth string) (*Key, error) {
+	//am.mu.Lock()
+	//defer am.mu.Unlock()
+	key, err := am.KeyStore.GetKey(a.Address, a.File, auth)
 	return key, err
 }
-//func (am *AccountManager) GetDecryptedKeyCache(a Account) (*Key, error) {
-//	am.mu.Lock()
-//	defer am.mu.Unlock()
-//	key, err := am.KeyStore.GetKeyFromCache(a.Address, am.keycache[a.Address], "123")
-//
-//	return key, err
-//}
+
 func (am *AccountManager) expire(addr common.Address, u *unlocked, timeout time.Duration) {
 	t := time.NewTimer(timeout)
 	defer t.Stop()

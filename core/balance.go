@@ -227,9 +227,9 @@ func VerifyBalance(tx *types.Transaction) bool {
 	}
 
 	bal := balanceIns.GetCacheBalance(common.HexToAddress(string(tx.From)))
-	bal2 := balanceIns.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000002"))
+	//bal2 := balanceIns.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000002"))
 	log.Debug(bal)
-	log.Debug(bal2)
+	//log.Debug(bal2)
 	//log.Println(common.Bytes2Hex(bal))
 
 
