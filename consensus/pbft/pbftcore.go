@@ -924,8 +924,6 @@ func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) events.Event {
 	return nil
 }
 
-func (instance *pbftCore) recvStateUpdate() {}
-
 func (instance *pbftCore) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 	H := instance.h + instance.L
 
