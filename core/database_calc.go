@@ -4,7 +4,7 @@ import (
 	"hyperchain/hyperdb"
 	"time"
 
-	"fmt"
+	//"fmt"
 )
 
 // CalcResponseCount calculate response count of a block for given blockNumber
@@ -24,12 +24,12 @@ func CalcResponseCount(blockNumber uint64, millTime int64) (int64,float64){
 	}
 	percent := float64(count)/500
 
-	fmt.Println("block number is",block.Number)
-	if block.Transactions!=nil{
-		fmt.Println("batch time is ",(block.Timestamp-block.Transactions[0].TimeStamp)/int64(time.Millisecond))
-	}
+	//fmt.Println("block number is",block.Number)
+	//if block.Transactions!=nil{
+	//	fmt.Println("batch time is ",(block.Timestamp-block.Transactions[0].TimeStamp)/int64(time.Millisecond))
+	//}
 
-	fmt.Println("commit time is ",(block.CommitTime-block.Timestamp)/int64(time.Millisecond))
+	//fmt.Println("commit time is ",(block.CommitTime-block.Timestamp)/int64(time.Millisecond))
 	//fmt.Println("write time is ",(block.WriteTime-block.CommitTime)/ int64(time.Millisecond))
 	return count,percent
 }
