@@ -109,7 +109,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 
 		case event.SendCheckpointSyncEvent:
 
-			log.Error("########enter SendCheckpointSyncEvent")
+
 			/*
 
 			receive request  from the consensus module required block and send to  outer peers
@@ -120,7 +120,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 			blockChainInfo := &protos.BlockchainInfo{}
 			proto.Unmarshal(UpdateStateMessage.TargetId, blockChainInfo)
 
-			log.Error("##########receive ",core.GetChainCopy().Height)
+
 			required := &recovery.CheckPointMessage{
 				RequiredNumber:blockChainInfo.Height,
 				CurrentNumber:core.GetChainCopy().Height,
@@ -141,7 +141,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 
 
 		case event.StateUpdateEvent:
-			log.Error("########enter StateUpdateEvent")
+
 			/*
 			get required block from db and send to outer peers
 			 */
@@ -158,7 +158,6 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 			for i := checkpointMsg.RequiredNumber; i > checkpointMsg.CurrentNumber; i -= 1 {
 			//for i := checkpointMsg.CurrentNumber + 1; i <= checkpointMsg.RequiredNumber; i += 1 {
 				block, err := core.GetBlockByNumber(db, i)
-				log.Error("####### current block number is ",checkpointMsg.CurrentNumber + 1)
 				if err != nil {
 					log.Warning("no required block number")
 				}
@@ -170,7 +169,6 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 
 				}
 
-				log.Error("####### current block number2 is ",blocks.Batch[0].Number)
 
 				//blocks.Batch=
 				//blocks.Batch = append(blocks.Batch, block)
@@ -207,9 +205,9 @@ func (self *ProtocolManager) syncBlockLoop() {
 			/*
 			receive block from outer peers
 			 */
-			log.Error("###########enter receive msg111")
+
 			if (core.GetChainCopy().RequiredBlockNum != 0) {
-				log.Error("###########enter receive msg222")
+
 				message := &recovery.Message{}
 				proto.Unmarshal(ev.Payload, message)
 				blocks := &types.Blocks{}
@@ -221,22 +219,20 @@ func (self *ProtocolManager) syncBlockLoop() {
 				db, _ := hyperdb.GetLDBDatabase()
 
 				for i := len(blocks.Batch) - 1; i >= 0; i -= 1 {
-					log.Error("###########enter for ")
-					log.Error("receive block number is ",blocks.Batch[i].Number)
-					log.Error("receive required block number is ",core.GetChainCopy().RequiredBlockNum)
+
 					if blocks.Batch[i].Number == core.GetChainCopy().RequiredBlockNum {
-						log.Error("###########enter receive msg2211")
+
 						acceptHash := blocks.Batch[i].HashBlock(self.commonHash).Bytes()
 						//todo compare receive blockHash and acceptHash
 						if (common.Bytes2Hex(acceptHash) == common.Bytes2Hex(core.GetChainCopy().RequireBlockHash)) {
-							log.Error("###########enter receive msg2212")
+
 							core.UpdateRequire(blocks.Batch[i].Number - 1, blocks.Batch[i].ParentHash, core.GetChainCopy().RecoveryNum)
 							core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
 							// receive all block in chain
 							if (common.Bytes2Hex(blocks.Batch[i].ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash)) {
 								core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum)
 
-								log.Error("###########enter receive msg221234")
+
 								core.UpdateRequire(uint64(0), []byte{}, uint64(0))
 								payload := &protos.StateUpdatedMessage{
 									SeqNo:core.GetChainCopy().Height,
@@ -248,7 +244,7 @@ func (self *ProtocolManager) syncBlockLoop() {
 									Payload:msg,
 									Id:1,
 								}
-								log.Error("###########enter receive msg333")
+
 								msgPayload,err:=proto.Marshal(msgSend)
 								if err!=nil{
 									log.Error(err)
