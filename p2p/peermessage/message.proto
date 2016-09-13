@@ -15,7 +15,7 @@ message Message{
     PeerAddress From     = 1;
     MsgType MessageType  = 2;
     bytes  Payload       = 3;
-    int64 MsgTimeStamp = 15;
+    int64 MsgTimeStamp   = 15;
 
     //MsgType message type during data transfer 
     enum MsgType {
@@ -24,6 +24,7 @@ message Message{
         CONSUS      = 2;
         KEEPALIVE   = 3;
         SYNCMSG     = 4;
+        PENDING    = 5;
     }
 }
 

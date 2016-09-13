@@ -8,6 +8,8 @@ import (
 	"io"
 	"fmt"
 	"hyperchain/hpc"
+	"os/exec"
+	"os"
 )
 
 const (
@@ -38,6 +40,14 @@ func Start(httpPort int,eventMux *event.TypeMux) error{
 			return err
 		}
 	}
+	go func() {
+		log.Info("start the simple httpserver")
+		cmd := exec.Command("pyhton $GOPATH/src/hyperchain/jsonrpc/Dashboard/simpleHttpServer.py")
+		//cmd := exec.Command("pwd")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		log.Info(cmd.Run())
+	}()
 
 	startHttp(httpPort, server)
 

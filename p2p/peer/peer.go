@@ -33,6 +33,7 @@ type Peer struct {
 	Connection *grpc.ClientConn
 	Client pb.ChatClient
 	Idetity string
+	CName string
 }
 
 // NewPeerByString to create a Peer which with a connection,

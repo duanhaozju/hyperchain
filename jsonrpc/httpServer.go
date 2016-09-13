@@ -29,8 +29,13 @@ func StartHttp(httpPort int,eventMux *event.TypeMux){
 
 
 	// Start http server
-	log.Info("启动http服务...")
+	log.Info("启动RPC服务...")
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(httpPort),router))
+
+	//start the python simple http server via python
+
+
+
 }
 
 func start() {

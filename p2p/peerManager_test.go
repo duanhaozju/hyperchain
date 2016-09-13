@@ -10,13 +10,10 @@ package p2p
 import (
 	"testing"
 	"hyperchain/event"
-	"fmt"
 )
 func TestGrpcPeerManager_Start(t *testing.T){
 
-	//path := "/home/chenquan/Workspace/IdeaProjects/hyperchain-go/src/hyperchain/p2p/peerconfig.json"
-	path := "./peerconfig.json"
-
+	path := "./local_peerconfig.json"
 
 	grpcPeerMgr := new(GrpcPeerManager)
 	aliveChan := make(chan bool)
@@ -48,9 +45,38 @@ func TestGrpcPeerManager_Start(t *testing.T){
 
 }
 
-func TestGrpcPeerManager_Start2(t *testing.T) {
-	a := 1
-	b := uint64(a)
-	fmt.Println(b)
 
+
+func TestGrpcPeerManager_GetPeerInfos(t *testing.T) {
+	path := "/home/chenquan/Workspace/IdeaProjects/hyperchain-go/src/hyperchain/p2p/local_peerconfig.json"
+
+	grpcPeerMgr := new(GrpcPeerManager)
+	aliveChan := make(chan bool)
+	eventMux := new(event.TypeMux)
+	go grpcPeerMgr.Start(path,1, aliveChan,true,eventMux )
+
+	grpcPeerMgr2 := new(GrpcPeerManager)
+
+	go grpcPeerMgr2.Start(path,2, aliveChan,true,eventMux)
+
+	grpcPeerMgr3 := new(GrpcPeerManager)
+
+	go grpcPeerMgr3.Start(path,3, aliveChan,true,eventMux)
+
+	grpcPeerMgr4 := new(GrpcPeerManager)
+
+	go grpcPeerMgr4.Start(path,4, aliveChan,true,eventMux)
+	// wait the sub thread done
+	nodeCount := 0
+	for flag := range aliveChan{
+		if flag{
+			log.Info("A peer has connected")
+			nodeCount += 1
+		}
+		if nodeCount >=4{
+			perinfos := grpcPeerMgr4.GetPeerInfos()
+			t.Log(perinfos.GetNumber())
+			break
+		}
+	}
 }
