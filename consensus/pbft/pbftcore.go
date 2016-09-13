@@ -791,7 +791,6 @@ func (instance *pbftCore) execDoneSync(idx msgID) {
 		delete(instance.committedCert, idx)
 		if instance.lastExec % instance.K == 0 {
 			bcInfo := getBlockchainInfo()
-			//bcInfo := &pb.BlockchainInfo{Height: instance.lastExec}
 			height := bcInfo.Height
 			if height == instance.lastExec {
 				logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", instance.lastExec, height)
