@@ -56,6 +56,7 @@ func SendTransaction(args TxArgs) bool {
 
 	log.Info(args)
 
+
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
 	if (core.VerifyBalance(tx)) {
 
@@ -83,7 +84,7 @@ func SendTransaction(args TxArgs) bool {
 				}else{
 					log.Warning("manager is Nil")
 				}
-				time.Sleep(200 * time.Microsecond)
+				time.Sleep(20 * time.Microsecond)
 			}
 		}
 

@@ -92,6 +92,12 @@ func CreateInitBlock(filename string)  {
 
 	log.Debug("构造创世区块")
 
+	err = PutBlock(db, block.BlockHash, &block)
+	// write transaction
+	//PutTransactions(db, commonHash, block.Transactions)
+	if err != nil {
+		log.Fatal(err)
+	}
 	UpdateChain(&block,true)
 	log.Info("current chain block number is",GetChainCopy().Height)
 
@@ -137,6 +143,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 		WriteChainChan()
 
 	}
+
 
 
 	// update our stateObject and statedb to blockchain
