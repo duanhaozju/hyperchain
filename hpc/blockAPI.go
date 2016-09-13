@@ -6,6 +6,7 @@ import (
 	"time"
 	"hyperchain/common"
 	"strconv"
+
 )
 
 type PublicBlockAPI struct{}
@@ -54,7 +55,7 @@ func lastestBlock() *BlockResult {
 	block, err := core.GetBlockByNumber(db, lastestBlkHeight)
 
 	if err != nil {
-		log.Fatalf("%v", err)
+		log.Errorf("%v", err)
 	}
 
 	blockResult := blockResult(block.Number)

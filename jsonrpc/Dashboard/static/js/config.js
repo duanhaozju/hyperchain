@@ -45,13 +45,6 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
                         {
                             name: 'ui.footable',
                             files: ['static/js/plugins/footable/angular-footable.js']
-                        },
-                        {
-                            files: ['static/js/plugins/sweetalert/sweetalert.min.js', 'static/css/plugins/sweetalert/sweetalert.css']
-                        },
-                        {
-                            name: 'oitozero.ngSweetAlert',
-                            files: ['static/js/plugins/sweetalert/angular-sweetalert.min.js']
                         }
                     ]);
                 }
@@ -155,7 +148,7 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
         })
 }
 angular
-    .module('inspinia')
+    .module('starter')
     .config(config)
     .run(function($rootScope, $state) {
         $rootScope.$state = $state;
