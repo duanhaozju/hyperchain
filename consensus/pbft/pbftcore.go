@@ -790,8 +790,8 @@ func (instance *pbftCore) execDoneSync(idx msgID) {
 		instance.lastExec = *instance.currentExec
 		delete(instance.committedCert, idx)
 		if instance.lastExec % instance.K == 0 {
-			//bcInfo := getBlockchainInfo()
-			bcInfo := &pb.BlockchainInfo{Height: instance.lastExec}
+			bcInfo := getBlockchainInfo()
+			//bcInfo := &pb.BlockchainInfo{Height: instance.lastExec}
 			height := bcInfo.Height
 			if height == instance.lastExec {
 				logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", instance.lastExec, height)
@@ -1075,7 +1075,6 @@ func (instance *pbftCore) moveWatermarks(n uint64) {
 
 	instance.resubmitRequestBatches()
 }
-
 
 func (instance *pbftCore) updateHighStateTarget(target *stateUpdateTarget) {
 	if instance.highStateTarget != nil && instance.highStateTarget.seqNo >= target.seqNo {
