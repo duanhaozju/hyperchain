@@ -94,7 +94,7 @@ func init() {
 	log = logging.MustGetLogger("key")
 }
 func newKey(am *AccountManager,rand io.Reader) (*Key, error) {
-	privKey, err := am.Encryption.GeneralKey("123")
+	privKey, err := am.Encryption.GeneralKey()
 	if err != nil {
 		return nil, err
 	}
