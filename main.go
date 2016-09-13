@@ -75,8 +75,8 @@ func main() {
 		blockPool := core.NewBlockPool(eventMux)
 
 		//start http server
-		//go jsonrpc.StartHttp(argv.LocalPort, eventMux)
-		go jsonrpc.Start(argv.LocalPort, eventMux)
+		go jsonrpc.StartHttp(argv.LocalPort, eventMux)
+		//go jsonrpc.Start(argv.LocalPort, eventMux)
 
 
 		//init manager
