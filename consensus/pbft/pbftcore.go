@@ -261,7 +261,7 @@ func (instance *pbftCore) ProcessEvent(e events.Event) events.Event {
 	case *Checkpoint:
 		return instance.recvCheckpoint(et)
 	case *stateUpdatedEvent:
-		instance.batch.reqStore = newRequestStore()
+		//instance.batch.reqStore = newRequestStore()
 		err = instance.recvStateUpdatedEvent(et)
 	case nullRequestEvent:
 		instance.nullRequestHandler()
