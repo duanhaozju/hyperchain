@@ -149,7 +149,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	}
 	case pb.Message_KEEPALIVE:{
 		//客户端会发来keepAlive请求,返回response即可
-		// client may send a keep alive request, just response A response type message
+		// client may send a keep alive request, just response A response type message,if node is not ready, send a pending status message
 		response.MessageType = pb.Message_RESPONSE
 		response.Payload = []byte("RESPONSE FROM SERVER")
 
