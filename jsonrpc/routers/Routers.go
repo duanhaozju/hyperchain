@@ -51,5 +51,11 @@ var routes = Routes{
 		"/query",
 		controller.ExecuteTimeQuery,
 	},
+	Route{
+		"CommitAndBatchTimeQuery",
+		"POST",
+		"/commitandbatchquery",
+		controller.CommitAndBatchTimeQuery,
+	},
 
 }

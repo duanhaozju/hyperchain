@@ -179,7 +179,7 @@ func GetDBBalance(db hyperdb.Database) (BalanceMap, error) {
 		return b, err
 	}
 	for key, value := range bJson {
-		b[common.StringToAddress(key)] = value
+		b[common.HexToAddress(key)] = value
 	}
 	return b, nil
 }

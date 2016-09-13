@@ -187,6 +187,17 @@ func QueryExcuteTime(args TxArgs) int64{
 	return core.CalcResponseAVGTime(from.Uint64(),to.Uint64())
 }
 
+func QueryCommitAndBatchTime(args TxArgs) (int64,int64){
+
+	var from big.Int
+	var to big.Int
+	from.SetString(args.From, 10)
+	to.SetString(args.To, 10)
+
+
+	return core.CalcCommitBatchAVGTime(from.Uint64(),to.Uint64())
+}
+
 func blockShow(height uint64) BlockShow{
 
 	db, err := hyperdb.GetLDBDatabase()
