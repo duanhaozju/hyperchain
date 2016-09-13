@@ -59,13 +59,12 @@ func (ee *EcdsaEncrypto)UnSign(args ...interface{})(common.Address, error)  {
 	copy(addr[:],Keccak256(pubBytes[1:])[12:])
 	return addr,nil
 }
-func (ee *EcdsaEncrypto)GeneralKey(port string)(interface{},error) {
+func (ee *EcdsaEncrypto)GeneralKey()(interface{},error) {
 	key,err := GenerateKey()
 	if err!=nil{
 		return nil,err
 	}
 
-	ee.port=port
 	return key,nil
 
 }
@@ -74,6 +73,29 @@ func (ee *EcdsaEncrypto)GeneralKey(port string)(interface{},error) {
 //	file := keystoredir+ee.port
 //	return LoadECDSA(file)
 //}
+
+func (ee *EcdsaEncrypto)GenerateNodeKey(port string,keydir string) error  {
+	ee.port = port
+	nodefile := keydir+"node/"+port
+	_, err := os.Stat(nodefile)
+	if err == nil || os.IsExist(err){//privatefile exists
+		return nil
+	}
+	key,err := GenerateKey()
+	if err!=nil{
+		return err
+	}
+	if err :=SaveECDSA(nodefile,key);err!=nil{
+		return err
+	}
+	return nil
+
+}
+func (ee *EcdsaEncrypto)GetNodeKey(keydir string)(interface{},error)  {
+	nodefile := keydir+"node/"+ee.port
+	return LoadECDSA(nodefile)
+
+}
 
 func (ee *EcdsaEncrypto)PrivKeyToAddress(prv interface {})common.Address  {
 	p := prv.(ecdsa.PrivateKey)

@@ -13,6 +13,7 @@ import (
 	"os"
 	"bufio"
 	"fmt"
+	"reflect"
 )
 
 var (
@@ -57,8 +58,15 @@ func NewAccountManager(keydir string,encryp crypto.Encryption) *AccountManager {
 }
 func (am *AccountManager)unlockAllAccount(keydir string){
 	var accounts []Account
-	addressdir := keydir+"/addresses/address"
+	accounts = getAllAccount(keydir)
+	for _,a := range accounts{
+		am.Unlock(a,"123")
+	}
 
+}
+func getAllAccount(keydir string) []Account {
+	var accounts []Account
+	addressdir := keydir+"/addresses/address"
 	fp, _ := os.Open(addressdir)
 	scanner := bufio.NewScanner(fp)
 	scanner.Split(bufio.ScanLines)
@@ -66,17 +74,14 @@ func (am *AccountManager)unlockAllAccount(keydir string){
 		addrHex := scanner.Text()
 		//fmt.Println(data)
 		addr := common.HexToAddress(string(addrHex)[:40])
-			account := Account{
-				Address:addr,
-				File:keydir+"/"+addrHex,
-			}
-			accounts = append(accounts,account)
+		account := Account{
+			Address:addr,
+			File:keydir+"/"+addrHex,
+		}
+		accounts = append(accounts,account)
 	}
 	fp.Close()
-	for _,a := range accounts{
-		am.Unlock(a,"123")
-	}
-
+	return accounts
 }
 
 // Sign signs hash with an unlocked private key matching the given address.
@@ -215,6 +220,22 @@ func zeroKey(k *ecdsa.PrivateKey) {
 	}
 }
 
-func ValidateMatchAddrPass(from []byte, password string)  {
-
+func ValidateAddr(from []byte) bool {
+	var accounts []Account
+	keydir,_ := filepath.Abs("./keystore")
+	accounts = getAllAccount(keydir)
+	addr := common.HexToAddress(string(from))
+	ac := Account{
+		Address:addr,
+		File:keydir +"/" +string(from),
+	}
+	for _,account := range accounts{
+		if(reflect.DeepEqual(ac,account)){
+			return true
+		}
+	}
+	//if _,found := am.unlocked[addr];found{
+	//	return true
+	//}
+	return false
 }

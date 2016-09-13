@@ -15,6 +15,15 @@ func TestCalcResponseCount(t *testing.T) {
 	if count != 2 {
 		t.Errorf("%d not equal 2, TestCalcResponseCount fail", count)
 	}
+	//InitDB(8081)
+	//db, _ := hyperdb.GetLDBDatabase()
+	//height := GetHeightOfChain()
+	//fmt.Println(height)
+	//block,_ := GetBlockByNumber(db,height)
+	////var ch crypto.CommonHash
+	//kec256Hash := crypto.NewKeccak256Hash("keccak256")
+	//fmt.Println(block.Hash(kec256Hash))
+	//fmt.Println(block.HashBlock(kec256Hash))
 }
 
 /*func TestCalcResponseCount(t *testing.T) {

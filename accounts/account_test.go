@@ -91,3 +91,13 @@ func TestManager(t *testing.T)  {
 	fmt.Println(am.unlocked[common.HexToAddress("6201cb0448964ac597faf6fdf1f472edf2a22b89")].PrivateKey)
 
 }
+func TestValidateAddr(t *testing.T) {
+	//keydir := "../keystore/"
+	//
+	//encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	//am := NewAccountManager(keydir,encryption)
+	start:=time.Now()
+	from := []byte("6201cb0448964ac597faf6fdf1f472edf2a22b89")
+	fmt.Println(ValidateAddr(from))
+	fmt.Println(time.Since(start))
+}
