@@ -25,11 +25,15 @@ func TestCalcResponseCount(t *testing.T) {
 	//WriteBlock(blockUtilsCase, commonHash)
 	fmt.Println(GetHeightOfChain())
 	for i := uint64(0); i <= GetHeightOfChain(); i += 1 {
-		count := CalcResponseCount(i, int64(300))
+		count,_ := CalcResponseCount(i, int64(300))
 
 		fmt.Println(count)
 	}
 
+}
+func TestCalcCommitBatchAVGTime(t *testing.T) {
+	InitDB(8084)
+	fmt.Println(CalcCommitBatchAVGTime(uint64(10),uint64(20)))
 }
 
 /*func TestGetBlockHash(t *testing.T) {
