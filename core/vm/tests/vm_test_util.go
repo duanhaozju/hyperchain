@@ -113,6 +113,16 @@ func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.
 	vmenv := api.GetVMEnv()
 	state = vmenv.State()
 	ret,err := api.Exec(&from,nil,([]byte)(sourcecode), gas, price, value)
+
+	addr := state.GetLeastAccount().Address()
+	for a, v := range state.GetStateObject(addr).Storage() {
+		log.Info("StateObject key:",a,"----------value:",v)
+	}
+	log.Info("addr---------------",addr)
+	log.Info("addr---------------",common.ToHex(addr.Bytes()))
+	log.Info("ret--------",common.ToHex(ret))
+
+	ret,err = api.Exec(&from,nil,([]byte)(sourcecode), gas, price, value)
 	//ret,err = api.Exec(&from,nil, data, gas, price, value)
 	//ret,err = api.Exec(&from,nil, data, gas, price, value)
 	//ret,err = api.Exec(&from,nil, data, gas, price, value)
@@ -123,12 +133,13 @@ func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.
 		log.Info("Account key:",k,"----------value:",v)
 	}
 
-	addr := state.GetLeastAccount().Address()
+	addr = state.GetLeastAccount().Address()
 	for a, v := range state.GetStateObject(addr).Storage() {
 		log.Info("StateObject key:",a,"----------value:",v)
 	}
 	log.Info("addr---------------",addr)
-	log.Info("ret--------",ret)
+	log.Info("addr---------------",common.ToHex(addr.Bytes()))
+	log.Info("ret--------",common.ToHex(ret))
 
 	ret,err = api.Exec(&from, &to, data, gas, price, value)
 	log.Info("ret--------",ret)

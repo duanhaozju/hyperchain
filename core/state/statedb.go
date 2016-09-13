@@ -7,6 +7,7 @@ import (
 	"hyperchain/hyperdb"
 	"github.com/op/go-logging"
 	"encoding/json"
+	"fmt"
 )
 var log *logging.Logger // package-level logger
 func init() {
@@ -199,6 +200,8 @@ func (self *StateDB) SetStateObject(object *StateObject) {
 
 // Retrieve a state object or create a new state object if nil
 func (self *StateDB) GetOrNewStateObject(addr common.Address) *StateObject {
+	fmt.Println("getornewstateobject",addr)
+
 	stateObject := self.GetStateObject(addr)
 	if stateObject == nil || stateObject.deleted {
 		stateObject = self.CreateStateObject(addr)
@@ -231,6 +234,7 @@ func (self *StateDB) CreateStateObject(addr common.Address) *StateObject {
 }
 
 func (self *StateDB) CreateAccount(addr common.Address) vm.Account {
+	fmt.Println("CreateAccount",addr)
 	return self.CreateStateObject(addr)
 }
 

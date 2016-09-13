@@ -44,7 +44,6 @@ func ExecBlock(block types.Block)(err error){
 
 // 这一块相当于ethereum里的TransitionDB
 func ExecTransaction(tx types.Transaction)(ret []byte,err error) {
-
 	var(
 		from = common.BytesToAddress(tx.From)
 		//sender = common.BytesToAddress(tx.From)
@@ -55,6 +54,10 @@ func ExecTransaction(tx types.Transaction)(ret []byte,err error) {
 		gasPrice = tx.GasPrice()
 		amount = tx.Amount()
 	)
+	if(tx.To == nil){
+		return Exec(&from,nil,data,gas,gasPrice,amount)
+	}
+
 	return Exec(&from,&to,data,gas,gasPrice,amount)
 }
 
@@ -65,7 +68,9 @@ func Exec(from, to *common.Address, data []byte, gas,
 	contractCreation := (nil == to)
 	//ret,err = env.Call(sender,*to,data,gas,gasPrice,value)
 	// 判断是否能够交易,转移,这一步可以考虑在外部执行
+
 	if contractCreation{
+		logger.Info("------create contract")
 		ret,_,err = vmenv.Create(sender,data,gas,gasPrice,value)
 		if err != nil{
 			ret = nil
