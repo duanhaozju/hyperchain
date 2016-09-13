@@ -85,7 +85,7 @@ func SendTransaction(args TxArgs) bool {
 				}
 				//time.Sleep(2 * time.Nanosecond)
 			}
-			time.Sleep(80 * time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
