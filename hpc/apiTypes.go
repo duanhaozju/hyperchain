@@ -22,5 +22,17 @@ func GetAPIs() []API{
 			Service: NewPublicNodeAPI(),
 			Public: true,
 		},
+		{
+			Namespace: "block",
+			Version: "0.4",
+			Service: NewPublicBlockAPI(),
+			Public: true,
+		},
+		{
+			Namespace: "acot",
+			Version: "0.4",
+			Service: NewPublicAccountAPI(),
+			Public: true,
+		},
 	}
 }

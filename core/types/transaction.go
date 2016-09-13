@@ -63,6 +63,15 @@ func NewTransaction(from []byte,to []byte,value []byte) *Transaction{
 	return transaction
 }
 
+func NewTransactionValue(price,gasLimit, amount int64, payload []byte) *TransactionValue{
+	return &TransactionValue{
+		Price: price,
+		GasLimit: gasLimit,
+		Amount: amount,
+		Payload: payload,
+	}
+}
+
 func (tx *Transaction) Payload() []byte       {
 	transactionValue := &TransactionValue{}
 	proto.Unmarshal(tx.Value,transactionValue)
