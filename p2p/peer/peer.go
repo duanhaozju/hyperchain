@@ -74,7 +74,7 @@ func NewPeerByString(address string)(*Peer,error){
 		if retMessage.MessageType == pb.Message_RESPONSE {
 			// get the peer id
 			origData, err := transport.TripleDesDecrypt(retMessage.Payload, DESKEY)
-			log.Notice(string(origData))
+			//log.Notice(string(origData))
 			if err != nil{
 				log.Error("cannot decrypt the nodeidinfo!")
 				errors.New("Decrypt ERROR")

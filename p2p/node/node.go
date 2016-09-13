@@ -129,12 +129,14 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 		switch SyncMsg.MessageType {
 		case recovery.Message_SYNCBLOCK:{
+
 			go this.higherEventManager.Post(event.ReceiveSyncBlockEvent{
 				Payload:SyncMsg.Payload,
 			})
 
 		}
 		case recovery.Message_SYNCCHECKPOINT:{
+
 			go this.higherEventManager.Post(event.StateUpdateEvent{
 				Payload:SyncMsg.Payload,
 			})

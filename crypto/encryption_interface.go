@@ -16,11 +16,13 @@ type Encryption interface {
 	//sign byte
 	Sign(hash []byte,  prv interface{})(sig []byte, err error)
 	UnSign(args ...interface{})(common.Address, error)
-	//general private key and save into file
+	//general private key
+	GeneralKey() (interface{},error)
 
+	//generates pri-pub key of node and save it to file
+	GenerateNodeKey(port string,keydir string) error
 
-	GeneralKey(path string) (interface{},error)
-
+	GetNodeKey(keydir string)(interface{},error)
 
 	//GeneralKey(path string)(*ecdsa.PrivateKey,error)
 

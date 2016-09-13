@@ -58,11 +58,11 @@ func main() {
 		cs := controller.NewConsenter(uint64(argv.NodeId), eventMux)
 
 		//init encryption object
-		encryption := crypto.NewEcdsaEncrypto("ecdsa")
-		encryption.GeneralKey(strconv.Itoa(argv.LocalPort))
-
-
 		keydir := "./keystore/"
+
+		encryption := crypto.NewEcdsaEncrypto("ecdsa")
+		encryption.GenerateNodeKey(strconv.Itoa(argv.LocalPort),keydir)
+
 		am := accounts.NewAccountManager(keydir,encryption)
 		//am.NewAccount("123")
 
@@ -75,7 +75,9 @@ func main() {
 		blockPool := core.NewBlockPool(eventMux)
 
 		//start http server
-		go jsonrpc.StartHttp(argv.LocalPort, eventMux)
+		//go jsonrpc.StartHttp(argv.LocalPort, eventMux)
+		go jsonrpc.Start(argv.LocalPort, eventMux)
+
 
 		//init manager
 

@@ -531,7 +531,7 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 		return
 	}
 
-	logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", instance.id, instance.view, n)
+	logger.Noticef("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", instance.id, instance.view, n)
 	instance.seqNo = n
 	preprep := &PrePrepare{
 		View:           instance.view,
@@ -552,7 +552,7 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 
 func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 
-	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
+	logger.Noticef("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
 		instance.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
 	if !instance.activeView {
@@ -790,7 +790,8 @@ func (instance *pbftCore) execDoneSync(idx msgID) {
 		instance.lastExec = *instance.currentExec
 		delete(instance.committedCert, idx)
 		if instance.lastExec % instance.K == 0 {
-			bcInfo := getBlockchainInfo()
+			//bcInfo := getBlockchainInfo()
+			bcInfo := &pb.BlockchainInfo{Height: instance.lastExec}
 			height := bcInfo.Height
 			if height == instance.lastExec {
 				logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", instance.lastExec, height)

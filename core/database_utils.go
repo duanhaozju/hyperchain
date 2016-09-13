@@ -179,7 +179,7 @@ func GetDBBalance(db hyperdb.Database) (BalanceMap, error) {
 		return b, err
 	}
 	for key, value := range bJson {
-		b[common.StringToAddress(key)] = value
+		b[common.HexToAddress(key)] = value
 	}
 	return b, nil
 }
@@ -254,16 +254,16 @@ func UpdateChain(block *types.Block, genesis bool) error {
 }
 
 //　根据blockNumber更新chain,chain的height直接赋值为block.Number
-func updateChainByBlcokNum(block *types.Block) error {
+func UpdateChainByBlcokNum(db hyperdb.Database, blockNumber uint64) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
+	block, err :=GetBlockByNumber(db,blockNumber)
+	if err != nil {
+		log.Warning("no required block number")
+	}
 	memChainMap.data.LatestBlockHash = block.BlockHash
 	memChainMap.data.ParentBlockHash = block.ParentHash
 	memChainMap.data.Height = block.Number
-	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {
-		return err
-	}
 	return putChain(db, &memChainMap.data)
 }
 
@@ -282,6 +282,9 @@ func GetChainCopy() *types.Chain {
 		LatestBlockHash: memChainMap.data.LatestBlockHash,
 		ParentBlockHash: memChainMap.data.ParentBlockHash,
 		Height: memChainMap.data.Height,
+		RequiredBlockNum:memChainMap.data.RequiredBlockNum,
+		RequireBlockHash:memChainMap.data.RequireBlockHash,
+		RecoveryNum:memChainMap.data.RecoveryNum,
 	}
 }
 
@@ -309,10 +312,11 @@ func putChain(db hyperdb.Database, t *types.Chain) error {
 }
 
 // UpdateRequire updates requireBlockNum and requireBlockHash
-func UpdateRequire(num uint64, hash []byte) error {
+func UpdateRequire(num uint64, hash []byte,recoveryNum uint64) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
 	memChainMap.data.RequiredBlockNum = num
+	memChainMap.data.RecoveryNum = recoveryNum
 	memChainMap.data.RequireBlockHash = hash
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {return err}

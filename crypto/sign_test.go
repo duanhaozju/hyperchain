@@ -34,7 +34,7 @@ func NewTransaction(to common.Address,amount *big.Int) *Transaction {
 
 func TestSigntx(t *testing.T)  {
 	ee := NewEcdsaEncrypto("ECDSAEncryto")
-	k, err:= ee.GeneralKey("5002")
+	k, err:= ee.GeneralKey()
 	if err!=nil{
 		panic(err)
 	}
