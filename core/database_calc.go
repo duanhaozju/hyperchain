@@ -100,5 +100,11 @@ func CalcResponseAVGTime(from, to uint64) int64 {
 		length += int64(len(block.Transactions))
 	}
 
-	return sum / (length * int64(time.Millisecond))
+	if length == 0 {
+		return 0
+	} else {
+		return sum / (length * int64(time.Millisecond))
+	}
+
+
 }

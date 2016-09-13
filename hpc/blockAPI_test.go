@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"hyperchain/core"
+	"fmt"
 )
 
 func TestPublicBlockAPI_GetBlocks(t *testing.T) {
@@ -14,9 +15,9 @@ func TestPublicBlockAPI_GetBlocks(t *testing.T) {
 	//init genesis
 	core.CreateInitBlock("../core/genesis.json")
 	//
-	//blockAPI := NewPublicBlockAPI()
+	blockAPI := NewPublicBlockAPI()
 	//
-	//a := blockAPI.GetBlocks()
+	a := blockAPI.GetBlocks()
 	//
-	//fmt.Println(a)
+	fmt.Println(a)
 }
