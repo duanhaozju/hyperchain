@@ -6,7 +6,7 @@
  * Initial there are written state for all view in theme.
  *
  */
-function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdleProvider, KeepaliveProvider) {
+function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdleProvider) {
 
     // Configure Idle settings
     IdleProvider.idle(5); // in seconds
