@@ -76,6 +76,7 @@ func main() {
 
 		//start http server
 		go jsonrpc.StartHttp(argv.LocalPort, eventMux)
+		//go jsonrpc.Start(argv.LocalPort, eventMux)
 
 		//init manager
 
