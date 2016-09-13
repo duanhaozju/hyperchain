@@ -4,12 +4,12 @@ import (
 	"hyperchain/hyperdb"
 	"time"
 
-	"fmt"
+
 )
 
 // CalcResponseCount calculate response count of a block for given blockNumber
 // millTime is Millisecond
-func CalcResponseCount(blockNumber uint64, millTime int64) int64 {
+func CalcResponseCount(blockNumber uint64, millTime int64) (int64,float64){
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
@@ -22,12 +22,13 @@ func CalcResponseCount(blockNumber uint64, millTime int64) int64 {
 			count ++
 		}
 	}
-	fmt.Println(block.Number)
-
+	percent := float64(count)/500
+	/*fmt.Println(block.CommitTime)
+	/*fmt.Println(block.WriteTime)*//*
 	fmt.Println("commit time is ",(block.CommitTime-block.Timestamp)/int64(time.Millisecond))
 
-	fmt.Println("write time is ",(block.WriteTime-block.CommitTime)/ int64(time.Millisecond))
-	return count
+	fmt.Println("write time is ",(block.WriteTime-block.CommitTime)/ int64(time.Millisecond))*/
+	return count,percent
 }
 
 // CalcResponseAVGTime calculate response avg time of blocks

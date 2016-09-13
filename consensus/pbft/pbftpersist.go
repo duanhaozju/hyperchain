@@ -7,6 +7,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"encoding/base64"
 	"github.com/pkg/errors"
+	//"reflect"
 )
 
 func (instance *pbftCore) persistQSet() {
@@ -38,31 +39,55 @@ func (instance *pbftCore) persistPQSet(key string, set []*ViewChange_PQ) {
 	persist.StoreState(key, raw)
 }
 
-func (instance *pbftCore) persistDelPSet() {
-	pSet, err := persist.ReadStateSet("pset")
-
-	if err != nil {
-		logger.Errorf("Read State Set Error %s", err)
-		return
-	} else {
-		for key := range pSet {
-			persist.DelState(key)
-		}
-	}
-}
-
-func (instance *pbftCore) persistDelQSet() {
-	qSet, err := persist.ReadStateSet("qset")
-
-	if err!= nil {
-		logger.Errorf("Read State Set Error %s", err)
-		return
-	} else {
-		for key := range qSet {
-			persist.DelState(key)
-		}
-	}
-}
+//func (instance *pbftCore) persistDelPSet(n uint64) {
+//	raw, err := persist.ReadState("pset")
+//
+//	if err != nil {
+//		logger.Errorf("Read State Set Error %s", err)
+//		return
+//	} else {
+//		pqset := &PQset{}
+//		if umErr := proto.Unmarshal(raw, pqset); umErr != nil {
+//			logger.Error(umErr)
+//			return
+//		} else {
+//			pset := pqset.GetSet()
+//			var newPset []*ViewChange_PQ
+//			for _, p := range pset {
+//				if p.SequenceNumber == n {
+//					continue
+//				}
+//				newPset = append(newPset, p)
+//			}
+//			instance.persistPQSet("pset", newPset)
+//		}
+//	}
+//}
+//
+//func (instance *pbftCore) persistDelQSet(idx qidx) {
+//	raw, err := persist.ReadState("qset")
+//
+//	if err!= nil {
+//		logger.Errorf("Read State Set Error %s", err)
+//		return
+//	} else {
+//		pqset := &PQset{}
+//		if umErr := proto.Unmarshal(raw, pqset); umErr != nil {
+//			logger.Error(umErr)
+//			return
+//		} else {
+//			qset := pqset.GetSet()
+//			var newQset []*ViewChange_PQ
+//			for _, q := range qset {
+//				if idx.d == q.BatchDigest && idx.n == q.SequenceNumber {
+//					continue
+//				}
+//				newQset = append(newQset, q)
+//			}
+//			instance.persistPQSet("qset", newQset)
+//		}
+//	}
+//}
 
 func (instance *pbftCore) restorePQSet(key string) []*ViewChange_PQ {
 	raw, err := persist.ReadState(key)

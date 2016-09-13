@@ -332,16 +332,16 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 func (self *ProtocolManager)sendMsg(payload []byte) {
 	//Todo sign tx
-	payLoad := self.transformTx(payload)
-	if payLoad == nil {
-		//log.Fatal("payLoad nil")
-		log.Error("payLoad nil")
-		return
-	}
+	//payLoad := self.transformTx(payload)
+	//if payLoad == nil {
+	//	//log.Fatal("payLoad nil")
+	//	log.Error("payLoad nil")
+	//	return
+	//}
 	msg := &protos.Message{
 		Type: protos.Message_TRANSACTION,
-		//Payload: payload,
-		Payload: payLoad,
+		Payload: payload,
+		//Payload: payLoad,
 		Timestamp: time.Now().UnixNano(),
 		Id: 0,
 	}
