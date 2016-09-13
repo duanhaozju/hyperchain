@@ -53,9 +53,9 @@ func ExecTransaction(tx types.Transaction)(ret []byte,err error) {
 		data = tx.Payload()
 		gas = tx.Gas()
 		gasPrice = tx.GasPrice()
-		value = tx.Amount()
+		amount = tx.Amount()
 	)
-	return Exec(&from,&to,data,gas,gasPrice,value)
+	return Exec(&from,&to,data,gas,gasPrice,amount)
 }
 
 func Exec(from, to *common.Address, data []byte, gas,
