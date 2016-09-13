@@ -12,7 +12,6 @@ import (
 	"hyperchain/crypto"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"
-	"fmt"
 	"sync"
 	"hyperchain/protos"
 	"time"
@@ -106,10 +105,45 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 	for obj := range self.syncCheckpointSub.Chan() {
 
 		switch  ev := obj.Data.(type) {
-		case event.StateUpdateEvent:
-			log.Error("-------------recv StateUpdateEvent-----------")
+
+
+		case event.SendCheckpointSyncEvent:
+
+
 			/*
-			get required block from db and send to peer
+
+			receive request  from the consensus module required block and send to  outer peers
+			 */
+			UpdateStateMessage := &protos.UpdateStateMessage{}
+			proto.Unmarshal(ev.Payload, UpdateStateMessage)
+
+			blockChainInfo := &protos.BlockchainInfo{}
+			proto.Unmarshal(UpdateStateMessage.TargetId, blockChainInfo)
+
+
+			required := &recovery.CheckPointMessage{
+				RequiredNumber:blockChainInfo.Height,
+				CurrentNumber:core.GetChainCopy().Height,
+				PeerId:UpdateStateMessage.Id,
+			}
+			log.Error(required.PeerId)
+			core.UpdateRequire(blockChainInfo.Height, blockChainInfo.CurrentBlockHash, blockChainInfo.Height)
+
+			payload, _ := proto.Marshal(required)
+			message := &recovery.Message{
+				MessageType:recovery.Message_SYNCCHECKPOINT,
+				MsgTimeStamp:time.Now().UnixNano(),
+				Payload:payload,
+
+			}
+			broadcastMsg, _ := proto.Marshal(message)
+			self.peerManager.SendMsgToPeers(broadcastMsg, UpdateStateMessage.Replicas, recovery.Message_SYNCCHECKPOINT)
+
+
+		case event.StateUpdateEvent:
+
+			/*
+			get required block from db and send to outer peers
 			 */
 
 			receiveMessage := &recovery.Message{}
@@ -121,54 +155,39 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 			db, _ := hyperdb.GetLDBDatabase()
 
 			blocks := &types.Blocks{}
-			for i := checkpointMsg.CurrentNumber + 1; i <= checkpointMsg.RequiredNumber; i += 1 {
-				block, err := core.GetBlockByNumber(db, checkpointMsg.CurrentNumber + 1)
+			for i := checkpointMsg.RequiredNumber; i > checkpointMsg.CurrentNumber; i -= 1 {
+			//for i := checkpointMsg.CurrentNumber + 1; i <= checkpointMsg.RequiredNumber; i += 1 {
+				block, err := core.GetBlockByNumber(db, i)
 				if err != nil {
 					log.Warning("no required block number")
 				}
-				blocks.Batch = append(blocks.Batch, block)
+
+				if blocks.Batch ==nil{
+					blocks.Batch = append(blocks.Batch, block)
+				}else {
+					blocks.Batch[0] = block
+
+				}
+
+
+				//blocks.Batch=
+				//blocks.Batch = append(blocks.Batch, block)
+
+				payload, _ := proto.Marshal(blocks)
+				message := &recovery.Message{
+					MessageType:recovery.Message_SYNCBLOCK,
+					MsgTimeStamp:time.Now().UnixNano(),
+					Payload:payload,
+
+				}
+				var peers []uint64
+				peers = append(peers, checkpointMsg.PeerId)
+				log.Error(peers)
+				broadcastMsg, _ := proto.Marshal(message)
+
+				self.peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_SYNCBLOCK)
 			}
-			payload, _ := proto.Marshal(blocks)
-			message := &recovery.Message{
-				MessageType:recovery.Message_SYNCBLOCK,
-				MsgTimeStamp:time.Now().UnixNano(),
-				Payload:payload,
 
-			}
-			var peers []uint64
-			peers = append(peers, checkpointMsg.PeerId)
-			broadcastMsg, _ := proto.Marshal(message)
-
-			self.peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_SYNCBLOCK)
-
-
-
-		case event.SendCheckpointSyncEvent:
-			log.Error("-------------recv SendCheckpointSyncEvent-----------")
-			/*
-			request  the consensus module required block to other peers
-			 */
-			UpdateStateMessage := &protos.UpdateStateMessage{}
-			proto.Unmarshal(ev.Payload, UpdateStateMessage)
-
-			blockChainInfo := &protos.BlockchainInfo{}
-			proto.Unmarshal(UpdateStateMessage.TargetId, blockChainInfo)
-
-			required := &recovery.CheckPointMessage{
-				RequiredNumber:blockChainInfo.Height,
-				CurrentNumber:core.GetChainCopy().Height,
-			}
-			core.UpdateRequire(blockChainInfo.Height, blockChainInfo.CurrentBlockHash)
-
-			payload, _ := proto.Marshal(required)
-			message := &recovery.Message{
-				MessageType:recovery.Message_SYNCCHECKPOINT,
-				MsgTimeStamp:time.Now().UnixNano(),
-				Payload:payload,
-
-			}
-			broadcastMsg, _ := proto.Marshal(message)
-			self.peerManager.SendMsgToPeers(broadcastMsg, UpdateStateMessage.Replicas, recovery.Message_SYNCCHECKPOINT)
 
 
 
@@ -183,49 +202,75 @@ func (self *ProtocolManager) syncBlockLoop() {
 
 		switch  ev := obj.Data.(type) {
 		case event.ReceiveSyncBlockEvent:
-			log.Error("############sendMsg111")
+			/*
+			receive block from outer peers
+			 */
+
 			if (core.GetChainCopy().RequiredBlockNum != 0) {
-				log.Error("############sendMsg222")
+
 				message := &recovery.Message{}
 				proto.Unmarshal(ev.Payload, message)
 				blocks := &types.Blocks{}
 				proto.Unmarshal(message.Payload, blocks)
-				if (common.Bytes2Hex(blocks.Batch[0].ParentHash) != common.Bytes2Hex(core.GetChainCopy().LatestBlockHash)) {
+				/*if (common.Bytes2Hex(blocks.Batch[0].ParentHash) != common.Bytes2Hex(core.GetChainCopy().LatestBlockHash)) {
 					log.Warning("receiver first block error")
 
-				}
+				}*/
 				db, _ := hyperdb.GetLDBDatabase()
-				for _, block := range blocks.Batch {
+
+				for i := len(blocks.Batch) - 1; i >= 0; i -= 1 {
+
+					if blocks.Batch[i].Number == core.GetChainCopy().RequiredBlockNum {
+
+						acceptHash := blocks.Batch[i].HashBlock(self.commonHash).Bytes()
+						//todo compare receive blockHash and acceptHash
+						if (common.Bytes2Hex(acceptHash) == common.Bytes2Hex(core.GetChainCopy().RequireBlockHash)) {
+
+							core.UpdateRequire(blocks.Batch[i].Number - 1, blocks.Batch[i].ParentHash, core.GetChainCopy().RecoveryNum)
+							core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
+							// receive all block in chain
+							if (common.Bytes2Hex(blocks.Batch[i].ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash)) {
+								core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum)
+
+
+								core.UpdateRequire(uint64(0), []byte{}, uint64(0))
+								payload := &protos.StateUpdatedMessage{
+									SeqNo:core.GetChainCopy().Height,
+								}
+								msg, _ := proto.Marshal(payload)
+								msgSend:=&protos.Message{
+									Type:protos.Message_STATE_UPDATED,
+									Timestamp:time.Now().UnixNano(),
+									Payload:msg,
+									Id:1,
+								}
+
+								msgPayload,err:=proto.Marshal(msgSend)
+								if err!=nil{
+									log.Error(err)
+								}
+								self.consenter.RecvMsg(msgPayload)
+								break
+							}
+						}
+					}
+
+				}
+				/*for _, block := range blocks.Batch {
+
 
 					//TODO  validate receive block chain
 					core.PutBlock(db, block.BlockHash, block)
 					core.UpdateChain(block, false)
 
-				}
-				core.UpdateRequire(0, []byte{})
-				payload := &protos.StateUpdatedMessage{
-					SeqNo:core.GetChainCopy().Height,
-				}
-				msg, _ := proto.Marshal(payload)
-				log.Error("############sendMsg333")
-				self.sendMsg(msg)
+				}*/
+
 
 			}
 		}
 	}
 }
 
-/*func ParseBlockHash(blocks types.Blocks,number uint64,max uint64,blockHash []byte,required string)  {
-
-	if(number==max||common.Bytes2Hex(blockHash)==required){
-
-		log.Info("success")
-	}else{
-		blocks.Batch[number].ParentHash=blockHash
-		bh:=blocks.Batch[number].HashBlock()
-		ParseBlockHash(blocks,number+uint64(1),max,bh,required)
-	}
-}*/
 
 
 // listen block msg
@@ -283,16 +328,16 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 func (self *ProtocolManager)sendMsg(payload []byte) {
 	//Todo sign tx
-	payLoad := self.transformTx(payload)
-	if payLoad == nil {
-		//log.Fatal("payLoad nil")
-		log.Error("payLoad nil")
-		return
-	}
+	//payLoad := self.transformTx(payload)
+	//if payLoad == nil {
+	//	//log.Fatal("payLoad nil")
+	//	log.Error("payLoad nil")
+	//	return
+	//}
 	msg := &protos.Message{
 		Type: protos.Message_TRANSACTION,
-		//Payload: payload,
-		Payload: payLoad,
+		Payload: payload,
+		//Payload: payLoad,
 		Timestamp: time.Now().UnixNano(),
 		Id: 0,
 	}
@@ -324,7 +369,8 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 	sign, err := pm.accountManager.SignWithPassphrase(addr, h[:],"123")
 	//sign, err := pm.accountManager.Sign(addr, h[:])
 	if err != nil {
-		fmt.Print(err)
+		log.Error(err)
+
 		return nil
 	}
 	transaction.Signature = sign

@@ -198,6 +198,7 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,Mes
 		MsgTimeStamp:time.Now().UnixNano(),
 		Payload:payLoad,
 	}
+
 	realPayload, err := proto.Marshal(mpPaylod)
 	if err != nil{
 		log.Error("marshal failed")
@@ -215,13 +216,22 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,Mes
 	}
 	pPool := peerPool.NewPeerPool(false, false)
 
+
 	// broadcast to special peers
 	go func(){for _, peer := range pPool.GetPeers() {
-		for nodeID := range peerList{
-			nid := strconv.Itoa(nodeID)
+
+		for _,nodeID := range peerList{
+			nid:=strconv.FormatUint(nodeID,10)
+			//peerId:=uint64(strconv.Atoi(peer.Idetity))
+
+			//nid := strconv.Itoa(nodeID)
+
+			//if peerId==nodeID{
 			if peer.Idetity == nid {
+				log.Error(nid)
 				resMsg, err := peer.Chat(&broadCastMessage)
 				if err != nil {
+					log.Error("enter error")
 					log.Error("Broadcast failed,Node", peer.Addr)
 				} else {
 					log.Info("resMsg:", string(resMsg.Payload))

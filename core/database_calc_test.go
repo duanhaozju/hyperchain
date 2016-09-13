@@ -2,10 +2,10 @@ package core
 
 import (
 	"testing"
-	"hyperchain/crypto"
+	"fmt"
 )
 
-func TestCalcResponseCount(t *testing.T) {
+/*func TestCalcResponseCount(t *testing.T) {
 	log.Info("test =============> > > TestInitDB")
 	InitDB(8089)
 	blockUtilsCase.Number = GetHeightOfChain() + 1
@@ -15,30 +15,22 @@ func TestCalcResponseCount(t *testing.T) {
 	if count != 2 {
 		t.Errorf("%d not equal 2, TestCalcResponseCount fail", count)
 	}
-	//InitDB(8081)
-	//db, _ := hyperdb.GetLDBDatabase()
-	//height := GetHeightOfChain()
-	//fmt.Println(height)
-	//block,_ := GetBlockByNumber(db,height)
-	////var ch crypto.CommonHash
-	//kec256Hash := crypto.NewKeccak256Hash("keccak256")
-	//fmt.Println(block.Hash(kec256Hash))
-	//fmt.Println(block.HashBlock(kec256Hash))
-}
+}*/
 
-/*func TestCalcResponseCount(t *testing.T) {
+func TestCalcResponseCount(t *testing.T) {
 	log.Info("test =============> > > TestInitDB")
 	InitDB(8084)
 	//blockUtilsCase.Number = GetHeightOfChain() + 1
 	//commonHash := crypto.NewKeccak256Hash("keccak256")
 	//WriteBlock(blockUtilsCase, commonHash)
 	fmt.Println(GetHeightOfChain())
-	count := CalcResponseCount(5, int64(300))
-	*//*if count != 2 {
-		t.Errorf("%d not equal 2, TestCalcResponseCount fail", count)
-	}*//*
-	fmt.Println(count)
-}*/
+	for i := uint64(0); i <= GetHeightOfChain(); i += 1 {
+		count := CalcResponseCount(i, int64(300))
+
+		fmt.Println(count)
+	}
+
+}
 
 /*func TestGetBlockHash(t *testing.T) {
 	log.Info("test =============> > > TestInitDB")
