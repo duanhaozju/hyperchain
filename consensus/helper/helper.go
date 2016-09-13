@@ -1,12 +1,20 @@
 package helper
 
 import (
+	"time"
+
 	"hyperchain/event"
 	pb "hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"
-	"time"
+	"github.com/op/go-logging"
 )
+
+var logger *logging.Logger // package-level logger
+
+func init() {
+	logger = logging.MustGetLogger("consensus/help")
+}
 
 type helper struct {
 	msgQ *event.TypeMux
@@ -66,10 +74,10 @@ func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
 		return err
 	}
 
-	updateStateEvent := event.ConsensusEvent {
+	updateStateEvent := event.SendCheckpointSyncEvent {
 		Payload:	tmpMsg,
 	}
-
+	logger.Error("-------------post UpdateStateEvent----------")
 	go h.msgQ.Post(updateStateEvent)
 
 	return nil

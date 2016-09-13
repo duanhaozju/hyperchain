@@ -15,8 +15,7 @@ import (
 	"hyperchain/crypto/secp256k1"
 )
 
-const keystoredir  = "/tmp/hyperchain/cache/keystore/"
-//
+
 type EcdsaEncrypto struct{
 	name string
 	port string
@@ -67,26 +66,14 @@ func (ee *EcdsaEncrypto)GeneralKey(port string)(interface{},error) {
 	}
 
 	ee.port=port
-	//k := hex.EncodeToString(FromECDSA(key))
-	//_, error := os.Stat(keystoredir)
-	//if error == nil || os.IsExist(error){
-	//	//("directory exists")
-	//
-	//}else {
-	//	os.MkdirAll(keystoredir,0777)
-	//}
-	//file := keystoredir+port
-	//if err:=ioutil.WriteFile(file, []byte(k), 0600);err!=nil{
-	//	return key,err
-	//}
 	return key,nil
 
 }
 //load key by given port
-func (ee *EcdsaEncrypto)GetKey() (interface{},error) {
-	file := keystoredir+ee.port
-	return LoadECDSA(file)
-}
+//func (ee *EcdsaEncrypto)GetKey() (interface{},error) {
+//	file := keystoredir+ee.port
+//	return LoadECDSA(file)
+//}
 
 func (ee *EcdsaEncrypto)PrivKeyToAddress(prv interface {})common.Address  {
 	p := prv.(ecdsa.PrivateKey)

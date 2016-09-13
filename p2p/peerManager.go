@@ -14,16 +14,16 @@ import (
 	"hyperchain/p2p/peerEventHandler"
 	"hyperchain/p2p/peerEventManager"
 	pb "hyperchain/p2p/peermessage"
+	"hyperchain/recovery"
 	"strconv"
 	"time"
 	"hyperchain/p2p/peerPool"
 	"encoding/hex"
 	"hyperchain/event"
 	"hyperchain/crypto"
-
+	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"hyperchain/p2p/transport"
-	"hyperchain/recovery"
 )
 
 
@@ -184,27 +184,64 @@ func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 		if err != nil {
 			log.Error("Broadcast failed,Node", peer.Addr)
 		} else {
-			log.Info("resMsg:", string(resMsg.Payload))
+			log.Debug("resMsg:", string(resMsg.Payload))
 			//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
 		}
 	}
 }
+
+
 // SendMsgToPeers Send msg to specific peer peerlist
-func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64){
-	result, err := transport.TripleDesEncrypt(payLoad, DESKEY)
+func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,MessageType recovery.Message_MsgType){
+	var mpPaylod = &recovery.Message{
+		MessageType:MessageType,
+		MsgTimeStamp:time.Now().UnixNano(),
+		Payload:payLoad,
+	}
+
+	realPayload, err := proto.Marshal(mpPaylod)
+	if err != nil{
+		log.Error("marshal failed")
+	}
+	result, err := transport.TripleDesEncrypt(realPayload, DESKEY)
 	if err!=nil{
 		log.Fatal("TripleDesEncrypt Failed!")
 	}
 	localNodeAddr := node.GetNodeAddr()
 	var broadCastMessage = pb.Message{
-		MessageType:  pb.Message_CONSUS,
+		MessageType:  pb.Message_SYNCMSG,
 		From:         &localNodeAddr,
 		Payload:      result,
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	pPool := peerPool.NewPeerPool(false, false)
-	//go this.EventManager.PostEvent(pb.Message_CONSUS, broadCastMessage)
-	go broadcast(broadCastMessage,&pPool)
+
+
+	// broadcast to special peers
+	go func(){for _, peer := range pPool.GetPeers() {
+
+		for _,nodeID := range peerList{
+			nid:=strconv.FormatUint(nodeID,10)
+			//peerId:=uint64(strconv.Atoi(peer.Idetity))
+
+			//nid := strconv.Itoa(nodeID)
+
+			//if peerId==nodeID{
+			if peer.Idetity == nid {
+				log.Error(nid)
+				resMsg, err := peer.Chat(&broadCastMessage)
+				if err != nil {
+					log.Error("enter error")
+					log.Error("Broadcast failed,Node", peer.Addr)
+				} else {
+					log.Info("resMsg:", string(resMsg.Payload))
+					//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
+				}
+			}
+		}
+
+	}
+	}()
 
 
 }

@@ -17,6 +17,8 @@ import (
 	"hyperchain/event"
 	"github.com/op/go-logging"
 	"hyperchain/p2p/transport"
+	"github.com/golang/protobuf/proto"
+	"hyperchain/recovery"
 )
 
 var log *logging.Logger // package-level logger
@@ -87,15 +89,14 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	}
 	case pb.Message_CONSUS:{
 		response.MessageType = pb.Message_RESPONSE
-
 		result, err := transport.TripleDesEncrypt([]byte("Consensus has received, response from " + strconv.Itoa(int(GetNodeAddr().Port))), DESKEY)
 		if err!=nil{
 			log.Fatal("TripleDesEncrypt Failed!")
 		}
-
-		response.Payload = result
+		response.Payload =result
 		log.Debug("<<<< GOT A CONSUS MESSAGE >>>>")
 		origData, err := transport.TripleDesDecrypt(msg.Payload, DESKEY)
+		//log.Notice(string(origData))
 		if err != nil {
 			panic(err)
 		}
@@ -104,6 +105,48 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		})
 
 		return &response, nil
+
+	}
+	case pb.Message_SYNCMSG:{
+		// package the response msg
+		response.MessageType = pb.Message_RESPONSE
+		enResult, err := transport.TripleDesEncrypt([]byte("got a sync msg"), DESKEY)
+		if err!=nil{
+			log.Fatal("TripleDesEncrypt Failed!")
+		}
+		response.Payload = enResult
+
+
+		log.Debug("<<<< GOT A SYNC MESSAGE >>>>")
+		origData, err := transport.TripleDesDecrypt(msg.Payload, DESKEY)
+		if err != nil {
+			panic(err)
+		}
+		var SyncMsg recovery.Message
+		unMarshalErr := proto.Unmarshal(origData,&SyncMsg)
+		if unMarshalErr != nil{
+			log.Error("sync UnMarshal error!")
+		}
+		switch SyncMsg.MessageType {
+		case recovery.Message_SYNCBLOCK:{
+
+			go this.higherEventManager.Post(event.ReceiveSyncBlockEvent{
+				Payload:SyncMsg.Payload,
+			})
+
+		}
+		case recovery.Message_SYNCCHECKPOINT:{
+
+			go this.higherEventManager.Post(event.StateUpdateEvent{
+				Payload:SyncMsg.Payload,
+			})
+
+		}
+		}
+		go this.higherEventManager.Post(event.ConsensusEvent{
+			Payload:origData,
+		})
+
 
 	}
 	case pb.Message_KEEPALIVE:{
@@ -123,6 +166,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	default:
 		return &response, nil
 	}
+	return &response, nil
 
 }
 

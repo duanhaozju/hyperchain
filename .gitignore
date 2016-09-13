@@ -4,6 +4,7 @@
 *.o
 *.a
 *.so
+#*.json
 
 test.go
 core/chche
@@ -96,3 +97,5 @@ logs/
 cache/
 crypto/addressInfo
 p2p/local_peerconfig.json
+
+*.tar

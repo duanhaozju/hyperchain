@@ -5,6 +5,9 @@ import (
 	"hyperchain/consensus/helper/persist"
 
 	"github.com/golang/protobuf/proto"
+	"encoding/base64"
+	"github.com/pkg/errors"
+	//"reflect"
 )
 
 func (instance *pbftCore) persistQSet() {
@@ -35,6 +38,56 @@ func (instance *pbftCore) persistPQSet(key string, set []*ViewChange_PQ) {
 	}
 	persist.StoreState(key, raw)
 }
+
+//func (instance *pbftCore) persistDelPSet(n uint64) {
+//	raw, err := persist.ReadState("pset")
+//
+//	if err != nil {
+//		logger.Errorf("Read State Set Error %s", err)
+//		return
+//	} else {
+//		pqset := &PQset{}
+//		if umErr := proto.Unmarshal(raw, pqset); umErr != nil {
+//			logger.Error(umErr)
+//			return
+//		} else {
+//			pset := pqset.GetSet()
+//			var newPset []*ViewChange_PQ
+//			for _, p := range pset {
+//				if p.SequenceNumber == n {
+//					continue
+//				}
+//				newPset = append(newPset, p)
+//			}
+//			instance.persistPQSet("pset", newPset)
+//		}
+//	}
+//}
+//
+//func (instance *pbftCore) persistDelQSet(idx qidx) {
+//	raw, err := persist.ReadState("qset")
+//
+//	if err!= nil {
+//		logger.Errorf("Read State Set Error %s", err)
+//		return
+//	} else {
+//		pqset := &PQset{}
+//		if umErr := proto.Unmarshal(raw, pqset); umErr != nil {
+//			logger.Error(umErr)
+//			return
+//		} else {
+//			qset := pqset.GetSet()
+//			var newQset []*ViewChange_PQ
+//			for _, q := range qset {
+//				if idx.d == q.BatchDigest && idx.n == q.SequenceNumber {
+//					continue
+//				}
+//				newQset = append(newQset, q)
+//			}
+//			instance.persistPQSet("qset", newQset)
+//		}
+//	}
+//}
 
 func (instance *pbftCore) restorePQSet(key string) []*ViewChange_PQ {
 	raw, err := persist.ReadState(key)
@@ -88,9 +141,91 @@ func (instance *pbftCore) persistDelCheckpoint(seqNo uint64) {
 }
 
 func (instance *pbftCore) restoreState() {
+	updateSeqView := func(set []*ViewChange_PQ) {
+		for _, e := range set {
+			if instance.view < e.View {
+				instance.view = e.View
+			}
+			if instance.seqNo < e.SequenceNumber {
+				instance.seqNo = e.SequenceNumber
+			}
+		}
+	}
 
+	set := instance.restorePQSet("pset")
+	for _, e := range set {
+		instance.pset[e.SequenceNumber] = e
+	}
+	updateSeqView(set)
+
+	set = instance.restorePQSet("qset")
+	for _, e := range set {
+		instance.qset[qidx{e.BatchDigest, e.SequenceNumber}] = e
+	}
+	updateSeqView(set)
+
+	reqBatchesPacked, err := persist.ReadStateSet("reqBatch.")
+	if err == nil {
+		for k, v := range reqBatchesPacked {
+			reqBatch := &RequestBatch{}
+			err = proto.Unmarshal(v, reqBatch)
+			if err != nil {
+				logger.Warningf("Replica %d could not restore request batch %s", instance.id, k)
+			} else {
+				instance.reqBatchStore[hash(reqBatch)] = reqBatch
+			}
+		}
+	} else {
+		logger.Warningf("Replica %d could not restore reqBatchStore: %s", instance.id, err)
+	}
+
+	chkpts, err := persist.ReadStateSet("chkpt.")
+	if err == nil {
+		highSeq := uint64(0)
+		for key, id := range chkpts {
+			var seqNo uint64
+			if _, err = fmt.Sscanf(key, "chkpt.%d", &seqNo); err != nil {
+				logger.Warningf("Replica %d could not restore checkpoint key %s", instance.id, key)
+			} else {
+				idAsString := base64.StdEncoding.EncodeToString(id)
+				logger.Debugf("Replica %d found checkpoint %s for seqNo %d", instance.id, idAsString, seqNo)
+				instance.chkpts[seqNo] = idAsString
+				if seqNo > highSeq {
+					highSeq = seqNo
+				}
+			}
+		}
+		instance.moveWatermarks(highSeq)
+	} else {
+		logger.Warningf("Replica %d could not restore checkpoints: %s", instance.id, err)
+	}
+
+	instance.restoreLastSeqNo() // assign value to lastExec
+	if instance.seqNo < instance.lastExec {
+		instance.seqNo = instance.lastExec
+	}
+	logger.Infof("Replica %d restored state: view: %d, seqNo: %d, pset: %d, qset: %d, reqBatches: %d, chkpts: %d",
+		instance.id, instance.view, instance.seqNo, len(instance.pset), len(instance.qset), len(instance.reqBatchStore), len(instance.chkpts))
 }
 
 func (instance *pbftCore) restoreLastSeqNo() {
-
+	var err error
+	if instance.lastExec, err = instance.getLastSeqNo(); err != nil {
+		logger.Warningf("Replica %d could not restore lastExec: %s", instance.id, err)
+		instance.lastExec = 0
+	}
+	logger.Infof("Replica %d restored lastExec: %d", instance.id, instance.lastExec)
 }
+
+func (instance *pbftCore) getLastSeqNo() (uint64, error) {
+
+	var err error
+	h := persist.GetHeightofChain()
+	if h == 0 {
+		err = errors.Errorf("Height of chain is 0")
+		return h, err
+	}
+
+	return h, nil
+}
+
