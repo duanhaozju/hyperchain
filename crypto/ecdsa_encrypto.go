@@ -85,7 +85,11 @@ func (ee *EcdsaEncrypto)GenerateNodeKey(port string,keydir string) error  {
 	if err!=nil{
 		return err
 	}
-	if err :=SaveECDSA(nodefile,key);err!=nil{
+	err = os.MkdirAll(keydir+"node/", 0700)
+	if err !=nil{
+		return err
+	}
+	if err =SaveECDSA(nodefile,key);err!=nil{
 		return err
 	}
 	return nil
