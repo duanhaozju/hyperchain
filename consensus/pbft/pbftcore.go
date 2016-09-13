@@ -1076,6 +1076,7 @@ func (instance *pbftCore) moveWatermarks(n uint64) {
 	instance.resubmitRequestBatches()
 }
 
+
 func (instance *pbftCore) updateHighStateTarget(target *stateUpdateTarget) {
 	if instance.highStateTarget != nil && instance.highStateTarget.seqNo >= target.seqNo {
 		logger.Infof("Replica %d not updating state target to seqNo %d, has target for seqNo %d", instance.id, target.seqNo, instance.highStateTarget.seqNo)
