@@ -552,7 +552,7 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 
 func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 
-	logger.Noticef("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
+	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
 		instance.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
 	if !instance.activeView {
