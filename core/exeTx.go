@@ -9,7 +9,6 @@ glog "github.com/op/go-logging"
 "hyperchain/hyperdb"
 "hyperchain/core/state"
 "hyperchain/core/vm/params"
-"fmt"
 )
 type Code []byte
 var logger = glog.Logger{}
@@ -44,8 +43,6 @@ func ExecBlock(block *types.Block)(err error){
 
 // 这一块相当于ethereum里的TransitionDB
 func ExecTransaction(tx types.Transaction)(ret []byte,err error) {
-	fmt.Println("------to:",tx.To)
-
 	var(
 		from = common.BytesToAddress(tx.From)
 		//sender = common.BytesToAddress(tx.From)
