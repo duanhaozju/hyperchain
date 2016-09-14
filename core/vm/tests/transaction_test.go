@@ -4,7 +4,7 @@ import (
 	"testing"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"
-	"hyperchain/core/vm/api"
+	"hyperchain/core"
 	"fmt"
 	"hyperchain/common"
 )
@@ -24,18 +24,18 @@ func Test_FormatTx(t *testing.T){
 		t.Log("the test transaction has error")
 	}
 	tx_create := types.NewTransaction(from.Bytes(),nil,value1)
-	api.ExecTransaction(*tx_create)
+	core.ExecTransaction(*tx_create)
 
 	//value2,err := proto.Marshal(tx_value2)
-	//tx_call := types.NewTransaction(from.Bytes(),api.GetVMEnv().State().GetLeastAccount().Address().Bytes(),value2)
-	fmt.Println("addrs----",api.GetVMEnv().State().GetLeastAccount().Address().Bytes())
-	fmt.Println("addrs----",api.GetVMEnv().State().GetLeastAccount().Address().Hex())
-	//api.ExecTransaction(*tx_call)
-	api.ExecTransaction(*types.NewTestCallTransaction())
-	api.ExecTransaction(*types.NewTestCallTransaction())
+	//tx_call := types.NewTransaction(from.Bytes(),core.GetVMEnv().State().GetLeastAccount().Address().Bytes(),value2)
+	fmt.Println("addrs----",core.GetVMEnv().State().GetLeastAccount().Address().Bytes())
+	fmt.Println("addrs----",core.GetVMEnv().State().GetLeastAccount().Address().Hex())
+	//core.ExecTransaction(*tx_call)
+	core.ExecTransaction(*types.NewTestCallTransaction())
+	core.ExecTransaction(*types.NewTestCallTransaction())
 
-	fmt.Println(len(api.GetVMEnv().State().GetAccounts()))
-	for k,v := range api.GetVMEnv().State().GetAccounts(){
+	fmt.Println(len(core.GetVMEnv().State().GetAccounts()))
+	for k,v := range core.GetVMEnv().State().GetAccounts(){
 		log.Info("Account key:",[]byte(k),"----------value:",v.Code())
 		log.Info("Account addr:",v.Address().Hex())
 		for a, v := range v.Storage() {

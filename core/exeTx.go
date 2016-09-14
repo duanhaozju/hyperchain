@@ -1,16 +1,15 @@
-package api
+package core
 
 import (
-	"hyperchain/core/types"
-	"hyperchain/core/vm"
-	glog "github.com/op/go-logging"
-	"hyperchain/common"
-	"math/big"
-	"hyperchain/hyperdb"
-	"hyperchain/core/state"
-	"hyperchain/core"
-	"hyperchain/core/vm/params"
-	"fmt"
+"hyperchain/core/types"
+"hyperchain/core/vm"
+glog "github.com/op/go-logging"
+"hyperchain/common"
+"math/big"
+"hyperchain/hyperdb"
+"hyperchain/core/state"
+"hyperchain/core/vm/params"
+"fmt"
 )
 type Code []byte
 var logger = glog.Logger{}
@@ -19,21 +18,21 @@ var(
 	db,err = hyperdb.GetLDBDatabase()
 	statedb,_  = state.New(db)
 	env = make(map[string]string)
-	vmenv = (*core.Env)(nil)
+	vmenv = (*Env)(nil)
 )
 
 func init(){
 	env["currentNumber"] = "1"
 	env["currentGasLimit"] = "10000000"
 	vm.Precompiled = make(map[string]*vm.PrecompiledAccount)
-	vmenv = core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
+	vmenv = NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
 }
 
 // TODO 1 we don't have gas in tx when I program this func,but it should be add
 // TODO 2 consider use a snapshot, so we can easily to recovery
 //func ExecBlock(block types.Block,db,hashfucn)(err error){
 // 得到虚拟机VM
-func ExecBlock(block types.Block)(err error){
+func ExecBlock(block *types.Block)(err error){
 	if(err != nil || env == nil){
 		return err
 	}
@@ -65,7 +64,7 @@ func ExecTransaction(tx types.Transaction)(ret []byte,err error) {
 }
 
 func Exec(from, to *common.Address, data []byte, gas,
-	gasPrice, value *big.Int)(ret []byte,err error){
+gasPrice, value *big.Int)(ret []byte,err error){
 
 	sender := vmenv.Db().GetAccount(*from)
 	contractCreation := (nil == to)
@@ -92,10 +91,10 @@ func CommitStatedbToBlockchain(){
 	vmenv.State().Commit()
 }
 
-func SetVMEnv(new_env *core.Env)  {
+func SetVMEnv(new_env *Env)  {
 	vmenv = new_env
 }
 
-func GetVMEnv()  *core.Env{
+func GetVMEnv()  *Env{
 	return vmenv
 }
