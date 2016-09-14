@@ -123,9 +123,6 @@ func (blk *PublicBlockAPI) QueryExcuteTime() *ExeTimeResult{
 	count := len(txs)
 	exeTime := core.CalcResponseAVGTime(from,core.GetHeightOfChain())
 
-	fmt.Println(count)
-	fmt.Println(exeTime)
-
 	return &ExeTimeResult{
 		Count: count,
 		Time: exeTime,

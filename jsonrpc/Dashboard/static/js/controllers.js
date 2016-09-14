@@ -477,12 +477,25 @@ function BlockCtrl($scope, BlockService) {
 }
 
 function TransactionCtrl($scope, TransactionService) {
+    $scope.status = "";
+    
     TransactionService.getAllTxs()
         .then(function(res){
             $scope.txs = res;
         }, function(error){
             console.log(error);
         })
+    
+    $scope.submit = function(){
+        $scope.status = "please waitting.....";
+        TransactionService.SendTransaction()
+            .then(function(res){
+                $scope.status = "success"
+            }, function(error){
+                $scope.status = "error";
+                console.log(error);
+            })
+    }
 }
 
 function AccountCtrl($scope, AccountService) {

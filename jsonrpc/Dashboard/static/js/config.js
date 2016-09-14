@@ -128,24 +128,6 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
                 }
             }
         })
-
-        .state('blockchain.transactions.addTransaction', {
-            url: "/add",
-            templateUrl: "static/views/addTransaction.html",
-            data: { pageTitle: 'AddTransaction' }
-            ,
-            resolve: {
-                loadPlugin: function ($ocLazyLoad) {
-                    return $ocLazyLoad.load([
-                        {
-                            name: 'ui.select',
-                            files: ['static/js/plugins/ui-select/select.min.js', 'static/css/plugins/ui-select/select.min.css']
-                        }
-                    ]);
-                }
-            }
-        })
-
         .state('blockchain.account_tables', {
             url: "/accounts",
             templateUrl: "static/views/account.html",
