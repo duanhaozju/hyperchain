@@ -113,6 +113,32 @@ function TransactionService($resource,$q) {
                     } else {
                         resolve(res.result)
                     }
+                
+                })
+            })
+        },
+        QueryCommitAndBatchTime: function(from ,to){
+            return $q(function(resolve, reject){
+                $resource("http://localhost:8084",{},{
+                    sendTx:{
+                        method:"POST"
+                    }
+                }).sendTx({
+                    method: "block_queryCommitAndBatchTime",
+                    params: [
+                        {
+                            "from":from,
+                            "to":to
+                        }
+                    ],
+                    id: 1
+                },function(res){
+                    console.log(res);
+                    if (res.error) {
+                        reject(res.error)
+                    } else {
+                        resolve(res.result)
+                    }
 
                 })
             })

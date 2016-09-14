@@ -16,3 +16,6 @@ table.dataTable thead .sorting, table.dataTable thead .sorting_asc:after, table.
 .center{
     text-align: center;
 }
+.text_red {
+    color: red
+}
