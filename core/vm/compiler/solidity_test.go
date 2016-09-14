@@ -77,9 +77,9 @@ func TestCompiler(t *testing.T) {
 	if err != nil {
 		return
 	}
-	t.Log("abis:",string(abis))
+	t.Log("abis:",abis)
 	t.Log("--------")
-	t.Log("bins",string(bins))
+	t.Log("bins",bins)
 
 }
 

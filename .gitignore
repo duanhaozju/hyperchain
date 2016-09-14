@@ -4,6 +4,7 @@
 *.o
 *.a
 *.so
+*.json
 
 test.go
 core/chche
@@ -13,7 +14,7 @@ _test
 # Architecture specific extensions/prefixes
 *.[568vq]
 [568vq].out
-core/vm/tests/files/*.json
+
 *.cgo1.go
 *.cgo2.c
 _cgo_defun.c
@@ -95,7 +96,7 @@ hyperchain
 logs/
 cache/
 crypto/addressInfo
-p2p/local_peerconfig.json
 
 *.tar
 
+keystore/node

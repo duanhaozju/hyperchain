@@ -13,8 +13,11 @@ import (
 
 func TestEncryption(t *testing.T){
 	encryption :=NewEcdsaEncrypto("ecdsa")
-	encryption.GeneralKey("123")
-	encryption.GetKey()
+	//encryption.GeneralKey("123")
+	//encryption.GetKey()
+	encryption.GenerateNodeKey("123","../keystore/")
+	//key ,_ := encryption.GetNodeKey("../keystore/")
+
 	fmt.Print(encryption.port)
 
 

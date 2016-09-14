@@ -11,6 +11,7 @@ import (
 	"time"
 	"encoding/hex"
 	"math/big"
+	"strconv"
 )
 
 type TxArgs struct{
@@ -39,6 +40,7 @@ type BlockShow struct{
 	BatchTIme string
 	WriteTime string
         Counts int64
+	Percents string
 }
 
 var log *logging.Logger // package-level logger
@@ -69,10 +71,10 @@ func SendTransaction(args TxArgs) bool {
 
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
-		end:=start+6
+		end:=start+300
 
 		for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 5000; i++ {
+			for i := 0; i < 500; i++ {
 				tx.TimeStamp=time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
@@ -83,8 +85,9 @@ func SendTransaction(args TxArgs) bool {
 				}else{
 					log.Warning("manager is Nil")
 				}
-				time.Sleep(200 * time.Nanosecond)
+				//time.Sleep(2 * time.Nanosecond)
 			}
+			time.Sleep(90 * time.Millisecond)
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
@@ -187,6 +190,17 @@ func QueryExcuteTime(args TxArgs) int64{
 	return core.CalcResponseAVGTime(from.Uint64(),to.Uint64())
 }
 
+func QueryCommitAndBatchTime(args TxArgs) (int64,int64){
+
+	var from big.Int
+	var to big.Int
+	from.SetString(args.From, 10)
+	to.SetString(args.To, 10)
+
+
+	return core.CalcCommitBatchAVGTime(from.Uint64(),to.Uint64())
+}
+
 func blockShow(height uint64) BlockShow{
 
 	db, err := hyperdb.GetLDBDatabase()
@@ -205,13 +219,16 @@ func blockShow(height uint64) BlockShow{
 	}
 
 	txCounts := uint64(len(block.Transactions))
+	count,percent := core.CalcResponseCount(height, int64(200))
 
 	return BlockShow{
 			Height: height,
 			TxCounts: txCounts,
 			BatchTIme: time.Unix(block.Timestamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
 			WriteTime: time.Unix(block.WriteTime / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
-			Counts: core.CalcResponseCount(height, int64(300)),
+			Counts: count,
+			Percents:strconv.FormatFloat(percent*100, 'f', 2, 32)+"%",
+
 		}
 
 }

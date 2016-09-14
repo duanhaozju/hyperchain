@@ -36,6 +36,16 @@
                 <input type="button" id="query" value="查询"/>&emsp;
                 <span class="time"><span id="time">0</span>ms</span>
             </div>
+            <div>
+                <span style="font-weight: bold">计算commit & batch时间：</span>
+                <input type="text" name="from_block2" placeholder="起始block number">&nbsp;-&nbsp;
+                <input type="text" name="to_block2" placeholder="终止block number">
+                <input type="button" id="commitandbatchquery" value="查询"/>&emsp;
+                <span>CommitTime:</span>
+                <span class="time"><span id="committime">0</span>ms</span>
+                <span>BatchTime:</span>
+                <span class="time"><span id="batchtime">0</span>ms</span>
+            </div>
         </div>
     </div>
     <div class="list">
@@ -79,7 +89,8 @@
                         <th>Transactions</th>
                         <th>BatchTIme</th>
                         <th>WriteTime</th>
-                        <th>处理 &lt; 300ms的交易数</th>
+                        <th>处理 &lt; 200ms的交易数</th>
+                        <th>处理 &lt; 200ms的交易百分比</th>
                     </tr>
                     </thead>
                     <tbody class="data-container"></tbody>

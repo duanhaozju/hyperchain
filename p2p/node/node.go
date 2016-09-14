@@ -96,6 +96,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		response.Payload =result
 		log.Debug("<<<< GOT A CONSUS MESSAGE >>>>")
 		origData, err := transport.TripleDesDecrypt(msg.Payload, DESKEY)
+		//log.Notice(string(origData))
 		if err != nil {
 			panic(err)
 		}
@@ -128,13 +129,15 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 		switch SyncMsg.MessageType {
 		case recovery.Message_SYNCBLOCK:{
+
 			go this.higherEventManager.Post(event.ReceiveSyncBlockEvent{
 				Payload:SyncMsg.Payload,
 			})
 
 		}
 		case recovery.Message_SYNCCHECKPOINT:{
-			go this.higherEventManager.Post(event.SendCheckpointSyncEvent{
+
+			go this.higherEventManager.Post(event.StateUpdateEvent{
 				Payload:SyncMsg.Payload,
 			})
 
@@ -148,7 +151,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	}
 	case pb.Message_KEEPALIVE:{
 		//客户端会发来keepAlive请求,返回response即可
-		// client may send a keep alive request, just response A response type message
+		// client may send a keep alive request, just response A response type message,if node is not ready, send a pending status message
 		response.MessageType = pb.Message_RESPONSE
 		response.Payload = []byte("RESPONSE FROM SERVER")
 

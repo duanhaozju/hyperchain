@@ -13,6 +13,7 @@ import (
 	"os"
 	"bufio"
 	"fmt"
+	"reflect"
 )
 
 var (
@@ -36,9 +37,7 @@ type Account struct {
 type AccountManager struct {
 	KeyStore	keyStore
 	Encryption	crypto.Encryption
-	//AddrPassMap	map[string]string
 	mu		sync.RWMutex
-	//keycache	map[common.Address]*[]byte
 	unlocked map[common.Address]*unlocked
 }
 type unlocked struct {
@@ -46,12 +45,10 @@ type unlocked struct {
 	abort chan struct{}
 }
 // NewAccountManager creates a AccountManager for the given directory.
-func NewAccountManager(keydir string,encryp crypto.Encryption, scryptN, scryptP int) *AccountManager {
+func NewAccountManager(keydir string,encryp crypto.Encryption) *AccountManager {
 	keydir, _ = filepath.Abs(keydir)
 	am := &AccountManager{
-		KeyStore: &keyStorePassphrase{keydir, scryptN, scryptP},
-		//AddrPassMap:make(map[string]string),
-		//keycache:make(map[common.Address]*[]byte),
+		KeyStore: &keyStorePassphrase{keydir, StandardScryptN, StandardScryptP},
 		unlocked:make(map[common.Address]*unlocked),
 		Encryption:encryp,
 	}
@@ -61,8 +58,15 @@ func NewAccountManager(keydir string,encryp crypto.Encryption, scryptN, scryptP 
 }
 func (am *AccountManager)unlockAllAccount(keydir string){
 	var accounts []Account
-	addressdir := keydir+"/addresses/address"
+	accounts = getAllAccount(keydir)
+	for _,a := range accounts{
+		am.Unlock(a,"123")
+	}
 
+}
+func getAllAccount(keydir string) []Account {
+	var accounts []Account
+	addressdir := keydir+"/addresses/address"
 	fp, _ := os.Open(addressdir)
 	scanner := bufio.NewScanner(fp)
 	scanner.Split(bufio.ScanLines)
@@ -70,34 +74,16 @@ func (am *AccountManager)unlockAllAccount(keydir string){
 		addrHex := scanner.Text()
 		//fmt.Println(data)
 		addr := common.HexToAddress(string(addrHex)[:40])
-			account := Account{
-				Address:addr,
-				File:keydir+"/"+addrHex,
-			}
-			accounts = append(accounts,account)
+		account := Account{
+			Address:addr,
+			File:keydir+"/"+addrHex,
+		}
+		accounts = append(accounts,account)
 	}
 	fp.Close()
-	for _,a := range accounts{
-		am.Unlock(a,"123")
-	}
-
+	return accounts
 }
-//func (am *AccountManager)cacheAllKey(fileList []string) error {
-//	for _,filename := range fileList{
-//		keyjson, err := ioutil.ReadFile(filename)
-//		if err != nil {
-//			return err
-//		}
-//		m:= make(map[string]interface{})
-//		if err := json.Unmarshal(keyjson,&m);err!=nil{
-//			return err
-//		}
-//		addrHex := m["address"]
-//		addr := common.HexToAddress("0x"+addrHex.(string))
-//		am.keycache[addr] = &keyjson
-//	}
-//	return nil
-//}
+
 // Sign signs hash with an unlocked private key matching the given address.
 func (am *AccountManager) Sign(addr common.Address, hash []byte) (signature []byte, err error) {
 	am.mu.RLock()
@@ -106,6 +92,30 @@ func (am *AccountManager) Sign(addr common.Address, hash []byte) (signature []by
 	if !found {
 		return nil, ErrLocked
 	}
+	return am.Encryption.Sign(hash, unlockedKey.PrivateKey)
+}
+// SignWithPassphrase signs hash if the private key matching the given address can be
+// decrypted with the given passphrase.
+func (am *AccountManager) SignWithPassphrase(addr common.Address, hash []byte, passphrase string) (signature []byte, err error) {
+	am.mu.RLock()
+	defer am.mu.RUnlock()
+	unlockedKey, found := am.unlocked[addr]
+	if !found {
+		key, err := am.GetDecryptedKey(Account{Address: addr}, passphrase)
+		if err != nil {
+			return nil, err
+		}
+		switch key.PrivateKey.(type) {
+		case *ecdsa.PrivateKey:
+			actualPriKey := key.PrivateKey.(*ecdsa.PrivateKey)
+			unlockedKey.Key = &Key{
+				Address:    crypto.PubkeyToAddress(actualPriKey.PublicKey),
+				PrivateKey: actualPriKey,
+			}
+			defer zeroKey(actualPriKey)
+		}
+	}
+
 	return am.Encryption.Sign(hash, unlockedKey.PrivateKey)
 }
 // Unlock unlocks the given account indefinitely.
@@ -135,7 +145,7 @@ func (am *AccountManager) Lock(addr common.Address) error {
 // shortens the active unlock timeout. If the address was previously unlocked
 // indefinitely the timeout is not altered.
 func (am *AccountManager) TimedUnlock(a Account, passphrase string, timeout time.Duration) error {
-	key, err := am.GetDecryptedKey(a)
+	key, err := am.GetDecryptedKey(a,passphrase)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -163,19 +173,13 @@ func (am *AccountManager) TimedUnlock(a Account, passphrase string, timeout time
 	am.unlocked[a.Address] = u
 	return nil
 }
-func (am *AccountManager) GetDecryptedKey(a Account) (*Key, error) {
-	am.mu.Lock()
-	defer am.mu.Unlock()
-	key, err := am.KeyStore.GetKey(a.Address, a.File, "123")
+func (am *AccountManager) GetDecryptedKey(a Account,auth string) (*Key, error) {
+	//am.mu.Lock()
+	//defer am.mu.Unlock()
+	key, err := am.KeyStore.GetKey(a.Address, a.File, auth)
 	return key, err
 }
-//func (am *AccountManager) GetDecryptedKeyCache(a Account) (*Key, error) {
-//	am.mu.Lock()
-//	defer am.mu.Unlock()
-//	key, err := am.KeyStore.GetKeyFromCache(a.Address, am.keycache[a.Address], "123")
-//
-//	return key, err
-//}
+
 func (am *AccountManager) expire(addr common.Address, u *unlocked, timeout time.Duration) {
 	t := time.NewTimer(timeout)
 	defer t.Stop()
@@ -204,6 +208,7 @@ func (am *AccountManager) NewAccount(passphrase string) (Account, error) {
 	}
 	//am.AddrPassMap[common.ToHex(account.Address)] = passphrase
 	storeNewAddrToFile(account)
+	am.Unlock(account,"123")
 	return account, nil
 }
 
@@ -213,4 +218,24 @@ func zeroKey(k *ecdsa.PrivateKey) {
 	for i := range b {
 		b[i] = 0
 	}
+}
+
+func ValidateAddr(from []byte) bool {
+	var accounts []Account
+	keydir,_ := filepath.Abs("./keystore")
+	accounts = getAllAccount(keydir)
+	addr := common.HexToAddress(string(from))
+	ac := Account{
+		Address:addr,
+		File:keydir +"/" +string(from),
+	}
+	for _,account := range accounts{
+		if(reflect.DeepEqual(ac,account)){
+			return true
+		}
+	}
+	//if _,found := am.unlocked[addr];found{
+	//	return true
+	//}
+	return false
 }

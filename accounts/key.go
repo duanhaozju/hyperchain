@@ -27,6 +27,7 @@ import (
 
 	"hyperchain/crypto"
 	"hyperchain/common"
+	"github.com/op/go-logging"
 )
 
 const (
@@ -88,9 +89,12 @@ type scryptParamsJSON struct {
 	DkLen int    `json:"dklen"`
 	Salt  string `json:"salt"`
 }
-
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("key")
+}
 func newKey(am *AccountManager,rand io.Reader) (*Key, error) {
-	privKey, err := am.Encryption.GeneralKey("123")
+	privKey, err := am.Encryption.GeneralKey()
 	if err != nil {
 		return nil, err
 	}
@@ -139,17 +143,6 @@ func storeNewKey(am *AccountManager, rand io.Reader, auth string) (*Key, Account
 	return nil,Account{},nil
 }
 
-//func listAllKeyFile(path string) []string {
-//	files, _ := ioutil.ReadDir(path)
-//	fileList :=[]string{}
-//	for _, fi := range files {
-//		if !fi.IsDir() {
-//			fileList = append(fileList,path + "/" + fi.Name())
-//		}
-//	}
-//
-//	return fileList
-//}
 func writeKeyFile(file string, content []byte) error {
 	// Create the keystore directory with appropriate permissions
 	// in case it is not present yet.
