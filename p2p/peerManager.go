@@ -222,6 +222,7 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,Mes
 
 
 	// broadcast to special peers
+	//TODO for stateUpdate
 	go func(){for _, peer := range pPool.GetPeers() {
 
 		for _,nodeID := range peerList{
