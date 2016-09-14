@@ -138,7 +138,7 @@ type BatchTimeResult struct {
 	CommitTime int64
 	BatchTime int64
 }
-func (tran *PublicTransactionAPI) QueryCommitAndBatchTime(args SendQueryArgs) (*BatchTimeResult,error) {
+func (blk *PublicBlockAPI) QueryCommitAndBatchTime(args SendQueryArgs) (*BatchTimeResult,error) {
 
 	from, err := strconv.ParseUint(args.From, 10, 64)
 	to, err := strconv.ParseUint(args.To, 10, 64)
