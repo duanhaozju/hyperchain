@@ -4,8 +4,8 @@ import (
 	"math/big"
 	"hyperchain/common"
 	"hyperchain/core/state"
+	"hyperchain/core"
 	"hyperchain/core/vm"
-	"hyperchain/core/vm/api"
 	"hyperchain/hyperdb"
 	"github.com/op/go-logging"
 	"fmt"
@@ -110,46 +110,57 @@ func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.
 		data2 = common.FromHex(exec["data"])
 	)
 
-	vmenv := api.GetVMEnv()
+	vmenv := core.GetVMEnv()
 	state = vmenv.State()
-	ret,err := api.Exec(&from,nil,([]byte)(sourcecode), gas, price, value)
-	//ret,err = api.Exec(&from,nil, data, gas, price, value)
-	//ret,err = api.Exec(&from,nil, data, gas, price, value)
-	//ret,err = api.Exec(&from,nil, data, gas, price, value)
-	//ret,err = api.Exec(&from,nil, data, gas, price, value)
-	//ret,err = api.Exec(&from,nil, data, gas, price, value)
-
-	for k,v := range state.GetAccounts(){
-		log.Info("Account key:",k,"----------value:",v)
-	}
+	ret,err := core.Exec(&from,nil,([]byte)(sourcecode), gas, price, value)
 
 	addr := state.GetLeastAccount().Address()
 	for a, v := range state.GetStateObject(addr).Storage() {
 		log.Info("StateObject key:",a,"----------value:",v)
 	}
 	log.Info("addr---------------",addr)
-	log.Info("ret--------",ret)
+	log.Info("addr---------------",common.ToHex(addr.Bytes()))
+	log.Info("ret--------",common.ToHex(ret))
 
-	ret,err = api.Exec(&from, &to, data, gas, price, value)
+	ret,err = core.Exec(&from,nil,([]byte)(sourcecode), gas, price, value)
+	//ret,err = core.Exec(&from,nil, data, gas, price, value)
+	//ret,err = core.Exec(&from,nil, data, gas, price, value)
+	//ret,err = core.Exec(&from,nil, data, gas, price, value)
+	//ret,err = core.Exec(&from,nil, data, gas, price, value)
+	//ret,err = core.Exec(&from,nil, data, gas, price, value)
+
+	for k,v := range state.GetAccounts(){
+		log.Info("Account key:",k,"----------value:",v)
+	}
+
+	addr = state.GetLeastAccount().Address()
+	for a, v := range state.GetStateObject(addr).Storage() {
+		log.Info("StateObject key:",a,"----------value:",v)
+	}
+	log.Info("addr---------------",addr)
+	log.Info("addr---------------",common.ToHex(addr.Bytes()))
+	log.Info("ret--------",common.ToHex(ret))
+
+	ret,err = core.Exec(&from, &to, data, gas, price, value)
 	log.Info("ret--------",ret)
 	for a, v := range state.GetStateObject(addr).Storage() {
 		log.Info("StateObject key:",a,"----------value:",v)
 	}
 
 	to = addr
-	ret,err = api.Exec(&from, &to, data2, gas, price, value)
+	ret,err = core.Exec(&from, &to, data2, gas, price, value)
 	log.Info("ret--------",ret)
 	for a, v := range state.GetStateObject(addr).Storage() {
 		log.Info("StateObject key:",a,"----------value:",v)
 	}
 
-	ret,err = api.Exec(&from, &to, data2, gas, price, value)
+	ret,err = core.Exec(&from, &to, data2, gas, price, value)
 	log.Info("ret--------",ret)
 	for a, v := range state.GetStateObject(addr).Storage() {
 		log.Info("StateObject key:",a,"----------value:",v)
 	}
 
-	ret,err = api.Exec(&from, &to, data2, gas, price, value)
+	ret,err = core.Exec(&from, &to, data2, gas, price, value)
 	log.Info("ret--------",ret)
 	for a, v := range state.GetStateObject(addr).Storage() {
 		log.Info("StateObject key:",a,"----------value:",v)
