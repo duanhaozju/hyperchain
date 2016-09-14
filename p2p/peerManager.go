@@ -29,7 +29,7 @@ import (
 )
 
 
-const MAXPEERNODE = 7
+const MAXPEERNODE = 10
 
 var DESKEY = []byte("sfe023f_sefiel#fi32lf3e!")
 
