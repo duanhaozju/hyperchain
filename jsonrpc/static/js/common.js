@@ -88,6 +88,31 @@ $(document).ready(function(){
         });
     });
 
+    $("#commitandbatchquery").click(function(){
+        $.ajax({
+            contentType: "application/json",
+            type: "POST",
+            dataType: "json",
+            url: "/commitandbatchquery",
+            data: JSON.stringify({
+                from: $("input[name='from_block2']").val(),
+                to: $("input[name='to_block2']").val()
+            }),
+            success: function (result) {
+                if (result.Code == 1) {
+                    $("#committime").html(result.Commit)
+                    $("#batchtime").html(result.Batch)
+                }
+            },
+            error: function (err) {
+                if (err) {
+                    console.log(err);
+                }
+                return false;
+            }
+        });
+    });
+
     $tab_tx.on('click',{div: $div_trans, url: "/trans"},tabClickHandler).trigger('click');
     $tab_bal.on('click',{div: $div_balances, url: "/balances"},tabClickHandler);
     $tab_block.on('click',{div: $div_blocks, url: "/blocks"},tabClickHandler);
