@@ -30,13 +30,16 @@ func Test_FormatTx(t *testing.T){
 	core.ExecTransaction(*types.NewTestCallTransaction())
 	core.ExecTransaction(*types.NewTestCallTransaction())
 
-	fmt.Println(len(core.GetVMEnv().State().GetAccounts()))
+	log.Notice(len(core.GetVMEnv().State().GetAccounts()))
+	var num = 0
 	for k,v := range core.GetVMEnv().State().GetAccounts(){
-		log.Info("Account key:",[]byte(k),"----------value:",v.Code())
-		log.Info("Account addr:",v.Address().Hex())
+		log.Notice("the num of accounts is-----------------------------",num)
+		log.Notice("Account key:",[]byte(k),"----------value:",v.Code())
+		log.Notice("Account addr:",v.Address().Hex())
 		for a, v := range v.Storage() {
-			log.Info("StateObject key:",a,"----------value:",v)
+			log.Notice("storage key:",a,"----------value:",v)
 		}
+		num  = num+1
 	}
 }
 

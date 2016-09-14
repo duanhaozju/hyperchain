@@ -70,6 +70,18 @@ func prepareExcute(args SendTxArgs) SendTxArgs{
 // if the sender's balance is enough, return tx hash
 func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error){
 
+	log.Error(len(core.GetVMEnv().State().GetAccounts()))
+	var num = 0
+	for k,v := range core.GetVMEnv().State().GetAccounts(){
+		log.Error("the num of accounts is-----------------------------",num)
+		log.Error("Account key:",[]byte(k),"----------value:",v.Code())
+		log.Error("Account addr:",v.Address().Hex())
+		for a, v := range v.Storage() {
+			log.Error("storage key:",a,"----------value:",v)
+		}
+		num  = num+1
+	}
+
 	log.Info("==========SendTransaction=====,args = ",args)
 
 	var tx *types.Transaction
@@ -149,7 +161,22 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 		tx = types.NewTransaction([]byte(realArgs.From), []byte(realArgs.To), value)
 	}
 
+	// todo just for test,to see the info of the statedb
+
+
 	// todo 其他处理,比如存储到数据库中
+	log.Error(len(core.GetVMEnv().State().GetAccounts()))
+	var num = 0
+	for k,v := range core.GetVMEnv().State().GetAccounts(){
+		log.Error("the num of accounts is-----------------------------",num)
+		log.Error("Account key:",[]byte(k),"----------value:",v.Code())
+		log.Error("Account addr:",v.Address().Hex())
+		for a, v := range v.Storage() {
+			log.Error("storage key:",a,"----------value:",v)
+		}
+		num  = num+1
+	}
+
 
 	return tx.BuildHash(),nil
 }

@@ -38,6 +38,8 @@ func ExecBlock(block *types.Block)(err error){
 	for _,tx := range block.Transactions{
 		_,err = ExecTransaction(*tx)
 	}
+	log.Error("the sum of transactions is ",len(block.Transactions))
+	ExecTransaction(*types.NewTestCreateTransaction())
 	return
 }
 
@@ -53,6 +55,8 @@ func ExecTransaction(tx types.Transaction)(ret []byte,err error) {
 		gasPrice = tx.GasPrice()
 		amount = tx.Amount()
 	)
+	log.Error("the to is ---------",to)
+	log.Error("the to is ---------",tx.To)
 	if(tx.To == nil){
 		return Exec(&from,nil,data,gas,gasPrice,amount)
 	}
@@ -69,7 +73,7 @@ gasPrice, value *big.Int)(ret []byte,err error){
 	// 判断是否能够交易,转移,这一步可以考虑在外部执行
 
 	if contractCreation{
-		logger.Info("------create contract")
+		logger.Notice("------create contract")
 		ret,_,err = vmenv.Create(sender,data,gas,gasPrice,value)
 		if err != nil{
 			ret = nil
