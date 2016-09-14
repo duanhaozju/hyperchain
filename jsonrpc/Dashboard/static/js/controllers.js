@@ -450,9 +450,49 @@ function selectCtrl($scope) {
 
 }
 
-function SummaryCtrl(SummaryService) {
-    console.log("=========summaryCtrl==========");
+function SummaryCtrl($scope, SummaryService) {
     SummaryService.getLastestBlock()
+        .then(function(res){
+            $scope.number = res.number;
+        }, function(error){
+            console.log(error)
+        })
+    
+    SummaryService.getAvgTimeAndCount()
+        .then(function(res){
+            $scope.avgTime = res.time;
+            $scope.txCount = res.count;
+        }, function(error){
+            console.log(error);
+        })
+}
+
+function BlockCtrl($scope, BlockService) {
+    BlockService.getAllBlocks()
+        .then(function(res){
+            $scope.blocks = res;
+        }, function(error){
+            console.log(error);
+        })
+}
+
+function TransactionCtrl($scope, TransactionService) {
+    TransactionService.getAllTxs()
+        .then(function(res){
+            $scope.txs = res;
+        }, function(error){
+            console.log(error);
+        })
+}
+
+function AccountCtrl($scope, AccountService) {
+    AccountService.getAllAccounts()
+        .then(function(res){
+            console.log(res)
+            $scope.accounts = res;
+        } ,function(error){
+            console.log(error);
+        })
 }
 
 /**
@@ -466,4 +506,7 @@ angular
     .controller('translateCtrl', translateCtrl)
     .controller('selectCtrl', selectCtrl)
     .controller('SummaryCtrl', SummaryCtrl)
+    .controller('BlockCtrl', BlockCtrl)
+    .controller('TransactionCtrl',TransactionCtrl)
+    .controller('AccountCtrl', AccountCtrl)
 
