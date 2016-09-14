@@ -9,6 +9,11 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
+func (self *Transaction)BuildHash() common.Hash {
+	ch := crypto.NewKeccak256Hash("keccak256")
+	return ch.Hash(self)
+}
+
 func (self *Transaction)Hash(ch crypto.CommonHash) common.Hash {
 	return ch.Hash(self)
 }
