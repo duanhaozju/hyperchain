@@ -15,7 +15,6 @@ apt-get dist-upgrade -qqy
 # auto install the golang env
 apt-get install  --yes build-essential git
 
-mkdir -p /usr/local/go
 
 # Set Go environment variables needed by other scripts
 export GOPATH="$HOME/gopath"
