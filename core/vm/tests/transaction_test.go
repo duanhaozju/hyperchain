@@ -14,7 +14,6 @@ func Test_FormatTx(t *testing.T){
 		//input = common.FromHex("0x3ad14af300000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002")
 	)
 	var tx_value1 = &types.TransactionValue{Price:100000,GasLimit:100000,Amount:100,Payload:([]byte)(sourcecode)}
-	//var tx_value2 = &types.TransactionValue{Price:100000,GasLimit:100000,Amount:100,Payload:input}
 	value1,err := proto.Marshal(tx_value1)
 	if err != nil{
 		t.Log("the test transaction has error")
@@ -23,14 +22,11 @@ func Test_FormatTx(t *testing.T){
 	if err != nil{
 		t.Log("the test transaction has error")
 	}
-	tx_create := types.NewTransaction(from.Bytes(),nil,value1)
-	core.ExecTransaction(*tx_create)
+	core.ExecTransaction(*types.NewTransaction(from.Bytes(),nil,value1))
 
-	//value2,err := proto.Marshal(tx_value2)
-	//tx_call := types.NewTransaction(from.Bytes(),core.GetVMEnv().State().GetLeastAccount().Address().Bytes(),value2)
 	fmt.Println("addrs----",core.GetVMEnv().State().GetLeastAccount().Address().Bytes())
 	fmt.Println("addrs----",core.GetVMEnv().State().GetLeastAccount().Address().Hex())
-	//core.ExecTransaction(*tx_call)
+
 	core.ExecTransaction(*types.NewTestCallTransaction())
 	core.ExecTransaction(*types.NewTestCallTransaction())
 

@@ -221,6 +221,10 @@
 			"revisionTime": "2016-08-24T13:50:57Z"
 		},
 		{
+			"path": "golang.org/x/net/http",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "TZDHZj3zWDc5LKqpoLamOKt6Nmo=",
 			"path": "golang.org/x/text/transform",
 			"revision": "d69c40b4be55797923cec7457fac7a244d91a9b6",
