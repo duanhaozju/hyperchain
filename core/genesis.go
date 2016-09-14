@@ -91,6 +91,7 @@ func CreateInitBlock(filename string)  {
 
 
 	log.Debug("构造创世区块")
+
 	err = PutBlock(db, block.BlockHash, &block)
 	// write transaction
 	//PutTransactions(db, commonHash, block.Transactions)
@@ -138,10 +139,11 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 	balance.UpdateDBBalance(block)
 
 
-	//if block.Number%10==0 && block.Number!=0{
-	//	WriteChainChan()
-	//
-	//}
+	if block.Number%10==0 && block.Number!=0{
+		WriteChainChan()
+
+	}
+
 
 
 	// update our stateObject and statedb to blockchain

@@ -15,5 +15,8 @@
   "external_port1":"8081",
   "external_port2":"8081",
   "external_port3":"8081",
-  "external_port4":"8081"
+  "external_port4":"8081",
+  "external_port5":"8081",
+  "external_port6":"8081",
+  "external_port7":"8081"
 }

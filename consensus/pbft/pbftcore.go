@@ -261,7 +261,7 @@ func (instance *pbftCore) ProcessEvent(e events.Event) events.Event {
 	case *Checkpoint:
 		return instance.recvCheckpoint(et)
 	case *stateUpdatedEvent:
-		instance.batch.reqStore = newRequestStore()
+		//instance.batch.reqStore = newRequestStore()
 		err = instance.recvStateUpdatedEvent(et)
 	case nullRequestEvent:
 		instance.nullRequestHandler()
@@ -498,7 +498,7 @@ func (instance *pbftCore) recvRequestBatch(reqBatch *RequestBatch) error {
 
 	instance.reqBatchStore[digest] = reqBatch
 	instance.outstandingReqBatches[digest] = reqBatch
-	//instance.persistRequestBatch(digest)
+	instance.persistRequestBatch(digest)
 	if instance.activeView {
 		instance.softStartTimer(instance.requestTimeout, fmt.Sprintf("new request batch %s", digest))
 	}
@@ -552,7 +552,7 @@ func (instance *pbftCore) sendPrePrepare(reqBatch *RequestBatch, digest string) 
 
 func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 
-	logger.Noticef("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
+	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
 		instance.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
 	if !instance.activeView {
@@ -595,7 +595,7 @@ func (instance *pbftCore) recvPrePrepare(preprep *PrePrepare) error {
 		instance.reqBatchStore[digest] = preprep.GetRequestBatch()
 		logger.Debugf("Replica %d storing request batch %s in outstanding request batch store", instance.id, digest)
 		instance.outstandingReqBatches[digest] = preprep.GetRequestBatch()
-		//instance.persistRequestBatch(digest)
+		instance.persistRequestBatch(digest)
 	}
 
 	instance.softStartTimer(instance.requestTimeout, fmt.Sprintf("new pre-prepare for request batch %s", preprep.BatchDigest))
@@ -790,8 +790,7 @@ func (instance *pbftCore) execDoneSync(idx msgID) {
 		instance.lastExec = *instance.currentExec
 		delete(instance.committedCert, idx)
 		if instance.lastExec % instance.K == 0 {
-			//bcInfo := getBlockchainInfo()
-			bcInfo := &pb.BlockchainInfo{Height: instance.lastExec}
+			bcInfo := getBlockchainInfo()
 			height := bcInfo.Height
 			if height == instance.lastExec {
 				logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", instance.lastExec, height)
@@ -834,7 +833,7 @@ func (instance *pbftCore) checkpoint(n uint64, info *pb.BlockchainInfo) {
 	}
 	instance.chkpts[seqNo] = idAsString
 
-	//instance.persistCheckpoint(seqNo, id)
+	instance.persistCheckpoint(seqNo, id)
 	instance.recvCheckpoint(chkpt)
 	msg := pbftMsgHelper(&Message{Payload: &Message_Checkpoint{Checkpoint: chkpt}}, instance.id)
 	instance.helper.InnerBroadcast(msg)
@@ -970,7 +969,7 @@ func (instance *pbftCore) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 			if m := chkptSeqNumArray[len(chkptSeqNumArray)-(instance.f+1)]; m > H {
 				logger.Warningf("Replica %d is out of date, f+1 nodes agree checkpoint with seqNo %d exists but our high water mark is %d", instance.id, chkpt.SequenceNumber, H)
 				instance.reqBatchStore = make(map[string]*RequestBatch) // Discard all our requests, as we will never know which were executed, to be addressed in #394
-				//instance.persistDelAllRequestBatches()
+				instance.persistDelAllRequestBatches()
 				instance.moveWatermarks(m)
 				instance.outstandingReqBatches = make(map[string]*RequestBatch)
 				instance.skipInProgress = true
@@ -1033,7 +1032,7 @@ func (instance *pbftCore) moveWatermarks(n uint64) {
 		if idx.n <= h {
 			logger.Debugf("Replica %d cleaning quorum certificate for view=%d/seqNo=%d",
 				instance.id, idx.v, idx.n)
-			//instance.persistDelRequestBatch(cert.digest)
+			instance.persistDelRequestBatch(cert.digest)
 			delete(instance.reqBatchStore, cert.digest)
 			delete(instance.certStore, idx)
 		}
@@ -1064,7 +1063,7 @@ func (instance *pbftCore) moveWatermarks(n uint64) {
 	for n := range instance.chkpts {
 		if n < h {
 			delete(instance.chkpts, n)
-			//instance.persistDelCheckpoint(n)
+			instance.persistDelCheckpoint(n)
 		}
 	}
 
