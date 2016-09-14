@@ -1,0 +1,105 @@
+<div class="row wrapper border-bottom white-bg page-heading">
+    <div class="col-lg-10">
+        <h2>Smart Contract</h2>
+        <ol class="breadcrumb">
+            <li>
+                <a href="index.html">Home</a>
+            </li>
+            <li class="active">
+                <strong>Smart Contract</strong>
+            </li>
+        </ol>
+    </div>
+    <div class="col-lg-2">
+
+    </div>
+</div>
+<div class="wrapper wrapper-content animated fadeInRight">
+    <div class="row" ng-controller="modalDemoCtrl">
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-content">
+                    <button class="btn btn-primary " type="button" ui-sref="contract.addProject"><i class="fa fa-plus"></i>&nbsp;Add project</button><br/><br/>
+                    <input type="text" class="form-control input-sm m-b-xs" id="filter"
+                           placeholder="Search in table"><br/>
+                    <table  class="footable table table-stripped table-hover" data-page-size="10" data-filter="#filter">
+                        <thead>
+                        <tr>
+                            <th class="table_th">Contract Name</th>
+                            <th class="table_th">Project Name</th>
+                            <th class="table_th">Type</th>
+                            <th class="table_th">Status</th>
+                            <th class="table_th">Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr class="gradeX">
+                            <td>Manage</td>
+                            <td>Manage</td>
+                            <td>Create</td>
+                            <td>Deployed</td>
+                            <td>
+                                <button class="btn btn-success btn-circle" type="button"><i class="fa fa-list"></i></button>
+                                <button class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>
+                                <button class="btn btn-info btn-circle" type="button" ng-click="open1()"><i class="fa fa-cloud-upload"></i></button>
+                            </td>
+                        </tr>
+                        <tr class="gradeC">
+                            <td>Manage</td>
+                            <td>Manage</td>
+                            <td>Load</td>
+                            <td>Nondeployed</td>
+                            <td>
+                                <button class="btn btn-success btn-circle" type="button"><i class="fa fa-list"></i></button>
+                                <button class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>
+                                <button class="btn btn-info btn-circle" type="button" ng-click="open1()"><i class="fa fa-cloud-upload"></i></button>
+                            </td>
+                        </tr>
+                        <tr class="gradeA">
+                            <td>Manage</td>
+                            <td>Manage</td>
+                            <td>Load</td>
+                            <td>Nondeployed</td>
+                            <td>
+                                <button class="btn btn-success btn-circle" type="button"><i class="fa fa-list"></i></button>
+                                <button class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>
+                                <button class="btn btn-info btn-circle" type="button" ng-click="open1()"><i class="fa fa-cloud-upload"></i></button>
+                            </td>
+                        </tr>
+                        <tr class="gradeA">
+                            <td>Manage</td>
+                            <td>Manage</td>
+                            <td>Load</td>
+                            <td>Nondeployed</td>
+                            <td>
+                                <button class="btn btn-success btn-circle" type="button"><i class="fa fa-list"></i></button>
+                                <button class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>
+                                <button class="btn btn-info btn-circle" type="button" ng-click="open1()"><i class="fa fa-cloud-upload"></i></button>
+                            </td>
+                        </tr>
+                        <tr class="gradeA">
+                            <td>Manage</td>
+                            <td>Manage</td>
+                            <td>Load</td>
+                            <td>Nondeployed</td>
+                            <td>
+                                <button class="btn btn-success btn-circle" type="button"><i class="fa fa-list"></i></button>
+                                <button class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>
+                                <button class="btn btn-info btn-circle" type="button" ng-click="open1()"><i class="fa fa-cloud-upload"></i></button>
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+                        <tr>
+                            <td colspan="5">
+                                <ul class="pagination pull-right"></ul>
+                            </td>
+                        </tr>
+                        </tfoot>
+                    </table>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

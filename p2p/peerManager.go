@@ -14,18 +14,26 @@ import (
 	"hyperchain/p2p/peerEventHandler"
 	"hyperchain/p2p/peerEventManager"
 	pb "hyperchain/p2p/peermessage"
+	"hyperchain/recovery"
 	"strconv"
 	"time"
 	"hyperchain/p2p/peerPool"
 	"encoding/hex"
 	"hyperchain/event"
 	"hyperchain/crypto"
-
+	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
+	"hyperchain/p2p/transport"
+	"golang.org/x/net/context"
+	"fmt"
 )
 
 
 const MAXPEERNODE = 4
+
+var DESKEY = []byte("sfe023f_sefiel#fi32lf3e!")
+
+
 
 type PeerManager interface {
 	// judge all peer are connected and return them
@@ -34,6 +42,8 @@ type PeerManager interface {
 	Start(path string, NodeId int, aliveChan chan bool,isTest bool,eventMux *event.TypeMux)
 	GetClientId() common.Hash
 	BroadcastPeers(payLoad []byte)
+	SendMsgToPeers(payLoad []byte,peerList []uint64,MessageType recovery.Message_MsgType)
+	GetPeerInfos() peer.PeerInfos
 }
 
 // gRPC peer manager struct, which to manage the gRPC peers
@@ -64,7 +74,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 	configs := peerComm.GetConfig(path)
 	port, _ := strconv.Atoi(configs["port"+strconv.Itoa(NodeId)])
 	// start local node
-	this.localNode = node.NewNode(port,isTest,eventMux)
+	this.localNode = node.NewNode(port,isTest,eventMux,NodeId)
 	log.Info("Local Node Hash:",hex.EncodeToString(this.GetClientId().Bytes()))
 	//
 	this.aliveChain = &aliveChan
@@ -138,34 +148,12 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 			}
 		}
 	}
-	log.Info("┌────────────────────────────┐")
-	log.Info("│  All NODES WERE CONNECTED  │")
-	log.Info("└────────────────────────────┘")
+	log.Notice("┌────────────────────────────┐")
+	log.Notice("│  All NODES WERE CONNECTED  │")
+	log.Notice("└────────────────────────────┘")
 
 	*this.aliveChain <- true
 }
-
-//tell the main thread the peers are already
-
-//func (this *GrpcPeerManager) JudgeAlivePeers(c *chan bool){
-//	//TODO 判断所有节点是否存活
-//	var keepAliveMessage = pb.Message{
-//		MessageType: pb.Message_KEEPALIVE,
-//		From:        node.GetNodeAddr(),
-//		Payload:      []byte("KeepAliveMessage"),
-//		MsgTimeStamp: time.Now().Unix(),
-//	}
-//	this.EventManager.PostEvent(pb.Message_KEEPALIVE, keepAliveMessage)
-//	peerPool := peerPool.NewPeerPool(false)
-//	for {
-//		if peerPool.GetAliveNodeNum() == MAXPEERNODE{
-//			c <- true
-//			break
-//		}
-//	}
-//
-//
-//}
 
 // GetAllPeers get all connected peer in the peer pool
 func (this *GrpcPeerManager) GetAllPeers() []*peer.Peer {
@@ -175,11 +163,15 @@ func (this *GrpcPeerManager) GetAllPeers() []*peer.Peer {
 
 // BroadcastPeers Broadcast Massage to connected peers
 func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
+	result, err := transport.TripleDesEncrypt(payLoad, DESKEY)
+	if err!=nil{
+		log.Fatal("TripleDesEncrypt Failed!")
+	}
 	localNodeAddr := node.GetNodeAddr()
 	var broadCastMessage = pb.Message{
 		MessageType:  pb.Message_CONSUS,
 		From:         &localNodeAddr,
-		Payload:      payLoad,
+		Payload:      result,
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	pPool := peerPool.NewPeerPool(false, false)
@@ -194,8 +186,102 @@ func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 		if err != nil {
 			log.Error("Broadcast failed,Node", peer.Addr)
 		} else {
-			log.Info("resMsg:", string(resMsg.Payload))
+			log.Debug("resMsg:", string(resMsg.Payload))
 			//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
 		}
 	}
+}
+
+
+// SendMsgToPeers Send msg to specific peer peerlist
+func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,MessageType recovery.Message_MsgType){
+	var mpPaylod = &recovery.Message{
+		MessageType:MessageType,
+		MsgTimeStamp:time.Now().UnixNano(),
+		Payload:payLoad,
+	}
+	realPayload, err := proto.Marshal(mpPaylod)
+	if err != nil{
+		log.Error("marshal failed")
+	}
+	result, err := transport.TripleDesEncrypt(realPayload, DESKEY)
+	if err!=nil{
+		log.Fatal("TripleDesEncrypt Failed!")
+	}
+	localNodeAddr := node.GetNodeAddr()
+	var syncMessage = pb.Message{
+		MessageType:  pb.Message_SYNCMSG,
+		From:         &localNodeAddr,
+		Payload:      result,
+		MsgTimeStamp: time.Now().UnixNano(),
+	}
+	pPool := peerPool.NewPeerPool(false, false)
+
+
+	// broadcast to special peers
+	go func(){for _, peer := range pPool.GetPeers() {
+
+		for _,nodeID := range peerList{
+			nid:=strconv.FormatUint(nodeID,10)
+			//peerId:=uint64(strconv.Atoi(peer.Idetity))
+
+			//nid := strconv.Itoa(nodeID)
+
+			//if peerId==nodeID{
+			if peer.Idetity == nid {
+				log.Error(nid)
+				resMsg, err := peer.Chat(&syncMessage)
+				if err != nil {
+					log.Error("enter error")
+					log.Error("Broadcast failed,Node", peer.Addr)
+				} else {
+					log.Info("resMsg:", string(resMsg.Payload))
+					//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
+				}
+			}
+		}
+
+	}
+	}()
+
+
+}
+
+
+func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
+	peerpool := peerPool.NewPeerPool(false,false);
+	peers := peerpool.GetPeers()
+	var perinfo peer.PeerInfo
+	localNodeAddr := node.GetNodeAddr()
+	result, err := transport.TripleDesEncrypt([]byte("Query Status"), DESKEY)
+	if err!=nil{
+		log.Fatal("TripleDesEncrypt Failed!")
+	}
+
+	var keepAliveMessage = pb.Message{
+		MessageType:  pb.Message_KEEPALIVE,
+		From:         &localNodeAddr,
+		Payload:      result,
+		MsgTimeStamp: time.Now().UnixNano(),
+	}
+	var perinfos peer.PeerInfos
+	fmt.Println("==========================")
+	for _,per := range peers{
+		fmt.Println("+++++++++++++++++++++++++++++")
+		log.Debug("rage the peer")
+		perinfo.IP = per.Addr.Ip
+		perinfo.Port = int(per.Addr.Port)
+		perinfo.CName = per.CName
+		retMsg, err := per.Client.Chat(context.Background(),&keepAliveMessage)
+		if err != nil{
+			perinfo.Status = peer.STOP
+		}else if retMsg.MessageType == pb.Message_RESPONSE{
+			perinfo.Status = peer.ALIVE
+		}else if retMsg.MessageType == pb.Message_PENDING{
+			perinfo.Status = peer.PENDING
+		}
+		perinfos = append(perinfos,&perinfo)
+		fmt.Println("add a peerinfo")
+	}
+	return perinfos
 }

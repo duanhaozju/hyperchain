@@ -2,11 +2,7 @@ package core
 
 import (
 	"testing"
-	//"hyperchain/crypto"
 	"fmt"
-
-	//"hyperchain/crypto"
-	"hyperchain/crypto"
 )
 
 func TestCalcResponseCount(t *testing.T) {
@@ -14,13 +10,11 @@ func TestCalcResponseCount(t *testing.T) {
 	InitDB(8089)
 	blockUtilsCase.Number = GetHeightOfChain() + 1
 	commonHash := crypto.NewKeccak256Hash("keccak256")
-	WriteBlock(&blockUtilsCase, commonHash,122)
-	fmt.Println(GetHeightOfChain())
-	count := CalcResponseCount(GetHeightOfChain(), 10000)
-		if count != 2 {
-			t.Errorf("%d not equal 2, TestCalcResponseCount fail", count)
-		}
-	fmt.Println(count)
+	WriteBlock(&blockUtilsCase, commonHash, 122)
+	count, _ := CalcResponseCount(GetHeightOfChain(), 1000)
+	if count != 2 {
+		t.Errorf("%d not equal 2, TestCalcResponseCount fail", count)
+	}
 }
 
 /*func TestCalcResponseCount(t *testing.T) {
@@ -30,12 +24,17 @@ func TestCalcResponseCount(t *testing.T) {
 	//commonHash := crypto.NewKeccak256Hash("keccak256")
 	//WriteBlock(blockUtilsCase, commonHash)
 	fmt.Println(GetHeightOfChain())
-	count := CalcResponseCount(5, int64(300))
-	*//*if count != 2 {
-		t.Errorf("%d not equal 2, TestCalcResponseCount fail", count)
-	}*//*
-	fmt.Println(count)
+	for i := uint64(0); i <= GetHeightOfChain(); i += 1 {
+		count,_ := CalcResponseCount(i, int64(300))
+
+		fmt.Println(count)
+	}
+
 }*/
+func TestCalcCommitBatchAVGTime(t *testing.T) {
+	InitDB(8084)
+	fmt.Println(CalcCommitBatchAVGTime(uint64(10),uint64(20)))
+}
 
 /*func TestGetBlockHash(t *testing.T) {
 	log.Info("test =============> > > TestInitDB")

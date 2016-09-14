@@ -4,6 +4,7 @@
 // last modified:2016-08-25
 package crypto
 
+import "hyperchain/common"
 
 type KeyType interface {
 	sign()
@@ -14,20 +15,22 @@ type Encryption interface {
 
 	//sign byte
 	Sign(hash []byte,  prv interface{})(sig []byte, err error)
-	UnSign(args ...interface{})([]byte, error)
-	//general private key and save into file
+	UnSign(args ...interface{})(common.Address, error)
+	//general private key
+	GeneralKey() (interface{},error)
 
+	//generates pri-pub key of node and save it to file
+	GenerateNodeKey(port string,keydir string) error
 
-	GeneralKey(path string) (interface{},error)
-
+	GetNodeKey(keydir string)(interface{},error)
 
 	//GeneralKey(path string)(*ecdsa.PrivateKey,error)
 
 
-	GetKey()(interface{},error)
+	//GetKey()(interface{},error)
 
 
-	PrivKeyToAddress(prv interface{})[]byte
+	PrivKeyToAddress(prv interface{})common.Address
 
 
 }

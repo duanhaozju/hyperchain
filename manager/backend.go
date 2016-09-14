@@ -11,22 +11,24 @@ import (
 	"hyperchain/crypto"
 
 	"hyperchain/event"
+	"hyperchain/accounts"
 )
 
 // init protocol manager params and start
 func New(eventMux *event.TypeMux, blockPool *core.BlockPool, peerManager p2p.PeerManager, consenter consensus.Consenter, fetcher *core.Fetcher,
-encryption crypto.Encryption, commonHash crypto.CommonHash,
-path string, nodeId int) (error) {
+//encryption crypto.Encryption, commonHash crypto.CommonHash,path string, nodeId int) (error) {
+am *accounts.AccountManager, commonHash crypto.CommonHash,path string, nodeId int) (error) {
 
 	aliveChan := make(chan bool)
-	go peerManager.Start(path, nodeId, aliveChan, false, eventMux)
+	go peerManager.Start(path,nodeId, aliveChan, false, eventMux)
 
 	//wait for all peer are connected
 	select {
 	case <-aliveChan:
 		{
 
-			protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, fetcher, consenter, encryption, commonHash)
+			//protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, fetcher, consenter, encryption, commonHash)
+			protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, fetcher, consenter, am, commonHash)
 			protocolManager.Start()
 
 		}

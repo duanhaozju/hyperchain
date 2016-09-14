@@ -7,6 +7,7 @@ message Message {
     enum Type {
         TRANSACTION = 0;
         CONSENSUS = 1;
+        STATE_UPDATED = 2;
     }
     Type type = 1;
     int64 timestamp = 2;
@@ -19,3 +20,22 @@ message ExeMessage {
     int64 timestamp = 2;
     uint64 no = 3;
 }
+
+message UpdateStateMessage {
+    uint64 id = 1;
+    uint64 seqNo = 2;
+    bytes targetId = 3;
+    repeated uint64 replicas = 4;
+}
+
+message StateUpdatedMessage {
+    uint64 seqNo = 1;
+}
+
+// BlockchainInfo
+message BlockchainInfo {
+    uint64 height = 1;
+    bytes currentBlockHash = 2;
+    bytes previousBlockHash = 3;
+}
+

@@ -16,6 +16,7 @@ import (
 	"hyperchain/crypto"
 	"time"
 	"encoding/hex"
+	//"hyperchain/core/vm/api"
 
 )
 
@@ -67,8 +68,8 @@ func CreateInitBlock(filename string)  {
 			Value:account,
 		}*/
 
-		balanceIns.PutCacheBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
-		balanceIns.PutDBBalance(common.BytesToAddress([]byte(addr)),[]byte(account))
+		balanceIns.PutCacheBalance(common.HexToAddress(addr),[]byte(account))
+		balanceIns.PutDBBalance(common.HexToAddress(addr),[]byte(account))
 
 
 	}
@@ -91,6 +92,12 @@ func CreateInitBlock(filename string)  {
 
 	log.Debug("构造创世区块")
 
+	err = PutBlock(db, block.BlockHash, &block)
+	// write transaction
+	//PutTransactions(db, commonHash, block.Transactions)
+	if err != nil {
+		log.Fatal(err)
+	}
 	UpdateChain(&block,true)
 	log.Info("current chain block number is",GetChainCopy().Height)
 
@@ -104,6 +111,7 @@ func CreateInitBlock(filename string)  {
 func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int64)  {
 
 	log.Info("block number is ",block.Number)
+
 	currentChain := GetChainCopy()
 	block.ParentHash = currentChain.LatestBlockHash
 	block.BlockHash = block.Hash(commonHash).Bytes()
@@ -126,7 +134,20 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 	}
 
 	newChain := GetChainCopy()
-	log.Info("Block number",newChain.Height)
-	log.Info("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
+	log.Notice("Block number",newChain.Height)
+	log.Notice("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
 	balance.UpdateDBBalance(block)
+
+
+	if block.Number%10==0 && block.Number!=0{
+		WriteChainChan()
+
+	}
+
+
+
+	// update our stateObject and statedb to blockchain
+	//api.ExecBlock(block)
+	//api.CommitStatedbToBlockchain()
+
 }

@@ -17,7 +17,7 @@
 <div class="container">
     <div class="form">
         <form name="form">
-            发送方：<input type="text" name="from" value="cd2a3d9f938e13cd947ec05abc7fe734df8dd822" placeholder="输入发送方地址"/><br/>
+            发送方：<input type="text" name="from" value="6201cb0448964ac597faf6fdf1f472edf2a22b89" placeholder="输入发送方地址"/><br/>
             接收方：<input type="text" name="to" value="0000000000000000000000000000000000000002" placeholder="输入接收方地址"/><br/>
             金&emsp;额：<input name="value" placeholder="value" value="1"/><br/>
             <!--<input name="address" placeholder="for example localhost:9000"/><br>-->
@@ -35,6 +35,16 @@
                 <input type="text" name="to_block" placeholder="终止block number">
                 <input type="button" id="query" value="查询"/>&emsp;
                 <span class="time"><span id="time">0</span>ms</span>
+            </div>
+            <div>
+                <span style="font-weight: bold">计算commit & batch时间：</span>
+                <input type="text" name="from_block2" placeholder="起始block number">&nbsp;-&nbsp;
+                <input type="text" name="to_block2" placeholder="终止block number">
+                <input type="button" id="commitandbatchquery" value="查询"/>&emsp;
+                <span>CommitTime:</span>
+                <span class="time"><span id="committime">0</span>ms</span>
+                <span>BatchTime:</span>
+                <span class="time"><span id="batchtime">0</span>ms</span>
             </div>
         </div>
     </div>
@@ -79,7 +89,8 @@
                         <th>Transactions</th>
                         <th>BatchTIme</th>
                         <th>WriteTime</th>
-                        <th>处理 &lt; 300ms的交易数</th>
+                        <th>处理 &lt; 200ms的交易数</th>
+                        <th>处理 &lt; 200ms的交易百分比</th>
                     </tr>
                     </thead>
                     <tbody class="data-container"></tbody>
