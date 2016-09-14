@@ -481,8 +481,8 @@ function BlockCtrl($scope, BlockService, TransactionService) {
         from:"",
         to:""
     };
-    $scope.commitTime = "0";
-    $scope.batchTime = "0";
+    $scope.CommitTime = "0";
+    $scope.BatchTime = "0";
 
     BlockService.getAllBlocks()
         .then(function(res){
@@ -506,8 +506,8 @@ function BlockCtrl($scope, BlockService, TransactionService) {
         console.log($scope.block);
         TransactionService.QueryCommitAndBatchTime($scope.block.from, $scope.block.to)
             .then(function(res){
-                $scope.commitTime = res.commitTime;
-                $scope.batchTime = res.batchTime
+                $scope.commitTime = res.CommitTime;
+                $scope.batchTime = res.BatchTime
             }, function(error){
                 // $scope.status = "error";
                 console.log(error);

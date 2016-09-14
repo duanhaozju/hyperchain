@@ -20,4 +20,8 @@ func TestPublicBlockAPI_GetBlocks(t *testing.T) {
 	a := blockAPI.GetBlocks()
 	//
 	fmt.Println(a)
+
+	cTime, bTime := blockAPI.QueryCommitAndBatchTime(SendQueryArgs{From:"1",To:"2",})
+
+	fmt.Println(cTime,bTime)
 }
