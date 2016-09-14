@@ -53,7 +53,7 @@ console.log(options);
 }
 
 //http.request(options, callback).end();
-for(var j=0;j<4;j++){
+for(var j=0;j<7;j++){
     if (j %2 ==0){
      testRequest({
         'url':hosts_url[j],
