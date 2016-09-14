@@ -13,6 +13,11 @@ func (self *Transaction)Hash(ch crypto.CommonHash) common.Hash {
 	return ch.Hash(self)
 }
 
+func (self *Transaction)BuildHash() common.Hash {
+	ch := crypto.NewKeccak256Hash("keccak256")
+	return ch.Hash(self)
+}
+
 func (self *Transaction)SighHash(ch crypto.CommonHash) common.Hash {
 	return ch.Hash([]interface{}{
 		self.Value,
@@ -56,6 +61,15 @@ func NewTransaction(from []byte,to []byte,value []byte) *Transaction{
 	}
 
 	return transaction
+}
+
+func NewTransactionValue(price,gasLimit, amount int64, payload []byte) *TransactionValue{
+	return &TransactionValue{
+		Price: price,
+		GasLimit: gasLimit,
+		Amount: amount,
+		Payload: payload,
+	}
 }
 
 func (tx *Transaction) Payload() []byte       {

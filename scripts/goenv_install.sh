@@ -7,7 +7,7 @@
 
 # Stop on first error
 set -e
-set -x
+#set -x
 # Update the entire system to the latest releases
 apt-get update -qq
 apt-get dist-upgrade -qqy
@@ -15,7 +15,6 @@ apt-get dist-upgrade -qqy
 # auto install the golang env
 apt-get install  --yes build-essential git
 
-mkdir -p /usr/local/go
 
 # Set Go environment variables needed by other scripts
 export GOPATH="$HOME/gopath"
@@ -31,7 +30,7 @@ then
    GO_VER=1.7
 
    cd /tmp
-   wget --quiet --no-check-certificate http://www.golangtc.com/static/go/$GO_VER/go$GO_VER.linux-${ARCH}.tar.gz
+   wget --quiet --no-check-certificate https://storage.googleapis.com/golang/go$GO_VER.linux-${ARCH}.tar.gz
    tar -xvf go$GO_VER.linux-${ARCH}.tar.gz
    mv go $GOROOT
    chmod 775 $GOROOT

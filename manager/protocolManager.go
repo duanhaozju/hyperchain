@@ -105,11 +105,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 	for obj := range self.syncCheckpointSub.Chan() {
 
 		switch  ev := obj.Data.(type) {
-
-
 		case event.SendCheckpointSyncEvent:
-
-
 			/*
 
 			receive request  from the consensus module required block and send to  outer peers
@@ -119,7 +115,6 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 
 			blockChainInfo := &protos.BlockchainInfo{}
 			proto.Unmarshal(UpdateStateMessage.TargetId, blockChainInfo)
-
 
 			required := &recovery.CheckPointMessage{
 				RequiredNumber:blockChainInfo.Height,
@@ -141,7 +136,6 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 
 
 		case event.StateUpdateEvent:
-
 			/*
 			get required block from db and send to outer peers
 			 */
@@ -156,19 +150,18 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 
 			blocks := &types.Blocks{}
 			for i := checkpointMsg.RequiredNumber; i > checkpointMsg.CurrentNumber; i -= 1 {
-			//for i := checkpointMsg.CurrentNumber + 1; i <= checkpointMsg.RequiredNumber; i += 1 {
+				//for i := checkpointMsg.CurrentNumber + 1; i <= checkpointMsg.RequiredNumber; i += 1 {
 				block, err := core.GetBlockByNumber(db, i)
 				if err != nil {
 					log.Warning("no required block number")
 				}
 
-				if blocks.Batch ==nil{
+				if blocks.Batch == nil {
 					blocks.Batch = append(blocks.Batch, block)
-				}else {
+				} else {
 					blocks.Batch[0] = block
 
 				}
-
 
 				//blocks.Batch=
 				//blocks.Batch = append(blocks.Batch, block)
@@ -182,7 +175,6 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 				}
 				var peers []uint64
 				peers = append(peers, checkpointMsg.PeerId)
-				log.Error(peers)
 				broadcastMsg, _ := proto.Marshal(message)
 
 				self.peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_SYNCBLOCK)
@@ -212,10 +204,6 @@ func (self *ProtocolManager) syncBlockLoop() {
 				proto.Unmarshal(ev.Payload, message)
 				blocks := &types.Blocks{}
 				proto.Unmarshal(message.Payload, blocks)
-				/*if (common.Bytes2Hex(blocks.Batch[0].ParentHash) != common.Bytes2Hex(core.GetChainCopy().LatestBlockHash)) {
-					log.Warning("receiver first block error")
-
-				}*/
 				db, _ := hyperdb.GetLDBDatabase()
 
 				for i := len(blocks.Batch) - 1; i >= 0; i -= 1 {
@@ -232,23 +220,23 @@ func (self *ProtocolManager) syncBlockLoop() {
 							if (common.Bytes2Hex(blocks.Batch[i].ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash)) {
 								core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum)
 
-
 								core.UpdateRequire(uint64(0), []byte{}, uint64(0))
 								payload := &protos.StateUpdatedMessage{
 									SeqNo:core.GetChainCopy().Height,
 								}
 								msg, _ := proto.Marshal(payload)
-								msgSend:=&protos.Message{
+								msgSend := &protos.Message{
 									Type:protos.Message_STATE_UPDATED,
-									Timestamp:time.Now().UnixNano(),
 									Payload:msg,
+									Timestamp:time.Now().UnixNano(),
 									Id:1,
 								}
 
-								msgPayload,err:=proto.Marshal(msgSend)
-								if err!=nil{
+								msgPayload, err := proto.Marshal(msgSend)
+								if err != nil {
 									log.Error(err)
 								}
+
 								self.consenter.RecvMsg(msgPayload)
 								break
 							}
@@ -256,15 +244,6 @@ func (self *ProtocolManager) syncBlockLoop() {
 					}
 
 				}
-				/*for _, block := range blocks.Batch {
-
-
-					//TODO  validate receive block chain
-					core.PutBlock(db, block.BlockHash, block)
-					core.UpdateChain(block, false)
-
-				}*/
-
 
 			}
 		}
@@ -366,7 +345,7 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 	addrHex := string(transaction.From)
 	addr := common.HexToAddress(addrHex)
 
-	sign, err := pm.accountManager.SignWithPassphrase(addr, h[:],"123")
+	sign, err := pm.accountManager.SignWithPassphrase(addr, h[:], "123")
 	//sign, err := pm.accountManager.Sign(addr, h[:])
 	if err != nil {
 		log.Error(err)

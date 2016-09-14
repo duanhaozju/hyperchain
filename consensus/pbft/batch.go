@@ -26,7 +26,7 @@ type batch struct {
 	pbft             *pbftCore
 	localID           uint64
 
-	reqStore	*requestStore	//received messages
+	//reqStore	*requestStore	//received messages
 	mux		sync.Mutex
 }
 
@@ -76,7 +76,7 @@ func newBatch(id uint64, config *viper.Viper, h helper.Stack) *batch {
 
 	logger.Infof("PBFT Batch size = %d", op.batchSize)
 	logger.Infof("PBFT Batch timeout = %v", op.batchTimeout)
-	op.reqStore = newRequestStore()
+	//op.reqStore = newRequestStore()
 
 	return op
 }
@@ -190,7 +190,7 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 
 func (op *batch) processRequest(req *Request) error {
 
-	op.reqStore.storeOutstanding(req)
+	//op.reqStore.storeOutstanding(req)
 	//op.startTimerIfOutstandingRequests()
 
 	if (op.pbft.primary(op.pbft.view) == op.pbft.id) && op.pbft.activeView {
@@ -277,20 +277,20 @@ func (op *batch) stopBatchTimer() {
 	op.batchTimerActive = false
 }
 
-func (op *batch) startTimerIfOutstandingRequests() {
-	if op.pbft.skipInProgress || !op.pbft.activeView {
-		// Do not start view change timer if some background event is in progress
-		logger.Debugf("Replica %d not starting timer because skip in progress or current exec or in view change", op.pbft.id)
-		return
-	}
-
-	if !op.reqStore.hasNonPending() {
-		// Only start a timer if we are aware of outstanding requests
-		logger.Debugf("Replica %d not starting timer because all outstanding requests are pending", op.pbft.id)
-		return
-	}
-	op.pbft.softStartTimer(op.pbft.requestTimeout, "Batch outstanding requests")
-}
+//func (op *batch) startTimerIfOutstandingRequests() {
+//	if op.pbft.skipInProgress || !op.pbft.activeView {
+//		// Do not start view change timer if some background event is in progress
+//		logger.Debugf("Replica %d not starting timer because skip in progress or current exec or in view change", op.pbft.id)
+//		return
+//	}
+//
+//	if !op.reqStore.hasNonPending() {
+//		// Only start a timer if we are aware of outstanding requests
+//		logger.Debugf("Replica %d not starting timer because all outstanding requests are pending", op.pbft.id)
+//		return
+//	}
+//	op.pbft.softStartTimer(op.pbft.requestTimeout, "Batch outstanding requests")
+//}
 
 // Close tells us to release resources we are holding
 func (op *batch) Close() {

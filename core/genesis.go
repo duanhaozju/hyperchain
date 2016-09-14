@@ -16,7 +16,6 @@ import (
 	"hyperchain/crypto"
 	"time"
 	"encoding/hex"
-	//"hyperchain/core/vm/api"
 
 )
 
@@ -91,6 +90,12 @@ func CreateInitBlock(filename string)  {
 
 	log.Debug("构造创世区块")
 
+	err = PutBlock(db, block.BlockHash, &block)
+	// write transaction
+	//PutTransactions(db, commonHash, block.Transactions)
+	if err != nil {
+		log.Fatal(err)
+	}
 	UpdateChain(&block,true)
 	log.Info("current chain block number is",GetChainCopy().Height)
 
@@ -132,14 +137,15 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 	balance.UpdateDBBalance(block)
 
 
-	//if block.Number%10==0 && block.Number!=0{
-	//	WriteChainChan()
-	//
-	//}
+	if block.Number%10==0 && block.Number!=0{
+		WriteChainChan()
+
+	}
+
 
 
 	// update our stateObject and statedb to blockchain
-	//api.ExecBlock(block)
-	//api.CommitStatedbToBlockchain()
+	//ExecBlock(ExecBlockblock)
+	//CommitStatedbToBlockchain()
 
 }
