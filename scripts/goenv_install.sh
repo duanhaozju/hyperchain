@@ -7,7 +7,7 @@
 
 # Stop on first error
 set -e
-set -x
+#set -x
 # Update the entire system to the latest releases
 apt-get update -qq
 apt-get dist-upgrade -qqy
@@ -31,7 +31,7 @@ then
    GO_VER=1.7
 
    cd /tmp
-   wget --quiet --no-check-certificate http://www.golangtc.com/static/go/$GO_VER/go$GO_VER.linux-${ARCH}.tar.gz
+   wget --quiet --no-check-certificate https://storage.googleapis.com/golang/go$GO_VER.linux-${ARCH}.tar.gz
    tar -xvf go$GO_VER.linux-${ARCH}.tar.gz
    mv go $GOROOT
    chmod 775 $GOROOT
