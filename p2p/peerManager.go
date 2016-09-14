@@ -25,11 +25,10 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/p2p/transport"
 	"golang.org/x/net/context"
-	"fmt"
 )
 
 
-const MAXPEERNODE = 7
+var MAXPEERNODE = 4
 
 var DESKEY = []byte("sfe023f_sefiel#fi32lf3e!")
 
@@ -72,6 +71,8 @@ func (this *GrpcPeerManager) GetClientId() common.Hash{
 func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,isTest bool,eventMux *event.TypeMux) {
 
 	configs := peerComm.GetConfig(path)
+	//MAXPEERS
+	MAXPEERNODE,_ = strconv.Atoi(configs["MAXPEERS"])
 	port, _ := strconv.Atoi(configs["port"+strconv.Itoa(NodeId)])
 	// start local node
 	this.localNode = node.NewNode(port,isTest,eventMux,NodeId)
@@ -267,9 +268,9 @@ func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	var perinfos peer.PeerInfos
-	fmt.Println("==========================")
+	//fmt.Println("==========================")
 	for _,per := range peers{
-		fmt.Println("+++++++++++++++++++++++++++++")
+		//fmt.Println("+++++++++++++++++++++++++++++")
 		log.Debug("rage the peer")
 		perinfo.IP = per.Addr.Ip
 		perinfo.Port = int(per.Addr.Port)
@@ -283,7 +284,6 @@ func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
 			perinfo.Status = peer.PENDING
 		}
 		perinfos = append(perinfos,&perinfo)
-		fmt.Println("add a peerinfo")
 	}
 	return perinfos
 }

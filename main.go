@@ -30,7 +30,7 @@ type argT struct {
 	NodeId    int `cli:"o,nodeId" usage:"本地RPC监听端口" dft:"8001"`
 
 	LocalPort int `cli:"l,LocalPort" usage:"本地RPC监听端口" dft:"8001"`
-	//HttpServerPORT int `cli:"s,httpport" usage:"启动本地http服务的端口，默认值为8003" dft:"8003"`
+	PeerConfigPath string `cli:"p,peerconfig" usage:"节点信息的端口，默认值为./p2p/peerconfig.json" dft:"./p2p/peerconfig.json"`
 }
 
 func main() {

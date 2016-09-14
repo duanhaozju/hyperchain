@@ -25,6 +25,18 @@ ports4=`lsof -i :8004 | awk 'NR>=2{print $2}'`
 if [ x"$ports4" != x"" ];then
     kill -9 $ports4
 fi
+ports5=`lsof -i :8005 | awk 'NR>=2{print $2}'`
+if [ x"$ports4" != x"" ];then
+    kill -9 $ports4
+fi
+ports6=`lsof -i :8006 | awk 'NR>=2{print $2}'`
+if [ x"$ports4" != x"" ];then
+    kill -9 $ports4
+fi
+ports7=`lsof -i :8007 | awk 'NR>=2{print $2}'`
+if [ x"$ports4" != x"" ];then
+    kill -9 $ports4
+fi
 
 #rebuild the application
 echo "rebuild the application"
@@ -37,9 +49,12 @@ rm -rf /tmp/hyperchain/*
 
 echo "run the application"
 
-gnome-terminal -x bash -c "(./hyperchain -o 1 -l 8081)"
-gnome-terminal -x bash -c "(./hyperchain -o 2 -l 8082)"
-gnome-terminal -x bash -c "(./hyperchain -o 3 -l 8083)"
-gnome-terminal -x bash -c "(./hyperchain -o 4 -l 8084)"
+gnome-terminal -x bash -c "(./hyperchain -o 1 -l 8081 -p ./p2p/local_peerconfig.json)"
+gnome-terminal -x bash -c "(./hyperchain -o 2 -l 8082 -p ./p2p/local_peerconfig.json)"
+gnome-terminal -x bash -c "(./hyperchain -o 3 -l 8083 -p ./p2p/local_peerconfig.json)"
+gnome-terminal -x bash -c "(./hyperchain -o 4 -l 8084 -p ./p2p/local_peerconfig.json)"
+gnome-terminal -x bash -c "(./hyperchain -o 5 -l 8085 -p ./p2p/local_peerconfig.json)"
+gnome-terminal -x bash -c "(./hyperchain -o 6 -l 8086 -p ./p2p/local_peerconfig.json)"
+gnome-terminal -x bash -c "(./hyperchain -o 7 -l 8087 -p ./p2p/local_peerconfig.json)"
 
 echo "All process are running background"
