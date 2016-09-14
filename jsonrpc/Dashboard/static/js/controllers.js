@@ -419,34 +419,31 @@ function diff($scope) {
 
 function selectCtrl($scope) {
 
-    $scope.person = {};
-    $scope.people = [
-        { name: 'Adam',      email: 'adam@email.com',      age: 12, country: 'United States' },
-        { name: 'Amalie',    email: 'amalie@email.com',    age: 12, country: 'Argentina' },
-        { name: 'Estefanía', email: 'estefania@email.com', age: 21, country: 'Argentina' },
-        { name: 'Adrian',    email: 'adrian@email.com',    age: 21, country: 'Ecuador' },
-        { name: 'Wladimir',  email: 'wladimir@email.com',  age: 30, country: 'Ecuador' },
-        { name: 'Samantha',  email: 'samantha@email.com',  age: 30, country: 'United States' },
-        { name: 'Nicole',    email: 'nicole@email.com',    age: 43, country: 'Colombia' },
-        { name: 'Natasha',   email: 'natasha@email.com',   age: 54, country: 'Ecuador' },
-        { name: 'Michael',   email: 'michael@email.com',   age: 15, country: 'Colombia' },
-        { name: 'Nicolás',   email: 'nicolas@email.com',    age: 43, country: 'Colombia' }
-    ];
+    // $scope.person = {};
+    // $scope.people = [
+    //     { name: 'Adam',      email: 'adam@email.com',      age: 12, country: 'United States' },
+    //     { name: 'Amalie',    email: 'amalie@email.com',    age: 12, country: 'Argentina' },
+    //     { name: 'Estefanía', email: 'estefania@email.com', age: 21, country: 'Argentina' },
+    //     { name: 'Adrian',    email: 'adrian@email.com',    age: 21, country: 'Ecuador' },
+    //     { name: 'Wladimir',  email: 'wladimir@email.com',  age: 30, country: 'Ecuador' },
+    //     { name: 'Samantha',  email: 'samantha@email.com',  age: 30, country: 'United States' },
+    //     { name: 'Nicole',    email: 'nicole@email.com',    age: 43, country: 'Colombia' },
+    //     { name: 'Natasha',   email: 'natasha@email.com',   age: 54, country: 'Ecuador' },
+    //     { name: 'Michael',   email: 'michael@email.com',   age: 15, country: 'Colombia' },
+    //     { name: 'Nicolás',   email: 'nicolas@email.com',    age: 43, country: 'Colombia' }
+    // ];
 
     $scope.option = {};
     $scope.options = [
-        { number: '1',      text: 'Option 1' },
-        { number: '2',      text: 'Option 2' },
-        { number: '3',      text: 'Option 3' },
-        { number: '4',      text: 'Option 4' },
-        { number: '5',      text: 'Option 5' },
-        { number: '6',      text: 'Option 6' }
+        { number: '1',      text: 'pattern1' },
+        { number: '2',      text: 'pattern2' },
+        { number: '3',      text: 'pattern3' }
     ];
 
-    $scope.availableColors = ['Red','Green','Blue','Yellow','Magenta','Maroon','Umbra','Turquoise'];
-
-    $scope.multipleDemo = {};
-    $scope.multipleDemo.colors = ['Blue','Red'];
+    // $scope.availableColors = ['Red','Green','Blue','Yellow','Magenta','Maroon','Umbra','Turquoise'];
+    //
+    // $scope.multipleDemo = {};
+    // $scope.multipleDemo.colors = ['Blue','Red'];
 
 }
 
@@ -461,19 +458,58 @@ function SummaryCtrl($scope, SummaryService) {
     SummaryService.getAvgTimeAndCount()
         .then(function(res){
             $scope.avgTime = res.time;
-            $scope.txCount = res.count;
+            // $scope.txCount = res.count;
+            $scope.txCount = $scope.number * 500;
         }, function(error){
             console.log(error);
         })
 }
 
-function BlockCtrl($scope, BlockService) {
+function BlockCtrl($scope, BlockService, TransactionService) {
+    $scope.status = "";
+
+    $scope.tx = {
+        from: "6201cb0448964ac597faf6fdf1f472edf2a22b89",
+        to: "0000000000000000000000000000000000000002",
+        value: "1"
+    };
+
+    $scope.block = {
+        from:"",
+        to:""
+    };
+    $scope.CommitTime = "0";
+    $scope.BatchTime = "0";
+
     BlockService.getAllBlocks()
         .then(function(res){
             $scope.blocks = res;
         }, function(error){
             console.log(error);
         })
+
+    $scope.submit = function(){
+        $scope.status = "please waitting.....";
+        TransactionService.SendTransaction($scope.tx.from, $scope.tx.to, $scope.tx.value)
+            .then(function(res){
+                $scope.status = "success"
+            }, function(error){
+                $scope.status = "error";
+                console.log(error);
+            })
+    };
+
+    $scope.query = function(){
+        console.log($scope.block);
+        TransactionService.QueryCommitAndBatchTime($scope.block.from, $scope.block.to)
+            .then(function(res){
+                $scope.commitTime = res.CommitTime;
+                $scope.batchTime = res.BatchTime
+            }, function(error){
+                // $scope.status = "error";
+                console.log(error);
+            })
+    }
 }
 
 function TransactionCtrl($scope, TransactionService) {
@@ -486,16 +522,16 @@ function TransactionCtrl($scope, TransactionService) {
             console.log(error);
         })
     
-    $scope.submit = function(){
-        $scope.status = "please waitting.....";
-        TransactionService.SendTransaction()
-            .then(function(res){
-                $scope.status = "success"
-            }, function(error){
-                $scope.status = "error";
-                console.log(error);
-            })
-    }
+    // $scope.submit = function(){
+    //     $scope.status = "please waitting.....";
+    //     TransactionService.SendTransaction()
+    //         .then(function(res){
+    //             $scope.status = "success"
+    //         }, function(error){
+    //             $scope.status = "error";
+    //             console.log(error);
+    //         })
+    // }
 }
 
 function AccountCtrl($scope, AccountService) {
@@ -506,6 +542,74 @@ function AccountCtrl($scope, AccountService) {
         } ,function(error){
             console.log(error);
         })
+}
+
+function AddProjectCtrl($scope, ContractService) {
+
+    $scope.flag = false;
+    $scope.abi = "";
+    
+    $scope.PATTERN = [
+        {name: "pattern1", value: "contract Accumulator{ uint sum = 0; function increment(){ sum = sum + 1; } function getSum() returns(uint){ return sum; }}"},
+        {name: "pattern2", value: "contract SimulateBank{" +
+                        "address owner;" +
+                        "mapping(address => uint) public accounts;" +
+                        "function SimulateBank(){" +
+                        "owner = msg.sender;" +
+                        "}" +
+                        "function issue(address addr,uint number) returns (bool){" +
+                        "if(msg.sender==owner){" +
+                        "accounts[addr] = accounts[addr] + number;" +
+                        "return true;" +
+                        "}" +
+                        "return false;" +
+                        "}" +
+                        "function transfer(address addr1,address addr2,uint amount) returns (bool){" +
+                        "if(accounts[addr1] >= amount){" +
+                        "accounts[addr1] = accounts[addr1] - amount;" +
+                        "accounts[addr2] = accounts[addr2] + amount;" +
+                        "return true;" +
+                        "}" +
+                        "return false;" +
+                        "}" +
+                        "function getAccountBalance(address addr) returns(uint){" +
+                        "return accounts[addr];" +
+                        "}}"},
+        {name: "pattern3", value: "contract InfoPlatform{" +
+                        "struct User{" +
+                        "string  name;   // the name of the user" +
+                        "uint    age;    // the age of the user" +
+                        "string  id;     // the id of the user" +
+                        "}" +
+                        "mapping(address => User) public users;" +
+                        "function setInformation(address addr,string name,uint age,string id){" +
+                        "User u = users[addr];" +
+                        "u.name = name;" +
+                        "u.age = age;" +
+                        "u.id = id;" +
+                        "}" +
+                        "function getInformation(address addr) returns (string,uint,string){" +
+                        "User u = users[addr];" +
+                        "return (u.name,u.age,u.id);" +
+                        "}}"
+    }]
+    
+    $scope.project = {
+        name: "",
+        type: "",
+        pattern: ""
+    }
+
+    $scope.compile = function(){
+        console.log($scope.project);
+        ContractService.compileContract($scope.project.pattern.value)
+            .then(function(res){
+                $scope.flag = true;
+                $scope.abi = res;
+            }, function(error){
+                console.log(error);
+            })
+    }
 }
 
 /**
@@ -522,4 +626,5 @@ angular
     .controller('BlockCtrl', BlockCtrl)
     .controller('TransactionCtrl',TransactionCtrl)
     .controller('AccountCtrl', AccountCtrl)
+    .controller('AddProjectCtrl', AddProjectCtrl)
 

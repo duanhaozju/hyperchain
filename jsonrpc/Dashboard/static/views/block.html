@@ -19,8 +19,49 @@
         <div class="col-lg-12">
             <div class="ibox float-e-margins">
                 <div class="ibox-content">
-                    <input type="text" class="form-control input-sm m-b-xs" id="filter"
-                           placeholder="Search in table"><br/>
+                    <form role="form" class="form-inline">
+                        <div class="form-group col-lg-4">
+                            <label for="sender" class="sr-only">Sender</label>
+                            <input type="text" placeholder="Sender address" id="sender"
+                                   class="form-control" ng-model="tx.from" style="width:100%">
+                        </div>
+                        <div class="form-group col-lg-4">
+                            <label for="receiver" class="sr-only">Password</label>
+                            <input type="text" placeholder="Receiver address" id="receiver"
+                                   class="form-control" ng-model="tx.to" style="width:100%">
+                        </div>
+                        <div class="form-group">
+                            <label for="amount" class="sr-only">Password</label>
+                            <input type="text" placeholder="Amount" id="amount" ng-model="tx.value"
+                                   class="form-control">
+                        </div>
+                        <button class="btn btn-primary" type="submit" ng-click="submit()">Submit</button>
+                        <div class="text_red">{{status}}</div>
+                    </form><br/>
+
+                    <form role="form" class="form-inline">
+                        <span style="font-weight: bold">计算commit & batch时间：</span>
+                        <div class="form-group">
+                            <label for="from" class="sr-only">from</label>
+                            <input type="text" placeholder="起始block number" ng-model="block.from" id="from"
+                                   class="form-control">
+                        </div>&nbsp;-&nbsp;
+                        <div class="form-group">
+                            <label for="to" class="sr-only">to</label>
+                            <input type="text" placeholder="起始block number" ng-model="block.to" id="to"
+                                   class="form-control">
+                        </div>
+                        <button class="btn btn-primary" type="submit" ng-click="query()">Query</button>
+
+                        <span>CommitTime:</span>
+                        <span class="text_red">{{commitTime}}ms</span>
+                        <span>BatchTime:</span>
+                        <span class="text_red">{{batchTime}}ms</span>
+
+                    </form><br/>
+
+                    <!--<input type="text" class="form-control input-sm m-b-xs" id="filter"-->
+                           <!--placeholder="Search in table"><br/>-->
                     <table  class="footable table table-striped table-hover" data-page-size="10" data-filter="#filter">
                         <thead>
                         <tr>

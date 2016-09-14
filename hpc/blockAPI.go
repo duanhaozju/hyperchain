@@ -129,3 +129,29 @@ func (blk *PublicBlockAPI) QueryExcuteTime() *ExeTimeResult{
 	}
 }
 
+// 测试用
+type SendQueryArgs struct {
+	From string
+	To string
+}
+type BatchTimeResult struct {
+	CommitTime int64
+	BatchTime int64
+}
+func (blk *PublicBlockAPI) QueryCommitAndBatchTime(args SendQueryArgs) (*BatchTimeResult,error) {
+
+	from, err := strconv.ParseUint(args.From, 10, 64)
+	to, err := strconv.ParseUint(args.To, 10, 64)
+
+	if err != nil {
+		return nil,err
+	}
+
+	commitTime, batchTime :=  core.CalcCommitBatchAVGTime(from,to)
+
+	return &BatchTimeResult{
+		CommitTime: commitTime,
+		BatchTime: batchTime,
+	},nil
+}
+

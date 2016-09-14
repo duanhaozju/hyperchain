@@ -113,6 +113,32 @@ function TransactionService($resource,$q) {
                     } else {
                         resolve(res.result)
                     }
+                
+                })
+            })
+        },
+        QueryCommitAndBatchTime: function(from ,to){
+            return $q(function(resolve, reject){
+                $resource("http://localhost:8084",{},{
+                    sendTx:{
+                        method:"POST"
+                    }
+                }).sendTx({
+                    method: "block_queryCommitAndBatchTime",
+                    params: [
+                        {
+                            "from":from,
+                            "to":to
+                        }
+                    ],
+                    id: 1
+                },function(res){
+                    console.log(res);
+                    if (res.error) {
+                        reject(res.error)
+                    } else {
+                        resolve(res.result)
+                    }
 
                 })
             })
@@ -144,9 +170,36 @@ function AccountService($resource,$q) {
     }
 }
 
+function ContractService($resource,$q) {
+    return {
+        compileContract: function(contract){
+            return $q(function(resolve, reject){
+                $resource("http://localhost:8084",{},{
+                    getAcc:{
+                        method:"POST"
+                    }
+                }).getAcc({
+                    method: "tx_complieContract",
+                    params: [contract],
+                    id: 1
+                },function(res){
+                    console.log(res)
+                    if (res.error) {
+                        reject(res.error)
+                    } else {
+                        resolve(res.result)
+                    }
+
+                })
+            })
+        }
+    }
+}
+
 angular
     .module('starter')
     .factory('SummaryService', SummaryService)
     .factory('BlockService', BlockService)
     .factory('TransactionService', TransactionService)
     .factory('AccountService', AccountService)
+    .factory('ContractService', ContractService)

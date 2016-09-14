@@ -1,0 +1,22 @@
+// it is a app to save the information of every address
+contract InfoPlatform{
+    struct User{
+        string  name;   // the name of the user
+        uint    age;    // the age of the user
+        string  id;     // the id of the user
+    }
+
+    mapping(address => User) public users;
+
+    function setInformation(address addr,string name,uint age,string id){
+        User u = users[addr];
+        u.name = name;
+        u.age = age;
+        u.id = id;
+    }
+
+    function getInformation(address addr) returns (string,uint,string){
+        User u = users[addr];
+        return (u.name,u.age,u.id);
+    }
+}
