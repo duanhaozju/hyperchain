@@ -89,7 +89,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
-		end:=start+1
+		end:=start+6
 
 		for start := start ; start < end; start = time.Now().Unix() {
 			for i := 0; i < 500; i++ {
