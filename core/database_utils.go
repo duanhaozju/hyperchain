@@ -158,7 +158,7 @@ func PutDBBalance(db hyperdb.Database, balance_db BalanceMap) error {
 
 	var bJson = make(balanceMapJson)
 	for key, value := range balance_db{
-		bJson[key.Str()] = value
+		bJson[key.Hex()] = value
 	}
 	data, err := json.Marshal(bJson)
 	if err != nil {

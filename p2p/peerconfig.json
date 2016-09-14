@@ -4,6 +4,7 @@
   "port3":"8003",
   "port4":"8004",
 
+
   "node1":"localhost",
   "node2":"localhost",
   "node3":"localhost",
@@ -18,5 +19,8 @@
   "external_port4":"8081",
   "external_port5":"8081",
   "external_port6":"8081",
-  "external_port7":"8081"
+  "external_port7":"8081",
+  "external_port8":"8081",
+  "external_port9":"8081",
+  "external_port10":"8081"
 }

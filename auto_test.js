@@ -15,7 +15,7 @@
  var params = {form:"",to:"",value:1}
  var hosts_url = []
  var hosts_port = []
- for (var i=1;i<=4;i++){
+ for (var i=1;i<=10;i++){
     hosts_url.push(config['external_node'+i])
     hosts_port.push(config['external_port'+i])
  }
@@ -53,7 +53,7 @@ console.log(options);
 }
 
 //http.request(options, callback).end();
-for(var j=0;j<4;j++){
+for(var j=0;j<10;j++){
     if (j %2 ==0){
      testRequest({
         'url':hosts_url[j],

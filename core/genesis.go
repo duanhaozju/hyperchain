@@ -16,7 +16,6 @@ import (
 	"hyperchain/crypto"
 	"time"
 	"encoding/hex"
-	//"hyperchain/core/vm/api"
 
 )
 
@@ -50,7 +49,6 @@ func CreateInitBlock(filename string)  {
 		log.Error("Unmarshal: ", err.Error())
 		return
 	}
-	
 	balanceIns, err := GetBalanceIns()
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
@@ -147,7 +145,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 
 
 	// update our stateObject and statedb to blockchain
-	//api.ExecBlock(block)
-	//api.CommitStatedbToBlockchain()
+	//ExecBlock(ExecBlockblock)
+	//CommitStatedbToBlockchain()
 
 }
