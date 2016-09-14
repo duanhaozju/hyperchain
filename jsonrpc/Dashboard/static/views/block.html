@@ -14,7 +14,7 @@
         </ol>
     </div>
 </div>
-<div class="wrapper wrapper-content animated fadeInRight">
+<div class="wrapper wrapper-content animated fadeInRight" ng-controller="BlockCtrl">
     <div class="row">
         <div class="col-lg-12">
             <div class="ibox float-e-margins">
@@ -33,74 +33,18 @@
                         </tr>
                         </thead>
                         <tbody>
-                        <tr class="gradeX">
-                            <td>0</td>
-                            <td>0xfgsdfgergrhth</td>
-                            <td class="center">2016-09-11 11:12:13</td>
-                            <td class="center">123ms</td>
-                            <td class="center">200</td>
-                            <td class="center">90%</td>
-                        </tr>
-                        <tr class="gradeC">
-                            <td>1</td>
-                            <td>0xfgsdfgergrhth</td>
-                            <td class="center">2016-09-11 11:12:13</td>
-                            <td class="center">123ms</td>
-                            <td class="center">500</td>
-                            <td class="center">100%</td>
-                        </tr>
-                        <tr class="gradeA">
-                            <td>2</td>
-                            <td>0xfgsdfgergrhth</td>
-                            <td class="center">2016-09-11 11:12:13</td>
-                            <td class="center">123ms</td>
-                            <td class="center">500</td>
-                            <td class="center">80%</td>
-                        </tr>
-                        <tr class="gradeA">
-                            <td>3</td>
-                            <td>0xfgsdfgergrhth</td>
-                            <td class="center">2016-09-11 11:12:13</td>
-                            <td class="center">123ms</td>
-                            <td class="center">500</td>
-                            <td class="center">90%</td>
-                        </tr>
-                        <tr class="gradeA">
-                            <td>4</td>
-                            <td>0xfgsdfgergrhth</td>
-                            <td class="center">2016-09-11 11:12:13</td>
-                            <td class="center">123ms</td>
-                            <td class="center">500</td>
-                            <td class="center">80%</td>
-                        </tr>
-                        <tr class="gradeA">
-                            <td>5</td>
-                            <td>0xfgsdfgergrhth</td>
-                            <td class="center">2016-09-11 11:12:13</td>
-                            <td class="center">123ms</td>
-                            <td class="center">500</td>
-                            <td class="center">99%</td>
-                        </tr>
-                        <tr class="gradeA">
-                            <td>6</td>
-                            <td>0xfgsdfgergrhth</td>
-                            <td class="center">2016-09-11 11:12:13</td>
-                            <td class="center">123ms</td>
-                            <td class="center">500</td>
-                            <td class="center">100%</td>
-                        </tr>
-                        <tr class="gradeA">
-                            <td>7</td>
-                            <td>0xfgsdfgergrhth</td>
-                            <td class="center">2016-09-11 11:12:13</td>
-                            <td class="center">123ms</td>
-                            <td class="center">500</td>
-                            <td class="center">99%</td>
+                        <tr ng-repeat="blk in blocks">
+                            <td>{{blk.number}}</td>
+                            <td>{{blk.hash}}</td>
+                            <td class="center">{{blk.writeTime}}</td>
+                            <td class="center">{{blk.avgTime}}ms</td>
+                            <td class="center">{{blk.txcounts}}</td>
+                            <td class="center">{{blk.percents}}</td>
                         </tr>
                         </tbody>
                         <tfoot>
                         <tr>
-                            <td colspan="5">
+                            <td colspan="6">
                                 <ul class="pagination pull-right"></ul>
                             </td>
                         </tr>

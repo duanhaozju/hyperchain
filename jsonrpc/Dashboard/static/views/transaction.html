@@ -14,18 +14,18 @@
         </ol>
     </div>
 </div>
-<div class="wrapper wrapper-content animated fadeInRight">
+<div class="wrapper wrapper-content animated fadeInRight" ng-controller="TransactionCtrl">
     <div class="row">
         <div class="col-lg-12">
             <div class="ibox float-e-margins">
                 <div class="ibox-content">
+                    <button class="btn btn-primary " type="button" ui-sref="blockchain.transactions.addTransaction"><i class="fa fa-plus"></i>&nbsp;Add transaction</button><br/><br/>
                     <input type="text" class="form-control input-sm m-b-xs" id="filter"
                            placeholder="Search in table"><br/>
                     <table  class="footable table table-striped table-hover" data-page-size="10" data-filter="#filter">
                         <thead>
                         <tr>
                             <th class="table_th">Hash</th>
-                            <th class="table_th">Blcok</th>
                             <th class="table_th">From</th>
                             <th class="table_th">To</th>
                             <th class="table_th">Amount</th>
@@ -33,70 +33,77 @@
                         </tr>
                         </thead>
                         <tbody>
-                        <tr class="gradeX">
-                            <td>0xfgsdfgergrhth...</td>
-                            <td>0</td>
-                            <td>0x000000000000000002</td>
-                            <td>0x000000000000000002</td>
-                            <td>200</td>
-                            <td>2016-09-11 11:12:13</td>
+                        <tr ng-repeat="tx in txs">
+                            <td>{{tx.hash}}</td>
+                            <td>{{tx.from}}</td>
+                            <td>{{tx.to}}</td>
+                            <td class="center">{{tx.amount}}</td>
+                            <td class="center">{{tx.timestamp}}</td>
                         </tr>
-                        <tr class="gradeC">
-                            <td>0xfgsdfgergrhth...</td>
-                            <td>0</td>
-                            <td>0x000000000000000002</td>
-                            <td>0x000000000000000002</td>
-                            <td>200</td>
-                            <td>2016-09-11 11:12:13</td>
-                        </tr>
-                        <tr class="gradeA">
-                            <td>0xfgsdfgergrhth...</td>
-                            <td>0</td>
-                            <td>0x000000000000000002</td>
-                            <td>0x000000000000000002</td>
-                            <td>200</td>
-                            <td>2016-09-11 11:12:13</td>
-                        </tr>
-                        <tr class="gradeA">
-                            <td>0xfgsdfgergrhth...</td>
-                            <td>0</td>
-                            <td>0x000000000000000002</td>
-                            <td>0x000000000000000002</td>
-                            <td>200</td>
-                            <td>2016-09-11 11:12:13</td>
-                        </tr>
-                        <tr class="gradeA">
-                            <td>0xfgsdfgergrhth...</td>
-                            <td>0</td>
-                            <td>0x000000000000000002</td>
-                            <td>0x000000000000000002</td>
-                            <td>200</td>
-                            <td>2016-09-11 11:12:13</td>
-                        </tr>
-                        <tr class="gradeA">
-                            <td>0xfgsdfgergrhth...</td>
-                            <td>0</td>
-                            <td>0x000000000000000002</td>
-                            <td>0x000000000000000002</td>
-                            <td>200</td>
-                            <td>2016-09-11 11:12:13</td>
-                        </tr>
-                        <tr class="gradeA">
-                            <td>0xfgsdfgergrhth...</td>
-                            <td>0</td>
-                            <td>0x000000000000000002</td>
-                            <td>0x000000000000000002</td>
-                            <td>200</td>
-                            <td>2016-09-11 11:12:13</td>
-                        </tr>
-                        <tr class="gradeA">
-                            <td>0xfgsdfgergrhth...</td>
-                            <td>0</td>
-                            <td>0x000000000000000002</td>
-                            <td>0x000000000000000002</td>
-                            <td>200</td>
-                            <td>2016-09-11 11:12:13</td>
-                        </tr>
+                        <!--<tr class="gradeX">-->
+                            <!--<td>0xfgsdfgergrhth...</td>-->
+                            <!--<td>0</td>-->
+                            <!--<td>0x000000000000000002</td>-->
+                            <!--<td>0x000000000000000002</td>-->
+                            <!--<td class="center">200</td>-->
+                            <!--<td>2016-09-11 11:12:13</td>-->
+                        <!--</tr>-->
+                        <!--<tr class="gradeC">-->
+                            <!--<td>0xfgsdfgergrhth...</td>-->
+                            <!--<td>0</td>-->
+                            <!--<td>0x000000000000000002</td>-->
+                            <!--<td>0x000000000000000002</td>-->
+                            <!--<td>200</td>-->
+                            <!--<td>2016-09-11 11:12:13</td>-->
+                        <!--</tr>-->
+                        <!--<tr class="gradeA">-->
+                            <!--<td>0xfgsdfgergrhth...</td>-->
+                            <!--<td>0</td>-->
+                            <!--<td>0x000000000000000002</td>-->
+                            <!--<td>0x000000000000000002</td>-->
+                            <!--<td>200</td>-->
+                            <!--<td>2016-09-11 11:12:13</td>-->
+                        <!--</tr>-->
+                        <!--<tr class="gradeA">-->
+                            <!--<td>0xfgsdfgergrhth...</td>-->
+                            <!--<td>0</td>-->
+                            <!--<td>0x000000000000000002</td>-->
+                            <!--<td>0x000000000000000002</td>-->
+                            <!--<td>200</td>-->
+                            <!--<td>2016-09-11 11:12:13</td>-->
+                        <!--</tr>-->
+                        <!--<tr class="gradeA">-->
+                            <!--<td>0xfgsdfgergrhth...</td>-->
+                            <!--<td>0</td>-->
+                            <!--<td>0x000000000000000002</td>-->
+                            <!--<td>0x000000000000000002</td>-->
+                            <!--<td>200</td>-->
+                            <!--<td>2016-09-11 11:12:13</td>-->
+                        <!--</tr>-->
+                        <!--<tr class="gradeA">-->
+                            <!--<td>0xfgsdfgergrhth...</td>-->
+                            <!--<td>0</td>-->
+                            <!--<td>0x000000000000000002</td>-->
+                            <!--<td>0x000000000000000002</td>-->
+                            <!--<td>200</td>-->
+                            <!--<td>2016-09-11 11:12:13</td>-->
+                        <!--</tr>-->
+                        <!--<tr class="gradeA">-->
+                            <!--<td>0xfgsdfgergrhth...</td>-->
+                            <!--<td>0</td>-->
+                            <!--<td>0x000000000000000002</td>-->
+                            <!--<td>0x000000000000000002</td>-->
+                            <!--<td>200</td>-->
+                            <!--<td>2016-09-11 11:12:13</td>-->
+                        <!--</tr>-->
+                        <!--<tr class="gradeA">-->
+                            <!--<td>0xfgsdfgergrhth...</td>-->
+                            <!--<td>0</td>-->
+                            <!--<td>0x000000000000000002</td>-->
+                            <!--<td>0x000000000000000002</td>-->
+                            <!--<td>200</td>-->
+                            <!--<td>2016-09-11 11:12:13</td>-->
+                        <!--</tr>-->
                         </tbody>
                         <tfoot>
                         <tr>

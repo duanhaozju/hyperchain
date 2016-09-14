@@ -1,4 +1,4 @@
-<div class="wrapper wrapper-content">
+<div class="wrapper wrapper-content" ng-controller="SummaryCtrl">
 <div class="row">
     <div class="col-lg-3">
         <div class="ibox float-e-margins">
@@ -7,27 +7,27 @@
                 <h3>Lastest Block</h3>
             </div>
             <div class="ibox-content wrap">
-                <h1 class="no-margins">#3108</h1>
+                <h1 class="no-margins">#{{number}}</h1>
 
                 <!--<div class="stat-percent font-bold text-success">98% <i class="fa fa-bolt"></i></div>-->
                 <!--<small>Total income</small>-->
             </div>
         </div>
     </div>
-    <div class="col-lg-3">
-        <div class="ibox float-e-margins">
-            <div class="ibox-title wrap">
-                <!--<span class="label label-danger pull-right">Low value</span>-->
-                <h3>Last Block</h3>
-            </div>
-            <div class="ibox-content wrap">
-                <h1 class="no-margins">12s ago</h1>
+    <!--<div class="col-lg-3">-->
+        <!--<div class="ibox float-e-margins">-->
+            <!--<div class="ibox-title wrap">-->
+                <!--&lt;!&ndash;<span class="label label-danger pull-right">Low value</span>&ndash;&gt;-->
+                <!--<h3>Last Block</h3>-->
+            <!--</div>-->
+            <!--<div class="ibox-content wrap">-->
+                <!--<h1 class="no-margins">12s ago</h1>-->
 
-                <!--<div class="stat-percent font-bold text-danger">38% <i class="fa fa-level-down"></i></div>-->
-                <!--<small>In first month</small>-->
-            </div>
-        </div>
-    </div>
+                <!--&lt;!&ndash;<div class="stat-percent font-bold text-danger">38% <i class="fa fa-level-down"></i></div>&ndash;&gt;-->
+                <!--&lt;!&ndash;<small>In first month</small>&ndash;&gt;-->
+            <!--</div>-->
+        <!--</div>-->
+    <!--</div>-->
     <div class="col-lg-3">
         <div class="ibox float-e-margins">
             <div class="ibox-title wrap">
@@ -35,7 +35,7 @@
                 <h3>AVG Time</h3>
             </div>
             <div class="ibox-content wrap">
-                <h1 class="no-margins">180ms</h1>
+                <h1 class="no-margins">{{avgTime}}ms</h1>
 
                 <!--<div class="stat-percent font-bold text-info">20% <i class="fa fa-level-up"></i></div>-->
                 <!--<small>New orders</small>-->
@@ -49,7 +49,7 @@
                 <h3>Total Transaction</h3>
             </div>
             <div class="ibox-content wrap">
-                <h1 class="no-margins">106,120</h1>
+                <h1 class="no-margins">{{txCount}}</h1>
 
                 <!--<div class="stat-percent font-bold text-navy">44% <i class="fa fa-level-up"></i></div>-->
                 <!--<small>New visits</small>-->
@@ -138,90 +138,4 @@
             </div>
         </div>
     </div>
-
-
-</div>
-<div class="small-chat-box ng-small-chat fadeInRight animated" ng-show="openChat">
-
-    <div class="heading" draggable="true">
-        <small class="chat-date pull-right">
-            02.19.2015
-        </small>
-        Small chat
-    </div>
-
-    <div class="content" chat-slim-scroll>
-
-        <div class="left">
-            <div class="author-name">
-                Monica Jackson <small class="chat-date">
-                10:02 am
-            </small>
-            </div>
-            <div class="chat-message active">
-                Lorem Ipsum is simply dummy text input.
-            </div>
-
-        </div>
-        <div class="right">
-            <div class="author-name">
-                Mick Smith
-                <small class="chat-date">
-                    11:24 am
-                </small>
-            </div>
-            <div class="chat-message">
-                Lorem Ipsum is simpl.
-            </div>
-        </div>
-        <div class="left">
-            <div class="author-name">
-                Alice Novak
-                <small class="chat-date">
-                    08:45 pm
-                </small>
-            </div>
-            <div class="chat-message active">
-                Check this stock char.
-            </div>
-        </div>
-        <div class="right">
-            <div class="author-name">
-                Anna Lamson
-                <small class="chat-date">
-                    11:24 am
-                </small>
-            </div>
-            <div class="chat-message">
-                The standard chunk of Lorem Ipsum
-            </div>
-        </div>
-        <div class="left">
-            <div class="author-name">
-                Mick Lane
-                <small class="chat-date">
-                    08:45 pm
-                </small>
-            </div>
-            <div class="chat-message active">
-                I belive that. Lorem Ipsum is simply dummy text.
-            </div>
-        </div>
-
-
-    </div>
-    <div class="form-chat">
-        <div class="input-group input-group-sm"><input type="text" class="form-control"> <span class="input-group-btn"> <button
-                class="btn btn-primary" type="button">Send
-        </button> </span></div>
-    </div>
-
-</div>
-<div id="small-chat" ng-click="openChat = !openChat">
-
-    <span class="badge badge-warning pull-right">5</span>
-    <a class="open-small-chat">
-        <i class="fa fa-comments"></i>
-
-    </a>
 </div>

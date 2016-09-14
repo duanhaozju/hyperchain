@@ -6,6 +6,8 @@ import (
 	"time"
 	"hyperchain/common"
 	"strconv"
+
+	"fmt"
 )
 
 type PublicBlockAPI struct{}
@@ -31,6 +33,8 @@ func (blk *PublicBlockAPI) GetBlocks() []*BlockResult{
 	block := lastestBlock()
 	height := block.Number
 
+	fmt.Println(height)
+
 	for height > 0 {
 		blocks = append(blocks,blockResult(height))
 		height--
@@ -54,20 +58,20 @@ func lastestBlock() *BlockResult {
 	block, err := core.GetBlockByNumber(db, lastestBlkHeight)
 
 	if err != nil {
-		log.Fatalf("%v", err)
+		log.Errorf("%v", err)
 	}
 
 	blockResult := blockResult(block.Number)
 
 	if err != nil {
-		log.Fatalf("%v", err)
+		log.Errorf("%v", err)
 	}
 
 	return blockResult
 }
 
 // blockResult convert type Block to type BlockResult according to height of the block
-func blockResult(height uint64) (*BlockResult){
+func blockResult(height uint64) *BlockResult{
 
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
@@ -76,7 +80,7 @@ func blockResult(height uint64) (*BlockResult){
 
 	block, err := core.GetBlockByNumber(db,height)
 	if err != nil {
-		log.Fatalf("%v", err)
+		log.Errorf("%v", err)
 	}
 
 	txCounts := uint64(len(block.Transactions))
@@ -94,13 +98,37 @@ func blockResult(height uint64) (*BlockResult){
 
 }
 
-// QueryExcuteTime computes excute time of transactions fo all the block
-func (blk *PublicBlockAPI) QueryExcuteTime() int64{
+type ExeTimeResult struct {
+	Count int       `json:"count"`
+	Time  int64	`json:"time"`
+}
 
-	lastestHeight := core.GetHeightOfChain()
+// QueryExcuteTime computes excute time of transactions fo all the block,
+// then return the avg time and the count of all the transaction
+func (blk *PublicBlockAPI) QueryExcuteTime() *ExeTimeResult{
 
 	var from uint64 = 1
 
-	return core.CalcResponseAVGTime(from,lastestHeight)
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+
+	txs,err := core.GetAllTransaction(db)
+
+	if err != nil {
+		log.Errorf("%v", err)
+	}
+
+	count := len(txs)
+	exeTime := core.CalcResponseAVGTime(from,core.GetHeightOfChain())
+
+	fmt.Println(count)
+	fmt.Println(exeTime)
+
+	return &ExeTimeResult{
+		Count: count,
+		Time: exeTime,
+	}
 }
 

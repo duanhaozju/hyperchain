@@ -30,10 +30,10 @@ fi
 echo "rebuild the application"
 govendor build
 
-rm -rf /tmp/hyperchain/cache/808*
+#rm -rf /tmp/hyperchain/cache/808*
 
 echo "remote tmp data"
-rm -rf /tmp/hyperchain/*
+#rm -rf /tmp/hyperchain/*
 
 echo "run the application"
 
@@ -41,5 +41,7 @@ gnome-terminal -x bash -c "(./hyperchain -o 1 -l 8081)"
 gnome-terminal -x bash -c "(./hyperchain -o 2 -l 8082)"
 gnome-terminal -x bash -c "(./hyperchain -o 3 -l 8083)"
 gnome-terminal -x bash -c "(./hyperchain -o 4 -l 8084)"
+
+python ./jsonrpc/Dashboard/simpleHttpServer.py
 
 echo "All process are running background"

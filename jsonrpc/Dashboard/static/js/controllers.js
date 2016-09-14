@@ -319,42 +319,11 @@ function MainCtrl() {
  */
 function modalDemoCtrl($scope, $uibModal) {
 
-    $scope.open = function () {
-
-        var modalInstance = $uibModal.open({
-            templateUrl: 'static/views/modal_example.html',
-            controller: ModalInstanceCtrl
-        });
-    };
 
     $scope.open1 = function () {
         var modalInstance = $uibModal.open({
             templateUrl: 'static/views/modal_deploy.html',
             controller: ModalInstanceCtrl
-        });
-    };
-
-    $scope.open2 = function () {
-        var modalInstance = $uibModal.open({
-            templateUrl: 'static/views/modal_example2.html',
-            controller: ModalInstanceCtrl,
-            windowClass: "animated fadeIn"
-        });
-    };
-
-    $scope.open3 = function (size) {
-        var modalInstance = $uibModal.open({
-            templateUrl: 'static/views/modal_example3.html',
-            size: size,
-            controller: ModalInstanceCtrl
-        });
-    };
-
-    $scope.open4 = function () {
-        var modalInstance = $uibModal.open({
-            templateUrl: 'static/views/modal_example2.html',
-            controller: ModalInstanceCtrl,
-            windowClass: "animated flipInY"
         });
     };
 };
@@ -448,80 +417,6 @@ function diff($scope) {
 }
 
 
-/**
- * sweetAlertCtrl - Function for Sweet alerts
- */
-function sweetAlertCtrl($scope, SweetAlert) {
-
-
-    $scope.demo1 = function () {
-        SweetAlert.swal({
-            title: "",
-            text: "param1: <input type='text' style='width: auto;display: inline'><br/>param2: <input type='text' style='width: auto;display: inline'>",
-            html: true,
-            showCancelButton: true,
-            confirmButtonColor: "#DD6B55",
-            confirmButtonText: "Deploy" ,
-            closeOnConfirm: false,
-            closeOnCancel: false,
-        },
-            function (isConfirm) {
-                if (isConfirm) {
-                        // swal("Ajax request finished!");
-                        SweetAlert.swal("Deployed!", "Deploy success !", "success");
-
-                } else {
-                    SweetAlert.swal("Cancelled", "You dont deploy", "info");
-                }
-            });
-    }
-
-    $scope.demo2 = function () {
-        SweetAlert.swal({
-            title: "Good job!",
-            text: "You clicked the button!",
-            type: "success"
-        });
-    }
-
-    $scope.demo3 = function () {
-        SweetAlert.swal({
-                title: "Are you sure?",
-                text: "Your will not be able to recover this imaginary file!",
-                type: "warning",
-                showCancelButton: true,
-                confirmButtonColor: "#DD6B55",
-                confirmButtonText: "Yes, delete it!",
-                closeOnConfirm: false,
-                closeOnCancel: false
-            },
-            function () {
-                SweetAlert.swal("Ok!");
-            });
-    }
-
-    $scope.demo4 = function () {
-        SweetAlert.swal({
-                title: "Are you sure?",
-                text: "Your will not be able to recover this imaginary file!",
-                type: "warning",
-                showCancelButton: true,
-                confirmButtonColor: "#DD6B55",
-                confirmButtonText: "Yes, delete it!",
-                cancelButtonText: "No, cancel plx!",
-                closeOnConfirm: false,
-                closeOnCancel: false },
-            function (isConfirm) {
-                if (isConfirm) {
-                    SweetAlert.swal("Deleted!", "Your imaginary file has been deleted.", "success");
-                } else {
-                    SweetAlert.swal("Cancelled", "Your imaginary file is safe :)", "error");
-                }
-            });
-    }
-
-}
-
 function selectCtrl($scope) {
 
     $scope.person = {};
@@ -555,15 +450,63 @@ function selectCtrl($scope) {
 
 }
 
+function SummaryCtrl($scope, SummaryService) {
+    SummaryService.getLastestBlock()
+        .then(function(res){
+            $scope.number = res.number;
+        }, function(error){
+            console.log(error)
+        })
+    
+    SummaryService.getAvgTimeAndCount()
+        .then(function(res){
+            $scope.avgTime = res.time;
+            $scope.txCount = res.count;
+        }, function(error){
+            console.log(error);
+        })
+}
+
+function BlockCtrl($scope, BlockService) {
+    BlockService.getAllBlocks()
+        .then(function(res){
+            $scope.blocks = res;
+        }, function(error){
+            console.log(error);
+        })
+}
+
+function TransactionCtrl($scope, TransactionService) {
+    TransactionService.getAllTxs()
+        .then(function(res){
+            $scope.txs = res;
+        }, function(error){
+            console.log(error);
+        })
+}
+
+function AccountCtrl($scope, AccountService) {
+    AccountService.getAllAccounts()
+        .then(function(res){
+            console.log(res)
+            $scope.accounts = res;
+        } ,function(error){
+            console.log(error);
+        })
+}
+
 /**
  *
  * Pass all functions into module
  */
 angular
-    .module('inspinia')
+    .module('starter')
     .controller('MainCtrl', MainCtrl)
     .controller('modalDemoCtrl', modalDemoCtrl)
     .controller('translateCtrl', translateCtrl)
-    .controller('sweetAlertCtrl', sweetAlertCtrl)
-    .controller('selectCtrl', selectCtrl);
+    .controller('selectCtrl', selectCtrl)
+    .controller('SummaryCtrl', SummaryCtrl)
+    .controller('BlockCtrl', BlockCtrl)
+    .controller('TransactionCtrl',TransactionCtrl)
+    .controller('AccountCtrl', AccountCtrl)
 

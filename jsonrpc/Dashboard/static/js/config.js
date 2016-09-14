@@ -45,13 +45,6 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
                         {
                             name: 'ui.footable',
                             files: ['static/js/plugins/footable/angular-footable.js']
-                        },
-                        {
-                            files: ['static/js/plugins/sweetalert/sweetalert.min.js', 'static/css/plugins/sweetalert/sweetalert.css']
-                        },
-                        {
-                            name: 'oitozero.ngSweetAlert',
-                            files: ['static/js/plugins/sweetalert/angular-sweetalert.min.js']
                         }
                     ]);
                 }
@@ -117,7 +110,7 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
                 }
             }
         })
-        .state('blockchain.tx_tables', {
+        .state('blockchain.transactions', {
             url: "/transactions",
             templateUrl: "static/views/transaction.html",
             data: { pageTitle: 'Transaction' },
@@ -134,6 +127,24 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
                     ]);
                 }
             }
+        })
+        .state('blockchain.transactions.addTransaction', {
+            url: "/addTransaction",
+            templateUrl: "static/views/addTransaction.html",
+            data: { pageTitle: 'AddTransaction' }
+            // resolve: {
+            //     loadPlugin: function ($ocLazyLoad) {
+            //         return $ocLazyLoad.load([
+            //             {
+            //                 files: ['static/js/plugins/footable/footable.all.min.js', 'static/css/plugins/footable/footable.core.css']
+            //             },
+            //             {
+            //                 name: 'ui.footable',
+            //                 files: ['static/js/plugins/footable/angular-footable.js']
+            //             }
+            //         ]);
+            //     }
+            // }
         })
         .state('blockchain.account_tables', {
             url: "/accounts",
@@ -155,7 +166,7 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
         })
 }
 angular
-    .module('inspinia')
+    .module('starter')
     .config(config)
     .run(function($rootScope, $state) {
         $rootScope.$state = $state;
