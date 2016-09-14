@@ -461,28 +461,80 @@ function SummaryCtrl($scope, SummaryService) {
     SummaryService.getAvgTimeAndCount()
         .then(function(res){
             $scope.avgTime = res.time;
-            $scope.txCount = res.count;
+            // $scope.txCount = res.count;
+            $scope.txCount = $scope.number * 500;
         }, function(error){
             console.log(error);
         })
 }
 
-function BlockCtrl($scope, BlockService) {
+function BlockCtrl($scope, BlockService, TransactionService) {
+    $scope.status = "";
+
+    $scope.tx = {
+        from: "6201cb0448964ac597faf6fdf1f472edf2a22b89",
+        to: "0000000000000000000000000000000000000002",
+        value: "1"
+    };
+
+    $scope.block = {
+        from:"",
+        to:""
+    };
+    $scope.CommitTime = "0";
+    $scope.BatchTime = "0";
+
     BlockService.getAllBlocks()
         .then(function(res){
             $scope.blocks = res;
         }, function(error){
             console.log(error);
         })
+
+    $scope.submit = function(){
+        $scope.status = "please waitting.....";
+        TransactionService.SendTransaction($scope.tx.from, $scope.tx.to, $scope.tx.value)
+            .then(function(res){
+                $scope.status = "success"
+            }, function(error){
+                $scope.status = "error";
+                console.log(error);
+            })
+    };
+
+    $scope.query = function(){
+        console.log($scope.block);
+        TransactionService.QueryCommitAndBatchTime($scope.block.from, $scope.block.to)
+            .then(function(res){
+                $scope.commitTime = res.CommitTime;
+                $scope.batchTime = res.BatchTime
+            }, function(error){
+                // $scope.status = "error";
+                console.log(error);
+            })
+    }
 }
 
 function TransactionCtrl($scope, TransactionService) {
+    $scope.status = "";
+    
     TransactionService.getAllTxs()
         .then(function(res){
             $scope.txs = res;
         }, function(error){
             console.log(error);
         })
+    
+    // $scope.submit = function(){
+    //     $scope.status = "please waitting.....";
+    //     TransactionService.SendTransaction()
+    //         .then(function(res){
+    //             $scope.status = "success"
+    //         }, function(error){
+    //             $scope.status = "error";
+    //             console.log(error);
+    //         })
+    // }
 }
 
 function AccountCtrl($scope, AccountService) {

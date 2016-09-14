@@ -92,7 +92,7 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
             url: "/blockchain",
             templateUrl: "static/views/common/content.html"
         })
-        .state('blockchain.block_tables', {
+        .state('blockchain.blocks', {
             url: "/blocks",
             templateUrl: "static/views/block.html",
             data: { pageTitle: 'Block' },
@@ -127,24 +127,6 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
                     ]);
                 }
             }
-        })
-        .state('blockchain.transactions.addTransaction', {
-            url: "/addTransaction",
-            templateUrl: "static/views/addTransaction.html",
-            data: { pageTitle: 'AddTransaction' }
-            // resolve: {
-            //     loadPlugin: function ($ocLazyLoad) {
-            //         return $ocLazyLoad.load([
-            //             {
-            //                 files: ['static/js/plugins/footable/footable.all.min.js', 'static/css/plugins/footable/footable.core.css']
-            //             },
-            //             {
-            //                 name: 'ui.footable',
-            //                 files: ['static/js/plugins/footable/angular-footable.js']
-            //             }
-            //         ]);
-            //     }
-            // }
         })
         .state('blockchain.account_tables', {
             url: "/accounts",

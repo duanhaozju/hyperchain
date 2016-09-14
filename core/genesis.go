@@ -49,7 +49,7 @@ func CreateInitBlock(filename string)  {
 		log.Error("Unmarshal: ", err.Error())
 		return
 	}
-	
+
 	balanceIns, err := GetBalanceIns()
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
@@ -86,8 +86,6 @@ func CreateInitBlock(filename string)  {
 		Number:   genesis["test1"].Number,
 		//MerkleRoot:       "root",
 	}
-
-
 
 	log.Debug("构造创世区块")
 	err = PutBlock(db, block.BlockHash, &block)

@@ -74,13 +74,66 @@ function TransactionService($resource,$q) {
         getAllTxs: function(){
             return $q(function(resolve, reject){
                 $resource("http://localhost:8084",{},{
-                    getBlock:{
+                    getTxs:{
                         method:"POST"
                     }
-                }).getBlock({
+                }).getTxs({
                     method: "tx_getTransactions",
                     id: 1
                 },function(res){
+                    if (res.error) {
+                        reject(res.error)
+                    } else {
+                        resolve(res.result)
+                    }
+
+                })
+            })
+        },
+        SendTransaction: function(from,to,value){
+            return $q(function(resolve, reject){
+                $resource("http://localhost:8084",{},{
+                    sendTx:{
+                        method:"POST"
+                    }
+                }).sendTx({
+                    method: "tx_sendTransaction",
+                    params: [
+                        {
+                            "from":from, 
+                            "to":to, 
+                            "value": value
+                        }
+                    ],
+                    id: 1
+                },function(res){
+                    console.log(res);
+                    if (res.error) {
+                        reject(res.error)
+                    } else {
+                        resolve(res.result)
+                    }
+                
+                })
+            })
+        },
+        QueryCommitAndBatchTime: function(from ,to){
+            return $q(function(resolve, reject){
+                $resource("http://localhost:8084",{},{
+                    sendTx:{
+                        method:"POST"
+                    }
+                }).sendTx({
+                    method: "block_queryCommitAndBatchTime",
+                    params: [
+                        {
+                            "from":from,
+                            "to":to
+                        }
+                    ],
+                    id: 1
+                },function(res){
+                    console.log(res);
                     if (res.error) {
                         reject(res.error)
                     } else {
@@ -98,10 +151,10 @@ function AccountService($resource,$q) {
         getAllAccounts: function(){
             return $q(function(resolve, reject){
                 $resource("http://localhost:8084",{},{
-                    getBlock:{
+                    getAcc:{
                         method:"POST"
                     }
-                }).getBlock({
+                }).getAcc({
                     method: "acot_getAccounts",
                     id: 1
                 },function(res){

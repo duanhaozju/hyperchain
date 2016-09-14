@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"hyperchain/core/types"
 	"errors"
-	"github.com/golang/protobuf/proto"
 	"hyperchain/manager"
 	"hyperchain/event"
+	"github.com/golang/protobuf/proto"
 )
 
 const (
@@ -70,18 +70,6 @@ func prepareExcute(args SendTxArgs) SendTxArgs{
 // if the sender's balance is enough, return tx hash
 func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error){
 
-	log.Error(len(core.GetVMEnv().State().GetAccounts()))
-	var num = 0
-	for k,v := range core.GetVMEnv().State().GetAccounts(){
-		log.Error("the num of accounts is-----------------------------",num)
-		log.Error("Account key:",[]byte(k),"----------value:",v.Code())
-		log.Error("Account addr:",v.Address().Hex())
-		for a, v := range v.Storage() {
-			log.Error("storage key:",a,"----------value:",v)
-		}
-		num  = num+1
-	}
-
 	log.Info("==========SendTransaction=====,args = ",args)
 
 	var tx *types.Transaction
@@ -100,29 +88,28 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		start := time.Now().Unix()
-		end:=start+1
+		//start := time.Now().Unix()
+		//end:=start+300
 
-		for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 5000; i++ {
+		//for start := start ; start < end; start = time.Now().Unix() {
+			for i := 0; i < 50; i++ {
 				tx.TimeStamp=time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
 					log.Fatalf("proto.Marshal(tx) error: %v",err)
 				}
-				go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-				time.Sleep(200 * time.Microsecond)
+				if manager.GetEventObject() != nil{
+					log.Info("-------enter-------")
+					go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+				}else{
+					log.Warning("manager is Nil")
+				}
 			}
-		}
+			time.Sleep(90 * time.Millisecond)
+		//}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
 
-		tx.TimeStamp=time.Now().UnixNano()
-		txBytes, err := proto.Marshal(tx)
-		if err != nil {
-			log.Fatalf("proto.Marshal(tx) error: %v",err)
-		}
-		go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 		return tx.BuildHash(),nil
 
 	} else {
@@ -161,22 +148,7 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 		tx = types.NewTransaction([]byte(realArgs.From), []byte(realArgs.To), value)
 	}
 
-	// todo just for test,to see the info of the statedb
-
-
 	// todo 其他处理,比如存储到数据库中
-	log.Error(len(core.GetVMEnv().State().GetAccounts()))
-	var num = 0
-	for k,v := range core.GetVMEnv().State().GetAccounts(){
-		log.Error("the num of accounts is-----------------------------",num)
-		log.Error("Account key:",[]byte(k),"----------value:",v.Code())
-		log.Error("Account addr:",v.Address().Hex())
-		for a, v := range v.Storage() {
-			log.Error("storage key:",a,"----------value:",v)
-		}
-		num  = num+1
-	}
-
 
 	return tx.BuildHash(),nil
 }
