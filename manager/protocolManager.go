@@ -279,7 +279,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 		switch ev := obj.Data.(type) {
 
 		case event.BroadcastConsensusEvent:
-			log.Error("######enter broadcast")
+			log.Debug("######enter broadcast")
 
 			go self.BroadcastConsensus(ev.Payload)
 		case event.NewTxEvent:
@@ -295,7 +295,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 		case event.ConsensusEvent:
 			//call consensus module
-			log.Error("###### enter ConsensusEvent")
+			log.Debug("###### enter ConsensusEvent")
 			//logger.GetLogger().Println("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 
