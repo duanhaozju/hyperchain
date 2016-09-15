@@ -2,11 +2,11 @@
  * Created by sammy on 16-9-13.
  */
 
-function SummaryService($resource,$q) {
+function SummaryService($resource,$q,ENV) {
     return {
         getLastestBlock: function(){
             return $q(function(resolve, reject){
-                $resource("http://localhost:8084",{},{
+                $resource(ENV.API,{},{
                     getBlock:{
                         method:"POST"
                     }
@@ -23,16 +23,23 @@ function SummaryService($resource,$q) {
                 })
             })
         },
-        getAvgTimeAndCount: function(){
+        getAvgTimeAndCount: function(from,to){
             return $q(function(resolve, reject){
-                $resource("http://localhost:8084",{},{
-                    getBlock:{
+                $resource(ENV.API,{},{
+                    query:{
                         method:"POST"
                     }
-                }).getBlock({
-                    method: "block_queryExcuteTime",
+                }).query({
+                    method: "block_queryExecuteTime",
+                    params: [
+                        {
+                            "from":from,
+                            "to":to
+                        }
+                    ],
                     id: 1
                 },function(res){
+                    console.log(res);
                     if (res.error) {
                         reject(res.error)
                     } else {
@@ -45,11 +52,11 @@ function SummaryService($resource,$q) {
     }
 }
 
-function BlockService($resource,$q) {
+function BlockService($resource,$q,ENV) {
     return {
         getAllBlocks: function(){
             return $q(function(resolve, reject){
-                $resource("http://localhost:8084",{},{
+                $resource(ENV.API,{},{
                     getBlock:{
                         method:"POST"
                     }
@@ -65,15 +72,41 @@ function BlockService($resource,$q) {
 
                 })
             })
+        },
+        queryCommitAndBatchTime: function(from ,to){
+            return $q(function(resolve, reject){
+                $resource(ENV.API,{},{
+                    query:{
+                        method:"POST"
+                    }
+                }).query({
+                    method: "block_queryCommitAndBatchTime",
+                    params: [
+                        {
+                            "from":from,
+                            "to":to
+                        }
+                    ],
+                    id: 1
+                },function(res){
+                    console.log(res);
+                    if (res.error) {
+                        reject(res.error)
+                    } else {
+                        resolve(res.result)
+                    }
+
+                })
+            })
         }
     }
 }
 
-function TransactionService($resource,$q) {
+function TransactionService($resource,$q,ENV) {
     return {
         getAllTxs: function(){
             return $q(function(resolve, reject){
-                $resource("http://localhost:8084",{},{
+                $resource(ENV.API,{},{
                     getTxs:{
                         method:"POST"
                     }
@@ -92,7 +125,7 @@ function TransactionService($resource,$q) {
         },
         SendTransaction: function(from,to,value){
             return $q(function(resolve, reject){
-                $resource("http://localhost:8084",{},{
+                $resource(ENV.API,{},{
                     sendTx:{
                         method:"POST"
                     }
@@ -116,41 +149,15 @@ function TransactionService($resource,$q) {
                 
                 })
             })
-        },
-        QueryCommitAndBatchTime: function(from ,to){
-            return $q(function(resolve, reject){
-                $resource("http://localhost:8084",{},{
-                    sendTx:{
-                        method:"POST"
-                    }
-                }).sendTx({
-                    method: "block_queryCommitAndBatchTime",
-                    params: [
-                        {
-                            "from":from,
-                            "to":to
-                        }
-                    ],
-                    id: 1
-                },function(res){
-                    console.log(res);
-                    if (res.error) {
-                        reject(res.error)
-                    } else {
-                        resolve(res.result)
-                    }
-
-                })
-            })
         }
     }
 }
 
-function AccountService($resource,$q) {
+function AccountService($resource,$q,ENV) {
     return {
         getAllAccounts: function(){
             return $q(function(resolve, reject){
-                $resource("http://localhost:8084",{},{
+                $resource(ENV.API,{},{
                     getAcc:{
                         method:"POST"
                     }
@@ -170,11 +177,11 @@ function AccountService($resource,$q) {
     }
 }
 
-function ContractService($resource,$q) {
+function ContractService($resource,$q,ENV) {
     return {
         compileContract: function(contract){
             return $q(function(resolve, reject){
-                $resource("http://localhost:8084",{},{
+                $resource(ENV.API,{},{
                     getAcc:{
                         method:"POST"
                     }

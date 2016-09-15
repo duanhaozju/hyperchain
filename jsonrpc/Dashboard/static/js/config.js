@@ -40,11 +40,18 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
                 loadPlugin: function ($ocLazyLoad) {
                     return $ocLazyLoad.load([
                         {
-                            files: ['static/js/plugins/footable/footable.all.min.js', 'static/css/plugins/footable/footable.core.css']
+                            serie: true,
+                            files: ['static/js/plugins/dataTables/datatables.min.js','static/css/plugins/dataTables/datatables.min.css']
                         },
                         {
-                            name: 'ui.footable',
-                            files: ['static/js/plugins/footable/angular-footable.js']
+                            serie: true,
+                            name: 'datatables',
+                            files: ['static/js/plugins/dataTables/angular-datatables.min.js']
+                        },
+                        {
+                            serie: true,
+                            name: 'datatables.buttons',
+                            files: ['static/js/plugins/dataTables/angular-datatables.buttons.min.js']
                         }
                     ]);
                 }
@@ -100,11 +107,18 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
                 loadPlugin: function ($ocLazyLoad) {
                     return $ocLazyLoad.load([
                         {
-                            files: ['static/js/plugins/footable/footable.all.min.js', 'static/css/plugins/footable/footable.core.css']
+                            serie: true,
+                            files: ['static/js/plugins/dataTables/datatables.min.js','static/css/plugins/dataTables/datatables.min.css']
                         },
                         {
-                            name: 'ui.footable',
-                            files: ['static/js/plugins/footable/angular-footable.js']
+                            serie: true,
+                            name: 'datatables',
+                            files: ['static/js/plugins/dataTables/angular-datatables.min.js']
+                        },
+                        {
+                            serie: true,
+                            name: 'datatables.buttons',
+                            files: ['static/js/plugins/dataTables/angular-datatables.buttons.min.js']
                         }
                     ]);
                 }
@@ -118,17 +132,24 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
                 loadPlugin: function ($ocLazyLoad) {
                     return $ocLazyLoad.load([
                         {
-                            files: ['static/js/plugins/footable/footable.all.min.js', 'static/css/plugins/footable/footable.core.css']
+                            serie: true,
+                            files: ['static/js/plugins/dataTables/datatables.min.js','static/css/plugins/dataTables/datatables.min.css']
                         },
                         {
-                            name: 'ui.footable',
-                            files: ['static/js/plugins/footable/angular-footable.js']
+                            serie: true,
+                            name: 'datatables',
+                            files: ['static/js/plugins/dataTables/angular-datatables.min.js']
+                        },
+                        {
+                            serie: true,
+                            name: 'datatables.buttons',
+                            files: ['static/js/plugins/dataTables/angular-datatables.buttons.min.js']
                         }
                     ]);
                 }
             }
         })
-        .state('blockchain.account_tables', {
+        .state('blockchain.accounts', {
             url: "/accounts",
             templateUrl: "static/views/account.html",
             data: { pageTitle: 'Account' },
@@ -136,11 +157,18 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
                 loadPlugin: function ($ocLazyLoad) {
                     return $ocLazyLoad.load([
                         {
-                            files: ['static/js/plugins/footable/footable.all.min.js', 'static/css/plugins/footable/footable.core.css']
+                            serie: true,
+                            files: ['static/js/plugins/dataTables/datatables.min.js','static/css/plugins/dataTables/datatables.min.css']
                         },
                         {
-                            name: 'ui.footable',
-                            files: ['static/js/plugins/footable/angular-footable.js']
+                            serie: true,
+                            name: 'datatables',
+                            files: ['static/js/plugins/dataTables/angular-datatables.min.js']
+                        },
+                        {
+                            serie: true,
+                            name: 'datatables.buttons',
+                            files: ['static/js/plugins/dataTables/angular-datatables.buttons.min.js']
                         }
                     ]);
                 }
