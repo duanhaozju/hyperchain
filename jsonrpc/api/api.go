@@ -72,7 +72,7 @@ func SendTransaction(args TxArgs) bool {
 		end:=start+300
 
 		for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 500; i++ {
+			for i := 0; i < 100; i++ {
 				tx.TimeStamp=time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
@@ -85,7 +85,7 @@ func SendTransaction(args TxArgs) bool {
 				}
 				//time.Sleep(2 * time.Nanosecond)
 			}
-			time.Sleep(90 * time.Millisecond)
+			time.Sleep(60 * time.Millisecond)
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
@@ -143,7 +143,6 @@ func GetAllBalances() BalanceShow{
 	balMap := balanceIns.GetAllDBBalance()
 
 	for key, value := range balMap {
-		log.Info(key.Hex())
 		balances[key.Hex()] = string(value)
 	}
 

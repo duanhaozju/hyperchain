@@ -25,10 +25,11 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/p2p/transport"
 	"golang.org/x/net/context"
+	"fmt"
 )
 
 
-var MAXPEERNODE = 4
+const MAXPEERNODE = 7
 
 var DESKEY = []byte("sfe023f_sefiel#fi32lf3e!")
 
@@ -69,10 +70,8 @@ func (this *GrpcPeerManager) GetClientId() common.Hash{
 
 // Start start the Normal local listen server
 func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,isTest bool,eventMux *event.TypeMux) {
-	// initialize the global configs
+
 	configs := peerComm.GetConfig(path)
-	//MAX PEERS NUMBER
-	MAXPEERNODE,_ = strconv.Atoi(configs["MAXPEERS"])
 	port, _ := strconv.Atoi(configs["port"+strconv.Itoa(NodeId)])
 	// start local node
 	this.localNode = node.NewNode(port,isTest,eventMux,NodeId)
@@ -80,12 +79,9 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 	//
 	this.aliveChain = &aliveChan
 
-	//local HandShake Manager
-	//var localHSM transport.HandShakeManager
-	//localHSM = transport
-
 	// init the event manager
 	this.EventManager = peerEventManager.NewPeerEventManager()
+
 	this.EventManager.RegisterEvent(pb.Message_HELLO, peerEventHandler.NewHelloHandler())
 	this.EventManager.RegisterEvent(pb.Message_RESPONSE, peerEventHandler.NewResponseHandler())
 	this.EventManager.RegisterEvent(pb.Message_CONSUS, peerEventHandler.NewBroadCastHandler())
@@ -180,21 +176,22 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 	}
 	pPool := peerPool.NewPeerPool(false, false)
 	//go this.EventManager.PostEvent(pb.Message_CONSUS, broadCastMessage)
-	broadcast(broadCastMessage,&pPool)
+	go broadcast(broadCastMessage,&pPool)
 }
 
 // inner the broadcast method which serve BroadcastPeers function
 func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 	for _, peer := range pPool.GetPeers() {
-		go func(){
-			resMsg, err := peer.Chat(&broadCastMessage)
-			if err != nil {
-				log.Error("Broadcast failed,Node", peer.Addr)
-			} else {
-				log.Debug("resMsg:", string(resMsg.Payload))
-				//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
-			}
-		}()
+		go peer.Chat(&broadCastMessage)
+		//go func(){
+		//	resMsg, err := peer.Chat(&broadCastMessage)
+		//	if err != nil {
+		//		log.Error("Broadcast failed,Node", peer.Addr)
+		//	} else {
+		//		log.Debug("resMsg:", string(resMsg.Payload))
+		//		//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
+		//	}
+		//}()
 	}
 }
 
@@ -225,6 +222,7 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,Mes
 
 
 	// broadcast to special peers
+	//TODO for stateUpdate
 	go func(){for _, peer := range pPool.GetPeers() {
 
 		for _,nodeID := range peerList{
@@ -271,9 +269,9 @@ func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	var perinfos peer.PeerInfos
-	//fmt.Println("==========================")
+	fmt.Println("==========================")
 	for _,per := range peers{
-		//fmt.Println("+++++++++++++++++++++++++++++")
+		fmt.Println("+++++++++++++++++++++++++++++")
 		log.Debug("rage the peer")
 		perinfo.IP = per.Addr.Ip
 		perinfo.Port = int(per.Addr.Port)
@@ -287,6 +285,7 @@ func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
 			perinfo.Status = peer.PENDING
 		}
 		perinfos = append(perinfos,&perinfo)
+		fmt.Println("add a peerinfo")
 	}
 	return perinfos
 }
