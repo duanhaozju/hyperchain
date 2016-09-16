@@ -49,6 +49,7 @@ func CreateInitBlock(filename string)  {
 		log.Error("Unmarshal: ", err.Error())
 		return
 	}
+
 	balanceIns, err := GetBalanceIns()
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
@@ -86,10 +87,7 @@ func CreateInitBlock(filename string)  {
 		//MerkleRoot:       "root",
 	}
 
-
-
 	log.Debug("构造创世区块")
-
 	err = PutBlock(db, block.BlockHash, &block)
 	// write transaction
 	//PutTransactions(db, commonHash, block.Transactions)
@@ -109,7 +107,6 @@ func CreateInitBlock(filename string)  {
 func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int64)  {
 
 	log.Info("block number is ",block.Number)
-
 	currentChain := GetChainCopy()
 	block.ParentHash = currentChain.LatestBlockHash
 	block.BlockHash = block.Hash(commonHash).Bytes()
@@ -135,17 +132,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 	log.Notice("Block number",newChain.Height)
 	log.Notice("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
 	balance.UpdateDBBalance(block)
-
-
-	if block.Number%10==0 && block.Number!=0{
-		WriteChainChan()
-
-	}
-
-
-
 	// update our stateObject and statedb to blockchain
-	//ExecBlock(ExecBlockblock)
+	ExecBlock(block)
 	//CommitStatedbToBlockchain()
-
 }

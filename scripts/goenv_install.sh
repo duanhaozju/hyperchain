@@ -7,7 +7,7 @@
 
 # Stop on first error
 set -e
-#set -x
+set -x
 # Update the entire system to the latest releases
 apt-get update -qq
 apt-get dist-upgrade -qqy
@@ -27,10 +27,10 @@ then
 
    #ARCH=`uname -m | sed 's|i686|386|' | sed 's|x86_64|amd64|'`
    ARCH=amd64
-   GO_VER=1.7
+   GO_VER=1.7.1
 
    cd /tmp
-   wget --quiet --no-check-certificate https://storage.googleapis.com/golang/go$GO_VER.linux-${ARCH}.tar.gz
+   wget --quiet --no-check-certificate https://storage.googleapis.com/golang/go$GO_VER.linux-amd64.tar.gz
    tar -xvf go$GO_VER.linux-${ARCH}.tar.gz
    mv go $GOROOT
    chmod 775 $GOROOT
@@ -43,6 +43,7 @@ fi
 echo 'export PATH=$PATH:/usr/local/go/bin' >> $HOME/.profile
 echo 'export GOPATH=$HOME/gopath' >> $HOME/.profile
 echo 'export PATH=$PATH:$GOPATH/bin' >> $HOME/.profile
+source $HOME/.profile
 export PATH=$PATH:/usr/local/go/bin
 export GOPATH=$HOME/gopath
 export PATH=$PATH:$GOPATH/bin
