@@ -20,10 +20,8 @@
     hosts_port.push(config['external_port'+i])
  }
 
- console.log(hosts_url)
- console.log(hosts_port)
-
-
+console.log(hosts_url)
+console.log(hosts_port)
 
 function testRequest(opt){
 var options = {
@@ -38,7 +36,6 @@ var options = {
 var post_data = JSON.stringify({"from":opt.from,"to":opt.to,"value":'1'});
 console.log(options);
 // Set up the request
-
     var post_req = http.request(options, function(res) {
         res.setEncoding('utf8');
         res.on('data', function (chunk) {
