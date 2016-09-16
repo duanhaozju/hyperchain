@@ -7,14 +7,12 @@ import (
 	"time"
 	"github.com/op/go-logging"
 	"encoding/json"
-	"hyperchain/core/vm/compiler"
 	"strconv"
 	"hyperchain/core/types"
 	"errors"
 	"hyperchain/manager"
 	"hyperchain/event"
 	"github.com/golang/protobuf/proto"
-	"fmt"
 )
 
 const (
@@ -154,18 +152,18 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 }
 
 // ComplieContract complies contract to ABI
-func (tran *PublicTransactionAPI) ComplieContract(ct string) ([]string, error){
-
-	fmt.Println(ct)
-	abi, _, err := compiler.CompileSourcefile(ct)
-	fmt.Println(abi)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return abi,nil
-}
+//func (tran *PublicTransactionAPI) ComplieContract(ct string) ([]string, error){
+//
+//	fmt.Println(ct)
+//	abi, _, err := compiler.CompileSourcefile(ct)
+//	fmt.Println(abi)
+//
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	return abi,nil
+//}
 
 
 
