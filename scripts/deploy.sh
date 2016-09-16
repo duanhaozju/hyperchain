@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Author: ChenQuan
 # Description: this script is used for deploy code env in the server side.
 # Date: 2016-09-15

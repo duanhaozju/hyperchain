@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # this script is used for auto install go env on the aliyun server
 # author:ChenQuan
 # date: 2016-09-05
