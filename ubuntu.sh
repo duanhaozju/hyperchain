@@ -10,7 +10,7 @@ echo "$0 1 : 本地测试"
 echo "$0 2 : 服务器测试"
 echo "$0 3 : 杀死进程"
 echo "你的选择: $1"
-echo "=============="
+echo "--------------"
 # Stop on first error
 set -e
 
