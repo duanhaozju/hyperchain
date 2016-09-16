@@ -35,11 +35,16 @@ func ExecBlock(block *types.Block)(err error){
 	if(err != nil || env == nil){
 		return err
 	}
-	for _,tx := range block.Transactions{
-		_,err = ExecTransaction(*tx)
-	}
-	log.Error("the sum of transactions is ",len(block.Transactions))
 	ExecTransaction(*types.NewTestCreateTransaction())
+
+	//for _,tx := range block.Transactions{
+	for _,_ = range block.Transactions{
+		_,err = ExecTransaction(*types.NewTestCallTransaction())
+		//_,err = ExecTransaction(*tx)
+	}
+	log.Notice("the sum of transactions is ",len(block.Transactions))
+	//start := time.Now()
+	//log.Error("we cost ")
 	return
 }
 
@@ -55,8 +60,8 @@ func ExecTransaction(tx types.Transaction)(ret []byte,err error) {
 		gasPrice = tx.GasPrice()
 		amount = tx.Amount()
 	)
-	log.Error("the to is ---------",to)
-	log.Error("the to is ---------",tx.To)
+	log.Notice("the to is ---------",to)
+	log.Notice("the to is ---------",tx.To)
 	if(tx.To == nil){
 		return Exec(&from,nil,data,gas,gasPrice,amount)
 	}

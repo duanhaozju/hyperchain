@@ -83,6 +83,10 @@ func (self *StateDB) GetLeastAccount() vm.Account {
 	return self.leastStateObject
 }
 
+// todo
+func (self *StateDB) SetLeastAccount(account *vm.Account) {
+	//self.leastStateObject.abi = account.Address()
+}
 func (self *StateDB) GetAccounts() map[string]*StateObject {
 	return self.stateObjects
 }
@@ -202,6 +206,7 @@ func (self *StateDB) GetOrNewStateObject(addr common.Address) *StateObject {
 	stateObject := self.GetStateObject(addr)
 	if stateObject == nil || stateObject.deleted {
 		stateObject = self.CreateStateObject(addr)
+		self.leastStateObject = stateObject
 	}
 	return stateObject
 }
@@ -226,7 +231,6 @@ func (self *StateDB) CreateStateObject(addr common.Address) *StateObject {
 	if so != nil {
 		newSo.balance = so.balance
 	}
-	self.leastStateObject = newSo
 	return newSo
 }
 

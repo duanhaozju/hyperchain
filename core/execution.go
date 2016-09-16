@@ -89,7 +89,9 @@ func exec(env vm.Environment, caller vm.ContractRef, toAddress, codeAddr *common
 		}
 		log.Info("abis:",abis)
 		log.Info("bins:",bins)
+		//log.Info("to:",to.Address())
 		log.Info("--------------")
+		vmenv.state.SetLeastAccount(&to)
 
 		// TODO this is only for one contract
 		contract.SetABI(common.FromHex(abis[0]))
