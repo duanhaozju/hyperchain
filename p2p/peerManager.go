@@ -25,7 +25,6 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/p2p/transport"
 	"golang.org/x/net/context"
-	"fmt"
 )
 
 
@@ -75,7 +74,6 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 	port, _ := strconv.Atoi(configs["port"+strconv.Itoa(NodeId)])
 	// start local node
 	this.localNode = node.NewNode(port,isTest,eventMux,NodeId)
-	log.Info("Local Node Hash:",hex.EncodeToString(this.GetClientId().Bytes()))
 	//
 	this.aliveChain = &aliveChan
 
@@ -269,9 +267,7 @@ func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	var perinfos peer.PeerInfos
-	fmt.Println("==========================")
 	for _,per := range peers{
-		fmt.Println("+++++++++++++++++++++++++++++")
 		log.Debug("rage the peer")
 		perinfo.IP = per.Addr.Ip
 		perinfo.Port = int(per.Addr.Port)
@@ -285,7 +281,6 @@ func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
 			perinfo.Status = peer.PENDING
 		}
 		perinfos = append(perinfos,&perinfo)
-		fmt.Println("add a peerinfo")
 	}
 	return perinfos
 }

@@ -69,7 +69,8 @@ func main() {
 
 		//init hash object
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
-		nodePath := "./p2p/peerconfig.json"
+		//nodePath := "./p2p/peerconfig.json"
+		nodePath := argv.PeerConfigPath
 
 		//init block pool to save block
 		blockPool := core.NewBlockPool(eventMux)

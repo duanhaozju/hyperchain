@@ -1,0 +1,8 @@
+cn6.hyperchain.cn
+cn7.hyperchain.cn
+cn8.hyperchain.cn
+cn9.hyperchain.cn
+cn12.hyperchain.cn
+cn13.hyperchain.cn
+cn14.hyperchain.cn
+please leave this line to ensure the script could run correctly

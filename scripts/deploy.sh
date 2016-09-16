@@ -5,33 +5,52 @@
 # Happy mid-moon day!
 
 set -e
-set -x
-sudo apt-update --yyq
-sudo apt-upgrade
-sudo apt-get -y install git build-essential wget
+echo -e " _   _                        ____ _           _       "
+echo -e "| | | |_   _ _ __   ___ _ __ / ___| |__   __ _(_)_ __  "
+echo -e "| |_| | | | | '_ \ / _ \ '__| |   | '_ \ / _\` | | '_ \ "
+echo -e "|  _  | |_| | |_) |  __/ |  | |___| | | | (_| | | | | |"
+echo -e "|_| |_|\__, | .__/ \___|_|   \____|_| |_|\__,_|_|_| |_|"
+echo -e "       |___/|_|                                        "
 
-GOROOT=/usr/local/go
-cd /tmp
-mkdir gopkg
-wget --no-check-certificate https://api.google.com/golang/go1.7.1-amd64.tar.gz
-sudo tar zxf go1.7.1-amd64.tar.gz -c /usr/local
-rm -rf /tmp/gopkg/
-export PATH=$PATH:$GOROOT/bin
-export GOPATH=$HOME/gopath
-export PATH=$PATH:$GOPATH/bin
-echo "export PATH=$PATH:$GOROOT/bin" >> $HOME/.bashrc
-echo "export GOPATH=$HOME/gopath" >> $HOME/.bashrc
-echo "export PATH=$PATH:$GOPATH/bin" >> $HOME/.bashrc
-source $HOME/.bashrc 
+if [ ! -f "/usr/bin/expect" ];then
+  echo "hasn't install expect,please install expect mannualy: 'apt-get install expect'"
+  exit 1
+fi
 
+PASSWD="blockchain"
 
-mkdir -p $HOME/gopath
-sudo mount /dev/vdb $HOME/gopath
-mkdir -p $HOME/gopath/src
+# get the server list config
+while read line;do
+   SERVER_ADDR+=" ${line}"
+done < ../serverlist.txt
 
-cd $HOME/gopath/src
-git clone git@git.hyperchain.cn/hyperchain/hyperchain.git
-cd hyperchain
-git checkout develop
-git pull origin develop
-echo "all code were upgreded"
+#########################
+# authorization         #
+#########################
+
+# add your local pubkey into every server
+    echo "┌────────────────────────┐"
+    echo "│    auto add ssh key    │"
+    echo "└────────────────────────┘"
+    for server_address in ${SERVER_ADDR[@]}; do
+    expect <<EOF
+        set timeout 60
+        spawn ssh-copy-id satoshi@$server_address
+        expect {
+          "s password:" {send "$PASSWD\r";exp_continue }
+          eof
+        }
+EOF
+    done
+
+#########################
+# deploy                #
+#########################
+
+echo "┌────────────────────────┐"
+echo "│    auto deploy         │"
+echo "└────────────────────────┘"
+for server_address in ${SERVER_ADDR[@]}; do
+    scp ./goenv_install.sh satoshi@server_address:/home/satoshi/
+    nome-terminal -x bash -c "ssh satoshi@server_address \"chmod a+x /home/satoshi/goenv_install.sh;/home/satoshi/goenv_install.sh\""
+done
