@@ -69,9 +69,9 @@ func (this *GrpcPeerManager) GetClientId() common.Hash{
 
 // Start start the Normal local listen server
 func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,isTest bool,eventMux *event.TypeMux) {
-
+	// initialize the global configs
 	configs := peerComm.GetConfig(path)
-	//MAXPEERS
+	//MAX PEERS NUMBER
 	MAXPEERNODE,_ = strconv.Atoi(configs["MAXPEERS"])
 	port, _ := strconv.Atoi(configs["port"+strconv.Itoa(NodeId)])
 	// start local node
@@ -80,9 +80,12 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 	//
 	this.aliveChain = &aliveChan
 
+	//local HandShake Manager
+	//var localHSM transport.HandShakeManager
+	//localHSM = transport
+
 	// init the event manager
 	this.EventManager = peerEventManager.NewPeerEventManager()
-
 	this.EventManager.RegisterEvent(pb.Message_HELLO, peerEventHandler.NewHelloHandler())
 	this.EventManager.RegisterEvent(pb.Message_RESPONSE, peerEventHandler.NewResponseHandler())
 	this.EventManager.RegisterEvent(pb.Message_CONSUS, peerEventHandler.NewBroadCastHandler())
@@ -177,7 +180,7 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 	}
 	pPool := peerPool.NewPeerPool(false, false)
 	//go this.EventManager.PostEvent(pb.Message_CONSUS, broadCastMessage)
-	go broadcast(broadCastMessage,&pPool)
+	broadcast(broadCastMessage,&pPool)
 }
 
 // inner the broadcast method which serve BroadcastPeers function

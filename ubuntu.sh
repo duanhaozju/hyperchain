@@ -7,6 +7,20 @@ echo "└───────────────────────�
 set -e
 
 #set -x
+(( $# != 1 )) && { echo -e >&2 "Usage: $0 1 : 本地测试, $0 2 : 服务器测试"; exit 1; }
+CONFIG_PATH="./p2p/local_peerconfig.json"
+if [ $1 == 1 ];then
+    echo -e "开启本地测试"
+    CONFIG_PATH="./p2p/local_peerconfig.json"
+elif [ $1 == 2 ];then
+    echo -e "开启服务器测试"
+    CONFIG_PATH="./p2p/peerconfig.json"
+else
+    echo "参数错误"
+    exit 1
+fi
+# max test node number
+MAXNODE=7
 
 echo "kill the bind port process"
 ports1=`lsof -i :8001 | awk 'NR>=2{print $2}'`
@@ -42,19 +56,15 @@ fi
 echo "rebuild the application"
 govendor build
 
-rm -rf /tmp/hyperchain/cache/808*
 
-echo "remote tmp data"
+echo "remove tmp data"
 rm -rf /tmp/hyperchain/*
 
-echo "run the application"
+echo "running the application"
 
-gnome-terminal -x bash -c "(./hyperchain -o 1 -l 8081 -p ./p2p/local_peerconfig.json)"
-gnome-terminal -x bash -c "(./hyperchain -o 2 -l 8082 -p ./p2p/local_peerconfig.json)"
-gnome-terminal -x bash -c "(./hyperchain -o 3 -l 8083 -p ./p2p/local_peerconfig.json)"
-gnome-terminal -x bash -c "(./hyperchain -o 4 -l 8084 -p ./p2p/local_peerconfig.json)"
-gnome-terminal -x bash -c "(./hyperchain -o 5 -l 8085 -p ./p2p/local_peerconfig.json)"
-gnome-terminal -x bash -c "(./hyperchain -o 6 -l 8086 -p ./p2p/local_peerconfig.json)"
-gnome-terminal -x bash -c "(./hyperchain -o 7 -l 8087 -p ./p2p/local_peerconfig.json)"
+for((i=1;i<=$MAXNODE;i++))
+do
+    gnome-terminal -x bash -c "(./hyperchain -o $i -l 808$i -p $CONFIG_PATH)"
+done
 
 echo "All process are running background"
