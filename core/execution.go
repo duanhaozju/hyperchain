@@ -87,10 +87,10 @@ func exec(env vm.Environment, caller vm.ContractRef, toAddress, codeAddr *common
 		if err != nil{
 			return nil,common.Address{},err
 		}
-		log.Info("abis:",abis)
-		log.Info("bins:",bins)
+		//log.Info("abis:",abis)
+		//log.Info("bins:",bins)
 		//log.Info("to:",to.Address())
-		log.Info("--------------")
+		//log.Info("--------------")
 		vmenv.state.SetLeastAccount(&to)
 
 		// TODO this is only for one contract

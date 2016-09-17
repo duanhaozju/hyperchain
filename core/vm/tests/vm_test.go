@@ -7,9 +7,12 @@ import (
 
 func TestMyAPI(t *testing.T)  {
 	fn := filepath.Join("", "myTest.json")
+
 	if err := RunVmTest(fn, StateSkipTests); err != nil {
 		t.Error(err)
 	}
+
+
 }
 
 /*

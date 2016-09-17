@@ -174,7 +174,18 @@ func (self *StateObject) Value() *big.Int {
 
 func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) {
 	// When iterating over the storage check the cache first
+	log.Info("+++++++++++++++++the address of stateObject is,",self.address,"+++++++++++++++++")
 	for h, value := range self.storage {
 		cb(h, value)
 	}
+	log.Info("++++++++++++++++++++++++++++++++++")
 }
+
+func (self *StateObject) PrintStorages() {
+	// When iterating over the storage check the cache first
+	log.Info("+++++++++++++++++the address of stateObject is,",common.ToHex(self.address.Bytes()),"+++++++++++++++++")
+	for k,v := range self.Storage(){
+		log.Info("storage key is ------",k,"value is -----",v)
+	}
+}
+

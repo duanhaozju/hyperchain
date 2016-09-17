@@ -43,6 +43,18 @@ func ExecBlock(block *types.Block)(err error){
 		//_,err = ExecTransaction(*tx)
 	}
 	log.Notice("the sum of transactions is ",len(block.Transactions))
+	log.Notice("the sum of accounts is :",len(vmenv.State().GetAccounts()))
+	log.Notice("---------------------------------------------------------")
+	for _,v := range vmenv.State().GetAccounts(){
+		log.Notice("##################################################")
+		v.ForEachStorage(func(key, value common.Hash) (bool) {
+			log.Notice("the key is ",key,"       the value is ",value)
+			return true
+		})
+		log.Notice("##################################################")
+	}
+	log.Notice("---------------------------------------------------------")
+
 	//start := time.Now()
 	//log.Error("we cost ")
 	return
@@ -78,7 +90,7 @@ gasPrice, value *big.Int)(ret []byte,err error){
 	// 判断是否能够交易,转移,这一步可以考虑在外部执行
 
 	if contractCreation{
-		logger.Notice("------create contract")
+		//logger.Notice("------create contract")
 		ret,_,err = vmenv.Create(sender,data,gas,gasPrice,value)
 		if err != nil{
 			ret = nil

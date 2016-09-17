@@ -9,6 +9,7 @@ import (
 	"hyperchain/hyperdb"
 	"github.com/op/go-logging"
 	"fmt"
+	"time"
 )
 var log *logging.Logger // package-level logger
 func init() {
@@ -100,74 +101,43 @@ func runVmTest(test VmTest) error {
 }
 
 func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.Int, error) {
+	// init the parameters
 	var (
-		to    = common.HexToAddress(exec["address"])
+		//data  = common.HexToAddress(exec["code"])
 		from  = common.HexToAddress(exec["caller"])
-		data  = common.FromHex(exec["code"])
 		gas = common.Big(exec["gasLimit"])
 		price = common.Big(exec["gasPrice"])
 		value = common.Big(exec["value"])
 		data2 = common.FromHex(exec["data"])
 	)
-
 	vmenv := core.GetVMEnv()
 	state = vmenv.State()
+
+	// create a new contract
+	now_time := time.Now()
+	for i := 0;i<30;i++{
+		core.Exec(&from,nil,([]byte)(sourcecode), gas, price, value)
+	}
+	log.Notice("the create contract time we used is ",time.Now().Sub(now_time))
+
+
 	ret,err := core.Exec(&from,nil,([]byte)(sourcecode), gas, price, value)
-
-	addr := state.GetLeastAccount().Address()
-	for a, v := range state.GetStateObject(addr).Storage() {
-		log.Info("StateObject key:",a,"----------value:",v)
-	}
-	log.Info("addr---------------",addr)
-	log.Info("addr---------------",common.ToHex(addr.Bytes()))
-	log.Info("ret--------",common.ToHex(ret))
-
 	ret,err = core.Exec(&from,nil,([]byte)(sourcecode), gas, price, value)
-	//ret,err = core.Exec(&from,nil, data, gas, price, value)
-	//ret,err = core.Exec(&from,nil, data, gas, price, value)
-	//ret,err = core.Exec(&from,nil, data, gas, price, value)
-	//ret,err = core.Exec(&from,nil, data, gas, price, value)
-	//ret,err = core.Exec(&from,nil, data, gas, price, value)
+	addr := state.GetLeastAccount().Address()
+	//state.ForEachAccounts()
 
-	for k,v := range state.GetAccounts(){
-		log.Info("Account key:",k,"----------value:",v)
+	// call the contract there times
+	log.Notice("the time now is",time.Now())
+	now_time = time.Now()
+	for i := 0;i<3000;i++{
+		ret,err = core.Exec(&from, &addr, data2, gas, price, value)
 	}
+	//state.GetAccount(addr).PrintStorages()
+	log.Notice("the call contract time we used is ",time.Now().Sub(now_time))
 
-	addr = state.GetLeastAccount().Address()
-	for a, v := range state.GetStateObject(addr).Storage() {
-		log.Info("StateObject key:",a,"----------value:",v)
-	}
-	log.Info("addr---------------",addr)
-	log.Info("addr---------------",common.ToHex(addr.Bytes()))
-	log.Info("ret--------",common.ToHex(ret))
-
-	ret,err = core.Exec(&from, &to, data, gas, price, value)
-	log.Info("ret--------",ret)
-	for a, v := range state.GetStateObject(addr).Storage() {
-		log.Info("StateObject key:",a,"----------value:",v)
-	}
-
-	to = addr
-	ret,err = core.Exec(&from, &to, data2, gas, price, value)
-	log.Info("ret--------",ret)
-	for a, v := range state.GetStateObject(addr).Storage() {
-		log.Info("StateObject key:",a,"----------value:",v)
-	}
-
-	ret,err = core.Exec(&from, &to, data2, gas, price, value)
-	log.Info("ret--------",ret)
-	for a, v := range state.GetStateObject(addr).Storage() {
-		log.Info("StateObject key:",a,"----------value:",v)
-	}
-
-	ret,err = core.Exec(&from, &to, data2, gas, price, value)
-	log.Info("ret--------",ret)
-	for a, v := range state.GetStateObject(addr).Storage() {
-		log.Info("StateObject key:",a,"----------value:",v)
-	}
+	// if err
 	if err != nil{
 		log.Error("VM call err:",err)
 	}
-
 	return ret, vmenv.State().Logs(), vmenv.Gas, err
 }
