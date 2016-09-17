@@ -50,5 +50,7 @@ angular
             "User u = users[addr];" +
             "return (u.name,u.age,u.id);" +
             "}}"
-            }]
+            }],
+        "CONTRACT": [],
+        "FROM": "0x0000000000000000000000000000000000000002"
     })

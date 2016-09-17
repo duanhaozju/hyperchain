@@ -119,7 +119,6 @@ func (blk *PublicBlockAPI) QueryExecuteTime(args SendQueryArgs) *ExeTimeResult{
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	log.Info("=======================")
 	txs,err := core.GetAllTransaction(db)
 
 	if err != nil {

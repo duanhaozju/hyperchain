@@ -38,54 +38,40 @@
                             <td>Deployed</td>
                             <td>
                                 <button class="btn btn-success btn-circle" type="button"><i class="fa fa-list"></i></button>
-                                <button class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>
-                                <button class="btn btn-info btn-circle" type="button" ng-click="open1()"><i class="fa fa-cloud-upload"></i></button>
+                                <!--<button class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>-->
+                                <button class="btn btn-info btn-circle" type="button" ng-click="modal_deploy()" disabled><i class="fa fa-cloud-upload"></i></button>
                             </td>
                         </tr>
                         <tr class="gradeC">
-                            <td>Manage</td>
-                            <td>Manage</td>
+                            <td>Enter</td>
+                            <td>Enter</td>
                             <td>Load</td>
                             <td>Nondeployed</td>
                             <td>
                                 <button class="btn btn-success btn-circle" type="button"><i class="fa fa-list"></i></button>
-                                <button class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>
-                                <button class="btn btn-info btn-circle" type="button" ng-click="open1()"><i class="fa fa-cloud-upload"></i></button>
+                                <!--<button class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>-->
+                                <button class="btn btn-info btn-circle" type="button" ng-click="modal_deploy()" disabled><i class="fa fa-cloud-upload"></i></button>
                             </td>
                         </tr>
-                        <tr class="gradeA">
-                            <td>Manage</td>
-                            <td>Manage</td>
-                            <td>Load</td>
-                            <td>Nondeployed</td>
-                            <td>
+                        <tr ng-repeat="ct in contracts">
+                            <td>{{ct.contractName}}</td>
+                            <td>{{ct.projectName}}</td>
+                            <td ng-switch="ct.type">
+                                <span ng-switch-when="1">Create</span>
+                                <span ng-switch-when="2">Load</span>
+                            </td>
+                            <td ng-switch="ct.status">
+                                <span ng-switch-when="0">Nondeployed</span>
+                                <span ng-switch-when="1">Deployed</span>
+                            </td>
+                            <td ng-switch="ct.status">
                                 <button class="btn btn-success btn-circle" type="button"><i class="fa fa-list"></i></button>
-                                <button class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>
-                                <button class="btn btn-info btn-circle" type="button" ng-click="open1()"><i class="fa fa-cloud-upload"></i></button>
+                                <button ng-switch-when="0" class="btn btn-info btn-circle" type="button" ng-click="modal_deploy(ct.contractName,ct.sourceCode)"><i class="fa fa-cloud-upload"></i></button>
+                                <!--<button ng-switch-when="1" class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>-->
+                                <button ng-switch-when="1" class="btn btn-warning btn-circle" type="button" ng-click="modal_invoke(ct.hash, ct.methods)"><i class="fa fa-flag"></i></button>
                             </td>
                         </tr>
-                        <tr class="gradeA">
-                            <td>Manage</td>
-                            <td>Manage</td>
-                            <td>Load</td>
-                            <td>Nondeployed</td>
-                            <td>
-                                <button class="btn btn-success btn-circle" type="button"><i class="fa fa-list"></i></button>
-                                <button class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>
-                                <button class="btn btn-info btn-circle" type="button" ng-click="open1()"><i class="fa fa-cloud-upload"></i></button>
-                            </td>
-                        </tr>
-                        <tr class="gradeA">
-                            <td>Manage</td>
-                            <td>Manage</td>
-                            <td>Load</td>
-                            <td>Nondeployed</td>
-                            <td>
-                                <button class="btn btn-success btn-circle" type="button"><i class="fa fa-list"></i></button>
-                                <button class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>
-                                <button class="btn btn-info btn-circle" type="button" ng-click="open1()"><i class="fa fa-cloud-upload"></i></button>
-                            </td>
-                        </tr>
+
                         </tbody>
                         <tfoot>
                         <tr>
