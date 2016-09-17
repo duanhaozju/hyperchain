@@ -11,6 +11,7 @@ fi
 sudo mount /dev/vdb /home/satoshi/gopath/
 ls /home/satoshi/gopath/
 cd /home/satoshi/gopath/src/hyperchain
+git checkout server.sh
 git checkout develop
 git pull origin develop
 #expect <<EOF
