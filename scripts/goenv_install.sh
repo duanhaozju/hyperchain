@@ -8,42 +8,48 @@
 # Stop on first error
 set -e
 #set -x
+
 # Update the entire system to the latest releases
-apt-get update -qq
-apt-get dist-upgrade -qqy
+sudo apt-get update -qq
+sudo apt-get dist-upgrade -qqy
+sudo apt-get -y install git build-essential wget
 
-# auto install the golang env
-apt-get install  --yes build-essential git
+GOROOT=/usr/local/go
+GOINSTALLPATH=/usr/local
 
 
-# Set Go environment variables needed by other scripts
-export GOPATH="$HOME/gopath"
-mkdir -p $GOPATH
+cd /tmp
+mkdir gopkg
+wget --no-check-certificate https://api.google.com/golang/go1.7.1-amd64.tar.gz
+sudo tar zxf go1.7.1-amd64.tar.gz -c $GOINSTALLPATH
+chmod 775 $GOROOT
+rm -rf /tmp/gopkg/
 
-MACHINE=`uname -m`
-if [ x$MACHINE = xx86_64 ]
-then
-   export GOROOT="/usr/local/go"
+# mount the ssd
+mkdir -p $HOME/gopath
+sudo mount /dev/vdb $HOME/gopath
+mkdir -p $HOME/gopath/src
 
-   #ARCH=`uname -m | sed 's|i686|386|' | sed 's|x86_64|amd64|'`
-   ARCH=amd64
-   GO_VER=1.7
-
-   cd /tmp
-   wget --quiet --no-check-certificate https://storage.googleapis.com/golang/go$GO_VER.linux-${ARCH}.tar.gz
-   tar -xvf go$GO_VER.linux-${ARCH}.tar.gz
-   mv go $GOROOT
-   chmod 775 $GOROOT
-   rm go$GO_VER.linux-${ARCH}.tar.gz
-else
-    echo "NOT X86_64"
-    exit 1
-fi
-
-echo 'export PATH=$PATH:/usr/local/go/bin' >> $HOME/.profile
-echo 'export GOPATH=$HOME/gopath' >> $HOME/.profile
-echo 'export PATH=$PATH:$GOPATH/bin' >> $HOME/.profile
-export PATH=$PATH:/usr/local/go/bin
+# setup the env
+export PATH=$PATH:$GOROOT/bin
 export GOPATH=$HOME/gopath
 export PATH=$PATH:$GOPATH/bin
+echo "export PATH=$PATH:$GOROOT/bin" >> $HOME/.bashrc
+echo "export GOPATH=$HOME/gopath" >> $HOME/.bashrc
+echo "export PATH=$PATH:$GOPATH/bin" >> $HOME/.bashrc
+source $HOME/.bashrc
 go env
+
+# deploy the code
+cd $HOME/gopath/src
+git clone git@git.hyperchain.cn/hyperchain/hyperchain.git
+cd hyperchain
+git checkout develop
+git pull origin develop
+echo "all code were deployed"
+
+# install the govendor
+go get -u github.com/kardianos/govendor
+govendor sync
+
+echo "done"
