@@ -1,3 +1,4 @@
+
 #!/bin/bash
 #if [ ! -f "/usr/bin/expect" ];then
 #  echo "hasn't install expect,please install expect mannualy: 'apt-get install expect'"
@@ -6,7 +7,7 @@
 #fi
 
 if [ ! -d /home/satoshi/gopath ];then
-    mkdir -p /home/satoshi/gopath
+   mkdir -p /home/satoshi/gopath
 fi
 sudo mount /dev/vdb /home/satoshi/gopath/
 ls /home/satoshi/gopath/
@@ -21,4 +22,3 @@ git checkout develop
 #        }
 #EOF
 echo "already update"
-
