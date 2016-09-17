@@ -75,7 +75,7 @@ func ExecTransaction(tx types.Transaction)(ret []byte,err error) {
 	log.Notice("the to is ---------",to)
 	log.Notice("the to is ---------",tx.To)
 	if(tx.To == nil){
-		return ExecSourceCode(&from,nil,data,gas,gasPrice,amount)
+		return Exec(&from,nil,data,gas,gasPrice,amount)
 	}
 
 	return Exec(&from,&to,data,gas,gasPrice,amount)
