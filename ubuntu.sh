@@ -56,10 +56,10 @@ local_test(){
 #   server side test   #
 ########################
 server_test(){
-if [ ! -f "/usr/bin/expect" ];then
- echo "hasn't install expect,please install expect mannualy: 'apt-get install expect'"
- exit 1
-fi
+#if [ ! -f "/usr/bin/expect" ];then
+# echo "hasn't install expect,please install expect mannualy: 'apt-get install expect'"
+# exit 1
+#fi
 #SERVER_ADDR=( cn6.hyperchain.cn cn7.hyperchain.cn cn8.hyperchain.cn cn9.hyperchain.cn cn12.hyperchain.cn cn13.hyperchain.cn cn14.hyperchain.cn)
 # get the server list config
 while read line;do
@@ -70,11 +70,7 @@ done < ./serverlist.txt
  for server_address in ${SERVER_ADDR[@]}; do
    i=`expr $ni + 1`
    # gnome-terminal -x bash -c "ssh satoshi@$server_address \"cd /home/satoshi/gopath/src/hyperchain/scripts/ && ./server.sh $i\""
-   if [ $ni -eq 1 ];then
-       gnome-terminal -x bash -c "ssh satoshi@$server_address \"cd /home/satoshi/gopath/src/hyperchain/scripts/ && ./server.sh $ni\""
-   else
-       nohup ssh satoshi@$server_address "source /home/satoshi/.profile && cd /home/satoshi/gopath/src/hyperchain/scripts/ && ./server.sh $ni" &
-   fi
+   ssh satoshi@$server_address "bash /home/satoshi/gopath/src/hyperchain/scripts/server.sh $ni"
  done
 }
 

@@ -13,6 +13,7 @@ sudo mount /dev/vdb /home/satoshi/gopath/
 ls /home/satoshi/gopath/
 cd /home/satoshi/gopath/src/hyperchain
 git checkout develop
+git pull origin develop
 #expect <<EOF
 #        set timeout 60
 #        spawn git pull origin develop
