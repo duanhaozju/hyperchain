@@ -70,7 +70,11 @@ done < ./serverlist.txt
   for server_address in ${SERVER_ADDR[@]}; do
     i=`expr $ni + 1`
     # gnome-terminal -x bash -c "ssh satoshi@$server_address \"cd /home/satoshi/gopath/src/hyperchain/scripts/ && ./server.sh $i\""
-    gnome-terminal -x bash -c "ssh satoshi@$server_address \"source /home/satoshi/.profile && cd /home/satoshi/gopath/src/hyperchain/scripts/ && ./server.sh $ni\""
+    if [ $ni -eq 1 ];then
+        gnome-terminal -x bash -c "ssh satoshi@$server_address \"cd /home/satoshi/gopath/src/hyperchain/scripts/ && ./server.sh $ni\""
+    else
+        ssh satoshi@$server_address "source /home/satoshi/.profile && cd /home/satoshi/gopath/src/hyperchain/scripts/ && ./server.sh $ni" &
+    fi
   done
 }
 

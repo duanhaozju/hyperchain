@@ -37,6 +37,7 @@ done < ../serverlist.txt
         set timeout 60
         spawn ssh-copy-id satoshi@$server_address
         expect {
+          "yes/no" {send "yes\r";exp_continue }
           "s password:" {send "$PASSWD\r";exp_continue }
           eof
         }

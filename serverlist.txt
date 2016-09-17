@@ -1,13 +1,3 @@
-cn6.hyperchain.cn
-cn7.hyperchain.cn
-cn8.hyperchain.cn
-cn9.hyperchain.cn
-cn12.hyperchain.cn
-cn13.hyperchain.cn
-cn14.hyperchain.cn
-cn15.hyperchain.cn
-cn16.hyperchain.cn
-cn17.hyperchain.cn
 114.55.238.65
 114.55.238.67
 114.55.238.101
