@@ -75,10 +75,34 @@ func ExecTransaction(tx types.Transaction)(ret []byte,err error) {
 	log.Notice("the to is ---------",to)
 	log.Notice("the to is ---------",tx.To)
 	if(tx.To == nil){
-		return Exec(&from,nil,data,gas,gasPrice,amount)
+		return ExecSourceCode(&from,nil,data,gas,gasPrice,amount)
 	}
 
-	return Exec(&from,&to,data,gas,gasPrice,amount)
+	return ExecSourceCode(&from,&to,data,gas,gasPrice,amount)
+}
+
+func ExecSourceCode(from, to *common.Address, data []byte, gas,
+gasPrice, value *big.Int)(ret []byte,err error){
+
+	sender := vmenv.Db().GetAccount(*from)
+	contractCreation := (nil == to)
+	//ret,err = env.Call(sender,*to,data,gas,gasPrice,value)
+	// 判断是否能够交易,转移,这一步可以考虑在外部执行
+
+	if contractCreation{
+		//logger.Notice("------create contract")
+		ret,_,err = vmenv.Create(sender,data,gas,gasPrice,value)
+		if err != nil{
+			ret = nil
+			logger.Error("VM create err:",err)
+		}
+	} else {
+		ret,err = vmenv.Call(sender,*to,data,gas,gasPrice,value)
+		if err != nil{
+			logger.Error("VM call err:",err)
+		}
+	}
+	return ret,err
 }
 
 func Exec(from, to *common.Address, data []byte, gas,

@@ -6,7 +6,7 @@ import (
 	"hyperchain/core/vm"
 	"hyperchain/core/crypto"
 	"hyperchain/core/vm/params"
-	"hyperchain/core/vm/compiler"
+	//"hyperchain/core/vm/compiler"
 )
 
 // Call executes within the given contract
@@ -82,20 +82,20 @@ func exec(env vm.Environment, caller vm.ContractRef, toAddress, codeAddr *common
 	// only.
 	contract := vm.NewContract(caller, to, value, gas, gasPrice)
 	if createAccount{
-		abis,bins,err := compiler.CompileSourcefile(string(code))
-		//_,_,err := compiler.CompileSourcefile(sourcecode)
-		if err != nil{
-			return nil,common.Address{},err
-		}
+		//abis,bins,err := compiler.CompileSourcefile(string(code))
+		// TODO this is only for one contract
+		//contract.SetABI(common.FromHex(abis[0]))
+		//contract.SetCallCode(codeAddr,common.FromHex(bins[0]))
+		//if err != nil{
+		//	return nil,common.Address{},err
+		//}
 		//log.Info("abis:",abis)
 		//log.Info("bins:",bins)
 		//log.Info("to:",to.Address())
 		//log.Info("--------------")
-		vmenv.state.SetLeastAccount(&to)
-
-		// TODO this is only for one contract
-		contract.SetABI(common.FromHex(abis[0]))
-		contract.SetCallCode(codeAddr,common.FromHex(bins[0]))
+		// todo finish the method
+		//vmenv.state.SetLeastAccount(&to)
+		contract.SetCallCode(codeAddr,code)
 	}else {
 		contract.SetCallCode(codeAddr, code)
 	}

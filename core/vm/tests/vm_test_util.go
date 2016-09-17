@@ -103,7 +103,7 @@ func runVmTest(test VmTest) error {
 func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.Int, error) {
 	// init the parameters
 	var (
-		//data  = common.HexToAddress(exec["code"])
+		data  = common.FromHex(exec["code"])
 		from  = common.HexToAddress(exec["caller"])
 		gas = common.Big(exec["gasLimit"])
 		price = common.Big(exec["gasPrice"])
@@ -115,14 +115,14 @@ func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.
 
 	// create a new contract
 	now_time := time.Now()
-	for i := 0;i<30;i++{
-		core.Exec(&from,nil,([]byte)(sourcecode), gas, price, value)
+	ret,err :=core.Exec(&from,nil,([]byte)(data), gas, price, value)
+	for i := 0;i<30000;i++{
+		//core.ExecSourceCode(&from,nil,([]byte)(sourcecode), gas, price, value)
+		core.Exec(&from,nil,([]byte)(data), gas, price, value)
 	}
 	log.Notice("the create contract time we used is ",time.Now().Sub(now_time))
-
-
-	ret,err := core.Exec(&from,nil,([]byte)(sourcecode), gas, price, value)
-	ret,err = core.Exec(&from,nil,([]byte)(sourcecode), gas, price, value)
+	//ret,err := core.ExecSourceCode(&from,nil,([]byte)(sourcecode), gas, price, value)
+	//ret,err = core.ExecSourceCode(&from,nil,([]byte)(sourcecode), gas, price, value)
 	addr := state.GetLeastAccount().Address()
 	//state.ForEachAccounts()
 
@@ -130,7 +130,7 @@ func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.
 	log.Notice("the time now is",time.Now())
 	now_time = time.Now()
 	for i := 0;i<3000;i++{
-		ret,err = core.Exec(&from, &addr, data2, gas, price, value)
+		ret,err = core.ExecSourceCode(&from, &addr, data2, gas, price, value)
 	}
 	//state.GetAccount(addr).PrintStorages()
 	log.Notice("the call contract time we used is ",time.Now().Sub(now_time))
