@@ -48,7 +48,7 @@ EOF
 #########################
 
 echo "┌────────────────────────┐"
-echo "│    auto deploy         │"
+echo "│      auto deploy       │"
 echo "└────────────────────────┘"
 for server_address in ${SERVER_ADDR[@]}; do
     scp ./goenv_setup.sh satoshi@$server_address:/home/satoshi/
