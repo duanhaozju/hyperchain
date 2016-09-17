@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Author: ChenQuan
 # Description: this script is used for deploy code env in the server side.
 # Date: 2016-09-15
@@ -42,15 +42,18 @@ done < ../serverlist.txt
         }
 EOF
     done
-
+    
 #########################
 # deploy                #
 #########################
 
 echo "┌────────────────────────┐"
-echo "│    auto deploy         │"
+echo "│      auto deploy       │"
 echo "└────────────────────────┘"
 for server_address in ${SERVER_ADDR[@]}; do
-    scp ./goenv_install.sh satoshi@server_address:/home/satoshi/
-    nome-terminal -x bash -c "ssh satoshi@server_address \"chmod a+x /home/satoshi/goenv_install.sh;/home/satoshi/goenv_install.sh\""
+    scp ./goenv_setup.sh satoshi@$server_address:/home/satoshi/
+#    ssh -t satoshi@$server_address "mv /home/satoshi/.ssh /home/satoshi/.ssh_bak && mkdir -p /home/satoshi/.ssh"
+#    scp ./sshkeys/* satoshi@$server_address:/home/satoshi/.ssh
+#    gnome-terminal -x bash -c "ssh satoshi@$server_address \"chmod a+x /home/satoshi/goenv_setup.sh;/home/satoshi/goenv_setup.sh\""
+    ssh -t satoshi@$server_address "chmod a+x /home/satoshi/goenv_setup.sh;sudo bash /home/satoshi/goenv_setup.sh"
 done

@@ -27,18 +27,18 @@ func TestDes3(t *testing.T) {
 	fmt.Println(string(origData))*/
 
 
-	var hSM0, hSM1 handShakeManager
+	//var hSM0, hSM1 HandShakeManager
 
 	//双方建立新的握手
-	hSM0.newHandShakeManger()
-	hSM1.newHandShakeManger()
+	hSM0 := NewHandShakeManger()
+	hSM1 := NewHandShakeManger()
 
 	//双方根据对方的公钥生成共享密钥
-	hSM0.generateSecret(hSM1.getLocalPublicKey())
-	hSM1.generateSecret(hSM0.getLocalPublicKey())
+	hSM0.GenerateSecret(hSM1.GetLocalPublicKey())
+	hSM1.GenerateSecret(hSM0.GetLocalPublicKey())
 
 	//双方利用共享密钥加密和解密消息
-	println(string(hSM1.decWithSecret(hSM0.encWithSecret([]byte("hello, message length is not limited")))))
-	println(string(hSM0.decWithSecret(hSM1.encWithSecret([]byte("ok, I got it")))))
+	println(string(hSM1.DecWithSecret(hSM0.EncWithSecret([]byte("hello, message length is not limited")))))
+	println(string(hSM0.DecWithSecret(hSM1.EncWithSecret([]byte("ok, I got it")))))
 
 }

@@ -22,7 +22,7 @@ func init() {
 }
 
 
-type handShakeManager struct {
+type HandShakeManager struct {
 	e            ecdh.ECDH
 	privateKey   crypto.PrivateKey
 	publicKey    crypto.PublicKey
@@ -73,19 +73,21 @@ func PKCS5UnPadding(origData []byte) []byte {
 
 
 //---------------------------------ECDH-------------------------------------------
-func (hSM *handShakeManager) newHandShakeManger() {
+func NewHandShakeManger() *HandShakeManager{
+	var hSM HandShakeManager
 	hSM.e = ecdh.NewEllipticECDH(elliptic.P384())
 	hSM.privateKey, hSM.publicKey, _ = hSM.e.GenerateKey(rand.Reader)
+	return &hSM
 }
-func (hSM *handShakeManager) getLocalPublicKey() []byte {
+func (hSM *HandShakeManager) GetLocalPublicKey() []byte {
 	return hSM.e.Marshal(hSM.publicKey)
 }
-func (hSM *handShakeManager) generateSecret(remotePublicKey []byte) {
+func (hSM *HandShakeManager) GenerateSecret(remotePublicKey []byte) {
 	remotePubKey, _ := hSM.e.Unmarshal(remotePublicKey)
 	hSM.secret, _ = hSM.e.GenerateSharedSecret(hSM.privateKey, remotePubKey)
 }
 
-func (hSM *handShakeManager) encWithSecret(message []byte) []byte {
+func (hSM *HandShakeManager) EncWithSecret(message []byte) []byte {
 	key := hSM.secret[:16]
 	var iv = []byte(key)[:aes.BlockSize]
 	encrypted := make([]byte, len(message))
@@ -95,7 +97,7 @@ func (hSM *handShakeManager) encWithSecret(message []byte) []byte {
 	return encrypted
 }
 
-func (hSM *handShakeManager) decWithSecret(message []byte) []byte {
+func (hSM *HandShakeManager) DecWithSecret(message []byte) []byte {
 	key := hSM.secret[:16]
 	var iv = []byte(key)[:aes.BlockSize]
 	decrypted := make([]byte, len(message))

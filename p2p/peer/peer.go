@@ -34,6 +34,7 @@ type Peer struct {
 	Client pb.ChatClient
 	Idetity string
 	CName string
+	HSM transport.HandShakeManager
 }
 
 // NewPeerByString to create a Peer which with a connection,
