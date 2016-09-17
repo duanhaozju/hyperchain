@@ -15,7 +15,7 @@ echo "--------------"
 set -e
 
 # max test node number
-MAXNODE=7
+MAXNODE=100
 PASSWD="blockchain"
 
 #kill the progress
