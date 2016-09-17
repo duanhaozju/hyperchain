@@ -103,5 +103,6 @@ type Account interface {
 	ReturnGas(*big.Int, *big.Int)
 	SetCode([]byte)
 	ForEachStorage(cb func(key, value common.Hash) bool)
+	PrintStorages()
 	Value() *big.Int
 }

@@ -83,9 +83,25 @@ func (self *StateDB) GetLeastAccount() vm.Account {
 	return self.leastStateObject
 }
 
+// todo
+func (self *StateDB) SetLeastAccount(account *vm.Account) {
+	//self.leastStateObject.abi = account.Address()
+}
 func (self *StateDB) GetAccounts() map[string]*StateObject {
 	return self.stateObjects
 }
+
+func (self *StateDB) ForEachAccounts(){
+	var n = 0
+	for _,v := range self.GetAccounts(){
+		log.Info("+++++++++++++++++++++the ",n," account+++++++++++++++++++++++")
+		log.Info("Account key:",common.ToHex(v.address.Bytes()),"----------value:",v)
+		n = n+1
+	}
+
+
+}
+
 // Retrieve the balance from the given address or 0 if object not found
 func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 	stateObject := self.GetStateObject(addr)
@@ -151,6 +167,7 @@ func (self *StateDB) SetCode(addr common.Address, code []byte) {
 	if stateObject != nil {
 		stateObject.SetCode(code)
 	}
+	self.leastStateObject = stateObject
 }
 
 func (self *StateDB) SetState(addr common.Address, key common.Hash, value common.Hash) {
@@ -226,7 +243,6 @@ func (self *StateDB) CreateStateObject(addr common.Address) *StateObject {
 	if so != nil {
 		newSo.balance = so.balance
 	}
-	self.leastStateObject = newSo
 	return newSo
 }
 

@@ -35,11 +35,28 @@ func ExecBlock(block *types.Block)(err error){
 	if(err != nil || env == nil){
 		return err
 	}
-	for _,tx := range block.Transactions{
-		_,err = ExecTransaction(*tx)
-	}
-	log.Error("the sum of transactions is ",len(block.Transactions))
 	ExecTransaction(*types.NewTestCreateTransaction())
+
+	//for _,tx := range block.Transactions{
+	for _,_ = range block.Transactions{
+		_,err = ExecTransaction(*types.NewTestCallTransaction())
+		//_,err = ExecTransaction(*tx)
+	}
+	log.Notice("the sum of transactions is ",len(block.Transactions))
+	log.Notice("the sum of accounts is :",len(vmenv.State().GetAccounts()))
+	log.Notice("---------------------------------------------------------")
+	for _,v := range vmenv.State().GetAccounts(){
+		log.Notice("##################################################")
+		v.ForEachStorage(func(key, value common.Hash) (bool) {
+			log.Notice("the key is ",key,"       the value is ",value)
+			return true
+		})
+		log.Notice("##################################################")
+	}
+	log.Notice("---------------------------------------------------------")
+
+	//start := time.Now()
+	//log.Error("we cost ")
 	return
 }
 
@@ -55,13 +72,37 @@ func ExecTransaction(tx types.Transaction)(ret []byte,err error) {
 		gasPrice = tx.GasPrice()
 		amount = tx.Amount()
 	)
-	log.Error("the to is ---------",to)
-	log.Error("the to is ---------",tx.To)
+	log.Notice("the to is ---------",to)
+	log.Notice("the to is ---------",tx.To)
 	if(tx.To == nil){
-		return Exec(&from,nil,data,gas,gasPrice,amount)
+		return ExecSourceCode(&from,nil,data,gas,gasPrice,amount)
 	}
 
-	return Exec(&from,&to,data,gas,gasPrice,amount)
+	return ExecSourceCode(&from,&to,data,gas,gasPrice,amount)
+}
+
+func ExecSourceCode(from, to *common.Address, data []byte, gas,
+gasPrice, value *big.Int)(ret []byte,err error){
+
+	sender := vmenv.Db().GetAccount(*from)
+	contractCreation := (nil == to)
+	//ret,err = env.Call(sender,*to,data,gas,gasPrice,value)
+	// 判断是否能够交易,转移,这一步可以考虑在外部执行
+
+	if contractCreation{
+		//logger.Notice("------create contract")
+		ret,_,err = vmenv.Create(sender,data,gas,gasPrice,value)
+		if err != nil{
+			ret = nil
+			logger.Error("VM create err:",err)
+		}
+	} else {
+		ret,err = vmenv.Call(sender,*to,data,gas,gasPrice,value)
+		if err != nil{
+			logger.Error("VM call err:",err)
+		}
+	}
+	return ret,err
 }
 
 func Exec(from, to *common.Address, data []byte, gas,
@@ -73,7 +114,7 @@ gasPrice, value *big.Int)(ret []byte,err error){
 	// 判断是否能够交易,转移,这一步可以考虑在外部执行
 
 	if contractCreation{
-		logger.Notice("------create contract")
+		//logger.Notice("------create contract")
 		ret,_,err = vmenv.Create(sender,data,gas,gasPrice,value)
 		if err != nil{
 			ret = nil
