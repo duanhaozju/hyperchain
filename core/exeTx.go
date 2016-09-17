@@ -129,8 +129,9 @@ gasPrice, value *big.Int)(ret []byte,err error){
 	return ret,err
 }
 
+
 func CommitStatedbToBlockchain(){
-	vmenv.State().Commit()
+	GetVMEnv().State().Commit()
 }
 
 func SetVMEnv(new_env *Env)  {
