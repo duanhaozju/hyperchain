@@ -56,5 +56,5 @@ for server_address in ${SERVER_ADDR[@]}; do
 #    ssh -t satoshi@$server_address "mv /home/satoshi/.ssh /home/satoshi/.ssh_bak && mkdir -p /home/satoshi/.ssh"
 #    scp ./sshkeys/* satoshi@$server_address:/home/satoshi/.ssh
 #    gnome-terminal -x bash -c "ssh satoshi@$server_address \"chmod a+x /home/satoshi/goenv_setup.sh;/home/satoshi/goenv_setup.sh\""
-   ssh -t satoshi@$server_address "chmod a+x /home/satoshi/goenv_setup.sh;sudo bash /home/satoshi/goenv_setup.sh"
+   ssh -t satoshi@$server_address "sudo chmod a+x /home/satoshi/goenv_setup.sh;sudo bash /home/satoshi/goenv_setup.sh"
 done
