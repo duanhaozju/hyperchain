@@ -93,7 +93,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//end:=start+500
 
 		for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 100; i++ {
+			for i := 0; i < 500; i++ {
 				tx.TimeStamp=time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
@@ -104,8 +104,10 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				}else{
 					log.Warning("manager is Nil")
 				}
+
 			}
-			time.Sleep(60 * time.Millisecond)
+			time.Sleep(50 * time.Millisecond)
+
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())

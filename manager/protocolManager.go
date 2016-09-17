@@ -262,7 +262,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 			//accept msg from consensus module
 			//commit block into block pool
 
-			log.Debug("write block success")
+			log.Info("write block success")
 			self.commitNewBlock(ev.Payload, ev.CommitTime)
 		//self.fetcher.Enqueue(ev.Payload)
 

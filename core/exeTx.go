@@ -78,7 +78,7 @@ func ExecTransaction(tx types.Transaction)(ret []byte,err error) {
 		return ExecSourceCode(&from,nil,data,gas,gasPrice,amount)
 	}
 
-	return ExecSourceCode(&from,&to,data,gas,gasPrice,amount)
+	return Exec(&from,&to,data,gas,gasPrice,amount)
 }
 
 func ExecSourceCode(from, to *common.Address, data []byte, gas,
