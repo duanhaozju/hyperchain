@@ -5,7 +5,10 @@
 # usage: bash server.sh 1
 
 set -e
-cd ../
+pwd
+cd /home/satoshi/gopath/src/hyperchain/
+go get -u github.com/kardianos/govendor
+govendor sync
 rm -rf /tmp/hyperchain/*
 git pull origin develop
 govendor build
