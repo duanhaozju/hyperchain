@@ -7,14 +7,14 @@ import (
 	"time"
 	"github.com/op/go-logging"
 	"encoding/json"
-	//"fmt"
-	//"hyperchain/core/vm/compiler"
+	"hyperchain/core/vm/compiler"
 	"strconv"
 	"hyperchain/core/types"
 	"errors"
 	"hyperchain/manager"
 	"hyperchain/event"
 	"github.com/golang/protobuf/proto"
+	"fmt"
 )
 
 const (
@@ -89,10 +89,11 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
-		end:=start+300
+		end:=start+6
+		//end:=start+500
 
 		for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 500; i++ {
+			for i := 0; i < 100; i++ {
 				tx.TimeStamp=time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
@@ -104,7 +105,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					log.Warning("manager is Nil")
 				}
 			}
-			time.Sleep(90 * time.Millisecond)
+			time.Sleep(60 * time.Millisecond)
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
@@ -152,19 +153,19 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 	return tx.BuildHash(),nil
 }
 
-//// ComplieContract complies contract to ABI
-//func (tran *PublicTransactionAPI) ComplieContract(ct string) ([]string, error){
-//
-//	fmt.Println(ct)
-//	abi, _, err := compiler.CompileSourcefile(ct)
-//	fmt.Println(abi)
-//
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	return abi,nil
-//}
+// ComplieContract complies contract to ABI
+func (tran *PublicTransactionAPI) ComplieContract(ct string) ([]string, error){
+
+	fmt.Println(ct)
+	abi, _, err := compiler.CompileSourcefile(ct)
+	fmt.Println(abi)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return abi,nil
+}
 
 
 

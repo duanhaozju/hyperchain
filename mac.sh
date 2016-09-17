@@ -40,9 +40,9 @@ echo "run the application"
 #gnome-terminal -x bash -c "(./hyperchain -o 4 -l 8084)"
 
 # This is for mac. Uncomment to use :)
-#osascript -e 'tell app "Terminal" to do script "./hyperchain -o 1 -l 8081"'
-#osascript -e 'tell app "Terminal" to do script "./hyperchain -o 1 -l 8082"'
-#osascript -e 'tell app "Terminal" to do script "./hyperchain -o 1 -l 8083"'
-#osascript -e 'tell app "Terminal" to do script "./hyperchain -o 1 -l 8084"'
+osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain && ./hyperchain -o 1 -l 8081"'
+osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain && ./hyperchain -o 2 -l 8082"'
+osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain && ./hyperchain -o 3 -l 8083"'
+osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain && ./hyperchain -o 4 -l 8084"'
 
 echo "All process are running background"

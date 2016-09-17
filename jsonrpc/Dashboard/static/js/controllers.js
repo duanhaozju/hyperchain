@@ -313,86 +313,6 @@ function MainCtrl() {
     };
 };
 
-/**
- * modalDemoCtrl - Controller used to run modal view
- * used in Basic form view
- */
-function modalDemoCtrl($scope, $uibModal) {
-
-
-    $scope.open1 = function () {
-        var modalInstance = $uibModal.open({
-            templateUrl: 'static/views/modal_deploy.html',
-            controller: ModalInstanceCtrl
-        });
-    };
-};
-
-function ModalInstanceCtrl ($scope, $uibModalInstance) {
-
-    $scope.ok = function () {
-        $uibModalInstance.close();
-    };
-
-    $scope.cancel = function () {
-        $uibModalInstance.dismiss('cancel');
-    };
-
-
-    $scope.states = [
-        'Alabama',
-        'Alaska',
-        'Arizona',
-        'Arkansas',
-        'California',
-        'Colorado',
-        'Connecticut',
-        'Delaware',
-        'Florida',
-        'Georgia',
-        'Hawaii',
-        'Idaho',
-        'Illinois',
-        'Indiana',
-        'Iowa',
-        'Kansas',
-        'Kentucky',
-        'Louisiana',
-        'Maine',
-        'Maryland',
-        'Massachusetts',
-        'Michigan',
-        'Minnesota',
-        'Mississippi',
-        'Missouri',
-        'Montana',
-        'Nebraska',
-        'Nevada',
-        'New Hampshire',
-        'New Jersey',
-        'New Mexico',
-        'New York',
-        'North Carolina',
-        'North Dakota',
-        'Ohio',
-        'Oklahoma',
-        'Oregon',
-        'Pennsylvania',
-        'Rhode Island',
-        'South Carolina',
-        'South Dakota',
-        'Tennessee',
-        'Texas',
-        'Utah',
-        'Vermont',
-        'Virginia',
-        'Washington',
-        'West Virginia',
-        'Wisconsin',
-        'Wyoming'
-    ];
-
-};
 
 /**
  * translateCtrl - Controller for translate
@@ -416,56 +336,52 @@ function diff($scope) {
     $scope.newText1 = 'Ting dummy text of the printing and has been the industry\'s typesetting. Lorem Ipsum has been the industry\'s';
 }
 
+function datatables($scope,DTOptionsBuilder){
 
-function selectCtrl($scope) {
-
-    // $scope.person = {};
-    // $scope.people = [
-    //     { name: 'Adam',      email: 'adam@email.com',      age: 12, country: 'United States' },
-    //     { name: 'Amalie',    email: 'amalie@email.com',    age: 12, country: 'Argentina' },
-    //     { name: 'Estefanía', email: 'estefania@email.com', age: 21, country: 'Argentina' },
-    //     { name: 'Adrian',    email: 'adrian@email.com',    age: 21, country: 'Ecuador' },
-    //     { name: 'Wladimir',  email: 'wladimir@email.com',  age: 30, country: 'Ecuador' },
-    //     { name: 'Samantha',  email: 'samantha@email.com',  age: 30, country: 'United States' },
-    //     { name: 'Nicole',    email: 'nicole@email.com',    age: 43, country: 'Colombia' },
-    //     { name: 'Natasha',   email: 'natasha@email.com',   age: 54, country: 'Ecuador' },
-    //     { name: 'Michael',   email: 'michael@email.com',   age: 15, country: 'Colombia' },
-    //     { name: 'Nicolás',   email: 'nicolas@email.com',    age: 43, country: 'Colombia' }
-    // ];
-
-    $scope.option = {};
-    $scope.options = [
-        { number: '1',      text: 'pattern1' },
-        { number: '2',      text: 'pattern2' },
-        { number: '3',      text: 'pattern3' }
-    ];
-
-    // $scope.availableColors = ['Red','Green','Blue','Yellow','Magenta','Maroon','Umbra','Turquoise'];
-    //
-    // $scope.multipleDemo = {};
-    // $scope.multipleDemo.colors = ['Blue','Red'];
-
+    $scope.dtOptions = DTOptionsBuilder.newOptions()
+        .withOption('order', [0, 'desc'])
+        .withDOM('<"html5buttons"B>lTfgitp')
+        .withButtons([
+            // {extend: 'copy'},
+            // {extend: 'csv'},
+            // {extend: 'excel', title: 'ExampleFile'},
+            // {extend: 'pdf', title: 'ExampleFile'},
+            //
+            // {extend: 'print',
+            //     customize: function (win){
+            //         $(win.document.body).addClass('white-bg');
+            //         $(win.document.body).css('font-size', '10px');
+            //
+            //         $(win.document.body).find('table')
+            //             .addClass('compact')
+            //             .css('font-size', 'inherit');
+            //     }
+            // }
+        ]);
 }
 
-function SummaryCtrl($scope, SummaryService) {
+function SummaryCtrl($scope, $rootScope, SummaryService) {
+
     SummaryService.getLastestBlock()
         .then(function(res){
             $scope.number = res.number;
+            $rootScope.height = res.number;
+
+            SummaryService.getAvgTimeAndCount("1",res.number+"")
+                .then(function(res){
+                    $scope.avgTime = res.time;
+                    // $scope.txCount = res.count; // 后端没有存到数据库里
+                    $scope.txCount = $scope.number * 500;
+                }, function(error){
+                    console.log(error);
+                })
+
         }, function(error){
             console.log(error)
         })
-    
-    SummaryService.getAvgTimeAndCount()
-        .then(function(res){
-            $scope.avgTime = res.time;
-            // $scope.txCount = res.count;
-            $scope.txCount = $scope.number * 500;
-        }, function(error){
-            console.log(error);
-        })
 }
 
-function BlockCtrl($scope, BlockService, TransactionService) {
+function BlockCtrl($scope, DTOptionsBuilder, SummaryService, BlockService, TransactionService) {
     $scope.status = "";
 
     $scope.tx = {
@@ -474,34 +390,74 @@ function BlockCtrl($scope, BlockService, TransactionService) {
         value: "1"
     };
 
+    $scope.blockAvg = {
+        from: "",
+        to: ""
+    };
+
     $scope.block = {
         from:"",
         to:""
     };
-    $scope.CommitTime = "0";
-    $scope.BatchTime = "0";
 
-    BlockService.getAllBlocks()
-        .then(function(res){
-            $scope.blocks = res;
-        }, function(error){
-            console.log(error);
-        })
+    $scope.commitTime = "0";
+    $scope.batchTime = "0";
+    $scope.avgTime = "0";
 
-    $scope.submit = function(){
-        $scope.status = "please waitting.....";
-        TransactionService.SendTransaction($scope.tx.from, $scope.tx.to, $scope.tx.value)
+    var getBlocks = function() {
+        BlockService.getAllBlocks()
             .then(function(res){
-                $scope.status = "success"
+                $scope.blocks = res;
             }, function(error){
-                $scope.status = "error";
                 console.log(error);
             })
     };
 
+    datatables($scope, DTOptionsBuilder);
+    getBlocks();
+
+
+    $scope.submit = function(){
+
+        if (!$scope.tx.from || !$scope.tx.to || !$scope.tx.value) {
+            alert("不能为空");
+            return false;
+        }
+
+        $scope.status = "please waitting.....";
+        TransactionService.SendTransaction($scope.tx.from, $scope.tx.to, $scope.tx.value)
+            .then(function(res){
+                $scope.status = res;
+                getBlocks();
+            }, function(error){
+                $scope.status = error.message;
+                console.log(error);
+            })
+    };
+
+    $scope.queryAvg = function(){
+
+        if (!$scope.blockAvg.from || !$scope.blockAvg.to) {
+            alert("不能为空");
+            return false;
+        }
+
+        SummaryService.getAvgTimeAndCount($scope.blockAvg.from, $scope.blockAvg.to)
+            .then(function(res){
+                $scope.avgTime = res.time
+            }, function(error){
+                console.log(error);
+            })
+    }
+
     $scope.query = function(){
-        console.log($scope.block);
-        TransactionService.QueryCommitAndBatchTime($scope.block.from, $scope.block.to)
+
+        if (!$scope.block.from || !$scope.block.to) {
+            alert("不能为空");
+            return false;
+        }
+
+        BlockService.queryCommitAndBatchTime($scope.block.from, $scope.block.to)
             .then(function(res){
                 $scope.commitTime = res.CommitTime;
                 $scope.batchTime = res.BatchTime
@@ -512,87 +468,81 @@ function BlockCtrl($scope, BlockService, TransactionService) {
     }
 }
 
-function TransactionCtrl($scope, TransactionService) {
+function TransactionCtrl($scope, DTOptionsBuilder, TransactionService) {
     $scope.status = "";
-    
+
+    datatables($scope, DTOptionsBuilder);
+
     TransactionService.getAllTxs()
         .then(function(res){
             $scope.txs = res;
         }, function(error){
             console.log(error);
         })
-    
-    // $scope.submit = function(){
-    //     $scope.status = "please waitting.....";
-    //     TransactionService.SendTransaction()
-    //         .then(function(res){
-    //             $scope.status = "success"
-    //         }, function(error){
-    //             $scope.status = "error";
-    //             console.log(error);
-    //         })
-    // }
 }
 
-function AccountCtrl($scope, AccountService) {
+function AccountCtrl($scope, DTOptionsBuilder, AccountService) {
+
+    datatables($scope, DTOptionsBuilder);
+
     AccountService.getAllAccounts()
         .then(function(res){
-            console.log(res)
             $scope.accounts = res;
         } ,function(error){
             console.log(error);
         })
 }
 
-function AddProjectCtrl($scope, ContractService) {
+function AddProjectCtrl($scope, ENV, ContractService) {
 
     $scope.flag = false;
     $scope.abi = "";
     
-    $scope.PATTERN = [
-        {name: "pattern1", value: "contract Accumulator{ uint sum = 0; function increment(){ sum = sum + 1; } function getSum() returns(uint){ return sum; }}"},
-        {name: "pattern2", value: "contract SimulateBank{" +
-                        "address owner;" +
-                        "mapping(address => uint) public accounts;" +
-                        "function SimulateBank(){" +
-                        "owner = msg.sender;" +
-                        "}" +
-                        "function issue(address addr,uint number) returns (bool){" +
-                        "if(msg.sender==owner){" +
-                        "accounts[addr] = accounts[addr] + number;" +
-                        "return true;" +
-                        "}" +
-                        "return false;" +
-                        "}" +
-                        "function transfer(address addr1,address addr2,uint amount) returns (bool){" +
-                        "if(accounts[addr1] >= amount){" +
-                        "accounts[addr1] = accounts[addr1] - amount;" +
-                        "accounts[addr2] = accounts[addr2] + amount;" +
-                        "return true;" +
-                        "}" +
-                        "return false;" +
-                        "}" +
-                        "function getAccountBalance(address addr) returns(uint){" +
-                        "return accounts[addr];" +
-                        "}}"},
-        {name: "pattern3", value: "contract InfoPlatform{" +
-                        "struct User{" +
-                        "string  name;   // the name of the user" +
-                        "uint    age;    // the age of the user" +
-                        "string  id;     // the id of the user" +
-                        "}" +
-                        "mapping(address => User) public users;" +
-                        "function setInformation(address addr,string name,uint age,string id){" +
-                        "User u = users[addr];" +
-                        "u.name = name;" +
-                        "u.age = age;" +
-                        "u.id = id;" +
-                        "}" +
-                        "function getInformation(address addr) returns (string,uint,string){" +
-                        "User u = users[addr];" +
-                        "return (u.name,u.age,u.id);" +
-                        "}}"
-    }]
+    // $scope.PATTERN = [
+    //     {name: "pattern1", value: "contract Accumulator{ uint sum = 0; function increment(){ sum = sum + 1; } function getSum() returns(uint){ return sum; }}"},
+    //     {name: "pattern2", value: "contract SimulateBank{" +
+    //                     "address owner;" +
+    //                     "mapping(address => uint) public accounts;" +
+    //                     "function SimulateBank(){" +
+    //                     "owner = msg.sender;" +
+    //                     "}" +
+    //                     "function issue(address addr,uint number) returns (bool){" +
+    //                     "if(msg.sender==owner){" +
+    //                     "accounts[addr] = accounts[addr] + number;" +
+    //                     "return true;" +
+    //                     "}" +
+    //                     "return false;" +
+    //                     "}" +
+    //                     "function transfer(address addr1,address addr2,uint amount) returns (bool){" +
+    //                     "if(accounts[addr1] >= amount){" +
+    //                     "accounts[addr1] = accounts[addr1] - amount;" +
+    //                     "accounts[addr2] = accounts[addr2] + amount;" +
+    //                     "return true;" +
+    //                     "}" +
+    //                     "return false;" +
+    //                     "}" +
+    //                     "function getAccountBalance(address addr) returns(uint){" +
+    //                     "return accounts[addr];" +
+    //                     "}}"},
+    //     {name: "pattern3", value: "contract InfoPlatform{" +
+    //                     "struct User{" +
+    //                     "string  name;   // the name of the user" +
+    //                     "uint    age;    // the age of the user" +
+    //                     "string  id;     // the id of the user" +
+    //                     "}" +
+    //                     "mapping(address => User) public users;" +
+    //                     "function setInformation(address addr,string name,uint age,string id){" +
+    //                     "User u = users[addr];" +
+    //                     "u.name = name;" +
+    //                     "u.age = age;" +
+    //                     "u.id = id;" +
+    //                     "}" +
+    //                     "function getInformation(address addr) returns (string,uint,string){" +
+    //                     "User u = users[addr];" +
+    //                     "return (u.name,u.age,u.id);" +
+    //                     "}}"
+    // }]
+    $scope.PATTERN = ENV.PATTERN;
     
     $scope.project = {
         name: "",
@@ -612,6 +562,32 @@ function AddProjectCtrl($scope, ContractService) {
     }
 }
 
+
+function ContractCtrl($scope, DTOptionsBuilder, $uibModal) {
+
+    datatables($scope, DTOptionsBuilder);
+
+
+    $scope.open1 = function () {
+        var modalInstance = $uibModal.open({
+            templateUrl: 'static/views/modal_deploy.html',
+            controller: modalInstanceCtrl
+        });
+    };
+}
+
+function modalInstanceCtrl ($scope, $uibModalInstance) {
+
+    $scope.ok = function () {
+        $uibModalInstance.close();
+    };
+
+    $scope.cancel = function () {
+        $uibModalInstance.dismiss('cancel');
+    };
+
+};
+
 /**
  *
  * Pass all functions into module
@@ -619,12 +595,11 @@ function AddProjectCtrl($scope, ContractService) {
 angular
     .module('starter')
     .controller('MainCtrl', MainCtrl)
-    .controller('modalDemoCtrl', modalDemoCtrl)
     .controller('translateCtrl', translateCtrl)
-    .controller('selectCtrl', selectCtrl)
     .controller('SummaryCtrl', SummaryCtrl)
     .controller('BlockCtrl', BlockCtrl)
     .controller('TransactionCtrl',TransactionCtrl)
     .controller('AccountCtrl', AccountCtrl)
+    .controller('ContractCtrl', ContractCtrl)
     .controller('AddProjectCtrl', AddProjectCtrl)
 

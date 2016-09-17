@@ -1,0 +1,12 @@
+// it is a accumulator
+contract Accumulator{
+    uint sum = 0;
+
+    function increment(){
+        sum = sum + 1;
+    }
+
+    function getSum() returns(uint){
+        return sum;
+    }
+}
