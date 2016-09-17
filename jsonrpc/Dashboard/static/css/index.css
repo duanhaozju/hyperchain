@@ -26,3 +26,7 @@ table.dataTable thead .sorting, table.dataTable thead .sorting_asc:after, table.
     background-color: #efeeee;
     padding: 10px;
 }
+
+.swal-wide{
+    width:800px !important;
+}

@@ -419,8 +419,8 @@ function BlockCtrl($scope, DTOptionsBuilder, SummaryService, BlockService, Trans
 
     $scope.submit = function(){
 
-        if (!$scope.tx.from || !$scope.tx.to || !$scope.tx.value) {
-            alert("不能为空");
+        if (isEmpty($scope.tx)) {
+            alert("字段不能为空");
             return false;
         }
 
@@ -437,8 +437,8 @@ function BlockCtrl($scope, DTOptionsBuilder, SummaryService, BlockService, Trans
 
     $scope.queryAvg = function(){
 
-        if (!$scope.blockAvg.from || !$scope.blockAvg.to) {
-            alert("不能为空");
+        if (isEmpty($scope.blockAvg)) {
+            alert("字段不能为空");
             return false;
         }
 
@@ -452,8 +452,8 @@ function BlockCtrl($scope, DTOptionsBuilder, SummaryService, BlockService, Trans
 
     $scope.query = function(){
 
-        if (!$scope.block.from || !$scope.block.to) {
-            alert("不能为空");
+        if (isEmpty($scope.block)) {
+            alert("字段不能为空");
             return false;
         }
 
@@ -493,100 +493,202 @@ function AccountCtrl($scope, DTOptionsBuilder, AccountService) {
         })
 }
 
-function AddProjectCtrl($scope, ENV, ContractService) {
+function AddProjectCtrl($scope, $state, ENV, ContractService) {
 
     $scope.flag = false;
-    $scope.abi = "";
-    
-    // $scope.PATTERN = [
-    //     {name: "pattern1", value: "contract Accumulator{ uint sum = 0; function increment(){ sum = sum + 1; } function getSum() returns(uint){ return sum; }}"},
-    //     {name: "pattern2", value: "contract SimulateBank{" +
-    //                     "address owner;" +
-    //                     "mapping(address => uint) public accounts;" +
-    //                     "function SimulateBank(){" +
-    //                     "owner = msg.sender;" +
-    //                     "}" +
-    //                     "function issue(address addr,uint number) returns (bool){" +
-    //                     "if(msg.sender==owner){" +
-    //                     "accounts[addr] = accounts[addr] + number;" +
-    //                     "return true;" +
-    //                     "}" +
-    //                     "return false;" +
-    //                     "}" +
-    //                     "function transfer(address addr1,address addr2,uint amount) returns (bool){" +
-    //                     "if(accounts[addr1] >= amount){" +
-    //                     "accounts[addr1] = accounts[addr1] - amount;" +
-    //                     "accounts[addr2] = accounts[addr2] + amount;" +
-    //                     "return true;" +
-    //                     "}" +
-    //                     "return false;" +
-    //                     "}" +
-    //                     "function getAccountBalance(address addr) returns(uint){" +
-    //                     "return accounts[addr];" +
-    //                     "}}"},
-    //     {name: "pattern3", value: "contract InfoPlatform{" +
-    //                     "struct User{" +
-    //                     "string  name;   // the name of the user" +
-    //                     "uint    age;    // the age of the user" +
-    //                     "string  id;     // the id of the user" +
-    //                     "}" +
-    //                     "mapping(address => User) public users;" +
-    //                     "function setInformation(address addr,string name,uint age,string id){" +
-    //                     "User u = users[addr];" +
-    //                     "u.name = name;" +
-    //                     "u.age = age;" +
-    //                     "u.id = id;" +
-    //                     "}" +
-    //                     "function getInformation(address addr) returns (string,uint,string){" +
-    //                     "User u = users[addr];" +
-    //                     "return (u.name,u.age,u.id);" +
-    //                     "}}"
-    // }]
+
     $scope.PATTERN = ENV.PATTERN;
     
     $scope.project = {
         name: "",
-        type: "",
-        pattern: ""
+        type: "1",
+        pattern: "",
+        abi: []
+    };
+
+    $scope.disable = false;
+
+    $scope.select = function(){
+        $scope.disable = false;
+        $scope.flag = false;
+        $scope.project.abi = [];
     }
 
     $scope.compile = function(){
-        console.log($scope.project);
+        console.log($scope.project)
+        if (isEmpty($scope.project)) {
+            alert("字段不能为空");
+            return false;
+        }
+
+        $scope.disable = true;
         ContractService.compileContract($scope.project.pattern.value)
             .then(function(res){
                 $scope.flag = true;
-                $scope.abi = res;
+                var abis = [];
+
+                for (var i = 0;i < res.length; i++) {
+                    abis.push(JSON.parse(res[i]))
+                }
+
+                // $scope.abi = abis
+                $scope.project.abi = abis
+
             }, function(error){
+                alert(error.message);
                 console.log(error);
             })
+    }
+
+    $scope.saveABI = function() {
+            console.log($scope.project);
+            var len = ENV.CONTRACT.length;
+            // contract
+            for (var i = 0;i < $scope.project.abi.length; i++) {
+                // var contract = {};
+                var _contract = {};
+
+                _contract.projectName = $scope.project.name;
+                _contract.type = $scope.project.type;    // 1: Create 2: Load
+                // _contract.contractName = $scope.project.abi[i].  // 如何得到合约名字？？
+                len++;
+                _contract.contractName = "Contract_"+ len;  // 如何得到合约名字？？正则？
+                _contract.methods = [];
+                _contract.methods = $scope.project.abi[i];
+                _contract.status = 0 // 0: Nondeployed 1: Deployed
+                _contract.sourceCode = $scope.project.pattern.value;
+                _contract.hash = "";
+
+                // contract["Contract_"+ len] = _contract;
+                // console.log(contract);
+                // ENV.CONTRACT.push(contract)
+                ENV.CONTRACT.push(_contract)
+            }
+
+        $state.go("dashboards.contract")
     }
 }
 
 
-function ContractCtrl($scope, DTOptionsBuilder, $uibModal) {
+function ContractCtrl($scope, $uibModal, DTOptionsBuilder, ENV) {
+
+    $scope.contracts = ENV.CONTRACT;
+    $scope.contract = {
+        from: ENV.FROM
+    };
 
     datatables($scope, DTOptionsBuilder);
 
-
-    $scope.open1 = function () {
+    $scope.modal_deploy = function (ctName, sourceCode) {
+        $scope.ctName = ctName;
+        $scope.sourceCode = sourceCode;
         var modalInstance = $uibModal.open({
             templateUrl: 'static/views/modal_deploy.html',
-            controller: modalInstanceCtrl
+            controller: modalInstanceCtrl,
+            scope: $scope
         });
     };
+
+    $scope.modal_invoke = function(ctHash, methods) {
+        $scope.ctHash = ctHash;
+        $scope.methods = methods;
+        var modalInstance = $uibModal.open({
+            templateUrl: 'static/views/modal_invoke.html',
+            controller: modalInstanceInvodeCtrl,
+            scope: $scope
+        });
+    };
+    // $scope.open1 = function(){
+    //     SweetAlert.swal({
+    //             title: "Are you sure?",
+    //             // text: "",
+    //             type: "warning",
+    //             showCancelButton: true,
+    //             confirmButtonColor: "#DD6B55",
+    //             confirmButtonText: "Yes, deploy it!",
+    //             closeOnConfirm: false,
+    //             closeOnCancel: false
+    //         },
+    //         function (isConfirm) {
+    //             if (isConfirm) {
+    //
+    //                 ContractService.deployContract()
+    //                     .then(function(){
+    //                         SweetAlert.swal("Deployed!", "You have deployed the contract successfully!", "success");
+    //                     }, function(err){
+    //                         console.log(err)
+    //                     })
+    //             } else {
+    //                 SweetAlert.swal("Cancelled", "You don't deploy the contract :)", "error");
+    //             }
+    //         });
+    // };
 }
 
-function modalInstanceCtrl ($scope, $uibModalInstance) {
+function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, ContractService) {
 
     $scope.ok = function () {
+        ContractService.deployContract($scope.from,$scope.sourceCode)
+            .then(function(res){
+                for (var i = 0;i < ENV.CONTRACT.length; i++) {
+                        if ( ENV.CONTRACT[i].contractName == $scope.ctName) {
+                            ENV.CONTRACT[i].status = 1;
+                            ENV.CONTRACT[i].hash = res;
+                            console.log(ENV.CONTRACT[i])
+                            break;
+                        }
+
+                }
+                SweetAlert.swal({
+                    title: "Deployed successfully!",
+                    text: "The contract hash is <span class='text_red'>"+res+"</span>>",
+                    type: "success",
+                    customClass: 'swal-wide',
+                    html: true
+                });
+            }, function(err){
+                console.log(err)
+            })
+
+        SweetAlert.swal("Deployed!", "You have deployed the contract successfully!", "success");
         $uibModalInstance.close();
     };
 
     $scope.cancel = function () {
+        SweetAlert.swal("Cancelled", "You don't deploy the contract :)", "error");
         $uibModalInstance.dismiss('cancel');
     };
 
-};
+}
+
+
+function modalInstanceInvodeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, ContractService) {
+
+    $scope.method = {
+        name: $scope.methods[0].name,
+        params: []
+    }
+
+    $scope.submit = function () {
+        console.log($scope.method.name);
+        SweetAlert.swal("Successfully!", "You have invode the method of contract successfully!", "success");
+        $uibModalInstance.close();
+    };
+
+    $scope.cancel = function () {
+        SweetAlert.swal("Cancelled", "You don't invoke the contract :)", "error");
+        $uibModalInstance.dismiss('cancel');
+    };
+}
+
+function isEmpty(obj) {
+    for (var key in obj) {
+        if (!obj[key]) {
+            return true
+        }
+    }
+    return false
+}
 
 /**
  *

@@ -7,7 +7,7 @@
                 <h3>Lastest Block</h3>
             </div>
             <div class="ibox-content wrap">
-                <h1 class="no-margins">#{{number}}</h1>
+                <h1 class="no-margins">#<span ng-bind="number"></span></h1>
 
                 <!--<div class="stat-percent font-bold text-success">98% <i class="fa fa-bolt"></i></div>-->
                 <!--<small>Total income</small>-->
@@ -35,7 +35,7 @@
                 <h3>AVG Time</h3>
             </div>
             <div class="ibox-content wrap">
-                <h1 class="no-margins">{{avgTime}}ms</h1>
+                <h1 class="no-margins"><span ng-bind="avgTime"></span>ms</h1>
 
                 <!--<div class="stat-percent font-bold text-info">20% <i class="fa fa-level-up"></i></div>-->
                 <!--<small>New orders</small>-->
@@ -49,7 +49,7 @@
                 <h3>Total Transaction</h3>
             </div>
             <div class="ibox-content wrap">
-                <h1 class="no-margins">#{{txCount}}</h1>
+                <h1 class="no-margins">#<span ng-bind="txCount"></span></h1>
 
                 <!--<div class="stat-percent font-bold text-navy">44% <i class="fa fa-level-up"></i></div>-->
                 <!--<small>New visits</small>-->

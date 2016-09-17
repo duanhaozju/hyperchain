@@ -199,6 +199,32 @@ function ContractService($resource,$q,ENV) {
 
                 })
             })
+        },
+        deployContract: function(from, sourceCode){
+            return $q(function(resolve, reject){
+                $resource(ENV.API,{},{
+                    getAcc:{
+                        method:"POST"
+                    }
+                }).getAcc({
+                    method: "tx_sendTransactionOrContract",
+                    params: [
+                        {
+                            "from": from,
+                            "payload": sourceCode
+                        }
+                    ],
+                    id: 1
+                },function(res){
+                    console.log(res)
+                    if (res.error) {
+                        reject(res.error)
+                    } else {
+                        resolve(res.result)
+                    }
+
+                })
+            })
         }
     }
 }

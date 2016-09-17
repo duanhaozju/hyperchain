@@ -52,6 +52,13 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
                             serie: true,
                             name: 'datatables.buttons',
                             files: ['static/js/plugins/dataTables/angular-datatables.buttons.min.js']
+                        },
+                        {
+                            files: ['static/js/plugins/sweetalert/sweetalert.min.js', 'static/css/plugins/sweetalert/sweetalert.css']
+                        },
+                        {
+                            name: 'oitozero.ngSweetAlert',
+                            files: ['static/js/plugins/sweetalert/angular-sweetalert.min.js']
                         }
                     ]);
                 }
