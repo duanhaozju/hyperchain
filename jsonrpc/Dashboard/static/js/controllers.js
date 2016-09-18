@@ -543,6 +543,7 @@ function AddProjectCtrl($scope, $state, ENV, ContractService) {
     $scope.saveABI = function() {
             console.log($scope.project);
             var len = ENV.CONTRACT.length;
+
             // contract
             for (var i = 0;i < $scope.project.abi.length; i++) {
                 // var contract = {};
@@ -598,31 +599,6 @@ function ContractCtrl($scope, $uibModal, DTOptionsBuilder, ENV) {
             scope: $scope
         });
     };
-    // $scope.open1 = function(){
-    //     SweetAlert.swal({
-    //             title: "Are you sure?",
-    //             // text: "",
-    //             type: "warning",
-    //             showCancelButton: true,
-    //             confirmButtonColor: "#DD6B55",
-    //             confirmButtonText: "Yes, deploy it!",
-    //             closeOnConfirm: false,
-    //             closeOnCancel: false
-    //         },
-    //         function (isConfirm) {
-    //             if (isConfirm) {
-    //
-    //                 ContractService.deployContract()
-    //                     .then(function(){
-    //                         SweetAlert.swal("Deployed!", "You have deployed the contract successfully!", "success");
-    //                     }, function(err){
-    //                         console.log(err)
-    //                     })
-    //             } else {
-    //                 SweetAlert.swal("Cancelled", "You don't deploy the contract :)", "error");
-    //             }
-    //         });
-    // };
 }
 
 function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, ContractService) {
@@ -641,7 +617,7 @@ function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Contract
                 }
                 SweetAlert.swal({
                     title: "Deployed successfully!",
-                    text: "The contract hash is <span class='text_red'>"+res+"</span>>",
+                    text: "The contract hash is <span class='text_red'>"+res+"</span>",
                     type: "success",
                     customClass: 'swal-wide',
                     html: true
@@ -662,17 +638,54 @@ function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Contract
 }
 
 
-function modalInstanceInvodeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, ContractService) {
+function modalInstanceInvodeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, ContractService, EncodeService) {
+    console.log($scope.methods);
+    var abimethod = {};
 
     $scope.method = {
         name: $scope.methods[0].name,
-        params: []
-    }
+        params: {}
+    };
 
     $scope.submit = function () {
-        console.log($scope.method.name);
-        SweetAlert.swal("Successfully!", "You have invode the method of contract successfully!", "success");
-        $uibModalInstance.close();
+
+        for (var i = 0;i < $scope.methods.length;i++) {
+            if ($scope.methods[i].name === $scope.method.name) {
+                abimethod = $scope.methods[i];
+                break;
+            }
+        }
+
+        EncodeService.encode(abimethod,$scope.method.params)
+            .then(function(res) {
+                // 调用合约
+                console.log(res);
+
+                // from 调用者地址，to 合约地址，data 为编码
+                ContractService.invokeContract(ENV.FROM,  $scope.ctHash, res)
+                    .then(function(res){
+                        // $scope.status = res;
+                        // getBlocks();
+
+                        SweetAlert.swal({
+                            title: "Invoked successfully!",
+                            text: "You have invode the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The address is <span class='text_red'>"+ res +"</span>",
+                            type: "success",
+                            customClass: 'swal-wide',
+                            html: true
+                        });
+                        $uibModalInstance.close();
+                    }, function(error){
+                        // $scope.status = error.message;
+                        console.log(error);
+                        SweetAlert.swal("Error！", "", "error");
+                        $uibModalInstance.close();
+                    })
+            }, function(err) {
+                console.log(err);
+                SweetAlert.swal("Error！", "", "error");
+                $uibModalInstance.close();
+            });
     };
 
     $scope.cancel = function () {
