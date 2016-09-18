@@ -269,19 +269,29 @@ func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
 	}
 	var perinfos peer.PeerInfos
 	for _,per := range peers{
-		log.Debug("rage the peer")
+		log.Info("rage the peer",)
 		perinfo.IP = per.Addr.Ip
 		perinfo.Port = int(per.Addr.Port)
 		perinfo.CName = per.CName
+		log.Info("rage the peer",perinfo.Port)
 		retMsg, err := per.Client.Chat(context.Background(),&keepAliveMessage)
 		if err != nil{
 			perinfo.Status = peer.STOP
 		}else if retMsg.MessageType == pb.Message_RESPONSE{
-			perinfo.Status = peer.ALIVE
+			perinfo.Status =peer.ALIVE
 		}else if retMsg.MessageType == pb.Message_PENDING{
 			perinfo.Status = peer.PENDING
 		}
 		perinfos = append(perinfos,&perinfo)
 	}
+	selfPeerInfo := peer.PeerInfo{
+		Status:peer.ALIVE,
+		CName:"",
+		IP:localNodeAddr.Ip,
+		Port:int(localNodeAddr.Port),
+
+
+	}
+	perinfos = append(perinfos,&selfPeerInfo)
 	return perinfos
 }
