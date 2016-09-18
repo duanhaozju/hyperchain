@@ -552,7 +552,6 @@ function AddProjectCtrl($scope, $state, ENV, ContractService) {
                     abis.push(JSON.parse(res[i]))
                 }
 
-                // $scope.abi = abis
                 $scope.project.abi = abis
 
             }, function(error){
@@ -645,7 +644,7 @@ function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Contract
                 });
             }, function(err){
                 console.log(err)
-            })
+            });
 
         SweetAlert.swal("Deployed!", "You have deployed the contract successfully!", "success");
         $uibModalInstance.close();
