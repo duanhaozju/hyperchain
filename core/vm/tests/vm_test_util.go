@@ -138,6 +138,7 @@ func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.
 		//core.Exec(&from, &addr, data_add, gas, price, value)
 		core.Exec(&from, &addr, data_inc, gas, price, value)
 		ret,_,_ = core.Exec(&from, &addr, data_get, gas, price, value)
+		log.Info("the ret is ",common.ToHex(ret))
 		log.Info("the ret is ",ret)
 		vmenv.State().GetAccount(addr).PrintStorages()
 		//ret,addr,err = core.Exec(&from, &addr, data_get, gas, price, value)

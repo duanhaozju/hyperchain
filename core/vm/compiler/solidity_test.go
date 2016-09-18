@@ -14,9 +14,10 @@ const solcVersion = "0.1.1"
 
 var (
 	source = `
+// it is a accumulator
 contract Accumulator{
     uint32 sum = 0;
-    string hehe = "hello world";
+    bytes32 hello = "abcdefghijklmnopqrstuvwxyz";
 
     function increment(){
         sum = sum + 1;
@@ -26,7 +27,9 @@ contract Accumulator{
         return sum;
     }
 
-
+    function getHello() constant returns(bytes32){
+        return hello;
+    }
 
     function add(uint32 num1,uint32 num2) {
         sum = sum+num1+num2;
