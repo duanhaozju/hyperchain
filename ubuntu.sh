@@ -15,7 +15,7 @@ echo "--------------"
 set -e
 
 # max test node number
-MAXNODE=100
+MAXNODE=7
 PASSWD="blockchain"
 
 #kill the progress
@@ -34,6 +34,7 @@ kellprogress(){
 local_test(){
    kellprogress
    CONFIG_PATH=$1
+   echo $CONFIG_PATH
    #rebuild the application
    echo "rebuild the application"
    govendor build
