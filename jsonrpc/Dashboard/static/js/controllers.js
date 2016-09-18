@@ -369,7 +369,11 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
 
             SummaryService.getAvgTimeAndCount("1",res.number+"")
                 .then(function(res){
-                    $scope.avgTime = res.time;
+                    if (res.time < 0) {
+                        $scope.avgTime = 0
+                    } else {
+                        $scope.avgTime = res.time;
+                    }
                     // $scope.txCount = res.count; // 后端没有存到数据库里
                     $scope.txCount = $scope.number * 500;
                 }, function(error){
@@ -382,7 +386,7 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
 
     SummaryService.getNodeInfo()
         .then(function(res){
-            console.log(res)
+            $scope.nodes = res;
         }, function(error){
             console.log(error)
         })
