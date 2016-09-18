@@ -83,7 +83,7 @@ func newBatch(id uint64, config *viper.Viper, h helper.Stack) *batch {
 
 // RecvMsg is used by outer to send message to consensus
 func (op *batch) RecvMsg(e []byte) error {
-
+	
 	msg := &pb.Message{}
 	err := proto.Unmarshal(e,msg)
 	if err!=nil {

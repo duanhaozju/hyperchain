@@ -26,7 +26,9 @@ func init() {
 	log = logging.MustGetLogger("jsonrpc/api")
 }
 
-type PublicTransactionAPI struct {}
+type PublicTransactionAPI struct {
+	eventMux *event.TypeMux
+}
 
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
@@ -51,8 +53,10 @@ type TransactionResult struct {
 	Timestamp  string		`json:"timestamp"`
 }
 
-func NewPublicTransactionAPI() *PublicTransactionAPI {
-	return &PublicTransactionAPI{}
+func NewPublicTransactionAPI(eventMux *event.TypeMux) *PublicTransactionAPI {
+	return &PublicTransactionAPI{
+		eventMux :eventMux,
+	}
 }
 
 func prepareExcute(args SendTxArgs) SendTxArgs{
@@ -77,7 +81,8 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
 
 	log.Info(tx.Value)
-	if (core.VerifyBalance(tx)) {
+	if (true) {
+	//if (core.VerifyBalance(tx)) {
 
 		// Balance is enough
 		/*txBytes, err := proto.Marshal(tx)
@@ -99,13 +104,14 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					log.Fatalf("proto.Marshal(tx) error: %v",err)
 				}
 				if manager.GetEventObject() != nil{
-					go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+					//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 				}else{
 					log.Warning("manager is Nil")
 				}
 
 			}
-			time.Sleep(50 * time.Millisecond)
+			time.Sleep(90 * time.Millisecond)
 
 		}
 

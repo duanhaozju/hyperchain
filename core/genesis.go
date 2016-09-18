@@ -132,7 +132,11 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 	log.Notice("Block number",newChain.Height)
 	log.Notice("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
 	balance.UpdateDBBalance(block)
+	if block.Number%10==0 && block.Number!=0{
+		WriteChainChan()
+
+	}
 	// update our stateObject and statedb to blockchain
-	ExecBlock(block)
+	//ExecBlock(block)
 	//CommitStatedbToBlockchain()
 }
