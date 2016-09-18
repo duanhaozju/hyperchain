@@ -268,6 +268,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 			//commit block into block pool
 
 			log.Info("write block success")
+
 			self.commitNewBlock(ev.Payload, ev.CommitTime)
 		//self.fetcher.Enqueue(ev.Payload)
 

@@ -38,7 +38,7 @@ func main() {
 		argv := ctx.Argv().(*argT)
 
 		//init log
-		common.InitLog(logging.DEBUG, "./logs/", argv.LocalPort)
+		common.InitLog(logging.INFO, "./logs/", argv.LocalPort)
 		eventMux := new(event.TypeMux)
 
 		//init peer manager to start grpc server and client
@@ -77,6 +77,7 @@ func main() {
 
 		//start http server
 		//go jsonrpc.StartHttp(argv.LocalPort, eventMux)
+
 		go jsonrpc.Start(argv.LocalPort, eventMux)
 
 

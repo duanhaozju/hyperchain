@@ -52,6 +52,7 @@ func Start(httpPort int,eventMux *event.TypeMux) error{
 	return nil
 }
 
+
 func startHttp(httpPort int, srv *Server) {
 	//log.Info("=============enter startHttp()=================")
 	// TODO AllowedOrigins should be a parameter
