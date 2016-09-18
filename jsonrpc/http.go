@@ -8,6 +8,7 @@ import (
 	"io"
 	"fmt"
 	"hyperchain/hpc"
+	"hyperchain/manager"
 )
 
 const (
@@ -23,7 +24,7 @@ func (hrw *httpReadWrite) Close() error{
 	return nil
 }
 
-func Start(httpPort int,eventMux *event.TypeMux) error{
+func Start(httpPort int,eventMux *event.TypeMux,pm *manager.ProtocolManager) error{
 	//log.Info("=============enter Start()=================")
 	eventMux = eventMux
 

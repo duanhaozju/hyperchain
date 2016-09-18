@@ -32,6 +32,8 @@ type ProtocolManager struct {
 	blockPool         *core.BlockPool
 	fetcher           *core.Fetcher
 	peerManager       p2p.PeerManager
+
+	nodeInfo          map[string]bool // node info ,store node status,ip,port
 	consenter         consensus.Consenter
 	//encryption   crypto.Encryption
 	accountManager    *accounts.AccountManager
@@ -52,16 +54,21 @@ type ProtocolManager struct {
 
 	wg                sync.WaitGroup
 }
+type NodeManager struct {
 
+	peerManager p2p.PeerManager
+
+}
 var eventMuxAll *event.TypeMux
 
 func NewProtocolManager(blockPool *core.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
 //encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 am *accounts.AccountManager, commonHash crypto.CommonHash) (*ProtocolManager) {
 	log.Debug("enter parotocol manager")
+
 	manager := &ProtocolManager{
 
-
+		nodeInfo :make(map[string]bool),
 		blockPool: blockPool,
 		eventMux:    eventMux,
 		quitSync:    make(chan struct{}),
@@ -101,7 +108,7 @@ func (pm *ProtocolManager) Start() {
 
 }
 func (self *ProtocolManager) syncCheckpointLoop() {
-
+	self.wg.Add(-1)
 	for obj := range self.syncCheckpointSub.Chan() {
 
 		switch  ev := obj.Data.(type) {
@@ -389,6 +396,16 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte, commitTime int64) {
 	log.Info("now is ", msgList.No)
 	pm.blockPool.AddBlock(block, pm.commonHash, commitTime)
 	//core.WriteBlock(*block)
+
+}
+
+
+func (pm *ProtocolManager) GetNodeInfo()map[string]bool {
+	pm.nodeInfo["node1"]=true
+	pm.nodeInfo["node2"]=true
+	pm.nodeInfo["node3"]=false
+	pm.nodeInfo["node4"]=true
+	return pm.nodeInfo
 
 }
 

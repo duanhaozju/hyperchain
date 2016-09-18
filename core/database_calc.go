@@ -33,6 +33,7 @@ func CalcResponseCount(blockNumber uint64, millTime int64) (int64,float64){
 	/*fmt.Println("commit time is ",(block.CommitTime-block.Timestamp)/int64(time.Millisecond))
 	fmt.Println("write time is ",(block.WriteTime-block.CommitTime)/ int64(time.Millisecond))
 	fmt.Println("evm time is ",(block.EvmTime-block.WriteTime)/ int64(time.Millisecond))*/
+	//fmt.Println("evm time is ",(block.EvmTime-block.WriteTime)/ int64(time.Millisecond))
 	return count,percent
 }
 //CalcCommitAVGTime calculates block average commit time
