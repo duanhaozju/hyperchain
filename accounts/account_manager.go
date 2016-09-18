@@ -67,7 +67,6 @@ func (am *AccountManager)UnlockAllAccount(keydir string){
 func getAllAccount(keydir string) []Account {
 	var accounts []Account
 	addressdir := keydir+"addresses/address"
-	log.Info(addressdir,"====================")
 	fp, _ := os.Open(addressdir)
 	scanner := bufio.NewScanner(fp)
 	scanner.Split(bufio.ScanLines)
@@ -102,19 +101,21 @@ func (am *AccountManager) SignWithPassphrase(addr common.Address, hash []byte, p
 	defer am.mu.RUnlock()
 	unlockedKey, found := am.unlocked[addr]
 	if !found {
-		key, err := am.GetDecryptedKey(Account{Address: addr}, passphrase)
+		file := am.KeyStore.JoinPath(addr.Hex()[2:])
+		key, err := am.GetDecryptedKey(Account{Address: addr,File:file}, passphrase)
 		if err != nil {
 			return nil, err
 		}
-		switch key.PrivateKey.(type) {
-		case *ecdsa.PrivateKey:
-			actualPriKey := key.PrivateKey.(*ecdsa.PrivateKey)
-			unlockedKey.Key = &Key{
-				Address:    crypto.PubkeyToAddress(actualPriKey.PublicKey),
-				PrivateKey: actualPriKey,
-			}
-			defer zeroKey(actualPriKey)
-		}
+		unlockedKey = &unlocked{Key: key, abort: make(chan struct{})}
+		//switch key.PrivateKey.(type) {
+		//case *ecdsa.PrivateKey:
+		//	actualPriKey := key.PrivateKey.(*ecdsa.PrivateKey)
+		//	unlockedKey.Key = &Key{
+		//		Address:    crypto.PubkeyToAddress(actualPriKey.PublicKey),
+		//		PrivateKey: actualPriKey,
+		//	}
+		//	defer zeroKey(actualPriKey)
+		//}
 	}
 
 	return am.Encryption.Sign(hash, unlockedKey.PrivateKey)
@@ -146,7 +147,6 @@ func (am *AccountManager) Lock(addr common.Address) error {
 // shortens the active unlock timeout. If the address was previously unlocked
 // indefinitely the timeout is not altered.
 func (am *AccountManager) TimedUnlock(a Account, passphrase string, timeout time.Duration) error {
-	log.Info(a.File,"---------------------------------")
 	key, err := am.GetDecryptedKey(a,passphrase)
 	if err != nil {
 		fmt.Println(err)
