@@ -153,8 +153,13 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 	if err != nil {
 		return err
 	}
+
+	//for test evm execute contract
+	ExecTransaction(*types.NewTestCreateTransaction())
 	for _, trans := range block.Transactions {
-		ExecTransaction(*trans)
+		//ExecTransaction(*trans)
+		ExecTransaction(*types.NewTestCallTransaction())
+
 		var transValue big.Int
 		transValue.SetString(string(trans.Value), 10)
 		fromBalance := self.dbBalance[common.HexToAddress(string(trans.From))]
