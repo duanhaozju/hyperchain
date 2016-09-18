@@ -19,6 +19,25 @@
         <div class="col-lg-12">
             <div class="ibox float-e-margins">
                 <div class="ibox-content">
+                    <div class="test_wrap">
+
+                        <form role="form" class="form-inline">
+                            <span style="font-weight: bold">注册账户：</span>
+                            <div class="form-group">
+                                <label for="password" class="sr-only">password</label>
+                                <input type="password" placeholder="password" ng-model="account.password" id="password"
+                                       class="form-control">
+                            </div>&nbsp;&nbsp;
+                            <div class="form-group">
+                                <label for="confirm" class="sr-only">confirm</label>
+                                <input type="password" placeholder="confirm password" ng-model="account.confirm" id="confirm"
+                                       class="form-control">
+                            </div>
+                            <button class="btn btn-primary" type="submit" ng-click="submit()">Submit</button>
+                            <span>账户地址:</span>
+                            <span class="text_red">{{address}}</span>
+                        </form>
+                    </div>
                     <table  datatable="ng" dt-options="dtOptions" class="table table-striped table-hover dataTables-example" data-page-size="10">
                         <thead>
                         <tr>

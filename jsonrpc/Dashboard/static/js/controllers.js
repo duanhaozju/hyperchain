@@ -483,6 +483,10 @@ function TransactionCtrl($scope, DTOptionsBuilder, TransactionService) {
 
 function AccountCtrl($scope, DTOptionsBuilder, AccountService) {
 
+    $scope.account = {
+        password: "",
+        confirm:""
+    };
     datatables($scope, DTOptionsBuilder);
 
     AccountService.getAllAccounts()
@@ -491,6 +495,27 @@ function AccountCtrl($scope, DTOptionsBuilder, AccountService) {
         } ,function(error){
             console.log(error);
         })
+    $scope.submit = function(){
+
+        if (isEmpty($scope.account)) {
+            alert("字段不能为空");
+            return false;
+        }
+        if($scope.account.password != $scope.account.confirm) {
+            alert("两次输入密码不一致！")
+            $scope.account.password = "";
+            $scope.account.confirm = "";
+            return false;
+        }
+        // $scope.status = "please waitting.....";
+        AccountService.newAccount($scope.account.password)
+            .then(function(res){
+                $scope.address = res;
+            }, function(error){
+                // $scope.status = error.message;
+                console.log(error);
+            })
+    };
 }
 
 function AddProjectCtrl($scope, $state, ENV, ContractService) {
