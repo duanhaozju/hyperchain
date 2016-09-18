@@ -94,4 +94,4 @@ else
     exit 1
 fi
 
-
+python ./jsonrpc/Dashboard/simpleHttpServer.py

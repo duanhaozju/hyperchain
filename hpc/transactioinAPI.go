@@ -28,6 +28,7 @@ func init() {
 
 type PublicTransactionAPI struct {
 	eventMux *event.TypeMux
+
 }
 
 
@@ -56,6 +57,7 @@ type TransactionResult struct {
 func NewPublicTransactionAPI(eventMux *event.TypeMux) *PublicTransactionAPI {
 	return &PublicTransactionAPI{
 		eventMux :eventMux,
+
 	}
 }
 
@@ -97,7 +99,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//end:=start+500
 
 		for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 500; i++ {
+			for i := 0; i < 50; i++ {
 				tx.TimeStamp=time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
@@ -111,11 +113,14 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				}
 
 			}
-			time.Sleep(90 * time.Millisecond)
+			time.Sleep(20 * time.Millisecond)
 
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
+
+
+
 
 		return tx.BuildHash(),nil
 
@@ -156,6 +161,13 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 	}
 
 	// todo 其他处理,比如存储到数据库中
+	//db, err := hyperdb.GetLDBDatabase()
+	//
+	//if err != nil {
+	//	log.Fatalf("Open database error: %v", err)
+	//}
+	//
+	//core.PutTransaction(db, ,tx)
 
 	return tx.BuildHash(),nil
 }

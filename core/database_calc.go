@@ -5,6 +5,7 @@ import (
 	"time"
 
 	//"fmt"
+
 )
 
 // CalcResponseCount calculate response count of a block for given blockNumber
@@ -29,8 +30,10 @@ func CalcResponseCount(blockNumber uint64, millTime int64) (int64,float64){
 	//	fmt.Println("batch time is ",(block.Timestamp-block.Transactions[0].TimeStamp)/int64(time.Millisecond))
 	//}
 
-	//fmt.Println("commit time is ",(block.CommitTime-block.Timestamp)/int64(time.Millisecond))
-	//fmt.Println("write time is ",(block.WriteTime-block.CommitTime)/ int64(time.Millisecond))
+	/*fmt.Println("commit time is ",(block.CommitTime-block.Timestamp)/int64(time.Millisecond))
+	fmt.Println("write time is ",(block.WriteTime-block.CommitTime)/ int64(time.Millisecond))
+	fmt.Println("evm time is ",(block.EvmTime-block.WriteTime)/ int64(time.Millisecond))*/
+	//fmt.Println("evm time is ",(block.EvmTime-block.WriteTime)/ int64(time.Millisecond))
 	return count,percent
 }
 //CalcCommitAVGTime calculates block average commit time
@@ -104,6 +107,40 @@ func CalcResponseAVGTime(from, to uint64) int64 {
 		return 0
 	} else {
 		return sum / (length * int64(time.Millisecond))
+	}
+
+
+}
+
+
+func CalcEvmAVGTime(from, to uint64) int64 {
+	if from > to {
+		log.Error("from less than to")
+		return -1
+	}
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+	var sum int64 = 0
+	for i := from; i <= to; i ++ {
+		blockHash, err := GetBlockHash(db, i)
+		if err != nil {
+			log.Error(err)
+			return -1
+		}
+		block, err := GetBlock(db, blockHash)
+		if err != nil {
+			log.Error(err)
+			return -1
+		}
+		sum+=(block.EvmTime-block.WriteTime)/ int64(time.Millisecond)
+	}
+	num := int64(to-from+1)
+	if num == 0 {
+		return 0
+	} else {
+		return sum / (num)
 	}
 
 

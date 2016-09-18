@@ -40,7 +40,7 @@
                             <div class="text_red">{{status}}</div>
                         </form><br/>
                         <form role="form" class="form-inline">
-                            <span style="font-weight: bold">&emsp;&emsp;&emsp;&emsp;计算平均处理时间：</span>
+                            <span style="font-weight: bold">&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;计算tx平均处理时间：</span>
                             <div class="form-group">
                                 <label for="from1" class="sr-only">from</label>
                                 <input type="text" placeholder="起始block number" ng-model="blockAvg.from" id="from1"
@@ -57,7 +57,7 @@
                             <span class="text_red">{{avgTime}}ms</span>
                         </form><br/>
                         <form role="form" class="form-inline">
-                            <span style="font-weight: bold">计算commit & batch时间：</span>
+                            <span style="font-weight: bold">计算block commit & batch时间：</span>
                             <div class="form-group">
                                 <label for="from" class="sr-only">from</label>
                                 <input type="text" placeholder="起始block number" ng-model="block.from" id="from"
@@ -75,6 +75,23 @@
                             <span>BatchTime:</span>
                             <span class="text_red">{{batchTime}}ms</span>
 
+                        </form><br/>
+                        <form role="form" class="form-inline">
+                            <span style="font-weight: bold">&emsp;&emsp;&emsp;&emsp;&emsp;计算Evm平均处理时间：</span>
+                            <div class="form-group">
+                                <label for="from2" class="sr-only">from</label>
+                                <input type="text" placeholder="起始block number" ng-model="blockEvm.from" id="from2"
+                                       class="form-control">
+                            </div>&nbsp;-&nbsp;
+                            <div class="form-group">
+                                <label for="to2" class="sr-only">to</label>
+                                <input type="text" placeholder="起始block number" ng-model="blockEvm.to" id="to2"
+                                       class="form-control">
+                            </div>
+                            <button class="btn btn-primary" type="submit" ng-click="queryEvmTime()">Query</button>
+
+                            <span>AvgTime:</span>
+                            <span class="text_red">{{evmTime}}ms</span>
                         </form><br/>
                     </div>
 

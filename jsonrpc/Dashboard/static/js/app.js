@@ -10,7 +10,8 @@
         'pascalprecht.translate',       // Angular Translate
         'ngIdle',                       // Idle timer
         'ngSanitize',                   // ngSanitize
-        'ngResource'
+        'ngResource',                   // ngResource
+        'ngCookies'                     // ngCookies
     ])
 })();
 

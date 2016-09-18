@@ -110,18 +110,13 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 	currentChain := GetChainCopy()
 	block.ParentHash = currentChain.LatestBlockHash
 	block.BlockHash = block.Hash(commonHash).Bytes()
-	block.WriteTime = time.Now().UnixNano()
+	//block.WriteTime = time.Now().UnixNano()
 	block.CommitTime = commitTime
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = PutBlock(db, block.BlockHash, block)
-	// write transaction
-	//PutTransactions(db, commonHash, block.Transactions)
-	if err != nil {
-		log.Fatal(err)
-	}
+
 	UpdateChain(block, false)
 	balance, err := GetBalanceIns()
 	if err != nil {
@@ -131,6 +126,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 	newChain := GetChainCopy()
 	log.Notice("Block number",newChain.Height)
 	log.Notice("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
+	block.WriteTime = time.Now().UnixNano()
 	balance.UpdateDBBalance(block)
 	if block.Number%10==0 && block.Number!=0{
 		WriteChainChan()
@@ -138,5 +134,12 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 	}
 	// update our stateObject and statedb to blockchain
 	//ExecBlock(block)
+	block.EvmTime=time.Now().UnixNano()
+	err = PutBlock(db, block.BlockHash, block)
+	// write transaction
+	//PutTransactions(db, commonHash, block.Transactions)
+	if err != nil {
+		log.Fatal(err)
+	}
 	//CommitStatedbToBlockchain()
 }

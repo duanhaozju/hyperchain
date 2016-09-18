@@ -98,6 +98,32 @@ function BlockService($resource,$q,ENV) {
 
                 })
             })
+        },
+        queryEvmAvgTime: function(from, to) {
+            return $q(function(resolve, reject){
+                $resource(ENV.API,{},{
+                    query:{
+                        method:"POST"
+                    }
+                }).query({
+                    method: "block_queryEvmAvgTime",
+                    params: [
+                        {
+                            "from":from,
+                            "to":to
+                        }
+                    ],
+                    id: 1
+                },function(res){
+                    console.log(res);
+                    if (res.error) {
+                        reject(res.error)
+                    } else {
+                        resolve(res.result)
+                    }
+
+                })
+            })
         }
     }
 }
@@ -232,6 +258,33 @@ function ContractService($resource,$q,ENV) {
                         {
                             "from": from,
                             "payload": sourceCode
+                        }
+                    ],
+                    id: 1
+                },function(res){
+                    console.log(res);
+                    if (res.error) {
+                        reject(res.error)
+                    } else {
+                        resolve(res.result)
+                    }
+
+                })
+            })
+        },
+        invokeContract: function(from, to, data) {
+            return $q(function(resolve, reject){
+                $resource(ENV.API,{},{
+                    getAcc:{
+                        method:"POST"
+                    }
+                }).getAcc({
+                    method: "tx_sendTransactionOrContract",
+                    params: [
+                        {
+                            "from": from,
+                            "to": to,
+                            "payload": data
                         }
                     ],
                     id: 1
