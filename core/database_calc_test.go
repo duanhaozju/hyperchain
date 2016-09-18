@@ -17,7 +17,7 @@ import (
 	}
 }*/
 
-func TestCalcResponseCount(t *testing.T) {
+/*func TestCalcResponseCount(t *testing.T) {
 	log.Info("test =============> > > TestInitDB")
 	InitDB(8084)
 	//blockUtilsCase.Number = GetHeightOfChain() + 1
@@ -30,7 +30,7 @@ func TestCalcResponseCount(t *testing.T) {
 		fmt.Println(count)
 	}
 
-}
+}*/
 func TestCalcCommitBatchAVGTime(t *testing.T) {
 	InitDB(8084)
 	fmt.Println(CalcCommitBatchAVGTime(uint64(10),uint64(20)))
