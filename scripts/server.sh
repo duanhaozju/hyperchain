@@ -6,6 +6,7 @@
 
 set -e
 pwd
+source $HOME/.profile
 cd /home/satoshi/gopath/src/hyperchain/
 go get -u github.com/kardianos/govendor
 govendor sync

@@ -30,7 +30,8 @@ type argT struct {
 	NodeId    int `cli:"o,nodeId" usage:"本地RPC监听端口" dft:"8001"`
 
 	LocalPort int `cli:"l,LocalPort" usage:"本地RPC监听端口" dft:"8001"`
-	PeerConfigPath string `cli:"p,peerconfig" usage:"节点信息的端口，默认值为./p2p/peerconfig.json" dft:"./p2p/peerconfig.json"`
+	PeerConfigPath string `cli:"p,peerconfig" usage:"节点信息的端口，默认值为./peerconfig.json" dft:"./peerconfig.json"`
+	PbftConfigPath string `cli:"f,pbftconfig" usage:"pbft配置文件, 默认值为./" dft:"./"`
 }
 
 func main() {
@@ -55,7 +56,7 @@ func main() {
 		core.CreateInitBlock("./core/genesis.json")
 
 		//init pbft consensus
-		cs := controller.NewConsenter(uint64(argv.NodeId), eventMux)
+		cs := controller.NewConsenter(uint64(argv.NodeId), eventMux, argv.PbftConfigPath)
 
 		//init encryption object
 		keydir := "./keystore/"

@@ -1,4 +1,3 @@
-
 #!/bin/bash
 #if [ ! -f "/usr/bin/expect" ];then
 #  echo "hasn't install expect,please install expect mannualy: 'apt-get install expect'"
@@ -7,11 +6,12 @@
 #fi
 
 if [ ! -d /home/satoshi/gopath ];then
-   mkdir -p /home/satoshi/gopath
+  mkdir -p /home/satoshi/gopath
 fi
 sudo mount /dev/vdb /home/satoshi/gopath/
 ls /home/satoshi/gopath/
 cd /home/satoshi/gopath/src/hyperchain
+git checkout server.sh
 git checkout develop
 git pull origin develop
 #expect <<EOF
