@@ -20,6 +20,8 @@ import (
 	"hyperchain/common"
 	"hyperchain/recovery"
 	"hyperchain/hyperdb"
+	"hyperchain/p2p/peer"
+
 )
 
 var log *logging.Logger // package-level logger
@@ -33,7 +35,7 @@ type ProtocolManager struct {
 	fetcher           *core.Fetcher
 	peerManager       p2p.PeerManager
 
-	nodeInfo          map[string]bool // node info ,store node status,ip,port
+	nodeInfo          client.PeerInfos // node info ,store node status,ip,port
 	consenter         consensus.Consenter
 	//encryption   crypto.Encryption
 	accountManager    *accounts.AccountManager
@@ -68,7 +70,6 @@ am *accounts.AccountManager, commonHash crypto.CommonHash) (*ProtocolManager) {
 
 	manager := &ProtocolManager{
 
-		nodeInfo :make(map[string]bool),
 		blockPool: blockPool,
 		eventMux:    eventMux,
 		quitSync:    make(chan struct{}),
@@ -81,6 +82,7 @@ am *accounts.AccountManager, commonHash crypto.CommonHash) (*ProtocolManager) {
 
 
 	}
+	manager.nodeInfo = make(client.PeerInfos, 0,1000)
 	eventMuxAll = eventMux
 	return manager
 }
@@ -400,11 +402,12 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte, commitTime int64) {
 }
 
 
-func (pm *ProtocolManager) GetNodeInfo()map[string]bool {
-	pm.nodeInfo["node1"]=true
+func (pm *ProtocolManager) GetNodeInfo()client.PeerInfos{
+	pm.nodeInfo=pm.peerManager.GetPeerInfos()
+/*	pm.nodeInfo["node1"]=true
 	pm.nodeInfo["node2"]=true
 	pm.nodeInfo["node3"]=false
-	pm.nodeInfo["node4"]=true
+	pm.nodeInfo["node4"]=true*/
 	return pm.nodeInfo
 
 }
