@@ -132,7 +132,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 
 	}
 	// update our stateObject and statedb to blockchain
-	ExecBlock(block)
+	//ExecBlock(block)
 	block.EvmTime=time.Now().UnixNano()
 	err = PutBlock(db, block.BlockHash, block)
 	// write transaction

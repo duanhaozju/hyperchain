@@ -154,6 +154,7 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 		return err
 	}
 	for _, trans := range block.Transactions {
+		ExecTransaction(*trans)
 		var transValue big.Int
 		transValue.SetString(string(trans.Value), 10)
 		fromBalance := self.dbBalance[common.HexToAddress(string(trans.From))]
