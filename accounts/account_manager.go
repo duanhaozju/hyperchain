@@ -53,10 +53,10 @@ func NewAccountManager(keydir string,encryp crypto.Encryption) *AccountManager {
 		Encryption:encryp,
 	}
 
-	am.unlockAllAccount(keydir)
+	//am.unlockAllAccount(keydir)
 	return am
 }
-func (am *AccountManager)unlockAllAccount(keydir string){
+func (am *AccountManager)UnlockAllAccount(keydir string){
 	var accounts []Account
 	accounts = getAllAccount(keydir)
 	for _,a := range accounts{
@@ -66,7 +66,8 @@ func (am *AccountManager)unlockAllAccount(keydir string){
 }
 func getAllAccount(keydir string) []Account {
 	var accounts []Account
-	addressdir := keydir+"/addresses/address"
+	addressdir := keydir+"addresses/address"
+	log.Info(addressdir,"====================")
 	fp, _ := os.Open(addressdir)
 	scanner := bufio.NewScanner(fp)
 	scanner.Split(bufio.ScanLines)
@@ -76,7 +77,7 @@ func getAllAccount(keydir string) []Account {
 		addr := common.HexToAddress(string(addrHex)[:40])
 		account := Account{
 			Address:addr,
-			File:keydir+"/"+addrHex,
+			File:keydir+addrHex,
 		}
 		accounts = append(accounts,account)
 	}
@@ -145,6 +146,7 @@ func (am *AccountManager) Lock(addr common.Address) error {
 // shortens the active unlock timeout. If the address was previously unlocked
 // indefinitely the timeout is not altered.
 func (am *AccountManager) TimedUnlock(a Account, passphrase string, timeout time.Duration) error {
+	log.Info(a.File,"---------------------------------")
 	key, err := am.GetDecryptedKey(a,passphrase)
 	if err != nil {
 		fmt.Println(err)

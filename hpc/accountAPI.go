@@ -13,6 +13,10 @@ type AccountResult struct {
 	Account common.Address `json:"account"`
 	Balance string         `json:"balance"`
 }
+type UnlockParas struct {
+	Address string
+	Password string
+}
 
 func NewPublicAccountAPI() *PublicAccountAPI {
 	return &PublicAccountAPI{}
@@ -32,6 +36,27 @@ func (acot *PublicAccountAPI)NewAccount(password string) common.Address  {
 	balanceIns.PutCacheBalance(ac.Address,[]byte("0"))
 	balanceIns.PutDBBalance(ac.Address,[]byte("0"))
 	return ac.Address
+}
+//Unlock account according to args(address,password)
+func (acot *PublicAccountAPI)UnlockAccount(args UnlockParas) error {
+	password := string(args.Password)
+	address := common.HexToAddress(args.Address)
+
+	keydir := "./keystore/"
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	am := accounts.NewAccountManager(keydir,encryption)
+
+	s := string(args.Address)
+	if len(s) > 1 {
+		if s[0:2] == "0x" {
+			s = s[2:]
+		}
+		if len(s)%2 == 1 {
+			s = "0" + s
+		}
+	}
+	ac := accounts.Account{Address:address,File:am.KeyStore.JoinPath(s)}
+	return am.Unlock(ac,password)
 }
 // GetAllBalances returns all account's balance in the db,NOT CACHE DB!
 func (acot *PublicAccountAPI) GetAccounts() []*AccountResult{

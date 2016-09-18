@@ -508,6 +508,10 @@ function AccountCtrl($scope, DTOptionsBuilder, AccountService) {
         password: "",
         confirm:""
     };
+    $scope.unlock = {
+        address:"",
+        password: ""
+    };
     datatables($scope, DTOptionsBuilder);
 
     AccountService.getAllAccounts()
@@ -534,6 +538,21 @@ function AccountCtrl($scope, DTOptionsBuilder, AccountService) {
                 $scope.address = res;
             }, function(error){
                 // $scope.status = error.message;
+                console.log(error);
+            })
+    };
+    $scope.unlockAccount = function(){
+
+        if (isEmpty($scope.unlock)) {
+            alert("字段不能为空");
+            return false;
+        }
+        $scope.status = "please waitting.....";
+        AccountService.unlockAccount($scope.unlock.address,$scope.unlock.password)
+            .then(function(res){
+                $scope.status = "unlock succeeds";
+            }, function(error){
+                $scope.status = error.message;
                 console.log(error);
             })
     };
