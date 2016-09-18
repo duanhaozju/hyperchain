@@ -254,7 +254,7 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,Mes
 func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
 	peerpool := peerPool.NewPeerPool(false,false);
 	peers := peerpool.GetPeers()
-	var perinfo peer.PeerInfo
+
 	localNodeAddr := node.GetNodeAddr()
 	result, err := transport.TripleDesEncrypt([]byte("Query Status"), DESKEY)
 	if err!=nil{
@@ -269,11 +269,12 @@ func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
 	}
 	var perinfos peer.PeerInfos
 	for _,per := range peers{
-		log.Info("rage the peer",)
+		var perinfo peer.PeerInfo
+
 		perinfo.IP = per.Addr.Ip
 		perinfo.Port = int(per.Addr.Port)
 		perinfo.CName = per.CName
-		log.Info("rage the peer",perinfo.Port)
+
 		retMsg, err := per.Client.Chat(context.Background(),&keepAliveMessage)
 		if err != nil{
 			perinfo.Status = peer.STOP
@@ -292,6 +293,8 @@ func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
 
 
 	}
+
 	perinfos = append(perinfos,&selfPeerInfo)
+
 	return perinfos
 }
