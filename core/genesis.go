@@ -116,12 +116,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = PutBlock(db, block.BlockHash, block)
-	// write transaction
-	//PutTransactions(db, commonHash, block.Transactions)
-	if err != nil {
-		log.Fatal(err)
-	}
+
 	UpdateChain(block, false)
 	balance, err := GetBalanceIns()
 	if err != nil {
@@ -137,6 +132,13 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 
 	}
 	// update our stateObject and statedb to blockchain
-	//ExecBlock(block)
+	ExecBlock(block)
+	block.EvmTime=time.Now().UnixNano()
+	err = PutBlock(db, block.BlockHash, block)
+	// write transaction
+	//PutTransactions(db, commonHash, block.Transactions)
+	if err != nil {
+		log.Fatal(err)
+	}
 	//CommitStatedbToBlockchain()
 }
