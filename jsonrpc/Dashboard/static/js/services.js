@@ -199,6 +199,51 @@ function AccountService($resource,$q,ENV) {
 
                 })
             })
+        },
+        newAccount: function(password){
+            return $q(function(resolve, reject){
+                $resource(ENV.API,{},{
+                    newAcc:{
+                        method:"POST"
+                    }
+                }).newAcc({
+                    method: "acot_newAccount",
+                    params: [password],
+                    id: 1
+                },function(res){
+                    if (res.error) {
+                        reject(res.error)
+                    } else {
+                        resolve(res.result)
+                    }
+
+                })
+            })
+        },
+        unlockAccount:function (address,password) {
+            return $q(function(resolve, reject){
+                $resource(ENV.API,{},{
+                    unlockac:{
+                        method:"POST"
+                    }
+                }).unlockac({
+                    method: "acot_unlockAccount",
+                    params: [
+                        {
+                            "address":address,
+                            "password":password,
+                        }
+                    ],
+                    id: 1
+                },function(res){
+                    console.log(res);
+                    if (res.error) {
+                        reject(res.error)
+                    } else {
+                        resolve(res.result)
+                    }
+                })
+            })
         }
     }
 }

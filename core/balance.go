@@ -9,7 +9,6 @@ import (
 	"math/big"
 	"github.com/op/go-logging"
 	"fmt"
-	"time"
 )
 
 //-- --------------------- Balance ------------------------------------\
@@ -154,35 +153,35 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	now_time := time.Now()
+
+	//for test evm execute contract
 	ExecTransaction(*types.NewTestCreateTransaction())
-	for _, _ = range block.Transactions {
+	for _, trans := range block.Transactions {
 		//ExecTransaction(*trans)
 		ExecTransaction(*types.NewTestCallTransaction())
-		//
-		//var transValue big.Int
-		//transValue.SetString(string(trans.Value), 10)
-		//fromBalance := self.dbBalance[common.HexToAddress(string(trans.From))]
-		//toBalance := self.dbBalance[common.HexToAddress(string(trans.To))]
-		//var fromValue big.Int
-		//var toValue big.Int
-		//fromValue.SetString(string(fromBalance), 10)
-		//toValue.SetString(string(toBalance), 10)
-		//fromValue.Sub(&fromValue, &transValue)
-		//
-		//// Update Transaction.From account(sub the From account balance by value)
-		//self.dbBalance[common.HexToAddress(string(trans.From))] = []byte(fromValue.String())
-		//
-		//// Update Transaction.To account(add the To account balance by value)
-		//// if Transaction.To account not exist, it will be created, initial account balance is 0
-		//if _, ok := self.dbBalance[common.HexToAddress(string(trans.To))]; ok {
-		//	toValue.Add(&toValue, &transValue)
-		//	self.dbBalance[common.HexToAddress(string(trans.To))] = []byte(toValue.String())
-		//} else {
-		//	self.dbBalance[common.HexToAddress(string(trans.To))] = []byte(transValue.String())
-		//}
+
+		var transValue big.Int
+		transValue.SetString(string(trans.Value), 10)
+		fromBalance := self.dbBalance[common.HexToAddress(string(trans.From))]
+		toBalance := self.dbBalance[common.HexToAddress(string(trans.To))]
+		var fromValue big.Int
+		var toValue big.Int
+		fromValue.SetString(string(fromBalance), 10)
+		toValue.SetString(string(toBalance), 10)
+		fromValue.Sub(&fromValue, &transValue)
+
+		// Update Transaction.From account(sub the From account balance by value)
+		self.dbBalance[common.HexToAddress(string(trans.From))] = []byte(fromValue.String())
+
+		// Update Transaction.To account(add the To account balance by value)
+		// if Transaction.To account not exist, it will be created, initial account balance is 0
+		if _, ok := self.dbBalance[common.HexToAddress(string(trans.To))]; ok {
+			toValue.Add(&toValue, &transValue)
+			self.dbBalance[common.HexToAddress(string(trans.To))] = []byte(toValue.String())
+		} else {
+			self.dbBalance[common.HexToAddress(string(trans.To))] = []byte(transValue.String())
+		}
 	}
-	log.Notice("?????the create contract time we used is ",time.Now().Sub(now_time))
 	// cacheBalance keep correspondence with dbBalance
 	self.cacheBalance = self.dbBalance
 	// put dbBalance into database
