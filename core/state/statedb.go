@@ -269,9 +269,13 @@ func (self *StateDB) GetRefund() *big.Int {
 var stateObjectPrefix = []byte("stateObject-")
 
 // Commit commits all state changes to the database.
+// we should not use statedb.db because it is useless
 // TODO test
 func (s *StateDB) Commit() (root common.Hash, err error) {
-	batch := s.db.NewBatch()
+	//batch := s.db.NewBatch()
+	db, _ := hyperdb.GetLDBDatabase()
+	bacth := db.NewBatch()
+
 	for addr, stateObject := range s.stateObjects {
 		if stateObject.dirty {
 			data, err := json.Marshal(stateObject)
@@ -279,8 +283,10 @@ func (s *StateDB) Commit() (root common.Hash, err error) {
 				// err
 			}
 			keyFact := append(stateObjectPrefix, []byte(addr)...)
-			batch.Put(keyFact, data)
+			//log.Notice("save the data")
+			bacth.Put(keyFact, data)
+			//log.Notice("save already")
 		}
 	}
-	return common.Hash{},batch.Write()
+	return common.Hash{},bacth.Write()
 }

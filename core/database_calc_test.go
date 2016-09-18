@@ -3,9 +3,10 @@ package core
 import (
 	"testing"
 	"fmt"
+	"hyperchain/crypto"
 )
 
-func TestCalcResponseCount(t *testing.T) {
+/*func TestCalcResponseCount(t *testing.T) {
 	log.Info("test =============> > > TestInitDB")
 	InitDB(8089)
 	blockUtilsCase.Number = GetHeightOfChain() + 1
@@ -15,7 +16,7 @@ func TestCalcResponseCount(t *testing.T) {
 	if count != 2 {
 		t.Errorf("%d not equal 2, TestCalcResponseCount fail", count)
 	}
-}
+}*/
 
 /*func TestCalcResponseCount(t *testing.T) {
 	log.Info("test =============> > > TestInitDB")

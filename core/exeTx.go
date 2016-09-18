@@ -72,13 +72,13 @@ func ExecTransaction(tx types.Transaction)(ret []byte,err error) {
 		gasPrice = tx.GasPrice()
 		amount = tx.Amount()
 	)
-	log.Notice("the to is ---------",to)
-	log.Notice("the to is ---------",tx.To)
+	//log.Info("the to is ---------",to)
+	//log.Info("the to is ---------",tx.To)
 	if(tx.To == nil){
-		return ExecSourceCode(&from,nil,data,gas,gasPrice,amount)
+		return Exec(&from,nil,data,gas,gasPrice,amount)
 	}
 
-	return ExecSourceCode(&from,&to,data,gas,gasPrice,amount)
+	return Exec(&from,&to,data,gas,gasPrice,amount)
 }
 
 func ExecSourceCode(from, to *common.Address, data []byte, gas,
@@ -129,8 +129,9 @@ gasPrice, value *big.Int)(ret []byte,err error){
 	return ret,err
 }
 
+
 func CommitStatedbToBlockchain(){
-	vmenv.State().Commit()
+	GetVMEnv().State().Commit()
 }
 
 func SetVMEnv(new_env *Env)  {

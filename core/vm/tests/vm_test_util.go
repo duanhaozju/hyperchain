@@ -135,7 +135,7 @@ func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.
 	//state.GetAccount(addr).PrintStorages()
 	log.Notice("the call contract time we used is ",time.Now().Sub(now_time))
 
-	// if err
+	// if err, print log
 	if err != nil{
 		log.Error("VM call err:",err)
 	}

@@ -216,6 +216,11 @@ func (self *ProtocolManager) syncBlockLoop() {
 
 							core.UpdateRequire(blocks.Batch[i].Number - 1, blocks.Batch[i].ParentHash, core.GetChainCopy().RecoveryNum)
 							core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
+							balance, err := core.GetBalanceIns()
+							if err != nil {
+								log.Fatal(err)
+							}
+							balance.UpdateDBBalance(blocks.Batch[i])
 							// receive all block in chain
 							if (common.Bytes2Hex(blocks.Batch[i].ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash)) {
 								core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum)
@@ -262,7 +267,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 			//accept msg from consensus module
 			//commit block into block pool
 
-			log.Debug("write block success")
+			log.Info("write block success")
 			self.commitNewBlock(ev.Payload, ev.CommitTime)
 		//self.fetcher.Enqueue(ev.Payload)
 
@@ -283,7 +288,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 			go self.BroadcastConsensus(ev.Payload)
 		case event.NewTxEvent:
-			log.Debug("######receiver new tx")
+			//log.Error("######receiver new tx")
 			//call consensus module
 			//send msg to consensus
 			//for i:=0;i<10000;i+=1{
