@@ -3,10 +3,10 @@ package core
 import (
 	"testing"
 	"fmt"
-
+	"hyperchain/crypto"
 )
 
-/*func TestCalcResponseCount(t *testing.T) {
+func TestCalcResponseCount(t *testing.T) {
 	log.Info("test =============> > > TestInitDB")
 	InitDB(8089)
 	blockUtilsCase.Number = GetHeightOfChain() + 1
@@ -16,7 +16,7 @@ import (
 	if count != 2 {
 		t.Errorf("%d not equal 2, TestCalcResponseCount fail", count)
 	}
-}*/
+}
 
 /*func TestCalcResponseCount(t *testing.T) {
 	log.Info("test =============> > > TestInitDB")
@@ -25,7 +25,6 @@ import (
 	//commonHash := crypto.NewKeccak256Hash("keccak256")
 	//WriteBlock(blockUtilsCase, commonHash)
 	fmt.Println(GetHeightOfChain())
-
 	for i := uint64(0); i <= GetHeightOfChain(); i += 1 {
 		count,_ := CalcResponseCount(i, int64(300))
 
