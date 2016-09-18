@@ -15,7 +15,7 @@ echo "--------------"
 set -e
 
 # max test node number
-MAXNODE=100
+MAXNODE=4
 PASSWD="blockchain"
 
 #kill the progress
@@ -92,4 +92,4 @@ else
     exit 1
 fi
 
-
+python ./jsonrpc/Dashboard/simpleHttpServer.py
