@@ -379,6 +379,13 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
         }, function(error){
             console.log(error)
         })
+
+    SummaryService.getNodeInfo()
+        .then(function(res){
+            console.log(res)
+        }, function(error){
+            console.log(error)
+        })
 }
 
 function BlockCtrl($scope, DTOptionsBuilder, SummaryService, BlockService, TransactionService) {

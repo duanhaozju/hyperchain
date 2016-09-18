@@ -39,7 +39,25 @@ function SummaryService($resource,$q,ENV) {
                     ],
                     id: 1
                 },function(res){
-                    console.log(res);
+                    if (res.error) {
+                        reject(res.error)
+                    } else {
+                        resolve(res.result)
+                    }
+
+                })
+            })
+        },
+        getNodeInfo: function(){
+            return $q(function(resolve, reject){
+                $resource(ENV.API,{},{
+                    getNodes:{
+                        method:"POST"
+                    }
+                }).getNodes({
+                    method: "node_getNodes",
+                    id: 1
+                },function(res){
                     if (res.error) {
                         reject(res.error)
                     } else {
@@ -281,6 +299,7 @@ function ContractService($resource,$q,ENV) {
         }
     }
 }
+
 
 angular
     .module('starter')

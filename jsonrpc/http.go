@@ -31,7 +31,7 @@ func Start(httpPort int,eventMux *event.TypeMux,pm *manager.ProtocolManager) err
 	server := NewServer()
 
 	// 得到API，注册服务
-	apis := hpc.GetAPIs(eventMux)
+	apis := hpc.GetAPIs(eventMux, pm)
 
 	// api.Namespace 是API的命名空间，api.Service 是一个拥有命名空间对应对象的所有方法的对象
 	for _, api := range apis {
