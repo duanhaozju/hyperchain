@@ -53,10 +53,10 @@ func NewAccountManager(keydir string,encryp crypto.Encryption) *AccountManager {
 		Encryption:encryp,
 	}
 
-	am.unlockAllAccount(keydir)
+	//am.unlockAllAccount(keydir)
 	return am
 }
-func (am *AccountManager)unlockAllAccount(keydir string){
+func (am *AccountManager)UnlockAllAccount(keydir string){
 	var accounts []Account
 	accounts = getAllAccount(keydir)
 	for _,a := range accounts{
@@ -66,7 +66,7 @@ func (am *AccountManager)unlockAllAccount(keydir string){
 }
 func getAllAccount(keydir string) []Account {
 	var accounts []Account
-	addressdir := keydir+"/addresses/address"
+	addressdir := keydir+"addresses/address"
 	fp, _ := os.Open(addressdir)
 	scanner := bufio.NewScanner(fp)
 	scanner.Split(bufio.ScanLines)
@@ -76,7 +76,7 @@ func getAllAccount(keydir string) []Account {
 		addr := common.HexToAddress(string(addrHex)[:40])
 		account := Account{
 			Address:addr,
-			File:keydir+"/"+addrHex,
+			File:keydir+addrHex,
 		}
 		accounts = append(accounts,account)
 	}
@@ -101,19 +101,21 @@ func (am *AccountManager) SignWithPassphrase(addr common.Address, hash []byte, p
 	defer am.mu.RUnlock()
 	unlockedKey, found := am.unlocked[addr]
 	if !found {
-		key, err := am.GetDecryptedKey(Account{Address: addr}, passphrase)
+		file := am.KeyStore.JoinPath(addr.Hex()[2:])
+		key, err := am.GetDecryptedKey(Account{Address: addr,File:file}, passphrase)
 		if err != nil {
 			return nil, err
 		}
-		switch key.PrivateKey.(type) {
-		case *ecdsa.PrivateKey:
-			actualPriKey := key.PrivateKey.(*ecdsa.PrivateKey)
-			unlockedKey.Key = &Key{
-				Address:    crypto.PubkeyToAddress(actualPriKey.PublicKey),
-				PrivateKey: actualPriKey,
-			}
-			defer zeroKey(actualPriKey)
-		}
+		unlockedKey = &unlocked{Key: key, abort: make(chan struct{})}
+		//switch key.PrivateKey.(type) {
+		//case *ecdsa.PrivateKey:
+		//	actualPriKey := key.PrivateKey.(*ecdsa.PrivateKey)
+		//	unlockedKey.Key = &Key{
+		//		Address:    crypto.PubkeyToAddress(actualPriKey.PublicKey),
+		//		PrivateKey: actualPriKey,
+		//	}
+		//	defer zeroKey(actualPriKey)
+		//}
 	}
 
 	return am.Encryption.Sign(hash, unlockedKey.PrivateKey)
