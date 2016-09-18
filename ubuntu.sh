@@ -15,11 +15,11 @@ echo "--------------"
 set -e
 
 # max test node number
-MAXNODE=100
+MAXNODE=7
 PASSWD="blockchain"
 
 #kill the progress
-kellprogress(){
+killprocess(){
 
   echo "kill the bind port process"
   for((i=1;i<=$MAXNODE;i++))
@@ -32,7 +32,7 @@ kellprogress(){
 }
 
 local_test(){
-  kellprogress
+  killprocess
   CONFIG_PATH=$1
   #rebuild the application
   echo "rebuild the application"
@@ -46,7 +46,7 @@ local_test(){
 
   for((j=1;j<=$MAXNODE;j++))
   do
-      gnome-terminal -x bash -c "(./hyperchain -o $j -l 808$j -p $CONFIG_PATH)"
+      gnome-terminal -x bash -c "(./hyperchain -o $j -l 808$j -p $CONFIG_PATH -f ./consensus/pbft/ -g ./core/genesis.json)"
   done
 
   echo "All process are running background"
