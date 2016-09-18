@@ -16,19 +16,22 @@
   "node6":"localhost",
   "node7":"localhost",
 
-  "external_node1":"114.55.64.132",
-  "external_node2":"114.55.232.225",
-  "external_node3":"114.55.233.121",
-  "external_node4":"114.55.42.186",
-  "external_node5":"114.55.64.145",
-  "external_node6":"114.55.176.43",
-  "external_node7":"114.55.237.33",
+
+  "external_node1":"localhost",
+  "external_node2":"localhost",
+  "external_node3":"localhost",
+  "external_node4":"localhost",
+  "external_node5":"localhost",
+  "external_node6":"localhost",
+  "external_node7":"localhost",
+
 
   "external_port1":"8081",
-  "external_port2":"8081",
-  "external_port3":"8081",
-  "external_port4":"8081",
-  "external_port5":"8081",
-  "external_port6":"8081",
-  "external_port7":"8081"
+  "external_port2":"8082",
+  "external_port3":"8083",
+  "external_port4":"8084",
+  "external_port5":"8085",
+  "external_port6":"8086",
+  "external_port7":"8087"
+
 }
