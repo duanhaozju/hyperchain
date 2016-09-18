@@ -70,7 +70,7 @@ done < ./serverlist.txt
  for server_address in ${SERVER_ADDR[@]}; do
    i=`expr $ni + 1`
    # gnome-terminal -x bash -c "ssh satoshi@$server_address \"cd /home/satoshi/gopath/src/hyperchain/scripts/ && ./server.sh $i\""
-   ssh satoshi@$server_address "bash /home/satoshi/gopath/src/hyperchain/scripts/server.sh $ni"
+   ssh satoshi@$server_address "cd /home/satoshi/gopath/src/hyperchain/ && pwd && chmod a+x /home/satoshi/gopath/src/hyperchain/scripts/server.sh && bash /home/satoshi/gopath/src/hyperchain/scripts/server.sh $ni"
  done
 }
 

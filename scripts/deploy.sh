@@ -29,20 +29,20 @@ done < ../serverlist.txt
 #########################
 
 # add your local pubkey into every server
-   echo "┌────────────────────────┐"
-   echo "│    auto add ssh key    │"
-   echo "└────────────────────────┘"
-   for server_address in ${SERVER_ADDR[@]}; do
-   expect <<EOF
-       set timeout 60
-       spawn ssh-copy-id satoshi@$server_address
-       expect {
-         "yes/no" {send "yes\r";exp_continue }
-         "s password:" {send "$PASSWD\r";exp_continue }
-         eof
-       }
-EOF
-   done
+#   echo "┌────────────────────────┐"
+#   echo "│    auto add ssh key    │"
+#   echo "└────────────────────────┘"
+#   for server_address in ${SERVER_ADDR[@]}; do
+#   expect <<EOF
+#       set timeout 60
+#       spawn ssh-copy-id satoshi@$server_address
+#       expect {
+#         "yes/no" {send "yes\r";exp_continue }
+#         "s password:" {send "$PASSWD\r";exp_continue }
+#         eof
+#       }
+#EOF
+#   done
 
 #########################
 # deploy                #
@@ -56,5 +56,5 @@ for server_address in ${SERVER_ADDR[@]}; do
 #    ssh -t satoshi@$server_address "mv /home/satoshi/.ssh /home/satoshi/.ssh_bak && mkdir -p /home/satoshi/.ssh"
 #    scp ./sshkeys/* satoshi@$server_address:/home/satoshi/.ssh
 #    gnome-terminal -x bash -c "ssh satoshi@$server_address \"chmod a+x /home/satoshi/goenv_setup.sh;/home/satoshi/goenv_setup.sh\""
-   ssh -t satoshi@$server_address "chmod a+x /home/satoshi/goenv_setup.sh;sudo bash /home/satoshi/goenv_setup.sh"
+   ssh -t satoshi@$server_address "sudo chmod a+x /home/satoshi/goenv_setup.sh; sudo bash /home/satoshi/goenv_setup.sh"
 done
