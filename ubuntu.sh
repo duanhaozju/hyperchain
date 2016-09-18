@@ -15,7 +15,7 @@ echo "--------------"
 set -e
 
 # max test node number
-MAXNODE=100
+MAXNODE=4
 PASSWD="blockchain"
 
 #kill the progress
@@ -48,6 +48,8 @@ local_test(){
     do
         gnome-terminal -x bash -c "(./hyperchain -o $j -l 808$j -p $CONFIG_PATH)"
     done
+
+    python ./jsonrpc/Dashboard/simpleHttpServer.py
 
     echo "All process are running background"
 
