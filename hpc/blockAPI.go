@@ -152,3 +152,16 @@ func (blk *PublicBlockAPI) QueryCommitAndBatchTime(args SendQueryArgs) (*BatchTi
 	},nil
 }
 
+func (blk *PublicBlockAPI) QueryEvmAvgTime(args SendQueryArgs) (int64,error) {
+
+	from, err := strconv.ParseUint(args.From, 10, 64)
+	to, err := strconv.ParseUint(args.To, 10, 64)
+
+	if err != nil {
+		return 0,err
+	}
+
+	evmTime :=  core.CalcEvmAVGTime(from,to)
+
+	return evmTime, nil
+}
