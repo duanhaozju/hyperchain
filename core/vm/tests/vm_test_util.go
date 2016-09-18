@@ -115,22 +115,23 @@ func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.
 
 	// create a new contract
 	now_time := time.Now()
-	ret,err :=core.Exec(&from,nil,([]byte)(data), gas, price, value)
-	for i := 0;i<30000;i++{
+	ret,addr,err :=core.Exec(&from,nil,([]byte)(data), gas, price, value)
+	for i := 0;i<500;i++{
 		//core.ExecSourceCode(&from,nil,([]byte)(sourcecode), gas, price, value)
-		core.Exec(&from,nil,([]byte)(data), gas, price, value)
+		ret,addr,err = core.Exec(&from,nil,([]byte)(data), gas, price, value)
+		//log.Info(state.GetNonce(from),"the address is ",common.ToHex(addr.Bytes()))
 	}
 	log.Notice("the create contract time we used is ",time.Now().Sub(now_time))
 	//ret,err := core.ExecSourceCode(&from,nil,([]byte)(sourcecode), gas, price, value)
 	//ret,err = core.ExecSourceCode(&from,nil,([]byte)(sourcecode), gas, price, value)
-	addr := state.GetLeastAccount().Address()
+	addr = state.GetLeastAccount().Address()
 	//state.ForEachAccounts()
 
 	// call the contract there times
 	log.Notice("the time now is",time.Now())
 	now_time = time.Now()
-	for i := 0;i<3000;i++{
-		ret,err = core.ExecSourceCode(&from, &addr, data2, gas, price, value)
+	for i := 0;i<500;i++{
+		ret,addr,err = core.Exec(&from, &addr, data2, gas, price, value)
 	}
 	//state.GetAccount(addr).PrintStorages()
 	log.Notice("the call contract time we used is ",time.Now().Sub(now_time))
