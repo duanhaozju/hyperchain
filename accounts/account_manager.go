@@ -208,7 +208,7 @@ func (am *AccountManager) NewAccount(passphrase string) (Account, error) {
 	}
 	//am.AddrPassMap[common.ToHex(account.Address)] = passphrase
 	storeNewAddrToFile(account)
-	am.Unlock(account,"123")
+	am.Unlock(account,passphrase)
 	return account, nil
 }
 

@@ -101,3 +101,10 @@ func TestValidateAddr(t *testing.T) {
 	fmt.Println(ValidateAddr(from))
 	fmt.Println(time.Since(start))
 }
+func TestNewAccount(t *testing.T) {
+	keydir := "../keystore/"
+
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	am := NewAccountManager(keydir,encryption)
+	am.NewAccount("123")
+}

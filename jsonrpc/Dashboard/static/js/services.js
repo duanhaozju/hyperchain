@@ -217,6 +217,26 @@ function AccountService($resource,$q,ENV) {
 
                 })
             })
+        },
+        newAccount: function(password){
+            return $q(function(resolve, reject){
+                $resource(ENV.API,{},{
+                    newAcc:{
+                        method:"POST"
+                    }
+                }).newAcc({
+                    method: "acot_newAccount",
+                    params: [password],
+                    id: 1
+                },function(res){
+                    if (res.error) {
+                        reject(res.error)
+                    } else {
+                        resolve(res.result)
+                    }
+
+                })
+            })
         }
     }
 }
