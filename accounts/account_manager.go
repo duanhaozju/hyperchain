@@ -56,6 +56,7 @@ func NewAccountManager(keydir string,encryp crypto.Encryption) *AccountManager {
 	am.unlockAllAccount(keydir)
 	return am
 }
+
 func (am *AccountManager)unlockAllAccount(keydir string){
 	var accounts []Account
 	accounts = getAllAccount(keydir)
@@ -101,19 +102,21 @@ func (am *AccountManager) SignWithPassphrase(addr common.Address, hash []byte, p
 	defer am.mu.RUnlock()
 	unlockedKey, found := am.unlocked[addr]
 	if !found {
-		key, err := am.GetDecryptedKey(Account{Address: addr}, passphrase)
+		file := am.KeyStore.JoinPath(addr.Hex()[2:])
+		key, err := am.GetDecryptedKey(Account{Address: addr,File:file}, passphrase)
 		if err != nil {
 			return nil, err
 		}
-		switch key.PrivateKey.(type) {
-		case *ecdsa.PrivateKey:
-			actualPriKey := key.PrivateKey.(*ecdsa.PrivateKey)
-			unlockedKey.Key = &Key{
-				Address:    crypto.PubkeyToAddress(actualPriKey.PublicKey),
-				PrivateKey: actualPriKey,
-			}
-			defer zeroKey(actualPriKey)
-		}
+		unlockedKey = &unlocked{Key: key, abort: make(chan struct{})}
+		//switch key.PrivateKey.(type) {
+		//case *ecdsa.PrivateKey:
+		//	actualPriKey := key.PrivateKey.(*ecdsa.PrivateKey)
+		//	unlockedKey.Key = &Key{
+		//		Address:    crypto.PubkeyToAddress(actualPriKey.PublicKey),
+		//		PrivateKey: actualPriKey,
+		//	}
+		//	defer zeroKey(actualPriKey)
+		//}
 	}
 
 	return am.Encryption.Sign(hash, unlockedKey.PrivateKey)

@@ -92,13 +92,15 @@ func TestSignTx(t *testing.T) {
 		addrHex := string(tx.From)
 		addr := common.HexToAddress(addrHex)
 
-		_, err := pm.accountManager.SignWithPassphrase(addr, h[:], "123")
 		start := time.Now()
+		_, err := pm.accountManager.SignWithPassphrase(addr, h[:], "123")
+		fmt.Println(time.Since(start))
+
 		tx.ValidateSign(encryption,pm.commonHash)
 		if err!=nil{
 			panic(err)
 		}
-		fmt.Println(time.Since(start))
+
 	}
 }
 
