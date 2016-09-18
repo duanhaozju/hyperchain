@@ -3,6 +3,7 @@ package core
 import (
 	"testing"
 	"fmt"
+	"hyperchain/crypto"
 )
 
 /*func TestCalcResponseCount(t *testing.T) {
