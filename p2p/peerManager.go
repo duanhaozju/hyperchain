@@ -28,7 +28,7 @@ import (
 )
 
 
-const MAXPEERNODE = 7
+var MAXPEERNODE = 7
 
 var DESKEY = []byte("sfe023f_sefiel#fi32lf3e!")
 
@@ -72,6 +72,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 
 	configs := peerComm.GetConfig(path)
 	port, _ := strconv.Atoi(configs["port"+strconv.Itoa(NodeId)])
+	MAXPEERNODE,_ = strconv.Atoi(configs["MAXPEERS"])
 	// start local node
 	this.localNode = node.NewNode(port,isTest,eventMux,NodeId)
 	//
