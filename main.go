@@ -32,6 +32,7 @@ type argT struct {
 	LocalPort int `cli:"l,LocalPort" usage:"本地RPC监听端口" dft:"8001"`
 	PeerConfigPath string `cli:"p,peerconfig" usage:"节点信息的端口，默认值为./peerconfig.json" dft:"./peerconfig.json"`
 	PbftConfigPath string `cli:"f,pbftconfig" usage:"pbft配置文件, 默认值为./" dft:"./"`
+	GenesisPath string `cli:"g,genesisconfig" usage:"genesis配置文件，用于创建创世块, 默认值是./genesis.json" dft:"./genesis.json"`
 }
 
 func main() {
@@ -53,7 +54,7 @@ func main() {
 		core.InitDB(argv.LocalPort)
 
 		//init genesis
-		core.CreateInitBlock("./core/genesis.json")
+		core.CreateInitBlock(argv.GenesisPath)
 
 		//init pbft consensus
 		cs := controller.NewConsenter(uint64(argv.NodeId), eventMux, argv.PbftConfigPath)
