@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"github.com/syndtr/goleveldb/leveldb"
 	"hyperchain/crypto"
-	"fmt"
 )
 
 var transactionCases = []*types.Transaction{
@@ -219,11 +218,7 @@ func TestUpdateChain(t *testing.T) {
 		t.Errorf("TestUpdateChain fail")
 	}
 }
-func TestGetDBBalance(t *testing.T) {
-	InitDB(8082)
-	db, _ := hyperdb.GetLDBDatabase()
-	bal,_ := GetDBBalance(db)
-	for key,value := range bal{
-		fmt.Println(key.Hex(),string(value))
-	}
+
+func TestGetCurrentAndParentBlockHash(t *testing.T) {
+
 }

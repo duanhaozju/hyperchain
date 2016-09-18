@@ -161,6 +161,13 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 	}
 
 	// todo 其他处理,比如存储到数据库中
+	//db, err := hyperdb.GetLDBDatabase()
+	//
+	//if err != nil {
+	//	log.Fatalf("Open database error: %v", err)
+	//}
+	//
+	//core.PutTransaction(db, ,tx)
 
 	return tx.BuildHash(),nil
 }

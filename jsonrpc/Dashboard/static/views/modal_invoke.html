@@ -24,7 +24,7 @@
                     <div ng-if="md.name == method.name">
                         <div class="col-lg-2" ng-repeat="param in md.inputs">
                             <div>{{param.name}}</div>
-                            <input type="text" class="form-control">
+                            <input type="text" class="form-control" ng-model="method.params[param.name]">
                         </div>
                     </div>
                 </div>
