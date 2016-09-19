@@ -8,8 +8,7 @@ import (
 	"io"
 	"fmt"
 	"hyperchain/hpc"
-	"os/exec"
-	"os"
+	"hyperchain/manager"
 )
 
 const (
@@ -25,14 +24,14 @@ func (hrw *httpReadWrite) Close() error{
 	return nil
 }
 
-func Start(httpPort int,eventMux *event.TypeMux) error{
+func Start(httpPort int,eventMux *event.TypeMux,pm *manager.ProtocolManager) error{
 	//log.Info("=============enter Start()=================")
 	eventMux = eventMux
 
 	server := NewServer()
 
 	// 得到API，注册服务
-	apis := hpc.GetAPIs()
+	apis := hpc.GetAPIs(eventMux, pm)
 
 	// api.Namespace 是API的命名空间，api.Service 是一个拥有命名空间对应对象的所有方法的对象
 	for _, api := range apis {
@@ -40,19 +39,20 @@ func Start(httpPort int,eventMux *event.TypeMux) error{
 			return err
 		}
 	}
-	go func() {
-		log.Info("start the simple httpserver")
-		cmd := exec.Command("pyhton $GOPATH/src/hyperchain/jsonrpc/Dashboard/simpleHttpServer.py")
-		//cmd := exec.Command("pwd")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		log.Info(cmd.Run())
-	}()
+	//go func() {
+	//	log.Info("start the simple httpserver")
+	//	cmd := exec.Command("pyhton $GOPATH/src/hyperchain/jsonrpc/Dashboard/simpleHttpServer.py")
+	//	//cmd := exec.Command("pwd")
+	//	cmd.Stdout = os.Stdout
+	//	cmd.Stderr = os.Stderr
+	//	log.Info(cmd.Run())
+	//}()
 
 	startHttp(httpPort, server)
 
 	return nil
 }
+
 
 func startHttp(httpPort int, srv *Server) {
 	//log.Info("=============enter startHttp()=================")

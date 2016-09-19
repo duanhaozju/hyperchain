@@ -18,10 +18,10 @@ import (
 	"strconv"
 
 	"hyperchain/consensus/controller"
-	"hyperchain/jsonrpc"
 	"hyperchain/common"
 	"github.com/op/go-logging"
 	"hyperchain/accounts"
+	"hyperchain/jsonrpc"
 )
 
 type argT struct {
@@ -66,7 +66,7 @@ func main() {
 		encryption.GenerateNodeKey(strconv.Itoa(argv.LocalPort),keydir)
 
 		am := accounts.NewAccountManager(keydir,encryption)
-		//am.NewAccount("123")
+		am.UnlockAllAccount(keydir)
 
 
 		//init hash object
@@ -78,15 +78,20 @@ func main() {
 		blockPool := core.NewBlockPool(eventMux)
 
 		//start http server
-		go jsonrpc.StartHttp(argv.LocalPort, eventMux)
+		//go jsonrpc.StartHttp(argv.LocalPort, eventMux)
+
 		//go jsonrpc.Start(argv.LocalPort, eventMux)
 
 
 		//init manager
 
-		manager.New(eventMux,blockPool,grpcPeerMgr,cs,fetcher,am,kec256Hash,
+		exist:=make(chan bool)
+		pm:=manager.New(eventMux,blockPool,grpcPeerMgr,cs,fetcher,am,kec256Hash,
 			nodePath,argv.NodeId)
+		go jsonrpc.Start(argv.LocalPort, eventMux,pm)
 
+
+		<-exist
 		////init manager
 		//manager.New(eventMux,blockPool,grpcPeerMgr,cs,fetcher,encryption,kec256Hash,
 		//	nodePath,argv.NodeId)

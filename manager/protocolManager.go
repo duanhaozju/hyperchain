@@ -20,6 +20,8 @@ import (
 	"hyperchain/common"
 	"hyperchain/recovery"
 	"hyperchain/hyperdb"
+	"hyperchain/p2p/peer"
+
 )
 
 var log *logging.Logger // package-level logger
@@ -32,6 +34,8 @@ type ProtocolManager struct {
 	blockPool         *core.BlockPool
 	fetcher           *core.Fetcher
 	peerManager       p2p.PeerManager
+
+	nodeInfo          client.PeerInfos // node info ,store node status,ip,port
 	consenter         consensus.Consenter
 	//encryption   crypto.Encryption
 	accountManager    *accounts.AccountManager
@@ -52,15 +56,19 @@ type ProtocolManager struct {
 
 	wg                sync.WaitGroup
 }
+type NodeManager struct {
 
+	peerManager p2p.PeerManager
+
+}
 var eventMuxAll *event.TypeMux
 
 func NewProtocolManager(blockPool *core.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
 //encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 am *accounts.AccountManager, commonHash crypto.CommonHash) (*ProtocolManager) {
 	log.Debug("enter parotocol manager")
-	manager := &ProtocolManager{
 
+	manager := &ProtocolManager{
 
 		blockPool: blockPool,
 		eventMux:    eventMux,
@@ -74,6 +82,7 @@ am *accounts.AccountManager, commonHash crypto.CommonHash) (*ProtocolManager) {
 
 
 	}
+	manager.nodeInfo = make(client.PeerInfos, 0,1000)
 	eventMuxAll = eventMux
 	return manager
 }
@@ -101,7 +110,7 @@ func (pm *ProtocolManager) Start() {
 
 }
 func (self *ProtocolManager) syncCheckpointLoop() {
-
+	self.wg.Add(-1)
 	for obj := range self.syncCheckpointSub.Chan() {
 
 		switch  ev := obj.Data.(type) {
@@ -216,6 +225,11 @@ func (self *ProtocolManager) syncBlockLoop() {
 
 							core.UpdateRequire(blocks.Batch[i].Number - 1, blocks.Batch[i].ParentHash, core.GetChainCopy().RecoveryNum)
 							core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
+							balance, err := core.GetBalanceIns()
+							if err != nil {
+								log.Fatal(err)
+							}
+							balance.UpdateDBBalance(blocks.Batch[i])
 							// receive all block in chain
 							if (common.Bytes2Hex(blocks.Batch[i].ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash)) {
 								core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum)
@@ -262,7 +276,8 @@ func (self *ProtocolManager) NewBlockLoop() {
 			//accept msg from consensus module
 			//commit block into block pool
 
-			log.Debug("write block success")
+			log.Info("write block success")
+
 			self.commitNewBlock(ev.Payload, ev.CommitTime)
 		//self.fetcher.Enqueue(ev.Payload)
 
@@ -283,7 +298,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 			go self.BroadcastConsensus(ev.Payload)
 		case event.NewTxEvent:
-			log.Debug("######receiver new tx")
+			//log.Error("######receiver new tx")
 			//call consensus module
 			//send msg to consensus
 			//for i:=0;i<10000;i+=1{
@@ -383,6 +398,18 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte, commitTime int64) {
 	log.Info("now is ", msgList.No)
 	pm.blockPool.AddBlock(block, pm.commonHash, commitTime)
 	//core.WriteBlock(*block)
+
+}
+
+
+func (pm *ProtocolManager) GetNodeInfo()client.PeerInfos{
+	pm.nodeInfo=pm.peerManager.GetPeerInfos()
+	log.Info("nodeInfo is ",pm.nodeInfo)
+/*	pm.nodeInfo["node1"]=true
+	pm.nodeInfo["node2"]=true
+	pm.nodeInfo["node3"]=false
+	pm.nodeInfo["node4"]=true*/
+	return pm.nodeInfo
 
 }
 

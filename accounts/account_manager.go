@@ -53,11 +53,10 @@ func NewAccountManager(keydir string,encryp crypto.Encryption) *AccountManager {
 		Encryption:encryp,
 	}
 
-	am.unlockAllAccount(keydir)
+	//am.unlockAllAccount(keydir)
 	return am
 }
-
-func (am *AccountManager)unlockAllAccount(keydir string){
+func (am *AccountManager)UnlockAllAccount(keydir string){
 	var accounts []Account
 	accounts = getAllAccount(keydir)
 	for _,a := range accounts{
@@ -67,7 +66,7 @@ func (am *AccountManager)unlockAllAccount(keydir string){
 }
 func getAllAccount(keydir string) []Account {
 	var accounts []Account
-	addressdir := keydir+"/addresses/address"
+	addressdir := keydir+"addresses/address"
 	fp, _ := os.Open(addressdir)
 	scanner := bufio.NewScanner(fp)
 	scanner.Split(bufio.ScanLines)
@@ -77,7 +76,7 @@ func getAllAccount(keydir string) []Account {
 		addr := common.HexToAddress(string(addrHex)[:40])
 		account := Account{
 			Address:addr,
-			File:keydir+"/"+addrHex,
+			File:keydir+addrHex,
 		}
 		accounts = append(accounts,account)
 	}
@@ -211,7 +210,7 @@ func (am *AccountManager) NewAccount(passphrase string) (Account, error) {
 	}
 	//am.AddrPassMap[common.ToHex(account.Address)] = passphrase
 	storeNewAddrToFile(account)
-	am.Unlock(account,"123")
+	am.Unlock(account,passphrase)
 	return account, nil
 }
 

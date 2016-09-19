@@ -158,7 +158,7 @@ func PutDBBalance(db hyperdb.Database, balance_db BalanceMap) error {
 
 	var bJson = make(balanceMapJson)
 	for key, value := range balance_db{
-		bJson[key.Hex()] = value
+		bJson[key.Str()] = value
 	}
 	data, err := json.Marshal(bJson)
 	if err != nil {
@@ -179,7 +179,7 @@ func GetDBBalance(db hyperdb.Database) (BalanceMap, error) {
 		return b, err
 	}
 	for key, value := range bJson {
-		b[common.HexToAddress(key)] = value
+		b[common.StringToAddress(key)] = value
 	}
 	return b, nil
 }
@@ -322,6 +322,8 @@ func UpdateRequire(num uint64, hash []byte,recoveryNum uint64) error {
 	if err != nil {return err}
 	return putChain(db, &memChainMap.data)
 }
+
+
 
 // getChain get chain from database
 func getChain(db hyperdb.Database) (*types.Chain, error){

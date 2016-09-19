@@ -6,10 +6,27 @@
 }
 
 .table_th{
-    background-color: #6e7598;
+    /*background-color: #6e7598;*/
+    background-color: #7888d6;
     color:white;
     border:none
 }
 table.dataTable thead .sorting, table.dataTable thead .sorting_asc:after, table.dataTable thead .sorting_desc, table.dataTable thead .sorting_asc_disabled, table.dataTable thead .sorting_desc_disabled{
-    background-color: #6e7598;
+    /*background-color: #6e7598;*/
+    background-color: #7888d6;
+}
+.center{
+    text-align: center;
+}
+.text_red {
+    color: red
+}
+.test_wrap{
+    margin-bottom: 10px;
+    background-color: #efeeee;
+    padding: 10px;
+}
+
+.swal-wide{
+    width:800px !important;
 }
