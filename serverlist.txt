@@ -1,11 +1,11 @@
-cn6.hyperchain.cn
-cn7.hyperchain.cn
-cn8.hyperchain.cn
-cn9.hyperchain.cn
-cn12.hyperchain.cn
-cn13.hyperchain.cn
-cn14.hyperchain.cn
-cn15.hyperchain.cn
-cn16.hyperchain.cn
-cn17.hyperchain.cn
+114.55.64.132
+114.55.232.225
+114.55.233.121
+114.55.42.186
+114.55.64.145
+114.55.176.43
+114.55.237.23
+114.55.238.31
+114.55.26.32
+114.55.131.21
 please leave this line to ensure the script could run correctly

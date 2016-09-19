@@ -53,7 +53,25 @@
                                 <button class="btn btn-info btn-circle" type="button" ng-click="modal_deploy()" disabled><i class="fa fa-cloud-upload"></i></button>
                             </td>
                         </tr>
-                        <tr ng-repeat="ct in contracts">
+                        <!--<tr ng-repeat="ct in contracts">-->
+                            <!--<td>{{ct.contractName}}</td>-->
+                            <!--<td>{{ct.projectName}}</td>-->
+                            <!--<td ng-switch="ct.type">-->
+                                <!--<span ng-switch-when="1">Create</span>-->
+                                <!--<span ng-switch-when="2">Load</span>-->
+                            <!--</td>-->
+                            <!--<td ng-switch="ct.status">-->
+                                <!--<span ng-switch-when="0">Nondeployed</span>-->
+                                <!--<span ng-switch-when="1">Deployed</span>-->
+                            <!--</td>-->
+                            <!--<td ng-switch="ct.status">-->
+                                <!--<button class="btn btn-success btn-circle" type="button"><i class="fa fa-list"></i></button>-->
+                                <!--<button ng-switch-when="0" class="btn btn-info btn-circle" type="button" ng-click="modal_deploy(ct.contractName,ct.sourceCode)"><i class="fa fa-cloud-upload"></i></button>-->
+                                <!--&lt;!&ndash;<button ng-switch-when="1" class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>&ndash;&gt;-->
+                                <!--<button ng-switch-when="1" class="btn btn-warning btn-circle" type="button" ng-click="modal_invoke(ct.hash, ct.methods)"><i class="fa fa-flag"></i></button>-->
+                            <!--</td>-->
+                        <!--</tr>-->
+                        <tr ng-repeat="(name,ct) in contracts">
                             <td>{{ct.contractName}}</td>
                             <td>{{ct.projectName}}</td>
                             <td ng-switch="ct.type">
@@ -69,7 +87,7 @@
                                 <button ng-switch-when="0" class="btn btn-info btn-circle" type="button" ng-click="modal_deploy(ct.contractName,ct.sourceCode)"><i class="fa fa-cloud-upload"></i></button>
                                 <!--<button ng-switch-when="1" class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>-->
                                 <button ng-switch-when="1" class="btn btn-warning btn-circle" type="button" ng-click="modal_invoke(ct.hash, ct.methods)"><i class="fa fa-flag"></i></button>
-                            </td>
+                                <button class="btn btn-danger btn-circle" type="button" ng-click="delete(ct.contractName)"><i class="fa fa-trash-o"></i></button>
                         </tr>
 
                         </tbody>

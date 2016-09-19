@@ -6,7 +6,7 @@ var SF = require("w3.js");
 
 angular
     .module('starter')
-    .factory('EncodeService', function($q) {
+    .factory('UtilsService', function($q) {
         return {
             encode: function(abimethod, params) {
                 console.log(abimethod);

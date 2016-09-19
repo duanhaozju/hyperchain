@@ -72,64 +72,30 @@
                             </tr>
                         </thead>
                         <tbody>
-                        <tr>
+                        <tr ng-repeat="n in nodes">
                             <td>
-                                <i class="fa fa-circle text-navy"></i>&nbsp;
-                                <small>live</small>
+                                <div ng-if="n.Status == 0">
+                                    <i class="fa fa-circle text-navy"></i>&nbsp;
+                                    <small>alive</small>
+                                </div>
+                                <div ng-if="n.Status == 1">
+                                    <i class="fa fa-circle text-warning"></i>&nbsp;
+                                    <small>pending</small>
+                                </div>
+                                <div ng-if="n.Status == 2">
+                                    <i class="fa fa-circle text-danger"></i>&nbsp;
+                                    <small>stopped</small>
+                                </div>
+
                             </td>
                             <td>
-                                cn6.hyperchain.cn
+                                <span ng-bind="n.CName"></span>
                             </td>
                             <td >
-                                111.111.111.04
+                                <span ng-bind="n.IP"></span>
                             </td>
                             <td>
-                                8001
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <i class="fa fa-circle text-danger"></i>&nbsp;
-                                <small>stopped</small>
-                            </td>
-                            <td>
-                                cn6.hyperchain.cn
-                            </td>
-                            <td>
-                                111.111.111.04
-                            </td>
-                            <td>
-                                8001
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <i class="fa fa-circle text-navy"></i>&nbsp;
-                                <small>live</small>
-                            </td>
-                            <td>
-                                cn6.hyperchain.cn
-                            </td>
-                            <td>
-                                111.111.111.04
-                            </td>
-                            <td>
-                                8001
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <i class="fa fa-circle text-navy"></i>&nbsp;
-                                <small>live</small>
-                            </td>
-                            <td>
-                                cn6.hyperchain.cn
-                            </td>
-                            <td>
-                                111.111.111.04
-                            </td>
-                            <td>
-                                8001
+                                <span ng-bind="n.Port"></span>
                             </td>
                         </tr>
                         </tbody>
