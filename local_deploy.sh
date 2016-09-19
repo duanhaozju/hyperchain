@@ -4,7 +4,6 @@ set -e
 govendor build
 
 FIRSTSERVER="114.55.64.132"
-MAXNODE=10
 
  scp -r killprocess.sh satoshi@$FIRSTSERVER:/home/satoshi/
  ssh -t satoshi@$FIRSTSERVER "chmod a+x killprocess.sh && bash killprocess.sh"
