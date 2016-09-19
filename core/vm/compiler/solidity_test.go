@@ -14,11 +14,26 @@ const solcVersion = "0.1.1"
 
 var (
 	source = `
-contract test {
-   /// @notice Will multiply ` + "`a`" + ` by 7.
-   function multiply(uint a) returns(uint d) {
-       return a * 7;
-   }
+// it is a accumulator
+contract Accumulator{
+    uint32 sum = 0;
+    bytes32 hello = "abcdefghijklmnopqrstuvwxyz";
+
+    function increment(){
+        sum = sum + 1;
+    }
+
+    function getSum() returns(uint32){
+        return sum;
+    }
+
+    function getHello() constant returns(bytes32){
+        return hello;
+    }
+
+    function add(uint32 num1,uint32 num2) {
+        sum = sum+num1+num2;
+    }
 }
 `
 	source2 = `
@@ -73,7 +88,7 @@ contract mortal {
 
 func TestCompiler(t *testing.T) {
 
-	abis,bins,err := CompileSourcefile(source2)
+	abis,bins,err := CompileSourcefile(source)
 	if err != nil {
 		return
 	}
