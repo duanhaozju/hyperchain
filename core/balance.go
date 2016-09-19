@@ -224,16 +224,12 @@ func (self *Balance)UpdateCacheBalance(trans *types.Transaction) {
 func VerifyBalance(tx *types.Transaction) bool {
 	var balance big.Int
 	var value big.Int
-
 	balanceIns, err := GetBalanceIns()
-
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
 	}
 	bal := balanceIns.GetCacheBalance(common.HexToAddress(string(tx.From)))
 	//log.Println(common.Bytes2Hex(bal))
-
-
 	balance.SetString(string(bal), 10)
 	value.SetString(string(tx.Value), 10)
 

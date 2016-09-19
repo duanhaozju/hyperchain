@@ -77,19 +77,16 @@ func prepareExcute(args SendTxArgs) SendTxArgs{
 func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error){
 
 	log.Info("==========SendTransaction=====,args = ",args)
-
 	var tx *types.Transaction
-
 	log.Info(args.Value)
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
-
 	log.Info(tx.Value)
-	//if (true) {
 	am := tran.pm.AccountManager
 	addr := common.HexToAddress(string(args.From))
-	if _,found := am.Unlocked[addr];!found{
-		return common.Hash{},errors.New("account is locked!")
-	}else if (core.VerifyBalance(tx)) {
+
+	if (!core.VerifyBalance(tx)){
+		return common.Hash{},errors.New("Not enough balance!")
+	}else if _,found := am.Unlocked[addr];found {
 
 		// Balance is enough
 		/*txBytes, err := proto.Marshal(tx)
@@ -123,10 +120,6 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
-
-
-
-
 		return tx.BuildHash(),nil
 
 	} else {

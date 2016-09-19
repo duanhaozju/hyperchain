@@ -5,6 +5,7 @@ import (
 	"hyperchain/core"
 	"hyperchain/accounts"
 	"hyperchain/manager"
+	"errors"
 )
 
 type PublicAccountAPI struct {
@@ -60,7 +61,11 @@ func (acot *PublicAccountAPI)UnlockAccount(args UnlockParas) error {
 		}
 	}
 	ac := accounts.Account{Address:address,File:am.KeyStore.JoinPath(s)}
-	return am.Unlock(ac,password)
+	err:= am.Unlock(ac,password)
+	if err!=nil{
+		return errors.New("Incorrect address or password!")
+	}
+	return nil
 }
 // GetAllBalances returns all account's balance in the db,NOT CACHE DB!
 func (acot *PublicAccountAPI) GetAccounts() []*AccountResult{
