@@ -805,9 +805,10 @@ function modalInstanceInvodeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Co
 
                         SweetAlert.swal({
                             title: "Invoked successfully!",
-                            text: "You have invode the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The address is <span class='text_red'>"+ res +"</span>",
+                            text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! ",
+                            // text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The address is <span class='text_red'>"+ res +"</span>",
                             type: "success",
-                            customClass: 'swal-wide',
+                            // customClass: 'swal-wide',
                             html: true
                         });
                         $uibModalInstance.close();
