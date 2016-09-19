@@ -39,7 +39,7 @@ func ExecBlock(block *types.Block)(err error){
 
 	//for _,tx := range block.Transactions{
 	for _,_ = range block.Transactions{
-		_,err = ExecTransaction(*types.NewTestCallTransaction())
+		_,_,err = ExecTransaction(*types.NewTestCallTransaction())
 		//_,err = ExecTransaction(*tx)
 	}
 	log.Notice("the sum of transactions is ",len(block.Transactions))
@@ -61,7 +61,7 @@ func ExecBlock(block *types.Block)(err error){
 }
 
 // 这一块相当于ethereum里的TransitionDB
-func ExecTransaction(tx types.Transaction)(ret []byte,err error) {
+func ExecTransaction(tx types.Transaction)(ret []byte,addr common.Address,err error) {
 	var(
 		from = common.BytesToAddress(tx.From)
 		//sender = common.BytesToAddress(tx.From)
@@ -72,8 +72,8 @@ func ExecTransaction(tx types.Transaction)(ret []byte,err error) {
 		gasPrice = tx.GasPrice()
 		amount = tx.Amount()
 	)
-	//log.Info("the to is ---------",to)
-	//log.Info("the to is ---------",tx.To)
+	log.Debug("the to is ---------",to)
+	log.Debug("the to is ---------",tx.To)
 	if(tx.To == nil){
 		return Exec(&from,nil,data,gas,gasPrice,amount)
 	}
@@ -82,7 +82,7 @@ func ExecTransaction(tx types.Transaction)(ret []byte,err error) {
 }
 
 func ExecSourceCode(from, to *common.Address, data []byte, gas,
-gasPrice, value *big.Int)(ret []byte,err error){
+gasPrice, value *big.Int)(ret []byte,addr common.Address,err error){
 
 	sender := vmenv.Db().GetAccount(*from)
 	contractCreation := (nil == to)
@@ -91,7 +91,7 @@ gasPrice, value *big.Int)(ret []byte,err error){
 
 	if contractCreation{
 		//logger.Notice("------create contract")
-		ret,_,err = vmenv.Create(sender,data,gas,gasPrice,value)
+		ret,addr,err = vmenv.Create(sender,data,gas,gasPrice,value)
 		if err != nil{
 			ret = nil
 			logger.Error("VM create err:",err)
@@ -102,11 +102,11 @@ gasPrice, value *big.Int)(ret []byte,err error){
 			logger.Error("VM call err:",err)
 		}
 	}
-	return ret,err
+	return ret,addr,err
 }
 
 func Exec(from, to *common.Address, data []byte, gas,
-gasPrice, value *big.Int)(ret []byte,err error){
+gasPrice, value *big.Int)(ret []byte,addr common.Address,err error){
 
 	sender := vmenv.Db().GetAccount(*from)
 	contractCreation := (nil == to)
@@ -115,7 +115,7 @@ gasPrice, value *big.Int)(ret []byte,err error){
 
 	if contractCreation{
 		//logger.Notice("------create contract")
-		ret,_,err = vmenv.Create(sender,data,gas,gasPrice,value)
+		ret,addr,err = vmenv.Create(sender,data,gas,gasPrice,value)
 		if err != nil{
 			ret = nil
 			logger.Error("VM create err:",err)
@@ -126,7 +126,7 @@ gasPrice, value *big.Int)(ret []byte,err error){
 			logger.Error("VM call err:",err)
 		}
 	}
-	return ret,err
+	return ret,addr,err
 }
 
 

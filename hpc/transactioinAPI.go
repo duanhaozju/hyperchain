@@ -83,8 +83,8 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
 
 	log.Info(tx.Value)
-	if (true) {
-	//if (core.VerifyBalance(tx)) {
+	//if (true) {
+	if (core.VerifyBalance(tx)) {
 
 		// Balance is enough
 		/*txBytes, err := proto.Marshal(tx)
@@ -99,7 +99,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//end:=start+500
 
 		for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 50; i++ {
+			for i := 0; i < 32; i++ {
 				tx.TimeStamp=time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
@@ -113,7 +113,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				}
 
 			}
-			time.Sleep(20 * time.Millisecond)
+			time.Sleep(90 * time.Millisecond)
 
 		}
 

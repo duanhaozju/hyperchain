@@ -103,41 +103,49 @@ func runVmTest(test VmTest) error {
 func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.Int, error) {
 	// init the parameters
 	var (
-		data  = common.FromHex(exec["code"])
+		//code = common.FromHex(exec["code"])
+		code_exe1 = common.FromHex(exec["code_exe1"])
 		from  = common.HexToAddress(exec["caller"])
 		gas = common.Big(exec["gasLimit"])
 		price = common.Big(exec["gasPrice"])
 		value = common.Big(exec["value"])
-		data2 = common.FromHex(exec["data"])
+		//data2 = common.FromHex(exec["data"])
+		data_get = common.FromHex(exec["data_get"])
+		data_inc = common.FromHex(exec["data_inc"])
+		//data_add = common.FromHex(exec["data_add"])
 	)
 	vmenv := core.GetVMEnv()
 	state = vmenv.State()
 
 	// create a new contract
 	now_time := time.Now()
-	ret,err :=core.Exec(&from,nil,([]byte)(data), gas, price, value)
-	for i := 0;i<30000;i++{
-		//core.ExecSourceCode(&from,nil,([]byte)(sourcecode), gas, price, value)
-		core.Exec(&from,nil,([]byte)(data), gas, price, value)
-	}
+	ret,addr,err :=core.Exec(&from,nil,([]byte)(code_exe1), gas, price, value)
+	//for i := 0;i<1;i++{
+	//	//core.ExecSourceCode(&from,nil,([]byte)(sourcecode), gas, price, value)
+	//	core.Exec(&from,nil,([]byte)(code_exe1), gas, price, value)
+	//}
 	log.Notice("the create contract time we used is ",time.Now().Sub(now_time))
 	//ret,err := core.ExecSourceCode(&from,nil,([]byte)(sourcecode), gas, price, value)
 	//ret,err = core.ExecSourceCode(&from,nil,([]byte)(sourcecode), gas, price, value)
-	addr := state.GetLeastAccount().Address()
+	addr = state.GetLeastAccount().Address()
 	//state.ForEachAccounts()
 
 	// call the contract there times
 	log.Notice("the time now is",time.Now())
 	now_time = time.Now()
-	for i := 0;i<3000;i++{
-		ret,err = core.ExecSourceCode(&from, &addr, data2, gas, price, value)
+	log.Info("----------",common.ToHex(addr.Bytes()))
+	for i := 0;i<3;i++{
+		//core.Exec(&from, &addr, data_add, gas, price, value)
+		core.Exec(&from, &addr, data_inc, gas, price, value)
+		ret,_,_ = core.Exec(&from, &addr, data_get, gas, price, value)
+		log.Info("the ret is ",common.ToHex(ret))
+		log.Info("the ret is ",ret)
+		vmenv.State().GetAccount(addr).PrintStorages()
+		//ret,addr,err = core.Exec(&from, &addr, data_get, gas, price, value)
 	}
 	//state.GetAccount(addr).PrintStorages()
 	log.Notice("the call contract time we used is ",time.Now().Sub(now_time))
 
 	// if err, print log
-	if err != nil{
-		log.Error("VM call err:",err)
-	}
 	return ret, vmenv.State().Logs(), vmenv.Gas, err
 }

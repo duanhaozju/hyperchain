@@ -323,6 +323,8 @@ func UpdateRequire(num uint64, hash []byte,recoveryNum uint64) error {
 	return putChain(db, &memChainMap.data)
 }
 
+
+
 // getChain get chain from database
 func getChain(db hyperdb.Database) (*types.Chain, error){
 	var chain types.Chain
