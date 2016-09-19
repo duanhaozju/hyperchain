@@ -50,5 +50,6 @@ func TestCalcCommitBatchAVGTime(t *testing.T) {
 
 func TestCalTransactionNums(t *testing.T) {
 	InitDB(8084)
-	fmt.Println(CalTransactionSum())
+	res := CalTransactionSum()
+	fmt.Println(res)
 }
