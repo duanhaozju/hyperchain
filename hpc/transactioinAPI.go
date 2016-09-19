@@ -14,6 +14,8 @@ import (
 	"hyperchain/event"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/vm/compiler"
+
+	"hyperchain/core/crypto"
 )
 
 const (
@@ -101,7 +103,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//end:=start+500
 
 		for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 32; i++ {
+			for i := 0; i < 50; i++ {
 				tx.TimeStamp=time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
@@ -115,7 +117,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				}
 
 			}
-			time.Sleep(20 * time.Millisecond)
+			time.Sleep(90 * time.Millisecond)
 
 		}
 
@@ -129,7 +131,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 }
 
 // SendTransactionOrContract deploy contract
-func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (common.Hash, error){
+func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (common.Address, error){
 
 	var tx *types.Transaction
 
@@ -141,7 +143,7 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 	payload, err := json.Marshal(realArgs.Payload)
 
 	if err != nil {
-		return common.Hash{},err
+		return common.Address{},err
 	}
 
 	txValue := types.NewTransactionValue(price,gas,amount,payload)
@@ -149,11 +151,15 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 	value, err := json.Marshal(txValue)
 
 	if err != nil {
-		return common.Hash{}, err
+		return common.Address{}, err
 	}
 
+	var addr common.Address
 	if args.To == "" {
 		tx = types.NewTransaction([]byte(realArgs.From), nil, value)
+		nonce := core.GetVMEnv().Db().GetNonce(common.BytesToAddress(tx.From))
+		core.GetVMEnv().Db().SetNonce(common.BytesToAddress(tx.From), nonce+1)
+		addr = crypto.CreateAddress(common.BytesToAddress(tx.From), nonce)
 	} else {
 		tx = types.NewTransaction([]byte(realArgs.From), []byte(realArgs.To), value)
 	}
@@ -167,7 +173,8 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 	//
 	//core.PutTransaction(db, ,tx)
 
-	return tx.BuildHash(),nil
+	return addr,nil
+	//return tx.BuildHash(),nil
 }
 
 // ComplieContract complies contract to ABI

@@ -11,7 +11,6 @@ import (
 
 // CalcResponseCount calculate response count of a block for given blockNumber
 // millTime is Millisecond
-var TxSum *big.Int
 func CalcResponseCount(blockNumber uint64, millTime int64) (int64,float64){
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
@@ -92,6 +91,7 @@ func CalTransactionSum()  *big.Int{
 			return big.NewInt(-1)
 		}
 		tmp := big.NewInt(int64(len(block.Transactions)))
+		log.Info("block tx number is:",tmp)
 		sum.Add(sum,tmp)
 	}
 	return sum

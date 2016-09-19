@@ -52,7 +52,7 @@ func main() {
 
 		//init db
 		core.InitDB(argv.LocalPort)
-		core.TxSum = core.CalTransactionSum()
+		//core.TxSum = core.CalTransactionSum()
 
 		//init genesis
 		core.CreateInitBlock(argv.GenesisPath)
