@@ -28,6 +28,7 @@ func init() {
 
 type PublicTransactionAPI struct {
 	eventMux *event.TypeMux
+	pm *manager.ProtocolManager
 
 }
 
@@ -54,10 +55,10 @@ type TransactionResult struct {
 	Timestamp  string		`json:"timestamp"`
 }
 
-func NewPublicTransactionAPI(eventMux *event.TypeMux) *PublicTransactionAPI {
+func NewPublicTransactionAPI(eventMux *event.TypeMux,pm *manager.ProtocolManager) *PublicTransactionAPI {
 	return &PublicTransactionAPI{
 		eventMux :eventMux,
-
+		pm:pm,
 	}
 }
 
@@ -83,8 +84,12 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
 
 	log.Info(tx.Value)
-	if (true) {
-	//if (core.VerifyBalance(tx)) {
+	//if (true) {
+	am := tran.pm.AccountManager
+	addr := common.HexToAddress(string(args.From))
+	if _,found := am.Unlocked[addr];!found{
+		return common.Hash{},errors.New("account is locked!")
+	}else if (core.VerifyBalance(tx)) {
 
 		// Balance is enough
 		/*txBytes, err := proto.Marshal(tx)

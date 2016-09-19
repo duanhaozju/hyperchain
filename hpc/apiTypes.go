@@ -18,7 +18,7 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager) []API{
 		{
 			Namespace: "tx",
 			Version: "0.4",
-			Service: NewPublicTransactionAPI(eventMux),
+			Service: NewPublicTransactionAPI(eventMux,pm),
 			Public: true,
 		},
 		{
