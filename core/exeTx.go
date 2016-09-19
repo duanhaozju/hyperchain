@@ -72,8 +72,8 @@ func ExecTransaction(tx types.Transaction)(ret []byte,addr common.Address,err er
 		gasPrice = tx.GasPrice()
 		amount = tx.Amount()
 	)
-	log.Notice("the to is ---------",to)
-	log.Notice("the to is ---------",tx.To)
+	log.Debug("the to is ---------",to)
+	log.Debug("the to is ---------",tx.To)
 	if(tx.To == nil){
 		return Exec(&from,nil,data,gas,gasPrice,amount)
 	}
