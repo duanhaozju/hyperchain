@@ -375,15 +375,19 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
                         $scope.avgTime = res.time;
                     }
                     // $scope.txCount = res.count; // 后端没有存到数据库里
-                    $scope.txCount = $scope.number * 500;
+                    // $scope.txCount = $scope.number * 500;
                 }, function(error){
                     console.log(error);
                 })
-
         }, function(error){
             console.log(error)
         })
-
+    SummaryService.getTransactionSum()
+        .then(function(res){
+            $scope.txCount = res;
+        }, function(error){
+            console.log(error)
+        })
     SummaryService.getNodeInfo()
         .then(function(res){
             $scope.nodes = res;

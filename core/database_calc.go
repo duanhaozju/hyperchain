@@ -71,6 +71,28 @@ func CalcCommitBatchAVGTime(from,to uint64) (int64,int64) {
 	return commit/(num)/int64(time.Millisecond),batch/(num)/int64(time.Millisecond)
 
 }
+func CalTransactionSum()  int{
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+	var sum int = 0
+	height := GetHeightOfChain()
+	for i:=uint64(1);i<=height;i++{
+		blockHash, err := GetBlockHash(db, i)
+		if err != nil {
+			log.Error(err)
+			return -1
+		}
+		block, err := GetBlock(db, blockHash)
+		if err != nil {
+			log.Error(err)
+			return -1
+		}
+		sum+=len(block.Transactions)
+	}
+	return sum
+}
 
 // CalcResponseAVGTime calculate response avg time of blocks
 // whose blockNumber from 'from' to 'to', include 'from' and 'to'
