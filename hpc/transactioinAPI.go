@@ -83,8 +83,8 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
 
 	log.Info(tx.Value)
-	if (true) {
-	//if (core.VerifyBalance(tx)) {
+	//if (true) {
+	if (core.VerifyBalance(tx)) {
 
 		// Balance is enough
 		/*txBytes, err := proto.Marshal(tx)
