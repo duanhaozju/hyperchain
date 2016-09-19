@@ -66,7 +66,7 @@ func main() {
 		encryption.GenerateNodeKey(strconv.Itoa(argv.LocalPort),keydir)
 
 		am := accounts.NewAccountManager(keydir,encryption)
-		//am.NewAccount("123")
+		am.UnlockAllAccount(keydir)
 
 
 		//init hash object

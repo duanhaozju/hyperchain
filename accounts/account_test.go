@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"math/big"
 	"time"
+	"hyperchain/hyperdb"
+	"hyperchain/core"
 )
 
 type Transaction struct {
@@ -100,4 +102,35 @@ func TestValidateAddr(t *testing.T) {
 	from := []byte("6201cb0448964ac597faf6fdf1f472edf2a22b89")
 	fmt.Println(ValidateAddr(from))
 	fmt.Println(time.Since(start))
+}
+func TestNewAccount(t *testing.T) {
+	keydir := "../keystore/"
+
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	am := NewAccountManager(keydir,encryption)
+	am.NewAccount("123")
+}
+func TestSigntx(t *testing.T) {
+	keydir := "./keystore/"
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+
+	am := NewAccountManager(keydir,encryption)
+
+	core.InitDB(8082)
+	db ,_ := hyperdb.GetLDBDatabase()
+	height := core.GetHeightOfChain()
+	block ,_ := core.GetBlockByNumber(db,height)
+	tx := block.Transactions[0]
+
+	kec256Hash := crypto.NewKeccak256Hash("keccak256")
+
+	hash := tx.SighHash(kec256Hash)
+	for i:=0;i<10;i++{
+		start := time.Now()
+		signature, _ := am.SignWithPassphrase(common.HexToAddress(string(tx.From)),hash[:],"123")
+		fmt.Println(time.Since(start))
+		fmt.Println(signature)
+		tx.ValidateSign(encryption,kec256Hash)
+
+	}
 }
