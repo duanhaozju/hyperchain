@@ -19,6 +19,7 @@ import (
 	"hyperchain/p2p/transport"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/recovery"
+	"hyperchain/common"
 )
 
 var log *logging.Logger // package-level logger
@@ -31,6 +32,12 @@ type Node struct {
 	NodeID		string
 	higherEventManager *event.TypeMux
 	HSM transport.HandShakeManager
+
+	//common information
+	IP	     string
+	Port         int
+	NodeHash     *common.Hash
+	Cname	     string
 }
 
 var globalNode Node

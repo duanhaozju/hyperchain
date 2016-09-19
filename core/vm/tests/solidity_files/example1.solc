@@ -1,6 +1,6 @@
 contract Accumulator{
     uint32 sum = 0;
-    bytes32 hello = "abcdefghijklmnopqrstuvwxyz";
+    string hello = "aaabbbccc";
 
     function increment(){
         sum = sum + 1;
@@ -10,7 +10,7 @@ contract Accumulator{
         return sum;
     }
 
-    function getHello() constant returns(bytes32){
+    function getHello() constant returns(string){
         return hello;
     }
 

@@ -87,6 +87,50 @@ func NewPeerByString(address string)(*Peer,error){
 	return nil,errors.New("cannot establish a connection")
 }
 
+
+func NewPeerByIpAndPort(ip string,port int32)(*Peer,error){
+	var peer Peer
+	peerAddr := pb.PeerAddress{
+		Ip:ip,
+		Port:port,
+	}
+	//TODO 修改int32
+	conn, err := grpc.Dial(ip + ":" + strconv.Itoa(int(port)), grpc.WithInsecure())
+	if err != nil {
+		errors.New("Cannot establish a connection!")
+		log.Error("err:",err)
+		return nil,err
+	}
+	peer.Connection = conn
+	peer.Client = pb.NewChatClient(peer.Connection)
+	peer.Addr = peerAddr
+	//fromAddr := Server.GetChatServerAddr()
+	helloMessage := pb.Message{
+		MessageType:pb.Message_HELLO,
+		Payload:[]byte("HELLO"),
+		//From:&fromAddr,
+	}
+	retMessage,err2 := peer.Client.Chat(context.Background(),&helloMessage)
+	if err2 != nil{
+		errors.New("cannot establish a connection!")
+		log.Error("cannot establish a connection,errinfo: ",err2)
+		return nil,err2
+	}else{
+		if retMessage.MessageType == pb.Message_RESPONSE {
+			// get the peer id
+			origData, err := transport.TripleDesDecrypt(retMessage.Payload, DESKEY)
+			//log.Notice(string(origData))
+			if err != nil{
+				log.Error("cannot decrypt the nodeidinfo!")
+				errors.New("Decrypt ERROR")
+			}
+			peer.Idetity = string(origData)
+			return &peer,nil
+		}
+	}
+	return nil,errors.New("cannot establish a connection")
+}
+
 // Chat is a function to send a message to peer,
 // this function invokes the remote function peer-to-peer,
 // which implements the service that prototype file declares

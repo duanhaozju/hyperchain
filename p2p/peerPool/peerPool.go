@@ -37,7 +37,7 @@ func init() {
 }
 
 // NewPeerPool get a new peer pool instance
-func NewPeerPool(isNewInstance bool,isKeepAlive bool) PeersPool {
+func NewPeerPool(isNewInstance bool,isKeepAlive bool) *PeersPool {
 	if isNewInstance {
 		var newPrPoolIns PeersPool
 		newPrPoolIns.peers = make(map[string]*peer.Peer)
@@ -71,19 +71,22 @@ func NewPeerPool(isNewInstance bool,isKeepAlive bool) PeersPool {
 				}
 			}()
 		}
-		return newPrPoolIns
+		return &newPrPoolIns
 	} else {
-		return prPoolIns
+		return &prPoolIns
 	}
 }
 
 // PutPeer put a peer into the peer pool and get a peer point
 func (this *PeersPool) PutPeer(addr pb.PeerAddress, client *peer.Peer) (*peer.Peer, error) {
-	addrString := addr.String()
+	addrString := addr.Hash
 	//log.Println("Add a peer:",addrString)
 	if _, ok := this.peerKeys[addr]; ok {
 		// the pool already has this client
+
+		log.Error(addr.Ip,addr.Port,"The client already in")
 		return this.peers[addrString], errors.New("The client already in")
+
 	} else {
 		this.aliveNodes += 1
 		this.peerKeys[addr] = addrString

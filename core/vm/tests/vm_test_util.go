@@ -111,7 +111,7 @@ func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.
 		value = common.Big(exec["value"])
 		//data2 = common.FromHex(exec["data"])
 		data_get = common.FromHex(exec["data_get"])
-		data_inc = common.FromHex(exec["data_inc"])
+		//data_inc = common.FromHex(exec["data_inc"])
 		//data_add = common.FromHex(exec["data_add"])
 	)
 	vmenv := core.GetVMEnv()
@@ -134,9 +134,9 @@ func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.
 	log.Notice("the time now is",time.Now())
 	now_time = time.Now()
 	log.Info("----------",common.ToHex(addr.Bytes()))
-	for i := 0;i<3;i++{
+	for i := 0;i<1;i++{
 		//core.Exec(&from, &addr, data_add, gas, price, value)
-		core.Exec(&from, &addr, data_inc, gas, price, value)
+		//core.Exec(&from, &addr, data_inc, gas, price, value)
 		ret,_,_ = core.Exec(&from, &addr, data_get, gas, price, value)
 		log.Info("the ret is ",common.ToHex(ret))
 		log.Info("the ret is ",ret)

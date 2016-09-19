@@ -46,10 +46,10 @@ local_test(){
 
     for((j=1;j<=$MAXNODE;j++))
     do
-        gnome-terminal -x bash -c "(./hyperchain -o $j -l 808$j -p $CONFIG_PATH)"
+        gnome-terminal -x bash -c "./hyperchain -o $j -l 808$j -p $1 -f ./ -g ./genesis.json"
     done
 
-    python ./jsonrpc/Dashboard/simpleHttpServer.py
+#    python ./jsonrpc/Dashboard/simpleHttpServer.py
 
     echo "All process are running background"
 
@@ -93,5 +93,3 @@ else
     echo "参数错误"
     exit 1
 fi
-
-python ./jsonrpc/Dashboard/simpleHttpServer.py
