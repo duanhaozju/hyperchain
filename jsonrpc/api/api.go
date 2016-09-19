@@ -56,8 +56,8 @@ func SendTransaction(args TxArgs) bool {
 
 	log.Info(args)
 
-	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
-	//tx = types.NewTestCreateTransaction()
+	//tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
+	tx = types.NewTestCreateTransaction()
 	//tx = types.NewTestCallTransaction()
 	if (core.VerifyBalance(tx)) {
 
@@ -71,7 +71,7 @@ func SendTransaction(args TxArgs) bool {
 
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
-		end:=start+3
+		end:=start+6
 
 		for start := start ; start < end; start = time.Now().Unix() {
 			for i := 0; i < 100; i++ {
@@ -87,7 +87,7 @@ func SendTransaction(args TxArgs) bool {
 				}
 				//time.Sleep(2 * time.Nanosecond)
 			}
-			time.Sleep(60 * time.Millisecond)
+			time.Sleep(90 * time.Millisecond)
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
