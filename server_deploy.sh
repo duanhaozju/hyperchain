@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-MAXNODE=10
+MAXNODE=16
 #kill the progress
 kellprogress(){
 

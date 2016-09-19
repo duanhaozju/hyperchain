@@ -103,7 +103,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 	for peerPool.GetAliveNodeNum() < MAXPEERNODE - 1{
 		log.Debug("node:",NodeId,"process connecting task...")
 		nid := 1
-		for range time.Tick(3 * time.Second) {
+		for range time.Tick(100 * time.Millisecond) {
 			status := alivePeerMap[nid]
 			//log.Println("status map", nid, status)
 			if !status {
