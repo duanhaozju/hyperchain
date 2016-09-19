@@ -3,11 +3,13 @@ package hpc
 import (
 	"hyperchain/common"
 	"hyperchain/core"
-	"hyperchain/crypto"
 	"hyperchain/accounts"
+	"hyperchain/manager"
 )
 
-type PublicAccountAPI struct {}
+type PublicAccountAPI struct {
+	pm *manager.ProtocolManager
+}
 
 type AccountResult struct {
 	Account common.Address `json:"account"`
@@ -18,15 +20,17 @@ type UnlockParas struct {
 	Password string
 }
 
-func NewPublicAccountAPI() *PublicAccountAPI {
-	return &PublicAccountAPI{}
+func NewPublicAccountAPI(pm *manager.ProtocolManager) *PublicAccountAPI {
+	return &PublicAccountAPI{
+		pm: pm,
+	}
 }
 
 //New Account according to args from html
 func (acot *PublicAccountAPI)NewAccount(password string) common.Address  {
-	keydir := "./keystore/"
-	encryption := crypto.NewEcdsaEncrypto("ecdsa")
-	am := accounts.NewAccountManager(keydir,encryption)
+	//keydir := "./keystore/"
+	//encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	am := acot.pm.AccountManager
 	ac,err :=am.NewAccount(password)
 	if err !=nil{
 		log.Fatal("New Account error,%v",err)
@@ -42,9 +46,9 @@ func (acot *PublicAccountAPI)UnlockAccount(args UnlockParas) error {
 	password := string(args.Password)
 	address := common.HexToAddress(args.Address)
 
-	keydir := "./keystore/"
-	encryption := crypto.NewEcdsaEncrypto("ecdsa")
-	am := accounts.NewAccountManager(keydir,encryption)
+	//keydir := "./keystore/"
+	//encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	am := acot.pm.AccountManager
 
 	s := string(args.Address)
 	if len(s) > 1 {
