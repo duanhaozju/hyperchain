@@ -28,6 +28,7 @@ func init() {
 
 type PublicTransactionAPI struct {
 	eventMux *event.TypeMux
+	pm *manager.ProtocolManager
 
 }
 
@@ -54,10 +55,10 @@ type TransactionResult struct {
 	Timestamp  string		`json:"timestamp"`
 }
 
-func NewPublicTransactionAPI(eventMux *event.TypeMux) *PublicTransactionAPI {
+func NewPublicTransactionAPI(eventMux *event.TypeMux,pm *manager.ProtocolManager) *PublicTransactionAPI {
 	return &PublicTransactionAPI{
 		eventMux :eventMux,
-
+		pm:pm,
 	}
 }
 
@@ -76,15 +77,16 @@ func prepareExcute(args SendTxArgs) SendTxArgs{
 func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error){
 
 	log.Info("==========SendTransaction=====,args = ",args)
-
 	var tx *types.Transaction
-
 	log.Info(args.Value)
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
-
 	log.Info(tx.Value)
-	//if (true) {
-	if (core.VerifyBalance(tx)) {
+	am := tran.pm.AccountManager
+	addr := common.HexToAddress(string(args.From))
+
+	if (!core.VerifyBalance(tx)){
+		return common.Hash{},errors.New("Not enough balance!")
+	}else if _,found := am.Unlocked[addr];found {
 
 		// Balance is enough
 		/*txBytes, err := proto.Marshal(tx)
@@ -113,15 +115,11 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				}
 
 			}
-			time.Sleep(90 * time.Millisecond)
+			time.Sleep(20 * time.Millisecond)
 
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
-
-
-
-
 		return tx.BuildHash(),nil
 
 	} else {

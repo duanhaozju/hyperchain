@@ -38,7 +38,7 @@ type AccountManager struct {
 	KeyStore	keyStore
 	Encryption	crypto.Encryption
 	mu		sync.RWMutex
-	unlocked map[common.Address]*unlocked
+	Unlocked map[common.Address]*unlocked
 }
 type unlocked struct {
 	*Key
@@ -49,7 +49,7 @@ func NewAccountManager(keydir string,encryp crypto.Encryption) *AccountManager {
 	keydir, _ = filepath.Abs(keydir)
 	am := &AccountManager{
 		KeyStore: &keyStorePassphrase{keydir, StandardScryptN, StandardScryptP},
-		unlocked:make(map[common.Address]*unlocked),
+		Unlocked:make(map[common.Address]*unlocked),
 		Encryption:encryp,
 	}
 
@@ -88,7 +88,7 @@ func getAllAccount(keydir string) []Account {
 func (am *AccountManager) Sign(addr common.Address, hash []byte) (signature []byte, err error) {
 	am.mu.RLock()
 	defer am.mu.RUnlock()
-	unlockedKey, found := am.unlocked[addr]
+	unlockedKey, found := am.Unlocked[addr]
 	if !found {
 		return nil, ErrLocked
 	}
@@ -99,7 +99,7 @@ func (am *AccountManager) Sign(addr common.Address, hash []byte) (signature []by
 func (am *AccountManager) SignWithPassphrase(addr common.Address, hash []byte, passphrase string) (signature []byte, err error) {
 	am.mu.RLock()
 	defer am.mu.RUnlock()
-	unlockedKey, found := am.unlocked[addr]
+	unlockedKey, found := am.Unlocked[addr]
 	if !found {
 		file := am.KeyStore.JoinPath(addr.Hex()[2:])
 		key, err := am.GetDecryptedKey(Account{Address: addr,File:file}, passphrase)
@@ -130,7 +130,7 @@ func (am *AccountManager) Unlock(a Account, passphrase string) error {
 // Lock removes the private key with the given address from memory.
 func (am *AccountManager) Lock(addr common.Address) error {
 	am.mu.Lock()
-	if unl, found := am.unlocked[addr]; found {
+	if unl, found := am.Unlocked[addr]; found {
 		am.mu.Unlock()
 		am.expire(addr, unl, time.Duration(0)*time.Nanosecond)
 	} else {
@@ -154,7 +154,7 @@ func (am *AccountManager) TimedUnlock(a Account, passphrase string, timeout time
 	}
 	am.mu.Lock()
 	defer am.mu.Unlock()
-	u, found := am.unlocked[a.Address]
+	u, found := am.Unlocked[a.Address]
 	if found {
 		if u.abort == nil {
 			// The address was unlocked indefinitely, so unlocking
@@ -172,7 +172,7 @@ func (am *AccountManager) TimedUnlock(a Account, passphrase string, timeout time
 	} else {
 		u = &unlocked{Key: key}
 	}
-	am.unlocked[a.Address] = u
+	am.Unlocked[a.Address] = u
 	return nil
 }
 func (am *AccountManager) GetDecryptedKey(a Account,auth string) (*Key, error) {
@@ -194,9 +194,9 @@ func (am *AccountManager) expire(addr common.Address, u *unlocked, timeout time.
 	// was launched with. we can check that using pointer equality
 	// because the map stores a new pointer every time the key is
 	// unlocked.
-		if am.unlocked[addr] == u {
+		if am.Unlocked[addr] == u {
 			zeroKey(u.PrivateKey.(*ecdsa.PrivateKey))
-			delete(am.unlocked, addr)
+			delete(am.Unlocked, addr)
 		}
 		am.mu.Unlock()
 	}
@@ -210,7 +210,7 @@ func (am *AccountManager) NewAccount(passphrase string) (Account, error) {
 	}
 	//am.AddrPassMap[common.ToHex(account.Address)] = passphrase
 	storeNewAddrToFile(account)
-	am.Unlock(account,passphrase)
+	//am.Unlock(account,passphrase)
 	return account, nil
 }
 

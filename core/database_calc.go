@@ -6,10 +6,12 @@ import (
 
 	//"fmt"
 
+	"math/big"
 )
 
 // CalcResponseCount calculate response count of a block for given blockNumber
 // millTime is Millisecond
+var TxSum *big.Int
 func CalcResponseCount(blockNumber uint64, millTime int64) (int64,float64){
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
@@ -70,6 +72,29 @@ func CalcCommitBatchAVGTime(from,to uint64) (int64,int64) {
 	num := int64(to-from+1)
 	return commit/(num)/int64(time.Millisecond),batch/(num)/int64(time.Millisecond)
 
+}
+func CalTransactionSum()  *big.Int{
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+	sum := big.NewInt(0)
+	height := GetHeightOfChain()
+	for i:=uint64(1);i<=height;i++{
+		blockHash, err := GetBlockHash(db, i)
+		if err != nil {
+			log.Error(err)
+			return big.NewInt(-1)
+		}
+		block, err := GetBlock(db, blockHash)
+		if err != nil {
+			log.Error(err)
+			return big.NewInt(-1)
+		}
+		tmp := big.NewInt(int64(len(block.Transactions)))
+		sum.Add(sum,tmp)
+	}
+	return sum
 }
 
 // CalcResponseAVGTime calculate response avg time of blocks
