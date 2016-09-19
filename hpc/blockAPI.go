@@ -135,6 +135,7 @@ func (blk *PublicBlockAPI) QueryExecuteTime(args SendQueryArgs) *ExeTimeResult{
 	}
 }
 
+// QueryCommitAndBatchTime returns commit time and batch time between from block and to block
 func (blk *PublicBlockAPI) QueryCommitAndBatchTime(args SendQueryArgs) (*BatchTimeResult,error) {
 
 	from, err := strconv.ParseUint(args.From, 10, 64)
@@ -152,6 +153,7 @@ func (blk *PublicBlockAPI) QueryCommitAndBatchTime(args SendQueryArgs) (*BatchTi
 	},nil
 }
 
+// QueryEvmAvgTime returns EVM average time between from block and to block
 func (blk *PublicBlockAPI) QueryEvmAvgTime(args SendQueryArgs) (int64,error) {
 
 	from, err := strconv.ParseUint(args.From, 10, 64)
