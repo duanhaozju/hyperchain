@@ -86,7 +86,7 @@ func ExecTransaction(tx types.Transaction)(receipt *types.Receipt,ret []byte,add
 	}else {
 		ret,_,err = Exec(&from,&to,data,gas,gasPrice,amount)
 	}
-	receipt.Ret = "adfsf"
+	receipt.Ret = []byte("adfsf")
 	fmt.Println("-----------------------")
 	fmt.Println("ret",ret)
 	fmt.Println("-----------------------")
@@ -105,7 +105,7 @@ gasPrice, value *big.Int)(ret []byte,addr common.Address,err error){
 		//logger.Notice("------create contract")
 		ret,addr,err = vmenv.Create(sender,data,gas,gasPrice,value)
 		if err != nil{
-			ret = nil
+			//ret = nil
 			logger.Error("VM create err:",err)
 		}
 	} else {
@@ -122,7 +122,7 @@ gasPrice, value *big.Int)(ret []byte,addr common.Address,err error){
 	receipt.TxHash = common.Hash{}.Bytes()
 	receipt.Ret = ret
 	//WriteReceipts(types.Receipts{receipt,receipt,receipt})
-	fmt.Println("receipt from db",GetReceipt(common.Hash{}))
+	fmt.Println("receipt from db",GetReceipt(common.Hash{}).Ret)
 	return ret,addr,err
 }
 
