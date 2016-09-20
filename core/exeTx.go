@@ -87,7 +87,9 @@ func ExecTransaction(tx types.Transaction)(receipt *types.Receipt,ret []byte,add
 		ret,_,err = Exec(&from,&to,data,gas,gasPrice,amount)
 	}
 	receipt.Ret = "adfsf"
-	fmt.Println("ret",receipt)
+	fmt.Println("-----------------------")
+	fmt.Println("ret",ret)
+	fmt.Println("-----------------------")
 	return receipt,ret,addr,err
 }
 
