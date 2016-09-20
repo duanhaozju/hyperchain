@@ -86,8 +86,8 @@ func ExecTransaction(tx types.Transaction)(receipt *types.Receipt,ret []byte,add
 	}else {
 		ret,_,err = Exec(&from,&to,data,gas,gasPrice,amount)
 	}
-	receipt.Ret = ret
-	fmt.Println("receipt",receipt)
+	receipt.Ret = "adfsf"
+	fmt.Println("ret",receipt)
 	return receipt,ret,addr,err
 }
 
@@ -119,7 +119,7 @@ gasPrice, value *big.Int)(ret []byte,addr common.Address,err error){
 	receipt.ContractAddress = addr.Bytes();
 	receipt.TxHash = common.Hash{}.Bytes()
 	receipt.Ret = ret
-	WriteReceipts(types.Receipts{receipt,receipt,receipt})
+	//WriteReceipts(types.Receipts{receipt,receipt,receipt})
 	fmt.Println("receipt from db",GetReceipt(common.Hash{}))
 	return ret,addr,err
 }
