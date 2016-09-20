@@ -37,7 +37,7 @@
                                        class="form-control">
                             </div>
                             <button class="btn btn-primary" type="submit" ng-click="submit()">Submit</button>
-                            <div class="text_red">{{status}}</div>
+                            <div class="text_red">&nbsp;&nbsp;&nbsp;&nbsp;{{status}}</div>
                         </form><br/>
                         <form role="form" class="form-inline">
                             <span style="font-weight: bold">&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;计算tx平均处理时间：</span>
@@ -48,7 +48,7 @@
                             </div>&nbsp;-&nbsp;
                             <div class="form-group">
                                 <label for="to1" class="sr-only">to</label>
-                                <input type="text" placeholder="起始block number" ng-model="blockAvg.to" id="to1"
+                                <input type="text" placeholder="终止block number" ng-model="blockAvg.to" id="to1"
                                        class="form-control">
                             </div>
                             <button class="btn btn-primary" type="submit" ng-click="queryAvg()">Query</button>
@@ -65,7 +65,7 @@
                             </div>&nbsp;-&nbsp;
                             <div class="form-group">
                                 <label for="to" class="sr-only">to</label>
-                                <input type="text" placeholder="起始block number" ng-model="block.to" id="to"
+                                <input type="text" placeholder="终止block number" ng-model="block.to" id="to"
                                        class="form-control">
                             </div>
                             <button class="btn btn-primary" type="submit" ng-click="query()">Query</button>
@@ -85,7 +85,7 @@
                             </div>&nbsp;-&nbsp;
                             <div class="form-group">
                                 <label for="to2" class="sr-only">to</label>
-                                <input type="text" placeholder="起始block number" ng-model="blockEvm.to" id="to2"
+                                <input type="text" placeholder="终止block number" ng-model="blockEvm.to" id="to2"
                                        class="form-control">
                             </div>
                             <button class="btn btn-primary" type="submit" ng-click="queryEvmTime()">Query</button>

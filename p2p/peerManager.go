@@ -103,7 +103,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 	for peerPool.GetAliveNodeNum() < MAXPEERNODE - 1{
 		log.Debug("node:",NodeId,"process connecting task...")
 		nid := 1
-		for range time.Tick(3 * time.Second) {
+		for range time.Tick(100 * time.Millisecond) {
 			status := alivePeerMap[nid]
 			//log.Println("status map", nid, status)
 			if !status {
@@ -254,7 +254,7 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,Mes
 func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
 	peerpool := peerPool.NewPeerPool(false,false);
 	peers := peerpool.GetPeers()
-	var perinfo peer.PeerInfo
+
 	localNodeAddr := node.GetNodeAddr()
 	result, err := transport.TripleDesEncrypt([]byte("Query Status"), DESKEY)
 	if err!=nil{
@@ -269,19 +269,32 @@ func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
 	}
 	var perinfos peer.PeerInfos
 	for _,per := range peers{
-		log.Debug("rage the peer")
+		var perinfo peer.PeerInfo
+
 		perinfo.IP = per.Addr.Ip
 		perinfo.Port = int(per.Addr.Port)
 		perinfo.CName = per.CName
+
 		retMsg, err := per.Client.Chat(context.Background(),&keepAliveMessage)
 		if err != nil{
 			perinfo.Status = peer.STOP
 		}else if retMsg.MessageType == pb.Message_RESPONSE{
-			perinfo.Status = peer.ALIVE
+			perinfo.Status =peer.ALIVE
 		}else if retMsg.MessageType == pb.Message_PENDING{
 			perinfo.Status = peer.PENDING
 		}
 		perinfos = append(perinfos,&perinfo)
 	}
+	selfPeerInfo := peer.PeerInfo{
+		Status:peer.ALIVE,
+		CName:"",
+		IP:localNodeAddr.Ip,
+		Port:int(localNodeAddr.Port),
+
+
+	}
+
+	perinfos = append(perinfos,&selfPeerInfo)
+
 	return perinfos
 }

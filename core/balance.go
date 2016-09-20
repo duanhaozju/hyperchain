@@ -8,7 +8,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/big"
 	"github.com/op/go-logging"
-	"fmt"
 )
 
 //-- --------------------- Balance ------------------------------------\
@@ -155,10 +154,22 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 	}
 
 	//for test evm execute contract
-	ExecTransaction(*types.NewTestCreateTransaction())
+
+		//ExecTransaction(*types.NewTestCreateTransaction())
+
+
 	for _, trans := range block.Transactions {
 		//ExecTransaction(*trans)
-		ExecTransaction(*types.NewTestCallTransaction())
+
+
+		if trans.To ==nil{
+			ExecTransaction(*trans)
+			continue
+		}
+		if _, ok := self.dbBalance[common.HexToAddress(string(trans.To))]; !ok {
+			ExecTransaction(*trans)
+			continue
+		}
 
 		var transValue big.Int
 		transValue.SetString(string(trans.Value), 10)
@@ -225,25 +236,17 @@ func (self *Balance)UpdateCacheBalance(trans *types.Transaction) {
 func VerifyBalance(tx *types.Transaction) bool {
 	var balance big.Int
 	var value big.Int
-
 	balanceIns, err := GetBalanceIns()
-
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
 	}
-
 	bal := balanceIns.GetCacheBalance(common.HexToAddress(string(tx.From)))
-	//bal2 := balanceIns.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000002"))
-	log.Debug(bal)
-	//log.Debug(bal2)
 	//log.Println(common.Bytes2Hex(bal))
-
-
 	balance.SetString(string(bal), 10)
 	value.SetString(string(tx.Value), 10)
 
-	fmt.Println("value: ", value.String())
-	fmt.Println("balance: ", balance.String())
+	//fmt.Println("value: ", value.String())
+	//fmt.Println("balance: ", balance.String())
 	if value.Cmp(&balance) == 1 {
 		return false
 	}
