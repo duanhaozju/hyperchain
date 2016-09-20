@@ -1,5 +1,5 @@
 {
-  "MAXPEERS":"10",
+  "MAXPEERS":"4",
   "port1":"8001",
   "port2":"8001",
   "port3":"8001",
