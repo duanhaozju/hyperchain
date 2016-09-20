@@ -573,7 +573,7 @@ function AccountCtrl($scope, DTOptionsBuilder, AccountService) {
     };
 }
 
-function AddProjectCtrl($scope, $state, $cookies, ENV, ContractService) {
+function AddProjectCtrl($scope, $state, ENV, ContractService) {
 
     $scope.flag = false;
 
@@ -595,7 +595,6 @@ function AddProjectCtrl($scope, $state, $cookies, ENV, ContractService) {
     }
 
     $scope.compile = function(){
-        console.log($scope.project)
         if (isEmpty($scope.project)) {
             alert("字段不能为空");
             return false;
@@ -623,9 +622,8 @@ function AddProjectCtrl($scope, $state, $cookies, ENV, ContractService) {
             console.log($scope.project);
 
             // todo 现有合约个数
-            var cookieValue = $cookies.getObject(ENV.COOKIE);
+            var contractStorage = JSON.parse(localStorage.getItem(ENV.STORAGE));
             var len;
-            // var len = ENV.CONTRACT.length;
 
             var ctNames = getContractName("contract $", $scope.project.pattern.value);
 
@@ -641,27 +639,20 @@ function AddProjectCtrl($scope, $state, $cookies, ENV, ContractService) {
                 _contract.sourceCode = $scope.project.pattern.value;
                 _contract.hash = "";
 
-                // contract["Contract_"+ len] = _contract;
-                // console.log(contract);
-                // ENV.CONTRACT.push(contract)
-                // todo 将合约存到cookie或文件中
-                console.log(cookieValue)
-                if (!cookieValue) {
+                // 合约存到localstorage中
+                if (!contractStorage) {
                     len = 1;
-                    // _contract.contractName = "Contract_"+ len;
                     _contract.contractName = ctNames[i] + "_" + len;
                     var objContract = _defineProperty({}, _contract.contractName, _contract);
-                    $cookies.putObject("contracts",objContract)
+                    localStorage.setItem(ENV.STORAGE,JSON.stringify(objContract))
                 } else {
-                    len = Object.keys(cookieValue).length;
+                    len = Object.keys(contractStorage).length;
                     len++;
-                    // _contract.contractName = "Contract_"+ len;
                     _contract.contractName = ctNames[i] + "_" + len;
-                    cookieValue[_contract.contractName] = _contract;
-                    $cookies.putObject(ENV.COOKIE, cookieValue);
+                    contractStorage[_contract.contractName] = _contract;
+                    localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage));
                 }
 
-                // ENV.CONTRACT.push(_contract)
             }
 
         $state.go("dashboards.contract")
@@ -669,12 +660,11 @@ function AddProjectCtrl($scope, $state, $cookies, ENV, ContractService) {
 }
 
 
-function ContractCtrl($scope, $uibModal, $cookies, DTOptionsBuilder, SweetAlert, ENV) {
+function ContractCtrl($scope, $uibModal, DTOptionsBuilder, SweetAlert, ENV) {
 
-    // todo 从cookie或文件中取出所有合约
-    $scope.contracts = $cookies.getObject(ENV.COOKIE);
+    // 从localstorage中取出所有合约
+    $scope.contracts = JSON.parse(localStorage.getItem(ENV.STORAGE));
 
-    // $scope.contracts = ENV.CONTRACT;
     $scope.contract = {
         from: ENV.FROM
     };
@@ -704,7 +694,7 @@ function ContractCtrl($scope, $uibModal, $cookies, DTOptionsBuilder, SweetAlert,
     $scope.delete = function(name){
         SweetAlert.swal({
                 title: "Are you sure?",
-                text: "Your will delete the contract from cookie!",
+                text: "Your will delete the contract from localstorage!",
                 type: "warning",
                 showCancelButton: true,
                 confirmButtonColor: "#DD6B55",
@@ -714,11 +704,11 @@ function ContractCtrl($scope, $uibModal, $cookies, DTOptionsBuilder, SweetAlert,
             },
             function (isConfirm) {
                 if (isConfirm) {
-                    var cookieValue = $cookies.getObject(ENV.COOKIE);
-                    delete cookieValue[name]
+                    var contractStorage = JSON.parse(localStorage.getItem(ENV.STORAGE));
+                    delete contractStorage[name]
                     delete $scope.contracts[name]
-                    $cookies.putObject(ENV.COOKIE, cookieValue)
-                    SweetAlert.swal("Deleted!", "The contract has deleted from cookie.", "success");
+                    localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage))
+                    SweetAlert.swal("Deleted!", "The contract has deleted from localstorage.", "success");
                 } else {
                     SweetAlert.swal("Cancelled", ":)", "error");
                 }
@@ -726,31 +716,25 @@ function ContractCtrl($scope, $uibModal, $cookies, DTOptionsBuilder, SweetAlert,
     }
 }
 
-function modalInstanceCtrl ($scope, $uibModalInstance, $cookies, SweetAlert, ENV, ContractService) {
+function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, ContractService) {
 
     $scope.ok = function () {
         ContractService.deployContract($scope.from,$scope.sourceCode)
             .then(function(res){
-                var cookieValue = $cookies.getObject(ENV.COOKIE);
-                for (var name in cookieValue) {
-                    if ( name == $scope.ctName) {
-                        cookieValue[name].status = 1;
-                        cookieValue[name].hash = res;
 
-                        $scope.contracts[name] = cookieValue[name];
-                        $cookies.putObject(ENV.COOKIE, cookieValue)
+                var contractStorage = JSON.parse(localStorage.getItem(ENV.STORAGE));
+                for (var name in contractStorage) {
+                    if ( name == $scope.ctName) {
+                        contractStorage[name].status = 1;
+                        contractStorage[name].hash = res;
+
+                        $scope.contracts[name] = contractStorage[name];
+                        localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage))
 
                         break;
                     }
                 }
-                // for (var i = 0;i < ENV.CONTRACT.length; i++) {
-                //         if ( ENV.CONTRACT[i].contractName == $scope.ctName) {
-                //             ENV.CONTRACT[i].status = 1;
-                //             ENV.CONTRACT[i].hash = res;
-                //             console.log(ENV.CONTRACT[i])
-                //             break;
-                //         }
-                // }
+
                 SweetAlert.swal({
                     title: "Deployed successfully!",
                     text: "The contract hash is <span class='text_red'>"+res+"</span>",

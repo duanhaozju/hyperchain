@@ -36,15 +36,19 @@ type PublicTransactionAPI struct {
 
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
+// If type is Ptr or String, it is optional parameter
 type SendTxArgs struct {
+	//From     common.Address  `json:"from"`
+	//To       *common.Address  `json:"to"`
+	//Gas      *jsonrpc.Number  `json:"gas"`
+	//GasPrice *jsonrpc.Number  `json:"gasPrice"`
+	//Value    *jsonrpc.Number  `json:"value"`
 	From     string  `json:"from"`
 	To       string  `json:"to"`
 	Gas      string  `json:"gas"`
 	GasPrice string  `json:"gasPrice"`
-	//Value    *jsonrpc.HexNumber  `json:"value"`
 	Value    string  `json:"value"`
 	Payload  string  `json:"payload"`
-	//Data     string          `json:"data"`
 	//Nonce    *jsonrpc.HexNumber  `json:"nonce"`
 }
 
@@ -82,6 +86,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	var tx *types.Transaction
 	log.Info(args.Value)
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
+	//tx = types.NewTransaction(args.From[:], (*args.To)[:], []byte(args.Value))
 	log.Info(tx.Value)
 	am := tran.pm.AccountManager
 	addr := common.HexToAddress(string(args.From))

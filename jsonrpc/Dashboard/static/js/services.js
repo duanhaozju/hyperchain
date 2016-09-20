@@ -298,7 +298,6 @@ function ContractService($resource,$q,ENV) {
                     params: [contract],
                     id: 1
                 },function(res){
-                    console.log(res)
                     if (res.error) {
                         reject(res.error)
                     } else {

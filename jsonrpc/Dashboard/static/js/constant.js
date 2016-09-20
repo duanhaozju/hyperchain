@@ -53,5 +53,5 @@ angular
             }],
         "CONTRACT": [],
         "FROM": "0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd",
-        "COOKIE": "contracts"
+        "STORAGE": "contracts"
     })
