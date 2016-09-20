@@ -642,13 +642,13 @@ function AddProjectCtrl($scope, $state, ENV, ContractService) {
                 // 合约存到localstorage中
                 if (!contractStorage) {
                     len = 1;
-                    _contract.contractName = ctNames[i] + "_" + len;
+                    _contract.contractName = len + "_" + ctNames[i];
                     var objContract = _defineProperty({}, _contract.contractName, _contract);
                     localStorage.setItem(ENV.STORAGE,JSON.stringify(objContract))
                 } else {
                     len = Object.keys(contractStorage).length;
                     len++;
-                    _contract.contractName = ctNames[i] + "_" + len;
+                    _contract.contractName = len + "_" + ctNames[i];
                     contractStorage[_contract.contractName] = _contract;
                     localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage));
                 }
