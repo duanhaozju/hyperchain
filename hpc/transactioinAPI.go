@@ -162,6 +162,7 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 		addr = crypto.CreateAddress(common.BytesToAddress(tx.From), nonce)
 	} else {
 		tx = types.NewTransaction([]byte(realArgs.From), []byte(realArgs.To), value)
+
 	}
 
 	// todo 其他处理,比如存储到数据库中
