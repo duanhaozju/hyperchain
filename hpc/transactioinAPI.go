@@ -125,7 +125,6 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		return tx.BuildHash(),nil
 
 	} else {
-		// Balance isn't enough
 		return common.Hash{},errors.New("Not enough balance!")
 	}
 }
@@ -160,8 +159,43 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 		nonce := core.GetVMEnv().Db().GetNonce(common.BytesToAddress(tx.From))
 		core.GetVMEnv().Db().SetNonce(common.BytesToAddress(tx.From), nonce+1)
 		addr = crypto.CreateAddress(common.BytesToAddress(tx.From), nonce)
+
+
 	} else {
 		tx = types.NewTransaction([]byte(realArgs.From), []byte(realArgs.To), value)
+
+		am := tran.pm.AccountManager
+		addr := common.HexToAddress(args.From)
+
+		if _,found := am.Unlocked[addr];found {
+			log.Infof("############# %d: start send request#############", time.Now().Unix())
+			start := time.Now().Unix()
+			end:=start+6
+			//end:=start+500
+
+			for start := start ; start < end; start = time.Now().Unix() {
+				for i := 0; i < 50; i++ {
+					tx.TimeStamp=time.Now().UnixNano()
+					txBytes, err := proto.Marshal(tx)
+					if err != nil {
+						log.Fatalf("proto.Marshal(tx) error: %v",err)
+					}
+					if manager.GetEventObject() != nil{
+						go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+						//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+					}else{
+						log.Warning("manager is Nil")
+					}
+
+				}
+				time.Sleep(90 * time.Millisecond)
+
+			}
+
+			log.Infof("############# %d: end send request#############", time.Now().Unix())
+		} else {
+			return common.Address{}, errors.New("account isn't unlock")
+		}
 	}
 
 	// todo 其他处理,比如存储到数据库中
