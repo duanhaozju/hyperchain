@@ -627,6 +627,8 @@ function AddProjectCtrl($scope, $state, $cookies, ENV, ContractService) {
             var len;
             // var len = ENV.CONTRACT.length;
 
+            var ctNames = getContractName("contract $", $scope.project.pattern.value);
+
             // contract
             for (var i = 0;i < $scope.project.abi.length; i++) {
 
@@ -634,10 +636,6 @@ function AddProjectCtrl($scope, $state, $cookies, ENV, ContractService) {
 
                 _contract.projectName = $scope.project.name;
                 _contract.type = $scope.project.type;    // 1: Create 2: Load
-                // _contract.contractName = $scope.project.abi[i].  // 如何得到合约名字？？
-                // len++;
-                // _contract.contractName = "Contract_"+ len;  // 如何得到合约名字？？正则？
-                // _contract.methods = [];
                 _contract.methods = $scope.project.abi[i];
                 _contract.status = 0; // 0: Nondeployed 1: Deployed
                 _contract.sourceCode = $scope.project.pattern.value;
@@ -650,13 +648,15 @@ function AddProjectCtrl($scope, $state, $cookies, ENV, ContractService) {
                 console.log(cookieValue)
                 if (!cookieValue) {
                     len = 1;
-                    _contract.contractName = "Contract_"+ len;  // 如何得到合约名字？？正则？
+                    // _contract.contractName = "Contract_"+ len;
+                    _contract.contractName = ctNames[i] + "_" + len;
                     var objContract = _defineProperty({}, _contract.contractName, _contract);
                     $cookies.putObject("contracts",objContract)
                 } else {
                     len = Object.keys(cookieValue).length;
                     len++;
-                    _contract.contractName = "Contract_"+ len;  // 如何得到合约名字？？正则？
+                    // _contract.contractName = "Contract_"+ len;
+                    _contract.contractName = ctNames[i] + "_" + len;
                     cookieValue[_contract.contractName] = _contract;
                     $cookies.putObject(ENV.COOKIE, cookieValue);
                 }
@@ -852,6 +852,23 @@ function isEmpty(obj) {
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
+function getContractName(regs, str) {
+
+    var reg = regs.replace(/\s+/g, "\\s+");
+    var reg1 = reg.replace("$", "([^(\\s]+)\\s*\\([^(]*\\)\\s*{");
+    var reg2 = reg.replace("$", "([^(\\s]+)\\s*{");
+    reg = [reg1, "|", reg2].join("");
+
+    var pattern = new RegExp(reg, "gm");
+    var arrs = [];
+    var match;
+
+    while (match = pattern.exec(str)) {
+        arrs.push(match[1]?match[1]:match[2]);
+    }
+    console.log(arrs);
+    return arrs;
+}
 /**
  *
  * Pass all functions into module
