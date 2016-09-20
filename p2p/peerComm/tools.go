@@ -53,18 +53,15 @@ func GetConfig(path string) map[string]string{
 	return configs
 }
 
-func ExtactAddress(peerIp string, peerPort_s string) *pb.PeerAddress{
-	peerPort_i,err := strconv.Atoi(peerPort_s)
-	if err != nil{
-		log.Error("port cannot convert into int",err)
-	}
-	peerPort_i32 := int32(peerPort_i)
-	peerAddrString := peerIp + ":" + peerPort_s
+func ExtractAddress(peerIp string, peerPort int,ID int32) *pb.PeerAddress{
+	peerPort_i32 := int32(peerPort)
+	peerAddrString := peerIp + ":" + strconv.Itoa(peerPort)
 	peerAddress := pb.PeerAddress{
 		Ip:peerIp,
 		Port:peerPort_i32,
 		Address:peerAddrString,
 		Hash:GetHash(peerAddrString),
+		ID:ID,
 	}
 	return &peerAddress
 }

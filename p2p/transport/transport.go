@@ -15,12 +15,20 @@ import (
 	"hyperchain/p2p/transport/ecdh"
 	"crypto/rand"
 	"crypto"
+	"encoding/hex"
 )
 var log *logging.Logger // package-level logger
 func init() {
 	log = logging.MustGetLogger("p2p/transport")
 }
 
+type TransportEncryptManager interface {
+	GetLocalPublicKey() []byte
+	GenerateSecret(remotePublicKey []byte)
+	EncWithSecret(message []byte) []byte
+	DecWithSecret(message []byte) []byte
+	GetSecret() string
+}
 
 type HandShakeManager struct {
 	e            ecdh.ECDH
@@ -105,4 +113,8 @@ func (hSM *HandShakeManager) DecWithSecret(message []byte) []byte {
 	aesDecrypter := cipher.NewCFBDecrypter(aesBlockDecrypter, iv)
 	aesDecrypter.XORKeyStream(decrypted, message)
 	return decrypted
+}
+
+func (this *HandShakeManager) GetSecret()string{
+	return hex.EncodeToString(this.secret)
 }

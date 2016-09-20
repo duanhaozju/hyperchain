@@ -16,7 +16,9 @@ import (
 	"strconv"
 	"github.com/op/go-logging"
 	"hyperchain/p2p/transport"
-)
+	"hyperchain/p2p/peerComm"
+	"time"
+	)
 
 // init the package-level logger system,
 // after this declare and init function,
@@ -29,12 +31,13 @@ var DESKEY = []byte("sfe023f_sefiel#fi32lf3e!")
 
 
 type Peer struct {
-	Addr pb.PeerAddress
+	Addr *pb.PeerAddress
 	Connection *grpc.ClientConn
 	Client pb.ChatClient
-	Idetity string
 	CName string
-	HSM transport.HandShakeManager
+	TEM transport.TransportEncryptManager
+	Status int
+	ID int
 }
 
 // NewPeerByString to create a Peer which with a connection,
@@ -43,14 +46,11 @@ type Peer struct {
 // the peer will auto store into the peer pool.
 // when creating a peer, the client instance will create a message whose type is HELLO
 // if get a response, save the peer into singleton peer pool instance
-func NewPeerByString(address string)(*Peer,error){
+func NewPeerByString(address string,nid int)(*Peer,error){
 	var peer Peer
 	arr := strings.Split(address,":")
 	p,_ := strconv.Atoi(arr[1])
-	peerAddr := pb.PeerAddress{
-		Ip:arr[0],
-		Port:int32(p),
-	}
+	peer.Addr  = peerComm.ExtractAddress(arr[0],p,int32(nid))
 	conn, err := grpc.Dial(address, grpc.WithInsecure())
 	if err != nil {
 		errors.New("Cannot establish a connection!")
@@ -59,7 +59,6 @@ func NewPeerByString(address string)(*Peer,error){
 	}
 	peer.Connection = conn
 	peer.Client = pb.NewChatClient(peer.Connection)
-	peer.Addr = peerAddr
 	//fromAddr := Server.GetChatServerAddr()
 	helloMessage := pb.Message{
 		MessageType:pb.Message_HELLO,
@@ -74,27 +73,26 @@ func NewPeerByString(address string)(*Peer,error){
 	}else{
 		if retMessage.MessageType == pb.Message_RESPONSE {
 			// get the peer id
-			origData, err := transport.TripleDesDecrypt(retMessage.Payload, DESKEY)
-			//log.Notice(string(origData))
 			if err != nil{
 				log.Error("cannot decrypt the nodeidinfo!")
 				errors.New("Decrypt ERROR")
 			}
-			peer.Idetity = string(origData)
+			peer.ID = int(retMessage.From.ID)
 			return &peer,nil
 		}
 	}
 	return nil,errors.New("cannot establish a connection")
 }
 
-
-func NewPeerByIpAndPort(ip string,port int32)(*Peer,error){
+// NewPeerByIpAndPort to create a Peer which with a connection,
+// this connection ip string format is like '192.168.1.1'
+// the peer will auto store into the peer pool.
+// when creating a peer, the client instance will create a message whose type is HELLO
+// if get a response, save the peer into singleton peer pool instance
+func NewPeerByIpAndPort(ip string,port int32,nid int32)(*Peer,error){
 	var peer Peer
-	peerAddr := pb.PeerAddress{
-		Ip:ip,
-		Port:port,
-	}
-	//TODO 修改int32
+	peerAddr := peerComm.ExtractAddress(ip,int(port),nid)
+
 	conn, err := grpc.Dial(ip + ":" + strconv.Itoa(int(port)), grpc.WithInsecure())
 	if err != nil {
 		errors.New("Cannot establish a connection!")
@@ -104,27 +102,31 @@ func NewPeerByIpAndPort(ip string,port int32)(*Peer,error){
 	peer.Connection = conn
 	peer.Client = pb.NewChatClient(peer.Connection)
 	peer.Addr = peerAddr
-	//fromAddr := Server.GetChatServerAddr()
+	//TODO handshake operation
+	peer.TEM = transport.NewHandShakeManger()
+	//package the information
+	//review 开始交换秘钥
 	helloMessage := pb.Message{
 		MessageType:pb.Message_HELLO,
-		Payload:[]byte("HELLO"),
-		//From:&fromAddr,
+		Payload:peer.TEM.GetLocalPublicKey(),
+		From:peerAddr,
+		MsgTimeStamp:time.Now().UnixNano(),
 	}
 	retMessage,err2 := peer.Client.Chat(context.Background(),&helloMessage)
 	if err2 != nil{
-		errors.New("cannot establish a connection!")
-		log.Error("cannot establish a connection,errinfo: ",err2)
+		log.Error("cannot establish a connection")
 		return nil,err2
 	}else{
-		if retMessage.MessageType == pb.Message_RESPONSE {
-			// get the peer id
-			origData, err := transport.TripleDesDecrypt(retMessage.Payload, DESKEY)
-			//log.Notice(string(origData))
+		//review 取得对方的秘钥
+		if retMessage.MessageType == pb.Message_HELLO_RESPONSE {
+			remotePublicKey := retMessage.Payload
+			peer.TEM.GenerateSecret(remotePublicKey)
+			peer.ID = int(retMessage.From.ID)
 			if err != nil{
 				log.Error("cannot decrypt the nodeidinfo!")
 				errors.New("Decrypt ERROR")
 			}
-			peer.Idetity = string(origData)
+			log.Notice(peer.TEM.GetSecret())
 			return &peer,nil
 		}
 	}
@@ -136,6 +138,8 @@ func NewPeerByIpAndPort(ip string,port int32)(*Peer,error){
 // which implements the service that prototype file declares
 //
 func (this *Peer)Chat(msg *pb.Message) (*pb.Message, error){
+	//review encrypt
+	msg.Payload = this.TEM.EncWithSecret(msg.Payload)
 	r,err := this.Client.Chat(context.Background(),msg)
 	if err != nil{
 		log.Error("err:",err)

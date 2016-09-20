@@ -23,8 +23,8 @@ type PeerManager interface {
 	// judge all peer are connected and return them
 	//JudgeAlivePeers(*chan bool)
 	GetAllPeers() []*peer.Peer
-	Start(path string, NodeId int, aliveChan chan bool,isTest bool,eventMux *event.TypeMux)
-	GetNodeId() string
+	Start(aliveChain chan bool,eventMux *event.TypeMux)
+	GetNodeId() int
 	BroadcastPeers(payLoad []byte)
 	SendMsgToPeers(payLoad []byte,peerList []uint64,MessageType recovery.Message_MsgType)
 	GetPeerInfos() peer.PeerInfos

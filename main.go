@@ -44,7 +44,7 @@ func main() {
 		eventMux := new(event.TypeMux)
 
 		//init peer manager to start grpc server and client
-		grpcPeerMgr := new(p2p.GrpcPeerManager)
+		grpcPeerMgr := p2p.NewGrpcManager(argv.PeerConfigPath,argv.NodeId)
 
 		//init fetcher to accept block
 		fetcher := core.NewFetcher()
