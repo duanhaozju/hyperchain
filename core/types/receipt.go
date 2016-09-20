@@ -12,14 +12,14 @@ type ReceiptTrans struct {
 	PostState         []byte
 	CumulativeGasUsed int64
 	TxHash            string
-	ContractAddress   string
+	ContractAddress   []byte
 	GasUsed           int64
 	Ret               []byte
 }
 
 func (receipt Receipt)ToReceiptTrans() (receiptTrans *ReceiptTrans){
 	return &ReceiptTrans{GasUsed:receipt.GasUsed,PostState:receipt.PostState,
-		ContractAddress:common.ToHex(receipt.ContractAddress),
+		ContractAddress:receipt.ContractAddress,
 		CumulativeGasUsed:receipt.CumulativeGasUsed,Ret:receipt.Ret,
 		TxHash:common.ToHex(receipt.TxHash)}
 }
