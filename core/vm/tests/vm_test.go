@@ -11,8 +11,6 @@ func TestMyAPI(t *testing.T)  {
 	if err := RunVmTest(fn, StateSkipTests); err != nil {
 		t.Error(err)
 	}
-
-
 }
 
 /*

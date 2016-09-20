@@ -2,13 +2,14 @@ package pbft
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
+	//"os"
+	//"path/filepath"
 	"strings"
 
 	"hyperchain/consensus"
 	"hyperchain/consensus/helper"
 	"github.com/spf13/viper"
+	//"path"
 )
 
 const configPrefix = "CORE_PBFT"
@@ -16,15 +17,11 @@ const configPrefix = "CORE_PBFT"
 var pluginInstance consensus.Consenter // singleton service
 var config *viper.Viper
 
-func init() {
-	config = loadConfig()
-}
-
 // GetPlugin returns the handle to the Consenter singleton
-func GetPlugin(id uint64, h helper.Stack) consensus.Consenter {
+func GetPlugin(id uint64, h helper.Stack, pbftConfigPath string) consensus.Consenter {
 
 	if pluginInstance == nil {
-		pluginInstance = New(id, h)
+		pluginInstance = New(id, h, pbftConfigPath)
 	}
 
 	return pluginInstance
@@ -32,8 +29,9 @@ func GetPlugin(id uint64, h helper.Stack) consensus.Consenter {
 
 // New creates a new *batch instance that provides the Consenter interface.
 // Internally, it uses an opaque pbft-core instance.
-func New(id uint64, h helper.Stack) consensus.Consenter {
+func New(id uint64, h helper.Stack, pbftConfigPath string) consensus.Consenter {
 
+	config = loadConfig(pbftConfigPath)
 	switch strings.ToLower(config.GetString("general.mode")) {
 	case "batch":
 		return newBatch(id, config, h)
@@ -45,7 +43,7 @@ func New(id uint64, h helper.Stack) consensus.Consenter {
 
 
 // loadConfig load the config in the config.yaml
-func loadConfig() (config *viper.Viper) {
+func loadConfig(pbftConfigPath string) (config *viper.Viper) {
 
 	config = viper.New()
 
@@ -56,15 +54,16 @@ func loadConfig() (config *viper.Viper) {
 	config.SetEnvKeyReplacer(replacer)
 
 	config.SetConfigName("config")
-	config.AddConfigPath("./")
-	config.AddConfigPath("../consensus/pbft")
-	config.AddConfigPath("../../consensus/pbft")
+	//config.AddConfigPath("./")
+	//config.AddConfigPath("../consensus/pbft")
+	//config.AddConfigPath("../../consensus/pbft")
 	// Path to look for the config file in based on GOPATH
-	gopath := os.Getenv("GOPATH")
-	for _, p := range filepath.SplitList(gopath) {
-		pbftpath := filepath.Join(p, "src/hyperchain/consensus/pbft")
-		config.AddConfigPath(pbftpath)
-	}
+	//gopath := os.Getenv("GOPATH")
+	//for _, p := range filepath.SplitList(gopath) {
+	//	pbftpath := filepath.Join(p, pbftConfigPath)
+	//	config.AddConfigPath(pbftpath)
+	//}
+	config.AddConfigPath(pbftConfigPath)
 
 	err := config.ReadInConfig()
 	if err != nil {

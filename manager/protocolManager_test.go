@@ -17,8 +17,8 @@ import (
 
 	"time"
 
-	"hyperchain/hyperdb"
 	"hyperchain/core"
+	"hyperchain/hyperdb"
 	"hyperchain/crypto"
 	"hyperchain/accounts"
 	"hyperchain/common"
@@ -69,6 +69,7 @@ func TestAliveEvent(t *testing.T) {
 
 	}
 }
+
 func TestSignTx(t *testing.T) {
 	core.InitDB(8083)
 	db, _ := hyperdb.GetLDBDatabase()
@@ -81,20 +82,20 @@ func TestSignTx(t *testing.T) {
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	am := accounts.NewAccountManager(keydir,encryption)
 	pm := &ProtocolManager{
-		accountManager:am,
+		AccountManager:am,
 		commonHash:kec256Hash,
 	}
-	am.UnlockAllAccount(keydir)
-	for i:=0;i<10;i++{
+
+	for i:=0;i<100;i++{
 
 		h := tx.SighHash(pm.commonHash)
 		addrHex := string(tx.From)
 		addr := common.HexToAddress(addrHex)
 
 		start := time.Now()
-		sig, err := pm.accountManager.SignWithPassphrase(addr, h[:], "123")
+		_, err := pm.AccountManager.SignWithPassphrase(addr, h[:], "123")
 		fmt.Println(time.Since(start))
-		fmt.Println(sig)
+
 		tx.ValidateSign(encryption,pm.commonHash)
 		if err!=nil{
 			panic(err)
@@ -102,6 +103,7 @@ func TestSignTx(t *testing.T) {
 
 	}
 }
+
 /*func TestCommitNewBlock(t *testing.T) {
 
 	transaction := &types.Transaction{

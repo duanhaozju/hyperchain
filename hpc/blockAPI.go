@@ -167,3 +167,7 @@ func (blk *PublicBlockAPI) QueryEvmAvgTime(args SendQueryArgs) (int64,error) {
 
 	return evmTime, nil
 }
+func (blk *PublicBlockAPI)QueryTransactionSum() string {
+	sum := core.CalTransactionSum()
+	return sum.String()
+}

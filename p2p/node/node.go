@@ -30,6 +30,7 @@ type Node struct {
 	gRPCServer	*grpc.Server
 	NodeID		string
 	higherEventManager *event.TypeMux
+	HSM transport.HandShakeManager
 }
 
 var globalNode Node
@@ -50,6 +51,7 @@ func NewNode(port int, isTest bool,hEventManager *event.TypeMux,nodeID int) *Nod
 	if globalNode.address.Ip != "" && globalNode.address.Port != 0 {
 		return &globalNode
 	} else {
+		//globalNode.HSM = transport.NewHandShakeManger()
 		globalNode.address.Ip = peerComm.GetLocalIp()
 		globalNode.address.Port = int32(port)
 		globalNode.NodeID = strconv.Itoa(nodeID)
