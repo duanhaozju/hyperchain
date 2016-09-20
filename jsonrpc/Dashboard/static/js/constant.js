@@ -33,23 +33,35 @@ angular
             "function getAccountBalance(address addr) returns(uint){" +
             "return accounts[addr];" +
             "}}"},
-            {name: "pattern3", value: "contract InfoPlatform{" +
-            "struct User{" +
-            "string  name;   // the name of the user" +
-            "uint    age;    // the age of the user" +
-            "string  id;     // the id of the user" +
+            {name: "pattern3", value: "contract mortal {" +
+            "/* Define variable owner of the type address*/" +
+            "address owner;" +
+            "/* this function is executed at initialization and sets the owner of the contract */" +
+            "function mortal() {" +
+            "owner = msg.sender;" +
             "}" +
-            "mapping(address => User) public users;" +
-            "function setInformation(address addr,string name,uint age,string id){" +
-            "User u = users[addr];" +
-            "u.name = name;" +
-            "u.age = age;" +
-            "u.id = id;" +
+            "/* Function to recover the funds on the contract */" +
+            "function kill() {" +
+            "if (msg.sender == owner)" +
+            "selfdestruct(owner);" +
             "}" +
-            "function getInformation(address addr) returns (string,uint,string){" +
-            "User u = users[addr];" +
-            "return (u.name,u.age,u.id);" +
-            "}}"
+            "}" +
+            "contract greeter is mortal {" +
+            "/* define variable greeting of the type string */" +
+            "string greeting;" +
+            "uint32 sum;" +
+            "/* this runs when the contract is executed */" +
+            "function greeter(string _greeting) public {" +
+            "greeting = _greeting;" +
+            "}" +
+            "/* main function */" +
+            "function greet() constant returns (string) {" +
+            "return greeting;" +
+            "}" +
+            "function add(uint32 num1,uint32 num2) {" +
+            "sum = sum+num1+num2;" +
+            "}" +
+            "}"
             }],
         "CONTRACT": [],
         "FROM": "0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd",
