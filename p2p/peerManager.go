@@ -181,7 +181,7 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 // inner the broadcast method which serve BroadcastPeers function
 func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 	for _, peer := range pPool.GetPeers() {
-		go peer.Chat(&broadCastMessage)
+		peer.Chat(&broadCastMessage)
 		//go func(){
 		//	resMsg, err := peer.Chat(&broadCastMessage)
 		//	if err != nil {
