@@ -28,13 +28,24 @@ function testRequest(opt){
 var options = {
     host: opt.url,
     port: opt.port,
-    path: '/trans',
+    //path: '/trans',
     method: 'POST',
     headers: {
           'Content-Type': 'application/json'
     }
 };
-var post_data = JSON.stringify({"from":opt.from,"to":opt.to,"value":'1'});
+//var post_data = JSON.stringify({"from":opt.from,"to":opt.to,"value":'1'});
+var post_data = JSON.stringify({
+    "method": "tx_sendTransaction",
+    "params": [
+        {
+            "from":opt.from,
+            "to":opt.to,
+            "value": '1'
+        }
+    ],
+    "id": 1
+});
 console.log(options);
 // Set up the request
     var post_req = http.request(options, function(res) {

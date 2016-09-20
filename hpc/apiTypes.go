@@ -1,5 +1,10 @@
 package hpc
 
+import (
+	"hyperchain/event"
+	"hyperchain/manager"
+)
+
 // API describes the set of methods offered over the RPC interface
 type API struct {
 	Namespace string      // namespace under which the rpc methods of Service are exposed
@@ -8,18 +13,18 @@ type API struct {
 	Public    bool        // indication if the methods must be considered safe for public use
 }
 
-func GetAPIs() []API{
+func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager) []API{
 	return []API{
 		{
 			Namespace: "tx",
 			Version: "0.4",
-			Service: NewPublicTransactionAPI(),
+			Service: NewPublicTransactionAPI(eventMux,pm),
 			Public: true,
 		},
 		{
 			Namespace: "node",
 			Version: "0.4",
-			Service: NewPublicNodeAPI(),
+			Service: NewPublicNodeAPI(pm),
 			Public: true,
 		},
 		{
@@ -31,7 +36,7 @@ func GetAPIs() []API{
 		{
 			Namespace: "acot",
 			Version: "0.4",
-			Service: NewPublicAccountAPI(),
+			Service: NewPublicAccountAPI(pm),
 			Public: true,
 		},
 	}

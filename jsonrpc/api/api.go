@@ -56,7 +56,9 @@ func SendTransaction(args TxArgs) bool {
 
 	log.Info(args)
 
-	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
+	//tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
+	tx = types.NewTestCreateTransaction()
+	//tx = types.NewTestCallTransaction()
 	if (core.VerifyBalance(tx)) {
 
 		// Balance is enough

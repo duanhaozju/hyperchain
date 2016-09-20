@@ -11,6 +11,7 @@ message Block {
 	uint64 number = 6;
 	int64 writeTime = 7;
 	int64 commitTime = 8;
+	int64 evmTime=9;
 }
 
 message Blocks{

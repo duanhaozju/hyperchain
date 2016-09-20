@@ -79,14 +79,17 @@ func (mux *TypeMux) Subscribe(types ...interface{}) Subscription {
 // Post sends an event to all receivers registered for the given type.
 // It returns ErrMuxClosed if the mux has been stopped.
 func (mux *TypeMux) Post(ev interface{}) error {
+
 	event := &Event{
 		Time: time.Now(),
 		Data: ev,
 	}
+
 	rtyp := reflect.TypeOf(ev)
 	mux.mutex.RLock()
 	if mux.stopped {
 		mux.mutex.RUnlock()
+
 		return ErrMuxClosed
 	}
 	subs := mux.subm[rtyp]
@@ -94,6 +97,7 @@ func (mux *TypeMux) Post(ev interface{}) error {
 	for _, sub := range subs {
 		sub.deliver(event)
 	}
+
 	return nil
 }
 

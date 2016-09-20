@@ -40,11 +40,18 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
                 loadPlugin: function ($ocLazyLoad) {
                     return $ocLazyLoad.load([
                         {
-                            files: ['static/js/plugins/footable/footable.all.min.js', 'static/css/plugins/footable/footable.core.css']
+                            serie: true,
+                            files: ['static/js/plugins/dataTables/datatables.min.js','static/css/plugins/dataTables/datatables.min.css']
                         },
                         {
-                            name: 'ui.footable',
-                            files: ['static/js/plugins/footable/angular-footable.js']
+                            serie: true,
+                            name: 'datatables',
+                            files: ['static/js/plugins/dataTables/angular-datatables.min.js']
+                        },
+                        {
+                            serie: true,
+                            name: 'datatables.buttons',
+                            files: ['static/js/plugins/dataTables/angular-datatables.buttons.min.js']
                         },
                         {
                             files: ['static/js/plugins/sweetalert/sweetalert.min.js', 'static/css/plugins/sweetalert/sweetalert.css']
@@ -99,7 +106,7 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
             url: "/blockchain",
             templateUrl: "static/views/common/content.html"
         })
-        .state('blockchain.block_tables', {
+        .state('blockchain.blocks', {
             url: "/blocks",
             templateUrl: "static/views/block.html",
             data: { pageTitle: 'Block' },
@@ -107,17 +114,24 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
                 loadPlugin: function ($ocLazyLoad) {
                     return $ocLazyLoad.load([
                         {
-                            files: ['static/js/plugins/footable/footable.all.min.js', 'static/css/plugins/footable/footable.core.css']
+                            serie: true,
+                            files: ['static/js/plugins/dataTables/datatables.min.js','static/css/plugins/dataTables/datatables.min.css']
                         },
                         {
-                            name: 'ui.footable',
-                            files: ['static/js/plugins/footable/angular-footable.js']
+                            serie: true,
+                            name: 'datatables',
+                            files: ['static/js/plugins/dataTables/angular-datatables.min.js']
+                        },
+                        {
+                            serie: true,
+                            name: 'datatables.buttons',
+                            files: ['static/js/plugins/dataTables/angular-datatables.buttons.min.js']
                         }
                     ]);
                 }
             }
         })
-        .state('blockchain.tx_tables', {
+        .state('blockchain.transactions', {
             url: "/transactions",
             templateUrl: "static/views/transaction.html",
             data: { pageTitle: 'Transaction' },
@@ -125,17 +139,24 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
                 loadPlugin: function ($ocLazyLoad) {
                     return $ocLazyLoad.load([
                         {
-                            files: ['static/js/plugins/footable/footable.all.min.js', 'static/css/plugins/footable/footable.core.css']
+                            serie: true,
+                            files: ['static/js/plugins/dataTables/datatables.min.js','static/css/plugins/dataTables/datatables.min.css']
                         },
                         {
-                            name: 'ui.footable',
-                            files: ['static/js/plugins/footable/angular-footable.js']
+                            serie: true,
+                            name: 'datatables',
+                            files: ['static/js/plugins/dataTables/angular-datatables.min.js']
+                        },
+                        {
+                            serie: true,
+                            name: 'datatables.buttons',
+                            files: ['static/js/plugins/dataTables/angular-datatables.buttons.min.js']
                         }
                     ]);
                 }
             }
         })
-        .state('blockchain.account_tables', {
+        .state('blockchain.accounts', {
             url: "/accounts",
             templateUrl: "static/views/account.html",
             data: { pageTitle: 'Account' },
@@ -143,11 +164,18 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
                 loadPlugin: function ($ocLazyLoad) {
                     return $ocLazyLoad.load([
                         {
-                            files: ['static/js/plugins/footable/footable.all.min.js', 'static/css/plugins/footable/footable.core.css']
+                            serie: true,
+                            files: ['static/js/plugins/dataTables/datatables.min.js','static/css/plugins/dataTables/datatables.min.css']
                         },
                         {
-                            name: 'ui.footable',
-                            files: ['static/js/plugins/footable/angular-footable.js']
+                            serie: true,
+                            name: 'datatables',
+                            files: ['static/js/plugins/dataTables/angular-datatables.min.js']
+                        },
+                        {
+                            serie: true,
+                            name: 'datatables.buttons',
+                            files: ['static/js/plugins/dataTables/angular-datatables.buttons.min.js']
                         }
                     ]);
                 }
@@ -155,7 +183,7 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
         })
 }
 angular
-    .module('inspinia')
+    .module('starter')
     .config(config)
     .run(function($rootScope, $state) {
         $rootScope.$state = $state;

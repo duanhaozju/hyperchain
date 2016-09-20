@@ -7,11 +7,15 @@ import (
 	"time"
 	"github.com/op/go-logging"
 	"encoding/json"
-	//"fmt"
-	//"hyperchain/core/vm/compiler"
 	"strconv"
 	"hyperchain/core/types"
 	"errors"
+	"hyperchain/manager"
+	"hyperchain/event"
+	"github.com/golang/protobuf/proto"
+	"hyperchain/core/vm/compiler"
+
+	"hyperchain/core/crypto"
 )
 
 const (
@@ -24,7 +28,11 @@ func init() {
 	log = logging.MustGetLogger("jsonrpc/api")
 }
 
-type PublicTransactionAPI struct {}
+type PublicTransactionAPI struct {
+	eventMux *event.TypeMux
+	pm *manager.ProtocolManager
+
+}
 
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
@@ -49,8 +57,11 @@ type TransactionResult struct {
 	Timestamp  string		`json:"timestamp"`
 }
 
-func NewPublicTransactionAPI() *PublicTransactionAPI {
-	return &PublicTransactionAPI{}
+func NewPublicTransactionAPI(eventMux *event.TypeMux,pm *manager.ProtocolManager) *PublicTransactionAPI {
+	return &PublicTransactionAPI{
+		eventMux :eventMux,
+		pm:pm,
+	}
 }
 
 func prepareExcute(args SendTxArgs) SendTxArgs{
@@ -68,14 +79,16 @@ func prepareExcute(args SendTxArgs) SendTxArgs{
 func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error){
 
 	log.Info("==========SendTransaction=====,args = ",args)
-
 	var tx *types.Transaction
-
 	log.Info(args.Value)
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
-
 	log.Info(tx.Value)
-	if (core.VerifyBalance(tx)) {
+	am := tran.pm.AccountManager
+	addr := common.HexToAddress(string(args.From))
+
+	if (!core.VerifyBalance(tx)){
+		return common.Hash{},errors.New("Not enough balance!")
+	}else if _,found := am.Unlocked[addr];found {
 
 		// Balance is enough
 		/*txBytes, err := proto.Marshal(tx)
@@ -84,40 +97,40 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		}*/
 
 		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-		//log.Infof("############# %d: start send request#############", time.Now().Unix())
-		//start := time.Now().Unix()
-		//end:=start+1
-		//
-		//for start := start ; start < end; start = time.Now().Unix() {
-		//	for i := 0; i < 5000; i++ {
-		//		tx.TimeStamp=time.Now().UnixNano()
-		//		txBytes, err := proto.Marshal(tx)
-		//		if err != nil {
-		//			log.Fatalf("proto.Marshal(tx) error: %v",err)
-		//		}
-		//		go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-		//		time.Sleep(200 * time.Microsecond)
-		//	}
-		//}
-		//
-		//log.Infof("############# %d: end send request#############", time.Now().Unix())
+		log.Infof("############# %d: start send request#############", time.Now().Unix())
+		start := time.Now().Unix()
+		end:=start+6
+		//end:=start+500
 
-		//tx.TimeStamp=time.Now().UnixNano()
-		//txBytes, err := proto.Marshal(tx)
-		//if err != nil {
-		//	log.Fatalf("proto.Marshal(tx) error: %v",err)
-		//}
-		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+		for start := start ; start < end; start = time.Now().Unix() {
+			for i := 0; i < 50; i++ {
+				tx.TimeStamp=time.Now().UnixNano()
+				txBytes, err := proto.Marshal(tx)
+				if err != nil {
+					log.Fatalf("proto.Marshal(tx) error: %v",err)
+				}
+				if manager.GetEventObject() != nil{
+					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+					//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+				}else{
+					log.Warning("manager is Nil")
+				}
+
+			}
+			time.Sleep(90 * time.Millisecond)
+
+		}
+
+		log.Infof("############# %d: end send request#############", time.Now().Unix())
 		return tx.BuildHash(),nil
 
 	} else {
-		// Balance isn't enough
 		return common.Hash{},errors.New("Not enough balance!")
 	}
 }
 
 // SendTransactionOrContract deploy contract
-func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (common.Hash, error){
+func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (common.Address, error){
 
 	var tx *types.Transaction
 
@@ -129,7 +142,7 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 	payload, err := json.Marshal(realArgs.Payload)
 
 	if err != nil {
-		return common.Hash{},err
+		return common.Address{},err
 	}
 
 	txValue := types.NewTransactionValue(price,gas,amount,payload)
@@ -137,33 +150,80 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 	value, err := json.Marshal(txValue)
 
 	if err != nil {
-		return common.Hash{}, err
+		return common.Address{}, err
 	}
 
+	var addr common.Address
 	if args.To == "" {
 		tx = types.NewTransaction([]byte(realArgs.From), nil, value)
+		nonce := core.GetVMEnv().Db().GetNonce(common.BytesToAddress(tx.From))
+		core.GetVMEnv().Db().SetNonce(common.BytesToAddress(tx.From), nonce+1)
+		addr = crypto.CreateAddress(common.BytesToAddress(tx.From), nonce)
+
+
 	} else {
 		tx = types.NewTransaction([]byte(realArgs.From), []byte(realArgs.To), value)
+
+		am := tran.pm.AccountManager
+		addr := common.HexToAddress(args.From)
+
+		if _,found := am.Unlocked[addr];found {
+			log.Infof("############# %d: start send request#############", time.Now().Unix())
+			start := time.Now().Unix()
+			end:=start+6
+			//end:=start+500
+
+			for start := start ; start < end; start = time.Now().Unix() {
+				for i := 0; i < 50; i++ {
+					tx.TimeStamp=time.Now().UnixNano()
+					txBytes, err := proto.Marshal(tx)
+					if err != nil {
+						log.Fatalf("proto.Marshal(tx) error: %v",err)
+					}
+					if manager.GetEventObject() != nil{
+						go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+						//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+					}else{
+						log.Warning("manager is Nil")
+					}
+
+				}
+				time.Sleep(90 * time.Millisecond)
+
+			}
+
+			log.Infof("############# %d: end send request#############", time.Now().Unix())
+		} else {
+			return common.Address{}, errors.New("account isn't unlock")
+		}
 	}
 
 	// todo 其他处理,比如存储到数据库中
+	//db, err := hyperdb.GetLDBDatabase()
+	//
+	//if err != nil {
+	//	log.Fatalf("Open database error: %v", err)
+	//}
+	//
+	//core.PutTransaction(db, ,tx)
 
-	return tx.BuildHash(),nil
+	return addr,nil
+	//return tx.BuildHash(),nil
 }
 
-//// ComplieContract complies contract to ABI
-//func (tran *PublicTransactionAPI) ComplieContract(ct string) ([]string, error){
-//
-//	fmt.Println(ct)
-//	abi, _, err := compiler.CompileSourcefile(ct)
-//	fmt.Println(abi)
-//
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	return abi,nil
-//}
+// ComplieContract complies contract to ABI
+func (tran *PublicTransactionAPI) ComplieContract(ct string) ([]string, error){
+
+	log.Debug(ct)
+	abi, _, err := compiler.CompileSourcefile(ct)
+	log.Debug(abi)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return abi,nil
+}
 
 
 

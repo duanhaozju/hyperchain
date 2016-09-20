@@ -313,117 +313,6 @@ function MainCtrl() {
     };
 };
 
-/**
- * modalDemoCtrl - Controller used to run modal view
- * used in Basic form view
- */
-function modalDemoCtrl($scope, $uibModal) {
-
-    $scope.open = function () {
-
-        var modalInstance = $uibModal.open({
-            templateUrl: 'static/views/modal_example.html',
-            controller: ModalInstanceCtrl
-        });
-    };
-
-    $scope.open1 = function () {
-        var modalInstance = $uibModal.open({
-            templateUrl: 'static/views/modal_deploy.html',
-            controller: ModalInstanceCtrl
-        });
-    };
-
-    $scope.open2 = function () {
-        var modalInstance = $uibModal.open({
-            templateUrl: 'static/views/modal_example2.html',
-            controller: ModalInstanceCtrl,
-            windowClass: "animated fadeIn"
-        });
-    };
-
-    $scope.open3 = function (size) {
-        var modalInstance = $uibModal.open({
-            templateUrl: 'static/views/modal_example3.html',
-            size: size,
-            controller: ModalInstanceCtrl
-        });
-    };
-
-    $scope.open4 = function () {
-        var modalInstance = $uibModal.open({
-            templateUrl: 'static/views/modal_example2.html',
-            controller: ModalInstanceCtrl,
-            windowClass: "animated flipInY"
-        });
-    };
-};
-
-function ModalInstanceCtrl ($scope, $uibModalInstance) {
-
-    $scope.ok = function () {
-        $uibModalInstance.close();
-    };
-
-    $scope.cancel = function () {
-        $uibModalInstance.dismiss('cancel');
-    };
-
-
-    $scope.states = [
-        'Alabama',
-        'Alaska',
-        'Arizona',
-        'Arkansas',
-        'California',
-        'Colorado',
-        'Connecticut',
-        'Delaware',
-        'Florida',
-        'Georgia',
-        'Hawaii',
-        'Idaho',
-        'Illinois',
-        'Indiana',
-        'Iowa',
-        'Kansas',
-        'Kentucky',
-        'Louisiana',
-        'Maine',
-        'Maryland',
-        'Massachusetts',
-        'Michigan',
-        'Minnesota',
-        'Mississippi',
-        'Missouri',
-        'Montana',
-        'Nebraska',
-        'Nevada',
-        'New Hampshire',
-        'New Jersey',
-        'New Mexico',
-        'New York',
-        'North Carolina',
-        'North Dakota',
-        'Ohio',
-        'Oklahoma',
-        'Oregon',
-        'Pennsylvania',
-        'Rhode Island',
-        'South Carolina',
-        'South Dakota',
-        'Tennessee',
-        'Texas',
-        'Utah',
-        'Vermont',
-        'Virginia',
-        'Washington',
-        'West Virginia',
-        'Wisconsin',
-        'Wyoming'
-    ];
-
-};
 
 /**
  * translateCtrl - Controller for translate
@@ -447,47 +336,375 @@ function diff($scope) {
     $scope.newText1 = 'Ting dummy text of the printing and has been the industry\'s typesetting. Lorem Ipsum has been the industry\'s';
 }
 
+function datatables($scope,DTOptionsBuilder){
 
-/**
- * sweetAlertCtrl - Function for Sweet alerts
- */
-function sweetAlertCtrl($scope, SweetAlert) {
+    $scope.dtOptions = DTOptionsBuilder.newOptions()
+        .withOption('order', [0, 'desc'])
+        .withDOM('<"html5buttons"B>lTfgitp')
+        .withButtons([
+            // {extend: 'copy'},
+            // {extend: 'csv'},
+            // {extend: 'excel', title: 'ExampleFile'},
+            // {extend: 'pdf', title: 'ExampleFile'},
+            //
+            // {extend: 'print',
+            //     customize: function (win){
+            //         $(win.document.body).addClass('white-bg');
+            //         $(win.document.body).css('font-size', '10px');
+            //
+            //         $(win.document.body).find('table')
+            //             .addClass('compact')
+            //             .css('font-size', 'inherit');
+            //     }
+            // }
+        ]);
+}
+
+function SummaryCtrl($scope, $rootScope, SummaryService) {
+
+    SummaryService.getLastestBlock()
+        .then(function(res){
+            $scope.number = res.number;
+            $rootScope.height = res.number;
+
+            SummaryService.getAvgTimeAndCount("1",res.number+"")
+                .then(function(res){
+                    if (res.time < 0) {
+                        $scope.avgTime = 0
+                    } else {
+                        $scope.avgTime = res.time;
+                    }
+                    // $scope.txCount = res.count; // 后端没有存到数据库里
+                    // $scope.txCount = $scope.number * 500;
+                }, function(error){
+                    console.log(error);
+                })
+        }, function(error){
+            console.log(error)
+        })
+    SummaryService.getTransactionSum()
+        .then(function(res){
+            $scope.txCount = res;
+        }, function(error){
+            console.log(error)
+        })
+    SummaryService.getNodeInfo()
+        .then(function(res){
+            $scope.nodes = res;
+        }, function(error){
+            console.log(error)
+        })
+}
+
+function BlockCtrl($scope, DTOptionsBuilder, SummaryService, BlockService, TransactionService) {
+    $scope.status = "";
+
+    $scope.tx = {
+        from: "6201cb0448964ac597faf6fdf1f472edf2a22b89",
+        to: "0000000000000000000000000000000000000002",
+        value: "1"
+    };
+
+    $scope.blockAvg = {
+        from: "",
+        to: ""
+    };
+
+    $scope.block = {
+        from:"",
+        to:""
+    };
+
+    $scope.blockEvm = {
+        from: "",
+        to: ""
+    };
+
+    $scope.commitTime = "0";
+    $scope.batchTime = "0";
+    $scope.avgTime = "0";
+    $scope.evmTime = "0";
+
+    var getBlocks = function() {
+        BlockService.getAllBlocks()
+            .then(function(res){
+                $scope.blocks = res;
+            }, function(error){
+                console.log(error);
+            })
+    };
+
+    datatables($scope, DTOptionsBuilder);
+    getBlocks();
 
 
-    $scope.demo1 = function () {
-        SweetAlert.swal({
-            title: "",
-            text: "param1: <input type='text' style='width: auto;display: inline'><br/>param2: <input type='text' style='width: auto;display: inline'>",
-            html: true,
-            showCancelButton: true,
-            confirmButtonColor: "#DD6B55",
-            confirmButtonText: "Deploy" ,
-            closeOnConfirm: false,
-            closeOnCancel: false,
-        },
-            function (isConfirm) {
-                if (isConfirm) {
-                        // swal("Ajax request finished!");
-                        SweetAlert.swal("Deployed!", "Deploy success !", "success");
+    $scope.submit = function(){
 
-                } else {
-                    SweetAlert.swal("Cancelled", "You dont deploy", "info");
+        if (isEmpty($scope.tx)) {
+            alert("字段不能为空");
+            return false;
+        }
+
+        $scope.status = "please waitting.....";
+        TransactionService.SendTransaction($scope.tx.from, $scope.tx.to, $scope.tx.value)
+            .then(function(res){
+                $scope.status = res;
+                getBlocks();
+            }, function(error){
+                $scope.status = error.message;
+                console.log(error);
+            })
+    };
+
+    $scope.queryAvg = function(){
+
+        if (isEmpty($scope.blockAvg)) {
+            alert("字段不能为空");
+            return false;
+        }
+
+        SummaryService.getAvgTimeAndCount($scope.blockAvg.from, $scope.blockAvg.to)
+            .then(function(res){
+                $scope.avgTime = res.time
+            }, function(error){
+                console.log(error);
+            })
+    }
+
+    $scope.query = function(){
+
+        if (isEmpty($scope.block)) {
+            alert("字段不能为空");
+            return false;
+        }
+
+        BlockService.queryCommitAndBatchTime($scope.block.from, $scope.block.to)
+            .then(function(res){
+                $scope.commitTime = res.CommitTime;
+                $scope.batchTime = res.BatchTime
+            }, function(error){
+                // $scope.status = "error";
+                console.log(error);
+            })
+    }
+
+    $scope.queryEvmTime = function() {
+
+        if (isEmpty($scope.blockEvm)) {
+            alert("字段不能为空");
+            return false;
+        }
+
+        BlockService.queryEvmAvgTime($scope.blockEvm.from, $scope.blockEvm.to)
+            .then(function(res){
+                $scope.evmTime = res;
+            }, function(error){
+                console.log(error);
+            })
+    }
+}
+
+function TransactionCtrl($scope, DTOptionsBuilder, TransactionService) {
+    $scope.status = "";
+
+    datatables($scope, DTOptionsBuilder);
+
+    TransactionService.getAllTxs()
+        .then(function(res){
+            $scope.txs = res;
+        }, function(error){
+            console.log(error);
+        })
+}
+
+function AccountCtrl($scope, DTOptionsBuilder, AccountService) {
+
+    $scope.account = {
+        password: "",
+        confirm:""
+    };
+    $scope.unlock = {
+        address:"",
+        password: ""
+    };
+    datatables($scope, DTOptionsBuilder);
+
+    AccountService.getAllAccounts()
+        .then(function(res){
+            $scope.accounts = res;
+        } ,function(error){
+            console.log(error);
+        })
+    $scope.submit = function(){
+
+        if (isEmpty($scope.account)) {
+            alert("字段不能为空");
+            return false;
+        }
+        if($scope.account.password != $scope.account.confirm) {
+            alert("两次输入密码不一致！")
+            $scope.account.password = "";
+            $scope.account.confirm = "";
+            return false;
+        }
+        // $scope.status = "please waitting.....";
+        AccountService.newAccount($scope.account.password)
+            .then(function(res){
+                $scope.address = res;
+            }, function(error){
+                // $scope.status = error.message;
+                console.log(error);
+            })
+    };
+    $scope.unlockAccount = function(){
+
+        if (isEmpty($scope.unlock)) {
+            alert("字段不能为空");
+            return false;
+        }
+        $scope.status = "please waitting.....";
+        AccountService.unlockAccount($scope.unlock.address,$scope.unlock.password)
+            .then(function(res){
+                $scope.status = "unlock succeeds";
+            }, function(error){
+                $scope.status = error.message;
+                console.log(error);
+            })
+    };
+}
+
+function AddProjectCtrl($scope, $state, $cookies, ENV, ContractService) {
+
+    $scope.flag = false;
+
+    $scope.PATTERN = ENV.PATTERN;
+    
+    $scope.project = {
+        name: "",
+        type: "1",
+        pattern: "",
+        abi: []
+    };
+
+    $scope.disable = false;
+
+    $scope.select = function(){
+        $scope.disable = false;
+        $scope.flag = false;
+        $scope.project.abi = [];
+    }
+
+    $scope.compile = function(){
+        console.log($scope.project)
+        if (isEmpty($scope.project)) {
+            alert("字段不能为空");
+            return false;
+        }
+
+        $scope.disable = true;
+        ContractService.compileContract($scope.project.pattern.value)
+            .then(function(res){
+                $scope.flag = true;
+                var abis = [];
+
+                for (var i = 0;i < res.length; i++) {
+                    abis.push(JSON.parse(res[i]))
                 }
-            });
+
+                $scope.project.abi = abis
+
+            }, function(error){
+                alert(error.message);
+                console.log(error);
+            })
     }
 
-    $scope.demo2 = function () {
-        SweetAlert.swal({
-            title: "Good job!",
-            text: "You clicked the button!",
-            type: "success"
+    $scope.saveABI = function() {
+            console.log($scope.project);
+
+            // todo 现有合约个数
+            var cookieValue = $cookies.getObject(ENV.COOKIE);
+            var len;
+            // var len = ENV.CONTRACT.length;
+
+            var ctNames = getContractName("contract $", $scope.project.pattern.value);
+
+            // contract
+            for (var i = 0;i < $scope.project.abi.length; i++) {
+
+                var _contract = {};
+
+                _contract.projectName = $scope.project.name;
+                _contract.type = $scope.project.type;    // 1: Create 2: Load
+                _contract.methods = $scope.project.abi[i];
+                _contract.status = 0; // 0: Nondeployed 1: Deployed
+                _contract.sourceCode = $scope.project.pattern.value;
+                _contract.hash = "";
+
+                // contract["Contract_"+ len] = _contract;
+                // console.log(contract);
+                // ENV.CONTRACT.push(contract)
+                // todo 将合约存到cookie或文件中
+                console.log(cookieValue)
+                if (!cookieValue) {
+                    len = 1;
+                    // _contract.contractName = "Contract_"+ len;
+                    _contract.contractName = ctNames[i] + "_" + len;
+                    var objContract = _defineProperty({}, _contract.contractName, _contract);
+                    $cookies.putObject("contracts",objContract)
+                } else {
+                    len = Object.keys(cookieValue).length;
+                    len++;
+                    // _contract.contractName = "Contract_"+ len;
+                    _contract.contractName = ctNames[i] + "_" + len;
+                    cookieValue[_contract.contractName] = _contract;
+                    $cookies.putObject(ENV.COOKIE, cookieValue);
+                }
+
+                // ENV.CONTRACT.push(_contract)
+            }
+
+        $state.go("dashboards.contract")
+    }
+}
+
+
+function ContractCtrl($scope, $uibModal, $cookies, DTOptionsBuilder, SweetAlert, ENV) {
+
+    // todo 从cookie或文件中取出所有合约
+    $scope.contracts = $cookies.getObject(ENV.COOKIE);
+
+    // $scope.contracts = ENV.CONTRACT;
+    $scope.contract = {
+        from: ENV.FROM
+    };
+
+    datatables($scope, DTOptionsBuilder);
+
+    $scope.modal_deploy = function (ctName, sourceCode) {
+        $scope.ctName = ctName;
+        $scope.sourceCode = sourceCode;
+        var modalInstance = $uibModal.open({
+            templateUrl: 'static/views/modal_deploy.html',
+            controller: modalInstanceCtrl,
+            scope: $scope
         });
-    }
+    };
 
-    $scope.demo3 = function () {
+    $scope.modal_invoke = function(ctHash, methods) {
+        $scope.ctHash = ctHash;
+        $scope.methods = methods;
+        var modalInstance = $uibModal.open({
+            templateUrl: 'static/views/modal_invoke.html',
+            controller: modalInstanceInvodeCtrl,
+            scope: $scope
+        });
+    };
+
+    $scope.delete = function(name){
         SweetAlert.swal({
                 title: "Are you sure?",
-                text: "Your will not be able to recover this imaginary file!",
+                text: "Your will delete the contract from cookie!",
                 type: "warning",
                 showCancelButton: true,
                 confirmButtonColor: "#DD6B55",
@@ -495,75 +712,175 @@ function sweetAlertCtrl($scope, SweetAlert) {
                 closeOnConfirm: false,
                 closeOnCancel: false
             },
-            function () {
-                SweetAlert.swal("Ok!");
-            });
-    }
-
-    $scope.demo4 = function () {
-        SweetAlert.swal({
-                title: "Are you sure?",
-                text: "Your will not be able to recover this imaginary file!",
-                type: "warning",
-                showCancelButton: true,
-                confirmButtonColor: "#DD6B55",
-                confirmButtonText: "Yes, delete it!",
-                cancelButtonText: "No, cancel plx!",
-                closeOnConfirm: false,
-                closeOnCancel: false },
             function (isConfirm) {
                 if (isConfirm) {
-                    SweetAlert.swal("Deleted!", "Your imaginary file has been deleted.", "success");
+                    var cookieValue = $cookies.getObject(ENV.COOKIE);
+                    delete cookieValue[name]
+                    delete $scope.contracts[name]
+                    $cookies.putObject(ENV.COOKIE, cookieValue)
+                    SweetAlert.swal("Deleted!", "The contract has deleted from cookie.", "success");
                 } else {
-                    SweetAlert.swal("Cancelled", "Your imaginary file is safe :)", "error");
+                    SweetAlert.swal("Cancelled", ":)", "error");
                 }
             });
     }
+}
+
+function modalInstanceCtrl ($scope, $uibModalInstance, $cookies, SweetAlert, ENV, ContractService) {
+
+    $scope.ok = function () {
+        ContractService.deployContract($scope.from,$scope.sourceCode)
+            .then(function(res){
+                var cookieValue = $cookies.getObject(ENV.COOKIE);
+                for (var name in cookieValue) {
+                    if ( name == $scope.ctName) {
+                        cookieValue[name].status = 1;
+                        cookieValue[name].hash = res;
+
+                        $scope.contracts[name] = cookieValue[name];
+                        $cookies.putObject(ENV.COOKIE, cookieValue)
+
+                        break;
+                    }
+                }
+                // for (var i = 0;i < ENV.CONTRACT.length; i++) {
+                //         if ( ENV.CONTRACT[i].contractName == $scope.ctName) {
+                //             ENV.CONTRACT[i].status = 1;
+                //             ENV.CONTRACT[i].hash = res;
+                //             console.log(ENV.CONTRACT[i])
+                //             break;
+                //         }
+                // }
+                SweetAlert.swal({
+                    title: "Deployed successfully!",
+                    text: "The contract hash is <span class='text_red'>"+res+"</span>",
+                    type: "success",
+                    customClass: 'swal-wide',
+                    html: true
+                });
+            }, function(err){
+                console.log(err)
+            });
+
+        SweetAlert.swal("Deployed!", "You have deployed the contract successfully!", "success");
+        $uibModalInstance.close();
+    };
+
+    $scope.cancel = function () {
+        SweetAlert.swal("Cancelled", "You don't deploy the contract :)", "error");
+        $uibModalInstance.dismiss('cancel');
+    };
 
 }
 
-function selectCtrl($scope) {
 
-    $scope.person = {};
-    $scope.people = [
-        { name: 'Adam',      email: 'adam@email.com',      age: 12, country: 'United States' },
-        { name: 'Amalie',    email: 'amalie@email.com',    age: 12, country: 'Argentina' },
-        { name: 'Estefanía', email: 'estefania@email.com', age: 21, country: 'Argentina' },
-        { name: 'Adrian',    email: 'adrian@email.com',    age: 21, country: 'Ecuador' },
-        { name: 'Wladimir',  email: 'wladimir@email.com',  age: 30, country: 'Ecuador' },
-        { name: 'Samantha',  email: 'samantha@email.com',  age: 30, country: 'United States' },
-        { name: 'Nicole',    email: 'nicole@email.com',    age: 43, country: 'Colombia' },
-        { name: 'Natasha',   email: 'natasha@email.com',   age: 54, country: 'Ecuador' },
-        { name: 'Michael',   email: 'michael@email.com',   age: 15, country: 'Colombia' },
-        { name: 'Nicolás',   email: 'nicolas@email.com',    age: 43, country: 'Colombia' }
-    ];
+function modalInstanceInvodeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, ContractService, UtilsService) {
+    console.log($scope.methods);
+    var abimethod = {};
 
-    $scope.option = {};
-    $scope.options = [
-        { number: '1',      text: 'Option 1' },
-        { number: '2',      text: 'Option 2' },
-        { number: '3',      text: 'Option 3' },
-        { number: '4',      text: 'Option 4' },
-        { number: '5',      text: 'Option 5' },
-        { number: '6',      text: 'Option 6' }
-    ];
+    $scope.method = {
+        name: $scope.methods[0].name,
+        params: {}
+    };
 
-    $scope.availableColors = ['Red','Green','Blue','Yellow','Magenta','Maroon','Umbra','Turquoise'];
+    $scope.flag = true;
+    $scope.submit = function () {
 
-    $scope.multipleDemo = {};
-    $scope.multipleDemo.colors = ['Blue','Red'];
+        if ($scope.flag) {
+            $scope.flag = false;
 
+            for (var i = 0;i < $scope.methods.length;i++) {
+                if ($scope.methods[i].name === $scope.method.name) {
+                    abimethod = $scope.methods[i];
+                    break;
+                }
+            }
+
+            UtilsService.encode(abimethod,$scope.method.params)
+                .then(function(res) {
+                    // 调用合约
+                    console.log(res);
+                    SweetAlert.swal("Waiting...", "please waiting...", "warning");
+
+                    // from 调用者地址，to 合约地址，data 为编码
+                    ContractService.invokeContract(ENV.FROM,  $scope.ctHash, res)
+                        .then(function(res){
+                            // $scope.status = res;
+                            // getBlocks();
+                            $scope.flag = true;
+                            SweetAlert.swal({
+                                title: "Invoked successfully!",
+                                text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! ",
+                                // text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The address is <span class='text_red'>"+ res +"</span>",
+                                type: "success",
+                                // customClass: 'swal-wide',
+                                html: true
+                            });
+                            $uibModalInstance.close();
+                        }, function(error){
+                            // $scope.status = error.message;
+                            console.log(error);
+                            $scope.flag = true;
+                            SweetAlert.swal("Error！", error.message, "error");
+                            $uibModalInstance.close();
+                        })
+                }, function(err) {
+                    console.log(err);
+                    $scope.flag = true;
+                    SweetAlert.swal("Error！", "", "error");
+                    $uibModalInstance.close();
+                });
+        } else {
+            SweetAlert.swal("Waiting...", "please waiting...", "warning");
+        }
+    };
+
+    $scope.cancel = function () {
+        SweetAlert.swal("Cancelled", "You don't invoke the contract :)", "error");
+        $uibModalInstance.dismiss('cancel');
+    };
 }
 
+function isEmpty(obj) {
+    for (var key in obj) {
+        if (!obj[key]) {
+            return true
+        }
+    }
+    return false
+}
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+function getContractName(regs, str) {
+
+    var reg = regs.replace(/\s+/g, "\\s+");
+    var reg1 = reg.replace("$", "([^(\\s]+)\\s*\\([^(]*\\)\\s*{");
+    var reg2 = reg.replace("$", "([^(\\s]+)\\s*{");
+    reg = [reg1, "|", reg2].join("");
+
+    var pattern = new RegExp(reg, "gm");
+    var arrs = [];
+    var match;
+
+    while (match = pattern.exec(str)) {
+        arrs.push(match[1]?match[1]:match[2]);
+    }
+    console.log(arrs);
+    return arrs;
+}
 /**
  *
  * Pass all functions into module
  */
 angular
-    .module('inspinia')
+    .module('starter')
     .controller('MainCtrl', MainCtrl)
-    .controller('modalDemoCtrl', modalDemoCtrl)
     .controller('translateCtrl', translateCtrl)
-    .controller('sweetAlertCtrl', sweetAlertCtrl)
-    .controller('selectCtrl', selectCtrl);
+    .controller('SummaryCtrl', SummaryCtrl)
+    .controller('BlockCtrl', BlockCtrl)
+    .controller('TransactionCtrl',TransactionCtrl)
+    .controller('AccountCtrl', AccountCtrl)
+    .controller('ContractCtrl', ContractCtrl)
+    .controller('AddProjectCtrl', AddProjectCtrl)
 

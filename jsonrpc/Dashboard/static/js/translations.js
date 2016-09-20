@@ -68,5 +68,5 @@ function config($translateProvider) {
 }
 
 angular
-    .module('inspinia')
+    .module('starter')
     .config(config)
