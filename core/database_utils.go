@@ -18,6 +18,7 @@ import (
 // the prefix of key, use to save to db
 var (
 	transactionPrefix   = []byte("transaction-")
+	receiptsPrefix   = []byte("receipts-")
 	blockPrefix         = []byte("block-")
 	chainKey            = []byte("chain-key")
 	balanceKey          = []byte("balance-key")
@@ -33,6 +34,42 @@ func InitDB(port int) {
 	hyperdb.SetLDBPath(port)
 	memChainMap = newMemChain()
 }
+//---------------------- Receipt Start ---------------------------------
+// WriteReceipts stores a batch of transaction receipts into the database.
+func WriteReceipts(receipts types.Receipts) error {
+	db,_ := hyperdb.GetLDBDatabase()
+	batch := db.NewBatch()
+	// Iterate over all the receipts and queue them for database injection
+	for _, receipt := range receipts {
+		data, err := proto.Marshal(receipt)
+		if err != nil {
+			return err
+		}
+		if err := batch.Put(append(receiptsPrefix, receipt.TxHash...), data); err != nil {
+			return err
+		}
+	}
+	// Write the scheduled data into the database
+	if err := batch.Write(); err != nil {
+		return err
+	}
+	return nil
+}
+// GetReceipt returns a receipt by hash
+func GetReceipt(txHash common.Hash) *types.Receipt {
+	db,_ = hyperdb.GetLDBDatabase()
+	data, _ := db.Get(append(receiptsPrefix, txHash[:]...))
+	if len(data) == 0 {
+		return nil
+	}
+	var receipt types.Receipt
+	err := proto.Unmarshal(data, &receipt)
+	if err != nil {
+		log.Info("GetReceipt err:", err)
+	}
+	return (*types.Receipt)(&receipt)
+}
+//---------------------- Receipts End ---------------------------------
 
 
 //-- ------------------- Transaction ---------------------------------

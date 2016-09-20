@@ -146,6 +146,9 @@ func (self *Balance)GetAllDBBalance() (BalanceMap) {
 // UpdateDBBalance update dbBalance require a latest block,
 // after updating dbBalance, cacheBalance will be equal with dbBalance
 func (self *Balance)UpdateDBBalance(block *types.Block) error {
+	var (
+		receipts	types.Receipts
+	)
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	db, err := hyperdb.GetLDBDatabase()
@@ -160,14 +163,18 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 
 	for _, trans := range block.Transactions {
 		//ExecTransaction(*trans)
-
-
 		if trans.To ==nil{
-			ExecTransaction(*trans)
+			receipt,_,_,err := ExecTransaction(*trans)
+			if(err == nil){
+				receipts = append(receipts,receipt)
+			}
 			continue
 		}
 		if _, ok := self.dbBalance[common.HexToAddress(string(trans.To))]; !ok {
-			ExecTransaction(*trans)
+			receipt,_,_,err := ExecTransaction(*trans)
+			if(err == nil){
+				receipts = append(receipts,receipt)
+			}
 			continue
 		}
 
@@ -197,6 +204,10 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 	self.cacheBalance = self.dbBalance
 	// put dbBalance into database
 	err = PutDBBalance(db, self.dbBalance)
+	/**
+	    we want to save the receipts to the db
+	 */
+	WriteReceipts(receipts)
 	if err != nil {
 		return err
 	}
