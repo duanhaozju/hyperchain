@@ -13,6 +13,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/crypto"
 	"strconv"
+	"fmt"
 )
 
 // the prefix of key, use to save to db
@@ -56,7 +57,7 @@ func WriteReceipts(receipts types.Receipts) error {
 	return nil
 }
 // GetReceipt returns a receipt by hash
-func GetReceipt(txHash common.Hash) *types.Receipt {
+func GetReceipt(txHash common.Hash) *types.ReceiptTrans {
 	db,_ = hyperdb.GetLDBDatabase()
 	data, _ := db.Get(append(receiptsPrefix, txHash[:]...))
 	if len(data) == 0 {
@@ -67,7 +68,10 @@ func GetReceipt(txHash common.Hash) *types.Receipt {
 	if err != nil {
 		log.Info("GetReceipt err:", err)
 	}
-	return (*types.Receipt)(&receipt)
+	//a:= receipt.ToReceiptTrans()
+	//fmt.Println("address",a.ContractAddress)
+	//fmt.Println("TxHash",a.TxHash)
+	return receipt.ToReceiptTrans()
 }
 //---------------------- Receipts End ---------------------------------
 
