@@ -48,6 +48,25 @@ function SummaryService($resource,$q,ENV) {
                 })
             })
         },
+        getTransactionSum:function () {
+            return $q(function(resolve, reject){
+                $resource(ENV.API,{},{
+                    getTxSum:{
+                        method:"POST"
+                    }
+                }).getTxSum({
+                    method: "block_queryTransactionSum",
+                    id: 1
+                },function(res){
+                    if (res.error) {
+                        reject(res.error)
+                    } else {
+                        resolve(res.result)
+                    }
+
+                })
+            })
+        },
         getNodeInfo: function(){
             return $q(function(resolve, reject){
                 $resource(ENV.API,{},{

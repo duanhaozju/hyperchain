@@ -38,7 +38,7 @@ type ProtocolManager struct {
 	nodeInfo          client.PeerInfos // node info ,store node status,ip,port
 	consenter         consensus.Consenter
 	//encryption   crypto.Encryption
-	accountManager    *accounts.AccountManager
+	AccountManager    *accounts.AccountManager
 	commonHash        crypto.CommonHash
 
 	noMorePeers       chan struct{}
@@ -77,7 +77,7 @@ am *accounts.AccountManager, commonHash crypto.CommonHash) (*ProtocolManager) {
 		peerManager:  peerManager,
 		fetcher:fetcher,
 		//encryption:encryption,
-		accountManager:am,
+		AccountManager:am,
 		commonHash:commonHash,
 
 
@@ -360,7 +360,7 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 	addrHex := string(transaction.From)
 	addr := common.HexToAddress(addrHex)
 
-	sign, err := pm.accountManager.SignWithPassphrase(addr, h[:], "123")
+	sign, err := pm.AccountManager.SignWithPassphrase(addr, h[:], "123")
 	//sign, err := pm.accountManager.Sign(addr, h[:])
 	if err != nil {
 		log.Error(err)

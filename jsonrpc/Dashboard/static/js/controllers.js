@@ -375,15 +375,19 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
                         $scope.avgTime = res.time;
                     }
                     // $scope.txCount = res.count; // 后端没有存到数据库里
-                    $scope.txCount = $scope.number * 500;
+                    // $scope.txCount = $scope.number * 500;
                 }, function(error){
                     console.log(error);
                 })
-
         }, function(error){
             console.log(error)
         })
-
+    SummaryService.getTransactionSum()
+        .then(function(res){
+            $scope.txCount = res;
+        }, function(error){
+            console.log(error)
+        })
     SummaryService.getNodeInfo()
         .then(function(res){
             $scope.nodes = res;
@@ -779,45 +783,56 @@ function modalInstanceInvodeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Co
         params: {}
     };
 
+    $scope.flag = true;
     $scope.submit = function () {
 
-        for (var i = 0;i < $scope.methods.length;i++) {
-            if ($scope.methods[i].name === $scope.method.name) {
-                abimethod = $scope.methods[i];
-                break;
+        if ($scope.flag) {
+            $scope.flag = false;
+
+            for (var i = 0;i < $scope.methods.length;i++) {
+                if ($scope.methods[i].name === $scope.method.name) {
+                    abimethod = $scope.methods[i];
+                    break;
+                }
             }
+
+            UtilsService.encode(abimethod,$scope.method.params)
+                .then(function(res) {
+                    // 调用合约
+                    console.log(res);
+                    SweetAlert.swal("Waiting...", "please waiting...", "warning");
+
+                    // from 调用者地址，to 合约地址，data 为编码
+                    ContractService.invokeContract(ENV.FROM,  $scope.ctHash, res)
+                        .then(function(res){
+                            // $scope.status = res;
+                            // getBlocks();
+                            $scope.flag = true;
+                            SweetAlert.swal({
+                                title: "Invoked successfully!",
+                                text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! ",
+                                // text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The address is <span class='text_red'>"+ res +"</span>",
+                                type: "success",
+                                // customClass: 'swal-wide',
+                                html: true
+                            });
+                            $uibModalInstance.close();
+                        }, function(error){
+                            // $scope.status = error.message;
+                            console.log(error);
+                            $scope.flag = true;
+                            SweetAlert.swal("Error！", error.message, "error");
+                            $uibModalInstance.close();
+                        })
+                }, function(err) {
+                    console.log(err);
+                    $scope.flag = true;
+                    SweetAlert.swal("Error！", "", "error");
+                    $uibModalInstance.close();
+                });
+        } else {
+            SweetAlert.swal("Waiting...", "please waiting...", "warning");
         }
-
-        UtilsService.encode(abimethod,$scope.method.params)
-            .then(function(res) {
-                // 调用合约
-                console.log(res);
-
-                // from 调用者地址，to 合约地址，data 为编码
-                ContractService.invokeContract(ENV.FROM,  $scope.ctHash, res)
-                    .then(function(res){
-                        // $scope.status = res;
-                        // getBlocks();
-
-                        SweetAlert.swal({
-                            title: "Invoked successfully!",
-                            text: "You have invode the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The address is <span class='text_red'>"+ res +"</span>",
-                            type: "success",
-                            customClass: 'swal-wide',
-                            html: true
-                        });
-                        $uibModalInstance.close();
-                    }, function(error){
-                        // $scope.status = error.message;
-                        console.log(error);
-                        SweetAlert.swal("Error！", "", "error");
-                        $uibModalInstance.close();
-                    })
-            }, function(err) {
-                console.log(err);
-                SweetAlert.swal("Error！", "", "error");
-                $uibModalInstance.close();
-            });
     };
 
     $scope.cancel = function () {

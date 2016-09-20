@@ -16,7 +16,6 @@ import (
 	"hyperchain/crypto"
 	"time"
 	"encoding/hex"
-
 )
 
 
@@ -141,5 +140,6 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 	if err != nil {
 		log.Fatal(err)
 	}
+	//TxSum.Add(TxSum,big.NewInt(int64(len(block.Transactions))))
 	//CommitStatedbToBlockchain()
 }
