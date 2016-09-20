@@ -160,7 +160,7 @@ func (op *batch) processStateUpdated(msg *pb.Message) error {
 		return err
 	}
 
-	event := stateUpdatedEvent{
+	event := &stateUpdatedEvent{
 		seqNo: stateUpdatedMsg.SeqNo,
 	}
 	op.postPbftEvent(event)
