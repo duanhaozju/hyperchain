@@ -4,7 +4,7 @@ set -e
 govendor build
 
 FIRSTSERVER="114.55.64.132"
-MAXNODE=16
+MAXNODE=4
 
  scp -r killprocess.sh satoshi@$FIRSTSERVER:/home/satoshi/
  ssh -t satoshi@$FIRSTSERVER "chmod a+x killprocess.sh && bash killprocess.sh"
@@ -25,8 +25,8 @@ for server_address in ${SERVER_ADDR[@]}; do
 echo $server_address
  #    ssh -t satoshi@$server_address "cd /home/satoshi/ && ./hyperchain -o $ni -l 8081 -p ./peerconfig.json -f ./"
 
-#osascript -e 'tell app "Terminal" to do script "ssh -t satoshi@'$server_address' \"rm -rf /tmp/hyperchain/ && cd /home/satoshi/ &&chmod a+x hyperchain && ./hyperchain -o $ni -l 8081 -p ./peerconfig.json -f ./ -g ./genesis.json\""'
+osascript -e 'tell app "Terminal" to do script "ssh -t satoshi@'$server_address' \"rm -rf /tmp/hyperchain/ && cd /home/satoshi/ &&chmod a+x hyperchain && ./hyperchain -o $ni -l 8081 -p ./peerconfig.json -f ./ -g ./genesis.json\""'
 
- gnome-terminal -x bash -c "ssh -t satoshi@$server_address \"rm -rf /tmp/hyperchain/ && cd /home/satoshi/ && ./hyperchain -o $ni -l 8081 -p ./peerconfig.json -f ./ -g ./genesis.json\""
+ #gnome-terminal -x bash -c "ssh -t satoshi@$server_address \"rm -rf /tmp/hyperchain/ && cd /home/satoshi/ && ./hyperchain -o $ni -l 8081 -p ./peerconfig.json -f ./ -g ./genesis.json\""
  ni=`expr $ni + 1`
 done

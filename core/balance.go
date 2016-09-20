@@ -8,7 +8,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/big"
 	"github.com/op/go-logging"
-	"fmt"
 )
 
 //-- --------------------- Balance ------------------------------------\
@@ -147,6 +146,9 @@ func (self *Balance)GetAllDBBalance() (BalanceMap) {
 // UpdateDBBalance update dbBalance require a latest block,
 // after updating dbBalance, cacheBalance will be equal with dbBalance
 func (self *Balance)UpdateDBBalance(block *types.Block) error {
+	var (
+		receipts	types.Receipts
+	)
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	db, err := hyperdb.GetLDBDatabase()
@@ -155,10 +157,26 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 	}
 
 	//for test evm execute contract
-	ExecTransaction(*types.NewTestCreateTransaction())
+
+		//ExecTransaction(*types.NewTestCreateTransaction())
+
+
 	for _, trans := range block.Transactions {
 		//ExecTransaction(*trans)
-		ExecTransaction(*types.NewTestCallTransaction())
+		if trans.To ==nil{
+			receipt,_,_,err := ExecTransaction(*trans)
+			if(err == nil){
+				receipts = append(receipts,receipt)
+			}
+			continue
+		}
+		if _, ok := self.dbBalance[common.HexToAddress(string(trans.To))]; !ok {
+			receipt,_,_,err := ExecTransaction(*trans)
+			if(err == nil){
+				receipts = append(receipts,receipt)
+			}
+			continue
+		}
 
 		var transValue big.Int
 		transValue.SetString(string(trans.Value), 10)
@@ -186,6 +204,10 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 	self.cacheBalance = self.dbBalance
 	// put dbBalance into database
 	err = PutDBBalance(db, self.dbBalance)
+	/**
+	    we want to save the receipts to the db
+	 */
+	WriteReceipts(receipts)
 	if err != nil {
 		return err
 	}
@@ -225,25 +247,17 @@ func (self *Balance)UpdateCacheBalance(trans *types.Transaction) {
 func VerifyBalance(tx *types.Transaction) bool {
 	var balance big.Int
 	var value big.Int
-
 	balanceIns, err := GetBalanceIns()
-
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
 	}
-
 	bal := balanceIns.GetCacheBalance(common.HexToAddress(string(tx.From)))
-	//bal2 := balanceIns.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000002"))
-	log.Debug(bal)
-	//log.Debug(bal2)
 	//log.Println(common.Bytes2Hex(bal))
-
-
 	balance.SetString(string(bal), 10)
 	value.SetString(string(tx.Value), 10)
 
-	fmt.Println("value: ", value.String())
-	fmt.Println("balance: ", balance.String())
+	//fmt.Println("value: ", value.String())
+	//fmt.Println("balance: ", balance.String())
 	if value.Cmp(&balance) == 1 {
 		return false
 	}

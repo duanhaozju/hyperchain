@@ -14,6 +14,8 @@ import (
 	"hyperchain/event"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/vm/compiler"
+
+	"hyperchain/core/crypto"
 )
 
 const (
@@ -28,20 +30,25 @@ func init() {
 
 type PublicTransactionAPI struct {
 	eventMux *event.TypeMux
+	pm *manager.ProtocolManager
 
 }
 
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
+// If type is Ptr or String, it is optional parameter
 type SendTxArgs struct {
+	//From     common.Address  `json:"from"`
+	//To       *common.Address  `json:"to"`
+	//Gas      *jsonrpc.Number  `json:"gas"`
+	//GasPrice *jsonrpc.Number  `json:"gasPrice"`
+	//Value    *jsonrpc.Number  `json:"value"`
 	From     string  `json:"from"`
 	To       string  `json:"to"`
 	Gas      string  `json:"gas"`
 	GasPrice string  `json:"gasPrice"`
-	//Value    *jsonrpc.HexNumber  `json:"value"`
 	Value    string  `json:"value"`
 	Payload  string  `json:"payload"`
-	//Data     string          `json:"data"`
 	//Nonce    *jsonrpc.HexNumber  `json:"nonce"`
 }
 
@@ -54,10 +61,10 @@ type TransactionResult struct {
 	Timestamp  string		`json:"timestamp"`
 }
 
-func NewPublicTransactionAPI(eventMux *event.TypeMux) *PublicTransactionAPI {
+func NewPublicTransactionAPI(eventMux *event.TypeMux,pm *manager.ProtocolManager) *PublicTransactionAPI {
 	return &PublicTransactionAPI{
 		eventMux :eventMux,
-
+		pm:pm,
 	}
 }
 
@@ -76,15 +83,17 @@ func prepareExcute(args SendTxArgs) SendTxArgs{
 func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error){
 
 	log.Info("==========SendTransaction=====,args = ",args)
-
 	var tx *types.Transaction
-
 	log.Info(args.Value)
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
-
+	//tx = types.NewTransaction(args.From[:], (*args.To)[:], []byte(args.Value))
 	log.Info(tx.Value)
-	//if (true) {
-	if (core.VerifyBalance(tx)) {
+	am := tran.pm.AccountManager
+	addr := common.HexToAddress(string(args.From))
+
+	if (!core.VerifyBalance(tx)){
+		return common.Hash{},errors.New("Not enough balance!")
+	}else if _,found := am.Unlocked[addr];found {
 
 		// Balance is enough
 		/*txBytes, err := proto.Marshal(tx)
@@ -99,7 +108,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//end:=start+500
 
 		for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 500; i++ {
+			for i := 0; i < 50; i++ {
 				tx.TimeStamp=time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
@@ -118,20 +127,15 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
-
-
-
-
 		return tx.BuildHash(),nil
 
 	} else {
-		// Balance isn't enough
 		return common.Hash{},errors.New("Not enough balance!")
 	}
 }
 
 // SendTransactionOrContract deploy contract
-func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (common.Hash, error){
+func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (common.Address, error){
 
 	var tx *types.Transaction
 
@@ -143,7 +147,7 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 	payload, err := json.Marshal(realArgs.Payload)
 
 	if err != nil {
-		return common.Hash{},err
+		return common.Address{},err
 	}
 
 	txValue := types.NewTransactionValue(price,gas,amount,payload)
@@ -151,13 +155,52 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 	value, err := json.Marshal(txValue)
 
 	if err != nil {
-		return common.Hash{}, err
+		return common.Address{}, err
 	}
 
+	var addr common.Address
 	if args.To == "" {
 		tx = types.NewTransaction([]byte(realArgs.From), nil, value)
+		nonce := core.GetVMEnv().Db().GetNonce(common.BytesToAddress(tx.From))
+		core.GetVMEnv().Db().SetNonce(common.BytesToAddress(tx.From), nonce+1)
+		addr = crypto.CreateAddress(common.BytesToAddress(tx.From), nonce)
+
+
 	} else {
 		tx = types.NewTransaction([]byte(realArgs.From), []byte(realArgs.To), value)
+
+		am := tran.pm.AccountManager
+		addr := common.HexToAddress(args.From)
+
+		if _,found := am.Unlocked[addr];found {
+			log.Infof("############# %d: start send request#############", time.Now().Unix())
+			start := time.Now().Unix()
+			end:=start+6
+			//end:=start+500
+
+			for start := start ; start < end; start = time.Now().Unix() {
+				for i := 0; i < 50; i++ {
+					tx.TimeStamp=time.Now().UnixNano()
+					txBytes, err := proto.Marshal(tx)
+					if err != nil {
+						log.Fatalf("proto.Marshal(tx) error: %v",err)
+					}
+					if manager.GetEventObject() != nil{
+						go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+						//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+					}else{
+						log.Warning("manager is Nil")
+					}
+
+				}
+				time.Sleep(90 * time.Millisecond)
+
+			}
+
+			log.Infof("############# %d: end send request#############", time.Now().Unix())
+		} else {
+			return common.Address{}, errors.New("account isn't unlock")
+		}
 	}
 
 	// todo 其他处理,比如存储到数据库中
@@ -169,7 +212,8 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 	//
 	//core.PutTransaction(db, ,tx)
 
-	return tx.BuildHash(),nil
+	return addr,nil
+	//return tx.BuildHash(),nil
 }
 
 // ComplieContract complies contract to ABI

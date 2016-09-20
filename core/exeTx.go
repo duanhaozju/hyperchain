@@ -9,6 +9,7 @@ glog "github.com/op/go-logging"
 "hyperchain/hyperdb"
 "hyperchain/core/state"
 "hyperchain/core/vm/params"
+	"fmt"
 )
 type Code []byte
 var logger = glog.Logger{}
@@ -39,7 +40,7 @@ func ExecBlock(block *types.Block)(err error){
 
 	//for _,tx := range block.Transactions{
 	for _,_ = range block.Transactions{
-		_,_,err = ExecTransaction(*types.NewTestCallTransaction())
+		_,_,_,err = ExecTransaction(*types.NewTestCallTransaction())
 		//_,err = ExecTransaction(*tx)
 	}
 	log.Notice("the sum of transactions is ",len(block.Transactions))
@@ -61,7 +62,7 @@ func ExecBlock(block *types.Block)(err error){
 }
 
 // 这一块相当于ethereum里的TransitionDB
-func ExecTransaction(tx types.Transaction)(ret []byte,addr common.Address,err error) {
+func ExecTransaction(tx types.Transaction)(receipt *types.Receipt,ret []byte,addr common.Address,err error) {
 	var(
 		from = common.BytesToAddress(tx.From)
 		//sender = common.BytesToAddress(tx.From)
@@ -72,37 +73,22 @@ func ExecTransaction(tx types.Transaction)(ret []byte,addr common.Address,err er
 		gasPrice = tx.GasPrice()
 		amount = tx.Amount()
 	)
-	log.Debug("the to is ---------",to)
-	log.Debug("the to is ---------",tx.To)
+	//log.Notice("the to is ---------",to)
+	//log.Notice("the to is ---------",tx.To)
+
+	receipt = types.NewReceipt(nil,gas)
+	receipt.TxHash = tx.BuildHash().Bytes()
+	// todo replace the gasused
+	receipt.GasUsed = 100000
 	if(tx.To == nil){
-		return Exec(&from,nil,data,gas,gasPrice,amount)
+		ret,addr,err = Exec(&from,nil,data,gas,gasPrice,amount)
+		receipt.ContractAddress = addr.Bytes();
+	}else {
+		ret,_,err = Exec(&from,&to,data,gas,gasPrice,amount)
 	}
-
-	return Exec(&from,&to,data,gas,gasPrice,amount)
-}
-
-func ExecSourceCode(from, to *common.Address, data []byte, gas,
-gasPrice, value *big.Int)(ret []byte,addr common.Address,err error){
-
-	sender := vmenv.Db().GetAccount(*from)
-	contractCreation := (nil == to)
-	//ret,err = env.Call(sender,*to,data,gas,gasPrice,value)
-	// 判断是否能够交易,转移,这一步可以考虑在外部执行
-
-	if contractCreation{
-		//logger.Notice("------create contract")
-		ret,addr,err = vmenv.Create(sender,data,gas,gasPrice,value)
-		if err != nil{
-			ret = nil
-			logger.Error("VM create err:",err)
-		}
-	} else {
-		ret,err = vmenv.Call(sender,*to,data,gas,gasPrice,value)
-		if err != nil{
-			logger.Error("VM call err:",err)
-		}
-	}
-	return ret,addr,err
+	receipt.Ret = ret
+	fmt.Println("receipt",receipt)
+	return receipt,ret,addr,err
 }
 
 func Exec(from, to *common.Address, data []byte, gas,
@@ -110,9 +96,9 @@ gasPrice, value *big.Int)(ret []byte,addr common.Address,err error){
 
 	sender := vmenv.Db().GetAccount(*from)
 	contractCreation := (nil == to)
+
 	//ret,err = env.Call(sender,*to,data,gas,gasPrice,value)
 	// 判断是否能够交易,转移,这一步可以考虑在外部执行
-
 	if contractCreation{
 		//logger.Notice("------create contract")
 		ret,addr,err = vmenv.Create(sender,data,gas,gasPrice,value)
@@ -126,6 +112,15 @@ gasPrice, value *big.Int)(ret []byte,addr common.Address,err error){
 			logger.Error("VM call err:",err)
 		}
 	}
+	// todo replace the gasused
+	// todo just for test
+	receipt := types.NewReceipt(nil,gas)
+	receipt.GasUsed = 100000
+	receipt.ContractAddress = addr.Bytes();
+	receipt.TxHash = common.Hash{}.Bytes()
+	receipt.Ret = ret
+	WriteReceipts(types.Receipts{receipt,receipt,receipt})
+	fmt.Println("receipt from db",GetReceipt(common.Hash{}))
 	return ret,addr,err
 }
 

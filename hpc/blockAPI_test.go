@@ -10,7 +10,7 @@ import (
 func TestPublicBlockAPI_GetBlocks(t *testing.T) {
 
 	//init db
-	core.InitDB(8086)
+	core.InitDB(8083)
 
 	//init genesis
 	core.CreateInitBlock("../core/genesis.json")
@@ -24,4 +24,7 @@ func TestPublicBlockAPI_GetBlocks(t *testing.T) {
 	cTime, bTime := blockAPI.QueryCommitAndBatchTime(SendQueryArgs{From:"1",To:"2",})
 
 	fmt.Println(cTime,bTime)
+
+	num := blockAPI.QueryTransactionSum()
+	fmt.Println(num)
 }

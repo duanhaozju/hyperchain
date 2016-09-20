@@ -20,7 +20,7 @@
             <div class="ibox float-e-margins">
                 <div class="ibox-content">
                     <button class="btn btn-primary " type="button" ui-sref="contract.addProject"><i class="fa fa-plus"></i>&nbsp;Add project</button><br/><br/>
-                    <table  datatable="" dt-options="dtOptions" class="table table-striped table-hover dataTables-example" data-page-size="10">
+                    <table  datatable="ng" dt-options="dtOptions" class="table table-striped table-hover dataTables-example" data-page-size="10">
                         <thead>
                         <tr>
                             <th class="table_th">Contract Name</th>
@@ -31,46 +31,6 @@
                         </tr>
                         </thead>
                         <tbody>
-                        <tr class="gradeX">
-                            <td>Manage</td>
-                            <td>Manage</td>
-                            <td>Create</td>
-                            <td>Deployed</td>
-                            <td>
-                                <button class="btn btn-success btn-circle" type="button"><i class="fa fa-list"></i></button>
-                                <!--<button class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>-->
-                                <button class="btn btn-info btn-circle" type="button" ng-click="modal_deploy()" disabled><i class="fa fa-cloud-upload"></i></button>
-                            </td>
-                        </tr>
-                        <tr class="gradeC">
-                            <td>Enter</td>
-                            <td>Enter</td>
-                            <td>Load</td>
-                            <td>Nondeployed</td>
-                            <td>
-                                <button class="btn btn-success btn-circle" type="button"><i class="fa fa-list"></i></button>
-                                <!--<button class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>-->
-                                <button class="btn btn-info btn-circle" type="button" ng-click="modal_deploy()" disabled><i class="fa fa-cloud-upload"></i></button>
-                            </td>
-                        </tr>
-                        <!--<tr ng-repeat="ct in contracts">-->
-                            <!--<td>{{ct.contractName}}</td>-->
-                            <!--<td>{{ct.projectName}}</td>-->
-                            <!--<td ng-switch="ct.type">-->
-                                <!--<span ng-switch-when="1">Create</span>-->
-                                <!--<span ng-switch-when="2">Load</span>-->
-                            <!--</td>-->
-                            <!--<td ng-switch="ct.status">-->
-                                <!--<span ng-switch-when="0">Nondeployed</span>-->
-                                <!--<span ng-switch-when="1">Deployed</span>-->
-                            <!--</td>-->
-                            <!--<td ng-switch="ct.status">-->
-                                <!--<button class="btn btn-success btn-circle" type="button"><i class="fa fa-list"></i></button>-->
-                                <!--<button ng-switch-when="0" class="btn btn-info btn-circle" type="button" ng-click="modal_deploy(ct.contractName,ct.sourceCode)"><i class="fa fa-cloud-upload"></i></button>-->
-                                <!--&lt;!&ndash;<button ng-switch-when="1" class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>&ndash;&gt;-->
-                                <!--<button ng-switch-when="1" class="btn btn-warning btn-circle" type="button" ng-click="modal_invoke(ct.hash, ct.methods)"><i class="fa fa-flag"></i></button>-->
-                            <!--</td>-->
-                        <!--</tr>-->
                         <tr ng-repeat="(name,ct) in contracts">
                             <td>{{ct.contractName}}</td>
                             <td>{{ct.projectName}}</td>
