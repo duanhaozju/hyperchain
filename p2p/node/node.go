@@ -31,49 +31,37 @@ type Node struct {
 	gRPCServer	*grpc.Server
 	NodeID		string
 	higherEventManager *event.TypeMux
-	HSM transport.HandShakeManager
-
 	//common information
-	IP	     string
-	Port         int
-	NodeHash     *common.Hash
 	Cname	     string
+	SecretManager map[string]*transport.HandShakeManager
 }
 
-var globalNode Node
+
 var DESKEY = []byte("sfe023f_sefiel#fi32lf3e!")
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
-func NewNode(port int, isTest bool,hEventManager *event.TypeMux,nodeID int) *Node {
-	if isTest {
-		log.Info("Unit test: start local node, port", port)
-		var TestNode Node
-		TestNode.address.Ip = peerComm.GetLocalIp()
-		TestNode.address.Port = int32(port)
-		TestNode.higherEventManager = hEventManager
-		TestNode.NodeID = strconv.Itoa(nodeID)
-		TestNode.startServer()
-		return &TestNode
-	}
-	if globalNode.address.Ip != "" && globalNode.address.Port != 0 {
-		return &globalNode
-	} else {
-		//globalNode.HSM = transport.NewHandShakeManger()
-		globalNode.address.Ip = peerComm.GetLocalIp()
-		globalNode.address.Port = int32(port)
-		globalNode.NodeID = strconv.Itoa(nodeID)
-		globalNode.higherEventManager = hEventManager
-		globalNode.startServer()
-		return &globalNode
-	}
+func NewNode(port string, hEventManager *event.TypeMux,nodeID int,Cname string) *Node {
+	var newNode Node
+	//globalNode.HSM = transport.NewHandShakeManger()
+	newNode.address = peerComm.ExtactAddress(peerComm.GetLocalIp(),port)
+	newNode.Cname = Cname
+	newNode.SecretManager = make(map[string]*transport.HandShakeManager)
+	newNode.NodeID = strconv.Itoa(nodeID)
+	newNode.higherEventManager = hEventManager
+
+	newNode.startServer()
+	return &newNode
 
 }
-func GetNodeAddr() pb.PeerAddress {
-	return globalNode.address
+func (this *Node)GetNodeAddr() pb.PeerAddress {
+	return this.address
 }
 // GetNodeID which init by new function
-func GetNodeID() string{
-	return globalNode.NodeID
+func (this *Node)GetNodeHash() string{
+	return this.address.Hash
+}
+func (this *Node)GetNodeID() string{
+	return this.NodeID
 }
 // Chat Implements the ServerSide Function
 func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error) {

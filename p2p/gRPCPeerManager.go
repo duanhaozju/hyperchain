@@ -10,18 +10,15 @@ import (
 	node "hyperchain/p2p/node"
 	peer "hyperchain/p2p/peer"
 	"hyperchain/p2p/peerComm"
-	"hyperchain/p2p/peerEventManager"
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/recovery"
 	"strconv"
 	"time"
 	"hyperchain/p2p/peerPool"
 	"hyperchain/event"
-	"hyperchain/crypto"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/p2p/transport"
 	"golang.org/x/net/context"
-	"encoding/hex"
 )
 
 
@@ -32,7 +29,6 @@ var DESKEY = []byte("sfe023f_sefiel#fi32lf3e!")
 
 // gRPC peer manager struct, which to manage the gRPC peers
 type GrpcPeerManager struct {
-	EventManager *peerEventManager.PeerEventManager
 	//localNodeHash
 	LocalNode    *node.Node
 	AliveChain   *chan bool
@@ -43,24 +39,15 @@ type GrpcPeerManager struct {
 func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,isTest bool,eventMux *event.TypeMux) {
 	// Read the config
 	configs := peerComm.GetConfig(path)
-	port, _ := strconv.Atoi(configs["port"+strconv.Itoa(NodeId)])
+	port := configs["port"+strconv.Itoa(NodeId)]
 	MAXPEERNODE,_ := strconv.Atoi(configs["MAXPEERS"])
+	cname := configs["cname"+strconv.Itoa(NodeId)]
 
 
 	// start local node
-	this.LocalNode = node.NewNode(port,isTest,eventMux,NodeId)
+	this.LocalNode = node.NewNode(port,eventMux,NodeId,cname)
 	//节点处理完成通道
 	this.AliveChain = &aliveChan
-
-	//初始化peerEvent处理器
-	//this.EventManager = peerEventManager.NewPeerEventManager()
-	//注册事件
-	//this.EventManager.RegisterEvent(pb.Message_HELLO, peerEventHandler.NewHelloHandler())
-	//this.EventManager.RegisterEvent(pb.Message_RESPONSE, peerEventHandler.NewResponseHandler())
-	//this.EventManager.RegisterEvent(pb.Message_CONSUS, peerEventHandler.NewBroadCastHandler())
-	//this.EventManager.RegisterEvent(pb.Message_KEEPALIVE, peerEventHandler.NewKeepAliveHandler())
-	//开启事件处理监听循环
-	//this.EventManager.Start()
 
 	// connect to peer
 	// 如果进行单元测试,需要将参数设置为true
@@ -77,6 +64,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 
 func (this *GrpcPeerManager)connectToPeers(MaxPeerNumber int,NodeId int,configs map[string]string){
 	alivePeerMap := make(map[int]bool)
+	//初始化flag map
 	for i := 1;i<=MaxPeerNumber;i++{
 		if i == NodeId{
 			alivePeerMap[i] = true
@@ -85,7 +73,7 @@ func (this *GrpcPeerManager)connectToPeers(MaxPeerNumber int,NodeId int,configs 
 		}
 	}
 
-	log.Notice(alivePeerMap)
+	//log.Notice(alivePeerMap)
 
 	// connect other peers
 	for this.peersPool.GetAliveNodeNum() < MaxPeerNumber - 1{
@@ -105,13 +93,13 @@ func (this *GrpcPeerManager)connectToPeers(MaxPeerNumber int,NodeId int,configs 
 			//if this node is not online, connect it
 			peerIp   := configs["node"+strconv.Itoa(nid)]
 			peerPort_s := configs["port"+strconv.Itoa(nid)]
-			peerAddress := extactAddress(peerIp,peerPort_s)
+			peerAddress := peerComm.ExtactAddress(peerIp,peerPort_s)
 
-			peer,peerErr := this.connectToPeer(peerAddress.Ip,peerAddress.Port)
+			peer,connectErr := this.connectToPeer(peerAddress.Ip,peerAddress.Port)
 
-			if peerErr != nil {
+			if connectErr != nil {
 				// cannot connect to other peer
-				log.Error("Node: ",peerAddress.Ip,":",peerAddress.Port," can not connect!\n", peerErr)
+				log.Error("Node: ",peerAddress.Ip,":",peerAddress.Port," can not connect!\n", connectErr)
 			} else {
 				// add  peer to peer pool
 				this.peersPool.PutPeer(*peerAddress, peer)
@@ -122,7 +110,7 @@ func (this *GrpcPeerManager)connectToPeers(MaxPeerNumber int,NodeId int,configs 
 	}
 }
 
-
+//connect to peer by ip address and port (why int32? because of protobuf limit)
 func (this *GrpcPeerManager)connectToPeer(peerIp string,peerPort int32)(*peer.Peer,error){
 	//if this node is not online, connect it
 	peer, peerErr := peer.NewPeerByIpAndPort(peerIp,peerPort)
@@ -150,7 +138,7 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 	if err!=nil{
 		log.Fatal("TripleDesEncrypt Failed!")
 	}
-	localNodeAddr := node.GetNodeAddr()
+	localNodeAddr := this.LocalNode.GetNodeAddr()
 	var broadCastMessage = pb.Message{
 		MessageType:  pb.Message_CONSUS,
 		From:         &localNodeAddr,
@@ -165,16 +153,8 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 // inner the broadcast method which serve BroadcastPeers function
 func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 	for _, peer := range pPool.GetPeers() {
+		//review 这里没有返回值,不知道本次通信是否成功
 		go peer.Chat(&broadCastMessage)
-		//go func(){
-		//	resMsg, err := peer.Chat(&broadCastMessage)
-		//	if err != nil {
-		//		log.Error("Broadcast failed,Node", peer.Addr)
-		//	} else {
-		//		log.Debug("resMsg:", string(resMsg.Payload))
-		//		//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
-		//	}
-		//}()
 	}
 }
 
@@ -194,7 +174,7 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,Mes
 	if err!=nil{
 		log.Fatal("TripleDesEncrypt Failed!")
 	}
-	localNodeAddr := node.GetNodeAddr()
+	localNodeAddr := this.LocalNode.GetNodeAddr()
 	var syncMessage = pb.Message{
 		MessageType:  pb.Message_SYNCMSG,
 		From:         &localNodeAddr,
@@ -239,7 +219,7 @@ func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
 	peerpool := peerPool.NewPeerPool(false,false);
 	peers := peerpool.GetPeers()
 	var perinfo peer.PeerInfo
-	localNodeAddr := node.GetNodeAddr()
+	localNodeAddr := this.LocalNode.GetNodeAddr()
 	result, err := transport.TripleDesEncrypt([]byte("Query Status"), DESKEY)
 	if err!=nil{
 		log.Fatal("TripleDesEncrypt Failed!")
@@ -272,28 +252,11 @@ func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
 
 // GetNodeId GetLocalNodeIdHash string
 func (this *GrpcPeerManager) GetNodeId() string{
-	addr := node.GetNodeAddr()
-	return getHash(addr.String())
+	addr := this.LocalNode.GetNodeAddr()
+	return addr.Hash
 }
 
-func getHash(needHashString string)string {
-	hasher := crypto.NewKeccak256Hash("keccak256Hanser")
-	return hex.EncodeToString(hasher.Hash(needHashString).Bytes())
-}
 
-func extactAddress(peerIp string, peerPort_s string) *pb.PeerAddress{
-	peerPort_i,err := strconv.Atoi(peerPort_s)
-	if err != nil{
-		log.Error("port cannot convert into int",err)
-	}
-	peerPort_i32 := int32(peerPort_i)
-	peerAddrString := peerIp + ":" + peerPort_s
-	peerAddress := pb.PeerAddress{
-		Ip:peerIp,
-		Port:peerPort_i32,
-		Address:peerAddrString,
-		Hash:getHash(peerAddrString),
-	}
-	return &peerAddress
-}
+
+
 
