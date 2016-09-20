@@ -7,14 +7,22 @@ import (
 	"fmt"
 )
 //
-//// Receipt represents the results of a transaction.
-//type Receipt struct {
-//	PostState         []byte
-//	CumulativeGasUsed *big.Int
-//	TxHash          common.Hash
-//	ContractAddress common.Address
-//	GasUsed         *big.Int
-//}
+//// ReceiptTrans are used to show in web.
+type ReceiptTrans struct {
+	PostState         []byte
+	CumulativeGasUsed int64
+	TxHash            string
+	ContractAddress   string
+	GasUsed           int64
+	Ret               []byte
+}
+
+func (receipt Receipt)ToReceiptTrans() (receiptTrans *ReceiptTrans){
+	return &ReceiptTrans{GasUsed:receipt.GasUsed,PostState:receipt.PostState,
+		ContractAddress:common.ToHex(receipt.ContractAddress),
+		CumulativeGasUsed:receipt.CumulativeGasUsed,Ret:receipt.Ret,
+		TxHash:common.ToHex(receipt.TxHash)}
+}
 
 // NewReceipt creates a barebone transaction receipt, copying the init fields.
 func NewReceipt(root []byte, cumulativeGasUsed *big.Int) *Receipt {
