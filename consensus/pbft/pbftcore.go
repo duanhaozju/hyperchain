@@ -104,7 +104,6 @@ type pbftCore struct {
 	certStore	map[msgID]*msgCert		// track quorum certificates for requests
 	checkpointStore	map[Checkpoint]bool		// track checkpoints as set
 	committedCert	map[msgID]string
-
 	valid		bool // whether we believe the state is up to date
 }
 
@@ -123,8 +122,10 @@ type msgCert struct {
 	prePrepare	*PrePrepare
 	sentPrepare	bool
 	prepare		[]*Prepare
+	prepareCount	int
 	sentCommit	bool
 	commit		[]*Commit
+	commitCount	int
 	sentExecute	bool
 }
 
@@ -374,23 +375,16 @@ func (instance *pbftCore) prepared(digest string, v uint64, n uint64) bool {
 	//	return true
 	//}
 
-	quorum := 0
 	cert := instance.certStore[msgID{v, n}]
 
 	if cert == nil {
 		return false
 	}
 
-	for _, p := range cert.prepare {
-		if p.View == v && p.SequenceNumber == n && p.BatchDigest == digest {
-			quorum++
-		}
-	}
-
 	logger.Debugf("Replica %d prepare count for view=%d/seqNo=%d: %d",
-		instance.id, v, n, quorum)
+		instance.id, v, n, cert.prepareCount)
 
-	return quorum >= instance.preparedReplicasQuorum()
+	return cert.prepareCount >= instance.preparedReplicasQuorum()
 }
 
 func (instance *pbftCore) committed(digest string, v uint64, n uint64) bool {
@@ -399,23 +393,16 @@ func (instance *pbftCore) committed(digest string, v uint64, n uint64) bool {
 		return false
 	}
 
-	quorum := 0
 	cert := instance.certStore[msgID{v, n}]
 
 	if cert == nil {
 		return false
 	}
 
-	for _, p := range cert.commit {
-		if p.View == v && p.SequenceNumber == n {
-			quorum++
-		}
-	}
-
 	logger.Debugf("Replica %d commit count for view=%d/seqNo=%d: %d",
-		instance.id, v, n, quorum)
+		instance.id, v, n, cert.commitCount)
 
-	return quorum >= instance.committedReplicasQuorum()
+	return cert.commitCount >= instance.committedReplicasQuorum()
 }
 
 // =============================================================================
@@ -649,6 +636,7 @@ func (instance *pbftCore) recvPrepare(prep *Prepare) error {
 	}
 
 	cert.prepare = append(cert.prepare, prep)
+	cert.prepareCount = cert.prepareCount + 1
 	//instance.persistPSet()
 
 	return instance.maybeSendCommit(prep.BatchDigest, prep.View, prep.SequenceNumber)
@@ -701,6 +689,7 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 	}
 
 	cert.commit = append(cert.commit, commit)
+	cert.commitCount = cert.commitCount + 1
 
 	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) && cert.sentExecute == false {
 		instance.stopTimer(commit.SequenceNumber)
@@ -837,26 +826,6 @@ func (instance *pbftCore) checkpoint(n uint64, info *pb.BlockchainInfo) {
 	instance.recvCheckpoint(chkpt)
 	msg := pbftMsgHelper(&Message{Payload: &Message_Checkpoint{Checkpoint: chkpt}}, instance.id)
 	instance.helper.InnerBroadcast(msg)
-}
-
-func (instance *pbftCore) retryCheckpoint(n uint64) {
-
-	if n % instance.K != 0 {
-		return
-	}
-
-	bcInfo := getBlockchainInfo()
-	height := bcInfo.Height
-	if height == n {
-		logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", n, height)
-		instance.checkpoint(n, bcInfo)
-	} else {
-		// reqBatch call execute but have not done with execute
-		logger.Warningf("Fail to call the checkpoint, seqNo=%d, block height=%d", n, height)
-		instance.retryCheckpoint(instance.lastExec)
-	}
-
-
 }
 
 func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) events.Event {
