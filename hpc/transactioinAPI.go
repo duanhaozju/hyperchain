@@ -88,12 +88,12 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
 	//tx = types.NewTransaction(args.From[:], (*args.To)[:], []byte(args.Value))
 	log.Info(tx.Value)
-	am := tran.pm.AccountManager
-	addr := common.HexToAddress(string(args.From))
+	/*am := tran.pm.AccountManager
+	addr := common.HexToAddress(string(args.From))*/
 
-	if (!core.VerifyBalance(tx)){
+/*	if (!core.VerifyBalance(tx)){
 		return common.Hash{},errors.New("Not enough balance!")
-	}else if _,found := am.Unlocked[addr];found {
+	}else if _,found := am.Unlocked[addr];found {*/
 
 		// Balance is enough
 		/*txBytes, err := proto.Marshal(tx)
@@ -108,7 +108,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//end:=start+500
 
 		for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 50; i++ {
+			for i := 0; i < 500; i++ {
 				tx.TimeStamp=time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
@@ -129,10 +129,10 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
 		return tx.BuildHash(),nil
 
-	} else {
+	} /*else {
 		return common.Hash{},errors.New("Not enough balance!")
-	}
-}
+	}*/
+//}
 
 // SendTransactionOrContract deploy contract
 func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (common.Address, error){
