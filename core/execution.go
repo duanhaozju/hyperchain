@@ -103,6 +103,14 @@ func exec(env vm.Environment, caller vm.ContractRef, toAddress, codeAddr *common
 
 	// very important 执行contract和input
 	ret, err = evm.Run(contract, input)
+	log.Info("--------------------------------------")
+	log.Info("ret:",ret)
+	log.Info("caller.address:",caller.Address())
+	log.Info("address:",toAddress)
+	log.Info("codeaddress:",codeAddr)
+	log.Info("input:",input)
+	log.Info("code:",code)
+	log.Info("--------------------------------------")
 	// if the contract creation ran successfully and no errors were returned
 	// calculate the gas required to store the code. If the code could not
 	// be stored due to not enough gas set an error and let it be handled
