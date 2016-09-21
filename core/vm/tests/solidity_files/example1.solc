@@ -1,9 +1,10 @@
 contract Accumulator{
     uint32 sum = 0;
-    bytes32 hello = "abcdefghijklmnopqrstuvwxyz";
+    bytes32 hello = "hello world!";
 
-    function increment(){
+    function increment() returns(uint32){
         sum = sum + 1;
+        return sum;
     }
 
     function getSum() returns(uint32){
