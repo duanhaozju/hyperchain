@@ -24,7 +24,7 @@ func CalcResponseCount(blockNumber uint64, millTime int64) (int64,float64){
 			count ++
 		}
 	}
-	percent := float64(count)/500
+	percent := float64(count)/100
 
 	//fmt.Println("block number is",block.Number)
 	//if block.Transactions!=nil{
