@@ -384,6 +384,8 @@ function ContractService($resource,$q ,$timeout, ENV) {
             })
         },
         invokeContract: function(from, to, data) {
+            console.log("======================");
+            console.log(to);
             return $q(function(resolve, reject){
                 $resource(ENV.API,{},{
                     invoke:{

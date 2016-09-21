@@ -9,7 +9,6 @@ glog "github.com/op/go-logging"
 "hyperchain/hyperdb"
 "hyperchain/core/state"
 "hyperchain/core/vm/params"
-	"fmt"
 )
 type Code []byte
 var logger = glog.Logger{}
@@ -86,10 +85,10 @@ func ExecTransaction(tx types.Transaction)(receipt *types.Receipt,ret []byte,add
 	}else {
 		ret,_,err = Exec(&from,&to,data,gas,gasPrice,amount)
 	}
-	receipt.Ret = []byte("adfsf")
-	fmt.Println("-----------------------")
-	fmt.Println("ret",ret)
-	fmt.Println("-----------------------")
+	receipt.Ret = ret
+	//fmt.Println("-----------------------")
+	//fmt.Println("ret",ret)
+	//fmt.Println("-----------------------")
 	return receipt,ret,addr,err
 }
 
@@ -105,7 +104,7 @@ gasPrice, value *big.Int)(ret []byte,addr common.Address,err error){
 		//logger.Notice("------create contract")
 		ret,addr,err = vmenv.Create(sender,data,gas,gasPrice,value)
 		if err != nil{
-			//ret = nil
+			ret = nil
 			logger.Error("VM create err:",err)
 		}
 	} else {
@@ -122,7 +121,7 @@ gasPrice, value *big.Int)(ret []byte,addr common.Address,err error){
 	receipt.TxHash = common.Hash{}.Bytes()
 	receipt.Ret = ret
 	//WriteReceipts(types.Receipts{receipt,receipt,receipt})
-	fmt.Println("receipt from db",GetReceipt(common.Hash{}).Ret)
+	//fmt.Println("receipt from db",GetReceipt(common.Hash{}))
 	return ret,addr,err
 }
 

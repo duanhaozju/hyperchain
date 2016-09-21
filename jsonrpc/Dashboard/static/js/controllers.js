@@ -396,7 +396,7 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
         })
 }
 
-function BlockCtrl($scope, DTOptionsBuilder, SummaryService, BlockService, TransactionService) {
+function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockService, TransactionService) {
     $scope.status = "";
 
     $scope.tx = {
@@ -449,7 +449,9 @@ function BlockCtrl($scope, DTOptionsBuilder, SummaryService, BlockService, Trans
         TransactionService.SendTransaction($scope.tx.from, $scope.tx.to, $scope.tx.value)
             .then(function(res){
                 $scope.status = res;
-                getBlocks();
+                $timeout(function(){
+                    getBlocks();
+                },100);
             }, function(error){
                 $scope.status = error.message;
                 console.log(error);
@@ -527,14 +529,20 @@ function AccountCtrl($scope, DTOptionsBuilder, AccountService) {
         address:"",
         password: ""
     };
-    datatables($scope, DTOptionsBuilder);
 
-    AccountService.getAllAccounts()
-        .then(function(res){
-            $scope.accounts = res;
-        } ,function(error){
-            console.log(error);
-        })
+    var getAccounts = function(){
+        AccountService.getAllAccounts()
+            .then(function(res){
+                $scope.accounts = res;
+            } ,function(error){
+                console.log(error);
+            })
+    }
+
+    datatables($scope, DTOptionsBuilder);
+    getAccounts();
+
+
     $scope.submit = function(){
 
         if (isEmpty($scope.account)) {
@@ -551,6 +559,7 @@ function AccountCtrl($scope, DTOptionsBuilder, AccountService) {
         AccountService.newAccount($scope.account.password)
             .then(function(res){
                 $scope.address = res;
+                getAccounts();
             }, function(error){
                 // $scope.status = error.message;
                 console.log(error);
@@ -583,7 +592,8 @@ function AddProjectCtrl($scope, $state, ENV, ContractService) {
         name: "",
         type: "1",
         pattern: "",
-        abi: []
+        abi: [],
+        bin: []
     };
 
     $scope.disable = false;
@@ -592,7 +602,8 @@ function AddProjectCtrl($scope, $state, ENV, ContractService) {
         $scope.disable = false;
         $scope.flag = false;
         $scope.project.abi = [];
-    }
+        $scope.project.bin = [];
+    };
 
     $scope.compile = function(){
         if (isEmpty($scope.project)) {
@@ -603,14 +614,15 @@ function AddProjectCtrl($scope, $state, ENV, ContractService) {
         $scope.disable = true;
         ContractService.compileContract($scope.project.pattern.value)
             .then(function(res){
+                console.log(res);
                 $scope.flag = true;
                 var abis = [];
 
-                for (var i = 0;i < res.length; i++) {
-                    abis.push(JSON.parse(res[i]))
+                for (var i = 0;i < res.Abi.length; i++) {
+                    abis.push(JSON.parse(res.Abi[i]));
                 }
-
                 $scope.project.abi = abis
+                $scope.project.bin = res.Bin
 
             }, function(error){
                 alert(error.message);
@@ -635,9 +647,11 @@ function AddProjectCtrl($scope, $state, ENV, ContractService) {
                 _contract.projectName = $scope.project.name;
                 _contract.type = $scope.project.type;    // 1: Create 2: Load
                 _contract.methods = $scope.project.abi[i];
+                _contract.code = $scope.project.bin[i];
                 _contract.status = 0; // 0: Nondeployed 1: Deployed
                 _contract.sourceCode = $scope.project.pattern.value;
                 _contract.hash = "";
+                _contract.address = "";
 
                 // 合约存到localstorage中
                 if (!contractStorage) {
@@ -671,9 +685,9 @@ function ContractCtrl($scope, $uibModal, DTOptionsBuilder, SweetAlert, ENV) {
 
     datatables($scope, DTOptionsBuilder);
 
-    $scope.modal_deploy = function (ctName, sourceCode) {
+    $scope.modal_deploy = function (ctName, code) {
         $scope.ctName = ctName;
-        $scope.sourceCode = sourceCode;
+        $scope.sourceCode = code;
         var modalInstance = $uibModal.open({
             templateUrl: 'static/views/modal_deploy.html',
             controller: modalInstanceCtrl,
@@ -681,8 +695,9 @@ function ContractCtrl($scope, $uibModal, DTOptionsBuilder, SweetAlert, ENV) {
         });
     };
 
-    $scope.modal_invoke = function(ctHash, methods) {
-        $scope.ctHash = ctHash;
+    $scope.modal_invoke = function(address, methods) {
+        // $scope.ctHash = ctHash;
+        $scope.address = address
         $scope.methods = methods;
         var modalInstance = $uibModal.open({
             templateUrl: 'static/views/modal_invoke.html',
@@ -757,7 +772,7 @@ function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Contract
     }
 
     var flag = true;
-console.log(JSON.parse(localStorage.getItem(ENV.STORAGE))[$scope.ctName]);
+
     $scope.ok = function () {
         // deployContract($scope.from, $scope.sourceCode);
 
@@ -852,7 +867,7 @@ function modalInstanceInvokeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Co
                             SweetAlert.swal({
                                 title: "Invoked successfully!",
                                 // text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! ",
-                                text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The result is <span class='text_red'>"+ res.ret +"</span>",
+                                text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The result is <span class='text_red'>"+ res.Ret +"</span>",
                                 type: "success",
                                 customClass: 'swal-wide',
                                 html: true

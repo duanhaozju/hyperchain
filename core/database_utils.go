@@ -13,7 +13,6 @@ import (
 	"hyperchain/common"
 	"hyperchain/crypto"
 	"strconv"
-	"fmt"
 )
 
 // the prefix of key, use to save to db
@@ -42,8 +41,8 @@ func WriteReceipts(receipts types.Receipts) error {
 	batch := db.NewBatch()
 	// Iterate over all the receipts and queue them for database injection
 	for _, receipt := range receipts {
-		fmt.Println("the addr",receipt.ContractAddress)
-		fmt.Println("the txhash",receipt.TxHash)
+		//fmt.Println("the addr",receipt.ContractAddress)
+		//fmt.Println("the txhash",receipt.TxHash)
 		data, err := proto.Marshal(receipt)
 		if err != nil {
 			return err
@@ -70,9 +69,9 @@ func GetReceipt(txHash common.Hash) *types.ReceiptTrans {
 	if err != nil {
 		log.Info("GetReceipt err:", err)
 	}
-	a:= receipt.ToReceiptTrans()
-	fmt.Println("address",common.ToHex(a.ContractAddress))
-	fmt.Println("TxHash",a.TxHash)
+	//a:= receipt.ToReceiptTrans()
+	//fmt.Println("address",common.ToHex(a.ContractAddress))
+	//fmt.Println("TxHash",a.TxHash)
 	return receipt.ToReceiptTrans()
 }
 //---------------------- Receipts End ---------------------------------

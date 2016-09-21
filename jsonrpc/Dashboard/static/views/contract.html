@@ -44,9 +44,9 @@
                             </td>
                             <td ng-switch="ct.status">
                                 <button class="btn btn-success btn-circle" type="button"><i class="fa fa-list"></i></button>
-                                <button ng-switch-when="0" class="btn btn-info btn-circle" type="button" ng-click="modal_deploy(ct.contractName,ct.sourceCode)"><i class="fa fa-cloud-upload"></i></button>
+                                <button ng-switch-when="0" class="btn btn-info btn-circle" type="button" ng-click="modal_deploy(ct.contractName,ct.code)"><i class="fa fa-cloud-upload"></i></button>
                                 <!--<button ng-switch-when="1" class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>-->
-                                <button ng-switch-when="1" class="btn btn-warning btn-circle" type="button" ng-click="modal_invoke(ct.hash, ct.methods)"><i class="fa fa-flag"></i></button>
+                                <button ng-switch-when="1" class="btn btn-warning btn-circle" type="button" ng-click="modal_invoke(ct.address, ct.methods)"><i class="fa fa-flag"></i></button>
                                 <button class="btn btn-danger btn-circle" type="button" ng-click="delete(ct.contractName)"><i class="fa fa-trash-o"></i></button>
                         </tr>
 
