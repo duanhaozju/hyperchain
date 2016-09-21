@@ -6,7 +6,7 @@
 angular
     .module('starter')
     .constant('ENV',{
-        "API": "http://114.55.64.132:8081",
+        "API": "http://localhost:8081",
         "PATTERN": [
             {name: "pattern1", value: 'contract Accumulator{     uint32 sum = 0;   function increment(){         sum = sum + 1;     }      function getSum() returns(uint32){         return sum;     }   function add(uint32 num1,uint32 num2) {         sum = sum+num1+num2;     } }'},
             {name: "pattern2", value: "contract SimulateBank{" +
