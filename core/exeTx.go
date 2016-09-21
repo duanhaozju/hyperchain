@@ -81,9 +81,16 @@ func ExecTransaction(tx types.Transaction)(receipt *types.Receipt,ret []byte,add
 	receipt.GasUsed = 100000
 	if(tx.To == nil){
 		ret,addr,err = Exec(&from,nil,data,gas,gasPrice,amount)
+		log.Info("the exetx addr is ",addr.Bytes())
+		log.Info("the exetx hash is ",common.ToHex(tx.BuildHash().Bytes()))
+		log.Info("the exetx create ret is ",ret)
 		receipt.ContractAddress = addr.Bytes();
 	}else {
 		ret,_,err = Exec(&from,&to,data,gas,gasPrice,amount)
+		log.Info("the exetx to addr is ",to.Bytes())
+		log.Infof("the exetx tx.to is %#V",tx.To)
+		log.Info("the exetx hash is ",common.ToHex(tx.BuildHash().Bytes()))
+		log.Info("the exetx call ret is ",ret)
 	}
 	receipt.Ret = ret
 	//fmt.Println("-----------------------")
@@ -101,16 +108,17 @@ gasPrice, value *big.Int)(ret []byte,addr common.Address,err error){
 	//ret,err = env.Call(sender,*to,data,gas,gasPrice,value)
 	// 判断是否能够交易,转移,这一步可以考虑在外部执行
 	if contractCreation{
-		//logger.Notice("------create contract")
+		log.Info("------create contract")
 		ret,addr,err = vmenv.Create(sender,data,gas,gasPrice,value)
 		if err != nil{
 			ret = nil
-			logger.Error("VM create err:",err)
+			log.Error("VM create err:",err)
 		}
 	} else {
+		log.Info("------call contract")
 		ret,err = vmenv.Call(sender,*to,data,gas,gasPrice,value)
 		if err != nil{
-			logger.Error("VM call err:",err)
+			log.Error("VM call err:",err)
 		}
 	}
 	// todo replace the gasused

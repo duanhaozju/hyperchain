@@ -163,6 +163,7 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 
 	for _, trans := range block.Transactions {
 		//ExecTransaction(*trans)
+
 		if trans.To ==nil{
 			receipt,_,_,err := ExecTransaction(*trans)
 			if(err == nil){

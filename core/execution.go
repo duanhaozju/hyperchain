@@ -12,7 +12,7 @@ import (
 
 // Call executes within the given contract
 func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int) (ret []byte, err error) {
-	fmt.Println("Call")
+	//fmt.Println("Call")
 	ret, _, err = exec(env, caller, &addr, &addr, input, env.Db().GetCode(addr), gas, gasPrice, value)
 	return ret, err
 }
@@ -39,8 +39,7 @@ func DelegateCall(env vm.Environment, caller vm.ContractRef, addr common.Address
 
 // Create creates a new contract with the given code
 func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPrice, value *big.Int) (ret []byte, address common.Address, err error) {
-	fmt.Println("Create")
-
+	//fmt.Println("Create")
 	ret, address, err = exec(env, caller, nil, nil, nil, code, gas, gasPrice, value)
 	if err != nil {
 		log.Error("it is err",err)
