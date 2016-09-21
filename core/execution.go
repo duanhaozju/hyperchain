@@ -7,19 +7,19 @@ import (
 	"hyperchain/core/crypto"
 	"hyperchain/core/vm/params"
 	//"hyperchain/core/vm/compiler"
-	"fmt"
+
 )
 
 // Call executes within the given contract
 func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int) (ret []byte, err error) {
-	fmt.Println("Call")
+	//fmt.Println("Call")
 	ret, _, err = exec(env, caller, &addr, &addr, input, env.Db().GetCode(addr), gas, gasPrice, value)
 	return ret, err
 }
 
 // CallCode executes the given address' code as the given contract address
 func CallCode(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int) (ret []byte, err error) {
-	fmt.Println("CallCode")
+	//fmt.Println("CallCode")
 
 	callerAddr := caller.Address()
 	ret, _, err = exec(env, caller, &callerAddr, &addr, input, env.Db().GetCode(addr), gas, gasPrice, value)
@@ -28,7 +28,7 @@ func CallCode(env vm.Environment, caller vm.ContractRef, addr common.Address, in
 
 // DelegateCall is equivalent to CallCode except that sender and value propagates from parent scope to child scope
 func DelegateCall(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice *big.Int) (ret []byte, err error) {
-	fmt.Println("DelegateCall")
+	//fmt.Println("DelegateCall")
 
 	callerAddr := caller.Address()
 	originAddr := env.Origin()
@@ -39,7 +39,7 @@ func DelegateCall(env vm.Environment, caller vm.ContractRef, addr common.Address
 
 // Create creates a new contract with the given code
 func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPrice, value *big.Int) (ret []byte, address common.Address, err error) {
-	fmt.Println("Create")
+	//fmt.Println("Create")
 
 	ret, address, err = exec(env, caller, nil, nil, nil, code, gas, gasPrice, value)
 	if err != nil {

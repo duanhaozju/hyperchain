@@ -58,7 +58,7 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 		if p := Precompiled[contract.CodeAddr.Str()]; p != nil {
 			return evm.RunPrecompiled(p, input, contract)
 		}
-		fmt.Println("the codeAddr is not exist")
+		//fmt.Println("the codeAddr is not exist")
 	}
 
 	// Don't bother with the execution if there's no code.
