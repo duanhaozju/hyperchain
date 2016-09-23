@@ -2,7 +2,6 @@ package core
 
 import (
 "hyperchain/core/types"
-"hyperchain/core/vm"
 glog "github.com/op/go-logging"
 "hyperchain/common"
 "math/big"
@@ -21,9 +20,9 @@ var(
 )
 
 func init(){
+	//vm.Precompiled = make(map[string]*vm.PrecompiledAccount)
 	env["currentNumber"] = "1"
 	env["currentGasLimit"] = "10000000"
-	vm.Precompiled = make(map[string]*vm.PrecompiledAccount)
 	vmenv = NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
 }
 
@@ -81,16 +80,16 @@ func ExecTransaction(tx types.Transaction)(receipt *types.Receipt,ret []byte,add
 	receipt.GasUsed = 100000
 	if(tx.To == nil){
 		ret,addr,err = Exec(&from,nil,data,gas,gasPrice,amount)
-		log.Info("the exetx addr is ",addr.Bytes())
-		log.Info("the exetx hash is ",common.ToHex(tx.BuildHash().Bytes()))
-		log.Info("the exetx create ret is ",ret)
+		//log.Info("the exetx addr is ",addr.Bytes())
+		//log.Info("the exetx hash is ",common.ToHex(tx.BuildHash().Bytes()))
+		//log.Info("the exetx create ret is ",ret)
 		receipt.ContractAddress = addr.Bytes();
 	}else {
 		ret,_,err = Exec(&from,&to,data,gas,gasPrice,amount)
-		log.Info("the exetx to addr is ",to.Bytes())
-		log.Infof("the exetx tx.to is %#V",tx.To)
-		log.Info("the exetx hash is ",common.ToHex(tx.BuildHash().Bytes()))
-		log.Info("the exetx call ret is ",ret)
+		//log.Info("the exetx to addr is ",to.Bytes())
+		//log.Infof("the exetx tx.to is %#V",tx.To)
+		//log.Info("the exetx hash is ",common.ToHex(tx.BuildHash().Bytes()))
+		//log.Info("the exetx call ret is ",ret)
 	}
 	receipt.Ret = ret
 	//fmt.Println("-----------------------")

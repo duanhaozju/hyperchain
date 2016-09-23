@@ -125,7 +125,7 @@ func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.
 	//log.Info("ret",ret)
 	//log.Info("old addr",addr)
 	receipt,ret,addr,err :=core.ExecTransaction(*types.NewTestCreateTransaction())
-	log.Info("new addr",addr)
+	//log.Info("new addr",addr)
 	log.Info("receipt",receipt.Ret)
 	//addr = state.GetLeastAccount().Address()
 
@@ -137,13 +137,13 @@ func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.
 	//ret,err := core.ExecSourceCode(&from,nil,([]byte)(sourcecode), gas, price, value)
 	//ret,err = core.ExecSourceCode(&from,nil,([]byte)(sourcecode), gas, price, value)
 	//state.ForEachAccounts()
-	log.Notice("the code is ",common.ToHex(state.GetStateObject(addr).Code()))
+	//log.Notice("the code is ",common.ToHex(state.GetStateObject(addr).Code()))
 	// call the contract there times
 	log.Notice("the time now is",time.Now())
 	now_time = time.Now()
 	log.Info("----------",common.ToHex(addr.Bytes()))
 	for i := 0;i<1;i++{
-		log.Notice("the code is ",common.ToHex(state.GetStateObject(addr).Code()))
+		//log.Notice("the code is ",common.ToHex(state.GetStateObject(addr).Code()))
 		//ret,_,_ = core.Exec(&from, &addr, data_get, gas, price, value)
 		tx := types.NewTestCallTransaction()
 		tx.To = addr.Bytes()
