@@ -1,1 +1,6 @@
-contract Accumulator{ uint32 sum = 0; string hello = "hello world"; function increment(){ sum = sum + 1; } function getSum() returns(uint32){ return sum; } function getHello() returns(string){ return hello; } function add(uint32 num1,uint32 num2) { sum = sum+num1+num2; } }
+contract Hello{
+    string hello = "hello world!";
+    function getHello() constant returns(string){
+        return hello;
+    }
+}
