@@ -9,6 +9,6 @@
   "author": "Xiaomin Ma",
   "license": "ISC",
   "dependencies": {
-    "w3.js": "^1.0.4"
+    "w3.js": "^1.0.5"
   }
 }
