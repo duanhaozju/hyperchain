@@ -285,20 +285,42 @@ function AccountService($resource,$q,ENV) {
     }
 }
 
-function ContractService($resource,$q,ENV) {
+function ContractService($resource,$q ,$timeout, ENV) {
+
+    var getReceipt = function(txHash){
+        return $q(function(resolve, reject){
+            $resource(ENV.API,{},{
+                get:{
+                    method:"POST"
+                }
+            }).get({
+                method: "tx_getTransactionReceipt",
+                params: [txHash],
+                id: 1
+            },function(res){
+                console.log(res)
+                if (res.error) {
+                    reject(res.error)
+                } else {
+                    resolve(res.result)
+                }
+
+            })
+        })
+    }
+
     return {
         compileContract: function(contract){
             return $q(function(resolve, reject){
                 $resource(ENV.API,{},{
-                    getAcc:{
+                    compile:{
                         method:"POST"
                     }
-                }).getAcc({
+                }).compile({
                     method: "tx_complieContract",
                     params: [contract],
                     id: 1
                 },function(res){
-                    console.log(res)
                     if (res.error) {
                         reject(res.error)
                     } else {
@@ -311,10 +333,10 @@ function ContractService($resource,$q,ENV) {
         deployContract: function(from, sourceCode){
             return $q(function(resolve, reject){
                 $resource(ENV.API,{},{
-                    getAcc:{
+                    deploy:{
                         method:"POST"
                     }
-                }).getAcc({
+                }).deploy({
                     method: "tx_sendTransactionOrContract",
                     params: [
                         {
@@ -328,19 +350,48 @@ function ContractService($resource,$q,ENV) {
                     if (res.error) {
                         reject(res.error)
                     } else {
-                        resolve(res.result)
+
+                        var flag = false;
+                        // var result;
+
+                        var startTime = new Date().getTime();
+                        var getResp = function(){
+                            console.log(flag);
+                                if (!flag) {
+                                    if ((new Date().getTime() - startTime) < 5000) {
+                                        getReceipt(res.result)
+                                            .then(function(data){
+                                                console.log(data);
+
+                                                if(data){
+                                                    flag = true;
+                                                    resolve(data)
+                                                }
+                                            }, function(error){
+                                                console.log(error);
+                                                reject(error)
+                                            });
+                                        $timeout(getResp, 400)
+                                    } else {
+                                        reject({message: "timeout"})
+                                    }
+                                }
+                        };
+                        $timeout(getResp, 400);
                     }
 
                 })
             })
         },
         invokeContract: function(from, to, data) {
+            console.log("======================");
+            console.log(to);
             return $q(function(resolve, reject){
                 $resource(ENV.API,{},{
-                    getAcc:{
+                    invoke:{
                         method:"POST"
                     }
-                }).getAcc({
+                }).invoke({
                     method: "tx_sendTransactionOrContract",
                     params: [
                         {
@@ -355,12 +406,59 @@ function ContractService($resource,$q,ENV) {
                     if (res.error) {
                         reject(res.error)
                     } else {
-                        resolve(res.result)
+
+                        var flag = false;
+
+                        var startTime = new Date().getTime();
+                        var getResp = function(){
+                            console.log(flag);
+                            if (!flag) {
+                                if ((new Date().getTime() - startTime) < 5000) {
+                                    getReceipt(res.result)
+                                        .then(function(data){
+                                            console.log(data);
+
+                                            if(data){
+                                                flag = true;
+                                                resolve(data)
+                                            }
+                                        }, function(error){
+                                            console.log(error);
+                                            reject(error)
+                                        });
+                                    $timeout(getResp, 400)
+                                } else {
+                                    reject({message: "timeout"})
+                                }
+                            }
+                        };
+                        $timeout(getResp, 400);
                     }
 
                 })
             })
         }
+        // getReceipt: function(txHash){
+        //     return $q(function(resolve, reject){
+        //         $resource(ENV.API,{},{
+        //             get:{
+        //                 method:"POST"
+        //             }
+        //         }).get({
+        //             method: "tx_getTransactionReceipt",
+        //             params: [txHash],
+        //             id: 1
+        //         },function(res){
+        //             console.log(res)
+        //             if (res.error) {
+        //                 reject(res.error)
+        //             } else {
+        //                 resolve(res.result)
+        //             }
+        //
+        //         })
+        //     })
+        // }
     }
 }
 

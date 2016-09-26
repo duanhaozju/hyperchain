@@ -396,7 +396,7 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
         })
 }
 
-function BlockCtrl($scope, DTOptionsBuilder, SummaryService, BlockService, TransactionService) {
+function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockService, TransactionService) {
     $scope.status = "";
 
     $scope.tx = {
@@ -449,7 +449,9 @@ function BlockCtrl($scope, DTOptionsBuilder, SummaryService, BlockService, Trans
         TransactionService.SendTransaction($scope.tx.from, $scope.tx.to, $scope.tx.value)
             .then(function(res){
                 $scope.status = res;
-                getBlocks();
+                $timeout(function(){
+                    getBlocks();
+                },100);
             }, function(error){
                 $scope.status = error.message;
                 console.log(error);
@@ -527,14 +529,20 @@ function AccountCtrl($scope, DTOptionsBuilder, AccountService) {
         address:"",
         password: ""
     };
-    datatables($scope, DTOptionsBuilder);
 
-    AccountService.getAllAccounts()
-        .then(function(res){
-            $scope.accounts = res;
-        } ,function(error){
-            console.log(error);
-        })
+    var getAccounts = function(){
+        AccountService.getAllAccounts()
+            .then(function(res){
+                $scope.accounts = res;
+            } ,function(error){
+                console.log(error);
+            })
+    }
+
+    datatables($scope, DTOptionsBuilder);
+    getAccounts();
+
+
     $scope.submit = function(){
 
         if (isEmpty($scope.account)) {
@@ -551,6 +559,7 @@ function AccountCtrl($scope, DTOptionsBuilder, AccountService) {
         AccountService.newAccount($scope.account.password)
             .then(function(res){
                 $scope.address = res;
+                getAccounts();
             }, function(error){
                 // $scope.status = error.message;
                 console.log(error);
@@ -573,7 +582,7 @@ function AccountCtrl($scope, DTOptionsBuilder, AccountService) {
     };
 }
 
-function AddProjectCtrl($scope, $state, $cookies, ENV, ContractService) {
+function AddProjectCtrl($scope, $state, ENV, ContractService) {
 
     $scope.flag = false;
 
@@ -583,7 +592,8 @@ function AddProjectCtrl($scope, $state, $cookies, ENV, ContractService) {
         name: "",
         type: "1",
         pattern: "",
-        abi: []
+        abi: [],
+        bin: []
     };
 
     $scope.disable = false;
@@ -592,10 +602,10 @@ function AddProjectCtrl($scope, $state, $cookies, ENV, ContractService) {
         $scope.disable = false;
         $scope.flag = false;
         $scope.project.abi = [];
-    }
+        $scope.project.bin = [];
+    };
 
     $scope.compile = function(){
-        console.log($scope.project)
         if (isEmpty($scope.project)) {
             alert("字段不能为空");
             return false;
@@ -604,14 +614,15 @@ function AddProjectCtrl($scope, $state, $cookies, ENV, ContractService) {
         $scope.disable = true;
         ContractService.compileContract($scope.project.pattern.value)
             .then(function(res){
+                console.log(res);
                 $scope.flag = true;
                 var abis = [];
 
-                for (var i = 0;i < res.length; i++) {
-                    abis.push(JSON.parse(res[i]))
+                for (var i = 0;i < res.Abi.length; i++) {
+                    abis.push(JSON.parse(res.Abi[i]));
                 }
-
                 $scope.project.abi = abis
+                $scope.project.bin = res.Bin
 
             }, function(error){
                 alert(error.message);
@@ -623,9 +634,8 @@ function AddProjectCtrl($scope, $state, $cookies, ENV, ContractService) {
             console.log($scope.project);
 
             // todo 现有合约个数
-            var cookieValue = $cookies.getObject(ENV.COOKIE);
+            var contractStorage = JSON.parse(localStorage.getItem(ENV.STORAGE));
             var len;
-            // var len = ENV.CONTRACT.length;
 
             var ctNames = getContractName("contract $", $scope.project.pattern.value);
 
@@ -637,31 +647,26 @@ function AddProjectCtrl($scope, $state, $cookies, ENV, ContractService) {
                 _contract.projectName = $scope.project.name;
                 _contract.type = $scope.project.type;    // 1: Create 2: Load
                 _contract.methods = $scope.project.abi[i];
+                _contract.code = $scope.project.bin[i];
                 _contract.status = 0; // 0: Nondeployed 1: Deployed
                 _contract.sourceCode = $scope.project.pattern.value;
                 _contract.hash = "";
+                _contract.address = "";
 
-                // contract["Contract_"+ len] = _contract;
-                // console.log(contract);
-                // ENV.CONTRACT.push(contract)
-                // todo 将合约存到cookie或文件中
-                console.log(cookieValue)
-                if (!cookieValue) {
+                // 合约存到localstorage中
+                if (!contractStorage) {
                     len = 1;
-                    // _contract.contractName = "Contract_"+ len;
-                    _contract.contractName = ctNames[i] + "_" + len;
+                    _contract.contractName = len + "_" + ctNames[i];
                     var objContract = _defineProperty({}, _contract.contractName, _contract);
-                    $cookies.putObject("contracts",objContract)
+                    localStorage.setItem(ENV.STORAGE,JSON.stringify(objContract))
                 } else {
-                    len = Object.keys(cookieValue).length;
+                    len = Object.keys(contractStorage).length;
                     len++;
-                    // _contract.contractName = "Contract_"+ len;
-                    _contract.contractName = ctNames[i] + "_" + len;
-                    cookieValue[_contract.contractName] = _contract;
-                    $cookies.putObject(ENV.COOKIE, cookieValue);
+                    _contract.contractName = len + "_" + ctNames[i];
+                    contractStorage[_contract.contractName] = _contract;
+                    localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage));
                 }
 
-                // ENV.CONTRACT.push(_contract)
             }
 
         $state.go("dashboards.contract")
@@ -669,21 +674,20 @@ function AddProjectCtrl($scope, $state, $cookies, ENV, ContractService) {
 }
 
 
-function ContractCtrl($scope, $uibModal, $cookies, DTOptionsBuilder, SweetAlert, ENV) {
+function ContractCtrl($scope, $uibModal, DTOptionsBuilder, SweetAlert, ENV) {
 
-    // todo 从cookie或文件中取出所有合约
-    $scope.contracts = $cookies.getObject(ENV.COOKIE);
+    // 从localstorage中取出所有合约
+    $scope.contracts = JSON.parse(localStorage.getItem(ENV.STORAGE));
 
-    // $scope.contracts = ENV.CONTRACT;
     $scope.contract = {
         from: ENV.FROM
     };
 
     datatables($scope, DTOptionsBuilder);
 
-    $scope.modal_deploy = function (ctName, sourceCode) {
+    $scope.modal_deploy = function (ctName, code) {
         $scope.ctName = ctName;
-        $scope.sourceCode = sourceCode;
+        $scope.sourceCode = code;
         var modalInstance = $uibModal.open({
             templateUrl: 'static/views/modal_deploy.html',
             controller: modalInstanceCtrl,
@@ -691,12 +695,13 @@ function ContractCtrl($scope, $uibModal, $cookies, DTOptionsBuilder, SweetAlert,
         });
     };
 
-    $scope.modal_invoke = function(ctHash, methods) {
-        $scope.ctHash = ctHash;
+    $scope.modal_invoke = function(address, methods) {
+        // $scope.ctHash = ctHash;
+        $scope.address = address
         $scope.methods = methods;
         var modalInstance = $uibModal.open({
             templateUrl: 'static/views/modal_invoke.html',
-            controller: modalInstanceInvodeCtrl,
+            controller: modalInstanceInvokeCtrl,
             scope: $scope
         });
     };
@@ -704,7 +709,7 @@ function ContractCtrl($scope, $uibModal, $cookies, DTOptionsBuilder, SweetAlert,
     $scope.delete = function(name){
         SweetAlert.swal({
                 title: "Are you sure?",
-                text: "Your will delete the contract from cookie!",
+                text: "Your will delete the contract from localstorage!",
                 type: "warning",
                 showCancelButton: true,
                 confirmButtonColor: "#DD6B55",
@@ -714,11 +719,11 @@ function ContractCtrl($scope, $uibModal, $cookies, DTOptionsBuilder, SweetAlert,
             },
             function (isConfirm) {
                 if (isConfirm) {
-                    var cookieValue = $cookies.getObject(ENV.COOKIE);
-                    delete cookieValue[name]
+                    var contractStorage = JSON.parse(localStorage.getItem(ENV.STORAGE));
+                    delete contractStorage[name]
                     delete $scope.contracts[name]
-                    $cookies.putObject(ENV.COOKIE, cookieValue)
-                    SweetAlert.swal("Deleted!", "The contract has deleted from cookie.", "success");
+                    localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage))
+                    SweetAlert.swal("Deleted!", "The contract has deleted from localstorage.", "success");
                 } else {
                     SweetAlert.swal("Cancelled", ":)", "error");
                 }
@@ -726,44 +731,98 @@ function ContractCtrl($scope, $uibModal, $cookies, DTOptionsBuilder, SweetAlert,
     }
 }
 
-function modalInstanceCtrl ($scope, $uibModalInstance, $cookies, SweetAlert, ENV, ContractService) {
+function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, ContractService) {
 
-    $scope.ok = function () {
-        ContractService.deployContract($scope.from,$scope.sourceCode)
+    var deployContract = function(from, sourceCode){
+        ContractService.deployContract(from,sourceCode)
             .then(function(res){
-                var cookieValue = $cookies.getObject(ENV.COOKIE);
-                for (var name in cookieValue) {
-                    if ( name == $scope.ctName) {
-                        cookieValue[name].status = 1;
-                        cookieValue[name].hash = res;
 
-                        $scope.contracts[name] = cookieValue[name];
-                        $cookies.putObject(ENV.COOKIE, cookieValue)
+                var contractStorage = JSON.parse(localStorage.getItem(ENV.STORAGE));
+                for (var name in contractStorage) {
+                    if ( name == $scope.ctName) {
+                        contractStorage[name].status = 1;
+                        // contractStorage[name].hash = res;
+
+                        // ContractService.getReceipt(res)
+                        //     .then(function(data){
+                                contractStorage[name].address = res.ContractAddress;
+
+                                $scope.contracts[name] = contractStorage[name];
+                                localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage))
+
+                                SweetAlert.swal({
+                                    title: "Deployed successfully!",
+                                    text: "The contract address is <span class='text_red'>"+res.ContractAddress+"</span>",
+                                    type: "success",
+                                    customClass: 'swal-wide',
+                                    html: true
+                                });
+
+                            // }, function(error){
+                            //     console.log(error)
+                            // })
 
                         break;
                     }
                 }
-                // for (var i = 0;i < ENV.CONTRACT.length; i++) {
-                //         if ( ENV.CONTRACT[i].contractName == $scope.ctName) {
-                //             ENV.CONTRACT[i].status = 1;
-                //             ENV.CONTRACT[i].hash = res;
-                //             console.log(ENV.CONTRACT[i])
-                //             break;
-                //         }
-                // }
-                SweetAlert.swal({
-                    title: "Deployed successfully!",
-                    text: "The contract hash is <span class='text_red'>"+res+"</span>",
-                    type: "success",
-                    customClass: 'swal-wide',
-                    html: true
-                });
+
             }, function(err){
                 console.log(err)
             });
+    }
 
-        SweetAlert.swal("Deployed!", "You have deployed the contract successfully!", "success");
-        $uibModalInstance.close();
+    var flag = true;
+
+    $scope.ok = function () {
+        // deployContract($scope.from, $scope.sourceCode);
+
+        if (flag) {
+            flag = false;
+            SweetAlert.swal("Waiting...", "please waiting...", "warning");
+
+            ContractService.deployContract($scope.contract.from, $scope.sourceCode)
+                .then(function(res){
+                    var contractStorage = JSON.parse(localStorage.getItem(ENV.STORAGE));
+                    for (var name in contractStorage) {
+                        if ( name == $scope.ctName) {
+                            contractStorage[name].status = 1;
+                            // contractStorage[name].hash = res;
+
+                            // ContractService.getReceipt(res)
+                            //     .then(function(data){
+                            contractStorage[name].address = res.ContractAddress;
+
+                            $scope.contracts[name] = contractStorage[name];
+                            localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage))
+
+                            SweetAlert.swal({
+                                title: "Deployed successfully!",
+                                text: "The contract address is <span class='text_red'>"+res.ContractAddress+"</span>",
+                                type: "success",
+                                customClass: 'swal-wide',
+                                html: true
+                            });
+                            $uibModalInstance.close();
+                            // }, function(error){
+                            //     console.log(error)
+                            // })
+
+                            break;
+                        }
+                    }
+
+                    flag = true;
+                }, function(err){
+                    SweetAlert.swal("Error", err.message, "error");
+                    flag = true;
+                });
+        } else {
+            SweetAlert.swal("Waiting...", "please waiting...", "warning");
+        }
+
+
+        // SweetAlert.swal("Deployed!", "You have deployed the contract successfully!", "success");
+        // $uibModalInstance.close();
     };
 
     $scope.cancel = function () {
@@ -774,7 +833,7 @@ function modalInstanceCtrl ($scope, $uibModalInstance, $cookies, SweetAlert, ENV
 }
 
 
-function modalInstanceInvodeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, ContractService, UtilsService) {
+function modalInstanceInvokeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, ContractService, UtilsService) {
     console.log($scope.methods);
     var abimethod = {};
 
@@ -783,11 +842,11 @@ function modalInstanceInvodeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Co
         params: {}
     };
 
-    $scope.flag = true;
+    var flag = true;
     $scope.submit = function () {
 
-        if ($scope.flag) {
-            $scope.flag = false;
+        if (flag) {
+            flag = false;
 
             for (var i = 0;i < $scope.methods.length;i++) {
                 if ($scope.methods[i].name === $scope.method.name) {
@@ -797,36 +856,36 @@ function modalInstanceInvodeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Co
             }
 
             UtilsService.encode(abimethod,$scope.method.params)
-                .then(function(res) {
+                .then(function(data) {
                     // 调用合约
-                    console.log(res);
+                    console.log(data);
                     SweetAlert.swal("Waiting...", "please waiting...", "warning");
 
                     // from 调用者地址，to 合约地址，data 为编码
-                    ContractService.invokeContract(ENV.FROM,  $scope.ctHash, res)
+                    ContractService.invokeContract(ENV.FROM,  $scope.address, data)
                         .then(function(res){
-                            // $scope.status = res;
-                            // getBlocks();
-                            $scope.flag = true;
                             SweetAlert.swal({
                                 title: "Invoked successfully!",
-                                text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! ",
-                                // text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The address is <span class='text_red'>"+ res +"</span>",
+                                // text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! ",
+                                text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The result is <span class='text_red'>"+ res.Ret +"</span>",
                                 type: "success",
-                                // customClass: 'swal-wide',
+                                customClass: 'swal-wide',
                                 html: true
                             });
                             $uibModalInstance.close();
+
+                            flag = true;
+
                         }, function(error){
                             // $scope.status = error.message;
                             console.log(error);
-                            $scope.flag = true;
+                            flag = true;
                             SweetAlert.swal("Error！", error.message, "error");
                             $uibModalInstance.close();
                         })
                 }, function(err) {
                     console.log(err);
-                    $scope.flag = true;
+                    flag = true;
                     SweetAlert.swal("Error！", "", "error");
                     $uibModalInstance.close();
                 });
