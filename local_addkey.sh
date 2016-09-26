@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+#!/usr/bin/env bash
 
 set -e
 
@@ -12,7 +13,7 @@ PASSWD="blockchain"
 # get the server list config
 while read line;do
  SERVER_ADDR+=" ${line}"
-done < ./innerserverlist.txt
+done < ./serverlist.txt
 
 #########################
 # authorization         #

@@ -5,7 +5,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"
 	"hyperchain/core"
-	"fmt"
 	"hyperchain/common"
 )
 func Test_FormatTx(t *testing.T){
@@ -24,8 +23,8 @@ func Test_FormatTx(t *testing.T){
 	}
 	core.ExecTransaction(*types.NewTransaction(from.Bytes(),nil,value1))
 
-	fmt.Println("addrs----",core.GetVMEnv().State().GetLeastAccount().Address().Bytes())
-	fmt.Println("addrs----",core.GetVMEnv().State().GetLeastAccount().Address().Hex())
+	//fmt.Println("addrs----",core.GetVMEnv().State().GetLeastAccount().Address().Bytes())
+	//fmt.Println("addrs----",core.GetVMEnv().State().GetLeastAccount().Address().Hex())
 
 	core.ExecTransaction(*types.NewTestCallTransaction())
 	core.ExecTransaction(*types.NewTestCallTransaction())

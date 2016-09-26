@@ -1,7 +1,4 @@
 /**
- * Created by fox on 16-9-18.
- */
-/**
  * this file is for test multi http request by once click
  * the request must be async, so use the nodeJS
  * author: ChenQuan
@@ -11,25 +8,39 @@
  */
 
 var http  = require('http');
+var config = require('./peerconfig.json');
+var genesis = require('./genesis.json');
+var address = genesis.test1.alloc;
+var addresses = Object.keys(address);
+var params = {form:"",to:"",value:1};
+var hosts_url = [];
+var hosts_port = [];
+var MAXNODES = parseInt(config['MAXPEERS']);
+for (var i=1;i<=MAXNODES;i++){
+    hosts_url.push(config['external_node'+i]);
+    hosts_port.push(config['external_port'+i]);
+}
 
-function testRequest(){
+console.log(hosts_url);
+console.log(hosts_port);
+
+function testRequest(opt){
     var options = {
-        host: "114.55.64.132",
-        port: "8081",
-        path: '/query',
+        host: opt.url,
+        port: opt.port,
+        path: '/trans',
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         }
     };
-    var post_data = JSON.stringify({"from":"186","to":"248"});
+    var post_data = JSON.stringify({"from":opt.from,"to":opt.to,"value":'1'});
     console.log(options);
 // Set up the request
     var post_req = http.request(options, function(res) {
         res.setEncoding('utf8');
         res.on('data', function (chunk) {
-            // console.log('Response: OK');
-            console.log(chunk)
+            console.log('Response: OK');
         });
     });
     post_req.on('error',function(err){
@@ -38,7 +49,12 @@ function testRequest(){
     post_req.write(post_data);
     post_req.end();
 }
-testRequest()
 
 //http.request(options, callback).end();
+testRequest({
+    'url':hosts_url[0],
+    'port':hosts_port[0],
+    'from':addresses[0],
+    'to':addresses[2]
+})
 
