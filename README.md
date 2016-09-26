@@ -81,7 +81,7 @@ func init() {
 `server.sh 1-4`
 
 3. 本地http请求自动化脚本:
-`auto_test.js`
+`auto_server_test.js`
 
 使用方式:
-`node auto_test.js`
+`node auto_server_test.js`

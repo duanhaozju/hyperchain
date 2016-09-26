@@ -875,26 +875,46 @@ func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) events.Event {
 		return nil
 	}
 
-	cert := instance.getChkptCert(chkpt.SequenceNumber, chkpt.Id)
-	flag := cert.chkpts[*chkpt]
 
-	if flag == false {
-		logger.Warningf("Ignoring duplicate commit from %d, --------seqNo=%d--------", chkpt.ReplicaId, chkpt.SequenceNumber)
-		return nil
-	}
-
-	cert.chkpts[*chkpt] = true
+	//cert := instance.getChkptCert(chkpt.SequenceNumber, chkpt.Id)
+	//ok := cert.chkpts[*chkpt]
+	//
+	//if ok {
+	//	logger.Warningf("Ignoring duplicate checkpoint from %d, --------seqNo=%d--------", chkpt.ReplicaId, chkpt.SequenceNumber)
+	//	return nil
+	//}
+	//
+	//cert.chkpts[*chkpt] = true
 	instance.checkpointStore[*chkpt] = true
 
-	logger.Debugf("Replica %d found %d matching checkpoints for seqNo %d, digest %s",
-		instance.id, cert.chkptCount, chkpt.SequenceNumber, chkpt.Id)
+	//logger.Debugf("Replica %d found %d matching checkpoints for seqNo %d, digest %s",
+	//	instance.id, cert.chkptCount, chkpt.SequenceNumber, chkpt.Id)
+	//
+	//if cert.chkptCount == instance.f+1 {
+	//	// We do have a weak cert
+	//	instance.witnessCheckpointWeakCert(chkpt)
+	//}
+	//
+	//if cert.chkptCount < instance.intersectionQuorum() {
+	//	// We do not have a quorum yet
+	//	return nil
+	//}
 
-	if cert.chkptCount == instance.f+1 {
+	matching := 0
+	for testChkpt := range instance.checkpointStore {
+		if testChkpt.SequenceNumber == chkpt.SequenceNumber && testChkpt.Id == chkpt.Id {
+			matching++
+		}
+	}
+	logger.Debugf("Replica %d found %d matching checkpoints for seqNo %d, digest %s",
+		instance.id, matching, chkpt.SequenceNumber, chkpt.Id)
+
+	if matching == instance.f+1 {
 		// We do have a weak cert
 		instance.witnessCheckpointWeakCert(chkpt)
 	}
 
-	if cert.chkptCount < instance.intersectionQuorum() {
+	if matching < instance.intersectionQuorum() {
 		// We do not have a quorum yet
 		return nil
 	}

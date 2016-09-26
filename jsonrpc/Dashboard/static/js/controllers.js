@@ -401,7 +401,7 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
 
     $scope.tx = {
         from: "6201cb0448964ac597faf6fdf1f472edf2a22b89",
-        to: "0000000000000000000000000000000000000002",
+        to: "000f1a7a08ccc48e5d30f80850cf1cf283aa3abd",
         value: "1"
     };
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -e
 MAXNODE=4
+
 #kill the progress
 kellprogress(){
 
@@ -14,6 +15,7 @@ kellprogress(){
       fi
   done
 }
+
 while read line;do
  SERVER_ADDR+=" ${line}"
  done < ./innerserverlist.txt
@@ -27,12 +29,14 @@ while read line;do
          eof
        }
 EOF
+
 kellprogress
 
- #    ssh -t satoshi@$server_address "cd /home/satoshi/ && ./hyperchain -o $ni -l 8081 -p ./peerconfig.json -f ./"
  scp -r hyperchain satoshi@$server_address:/home/satoshi/
  scp -r peerconfig.json satoshi@$server_address:/home/satoshi/
  scp -r config.yaml satoshi@$server_address:/home/satoshi/
  scp -r genesis.json satoshi@$server_address:/home/satoshi/
+ ssh -t satoshi@$server_address "rm -rf keystore"
+ scp -r keystore satoshi@$server_address:/home/satoshi/
  ni=`expr $ni + 1`
- done
+done

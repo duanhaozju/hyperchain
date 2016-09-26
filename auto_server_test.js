@@ -8,7 +8,7 @@
  */
 
  var http  = require('http');
- var config = require('./p2p/local_peerconfig.json');
+ var config = require('./peerconfig.json');
  var genesis = require('./genesis.json');
  var address = genesis.test1.alloc;
  var addresses = Object.keys(address);
