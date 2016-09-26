@@ -169,3 +169,15 @@ func (blk *PublicBlockAPI)QueryTransactionSum() string {
 	sum := core.CalTransactionSum()
 	return sum.String()
 }
+func (blk *PublicBlockAPI)QueryBlockAvgTime(args SendQueryArgs)(int64,error)  {
+	from, err := strconv.ParseUint(args.From, 10, 64)
+	to, err := strconv.ParseUint(args.To, 10, 64)
+
+	if err != nil {
+		return 0,err
+	}
+
+	evmTime :=  core.CalcBlockAVGTime(from,to)
+
+	return evmTime, nil
+}

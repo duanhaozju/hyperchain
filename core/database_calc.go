@@ -137,6 +137,37 @@ func CalcResponseAVGTime(from, to uint64) int64 {
 
 }
 
+func CalcBlockAVGTime(from,to uint64) int64 {
+	if from > to {
+		log.Error("from less than to")
+		return -1
+	}
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+	var sum int64 = 0
+	for i := from; i <= to; i ++ {
+		blockHash, err := GetBlockHash(db, i)
+		if err != nil {
+			log.Error(err)
+			return -1
+		}
+		block, err := GetBlock(db, blockHash)
+		if err != nil {
+			log.Error(err)
+			return -1
+		}
+		sum+=(block.WriteTime-block.Timestamp)/ int64(time.Millisecond)
+	}
+	num := int64(to-from+1)
+	if num == 0 {
+		return 0
+	} else {
+		return sum / (num)
+	}
+
+}
 
 func CalcEvmAVGTime(from, to uint64) int64 {
 	if from > to {

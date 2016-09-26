@@ -458,22 +458,22 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
             })
     };
 
-    $scope.queryAvg = function(){
+    $scope.queryTxAvg = function(){
 
-        if (isEmpty($scope.blockAvg)) {
+        if (isEmpty($scope.txAvg)) {
             alert("字段不能为空");
             return false;
         }
 
-        SummaryService.getAvgTimeAndCount($scope.blockAvg.from, $scope.blockAvg.to)
+        SummaryService.getAvgTimeAndCount($scope.txAvg.from, $scope.txAvg.to)
             .then(function(res){
-                $scope.avgTime = res.time
+                $scope.txAvgTime = res.time
             }, function(error){
                 console.log(error);
             })
     }
 
-    $scope.query = function(){
+    $scope.queryBatchAndCommit = function(){
 
         if (isEmpty($scope.block)) {
             alert("字段不能为空");
@@ -500,6 +500,20 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
         BlockService.queryEvmAvgTime($scope.blockEvm.from, $scope.blockEvm.to)
             .then(function(res){
                 $scope.evmTime = res;
+            }, function(error){
+                console.log(error);
+            })
+    }
+    $scope.queryBlockTime = function() {
+
+        if (isEmpty($scope.blockAvg)) {
+            alert("字段不能为空");
+            return false;
+        }
+
+        BlockService.queryBlockAvgTime($scope.blockAvg.from, $scope.blockAvg.to)
+            .then(function(res){
+                $scope.blockTime = res;
             }, function(error){
                 console.log(error);
             })

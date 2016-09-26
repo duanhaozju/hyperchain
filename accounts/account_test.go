@@ -25,16 +25,16 @@ type txdata struct  {
 	Amount *big.Int
 	signature []byte
 }
-func NewTransaction(to common.Address,amount *big.Int) *Transaction {
-	d:=txdata{
-		Recipient:	&to,
-		Amount:		new(big.Int),
-	}
-	if amount != nil{
-		d.Amount.Set(amount)
-	}
-	return &Transaction{data:d}
-}
+//func NewTransaction(to common.Address,amount *big.Int) *Transaction {
+//	d:=txdata{
+//		Recipient:	&to,
+//		Amount:		new(big.Int),
+//	}
+//	if amount != nil{
+//		d.Amount.Set(amount)
+//	}
+//	return &Transaction{data:d}
+//}
 
 func TestManager(t *testing.T)  {
 
