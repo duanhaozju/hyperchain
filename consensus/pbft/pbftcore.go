@@ -335,7 +335,11 @@ func (instance *pbftCore) getChkptCert(n uint64, id string) (cert *chkptCert) {
 		return
 	}
 
-	cert = &chkptCert{}
+	chkpts := make(map[Checkpoint]bool)
+	cert = &chkptCert{
+		chkpts:		chkpts,
+		chkptCount:	0,
+	}
 	instance.chkptCertStore[idx] = cert
 
 	return
@@ -875,45 +879,27 @@ func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) events.Event {
 		return nil
 	}
 
-	//cert := instance.getChkptCert(chkpt.SequenceNumber, chkpt.Id)
-	//ok := cert.chkpts[*chkpt]
-	//
-	//if ok {
-	//	logger.Warningf("Ignoring duplicate checkpoint from %d, --------seqNo=%d--------", chkpt.ReplicaId, chkpt.SequenceNumber)
-	//	return nil
-	//}
-	//
-	//cert.chkpts[*chkpt] = true
+	cert := instance.getChkptCert(chkpt.SequenceNumber, chkpt.Id)
+	ok := cert.chkpts[*chkpt]
+
+	if ok {
+		logger.Warningf("Ignoring duplicate checkpoint from %d, --------seqNo=%d--------", chkpt.ReplicaId, chkpt.SequenceNumber)
+		return nil
+	}
+
+	cert.chkpts[*chkpt] = true
+	cert.chkptCount++
 	instance.checkpointStore[*chkpt] = true
 
-	//logger.Debugf("Replica %d found %d matching checkpoints for seqNo %d, digest %s",
-	//	instance.id, cert.chkptCount, chkpt.SequenceNumber, chkpt.Id)
-	//
-	//if cert.chkptCount == instance.f+1 {
-	//	// We do have a weak cert
-	//	instance.witnessCheckpointWeakCert(chkpt)
-	//}
-	//
-	//if cert.chkptCount < instance.intersectionQuorum() {
-	//	// We do not have a quorum yet
-	//	return nil
-	//}
-
-	matching := 0
-	for testChkpt := range instance.checkpointStore {
-		if testChkpt.SequenceNumber == chkpt.SequenceNumber && testChkpt.Id == chkpt.Id {
-			matching++
-		}
-	}
 	logger.Debugf("Replica %d found %d matching checkpoints for seqNo %d, digest %s",
-		instance.id, matching, chkpt.SequenceNumber, chkpt.Id)
+		instance.id, cert.chkptCount, chkpt.SequenceNumber, chkpt.Id)
 
-	if matching == instance.f+1 {
+	if cert.chkptCount == instance.f+1 {
 		// We do have a weak cert
 		instance.witnessCheckpointWeakCert(chkpt)
 	}
 
-	if matching < instance.intersectionQuorum() {
+	if cert.chkptCount < instance.intersectionQuorum() {
 		// We do not have a quorum yet
 		return nil
 	}
@@ -926,6 +912,7 @@ func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) events.Event {
 	// we have reached this checkpoint
 	// Note, this is not divergent from the paper, as the paper requires that
 	// the quorum certificate must contain 2f+1 messages, including its own
+
 	chkptID, ok := instance.chkpts[chkpt.SequenceNumber]
 	if !ok {
 		logger.Debugf("Replica %d found checkpoint quorum for seqNo %d, digest %s, but it has not reached this checkpoint itself yet",

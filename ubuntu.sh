@@ -10,7 +10,7 @@ echo -e "       |___/|_|                                        "
 #kill the progress
 
 echo "kill the bind port process"
-for((i=1;i<=4;i++))
+for((i=0;i<=4;i++))
 do
     temp_port=`lsof -i :800$i | awk 'NR>=2{print $2}'`
     if [ x"$temp_port" != x"" ];then
