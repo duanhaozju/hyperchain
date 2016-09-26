@@ -797,7 +797,7 @@ function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Contract
 
                             SweetAlert.swal({
                                 title: "Deployed successfully!",
-                                text: "The contract address is <span class='text_red'>"+res.ContractAddress+"</span>",
+                                text: "The contract address is <span class='text_red'>0x"+res.ContractAddress+"</span>",
                                 type: "success",
                                 customClass: 'swal-wide',
                                 html: true
@@ -864,10 +864,12 @@ function modalInstanceInvokeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Co
                     // from 调用者地址，to 合约地址，data 为编码
                     ContractService.invokeContract(ENV.FROM,  $scope.address, data)
                         .then(function(res){
+                            var hex16 = res.Ret.substring(2,res.Ret.length);
+
                             SweetAlert.swal({
                                 title: "Invoked successfully!",
                                 // text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! ",
-                                text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The result is <span class='text_red'>"+ res.Ret +"</span>",
+                                text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The result is <span class='text_red'>"+ parseInt(hex16,16) +"</span>",
                                 type: "success",
                                 customClass: 'swal-wide',
                                 html: true
