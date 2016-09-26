@@ -875,6 +875,7 @@ func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) events.Event {
 		return nil
 	}
 
+
 	//cert := instance.getChkptCert(chkpt.SequenceNumber, chkpt.Id)
 	//ok := cert.chkpts[*chkpt]
 	//
