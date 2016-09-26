@@ -6,6 +6,7 @@ import (
 	"hyperchain/common"
 	"time"
 	"github.com/op/go-logging"
+	"encoding/json"
 	"strconv"
 	"hyperchain/core/types"
 	"errors"
@@ -13,6 +14,8 @@ import (
 	"hyperchain/event"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/vm/compiler"
+
+	"hyperchain/core/crypto"
 )
 
 const (
@@ -68,10 +71,10 @@ func NewPublicTransactionAPI(eventMux *event.TypeMux,pm *manager.ProtocolManager
 func prepareExcute(args SendTxArgs) SendTxArgs{
 	if args.Gas == "" {
 		args.Gas = strconv.Itoa(defaultGas)
-	}
-	if args.GasPrice == "" {
+	} else if args.GasPrice == "" {
 		args.GasPrice = strconv.Itoa(defaustGasPrice)
 	}
+
 	return args
 }
 
@@ -85,18 +88,18 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
 	//tx = types.NewTransaction(args.From[:], (*args.To)[:], []byte(args.Value))
 	log.Info(tx.Value)
-	am := tran.pm.AccountManager
-	addr := common.HexToAddress(string(args.From))
-
-	if (!core.VerifyBalance(tx)){
-		return common.Hash{},errors.New("Not enough balance!")
-	}else if _,found := am.Unlocked[addr];found {
+	//am := tran.pm.AccountManager
+	//addr := common.HexToAddress(string(args.From))
+	//
+	//if (!core.VerifyBalance(tx)){
+	//	return common.Hash{},errors.New("Not enough balance!")
+	//}else if _,found := am.Unlocked[addr];found {
 
 		// Balance is enough
-		//txBytes, err := proto.Marshal(tx)
-		//if err != nil {
-		//	log.Fatalf("proto.Marshal(tx) error: %v",err)
-		//}
+		/*txBytes, err := proto.Marshal(tx)
+		if err != nil {
+			log.Fatalf("proto.Marshal(tx) error: %v",err)
+		}*/
 
 		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
@@ -109,7 +112,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				tx.TimeStamp=time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
-					log.Errorf("proto.Marshal(tx) error: %v",err)
+					log.Fatalf("proto.Marshal(tx) error: %v",err)
 				}
 				if manager.GetEventObject() != nil{
 					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
@@ -119,127 +122,128 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				}
 
 			}
-			time.Sleep(20 * time.Millisecond)
+			time.Sleep(10 * time.Millisecond)
 
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
 		return tx.BuildHash(),nil
 
-	} else {
-		return common.Hash{}, errors.New("account isn't unlock")
-	}
+	//} else {
+	//	return common.Hash{},errors.New("Not enough balance!")
+	//}
 }
 
 // SendTransactionOrContract deploy contract
-func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (common.Hash, error){
+func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (common.Address, error){
 
 	var tx *types.Transaction
-	var amount int64
 
 	realArgs := prepareExcute(args)
 
 	gas, err := strconv.ParseInt(realArgs.Gas,10,64)
 	price, err := strconv.ParseInt(realArgs.GasPrice,10,64)
-
-	if realArgs.Value == "" {
-		amount = 0
-	} else {
-		amount, err = strconv.ParseInt(realArgs.Value,10,64)
-	}
-
-	payload := common.FromHex(realArgs.Payload)
+	amount, err := strconv.ParseInt(realArgs.Value,10,64)
+	payload, err := json.Marshal(realArgs.Payload)
 
 	if err != nil {
-		return common.Hash{},err
+		return common.Address{},err
 	}
 
 	txValue := types.NewTransactionValue(price,gas,amount,payload)
 
-	value, err := proto.Marshal(txValue)
+	value, err := json.Marshal(txValue)
 
 	if err != nil {
-		return common.Hash{}, err
+		return common.Address{}, err
 	}
 
+	var addr common.Address
 	if args.To == "" {
-		tx = types.NewTransaction(common.HexToAddress(realArgs.From).Bytes(), nil, value)
+		tx = types.NewTransaction([]byte(realArgs.From), nil, value)
+		nonce := core.GetVMEnv().Db().GetNonce(common.BytesToAddress(tx.From))
+		core.GetVMEnv().Db().SetNonce(common.BytesToAddress(tx.From), nonce+1)
+		addr = crypto.CreateAddress(common.BytesToAddress(tx.From), nonce)
+
 
 	} else {
-		tx = types.NewTransaction(common.HexToAddress(realArgs.From).Bytes(), common.HexToAddress(realArgs.To).Bytes(), value)
-	}
+		tx = types.NewTransaction([]byte(realArgs.From), []byte(realArgs.To), value)
 
-	am := tran.pm.AccountManager
-	addr := common.HexToAddress(args.From)
+		am := tran.pm.AccountManager
+		addr := common.HexToAddress(args.From)
 
-	if _,found := am.Unlocked[addr];found {
-		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		start := time.Now().Unix()
-		end:=start+6
-		//end:=start+500
+		if _,found := am.Unlocked[addr];found {
+			log.Infof("############# %d: start send request#############", time.Now().Unix())
+			start := time.Now().Unix()
+			end:=start+6
+			//end:=start+500
 
-		for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 50; i++ {
-				tx.TimeStamp=time.Now().UnixNano()
-				txBytes, err := proto.Marshal(tx)
-				if err != nil {
-					log.Errorf("proto.Marshal(tx) error: %v",err)
+			for start := start ; start < end; start = time.Now().Unix() {
+				for i := 0; i < 500; i++ {
+					tx.TimeStamp=time.Now().UnixNano()
+					txBytes, err := proto.Marshal(tx)
+					if err != nil {
+						log.Fatalf("proto.Marshal(tx) error: %v",err)
+					}
+					if manager.GetEventObject() != nil{
+						go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+						//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+					}else{
+						log.Warning("manager is Nil")
+					}
+
 				}
-				if manager.GetEventObject() != nil{
-					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
-					//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-				}else{
-					log.Warning("manager is Nil")
-				}
+				time.Sleep(90 * time.Millisecond)
+
 			}
-			time.Sleep(90 * time.Millisecond)
-		}
 
-		log.Infof("############# %d: end send request#############", time.Now().Unix())
-	} else {
-		return common.Hash{}, errors.New("account isn't unlock")
+			log.Infof("############# %d: end send request#############", time.Now().Unix())
+		} else {
+			return common.Address{}, errors.New("account isn't unlock")
+		}
 	}
 
-	return tx.BuildHash(),nil
-}
+	// todo 其他处理,比如存储到数据库中
+	//db, err := hyperdb.GetLDBDatabase()
+	//
+	//if err != nil {
+	//	log.Fatalf("Open database error: %v", err)
+	//}
+	//
+	//core.PutTransaction(db, ,tx)
 
-type CompileCode struct{
-	Abi []string
-	Bin []string
+	return addr,nil
+	//return tx.BuildHash(),nil
 }
 
 // ComplieContract complies contract to ABI
-func (tran *PublicTransactionAPI) ComplieContract(ct string) (*CompileCode,error){
+func (tran *PublicTransactionAPI) ComplieContract(ct string) ([]string, error){
 
-	abi, bin, err := compiler.CompileSourcefile(ct)
+	log.Debug(ct)
+	abi, _, err := compiler.CompileSourcefile(ct)
+	log.Debug(abi)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &CompileCode{
-		Abi: abi,
-		Bin: bin,
-	}, nil
+	return abi,nil
 }
 
-// GetTransactionReceipt returns transaction's receipt for given transaction hash
-func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) *types.ReceiptTrans {
-	return core.GetReceipt(hash)
-}
+
 
 // GetAllTransactions return all transactions in the chain/db
 func (tran *PublicTransactionAPI) GetTransactions() []*TransactionResult{
 	db, err := hyperdb.GetLDBDatabase()
 
 	if err != nil {
-		log.Errorf("Open database error: %v", err)
+		log.Fatalf("Open database error: %v", err)
 	}
 
 	txs, err := core.GetAllTransaction(db)
 
 	if err != nil {
-		log.Errorf("GetAllTransaction error: %v", err)
+		log.Fatalf("GetAllTransaction error: %v", err)
 	}
 
 	var transactions []*TransactionResult

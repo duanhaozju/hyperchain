@@ -15,7 +15,8 @@
  var params = {form:"",to:"",value:1};
  var hosts_url = [];
  var hosts_port = [];
- var MAXNODES = parseInt(config['MAXPEERS']);
+ // var MAXNODES = parseInt(config['MAXPEERS']);
+var MAXNODES = 2;
  for (var i=1;i<=MAXNODES;i++){
     hosts_url.push(config['external_node'+i]);
     hosts_port.push(config['external_port'+i]);

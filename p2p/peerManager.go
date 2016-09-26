@@ -8,8 +8,8 @@ package p2p
 
 import (
 	"hyperchain/common"
-	node "hyperchain/p2p/node"
-	peer "hyperchain/p2p/peer"
+	nd "hyperchain/p2p/node"
+	pr "hyperchain/p2p/peer"
 	"hyperchain/p2p/peerComm"
 	"hyperchain/p2p/peerEventHandler"
 	"hyperchain/p2p/peerEventManager"
@@ -27,9 +27,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-
-var MAXPEERNODE int
-
 var DESKEY = []byte("sfe023f_sefiel#fi32lf3e!")
 
 
@@ -37,18 +34,18 @@ var DESKEY = []byte("sfe023f_sefiel#fi32lf3e!")
 type PeerManager interface {
 	// judge all peer are connected and return them
 	//JudgeAlivePeers(*chan bool)
-	GetAllPeers() []*peer.Peer
+	GetAllPeers() []*pr.Peer
 	Start(path string, NodeId int, aliveChan chan bool,isTest bool,eventMux *event.TypeMux)
 	GetClientId() common.Hash
 	BroadcastPeers(payLoad []byte)
 	SendMsgToPeers(payLoad []byte,peerList []uint64,MessageType recovery.Message_MsgType)
-	GetPeerInfos() peer.PeerInfos
+	GetPeerInfos() pr.PeerInfos
 }
 
 // gRPC peer manager struct, which to manage the gRPC peers
 type GrpcPeerManager struct {
 	EventManager *peerEventManager.PeerEventManager
-	localNode    *node.Node
+	localNode    *nd.Node
 	aliveChain   *chan bool
 }
 
@@ -59,7 +56,7 @@ func init() {
 
 // GetClientId GetLocalClientId
 func (this *GrpcPeerManager) GetClientId() common.Hash{
-	addr := node.GetNodeAddr()
+	addr := nd.GetNodeAddr()
 	addrString := addr.String()
 	hasher := crypto.NewKeccak256Hash("keccak256Hanser")
 	return hasher.Hash(addrString)
@@ -74,7 +71,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 	port, _ := strconv.Atoi(configs["port"+strconv.Itoa(NodeId)])
 	MAXPEERNODE,_ := strconv.Atoi(configs["MAXPEERS"])
 	// start local node
-	this.localNode = node.NewNode(port,isTest,eventMux,NodeId)
+	this.localNode = nd.NewNode(port,isTest,eventMux,NodeId)
 	//
 	this.aliveChain = &aliveChan
 
@@ -124,7 +121,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 				hasher := crypto.NewKeccak256Hash("keccak256Hanser")
 				peerNodeHash := hex.EncodeToString(hasher.Hash(peerAddress.String()).Bytes())
 
-				peer, peerErr := peer.NewPeerByString(peerAddrString)
+				peer, peerErr := pr.NewPeerByString(peerAddrString)
 				if peerErr != nil {
 					// cannot connect to other peer
 					log.Error("Node: "+peerAddrString+" can not connect!\n", peerErr)
@@ -155,7 +152,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 }
 
 // GetAllPeers get all connected peer in the peer pool
-func (this *GrpcPeerManager) GetAllPeers() []*peer.Peer {
+func (this *GrpcPeerManager) GetAllPeers() []*pr.Peer {
 	peerPool := peerPool.NewPeerPool(false,false)
 	return peerPool.GetPeers()
 }
@@ -166,7 +163,7 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 	if err!=nil{
 		log.Fatal("TripleDesEncrypt Failed!")
 	}
-	localNodeAddr := node.GetNodeAddr()
+	localNodeAddr := nd.GetNodeAddr()
 	var broadCastMessage = pb.Message{
 		MessageType:  pb.Message_CONSUS,
 		From:         &localNodeAddr,
@@ -181,7 +178,7 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 // inner the broadcast method which serve BroadcastPeers function
 func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 	for _, peer := range pPool.GetPeers() {
-		peer.Chat(&broadCastMessage)
+		go peer.Chat(&broadCastMessage)
 		//go func(){
 		//	resMsg, err := peer.Chat(&broadCastMessage)
 		//	if err != nil {
@@ -210,7 +207,7 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,Mes
 	if err!=nil{
 		log.Fatal("TripleDesEncrypt Failed!")
 	}
-	localNodeAddr := node.GetNodeAddr()
+	localNodeAddr := nd.GetNodeAddr()
 	var syncMessage = pb.Message{
 		MessageType:  pb.Message_SYNCMSG,
 		From:         &localNodeAddr,
@@ -251,11 +248,11 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,Mes
 }
 
 
-func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
+func (this *GrpcPeerManager) GetPeerInfos() pr.PeerInfos{
 	peerpool := peerPool.NewPeerPool(false,false);
 	peers := peerpool.GetPeers()
 
-	localNodeAddr := node.GetNodeAddr()
+	localNodeAddr := nd.GetNodeAddr()
 	result, err := transport.TripleDesEncrypt([]byte("Query Status"), DESKEY)
 	if err!=nil{
 		log.Fatal("TripleDesEncrypt Failed!")
@@ -267,9 +264,9 @@ func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
 		Payload:      result,
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
-	var perinfos peer.PeerInfos
+	var perinfos pr.PeerInfos
 	for _,per := range peers{
-		var perinfo peer.PeerInfo
+		var perinfo pr.PeerInfo
 
 		perinfo.IP = per.Addr.Ip
 		perinfo.Port = int(per.Addr.Port)
@@ -277,16 +274,16 @@ func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
 
 		retMsg, err := per.Client.Chat(context.Background(),&keepAliveMessage)
 		if err != nil{
-			perinfo.Status = peer.STOP
+			perinfo.Status = pr.STOP
 		}else if retMsg.MessageType == pb.Message_RESPONSE{
-			perinfo.Status =peer.ALIVE
+			perinfo.Status =pr.ALIVE
 		}else if retMsg.MessageType == pb.Message_PENDING{
-			perinfo.Status = peer.PENDING
+			perinfo.Status = pr.PENDING
 		}
 		perinfos = append(perinfos,&perinfo)
 	}
-	selfPeerInfo := peer.PeerInfo{
-		Status:peer.ALIVE,
+	selfPeerInfo := pr.PeerInfo{
+		Status:pr.ALIVE,
 		CName:"",
 		IP:localNodeAddr.Ip,
 		Port:int(localNodeAddr.Port),
