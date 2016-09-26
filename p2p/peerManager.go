@@ -235,7 +235,7 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,Mes
 					log.Error("enter error")
 					log.Error("Broadcast failed,Node", peer.Addr)
 				} else {
-					log.Info("resMsg:", string(resMsg.Payload))
+					log.Debug("resMsg:", string(resMsg.Payload))
 					//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
 				}
 			}
