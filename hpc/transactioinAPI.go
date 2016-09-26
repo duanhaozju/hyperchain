@@ -174,7 +174,7 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 			//end:=start+500
 
 			for start := start ; start < end; start = time.Now().Unix() {
-				for i := 0; i < 50; i++ {
+				for i := 0; i < 100; i++ {
 					tx.TimeStamp=time.Now().UnixNano()
 					txBytes, err := proto.Marshal(tx)
 					if err != nil {
