@@ -29,7 +29,6 @@ import (
 func newEvent(manager *ProtocolManager) {
 	for i := 0; i < 5; i += 1 {
 
-
 		go GetEventObject().Post(event.AliveEvent{true})
 		//manager.eventMux.Post(event.AliveEvent{true})
 
@@ -82,7 +81,7 @@ func TestSignTx(t *testing.T) {
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	am := accounts.NewAccountManager(keydir,encryption)
 	pm := &ProtocolManager{
-		accountManager:am,
+		AccountManager:am,
 		commonHash:kec256Hash,
 	}
 
@@ -93,7 +92,7 @@ func TestSignTx(t *testing.T) {
 		addr := common.HexToAddress(addrHex)
 
 		start := time.Now()
-		_, err := pm.accountManager.SignWithPassphrase(addr, h[:], "123")
+		_, err := pm.AccountManager.SignWithPassphrase(addr, h[:], "123")
 		fmt.Println(time.Since(start))
 
 		tx.ValidateSign(encryption,pm.commonHash)

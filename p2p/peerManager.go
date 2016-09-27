@@ -103,7 +103,7 @@ func (this *GrpcPeerManager) Start(path string, NodeId int, aliveChan chan bool,
 	for peerPool.GetAliveNodeNum() < MAXPEERNODE - 1{
 		log.Debug("node:",NodeId,"process connecting task...")
 		nid := 1
-		for range time.Tick(3 * time.Second) {
+		for range time.Tick(100 * time.Millisecond) {
 			status := alivePeerMap[nid]
 			//log.Println("status map", nid, status)
 			if !status {
@@ -181,7 +181,7 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 // inner the broadcast method which serve BroadcastPeers function
 func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 	for _, peer := range pPool.GetPeers() {
-		go peer.Chat(&broadCastMessage)
+		peer.Chat(&broadCastMessage)
 		//go func(){
 		//	resMsg, err := peer.Chat(&broadCastMessage)
 		//	if err != nil {
@@ -238,7 +238,7 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,Mes
 					log.Error("enter error")
 					log.Error("Broadcast failed,Node", peer.Addr)
 				} else {
-					log.Info("resMsg:", string(resMsg.Payload))
+					log.Debug("resMsg:", string(resMsg.Payload))
 					//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
 				}
 			}

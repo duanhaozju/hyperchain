@@ -102,6 +102,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		if err != nil {
 			panic(err)
 		}
+
 		go this.higherEventManager.Post(event.ConsensusEvent{
 			Payload:origData,
 		})
@@ -145,9 +146,11 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 
 		}
 		}
+		/*log.Info("2")
+		log.Info(SyncMsg.MessageType)
 		go this.higherEventManager.Post(event.ConsensusEvent{
-			Payload:origData,
-		})
+			Payload:SyncMsg.Payload,
+		})*/
 
 
 	}

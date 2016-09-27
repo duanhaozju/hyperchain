@@ -14,11 +14,26 @@ const solcVersion = "0.1.1"
 
 var (
 	source = `
-contract test {
-   /// @notice Will multiply ` + "`a`" + ` by 7.
-   function multiply(uint a) returns(uint d) {
-       return a * 7;
-   }
+// it is a accumulator
+contract Accumulator{
+    uint32 sum = 0;
+    bytes32 hello = "abcdefghijklmnopqrstuvwxyz";
+
+    function increment(){
+        sum = sum + 1;
+    }
+
+    function getSum() returns(uint32){
+        return sum;
+    }
+
+    function getHello() constant returns(bytes32){
+        return hello;
+    }
+
+    function add(uint32 num1,uint32 num2) {
+        sum = sum+num1+num2;
+    }
 }
 `
 	source2 = `
@@ -58,12 +73,7 @@ contract mortal {
  }`
 
 	source3 = `
-contract mortal {
-    uint32 sum;
-    function add(uint32 num1,uint32 num2) {
-        sum = sum+num1+num2;
-    }
-}
+contract Accumulator{ uint32 sum = 0; string hello = "hello world"; function increment(){ sum = sum + 1; } function getSum() returns(uint32){ return sum; } function getHello() returns(string){ return hello; } function add(uint32 num1,uint32 num2) { sum = sum+num1+num2; } }
 `
 	code = "0x6060604052602a8060106000396000f3606060405260e060020a6000350463c6888fa18114601a575b005b6007600435026060908152602090f3"
 	info = `{"source":"\ncontract test {\n   /// @notice Will multiply ` + "`a`" + ` by 7.\n   function multiply(uint a) returns(uint d) {\n       return a * 7;\n   }\n}\n","language":"Solidity","languageVersion":"0.1.1","compilerVersion":"0.1.1","compilerOptions":"--binary file --json-abi file --natspec-user file --natspec-dev file --add-std 1","abiDefinition":[{"constant":false,"inputs":[{"name":"a","type":"uint256"}],"name":"multiply","outputs":[{"name":"d","type":"uint256"}],"type":"function"}],"userDoc":{"methods":{"multiply(uint256)":{"notice":"Will multiply ` + "`a`" + ` by 7."}}},"developerDoc":{"methods":{}}}`
@@ -73,7 +83,7 @@ contract mortal {
 
 func TestCompiler(t *testing.T) {
 
-	abis,bins,err := CompileSourcefile(source2)
+	abis,bins,err := CompileSourcefile(source3)
 	if err != nil {
 		return
 	}

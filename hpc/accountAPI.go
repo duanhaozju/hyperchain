@@ -3,14 +3,19 @@ package hpc
 import (
 	"hyperchain/common"
 	"hyperchain/core"
-	"hyperchain/crypto"
 	"hyperchain/accounts"
+	"hyperchain/manager"
+	"errors"
+	"hyperchain/hyperdb"
+	"hyperchain/core/state"
 )
 
-type PublicAccountAPI struct {}
+type PublicAccountAPI struct {
+	pm *manager.ProtocolManager
+}
 
 type AccountResult struct {
-	Account common.Address `json:"account"`
+	Account string `json:"account"`
 	Balance string         `json:"balance"`
 }
 type UnlockParas struct {
@@ -18,15 +23,17 @@ type UnlockParas struct {
 	Password string
 }
 
-func NewPublicAccountAPI() *PublicAccountAPI {
-	return &PublicAccountAPI{}
+func NewPublicAccountAPI(pm *manager.ProtocolManager) *PublicAccountAPI {
+	return &PublicAccountAPI{
+		pm: pm,
+	}
 }
 
 //New Account according to args from html
 func (acot *PublicAccountAPI)NewAccount(password string) common.Address  {
-	keydir := "./keystore/"
-	encryption := crypto.NewEcdsaEncrypto("ecdsa")
-	am := accounts.NewAccountManager(keydir,encryption)
+	//keydir := "./keystore/"
+	//encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	am := acot.pm.AccountManager
 	ac,err :=am.NewAccount(password)
 	if err !=nil{
 		log.Fatal("New Account error,%v",err)
@@ -42,9 +49,9 @@ func (acot *PublicAccountAPI)UnlockAccount(args UnlockParas) error {
 	password := string(args.Password)
 	address := common.HexToAddress(args.Address)
 
-	keydir := "./keystore/"
-	encryption := crypto.NewEcdsaEncrypto("ecdsa")
-	am := accounts.NewAccountManager(keydir,encryption)
+	//keydir := "./keystore/"
+	//encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	am := acot.pm.AccountManager
 
 	s := string(args.Address)
 	if len(s) > 1 {
@@ -56,21 +63,38 @@ func (acot *PublicAccountAPI)UnlockAccount(args UnlockParas) error {
 		}
 	}
 	ac := accounts.Account{Address:address,File:am.KeyStore.JoinPath(s)}
-	return am.Unlock(ac,password)
+	err:= am.Unlock(ac,password)
+	if err!=nil{
+		return errors.New("Incorrect address or password!")
+	}
+	return nil
 }
 // GetAllBalances returns all account's balance in the db,NOT CACHE DB!
 func (acot *PublicAccountAPI) GetAccounts() []*AccountResult{
 	var acts []*AccountResult
 
-	balanceIns, err := core.GetBalanceIns()
+	//balanceIns, err := core.GetBalanceIns()
+	db,err := hyperdb.GetLDBDatabase()
+	stateObjects,err:=state.GetStateObjects(db)
 
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
 	}
 
-	balMap := balanceIns.GetAllDBBalance()
+	//balMap := balanceIns.GetAllDBBalance()
 
-	for key, value := range balMap {
+	//stateObjects:=stateDB.GetAccounts()
+	for key,value := range stateObjects{
+		log.Info("key is",key)
+
+		var act = &AccountResult{
+			Account: key,
+			Balance: value.Balance().String(),
+		}
+
+		acts = append(acts, act)
+	}
+	/*for key, value := range balMap {
 
 		var act = &AccountResult{
 			Account: key,
@@ -78,7 +102,7 @@ func (acot *PublicAccountAPI) GetAccounts() []*AccountResult{
 		}
 
 		acts = append(acts, act)
-	}
+	}*/
 
 	return acts
 }

@@ -228,3 +228,27 @@ func TestBalance_UpdateDBBalance(t *testing.T) {
 		b.DeleteDBBalance(key)
 	}
 }
+//func TestVerifyBalance(t *testing.T) {
+//
+//	InitDB(8083)
+//	db, _ := hyperdb.GetLDBDatabase()
+//	height := GetHeightOfChain()
+//	block,_:= GetBlockByNumber(db,height)
+//	tx := block.Transactions[0]
+//	start:= time.Now()
+//	VerifyBalance(tx)
+//	fmt.Println(time.Since(start))
+//
+//	keydir := "../keystore/"
+//
+//	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+//
+//	am := accounts.NewAccountManager(keydir,encryption)
+//	am.UnlockAllAccount(keydir)
+//	addr := common.HexToAddress(string(tx.From))
+//	start = time.Now()
+//	if _,found := am.Unlocked[addr];found {
+//		fmt.Println("found")
+//	}
+//	fmt.Println(time.Since(start))
+//}

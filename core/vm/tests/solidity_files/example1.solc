@@ -1,12 +1,21 @@
-// it is a accumulator
 contract Accumulator{
-    uint sum = 0;
+    uint32 sum = 0;
+    string hello = "hello world!";
 
-    function increment(){
+    function increment() returns(uint32){
         sum = sum + 1;
+        return sum;
     }
 
-    function getSum() returns(uint){
+    function getSum() returns(uint32){
         return sum;
+    }
+
+    function getHello() constant returns(string){
+        return hello;
+    }
+
+    function add(uint32 num1,uint32 num2) {
+        sum = sum+num1+num2;
     }
 }

@@ -8,14 +8,15 @@
  */
 
  var http  = require('http');
- var config = require('./peerconfig.json');
+ var config = require('./p2p/local_peerconfig.json');
  var genesis = require('./genesis.json');
  var address = genesis.test1.alloc;
  var addresses = Object.keys(address);
  var params = {form:"",to:"",value:1};
  var hosts_url = [];
  var hosts_port = [];
- var MAXNODES = parseInt(config['MAXPEERS']);
+ // var MAXNODES = parseInt(config['MAXPEERS']);
+var MAXNODES = 2;
  for (var i=1;i<=MAXNODES;i++){
     hosts_url.push(config['external_node'+i]);
     hosts_port.push(config['external_port'+i]);
@@ -28,13 +29,24 @@ function testRequest(opt){
 var options = {
     host: opt.url,
     port: opt.port,
-    path: '/trans',
+    //path: '/trans',
     method: 'POST',
     headers: {
           'Content-Type': 'application/json'
     }
 };
-var post_data = JSON.stringify({"from":opt.from,"to":opt.to,"value":'1'});
+//var post_data = JSON.stringify({"from":opt.from,"to":opt.to,"value":'1'});
+var post_data = JSON.stringify({
+    "method": "tx_sendTransaction",
+    "params": [
+        {
+            "from":opt.from,
+            "to":opt.to,
+            "value": '1'
+        }
+    ],
+    "id": 1
+});
 console.log(options);
 // Set up the request
     var post_req = http.request(options, function(res) {
