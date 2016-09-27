@@ -35,12 +35,14 @@ type StateDB struct {
 
 // Create a new state from a given trie
 func New(db hyperdb.Database) (*StateDB, error) {
+
 	return &StateDB{
 		db:           db,
 		stateObjects: make(map[string]*StateObject),
 		refund:       new(big.Int),
 		logs:         make(map[common.Hash]vm.Logs),
 	}, nil
+
 
 }
 

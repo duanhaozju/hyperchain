@@ -162,7 +162,7 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 		//ExecTransaction(*types.NewTestCreateTransaction())
 
 
-	statedb,_  = state.New(db)
+	//statedb,_  = state.New(db)
 
 	for _, trans := range block.Transactions {
 		//ExecTransaction(*trans)
