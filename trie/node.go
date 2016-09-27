@@ -1,10 +1,8 @@
 package trie
 
 import (
-	//"bytes"
 	"encoding/json"
 	"fmt"
-	//	simplejson "github.com/bitly/go-simplejson"
 	"hyperchain/common"
 	"io"
 	"strings"
