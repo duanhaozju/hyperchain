@@ -8,6 +8,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/big"
 	"github.com/op/go-logging"
+	"hyperchain/core/state"
 )
 
 //-- --------------------- Balance ------------------------------------\
@@ -161,23 +162,39 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 		//ExecTransaction(*types.NewTestCreateTransaction())
 
 
+	statedb,_  = state.New(db)
+
 	for _, trans := range block.Transactions {
 		//ExecTransaction(*trans)
 
-		if trans.To ==nil{
+		receipt,_,_,err := ExecTransaction(*trans)
+		if(err == nil){
+			receipts = append(receipts,receipt)
+		}
+		continue
+		/*if trans.To ==nil{
 			receipt,_,_,err := ExecTransaction(*trans)
 			if(err == nil){
 				receipts = append(receipts,receipt)
 			}
 			continue
 		}
-		if _, ok := self.dbBalance[common.HexToAddress(string(trans.To))]; !ok {
+		//to为合约账户
+		if statedb.GetCode(common.HexToAddress(string(trans.To)))!=nil{
 			receipt,_,_,err := ExecTransaction(*trans)
 			if(err == nil){
 				receipts = append(receipts,receipt)
 			}
 			continue
-		}
+		}*/
+		/*if  statedb.GetAccount(common.HexToAddress(string(trans.To)))!=nil {
+		//if _, ok := self.dbBalance[common.HexToAddress(string(trans.To))]; !ok {
+			receipt,_,_,err := ExecTransaction(*trans)
+			if(err == nil){
+				receipts = append(receipts,receipt)
+			}
+			continue
+		}*/
 
 		var transValue big.Int
 		transValue.SetString(string(trans.Value), 10)
@@ -246,22 +263,40 @@ func (self *Balance)UpdateCacheBalance(trans *types.Transaction) {
 // VerifyTransaction is to verify balance of the tranaction
 // If the balance is not enough, returns false
 func VerifyBalance(tx *types.Transaction) bool {
-	var balance big.Int
+	//var balance big.Int
 	var value big.Int
-	balanceIns, err := GetBalanceIns()
+	//balanceIns, err := GetBalanceIns()
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
 	}
-	bal := balanceIns.GetCacheBalance(common.HexToAddress(string(tx.From)))
-	//log.Println(common.Bytes2Hex(bal))
+
+
+	db,err := hyperdb.GetLDBDatabase()
+	stateObjects,err:=state.GetStateObjects(db)
+	if _,ok:=stateObjects["0x"+string(tx.From)];ok{
+		balance:=stateObjects["0x"+string(tx.From)].Balance()
+		if value.Cmp(balance) == 1 {
+			return false
+		}
+	}
+
+
+
+
+
+
+
+	if err != nil {
+		log.Fatalf("GetBalanceIns error, %v", err)
+	}
+
+
+	/*bal := balanceIns.GetCacheBalance(common.HexToAddress(string(tx.From)))
 	balance.SetString(string(bal), 10)
 	value.SetString(string(tx.Value), 10)
-
-	//fmt.Println("value: ", value.String())
-	//fmt.Println("balance: ", balance.String())
 	if value.Cmp(&balance) == 1 {
 		return false
-	}
+	}*/
 
 	return true
 }

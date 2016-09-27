@@ -62,11 +62,11 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	}
 
 	// TODO
-	/*if !env.CanTransfer(caller.Address(), value) {
+	if !env.CanTransfer(caller.Address(), value) {
 		caller.ReturnGas(gas, gasPrice)
 
 		return nil, common.Address{}, ValueTransferErr("insufficient funds to transfer value. Req %v, has %v", value, env.Db().GetBalance(caller.Address()))
-	}*/
+	}
 
 	var createAccount bool
 	if address == nil {
@@ -88,11 +88,17 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	} else {
 		if !env.Db().Exist(*address) {
 			to = env.Db().CreateAccount(*address)
+			env.Transfer(from, to, value)
 		} else {
+
 			to = env.Db().GetAccount(*address)
+			if statedb.GetCode(to.Address())==nil{
+				log.Info("enter")
+				env.Transfer(from, to, value)
+			}
 		}
 	}
-	env.Transfer(from, to, value)
+
 
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
@@ -101,7 +107,9 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	contract.SetCallCode(codeAddr, code)
 	defer contract.Finalise()
 
+	log.Info("enter3")
 	ret, err = evm.Run(contract, input)
+	log.Info("enter2")
 	/*
 	fmt.Println("---------------------------------------")
 	fmt.Println("caller.address",caller.Address())

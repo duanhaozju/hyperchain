@@ -56,7 +56,6 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 	// 2.判断CodeAddr是否为空,如果不为空就去找已编译好的合约地址,然后运行该原生的智能合约
 	if contract.CodeAddr != nil {
 
-		fmt.Println("the length is",len(Precompiled))
 		if p := Precompiled[contract.CodeAddr.Str()]; p != nil {
 			fmt.Println("we have the codeAddr")
 			return evm.RunPrecompiled(p, input, contract)

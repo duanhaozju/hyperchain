@@ -81,7 +81,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 	log.Info("==========SendTransaction=====,args = ",args)
 	var tx *types.Transaction
-	log.Info(args.Value)
+
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
 	//tx = types.NewTransaction(args.From[:], (*args.To)[:], []byte(args.Value))
 	log.Info(tx.Value)
