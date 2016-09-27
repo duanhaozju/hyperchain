@@ -1,0 +1,39 @@
+syntax = "proto3";
+package trie;
+
+message Node {
+    oneof val {
+        shortNode shortnode = 1;
+        fullNode fullnode = 2;
+        hashNode hashnode = 3;
+        valueNode valuenode = 4;
+        blankNode blanknode = 5;
+    }
+}
+
+message shortNode {
+    bytes key = 1;
+    bool dirty = 2;
+    bytes hash = 3;
+    Node val = 4;
+    bool extension = 5;
+}
+
+
+message fullNode {
+    bool dirty = 1;
+    bytes hash = 2;
+    repeated Node children = 3;
+}
+
+message hashNode {
+    bytes hash = 1;
+}
+
+message valueNode {
+    bytes val = 1;
+}
+
+message blankNode {
+
+}
