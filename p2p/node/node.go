@@ -32,17 +32,17 @@ type Node struct {
 	higherEventManager *event.TypeMux
 	//common information
 	Cname	     string
-	TEMS *map[string]transport.TransportEncryptManager
+	TEM transport.TransportEncryptManager
 }
 
 
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
-func NewNode(port int, hEventManager *event.TypeMux,nodeID int,Cname string,TEMS *map[string]transport.TransportEncryptManager) *Node {
+func NewNode(port int, hEventManager *event.TypeMux,nodeID int,Cname string,TEM transport.TransportEncryptManager) *Node {
 	var newNode Node
 	newNode.address = peerComm.ExtractAddress(peerComm.GetLocalIp(),port,int32(nodeID))
 	newNode.Cname = Cname
-	newNode.TEMS = TEMS
+	newNode.TEM = TEM
 	newNode.NodeID = strconv.Itoa(nodeID)
 	newNode.higherEventManager = hEventManager
 
@@ -67,17 +67,20 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	//handle the message
 	//review decrypt
 	if msg.MessageType !=pb.Message_HELLO && msg.MessageType != pb.Message_HELLO_RESPONSE{
-		msg.Payload = this.TEMS[msg.From.Hash].DecWithSecret(msg.Payload)
+		msg.Payload = this.TEM.DecWithSecret(msg.Payload,msg.From.Hash)
 	}
 	switch msg.MessageType {
 	case pb.Message_HELLO :{
+		log.Notice("=================================")
+		log.Notice("协商秘钥")
+		log.Notice("本地地址为",this.address.ID,this.address.Ip,this.address.Port)
+		log.Notice("远端地址为",msg.From.ID,msg.From.Ip,msg.From.Port)
+		log.Notice("=================================")
 		response.MessageType = pb.Message_HELLO_RESPONSE
 		//review 协商密钥
 		remotePublicKey := msg.Payload
-		remoteAddressHash := msg.From.Hash
-		this.TEMS[remoteAddressHash] = transport.NewHandShakeManger()
-		this.TEMS[remoteAddressHash].GenerateSecret(remotePublicKey)
-		transportPublicKey := this.TEMS[remoteAddressHash].GetLocalPublicKey()
+		this.TEM.GenerateSecret(remotePublicKey,msg.From.Hash)
+		transportPublicKey := this.TEM.GetLocalPublicKey()
 		//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
 		response.Payload = transportPublicKey
 		 //REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
@@ -89,8 +92,14 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	}
 	case pb.Message_CONSUS:{
 		response.MessageType = pb.Message_RESPONSE
-		log.Debug("<<<< GOT A CONSUS MESSAGE >>>>")
-		msg.Payload = []byte(this.address.Ip+" got a message")
+		log.Notice("<<<< GOT A CONSUS MESSAGE >>>>")
+		response.Payload = []byte(this.address.Ip+" got a message")
+		// TODO 暂时屏蔽共识功能
+		log.Notice("共识信息秘钥》》》",this.TEM.GetSecret(msg.From.Hash))
+		msg.Payload = this.TEM.DecWithSecret(msg.Payload,msg.From.Hash)
+		log.Critical(string(msg.Payload))
+
+
 		go this.higherEventManager.Post(event.ConsensusEvent{
 			Payload:msg.Payload,
 		})
@@ -99,12 +108,12 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		// package the response msg
 		response.MessageType = pb.Message_RESPONSE
 
-		response.Payload = this.TEMS[msg.From.Hash].EncWithSecret([]byte("got a sync msg"))
+		response.Payload = this.TEM.EncWithSecret([]byte("got a sync msg"),msg.From.Hash)
 		log.Debug("<<<< GOT A SYNC MESSAGE >>>>")
 		var SyncMsg recovery.Message
 		unMarshalErr := proto.Unmarshal(msg.Payload,&SyncMsg)
 		if unMarshalErr != nil{
-			response.Payload = this.TEMS[msg.From.Hash].EncWithSecret([]byte("Sync message Unmarshal error"))
+			response.Payload = this.TEM.EncWithSecret([]byte("Sync message Unmarshal error"),msg.From.Hash)
 			log.Error("sync UnMarshal error!")
 		}
 		switch SyncMsg.MessageType {
@@ -128,7 +137,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		//客户端会发来keepAlive请求,返回response即可
 		// client may send a keep alive request, just response A response type message,if node is not ready, send a pending status message
 		response.MessageType = pb.Message_RESPONSE
-		response.Payload = this.TEMS[msg.From.Hash].EncWithSecret([]byte("RESPONSE FROM SERVER"))
+		response.Payload = this.TEM.EncWithSecret([]byte("RESPONSE FROM SERVER"),msg.From.Hash)
 	}
 	case pb.Message_RESPONSE:{
 		// client couldn't send a response message to server, so server should never receive a response type message

@@ -33,7 +33,7 @@ type GrpcPeerManager struct {
 	//localNodeHash
 	LocalNode    *node.Node
 	peersPool    *peerPool.PeersPool
-	TEMS map[string]transport.TransportEncryptManager
+	TEM          transport.TransportEncryptManager
 	peerStatus   map[int]bool
 	configs peerComm.Config
 	MaxPeerNumber int
@@ -53,7 +53,7 @@ func NewGrpcManager(configPath string,NodeId int) *GrpcPeerManager{
 	newgRPCManager.IP = newgRPCManager.configs.GetIP(newgRPCManager.NodeId)
 	newgRPCManager.Port = newgRPCManager.configs.GetPort(newgRPCManager.NodeId)
 	newgRPCManager.CName = newgRPCManager.configs.GetCname(newgRPCManager.NodeId)
-	newgRPCManager.TEMS = make(map[string]transport.TransportEncryptManager)
+	newgRPCManager.TEM = transport.NewHandShakeManger()
 	// start local node
 	newgRPCManager.peerStatus =make(map[int]bool)
 	//初始化flag map
@@ -73,11 +73,11 @@ func (this *GrpcPeerManager) Start(aliveChain chan bool,eventMux *event.TypeMux)
 		log.Error("the gRPC Manager hasn't initlized")
 		os.Exit(1)
 	}
-	this.LocalNode = node.NewNode(this.Port,eventMux,this.NodeId,this.CName,&this.TEMS)
+	this.LocalNode = node.NewNode(this.Port,eventMux,this.NodeId,this.CName,this.TEM)
 	// connect to peer
 	// 如果进行单元测试,需要将参数设置为true
 	// 重构peerpool 不采用单例模式进行管理
-	this.peersPool = peerPool.NewPeerPool(&this.TEMS)
+	this.peersPool = peerPool.NewPeerPool(this.TEM)
 	// 读取待连接的节点信息
 	this.connectToPeers()
 	log.Notice("┌────────────────────────────┐")
@@ -116,7 +116,7 @@ func (this *GrpcPeerManager)connectToPeers(){
 			} else {
 				// add  peer to peer pool
 				this.peersPool.PutPeer(*peerAddress, peer)
-				this.TEMS[peer.Addr.Hash]=peer.TEM
+				//this.TEM.[peer.Addr.Hash]=peer.TEM
 				this.peerStatus[nid] = true
 				log.Debug("Peer Node hash:", peerAddress.Hash,"has connected!")
 			}
@@ -128,7 +128,7 @@ func (this *GrpcPeerManager)connectToPeers(){
 func (this *GrpcPeerManager)connectToPeer(peerAddress *pb.PeerAddress,nid int32)(*peer.Peer,error){
 	//if this node is not online, connect it
 
-	peer, peerErr := peer.NewPeerByIpAndPort(peerAddress.Ip,peerAddress.Port,nid)
+	peer, peerErr := peer.NewPeerByIpAndPort(peerAddress.Ip,peerAddress.Port,nid,this.TEM,this.LocalNode.GetNodeAddr())
 	if peerErr != nil {
 		// cannot connect to other peer
 		log.Error("Node: ", peerAddress.Address + " can not connect!\n")
@@ -148,26 +148,30 @@ func (this *GrpcPeerManager) GetAllPeers() []*peer.Peer {
 
 // BroadcastPeers Broadcast Massage to connected peers
 func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
-	result, err := transport.TripleDesEncrypt(payLoad, DESKEY)
-	if err!=nil{
-		log.Fatal("TripleDesEncrypt Failed!")
-	}
+	//result, err := transport.TripleDesEncrypt(payLoad, DESKEY)
+	//if err!=nil{
+	//	log.Fatal("TripleDesEncrypt Failed!")
+	//}
 	var broadCastMessage = pb.Message{
 		MessageType:  pb.Message_CONSUS,
 		From:        this.LocalNode.GetNodeAddr(),
-		Payload:      result,
+		Payload:      payLoad,
+		//Payload:      []byte("HYPERCHAIN"),
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	//go this.EventManager.PostEvent(pb.Message_CONSUS, broadCastMessage)
 	go broadcast(broadCastMessage,this.peersPool)
 }
 
+
 // inner the broadcast method which serve BroadcastPeers function
 func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 	for _, peer := range pPool.GetPeers() {
 		//review 这里没有返回值,不知道本次通信是否成功
+		log.Notice(string(broadCastMessage.Payload))
 		go peer.Chat(&broadCastMessage)
 	}
+
 }
 
 
@@ -182,15 +186,11 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,Mes
 	if err != nil{
 		log.Error("marshal failed")
 	}
-	result, err := transport.TripleDesEncrypt(realPayload, DESKEY)
-	if err!=nil{
-		log.Fatal("TripleDesEncrypt Failed!")
-	}
 	localNodeAddr := this.LocalNode.GetNodeAddr()
 	var syncMessage = pb.Message{
 		MessageType:  pb.Message_SYNCMSG,
 		From:         localNodeAddr,
-		Payload:      result,
+		Payload:      realPayload,
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 
@@ -227,15 +227,12 @@ func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos{
 	peers := this.peersPool.GetPeers()
 	var perinfo peer.PeerInfo
 	localNodeAddr := this.LocalNode.GetNodeAddr()
-	result, err := transport.TripleDesEncrypt([]byte("Query Status"), DESKEY)
-	if err!=nil{
-		log.Fatal("TripleDesEncrypt Failed!")
-	}
+
 
 	var keepAliveMessage = pb.Message{
 		MessageType:  pb.Message_KEEPALIVE,
 		From:         localNodeAddr,
-		Payload:      result,
+		Payload:      []byte("Query Status"),
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	var perinfos peer.PeerInfos

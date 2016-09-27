@@ -20,7 +20,7 @@ type PeersPool struct {
 	peers      map[string]*peer.Peer
 	peerAddr   map[string]pb.PeerAddress
 	peerKeys   map[pb.PeerAddress]string
-	TMS *map[string]transport.TransportEncryptManager
+	TEM        transport.TransportEncryptManager
 	alivePeers int
 }
 
@@ -34,12 +34,12 @@ func init() {
 }
 
 // NewPeerPool get a new peer pool instance
-func NewPeerPool(TEMS *map[string]transport.TransportEncryptManager) *PeersPool {
+func NewPeerPool(TEM transport.TransportEncryptManager) *PeersPool {
 	var newPrPoolIns PeersPool
 	newPrPoolIns.peers = make(map[string]*peer.Peer)
 	newPrPoolIns.peerAddr = make(map[string]pb.PeerAddress)
 	newPrPoolIns.peerKeys = make(map[pb.PeerAddress]string)
-	newPrPoolIns.TMS = TEMS
+	newPrPoolIns.TEM = TEM
 	newPrPoolIns.alivePeers = 0
 	return &newPrPoolIns
 
