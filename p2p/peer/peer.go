@@ -18,7 +18,7 @@ import (
 	"hyperchain/p2p/transport"
 	"hyperchain/p2p/peerComm"
 	"time"
-	"encoding/hex"
+	"sync"
 )
 
 // init the package-level logger system,
@@ -38,6 +38,7 @@ type Peer struct {
 	TEM transport.TransportEncryptManager
 	Status int
 	ID int
+	chatMux sync.Mutex
 }
 
 // NewPeerByString to create a Peer which with a connection,
@@ -144,16 +145,20 @@ func NewPeerByIpAndPort(ip string,port int32,nid int32,TEM transport.TransportEn
 // which implements the service that prototype file declares
 //
 func (this *Peer)Chat(msg *pb.Message) (*pb.Message, error){
+	this.chatMux.Lock()
+	defer this.chatMux.Unlock()
 	//review encrypt
 	//log.Notice("sec pool size ",this.TEM.GetSceretPoolSize())
 	this.TEM.PrintAllSecHash()
 	//log.Notice("消息发往>>>",this.Addr.ID)
 	//log.Notice("消息发往秘钥>>>",this.TEM.GetSecret(this.Addr.Hash))
-	source := msg.Payload
+	//msg.Payload=[]byte(strconv.Itoa(int(this.Addr.ID)))
+
+	//source := msg.Payload
 	msg.Payload = this.TEM.EncWithSecret(msg.Payload,this.Addr.Hash)
-	log.Critical("××××××加密传输××××××")
-	log.Critical("to node ",this.Addr.ID)
-	log.Critical("原信息:",hex.EncodeToString(source),"加密信息:",hex.EncodeToString(msg.Payload))
+	//log.Critical("××××××加密传输××××××")
+	//log.Critical("to node ",this.Addr.ID)
+	//log.Critical("原信息:",hex.EncodeToString(source),"加密信息:",hex.EncodeToString(msg.Payload))
 	r,err := this.Client.Chat(context.Background(),msg)
 	if err != nil{
 		log.Error("err:",err)

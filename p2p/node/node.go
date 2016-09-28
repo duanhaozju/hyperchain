@@ -19,7 +19,6 @@ import (
 	"hyperchain/p2p/transport"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/recovery"
-	"encoding/hex"
 )
 
 var log *logging.Logger // package-level logger
@@ -68,10 +67,10 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	//handle the message
 	//review decrypt
 	if msg.MessageType !=pb.Message_HELLO && msg.MessageType != pb.Message_HELLO_RESPONSE{
-		log.Critical("××××××解密信息××××××")
-		log.Critical("待解密信息",hex.EncodeToString(msg.Payload))
+		//log.Critical("××××××解密信息××××××")
+		//log.Critical("待解密信息",hex.EncodeToString(msg.Payload))
 		msg.Payload = this.TEM.DecWithSecret(msg.Payload,msg.From.Hash)
-		log.Critical("解密后信息",hex.EncodeToString(msg.Payload))
+		//log.Critical("解密后信息",hex.EncodeToString(msg.Payload))
 	}
 	switch msg.MessageType {
 	case pb.Message_HELLO :{
@@ -99,9 +98,10 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		log.Notice("<<<< GOT A CONSUS MESSAGE >>>>")
 		response.Payload = []byte(this.address.Ip+" got a message")
 
-		go this.higherEventManager.Post(event.ConsensusEvent{
-			Payload:msg.Payload,
-		})
+		//log.Critical(string(msg.Payload))
+		//go this.higherEventManager.Post(event.ConsensusEvent{
+		//	Payload:msg.Payload,
+		//})
 	}
 	case pb.Message_SYNCMSG:{
 		// package the response msg

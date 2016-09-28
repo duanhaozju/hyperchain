@@ -41,6 +41,7 @@ type GrpcPeerManager struct {
 	CName  string
 	Port int
 	IP string
+
 }
 
 func NewGrpcManager(configPath string,NodeId int) *GrpcPeerManager{
@@ -156,7 +157,6 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 		MessageType:  pb.Message_CONSUS,
 		From:        this.LocalNode.GetNodeAddr(),
 		Payload:      payLoad,
-		//Payload:      []byte("HYPERCHAIN"),
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	//go this.EventManager.PostEvent(pb.Message_CONSUS, broadCastMessage)
@@ -168,7 +168,8 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 	for _, peer := range pPool.GetPeers() {
 		//review 这里没有返回值,不知道本次通信是否成功
-		log.Notice(string(broadCastMessage.Payload))
+		//log.Notice(string(broadCastMessage.Payload))
+
 		go peer.Chat(&broadCastMessage)
 	}
 
