@@ -55,9 +55,9 @@ func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error{
 		return err
 	}
 
-	unicastEvent := event.UnicastConsensusEvent{
+	unicastEvent := event.TxUniqueCastEvent{
 		Payload:	tmpMsg,
-		To:		to,
+		PeerId:		to,
 	}
 
 	// Post the event to outer
