@@ -14,6 +14,7 @@ message Message{
     enum MsgType {
         SYNCCHECKPOINT       = 0;
         SYNCBLOCK    = 1;
+        RELAYTX  = 2;
 
 
     }

@@ -23,6 +23,9 @@ type NewBlockEvent struct{ Payload []byte
 //general tx local
 type NewTxEvent struct{ Payload []byte  }
 
+type TxUniqueCastEvent struct{ Payload []byte
+			       PeerId uint64  }
+
 
 type NewBlockPoolEvent struct{ Payload []byte  }
 
