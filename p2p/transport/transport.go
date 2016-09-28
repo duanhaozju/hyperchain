@@ -62,8 +62,8 @@ func (hSM *HandShakeManager) EncWithSecret(message []byte,peerHash string) []byt
 	aesBlockEncrypter, _ := aes.NewCipher(key)
 	aesEncrypter := cipher.NewCFBEncrypter(aesBlockEncrypter, iv)
 	aesEncrypter.XORKeyStream(encrypted, []byte(message))
-	//return encrypted
-	return message
+	return encrypted
+	//return message
 }
 
 func (hSM *HandShakeManager) DecWithSecret(message []byte,peerHash string) []byte {
