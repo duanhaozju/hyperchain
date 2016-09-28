@@ -40,11 +40,11 @@ func main() {
 		argv := ctx.Argv().(*argT)
 
 		//init log
-		common.InitLog(logging.INFO, "./logs/", argv.LocalPort)
+		common.InitLog(logging.DEBUG, "./logs/", argv.LocalPort)
 		eventMux := new(event.TypeMux)
 
 		//init peer manager to start grpc server and client
-		grpcPeerMgr := new(p2p.GrpcPeerManager)
+		grpcPeerMgr := p2p.NewGrpcManager(argv.PeerConfigPath,argv.NodeId)
 
 		//init fetcher to accept block
 		fetcher := core.NewFetcher()

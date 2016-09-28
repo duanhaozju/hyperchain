@@ -85,3 +85,7 @@ func init() {
 
 使用方式:
 `node auto_test.js`
+
+## TEST COMMAND
+
+`./hyperchain -o 1 -l 8081 -p $1 p2p/local_peerconfig.json ./ -g ./genesis.json`
