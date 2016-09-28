@@ -101,11 +101,11 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
-		end:=start+6
+		end:=start+60
 		//end:=start+500
 
 		for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 100; i++ {
+			for i := 0; i < 5; i++ {
 				tx.TimeStamp=time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
@@ -119,7 +119,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				}
 
 			}
-			time.Sleep(20 * time.Millisecond)
+			time.Sleep(90 * time.Millisecond)
 
 		}
 

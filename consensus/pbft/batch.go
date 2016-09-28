@@ -110,10 +110,10 @@ func (op *batch) processTransaction(msg *pb.Message) error {
 	// Parse the trasaction message to request
 	req := op.txToReq(msg)
 
-	// Broadcast request to other peer
-	consensusMsg := &ConsensusMessage{Payload: &ConsensusMessage_Request{Request: req}}
-	pbMsg := consensusMsgHelper(consensusMsg, op.pbft.id)
-	op.helperImpl.InnerBroadcast(pbMsg)
+	//// Broadcast request to other peer
+	//consensusMsg := &ConsensusMessage{Payload: &ConsensusMessage_Request{Request: req}}
+	//pbMsg := consensusMsgHelper(consensusMsg, op.pbft.id)
+	//op.helperImpl.InnerBroadcast(pbMsg)
 
 	// Post a requestEvent
 	go op.postRequestEvent(req)
@@ -193,9 +193,15 @@ func (op *batch) processRequest(req *Request) error {
 	//op.reqStore.storeOutstanding(req)
 	//op.startTimerIfOutstandingRequests()
 
-	if (op.pbft.primary(op.pbft.view) == op.pbft.id) && op.pbft.activeView {
+	primary := op.pbft.primary(op.pbft.view)
+	if (primary == op.pbft.id) && op.pbft.activeView {
 		return op.leaderProcReq(req)
 	}
+
+	// Broadcast request to other peer
+	consensusMsg := &ConsensusMessage{Payload: &ConsensusMessage_Request{Request: req}}
+	pbMsg := consensusMsgHelper(consensusMsg, op.pbft.id)
+	op.helperImpl.InnerUnicast(pbMsg, primary)
 
 	return nil
 }
