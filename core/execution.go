@@ -12,15 +12,12 @@ import (
 
 // Call executes within the given contract
 func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int) (ret []byte, err error) {
-	fmt.Println("call")
 	ret, _, err = exec(env, caller, &addr, &addr, input, env.Db().GetCode(addr), gas, gasPrice, value)
 	return ret, err
 }
 
 // CallCode executes the given address' code as the given contract address
 func CallCode(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int) (ret []byte, err error) {
-	fmt.Println("callcode")
-
 	callerAddr := caller.Address()
 	ret, _, err = exec(env, caller, &callerAddr, &addr, input, env.Db().GetCode(addr), gas, gasPrice, value)
 	return ret, err
@@ -28,8 +25,6 @@ func CallCode(env vm.Environment, caller vm.ContractRef, addr common.Address, in
 
 // DelegateCall is equivalent to CallCode except that sender and value propagates from parent scope to child scope
 func DelegateCall(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice *big.Int) (ret []byte, err error) {
-	fmt.Println("DelegateCall")
-
 	callerAddr := caller.Address()
 	originAddr := env.Origin()
 	callerValue := caller.Value()
@@ -39,7 +34,6 @@ func DelegateCall(env vm.Environment, caller vm.ContractRef, addr common.Address
 
 // Create creates a new contract with the given code
 func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPrice, value *big.Int) (ret []byte, address common.Address, err error) {
-	fmt.Println("Create")
 	ret, address, err = exec(env, caller, nil, nil, nil, code, gas, gasPrice, value)
 	// Here we get an error if we run into maximum stack depth,
 	// See: https://github.com/ethereum/yellowpaper/pull/131
@@ -51,8 +45,6 @@ func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPric
 }
 
 func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
-	fmt.Println("exec")
-
 	evm := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
@@ -103,14 +95,14 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	defer contract.Finalise()
 
 	ret, err = evm.Run(contract, input)
-	fmt.Println("---------------------------------------")
-	fmt.Println("caller.address",caller.Address())
-	fmt.Println("address",address)
-	fmt.Println("codeaddress",codeAddr)
-	fmt.Println("input",input)
-	fmt.Println("code",code)
-	fmt.Println("---------------------------------------")
-	fmt.Println("ret",ret)
+	log.Debug("---------------------------------------")
+	log.Debug("caller.address",caller.Address())
+	log.Debug("address",address)
+	log.Debug("codeaddress",codeAddr)
+	log.Debug("input",input)
+	log.Debug("code",code)
+	log.Debug("---------------------------------------")
+	log.Debug("ret",ret)
 
 	// if the contract creation ran successfully and no errors were returned
 	// calculate the gas required to store the code. If the code could not
