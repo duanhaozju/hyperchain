@@ -229,7 +229,7 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,Mes
 
 			//if peerId==nodeID{
 			if peer.Idetity == nid {
-				log.Error(nid)
+				//log.Error(nid)
 				peer.Chat(&syncMessage)
 				//resMsg, err := peer.Chat(&syncMessage)
 				//if err != nil {

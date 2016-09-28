@@ -194,14 +194,14 @@ func (op *batch) processRequest(req *Request) error {
 	//op.startTimerIfOutstandingRequests()
 
 	primary := op.pbft.primary(op.pbft.view)
-	if (primary == op.pbft.id) && op.pbft.activeView {
+	if (primary != op.pbft.id) {
+		// Broadcast request to primary
+		consensusMsg := &ConsensusMessage{Payload: &ConsensusMessage_Request{Request: req}}
+		pbMsg := consensusMsgHelper(consensusMsg, op.pbft.id)
+		op.helperImpl.InnerUnicast(pbMsg, primary)
+	} else if (primary == op.pbft.id && op.pbft.activeView) {
 		return op.leaderProcReq(req)
 	}
-
-	// Broadcast request to other peer
-	consensusMsg := &ConsensusMessage{Payload: &ConsensusMessage_Request{Request: req}}
-	pbMsg := consensusMsgHelper(consensusMsg, op.pbft.id)
-	op.helperImpl.InnerUnicast(pbMsg, primary)
 
 	return nil
 }
