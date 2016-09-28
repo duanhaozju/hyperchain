@@ -725,7 +725,7 @@ function ContractCtrl($scope, $uibModal, DTOptionsBuilder, SweetAlert, ENV) {
                     localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage))
                     SweetAlert.swal("Deleted!", "The contract has deleted from localstorage.", "success");
                 } else {
-                    SweetAlert.swal("Cancelled", ":)", "error");
+                    SweetAlert.swal("Cancelled", ":)", "success");
                 }
             });
     }
@@ -826,7 +826,7 @@ function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Contract
     };
 
     $scope.cancel = function () {
-        SweetAlert.swal("Cancelled", "You don't deploy the contract :)", "error");
+        SweetAlert.swal("Cancelled", "You don't deploy the contract :)", "success");
         $uibModalInstance.dismiss('cancel');
     };
 
@@ -895,7 +895,7 @@ function modalInstanceInvokeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Co
     };
 
     $scope.cancel = function () {
-        SweetAlert.swal("Cancelled", "You don't invoke the contract :)", "error");
+        SweetAlert.swal("Cancelled", "You don't invoke the contract :)", "success");
         $uibModalInstance.dismiss('cancel');
     };
 }

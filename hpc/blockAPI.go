@@ -41,6 +41,7 @@ func (blk *PublicBlockAPI) GetBlocks() []*BlockResult{
 
 // LastestBlock returns the number and hash of the lastest block
 func (blk *PublicBlockAPI) LastestBlock() *BlockResult{
+	log.Info("===========enter LastestBlock===============")
 	return lastestBlock()
 }
 
