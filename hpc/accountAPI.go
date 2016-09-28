@@ -6,6 +6,8 @@ import (
 	"hyperchain/accounts"
 	"hyperchain/manager"
 	"errors"
+	"hyperchain/hyperdb"
+	"hyperchain/core/state"
 )
 
 type PublicAccountAPI struct {
@@ -13,7 +15,7 @@ type PublicAccountAPI struct {
 }
 
 type AccountResult struct {
-	Account common.Address `json:"account"`
+	Account string `json:"account"`
 	Balance string         `json:"balance"`
 }
 type UnlockParas struct {
@@ -71,15 +73,28 @@ func (acot *PublicAccountAPI)UnlockAccount(args UnlockParas) error {
 func (acot *PublicAccountAPI) GetAccounts() []*AccountResult{
 	var acts []*AccountResult
 
-	balanceIns, err := core.GetBalanceIns()
+	//balanceIns, err := core.GetBalanceIns()
+	db,err := hyperdb.GetLDBDatabase()
+	stateObjects,err:=state.GetStateObjects(db)
 
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
 	}
 
-	balMap := balanceIns.GetAllDBBalance()
+	//balMap := balanceIns.GetAllDBBalance()
 
-	for key, value := range balMap {
+	//stateObjects:=stateDB.GetAccounts()
+	for key,value := range stateObjects{
+		log.Info("key is",key)
+
+		var act = &AccountResult{
+			Account: key,
+			Balance: value.Balance().String(),
+		}
+
+		acts = append(acts, act)
+	}
+	/*for key, value := range balMap {
 
 		var act = &AccountResult{
 			Account: key,
@@ -87,7 +102,7 @@ func (acot *PublicAccountAPI) GetAccounts() []*AccountResult{
 		}
 
 		acts = append(acts, act)
-	}
+	}*/
 
 	return acts
 }

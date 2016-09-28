@@ -123,8 +123,8 @@ func NewEnvFromMap(ruleSet RuleSet, state *state.StateDB, envValues map[string]s
 	env.number = common.Big(envValues["currentNumber"])
 	env.Gas = new(big.Int)
 	env.evm = vm.New(env, vm.Config{
-		EnableJit: EnableJit,
-		ForceJit:  ForceJit,
+		EnableJit: false,
+		ForceJit:  false,
 	})
 
 	return env

@@ -13,9 +13,9 @@ import (
 
 	"hyperchain/hyperdb"
 
-	"hyperchain/crypto"
-	"time"
-	"encoding/hex"
+	"hyperchain/core/state"
+
+	"math/big"
 )
 
 
@@ -32,7 +32,7 @@ func CreateInitBlock(filename string)  {
 		BlockHash  string
 		Coinbase   string
 		Number     uint64
-		Alloc      map[string]string
+		Alloc      map[string]int64
 	}
 
 	var genesis = map[string]Genesis{}
@@ -49,30 +49,34 @@ func CreateInitBlock(filename string)  {
 		return
 	}
 
-	balanceIns, err := GetBalanceIns()
+	//balanceIns, err := GetBalanceIns()
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
 	}
+	stateDB,_:=state.New(db)
 	for addr, account := range genesis["test1"].Alloc {
-		//address := common.HexToAddress(addr)
-
-		//value, err := strconv.ParseInt(account.Balance, 10, 64)
-		//fmt.Println(addr)
-		//fmt.Println([]byte(addr))
-		//fmt.Println(common.BytesToHash([]byte(addr)))
-		//fmt.Println(common.BytesToAddress([]byte("0000000000000000000000000000000000000002")))
 		/*balance:=types.Balance{
 			AccountPublicKeyHash:[]byte(addr),
 			Value:account,
 		}*/
+		//address := common.HexToAddress(addr)
 
+		//statedb.AddBalance(address, common.String2Big(account))
+		object:=stateDB.CreateAccount(common.HexToAddress(addr))
+
+		object.AddBalance(big.NewInt(account))
+
+
+/*
 		balanceIns.PutCacheBalance(common.HexToAddress(addr),[]byte(account))
-		balanceIns.PutDBBalance(common.HexToAddress(addr),[]byte(account))
+		balanceIns.PutDBBalance(common.HexToAddress(addr),[]byte(account))*/
 
 
 	}
+	stateDB.Commit()
+	//stateDB.GetBalance()
 	db,err:=hyperdb.GetLDBDatabase()
-	PutDBBalance(db,balanceIns.dbBalance)
+	//PutDBBalance(db,balanceIns.dbBalance)
 	if err!=nil{
 		log.Fatal(err)
 	}
@@ -94,52 +98,8 @@ func CreateInitBlock(filename string)  {
 		log.Fatal(err)
 	}
 	UpdateChain(&block,true)
+
 	log.Info("current chain block number is",GetChainCopy().Height)
 
 }
 
-// WriteBlock need:
-// 1. Put block into db
-// 2. Put transactions in block into db  (-- cancel --)
-// 3. Update chain
-// 4. Update balance
-func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int64)  {
-
-	log.Info("block number is ",block.Number)
-	currentChain := GetChainCopy()
-	block.ParentHash = currentChain.LatestBlockHash
-	block.BlockHash = block.Hash(commonHash).Bytes()
-	//block.WriteTime = time.Now().UnixNano()
-	block.CommitTime = commitTime
-	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	UpdateChain(block, false)
-	balance, err := GetBalanceIns()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	newChain := GetChainCopy()
-	log.Notice("Block number",newChain.Height)
-	log.Notice("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
-	block.WriteTime = time.Now().UnixNano()
-	balance.UpdateDBBalance(block)
-	if block.Number%10==0 && block.Number!=0{
-		WriteChainChan()
-
-	}
-	// update our stateObject and statedb to blockchain
-	//ExecBlock(block)
-	block.EvmTime=time.Now().UnixNano()
-	err = PutBlock(db, block.BlockHash, block)
-	// write transaction
-	//PutTransactions(db, commonHash, block.Transactions)
-	if err != nil {
-		log.Fatal(err)
-	}
-	//TxSum.Add(TxSum,big.NewInt(int64(len(block.Transactions))))
-	//CommitStatedbToBlockchain()
-}
