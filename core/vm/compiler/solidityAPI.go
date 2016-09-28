@@ -37,6 +37,7 @@ func CompileSourcefile(source string)  ([]string,[]string, error) {
 		abis = append(abis, string(abi))
 		bins = append(bins, contract.Code)
 		types = append(types, name)
+		fmt.Println("the code is ",contract.Code)
 	}
 	return abis,bins,nil
 }
