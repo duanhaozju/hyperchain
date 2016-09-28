@@ -99,9 +99,9 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		response.Payload = []byte(this.address.Ip+" got a message")
 
 		//log.Critical(string(msg.Payload))
-		//go this.higherEventManager.Post(event.ConsensusEvent{
-		//	Payload:msg.Payload,
-		//})
+		go this.higherEventManager.Post(event.ConsensusEvent{
+			Payload:msg.Payload,
+		})
 	}
 	case pb.Message_SYNCMSG:{
 		// package the response msg
