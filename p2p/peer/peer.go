@@ -18,7 +18,7 @@ import (
 	"hyperchain/p2p/transport"
 	"hyperchain/p2p/peerComm"
 	"time"
-
+	"encoding/hex"
 )
 
 // init the package-level logger system,
@@ -28,7 +28,6 @@ var log *logging.Logger // package-level logger
 func init() {
 	log = logging.MustGetLogger("p2p/Server")
 }
-var DESKEY = []byte("sfe023f_sefiel#fi32lf3e!")
 
 
 type Peer struct {
@@ -146,18 +145,23 @@ func NewPeerByIpAndPort(ip string,port int32,nid int32,TEM transport.TransportEn
 //
 func (this *Peer)Chat(msg *pb.Message) (*pb.Message, error){
 	//review encrypt
-	log.Notice("sec pool size ",this.TEM.GetSceretPoolSize())
+	//log.Notice("sec pool size ",this.TEM.GetSceretPoolSize())
 	this.TEM.PrintAllSecHash()
-	log.Notice("消息发往>>>",this.Addr.ID)
-	log.Notice("消息发往秘钥>>>",this.TEM.GetSecret(this.Addr.Hash))
-	//log.Critical("chat>>>",this.TEM.GetSecret(msg.From.Hash))
+	//log.Notice("消息发往>>>",this.Addr.ID)
+	//log.Notice("消息发往秘钥>>>",this.TEM.GetSecret(this.Addr.Hash))
+	source := msg.Payload
 	msg.Payload = this.TEM.EncWithSecret(msg.Payload,this.Addr.Hash)
+	log.Critical("××××××加密传输××××××")
+	log.Critical("to node ",this.Addr.ID)
+	log.Critical("原信息:",hex.EncodeToString(source),"加密信息:",hex.EncodeToString(msg.Payload))
 	r,err := this.Client.Chat(context.Background(),msg)
 	if err != nil{
 		log.Error("err:",err)
 	}
-
-
+	// 返回信息解密
+	if r.MessageType !=pb.Message_HELLO && r.MessageType != pb.Message_HELLO_RESPONSE{
+		r.Payload = this.TEM.DecWithSecret(r.Payload,r.From.Hash)
+	}
 	return r,err
 }
 

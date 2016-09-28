@@ -1,9 +1,10 @@
 contract Accumulator{
     uint32 sum = 0;
-    string hello = "aaabbbccc";
+    string hello = "hello world!";
 
-    function increment(){
+    function increment() returns(uint32){
         sum = sum + 1;
+        return sum;
     }
 
     function getSum() returns(uint32){
