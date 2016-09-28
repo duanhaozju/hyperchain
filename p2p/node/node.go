@@ -19,6 +19,7 @@ import (
 	"hyperchain/p2p/transport"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/recovery"
+	"encoding/hex"
 )
 
 var log *logging.Logger // package-level logger
@@ -67,7 +68,10 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	//handle the message
 	//review decrypt
 	if msg.MessageType !=pb.Message_HELLO && msg.MessageType != pb.Message_HELLO_RESPONSE{
+		log.Critical("××××××解密信息××××××")
+		log.Critical("待解密信息",hex.EncodeToString(msg.Payload))
 		msg.Payload = this.TEM.DecWithSecret(msg.Payload,msg.From.Hash)
+		log.Critical("解密后信息",hex.EncodeToString(msg.Payload))
 	}
 	switch msg.MessageType {
 	case pb.Message_HELLO :{
@@ -94,11 +98,6 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		response.MessageType = pb.Message_RESPONSE
 		log.Notice("<<<< GOT A CONSUS MESSAGE >>>>")
 		response.Payload = []byte(this.address.Ip+" got a message")
-		// TODO 暂时屏蔽共识功能
-		log.Notice("共识信息秘钥》》》",this.TEM.GetSecret(msg.From.Hash))
-		msg.Payload = this.TEM.DecWithSecret(msg.Payload,msg.From.Hash)
-		log.Critical(string(msg.Payload))
-
 
 		go this.higherEventManager.Post(event.ConsensusEvent{
 			Payload:msg.Payload,
@@ -108,12 +107,12 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		// package the response msg
 		response.MessageType = pb.Message_RESPONSE
 
-		response.Payload = this.TEM.EncWithSecret([]byte("got a sync msg"),msg.From.Hash)
+		response.Payload = []byte("got a sync msg")
 		log.Debug("<<<< GOT A SYNC MESSAGE >>>>")
 		var SyncMsg recovery.Message
 		unMarshalErr := proto.Unmarshal(msg.Payload,&SyncMsg)
 		if unMarshalErr != nil{
-			response.Payload = this.TEM.EncWithSecret([]byte("Sync message Unmarshal error"),msg.From.Hash)
+			response.Payload = []byte("Sync message Unmarshal error")
 			log.Error("sync UnMarshal error!")
 		}
 		switch SyncMsg.MessageType {
@@ -137,7 +136,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		//客户端会发来keepAlive请求,返回response即可
 		// client may send a keep alive request, just response A response type message,if node is not ready, send a pending status message
 		response.MessageType = pb.Message_RESPONSE
-		response.Payload = this.TEM.EncWithSecret([]byte("RESPONSE FROM SERVER"),msg.From.Hash)
+		response.Payload = []byte("RESPONSE FROM SERVER")
 	}
 	case pb.Message_RESPONSE:{
 		// client couldn't send a response message to server, so server should never receive a response type message
@@ -149,6 +148,10 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	}
 	default:
 		log.Warning("Unkown Message type!")
+	}
+	// 返回信息加密
+	if msg.MessageType !=pb.Message_HELLO && msg.MessageType != pb.Message_HELLO_RESPONSE{
+		response.Payload = this.TEM.EncWithSecret(response.Payload,msg.From.Hash)
 	}
 	return &response, nil
 }
