@@ -301,7 +301,6 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 			var peers []uint64
 			peers = append(peers, ev.PeerId)
-			log.Notice("###### enter ConsensusEvent",ev.PeerId)
 			self.peerManager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
 			//go self.peerManager.SendMsgToPeers(ev.Payload,)
 		case event.NewTxEvent:
