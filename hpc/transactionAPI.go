@@ -224,9 +224,6 @@ func (tran *PublicTransactionAPI) ComplieContract(ct string) (*CompileCode,error
 
 // GetTransactionReceipt returns transaction's receipt for given transaction hash
 func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) *types.ReceiptTrans {
-	log.Info("enter GetTransactionReceipt")
-	log.Info(hash)
-	log.Info(core.GetReceipt(hash))
 	return core.GetReceipt(hash)
 }
 
