@@ -62,11 +62,10 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	}
 
 	// TODO
-	/*if !env.CanTransfer(caller.Address(), value) {
-		caller.ReturnGas(gas, gasPrice)
-
+	if !env.CanTransfer(caller.Address(), value) {
+		//caller.ReturnGas(gas, gasPrice)
 		return nil, common.Address{}, ValueTransferErr("insufficient funds to transfer value. Req %v, has %v", value, env.Db().GetBalance(caller.Address()))
-	}*/
+	}
 
 	var createAccount bool
 	if address == nil {

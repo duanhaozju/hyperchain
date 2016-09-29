@@ -5,12 +5,22 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/davecgh/go-spew/spew"
+	checker "gopkg.in/check.v1"
 	"hyperchain/common"
 	"hyperchain/hyperdb"
 	"io/ioutil"
 	"os"
 	"testing"
 )
+
+type TrieSuite struct {
+}
+
+func Test(t *testing.T) {
+	checker.TestingT(t)
+}
+
+var _ = checker.Suite(&TrieSuite{})
 
 func init() {
 	spew.Config.Indent = "    "
@@ -301,6 +311,96 @@ func TestParanoia(t *testing.T) {
 	}
 }
 
+func (s *TrieSuite) TestDeleteAfterLoad(c *checker.C) {
+	trie := newEmpty()
+
+	vals := []struct{ k, v string }{
+		{"do", "verb"},
+		{"ether", "wookiedoo"},
+		{"horse", "stallion"},
+		{"shaman", "horse"},
+		{"doge", "coin"},
+		{"dog", "puppy"},
+		{"somethingveryoddindeedthis is", "myothernodedata"},
+	}
+	for _, val := range vals {
+		updateString(trie, val.k, val.v)
+	}
+	root, _ := trie.Commit()
+	ClearGlobalCache()
+
+	newTrie, _ := New(root, trie.db)
+
+	for _, val := range vals {
+		ret := string(newTrie.Get([]byte(val.k)))
+		c.Assert(val.v, checker.Equals, ret)
+	}
+	var begin = 2
+	var end = 4
+	removeVals := vals[begin:end]
+	var remainVals []struct{ k, v string }
+	remainVals = append(remainVals, vals[:begin]...)
+	remainVals = append(remainVals, vals[end:]...)
+	for _, val := range removeVals {
+		deleteString(newTrie, val.k)
+	}
+	for _, val := range remainVals {
+		ret := string(newTrie.Get([]byte(val.k)))
+		c.Assert(val.v, checker.Equals, ret)
+	}
+
+	newInstvals := []struct{ k, v string }{
+		{"key1", "val1"},
+		{"key2", "val2"},
+		{"key3", "val3"},
+		{"w1", "q1"},
+		{"w2", "q2"},
+		{"w3", "q3"},
+	}
+	for _, val := range newInstvals {
+		updateString(newTrie, val.k, val.v)
+	}
+
+	remainVals = append(remainVals, newInstvals[:]...)
+	for _, val := range remainVals {
+		ret := string(newTrie.Get([]byte(val.k)))
+		c.Assert(val.v, checker.Equals, ret)
+	}
+
+}
+
+func TestRetrieve(t *testing.T) {
+	trie := newEmpty()
+
+	vals := []struct{ k, v string }{
+		{"do", "verb"},
+		{"ether", "wookiedoo"},
+		{"horse", "stallion"},
+		{"shaman", "horse"},
+		{"doge", "coin"},
+		{"dog", "puppy"},
+		{"somethingveryoddindeedthis is", "myothernodedata"},
+	}
+	for _, val := range vals {
+		updateString(trie, val.k, val.v)
+	}
+	root, _ := trie.Commit()
+	ClearGlobalCache()
+
+	newTrie, _ := New(root, trie.db)
+
+	deleteString(newTrie, "do")
+	deleteString(newTrie, "ether")
+	updateString(newTrie, "key1", "value1")
+	updateString(newTrie, "doge", "newcoin")
+	traverse_trie(newTrie)
+	root2, _ := newTrie.Commit()
+	ClearGlobalCache()
+
+	newTrie2, _ := New(root2, trie.db)
+	traverse_trie(newTrie2)
+}
+
 // Not an actual test
 func TestOutput(t *testing.T) {
 
@@ -443,7 +543,7 @@ func deleteString(trie *Trie, k string) {
 func listMem(db *hyperdb.MemDatabase) {
 	for _, key := range db.Keys() {
 		val, _ := db.Get(key)
-		fmt.Printf("MEM key: %x, val: %v\n", string(key), val)
+		fmt.Printf("MEM key: %x, val: %x\n", string(key), string(val))
 	}
 }
 func traverse_trie(trie *Trie) {

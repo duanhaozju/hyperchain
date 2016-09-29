@@ -53,7 +53,13 @@ func CreateInitBlock(filename string)  {
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
 	}
-	stateDB,_:=state.New(db)
+	db,err:=hyperdb.GetLDBDatabase()
+	//PutDBBalance(db,balanceIns.dbBalance)
+	if err!=nil{
+		log.Fatal(err)
+	}
+
+	stateDB,_:=state.New(common.Hash{}, db)
 	for addr, account := range genesis["test1"].Alloc {
 		/*balance:=types.Balance{
 			AccountPublicKeyHash:[]byte(addr),
@@ -75,11 +81,7 @@ func CreateInitBlock(filename string)  {
 	}
 	stateDB.Commit()
 	//stateDB.GetBalance()
-	db,err:=hyperdb.GetLDBDatabase()
-	//PutDBBalance(db,balanceIns.dbBalance)
-	if err!=nil{
-		log.Fatal(err)
-	}
+	
 
 
 	block := types.Block{

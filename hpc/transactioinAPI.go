@@ -87,10 +87,12 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	log.Info(tx.Value)
 	am := tran.pm.AccountManager
 	addr := common.HexToAddress(string(args.From))
-
+	/*
 	if (!core.VerifyBalance(tx)){
 		return common.Hash{},errors.New("Not enough balance!")
-	}else if _,found := am.Unlocked[addr];found {
+	}else 
+	*/
+	if _,found := am.Unlocked[addr];found {
 
 		// Balance is enough
 		//txBytes, err := proto.Marshal(tx)

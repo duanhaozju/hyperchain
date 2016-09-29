@@ -8,7 +8,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/big"
 	"github.com/op/go-logging"
-	"hyperchain/core/state"
+	//"hyperchain/core/state"
 )
 
 //-- --------------------- Balance ------------------------------------\
@@ -146,6 +146,7 @@ func (self *Balance)GetAllDBBalance() (BalanceMap) {
 
 // UpdateDBBalance update dbBalance require a latest block,
 // after updating dbBalance, cacheBalance will be equal with dbBalance
+/*
 func (self *Balance)UpdateDBBalance(block *types.Block) error {
 	var (
 		receipts	types.Receipts
@@ -195,7 +196,7 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 			}
 			continue
 		}*/
-
+		/*
 		var transValue big.Int
 		transValue.SetString(string(trans.Value), 10)
 		fromBalance := self.dbBalance[common.HexToAddress(string(trans.From))]
@@ -225,12 +226,13 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 	/**
 	    we want to save the receipts to the db
 	 */
+	  /*
 	WriteReceipts(receipts)
 	if err != nil {
 		return err
 	}
 	return nil
-}
+}*/
 
 // UpdateCacheBalance　updates cacheBalance by transactions
 func (self *Balance)UpdateCacheBalance(trans *types.Transaction) {
@@ -262,6 +264,7 @@ func (self *Balance)UpdateCacheBalance(trans *types.Transaction) {
 
 // VerifyTransaction is to verify balance of the tranaction
 // If the balance is not enough, returns false
+/*
 func VerifyBalance(tx *types.Transaction) bool {
 	//var balance big.Int
 	var value big.Int
@@ -272,6 +275,9 @@ func VerifyBalance(tx *types.Transaction) bool {
 
 
 	db,err := hyperdb.GetLDBDatabase()
+
+
+
 	stateObjects,err:=state.GetStateObjects(db)
 	if _,ok:=stateObjects["0x"+string(tx.From)];ok{
 		balance:=stateObjects["0x"+string(tx.From)].Balance()
@@ -297,9 +303,9 @@ func VerifyBalance(tx *types.Transaction) bool {
 	if value.Cmp(&balance) == 1 {
 		return false
 	}*/
-
+	/*
 	return true
 }
-
+*/
 
 //-- --------------------- Balance END --------------------------------

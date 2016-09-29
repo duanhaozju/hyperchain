@@ -225,11 +225,13 @@ func (self *ProtocolManager) syncBlockLoop() {
 
 							core.UpdateRequire(blocks.Batch[i].Number - 1, blocks.Batch[i].ParentHash, core.GetChainCopy().RecoveryNum)
 							core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
+							/*
 							balance, err := core.GetBalanceIns()
 							if err != nil {
 								log.Fatal(err)
 							}
 							balance.UpdateDBBalance(blocks.Batch[i])
+							*/
 							// receive all block in chain
 							if (common.Bytes2Hex(blocks.Batch[i].ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash)) {
 								core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum)
