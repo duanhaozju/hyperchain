@@ -67,7 +67,7 @@ func GetReceipt(txHash common.Hash) *types.ReceiptTrans {
 	var receipt types.Receipt
 	err := proto.Unmarshal(data, &receipt)
 	if err != nil {
-		log.Info("GetReceipt err:", err)
+		log.Errorf("GetReceipt err:", err)
 	}
 	//a:= receipt.ToReceiptTrans()
 	//fmt.Println("address",common.ToHex(a.ContractAddress))

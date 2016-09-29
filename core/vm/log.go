@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"hyperchain/common"
-	"hyperchain/logger/rlp"
+	"hyperchain/crypto/rlp"
 )
 
 type Log struct {
