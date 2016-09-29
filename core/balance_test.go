@@ -4,11 +4,12 @@ import (
 	"testing"
 	"hyperchain/common"
 	"hyperchain/core/types"
+	"github.com/golang/protobuf/proto"
+	"hyperchain/hyperdb"
 	"time"
 	"fmt"
-	"hyperchain/hyperdb"
-	"hyperchain/accounts"
 	"hyperchain/crypto"
+	"hyperchain/accounts"
 )
 
 
@@ -153,21 +154,35 @@ func TestBalance_DeleteDBBalance(t *testing.T) {
 	}
 }
 
+
+func setValue(num int64) []byte{
+	var txValue = &types.TransactionValue{
+		Price: 1000,
+		GasLimit: 1000,
+		Amount: num,
+		Payload: nil,
+	}
+
+	var value,_ = proto.Marshal(txValue)
+
+	return value
+}
+
 var transCases = []*types.Transaction{
 	&types.Transaction{
-		From: []byte("0000000000000000000000000000000000000001"),
-		To: []byte("0000000000000000000000000000000000000003"),
-		Value: []byte("100"),
+		From: common.HexToAddress("0000000000000000000000000000000000000001").Bytes(),
+		To: common.HexToAddress("0000000000000000000000000000000000000003").Bytes(),
+		Value: setValue(100),
 	},
 	&types.Transaction{
-		From: []byte("0000000000000000000000000000000000000001"),
-		To: []byte("0000000000000000000000000000000000000002"),
-		Value: []byte("100"),
+		From: common.HexToAddress("0000000000000000000000000000000000000001").Bytes(),
+		To: common.HexToAddress("0000000000000000000000000000000000000002").Bytes(),
+		Value: setValue(100),
 	},
 	&types.Transaction{
-		From: []byte("0000000000000000000000000000000000000002"),
-		To: []byte("0000000000000000000000000000000000000003"),
-		Value: []byte("700"),
+		From: common.HexToAddress("0000000000000000000000000000000000000002").Bytes(),
+		To: common.HexToAddress("0000000000000000000000000000000000000003").Bytes(),
+		Value: setValue(700),
 	},
 }
 
@@ -186,6 +201,10 @@ func TestBalance_UpdateCacheBalance(t *testing.T) {
 	zhangsan := b.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000001"))
 	lisi := b.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000002"))
 	wangwu := b.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000003"))
+
+	log.Info(string(zhangsan))
+	log.Info(string(lisi))
+	log.Info(string(wangwu))
 
 	if string(zhangsan) != "800" || string(lisi) != "1400" || string(wangwu) != "3800"{
 		t.Errorf("TestBalance_UpdateCacheBalance fail")
@@ -238,7 +257,9 @@ func TestVerifyBalance(t *testing.T) {
 	InitDB(8083)
 	db, _ := hyperdb.GetLDBDatabase()
 	height := GetHeightOfChain()
+	log.Infof("height: %v",height)
 	block,_:= GetBlockByNumber(db,height)
+	log.Infof("block: %#v", block)
 	tx := block.Transactions[0]
 	start:= time.Now()
 	VerifyBalance(tx)

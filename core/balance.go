@@ -8,6 +8,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/big"
 	"github.com/op/go-logging"
+	"github.com/golang/protobuf/proto"
 )
 
 //-- --------------------- Balance ------------------------------------\
@@ -163,7 +164,6 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 
 	for _, trans := range block.Transactions {
 		//ExecTransaction(*trans)
-
 		if trans.To ==nil{
 			receipt,_,_,err := ExecTransaction(*trans)
 			if(err == nil){
@@ -171,7 +171,7 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 			}
 			continue
 		}
-		if _, ok := self.dbBalance[common.HexToAddress(string(trans.To))]; !ok {
+		if _, ok := self.dbBalance[common.BytesToAddress(trans.To)]; !ok {
 			receipt,_,_,err := ExecTransaction(*trans)
 			if(err == nil){
 				receipts = append(receipts,receipt)
@@ -179,10 +179,17 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 			continue
 		}
 
+		var txValue types.TransactionValue
+		if err := proto.Unmarshal(trans.Value,&txValue); err != nil {
+			log.Errorf("%v", err)
+			return err
+		}
+
 		var transValue big.Int
-		transValue.SetString(string(trans.Value), 10)
-		fromBalance := self.dbBalance[common.HexToAddress(string(trans.From))]
-		toBalance := self.dbBalance[common.HexToAddress(string(trans.To))]
+		transValue.SetInt64(txValue.Amount)
+		//transValue.SetString(string(trans.Value), 10)
+		fromBalance := self.dbBalance[common.BytesToAddress(trans.From)]
+		toBalance := self.dbBalance[common.BytesToAddress(trans.To)]
 		var fromValue big.Int
 		var toValue big.Int
 		fromValue.SetString(string(fromBalance), 10)
@@ -190,15 +197,15 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 		fromValue.Sub(&fromValue, &transValue)
 
 		// Update Transaction.From account(sub the From account balance by value)
-		self.dbBalance[common.HexToAddress(string(trans.From))] = []byte(fromValue.String())
+		self.dbBalance[common.BytesToAddress(trans.From)] = []byte(fromValue.String())
 
 		// Update Transaction.To account(add the To account balance by value)
 		// if Transaction.To account not exist, it will be created, initial account balance is 0
-		if _, ok := self.dbBalance[common.HexToAddress(string(trans.To))]; ok {
+		if _, ok := self.dbBalance[common.BytesToAddress(trans.To)]; ok {
 			toValue.Add(&toValue, &transValue)
-			self.dbBalance[common.HexToAddress(string(trans.To))] = []byte(toValue.String())
+			self.dbBalance[common.BytesToAddress(trans.To)] = []byte(toValue.String())
 		} else {
-			self.dbBalance[common.HexToAddress(string(trans.To))] = []byte(transValue.String())
+			self.dbBalance[common.BytesToAddress(trans.To)] = []byte(transValue.String())
 		}
 	}
 	// cacheBalance keep correspondence with dbBalance
@@ -216,13 +223,22 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 }
 
 // UpdateCacheBalance　updates cacheBalance by transactions
-func (self *Balance)UpdateCacheBalance(trans *types.Transaction) {
+func (self *Balance)UpdateCacheBalance(trans *types.Transaction) error{
 	self.lock.Lock()
 	defer self.lock.Unlock()
+
+	var txValue types.TransactionValue
+	if err := proto.Unmarshal(trans.Value,&txValue); err != nil {
+		log.Errorf("%v", err)
+		return err
+	}
+
 	var transValue big.Int
-	transValue.SetString(string(trans.Value), 10)
-	fromBalance := self.cacheBalance[common.HexToAddress(string(trans.From))]
-	toBalance := self.cacheBalance[common.HexToAddress(string(trans.To))]
+	transValue.SetInt64(txValue.Amount)
+
+	fromBalance := self.cacheBalance[common.BytesToAddress(trans.From)]
+	toBalance := self.cacheBalance[common.BytesToAddress(trans.To)]
+
 	var fromValue big.Int
 	var toValue big.Int
 	fromValue.SetString(string(fromBalance), 10)
@@ -233,13 +249,14 @@ func (self *Balance)UpdateCacheBalance(trans *types.Transaction) {
 
 	// Update Transaction.To account(add the To account balance by value)
 	// if Transaction.To account not exist, it will be created, initial account balance is 0
-	self.cacheBalance[common.HexToAddress(string(trans.From))] = []byte(fromValue.String())
-	if _, ok := self.cacheBalance[common.HexToAddress(string(trans.To))]; ok {
+	self.cacheBalance[common.BytesToAddress(trans.From)] = []byte(fromValue.String())
+	if _, ok := self.cacheBalance[common.BytesToAddress(trans.To)]; ok {
 		toValue.Add(&toValue, &transValue)
-		self.cacheBalance[common.HexToAddress(string(trans.To))] = []byte(toValue.String())
+		self.cacheBalance[common.BytesToAddress(trans.To)] = []byte(toValue.String())
 	} else {
-		self.cacheBalance[common.HexToAddress(string(trans.To))] = []byte(transValue.String())
+		self.cacheBalance[common.BytesToAddress(trans.To)] = []byte(transValue.String())
 	}
+	return nil
 }
 
 
@@ -252,13 +269,16 @@ func VerifyBalance(tx *types.Transaction) bool {
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
 	}
-	bal := balanceIns.GetCacheBalance(common.HexToAddress(string(tx.From)))
-	//log.Println(common.Bytes2Hex(bal))
+	bal := balanceIns.GetCacheBalance(common.BytesToAddress(tx.From))
 	balance.SetString(string(bal), 10)
-	value.SetString(string(tx.Value), 10)
 
-	//fmt.Println("value: ", value.String())
-	//fmt.Println("balance: ", balance.String())
+	var txValue types.TransactionValue
+	if err := proto.Unmarshal(tx.Value,&txValue); err != nil {
+		log.Fatalf("%v", err)
+	}
+
+	value.SetInt64(txValue.Amount)
+
 	if value.Cmp(&balance) == 1 {
 		return false
 	}

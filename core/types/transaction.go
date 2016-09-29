@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/big"
 	"github.com/golang/protobuf/proto"
-	"github.com/labstack/gommon/log"
 )
 
 func (self *Transaction)BuildHash() common.Hash {
@@ -66,8 +65,6 @@ func NewTransaction(from []byte,to []byte,value []byte) *Transaction{
 
 
 func NewTransactionValue(price,gasLimit, amount int64, payload []byte) *TransactionValue{
-	log.Info("=======enter NewTransactionValue ================")
-	log.Info(price,gasLimit,amount,payload)
 	return &TransactionValue{
 		Price: price,
 		GasLimit: gasLimit,
