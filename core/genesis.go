@@ -134,7 +134,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 
 
 
-	if block.Number%10==0 && block.Number!=0{
+	if block.Number%10 == 0 && block.Number != 0 {
 		WriteChainChan()
 
 	}

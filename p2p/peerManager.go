@@ -229,15 +229,16 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,Mes
 
 			//if peerId==nodeID{
 			if peer.Idetity == nid {
-				log.Error(nid)
-				resMsg, err := peer.Chat(&syncMessage)
-				if err != nil {
-					log.Error("enter error")
-					log.Error("Broadcast failed,Node", peer.Addr)
-				} else {
-					log.Debug("resMsg:", string(resMsg.Payload))
-					//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
-				}
+				//log.Error(nid)
+				peer.Chat(&syncMessage)
+				//resMsg, err := peer.Chat(&syncMessage)
+				//if err != nil {
+				//	log.Error("enter error")
+				//	log.Error("Broadcast failed,Node", peer.Addr)
+				//} else {
+				//	log.Debug("resMsg:", string(resMsg.Payload))
+				//	//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
+				//}
 			}
 		}
 
