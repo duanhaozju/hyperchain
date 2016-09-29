@@ -36,8 +36,8 @@ func (self Storage) Copy() Storage {
 type StateObject struct {
 			   // Address belonging to this account
 	address common.Address
-			   // The balance of the account
-	balance *big.Int
+			   // The BalanceData of the account
+	BalanceData *big.Int
 			   // The nonce of the account
 	nonce uint64
 			   // The code hash if code is present (i.e. a contract)
@@ -57,7 +57,7 @@ type StateObject struct {
 func NewStateObject(address common.Address) *StateObject {
 	object := &StateObject{
 		address:  address,
-		balance:  new(big.Int),
+		BalanceData:  new(big.Int),
 		dirty:    true,
 		codeHash: emptyCodeHash,
 		storage:  make(Storage),
@@ -96,15 +96,17 @@ func (self *StateObject) Update() {
 }
 
 func (c *StateObject) AddBalance(amount *big.Int) {
-	c.SetBalance(new(big.Int).Add(c.balance, amount))
+
+	c.SetBalance(new(big.Int).Add(c.BalanceData, amount))
 }
 
 func (c *StateObject) SubBalance(amount *big.Int) {
-	c.SetBalance(new(big.Int).Sub(c.balance, amount))
+	c.SetBalance(new(big.Int).Sub(c.BalanceData, amount))
 }
 
 func (c *StateObject) SetBalance(amount *big.Int) {
-	c.balance = amount
+
+	c.BalanceData = amount
 	c.dirty = true
 }
 
@@ -113,7 +115,7 @@ func (c *StateObject) ReturnGas(gas, price *big.Int) {}
 
 func (self *StateObject) Copy() *StateObject {
 	stateObject := NewStateObject(self.Address())
-	stateObject.balance.Set(self.balance)
+	stateObject.BalanceData.Set(self.BalanceData)
 	stateObject.codeHash = common.CopyBytes(self.codeHash)
 	stateObject.nonce = self.nonce
 	stateObject.code = common.CopyBytes(self.code)
@@ -129,7 +131,7 @@ func (self *StateObject) Copy() *StateObject {
 //
 
 func (self *StateObject) Balance() *big.Int {
-	return self.balance
+	return self.BalanceData
 }
 
 // Returns the address of the contract/account

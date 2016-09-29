@@ -12,7 +12,7 @@ PASSWD="blockchain"
 # get the server list config
 while read line;do
  SERVER_ADDR+=" ${line}"
-done < ./serverlist.txt
+done < ./innerserverlist.txt
 
 #########################
 # authorization         #

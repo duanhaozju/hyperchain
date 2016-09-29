@@ -1,0 +1,6 @@
+contract Hello{
+    string hello = "hello world!";
+    function getHello() constant returns(string){
+        return hello;
+    }
+}
