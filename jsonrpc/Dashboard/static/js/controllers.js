@@ -365,17 +365,15 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
     SummaryService.getLastestBlock()
         .then(function(res){
             $scope.number = res.number;
-            $rootScope.height = res.number;
+            // $rootScope.height = res.number;
 
-            SummaryService.getAvgTimeAndCount("1",res.number+"")
+            SummaryService.getAvgTimeAndCount("1",res.number+"") // res.number 是十六进制字符串。这里参数可以是十进制字符串、整数或十六进制字符串
                 .then(function(res){
                     if (res.time < 0) {
                         $scope.avgTime = 0
                     } else {
                         $scope.avgTime = res.time;
                     }
-                    // $scope.txCount = res.count; // 后端没有存到数据库里
-                    // $scope.txCount = $scope.number * 500;
                 }, function(error){
                     console.log(error);
                 })
