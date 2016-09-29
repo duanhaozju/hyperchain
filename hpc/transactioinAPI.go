@@ -2,7 +2,6 @@ package hpc
 
 import (
 	"errors"
-	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"hyperchain/common"
@@ -77,12 +76,12 @@ func prepareExcute(args SendTxArgs) SendTxArgs {
 // SendTransaction is to build a transaction object,and then post event NewTxEvent,
 // if the sender's balance is enough, return tx hash
 func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error) {
-
 	log.Info("==========SendTransaction=====,args = ", args)
-	fmt.Println("--------------------send tx, args", args)
 	var tx *types.Transaction
-
-	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
+	amount, _ := strconv.Atoi(args.Value)
+	tv := types.NewTransactionValue(0, 0, int64(amount), nil)
+	tvData, _ := proto.Marshal(tv)
+	tx = types.NewTransaction([]byte(args.From), []byte(args.To), tvData)
 	//tx = types.NewTransaction(args.From[:], (*args.To)[:], []byte(args.Value))
 	log.Info(tx.Value)
 	//	am := tran.pm.AccountManager

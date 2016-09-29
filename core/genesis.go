@@ -13,7 +13,6 @@ import (
 
 	"hyperchain/hyperdb"
 
-	"fmt"
 	"hyperchain/core/state"
 	"math/big"
 )
@@ -66,7 +65,6 @@ func CreateInitBlock(filename string) {
 
 		//statedb.AddBalance(address, common.String2Big(account))
 		object := stateDB.CreateAccount(common.StringToAddress(addr))
-		fmt.Println("INIT ADDR", common.StringToAddress(addr).Bytes())
 		object.AddBalance(big.NewInt(account))
 
 		/*
@@ -89,7 +87,6 @@ func CreateInitBlock(filename string) {
 		log.Fatal(err)
 	}
 	UpdateChain(&block, true)
-	fmt.Printf("[GENESIS] %s\n", string(stateDB.Dump()))
 	log.Info("current chain block number is", GetChainCopy().Height)
 
 }

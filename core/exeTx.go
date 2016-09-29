@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	glog "github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/core/state"
@@ -77,7 +76,6 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		gasPrice = tx.GasPrice()
 		amount   = tx.Amount()
 	)
-	fmt.Println("[ExecTransaction]from", from.Bytes())
 	//log.Notice("the to is ---------",to)
 	//log.Notice("the to is ---------",tx.To)
 	receipt = types.NewReceipt(nil, gas)
