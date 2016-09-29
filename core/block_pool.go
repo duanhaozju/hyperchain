@@ -187,7 +187,9 @@ func ProcessBlock(block *types.Block) error {
 		return err
 	}
 	parentBlock, _ := GetBlock(db, block.ParentHash)
-
+	fmt.Println("CURRENT BLOCK PARENT HASH", block.ParentHash)
+	fmt.Println("CURRENT BLOCK PARENT MERKLE ROOT HASH", parentBlock.MerkleRoot)
+	fmt.Println("CURRENT BLOCK HEIGHT", block.Number)
 	statedb, e := state.New(common.BytesToHash(parentBlock.MerkleRoot), db)
 	if err != nil {
 		return e
@@ -208,6 +210,7 @@ func ProcessBlock(block *types.Block) error {
 	root, _ := statedb.Commit()
 
 	block.MerkleRoot = root.Bytes()
+	fmt.Println("CURRENT BLOCK MERKLE ROOT HASH", block.MerkleRoot)
 	fmt.Printf("[Process Block %d], Statedb DUMP: %s\n", block.Number, string(statedb.Dump()))
 	return nil
 }
