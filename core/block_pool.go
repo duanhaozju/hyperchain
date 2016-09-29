@@ -139,10 +139,6 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 
 	log.Info("block number is ", block.Number)
 	currentChain := GetChainCopy()
-	block.ParentHash = currentChain.LatestBlockHash
-	block.BlockHash = block.Hash(commonHash).Bytes()
-	//block.WriteTime = time.Now().UnixNano()
-	block.CommitTime = commitTime
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
@@ -150,10 +146,10 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 
 	UpdateChain(block, false)
 	/*
-	balance, err := GetBalanceIns()
-	if err != nil {
-		log.Fatal(err)
-	}
+		balance, err := GetBalanceIns()
+		if err != nil {
+			log.Fatal(err)
+		}
 	*/
 
 	newChain := GetChainCopy()
@@ -163,6 +159,10 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 
 	//	balance.UpdateDBBalance(block)
 	err = ProcessBlock(block)
+	block.ParentHash = currentChain.LatestBlockHash
+	block.BlockHash = block.Hash(commonHash).Bytes()
+	//block.WriteTime = time.Now().UnixNano()
+	block.CommitTime = commitTime
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -187,7 +187,7 @@ func ProcessBlock(block *types.Block) error {
 	var (
 		receipts types.Receipts
 		//allLogs  vm.Logs
-		env      = make(map[string]string)
+		env = make(map[string]string)
 	)
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
@@ -209,5 +209,7 @@ func ProcessBlock(block *types.Block) error {
 		}
 	}
 	WriteReceipts(receipts)
+	root, _ := statedb.Commit()
+	block.MerkleRoot = root.Bytes()
 	return nil
 }

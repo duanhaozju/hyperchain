@@ -74,7 +74,7 @@ func CreateInitBlock(filename string) {
 			balanceIns.PutDBBalance(common.HexToAddress(addr),[]byte(account))*/
 
 	}
-	stateDB.Commit()
+	root, _ := stateDB.Commit()
 	//stateDB.GetBalance()
 
 	block := types.Block{
@@ -82,7 +82,7 @@ func CreateInitBlock(filename string) {
 		Timestamp:  genesis["test1"].Timestamp,
 		BlockHash:  common.FromHex(genesis["test1"].BlockHash),
 		Number:     genesis["test1"].Number,
-		//MerkleRoot:       "root",
+		MerkleRoot: root.Bytes(),
 	}
 
 	log.Debug("构造创世区块")
