@@ -13,8 +13,8 @@ import (
 
 	"hyperchain/hyperdb"
 
+	"fmt"
 	"hyperchain/core/state"
-
 	"math/big"
 )
 
@@ -66,7 +66,7 @@ func CreateInitBlock(filename string) {
 
 		//statedb.AddBalance(address, common.String2Big(account))
 		object := stateDB.CreateAccount(common.HexToAddress(addr))
-
+		fmt.Println("INIT ADDR", common.HexToAddress(addr).Bytes())
 		object.AddBalance(big.NewInt(account))
 
 		/*
@@ -75,7 +75,6 @@ func CreateInitBlock(filename string) {
 
 	}
 	root, _ := stateDB.Commit()
-	//stateDB.GetBalance()
 
 	block := types.Block{
 		ParentHash: common.FromHex(genesis["test1"].ParentHash),
@@ -86,14 +85,11 @@ func CreateInitBlock(filename string) {
 	}
 
 	log.Debug("构造创世区块")
-	err = PutBlock(db, block.BlockHash, &block)
-	// write transaction
-	//PutTransactions(db, commonHash, block.Transactions)
-	if err != nil {
+	if err := PutBlock(db, block.BlockHash, &block); err != nil {
 		log.Fatal(err)
 	}
 	UpdateChain(&block, true)
-
+	fmt.Printf("[GENESIS] %s\n", string(stateDB.Dump()))
 	log.Info("current chain block number is", GetChainCopy().Height)
 
 }

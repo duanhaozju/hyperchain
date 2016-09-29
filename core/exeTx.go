@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	glog "github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/core/state"
@@ -67,18 +68,18 @@ func ExecBlock(block *types.Block) (err error) {
 // 这一块相当于ethereum里的TransitionDB
 func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
 	var (
-		from = common.BytesToAddress(tx.From)
+		from = common.HexToAddress(fmt.Sprintf("%x", tx.From))
 		//sender = common.BytesToAddress(tx.From)
-		to = common.BytesToAddress(tx.To)
+		to = common.HexToAddress(fmt.Sprintf("%x", tx.To))
 		// TODO these there parameters should be added into the tx
 		data     = tx.Payload()
 		gas      = tx.Gas()
 		gasPrice = tx.GasPrice()
 		amount   = tx.Amount()
 	)
+	fmt.Println("[ExecTransaction]from", from.Bytes())
 	//log.Notice("the to is ---------",to)
 	//log.Notice("the to is ---------",tx.To)
-
 	receipt = types.NewReceipt(nil, gas)
 	receipt.TxHash = tx.BuildHash().Bytes()
 	// todo replace the gasused

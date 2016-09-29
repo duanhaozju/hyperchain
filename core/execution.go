@@ -1,11 +1,12 @@
 package core
 
 import (
-	"math/big"
+	"fmt"
 	"hyperchain/common"
-	"hyperchain/core/vm"
 	"hyperchain/core/crypto"
+	"hyperchain/core/vm"
 	"hyperchain/core/vm/params"
+	"math/big"
 	//"hyperchain/core/vm/compiler"
 )
 
@@ -50,7 +51,7 @@ func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPric
 }
 
 func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
-	//fmt.Println("exec")
+	fmt.Println("step5")
 
 	evm := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
@@ -61,6 +62,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		return nil, common.Address{}, vm.DepthError
 	}
 
+	fmt.Println("step6")
 	// TODO
 	if !env.CanTransfer(caller.Address(), value) {
 		//caller.ReturnGas(gas, gasPrice)
@@ -77,6 +79,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		createAccount = true
 	}
 
+	fmt.Println("step7")
 	snapshotPreTransfer := env.MakeSnapshot()
 	var (
 		from = env.Db().GetAccount(caller.Address())
@@ -91,14 +94,14 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		} else {
 
 			to = env.Db().GetAccount(*address)
-			if statedb.GetCode(to.Address())==nil{
+			if statedb.GetCode(to.Address()) == nil {
 
 				env.Transfer(from, to, value)
 			}
 		}
 	}
 
-
+	fmt.Println("step8")
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
@@ -106,18 +109,18 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	contract.SetCallCode(codeAddr, code)
 	defer contract.Finalise()
 
-
 	ret, err = evm.Run(contract, input)
 
+	fmt.Println("step9")
 	/*
-	fmt.Println("---------------------------------------")
-	fmt.Println("caller.address",caller.Address())
-	fmt.Println("address",address)
-	fmt.Println("codeaddress",codeAddr)
-	fmt.Println("input",input)
-	fmt.Println("code",code)
-	fmt.Println("---------------------------------------")
-	fmt.Println("ret",ret)
+		fmt.Println("---------------------------------------")
+		fmt.Println("caller.address",caller.Address())
+		fmt.Println("address",address)
+		fmt.Println("codeaddress",codeAddr)
+		fmt.Println("input",input)
+		fmt.Println("code",code)
+		fmt.Println("---------------------------------------")
+		fmt.Println("ret",ret)
 	*/
 
 	// if the contract creation ran successfully and no errors were returned
@@ -134,6 +137,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		}
 	}
 
+	fmt.Println("step10")
 	// When an error was returned by the EVM or when setting the creation code
 	// above we revert to the snapshot and consume any gas remaining. Additionally
 	// when we're in homestead this also counts for code storage gas errors.

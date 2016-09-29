@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"encoding/hex"
+	"fmt"
 	"hyperchain/common"
 	"hyperchain/core/state"
 	"hyperchain/core/types"
@@ -136,36 +137,20 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 // 3. Update chain
 // 4. Update balance
 func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int64) {
-
 	log.Info("block number is ", block.Number)
+
 	currentChain := GetChainCopy()
-	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {
+
+	block.ParentHash = currentChain.LatestBlockHash
+	if err := ProcessBlock(block); err != nil {
 		log.Fatal(err)
 	}
+
+	block.WriteTime = time.Now().UnixNano()
+	block.CommitTime = commitTime
+	block.BlockHash = block.Hash(commonHash).Bytes()
 
 	UpdateChain(block, false)
-	/*
-		balance, err := GetBalanceIns()
-		if err != nil {
-			log.Fatal(err)
-		}
-	*/
-
-	newChain := GetChainCopy()
-	log.Notice("Block number", newChain.Height)
-	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
-	block.WriteTime = time.Now().UnixNano()
-
-	//	balance.UpdateDBBalance(block)
-	err = ProcessBlock(block)
-	block.ParentHash = currentChain.LatestBlockHash
-	block.BlockHash = block.Hash(commonHash).Bytes()
-	//block.WriteTime = time.Now().UnixNano()
-	block.CommitTime = commitTime
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	if block.Number%10 == 0 && block.Number != 0 {
 		WriteChainChan()
@@ -173,12 +158,20 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	// update our stateObject and statedb to blockchain
 	//ExecBlock(block)
 	block.EvmTime = time.Now().UnixNano()
-	err = PutBlock(db, block.BlockHash, block)
-	// write transaction
-	//PutTransactions(db, commonHash, block.Transactions)
+
+	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
+	if err := PutBlock(db, block.BlockHash, block); err != nil {
+		log.Fatal(err)
+	}
+	// write transaction
+	//PutTransactions(db, commonHash, block.Transactions)
+
+	newChain := GetChainCopy()
+	log.Notice("Block number", newChain.Height)
+	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
 	//TxSum.Add(TxSum,big.NewInt(int64(len(block.Transactions))))
 	//CommitStatedbToBlockchain()
 }
@@ -193,23 +186,28 @@ func ProcessBlock(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	statedb, e := state.New(common.BytesToHash(block.ParentHash), db)
+	parentBlock, _ := GetBlock(db, block.ParentHash)
+
+	statedb, e := state.New(common.BytesToHash(parentBlock.MerkleRoot), db)
 	if err != nil {
 		return e
 	}
 	env["currentNumber"] = "1"
 	env["currentGasLimit"] = "10000000"
-	vmenv = NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
+	vmenv := NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
 
 	for _, tx := range block.Transactions {
 		// statedb.StartRecord(tx.BuildHash(), block.Hash(), i)
 		receipt, _, _, err := ExecTransaction(*tx, vmenv)
+
 		if err == nil {
 			receipts = append(receipts, receipt)
 		}
 	}
 	WriteReceipts(receipts)
 	root, _ := statedb.Commit()
+
 	block.MerkleRoot = root.Bytes()
+	fmt.Printf("[Process Block %d], Statedb DUMP: %s\n", block.Number, string(statedb.Dump()))
 	return nil
 }
