@@ -5,9 +5,9 @@
 package core
 
 import (
+	"encoding/json"
 	"hyperchain/core/types"
 	"io/ioutil"
-	"encoding/json"
 
 	"hyperchain/common"
 
@@ -18,11 +18,10 @@ import (
 	"math/big"
 )
 
-
-func CreateInitBlock(filename string)  {
+func CreateInitBlock(filename string) {
 	log.Info("genesis start")
 
-	if(GetHeightOfChain()>0){
+	if GetHeightOfChain() > 0 {
 		log.Info("already genesis")
 		return
 	}
@@ -49,17 +48,15 @@ func CreateInitBlock(filename string)  {
 		return
 	}
 
-	//balanceIns, err := GetBalanceIns()
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
 	}
-	db,err:=hyperdb.GetLDBDatabase()
-	//PutDBBalance(db,balanceIns.dbBalance)
-	if err!=nil{
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	stateDB,_:=state.New(common.Hash{}, db)
+	stateDB, _ := state.New(common.Hash{}, db)
 	for addr, account := range genesis["test1"].Alloc {
 		/*balance:=types.Balance{
 			AccountPublicKeyHash:[]byte(addr),
@@ -68,27 +65,23 @@ func CreateInitBlock(filename string)  {
 		//address := common.HexToAddress(addr)
 
 		//statedb.AddBalance(address, common.String2Big(account))
-		object:=stateDB.CreateAccount(common.HexToAddress(addr))
+		object := stateDB.CreateAccount(common.HexToAddress(addr))
 
 		object.AddBalance(big.NewInt(account))
 
-
-/*
-		balanceIns.PutCacheBalance(common.HexToAddress(addr),[]byte(account))
-		balanceIns.PutDBBalance(common.HexToAddress(addr),[]byte(account))*/
-
+		/*
+			balanceIns.PutCacheBalance(common.HexToAddress(addr),[]byte(account))
+			balanceIns.PutDBBalance(common.HexToAddress(addr),[]byte(account))*/
 
 	}
 	stateDB.Commit()
 	//stateDB.GetBalance()
-	
-
 
 	block := types.Block{
 		ParentHash: common.FromHex(genesis["test1"].ParentHash),
-		Timestamp:   genesis["test1"].Timestamp,
-		BlockHash: common.FromHex(genesis["test1"].BlockHash),
-		Number:   genesis["test1"].Number,
+		Timestamp:  genesis["test1"].Timestamp,
+		BlockHash:  common.FromHex(genesis["test1"].BlockHash),
+		Number:     genesis["test1"].Number,
 		//MerkleRoot:       "root",
 	}
 
@@ -99,9 +92,8 @@ func CreateInitBlock(filename string)  {
 	if err != nil {
 		log.Fatal(err)
 	}
-	UpdateChain(&block,true)
+	UpdateChain(&block, true)
 
-	log.Info("current chain block number is",GetChainCopy().Height)
+	log.Info("current chain block number is", GetChainCopy().Height)
 
 }
-
