@@ -146,7 +146,7 @@ func TestNode_Chat3(t *testing.T) {
 	if err !=nil{
 		log.Error("marshal err", err)
 	}
-	log.Critical("marshal之后",hex.EncodeToString(tranferData))
+	log.Notice("marshal之后",hex.EncodeToString(tranferData))
 
 
 	transfer:= fakeRemoteTem.EncWithSecret([]byte(tranferData),testNode.address.Hash)

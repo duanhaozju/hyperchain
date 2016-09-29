@@ -18,7 +18,6 @@ import (
 	"hyperchain/p2p/peerComm"
 	"time"
 	"sync"
-	"encoding/hex"
 )
 
 // init the package-level logger system,
@@ -79,7 +78,7 @@ func NewPeerByIpAndPort(ip string,port int32,nid int32,TEM transport.TransportEn
 		if retMessage.MessageType == pb.Message_HELLO_RESPONSE {
 			remotePublicKey := retMessage.Payload
 			peer.TEM.GenerateSecret(remotePublicKey,peer.Addr.Hash)
-			log.Critical("secret",len(peer.TEM.GetSecret(peer.Addr.Hash)))
+			log.Notice("secret",len(peer.TEM.GetSecret(peer.Addr.Hash)))
 			peer.ID = int(retMessage.From.ID)
 			if err != nil{
 				log.Error("cannot decrypt the nodeidinfo!")
@@ -99,29 +98,19 @@ func NewPeerByIpAndPort(ip string,port int32,nid int32,TEM transport.TransportEn
 // this function invokes the remote function peer-to-peer,
 // which implements the service that prototype file declares
 //
-func (this *Peer)Chat(msg *pb.Message) (*pb.Message, error){
+func (this *Peer)Chat(msg pb.Message) (*pb.Message, error){
+	log.Debug("调用了广播方法",msg.From.ID,">>>",this.Addr.ID)
 	this.chatMux.Lock()
 	defer this.chatMux.Unlock()
-	//review encrypt
-	//log.Notice("sec pool size ",this.TEM.GetSceretPoolSize())
-	//this.TEM.PrintAllSecHash()
-	log.Notice("消息发往>>>",this.Addr.ID)
-	//log.Notice("消息发往秘钥>>>",this.TEM.GetSecret(this.Addr.Hash))
-	//msg.Payload=[]byte(strconv.Itoa(int(this.Addr.ID)))
-
-	source := msg.Payload
 	msg.Payload = this.TEM.EncWithSecret(msg.Payload,this.Addr.Hash)
-	//log.Critical("××××××加密传输××××××")
-	//log.Critical("to node ",this.Addr.ID)
-	log.Critical("原信息:",hex.EncodeToString(source),"加密信息:",hex.EncodeToString(msg.Payload))
-	r,err := this.Client.Chat(context.Background(),msg)
+	r,err := this.Client.Chat(context.Background(),&msg)
 	if err != nil{
 		log.Error("err:",err)
 	}
 	// 返回信息解密
-	//if r.MessageType !=pb.Message_HELLO && r.MessageType != pb.Message_HELLO_RESPONSE{
-	//	r.Payload = this.TEM.DecWithSecret(r.Payload,r.From.Hash)
-	//}
+	if r.MessageType !=pb.Message_HELLO && r.MessageType != pb.Message_HELLO_RESPONSE{
+		r.Payload = this.TEM.DecWithSecret(r.Payload,r.From.Hash)
+	}
 	return r,err
 }
 

@@ -70,20 +70,20 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	response.From = this.address
 	//handle the message
 	//review decrypt
-	log.Critical("消息类型",msg.MessageType)
+	log.Debug("消息类型",msg.MessageType)
 
 	switch msg.MessageType {
 	case pb.Message_HELLO :{
-		log.Notice("=================================")
-		log.Notice("协商秘钥")
-		log.Notice("本地地址为",this.address.ID,this.address.Ip,this.address.Port)
-		log.Notice("远端地址为",msg.From.ID,msg.From.Ip,msg.From.Port)
-		log.Notice("=================================")
+		log.Debug("=================================")
+		log.Debug("协商秘钥")
+		log.Debug("本地地址为",this.address.ID,this.address.Ip,this.address.Port)
+		log.Debug("远端地址为",msg.From.ID,msg.From.Ip,msg.From.Port)
+		log.Debug("=================================")
 		response.MessageType = pb.Message_HELLO_RESPONSE
 		//review 协商密钥
 		remotePublicKey := msg.Payload
 		this.TEM.GenerateSecret(remotePublicKey,msg.From.Hash)
-		log.Notice("协商秘钥为：",this.TEM.GetSecret(msg.From.Hash))
+		//log.Notice("协商秘钥为：",this.TEM.GetSecret(msg.From.Hash))
 		transportPublicKey := this.TEM.GetLocalPublicKey()
 		//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
 		response.Payload = transportPublicKey
@@ -95,20 +95,19 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		log.Warning("Invalidate HELLO_RESPONSE message")
 	}
 	case pb.Message_CONSUS:{
-		log.Notice("<<<< GOT A CONSUS MESSAGE >>>>")
+		log.Debug("<<<< GOT A CONSUS MESSAGE >>>>")
 
-		log.Critical("××××××Node解密信息××××××")
-		log.Critical("Node待解密信息",hex.EncodeToString(msg.Payload))
+		log.Debug("××××××Node解密信息××××××")
+		log.Debug("Node待解密信息",hex.EncodeToString(msg.Payload))
 		transferData := this.TEM.DecWithSecret(msg.Payload,msg.From.Hash)
-		log.Critical("Node解密后信息",hex.EncodeToString(transferData))
-		log.Critical("Node解密后信息2",string(transferData))
-		//response.Payload = []byte("GOT_A_CONSENSUS_MESSAGE_"+this.address.Ip+"_"+strconv.Itoa(int(this.address.Port)))
-		response.Payload = transferData
+		log.Debug("Node解密后信息",hex.EncodeToString(transferData))
+		log.Debug("Node解密后信息2",string(transferData))
+		response.Payload =  []byte("GOT_A_CONSENSUS_MESSAGE")
 		if string(transferData) == "TEST"{
 			response.Payload = []byte("GOT_A_TEST_CONSENSUS_MESSAGE")
 		}
-		log.Critical("来自节点",msg.From.ID)
-		log.Critical(hex.EncodeToString(transferData))
+		log.Debug("来自节点",msg.From.ID)
+		log.Debug(hex.EncodeToString(transferData))
 
 		go this.higherEventManager.Post(event.ConsensusEvent{
 			Payload:transferData,
@@ -162,7 +161,6 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	}
 	// 返回信息加密
 	if msg.MessageType !=pb.Message_HELLO && msg.MessageType != pb.Message_HELLO_RESPONSE{
-		log.Critical("返回值加密")
 		response.Payload = this.TEM.EncWithSecret(response.Payload,msg.From.Hash)
 	}
 	return &response, nil

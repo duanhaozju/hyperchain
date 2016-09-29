@@ -159,11 +159,12 @@ func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 		//review 这里没有返回值,不知道本次通信是否成功
 		//log.Notice(string(broadCastMessage.Payload))
 		//TODO 其实这里不需要处理返回值，需要将其go起来
-		retmsg,e := peer.Chat(&broadCastMessage)
+
+		retmsg,e := peer.Chat(broadCastMessage)
 		if e != nil {
-			log.Errorf("peer return %v",e)
+			log.Errorf("peer return err: %v",e)
 		}else{
-			log.Criticalf("peerreturn%v",retmsg)
+			log.Debug("Peer Return Msg: %v",retmsg)
 		}
 	}
 
@@ -200,7 +201,7 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte,peerList []uint64,Mes
 			//if peerId==nodeID{
 			if peer.ID == nid {
 				log.Error(nid)
-				resMsg, err := peer.Chat(&syncMessage)
+				resMsg, err := peer.Chat(syncMessage)
 				if err != nil {
 					log.Error("enter error")
 					log.Error("Broadcast failed,Node", peer.Addr)
