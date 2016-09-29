@@ -68,9 +68,9 @@ func ExecBlock(block *types.Block) (err error) {
 // 这一块相当于ethereum里的TransitionDB
 func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
 	var (
-		from = common.HexToAddress(fmt.Sprintf("%x", tx.From))
+		from = common.BytesToAddress(tx.From)
 		//sender = common.BytesToAddress(tx.From)
-		to = common.HexToAddress(fmt.Sprintf("%x", tx.To))
+		to = common.BytesToAddress(tx.To)
 		// TODO these there parameters should be added into the tx
 		data     = tx.Payload()
 		gas      = tx.Gas()
