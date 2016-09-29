@@ -15,6 +15,9 @@ import (
 	"encoding/hex"
 	"crypto/des"
 	"bytes"
+	//global "hyperchain/protos"
+	//"github.com/golang/protobuf/proto"
+	"encoding/base64"
 	"crypto/aes"
 )
 var log *logging.Logger // package-level logger
@@ -59,11 +62,25 @@ func (hSM *HandShakeManager) GenerateSecret(remotePublicKey []byte, peerHash str
 
 func (hSM *HandShakeManager) EncWithSecret(message []byte,peerHash string) []byte {
 
-	// 3DES
+
+
+	log.Critical("加密之前的信息：",hex.EncodeToString(message))
+
+	//msg := &global.Message{}
+	//err := proto.Unmarshal(message,msg)
+	//if err!=nil {
+	//	log.Errorf("非正常加密之前 %v", err)
+	//}else{
+	//	log.Criticalf("正常加密之前 %v",msg)
+	//}
+
+	//return base64Encode(message)
+
+	 //3DES
 	//key := []byte("sfe023f_sefiel#fi32lf3e!")
 	//log.Critical("密钥长度",len(key))
-	//
-	//
+
+
 	//encrypted,err := TripleDesEncrypt(message,key)
 	//if err !=nil{
 	//	log.Error(err)
@@ -84,15 +101,33 @@ func (hSM *HandShakeManager) EncWithSecret(message []byte,peerHash string) []byt
 }
 
 func (hSM *HandShakeManager) DecWithSecret(message []byte,peerHash string) []byte {
+	//message,err := base64Decode(message)
+	//if err != nil{
+	//	log.Error("Decode Fail")
+	//}
+
+	//msg := &global.Message{}
+	//errs := proto.Unmarshal(message,msg)
+	//if errs!=nil {
+	//	log.Errorf("非正常解密之后 %v", errs)
+	//}else{
+	//	log.Criticalf("正常解密之后 %v",msg)
+	//}
+
+	//return message
 
 	//3DES
 	//key := []byte("sfe023f_sefiel#fi32lf3e!")
-	//log.Critical("密钥长度",len(key))
+	////log.Critical("密钥长度",len(key))
 	//decrypted,err := TripleDesDecrypt(message,key)
 	//if err !=nil{
 	//	log.Error(err)
 	//	return nil
 	//}
+
+
+
+
 	//return decrypted
 
 	//aes
@@ -191,4 +226,13 @@ func PKCS5UnPadding(origData []byte) []byte {
 	// 去掉最后一个字节 unpadding 次
 	unpadding := int(origData[length-1])
 	return origData[:(length - unpadding)]
+}
+
+
+func base64Encode(src []byte) []byte {
+	return []byte(base64.StdEncoding.EncodeToString(src))
+}
+
+func base64Decode(src []byte) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(string(src))
 }

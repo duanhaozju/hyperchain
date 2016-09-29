@@ -22,12 +22,6 @@ import (
 	"os"
 )
 
-
-// MAX PEER NUMBER
-// var MAXPEERNODE int
-// 3DES Secret Key
-var DESKEY = []byte("sfe023f_sefiel#fi32lf3e!")
-
 // gRPC peer manager struct, which to manage the gRPC peers
 type GrpcPeerManager struct {
 	//localNodeHash
@@ -75,6 +69,7 @@ func (this *GrpcPeerManager) Start(aliveChain chan bool,eventMux *event.TypeMux)
 		os.Exit(1)
 	}
 	this.LocalNode = node.NewNode(this.Port,eventMux,this.NodeId,this.CName,this.TEM)
+	this.LocalNode.StartServer()
 	// connect to peer
 	// 如果进行单元测试,需要将参数设置为true
 	// 重构peerpool 不采用单例模式进行管理
@@ -128,7 +123,6 @@ func (this *GrpcPeerManager)connectToPeers(){
 //connect to peer by ip address and port (why int32? because of protobuf limit)
 func (this *GrpcPeerManager)connectToPeer(peerAddress *pb.PeerAddress,nid int32)(*peer.Peer,error){
 	//if this node is not online, connect it
-
 	peer, peerErr := peer.NewPeerByIpAndPort(peerAddress.Ip,peerAddress.Port,nid,this.TEM,this.LocalNode.GetNodeAddr())
 	if peerErr != nil {
 		// cannot connect to other peer
@@ -149,17 +143,12 @@ func (this *GrpcPeerManager) GetAllPeers() []*peer.Peer {
 
 // BroadcastPeers Broadcast Massage to connected peers
 func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
-	//result, err := transport.TripleDesEncrypt(payLoad, DESKEY)
-	//if err!=nil{
-	//	log.Fatal("TripleDesEncrypt Failed!")
-	//}
 	var broadCastMessage = pb.Message{
 		MessageType:  pb.Message_CONSUS,
 		From:        this.LocalNode.GetNodeAddr(),
 		Payload:      payLoad,
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
-	//go this.EventManager.PostEvent(pb.Message_CONSUS, broadCastMessage)
 	go broadcast(broadCastMessage,this.peersPool)
 }
 
@@ -169,8 +158,13 @@ func broadcast(broadCastMessage pb.Message,pPool *peerPool.PeersPool){
 	for _, peer := range pPool.GetPeers() {
 		//review 这里没有返回值,不知道本次通信是否成功
 		//log.Notice(string(broadCastMessage.Payload))
-
-		go peer.Chat(&broadCastMessage)
+		//TODO 其实这里不需要处理返回值，需要将其go起来
+		retmsg,e := peer.Chat(&broadCastMessage)
+		if e != nil {
+			log.Errorf("peer return %v",e)
+		}else{
+			log.Criticalf("peerreturn%v",retmsg)
+		}
 	}
 
 }

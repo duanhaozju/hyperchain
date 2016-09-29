@@ -40,7 +40,7 @@ func main() {
 		argv := ctx.Argv().(*argT)
 
 		//init log
-		common.InitLog(logging.DEBUG, "./logs/", argv.LocalPort)
+		common.InitLog(logging.NOTICE, "./logs/", argv.LocalPort)
 		eventMux := new(event.TypeMux)
 
 		//init peer manager to start grpc server and client
