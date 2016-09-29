@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-MAXNODE=100
+MAXNODE=10
 killprocess(){
 
   echo "kill the bind port process"
