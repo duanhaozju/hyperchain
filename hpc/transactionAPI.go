@@ -21,7 +21,7 @@ const (
 
 var log *logging.Logger // package-level logger
 func init() {
-	log = logging.MustGetLogger("jsonrpc/api")
+	log = logging.MustGetLogger("hpc")
 }
 
 type PublicTransactionAPI struct {
@@ -50,9 +50,6 @@ type TransactionResult struct {
 	//TxIndex	  string	`json:"txIndex"`
 	From      common.Address	`json:"from"`
 	To        common.Address	`json:"to"`
-	//Amount     string		`json:"amount"`
-	//Gas	   string		`json:"gas"`
-	//GasPrice   string		`json:"gasPrice"`
 	Amount     Number		`json:"amount"`
 	Gas	   Number		`json:"gas"`
 	GasPrice   Number		`json:"gasPrice"`
@@ -107,7 +104,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//end:=start+500
 
 		for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 100; i++ {
+			for i := 0; i < 10; i++ {
 				tx.TimeStamp=time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
@@ -129,7 +126,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		return tx.BuildHash(),nil
 
 	} else {
-		return common.Hash{}, errors.New("account isn't unlock")
+		return common.Hash{}, errors.New("account don't unlock")
 	}
 }
 
