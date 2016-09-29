@@ -8,6 +8,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	"fmt"
 	"hyperchain/common"
+	"encoding/json"
+	"os"
 )
 
 func TestPublicTransactionAPI_GetTransactionByHash(t *testing.T) {
@@ -42,5 +44,6 @@ func TestPublicTransactionAPI_GetTransactionByHash(t *testing.T) {
 	}
 
 	fmt.Printf("tx hash: %#v\n",common.ToHex(txGet.Hash[:]))
-	fmt.Printf(fmt.Sprintf(`%#x`, txGet))
+	e := json.NewEncoder(os.Stdout)
+	e.Encode(txGet)
 }

@@ -83,7 +83,6 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	var tx *types.Transaction
 
 	realArgs := prepareExcute(args)
-
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), nil)
 
 	value, err := proto.Marshal(txValue)
@@ -91,8 +90,6 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	if err != nil {
 		return common.Hash{}, err
 	}
-	log.Infof("realArgs: %#v",realArgs)
-	log.Infof("from: %#v",common.ToHex(realArgs.From[:]))
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 
 	am := tran.pm.AccountManager
@@ -102,10 +99,6 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	}else if _,found := am.Unlocked[args.From];found {
 
 		// Balance is enough
-		//txBytes, err := proto.Marshal(tx)
-		//if err != nil {
-		//	log.Fatalf("proto.Marshal(tx) error: %v",err)
-		//}
 
 		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 		log.Infof("############# %d: start send request#############", time.Now().Unix())

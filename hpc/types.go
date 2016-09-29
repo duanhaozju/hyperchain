@@ -4,6 +4,8 @@ import (
 	"math/big"
 	"fmt"
 	"strings"
+	"encoding/json"
+	"strconv"
 )
 
 type Number int64
@@ -13,6 +15,20 @@ func NewInt64ToNumber(n int64) *Number{
 	return &num
 }
 
+func NewUint64ToNumber(n uint64) *Number{
+	num := Number(n)
+	return &num
+}
+
+func (n Number) Hex() string   { return "0x" + strconv.FormatInt(int64(n), 16) }
+
+
+// MarshalJSON serialize given number to JSON
+func (n Number) MarshalJSON() ([]byte, error) {
+	return json.Marshal(n.Hex())
+}
+
+// UnmarshalJSON parses a hash in its hex from to a number
 func (n *Number) UnmarshalJSON(data []byte) error {
 
 	input := strings.TrimSpace(string(data))
@@ -33,21 +49,16 @@ func (n *Number) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON serialize the hex number instance to a hex representation.
-func (n *Number) MarshalJSON() ([]byte, error) {
-	if n != nil {
-		hn := big.NewInt(int64(*n))
-		if hn.BitLen() == 0 {
-			return []byte(`"0x0"`), nil
-		}
-		return []byte(fmt.Sprintf(`"0x%x"`, hn)), nil
-	}
-	return nil, nil
-}
-
 func (n *Number) ToInt64() int64{
 	if n == nil {
 		return 0
 	}
 	return int64(*n)
+}
+
+func (n Number) ToUnit64() uint64{
+	if n <= 0{
+		return 0
+	}
+	return uint64(n)
 }
