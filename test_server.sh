@@ -3,8 +3,8 @@ set -e
 
 govendor build
 
-PRIMARY="114.55.64.132"
-MAXNODE=100
+PRIMARY="115.159.122.96"
+MAXNODE=7
 
 scp -r killprocess.sh satoshi@$PRIMARY:/home/satoshi/
 ssh -t satoshi@$PRIMARY "chmod a+x killprocess.sh && bash killprocess.sh && rm -rf keystore"
