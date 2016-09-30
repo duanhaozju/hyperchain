@@ -1,7 +1,7 @@
 // author: Lizhong kuang
 // date: 2016-09-29
 
-package main
+package membersrvc
 
 import (
 	"fmt"
@@ -25,11 +25,10 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-
 	"time"
 
 	//membersrvc "github.com/hyperledger/fabric/membersrvc/protos"
-        membersrvc "hyperchain/membersrvc/protos"
+	membersrvc "hyperchain/membersrvc/protos"
 
 	"hyperchain/membersrvc/ca"
 	"hyperchain/core/crypto"
@@ -39,7 +38,9 @@ import (
 
 const envPrefix = "MEMBERSRVC_CA"
 
-func main() {
+var config *viper.Viper
+
+func StartCAServer() {
 	viper.SetEnvPrefix(envPrefix)
 	viper.AutomaticEnv()
 	replacer := strings.NewReplacer(".", "_")
@@ -50,7 +51,10 @@ func main() {
 	// Path to look for the config file based on GOPATH
 	gopath := os.Getenv("GOPATH")
 	for _, p := range filepath.SplitList(gopath) {
-		cfgpath := filepath.Join(p, "src/github.com/hyperledger/fabric/membersrvc")
+		//cfgpath := filepath.Join(p, "src/github.com/hyperledger/fabric/membersrvc")
+		cfgpath := filepath.Join(p, "src/hyperchain/membersrvc/")
+
+		fmt.Println(cfgpath)
 		viper.AddConfigPath(cfgpath)
 	}
 	err := viper.ReadInConfig()
@@ -112,16 +116,18 @@ func main() {
 
 	var opts []grpc.ServerOption
 	if viper.GetString("server.tls.cert.file") != "" {
-		//creds, err := credentials.NewServerTLSFromFile("/Users/kuang/go-workspace/src/github.com/hyperledger/fabric/membersrvc/ca/test_resources/tlsca.cert", "/Users/kuang/go-workspace/src/github.com/hyperledger/fabric/membersrvc/ca/test_resources/tlsca.priv")
+		//creds, err := credentials.NewServerTLSFromFile(cert, priv)
+
 
 		creds, err := credentials.NewServerTLSFromFile(viper.GetString("server.tls.cert.file"), viper.GetString("server.tls.key.file"))
+
 		if err != nil {
 			panic(err)
 		}
 		opts = []grpc.ServerOption{grpc.Creds(creds)}
 	}
 	srv := grpc.NewServer(opts...)
-	fmt.Println("port is ",viper.GetString("server.port"))
+	fmt.Println("port is ", viper.GetString("server.port"))
 
 	aca.Start(srv)
 	eca.Start(srv)
@@ -135,37 +141,33 @@ func main() {
 		go srv.Serve(sock)
 		//sock.Close()
 	}
-	a:=make(chan bool)
-	time.Sleep(time.Second * 10)
-
+	/*time.Sleep(time.Second * 20)
+	a := make(chan bool)
 	requestTLSCertificateDemo()
-	go func(){
-		for i:=0;i<10;i++{
-			time.Sleep(time.Second *5)
+	go func() {
+		for i := 0; i < 10; i++ {
+			time.Sleep(time.Second * 5)
 			requestTLSCertificateDemo()
-
 
 		}
 	}()
+	<-a*/
 
-	<-a
 }
 
 
 func requestTLSCertificateDemo() {
 	var opts []grpc.DialOption
 
-
-
-	//creds, err := credentials.NewClientTLSFromFile(viper.GetString("server.tls.cert.file"), "tlsca")
-	creds, err := credentials.NewClientTLSFromFile("/Users/kuang/go-workspace/src/github.com/hyperledger/fabric/membersrvc/ca/test_resources/tlsca.cert", "tlsca")
+	creds, err := credentials.NewClientTLSFromFile(viper.GetString("server.tls.cert.file"), "tlsca")
+	//creds, err := credentials.NewClientTLSFromFile(clientCAPath + "/tlsca.cert", "tlsca")
 	if err != nil {
 		fmt.Println("Failed creating credentials for TLS-CA client: %s", err)
 
 	}
 
 	opts = append(opts, grpc.WithTransportCredentials(creds))
-	fmt.Println("connect port is ",viper.GetString("server.paddr"))
+	fmt.Println("connect port is ", viper.GetString("server.paddr"))
 	sockP, err := grpc.Dial(viper.GetString("server.paddr"), opts...)
 	if err != nil {
 		fmt.Println("Failed dialing in: %s", err)
@@ -214,12 +216,42 @@ func requestTLSCertificateDemo() {
 	if err != nil {
 		fmt.Println("Failed dialing in: %s", err)
 	}
-	fmt.Println("resp is",resp.Cert.Cert)
+	fmt.Println("resp is", resp.Cert.Cert)
 
-	storePrivateKeyInClear("tls_peer.priv", priv)
-	storeCert("tls_peer.cert", resp.Cert.Cert)
-	storeCert("tls_peer.ca", resp.RootCert.Cert)
+	storePrivateKeyInClear("cert/tls_peer.priv", priv)
+	storeCert("cert/tls_peer.cert", resp.Cert.Cert)
+	storeCert("cert/tls_peer.ca", resp.RootCert.Cert)
 }
+
+func GetGrpcOpts(clientCAPath string) []grpc.DialOption {
+	var opts []grpc.DialOption
+
+
+	//creds, err := credentials.NewClientTLSFromFile(viper.GetString("server.tls.cert.file"), "tlsca")
+	creds, err := credentials.NewClientTLSFromFile(clientCAPath + "/tlsca.cert", "tlsca")
+	if err != nil {
+		fmt.Println("Failed creating credentials for TLS-CA client: %s", err)
+
+	}
+	opts = append(opts, grpc.WithTransportCredentials(creds))
+	return opts
+}
+
+func GetGrpcServerOpts(caPath string) []grpc.ServerOption {
+	var opts []grpc.ServerOption
+	creds, err := credentials.NewServerTLSFromFile(caPath + "./tlsca.cert", caPath + "/tlsca.priv")
+
+	fmt.Println(viper.GetString("server.tls.cert.file"))
+	//creds, err := credentials.NewServerTLSFromFile(viper.GetString("server.tls.cert.file"), viper.GetString("server.tls.key.file"))
+
+	if err != nil {
+		panic(err)
+	}
+	opts = []grpc.ServerOption{grpc.Creds(creds)}
+	return opts
+
+}
+
 func storePrivateKeyInClear(alias string, privateKey interface{}) {
 	rawKey, err := primitives.PrivateKeyToPEM(privateKey, nil)
 	if err != nil {
@@ -238,4 +270,25 @@ func storeCert(alias string, der []byte) {
 	if err != nil {
 		fmt.Println(err)
 	}
+}
+func loadConfig(path string) (config *viper.Viper) {
+
+	config = viper.New()
+
+	// for environment variables
+	config.SetEnvPrefix(envPrefix)
+	config.AutomaticEnv()
+	replacer := strings.NewReplacer(".", "_")
+	config.SetEnvKeyReplacer(replacer)
+	config.SetConfigName("membersrvc")
+	config.SetConfigType("yaml")
+	//config.SetConfigName("config")
+	config.AddConfigPath(path)
+
+	err := config.ReadInConfig()
+	if err != nil {
+		panic(fmt.Errorf("Error reading %s plugin config: %s", envPrefix, err))
+	}
+
+	return
 }
