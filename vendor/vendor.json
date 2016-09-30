@@ -3,6 +3,13 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "QfNyP58Wby5nuvgr37f7vxct75A=",
+			"origin": "github.com/hyperledger/fabric/vendor/github.com/BurntSushi/toml",
+			"path": "github.com/BurntSushi/toml",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
 			"checksumSHA1": "2avCvSn0XonfApKKuTMyiQmk7s0=",
 			"path": "github.com/Sirupsen/logrus",
 			"revision": "3ec0642a7fb6488f65b06f9040adc67e3990296a",
@@ -88,16 +95,163 @@
 			"revisionTime": "2016-08-22T21:41:45Z"
 		},
 		{
+			"checksumSHA1": "RD5XdNr59UaVLdAQgvzD/nT0bOw=",
+			"path": "github.com/hyperledger/fabric/core/comm",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "s90jNu3L+8OPG2SS7FZAaemQjHs=",
+			"path": "github.com/hyperledger/fabric/core/crypto",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "P2RUXhgAkuk77/fJi7bbpkNcn0o=",
+			"path": "github.com/hyperledger/fabric/core/crypto/attributes",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "Z9rfzdTU1tbujqoZxECD9Ra91SA=",
+			"path": "github.com/hyperledger/fabric/core/crypto/attributes/proto",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "UH5duux7GQ40D28QJiQfvmCGj9c=",
+			"path": "github.com/hyperledger/fabric/core/crypto/primitives",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "a4X9Y7GSpAUJRtN9EKN9OOhSY7c=",
+			"path": "github.com/hyperledger/fabric/core/crypto/primitives/ecies",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "xRybnSkcWsFUr7I4AdHeH7xbIBE=",
+			"path": "github.com/hyperledger/fabric/core/crypto/utils",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "lUcMPGK44oCU5E7njcavb3qnGj0=",
+			"path": "github.com/hyperledger/fabric/core/db",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "jy5xZ5+mR816Ji6+nAvRdcE80oY=",
+			"path": "github.com/hyperledger/fabric/core/ledger",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "8PtjLjOLwh7nXLKjFlUOi3AGIxc=",
+			"path": "github.com/hyperledger/fabric/core/ledger/perfstat",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "fe1ZmhzsszqqL6rVB8k/xEwgKsM=",
+			"path": "github.com/hyperledger/fabric/core/ledger/statemgmt",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "pR4l3UQlA5qcQAx4lc3T5mfcVvM=",
+			"path": "github.com/hyperledger/fabric/core/ledger/statemgmt/buckettree",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "mGFkpEYZZQ0igghZDazS5xK59Do=",
+			"path": "github.com/hyperledger/fabric/core/ledger/statemgmt/raw",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "Syc08HKyDPZBa1xEPNTDyXdcDlQ=",
+			"path": "github.com/hyperledger/fabric/core/ledger/statemgmt/state",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "Zv371PaJ2cDdRmWWxui2rRvJvAs=",
+			"path": "github.com/hyperledger/fabric/core/ledger/statemgmt/trie",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "RRXcrGl+tztwyw9eCAFvdFgYKmY=",
+			"path": "github.com/hyperledger/fabric/core/ledger/testutil",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "fBm8An72HVGGU9EPZpEE1n1x440=",
+			"path": "github.com/hyperledger/fabric/core/ledger/util",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "5ovyIsfh1gn+heSbnI2GrLT6l0A=",
+			"path": "github.com/hyperledger/fabric/core/util",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "WFB+15qimn0zCfYOPbtlnt4FvsI=",
+			"path": "github.com/hyperledger/fabric/events/producer",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "GJJxPTv6XSenSjtB/+ejfw29Qh4=",
+			"path": "github.com/hyperledger/fabric/membersrvc/protos",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "0slaOyZJVkiRUYO82WD9q7rg9TE=",
+			"path": "github.com/hyperledger/fabric/protos",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
 			"checksumSHA1": "KQhA4EQp4Ldwj9nJZnEURlE6aQw=",
 			"path": "github.com/kr/fs",
 			"revision": "2788f0dbd16903de03cb8186e5c7d97b69ad387b",
 			"revisionTime": "2013-11-06T22:25:44Z"
 		},
 		{
+			"checksumSHA1": "1YeGotQXMZMqk+mmm8sbBVJywpw=",
+			"origin": "github.com/hyperledger/fabric/vendor/github.com/kr/pretty",
+			"path": "github.com/kr/pretty",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
+			"checksumSHA1": "uulQHQ7IsRKqDudBC8Go9J0gtAc=",
+			"origin": "github.com/hyperledger/fabric/vendor/github.com/kr/text",
+			"path": "github.com/kr/text",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
 			"checksumSHA1": "S6PDDQMYaKwLDIP/NsRYb4FRAqQ=",
 			"path": "github.com/magiconair/properties",
 			"revision": "61b492c03cf472e0c6419be5899b8e0dc28b1b88",
 			"revisionTime": "2016-08-16T08:55:11Z"
+		},
+		{
+			"checksumSHA1": "p/AkbrCV0vCPuGy/xnCrZuusM8g=",
+			"origin": "github.com/hyperledger/fabric/vendor/github.com/mattn/go-sqlite3",
+			"path": "github.com/mattn/go-sqlite3",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
 		},
 		{
 			"checksumSHA1": "LUrnGREfnifW4WDMaavmc9MlLI0=",
@@ -203,6 +357,13 @@
 			"revisionTime": "2016-06-15T09:26:46Z"
 		},
 		{
+			"checksumSHA1": "wzd7hn+EAwAO7QZ0YbsQBK1m9gg=",
+			"origin": "github.com/hyperledger/fabric/vendor/github.com/tecbot/gorocksdb",
+			"path": "github.com/tecbot/gorocksdb",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
 			"checksumSHA1": "h+pFYiRHBogczS8/F1NoN3Ata44=",
 			"path": "golang.org/x/crypto/curve25519",
 			"revision": "351dc6a5bf92a5f2ae22fadeee08eb6a45aa2d93",
@@ -219,6 +380,13 @@
 			"path": "golang.org/x/crypto/ed25519/internal/edwards25519",
 			"revision": "351dc6a5bf92a5f2ae22fadeee08eb6a45aa2d93",
 			"revisionTime": "2016-08-24T13:50:57Z"
+		},
+		{
+			"checksumSHA1": "4D8hxMIaSDEW5pCQk22Xj4DcDh4=",
+			"origin": "github.com/hyperledger/fabric/vendor/golang.org/x/crypto/hkdf",
+			"path": "golang.org/x/crypto/hkdf",
+			"revision": "bc89c496413265e715159bdc8478ee9a92fdc265",
+			"revisionTime": "2016-07-08T11:45:45Z"
 		},
 		{
 			"checksumSHA1": "1MGpGDQqnUoRpv7VEcQrXOBydXE=",
@@ -265,6 +433,13 @@
 			"path": "golang.org/x/text/unicode/norm",
 			"revision": "d69c40b4be55797923cec7457fac7a244d91a9b6",
 			"revisionTime": "2016-08-15T22:39:46Z"
+		},
+		{
+			"checksumSHA1": "gbW0f3IRg4wsuHITKgfH+VsxWK0=",
+			"origin": "github.com/hyperledger/fabric/vendor/google/protobuf",
+			"path": "google/protobuf",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
 		},
 		{
 			"checksumSHA1": "NGg7/qIJVUfXi7xnEyyDLocdi6Y=",
