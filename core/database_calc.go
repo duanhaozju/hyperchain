@@ -214,10 +214,24 @@ func CalBlockGPS()error{
 	latest,_ := GetBlockByNumber(db,height)
 	endTime := latest.WriteTime
 	content :=[]string{}
-	s := "start time: "+time.Unix(0,startTime).Format("2006-01-02 15:04:05")+" end time: "+time.Unix(0,endTime).Format("2006-01-02 15:04:05")+" total blocks: "+strconv.FormatUint(height,10)+"\n"
-	content=append(content,s)
+	s := "start time: "+time.Unix(0,startTime).Format("2006-01-02 15:04:05")+" end time: "+time.Unix(0,endTime).Format("2006-01-02 15:04:05")+"\n"
+
 	count :=0
 	flag := true
+	var avg float64 = 0
+	for i:=uint64(1);i<=height;i++{
+		block,_ := GetBlockByNumber(db,i)
+		if block.WriteTime-startTime>int64(20*time.Second){
+			break
+		}
+		if block.WriteTime-startTime>int64(10*time.Second){
+			avg+=1
+		}
+	}
+	avg = avg/10
+	log.Info(avg,"----------------1----------------")
+	s = s+"total blocks: "+strconv.FormatUint(height,10)+"      blocks per second: "+strconv.FormatFloat(avg,'f',2,32)+"\n"
+	content=append(content,s)
 	for i:=uint64(1);i<=height;i++{
 		block,_ := GetBlockByNumber(db,i)
 		//println(time.Unix(block.WriteTime / int64(time.Second), 0).Format("2006-01-02 15:04:05"),"********",block.Number)
@@ -251,6 +265,8 @@ func CalBlockGPS()error{
 	return storeData(path,content)
 }
 func storeData(file string,content []string) error {
+	index := time.Now().Unix()
+	file = file + "_"+strconv.FormatInt(index,10)
 	dir := filepath.Dir(file)
 	_, err := os.Stat(dir)
 	if !(err == nil || os.IsExist(err)){//file exists

@@ -158,12 +158,12 @@ func PutBlock(db hyperdb.Database, key []byte, t *types.Block) error {
 		return err
 	}
 	keyNum := strconv.FormatInt(int64(t.Number), 10)
-	path := "/tmp/hyperchain/cache/block/"+keyNum
+	//path := "/tmp/hyperchain/cache/block/"+keyNum
 
-	err =storeBlockData(path,data)
-	if err != nil {
-		return err
-	}
+	//err =storeBlockData(path,data)
+	//if err != nil {
+	//	return err
+	//}
 	err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
 	return err
 
