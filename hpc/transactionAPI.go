@@ -78,6 +78,7 @@ func prepareExcute(args SendTxArgs) SendTxArgs{
 func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error){
 
 	var tx *types.Transaction
+	var found bool
 
 	realArgs := prepareExcute(args)
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), nil)
@@ -89,11 +90,22 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	}
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 
-	am := tran.pm.AccountManager
+
+	if tran.pm == nil {
+
+		// Test environment
+		found = true
+	} else {
+
+		// Development environment
+		am := tran.pm.AccountManager
+		_, found = am.Unlocked[args.From]
+	}
+	//am := tran.pm.AccountManager
 
 	if (!core.VerifyBalance(tx)){
 		return common.Hash{},errors.New("Not enough balance!")
-	}else if _,found := am.Unlocked[args.From];found {
+	}else if found == true {
 
 		// Balance is enough
 
@@ -135,6 +147,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (common.Hash, error){
 
 	var tx *types.Transaction
+	var found bool
 
 	realArgs := prepareExcute(args)
 
@@ -159,9 +172,19 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 	}
 
-	am := tran.pm.AccountManager
+	if tran.pm == nil {
 
-	if _,found := am.Unlocked[args.From];found {
+		// Test environment
+		found = true
+	} else {
+
+		// Development environment
+		am := tran.pm.AccountManager
+		_, found = am.Unlocked[args.From]
+	}
+	//am := tran.pm.AccountManager
+
+	if found == true {
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
 		end:=start+6
@@ -250,7 +273,7 @@ func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) *types
 //	return transactions
 //}
 
-func (tran *PublicTransactionAPI) GetTransactionByHash(hash string) (*TransactionResult, error){
+func (tran *PublicTransactionAPI) GetTransactionByHash(hash common.Hash) (*TransactionResult, error){
 
 	var txValue types.TransactionValue
 
@@ -261,7 +284,7 @@ func (tran *PublicTransactionAPI) GetTransactionByHash(hash string) (*Transactio
 		return nil, err
 	}
 
-	tx, err := core.GetTransaction(db, common.FromHex(hash))
+	tx, err := core.GetTransaction(db, hash[:])
 
 	if tx.From == nil {
 		return nil, errors.New("Not found this transaction")
@@ -282,3 +305,37 @@ func (tran *PublicTransactionAPI) GetTransactionByHash(hash string) (*Transactio
 		Timestamp: time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
 	}, nil
 }
+
+// todo 根据区块哈希、索引返回交易信息
+func (tran *PublicTransactionAPI) GetTransactionByBlockHashAndIndex(hash common.Hash, index Number) (*TransactionResult, error) {
+	//blockAPI := GetBlockAPI()
+
+	//db, err := hyperdb.GetLDBDatabase()
+	//
+	//if err != nil {
+	//	log.Errorf("Open database error: %v", err)
+	//	return nil, err
+	//}
+	//
+	//block, err := core.GetBlock(db, hash[:])
+	//log.Infof("block hash: %v", common.ToHex(hash[:]))
+	//log.Infof("block: %v", block)
+	//log.Info(index)
+	//tx := block.Transactions[index]
+	//log.Info(tx)
+	//
+	//if err != nil {
+	//	log.Errorf("%v", err)
+	//	return nil, err
+	//}
+
+
+	return nil, nil
+}
+
+// todo 根据区块高度、索引返回交易信息
+func (tran *PublicTransactionAPI) GetTransactionsByBlockNumberAndIndex(number Number, index Number) (*TransactionResult, error){
+	return nil, nil
+}
+
+

@@ -13,37 +13,70 @@ type API struct {
 	Public    bool        // indication if the methods must be considered safe for public use
 }
 
+var TxAPI *PublicTransactionAPI
+var NodeAPI *PublicNodeAPI
+var BlockAPI *PublicBlockAPI
+var AccountAPI *PublicAccountAPI
+var ContractAPI *PublicContractAPI
+
 func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager) []API{
+
+	TxAPI = NewPublicTransactionAPI(eventMux,pm)
+	NodeAPI = NewPublicNodeAPI(pm)
+	BlockAPI = NewPublicBlockAPI()
+	AccountAPI = NewPublicAccountAPI(pm)
+	ContractAPI = NewPublicContractAPI()
+
 	return []API{
 		{
 			Namespace: "tx",
 			Version: "0.4",
-			Service: NewPublicTransactionAPI(eventMux,pm),
+			Service: TxAPI,
 			Public: true,
 		},
 		{
 			Namespace: "node",
 			Version: "0.4",
-			Service: NewPublicNodeAPI(pm),
+			Service: NodeAPI,
 			Public: true,
 		},
 		{
 			Namespace: "block",
 			Version: "0.4",
-			Service: NewPublicBlockAPI(),
+			Service: BlockAPI,
 			Public: true,
 		},
 		{
 			Namespace: "acot",
 			Version: "0.4",
-			Service: NewPublicAccountAPI(pm),
+			Service: AccountAPI,
 			Public: true,
 		},
 		{
 			Namespace: "contract",
 			Version: "0.4",
-			Service: NewPublicContractAPI(),
+			Service: ContractAPI,
 			Public: true,
 		},
 	}
+}
+
+func GetTxAPI() *PublicTransactionAPI{
+	return TxAPI
+}
+
+func GetBlockAPI() *PublicBlockAPI{
+	return BlockAPI
+}
+
+func GetNodeAPI() *PublicNodeAPI{
+	return NodeAPI
+}
+
+func GetAccountAPI() *PublicAccountAPI{
+	return AccountAPI
+}
+
+func GetContractAPI() *PublicContractAPI{
+	return ContractAPI
 }

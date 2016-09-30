@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"hyperchain/core"
-	"fmt"
 )
 
 func TestPublicBlockAPI_GetBlocks(t *testing.T) {
@@ -17,14 +16,17 @@ func TestPublicBlockAPI_GetBlocks(t *testing.T) {
 	//
 	blockAPI := NewPublicBlockAPI()
 	//
-	a := blockAPI.GetBlocks()
+	a, err := blockAPI.GetBlocks()
 	//
-	fmt.Println(a)
+	if err != nil {
+		t.Errorf("%v",err)
+	}
+	t.Log(a)
 
-	cTime, bTime := blockAPI.QueryCommitAndBatchTime(SendQueryArgs{From:"1",To:"2",})
+	cTime, bTime := blockAPI.QueryCommitAndBatchTime(SendQueryArgs{From:*NewInt64ToNumber(1),To:*NewInt64ToNumber(2),})
 
-	fmt.Println(cTime,bTime)
+	t.Log(cTime,bTime)
 
 	num := blockAPI.QueryTransactionSum()
-	fmt.Println(num)
+	t.Log(num)
 }
