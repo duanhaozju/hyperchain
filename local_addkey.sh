@@ -24,7 +24,7 @@ echo "│    auto add ssh key    │"
 echo "└────────────────────────┘"
 
 addkey(){
-  ssh-keygen -f "/home/fox/.ssh/known_hosts" -R $1
+#  ssh-keygen -f "/home/fox/.ssh/known_hosts" -R $1
   expect <<EOF
       set timeout 60
       spawn ssh-copy-id satoshi@$1

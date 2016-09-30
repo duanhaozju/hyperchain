@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-MAXNODE=10
+MAXNODE=4
 
 #kill the progress
 killprogress(){
@@ -22,9 +22,6 @@ while read line;do
 
 scpfile() {
  # ssh-keygen -f "/home/satoshi/.ssh/known_hosts" -R $server_address
- echo "#################"
- echo $1
- echo "#################"
  expect <<EOF
        set timeout 60
        spawn ssh -t satoshi@$1 "echo \"hello world\""
