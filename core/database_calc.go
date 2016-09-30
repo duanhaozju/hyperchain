@@ -4,7 +4,6 @@ import (
 	"hyperchain/hyperdb"
 	"time"
 
-	"math/big"
 	"strconv"
 	"os"
 	"io"
@@ -74,27 +73,27 @@ func CalcCommitBatchAVGTime(from,to uint64) (int64,int64) {
 	return commit/(num)/int64(time.Millisecond),batch/(num)/int64(time.Millisecond)
 
 }
-func CalTransactionSum()  *big.Int{
+func CalTransactionSum()  uint64{
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
-	sum := big.NewInt(0)
+	var sum uint64 = 0
 	height := GetHeightOfChain()
 	for i:=uint64(1);i<=height;i++{
 		blockHash, err := GetBlockHash(db, i)
 		if err != nil {
 			log.Error(err)
-			return big.NewInt(-1)
+			return uint64(0)
 		}
 		block, err := GetBlock(db, blockHash)
 		if err != nil {
 			log.Error(err)
-			return big.NewInt(-1)
+			return uint64(0)
 		}
-		tmp := big.NewInt(int64(len(block.Transactions)))
-		log.Info("block tx number is:",tmp)
-		sum.Add(sum,tmp)
+		tmp := uint64(len(block.Transactions))
+		//log.Info("block tx number is:",tmp)
+		sum+=tmp
 	}
 	return sum
 }
@@ -215,10 +214,24 @@ func CalBlockGPS()error{
 	latest,_ := GetBlockByNumber(db,height)
 	endTime := latest.WriteTime
 	content :=[]string{}
-	s := "start time: "+time.Unix(0,startTime).Format("2006-01-02 15:04:05")+" end time: "+time.Unix(0,endTime).Format("2006-01-02 15:04:05")+" total blocks: "+strconv.FormatUint(height,10)+"\n"
-	content=append(content,s)
+	s := "start time: "+time.Unix(0,startTime).Format("2006-01-02 15:04:05")+" end time: "+time.Unix(0,endTime).Format("2006-01-02 15:04:05")+"\n"
+
 	count :=0
 	flag := true
+	var avg float64 = 0
+	for i:=uint64(1);i<=height;i++{
+		block,_ := GetBlockByNumber(db,i)
+		if block.WriteTime-startTime>int64(20*time.Second){
+			break
+		}
+		if block.WriteTime-startTime>int64(10*time.Second){
+			avg+=1
+		}
+	}
+	avg = avg/10
+	log.Info(avg,"----------------1----------------")
+	s = s+"total blocks: "+strconv.FormatUint(height,10)+"      blocks per second: "+strconv.FormatFloat(avg,'f',2,32)+"\n"
+	content=append(content,s)
 	for i:=uint64(1);i<=height;i++{
 		block,_ := GetBlockByNumber(db,i)
 		//println(time.Unix(block.WriteTime / int64(time.Second), 0).Format("2006-01-02 15:04:05"),"********",block.Number)

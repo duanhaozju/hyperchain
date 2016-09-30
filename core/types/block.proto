@@ -16,6 +16,4 @@ message Block {
 
 message Blocks{
     repeated Block batch = 1;
-
-
 }

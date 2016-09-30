@@ -158,12 +158,12 @@ func PutBlock(db hyperdb.Database, key []byte, t *types.Block) error {
 		return err
 	}
 	keyNum := strconv.FormatInt(int64(t.Number), 10)
-	path := "/tmp/hyperchain/cache/block/"+keyNum
+	//path := "/tmp/hyperchain/cache/block/"+keyNum
 
-	err =storeBlockData(path,data)
-	if err != nil {
-		return err
-	}
+	//err =storeBlockData(path,data)
+	//if err != nil {
+	//	return err
+	//}
 	err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
 	return err
 
@@ -318,6 +318,7 @@ func UpdateChain(block *types.Block, genesis bool) error {
 	memChainMap.data.ParentBlockHash = block.ParentHash
 	if !genesis {
 		memChainMap.data.Height += 1
+		memChainMap.data.CurrentTxSum += uint64(len(block.Transactions))
 	}
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {

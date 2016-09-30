@@ -13,8 +13,8 @@ import (
 	"time"
 	//"hyperchain/hyperdb"
 	//"hyperchain/core"
-	"hyperchain/core"
-	"hyperchain/hyperdb"
+	//"hyperchain/core"
+	//"hyperchain/hyperdb"
 )
 
 type Transaction struct {
