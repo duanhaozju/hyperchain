@@ -181,3 +181,6 @@ func (blk *PublicBlockAPI)QueryBlockAvgTime(args SendQueryArgs)(int64,error)  {
 
 	return evmTime, nil
 }
+func (blk *PublicBlockAPI)QueryBlockGPS()(error)  {
+	return core.CalBlockGPS()
+}
