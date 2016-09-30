@@ -4,7 +4,7 @@ set -e
 govendor build
 
 PRIMARY="115.159.122.96"
-MAXNODE=4
+MAXNODE=7
 
 scp -r killprocess.sh satoshi@$PRIMARY:/home/satoshi/
 ssh -t satoshi@$PRIMARY "chmod a+x killprocess.sh && bash killprocess.sh && rm -rf keystore"
