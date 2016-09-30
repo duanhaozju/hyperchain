@@ -78,10 +78,6 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 	)
 	//log.Notice("the to is ---------",to)
 	//log.Notice("the to is ---------",tx.To)
-	receipt = types.NewReceipt(nil, gas)
-	receipt.TxHash = tx.BuildHash().Bytes()
-	// todo replace the gasused
-	receipt.GasUsed = 100000
 	if tx.To == nil {
 		ret, addr, err = Exec(env, &from, nil, data, gas, gasPrice, amount)
 		//log.Info("the exetx addr is ",addr.Bytes())
@@ -95,8 +91,13 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		//log.Info("the exetx hash is ",common.ToHex(tx.BuildHash().Bytes()))
 		//log.Info("the exetx call ret is ",ret)
 	}
+	statedb, _ := env.Db().(*state.StateDB)
+	receipt = types.NewReceipt(statedb.IntermediateRoot().Bytes(), gas)
+	receipt.TxHash = tx.BuildHash().Bytes()
+	// todo replace the gasused
+	receipt.GasUsed = 100000
 	receipt.Ret = ret
-	(&receipt).SetLogs(env.Db().GetLogs(receipt.TxHash))
+	receipt.SetLogs(statedb.GetLogs(common.BytesToHash(receipt.TxHash)))
 	//fmt.Println("-----------------------")
 	//fmt.Println("ret",ret)
 	//fmt.Println("-----------------------")

@@ -12,7 +12,6 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/state"
 	"hyperchain/core/types"
-	"hyperchain/core/vm"
 	"hyperchain/core/vm/params"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
