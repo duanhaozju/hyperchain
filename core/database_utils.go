@@ -13,6 +13,9 @@ import (
 	"hyperchain/common"
 	"hyperchain/crypto"
 	"strconv"
+	"os"
+	"io"
+	"path/filepath"
 )
 
 // the prefix of key, use to save to db
@@ -155,10 +158,38 @@ func PutBlock(db hyperdb.Database, key []byte, t *types.Block) error {
 		return err
 	}
 	keyNum := strconv.FormatInt(int64(t.Number), 10)
+	path := "/tmp/hyperchain/cache/block/"+keyNum
+
+	err =storeBlockData(path,data)
+	if err != nil {
+		return err
+	}
 	err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
 	return err
-}
 
+}
+func storeBlockData(file string,data []byte) error {
+	dir := filepath.Dir(file)
+	_, err := os.Stat(dir)
+	if !(err == nil || os.IsExist(err)){//file not exists
+		err = os.MkdirAll(dir, 0700)
+		if err !=nil{
+			return err
+		}
+	}
+	f, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_RDWR,0600)
+	if err != nil {
+		return err
+	}
+	n, err := f.Write(data)
+	if err == nil && n < len(data) {
+		err = io.ErrShortWrite
+	}
+	if err1 := f.Close(); err == nil {
+		err = err1
+	}
+	return err
+}
 func GetBlockHash(db hyperdb.Database, blockNumber uint64) ([]byte, error) {
 	keyNum := strconv.FormatInt(int64(blockNumber), 10)
 	return db.Get(append(blockNumPrefix, keyNum...))

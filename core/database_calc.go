@@ -4,9 +4,11 @@ import (
 	"hyperchain/hyperdb"
 	"time"
 
-	//"fmt"
-
 	"math/big"
+	"strconv"
+	"os"
+	"io"
+	"path/filepath"
 )
 
 // CalcResponseCount calculate response count of a block for given blockNumber
@@ -200,4 +202,77 @@ func CalcEvmAVGTime(from, to uint64) int64 {
 	}
 
 
+}
+func CalBlockGPS()error{
+	db,err:= hyperdb.GetLDBDatabase()
+	if err!=nil{
+		log.Fatal(err)
+	}
+	height := GetHeightOfChain()
+	genesis,_ := GetBlockByNumber(db,uint64(1))
+	startTime := genesis.WriteTime
+	startSec := time.Unix(startTime/int64(time.Second),0).Second()
+	latest,_ := GetBlockByNumber(db,height)
+	endTime := latest.WriteTime
+	content :=[]string{}
+	s := "start time: "+time.Unix(0,startTime).Format("2006-01-02 15:04:05")+" end time: "+time.Unix(0,endTime).Format("2006-01-02 15:04:05")+" total blocks: "+strconv.FormatUint(height,10)+"\n"
+	content=append(content,s)
+	count :=0
+	flag := true
+	for i:=uint64(1);i<=height;i++{
+		block,_ := GetBlockByNumber(db,i)
+		//println(time.Unix(block.WriteTime / int64(time.Second), 0).Format("2006-01-02 15:04:05"),"********",block.Number)
+		endSec := time.Unix(block.WriteTime/int64(time.Second),0).Second()
+		if block.WriteTime>=startTime&&endSec-startSec==0{
+			count++
+			if i==height{
+				current:= time.Unix(0,startTime).Format("2006-01-02 15:04:05")
+				s = current+":"+strconv.Itoa(count)+" blocks generated"+"\n"
+				content=append(content,s)
+			}
+			continue
+		}
+		current:= time.Unix(0,startTime).Format("2006-01-02 15:04:05")
+		s = current+":"+strconv.Itoa(count)+" blocks generated"+"\n"
+		content=append(content,s)
+		flag = false
+		if flag==false{
+			startTime = block.WriteTime
+			startSec = time.Unix(startTime/int64(time.Second),0).Second()
+			count = 1
+			flag = true
+			if i==height{
+				s = current+":"+strconv.Itoa(count)+" blocks generated"+"\n"
+				content=append(content,s)
+			}
+		}
+
+	}
+	path :="/tmp/hyperchain/cache/statis/block_time_statis"
+	return storeData(path,content)
+}
+func storeData(file string,content []string) error {
+	dir := filepath.Dir(file)
+	_, err := os.Stat(dir)
+	if !(err == nil || os.IsExist(err)){//file exists
+		err = os.MkdirAll(dir, 0700)
+		if err !=nil{
+				return err
+		}
+	}
+	f, err := os.OpenFile(file, os.O_WRONLY|os.O_CREATE|os.O_TRUNC,0600)
+	if err != nil {
+		return err
+	}
+	for _,d:=range(content){
+		n, err := f.Write([]byte(d))
+		if err == nil && n < len([]byte(d)) {
+			err = io.ErrShortWrite
+		}
+
+	}
+	if err1 := f.Close(); err == nil {
+		err = err1
+	}
+	return err
 }

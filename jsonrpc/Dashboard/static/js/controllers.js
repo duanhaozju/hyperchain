@@ -398,6 +398,7 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
 
 function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockService, TransactionService) {
     $scope.status = "";
+    $scope.blkGPSstatus = "";
 
     $scope.tx = {
         from: "6201cb0448964ac597faf6fdf1f472edf2a22b89",
@@ -419,7 +420,6 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
         from: "",
         to: ""
     };
-
     $scope.commitTime = "0";
     $scope.batchTime = "0";
     $scope.avgTime = "0";
@@ -517,6 +517,18 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
             }, function(error){
                 console.log(error);
             })
+    }
+    $scope.queryBlkGPS = function() {
+        
+        $scope.blkGPSstatus = "please waitting.....";
+        BlockService.queryBlockGPS()
+            .then(function(res){
+                $scope.blkGPSstatus = "statis saved in /tmp/hyperchain/cache/statis/block_time_statis ";
+            }, function(error){
+                $scope.blkGPSstatus = error.message;
+                console.log(error);
+            })
+
     }
 }
 

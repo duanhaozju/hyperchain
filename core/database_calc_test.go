@@ -53,3 +53,7 @@ func TestCalTransactionNums(t *testing.T) {
 	res := CalTransactionSum()
 	fmt.Println(res)
 }
+func TestCalBlockGPS(t *testing.T) {
+	InitDB(8084)
+	CalBlockGPS()
+}

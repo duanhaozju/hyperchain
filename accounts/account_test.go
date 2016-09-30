@@ -13,6 +13,8 @@ import (
 	"time"
 	//"hyperchain/hyperdb"
 	//"hyperchain/core"
+	"hyperchain/core"
+	"hyperchain/hyperdb"
 )
 
 type Transaction struct {
@@ -113,7 +115,7 @@ func TestValidateAddr(t *testing.T) {
 //}
 
 //func TestSigntx(t *testing.T) {
-//	keydir := "./keystore/"
+//	keydir := "../keystore/"
 //	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 //
 //	am := NewAccountManager(keydir,encryption)
@@ -127,12 +129,34 @@ func TestValidateAddr(t *testing.T) {
 //	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 //
 //	hash := tx.SighHash(kec256Hash)
-//	for i:=0;i<10;i++{
+//	ac:=Account{
+//		Address:common.HexToAddress(string(tx.From)),
+//		File:am.KeyStore.JoinPath(string(tx.From)),
+//	}
+//
+//	am.Unlock(ac,"123")
+//	var set = []int{500,5000,10000}
+//
+//	for _,j:=range set{
 //		start := time.Now()
-//		signature, _ := am.SignWithPassphrase(common.HexToAddress(string(tx.From)),hash[:],"123")
-//		fmt.Println(time.Since(start))
-//		fmt.Println(signature)
-//		tx.ValidateSign(encryption,kec256Hash)
+//		for i:=0;i<j;i++{
+//			am.SignWithPassphrase(common.HexToAddress(string(tx.From)),hash[:],"123")
+//			//fmt.Println(signature)
+//			//tx.ValidateSign(encryption,kec256Hash)
+//		}
+//		fmt.Printf("signtx test %dtxs: %s",j,time.Since(start))
+//		fmt.Println()
 //
 //	}
+//	for _,j:=range set{
+//		start := time.Now()
+//		for i:=0;i<j;i++{
+//			//am.SignWithPassphrase(common.HexToAddress(string(tx.From)),hash[:],"123")
+//			tx.ValidateSign(encryption,kec256Hash)
+//		}
+//		fmt.Printf("unsigntx test %dtxs: %s",j,time.Since(start))
+//		fmt.Println()
+//
+//	}
+//
 //}
