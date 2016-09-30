@@ -2,15 +2,6 @@
 // source: chain.proto
 // DO NOT EDIT!
 
-/*
-Package types is a generated protocol buffer package.
-
-It is generated from these files:
-	chain.proto
-
-It has these top-level messages:
-	Chain
-*/
 package types
 
 import proto "github.com/golang/protobuf/proto"
@@ -21,12 +12,6 @@ import math "math"
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the proto package it is being compiled against.
-// A compilation error at this line likely means your copy of the
-// proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type Chain struct {
 	LatestBlockHash  []byte `protobuf:"bytes,1,opt,name=latestBlockHash,proto3" json:"latestBlockHash,omitempty"`
@@ -41,15 +26,15 @@ type Chain struct {
 func (m *Chain) Reset()                    { *m = Chain{} }
 func (m *Chain) String() string            { return proto.CompactTextString(m) }
 func (*Chain) ProtoMessage()               {}
-func (*Chain) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (*Chain) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{0} }
 
 func init() {
 	proto.RegisterType((*Chain)(nil), "types.Chain")
 }
 
-func init() { proto.RegisterFile("chain.proto", fileDescriptor0) }
+func init() { proto.RegisterFile("chain.proto", fileDescriptor1) }
 
-var fileDescriptor0 = []byte{
+var fileDescriptor1 = []byte{
 	// 188 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0xe2, 0x4e, 0xce, 0x48, 0xcc,
 	0xcc, 0xd3, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x2d, 0xa9, 0x2c, 0x48, 0x2d, 0x56, 0x9a,
