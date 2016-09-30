@@ -359,6 +359,7 @@ func GetChainCopy() *types.Chain {
 		RequiredBlockNum:memChainMap.data.RequiredBlockNum,
 		RequireBlockHash:memChainMap.data.RequireBlockHash,
 		RecoveryNum:memChainMap.data.RecoveryNum,
+		CurrentTxSum:memChainMap.data.CurrentTxSum,
 	}
 }
 
