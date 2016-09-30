@@ -91,11 +91,9 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		gasPrice = tx.GasPrice()
 		amount   = tx.Amount()
 	)
-	/*
-		if err := preCheck(tx); err != nil {
-			return nil, nil, common.Address{}, nil
-		}
-	*/
+	if err := preCheck(tx); err != nil {
+		return nil, nil, common.Address{}, nil
+	}
 	//log.Notice("the to is ---------",to)
 	//log.Notice("the to is ---------",tx.To)
 	if tx.To == nil {
