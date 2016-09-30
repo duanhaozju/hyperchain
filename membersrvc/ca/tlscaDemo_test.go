@@ -38,7 +38,7 @@ func TestTLSDemo(t *testing.T) {
 
 
 	// Skipping test for now, this is just to try tls connections
-	//t.Skip()
+	t.Skip()
 
 
 

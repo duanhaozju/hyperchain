@@ -220,6 +220,7 @@ func TestNewECA(t *testing.T) {
  */
 func TestCreateCertificatePairAdmin(t *testing.T) {
 	//enroll testAdmin
+	t.Skip()
 	err := enrollUser(&testAdmin)
 
 	if err != nil {
@@ -230,6 +231,7 @@ func TestCreateCertificatePairAdmin(t *testing.T) {
 //register testUser using testAdmin as the registrar
 func TestRegisterUser(t *testing.T) {
 
+	t.Skip()
 	err := registerUser(testAdmin, &testUser)
 
 	if err != nil {
@@ -241,6 +243,7 @@ func TestRegisterUser(t *testing.T) {
 //now see if we can enroll testUser
 func TestCreateCertificatePairTestUser(t *testing.T) {
 
+	t.Skip()
 	err := enrollUser(&testUser)
 
 	if err != nil {
@@ -251,6 +254,7 @@ func TestCreateCertificatePairTestUser(t *testing.T) {
 //register testUser again - should get error
 func TestRegisterDuplicateUser(t *testing.T) {
 
+	t.Skip()
 	err := registerUser(testAdmin, &testUser)
 
 	if err == nil {
@@ -265,7 +269,7 @@ func TestRegisterDuplicateUser(t *testing.T) {
 //register testAuditor with testAdmin as registrar
 //register testUser again - should get error
 func TestRegisterAuditor(t *testing.T) {
-
+	t.Skip()
 	err := registerUser(testAdmin, &testAuditor)
 
 	if err != nil {
@@ -278,6 +282,7 @@ func TestRegisterAuditor(t *testing.T) {
  */
 func TestRegisterUserNonRegistrar(t *testing.T) {
 
+	t.Skip()
 	//testUser has no registrar metadata
 	err := registerUser(testUser, &testUser2)
 
@@ -290,7 +295,7 @@ func TestRegisterUserNonRegistrar(t *testing.T) {
 //testAdmin should NOT be able to register testPeer since testAdmin's
 //delegateRoles field DOES NOT contain the value "peer"
 func TestRegisterUserPeer(t *testing.T) {
-
+	t.Skip()
 	err := registerUser(testAdmin, &testPeer)
 
 	if err == nil {
@@ -302,7 +307,7 @@ func TestRegisterUserPeer(t *testing.T) {
 //testAdmin should be able to register testClient1 since testAdmin's
 //delegateRoles field contains the value "client"
 func TestRegisterUserClient(t *testing.T) {
-
+	t.Skip()
 	err := registerUser(testAdmin, &testClient1)
 
 	if err != nil {
@@ -312,7 +317,7 @@ func TestRegisterUserClient(t *testing.T) {
 
 //testClient1 registered in the previous test should be able to enroll
 func TestCreateCertificatePairClient(t *testing.T) {
-
+	t.Skip()
 	err := enrollUser(&testClient1)
 
 	if err != nil {
@@ -323,7 +328,7 @@ func TestCreateCertificatePairClient(t *testing.T) {
 //testClient1 should be able to register testClient2 since testClient1's
 //delegateRoles field contains the value "client"
 func TestRegisterUserClientAsRegistrar(t *testing.T) {
-
+	t.Skip()
 	err := registerUser(testClient1, &testClient2)
 
 	if err != nil {
@@ -335,7 +340,7 @@ func TestRegisterUserClientAsRegistrar(t *testing.T) {
 //testClient2 should NOT be able to register testClient3 since testClient2's
 //delegateRoles field is empty
 func TestRegisterUserNoDelegateRoles(t *testing.T) {
-
+	t.Skip()
 	err := enrollUser(&testClient2)
 
 	if err != nil {
@@ -352,6 +357,7 @@ func TestRegisterUserNoDelegateRoles(t *testing.T) {
 }
 
 func TestReadCACertificate(t *testing.T) {
+	t.Skip()
 	ecap := &ECAP{eca}
 	_, err := ecap.ReadCACertificate(context.Background(), &pb.Empty{})
 
@@ -361,7 +367,7 @@ func TestReadCACertificate(t *testing.T) {
 }
 
 func TestReadCertificatePair(t *testing.T) {
-
+	t.Skip()
 	ecap := &ECAP{eca}
 
 	req := &pb.ECertReadReq{Id: &pb.Identity{Id: testUser.enrollID}}
@@ -374,6 +380,7 @@ func TestReadCertificatePair(t *testing.T) {
 }
 
 func TestReadCertificatePairBadIdentity(t *testing.T) {
+	t.Skip()
 	ecap := &ECAP{eca}
 
 	req := &pb.ECertReadReq{Id: &pb.Identity{Id: "badUser"}}
@@ -387,6 +394,7 @@ func TestReadCertificatePairBadIdentity(t *testing.T) {
 }
 
 func TestReadCertificateByHash(t *testing.T) {
+	t.Skip()
 	ecap := &ECAP{eca}
 
 	req := &pb.ECertReadReq{Id: &pb.Identity{Id: testUser.enrollID}}
@@ -412,6 +420,7 @@ func TestReadCertificateByHash(t *testing.T) {
 }
 
 func TestReadCertificateByInvalidHash(t *testing.T) {
+	t.Skip()
 	ecap := &ECAP{eca}
 
 	req := &pb.Hash{Hash: nil}
@@ -425,7 +434,7 @@ func TestReadCertificateByInvalidHash(t *testing.T) {
 }
 
 func TestReadUserSet(t *testing.T) {
-
+	t.Skip()
 	//enroll Auditor
 	err := enrollUser(&testAuditor)
 
@@ -462,7 +471,7 @@ func TestReadUserSet(t *testing.T) {
 }
 
 func TestReadUserSetNonAuditor(t *testing.T) {
-
+	t.Skip()
 	ecaa := &ECAA{eca}
 
 	req := &pb.ReadUserSetReq{
@@ -492,7 +501,7 @@ func TestReadUserSetNonAuditor(t *testing.T) {
 }
 
 func TestCreateCertificatePairBadIdentity(t *testing.T) {
-
+	t.Skip()
 	ecap := &ECAP{eca}
 
 	req := &pb.ECertCreateReq{
@@ -511,7 +520,7 @@ func TestCreateCertificatePairBadIdentity(t *testing.T) {
 }
 
 func TestCreateCertificatePairBadToken(t *testing.T) {
-
+	t.Skip()
 	ecap := &ECAP{eca}
 
 	req := &pb.ECertCreateReq{
@@ -529,7 +538,7 @@ func TestCreateCertificatePairBadToken(t *testing.T) {
 }
 
 func TestRevokeCertificatePair(t *testing.T) {
-
+	t.Skip()
 	ecap := &ECAP{eca}
 
 	_, err := ecap.RevokeCertificatePair(context.Background(), &pb.ECertRevokeReq{})
@@ -549,6 +558,7 @@ func TestRevokeCertificate(t *testing.T) {
 }
 
 func TestPublishCRL(t *testing.T) {
+	t.Skip()
 	ecaa := &ECAA{eca}
 
 	_, err := ecaa.PublishCRL(context.Background(), &pb.ECertCRLReq{})

@@ -112,9 +112,9 @@ func main() {
 
 	var opts []grpc.ServerOption
 	if viper.GetString("server.tls.cert.file") != "" {
-		creds, err := credentials.NewServerTLSFromFile("/Users/kuang/go-workspace/src/github.com/hyperledger/fabric/membersrvc/ca/test_resources/tlsca.cert", "/Users/kuang/go-workspace/src/github.com/hyperledger/fabric/membersrvc/ca/test_resources/tlsca.priv")
+		//creds, err := credentials.NewServerTLSFromFile("/Users/kuang/go-workspace/src/github.com/hyperledger/fabric/membersrvc/ca/test_resources/tlsca.cert", "/Users/kuang/go-workspace/src/github.com/hyperledger/fabric/membersrvc/ca/test_resources/tlsca.priv")
 
-		//creds, err := credentials.NewServerTLSFromFile(viper.GetString("server.tls.cert.file"), viper.GetString("server.tls.key.file"))
+		creds, err := credentials.NewServerTLSFromFile(viper.GetString("server.tls.cert.file"), viper.GetString("server.tls.key.file"))
 		if err != nil {
 			panic(err)
 		}
