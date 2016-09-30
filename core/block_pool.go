@@ -15,6 +15,7 @@ import (
 	"hyperchain/core/vm/params"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
+	"strconv"
 	"time"
 )
 
@@ -190,7 +191,7 @@ func ProcessBlock(block *types.Block) error {
 	if err != nil {
 		return e
 	}
-	env["currentNumber"] = "1"
+	env["currentNumber"] = strconv.FormatUint(block.Number, 10)
 	env["currentGasLimit"] = "10000000"
 	vmenv := NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
 

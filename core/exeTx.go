@@ -1,12 +1,14 @@
 package core
 
 import (
+	"fmt"
 	glog "github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/core/state"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/params"
+	"hyperchain/crypto"
 	"hyperchain/hyperdb"
 	"math/big"
 )
@@ -64,6 +66,19 @@ func ExecBlock(block *types.Block) (err error) {
 }
 */
 
+func preCheck(tx types.Transaction) error {
+	// check signature
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	kec256Hash := crypto.NewKeccak256Hash("keccak256")
+	if !(&tx).ValidateSign(encryption, kec256Hash) {
+		fmt.Println("validate signature failed")
+		fmt.Println("sign", tx.Signature)
+		return SignatureError("")
+	}
+	// check balance
+	return nil
+}
+
 // 这一块相当于ethereum里的TransitionDB
 func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
 	var (
@@ -76,6 +91,11 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		gasPrice = tx.GasPrice()
 		amount   = tx.Amount()
 	)
+	/*
+		if err := preCheck(tx); err != nil {
+			return nil, nil, common.Address{}, nil
+		}
+	*/
 	//log.Notice("the to is ---------",to)
 	//log.Notice("the to is ---------",tx.To)
 	if tx.To == nil {

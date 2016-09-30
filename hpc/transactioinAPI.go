@@ -4,10 +4,12 @@ import (
 	"errors"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
+	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/types"
 	"hyperchain/core/vm/compiler"
+	"hyperchain/crypto"
 	"hyperchain/event"
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
@@ -20,7 +22,11 @@ const (
 	defaustGasPrice int = 10000
 )
 
-var log *logging.Logger // package-level logger
+var (
+	log        *logging.Logger // package-level logger
+	kec256Hash = crypto.NewKeccak256Hash("keccak256")
+)
+
 func init() {
 	log = logging.MustGetLogger("jsonrpc/api")
 }
@@ -78,10 +84,10 @@ func prepareExcute(args SendTxArgs) SendTxArgs {
 func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	log.Info("==========SendTransaction=====,args = ", args)
 	var tx *types.Transaction
-	amount, _ := strconv.Atoi(args.Value)
+	amount, _ := strconv.Atoi(common.HexToString(args.Value))
 	tv := types.NewTransactionValue(0, 0, int64(amount), nil)
 	tvData, _ := proto.Marshal(tv)
-	tx = types.NewTransaction([]byte(args.From), []byte(args.To), tvData)
+	tx = types.NewTransaction(common.HexToAddress(args.From).Bytes(), common.HexToAddress(args.To).Bytes(), tvData)
 	log.Info(tx.Value)
 
 	// TODO check balance
@@ -95,6 +101,17 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	for start := start; start < end; start = time.Now().Unix() {
 		for i := 0; i < 10; i++ {
 			tx.TimeStamp = time.Now().UnixNano()
+
+			// calculate signature
+			keydir := "./keystore/"
+			encryption := crypto.NewEcdsaEncrypto("ecdsa")
+			am := accounts.NewAccountManager(keydir, encryption)
+			// TODO replace password with test value
+			signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
+			if err != nil {
+				log.Errorf("Sign(tx) error :%v", err)
+			}
+			tx.Signature = signature
 			txBytes, err := proto.Marshal(tx)
 			if err != nil {
 				log.Errorf("proto.Marshal(tx) error: %v", err)
@@ -105,10 +122,8 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 			} else {
 				log.Warning("manager is Nil")
 			}
-
 		}
 		time.Sleep(20 * time.Millisecond)
-
 	}
 
 	log.Infof("############# %d: end send request#############", time.Now().Unix())

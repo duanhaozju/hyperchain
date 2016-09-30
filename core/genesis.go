@@ -64,7 +64,7 @@ func CreateInitBlock(filename string) {
 		//address := common.HexToAddress(addr)
 
 		//statedb.AddBalance(address, common.String2Big(account))
-		object := stateDB.CreateAccount(common.StringToAddress(addr))
+		object := stateDB.CreateAccount(common.HexToAddress(addr))
 		object.AddBalance(big.NewInt(account))
 
 		/*
