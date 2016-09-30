@@ -26,14 +26,11 @@ while read line;do
  SERVER_ADDR+=" ${line}"
 done < ./serverlist.txt
 ni=1
+
 for server_address in ${SERVER_ADDR[@]}; do
-echo $server_address
- #    ssh -t satoshi@$server_address "cd /home/satoshi/ && ./hyperchain -o $ni -l 8081 -p ./peerconfig.json -f ./"
-
-#osascript -e 'tell app "Terminal" to do script "ssh -t satoshi@'$server_address' \"rm -rf /tmp/hyperchain/ && cd /home/satoshi/ &&chmod a+x hyperchain && ./hyperchain -o $ni -l 8081 -p ./peerconfig.json -f ./ -g ./genesis.json\""'
-
- gnome-terminal -x bash -c "ssh -t satoshi@$server_address \"rm -rf /tmp/hyperchain/ && cd /home/satoshi/ && ./hyperchain -o $ni -l 8081 -p ./peerconfig.json -f ./ -g ./genesis.json\""
- ni=`expr $ni + 1`
+  echo $server_address
+  gnome-terminal -x bash -c "ssh -t satoshi@$server_address \"rm -rf /tmp/hyperchain/ && cd /home/satoshi/ && ./hyperchain -o $ni -l 8081 -p ./peerconfig.json -f ./ -g ./genesis.json\""
+  ni=`expr $ni + 1`
 done
 
 python ./jsonrpc/Dashboard/simpleHttpServer.py

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -e
-MAXNODE=100
+MAXNODE=10
 
 #kill the progress
-kellprogress(){
+killprogress(){
 
   echo "kill the bind port process"
   for((i=1;i<=$MAXNODE;i++))
@@ -34,7 +34,7 @@ scpfile() {
        }
 EOF
 
-kellprogress
+killprogress
  scp -r hyperchain satoshi@$1:/home/satoshi/
  scp -r peerconfig.json satoshi@$1:/home/satoshi/
  scp -r config.yaml satoshi@$1:/home/satoshi/
@@ -42,7 +42,8 @@ kellprogress
  ssh -t satoshi@$1 "rm -rf keystore"
  scp -r keystore satoshi@$1:/home/satoshi/
 }
- for server_address in ${SERVER_ADDR[@]}; do
+
+for server_address in ${SERVER_ADDR[@]}; do
 
  scpfile $server_address &
 
