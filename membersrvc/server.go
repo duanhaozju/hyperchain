@@ -34,6 +34,7 @@ import (
 	"hyperchain/core/crypto"
 	"hyperchain/core/util"
 	"hyperchain/core/crypto/primitives"
+
 )
 
 const envPrefix = "MEMBERSRVC_CA"
@@ -144,13 +145,13 @@ func StartCAServer() {
 	time.Sleep(time.Second * 20)
 	a := make(chan bool)
 	requestTLSCertificateDemo()
-	go func() {
+	/*go func() {
 		for i := 0; i < 10; i++ {
 			time.Sleep(time.Second * 5)
 			requestTLSCertificateDemo()
 
 		}
-	}()
+	}()*/
 	<-a
 
 }
@@ -221,13 +222,18 @@ func requestTLSCertificateDemo() {
 	storePrivateKeyInClear("cert/tls_peer.priv", priv)
 	storeCert("cert/tls_peer.cert", resp.Cert.Cert)
 	storeCert("cert/tls_peer.ca", resp.RootCert.Cert)
+
 }
 
 func GetGrpcClientOpts() []grpc.DialOption {
+
 	var opts []grpc.DialOption
 
 	//creds, err := credentials.NewClientTLSFromFile(viper.GetString("server.tls.cert.file"), "tlsca")
-	creds, err := credentials.NewClientTLSFromFile(caConfig.GetString("node.tls.cap.file"), "tlsca")
+
+	creds, err := credentials.NewClientTLSFromFile("./membersrvc/"+caConfig.GetString("node.tls.cap.file"), "peer-18f4f227-3ab9-4531-a469-d6f174d88cf3")
+
+
 	if err != nil {
 		fmt.Println("Failed creating credentials for TLS-CA client: %s", err)
 
@@ -235,11 +241,14 @@ func GetGrpcClientOpts() []grpc.DialOption {
 	opts = append(opts, grpc.WithTransportCredentials(creds))
 	return opts
 }
-
+func Start(){
+	caConfig = loadConfig("./membersrvc/")
+}
 func GetGrpcServerOpts() []grpc.ServerOption {
+
 	var opts []grpc.ServerOption
 
-	creds, err := credentials.NewServerTLSFromFile(caConfig.GetString("node.tls.cert.file"), caConfig.GetString("node.tls.key.file"))
+	creds, err := credentials.NewServerTLSFromFile("./membersrvc/"+caConfig.GetString("node.tls.cert.file"),"./membersrvc/"+ caConfig.GetString("node.tls.key.file"))
 
 
 	//creds, err := credentials.NewServerTLSFromFile(viper.GetString("server.tls.cert.file"), viper.GetString("server.tls.key.file"))

@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"github.com/op/go-logging"
 	"hyperchain/p2p/transport"
+	"hyperchain/membersrvc"
 )
 
 // init the package-level logger system,
@@ -51,7 +52,8 @@ func NewPeerByString(address string)(*Peer,error){
 		Ip:arr[0],
 		Port:int32(p),
 	}
-	conn, err := grpc.Dial(address, grpc.WithInsecure())
+	//conn, err := grpc.Dial(address, grpc.WithInsecure())
+	conn, err := grpc.Dial(address,membersrvc.GetGrpcClientOpts()...)
 	if err != nil {
 		errors.New("Cannot establish a connection!")
 		log.Error("err:",err)

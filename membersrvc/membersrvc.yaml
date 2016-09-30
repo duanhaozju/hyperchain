@@ -29,7 +29,7 @@ node:
             key:
                 file: "cert/tls_peer.priv"
             cap:
-                file: "cert/tlsca.cert"
+                file: "cert/tls_peer.ca"
 
 security:
     # Can be 256 or 384

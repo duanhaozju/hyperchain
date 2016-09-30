@@ -19,6 +19,8 @@ import (
 	"hyperchain/p2p/transport"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/recovery"
+
+	"hyperchain/membersrvc"
 )
 
 var log *logging.Logger // package-level logger
@@ -190,7 +192,9 @@ func (this *Node)startServer() {
 		log.Fatalf("Failed to listen: %v", err)
 		log.Fatal("PLEASE RESTART THE SERVER NODE!")
 	}
-	this.gRPCServer = grpc.NewServer()
+
+	//this.gRPCServer = grpc.NewServer()
+	this.gRPCServer = grpc.NewServer(membersrvc.GetGrpcServerOpts()...)
 	pb.RegisterChatServer(this.gRPCServer, this)
 	log.Info("Listening gRPC request...")
 	go this.gRPCServer.Serve(lis)
