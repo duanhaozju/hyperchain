@@ -265,8 +265,6 @@ func CalBlockGPS()error{
 	return storeData(path,content)
 }
 func storeData(file string,content []string) error {
-	index := time.Now().Unix()
-	file = file + "_"+strconv.FormatInt(index,10)
 	dir := filepath.Dir(file)
 	_, err := os.Stat(dir)
 	if !(err == nil || os.IsExist(err)){//file exists
