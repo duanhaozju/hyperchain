@@ -2,9 +2,9 @@ package membersrvc
 
 import (
 	"testing"
-	//"fmt"
+	"fmt"
 
-	"time"
+	//"time"
 	/*"io/ioutil"
 	"google.golang.org/grpc/credentials"*/
 )
@@ -22,20 +22,34 @@ func TestReadCertFile(t *testing.T) {
 	fmt.Println("cred",creds)*/
 
 	//StartCAServer(config.GetString("server.tls.cert.file"),config.GetString("server.tls.key.file"))
-	StartCAServer()
-	time.Sleep(time.Second * 20)
-	a := make(chan bool)
-	requestTLSCertificateDemo()
-	go func() {
-		for i := 0; i < 10; i++ {
-			time.Sleep(time.Second * 5)
-			requestTLSCertificateDemo()
+	//StartCAServer()
+	caConfig = loadConfig("./")
 
-		}
-	}()
-	<-a
+	fmt.Println(GetGrpcClientOpts())
+	fmt.Println(GetGrpcServerOpts())
+
+
 
 }
+
+/*func TestStartCAServer(t *testing.T) {
+	*//*config = loadConfig("./")
+	fmt.Println(config.GetString("server.tls.cert.file"))
+	creds, err := credentials.NewClientTLSFromFile(config.GetString("server.tls.cert.file"), "tlsca")
+	certPEMBlock, err := ioutil.ReadFile(config.GetString("server.tls.cert.file"))
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(certPEMBlock)
+	fmt.Println("cred",creds)*//*
+
+	//StartCAServer(config.GetString("server.tls.cert.file"),config.GetString("server.tls.key.file"))
+	caConfig = loadConfig("./")
+	StartCAServer()
+
+
+
+}*/
 /*func loadConfig(path string) (config *viper.Viper) {
 
 	config = viper.New()

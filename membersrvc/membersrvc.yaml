@@ -22,6 +22,14 @@ server:
                 file: "ca/test_resources/tlsca.cert"
             key:
                 file: "ca/test_resources/tlsca.priv"
+node:
+        tls:
+            cert:
+                file: "cert/tls_peer.cert"
+            key:
+                file: "cert/tls_peer.priv"
+            cap:
+                file: "cert/tlsca.cert"
 
 security:
     # Can be 256 or 384

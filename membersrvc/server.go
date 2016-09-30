@@ -38,7 +38,7 @@ import (
 
 const envPrefix = "MEMBERSRVC_CA"
 
-var config *viper.Viper
+var caConfig *viper.Viper
 
 func StartCAServer() {
 	viper.SetEnvPrefix(envPrefix)
@@ -141,7 +141,7 @@ func StartCAServer() {
 		go srv.Serve(sock)
 		//sock.Close()
 	}
-	/*time.Sleep(time.Second * 20)
+	time.Sleep(time.Second * 20)
 	a := make(chan bool)
 	requestTLSCertificateDemo()
 	go func() {
@@ -151,7 +151,7 @@ func StartCAServer() {
 
 		}
 	}()
-	<-a*/
+	<-a
 
 }
 
@@ -223,12 +223,11 @@ func requestTLSCertificateDemo() {
 	storeCert("cert/tls_peer.ca", resp.RootCert.Cert)
 }
 
-func GetGrpcOpts(clientCAPath string) []grpc.DialOption {
+func GetGrpcClientOpts() []grpc.DialOption {
 	var opts []grpc.DialOption
 
-
 	//creds, err := credentials.NewClientTLSFromFile(viper.GetString("server.tls.cert.file"), "tlsca")
-	creds, err := credentials.NewClientTLSFromFile(clientCAPath + "/tlsca.cert", "tlsca")
+	creds, err := credentials.NewClientTLSFromFile(caConfig.GetString("node.tls.cap.file"), "tlsca")
 	if err != nil {
 		fmt.Println("Failed creating credentials for TLS-CA client: %s", err)
 
@@ -237,11 +236,12 @@ func GetGrpcOpts(clientCAPath string) []grpc.DialOption {
 	return opts
 }
 
-func GetGrpcServerOpts(caPath string) []grpc.ServerOption {
+func GetGrpcServerOpts() []grpc.ServerOption {
 	var opts []grpc.ServerOption
-	creds, err := credentials.NewServerTLSFromFile(caPath + "./tlsca.cert", caPath + "/tlsca.priv")
 
-	fmt.Println(viper.GetString("server.tls.cert.file"))
+	creds, err := credentials.NewServerTLSFromFile(caConfig.GetString("node.tls.cert.file"), caConfig.GetString("node.tls.key.file"))
+
+
 	//creds, err := credentials.NewServerTLSFromFile(viper.GetString("server.tls.cert.file"), viper.GetString("server.tls.key.file"))
 
 	if err != nil {
@@ -258,7 +258,7 @@ func storePrivateKeyInClear(alias string, privateKey interface{}) {
 		fmt.Println(err)
 	}
 
-	err = ioutil.WriteFile(filepath.Join("membersrvc/", alias), rawKey, 0700)
+	err = ioutil.WriteFile(filepath.Join("./", alias), rawKey, 0700)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -266,7 +266,7 @@ func storePrivateKeyInClear(alias string, privateKey interface{}) {
 
 func storeCert(alias string, der []byte) {
 	fmt.Println("entera")
-	err := ioutil.WriteFile(filepath.Join("membersrvc/", alias), primitives.DERCertToPEM(der), 0700)
+	err := ioutil.WriteFile(filepath.Join("./", alias), primitives.DERCertToPEM(der), 0700)
 	if err != nil {
 		fmt.Println(err)
 	}
