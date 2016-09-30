@@ -159,7 +159,7 @@ func PutBlock(db hyperdb.Database, key []byte, t *types.Block) error {
 	}
 	keyNum := strconv.FormatInt(int64(t.Number), 10)
 	//path := "/tmp/hyperchain/cache/block/"+keyNum
-
+	//
 	//err =storeBlockData(path,data)
 	//if err != nil {
 	//	return err
@@ -177,7 +177,7 @@ func storeBlockData(file string,data []byte) error {
 			return err
 		}
 	}
-	f, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_RDWR,0600)
+	f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR,0600)
 	if err != nil {
 		return err
 	}

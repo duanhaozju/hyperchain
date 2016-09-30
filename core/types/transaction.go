@@ -46,7 +46,7 @@ func (self *Transaction)ValidateSign(encryption crypto.Encryption,ch crypto.Comm
 
 	hash := self.SighHash(ch)
 	addr,_ := encryption.UnSign(hash[:],self.Signature)
-	from := common.HexToAddress(string(self.From))
+	from := common.BytesToAddress(self.From)
 	return addr==from
 }
 
