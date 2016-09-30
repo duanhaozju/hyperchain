@@ -34,7 +34,10 @@ func TestCalcResponseCount(t *testing.T) {
 }*/
 func TestCalcCommitBatchAVGTime(t *testing.T) {
 	InitDB(8084)
-	fmt.Println(CalcCommitBatchAVGTime(uint64(10),uint64(20)))
+	blockUtilsCase.Number = GetHeightOfChain() + 1
+	commonHash := crypto.NewKeccak256Hash("keccak256")
+	WriteBlock(&blockUtilsCase, commonHash, 122)
+	fmt.Println(CalcCommitBatchAVGTime(GetHeightOfChain(),GetHeightOfChain()))
 }
 
 /*func TestGetBlockHash(t *testing.T) {
@@ -50,6 +53,16 @@ func TestCalcCommitBatchAVGTime(t *testing.T) {
 
 func TestCalTransactionNums(t *testing.T) {
 	InitDB(8084)
+	blockUtilsCase.Number = GetHeightOfChain() + 1
+	commonHash := crypto.NewKeccak256Hash("keccak256")
+	WriteBlock(&blockUtilsCase, commonHash, 122)
 	res := CalTransactionSum()
 	fmt.Println(res)
+}
+func TestCalBlockGPS(t *testing.T) {
+	InitDB(8084)
+	blockUtilsCase.Number = GetHeightOfChain() + 1
+	commonHash := crypto.NewKeccak256Hash("keccak256")
+	WriteBlock(&blockUtilsCase, commonHash, 122)
+	CalBlockGPS()
 }

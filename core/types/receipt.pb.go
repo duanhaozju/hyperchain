@@ -2,15 +2,6 @@
 // source: receipt.proto
 // DO NOT EDIT!
 
-/*
-Package types is a generated protocol buffer package.
-
-It is generated from these files:
-	receipt.proto
-
-It has these top-level messages:
-	Receipt
-*/
 package types
 
 import proto "github.com/golang/protobuf/proto"
@@ -21,12 +12,6 @@ import math "math"
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the proto package it is being compiled against.
-// A compilation error at this line likely means your copy of the
-// proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type Receipt struct {
 	PostState         []byte `protobuf:"bytes,1,opt,name=PostState,json=postState,proto3" json:"PostState,omitempty"`
@@ -40,15 +25,15 @@ type Receipt struct {
 func (m *Receipt) Reset()                    { *m = Receipt{} }
 func (m *Receipt) String() string            { return proto.CompactTextString(m) }
 func (*Receipt) ProtoMessage()               {}
-func (*Receipt) Descriptor() ([]byte, []int) { return fileDescriptor4, []int{0} }
+func (*Receipt) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{0} }
 
 func init() {
 	proto.RegisterType((*Receipt)(nil), "types.Receipt")
 }
 
-func init() { proto.RegisterFile("receipt.proto", fileDescriptor4) }
+func init() { proto.RegisterFile("receipt.proto", fileDescriptor2) }
 
-var fileDescriptor4 = []byte{
+var fileDescriptor2 = []byte{
 	// 186 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0xe2, 0x2d, 0x4a, 0x4d, 0x4e,
 	0xcd, 0x2c, 0x28, 0xd1, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x2d, 0xa9, 0x2c, 0x48, 0x2d,

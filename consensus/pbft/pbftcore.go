@@ -122,10 +122,10 @@ type msgCert struct {
 	digest		string
 	prePrepare	*PrePrepare
 	sentPrepare	bool
-	prepare		[]*Prepare
+	prepare		map[Prepare]bool
 	prepareCount	int
 	sentCommit	bool
-	commit		[]*Commit
+	commit		map[Commit]bool
 	commitCount	int
 	sentExecute	bool
 }
@@ -319,7 +319,12 @@ func (instance *pbftCore) getCert(v uint64, n uint64) (cert *msgCert) {
 		return
 	}
 
-	cert = &msgCert{}
+	prepare := make(map[Prepare]bool)
+	commit := make(map[Commit]bool)
+	cert = &msgCert{
+		prepare:	prepare,
+		commit:		commit,
+	}
 	instance.certStore[idx] = cert
 
 	return
@@ -335,7 +340,11 @@ func (instance *pbftCore) getChkptCert(n uint64, id string) (cert *chkptCert) {
 		return
 	}
 
-	cert = &chkptCert{}
+	chkpts := make(map[Checkpoint]bool)
+	cert = &chkptCert{
+		chkpts:		chkpts,
+		chkptCount:	0,
+	}
 	instance.chkptCertStore[idx] = cert
 
 	return
@@ -656,16 +665,15 @@ func (instance *pbftCore) recvPrepare(prep *Prepare) error {
 
 	cert := instance.getCert(prep.View, prep.SequenceNumber)
 
-	for _, prevPrep := range cert.prepare {
-		if prevPrep.ReplicaId == prep.ReplicaId {
-			logger.Warningf("Ignoring duplicate prepare from %d, --------view=%d/seqNo=%d--------", prep.ReplicaId, prep.View, prep.SequenceNumber)
-			return nil
-		}
+	ok := cert.prepare[*prep]
+
+	if ok {
+		logger.Warningf("Ignoring duplicate prepare from %d, --------view=%d/seqNo=%d--------", prep.ReplicaId, prep.View, prep.SequenceNumber)
+		return nil
 	}
 
-	cert.prepare = append(cert.prepare, prep)
-	cert.prepareCount = cert.prepareCount + 1
-	//instance.persistPSet()
+	cert.prepare[*prep] = true
+	cert.prepareCount++
 
 	return instance.maybeSendCommit(prep.BatchDigest, prep.View, prep.SequenceNumber)
 }
@@ -709,15 +717,16 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 	}
 
 	cert := instance.getCert(commit.View, commit.SequenceNumber)
-	for _, prevCommit := range cert.commit {
-		if prevCommit.ReplicaId == commit.ReplicaId {
-			logger.Warningf("Ignoring duplicate commit from %d, --------view=%d/seqNo=%d--------", commit.ReplicaId, commit.View, commit.SequenceNumber)
-			return nil
-		}
+
+	ok := cert.commit[*commit]
+
+	if ok {
+		logger.Warningf("Ignoring duplicate commit from %d, --------view=%d/seqNo=%d--------", commit.ReplicaId, commit.View, commit.SequenceNumber)
+		return nil
 	}
 
-	cert.commit = append(cert.commit, commit)
-	cert.commitCount = cert.commitCount + 1
+	cert.commit[*commit] = true
+	cert.commitCount++
 
 	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) && cert.sentExecute == false {
 		instance.stopTimer(commit.SequenceNumber)
@@ -876,14 +885,15 @@ func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) events.Event {
 	}
 
 	cert := instance.getChkptCert(chkpt.SequenceNumber, chkpt.Id)
-	flag := cert.chkpts[*chkpt]
+	ok := cert.chkpts[*chkpt]
 
-	if flag == false {
-		logger.Warningf("Ignoring duplicate commit from %d, --------seqNo=%d--------", chkpt.ReplicaId, chkpt.SequenceNumber)
+	if ok {
+		logger.Warningf("Ignoring duplicate checkpoint from %d, --------seqNo=%d--------", chkpt.ReplicaId, chkpt.SequenceNumber)
 		return nil
 	}
 
 	cert.chkpts[*chkpt] = true
+	cert.chkptCount++
 	instance.checkpointStore[*chkpt] = true
 
 	logger.Debugf("Replica %d found %d matching checkpoints for seqNo %d, digest %s",
@@ -907,6 +917,7 @@ func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) events.Event {
 	// we have reached this checkpoint
 	// Note, this is not divergent from the paper, as the paper requires that
 	// the quorum certificate must contain 2f+1 messages, including its own
+
 	chkptID, ok := instance.chkpts[chkpt.SequenceNumber]
 	if !ok {
 		logger.Debugf("Replica %d found checkpoint quorum for seqNo %d, digest %s, but it has not reached this checkpoint itself yet",

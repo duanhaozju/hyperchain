@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 set -e
-MAXNODE=4
+MAXNODE=7
+
 #kill the progress
-kellprogress(){
+killprogress(){
 
   echo "kill the bind port process"
-  for((i=1;i<=$MAXNODE;i++))
+  for((i=0;i<=$MAXNODE;i++))
   do
       test_port=`expr 8000 + $i`
       temp_port=`lsof -i :$test_port | awk 'NR>=2{print $2}'`
@@ -14,25 +15,35 @@ kellprogress(){
       fi
   done
 }
+
 while read line;do
  SERVER_ADDR+=" ${line}"
  done < ./innerserverlist.txt
- ni=1
- for server_address in ${SERVER_ADDR[@]}; do
+
+scpfile() {
+ # ssh-keygen -f "/home/satoshi/.ssh/known_hosts" -R $server_address
  expect <<EOF
        set timeout 60
-       spawn ssh -t satoshi@$server_address "echo \"hello world\""
+       spawn ssh -t satoshi@$1 "echo \"hello world\""
        expect {
          "yes/no" {send "yes\r";exp_continue }
          eof
        }
 EOF
-kellprogress
 
- #    ssh -t satoshi@$server_address "cd /home/satoshi/ && ./hyperchain -o $ni -l 8081 -p ./peerconfig.json -f ./"
- scp -r hyperchain satoshi@$server_address:/home/satoshi/
- scp -r peerconfig.json satoshi@$server_address:/home/satoshi/
- scp -r config.yaml satoshi@$server_address:/home/satoshi/
- scp -r genesis.json satoshi@$server_address:/home/satoshi/
- ni=`expr $ni + 1`
- done
+killprogress
+ scp -r hyperchain satoshi@$1:/home/satoshi/
+ scp -r peerconfig.json satoshi@$1:/home/satoshi/
+ scp -r config.yaml satoshi@$1:/home/satoshi/
+ scp -r genesis.json satoshi@$1:/home/satoshi/
+ ssh -t satoshi@$1 "rm -rf keystore"
+ scp -r keystore satoshi@$1:/home/satoshi/
+}
+
+for server_address in ${SERVER_ADDR[@]}; do
+
+ scpfile $server_address &
+
+done
+
+wait

@@ -100,6 +100,13 @@
 			"revisionTime": "2016-08-16T08:55:11Z"
 		},
 		{
+			"checksumSHA1": "p/AkbrCV0vCPuGy/xnCrZuusM8g=",
+			"origin": "github.com/hyperledger/fabric/vendor/github.com/mattn/go-sqlite3",
+			"path": "github.com/mattn/go-sqlite3",
+			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
+			"revisionTime": "2016-08-16T18:33:26Z"
+		},
+		{
 			"checksumSHA1": "LUrnGREfnifW4WDMaavmc9MlLI0=",
 			"path": "github.com/mitchellh/mapstructure",
 			"revision": "ca63d7c062ee3c9f34db231e352b60012b4fd0c1",
