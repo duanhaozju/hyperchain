@@ -8,4 +8,6 @@ message Receipt {
 	bytes ContractAddress = 4;
     int64 GasUsed = 5;
     bytes Ret = 6;
+    bytes Logs = 7;
 }
+

@@ -90,7 +90,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 
 			to = env.Db().GetAccount(*address)
 			if statedb.GetCode(to.Address()) == nil {
-
+				
 				env.Transfer(from, to, value)
 			}
 		}

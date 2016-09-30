@@ -96,6 +96,7 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		//log.Info("the exetx call ret is ",ret)
 	}
 	receipt.Ret = ret
+	(&receipt).SetLogs(env.Db().GetLogs(receipt.TxHash))
 	//fmt.Println("-----------------------")
 	//fmt.Println("ret",ret)
 	//fmt.Println("-----------------------")

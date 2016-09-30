@@ -82,21 +82,9 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	tv := types.NewTransactionValue(0, 0, int64(amount), nil)
 	tvData, _ := proto.Marshal(tv)
 	tx = types.NewTransaction([]byte(args.From), []byte(args.To), tvData)
-	//tx = types.NewTransaction(args.From[:], (*args.To)[:], []byte(args.Value))
 	log.Info(tx.Value)
-	//	am := tran.pm.AccountManager
-	//addr := common.HexToAddress(string(args.From))
-	/*
-		if (!core.VerifyBalance(tx)){
-			return common.Hash{},errors.New("Not enough balance!")
-		}else
-	*/
 
-	// Balance is enough
-	//txBytes, err := proto.Marshal(tx)
-	//if err != nil {
-	//	log.Fatalf("proto.Marshal(tx) error: %v",err)
-	//}
+	// TODO check balance
 
 	//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 	log.Infof("############# %d: start send request#############", time.Now().Unix())

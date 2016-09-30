@@ -12,6 +12,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/state"
 	"hyperchain/core/types"
+	"hyperchain/core/vm"
 	"hyperchain/core/vm/params"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
@@ -151,9 +152,6 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 
 	UpdateChain(block, false)
 
-	if block.Number%10 == 0 && block.Number != 0 {
-		WriteChainChan()
-	}
 	// update our stateObject and statedb to blockchain
 	//ExecBlock(block)
 	block.EvmTime = time.Now().UnixNano()
@@ -171,6 +169,10 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	newChain := GetChainCopy()
 	log.Notice("Block number", newChain.Height)
 	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
+
+	if block.Number%10 == 0 && block.Number != 0 {
+		WriteChainChan()
+	}
 	//TxSum.Add(TxSum,big.NewInt(int64(len(block.Transactions))))
 	//CommitStatedbToBlockchain()
 }
@@ -178,8 +180,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 func ProcessBlock(block *types.Block) error {
 	var (
 		receipts types.Receipts
-		//allLogs  vm.Logs
-		env = make(map[string]string)
+		env      = make(map[string]string)
 	)
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
@@ -194,8 +195,8 @@ func ProcessBlock(block *types.Block) error {
 	env["currentGasLimit"] = "10000000"
 	vmenv := NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
 
-	for _, tx := range block.Transactions {
-		// statedb.StartRecord(tx.BuildHash(), block.Hash(), i)
+	for i, tx := range block.Transactions {
+		statedb.StartRecord(tx.BuildHash(), common.Hash{}, i)
 		receipt, _, _, err := ExecTransaction(*tx, vmenv)
 
 		if err == nil {
