@@ -1,10 +1,10 @@
 package core
 
-import (
-	"testing"
-	"fmt"
-	"hyperchain/crypto"
-)
+//import (
+//	"testing"
+//	"fmt"
+//	"hyperchain/crypto"
+//)
 
 //func TestCalcResponseCount(t *testing.T) {
 //	log.Info("test =============> > > TestInitDB")
