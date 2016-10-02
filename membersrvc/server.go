@@ -44,25 +44,20 @@ func init() {
 
 const envPrefix = "MEMBERSRVC_CA"
 
-//const caPath = "./"
-//const caPath = "./"
 var caPath string
 var caConfig *viper.Viper
 
 func Start(caConfigDir string, nodeId int) {
-	
-	caConfig = loadConfig(caConfigDir)
-	caPath=caConfig.GetString("server.cadir")
+
+	caConfig = LoadConfig(caConfigDir)
+	caPath = caConfig.GetString("server.caserverdir")
 	if (nodeId == 1) {
-		go StartCAServer()
-		time.Sleep(time.Second * 20)
-	}else{
-		time.Sleep(time.Second * 20)
+		go StartCAServer(caConfigDir)
 	}
 }
 
 //启动ca服务器
-func StartCAServer() {
+func StartCAServer(caConfigDir string) {
 
 	viper.SetEnvPrefix(envPrefix)
 	viper.AutomaticEnv()
@@ -70,11 +65,12 @@ func StartCAServer() {
 	viper.SetEnvKeyReplacer(replacer)
 	viper.SetConfigName("membersrvc")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath("./")
+	//config.SetConfigName("config")
+	viper.AddConfigPath(caConfigDir)
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		panic(fmt.Errorf("Fatal error when reading %s config file: %s\n", "membersrvc", err))
+		panic(fmt.Errorf("Error reading %s plugin config: %s", envPrefix, err))
 	}
 
 	var iotrace, ioinfo, iowarning, ioerror, iopanic io.Writer
@@ -113,8 +109,6 @@ func StartCAServer() {
 	// cache configure
 	ca.CacheConfiguration()
 
-	ca.Info.Println("CA Server (" + viper.GetString("server.version") + ")")
-
 	aca := ca.NewACA()
 	defer aca.Stop()
 
@@ -127,12 +121,12 @@ func StartCAServer() {
 	tlsca := ca.NewTLSCA(eca)
 	defer tlsca.Stop()
 
-	runtime.GOMAXPROCS(viper.GetInt("server.gomaxprocs"))
+	runtime.GOMAXPROCS(caConfig.GetInt("server.gomaxprocs"))
 
 	var opts []grpc.ServerOption
-	if viper.GetString("server.tls.cert.file") != "" {
+	if caConfig.GetString("server.tls.cert.file") != "" {
 
-		creds, err := credentials.NewServerTLSFromFile(caPath + viper.GetString("server.tls.cert.file"), caPath + viper.GetString("server.tls.key.file"))
+		creds, err := credentials.NewServerTLSFromFile(caPath + caConfig.GetString("server.tls.cert.file"), caPath + caConfig.GetString("server.tls.key.file"))
 
 		if err != nil {
 			panic(err)
@@ -140,31 +134,19 @@ func StartCAServer() {
 		opts = []grpc.ServerOption{grpc.Creds(creds)}
 	}
 	srv := grpc.NewServer(opts...)
-	fmt.Println("port is ", viper.GetString("server.port"))
 
 	aca.Start(srv)
 	eca.Start(srv)
 	tca.Start(srv)
 	tlsca.Start(srv)
 
-	if sock, err := net.Listen("tcp", viper.GetString("server.port")); err != nil {
+	if sock, err := net.Listen("tcp", caConfig.GetString("server.port")); err != nil {
 		ca.Error.Println("Fail to start CA Server: ", err)
 		os.Exit(1)
 	} else {
 		srv.Serve(sock)
 		sock.Close()
 	}
-
-	//a := make(chan bool)
-	//requestTLSCertificate()
-	/*go func() {
-		for i := 0; i < 10; i++ {
-			time.Sleep(time.Second * 5)
-			requestTLSCertificateDemo()
-
-		}
-	}()
-	<-a*/
 
 }
 //请求ca服务器端的证书
@@ -178,7 +160,7 @@ func requestTLSCertificate() {
 
 	}
 	opts = append(opts, grpc.WithTransportCredentials(creds))
-	fmt.Println("connect port is ", caConfig.GetString("server.paddr"))
+
 	sockP, err := grpc.Dial(caConfig.GetString("server.paddr"), opts...)
 	if err != nil {
 		fmt.Println("Failed dialing in: %s", err)
@@ -191,11 +173,9 @@ func requestTLSCertificate() {
 
 	// Prepare the request
 	//id := "peer"
-	//serverHost:="kuang"
 	if err := crypto.Init(); err != nil {
 		panic(fmt.Errorf("Failed initializing the crypto layer [%s]", err))
 	}
-	//primitives.SetSecurityLevel()
 
 	priv, err := primitives.NewECDSAKey()
 
@@ -212,7 +192,7 @@ func requestTLSCertificate() {
 
 	req := &membersrvc.TLSCertCreateReq{
 		Ts: &timestamp,
-		Id:&membersrvc.Identity{Id:"kuang"},
+		Id:&membersrvc.Identity{Id:caConfig.GetString("node.serverhostoverride")},
 		//Id: &membersrvc.Identity{Id: id + "-" + uuid},
 		Pub: &membersrvc.PublicKey{
 			Type: membersrvc.CryptoType_ECDSA,
@@ -271,7 +251,6 @@ func GetGrpcServerOpts() []grpc.ServerOption {
 	creds, err := credentials.NewServerTLSFromFile(caPath + caConfig.GetString("node.tls.cert.file"), caPath + caConfig.GetString("node.tls.key.file"))
 
 	if err != nil {
-		log.Notice("enter 3333")
 		log.Info("Failed creating credentials for TLS-CA server: %s", err)
 		time.Sleep(time.Second * 10)
 		requestTLSCertificate()
@@ -306,7 +285,7 @@ func storeCert(alias string, der []byte) {
 		fmt.Println(err)
 	}
 }
-func loadConfig(path string) (config *viper.Viper) {
+func LoadConfig(path string) (config *viper.Viper) {
 
 	config = viper.New()
 
