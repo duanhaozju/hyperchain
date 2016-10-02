@@ -4,10 +4,12 @@ import (
 	"errors"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
+	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/types"
 	"hyperchain/core/vm/compiler"
+	"hyperchain/crypto"
 	"hyperchain/event"
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
@@ -20,7 +22,11 @@ const (
 	defaustGasPrice int = 10000
 )
 
-var log *logging.Logger // package-level logger
+var (
+	log        *logging.Logger // package-level logger
+	kec256Hash = crypto.NewKeccak256Hash("keccak256")
+)
+
 func init() {
 	log = logging.MustGetLogger("jsonrpc/api")
 }
@@ -76,56 +82,53 @@ func prepareExcute(args SendTxArgs) SendTxArgs {
 // SendTransaction is to build a transaction object,and then post event NewTxEvent,
 // if the sender's balance is enough, return tx hash
 func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error) {
-
 	log.Info("==========SendTransaction=====,args = ", args)
 	var tx *types.Transaction
-
-	tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
-	//tx = types.NewTransaction(args.From[:], (*args.To)[:], []byte(args.Value))
+	amount, _ := strconv.Atoi(common.HexToString(args.Value))
+	tv := types.NewTransactionValue(0, 0, int64(amount), nil)
+	tvData, _ := proto.Marshal(tv)
+	tx = types.NewTransaction(common.HexToAddress(args.From).Bytes(), common.HexToAddress(args.To).Bytes(), tvData)
 	log.Info(tx.Value)
-	am := tran.pm.AccountManager
-	addr := common.HexToAddress(string(args.From))
 
-	if !core.VerifyBalance(tx) {
-		return common.Hash{}, errors.New("Not enough balance!")
-	} else if _, found := am.Unlocked[addr]; found {
+	// TODO check balance
 
-		// Balance is enough
-		//txBytes, err := proto.Marshal(tx)
-		//if err != nil {
-		//	log.Fatalf("proto.Marshal(tx) error: %v",err)
-		//}
+	//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+	log.Infof("############# %d: start send request#############", time.Now().Unix())
+	start := time.Now().Unix()
+	end := start + 6
+	//end:=start+500
 
-		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		start := time.Now().Unix()
-		end := start + 6
+	for start := start; start < end; start = time.Now().Unix() {
+		for i := 0; i < 10; i++ {
+			tx.TimeStamp = time.Now().UnixNano()
 
-		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < 10; i++ {
-				tx.TimeStamp = time.Now().UnixNano()
-				txBytes, err := proto.Marshal(tx)
-				if err != nil {
-					log.Errorf("proto.Marshal(tx) error: %v", err)
-				}
-				if manager.GetEventObject() != nil {
-					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
-					//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-				} else {
-					log.Warning("manager is Nil")
-				}
-
+			// calculate signature
+			keydir := "./keystore/"
+			encryption := crypto.NewEcdsaEncrypto("ecdsa")
+			am := accounts.NewAccountManager(keydir, encryption)
+			// TODO replace password with test value
+			signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
+			if err != nil {
+				log.Errorf("Sign(tx) error :%v", err)
 			}
-			time.Sleep(2 * time.Millisecond)
-			//
+			tx.Signature = signature
+			txBytes, err := proto.Marshal(tx)
+			if err != nil {
+				log.Errorf("proto.Marshal(tx) error: %v", err)
+			}
+			if manager.GetEventObject() != nil {
+				go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+				//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+			} else {
+				log.Warning("manager is Nil")
+			}
 		}
-
-		log.Infof("############# %d: end send request#############", time.Now().Unix())
-		return tx.BuildHash(), nil
-
-	} else {
-		return common.Hash{}, errors.New("account isn't unlock")
+		time.Sleep(20 * time.Millisecond)
 	}
+
+	log.Infof("############# %d: end send request#############", time.Now().Unix())
+	return tx.BuildHash(), nil
+
 }
 
 // SendTransactionOrContract deploy contract
