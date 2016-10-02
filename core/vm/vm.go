@@ -3,12 +3,9 @@ package vm
 import (
 	"fmt"
 	"math/big"
-	"time"
 
 	"hyperchain/common"
 	"hyperchain/core/crypto"
-	"hyperchain/logger"
-	"hyperchain/logger/glog"
 	"hyperchain/core/vm/params"
 )
 
@@ -56,8 +53,9 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 	// 2.判断CodeAddr是否为空,如果不为空就去找已编译好的合约地址,然后运行该原生的智能合约
 	if contract.CodeAddr != nil {
 
+		//fmt.Println("the length is",len(Precompiled))
 		if p := Precompiled[contract.CodeAddr.Str()]; p != nil {
-			fmt.Println("we have the codeAddr")
+			//fmt.Println("we have the codeAddr")
 			return evm.RunPrecompiled(p, input, contract)
 		}
 		//fmt.Println("the codeAddr is not exist")
@@ -92,7 +90,6 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 				if perr == nil {
 					return RunProgram(program, evm.env, contract, input)
 				}
-				glog.V(logger.Info).Infoln("error compiling program", err)
 			} else {
 				// 否则可以另开一个线程
 				// create and compile the program. Compilation
@@ -101,7 +98,6 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 				go func() {
 					err := CompileProgram(program)
 					if err != nil {
-						glog.V(logger.Info).Infoln("error compiling program", err)
 						return
 					}
 				}()
@@ -146,14 +142,6 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 			evm.logger.captureState(pc, op, contract.Gas, cost, mem, stack, contract, evm.env.Depth(), err)
 		}
 	}()
-
-	if glog.V(logger.Debug) {
-		glog.Infof("running byte VM %x\n", codehash[:4])
-		tstart := time.Now()
-		defer func() {
-			glog.Infof("byte VM %x done. time: %v instrc: %v\n", codehash[:4], time.Since(tstart), instrCount)
-		}()
-	}
 
 	// 一个指令一个指令执行
 	for ; ; instrCount++ {
