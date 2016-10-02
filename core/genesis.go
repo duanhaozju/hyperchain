@@ -78,11 +78,18 @@ func CreateInitBlock(filename string)  {
 	}
 
 
+	//block := types.Block{
+	//	ParentHash: common.FromHex(genesis["test1"].ParentHash),
+	//	Timestamp:   genesis["test1"].Timestamp,
+	//	BlockHash: common.FromHex(genesis["test1"].BlockHash),
+	//	Number:   genesis["test1"].Number,
+	//	//MerkleRoot:       "root",
+	//}
 	block := types.Block{
-		ParentHash: common.FromHex(genesis["test1"].ParentHash),
-		Timestamp:   genesis["test1"].Timestamp,
-		BlockHash: common.FromHex(genesis["test1"].BlockHash),
-		Number:   genesis["test1"].Number,
+		ParentHash: common.FromHex("0x0000000000000000000000000000000000000000000000000000000000000000"),
+		Timestamp:   time.Now().Unix(),
+		BlockHash: common.FromHex("0x0000000000000000000000000000000000000000000000000000000000000000"),
+		Number:   uint64(0),
 		//MerkleRoot:       "root",
 	}
 
