@@ -40,7 +40,8 @@ func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*argT)
 
-		membersrvc.Start()
+		membersrvc.Start("./",argv.NodeId)
+
 		//init log
 		common.InitLog(logging.NOTICE, "./logs/", argv.LocalPort)
 		eventMux := new(event.TypeMux)
