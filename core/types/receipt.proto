@@ -9,5 +9,12 @@ message Receipt {
     int64 GasUsed = 5;
     bytes Ret = 6;
     bytes Logs = 7;
+    STATUS Status = 8;
+    bytes Message = 9;
+    enum STATUS {
+        SUCCESS       = 0;
+        OUTOFBALANCE    = 1;
+        SIGFAILED      = 2;
+    }
 }
 
