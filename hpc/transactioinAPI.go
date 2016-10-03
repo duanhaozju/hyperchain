@@ -1,10 +1,9 @@
 package hpc
 
 import (
-	"errors"
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
-	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/types"
@@ -18,8 +17,8 @@ import (
 )
 
 const (
-	defaultGas      int = 10000
-	defaustGasPrice int = 10000
+	defaultGas      int = 10000000
+	defaustGasPrice int = 10000000
 )
 
 var (
@@ -83,52 +82,85 @@ func prepareExcute(args SendTxArgs) SendTxArgs {
 // if the sender's balance is enough, return tx hash
 func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	log.Info("==========SendTransaction=====,args = ", args)
+	args = prepareExcute(args)
 	var tx *types.Transaction
-	amount, _ := strconv.Atoi(common.HexToString(args.Value))
-	tv := types.NewTransactionValue(0, 0, int64(amount), nil)
+
+	// (1) parse args
+	payload := common.FromHex(args.Payload)
+	amount, _ := strconv.ParseInt(common.HexToString(args.Value), 16, 64)
+	gasLimit, _ := strconv.ParseInt(common.HexToString(args.Gas), 16, 64)
+	gasPrice, _ := strconv.ParseInt(common.HexToString(args.GasPrice), 16, 64)
+	tv := types.NewTransactionValue(gasPrice, gasLimit, amount, payload)
 	tvData, _ := proto.Marshal(tv)
 	tx = types.NewTransaction(common.HexToAddress(args.From).Bytes(), common.HexToAddress(args.To).Bytes(), tvData)
-	log.Info(tx.Value)
-
-	// TODO check balance
 
 	//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 	log.Infof("############# %d: start send request#############", time.Now().Unix())
-	start := time.Now().Unix()
-	end := start + 6
-	//end:=start+500
+	/*
+		start := time.Now().Unix()
+		end := start + 6
+		//end:=start+500
 
-	for start := start; start < end; start = time.Now().Unix() {
-		for i := 0; i < 10; i++ {
-			tx.TimeStamp = time.Now().UnixNano()
+		for start := start; start < end; start = time.Now().Unix() {
+			for i := 0; i < 10; i++ {
+				tx.TimeStamp = time.Now().UnixNano()
 
-			// calculate signature
-			keydir := "./keystore/"
-			encryption := crypto.NewEcdsaEncrypto("ecdsa")
-			am := accounts.NewAccountManager(keydir, encryption)
-			// TODO replace password with test value
-			signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
-			if err != nil {
-				log.Errorf("Sign(tx) error :%v", err)
+				// calculate signature
+				keydir := "./keystore/"
+				encryption := crypto.NewEcdsaEncrypto("ecdsa")
+				am := accounts.NewAccountManager(keydir, encryption)
+				// TODO replace password with test value
+				signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
+				if err != nil {
+					log.Errorf("Sign(tx) error :%v", err)
+				}
+				tx.Signature = signature
+				txBytes, err := proto.Marshal(tx)
+				if err != nil {
+					log.Errorf("proto.Marshal(tx) error: %v", err)
+				}
+				if manager.GetEventObject() != nil {
+					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+					//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+				} else {
+					log.Warning("manager is Nil")
+				}
 			}
-			tx.Signature = signature
-			txBytes, err := proto.Marshal(tx)
-			if err != nil {
-				log.Errorf("proto.Marshal(tx) error: %v", err)
-			}
-			if manager.GetEventObject() != nil {
-				go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
-				//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-			} else {
-				log.Warning("manager is Nil")
-			}
+			time.Sleep(20 * time.Millisecond)
 		}
-		time.Sleep(20 * time.Millisecond)
+	*/
+	tx.TimeStamp = time.Now().UnixNano()
+
+	// TODO replace password with test value
+	signature, err := tran.pm.AccountManager.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
+	if err != nil {
+		log.Errorf("Sign(tx) error :%v", err)
 	}
-
+	tx.Signature = signature
+	txBytes, err := proto.Marshal(tx)
+	if err != nil {
+		log.Errorf("proto.Marshal(tx) error: %v", err)
+	}
+	if manager.GetEventObject() != nil {
+		go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+	} else {
+		log.Warning("manager is Nil")
+	}
 	log.Infof("############# %d: end send request#############", time.Now().Unix())
-	return tx.BuildHash(), nil
 
+	time.Sleep(2000 * time.Millisecond)
+	receipt := core.GetReceipt(tx.BuildHash())
+	fmt.Println("GasUsed", receipt.GasUsed)
+	fmt.Println("PostState", receipt.PostState)
+	fmt.Println("ContractAddress", receipt.ContractAddress)
+	fmt.Println("CumulativeGasUsed", receipt.CumulativeGasUsed)
+	fmt.Println("Ret", receipt.Ret)
+	fmt.Println("TxHash", receipt.TxHash)
+	fmt.Println("Status", receipt.Status)
+	fmt.Println("Message", receipt.Message)
+	fmt.Println("Log", receipt.Logs)
+	return tx.BuildHash(), nil
 }
 
 // SendTransactionOrContract deploy contract
@@ -148,61 +180,53 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 	//	amount, err = strconv.ParseInt(realArgs.Value,10,64)
 	//}
 
+	payload := common.FromHex(realArgs.Payload)
+	amount, _ := strconv.ParseInt(common.HexToString(realArgs.Value), 16, 64)
+	gasLimit, _ := strconv.ParseInt(common.HexToString(args.Gas), 16, 64)
+	gasPrice, _ := strconv.ParseInt(common.HexToString(args.GasPrice), 16, 64)
+	txValue := types.NewTransactionValue(gasPrice, gasLimit, amount, payload)
+	value, _ := proto.Marshal(txValue)
+
 	if args.To == "" {
-		//payload := common.FromHex("60606040526000600060006101000a81548163ffffffff021916908302179055507f6162636465666768696a6b6c6d6e6f707172737475767778797a0000000000006001600050556101aa806100556000396000f360606040526000357c0100000000000000000000000000000000000000000000000000000000900480633ad14af31461005a578063569c5f6d1461007b5780638da9b772146100a4578063d09de08a146100cb57610058565b005b61007960048080359060200190919080359060200190919050506100f4565b005b610088600480505061012a565b604051808263ffffffff16815260200191505060405180910390f35b6100b16004805050610149565b604051808260001916815260200191505060405180910390f35b6100d8600480505061015b565b604051808263ffffffff16815260200191505060405180910390f35b8082600060009054906101000a900463ffffffff160101600060006101000a81548163ffffffff021916908302179055505b5050565b6000600060009054906101000a900463ffffffff169050610146565b90565b60006001600050549050610158565b90565b60006001600060009054906101000a900463ffffffff1601600060006101000a81548163ffffffff02191690830217905550600060009054906101000a900463ffffffff1690506101a7565b9056")
-		//var code = "0x6000805463ffffffff1916815560a0604052600b6060527f68656c6c6f20776f726c6400000000000000000000000000000000000000000060805260018054918190527f68656c6c6f20776f726c6400000000000000000000000000000000000000001681559060be907fb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf66020600261010084871615026000190190931692909204601f01919091048101905b8082111560ce576000815560010160ac565b50506101b8806100d26000396000f35b509056606060405260e060020a60003504633ad14af3811461003c578063569c5f6d146100615780638da9b77214610071578063d09de08a146100da575b005b6000805460043563ffffffff8216016024350163ffffffff199190911617905561003a565b6100f960005463ffffffff165b90565b604080516020818101835260008252600180548451600261010083851615026000190190921691909104601f81018490048402820184019095528481526101139490928301828280156101ac5780601f10610181576101008083540402835291602001916101ac565b61003a6000805463ffffffff19811663ffffffff909116600101179055565b6040805163ffffffff929092168252519081900360200190f35b60405180806020018281038252838181518152602001915080519060200190808383829060006004602084601f0104600302600f01f150905090810190601f1680156101735780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b820191906000526020600020905b81548152906001019060200180831161018f57829003601f168201915b5050505050905061006e56"
-		//payload := common.FromHex(code)
-		payload := common.FromHex(realArgs.Payload)
-		txValue := types.NewTransactionValue(100000, 100000, 100, payload)
-		value, _ := proto.Marshal(txValue)
 		tx = types.NewTransaction(common.HexToAddress(realArgs.From).Bytes(), nil, value)
-		//tx = types.NewTestCreateTransaction()
-		//log.Info("the to is null")
 	} else {
-		payload := common.FromHex(realArgs.Payload)
-		txValue := types.NewTransactionValue(100000, 100000, 100, payload)
-		value, _ := proto.Marshal(txValue)
 		tx = types.NewTransaction(common.HexToAddress(realArgs.From).Bytes(), common.FromHex(realArgs.To), value)
-		//log.Info("the old value is",tx.Payload())
-		//tx = types.NewTestCallTransaction()
-		//tx.From = common.HexToAddress(realArgs.From).Bytes()
-		//tx.To = common.FromHex(realArgs.To)
-		//log.Info("the transactionapi real to byte is",realArgs.To)
-		//log.Info("the real from addr is",tx.From)
-		//log.Info("the real to addr is %#V",tx.To)
-		//log.Info("the new value is",tx.Payload())
 	}
 
 	am := tran.pm.AccountManager
-	addr := common.HexToAddress(args.From)
 
-	if _, found := am.Unlocked[addr]; found {
-		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		//start := time.Now().Unix()
-		//end:=start+6
-		//end:=start+500
+	log.Infof("############# %d: start send request#############", time.Now().Unix())
+	tx.TimeStamp = time.Now().UnixNano()
 
-		//for start := start ; start < end; start = time.Now().Unix() {
-		//	for i := 0; i < 50; i++ {
-		tx.TimeStamp = time.Now().UnixNano()
-		txBytes, err := proto.Marshal(tx)
-		if err != nil {
-			log.Errorf("proto.Marshal(tx) error: %v", err)
-		}
-		if manager.GetEventObject() != nil {
-			go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
-			//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-		} else {
-			log.Warning("manager is Nil")
-		}
-		//}
-		//time.Sleep(90 * time.Millisecond)
-		//}
-
-		log.Infof("############# %d: end send request#############", time.Now().Unix())
-	} else {
-		return common.Hash{}, errors.New("account isn't unlock")
+	// TODO replace password with test value
+	signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
+	if err != nil {
+		log.Errorf("Sign(tx) error :%v", err)
 	}
+	tx.Signature = signature
+
+	txBytes, err := proto.Marshal(tx)
+	if err != nil {
+		log.Errorf("proto.Marshal(tx) error: %v", err)
+	}
+	if manager.GetEventObject() != nil {
+		go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+	} else {
+		log.Warning("manager is Nil")
+	}
+	log.Infof("############# %d: end send request#############", time.Now().Unix())
+
+	time.Sleep(2000 * time.Millisecond)
+	receipt := core.GetReceipt(tx.BuildHash())
+	fmt.Println("GasUsed", receipt.GasUsed)
+	fmt.Println("PostState", receipt.PostState)
+	fmt.Println("ContractAddress", receipt.ContractAddress)
+	fmt.Println("CumulativeGasUsed", receipt.CumulativeGasUsed)
+	fmt.Println("Ret", receipt.Ret)
+	fmt.Println("TxHash", receipt.TxHash)
+	fmt.Println("Status", receipt.Status)
+	fmt.Println("Message", receipt.Message)
+	fmt.Println("Log", receipt.Logs)
 
 	return tx.BuildHash(), nil
 }
