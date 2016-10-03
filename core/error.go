@@ -18,17 +18,17 @@ func IsValueTransferErr(e error) bool {
 	return ok
 }
 
-type SignatureErr struct {
+type SignatureError struct {
 	message string
 }
 
-func SignatureError(str string, v ...interface{}) *SignatureErr {
-	return &SignatureErr{fmt.Sprintf(str, v...)}
+func SignatureErr(str string, v ...interface{}) *SignatureError {
+	return &SignatureError{fmt.Sprintf(str, v...)}
 }
-func (self *SignatureErr) Error() string {
+func (self *SignatureError) Error() string {
 	return self.message
 }
-func IsSignatureError(e error) bool {
-	_, ok := e.(*SignatureErr)
+func IsSignatureErr(e error) bool {
+	_, ok := e.(*SignatureError)
 	return ok
 }

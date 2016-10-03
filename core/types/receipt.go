@@ -11,34 +11,35 @@ import (
 //
 //// ReceiptTrans are used to show in web.
 type ReceiptTrans struct {
-	PostState         []byte
+	PostState         string
 	CumulativeGasUsed int64
 	TxHash            string
 	ContractAddress   string
 	GasUsed           int64
 	Ret               string
-	Logs              vm.Logs
-}
-
-type LogTrans struct {
-	Address     string
-	Topics      []common.Hash
-	Data        []byte
-	BlockNumber uint64
-	TxHash      string
-	TxIndex     uint
-	BlockHash   string
-	Index       uint
+	Status            Receipt_STATUS
+	Message           string
+	Logs              []vm.LogTrans
 }
 
 func (receipt Receipt) ToReceiptTrans() (receiptTrans *ReceiptTrans) {
+	logs, err := receipt.GetLogs()
+	var logsValue []vm.LogTrans
+	if err != nil {
+		logsValue = nil
+	} else {
+		logsValue = logs.ToLogsTrans()
+	}
 	return &ReceiptTrans{
 		GasUsed:           receipt.GasUsed,
-		PostState:         receipt.PostState,
-		ContractAddress:   common.Bytes2Hex(receipt.ContractAddress),
+		PostState:         common.BytesToHash(receipt.PostState).Hex(),
+		ContractAddress:   common.BytesToAddress(receipt.ContractAddress).Hex(),
 		CumulativeGasUsed: receipt.CumulativeGasUsed,
 		Ret:               common.ToHex(receipt.Ret),
-		TxHash:            common.ToHex(receipt.TxHash),
+		TxHash:            common.BytesToHash(receipt.TxHash).Hex(),
+		Status:            receipt.Status,
+		Message:           string(receipt.Message),
+		Logs:              logsValue,
 	}
 }
 

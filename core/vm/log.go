@@ -50,6 +50,38 @@ func DecodeLogs(buf []byte) (Logs, error) {
 	return tmp, err
 }
 
+type LogTrans struct {
+	Address     string
+	Topics      []string
+	Data        string
+	BlockNumber uint64
+	TxHash      string
+	TxIndex     uint
+	BlockHash   string
+	Index       uint
+}
+
+func (ls Logs) ToLogsTrans() []LogTrans {
+	var ret = make([]LogTrans, len(ls))
+	for idx, log := range ls {
+		var topics = make([]string, len(log.Topics))
+		for ti, t := range log.Topics {
+			topics[ti] = t.Hex()
+		}
+		ret[idx] = LogTrans{
+			Address:     log.Address.Hex(),
+			Data:        common.BytesToHash(log.Data).Hex(),
+			BlockNumber: log.BlockNumber,
+			Topics:      topics,
+			BlockHash:   log.BlockHash.Hex(),
+			TxHash:      log.TxHash.Hex(),
+			Index:       log.Index,
+			TxIndex:     log.TxIndex,
+		}
+	}
+	return ret
+}
+
 // LogForStorage is a wrapper around a Log that flattens and parses the entire
 // content of a log, as opposed to only the consensus fields originally (by hiding
 // the rlp interface methods).

@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	glog "github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/core/state"
@@ -71,9 +70,7 @@ func preCheck(tx types.Transaction) error {
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	if !(&tx).ValidateSign(encryption, kec256Hash) {
-		fmt.Println("validate signature failed")
-		fmt.Println("sign", tx.Signature)
-		return SignatureError("")
+		return SignatureErr("signature validation failed")
 	}
 	// check balance
 	return nil
@@ -86,39 +83,44 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		//sender = common.BytesToAddress(tx.From)
 		to = common.BytesToAddress(tx.To)
 		// TODO these there parameters should be added into the tx
-		data     = tx.Payload()
-		gas      = tx.Gas()
-		gasPrice = tx.GasPrice()
-		amount   = tx.Amount()
+		data       = tx.Payload()
+		gas        = tx.Gas()
+		gasPrice   = tx.GasPrice()
+		amount     = tx.Amount()
+		statedb, _ = env.Db().(*state.StateDB)
 	)
 	if err := preCheck(tx); err != nil {
-		return nil, nil, common.Address{}, nil
+		receipt = types.NewReceipt(statedb.IntermediateRoot().Bytes(), gas)
+		receipt.ContractAddress = addr.Bytes()
+		receipt.TxHash = tx.BuildHash().Bytes()
+		// todo replace the gasused
+		receipt.GasUsed = 100000
+		receipt.SetLogs(statedb.GetLogs(common.BytesToHash(receipt.TxHash)))
+		receipt.Status = types.Receipt_SIGFAILED
+		receipt.Message = []byte(err.Error())
+		return receipt, nil, addr, err
 	}
-	//log.Notice("the to is ---------",to)
-	//log.Notice("the to is ---------",tx.To)
 	if tx.To == nil {
 		ret, addr, err = Exec(env, &from, nil, data, gas, gasPrice, amount)
-		//log.Info("the exetx addr is ",addr.Bytes())
-		//log.Info("the exetx hash is ",common.ToHex(tx.BuildHash().Bytes()))
-		//log.Info("the exetx create ret is ",ret)
-		receipt.ContractAddress = addr.Bytes()
 	} else {
 		ret, _, err = Exec(env, &from, &to, data, gas, gasPrice, amount)
-		//log.Info("the exetx to addr is ",to.Bytes())
-		//log.Infof("the exetx tx.to is %#V",tx.To)
-		//log.Info("the exetx hash is ",common.ToHex(tx.BuildHash().Bytes()))
-		//log.Info("the exetx call ret is ",ret)
 	}
-	statedb, _ := env.Db().(*state.StateDB)
+
 	receipt = types.NewReceipt(statedb.IntermediateRoot().Bytes(), gas)
+	receipt.ContractAddress = addr.Bytes()
 	receipt.TxHash = tx.BuildHash().Bytes()
 	// todo replace the gasused
 	receipt.GasUsed = 100000
 	receipt.Ret = ret
 	receipt.SetLogs(statedb.GetLogs(common.BytesToHash(receipt.TxHash)))
-	//fmt.Println("-----------------------")
-	//fmt.Println("ret",ret)
-	//fmt.Println("-----------------------")
+
+	if err != nil && IsValueTransferErr(err) {
+		receipt.Status = types.Receipt_OUTOFBALANCE
+		receipt.Message = []byte(err.Error())
+	} else {
+		receipt.Status = types.Receipt_SUCCESS
+		receipt.Message = nil
+	}
 	return receipt, ret, addr, err
 }
 
