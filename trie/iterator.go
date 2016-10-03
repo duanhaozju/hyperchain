@@ -7,8 +7,12 @@ import (
 	"hyperchain/common"
 	"hyperchain/logger"
 	"hyperchain/logger/glog"
+	"github.com/op/go-logging"
 )
-
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("trie")
+}
 // Iterator is a key-value trie iterator to traverse the data contents.
 type Iterator struct {
 	trie *Trie
