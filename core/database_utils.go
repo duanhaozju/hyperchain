@@ -5,26 +5,26 @@
 package core
 
 import (
-	"hyperchain/hyperdb"
-	"github.com/golang/protobuf/proto"
-	"hyperchain/core/types"
-	"sync"
 	"encoding/json"
+	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
+	"hyperchain/core/types"
 	"hyperchain/crypto"
+	"hyperchain/hyperdb"
 	"strconv"
+	"sync"
 )
 
 // the prefix of key, use to save to db
 var (
-	transactionPrefix   = []byte("transaction-")
-	receiptsPrefix   = []byte("receipts-")
-	blockPrefix         = []byte("block-")
-	chainKey            = []byte("chain-key")
-	balanceKey          = []byte("balance-key")
-	blockNumPrefix      = []byte("blockNum-")
-	bodySuffix          = []byte("-body")
-	txMetaSuffix        = []byte{0x01}
+	transactionPrefix = []byte("transaction-")
+	receiptsPrefix    = []byte("receipts-")
+	blockPrefix       = []byte("block-")
+	chainKey          = []byte("chain-key")
+	balanceKey        = []byte("balance-key")
+	blockNumPrefix    = []byte("blockNum-")
+	bodySuffix        = []byte("-body")
+	txMetaSuffix      = []byte{0x01}
 )
 
 // InitDB initialization ldb and memdb
@@ -34,19 +34,20 @@ func InitDB(port int) {
 	hyperdb.SetLDBPath(port)
 	memChainMap = newMemChain()
 }
+
 //---------------------- Receipt Start ---------------------------------
 // WriteReceipts stores a batch of transaction receipts into the database.
 func WriteReceipts(receipts types.Receipts) error {
-	db,_ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetLDBDatabase()
 	batch := db.NewBatch()
 	// Iterate over all the receipts and queue them for database injection
 	for _, receipt := range receipts {
-		//fmt.Println("the addr",receipt.ContractAddress)
-		//fmt.Println("the txhash",receipt.TxHash)
+		//fmt.Println("the addr", receipt.ContractAddress)
 		data, err := proto.Marshal(receipt)
 		if err != nil {
 			return err
 		}
+
 		if err := batch.Put(append(receiptsPrefix, receipt.TxHash...), data); err != nil {
 			return err
 		}
@@ -57,9 +58,10 @@ func WriteReceipts(receipts types.Receipts) error {
 	}
 	return nil
 }
+
 // GetReceipt returns a receipt by hash
 func GetReceipt(txHash common.Hash) *types.ReceiptTrans {
-	db,_ = hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetLDBDatabase()
 	data, _ := db.Get(append(receiptsPrefix, txHash[:]...))
 	if len(data) == 0 {
 		return nil
@@ -74,8 +76,8 @@ func GetReceipt(txHash common.Hash) *types.ReceiptTrans {
 	//fmt.Println("TxHash",a.TxHash)
 	return receipt.ToReceiptTrans()
 }
-//---------------------- Receipts End ---------------------------------
 
+//---------------------- Receipts End ---------------------------------
 
 //-- ------------------- Transaction ---------------------------------
 func PutTransaction(db hyperdb.Database, key []byte, t *types.Transaction) error {
@@ -93,7 +95,7 @@ func PutTransaction(db hyperdb.Database, key []byte, t *types.Transaction) error
 
 // PutTransactions put transaction into database using Batch
 // Each Transaction's key is its hash
-func PutTransactions(db hyperdb.Database, commonHash crypto.CommonHash ,ts []*types.Transaction) error {
+func PutTransactions(db hyperdb.Database, commonHash crypto.CommonHash, ts []*types.Transaction) error {
 	batch := db.NewBatch()
 	for _, trans := range ts {
 		key := trans.Hash(commonHash).Bytes()
@@ -107,7 +109,7 @@ func PutTransactions(db hyperdb.Database, commonHash crypto.CommonHash ,ts []*ty
 	return batch.Write()
 }
 
-func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error){
+func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error) {
 	var transaction types.Transaction
 	keyFact := append(transactionPrefix, key...)
 	data, err := db.Get(keyFact)
@@ -141,8 +143,8 @@ func GetAllTransaction(db *hyperdb.LDBDatabase) ([]*types.Transaction, error) {
 	err := iter.Error()
 	return ts, err
 }
-//-- --------------------- Transaction END -----------------------------------
 
+//-- --------------------- Transaction END -----------------------------------
 
 //-- ------------------- Block ---------------------------------
 func PutBlock(db hyperdb.Database, key []byte, t *types.Block) error {
@@ -164,7 +166,7 @@ func GetBlockHash(db hyperdb.Database, blockNumber uint64) ([]byte, error) {
 	return db.Get(append(blockNumPrefix, keyNum...))
 }
 
-func GetBlock(db hyperdb.Database, key []byte) (*types.Block, error){
+func GetBlock(db hyperdb.Database, key []byte) (*types.Block, error) {
 	var block types.Block
 	keyFact := append(blockPrefix, key...)
 	data, err := db.Get(keyFact)
@@ -176,14 +178,13 @@ func GetBlock(db hyperdb.Database, key []byte) (*types.Block, error){
 }
 
 func GetBlockByNumber(db hyperdb.Database, blockNumber uint64) (*types.Block, error) {
-	hash , err := GetBlockHash(db , blockNumber)
+	hash, err := GetBlockHash(db, blockNumber)
 	if err != nil {
 		return nil, err
 
 	}
 	return GetBlock(db, hash)
 }
-
 
 func DeleteBlock(db hyperdb.Database, key []byte) error {
 	keyFact := append(blockPrefix, key...)
@@ -199,7 +200,7 @@ type balanceMapJson map[string][]byte
 func PutDBBalance(db hyperdb.Database, balance_db BalanceMap) error {
 
 	var bJson = make(balanceMapJson)
-	for key, value := range balance_db{
+	for key, value := range balance_db {
 		bJson[key.Str()] = value
 	}
 	data, err := json.Marshal(bJson)
@@ -225,14 +226,15 @@ func GetDBBalance(db hyperdb.Database) (BalanceMap, error) {
 	}
 	return b, nil
 }
+
 //-- --------------------- BalanceMap END---------------------------------
 
 //-- ------------------- Chain ----------------------------------------
 
 // memChain manage safe chain
 type memChain struct {
-	data   types.Chain   // chain
-	lock   sync.RWMutex  // the lock of chain
+	data   types.Chain      // chain
+	lock   sync.RWMutex     // the lock of chain
 	cpChan chan types.Chain // when data.Height reach check point, will be writed
 }
 
@@ -251,7 +253,7 @@ func newMemChain() *memChain {
 	chain, err := getChain(db)
 	if err == nil {
 		return &memChain{
-			data: *chain,
+			data:   *chain,
 			cpChan: make(chan types.Chain),
 		}
 	}
@@ -259,10 +261,11 @@ func newMemChain() *memChain {
 		data: types.Chain{
 			Height: 0,
 		},
-		cpChan:make(chan types.Chain),
+		cpChan: make(chan types.Chain),
 	}
 }
-var memChainMap *memChain;
+
+var memChainMap *memChain
 
 // GetLatestBlockHash get latest blockHash
 func GetLatestBlockHash() []byte {
@@ -299,7 +302,7 @@ func UpdateChain(block *types.Block, genesis bool) error {
 func UpdateChainByBlcokNum(db hyperdb.Database, blockNumber uint64) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
-	block, err :=GetBlockByNumber(db,blockNumber)
+	block, err := GetBlockByNumber(db, blockNumber)
 	if err != nil {
 		log.Warning("no required block number")
 	}
@@ -321,23 +324,23 @@ func GetChainCopy() *types.Chain {
 	memChainMap.lock.RLock()
 	defer memChainMap.lock.RUnlock()
 	return &types.Chain{
-		LatestBlockHash: memChainMap.data.LatestBlockHash,
-		ParentBlockHash: memChainMap.data.ParentBlockHash,
-		Height: memChainMap.data.Height,
-		RequiredBlockNum:memChainMap.data.RequiredBlockNum,
-		RequireBlockHash:memChainMap.data.RequireBlockHash,
-		RecoveryNum:memChainMap.data.RecoveryNum,
+		LatestBlockHash:  memChainMap.data.LatestBlockHash,
+		ParentBlockHash:  memChainMap.data.ParentBlockHash,
+		Height:           memChainMap.data.Height,
+		RequiredBlockNum: memChainMap.data.RequiredBlockNum,
+		RequireBlockHash: memChainMap.data.RequireBlockHash,
+		RecoveryNum:      memChainMap.data.RecoveryNum,
 	}
 }
 
 // WaitUtilHeightChan get chain from channel. if channel is empty, the func will be blocked
 func GetChainUntil() *types.Chain {
-	chain := <- memChainMap.cpChan
+	chain := <-memChainMap.cpChan
 	return &chain
 }
 
 // WriteChain to channel, if the channel is not read, will be blocked
-func WriteChainChan()  {
+func WriteChainChan() {
 	memChainMap.cpChan <- memChainMap.data
 }
 
@@ -354,21 +357,21 @@ func putChain(db hyperdb.Database, t *types.Chain) error {
 }
 
 // UpdateRequire updates requireBlockNum and requireBlockHash
-func UpdateRequire(num uint64, hash []byte,recoveryNum uint64) error {
+func UpdateRequire(num uint64, hash []byte, recoveryNum uint64) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
 	memChainMap.data.RequiredBlockNum = num
 	memChainMap.data.RecoveryNum = recoveryNum
 	memChainMap.data.RequireBlockHash = hash
 	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {return err}
+	if err != nil {
+		return err
+	}
 	return putChain(db, &memChainMap.data)
 }
 
-
-
 // getChain get chain from database
-func getChain(db hyperdb.Database) (*types.Chain, error){
+func getChain(db hyperdb.Database) (*types.Chain, error) {
 	var chain types.Chain
 	data, err := db.Get(chainKey)
 	if len(data) == 0 {
@@ -377,6 +380,7 @@ func getChain(db hyperdb.Database) (*types.Chain, error){
 	err = proto.Unmarshal(data, &chain)
 	return &chain, err
 }
+
 //-- --------------------- Chain END ----------------------------------
 
 // GetCurrentAndParentBlockHash get current blockHash and parent blockHash
