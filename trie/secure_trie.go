@@ -5,8 +5,6 @@ import (
 
 	"hyperchain/common"
 	"hyperchain/crypto/sha3"
-	"hyperchain/logger"
-	"hyperchain/logger/glog"
 )
 
 var secureKeyPrefix = []byte("secure-key-")
@@ -54,8 +52,8 @@ func NewSecure(root common.Hash, db Database) (*SecureTrie, error) {
 // The value bytes must not be modified by the caller.
 func (t *SecureTrie) Get(key []byte) []byte {
 	res, err := t.TryGet(key)
-	if err != nil && glog.V(logger.Error) {
-		glog.Errorf("Unhandled trie error: %v", err)
+	if err != nil {
+		log.Errorf("Unhandled trie error: %v", err)
 	}
 	return res
 }
@@ -74,8 +72,8 @@ func (t *SecureTrie) TryGet(key []byte) ([]byte, error) {
 // The value bytes must not be modified by the caller while they are
 // stored in the trie.
 func (t *SecureTrie) Update(key, value []byte) {
-	if err := t.TryUpdate(key, value); err != nil && glog.V(logger.Error) {
-		glog.Errorf("Unhandled trie error: %v", err)
+	if err := t.TryUpdate(key, value); err != nil {
+		log.Errorf("Unhandled trie error: %v", err)
 	}
 }
 
@@ -99,8 +97,8 @@ func (t *SecureTrie) TryUpdate(key, value []byte) error {
 
 // Delete removes any existing value for key from the trie.
 func (t *SecureTrie) Delete(key []byte) {
-	if err := t.TryDelete(key); err != nil && glog.V(logger.Error) {
-		glog.Errorf("Unhandled trie error: %v", err)
+	if err := t.TryDelete(key); err != nil {
+		log.Errorf("Unhandled trie error: %v", err)
 	}
 }
 

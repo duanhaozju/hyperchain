@@ -5,14 +5,8 @@ import (
 	"fmt"
 
 	"hyperchain/common"
-	"hyperchain/logger"
-	"hyperchain/logger/glog"
-	"github.com/op/go-logging"
 )
-var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("trie")
-}
+
 // Iterator is a key-value trie iterator to traverse the data contents.
 type Iterator struct {
 	trie *Trie
@@ -99,8 +93,8 @@ func (self *Iterator) next(node interface{}, key []byte, isIterStart bool) []byt
 
 	case hashNode:
 		rn, err := self.trie.resolveHash(node, nil, nil)
-		if err != nil && glog.V(logger.Error) {
-			glog.Errorf("Unhandled trie error: %v", err)
+		if err != nil {
+			log.Errorf("Unhandled trie error: %v", err)
 		}
 		return self.next(rn, key, isIterStart)
 	}
@@ -130,8 +124,8 @@ func (self *Iterator) key(node interface{}) []byte {
 		}
 	case hashNode:
 		rn, err := self.trie.resolveHash(node, nil, nil)
-		if err != nil && glog.V(logger.Error) {
-			glog.Errorf("Unhandled trie error: %v", err)
+		if err != nil {
+			log.Errorf("Unhandled trie error: %v", err)
 		}
 		return self.key(rn)
 	}
