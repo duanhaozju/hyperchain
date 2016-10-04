@@ -21,6 +21,7 @@ type NewBlockEvent struct{ Payload []byte
 //general tx local
 type NewTxEvent struct{ Payload []byte  }
 
+//transmit tx to primary node
 type TxUniqueCastEvent struct{ Payload []byte
 			       PeerId uint64  }
 
@@ -34,6 +35,8 @@ type StateUpdateEvent struct{Payload []byte }
 
 // after get all required block,send this block to node
 type ReceiveSyncBlockEvent struct{Payload []byte }
+
+
 
 
 

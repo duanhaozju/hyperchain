@@ -389,10 +389,6 @@ func (pm *ProtocolManager) commitNewBlock(payload []byte, commitTime int64) {
 func (pm *ProtocolManager) GetNodeInfo() client.PeerInfos {
 	pm.nodeInfo = pm.peerManager.GetPeerInfos()
 	log.Info("nodeInfo is ", pm.nodeInfo)
-	/*	pm.nodeInfo["node1"]=true
-		pm.nodeInfo["node2"]=true
-		pm.nodeInfo["node3"]=false
-		pm.nodeInfo["node4"]=true*/
 	return pm.nodeInfo
 
 }

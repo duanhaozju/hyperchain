@@ -71,6 +71,9 @@ func (pool *BlockPool) eventLoop() {
 	}
 }
 
+
+
+
 //check block sequence and validate in chain
 func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int64) {
 
@@ -92,8 +95,20 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 	currentChain := GetChainCopy()
 
 	if currentChain.Height >= block.Number {
+		//todo view change ,delete block and rewrite block
 
-		log.Info("replated block number,number is: ", block.Number)
+		db, err := hyperdb.GetLDBDatabase()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		block,_:=GetBlockByNumber(db,block.Number)
+		//rollback chain height,latestHash
+		UpdateChainByViewChange(block.Number-1,block.ParentHash)
+		keyNum := strconv.FormatInt(int64(block.Number), 10)
+		DeleteBlock(db,append(blockNumPrefix, keyNum...))
+		WriteBlock(block, commonHash, commitTime)
+		log.Notice("replated block number,number is: ", block.Number)
 		return
 	}
 
@@ -177,6 +192,8 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	//TxSum.Add(TxSum,big.NewInt(int64(len(block.Transactions))))
 	//CommitStatedbToBlockchain()
 }
+
+
 
 func ProcessBlock(block *types.Block) error {
 	var (
