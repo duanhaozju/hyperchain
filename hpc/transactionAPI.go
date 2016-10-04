@@ -1,7 +1,6 @@
 package hpc
 
 import (
-	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"hyperchain/common"
@@ -150,16 +149,18 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	log.Infof("############# %d: end send request#############", time.Now().Unix())
 
 	time.Sleep(2000 * time.Millisecond)
-	receipt := core.GetReceipt(tx.BuildHash())
-	fmt.Println("GasUsed", receipt.GasUsed)
-	fmt.Println("PostState", receipt.PostState)
-	fmt.Println("ContractAddress", receipt.ContractAddress)
-	fmt.Println("CumulativeGasUsed", receipt.CumulativeGasUsed)
-	fmt.Println("Ret", receipt.Ret)
-	fmt.Println("TxHash", receipt.TxHash)
-	fmt.Println("Status", receipt.Status)
-	fmt.Println("Message", receipt.Message)
-	fmt.Println("Log", receipt.Logs)
+	/*
+		receipt := core.GetReceipt(tx.BuildHash())
+		fmt.Println("GasUsed", receipt.GasUsed)
+		fmt.Println("PostState", receipt.PostState)
+		fmt.Println("ContractAddress", receipt.ContractAddress)
+		fmt.Println("CumulativeGasUsed", receipt.CumulativeGasUsed)
+		fmt.Println("Ret", receipt.Ret)
+		fmt.Println("TxHash", receipt.TxHash)
+		fmt.Println("Status", receipt.Status)
+		fmt.Println("Message", receipt.Message)
+		fmt.Println("Log", receipt.Logs)
+	*/
 	return tx.BuildHash(), nil
 }
 
@@ -217,17 +218,18 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 	log.Infof("############# %d: end send request#############", time.Now().Unix())
 
 	time.Sleep(2000 * time.Millisecond)
-	receipt := core.GetReceipt(tx.BuildHash())
-	fmt.Println("GasUsed", receipt.GasUsed)
-	fmt.Println("PostState", receipt.PostState)
-	fmt.Println("ContractAddress", receipt.ContractAddress)
-	fmt.Println("CumulativeGasUsed", receipt.CumulativeGasUsed)
-	fmt.Println("Ret", receipt.Ret)
-	fmt.Println("TxHash", receipt.TxHash)
-	fmt.Println("Status", receipt.Status)
-	fmt.Println("Message", receipt.Message)
-	fmt.Println("Log", receipt.Logs)
-
+	/*
+		receipt := core.GetReceipt(tx.BuildHash())
+		fmt.Println("GasUsed", receipt.GasUsed)
+		fmt.Println("PostState", receipt.PostState)
+		fmt.Println("ContractAddress", receipt.ContractAddress)
+		fmt.Println("CumulativeGasUsed", receipt.CumulativeGasUsed)
+		fmt.Println("Ret", receipt.Ret)
+		fmt.Println("TxHash", receipt.TxHash)
+		fmt.Println("Status", receipt.Status)
+		fmt.Println("Message", receipt.Message)
+		fmt.Println("Log", receipt.Logs)
+	*/
 	return tx.BuildHash(), nil
 }
 
