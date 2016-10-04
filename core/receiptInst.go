@@ -67,6 +67,8 @@ func (self *ReceiptInst) GetAllReceipt() ReceiptMap {
 	return ret
 }
 func (self *ReceiptInst) Commit() error {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
 	receipts := make([]*types.Receipt, 0)
 	for _, v := range self.data {
 		receipts = append(receipts, v)
