@@ -20,6 +20,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"hyperchain/recovery"
 	"encoding/hex"
+	"time"
 )
 
 var log *logging.Logger // package-level logger
@@ -47,7 +48,7 @@ func NewNode(port int, hEventManager *event.TypeMux,nodeID int,Cname string,TEM 
 	newNode.NodeID = strconv.Itoa(nodeID)
 	newNode.higherEventManager = hEventManager
 
-	newNode.startServer()
+
 	return &newNode
 
 }
@@ -64,26 +65,25 @@ func (this *Node)GetNodeID() string{
 // Chat Implements the ServerSide Function
 func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error) {
 	var response pb.Message
+	response.MessageType = pb.Message_RESPONSE
+	response.MsgTimeStamp = time.Now().UnixNano()
 	response.From = this.address
 	//handle the message
 	//review decrypt
-	if msg.MessageType !=pb.Message_HELLO && msg.MessageType != pb.Message_HELLO_RESPONSE{
-		log.Critical("××××××解密信息××××××")
-		log.Critical("待解密信息",hex.EncodeToString(msg.Payload))
-		msg.Payload = this.TEM.DecWithSecret(msg.Payload,msg.From.Hash)
-		log.Critical("解密后信息",hex.EncodeToString(msg.Payload))
-	}
+	log.Debug("消息类型",msg.MessageType)
+
 	switch msg.MessageType {
 	case pb.Message_HELLO :{
-		log.Notice("=================================")
-		log.Notice("协商秘钥")
-		log.Notice("本地地址为",this.address.ID,this.address.Ip,this.address.Port)
-		log.Notice("远端地址为",msg.From.ID,msg.From.Ip,msg.From.Port)
-		log.Notice("=================================")
+		log.Debug("=================================")
+		log.Debug("协商秘钥")
+		log.Debug("本地地址为",this.address.ID,this.address.Ip,this.address.Port)
+		log.Debug("远端地址为",msg.From.ID,msg.From.Ip,msg.From.Port)
+		log.Debug("=================================")
 		response.MessageType = pb.Message_HELLO_RESPONSE
 		//review 协商密钥
 		remotePublicKey := msg.Payload
 		this.TEM.GenerateSecret(remotePublicKey,msg.From.Hash)
+		//log.Notice("协商秘钥为：",this.TEM.GetSecret(msg.From.Hash))
 		transportPublicKey := this.TEM.GetLocalPublicKey()
 		//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
 		response.Payload = transportPublicKey
@@ -95,12 +95,22 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		log.Warning("Invalidate HELLO_RESPONSE message")
 	}
 	case pb.Message_CONSUS:{
-		response.MessageType = pb.Message_RESPONSE
-		log.Notice("<<<< GOT A CONSUS MESSAGE >>>>")
-		response.Payload = []byte(this.address.Ip+" got a message")
+		log.Debug("<<<< GOT A CONSUS MESSAGE >>>>")
+
+		log.Debug("××××××Node解密信息××××××")
+		log.Debug("Node待解密信息",hex.EncodeToString(msg.Payload))
+		transferData := this.TEM.DecWithSecret(msg.Payload,msg.From.Hash)
+		log.Debug("Node解密后信息",hex.EncodeToString(transferData))
+		log.Debug("Node解密后信息2",string(transferData))
+		response.Payload =  []byte("GOT_A_CONSENSUS_MESSAGE")
+		if string(transferData) == "TEST"{
+			response.Payload = []byte("GOT_A_TEST_CONSENSUS_MESSAGE")
+		}
+		log.Debug("来自节点",msg.From.ID)
+		log.Debug(hex.EncodeToString(transferData))
 
 		go this.higherEventManager.Post(event.ConsensusEvent{
-			Payload:msg.Payload,
+			Payload:transferData,
 		})
 	}
 	case pb.Message_SYNCMSG:{
@@ -157,7 +167,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 }
 
 // StartServer start the gRPC server
-func (this *Node)startServer() {
+func (this *Node)StartServer() {
 	log.Info("Starting the grpc listening server...")
 	lis, err := net.Listen("tcp", ":" + strconv.Itoa(int(this.address.Port)))
 	if err != nil {
