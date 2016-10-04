@@ -13,7 +13,7 @@ import (
 	"hyperchain/manager"
 	"strconv"
 	"time"
-	"hyperchain/accounts"
+	//"hyperchain/accounts"
 )
 
 const (
@@ -102,11 +102,11 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//end:=start+500
 
 		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < 100; i++ {
+			for i := 0; i < 25; i++ {
 				tx.TimeStamp = time.Now().UnixNano()
 
 				// calculate signature
-				keydir := "./keystore/"
+				/*keydir := "./keystore/"
 				encryption := crypto.NewEcdsaEncrypto("ecdsa")
 				am := accounts.NewAccountManager(keydir, encryption)
 				// TODO replace password with test value
@@ -114,7 +114,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				if err != nil {
 					log.Errorf("Sign(tx) error :%v", err)
 				}
-				tx.Signature = signature
+				tx.Signature = signature*/
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
 					log.Errorf("proto.Marshal(tx) error: %v", err)
@@ -126,7 +126,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					log.Warning("manager is Nil")
 				}
 			}
-			time.Sleep(20 * time.Millisecond)
+			time.Sleep(25 * time.Millisecond)
 		}
 	/*tx.TimeStamp = time.Now().UnixNano()
 

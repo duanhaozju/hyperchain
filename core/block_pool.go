@@ -9,7 +9,7 @@ import (
 	"sync"
 
 	"encoding/hex"
-	"fmt"
+
 	"hyperchain/common"
 	"hyperchain/core/state"
 	"hyperchain/core/types"
