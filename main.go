@@ -22,6 +22,7 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/accounts"
 	"hyperchain/jsonrpc"
+	"hyperchain/membersrvc"
 )
 
 type argT struct {
@@ -38,6 +39,8 @@ type argT struct {
 func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*argT)
+
+		membersrvc.Start("./",argv.NodeId)
 
 		//init log
 		common.InitLog(logging.NOTICE, "./logs/", argv.LocalPort)

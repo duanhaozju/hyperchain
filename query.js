@@ -6,7 +6,7 @@
  * the request must be async, so use the nodeJS
  * author: ChenQuan
  * create date: 2016-09-04
- * description: this is a pure http request file, depends on noting, and you can use this just type `node auto_test.js`
+ * description: this is a pure http request file, depends on noting, and you can use this just type `node auto_server_test.js`
  *
  */
 

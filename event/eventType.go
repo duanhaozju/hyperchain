@@ -14,8 +14,6 @@ type AliveEvent struct{Payload bool}
 // send consensus event to outer peers for consensus module
 type BroadcastConsensusEvent struct{ Payload []byte }
 
-
-
 //receive new block event from node consensus event for consensus module
 type NewBlockEvent struct{ Payload []byte
 			   CommitTime int64}
@@ -23,6 +21,8 @@ type NewBlockEvent struct{ Payload []byte
 //general tx local
 type NewTxEvent struct{ Payload []byte  }
 
+type TxUniqueCastEvent struct{ Payload []byte
+			       PeerId uint64  }
 
 type NewBlockPoolEvent struct{ Payload []byte  }
 

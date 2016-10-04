@@ -396,10 +396,11 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
 
 function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockService, TransactionService) {
     $scope.status = "";
+    $scope.blkGPSstatus = "";
 
     $scope.tx = {
         from: "6201cb0448964ac597faf6fdf1f472edf2a22b89",
-        to: "0000000000000000000000000000000000000002",
+        to: "000f1a7a08ccc48e5d30f80850cf1cf283aa3abd",
         value: "1"
     };
 
@@ -417,7 +418,6 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
         from: "",
         to: ""
     };
-
     $scope.commitTime = "0";
     $scope.batchTime = "0";
     $scope.avgTime = "0";
@@ -456,22 +456,22 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
             })
     };
 
-    $scope.queryAvg = function(){
+    $scope.queryTxAvg = function(){
 
-        if (isEmpty($scope.blockAvg)) {
+        if (isEmpty($scope.txAvg)) {
             alert("字段不能为空");
             return false;
         }
 
-        SummaryService.getAvgTimeAndCount($scope.blockAvg.from, $scope.blockAvg.to)
+        SummaryService.getAvgTimeAndCount($scope.txAvg.from, $scope.txAvg.to)
             .then(function(res){
-                $scope.avgTime = res.time
+                $scope.txAvgTime = res.time
             }, function(error){
                 console.log(error);
             })
     }
 
-    $scope.query = function(){
+    $scope.queryBatchAndCommit = function(){
 
         if (isEmpty($scope.block)) {
             alert("字段不能为空");
@@ -501,6 +501,32 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
             }, function(error){
                 console.log(error);
             })
+    }
+    $scope.queryBlockTime = function() {
+
+        if (isEmpty($scope.blockAvg)) {
+            alert("字段不能为空");
+            return false;
+        }
+
+        BlockService.queryBlockAvgTime($scope.blockAvg.from, $scope.blockAvg.to)
+            .then(function(res){
+                $scope.blockTime = res;
+            }, function(error){
+                console.log(error);
+            })
+    }
+    $scope.queryBlkGPS = function() {
+        
+        $scope.blkGPSstatus = "please waitting.....";
+        BlockService.queryBlockGPS()
+            .then(function(res){
+                $scope.blkGPSstatus = "statis saved in /tmp/hyperchain/cache/statis/block_time_statis ";
+            }, function(error){
+                $scope.blkGPSstatus = error.message;
+                console.log(error);
+            })
+
     }
 }
 
