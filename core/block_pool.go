@@ -189,7 +189,7 @@ func ProcessBlock(block *types.Block) error {
 	}
 	parentBlock, _ := GetBlock(db, block.ParentHash)
 	statedb, e := state.New(common.BytesToHash(parentBlock.MerkleRoot), db)
-	fmt.Printf("[Before Process %d] %s\n", block.Number, string(statedb.Dump()))
+	//fmt.Printf("[Before Process %d] %s\n", block.Number, string(statedb.Dump()))
 	if err != nil {
 		return e
 	}
@@ -211,6 +211,6 @@ func ProcessBlock(block *types.Block) error {
 	root, _ := statedb.Commit()
 
 	block.MerkleRoot = root.Bytes()
-	fmt.Printf("[After Process %d] %s\n", block.Number, string(statedb.Dump()))
+	//fmt.Printf("[After Process %d] %s\n", block.Number, string(statedb.Dump()))
 	return nil
 }

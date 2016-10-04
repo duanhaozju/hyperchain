@@ -13,6 +13,7 @@ import (
 	"hyperchain/manager"
 	"strconv"
 	"time"
+	"hyperchain/accounts"
 )
 
 const (
@@ -80,6 +81,7 @@ func prepareExcute(args SendTxArgs) SendTxArgs {
 // SendTransaction is to build a transaction object,and then post event NewTxEvent,
 // if the sender's balance is enough, return tx hash
 func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error) {
+	log.Info("==========enter11111=====,args = ", args)
 	log.Info("==========SendTransaction=====,args = ", args)
 	args = prepareExcute(args)
 	var tx *types.Transaction
@@ -95,13 +97,12 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 	//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 	log.Infof("############# %d: start send request#############", time.Now().Unix())
-	/*
 		start := time.Now().Unix()
 		end := start + 6
 		//end:=start+500
 
 		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < 10; i++ {
+			for i := 0; i < 100; i++ {
 				tx.TimeStamp = time.Now().UnixNano()
 
 				// calculate signature
@@ -127,8 +128,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 			}
 			time.Sleep(20 * time.Millisecond)
 		}
-	*/
-	tx.TimeStamp = time.Now().UnixNano()
+	/*tx.TimeStamp = time.Now().UnixNano()
 
 	// TODO replace password with test value
 	signature, err := tran.pm.AccountManager.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
@@ -148,7 +148,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	}
 	log.Infof("############# %d: end send request#############", time.Now().Unix())
 
-	time.Sleep(2000 * time.Millisecond)
+	time.Sleep(2000 * time.Millisecond)*/
 	/*
 		receipt := core.GetReceipt(tx.BuildHash())
 		fmt.Println("GasUsed", receipt.GasUsed)
