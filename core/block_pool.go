@@ -202,7 +202,11 @@ func ProcessBlock(block *types.Block) error {
 		receipt, _, _, _ := ExecTransaction(*tx, vmenv)
 		receipts = append(receipts, receipt)
 	}
-	WriteReceipts(receipts)
+	receiptInst, _ := GetReceiptInst()
+	for _, receipt := range receipts {
+		receiptInst.PutReceipt(common.BytesToHash(receipt.TxHash), receipt)
+	}
+	//	WriteReceipts(receipts)
 
 	root, _ := statedb.Commit()
 

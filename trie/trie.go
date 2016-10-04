@@ -5,13 +5,18 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/op/go-logging"
 	"hash"
 	"hyperchain/common"
 	"hyperchain/crypto"
 	"hyperchain/crypto/sha3"
-	"hyperchain/logger"
-	"hyperchain/logger/glog"
 )
+
+var log *logging.Logger
+
+func init() {
+	log = logging.MustGetLogger("trie")
+}
 
 const defaultCacheCapacity = 800
 
@@ -91,8 +96,8 @@ func (t *Trie) Iterator() *Iterator {
 // The value bytes must not be modified by the caller.
 func (t *Trie) Get(key []byte) []byte {
 	res, err := t.TryGet(key)
-	if err != nil && glog.V(logger.Error) {
-		glog.Errorf("Unhandled trie error: %v", err)
+	if err != nil {
+		log.Errorf("Unhandled trie error: %v", err)
 	}
 	return res
 }
@@ -137,8 +142,8 @@ func (t *Trie) TryGet(key []byte) ([]byte, error) {
 // The value bytes must not be modified by the caller while they are
 // stored in the trie.
 func (t *Trie) Update(key, value []byte) {
-	if err := t.TryUpdate(key, value); err != nil && glog.V(logger.Error) {
-		glog.Errorf("Unhandled trie error: %v", err)
+	if err := t.TryUpdate(key, value); err != nil {
+		log.Errorf("Unhandled trie error: %v", err)
 	}
 }
 
@@ -246,8 +251,8 @@ func (t *Trie) insert(n node, prefix, key []byte, value node) (bool, node, error
 
 // Delete removes any existing value for key from the trie.
 func (t *Trie) Delete(key []byte) {
-	if err := t.TryDelete(key); err != nil && glog.V(logger.Error) {
-		glog.Errorf("Unhandled trie error: %v", err)
+	if err := t.TryDelete(key); err != nil {
+		log.Errorf("Unhandled trie error: %v", err)
 	}
 }
 
