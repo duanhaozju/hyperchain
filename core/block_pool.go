@@ -10,9 +10,6 @@ import (
 
 	"hyperchain/core/types"
 	"hyperchain/crypto"
-	"time"
-	"encoding/hex"
-	"hyperchain/hyperdb"
 )
 
 const (
@@ -136,59 +133,16 @@ func (pool *BlockPool)AddBlock(block *types.Block,commonHash crypto.CommonHash,c
 }
 
 
-// WriteBlock need:
-// 1. Put block into db
-// 2. Put transactions in block into db  (-- cancel --)
-// 3. Update chain
-// 4. Update balance
-func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int64)  {
+/*func ParseBlockHash(blocks types.Blocks,number uint64,max uint64,blockHash []byte,required string)  {
 
-	log.Info("block number is ",block.Number)
-	currentChain := GetChainCopy()
-	block.ParentHash = currentChain.LatestBlockHash
-	block.BlockHash = block.Hash(commonHash).Bytes()
-	//block.WriteTime = time.Now().UnixNano()
-	block.CommitTime = commitTime
-	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {
-		log.Fatal(err)
+	if(number==max||common.Bytes2Hex(blockHash)==required){
+
+		log.Info("success")
+	}else{
+		blocks.Batch[number].ParentHash=blockHash
+		bh:=blocks.Batch[number].HashBlock()
+		ParseBlockHash(blocks,number+uint64(1),max,bh,required)
 	}
-
-	UpdateChain(block, false)
-	balance, err := GetBalanceIns()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	newChain := GetChainCopy()
-	log.Notice("Block number",newChain.Height)
-	log.Notice("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
-	block.WriteTime = time.Now().UnixNano()
-
-
-
-
-	balance.UpdateDBBalance(block)
-
-
-
-	if block.Number%10==0 && block.Number!=0{
-		WriteChainChan()
-
-	}
-	// update our stateObject and statedb to blockchain
-	//ExecBlock(block)
-	block.EvmTime=time.Now().UnixNano()
-	err = PutBlock(db, block.BlockHash, block)
-	// write transaction
-	//PutTransactions(db, commonHash, block.Transactions)
-	if err != nil {
-		log.Fatal(err)
-	}
-	//TxSum.Add(TxSum,big.NewInt(int64(len(block.Transactions))))
-	//CommitStatedbToBlockchain()
-}
-
-
+}*/
 
 

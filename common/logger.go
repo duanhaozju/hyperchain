@@ -9,14 +9,14 @@ package common
 import (
 	"github.com/op/go-logging"
 	"os"
-	//"time"
-	//"strconv"
-	//"log"
+	"time"
+	"strconv"
+	"log"
 )
 
 func InitLog(level logging.Level,loggerDir string,port int){
-	//timestamp := time.Now().Unix()
-	//tm := time.Unix(timestamp, 0)
+	timestamp := time.Now().Unix()
+	tm := time.Unix(timestamp, 0)
 
 	_, error := os.Stat(loggerDir)
 	if error == nil || os.IsExist(error){
@@ -27,26 +27,25 @@ func InitLog(level logging.Level,loggerDir string,port int){
 		os.MkdirAll(loggerDir,0777)
 	}
 
-	//fileName :=loggerDir+strconv.Itoa(port) +tm.Format("-2006-01-02-15:04:05 PM")+ ".log"
-	//logFile,err  := os.Create(fileName)
+	fileName :=loggerDir+strconv.Itoa(port) +tm.Format("-2006-01-02-15:04:05 PM")+ ".log"
+	logFile,err  := os.Create(fileName)
 	//defer logFile.Close()
-	//if err != nil {
-	//	log.Fatalln("open file error !")
-	//}
+	if err != nil {
+		log.Fatalln("open file error !")
+	}
 	backend_stderr := logging.NewLogBackend(os.Stderr, "", 0)
-	//backend_file := logging.NewLogBackend(logFile, "", 0)
+	backend_file := logging.NewLogBackend(logFile, "", 0)
 	var format_stderr = logging.MustStringFormatter(
 		`%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}%{color:reset}`,
 	)
-	//var format_file = logging.MustStringFormatter(
-	//	`{"level":"%{level}","time":"%{time:2006-01-02 15:04:05.000}","message":"%{message}"},`,
-	//)
+	var format_file = logging.MustStringFormatter(
+		`{"level":"%{level}","time":"%{time:2006-01-02 15:04:05.000}","message":"%{message}"},`,
+	)
 	backendFormatter := logging.NewBackendFormatter(backend_stderr, format_stderr)
 	backendStderr := logging.AddModuleLevel(backendFormatter)
-	//backendFileFormatter := logging.NewBackendFormatter(backend_file, format_file)
-	//backendFile := logging.AddModuleLevel(backendFileFormatter)
+	backendFileFormatter := logging.NewBackendFormatter(backend_file, format_file)
+	backendFile := logging.AddModuleLevel(backendFileFormatter)
 	backendStderr.SetLevel(level, "")
-	//backendFile.SetLevel(level, "")
-	//logging.SetBackend(backendStderr,backendFile)
-	logging.SetBackend(backendStderr)
+	backendFile.SetLevel(level, "")
+	logging.SetBackend(backendStderr,backendFile)
 }

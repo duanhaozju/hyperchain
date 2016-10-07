@@ -90,7 +90,7 @@ func lastestBlock() (*BlockResult, error) {
 //func blockResult(height uint64) *BlockResult{
 func getBlockByNumber(height Number) (*BlockResult, error){
 
-	h := height.ToUnit64()
+	h := height.ToUint64()
 
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
@@ -175,7 +175,7 @@ func (blk *PublicBlockAPI) QueryExecuteTime(args SendQueryArgs) *ExeTimeResult{
 	}
 
 	count := len(txs)
-	exeTime := core.CalcResponseAVGTime(args.From.ToUnit64(),args.To.ToUnit64())
+	exeTime := core.CalcResponseAVGTime(args.From.ToUint64(),args.To.ToUint64())
 
 	return &ExeTimeResult{
 		Count: count,
@@ -186,7 +186,7 @@ func (blk *PublicBlockAPI) QueryExecuteTime(args SendQueryArgs) *ExeTimeResult{
 // QueryCommitAndBatchTime returns commit time and batch time between from block and to block
 func (blk *PublicBlockAPI) QueryCommitAndBatchTime(args SendQueryArgs) (*BatchTimeResult,error) {
 
-	commitTime, batchTime :=  core.CalcCommitBatchAVGTime(args.From.ToUnit64(),args.To.ToUnit64())
+	commitTime, batchTime :=  core.CalcCommitBatchAVGTime(args.From.ToUint64(),args.To.ToUint64())
 
 	return &BatchTimeResult{
 		CommitTime: commitTime,
@@ -197,7 +197,7 @@ func (blk *PublicBlockAPI) QueryCommitAndBatchTime(args SendQueryArgs) (*BatchTi
 // QueryEvmAvgTime returns EVM average time between from block and to block
 func (blk *PublicBlockAPI) QueryEvmAvgTime(args SendQueryArgs) (int64,error) {
 
-	evmTime :=  core.CalcEvmAVGTime(args.From.ToUnit64(),args.To.ToUnit64())
+	evmTime :=  core.CalcEvmAVGTime(args.From.ToUint64(),args.To.ToUint64())
 
 	return evmTime, nil
 }

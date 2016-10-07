@@ -90,7 +90,7 @@ func TestManager(t *testing.T)  {
 	//
 	//fmt.Println(from)
 	//fmt.Println(common.ToHex(from[:]))
-	//fmt.Println(am.Unlocked[common.HexToAddress("6201cb0448964ac597faf6fdf1f472edf2a22b89")].PrivateKey)
+	fmt.Println(am.unlocked[common.HexToAddress("6201cb0448964ac597faf6fdf1f472edf2a22b89")].PrivateKey)
 
 }
 func TestValidateAddr(t *testing.T) {
@@ -120,7 +120,7 @@ func TestSigntx(t *testing.T) {
 	db ,_ := hyperdb.GetLDBDatabase()
 	height := core.GetHeightOfChain()
 	block ,_ := core.GetBlockByNumber(db,height)
-	tx := block.Transactions[1]
+	tx := block.Transactions[0]
 
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 

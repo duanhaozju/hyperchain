@@ -9,6 +9,7 @@ import (
 	"hyperchain/common"
 	"encoding/json"
 	"os"
+	"time"
 )
 
 var api = NewPublicTransactionAPI(nil,nil)
@@ -88,13 +89,82 @@ func TestPublicTransactionAPI_GetTransactionByHash(t *testing.T) {
 	e.Encode(txGet)
 }
 
-//func TestPublicTransactionAPI_GetTransactionByBlockHashAndIndex(t *testing.T) {
-//
-//	//init db
-//	core.InitDB(8083)
-//
-//	//init genesis
-//	core.CreateInitBlock("../core/genesis.json")
-//
-//	api.GetTransactionByBlockHashAndIndex(common.HexToHash("0x000012"),0)
-//}
+var txValue = types.NewTransactionValue(100,100,1,nil)
+
+var value, err = proto.Marshal(txValue)
+
+var transactionCases = []*types.Transaction{
+	&types.Transaction{
+		From: from[:],
+		To: to[:],
+		Value: value,
+		TimeStamp: time.Now().UnixNano() - int64(time.Second),
+		Signature: []byte("signature1"),
+	},
+	&types.Transaction{
+		From: from[:],
+		To: to[:],
+		Value: value,
+		TimeStamp: time.Now().UnixNano() - int64(time.Second),
+		Signature: []byte("signature2"),
+	},
+	&types.Transaction{
+		From: from[:],
+		To: to[:],
+		Value: value,
+		TimeStamp: time.Now().UnixNano() - int64(time.Second),
+		Signature: []byte("signature3"),
+	},
+}
+
+var blockUtilsCase = types.Block{
+	ParentHash: common.StringToHash("parenthash").Bytes(),
+	BlockHash: common.StringToHash("blockhash").Bytes(),
+	Transactions: transactionCases,
+	Timestamp    : time.Now().UnixNano(),
+	MerkleRoot  : []byte("merkeleroot"),
+	Number       : 1,
+	WriteTime: time.Now().UnixNano() + int64(time.Second)/2,
+}
+
+func TestPublicTransactionAPI_GetTransactionByBlockHashAndIndex(t *testing.T) {
+
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = core.PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tx, err := api.GetTransactionByBlockHashAndIndex(common.BytesToHash(blockUtilsCase.BlockHash),0)
+
+	if err != nil {
+		t.Errorf("%v",err)
+	} else {
+		t.Logf("%#v",tx)
+	}
+
+}
+
+func TestPublicTransactionAPI_GetTransactionsByBlockNumberAndIndex(t *testing.T) {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = core.PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tx, err := api.GetTransactionsByBlockNumberAndIndex(1,0)
+
+	if err != nil {
+		t.Errorf("%v",err)
+	} else {
+		t.Logf("%#v",tx)
+	}
+}

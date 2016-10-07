@@ -358,7 +358,7 @@ function ContractService($resource,$q ,$timeout, ENV) {
                         var getResp = function(){
                             console.log(flag);
                                 if (!flag) {
-                                    if ((new Date().getTime() - startTime) < 8000) {
+                                    if ((new Date().getTime() - startTime) < 5000) {
                                         getReceipt(res.result)
                                             .then(function(data){
                                                 console.log(data);

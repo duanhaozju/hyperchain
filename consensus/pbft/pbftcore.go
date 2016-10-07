@@ -103,8 +103,8 @@ type pbftCore struct {
 	reqBatchStore	map[string]*RequestBatch	// track request batches
 	certStore	map[msgID]*msgCert		// track quorum certificates for requests
 	checkpointStore	map[Checkpoint]bool		// track checkpoints as set
-	committedCert	map[msgID]string		// track the committed cert to help excute
-	chkptCertStore	map[chkptID]*chkptCert		// track quorum certificates for checkpoints
+	committedCert	map[msgID]string
+
 	valid		bool // whether we believe the state is up to date
 }
 
@@ -123,21 +123,9 @@ type msgCert struct {
 	prePrepare	*PrePrepare
 	sentPrepare	bool
 	prepare		[]*Prepare
-	prepareCount	int
 	sentCommit	bool
 	commit		[]*Commit
-	commitCount	int
 	sentExecute	bool
-}
-
-type chkptID struct {
-	n	uint64
-	id	string
-}
-
-type chkptCert struct {
-	chkpts		map[Checkpoint]bool
-	chkptCount	int
 }
 
 type vcidx struct {
@@ -225,7 +213,6 @@ func newPbftCore(id uint64, config *viper.Viper, batch *batch, etf events.TimerF
 	instance.pset = make(map[uint64]*ViewChange_PQ)
 	instance.qset = make(map[qidx]*ViewChange_PQ)
 	instance.committedCert = make(map[msgID]string)
-	instance.chkptCertStore = make(map[chkptID]*chkptCert)
 
 	// initialize state transfer
 	instance.hChkpts = make(map[uint64]uint64)
@@ -325,22 +312,6 @@ func (instance *pbftCore) getCert(v uint64, n uint64) (cert *msgCert) {
 	return
 }
 
-// Given a seqNo/id get the checkpoint Cert
-func (instance *pbftCore) getChkptCert(n uint64, id string) (cert *chkptCert) {
-
-	idx := chkptID{n, id}
-	cert, ok := instance.chkptCertStore[idx]
-
-	if ok {
-		return
-	}
-
-	cert = &chkptCert{}
-	instance.chkptCertStore[idx] = cert
-
-	return
-}
-
 
 // =============================================================================
 // prepare/commit quorum checks helper
@@ -403,16 +374,23 @@ func (instance *pbftCore) prepared(digest string, v uint64, n uint64) bool {
 	//	return true
 	//}
 
+	quorum := 0
 	cert := instance.certStore[msgID{v, n}]
 
 	if cert == nil {
 		return false
 	}
 
-	logger.Debugf("Replica %d prepare count for view=%d/seqNo=%d: %d",
-		instance.id, v, n, cert.prepareCount)
+	for _, p := range cert.prepare {
+		if p.View == v && p.SequenceNumber == n && p.BatchDigest == digest {
+			quorum++
+		}
+	}
 
-	return cert.prepareCount >= instance.preparedReplicasQuorum()
+	logger.Debugf("Replica %d prepare count for view=%d/seqNo=%d: %d",
+		instance.id, v, n, quorum)
+
+	return quorum >= instance.preparedReplicasQuorum()
 }
 
 func (instance *pbftCore) committed(digest string, v uint64, n uint64) bool {
@@ -421,16 +399,23 @@ func (instance *pbftCore) committed(digest string, v uint64, n uint64) bool {
 		return false
 	}
 
+	quorum := 0
 	cert := instance.certStore[msgID{v, n}]
 
 	if cert == nil {
 		return false
 	}
 
-	logger.Debugf("Replica %d commit count for view=%d/seqNo=%d: %d",
-		instance.id, v, n, cert.commitCount)
+	for _, p := range cert.commit {
+		if p.View == v && p.SequenceNumber == n {
+			quorum++
+		}
+	}
 
-	return cert.commitCount >= instance.committedReplicasQuorum()
+	logger.Debugf("Replica %d commit count for view=%d/seqNo=%d: %d",
+		instance.id, v, n, quorum)
+
+	return quorum >= instance.committedReplicasQuorum()
 }
 
 // =============================================================================
@@ -664,7 +649,6 @@ func (instance *pbftCore) recvPrepare(prep *Prepare) error {
 	}
 
 	cert.prepare = append(cert.prepare, prep)
-	cert.prepareCount = cert.prepareCount + 1
 	//instance.persistPSet()
 
 	return instance.maybeSendCommit(prep.BatchDigest, prep.View, prep.SequenceNumber)
@@ -717,7 +701,6 @@ func (instance *pbftCore) recvCommit(commit *Commit) error {
 	}
 
 	cert.commit = append(cert.commit, commit)
-	cert.commitCount = cert.commitCount + 1
 
 	if instance.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) && cert.sentExecute == false {
 		instance.stopTimer(commit.SequenceNumber)
@@ -856,6 +839,26 @@ func (instance *pbftCore) checkpoint(n uint64, info *pb.BlockchainInfo) {
 	instance.helper.InnerBroadcast(msg)
 }
 
+func (instance *pbftCore) retryCheckpoint(n uint64) {
+
+	if n % instance.K != 0 {
+		return
+	}
+
+	bcInfo := getBlockchainInfo()
+	height := bcInfo.Height
+	if height == n {
+		logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", n, height)
+		instance.checkpoint(n, bcInfo)
+	} else {
+		// reqBatch call execute but have not done with execute
+		logger.Warningf("Fail to call the checkpoint, seqNo=%d, block height=%d", n, height)
+		instance.retryCheckpoint(instance.lastExec)
+	}
+
+
+}
+
 func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) events.Event {
 
 	logger.Infof("Replica %d received checkpoint from replica %d, seqNo %d, digest %s",
@@ -875,26 +878,23 @@ func (instance *pbftCore) recvCheckpoint(chkpt *Checkpoint) events.Event {
 		return nil
 	}
 
-	cert := instance.getChkptCert(chkpt.SequenceNumber, chkpt.Id)
-	flag := cert.chkpts[*chkpt]
-
-	if flag == false {
-		logger.Warningf("Ignoring duplicate commit from %d, --------seqNo=%d--------", chkpt.ReplicaId, chkpt.SequenceNumber)
-		return nil
-	}
-
-	cert.chkpts[*chkpt] = true
 	instance.checkpointStore[*chkpt] = true
 
+	matching := 0
+	for testChkpt := range instance.checkpointStore {
+		if testChkpt.SequenceNumber == chkpt.SequenceNumber && testChkpt.Id == chkpt.Id {
+			matching++
+		}
+	}
 	logger.Debugf("Replica %d found %d matching checkpoints for seqNo %d, digest %s",
-		instance.id, cert.chkptCount, chkpt.SequenceNumber, chkpt.Id)
+		instance.id, matching, chkpt.SequenceNumber, chkpt.Id)
 
-	if cert.chkptCount == instance.f+1 {
+	if matching == instance.f+1 {
 		// We do have a weak cert
 		instance.witnessCheckpointWeakCert(chkpt)
 	}
 
-	if cert.chkptCount < instance.intersectionQuorum() {
+	if matching < instance.intersectionQuorum() {
 		// We do not have a quorum yet
 		return nil
 	}
@@ -1043,14 +1043,6 @@ func (instance *pbftCore) moveWatermarks(n uint64) {
 			logger.Debugf("Replica %d cleaning checkpoint message from replica %d, seqNo %d, b64 snapshot id %s",
 				instance.id, testChkpt.ReplicaId, testChkpt.SequenceNumber, testChkpt.Id)
 			delete(instance.checkpointStore, testChkpt)
-		}
-	}
-
-	for cid := range instance.chkptCertStore {
-		if cid.n <= h {
-			logger.Debugf("Replica %d cleaning checkpoint message, seqNo %d, b64 snapshot id %s",
-				instance.id, cid.n, cid.id)
-			delete(instance.chkptCertStore, cid)
 		}
 	}
 

@@ -107,14 +107,14 @@ gasPrice, value *big.Int)(ret []byte,addr common.Address,err error){
 	//ret,err = env.Call(sender,*to,data,gas,gasPrice,value)
 	// 判断是否能够交易,转移,这一步可以考虑在外部执行
 	if contractCreation{
-		log.Debug("------create contract")
+		log.Info("------create contract")
 		ret,addr,err = vmenv.Create(sender,data,gas,gasPrice,value)
 		if err != nil{
 			ret = nil
 			log.Error("VM create err:",err)
 		}
 	} else {
-		log.Debug("------call contract")
+		log.Info("------call contract")
 		ret,err = vmenv.Call(sender,*to,data,gas,gasPrice,value)
 		if err != nil{
 			log.Error("VM call err:",err)

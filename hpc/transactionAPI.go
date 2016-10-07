@@ -235,6 +235,26 @@ func (tran *PublicTransactionAPI) ComplieContract(ct string) (*CompileCode,error
 	}, nil
 }
 
+func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
+
+	var txValue types.TransactionValue
+
+	if err := proto.Unmarshal(tx.Value,&txValue); err != nil {
+		log.Errorf("%v", err)
+		return nil, err
+	}
+
+	return &TransactionResult{
+		Hash: tx.BuildHash(),
+		From: common.BytesToAddress(tx.From),
+		To: common.BytesToAddress(tx.To),
+		Amount: *NewInt64ToNumber(txValue.Amount),
+		Gas: *NewInt64ToNumber(txValue.GasLimit),
+		GasPrice: *NewInt64ToNumber(txValue.Price),
+		Timestamp: time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+	}, nil
+}
+
 // GetTransactionReceipt returns transaction's receipt for given transaction hash
 func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) *types.ReceiptTrans {
 	return core.GetReceipt(hash)
@@ -275,8 +295,6 @@ func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) *types
 
 func (tran *PublicTransactionAPI) GetTransactionByHash(hash common.Hash) (*TransactionResult, error){
 
-	var txValue types.TransactionValue
-
 	db, err := hyperdb.GetLDBDatabase()
 
 	if err != nil {
@@ -290,51 +308,62 @@ func (tran *PublicTransactionAPI) GetTransactionByHash(hash common.Hash) (*Trans
 		return nil, errors.New("Not found this transaction")
 	}
 
-	if err := proto.Unmarshal(tx.Value,&txValue); err != nil {
+	return outputTransaction(tx)
+}
+
+// GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
+func (tran *PublicTransactionAPI) GetTransactionByBlockHashAndIndex(hash common.Hash, index Number) (*TransactionResult, error) {
+
+	db, err := hyperdb.GetLDBDatabase()
+
+	if err != nil {
+		log.Errorf("Open database error: %v", err)
+		return nil, err
+	}
+
+	block, err := core.GetBlock(db, hash[:])
+	if err != nil {
 		log.Errorf("%v", err)
 		return nil, err
 	}
 
-	return &TransactionResult{
-		Hash: tx.BuildHash(),
-		From: common.BytesToAddress(tx.From),
-		To: common.BytesToAddress(tx.To),
-		Amount: *NewInt64ToNumber(txValue.Amount),
-		Gas: *NewInt64ToNumber(txValue.GasLimit),
-		GasPrice: *NewInt64ToNumber(txValue.Price),
-		Timestamp: time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
-	}, nil
-}
+	txCount := len(block.Transactions)
 
-// todo 根据区块哈希、索引返回交易信息
-func (tran *PublicTransactionAPI) GetTransactionByBlockHashAndIndex(hash common.Hash, index Number) (*TransactionResult, error) {
-	//blockAPI := GetBlockAPI()
+	if index.ToInt() >= 0 && index.ToInt() < txCount {
 
-	//db, err := hyperdb.GetLDBDatabase()
-	//
-	//if err != nil {
-	//	log.Errorf("Open database error: %v", err)
-	//	return nil, err
-	//}
-	//
-	//block, err := core.GetBlock(db, hash[:])
-	//log.Infof("block hash: %v", common.ToHex(hash[:]))
-	//log.Infof("block: %v", block)
-	//log.Info(index)
-	//tx := block.Transactions[index]
-	//log.Info(tx)
-	//
-	//if err != nil {
-	//	log.Errorf("%v", err)
-	//	return nil, err
-	//}
+		tx := block.Transactions[index]
 
+		return outputTransaction(tx)
+	}
 
 	return nil, nil
 }
 
-// todo 根据区块高度、索引返回交易信息
-func (tran *PublicTransactionAPI) GetTransactionsByBlockNumberAndIndex(number Number, index Number) (*TransactionResult, error){
+// GetTransactionsByBlockNumberAndIndex returns the transaction for the given block number and index.
+func (tran *PublicTransactionAPI) GetTransactionsByBlockNumberAndIndex(n Number, index Number) (*TransactionResult, error){
+
+	db, err := hyperdb.GetLDBDatabase()
+
+	if err != nil {
+		log.Errorf("Open database error: %v", err)
+		return nil, err
+	}
+
+	block, err := core.GetBlockByNumber(db, n.ToUint64())
+	if err != nil {
+		log.Errorf("%v", err)
+		return nil, err
+	}
+
+	txCount := len(block.Transactions)
+
+	if index.ToInt() >= 0 && index.ToInt() < txCount {
+
+		tx := block.Transactions[index]
+
+		return outputTransaction(tx)
+	}
+
 	return nil, nil
 }
 

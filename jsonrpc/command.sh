@@ -16,6 +16,8 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method": "tx_sendTransactionOrCont
 # 根据交易hash查询交易信息 GetTransactionByHash
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByHash","params":["the transaction hash"],"id":1}'
 
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByBlockHashAndIndex","params":["0xf4d42f0d4e276b306f3a6f7c04e06ef52ee9471684408b24cd4096b8402f7721",0],"id":1}'
+
 ########## block 服务 ##########
 # 得到最新区块
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_lastestBlock","params":[],"id":1}'

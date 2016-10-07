@@ -12,7 +12,7 @@ import (
 	"math/big"
 	"os"
 	"bufio"
-
+	"fmt"
 	"reflect"
 )
 
@@ -149,7 +149,7 @@ func (am *AccountManager) Lock(addr common.Address) error {
 func (am *AccountManager) TimedUnlock(a Account, passphrase string, timeout time.Duration) error {
 	key, err := am.GetDecryptedKey(a,passphrase)
 	if err != nil {
-		log.Debug(err)
+		fmt.Println(err)
 		return err
 	}
 	am.mu.Lock()

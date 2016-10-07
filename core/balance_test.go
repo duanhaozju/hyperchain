@@ -4,6 +4,12 @@ import (
 	"testing"
 	"hyperchain/common"
 	"hyperchain/core/types"
+	"github.com/golang/protobuf/proto"
+	"hyperchain/hyperdb"
+	"time"
+	"fmt"
+	"hyperchain/crypto"
+	"hyperchain/accounts"
 )
 
 
@@ -196,6 +202,10 @@ func TestBalance_UpdateCacheBalance(t *testing.T) {
 	lisi := b.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000002"))
 	wangwu := b.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000003"))
 
+	log.Info(string(zhangsan))
+	log.Info(string(lisi))
+	log.Info(string(wangwu))
+
 	if string(zhangsan) != "800" || string(lisi) != "1400" || string(wangwu) != "3800"{
 		t.Errorf("TestBalance_UpdateCacheBalance fail")
 	}
@@ -242,29 +252,29 @@ func TestBalance_UpdateDBBalance(t *testing.T) {
 		b.DeleteDBBalance(key)
 	}
 }
-//func TestVerifyBalance(t *testing.T) {
-//
-//	InitDB(8083)
-//	db, _ := hyperdb.GetLDBDatabase()
-//	height := GetHeightOfChain()
-//	log.Infof("height: %v",height)
-//	block,_:= GetBlockByNumber(db,height)
-//	log.Infof("block: %#v", block)
-//	tx := block.Transactions[0]
-//	start:= time.Now()
-//	VerifyBalance(tx)
-//	fmt.Println(time.Since(start))
-//
-//	keydir := "../keystore/"
-//
-//	encryption := crypto.NewEcdsaEncrypto("ecdsa")
-//
-//	am := accounts.NewAccountManager(keydir,encryption)
-//	am.UnlockAllAccount(keydir)
-//	addr := common.HexToAddress(string(tx.From))
-//	start = time.Now()
-//	if _,found := am.Unlocked[addr];found {
-//		fmt.Println("found")
-//	}
-//	fmt.Println(time.Since(start))
-//}
+func TestVerifyBalance(t *testing.T) {
+
+	InitDB(8083)
+	db, _ := hyperdb.GetLDBDatabase()
+	height := GetHeightOfChain()
+	log.Infof("height: %v",height)
+	block,_:= GetBlockByNumber(db,height)
+	log.Infof("block: %#v", block)
+	tx := block.Transactions[0]
+	start:= time.Now()
+	VerifyBalance(tx)
+	fmt.Println(time.Since(start))
+
+	keydir := "../keystore/"
+
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+
+	am := accounts.NewAccountManager(keydir,encryption)
+	am.UnlockAllAccount(keydir)
+	addr := common.HexToAddress(string(tx.From))
+	start = time.Now()
+	if _,found := am.Unlocked[addr];found {
+		fmt.Println("found")
+	}
+	fmt.Println(time.Since(start))
+}
