@@ -103,9 +103,10 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	}
 	//am := tran.pm.AccountManager
 
-	if (!core.VerifyBalance(tx)){
-		return common.Hash{},errors.New("Not enough balance!")
-	}else if found == true {
+	//if (!core.VerifyBalance(tx)){
+	//	return common.Hash{},errors.New("Not enough balance!")
+	//}else
+	if found == true {
 
 		// Balance is enough
 
@@ -293,6 +294,7 @@ func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) *types
 //	return transactions
 //}
 
+// GetTransactionByHash returns the transaction for the given transaction hash.
 func (tran *PublicTransactionAPI) GetTransactionByHash(hash common.Hash) (*TransactionResult, error){
 
 	db, err := hyperdb.GetLDBDatabase()
