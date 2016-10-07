@@ -157,6 +157,7 @@ var blockUtilsCase = types.Block{
 
 // TestPutBlock tests for PutBlock
 func TestPutBlock(t *testing.T) {
+	//InitDB(8084)
 	log.Info("test =============> > > TestPutBlock")
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
@@ -166,6 +167,12 @@ func TestPutBlock(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	//height := GetHeightOfChain()
+	//for i:=uint64(1);i<=height;i++{
+	//	block ,_:= GetBlockByNumber(db,i)
+	//	PutBlock(db,block.BlockHash,block)
+	//}
+
 }
 
 // TestGetBlock tests for GetBlock

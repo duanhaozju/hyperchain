@@ -370,6 +370,20 @@ func UpdateRequire(num uint64, hash []byte, recoveryNum uint64) error {
 	return putChain(db, &memChainMap.data)
 }
 
+
+func UpdateChainByViewChange(height uint64, latestHash []byte) error {
+	memChainMap.lock.Lock()
+	defer memChainMap.lock.Unlock()
+	memChainMap.data.Height = height
+	//memChainMap.data.ParentBlockHash = parentHash
+	memChainMap.data.LatestBlockHash = latestHash
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		return err
+	}
+	return putChain(db, &memChainMap.data)
+}
+
 // getChain get chain from database
 func getChain(db hyperdb.Database) (*types.Chain, error) {
 	var chain types.Chain

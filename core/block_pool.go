@@ -9,7 +9,7 @@ import (
 	"sync"
 
 	"encoding/hex"
-	"fmt"
+
 	"hyperchain/common"
 	"hyperchain/core/state"
 	"hyperchain/core/types"
@@ -71,6 +71,9 @@ func (pool *BlockPool) eventLoop() {
 	}
 }
 
+
+
+
 //check block sequence and validate in chain
 func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int64) {
 
@@ -92,8 +95,20 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 	currentChain := GetChainCopy()
 
 	if currentChain.Height >= block.Number {
+		//todo view change ,delete block and rewrite block
 
-		log.Info("replated block number,number is: ", block.Number)
+		db, err := hyperdb.GetLDBDatabase()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		block,_:=GetBlockByNumber(db,block.Number)
+		//rollback chain height,latestHash
+		UpdateChainByViewChange(block.Number-1,block.ParentHash)
+		keyNum := strconv.FormatInt(int64(block.Number), 10)
+		DeleteBlock(db,append(blockNumPrefix, keyNum...))
+		WriteBlock(block, commonHash, commitTime)
+		log.Notice("replated block number,number is: ", block.Number)
 		return
 	}
 
@@ -178,6 +193,8 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	//CommitStatedbToBlockchain()
 }
 
+
+
 func ProcessBlock(block *types.Block) error {
 	var (
 		receipts types.Receipts
@@ -189,7 +206,7 @@ func ProcessBlock(block *types.Block) error {
 	}
 	parentBlock, _ := GetBlock(db, block.ParentHash)
 	statedb, e := state.New(common.BytesToHash(parentBlock.MerkleRoot), db)
-	fmt.Printf("[Before Process %d] %s\n", block.Number, string(statedb.Dump()))
+	//fmt.Printf("[Before Process %d] %s\n", block.Number, string(statedb.Dump()))
 	if err != nil {
 		return e
 	}
@@ -211,6 +228,6 @@ func ProcessBlock(block *types.Block) error {
 	root, _ := statedb.Commit()
 
 	block.MerkleRoot = root.Bytes()
-	fmt.Printf("[After Process %d] %s\n", block.Number, string(statedb.Dump()))
+	//fmt.Printf("[After Process %d] %s\n", block.Number, string(statedb.Dump()))
 	return nil
 }

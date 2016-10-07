@@ -22,6 +22,7 @@ type helper struct {
 
 type Stack interface {
 	InnerBroadcast(msg *pb.Message) error
+	InnerUnicast(msg *pb.Message, to uint64) error
 	Execute(reqBatch *pb.ExeMessage) error
 	UpdateState(updateState *pb.UpdateStateMessage) error
 }
@@ -41,6 +42,26 @@ func (h *helper) InnerBroadcast(msg *pb.Message) error{
 
 	// Post the event to outer
 	go h.msgQ.Post(broadcastEvent)
+
+	return nil
+}
+
+// InnerUnicast unicast the transaction message between to primary
+func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error{
+
+	tmpMsg, err := proto.Marshal(msg)
+
+	if err != nil {
+		return err
+	}
+
+	unicastEvent := event.TxUniqueCastEvent{
+		Payload:	tmpMsg,
+		PeerId:		to,
+	}
+
+	// Post the event to outer
+	go h.msgQ.Post(unicastEvent)
 
 	return nil
 }

@@ -11,8 +11,10 @@ import (
 	"sync/atomic"
 	"math/big"
 	"time"
-	"hyperchain/hyperdb"
-	"hyperchain/core"
+	//"hyperchain/hyperdb"
+	//"hyperchain/core"
+	//"hyperchain/core"
+	//"hyperchain/hyperdb"
 )
 
 type Transaction struct {
@@ -25,16 +27,16 @@ type txdata struct  {
 	Amount *big.Int
 	signature []byte
 }
-func NewTransaction(to common.Address,amount *big.Int) *Transaction {
-	d:=txdata{
-		Recipient:	&to,
-		Amount:		new(big.Int),
-	}
-	if amount != nil{
-		d.Amount.Set(amount)
-	}
-	return &Transaction{data:d}
-}
+//func NewTransaction(to common.Address,amount *big.Int) *Transaction {
+//	d:=txdata{
+//		Recipient:	&to,
+//		Amount:		new(big.Int),
+//	}
+//	if amount != nil{
+//		d.Amount.Set(amount)
+//	}
+//	return &Transaction{data:d}
+//}
 
 func TestManager(t *testing.T)  {
 
@@ -103,34 +105,58 @@ func TestValidateAddr(t *testing.T) {
 	fmt.Println(ValidateAddr(from))
 	fmt.Println(time.Since(start))
 }
-func TestNewAccount(t *testing.T) {
-	keydir := "../keystore/"
 
-	encryption := crypto.NewEcdsaEncrypto("ecdsa")
-	am := NewAccountManager(keydir,encryption)
-	am.NewAccount("123")
-}
-func TestSigntx(t *testing.T) {
-	keydir := "./keystore/"
-	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+//func TestNewAccount(t *testing.T) {
+//	keydir := "../keystore/"
+//
+//	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+//	am := NewAccountManager(keydir,encryption)
+//	am.NewAccount("123")
+//}
 
-	am := NewAccountManager(keydir,encryption)
-
-	core.InitDB(8082)
-	db ,_ := hyperdb.GetLDBDatabase()
-	height := core.GetHeightOfChain()
-	block ,_ := core.GetBlockByNumber(db,height)
-	tx := block.Transactions[1]
-
-	kec256Hash := crypto.NewKeccak256Hash("keccak256")
-
-	hash := tx.SighHash(kec256Hash)
-	for i:=0;i<10;i++{
-		start := time.Now()
-		signature, _ := am.SignWithPassphrase(common.HexToAddress(string(tx.From)),hash[:],"123")
-		fmt.Println(time.Since(start))
-		fmt.Println(signature)
-		tx.ValidateSign(encryption,kec256Hash)
-
-	}
-}
+//func TestSigntx(t *testing.T) {
+//	keydir := "../keystore/"
+//	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+//
+//	am := NewAccountManager(keydir,encryption)
+//
+//	core.InitDB(8082)
+//	db ,_ := hyperdb.GetLDBDatabase()
+//	height := core.GetHeightOfChain()
+//	block ,_ := core.GetBlockByNumber(db,height)
+//	tx := block.Transactions[1]
+//
+//	kec256Hash := crypto.NewKeccak256Hash("keccak256")
+//
+//	hash := tx.SighHash(kec256Hash)
+//	ac:=Account{
+//		Address:common.HexToAddress(string(tx.From)),
+//		File:am.KeyStore.JoinPath(string(tx.From)),
+//	}
+//
+//	am.Unlock(ac,"123")
+//	var set = []int{500,5000,10000}
+//
+//	for _,j:=range set{
+//		start := time.Now()
+//		for i:=0;i<j;i++{
+//			am.SignWithPassphrase(common.HexToAddress(string(tx.From)),hash[:],"123")
+//			//fmt.Println(signature)
+//			//tx.ValidateSign(encryption,kec256Hash)
+//		}
+//		fmt.Printf("signtx test %dtxs: %s",j,time.Since(start))
+//		fmt.Println()
+//
+//	}
+//	for _,j:=range set{
+//		start := time.Now()
+//		for i:=0;i<j;i++{
+//			//am.SignWithPassphrase(common.HexToAddress(string(tx.From)),hash[:],"123")
+//			tx.ValidateSign(encryption,kec256Hash)
+//		}
+//		fmt.Printf("unsigntx test %dtxs: %s",j,time.Since(start))
+//		fmt.Println()
+//
+//	}
+//
+//}

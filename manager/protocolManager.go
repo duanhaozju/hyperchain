@@ -92,7 +92,7 @@ func (pm *ProtocolManager) Start() {
 
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
-	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
+	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{},event.BroadcastConsensusEvent{}, event.NewTxEvent{})
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
@@ -285,14 +285,13 @@ func (self *ProtocolManager) ConsensusLoop() {
 			log.Debug("######enter broadcast")
 
 			go self.BroadcastConsensus(ev.Payload)
+		case event.TxUniqueCastEvent:
+
+			var peers []uint64
+			peers = append(peers, ev.PeerId)
+			self.peerManager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
+			//go self.peerManager.SendMsgToPeers(ev.Payload,)
 		case event.NewTxEvent:
-			//log.Error("######receiver new tx")
-			//call consensus module
-			//send msg to consensus
-			//for i:=0;i<10000;i+=1{
-			//	go self.sendMsg(ev.Payload)
-			//	//time.Sleep(100*time.Microsecond)
-			//}
 
 			go self.sendMsg(ev.Payload)
 
@@ -390,10 +389,6 @@ func (pm *ProtocolManager) commitNewBlock(payload []byte, commitTime int64) {
 func (pm *ProtocolManager) GetNodeInfo() client.PeerInfos {
 	pm.nodeInfo = pm.peerManager.GetPeerInfos()
 	log.Info("nodeInfo is ", pm.nodeInfo)
-	/*	pm.nodeInfo["node1"]=true
-		pm.nodeInfo["node2"]=true
-		pm.nodeInfo["node3"]=false
-		pm.nodeInfo["node4"]=true*/
 	return pm.nodeInfo
 
 }

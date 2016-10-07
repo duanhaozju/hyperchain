@@ -1,17 +1,19 @@
 package hpc
 
 import (
-	"hyperchain/hyperdb"
-	"hyperchain/core"
-	"hyperchain/common"
-	"time"
-	"github.com/op/go-logging"
-	"hyperchain/core/types"
-	"errors"
-	"hyperchain/manager"
-	"hyperchain/event"
 	"github.com/golang/protobuf/proto"
+	"github.com/op/go-logging"
+	"hyperchain/common"
+	"hyperchain/core"
+	"hyperchain/core/types"
 	"hyperchain/core/vm/compiler"
+	"hyperchain/crypto"
+	"hyperchain/event"
+	"hyperchain/hyperdb"
+	"hyperchain/manager"
+	"time"
+	//"hyperchain/accounts"
+	"errors"
 )
 
 const (
@@ -19,17 +21,19 @@ const (
 	defaustGasPrice int64 = 10000
 )
 
-var log *logging.Logger // package-level logger
+var (
+	log        *logging.Logger // package-level logger
+	kec256Hash = crypto.NewKeccak256Hash("keccak256")
+)
+
 func init() {
 	log = logging.MustGetLogger("hpc")
 }
 
 type PublicTransactionAPI struct {
 	eventMux *event.TypeMux
-	pm *manager.ProtocolManager
-
+	pm       *manager.ProtocolManager
 }
-
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 // If type is Ptr or String, it is optional parameter
@@ -89,50 +93,88 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	}
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 
-	am := tran.pm.AccountManager
+	//am := tran.pm.AccountManager
 
-	if (!core.VerifyBalance(tx)){
-		return common.Hash{},errors.New("Not enough balance!")
-	}else if _,found := am.Unlocked[args.From];found {
+	//if (!core.VerifyBalance(tx)){
+	//	return common.Hash{},errors.New("Not enough balance!")
+	//}else if _,found := am.Unlocked[args.From];found {
 
 		// Balance is enough
 
 		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
-		end:=start+6
+		end := start + 6
 		//end:=start+500
 
-		for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 10; i++ {
-				tx.TimeStamp=time.Now().UnixNano()
+		for start := start; start < end; start = time.Now().Unix() {
+			for i := 0; i < 25; i++ {
+				tx.TimeStamp = time.Now().UnixNano()
+
+				// calculate signature
+				/*keydir := "./keystore/"
+				encryption := crypto.NewEcdsaEncrypto("ecdsa")
+				am := accounts.NewAccountManager(keydir, encryption)
+				// TODO replace password with test value
+				signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
+				if err != nil {
+					log.Errorf("Sign(tx) error :%v", err)
+				}
+				tx.Signature = signature*/
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
-					log.Errorf("proto.Marshal(tx) error: %v",err)
+					log.Errorf("proto.Marshal(tx) error: %v", err)
 				}
-				if manager.GetEventObject() != nil{
+				if manager.GetEventObject() != nil {
 					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
 					//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-				}else{
+				} else {
 					log.Warning("manager is Nil")
 				}
-
 			}
-			time.Sleep(20 * time.Millisecond)
-
+			time.Sleep(25 * time.Millisecond)
 		}
+	/*tx.TimeStamp = time.Now().UnixNano()
 
-		log.Infof("############# %d: end send request#############", time.Now().Unix())
-		return tx.BuildHash(),nil
-
-	} else {
-		return common.Hash{}, errors.New("account don't unlock")
+	// TODO replace password with test value
+	signature, err := tran.pm.AccountManager.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
+	if err != nil {
+		log.Errorf("Sign(tx) error :%v", err)
 	}
+	tx.Signature = signature
+	txBytes, err := proto.Marshal(tx)
+	if err != nil {
+		log.Errorf("proto.Marshal(tx) error: %v", err)
+	}
+	if manager.GetEventObject() != nil {
+		go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+	} else {
+		log.Warning("manager is Nil")
+	}
+	time.Sleep(2000 * time.Millisecond)*/
+		log.Infof("############# %d: end send request#############", time.Now().Unix())
+	/*
+		receipt := core.GetReceipt(tx.BuildHash())
+		fmt.Println("GasUsed", receipt.GasUsed)
+		fmt.Println("PostState", receipt.PostState)
+		fmt.Println("ContractAddress", receipt.ContractAddress)
+		fmt.Println("CumulativeGasUsed", receipt.CumulativeGasUsed)
+		fmt.Println("Ret", receipt.Ret)
+		fmt.Println("TxHash", receipt.TxHash)
+		fmt.Println("Status", receipt.Status)
+		fmt.Println("Message", receipt.Message)
+		fmt.Println("Log", receipt.Logs)
+	*/
+	return tx.BuildHash(),nil
+
+	//} else {
+	//	return common.Hash{}, errors.New("account don't unlock")
+	//}
 }
 
-
 // SendTransactionOrContract deploy contract
-func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (common.Hash, error){
+func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (common.Hash, error) {
 
 	var tx *types.Transaction
 
@@ -161,38 +203,49 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 
 	am := tran.pm.AccountManager
 
-	if _,found := am.Unlocked[args.From];found {
+	//if _,found := am.Unlocked[args.From];found {
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		start := time.Now().Unix()
-		end:=start+6
-		//end:=start+500
+		tx.TimeStamp = time.Now().UnixNano()
 
-		for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 10; i++ {
-				tx.TimeStamp=time.Now().UnixNano()
-				txBytes, err := proto.Marshal(tx)
-				if err != nil {
-					log.Errorf("proto.Marshal(tx) error: %v",err)
-				}
-				if manager.GetEventObject() != nil{
-					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
-					//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-				}else{
-					log.Warning("manager is Nil")
-				}
-			}
-			time.Sleep(20 * time.Millisecond)
-		}
+	// TODO replace password with test value
+	signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
+	if err != nil {
+		log.Errorf("Sign(tx) error :%v", err)
+	}
+	tx.Signature = signature
 
-		log.Infof("############# %d: end send request#############", time.Now().Unix())
+	txBytes, err := proto.Marshal(tx)
+	if err != nil {
+		log.Errorf("proto.Marshal(tx) error: %v", err)
+	}
+	if manager.GetEventObject() != nil {
+		go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
 	} else {
-		return common.Hash{}, errors.New("account don't unlock")
+		log.Warning("manager is Nil")
 	}
 
-	return tx.BuildHash(),nil
+		log.Infof("############# %d: end send request#############", time.Now().Unix())
+	//} else {
+	//	return common.Hash{}, errors.New("account don't unlock")
+	//}
+
+	time.Sleep(2000 * time.Millisecond)
+	/*
+		receipt := core.GetReceipt(tx.BuildHash())
+		fmt.Println("GasUsed", receipt.GasUsed)
+		fmt.Println("PostState", receipt.PostState)
+		fmt.Println("ContractAddress", receipt.ContractAddress)
+		fmt.Println("CumulativeGasUsed", receipt.CumulativeGasUsed)
+		fmt.Println("Ret", receipt.Ret)
+		fmt.Println("TxHash", receipt.TxHash)
+		fmt.Println("Status", receipt.Status)
+		fmt.Println("Message", receipt.Message)
+		fmt.Println("Log", receipt.Logs)
+	*/
+	return tx.BuildHash(), nil
 }
 
-type CompileCode struct{
+type CompileCode struct {
 	Abi []string
 	Bin []string
 }

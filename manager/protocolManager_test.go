@@ -17,11 +17,11 @@ import (
 
 	"time"
 
-	"hyperchain/core"
-	"hyperchain/hyperdb"
-	"hyperchain/crypto"
-	"hyperchain/accounts"
-	"hyperchain/common"
+	//"hyperchain/core"
+	//"hyperchain/hyperdb"
+	//"hyperchain/crypto"
+	//"hyperchain/accounts"
+	//"hyperchain/common"
 )
 
 
@@ -69,39 +69,39 @@ func TestAliveEvent(t *testing.T) {
 	}
 }
 
-func TestSignTx(t *testing.T) {
-	core.InitDB(8083)
-	db, _ := hyperdb.GetLDBDatabase()
-	height := core.GetHeightOfChain()
-	block,_:= core.GetBlockByNumber(db,height)
-	tx := block.Transactions[0]
-	kec256Hash := crypto.NewKeccak256Hash("keccak256")
-	//init encryption object
-	keydir := "../keystore/"
-	encryption := crypto.NewEcdsaEncrypto("ecdsa")
-	am := accounts.NewAccountManager(keydir,encryption)
-	pm := &ProtocolManager{
-		AccountManager:am,
-		commonHash:kec256Hash,
-	}
-
-	for i:=0;i<100;i++{
-
-		h := tx.SighHash(pm.commonHash)
-		addrHex := string(tx.From)
-		addr := common.HexToAddress(addrHex)
-
-		start := time.Now()
-		_, err := pm.AccountManager.SignWithPassphrase(addr, h[:], "123")
-		fmt.Println(time.Since(start))
-
-		tx.ValidateSign(encryption,pm.commonHash)
-		if err!=nil{
-			panic(err)
-		}
-
-	}
-}
+//func TestSignTx(t *testing.T) {
+//	core.InitDB(8083)
+//	db, _ := hyperdb.GetLDBDatabase()
+//	height := core.GetHeightOfChain()
+//	block,_:= core.GetBlockByNumber(db,height)
+//	tx := block.Transactions[0]
+//	kec256Hash := crypto.NewKeccak256Hash("keccak256")
+//	//init encryption object
+//	keydir := "../keystore/"
+//	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+//	am := accounts.NewAccountManager(keydir,encryption)
+//	pm := &ProtocolManager{
+//		AccountManager:am,
+//		commonHash:kec256Hash,
+//	}
+//
+//	for i:=0;i<100;i++{
+//
+//		h := tx.SighHash(pm.commonHash)
+//		addrHex := string(tx.From)
+//		addr := common.HexToAddress(addrHex)
+//
+//		start := time.Now()
+//		_, err := pm.AccountManager.SignWithPassphrase(addr, h[:], "123")
+//		fmt.Println(time.Since(start))
+//
+//		tx.ValidateSign(encryption,pm.commonHash)
+//		if err!=nil{
+//			panic(err)
+//		}
+//
+//	}
+//}
 
 /*func TestCommitNewBlock(t *testing.T) {
 

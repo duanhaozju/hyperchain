@@ -161,6 +161,51 @@ function BlockService($resource,$q,ENV) {
 
                 })
             })
+        },
+        queryBlockAvgTime: function(from, to) {
+            return $q(function(resolve, reject){
+                $resource(ENV.API,{},{
+                    query:{
+                        method:"POST"
+                    }
+                }).query({
+                    method: "block_queryBlockAvgTime",
+                    params: [
+                        {
+                            "from":from,
+                            "to":to
+                        }
+                    ],
+                    id: 1
+                },function(res){
+                    console.log(res);
+                    if (res.error) {
+                        reject(res.error)
+                    } else {
+                        resolve(res.result)
+                    }
+
+                })
+            })
+        },
+        queryBlockGPS:function () {
+            return $q(function(resolve, reject){
+                $resource(ENV.API,{},{
+                    query:{
+                        method:"POST"
+                    }
+                }).query({
+                    method: "block_queryBlockGPS",
+                    id: 1
+                },function(res){
+                    console.log(res);
+                    if (res.error) {
+                        reject(res.error)
+                    } else {
+                        resolve(res.result)
+                    }
+                })
+            })
         }
     }
 }
