@@ -12,7 +12,6 @@ import (
 type PublicBlockAPI struct{}
 
 type BlockResult struct{
-	//Number    uint64      `json:"number"`
 	Number    	Number      	`json:"number"`
 	Hash      	common.Hash 	`json:"hash"`
 	ParentHash	common.Hash	`json:"parentHash"`
@@ -27,7 +26,7 @@ func NewPublicBlockAPI() *PublicBlockAPI{
 	return &PublicBlockAPI{}
 }
 
-// GetBlocks returns all the block
+// GetBlocks returns all the block.
 func (blk *PublicBlockAPI) GetBlocks() ([]*BlockResult, error){
 	var blocks []*BlockResult
 
@@ -59,7 +58,7 @@ func (blk *PublicBlockAPI) GetBlocks() ([]*BlockResult, error){
 	return blocks, nil
 }
 
-// LastestBlock returns the number and hash of the lastest block
+// LastestBlock returns the number and hash of the lastest block.
 func (blk *PublicBlockAPI) LastestBlock() (*BlockResult, error){
 	return lastestBlock()
 }
@@ -86,8 +85,7 @@ func lastestBlock() (*BlockResult, error) {
 	return outputBlockResult(block), nil
 }
 
-// getBlockByNumber convert type Block to type BlockResult according to height of the block
-//func blockResult(height uint64) *BlockResult{
+// getBlockByNumber convert type Block to type BlockResult for the given block number.
 func getBlockByNumber(height Number) (*BlockResult, error){
 
 	h := height.ToUint64()
@@ -125,6 +123,7 @@ func outputBlockResult(block *types.Block) *BlockResult{
 	}
 }
 
+// GetBlockByHash returns the block for the given block hash.
 func (blk *PublicBlockAPI) GetBlockByHash(hash common.Hash) (*BlockResult, error){
 	db, err := hyperdb.GetLDBDatabase()
 
@@ -142,6 +141,7 @@ func (blk *PublicBlockAPI) GetBlockByHash(hash common.Hash) (*BlockResult, error
 	return outputBlockResult(block), nil
 }
 
+// GetBlockByNumber returns the bock for the given block number.
 func (blk *PublicBlockAPI) GetBlockByNumber(number Number) (*BlockResult, error){
 	return getBlockByNumber(number)
 }
@@ -161,7 +161,7 @@ type ExeTimeResult struct {
 }
 
 // QueryExecuteTime computes execute time of transactions fo all the block,
-// then return the avg time and the count of all the transaction
+// then return the avg time and the count of all the transaction.
 func (blk *PublicBlockAPI) QueryExecuteTime(args SendQueryArgs) *ExeTimeResult{
 
 	db, err := hyperdb.GetLDBDatabase()
