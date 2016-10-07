@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-########## tx 服务 ########## （说明：value可以是十六进制字符串、八进制字符串、十进制字符串或整数）
+########### tx 服务 ########## （说明：value可以是十六进制字符串、八进制字符串、十进制字符串或整数）
 # 普通交易 SendTransaction
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_sendTransaction","params":[{"from":"0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","to":"0x0000000000000000000000000000000000000003","value":"0x01"}],"id":1}'
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_sendTransaction","params":[{"from":"0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","to":"0x0000000000000000000000000000000000000003","value":1}],"id":1}'
@@ -11,19 +11,29 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_sendTransactionOrContr
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_complieContract","params":["contract Accumulator{ uint sum = 0; function increment(){ sum = sum + 1; } function getSum() returns(uint){ return sum; }}"],"id":1}'
 
 # 调用合约方法 SendTransactionOrContract
-curl localhost:8081 --data '{"jsonrpc":"2.0","method": "tx_sendTransactionOrContract","params": [{"from": "caller address", "to": "contract address", "payload": "encode data"}],id: 1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "tx_sendTransactionOrContract","params": [{"from": "<caller address>", "to": "<contract address>", "payload": "<encode data>"}],id: 1}'
 
 # 根据交易hash查询交易信息 GetTransactionByHash
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByHash","params":["the transaction hash"],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByHash","params":["<the transaction hash>"],"id":1}'
 
+# 根据区块hash和索引查询交易信息 GetTransactionByBlockHashAndIndex
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByBlockHashAndIndex","params":["0xf4d42f0d4e276b306f3a6f7c04e06ef52ee9471684408b24cd4096b8402f7721",0],"id":1}'
 
+# 根据区块number和索引查询交易信息 GetTransactionsByBlockNumberAndIndex
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionsByBlockNumberAndIndex","params":[1,0],"id":1}'
+
 ########## block 服务 ##########
-# 得到最新区块
+# 得到最新区块 LastestBlock
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_lastestBlock","params":[],"id":1}'
 
-# 得到所有区块
+# 得到所有区块 GetBlocks
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params":[],"id":1}'
+
+# 根据区块hash查询区块信息 GetBlockByHash
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlockByHash","params":["<block hash>"],"id":1}'
+
+# 根据区块number查询区块信息 GetBlockByNumber
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlockByNumber","params":[<block number>],"id":1}'
 
 # 查询交易平均处理时间
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "block_queryExecuteTime","params": [{"from":"the number of block","to":"the number of block"}],"id": 1}'
