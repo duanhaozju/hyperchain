@@ -1,12 +1,12 @@
 package core
 
 import (
-	"math/big"
 	"hyperchain/common"
+	"hyperchain/core/crypto"
 	"hyperchain/core/state"
 	"hyperchain/core/vm"
-	"hyperchain/core/crypto"
 	"hyperchain/hyperdb"
+	"math/big"
 )
 
 var (
@@ -14,7 +14,7 @@ var (
 	EnableJit bool
 )
 
-func checkLogs(tlog []Log, logs vm.Logs) error {	return nil	}
+func checkLogs(tlog []Log, logs vm.Logs) error { return nil }
 
 type Account struct {
 	Balance string
@@ -42,7 +42,7 @@ func (self Log) Topics() [][]byte {
 }
 
 func StateObjectFromAccount(db hyperdb.Database, addr string, account Account) *state.StateObject {
-	obj := state.NewStateObject(common.HexToAddress(addr))
+	obj := state.NewStateObject(common.HexToAddress(addr), nil)
 	obj.SetBalance(common.Big(account.Balance))
 
 	if common.IsHex(account.Code) {
@@ -89,12 +89,12 @@ func (r RuleSet) IsHomestead(n *big.Int) bool {
 }
 
 type Env struct {
-	ruleSet      RuleSet
-	depth        int
-	state        *state.StateDB
-	Gas          *big.Int
-	origin   common.Address
-	coinbase common.Address
+	ruleSet    RuleSet
+	depth      int
+	state      *state.StateDB
+	Gas        *big.Int
+	origin     common.Address
+	coinbase   common.Address
 	number     *big.Int
 	time       *big.Int
 	difficulty *big.Int
@@ -115,7 +115,6 @@ func NewEnv(ruleSet RuleSet, state *state.StateDB) *Env {
 	return env
 }
 
-
 func NewEnvFromMap(ruleSet RuleSet, state *state.StateDB, envValues map[string]string) *Env {
 	env := NewEnv(ruleSet, state)
 	env.time = common.Big(envValues["currentTimestamp"])
@@ -123,8 +122,8 @@ func NewEnvFromMap(ruleSet RuleSet, state *state.StateDB, envValues map[string]s
 	env.number = common.Big(envValues["currentNumber"])
 	env.Gas = new(big.Int)
 	env.evm = vm.New(env, vm.Config{
-		EnableJit: false,
-		ForceJit:  false,
+		EnableJit: EnableJit,
+		ForceJit:  ForceJit,
 	})
 
 	return env
@@ -132,7 +131,7 @@ func NewEnvFromMap(ruleSet RuleSet, state *state.StateDB, envValues map[string]s
 
 func (self *Env) RuleSet() vm.RuleSet      { return self.ruleSet }
 func (self *Env) Vm() vm.Vm                { return self.evm }
-func (self *Env) State() *state.StateDB     { return self.state }
+func (self *Env) State() *state.StateDB    { return self.state }
 func (self *Env) Origin() common.Address   { return self.origin }
 func (self *Env) BlockNumber() *big.Int    { return self.number }
 func (self *Env) Coinbase() common.Address { return self.coinbase }

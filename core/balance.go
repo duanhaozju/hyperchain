@@ -1,14 +1,14 @@
 package core
 
 import (
-	"sync"
+	"github.com/op/go-logging"
+	"github.com/syndtr/goleveldb/leveldb"
+	"hyperchain/common"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
-	"hyperchain/common"
-	"github.com/syndtr/goleveldb/leveldb"
 	"math/big"
-	"github.com/op/go-logging"
-	"hyperchain/core/state"
+	"sync"
+	//"hyperchain/core/state"
 )
 
 //-- --------------------- Balance ------------------------------------\
@@ -30,8 +30,8 @@ type Balance struct {
 	cacheBalance BalanceMap   // synchronization with transaction
 	lock         sync.RWMutex // the lock for balance of reading of writing
 
-	state        stateType    // the balance state, use for singleton
-	stateLock    sync.Mutex   // the lock of get balance instance
+	state     stateType  // the balance state, use for singleton
+	stateLock sync.Mutex // the lock of get balance instance
 }
 
 // balance is a instance of Balance, balance.state is closed
@@ -44,7 +44,6 @@ var log *logging.Logger // package-level logger
 func init() {
 	log = logging.MustGetLogger("core")
 }
-
 
 // GetBalanceIns get balance singleton instance
 // if there is no balance instance, it will create one. creating process:
@@ -70,39 +69,38 @@ func GetBalanceIns() (*Balance, error) {
 			balance.cacheBalance = balance_db
 			balance.dbBalance = balance_db
 			return balance, nil
-		}else if err == leveldb.ErrNotFound {
+		} else if err == leveldb.ErrNotFound {
 			return balance, nil
-		}else{
+		} else {
 			return balance, err
 		}
 	}
 	return balance, nil
 }
 
-
 //-- PutCacheBalance put cacheBalance(just into memory not db)
-func (self *Balance)PutCacheBalance(address common.Address, value []byte) {
+func (self *Balance) PutCacheBalance(address common.Address, value []byte) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	self.cacheBalance[address] = value
 }
 
 //-- GetCacheBalance get cacheBalance by address
-func (self *Balance)GetCacheBalance(address common.Address) []byte {
+func (self *Balance) GetCacheBalance(address common.Address) []byte {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	return self.cacheBalance[address]
 }
 
 //-- DeleteCacheBalance delete cacheBalance for given address
-func (self *Balance)DeleteCacheBalance(address common.Address) {
+func (self *Balance) DeleteCacheBalance(address common.Address) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	delete(self.cacheBalance, address)
 }
 
 //-- GetAllCacheBalance get all cacheBalance
-func (self *Balance)GetAllCacheBalance() (BalanceMap) {
+func (self *Balance) GetAllCacheBalance() BalanceMap {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	var bs = make(BalanceMap)
@@ -113,28 +111,28 @@ func (self *Balance)GetAllCacheBalance() (BalanceMap) {
 }
 
 //-- PutDBBalance put dbbalance (just into memory not db)
-func (self *Balance)PutDBBalance(address common.Address, value []byte) {
+func (self *Balance) PutDBBalance(address common.Address, value []byte) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	self.dbBalance[address] = value
 }
 
 //-- GetDBBalance get dbBalance by address
-func (self *Balance)GetDBBalance(address common.Address) []byte {
+func (self *Balance) GetDBBalance(address common.Address) []byte {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	return self.dbBalance[address]
 }
 
 //-- DeleteDBBalance deleate dbBalance for given address
-func (self *Balance)DeleteDBBalance(address common.Address) {
+func (self *Balance) DeleteDBBalance(address common.Address) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	delete(self.dbBalance, address)
 }
 
 //-- GetAllDBBalance get all dbBalance
-func (self *Balance)GetAllDBBalance() (BalanceMap) {
+func (self *Balance) GetAllDBBalance() BalanceMap {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	var bs = make(BalanceMap)
@@ -146,6 +144,7 @@ func (self *Balance)GetAllDBBalance() (BalanceMap) {
 
 // UpdateDBBalance update dbBalance require a latest block,
 // after updating dbBalance, cacheBalance will be equal with dbBalance
+/*
 func (self *Balance)UpdateDBBalance(block *types.Block) error {
 	var (
 		receipts	types.Receipts
@@ -187,15 +186,15 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 			}
 			continue
 		}*/
-		/*if  statedb.GetAccount(common.HexToAddress(string(trans.To)))!=nil {
-		//if _, ok := self.dbBalance[common.HexToAddress(string(trans.To))]; !ok {
-			receipt,_,_,err := ExecTransaction(*trans)
-			if(err == nil){
-				receipts = append(receipts,receipt)
-			}
-			continue
-		}*/
-
+/*if  statedb.GetAccount(common.HexToAddress(string(trans.To)))!=nil {
+//if _, ok := self.dbBalance[common.HexToAddress(string(trans.To))]; !ok {
+	receipt,_,_,err := ExecTransaction(*trans)
+	if(err == nil){
+		receipts = append(receipts,receipt)
+	}
+	continue
+}*/
+/*
 		var transValue big.Int
 		transValue.SetString(string(trans.Value), 10)
 		fromBalance := self.dbBalance[common.HexToAddress(string(trans.From))]
@@ -224,16 +223,17 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 	err = PutDBBalance(db, self.dbBalance)
 	/**
 	    we want to save the receipts to the db
-	 */
+*/
+/*
 	WriteReceipts(receipts)
 	if err != nil {
 		return err
 	}
 	return nil
-}
+}*/
 
 // UpdateCacheBalance　updates cacheBalance by transactions
-func (self *Balance)UpdateCacheBalance(trans *types.Transaction) {
+func (self *Balance) UpdateCacheBalance(trans *types.Transaction) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	var transValue big.Int
@@ -259,9 +259,9 @@ func (self *Balance)UpdateCacheBalance(trans *types.Transaction) {
 	}
 }
 
-
 // VerifyTransaction is to verify balance of the tranaction
 // If the balance is not enough, returns false
+/*
 func VerifyBalance(tx *types.Transaction) bool {
 	//var balance big.Int
 	var value big.Int
@@ -272,6 +272,9 @@ func VerifyBalance(tx *types.Transaction) bool {
 
 
 	db,err := hyperdb.GetLDBDatabase()
+
+
+
 	stateObjects,err:=state.GetStateObjects(db)
 	if _,ok:=stateObjects["0x"+string(tx.From)];ok{
 		balance:=stateObjects["0x"+string(tx.From)].Balance()
@@ -297,9 +300,9 @@ func VerifyBalance(tx *types.Transaction) bool {
 	if value.Cmp(&balance) == 1 {
 		return false
 	}*/
-
+/*
 	return true
 }
-
+*/
 
 //-- --------------------- Balance END --------------------------------
