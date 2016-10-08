@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"sync"
 	//"hyperchain/core/state"
+	"github.com/golang/protobuf/proto"
 )
 
 //-- --------------------- Balance ------------------------------------\
@@ -233,13 +234,22 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 }*/
 
 // UpdateCacheBalance　updates cacheBalance by transactions
-func (self *Balance) UpdateCacheBalance(trans *types.Transaction) {
+func (self *Balance)UpdateCacheBalance(trans *types.Transaction) error{
 	self.lock.Lock()
 	defer self.lock.Unlock()
+
+	var txValue types.TransactionValue
+	if err := proto.Unmarshal(trans.Value,&txValue); err != nil {
+		log.Errorf("%v", err)
+		return err
+	}
+
 	var transValue big.Int
-	transValue.SetString(string(trans.Value), 10)
-	fromBalance := self.cacheBalance[common.HexToAddress(string(trans.From))]
-	toBalance := self.cacheBalance[common.HexToAddress(string(trans.To))]
+	transValue.SetInt64(txValue.Amount)
+
+	fromBalance := self.cacheBalance[common.BytesToAddress(trans.From)]
+	toBalance := self.cacheBalance[common.BytesToAddress(trans.To)]
+
 	var fromValue big.Int
 	var toValue big.Int
 	fromValue.SetString(string(fromBalance), 10)
@@ -250,13 +260,14 @@ func (self *Balance) UpdateCacheBalance(trans *types.Transaction) {
 
 	// Update Transaction.To account(add the To account balance by value)
 	// if Transaction.To account not exist, it will be created, initial account balance is 0
-	self.cacheBalance[common.HexToAddress(string(trans.From))] = []byte(fromValue.String())
-	if _, ok := self.cacheBalance[common.HexToAddress(string(trans.To))]; ok {
+	self.cacheBalance[common.BytesToAddress(trans.From)] = []byte(fromValue.String())
+	if _, ok := self.cacheBalance[common.BytesToAddress(trans.To)]; ok {
 		toValue.Add(&toValue, &transValue)
-		self.cacheBalance[common.HexToAddress(string(trans.To))] = []byte(toValue.String())
+		self.cacheBalance[common.BytesToAddress(trans.To)] = []byte(toValue.String())
 	} else {
-		self.cacheBalance[common.HexToAddress(string(trans.To))] = []byte(transValue.String())
+		self.cacheBalance[common.BytesToAddress(trans.To)] = []byte(transValue.String())
 	}
+	return nil
 }
 
 // VerifyTransaction is to verify balance of the tranaction
