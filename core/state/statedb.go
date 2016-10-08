@@ -146,8 +146,21 @@ func (self *StateDB) GetLeastAccount() vm.Account {
 func (self *StateDB) SetLeastAccount(account *vm.Account) {
 	//self.leastStateObject.abi = account.Address()
 }
+
+// return all StateObject saved in the trie instead of in CACHE
 func (self *StateDB) GetAccounts() map[string]*StateObject {
-	return self.stateObjects
+	// return self.stateObjects
+	ret := make(map[string]*StateObject)
+	it := self.trie.Iterator()
+	for it.Next() {
+		addr := self.trie.GetKey(it.Key)
+		stateObject, err := DecodeObject(common.BytesToAddress(addr), self.db, it.Value)
+		if err != nil {
+			continue
+		}
+		ret[common.BytesToAddress(addr).Hex()] = stateObject
+	}
+	return ret
 }
 
 func (self *StateDB) ForEachAccounts() {
