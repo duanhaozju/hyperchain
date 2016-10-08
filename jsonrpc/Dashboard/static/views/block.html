@@ -51,10 +51,10 @@
                                 <input type="text" placeholder="终止block number" ng-model="blockAvg.to" id="to1"
                                        class="form-control">
                             </div>
-                            <button class="btn btn-primary" type="submit" ng-click="queryAvg()">Query</button>
+                            <button class="btn btn-primary" type="submit" ng-click="queryTxAvg()">Query</button>
 
                             <span>AvgTime:</span>
-                            <span class="text_red">{{avgTime}}ms</span>
+                            <span class="text_red">{{txAvgTime}}ms</span>
                         </form><br/>
                         <form role="form" class="form-inline">
                             <span style="font-weight: bold">计算block commit & batch时间：</span>
