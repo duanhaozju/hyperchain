@@ -193,7 +193,7 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, M
 				nid, _ := strconv.Atoi(nodeid)
 				//if peerId==nodeID{
 				if peer.ID == nid {
-					log.Error(nid)
+
 					resMsg, err := peer.Chat(syncMessage)
 					if err != nil {
 						log.Error("enter error")

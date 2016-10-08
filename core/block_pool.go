@@ -12,7 +12,7 @@ import (
 	"errors"
 	"github.com/golang/protobuf/proto"
 
-	"fmt"
+	//"fmt"
 	"hyperchain/common"
 	"hyperchain/core/state"
 	"hyperchain/core/types"
@@ -285,7 +285,7 @@ func ProcessBlock(block *types.Block) error {
 	}
 	parentBlock, _ := GetBlock(db, block.ParentHash)
 	statedb, e := state.New(common.BytesToHash(parentBlock.MerkleRoot), db)
-	fmt.Println("[Before Process %d] %s\n", block.Number, string(statedb.Dump()))
+	//fmt.Println("[Before Process %d] %s\n", block.Number, string(statedb.Dump()))
 	if err != nil {
 		return e
 	}
@@ -307,7 +307,7 @@ func ProcessBlock(block *types.Block) error {
 	root, _ := statedb.Commit()
 	block.MerkleRoot = root.Bytes()
 
-	fmt.Println("[After Process %d] %s\n", block.Number, string(statedb.Dump()))
+	//fmt.Println("[After Process %d] %s\n", block.Number, string(statedb.Dump()))
 	return nil
 }
 
