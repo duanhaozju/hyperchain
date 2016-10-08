@@ -290,6 +290,7 @@ func UpdateChain(block *types.Block, genesis bool) error {
 	memChainMap.data.ParentBlockHash = block.ParentHash
 	if !genesis {
 		memChainMap.data.Height += 1
+		memChainMap.data.CurrentTxSum += uint64(len(block.Transactions))
 	}
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
@@ -330,6 +331,7 @@ func GetChainCopy() *types.Chain {
 		RequiredBlockNum: memChainMap.data.RequiredBlockNum,
 		RequireBlockHash: memChainMap.data.RequireBlockHash,
 		RecoveryNum:      memChainMap.data.RecoveryNum,
+		CurrentTxSum:	  memChainMap.data.CurrentTxSum,
 	}
 }
 
