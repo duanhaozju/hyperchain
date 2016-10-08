@@ -2,15 +2,6 @@
 // source: receipt.proto
 // DO NOT EDIT!
 
-/*
-Package types is a generated protocol buffer package.
-
-It is generated from these files:
-	receipt.proto
-
-It has these top-level messages:
-	Receipt
-*/
 package types
 
 import proto "github.com/golang/protobuf/proto"
@@ -21,12 +12,6 @@ import math "math"
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the proto package it is being compiled against.
-// A compilation error at this line likely means your copy of the
-// proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type Receipt_STATUS int32
 
@@ -50,7 +35,7 @@ var Receipt_STATUS_value = map[string]int32{
 func (x Receipt_STATUS) String() string {
 	return proto.EnumName(Receipt_STATUS_name, int32(x))
 }
-func (Receipt_STATUS) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{0, 0} }
+func (Receipt_STATUS) EnumDescriptor() ([]byte, []int) { return fileDescriptor2, []int{0, 0} }
 
 type Receipt struct {
 	PostState         []byte         `protobuf:"bytes,1,opt,name=PostState,json=postState,proto3" json:"PostState,omitempty"`
@@ -67,16 +52,16 @@ type Receipt struct {
 func (m *Receipt) Reset()                    { *m = Receipt{} }
 func (m *Receipt) String() string            { return proto.CompactTextString(m) }
 func (*Receipt) ProtoMessage()               {}
-func (*Receipt) Descriptor() ([]byte, []int) { return fileDescriptor4, []int{0} }
+func (*Receipt) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{0} }
 
 func init() {
 	proto.RegisterType((*Receipt)(nil), "types.Receipt")
 	proto.RegisterEnum("types.Receipt_STATUS", Receipt_STATUS_name, Receipt_STATUS_value)
 }
 
-func init() { proto.RegisterFile("receipt.proto", fileDescriptor4) }
+func init() { proto.RegisterFile("receipt.proto", fileDescriptor2) }
 
-var fileDescriptor4 = []byte{
+var fileDescriptor2 = []byte{
 	// 292 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x5c, 0x90, 0x41, 0x4e, 0xf3, 0x30,
 	0x10, 0x85, 0xff, 0x36, 0xa9, 0xfd, 0x67, 0x68, 0x69, 0x6a, 0x09, 0xe4, 0x05, 0x0b, 0xd4, 0x55,

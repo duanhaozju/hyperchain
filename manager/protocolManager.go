@@ -212,7 +212,12 @@ func (self *ProtocolManager) syncBlockLoop() {
 						if common.Bytes2Hex(acceptHash) == common.Bytes2Hex(core.GetChainCopy().RequireBlockHash) {
 
 							core.UpdateRequire(blocks.Batch[i].Number-1, blocks.Batch[i].ParentHash, core.GetChainCopy().RecoveryNum)
-							core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
+
+							//core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
+
+							//core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
+							core.PutBlockTx(db, self.commonHash,blocks.Batch[i].BlockHash, blocks.Batch[i])
+
 							// receive all block in chain
 							if blocks.Batch[i].Number<=core.GetChainCopy().Height+1{
 								//如果刚好是最后一个要添加的区块

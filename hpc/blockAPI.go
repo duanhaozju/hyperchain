@@ -153,12 +153,12 @@ func (blk *PublicBlockAPI) QueryEvmAvgTime(args SendQueryArgs) (int64,error) {
 
 	return evmTime, nil
 }
-/*func (blk *PublicBlockAPI)QueryTransactionSum() string {
+func (blk *PublicBlockAPI)QueryTransactionSum() string {
 	//return strconv.FormatUint(core.CalTransactionSum(),10)
 	currentChain := core.GetChainCopy()
 	sum := currentChain.CurrentTxSum
 	return strconv.FormatUint(sum,10)
-}*/
+}
 func (blk *PublicBlockAPI)QueryBlockAvgTime(args SendQueryArgs)(int64,error)  {
 	from, err := strconv.ParseUint(string(args.From), 10, 64)
 	to, err := strconv.ParseUint(string(args.To), 10, 64)
