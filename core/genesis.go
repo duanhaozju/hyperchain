@@ -15,6 +15,7 @@ import (
 
 	"hyperchain/core/state"
 	"math/big"
+	"hyperchain/crypto"
 )
 
 func CreateInitBlock(filename string) {
@@ -83,7 +84,9 @@ func CreateInitBlock(filename string) {
 	}
 
 	log.Debug("构造创世区块")
-	if err := PutBlock(db, block.BlockHash, &block); err != nil {
+	//if err := PutBlock(db, block.BlockHash, &block); err != nil {
+	commonHash := crypto.NewKeccak256Hash("keccak256")
+	if err := PutBlockTx(db, commonHash,block.BlockHash, &block); err != nil {
 		log.Fatal(err)
 	}
 	UpdateChain(&block, true)

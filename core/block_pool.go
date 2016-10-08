@@ -252,7 +252,8 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := PutBlock(db, block.BlockHash, block); err != nil {
+	//if err := PutBlock(db, block.BlockHash, block); err != nil {
+	if err := PutBlockTx(db, commonHash,block.BlockHash, block); err != nil {
 		log.Fatal(err)
 	}
 	// write transaction
@@ -299,7 +300,7 @@ func ProcessBlock(block *types.Block) error {
 	for _, receipt := range receipts {
 		receiptInst.PutReceipt(common.BytesToHash(receipt.TxHash), receipt)
 	}
-	//	WriteReceipts(receipts)
+		//WriteReceipts(receipts)
 
 	root, _ := statedb.Commit()
 

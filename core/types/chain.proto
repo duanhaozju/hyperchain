@@ -8,4 +8,5 @@ message Chain {
 	uint64 requiredBlockNum = 4;
 	bytes requireBlockHash = 5;
 	uint64 recoveryNum = 6;
+	uint64 currentTxSum = 7;
 }
