@@ -3,8 +3,7 @@ set -e
 
 govendor build
 
-PRIMARY="115.159.122.96"
-MAXNODE=7
+PRIMARY="182.254.246.243"
 
 ./local_addkey.sh
 

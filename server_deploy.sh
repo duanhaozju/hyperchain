@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-MAXNODE=7
+MAXNODE=1
 
 #kill the progress
 killprogress(){
