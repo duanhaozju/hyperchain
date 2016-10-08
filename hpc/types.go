@@ -56,9 +56,16 @@ func (n *Number) ToInt64() int64{
 	return int64(*n)
 }
 
-func (n Number) ToUnit64() uint64{
+func (n Number) ToUint64() uint64{
 	if n <= 0{
 		return 0
 	}
 	return uint64(n)
+}
+
+func (n Number) ToInt() int{
+	if n <= 0{
+		return 0
+	}
+	return int(n)
 }
