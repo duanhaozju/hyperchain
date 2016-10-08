@@ -9,10 +9,8 @@ server:
         gomaxprocs: -1
 
         # path to the OBC state directory and CA state subdirectory
-        rootpath: "/var/hyperchain/production"
+        rootpath: "/var/hyperledger/production"
         cadir: ".membersrvc"
-
-        caserverdir: "./"
 
         # port the CA services are listening on
         port: ":50051"
@@ -21,18 +19,9 @@ server:
         # TLS certificate and key file paths
         tls:
             cert:
-                file: "cert/server/tlsca.cert"
+                file: "ca/test_resources/tlsca.cert"
             key:
-                file: "cert/server/tlsca.priv"
-node:
-        tls:
-            cert:
-                file: "cert/tls_peer.cert"
-            key:
-                file: "cert/tls_peer.priv"
-            cap:
-                file: "cert/tls_peer.ca"
-        serverhostoverride: "kuang"
+                file: "ca/test_resources/tlsca.priv"
 
 security:
     # Can be 256 or 384
@@ -184,5 +173,5 @@ aca:
 pki:
           ca:
                  subject:
-                         organization: hyperchain
+                         organization: Hyperledger
                          country: US

@@ -18,7 +18,7 @@ import (
 	"hyperchain/crypto/ecies"
 	"hyperchain/crypto/secp256k1"
 	"hyperchain/crypto/sha3"
-	"hyperchain/crypto/rlp"
+	"hyperchain/logger/rlp"
 	"golang.org/x/crypto/ripemd160"
 )
 

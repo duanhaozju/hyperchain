@@ -5,25 +5,24 @@
 package core
 
 import (
-	"encoding/json"
 	"hyperchain/core/types"
 	"io/ioutil"
+	"encoding/json"
 
 	"hyperchain/common"
 
 	"hyperchain/hyperdb"
+
 	"hyperchain/crypto"
 	"time"
 	"encoding/hex"
-	"hyperchain/core/state"
-	"math/big"
-	"hyperchain/crypto"
 )
 
-func CreateInitBlock(filename string) {
+
+func CreateInitBlock(filename string)  {
 	log.Info("genesis start")
 
-	if GetHeightOfChain() > 0 {
+	if(GetHeightOfChain()>0){
 		log.Info("already genesis")
 		return
 	}
@@ -50,22 +49,10 @@ func CreateInitBlock(filename string) {
 		return
 	}
 
-<<<<<<< HEAD
 	balanceIns, err := GetBalanceIns()
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
 	}
-=======
-	if err != nil {
-		log.Fatalf("GetBalanceIns error, %v", err)
-	}
-	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	stateDB, _ := state.New(common.Hash{}, db)
->>>>>>> 6c921ad71b84be6493b96424feeef27a08541087
 	for addr, account := range genesis["test1"].Alloc {
 		//address := common.HexToAddress(addr)
 
@@ -78,7 +65,6 @@ func CreateInitBlock(filename string) {
 			AccountPublicKeyHash:[]byte(addr),
 			Value:account,
 		}*/
-<<<<<<< HEAD
 
 		balanceIns.PutCacheBalance(common.HexToAddress(addr),[]byte(account))
 		balanceIns.PutDBBalance(common.HexToAddress(addr),[]byte(account))
@@ -91,31 +77,16 @@ func CreateInitBlock(filename string) {
 		log.Fatal(err)
 	}
 
-=======
-		//address := common.HexToAddress(addr)
-
-		//statedb.AddBalance(address, common.String2Big(account))
-		object := stateDB.CreateAccount(common.HexToAddress(addr))
-		object.AddBalance(big.NewInt(account))
-
-		/*
-			balanceIns.PutCacheBalance(common.HexToAddress(addr),[]byte(account))
-			balanceIns.PutDBBalance(common.HexToAddress(addr),[]byte(account))*/
-
-	}
-	root, _ := stateDB.Commit()
->>>>>>> 6c921ad71b84be6493b96424feeef27a08541087
 
 	block := types.Block{
 		ParentHash: common.FromHex(genesis["test1"].ParentHash),
-		Timestamp:  genesis["test1"].Timestamp,
-		BlockHash:  common.FromHex(genesis["test1"].BlockHash),
-		Number:     genesis["test1"].Number,
-		MerkleRoot: root.Bytes(),
+		Timestamp:   genesis["test1"].Timestamp,
+		BlockHash: common.FromHex(genesis["test1"].BlockHash),
+		Number:   genesis["test1"].Number,
+		//MerkleRoot:       "root",
 	}
 
 	log.Debug("构造创世区块")
-<<<<<<< HEAD
 	err = PutBlock(db, block.BlockHash, &block)
 	// write transaction
 	//PutTransactions(db, commonHash, block.Transactions)
@@ -148,17 +119,9 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 	UpdateChain(block, false)
 	balance, err := GetBalanceIns()
 	if err != nil {
-=======
-	//if err := PutBlock(db, block.BlockHash, &block); err != nil {
-	commonHash := crypto.NewKeccak256Hash("keccak256")
-	if err := PutBlockTx(db, commonHash,block.BlockHash, &block); err != nil {
->>>>>>> 6c921ad71b84be6493b96424feeef27a08541087
 		log.Fatal(err)
 	}
-	UpdateChain(&block, true)
-	log.Info("current chain block number is", GetChainCopy().Height)
 
-<<<<<<< HEAD
 	newChain := GetChainCopy()
 	log.Notice("Block number",newChain.Height)
 	log.Notice("Block hash",hex.EncodeToString(newChain.LatestBlockHash))
@@ -187,6 +150,3 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash,commitTime int6
 	//TxSum.Add(TxSum,big.NewInt(int64(len(block.Transactions))))
 	//CommitStatedbToBlockchain()
 }
-=======
-}
->>>>>>> 6c921ad71b84be6493b96424feeef27a08541087

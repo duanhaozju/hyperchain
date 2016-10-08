@@ -59,7 +59,7 @@ func SendTransaction(args TxArgs) bool {
 	//tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
 	tx = types.NewTestCreateTransaction()
 	//tx = types.NewTestCallTransaction()
-	if (/*core.VerifyBalance(tx)*/ true) {
+	if (core.VerifyBalance(tx)) {
 
 		// Balance is enough
 		/*txBytes, err := proto.Marshal(tx)

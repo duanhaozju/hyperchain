@@ -38,7 +38,6 @@ type Environment interface {
 	// The gas limit of the block
 	GasLimit() *big.Int
 	// Determines whether it's possible to transact
-	VmType() Type
 	CanTransfer(from common.Address, balance *big.Int) bool
 	// Transfers amount from one account to the other
 	Transfer(from, to Account, amount *big.Int)

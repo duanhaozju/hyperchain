@@ -28,22 +28,6 @@ type (
 	Address [AddressLength]byte
 )
 
-func StringToHex(s string) string {
-	if len(s) >= 2 && s[:2] == "0x" {
-		return s
-	} else {
-		return "0x" + s
-	}
-}
-
-func HexToString(s string) string {
-	if len(s) >= 2 && s[:2] == "0x" {
-		return s[2:]
-	} else {
-		return s
-	}
-}
-
 func BytesToHash(b []byte) Hash {
 	var h Hash
 	h.SetBytes(b)

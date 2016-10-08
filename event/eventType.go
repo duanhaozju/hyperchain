@@ -4,8 +4,6 @@
 // last modified:2016-08-25
 package event
 
-import "hyperchain/core/types"
-
 
 
 //consensus event incoming from outer,peers post
@@ -23,7 +21,6 @@ type NewBlockEvent struct{ Payload []byte
 //general tx local
 type NewTxEvent struct{ Payload []byte  }
 
-//transmit tx to primary node
 type TxUniqueCastEvent struct{ Payload []byte
 			       PeerId uint64  }
 
@@ -37,20 +34,6 @@ type StateUpdateEvent struct{Payload []byte }
 
 // after get all required block,send this block to node
 type ReceiveSyncBlockEvent struct{Payload []byte }
-
-// after exe all txs,send the executable txs and its' hash to the pbft module
-type ExeTxsEvent struct{ Transactions []types.Transaction
-			 SequenceNum uint64}
-
-// if the CommitStatus is true, we will commit the blocks and save the statedb
-// or we will rollback the statedb
-type CommitOrRollbackBlockEvent struct{ Transactions []types.Transaction
-					SequenceNum uint64
-					Timestamp int64
-					CommitTime int64
-					CommitStatus bool  }
-
-
 
 
 

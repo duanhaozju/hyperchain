@@ -1,11 +1,11 @@
 package core
 
 import (
-	"hyperchain/common"
-	"hyperchain/core/crypto"
-	"hyperchain/core/vm"
-	"hyperchain/core/vm/params"
 	"math/big"
+	"hyperchain/common"
+	"hyperchain/core/vm"
+	"hyperchain/core/crypto"
+	"hyperchain/core/vm/params"
 	//"hyperchain/core/vm/compiler"
 )
 
@@ -50,6 +50,8 @@ func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPric
 }
 
 func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
+	//fmt.Println("exec")
+
 	evm := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
@@ -60,10 +62,11 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	}
 
 	// TODO
-	if !env.CanTransfer(caller.Address(), value) {
-		//caller.ReturnGas(gas, gasPrice)
+	/*if !env.CanTransfer(caller.Address(), value) {
+		caller.ReturnGas(gas, gasPrice)
+
 		return nil, common.Address{}, ValueTransferErr("insufficient funds to transfer value. Req %v, has %v", value, env.Db().GetBalance(caller.Address()))
-	}
+	}*/
 
 	var createAccount bool
 	if address == nil {
@@ -89,12 +92,13 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		} else {
 
 			to = env.Db().GetAccount(*address)
-			if statedb.GetCode(to.Address()) == nil {
+			if statedb.GetCode(to.Address())==nil{
 
 				env.Transfer(from, to, value)
 			}
 		}
 	}
+
 
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
@@ -103,17 +107,18 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	contract.SetCallCode(codeAddr, code)
 	defer contract.Finalise()
 
+
 	ret, err = evm.Run(contract, input)
 
 	/*
-		fmt.Println("---------------------------------------")
-		fmt.Println("caller.address",caller.Address())
-		fmt.Println("address",address)
-		fmt.Println("codeaddress",codeAddr)
-		fmt.Println("input",input)
-		fmt.Println("code",code)
-		fmt.Println("---------------------------------------")
-		fmt.Println("ret",ret)
+	fmt.Println("---------------------------------------")
+	fmt.Println("caller.address",caller.Address())
+	fmt.Println("address",address)
+	fmt.Println("codeaddress",codeAddr)
+	fmt.Println("input",input)
+	fmt.Println("code",code)
+	fmt.Println("---------------------------------------")
+	fmt.Println("ret",ret)
 	*/
 
 	// if the contract creation ran successfully and no errors were returned

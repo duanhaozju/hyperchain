@@ -4,7 +4,6 @@ import (
 	"testing"
 	"hyperchain/common"
 	"hyperchain/core/types"
-	"github.com/golang/protobuf/proto"
 )
 
 
@@ -149,35 +148,21 @@ func TestBalance_DeleteDBBalance(t *testing.T) {
 	}
 }
 
-
-func setValue(num int64) []byte{
-	var txValue = &types.TransactionValue{
-		Price: 1000,
-		GasLimit: 1000,
-		Amount: num,
-		Payload: nil,
-	}
-
-	var value,_ = proto.Marshal(txValue)
-
-	return value
-}
-
 var transCases = []*types.Transaction{
 	&types.Transaction{
-		From: common.HexToAddress("0000000000000000000000000000000000000001").Bytes(),
-		To: common.HexToAddress("0000000000000000000000000000000000000003").Bytes(),
-		Value: setValue(100),
+		From: []byte("0000000000000000000000000000000000000001"),
+		To: []byte("0000000000000000000000000000000000000003"),
+		Value: []byte("100"),
 	},
 	&types.Transaction{
-		From: common.HexToAddress("0000000000000000000000000000000000000001").Bytes(),
-		To: common.HexToAddress("0000000000000000000000000000000000000002").Bytes(),
-		Value: setValue(100),
+		From: []byte("0000000000000000000000000000000000000001"),
+		To: []byte("0000000000000000000000000000000000000002"),
+		Value: []byte("100"),
 	},
 	&types.Transaction{
-		From: common.HexToAddress("0000000000000000000000000000000000000002").Bytes(),
-		To: common.HexToAddress("0000000000000000000000000000000000000003").Bytes(),
-		Value: setValue(700),
+		From: []byte("0000000000000000000000000000000000000002"),
+		To: []byte("0000000000000000000000000000000000000003"),
+		Value: []byte("700"),
 	},
 }
 
@@ -220,7 +205,7 @@ func TestBalance_UpdateDBBalance(t *testing.T) {
 	for key, value := range balanceCases {
 		b.PutDBBalance(key, value)
 	}
-	//b.UpdateDBBalance(blockCase)
+	b.UpdateDBBalance(blockCase)
 
 	zhangsan1 := b.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000001"))
 	lisi1 := b.GetCacheBalance(common.HexToAddress("0000000000000000000000000000000000000002"))
@@ -248,9 +233,7 @@ func TestBalance_UpdateDBBalance(t *testing.T) {
 //	InitDB(8083)
 //	db, _ := hyperdb.GetLDBDatabase()
 //	height := GetHeightOfChain()
-//	log.Infof("height: %v",height)
 //	block,_:= GetBlockByNumber(db,height)
-//	log.Infof("block: %#v", block)
 //	tx := block.Transactions[0]
 //	start:= time.Now()
 //	VerifyBalance(tx)

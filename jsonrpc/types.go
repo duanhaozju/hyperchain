@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"sync"
 	"gopkg.in/fatih/set.v0"
+	"math/big"
 )
 
 // callback is a method callback which was registered in the server
@@ -13,7 +14,7 @@ type callback struct {
 	argTypes    []reflect.Type // input argument types
 	hasCtx      bool           // method's first argument is a context (not included in argTypes)
 	errPos      int            // err return idx, of -1 when method cannot return error
-	//isSubscribe bool           // indication if the callback is a subscription
+	isSubscribe bool           // indication if the callback is a subscription
 }
 
 
@@ -33,7 +34,7 @@ type serverRequest struct {
 	rcvr          reflect.Value
 	callb         *callback
 	args          []reflect.Value
-	//isUnsubscribe bool
+	isUnsubscribe bool
 	err           RPCError
 }
 
@@ -85,7 +86,7 @@ type ServerCodec interface {
 	// Assemble error response with extra information about the error through info
 	CreateErrorResponseWithInfo(id interface{}, err RPCError, info interface{}) interface{}
 	// Create notification response
-	//CreateNotification(string, interface{}) interface{}
+	CreateNotification(string, interface{}) interface{}
 	// Write msg to client.
 	Write(interface{}) error
 	// Close underlying data stream
@@ -93,3 +94,6 @@ type ServerCodec interface {
 	// Closed when underlying connection is closed
 	Closed() <-chan interface{}
 }
+
+// HexNumber serializes a number to hex format using the "%#x" format
+type HexNumber big.Int

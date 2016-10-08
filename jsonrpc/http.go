@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"io"
 	"fmt"
-	"hyperchain/manager"
 	"hyperchain/hpc"
+	"hyperchain/manager"
 )
 
 const (
@@ -36,7 +36,6 @@ func Start(httpPort int,eventMux *event.TypeMux,pm *manager.ProtocolManager) err
 	// api.Namespace 是API的命名空间，api.Service 是一个拥有命名空间对应对象的所有方法的对象
 	for _, api := range apis {
 		if err := server.RegisterName(api.Namespace, api.Service);err != nil {
-			log.Errorf("registerName error: %v ",err)
 			return err
 		}
 	}

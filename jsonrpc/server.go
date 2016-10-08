@@ -1,3 +1,19 @@
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+
 package jsonrpc
 
 import (
@@ -14,8 +30,11 @@ import (
 const (
 	stopPendingRequestTimeout = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
 
+	notificationBufferSize = 10000 // max buffered notifications before codec is closed
+
 	MetadataApi     = "rpc"
-	DefaultHTTPApis = "tx,node,block,acot"
+	DefaultIPCApis  = "admin,debug,eth,miner,net,personal,shh,txpool,web3"
+	DefaultHTTPApis = "eth,net,web3"
 )
 
 // CodecOption specifies which type of messages this codec supports
@@ -24,6 +43,9 @@ type CodecOption int
 const (
 	// OptionMethodInvocation is an indication that the codec supports RPC method calls
 	OptionMethodInvocation CodecOption = 1 << iota
+
+	// OptionSubscriptions is an indication that the codec suports RPC notifications
+	OptionSubscriptions = 1 << iota // support pub sub
 )
 
 // NewServer will create a new server instance with no registered handlers.
@@ -144,6 +166,12 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// if the codec supports notification include a notifier that callbacks can use
+	// to send notification to clients. It is thight to the codec/connection. If the
+	// connection is closed the notifier will stop and cancels all active subscriptions.
+	if options&OptionSubscriptions == OptionSubscriptions {
+		ctx = context.WithValue(ctx, notifierKey{}, newBufferedNotifier(codec, notificationBufferSize))
+	}
 	s.codecsMu.Lock()
 	if atomic.LoadInt32(&s.run) != 1 { // server stopped
 		s.codecsMu.Unlock()
@@ -224,11 +252,57 @@ func (s *Server) Stop() {
 	}
 }
 
+// createSubscription will call the subscription callback and returns the subscription id or error.
+func (s *Server) createSubscription(ctx context.Context, c ServerCodec, req *serverRequest) (string, error) {
+	// subscription have as first argument the context following optional arguments
+	args := []reflect.Value{req.callb.rcvr, reflect.ValueOf(ctx)}
+	args = append(args, req.args...)
+	reply := req.callb.method.Func.Call(args)
+
+	if !reply[1].IsNil() { // subscription creation failed
+		return "", reply[1].Interface().(error)
+	}
+
+	return reply[0].Interface().(Subscription).ID(), nil
+}
+
 // handle executes a request and returns the response from the callback.
 func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverRequest) (interface{}, func()) {
 	//log.Info("=========================enter handle()============================")
 	if req.err != nil {
 		return codec.CreateErrorResponse(&req.id, req.err), nil
+	}
+
+	if req.isUnsubscribe { // cancel subscription, first param must be the subscription id
+		if len(req.args) >= 1 && req.args[0].Kind() == reflect.String {
+			notifier, supported := NotifierFromContext(ctx)
+			if !supported { // interface doesn't support subscriptions (e.g. http)
+				return codec.CreateErrorResponse(&req.id, &callbackError{ErrNotificationsUnsupported.Error()}), nil
+			}
+
+			subid := req.args[0].String()
+			if err := notifier.Unsubscribe(subid); err != nil {
+				return codec.CreateErrorResponse(&req.id, &callbackError{err.Error()}), nil
+			}
+
+			return codec.CreateResponse(req.id, true), nil
+		}
+		return codec.CreateErrorResponse(&req.id, &invalidParamsError{"Expected subscription id as first argument"}), nil
+	}
+
+	if req.callb.isSubscribe {
+		subid, err := s.createSubscription(ctx, codec, req)
+		if err != nil {
+			return codec.CreateErrorResponse(&req.id, &callbackError{err.Error()}), nil
+		}
+
+		// active the subscription after the sub id was successful sent to the client
+		activateSub := func() {
+			notifier, _ := NotifierFromContext(ctx)
+			notifier.(*bufferedNotifier).activate(subid)
+		}
+
+		return codec.CreateResponse(req.id, subid), activateSub
 	}
 
 	// regular RPC call, prepare arguments
@@ -329,8 +403,37 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, RPCErro
 		var ok bool
 		var svc *service
 
+		if r.isPubSub && r.method == unsubscribeMethod {
+			requests[i] = &serverRequest{id: r.id, isUnsubscribe: true}
+			argTypes := []reflect.Type{reflect.TypeOf("")} // expect subscription id as first arg
+			if args, err := codec.ParseRequestArguments(argTypes, r.params); err == nil {
+				requests[i].args = args
+			} else {
+				requests[i].err = &invalidParamsError{err.Error()}
+			}
+			continue
+		}
+
 		if svc, ok = s.services[r.service]; !ok { // rpc method isn't available
 			requests[i] = &serverRequest{id: r.id, err: &methodNotFoundError{r.service, r.method}}
+			continue
+		}
+
+		if r.isPubSub { // eth_subscribe, r.method contains the subscription method name
+			if callb, ok := svc.subscriptions[r.method]; ok {
+				requests[i] = &serverRequest{id: r.id, svcname: svc.name, callb: callb}
+				if r.params != nil && len(callb.argTypes) > 0 {
+					argTypes := []reflect.Type{reflect.TypeOf("")}
+					argTypes = append(argTypes, callb.argTypes...)
+					if args, err := codec.ParseRequestArguments(argTypes, r.params); err == nil {
+						requests[i].args = args[1:] // first one is service.method name which isn't an actual argument
+					} else {
+						requests[i].err = &invalidParamsError{err.Error()}
+					}
+				}
+			} else {
+				requests[i] = &serverRequest{id: r.id, err: &methodNotFoundError{subscribeMethod, r.method}}
+			}
 			continue
 		}
 

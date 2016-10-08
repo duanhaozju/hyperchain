@@ -6,8 +6,8 @@ import (
 	"hyperchain/accounts"
 	"hyperchain/manager"
 	"errors"
-	//"hyperchain/hyperdb"
-	//"hyperchain/core/state"
+	"hyperchain/hyperdb"
+	"hyperchain/core/state"
 )
 
 type PublicAccountAPI struct {
@@ -74,18 +74,16 @@ func (acot *PublicAccountAPI) GetAccounts() []*AccountResult{
 	var acts []*AccountResult
 
 	//balanceIns, err := core.GetBalanceIns()
-	/*
 	db,err := hyperdb.GetLDBDatabase()
 	stateObjects,err:=state.GetStateObjects(db)
 
 	if err != nil {
 		log.Fatalf("GetBalanceIns error, %v", err)
 	}
-	*/
+
 	//balMap := balanceIns.GetAllDBBalance()
 
 	//stateObjects:=stateDB.GetAccounts()
-	/*
 	for key,value := range stateObjects{
 		log.Info("key is",key)
 

@@ -15,6 +15,7 @@ import (
 	"encoding/hex"
 	"crypto/des"
 	"bytes"
+	"crypto/aes"
 )
 var log *logging.Logger // package-level logger
 func init() {
@@ -59,52 +60,51 @@ func (hSM *HandShakeManager) GenerateSecret(remotePublicKey []byte, peerHash str
 func (hSM *HandShakeManager) EncWithSecret(message []byte,peerHash string) []byte {
 
 
-
-	key := []byte("sfe023f_sefiel#fi32lf3e!")
-	//log.Critical("密钥长度",len(key))
-
-
-
-	encrypted,err := TripleDesEncrypt(message,key)
-	if err !=nil{
-		log.Error(err)
-		return nil
-	}
-	return encrypted
+	// 3DES
+	//key := []byte("sfe023f_sefiel#fi32lf3e!")
+	////log.Critical("密钥长度",len(key))
+	//
+	//
+	//encrypted,err := TripleDesEncrypt(message,key)
+	//if err !=nil{
+	//	log.Error(err)
+	//	return nil
+	//}
+	//return encrypted
 
 
 	//aes
-	//key := hSM.secrets[peerHash][:16]
-	//var iv = []byte(key)[:aes.BlockSize]
-	//encrypted := make([]byte, len(message))
-	//aesBlockEncrypter, _ := aes.NewCipher(key)
-	//aesEncrypter := cipher.NewCFBEncrypter(aesBlockEncrypter, iv)
-	//aesEncrypter.XORKeyStream(encrypted, []byte(message))
-	//return encrypted
+	key := hSM.secrets[peerHash][:16]
+	var iv = []byte(key)[:aes.BlockSize]
+	encrypted := make([]byte, len(message))
+	aesBlockEncrypter, _ := aes.NewCipher(key)
+	aesEncrypter := cipher.NewCFBEncrypter(aesBlockEncrypter, iv)
+	aesEncrypter.XORKeyStream(encrypted, []byte(message))
+	return encrypted
 
 }
 
 func (hSM *HandShakeManager) DecWithSecret(message []byte,peerHash string) []byte {
 
 
-
-	key := []byte("sfe023f_sefiel#fi32lf3e!")
-	//log.Critical("密钥长度",len(key))
-	decrypted,err := TripleDesDecrypt(message,key)
-	if err !=nil{
-		log.Error(err)
-		return nil
-	}
-	return decrypted
+	//3DES
+	//key := []byte("sfe023f_sefiel#fi32lf3e!")
+	////log.Critical("密钥长度",len(key))
+	//decrypted,err := TripleDesDecrypt(message,key)
+	//if err !=nil{
+	//	log.Error(err)
+	//	return nil
+	//}
+	//return decrypted
 
 	//aes
-	//key := hSM.secrets[peerHash][:16]
-	//var iv = []byte(key)[:aes.BlockSize]
-	//decrypted := make([]byte, len(message))
-	//aesBlockDecrypter, _ := aes.NewCipher([]byte(key))
-	//aesDecrypter := cipher.NewCFBDecrypter(aesBlockDecrypter, iv)
-	//aesDecrypter.XORKeyStream(decrypted, message)
-	//return decrypted
+	key := hSM.secrets[peerHash][:16]
+	var iv = []byte(key)[:aes.BlockSize]
+	decrypted := make([]byte, len(message))
+	aesBlockDecrypter, _ := aes.NewCipher([]byte(key))
+	aesDecrypter := cipher.NewCFBDecrypter(aesBlockDecrypter, iv)
+	aesDecrypter.XORKeyStream(decrypted, message)
+	return decrypted
 
 }
 

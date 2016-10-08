@@ -2,6 +2,10 @@ package vm
 
 import (
 	"math/big"
+	"time"
+
+	"hyperchain/logger"
+	"hyperchain/logger/glog"
 )
 
 // optimeProgram optimises a JIT program creating segments out of program
@@ -13,6 +17,14 @@ func optimiseProgram(program *Program) {
 		statsJump = 0
 		statsPush = 0
 	)
+
+	if glog.V(logger.Debug) {
+		glog.Infof("optimising %x\n", program.Id[:4])
+		tstart := time.Now()
+		defer func() {
+			glog.Infof("optimised %x done in %v with JMP: %d PSH: %d\n", program.Id[:4], time.Since(tstart), statsJump, statsPush)
+		}()
+	}
 
 	/*
 		code := Parse(program.code)

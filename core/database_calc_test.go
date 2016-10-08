@@ -66,12 +66,3 @@ func TestCalBlockGPS(t *testing.T) {
 	WriteBlock(&blockUtilsCase, commonHash, 122)
 	CalBlockGPS()
 }
-//func TestCall(t *testing.T) {
-//	InitDB(8084)
-//	db,_ := hyperdb.GetLDBDatabase()
-//	block,_ := GetBlockByNumber(db,GetHeightOfChain())
-//	tx := block.Transactions[0]
-//	fmt.Printf("tx %v\n",tx)
-//	fmt.Printf("block %v\n",block)
-//
-//}

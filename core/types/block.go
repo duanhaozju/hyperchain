@@ -11,7 +11,6 @@ func (self Block)Hash(ch crypto.CommonHash) common.Hash {
 		self.Number,
 		self.Timestamp,
 		self.Transactions,
-		self.MerkleRoot,
 	})
 	//return ch.Hash(self)
 }
@@ -22,6 +21,5 @@ func (self *Block)HashBlock(ch crypto.CommonHash) common.Hash {
 		self.Number,
 		self.Timestamp,
 		self.Transactions,
-		self.MerkleRoot,
 	})
 }
