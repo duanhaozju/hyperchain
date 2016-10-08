@@ -225,7 +225,3 @@ func TestUpdateChain(t *testing.T) {
 		t.Errorf("TestUpdateChain fail")
 	}
 }
-
-func TestGetCurrentAndParentBlockHash(t *testing.T) {
-
-}
