@@ -179,6 +179,8 @@ func TestPutBlock(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	block, err := GetBlock(db, blockUtilsCase.BlockHash)
+	fmt.Println(block.Number)
 	//height := GetHeightOfChain()
 	//for i:=uint64(1);i<=height;i++{
 	//	block ,_:= GetBlockByNumber(db,i)
@@ -210,8 +212,16 @@ func TestDeleteBlock(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	err = PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
+	if err != nil {
+		log.Fatal(err)
+	}
+	block, err := GetBlock(db, blockUtilsCase.BlockHash)
+	fmt.Println(block.Number)
 	err = DeleteBlock(db, blockUtilsCase.BlockHash)
-	_, err = GetBlock(db, blockUtilsCase.BlockHash)
+	//err = DeleteBlockByNum(db, 1)
+	block, err = GetBlock(db, blockUtilsCase.BlockHash)
+	fmt.Println(block.Number)
 	if err != leveldb.ErrNotFound {
 		t.Errorf("block delete fail, TestDeleteBlock fail")
 	}

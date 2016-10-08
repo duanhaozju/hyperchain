@@ -242,6 +242,14 @@ func DeleteBlock(db hyperdb.Database, key []byte) error {
 	keyFact := append(blockPrefix, key...)
 	return db.Delete(keyFact)
 }
+func DeleteBlockByNum(db hyperdb.Database,blockNum uint64) error {
+	hash,err := GetBlockHash(db,blockNum)
+	if err !=nil{
+		return err
+	}
+	keyFact := append(blockPrefix, hash...)
+	return db.Delete(keyFact)
+}
 
 //-- --------------------- Block END ----------------------------------
 
