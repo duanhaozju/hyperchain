@@ -9,13 +9,16 @@ import (
 	"sync"
 
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
 	"hyperchain/core/state"
 	"hyperchain/core/types"
 	"hyperchain/core/vm/params"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
+	"hyperchain/trie"
 	"strconv"
 	"time"
 )
@@ -206,10 +209,54 @@ func ProcessBlock(block *types.Block) error {
 		receiptInst.PutReceipt(common.BytesToHash(receipt.TxHash), receipt)
 	}
 	//	WriteReceipts(receipts)
-
 	root, _ := statedb.Commit()
-
 	block.MerkleRoot = root.Bytes()
+
 	fmt.Printf("[After Process %d] %s\n", block.Number, string(statedb.Dump()))
 	return nil
+}
+
+func BuildTree(prefix []byte, ctx []interface{}) ([]byte, error) {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		return nil, err
+	}
+	trie, err := trie.New(common.Hash{}, db)
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range ctx {
+		switch t := item.(type) {
+		case *types.Receipt:
+			data, err := proto.Marshal(t)
+			if err != nil {
+				return nil, err
+			}
+			trie.Update(append(receiptsPrefix, t.TxHash...), data)
+		case *types.Transaction:
+			data, err := proto.Marshal(t)
+			if err != nil {
+				return nil, err
+			}
+			trie.Update(append(transactionPrefix, t.BuildHash().Bytes()...), data)
+		default:
+			return nil, errors.New("Invalid element type when build tree")
+		}
+	}
+	return trie.Hash().Bytes(), nil
+}
+
+func convertR(receipts types.Receipts) (ret []interface{}) {
+	ret = make([]interface{}, len(receipts))
+	for idx, v := range receipts {
+		ret[idx] = v
+	}
+	return
+}
+func convertT(txs []*types.Transaction) (ret []interface{}) {
+	ret = make([]interface{}, len(txs))
+	for idx, v := range txs {
+		ret[idx] = v
+	}
+	return
 }
