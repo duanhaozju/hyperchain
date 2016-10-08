@@ -138,18 +138,14 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 // 3. Update chain
 // 4. Update balance
 func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int64) {
-	var (
-		successTxs []*types.Transaction
-	)
 	log.Info("block number is ", block.Number)
 
 	currentChain := GetChainCopy()
 
 	block.ParentHash = currentChain.LatestBlockHash
-	if successTxs, err := ProcessBlock(block); err != nil {
+	if err := ProcessBlock(block); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Success Tx", successTxs)
 	block.WriteTime = time.Now().UnixNano()
 	block.CommitTime = commitTime
 	block.BlockHash = block.Hash(commonHash).Bytes()
@@ -181,21 +177,20 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	//CommitStatedbToBlockchain()
 }
 
-func ProcessBlock(block *types.Block) ([]*types.Transaction, error) {
+func ProcessBlock(block *types.Block) error {
 	var (
-		receipts   types.Receipts
-		successTxs []*types.Transaction
-		env        = make(map[string]string)
+		receipts types.Receipts
+		env      = make(map[string]string)
 	)
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	parentBlock, _ := GetBlock(db, block.ParentHash)
 	statedb, e := state.New(common.BytesToHash(parentBlock.MerkleRoot), db)
 	fmt.Printf("[Before Process %d] %s\n", block.Number, string(statedb.Dump()))
 	if err != nil {
-		return nil, e
+		return e
 	}
 	env["currentNumber"] = strconv.FormatUint(block.Number, 10)
 	env["currentGasLimit"] = "10000000"
@@ -203,11 +198,8 @@ func ProcessBlock(block *types.Block) ([]*types.Transaction, error) {
 
 	for i, tx := range block.Transactions {
 		statedb.StartRecord(tx.BuildHash(), common.Hash{}, i)
-		receipt, _, _, err := ExecTransaction(*tx, vmenv)
+		receipt, _, _, _ := ExecTransaction(*tx, vmenv)
 		receipts = append(receipts, receipt)
-		if err == nil {
-			successTxs = append(successTxs, tx)
-		}
 	}
 	receiptInst, _ := GetReceiptInst()
 	for _, receipt := range receipts {
@@ -219,5 +211,5 @@ func ProcessBlock(block *types.Block) ([]*types.Transaction, error) {
 
 	block.MerkleRoot = root.Bytes()
 	fmt.Printf("[After Process %d] %s\n", block.Number, string(statedb.Dump()))
-	return successTxs, nil
+	return nil
 }
