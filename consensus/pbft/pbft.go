@@ -65,6 +65,7 @@ func loadConfig(pbftConfigPath string) (config *viper.Viper) {
 	//}
 	config.AddConfigPath(pbftConfigPath)
 
+
 	err := config.ReadInConfig()
 	if err != nil {
 		panic(fmt.Errorf("Error reading %s plugin config: %s", configPrefix, err))
