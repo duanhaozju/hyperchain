@@ -29,6 +29,7 @@ import (
 func newEvent(manager *ProtocolManager) {
 	for i := 0; i < 5; i += 1 {
 
+
 		go GetEventObject().Post(event.AliveEvent{true})
 		//manager.eventMux.Post(event.AliveEvent{true})
 

@@ -1,19 +1,17 @@
 package hpc
 
 import (
-	"github.com/golang/protobuf/proto"
-	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/core"
-	"hyperchain/core/types"
-	"hyperchain/core/vm/compiler"
-	"hyperchain/crypto"
-	"hyperchain/event"
 	"hyperchain/hyperdb"
-	"hyperchain/manager"
+	"hyperchain/core"
+	"hyperchain/common"
 	"time"
-	//"hyperchain/accounts"
+	"github.com/op/go-logging"
+	"hyperchain/core/types"
 	"errors"
+	"hyperchain/manager"
+	"hyperchain/event"
+	"github.com/golang/protobuf/proto"
+	"hyperchain/core/vm/compiler"
 )
 
 const (
@@ -82,6 +80,7 @@ func prepareExcute(args SendTxArgs) SendTxArgs{
 func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error){
 
 	var tx *types.Transaction
+	var found bool
 
 	realArgs := prepareExcute(args)
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), nil)
@@ -93,11 +92,23 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	}
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 
+
+	if tran.pm == nil {
+
+		// Test environment
+		found = true
+	} else {
+
+		// Development environment
+		am := tran.pm.AccountManager
+		_, found = am.Unlocked[args.From]
+	}
 	//am := tran.pm.AccountManager
 
 	//if (!core.VerifyBalance(tx)){
 	//	return common.Hash{},errors.New("Not enough balance!")
-	//}else if _,found := am.Unlocked[args.From];found {
+	//}else
+	if found == true {
 
 		// Balance is enough
 
@@ -168,15 +179,16 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	*/
 	return tx.BuildHash(),nil
 
-	//} else {
-	//	return common.Hash{}, errors.New("account don't unlock")
-	//}
+	} else {
+		return common.Hash{}, errors.New("account don't unlock")
+	}
 }
 
 // SendTransactionOrContract deploy contract
 func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (common.Hash, error) {
 
 	var tx *types.Transaction
+	var found bool
 
 	realArgs := prepareExcute(args)
 
@@ -201,9 +213,19 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 	}
 
-	am := tran.pm.AccountManager
+	if tran.pm == nil {
 
-	//if _,found := am.Unlocked[args.From];found {
+		// Test environment
+		found = true
+	} else {
+
+		// Development environment
+		am := tran.pm.AccountManager
+		_, found = am.Unlocked[args.From]
+	}
+	//am := tran.pm.AccountManager
+
+	if found == true {
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		tx.TimeStamp = time.Now().UnixNano()
 
@@ -225,9 +247,9 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 	}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
-	//} else {
-	//	return common.Hash{}, errors.New("account don't unlock")
-	//}
+	} else {
+		return common.Hash{}, errors.New("account don't unlock")
+	}
 
 	time.Sleep(2000 * time.Millisecond)
 	/*
@@ -262,6 +284,26 @@ func (tran *PublicTransactionAPI) ComplieContract(ct string) (*CompileCode,error
 	return &CompileCode{
 		Abi: abi,
 		Bin: bin,
+	}, nil
+}
+
+func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
+
+	var txValue types.TransactionValue
+
+	if err := proto.Unmarshal(tx.Value,&txValue); err != nil {
+		log.Errorf("%v", err)
+		return nil, err
+	}
+
+	return &TransactionResult{
+		Hash: tx.BuildHash(),
+		From: common.BytesToAddress(tx.From),
+		To: common.BytesToAddress(tx.To),
+		Amount: *NewInt64ToNumber(txValue.Amount),
+		Gas: *NewInt64ToNumber(txValue.GasLimit),
+		GasPrice: *NewInt64ToNumber(txValue.Price),
+		Timestamp: time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
 	}, nil
 }
 
@@ -303,9 +345,8 @@ func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) *types
 //	return transactions
 //}
 
-func (tran *PublicTransactionAPI) GetTransactionByHash(hash string) (*TransactionResult, error){
-
-	var txValue types.TransactionValue
+// GetTransactionByHash returns the transaction for the given transaction hash.
+func (tran *PublicTransactionAPI) GetTransactionByHash(hash common.Hash) (*TransactionResult, error){
 
 	db, err := hyperdb.GetLDBDatabase()
 
@@ -314,24 +355,69 @@ func (tran *PublicTransactionAPI) GetTransactionByHash(hash string) (*Transactio
 		return nil, err
 	}
 
-	tx, err := core.GetTransaction(db, common.FromHex(hash))
+	tx, err := core.GetTransaction(db, hash[:])
 
 	if tx.From == nil {
 		return nil, errors.New("Not found this transaction")
 	}
 
-	if err := proto.Unmarshal(tx.Value,&txValue); err != nil {
+	return outputTransaction(tx)
+}
+
+// GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
+func (tran *PublicTransactionAPI) GetTransactionByBlockHashAndIndex(hash common.Hash, index Number) (*TransactionResult, error) {
+
+	db, err := hyperdb.GetLDBDatabase()
+
+	if err != nil {
+		log.Errorf("Open database error: %v", err)
+		return nil, err
+	}
+
+	block, err := core.GetBlock(db, hash[:])
+	if err != nil {
 		log.Errorf("%v", err)
 		return nil, err
 	}
 
-	return &TransactionResult{
-		Hash: tx.BuildHash(),
-		From: common.BytesToAddress(tx.From),
-		To: common.BytesToAddress(tx.To),
-		Amount: *NewInt64ToNumber(txValue.Amount),
-		Gas: *NewInt64ToNumber(txValue.GasLimit),
-		GasPrice: *NewInt64ToNumber(txValue.Price),
-		Timestamp: time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
-	}, nil
+	txCount := len(block.Transactions)
+
+	if index.ToInt() >= 0 && index.ToInt() < txCount {
+
+		tx := block.Transactions[index]
+
+		return outputTransaction(tx)
+	}
+
+	return nil, nil
 }
+
+// GetTransactionsByBlockNumberAndIndex returns the transaction for the given block number and index.
+func (tran *PublicTransactionAPI) GetTransactionsByBlockNumberAndIndex(n Number, index Number) (*TransactionResult, error){
+
+	db, err := hyperdb.GetLDBDatabase()
+
+	if err != nil {
+		log.Errorf("Open database error: %v", err)
+		return nil, err
+	}
+
+	block, err := core.GetBlockByNumber(db, n.ToUint64())
+	if err != nil {
+		log.Errorf("%v", err)
+		return nil, err
+	}
+
+	txCount := len(block.Transactions)
+
+	if index.ToInt() >= 0 && index.ToInt() < txCount {
+
+		tx := block.Transactions[index]
+
+		return outputTransaction(tx)
+	}
+
+	return nil, nil
+}
+
+
