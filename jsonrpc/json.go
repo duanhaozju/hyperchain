@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package jsonrpc
 
 import (
@@ -21,17 +5,14 @@ import (
 	"fmt"
 	"io"
 	"reflect"
-	"strconv"
 	"strings"
 	"sync"
+	"strconv"
 )
 
 const (
 	JSONRPCVersion         = "2.0"
 	serviceMethodSeparator = "_"
-	subscribeMethod        = "eth_subscribe"
-	unsubscribeMethod      = "eth_unsubscribe"
-	notificationMethod     = "eth_subscription"
 )
 
 // JSON-RPC request
@@ -155,30 +136,6 @@ func parseRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, RPCError) {
 		return nil, false, &invalidMessageError{err.Error()}
 	}
 
-	// subscribe are special, they will always use `subscribeMethod` as first param in the payload
-	if in.Method == subscribeMethod {
-		reqs := []rpcRequest{rpcRequest{id: &in.Id, isPubSub: true}}
-		if len(in.Payload) > 0 {
-			// first param must be subscription name
-			var subscribeMethod [1]string
-			if err := json.Unmarshal(in.Payload, &subscribeMethod); err != nil {
-				log.Errorf("Unable to parse subscription method: %v\n", err)
-				return nil, false, &invalidRequestError{"Unable to parse subscription request"}
-			}
-
-			// all subscriptions are made on the eth service
-			reqs[0].service, reqs[0].method = "eth", subscribeMethod[0]
-			reqs[0].params = in.Payload
-			return reqs, false, nil
-		}
-		return nil, false, &invalidRequestError{"Unable to parse subscription request"}
-	}
-
-	if in.Method == unsubscribeMethod {
-		return []rpcRequest{rpcRequest{id: &in.Id, isPubSub: true,
-			method: unsubscribeMethod, params: in.Payload}}, false, nil
-	}
-
 	// regular RPC call
 	elems := strings.Split(in.Method, serviceMethodSeparator)
 	if len(elems) != 2 {
@@ -207,31 +164,6 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, RPCErro
 		}
 
 		id := &in[i].Id
-
-		// subscribe are special, they will always use `subscribeMethod` as first param in the payload
-		if r.Method == subscribeMethod {
-			requests[i] = rpcRequest{id: id, isPubSub: true}
-			if len(r.Payload) > 0 {
-				// first param must be subscription name
-				var subscribeMethod [1]string
-				if err := json.Unmarshal(r.Payload, &subscribeMethod); err != nil {
-					log.Errorf("Unable to parse subscription method: %v\n", err)
-					return nil, false, &invalidRequestError{"Unable to parse subscription request"}
-				}
-
-				// all subscriptions are made on the eth service
-				requests[i].service, requests[i].method = "eth", subscribeMethod[0]
-				requests[i].params = r.Payload
-				continue
-			}
-
-			return nil, true, &invalidRequestError{"Unable to parse (un)subscribe request arguments"}
-		}
-
-		if r.Method == unsubscribeMethod {
-			requests[i] = rpcRequest{id: id, isPubSub: true, method: unsubscribeMethod, params: r.Payload}
-			continue
-		}
 
 		elems := strings.Split(r.Method, serviceMethodSeparator)
 		if len(elems) != 2 {
@@ -268,6 +200,8 @@ func parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type)
 	for _, t := range callbackArgs {
 		params = append(params, reflect.New(t).Interface()) // Interface()转换为原来的类型
 	}
+	//log.Info(string(args)) // [{"from":"0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","to":"0x0000000000000000000000000000000000000003","value":"0x9184e72a"}]
+	//log.Info(params)	// [0xc8201437a0]
 	if err := json.Unmarshal(args, &params); err != nil {
 		log.Info(err)
 		return nil, &invalidParamsError{err.Error()}
@@ -292,6 +226,7 @@ func parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type)
 			argValues[i] = reflect.Zero(callbackArgs[i])
 		} else { // deref pointers values creates previously with reflect.New
 			argValues[i] = reflect.ValueOf(p).Elem()
+			//log.Infof("%#v",argValues[i])  // hpc.SendTxArgs{From:common.Address{0x0, 0xf, 0x1a, 0x7a, 0x8, 0xcc, 0xc4, 0x8e, 0x5d, 0x30, 0xf8, 0x8, 0x50, 0xcf, 0x1c, 0xf2, 0x83, 0xaa, 0x3a, 0xbd}, To:"0x0000000000000000000000000000000000000003", Gas:"", GasPrice:"", Value:"0x9184e72a", Payload:""}
 		}
 	}
 
@@ -319,15 +254,15 @@ func (c *jsonCodec) CreateErrorResponseWithInfo(id interface{}, err RPCError, in
 }
 
 // CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.
-func (c *jsonCodec) CreateNotification(subid string, event interface{}) interface{} {
-	if isHexNum(reflect.TypeOf(event)) {
-		return &jsonNotification{Version: JSONRPCVersion, Method: notificationMethod,
-			Params: jsonSubscription{Subscription: subid, Result: fmt.Sprintf(`%#x`, event)}}
-	}
-
-	return &jsonNotification{Version: JSONRPCVersion, Method: notificationMethod,
-		Params: jsonSubscription{Subscription: subid, Result: event}}
-}
+//func (c *jsonCodec) CreateNotification(subid string, event interface{}) interface{} {
+//	if isHexNum(reflect.TypeOf(event)) {
+//		return &jsonNotification{Version: JSONRPCVersion, Method: notificationMethod,
+//			Params: jsonSubscription{Subscription: subid, Result: fmt.Sprintf(`%#x`, event)}}
+//	}
+//
+//	return &jsonNotification{Version: JSONRPCVersion, Method: notificationMethod,
+//		Params: jsonSubscription{Subscription: subid, Result: event}}
+//}
 
 // Write message to client
 func (c *jsonCodec) Write(res interface{}) error {
