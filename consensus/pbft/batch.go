@@ -26,7 +26,7 @@ type batch struct {
 	pbft             *pbftCore
 	localID           uint64
 
-	//reqStore	*requestStore	//received messages
+	reqStore	*requestStore	//received messages
 	mux		sync.Mutex
 }
 
@@ -76,7 +76,7 @@ func newBatch(id uint64, config *viper.Viper, h helper.Stack) *batch {
 
 	logger.Infof("PBFT Batch size = %d", op.batchSize)
 	logger.Infof("PBFT Batch timeout = %v", op.batchTimeout)
-	//op.reqStore = newRequestStore()
+	op.reqStore = newRequestStore()
 
 	return op
 }
@@ -97,6 +97,8 @@ func (op *batch) RecvMsg(e []byte) error {
 		return op.processConsensus(msg)
 	} else if msg.Type == pb.Message_STATE_UPDATED {
 		return op.processStateUpdated(msg)
+	} else if msg.Type == pb.Message_NULL_REQUEST {
+		return op.processNullRequest(msg)
 	}
 
 	logger.Errorf("Unknown recvMsg: %+v", msg)
@@ -167,6 +169,12 @@ func (op *batch) processStateUpdated(msg *pb.Message) error {
 	return nil
 }
 
+// processNullRequest process when a null request come
+func (op *batch) processNullRequest(msg *pb.Message) error {
+	op.pbft.NullReqTimerReset()
+	return nil
+}
+
 func (op *batch) ProcessEvent(e events.Event) events.Event{
 
 	logger.Debugf("Replica %d start solve event", op.pbft.id)
@@ -176,6 +184,8 @@ func (op *batch) ProcessEvent(e events.Event) events.Event{
 	case *Request:
 		req := event
 		return op.processRequest(req)
+	case viewChangedEvent:
+		op.processRequestsDuringViewChange()
 	case batchTimerEvent:
 		logger.Debugf("Replica %d batch timer expired", op.pbft.id)
 		if  op.pbft.activeView && (len(op.batchStore) > 0) {
@@ -194,15 +204,42 @@ func (op *batch) processRequest(req *Request) error {
 	//op.startTimerIfOutstandingRequests()
 
 	primary := op.pbft.primary(op.pbft.view)
-	if (primary != op.pbft.id) {
-		// Broadcast request to primary
+	if !op.pbft.activeView {
+		op.reqStore.storeOutstanding(req)
+	} else if primary != op.pbft.id {
+		//Broadcast request to primary
 		consensusMsg := &ConsensusMessage{Payload: &ConsensusMessage_Request{Request: req}}
 		pbMsg := consensusMsgHelper(consensusMsg, op.pbft.id)
 		op.helperImpl.InnerUnicast(pbMsg, primary)
-	} else if (primary == op.pbft.id && op.pbft.activeView) {
+	} else {
 		return op.leaderProcReq(req)
 	}
 
+
+	return nil
+}
+
+func (op *batch) processRequestsDuringViewChange() error {
+	primary := op.pbft.primary(op.pbft.view)
+	if op.pbft.activeView && primary != op.pbft.id {
+		for op.reqStore.outstandingRequests.Len() != 0 {
+
+			temp:=op.reqStore.outstandingRequests.order.Front().Value
+
+			reqc,ok:=interface{}(temp).(requestContainer)
+			if !ok {
+				logger.Error("type assert error:",temp)
+				return nil
+			}
+			req:= reqc.req
+			if req != nil {
+				consensusMsg := &ConsensusMessage{Payload: &ConsensusMessage_Request{Request: req}}
+				pbMsg := consensusMsgHelper(consensusMsg, op.pbft.id)
+				op.helperImpl.InnerUnicast(pbMsg, primary)
+				op.reqStore.remove(req)
+			}
+		}
+	}
 	return nil
 }
 

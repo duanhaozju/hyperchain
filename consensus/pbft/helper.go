@@ -29,6 +29,18 @@ func consensusMsgHelper(msg *ConsensusMessage, id uint64) *pb.Message {
 	return pbMsg
 }
 
+// nullRequestMsgHelper help convert the nullRequestMessage to pb.Message
+func nullRequestMsgHelper(id uint64) *pb.Message {
+	pbMsg := &pb.Message{
+		Type:  		pb.Message_NULL_REQUEST,
+		Payload:        nil,
+		Timestamp:	time.Now().UnixNano(),
+		Id:		id,
+	}
+
+	return pbMsg
+}
+
 // pbftMsgHelper help convert the pbftMessage to pb.Message
 func pbftMsgHelper(msg *Message, id uint64) *pb.Message {
 
