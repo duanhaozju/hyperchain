@@ -41,8 +41,8 @@ func (blk *PublicBlockAPI) GetBlocks() ([]*BlockResult, error){
 
 	// only genesis block
 	if height == 0 {
-		blocks = append(blocks, block)
-		return blocks, nil
+		//blocks = append(blocks, block)
+		return nil, nil
 	}
 
 	for height > 0 {
@@ -198,6 +198,7 @@ func (blk *PublicBlockAPI) QueryCommitAndBatchTime(args SendQueryArgs) (*BatchTi
 func (blk *PublicBlockAPI) QueryEvmAvgTime(args SendQueryArgs) (int64,error) {
 
 	evmTime :=  core.CalcEvmAVGTime(args.From.ToUint64(),args.To.ToUint64())
+	log.Info("-----evmTime----",evmTime)
 
 	return evmTime, nil
 }
