@@ -191,7 +191,8 @@ func CalcEvmAVGTime(from, to uint64) int64 {
 			log.Error(err)
 			return -1
 		}
-		sum+=(block.EvmTime-block.WriteTime)/ int64(time.Millisecond)
+		sum+=(block.EvmTime-block.WriteTime)/ int64(time.Microsecond)
+
 	}
 	num := int64(to-from+1)
 	if num == 0 {
