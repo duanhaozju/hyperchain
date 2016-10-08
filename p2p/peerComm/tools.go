@@ -11,6 +11,10 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"github.com/op/go-logging"
+	"strconv"
+	pb "hyperchain/p2p/peermessage"
+	"encoding/hex"
+	"hyperchain/crypto"
 )
 var log *logging.Logger // package-level logger
 func init() {
@@ -47,4 +51,22 @@ func GetConfig(path string) map[string]string{
 		log.Fatal(UmErr)
 	}
 	return configs
+}
+
+func ExtractAddress(peerIp string, peerPort int,ID int32) *pb.PeerAddress{
+	peerPort_i32 := int32(peerPort)
+	peerAddrString := peerIp + ":" + strconv.Itoa(peerPort)
+	peerAddress := pb.PeerAddress{
+		Ip:peerIp,
+		Port:peerPort_i32,
+		Address:peerAddrString,
+		Hash:GetHash(peerAddrString),
+		ID:ID,
+	}
+	return &peerAddress
+}
+
+func GetHash(needHashString string)string {
+	hasher := crypto.NewKeccak256Hash("keccak256Hanser")
+	return hex.EncodeToString(hasher.Hash(needHashString).Bytes())
 }

@@ -12,7 +12,7 @@ import (
 
 var log *logging.Logger // package-level logger
 func init() {
-	log = logging.MustGetLogger("p2p")
+	log = logging.MustGetLogger("state")
 }
 
 // The starting nonce determines the default nonce when new accounts are being

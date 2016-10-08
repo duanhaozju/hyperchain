@@ -365,17 +365,15 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
     SummaryService.getLastestBlock()
         .then(function(res){
             $scope.number = res.number;
-            $rootScope.height = res.number;
+            // $rootScope.height = res.number;
 
-            SummaryService.getAvgTimeAndCount("1",res.number+"")
+            SummaryService.getAvgTimeAndCount("1",res.number+"") // res.number 是十六进制字符串。这里参数可以是十进制字符串、整数或十六进制字符串
                 .then(function(res){
                     if (res.time < 0) {
                         $scope.avgTime = 0
                     } else {
                         $scope.avgTime = res.time;
                     }
-                    // $scope.txCount = res.count; // 后端没有存到数据库里
-                    // $scope.txCount = $scope.number * 500;
                 }, function(error){
                     console.log(error);
                 })
@@ -398,10 +396,11 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
 
 function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockService, TransactionService) {
     $scope.status = "";
+    $scope.blkGPSstatus = "";
 
     $scope.tx = {
         from: "6201cb0448964ac597faf6fdf1f472edf2a22b89",
-        to: "0000000000000000000000000000000000000002",
+        to: "000f1a7a08ccc48e5d30f80850cf1cf283aa3abd",
         value: "1"
     };
 
@@ -419,7 +418,6 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
         from: "",
         to: ""
     };
-
     $scope.commitTime = "0";
     $scope.batchTime = "0";
     $scope.avgTime = "0";
@@ -458,7 +456,7 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
             })
     };
 
-    $scope.queryAvg = function(){
+    $scope.queryTxAvg = function(){
 
         if (isEmpty($scope.blockAvg)) {
             alert("字段不能为空");
@@ -467,13 +465,13 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
 
         SummaryService.getAvgTimeAndCount($scope.blockAvg.from, $scope.blockAvg.to)
             .then(function(res){
-                $scope.avgTime = res.time
+                $scope.txAvgTime = res.time
             }, function(error){
                 console.log(error);
             })
     }
 
-    $scope.query = function(){
+    $scope.queryBatchAndCommit = function(){
 
         if (isEmpty($scope.block)) {
             alert("字段不能为空");
@@ -503,6 +501,32 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
             }, function(error){
                 console.log(error);
             })
+    }
+    $scope.queryBlockTime = function() {
+
+        if (isEmpty($scope.blockAvg)) {
+            alert("字段不能为空");
+            return false;
+        }
+
+        BlockService.queryBlockAvgTime($scope.blockAvg.from, $scope.blockAvg.to)
+            .then(function(res){
+                $scope.blockTime = res;
+            }, function(error){
+                console.log(error);
+            })
+    }
+    $scope.queryBlkGPS = function() {
+        
+        $scope.blkGPSstatus = "please waitting.....";
+        BlockService.queryBlockGPS()
+            .then(function(res){
+                $scope.blkGPSstatus = "statis saved in /tmp/hyperchain/cache/statis/block_time_statis ";
+            }, function(error){
+                $scope.blkGPSstatus = error.message;
+                console.log(error);
+            })
+
     }
 }
 
@@ -725,7 +749,7 @@ function ContractCtrl($scope, $uibModal, DTOptionsBuilder, SweetAlert, ENV) {
                     localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage))
                     SweetAlert.swal("Deleted!", "The contract has deleted from localstorage.", "success");
                 } else {
-                    SweetAlert.swal("Cancelled", ":)", "error");
+                    SweetAlert.swal("Cancelled", ":)", "success");
                 }
             });
     }
@@ -826,7 +850,7 @@ function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Contract
     };
 
     $scope.cancel = function () {
-        SweetAlert.swal("Cancelled", "You don't deploy the contract :)", "error");
+        SweetAlert.swal("Cancelled", "You don't deploy the contract :)", "success");
         $uibModalInstance.dismiss('cancel');
     };
 
@@ -897,7 +921,7 @@ function modalInstanceInvokeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Co
     };
 
     $scope.cancel = function () {
-        SweetAlert.swal("Cancelled", "You don't invoke the contract :)", "error");
+        SweetAlert.swal("Cancelled", "You don't invoke the contract :)", "success");
         $uibModalInstance.dismiss('cancel');
     };
 }

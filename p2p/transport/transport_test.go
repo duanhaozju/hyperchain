@@ -12,6 +12,7 @@ import (
 
 	"fmt"
 	"time"
+	"encoding/hex"
 )
 
 func TestDes3(t *testing.T) {
@@ -49,4 +50,22 @@ func TestDes3(t *testing.T) {
 	println(string(hSM1.DecWithSecret(hSM0.EncWithSecret([]byte("hello, message length is not limited")))))
 	println(string(hSM0.DecWithSecret(hSM1.EncWithSecret([]byte("ok, I got it")))))*/
 
+}
+
+var HSM1 *HandShakeManager
+var HSM2 *HandShakeManager
+func init(){
+	HSM1 = NewHandShakeManger()
+	HSM2 = NewHandShakeManger()
+	pbk1 := HSM1.GetLocalPublicKey()
+	pbk2 := HSM2.GetLocalPublicKey()
+	HSM1.GenerateSecret(pbk2,"2")
+	HSM2.GenerateSecret(pbk1,"1")
+}
+
+func TestHandShakeManager_DecWithSecret(t *testing.T) {
+	enctrypted := HSM1.EncWithSecret([]byte("HELLO"),"2")
+	t.Log("加密之后信息",hex.EncodeToString(enctrypted))
+	decrypted := HSM2.DecWithSecret(enctrypted,"1")
+	fmt.Println(string(decrypted))
 }

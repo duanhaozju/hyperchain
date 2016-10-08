@@ -92,7 +92,7 @@ func (pm *ProtocolManager) Start() {
 
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
-	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
+	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{},event.BroadcastConsensusEvent{}, event.NewTxEvent{})
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
@@ -125,7 +125,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 				CurrentNumber:  core.GetChainCopy().Height,
 				PeerId:         UpdateStateMessage.Id,
 			}
-			log.Error(required.PeerId)
+			//log.Error(required.PeerId)
 			core.UpdateRequire(blockChainInfo.Height, blockChainInfo.CurrentBlockHash, blockChainInfo.Height)
 
 			payload, _ := proto.Marshal(required)
@@ -212,15 +212,15 @@ func (self *ProtocolManager) syncBlockLoop() {
 						if common.Bytes2Hex(acceptHash) == common.Bytes2Hex(core.GetChainCopy().RequireBlockHash) {
 
 							core.UpdateRequire(blocks.Batch[i].Number-1, blocks.Batch[i].ParentHash, core.GetChainCopy().RecoveryNum)
-							core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
-							/*
-								balance, err := core.GetBalanceIns()
-								if err != nil {
-									log.Fatal(err)
-								}
-								balance.UpdateDBBalance(blocks.Batch[i])
-							*/
+
+							//core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
+
+							//core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
+							core.PutBlockTx(db, self.commonHash,blocks.Batch[i].BlockHash, blocks.Batch[i])
+
 							// receive all block in chain
+							if blocks.Batch[i].Number<=core.GetChainCopy().Height+1{
+								//如果刚好是最后一个要添加的区块
 							if common.Bytes2Hex(blocks.Batch[i].ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash) {
 								core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum)
 
@@ -243,6 +243,15 @@ func (self *ProtocolManager) syncBlockLoop() {
 
 								self.consenter.RecvMsg(msgPayload)
 								break
+							} else{
+								//如果自己链上最新区块异常,则替换,并广播节点需要的最新区块
+								//deleteBlock(db,blocks.Batch[i].Number-1)
+								core.UpdateChainByBlcokNum(db, blocks.Batch[i].Number-2)
+								//broadcastDemandBlock(blocks.Batch[i].Number-1,replica,msg)
+								//core.UpdateChainByViewChange(blocks.Batch[i].Number-1,blocks.Batch[i].ParentHash)
+
+
+							}
 							}
 						}
 					}
@@ -285,14 +294,13 @@ func (self *ProtocolManager) ConsensusLoop() {
 			log.Debug("######enter broadcast")
 
 			go self.BroadcastConsensus(ev.Payload)
+		case event.TxUniqueCastEvent:
+
+			var peers []uint64
+			peers = append(peers, ev.PeerId)
+			self.peerManager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
+			//go self.peerManager.SendMsgToPeers(ev.Payload,)
 		case event.NewTxEvent:
-			//log.Error("######receiver new tx")
-			//call consensus module
-			//send msg to consensus
-			//for i:=0;i<10000;i+=1{
-			//	go self.sendMsg(ev.Payload)
-			//	//time.Sleep(100*time.Microsecond)
-			//}
 
 			go self.sendMsg(ev.Payload)
 
@@ -301,8 +309,13 @@ func (self *ProtocolManager) ConsensusLoop() {
 			log.Debug("###### enter ConsensusEvent")
 			//logger.GetLogger().Println("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
-
+		case event.ExeTxsEvent:
+			self.blockPool.ExecTxs(ev.SequenceNum,ev.Transactions)
+		case event.CommitOrRollbackBlockEvent:
+			self.blockPool.CommitOrRollbackBlockEvent(ev.SequenceNum,
+				ev.Transactions,ev.Timestamp,ev.CommitTime,ev.CommitStatus)
 		}
+
 
 	}
 }
@@ -390,10 +403,6 @@ func (pm *ProtocolManager) commitNewBlock(payload []byte, commitTime int64) {
 func (pm *ProtocolManager) GetNodeInfo() client.PeerInfos {
 	pm.nodeInfo = pm.peerManager.GetPeerInfos()
 	log.Info("nodeInfo is ", pm.nodeInfo)
-	/*	pm.nodeInfo["node1"]=true
-		pm.nodeInfo["node2"]=true
-		pm.nodeInfo["node3"]=false
-		pm.nodeInfo["node4"]=true*/
 	return pm.nodeInfo
 
 }

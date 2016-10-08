@@ -7,10 +7,18 @@ Package types is a generated protocol buffer package.
 
 It is generated from these files:
 	block.proto
+	chain.proto
+	receipt.proto
+	transaction.proto
+	transaction_value.proto
 
 It has these top-level messages:
 	Block
 	Blocks
+	Chain
+	Receipt
+	Transaction
+	TransactionValue
 */
 package types
 
