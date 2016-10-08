@@ -5,23 +5,22 @@
 package manager
 
 import (
-	"hyperchain/event"
-	"hyperchain/p2p"
-	"hyperchain/core"
-	"hyperchain/consensus"
-	"hyperchain/crypto"
 	"github.com/golang/protobuf/proto"
-	"hyperchain/core/types"
-	"sync"
-	"hyperchain/protos"
-	"time"
 	"github.com/op/go-logging"
 	"hyperchain/accounts"
 	"hyperchain/common"
-	"hyperchain/recovery"
+	"hyperchain/consensus"
+	"hyperchain/core"
+	"hyperchain/core/types"
+	"hyperchain/crypto"
+	"hyperchain/event"
 	"hyperchain/hyperdb"
+	"hyperchain/p2p"
 	"hyperchain/p2p/peer"
-
+	"hyperchain/protos"
+	"hyperchain/recovery"
+	"sync"
+	"time"
 )
 
 var log *logging.Logger // package-level logger
@@ -30,59 +29,56 @@ func init() {
 }
 
 type ProtocolManager struct {
-	serverPort        int
-	blockPool         *core.BlockPool
-	fetcher           *core.Fetcher
-	peerManager       p2p.PeerManager
+	serverPort  int
+	blockPool   *core.BlockPool
+	fetcher     *core.Fetcher
+	peerManager p2p.PeerManager
 
-	nodeInfo          client.PeerInfos // node info ,store node status,ip,port
-	consenter         consensus.Consenter
+	nodeInfo  client.PeerInfos // node info ,store node status,ip,port
+	consenter consensus.Consenter
 	//encryption   crypto.Encryption
-	AccountManager    *accounts.AccountManager
-	commonHash        crypto.CommonHash
+	AccountManager *accounts.AccountManager
+	commonHash     crypto.CommonHash
 
-	noMorePeers       chan struct{}
-	eventMux          *event.TypeMux
-	txSub             event.Subscription
-	newBlockSub       event.Subscription
-	consensusSub      event.Subscription
+	noMorePeers  chan struct{}
+	eventMux     *event.TypeMux
+	txSub        event.Subscription
+	newBlockSub  event.Subscription
+	consensusSub event.Subscription
 
-	aLiveSub          event.Subscription
+	aLiveSub event.Subscription
 
 	syncCheckpointSub event.Subscription
 
-	syncBlockSub      event.Subscription
-	quitSync          chan struct{}
+	syncBlockSub event.Subscription
+	quitSync     chan struct{}
 
-	wg                sync.WaitGroup
+	wg sync.WaitGroup
 }
 type NodeManager struct {
-
 	peerManager p2p.PeerManager
-
 }
+
 var eventMuxAll *event.TypeMux
 
 func NewProtocolManager(blockPool *core.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
-//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
-am *accounts.AccountManager, commonHash crypto.CommonHash) (*ProtocolManager) {
+	//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
+	am *accounts.AccountManager, commonHash crypto.CommonHash) *ProtocolManager {
 	log.Debug("enter parotocol manager")
 
 	manager := &ProtocolManager{
 
-		blockPool: blockPool,
+		blockPool:   blockPool,
 		eventMux:    eventMux,
 		quitSync:    make(chan struct{}),
-		consenter:consenter,
-		peerManager:  peerManager,
-		fetcher:fetcher,
+		consenter:   consenter,
+		peerManager: peerManager,
+		fetcher:     fetcher,
 		//encryption:encryption,
-		AccountManager:am,
-		commonHash:commonHash,
-
-
+		AccountManager: am,
+		commonHash:     commonHash,
 	}
-	manager.nodeInfo = make(client.PeerInfos, 0,1000)
+	manager.nodeInfo = make(client.PeerInfos, 0, 1000)
 	eventMuxAll = eventMux
 	return manager
 }
@@ -90,7 +86,6 @@ am *accounts.AccountManager, commonHash crypto.CommonHash) (*ProtocolManager) {
 func GetEventObject() *event.TypeMux {
 	return eventMuxAll
 }
-
 
 // start listen new block msg and consensus msg
 func (pm *ProtocolManager) Start() {
@@ -113,12 +108,12 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 	self.wg.Add(-1)
 	for obj := range self.syncCheckpointSub.Chan() {
 
-		switch  ev := obj.Data.(type) {
+		switch ev := obj.Data.(type) {
 		case event.SendCheckpointSyncEvent:
 			/*
 
-			receive request  from the consensus module required block and send to  outer peers
-			 */
+				receive request  from the consensus module required block and send to  outer peers
+			*/
 			UpdateStateMessage := &protos.UpdateStateMessage{}
 			proto.Unmarshal(ev.Payload, UpdateStateMessage)
 
@@ -126,28 +121,26 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 			proto.Unmarshal(UpdateStateMessage.TargetId, blockChainInfo)
 
 			required := &recovery.CheckPointMessage{
-				RequiredNumber:blockChainInfo.Height,
-				CurrentNumber:core.GetChainCopy().Height,
-				PeerId:UpdateStateMessage.Id,
+				RequiredNumber: blockChainInfo.Height,
+				CurrentNumber:  core.GetChainCopy().Height,
+				PeerId:         UpdateStateMessage.Id,
 			}
 			//log.Error(required.PeerId)
 			core.UpdateRequire(blockChainInfo.Height, blockChainInfo.CurrentBlockHash, blockChainInfo.Height)
 
 			payload, _ := proto.Marshal(required)
 			message := &recovery.Message{
-				MessageType:recovery.Message_SYNCCHECKPOINT,
-				MsgTimeStamp:time.Now().UnixNano(),
-				Payload:payload,
-
+				MessageType:  recovery.Message_SYNCCHECKPOINT,
+				MsgTimeStamp: time.Now().UnixNano(),
+				Payload:      payload,
 			}
 			broadcastMsg, _ := proto.Marshal(message)
 			self.peerManager.SendMsgToPeers(broadcastMsg, UpdateStateMessage.Replicas, recovery.Message_SYNCCHECKPOINT)
 
-
 		case event.StateUpdateEvent:
 			/*
-			get required block from db and send to outer peers
-			 */
+				get required block from db and send to outer peers
+			*/
 
 			receiveMessage := &recovery.Message{}
 			proto.Unmarshal(ev.Payload, receiveMessage)
@@ -177,10 +170,9 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 
 				payload, _ := proto.Marshal(blocks)
 				message := &recovery.Message{
-					MessageType:recovery.Message_SYNCBLOCK,
-					MsgTimeStamp:time.Now().UnixNano(),
-					Payload:payload,
-
+					MessageType:  recovery.Message_SYNCBLOCK,
+					MsgTimeStamp: time.Now().UnixNano(),
+					Payload:      payload,
 				}
 				var peers []uint64
 				peers = append(peers, checkpointMsg.PeerId)
@@ -188,10 +180,6 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 
 				self.peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_SYNCBLOCK)
 			}
-
-
-
-
 
 		}
 	}
@@ -201,13 +189,13 @@ func (self *ProtocolManager) syncBlockLoop() {
 
 	for obj := range self.syncBlockSub.Chan() {
 
-		switch  ev := obj.Data.(type) {
+		switch ev := obj.Data.(type) {
 		case event.ReceiveSyncBlockEvent:
 			/*
-			receive block from outer peers
-			 */
+				receive block from outer peers
+			*/
 
-			if (core.GetChainCopy().RequiredBlockNum != 0) {
+			if core.GetChainCopy().RequiredBlockNum != 0 {
 
 				message := &recovery.Message{}
 				proto.Unmarshal(ev.Payload, message)
@@ -221,29 +209,31 @@ func (self *ProtocolManager) syncBlockLoop() {
 
 						acceptHash := blocks.Batch[i].HashBlock(self.commonHash).Bytes()
 						//todo compare receive blockHash and acceptHash
-						if (common.Bytes2Hex(acceptHash) == common.Bytes2Hex(core.GetChainCopy().RequireBlockHash)) {
+						if common.Bytes2Hex(acceptHash) == common.Bytes2Hex(core.GetChainCopy().RequireBlockHash) {
 
-							core.UpdateRequire(blocks.Batch[i].Number - 1, blocks.Batch[i].ParentHash, core.GetChainCopy().RecoveryNum)
-							core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
-							balance, err := core.GetBalanceIns()
-							if err != nil {
-								log.Fatal(err)
-							}
-							balance.UpdateDBBalance(blocks.Batch[i])
+							core.UpdateRequire(blocks.Batch[i].Number-1, blocks.Batch[i].ParentHash, core.GetChainCopy().RecoveryNum)
+
+							//core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
+
+							//core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
+							core.PutBlockTx(db, self.commonHash,blocks.Batch[i].BlockHash, blocks.Batch[i])
+
 							// receive all block in chain
-							if (common.Bytes2Hex(blocks.Batch[i].ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash)) {
+							if blocks.Batch[i].Number<=core.GetChainCopy().Height+1{
+								//如果刚好是最后一个要添加的区块
+							if common.Bytes2Hex(blocks.Batch[i].ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash) {
 								core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum)
 
 								core.UpdateRequire(uint64(0), []byte{}, uint64(0))
 								payload := &protos.StateUpdatedMessage{
-									SeqNo:core.GetChainCopy().Height,
+									SeqNo: core.GetChainCopy().Height,
 								}
 								msg, _ := proto.Marshal(payload)
 								msgSend := &protos.Message{
-									Type:protos.Message_STATE_UPDATED,
-									Payload:msg,
-									Timestamp:time.Now().UnixNano(),
-									Id:1,
+									Type:      protos.Message_STATE_UPDATED,
+									Payload:   msg,
+									Timestamp: time.Now().UnixNano(),
+									Id:        1,
 								}
 
 								msgPayload, err := proto.Marshal(msgSend)
@@ -253,6 +243,15 @@ func (self *ProtocolManager) syncBlockLoop() {
 
 								self.consenter.RecvMsg(msgPayload)
 								break
+							} else{
+								//如果自己链上最新区块异常,则替换,并广播节点需要的最新区块
+								//deleteBlock(db,blocks.Batch[i].Number-1)
+								core.UpdateChainByBlcokNum(db, blocks.Batch[i].Number-2)
+								//broadcastDemandBlock(blocks.Batch[i].Number-1,replica,msg)
+								//core.UpdateChainByViewChange(blocks.Batch[i].Number-1,blocks.Batch[i].ParentHash)
+
+
+							}
 							}
 						}
 					}
@@ -264,14 +263,12 @@ func (self *ProtocolManager) syncBlockLoop() {
 	}
 }
 
-
-
 // listen block msg
 func (self *ProtocolManager) NewBlockLoop() {
 
 	for obj := range self.newBlockSub.Chan() {
 
-		switch  ev := obj.Data.(type) {
+		switch ev := obj.Data.(type) {
 		case event.NewBlockEvent:
 			//accept msg from consensus module
 			//commit block into block pool
@@ -279,7 +276,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 			log.Info("write block success")
 
 			self.commitNewBlock(ev.Payload, ev.CommitTime)
-		//self.fetcher.Enqueue(ev.Payload)
+			//self.fetcher.Enqueue(ev.Payload)
 
 		}
 	}
@@ -312,14 +309,18 @@ func (self *ProtocolManager) ConsensusLoop() {
 			log.Debug("###### enter ConsensusEvent")
 			//logger.GetLogger().Println("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
-
-
+		case event.ExeTxsEvent:
+			self.blockPool.ExecTxs(ev.SequenceNum,ev.Transactions)
+		case event.CommitOrRollbackBlockEvent:
+			self.blockPool.CommitOrRollbackBlockEvent(ev.SequenceNum,
+				ev.Transactions,ev.Timestamp,ev.CommitTime,ev.CommitStatus)
 		}
+
 
 	}
 }
 
-func (self *ProtocolManager)sendMsg(payload []byte) {
+func (self *ProtocolManager) sendMsg(payload []byte) {
 	//Todo sign tx
 	//payLoad := self.transformTx(payload)
 	//if payLoad == nil {
@@ -328,17 +329,16 @@ func (self *ProtocolManager)sendMsg(payload []byte) {
 	//	return
 	//}
 	msg := &protos.Message{
-		Type: protos.Message_TRANSACTION,
+		Type:    protos.Message_TRANSACTION,
 		Payload: payload,
 		//Payload: payLoad,
 		Timestamp: time.Now().UnixNano(),
-		Id: 0,
+		Id:        0,
 	}
 	msgSend, _ := proto.Marshal(msg)
 	self.consenter.RecvMsg(msgSend)
 
 }
-
 
 // Broadcast consensus msg to a batch of peers not knowing about it
 func (pm *ProtocolManager) BroadcastConsensus(payload []byte) {
@@ -348,7 +348,7 @@ func (pm *ProtocolManager) BroadcastConsensus(payload []byte) {
 }
 
 //receive tx from web,sign it and marshal it,then give it to consensus module
-func (pm *ProtocolManager)transformTx(payload []byte) []byte {
+func (pm *ProtocolManager) transformTx(payload []byte) []byte {
 
 	//var transaction types.Transaction
 	transaction := &types.Transaction{}
@@ -377,7 +377,7 @@ func (pm *ProtocolManager)transformTx(payload []byte) []byte {
 }
 
 // add new block into block pool
-func (pm *ProtocolManager) commitNewBlock(payload[]byte, commitTime int64) {
+func (pm *ProtocolManager) commitNewBlock(payload []byte, commitTime int64) {
 
 	msgList := &protos.ExeMessage{}
 	proto.Unmarshal(payload, msgList)
@@ -400,18 +400,9 @@ func (pm *ProtocolManager) commitNewBlock(payload[]byte, commitTime int64) {
 
 }
 
-
-func (pm *ProtocolManager) GetNodeInfo()client.PeerInfos{
-	pm.nodeInfo=pm.peerManager.GetPeerInfos()
-	log.Info("nodeInfo is ",pm.nodeInfo)
-/*	pm.nodeInfo["node1"]=true
-	pm.nodeInfo["node2"]=true
-	pm.nodeInfo["node3"]=false
-	pm.nodeInfo["node4"]=true*/
+func (pm *ProtocolManager) GetNodeInfo() client.PeerInfos {
+	pm.nodeInfo = pm.peerManager.GetPeerInfos()
+	log.Info("nodeInfo is ", pm.nodeInfo)
 	return pm.nodeInfo
 
 }
-
-
-
-

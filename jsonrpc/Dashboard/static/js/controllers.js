@@ -365,17 +365,15 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
     SummaryService.getLastestBlock()
         .then(function(res){
             $scope.number = res.number;
-            $rootScope.height = res.number;
+            // $rootScope.height = res.number;
 
-            SummaryService.getAvgTimeAndCount("1",res.number+"")
+            SummaryService.getAvgTimeAndCount("1",res.number+"") // res.number 是十六进制字符串。这里参数可以是十进制字符串、整数或十六进制字符串
                 .then(function(res){
                     if (res.time < 0) {
                         $scope.avgTime = 0
                     } else {
                         $scope.avgTime = res.time;
                     }
-                    // $scope.txCount = res.count; // 后端没有存到数据库里
-                    // $scope.txCount = $scope.number * 500;
                 }, function(error){
                     console.log(error);
                 })
@@ -751,7 +749,7 @@ function ContractCtrl($scope, $uibModal, DTOptionsBuilder, SweetAlert, ENV) {
                     localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage))
                     SweetAlert.swal("Deleted!", "The contract has deleted from localstorage.", "success");
                 } else {
-                    SweetAlert.swal("Cancelled", ":)", "error");
+                    SweetAlert.swal("Cancelled", ":)", "success");
                 }
             });
     }
@@ -852,7 +850,7 @@ function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Contract
     };
 
     $scope.cancel = function () {
-        SweetAlert.swal("Cancelled", "You don't deploy the contract :)", "error");
+        SweetAlert.swal("Cancelled", "You don't deploy the contract :)", "success");
         $uibModalInstance.dismiss('cancel');
     };
 
@@ -923,7 +921,7 @@ function modalInstanceInvokeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Co
     };
 
     $scope.cancel = function () {
-        SweetAlert.swal("Cancelled", "You don't invoke the contract :)", "error");
+        SweetAlert.swal("Cancelled", "You don't invoke the contract :)", "success");
         $uibModalInstance.dismiss('cancel');
     };
 }

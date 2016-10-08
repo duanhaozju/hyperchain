@@ -43,18 +43,18 @@
                             <span style="font-weight: bold">&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;计算tx平均处理时间：</span>
                             <div class="form-group">
                                 <label for="from1" class="sr-only">from</label>
-                                <input type="text" placeholder="起始block number" ng-model="txAvg.from" id="from1"
+                                <input type="text" placeholder="起始block number" ng-model="blockAvg.from" id="from1"
                                        class="form-control">
                             </div>&nbsp;-&nbsp;
                             <div class="form-group">
                                 <label for="to1" class="sr-only">to</label>
-                                <input type="text" placeholder="终止block number" ng-model="txAvg.to" id="to1"
+                                <input type="text" placeholder="终止block number" ng-model="blockAvg.to" id="to1"
                                        class="form-control">
                             </div>
-                            <button class="btn btn-primary" type="submit" ng-click="queryTxAvg()">Query</button>
+                            <button class="btn btn-primary" type="submit" ng-click="queryAvg()">Query</button>
 
-                            <span>TxAvgTime:</span>
-                            <span class="text_red">{{txAvgTime}}ms</span>
+                            <span>AvgTime:</span>
+                            <span class="text_red">{{avgTime}}ms</span>
                         </form><br/>
                         <form role="form" class="form-inline">
                             <span style="font-weight: bold">计算block commit & batch时间：</span>
@@ -68,7 +68,7 @@
                                 <input type="text" placeholder="终止block number" ng-model="block.to" id="to"
                                        class="form-control">
                             </div>
-                            <button class="btn btn-primary" type="submit" ng-click="queryBatchAndCommit()">Query</button>
+                            <button class="btn btn-primary" type="submit" ng-click="query()">Query</button>
 
                             <span>CommitTime:</span>
                             <span class="text_red">{{commitTime}}ms</span>
@@ -77,46 +77,22 @@
 
                         </form><br/>
                         <form role="form" class="form-inline">
-                            <span style="font-weight: bold">&emsp;&emsp;&emsp;&emsp;&emsp;计算Block平均处理时间：</span>
+                            <span style="font-weight: bold">&emsp;&emsp;&emsp;&emsp;&emsp;计算Evm平均处理时间：</span>
                             <div class="form-group">
                                 <label for="from2" class="sr-only">from</label>
-                                <input type="text" placeholder="起始block number" ng-model="blockAvg.from" id="from2"
-                                class="form-control">
+                                <input type="text" placeholder="起始block number" ng-model="blockEvm.from" id="from2"
+                                       class="form-control">
                             </div>&nbsp;-&nbsp;
                             <div class="form-group">
                                 <label for="to2" class="sr-only">to</label>
-                                <input type="text" placeholder="终止block number" ng-model="blockAvg.to" id="to2"
-                                class="form-control">
+                                <input type="text" placeholder="终止block number" ng-model="blockEvm.to" id="to2"
+                                       class="form-control">
                             </div>
-                            <button class="btn btn-primary" type="submit" ng-click="queryBlockTime()">Query</button>
+                            <button class="btn btn-primary" type="submit" ng-click="queryEvmTime()">Query</button>
 
-                            <span>BlockAvgTime:</span>
-                            <span class="text_red">{{blockTime}}ms</span>
+                            <span>AvgTime:</span>
+                            <span class="text_red">{{evmTime}}ms</span>
                         </form><br/>
-
-                        <form role="form" class="form-inline">
-
-                            <button class="btn btn-primary" type="submit" ng-click="queryBlkGPS()">统计每秒生成区块数</button>
-                            <div class="text_red">&nbsp;&nbsp;{{blkGPSstatus}}</div>
-
-                        </form><br/>
-                        <!--<form role="form" class="form-inline">-->
-                            <!--<span style="font-weight: bold">&emsp;&emsp;&emsp;&emsp;&emsp;计算Evm平均处理时间：</span>-->
-                            <!--<div class="form-group">-->
-                                <!--<label for="from2" class="sr-only">from</label>-->
-                                <!--<input type="text" placeholder="起始block number" ng-model="blockEvm.from" id="from2"-->
-                                       <!--class="form-control">-->
-                            <!--</div>&nbsp;-&nbsp;-->
-                            <!--<div class="form-group">-->
-                                <!--<label for="to2" class="sr-only">to</label>-->
-                                <!--<input type="text" placeholder="终止block number" ng-model="blockEvm.to" id="to2"-->
-                                       <!--class="form-control">-->
-                            <!--</div>-->
-                            <!--<button class="btn btn-primary" type="submit" ng-click="queryEvmTime()">Query</button>-->
-
-                            <!--<span>EvmAvgTime:</span>-->
-                            <!--<span class="text_red">{{evmTime}}ms</span>-->
-                        <!--</form><br/>-->
                     </div>
 
                     <table  datatable="ng" dt-options="dtOptions" class="table table-striped table-hover dataTables-example" data-page-size="10">
@@ -132,11 +108,11 @@
                         </thead>
                         <tbody>
                         <tr ng-repeat="blk in blocks">
-                            <td>{{blk.number}}</td>
+                            <td>{{blk.number | hexStringToNum}}</td>
                             <td>{{blk.hash}}</td>
                             <td class="center">{{blk.writeTime}}</td>
-                            <td class="center">{{blk.avgTime}}ms</td>
-                            <td class="center">{{blk.txcounts}}</td>
+                            <td class="center">{{blk.avgTime | hexStringToNum}}ms</td>
+                            <td class="center">{{blk.txcounts | hexStringToNum}}</td>
                             <td class="center">{{blk.percents}}</td>
                         </tr>
                         </tbody>
