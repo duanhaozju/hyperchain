@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"github.com/syndtr/goleveldb/leveldb"
 	"hyperchain/crypto"
+	"fmt"
 )
 
 var transactionCases = []*types.Transaction{
@@ -86,6 +87,17 @@ func TestGetTransaction(t *testing.T) {
 			t.Errorf("%s not equal %s, TestGetTransaction fail", string(tr.Signature), string(trans.Signature))
 		}
 	}
+}
+func TestGetTransactionBLk(t *testing.T) {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+	block ,err:= GetBlockByNumber(db,5)
+	fmt.Println("tx hash",block.Transactions[2].BuildHash())
+	tx := block.Transactions[2]
+	bh,bn,i := GetTxWithBlock(db,tx.BuildHash().Bytes())
+	fmt.Println("block hash",bh,"block num :",bn,"tx index:",i)
 }
 // TestGetAllTransaction tests for GetAllTransaction
 func TestGetAllTransaction(t *testing.T) {

@@ -119,6 +119,22 @@ func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error)
 	err = proto.Unmarshal(data, &transaction)
 	return &transaction, err
 }
+//get tx<-->block num,hash,index
+func GetTxWithBlock(db hyperdb.Database, key []byte) (common.Hash, uint64, uint64) {
+	dataMeta,_ := db.Get(append(key,txMetaSuffix...))
+	if len(dataMeta) == 0{
+		return common.Hash{}, 0, 0
+	}
+	var meta struct{
+		BlockHash	common.Hash
+		BlockIndex	uint64
+		Index		uint64
+	}
+	if err := json.Unmarshal(dataMeta,&meta);err!=nil{
+		return common.Hash{}, 0, 0
+	}
+	return meta.BlockHash,meta.BlockIndex,meta.Index
+}
 
 func DeleteTransaction(db hyperdb.Database, key []byte) error {
 	keyFact := append(transactionPrefix, key...)
@@ -147,7 +163,7 @@ func GetAllTransaction(db *hyperdb.LDBDatabase) ([]*types.Transaction, error) {
 //-- --------------------- Transaction END -----------------------------------
 
 //-- ------------------- Block ---------------------------------
-func PutBlock(db hyperdb.Database, key []byte, t *types.Block) error {
+func PutBlock(db hyperdb.Database,key []byte, t *types.Block) error {
 	data, err := proto.Marshal(t)
 	if err != nil {
 		return err
@@ -159,6 +175,42 @@ func PutBlock(db hyperdb.Database, key []byte, t *types.Block) error {
 	keyNum := strconv.FormatInt(int64(t.Number), 10)
 	err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
 	return err
+}
+func PutBlockTx(db hyperdb.Database,commonHash crypto.CommonHash, key []byte, t *types.Block) error {
+	data, err := proto.Marshal(t)
+	if err != nil {
+		return err
+	}
+	keyFact := append(blockPrefix, key...)
+	if err := db.Put(keyFact, data); err != nil {
+		return err
+	}
+	keyNum := strconv.FormatInt(int64(t.Number), 10)
+	err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
+
+	//put tx<-->block num,hash,index
+	batch := db.NewBatch()
+	for i,tx:=range t.Transactions{
+		meta := struct {
+			BlockHash  common.Hash
+			BlockIndex uint64
+			Index      uint64
+		}{
+			BlockHash:  common.BytesToHash(t.BlockHash),
+			BlockIndex: t.Number,
+			Index:      uint64(i),
+		}
+		keyTxBlock := append(tx.Hash(commonHash).Bytes(),txMetaSuffix...)
+		dataTxBlock,err := json.Marshal(meta)
+		if err !=nil{
+			return err
+		}
+		err = batch.Put(keyTxBlock,dataTxBlock)
+		if err !=nil{
+			return err
+		}
+	}
+	return batch.Write()
 }
 
 func GetBlockHash(db hyperdb.Database, blockNumber uint64) ([]byte, error) {

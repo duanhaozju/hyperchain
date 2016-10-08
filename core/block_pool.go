@@ -176,7 +176,8 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := PutBlock(db, block.BlockHash, block); err != nil {
+	//if err := PutBlock(db, block.BlockHash, block); err != nil {
+	if err := PutBlockTx(db, commonHash,block.BlockHash, block); err != nil {
 		log.Fatal(err)
 	}
 	// write transaction

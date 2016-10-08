@@ -212,7 +212,8 @@ func (self *ProtocolManager) syncBlockLoop() {
 						if common.Bytes2Hex(acceptHash) == common.Bytes2Hex(core.GetChainCopy().RequireBlockHash) {
 
 							core.UpdateRequire(blocks.Batch[i].Number-1, blocks.Batch[i].ParentHash, core.GetChainCopy().RecoveryNum)
-							core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
+							//core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
+							core.PutBlockTx(db, self.commonHash,blocks.Batch[i].BlockHash, blocks.Batch[i])
 							/*
 								balance, err := core.GetBalanceIns()
 								if err != nil {
