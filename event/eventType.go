@@ -36,6 +36,14 @@ type StateUpdateEvent struct{Payload []byte }
 // after get all required block,send this block to node
 type ReceiveSyncBlockEvent struct{Payload []byte }
 
+// after exe all txs,send the executable txs and its' hash to the pbft module
+type ExeTxsEvent struct{Payload []byte }
+
+// if the CommitStatus is true, we will commit the blocks and save the statedb
+// or we will rollback the statedb
+type CommitOrRollbackBlockEvent struct{ Payload []byte
+				   CommitStatus bool  }
+
 
 
 
