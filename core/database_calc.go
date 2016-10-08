@@ -229,7 +229,6 @@ func CalBlockGPS()error{
 		}
 	}
 	avg = avg/10
-	log.Info(avg,"----------------1----------------")
 	s = s+"total blocks: "+strconv.FormatUint(height,10)+"      blocks per second: "+strconv.FormatFloat(avg,'f',2,32)+"\n"
 	content=append(content,s)
 	for i:=uint64(1);i<=height;i++{

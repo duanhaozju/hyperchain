@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hyperledger/fabric/core/crypto/utils"
+	"hyperchain/core/crypto/utils"
 )
 
 // PrivateKeyToDER marshals a private key to der
