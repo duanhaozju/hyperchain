@@ -125,7 +125,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 				CurrentNumber:  core.GetChainCopy().Height,
 				PeerId:         UpdateStateMessage.Id,
 			}
-			log.Error(required.PeerId)
+			//log.Error(required.PeerId)
 			core.UpdateRequire(blockChainInfo.Height, blockChainInfo.CurrentBlockHash, blockChainInfo.Height)
 
 			payload, _ := proto.Marshal(required)
