@@ -223,7 +223,7 @@ func ProcessBlock(block *types.Block) error {
 	for _, receipt := range receipts {
 		receiptInst.PutReceipt(common.BytesToHash(receipt.TxHash), receipt)
 	}
-	//	WriteReceipts(receipts)
+		//WriteReceipts(receipts)
 
 	root, _ := statedb.Commit()
 

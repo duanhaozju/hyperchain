@@ -213,14 +213,9 @@ func (self *ProtocolManager) syncBlockLoop() {
 
 							core.UpdateRequire(blocks.Batch[i].Number-1, blocks.Batch[i].ParentHash, core.GetChainCopy().RecoveryNum)
 							core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
-							/*
-								balance, err := core.GetBalanceIns()
-								if err != nil {
-									log.Fatal(err)
-								}
-								balance.UpdateDBBalance(blocks.Batch[i])
-							*/
 							// receive all block in chain
+							if blocks.Batch[i].Number<=core.GetChainCopy().Height+1{
+								//如果刚好是最后一个要添加的区块
 							if common.Bytes2Hex(blocks.Batch[i].ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash) {
 								core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum)
 
@@ -243,6 +238,15 @@ func (self *ProtocolManager) syncBlockLoop() {
 
 								self.consenter.RecvMsg(msgPayload)
 								break
+							} else{
+								//如果自己链上最新区块异常,则替换,并广播节点需要的最新区块
+								//deleteBlock(db,blocks.Batch[i].Number-1)
+								core.UpdateChainByBlcokNum(db, blocks.Batch[i].Number-2)
+								//broadcastDemandBlock(blocks.Batch[i].Number-1,replica,msg)
+								//core.UpdateChainByViewChange(blocks.Batch[i].Number-1,blocks.Batch[i].ParentHash)
+
+
+							}
 							}
 						}
 					}
