@@ -1,17 +1,19 @@
 package hpc
 
 import (
-	"hyperchain/hyperdb"
-	"hyperchain/core"
-	"hyperchain/common"
-	"time"
-	"github.com/op/go-logging"
-	"hyperchain/core/types"
-	"errors"
-	"hyperchain/manager"
-	"hyperchain/event"
 	"github.com/golang/protobuf/proto"
+	"github.com/op/go-logging"
+	"hyperchain/common"
+	"hyperchain/core"
+	"hyperchain/core/types"
 	"hyperchain/core/vm/compiler"
+	"hyperchain/crypto"
+	"hyperchain/event"
+	"hyperchain/hyperdb"
+	"hyperchain/manager"
+	"time"
+	//"hyperchain/accounts"
+	"errors"
 )
 
 const (
@@ -30,8 +32,10 @@ func init() {
 
 type PublicTransactionAPI struct {
 	eventMux *event.TypeMux
-	pm       *manager.ProtocolManager
+	pm *manager.ProtocolManager
+
 }
+
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 // If type is Ptr or String, it is optional parameter
@@ -184,6 +188,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	}
 }
 
+
 // SendTransactionOrContract deploy contract
 func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (common.Hash, error) {
 
@@ -222,6 +227,13 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 		// Development environment
 		am := tran.pm.AccountManager
 		_, found = am.Unlocked[args.From]
+
+		// TODO replace password with test value
+		signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
+		if err != nil {
+			log.Errorf("Sign(tx) error :%v", err)
+		}
+		tx.Signature = signature
 	}
 	//am := tran.pm.AccountManager
 
@@ -229,22 +241,15 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		tx.TimeStamp = time.Now().UnixNano()
 
-	// TODO replace password with test value
-	signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
-	if err != nil {
-		log.Errorf("Sign(tx) error :%v", err)
-	}
-	tx.Signature = signature
-
-	txBytes, err := proto.Marshal(tx)
-	if err != nil {
-		log.Errorf("proto.Marshal(tx) error: %v", err)
-	}
-	if manager.GetEventObject() != nil {
-		go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
-	} else {
-		log.Warning("manager is Nil")
-	}
+		txBytes, err := proto.Marshal(tx)
+		if err != nil {
+			log.Errorf("proto.Marshal(tx) error: %v", err)
+		}
+		if manager.GetEventObject() != nil {
+			go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+		} else {
+			log.Warning("manager is Nil")
+		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
 	} else {

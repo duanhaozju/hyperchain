@@ -10,17 +10,18 @@ import (
 	"errors"
 	peer "hyperchain/p2p/peer"
 	pb "hyperchain/p2p/peermessage"
-	"time"
 	"strings"
 	"strconv"
 	"github.com/op/go-logging"
+	"hyperchain/p2p/transport"
 )
 
 type PeersPool struct {
 	peers      map[string]*peer.Peer
 	peerAddr   map[string]pb.PeerAddress
 	peerKeys   map[pb.PeerAddress]string
-	aliveNodes int
+	TEM        transport.TransportEncryptManager
+	alivePeers int
 }
 
 // the peers pool instance
@@ -30,62 +31,31 @@ var log *logging.Logger // package-level logger
 //initialize the peers pool
 func init() {
 	log = logging.MustGetLogger("p2p/peerPool")
-	prPoolIns.peers = make(map[string]*peer.Peer)
-	prPoolIns.peerAddr = make(map[string]pb.PeerAddress)
-	prPoolIns.peerKeys = make(map[pb.PeerAddress]string)
-	prPoolIns.aliveNodes = 0
 }
 
 // NewPeerPool get a new peer pool instance
-func NewPeerPool(isNewInstance bool,isKeepAlive bool) PeersPool {
-	if isNewInstance {
-		var newPrPoolIns PeersPool
-		newPrPoolIns.peers = make(map[string]*peer.Peer)
-		newPrPoolIns.peerAddr = make(map[string]pb.PeerAddress)
-		newPrPoolIns.peerKeys = make(map[pb.PeerAddress]string)
-		//Open a keep alive go routine
-		//Set interval to post keep alive event to event manager
-		/////////////////////////////////////////////////////
-		//                                                 //
-		//       THIS PART IS USED FOR KEEP ALIVE          //
-		//                                                 //
-		/////////////////////////////////////////////////////
-		if isKeepAlive{
-			go func() {
-				for tick := range time.Tick(15 * time.Second) {
-					log.Debug("Keep alive go routine information")
-					log.Debug("Keep alive:", tick)
-					for nodeName, p := range newPrPoolIns.peers {
-						log.Info(nodeName)
-						msg, err := p.Chat(&pb.Message{
-							MessageType:  pb.Message_HELLO,
-							Payload:      []byte("Hello"),
-							MsgTimeStamp: time.Now().UnixNano(),
-						})
-						if err != nil {
-							log.Fatal("Node:", p.Addr, "was down and need to recall ", err)
-							//TODO RECALL THE DEAD NODE
-						}
-						log.Info("Node:", p.Addr, "Message", msg.MessageType)
-					}
-				}
-			}()
-		}
-		return newPrPoolIns
-	} else {
-		return prPoolIns
-	}
+func NewPeerPool(TEM transport.TransportEncryptManager) *PeersPool {
+	var newPrPoolIns PeersPool
+	newPrPoolIns.peers = make(map[string]*peer.Peer)
+	newPrPoolIns.peerAddr = make(map[string]pb.PeerAddress)
+	newPrPoolIns.peerKeys = make(map[pb.PeerAddress]string)
+	newPrPoolIns.TEM = TEM
+	newPrPoolIns.alivePeers = 0
+	return &newPrPoolIns
+
 }
 
 // PutPeer put a peer into the peer pool and get a peer point
 func (this *PeersPool) PutPeer(addr pb.PeerAddress, client *peer.Peer) (*peer.Peer, error) {
-	addrString := addr.String()
+	addrString := addr.Hash
 	//log.Println("Add a peer:",addrString)
 	if _, ok := this.peerKeys[addr]; ok {
 		// the pool already has this client
+		log.Error(addr.Ip,addr.Port,"The client already in")
 		return this.peers[addrString], errors.New("The client already in")
+
 	} else {
-		this.aliveNodes += 1
+		this.alivePeers += 1
 		this.peerKeys[addr] = addrString
 		this.peerAddr[addrString] = addr
 		this.peers[addrString] = client
@@ -106,7 +76,7 @@ func (this *PeersPool) GetPeer(addr pb.PeerAddress) *peer.Peer {
 
 // GetAliveNodeNum get all alive node num
 func (this *PeersPool) GetAliveNodeNum() int {
-	return this.aliveNodes
+	return this.alivePeers
 }
 
 // GetPeerByString get peer by address string

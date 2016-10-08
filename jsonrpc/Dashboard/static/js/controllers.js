@@ -209,7 +209,7 @@ function MainCtrl() {
      * summernoteText - used for Summernote plugin
      */
     this.summernoteText = ['<h3>Hello Jonathan! </h3>',
-    '<p>dummy text of the printing and typesetting industry. <strong>Lorem Ipsum has been the dustrys</strong> standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more',
+        '<p>dummy text of the printing and typesetting industry. <strong>Lorem Ipsum has been the dustrys</strong> standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more',
         'recently with</p>'].join('');
 
     /**
@@ -502,32 +502,6 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
                 console.log(error);
             })
     }
-    $scope.queryBlockTime = function() {
-
-        if (isEmpty($scope.blockAvg)) {
-            alert("字段不能为空");
-            return false;
-        }
-
-        BlockService.queryBlockAvgTime($scope.blockAvg.from, $scope.blockAvg.to)
-            .then(function(res){
-                $scope.blockTime = res;
-            }, function(error){
-                console.log(error);
-            })
-    }
-    $scope.queryBlkGPS = function() {
-        
-        $scope.blkGPSstatus = "please waitting.....";
-        BlockService.queryBlockGPS()
-            .then(function(res){
-                $scope.blkGPSstatus = "statis saved in /tmp/hyperchain/cache/statis/block_time_statis ";
-            }, function(error){
-                $scope.blkGPSstatus = error.message;
-                console.log(error);
-            })
-
-    }
 }
 
 function TransactionCtrl($scope, DTOptionsBuilder, TransactionService) {
@@ -611,7 +585,7 @@ function AddProjectCtrl($scope, $state, ENV, ContractService) {
     $scope.flag = false;
 
     $scope.PATTERN = ENV.PATTERN;
-    
+
     $scope.project = {
         name: "",
         type: "1",
@@ -655,43 +629,43 @@ function AddProjectCtrl($scope, $state, ENV, ContractService) {
     }
 
     $scope.saveABI = function() {
-            console.log($scope.project);
+        console.log($scope.project);
 
-            // todo 现有合约个数
-            var contractStorage = JSON.parse(localStorage.getItem(ENV.STORAGE));
-            var len;
+        // todo 现有合约个数
+        var contractStorage = JSON.parse(localStorage.getItem(ENV.STORAGE));
+        var len;
 
-            var ctNames = getContractName("contract $", $scope.project.pattern.value);
+        var ctNames = getContractName("contract $", $scope.project.pattern.value);
 
-            // contract
-            for (var i = 0;i < $scope.project.abi.length; i++) {
+        // contract
+        for (var i = 0;i < $scope.project.abi.length; i++) {
 
-                var _contract = {};
+            var _contract = {};
 
-                _contract.projectName = $scope.project.name;
-                _contract.type = $scope.project.type;    // 1: Create 2: Load
-                _contract.methods = $scope.project.abi[i];
-                _contract.code = $scope.project.bin[i];
-                _contract.status = 0; // 0: Nondeployed 1: Deployed
-                _contract.sourceCode = $scope.project.pattern.value;
-                _contract.hash = "";
-                _contract.address = "";
+            _contract.projectName = $scope.project.name;
+            _contract.type = $scope.project.type;    // 1: Create 2: Load
+            _contract.methods = $scope.project.abi[i];
+            _contract.code = $scope.project.bin[i];
+            _contract.status = 0; // 0: Nondeployed 1: Deployed
+            _contract.sourceCode = $scope.project.pattern.value;
+            _contract.hash = "";
+            _contract.address = "";
 
-                // 合约存到localstorage中
-                if (!contractStorage) {
-                    len = 1;
-                    _contract.contractName = len + "_" + ctNames[i];
-                    var objContract = _defineProperty({}, _contract.contractName, _contract);
-                    localStorage.setItem(ENV.STORAGE,JSON.stringify(objContract))
-                } else {
-                    len = Object.keys(contractStorage).length;
-                    len++;
-                    _contract.contractName = len + "_" + ctNames[i];
-                    contractStorage[_contract.contractName] = _contract;
-                    localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage));
-                }
-
+            // 合约存到localstorage中
+            if (!contractStorage) {
+                len = 1;
+                _contract.contractName = len + "_" + ctNames[i];
+                var objContract = _defineProperty({}, _contract.contractName, _contract);
+                localStorage.setItem(ENV.STORAGE,JSON.stringify(objContract))
+            } else {
+                len = Object.keys(contractStorage).length;
+                len++;
+                _contract.contractName = len + "_" + ctNames[i];
+                contractStorage[_contract.contractName] = _contract;
+                localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage));
             }
+
+        }
 
         $state.go("dashboards.contract")
     }
@@ -769,22 +743,22 @@ function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Contract
 
                         // ContractService.getReceipt(res)
                         //     .then(function(data){
-                                contractStorage[name].address = res.ContractAddress;
+                        contractStorage[name].address = res.ContractAddress;
 
-                                $scope.contracts[name] = contractStorage[name];
-                                localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage))
+                        $scope.contracts[name] = contractStorage[name];
+                        localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage))
 
-                                SweetAlert.swal({
-                                    title: "Deployed successfully!",
-                                    text: "The contract address is <span class='text_red'>"+res.ContractAddress+"</span>",
-                                    type: "success",
-                                    customClass: 'swal-wide',
-                                    html: true
-                                });
+                        SweetAlert.swal({
+                            title: "Deployed successfully!",
+                            text: "The contract address is <span class='text_red'>"+res.ContractAddress+"</span>",
+                            type: "success",
+                            customClass: 'swal-wide',
+                            html: true
+                        });
 
-                            // }, function(error){
-                            //     console.log(error)
-                            // })
+                        // }, function(error){
+                        //     console.log(error)
+                        // })
 
                         break;
                     }

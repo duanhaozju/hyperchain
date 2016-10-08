@@ -51,7 +51,7 @@ func (blk *PublicBlockAPI) GetBlocks() ([]*BlockResult, error){
 			return nil, err
 			break;
 		}
- 		blocks = append(blocks, b)
+		blocks = append(blocks, b)
 		height--
 	}
 
@@ -201,24 +201,11 @@ func (blk *PublicBlockAPI) QueryEvmAvgTime(args SendQueryArgs) (int64,error) {
 
 	return evmTime, nil
 }
-func (blk *PublicBlockAPI)QueryTransactionSum() string {
-	//return strconv.FormatUint(core.CalTransactionSum(),10)
-	currentChain := core.GetChainCopy()
-	sum := currentChain.CurrentTxSum
-	return strconv.FormatUint(sum,10)
-}
-func (blk *PublicBlockAPI)QueryBlockAvgTime(args SendQueryArgs)(int64,error)  {
-	from, err := strconv.ParseUint(string(args.From), 10, 64)
-	to, err := strconv.ParseUint(string(args.To), 10, 64)
-
-	if err != nil {
-		return 0,err
-	}
-
-	evmTime :=  core.CalcBlockAVGTime(from,to)
-
-	return evmTime, nil
-}
-func (blk *PublicBlockAPI)QueryBlockGPS()(error)  {
-	return core.CalBlockGPS()
+//func (blk *PublicBlockAPI)QueryTransactionSum() string {
+//	sum := core.CalTransactionSum()
+//	return sum.String()
+//}
+func (blk *PublicBlockAPI)QueryTransactionSum() uint64 {
+	sum := core.CalTransactionSum()
+	return sum
 }
