@@ -10,36 +10,36 @@ import (
 	//"reflect"
 )
 
-func (instance *pbftCore) persistQSet() {
+func (pbft *pbftProtocal) persistQSet() {
 	var qset []*ViewChange_PQ
 
-	for _, q := range instance.calcQSet() {
+	for _, q := range pbft.calcQSet() {
 		qset = append(qset, q)
 	}
 
-	instance.persistPQSet("qset", qset)
+	pbft.persistPQSet("qset", qset)
 }
 
-func (instance *pbftCore) persistPSet() {
+func (pbft *pbftProtocal) persistPSet() {
 	var pset []*ViewChange_PQ
 
-	for _, p := range instance.calcPSet() {
+	for _, p := range pbft.calcPSet() {
 		pset = append(pset, p)
 	}
 
-	instance.persistPQSet("pset", pset)
+	pbft.persistPQSet("pset", pset)
 }
 
-func (instance *pbftCore) persistPQSet(key string, set []*ViewChange_PQ) {
+func (pbft *pbftProtocal) persistPQSet(key string, set []*ViewChange_PQ) {
 	raw, err := proto.Marshal(&PQset{set})
 	if err != nil {
-		logger.Warningf("Replica %d could not persist pqset: %s", instance.id, err)
+		logger.Warningf("Replica %d could not persist pqset: %s", pbft.id, err)
 		return
 	}
 	persist.StoreState(key, raw)
 }
 
-//func (instance *pbftCore) persistDelPSet(n uint64) {
+//func (pbft *pbftProtocal) persistDelPSet(n uint64) {
 //	raw, err := persist.ReadState("pset")
 //
 //	if err != nil {
@@ -59,12 +59,12 @@ func (instance *pbftCore) persistPQSet(key string, set []*ViewChange_PQ) {
 //				}
 //				newPset = append(newPset, p)
 //			}
-//			instance.persistPQSet("pset", newPset)
+//			pbft.persistPQSet("pset", newPset)
 //		}
 //	}
 //}
 //
-//func (instance *pbftCore) persistDelQSet(idx qidx) {
+//func (pbft *pbftProtocal) persistDelQSet(idx qidx) {
 //	raw, err := persist.ReadState("qset")
 //
 //	if err!= nil {
@@ -84,41 +84,41 @@ func (instance *pbftCore) persistPQSet(key string, set []*ViewChange_PQ) {
 //				}
 //				newQset = append(newQset, q)
 //			}
-//			instance.persistPQSet("qset", newQset)
+//			pbft.persistPQSet("qset", newQset)
 //		}
 //	}
 //}
 
-func (instance *pbftCore) restorePQSet(key string) []*ViewChange_PQ {
+func (pbft *pbftProtocal) restorePQSet(key string) []*ViewChange_PQ {
 	raw, err := persist.ReadState(key)
 	if err != nil {
-		logger.Debugf("Replica %d could not restore state %s: %s", instance.id, key, err)
+		logger.Debugf("Replica %d could not restore state %s: %s", pbft.id, key, err)
 		return nil
 	}
 	val := &PQset{}
 	err = proto.Unmarshal(raw, val)
 	if err != nil {
-		logger.Errorf("Replica %d could not unmarshal %s - local state is damaged: %s", instance.id, key, err)
+		logger.Errorf("Replica %d could not unmarshal %s - local state is damaged: %s", pbft.id, key, err)
 		return nil
 	}
 	return val.GetSet()
 }
 
-func (instance *pbftCore) persistRequestBatch(digest string) {
-	reqBatch := instance.reqBatchStore[digest]
+func (pbft *pbftProtocal) persistRequestBatch(digest string) {
+	reqBatch := pbft.reqBatchStore[digest]
 	reqBatchPacked, err := proto.Marshal(reqBatch)
 	if err != nil {
-		logger.Warningf("Replica %d could not persist request batch %s: %s", instance.id, digest, err)
+		logger.Warningf("Replica %d could not persist request batch %s: %s", pbft.id, digest, err)
 		return
 	}
 	persist.StoreState("reqBatch."+digest, reqBatchPacked)
 }
 
-func (instance *pbftCore) persistDelRequestBatch(digest string) {
+func (pbft *pbftProtocal) persistDelRequestBatch(digest string) {
 	persist.DelState("reqBatch."+digest)
 }
 
-func (instance *pbftCore) persistDelAllRequestBatches() {
+func (pbft *pbftProtocal) persistDelAllRequestBatches() {
 	reqBatches, err := persist.ReadStateSet("reqBatch.")
 	if err != nil {
 		logger.Errorf("Read State Set Error %s", err)
@@ -130,37 +130,37 @@ func (instance *pbftCore) persistDelAllRequestBatches() {
 	}
 }
 
-func (instance *pbftCore) persistCheckpoint(seqNo uint64, id []byte) {
+func (pbft *pbftProtocal) persistCheckpoint(seqNo uint64, id []byte) {
 	key := fmt.Sprintf("chkpt.%d", seqNo)
 	persist.StoreState(key, id)
 }
 
-func (instance *pbftCore) persistDelCheckpoint(seqNo uint64) {
+func (pbft *pbftProtocal) persistDelCheckpoint(seqNo uint64) {
 	key := fmt.Sprintf("chkpt.%d", seqNo)
 	persist.DelState(key)
 }
 
-func (instance *pbftCore) restoreState() {
+func (pbft *pbftProtocal) restoreState() {
 	updateSeqView := func(set []*ViewChange_PQ) {
 		for _, e := range set {
-			if instance.view < e.View {
-				instance.view = e.View
+			if pbft.view < e.View {
+				pbft.view = e.View
 			}
-			if instance.seqNo < e.SequenceNumber {
-				instance.seqNo = e.SequenceNumber
+			if pbft.seqNo < e.SequenceNumber {
+				pbft.seqNo = e.SequenceNumber
 			}
 		}
 	}
 
-	set := instance.restorePQSet("pset")
+	set := pbft.restorePQSet("pset")
 	for _, e := range set {
-		instance.pset[e.SequenceNumber] = e
+		pbft.pset[e.SequenceNumber] = e
 	}
 	updateSeqView(set)
 
-	set = instance.restorePQSet("qset")
+	set = pbft.restorePQSet("qset")
 	for _, e := range set {
-		instance.qset[qidx{e.BatchDigest, e.SequenceNumber}] = e
+		pbft.qset[qidx{e.BatchDigest, e.SequenceNumber}] = e
 	}
 	updateSeqView(set)
 
@@ -170,13 +170,13 @@ func (instance *pbftCore) restoreState() {
 			reqBatch := &RequestBatch{}
 			err = proto.Unmarshal(v, reqBatch)
 			if err != nil {
-				logger.Warningf("Replica %d could not restore request batch %s", instance.id, k)
+				logger.Warningf("Replica %d could not restore request batch %s", pbft.id, k)
 			} else {
-				instance.reqBatchStore[hash(reqBatch)] = reqBatch
+				pbft.reqBatchStore[hash(reqBatch)] = reqBatch
 			}
 		}
 	} else {
-		logger.Warningf("Replica %d could not restore reqBatchStore: %s", instance.id, err)
+		logger.Warningf("Replica %d could not restore reqBatchStore: %s", pbft.id, err)
 	}
 
 	chkpts, err := persist.ReadStateSet("chkpt.")
@@ -185,39 +185,39 @@ func (instance *pbftCore) restoreState() {
 		for key, id := range chkpts {
 			var seqNo uint64
 			if _, err = fmt.Sscanf(key, "chkpt.%d", &seqNo); err != nil {
-				logger.Warningf("Replica %d could not restore checkpoint key %s", instance.id, key)
+				logger.Warningf("Replica %d could not restore checkpoint key %s", pbft.id, key)
 			} else {
 				idAsString := base64.StdEncoding.EncodeToString(id)
-				logger.Debugf("Replica %d found checkpoint %s for seqNo %d", instance.id, idAsString, seqNo)
-				instance.chkpts[seqNo] = idAsString
+				logger.Debugf("Replica %d found checkpoint %s for seqNo %d", pbft.id, idAsString, seqNo)
+				pbft.chkpts[seqNo] = idAsString
 				if seqNo > highSeq {
 					highSeq = seqNo
 				}
 			}
 		}
-		instance.moveWatermarks(highSeq)
+		pbft.moveWatermarks(highSeq)
 	} else {
-		logger.Warningf("Replica %d could not restore checkpoints: %s", instance.id, err)
+		logger.Warningf("Replica %d could not restore checkpoints: %s", pbft.id, err)
 	}
 
-	instance.restoreLastSeqNo() // assign value to lastExec
-	if instance.seqNo < instance.lastExec {
-		instance.seqNo = instance.lastExec
+	pbft.restoreLastSeqNo() // assign value to lastExec
+	if pbft.seqNo < pbft.lastExec {
+		pbft.seqNo = pbft.lastExec
 	}
 	logger.Infof("Replica %d restored state: view: %d, seqNo: %d, pset: %d, qset: %d, reqBatches: %d, chkpts: %d",
-		instance.id, instance.view, instance.seqNo, len(instance.pset), len(instance.qset), len(instance.reqBatchStore), len(instance.chkpts))
+		pbft.id, pbft.view, pbft.seqNo, len(pbft.pset), len(pbft.qset), len(pbft.reqBatchStore), len(pbft.chkpts))
 }
 
-func (instance *pbftCore) restoreLastSeqNo() {
+func (pbft *pbftProtocal) restoreLastSeqNo() {
 	var err error
-	if instance.lastExec, err = instance.getLastSeqNo(); err != nil {
-		logger.Warningf("Replica %d could not restore lastExec: %s", instance.id, err)
-		instance.lastExec = 0
+	if pbft.lastExec, err = pbft.getLastSeqNo(); err != nil {
+		logger.Warningf("Replica %d could not restore lastExec: %s", pbft.id, err)
+		pbft.lastExec = 0
 	}
-	logger.Infof("Replica %d restored lastExec: %d", instance.id, instance.lastExec)
+	logger.Infof("Replica %d restored lastExec: %d", pbft.id, pbft.lastExec)
 }
 
-func (instance *pbftCore) getLastSeqNo() (uint64, error) {
+func (pbft *pbftProtocal) getLastSeqNo() (uint64, error) {
 
 	var err error
 	h := persist.GetHeightofChain()

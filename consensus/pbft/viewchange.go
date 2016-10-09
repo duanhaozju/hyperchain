@@ -2,20 +2,20 @@ package pbft
 
 
 
-func (instance *pbftCore) calcPSet() map[uint64]*ViewChange_PQ {
+func (pbft *pbftProtocal) calcPSet() map[uint64]*ViewChange_PQ {
 	pset := make(map[uint64]*ViewChange_PQ)
 
-	for n, p := range instance.pset {
+	for n, p := range pbft.pset {
 		pset[n] = p
 	}
 
-	for idx, cert := range instance.certStore {
+	for idx, cert := range pbft.certStore {
 		if cert.prePrepare == nil {
 			continue
 		}
 
 		digest := cert.digest
-		if !instance.prepared(digest, idx.v, idx.n) {
+		if !pbft.prepared(digest, idx.v, idx.n) {
 			continue
 		}
 
@@ -33,20 +33,20 @@ func (instance *pbftCore) calcPSet() map[uint64]*ViewChange_PQ {
 	return pset
 }
 
-func (instance *pbftCore) calcQSet() map[qidx]*ViewChange_PQ {
+func (pbft *pbftProtocal) calcQSet() map[qidx]*ViewChange_PQ {
 	qset := make(map[qidx]*ViewChange_PQ)
 
-	for n, q := range instance.qset {
+	for n, q := range pbft.qset {
 		qset[n] = q
 	}
 
-	for idx, cert := range instance.certStore {
+	for idx, cert := range pbft.certStore {
 		if cert.prePrepare == nil {
 			continue
 		}
 
 		digest := cert.digest
-		if !instance.prePrepared(digest, idx.v, idx.n) {
+		if !pbft.prePrepared(digest, idx.v, idx.n) {
 			continue
 		}
 
