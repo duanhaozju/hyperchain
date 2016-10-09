@@ -5,6 +5,7 @@
 package manager
 
 import (
+	"bytes"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"hyperchain/accounts"
@@ -21,7 +22,6 @@ import (
 	"hyperchain/recovery"
 	"sync"
 	"time"
-	"bytes"
 )
 
 var log *logging.Logger // package-level logger
@@ -239,7 +239,7 @@ func (self *ProtocolManager) syncBlockLoop() {
 												continue
 											} else {
 												core.ProcessBlock(blk)
-												if (bytes.Compare(blk.MerkleRoot, originMerkleRoot) != 0) {
+												if bytes.Compare(blk.MerkleRoot, originMerkleRoot) != 0 {
 													// stateDb has difference status
 												}
 											}
@@ -271,7 +271,7 @@ func (self *ProtocolManager) syncBlockLoop() {
 										//如果自己链上最新区块异常,则替换,并广播节点需要的最新区块
 										core.DeleteBlockByNum(db, lastBlk.Number-1)
 										core.UpdateChainByBlcokNum(db, lastBlk.Number-2)
-										broadcastDemandBlock(lastBlk.Number-1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
+										self.broadcastDemandBlock(lastBlk.Number-1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
 									}
 								}
 							}
