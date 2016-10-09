@@ -18,7 +18,7 @@ import (
 	"strconv"
 	"sync"
 	"time"
-	"hyperchain/membersrvc"
+	//"hyperchain/membersrvc"
 )
 
 // init the package-level logger system,

@@ -21,7 +21,7 @@ import (
 	"net"
 	"strconv"
 	"time"
-	"hyperchain/membersrvc"
+	//"hyperchain/membersrvc"
 )
 
 var log *logging.Logger // package-level logger
