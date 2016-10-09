@@ -6,6 +6,15 @@ type batchTimerEvent struct{}
 // viewChangeTimerEvent is sent when the view change timer expires
 type viewChangeTimerEvent struct{}
 
+// viewChangeResendTimerEvent is sent when the view change resend timer expires
+type viewChangeResendTimerEvent struct{}
+
+// viewChangedEvent is sent when the view change timer expires
+type viewChangedEvent struct{}
+
+// returnRequestBatchEvent is sent by pbft when we are forwarded a request
+type returnRequestBatchEvent *RequestBatch
+
 // pbftMessageEvent is sent when a consensus messages is received to be sent to pbft
 type pbftMessageEvent pbftMessage
 

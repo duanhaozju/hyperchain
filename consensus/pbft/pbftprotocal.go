@@ -33,6 +33,7 @@ type pbftProtocal struct {
 	batchManager     events.Manager
 	pbftManager      events.Manager
 	mux		sync.Mutex
+	reqStore	*requestStore	//received messages
 
 
 	// PBFT data
@@ -49,6 +50,8 @@ type pbftProtocal struct {
 	replicaCount	int	// number of replicas; PBFT `|R|`
 	seqNo		uint64	// PBFT "n", strictly monotonic increasing sequence number
 	view		uint64	// current view
+	nvInitialSeqNo	uint64  // initial seqNo in a new view
+	valid		bool	// whether we believe the state is up to date
 
 	chkpts		map[uint64]string		// state checkpoints; map lastExec to global hash
 	pset		map[uint64]*ViewChange_PQ	// state checkpoints; map lastExec to global hash
@@ -61,12 +64,20 @@ type pbftProtocal struct {
 
 	currentExec		*uint64				// currently executing request
 	timerActive		bool				// is the timer running?
+	vcResendTimer		events.Timer	                // timer triggering resend of a view change
+	vcResendTimeout         time.Duration                   // timeout before resending view change
 	requestTimeout		time.Duration            	// progress timeout for requests
+	lastNewViewTimeout    	time.Duration            	// last timeout we used during this view change
 	outstandingReqBatches	map[string]*RequestBatch	// track whether we are waiting for request batches to execute
+	newViewTimeout        	time.Duration            	// progress timeout for new views
 	newViewTimer		events.Timer			// track the timeout for each requestBatch
 	newViewTimerReason	string				// what triggered the timer
 	nullRequestTimer	events.Timer			// timeout triggering a null request
 	nullRequestTimeout	time.Duration			// duration for this timeout
+
+	viewChangePeriod	uint64		// period between automatic view changes
+	viewChangeSeqNo		uint64		// next seqNo to perform view change
+	missingReqBatches	map[string]bool	// for all the assigned, non-checkpointed request batches we might be missing during view-change
 
 	// implementation of PBFT `in`
 	reqBatchStore	map[string]*RequestBatch	// track request batches
@@ -74,7 +85,8 @@ type pbftProtocal struct {
 	checkpointStore	map[Checkpoint]bool		// track checkpoints as set
 	committedCert	map[msgID]string		// track the committed cert to help excute
 	chkptCertStore	map[chkptID]*chkptCert		// track quorum certificates for checkpoints
-	valid		bool // whether we believe the state is up to date
+	newViewStore    map[uint64]*NewView      	// track last new-view we received or sent
+	viewChangeStore map[vcidx]*ViewChange    	// track view-change messages
 }
 
 type qidx struct {
@@ -193,6 +205,9 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 
 	pbft.restoreState()
 
+	pbft.viewChangeSeqNo = ^uint64(0) // infinity
+	pbft.updateViewChangeSeqNo()
+
 	pbft.pbftManager.Start()
 
 	// batchManager is used to solve batch message, like *Request
@@ -254,6 +269,8 @@ func (pbft *pbftProtocal) RecvMsg(e []byte) error {
 		return pbft.processConsensus(msg)
 	} else if msg.Type == protos.Message_STATE_UPDATED {
 		return pbft.processStateUpdated(msg)
+	} else if msg.Type == protos.Message_NULL_REQUEST {
+		return pbft.processNullRequest(msg)
 	}
 
 	logger.Errorf("Unknown recvMsg: %+v", msg)
@@ -274,6 +291,8 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event{
 	case *Request:
 		req := event
 		return pbft.processRequest(req)
+	case viewChangedEvent:
+		pbft.processRequestsDuringViewChange()
 	case batchTimerEvent:
 		logger.Debugf("Replica %d batch timer expired", pbft.id)
 		if  pbft.activeView && (len(pbft.batchStore) > 0) {
@@ -293,8 +312,10 @@ func (pbft *pbftProtocal) ProcessPbftEvent(e events.Event) events.Event {
 	logger.Debugf("Replica %d processing event", pbft.id)
 
 	switch et := e.(type) {
-	//case *pbftMessage:
-	//	return pbftMessageEvent(*et)
+	case viewChangeTimerEvent:
+		logger.Infof("Replica %d view change timer expired, sending view change: %s", pbft.id, pbft.newViewTimerReason)
+		pbft.timerActive = false
+		pbft.sendViewChange()
 	case pbftMessageEvent:
 		msg := et
 		logger.Debugf("Replica %d received incoming message from %v", pbft.id, msg.sender)
@@ -316,8 +337,30 @@ func (pbft *pbftProtocal) ProcessPbftEvent(e events.Event) events.Event {
 	case *stateUpdatedEvent:
 		//pbft.batch.reqStore = newRequestStore()
 		err = pbft.recvStateUpdatedEvent(et)
+	case *ViewChange:
+		return pbft.recvViewChange(et)
+	case *NewView:
+		return pbft.recvNewView(et)
+	case *FetchRequestBatch:
+		err = pbft.recvFetchRequestBatch(et)
+	case returnRequestBatchEvent:
+		return pbft .recvReturnRequestBatch(et)
+	case viewChangeQuorumEvent:
+		logger.Debugf("Replica %d received view change quorum, processing new view", pbft.id)
+		if pbft.primary(pbft.view) == pbft.id {
+			return pbft.sendNewView()
+		}
+		return pbft.processNewView()
 	case nullRequestEvent:
 		pbft.nullRequestHandler()
+	case viewChangeResendTimerEvent:
+		if pbft.activeView {
+			logger.Warningf("Replica %d had its view change resend timer expire but it's in an active view, this is benign but may indicate a bug", pbft.id)
+			return nil
+		}
+		logger.Debugf("Replica %d view change resend timer expired before view change quorum was reached, resending", pbft.id)
+		pbft.view-- // sending the view change increments this
+		return pbft.sendViewChange()
 	default:
 		logger.Warningf("Replica %d received an unknown message type %T", pbft.id, et)
 	}
@@ -391,6 +434,12 @@ func (pbft *pbftProtocal) processStateUpdated(msg *protos.Message) error {
 	return nil
 }
 
+// processNullRequest process when a null request come
+func (pbft *pbftProtocal) processNullRequest(msg *protos.Message) error {
+	pbft.nullReqTimerReset()
+	return nil
+}
+
 func (pbft *pbftProtocal) processRequest(req *Request) error {
 
 	//pbft.reqStore.storeOutstanding(req)
@@ -406,6 +455,30 @@ func (pbft *pbftProtocal) processRequest(req *Request) error {
 		return pbft.leaderProcReq(req)
 	}
 
+	return nil
+}
+
+func (pbft *pbftProtocal) processRequestsDuringViewChange() error {
+	primary := pbft.primary(pbft.view)
+	if pbft.activeView && primary != pbft.id {
+		for pbft.reqStore.outstandingRequests.Len() != 0 {
+
+			temp:=pbft.reqStore.outstandingRequests.order.Front().Value
+
+			reqc,ok:=interface{}(temp).(requestContainer)
+			if !ok {
+				logger.Error("type assert error:",temp)
+				return nil
+			}
+			req:= reqc.req
+			if req != nil {
+				consensusMsg := &ConsensusMessage{Payload: &ConsensusMessage_Request{Request: req}}
+				pbMsg := consensusMsgHelper(consensusMsg, pbft.id)
+				pbft.helper.InnerUnicast(pbMsg, primary)
+				pbft.reqStore.remove(req)
+			}
+		}
+	}
 	return nil
 }
 
@@ -456,11 +529,23 @@ func (pbft *pbftProtocal) nullRequestHandler() {
 	if !pbft.activeView {
 		return
 	}
-	// time for the primary to send a null request
-	// pre-prepare with null digest
-	logger.Info("Primary %d null request timer expired, sending null request", pbft.id)
-	pbft.sendPrePrepare(nil, "")
 
+	if pbft.primary(pbft.view) != pbft.id {
+		// backup expected a null request, but primary never sent one
+		logger.Info("Replica %d null request timer expired, sending view change", pbft.id)
+
+		pbft.sendViewChange()
+	} else {
+		// time for the primary to send a null request
+		// pre-prepare with null digest
+		//todo test
+		//if pbft.logstatic.Blockbool{
+		//	pbft.logstatic.RecordCount("block_SendNullRequest_nullRequestHandler","currentView")
+		//	return
+		//}
+		logger.Info("Primary %d null request timer expired, sending null request", pbft.id)
+		pbft.sendNullRequest()
+	}
 }
 
 func (pbft *pbftProtocal) eventToMsg(msg *Message, senderID uint64) (interface{}, error) {
@@ -487,6 +572,25 @@ func (pbft *pbftProtocal) eventToMsg(msg *Message, senderID uint64) (interface{}
 			return nil, fmt.Errorf("Sender ID included in checkpoint message (%v) doesn't match ID corresponding to the receiving stream (%v)", chkpt.ReplicaId, senderID)
 		}
 		return chkpt, nil
+	} else if vc := msg.GetViewChange(); vc != nil {
+
+		if senderID != vc.ReplicaId {
+			return nil, fmt.Errorf("Sender ID included in view-change message (%v) doesn't match ID corresponding to the receiving stream (%v)", vc.ReplicaId, senderID)
+		}
+		return vc, nil
+	} else if nv := msg.GetNewView(); nv != nil {
+		if senderID != nv.ReplicaId {
+			return nil, fmt.Errorf("Sender ID included in new-view message (%v) doesn't match ID corresponding to the receiving stream (%v)", nv.ReplicaId, senderID)
+		}
+		return nv, nil
+	} else if fr := msg.GetFetchRequestBatch(); fr != nil {
+		if senderID != fr.ReplicaId {
+			return nil, fmt.Errorf("Sender ID included in fetch-request-batch message (%v) doesn't match ID corresponding to the receiving stream (%v)", fr.ReplicaId, senderID)
+		}
+		return fr, nil
+	} else if reqBatch := msg.GetReturnRequestBatch(); reqBatch != nil {
+		// it's ok for sender ID and replica ID to differ; we're sending the original request message
+		return returnRequestBatchEvent(reqBatch), nil
 	}
 
 	return nil, fmt.Errorf("Invalid message: %v", msg)
@@ -527,7 +631,7 @@ func (pbft *pbftProtocal) recvRequestBatch(reqBatch *RequestBatch) error {
 
 	pbft.reqBatchStore[digest] = reqBatch
 	pbft.outstandingReqBatches[digest] = reqBatch
-	pbft.persistRequestBatch(digest)
+	//pbft.persistRequestBatch(digest)
 	if pbft.activeView {
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", digest))
 	}
@@ -539,6 +643,13 @@ func (pbft *pbftProtocal) recvRequestBatch(reqBatch *RequestBatch) error {
 	}
 
 	return nil
+}
+
+// sendNullRequest is for primary peer to send null when nullRequestTimer booms
+func (pbft *pbftProtocal) sendNullRequest() {
+	nullRequest := nullRequestMsgHelper(pbft.id)
+	pbft.helper.InnerBroadcast(nullRequest)
+	pbft.nullReqTimerReset()
 }
 
 func (pbft *pbftProtocal) sendPrePrepare(reqBatch *RequestBatch, digest string) {
@@ -735,10 +846,16 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 
 	if pbft.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) && cert.sentExecute == false {
 		pbft.stopTimer(commit.SequenceNumber)
+		//todo  lastNewViewTimeout
+		pbft.lastNewViewTimeout = pbft.newViewTimeout
 		delete(pbft.outstandingReqBatches, commit.BatchDigest)
 		idx := msgID{v: commit.View, n: commit.SequenceNumber}
 		pbft.committedCert[idx] = cert.digest
 		pbft.executeOutstanding()
+		if commit.SequenceNumber == pbft.viewChangeSeqNo {
+			logger.Infof("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
+			pbft.sendViewChange()
+		}
 	}
 
 	return nil
@@ -951,6 +1068,67 @@ func (pbft *pbftProtocal) recvCheckpoint(chkpt *Checkpoint) events.Event {
 	pbft.moveWatermarks(chkpt.SequenceNumber)
 
 	return nil
+}
+
+// used in view-change to fetch missing assigned, non-checkpointed requests
+func (pbft *pbftProtocal) fetchRequestBatches() (err error) {
+	var msg *Message
+	for digest := range pbft.missingReqBatches {
+		msg = &Message{Payload: &Message_FetchRequestBatch{FetchRequestBatch: &FetchRequestBatch{
+			BatchDigest: digest,
+			ReplicaId:   pbft.id,
+		}}}
+		pbft.helper.InnerBroadcast(pbftMsgHelper(msg, pbft.id))
+	}
+
+	return
+}
+
+func (pbft *pbftProtocal) recvFetchRequestBatch(fr *FetchRequestBatch) (err error) {
+	digest := fr.BatchDigest
+	if _, ok := pbft.reqBatchStore[digest]; !ok {
+		return nil // we don't have it either
+	}
+
+	reqBatch := pbft.reqBatchStore[digest]
+	msg := &Message{Payload: &Message_ReturnRequestBatch{ReturnRequestBatch: reqBatch}}
+
+	if err != nil {
+		return fmt.Errorf("Error marshalling return-request-batch message: %v", err)
+	}
+	receiver := fr.ReplicaId
+	err = pbft.helper.InnerUnicast(pbftMsgHelper(msg,pbft.id),receiver)
+
+
+	return
+}
+
+func (pbft *pbftProtocal) recvReturnRequestBatch(reqBatch *RequestBatch) events.Event {
+
+	digest := hash(reqBatch)
+	if _, ok := pbft.missingReqBatches[digest]; !ok {
+		return nil // either the wrong digest, or we got it already from someone else
+	}
+	pbft.reqBatchStore[digest] = reqBatch
+	delete(pbft.missingReqBatches, digest)
+	//pbft.persistRequestBatch(digest)
+
+	if len(pbft.missingReqBatches) == 0 {
+		//return pbft.processNewView()
+		nv, ok := pbft.newViewStore[pbft.view]
+		if !ok {
+			logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
+			return nil
+		}
+		if pbft.activeView {
+			logger.Infof("Replica %d ignoring new-view from %d, v:%d: we are active in view %d",
+				pbft.id, nv.ReplicaId, nv.View, pbft.view)
+			return nil
+		}
+		return pbft.processReqInNewView(nv)
+	}
+	return nil
+
 }
 
 func (pbft *pbftProtocal) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
@@ -1197,6 +1375,15 @@ func (pbft *pbftProtocal) updateState(seqNo uint64, targetId []byte, replicaId [
 	updateStateMsg := stateUpdateHelper(pbft.id, seqNo, targetId, replicaId)
 	pbft.helper.UpdateState(updateStateMsg) // TODO: stateUpdateEvent
 
+}
+
+func (pbft *pbftProtocal) updateViewChangeSeqNo() {
+	if pbft.viewChangePeriod <= 0 {
+		return
+	}
+	// Ensure the view change always occurs at a checkpoint boundary
+	pbft.viewChangeSeqNo = pbft.seqNo + pbft.viewChangePeriod*pbft.K - pbft.seqNo%pbft.K
+	logger.Debugf("Replica %d updating view change sequence number to %d", pbft.id, pbft.viewChangeSeqNo)
 }
 
 

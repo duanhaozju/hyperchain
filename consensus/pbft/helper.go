@@ -133,6 +133,10 @@ func (pbft *pbftProtocal) intersectionQuorum() int {
 	return (pbft.N + pbft.f + 2) / 2
 }
 
+func (pbft *pbftProtocal) allCorrectReplicasQuorum() int {
+	return (pbft.N - pbft.f)
+}
+
 // =============================================================================
 // pre-prepare/prepare/commit check helper
 // =============================================================================
@@ -229,9 +233,9 @@ func consensusMsgHelper(msg *ConsensusMessage, id uint64) *protos.Message {
 }
 
 // nullRequestMsgHelper help convert the nullRequestMessage to pb.Message
-func nullRequestMsgHelper(id uint64) *pb.Message {
-	pbMsg := &pb.Message{
-		Type:  		pb.Message_NULL_REQUEST,
+func nullRequestMsgHelper(id uint64) *protos.Message {
+	pbMsg := &protos.Message{
+		Type:  		protos.Message_NULL_REQUEST,
 		Payload:        nil,
 		Timestamp:	time.Now().UnixNano(),
 		Id:		id,
@@ -332,13 +336,17 @@ func (pbft *pbftProtocal) startTimerIfOutstandingRequests() {
 		}()
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("outstanding request batches %v", getOutstandingDigests))
 	} else if pbft.nullRequestTimeout > 0 {
-		timeout := pbft.nullRequestTimeout
-		if pbft.primary(pbft.view) != pbft.id {
-			// we're waiting for the primary to deliver a null request - give it a bit more time
-			timeout += pbft.requestTimeout
-		}
-		pbft.nullRequestTimer.Reset(timeout, nullRequestEvent{})
+		pbft.nullReqTimerReset()
 	}
+}
+
+func (pbft *pbftProtocal) nullReqTimerReset(){
+	timeout := pbft.nullRequestTimeout
+	if pbft.primary(pbft.view) != pbft.id {
+		// we're waiting for the primary to deliver a null request - give it a bit more time
+		timeout += pbft.requestTimeout
+	}
+	pbft.nullRequestTimer.Reset(timeout, nullRequestEvent{})
 }
 
 func (pbft *pbftProtocal) softStartTimer(timeout time.Duration, reason string) {
