@@ -21,6 +21,26 @@ var _ = checker.Suite(&StateSuite{})
 
 var toAddr = common.BytesToAddress
 
+func (s *StateSuite) TestGetAccounts(c *checker.C) {
+	// generate a few entries
+	obj1 := s.state.GetOrNewStateObject(toAddr([]byte{0x01}))
+	obj1.AddBalance(big.NewInt(22))
+	obj2 := s.state.GetOrNewStateObject(toAddr([]byte{0x01, 0x02}))
+	obj2.SetCode([]byte{3, 3, 3, 3, 3, 3, 3})
+	obj3 := s.state.GetOrNewStateObject(toAddr([]byte{0x02}))
+	obj3.SetBalance(big.NewInt(44))
+
+	// write some of them to the trie
+	s.state.UpdateStateObject(obj1)
+	s.state.UpdateStateObject(obj2)
+	s.state.Commit()
+
+	ret := s.state.GetAccounts()
+	for k, v := range ret {
+		fmt.Println("account: ", k, v)
+	}
+
+}
 func (s *StateSuite) TestDump(c *checker.C) {
 	// generate a few entries
 	obj1 := s.state.GetOrNewStateObject(toAddr([]byte{0x01}))
@@ -146,7 +166,6 @@ func (s *StateSuite) TestReplication(c *checker.C) {
 	c.Assert(state1.Dump(), checker.DeepEquals, state2.Dump())
 
 	state1.Delete(obj1.address)
-	root2, _ := state1.Commit()
 }
 
 // use testing instead of checker because checker does not support

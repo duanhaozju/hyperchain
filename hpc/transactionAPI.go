@@ -97,37 +97,37 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 	//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 	log.Infof("############# %d: start send request#############", time.Now().Unix())
-		start := time.Now().Unix()
-		end := start + 6
-		//end:=start+500
+	start := time.Now().Unix()
+	end := start + 6
+	//end:=start+500
 
-		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < 25; i++ {
-				tx.TimeStamp = time.Now().UnixNano()
+	for start := start; start < end; start = time.Now().Unix() {
+		for i := 0; i < 25; i++ {
+			tx.TimeStamp = time.Now().UnixNano()
 
-				// calculate signature
-				/*keydir := "./keystore/"
-				encryption := crypto.NewEcdsaEncrypto("ecdsa")
-				am := accounts.NewAccountManager(keydir, encryption)
-				// TODO replace password with test value
-				signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
-				if err != nil {
-					log.Errorf("Sign(tx) error :%v", err)
-				}
-				tx.Signature = signature*/
-				txBytes, err := proto.Marshal(tx)
-				if err != nil {
-					log.Errorf("proto.Marshal(tx) error: %v", err)
-				}
-				if manager.GetEventObject() != nil {
-					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
-					//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-				} else {
-					log.Warning("manager is Nil")
-				}
+			// calculate signature
+			/*keydir := "./keystore/"
+			encryption := crypto.NewEcdsaEncrypto("ecdsa")
+			am := accounts.NewAccountManager(keydir, encryption)
+			// TODO replace password with test value
+			signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
+			if err != nil {
+				log.Errorf("Sign(tx) error :%v", err)
 			}
-			time.Sleep(25 * time.Millisecond)
+			tx.Signature = signature*/
+			txBytes, err := proto.Marshal(tx)
+			if err != nil {
+				log.Errorf("proto.Marshal(tx) error: %v", err)
+			}
+			if manager.GetEventObject() != nil {
+				go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+				//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+			} else {
+				log.Warning("manager is Nil")
+			}
 		}
+		time.Sleep(25 * time.Millisecond)
+	}
 	/*tx.TimeStamp = time.Now().UnixNano()
 
 	// TODO replace password with test value

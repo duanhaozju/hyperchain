@@ -98,7 +98,7 @@ func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
 	updateStateEvent := event.SendCheckpointSyncEvent {
 		Payload:	tmpMsg,
 	}
-	logger.Error("-------------post UpdateStateEvent----------")
+	logger.Info("-------------post UpdateStateEvent----------")
 	go h.msgQ.Post(updateStateEvent)
 
 	return nil
