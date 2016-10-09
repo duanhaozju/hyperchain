@@ -211,7 +211,7 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, M
 
 }
 
-func (this *GrpcPeerManager) GetPeerInfos() peer.PeerInfos {
+func (this *GrpcPeerManager) GetPeerInfo() peer.PeerInfos {
 	peers := this.peersPool.GetPeers()
 	var perinfo peer.PeerInfo
 	localNodeAddr := this.LocalNode.GetNodeAddr()
