@@ -309,10 +309,10 @@ func (self *ProtocolManager) ConsensusLoop() {
 			//logger.GetLogger().Println("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 		case event.ExeTxsEvent:
-			self.blockPool.ExecTxs(ev.SequenceNum,ev.Transactions)
-		case event.CommitOrRollbackBlockEvent:
-			self.blockPool.CommitOrRollbackBlockEvent(ev.SequenceNum,
-				ev.Transactions,ev.Timestamp,ev.CommitTime,ev.CommitStatus)
+			self.blockPool.ExecTxs(ev.SeqNo,ev.Transactions)
+		/*case event.CommitOrRollbackBlockEvent:
+			self.blockPool.CommitOrRollbackBlockEvent(ev.SeqNo,
+				ev.Transactions,ev.CommitTime,ev.CommitStatus)*/
 		}
 
 
