@@ -34,7 +34,7 @@ func New(id uint64, h helper.Stack, pbftConfigPath string) consensus.Consenter {
 	config = loadConfig(pbftConfigPath)
 	switch strings.ToLower(config.GetString("general.mode")) {
 	case "batch":
-		return newBatch(id, config, h)
+		return newPbft(id, config, h)
 	default:
 		panic(fmt.Errorf("Invalid PBFT mode: %s", config.GetString("general.mode")))
 	}
@@ -64,6 +64,7 @@ func loadConfig(pbftConfigPath string) (config *viper.Viper) {
 	//	config.AddConfigPath(pbftpath)
 	//}
 	config.AddConfigPath(pbftConfigPath)
+
 
 	err := config.ReadInConfig()
 	if err != nil {
