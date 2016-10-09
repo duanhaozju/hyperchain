@@ -206,6 +206,14 @@ func PutBlockTx(db hyperdb.Database,commonHash crypto.CommonHash, key []byte, t 
 			return err
 		}
 		err = batch.Put(keyTxBlock,dataTxBlock)
+		txKey := tx.Hash(commonHash).Bytes()
+		txKeyFact := append(transactionPrefix, txKey...)
+		txValue, err := proto.Marshal(tx)
+		if err != nil {
+			return nil
+		}
+		batch.Put(txKeyFact, txValue)
+
 		if err !=nil{
 			return err
 		}
