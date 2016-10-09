@@ -245,10 +245,9 @@ func (self *ProtocolManager) syncBlockLoop() {
 								break
 							} else{
 								//如果自己链上最新区块异常,则替换,并广播节点需要的最新区块
-								//deleteBlock(db,blocks.Batch[i].Number-1)
+								core.DeleteBlockByNum(db,blocks.Batch[i].Number-1)
 								core.UpdateChainByBlcokNum(db, blocks.Batch[i].Number-2)
 								//broadcastDemandBlock(blocks.Batch[i].Number-1,replica,msg)
-								//core.UpdateChainByViewChange(blocks.Batch[i].Number-1,blocks.Batch[i].ParentHash)
 
 
 							}
