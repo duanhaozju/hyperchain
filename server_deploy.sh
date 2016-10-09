@@ -36,8 +36,11 @@ killprogress
  scp -r peerconfig.json satoshi@$1:/home/satoshi/
  scp -r config.yaml satoshi@$1:/home/satoshi/
  scp -r genesis.json satoshi@$1:/home/satoshi/
+ scp -r membersrvc.yaml satoshi@$1:/home/satoshi/
  ssh -t satoshi@$1 "rm -rf keystore"
  scp -r keystore satoshi@$1:/home/satoshi/
+ ssh -t satoshi@$1 "rm -rf cert"
+ scp -r cert satoshi@$1:/home/satoshi/
 }
 
 for server_address in ${SERVER_ADDR[@]}; do
