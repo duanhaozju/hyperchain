@@ -55,7 +55,7 @@ func GetConfig(path string) map[string]string{
 
 func ExtractAddress(peerIp string, peerPort int,ID int32) *pb.PeerAddress{
 	peerPort_i32 := int32(peerPort)
-	peerAddrString := peerIp + ":" + strconv.Itoa(peerPort)
+	peerAddrString := strconv.Itoa(int(ID)) + ":" + strconv.Itoa(peerPort)
 	peerAddress := pb.PeerAddress{
 		Ip:peerIp,
 		Port:peerPort_i32,
