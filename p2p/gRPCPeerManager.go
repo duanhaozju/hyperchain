@@ -195,7 +195,7 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, M
 				nid, _ := strconv.Atoi(nodeId)
 				// because the unicast node is not confirm so, here use double loop
 				if p.ID == nid {
-					log.Notice("send msg to ", nid)
+					log.Debug("send msg to ", nid)
 					resMsg, err := p.Chat(syncMessage)
 					if err != nil {
 						log.Error("Broadcast failed,Node", p.Addr)
