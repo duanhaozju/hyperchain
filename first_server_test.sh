@@ -3,7 +3,7 @@ set -e
 
 govendor build
 
-PRIMARY="182.254.141.236"
+PRIMARY="115.159.113.143"
 
 ./local_addkey.sh
 
