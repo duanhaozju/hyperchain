@@ -198,8 +198,6 @@ func (blk *PublicBlockAPI) QueryCommitAndBatchTime(args SendQueryArgs) (*BatchTi
 func (blk *PublicBlockAPI) QueryEvmAvgTime(args SendQueryArgs) (int64,error) {
 
 	evmTime :=  core.CalcEvmAVGTime(args.From.ToUint64(),args.To.ToUint64())
-	log.Info("-----evmTime----",evmTime)
-
 	return evmTime, nil
 }
 //func (blk *PublicBlockAPI)QueryTransactionSum() string {

@@ -247,3 +247,17 @@ func TestUpdateChain(t *testing.T) {
 		t.Errorf("TestUpdateChain fail")
 	}
 }
+//func TestUpdate(t *testing.T) {
+//	InitDB(8081)
+//	height := GetHeightOfChain()
+//	fmt.Println(height)
+//	InitDB(8082)
+//	height = GetHeightOfChain()
+//	fmt.Println(height)
+//	InitDB(8083)
+//	height = GetHeightOfChain()
+//	fmt.Println(height)
+//	InitDB(8084)
+//	height = GetHeightOfChain()
+//	fmt.Println(height)
+//}
