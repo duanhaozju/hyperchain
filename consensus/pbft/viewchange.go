@@ -150,9 +150,7 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 
 	msg := pbftMsgHelper(&Message{Payload: &Message_ViewChange{ViewChange: vc}}, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
-
 	pbft.vcResendTimer.Reset(pbft.vcResendTimeout, viewChangeResendTimerEvent{})
-
 	return pbft.recvViewChange(vc)
 }
 

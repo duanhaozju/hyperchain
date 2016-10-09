@@ -53,10 +53,10 @@ timeout:
     viewchange: 2s
 
     # How long to wait for a view change quorum before resending (the same) view change
-    resendviewchange: 2s
+    resendviewchange: 5s
 
     # Interval to send "keep-alive" null requests.  Set to 0 to disable. If enabled, must be greater than request timeout
-    nullrequest: 0s
+    nullrequest: 2s
 
 ################################################################################
 #

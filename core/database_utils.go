@@ -357,7 +357,7 @@ func UpdateChain(block *types.Block, genesis bool) error {
 	memChainMap.data.LatestBlockHash = block.BlockHash
 	memChainMap.data.ParentBlockHash = block.ParentHash
 	if !genesis {
-		memChainMap.data.Height += 1
+		memChainMap.data.Height = block.Number
 		memChainMap.data.CurrentTxSum += uint64(len(block.Transactions))
 	}
 	db, err := hyperdb.GetLDBDatabase()
