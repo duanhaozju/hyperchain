@@ -44,13 +44,16 @@ func NewGrpcManager(configPath string, NodeId int) *GrpcPeerManager {
 	newgRPCManager.configs = configUtil
 	newgRPCManager.MaxPeerNumber = newgRPCManager.configs.GetMaxPeerNumber()
 	newgRPCManager.NodeId = NodeId
+
 	newgRPCManager.IP = newgRPCManager.configs.GetIP(newgRPCManager.NodeId)
 	newgRPCManager.Port = newgRPCManager.configs.GetPort(newgRPCManager.NodeId)
 	newgRPCManager.CName = newgRPCManager.configs.GetCname(newgRPCManager.NodeId)
+
+	//HSM only instanced once, so peersPool and Node Hsm are same instance
 	newgRPCManager.TEM = transport.NewHandShakeManger()
 	// start local node
 	newgRPCManager.peerStatus = make(map[int]bool)
-	//初始化flag map
+	//init the flag map
 	for i := 1; i <= newgRPCManager.MaxPeerNumber; i++ {
 		if i == newgRPCManager.NodeId {
 			newgRPCManager.peerStatus[i] = true
@@ -185,19 +188,17 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, M
 	// broadcast to special peers
 	//TODO for stateUpdate
 	go func() {
-		for _, peer := range this.peersPool.GetPeers() {
-
+		for _, p := range this.peersPool.GetPeers() {
 			for _, nodeID := range peerList {
-				nodeid := strconv.FormatUint(nodeID, 10)
-
-				nid, _ := strconv.Atoi(nodeid)
-				//if peerId==nodeID{
-				if peer.ID == nid {
-
-					resMsg, err := peer.Chat(syncMessage)
+				// convert the uint64 to int
+				nodeId := strconv.FormatUint(nodeID, 10)
+				nid, _ := strconv.Atoi(nodeId)
+				// because the unicast node is not confirm so, here use double loop
+				if p.ID == nid {
+					log.Notice("send msg to ", nid)
+					resMsg, err := p.Chat(syncMessage)
 					if err != nil {
-						log.Error("enter error")
-						log.Error("Broadcast failed,Node", peer.Addr)
+						log.Error("Broadcast failed,Node", p.Addr)
 					} else {
 						log.Info("resMsg:", string(resMsg.Payload))
 						//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
