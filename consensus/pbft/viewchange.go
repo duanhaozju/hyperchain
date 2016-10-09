@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 	"hyperchain/consensus/events"
-	"math/rand"
 )
 
 type viewChangeQuorumEvent struct{}
@@ -98,8 +97,6 @@ func (instance *pbftCore) sendViewChange() events.Event {
 	delete(instance.newViewStore, instance.view)
 	instance.view++
 	instance.activeView = false
-	//todo
-	instance.logstatic.RecordList(instance.view,"sendViewChange")
 
 	instance.pset = instance.calcPSet()
 	instance.qset = instance.calcQSet()
@@ -163,8 +160,6 @@ func (instance *pbftCore) recvViewChange(vc *ViewChange) events.Event {
 	logger.Infof("Replica %d received view-change from replica %d, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		instance.id, vc.ReplicaId, vc.View, vc.H, len(vc.Cset), len(vc.Pset), len(vc.Qset))
 
-	instance.logstatic.RecordList(vc.View,"recvViewChange","from",vc.ReplicaId,"vcNumber")
-
 	// TODO verify
 	//if err := instance.verify(vc); err != nil {
 	//	logger.Warningf("Replica %d found incorrect signature in view-change message: %s", instance.id, err)
@@ -212,7 +207,6 @@ func (instance *pbftCore) recvViewChange(vc *ViewChange) events.Event {
 			instance.id, minView)
 		// subtract one, because sendViewChange() increments
 		instance.view = minView - 1
-		instance.logstatic.RecordInfo(instance.view,"sendViewChange len(replicas) >= instance.f+1","viewNum")
 		return instance.sendViewChange()
 	}
 
@@ -256,9 +250,7 @@ func (instance *pbftCore) sendNewView() events.Event {
 		logger.Infof("Replica %d could not assign sequence numbers for new view", instance.id)
 		return nil
 	}
-	for key,_:=range msgList{
-		instance.logstatic.RecordList(key,"sendNewView","primary seq")
-	}
+
 	nv := &NewView{
 		View:      instance.view,
 		Vset:      vset,
@@ -271,7 +263,6 @@ func (instance *pbftCore) sendNewView() events.Event {
 
 	msg := pbftMsgHelper(&Message{Payload: &Message_NewView{NewView: nv}}, instance.id)
 	instance.helper.InnerBroadcast(msg)
-	instance.logstatic.RecordInfo(nv.View,"sendNewView","seq",cp.SequenceNumber,"viewNumber")
 	instance.newViewStore[instance.view] = nv
 	//return instance.processNewView()
 	return instance.primaryProcessNewView(cp, replicas, nv)
@@ -280,7 +271,6 @@ func (instance *pbftCore) sendNewView() events.Event {
 func (instance *pbftCore) recvNewView(nv *NewView) events.Event {
 	logger.Infof("Replica %d received new-view %d",
 		instance.id, nv.View)
-	instance.logstatic.RecordList(nv.View,"currentView",instance.view,"recvNewView")
 	if !(nv.View > 0 && nv.View >= instance.view && instance.primary(nv.View) == nv.ReplicaId && instance.newViewStore[nv.View] == nil) {
 		logger.Infof("Replica %d rejecting invalid new-view from %d, v:%d",
 			instance.id, nv.ReplicaId, nv.View)
@@ -348,14 +338,6 @@ func (instance *pbftCore) feedMissingReqBatchIfNeeded(nv *NewView) (newReqBatchM
 				continue
 			}
 
-			//todo feedMissingReqBatchIfNeeded
-			if instance.id==2{
-				c:=rand.Int31n(100)
-				if c%2==0{
-					instance.logstatic.RecordList(n,"feedMissingReqBatchIfNeeded","deleteReqBatch")
-					delete(instance.reqBatchStore,d)
-				}
-			}
 
 			if _, ok := instance.reqBatchStore[d]; !ok {
 				logger.Warningf("Replica %d missing assigned, non-checkpointed request batch %s",
@@ -416,7 +398,6 @@ func (instance *pbftCore) primaryProcessNewView(initialCp ViewChange_C, replicas
 
 	newReqBatchMissing = instance.feedMissingReqBatchIfNeeded(nv)
 
-	instance.logstatic.RecordInfo(initialCp.SequenceNumber,"processNewView","checkpoint")
 	if len(instance.missingReqBatches) == 0 {
 		return instance.processReqInNewView(nv)
 	} else if newReqBatchMissing {
@@ -445,7 +426,6 @@ func (instance *pbftCore) processNewView() events.Event {
 	if !ok {
 		logger.Warningf("Replica %d could not determine initial checkpoint: %+v",
 			instance.id, instance.viewChangeStore)
-		instance.logstatic.RecordInfo(instance.view,"sendViewChange_selectInitialCheckpoint","beforeViewNum")
 		return instance.sendViewChange()
 	}
 // 以上 primary 不必做
@@ -465,24 +445,18 @@ func (instance *pbftCore) processNewView() events.Event {
 	}
 // --
 	msgList := instance.assignSequenceNumbers(nv.Vset, cp.SequenceNumber)
-	for key, _:=range msgList{
-		instance.logstatic.RecordList(key,"assignSequenceNumbers","non-primary")
-	}
 
 	if msgList == nil {
 		logger.Warningf("Replica %d could not assign sequence numbers: %+v",
 			instance.id, instance.viewChangeStore)
-		instance.logstatic.RecordInfo(instance.view,instance.view,"sendViewChange_assignSequenceNumbers","beforeViewNum")
 		return instance.sendViewChange()
 	}
 
 	if !(len(msgList) == 0 && len(nv.Xset) == 0) && !reflect.DeepEqual(msgList, nv.Xset) {
 		logger.Warningf("Replica %d failed to verify new-view Xset: computed %+v, received %+v",
 			instance.id, msgList, nv.Xset)
-		instance.logstatic.RecordInfo(instance.view,instance.view,"sendViewChange_msgList, nv.Xset","beforeViewNum")
 		return instance.sendViewChange()
 	}
-	instance.logstatic.RecordInfo(cp.SequenceNumber,"processNewView","checkpoint")
 // -- primary 不必做
 	if instance.h < cp.SequenceNumber {
 		instance.moveWatermarks(cp.SequenceNumber)
@@ -512,7 +486,6 @@ func (instance *pbftCore) processNewView() events.Event {
 
 
 	newReqBatchMissing = instance.feedMissingReqBatchIfNeeded(nv)
-	instance.logstatic.RecordInfo(cp.SequenceNumber,"processNewView","checkpoint")
 	if len(instance.missingReqBatches) == 0 {
 		return instance.processReqInNewView(nv)
 	} else if newReqBatchMissing {
@@ -582,7 +555,6 @@ func (instance *pbftCore) processReqInNewView(nv *NewView) events.Event {
 	}
 
 	instance.startTimerIfOutstandingRequests()
-	instance.logstatic.RecordList(instance.view,"change View Successful!!")
 	logger.Debugf("Replica %d done cleaning view change artifacts, calling into consumer", instance.id)
 
 	return viewChangedEvent{}

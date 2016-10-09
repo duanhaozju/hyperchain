@@ -404,6 +404,11 @@ func (instance *pbftCore) getCert(v uint64, n uint64) (cert *msgCert) {
 	return
 }
 
+// allCorrectReplicasQuorum returns the number of correct replicas (N-f)
+func (instance *pbftCore) allCorrectReplicasQuorum() int {
+	return (instance.N - instance.f)
+}
+
 // Given a seqNo/id get the checkpoint Cert
 func (instance *pbftCore) getChkptCert(n uint64, id string) (cert *chkptCert) {
 
