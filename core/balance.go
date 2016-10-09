@@ -234,12 +234,12 @@ func (self *Balance)UpdateDBBalance(block *types.Block) error {
 }*/
 
 // UpdateCacheBalance　updates cacheBalance by transactions
-func (self *Balance)UpdateCacheBalance(trans *types.Transaction) error{
+func (self *Balance) UpdateCacheBalance(trans *types.Transaction) error {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 
 	var txValue types.TransactionValue
-	if err := proto.Unmarshal(trans.Value,&txValue); err != nil {
+	if err := proto.Unmarshal(trans.Value, &txValue); err != nil {
 		log.Errorf("%v", err)
 		return err
 	}

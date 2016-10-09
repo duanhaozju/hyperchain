@@ -153,13 +153,14 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 						Payload: SyncMsg.Payload,
 					})
 
-		}
-		case recovery.Message_RELAYTX:{
-			go this.higherEventManager.Post(event.ConsensusEvent{
-				Payload:SyncMsg.Payload,
-			})
-		}
-		}
+				}
+			case recovery.Message_RELAYTX:
+				{
+					go this.higherEventManager.Post(event.ConsensusEvent{
+						Payload: SyncMsg.Payload,
+					})
+				}
+			}
 
 		}
 	case pb.Message_KEEPALIVE:
