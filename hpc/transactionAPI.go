@@ -123,7 +123,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//end:=start+500
 
 		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < 100; i++ {
+			for i := 0; i < 125; i++ {
 				tx.TimeStamp = time.Now().UnixNano()
 
 				// calculate signature
@@ -147,7 +147,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					log.Warning("manager is Nil")
 				}
 			}
-			time.Sleep(20 * time.Millisecond)
+			time.Sleep(90 * time.Millisecond)
 		}
 	/*tx.TimeStamp = time.Now().UnixNano()
 
