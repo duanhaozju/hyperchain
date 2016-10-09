@@ -89,6 +89,7 @@ type pbftCore struct {
 	replicaCount	int	// number of replicas; PBFT `|R|`
 	seqNo		uint64	// PBFT "n", strictly monotonic increasing sequence number
 	view		uint64	// current view
+	nvInitialSeqNo     uint64  // initial seqNo in a new view
 
 	chkpts		map[uint64]string		// state checkpoints; map lastExec to global hash
 	pset		map[uint64]*ViewChange_PQ	// state checkpoints; map lastExec to global hash
@@ -977,7 +978,11 @@ func (instance *pbftCore) execDoneSync(idx msgID) {
 	}
 
 	instance.currentExec = nil
-	instance.processNewView()
+	// optimization: if we are in view changing waiting for executing to target seqNo,
+	// one-time processNewView() is enough. No need to processNewView() every time in execDoneSync()
+	if !instance.activeView && instance.lastExec == instance.nvInitialSeqNo {
+		instance.processNewView()
+	}
 	instance.executeOutstanding()
 
 }

@@ -318,8 +318,10 @@ func (instance *pbftCore) canExecuteToTarget(specLastExec uint64, initialCp View
 	}
 
 	if canExecuteToTarget {
+		instance.nvInitialSeqNo = initialCp.SequenceNumber
 		logger.Debugf("Replica %d needs to process a new view, but can execute to the checkpoint seqNo %d, delaying processing of new view", instance.id, initialCp.SequenceNumber)
 	} else {
+		instance.nvInitialSeqNo = 0
 		logger.Infof("Replica %d cannot execute to the view change checkpoint with seqNo %d", instance.id, initialCp.SequenceNumber)
 	}
 	return  canExecuteToTarget
