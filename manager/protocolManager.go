@@ -400,7 +400,7 @@ func (pm *ProtocolManager) commitNewBlock(payload []byte, commitTime int64) {
 }
 
 func (pm *ProtocolManager) GetNodeInfo() client.PeerInfos {
-	pm.nodeInfo = pm.peerManager.GetPeerInfos()
+	pm.nodeInfo = pm.peerManager.GetPeerInfo()
 	log.Info("nodeInfo is ", pm.nodeInfo)
 	return pm.nodeInfo
 
