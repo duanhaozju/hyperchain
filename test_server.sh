@@ -3,7 +3,7 @@ set -e
 
 govendor build
 
-PRIMARY="182.254.246.243"
+PRIMARY="182.254.141.236"
 
 scp -r killprocess.sh satoshi@$PRIMARY:/home/satoshi/
 ssh -t satoshi@$PRIMARY "chmod a+x killprocess.sh && bash killprocess.sh && rm -rf keystore"
@@ -11,6 +11,8 @@ scp -r hyperchain satoshi@$PRIMARY:/home/satoshi/
 scp -r peerconfig.json satoshi@$PRIMARY:/home/satoshi/
 scp -r config.yaml satoshi@$PRIMARY:/home/satoshi/
 scp -r genesis.json satoshi@$PRIMARY:/home/satoshi/
+scp -r membersrvc.yaml satoshi@$PRIMARY:/home/satoshi/
+scp -r cert satoshi@$PRIMARY:/home/satoshi/
 scp -r keystore satoshi@$PRIMARY:/home/satoshi/
 scp -r innerserverlist.txt satoshi@$PRIMARY:/home/satoshi/
 scp -r server_deploy.sh satoshi@$PRIMARY:/home/satoshi/
