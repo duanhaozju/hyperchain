@@ -69,9 +69,9 @@ func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error{
 // Execute transfers the transactions decided by consensus to outer
 func (h *helper) Execute(reqBatch *pb.ExeMessage) error{
 
-	tmpMsg,err:=proto.Marshal(reqBatch)
+	tmpMsg, err := proto.Marshal(reqBatch)
 
-	if err!=nil {
+	if err != nil {
 		return err
 	}
 
@@ -107,7 +107,7 @@ func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
 // NewHelper initializes a helper object
 func NewHelper(m *event.TypeMux) *helper {
 
-	h:=&helper{
+	h := &helper{
 		msgQ: m,
 	}
 
