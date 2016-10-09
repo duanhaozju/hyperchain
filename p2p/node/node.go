@@ -199,8 +199,9 @@ func (this *Node) StartServer() {
 		log.Fatalf("Failed to listen: %v", err)
 		log.Fatal("PLEASE RESTART THE SERVER NODE!")
 	}
-	opts:=membersrvc.GetGrpcServerOpts()
-	this.gRPCServer = grpc.NewServer(opts...)
+	/*opts:=membersrvc.GetGrpcServerOpts()
+	this.gRPCServer = grpc.NewServer(opts...)*/
+	this.gRPCServer = grpc.NewServer()
 	pb.RegisterChatServer(this.gRPCServer, this)
 	log.Info("Listening gRPC request...")
 	go this.gRPCServer.Serve(lis)
