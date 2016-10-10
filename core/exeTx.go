@@ -110,9 +110,27 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		ret, _, err = Exec(env, &from, &to, data, gas, gasPrice, amount)
 	}
 
-	/*receipt = types.NewReceipt(statedb.IntermediateRoot().Bytes(), gas)
+	//receipt = types.NewReceipt(statedb.IntermediateRoot().Bytes(), gas)
+	/*go func() {
+		receipt = types.NewReceipt(nil, gas)
+		receipt.ContractAddress = addr.Bytes()
+		//receipt.TxHash = tx.BuildHash().Bytes()
+		// todo replace the gasused
+		receipt.GasUsed = 100000
+		//receipt.Ret = ret
+		//receipt.SetLogs(statedb.GetLogs(common.BytesToHash(receipt.TxHash)))
+
+		*//*if err != nil && IsValueTransferErr(err) {
+			receipt.Status = types.Receipt_OUTOFBALANCE
+			receipt.Message = []byte(err.Error())
+		} else {
+			receipt.Status = types.Receipt_SUCCESS
+			receipt.Message = nil
+		}*//*
+	}()*/
+	receipt = types.NewReceipt(nil, gas)
 	receipt.ContractAddress = addr.Bytes()
-	receipt.TxHash = tx.BuildHash().Bytes()
+	//receipt.TxHash = tx.BuildHash().Bytes()
 	// todo replace the gasused
 	receipt.GasUsed = 100000
 	receipt.Ret = ret
@@ -124,8 +142,8 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 	} else {
 		receipt.Status = types.Receipt_SUCCESS
 		receipt.Message = nil
-	}*/
-	return nil, ret, addr, err
+	}
+	return receipt, ret, addr, err
 }
 
 func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
@@ -152,11 +170,7 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 	}
 	// todo replace the gasused
 	// todo just for test
-	receipt := types.NewReceipt(nil, gas)
-	receipt.GasUsed = 100000
-	receipt.ContractAddress = addr.Bytes()
-	receipt.TxHash = common.Hash{}.Bytes()
-	receipt.Ret = ret
+
 	//WriteReceipts(types.Receipts{receipt,receipt,receipt})
 	//fmt.Println("receipt from db",GetReceipt(common.Hash{}))
 	return ret, addr, err
