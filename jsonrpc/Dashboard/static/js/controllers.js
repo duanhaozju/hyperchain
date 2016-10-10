@@ -209,7 +209,7 @@ function MainCtrl() {
      * summernoteText - used for Summernote plugin
      */
     this.summernoteText = ['<h3>Hello Jonathan! </h3>',
-    '<p>dummy text of the printing and typesetting industry. <strong>Lorem Ipsum has been the dustrys</strong> standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more',
+        '<p>dummy text of the printing and typesetting industry. <strong>Lorem Ipsum has been the dustrys</strong> standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more',
         'recently with</p>'].join('');
 
     /**
@@ -396,10 +396,11 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
 
 function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockService, TransactionService) {
     $scope.status = "";
+    $scope.blkGPSstatus = "";
 
     $scope.tx = {
         from: "6201cb0448964ac597faf6fdf1f472edf2a22b89",
-        to: "0000000000000000000000000000000000000002",
+        to: "000f1a7a08ccc48e5d30f80850cf1cf283aa3abd",
         value: "1"
     };
 
@@ -417,7 +418,6 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
         from: "",
         to: ""
     };
-
     $scope.commitTime = "0";
     $scope.batchTime = "0";
     $scope.avgTime = "0";
@@ -456,7 +456,7 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
             })
     };
 
-    $scope.queryAvg = function(){
+    $scope.queryTxAvg = function(){
 
         if (isEmpty($scope.blockAvg)) {
             alert("字段不能为空");
@@ -465,13 +465,13 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
 
         SummaryService.getAvgTimeAndCount($scope.blockAvg.from, $scope.blockAvg.to)
             .then(function(res){
-                $scope.avgTime = res.time
+                $scope.txAvgTime = res.time
             }, function(error){
                 console.log(error);
             })
     }
 
-    $scope.query = function(){
+    $scope.queryBatchAndCommit = function(){
 
         if (isEmpty($scope.block)) {
             alert("字段不能为空");
@@ -585,7 +585,7 @@ function AddProjectCtrl($scope, $state, ENV, ContractService) {
     $scope.flag = false;
 
     $scope.PATTERN = ENV.PATTERN;
-    
+
     $scope.project = {
         name: "",
         type: "1",
@@ -629,43 +629,43 @@ function AddProjectCtrl($scope, $state, ENV, ContractService) {
     }
 
     $scope.saveABI = function() {
-            console.log($scope.project);
+        console.log($scope.project);
 
-            // todo 现有合约个数
-            var contractStorage = JSON.parse(localStorage.getItem(ENV.STORAGE));
-            var len;
+        // todo 现有合约个数
+        var contractStorage = JSON.parse(localStorage.getItem(ENV.STORAGE));
+        var len;
 
-            var ctNames = getContractName("contract $", $scope.project.pattern.value);
+        var ctNames = getContractName("contract $", $scope.project.pattern.value);
 
-            // contract
-            for (var i = 0;i < $scope.project.abi.length; i++) {
+        // contract
+        for (var i = 0;i < $scope.project.abi.length; i++) {
 
-                var _contract = {};
+            var _contract = {};
 
-                _contract.projectName = $scope.project.name;
-                _contract.type = $scope.project.type;    // 1: Create 2: Load
-                _contract.methods = $scope.project.abi[i];
-                _contract.code = $scope.project.bin[i];
-                _contract.status = 0; // 0: Nondeployed 1: Deployed
-                _contract.sourceCode = $scope.project.pattern.value;
-                _contract.hash = "";
-                _contract.address = "";
+            _contract.projectName = $scope.project.name;
+            _contract.type = $scope.project.type;    // 1: Create 2: Load
+            _contract.methods = $scope.project.abi[i];
+            _contract.code = $scope.project.bin[i];
+            _contract.status = 0; // 0: Nondeployed 1: Deployed
+            _contract.sourceCode = $scope.project.pattern.value;
+            _contract.hash = "";
+            _contract.address = "";
 
-                // 合约存到localstorage中
-                if (!contractStorage) {
-                    len = 1;
-                    _contract.contractName = len + "_" + ctNames[i];
-                    var objContract = _defineProperty({}, _contract.contractName, _contract);
-                    localStorage.setItem(ENV.STORAGE,JSON.stringify(objContract))
-                } else {
-                    len = Object.keys(contractStorage).length;
-                    len++;
-                    _contract.contractName = len + "_" + ctNames[i];
-                    contractStorage[_contract.contractName] = _contract;
-                    localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage));
-                }
-
+            // 合约存到localstorage中
+            if (!contractStorage) {
+                len = 1;
+                _contract.contractName = len + "_" + ctNames[i];
+                var objContract = _defineProperty({}, _contract.contractName, _contract);
+                localStorage.setItem(ENV.STORAGE,JSON.stringify(objContract))
+            } else {
+                len = Object.keys(contractStorage).length;
+                len++;
+                _contract.contractName = len + "_" + ctNames[i];
+                contractStorage[_contract.contractName] = _contract;
+                localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage));
             }
+
+        }
 
         $state.go("dashboards.contract")
     }
@@ -743,22 +743,22 @@ function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Contract
 
                         // ContractService.getReceipt(res)
                         //     .then(function(data){
-                                contractStorage[name].address = res.ContractAddress;
+                        contractStorage[name].address = res.ContractAddress;
 
-                                $scope.contracts[name] = contractStorage[name];
-                                localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage))
+                        $scope.contracts[name] = contractStorage[name];
+                        localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage))
 
-                                SweetAlert.swal({
-                                    title: "Deployed successfully!",
-                                    text: "The contract address is <span class='text_red'>"+res.ContractAddress+"</span>",
-                                    type: "success",
-                                    customClass: 'swal-wide',
-                                    html: true
-                                });
+                        SweetAlert.swal({
+                            title: "Deployed successfully!",
+                            text: "The contract address is <span class='text_red'>"+res.ContractAddress+"</span>",
+                            type: "success",
+                            customClass: 'swal-wide',
+                            html: true
+                        });
 
-                            // }, function(error){
-                            //     console.log(error)
-                            // })
+                        // }, function(error){
+                        //     console.log(error)
+                        // })
 
                         break;
                     }

@@ -49,7 +49,7 @@ func TestSigntx(t *testing.T)  {
 	fmt.Println(pub)
 	fmt.Println("private key is :")
 	fmt.Println(key)
-	SaveNodeInfo("./port_address_privatekey","5004",addr,key)
+	//SaveNodeInfo("./port_address_privatekey","5004",addr,key)
 
 	//p,err:=ee.GetKey()
 	if err!=nil{

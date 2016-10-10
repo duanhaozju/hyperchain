@@ -22,12 +22,13 @@ type helper struct {
 
 type Stack interface {
 	InnerBroadcast(msg *pb.Message) error
+	InnerUnicast(msg *pb.Message, to uint64) error
 	Execute(reqBatch *pb.ExeMessage) error
 	UpdateState(updateState *pb.UpdateStateMessage) error
 }
 
 // InnerBroadcast broadcast the consensus message between vp nodes
-func (h *helper) InnerBroadcast(msg *pb.Message) error{
+func (h *helper) InnerBroadcast(msg *pb.Message) error {
 
 	tmpMsg, err := proto.Marshal(msg)
 
@@ -45,22 +46,42 @@ func (h *helper) InnerBroadcast(msg *pb.Message) error{
 	return nil
 }
 
+// InnerUnicast unicast the transaction message between to primary
+func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error {
+
+	tmpMsg, err := proto.Marshal(msg)
+
+	if err != nil {
+		return err
+	}
+
+	unicastEvent := event.TxUniqueCastEvent{
+		Payload: tmpMsg,
+		PeerId:  to,
+	}
+
+	// Post the event to outer
+	go h.msgQ.Post(unicastEvent)
+
+	return nil
+}
+
 // Execute transfers the transactions decided by consensus to outer
-func (h *helper) Execute(reqBatch *pb.ExeMessage) error{
+func (h *helper) Execute(reqBatch *pb.ExeMessage) error {
 
-	tmpMsg,err:=proto.Marshal(reqBatch)
+	tmpMsg, err := proto.Marshal(reqBatch)
 
-	if err!=nil {
+	if err != nil {
 		return err
 	}
 
 	exeEvent := event.NewBlockEvent{
-		Payload:	tmpMsg,
-		CommitTime:	time.Now().UnixNano(),
+		Payload:    tmpMsg,
+		CommitTime: time.Now().UnixNano(),
 	}
 
 	// Post the event to outer
-	go h.msgQ.Post(exeEvent)
+	h.msgQ.Post(exeEvent)
 
 	return nil
 }
@@ -74,10 +95,10 @@ func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
 		return err
 	}
 
-	updateStateEvent := event.SendCheckpointSyncEvent {
-		Payload:	tmpMsg,
+	updateStateEvent := event.SendCheckpointSyncEvent{
+		Payload: tmpMsg,
 	}
-	logger.Error("-------------post UpdateStateEvent----------")
+	logger.Info("-------------post UpdateStateEvent----------")
 	go h.msgQ.Post(updateStateEvent)
 
 	return nil
@@ -86,7 +107,7 @@ func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
 // NewHelper initializes a helper object
 func NewHelper(m *event.TypeMux) *helper {
 
-	h:=&helper{
+	h := &helper{
 		msgQ: m,
 	}
 

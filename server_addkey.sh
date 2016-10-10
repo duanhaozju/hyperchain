@@ -12,24 +12,32 @@ PASSWD="blockchain"
 # get the server list config
 while read line;do
  SERVER_ADDR+=" ${line}"
-done < ./serverlist.txt
+done < ./innerserverlist.txt
 
 #########################
 # authorization         #
 #########################
 
 # add your local pubkey into every server
-  echo "┌────────────────────────┐"
-  echo "│    auto add ssh key    │"
-  echo "└────────────────────────┘"
-  for server_address in ${SERVER_ADDR[@]}; do
+echo "┌────────────────────────┐"
+echo "│    auto add ssh key    │"
+echo "└────────────────────────┘"
+
+addkey(){
+#  ssh-keygen -f "/home/satoshi/.ssh/known_hosts" -R $1
   expect <<EOF
       set timeout 60
-      spawn ssh-copy-id satoshi@$server_address
+      spawn ssh-copy-id satoshi@$1
       expect {
         "yes/no" {send "yes\r";exp_continue }
         "s password:" {send "$PASSWD\r";exp_continue }
         eof
       }
 EOF
-  done
+}
+
+for server_address in ${SERVER_ADDR[@]}; do
+  addkey $server_address &
+done
+
+wait

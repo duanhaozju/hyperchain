@@ -9,16 +9,16 @@ import (
 	"time"
 )
 
-func (self *Transaction)BuildHash() common.Hash {
+func (self *Transaction) BuildHash() common.Hash {
 	ch := crypto.NewKeccak256Hash("keccak256")
 	return ch.Hash(self)
 }
 
-func (self *Transaction)Hash(ch crypto.CommonHash) common.Hash {
+func (self *Transaction) Hash(ch crypto.CommonHash) common.Hash {
 	return ch.Hash(self)
 }
 
-func (self *Transaction)SighHash(ch crypto.CommonHash) common.Hash {
+func (self *Transaction) SighHash(ch crypto.CommonHash) common.Hash {
 	return ch.Hash([]interface{}{
 		self.Value,
 		self.TimeStamp,
@@ -27,7 +27,7 @@ func (self *Transaction)SighHash(ch crypto.CommonHash) common.Hash {
 	})
 }
 
-func (self *Transaction)FString() string {
+func (self *Transaction) FString() string {
 	return fmt.Sprintf(`
 	From : %s
 	To : %s
@@ -43,21 +43,21 @@ func (self *Transaction)FString() string {
 
 //validates the signature
 //if addr recovered from signature != tx.from return false
-func (self *Transaction)ValidateSign(encryption crypto.Encryption,ch crypto.CommonHash)  bool{
+func (self *Transaction) ValidateSign(encryption crypto.Encryption, ch crypto.CommonHash) bool {
 
 	hash := self.SighHash(ch)
-	addr,_ := encryption.UnSign(hash[:],self.Signature)
-	from := common.HexToAddress(string(self.From))
-	return addr==from
+	addr, _ := encryption.UnSign(hash[:], self.Signature)
+	from := common.BytesToAddress(self.From)
+	return addr == from
 }
 
 // NewTransaction returns a new transaction
 func NewTransaction(from []byte,to []byte,value []byte, signature []byte) *Transaction{
 
 	transaction := &Transaction{
-		From: from,
-		To: to,
-		Value: value,
+		From:      from,
+		To:        to,
+		Value:     value,
 		TimeStamp: time.Now().UnixNano(),
 		Signature: signature,
 	}

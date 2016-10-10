@@ -6,7 +6,7 @@
  * the request must be async, so use the nodeJS
  * author: ChenQuan
  * create date: 2016-09-04
- * description: this is a pure http request file, depends on noting, and you can use this just type `node auto_test.js`
+ * description: this is a pure http request file, depends on noting, and you can use this just type `node auto_server_test.js`
  *
  */
 
@@ -14,7 +14,7 @@ var http  = require('http');
 
 function testRequest(){
     var options = {
-        host: "114.55.64.132",
+        host: "115.159.35.77",
         port: "8081",
         path: '/query',
         method: 'POST',
@@ -22,7 +22,7 @@ function testRequest(){
             'Content-Type': 'application/json'
         }
     };
-    var post_data = JSON.stringify({"from":"1","to":"100"});
+    var post_data = JSON.stringify({"from":"1","to":"1688"});
     console.log(options);
 // Set up the request
     var post_req = http.request(options, function(res) {

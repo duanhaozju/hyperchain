@@ -1,12 +1,12 @@
 package hpc
 
 import (
-	"hyperchain/common"
-	"hyperchain/core"
-	"hyperchain/core/types"
 	"hyperchain/hyperdb"
-	"strconv"
+	"hyperchain/core"
 	"time"
+	"hyperchain/common"
+	"strconv"
+	"hyperchain/core/types"
 )
 
 type PublicBlockAPI struct{}

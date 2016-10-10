@@ -31,7 +31,7 @@ general:
     logmultiplier: 4
 
     # How many requests should the primary send per pre-prepare when in "batch" mode
-    batchsize: 500
+    batchsize: 100
 
     # Whether the replica should act as a byzantine one; useful for debugging on testnets
     byzantine: false
@@ -53,10 +53,10 @@ timeout:
     viewchange: 2s
 
     # How long to wait for a view change quorum before resending (the same) view change
-    resendviewchange: 2s
+    resendviewchange: 5s
 
     # Interval to send "keep-alive" null requests.  Set to 0 to disable. If enabled, must be greater than request timeout
-    nullrequest: 0s
+    nullrequest: 2s
 
 ################################################################################
 #

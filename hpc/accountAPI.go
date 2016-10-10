@@ -1,11 +1,13 @@
 package hpc
 
 import (
+	"errors"
+	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/core"
-	"hyperchain/accounts"
+	"hyperchain/core/state"
+	"hyperchain/hyperdb"
 	"hyperchain/manager"
-	"errors"
 )
 
 type PublicAccountAPI struct {
@@ -13,11 +15,11 @@ type PublicAccountAPI struct {
 }
 
 type AccountResult struct {
-	Account common.Address `json:"account"`
-	Balance string         `json:"balance"`
+	Account string `json:"account"`
+	Balance string `json:"balance"`
 }
 type UnlockParas struct {
-	Address string
+	Address  string
 	Password string
 }
 
@@ -28,22 +30,23 @@ func NewPublicAccountAPI(pm *manager.ProtocolManager) *PublicAccountAPI {
 }
 
 //New Account according to args from html
-func (acot *PublicAccountAPI)NewAccount(password string) common.Address  {
+func (acot *PublicAccountAPI) NewAccount(password string) common.Address {
 	//keydir := "./keystore/"
 	//encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	am := acot.pm.AccountManager
-	ac,err :=am.NewAccount(password)
-	if err !=nil{
-		log.Fatal("New Account error,%v",err)
+	ac, err := am.NewAccount(password)
+	if err != nil {
+		log.Fatal("New Account error,%v", err)
 	}
 
 	balanceIns, err := core.GetBalanceIns()
-	balanceIns.PutCacheBalance(ac.Address,[]byte("0"))
-	balanceIns.PutDBBalance(ac.Address,[]byte("0"))
+	balanceIns.PutCacheBalance(ac.Address, []byte("0"))
+	balanceIns.PutDBBalance(ac.Address, []byte("0"))
 	return ac.Address
 }
+
 //Unlock account according to args(address,password)
-func (acot *PublicAccountAPI)UnlockAccount(args UnlockParas) error {
+func (acot *PublicAccountAPI) UnlockAccount(args UnlockParas) error {
 	password := string(args.Password)
 	address := common.HexToAddress(args.Address)
 
@@ -60,34 +63,35 @@ func (acot *PublicAccountAPI)UnlockAccount(args UnlockParas) error {
 			s = "0" + s
 		}
 	}
-	ac := accounts.Account{Address:address,File:am.KeyStore.JoinPath(s)}
-	err:= am.Unlock(ac,password)
-	if err!=nil{
+	ac := accounts.Account{Address: address, File: am.KeyStore.JoinPath(s)}
+	err := am.Unlock(ac, password)
+	if err != nil {
 		return errors.New("Incorrect address or password!")
 	}
 	return nil
 }
+
 // GetAllBalances returns all account's balance in the db,NOT CACHE DB!
-func (acot *PublicAccountAPI) GetAccounts() []*AccountResult{
+func (acot *PublicAccountAPI) GetAccounts() []*AccountResult {
 	var acts []*AccountResult
-
-	balanceIns, err := core.GetBalanceIns()
-
+	chain := core.GetChainCopy()
+	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
-		log.Fatalf("GetBalanceIns error, %v", err)
+		log.Fatalf("Get DB error, %v", err)
 	}
+	headBlock, _ := core.GetBlock(db, chain.LatestBlockHash)
+	stateDB, err := state.New(common.BytesToHash(headBlock.MerkleRoot), db)
+	if err != nil {
+		log.Fatalf("Get stateDB error, %v", err)
+	}
+	ctx := stateDB.GetAccounts()
 
-	balMap := balanceIns.GetAllDBBalance()
-
-	for key, value := range balMap {
-
+	for k, v := range ctx {
 		var act = &AccountResult{
-			Account: key,
-			Balance: string(value),
+			Account: k,
+			Balance: v.Balance().String(),
 		}
-
 		acts = append(acts, act)
 	}
-
 	return acts
 }
