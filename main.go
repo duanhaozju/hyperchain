@@ -43,7 +43,7 @@ func main() {
 		membersrvc.Start("./", argv.NodeId)
 
 		//init log
-		common.InitLog(logging.INFO, "./logs/", argv.LocalPort)
+		common.InitLog(logging.NOTICE, "./logs/", argv.LocalPort)
 		eventMux := new(event.TypeMux)
 
 		//init peer manager to start grpc server and client

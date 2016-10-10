@@ -940,7 +940,7 @@ func (pbft *pbftProtocal) executeOne(idx msgID) bool {
 		cert.sentExecute = true
 		pbft.execDoneSync(idx)
 	} else {
-		logger.Infof("--------call execute--------view=%d/seqNo=%d--------", idx.v, idx.n)
+		logger.Noticef("--------Call execute--------view=%d/seqNo=%d--------", idx.v, idx.n)
 		exeBatch := exeBatchHelper(reqBatch, idx.n)
 		pbft.helper.Execute(exeBatch)
 		cert.sentExecute = true
