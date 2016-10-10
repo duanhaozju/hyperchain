@@ -4,6 +4,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"sync"
 	"strconv"
+	"github.com/op/go-logging"
 )
 
 type stateldb int32
@@ -13,6 +14,11 @@ type LDBInstance struct {
 	state  stateldb
 	dbsync sync.Mutex
 }
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("hyperdb")
+}
+
 
 const (
 	closed stateldb = iota
