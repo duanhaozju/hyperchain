@@ -240,9 +240,9 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	currentChain := GetChainCopy()
 
 	block.ParentHash = currentChain.LatestBlockHash
-	//if err := ProcessBlock(block); err != nil {
-	//	log.Fatal(err)
-	//}
+	/*if err := ProcessBlock(block); err != nil {
+		log.Fatal(err)
+	}*/
 	block.WriteTime = time.Now().UnixNano()
 	block.CommitTime = commitTime
 	block.BlockHash = block.Hash(commonHash).Bytes()
@@ -257,10 +257,10 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := PutBlock(db, block.BlockHash, block); err != nil {
+	/*if err := PutBlock(db, block.BlockHash, block); err != nil {
 	//if err := PutBlockTx(db, commonHash, block.BlockHash, block); err != nil {
 		log.Fatal(err)
-	}
+	}*/
 	// write transaction
 	//PutTransactions(db, commonHash, block.Transactions)
 
@@ -268,6 +268,11 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	log.Notice("Block number", newChain.Height)
 	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
 
+	//if err := PutBlock(db, block.BlockHash, block); err != nil {
+	go PutBlockTx(db, commonHash, block.BlockHash, block)
+		/*if err := PutBlockTx(db, commonHash, block.BlockHash, block); err != nil {
+		log.Fatal(err)
+	}*/
 	if block.Number%10 == 0 && block.Number != 0 {
 		WriteChainChan()
 	}
