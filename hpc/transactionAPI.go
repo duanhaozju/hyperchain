@@ -40,26 +40,26 @@ type PublicTransactionAPI struct {
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 // If type is Ptr or String, it is optional parameter
 type SendTxArgs struct {
-	From     common.Address  `json:"from"`
-	To       *common.Address  `json:"to"`
-	Gas      *Number  `json:"gas"`
-	GasPrice *Number  `json:"gasPrice"`
-	Value    *Number  `json:"value"`
-	Payload  string  `json:"payload"`
+	From     common.Address		`json:"from"`
+	To       *common.Address	`json:"to"`
+	Gas      *Number  		`json:"gas"`
+	GasPrice *Number		`json:"gasPrice"`
+	Value    *Number		`json:"value"`
+	Payload  string			`json:"payload"`
 	//Nonce    *jsonrpc.HexNumber  `json:"nonce"`
 }
 
 type TransactionResult struct {
-	Hash	  common.Hash		`json:"hash"`
-	//BlockNumber	  int		`json:"blockNumber"`
-	//BlockHash	  string	`json:"blockHash"`
-	//TxIndex	  string	`json:"txIndex"`
-	From      common.Address	`json:"from"`
-	To        common.Address	`json:"to"`
-	Amount     Number		`json:"amount"`
-	Gas	   Number		`json:"gas"`
-	GasPrice   Number		`json:"gasPrice"`
-	Timestamp  string		`json:"timestamp"`
+	Hash	  	common.Hash	`json:"hash"`
+	BlockNumber	Number		`json:"blockNumber"`
+	BlockHash	common.Hash	`json:"blockHash"`
+	TxIndex	  	Number		`json:"txIndex"`
+	From      	common.Address	`json:"from"`
+	To        	common.Address	`json:"to"`
+	Amount     	Number		`json:"amount"`
+	Gas	   	Number		`json:"gas"`
+	GasPrice   	Number		`json:"gasPrice"`
+	Timestamp  	string		`json:"timestamp"`
 }
 
 func NewPublicTransactionAPI(eventMux *event.TypeMux,pm *manager.ProtocolManager) *PublicTransactionAPI {
@@ -123,7 +123,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//end:=start+500
 
 		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < 25; i++ {
+			for i := 0; i < 100; i++ {
 				tx.TimeStamp = time.Now().UnixNano()
 
 				// calculate signature
@@ -147,7 +147,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					log.Warning("manager is Nil")
 				}
 			}
-			time.Sleep(25 * time.Millisecond)
+			time.Sleep(90 * time.Millisecond)
 		}
 	/*tx.TimeStamp = time.Now().UnixNano()
 
@@ -295,20 +295,36 @@ func (tran *PublicTransactionAPI) ComplieContract(ct string) (*CompileCode,error
 func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
 
 	var txValue types.TransactionValue
+	var bh common.Hash
+	var bn , txIndex uint64
+
+	txHash := tx.BuildHash()
 
 	if err := proto.Unmarshal(tx.Value,&txValue); err != nil {
 		log.Errorf("%v", err)
 		return nil, err
 	}
 
+	if db, err := hyperdb.GetLDBDatabase(); err != nil {
+		log.Errorf("Open database error: %v", err)
+		return nil, err
+	} else {
+		bh, bn, txIndex = core.GetTxWithBlock(db, txHash[:])
+	}
+
+
+
 	return &TransactionResult{
-		Hash: tx.BuildHash(),
-		From: common.BytesToAddress(tx.From),
-		To: common.BytesToAddress(tx.To),
-		Amount: *NewInt64ToNumber(txValue.Amount),
-		Gas: *NewInt64ToNumber(txValue.GasLimit),
-		GasPrice: *NewInt64ToNumber(txValue.Price),
-		Timestamp: time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+		Hash: 		txHash,
+		BlockNumber: 	*NewUint64ToNumber(bn),
+		BlockHash: 	bh,
+		TxIndex: 	*NewUint64ToNumber(txIndex),
+		From: 		common.BytesToAddress(tx.From),
+		To: 		common.BytesToAddress(tx.To),
+		Amount: 	*NewInt64ToNumber(txValue.Amount),
+		Gas: 		*NewInt64ToNumber(txValue.GasLimit),
+		GasPrice: 	*NewInt64ToNumber(txValue.Price),
+		Timestamp: 	time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
 	}, nil
 }
 

@@ -1,13 +1,15 @@
 // p2p handshake and communicate
 // author: Lizhong kuang
 // date: 2016-09-08
-
+// lastModified:
+// add the TransportEncryptManager interface
 package transport
 
 import (
 	"crypto/cipher"
-	"github.com/op/go-logging"
 	"crypto/elliptic"
+	"github.com/op/go-logging"
+
 	"bytes"
 	"crypto"
 	"crypto/aes"
@@ -16,6 +18,7 @@ import (
 	"encoding/hex"
 	"hyperchain/p2p/transport/ecdh"
 )
+
 var log *logging.Logger // package-level logger
 func init() {
 	log = logging.MustGetLogger("p2p/transport")
@@ -23,10 +26,10 @@ func init() {
 
 type TransportEncryptManager interface {
 	GetLocalPublicKey() []byte
-	GenerateSecret(remotePublicKey []byte, peerHash string)
-	EncWithSecret(message []byte,peerHash string) []byte
-	DecWithSecret(message []byte,peerHash string) []byte
-	GetSecret(peerHash string)string
+	GenerateSecret(remotePublicKey []byte, peerHash string) error
+	EncWithSecret(message []byte, peerHash string) []byte
+	DecWithSecret(message []byte, peerHash string) []byte
+	GetSecret(peerHash string) string
 	GetSceretPoolSize() int
 	PrintAllSecHash()
 }
@@ -39,9 +42,8 @@ type HandShakeManager struct {
 	secrets      map[string][]byte
 }
 
-
 //---------------------------------ECDH-------------------------------------------
-func NewHandShakeManger() *HandShakeManager{
+func NewHandShakeManger() *HandShakeManager {
 	var hSM HandShakeManager
 	hSM.secrets = make(map[string][]byte)
 	hSM.e = ecdh.NewEllipticECDH(elliptic.P384())
@@ -51,13 +53,19 @@ func NewHandShakeManger() *HandShakeManager{
 func (hSM *HandShakeManager) GetLocalPublicKey() []byte {
 	return hSM.e.Marshal(hSM.publicKey)
 }
-func (hSM *HandShakeManager) GenerateSecret(remotePublicKey []byte, peerHash string) {
+func (hSM *HandShakeManager) GenerateSecret(remotePublicKey []byte, peerHash string) error {
 	remotePubKey, _ := hSM.e.Unmarshal(remotePublicKey)
-	hSM.secrets[peerHash], _ = hSM.e.GenerateSharedSecret(hSM.privateKey, remotePubKey)
+	var err error
+	hSM.secrets[peerHash], err = hSM.e.GenerateSharedSecret(hSM.privateKey, remotePubKey)
+	if err != nil {
+		log.Error("Generate share secret failed!", err)
+		return err
+	} else {
+		return nil
+	}
 }
 
-func (hSM *HandShakeManager) EncWithSecret(message []byte,peerHash string) []byte {
-
+func (hSM *HandShakeManager) EncWithSecret(message []byte, peerHash string) []byte {
 
 	// 3DES
 	//key := []byte("sfe023f_sefiel#fi32lf3e!")
@@ -71,7 +79,6 @@ func (hSM *HandShakeManager) EncWithSecret(message []byte,peerHash string) []byt
 	//}
 	//return encrypted
 
-
 	//aes
 	key := hSM.secrets[peerHash][:16]
 	var iv = []byte(key)[:aes.BlockSize]
@@ -83,8 +90,7 @@ func (hSM *HandShakeManager) EncWithSecret(message []byte,peerHash string) []byt
 
 }
 
-func (hSM *HandShakeManager) DecWithSecret(message []byte,peerHash string) []byte {
-
+func (hSM *HandShakeManager) DecWithSecret(message []byte, peerHash string) []byte {
 
 	//3DES
 	//key := []byte("sfe023f_sefiel#fi32lf3e!")
@@ -97,6 +103,7 @@ func (hSM *HandShakeManager) DecWithSecret(message []byte,peerHash string) []byt
 	//return decrypted
 
 	//aes
+
 	key := hSM.secrets[peerHash][:16]
 	var iv = []byte(key)[:aes.BlockSize]
 	decrypted := make([]byte, len(message))
@@ -107,26 +114,27 @@ func (hSM *HandShakeManager) DecWithSecret(message []byte,peerHash string) []byt
 
 }
 
-func (this *HandShakeManager) GetSecret(peerHash string)string{
-	if sc , ok := this.secrets[peerHash];ok{
+func (this *HandShakeManager) GetSecret(peerHash string) string {
+	if sc, ok := this.secrets[peerHash]; ok {
 		return hex.EncodeToString(sc)
-	}else{
+	} else {
 		log.Error("无法取得相应秘钥", peerHash)
 		return ""
 	}
 
 }
 
-func (this *HandShakeManager) GetSceretPoolSize()int{
+func (this *HandShakeManager) GetSceretPoolSize() int {
 	return len(this.secrets)
 }
 
-func (this *HandShakeManager) PrintAllSecHash(){
-	for hash,_ := range this.secrets{
+func (this *HandShakeManager) PrintAllSecHash() {
+	for hash, _ := range this.secrets {
 		log.Notice(hash)
 	}
 
 }
+
 // 3DES加密
 func TripleDesEncrypt(origData, key []byte) ([]byte, error) {
 	block, err := des.NewTripleDESCipher(key)
@@ -160,6 +168,7 @@ func PKCS5Padding(ciphertext []byte, blockSize int) []byte {
 	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
 	return append(ciphertext, padtext...)
 }
+
 // 3DES解密
 func TripleDesDecrypt(crypted, key []byte) ([]byte, error) {
 	block, err := des.NewTripleDESCipher(key)

@@ -8,16 +8,17 @@
 package client
 
 import (
-	"google.golang.org/grpc"
-	pb "hyperchain/p2p/peermessage"
 	"errors"
-	"golang.org/x/net/context"
-	"strconv"
 	"github.com/op/go-logging"
-	"hyperchain/p2p/transport"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 	"hyperchain/p2p/peerComm"
-	"time"
+	pb "hyperchain/p2p/peermessage"
+	"hyperchain/p2p/transport"
+	"strconv"
 	"sync"
+	"time"
+	//"hyperchain/membersrvc"
 )
 
 // init the package-level logger system,
@@ -49,7 +50,9 @@ func NewPeerByIpAndPort(ip string, port int32, nid int32, TEM transport.Transpor
 	peer.TEM = TEM
 	peerAddr := peerComm.ExtractAddress(ip, int(port), nid)
 
-	conn, err := grpc.Dial(ip + ":" + strconv.Itoa(int(port)), grpc.WithInsecure())
+	//opts:=membersrvc.GetGrpcClientOpts()
+	//conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), opts...)
+	conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
 	if err != nil {
 		errors.New("Cannot establish a connection!")
 		log.Error("err:", err)
@@ -63,10 +66,10 @@ func NewPeerByIpAndPort(ip string, port int32, nid int32, TEM transport.Transpor
 	//package the information
 	//review 开始交换秘钥
 	helloMessage := pb.Message{
-		MessageType:pb.Message_HELLO,
-		Payload:peer.TEM.GetLocalPublicKey(),
-		From:localAddr,
-		MsgTimeStamp:time.Now().UnixNano(),
+		MessageType:  pb.Message_HELLO,
+		Payload:      peer.TEM.GetLocalPublicKey(),
+		From:         localAddr,
+		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	retMessage, err2 := peer.Client.Chat(context.Background(), &helloMessage)
 	if err2 != nil {
@@ -76,7 +79,11 @@ func NewPeerByIpAndPort(ip string, port int32, nid int32, TEM transport.Transpor
 		//review 取得对方的秘钥
 		if retMessage.MessageType == pb.Message_HELLO_RESPONSE {
 			remotePublicKey := retMessage.Payload
-			peer.TEM.GenerateSecret(remotePublicKey, peer.Addr.Hash)
+			genErr := peer.TEM.GenerateSecret(remotePublicKey, peer.Addr.Hash)
+			if genErr != nil {
+				log.Error("genErr", err)
+			}
+
 			log.Notice("secret", len(peer.TEM.GetSecret(peer.Addr.Hash)))
 			peer.ID = int(retMessage.From.ID)
 			if err != nil {
@@ -97,7 +104,7 @@ func NewPeerByIpAndPort(ip string, port int32, nid int32, TEM transport.Transpor
 // this function invokes the remote function peer-to-peer,
 // which implements the service that prototype file declares
 //
-func (this *Peer)Chat(msg pb.Message) (*pb.Message, error) {
+func (this *Peer) Chat(msg pb.Message) (*pb.Message, error) {
 	log.Debug("调用了广播方法", msg.From.ID, ">>>", this.Addr.ID)
 	this.chatMux.Lock()
 	defer this.chatMux.Unlock()
@@ -118,7 +125,7 @@ func (this *Peer)Chat(msg pb.Message) (*pb.Message, error) {
 // Close the peer connection
 // this function should ensure no thread use this thead
 // this is not thread safety
-func (this *Peer)Close() (bool, error) {
+func (this *Peer) Close() (bool, error) {
 	err := this.Connection.Close()
 	if err != nil {
 		log.Error("err:", err)

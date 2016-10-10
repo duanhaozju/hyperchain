@@ -6,15 +6,15 @@
   "port3":"8003",
   "port4":"8004",
 
-  "node1":"localhost",
-  "node2":"localhost",
-  "node3":"localhost",
-  "node4":"localhost",
+  "node1":"127.0.0.1",
+  "node2":"127.0.0.1",
+  "node3":"127.0.0.1",
+  "node4":"127.0.0.1",
 
-  "external_node1":"localhost",
-  "external_node2":"localhost",
-  "external_node3":"localhost",
-  "external_node4":"localhost",
+  "external_node1":"127.0.0.1",
+  "external_node2":"127.0.0.1",
+  "external_node3":"127.0.0.1",
+  "external_node4":"127.0.0.1",
 
   "external_port1":"8081",
   "external_port2":"8082",

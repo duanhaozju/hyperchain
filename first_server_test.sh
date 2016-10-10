@@ -3,8 +3,7 @@ set -e
 
 govendor build
 
-PRIMARY="115.159.122.96"
-MAXNODE=7
+PRIMARY="115.159.113.143"
 
 ./local_addkey.sh
 
@@ -15,6 +14,8 @@ scp -r peerconfig.json satoshi@$PRIMARY:/home/satoshi/
 scp -r config.yaml satoshi@$PRIMARY:/home/satoshi/
 scp -r genesis.json satoshi@$PRIMARY:/home/satoshi/
 scp -r keystore satoshi@$PRIMARY:/home/satoshi/
+scp -r membersrvc.yaml satoshi@$PRIMARY:/home/satoshi/
+scp -r cert satoshi@$PRIMARY:/home/satoshi/
 scp -r innerserverlist.txt satoshi@$PRIMARY:/home/satoshi/
 scp -r server_addkey.sh satoshi@$PRIMARY:/home/satoshi/
 ssh -t satoshi@$PRIMARY "chmod a+x server_addkey.sh && bash server_addkey.sh"

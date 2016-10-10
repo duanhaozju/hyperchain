@@ -9,9 +9,9 @@ package common
 import (
 	"github.com/op/go-logging"
 	"os"
-//	"time"
-//	"strconv"
-//	"log"
+	//"time"
+	//"strconv"
+	//"log"
 )
 
  //This applied when test, no writing log

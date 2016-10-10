@@ -17,19 +17,20 @@ func TestCalcResponseCount(t *testing.T) {
 		t.Errorf("%d not equal 2, TestCalcResponseCount fail", count)
 	}
 }
-
-/*func TestCalcResponseCount(t *testing.T) {
+/*
+func TestCalcResponseCount(t *testing.T) {
 	log.Info("test =============> > > TestInitDB")
-	InitDB(8084)
+	InitDB(8082)
 	//blockUtilsCase.Number = GetHeightOfChain() + 1
 	//commonHash := crypto.NewKeccak256Hash("keccak256")
 	//WriteBlock(blockUtilsCase, commonHash)
 	fmt.Println(GetHeightOfChain())
-	for i := uint64(0); i <= GetHeightOfChain(); i += 1 {
+	fmt.Println(GetChainCopy().LatestBlockHash)
+	*//*for i := uint64(0); i <= GetHeightOfChain(); i += 1 {
 		count,_ := CalcResponseCount(i, int64(300))
 
 		fmt.Println(count)
-	}
+	}*//*
 
 }*/
 func TestCalcCommitBatchAVGTime(t *testing.T) {

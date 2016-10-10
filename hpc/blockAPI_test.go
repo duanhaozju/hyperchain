@@ -19,13 +19,13 @@ func TestPublicBlockAPI_GetBlocks(t *testing.T) {
 	a, err := blockAPI.GetBlocks()
 	//
 	if err != nil {
-		t.Errorf("%v",err)
+		t.Errorf("%v", err)
 	}
 	t.Log(a)
 
-	cTime, bTime := blockAPI.QueryCommitAndBatchTime(SendQueryArgs{From:*NewInt64ToNumber(1),To:*NewInt64ToNumber(2),})
+	cTime, bTime := blockAPI.QueryCommitAndBatchTime(SendQueryArgs{From: *NewInt64ToNumber(1), To: *NewInt64ToNumber(2)})
 
-	t.Log(cTime,bTime)
+	t.Log(cTime, bTime)
 
 	num := blockAPI.QueryTransactionSum()
 	t.Log(num)

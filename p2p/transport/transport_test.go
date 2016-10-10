@@ -10,13 +10,13 @@ package transport
 import (
 	"testing"
 
+	"encoding/hex"
 	"fmt"
 	"time"
-	"encoding/hex"
 )
 
 func TestDes3(t *testing.T) {
-	first:=time.Now().UnixNano()
+	first := time.Now().UnixNano()
 	fmt.Println(first)
 	for i := 0; i < 700; i += 1 {
 		key := []byte("sfe023f_sefiel#fi32lf3e!")
@@ -31,10 +31,8 @@ func TestDes3(t *testing.T) {
 		}
 		fmt.Println(string(origData))
 	}
-	now:=time.Now().UnixNano()
-	fmt.Println((now-first)/int64(time.Millisecond))
-
-
+	now := time.Now().UnixNano()
+	fmt.Println((now - first) / int64(time.Millisecond))
 
 	//var hSM0, hSM1 HandShakeManager
 
@@ -54,18 +52,26 @@ func TestDes3(t *testing.T) {
 
 var HSM1 *HandShakeManager
 var HSM2 *HandShakeManager
-func init(){
+
+func init() {
 	HSM1 = NewHandShakeManger()
 	HSM2 = NewHandShakeManger()
 	pbk1 := HSM1.GetLocalPublicKey()
 	pbk2 := HSM2.GetLocalPublicKey()
-	HSM1.GenerateSecret(pbk2,"2")
-	HSM2.GenerateSecret(pbk1,"1")
+	HSM1.GenerateSecret(pbk2, "2")
+	HSM2.GenerateSecret(pbk1, "1")
 }
 
 func TestHandShakeManager_DecWithSecret(t *testing.T) {
-	enctrypted := HSM1.EncWithSecret([]byte("HELLO"),"2")
-	t.Log("加密之后信息",hex.EncodeToString(enctrypted))
-	decrypted := HSM2.DecWithSecret(enctrypted,"1")
+	enctrypted := HSM1.EncWithSecret([]byte("HELLO"), "2")
+	t.Log("加密之后信息", hex.EncodeToString(enctrypted))
+	decrypted := HSM2.DecWithSecret(enctrypted, "1")
 	fmt.Println(string(decrypted))
+}
+
+func BenchmarkHandShakeManager_DecWithSecret(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		enctrypted := HSM1.EncWithSecret([]byte("HELLO"), "2")
+		HSM2.DecWithSecret(enctrypted, "1")
+	}
 }

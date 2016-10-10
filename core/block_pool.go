@@ -9,13 +9,17 @@ import (
 	"sync"
 
 	"encoding/hex"
+	"errors"
+	"github.com/golang/protobuf/proto"
 
+	//"fmt"
 	"hyperchain/common"
 	"hyperchain/core/state"
 	"hyperchain/core/types"
 	"hyperchain/core/vm/params"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
+	"hyperchain/trie"
 	"strconv"
 	"time"
 )
@@ -23,9 +27,11 @@ import (
 const (
 	maxQueued = 64 // max limit of queued block in pool
 )
+
 var (
-	tempReceiptsMap map[uint64] types.Receipts
+	tempReceiptsMap map[uint64]types.Receipts
 )
+
 type BlockPool struct {
 	demandNumber uint64
 	maxNum       uint64
@@ -39,7 +45,7 @@ type BlockPool struct {
 }
 
 func NewBlockPool(eventMux *event.TypeMux) *BlockPool {
-	tempReceiptsMap = make(map[uint64] types.Receipts)
+	tempReceiptsMap = make(map[uint64]types.Receipts)
 
 	pool := &BlockPool{
 		eventMux: eventMux,
@@ -59,22 +65,22 @@ func NewBlockPool(eventMux *event.TypeMux) *BlockPool {
 
 // this method is used to Exec the transactions, if the err of one execution is not nil, we will
 // abandon this transaction. And this method will return the new transactions and its' hash
-func (pool *BlockPool) ExecTxs(sequenceNum uint64,transactions []types.Transaction) ([]types.Transaction,common.Hash,error){
+func (pool *BlockPool) ExecTxs(sequenceNum uint64, transactions []types.Transaction) ([]types.Transaction, common.Hash, error) {
 	var (
-		receipts types.Receipts
-		env      = make(map[string]string)
+		receipts        types.Receipts
+		env             = make(map[string]string)
 		newTransactions []types.Transaction
 	)
 
 	// 1.prepare the current enviroment
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
-		return nil,common.Hash{},err
+		return nil, common.Hash{}, err
 	}
 	currentBlock, _ := GetBlock(db, GetLatestBlockHash())
 	statedb, err := state.New(common.BytesToHash(currentBlock.MerkleRoot), db)
 	if err != nil {
-		return nil,common.Hash{},err
+		return nil, common.Hash{}, err
 	}
 	env["currentNumber"] = strconv.FormatUint(currentBlock.Number, 10)
 	env["currentGasLimit"] = "10000000"
@@ -84,38 +90,38 @@ func (pool *BlockPool) ExecTxs(sequenceNum uint64,transactions []types.Transacti
 	for i, tx := range transactions {
 		statedb.StartRecord(tx.BuildHash(), common.Hash{}, i)
 		receipt, _, _, err := ExecTransaction(tx, vmenv)
-		if err == nil{
-			newTransactions = append(newTransactions,tx)
+		if err == nil {
+			newTransactions = append(newTransactions, tx)
 			receipts = append(receipts, receipt)
 		}
 	}
 
 	// 3.save the receipts to the tempReceiptsMap
 	tempReceiptsMap[sequenceNum] = receipts
-	return newTransactions,crypto.NewKeccak256Hash("Keccak256").Hash(newTransactions),nil
+	return newTransactions, crypto.NewKeccak256Hash("Keccak256").Hash(newTransactions), nil
 }
 
-func (pool *BlockPool) CommitOrRollbackBlockEvent(sequenceNum uint64,transactions []types.Transaction,
-		timestamp int64,commitTime int64,CommitStatus bool) (error){
+func (pool *BlockPool) CommitOrRollbackBlockEvent(sequenceNum uint64, transactions []types.Transaction,
+	timestamp int64, commitTime int64, CommitStatus bool) error {
 	// 1.init a new block
 	newBlock := new(types.Block)
 	for _, tx := range transactions {
 		newBlock.Transactions = append(newBlock.Transactions, &tx)
 	}
-	newBlock.Timestamp = timestamp;
+	newBlock.Timestamp = timestamp
 	newBlock.Number = sequenceNum
 	// 2. add the block to the chain
-	pool.AddBlockWithoutExecTxs(newBlock,crypto.NewKeccak256Hash("Keccak256"),commitTime)
+	pool.AddBlockWithoutExecTxs(newBlock, crypto.NewKeccak256Hash("Keccak256"), commitTime)
 
 	// 3.if CommitStatus is true,save the receipts to database
 	//   or reset the statedb
-	if CommitStatus{
+	if CommitStatus {
 		// save the receipts to database
 		receiptInst, _ := GetReceiptInst()
 		for _, receipt := range tempReceiptsMap[newBlock.Number] {
 			receiptInst.PutReceipt(common.BytesToHash(receipt.TxHash), receipt)
 		}
-	}else {
+	} else {
 		// prepare the current enviroment
 		db, err := hyperdb.GetLDBDatabase()
 		if err != nil {
@@ -128,7 +134,7 @@ func (pool *BlockPool) CommitOrRollbackBlockEvent(sequenceNum uint64,transaction
 		statedb.Reset(common.BytesToHash(currentBlock.BlockHash))
 	}
 	// 4.delete the receipts of newBlock.Number
-	delete(tempReceiptsMap,newBlock.Number)
+	delete(tempReceiptsMap, newBlock.Number)
 	return nil
 }
 
@@ -152,7 +158,6 @@ func (pool *BlockPool) eventLoop() {
 
 //check block sequence and validate in chain
 func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int64) {
-
 	if block.Number == 0 {
 		WriteBlock(block, commonHash, commitTime)
 		return
@@ -178,12 +183,13 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 			log.Fatal(err)
 		}
 
-		block,_:=GetBlockByNumber(db,block.Number)
+		block, _ := GetBlockByNumber(db, block.Number)
 		//rollback chain height,latestHash
-		UpdateChainByViewChange(block.Number-1,block.ParentHash)
+		UpdateChainByViewChange(block.Number-1, block.ParentHash)
 		keyNum := strconv.FormatInt(int64(block.Number), 10)
-		DeleteBlock(db,append(blockNumPrefix, keyNum...))
+		DeleteBlock(db, append(blockNumPrefix, keyNum...))
 		WriteBlock(block, commonHash, commitTime)
+		pool.demandNumber = GetChainCopy().Height + 1
 		log.Notice("replated block number,number is: ", block.Number)
 		return
 	}
@@ -237,7 +243,6 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	if err := ProcessBlock(block); err != nil {
 		log.Fatal(err)
 	}
-
 	block.WriteTime = time.Now().UnixNano()
 	block.CommitTime = commitTime
 	block.BlockHash = block.Hash(commonHash).Bytes()
@@ -253,7 +258,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 		log.Fatal(err)
 	}
 	//if err := PutBlock(db, block.BlockHash, block); err != nil {
-	if err := PutBlockTx(db, commonHash,block.BlockHash, block); err != nil {
+	if err := PutBlockTx(db, commonHash, block.BlockHash, block); err != nil {
 		log.Fatal(err)
 	}
 	// write transaction
@@ -270,8 +275,6 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	//CommitStatedbToBlockchain()
 }
 
-
-
 func ProcessBlock(block *types.Block) error {
 	var (
 		receipts types.Receipts
@@ -283,7 +286,7 @@ func ProcessBlock(block *types.Block) error {
 	}
 	parentBlock, _ := GetBlock(db, block.ParentHash)
 	statedb, e := state.New(common.BytesToHash(parentBlock.MerkleRoot), db)
-	//fmt.Printf("[Before Process %d] %s\n", block.Number, string(statedb.Dump()))
+	//fmt.Println("[Before Process %d] %s\n", block.Number, string(statedb.Dump()))
 	if err != nil {
 		return e
 	}
@@ -300,16 +303,60 @@ func ProcessBlock(block *types.Block) error {
 	for _, receipt := range receipts {
 		receiptInst.PutReceipt(common.BytesToHash(receipt.TxHash), receipt)
 	}
-		//WriteReceipts(receipts)
+	//WriteReceipts(receipts)
 
 	root, _ := statedb.Commit()
-
 	block.MerkleRoot = root.Bytes()
-	//fmt.Printf("[After Process %d] %s\n", block.Number, string(statedb.Dump()))
+
+	//fmt.Println("[After Process %d] %s\n", block.Number, string(statedb.Dump()))
 	return nil
 }
 
+func BuildTree(prefix []byte, ctx []interface{}) ([]byte, error) {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		return nil, err
+	}
+	trie, err := trie.New(common.Hash{}, db)
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range ctx {
+		switch t := item.(type) {
+		case *types.Receipt:
+			data, err := proto.Marshal(t)
+			if err != nil {
+				return nil, err
+			}
+			trie.Update(append(receiptsPrefix, t.TxHash...), data)
+		case *types.Transaction:
+			data, err := proto.Marshal(t)
+			if err != nil {
+				return nil, err
+			}
+			trie.Update(append(transactionPrefix, t.BuildHash().Bytes()...), data)
+		default:
+			return nil, errors.New("Invalid element type when build tree")
+		}
+	}
+	return trie.Hash().Bytes(), nil
+}
 
+func convertR(receipts types.Receipts) (ret []interface{}) {
+	ret = make([]interface{}, len(receipts))
+	for idx, v := range receipts {
+		ret[idx] = v
+	}
+	return
+}
+func convertT(txs []*types.Transaction) (ret []interface{}) {
+	ret = make([]interface{}, len(txs))
+	for idx, v := range txs {
+		ret[idx] = v
+	}
+	//fmt.Printf("[After Process %d] %s\n", block.Number, string(statedb.Dump()))
+	return nil
+}
 
 //check block sequence and validate in chain
 func (pool *BlockPool) AddBlockWithoutExecTxs(block *types.Block, commonHash crypto.CommonHash, commitTime int64) {
@@ -339,11 +386,11 @@ func (pool *BlockPool) AddBlockWithoutExecTxs(block *types.Block, commonHash cry
 			log.Fatal(err)
 		}
 
-		block,_:=GetBlockByNumber(db,block.Number)
+		block, _ := GetBlockByNumber(db, block.Number)
 		//rollback chain height,latestHash
-		UpdateChainByViewChange(block.Number-1,block.ParentHash)
+		UpdateChainByViewChange(block.Number-1, block.ParentHash)
 		keyNum := strconv.FormatInt(int64(block.Number), 10)
-		DeleteBlock(db,append(blockNumPrefix, keyNum...))
+		DeleteBlock(db, append(blockNumPrefix, keyNum...))
 		WriteBlockWithoutExecTx(block, commonHash, commitTime)
 		log.Notice("replated block number,number is: ", block.Number)
 		return
@@ -383,6 +430,7 @@ func (pool *BlockPool) AddBlockWithoutExecTxs(block *types.Block, commonHash cry
 	}
 
 }
+
 // write the block to db but don't exec the txs
 func WriteBlockWithoutExecTx(block *types.Block, commonHash crypto.CommonHash, commitTime int64) {
 	log.Info("block number is ", block.Number)

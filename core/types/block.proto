@@ -8,10 +8,12 @@ message Block {
 	repeated Transaction transactions = 3;
 	int64 timestamp = 4;
 	bytes merkleRoot = 5;
-	uint64 number = 6;
-	int64 writeTime = 7;
-	int64 commitTime = 8;
-	int64 evmTime=9;
+	bytes txRoot = 6;
+	bytes receiptRoot = 7;
+	uint64 number = 8;
+	int64 writeTime = 9;
+	int64 commitTime = 10;
+	int64 evmTime=11;
 }
 
 message Blocks{
