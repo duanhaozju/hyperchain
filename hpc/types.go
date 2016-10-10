@@ -20,6 +20,11 @@ func NewUint64ToNumber(n uint64) *Number {
 	return &num
 }
 
+func NewIntToNumber(n int) *Number {
+	num := Number(n)
+	return &num
+}
+
 func (n Number) Hex() string { return "0x" + strconv.FormatInt(int64(n), 16) }
 
 // MarshalJSON serialize given number to JSON

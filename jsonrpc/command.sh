@@ -26,6 +26,9 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByBlockH
 # 根据区块number和索引查询交易信息 GetTransactionsByBlockNumberAndIndex
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionsByBlockNumberAndIndex","params":[1,0],"id":1}'
 
+# 查询指定区块的交易数量
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getBlockTransactionCountByHash","params":["<block hash>"],"id":1}'
+
 ########## block 服务 ##########
 # 得到最新区块 LastestBlock
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_lastestBlock","params":[],"id":1}'

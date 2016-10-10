@@ -417,7 +417,7 @@ func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
 	}, nil
 }
 
-// GetTransactionReceipt returns transaction's receipt for given transaction hash
+// GetTransactionReceipt returns transaction's receipt for given transaction hash.
 func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) *types.ReceiptTrans {
 	return core.GetReceipt(hash)
 }
@@ -530,4 +530,22 @@ func (tran *PublicTransactionAPI) GetTransactionsByBlockNumberAndIndex(n Number,
 	return nil, nil
 }
 
+// GetBlockTransactionCountByHash returns the number of block transactions for given block hash.
+func (tran *PublicTransactionAPI) GetBlockTransactionCountByHash(hash common.Hash) (*Number, error){
+	db, err := hyperdb.GetLDBDatabase()
 
+	if err != nil {
+		log.Errorf("Open database error: %v", err)
+		return nil, err
+	}
+
+	block, err := core.GetBlock(db, hash[:])
+	if err != nil {
+		log.Errorf("%v", err)
+		return nil, err
+	}
+
+	txCount := len(block.Transactions)
+
+	return NewIntToNumber(txCount), nil
+}
