@@ -1,4 +1,4 @@
-10.105.78.88
-10.105.72.247
-10.105.122.99
+10.105.122.32
+10.105.79.193
+10.105.123.48
 please leave this line to ensure the script could run correctly

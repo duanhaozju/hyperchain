@@ -17,13 +17,16 @@ type Code []byte
 var logger = glog.Logger{}
 var (
 	//TODO set the vm.config
-	db, err    = hyperdb.GetLDBDatabase()
-	statedb, _ = state.New(common.Hash{}, db)
+	//db, err    = hyperdb.GetLDBDatabase()
+	statedb *state.StateDB
 	env        = make(map[string]string)
 	vmenv      = (*Env)(nil)
 )
 
-func init() {
+func InitEnv() {
+
+	db, _    := hyperdb.GetLDBDatabase()
+	statedb, _ = state.New(common.Hash{}, db)
 	//vm.Precompiled = make(map[string]*vm.PrecompiledAccount)
 	env["currentNumber"] = "1"
 	env["currentGasLimit"] = "10000000"
