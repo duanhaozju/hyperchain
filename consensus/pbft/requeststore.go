@@ -4,7 +4,7 @@ import "container/list"
 
 type requestContainer struct {
 	key string
-	req *Request
+	req *Transaction
 }
 
 type orderedRequests struct {
@@ -16,7 +16,7 @@ func (a *orderedRequests) Len() int {
 	return a.order.Len()
 }
 
-func (a *orderedRequests) wrapRequest(req *Request) requestContainer {
+func (a *orderedRequests) wrapRequest(req *Transaction) requestContainer {
 	return requestContainer{
 		key: hash(req),
 		req: req,
@@ -28,7 +28,7 @@ func (a *orderedRequests) has(key string) bool {
 	return ok
 }
 
-func (a *orderedRequests) add(request *Request) {
+func (a *orderedRequests) add(request *Transaction) {
 	rc := a.wrapRequest(request)
 	if !a.has(rc.key) {
 		e := a.order.PushBack(rc)
@@ -36,13 +36,13 @@ func (a *orderedRequests) add(request *Request) {
 	}
 }
 
-func (a *orderedRequests) adds(requests []*Request) {
+func (a *orderedRequests) adds(requests []*Transaction) {
 	for _, req := range requests {
 		a.add(req)
 	}
 }
 
-func (a *orderedRequests) remove(request *Request) bool {
+func (a *orderedRequests) remove(request *Transaction) bool {
 	rc := a.wrapRequest(request)
 	e, ok := a.presence[rc.key]
 	if !ok {
@@ -53,7 +53,7 @@ func (a *orderedRequests) remove(request *Request) bool {
 	return true
 }
 
-func (a *orderedRequests) removes(requests []*Request) bool {
+func (a *orderedRequests) removes(requests []*Transaction) bool {
 	allSuccess := true
 	for _, req := range requests {
 		if !a.remove(req) {
@@ -88,22 +88,22 @@ func newRequestStore() *requestStore {
 }
 
 // storeOutstanding adds a request to the outstanding request list
-func (rs *requestStore) storeOutstanding(request *Request) {
+func (rs *requestStore) storeOutstanding(request *Transaction) {
 	rs.outstandingRequests.add(request)
 }
 
 // storePending adds a request to the pending request list
-func (rs *requestStore) storePending(request *Request) {
+func (rs *requestStore) storePending(request *Transaction) {
 	rs.pendingRequests.add(request)
 }
 
 // storePending adds a slice of requests to the pending request list
-func (rs *requestStore) storePendings(requests []*Request) {
+func (rs *requestStore) storePendings(requests []*Transaction) {
 	rs.pendingRequests.adds(requests)
 }
 
 // remove deletes the request from both the outstanding and pending lists, it returns whether it was found in each list respectively
-func (rs *requestStore) remove(request *Request) (outstanding, pending bool) {
+func (rs *requestStore) remove(request *Transaction) (outstanding, pending bool) {
 	outstanding = rs.outstandingRequests.remove(request)
 	pending = rs.pendingRequests.remove(request)
 	return
@@ -115,7 +115,7 @@ func (rs *requestStore) hasNonPending() bool {
 }
 
 // getNextNonPending returns up to the next n outstanding, but not pending requests
-func (rs *requestStore) getNextNonPending(n int) (result []*Request) {
+func (rs *requestStore) getNextNonPending(n int) (result []*Transaction) {
 	for oreqc := rs.outstandingRequests.order.Front(); oreqc != nil; oreqc = oreqc.Next() {
 		oreq := oreqc.Value.(requestContainer)
 		if rs.pendingRequests.has(oreq.key) {

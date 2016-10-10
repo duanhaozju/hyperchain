@@ -28,19 +28,8 @@ func (a sortableUint64Slice) Less(i, j int) bool {
 // =============================================================================
 // helper functions for create batch
 // =============================================================================
-// covert the transaction to request
-func (pbft *pbftProtocal) txToReq(tx *protos.Message) *Request {
 
-	req := &Request{
-		Timestamp: 	tx.Timestamp,
-		Payload:   	tx.Payload,
-		ReplicaId: 	pbft.id,
-	}
-
-	return req
-}
-
-func (pbft *pbftProtocal) postRequestEvent(event *Request) {
+func (pbft *pbftProtocal) postRequestEvent(event *Transaction) {
 
 	pbft.mux.Lock()
 	defer pbft.mux.Unlock()

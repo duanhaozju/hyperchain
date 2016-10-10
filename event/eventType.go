@@ -42,11 +42,12 @@ type ReceiveSyncBlockEvent struct{ Payload []byte }
 //receive new block event from node consensus event for consensus module
 type ExeTxsEvent struct{
 	Transactions	[]types.Transaction
+	Digest		string
 	SeqNo		uint64
 	IsPrimary	bool
 }
 
-type ValidateBatch struct {
+type ValidatedTxs struct {
 	Transactions	[]types.Transaction
 	SeqNo		uint64
 }

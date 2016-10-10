@@ -3,7 +3,6 @@ package pbft
 import (
 	"testing"
 	"time"
-	"strconv"
 )
 
 func TestOrderedRequests(t *testing.T) {
@@ -35,23 +34,19 @@ func TestOrderedRequests(t *testing.T) {
 	if or.order.Len() != 0 || len(or.presence) != 0 {
 		t.Error("should have 0 len")
 	}
-	or.adds([]*Request{r1, r2, r3})
+	or.adds([]*Transaction{r1, r2, r3})
 
 	if or.order.Back().Value.(requestContainer).req != r3 {
 		t.Error("incorrect order")
 	}
 }
 
-func createPbftReq(tag int, replica uint64) (req *Request) {
+func createPbftReq(tag int, replica uint64) (tx *Transaction) {
 
-	var payload []byte
-	temp := strconv.Itoa(tag)
-	copy(payload[:], temp)
-
-	req = &Request{
-		Timestamp: time.Now().UnixNano(),
-		ReplicaId: replica,
-		Payload:   payload,
+	tx = &Transaction{
+		Timestamp:	time.Now().UnixNano(),
+		Id:	replica,
+		Value:		tag,
 	}
 
 	return
@@ -63,7 +58,7 @@ func BenchmarkOrderedRequests(b *testing.B) {
 
 	Nreq := 1000
 
-	reqs := make(map[string]*Request)
+	reqs := make(map[string]*Transaction)
 	for i := 0; i < Nreq; i++ {
 		rc := or.wrapRequest(createPbftReq(i, 0))
 		reqs[rc.key] = rc.req
