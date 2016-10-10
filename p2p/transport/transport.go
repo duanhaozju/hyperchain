@@ -8,14 +8,13 @@ import (
 	"crypto/cipher"
 	"github.com/op/go-logging"
 	"crypto/elliptic"
-
-	"hyperchain/p2p/transport/ecdh"
-	"crypto/rand"
-	"crypto"
-	"encoding/hex"
-	"crypto/des"
 	"bytes"
+	"crypto"
 	"crypto/aes"
+	"crypto/des"
+	"crypto/rand"
+	"encoding/hex"
+	"hyperchain/p2p/transport/ecdh"
 )
 var log *logging.Logger // package-level logger
 func init() {
