@@ -81,7 +81,7 @@ func (h *helper) Execute(reqBatch *pb.ExeMessage) error {
 	}
 
 	// Post the event to outer
-	go h.msgQ.Post(exeEvent)
+	h.msgQ.Post(exeEvent)
 
 	return nil
 }
