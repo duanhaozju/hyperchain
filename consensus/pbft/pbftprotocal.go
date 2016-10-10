@@ -197,6 +197,12 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 		logger.Infof("PBFT null requests disabled")
 	}
 
+	if pbft.viewChangePeriod > 0 {
+		logger.Infof("PBFT view change period = %v", pbft.viewChangePeriod)
+	} else {
+		logger.Infof("PBFT automatic view change disabled")
+	}
+
 	// init the logs
 	pbft.certStore = make(map[msgID]*msgCert)
 	pbft.reqBatchStore = make(map[string]*RequestBatch)
@@ -255,7 +261,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	logger.Infof("PBFT Batch timeout = %v", pbft.batchTimeout)
 	pbft.reqStore = newRequestStore()
 
-	logger.Infof("--------PBFT finish start, nodeID: %d--------", pbft.id)
+	logger.Noticef("--------PBFT finish start, nodeID: %d--------", pbft.id)
 
 	return pbft
 }
@@ -263,6 +269,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 // Close tells us to release resources we are holding
 func (pbft *pbftProtocal) Close() {
 	pbft.batchTimer.Halt()
+	pbft.newViewTimer.Halt()
 	pbft.nullRequestTimer.Halt()
 }
 
@@ -313,13 +320,13 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event{
 		}
 	default:
 		logger.Debugf("batch processEvent, default: %+v", event)
-		return pbft.ProcessPbftEvent(event)
+		return pbft.processPbftEvent(event)
 	}
 	return nil
 }
 
 // allow the view-change protocol to kick-off when the timer expires
-func (pbft *pbftProtocal) ProcessPbftEvent(e events.Event) events.Event {
+func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 
 	var err error
 	logger.Debugf("Replica %d processing event", pbft.id)
