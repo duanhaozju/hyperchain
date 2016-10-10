@@ -463,7 +463,7 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
             return false;
         }
 
-        SummaryService.getAvgTimeAndCount($scope.txAvg.from, $scope.txAvg.to)
+        SummaryService.getAvgTimeAndCount($scope.blockAvg.from, $scope.blockAvg.to)
             .then(function(res){
                 $scope.txAvgTime = res.time
             }, function(error){
