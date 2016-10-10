@@ -193,8 +193,8 @@ func PutBlockTx(db hyperdb.Database,commonHash crypto.CommonHash, key []byte, t 
 	err = batch.Put(append(blockNumPrefix, keyNum...),t.BlockHash)
 	//put tx<-->block num,hash,index
 
-	for _,tx:=range t.Transactions{
-		/*meta := struct {
+	/*for _,tx:=range t.Transactions{
+		*//*meta := struct {
 			BlockHash  common.Hash
 			BlockIndex uint64
 			Index      uint64
@@ -208,9 +208,9 @@ func PutBlockTx(db hyperdb.Database,commonHash crypto.CommonHash, key []byte, t 
 		if err !=nil{
 			return err
 		}
-		err = batch.Put(keyTxBlock,dataTxBlock)*/
-		/*keyTxBlock := append(tx.Hash(commonHash).Bytes(),txMetaSuffix...)
-		err:=batch.Put(keyTxBlock,t.BlockHash)*/
+		err = batch.Put(keyTxBlock,dataTxBlock)*//*
+		*//*keyTxBlock := append(tx.Hash(commonHash).Bytes(),txMetaSuffix...)
+		err:=batch.Put(keyTxBlock,t.BlockHash)*//*
 		txKey := tx.Hash(commonHash).Bytes()
 		txKeyFact := append(transactionPrefix, txKey...)
 		txValue, err := proto.Marshal(tx)
@@ -222,7 +222,7 @@ func PutBlockTx(db hyperdb.Database,commonHash crypto.CommonHash, key []byte, t 
 		//if err !=nil{
 		//	return err
 		//}
-	}
+	}*/
 	return batch.Write()
 }
 

@@ -240,9 +240,9 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	currentChain := GetChainCopy()
 
 	block.ParentHash = currentChain.LatestBlockHash
-	/*if err := ProcessBlock(block); err != nil {
+	if err := ProcessBlock(block,commonHash ); err != nil {
 		log.Fatal(err)
-	}*/
+	}
 	block.WriteTime = time.Now().UnixNano()
 	block.CommitTime = commitTime
 	block.BlockHash = block.Hash(commonHash).Bytes()
@@ -269,7 +269,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
 
 	//if err := PutBlock(db, block.BlockHash, block); err != nil {
-	go PutBlockTx(db, commonHash, block.BlockHash, block)
+	 PutBlockTx(db, commonHash, block.BlockHash, block)
 		/*if err := PutBlockTx(db, commonHash, block.BlockHash, block); err != nil {
 		log.Fatal(err)
 	}*/
@@ -280,9 +280,9 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	//CommitStatedbToBlockchain()
 }
 
-func ProcessBlock(block *types.Block) error {
+func ProcessBlock(block *types.Block,commonHash crypto.CommonHash) error {
 	var (
-		receipts types.Receipts
+		//receipts types.Receipts
 		env      = make(map[string]string)
 	)
 	db, err := hyperdb.GetLDBDatabase()
@@ -299,19 +299,41 @@ func ProcessBlock(block *types.Block) error {
 	env["currentGasLimit"] = "10000000"
 	vmenv := NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
 
+	batch := db.NewBatch()
 	for i, tx := range block.Transactions {
+
 		statedb.StartRecord(tx.BuildHash(), common.Hash{}, i)
-		receipt, _, _, _ := ExecTransaction(*tx, vmenv)
-		receipts = append(receipts, receipt)
+		//receipt, _, _, _ := ExecTransaction(*tx, vmenv)
+		ExecTransaction(*tx, vmenv)
+		//receipts = append(receipts, receipt)
+
+
+		txKey := tx.Hash(commonHash).Bytes()
+		txKeyFact := append(transactionPrefix, txKey...)
+		txValue, err := proto.Marshal(tx)
+		if err != nil {
+			return nil
+		}
+		/*data, err := proto.Marshal(receipt)
+
+
+		if err := batch.Put(append(receiptsPrefix, receipt.TxHash...), data); err != nil {
+			return err
+		}*/
+
+
+		 batch.Put(txKeyFact, txValue)
 	}
-	receiptInst, _ := GetReceiptInst()
+	/*receiptInst, _ := GetReceiptInst()
 	for _, receipt := range receipts {
 		receiptInst.PutReceipt(common.BytesToHash(receipt.TxHash), receipt)
-	}
+	}*/
 	//WriteReceipts(receipts)
 
 	root, _ := statedb.Commit()
 	block.MerkleRoot = root.Bytes()
+	/*root, _ := statedb.Commit()
+	block.MerkleRoot = root.Bytes()*/
 
 	//fmt.Println("[After Process %d] %s\n", block.Number, string(statedb.Dump()))
 	return nil

@@ -307,7 +307,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			//call consensus module
 			log.Debug("###### enter ConsensusEvent")
 			//logger.GetLogger().Println("###### enter ConsensusEvent")
-			go self.consenter.RecvMsg(ev.Payload)
+			 self.consenter.RecvMsg(ev.Payload)
 		case event.ExeTxsEvent:
 			self.blockPool.ExecTxs(ev.SeqNo,ev.Transactions)
 		/*case event.CommitOrRollbackBlockEvent:

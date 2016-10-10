@@ -90,7 +90,7 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		gas        = tx.Gas()
 		gasPrice   = tx.GasPrice()
 		amount     = tx.Amount()
-		statedb, _ = env.Db().(*state.StateDB)
+		//statedb, _ = env.Db().(*state.StateDB)
 	)
 	//not check sign
 	/*if err := preCheck(tx); err != nil {
@@ -110,7 +110,7 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		ret, _, err = Exec(env, &from, &to, data, gas, gasPrice, amount)
 	}
 
-	receipt = types.NewReceipt(statedb.IntermediateRoot().Bytes(), gas)
+	/*receipt = types.NewReceipt(statedb.IntermediateRoot().Bytes(), gas)
 	receipt.ContractAddress = addr.Bytes()
 	receipt.TxHash = tx.BuildHash().Bytes()
 	// todo replace the gasused
@@ -124,8 +124,8 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 	} else {
 		receipt.Status = types.Receipt_SUCCESS
 		receipt.Message = nil
-	}
-	return receipt, ret, addr, err
+	}*/
+	return nil, ret, addr, err
 }
 
 func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
