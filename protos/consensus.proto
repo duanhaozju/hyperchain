@@ -8,6 +8,7 @@ message Message {
         TRANSACTION = 0;
         CONSENSUS = 1;
         STATE_UPDATED = 2;
+        NULL_REQUEST = 3;
     }
     Type type = 1;
     int64 timestamp = 2;
@@ -39,3 +40,6 @@ message BlockchainInfo {
     bytes previousBlockHash = 3;
 }
 
+message NullRequestMessage {
+    uint64 seqNo = 1;
+}

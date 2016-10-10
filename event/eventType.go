@@ -4,25 +4,29 @@
 // last modified:2016-08-25
 package event
 
-
+import "hyperchain/core/types"
 
 //consensus event incoming from outer,peers post
-type ConsensusEvent struct{Payload []byte }
+type ConsensusEvent struct{ Payload []byte }
 
-type AliveEvent struct{Payload bool}
+type AliveEvent struct{ Payload bool }
 
 // send consensus event to outer peers for consensus module
 type BroadcastConsensusEvent struct{ Payload []byte }
 
 //receive new block event from node consensus event for consensus module
-type NewBlockEvent struct{ Payload []byte
-			   CommitTime int64}
+type NewBlockEvent struct{
+	Payload		[]byte
+	CommitTime	int64
+}
 
 //general tx local
 type NewTxEvent struct{ Payload []byte  }
 
-type TxUniqueCastEvent struct{ Payload []byte
-			       PeerId uint64  }
+type TxUniqueCastEvent struct{
+	Payload	[]byte
+	PeerId	uint64
+}
 
 type NewBlockPoolEvent struct{ Payload []byte  }
 
@@ -30,11 +34,30 @@ type NewBlockPoolEvent struct{ Payload []byte  }
 type SendCheckpointSyncEvent struct{Payload []byte }
 
 //receive event from consensus module
-type StateUpdateEvent struct{Payload []byte }
+type StateUpdateEvent struct{ Payload []byte }
 
 // after get all required block,send this block to node
-type ReceiveSyncBlockEvent struct{Payload []byte }
+type ReceiveSyncBlockEvent struct{ Payload []byte }
 
+//receive new block event from node consensus event for consensus module
+type ExeTxsEvent struct{
+	Transactions	[]types.Transaction
+	SeqNo		uint64
+	IsPrimary	bool
+}
 
+type ValidateBatch struct {
+	Transactions	[]types.Transaction
+	SeqNo		uint64
+}
+
+// if the CommitStatus is true, we will commit the blocks and save the statedb
+// or we will rollback the statedb
+// Flag == true, commit; Flag == false, rollback
+type CommitOrRollbackBlockEvent struct{
+	SeqNo		uint64
+	CommitTime	int64
+	Flag		bool
+}
 
 

@@ -14,7 +14,7 @@ var http  = require('http');
 
 function testRequest(){
     var options = {
-        host: "114.55.64.132",
+        host: "115.159.35.77",
         port: "8081",
         path: '/query',
         method: 'POST',
@@ -22,7 +22,7 @@ function testRequest(){
             'Content-Type': 'application/json'
         }
     };
-    var post_data = JSON.stringify({"from":"186","to":"248"});
+    var post_data = JSON.stringify({"from":"1","to":"1688"});
     console.log(options);
 // Set up the request
     var post_req = http.request(options, function(res) {

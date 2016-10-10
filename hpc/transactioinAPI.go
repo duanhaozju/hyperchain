@@ -119,7 +119,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				}
 
 			}
-			time.Sleep(25 * time.Millisecond)
+			time.Sleep(90 * time.Millisecond)
 
 		}
 
