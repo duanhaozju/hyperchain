@@ -150,9 +150,7 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 
 	msg := pbftMsgHelper(&Message{Payload: &Message_ViewChange{ViewChange: vc}}, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
-
 	pbft.vcResendTimer.Reset(pbft.vcResendTimeout, viewChangeResendTimerEvent{})
-
 	return pbft.recvViewChange(vc)
 }
 
@@ -293,7 +291,7 @@ func (pbft *pbftProtocal) canExecuteToTarget(specLastExec uint64, initialCp View
 			}
 
 			quorum := 0
-			for p, _ := range cert.commit {
+			for p := range cert.commit {
 				// Was this committed in the previous view
 				if p.View == idx.v && p.SequenceNumber == seqNo {
 					quorum++

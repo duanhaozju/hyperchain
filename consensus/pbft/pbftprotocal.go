@@ -139,6 +139,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.pbftManager.SetReceiver(pbft)
 	pbftTimerFactory := events.NewTimerFactoryImpl(pbft.pbftManager)
 
+	pbft.vcResendTimer = pbftTimerFactory.CreateTimer()
 	pbft.nullRequestTimer = pbftTimerFactory.CreateTimer()
 	pbft.newViewTimer = pbftTimerFactory.CreateTimer()
 	pbft.N = config.GetInt("general.N")
@@ -156,15 +157,25 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	}
 
 	pbft.L = pbft.logMultiplier * pbft.K // log size
+	pbft.viewChangePeriod = uint64(config.GetInt("general.viewchangeperiod"))
 	pbft.byzantine = config.GetBool("general.byzantine")
-	pbft.requestTimeout, err = time.ParseDuration(config.GetString("timeout.request"))
 
+	pbft.vcResendTimeout, err = time.ParseDuration(config.GetString("timeout.resendviewchange"))
+	if err != nil {
+		panic(fmt.Errorf("Cannot parse resendviewchange timeout: %s", err))
+	}
+
+	pbft.newViewTimeout, err = time.ParseDuration(config.GetString("timeout.viewchange"))
+	if err != nil {
+		panic(fmt.Errorf("Cannot parse viewchange timeout: %s", err))
+	}
+
+	pbft.requestTimeout, err = time.ParseDuration(config.GetString("timeout.request"))
 	if err != nil {
 		panic(fmt.Errorf("Cannot parse request timeout: %s", err))
 	}
 
 	pbft.nullRequestTimeout, err = time.ParseDuration(config.GetString("timeout.nullrequest"))
-
 	if err != nil {
 		pbft.nullRequestTimeout = 0
 	}
@@ -186,6 +197,12 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 		logger.Infof("PBFT null requests disabled")
 	}
 
+	if pbft.viewChangePeriod > 0 {
+		logger.Infof("PBFT view change period = %v", pbft.viewChangePeriod)
+	} else {
+		logger.Infof("PBFT automatic view change disabled")
+	}
+
 	// init the logs
 	pbft.certStore = make(map[msgID]*msgCert)
 	pbft.reqBatchStore = make(map[string]*RequestBatch)
@@ -195,12 +212,16 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.qset = make(map[qidx]*ViewChange_PQ)
 	pbft.committedCert = make(map[msgID]string)
 	pbft.chkptCertStore = make(map[chkptID]*chkptCert)
+	pbft.newViewStore = make(map[uint64]*NewView)
+	pbft.viewChangeStore = make(map[vcidx]*ViewChange)
+	pbft.missingReqBatches=make(map[string]bool)
 
 	// initialize state transfer
 	pbft.hChkpts = make(map[uint64]uint64)
 
 	pbft.chkpts[0] = "XXX GENESIS"
 
+	pbft.lastNewViewTimeout = pbft.newViewTimeout
 	pbft.outstandingReqBatches = make(map[string]*RequestBatch)
 
 	pbft.restoreState()
@@ -215,8 +236,6 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.batchManager.SetReceiver(pbft)
 	etf := events.NewTimerFactoryImpl(pbft.batchManager)
 	pbft.batchManager.Start()
-
-	logger.Info("333333")
 
 	// initialize the batchTimeout
 	pbft.batchTimer = etf.CreateTimer()
@@ -240,9 +259,9 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 
 	logger.Infof("PBFT Batch size = %d", pbft.batchSize)
 	logger.Infof("PBFT Batch timeout = %v", pbft.batchTimeout)
-	//pbft.reqStore = newRequestStore()
+	pbft.reqStore = newRequestStore()
 
-	logger.Infof("--------PBFT finish start, nodeID: %d--------", pbft.id)
+	logger.Noticef("--------PBFT finish start, nodeID: %d--------", pbft.id)
 
 	return pbft
 }
@@ -250,6 +269,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 // Close tells us to release resources we are holding
 func (pbft *pbftProtocal) Close() {
 	pbft.batchTimer.Halt()
+	pbft.newViewTimer.Halt()
 	pbft.nullRequestTimer.Halt()
 }
 
@@ -299,14 +319,14 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event{
 			return pbft.sendBatch()
 		}
 	default:
-		logger.Debugf("batch processEvent, default: ")
-		return pbft.ProcessPbftEvent(event)
+		logger.Debugf("batch processEvent, default: %+v", event)
+		return pbft.processPbftEvent(event)
 	}
 	return nil
 }
 
 // allow the view-change protocol to kick-off when the timer expires
-func (pbft *pbftProtocal) ProcessPbftEvent(e events.Event) events.Event {
+func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 
 	var err error
 	logger.Debugf("Replica %d processing event", pbft.id)
@@ -442,16 +462,15 @@ func (pbft *pbftProtocal) processNullRequest(msg *protos.Message) error {
 
 func (pbft *pbftProtocal) processRequest(req *Request) error {
 
-	//pbft.reqStore.storeOutstanding(req)
-	//pbft.startTimerIfOutstandingRequests()
-
 	primary := pbft.primary(pbft.view)
-	if (primary != pbft.id) {
-		// Broadcast request to primary
+	if !pbft.activeView {
+		pbft.reqStore.storeOutstanding(req)
+	} else if primary != pbft.id {
+		//Broadcast request to primary
 		consensusMsg := &ConsensusMessage{Payload: &ConsensusMessage_Request{Request: req}}
 		pbMsg := consensusMsgHelper(consensusMsg, pbft.id)
 		pbft.helper.InnerUnicast(pbMsg, primary)
-	} else if (primary == pbft.id && pbft.activeView) {
+	} else {
 		return pbft.leaderProcReq(req)
 	}
 
@@ -532,7 +551,7 @@ func (pbft *pbftProtocal) nullRequestHandler() {
 
 	if pbft.primary(pbft.view) != pbft.id {
 		// backup expected a null request, but primary never sent one
-		logger.Info("Replica %d null request timer expired, sending view change", pbft.id)
+		logger.Infof("Replica %d null request timer expired, sending view change", pbft.id)
 
 		pbft.sendViewChange()
 	} else {
@@ -543,7 +562,7 @@ func (pbft *pbftProtocal) nullRequestHandler() {
 		//	pbft.logstatic.RecordCount("block_SendNullRequest_nullRequestHandler","currentView")
 		//	return
 		//}
-		logger.Info("Primary %d null request timer expired, sending null request", pbft.id)
+		logger.Infof("Primary %d null request timer expired, sending null request", pbft.id)
 		pbft.sendNullRequest()
 	}
 }
@@ -875,7 +894,7 @@ func (pbft *pbftProtocal) executeOutstanding() {
 		}
 	}
 
-	//pbft.startTimerIfOutstandingRequests()
+	pbft.startTimerIfOutstandingRequests()
 
 }
 

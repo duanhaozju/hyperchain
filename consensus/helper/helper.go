@@ -28,7 +28,7 @@ type Stack interface {
 }
 
 // InnerBroadcast broadcast the consensus message between vp nodes
-func (h *helper) InnerBroadcast(msg *pb.Message) error{
+func (h *helper) InnerBroadcast(msg *pb.Message) error {
 
 	tmpMsg, err := proto.Marshal(msg)
 
@@ -47,7 +47,7 @@ func (h *helper) InnerBroadcast(msg *pb.Message) error{
 }
 
 // InnerUnicast unicast the transaction message between to primary
-func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error{
+func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error {
 
 	tmpMsg, err := proto.Marshal(msg)
 
@@ -67,7 +67,7 @@ func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error{
 }
 
 // Execute transfers the transactions decided by consensus to outer
-func (h *helper) Execute(reqBatch *pb.ExeMessage) error{
+func (h *helper) Execute(reqBatch *pb.ExeMessage) error {
 
 	tmpMsg, err := proto.Marshal(reqBatch)
 
@@ -75,13 +75,13 @@ func (h *helper) Execute(reqBatch *pb.ExeMessage) error{
 		return err
 	}
 
-	exeEvent := event.NewBlockEvent{
+	exeEvent := event.NewBlockEvent {
 		Payload:	tmpMsg,
 		CommitTime:	time.Now().UnixNano(),
 	}
 
 	// Post the event to outer
-	go h.msgQ.Post(exeEvent)
+	h.msgQ.Post(exeEvent)
 
 	return nil
 }
@@ -98,7 +98,7 @@ func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
 	updateStateEvent := event.SendCheckpointSyncEvent {
 		Payload:	tmpMsg,
 	}
-	logger.Error("-------------post UpdateStateEvent----------")
+	logger.Info("-------------post UpdateStateEvent----------")
 	go h.msgQ.Post(updateStateEvent)
 
 	return nil
