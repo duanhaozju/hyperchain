@@ -14,6 +14,7 @@ import (
 	"time"
 	//"hyperchain/accounts"
 	"errors"
+	"encoding/hex"
 )
 
 const (
@@ -23,6 +24,7 @@ const (
 
 var (
 	log        *logging.Logger // package-level logger
+	encryption = crypto.NewEcdsaEncrypto("ecdsa")
 	kec256Hash = crypto.NewKeccak256Hash("keccak256")
 )
 
@@ -46,8 +48,10 @@ type SendTxArgs struct {
 	GasPrice  *Number		`json:"gasPrice"`
 	Value     *Number		`json:"value"`
 	Payload   string		`json:"payload"`
-	Signature string		`json:"signature"`
+	//Signature string		`json:"signature"`
 	//Nonce    *jsonrpc.HexNumber  `json:"nonce"`
+	// --- test -----
+	PrivKey string			`json:"privKey"`
 }
 
 type TransactionResult struct {
@@ -81,12 +85,26 @@ func prepareExcute(args SendTxArgs) SendTxArgs{
 	return args
 }
 
-// SendTransaction is to build a transaction object,and then post event NewTxEvent,
-// if the sender's balance is enough, return tx hash
-func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error){
+//func (tran *PublicTransactionAPI) SendRawTransaction(args SendTxArgs) (common.Hash, error) {
+//
+//	tx := new(types.Transaction)
+//	//var tx *types.Transaction
+//	if err := rlp.DecodeBytes(common.FromHex(args.Signature), tx); err != nil {
+//		log.Info("rlp.DecodeBytes error: ", err)
+//		return common.Hash{}, err
+//	}
+//	log.Infof("tx: %#v", tx)
+//	log.Info(tx.Signature)
+//	log.Infof("tx sign: %#v", tx.Signature)
+//
+//	return tx.BuildHash(), nil
+//}
 
+
+
+func (tran *PublicTransactionAPI) SendTransactionTest (args SendTxArgs) (common.Hash, error) {
 	var tx *types.Transaction
-	var found bool
+	//var found bool
 
 	realArgs := prepareExcute(args)
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), nil)
@@ -96,26 +114,87 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	if err != nil {
 		return common.Hash{}, err
 	}
-	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, []byte(args.Signature))
-	//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 
+	//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, common.FromHex(args.Signature))
+	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 
-	if tran.pm == nil {
-
-		// Test environment
-		found = true
-	} else {
-
-		// Development environment
-		am := tran.pm.AccountManager
-		_, found = am.Unlocked[args.From]
+	key, err := hex.DecodeString(args.PrivKey)
+	if err != nil {
+		return common.Hash{}, err
 	}
+	pri := crypto.ToECDSA(key)
+	log.Info(pri)
+
+	log.Infof("############# %d: start send request#############", time.Now().Unix())
+	//start := time.Now().Unix()
+	//end := start + 6
+	//end:=start+500
+
+	//for start := start; start < end; start = time.Now().Unix() {
+	//	for i := 0; i < 10; i++ {
+	//		tx.TimeStamp = time.Now().UnixNano()
+			hash := tx.SighHash(kec256Hash).Bytes()
+			sig, err := encryption.Sign(hash,pri)
+			if err != nil{
+				return common.Hash{},err
+			}
+
+			tx.Signature = sig
+			txBytes, err := proto.Marshal(tx)
+
+			if err != nil {
+				log.Errorf("proto.Marshal(tx) error: %v", err)
+			}
+			if manager.GetEventObject() != nil {
+				go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+			} else {
+				log.Warning("manager is Nil")
+			}
+		//}
+		//time.Sleep(90 * time.Millisecond)
+	//}
+
+	log.Infof("############# %d: end send request#############", time.Now().Unix())
+
+	return tx.BuildHash(),nil
+}
+
+// SendTransaction is to build a transaction object,and then post event NewTxEvent,
+// if the sender's balance is enough, return tx hash
+func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error){
+
+	var tx *types.Transaction
+	//var found bool
+
+	realArgs := prepareExcute(args)
+	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), nil)
+
+	value, err := proto.Marshal(txValue)
+
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, common.FromHex(args.Signature))
+	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
+
+
+	//if tran.pm == nil {
+	//
+	//	// Test environment
+	//	found = true
+	//} else {
+	//
+	//	// Development environment
+	//	am := tran.pm.AccountManager
+	//	_, found = am.Unlocked[args.From]
+	//}
 	//am := tran.pm.AccountManager
 
 	//if (!core.VerifyBalance(tx)){
 	//	return common.Hash{},errors.New("Not enough balance!")
 	//}else
-	if found == true {
+	//if found == true {
 
 		// Balance is enough
 
@@ -126,7 +205,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//end:=start+500
 
 		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < 100; i++ {
+			for i := 0; i < 10; i++ {
 				tx.TimeStamp = time.Now().UnixNano()
 
 				// calculate signature
@@ -186,9 +265,9 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	*/
 	return tx.BuildHash(),nil
 
-	} else {
-		return common.Hash{}, errors.New("account don't unlock")
-	}
+	//} else {
+	//	return common.Hash{}, errors.New("account don't unlock")
+	//}
 }
 
 
@@ -213,14 +292,14 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 	if args.To == nil {
 
 		// 部署合约
-		tx = types.NewTransaction(realArgs.From[:], nil, value, []byte(args.Signature))
-		//tx = types.NewTransaction(realArgs.From[:], nil, value)
+		//tx = types.NewTransaction(realArgs.From[:], nil, value, []byte(args.Signature))
+		tx = types.NewTransaction(realArgs.From[:], nil, value)
 
 	} else {
 
 		// 调用合约或者普通交易(普通交易还需要加检查余额)
-		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, []byte(args.Signature))
-		//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
+		//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, []byte(args.Signature))
+		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 	}
 
 	if tran.pm == nil {

@@ -90,7 +90,7 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		statedb, _ = env.Db().(*state.StateDB)
 	)
 	//not check sign
-	/*if err := preCheck(tx); err != nil {
+	if err := preCheck(tx); err != nil {
 		receipt = types.NewReceipt(statedb.IntermediateRoot().Bytes(), gas)
 		receipt.ContractAddress = addr.Bytes()
 		receipt.TxHash = tx.BuildHash().Bytes()
@@ -100,13 +100,13 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		receipt.Status = types.Receipt_SIGFAILED
 		receipt.Message = []byte(err.Error())
 		return receipt, nil, addr, err
-	}*/
+	}
+
 	if tx.To == nil {
 		ret, addr, err = Exec(env, &from, nil, data, gas, gasPrice, amount)
 	} else {
 		ret, _, err = Exec(env, &from, &to, data, gas, gasPrice, amount)
 	}
-
 	receipt = types.NewReceipt(statedb.IntermediateRoot().Bytes(), gas)
 	receipt.ContractAddress = addr.Bytes()
 	receipt.TxHash = tx.BuildHash().Bytes()
@@ -114,7 +114,6 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 	receipt.GasUsed = 100000
 	receipt.Ret = ret
 	receipt.SetLogs(statedb.GetLogs(common.BytesToHash(receipt.TxHash)))
-
 	if err != nil && IsValueTransferErr(err) {
 		receipt.Status = types.Receipt_OUTOFBALANCE
 		receipt.Message = []byte(err.Error())
@@ -122,13 +121,20 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		receipt.Status = types.Receipt_SUCCESS
 		receipt.Message = nil
 	}
+
 	return receipt, ret, addr, err
 }
 
 func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 	gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
+	var sender vm.Account
 
-	sender := vmenv.Db().GetAccount(*from)
+	if !(vmenv.Db().Exist(*from)) {
+		sender = vmenv.Db().CreateAccount(*from)
+		vmenv.Db().AddBalance(*from,big.NewInt(100000))
+	} else {
+		sender = vmenv.Db().GetAccount(*from)
+	}
 	contractCreation := (nil == to)
 
 	//ret,err = env.Call(sender,*to,data,gas,gasPrice,value)

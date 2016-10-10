@@ -121,6 +121,7 @@ func outputBlockResult(block *types.Block) *BlockResult {
 		TxCounts:   *NewInt64ToNumber(txCounts),
 		Counts:     *NewInt64ToNumber(count),
 		Percents:   strconv.FormatFloat(percent*100, 'f', 2, 32) + "%",
+		Transactions: block.Transactions,
 	}
 }
 
