@@ -97,6 +97,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		return common.Hash{}, err
 	}
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, []byte(args.Signature))
+	//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 
 
 	if tran.pm == nil {
@@ -213,11 +214,13 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 
 		// 部署合约
 		tx = types.NewTransaction(realArgs.From[:], nil, value, []byte(args.Signature))
+		//tx = types.NewTransaction(realArgs.From[:], nil, value)
 
 	} else {
 
 		// 调用合约或者普通交易(普通交易还需要加检查余额)
 		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, []byte(args.Signature))
+		//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 	}
 
 	if tran.pm == nil {
@@ -320,8 +323,6 @@ func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
 		}
 	}
 
-
-
 	return &TransactionResult{
 		Hash: 		txHash,
 		BlockNumber: 	*NewUint64ToNumber(bn),
@@ -333,7 +334,7 @@ func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
 		Gas: 		*NewInt64ToNumber(txValue.GasLimit),
 		GasPrice: 	*NewInt64ToNumber(txValue.Price),
 		Timestamp: 	time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
-		ExecuteTime:	(blk.WriteTime - tx.TimeStamp) / int64(time.Millisecond),
+		ExecuteTime:	*NewInt64ToNumber((blk.WriteTime - tx.TimeStamp) / int64(time.Millisecond)),
 	}, nil
 }
 
