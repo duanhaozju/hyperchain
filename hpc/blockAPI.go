@@ -12,13 +12,13 @@ import (
 type PublicBlockAPI struct{}
 
 type BlockResult struct {
-	Number     Number      `json:"number"`
+	Number     *Number      `json:"number"`
 	Hash       common.Hash `json:"hash"`
 	ParentHash common.Hash `json:"parentHash"`
 	WriteTime  string      `json:"writeTime"`
-	AvgTime    Number      `json:"avgTime"`
-	TxCounts   Number      `json:"txcounts"`
-	Counts     Number      `json:"Counts"`
+	AvgTime    *Number      `json:"avgTime"`
+	TxCounts   *Number      `json:"txcounts"`
+	Counts     *Number      `json:"Counts"`
 	Percents   string      `json:"percents"`
 	//Transactions []*types.Transaction	`json:transactions`
 	Transactions []interface{}	`json:transactions`
@@ -39,7 +39,7 @@ func (blk *PublicBlockAPI) GetBlocks() ([]*BlockResult, error) {
 		return nil, err
 	}
 
-	height := block.Number
+	height := *block.Number
 
 	// only genesis block
 	if height == 0 {
@@ -123,14 +123,14 @@ func outputBlockResult(block *types.Block) (*BlockResult, error) {
 
 
 	return &BlockResult{
-		Number:     *NewUint64ToNumber(block.Number),
-		Hash:       common.BytesToHash(block.BlockHash),
-		ParentHash: common.BytesToHash(block.ParentHash),
-		WriteTime:  time.Unix(block.WriteTime/int64(time.Second), 0).Format("2006-01-02 15:04:05"),
-		AvgTime:    *NewInt64ToNumber(core.CalcResponseAVGTime(block.Number, block.Number)),
-		TxCounts:   *NewInt64ToNumber(txCounts),
-		Counts:     *NewInt64ToNumber(count),
-		Percents:   strconv.FormatFloat(percent*100, 'f', 2, 32) + "%",
+		Number:       NewUint64ToNumber(block.Number),
+		Hash:         common.BytesToHash(block.BlockHash),
+		ParentHash:   common.BytesToHash(block.ParentHash),
+		WriteTime:    time.Unix(block.WriteTime/int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+		AvgTime:      NewInt64ToNumber(core.CalcResponseAVGTime(block.Number, block.Number)),
+		TxCounts:     NewInt64ToNumber(txCounts),
+		Counts:       NewInt64ToNumber(count),
+		Percents:     strconv.FormatFloat(percent*100, 'f', 2, 32) + "%",
 		Transactions: transactions,
 	}, nil
 }
