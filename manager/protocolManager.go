@@ -224,8 +224,6 @@ func (self *ProtocolManager) syncBlockLoop() {
 								}
 								core.UpdateRequire(tmp, tmpHash, core.GetChainCopy().RecoveryNum)
 								log.Debug("Next Required", core.GetChainCopy().RequiredBlockNum, common.BytesToHash(core.GetChainCopy().RequireBlockHash).Hex())
-
-								time.Sleep(80 * time.Millisecond)
 								core.PutBlockTx(db, self.commonHash, blocks.Batch[i].BlockHash, blocks.Batch[i])
 
 								// receive all block in chain
