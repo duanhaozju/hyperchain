@@ -98,7 +98,8 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	}
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 
-
+	//tx.PeerId =tx tran.pm.Peermanager.GetNodeId()
+	//tx.TransactionHash = tx.BuildHash()
 
 
 	if tran.pm == nil {
