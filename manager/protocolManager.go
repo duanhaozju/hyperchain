@@ -123,6 +123,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 				CurrentNumber:  core.GetChainCopy().Height,
 				PeerId:         UpdateStateMessage.Id,
 			}
+			log.Notice("syncCheckpointLoop : ", blockChainInfo.Height)
 			// For Test
 			// Midify the current highest block
 			/*
@@ -207,7 +208,7 @@ func (self *ProtocolManager) syncBlockLoop() {
 				db, _ := hyperdb.GetLDBDatabase()
 				for i := len(blocks.Batch) - 1; i >= 0; i -= 1 {
 					if blocks.Batch[i].Number <= core.GetChainCopy().RequiredBlockNum {
-						log.Notice("Receive Block: ", blocks.Batch[i].Number, common.BytesToHash(blocks.Batch[i].BlockHash).Hex())
+						log.Debug("Receive Block: ", blocks.Batch[i].Number, common.BytesToHash(blocks.Batch[i].BlockHash).Hex())
 						if blocks.Batch[i].Number == core.GetChainCopy().RequiredBlockNum {
 							acceptHash := blocks.Batch[i].HashBlock(self.commonHash).Bytes()
 							if common.Bytes2Hex(acceptHash) == common.Bytes2Hex(core.GetChainCopy().RequireBlockHash) {
@@ -222,8 +223,9 @@ func (self *ProtocolManager) syncBlockLoop() {
 									}
 								}
 								core.UpdateRequire(tmp, tmpHash, core.GetChainCopy().RecoveryNum)
-								log.Notice("Next Required", core.GetChainCopy().RequiredBlockNum, common.BytesToHash(core.GetChainCopy().RequireBlockHash).Hex())
+								log.Debug("Next Required", core.GetChainCopy().RequiredBlockNum, common.BytesToHash(core.GetChainCopy().RequireBlockHash).Hex())
 
+								time.Sleep(80 * time.Millisecond)
 								core.PutBlockTx(db, self.commonHash, blocks.Batch[i].BlockHash, blocks.Batch[i])
 
 								// receive all block in chain
@@ -232,7 +234,7 @@ func (self *ProtocolManager) syncBlockLoop() {
 									lastBlk, _ := core.GetBlockByNumber(db, core.GetChainCopy().RequiredBlockNum+1)
 									if common.Bytes2Hex(lastBlk.ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash) {
 										// execute all received block at one time
-										log.Notice("Recv All blocks required, match")
+										log.Debug("Recv All blocks required, match")
 										for i := core.GetChainCopy().RequiredBlockNum + 1; i <= core.GetChainCopy().RecoveryNum; i += 1 {
 											blk, err := core.GetBlockByNumber(db, i)
 											//											originMerkleRoot := blk.MerkleRoot
@@ -240,6 +242,7 @@ func (self *ProtocolManager) syncBlockLoop() {
 												continue
 											} else {
 												core.ProcessBlock(blk)
+												self.blockPool.SetDemandNumber(blk.Number + 1)
 												/*
 													if bytes.Compare(blk.MerkleRoot, originMerkleRoot) != 0 {
 														// stateDb has difference status
@@ -266,6 +269,7 @@ func (self *ProtocolManager) syncBlockLoop() {
 										if err != nil {
 											log.Error(err)
 										}
+										time.Sleep(2000 * time.Millisecond)
 										self.consenter.RecvMsg(msgPayload)
 										break
 									} else {
@@ -281,7 +285,7 @@ func (self *ProtocolManager) syncBlockLoop() {
 							// block with smaller height arrive early than expected
 							// put into db
 							if ret, _ := core.GetBlockByNumber(db, blocks.Batch[i].Number); ret != nil {
-								log.Notice("Receive Duplicate Block: ", blocks.Batch[i].Number, common.BytesToHash(blocks.Batch[i].BlockHash).Hex())
+								log.Debug("Receive Duplicate Block: ", blocks.Batch[i].Number, common.BytesToHash(blocks.Batch[i].BlockHash).Hex())
 								// already exists in db
 								continue
 							}
@@ -304,8 +308,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 			//accept msg from consensus module
 			//commit block into block pool
 
-			log.Info("write block success")
-
+			log.Debug("write block success")
 			self.commitNewBlock(ev.Payload, ev.CommitTime)
 			//self.fetcher.Enqueue(ev.Payload)
 
@@ -337,7 +340,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 		case event.ConsensusEvent:
 			//call consensus module
-			log.Notice("###### enter ConsensusEvent")
+			log.Debug("###### enter ConsensusEvent")
 			//logger.GetLogger().Println("###### enter ConsensusEvent")
 			/*
 				receiveMessage := &protos.Message{}
@@ -346,7 +349,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 					log.Notice("ReceiveSyncBlockEvent checkpoint in consensus ")
 				}
 			*/
-			self.consenter.RecvMsg(ev.Payload)
+			go self.consenter.RecvMsg(ev.Payload)
 		case event.ExeTxsEvent:
 			//self.blockPool.ExecTxs(ev.SequenceNum, ev.Transactions)
 			/*
