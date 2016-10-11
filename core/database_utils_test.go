@@ -263,8 +263,17 @@ func TestGetId(t *testing.T) {
 	t.Log(GetId())
 }
 
-func TestGetBlockByNumber(t *testing.T) {
-	db, _ := hyperdb.GetLDBDatabase()
-	blk, err := GetBlockByNumber(db, 123)
-	t.Log(blk, err)
-}
+//func TestUpdate(t *testing.T) {
+//	InitDB(8081)
+//	height := GetHeightOfChain()
+//	fmt.Println(height)
+//	InitDB(8082)
+//	height = GetHeightOfChain()
+//	fmt.Println(height)
+//	InitDB(8083)
+//	height = GetHeightOfChain()
+//	fmt.Println(height)
+//	InitDB(8084)
+//	height = GetHeightOfChain()
+//	fmt.Println(height)
+//}

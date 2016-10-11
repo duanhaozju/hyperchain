@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"time"
 	//"hyperchain/membersrvc"
+
 )
 
 var log *logging.Logger // package-level logger
@@ -203,8 +204,8 @@ func (this *Node) StartServer() {
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 		log.Fatal("PLEASE RESTART THE SERVER NODE!")
-	}
-	/*opts:=membersrvc.GetGrpcServerOpts()
+	}/*
+	opts:=membersrvc.GetGrpcServerOpts()
 	this.gRPCServer = grpc.NewServer(opts...)*/
 	this.gRPCServer = grpc.NewServer()
 	pb.RegisterChatServer(this.gRPCServer, this)

@@ -17,13 +17,16 @@ type Code []byte
 var logger = glog.Logger{}
 var (
 	//TODO set the vm.config
-	db, err    = hyperdb.GetLDBDatabase()
-	statedb, _ = state.New(common.Hash{}, db)
+	//db, err    = hyperdb.GetLDBDatabase()
+	statedb *state.StateDB
 	env        = make(map[string]string)
 	vmenv      = (*Env)(nil)
 )
 
-func init() {
+func InitEnv() {
+
+	db, _    := hyperdb.GetLDBDatabase()
+	statedb, _ = state.New(common.Hash{}, db)
 	//vm.Precompiled = make(map[string]*vm.PrecompiledAccount)
 	env["currentNumber"] = "1"
 	env["currentGasLimit"] = "10000000"
@@ -87,7 +90,7 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		gas        = tx.Gas()
 		gasPrice   = tx.GasPrice()
 		amount     = tx.Amount()
-		statedb, _ = env.Db().(*state.StateDB)
+		//statedb, _ = env.Db().(*state.StateDB)
 	)
 	//not check sign
 	/*if err := preCheck(tx); err != nil {
@@ -107,9 +110,28 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		ret, _, err = Exec(env, &from, &to, data, gas, gasPrice, amount)
 	}
 
-	receipt = types.NewReceipt(statedb.IntermediateRoot().Bytes(), gas)
+	//receipt = types.NewReceipt(statedb.IntermediateRoot().Bytes(), gas)
+	/*go func() {
+		receipt = types.NewReceipt(nil, gas)
+		receipt.ContractAddress = addr.Bytes()
+		//receipt.TxHash = tx.BuildHash().Bytes()
+		// todo replace the gasused
+		receipt.GasUsed = 100000
+		//receipt.Ret = ret
+		//receipt.SetLogs(statedb.GetLogs(common.BytesToHash(receipt.TxHash)))
+
+		*//*if err != nil && IsValueTransferErr(err) {
+			receipt.Status = types.Receipt_OUTOFBALANCE
+			receipt.Message = []byte(err.Error())
+		} else {
+			receipt.Status = types.Receipt_SUCCESS
+			receipt.Message = nil
+		}*//*
+	}()*/
+	receipt = types.NewReceipt(nil, gas)
 	receipt.ContractAddress = addr.Bytes()
-	receipt.TxHash = tx.BuildHash().Bytes()
+	//todo add tx hash in tx struct
+	//receipt.TxHash = tx.BuildHash().Bytes()
 	// todo replace the gasused
 	receipt.GasUsed = 100000
 	receipt.Ret = ret
@@ -149,11 +171,7 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 	}
 	// todo replace the gasused
 	// todo just for test
-	receipt := types.NewReceipt(nil, gas)
-	receipt.GasUsed = 100000
-	receipt.ContractAddress = addr.Bytes()
-	receipt.TxHash = common.Hash{}.Bytes()
-	receipt.Ret = ret
+
 	//WriteReceipts(types.Receipts{receipt,receipt,receipt})
 	//fmt.Println("receipt from db",GetReceipt(common.Hash{}))
 	return ret, addr, err

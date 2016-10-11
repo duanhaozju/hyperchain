@@ -458,7 +458,7 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
 
     $scope.queryTxAvg = function(){
 
-        if (isEmpty($scope.blockAvg)) {
+        if (isEmpty($scope.txAvg)) {
             alert("字段不能为空");
             return false;
         }

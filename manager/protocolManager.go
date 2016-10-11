@@ -117,7 +117,9 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 
 			blockChainInfo := &protos.BlockchainInfo{}
 			proto.Unmarshal(UpdateStateMessage.TargetId, blockChainInfo)
-
+			if core.GetChainCopy().RecoveryNum >= blockChainInfo.Height {
+				return
+			}
 			required := &recovery.CheckPointMessage{
 				RequiredNumber: blockChainInfo.Height,
 				CurrentNumber:  core.GetChainCopy().Height,
@@ -330,7 +332,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 			var peers []uint64
 			peers = append(peers, ev.PeerId)
-			self.peerManager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
+			go self.peerManager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
 			//go self.peerManager.SendMsgToPeers(ev.Payload,)
 		case event.NewTxEvent:
 
@@ -347,7 +349,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 					log.Notice("ReceiveSyncBlockEvent checkpoint in consensus ")
 				}
 			*/
-			go self.consenter.RecvMsg(ev.Payload)
+			self.consenter.RecvMsg(ev.Payload)
 		case event.ExeTxsEvent:
 			//self.blockPool.ExecTxs(ev.SequenceNum, ev.Transactions)
 			/*

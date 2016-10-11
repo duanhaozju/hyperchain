@@ -12,6 +12,9 @@ import (
 	//"time"
 	//"strconv"
 	//"log"
+	//"time"
+	//"strconv"
+	//"log"
 )
 
  //This applied when test, no writing log
@@ -36,7 +39,8 @@ func InitLog(level logging.Level,loggerDir string,port int){
 	logging.SetBackend(backendStderr)
 }
 
-// This applied when local debug, writing log
+
+
 //func InitLog(level logging.Level,loggerDir string,port int){
 //	timestamp := time.Now().Unix()
 //	tm := time.Unix(timestamp, 0)

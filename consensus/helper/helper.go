@@ -56,8 +56,8 @@ func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error {
 	}
 
 	unicastEvent := event.TxUniqueCastEvent{
-		Payload: tmpMsg,
-		PeerId:  to,
+		Payload:	tmpMsg,
+		PeerId:		to,
 	}
 
 	// Post the event to outer
@@ -75,9 +75,9 @@ func (h *helper) Execute(reqBatch *pb.ExeMessage) error {
 		return err
 	}
 
-	exeEvent := event.NewBlockEvent{
-		Payload:    tmpMsg,
-		CommitTime: time.Now().UnixNano(),
+	exeEvent := event.NewBlockEvent {
+		Payload:	tmpMsg,
+		CommitTime:	time.Now().UnixNano(),
 	}
 
 	// Post the event to outer
@@ -95,8 +95,8 @@ func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
 		return err
 	}
 
-	updateStateEvent := event.SendCheckpointSyncEvent{
-		Payload: tmpMsg,
+	updateStateEvent := event.SendCheckpointSyncEvent {
+		Payload:	tmpMsg,
 	}
 	logger.Info("-------------post UpdateStateEvent----------")
 	go h.msgQ.Post(updateStateEvent)

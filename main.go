@@ -23,6 +23,7 @@ import (
 	"hyperchain/accounts"
 	"hyperchain/jsonrpc"
 	"hyperchain/membersrvc"
+	"runtime"
 )
 
 type argT struct {
@@ -40,6 +41,7 @@ func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*argT)
 
+		runtime.GOMAXPROCS(-1)
 		membersrvc.Start("./", argv.NodeId)
 
 		//init log
@@ -57,6 +59,7 @@ func main() {
 		core.InitDB(argv.LocalPort)
 		//core.TxSum = core.CalTransactionSum()
 
+		core.InitEnv()
 		//init genesis
 		core.CreateInitBlock(argv.GenesisPath)
 

@@ -184,39 +184,58 @@ func PutBlockTx(db hyperdb.Database, commonHash crypto.CommonHash, key []byte, t
 		return err
 	}
 	keyFact := append(blockPrefix, key...)
-	if err := db.Put(keyFact, data); err != nil {
-		return err
-	}
-	keyNum := strconv.FormatInt(int64(t.Number), 10)
-	err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
-
-	//put tx<-->block num,hash,index
 	batch := db.NewBatch()
-	for i, tx := range t.Transactions {
-		meta := struct {
-			BlockHash  common.Hash
-			BlockIndex uint64
-			Index      uint64
-		}{
-			BlockHash:  common.BytesToHash(t.BlockHash),
-			BlockIndex: t.Number,
-			Index:      uint64(i),
-		}
-		keyTxBlock := append(tx.Hash(commonHash).Bytes(), txMetaSuffix...)
-		dataTxBlock, err := json.Marshal(meta)
-		if err != nil {
-			return err
-		}
-		err = batch.Put(keyTxBlock, dataTxBlock)
-		if err != nil {
-			err = batch.Put(keyTxBlock, dataTxBlock)
-			txKey := tx.Hash(commonHash).Bytes()
-			txKeyFact := append(transactionPrefix, txKey...)
-			txValue, _ := proto.Marshal(tx)
-			batch.Put(txKeyFact, txValue)
-		}
+	err = batch.Put(keyFact, data)
+	/*if err := db.Put(keyFact, data); err != nil {
+		return err
+	}*/
+	keyNum := strconv.FormatInt(int64(t.Number), 10)
+	//err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
 
-	}
+	err = batch.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
+	//put tx<-->block num,hash,index
+
+	/*for _,tx:=range t.Transactions{
+	 */ /*meta := struct {
+	>>>>>>> ee798cd8d726d02fef20ba266f17e5c034e42abe
+				BlockHash  common.Hash
+				BlockIndex uint64
+				Index      uint64
+			}{
+				BlockHash:  common.BytesToHash(t.BlockHash),
+				BlockIndex: t.Number,
+				Index:      uint64(i),
+			}
+			keyTxBlock := append(tx.Hash(commonHash).Bytes(), txMetaSuffix...)
+			dataTxBlock, err := json.Marshal(meta)
+			if err != nil {
+				return err
+			}
+	<<<<<<< HEAD
+			err = batch.Put(keyTxBlock, dataTxBlock)
+	=======
+			err = batch.Put(keyTxBlock,dataTxBlock)*/ /*
+	 */ /*keyTxBlock := append(tx.Hash(commonHash).Bytes(),txMetaSuffix...)
+	err:=batch.Put(keyTxBlock,t.BlockHash)*/ /*
+				txKey := tx.Hash(commonHash).Bytes()
+				txKeyFact := append(transactionPrefix, txKey...)
+				txValue, err := proto.Marshal(tx)
+		>>>>>>> ee798cd8d726d02fef20ba266f17e5c034e42abe
+				if err != nil {
+					err = batch.Put(keyTxBlock, dataTxBlock)
+					txKey := tx.Hash(commonHash).Bytes()
+					txKeyFact := append(transactionPrefix, txKey...)
+					txValue, _ := proto.Marshal(tx)
+					batch.Put(txKeyFact, txValue)
+				}
+
+		<<<<<<< HEAD
+			}
+		=======
+				//if err !=nil{
+				//	return err
+				//}
+			}*/
 	return batch.Write()
 }
 
