@@ -97,7 +97,7 @@ func (pool *BlockPool) ExecTxs(sequenceNum uint64, transactions []types.Transact
 
 	// 2.exec all the transactions, if the err is nil, save the tx and append to newTransactions
 	for i, tx := range transactions {
-		statedb.StartRecord(tx.BuildHash(), common.Hash{}, i)
+		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := ExecTransaction(tx, vmenv)
 		if err == nil {
 			newTransactions = append(newTransactions, tx)
@@ -321,7 +321,7 @@ func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int
 	//todo run 20 ms in 500 tx
 	for i, tx := range block.Transactions {
 
-		statedb.StartRecord(tx.BuildHash(), common.Hash{}, i)
+		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, _ := ExecTransaction(*tx, vmenv)
 		//ExecTransaction(*tx, vmenv)
 		//receipts = append(receipts, receipt)
@@ -449,7 +449,7 @@ func BuildTree(prefix []byte, ctx []interface{}) ([]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			trie.Update(append(transactionPrefix, t.BuildHash().Bytes()...), data)
+			trie.Update(append(transactionPrefix, t.GetTransactionHash().Bytes()...), data)
 		default:
 			return nil, errors.New("Invalid element type when build tree")
 		}

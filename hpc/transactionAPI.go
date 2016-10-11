@@ -98,8 +98,9 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	}
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 
-	//tx.PeerId =tx tran.pm.Peermanager.GetNodeId()
-	//tx.TransactionHash = tx.BuildHash()
+	// TODO set the PeerId of tx
+	//tx.PeerId = tran.pm.Peermanager.GetNodeId()
+	tx.TransactionHash = tx.GetTransactionHash().Bytes()
 
 
 	if tran.pm == nil {
@@ -187,7 +188,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		fmt.Println("Message", receipt.Message)
 		fmt.Println("Log", receipt.Logs)
 	*/
-	return tx.BuildHash(),nil
+	return tx.GetTransactionHash(),nil
 
 	} else {
 		return common.Hash{}, errors.New("account don't unlock")
@@ -275,7 +276,7 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 		fmt.Println("Message", receipt.Message)
 		fmt.Println("Log", receipt.Logs)
 	*/
-	return tx.BuildHash(), nil
+	return tx.GetTransactionHash(), nil
 }
 
 type CompileCode struct {
@@ -304,7 +305,7 @@ func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
 	var bh common.Hash
 	var bn , txIndex uint64
 
-	txHash := tx.BuildHash()
+	txHash := tx.GetTransactionHash()
 
 	if err := proto.Unmarshal(tx.Value,&txValue); err != nil {
 		log.Errorf("%v", err)
