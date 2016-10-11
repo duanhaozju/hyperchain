@@ -262,11 +262,11 @@ func (self *ProtocolManager) syncBlockLoop() {
 											Timestamp: time.Now().UnixNano(),
 											Id:        1,
 										}
-										_, err := proto.Marshal(msgSend)
+										msgPayload, err := proto.Marshal(msgSend)
 										if err != nil {
 											log.Error(err)
 										}
-										//self.consenter.RecvMsg(msgPayload)
+										self.consenter.RecvMsg(msgPayload)
 										break
 									} else {
 										//如果自己链上最新区块异常,则替换,并广播节点需要的最新区块
