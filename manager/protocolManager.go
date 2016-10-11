@@ -125,7 +125,6 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 				CurrentNumber:  core.GetChainCopy().Height,
 				PeerId:         UpdateStateMessage.Id,
 			}
-			log.Notice("syncCheckpointLoop : ", blockChainInfo.Height)
 			// For Test
 			// Midify the current highest block
 			/*
@@ -243,6 +242,7 @@ func (self *ProtocolManager) syncBlockLoop() {
 											} else {
 												core.ProcessBlock(blk)
 												self.blockPool.SetDemandNumber(blk.Number + 1)
+
 												/*
 													if bytes.Compare(blk.MerkleRoot, originMerkleRoot) != 0 {
 														// stateDb has difference status
@@ -341,14 +341,6 @@ func (self *ProtocolManager) ConsensusLoop() {
 		case event.ConsensusEvent:
 			//call consensus module
 			log.Debug("###### enter ConsensusEvent")
-			//logger.GetLogger().Println("###### enter ConsensusEvent")
-			/*
-				receiveMessage := &protos.Message{}
-				proto.Unmarshal(ev.Payload, receiveMessage)
-				if receiveMessage.Type == 1 {
-					log.Notice("ReceiveSyncBlockEvent checkpoint in consensus ")
-				}
-			*/
 			self.consenter.RecvMsg(ev.Payload)
 		case event.ExeTxsEvent:
 			//self.blockPool.ExecTxs(ev.SequenceNum, ev.Transactions)
