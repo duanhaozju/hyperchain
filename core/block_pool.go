@@ -32,6 +32,10 @@ const (
 
 var (
 	tempReceiptsMap map[uint64]types.Receipts
+	public_db, _ = hyperdb.GetLDBDatabase()
+	public_batch = public_db.NewBatch()
+	batchsize = 0
+
 )
 
 type BlockPool struct {
@@ -333,8 +337,8 @@ func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int
 			return err
 		}
 
-
-		 batch.Put(txKeyFact, txValue)
+		batch.Put(txKeyFact, txValue)
+		batchsize++
 	}
 	/*receiptInst, _ := GetReceiptInst()
 	for _, receipt := range receipts {
@@ -376,7 +380,13 @@ func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int
 
 
 
-	// batch.Write()
+	/*
+	if(batchsize>=500){
+		go public_batch.Write()
+		batchsize = 0
+		public_batch = db.NewBatch()
+	}*/
+	go batch.Write()
 
 
 
