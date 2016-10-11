@@ -56,16 +56,16 @@ type SendTxArgs struct {
 
 type TransactionResult struct {
 	Hash	  	common.Hash	`json:"hash"`
-	BlockNumber	Number		`json:"blockNumber"`
+	BlockNumber	*Number		`json:"blockNumber"`
 	BlockHash	common.Hash	`json:"blockHash"`
-	TxIndex	  	Number		`json:"txIndex"`
+	TxIndex	  	*Number		`json:"txIndex"`
 	From      	common.Address	`json:"from"`
 	To        	common.Address	`json:"to"`
-	Amount     	Number		`json:"amount"`
-	Gas	   	Number		`json:"gas"`
-	GasPrice   	Number		`json:"gasPrice"`
+	Amount     	*Number		`json:"amount"`
+	Gas	   	*Number		`json:"gas"`
+	GasPrice   	*Number		`json:"gasPrice"`
 	Timestamp  	string		`json:"timestamp"`
-	ExecuteTime	Number		`json:"executeTime"`
+	ExecuteTime	*Number		`json:"executeTime"`
 }
 
 func NewPublicTransactionAPI(eventMux *event.TypeMux,pm *manager.ProtocolManager) *PublicTransactionAPI {
@@ -404,16 +404,16 @@ func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
 
 	return &TransactionResult{
 		Hash: 		txHash,
-		BlockNumber: 	*NewUint64ToNumber(bn),
+		BlockNumber: 	NewUint64ToNumber(bn),
 		BlockHash: 	bh,
-		TxIndex: 	*NewUint64ToNumber(txIndex),
+		TxIndex: 	NewUint64ToNumber(txIndex),
 		From: 		common.BytesToAddress(tx.From),
 		To: 		common.BytesToAddress(tx.To),
-		Amount: 	*NewInt64ToNumber(txValue.Amount),
-		Gas: 		*NewInt64ToNumber(txValue.GasLimit),
-		GasPrice: 	*NewInt64ToNumber(txValue.Price),
+		Amount: 	NewInt64ToNumber(txValue.Amount),
+		Gas: 		NewInt64ToNumber(txValue.GasLimit),
+		GasPrice: 	NewInt64ToNumber(txValue.Price),
 		Timestamp: 	time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
-		ExecuteTime:	*NewInt64ToNumber((blk.WriteTime - tx.TimeStamp) / int64(time.Millisecond)),
+		ExecuteTime:	NewInt64ToNumber((blk.WriteTime - tx.TimeStamp) / int64(time.Millisecond)),
 	}, nil
 }
 
