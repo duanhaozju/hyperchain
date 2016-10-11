@@ -189,6 +189,7 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 		keyNum := strconv.FormatInt(int64(block.Number), 10)
 		DeleteBlock(db, append(blockNumPrefix, keyNum...))
 		WriteBlock(block, commonHash, commitTime)
+		pool.demandNumber = GetChainCopy().Height + 1
 		log.Notice("replated block number,number is: ", block.Number)
 		return
 	}

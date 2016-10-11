@@ -209,8 +209,13 @@ func PutBlockTx(db hyperdb.Database, commonHash crypto.CommonHash, key []byte, t
 		}
 		err = batch.Put(keyTxBlock, dataTxBlock)
 		if err != nil {
-			return err
+			err = batch.Put(keyTxBlock, dataTxBlock)
+			txKey := tx.Hash(commonHash).Bytes()
+			txKeyFact := append(transactionPrefix, txKey...)
+			txValue, _ := proto.Marshal(tx)
+			batch.Put(txKeyFact, txValue)
 		}
+
 	}
 	return batch.Write()
 }
@@ -362,7 +367,7 @@ func UpdateChain(block *types.Block, genesis bool) error {
 	memChainMap.data.LatestBlockHash = block.BlockHash
 	memChainMap.data.ParentBlockHash = block.ParentHash
 	if !genesis {
-		memChainMap.data.Height += 1
+		memChainMap.data.Height = block.Number
 		memChainMap.data.CurrentTxSum += uint64(len(block.Transactions))
 	}
 	db, err := hyperdb.GetLDBDatabase()

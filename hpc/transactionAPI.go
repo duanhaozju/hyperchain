@@ -11,14 +11,14 @@ import (
 	"hyperchain/event"
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
-	"strconv"
 	"time"
 	//"hyperchain/accounts"
+	"errors"
 )
 
 const (
-	defaultGas      int = 10000000
-	defaustGasPrice int = 10000000
+	defaultGas int64 = 10000
+	defaustGasPrice int64 = 10000
 )
 
 var (
@@ -27,107 +27,128 @@ var (
 )
 
 func init() {
-	log = logging.MustGetLogger("jsonrpc/api")
+	log = logging.MustGetLogger("hpc")
 }
 
 type PublicTransactionAPI struct {
 	eventMux *event.TypeMux
-	pm       *manager.ProtocolManager
+	pm *manager.ProtocolManager
+
 }
+
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 // If type is Ptr or String, it is optional parameter
 type SendTxArgs struct {
-	//From     common.Address  `json:"from"`
-	//To       *common.Address  `json:"to"`
-	//Gas      *jsonrpc.Number  `json:"gas"`
-	//GasPrice *jsonrpc.Number  `json:"gasPrice"`
-	//Value    *jsonrpc.Number  `json:"value"`
-	From     string `json:"from"`
-	To       string `json:"to"`
-	Gas      string `json:"gas"`
-	GasPrice string `json:"gasPrice"`
-	Value    string `json:"value"`
-	Payload  string `json:"payload"`
+	From     common.Address		`json:"from"`
+	To       *common.Address	`json:"to"`
+	Gas      *Number  		`json:"gas"`
+	GasPrice *Number		`json:"gasPrice"`
+	Value    *Number		`json:"value"`
+	Payload  string			`json:"payload"`
 	//Nonce    *jsonrpc.HexNumber  `json:"nonce"`
 }
 
 type TransactionResult struct {
-	Hash common.Hash `json:"hash"`
-	//Block	  int			`json:"block"`
-	From      common.Address `json:"from"`
-	To        common.Address `json:"to"`
-	Amount    string         `json:"amount"`
-	Timestamp string         `json:"timestamp"`
+	Hash	  	common.Hash	`json:"hash"`
+	BlockNumber	Number		`json:"blockNumber"`
+	BlockHash	common.Hash	`json:"blockHash"`
+	TxIndex	  	Number		`json:"txIndex"`
+	From      	common.Address	`json:"from"`
+	To        	common.Address	`json:"to"`
+	Amount     	Number		`json:"amount"`
+	Gas	   	Number		`json:"gas"`
+	GasPrice   	Number		`json:"gasPrice"`
+	Timestamp  	string		`json:"timestamp"`
 }
 
-func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager) *PublicTransactionAPI {
+func NewPublicTransactionAPI(eventMux *event.TypeMux,pm *manager.ProtocolManager) *PublicTransactionAPI {
 	return &PublicTransactionAPI{
-		eventMux: eventMux,
-		pm:       pm,
+		eventMux :eventMux,
+		pm:pm,
 	}
 }
 
-func prepareExcute(args SendTxArgs) SendTxArgs {
-	if args.Gas == "" {
-		args.Gas = strconv.Itoa(defaultGas)
+func prepareExcute(args SendTxArgs) SendTxArgs{
+	if args.Gas == nil {
+		args.Gas = NewInt64ToNumber(defaultGas)
 	}
-	if args.GasPrice == "" {
-		args.GasPrice = strconv.Itoa(defaustGasPrice)
+	if args.GasPrice == nil {
+		args.GasPrice = NewInt64ToNumber(defaustGasPrice)
 	}
 	return args
 }
 
 // SendTransaction is to build a transaction object,and then post event NewTxEvent,
 // if the sender's balance is enough, return tx hash
-func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error) {
-	log.Info("==========enter11111=====,args = ", args)
-	log.Info("==========SendTransaction=====,args = ", args)
-	args = prepareExcute(args)
+func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error){
+
 	var tx *types.Transaction
+	var found bool
 
-	// (1) parse args
-	payload := common.FromHex(args.Payload)
-	amount, _ := strconv.ParseInt(common.HexToString(args.Value), 16, 64)
-	gasLimit, _ := strconv.ParseInt(common.HexToString(args.Gas), 16, 64)
-	gasPrice, _ := strconv.ParseInt(common.HexToString(args.GasPrice), 16, 64)
-	tv := types.NewTransactionValue(gasPrice, gasLimit, amount, payload)
-	tvData, _ := proto.Marshal(tv)
-	tx = types.NewTransaction(common.HexToAddress(args.From).Bytes(), common.HexToAddress(args.To).Bytes(), tvData)
+	realArgs := prepareExcute(args)
+	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), nil)
 
-	//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-	log.Infof("############# %d: start send request#############", time.Now().Unix())
-	start := time.Now().Unix()
-	end := start + 6
-	//end:=start+500
+	value, err := proto.Marshal(txValue)
 
-	for start := start; start < end; start = time.Now().Unix() {
-		for i := 0; i < 25; i++ {
-			tx.TimeStamp = time.Now().UnixNano()
-
-			// calculate signature
-			/*keydir := "./keystore/"
-			encryption := crypto.NewEcdsaEncrypto("ecdsa")
-			am := accounts.NewAccountManager(keydir, encryption)
-			// TODO replace password with test value
-			signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
-			if err != nil {
-				log.Errorf("Sign(tx) error :%v", err)
-			}
-			tx.Signature = signature*/
-			txBytes, err := proto.Marshal(tx)
-			if err != nil {
-				log.Errorf("proto.Marshal(tx) error: %v", err)
-			}
-			if manager.GetEventObject() != nil {
-				go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
-				//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-			} else {
-				log.Warning("manager is Nil")
-			}
-		}
-		time.Sleep(25 * time.Millisecond)
+	if err != nil {
+		return common.Hash{}, err
 	}
+	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
+
+
+	if tran.pm == nil {
+
+		// Test environment
+		found = true
+	} else {
+
+		// Development environment
+		am := tran.pm.AccountManager
+		_, found = am.Unlocked[args.From]
+	}
+	//am := tran.pm.AccountManager
+
+	//if (!core.VerifyBalance(tx)){
+	//	return common.Hash{},errors.New("Not enough balance!")
+	//}else
+	if found == true {
+
+		// Balance is enough
+
+		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+		log.Infof("############# %d: start send request#############", time.Now().Unix())
+		start := time.Now().Unix()
+		end := start + 6
+		//end:=start+500
+
+		for start := start; start < end; start = time.Now().Unix() {
+			for i := 0; i < 100; i++ {
+				tx.TimeStamp = time.Now().UnixNano()
+
+				// calculate signature
+				/*keydir := "./keystore/"
+				encryption := crypto.NewEcdsaEncrypto("ecdsa")
+				am := accounts.NewAccountManager(keydir, encryption)
+				// TODO replace password with test value
+				signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
+				if err != nil {
+					log.Errorf("Sign(tx) error :%v", err)
+				}
+				tx.Signature = signature*/
+				txBytes, err := proto.Marshal(tx)
+				if err != nil {
+					log.Errorf("proto.Marshal(tx) error: %v", err)
+				}
+				if manager.GetEventObject() != nil {
+					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+					//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+				} else {
+					log.Warning("manager is Nil")
+				}
+			}
+			time.Sleep(90 * time.Millisecond)
+		}
 	/*tx.TimeStamp = time.Now().UnixNano()
 
 	// TODO replace password with test value
@@ -146,9 +167,8 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	} else {
 		log.Warning("manager is Nil")
 	}
-	log.Infof("############# %d: end send request#############", time.Now().Unix())
-
 	time.Sleep(2000 * time.Millisecond)*/
+		log.Infof("############# %d: end send request#############", time.Now().Unix())
 	/*
 		receipt := core.GetReceipt(tx.BuildHash())
 		fmt.Println("GasUsed", receipt.GasUsed)
@@ -161,61 +181,80 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		fmt.Println("Message", receipt.Message)
 		fmt.Println("Log", receipt.Logs)
 	*/
-	return tx.BuildHash(), nil
+	return tx.BuildHash(),nil
+
+	} else {
+		return common.Hash{}, errors.New("account don't unlock")
+	}
 }
+
 
 // SendTransactionOrContract deploy contract
 func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (common.Hash, error) {
 
 	var tx *types.Transaction
-	//var amount int64
+	var found bool
 
 	realArgs := prepareExcute(args)
 
-	//gas, err := strconv.ParseInt(realArgs.Gas,10,64)
-	//price, err := strconv.ParseInt(realArgs.GasPrice,10,64)
-	//
-	//if realArgs.Value == "" {
-	//	amount = 0
-	//} else {
-	//	amount, err = strconv.ParseInt(realArgs.Value,10,64)
-	//}
-
 	payload := common.FromHex(realArgs.Payload)
-	amount, _ := strconv.ParseInt(common.HexToString(realArgs.Value), 16, 64)
-	gasLimit, _ := strconv.ParseInt(common.HexToString(args.Gas), 16, 64)
-	gasPrice, _ := strconv.ParseInt(common.HexToString(args.GasPrice), 16, 64)
-	txValue := types.NewTransactionValue(gasPrice, gasLimit, amount, payload)
-	value, _ := proto.Marshal(txValue)
 
-	if args.To == "" {
-		tx = types.NewTransaction(common.HexToAddress(realArgs.From).Bytes(), nil, value)
-	} else {
-		tx = types.NewTransaction(common.HexToAddress(realArgs.From).Bytes(), common.FromHex(realArgs.To), value)
-	}
+	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(),realArgs.Gas.ToInt64(),realArgs.Value.ToInt64(),payload)
 
-	am := tran.pm.AccountManager
+	value, err := proto.Marshal(txValue)
 
-	log.Infof("############# %d: start send request#############", time.Now().Unix())
-	tx.TimeStamp = time.Now().UnixNano()
-
-	// TODO replace password with test value
-	signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
 	if err != nil {
-		log.Errorf("Sign(tx) error :%v", err)
+		return common.Hash{}, err
 	}
-	tx.Signature = signature
 
-	txBytes, err := proto.Marshal(tx)
-	if err != nil {
-		log.Errorf("proto.Marshal(tx) error: %v", err)
-	}
-	if manager.GetEventObject() != nil {
-		go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+	if args.To == nil {
+
+		// 部署合约
+		tx = types.NewTransaction(realArgs.From[:], nil, value)
+
 	} else {
-		log.Warning("manager is Nil")
+
+		// 调用合约或者普通交易(普通交易还需要加检查余额)
+		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 	}
-	log.Infof("############# %d: end send request#############", time.Now().Unix())
+
+	if tran.pm == nil {
+
+		// Test environment
+		found = true
+	} else {
+
+		// Development environment
+		am := tran.pm.AccountManager
+		_, found = am.Unlocked[args.From]
+
+		// TODO replace password with test value
+		signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
+		if err != nil {
+			log.Errorf("Sign(tx) error :%v", err)
+		}
+		tx.Signature = signature
+	}
+	//am := tran.pm.AccountManager
+
+	if found == true {
+		log.Infof("############# %d: start send request#############", time.Now().Unix())
+		tx.TimeStamp = time.Now().UnixNano()
+
+		txBytes, err := proto.Marshal(tx)
+		if err != nil {
+			log.Errorf("proto.Marshal(tx) error: %v", err)
+		}
+		if manager.GetEventObject() != nil {
+			go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+		} else {
+			log.Warning("manager is Nil")
+		}
+
+		log.Infof("############# %d: end send request#############", time.Now().Unix())
+	} else {
+		return common.Hash{}, errors.New("account don't unlock")
+	}
 
 	time.Sleep(2000 * time.Millisecond)
 	/*
@@ -238,8 +277,8 @@ type CompileCode struct {
 	Bin []string
 }
 
-// ComplieContract complies contract to ABI
-func (tran *PublicTransactionAPI) ComplieContract(ct string) (*CompileCode, error) {
+// ComplieContract complies contract to ABI ---------------- (该方法已移到 contractAPI.go 中, 后期不再使用这里)
+func (tran *PublicTransactionAPI) ComplieContract(ct string) (*CompileCode,error){
 
 	abi, bin, err := compiler.CompileSourcefile(ct)
 
@@ -253,40 +292,153 @@ func (tran *PublicTransactionAPI) ComplieContract(ct string) (*CompileCode, erro
 	}, nil
 }
 
+func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
+
+	var txValue types.TransactionValue
+	var bh common.Hash
+	var bn , txIndex uint64
+
+	txHash := tx.BuildHash()
+
+	if err := proto.Unmarshal(tx.Value,&txValue); err != nil {
+		log.Errorf("%v", err)
+		return nil, err
+	}
+
+	if db, err := hyperdb.GetLDBDatabase(); err != nil {
+		log.Errorf("Open database error: %v", err)
+		return nil, err
+	} else {
+		bh, bn, txIndex = core.GetTxWithBlock(db, txHash[:])
+	}
+
+
+
+	return &TransactionResult{
+		Hash: 		txHash,
+		BlockNumber: 	*NewUint64ToNumber(bn),
+		BlockHash: 	bh,
+		TxIndex: 	*NewUint64ToNumber(txIndex),
+		From: 		common.BytesToAddress(tx.From),
+		To: 		common.BytesToAddress(tx.To),
+		Amount: 	*NewInt64ToNumber(txValue.Amount),
+		Gas: 		*NewInt64ToNumber(txValue.GasLimit),
+		GasPrice: 	*NewInt64ToNumber(txValue.Price),
+		Timestamp: 	time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+	}, nil
+}
+
 // GetTransactionReceipt returns transaction's receipt for given transaction hash
 func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) *types.ReceiptTrans {
-	log.Info("transactionAPI.go,", core.GetReceipt(hash).ContractAddress)
 	return core.GetReceipt(hash)
 }
 
 // GetAllTransactions return all transactions in the chain/db
-func (tran *PublicTransactionAPI) GetTransactions() []*TransactionResult {
+//func (tran *PublicTransactionAPI) GetTransactions() []*TransactionResult{
+//	db, err := hyperdb.GetLDBDatabase()
+//
+//	if err != nil {
+//		log.Errorf("Open database error: %v", err)
+//	}
+//
+//	txs, err := core.GetAllTransaction(db)
+//
+//	if err != nil {
+//		log.Errorf("GetAllTransaction error: %v", err)
+//	}
+//
+//	var transactions []*TransactionResult
+//
+//
+//	// TODO 1.得到交易所在的区块哈希 2.取出 tx.Value 中的 amount
+//	for _, tx := range txs {
+//		var ts = &TransactionResult{
+//			Hash: tx.BuildHash(),
+//			//Block: 1,
+//			Amount: string(tx.Value),
+//			From: common.BytesToAddress(tx.From),
+//			To: common.BytesToAddress(tx.To),
+//			Timestamp: time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+//		}
+//		transactions = append(transactions,ts)
+//	}
+//
+//	return transactions
+//}
+
+// GetTransactionByHash returns the transaction for the given transaction hash.
+func (tran *PublicTransactionAPI) GetTransactionByHash(hash common.Hash) (*TransactionResult, error){
+
 	db, err := hyperdb.GetLDBDatabase()
 
 	if err != nil {
 		log.Errorf("Open database error: %v", err)
+		return nil, err
 	}
 
-	txs, err := core.GetAllTransaction(db)
+	tx, err := core.GetTransaction(db, hash[:])
+
+	if tx.From == nil {
+		return nil, errors.New("Not found this transaction")
+	}
+
+	return outputTransaction(tx)
+}
+
+// GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
+func (tran *PublicTransactionAPI) GetTransactionByBlockHashAndIndex(hash common.Hash, index Number) (*TransactionResult, error) {
+
+	db, err := hyperdb.GetLDBDatabase()
 
 	if err != nil {
-		log.Errorf("GetAllTransaction error: %v", err)
+		log.Errorf("Open database error: %v", err)
+		return nil, err
 	}
 
-	var transactions []*TransactionResult
-
-	// TODO 得到交易所在的区块哈希
-	for _, tx := range txs {
-		var ts = &TransactionResult{
-			Hash: tx.BuildHash(),
-			//Block: 1,
-			Amount:    string(tx.Value),
-			From:      common.BytesToAddress(tx.From),
-			To:        common.BytesToAddress(tx.To),
-			Timestamp: time.Unix(tx.TimeStamp/int64(time.Second), 0).Format("2006-01-02 15:04:05"),
-		}
-		transactions = append(transactions, ts)
+	block, err := core.GetBlock(db, hash[:])
+	if err != nil {
+		log.Errorf("%v", err)
+		return nil, err
 	}
 
-	return transactions
+	txCount := len(block.Transactions)
+
+	if index.ToInt() >= 0 && index.ToInt() < txCount {
+
+		tx := block.Transactions[index]
+
+		return outputTransaction(tx)
+	}
+
+	return nil, nil
 }
+
+// GetTransactionsByBlockNumberAndIndex returns the transaction for the given block number and index.
+func (tran *PublicTransactionAPI) GetTransactionsByBlockNumberAndIndex(n Number, index Number) (*TransactionResult, error){
+
+	db, err := hyperdb.GetLDBDatabase()
+
+	if err != nil {
+		log.Errorf("Open database error: %v", err)
+		return nil, err
+	}
+
+	block, err := core.GetBlockByNumber(db, n.ToUint64())
+	if err != nil {
+		log.Errorf("%v", err)
+		return nil, err
+	}
+
+	txCount := len(block.Transactions)
+
+	if index.ToInt() >= 0 && index.ToInt() < txCount {
+
+		tx := block.Transactions[index]
+
+		return outputTransaction(tx)
+	}
+
+	return nil, nil
+}
+
+
