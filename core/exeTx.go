@@ -130,6 +130,7 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 	}()*/
 	receipt = types.NewReceipt(nil, gas)
 	receipt.ContractAddress = addr.Bytes()
+	//todo add tx hash in tx struct
 	//receipt.TxHash = tx.BuildHash().Bytes()
 	// todo replace the gasused
 	receipt.GasUsed = 100000
