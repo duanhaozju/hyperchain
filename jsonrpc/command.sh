@@ -51,6 +51,13 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_queryCommitAndBatch
 # 查询EVM平均处理时间
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_queryEvmAvgTime","params":[{"from":"the number of block","to":"the number of block"}],"id": 1}'
 
+########## account服务 ##########
+# 获取所有账户信息 GetAccounts
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acot_getAccounts","params":[],"id": 1}'
+
+# 查询账户余额 GetBalance
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acot_getBalance","params":["0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd"],"id": 1}'
+
 ########## node服务 ##########
 # 得到节点信息
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "node_getNodes","id": 1}'

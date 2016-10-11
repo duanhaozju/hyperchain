@@ -93,17 +93,17 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		statedb, _ = env.Db().(*state.StateDB)
 	)
 	//not check sign
-	if err := preCheck(tx); err != nil {
-		receipt = types.NewReceipt(statedb.IntermediateRoot().Bytes(), gas)
-		receipt.ContractAddress = addr.Bytes()
-		receipt.TxHash = tx.BuildHash().Bytes()
-		// todo replace the gasused
-		receipt.GasUsed = 100000
-		receipt.SetLogs(statedb.GetLogs(common.BytesToHash(receipt.TxHash)))
-		receipt.Status = types.Receipt_SIGFAILED
-		receipt.Message = []byte(err.Error())
-		return receipt, nil, addr, err
-	}
+	//if err := preCheck(tx); err != nil {
+	//	receipt = types.NewReceipt(statedb.IntermediateRoot().Bytes(), gas)
+	//	receipt.ContractAddress = addr.Bytes()
+	//	receipt.TxHash = tx.BuildHash().Bytes()
+	//	// todo replace the gasused
+	//	receipt.GasUsed = 100000
+	//	receipt.SetLogs(statedb.GetLogs(common.BytesToHash(receipt.TxHash)))
+	//	receipt.Status = types.Receipt_SIGFAILED
+	//	receipt.Message = []byte(err.Error())
+	//	return receipt, nil, addr, err
+	//}
 
 	if tx.To == nil {
 		ret, addr, err = Exec(env, &from, nil, data, gas, gasPrice, amount)
