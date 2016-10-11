@@ -32,8 +32,7 @@ const (
 
 var (
 	tempReceiptsMap map[uint64]types.Receipts
-	public_db, _ = hyperdb.GetLDBDatabase()
-	public_batch = public_db.NewBatch()
+	public_batch hyperdb.Batch
 	batchsize = 0
 
 )
@@ -317,8 +316,8 @@ func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int
 	env["currentGasLimit"] = "10000000"
 	vmenv := NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
 
-	batch := db.NewBatch()
-
+	//batch := db.NewBatch()
+	public_batch = db.NewBatch()
 	//todo run 20 ms in 500 tx
 	for i, tx := range block.Transactions {
 
@@ -337,11 +336,11 @@ func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int
 		data, err := proto.Marshal(receipt)
 
 
-		if err := batch.Put(append(receiptsPrefix, receipt.TxHash...), data); err != nil {
+		if err := public_batch.Put(append(receiptsPrefix, receipt.TxHash...), data); err != nil {
 			return err
 		}
 
-		batch.Put(txKeyFact, txValue)
+		public_batch.Put(txKeyFact, txValue)
 		batchsize++
 	}
 	/*receiptInst, _ := GetReceiptInst()
@@ -390,7 +389,7 @@ func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int
 		batchsize = 0
 		public_batch = db.NewBatch()
 	}*/
-	go batch.Write()
+	go public_batch.Write()
 
 
 

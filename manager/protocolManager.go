@@ -29,29 +29,29 @@ func init() {
 }
 
 type ProtocolManager struct {
-	serverPort  int
-	blockPool   *core.BlockPool
-	fetcher     *core.Fetcher
-	peerManager p2p.PeerManager
+	serverPort        int
+	blockPool         *core.BlockPool
+	fetcher           *core.Fetcher
+	Peermanager       p2p.PeerManager
 
-	nodeInfo  client.PeerInfos // node info ,store node status,ip,port
-	consenter consensus.Consenter
+	nodeInfo          client.PeerInfos // node info ,store node status,ip,port
+	consenter         consensus.Consenter
 	//encryption   crypto.Encryption
-	AccountManager *accounts.AccountManager
-	commonHash     crypto.CommonHash
+	AccountManager    *accounts.AccountManager
+	commonHash        crypto.CommonHash
 
-	noMorePeers  chan struct{}
-	eventMux     *event.TypeMux
-	txSub        event.Subscription
-	newBlockSub  event.Subscription
-	consensusSub event.Subscription
+	noMorePeers       chan struct{}
+	eventMux          *event.TypeMux
+	txSub             event.Subscription
+	newBlockSub       event.Subscription
+	consensusSub      event.Subscription
 
-	aLiveSub event.Subscription
+	aLiveSub          event.Subscription
 
 	syncCheckpointSub event.Subscription
 
-	syncBlockSub event.Subscription
-	quitSync     chan struct{}
+	syncBlockSub      event.Subscription
+	quitSync          chan struct{}
 
 	wg sync.WaitGroup
 }
@@ -71,7 +71,7 @@ func NewProtocolManager(blockPool *core.BlockPool, peerManager p2p.PeerManager, 
 		eventMux:    eventMux,
 		quitSync:    make(chan struct{}),
 		consenter:   consenter,
-		peerManager: peerManager,
+		Peermanager: peerManager,
 		fetcher:     fetcher,
 		//encryption:encryption,
 		AccountManager: am,
@@ -147,7 +147,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 				Payload:      payload,
 			}
 			broadcastMsg, _ := proto.Marshal(message)
-			self.peerManager.SendMsgToPeers(broadcastMsg, UpdateStateMessage.Replicas, recovery.Message_SYNCCHECKPOINT)
+			self.Peermanager.SendMsgToPeers(broadcastMsg, UpdateStateMessage.Replicas, recovery.Message_SYNCCHECKPOINT)
 
 		case event.StateUpdateEvent:
 			/*
@@ -185,7 +185,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 				peers = append(peers, checkpointMsg.PeerId)
 				broadcastMsg, _ := proto.Marshal(message)
 
-				self.peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_SYNCBLOCK)
+				self.Peermanager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_SYNCBLOCK)
 			}
 
 		}
@@ -241,7 +241,7 @@ func (self *ProtocolManager) syncBlockLoop() {
 											if err != nil {
 												continue
 											} else {
-												core.ProcessBlock(blk)
+												core.ProcessBlock(blk,self.commonHash,blk.CommitTime)
 												self.blockPool.SetDemandNumber(blk.Number + 1)
 												/*
 													if bytes.Compare(blk.MerkleRoot, originMerkleRoot) != 0 {
@@ -332,7 +332,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 			var peers []uint64
 			peers = append(peers, ev.PeerId)
-			go self.peerManager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
+			go self.Peermanager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
 			//go self.peerManager.SendMsgToPeers(ev.Payload,)
 		case event.NewTxEvent:
 
@@ -389,7 +389,7 @@ func (self *ProtocolManager) sendMsg(payload []byte) {
 // Broadcast consensus msg to a batch of peers not knowing about it
 func (pm *ProtocolManager) BroadcastConsensus(payload []byte) {
 	log.Debug("begin call broadcast")
-	pm.peerManager.BroadcastPeers(payload)
+	pm.Peermanager.BroadcastPeers(payload)
 
 }
 
@@ -447,7 +447,7 @@ func (pm *ProtocolManager) commitNewBlock(payload []byte, commitTime int64) {
 }
 
 func (pm *ProtocolManager) GetNodeInfo() client.PeerInfos {
-	pm.nodeInfo = pm.peerManager.GetPeerInfo()
+	pm.nodeInfo = pm.Peermanager.GetPeerInfo()
 	log.Info("nodeInfo is ", pm.nodeInfo)
 	return pm.nodeInfo
 
@@ -465,5 +465,5 @@ func (pm *ProtocolManager) broadcastDemandBlock(number uint64, hash []byte, repl
 		Payload:      payload,
 	}
 	broadcastMsg, _ := proto.Marshal(message)
-	pm.peerManager.SendMsgToPeers(broadcastMsg, replicas, recovery.Message_SYNCSINGLE)
+	pm.Peermanager.SendMsgToPeers(broadcastMsg, replicas, recovery.Message_SYNCSINGLE)
 }

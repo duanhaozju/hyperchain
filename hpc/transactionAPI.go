@@ -87,7 +87,9 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	var found bool
 
 	realArgs := prepareExcute(args)
+
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), nil)
+
 
 	value, err := proto.Marshal(txValue)
 
@@ -95,6 +97,8 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		return common.Hash{}, err
 	}
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
+
+
 
 
 	if tran.pm == nil {
