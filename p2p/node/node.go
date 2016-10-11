@@ -157,6 +157,12 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 					})
 
 				}
+			case recovery.Message_SYNCSINGLE:
+				{
+					go this.higherEventManager.Post(event.StateUpdateEvent{
+						Payload: SyncMsg.Payload,
+					})
+				}
 			case recovery.Message_RELAYTX:
 				{
 					go this.higherEventManager.Post(event.ConsensusEvent{
@@ -164,7 +170,6 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 					})
 				}
 			}
-
 		}
 	case pb.Message_KEEPALIVE:
 		{

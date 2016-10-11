@@ -50,6 +50,10 @@ type BlockPool struct {
 	wg        sync.WaitGroup // for shutdown sync
 }
 
+func (bp *BlockPool) SetDemandNumber(number uint64) {
+	bp.demandNumber = number
+}
+
 func NewBlockPool(eventMux *event.TypeMux) *BlockPool {
 	tempReceiptsMap = make(map[uint64]types.Receipts)
 
