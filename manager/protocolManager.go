@@ -29,29 +29,29 @@ func init() {
 }
 
 type ProtocolManager struct {
-	serverPort        int
-	blockPool         *core.BlockPool
-	fetcher           *core.Fetcher
-	Peermanager       p2p.PeerManager
+	serverPort  int
+	blockPool   *core.BlockPool
+	fetcher     *core.Fetcher
+	Peermanager p2p.PeerManager
 
-	nodeInfo          client.PeerInfos // node info ,store node status,ip,port
-	consenter         consensus.Consenter
+	nodeInfo  client.PeerInfos // node info ,store node status,ip,port
+	consenter consensus.Consenter
 	//encryption   crypto.Encryption
-	AccountManager    *accounts.AccountManager
-	commonHash        crypto.CommonHash
+	AccountManager *accounts.AccountManager
+	commonHash     crypto.CommonHash
 
-	noMorePeers       chan struct{}
-	eventMux          *event.TypeMux
-	txSub             event.Subscription
-	newBlockSub       event.Subscription
-	consensusSub      event.Subscription
+	noMorePeers  chan struct{}
+	eventMux     *event.TypeMux
+	txSub        event.Subscription
+	newBlockSub  event.Subscription
+	consensusSub event.Subscription
 
-	aLiveSub          event.Subscription
+	aLiveSub event.Subscription
 
 	syncCheckpointSub event.Subscription
 
-	syncBlockSub      event.Subscription
-	quitSync          chan struct{}
+	syncBlockSub event.Subscription
+	quitSync     chan struct{}
 
 	wg sync.WaitGroup
 }
@@ -240,7 +240,7 @@ func (self *ProtocolManager) syncBlockLoop() {
 											if err != nil {
 												continue
 											} else {
-												core.ProcessBlock(blk,self.commonHash,blk.CommitTime)
+												core.ProcessBlock(blk, self.commonHash, blk.CommitTime)
 												self.blockPool.SetDemandNumber(blk.Number + 1)
 
 												/*
@@ -335,7 +335,19 @@ func (self *ProtocolManager) ConsensusLoop() {
 			go self.Peermanager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
 			//go self.peerManager.SendMsgToPeers(ev.Payload,)
 		case event.NewTxEvent:
-
+			// unsign signature
+			encryption := crypto.NewEcdsaEncrypto("ecdsa")
+			kec256Hash := crypto.NewKeccak256Hash("keccak256")
+			tx := &types.Transaction{}
+			if err := proto.Unmarshal(ev.Payload, tx); err != nil {
+				log.Error("NewTxEvent, unmarshal failed")
+				continue
+			}
+			if !tx.ValidateSign(encryption, kec256Hash) {
+				// TODO Post Event to frontend
+				log.Error("NewTxEvent, Invalid signature")
+				continue
+			}
 			go self.sendMsg(ev.Payload)
 
 		case event.ConsensusEvent:
