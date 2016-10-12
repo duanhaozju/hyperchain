@@ -10,3 +10,12 @@ message Transaction {
 	uint64 peerId = 6;
 	bytes transactionHash = 7;
 }
+
+message InvalidTransactionRecord {
+    Transaction tx = 1;
+    ErrType errType = 2;
+    enum ErrType {
+        OUTOFBALANCE = 0;
+        SIGFAILED = 1;
+    }
+}
