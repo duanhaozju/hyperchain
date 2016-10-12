@@ -334,7 +334,7 @@ func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int
 			tx.Value = value
 			_, _, addr, _ = ExecTransaction(*tx, vmenv)
 			continue
-		}else if(i<150) {
+		}else if(i<140) {
 			tx.To = addr.Bytes()
 		}else {
 			tx.Value = nil
