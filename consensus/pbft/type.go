@@ -1,7 +1,5 @@
 package pbft
 
-import "hyperchain/core/types"
-
 // batchTimerEvent is sent when the batch timer expires
 type batchTimerEvent struct{}
 
@@ -27,8 +25,6 @@ type stateUpdatedEvent struct {
 
 // nullRequestEvent provides "keep-alive" null requests
 type nullRequestEvent struct{}
-
-type consensusMessageEvent ConsensusMessage
 
 type checkpointMessage struct {
 	seqNo uint64

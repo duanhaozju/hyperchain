@@ -26,7 +26,7 @@ type Stack interface {
 	InnerUnicast(msg *pb.Message, to uint64) error
 	Execute(seqNo uint64, flag bool) error
 	UpdateState(updateState *pb.UpdateStateMessage) error
-	ValidateBatch(txs []types.Transaction, seqNo uint64, isPrimary bool) error
+	ValidateBatch(txs []*types.Transaction, seqNo uint64, view uint64, digest string, isPrimary bool) error
 }
 
 // InnerBroadcast broadcast the consensus message between vp nodes
@@ -103,11 +103,13 @@ func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
 }
 
 // UpdateState transfers the UpdateStateEvent to outer
-func (h *helper) ValidateBatch(txs []types.Transaction, seqNo uint64, isPrimary bool) error {
+func (h *helper) ValidateBatch(txs []*types.Transaction, seqNo uint64, view uint64, digest string, isPrimary bool) error {
 
 	validateEvent := event.ExeTxsEvent {
 		Transactions:	txs,
+		Digest:		digest,
 		SeqNo:		seqNo,
+		View:		view,
 		IsPrimary:	isPrimary,
 	}
 

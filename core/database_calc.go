@@ -21,7 +21,7 @@ func CalcResponseCount(blockNumber uint64, millTime int64) (int64,float64){
 	block, err := GetBlock(db, blockHash)
 	var count int64 = 0
 	for _, trans := range block.Transactions {
-		if block.WriteTime - trans.TimeStamp <= millTime * int64(time.Millisecond) {
+		if block.WriteTime - trans.Timestamp <= millTime * int64(time.Millisecond) {
 			count ++
 		}
 	}
@@ -65,7 +65,7 @@ func CalcCommitBatchAVGTime(from,to uint64) (int64,int64) {
 		}
 		commit += block.CommitTime - block.Timestamp
 		if block.Transactions!=nil{
-			batch += block.Timestamp - block.Transactions[0].TimeStamp
+			batch += block.Timestamp - block.Transactions[0].Timestamp
 		}
 
 	}
@@ -124,7 +124,7 @@ func CalcResponseAVGTime(from, to uint64) int64 {
 			return -1
 		}
 		for _, trans := range block.Transactions {
-			sum += block.WriteTime - trans.TimeStamp
+			sum += block.WriteTime - trans.Timestamp
 		}
 		length += int64(len(block.Transactions))
 	}

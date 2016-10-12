@@ -6,6 +6,6 @@ import "hyperchain/event"
 // Every consensus plugin needs to implement this interface
 type Consenter interface {
 	RecvMsg(msgPayload []byte) error // Called serially with incoming messages from gRPC
-	ValidatedResult(validateBatch event.ValidatedTxs) error //called to pass validated batch result
+	RecvValidatedResult(validateBatch event.ValidatedTxs) error //called to pass validated batch result
 	Close()
 }
