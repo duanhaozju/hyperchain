@@ -18,7 +18,7 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager) []API{
 		{
 			Namespace: "tx",
 			Version: "0.4",
-			Service: NewPublicTransactionAPI(eventMux,pm),
+			Service: NewPublicTransactionAPI(eventMux, pm),
 			Public: true,
 		},
 		{
@@ -42,7 +42,7 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager) []API{
 		{
 			Namespace: "contract",
 			Version: "0.4",
-			Service: NewPublicContractAPI(),
+			Service: NewPublicContractAPI(eventMux, pm),
 			Public: true,
 		},
 	}

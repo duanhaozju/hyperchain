@@ -317,7 +317,7 @@ function ContractService($resource,$q ,$timeout, ENV) {
                         method:"POST"
                     }
                 }).compile({
-                    method: "tx_complieContract",
+                    method: "contract_compileContract",
                     params: [contract],
                     id: 1
                 },function(res){
@@ -337,7 +337,8 @@ function ContractService($resource,$q ,$timeout, ENV) {
                         method:"POST"
                     }
                 }).deploy({
-                    method: "tx_sendTransactionOrContract",
+                    // method: "tx_sendTransactionOrContract",
+                    method: "contract_deployContract",
                     params: [
                         {
                             "from": from,
@@ -392,7 +393,8 @@ function ContractService($resource,$q ,$timeout, ENV) {
                         method:"POST"
                     }
                 }).invoke({
-                    method: "tx_sendTransactionOrContract",
+                    // method: "tx_sendTransactionOrContract",
+                    method: "contract_invokeContract",
                     params: [
                         {
                             "from": from,
