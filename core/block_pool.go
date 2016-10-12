@@ -32,6 +32,9 @@ const (
 
 var (
 	tempReceiptsMap map[uint64]types.Receipts
+	public_batch hyperdb.Batch
+	batchsize = 0
+
 )
 
 type BlockPool struct {
@@ -94,7 +97,7 @@ func (pool *BlockPool) ExecTxs(sequenceNum uint64, transactions []types.Transact
 
 	// 2.exec all the transactions, if the err is nil, save the tx and append to newTransactions
 	for i, tx := range transactions {
-		statedb.StartRecord(tx.BuildHash(), common.Hash{}, i)
+		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := ExecTransaction(tx, vmenv)
 		if err == nil {
 			newTransactions = append(newTransactions, tx)
@@ -313,12 +316,29 @@ func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int
 	env["currentGasLimit"] = "10000000"
 	vmenv := NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
 
-	batch := db.NewBatch()
+	//batch := db.NewBatch()
+	public_batch = db.NewBatch()
 
-	//todo run 20 ms in 500 tx
+	// todo run 20 ms in 500 tx
+	// TODO just for sendContractTransactionTest
+	var code = "0x6000805463ffffffff1916815560a0604052600b6060527f68656c6c6f20776f726c6400000000000000000000000000000000000000000060805260018054918190527f68656c6c6f20776f726c6400000000000000000000000000000000000000001681559060be907fb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf66020600261010084871615026000190190931692909204601f01919091048101905b8082111560ce576000815560010160ac565b50506101b8806100d26000396000f35b509056606060405260e060020a60003504633ad14af3811461003c578063569c5f6d146100615780638da9b77214610071578063d09de08a146100da575b005b6000805460043563ffffffff8216016024350163ffffffff199190911617905561003a565b6100f960005463ffffffff165b90565b604080516020818101835260008252600180548451600261010083851615026000190190921691909104601f81018490048402820184019095528481526101139490928301828280156101ac5780601f10610181576101008083540402835291602001916101ac565b61003a6000805463ffffffff19811663ffffffff909116600101179055565b6040805163ffffffff929092168252519081900360200190f35b60405180806020018281038252838181518152602001915080519060200190808383829060006004602084601f0104600302600f01f150905090810190601f1680156101735780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b820191906000526020600020905b81548152906001019060200180831161018f57829003601f168201915b5050505050905061006e56"
+	var tx_value1 = &types.TransactionValue{Price: 100000, GasLimit: 100000, Amount: 100, Payload: common.FromHex(code)}
+	value, _ := proto.Marshal(tx_value1)
+	//receipt, _, _, _ := ExecTransaction(*types.NewTestCreateTransaction(), vmenv)
+	var addr common.Address
 	for i, tx := range block.Transactions {
+		//tx.To = addr.Bytes() //TODO just for test
+		if(i==0){
+			tx.To = nil
+			tx.Value = value
+			_, _, addr, _ = ExecTransaction(*tx, vmenv)
+		}else if(i<=125) {
+			tx.To = addr.Bytes()
+		}else {
+			tx.Value = nil
+		}
 
-		statedb.StartRecord(tx.BuildHash(), common.Hash{}, i)
+		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, _ := ExecTransaction(*tx, vmenv)
 		//ExecTransaction(*tx, vmenv)
 		//receipts = append(receipts, receipt)
@@ -333,13 +353,14 @@ func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int
 		data, err := proto.Marshal(receipt)
 
 
-		if err := batch.Put(append(receiptsPrefix, receipt.TxHash...), data); err != nil {
+		if err := public_batch.Put(append(receiptsPrefix, receipt.TxHash...), data); err != nil {
 			return err
 		}
 
-
-		 batch.Put(txKeyFact, txValue)
+		public_batch.Put(txKeyFact, txValue)
+		batchsize++
 	}
+
 	/*receiptInst, _ := GetReceiptInst()
 	for _, receipt := range receipts {
 		receiptInst.PutReceipt(common.BytesToHash(receipt.TxHash), receipt)
@@ -380,7 +401,13 @@ func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int
 
 
 
-	// batch.Write()
+	/*
+	if(batchsize>=500){
+		go public_batch.Write()
+		batchsize = 0
+		public_batch = db.NewBatch()
+	}*/
+	go public_batch.Write()
 
 
 
@@ -440,7 +467,7 @@ func BuildTree(prefix []byte, ctx []interface{}) ([]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			trie.Update(append(transactionPrefix, t.BuildHash().Bytes()...), data)
+			trie.Update(append(transactionPrefix, t.GetTransactionHash().Bytes()...), data)
 		default:
 			return nil, errors.New("Invalid element type when build tree")
 		}

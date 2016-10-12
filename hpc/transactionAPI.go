@@ -87,7 +87,9 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	var found bool
 
 	realArgs := prepareExcute(args)
+
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), nil)
+
 
 	value, err := proto.Marshal(txValue)
 
@@ -95,6 +97,10 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		return common.Hash{}, err
 	}
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
+
+	// TODO set the PeerId of tx
+	//tx.PeerId = tran.pm.Peermanager.GetNodeId()
+	tx.TransactionHash = tx.GetTransactionHash().Bytes()
 
 
 	if tran.pm == nil {
@@ -182,7 +188,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		fmt.Println("Message", receipt.Message)
 		fmt.Println("Log", receipt.Logs)
 	*/
-	return tx.BuildHash(),nil
+	return tx.GetTransactionHash(),nil
 
 	} else {
 		return common.Hash{}, errors.New("account don't unlock")
@@ -219,6 +225,10 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 	}
 
+	// TODO just for test
+	tx.TransactionHash = tx.GetTransactionHash().Bytes()
+
+
 	if tran.pm == nil {
 
 		// Test environment
@@ -230,15 +240,44 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 		_, found = am.Unlocked[args.From]
 
 		// TODO replace password with test value
+		/*
 		signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
 		if err != nil {
 			log.Errorf("Sign(tx) error :%v", err)
 		}
 		tx.Signature = signature
+		*/
 	}
 	//am := tran.pm.AccountManager
 
 	if found == true {
+		log.Infof("############# %d: start send request#############", time.Now().Unix())
+		start := time.Now().Unix()
+		end := start + 90
+		for start := start; start < end; start = time.Now().Unix() {
+			for i := 0; i < 125; i++ {
+				tx.TimeStamp = time.Now().UnixNano()
+				txBytes, err := proto.Marshal(tx)
+				if err != nil {
+					log.Errorf("proto.Marshal(tx) error: %v", err)
+				}
+				if manager.GetEventObject() != nil {
+					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+					//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+				} else {
+					log.Warning("manager is Nil")
+				}
+			}
+
+			time.Sleep(90 * time.Millisecond)
+		}
+		log.Infof("############# %d: end send request#############", time.Now().Unix())
+		return tx.GetTransactionHash(),nil
+
+	} else {
+		return common.Hash{}, errors.New("account don't unlock")
+	}
+	/*if found == true {
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		tx.TimeStamp = time.Now().UnixNano()
 
@@ -257,7 +296,7 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 		return common.Hash{}, errors.New("account don't unlock")
 	}
 
-	time.Sleep(2000 * time.Millisecond)
+	time.Sleep(2000 * time.Millisecond)*/
 	/*
 		receipt := core.GetReceipt(tx.BuildHash())
 		fmt.Println("GasUsed", receipt.GasUsed)
@@ -270,7 +309,7 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 		fmt.Println("Message", receipt.Message)
 		fmt.Println("Log", receipt.Logs)
 	*/
-	return tx.BuildHash(), nil
+	return tx.GetTransactionHash(), nil
 }
 
 type CompileCode struct {
@@ -299,7 +338,7 @@ func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
 	var bh common.Hash
 	var bn , txIndex uint64
 
-	txHash := tx.BuildHash()
+	txHash := tx.GetTransactionHash()
 
 	if err := proto.Unmarshal(tx.Value,&txValue); err != nil {
 		log.Errorf("%v", err)
