@@ -326,13 +326,15 @@ func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int
 	value, _ := proto.Marshal(tx_value1)
 	//receipt, _, _, _ := ExecTransaction(*types.NewTestCreateTransaction(), vmenv)
 	var addr common.Address
+	begin_exectx:=time.Now().UnixNano()
 	for i, tx := range block.Transactions {
 		//tx.To = addr.Bytes() //TODO just for test
 		if(i==0){
 			tx.To = nil
 			tx.Value = value
 			_, _, addr, _ = ExecTransaction(*tx, vmenv)
-		}else if(i<=125) {
+			continue
+		}else if(i<100) {
 			tx.To = addr.Bytes()
 		}else {
 			tx.Value = nil
@@ -360,7 +362,8 @@ func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int
 		public_batch.Put(txKeyFact, txValue)
 		batchsize++
 	}
-
+	end_exectx:=time.Now().UnixNano()
+	log.Notice("exec tx time is ",(end_exectx-begin_exectx)/int64(time.Millisecond))
 	/*receiptInst, _ := GetReceiptInst()
 	for _, receipt := range receipts {
 		receiptInst.PutReceipt(common.BytesToHash(receipt.TxHash), receipt)
