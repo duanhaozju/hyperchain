@@ -143,7 +143,6 @@ func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash,
 
 // GetCode returns the code from the given contract address and block number.
 func (contract *PublicContractAPI) GetCode(addr common.Address, n Number) (string, error) {
-
 	db, err := hyperdb.GetLDBDatabase()
 
 	if err != nil {
@@ -160,7 +159,6 @@ func (contract *PublicContractAPI) GetCode(addr common.Address, n Number) (strin
 	}
 
 	return fmt.Sprintf(`0x%x`, stateDB.GetCode(addr)), nil
-
 }
 
 

@@ -30,10 +30,10 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"contract_deployContract",
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"contract_compileContract","params":["contract Accumulator{ uint sum = 0; function increment(){ sum = sum + 1; } function getSum() returns(uint){ return sum; }}"],"id":1}'
 
 # 调用合约方法 InvokeContract
-curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_invokeContract","params": [{"from": "<caller address>", "to": "<contract address>", "payload": "<encode data>"}],id: 1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_invokeContract","params": [{"from": "<caller address>", "to": "<contract address>", "payload": "<encode data>"}],"id": 1}'
 
 # 获取合约code GetCode
-curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getCode","params": ["<contract address>"],id: 1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getCode","params": ["<contract address>"],"id": 1}'
 
 ########## block 服务 ##########
 # 得到最新区块 LastestBlock
@@ -59,10 +59,10 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_queryEvmAvgTime","p
 
 ########## account服务 ##########
 # 获取所有账户信息 GetAccounts
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acot_getAccounts","params":[],"id": 1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acc_getAccounts","params":[],"id": 1}'
 
 # 查询账户余额 GetBalance
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acot_getBalance","params":["0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd"],"id": 1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acc_getBalance","params":["0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd"],"id": 1}'
 
 ########## node服务 ##########
 # 得到节点信息
