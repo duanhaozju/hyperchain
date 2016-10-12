@@ -8,7 +8,6 @@ import (
 	"hyperchain/manager"
 	"hyperchain/core/types"
 	"hyperchain/event"
-	"errors"
 	"hyperchain/hyperdb"
 	"fmt"
 	"hyperchain/core/state"
@@ -28,7 +27,7 @@ func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager) 
 
 func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, error) {
 	var tx *types.Transaction
-	var found bool
+	//var found bool
 
 	realArgs := prepareExcute(args)
 
@@ -55,27 +54,20 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 	}
 
-	if contract.pm == nil {
-
-		// Test environment
-		found = true
-	} else {
-
-		// Development environment
-		am := contract.pm.AccountManager
-		_, found = am.Unlocked[args.From]
-
-		//// TODO replace password with test value
-		//signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
-		//if err != nil {
-		//	log.Errorf("Sign(tx) error :%v", err)
-		//}
-		//tx.Signature = signature
-
-	}
+	//if contract.pm == nil {
+	//
+	//	// Test environment
+	//	found = true
+	//} else {
+	//
+	//	// Development environment
+	//	am := contract.pm.AccountManager
+	//	_, found = am.Unlocked[args.From]
+	//
+	//}
 	//am := tran.pm.AccountManager
 
-	if found == true {
+	//if found == true {
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		tx.TimeStamp = time.Now().UnixNano()
 
@@ -90,9 +82,9 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
-	} else {
-		return common.Hash{}, errors.New("account don't unlock")
-	}
+	//} else {
+	//	return common.Hash{}, errors.New("account don't unlock")
+	//}
 
 	time.Sleep(2000 * time.Millisecond)
 	/*
