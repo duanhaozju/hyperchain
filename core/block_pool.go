@@ -38,18 +38,35 @@ type BlockPool struct {
 	demandNumber uint64
 	demandSeqNo  uint64
 	maxNum       uint64
+	maxSeqNo     uint64
 
 	queue           map[uint64]*types.Block
 	validationQueue map[uint64]*event.ExeTxsEvent
 	eventMux        *event.TypeMux
 	events          event.Subscription
 	mu              sync.RWMutex
+	seqMu           sync.RWMutex
 	stateLock       sync.Mutex
 	wg              sync.WaitGroup // for shutdown sync
+
+	lastValidationState common.Hash
 }
 
 func (bp *BlockPool) SetDemandNumber(number uint64) {
 	bp.demandNumber = number
+}
+func (bp *BlockPool) SetDemandSeqNo(seqNo uint64) {
+	bp.demandSeqNo = seqNo
+}
+func (bp *BlockPool) SetMaxSeqNo(seqNo uint64) {
+	bp.maxSeqNo = seqNo
+}
+func (bp *BlockPool) SetLastValidationState(hash common.Hash) {
+	bp.lastValidationState = hash
+}
+
+func (bp *BlockPool) GetLastValidationState() common.Hash {
+	return bp.lastValidationState
 }
 
 func NewBlockPool(eventMux *event.TypeMux) *BlockPool {
@@ -60,8 +77,7 @@ func NewBlockPool(eventMux *event.TypeMux) *BlockPool {
 
 		queue:           make(map[uint64]*types.Block),
 		validationQueue: make(map[uint64]*event.ExeTxsEvent),
-
-		events: eventMux.Subscribe(event.NewBlockPoolEvent{}),
+		events:          eventMux.Subscribe(event.NewBlockPoolEvent{}),
 	}
 
 	//pool.wg.Add(1)
@@ -70,6 +86,7 @@ func NewBlockPool(eventMux *event.TypeMux) *BlockPool {
 	currentChain := GetChainCopy()
 	pool.demandNumber = currentChain.Height + 1
 	pool.demandSeqNo = currentChain.Height + 1
+	pool.lastValidationState = common.BytesToHash(currentChain.LatestBlockHash)
 	return pool
 }
 
@@ -580,4 +597,8 @@ func WriteBlockWithoutExecTx(block *types.Block, commonHash crypto.CommonHash, c
 	if block.Number%10 == 0 && block.Number != 0 {
 		WriteChainChan()
 	}
+}
+
+func PreProcessBlock(txs []types.Transaction, seqNo uint64) {
+
 }

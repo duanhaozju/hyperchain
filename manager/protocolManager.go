@@ -11,6 +11,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/consensus"
 	"hyperchain/core"
+	"hyperchain/core/state"
 	"hyperchain/core/types"
 	"hyperchain/crypto"
 	"hyperchain/event"
@@ -19,6 +20,7 @@ import (
 	"hyperchain/p2p/peer"
 	"hyperchain/protos"
 	"hyperchain/recovery"
+	"math/big"
 	"sync"
 	"time"
 )
@@ -359,35 +361,77 @@ func (self *ProtocolManager) ConsensusLoop() {
 	}
 }
 
-func (self *ProtocolManager) Validation(validationEvent *event.ExeTxsEvent) {
-	if !validationEvent.IsPrimary {
-		return
+func (self *ProtocolManager) PreCheck(txs []types.Transaction) ([]types.Transaction, []types.Transaction) {
+	var validTxSet []types.Transaction
+	var invalidTxSet []types.InvalidTransactionRecord
+	for _, tx := range txs {
+		if !(&tx).ValidateSign(self.AccountManager.Encryption, self.commonHash) {
+			log.Info("Validation, found invalid signature, send from :", tx.PeerId)
+			invalidTxSet = append(invalidTxSet, types.InvalidTransactionRecord{
+				Tx:      tx,
+				ErrType: types.InvalidTransactionRecord_SIGFAILED,
+			})
+		} else {
+			validTxSet = append(validTxSet, tx)
+		}
 	}
+	// (2) check sender account balance for each valid transaction
+	db, err := hyperdb.GetLDBDatabase()
+	statedb, err := state.New(self.blockPool.GetLastValidationState(), db)
+	for idx, tx := range validTxSet {
+		if !CanTransfer(common.BytesToAddress(tx.From, statedb, tx.Amount())) {
+			invalidTxSet = append(invalidTxSet, types.InvalidTransactionRecord{
+				Tx:      tx,
+				ErrType: types.InvalidTransactionRecord_OUTOFBALANCE,
+			})
+			validTxSet = append(validTxSet[:idx], validTxSet[idx+1:]...)
+		}
+	}
+
+}
+
+func (self *ProtocolManager) PreProcess(preProcessEvent *event.ExeTxsEvent) {
 	// (1) Check SeqNo
-	if validationEvent.SeqNo <= self.blockPool.demandSeqNo {
+	if preProcessEvent.SeqNo <= self.blockPool.demandSeqNo {
 		// receive repeat ValidationEvent
-		log.Error("Receive Repeat ValidationEvent, ", validationEvent.SeqNo)
+		log.Error("Receive Repeat ValidationEvent, ", preProcessEvent.SeqNo)
 		return
-	} else if validationEvent.SeqNo == self.blockPool.demandSeqNo {
-		// receive demand validationEvent
+	} else if preProcessEvent.SeqNo == self.blockPool.demandSeqNo {
+		// receive demand preProcessEvent
 		// (1) check signature for each transaction
 		var validTxSet []types.Transaction
-		var invalidTxSet []types.Transaction
-		for _, tx := range validationEvent.Transactions {
+		var invalidTxSet []types.InvalidTransactionRecord
+		for _, tx := range preProcessEvent.Transactions {
 			if !(&tx).ValidateSign(self.AccountManager.Encryption, self.commonHash) {
 				log.Info("Validation, found invalid signature, send from :", tx.PeerId)
-				invalidTxSet = append(invalidTxSet, tx)
+				invalidTxSet = append(invalidTxSet, types.InvalidTransactionRecord{
+					Tx:      tx,
+					ErrType: types.InvalidTransactionRecord_SIGFAILED,
+				})
 			} else {
 				validTxSet = append(validTxSet, tx)
 			}
 		}
 		// (2) check sender account balance for each valid transaction
+		db, err := hyperdb.GetLDBDatabase()
+		statedb, err := state.New(self.blockPool.GetLastValidationState(), db)
+		for idx, tx := range validTxSet {
+			if !CanTransfer(common.BytesToAddress(tx.From, statedb, tx.Amount())) {
+				invalidTxSet = append(invalidTxSet, types.InvalidTransactionRecord{
+					Tx:      tx,
+					ErrType: types.InvalidTransactionRecord_OUTOFBALANCE,
+				})
+				validTxSet = append(validTxSet[:idx], validTxSet[idx+1:]...)
+			}
+		}
+		// (3) process valid transaction
 		for _, tx := range validTxSet {
 
 		}
+
 	} else {
-		log.Info("Receive ValidationEvent which is not demand, ", validationEvent.SeqNo)
-		self.blockPool.validationQueue[validationEvent.SeqNo] = validationEvent
+		log.Info("Receive ValidationEvent which is not demand, ", preProcessEvent.SeqNo)
+		self.blockPool.validationQueue[preProcessEvent.SeqNo] = preProcessEvent
 	}
 }
 
@@ -491,4 +535,8 @@ func (pm *ProtocolManager) broadcastDemandBlock(number uint64, hash []byte, repl
 	}
 	broadcastMsg, _ := proto.Marshal(message)
 	pm.Peermanager.SendMsgToPeers(broadcastMsg, replicas, recovery.Message_SYNCSINGLE)
+}
+
+func CanTransfer(from common.Address, statedb *state.StateDB, value *big.Int) bool {
+	return statedb.GetBalance(from).Cmp(value) >= 0
 }
