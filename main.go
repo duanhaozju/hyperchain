@@ -23,6 +23,7 @@ import (
 	"hyperchain/accounts"
 	"hyperchain/jsonrpc"
 	"hyperchain/membersrvc"
+	"runtime"
 )
 
 type argT struct {
@@ -40,10 +41,11 @@ func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*argT)
 
+		runtime.GOMAXPROCS(-1)
 		membersrvc.Start("./", argv.NodeId)
 
 		//init log
-		common.InitLog(logging.INFO, "./logs/", argv.LocalPort)
+		common.InitLog(logging.NOTICE, "./logs/", argv.LocalPort)
 		eventMux := new(event.TypeMux)
 
 		//init peer manager to start grpc server and client

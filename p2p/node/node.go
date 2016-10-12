@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"time"
 	//"hyperchain/membersrvc"
+
+	"hyperchain/membersrvc"
 )
 
 var log *logging.Logger // package-level logger
@@ -155,6 +157,12 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 					})
 
 				}
+			case recovery.Message_SYNCSINGLE:
+				{
+					go this.higherEventManager.Post(event.StateUpdateEvent{
+						Payload: SyncMsg.Payload,
+					})
+				}
 			case recovery.Message_RELAYTX:
 				{
 					go this.higherEventManager.Post(event.ConsensusEvent{
@@ -162,7 +170,6 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 					})
 				}
 			}
-
 		}
 	case pb.Message_KEEPALIVE:
 		{
@@ -199,9 +206,9 @@ func (this *Node) StartServer() {
 		log.Fatalf("Failed to listen: %v", err)
 		log.Fatal("PLEASE RESTART THE SERVER NODE!")
 	}
-	/*opts:=membersrvc.GetGrpcServerOpts()
-	this.gRPCServer = grpc.NewServer(opts...)*/
-	this.gRPCServer = grpc.NewServer()
+	opts:=membersrvc.GetGrpcServerOpts()
+	this.gRPCServer = grpc.NewServer(opts...)
+	//this.gRPCServer = grpc.NewServer()
 	pb.RegisterChatServer(this.gRPCServer, this)
 	log.Info("Listening gRPC request...")
 	go this.gRPCServer.Serve(lis)

@@ -12,11 +12,12 @@ import (
 
 	"bytes"
 	"crypto"
-	"crypto/aes"
+	//"crypto/aes"
 	"crypto/des"
 	"crypto/rand"
 	"encoding/hex"
 	"hyperchain/p2p/transport/ecdh"
+	"crypto/aes"
 )
 
 var log *logging.Logger // package-level logger
@@ -87,6 +88,7 @@ func (hSM *HandShakeManager) EncWithSecret(message []byte, peerHash string) []by
 	aesEncrypter := cipher.NewCFBEncrypter(aesBlockEncrypter, iv)
 	aesEncrypter.XORKeyStream(encrypted, []byte(message))
 	return encrypted
+	//return message
 
 }
 
@@ -111,6 +113,7 @@ func (hSM *HandShakeManager) DecWithSecret(message []byte, peerHash string) []by
 	aesDecrypter := cipher.NewCFBDecrypter(aesBlockDecrypter, iv)
 	aesDecrypter.XORKeyStream(decrypted, message)
 	return decrypted
+	//return message
 
 }
 

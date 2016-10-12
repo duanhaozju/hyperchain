@@ -14,6 +14,13 @@ func (self *Transaction) BuildHash() common.Hash {
 	return ch.Hash(self)
 }
 
+func (self *Transaction) GetTransactionHash() common.Hash{
+	if(len(self.TransactionHash)== 0){
+		return self.BuildHash()
+	}
+	return common.BytesToHash(self.TransactionHash)
+}
+
 func (self *Transaction) Hash(ch crypto.CommonHash) common.Hash {
 	return ch.Hash(self)
 }

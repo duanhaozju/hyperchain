@@ -28,16 +28,15 @@ echo "remove tmp data"
 rm -rf /tmp/hyperchain/
 
 echo "running the application"
+#    for((j=1;j<=4;j++))
+#    do
+#        ./hyperchain -o $j -l 808$j -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json > output$j &
+#    done
 
-gnome-terminal -x bash -c "./hyperchain -o 1 -l 8081 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json"
-gnome-terminal -x bash -c "./hyperchain -o 2 -l 8082 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json"
-gnome-terminal -x bash -c "./hyperchain -o 3 -l 8083 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json"
-gnome-terminal -x bash -c "./hyperchain -o 4 -l 8084 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json"
-
-#./hyperchain -o 1 -l 8081 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json &
-#./hyperchain -o 2 -l 8082 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json &
-#./hyperchain -o 3 -l 8083 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json &
-#./hyperchain -o 4 -l 8084 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json &
+./hyperchain -o 1 -l 8081 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json &
+./hyperchain -o 2 -l 8082 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json &
+./hyperchain -o 3 -l 8083 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json &
+./hyperchain -o 4 -l 8084 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json &
 
 
 python ./jsonrpc/Dashboard/simpleHttpServer.py

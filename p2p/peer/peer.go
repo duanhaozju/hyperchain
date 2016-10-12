@@ -19,6 +19,8 @@ import (
 	"sync"
 	"time"
 	//"hyperchain/membersrvc"
+
+	"hyperchain/membersrvc"
 )
 
 // init the package-level logger system,
@@ -50,9 +52,9 @@ func NewPeerByIpAndPort(ip string, port int32, nid int32, TEM transport.Transpor
 	peer.TEM = TEM
 	peerAddr := peerComm.ExtractAddress(ip, int(port), nid)
 
-	//opts:=membersrvc.GetGrpcClientOpts()
-	//conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), opts...)
-	conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
+	opts:=membersrvc.GetGrpcClientOpts()
+	conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), opts...)
+	//conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
 	if err != nil {
 		errors.New("Cannot establish a connection!")
 		log.Error("err:", err)

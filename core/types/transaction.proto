@@ -7,4 +7,6 @@ message Transaction {
 	bytes value = 3;
 	int64 timeStamp = 4;
 	bytes signature = 5;
+	uint64 peerId = 6;
+	bytes transactionHash = 7;
 }
