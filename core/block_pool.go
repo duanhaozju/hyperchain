@@ -342,6 +342,7 @@ func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int
 
 		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, _ := ExecTransaction(*tx, vmenv)
+		//log.Notice("------------ret",ret)
 		//ExecTransaction(*tx, vmenv)
 		//receipts = append(receipts, receipt)
 
