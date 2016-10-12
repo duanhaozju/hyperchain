@@ -12,16 +12,16 @@ import (
 type PublicBlockAPI struct{}
 
 type BlockResult struct {
-	Number     *Number      `json:"number"`
-	Hash       common.Hash `json:"hash"`
-	ParentHash common.Hash `json:"parentHash"`
-	WriteTime  string      `json:"writeTime"`
-	AvgTime    *Number      `json:"avgTime"`
-	TxCounts   *Number      `json:"txcounts"`
-	Counts     *Number      `json:"Counts"`
-	Percents   string      `json:"percents"`
-	//Transactions []*types.Transaction	`json:transactions`
-	Transactions []interface{}	`json:transactions`
+	Number       *Number      	`json:"number"`
+	Hash         common.Hash 	`json:"hash"`
+	ParentHash   common.Hash 	`json:"parentHash"`
+	WriteTime    string      	`json:"writeTime"`
+	AvgTime      *Number      	`json:"avgTime"`
+	TxCounts     *Number      	`json:"txcounts"`
+	Counts       *Number      	`json:"Counts"`
+	Percents     string      	`json:"percents"`
+	MerkleRoot   common.Hash	`json:"merkleRoot"`
+	Transactions []interface{}	`json:"transactions"`
 }
 
 func NewPublicBlockAPI() *PublicBlockAPI {
@@ -131,6 +131,7 @@ func outputBlockResult(block *types.Block) (*BlockResult, error) {
 		TxCounts:     NewInt64ToNumber(txCounts),
 		Counts:       NewInt64ToNumber(count),
 		Percents:     strconv.FormatFloat(percent*100, 'f', 2, 32) + "%",
+		MerkleRoot:   common.BytesToHash(block.MerkleRoot),
 		Transactions: transactions,
 	}, nil
 }

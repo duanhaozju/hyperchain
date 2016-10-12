@@ -9,6 +9,9 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/event"
 	"errors"
+	"hyperchain/hyperdb"
+	"fmt"
+	"hyperchain/core/state"
 )
 
 type PublicContractAPI struct {
@@ -110,11 +113,12 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 type CompileCode struct{
 	Abi []string
 	Bin []string
+	Types []string
 }
 
 // ComplieContract complies contract to ABI
 func (contract *PublicContractAPI) CompileContract(ct string) (*CompileCode,error){
-	abi, bin, err := compiler.CompileSourcefile(ct)
+	abi, bin, names, err := compiler.CompileSourcefile(ct)
 
 	if err != nil {
 		return nil, err
@@ -123,6 +127,7 @@ func (contract *PublicContractAPI) CompileContract(ct string) (*CompileCode,erro
 	return &CompileCode{
 		Abi: abi,
 		Bin: bin,
+		Types: names,
 	}, nil
 }
 
@@ -131,7 +136,31 @@ func (contract *PublicContractAPI) DeployContract(args SendTxArgs) (common.Hash,
 	return deployOrInvoke(contract, args)
 }
 
-// InvokeContract invoke contract.
+// InvokeContract invokes contract.
 func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash, error) {
 	return deployOrInvoke(contract, args)
 }
+
+// GetCode returns the code from the given contract address and block number.
+func (contract *PublicContractAPI) GetCode(addr common.Address, n Number) (string, error) {
+
+	db, err := hyperdb.GetLDBDatabase()
+
+	if err != nil {
+		log.Errorf("Open database error: %v", err)
+		return "", err
+	}
+
+	blk, err := getBlockByNumber(n)
+
+	stateDB, err := state.New(blk.MerkleRoot, db)
+	if err != nil {
+		log.Errorf("Get stateDB error, %v", err)
+		return "", err
+	}
+
+	return fmt.Sprintf(`0x%x`, stateDB.GetCode(addr)), nil
+
+}
+
+
