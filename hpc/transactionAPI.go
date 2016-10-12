@@ -254,7 +254,7 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
 		end := start + 90
-		for start := start; start < end-60; start = time.Now().Unix() {
+		for start := start; start < end; start = time.Now().Unix() {
 			for i := 0; i < 100; i++ {
 				tx.TimeStamp = time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
@@ -269,7 +269,7 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 				}
 			}
 
-			time.Sleep(90 * time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
 		}
 		return tx.GetTransactionHash(),nil
 
