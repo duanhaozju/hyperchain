@@ -36,12 +36,14 @@ var options = {
 };
 //var post_data = JSON.stringify({"from":opt.from,"to":opt.to,"value":'1'});
 var post_data = JSON.stringify({
-    "method": "tx_sendTransaction",
+    // "method": "tx_sendTransaction",
+    "method": "tx_sendTransactionOrContract",
     "params": [
         {
             "from":opt.from,
             "to":opt.to,
-            "value": '1'
+            "value": '1',
+            "payload" : "0x8da9b772",
         }
     ],
     "id": 1
