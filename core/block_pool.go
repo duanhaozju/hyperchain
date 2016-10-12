@@ -22,8 +22,6 @@ import (
 	"hyperchain/trie"
 	"strconv"
 	"time"
-
-
 )
 
 const (
@@ -32,21 +30,22 @@ const (
 
 var (
 	tempReceiptsMap map[uint64]types.Receipts
-	public_batch hyperdb.Batch
-	batchsize = 0
-
+	public_batch    hyperdb.Batch
+	batchsize       = 0
 )
 
 type BlockPool struct {
 	demandNumber uint64
+	demandSeqNo  uint64
 	maxNum       uint64
 
-	queue     map[uint64]*types.Block
-	eventMux  *event.TypeMux
-	events    event.Subscription
-	mu        sync.RWMutex
-	stateLock sync.Mutex
-	wg        sync.WaitGroup // for shutdown sync
+	queue           map[uint64]*types.Block
+	validationQueue map[uint64]*event.ExeTxsEvent
+	eventMux        *event.TypeMux
+	events          event.Subscription
+	mu              sync.RWMutex
+	stateLock       sync.Mutex
+	wg              sync.WaitGroup // for shutdown sync
 }
 
 func (bp *BlockPool) SetDemandNumber(number uint64) {
@@ -59,7 +58,8 @@ func NewBlockPool(eventMux *event.TypeMux) *BlockPool {
 	pool := &BlockPool{
 		eventMux: eventMux,
 
-		queue: make(map[uint64]*types.Block),
+		queue:           make(map[uint64]*types.Block),
+		validationQueue: make(map[uint64]*event.ExeTxsEvent),
 
 		events: eventMux.Subscribe(event.NewBlockPoolEvent{}),
 	}
@@ -69,6 +69,7 @@ func NewBlockPool(eventMux *event.TypeMux) *BlockPool {
 
 	currentChain := GetChainCopy()
 	pool.demandNumber = currentChain.Height + 1
+	pool.demandSeqNo = currentChain.Height + 1
 	return pool
 }
 
@@ -251,7 +252,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	block.ParentHash = currentChain.LatestBlockHash
 	db, _ := hyperdb.GetLDBDatabase()
 	//batch := db.NewBatch()
-	if err := ProcessBlock(block,commonHash,commitTime ); err != nil {
+	if err := ProcessBlock(block, commonHash, commitTime); err != nil {
 		log.Fatal(err)
 	}
 	block.WriteTime = time.Now().UnixNano()
@@ -263,31 +264,29 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	// update our stateObject and statedb to blockchain
 	block.EvmTime = time.Now().UnixNano()
 
-
-
 	newChain := GetChainCopy()
 	log.Notice("Block number", newChain.Height)
 	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
 
-/*	block.WriteTime = time.Now().UnixNano()
-	block.CommitTime = commitTime
-	block.BlockHash = block.Hash(commonHash).Bytes()
-	data, err := proto.Marshal(block)
-	if err != nil {
-		log.Critical(err)
-		return
-	}
+	/*	block.WriteTime = time.Now().UnixNano()
+		block.CommitTime = commitTime
+		block.BlockHash = block.Hash(commonHash).Bytes()
+		data, err := proto.Marshal(block)
+		if err != nil {
+			log.Critical(err)
+			return
+		}
 
 
-	keyFact := append(blockPrefix, block.BlockHash...)
-	err = db.Put(keyFact,data)
-	*//*if err := db.Put(keyFact, data); err != nil {
+		keyFact := append(blockPrefix, block.BlockHash...)
+		err = db.Put(keyFact,data)
+	*/ /*if err := db.Put(keyFact, data); err != nil {
 		return err
-	}*//*
-	keyNum := strconv.FormatInt(int64(block.Number), 10)
-	//err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
+	}*/ /*
+		keyNum := strconv.FormatInt(int64(block.Number), 10)
+		//err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
 
-	err = db.Put(append(blockNumPrefix, keyNum...),block.BlockHash)*/
+		err = db.Put(append(blockNumPrefix, keyNum...),block.BlockHash)*/
 
 	PutBlockTx(db, commonHash, block.BlockHash, block)
 	if block.Number%10 == 0 && block.Number != 0 {
@@ -297,10 +296,10 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	//CommitStatedbToBlockchain()
 }
 
-func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int64) error {
+func ProcessBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int64) error {
 	var (
 		//receipts types.Receipts
-		env      = make(map[string]string)
+		env = make(map[string]string)
 	)
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
@@ -328,13 +327,13 @@ func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int
 	var addr common.Address
 	for i, tx := range block.Transactions {
 		//tx.To = addr.Bytes() //TODO just for test
-		if(i==0){
+		if i == 0 {
 			tx.To = nil
 			tx.Value = value
 			_, _, addr, _ = ExecTransaction(*tx, vmenv)
-		}else if(i<=125) {
+		} else if i <= 125 {
 			tx.To = addr.Bytes()
-		}else {
+		} else {
 			tx.Value = nil
 		}
 
@@ -343,7 +342,6 @@ func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int
 		//ExecTransaction(*tx, vmenv)
 		//receipts = append(receipts, receipt)
 
-
 		txKey := tx.Hash(commonHash).Bytes()
 		txKeyFact := append(transactionPrefix, txKey...)
 		txValue, err := proto.Marshal(tx)
@@ -351,7 +349,6 @@ func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int
 			return nil
 		}
 		data, err := proto.Marshal(receipt)
-
 
 		if err := public_batch.Put(append(receiptsPrefix, receipt.TxHash...), data); err != nil {
 			return err
@@ -367,10 +364,8 @@ func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int
 	}*/
 	//WriteReceipts(receipts)
 
-	begin:=time.Now().UnixNano()
+	begin := time.Now().UnixNano()
 	root, _ := statedb.Commit()
-
-
 
 	//batch := db.NewBatch()
 	block.MerkleRoot = root.Bytes()
@@ -386,36 +381,31 @@ func ProcessBlock(block *types.Block,commonHash crypto.CommonHash,commitTime int
 
 	keyFact := append(blockPrefix, block.BlockHash...)
 	err = batch.Put(keyFact,data)
-	*//*if err := db.Put(keyFact, data); err != nil {
+	*/ /*if err := db.Put(keyFact, data); err != nil {
 		return err
-	}*//*
-	keyNum := strconv.FormatInt(int64(block.Number), 10)
-	//err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
+	}*/ /*
+		keyNum := strconv.FormatInt(int64(block.Number), 10)
+		//err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
 
-	err = batch.Put(append(blockNumPrefix, keyNum...),block.BlockHash)*/
+		err = batch.Put(append(blockNumPrefix, keyNum...),block.BlockHash)*/
 	//batch.Write()
-	end:=time.Now().UnixNano()
-	log.Notice("write time is ",(end-begin)/int64(time.Millisecond))
+	end := time.Now().UnixNano()
+	log.Notice("write time is ", (end-begin)/int64(time.Millisecond))
 	//WriteBlockInDB(root,block,commitTime,commonHash)
 
-
-
-
 	/*
-	if(batchsize>=500){
-		go public_batch.Write()
-		batchsize = 0
-		public_batch = db.NewBatch()
-	}*/
+		if(batchsize>=500){
+			go public_batch.Write()
+			batchsize = 0
+			public_batch = db.NewBatch()
+		}*/
 	go public_batch.Write()
-
-
 
 	//fmt.Println("[After Process %d] %s\n", block.Number, string(statedb.Dump()))
 	return nil
 }
 
-func WriteBlockInDB(root common.Hash,block *types.Block,commitTime int64,commonHash crypto.CommonHash)  {
+func WriteBlockInDB(root common.Hash, block *types.Block, commitTime int64, commonHash crypto.CommonHash) {
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Critical(err)
@@ -434,14 +424,14 @@ func WriteBlockInDB(root common.Hash,block *types.Block,commitTime int64,commonH
 	}
 
 	keyFact := append(blockPrefix, block.BlockHash...)
-	err = batch.Put(keyFact,data)
+	err = batch.Put(keyFact, data)
 	/*if err := db.Put(keyFact, data); err != nil {
 		return err
 	}*/
 	keyNum := strconv.FormatInt(int64(block.Number), 10)
 	//err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
 
-	err = batch.Put(append(blockNumPrefix, keyNum...),block.BlockHash)
+	err = batch.Put(append(blockNumPrefix, keyNum...), block.BlockHash)
 	batch.Write()
 }
 

@@ -335,19 +335,6 @@ func (self *ProtocolManager) ConsensusLoop() {
 			go self.Peermanager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
 			//go self.peerManager.SendMsgToPeers(ev.Payload,)
 		case event.NewTxEvent:
-			// unsign signature
-			encryption := crypto.NewEcdsaEncrypto("ecdsa")
-			kec256Hash := crypto.NewKeccak256Hash("keccak256")
-			tx := &types.Transaction{}
-			if err := proto.Unmarshal(ev.Payload, tx); err != nil {
-				log.Error("NewTxEvent, unmarshal failed")
-				continue
-			}
-			if !tx.ValidateSign(encryption, kec256Hash) {
-				// TODO Post Event to frontend
-				log.Error("NewTxEvent, Invalid signature")
-				continue
-			}
 			go self.sendMsg(ev.Payload)
 
 		case event.ConsensusEvent:
@@ -355,6 +342,8 @@ func (self *ProtocolManager) ConsensusLoop() {
 			log.Debug("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 		case event.ExeTxsEvent:
+			// (1) check signature for each transaction
+
 			//self.blockPool.ExecTxs(ev.SequenceNum, ev.Transactions)
 			/*
 				case event.CommitOrRollbackBlockEvent:
@@ -367,6 +356,38 @@ func (self *ProtocolManager) ConsensusLoop() {
 				ev.Transactions,ev.CommitTime,ev.CommitStatus)*/
 		}
 
+	}
+}
+
+func (self *ProtocolManager) Validation(validationEvent *event.ExeTxsEvent) {
+	if !validationEvent.IsPrimary {
+		return
+	}
+	// (1) Check SeqNo
+	if validationEvent.SeqNo <= self.blockPool.demandSeqNo {
+		// receive repeat ValidationEvent
+		log.Error("Receive Repeat ValidationEvent, ", validationEvent.SeqNo)
+		return
+	} else if validationEvent.SeqNo == self.blockPool.demandSeqNo {
+		// receive demand validationEvent
+		// (1) check signature for each transaction
+		var validTxSet []types.Transaction
+		var invalidTxSet []types.Transaction
+		for _, tx := range validationEvent.Transactions {
+			if !(&tx).ValidateSign(self.AccountManager.Encryption, self.commonHash) {
+				log.Info("Validation, found invalid signature, send from :", tx.PeerId)
+				invalidTxSet = append(invalidTxSet, tx)
+			} else {
+				validTxSet = append(validTxSet, tx)
+			}
+		}
+		// (2) check sender account balance for each valid transaction
+		for _, tx := range validTxSet {
+
+		}
+	} else {
+		log.Info("Receive ValidationEvent which is not demand, ", validationEvent.SeqNo)
+		self.blockPool.validationQueue[validationEvent.SeqNo] = validationEvent
 	}
 }
 
