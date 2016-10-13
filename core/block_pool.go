@@ -497,7 +497,13 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) error {
 	if err != nil {
 		return err
 	}
-
+	blockCache, _ := GetBlockCache()
+	blockCache.Record(validationEvent.SeqNo, BlockRecord{
+		TxRoot:      txRoot,
+		ReceiptRoot: receiptRoot,
+		MerkleRoot:  merkleRoot,
+		InvalidTxs:  invalidTxSet,
+	})
 	log.Notice("PreProcess Result : ", common.BytesToHash(merkleRoot).Hex(), common.BytesToHash(txRoot).Hex(), common.BytesToHash(receiptRoot).Hex())
 	log.Notice("Invalid Tx number: ", len(invalidTxSet))
 	// Communicate with PBFT
@@ -505,7 +511,6 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) error {
 }
 func (pool *BlockPool) PreCheck(txs []*types.Transaction) ([]*types.Transaction, []*types.InvalidTransactionRecord) {
 	var validTxSet []*types.Transaction
-	var tmp []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
@@ -516,19 +521,6 @@ func (pool *BlockPool) PreCheck(txs []*types.Transaction) ([]*types.Transaction,
 			invalidTxSet = append(invalidTxSet, &types.InvalidTransactionRecord{
 				Tx:      tx,
 				ErrType: types.InvalidTransactionRecord_SIGFAILED,
-			})
-		} else {
-			tmp = append(tmp, tx)
-		}
-	}
-	// (2) check sender account balance for each valid transaction
-	db, _ := hyperdb.GetLDBDatabase()
-	statedb, _ := state.New(pool.lastValidationState, db)
-	for _, tx := range tmp {
-		if !CanTransfer(common.BytesToAddress(tx.From), statedb, tx.Amount()) {
-			invalidTxSet = append(invalidTxSet, &types.InvalidTransactionRecord{
-				Tx:      tx,
-				ErrType: types.InvalidTransactionRecord_OUTOFBALANCE,
 			})
 		} else {
 			validTxSet = append(validTxSet, tx)
@@ -601,6 +593,10 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 
 	log.Notice("[After Process %d] %s\n", seqNo, string(statedb.Dump()))
 	return nil, nil, merkleRoot, txRoot, receiptRoot, invalidTxs
+}
+
+func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent) {
+
 }
 
 func BuildTree(prefix []byte, ctx []interface{}) ([]byte, error) {
