@@ -617,12 +617,20 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent) {
 		for _, tx := range record.ValidTxs {
 			newBlock.Transactions = append(newBlock.Transactions, tx)
 		}
+		newBlock.MerkleRoot = record.MerkleRoot
+		newBlock.TxRoot = record.TxRoot
+		newBlock.ReceiptRoot = record.ReceiptRoot
 		newBlock.Timestamp = ev.Timestamp
 		newBlock.CommitTime = ev.CommitTime
 		newBlock.Number = ev.SeqNo
 		// 2.save block and update chain
 		pool.AddBlock(newBlock, crypto.NewKeccak256Hash("Keccak256"))
 	} else {
+		db, _ := hyperdb.GetLDBDatabase()
+		for _, t := range record.InvalidTxs {
+			db.Delete(append(transactionPrefix, t.Tx.GetTransactionHash().Bytes()...))
+			db.Delete(append(receiptsPrefix, t.Tx.GetTransactionHash().Bytes()...))
+		}
 		// TODO
 	}
 	blockCache.Delete(ev.SeqNo)
