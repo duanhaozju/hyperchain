@@ -20,6 +20,7 @@ import (
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
 	"hyperchain/trie"
+	"math/big"
 	"strconv"
 	"time"
 )
@@ -41,11 +42,11 @@ type BlockPool struct {
 	maxSeqNo     uint64
 
 	queue           map[uint64]*types.Block
-	validationQueue map[uint64]*event.ExeTxsEvent
+	validationQueue map[uint64]event.ExeTxsEvent
 	eventMux        *event.TypeMux
 	events          event.Subscription
 	mu              sync.RWMutex
-	seqMu           sync.RWMutex
+	seqNoMu         sync.RWMutex
 	stateLock       sync.Mutex
 	wg              sync.WaitGroup // for shutdown sync
 
@@ -55,19 +56,6 @@ type BlockPool struct {
 func (bp *BlockPool) SetDemandNumber(number uint64) {
 	bp.demandNumber = number
 }
-func (bp *BlockPool) SetDemandSeqNo(seqNo uint64) {
-	bp.demandSeqNo = seqNo
-}
-func (bp *BlockPool) SetMaxSeqNo(seqNo uint64) {
-	bp.maxSeqNo = seqNo
-}
-func (bp *BlockPool) SetLastValidationState(hash common.Hash) {
-	bp.lastValidationState = hash
-}
-
-func (bp *BlockPool) GetLastValidationState() common.Hash {
-	return bp.lastValidationState
-}
 
 func NewBlockPool(eventMux *event.TypeMux) *BlockPool {
 	tempReceiptsMap = make(map[uint64]types.Receipts)
@@ -76,7 +64,7 @@ func NewBlockPool(eventMux *event.TypeMux) *BlockPool {
 		eventMux: eventMux,
 
 		queue:           make(map[uint64]*types.Block),
-		validationQueue: make(map[uint64]*event.ExeTxsEvent),
+		validationQueue: make(map[uint64]event.ExeTxsEvent),
 		events:          eventMux.Subscribe(event.NewBlockPoolEvent{}),
 	}
 
@@ -86,7 +74,13 @@ func NewBlockPool(eventMux *event.TypeMux) *BlockPool {
 	currentChain := GetChainCopy()
 	pool.demandNumber = currentChain.Height + 1
 	pool.demandSeqNo = currentChain.Height + 1
-	pool.lastValidationState = common.BytesToHash(currentChain.LatestBlockHash)
+	if currentChain.Height == 0 {
+		pool.lastValidationState = common.Hash{}
+	} else {
+		db, _ := hyperdb.GetLDBDatabase()
+		blk, _ := GetBlock(db, currentChain.LatestBlockHash)
+		pool.lastValidationState = common.BytesToHash(blk.MerkleRoot)
+	}
 	return pool
 }
 
@@ -452,6 +446,175 @@ func WriteBlockInDB(root common.Hash, block *types.Block, commitTime int64, comm
 	batch.Write()
 }
 
+func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
+	if validationEvent.SeqNo == 0 {
+		// Process
+		pool.PreProcess(validationEvent)
+		// Process remain event
+		for i := validationEvent.SeqNo + 1; i <= pool.maxSeqNo; i += 1 {
+			if _, ok := pool.validationQueue[i]; ok {
+				pool.seqNoMu.RLock()
+				pool.demandSeqNo += 1
+				log.Info("Current demandSeqNo is, ", pool.demandSeqNo)
+				// Process
+				pool.PreProcess(pool.validationQueue[i])
+				delete(pool.validationQueue, i)
+				pool.seqNoMu.RUnlock()
+			} else {
+				break
+			}
+		}
+		return
+	}
+	if validationEvent.SeqNo > pool.maxSeqNo {
+		pool.maxSeqNo = validationEvent.SeqNo
+	}
+	// TODO Is necessary ?
+	if _, ok := pool.validationQueue[validationEvent.SeqNo]; ok {
+		log.Error("Receive Repeat ValidationEvent, ", validationEvent.SeqNo)
+		return
+	}
+	// (1) Check SeqNo
+	if validationEvent.SeqNo < pool.demandSeqNo {
+		// receive repeat ValidationEvent
+		log.Error("Receive Repeat ValidationEvent, ", validationEvent.SeqNo)
+		return
+	} else if validationEvent.SeqNo == pool.demandSeqNo {
+		// Process
+		pool.seqNoMu.RLock()
+		pool.PreProcess(validationEvent)
+		log.Info("Current demandSeqNo is, ", pool.demandSeqNo)
+		pool.seqNoMu.RUnlock()
+		// Process remain event
+		for i := validationEvent.SeqNo + 1; i <= pool.maxSeqNo; i += 1 {
+			if _, ok := pool.validationQueue[i]; ok {
+				pool.seqNoMu.RLock()
+				pool.demandSeqNo += 1
+				log.Info("Current demandSeqNo is, ", pool.demandSeqNo)
+				// Process
+				pool.PreProcess(pool.validationQueue[i])
+				delete(pool.validationQueue, i)
+				pool.seqNoMu.RUnlock()
+			} else {
+				break
+			}
+		}
+		return
+	} else {
+		log.Info("Receive ValidationEvent which is not demand, ", validationEvent.SeqNo)
+		pool.validationQueue[validationEvent.SeqNo] = validationEvent
+	}
+}
+
+func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) error {
+	log.Info("PreProcess validationEvent, ", validationEvent.SeqNo)
+	var validTxSet []types.Transaction
+	//var invalidTxSet []types.InvalidTransactionRecord
+	if validationEvent.IsPrimary {
+		validTxSet, _ = pool.PreCheck(validationEvent.Transactions)
+	} else {
+		validTxSet = validationEvent.Transactions
+	}
+	err, _, merkleRoot, txRoot, receiptRoot := pool.ProcessBlock1(validTxSet, validationEvent.SeqNo)
+	if err != nil {
+		return err
+	}
+
+	log.Notice("PreProcess Result : ", common.BytesToHash(merkleRoot).Hex(), common.BytesToHash(txRoot).Hex(), common.BytesToHash(receiptRoot).Hex())
+	// Communicate with PBFT
+	return nil
+}
+func (pool *BlockPool) PreCheck(txs []types.Transaction) ([]types.Transaction, []types.InvalidTransactionRecord) {
+	var validTxSet []types.Transaction
+	var invalidTxSet []types.InvalidTransactionRecord
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	kec256Hash := crypto.NewKeccak256Hash("keccak256")
+	// (1) check signature for each transaction
+	for _, tx := range txs {
+		if !(&tx).ValidateSign(encryption, kec256Hash) {
+			log.Info("Validation, found invalid signature, send from :", tx.PeerId)
+			invalidTxSet = append(invalidTxSet, types.InvalidTransactionRecord{
+				Tx:      &tx,
+				ErrType: types.InvalidTransactionRecord_SIGFAILED,
+			})
+		} else {
+			validTxSet = append(validTxSet, tx)
+		}
+	}
+	// (2) check sender account balance for each valid transaction
+	db, _ := hyperdb.GetLDBDatabase()
+	statedb, _ := state.New(pool.lastValidationState, db)
+	for idx, tx := range validTxSet {
+		if !CanTransfer(common.BytesToAddress(tx.From), statedb, tx.Amount()) {
+			invalidTxSet = append(invalidTxSet, types.InvalidTransactionRecord{
+				Tx:      &tx,
+				ErrType: types.InvalidTransactionRecord_OUTOFBALANCE,
+			})
+			validTxSet = append(validTxSet[:idx], validTxSet[idx+1:]...)
+		}
+	}
+	return validTxSet, invalidTxSet
+}
+
+func (pool *BlockPool) ProcessBlock1(txs []types.Transaction, seqNo uint64) (error, []byte, []byte, []byte, []byte) {
+
+	var (
+		//receipts types.Receipts
+		env = make(map[string]string)
+	)
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		return err, nil, nil, nil, nil
+	}
+	txTrie, _ := trie.New(common.Hash{}, db)
+	receiptTrie, _ := trie.New(common.Hash{}, db)
+	statedb, err := state.New(pool.lastValidationState, db)
+	//fmt.Println("[Before Process %d] %s\n", block.Number, string(statedb.Dump()))
+	if err != nil {
+		return err, nil, nil, nil, nil
+	}
+	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
+	env["currentGasLimit"] = "10000000"
+	vmenv := NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
+
+	//batch := db.NewBatch()
+	public_batch = db.NewBatch()
+
+	for i, tx := range txs {
+		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
+		receipt, _, _, _ := ExecTransaction(tx, vmenv)
+
+		// save to DB
+		txValue, _ := proto.Marshal(&tx)
+		if err := public_batch.Put(append(transactionPrefix, tx.GetTransactionHash().Bytes()...), txValue); err != nil {
+			return err, nil, nil, nil, nil
+		}
+
+		receiptValue, _ := proto.Marshal(receipt)
+		if err := public_batch.Put(append(receiptsPrefix, receipt.TxHash...), receiptValue); err != nil {
+			return err, nil, nil, nil, nil
+		}
+
+		// Update trie
+		txTrie.Update(append(transactionPrefix, tx.GetTransactionHash().Bytes()...), txValue)
+		receiptTrie.Update(append(receiptsPrefix, receipt.TxHash...), receiptValue)
+	}
+
+	root, _ := statedb.Commit()
+
+	merkleRoot := root.Bytes()
+	txRoot := txTrie.Hash().Bytes()
+	receiptRoot := receiptTrie.Hash().Bytes()
+
+	pool.lastValidationState = root
+	// Communicate with PBFT
+
+	go public_batch.Write()
+
+	//fmt.Println("[After Process %d] %s\n", block.Number, string(statedb.Dump()))
+	return nil, nil, merkleRoot, txRoot, receiptRoot
+}
+
 func BuildTree(prefix []byte, ctx []interface{}) ([]byte, error) {
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
@@ -599,6 +762,6 @@ func WriteBlockWithoutExecTx(block *types.Block, commonHash crypto.CommonHash, c
 	}
 }
 
-func PreProcessBlock(txs []types.Transaction, seqNo uint64) {
-
+func CanTransfer(from common.Address, statedb *state.StateDB, value *big.Int) bool {
+	return statedb.GetBalance(from).Cmp(value) >= 0
 }
