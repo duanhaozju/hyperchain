@@ -74,7 +74,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 
 	if found == true {
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		tx.TimeStamp = time.Now().UnixNano()
+		tx.Timestamp = time.Now().UnixNano()
 
 		txBytes, err := proto.Marshal(tx)
 		if err != nil {

@@ -392,10 +392,10 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 	return tx.GetTransactionHash(), nil
 }
 
-type CompileCode struct {
+/*type CompileCode struct {
 	Abi []string
 	Bin []string
-}
+}*/
 
 // ComplieContract complies contract to ABI ---------------- (该方法已移到 contractAPI.go 中, 后期不再使用这里)
 func (tran *PublicTransactionAPI) ComplieContract(ct string) (*CompileCode,error){
