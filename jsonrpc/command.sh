@@ -45,7 +45,7 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params"
 # 根据区块hash查询区块信息 GetBlockByHash
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlockByHash","params":["<block hash>"],"id":1}'
 
-# 根据区块number查询区块信息 GetBlockByNumber
+# 根据区块number查询区块信息 GetBlockByNumber, number可以是整数、十六进制字符串或者“latest”
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlockByNumber","params":[<block number>],"id":1}'
 
 # 查询交易平均处理时间
@@ -58,6 +58,12 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_queryCommitAndBatch
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_queryEvmAvgTime","params":[{"from":"the number of block","to":"the number of block"}],"id": 1}'
 
 ########## account服务 ##########
+# 新建一个账户 NewAccount
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acc_newAccount","params":["123456"],"id": 1}'
+
+# 解锁账户 UnlockAccount
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acc_unlockAccount","params":["<account address>", "123456"],"id": 1}'
+
 # 获取所有账户信息 GetAccounts
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acc_getAccounts","params":[],"id": 1}'
 
