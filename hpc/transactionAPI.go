@@ -377,46 +377,6 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 //	}, nil
 //}
 
-func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
-
-	var txValue types.TransactionValue
-	var bh common.Hash
-	var bn , txIndex uint64
-	var blk *types.Block
-
-	txHash := tx.BuildHash()
-
-	if err := proto.Unmarshal(tx.Value,&txValue); err != nil {
-		log.Errorf("%v", err)
-		return nil, err
-	}
-
-	if db, err := hyperdb.GetLDBDatabase(); err != nil {
-		log.Errorf("Open database error: %v", err)
-		return nil, err
-	} else {
-		bh, bn, txIndex = core.GetTxWithBlock(db, txHash[:])
-
-		if blk, err = core.GetBlockByNumber(db, bn);err != nil {
-			return nil, err
-		}
-	}
-
-	return &TransactionResult{
-		Hash: 		txHash,
-		BlockNumber: 	NewUint64ToNumber(bn),
-		BlockHash: 	bh,
-		TxIndex: 	NewUint64ToNumber(txIndex),
-		From: 		common.BytesToAddress(tx.From),
-		To: 		common.BytesToAddress(tx.To),
-		Amount: 	NewInt64ToNumber(txValue.Amount),
-		Gas: 		NewInt64ToNumber(txValue.GasLimit),
-		GasPrice: 	NewInt64ToNumber(txValue.Price),
-		Timestamp: 	time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
-		ExecuteTime:	NewInt64ToNumber((blk.WriteTime - tx.TimeStamp) / int64(time.Millisecond)),
-	}, nil
-}
-
 // GetTransactionReceipt returns transaction's receipt for given transaction hash.
 func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) *types.ReceiptTrans {
 	return core.GetReceipt(hash)
@@ -548,4 +508,44 @@ func (tran *PublicTransactionAPI) GetBlockTransactionCountByHash(hash common.Has
 	txCount := len(block.Transactions)
 
 	return NewIntToNumber(txCount), nil
+}
+
+func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
+
+	var txValue types.TransactionValue
+	var bh common.Hash
+	var bn , txIndex uint64
+	var blk *types.Block
+
+	txHash := tx.BuildHash()
+
+	if err := proto.Unmarshal(tx.Value,&txValue); err != nil {
+		log.Errorf("%v", err)
+		return nil, err
+	}
+
+	if db, err := hyperdb.GetLDBDatabase(); err != nil {
+		log.Errorf("Open database error: %v", err)
+		return nil, err
+	} else {
+		bh, bn, txIndex = core.GetTxWithBlock(db, txHash[:])
+
+		if blk, err = core.GetBlockByNumber(db, bn);err != nil {
+			return nil, err
+		}
+	}
+
+	return &TransactionResult{
+		Hash: 		txHash,
+		BlockNumber: 	NewUint64ToNumber(bn),
+		BlockHash: 	bh,
+		TxIndex: 	NewUint64ToNumber(txIndex),
+		From: 		common.BytesToAddress(tx.From),
+		To: 		common.BytesToAddress(tx.To),
+		Amount: 	NewInt64ToNumber(txValue.Amount),
+		Gas: 		NewInt64ToNumber(txValue.GasLimit),
+		GasPrice: 	NewInt64ToNumber(txValue.Price),
+		Timestamp: 	time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+		ExecuteTime:	NewInt64ToNumber((blk.WriteTime - tx.TimeStamp) / int64(time.Millisecond)),
+	}, nil
 }

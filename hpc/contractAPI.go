@@ -28,7 +28,6 @@ func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager) 
 func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, error) {
 	var tx *types.Transaction
 	//var found bool
-
 	realArgs := prepareExcute(args)
 
 	payload := common.FromHex(realArgs.Payload)
@@ -135,14 +134,18 @@ func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash,
 
 // GetCode returns the code from the given contract address and block number.
 func (contract *PublicContractAPI) GetCode(addr common.Address, n Number) (string, error) {
-	db, err := hyperdb.GetLDBDatabase()
 
+	var blk *BlockResult
+
+	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Errorf("Open database error: %v", err)
 		return "", err
 	}
 
-	blk, err := getBlockByNumber(n)
+	if blk, err = getBlockByNumber(n); err != nil {
+		return "", err
+	}
 
 	stateDB, err := state.New(blk.MerkleRoot, db)
 	if err != nil {
