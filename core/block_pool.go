@@ -461,6 +461,7 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
 		// Process
 		pool.seqNoMu.RLock()
 		pool.PreProcess(validationEvent)
+		pool.demandSeqNo += 1
 		log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
 		pool.seqNoMu.RUnlock()
 		// Process remain event
@@ -485,26 +486,24 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
 }
 
 func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) error {
-	log.Notice("PreProcess validationEvent, ", validationEvent.SeqNo)
 	var validTxSet []*types.Transaction
-	//var invalidTxSet []types.InvalidTransactionRecord
+	var invalidTxSet []*types.InvalidTransactionRecord
 	if validationEvent.IsPrimary {
-		validTxSet, _ = pool.PreCheck(validationEvent.Transactions)
+		validTxSet, invalidTxSet = pool.PreCheck(validationEvent.Transactions)
 	} else {
 		validTxSet = validationEvent.Transactions
 	}
-	err, _, merkleRoot, txRoot, receiptRoot := pool.ProcessBlock1(validTxSet, validationEvent.SeqNo)
+	err, _, merkleRoot, txRoot, receiptRoot, invalidTxSet := pool.ProcessBlock1(validTxSet, invalidTxSet, validationEvent.SeqNo)
 	if err != nil {
 		return err
 	}
 
 	log.Notice("PreProcess Result : ", common.BytesToHash(merkleRoot).Hex(), common.BytesToHash(txRoot).Hex(), common.BytesToHash(receiptRoot).Hex())
-	log.Notice("Total Transaction Number: ", len(validTxSet))
+	log.Notice("Invalid Tx number: ", len(invalidTxSet))
 	// Communicate with PBFT
 	return nil
 }
 func (pool *BlockPool) PreCheck(txs []*types.Transaction) ([]*types.Transaction, []*types.InvalidTransactionRecord) {
-	log.Notice("Init len", len(txs))
 	var validTxSet []*types.Transaction
 	var tmp []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
@@ -522,10 +521,8 @@ func (pool *BlockPool) PreCheck(txs []*types.Transaction) ([]*types.Transaction,
 			tmp = append(tmp, tx)
 		}
 	}
-	log.Notice("Step1 len", len(tmp))
 	// (2) check sender account balance for each valid transaction
 	db, _ := hyperdb.GetLDBDatabase()
-	log.Notice("lastValidationState", pool.lastValidationState.Hex())
 	statedb, _ := state.New(pool.lastValidationState, db)
 	for _, tx := range tmp {
 		if !CanTransfer(common.BytesToAddress(tx.From), statedb, tx.Amount()) {
@@ -533,14 +530,14 @@ func (pool *BlockPool) PreCheck(txs []*types.Transaction) ([]*types.Transaction,
 				Tx:      tx,
 				ErrType: types.InvalidTransactionRecord_OUTOFBALANCE,
 			})
+		} else {
 			validTxSet = append(validTxSet, tx)
 		}
 	}
-	log.Notice("Step2 len", len(validTxSet))
 	return validTxSet, invalidTxSet
 }
 
-func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, seqNo uint64) (error, []byte, []byte, []byte, []byte) {
+func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, []byte, []byte, []byte, []byte, []*types.InvalidTransactionRecord) {
 	log.Notice("[ProcessBlock1] txs: ", len(txs))
 	var (
 		//receipts types.Receipts
@@ -548,14 +545,14 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, seqNo uint64) (er
 	)
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
-		return err, nil, nil, nil, nil
+		return err, nil, nil, nil, nil, invalidTxs
 	}
 	txTrie, _ := trie.New(common.Hash{}, db)
 	receiptTrie, _ := trie.New(common.Hash{}, db)
 	statedb, err := state.New(pool.lastValidationState, db)
-	//fmt.Println("[Before Process %d] %s\n", block.Number, string(statedb.Dump()))
+	log.Notice("[Before Process %d] %s\n", seqNo, string(statedb.Dump()))
 	if err != nil {
-		return err, nil, nil, nil, nil
+		return err, nil, nil, nil, nil, invalidTxs
 	}
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
 	env["currentGasLimit"] = "10000000"
@@ -565,18 +562,25 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, seqNo uint64) (er
 	public_batch = db.NewBatch()
 
 	for i, tx := range txs {
+		if !CanTransfer(common.BytesToAddress(tx.From), statedb, tx.Amount()) {
+			invalidTxs = append(invalidTxs, &types.InvalidTransactionRecord{
+				Tx:      tx,
+				ErrType: types.InvalidTransactionRecord_OUTOFBALANCE,
+			})
+			continue
+		}
 		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, _ := ExecTransaction(*tx, vmenv)
 
 		// save to DB
 		txValue, _ := proto.Marshal(tx)
 		if err := public_batch.Put(append(transactionPrefix, tx.GetTransactionHash().Bytes()...), txValue); err != nil {
-			return err, nil, nil, nil, nil
+			return err, nil, nil, nil, nil, invalidTxs
 		}
 
 		receiptValue, _ := proto.Marshal(receipt)
 		if err := public_batch.Put(append(receiptsPrefix, receipt.TxHash...), receiptValue); err != nil {
-			return err, nil, nil, nil, nil
+			return err, nil, nil, nil, nil, invalidTxs
 		}
 
 		// Update trie
@@ -595,8 +599,8 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, seqNo uint64) (er
 
 	go public_batch.Write()
 
-	//fmt.Println("[After Process %d] %s\n", block.Number, string(statedb.Dump()))
-	return nil, nil, merkleRoot, txRoot, receiptRoot
+	log.Notice("[After Process %d] %s\n", seqNo, string(statedb.Dump()))
+	return nil, nil, merkleRoot, txRoot, receiptRoot, invalidTxs
 }
 
 func BuildTree(prefix []byte, ctx []interface{}) ([]byte, error) {
