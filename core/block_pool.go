@@ -512,11 +512,17 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) error {
 	log.Notice("PreProcess Result : ", common.BytesToHash(merkleRoot).Hex(), common.BytesToHash(txRoot).Hex(), common.BytesToHash(receiptRoot).Hex())
 	log.Notice("Invalid Tx number: ", len(invalidTxSet))
 	// Communicate with PBFT
+	hash := crypto.NewKeccak256Hash("Keccak256").Hash([]interface{}{
+		merkleRoot,
+		txRoot,
+		receiptRoot,
+	})
 	pool.consenter.RecvValidatedResult(event.ValidatedTxs{
 		Transactions: validTxSet,
 		Digest:       validationEvent.Digest,
 		SeqNo:        validationEvent.SeqNo,
 		View:         validationEvent.View,
+		Hash:         hash.Bytes(),
 	})
 	return nil
 }
