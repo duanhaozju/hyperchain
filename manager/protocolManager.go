@@ -92,7 +92,7 @@ func (pm *ProtocolManager) Start() {
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{}, event.ExeTxsEvent{})
-	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
+	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{}, event.CommitOrRollbackBlockEvent{})
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	go pm.NewBlockLoop()
@@ -312,6 +312,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 			self.commitNewBlock(ev.Payload, ev.CommitTime)
 			//self.fetcher.Enqueue(ev.Payload)
 		case event.CommitOrRollbackBlockEvent:
+			self.blockPool.CommitBlock(ev)
 		}
 	}
 }
@@ -437,7 +438,7 @@ func (pm *ProtocolManager) commitNewBlock(payload []byte, commitTime int64) {
 	block.Number = msgList.No
 
 	log.Info("now is ", msgList.No)
-	pm.blockPool.AddBlock(block, pm.commonHash, commitTime)
+	pm.blockPool.AddBlock(block, pm.commonHash)
 	//core.WriteBlock(*block)
 
 }
