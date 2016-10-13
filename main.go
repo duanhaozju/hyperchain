@@ -82,7 +82,7 @@ func main() {
 		nodePath := argv.PeerConfigPath
 
 		//init block pool to save block
-		blockPool := core.NewBlockPool(eventMux)
+		blockPool := core.NewBlockPool(eventMux,cs)
 
 		//start http server
 		//go jsonrpc.StartHttp(argv.LocalPort, eventMux)
