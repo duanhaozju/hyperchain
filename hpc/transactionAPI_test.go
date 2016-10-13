@@ -165,3 +165,88 @@ func TestPublicTransactionAPI_GetTransactionsByBlockNumberAndIndex(t *testing.T)
 		t.Logf("%#v", tx)
 	}
 }
+
+func TestPublicTransactionAPI_GetBlockTransactionCountByHash(t *testing.T) {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = core.PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if c,err := api.GetBlockTransactionCountByHash(common.BytesToHash(blockUtilsCase.BlockHash)); err != nil {
+		t.Error(err)
+	} else {
+		log.Info(c.ToInt64())
+	}
+}
+
+// test
+//func TestSigntx(t *testing.T)  {
+//	ee := crypto.NewEcdsaEncrypto("ECDSAEncryto")
+//	k, err:= ee.GeneralKey()
+//	if err!=nil{
+//		panic(err)
+//	}
+//
+//	key := k.(*ecdsa.PrivateKey)
+//	pub := key.PublicKey
+//	var addr common.Address
+//	addr = crypto.PubkeyToAddress(pub)
+//
+//	fmt.Println("public key is :")
+//	fmt.Println(pub)
+//	fmt.Println("private key is :")
+//	fmt.Println(key)
+//	//SaveNodeInfo("./port_address_privatekey","5004",addr,key)
+//
+//	//p,err:=ee.GetKey()
+//
+//	//priv := p.(*ecdsa.PrivateKey)
+//
+//	//var from1 = common.HexToAddress("0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd")
+//	var from1 = addr
+//	var to = common.HexToAddress("0x0000000000000000000000000000000000000003")
+//	tx := types.NewTransaction(from1[:], to[:], nil)
+//	//签名交易
+//	//tx:= NewTransaction(common.Address{},big.NewInt(100))
+//	s256 := crypto.NewKeccak256Hash("Keccak256")
+//	//hash := s256.Hash([]interface{}{tx.data.Amount,tx.data.Recipient})
+//	hash := tx.SighHash(s256)
+//	signature,err := ee.Sign(hash[:],key)
+//	fmt.Println(hash)
+//	fmt.Println("sig:",signature)
+//
+//	if err != nil {
+//		t.Error(err)
+//		t.FailNow()
+//
+//	}
+//	//验证签名
+//	from,err:= ee.UnSign(hash[:],signature)
+//	if err != nil {
+//		t.Error(err)
+//		t.FailNow()
+//	}
+//
+//	fmt.Println(from.Hex())
+//	fmt.Println(addr.Hex())
+//
+//	trans := new(types.Transaction)
+//	//var tx *types.Transaction
+//	if err := rlp.DecodeBytes(common.FromHex(args.Signature), trans); err != nil {
+//		log.Info("rlp.DecodeBytes error: ", err)
+//	}
+//	log.Infof("tx: %#v", trans)
+//	log.Info(trans.Signature)
+//	log.Infof("tx sign: %#v", trans.Signature)
+//	//
+//	//hex := common.ToHex(from.Bytes())
+//	//fmt.Println(common.ToHex(from[:]))
+//	//fmt.Println(common.ToHex(addr[:]))
+//	//fmt.Println(common.FromHex(hex))
+//
+//}

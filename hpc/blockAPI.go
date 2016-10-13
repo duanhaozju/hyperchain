@@ -1,25 +1,27 @@
 package hpc
 
 import (
-	"hyperchain/common"
-	"hyperchain/core"
-	"hyperchain/core/types"
 	"hyperchain/hyperdb"
-	"strconv"
+	"hyperchain/core"
 	"time"
+	"hyperchain/common"
+	"strconv"
+	"hyperchain/core/types"
 )
 
 type PublicBlockAPI struct{}
 
 type BlockResult struct {
-	Number     Number      `json:"number"`
+	Number     *Number      `json:"number"`
 	Hash       common.Hash `json:"hash"`
 	ParentHash common.Hash `json:"parentHash"`
 	WriteTime  string      `json:"writeTime"`
-	AvgTime    Number      `json:"avgTime"`
-	TxCounts   Number      `json:"txcounts"`
-	Counts     Number      `json:"Counts"`
+	AvgTime    *Number      `json:"avgTime"`
+	TxCounts   *Number      `json:"txcounts"`
+	Counts     *Number      `json:"Counts"`
 	Percents   string      `json:"percents"`
+	//Transactions []*types.Transaction	`json:transactions`
+	Transactions []interface{}	`json:transactions`
 }
 
 func NewPublicBlockAPI() *PublicBlockAPI {
@@ -37,7 +39,7 @@ func (blk *PublicBlockAPI) GetBlocks() ([]*BlockResult, error) {
 		return nil, err
 	}
 
-	height := block.Number
+	height := *block.Number
 
 	// only genesis block
 	if height == 0 {
@@ -82,7 +84,7 @@ func lastestBlock() (*BlockResult, error) {
 		return nil, err
 	}
 
-	return outputBlockResult(block), nil
+	return outputBlockResult(block)
 }
 
 // getBlockByNumber convert type Block to type BlockResult for the given block number.
@@ -102,25 +104,35 @@ func getBlockByNumber(height Number) (*BlockResult, error) {
 		return nil, err
 	}
 
-	return outputBlockResult(block), nil
+	return outputBlockResult(block)
 
 }
 
-func outputBlockResult(block *types.Block) *BlockResult {
+func outputBlockResult(block *types.Block) (*BlockResult, error) {
 
 	txCounts := int64(len(block.Transactions))
 	count, percent := core.CalcResponseCount(block.Number, int64(200))
 
-	return &BlockResult{
-		Number:     *NewUint64ToNumber(block.Number),
-		Hash:       common.BytesToHash(block.BlockHash),
-		ParentHash: common.BytesToHash(block.ParentHash),
-		WriteTime:  time.Unix(block.WriteTime/int64(time.Second), 0).Format("2006-01-02 15:04:05"),
-		AvgTime:    *NewInt64ToNumber(core.CalcResponseAVGTime(block.Number, block.Number)),
-		TxCounts:   *NewInt64ToNumber(txCounts),
-		Counts:     *NewInt64ToNumber(count),
-		Percents:   strconv.FormatFloat(percent*100, 'f', 2, 32) + "%",
+	transactions := make([]interface{}, txCounts)
+	var err error
+	for i, tx := range block.Transactions {
+		if transactions[i], err = outputTransaction(tx); err != nil {
+			return nil, err
+		}
 	}
+
+
+	return &BlockResult{
+		Number:       NewUint64ToNumber(block.Number),
+		Hash:         common.BytesToHash(block.BlockHash),
+		ParentHash:   common.BytesToHash(block.ParentHash),
+		WriteTime:    time.Unix(block.WriteTime/int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+		AvgTime:      NewInt64ToNumber(core.CalcResponseAVGTime(block.Number, block.Number)),
+		TxCounts:     NewInt64ToNumber(txCounts),
+		Counts:       NewInt64ToNumber(count),
+		Percents:     strconv.FormatFloat(percent*100, 'f', 2, 32) + "%",
+		Transactions: transactions,
+	}, nil
 }
 
 // GetBlockByHash returns the block for the given block hash.
@@ -138,7 +150,7 @@ func (blk *PublicBlockAPI) GetBlockByHash(hash common.Hash) (*BlockResult, error
 		return nil, err
 	}
 
-	return outputBlockResult(block), nil
+	return outputBlockResult(block)
 }
 
 // GetBlockByNumber returns the bock for the given block number.

@@ -8,6 +8,7 @@ import (
 	"hyperchain/core/state"
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
+	"fmt"
 )
 
 type PublicAccountAPI struct {
@@ -89,9 +90,28 @@ func (acot *PublicAccountAPI) GetAccounts() []*AccountResult {
 	for k, v := range ctx {
 		var act = &AccountResult{
 			Account: k,
-			Balance: v.Balance().String(),
+			Balance: fmt.Sprintf(`0x%x`, v.Balance()),
 		}
 		acts = append(acts, act)
 	}
 	return acts
+}
+
+// GetBalance returns account balance for given account address.
+func (acot *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
+	db, err := hyperdb.GetLDBDatabase()
+
+	if err != nil {
+		log.Errorf("Open database error: %v", err)
+		return "", err
+	}
+
+	headBlock, _ := core.GetBlock(db, core.GetChainCopy().LatestBlockHash)
+	stateDB, err := state.New(common.BytesToHash(headBlock.MerkleRoot), db)
+	if err != nil {
+		log.Errorf("Get stateDB error, %v", err)
+		return "", err
+	}
+
+	return fmt.Sprintf(`0x%x`, stateDB.GetStateObject(addr).BalanceData), nil
 }

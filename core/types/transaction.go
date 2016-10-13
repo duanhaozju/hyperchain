@@ -59,7 +59,8 @@ func (self *Transaction) ValidateSign(encryption crypto.Encryption, ch crypto.Co
 }
 
 // NewTransaction returns a new transaction
-func NewTransaction(from []byte, to []byte, value []byte) *Transaction {
+//func NewTransaction(from []byte,to []byte,value []byte, signature []byte) *Transaction{
+func NewTransaction(from []byte,to []byte,value []byte) *Transaction{
 
 	transaction := &Transaction{
 		From:      from,
