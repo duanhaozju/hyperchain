@@ -14,6 +14,7 @@ import (
 	//"hyperchain/accounts"
 	"errors"
 	"encoding/hex"
+	"hyperchain/core/vm/compiler"
 )
 
 const (
@@ -211,7 +212,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 		for start := start; start < end; start = time.Now().Unix() {
 			for i := 0; i < 10; i++ {
-				tx.TimeStamp = time.Now().UnixNano()
+				tx.Timestamp = time.Now().UnixNano()
 
 				// calculate signature
 				/*keydir := "./keystore/"
@@ -446,8 +447,8 @@ func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
 		Amount: 	NewInt64ToNumber(txValue.Amount),
 		Gas: 		NewInt64ToNumber(txValue.GasLimit),
 		GasPrice: 	NewInt64ToNumber(txValue.Price),
-		Timestamp: 	time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
-		ExecuteTime:	NewInt64ToNumber((blk.WriteTime - tx.TimeStamp) / int64(time.Millisecond)),
+		Timestamp: 	time.Unix(tx.Timestamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+		ExecuteTime:	NewInt64ToNumber((blk.WriteTime - tx.Timestamp) / int64(time.Millisecond)),
 	}, nil
 }
 
