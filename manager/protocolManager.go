@@ -91,7 +91,7 @@ func (pm *ProtocolManager) Start() {
 
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
-	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
+	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{}, event.ExeTxsEvent{})
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
@@ -335,6 +335,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			go self.Peermanager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
 			//go self.peerManager.SendMsgToPeers(ev.Payload,)
 		case event.NewTxEvent:
+			log.Notice("###### enter NewTxEvent")
 			go self.sendMsg(ev.Payload)
 
 		case event.ConsensusEvent:
@@ -354,6 +355,8 @@ func (self *ProtocolManager) ConsensusLoop() {
 			/*case event.CommitOrRollbackBlockEvent:
 			self.blockPool.CommitOrRollbackBlockEvent(ev.SeqNo,
 				ev.Transactions,ev.CommitTime,ev.CommitStatus)*/
+			log.Notice("###### enter ExeTxsEvent", ev.SeqNo)
+			time.Sleep(2000 * time.Millisecond)
 			self.blockPool.Validate(ev)
 		}
 

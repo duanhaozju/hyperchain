@@ -120,48 +120,47 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		start := time.Now().Unix()
-		end := start + 3
+		//start := time.Now().Unix()
+		//end := start + 1
 		//end:=start+500
 
-		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < 50; i++ {
-				tx.TimeStamp = time.Now().UnixNano()
+		for i := 0; i < 500; i++ {
+			tx.Timestamp = time.Now().UnixNano()
 
-				// Generate signature
-				// signature, err := tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
-				// Fake signature Just for test
+			// Generate signature
+			signature, err := tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
+			// Fake signature Just for test
+			/*
 				fakeSign := [32]byte{}
 				signature, err := tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), fakeSign[:])
 				if err != nil {
 					log.Errorf("Sign(tx) error :%v", err)
 				}
-				tx.Signature = signature
+			*/
+			tx.Signature = signature
 
-				// Unsign
-				log.Notice("Check Signature")
-				if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
-					return common.Hash{}, errors.New("invalid signature")
-				}
-
-				txBytes, err := proto.Marshal(tx)
-				if err != nil {
-					log.Errorf("proto.Marshal(tx) error: %v", err)
-				}
-				if manager.GetEventObject() != nil {
-					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
-					//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-				} else {
-					log.Warning("manager is Nil")
-				}
+			// Unsign
+			if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
+				return common.Hash{}, errors.New("invalid signature")
 			}
 
-			time.Sleep(100 * time.Millisecond)
+			txBytes, err := proto.Marshal(tx)
+			if err != nil {
+				log.Errorf("proto.Marshal(tx) error: %v", err)
+			}
+			if manager.GetEventObject() != nil {
+				go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+				//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+			} else {
+				log.Warning("manager is Nil")
+			}
 		}
+
 		/*tx.TimeStamp = time.Now().UnixNano()
 
 		// TODO replace password with test value
 		signature, err := tran.pm.AccountManager.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
+		/*
 		if err != nil {
 			log.Errorf("Sign(tx) error :%v", err)
 		}
@@ -256,7 +255,7 @@ func (tran *PublicTransactionAPI) SendTransactionOrContract(args SendTxArgs) (co
 		end := start + 90
 		for start := start; start < end; start = time.Now().Unix() {
 			for i := 0; i < 125; i++ {
-				tx.TimeStamp = time.Now().UnixNano()
+				tx.Timestamp = time.Now().UnixNano()
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
 					log.Errorf("proto.Marshal(tx) error: %v", err)
@@ -362,7 +361,7 @@ func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
 		Amount:      *NewInt64ToNumber(txValue.Amount),
 		Gas:         *NewInt64ToNumber(txValue.GasLimit),
 		GasPrice:    *NewInt64ToNumber(txValue.Price),
-		Timestamp:   time.Unix(tx.TimeStamp/int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+		Timestamp:   time.Unix(tx.Timestamp/int64(time.Second), 0).Format("2006-01-02 15:04:05"),
 	}, nil
 }
 

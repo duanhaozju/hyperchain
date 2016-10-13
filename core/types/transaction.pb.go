@@ -75,7 +75,7 @@ type InvalidTransactionRecord struct {
 func (m *InvalidTransactionRecord) Reset()                    { *m = InvalidTransactionRecord{} }
 func (m *InvalidTransactionRecord) String() string            { return proto.CompactTextString(m) }
 func (*InvalidTransactionRecord) ProtoMessage()               {}
-func (*InvalidTransactionRecord) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{1} }
+func (*InvalidTransactionRecord) Descriptor() ([]byte, []int) { return fileDescriptor3, []int{1} }
 
 func (m *InvalidTransactionRecord) GetTx() *Transaction {
 	if m != nil {
@@ -90,9 +90,9 @@ func init() {
 	proto.RegisterEnum("types.InvalidTransactionRecord_ErrType", InvalidTransactionRecord_ErrType_name, InvalidTransactionRecord_ErrType_value)
 }
 
-func init() { proto.RegisterFile("transaction.proto", fileDescriptor2) }
+func init() { proto.RegisterFile("transaction.proto", fileDescriptor3) }
 
-var fileDescriptor2 = []byte{
+var fileDescriptor3 = []byte{
 	// 273 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x74, 0x90, 0x41, 0x4e, 0xc3, 0x30,
 	0x10, 0x45, 0x71, 0xdb, 0x34, 0xea, 0xb4, 0x94, 0x30, 0x62, 0xe1, 0x05, 0x0b, 0x94, 0x0d, 0x15,
