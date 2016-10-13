@@ -117,6 +117,7 @@ type msgCert struct {
 	sentPrepare  bool
 	prepare      map[Prepare]bool
 	prepareCount int
+	sentValidate bool
 	sentCommit   bool
 	commit       map[Commit]bool
 	commitCount  int
@@ -833,6 +834,7 @@ func (pbft *pbftProtocal) validateBatch(txBatch *TransactionBatch, digest string
 
 func (pbft *pbftProtocal) trySendPrePrepare() {
 
+
 	if pbft.currentVid != nil {
 		logger.Debugf("Replica %d not attempting to send pre-prepare bacause it is currently send %d, retry.", pbft.id, pbft.currentVid)
 	}
@@ -899,7 +901,7 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	cert.prePrepare = preprep
 	cert.digest = digest
 	cert.rawDigest = rawDigest
-
+	delete(pbft.cacheValidatedBatch, digest)
 	//pbft.persistQSet()
 	payload, err := proto.Marshal(preprep)
 	if err != nil {
@@ -956,14 +958,15 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 	cert.digest = preprep.BatchDigest
 
 	// Store the request batch if, for whatever reason, we haven't received it from an earlier broadcast
-	if _, ok := pbft.reqBatchStore[preprep.BatchDigest]; !ok && preprep.BatchDigest != "" {
+	if _, ok := pbft.validatedBatchStore[preprep.BatchDigest]; !ok && preprep.BatchDigest != "" {
 		//digest := hash(preprep.GetTransactionBatch())
 		//if digest != preprep.BatchDigest {
 		//	logger.Warningf("Pre-prepare and request digest do not match: request %s, digest %s", digest, preprep.BatchDigest)
 		//	return nil
 		//}
 		digest := preprep.BatchDigest
-		pbft.reqBatchStore[digest] = preprep.GetTransactionBatch()
+		//pbft.reqBatchStore[digest] = preprep.GetTransactionBatch()
+		pbft.validatedBatchStore[digest] = preprep.GetTransactionBatch()
 		logger.Debugf("Replica %d storing request batch %s in outstanding request batch store", pbft.id, digest)
 		pbft.outstandingReqBatches[digest] = preprep.GetTransactionBatch()
 		pbft.persistRequestBatch(digest)
@@ -1046,12 +1049,15 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 
 	if !pbft.prepared(digest, v, n) {
 		return nil
-	} else {
-		if pbft.primary(pbft.id) == pbft.id {
-			return pbft.sendCommit(digest, v, n)
-		} else {
-			pbft.validateBatch(cert.prePrepare.TransactionBatch, digest, n, v)
-		}
+	}
+
+	if pbft.primary(pbft.id) == pbft.id {
+		return pbft.sendCommit(digest, v, n)
+	}
+
+	if !cert.sentValidate {
+		pbft.validateBatch(cert.prePrepare.TransactionBatch, digest, n, v)
+		cert.sentValidate = true
 	}
 
 	return nil
@@ -1386,11 +1392,11 @@ func (pbft *pbftProtocal) fetchRequestBatches() (err error) {
 
 func (pbft *pbftProtocal) recvFetchRequestBatch(fr *FetchRequestBatch) (err error) {
 	digest := fr.BatchDigest
-	if _, ok := pbft.reqBatchStore[digest]; !ok {
+	if _, ok := pbft.validatedBatchStore[digest]; !ok {
 		return nil // we don't have it either
 	}
 
-	reqBatch := pbft.reqBatchStore[digest]
+	reqBatch := pbft.validatedBatchStore[digest]
 	payload, err := proto.Marshal(reqBatch)
 	if err != nil {
 		logger.Errorf("ConsensusMessage_RETURN_REQUEST_BATCH Marshal Error", err)
@@ -1414,7 +1420,7 @@ func (pbft *pbftProtocal) recvReturnRequestBatch(reqBatch *TransactionBatch) eve
 	if _, ok := pbft.missingReqBatches[digest]; !ok {
 		return nil // either the wrong digest, or we got it already from someone else
 	}
-	pbft.reqBatchStore[digest] = reqBatch
+	pbft.validatedBatchStore[digest] = reqBatch
 	delete(pbft.missingReqBatches, digest)
 	//pbft.persistRequestBatch(digest)
 
@@ -1467,7 +1473,7 @@ func (pbft *pbftProtocal) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 			// (This is because all_replicas - missed - me = 3f+1 - f - 1 = 2f)
 			if m := chkptSeqNumArray[len(chkptSeqNumArray)-(pbft.f+1)]; m > H {
 				logger.Warningf("Replica %d is out of date, f+1 nodes agree checkpoint with seqNo %d exists but our high water mark is %d", pbft.id, chkpt.SequenceNumber, H)
-				pbft.reqBatchStore = make(map[string]*TransactionBatch) // Discard all our requests, as we will never know which were executed, to be addressed in #394
+				pbft.validatedBatchStore = make(map[string]*TransactionBatch) // Discard all our requests, as we will never know which were executed, to be addressed in #394
 				pbft.persistDelAllRequestBatches()
 				pbft.moveWatermarks(m)
 				pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
