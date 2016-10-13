@@ -15,6 +15,7 @@ import (
 	"errors"
 	"encoding/hex"
 	"hyperchain/core/vm/compiler"
+
 )
 
 const (
@@ -211,19 +212,23 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//end:=start+500
 
 		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < 10; i++ {
+			for i := 0; i < 100; i++ {
 				tx.Timestamp = time.Now().UnixNano()
 
-				// calculate signature
-				/*keydir := "./keystore/"
-				encryption := crypto.NewEcdsaEncrypto("ecdsa")
-				am := accounts.NewAccountManager(keydir, encryption)
+
 				// TODO replace password with test value
-				signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
+				signature, err := tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
 				if err != nil {
 					log.Errorf("Sign(tx) error :%v", err)
 				}
-				tx.Signature = signature*/
+				tx.Signature = signature
+
+				// Unsign
+				if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
+					return common.Hash{}, errors.New("invalid signature")
+				}
+
+
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
 					log.Errorf("proto.Marshal(tx) error: %v", err)

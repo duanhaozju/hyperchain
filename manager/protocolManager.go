@@ -311,7 +311,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 			log.Debug("write block success")
 			self.commitNewBlock(ev.Payload, ev.CommitTime)
 			//self.fetcher.Enqueue(ev.Payload)
-
+		case event.CommitOrRollbackBlockEvent:
 		}
 	}
 }
@@ -335,7 +335,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			go self.Peermanager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
 			//go self.peerManager.SendMsgToPeers(ev.Payload,)
 		case event.NewTxEvent:
-			log.Notice("###### enter NewTxEvent")
+			log.Debug("###### enter NewTxEvent")
 			go self.sendMsg(ev.Payload)
 
 		case event.ConsensusEvent:
@@ -356,8 +356,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			self.blockPool.CommitOrRollbackBlockEvent(ev.SeqNo,
 				ev.Transactions,ev.CommitTime,ev.CommitStatus)*/
 			log.Notice("###### enter ExeTxsEvent", ev.SeqNo)
-			time.Sleep(2000 * time.Millisecond)
-			self.blockPool.Validate(ev)
+			go self.blockPool.Validate(ev)
 		}
 
 	}
