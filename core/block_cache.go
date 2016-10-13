@@ -10,6 +10,7 @@ type BlockRecord struct {
 	ReceiptRoot []byte
 	MerkleRoot  []byte
 	InvalidTxs  []*types.InvalidTransactionRecord
+	ValidTxs    []*types.Transaction
 }
 
 type Data map[uint64]BlockRecord

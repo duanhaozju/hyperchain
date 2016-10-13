@@ -325,7 +325,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 		switch ev := obj.Data.(type) {
 
 		case event.BroadcastConsensusEvent:
-			log.Debug("######enter broadcast")
+			log.Notice("######enter broadcast")
 
 			go self.BroadcastConsensus(ev.Payload)
 		case event.TxUniqueCastEvent:
@@ -340,7 +340,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 		case event.ConsensusEvent:
 			//call consensus module
-			log.Debug("###### enter ConsensusEvent")
+			log.Notice("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 		case event.ExeTxsEvent:
 			// (1) check signature for each transaction

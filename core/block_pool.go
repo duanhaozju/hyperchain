@@ -14,6 +14,7 @@ import (
 
 	//"fmt"
 	"hyperchain/common"
+	"hyperchain/consensus"
 	"hyperchain/core/state"
 	"hyperchain/core/types"
 	"hyperchain/core/vm/params"
@@ -23,7 +24,6 @@ import (
 	"math/big"
 	"strconv"
 	"time"
-	"hyperchain/consensus"
 )
 
 const (
@@ -46,12 +46,12 @@ type BlockPool struct {
 	validationQueue map[uint64]event.ExeTxsEvent
 
 	consenter consensus.Consenter
-	eventMux        *event.TypeMux
-	events          event.Subscription
-	mu              sync.RWMutex
-	seqNoMu         sync.RWMutex
-	stateLock       sync.Mutex
-	wg              sync.WaitGroup // for shutdown sync
+	eventMux  *event.TypeMux
+	events    event.Subscription
+	mu        sync.RWMutex
+	seqNoMu   sync.RWMutex
+	stateLock sync.Mutex
+	wg        sync.WaitGroup // for shutdown sync
 
 	lastValidationState common.Hash
 }
@@ -60,12 +60,12 @@ func (bp *BlockPool) SetDemandNumber(number uint64) {
 	bp.demandNumber = number
 }
 
-func NewBlockPool(eventMux *event.TypeMux,consenter consensus.Consenter) *BlockPool {
+func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *BlockPool {
 	tempReceiptsMap = make(map[uint64]types.Receipts)
 
 	pool := &BlockPool{
-		eventMux: eventMux,
-		consenter:consenter,
+		eventMux:        eventMux,
+		consenter:       consenter,
 		queue:           make(map[uint64]*types.Block),
 		validationQueue: make(map[uint64]event.ExeTxsEvent),
 		events:          eventMux.Subscribe(event.NewBlockPoolEvent{}),
@@ -497,7 +497,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) error {
 	} else {
 		validTxSet = validationEvent.Transactions
 	}
-	err, _, merkleRoot, txRoot, receiptRoot, invalidTxSet := pool.ProcessBlock1(validTxSet, invalidTxSet, validationEvent.SeqNo)
+	err, _, merkleRoot, txRoot, receiptRoot, validTxSet, invalidTxSet := pool.ProcessBlock1(validTxSet, invalidTxSet, validationEvent.SeqNo)
 	if err != nil {
 		return err
 	}
@@ -507,10 +507,17 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) error {
 		ReceiptRoot: receiptRoot,
 		MerkleRoot:  merkleRoot,
 		InvalidTxs:  invalidTxSet,
+		ValidTxs:    validTxSet,
 	})
 	log.Notice("PreProcess Result : ", common.BytesToHash(merkleRoot).Hex(), common.BytesToHash(txRoot).Hex(), common.BytesToHash(receiptRoot).Hex())
 	log.Notice("Invalid Tx number: ", len(invalidTxSet))
 	// Communicate with PBFT
+	pool.consenter.RecvValidatedResult(event.ValidatedTxs{
+		Transactions: validTxSet,
+		Digest:       validationEvent.Digest,
+		SeqNo:        validationEvent.SeqNo,
+		View:         validationEvent.View,
+	})
 	return nil
 }
 func (pool *BlockPool) PreCheck(txs []*types.Transaction) ([]*types.Transaction, []*types.InvalidTransactionRecord) {
@@ -533,22 +540,23 @@ func (pool *BlockPool) PreCheck(txs []*types.Transaction) ([]*types.Transaction,
 	return validTxSet, invalidTxSet
 }
 
-func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, []byte, []byte, []byte, []byte, []*types.InvalidTransactionRecord) {
+func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, []byte, []byte, []byte, []byte, []*types.Transaction, []*types.InvalidTransactionRecord) {
 	log.Notice("[ProcessBlock1] txs: ", len(txs))
+	var validtxs []*types.Transaction
 	var (
 		//receipts types.Receipts
 		env = make(map[string]string)
 	)
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
-		return err, nil, nil, nil, nil, invalidTxs
+		return err, nil, nil, nil, nil, nil, invalidTxs
 	}
 	txTrie, _ := trie.New(common.Hash{}, db)
 	receiptTrie, _ := trie.New(common.Hash{}, db)
 	statedb, err := state.New(pool.lastValidationState, db)
 	log.Notice("[Before Process %d] %s\n", seqNo, string(statedb.Dump()))
 	if err != nil {
-		return err, nil, nil, nil, nil, invalidTxs
+		return err, nil, nil, nil, nil, nil, invalidTxs
 	}
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
 	env["currentGasLimit"] = "10000000"
@@ -571,17 +579,19 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 		// save to DB
 		txValue, _ := proto.Marshal(tx)
 		if err := public_batch.Put(append(transactionPrefix, tx.GetTransactionHash().Bytes()...), txValue); err != nil {
-			return err, nil, nil, nil, nil, invalidTxs
+			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
 
 		receiptValue, _ := proto.Marshal(receipt)
 		if err := public_batch.Put(append(receiptsPrefix, receipt.TxHash...), receiptValue); err != nil {
-			return err, nil, nil, nil, nil, invalidTxs
+			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
 
 		// Update trie
 		txTrie.Update(append(transactionPrefix, tx.GetTransactionHash().Bytes()...), txValue)
 		receiptTrie.Update(append(receiptsPrefix, receipt.TxHash...), receiptValue)
+
+		validtxs = append(validtxs, tx)
 	}
 
 	root, _ := statedb.Commit()
@@ -591,12 +601,11 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 	receiptRoot := receiptTrie.Hash().Bytes()
 
 	pool.lastValidationState = root
-	// Communicate with PBFT
 
 	go public_batch.Write()
 
 	log.Notice("[After Process %d] %s\n", seqNo, string(statedb.Dump()))
-	return nil, nil, merkleRoot, txRoot, receiptRoot, invalidTxs
+	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
 }
 
 func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent) {
