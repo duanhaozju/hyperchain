@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"strconv"
 	"time"
+	"hyperchain/consensus"
 )
 
 const (
@@ -43,6 +44,8 @@ type BlockPool struct {
 
 	queue           map[uint64]*types.Block
 	validationQueue map[uint64]event.ExeTxsEvent
+
+	consenter consensus.Consenter
 	eventMux        *event.TypeMux
 	events          event.Subscription
 	mu              sync.RWMutex
@@ -57,12 +60,12 @@ func (bp *BlockPool) SetDemandNumber(number uint64) {
 	bp.demandNumber = number
 }
 
-func NewBlockPool(eventMux *event.TypeMux) *BlockPool {
+func NewBlockPool(eventMux *event.TypeMux,consenter consensus.Consenter) *BlockPool {
 	tempReceiptsMap = make(map[uint64]types.Receipts)
 
 	pool := &BlockPool{
 		eventMux: eventMux,
-
+		consenter:consenter,
 		queue:           make(map[uint64]*types.Block),
 		validationQueue: make(map[uint64]event.ExeTxsEvent),
 		events:          eventMux.Subscribe(event.NewBlockPoolEvent{}),
@@ -152,6 +155,7 @@ func (pool *BlockPool) CommitOrRollbackBlockEvent(sequenceNum uint64, transactio
 	}
 	// 4.delete the receipts of newBlock.Number
 	delete(tempReceiptsMap, newBlock.Number)
+
 	return nil
 }
 
