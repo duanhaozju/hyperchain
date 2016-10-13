@@ -311,7 +311,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 			log.Debug("write block success")
 			self.commitNewBlock(ev.Payload, ev.CommitTime)
 			//self.fetcher.Enqueue(ev.Payload)
-
+		case event.CommitOrRollbackBlockEvent:
 		}
 	}
 }
@@ -356,7 +356,6 @@ func (self *ProtocolManager) ConsensusLoop() {
 			self.blockPool.CommitOrRollbackBlockEvent(ev.SeqNo,
 				ev.Transactions,ev.CommitTime,ev.CommitStatus)*/
 			log.Notice("###### enter ExeTxsEvent", ev.SeqNo)
-			//time.Sleep(2000 * time.Millisecond)
 			go self.blockPool.Validate(ev)
 		}
 

@@ -327,6 +327,12 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 			return nil
 		}
 
+		if len(result.Transactions) == 0 {
+			logger.Debugf("Replica %d is primary, receives validated result %s that is empty", pbft.id, result.Digest)
+			pbft.sendNullRequest()
+			return nil
+		}
+
 		batch := &TransactionBatch{
 			Batch:     result.Transactions,
 			Timestamp: time.Now().UnixNano(),
