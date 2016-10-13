@@ -115,7 +115,7 @@ func (h *helper) ValidateBatch(txs []*types.Transaction, seqNo uint64, view uint
 	}
 
 	// Post the event to outer
-	go h.msgQ.Post(validateEvent)
+	h.msgQ.Post(validateEvent)
 
 	return nil
 }

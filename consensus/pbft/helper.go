@@ -133,7 +133,7 @@ func (pbft *pbftProtocal) allCorrectReplicasQuorum() int {
 
 func (pbft *pbftProtocal) prePrepared(digest string, v uint64, n uint64) bool {
 
-	_, mInLog := pbft.reqBatchStore[digest]
+	_, mInLog := pbft.validatedBatchStore[digest]
 
 	if digest != "" && !mInLog {
 		logger.Debugf("Replica %d havan't store the reqBatch")

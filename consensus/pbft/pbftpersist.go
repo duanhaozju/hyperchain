@@ -105,7 +105,7 @@ func (pbft *pbftProtocal) restorePQSet(key string) []*ViewChange_PQ {
 }
 
 func (pbft *pbftProtocal) persistRequestBatch(digest string) {
-	reqBatch := pbft.reqBatchStore[digest]
+	reqBatch := pbft.validatedBatchStore[digest]
 	reqBatchPacked, err := proto.Marshal(reqBatch)
 	if err != nil {
 		logger.Warningf("Replica %d could not persist request batch %s: %s", pbft.id, digest, err)
