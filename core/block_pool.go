@@ -560,7 +560,7 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 	txTrie, _ := trie.New(common.Hash{}, db)
 	receiptTrie, _ := trie.New(common.Hash{}, db)
 	statedb, err := state.New(pool.lastValidationState, db)
-	log.Notice("[Before Process %d] %s\n", seqNo, string(statedb.Dump()))
+	//log.Notice("[Before Process %d] %s\n", seqNo, string(statedb.Dump()))
 	if err != nil {
 		return err, nil, nil, nil, nil, nil, invalidTxs
 	}
