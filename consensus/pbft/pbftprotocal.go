@@ -716,6 +716,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
 	if !pbft.activeView {
 		logger.Debugf("Replica %d ignoring pre-prepare as we sre in view change", pbft.id)
+		return nil
 	}
 
 	if pbft.primary(pbft.view) != preprep.ReplicaId {

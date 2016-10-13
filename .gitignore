@@ -104,3 +104,5 @@ scripts/read_server.py
 scripts/server.out
 scripts/server.txt
 scripts/sshkeys/
+
+log
