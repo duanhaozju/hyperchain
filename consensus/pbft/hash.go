@@ -31,3 +31,9 @@ func computeCryptoHash(data []byte) (hash []byte) {
 	sha3.ShakeSum256(hash, data)
 	return
 }
+
+func byteToString(data []byte) (re string) {
+
+	re = base64.StdEncoding.EncodeToString(data)
+	return
+}

@@ -327,11 +327,17 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 			return nil
 		}
 
+		if len(result.Transactions) == 0 {
+			logger.Debugf("Replica %d is primary, receives validated result %s that is empty", pbft.id, result.Digest)
+			pbft.sendNullRequest()
+			return nil
+		}
+
 		batch := &TransactionBatch{
 			Batch:     result.Transactions,
 			Timestamp: time.Now().UnixNano(),
 		}
-		digest := hash(batch)
+		digest := byteToString(result.Hash)
 		pbft.validatedBatchStore[digest] = batch
 
 		cache := &cacheBatch{
@@ -352,11 +358,7 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 
 		cert := pbft.getCert(result.View, result.SeqNo)
 
-		temp := &TransactionBatch{
-			Batch:     result.Transactions,
-			Timestamp: cert.prePrepare.TransactionBatch.Timestamp,
-		}
-		digest := hash(temp)
+		digest := byteToString(result.Hash)
 
 		if digest == cert.digest {
 			pbft.sendCommit(digest, result.View, result.SeqNo)
@@ -948,11 +950,12 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
 	// Store the request batch if, for whatever reason, we haven't received it from an earlier broadcast
 	if _, ok := pbft.reqBatchStore[preprep.BatchDigest]; !ok && preprep.BatchDigest != "" {
-		digest := hash(preprep.GetTransactionBatch())
-		if digest != preprep.BatchDigest {
-			logger.Warningf("Pre-prepare and request digest do not match: request %s, digest %s", digest, preprep.BatchDigest)
-			return nil
-		}
+		//digest := hash(preprep.GetTransactionBatch())
+		//if digest != preprep.BatchDigest {
+		//	logger.Warningf("Pre-prepare and request digest do not match: request %s, digest %s", digest, preprep.BatchDigest)
+		//	return nil
+		//}
+		digest := preprep.BatchDigest
 		pbft.reqBatchStore[digest] = preprep.GetTransactionBatch()
 		logger.Debugf("Replica %d storing request batch %s in outstanding request batch store", pbft.id, digest)
 		pbft.outstandingReqBatches[digest] = preprep.GetTransactionBatch()
@@ -1182,7 +1185,7 @@ func (pbft *pbftProtocal) executeOne(idx msgID) bool {
 			=======
 		*/
 		logger.Infof("--------call execute--------view=%d/seqNo=%d--------", idx.v, idx.n)
-		pbft.helper.Execute(idx.n, true)
+		pbft.helper.Execute(idx.n, true, cert.prePrepare.TransactionBatch.Timestamp)
 		cert.sentExecute = true
 		pbft.execDoneSync(idx)
 	}
@@ -1227,7 +1230,7 @@ func (pbft *pbftProtocal) checkpoint(n uint64, info *protos.BlockchainInfo) {
 	}
 
 	id, _ := proto.Marshal(info)
-	idAsString := base64.StdEncoding.EncodeToString(id)
+	idAsString := byteToString(id)
 	seqNo := n
 
 	logger.Debugf("Replica %d preparing checkpoint for view=%d/seqNo=%d and b64 id of %s",
