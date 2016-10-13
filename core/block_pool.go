@@ -178,9 +178,9 @@ func (pool *BlockPool) eventLoop() {
 }
 
 //check block sequence and validate in chain
-func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int64) {
+func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash) {
 	if block.Number == 0 {
-		WriteBlock(block, commonHash, commitTime)
+		WriteBlock(block, commonHash)
 		return
 	}
 
@@ -209,20 +209,16 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 		UpdateChainByViewChange(block.Number-1, block.ParentHash)
 		keyNum := strconv.FormatInt(int64(block.Number), 10)
 		DeleteBlock(db, append(blockNumPrefix, keyNum...))
-		WriteBlock(block, commonHash, commitTime)
+		WriteBlock(block, commonHash)
 		pool.demandNumber = GetChainCopy().Height + 1
 		log.Notice("replated block number,number is: ", block.Number)
 		return
 	}
-
 	if pool.demandNumber == block.Number {
-
 		pool.mu.RLock()
 		pool.demandNumber += 1
 		log.Info("current demandNumber is ", pool.demandNumber)
-
-		WriteBlock(block, commonHash, commitTime)
-
+		WriteBlock(block, commonHash)
 		pool.mu.RUnlock()
 
 		for i := block.Number + 1; i <= pool.maxNum; i += 1 {
@@ -231,21 +227,17 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 				pool.mu.RLock()
 				pool.demandNumber += 1
 				log.Info("current demandNumber is ", pool.demandNumber)
-				WriteBlock(pool.queue[i], commonHash, commitTime)
+				WriteBlock(pool.queue[i], commonHash)
 				delete(pool.queue, i)
 				pool.mu.RUnlock()
 
 			} else {
 				break
 			}
-
 		}
-
 		return
 	} else {
-
 		pool.queue[block.Number] = block
-
 	}
 
 }
@@ -255,7 +247,7 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 // 2. Put transactions in block into db  (-- cancel --)
 // 3. Update chain
 // 4. Update balance
-func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int64) {
+func WriteBlock(block *types.Block, commonHash crypto.CommonHash) {
 	log.Info("block number is ", block.Number)
 
 	currentChain := GetChainCopy()
@@ -263,17 +255,19 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, commitTime int
 	block.ParentHash = currentChain.LatestBlockHash
 	db, _ := hyperdb.GetLDBDatabase()
 	//batch := db.NewBatch()
-	if err := ProcessBlock(block, commonHash, commitTime); err != nil {
-		log.Fatal(err)
-	}
+	/*
+		if err := ProcessBlock(block, commonHash, commitTime); err != nil {
+			log.Fatal(err)
+		}
+	*/
 	block.WriteTime = time.Now().UnixNano()
-	block.CommitTime = commitTime
+	block.EvmTime = time.Now().UnixNano()
+
 	block.BlockHash = block.Hash(commonHash).Bytes()
 
 	UpdateChain(block, false)
 
 	// update our stateObject and statedb to blockchain
-	block.EvmTime = time.Now().UnixNano()
 
 	newChain := GetChainCopy()
 	log.Notice("Block number", newChain.Height)
@@ -615,7 +609,70 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 }
 
 func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent) {
+	blockCache, _ := GetBlockCache()
+	record := blockCache.Get(ev.SeqNo)
+	if ev.Flag {
+		// 1.init a new block
+		newBlock := new(types.Block)
+		for _, tx := range record.ValidTxs {
+			newBlock.Transactions = append(newBlock.Transactions, tx)
+		}
+		newBlock.Timestamp = ev.Timestamp
+		newBlock.CommitTime = ev.CommitTime
+		newBlock.Number = ev.SeqNo
+		// 2.save block and update chain
+		pool.AddBlock(newBlock, crypto.NewKeccak256Hash("Keccak256"))
+	} else {
+		// TODO
+	}
+	blockCache.Delete(ev.SeqNo)
+}
 
+func (pool *BlockPool) SaveBlock(block *types.Block) {
+	if block.Number > pool.maxNum {
+		pool.maxNum = block.Number
+	}
+	if _, ok := pool.queue[block.Number]; ok {
+		log.Info("replated block number,number is: ", block.Number)
+		return
+	}
+	if pool.demandNumber == block.Number {
+		pool.mu.RLock()
+		pool.StoreBlock(block)
+		pool.demandNumber += 1
+		log.Info("current demandNumber is ", pool.demandNumber)
+		pool.mu.RUnlock()
+		for i := block.Number + 1; i <= pool.maxNum; i += 1 {
+			if _, ok := pool.queue[i]; ok {
+				pool.mu.RLock()
+				pool.StoreBlock(block)
+				pool.demandNumber += 1
+				delete(pool.queue, i)
+				pool.mu.RUnlock()
+			}
+		}
+	} else {
+		pool.queue[block.Number] = block
+	}
+}
+
+func (pool *BlockPool) StoreBlock(block *types.Block) {
+	currentChain := GetChainCopy()
+	block.ParentHash = currentChain.LatestBlockHash
+	block.WriteTime = time.Now().UnixNano()
+	block.EvmTime = time.Now().UnixNano()
+	block.BlockHash = block.Hash(crypto.NewKeccak256Hash("Keccak256")).Bytes()
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := PutBlock(db, block.BlockHash, block); err != nil {
+		log.Fatal(err)
+	}
+	UpdateChain(block, false)
+	if block.Number%10 == 0 && block.Number != 0 {
+		WriteChainChan()
+	}
 }
 
 func BuildTree(prefix []byte, ctx []interface{}) ([]byte, error) {
@@ -668,7 +725,7 @@ func convertT(txs []*types.Transaction) (ret []interface{}) {
 func (pool *BlockPool) AddBlockWithoutExecTxs(block *types.Block, commonHash crypto.CommonHash, commitTime int64) {
 
 	if block.Number == 0 {
-		WriteBlockWithoutExecTx(block, commonHash, commitTime)
+		writeBlockWithoutExecTx(block, commonHash)
 		return
 	}
 
@@ -697,7 +754,7 @@ func (pool *BlockPool) AddBlockWithoutExecTxs(block *types.Block, commonHash cry
 		UpdateChainByViewChange(block.Number-1, block.ParentHash)
 		keyNum := strconv.FormatInt(int64(block.Number), 10)
 		DeleteBlock(db, append(blockNumPrefix, keyNum...))
-		WriteBlockWithoutExecTx(block, commonHash, commitTime)
+		writeBlockWithoutExecTx(block, commonHash)
 		log.Notice("replated block number,number is: ", block.Number)
 		return
 	}
@@ -708,7 +765,7 @@ func (pool *BlockPool) AddBlockWithoutExecTxs(block *types.Block, commonHash cry
 		pool.demandNumber += 1
 		log.Info("current demandNumber is ", pool.demandNumber)
 
-		WriteBlockWithoutExecTx(block, commonHash, commitTime)
+		writeBlockWithoutExecTx(block, commonHash)
 
 		pool.mu.RUnlock()
 
@@ -718,7 +775,7 @@ func (pool *BlockPool) AddBlockWithoutExecTxs(block *types.Block, commonHash cry
 				pool.mu.RLock()
 				pool.demandNumber += 1
 				log.Info("current demandNumber is ", pool.demandNumber)
-				WriteBlockWithoutExecTx(pool.queue[i], commonHash, commitTime)
+				writeBlockWithoutExecTx(pool.queue[i], commonHash)
 				delete(pool.queue, i)
 				pool.mu.RUnlock()
 
@@ -727,23 +784,18 @@ func (pool *BlockPool) AddBlockWithoutExecTxs(block *types.Block, commonHash cry
 			}
 
 		}
-
 		return
 	} else {
-
 		pool.queue[block.Number] = block
-
 	}
-
 }
 
 // write the block to db but don't exec the txs
-func WriteBlockWithoutExecTx(block *types.Block, commonHash crypto.CommonHash, commitTime int64) {
+func writeBlockWithoutExecTx(block *types.Block, commonHash crypto.CommonHash) {
 	log.Info("block number is ", block.Number)
 	currentChain := GetChainCopy()
 	block.ParentHash = currentChain.LatestBlockHash
 	block.WriteTime = time.Now().UnixNano()
-	block.CommitTime = commitTime
 	block.BlockHash = block.Hash(commonHash).Bytes()
 	block.EvmTime = time.Now().UnixNano()
 	UpdateChain(block, false)
