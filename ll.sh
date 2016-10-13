@@ -21,5 +21,5 @@ fi
 
 clear
 
-./hyperchain -o $1 -l 808$1 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json
+./hyperchain -o $1 -l 808$1 -p ./config/peerconfig.json -f ./
 

@@ -7,15 +7,14 @@
 package peerComm
 
 import (
-	"net"
-	"io/ioutil"
-	"encoding/json"
-	"github.com/op/go-logging"
-	"strconv"
-	pb "hyperchain/p2p/peermessage"
 	"encoding/hex"
+	"github.com/op/go-logging"
 	"hyperchain/crypto"
+	pb "hyperchain/p2p/peermessage"
+	"net"
+	"strconv"
 )
+
 var log *logging.Logger // package-level logger
 func init() {
 	log = logging.MustGetLogger("p2p/peerComm")
@@ -23,7 +22,7 @@ func init() {
 
 // GetIpLocalIpAddr this function is used to get the real internal net ip address
 // to use this make sure your net are valid
-func GetLocalIp()string{
+func GetLocalIp() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		return ""
@@ -38,35 +37,19 @@ func GetLocalIp()string{
 	}
 	return ""
 }
-// GetConfig this is a tool function for get the json file config
-// configs return a map[string]string
-func GetConfig(path string) map[string]string{
-	content,fileErr := ioutil.ReadFile(path)
-	if fileErr != nil {
-		log.Fatal(fileErr)
-	}
-	var configs map[string]string
-	UmErr := json.Unmarshal(content,&configs)
-	if UmErr != nil {
-		log.Fatal(UmErr)
-	}
-	return configs
-}
 
-func ExtractAddress(peerIp string, peerPort int,ID int32) *pb.PeerAddress{
-	peerPort_i32 := int32(peerPort)
-	peerAddrString := strconv.Itoa(int(ID)) + ":" + strconv.Itoa(peerPort)
+func ExtractAddress(peerIp string, peerPort int64, ID uint64) *pb.PeerAddress {
+	peerAddrString := strconv.FormatUint(ID, 10) + ":" + strconv.FormatInt(peerPort, 10)
 	peerAddress := pb.PeerAddress{
-		Ip:peerIp,
-		Port:peerPort_i32,
-		Address:peerAddrString,
-		Hash:GetHash(peerAddrString),
-		ID:ID,
+		IP:   peerIp,
+		Port: peerPort,
+		Hash: GetHash(peerAddrString),
+		ID:   ID,
 	}
 	return &peerAddress
 }
 
-func GetHash(needHashString string)string {
+func GetHash(needHashString string) string {
 	hasher := crypto.NewKeccak256Hash("keccak256Hanser")
 	return hex.EncodeToString(hasher.Hash(needHashString).Bytes())
 }
