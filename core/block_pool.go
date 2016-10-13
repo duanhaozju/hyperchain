@@ -605,7 +605,7 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 
 	go public_batch.Write()
 
-	log.Notice("[After Process %d] %s\n", seqNo, string(statedb.Dump()))
+	//log.Notice("[After Process %d] %s\n", seqNo, string(statedb.Dump()))
 	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
 }
 

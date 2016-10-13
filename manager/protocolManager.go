@@ -91,8 +91,8 @@ func (pm *ProtocolManager) Start() {
 
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
-	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{}, event.ExeTxsEvent{})
-	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{}, event.CommitOrRollbackBlockEvent{})
+	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
+	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{}, event.CommitOrRollbackBlockEvent{}, event.ExeTxsEvent{})
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	go pm.NewBlockLoop()
@@ -313,6 +313,24 @@ func (self *ProtocolManager) NewBlockLoop() {
 			//self.fetcher.Enqueue(ev.Payload)
 		case event.CommitOrRollbackBlockEvent:
 			self.blockPool.CommitBlock(ev)
+
+
+		case event.ExeTxsEvent:
+			// (1) check signature for each transaction
+
+			//self.blockPool.ExecTxs(ev.SequenceNum, ev.Transactions)
+			/*
+				case event.CommitOrRollbackBlockEvent:
+					self.blockPool.CommitOrRollbackBlockEvent(ev.SequenceNum,
+						ev.Transactions, ev.Timestamp, ev.CommitTime, ev.CommitStatus)
+			*/
+			//self.blockPool.ExecTxs(ev.SeqNo, ev.Transactions)
+			/*case event.CommitOrRollbackBlockEvent:
+			self.blockPool.CommitOrRollbackBlockEvent(ev.SeqNo,
+				ev.Transactions,ev.CommitTime,ev.CommitStatus)*/
+			log.Notice("###### enter ExeTxsEvent", ev.SeqNo)
+			go self.blockPool.Validate(ev)
+			log.Notice("###### end ExeTxsEvent", ev.SeqNo)
 		}
 	}
 }
@@ -343,21 +361,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			//call consensus module
 			log.Debug("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
-		case event.ExeTxsEvent:
-			// (1) check signature for each transaction
 
-			//self.blockPool.ExecTxs(ev.SequenceNum, ev.Transactions)
-			/*
-				case event.CommitOrRollbackBlockEvent:
-					self.blockPool.CommitOrRollbackBlockEvent(ev.SequenceNum,
-						ev.Transactions, ev.Timestamp, ev.CommitTime, ev.CommitStatus)
-			*/
-			//self.blockPool.ExecTxs(ev.SeqNo, ev.Transactions)
-			/*case event.CommitOrRollbackBlockEvent:
-			self.blockPool.CommitOrRollbackBlockEvent(ev.SeqNo,
-				ev.Transactions,ev.CommitTime,ev.CommitStatus)*/
-			log.Notice("###### enter ExeTxsEvent", ev.SeqNo)
-			go self.blockPool.Validate(ev)
 		}
 
 	}
