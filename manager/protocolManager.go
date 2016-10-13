@@ -335,7 +335,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			go self.Peermanager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
 			//go self.peerManager.SendMsgToPeers(ev.Payload,)
 		case event.NewTxEvent:
-			log.Notice("###### enter NewTxEvent")
+			log.Debug("###### enter NewTxEvent")
 			go self.sendMsg(ev.Payload)
 
 		case event.ConsensusEvent:
@@ -356,8 +356,8 @@ func (self *ProtocolManager) ConsensusLoop() {
 			self.blockPool.CommitOrRollbackBlockEvent(ev.SeqNo,
 				ev.Transactions,ev.CommitTime,ev.CommitStatus)*/
 			log.Notice("###### enter ExeTxsEvent", ev.SeqNo)
-			time.Sleep(2000 * time.Millisecond)
-			self.blockPool.Validate(ev)
+			//time.Sleep(2000 * time.Millisecond)
+			go self.blockPool.Validate(ev)
 		}
 
 	}
