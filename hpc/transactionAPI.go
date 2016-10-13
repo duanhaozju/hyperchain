@@ -160,7 +160,7 @@ func (tran *PublicTransactionAPI) SendTransactionTest (args SendTxArgs) (common.
 
 // SendTransaction is to build a transaction object,and then post event NewTxEvent,
 // if the sender's balance is enough, return tx hash
-func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error){
+func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error) {
 
 	var tx *types.Transaction
 	//var found bool
@@ -190,25 +190,25 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	//}
 	//am := tran.pm.AccountManager
 
-	//if (!core.VerifyBalance(tx)){
-	//	return common.Hash{},errors.New("Not enough balance!")
-	//}else
+	//if (!core.VerifyBalance(tx)) {
+	//	return common.Hash{}, errors.New("Not enough balance!")
+	//} else {
 	//if found == true {
 
-		// Balance is enough
+	// Balance is enough
 
-		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		start := time.Now().Unix()
-		end := start + 6
-		//end:=start+500
+	//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+	log.Infof("############# %d: start send request#############", time.Now().Unix())
+	start := time.Now().Unix()
+	end := start + 6
+	//end:=start+500
 
-		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < 10; i++ {
-				tx.TimeStamp = time.Now().UnixNano()
+	for start := start; start < end; start = time.Now().Unix() {
+		for i := 0; i < 10; i++ {
+			tx.TimeStamp = time.Now().UnixNano()
 
-				// calculate signature
-				/*keydir := "./keystore/"
+			// calculate signature
+			/*keydir := "./keystore/"
 				encryption := crypto.NewEcdsaEncrypto("ecdsa")
 				am := accounts.NewAccountManager(keydir, encryption)
 				// TODO replace password with test value
@@ -217,19 +217,19 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					log.Errorf("Sign(tx) error :%v", err)
 				}
 				tx.Signature = signature*/
-				txBytes, err := proto.Marshal(tx)
-				if err != nil {
-					log.Errorf("proto.Marshal(tx) error: %v", err)
-				}
-				if manager.GetEventObject() != nil {
-					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
-					//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-				} else {
-					log.Warning("manager is Nil")
-				}
+			txBytes, err := proto.Marshal(tx)
+			if err != nil {
+				log.Errorf("proto.Marshal(tx) error: %v", err)
 			}
-			time.Sleep(90 * time.Millisecond)
+			if manager.GetEventObject() != nil {
+				go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+				//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+			} else {
+				log.Warning("manager is Nil")
+			}
 		}
+		time.Sleep(90 * time.Millisecond)
+	}
 	/*tx.TimeStamp = time.Now().UnixNano()
 
 	// TODO replace password with test value
@@ -249,7 +249,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		log.Warning("manager is Nil")
 	}
 	time.Sleep(2000 * time.Millisecond)*/
-		log.Infof("############# %d: end send request#############", time.Now().Unix())
+	log.Infof("############# %d: end send request#############", time.Now().Unix())
 	/*
 		receipt := core.GetReceipt(tx.BuildHash())
 		fmt.Println("GasUsed", receipt.GasUsed)
@@ -262,10 +262,11 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		fmt.Println("Message", receipt.Message)
 		fmt.Println("Log", receipt.Logs)
 	*/
-	return tx.BuildHash(),nil
+	return tx.BuildHash(), nil
 
 	//} else {
 	//	return common.Hash{}, errors.New("account don't unlock")
+	//}
 	//}
 }
 
@@ -463,16 +464,9 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockHashAndIndex(hash common.
 }
 
 // GetTransactionsByBlockNumberAndIndex returns the transaction for the given block number and index.
-func (tran *PublicTransactionAPI) GetTransactionsByBlockNumberAndIndex(n Number, index Number) (*TransactionResult, error){
+func (tran *PublicTransactionAPI) GetTransactionByBlockNumberAndIndex(n Number, index Number) (interface{}, error){
 
-	db, err := hyperdb.GetLDBDatabase()
-
-	if err != nil {
-		log.Errorf("Open database error: %v", err)
-		return nil, err
-	}
-
-	block, err := core.GetBlockByNumber(db, n.ToUint64())
+	block, err := getBlockByNumber(n)
 	if err != nil {
 		log.Errorf("%v", err)
 		return nil, err
@@ -483,8 +477,7 @@ func (tran *PublicTransactionAPI) GetTransactionsByBlockNumberAndIndex(n Number,
 	if index.ToInt() >= 0 && index.ToInt() < txCount {
 
 		tx := block.Transactions[index]
-
-		return outputTransaction(tx)
+		return tx, nil
 	}
 
 	return nil, nil

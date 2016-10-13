@@ -11,10 +11,10 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_sendTransactionTest","
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByHash","params":["0xe17cdfcbb5e6825a41a823598ba2acaf1ae48b45513aa1ba4e2844bc75ea9e81"],"id":1}'
 
 # 根据区块hash和索引查询交易信息 GetTransactionByBlockHashAndIndex
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByBlockHashAndIndex","params":["0xf4d42f0d4e276b306f3a6f7c04e06ef52ee9471684408b24cd4096b8402f7721",0],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByBlockHashAndIndex","params":["0x87dba1c547fbdfec844e56c9ac2f412f2df989ad65a63ecc00fcb6b319f66adf",0],"id":1}'
 
 # 根据区块number和索引查询交易信息 GetTransactionsByBlockNumberAndIndex
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionsByBlockNumberAndIndex","params":[1,0],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByBlockNumberAndIndex","params":[1,0],"id":1}'
 
 # 查询指定区块的交易数量
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getBlockTransactionCountByHash","params":["<block hash>"],"id":1}'
