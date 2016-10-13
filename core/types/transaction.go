@@ -28,7 +28,7 @@ func (self *Transaction) Hash(ch crypto.CommonHash) common.Hash {
 func (self *Transaction) SighHash(ch crypto.CommonHash) common.Hash {
 	return ch.Hash([]interface{}{
 		self.Value,
-		self.TimeStamp,
+		self.Timestamp,
 		self.From,
 		self.To,
 	})
@@ -44,7 +44,7 @@ func (self *Transaction) FString() string {
 		self.From,
 		self.To,
 		self.Value,
-		self.TimeStamp,
+		self.Timestamp,
 		self.Signature)
 }
 

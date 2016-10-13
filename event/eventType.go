@@ -41,15 +41,18 @@ type ReceiveSyncBlockEvent struct{ Payload []byte }
 
 //receive new block event from node consensus event for consensus module
 type ExeTxsEvent struct {
-	Transactions []types.Transaction
+	Transactions []*types.Transaction
 	Digest       string
 	SeqNo        uint64
+	View         uint64
 	IsPrimary    bool
 }
 
-type ValidateBatch struct {
-	Transactions []types.Transaction
+type ValidatedTxs struct {
+	Transactions []*types.Transaction
+	Digest       string
 	SeqNo        uint64
+	View         uint64
 }
 
 // if the CommitStatus is true, we will commit the blocks and save the statedb

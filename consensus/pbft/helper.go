@@ -2,12 +2,13 @@ package pbft
 
 import (
 	"time"
+	"fmt"
 
 	"hyperchain/protos"
+	"hyperchain/core/types"
+	"hyperchain/consensus/helper/persist"
 
 	"github.com/golang/protobuf/proto"
-	"hyperchain/consensus/helper/persist"
-	"fmt"
 )
 
 // =============================================================================
@@ -28,19 +29,8 @@ func (a sortableUint64Slice) Less(i, j int) bool {
 // =============================================================================
 // helper functions for create batch
 // =============================================================================
-// covert the transaction to request
-func (pbft *pbftProtocal) txToReq(tx *protos.Message) *Request {
 
-	req := &Request{
-		Timestamp: 	tx.Timestamp,
-		Payload:   	tx.Payload,
-		ReplicaId: 	pbft.id,
-	}
-
-	return req
-}
-
-func (pbft *pbftProtocal) postRequestEvent(event *Request) {
+func (pbft *pbftProtocal) postRequestEvent(event *types.Transaction) {
 
 	pbft.mux.Lock()
 	defer pbft.mux.Unlock()
@@ -242,39 +232,6 @@ func nullRequestMsgHelper(id uint64) *protos.Message {
 	}
 
 	return pbMsg
-}
-
-// pbftMsgHelper help convert the pbftMessage to pb.Message
-func pbftMsgHelper(msg *Message, id uint64) *protos.Message {
-
-	consensusMsg := &ConsensusMessage{Payload: &ConsensusMessage_PbftMessage{PbftMessage: msg}}
-	pbMsg := consensusMsgHelper(consensusMsg, id)
-
-	return pbMsg
-}
-
-// exeBatchHelper help convert the RequestBatch to pb.ExeMessage
-func exeBatchHelper(reqBatch *RequestBatch, no uint64) *protos.ExeMessage {
-
-	batches := []*protos.Message{}
-	requests := reqBatch.Batch
-
-	for i := 0; i < len(requests); i++ {
-		batch := &protos.Message{
-			Timestamp:	requests[i].Timestamp,
-			Payload:	requests[i].Payload,
-			Id:		requests[i].ReplicaId,
-		}
-		batches = append(batches, batch)
-	}
-
-	exeMsg := &protos.ExeMessage{
-		Batch:		batches,
-		Timestamp:	reqBatch.Timestamp,
-		No:		no,
-	}
-
-	return exeMsg
 }
 
 // StateUpdateHelper help convert checkPointInfo, blockchainInfo, replicas to pb.UpdateStateMessage

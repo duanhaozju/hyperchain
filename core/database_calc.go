@@ -125,7 +125,7 @@ func CalcResponseAVGTime(from, to uint64) int64 {
 			return -1
 		}
 		for _, trans := range block.Transactions {
-			sum += block.WriteTime - trans.TimeStamp
+			sum += block.WriteTime - trans.Timestamp
 		}
 		length += int64(len(block.Transactions))
 	}

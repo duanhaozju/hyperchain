@@ -3,6 +3,8 @@ package pbft
 import (
 	"testing"
 	"time"
+
+	"hyperchain/core/types"
 )
 
 
@@ -12,21 +14,21 @@ func TestHash(t *testing.T) {
 	copy(a[:], "abc")
 	copy(b[:], "def")
 
-	req1 := &Request{
+	req1 := &types.Transaction{
 		Timestamp:	time.Now().UnixNano(),
-		Payload:	a,
-		ReplicaId:	0,
+		Value:		a,
+		Id:		0,
 		Signature:	a,
 	}
 
-	req2 := &Request{
+	req2 := &types.Transaction{
 		Timestamp:	time.Now().UnixNano(),
-		Payload:	b,
-		ReplicaId:	1,
+		Value:		b,
+		Id:		1,
 		Signature:	b,
 	}
 
-	reqBatch := &RequestBatch{Batch: []*Request{req1, req2}}
+	reqBatch := &TransactionBatch{Batch: []*types.Transaction{req1, req2}}
 
 	hashReq := hash(req1)
 	hashReqBatch := hash(reqBatch)
