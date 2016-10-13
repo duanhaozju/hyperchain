@@ -90,11 +90,13 @@ type pbftProtocal struct {
 	viewChangeStore map[vcidx]*ViewChange        // track view-change messages
 
 	// implement the validate transaction batch process
-	vid                 uint64                       // track the validate squence number
-	lastVid             uint64                       // track the last validate batch seqNo
-	currentVid          *uint64                      // track the current validate batch seqNo
-	validatedBatchStore map[string]*TransactionBatch // track the validated transaction rnnbatch
-	cacheValidatedBatch map[string]*cacheBatch       // track the cached validated batch
+	vid                 	uint64				// track the validate squence number
+	lastVid             	uint64                       	// track the last validate batch seqNo
+	currentVid          	*uint64                      	// track the current validate batch seqNo
+	validatedBatchStore 	map[string]*TransactionBatch 	// track the validated transaction rnnbatch
+	cacheValidatedBatch 	map[string]*cacheBatch       	// track the cached validated batch
+	validateTimer		events.Timer
+	validateTimeout		time.Duration
 
 }
 
@@ -260,7 +262,6 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.batchSize = config.GetInt("general.batchsize")
 	pbft.batchStore = nil
 	pbft.batchTimeout, err = time.ParseDuration(config.GetString("timeout.batch"))
-
 	if err != nil {
 		panic(fmt.Errorf("Cannot parse batch timeout: %s", err))
 	}
@@ -273,6 +274,12 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	if pbft.requestTimeout >= pbft.nullRequestTimeout && pbft.nullRequestTimeout != 0 {
 		pbft.nullRequestTimeout = 3 * pbft.requestTimeout / 2
 		logger.Warningf("Configured null request timeout must be greater than request timeout, setting to %v", pbft.nullRequestTimeout)
+	}
+
+	pbft.validateTimer = etf.CreateTimer()
+	pbft.validateTimeout, err = time.ParseDuration(config.GetString("timeout.validate"))
+	if err != nil {
+		panic(fmt.Errorf("Cannot parse validate timeout: %s", err))
 	}
 
 	logger.Infof("PBFT Batch size = %d", pbft.batchSize)
@@ -1032,12 +1039,19 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 
 	cert := pbft.getCert(v, n)
 
-	if pbft.primary(pbft.id) == pbft.id {
-		if pbft.prepared(digest, v, n) {
-			return pbft.sendCommit(digest, v, n)
-		}
+	if cert == nil {
+		logger.Errorf("Replica %d can't get the cert for the view=%d/seqNo=%d", pbft.id, v, n)
+		return nil
+	}
+
+	if !pbft.prepared(digest, v, n) {
+		return nil
 	} else {
-		pbft.validateBatch(cert.prePrepare.TransactionBatch, digest, n, v)
+		if pbft.primary(pbft.id) == pbft.id {
+			return pbft.sendCommit(digest, v, n)
+		} else {
+			pbft.validateBatch(cert.prePrepare.TransactionBatch, digest, n, v)
+		}
 	}
 
 	return nil
@@ -1046,6 +1060,11 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 func (pbft *pbftProtocal) sendCommit(digest string, v uint64, n uint64) error {
 
 	cert := pbft.getCert(v, n)
+
+	if cert == nil {
+		logger.Errorf("Replica %d can't get the cert for the view=%d/seqNo=%d", pbft.id, v, n)
+		return nil
+	}
 
 	if !cert.sentCommit {
 		logger.Debugf("Replica %d broadcasting commit for view=%d/seqNo=%d",
