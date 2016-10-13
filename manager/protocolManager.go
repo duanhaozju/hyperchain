@@ -29,29 +29,29 @@ func init() {
 }
 
 type ProtocolManager struct {
-	serverPort        int
-	blockPool         *core.BlockPool
-	fetcher           *core.Fetcher
-	Peermanager       p2p.PeerManager
+	serverPort  int
+	blockPool   *core.BlockPool
+	fetcher     *core.Fetcher
+	Peermanager p2p.PeerManager
 
-	nodeInfo          client.PeerInfos // node info ,store node status,ip,port
-	consenter         consensus.Consenter
+	nodeInfo  client.PeerInfos // node info ,store node status,ip,port
+	consenter consensus.Consenter
 	//encryption   crypto.Encryption
-	AccountManager    *accounts.AccountManager
-	commonHash        crypto.CommonHash
+	AccountManager *accounts.AccountManager
+	commonHash     crypto.CommonHash
 
-	noMorePeers       chan struct{}
-	eventMux          *event.TypeMux
-	txSub             event.Subscription
-	newBlockSub       event.Subscription
-	consensusSub      event.Subscription
+	noMorePeers  chan struct{}
+	eventMux     *event.TypeMux
+	txSub        event.Subscription
+	newBlockSub  event.Subscription
+	consensusSub event.Subscription
 
-	aLiveSub          event.Subscription
+	aLiveSub event.Subscription
 
 	syncCheckpointSub event.Subscription
 
-	syncBlockSub      event.Subscription
-	quitSync          chan struct{}
+	syncBlockSub event.Subscription
+	quitSync     chan struct{}
 
 	wg sync.WaitGroup
 }
@@ -91,7 +91,7 @@ func (pm *ProtocolManager) Start() {
 
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
-	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
+	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{}, event.ExeTxsEvent{})
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
@@ -125,7 +125,6 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 				CurrentNumber:  core.GetChainCopy().Height,
 				PeerId:         UpdateStateMessage.Id,
 			}
-			log.Notice("syncCheckpointLoop : ", blockChainInfo.Height)
 			// For Test
 			// Midify the current highest block
 			/*
@@ -241,8 +240,9 @@ func (self *ProtocolManager) syncBlockLoop() {
 											if err != nil {
 												continue
 											} else {
-												core.ProcessBlock(blk,self.commonHash,blk.CommitTime)
+												core.ProcessBlock(blk, self.commonHash, blk.CommitTime)
 												self.blockPool.SetDemandNumber(blk.Number + 1)
+
 												/*
 													if bytes.Compare(blk.MerkleRoot, originMerkleRoot) != 0 {
 														// stateDb has difference status
@@ -335,32 +335,29 @@ func (self *ProtocolManager) ConsensusLoop() {
 			go self.Peermanager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
 			//go self.peerManager.SendMsgToPeers(ev.Payload,)
 		case event.NewTxEvent:
-
+			log.Notice("###### enter NewTxEvent")
 			go self.sendMsg(ev.Payload)
 
 		case event.ConsensusEvent:
 			//call consensus module
 			log.Debug("###### enter ConsensusEvent")
-			//logger.GetLogger().Println("###### enter ConsensusEvent")
-			/*
-				receiveMessage := &protos.Message{}
-				proto.Unmarshal(ev.Payload, receiveMessage)
-				if receiveMessage.Type == 1 {
-					log.Notice("ReceiveSyncBlockEvent checkpoint in consensus ")
-				}
-			*/
 			self.consenter.RecvMsg(ev.Payload)
 		case event.ExeTxsEvent:
+			// (1) check signature for each transaction
+
 			//self.blockPool.ExecTxs(ev.SequenceNum, ev.Transactions)
 			/*
 				case event.CommitOrRollbackBlockEvent:
 					self.blockPool.CommitOrRollbackBlockEvent(ev.SequenceNum,
 						ev.Transactions, ev.Timestamp, ev.CommitTime, ev.CommitStatus)
 			*/
-			self.blockPool.ExecTxs(ev.SeqNo, ev.Transactions)
+			//self.blockPool.ExecTxs(ev.SeqNo, ev.Transactions)
 			/*case event.CommitOrRollbackBlockEvent:
 			self.blockPool.CommitOrRollbackBlockEvent(ev.SeqNo,
 				ev.Transactions,ev.CommitTime,ev.CommitStatus)*/
+			log.Notice("###### enter ExeTxsEvent", ev.SeqNo)
+			time.Sleep(2000 * time.Millisecond)
+			self.blockPool.Validate(ev)
 		}
 
 	}

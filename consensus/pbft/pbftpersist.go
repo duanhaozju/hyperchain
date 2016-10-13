@@ -167,7 +167,7 @@ func (pbft *pbftProtocal) restoreState() {
 	reqBatchesPacked, err := persist.ReadStateSet("reqBatch.")
 	if err == nil {
 		for k, v := range reqBatchesPacked {
-			reqBatch := &RequestBatch{}
+			reqBatch := &TransactionBatch{}
 			err = proto.Unmarshal(v, reqBatch)
 			if err != nil {
 				logger.Warningf("Replica %d could not restore request batch %s", pbft.id, k)
