@@ -888,6 +888,7 @@ func (pbft *pbftProtocal) executeOutstanding() {
 
 	logger.Debugf("Replica %d attempting to executeOutstanding", pbft.id)
 
+	// TODO TIMER
 	for idx := range pbft.committedCert {
 		if pbft.executeOne(idx) {
 			break
@@ -957,7 +958,9 @@ func (pbft *pbftProtocal) execDoneSync(idx msgID) {
 		pbft.lastExec = *pbft.currentExec
 		delete(pbft.committedCert, idx)
 		if pbft.lastExec % pbft.K == 0 {
+			//TODO TIMER START
 			bcInfo := getBlockchainInfo()
+			// TIMER STOP
 			height := bcInfo.Height
 			if height == pbft.lastExec {
 				logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", pbft.lastExec, height)
@@ -1240,6 +1243,10 @@ func (pbft *pbftProtocal) moveWatermarks(n uint64) {
 
 	// round down n to previous low watermark
 	h := n / pbft.K * pbft.K
+
+	if pbft.h > h {
+		return nil
+	}
 
 	for idx, cert := range pbft.certStore {
 		if idx.n <= h {
