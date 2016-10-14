@@ -1059,12 +1059,14 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 		logger.Errorf("Replica %d can't get the cert for the view=%d/seqNo=%d", pbft.id, v, n)
 		return nil
 	}
+	logger.Error(pbft.prepared(digest, v, n))
 
 	if !pbft.prepared(digest, v, n) {
 		return nil
 	}
 
-	if pbft.primary(pbft.id) == pbft.id {
+	if pbft.primary(pbft.view) == pbft.id {
+
 		return pbft.sendCommit(digest, v, n)
 	} else {
 		if !cert.sentValidate {
