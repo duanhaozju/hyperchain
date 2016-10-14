@@ -499,8 +499,13 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, boo
 	if err != nil {
 		return err, false
 	}
+	hash := crypto.NewKeccak256Hash("Keccak256").Hash([]interface{}{
+		merkleRoot,
+		txRoot,
+		receiptRoot,
+	})
 	blockCache, _ := GetBlockCache()
-	blockCache.Record(validationEvent.SeqNo, BlockRecord{
+	blockCache.Record(hash.Hex(), BlockRecord{
 		TxRoot:      txRoot,
 		ReceiptRoot: receiptRoot,
 		MerkleRoot:  merkleRoot,
@@ -510,17 +515,12 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, boo
 	log.Info("Invalid Tx number: ", len(invalidTxSet))
 	log.Info("Valid Tx number: ", len(validTxSet))
 	// Communicate with PBFT
-	hash := crypto.NewKeccak256Hash("Keccak256").Hash([]interface{}{
-		merkleRoot,
-		txRoot,
-		receiptRoot,
-	})
 	pool.consenter.RecvValidatedResult(event.ValidatedTxs{
 		Transactions: validTxSet,
 		Digest:       validationEvent.Digest,
 		SeqNo:        validationEvent.SeqNo,
 		View:         validationEvent.View,
-		Hash:         hash.Bytes(),
+		Hash:         hash.Hex(),
 	})
 	return nil, true
 }
@@ -610,7 +610,7 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 
 func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerManager p2p.PeerManager) {
 	blockCache, _ := GetBlockCache()
-	record := blockCache.Get(ev.SeqNo)
+	record := blockCache.Get(ev.Hash)
 	if ev.Flag {
 		// 1.init a new block
 		newBlock := new(types.Block)
