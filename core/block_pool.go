@@ -20,6 +20,8 @@ import (
 	"hyperchain/core/vm/params"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
+	"hyperchain/p2p"
+	"hyperchain/recovery"
 	"hyperchain/trie"
 	"math/big"
 	"strconv"
@@ -458,18 +460,20 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
 	} else if validationEvent.SeqNo == pool.demandSeqNo {
 		// Process
 		pool.seqNoMu.RLock()
-		pool.PreProcess(validationEvent)
-		pool.demandSeqNo += 1
-		log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
+		if _, success := pool.PreProcess(validationEvent); success {
+			pool.demandSeqNo += 1
+			log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
+		}
 		pool.seqNoMu.RUnlock()
 		// Process remain event
 		for i := validationEvent.SeqNo + 1; i <= pool.maxSeqNo; i += 1 {
 			if _, ok := pool.validationQueue[i]; ok {
 				pool.seqNoMu.RLock()
-				pool.demandSeqNo += 1
-				log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
 				// Process
-				pool.PreProcess(pool.validationQueue[i])
+				if _, success := pool.PreProcess(pool.validationQueue[i]); success {
+					pool.demandSeqNo += 1
+					log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
+				}
 				delete(pool.validationQueue, i)
 				pool.seqNoMu.RUnlock()
 			} else {
@@ -483,7 +487,7 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
 	}
 }
 
-func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) error {
+func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, bool) {
 	var validTxSet []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
 	if validationEvent.IsPrimary {
@@ -493,7 +497,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) error {
 	}
 	err, _, merkleRoot, txRoot, receiptRoot, validTxSet, invalidTxSet := pool.ProcessBlock1(validTxSet, invalidTxSet, validationEvent.SeqNo)
 	if err != nil {
-		return err
+		return err, false
 	}
 	blockCache, _ := GetBlockCache()
 	blockCache.Record(validationEvent.SeqNo, BlockRecord{
@@ -503,15 +507,14 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) error {
 		InvalidTxs:  invalidTxSet,
 		ValidTxs:    validTxSet,
 	})
-	/*log.Notice("PreProcess Result : ", common.BytesToHash(merkleRoot).Hex(), common.BytesToHash(txRoot).Hex(), common.BytesToHash(receiptRoot).Hex())
-	log.Notice("Invalid Tx number: ", len(invalidTxSet))*/
+	log.Info("Invalid Tx number: ", len(invalidTxSet))
+	log.Info("Valid Tx number: ", len(validTxSet))
 	// Communicate with PBFT
 	hash := crypto.NewKeccak256Hash("Keccak256").Hash([]interface{}{
 		merkleRoot,
 		txRoot,
 		receiptRoot,
 	})
-	log.Notice("enter recvValidateResult")
 	pool.consenter.RecvValidatedResult(event.ValidatedTxs{
 		Transactions: validTxSet,
 		Digest:       validationEvent.Digest,
@@ -519,7 +522,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) error {
 		View:         validationEvent.View,
 		Hash:         hash.Bytes(),
 	})
-	return nil
+	return nil, true
 }
 func (pool *BlockPool) PreCheck(txs []*types.Transaction) ([]*types.Transaction, []*types.InvalidTransactionRecord) {
 	var validTxSet []*types.Transaction
@@ -542,7 +545,6 @@ func (pool *BlockPool) PreCheck(txs []*types.Transaction) ([]*types.Transaction,
 }
 
 func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, []byte, []byte, []byte, []byte, []*types.Transaction, []*types.InvalidTransactionRecord) {
-	log.Debug("[ProcessBlock1] txs: ", len(txs))
 	var validtxs []*types.Transaction
 	var (
 		//receipts types.Receipts
@@ -555,7 +557,6 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 	txTrie, _ := trie.New(common.Hash{}, db)
 	receiptTrie, _ := trie.New(common.Hash{}, db)
 	statedb, err := state.New(pool.lastValidationState, db)
-	//log.Notice("[Before Process %d] %s\n", seqNo, string(statedb.Dump()))
 	if err != nil {
 		return err, nil, nil, nil, nil, nil, invalidTxs
 	}
@@ -563,7 +564,6 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 	env["currentGasLimit"] = "10000000"
 	vmenv := NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
 
-	//batch := db.NewBatch()
 	public_batch = db.NewBatch()
 
 	for i, tx := range txs {
@@ -605,11 +605,10 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 
 	go public_batch.Write()
 
-	//log.Notice("[After Process %d] %s\n", seqNo, string(statedb.Dump()))
 	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
 }
 
-func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent) {
+func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerManager p2p.PeerManager) {
 	blockCache, _ := GetBlockCache()
 	record := blockCache.Get(ev.SeqNo)
 	if ev.Flag {
@@ -626,6 +625,27 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent) {
 		newBlock.Number = ev.SeqNo
 		// 2.save block and update chain
 		pool.AddBlock(newBlock, crypto.NewKeccak256Hash("Keccak256"))
+		// 3.throw invalid tx back to origin node if current peer is primary
+		if ev.IsPrimary {
+			for _, t := range record.InvalidTxs {
+				payload, err := proto.Marshal(t)
+				if err != nil {
+					log.Error("Marshal tx error")
+				}
+				message := &recovery.Message{
+					MessageType:  recovery.Message_INVALIDRESP,
+					MsgTimeStamp: time.Now().UnixNano(),
+					Payload:      payload,
+				}
+				broadcastMsg, err := proto.Marshal(message)
+				if err != nil {
+					log.Error("Marshal Message")
+				}
+				var peers []uint64
+				peers = append(peers, t.Tx.Id)
+				peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_INVALIDRESP)
+			}
+		}
 	} else {
 		db, _ := hyperdb.GetLDBDatabase()
 		for _, t := range record.InvalidTxs {
@@ -637,51 +657,17 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent) {
 	blockCache.Delete(ev.SeqNo)
 }
 
-func (pool *BlockPool) SaveBlock(block *types.Block) {
-	if block.Number > pool.maxNum {
-		pool.maxNum = block.Number
-	}
-	if _, ok := pool.queue[block.Number]; ok {
-		log.Info("replated block number,number is: ", block.Number)
-		return
-	}
-	if pool.demandNumber == block.Number {
-		pool.mu.RLock()
-		pool.StoreBlock(block)
-		pool.demandNumber += 1
-		log.Info("current demandNumber is ", pool.demandNumber)
-		pool.mu.RUnlock()
-		for i := block.Number + 1; i <= pool.maxNum; i += 1 {
-			if _, ok := pool.queue[i]; ok {
-				pool.mu.RLock()
-				pool.StoreBlock(block)
-				pool.demandNumber += 1
-				delete(pool.queue, i)
-				pool.mu.RUnlock()
-			}
-		}
-	} else {
-		pool.queue[block.Number] = block
-	}
-}
-
-func (pool *BlockPool) StoreBlock(block *types.Block) {
-	currentChain := GetChainCopy()
-	block.ParentHash = currentChain.LatestBlockHash
-	block.WriteTime = time.Now().UnixNano()
-	block.EvmTime = time.Now().UnixNano()
-	block.BlockHash = block.Hash(crypto.NewKeccak256Hash("Keccak256")).Bytes()
-	db, err := hyperdb.GetLDBDatabase()
+func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
+	msg := &recovery.Message{}
+	invalidTx := &types.InvalidTransactionRecord{}
+	err := proto.Unmarshal(ev.Payload, msg)
+	err = proto.Unmarshal(msg.Payload, invalidTx)
 	if err != nil {
-		log.Fatal(err)
+		log.Error("Unmarshal Payload failed")
 	}
-	if err := PutBlock(db, block.BlockHash, block); err != nil {
-		log.Fatal(err)
-	}
-	UpdateChain(block, false)
-	if block.Number%10 == 0 && block.Number != 0 {
-		WriteChainChan()
-	}
+	// save to db
+	db, _ := hyperdb.GetLDBDatabase()
+	db.Put(append(invalidTransactionPrefix, invalidTx.Tx.TransactionHash...), msg.Payload)
 }
 
 func BuildTree(prefix []byte, ctx []interface{}) ([]byte, error) {

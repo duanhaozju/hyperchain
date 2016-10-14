@@ -45,6 +45,7 @@ type ProtocolManager struct {
 	txSub        event.Subscription
 	newBlockSub  event.Subscription
 	consensusSub event.Subscription
+	respSub      event.Subscription
 
 	aLiveSub event.Subscription
 
@@ -95,11 +96,12 @@ func (pm *ProtocolManager) Start() {
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{}, event.CommitOrRollbackBlockEvent{}, event.ExeTxsEvent{})
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
+	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
 	go pm.syncBlockLoop()
 	go pm.syncCheckpointLoop()
-
+	go pm.respHandlerLoop()
 	pm.wg.Wait()
 
 }
@@ -312,25 +314,22 @@ func (self *ProtocolManager) NewBlockLoop() {
 			self.commitNewBlock(ev.Payload, ev.CommitTime)
 			//self.fetcher.Enqueue(ev.Payload)
 		case event.CommitOrRollbackBlockEvent:
-			self.blockPool.CommitBlock(ev)
-
+			self.blockPool.CommitBlock(ev, self.Peermanager)
 
 		case event.ExeTxsEvent:
-			// (1) check signature for each transaction
-
-			//self.blockPool.ExecTxs(ev.SequenceNum, ev.Transactions)
-			/*
-				case event.CommitOrRollbackBlockEvent:
-					self.blockPool.CommitOrRollbackBlockEvent(ev.SequenceNum,
-						ev.Transactions, ev.Timestamp, ev.CommitTime, ev.CommitStatus)
-			*/
-			//self.blockPool.ExecTxs(ev.SeqNo, ev.Transactions)
-			/*case event.CommitOrRollbackBlockEvent:
-			self.blockPool.CommitOrRollbackBlockEvent(ev.SeqNo,
-				ev.Transactions,ev.CommitTime,ev.CommitStatus)*/
-
 			go self.blockPool.Validate(ev)
 
+		}
+	}
+}
+
+func (self *ProtocolManager) respHandlerLoop() {
+
+	for obj := range self.respSub.Chan() {
+		switch ev := obj.Data.(type) {
+		case event.RespInvalidTxsEvent:
+			// receive invalid tx message, save to db
+			self.blockPool.StoreInvalidResp(ev)
 		}
 	}
 }
