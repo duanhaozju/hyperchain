@@ -21,6 +21,7 @@ import (
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
 	"hyperchain/p2p"
+	"hyperchain/recovery"
 	"hyperchain/trie"
 	"math/big"
 	"strconv"
@@ -609,7 +610,7 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
 }
 
-func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerManager p2p.Peermanager) {
+func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerManager p2p.PeerManager) {
 	blockCache, _ := GetBlockCache()
 	record := blockCache.Get(ev.SeqNo)
 	if ev.Flag {
@@ -626,6 +627,19 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerMana
 		newBlock.Number = ev.SeqNo
 		// 2.save block and update chain
 		pool.AddBlock(newBlock, crypto.NewKeccak256Hash("Keccak256"))
+		// 3.throw invalid tx back to origin node
+		for _, t := range record.InvalidTxs {
+			payload, _ := proto.Marshal(t)
+			message := &recovery.Message{
+				MessageType:  recovery.Message_INVALIDRESP,
+				MsgTimeStamp: time.Now().UnixNano(),
+				Payload:      payload,
+			}
+			broadcastMsg, _ := proto.Marshal(message)
+			var peers []uint64
+			peers = append(peers, t.Tx.Id)
+			peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_INVALIDRESP)
+		}
 
 	} else {
 		db, _ := hyperdb.GetLDBDatabase()
