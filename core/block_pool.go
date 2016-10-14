@@ -441,7 +441,7 @@ func WriteBlockInDB(root common.Hash, block *types.Block, commitTime int64, comm
 }
 
 func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
-	log.Debug("[Validate]begin")
+	log.Notice("[Validate]begin", validationEvent.SeqNo)
 	if validationEvent.SeqNo > pool.maxSeqNo {
 		pool.maxSeqNo = validationEvent.SeqNo
 	}
@@ -457,7 +457,9 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
 		return
 	} else if validationEvent.SeqNo == pool.demandSeqNo {
 		// Process
+		log.Notice("Get Demand SeqNo")
 		pool.seqNoMu.RLock()
+		log.Notice("Unlock")
 		pool.PreProcess(validationEvent)
 		pool.demandSeqNo += 1
 		log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
@@ -491,10 +493,12 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) error {
 	} else {
 		validTxSet = validationEvent.Transactions
 	}
+	log.Notice("TX NUM", len(validTxSet))
 	err, _, merkleRoot, txRoot, receiptRoot, validTxSet, invalidTxSet := pool.ProcessBlock1(validTxSet, invalidTxSet, validationEvent.SeqNo)
 	if err != nil {
 		return err
 	}
+	log.Notice("PreProcess Result ",common.BytesToHash(merkleRoot).Hex(), common.BytesToHash(txRoot).Hex())
 	blockCache, _ := GetBlockCache()
 	blockCache.Record(validationEvent.SeqNo, BlockRecord{
 		TxRoot:      txRoot,
@@ -542,7 +546,7 @@ func (pool *BlockPool) PreCheck(txs []*types.Transaction) ([]*types.Transaction,
 }
 
 func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, []byte, []byte, []byte, []byte, []*types.Transaction, []*types.InvalidTransactionRecord) {
-	log.Debug("[ProcessBlock1] txs: ", len(txs))
+	log.Notice("[ProcessBlock1] txs: ", len(txs))
 	var validtxs []*types.Transaction
 	var (
 		//receipts types.Receipts
@@ -554,9 +558,11 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 	}
 	txTrie, _ := trie.New(common.Hash{}, db)
 	receiptTrie, _ := trie.New(common.Hash{}, db)
+	log.Notice("Before Process, lastValidationState", pool.lastValidationState.Hex())
 	statedb, err := state.New(pool.lastValidationState, db)
 	//log.Notice("[Before Process %d] %s\n", seqNo, string(statedb.Dump()))
 	if err != nil {
+		log.Notice("New StateDB ERROR")
 		return err, nil, nil, nil, nil, nil, invalidTxs
 	}
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
@@ -580,11 +586,13 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 		// save to DB
 		txValue, _ := proto.Marshal(tx)
 		if err := public_batch.Put(append(transactionPrefix, tx.GetTransactionHash().Bytes()...), txValue); err != nil {
+			log.Notice("Put TX")
 			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
 
 		receiptValue, _ := proto.Marshal(receipt)
 		if err := public_batch.Put(append(receiptsPrefix, receipt.TxHash...), receiptValue); err != nil {
+			log.Notice("Put recp")
 			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
 
@@ -602,6 +610,7 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 	receiptRoot := receiptTrie.Hash().Bytes()
 
 	pool.lastValidationState = root
+	log.Notice("After Process, lastValidationState", root.Hex())
 
 	go public_batch.Write()
 
@@ -624,6 +633,7 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent) {
 		newBlock.Timestamp = ev.Timestamp
 		newBlock.CommitTime = ev.CommitTime
 		newBlock.Number = ev.SeqNo
+		log.Notice(common.BytesToHash(newBlock.MerkleRoot).Hex(), common.BytesToHash(newBlock.TxRoot).Hex(), newBlock.Timestamp, newBlock.Number)
 		// 2.save block and update chain
 		pool.AddBlock(newBlock, crypto.NewKeccak256Hash("Keccak256"))
 	} else {
