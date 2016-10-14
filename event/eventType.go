@@ -64,6 +64,7 @@ type CommitOrRollbackBlockEvent struct {
 	Timestamp  int64
 	CommitTime int64
 	Flag       bool
+	IsPrimary  bool
 }
 
 type RespInvalidTxsEvent struct {

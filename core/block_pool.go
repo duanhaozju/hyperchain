@@ -443,7 +443,7 @@ func WriteBlockInDB(root common.Hash, block *types.Block, commitTime int64, comm
 }
 
 func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
-	log.Notice("[Validate]begin")
+	log.Debug("[Validate]begin")
 	if validationEvent.SeqNo > pool.maxSeqNo {
 		pool.maxSeqNo = validationEvent.SeqNo
 	}
@@ -626,24 +626,25 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerMana
 		// 2.save block and update chain
 		pool.AddBlock(newBlock, crypto.NewKeccak256Hash("Keccak256"))
 		// 3.throw invalid tx back to origin node if current peer is primary
-		for _, t := range record.InvalidTxs {
-			payload, err := proto.Marshal(t)
-			if err != nil {
-				log.Error("Marshal tx error")
+		if ev.IsPrimary {
+			for _, t := range record.InvalidTxs {
+				payload, err := proto.Marshal(t)
+				if err != nil {
+					log.Error("Marshal tx error")
+				}
+				message := &recovery.Message{
+					MessageType:  recovery.Message_INVALIDRESP,
+					MsgTimeStamp: time.Now().UnixNano(),
+					Payload:      payload,
+				}
+				broadcastMsg, err := proto.Marshal(message)
+				if err != nil {
+					log.Error("Marshal Message")
+				}
+				var peers []uint64
+				peers = append(peers, t.Tx.Id)
+				peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_INVALIDRESP)
 			}
-			message := &recovery.Message{
-				MessageType:  recovery.Message_INVALIDRESP,
-				MsgTimeStamp: time.Now().UnixNano(),
-				Payload:      payload,
-			}
-			broadcastMsg, err := proto.Marshal(message)
-			if err != nil {
-				log.Error("Marshal Message")
-			}
-			var peers []uint64
-			peers = append(peers, t.Tx.Id)
-			log.Error("Peer", peers)
-			peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_INVALIDRESP)
 		}
 	} else {
 		db, _ := hyperdb.GetLDBDatabase()

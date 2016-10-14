@@ -317,9 +317,8 @@ func (self *ProtocolManager) NewBlockLoop() {
 			self.blockPool.CommitBlock(ev, self.Peermanager)
 
 		case event.ExeTxsEvent:
-			log.Notice("###### enter ExeTxsEvent", ev.SeqNo)
 			go self.blockPool.Validate(ev)
-			log.Notice("###### end ExeTxsEvent", ev.SeqNo)
+
 		}
 	}
 }

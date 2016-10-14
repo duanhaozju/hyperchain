@@ -355,10 +355,6 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 		}
 		pbft.cacheValidatedBatch[digest] = cache
 
-		logger.Notice("primary post to replica digest is",result.Digest )
-		logger.Notice("primary post to replica seqNo is",result.SeqNo )
-		logger.Notice("primary post to replica digest is :%s,seqNo is: %d",result.Digest ,result.SeqNo )
-
 		pbft.trySendPrePrepare()
 	} else {
 		logger.Debugf("Replica %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Digest)
@@ -373,10 +369,8 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 
 		digest := byteToString(result.Hash)
 
-		logger.Notice("Replica  recived seqNo is sqeNo=%d, module digest is: %s,cert digest is: %s",result.SeqNo, result.Digest,cert.digest)
-		logger.Notice("replica receive seqNo is ",result.SeqNo )
-		logger.Notice("cert digest is",cert.digest )
-		logger.Notice("receive loop module digest is",digest)
+		//logger.Notice("Replica  recived seqNo is sqeNo=%d, module digest is: %s,cert digest is: %s",result.SeqNo, result.Digest,cert.digest)
+
 
 		if digest == cert.digest {
 			pbft.sendCommit(digest, result.View, result.SeqNo)
@@ -914,6 +908,9 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	delete(pbft.cacheValidatedBatch, digest)
 	//pbft.persistQSet()
 	payload, err := proto.Marshal(preprep)
+	logger.Debug("call---send pre-pare Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
+		pbft.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
+
 	if err != nil {
 		logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
 		return
@@ -933,7 +930,10 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 
 func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
-	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
+	//
+	//logger.Notice("receive  pre-prepare first seq is:",preprep.SequenceNumber)
+
+	logger.Debug("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
 		pbft.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
 	if !pbft.activeView {
@@ -984,7 +984,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
 	pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new pre-prepare for request batch %s", preprep.BatchDigest))
 	pbft.nullRequestTimer.Stop()
-
+	logger.Debug("receive  pre-prepare first seq is:",preprep.SequenceNumber)
 	if pbft.primary(pbft.view) != pbft.id && pbft.prePrepared(preprep.BatchDigest, preprep.View, preprep.SequenceNumber) && !cert.sentPrepare {
 		logger.Debugf("Backup %d broadcasting prepare for view=%d/seqNo=%d", pbft.id, preprep.View, preprep.SequenceNumber)
 		prep := &Prepare{
@@ -1006,6 +1006,9 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 			Payload: payload,
 		}
 		msg := consensusMsgHelper(consensusMsg, pbft.id)
+		logger.Debug("after pre-prepare seq is:",prep.SequenceNumber)
+		logger.Debug("after pre-prepare seq is:",prep.BatchDigest)
+
 		return pbft.helper.InnerBroadcast(msg)
 	}
 
@@ -1056,12 +1059,14 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 		logger.Errorf("Replica %d can't get the cert for the view=%d/seqNo=%d", pbft.id, v, n)
 		return nil
 	}
+	logger.Error(pbft.prepared(digest, v, n))
 
 	if !pbft.prepared(digest, v, n) {
 		return nil
 	}
 
-	if pbft.primary(pbft.id) == pbft.id {
+	if pbft.primary(pbft.view) == pbft.id {
+
 		return pbft.sendCommit(digest, v, n)
 	} else {
 		if !cert.sentValidate {
@@ -1221,7 +1226,13 @@ func (pbft *pbftProtocal) executeOne(idx msgID) bool {
 			=======
 		*/
 		logger.Infof("--------call execute--------view=%d/seqNo=%d--------", idx.v, idx.n)
-		pbft.helper.Execute(idx.n, true, cert.prePrepare.TransactionBatch.Timestamp)
+		var isPrimary bool
+		if pbft.primary(pbft.view) == pbft.id {
+			isPrimary = true
+		} else {
+			isPrimary = false
+		}
+		pbft.helper.Execute(idx.n, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
 		cert.sentExecute = true
 		pbft.execDoneSync(idx)
 	}
