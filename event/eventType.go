@@ -42,7 +42,6 @@ type ReceiveSyncBlockEvent struct{ Payload []byte }
 //receive new block event from node consensus event for consensus module
 type ExeTxsEvent struct {
 	Transactions []*types.Transaction
-	Digest       string
 	SeqNo        uint64
 	View         uint64
 	IsPrimary    bool
@@ -50,8 +49,7 @@ type ExeTxsEvent struct {
 
 type ValidatedTxs struct {
 	Transactions []*types.Transaction
-	Hash         []byte
-	Digest       string
+	Hash         string
 	SeqNo        uint64
 	View         uint64
 }
@@ -64,6 +62,7 @@ type CommitOrRollbackBlockEvent struct {
 	Timestamp  int64
 	CommitTime int64
 	Flag       bool
+	Hash       string
 	IsPrimary  bool
 }
 

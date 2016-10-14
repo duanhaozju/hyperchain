@@ -11,6 +11,7 @@ type BlockRecord struct {
 	MerkleRoot  []byte
 	InvalidTxs  []*types.InvalidTransactionRecord
 	ValidTxs    []*types.Transaction
+	SeqNo       uint64
 }
 
 type Data map[string]BlockRecord

@@ -172,7 +172,7 @@ func (pbft *pbftProtocal) restoreState() {
 			if err != nil {
 				logger.Warningf("Replica %d could not restore request batch %s", pbft.id, k)
 			} else {
-				pbft.reqBatchStore[hash(reqBatch)] = reqBatch
+				pbft.validatedBatchStore[hash(reqBatch)] = reqBatch
 			}
 		}
 	} else {
@@ -205,7 +205,7 @@ func (pbft *pbftProtocal) restoreState() {
 		pbft.seqNo = pbft.lastExec
 	}
 	logger.Infof("Replica %d restored state: view: %d, seqNo: %d, pset: %d, qset: %d, reqBatches: %d, chkpts: %d",
-		pbft.id, pbft.view, pbft.seqNo, len(pbft.pset), len(pbft.qset), len(pbft.reqBatchStore), len(pbft.chkpts))
+		pbft.id, pbft.view, pbft.seqNo, len(pbft.pset), len(pbft.qset), len(pbft.validatedBatchStore), len(pbft.chkpts))
 }
 
 func (pbft *pbftProtocal) restoreLastSeqNo() {

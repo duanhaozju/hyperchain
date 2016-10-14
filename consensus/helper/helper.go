@@ -24,9 +24,9 @@ type helper struct {
 type Stack interface {
 	InnerBroadcast(msg *pb.Message) error
 	InnerUnicast(msg *pb.Message, to uint64) error
-	Execute(seqNo uint64, flag bool, isPrimary bool, time int64) error
+	Execute(seqNo uint64, hash string, flag bool, isPrimary bool, time int64) error
 	UpdateState(updateState *pb.UpdateStateMessage) error
-	ValidateBatch(txs []*types.Transaction, seqNo uint64, view uint64, digest string, isPrimary bool) error
+	ValidateBatch(txs []*types.Transaction, seqNo uint64, view uint64, isPrimary bool) error
 }
 
 // InnerBroadcast broadcast the consensus message between vp nodes
@@ -69,10 +69,11 @@ func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error {
 }
 
 // Execute transfers the transactions decided by consensus to outer
-func (h *helper) Execute(seqNo uint64, flag bool, isPrimary bool, timestamp int64) error {
+func (h *helper) Execute(seqNo uint64, hash string, flag bool, isPrimary bool, timestamp int64) error {
 
 	writeEvent := event.CommitOrRollbackBlockEvent {
 		SeqNo:		seqNo,
+		Hash:		hash,
 		Timestamp:	timestamp,
 		CommitTime:	time.Now().UnixNano(),
 		Flag:		flag,
@@ -105,11 +106,10 @@ func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
 }
 
 // UpdateState transfers the UpdateStateEvent to outer
-func (h *helper) ValidateBatch(txs []*types.Transaction, seqNo uint64, view uint64, digest string, isPrimary bool) error {
+func (h *helper) ValidateBatch(txs []*types.Transaction, seqNo uint64, view uint64, isPrimary bool) error {
 
 	validateEvent := event.ExeTxsEvent {
 		Transactions:	txs,
-		Digest:		digest,
 		SeqNo:		seqNo,
 		View:		view,
 		IsPrimary:	isPrimary,
