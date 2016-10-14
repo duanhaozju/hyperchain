@@ -1061,12 +1061,14 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 		logger.Errorf("Replica %d can't get the cert for the view=%d/seqNo=%d", pbft.id, v, n)
 		return nil
 	}
+	logger.Error(pbft.prepared(digest, v, n))
 
 	if !pbft.prepared(digest, v, n) {
 		return nil
 	}
 
-	if pbft.primary(pbft.id) == pbft.id {
+	if pbft.primary(pbft.view) == pbft.id {
+
 		return pbft.sendCommit(digest, v, n)
 	} else {
 		if !cert.sentValidate {
@@ -1227,7 +1229,13 @@ func (pbft *pbftProtocal) executeOne(idx msgID) bool {
 			=======
 		*/
 		logger.Infof("--------call execute--------view=%d/seqNo=%d--------", idx.v, idx.n)
-		pbft.helper.Execute(idx.n, true, cert.prePrepare.TransactionBatch.Timestamp)
+		var isPrimary bool
+		if pbft.primary(pbft.view) == pbft.id {
+			isPrimary = true
+		} else {
+			isPrimary = false
+		}
+		pbft.helper.Execute(idx.n, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
 		cert.sentExecute = true
 		pbft.execDoneSync(idx)
 	}
