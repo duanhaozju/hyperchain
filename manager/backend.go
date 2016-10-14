@@ -5,23 +5,22 @@
 package manager
 
 import (
-	"hyperchain/p2p"
-	"hyperchain/core"
 	"hyperchain/consensus"
+	"hyperchain/core"
 	"hyperchain/crypto"
+	"hyperchain/p2p"
 
-	"hyperchain/event"
 	"hyperchain/accounts"
-
+	"hyperchain/event"
 )
 
 // init protocol manager params and start
 func New(eventMux *event.TypeMux, blockPool *core.BlockPool, peerManager p2p.PeerManager, consenter consensus.Consenter, fetcher *core.Fetcher,
-//encryption crypto.Encryption, commonHash crypto.CommonHash,path string, nodeId int) (error) {
-am *accounts.AccountManager, commonHash crypto.CommonHash,path string, nodeId int) (*ProtocolManager) {
+	//encryption crypto.Encryption, commonHash crypto.CommonHash,path string, nodeId int) (error) {
+	am *accounts.AccountManager, commonHash crypto.CommonHash, nodeId int) *ProtocolManager {
 
 	aliveChan := make(chan bool)
-	go peerManager.Start(aliveChan,eventMux)
+	go peerManager.Start(aliveChan, eventMux)
 
 	//wait for all peer are connected
 	select {
@@ -34,11 +33,8 @@ am *accounts.AccountManager, commonHash crypto.CommonHash,path string, nodeId in
 			//start server
 			return protocolManager
 
-
 		}
 	}
 
 	//return nil
 }
-
-

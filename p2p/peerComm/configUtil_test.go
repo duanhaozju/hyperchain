@@ -5,5 +5,5 @@ import (
 )
 
 func TestNewConfigUtil(t *testing.T) {
-	NewConfigUtil("/home/chenquan/Workspace/go/src/hyperchain/config/peerconfig.json")
+	NewConfigUtil("/home/chenquan/Workspace/go/src/hyperchain/config/")
 }

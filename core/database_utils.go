@@ -30,8 +30,8 @@ var (
 // InitDB initialization ldb and memdb
 // should be called while programming start-up
 // port: the server port
-func InitDB(port int) {
-	hyperdb.SetLDBPath(port)
+func InitDB(dbPath string, port int) {
+	hyperdb.SetLDBPath(dbPath, port)
 	memChainMap = newMemChain()
 }
 
@@ -119,21 +119,22 @@ func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error)
 	err = proto.Unmarshal(data, &transaction)
 	return &transaction, err
 }
+
 //get tx<-->block num,hash,index
 func GetTxWithBlock(db hyperdb.Database, key []byte) (common.Hash, uint64, uint64) {
-	dataMeta,_ := db.Get(append(key,txMetaSuffix...))
-	if len(dataMeta) == 0{
+	dataMeta, _ := db.Get(append(key, txMetaSuffix...))
+	if len(dataMeta) == 0 {
 		return common.Hash{}, 0, 0
 	}
-	var meta struct{
-		BlockHash	common.Hash
-		BlockIndex	uint64
-		Index		uint64
+	var meta struct {
+		BlockHash  common.Hash
+		BlockIndex uint64
+		Index      uint64
 	}
-	if err := json.Unmarshal(dataMeta,&meta);err!=nil{
+	if err := json.Unmarshal(dataMeta, &meta); err != nil {
 		return common.Hash{}, 0, 0
 	}
-	return meta.BlockHash,meta.BlockIndex,meta.Index
+	return meta.BlockHash, meta.BlockIndex, meta.Index
 }
 
 func DeleteTransaction(db hyperdb.Database, key []byte) error {
@@ -163,7 +164,7 @@ func GetAllTransaction(db *hyperdb.LDBDatabase) ([]*types.Transaction, error) {
 //-- --------------------- Transaction END -----------------------------------
 
 //-- ------------------- Block ---------------------------------
-func PutBlock(db hyperdb.Database,key []byte, t *types.Block) error {
+func PutBlock(db hyperdb.Database, key []byte, t *types.Block) error {
 	data, err := proto.Marshal(t)
 	if err != nil {
 		return err
@@ -176,7 +177,7 @@ func PutBlock(db hyperdb.Database,key []byte, t *types.Block) error {
 	err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
 	return err
 }
-func PutBlockTx(db hyperdb.Database,commonHash crypto.CommonHash, key []byte, t *types.Block) error {
+func PutBlockTx(db hyperdb.Database, commonHash crypto.CommonHash, key []byte, t *types.Block) error {
 	data, err := proto.Marshal(t)
 	if err != nil {
 		return err
@@ -190,7 +191,7 @@ func PutBlockTx(db hyperdb.Database,commonHash crypto.CommonHash, key []byte, t 
 
 	//put tx<-->block num,hash,index
 	batch := db.NewBatch()
-	for i,tx:=range t.Transactions{
+	for i, tx := range t.Transactions {
 		meta := struct {
 			BlockHash  common.Hash
 			BlockIndex uint64
@@ -200,12 +201,12 @@ func PutBlockTx(db hyperdb.Database,commonHash crypto.CommonHash, key []byte, t 
 			BlockIndex: t.Number,
 			Index:      uint64(i),
 		}
-		keyTxBlock := append(tx.Hash(commonHash).Bytes(),txMetaSuffix...)
-		dataTxBlock,err := json.Marshal(meta)
-		if err !=nil{
+		keyTxBlock := append(tx.Hash(commonHash).Bytes(), txMetaSuffix...)
+		dataTxBlock, err := json.Marshal(meta)
+		if err != nil {
 			return err
 		}
-		err = batch.Put(keyTxBlock,dataTxBlock)
+		err = batch.Put(keyTxBlock, dataTxBlock)
 		txKey := tx.Hash(commonHash).Bytes()
 		txKeyFact := append(transactionPrefix, txKey...)
 		txValue, err := proto.Marshal(tx)
@@ -214,7 +215,7 @@ func PutBlockTx(db hyperdb.Database,commonHash crypto.CommonHash, key []byte, t 
 		}
 		batch.Put(txKeyFact, txValue)
 
-		if err !=nil{
+		if err != nil {
 			return err
 		}
 	}
@@ -250,9 +251,9 @@ func DeleteBlock(db hyperdb.Database, key []byte) error {
 	keyFact := append(blockPrefix, key...)
 	return db.Delete(keyFact)
 }
-func DeleteBlockByNum(db hyperdb.Database,blockNum uint64) error {
-	hash,err := GetBlockHash(db,blockNum)
-	if err !=nil{
+func DeleteBlockByNum(db hyperdb.Database, blockNum uint64) error {
+	hash, err := GetBlockHash(db, blockNum)
+	if err != nil {
 		return err
 	}
 	keyFact := append(blockPrefix, hash...)
@@ -399,7 +400,7 @@ func GetChainCopy() *types.Chain {
 		RequiredBlockNum: memChainMap.data.RequiredBlockNum,
 		RequireBlockHash: memChainMap.data.RequireBlockHash,
 		RecoveryNum:      memChainMap.data.RecoveryNum,
-		CurrentTxSum:	  memChainMap.data.CurrentTxSum,
+		CurrentTxSum:     memChainMap.data.CurrentTxSum,
 	}
 }
 
@@ -439,7 +440,6 @@ func UpdateRequire(num uint64, hash []byte, recoveryNum uint64) error {
 	}
 	return putChain(db, &memChainMap.data)
 }
-
 
 func UpdateChainByViewChange(height uint64, latestHash []byte) error {
 	memChainMap.lock.Lock()

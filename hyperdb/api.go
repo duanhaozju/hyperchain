@@ -1,10 +1,12 @@
 package hyperdb
 
 import (
-	"github.com/op/go-logging"
-	"github.com/syndtr/goleveldb/leveldb"
+	"path"
 	"strconv"
 	"sync"
+
+	"github.com/op/go-logging"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 type stateldb int32
@@ -41,7 +43,8 @@ var (
 	portLDBPath = "db" //different port has different db path, default "db"
 )
 
-func SetLDBPath(path string, port int) {
+func SetLDBPath(dbpath string, port int) {
+	baseLDBPath = path.Join(dbpath, "hyperchain/cache/")
 	portLDBPath = strconv.Itoa(port)
 }
 

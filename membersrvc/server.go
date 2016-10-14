@@ -12,16 +12,15 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"strings"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/x509"
 	"google/protobuf"
 
 	"github.com/spf13/viper"
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"golang.org/x/net/context"
 
 	"github.com/golang/protobuf/proto"
 
@@ -29,8 +28,8 @@ import (
 
 	membersrvc "hyperchain/membersrvc/protos"
 
-	"hyperchain/membersrvc/ca"
 	"hyperchain/core/crypto"
+	"hyperchain/membersrvc/ca"
 	//"hyperchain/core/util"
 	"hyperchain/core/crypto/primitives"
 
@@ -51,22 +50,27 @@ func Start(caConfigDir string, nodeId int) {
 
 	caConfig = LoadConfig(caConfigDir)
 	caPath = caConfig.GetString("server.caserverdir")
-	if (nodeId == 1) {
+	if nodeId == 1 {
 		go StartCAServer(caConfigDir)
 	}
 }
 
 //启动ca服务器
-func StartCAServer(caConfigDir string) {
+func StartCAServer(caConfigFilepath string) {
 
-	viper.SetEnvPrefix(envPrefix)
-	viper.AutomaticEnv()
-	replacer := strings.NewReplacer(".", "_")
-	viper.SetEnvKeyReplacer(replacer)
+	//viper.SetEnvPrefix(envPrefix)
+	//viper.AutomaticEnv()
+	//replacer := strings.NewReplacer(".", "_")
+	//viper.SetEnvKeyReplacer(replacer)
+	// disable the path config instead of full file path name
+	// viper.SetConfigName("membersrvc")
+	// viper.SetConfigType("yaml")
+	// config.SetConfigName("config")
+	// viper.AddConfigPath(caConfigDir)
 	viper.SetConfigName("membersrvc")
 	viper.SetConfigType("yaml")
-	//config.SetConfigName("config")
-	viper.AddConfigPath(caConfigDir)
+	viper.SetConfigName("config")
+	viper.SetConfigFile(caConfigFilepath)
 
 	err := viper.ReadInConfig()
 	if err != nil {
@@ -126,7 +130,7 @@ func StartCAServer(caConfigDir string) {
 	var opts []grpc.ServerOption
 	if caConfig.GetString("server.tls.cert.file") != "" {
 
-		creds, err := credentials.NewServerTLSFromFile(caPath + caConfig.GetString("server.tls.cert.file"), caPath + caConfig.GetString("server.tls.key.file"))
+		creds, err := credentials.NewServerTLSFromFile(caPath+caConfig.GetString("server.tls.cert.file"), caPath+caConfig.GetString("server.tls.key.file"))
 
 		if err != nil {
 			panic(err)
@@ -149,11 +153,12 @@ func StartCAServer(caConfigDir string) {
 	}
 
 }
+
 //请求ca服务器端的证书
 func requestTLSCertificate() {
 	var opts []grpc.DialOption
 
-	creds, err := credentials.NewClientTLSFromFile(caPath + caConfig.GetString("server.tls.cert.file"), "tlsca")
+	creds, err := credentials.NewClientTLSFromFile(caPath+caConfig.GetString("server.tls.cert.file"), "tlsca")
 	//creds, err := credentials.NewClientTLSFromFile(clientCAPath + "/tlsca.cert", "tlsca")
 	if err != nil {
 		log.Info("Failed creating credentials for TLS-CA client: %s", err)
@@ -192,7 +197,7 @@ func requestTLSCertificate() {
 
 	req := &membersrvc.TLSCertCreateReq{
 		Ts: &timestamp,
-		Id:&membersrvc.Identity{Id:caConfig.GetString("node.serverhostoverride")},
+		Id: &membersrvc.Identity{Id: caConfig.GetString("node.serverhostoverride")},
 		//Id: &membersrvc.Identity{Id: id + "-" + uuid},
 		Pub: &membersrvc.PublicKey{
 			Type: membersrvc.CryptoType_ECDSA,
@@ -216,24 +221,25 @@ func requestTLSCertificate() {
 	}
 	//fmt.Println("resp is", resp.Cert.Cert)
 
-	storePrivateKeyInClear(caPath + "cert/tls_peer.priv", priv)
-	storeCert(caPath + "cert/tls_peer.cert", resp.Cert.Cert)
-	storeCert(caPath + "cert/tls_peer.ca", resp.RootCert.Cert)
+	storePrivateKeyInClear(caPath+"cert/tls_peer.priv", priv)
+	storeCert(caPath+"cert/tls_peer.cert", resp.Cert.Cert)
+	storeCert(caPath+"cert/tls_peer.ca", resp.RootCert.Cert)
 
 }
+
 //获取客户端ca配置opts
 func GetGrpcClientOpts() []grpc.DialOption {
 
 	var opts []grpc.DialOption
 
-	creds, err := credentials.NewClientTLSFromFile(caPath + caConfig.GetString("node.tls.cap.file"), caConfig.GetString("node.serverhostoverride"))
+	creds, err := credentials.NewClientTLSFromFile(caPath+caConfig.GetString("node.tls.cap.file"), caConfig.GetString("node.serverhostoverride"))
 
 	if err != nil {
 		log.Notice("enter 222")
 		log.Info("Failed creating credentials for TLS-CA client: %s", err)
 		time.Sleep(time.Second * 10)
 		requestTLSCertificate()
-		creds, err = credentials.NewClientTLSFromFile(caPath + caConfig.GetString("node.tls.cap.file"), caConfig.GetString("node.serverhostoverride"))
+		creds, err = credentials.NewClientTLSFromFile(caPath+caConfig.GetString("node.tls.cap.file"), caConfig.GetString("node.serverhostoverride"))
 
 		if err != nil {
 			log.Fatal("can not  create credentials for TLS-CA client: %s", err)
@@ -243,18 +249,19 @@ func GetGrpcClientOpts() []grpc.DialOption {
 	opts = append(opts, grpc.WithTransportCredentials(creds))
 	return opts
 }
+
 //获取服务器端ca配置opts
 func GetGrpcServerOpts() []grpc.ServerOption {
 
 	var opts []grpc.ServerOption
 
-	creds, err := credentials.NewServerTLSFromFile(caPath + caConfig.GetString("node.tls.cert.file"), caPath + caConfig.GetString("node.tls.key.file"))
+	creds, err := credentials.NewServerTLSFromFile(caPath+caConfig.GetString("node.tls.cert.file"), caPath+caConfig.GetString("node.tls.key.file"))
 
 	if err != nil {
 		log.Info("Failed creating credentials for TLS-CA server: %s", err)
 		time.Sleep(time.Second * 10)
 		requestTLSCertificate()
-		creds, err = credentials.NewServerTLSFromFile(caPath + caConfig.GetString("node.tls.cert.file"), caPath + caConfig.GetString("node.tls.key.file"))
+		creds, err = credentials.NewServerTLSFromFile(caPath+caConfig.GetString("node.tls.cert.file"), caPath+caConfig.GetString("node.tls.key.file"))
 
 		if err != nil {
 			log.Fatal("can not  create credentials for TLS-CA server: %s", err)
@@ -285,20 +292,21 @@ func storeCert(alias string, der []byte) {
 		fmt.Println(err)
 	}
 }
-func LoadConfig(path string) (config *viper.Viper) {
+func LoadConfig(caConfigFilepath string) (config *viper.Viper) {
 
 	config = viper.New()
 
 	// for environment variables
-	config.SetEnvPrefix(envPrefix)
-	config.AutomaticEnv()
-	replacer := strings.NewReplacer(".", "_")
-	config.SetEnvKeyReplacer(replacer)
-	config.SetConfigName("membersrvc")
-	config.SetConfigType("yaml")
-	//config.SetConfigName("config")
-	config.AddConfigPath(path)
+	//config.SetEnvPrefix(envPrefix)
+	//config.AutomaticEnv()
+	//replacer := strings.NewReplacer(".", "_")
+	//config.SetEnvKeyReplacer(replacer)
 
+	//config.AddConfigPath(path)
+	//config.SetConfigName("membersrvc")
+	//config.SetConfigType("yaml")
+	//config.SetConfigName("config")
+	config.SetConfigFile(caConfigFilepath)
 	err := config.ReadInConfig()
 	if err != nil {
 		panic(fmt.Errorf("Error reading %s plugin config: %s", envPrefix, err))

@@ -92,7 +92,7 @@ func (pm *ProtocolManager) Start() {
 
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
-	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{},event.BroadcastConsensusEvent{}, event.NewTxEvent{})
+	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
@@ -216,41 +216,40 @@ func (self *ProtocolManager) syncBlockLoop() {
 							//core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
 
 							//core.PutBlock(db, blocks.Batch[i].BlockHash, blocks.Batch[i])
-							core.PutBlockTx(db, self.commonHash,blocks.Batch[i].BlockHash, blocks.Batch[i])
+							core.PutBlockTx(db, self.commonHash, blocks.Batch[i].BlockHash, blocks.Batch[i])
 
 							// receive all block in chain
-							if blocks.Batch[i].Number<=core.GetChainCopy().Height+1{
+							if blocks.Batch[i].Number <= core.GetChainCopy().Height+1 {
 								//如果刚好是最后一个要添加的区块
-							if common.Bytes2Hex(blocks.Batch[i].ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash) {
-								core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum)
+								if common.Bytes2Hex(blocks.Batch[i].ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash) {
+									core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum)
 
-								core.UpdateRequire(uint64(0), []byte{}, uint64(0))
-								payload := &protos.StateUpdatedMessage{
-									SeqNo: core.GetChainCopy().Height,
+									core.UpdateRequire(uint64(0), []byte{}, uint64(0))
+									payload := &protos.StateUpdatedMessage{
+										SeqNo: core.GetChainCopy().Height,
+									}
+									msg, _ := proto.Marshal(payload)
+									msgSend := &protos.Message{
+										Type:      protos.Message_STATE_UPDATED,
+										Payload:   msg,
+										Timestamp: time.Now().UnixNano(),
+										Id:        1,
+									}
+
+									msgPayload, err := proto.Marshal(msgSend)
+									if err != nil {
+										log.Error(err)
+									}
+
+									self.consenter.RecvMsg(msgPayload)
+									break
+								} else {
+									//如果自己链上最新区块异常,则替换,并广播节点需要的最新区块
+									core.DeleteBlockByNum(db, blocks.Batch[i].Number-1)
+									core.UpdateChainByBlcokNum(db, blocks.Batch[i].Number-2)
+									//broadcastDemandBlock(blocks.Batch[i].Number-1,replica,msg)
+
 								}
-								msg, _ := proto.Marshal(payload)
-								msgSend := &protos.Message{
-									Type:      protos.Message_STATE_UPDATED,
-									Payload:   msg,
-									Timestamp: time.Now().UnixNano(),
-									Id:        1,
-								}
-
-								msgPayload, err := proto.Marshal(msgSend)
-								if err != nil {
-									log.Error(err)
-								}
-
-								self.consenter.RecvMsg(msgPayload)
-								break
-							} else{
-								//如果自己链上最新区块异常,则替换,并广播节点需要的最新区块
-								core.DeleteBlockByNum(db,blocks.Batch[i].Number-1)
-								core.UpdateChainByBlcokNum(db, blocks.Batch[i].Number-2)
-								//broadcastDemandBlock(blocks.Batch[i].Number-1,replica,msg)
-
-
-							}
 							}
 						}
 					}
@@ -308,13 +307,13 @@ func (self *ProtocolManager) ConsensusLoop() {
 			log.Debug("###### enter ConsensusEvent")
 			//logger.GetLogger().Println("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
+
 		case event.ExeTxsEvent:
-			self.blockPool.ExecTxs(ev.SeqNo,ev.Transactions)
-		/*case event.CommitOrRollbackBlockEvent:
+			self.blockPool.ExecTxs(ev.SeqNo, ev.Transactions)
+			/*case event.CommitOrRollbackBlockEvent:
 			self.blockPool.CommitOrRollbackBlockEvent(ev.SeqNo,
 				ev.Transactions,ev.CommitTime,ev.CommitStatus)*/
 		}
-
 
 	}
 }

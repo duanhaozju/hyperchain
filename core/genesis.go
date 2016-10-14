@@ -50,14 +50,6 @@ func CreateInitBlock(filename string) {
 
 	// start  the parse genesis content
 
-	//if err := json.Unmarshal(bytes, &genesis); err != nil {
-	//	log.Error("Unmarshal: ", err.Error())
-	//	return
-	//}
-
-	//if err != nil {
-	//	log.Fatalf("GetBalanceIns error, %v", err)
-	//}
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
@@ -74,22 +66,6 @@ func CreateInitBlock(filename string) {
 		return nil
 	}, "genesis", "alloc")
 
-	//for addr, account := range genesis["genesis"].Alloc {
-	//	/*balance:=types.Balance{
-	//		AccountPublicKeyHash:[]byte(addr),
-	//		Value:account,
-	//	}*/
-	//	//address := common.HexToAddress(addr)
-	//
-	//	//statedb.AddBalance(address, common.String2Big(account))
-	//	object := stateDB.CreateAccount(common.HexToAddress(addr))
-	//	object.AddBalance(big.NewInt(account))
-	//
-	//	/*
-	//		balanceIns.PutCacheBalance(common.HexToAddress(addr),[]byte(account))
-	//		balanceIns.PutDBBalance(common.HexToAddress(addr),[]byte(account))*/
-	//
-	//}
 	root, _ := stateDB.Commit()
 
 	block := types.Block{

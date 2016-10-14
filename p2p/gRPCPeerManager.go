@@ -36,8 +36,8 @@ type GrpcPeerManager struct {
 	IP            string
 }
 
-func NewGrpcManager(configPath string, nodeid int) *GrpcPeerManager {
-	NodeID := uint64(nodeid)
+func NewGrpcManager(configPath string, nodeID int) *GrpcPeerManager {
+	NodeID := uint64(nodeID)
 
 	// configs
 	var newgRPCManager GrpcPeerManager

@@ -2,19 +2,20 @@
 // date: 16-9-2
 // last modified: 16-9-2 13:59
 // last Modified Author: chenquan
-// change log: 
-//		
+// change log:
+//
 package common
 
 import (
 	"github.com/op/go-logging"
-	"os"
-	"time"
-	"strconv"
 	"log"
+	"os"
+	"path"
+	"strconv"
+	"time"
 )
 
- //This applied when test, no writing log
+//This applied when test, no writing log
 //func InitLog(level logging.Level,loggerDir string,port int){
 //
 //	_, error := os.Stat(loggerDir)
@@ -36,20 +37,18 @@ import (
 //	logging.SetBackend(backendStderr)
 //}
 
-
-
-func InitLog(level logging.Level,loggerDir string,port int){
+func InitLog(level logging.Level, loggerDir string, gRPCport int, dumpFileFlag bool) {
 	timestamp := time.Now().Unix()
 	tm := time.Unix(timestamp, 0)
 	_, error := os.Stat(loggerDir)
-	if error == nil || os.IsExist(error){
+	if error == nil || os.IsExist(error) {
 		//fmt.Println("directory exists")
-	}else {
+	} else {
 		//fmt.Println("no")
-		os.MkdirAll(loggerDir,0777)
+		os.MkdirAll(loggerDir, 0777)
 	}
-	fileName :=loggerDir+strconv.Itoa(port) +tm.Format("-2006-01-02-15:04:05 PM")+ ".log"
-	logFile,err  := os.Create(fileName)
+	fileName := path.Join(loggerDir, strconv.Itoa(gRPCport)+tm.Format("-2006-01-02-15:04:05 PM")+".log")
+	logFile, err := os.Create(fileName)
 	//defer logFile.Close()
 	if err != nil {
 		log.Fatalln("open file error !")
@@ -68,5 +67,10 @@ func InitLog(level logging.Level,loggerDir string,port int){
 	backendFile := logging.AddModuleLevel(backendFileFormatter)
 	backendStderr.SetLevel(level, "")
 	backendFile.SetLevel(level, "")
-	logging.SetBackend(backendStderr,backendFile)
+
+	if dumpFileFlag {
+		logging.SetBackend(backendStderr, backendFile)
+	} else {
+		logging.SetBackend(backendStderr)
+	}
 }

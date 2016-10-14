@@ -118,9 +118,10 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			log.Debug("来自节点", msg.From.ID)
 			log.Debug(hex.EncodeToString(transferData))
 
-			go this.higherEventManager.Post(event.ConsensusEvent{
-				Payload: transferData,
-			})
+			go this.higherEventManager.Post(
+				event.ConsensusEvent{
+					Payload: transferData,
+				})
 		}
 	case pb.Message_SYNCMSG:
 		{

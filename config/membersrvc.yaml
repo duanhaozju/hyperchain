@@ -9,10 +9,10 @@ server:
         gomaxprocs: -1
 
         # path to the OBC state directory and CA state subdirectory
-        rootpath: "/tmp/hyperchain/production"
-        cadir: ".membersrvc"
+        rootpath: "./build/production"
+        cadir: "./build/membersrvc"
 
-        caserverdir: "./"
+        caserverdir: "./config/"
 
         # port the CA services are listening on
         port: ":50051"

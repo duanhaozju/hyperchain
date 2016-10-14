@@ -10,6 +10,7 @@ import (
 	"hyperchain/crypto"
 	"math/big"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"sync"
@@ -67,7 +68,7 @@ func (am *AccountManager) UnlockAllAccount(keydir string) {
 }
 func getAllAccount(keydir string) []Account {
 	var accounts []Account
-	addressdir := keydir + "addresses/address"
+	addressdir := path.Join(keydir, "addresses/address")
 	fp, _ := os.Open(addressdir)
 	scanner := bufio.NewScanner(fp)
 	scanner.Split(bufio.ScanLines)
@@ -77,7 +78,7 @@ func getAllAccount(keydir string) []Account {
 		addr := common.HexToAddress(string(addrHex)[:40])
 		account := Account{
 			Address: addr,
-			File:    keydir + addrHex,
+			File:    path.Join(keydir, addrHex),
 		}
 		accounts = append(accounts, account)
 	}
