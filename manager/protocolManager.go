@@ -45,6 +45,7 @@ type ProtocolManager struct {
 	txSub        event.Subscription
 	newBlockSub  event.Subscription
 	consensusSub event.Subscription
+	frontEndSub  event.Subscription
 
 	aLiveSub event.Subscription
 
@@ -95,11 +96,12 @@ func (pm *ProtocolManager) Start() {
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{}, event.CommitOrRollbackBlockEvent{})
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
+	pm.frontEndSub = pm.eventMux.Subscribe(event.FrontEndInvalidTxsEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
 	go pm.syncBlockLoop()
 	go pm.syncCheckpointLoop()
-
+	go pm.FrontEndLoop()
 	pm.wg.Wait()
 
 }
@@ -312,7 +314,17 @@ func (self *ProtocolManager) NewBlockLoop() {
 			self.commitNewBlock(ev.Payload, ev.CommitTime)
 			//self.fetcher.Enqueue(ev.Payload)
 		case event.CommitOrRollbackBlockEvent:
-			self.blockPool.CommitBlock(ev)
+			self.blockPool.CommitBlock(ev, self.Peermanager)
+		}
+	}
+}
+
+func (self *ProtocolManager) FrontEndLoop() {
+
+	for obj := range self.frontEndSub.Chan() {
+		switch ev := obj.Data.(type) {
+		case event.FrontEndInvalidTxsEvent:
+			// receive invalid tx message, delivery to frontend
 		}
 	}
 }

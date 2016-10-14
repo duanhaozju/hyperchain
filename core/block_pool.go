@@ -20,6 +20,7 @@ import (
 	"hyperchain/core/vm/params"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
+	"hyperchain/p2p"
 	"hyperchain/trie"
 	"math/big"
 	"strconv"
@@ -608,7 +609,7 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
 }
 
-func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent) {
+func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerManager p2p.Peermanager) {
 	blockCache, _ := GetBlockCache()
 	record := blockCache.Get(ev.SeqNo)
 	if ev.Flag {
@@ -625,6 +626,7 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent) {
 		newBlock.Number = ev.SeqNo
 		// 2.save block and update chain
 		pool.AddBlock(newBlock, crypto.NewKeccak256Hash("Keccak256"))
+
 	} else {
 		db, _ := hyperdb.GetLDBDatabase()
 		for _, t := range record.InvalidTxs {
