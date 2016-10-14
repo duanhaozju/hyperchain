@@ -22,10 +22,10 @@ import (
 
 type argT struct {
 	cli.Helper
-	NodeID     int    `cli:"o,id" usage:"node ID 默认 1" dft:"1"`
-	ConfigPath string `cli:"c,conf" usage:"配置文件所在路径，默认值为./config" dft:"./config/global.yaml"`
-	GRPCPort   int    `cli:"l,rpcport" usage:"远程连接端口，默认值为8001" dft:"8001"`
-	HTTPPort   int    `cli:",t,httpport" useage:"jsonrpc开放端口，默认值为8081" dft:"8081"`
+	NodeID     int    `cli:"o,id" usage:"node ID" dft:"1"`
+	ConfigPath string `cli:"c,conf" usage:"配置文件所在路径" dft:"./config/global.yaml"`
+	GRPCPort   int    `cli:"l,rpcport" usage:"远程连接端口" dft:"8001"`
+	HTTPPort   int    `cli:",t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
 }
 
 func main() {
