@@ -1017,7 +1017,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
 func (pbft *pbftProtocal) recvPrepare(prep *Prepare) error {
 
-	logger.Debugf("Replica %d received prepare from replica %d for view=%d/seqNo=%d",
+	logger.Noticef("Replica %d received prepare from replica %d for view=%d/seqNo=%d",
 		pbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber)
 
 	if pbft.primary(prep.View) == prep.ReplicaId {
@@ -1032,6 +1032,7 @@ func (pbft *pbftProtocal) recvPrepare(prep *Prepare) error {
 			// This is perfectly normal
 			logger.Debugf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
 		}
+
 		return nil
 	}
 
@@ -1047,6 +1048,7 @@ func (pbft *pbftProtocal) recvPrepare(prep *Prepare) error {
 	cert.prepare[*prep] = true
 	cert.prepareCount++
 
+	logger.Notice("-----primary send primary")
 	return pbft.maybeSendCommit(prep.BatchDigest, prep.View, prep.SequenceNumber)
 }
 
@@ -1078,6 +1080,7 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 }
 
 func (pbft *pbftProtocal) sendCommit(digest string, v uint64, n uint64) error {
+	logger.Notice("-----primary2 send primary")
 
 	cert := pbft.getCert(v, n)
 
@@ -1087,7 +1090,7 @@ func (pbft *pbftProtocal) sendCommit(digest string, v uint64, n uint64) error {
 	}
 
 	if !cert.sentCommit {
-		logger.Debugf("Replica %d broadcasting commit for view=%d/seqNo=%d",
+		logger.Noticef("Replica %d broadcasting commit for view=%d/seqNo=%d",
 			pbft.id, v, n)
 		commit := &Commit{
 			View:           v,
@@ -1115,7 +1118,7 @@ func (pbft *pbftProtocal) sendCommit(digest string, v uint64, n uint64) error {
 
 func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 
-	logger.Debugf("Replica %d received commit from replica %d for view=%d/seqNo=%d",
+	logger.Noticef("Replica %d received commit from replica %d for view=%d/seqNo=%d",
 		pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber)
 
 	if !pbft.inWV(commit.View, commit.SequenceNumber) {

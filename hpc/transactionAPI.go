@@ -212,7 +212,6 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//end:=start+500
 
 		for start := start; start < end; start = time.Now().Unix() {
-			log.Notice("############# %d: start batch request#############", time.Now().Unix())
 
 			for i := 0; i < 100; i++ {
 				tx.Timestamp = time.Now().UnixNano()

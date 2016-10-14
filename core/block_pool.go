@@ -511,7 +511,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) error {
 		txRoot,
 		receiptRoot,
 	})
-	log.Debug("enter recvValidateResult")
+	log.Notice("enter recvValidateResult")
 	pool.consenter.RecvValidatedResult(event.ValidatedTxs{
 		Transactions: validTxSet,
 		Digest:       validationEvent.Digest,

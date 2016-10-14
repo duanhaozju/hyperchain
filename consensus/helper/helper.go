@@ -79,6 +79,7 @@ func (h *helper) Execute(seqNo uint64, flag bool, timestamp int64) error {
 	}
 
 	// Post the event to outer
+	logger.Notice("helper write block num is",seqNo)
 	h.msgQ.Post(writeEvent)
 
 	return nil
