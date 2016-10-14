@@ -6,8 +6,8 @@ package main
 
 import (
 	"github.com/mkideal/cli"
-	"hyperchain/p2p"
 	"hyperchain/manager"
+	"hyperchain/p2p"
 
 	"hyperchain/core"
 
@@ -17,10 +17,10 @@ import (
 
 	"strconv"
 
-	"hyperchain/consensus/controller"
-	"hyperchain/common"
 	"github.com/op/go-logging"
 	"hyperchain/accounts"
+	"hyperchain/common"
+	"hyperchain/consensus/controller"
 	"hyperchain/jsonrpc"
 	"hyperchain/membersrvc"
 	"runtime"
@@ -29,9 +29,9 @@ import (
 type argT struct {
 	cli.Helper
 	//NodePath string `cli:"o,hostport" usage:"本地RPC监听端口" dft:"8001"`
-	NodeId         int `cli:"o,nodeId" usage:"本地RPC监听端口" dft:"8001"`
+	NodeId int `cli:"o,nodeId" usage:"本地RPC监听端口" dft:"8001"`
 
-	LocalPort      int `cli:"l,LocalPort" usage:"本地RPC监听端口" dft:"8001"`
+	LocalPort      int    `cli:"l,LocalPort" usage:"本地RPC监听端口" dft:"8001"`
 	PeerConfigPath string `cli:"p,peerconfig" usage:"节点信息的端口，默认值为./peerconfig.json" dft:"./p2p/peerconfig.json"`
 	PbftConfigPath string `cli:"f,pbftconfig" usage:"pbft配置文件, 默认值为./" dft:"./consensus/pbft/"`
 	GenesisPath    string `cli:"g,genesisconfig" usage:"genesis配置文件，用于创建创世块, 默认值是./genesis.json" dft:"./core/genesis.json"`
@@ -45,7 +45,7 @@ func main() {
 		membersrvc.Start("./", argv.NodeId)
 
 		//init log
-		common.InitLog(logging.INFO, "./logs/", argv.LocalPort)
+		common.InitLog(logging.NOTICE, "./logs/", argv.LocalPort)
 		eventMux := new(event.TypeMux)
 
 		//init peer manager to start grpc server and client
@@ -53,7 +53,6 @@ func main() {
 
 		//init fetcher to accept block
 		fetcher := core.NewFetcher()
-
 
 		//init db
 		core.InitDB(argv.LocalPort)
@@ -75,20 +74,18 @@ func main() {
 		am := accounts.NewAccountManager(keydir, encryption)
 		am.UnlockAllAccount(keydir)
 
-
 		//init hash object
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
 		//nodePath := "./p2p/peerconfig.json"
 		nodePath := argv.PeerConfigPath
 
 		//init block pool to save block
-		blockPool := core.NewBlockPool(eventMux,cs)
+		blockPool := core.NewBlockPool(eventMux, cs)
 
 		//start http server
 		//go jsonrpc.StartHttp(argv.LocalPort, eventMux)
 
 		//go jsonrpc.Start(argv.LocalPort, eventMux)
-
 
 		//init manager
 
@@ -102,11 +99,6 @@ func main() {
 		//manager.New(eventMux,blockPool,grpcPeerMgr,cs,fetcher,encryption,kec256Hash,
 		//	nodePath,argv.NodeId)
 
-
 		return nil
 	})
 }
-
-
-
-

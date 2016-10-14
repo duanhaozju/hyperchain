@@ -66,6 +66,6 @@ type CommitOrRollbackBlockEvent struct {
 	Flag       bool
 }
 
-type FrontEndInvalidTxsEvent struct {
-	Transactions []*types.InvalidTransactionRecord
+type RespInvalidTxsEvent struct {
+	Payload []byte
 }

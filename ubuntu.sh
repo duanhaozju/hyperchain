@@ -33,10 +33,10 @@ echo "running the application"
 #        ./hyperchain -o $j -l 808$j -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json > output$j &
 #    done
 
-#./hyperchain -o 1 -l 8081 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json &
-#./hyperchain -o 2 -l 8082 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json &
-#./hyperchain -o 3 -l 8083 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json &
-#./hyperchain -o 4 -l 8084 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json &
+#./hyperchain -o 1 -l 8081 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json > output1 &
+#./hyperchain -o 2 -l 8082 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json > output2 &
+#./hyperchain -o 3 -l 8083 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json > output3 &
+#./hyperchain -o 4 -l 8084 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json > output4 &
 
 gnome-terminal -x bash -c "./hyperchain -o 1 -l 8081 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json"
 gnome-terminal -x bash -c "./hyperchain -o 2 -l 8082 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json"

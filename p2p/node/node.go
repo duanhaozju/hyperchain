@@ -169,6 +169,14 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 						Payload: SyncMsg.Payload,
 					})
 				}
+			case recovery.Message_INVALIDRESP:
+				{
+					log.Error("Message_INVALIDRESP")
+					go this.higherEventManager.Post(event.RespInvalidTxsEvent{
+						Payload: SyncMsg.Payload,
+					})
+				}
+
 			}
 		}
 	case pb.Message_KEEPALIVE:
@@ -206,7 +214,7 @@ func (this *Node) StartServer() {
 		log.Fatalf("Failed to listen: %v", err)
 		log.Fatal("PLEASE RESTART THE SERVER NODE!")
 	}
-	opts:=membersrvc.GetGrpcServerOpts()
+	opts := membersrvc.GetGrpcServerOpts()
 	this.gRPCServer = grpc.NewServer(opts...)
 	//this.gRPCServer = grpc.NewServer()
 	pb.RegisterChatServer(this.gRPCServer, this)

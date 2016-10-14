@@ -507,8 +507,9 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, boo
 		InvalidTxs:  invalidTxSet,
 		ValidTxs:    validTxSet,
 	})
-	/*log.Notice("PreProcess Result : ", common.BytesToHash(merkleRoot).Hex(), common.BytesToHash(txRoot).Hex(), common.BytesToHash(receiptRoot).Hex())
-	log.Notice("Invalid Tx number: ", len(invalidTxSet))*/
+	/*log.Notice("PreProcess Result : ", common.BytesToHash(merkleRoot).Hex(), common.BytesToHash(txRoot).Hex(), common.BytesToHash(receiptRoot).Hex())*/
+	log.Notice("Invalid Tx number: ", len(invalidTxSet))
+	log.Notice("Valid Tx number: ", len(validTxSet))
 	// Communicate with PBFT
 	hash := crypto.NewKeccak256Hash("Keccak256").Hash([]interface{}{
 		merkleRoot,
@@ -630,20 +631,26 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerMana
 		newBlock.Number = ev.SeqNo
 		// 2.save block and update chain
 		pool.AddBlock(newBlock, crypto.NewKeccak256Hash("Keccak256"))
-		// 3.throw invalid tx back to origin node
+		// 3.throw invalid tx back to origin node if current peer is primary
 		for _, t := range record.InvalidTxs {
-			payload, _ := proto.Marshal(t)
+			payload, err := proto.Marshal(t)
+			if err != nil {
+				log.Error("Marshal tx error")
+			}
 			message := &recovery.Message{
 				MessageType:  recovery.Message_INVALIDRESP,
 				MsgTimeStamp: time.Now().UnixNano(),
 				Payload:      payload,
 			}
-			broadcastMsg, _ := proto.Marshal(message)
+			broadcastMsg, err := proto.Marshal(message)
+			if err != nil {
+				log.Error("Marshal Message")
+			}
 			var peers []uint64
 			peers = append(peers, t.Tx.Id)
+			log.Error("Peer", peers)
 			peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_INVALIDRESP)
 		}
-
 	} else {
 		db, _ := hyperdb.GetLDBDatabase()
 		for _, t := range record.InvalidTxs {

@@ -96,7 +96,7 @@ func (pm *ProtocolManager) Start() {
 	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{}, event.CommitOrRollbackBlockEvent{}, event.ExeTxsEvent{})
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
-	pm.respSub = pm.eventMux.Subscribe(event.FrontEndInvalidTxsEvent{})
+	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
 	go pm.syncBlockLoop()
@@ -328,7 +328,7 @@ func (self *ProtocolManager) respHandlerLoop() {
 
 	for obj := range self.respSub.Chan() {
 		switch ev := obj.Data.(type) {
-		case event.FrontEndInvalidTxsEvent:
+		case event.RespInvalidTxsEvent:
 			// receive invalid tx message, delivery to frontend
 			log.Notice(ev)
 		}
