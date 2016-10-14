@@ -789,7 +789,7 @@ func (pbft *pbftProtocal) recvRequestBatch(reqBatch *TransactionBatch) error {
 	}
 	if pbft.primary(pbft.view) == pbft.id && pbft.activeView {
 		pbft.nullRequestTimer.Stop()
-		pbft.validateBatch(reqBatch, digest, 0, 0)
+		pbft.validateBatch(reqBatch, 0, 0)
 	} else {
 		logger.Debugf("Replica %d is backup, not sending pre-prepare for request batch %s", pbft.id, digest)
 	}
@@ -804,28 +804,28 @@ func (pbft *pbftProtocal) sendNullRequest() {
 	pbft.nullReqTimerReset()
 }
 
-func (pbft *pbftProtocal) validateBatch(txBatch *TransactionBatch, digest string, vid uint64, view uint64) {
+func (pbft *pbftProtocal) validateBatch(txBatch *TransactionBatch, vid uint64, view uint64) {
 
 	primary := pbft.primary(pbft.view)
 	if primary == pbft.id {
-		logger.Debugf("Primary %d try to  validate for batch: %+v", pbft.id, digest)
+		logger.Debugf("Primary %d try to validate batch", pbft.id)
 
 		n := pbft.vid + 1
 		if !pbft.inWV(pbft.view, n) {
-			logger.Debugf("Replica %d is primary, not validating for transaction batch %s because it is out of sequence numbers", pbft.id, digest)
+			logger.Debugf("Replica %d is primary, not validating for transaction batch because it is out of sequence numbers", pbft.id)
 			return
 		}
 
 		pbft.vid = n
-		pbft.helper.ValidateBatch(txBatch.Batch, n, pbft.view, digest, true)
+		pbft.helper.ValidateBatch(txBatch.Batch, n, pbft.view, true)
 	} else {
-		logger.Debugf("Replica %d try to  validate for batch: %+v", pbft.id, digest)
+		logger.Debugf("Replica %d try to validate batch", pbft.id)
 
 		if !pbft.inWV(pbft.view, vid) {
-			logger.Debugf("Replica %d not validating for transaction batch %s because it is out of sequence numbers", pbft.id, digest)
+			logger.Debugf("Replica %d not validating for transaction batch because it is out of sequence numbers", pbft.id)
 			return
 		}
-		pbft.helper.ValidateBatch(txBatch.Batch, vid, view, digest, false)
+		pbft.helper.ValidateBatch(txBatch.Batch, vid, view, false)
 	}
 
 }
@@ -1065,7 +1065,7 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 		return pbft.sendCommit(digest, v, n)
 	} else {
 		if !cert.sentValidate {
-			pbft.validateBatch(cert.prePrepare.TransactionBatch, digest, n, v)
+			pbft.validateBatch(cert.prePrepare.TransactionBatch, n, v)
 			cert.sentValidate = true
 		}
 
