@@ -117,9 +117,9 @@ func (h *helper) ValidateBatch(txs []*types.Transaction, seqNo uint64, view uint
 	}
 
 	// Post the event to outer
-	logger.Debug("enter post validateEvent")
+	logger.Error("enter post validateEvent")
 	  h.msgQ.Post(validateEvent)
-	logger.Debug("end post validateEvent")
+	logger.Error("end post validateEvent")
 
 	return nil
 }

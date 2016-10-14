@@ -329,15 +329,9 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 	if primary == pbft.id {
 		logger.Debugf("Primary %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
 
-		if !pbft.inWV(result.View, result.SeqNo) {
-			logger.Debugf("Replica %d is primary, receives validated result %s that is out of sequence numbers", pbft.id, result.Hash)
-			return nil
-		}
-
 		if len(result.Transactions) == 0 {
 			logger.Infof("Replica %d is primary, receives validated result %s that is empty", pbft.id, result.Hash)
-			pbft.stopTimer(result.SeqNo)
-			pbft.sendNullRequest()
+			pbft.stopTimer()
 			return nil
 		}
 
@@ -353,7 +347,7 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 			vid:       result.SeqNo,
 		}
 		pbft.cacheValidatedBatch[digest] = cache
-
+		pbft.nullRequestTimer.Stop()
 		pbft.trySendPrePrepare()
 	} else {
 		logger.Debugf("Replica %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
@@ -789,7 +783,7 @@ func (pbft *pbftProtocal) recvRequestBatch(reqBatch *TransactionBatch) error {
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", digest))
 	}
 	if pbft.primary(pbft.view) == pbft.id && pbft.activeView {
-		pbft.nullRequestTimer.Stop()
+		//pbft.nullRequestTimer.Stop()
 		pbft.validateBatch(reqBatch, 0, 0)
 	} else {
 		logger.Debugf("Replica %d is backup, not sending pre-prepare for request batch %s", pbft.id, digest)
@@ -809,13 +803,9 @@ func (pbft *pbftProtocal) validateBatch(txBatch *TransactionBatch, vid uint64, v
 
 	primary := pbft.primary(pbft.view)
 	if primary == pbft.id {
-		logger.Debugf("Primary %d try to validate batch", pbft.id)
+		logger.Errorf("Primary %d try to validate batch %s", pbft.id, hash(txBatch))
 
 		n := pbft.vid + 1
-		if !pbft.inWV(pbft.view, n) {
-			logger.Debugf("Replica %d is primary, not validating for transaction batch because it is out of sequence numbers", pbft.id)
-			return
-		}
 
 		pbft.vid = n
 		pbft.helper.ValidateBatch(txBatch.Batch, n, pbft.view, true)
@@ -1140,17 +1130,18 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 	cert.commit[*commit] = true
 	cert.commitCount++
 
-	if pbft.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) && !cert.sentExecute && cert.validated {
-		pbft.stopTimer(commit.SequenceNumber)
-		//todo  lastNewViewTimeout
-		pbft.lastNewViewTimeout = pbft.newViewTimeout
-		delete(pbft.outstandingReqBatches, commit.BatchDigest)
-		idx := msgID{v: commit.View, n: commit.SequenceNumber}
-		pbft.committedCert[idx] = cert.digest
-		pbft.executeOutstanding()
-		if commit.SequenceNumber == pbft.viewChangeSeqNo {
-			logger.Infof("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
-			pbft.sendViewChange()
+	if pbft.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
+		pbft.stopTimer()
+		if !cert.sentExecute && cert.validated {
+			pbft.lastNewViewTimeout = pbft.newViewTimeout
+			delete(pbft.outstandingReqBatches, commit.BatchDigest)
+			idx := msgID{v: commit.View, n: commit.SequenceNumber}
+			pbft.committedCert[idx] = cert.digest
+			pbft.executeOutstanding()
+			if commit.SequenceNumber == pbft.viewChangeSeqNo {
+				logger.Infof("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
+				pbft.sendViewChange()
+			}
 		}
 	}
 
@@ -1492,7 +1483,7 @@ func (pbft *pbftProtocal) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 				pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
 				pbft.skipInProgress = true
 				pbft.invalidateState()
-				pbft.stopTimer(chkpt.SequenceNumber)
+				pbft.stopTimer()
 
 				// TODO, reprocess the already gathered checkpoints, this will make recovery faster, though it is presently correct
 

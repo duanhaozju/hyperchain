@@ -93,7 +93,7 @@ func (pbft *pbftProtocal) calcQSet() map[qidx]*ViewChange_PQ {
 
 func (pbft *pbftProtocal) sendViewChange() events.Event {
 
-	pbft.stopTimer(uint64(0))
+	pbft.stopTimer()
 
 	delete(pbft.newViewStore, pbft.view)
 	pbft.view++
@@ -228,7 +228,7 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 	if !pbft.activeView && vc.View == pbft.view && quorum >= pbft.allCorrectReplicasQuorum() {
 		pbft.vcResendTimer.Stop()
 		// TODO first param
-		pbft.startTimer(uint64(0), pbft.lastNewViewTimeout, "new view change")
+		pbft.startTimer(pbft.lastNewViewTimeout, "new view change")
 		pbft.lastNewViewTimeout = 2 * pbft.lastNewViewTimeout
 		return viewChangeQuorumEvent{}
 	}
@@ -515,7 +515,7 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	logger.Infof("Replica %d accepting new-view to view %d", pbft.id, pbft.view)
 
-	pbft.stopTimer(uint64(0))
+	pbft.stopTimer()
 	pbft.nullRequestTimer.Stop()
 
 	pbft.activeView = true
