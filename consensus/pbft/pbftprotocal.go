@@ -335,7 +335,8 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 		}
 
 		if len(result.Transactions) == 0 {
-			logger.Debugf("Replica %d is primary, receives validated result %s that is empty", pbft.id, result.Hash)
+			logger.Infof("Replica %d is primary, receives validated result %s that is empty", pbft.id, result.Hash)
+			pbft.stopTimer(result.SeqNo)
 			pbft.sendNullRequest()
 			return nil
 		}
