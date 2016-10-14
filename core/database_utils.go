@@ -17,14 +17,15 @@ import (
 
 // the prefix of key, use to save to db
 var (
-	transactionPrefix = []byte("transaction-")
-	receiptsPrefix    = []byte("receipts-")
-	blockPrefix       = []byte("block-")
-	chainKey          = []byte("chain-key")
-	balanceKey        = []byte("balance-key")
-	blockNumPrefix    = []byte("blockNum-")
-	bodySuffix        = []byte("-body")
-	txMetaSuffix      = []byte{0x01}
+	transactionPrefix        = []byte("transaction-")
+	receiptsPrefix           = []byte("receipts-")
+	invalidTransactionPrefix = []byte("invalidtransaction-")
+	blockPrefix              = []byte("block-")
+	chainKey                 = []byte("chain-key")
+	balanceKey               = []byte("balance-key")
+	blockNumPrefix           = []byte("blockNum-")
+	bodySuffix               = []byte("-body")
+	txMetaSuffix             = []byte{0x01}
 )
 
 // InitDB initialization ldb and memdb

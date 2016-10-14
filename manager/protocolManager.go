@@ -329,8 +329,8 @@ func (self *ProtocolManager) respHandlerLoop() {
 	for obj := range self.respSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.RespInvalidTxsEvent:
-			// receive invalid tx message, delivery to frontend
-			log.Notice(ev)
+			// receive invalid tx message, save to db
+			self.blockPool.StoreInvalidResp(ev)
 		}
 	}
 }

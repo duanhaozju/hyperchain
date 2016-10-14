@@ -171,7 +171,6 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 				}
 			case recovery.Message_INVALIDRESP:
 				{
-					log.Error("Message_INVALIDRESP")
 					go this.higherEventManager.Post(event.RespInvalidTxsEvent{
 						Payload: SyncMsg.Payload,
 					})
