@@ -933,7 +933,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 	//
 	//logger.Notice("receive  pre-prepare first seq is:",preprep.SequenceNumber)
 
-	logger.Notice("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
+	logger.Debug("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
 		pbft.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
 	if !pbft.activeView {
@@ -984,7 +984,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
 	pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new pre-prepare for request batch %s", preprep.BatchDigest))
 	pbft.nullRequestTimer.Stop()
-	logger.Notice("receive  pre-prepare first seq is:",preprep.SequenceNumber)
+	logger.Debug("receive  pre-prepare first seq is:",preprep.SequenceNumber)
 	if pbft.primary(pbft.view) != pbft.id && pbft.prePrepared(preprep.BatchDigest, preprep.View, preprep.SequenceNumber) && !cert.sentPrepare {
 		logger.Debugf("Backup %d broadcasting prepare for view=%d/seqNo=%d", pbft.id, preprep.View, preprep.SequenceNumber)
 		prep := &Prepare{
@@ -1006,8 +1006,8 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 			Payload: payload,
 		}
 		msg := consensusMsgHelper(consensusMsg, pbft.id)
-		logger.Notice("after pre-prepare seq is:",prep.SequenceNumber)
-		logger.Notice("after pre-prepare seq is:",prep.BatchDigest)
+		logger.Debug("after pre-prepare seq is:",prep.SequenceNumber)
+		logger.Debug("after pre-prepare seq is:",prep.BatchDigest)
 
 		return pbft.helper.InnerBroadcast(msg)
 	}
