@@ -1086,7 +1086,7 @@ func (pbft *pbftProtocal) sendCommit(digest string, v uint64, n uint64) error {
 	}
 
 	if !cert.sentCommit {
-		logger.Noticef("Replica %d broadcasting commit for view=%d/seqNo=%d",
+		logger.Debugf("Replica %d broadcasting commit for view=%d/seqNo=%d",
 			pbft.id, v, n)
 		commit := &Commit{
 			View:           v,
@@ -1114,7 +1114,7 @@ func (pbft *pbftProtocal) sendCommit(digest string, v uint64, n uint64) error {
 
 func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 
-	logger.Noticef("Replica %d received commit from replica %d for view=%d/seqNo=%d",
+	logger.Debugf("Replica %d received commit from replica %d for view=%d/seqNo=%d",
 		pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber)
 
 	if !pbft.inWV(commit.View, commit.SequenceNumber) {
