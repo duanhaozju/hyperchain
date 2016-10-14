@@ -9,7 +9,7 @@ package peerPool
 import (
 	"errors"
 	"github.com/op/go-logging"
-	"hyperchain/p2p/peer"
+	peer "hyperchain/p2p/peer"
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/transport"
 	"strconv"
