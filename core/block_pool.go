@@ -522,7 +522,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, boo
 		View:         validationEvent.View,
 		Hash:         hash.Bytes(),
 	})
-	return nil, len(validTxSet) != 0
+	return nil, true
 }
 func (pool *BlockPool) PreCheck(txs []*types.Transaction) ([]*types.Transaction, []*types.InvalidTransactionRecord) {
 	var validTxSet []*types.Transaction

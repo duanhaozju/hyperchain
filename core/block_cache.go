@@ -13,7 +13,7 @@ type BlockRecord struct {
 	ValidTxs    []*types.Transaction
 }
 
-type Data map[uint64]BlockRecord
+type Data map[string]BlockRecord
 
 type BlockCache struct {
 	data      Data         // store in db, synchronization with block
@@ -37,22 +37,22 @@ func GetBlockCache() (*BlockCache, error) {
 	return blockCache, nil
 }
 
-func (self *BlockCache) Record(seqNo uint64, record BlockRecord) {
+func (self *BlockCache) Record(hash string, record BlockRecord) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	self.data[seqNo] = record
+	self.data[hash] = record
 }
 
-func (self *BlockCache) Get(seqNo uint64) BlockRecord {
+func (self *BlockCache) Get(hash string) BlockRecord {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	return self.data[seqNo]
+	return self.data[hash]
 }
 
-func (self *BlockCache) Delete(seqNo uint64) {
+func (self *BlockCache) Delete(hash string) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	delete(self.data, seqNo)
+	delete(self.data, hash)
 }
 
 func (self *BlockCache) Clear() {
