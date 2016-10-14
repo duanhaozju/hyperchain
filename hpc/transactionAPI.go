@@ -242,7 +242,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					log.Warning("manager is Nil")
 				}
 			}
-			time.Sleep(250 * time.Millisecond)
+			time.Sleep(1000 * time.Millisecond)
 		}
 	/*tx.TimeStamp = time.Now().UnixNano()
 

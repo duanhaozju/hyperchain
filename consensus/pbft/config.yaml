@@ -47,13 +47,13 @@ timeout:
     batch: 1s
 
     # How long may a request take between reception and execution, must be greater than the batch timeout
-    request: 3s
+    request: 2s
 
     # How long may a validate Txs process will take by outter
-    validate: 1s
+    validate: 0.5s
 
     # How long may a view change take
-    viewchange: 2s
+    viewchange: 3s
 
     # How long to wait for a view change quorum before resending (the same) view change
     resendviewchange: 10s
