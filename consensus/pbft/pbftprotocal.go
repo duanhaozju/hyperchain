@@ -347,7 +347,7 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 		}
 		digest := byteToString(result.Hash)
 		pbft.validatedBatchStore[digest] = batch
-
+		pbft.outstandingReqBatches[digest] = batch
 		cache := &cacheBatch{
 			batch:     batch,
 			rawDigest: result.Digest,
@@ -356,7 +356,7 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 		pbft.cacheValidatedBatch[digest] = cache
 		logger.Notice("primary post to replica digest is",digest )
 		logger.Notice("primary post to replica seqNo is",result.SeqNo )
-		//logger.Notice("primary post to replica digest is :%s,seqNo is: %d",result.Digest ,result.SeqNo )
+		logger.Notice("primary post to replica digest is :%s,seqNo is: %d",result.Digest ,result.SeqNo )
 
 		pbft.trySendPrePrepare()
 	} else {
@@ -377,6 +377,7 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 		logger.Notice("replica receive seqNo is ",result.SeqNo )
 		logger.Notice("cert digest is",cert.digest )
 		logger.Notice("receive loop module digest is",digest)
+
 		if digest == cert.digest {
 			pbft.sendCommit(digest, result.View, result.SeqNo)
 		} else {
@@ -792,7 +793,6 @@ func (pbft *pbftProtocal) recvRequestBatch(reqBatch *TransactionBatch) error {
 	logger.Debugf("Replica %d received request batch %s", pbft.id, digest)
 
 	pbft.reqBatchStore[digest] = reqBatch
-	pbft.outstandingReqBatches[digest] = reqBatch
 	//pbft.persistRequestBatch(digest)
 	if pbft.activeView {
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", digest))
@@ -814,7 +814,7 @@ func (pbft *pbftProtocal) sendNullRequest() {
 	pbft.nullReqTimerReset()
 }
 
-func (pbft *pbftProtocal) validateBatch(txBatch *TransactionBatch, digest string, seqNo uint64, view uint64) {
+func (pbft *pbftProtocal) validateBatch(txBatch *TransactionBatch, digest string, vid uint64, view uint64) {
 
 	primary := pbft.primary(pbft.view)
 	if primary == pbft.id {
@@ -831,12 +831,11 @@ func (pbft *pbftProtocal) validateBatch(txBatch *TransactionBatch, digest string
 	} else {
 		logger.Debugf("Replica %d try to  validate for batch: %+v", pbft.id, digest)
 
-		if !pbft.inWV(pbft.view, seqNo) {
+		if !pbft.inWV(pbft.view, vid) {
 			logger.Debugf("Replica %d not validating for transaction batch %s because it is out of sequence numbers", pbft.id, digest)
 			return
 		}
-
-		pbft.helper.ValidateBatch(txBatch.Batch, seqNo, view, digest, false)
+		pbft.helper.ValidateBatch(txBatch.Batch, vid, view, digest, false)
 	}
 
 }
@@ -912,6 +911,7 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	cert.prePrepare = preprep
 	cert.digest = digest
 	cert.rawDigest = rawDigest
+	cert.sentValidate = true
 	delete(pbft.cacheValidatedBatch, digest)
 	//pbft.persistQSet()
 	payload, err := proto.Marshal(preprep)
@@ -1073,14 +1073,15 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 
 	if pbft.primary(pbft.id) == pbft.id {
 		return pbft.sendCommit(digest, v, n)
+	} else {
+		if !cert.sentValidate {
+			pbft.validateBatch(cert.prePrepare.TransactionBatch, digest, n, v)
+			cert.sentValidate = true
+		}
+
+		return nil
 	}
 
-	if !cert.sentValidate {
-		pbft.validateBatch(cert.prePrepare.TransactionBatch, digest, n, v)
-		cert.sentValidate = true
-	}
-
-	return nil
 }
 
 func (pbft *pbftProtocal) sendCommit(digest string, v uint64, n uint64) error {
