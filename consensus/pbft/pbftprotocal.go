@@ -1044,7 +1044,6 @@ func (pbft *pbftProtocal) recvPrepare(prep *Prepare) error {
 	cert.prepare[*prep] = true
 	cert.prepareCount++
 
-	logger.Notice("-----primary send primary")
 	return pbft.maybeSendCommit(prep.BatchDigest, prep.View, prep.SequenceNumber)
 }
 
@@ -1077,7 +1076,7 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 }
 
 func (pbft *pbftProtocal) sendCommit(digest string, v uint64, n uint64) error {
-	logger.Notice("-----primary2 send primary")
+
 
 	cert := pbft.getCert(v, n)
 
