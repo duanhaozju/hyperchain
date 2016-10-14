@@ -41,30 +41,29 @@ type ReceiveSyncBlockEvent struct{ Payload []byte }
 
 //receive new block event from node consensus event for consensus module
 type ExeTxsEvent struct {
-	Transactions []*types.Transaction
-	Digest       string
-	SeqNo        uint64
-	View         uint64
-	IsPrimary    bool
+	Transactions	[]*types.Transaction
+	SeqNo			uint64
+	View			uint64
+	IsPrimary		bool
 }
 
 type ValidatedTxs struct {
-	Transactions []*types.Transaction
-	Hash         []byte
-	Digest       string
-	SeqNo        uint64
-	View         uint64
+	Transactions	[]*types.Transaction
+	Hash			string
+	SeqNo			uint64
+	View			uint64
 }
 
 // if the CommitStatus is true, we will commit the blocks and save the statedb
 // or we will rollback the statedb
 // Flag == true, commit; Flag == false, rollback
 type CommitOrRollbackBlockEvent struct {
-	SeqNo      uint64
-	Timestamp  int64
-	CommitTime int64
-	Flag       bool
-	IsPrimary  bool
+	SeqNo      	uint64
+	Hash		string
+	Timestamp	int64
+	CommitTime 	int64
+	Flag       	bool
+	IsPrimary	bool
 }
 
 type RespInvalidTxsEvent struct {

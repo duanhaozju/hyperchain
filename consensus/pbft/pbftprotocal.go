@@ -81,7 +81,7 @@ type pbftProtocal struct {
 	missingReqBatches map[string]bool // for all the assigned, non-checkpointed request batches we might be missing during view-change
 
 	// implementation of PBFT `in`
-	reqBatchStore   map[string]*TransactionBatch // track request batches
+	//reqBatchStore   map[string]*TransactionBatch // track request batches
 	certStore       map[msgID]*msgCert           // track quorum certificates for requests
 	checkpointStore map[Checkpoint]bool          // track checkpoints as set
 	committedCert   map[msgID]string             // track the committed cert to help excute
@@ -111,17 +111,17 @@ type msgID struct { // our index through certStore
 }
 
 type msgCert struct {
-	digest       string
-	rawDigest    string
-	prePrepare   *PrePrepare
-	sentPrepare  bool
-	prepare      map[Prepare]bool
-	prepareCount int
-	sentValidate bool
-	sentCommit   bool
-	commit       map[Commit]bool
-	commitCount  int
-	sentExecute  bool
+	digest       	string
+	prePrepare   	*PrePrepare
+	sentPrepare  	bool
+	prepare      	map[Prepare]bool
+	prepareCount 	int
+	sentValidate	bool
+	validated		bool
+	sentCommit   	bool
+	commit       	map[Commit]bool
+	commitCount  	int
+	sentExecute  	bool
 }
 
 type chkptID struct {
@@ -141,7 +141,6 @@ type vcidx struct {
 
 type cacheBatch struct {
 	batch     *TransactionBatch
-	rawDigest string
 	vid       uint64
 }
 
@@ -224,7 +223,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 
 	// init the logs
 	pbft.certStore = make(map[msgID]*msgCert)
-	pbft.reqBatchStore = make(map[string]*TransactionBatch)
+	//pbft.reqBatchStore = make(map[string]*TransactionBatch)
 	pbft.checkpointStore = make(map[Checkpoint]bool)
 	pbft.chkpts = make(map[uint64]string)
 	pbft.pset = make(map[uint64]*ViewChange_PQ)
@@ -328,15 +327,15 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 
 	primary := pbft.primary(pbft.view)
 	if primary == pbft.id {
-		logger.Debugf("Primary %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Digest)
+		logger.Debugf("Primary %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
 
 		if !pbft.inWV(result.View, result.SeqNo) {
-			logger.Debugf("Replica %d is primary, receives validated result %s that is out of sequence numbers", pbft.id, result.Digest)
+			logger.Debugf("Replica %d is primary, receives validated result %s that is out of sequence numbers", pbft.id, result.Hash)
 			return nil
 		}
 
 		if len(result.Transactions) == 0 {
-			logger.Debugf("Replica %d is primary, receives validated result %s that is empty", pbft.id, result.Digest)
+			logger.Debugf("Replica %d is primary, receives validated result %s that is empty", pbft.id, result.Hash)
 			pbft.sendNullRequest()
 			return nil
 		}
@@ -350,22 +349,21 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 		pbft.outstandingReqBatches[digest] = batch
 		cache := &cacheBatch{
 			batch:     batch,
-			rawDigest: result.Digest,
 			vid:       result.SeqNo,
 		}
 		pbft.cacheValidatedBatch[digest] = cache
 
 		pbft.trySendPrePrepare()
 	} else {
-		logger.Debugf("Replica %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Digest)
+		logger.Debugf("Replica %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
 
 		if !pbft.inWV(result.View, result.SeqNo) {
-			logger.Debugf("Replica %d receives validated result %s that is out of sequence numbers", pbft.id, result.Digest)
+			logger.Debugf("Replica %d receives validated result %s that is out of sequence numbers", pbft.id, result.Hash)
 			return nil
 		}
 
 		cert := pbft.getCert(result.View, result.SeqNo)
-
+		cert.validated = true
 
 		digest := byteToString(result.Hash)
 
@@ -786,7 +784,7 @@ func (pbft *pbftProtocal) recvRequestBatch(reqBatch *TransactionBatch) error {
 	digest := hash(reqBatch)
 	logger.Debugf("Replica %d received request batch %s", pbft.id, digest)
 
-	pbft.reqBatchStore[digest] = reqBatch
+	//pbft.reqBatchStore[digest] = reqBatch
 	//pbft.persistRequestBatch(digest)
 	if pbft.activeView {
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", digest))
@@ -866,12 +864,12 @@ func (pbft *pbftProtocal) callSendPrePrepare(digest string) bool {
 
 	currentVid := cache.vid
 	pbft.currentVid = &currentVid
-	pbft.sendPrePrepare(cache.batch, digest, cache.rawDigest)
+	pbft.sendPrePrepare(cache.batch, digest)
 
 	return true
 }
 
-func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest string, rawDigest string) {
+func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest string) {
 
 	logger.Debugf("Replica %d is primary, issuing pre-prepare for request batch %s", pbft.id, digest)
 
@@ -903,8 +901,8 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	cert := pbft.getCert(pbft.view, n)
 	cert.prePrepare = preprep
 	cert.digest = digest
-	cert.rawDigest = rawDigest
 	cert.sentValidate = true
+	cert.validated = true
 	delete(pbft.cacheValidatedBatch, digest)
 	//pbft.persistQSet()
 	payload, err := proto.Marshal(preprep)
@@ -1061,7 +1059,6 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 		logger.Errorf("Replica %d can't get the cert for the view=%d/seqNo=%d", pbft.id, v, n)
 		return nil
 	}
-	logger.Error(pbft.prepared(digest, v, n))
 
 	if !pbft.prepared(digest, v, n) {
 		return nil
@@ -1145,7 +1142,7 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 	cert.commit[*commit] = true
 	cert.commitCount++
 
-	if pbft.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) && cert.sentExecute == false {
+	if pbft.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) && !cert.sentExecute && cert.validated {
 		pbft.stopTimer(commit.SequenceNumber)
 		//todo  lastNewViewTimeout
 		pbft.lastNewViewTimeout = pbft.newViewTimeout
@@ -1221,21 +1218,14 @@ func (pbft *pbftProtocal) executeOne(idx msgID) bool {
 		cert.sentExecute = true
 		pbft.execDoneSync(idx)
 	} else {
-		/*
-			<<<<<<< HEAD
-					logger.Noticef("--------Call execute--------view=%d/seqNo=%d--------", idx.v, idx.n)
-					exeBatch := exeBatchHelper(reqBatch, idx.n)
-					pbft.helper.Execute(exeBatch)
-			=======
-		*/
-		logger.Infof("--------call execute--------view=%d/seqNo=%d--------", idx.v, idx.n)
+		logger.Noticef("--------call execute--------view=%d/seqNo=%d--------", idx.v, idx.n)
 		var isPrimary bool
 		if pbft.primary(pbft.view) == pbft.id {
 			isPrimary = true
 		} else {
 			isPrimary = false
 		}
-		pbft.helper.Execute(idx.n, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
+		pbft.helper.Execute(idx.n, digest, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
 		cert.sentExecute = true
 		pbft.execDoneSync(idx)
 	}
@@ -1283,7 +1273,7 @@ func (pbft *pbftProtocal) checkpoint(n uint64, info *protos.BlockchainInfo) {
 	idAsString := byteToString(id)
 	seqNo := n
 
-	logger.Debugf("Replica %d preparing checkpoint for view=%d/seqNo=%d and b64 id of %s",
+	logger.Infof("Replica %d preparing checkpoint for view=%d/seqNo=%d and b64 id of %s",
 		pbft.id, pbft.view, seqNo, idAsString)
 
 	chkpt := &Checkpoint{
@@ -1565,9 +1555,6 @@ func (pbft *pbftProtocal) moveWatermarks(n uint64) {
 			pbft.persistDelRequestBatch(cert.digest)
 			delete(pbft.validatedBatchStore, cert.digest)
 			delete(pbft.certStore, idx)
-			if pbft.primary(pbft.id) == pbft.id {
-				delete(pbft.reqBatchStore, cert.rawDigest)
-			}
 		}
 	}
 

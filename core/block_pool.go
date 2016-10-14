@@ -545,6 +545,7 @@ func (pool *BlockPool) PreCheck(txs []*types.Transaction) ([]*types.Transaction,
 }
 
 func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, []byte, []byte, []byte, []byte, []*types.Transaction, []*types.InvalidTransactionRecord) {
+	log.Debug("[ProcessBlock1] txs: ", len(txs))
 	var validtxs []*types.Transaction
 	var (
 		//receipts types.Receipts

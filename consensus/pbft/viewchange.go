@@ -356,7 +356,7 @@ func (pbft *pbftProtocal) feedMissingReqBatchIfNeeded(nv *NewView) (newReqBatchM
 			}
 
 
-			if _, ok := pbft.reqBatchStore[d]; !ok {
+			if _, ok := pbft.validatedBatchStore[d]; !ok {
 				logger.Warningf("Replica %d missing assigned, non-checkpointed request batch %s",
 					pbft.id, d)
 				if _, ok := pbft.missingReqBatches[d]; !ok {
@@ -528,7 +528,7 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 			continue
 		}
 
-		reqBatch, ok := pbft.reqBatchStore[d]
+		reqBatch, ok := pbft.validatedBatchStore[d]
 		if !ok && d != "" {
 			logger.Criticalf("Replica %d is missing request batch for seqNo=%d with digest '%s' for assigned prepare after fetching, this indicates a serious bug", pbft.id, n, d)
 		}
