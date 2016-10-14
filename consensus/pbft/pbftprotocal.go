@@ -354,6 +354,9 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 			vid:       result.SeqNo,
 		}
 		pbft.cacheValidatedBatch[digest] = cache
+		logger.Notice("primary post to replica digest is",result.Digest )
+		logger.Notice("primary post to replica seqNo is",result.SeqNo )
+		logger.Notice("primary post to replica digest is :%s,seqNo is: %d",result.Digest ,result.SeqNo )
 
 		pbft.trySendPrePrepare()
 	} else {
@@ -366,8 +369,14 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 
 		cert := pbft.getCert(result.View, result.SeqNo)
 
+
 		digest := byteToString(result.Hash)
 
+		logger.Notice("Replica  recived seqNo is sqeNo=%d, module digest is: %s,cert digest is: %s",result.SeqNo, result.Digest,cert.digest)
+
+		logger.Notice("replica receive seqNo is ",result.SeqNo )
+		logger.Notice("cert digest is",cert.digest )
+		logger.Notice("receive loop module digest is",digest)
 		if digest == cert.digest {
 			pbft.sendCommit(digest, result.View, result.SeqNo)
 		} else {
@@ -874,6 +883,7 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	logger.Debugf("Replica %d is primary, issuing pre-prepare for request batch %s", pbft.id, digest)
 
 	n := pbft.seqNo + 1
+
 	for _, cert := range pbft.certStore { // check for other PRE-PREPARE for same digest, but different seqNo
 		if p := cert.prePrepare; p != nil {
 			if p.View == pbft.view && p.SequenceNumber != n && p.BatchDigest == digest && digest != "" {

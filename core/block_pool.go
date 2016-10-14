@@ -460,18 +460,20 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
 	} else if validationEvent.SeqNo == pool.demandSeqNo {
 		// Process
 		pool.seqNoMu.RLock()
-		pool.PreProcess(validationEvent)
-		pool.demandSeqNo += 1
-		log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
+		if _, success := pool.PreProcess(validationEvent); success {
+			pool.demandSeqNo += 1
+			log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
+		}
 		pool.seqNoMu.RUnlock()
 		// Process remain event
 		for i := validationEvent.SeqNo + 1; i <= pool.maxSeqNo; i += 1 {
 			if _, ok := pool.validationQueue[i]; ok {
 				pool.seqNoMu.RLock()
-				pool.demandSeqNo += 1
-				log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
 				// Process
-				pool.PreProcess(pool.validationQueue[i])
+				if _, success := pool.PreProcess(pool.validationQueue[i]); success {
+					pool.demandSeqNo += 1
+					log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
+				}
 				delete(pool.validationQueue, i)
 				pool.seqNoMu.RUnlock()
 			} else {
@@ -485,7 +487,7 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
 	}
 }
 
-func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) error {
+func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, bool) {
 	var validTxSet []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
 	if validationEvent.IsPrimary {
@@ -495,7 +497,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) error {
 	}
 	err, _, merkleRoot, txRoot, receiptRoot, validTxSet, invalidTxSet := pool.ProcessBlock1(validTxSet, invalidTxSet, validationEvent.SeqNo)
 	if err != nil {
-		return err
+		return err, false
 	}
 	blockCache, _ := GetBlockCache()
 	blockCache.Record(validationEvent.SeqNo, BlockRecord{
@@ -505,14 +507,15 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) error {
 		InvalidTxs:  invalidTxSet,
 		ValidTxs:    validTxSet,
 	})
-	log.Notice("PreProcess Result : ", common.BytesToHash(merkleRoot).Hex(), common.BytesToHash(txRoot).Hex(), common.BytesToHash(receiptRoot).Hex())
-	log.Notice("Invalid Tx number: ", len(invalidTxSet))
+	/*log.Notice("PreProcess Result : ", common.BytesToHash(merkleRoot).Hex(), common.BytesToHash(txRoot).Hex(), common.BytesToHash(receiptRoot).Hex())
+	log.Notice("Invalid Tx number: ", len(invalidTxSet))*/
 	// Communicate with PBFT
 	hash := crypto.NewKeccak256Hash("Keccak256").Hash([]interface{}{
 		merkleRoot,
 		txRoot,
 		receiptRoot,
 	})
+	log.Notice("enter recvValidateResult")
 	pool.consenter.RecvValidatedResult(event.ValidatedTxs{
 		Transactions: validTxSet,
 		Digest:       validationEvent.Digest,
@@ -520,7 +523,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) error {
 		View:         validationEvent.View,
 		Hash:         hash.Bytes(),
 	})
-	return nil
+	return nil, len(validTxSet) != 0
 }
 func (pool *BlockPool) PreCheck(txs []*types.Transaction) ([]*types.Transaction, []*types.InvalidTransactionRecord) {
 	var validTxSet []*types.Transaction
@@ -556,7 +559,7 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 	txTrie, _ := trie.New(common.Hash{}, db)
 	receiptTrie, _ := trie.New(common.Hash{}, db)
 	statedb, err := state.New(pool.lastValidationState, db)
-	log.Notice("[Before Process %d] %s\n", seqNo, string(statedb.Dump()))
+	//log.Notice("[Before Process %d] %s\n", seqNo, string(statedb.Dump()))
 	if err != nil {
 		return err, nil, nil, nil, nil, nil, invalidTxs
 	}
@@ -606,7 +609,7 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 
 	go public_batch.Write()
 
-	log.Notice("[After Process %d] %s\n", seqNo, string(statedb.Dump()))
+	//log.Notice("[After Process %d] %s\n", seqNo, string(statedb.Dump()))
 	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
 }
 

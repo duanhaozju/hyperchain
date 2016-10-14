@@ -212,7 +212,9 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//end:=start+500
 
 		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < 2; i++ {
+			log.Notice("############# %d: start batch request#############", time.Now().Unix())
+
+			for i := 0; i < 100; i++ {
 				tx.Timestamp = time.Now().UnixNano()
 
 
@@ -240,7 +242,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					log.Warning("manager is Nil")
 				}
 			}
-			time.Sleep(10000 * time.Millisecond)
+			time.Sleep(250 * time.Millisecond)
 		}
 	/*tx.TimeStamp = time.Now().UnixNano()
 
