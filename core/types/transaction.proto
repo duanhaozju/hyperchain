@@ -19,3 +19,6 @@ message InvalidTransactionRecord {
         SIGFAILED = 1;
     }
 }
+message InvalidTransactionRecords {
+    repeated InvalidTransactionRecord records = 1;
+}
