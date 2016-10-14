@@ -354,9 +354,6 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 			vid:       result.SeqNo,
 		}
 		pbft.cacheValidatedBatch[digest] = cache
-		logger.Notice("primary post to replica digest is",digest )
-		logger.Notice("primary post to replica seqNo is",result.SeqNo )
-		logger.Notice("primary post to replica digest is :%s,seqNo is: %d",result.Digest ,result.SeqNo )
 
 		pbft.trySendPrePrepare()
 	} else {
@@ -374,9 +371,6 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 
 		//logger.Notice("Replica  recived seqNo is sqeNo=%d, module digest is: %s,cert digest is: %s",result.SeqNo, result.Digest,cert.digest)
 
-		logger.Notice("replica receive seqNo is ",result.SeqNo )
-		logger.Notice("cert digest is",cert.digest )
-		logger.Notice("receive loop module digest is",digest)
 
 		if digest == cert.digest {
 			pbft.sendCommit(digest, result.View, result.SeqNo)
@@ -859,7 +853,6 @@ func (pbft *pbftProtocal) trySendPrePrepare() {
 func (pbft *pbftProtocal) callSendPrePrepare(digest string) bool {
 
 	cache := pbft.cacheValidatedBatch[digest]
-	logger.Notice("last valid is ",pbft.lastVid)
 
 	if cache == nil {
 		logger.Debugf("Primary %d already call sendPrePrepare for batch: %d", pbft.id, digest)
@@ -915,7 +908,7 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	delete(pbft.cacheValidatedBatch, digest)
 	//pbft.persistQSet()
 	payload, err := proto.Marshal(preprep)
-	logger.Notice("call---send pre-pare Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
+	logger.Debug("call---send pre-pare Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
 		pbft.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
 	if err != nil {

@@ -328,9 +328,9 @@ func (self *ProtocolManager) NewBlockLoop() {
 			/*case event.CommitOrRollbackBlockEvent:
 			self.blockPool.CommitOrRollbackBlockEvent(ev.SeqNo,
 				ev.Transactions,ev.CommitTime,ev.CommitStatus)*/
-			log.Notice("###### enter ExeTxsEvent", ev.SeqNo)
+
 			go self.blockPool.Validate(ev)
-			log.Notice("###### end ExeTxsEvent", ev.SeqNo)
+
 		}
 	}
 }

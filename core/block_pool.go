@@ -441,7 +441,7 @@ func WriteBlockInDB(root common.Hash, block *types.Block, commitTime int64, comm
 }
 
 func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
-	log.Notice("[Validate]begin")
+	log.Debug("[Validate]begin")
 	if validationEvent.SeqNo > pool.maxSeqNo {
 		pool.maxSeqNo = validationEvent.SeqNo
 	}
@@ -511,7 +511,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) error {
 		txRoot,
 		receiptRoot,
 	})
-	log.Notice("enter recvValidateResult")
+	log.Debug("enter recvValidateResult")
 	pool.consenter.RecvValidatedResult(event.ValidatedTxs{
 		Transactions: validTxSet,
 		Digest:       validationEvent.Digest,
@@ -542,7 +542,7 @@ func (pool *BlockPool) PreCheck(txs []*types.Transaction) ([]*types.Transaction,
 }
 
 func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, []byte, []byte, []byte, []byte, []*types.Transaction, []*types.InvalidTransactionRecord) {
-	log.Notice("[ProcessBlock1] txs: ", len(txs))
+	log.Debug("[ProcessBlock1] txs: ", len(txs))
 	var validtxs []*types.Transaction
 	var (
 		//receipts types.Receipts
