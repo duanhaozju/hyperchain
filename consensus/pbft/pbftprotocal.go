@@ -344,7 +344,7 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 			Batch:     result.Transactions,
 			Timestamp: time.Now().UnixNano(),
 		}
-		digest := byteToString(result.Hash)
+		digest := result.Hash
 		pbft.validatedBatchStore[digest] = batch
 		pbft.outstandingReqBatches[digest] = batch
 		cache := &cacheBatch{
@@ -365,11 +365,9 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 		cert := pbft.getCert(result.View, result.SeqNo)
 		cert.validated = true
 
-		digest := byteToString(result.Hash)
-
 		//logger.Notice("Replica  recived seqNo is sqeNo=%d, module digest is: %s,cert digest is: %s",result.SeqNo, result.Digest,cert.digest)
 
-
+		digest := result.Hash
 		if digest == cert.digest {
 			pbft.sendCommit(digest, result.View, result.SeqNo)
 		} else {
