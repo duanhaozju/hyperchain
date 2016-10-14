@@ -517,7 +517,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, boo
 	})
 	pool.consenter.RecvValidatedResult(event.ValidatedTxs{
 		Transactions: validTxSet,
-		Digest:       validationEvent.Digest,
+		//Digest:       validationEvent.Digest,
 		SeqNo:        validationEvent.SeqNo,
 		View:         validationEvent.View,
 		Hash:         hash.Bytes(),
