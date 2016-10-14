@@ -354,9 +354,9 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 			vid:       result.SeqNo,
 		}
 		pbft.cacheValidatedBatch[digest] = cache
-		logger.Notice("primary post to replica digest is",result.Digest )
+		logger.Notice("primary post to replica digest is",digest )
 		logger.Notice("primary post to replica seqNo is",result.SeqNo )
-		logger.Notice("primary post to replica digest is :%s,seqNo is: %d",result.Digest ,result.SeqNo )
+		//logger.Notice("primary post to replica digest is :%s,seqNo is: %d",result.Digest ,result.SeqNo )
 
 		pbft.trySendPrePrepare()
 	} else {
@@ -372,7 +372,7 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 
 		digest := byteToString(result.Hash)
 
-		logger.Notice("Replica  recived seqNo is sqeNo=%d, module digest is: %s,cert digest is: %s",result.SeqNo, result.Digest,cert.digest)
+		//logger.Notice("Replica  recived seqNo is sqeNo=%d, module digest is: %s,cert digest is: %s",result.SeqNo, result.Digest,cert.digest)
 
 		logger.Notice("replica receive seqNo is ",result.SeqNo )
 		logger.Notice("cert digest is",cert.digest )
@@ -860,6 +860,7 @@ func (pbft *pbftProtocal) trySendPrePrepare() {
 func (pbft *pbftProtocal) callSendPrePrepare(digest string) bool {
 
 	cache := pbft.cacheValidatedBatch[digest]
+	logger.Notice("last valid is ",pbft.lastVid)
 
 	if cache == nil {
 		logger.Debugf("Primary %d already call sendPrePrepare for batch: %d", pbft.id, digest)
@@ -914,6 +915,9 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	delete(pbft.cacheValidatedBatch, digest)
 	//pbft.persistQSet()
 	payload, err := proto.Marshal(preprep)
+	logger.Notice("call---send pre-pare Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
+		pbft.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
+
 	if err != nil {
 		logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
 		return
@@ -933,7 +937,10 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 
 func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
-	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
+	//
+	//logger.Notice("receive  pre-prepare first seq is:",preprep.SequenceNumber)
+
+	logger.Notice("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
 		pbft.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
 	if !pbft.activeView {
@@ -984,7 +991,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
 	pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new pre-prepare for request batch %s", preprep.BatchDigest))
 	pbft.nullRequestTimer.Stop()
-
+	logger.Notice("receive  pre-prepare first seq is:",preprep.SequenceNumber)
 	if pbft.primary(pbft.view) != pbft.id && pbft.prePrepared(preprep.BatchDigest, preprep.View, preprep.SequenceNumber) && !cert.sentPrepare {
 		logger.Debugf("Backup %d broadcasting prepare for view=%d/seqNo=%d", pbft.id, preprep.View, preprep.SequenceNumber)
 		prep := &Prepare{
@@ -1006,6 +1013,9 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 			Payload: payload,
 		}
 		msg := consensusMsgHelper(consensusMsg, pbft.id)
+		logger.Notice("after pre-prepare seq is:",prep.SequenceNumber)
+		logger.Notice("after pre-prepare seq is:",prep.BatchDigest)
+
 		return pbft.helper.InnerBroadcast(msg)
 	}
 
