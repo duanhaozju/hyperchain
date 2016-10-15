@@ -238,12 +238,13 @@ func (self *ProtocolManager) syncBlockLoop() {
 										log.Debug("Recv All blocks required, match")
 										for i := core.GetChainCopy().RequiredBlockNum + 1; i <= core.GetChainCopy().RecoveryNum; i += 1 {
 											blk, err := core.GetBlockByNumber(db, i)
-											//											originMerkleRoot := blk.MerkleRoot
+											//originMerkleRoot := blk.MerkleRoot
 											if err != nil {
 												continue
 											} else {
-												core.ProcessBlock(blk, self.commonHash, blk.CommitTime)
+												core.ProcessBlock1(blk.Transactions, nil, blk.Number)
 												self.blockPool.SetDemandNumber(blk.Number + 1)
+												self.blockPool.SetDemandSeqNo(blk.Number + 1)
 
 												/*
 													if bytes.Compare(blk.MerkleRoot, originMerkleRoot) != 0 {
