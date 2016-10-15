@@ -758,7 +758,8 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 	logger.Infof("Replica %d application caught up via state transfer, lastExec now %d", pbft.id, et.seqNo)
 	// XXX create checkpoint
 	pbft.lastExec = et.seqNo
-	pbft.vid, pbft.lastVid = et.seqNo
+	pbft.vid = et.seqNo
+	pbft.lastVid = et.seqNo
 	pbft.moveWatermarks(pbft.lastExec) // The watermark movement handles moving this to a checkpoint boundary
 	pbft.skipInProgress = false
 	pbft.validateState()
@@ -1057,6 +1058,11 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 	}
 
 	if !pbft.prepared(digest, v, n) {
+		return nil
+	}
+
+	if pbft.skipInProgress {
+		logger.Debugf("Replica %d do not try to validate batch because it's in state update", pbft.id)
 		return nil
 	}
 
