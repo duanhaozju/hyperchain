@@ -313,13 +313,13 @@ func (pbft *pbftProtocal) softStartTimer(timeout time.Duration, reason string) {
 	pbft.newViewTimer.SoftReset(timeout, viewChangeTimerEvent{})
 }
 
-func (pbft *pbftProtocal) startTimer(n uint64, timeout time.Duration, reason string) {
+func (pbft *pbftProtocal) startTimer(timeout time.Duration, reason string) {
 	logger.Debugf("Replica %d starting new view timer for %s: %s", pbft.id, timeout, reason)
 	pbft.timerActive = true
 	pbft.newViewTimer.Reset(timeout, viewChangeTimerEvent{})
 }
 
-func (pbft *pbftProtocal) stopTimer(n uint64) {
+func (pbft *pbftProtocal) stopTimer() {
 	logger.Debugf("Replica %d stopping a running new view timer", pbft.id)
 	pbft.timerActive = false
 	pbft.newViewTimer.Stop()
