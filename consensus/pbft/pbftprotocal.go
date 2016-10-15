@@ -329,12 +329,6 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 	if primary == pbft.id {
 		logger.Debugf("Primary %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
 
-		if len(result.Transactions) == 0 {
-			logger.Infof("Replica %d is primary, receives validated result %s that is empty", pbft.id, result.Hash)
-			pbft.stopTimer()
-			return nil
-		}
-
 		batch := &TransactionBatch{
 			Batch:     result.Transactions,
 			Timestamp: time.Now().UnixNano(),
@@ -347,7 +341,7 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 			vid:       result.SeqNo,
 		}
 		pbft.cacheValidatedBatch[digest] = cache
-		pbft.nullRequestTimer.Stop()
+
 		pbft.trySendPrePrepare()
 	} else {
 		logger.Debugf("Replica %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
@@ -803,7 +797,7 @@ func (pbft *pbftProtocal) validateBatch(txBatch *TransactionBatch, vid uint64, v
 
 	primary := pbft.primary(pbft.view)
 	if primary == pbft.id {
-		logger.Errorf("Primary %d try to validate batch %s", pbft.id, hash(txBatch))
+		logger.Debugf("Primary %d try to validate batch %s", pbft.id, hash(txBatch))
 
 		n := pbft.vid + 1
 
@@ -853,6 +847,19 @@ func (pbft *pbftProtocal) callSendPrePrepare(digest string) bool {
 
 	currentVid := cache.vid
 	pbft.currentVid = &currentVid
+
+	if len(cache.batch.Batch) == 0 {
+		logger.Infof("Replica %d is primary, receives validated result %s that is empty", pbft.id, digest)
+		pbft.lastVid = *pbft.currentVid
+		pbft.currentVid = nil
+		delete(pbft.cacheValidatedBatch, digest)
+		delete(pbft.validatedBatchStore, digest)
+		delete(pbft.outstandingReqBatches, digest)
+		pbft.stopTimer()
+		return true
+	}
+
+	pbft.nullRequestTimer.Stop()
 	pbft.sendPrePrepare(cache.batch, digest)
 
 	return true

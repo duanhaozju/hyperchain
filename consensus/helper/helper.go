@@ -81,7 +81,6 @@ func (h *helper) Execute(seqNo uint64, hash string, flag bool, isPrimary bool, t
 	}
 
 	// Post the event to outer
-	logger.Notice("helper write block num is",seqNo)
 	h.msgQ.Post(writeEvent)
 
 	return nil
@@ -117,9 +116,7 @@ func (h *helper) ValidateBatch(txs []*types.Transaction, seqNo uint64, view uint
 	}
 
 	// Post the event to outer
-	logger.Error("enter post validateEvent")
-	  h.msgQ.Post(validateEvent)
-	logger.Error("end post validateEvent")
+	h.msgQ.Post(validateEvent)
 
 	return nil
 }
