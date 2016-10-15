@@ -242,7 +242,7 @@ func (self *ProtocolManager) syncBlockLoop() {
 											if err != nil {
 												continue
 											} else {
-												core.ProcessBlock1(blk.Transactions, nil, blk.Number)
+												self.blockPool.ProcessBlock1(blk.Transactions, nil, blk.Number)
 												self.blockPool.SetDemandNumber(blk.Number + 1)
 												self.blockPool.SetDemandSeqNo(blk.Number + 1)
 
