@@ -53,7 +53,13 @@ func (self *BlockCache) Get(hash string) BlockRecord {
 func (self *BlockCache) Delete(hash string) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
+	seqNo := self.data[hash].SeqNo
 	delete(self.data, hash)
+	for k, v := range self.data {
+		if v.SeqNo <= seqNo {
+			delete(self.data, k)
+		}
+	}
 }
 
 func (self *BlockCache) Clear() {
