@@ -758,10 +758,11 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 	logger.Infof("Replica %d application caught up via state transfer, lastExec now %d", pbft.id, et.seqNo)
 	// XXX create checkpoint
 	pbft.lastExec = et.seqNo
+	pbft.vid, pbft.lastVid = et.seqNo
 	pbft.moveWatermarks(pbft.lastExec) // The watermark movement handles moving this to a checkpoint boundary
 	pbft.skipInProgress = false
 	pbft.validateState()
-	pbft.executeOutstanding()
+	pbft.executeAfterStateUpdate()
 
 	return nil
 }
@@ -1153,6 +1154,20 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 	}
 
 	return nil
+}
+
+func (pbft *pbftProtocal) executeAfterStateUpdate() {
+
+	logger.Debugf("Replica %d try to execute after state update", pbft.id)
+
+	for idx, cert := range pbft.certStore {
+		if idx.n > pbft.seqNo && pbft.prepared(cert.digest, idx.v, idx.n) && !cert.validated {
+			logger.Debugf("Replica %d try to vaidate batch %s", pbft.id, cert.digest)
+			pbft.validateBatch(cert.prePrepare.TransactionBatch, idx.n, idx.v)
+			cert.validated = true
+		}
+	}
+
 }
 
 func (pbft *pbftProtocal) executeOutstanding() {
