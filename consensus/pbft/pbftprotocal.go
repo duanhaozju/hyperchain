@@ -1565,6 +1565,11 @@ func (pbft *pbftProtocal) moveWatermarks(n uint64) {
 	// round down n to previous low watermark
 	h := n / pbft.K * pbft.K
 
+	if pbft.h > n {
+		logger.Critical("Replica %d movewatermark but pbft.h>n", pbft.id)
+		return
+	}
+
 	for idx, cert := range pbft.certStore {
 		if idx.n <= h {
 			logger.Debugf("Replica %d cleaning quorum certificate for view=%d/seqNo=%d",
