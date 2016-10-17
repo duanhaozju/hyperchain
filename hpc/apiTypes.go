@@ -34,7 +34,7 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager) []API{
 			Public: true,
 		},
 		{
-			Namespace: "acot",
+			Namespace: "acc",
 			Version: "0.4",
 			Service: NewPublicAccountAPI(pm),
 			Public: true,
