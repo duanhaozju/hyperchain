@@ -61,6 +61,9 @@ type BlockPool struct {
 func (bp *BlockPool) SetDemandNumber(number uint64) {
 	bp.demandNumber = number
 }
+func (bp *BlockPool) SetDemandSeqNo(seqNo uint64) {
+	bp.demandSeqNo = seqNo
+}
 
 func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *BlockPool {
 	tempReceiptsMap = make(map[uint64]types.Receipts)
@@ -466,6 +469,12 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
 			log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
 		}
 		pool.seqNoMu.RUnlock()
+		// remove older event
+		for i, _ := range pool.validationQueue {
+			if i <= validationEvent.SeqNo {
+				delete(pool.validationQueue, i)
+			}
+		}
 		// Process remain event
 		for i := validationEvent.SeqNo + 1; i <= pool.maxSeqNo; i += 1 {
 			if _, ok := pool.validationQueue[i]; ok {

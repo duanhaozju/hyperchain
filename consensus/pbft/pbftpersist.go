@@ -204,6 +204,8 @@ func (pbft *pbftProtocal) restoreState() {
 	if pbft.seqNo < pbft.lastExec {
 		pbft.seqNo = pbft.lastExec
 	}
+	pbft.vid = pbft.seqNo
+	pbft.lastVid = pbft.seqNo
 	logger.Infof("Replica %d restored state: view: %d, seqNo: %d, pset: %d, qset: %d, reqBatches: %d, chkpts: %d",
 		pbft.id, pbft.view, pbft.seqNo, len(pbft.pset), len(pbft.qset), len(pbft.validatedBatchStore), len(pbft.chkpts))
 }

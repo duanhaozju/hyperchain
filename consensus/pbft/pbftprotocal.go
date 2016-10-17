@@ -758,10 +758,12 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 	logger.Infof("Replica %d application caught up via state transfer, lastExec now %d", pbft.id, et.seqNo)
 	// XXX create checkpoint
 	pbft.lastExec = et.seqNo
+	pbft.vid = et.seqNo
+	pbft.lastVid = et.seqNo
 	pbft.moveWatermarks(pbft.lastExec) // The watermark movement handles moving this to a checkpoint boundary
 	pbft.skipInProgress = false
 	pbft.validateState()
-	pbft.executeOutstanding()
+	pbft.executeAfterStateUpdate()
 
 	return nil
 }
@@ -1059,6 +1061,11 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 		return nil
 	}
 
+	if pbft.skipInProgress {
+		logger.Debugf("Replica %d do not try to validate batch because it's in state update", pbft.id)
+		return nil
+	}
+
 	if pbft.primary(pbft.view) == pbft.id {
 
 		return pbft.sendCommit(digest, v, n)
@@ -1153,6 +1160,20 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 	}
 
 	return nil
+}
+
+func (pbft *pbftProtocal) executeAfterStateUpdate() {
+
+	logger.Debugf("Replica %d try to execute after state update", pbft.id)
+
+	for idx, cert := range pbft.certStore {
+		if idx.n > pbft.seqNo && pbft.prepared(cert.digest, idx.v, idx.n) && !cert.validated {
+			logger.Debugf("Replica %d try to vaidate batch %s", pbft.id, cert.digest)
+			pbft.validateBatch(cert.prePrepare.TransactionBatch, idx.n, idx.v)
+			cert.validated = true
+		}
+	}
+
 }
 
 func (pbft *pbftProtocal) executeOutstanding() {
@@ -1543,6 +1564,11 @@ func (pbft *pbftProtocal) moveWatermarks(n uint64) {
 
 	// round down n to previous low watermark
 	h := n / pbft.K * pbft.K
+
+	if pbft.h > n {
+		logger.Critical("Replica %d movewatermark but pbft.h>n", pbft.id)
+		return
+	}
 
 	for idx, cert := range pbft.certStore {
 		if idx.n <= h {
