@@ -127,6 +127,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 				CurrentNumber:  core.GetChainCopy().Height,
 				PeerId:         UpdateStateMessage.Id,
 			}
+
 			// For Test
 			// Midify the current highest block
 			/*

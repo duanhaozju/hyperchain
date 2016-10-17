@@ -497,6 +497,7 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
 	}
 }
 
+// check sign and balance
 func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, bool) {
 	var validTxSet []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
@@ -505,6 +506,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, boo
 	} else {
 		validTxSet = validationEvent.Transactions
 	}
+	//check balance
 	err, _, merkleRoot, txRoot, receiptRoot, validTxSet, invalidTxSet := pool.ProcessBlock1(validTxSet, invalidTxSet, validationEvent.SeqNo)
 	if err != nil {
 		return err, false
@@ -534,6 +536,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, boo
 	})
 	return nil, true
 }
+//check sign
 func (pool *BlockPool) PreCheck(txs []*types.Transaction) ([]*types.Transaction, []*types.InvalidTransactionRecord) {
 	var validTxSet []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
@@ -554,6 +557,7 @@ func (pool *BlockPool) PreCheck(txs []*types.Transaction) ([]*types.Transaction,
 	return validTxSet, invalidTxSet
 }
 
+// put block into evm and run
 func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, []byte, []byte, []byte, []byte, []*types.Transaction, []*types.InvalidTransactionRecord) {
 	var validtxs []*types.Transaction
 	var (
@@ -606,7 +610,6 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 
 		validtxs = append(validtxs, tx)
 	}
-
 	root, _ := statedb.Commit()
 
 	merkleRoot := root.Bytes()
@@ -620,6 +623,7 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
 }
 
+// write block into db
 func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerManager p2p.PeerManager) {
 	blockCache, _ := GetBlockCache()
 	record := blockCache.Get(ev.Hash)

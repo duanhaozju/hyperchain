@@ -88,9 +88,11 @@ func (acot *PublicAccountAPI) GetAccounts() []*AccountResult {
 	ctx := stateDB.GetAccounts()
 
 	for k, v := range ctx {
+		log.Notice("balance is",v.Balance())
 		var act = &AccountResult{
 			Account: k,
-			Balance: fmt.Sprintf(`0x%x`, v.Balance()),
+			//Balance: fmt.Sprintf(`0x%x`, v.Balance()),
+			Balance:v.Balance().String(),
 		}
 		acts = append(acts, act)
 	}
