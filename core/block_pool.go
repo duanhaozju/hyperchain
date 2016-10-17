@@ -596,6 +596,15 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
 
+		meta := types.TransactionMeta{
+			BlockIndex: seqNo,
+			Index:      int64(i),
+		}
+		metaValue, _ := proto.Marshal(meta)
+		if err := public_batch.Put(append(txMetaSuffix, tx.GetTransactionHash().Bytes()...), metaValue); err != nil {
+			return err, nil, nil, nil, nil, nil, invalidTxs
+		}
+
 		// Update trie
 		txTrie.Update(append(transactionPrefix, tx.GetTransactionHash().Bytes()...), txValue)
 		receiptTrie.Update(append(receiptsPrefix, receipt.TxHash...), receiptValue)
