@@ -445,8 +445,7 @@ func WriteBlockInDB(root common.Hash, block *types.Block, commitTime int64, comm
 	batch.Write()
 }
 
-func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
-	log.Notice("[Validate]begin", validationEvent.SeqNo)
+func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption) {
 	if validationEvent.SeqNo > pool.maxSeqNo {
 		pool.maxSeqNo = validationEvent.SeqNo
 	}
@@ -457,19 +456,18 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
 	}
 	// (1) Check SeqNo
 	if validationEvent.SeqNo < pool.demandSeqNo {
-		// receive repeat ValidationEvent
+		// Receive repeat ValidationEvent
 		log.Error("Receive Repeat ValidationEvent, ", validationEvent.SeqNo)
 		return
 	} else if validationEvent.SeqNo == pool.demandSeqNo {
 		// Process
-		log.Notice("Get Demand SeqNo")
 		pool.seqNoMu.RLock()
-		if _, success := pool.PreProcess(validationEvent); success {
+		if _, success := pool.PreProcess(validationEvent, commonHash, encryption); success {
 			pool.demandSeqNo += 1
 			log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
 		}
 		pool.seqNoMu.RUnlock()
-		// remove older event
+		// Remove useless event
 		for i, _ := range pool.validationQueue {
 			if i <= validationEvent.SeqNo {
 				delete(pool.validationQueue, i)
@@ -480,7 +478,7 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
 			if _, ok := pool.validationQueue[i]; ok {
 				pool.seqNoMu.RLock()
 				// Process
-				if _, success := pool.PreProcess(pool.validationQueue[i]); success {
+				if _, success := pool.PreProcess(pool.validationQueue[i], commonHash, encryption); success {
 					pool.demandSeqNo += 1
 					log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
 				}
@@ -492,16 +490,16 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
 		}
 		return
 	} else {
-		log.Notice("Receive ValidationEvent which is not demand, ", validationEvent.SeqNo)
+		log.Notice("Receive ValidationEvent which is not demand, ", validationEvent.SeqNo, "save into cache temperarily")
 		pool.validationQueue[validationEvent.SeqNo] = validationEvent
 	}
 }
 
-func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, bool) {
+func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption) (error, bool) {
 	var validTxSet []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
 	if validationEvent.IsPrimary {
-		validTxSet, invalidTxSet = pool.PreCheck(validationEvent.Transactions)
+		validTxSet, invalidTxSet = pool.PreCheck(validationEvent.Transactions, commonHash, encryption)
 	} else {
 		validTxSet = validationEvent.Transactions
 	}
@@ -509,7 +507,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, boo
 	if err != nil {
 		return err, false
 	}
-	hash := crypto.NewKeccak256Hash("Keccak256").Hash([]interface{}{
+	hash := commonHash.Hash([]interface{}{
 		merkleRoot,
 		txRoot,
 		receiptRoot,
@@ -534,15 +532,13 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, boo
 	})
 	return nil, true
 }
-func (pool *BlockPool) PreCheck(txs []*types.Transaction) ([]*types.Transaction, []*types.InvalidTransactionRecord) {
+func (pool *BlockPool) PreCheck(txs []*types.Transaction, commonHash crypto.CommonHash, encryption crypto.Encryption) ([]*types.Transaction, []*types.InvalidTransactionRecord) {
 	var validTxSet []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
-	encryption := crypto.NewEcdsaEncrypto("ecdsa")
-	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	// (1) check signature for each transaction
 	for _, tx := range txs {
-		if !tx.ValidateSign(encryption, kec256Hash) {
-			log.Info("Validation, found invalid signature, send from :", tx.Id)
+		if !tx.ValidateSign(encryption, commonHash) {
+			log.Notice("Validation, found invalid signature, send from :", tx.Id)
 			invalidTxSet = append(invalidTxSet, &types.InvalidTransactionRecord{
 				Tx:      tx,
 				ErrType: types.InvalidTransactionRecord_SIGFAILED,
@@ -566,10 +562,10 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 	}
 	txTrie, _ := trie.New(common.Hash{}, db)
 	receiptTrie, _ := trie.New(common.Hash{}, db)
-	log.Notice("Before Process, lastValidationState", pool.lastValidationState.Hex())
+	log.Debug("Before Process, lastValidationState", pool.lastValidationState.Hex())
 	statedb, err := state.New(pool.lastValidationState, db)
 	if err != nil {
-		log.Notice("New StateDB ERROR")
+		log.Error("New StateDB ERROR")
 		return err, nil, nil, nil, nil, nil, invalidTxs
 	}
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
