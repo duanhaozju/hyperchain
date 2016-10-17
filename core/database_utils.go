@@ -507,6 +507,18 @@ func UpdateChainByViewChange(height uint64, latestHash []byte) error {
 	return putChain(db, &memChainMap.data)
 }
 
+//GetInvaildTxErrType gets ErrType of invalid tx
+func GetInvaildTxErrType(db hyperdb.Database,key []byte) (types.InvalidTransactionRecord_ErrType,error){
+	var invalidTx types.InvalidTransactionRecord
+	keyFact := append(invalidTransactionPrefix,key...)
+	data,err := db.Get(keyFact)
+	if len(data)==0{
+		return -1,err
+	}
+	err = proto.Unmarshal(data, &invalidTx)
+	return invalidTx.ErrType,err
+}
+
 // getChain get chain from database
 func getChain(db hyperdb.Database) (*types.Chain, error) {
 	var chain types.Chain
