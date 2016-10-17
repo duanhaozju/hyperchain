@@ -14,7 +14,6 @@ import (
 	//"hyperchain/accounts"
 	"encoding/hex"
 	"errors"
-	"hyperchain/core/vm/compiler"
 )
 
 const (
@@ -206,7 +205,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 		for start := start; start < end; start = time.Now().Unix() {
 
-		for i := 0; i < 125; i++ {
+		for i := 0; i < 100; i++ {
 			tx.Timestamp = time.Now().UnixNano()
 			tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
 
@@ -367,12 +366,12 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 //	Bin []string
 //}
 
-	return &CompileCode{
-		Abi: abi,
-		Bin: bin,
-	}, nil
-}
-
+//	return &CompileCode{
+//		Abi: abi,
+//		Bin: bin,
+//	}, nil
+//}
+/*
 func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
 
 	var txValue types.TransactionValue
@@ -411,7 +410,7 @@ func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
 		Timestamp: 	time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
 		ExecuteTime:	NewInt64ToNumber((blk.WriteTime - tx.TimeStamp) / int64(time.Millisecond)),
 	}, nil
-}
+}*/
 
 // GetTransactionReceipt returns transaction's receipt for given transaction hash.
 func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) *types.ReceiptTrans {
@@ -501,18 +500,28 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockHashAndIndex(hash common.
 // GetTransactionsByBlockNumberAndIndex returns the transaction for the given block number and index.
 func (tran *PublicTransactionAPI) GetTransactionsByBlockNumberAndIndex(n Number, index Number) (*TransactionResult, error) {
 
-	block, err := getBlockByNumber(n)
+	//block, err := getBlockByNumber(n)
+	db, err := hyperdb.GetLDBDatabase()
+
+	if err != nil {
+		log.Errorf("Open database error: %v", err)
+		return nil, err
+	}
+	block,err:=core.GetBlockByNumber(db, uint64(n))
 	if err != nil {
 		log.Errorf("%v", err)
 		return nil, err
 	}
+
+	//txCount := len(block.Transactions)
 
 	txCount := len(block.Transactions)
 
 	if index.ToInt() >= 0 && index.ToInt() < txCount {
 
 		tx := block.Transactions[index]
-		return tx, nil
+
+		return outputTransaction(tx)
 	}
 
 	return nil, nil
@@ -573,7 +582,7 @@ func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
 		Amount: 	NewInt64ToNumber(txValue.Amount),
 		Gas: 		NewInt64ToNumber(txValue.GasLimit),
 		GasPrice: 	NewInt64ToNumber(txValue.Price),
-		Timestamp: 	time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
-		ExecuteTime:	NewInt64ToNumber((blk.WriteTime - tx.TimeStamp) / int64(time.Millisecond)),
+		Timestamp: 	time.Unix(tx.Timestamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+		ExecuteTime:	NewInt64ToNumber((blk.WriteTime - tx.Timestamp) / int64(time.Millisecond)),
 	}, nil
 }
