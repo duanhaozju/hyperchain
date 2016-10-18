@@ -1,21 +1,17 @@
 {
   "MAXPEERS":"4",
-
   "port1":"8001",
   "port2":"8002",
   "port3":"8003",
   "port4":"8004",
-
-  "node1":"192.168.137.166",
-  "node2":"192.168.137.166",
-  "node3":"192.168.137.166",
-  "node4":"192.168.137.166",
-
-  "external_node1":"127.0.0.1",
-  "external_node2":"127.0.0.1",
-  "external_node3":"127.0.0.1",
-  "external_node4":"127.0.0.1",
-
+  "node1":"localhost",
+  "node2":"localhost",
+  "node3":"localhost",
+  "node4":"localhost",
+  "external_node1":"localhost",
+  "external_node2":"localhost",
+  "external_node3":"localhost",
+  "external_node4":"localhost",
   "external_port1":"8081",
   "external_port2":"8082",
   "external_port3":"8083",
