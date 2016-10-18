@@ -35,6 +35,9 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_invokeContract"
 # 获取合约code GetCode
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getCode","params": ["<contract address>"],"id": 1}'
 
+# 获取账户部署合约数量 GetContractCountByAddr
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getContractCountByAddr","params": ["0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd"],"id": 1}'
+
 ########## block 服务 ##########
 # 得到最新区块 LastestBlock
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_lastestBlock","params":[],"id":1}'

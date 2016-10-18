@@ -8,9 +8,7 @@ import (
 	"hyperchain/manager"
 	"hyperchain/core/types"
 	"hyperchain/event"
-	"hyperchain/hyperdb"
 	"fmt"
-	"hyperchain/core/state"
 	"errors"
 )
 
@@ -151,25 +149,28 @@ func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash,
 // GetCode returns the code from the given contract address and block number.
 func (contract *PublicContractAPI) GetCode(addr common.Address, n Number) (string, error) {
 
-	var blk *BlockResult
-
-	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {
-		log.Errorf("Open database error: %v", err)
-		return "", err
-	}
-
-	if blk, err = getBlockByNumber(n); err != nil {
-		return "", err
-	}
-
-	stateDB, err := state.New(blk.MerkleRoot, db)
+	_, stateDb, err := getBlockAndStateDb(n)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
 		return "", err
 	}
 
-	return fmt.Sprintf(`0x%x`, stateDB.GetCode(addr)), nil
+	return fmt.Sprintf(`0x%x`, stateDb.GetCode(addr)), nil
 }
+
+// GetContractCountByAddr returns the number of contract that has been deployed by given account address,
+// if addr is nil, returns the number of all the contract that has been deployed.
+func (contract *PublicContractAPI) GetContractCountByAddr(addr common.Address) (uint64, error) {
+
+	_, stateDb, err := getBlockAndStateDb(Number(latestBlockNumber))
+
+	if err != nil {
+		return 0, err
+	}
+	log.Info("===== stateDB nonce: ", stateDb.GetNonce(addr))
+	return stateDb.GetNonce(addr), nil
+
+}
+
 
 
