@@ -7,6 +7,7 @@ import (
 	"hyperchain/common"
 	"strconv"
 	"hyperchain/core/types"
+	"hyperchain/core/state"
 )
 
 type PublicBlockAPI struct{}
@@ -48,7 +49,7 @@ func (blk *PublicBlockAPI) GetBlocks() ([]*BlockResult, error) {
 	}
 
 	for height > 0 {
-		b, err := getBlockByNumber(height)
+		b, _, err := getBlockAndStateDb(height)
 		if err != nil {
 			return nil, err
 			break
@@ -72,7 +73,8 @@ func (blk *PublicBlockAPI) GetBlockByHash(hash common.Hash) (*BlockResult, error
 
 // GetBlockByNumber returns the bock for the given block number.
 func (blk *PublicBlockAPI) GetBlockByNumber(number Number) (*BlockResult, error) {
-	return getBlockByNumber(number)
+	block, _, err := getBlockAndStateDb(number)
+	return block, err
 }
 
 func lastestBlock() (*BlockResult, error) {
@@ -98,32 +100,67 @@ func lastestBlock() (*BlockResult, error) {
 }
 
 // getBlockByNumber convert type Block to type BlockResult for the given block number.
-func getBlockByNumber(n Number) (*BlockResult, error) {
+//func getBlockByNumber(n Number) (*BlockResult, error) {
+//
+//	//h := height.ToUint64()
+//	var blk *types.Block
+//	db, err := hyperdb.GetLDBDatabase()
+//	if err != nil {
+//		log.Errorf("%v", err)
+//		return nil, err
+//	}
+//
+//	if n == latestBlockNumber {
+//		chain := core.GetChainCopy()
+//		if block, err := getBlockByHash(common.BytesToHash(chain.LatestBlockHash)); err != nil {
+//			return nil, err
+//		} else {
+//			return block, nil
+//		}
+//	} else {
+//		m := n.ToUint64()
+//		if blk, err = core.GetBlockByNumber(db, m); err != nil {
+//			return nil, err
+//		}
+//	}
+//
+//	return outputBlockResult(blk)
+//
+//}
 
-	//h := height.ToUint64()
-	var blk *types.Block
+func getBlockAndStateDb(n Number) (*BlockResult, *state.StateDB, error) {
+
+	//var blk *types.Block
+	var blkRes *BlockResult
+
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Errorf("%v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	if n == latestBlockNumber {
 		chain := core.GetChainCopy()
-		if block, err := getBlockByHash(common.BytesToHash(chain.LatestBlockHash)); err != nil {
-			return nil, err
-		} else {
-			return block, nil
+		if blkRes, err = getBlockByHash(common.BytesToHash(chain.LatestBlockHash)); err != nil {
+			return nil, nil, err
 		}
 	} else {
 		m := n.ToUint64()
-		if blk, err = core.GetBlockByNumber(db, m); err != nil {
-			return nil, err
+		if blk, err := core.GetBlockByNumber(db, m); err != nil {
+			return nil, nil, err
+		} else if blkRes, err = outputBlockResult(blk); err != nil{
+			return nil, nil, err
+
 		}
 	}
 
-	return outputBlockResult(blk)
+	stateDB, err := state.New(blkRes.MerkleRoot, db)
+	if err != nil {
+		log.Errorf("Get stateDB error, %v", err)
+		return nil, nil, err
+	}
 
+	return blkRes, stateDB, nil
 }
 
 func outputBlockResult(block *types.Block) (*BlockResult, error) {

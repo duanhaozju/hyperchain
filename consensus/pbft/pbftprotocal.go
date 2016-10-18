@@ -822,6 +822,7 @@ func (pbft *pbftProtocal) trySendPrePrepare() {
 
 	if pbft.currentVid != nil {
 		logger.Debugf("Replica %d not attempting to send pre-prepare bacause it is currently send %d, retry.", pbft.id, pbft.currentVid)
+		//TODO: zarc
 	}
 
 	logger.Debugf("Replica %d attempting to call sendPrePrepare", pbft.id)

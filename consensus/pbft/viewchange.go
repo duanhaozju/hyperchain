@@ -523,6 +523,28 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 
 	pbft.lastExec = pbft.h
 	pbft.seqNo = pbft.h
+	pbft.vid = pbft.h
+	pbft.lastVid = pbft.h
+	xSetLen := len(nv.Xset)
+	upper := uint64(xSetLen) + pbft.h + uint64(1)
+	if pbft.primary(pbft.view) == pbft.id {
+		for i := pbft.h+uint64(1); i < upper; i++ {
+			d, ok := nv.Xset[i]
+			if !ok {
+				logger.Critical("view change Xset miss batch number %d", i)
+			}
+			if d == "" {
+				// This should not happen
+				logger.Critical("view change Xset has null batch")
+			}
+			batch, ok := pbft.validatedBatchStore[d]
+			if !ok {
+				logger.Criticalf("Replica %d is missing request batch for seqNo=%d with digest '%s' for assigned prepare after fetching, this indicates a serious bug", pbft.id, i, d)
+			}
+			pbft.recvRequestBatch(batch)
+		}
+	}
+	/*
 	for n, d := range nv.Xset {
 		if n <= pbft.h {
 			continue
@@ -547,9 +569,10 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 		}
 		pbft.persistQSet()
 	}
+	*/
 
 	pbft.updateViewChangeSeqNo()
-
+/*
 	if pbft.primary(pbft.view) != pbft.id {
 		for n, d := range nv.Xset {
 			prep := &Prepare{
@@ -579,7 +602,7 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 		logger.Debugf("Replica %d is now primary, attempting to resubmit requests", pbft.id)
 		pbft.resubmitRequestBatches()
 	}
-
+*/
 	pbft.startTimerIfOutstandingRequests()
 	logger.Debugf("Replica %d done cleaning view change artifacts, calling into consumer", pbft.id)
 

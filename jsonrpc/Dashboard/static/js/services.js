@@ -225,7 +225,7 @@ function AccountService($resource,$q,ENV) {
                         method:"POST"
                     }
                 }).getAcc({
-                    method: "acot_getAccounts",
+                    method: "acc_getAccounts",
                     id: 1
                 },function(res){
                     if (res.error) {
@@ -244,7 +244,7 @@ function AccountService($resource,$q,ENV) {
                         method:"POST"
                     }
                 }).newAcc({
-                    method: "acot_newAccount",
+                    method: "acc_newAccount",
                     params: [password],
                     id: 1
                 },function(res){
@@ -264,7 +264,7 @@ function AccountService($resource,$q,ENV) {
                         method:"POST"
                     }
                 }).unlockac({
-                    method: "acot_unlockAccount",
+                    method: "acc_unlockAccount",
                     params: [
                         {
                             "address":address,
