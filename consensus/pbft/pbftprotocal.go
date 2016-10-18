@@ -1047,8 +1047,10 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 		pbft.outstandingReqBatches[digest] = preprep.GetTransactionBatch()
 		pbft.persistRequestBatch(digest)
 	}
-
-	pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new pre-prepare for request batch %s", preprep.BatchDigest))
+	if !pbft.stateTransferring {
+		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new pre-prepare for request batch %s", preprep.BatchDigest))
+	}
+	
 	pbft.nullRequestTimer.Stop()
 	logger.Debug("receive  pre-prepare first seq is:",preprep.SequenceNumber)
 	if pbft.primary(pbft.view) != pbft.id && pbft.prePrepared(preprep.BatchDigest, preprep.View, preprep.SequenceNumber) && !cert.sentPrepare {
