@@ -40,12 +40,13 @@ type ProtocolManager struct {
 	AccountManager *accounts.AccountManager
 	commonHash     crypto.CommonHash
 
-	noMorePeers  chan struct{}
-	eventMux     *event.TypeMux
-	txSub        event.Subscription
-	newBlockSub  event.Subscription
-	consensusSub event.Subscription
-	respSub      event.Subscription
+	noMorePeers   chan struct{}
+	eventMux      *event.TypeMux
+	txSub         event.Subscription
+	newBlockSub   event.Subscription
+	consensusSub  event.Subscription
+	viewChangeSub event.Subscription
+	respSub       event.Subscription
 
 	aLiveSub event.Subscription
 
@@ -97,11 +98,13 @@ func (pm *ProtocolManager) Start() {
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
+	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
 	go pm.syncBlockLoop()
 	go pm.syncCheckpointLoop()
 	go pm.respHandlerLoop()
+	go pm.viewChangeLoop()
 	pm.wg.Wait()
 
 }
@@ -319,7 +322,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 			self.blockPool.CommitBlock(ev, self.Peermanager)
 
 		case event.ExeTxsEvent:
-			go self.blockPool.Validate(ev)
+			go self.blockPool.Validate(ev, self.commonHash, self.AccountManager.Encryption)
 
 		}
 	}
@@ -332,6 +335,16 @@ func (self *ProtocolManager) respHandlerLoop() {
 		case event.RespInvalidTxsEvent:
 			// receive invalid tx message, save to db
 			self.blockPool.StoreInvalidResp(ev)
+		}
+	}
+}
+func (self *ProtocolManager) viewChangeLoop() {
+
+	for obj := range self.viewChangeSub.Chan() {
+		switch ev := obj.Data.(type) {
+		case event.VCResetEvent:
+			// receive invalid tx message, save to db
+			self.blockPool.ResetStatus(ev)
 		}
 	}
 }
@@ -360,7 +373,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 		case event.ConsensusEvent:
 			//call consensus module
-			log.Debug("###### enter ConsensusEvent")
+			log.Notice("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 
 		}
