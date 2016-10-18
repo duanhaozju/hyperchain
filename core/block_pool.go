@@ -203,6 +203,7 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 
 	if currentChain.Height >= block.Number {
 		//todo view change ,delete block and rewrite block
+		// TODO Clear all stateobject cache
 
 		db, err := hyperdb.GetLDBDatabase()
 		if err != nil {
@@ -507,6 +508,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	//check balance
 	err, _, merkleRoot, txRoot, receiptRoot, validTxSet, invalidTxSet := pool.ProcessBlock1(validTxSet, invalidTxSet, validationEvent.SeqNo)
 	if err != nil {
+		// TODO Clear stateobject cache
 		return err, false
 	}
 	hash := commonHash.Hash([]interface{}{
@@ -673,7 +675,7 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerMana
 			db.Delete(append(transactionPrefix, t.Tx.GetTransactionHash().Bytes()...))
 			db.Delete(append(receiptsPrefix, t.Tx.GetTransactionHash().Bytes()...))
 		}
-		// TODO
+		// TODO Clear all stateobject cache
 	}
 	blockCache.Delete(ev.Hash)
 }
@@ -759,7 +761,6 @@ func (pool *BlockPool) AddBlockWithoutExecTxs(block *types.Block, commonHash cry
 
 	if currentChain.Height >= block.Number {
 		//todo view change ,delete block and rewrite block
-
 		db, err := hyperdb.GetLDBDatabase()
 		if err != nil {
 			log.Fatal(err)
