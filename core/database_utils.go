@@ -123,20 +123,18 @@ func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error)
 }
 
 //get tx<-->block num,hash,index
-func GetTxWithBlock(db hyperdb.Database, key []byte) (common.Hash, uint64, uint64) {
+func GetTxWithBlock(db hyperdb.Database, key []byte) (uint64, int64) {
 	dataMeta, _ := db.Get(append(key, txMetaSuffix...))
+	log.Info(dataMeta)
 	if len(dataMeta) == 0 {
-		return common.Hash{}, 0, 0
+		return 0, 0
 	}
-	var meta struct {
-		BlockHash  common.Hash
-		BlockIndex uint64
-		Index      uint64
+	meta := &types.TransactionMeta{}
+	if err := proto.Unmarshal(dataMeta, meta); err != nil {
+		log.Error(err)
+		return 0, 0
 	}
-	if err := json.Unmarshal(dataMeta, &meta); err != nil {
-		return common.Hash{}, 0, 0
-	}
-	return meta.BlockHash, meta.BlockIndex, meta.Index
+	return meta.BlockIndex, meta.Index
 }
 
 func DeleteTransaction(db hyperdb.Database, key []byte) error {
@@ -198,22 +196,22 @@ func PutBlockTx(db hyperdb.Database, commonHash crypto.CommonHash, key []byte, t
 	}
 	//put tx<-->block num,hash,index
 
-	for i,tx:=range t.Transactions{
-	  meta := struct {
-				BlockHash  common.Hash
-				BlockIndex uint64
-				Index      uint64
-			}{
-				BlockHash:  common.BytesToHash(t.BlockHash),
-				BlockIndex: t.Number,
-				Index:      uint64(i),
-			}
-	keyTxBlock := append(tx.Hash(commonHash).Bytes(), txMetaSuffix...)
-	dataTxBlock, err := json.Marshal(meta)
-	if err != nil {
-		return err
-	}
-	err = batch.Put(keyTxBlock,dataTxBlock)
+	//for i,tx:=range t.Transactions{
+	//  meta := struct {
+	//			BlockHash  common.Hash
+	//			BlockIndex uint64
+	//			Index      uint64
+	//		}{
+	//			BlockHash:  common.BytesToHash(t.BlockHash),
+	//			BlockIndex: t.Number,
+	//			Index:      uint64(i),
+	//		}
+	//keyTxBlock := append(tx.Hash(commonHash).Bytes(), txMetaSuffix...)
+	//dataTxBlock, err := json.Marshal(meta)
+	//if err != nil {
+	//	return err
+	//}
+	//err = batch.Put(keyTxBlock,dataTxBlock)
 
 	//txKey := tx.Hash(commonHash).Bytes()
 	//txKeyFact := append(transactionPrefix, txKey...)
@@ -222,7 +220,7 @@ func PutBlockTx(db hyperdb.Database, commonHash crypto.CommonHash, key []byte, t
 	//	batch.Put(txKeyFact, txValue)
 	//}
 
-}
+//}
 	//if err !=nil{
 	//	return err
 	//}

@@ -12,17 +12,20 @@ import (
 	"errors"
 	"encoding/hex"
 	"hyperchain/crypto"
+	"hyperchain/hyperdb"
 )
 
 type PublicContractAPI struct {
 	eventMux *event.TypeMux
 	pm *manager.ProtocolManager
+	db *hyperdb.LDBDatabase
 }
 
-func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager) *PublicContractAPI {
+func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase) *PublicContractAPI {
 	return &PublicContractAPI{
 		eventMux :eventMux,
 		pm:pm,
+		db:hyperDb,
 	}
 }
 
@@ -171,7 +174,7 @@ func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash,
 // GetCode returns the code from the given contract address and block number.
 func (contract *PublicContractAPI) GetCode(addr common.Address, n Number) (string, error) {
 
-	_, stateDb, err := getBlockAndStateDb(n)
+	stateDb, err := getBlockStateDb(n, contract.db)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
 		return "", err
@@ -184,7 +187,7 @@ func (contract *PublicContractAPI) GetCode(addr common.Address, n Number) (strin
 // if addr is nil, returns the number of all the contract that has been deployed.
 func (contract *PublicContractAPI) GetContractCountByAddr(addr common.Address) (uint64, error) {
 
-	_, stateDb, err := getBlockAndStateDb(Number(latestBlockNumber))
+	stateDb, err := getBlockStateDb(Number(latestBlockNumber), contract.db)
 
 	if err != nil {
 		return 0, err

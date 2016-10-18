@@ -34,6 +34,7 @@ func init() {
 type PublicTransactionAPI struct {
 	eventMux *event.TypeMux
 	pm       *manager.ProtocolManager
+	db       *hyperdb.LDBDatabase
 }
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
@@ -65,10 +66,11 @@ type TransactionResult struct {
 	ExecuteTime *Number        `json:"executeTime"`
 }
 
-func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager) *PublicTransactionAPI {
+func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase) *PublicTransactionAPI {
 	return &PublicTransactionAPI{
 		eventMux: eventMux,
 		pm:       pm,
+		db:	  hyperDb,
 	}
 }
 
@@ -204,7 +206,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 		for start := start; start < end; start = time.Now().Unix() {
 
-		for i := 0; i < 100; i++ {
+		for i := 0; i < 10; i++ {
 			tx.Timestamp = time.Now().UnixNano()
 			tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
 
@@ -235,7 +237,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				tx.Signature = sig
 			}
 
-			tx.TransactionHash = tx.GetTransactionHash().Bytes()
+			tx.TransactionHash = tx.BuildHash().Bytes()
 			// Unsign
 			if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
 				return common.Hash{}, errors.New("invalid signature")
@@ -395,14 +397,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 // GetTransactionReceipt returns transaction's receipt for given transaction hash.
 func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*types.ReceiptTrans, error) {
 
-	db, err := hyperdb.GetLDBDatabase()
-
-	if err != nil {
-		log.Errorf("Open database error: %v", err)
-		return nil, err
-	}
-
-	if errType, err := core.GetInvaildTxErrType(db, hash.Bytes()); errType == -1 {
+	if errType, err := core.GetInvaildTxErrType(tran.db, hash.Bytes()); errType == -1 {
 		return core.GetReceipt(hash), nil
 	} else if err != nil {
 		return nil, err
@@ -412,69 +407,50 @@ func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*type
 
 }
 
-// GetAllTransactions return all transactions in the chain/db
-//func (tran *PublicTransactionAPI) GetTransactions() []*TransactionResult{
-//	db, err := hyperdb.GetLDBDatabase()
-//
-//	if err != nil {
-//		log.Errorf("Open database error: %v", err)
-//	}
-//
-//	txs, err := core.GetAllTransaction(db)
-//
-//	if err != nil {
-//		log.Errorf("GetAllTransaction error: %v", err)
-//	}
-//
-//	var transactions []*TransactionResult
-//
-//
-//	// TODO 1.得到交易所在的区块哈希 2.取出 tx.Value 中的 amount
-//	for _, tx := range txs {
-//		var ts = &TransactionResult{
-//			Hash: tx.BuildHash(),
-//			//Block: 1,
-//			Amount: string(tx.Value),
-//			From: common.BytesToAddress(tx.From),
-//			To: common.BytesToAddress(tx.To),
-//			Timestamp: time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
-//		}
-//		transactions = append(transactions,ts)
-//	}
-//
-//	return transactions
-//}
+// GetTransactions return all transactions in the chain/db
+func (tran *PublicTransactionAPI) GetTransactions() ([]*TransactionResult, error) {
+
+	txs, err := core.GetAllTransaction(tran.db)
+
+	if err != nil {
+		log.Errorf("GetAllTransaction error: %v", err)
+	}
+
+	var transactions []*TransactionResult
+
+	log.Info("========== tx count ======= ", len(txs))
+	// TODO 1.得到交易所在的区块哈希 2.取出 tx.Value 中的 amount
+	for _, tx := range txs {
+		if ts, err := outputTransaction(tx, tran.db); err !=  nil {
+			return nil, err
+		} else {
+			transactions = append(transactions,ts)
+		}
+	}
+
+	return transactions, nil
+}
 
 // GetTransactionByHash returns the transaction for the given transaction hash.
 func (tran *PublicTransactionAPI) GetTransactionByHash(hash common.Hash) (*TransactionResult, error) {
 
-	db, err := hyperdb.GetLDBDatabase()
+	tx, err := core.GetTransaction(tran.db, hash[:])
 
 	if err != nil {
-		log.Errorf("Open database error: %v", err)
 		return nil, err
 	}
-
-	tx, err := core.GetTransaction(db, hash[:])
 
 	if tx.From == nil {
 		return nil, errors.New("Not found this transaction")
 	}
 
-	return outputTransaction(tx)
+	return outputTransaction(tx, tran.db)
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
 func (tran *PublicTransactionAPI) GetTransactionByBlockHashAndIndex(hash common.Hash, index Number) (*TransactionResult, error) {
 
-	db, err := hyperdb.GetLDBDatabase()
-
-	if err != nil {
-		log.Errorf("Open database error: %v", err)
-		return nil, err
-	}
-
-	block, err := core.GetBlock(db, hash[:])
+	block, err := core.GetBlock(tran.db, hash[:])
 	if err != nil {
 		log.Errorf("%v", err)
 		return nil, err
@@ -486,29 +462,20 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockHashAndIndex(hash common.
 
 		tx := block.Transactions[index]
 
-		return outputTransaction(tx)
+		return outputTransaction(tx, tran.db)
 	}
 
 	return nil, nil
 }
 
 // GetTransactionsByBlockNumberAndIndex returns the transaction for the given block number and index.
-func (tran *PublicTransactionAPI) GetTransactionsByBlockNumberAndIndex(n Number, index Number) (*TransactionResult, error) {
+func (tran *PublicTransactionAPI) GetTransactionByBlockNumberAndIndex(n Number, index Number) (*TransactionResult, error) {
 
-	//block, err := getBlockByNumber(n)
-	db, err := hyperdb.GetLDBDatabase()
-
-	if err != nil {
-		log.Errorf("Open database error: %v", err)
-		return nil, err
-	}
-	block,err:=core.GetBlockByNumber(db, uint64(n))
+	block,err:=core.GetBlockByNumber(tran.db, uint64(n))
 	if err != nil {
 		log.Errorf("%v", err)
 		return nil, err
 	}
-
-	//txCount := len(block.Transactions)
 
 	txCount := len(block.Transactions)
 
@@ -516,7 +483,7 @@ func (tran *PublicTransactionAPI) GetTransactionsByBlockNumberAndIndex(n Number,
 
 		tx := block.Transactions[index]
 
-		return outputTransaction(tx)
+		return outputTransaction(tx, tran.db)
 	}
 
 	return nil, nil
@@ -524,14 +491,8 @@ func (tran *PublicTransactionAPI) GetTransactionsByBlockNumberAndIndex(n Number,
 
 // GetBlockTransactionCountByHash returns the number of block transactions for given block hash.
 func (tran *PublicTransactionAPI) GetBlockTransactionCountByHash(hash common.Hash) (*Number, error) {
-	db, err := hyperdb.GetLDBDatabase()
 
-	if err != nil {
-		log.Errorf("Open database error: %v", err)
-		return nil, err
-	}
-
-	block, err := core.GetBlock(db, hash[:])
+	block, err := core.GetBlock(tran.db, hash[:])
 	if err != nil {
 		log.Errorf("%v", err)
 		return nil, err
@@ -575,11 +536,9 @@ func (tran *PublicTransactionAPI) GetBlockTransactionCountByHash(hash common.Has
 //	return tx.SighHash(kec256Hash)
 //}
 
-func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
-
+func outputTransaction(tx *types.Transaction, db *hyperdb.LDBDatabase) (*TransactionResult, error) {
+	log.Info("====== enter outputTransaction")
 	var txValue types.TransactionValue
-	var bh common.Hash
-	var bn , txIndex uint64
 	var blk *types.Block
 
 	txHash := tx.GetTransactionHash()
@@ -589,22 +548,18 @@ func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
 		return nil, err
 	}
 
-	if db, err := hyperdb.GetLDBDatabase(); err != nil {
-		log.Errorf("Open database error: %v", err)
-		return nil, err
-	} else {
-		bh, bn, txIndex = core.GetTxWithBlock(db, txHash[:])
+	bn, txIndex := core.GetTxWithBlock(db, txHash[:])
 
-		if blk, err = core.GetBlockByNumber(db, bn);err != nil {
-			return nil, err
-		}
+	blk, err := core.GetBlockByNumber(db, bn)
+	if err != nil {
+		return nil, err
 	}
 
 	return &TransactionResult{
 		Hash: 		txHash,
 		BlockNumber: 	NewUint64ToNumber(bn),
-		BlockHash: 	bh,
-		TxIndex: 	NewUint64ToNumber(txIndex),
+		BlockHash: 	common.BytesToHash(blk.BlockHash),
+		TxIndex: 	NewInt64ToNumber(txIndex),
 		From: 		common.BytesToAddress(tx.From),
 		To: 		common.BytesToAddress(tx.To),
 		Amount: 	NewInt64ToNumber(txValue.Amount),
