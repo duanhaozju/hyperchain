@@ -456,18 +456,18 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 		return
 	}
 	// (1) Check SeqNo
-	if validationEvent.SeqNo < pool.demandSeqNo {
+	if validationEvent.SeqNo < demandSeqNo {
 		// Receive repeat ValidationEvent
 		log.Error("Receive Repeat ValidationEvent, ", validationEvent.SeqNo)
 		return
-	} else if validationEvent.SeqNo == pool.demandSeqNo {
+	} else if validationEvent.SeqNo == demandSeqNo {
 		// Process
-		pool.seqNoMu.RLock()
+		pool.seqNoMu.Lock()
 		if _, success := pool.PreProcess(validationEvent, commonHash, encryption); success {
 			pool.demandSeqNo += 1
 			log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
 		}
-		pool.seqNoMu.RUnlock()
+		pool.seqNoMu.Unlock()
 		// Remove useless event
 		for i, _ := range pool.validationQueue {
 			if i <= validationEvent.SeqNo {
@@ -477,14 +477,14 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 		// Process remain event
 		for i := validationEvent.SeqNo + 1; i <= pool.maxSeqNo; i += 1 {
 			if _, ok := pool.validationQueue[i]; ok {
-				pool.seqNoMu.RLock()
+				pool.seqNoMu.Lock()
 				// Process
 				if _, success := pool.PreProcess(pool.validationQueue[i], commonHash, encryption); success {
 					pool.demandSeqNo += 1
 					log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
 				}
 				delete(pool.validationQueue, i)
-				pool.seqNoMu.RUnlock()
+				pool.seqNoMu.Unlock()
 			} else {
 				break
 			}
@@ -694,10 +694,6 @@ func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
 }
 
 func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
-	pool.mu.Lock()
-	pool.seqNoMu.Lock()
-	defer pool.mu.Unlock()
-	defer pool.seqNoMu.Unlock()
 	tmpDemandNumber = pool.demandNumber
 	tmpDemandSeqNo = pool.demandSeqNo
 	// 1. Reset demandNumber , demandSeqNo and lastValidationState
