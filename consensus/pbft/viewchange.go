@@ -523,6 +523,22 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 
 	pbft.lastExec = pbft.h
 	pbft.seqNo = pbft.h
+	pbft.vid = pbft.h
+	pbft.lastVid = pbft.h
+	xSetLen := len(nv.Xset)
+	if pbft.primary(pbft.view) == pbft.id {
+		for i := pbft.h+1; i < pbft.h+1+xSetLen; i++ {
+			idx := uint64(i)
+			_, batch := nv.Xset[idx]
+			if batch == "" {
+				// This should not happen
+				logger.Critical("view change Xset has null batch")
+				return nil
+			}
+			pbft.recvRequestBatch(batch)
+		}
+	}
+	/*
 	for n, d := range nv.Xset {
 		if n <= pbft.h {
 			continue
@@ -547,9 +563,10 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 		}
 		pbft.persistQSet()
 	}
+	*/
 
 	pbft.updateViewChangeSeqNo()
-
+/*
 	if pbft.primary(pbft.view) != pbft.id {
 		for n, d := range nv.Xset {
 			prep := &Prepare{
@@ -579,7 +596,7 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 		logger.Debugf("Replica %d is now primary, attempting to resubmit requests", pbft.id)
 		pbft.resubmitRequestBatches()
 	}
-
+*/
 	pbft.startTimerIfOutstandingRequests()
 	logger.Debugf("Replica %d done cleaning view change artifacts, calling into consumer", pbft.id)
 
