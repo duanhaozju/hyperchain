@@ -693,6 +693,62 @@ func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
 	db.Put(append(invalidTransactionPrefix, invalidTx.Tx.TransactionHash...), msg.Payload)
 }
 
+func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
+	pool.mu.Lock()
+	pool.seqNoMu.Lock()
+	defer pool.mu.Unlock()
+	defer pool.seqNoMu.Unlock()
+	tmpDemandNumber = pool.demandNumber
+	tmpDemandSeqNo = pool.demandSeqNo
+	// 1. Reset demandNumber , demandSeqNo and lastValidationState
+	pool.demandNumber = ev.SeqNo
+	pool.demandSeqNo = ev.SeqNo
+	pool.maxSeqNo = ev.SeqNo - 1
+	block, _ := GetBlockByNumber(db, ev.SeqNo-1)
+	pool.lastValidationState = common.BytesToHash(block.MerkleRoot)
+	// 2. Delete Invalid Stuff
+	db, _ := hyperdb.GetLDBDatabase()
+	for i := pool.demandNumber; i <= tmpDemandNumber; i += 1 {
+		// delete tx, txmeta and receipt
+		block := GetBlockByNumber(i)
+		for _, tx := range block.Transactions {
+			if err := db.Delete(append(transactionPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
+				log.Errorf("ViewChange, delete useless tx in block %d failed, error msg %s", i, err.Error())
+			}
+			if err := db.Delete(append(receiptsPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
+				log.Errorf("ViewChange, delete useless receipt in block %d failed, error msg %s", i, err.Error())
+			}
+			if err := db.Delete(append(txMetaSuffix, tx.GetTransactionHash().Bytes()...)); err != nil {
+				log.Errorf("ViewChange, delete useless txmeta in block %d failed, error msg %s", i, err.Error())
+			}
+		}
+		// delete block
+		if err := DeleteBlockByNum(i); err != nil {
+			log.Errorf("ViewChange, delete useless block %d failed, error msg %s", i, err.Error())
+		}
+	}
+	blockcache, _ := GetBlockCache()
+	// 3. Delete from blockcache
+	all := blockcache.All()
+	for _, record := range all {
+		for _, tx := range record.ValidTxs {
+			if err := db.Delete(append(transactionPrefix, tx.Tx.GetTransactionHash().Bytes()...)); err != nil {
+				log.Errorf("ViewChange, delete useless tx in block %d failed, error msg %s", i, err.Error())
+			}
+			if err := db.Delete(append(receiptsPrefix, tx.Tx.GetTransactionHash().Bytes()...)); err != nil {
+				log.Errorf("ViewChange, delete useless receipt in block %d failed, error msg %s", i, err.Error())
+			}
+			if err := db.Delete(append(txMetaSuffix, tx.Tx.GetTransactionHash().Bytes()...)); err != nil {
+				log.Errorf("ViewChange, delete useless txmeta in block %d failed, error msg %s", i, err.Error())
+			}
+		}
+	}
+	blockcache.Clear()
+	// 4. Reset chain
+	isGenesis := (block.Number == 0)
+	UpdateChain(block, isGenesis)
+}
+
 func BuildTree(prefix []byte, ctx []interface{}) ([]byte, error) {
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
