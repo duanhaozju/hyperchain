@@ -11,6 +11,7 @@ import (
 	"hyperchain/hyperdb"
 	"fmt"
 	"hyperchain/core/state"
+	"errors"
 )
 
 type PublicContractAPI struct {
@@ -69,6 +70,21 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 	//if found == true {
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		tx.Timestamp = time.Now().UnixNano()
+		tx.Id = uint64(contract.pm.Peermanager.GetNodeId())
+
+		// TODO replace password with test value
+		signature, err := contract.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
+		if err != nil {
+			log.Errorf("Sign(tx) error :%v", err)
+		}
+		tx.Signature = signature
+
+		tx.TransactionHash = tx.GetTransactionHash().Bytes()
+
+		// Unsign
+		if !tx.ValidateSign(contract.pm.AccountManager.Encryption, kec256Hash) {
+			return common.Hash{}, errors.New("invalid signature")
+		}
 
 		txBytes, err := proto.Marshal(tx)
 		if err != nil {
@@ -98,7 +114,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 		fmt.Println("Message", receipt.Message)
 		fmt.Println("Log", receipt.Logs)
 	*/
-	return tx.BuildHash(), nil
+	return tx.GetTransactionHash(), nil
 }
 
 type CompileCode struct{

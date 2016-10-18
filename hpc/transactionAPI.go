@@ -176,7 +176,6 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 	// TODO set the PeerId of tx
 	//tx.PeerId = tran.pm.Peermanager.GetNodeId()
-	tx.TransactionHash = tx.GetTransactionHash().Bytes()
 
 	//if tran.pm == nil {
 	//
@@ -215,7 +214,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				log.Errorf("Sign(tx) error :%v", err)
 			}
 			tx.Signature = signature
-
+			tx.TransactionHash = tx.GetTransactionHash().Bytes()
 			// Unsign
 			if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
 				return common.Hash{}, errors.New("invalid signature")
@@ -266,7 +265,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		fmt.Println("Message", receipt.Message)
 		fmt.Println("Log", receipt.Logs)
 	*/
-	return tx.BuildHash(), nil
+	return tx.GetTransactionHash(), nil
 
 	//} else {
 	//	return common.Hash{}, errors.New("account don't unlock")
@@ -413,8 +412,23 @@ func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
 }*/
 
 // GetTransactionReceipt returns transaction's receipt for given transaction hash.
-func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) *types.ReceiptTrans {
-	return core.GetReceipt(hash)
+func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*types.ReceiptTrans, error) {
+
+	db, err := hyperdb.GetLDBDatabase()
+
+	if err != nil {
+		log.Errorf("Open database error: %v", err)
+		return nil, err
+	}
+
+	if errType, err := core.GetInvaildTxErrType(db, hash.Bytes()); errType == -1 {
+		return core.GetReceipt(hash), nil
+	} else if err != nil {
+		return nil, err
+	} else {
+		return nil, errors.New(errType.String())
+	}
+
 }
 
 // GetAllTransactions return all transactions in the chain/db
@@ -554,7 +568,7 @@ func outputTransaction(tx *types.Transaction) (*TransactionResult, error) {
 	var bn , txIndex uint64
 	var blk *types.Block
 
-	txHash := tx.BuildHash()
+	txHash := tx.GetTransactionHash()
 
 	if err := proto.Unmarshal(tx.Value,&txValue); err != nil {
 		log.Errorf("%v", err)
