@@ -350,7 +350,7 @@ func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
 
 		batch := &TransactionBatch{
 			Batch:     result.Transactions,
-			Timestamp: time.Now().UnixNano(),
+			Timestamp: result.Timestamp,
 		}
 		digest := result.Hash
 		pbft.validatedBatchStore[digest] = batch
@@ -867,7 +867,7 @@ func (pbft *pbftProtocal) validateBatch(txBatch *TransactionBatch, vid uint64, v
 		n := pbft.vid + 1
 
 		pbft.vid = n
-		pbft.helper.ValidateBatch(txBatch.Batch, n, pbft.view, true)
+		pbft.helper.ValidateBatch(txBatch.Batch, txBatch.Timestamp, n, pbft.view, true)
 	} else {
 		logger.Debugf("Replica %d try to validate batch", pbft.id)
 
@@ -875,7 +875,7 @@ func (pbft *pbftProtocal) validateBatch(txBatch *TransactionBatch, vid uint64, v
 			logger.Debugf("Replica %d not validating for transaction batch because it is out of sequence numbers", pbft.id)
 			return
 		}
-		pbft.helper.ValidateBatch(txBatch.Batch, vid, view, false)
+		pbft.helper.ValidateBatch(txBatch.Batch, txBatch.Timestamp, vid, view, false)
 	}
 
 }
