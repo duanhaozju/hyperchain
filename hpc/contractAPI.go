@@ -10,6 +10,8 @@ import (
 	"hyperchain/event"
 	"fmt"
 	"errors"
+	"encoding/hex"
+	"hyperchain/crypto"
 )
 
 type PublicContractAPI struct {
@@ -70,12 +72,32 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 		tx.Timestamp = time.Now().UnixNano()
 		tx.Id = uint64(contract.pm.Peermanager.GetNodeId())
 
-		// TODO replace password with test value
-		signature, err := contract.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
-		if err != nil {
-			log.Errorf("Sign(tx) error :%v", err)
+		if realArgs.PrivKey == "" {
+			// For Hyperchain test
+
+			// TODO replace password with test value
+			signature, err := contract.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
+			if err != nil {
+				log.Errorf("Sign(tx) error :%v", err)
+			}
+			tx.Signature = signature
+		} else {
+			// For Dashboard test
+
+			key, err := hex.DecodeString(args.PrivKey)
+			if err != nil {
+				return common.Hash{}, err
+			}
+			pri := crypto.ToECDSA(key)
+
+			hash := tx.SighHash(kec256Hash).Bytes()
+			sig, err := encryption.Sign(hash, pri)
+			if err != nil {
+				return common.Hash{}, err
+			}
+
+			tx.Signature = sig
 		}
-		tx.Signature = signature
 
 		tx.TransactionHash = tx.GetTransactionHash().Bytes()
 
@@ -167,7 +189,7 @@ func (contract *PublicContractAPI) GetContractCountByAddr(addr common.Address) (
 	if err != nil {
 		return 0, err
 	}
-	log.Info("===== stateDB nonce: ", stateDb.GetNonce(addr))
+
 	return stateDb.GetNonce(addr), nil
 
 }
