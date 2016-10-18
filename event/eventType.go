@@ -45,6 +45,7 @@ type ExeTxsEvent struct {
 	SeqNo        uint64
 	View         uint64
 	IsPrimary    bool
+	Timestamp  int64
 }
 
 type ValidatedTxs struct {
@@ -52,6 +53,7 @@ type ValidatedTxs struct {
 	Hash         string
 	SeqNo        uint64
 	View         uint64
+	Timestamp  int64
 }
 
 // if the CommitStatus is true, we will commit the blocks and save the statedb

@@ -557,6 +557,9 @@ func (pbft *pbftProtocal) processStateUpdated(msg *protos.Message) error {
 
 // processNullRequest process when a null request come
 func (pbft *pbftProtocal) processNullRequest(msg *protos.Message) error {
+	if pbft.inNegoView {
+		return nil
+	}
 	pbft.nullReqTimerReset()
 	return nil
 }
@@ -1321,6 +1324,8 @@ func (pbft *pbftProtocal) executeOne(idx msgID) bool {
 		} else {
 			isPrimary = false
 		}
+		logger.Error("execute num is ",idx.n)
+		logger.Error("execute time is ",cert.prePrepare.TransactionBatch.Timestamp)
 		pbft.helper.Execute(idx.n, digest, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
 		cert.sentExecute = true
 		pbft.execDoneSync(idx)

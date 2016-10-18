@@ -373,7 +373,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 		case event.ConsensusEvent:
 			//call consensus module
-			log.Debug("###### enter ConsensusEvent")
+			log.Notice("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 
 		}
