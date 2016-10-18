@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"hyperchain/consensus/events"
+	"github.com/golang/protobuf/proto"
 )
 
 type viewChangeQuorumEvent struct{}
@@ -92,7 +93,7 @@ func (pbft *pbftProtocal) calcQSet() map[qidx]*ViewChange_PQ {
 
 func (pbft *pbftProtocal) sendViewChange() events.Event {
 
-	pbft.stopTimer(uint64(0))
+	pbft.stopTimer()
 
 	delete(pbft.newViewStore, pbft.view)
 	pbft.view++
@@ -147,8 +148,16 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 		pbft.id, vc.View, vc.H, len(vc.Cset), len(vc.Pset), len(vc.Qset))
 
 	//todo
-
-	msg := pbftMsgHelper(&Message{Payload: &Message_ViewChange{ViewChange: vc}}, pbft.id)
+	payload, err := proto.Marshal(vc)
+	if err != nil {
+		logger.Errorf("ConsensusMessage_VIEW_CHANGE Marshal Error", err)
+		return nil
+	}
+	consensusMsg := &ConsensusMessage{
+		Type:		ConsensusMessage_VIEW_CHANGE,
+		Payload:	payload,
+	}
+	msg := consensusMsgHelper(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
 	pbft.vcResendTimer.Reset(pbft.vcResendTimeout, viewChangeResendTimerEvent{})
 	return pbft.recvViewChange(vc)
@@ -219,7 +228,7 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 	if !pbft.activeView && vc.View == pbft.view && quorum >= pbft.allCorrectReplicasQuorum() {
 		pbft.vcResendTimer.Stop()
 		// TODO first param
-		pbft.startTimer(uint64(0), pbft.lastNewViewTimeout, "new view change")
+		pbft.startTimer(pbft.lastNewViewTimeout, "new view change")
 		pbft.lastNewViewTimeout = 2 * pbft.lastNewViewTimeout
 		return viewChangeQuorumEvent{}
 	}
@@ -258,8 +267,16 @@ func (pbft *pbftProtocal) sendNewView() events.Event {
 
 	logger.Infof("Replica %d is new primary, sending new-view, v:%d, X:%+v",
 		pbft.id, nv.View, nv.Xset)
-
-	msg := pbftMsgHelper(&Message{Payload: &Message_NewView{NewView: nv}}, pbft.id)
+	payload, err := proto.Marshal(nv)
+	if err != nil {
+		logger.Errorf("ConsensusMessage_NEW_VIEW Marshal Error", err)
+		return nil
+	}
+	consensusMsg := &ConsensusMessage{
+		Type:		ConsensusMessage_NEW_VIEW,
+		Payload:	payload,
+	}
+	msg := consensusMsgHelper(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
 	pbft.newViewStore[pbft.view] = nv
 	//return pbft.processNewView()
@@ -339,7 +356,7 @@ func (pbft *pbftProtocal) feedMissingReqBatchIfNeeded(nv *NewView) (newReqBatchM
 			}
 
 
-			if _, ok := pbft.reqBatchStore[d]; !ok {
+			if _, ok := pbft.validatedBatchStore[d]; !ok {
 				logger.Warningf("Replica %d missing assigned, non-checkpointed request batch %s",
 					pbft.id, d)
 				if _, ok := pbft.missingReqBatches[d]; !ok {
@@ -498,7 +515,7 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	logger.Infof("Replica %d accepting new-view to view %d", pbft.id, pbft.view)
 
-	pbft.stopTimer(uint64(0))
+	pbft.stopTimer()
 	pbft.nullRequestTimer.Stop()
 
 	pbft.activeView = true
@@ -511,16 +528,16 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 			continue
 		}
 
-		reqBatch, ok := pbft.reqBatchStore[d]
+		reqBatch, ok := pbft.validatedBatchStore[d]
 		if !ok && d != "" {
 			logger.Criticalf("Replica %d is missing request batch for seqNo=%d with digest '%s' for assigned prepare after fetching, this indicates a serious bug", pbft.id, n, d)
 		}
 		preprep := &PrePrepare{
-			View:           pbft.view,
-			SequenceNumber: n,
-			BatchDigest:    d,
-			RequestBatch:   reqBatch,
-			ReplicaId:      pbft.id,
+			View:           	pbft.view,
+			SequenceNumber: 	n,
+			BatchDigest:    	d,
+			TransactionBatch:   	reqBatch,
+			ReplicaId:      	pbft.id,
 		}
 		cert := pbft.getCert(pbft.view, n)
 		cert.prePrepare = preprep
@@ -546,7 +563,16 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 				cert.sentPrepare = true
 				pbft.recvPrepare(prep)
 			}
-			msg := pbftMsgHelper(&Message{Payload: &Message_Prepare{Prepare: prep}}, pbft.id)
+			payload, err := proto.Marshal(prep)
+			if err != nil {
+				logger.Errorf("ConsensusMessage_PREPARE Marshal Error", err)
+				return nil
+			}
+			consensusMsg := &ConsensusMessage{
+				Type:		ConsensusMessage_PREPARE,
+				Payload:	payload,
+			}
+			msg := consensusMsgHelper(consensusMsg, pbft.id)
 			pbft.helper.InnerBroadcast(msg)
 		}
 	} else {

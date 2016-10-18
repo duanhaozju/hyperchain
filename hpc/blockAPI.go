@@ -12,16 +12,16 @@ import (
 type PublicBlockAPI struct{}
 
 type BlockResult struct {
-	Number     *Number      `json:"number"`
-	Hash       common.Hash `json:"hash"`
-	ParentHash common.Hash `json:"parentHash"`
-	WriteTime  string      `json:"writeTime"`
-	AvgTime    *Number      `json:"avgTime"`
-	TxCounts   *Number      `json:"txcounts"`
-	Counts     *Number      `json:"Counts"`
-	Percents   string      `json:"percents"`
-	//Transactions []*types.Transaction	`json:transactions`
-	Transactions []interface{}	`json:transactions`
+	Number       *Number      	`json:"number"`
+	Hash         common.Hash 	`json:"hash"`
+	ParentHash   common.Hash 	`json:"parentHash"`
+	WriteTime    string      	`json:"writeTime"`
+	AvgTime      *Number      	`json:"avgTime"`
+	TxCounts     *Number      	`json:"txcounts"`
+	Counts       *Number      	`json:"Counts"`
+	Percents     string      	`json:"percents"`
+	MerkleRoot   common.Hash	`json:"merkleRoot"`
+	Transactions []interface{}	`json:"transactions"`
 }
 
 func NewPublicBlockAPI() *PublicBlockAPI {
@@ -65,6 +65,16 @@ func (blk *PublicBlockAPI) LastestBlock() (*BlockResult, error) {
 	return lastestBlock()
 }
 
+// GetBlockByHash returns the block for the given block hash.
+func (blk *PublicBlockAPI) GetBlockByHash(hash common.Hash) (*BlockResult, error) {
+	return getBlockByHash(hash)
+}
+
+// GetBlockByNumber returns the bock for the given block number.
+func (blk *PublicBlockAPI) GetBlockByNumber(number Number) (*BlockResult, error) {
+	return getBlockByNumber(number)
+}
+
 func lastestBlock() (*BlockResult, error) {
 	db, err := hyperdb.GetLDBDatabase()
 
@@ -88,23 +98,31 @@ func lastestBlock() (*BlockResult, error) {
 }
 
 // getBlockByNumber convert type Block to type BlockResult for the given block number.
-func getBlockByNumber(height Number) (*BlockResult, error) {
+func getBlockByNumber(n Number) (*BlockResult, error) {
 
-	h := height.ToUint64()
-
+	//h := height.ToUint64()
+	var blk *types.Block
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Errorf("%v", err)
 		return nil, err
 	}
 
-	block, err := core.GetBlockByNumber(db, h)
-	if err != nil {
-		log.Errorf("%v", err)
-		return nil, err
+	if n == latestBlockNumber {
+		chain := core.GetChainCopy()
+		if block, err := getBlockByHash(common.BytesToHash(chain.LatestBlockHash)); err != nil {
+			return nil, err
+		} else {
+			return block, nil
+		}
+	} else {
+		m := n.ToUint64()
+		if blk, err = core.GetBlockByNumber(db, m); err != nil {
+			return nil, err
+		}
 	}
 
-	return outputBlockResult(block)
+	return outputBlockResult(blk)
 
 }
 
@@ -131,12 +149,12 @@ func outputBlockResult(block *types.Block) (*BlockResult, error) {
 		TxCounts:     NewInt64ToNumber(txCounts),
 		Counts:       NewInt64ToNumber(count),
 		Percents:     strconv.FormatFloat(percent*100, 'f', 2, 32) + "%",
+		MerkleRoot:   common.BytesToHash(block.MerkleRoot),
 		Transactions: transactions,
 	}, nil
 }
 
-// GetBlockByHash returns the block for the given block hash.
-func (blk *PublicBlockAPI) GetBlockByHash(hash common.Hash) (*BlockResult, error) {
+func getBlockByHash(hash common.Hash) (*BlockResult, error) {
 	db, err := hyperdb.GetLDBDatabase()
 
 	if err != nil {
@@ -151,11 +169,6 @@ func (blk *PublicBlockAPI) GetBlockByHash(hash common.Hash) (*BlockResult, error
 	}
 
 	return outputBlockResult(block)
-}
-
-// GetBlockByNumber returns the bock for the given block number.
-func (blk *PublicBlockAPI) GetBlockByNumber(number Number) (*BlockResult, error) {
-	return getBlockByNumber(number)
 }
 
 // 测试用

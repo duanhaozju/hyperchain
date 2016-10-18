@@ -47,16 +47,19 @@ timeout:
     batch: 1s
 
     # How long may a request take between reception and execution, must be greater than the batch timeout
-    request: 2s
+    request: 3s
+
+    # How long may a validate Txs process will take by outter
+    validate: 1s
 
     # How long may a view change take
-    viewchange: 2s
+    viewchange: 4s
 
     # How long to wait for a view change quorum before resending (the same) view change
     resendviewchange: 10s
 
     # Interval to send "keep-alive" null requests.  Set to 0 to disable. If enabled, must be greater than request timeout
-    nullrequest: 2s
+    nullrequest: 4s
 
 ################################################################################
 #

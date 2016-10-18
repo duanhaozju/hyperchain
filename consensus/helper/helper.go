@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
+	"hyperchain/core/types"
 )
 
 var logger *logging.Logger // package-level logger
@@ -23,8 +24,9 @@ type helper struct {
 type Stack interface {
 	InnerBroadcast(msg *pb.Message) error
 	InnerUnicast(msg *pb.Message, to uint64) error
-	Execute(reqBatch *pb.ExeMessage) error
+	Execute(seqNo uint64, hash string, flag bool, isPrimary bool, time int64) error
 	UpdateState(updateState *pb.UpdateStateMessage) error
+	ValidateBatch(txs []*types.Transaction, seqNo uint64, view uint64, isPrimary bool) error
 }
 
 // InnerBroadcast broadcast the consensus message between vp nodes
@@ -67,21 +69,19 @@ func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error {
 }
 
 // Execute transfers the transactions decided by consensus to outer
-func (h *helper) Execute(reqBatch *pb.ExeMessage) error {
+func (h *helper) Execute(seqNo uint64, hash string, flag bool, isPrimary bool, timestamp int64) error {
 
-	tmpMsg, err := proto.Marshal(reqBatch)
-
-	if err != nil {
-		return err
-	}
-
-	exeEvent := event.NewBlockEvent {
-		Payload:	tmpMsg,
+	writeEvent := event.CommitOrRollbackBlockEvent {
+		SeqNo:		seqNo,
+		Hash:		hash,
+		Timestamp:	timestamp,
 		CommitTime:	time.Now().UnixNano(),
+		Flag:		flag,
+		IsPrimary:	isPrimary,
 	}
 
 	// Post the event to outer
-	h.msgQ.Post(exeEvent)
+	h.msgQ.Post(writeEvent)
 
 	return nil
 }
@@ -98,8 +98,25 @@ func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
 	updateStateEvent := event.SendCheckpointSyncEvent {
 		Payload:	tmpMsg,
 	}
-	logger.Info("-------------post UpdateStateEvent----------")
+
+	// Post the event to outer
 	go h.msgQ.Post(updateStateEvent)
+
+	return nil
+}
+
+// UpdateState transfers the UpdateStateEvent to outer
+func (h *helper) ValidateBatch(txs []*types.Transaction, seqNo uint64, view uint64, isPrimary bool) error {
+
+	validateEvent := event.ExeTxsEvent {
+		Transactions:	txs,
+		SeqNo:		seqNo,
+		View:		view,
+		IsPrimary:	isPrimary,
+	}
+
+	// Post the event to outer
+	h.msgQ.Post(validateEvent)
 
 	return nil
 }

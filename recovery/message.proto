@@ -10,13 +10,13 @@ message Message{
     bytes  Payload       = 2;
     int64 MsgTimeStamp = 15;
 
-    //MsgType message type during data transfer 
+    //MsgType message type during data transfer
     enum MsgType {
         SYNCCHECKPOINT       = 0;
         SYNCBLOCK    = 1;
         RELAYTX  = 2;
-
-
+        SYNCSINGLE = 3;
+        INVALIDRESP = 4;
     }
 }
 

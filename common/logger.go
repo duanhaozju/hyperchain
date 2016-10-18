@@ -15,6 +15,8 @@ import (
 )
 
  //This applied when test, no writing log
+
+
 //func InitLog(level logging.Level,loggerDir string,port int){
 //
 //	_, error := os.Stat(loggerDir)

@@ -14,6 +14,13 @@ func (self *Transaction) BuildHash() common.Hash {
 	return ch.Hash(self)
 }
 
+func (self *Transaction) GetTransactionHash() common.Hash {
+	if len(self.TransactionHash) == 0 {
+		return self.BuildHash()
+	}
+	return common.BytesToHash(self.TransactionHash)
+}
+
 func (self *Transaction) Hash(ch crypto.CommonHash) common.Hash {
 	return ch.Hash(self)
 }
@@ -21,7 +28,7 @@ func (self *Transaction) Hash(ch crypto.CommonHash) common.Hash {
 func (self *Transaction) SighHash(ch crypto.CommonHash) common.Hash {
 	return ch.Hash([]interface{}{
 		self.Value,
-		self.TimeStamp,
+		self.Timestamp,
 		self.From,
 		self.To,
 	})
@@ -37,7 +44,7 @@ func (self *Transaction) FString() string {
 		self.From,
 		self.To,
 		self.Value,
-		self.TimeStamp,
+		self.Timestamp,
 		self.Signature)
 }
 
@@ -59,8 +66,7 @@ func NewTransaction(from []byte,to []byte,value []byte) *Transaction{
 		From:      from,
 		To:        to,
 		Value:     value,
-		TimeStamp: time.Now().UnixNano(),
-		//Signature: signature,
+		Timestamp: time.Now().UnixNano(),
 	}
 
 	return transaction
@@ -86,7 +92,7 @@ func NewTestCreateTransaction() *Transaction {
 		From:      common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6").Bytes(),
 		To:        nil,
 		Value:     value,
-		TimeStamp: time.Now().UnixNano(),
+		Timestamp: time.Now().UnixNano(),
 	}
 
 	return transaction
@@ -134,7 +140,7 @@ contract mortal {
 		From:      common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6").Bytes(),
 		To:        nil,
 		Value:     value,
-		TimeStamp: time.Now().UnixNano(),
+		Timestamp: time.Now().UnixNano(),
 	}
 
 	return transaction
@@ -156,7 +162,7 @@ func NewTestCallTransaction() *Transaction {
 		From:      common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6").Bytes(),
 		To:        common.HexToAddress("0x945304eb96065b2a98b57a48a06ae28d285a71b5").Bytes(),
 		Value:     value,
-		TimeStamp: time.Now().UnixNano(),
+		Timestamp: time.Now().UnixNano(),
 	}
 
 	return transaction
