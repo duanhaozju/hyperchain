@@ -526,14 +526,20 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	pbft.vid = pbft.h
 	pbft.lastVid = pbft.h
 	xSetLen := len(nv.Xset)
+	upper := uint64(xSetLen) + pbft.h + uint64(1)
 	if pbft.primary(pbft.view) == pbft.id {
-		for i := pbft.h+1; i < pbft.h+1+xSetLen; i++ {
-			idx := uint64(i)
-			_, batch := nv.Xset[idx]
-			if batch == "" {
+		for i := pbft.h+uint64(1); i < upper; i++ {
+			d, ok := nv.Xset[i]
+			if !ok {
+				logger.Critical("view change Xset miss batch number %d", i)
+			}
+			if d == "" {
 				// This should not happen
 				logger.Critical("view change Xset has null batch")
-				return nil
+			}
+			batch, ok := pbft.validatedBatchStore[d]
+			if !ok {
+				logger.Criticalf("Replica %d is missing request batch for seqNo=%d with digest '%s' for assigned prepare after fetching, this indicates a serious bug", pbft.id, i, d)
 			}
 			pbft.recvRequestBatch(batch)
 		}
