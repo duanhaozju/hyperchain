@@ -69,3 +69,7 @@ type CommitOrRollbackBlockEvent struct {
 type RespInvalidTxsEvent struct {
 	Payload []byte
 }
+
+type VCResetEvent struct {
+	SeqNo uint64
+}

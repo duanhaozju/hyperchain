@@ -61,6 +61,9 @@ timeout:
     # Interval to send "keep-alive" null requests.  Set to 0 to disable. If enabled, must be greater than request timeout
     nullrequest: 4s
 
+    # How long to wait for N-f responses after send negotiate view
+    negoView: 6s
+
 ################################################################################
 #
 #   SECTION: EXECUTOR

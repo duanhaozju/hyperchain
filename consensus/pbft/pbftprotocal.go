@@ -98,6 +98,12 @@ type pbftProtocal struct {
 	validateTimer		events.Timer
 	validateTimeout		time.Duration
 
+	// negotiate view
+	inNegoView bool
+	negoViewRspStore 	map[uint64]uint64       // track replicaId, viewNo.
+	negoViewRspTimer 	events.Timer		// track timeout for N-f nego-view responses
+	negoViewRspTimeout	time.Duration           // time limit for N-f nego-view responses
+
 }
 
 type qidx struct {
@@ -251,6 +257,18 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 
 	pbft.pbftManager.Start()
 
+	// negotiate view
+	//if pbft.id == uint64(2) {
+	//	pbft.view = 2
+	//}
+
+	pbft.inNegoView = true
+	pbft.negoViewRspTimeout, err = time.ParseDuration(config.GetString("timeout.negoView"))
+	if err != nil {
+		panic(fmt.Errorf("Cannot parse negotiate view timeout: %s", err))
+	}
+	pbft.negoViewRspTimer = pbftTimerFactory.CreateTimer()
+
 	// batchManager is used to solve batch message, like *Request
 	pbft.batchManager = events.NewManagerImpl()
 	pbft.batchManager.SetReceiver(pbft)
@@ -316,9 +334,10 @@ func (pbft *pbftProtocal) RecvMsg(e []byte) error {
 		return pbft.processStateUpdated(msg)
 	} else if msg.Type == protos.Message_NULL_REQUEST {
 		return pbft.processNullRequest(msg)
+	} else if msg.Type == protos.Message_NEGOTIATE_VIEW {
+		return pbft.negotiateView()
 	}
-
-	logger.Errorf("Unknown recvMsg: %+v", msg)
+		logger.Errorf("Unknown recvMsg: %+v", msg)
 
 	return nil
 }
@@ -430,6 +449,10 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		return pbft.recvReturnRequestBatch(et)
 	case viewChangeQuorumEvent:
 		logger.Debugf("Replica %d received view change quorum, processing new view", pbft.id)
+		if pbft.inNegoView {
+			logger.Debugf("Replica %d try to process viewChangeQuorumEvent, but it's in nego-view", pbft.id)
+			return nil
+		}
 		if pbft.primary(pbft.view) == pbft.id {
 			return pbft.sendNewView()
 		}
@@ -444,6 +467,18 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		logger.Debugf("Replica %d view change resend timer expired before view change quorum was reached, resending", pbft.id)
 		pbft.view-- // sending the view change increments this
 		return pbft.sendViewChange()
+	case *NegotiateView:
+		err = pbft.recvNegoView(et)
+	case *NegotiateViewResponse:
+		err = pbft.recvNegoViewRsp(et)
+	case negoViewRspTimerEvent:
+		if !pbft.inNegoView {
+			logger.Warningf("Replica %d had its nego-view response timer expire but it's not in nego-view, this is benign but may indicate a bug", pbft.id)
+			return nil
+		}
+		logger.Debugf("Replica %d nego-view response timer expired before N-f was reached, resending", pbft.id)
+		pbft.restartNegoView()
+
 	default:
 		logger.Warningf("Replica %d received an unknown message type %T", pbft.id, et)
 	}
@@ -529,7 +564,7 @@ func (pbft *pbftProtocal) processNullRequest(msg *protos.Message) error {
 func (pbft *pbftProtocal) processTxEvent(tx *types.Transaction) error {
 
 	primary := pbft.primary(pbft.view)
-	if !pbft.activeView {
+	if !pbft.activeView || pbft.inNegoView {
 		pbft.reqStore.storeOutstanding(tx)
 	} else if primary != pbft.id {
 		//Broadcast request to primary
@@ -552,35 +587,28 @@ func (pbft *pbftProtocal) processTxEvent(tx *types.Transaction) error {
 }
 
 func (pbft *pbftProtocal) processRequestsDuringViewChange() error {
-	primary := pbft.primary(pbft.view)
-	if pbft.activeView && primary != pbft.id {
-		for pbft.reqStore.outstandingRequests.Len() != 0 {
-
-			temp := pbft.reqStore.outstandingRequests.order.Front().Value
-
-			reqc, ok := interface{}(temp).(requestContainer)
-			if !ok {
-				logger.Error("type assert error:", temp)
-				return nil
-			}
-			req := reqc.req
-			if req != nil {
-				payload, err := proto.Marshal(req)
-				if err != nil {
-					logger.Errorf("ConsensusMessage_TRANSACTION Marshal Error", err)
-					return nil
-				}
-				consensusMsg := &ConsensusMessage{
-					Type:    ConsensusMessage_TRANSACTION,
-					Payload: payload,
-				}
-				pbMsg := consensusMsgHelper(consensusMsg, pbft.id)
-				pbft.helper.InnerUnicast(pbMsg, primary)
-				pbft.reqStore.remove(req)
-			}
-		}
+	if pbft.activeView {
+		pbft.processCachedTransactions()
+	} else {
+		logger.Critical("peer try to processReqDuringViewChange but view change is not finished")
 	}
 	return nil
+}
+
+func (pbft *pbftProtocal) processCachedTransactions() {
+	for pbft.reqStore.outstandingRequests.Len() != 0 {
+		temp := pbft.reqStore.outstandingRequests.order.Front().Value
+		reqc, ok := interface{}(temp).(requestContainer)
+		if !ok {
+			logger.Error("type assert error:", temp)
+			return
+		}
+		req := reqc.req
+		if req != nil {
+			pbft.processTxEvent(req)
+		}
+		pbft.reqStore.remove(req)
+	}
 }
 
 func (pbft *pbftProtocal) leaderProcReq(tx *types.Transaction) error {
@@ -625,6 +653,11 @@ func (pbft *pbftProtocal) sendBatch() error {
 // =============================================================================
 
 func (pbft *pbftProtocal) nullRequestHandler() {
+
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try to nullRequestHandler, but it's in nego-view", pbft.id)
+		return
+	}
 
 	if !pbft.activeView {
 		return
@@ -732,6 +765,23 @@ func (pbft *pbftProtocal) eventToMsg(msg *ConsensusMessage) (interface{}, error)
 			return nil, err
 		}
 		return returnRequestBatchEvent(rrb), nil
+	case ConsensusMessage_NEGOTIATE_VIEW:
+		nv := &NegotiateView{}
+		err := proto.Unmarshal(msg.Payload, nv)
+		if err != nil {
+			logger.Error("Unmarshal error, can not unmarshal ConsensusMessage_NEGOTIATE_VIEW:", err)
+			return nil, err
+		}
+		return nv, nil
+	case ConsensusMessage_NEGOTIATE_VIEW_RESPONSE:
+		nvr := &NegotiateViewResponse{}
+		err := proto.Unmarshal(msg.Payload, nvr)
+		if err != nil {
+			logger.Error("Unmarshal error, can not unmarshal ConsensusMessage_NEGOTIATE_VIEW_RESPONSE:", err)
+			return nil, err
+		}
+		return nvr, nil
+
 	default:
 		return nil, fmt.Errorf("Invalid message: %v", msg)
 	}
@@ -739,6 +789,11 @@ func (pbft *pbftProtocal) eventToMsg(msg *ConsensusMessage) (interface{}, error)
 }
 
 func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
+
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try to recvStateUpdatedEvent, but it's in nego-view", pbft.id)
+		return nil
+	}
 
 	pbft.stateTransferring = false
 	// If state transfer did not complete successfully, or if it did not reach our low watermark, do it again
@@ -769,6 +824,11 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 }
 
 func (pbft *pbftProtocal) recvRequestBatch(reqBatch *TransactionBatch) error {
+
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try to recvRequestBatch, but it's in nego-view", pbft.id)
+		return nil
+	}
 
 	digest := hash(reqBatch)
 	logger.Debugf("Replica %d received request batch %s", pbft.id, digest)
@@ -927,6 +987,11 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 
 func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try recvPrePrepare, but it's in nego-view", pbft.id)
+		return nil
+	}
+
 	//
 	//logger.Notice("receive  pre-prepare first seq is:",preprep.SequenceNumber)
 
@@ -1016,6 +1081,11 @@ func (pbft *pbftProtocal) recvPrepare(prep *Prepare) error {
 
 	logger.Noticef("Replica %d received prepare from replica %d for view=%d/seqNo=%d",
 		pbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber)
+
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try to recvPrepare, but it's in nego-view", pbft.id)
+		return nil
+	}
 
 	if pbft.primary(prep.View) == prep.ReplicaId {
 		logger.Warningf("Replica %d received prepare from primary, ignoring", pbft.id)
@@ -1125,6 +1195,11 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 
 	logger.Debugf("Replica %d received commit from replica %d for view=%d/seqNo=%d",
 		pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber)
+
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try to recvCommit, but it's in nego-view", pbft.id)
+		return nil
+	}
 
 	if !pbft.inWV(commit.View, commit.SequenceNumber) {
 		if commit.SequenceNumber != pbft.h && !pbft.skipInProgress {
@@ -1324,6 +1399,11 @@ func (pbft *pbftProtocal) recvCheckpoint(chkpt *Checkpoint) events.Event {
 	logger.Infof("Replica %d received checkpoint from replica %d, seqNo %d, digest %s",
 		pbft.id, chkpt.ReplicaId, chkpt.SequenceNumber, chkpt.Id)
 
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try to recvCheckpoint, but it's in nego-view", pbft.id)
+		return nil
+	}
+
 	if pbft.weakCheckpointSetOutOfRange(chkpt) {
 		return nil
 	}
@@ -1427,6 +1507,12 @@ func (pbft *pbftProtocal) fetchRequestBatches() (err error) {
 }
 
 func (pbft *pbftProtocal) recvFetchRequestBatch(fr *FetchRequestBatch) (err error) {
+
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try to recvFetchRequestBatch, but it's in nego-view", pbft.id)
+		return nil
+	}
+
 	digest := fr.BatchDigest
 	if _, ok := pbft.validatedBatchStore[digest]; !ok {
 		return nil // we don't have it either
@@ -1451,6 +1537,11 @@ func (pbft *pbftProtocal) recvFetchRequestBatch(fr *FetchRequestBatch) (err erro
 }
 
 func (pbft *pbftProtocal) recvReturnRequestBatch(reqBatch *TransactionBatch) events.Event {
+
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try to recvReturnRequestBatch, but it's in nego-view", pbft.id)
+		return nil
+	}
 
 	digest := hash(reqBatch)
 	if _, ok := pbft.missingReqBatches[digest]; !ok {
@@ -1735,4 +1826,125 @@ func (pbft *pbftProtocal) updateViewChangeSeqNo() {
 	// Ensure the view change always occurs at a checkpoint boundary
 	pbft.viewChangeSeqNo = pbft.seqNo + pbft.viewChangePeriod*pbft.K - pbft.seqNo%pbft.K
 	logger.Debugf("Replica %d updating view change sequence number to %d", pbft.id, pbft.viewChangeSeqNo)
+}
+
+func (pbft *pbftProtocal) negotiateView() error {
+	if !pbft.inNegoView {
+		logger.Critical("Replica %d try to negotiateView, but it's not inNegoView. This indicates a bug")
+		return nil
+	}
+
+	logger.Noticef("Replica %d now negotiate view", pbft.id)
+
+	pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
+	pbft.negoViewRspStore = make(map[uint64]uint64)
+
+	negoViewMsg := &NegotiateView{
+		ReplicaId:pbft.id,
+	}
+	payload, err := proto.Marshal(negoViewMsg)
+	if err!=nil {
+		logger.Errorf("Marshal NegotiateView Error!")
+		return nil
+	}
+	consensusMsg := &ConsensusMessage{
+		Type: ConsensusMessage_NEGOTIATE_VIEW,
+		Payload: payload,
+	}
+	msg := consensusMsgHelper(consensusMsg, pbft.id)
+	pbft.helper.InnerBroadcast(msg)
+
+	nvr := &NegotiateViewResponse{
+		ReplicaId:pbft.id,
+		View:pbft.view,
+	}
+	pbft.recvNegoViewRsp(nvr)
+	return nil
+}
+
+func (pbft *pbftProtocal) recvNegoView(nv *NegotiateView) error {
+	if !pbft.activeView {
+		return nil
+	}
+
+	sender := nv.ReplicaId
+	logger.Noticef("Replica %d receive negotiate view from %d", pbft.id, sender)
+	negoViewRsp := &NegotiateViewResponse{
+		ReplicaId:pbft.id,
+		View:pbft.view,
+	}
+	payload, err := proto.Marshal(negoViewRsp)
+	if err!=nil {
+		logger.Errorf("Marshal NegotiateViewResponse Error!")
+		return nil
+	}
+	consensusMsg := &ConsensusMessage{
+		Type: ConsensusMessage_NEGOTIATE_VIEW_RESPONSE,
+		Payload: payload,
+	}
+	msg := consensusMsgHelper(consensusMsg, pbft.id)
+	pbft.helper.InnerUnicast(msg, sender)
+	return nil
+}
+
+func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) error {
+	if !pbft.inNegoView {
+		logger.Noticef("Replica %d already finished nego-view, ignore incoming nego-view response", pbft.id)
+		return nil
+	}
+
+	rspId, rspView := nvr.ReplicaId, nvr.View
+	if _, ok := pbft.negoViewRspStore[rspId]; ok {
+		logger.Debugf("Already recv view number from %d, ignore it", rspId)
+		return nil
+	}
+
+	logger.Noticef("Replica %d receive nego-view response from %d, view: %d", pbft.id, rspId, rspView)
+
+	pbft.negoViewRspStore[rspId] = rspView
+
+	if len(pbft.negoViewRspStore) >= pbft.N-pbft.f {
+
+		// can we find same view from 2f+1 peers?
+		viewCount := make(map[uint64]uint64)
+		var theView uint64
+		canFind := false
+		for _, view := range pbft.negoViewRspStore {
+			if _, ok := viewCount[view]; ok {
+				viewCount[view]++
+			} else {
+				viewCount[view] = uint64(1)
+			}
+			if viewCount[view] >= uint64(2*pbft.f+1) {
+				// yes we find the view
+				theView = view
+				canFind = true
+				break
+			}
+		}
+		if canFind {
+			pbft.negoViewRspTimer.Stop()
+			pbft.view = theView
+			pbft.inNegoView = false
+			logger.Noticef("Replica %d finished negotiating view: %d", pbft.id, pbft.view)
+			pbft.processRequestsDuringNegoView()
+		} else {
+			pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
+			logger.Noticef("pbft recv at least N-f nego-view responses, but cannot find same view from 2f+1.")
+		}
+	}
+	return nil
+}
+
+func (pbft *pbftProtocal) restartNegoView() {
+	logger.Noticef("Replica %d restart negotiate view", pbft.id)
+	pbft.negotiateView()
+}
+
+func (pbft *pbftProtocal) processRequestsDuringNegoView() {
+	if !pbft.inNegoView {
+		pbft.processCachedTransactions()
+	} else {
+		logger.Critical("peer try to processRequestsDuringNegoView but nego-view is not finished")
+	}
 }

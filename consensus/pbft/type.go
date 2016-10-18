@@ -35,3 +35,5 @@ type stateUpdateTarget struct {
 	checkpointMessage
 	replicas []uint64
 }
+
+type negoViewRspTimerEvent struct{}

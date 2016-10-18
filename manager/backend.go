@@ -12,7 +12,11 @@ import (
 
 	"hyperchain/event"
 	"hyperchain/accounts"
+	"hyperchain/protos"
 
+	"time"
+	"github.com/golang/protobuf/proto"
+	"fmt"
 )
 
 // init protocol manager params and start
@@ -31,6 +35,22 @@ am *accounts.AccountManager, commonHash crypto.CommonHash,path string, nodeId in
 			//protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, fetcher, consenter, encryption, commonHash)
 			protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, fetcher, consenter, am, commonHash)
 			protocolManager.Start()
+			// consensusEvent NegotiateView
+			negoView := &protos.Message{
+				Type:protos.Message_NEGOTIATE_VIEW,
+				Timestamp:time.Now().UnixNano(),
+				Payload:nil,
+				Id:0,
+			}
+			msg, err := proto.Marshal(negoView)
+			if err!=nil {
+				fmt.Println("nego view start")
+			}
+			fmt.Println("trigger negotiate view")
+			eventMux.Post(event.ConsensusEvent{
+				Payload:msg,
+			})
+
 			//start server
 			return protocolManager
 

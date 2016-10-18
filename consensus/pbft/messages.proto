@@ -33,6 +33,8 @@ message consensus_message {
         NEW_VIEW = 7;
         FRTCH_REQUEST_BATCH = 8;
         RETURN_REQUEST_BATCH = 9;
+        NEGOTIATE_VIEW = 10;
+        NEGOTIATE_VIEW_RESPONSE = 11;
     }
     Type type = 1;
     bytes payload = 2;
@@ -111,6 +113,15 @@ message new_view {
 message fetch_request_batch {
     string batch_digest = 1;
     uint64 replica_id = 2;
+}
+
+message negotiate_view {
+    uint64 replica_id = 1;
+}
+
+message negotiate_view_response {
+    uint64 replica_id = 1;
+    uint64 view = 2;
 }
 
 // consensus metadata

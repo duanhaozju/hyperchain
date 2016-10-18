@@ -27,6 +27,7 @@ type Stack interface {
 	Execute(seqNo uint64, hash string, flag bool, isPrimary bool, time int64) error
 	UpdateState(updateState *pb.UpdateStateMessage) error
 	ValidateBatch(txs []*types.Transaction, seqNo uint64, view uint64, isPrimary bool) error
+	VcReset(seqNo uint64) error
 }
 
 // InnerBroadcast broadcast the consensus message between vp nodes
@@ -117,6 +118,18 @@ func (h *helper) ValidateBatch(txs []*types.Transaction, seqNo uint64, view uint
 
 	// Post the event to outer
 	h.msgQ.Post(validateEvent)
+
+	return nil
+}
+
+// VcReset reset vid when view change is done
+func (h *helper) VcReset(seqNo uint64) error {
+	vcResetEvent := event.VCResetEvent{
+		SeqNo: seqNo,
+	}
+
+	// No need to "go h.msgQ.Post...", we'll wait for it to return
+	h.msgQ.Post(vcResetEvent)
 
 	return nil
 }

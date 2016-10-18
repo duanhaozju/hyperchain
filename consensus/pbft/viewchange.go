@@ -93,6 +93,11 @@ func (pbft *pbftProtocal) calcQSet() map[qidx]*ViewChange_PQ {
 
 func (pbft *pbftProtocal) sendViewChange() events.Event {
 
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try to send view change, but it's in nego-view", pbft.id)
+		return nil
+	}
+
 	pbft.stopTimer()
 
 	delete(pbft.newViewStore, pbft.view)
@@ -167,6 +172,11 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 	logger.Infof("Replica %d received view-change from replica %d, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		pbft.id, vc.ReplicaId, vc.View, vc.H, len(vc.Cset), len(vc.Pset), len(vc.Qset))
 
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try to recvViewChange, but it's in nego-view", pbft.id)
+		return nil
+	}
+
 	// TODO verify
 	//if err := pbft.verify(vc); err != nil {
 	//	logger.Warningf("Replica %d found incorrect signature in view-change message: %s", pbft.id, err)
@@ -238,6 +248,11 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 
 func (pbft *pbftProtocal) sendNewView() events.Event {
 
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try to sendNewView, but it's in nego-view", pbft.id)
+		return nil
+	}
+
 	if _, ok := pbft.newViewStore[pbft.view]; ok {
 		logger.Debugf("Replica %d already has new view in store for view %d, skipping", pbft.id, pbft.view)
 		return nil
@@ -286,6 +301,12 @@ func (pbft *pbftProtocal) sendNewView() events.Event {
 func (pbft *pbftProtocal) recvNewView(nv *NewView) events.Event {
 	logger.Infof("Replica %d received new-view %d",
 		pbft.id, nv.View)
+
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try to recvNewView, but it's in nego-view", pbft.id)
+		return nil
+	}
+
 	if !(nv.View > 0 && nv.View >= pbft.view && pbft.primary(nv.View) == nv.ReplicaId && pbft.newViewStore[nv.View] == nil) {
 		logger.Infof("Replica %d rejecting invalid new-view from %d, v:%d",
 			pbft.id, nv.ReplicaId, nv.View)
@@ -525,6 +546,8 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	pbft.seqNo = pbft.h
 	pbft.vid = pbft.h
 	pbft.lastVid = pbft.h
+	backendVid := uint64(pbft.vid+1)
+	pbft.helper.VcReset(backendVid)
 	xSetLen := len(nv.Xset)
 	upper := uint64(xSetLen) + pbft.h + uint64(1)
 	if pbft.primary(pbft.view) == pbft.id {
