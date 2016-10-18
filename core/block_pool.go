@@ -456,11 +456,11 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 		return
 	}
 	// (1) Check SeqNo
-	if validationEvent.SeqNo < demandSeqNo {
+	if validationEvent.SeqNo < pool.demandSeqNo {
 		// Receive repeat ValidationEvent
 		log.Error("Receive Repeat ValidationEvent, ", validationEvent.SeqNo)
 		return
-	} else if validationEvent.SeqNo == demandSeqNo {
+	} else if validationEvent.SeqNo == pool.demandSeqNo {
 		// Process
 		pool.seqNoMu.Lock()
 		if _, success := pool.PreProcess(validationEvent, commonHash, encryption); success {
@@ -602,7 +602,7 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
 
-		meta := types.TransactionMeta{
+		meta := &types.TransactionMeta{
 			BlockIndex: seqNo,
 			Index:      int64(i),
 		}
@@ -694,19 +694,21 @@ func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
 }
 
 func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
-	tmpDemandNumber = pool.demandNumber
-	tmpDemandSeqNo = pool.demandSeqNo
+	tmpDemandNumber := pool.demandNumber
 	// 1. Reset demandNumber , demandSeqNo and lastValidationState
 	pool.demandNumber = ev.SeqNo
 	pool.demandSeqNo = ev.SeqNo
 	pool.maxSeqNo = ev.SeqNo - 1
+	db, _ := hyperdb.GetLDBDatabase()
 	block, _ := GetBlockByNumber(db, ev.SeqNo-1)
 	pool.lastValidationState = common.BytesToHash(block.MerkleRoot)
 	// 2. Delete Invalid Stuff
-	db, _ := hyperdb.GetLDBDatabase()
 	for i := pool.demandNumber; i <= tmpDemandNumber; i += 1 {
 		// delete tx, txmeta and receipt
-		block := GetBlockByNumber(i)
+		block, err := GetBlockByNumber(db, i)
+		if err != nil {
+			log.Errorf("ViewChange, miss block %d ,error msg %s", i, err.Error())
+		}
 		for _, tx := range block.Transactions {
 			if err := db.Delete(append(transactionPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
 				log.Errorf("ViewChange, delete useless tx in block %d failed, error msg %s", i, err.Error())
@@ -719,7 +721,7 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 			}
 		}
 		// delete block
-		if err := DeleteBlockByNum(i); err != nil {
+		if err := DeleteBlockByNum(db, i); err != nil {
 			log.Errorf("ViewChange, delete useless block %d failed, error msg %s", i, err.Error())
 		}
 	}
@@ -727,14 +729,14 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	// 3. Delete from blockcache
 	all := blockcache.All()
 	for _, record := range all {
-		for _, tx := range record.ValidTxs {
-			if err := db.Delete(append(transactionPrefix, tx.Tx.GetTransactionHash().Bytes()...)); err != nil {
+		for i, tx := range record.ValidTxs {
+			if err := db.Delete(append(transactionPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
 				log.Errorf("ViewChange, delete useless tx in block %d failed, error msg %s", i, err.Error())
 			}
-			if err := db.Delete(append(receiptsPrefix, tx.Tx.GetTransactionHash().Bytes()...)); err != nil {
+			if err := db.Delete(append(receiptsPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
 				log.Errorf("ViewChange, delete useless receipt in block %d failed, error msg %s", i, err.Error())
 			}
-			if err := db.Delete(append(txMetaSuffix, tx.Tx.GetTransactionHash().Bytes()...)); err != nil {
+			if err := db.Delete(append(txMetaSuffix, tx.GetTransactionHash().Bytes()...)); err != nil {
 				log.Errorf("ViewChange, delete useless txmeta in block %d failed, error msg %s", i, err.Error())
 			}
 		}
