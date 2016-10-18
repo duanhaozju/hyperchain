@@ -627,7 +627,7 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	}
 */
 	pbft.startTimerIfOutstandingRequests()
-	logger.Debugf("Replica %d done cleaning view change artifacts, calling into consumer", pbft.id)
+	logger.Errorf("Replica %d done cleaning view change artifacts, calling into consumer", pbft.id)
 
 	return viewChangedEvent{}
 }

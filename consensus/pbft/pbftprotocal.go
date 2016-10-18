@@ -458,6 +458,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		}
 		return pbft.processNewView()
 	case nullRequestEvent:
+		logger.Error("receive null request")
 		pbft.nullRequestHandler()
 	case viewChangeResendTimerEvent:
 		if pbft.activeView {
@@ -1227,6 +1228,8 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 	cert.commitCount++
 
 	if pbft.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
+		logger.Error("receive stop timer seq num is ",commit.SequenceNumber)
+
 		pbft.stopTimer()
 		if !cert.sentExecute && cert.validated {
 			pbft.lastNewViewTimeout = pbft.newViewTimeout
