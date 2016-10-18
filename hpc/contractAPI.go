@@ -8,7 +8,9 @@ import (
 	"hyperchain/manager"
 	"hyperchain/core/types"
 	"hyperchain/event"
-	"errors"
+	"hyperchain/hyperdb"
+	"fmt"
+	"hyperchain/core/state"
 )
 
 type PublicContractAPI struct {
@@ -25,8 +27,7 @@ func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager) 
 
 func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, error) {
 	var tx *types.Transaction
-	var found bool
-
+	//var found bool
 	realArgs := prepareExcute(args)
 
 	payload := common.FromHex(realArgs.Payload)
@@ -52,27 +53,20 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 	}
 
-	if contract.pm == nil {
-
-		// Test environment
-		found = true
-	} else {
-
-		// Development environment
-		am := contract.pm.AccountManager
-		_, found = am.Unlocked[args.From]
-
-		//// TODO replace password with test value
-		//signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), "123")
-		//if err != nil {
-		//	log.Errorf("Sign(tx) error :%v", err)
-		//}
-		//tx.Signature = signature
-
-	}
+	//if contract.pm == nil {
+	//
+	//	// Test environment
+	//	found = true
+	//} else {
+	//
+	//	// Development environment
+	//	am := contract.pm.AccountManager
+	//	_, found = am.Unlocked[args.From]
+	//
+	//}
 	//am := tran.pm.AccountManager
 
-	if found == true {
+	//if found == true {
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		tx.Timestamp = time.Now().UnixNano()
 
@@ -87,9 +81,9 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
-	} else {
-		return common.Hash{}, errors.New("account don't unlock")
-	}
+	//} else {
+	//	return common.Hash{}, errors.New("account don't unlock")
+	//}
 
 	time.Sleep(2000 * time.Millisecond)
 	/*
@@ -110,11 +104,12 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 type CompileCode struct{
 	Abi []string
 	Bin []string
+	Types []string
 }
 
 // ComplieContract complies contract to ABI
 func (contract *PublicContractAPI) CompileContract(ct string) (*CompileCode,error){
-	abi, bin, err := compiler.CompileSourcefile(ct)
+	abi, bin, names, err := compiler.CompileSourcefile(ct)
 
 	if err != nil {
 		return nil, err
@@ -123,6 +118,7 @@ func (contract *PublicContractAPI) CompileContract(ct string) (*CompileCode,erro
 	return &CompileCode{
 		Abi: abi,
 		Bin: bin,
+		Types: names,
 	}, nil
 }
 
@@ -131,7 +127,33 @@ func (contract *PublicContractAPI) DeployContract(args SendTxArgs) (common.Hash,
 	return deployOrInvoke(contract, args)
 }
 
-// InvokeContract invoke contract.
+// InvokeContract invokes contract.
 func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash, error) {
 	return deployOrInvoke(contract, args)
 }
+
+// GetCode returns the code from the given contract address and block number.
+func (contract *PublicContractAPI) GetCode(addr common.Address, n Number) (string, error) {
+
+	var blk *BlockResult
+
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Errorf("Open database error: %v", err)
+		return "", err
+	}
+
+	if blk, err = getBlockByNumber(n); err != nil {
+		return "", err
+	}
+
+	stateDB, err := state.New(blk.MerkleRoot, db)
+	if err != nil {
+		log.Errorf("Get stateDB error, %v", err)
+		return "", err
+	}
+
+	return fmt.Sprintf(`0x%x`, stateDB.GetCode(addr)), nil
+}
+
+

@@ -1100,7 +1100,9 @@ func (pbft *pbftProtocal) sendCommit(digest string, v uint64, n uint64) error {
 			ReplicaId:      pbft.id,
 		}
 		cert.sentCommit = true
-		pbft.recvCommit(commit)
+
+
+		//pbft.recvCommit(commit)
 		payload, err := proto.Marshal(commit)
 		if err != nil {
 			logger.Errorf("ConsensusMessage_COMMIT Marshal Error", err)
@@ -1110,6 +1112,7 @@ func (pbft *pbftProtocal) sendCommit(digest string, v uint64, n uint64) error {
 			Type:    ConsensusMessage_COMMIT,
 			Payload: payload,
 		}
+		go pbft.postPbftEvent(consensusMsg)
 		msg := consensusMsgHelper(consensusMsg, pbft.id)
 		return pbft.helper.InnerBroadcast(msg)
 	}

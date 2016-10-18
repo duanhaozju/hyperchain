@@ -186,19 +186,20 @@ func PutBlockTx(db hyperdb.Database, commonHash crypto.CommonHash, key []byte, t
 	}
 	keyFact := append(blockPrefix, key...)
 	batch := db.NewBatch()
-	err = batch.Put(keyFact, data)
-	/*if err := db.Put(keyFact, data); err != nil {
+	if err := batch.Put(keyFact, data); err != nil {
 		return err
-	}*/
+	}
 	keyNum := strconv.FormatInt(int64(t.Number), 10)
 	//err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
 
-	err = batch.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
+	//err = batch.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
+	if err := batch.Put(append(blockNumPrefix, keyNum...), t.BlockHash); err != nil {
+		return err
+	}
 	//put tx<-->block num,hash,index
 
-	/*for _,tx:=range t.Transactions{
-	 */ /*meta := struct {
-	>>>>>>> ee798cd8d726d02fef20ba266f17e5c034e42abe
+	for i,tx:=range t.Transactions{
+	  meta := struct {
 				BlockHash  common.Hash
 				BlockIndex uint64
 				Index      uint64
@@ -207,36 +208,25 @@ func PutBlockTx(db hyperdb.Database, commonHash crypto.CommonHash, key []byte, t
 				BlockIndex: t.Number,
 				Index:      uint64(i),
 			}
-			keyTxBlock := append(tx.Hash(commonHash).Bytes(), txMetaSuffix...)
-			dataTxBlock, err := json.Marshal(meta)
-			if err != nil {
-				return err
-			}
-	<<<<<<< HEAD
-			err = batch.Put(keyTxBlock, dataTxBlock)
-	=======
-			err = batch.Put(keyTxBlock,dataTxBlock)*/ /*
-	 */ /*keyTxBlock := append(tx.Hash(commonHash).Bytes(),txMetaSuffix...)
-	err:=batch.Put(keyTxBlock,t.BlockHash)*/ /*
-				txKey := tx.Hash(commonHash).Bytes()
-				txKeyFact := append(transactionPrefix, txKey...)
-				txValue, err := proto.Marshal(tx)
-		>>>>>>> ee798cd8d726d02fef20ba266f17e5c034e42abe
-				if err != nil {
-					err = batch.Put(keyTxBlock, dataTxBlock)
-					txKey := tx.Hash(commonHash).Bytes()
-					txKeyFact := append(transactionPrefix, txKey...)
-					txValue, _ := proto.Marshal(tx)
-					batch.Put(txKeyFact, txValue)
-				}
+	keyTxBlock := append(tx.Hash(commonHash).Bytes(), txMetaSuffix...)
+	dataTxBlock, err := json.Marshal(meta)
+	if err != nil {
+		return err
+	}
+	err = batch.Put(keyTxBlock,dataTxBlock)
 
-		<<<<<<< HEAD
-			}
-		=======
-				//if err !=nil{
-				//	return err
-				//}
-			}*/
+	//txKey := tx.Hash(commonHash).Bytes()
+	//txKeyFact := append(transactionPrefix, txKey...)
+	//txValue, err := proto.Marshal(tx)
+	//if err != nil {
+	//	batch.Put(txKeyFact, txValue)
+	//}
+
+}
+	//if err !=nil{
+	//	return err
+	//}
+
 	return batch.Write()
 }
 
@@ -269,13 +259,18 @@ func DeleteBlock(db hyperdb.Database, key []byte) error {
 	keyFact := append(blockPrefix, key...)
 	return db.Delete(keyFact)
 }
+//delete block data and block.num<--->block.hash
 func DeleteBlockByNum(db hyperdb.Database, blockNum uint64) error {
 	hash, err := GetBlockHash(db, blockNum)
 	if err != nil {
 		return err
 	}
 	keyFact := append(blockPrefix, hash...)
-	return db.Delete(keyFact)
+	if err:= db.Delete(keyFact);err!=nil{
+		return err
+	}
+	keyNum := strconv.FormatInt(int64(blockNum),10)
+	return db.Delete(append(blockNumPrefix,keyNum...))
 }
 
 //-- --------------------- Block END ----------------------------------
@@ -505,6 +500,18 @@ func UpdateChainByViewChange(height uint64, latestHash []byte) error {
 		return err
 	}
 	return putChain(db, &memChainMap.data)
+}
+
+//GetInvaildTxErrType gets ErrType of invalid tx
+func GetInvaildTxErrType(db hyperdb.Database,key []byte) (types.InvalidTransactionRecord_ErrType,error){
+	var invalidTx types.InvalidTransactionRecord
+	keyFact := append(invalidTransactionPrefix,key...)
+	data,err := db.Get(keyFact)
+	if len(data)==0{
+		return -1,err
+	}
+	err = proto.Unmarshal(data, &invalidTx)
+	return invalidTx.ErrType,err
 }
 
 // getChain get chain from database

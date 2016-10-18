@@ -50,7 +50,7 @@ timeout:
     request: 3s
 
     # How long may a validate Txs process will take by outter
-    validate: 0.5s
+    validate: 1s
 
     # How long may a view change take
     viewchange: 4s
