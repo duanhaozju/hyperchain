@@ -34,26 +34,26 @@ const (
 
 var (
 	tempReceiptsMap map[uint64]types.Receipts
-	public_batch    hyperdb.Batch
-	batchsize       = 0
+	public_batch hyperdb.Batch
+	batchsize = 0
 )
 
 type BlockPool struct {
-	demandNumber uint64
-	demandSeqNo  uint64
-	maxNum       uint64
-	maxSeqNo     uint64
+	demandNumber        uint64
+	demandSeqNo         uint64
+	maxNum              uint64
+	maxSeqNo            uint64
 
-	queue           map[uint64]*types.Block
-	validationQueue map[uint64]event.ExeTxsEvent
+	queue               map[uint64]*types.Block
+	validationQueue     map[uint64]event.ExeTxsEvent
 
-	consenter consensus.Consenter
-	eventMux  *event.TypeMux
-	events    event.Subscription
-	mu        sync.RWMutex
-	seqNoMu   sync.RWMutex
-	stateLock sync.Mutex
-	wg        sync.WaitGroup // for shutdown sync
+	consenter           consensus.Consenter
+	eventMux            *event.TypeMux
+	events              event.Subscription
+	mu                  sync.RWMutex
+	seqNoMu             sync.RWMutex
+	stateLock           sync.Mutex
+	wg                  sync.WaitGroup // for shutdown sync
 
 	lastValidationState common.Hash
 }
@@ -92,8 +92,8 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *Block
 // abandon this transaction. And this method will return the new transactions and its' hash
 func (pool *BlockPool) ExecTxs(sequenceNum uint64, transactions []types.Transaction) ([]types.Transaction, common.Hash, error) {
 	var (
-		receipts        types.Receipts
-		env             = make(map[string]string)
+		receipts types.Receipts
+		env = make(map[string]string)
 		newTransactions []types.Transaction
 	)
 
@@ -127,7 +127,7 @@ func (pool *BlockPool) ExecTxs(sequenceNum uint64, transactions []types.Transact
 }
 
 func (pool *BlockPool) CommitOrRollbackBlockEvent(sequenceNum uint64, transactions []types.Transaction,
-	timestamp int64, commitTime int64, CommitStatus bool) error {
+timestamp int64, commitTime int64, CommitStatus bool) error {
 	// 1.init a new block
 	newBlock := new(types.Block)
 	for _, tx := range transactions {
@@ -203,6 +203,7 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 
 	if currentChain.Height >= block.Number {
 		//todo view change ,delete block and rewrite block
+		// TODO Clear all stateobject cache
 
 		db, err := hyperdb.GetLDBDatabase()
 		if err != nil {
@@ -211,7 +212,7 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 
 		block, _ := GetBlockByNumber(db, block.Number)
 		//rollback chain height,latestHash
-		UpdateChainByViewChange(block.Number-1, block.ParentHash)
+		UpdateChainByViewChange(block.Number - 1, block.ParentHash)
 		keyNum := strconv.FormatInt(int64(block.Number), 10)
 		DeleteBlock(db, append(blockNumPrefix, keyNum...))
 		WriteBlock(block, commonHash)
@@ -227,7 +228,8 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 		pool.mu.RUnlock()
 
 		for i := block.Number + 1; i <= pool.maxNum; i += 1 {
-			if _, ok := pool.queue[i]; ok { //存在}
+			if _, ok := pool.queue[i]; ok {
+				//存在}
 
 				pool.mu.RLock()
 				pool.demandNumber += 1
@@ -275,6 +277,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash) {
 	// update our stateObject and statedb to blockchain
 
 	newChain := GetChainCopy()
+
 	log.Notice("Block number", newChain.Height)
 	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
 
@@ -290,16 +293,23 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash) {
 
 		keyFact := append(blockPrefix, block.BlockHash...)
 		err = db.Put(keyFact,data)
-	*/ /*if err := db.Put(keyFact, data); err != nil {
-		return err
-	}*/ /*
-		keyNum := strconv.FormatInt(int64(block.Number), 10)
-		//err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
+	*/
+	/*if err := db.Put(keyFact, data); err != nil {
+		       return err
+	       }*/
+	/*
+		       keyNum := strconv.FormatInt(int64(block.Number), 10)
+		       //err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
 
-		err = db.Put(append(blockNumPrefix, keyNum...),block.BlockHash)*/
+		       err = db.Put(append(blockNumPrefix, keyNum...),block.BlockHash)*/
 
 	PutBlockTx(db, commonHash, block.BlockHash, block)
-	if block.Number%10 == 0 && block.Number != 0 {
+	log.Error("blocl num is ",block.Number)
+	log.Error("blocl merkle root is ",block.MerkleRoot)
+	log.Error("blocl Timestamp is ",block.Timestamp)
+	log.Error("blocl hash is ",block.BlockHash)
+
+	if block.Number % 10 == 0 && block.Number != 0 {
 		WriteChainChan()
 	}
 	//TxSum.Add(TxSum,big.NewInt(int64(len(block.Transactions))))
@@ -391,16 +401,18 @@ func ProcessBlock(block *types.Block, commonHash crypto.CommonHash, commitTime i
 
 	keyFact := append(blockPrefix, block.BlockHash...)
 	err = batch.Put(keyFact,data)
-	*/ /*if err := db.Put(keyFact, data); err != nil {
-		return err
-	}*/ /*
-		keyNum := strconv.FormatInt(int64(block.Number), 10)
-		//err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
+	*/
+	/*if err := db.Put(keyFact, data); err != nil {
+		       return err
+	       }*/
+	/*
+		       keyNum := strconv.FormatInt(int64(block.Number), 10)
+		       //err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
 
-		err = batch.Put(append(blockNumPrefix, keyNum...),block.BlockHash)*/
+		       err = batch.Put(append(blockNumPrefix, keyNum...),block.BlockHash)*/
 	//batch.Write()
 	end := time.Now().UnixNano()
-	log.Notice("write time is ", (end-begin)/int64(time.Millisecond))
+	log.Notice("write time is ", (end - begin) / int64(time.Millisecond))
 	//WriteBlockInDB(root,block,commitTime,commonHash)
 
 	/*
@@ -445,8 +457,7 @@ func WriteBlockInDB(root common.Hash, block *types.Block, commitTime int64, comm
 	batch.Write()
 }
 
-func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
-	log.Notice("[Validate]begin", validationEvent.SeqNo)
+func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption) {
 	if validationEvent.SeqNo > pool.maxSeqNo {
 		pool.maxSeqNo = validationEvent.SeqNo
 	}
@@ -457,19 +468,18 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
 	}
 	// (1) Check SeqNo
 	if validationEvent.SeqNo < pool.demandSeqNo {
-		// receive repeat ValidationEvent
-		log.Error("Receive Repeat ValidationEvent, ", validationEvent.SeqNo)
+		// Receive repeat ValidationEvent
+		log.Error("Receive Repeat ValidationEvent,seqno less than demandseqNo, ", validationEvent.SeqNo)
 		return
 	} else if validationEvent.SeqNo == pool.demandSeqNo {
 		// Process
-		log.Notice("Get Demand SeqNo")
-		pool.seqNoMu.RLock()
-		if _, success := pool.PreProcess(validationEvent); success {
+		pool.seqNoMu.Lock()
+		if _, success := pool.PreProcess(validationEvent, commonHash, encryption); success {
 			pool.demandSeqNo += 1
 			log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
 		}
-		pool.seqNoMu.RUnlock()
-		// remove older event
+		pool.seqNoMu.Unlock()
+		// Remove useless event
 		for i, _ := range pool.validationQueue {
 			if i <= validationEvent.SeqNo {
 				delete(pool.validationQueue, i)
@@ -478,40 +488,41 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent) {
 		// Process remain event
 		for i := validationEvent.SeqNo + 1; i <= pool.maxSeqNo; i += 1 {
 			if _, ok := pool.validationQueue[i]; ok {
-				pool.seqNoMu.RLock()
+				pool.seqNoMu.Lock()
 				// Process
-				if _, success := pool.PreProcess(pool.validationQueue[i]); success {
+				if _, success := pool.PreProcess(pool.validationQueue[i], commonHash, encryption); success {
 					pool.demandSeqNo += 1
 					log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
 				}
 				delete(pool.validationQueue, i)
-				pool.seqNoMu.RUnlock()
+				pool.seqNoMu.Unlock()
 			} else {
 				break
 			}
 		}
 		return
 	} else {
-		log.Notice("Receive ValidationEvent which is not demand, ", validationEvent.SeqNo)
+		log.Notice("Receive ValidationEvent which is not demand, ", validationEvent.SeqNo, "save into cache temperarily")
 		pool.validationQueue[validationEvent.SeqNo] = validationEvent
 	}
 }
 
-// check sign and balance
-func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, bool) {
+func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption) (error, bool) {
+	// check sign and balance
 	var validTxSet []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
 	if validationEvent.IsPrimary {
-		validTxSet, invalidTxSet = pool.PreCheck(validationEvent.Transactions)
+		validTxSet, invalidTxSet = pool.PreCheck(validationEvent.Transactions, commonHash, encryption)
 	} else {
 		validTxSet = validationEvent.Transactions
 	}
 	//check balance
 	err, _, merkleRoot, txRoot, receiptRoot, validTxSet, invalidTxSet := pool.ProcessBlock1(validTxSet, invalidTxSet, validationEvent.SeqNo)
 	if err != nil {
+		// TODO Clear stateobject cache
 		return err, false
 	}
-	hash := crypto.NewKeccak256Hash("Keccak256").Hash([]interface{}{
+	hash := commonHash.Hash([]interface{}{
 		merkleRoot,
 		txRoot,
 		receiptRoot,
@@ -533,19 +544,18 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, boo
 		SeqNo:        validationEvent.SeqNo,
 		View:         validationEvent.View,
 		Hash:         hash.Hex(),
+		Timestamp:    validationEvent.Timestamp,
 	})
 	return nil, true
 }
-//check sign
-func (pool *BlockPool) PreCheck(txs []*types.Transaction) ([]*types.Transaction, []*types.InvalidTransactionRecord) {
+func (pool *BlockPool) PreCheck(txs []*types.Transaction, commonHash crypto.CommonHash, encryption crypto.Encryption) ([]*types.Transaction, []*types.InvalidTransactionRecord) {
+	//check sign
 	var validTxSet []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
-	encryption := crypto.NewEcdsaEncrypto("ecdsa")
-	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	// (1) check signature for each transaction
 	for _, tx := range txs {
-		if !tx.ValidateSign(encryption, kec256Hash) {
-			log.Info("Validation, found invalid signature, send from :", tx.Id)
+		if !tx.ValidateSign(encryption, commonHash) {
+			log.Notice("Validation, found invalid signature, send from :", tx.Id)
 			invalidTxSet = append(invalidTxSet, &types.InvalidTransactionRecord{
 				Tx:      tx,
 				ErrType: types.InvalidTransactionRecord_SIGFAILED,
@@ -570,10 +580,10 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 	}
 	txTrie, _ := trie.New(common.Hash{}, db)
 	receiptTrie, _ := trie.New(common.Hash{}, db)
-	log.Notice("Before Process, lastValidationState", pool.lastValidationState.Hex())
+	log.Debug("Before Process, lastValidationState", pool.lastValidationState.Hex())
 	statedb, err := state.New(pool.lastValidationState, db)
 	if err != nil {
-		log.Notice("New StateDB ERROR")
+		log.Error("New StateDB ERROR")
 		return err, nil, nil, nil, nil, nil, invalidTxs
 	}
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
@@ -601,6 +611,15 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 
 		receiptValue, _ := proto.Marshal(receipt)
 		if err := public_batch.Put(append(receiptsPrefix, receipt.TxHash...), receiptValue); err != nil {
+			return err, nil, nil, nil, nil, nil, invalidTxs
+		}
+
+		meta := &types.TransactionMeta{
+			BlockIndex: seqNo,
+			Index:      int64(i),
+		}
+		metaValue, _ := proto.Marshal(meta)
+		if err := public_batch.Put(append(txMetaSuffix, tx.GetTransactionHash().Bytes()...), metaValue); err != nil {
 			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
 
@@ -668,7 +687,7 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerMana
 			db.Delete(append(transactionPrefix, t.Tx.GetTransactionHash().Bytes()...))
 			db.Delete(append(receiptsPrefix, t.Tx.GetTransactionHash().Bytes()...))
 		}
-		// TODO
+		// TODO Clear all stateobject cache
 	}
 	blockCache.Delete(ev.Hash)
 }
@@ -684,6 +703,66 @@ func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
 	// save to db
 	db, _ := hyperdb.GetLDBDatabase()
 	db.Put(append(invalidTransactionPrefix, invalidTx.Tx.TransactionHash...), msg.Payload)
+}
+
+func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
+
+
+	tmpDemandNumber := pool.demandNumber
+	// 1. Reset demandNumber , demandSeqNo and lastValidationState
+	pool.demandNumber = ev.SeqNo
+
+	pool.demandSeqNo = ev.SeqNo
+	pool.maxSeqNo = ev.SeqNo - 1
+	db, _ := hyperdb.GetLDBDatabase()
+	block, _ := GetBlockByNumber(db, ev.SeqNo - 1)
+	pool.lastValidationState = common.BytesToHash(block.MerkleRoot)
+	// 2. Delete Invalid Stuff
+	for i := pool.demandNumber; i < tmpDemandNumber; i += 1 {
+		// delete tx, txmeta and receipt
+		block, err := GetBlockByNumber(db, i)
+		if err != nil {
+			log.Errorf("ViewChange, miss block %d ,error msg %s", i, err.Error())
+		}
+
+			for _, tx := range block.Transactions {
+				if err := db.Delete(append(transactionPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
+					log.Errorf("ViewChange, delete useless tx in block %d failed, error msg %s", i, err.Error())
+				}
+				if err := db.Delete(append(receiptsPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
+					log.Errorf("ViewChange, delete useless receipt in block %d failed, error msg %s", i, err.Error())
+				}
+				if err := db.Delete(append(txMetaSuffix, tx.GetTransactionHash().Bytes()...)); err != nil {
+					log.Errorf("ViewChange, delete useless txmeta in block %d failed, error msg %s", i, err.Error())
+				}
+			}
+			// delete block
+			if err := DeleteBlockByNum(db, i); err != nil {
+				log.Errorf("ViewChange, delete useless block %d failed, error msg %s", i, err.Error())
+			}
+
+	}
+	blockcache, _ := GetBlockCache()
+	// 3. Delete from blockcache
+	all := blockcache.All()
+	for _, record := range all {
+		for i, tx := range record.ValidTxs {
+			if err := db.Delete(append(transactionPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
+				log.Errorf("ViewChange, delete useless tx in block %d failed, error msg %s", i, err.Error())
+			}
+			if err := db.Delete(append(receiptsPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
+				log.Errorf("ViewChange, delete useless receipt in block %d failed, error msg %s", i, err.Error())
+			}
+			if err := db.Delete(append(txMetaSuffix, tx.GetTransactionHash().Bytes()...)); err != nil {
+				log.Errorf("ViewChange, delete useless txmeta in block %d failed, error msg %s", i, err.Error())
+			}
+		}
+	}
+	blockcache.Clear()
+	// 4. Reset chain
+	isGenesis := (block.Number == 0)
+	UpdateChain(block, isGenesis)
+
 }
 
 func BuildTree(prefix []byte, ctx []interface{}) ([]byte, error) {
@@ -754,7 +833,6 @@ func (pool *BlockPool) AddBlockWithoutExecTxs(block *types.Block, commonHash cry
 
 	if currentChain.Height >= block.Number {
 		//todo view change ,delete block and rewrite block
-
 		db, err := hyperdb.GetLDBDatabase()
 		if err != nil {
 			log.Fatal(err)
@@ -762,7 +840,7 @@ func (pool *BlockPool) AddBlockWithoutExecTxs(block *types.Block, commonHash cry
 
 		block, _ := GetBlockByNumber(db, block.Number)
 		//rollback chain height,latestHash
-		UpdateChainByViewChange(block.Number-1, block.ParentHash)
+		UpdateChainByViewChange(block.Number - 1, block.ParentHash)
 		keyNum := strconv.FormatInt(int64(block.Number), 10)
 		DeleteBlock(db, append(blockNumPrefix, keyNum...))
 		writeBlockWithoutExecTx(block, commonHash)
@@ -781,7 +859,8 @@ func (pool *BlockPool) AddBlockWithoutExecTxs(block *types.Block, commonHash cry
 		pool.mu.RUnlock()
 
 		for i := block.Number + 1; i <= pool.maxNum; i += 1 {
-			if _, ok := pool.queue[i]; ok { //存在}
+			if _, ok := pool.queue[i]; ok {
+				//存在}
 
 				pool.mu.RLock()
 				pool.demandNumber += 1
@@ -823,7 +902,7 @@ func writeBlockWithoutExecTx(block *types.Block, commonHash crypto.CommonHash) {
 	log.Notice("Block number", newChain.Height)
 	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
 
-	if block.Number%10 == 0 && block.Number != 0 {
+	if block.Number % 10 == 0 && block.Number != 0 {
 		WriteChainChan()
 	}
 }
