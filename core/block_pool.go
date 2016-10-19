@@ -304,10 +304,10 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash) {
 		       err = db.Put(append(blockNumPrefix, keyNum...),block.BlockHash)*/
 
 	PutBlockTx(db, commonHash, block.BlockHash, block)
-	log.Error("blocl num is ",block.Number)
-	log.Error("blocl merkle root is ",block.MerkleRoot)
-	log.Error("blocl Timestamp is ",block.Timestamp)
-	log.Error("blocl hash is ",block.BlockHash)
+	//log.Error("blocl num is ",block.Number)
+	//log.Error("blocl merkle root is ",block.MerkleRoot)
+	//log.Error("blocl Timestamp is ",block.Timestamp)
+	//log.Error("blocl hash is ",block.BlockHash)
 
 	if block.Number % 10 == 0 && block.Number != 0 {
 		WriteChainChan()

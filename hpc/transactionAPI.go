@@ -537,7 +537,7 @@ func (tran *PublicTransactionAPI) GetBlockTransactionCountByHash(hash common.Has
 //}
 
 func outputTransaction(tx *types.Transaction, db *hyperdb.LDBDatabase) (*TransactionResult, error) {
-	log.Info("====== enter outputTransaction")
+	log.Debug("====== enter outputTransaction")
 	var txValue types.TransactionValue
 	var blk *types.Block
 
