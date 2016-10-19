@@ -1182,7 +1182,7 @@ func (pbft *pbftProtocal) sendCommit(digest string, v uint64, n uint64) error {
 			Type:    ConsensusMessage_COMMIT,
 			Payload: payload,
 		}
-		pbft.postPbftEvent(consensusMsg)
+		go pbft.postPbftEvent(consensusMsg)
 		msg := consensusMsgHelper(consensusMsg, pbft.id)
 		return pbft.helper.InnerBroadcast(msg)
 	}
