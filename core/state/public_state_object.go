@@ -39,7 +39,7 @@ func (self *PublicStateDB) Update(addr common.Address,publicStateObject PublicSt
 	self.PublicStateObjectMap[addr] = &publicStateObject
 }
 
-func (self *PublicStateDB) GetPublicStateObject(addr common.Address)  {
+func (self *PublicStateDB) GetPublicStateObject(addr common.Address) PublicStateObject {
 	if _,ok := self.PublicStateObjectMap[addr];ok{
 		return self.PublicStateObjectMap[addr]
 	}else{
@@ -59,7 +59,7 @@ func (self *PublicStateDB) ClearLowFrequence(frequence int){
 // TODO clear the the PublicStateObject which is old than timestamp
 func (self *PublicStateDB) ClearOldTimestamp(timestamp time.Time){
 	for addr,publicStateObject := range self.PublicStateObjectMap{
-		if(publicStateObject.Timestamp<timestamp){
+		if(publicStateObject.Timestamp.Before(timestamp)){
 			delete(PublicStateObjectMap,addr)
 		}
 	}

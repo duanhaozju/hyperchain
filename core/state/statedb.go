@@ -11,14 +11,6 @@ import (
 	"time"
 )
 
-var PublicStateObjectMap = make(map[common.Address]PublicStateObject)
-
-type PublicStateObject struct{
-	State_object	*StateObject
-	Frequence	int
-	Timestamp	time.Time
-}
-
 var log *logging.Logger // package-level logger
 func init() {
 	log = logging.MustGetLogger("state")
