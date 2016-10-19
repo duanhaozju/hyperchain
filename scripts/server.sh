@@ -169,7 +169,7 @@ if $FIRST_RUN; then
 	add_ssh_key_form_primary_to_others
 fi
 
-#build
+build
 for server_address in ${SERVER_ADDR[@]}; do
   echo "kill $server_address"
   ssh satoshi@$server_address "ps aux | grep hyperchain | awk '{print \$2}' | xargs kill -9"

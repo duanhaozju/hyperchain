@@ -2,18 +2,13 @@
 
 >HyperChain Proto  Internal version: alpha 0.3.0
 
-## IMPORTANT BUG
-- 内存泄露 missing check point
-
 ## CHANGE LOG:
 
-- alpha 0.1 Finished the basic node connection and information sync　2016/08/17 
-- alpha 0.2 Finished a single thread proto system.
-- alpha 0.3 to finish a multi-thread proto system, which based on PBFT.
+- alpha 1.0 Release 2016/10/19
 
 ## LATEST BRANCH
 
-`develop`
+`EVM`
 
 ## SETTINGS
 
