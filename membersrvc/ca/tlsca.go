@@ -11,10 +11,10 @@ import (
 	"math/big"
 
 	"github.com/golang/protobuf/proto"
-	"hyperchain/core/crypto/primitives"
-	pb "hyperchain/membersrvc/protos"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"hyperchain/core/crypto/primitives"
+	pb "hyperchain/membersrvc/protos"
 )
 
 // TLSCA is the tls certificate authority.

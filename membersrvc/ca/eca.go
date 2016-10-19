@@ -15,10 +15,10 @@ import (
 	"strconv"
 	"strings"
 
-	"hyperchain/core/crypto/primitives"
-	pb "hyperchain/membersrvc/protos"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
+	"hyperchain/core/crypto/primitives"
+	pb "hyperchain/membersrvc/protos"
 )
 
 var (

@@ -104,7 +104,6 @@ scripts/read_server.py
 scripts/server.out
 scripts/sshkeys/
 
-log
-
-# build vendor
+# build
 build
+keynodes

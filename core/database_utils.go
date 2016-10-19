@@ -31,8 +31,8 @@ var (
 // InitDB initialization ldb and memdb
 // should be called while programming start-up
 // port: the server port
-func InitDB(port int) {
-	hyperdb.SetLDBPath(port)
+func InitDB(dbPath string, port int) {
+	hyperdb.SetLDBPath(dbPath, port)
 	memChainMap = newMemChain()
 	memChainStatusMap = newMemChainStatus()
 }

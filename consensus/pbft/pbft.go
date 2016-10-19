@@ -6,9 +6,9 @@ import (
 	//"path/filepath"
 	"strings"
 
+	"github.com/spf13/viper"
 	"hyperchain/consensus"
 	"hyperchain/consensus/helper"
-	"github.com/spf13/viper"
 	//"path"
 )
 
@@ -41,7 +41,6 @@ func New(id uint64, h helper.Stack, pbftConfigPath string) consensus.Consenter {
 
 }
 
-
 // loadConfig load the config in the config.yaml
 func loadConfig(pbftConfigPath string) (config *viper.Viper) {
 
@@ -53,7 +52,6 @@ func loadConfig(pbftConfigPath string) (config *viper.Viper) {
 	replacer := strings.NewReplacer(".", "_")
 	config.SetEnvKeyReplacer(replacer)
 
-	config.SetConfigName("config")
 	//config.AddConfigPath("./")
 	//config.AddConfigPath("../consensus/pbft")
 	//config.AddConfigPath("../../consensus/pbft")
@@ -63,9 +61,13 @@ func loadConfig(pbftConfigPath string) (config *viper.Viper) {
 	//	pbftpath := filepath.Join(p, pbftConfigPath)
 	//	config.AddConfigPath(pbftpath)
 	//}
-	config.AddConfigPath(pbftConfigPath)
 
+	// Chen Quan 2016-10-14
+	//config.SetConfigName("config")
+	//config.AddConfigPath(pbftConfigPath)
+	// 修改为读取确定文件
 
+	config.SetConfigFile(pbftConfigPath)
 	err := config.ReadInConfig()
 	if err != nil {
 		panic(fmt.Errorf("Error reading %s plugin config: %s", configPrefix, err))

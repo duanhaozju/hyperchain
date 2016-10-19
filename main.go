@@ -1,101 +1,86 @@
-// init ProtocolManager
+// init ProtcolManager
 // author: Lizhong kuang
 // date: 2016-08-23
 // last modified:2016-08-29
 package main
 
 import (
-	"github.com/mkideal/cli"
-	"hyperchain/manager"
-	"hyperchain/p2p"
-
-	"hyperchain/core"
-
-	"hyperchain/crypto"
-
-	"hyperchain/event"
-
-	"strconv"
-
-	"github.com/op/go-logging"
 	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/consensus/controller"
+	"hyperchain/core"
+	"hyperchain/crypto"
+	"hyperchain/event"
 	"hyperchain/jsonrpc"
+	"hyperchain/manager"
 	"hyperchain/membersrvc"
-	"runtime"
+	"hyperchain/p2p"
+	"strconv"
+
+	"github.com/mkideal/cli"
 )
 
 type argT struct {
 	cli.Helper
-	NodeId int `cli:"o,nodeid" usage:"current node ID" dft:"1"`
-	LocalPort      int    `cli:"l,localport" usage:"gRPC data transport port" dft:"8001"`
-	PeerConfigPath string `cli:"p,peerconfig" usage:"peerconfig.json path" dft:"./peerconfig.json"`
-	PbftConfigPath string `cli:"f,pbftconfig" usage:"pbft config file folder path,ensure this is a valid dir path" dft:"./consensus/pbft/"`
-	GenesisPath    string `cli:"g,genesisconfig" usage:"genesis.json config file path " dft:"./core/genesis.json"`
+	NodeID     int    `cli:"o,id" usage:"node ID" dft:"1"`
+	ConfigPath string `cli:"c,conf" usage:"配置文件所在路径" dft:"./config/global.yaml"`
+	GRPCPort   int    `cli:"l,rpcport" usage:"远程连接端口" dft:"8001"`
+	HTTPPort   int    `cli:",t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
 }
 
 func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*argT)
 
-		runtime.GOMAXPROCS(-1)
-		membersrvc.Start("./", argv.NodeId)
+		config := newconfigsImpl(argv.ConfigPath)
+		// add condition judge if need the command line param override the config file config
+		config.initConfig(argv.NodeID, argv.GRPCPort, argv.HTTPPort)
+
+		membersrvc.Start(config.getMemberSRVCConfigPath(), config.getNodeID())
 
 		//init log
-		common.InitLog(logging.INFO, "./logs/", argv.LocalPort)
+		common.InitLog(config.getLogLevel(), config.getLogDumpFileDir(), config.getGRPCPort(), config.getLogDumpFileFlag())
+
 		eventMux := new(event.TypeMux)
 
 		//init peer manager to start grpc server and client
-		grpcPeerMgr := p2p.NewGrpcManager(argv.PeerConfigPath, argv.NodeId)
+		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath(), config.getNodeID())
 
 		//init fetcher to accept block
 		fetcher := core.NewFetcher()
 
 		//init db
-		core.InitDB(argv.LocalPort)
-		//core.TxSum = core.CalTransactionSum()
+		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())
 
 		core.InitEnv()
 		//init genesis
-		core.CreateInitBlock(argv.GenesisPath)
+		core.CreateInitBlock(config.getGenesisConfigPath())
 
 		//init pbft consensus
-		cs := controller.NewConsenter(uint64(argv.NodeId), eventMux, argv.PbftConfigPath)
+		cs := controller.NewConsenter(uint64(config.getNodeID()), eventMux, config.getPBFTConfigPath())
 
 		//init encryption object
-		keydir := "./keystore/"
 
 		encryption := crypto.NewEcdsaEncrypto("ecdsa")
-		encryption.GenerateNodeKey(strconv.Itoa(argv.LocalPort), keydir)
-
-		am := accounts.NewAccountManager(keydir, encryption)
-		am.UnlockAllAccount(keydir)
+		encryption.GenerateNodeKey(strconv.Itoa(config.getNodeID()), config.getKeyNodeDir())
+		//
+		am := accounts.NewAccountManager(config.getKeystoreDir(), encryption)
+		am.UnlockAllAccount(config.getKeystoreDir())
 
 		//init hash object
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
-		//nodePath := "./p2p/peerconfig.json"
-		nodePath := argv.PeerConfigPath
 
 		//init block pool to save block
-		blockPool := core.NewBlockPool(eventMux, cs)
-
-		//start http server
-		//go jsonrpc.StartHttp(argv.LocalPort, eventMux)
-
-		//go jsonrpc.Start(argv.LocalPort, eventMux)
+		blockPool := core.NewBlockPool(eventMux)
 
 		//init manager
-
 		exist := make(chan bool)
 		pm := manager.New(eventMux, blockPool, grpcPeerMgr, cs, fetcher, am, kec256Hash,
-			nodePath, argv.NodeId)
-		go jsonrpc.Start(argv.LocalPort, eventMux, pm)
+			config.getNodeID())
+
+		go jsonrpc.Start(config.getHTTPPort(), eventMux, pm)
 
 		<-exist
-		////init manager
-		//manager.New(eventMux,blockPool,grpcPeerMgr,cs,fetcher,encryption,kec256Hash,
-		//	nodePath,argv.NodeId)
 
 		return nil
 	})
