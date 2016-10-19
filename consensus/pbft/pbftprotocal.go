@@ -840,6 +840,7 @@ func (pbft *pbftProtocal) recvRequestBatch(reqBatch *TransactionBatch) error {
 	//pbft.reqBatchStore[digest] = reqBatch
 	//pbft.persistRequestBatch(digest)
 	if pbft.activeView {
+
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", digest))
 	}
 	if pbft.primary(pbft.view) == pbft.id && pbft.activeView {
@@ -1230,7 +1231,7 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 	cert.commitCount++
 
 	if pbft.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
-		logger.Error("receive stop timer seq num is ",commit.SequenceNumber)
+		logger.Debug("receive stop timer seq num is ",commit.SequenceNumber)
 
 		pbft.stopTimer()
 		if !cert.sentExecute && cert.validated {
@@ -1257,7 +1258,7 @@ func (pbft *pbftProtocal) executeAfterStateUpdate() {
 		if idx.n > pbft.seqNo && pbft.prepared(cert.digest, idx.v, idx.n) && !cert.validated {
 			logger.Debugf("Replica %d try to vaidate batch %s", pbft.id, cert.digest)
 			pbft.validateBatch(cert.prePrepare.TransactionBatch, idx.n, idx.v)
-			cert.validated = true
+			//cert.validated = true
 		}
 	}
 
@@ -1329,8 +1330,7 @@ func (pbft *pbftProtocal) executeOne(idx msgID) bool {
 		} else {
 			isPrimary = false
 		}
-		logger.Error("execute num is ",idx.n)
-		logger.Error("execute time is ",cert.prePrepare.TransactionBatch.Timestamp)
+
 		pbft.helper.Execute(idx.n, digest, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
 		cert.sentExecute = true
 		pbft.execDoneSync(idx)
@@ -1364,6 +1364,7 @@ func (pbft *pbftProtocal) execDoneSync(idx msgID) {
 	}
 
 	pbft.currentExec = nil
+
 	pbft.executeOutstanding()
 
 }
