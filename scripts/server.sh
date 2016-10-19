@@ -75,7 +75,7 @@ ssh -t satoshi@$1 "sudo -i && apt-get install -y expect"
 
 add_ssh_key_into_primary(){
     echo "add your local ssh public key into primary node"
-    echo "将你的本地ssh公钥添加到primary中"
+#    echo "将你的本地ssh公钥添加到primary中"
     for server_address in ${SERVER_ADDR[@]}; do
 	  addkey $server_address &
 	done
@@ -97,7 +97,7 @@ add_ssh_key_into_primary(){
 
 add_ssh_key_form_primary_to_others(){
     echo "primary add its ssh key into others nodes"
-    echo "primary 将它的ssh 公钥加入到其它节点中"
+#    echo "primary 将它的ssh 公钥加入到其它节点中"
 	scp -r ./sub_scripts/deploy/server_addkey.sh satoshi@$PRIMARY:/home/satoshi/
 
 	COMMANDS="cd /home/satoshi && chmod a+x server_addkey.sh && bash server_addkey.sh"
@@ -120,7 +120,7 @@ add_ssh_key_form_primary_to_others(){
 
 
 build(){
-	echo "编译并生成配置文件"
+	echo "Compiling and generating the configuration files..."
     cd ..
     govendor build -o build/hyperchain
     cd scripts
@@ -128,7 +128,7 @@ build(){
 
 
 distribute_the_binary(){
-    echo "将本地生成的二进制文件以及配置文件上传到primary中"
+    echo "Sending the local complied file and configuration files to primary"
 	scp -r ../build/hyperchain satoshi@$PRIMARY:/home/satoshi/
 	scp -r ../config/ satoshi@$PRIMARY:/home/satoshi/
 
@@ -155,7 +155,8 @@ distribute_the_binary(){
 
 ni=1
 auto_run(){
-    echo "自动运行相应命令，启动全节点"
+    echo "Auto start all nodes"
+#    echo "自动运行相应命令，启动全节点"
     for server_address in ${SERVER_ADDR[@]}; do
 	  echo $server_address
 
