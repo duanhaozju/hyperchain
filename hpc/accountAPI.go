@@ -13,6 +13,7 @@ import (
 
 type PublicAccountAPI struct {
 	pm *manager.ProtocolManager
+	db *hyperdb.LDBDatabase
 }
 
 type AccountResult struct {
@@ -24,17 +25,18 @@ type UnlockParas struct {
 	Password string
 }
 
-func NewPublicAccountAPI(pm *manager.ProtocolManager) *PublicAccountAPI {
+func NewPublicAccountAPI(pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase) *PublicAccountAPI {
 	return &PublicAccountAPI{
 		pm: pm,
+		db: hyperDb,
 	}
 }
 
 //New Account according to args from html
-func (acot *PublicAccountAPI) NewAccount(password string) common.Address {
+func (acc *PublicAccountAPI) NewAccount(password string) common.Address {
 	//keydir := "./keystore/"
 	//encryption := crypto.NewEcdsaEncrypto("ecdsa")
-	am := acot.pm.AccountManager
+	am := acc.pm.AccountManager
 	ac, err := am.NewAccount(password)
 	if err != nil {
 		log.Fatal("New Account error,%v", err)
@@ -47,13 +49,13 @@ func (acot *PublicAccountAPI) NewAccount(password string) common.Address {
 }
 
 //Unlock account according to args(address,password)
-func (acot *PublicAccountAPI) UnlockAccount(args UnlockParas) error {
+func (acc *PublicAccountAPI) UnlockAccount(args UnlockParas) error {
 	password := string(args.Password)
 	address := common.HexToAddress(args.Address)
 
 	//keydir := "./keystore/"
 	//encryption := crypto.NewEcdsaEncrypto("ecdsa")
-	am := acot.pm.AccountManager
+	am := acc.pm.AccountManager
 
 	s := string(args.Address)
 	if len(s) > 1 {
@@ -73,17 +75,18 @@ func (acot *PublicAccountAPI) UnlockAccount(args UnlockParas) error {
 }
 
 // GetAllBalances returns all account's balance in the db,NOT CACHE DB!
-func (acot *PublicAccountAPI) GetAccounts() []*AccountResult {
+func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 	var acts []*AccountResult
 	chain := core.GetChainCopy()
-	db, err := hyperdb.GetLDBDatabase()
+
+	headBlock, err := getBlockByHash(common.BytesToHash(chain.LatestBlockHash), acc.db)
 	if err != nil {
-		log.Fatalf("Get DB error, %v", err)
+		log.Errorf("%v", err)
 	}
-	headBlock, _ := core.GetBlock(db, chain.LatestBlockHash)
-	stateDB, err := state.New(common.BytesToHash(headBlock.MerkleRoot), db)
+
+	stateDB, err := state.New(headBlock.MerkleRoot, acc.db)
 	if err != nil {
-		log.Fatalf("Get stateDB error, %v", err)
+		log.Errorf("Get stateDB error, %v", err)
 	}
 	ctx := stateDB.GetAccounts()
 
@@ -100,16 +103,10 @@ func (acot *PublicAccountAPI) GetAccounts() []*AccountResult {
 }
 
 // GetBalance returns account balance for given account address.
-func (acot *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
-	db, err := hyperdb.GetLDBDatabase()
+func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
 
-	if err != nil {
-		log.Errorf("Open database error: %v", err)
-		return "", err
-	}
-
-	headBlock, _ := core.GetBlock(db, core.GetChainCopy().LatestBlockHash)
-	stateDB, err := state.New(common.BytesToHash(headBlock.MerkleRoot), db)
+	headBlock, _ := core.GetBlock(acc.db, core.GetChainCopy().LatestBlockHash)
+	stateDB, err := state.New(common.BytesToHash(headBlock.MerkleRoot), acc.db)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
 		return "", err
