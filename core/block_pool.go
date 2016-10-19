@@ -623,7 +623,7 @@ func (pool *BlockPool) ProcessBlock1(txs []*types.Transaction, invalidTxs []*typ
 			Index:      int64(i),
 		}
 		metaValue, _ := proto.Marshal(meta)
-		if err := public_batch.Put(append(txMetaSuffix, tx.GetTransactionHash().Bytes()...), metaValue); err != nil {
+		if err := public_batch.Put(append(tx.GetTransactionHash().Bytes(), txMetaSuffix...), metaValue); err != nil {
 			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
 

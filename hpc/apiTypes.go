@@ -3,6 +3,7 @@ package hpc
 import (
 	"hyperchain/event"
 	"hyperchain/manager"
+	"hyperchain/hyperdb"
 )
 
 // API describes the set of methods offered over the RPC interface
@@ -14,11 +15,18 @@ type API struct {
 }
 
 func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager) []API{
+
+	db, err := hyperdb.GetLDBDatabase()
+
+	if err != nil {
+		log.Errorf("Open database error: %v", err)
+	}
+
 	return []API{
 		{
 			Namespace: "tx",
 			Version: "0.4",
-			Service: NewPublicTransactionAPI(eventMux, pm),
+			Service: NewPublicTransactionAPI(eventMux, pm, db),
 			Public: true,
 		},
 		{
@@ -30,19 +38,19 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager) []API{
 		{
 			Namespace: "block",
 			Version: "0.4",
-			Service: NewPublicBlockAPI(),
+			Service: NewPublicBlockAPI(db),
 			Public: true,
 		},
 		{
 			Namespace: "acc",
 			Version: "0.4",
-			Service: NewPublicAccountAPI(pm),
+			Service: NewPublicAccountAPI(pm, db),
 			Public: true,
 		},
 		{
 			Namespace: "contract",
 			Version: "0.4",
-			Service: NewPublicContractAPI(eventMux, pm),
+			Service: NewPublicContractAPI(eventMux, pm, db),
 			Public: true,
 		},
 	}
