@@ -206,7 +206,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 		for start := start; start < end; start = time.Now().Unix() {
 
-		for i := 0; i < 10; i++ {
+		for i := 0; i < 100; i++ {
 			tx.Timestamp = time.Now().UnixNano()
 			tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
 
