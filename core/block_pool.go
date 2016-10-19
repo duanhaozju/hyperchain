@@ -304,10 +304,10 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash) {
 		       err = db.Put(append(blockNumPrefix, keyNum...),block.BlockHash)*/
 
 	PutBlockTx(db, commonHash, block.BlockHash, block)
-	log.Error("blocl num is ",block.Number)
+	/*log.Error("blocl num is ",block.Number)
 	log.Error("blocl merkle root is ",block.MerkleRoot)
 	log.Error("blocl Timestamp is ",block.Timestamp)
-	log.Error("blocl hash is ",block.BlockHash)
+	log.Error("blocl hash is ",block.BlockHash)*/
 
 	if block.Number % 10 == 0 && block.Number != 0 {
 		WriteChainChan()
@@ -467,12 +467,15 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 		return
 	}
 	// (1) Check SeqNo
+	pool.seqNoMu.RLock()
 	if validationEvent.SeqNo < pool.demandSeqNo {
 		// Receive repeat ValidationEvent
 		log.Error("Receive Repeat ValidationEvent,seqno less than demandseqNo, ", validationEvent.SeqNo)
+		pool.seqNoMu.RUnlock()
 		return
 	} else if validationEvent.SeqNo == pool.demandSeqNo {
 		// Process
+		pool.seqNoMu.RUnlock()
 		pool.seqNoMu.Lock()
 		if _, success := pool.PreProcess(validationEvent, commonHash, encryption); success {
 			pool.demandSeqNo += 1
@@ -504,6 +507,7 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 	} else {
 		log.Notice("Receive ValidationEvent which is not demand, ", validationEvent.SeqNo, "save into cache temperarily")
 		pool.validationQueue[validationEvent.SeqNo] = validationEvent
+		pool.seqNoMu.RUnlock()
 	}
 }
 
@@ -708,6 +712,7 @@ func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
 func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 
 
+	pool.seqNoMu.RLock()
 	tmpDemandNumber := pool.demandNumber
 	// 1. Reset demandNumber , demandSeqNo and lastValidationState
 	pool.demandNumber = ev.SeqNo
@@ -762,6 +767,7 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	// 4. Reset chain
 	isGenesis := (block.Number == 0)
 	UpdateChain(block, isGenesis)
+	pool.seqNoMu.RUnlock()
 
 }
 

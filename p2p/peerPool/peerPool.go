@@ -8,12 +8,12 @@ package peerPool
 
 import (
 	"errors"
+	"github.com/op/go-logging"
 	peer "hyperchain/p2p/peer"
 	pb "hyperchain/p2p/peermessage"
-	"strings"
-	"strconv"
-	"github.com/op/go-logging"
 	"hyperchain/p2p/transport"
+	"strconv"
+	"strings"
 )
 
 type PeersPool struct {
@@ -51,7 +51,7 @@ func (this *PeersPool) PutPeer(addr pb.PeerAddress, client *peer.Peer) (*peer.Pe
 	//log.Println("Add a peer:",addrString)
 	if _, ok := this.peerKeys[addr]; ok {
 		// the pool already has this client
-		log.Error(addr.Ip,addr.Port,"The client already in")
+		log.Error(addr.IP, addr.Port, "The client already in")
 		return this.peers[addrString], errors.New("The client already in")
 
 	} else {
@@ -80,20 +80,20 @@ func (this *PeersPool) GetAliveNodeNum() int {
 }
 
 // GetPeerByString get peer by address string
-func GetPeerByString(addr string)*peer.Peer{
-	address := strings.Split(addr,":")
-	p,err := strconv.Atoi(address[1])
-	if err != nil{
+func GetPeerByString(addr string) *peer.Peer {
+	address := strings.Split(addr, ":")
+	p, err := strconv.Atoi(address[1])
+	if err != nil {
 		log.Error(`given string is not like "localhost:1234", pls check it`)
 		return nil
 	}
 	pAddr := pb.PeerAddress{
-		Ip:address[0],
-		Port:int32(p),
+		IP:   address[0],
+		Port: int64(p),
 	}
-	if peerAddr,ok := prPoolIns.peerAddr[pAddr.String()];ok{
+	if peerAddr, ok := prPoolIns.peerAddr[pAddr.String()]; ok {
 		return prPoolIns.peers[prPoolIns.peerKeys[peerAddr]]
-	}else{
+	} else {
 		return nil
 	}
 }

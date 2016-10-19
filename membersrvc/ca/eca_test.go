@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 	"hyperchain/core/crypto/primitives"
 	"hyperchain/core/crypto/primitives/ecies"
 	pb "hyperchain/membersrvc/protos"
-	"golang.org/x/net/context"
 )
 
 type User struct {
