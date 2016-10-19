@@ -52,6 +52,7 @@ type BlockPool struct {
 	events              event.Subscription
 	mu                  sync.RWMutex
 	seqNoMu             sync.RWMutex
+	validationQueueMu   sync.RWMutex
 	stateLock           sync.Mutex
 	wg                  sync.WaitGroup // for shutdown sync
 
@@ -304,10 +305,10 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash) {
 		       err = db.Put(append(blockNumPrefix, keyNum...),block.BlockHash)*/
 
 	PutBlockTx(db, commonHash, block.BlockHash, block)
-	/*log.Error("blocl num is ",block.Number)
-	log.Error("blocl merkle root is ",block.MerkleRoot)
-	log.Error("blocl Timestamp is ",block.Timestamp)
-	log.Error("blocl hash is ",block.BlockHash)*/
+	//log.Error("blocl num is ",block.Number)
+	//log.Error("blocl merkle root is ",block.MerkleRoot)
+	//log.Error("blocl Timestamp is ",block.Timestamp)
+	//log.Error("blocl hash is ",block.BlockHash)
 
 	if block.Number % 10 == 0 && block.Number != 0 {
 		WriteChainChan()
@@ -462,10 +463,13 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 		pool.maxSeqNo = validationEvent.SeqNo
 	}
 	// TODO Is necessary ?
+	pool.validationQueueMu.RLock()
 	if _, ok := pool.validationQueue[validationEvent.SeqNo]; ok {
 		log.Error("Receive Repeat ValidationEvent, ", validationEvent.SeqNo)
+		pool.validationQueueMu.RUnlock()
 		return
 	}
+	pool.validationQueueMu.RUnlock()
 	// (1) Check SeqNo
 	pool.seqNoMu.RLock()
 	if validationEvent.SeqNo < pool.demandSeqNo {
@@ -485,7 +489,9 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 		// Remove useless event
 		for i, _ := range pool.validationQueue {
 			if i <= validationEvent.SeqNo {
+				pool.validationQueueMu.Lock()
 				delete(pool.validationQueue, i)
+				pool.validationQueueMu.Unlock()
 			}
 		}
 		// Process remain event
@@ -497,17 +503,23 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 					pool.demandSeqNo += 1
 					log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
 				}
-				delete(pool.validationQueue, i)
 				pool.seqNoMu.Unlock()
+
+				pool.validationQueueMu.Lock()
+				delete(pool.validationQueue, i)
+				pool.validationQueueMu.Unlock()
+
 			} else {
 				break
 			}
 		}
 		return
 	} else {
-		log.Notice("Receive ValidationEvent which is not demand, ", validationEvent.SeqNo, "save into cache temperarily")
-		pool.validationQueue[validationEvent.SeqNo] = validationEvent
 		pool.seqNoMu.RUnlock()
+		log.Notice("Receive ValidationEvent which is not demand, ", validationEvent.SeqNo, "save into cache temperarily")
+		pool.validationQueueMu.Lock()
+		pool.validationQueue[validationEvent.SeqNo] = validationEvent
+		pool.validationQueueMu.Unlock()
 	}
 }
 
@@ -712,7 +724,6 @@ func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
 func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 
 
-	pool.seqNoMu.RLock()
 	tmpDemandNumber := pool.demandNumber
 	// 1. Reset demandNumber , demandSeqNo and lastValidationState
 	pool.demandNumber = ev.SeqNo
@@ -767,7 +778,6 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	// 4. Reset chain
 	isGenesis := (block.Number == 0)
 	UpdateChain(block, isGenesis)
-	pool.seqNoMu.RUnlock()
 
 }
 

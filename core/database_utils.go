@@ -125,7 +125,7 @@ func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error)
 //get tx<-->block num,hash,index
 func GetTxWithBlock(db hyperdb.Database, key []byte) (uint64, int64) {
 	dataMeta, _ := db.Get(append(key, txMetaSuffix...))
-	log.Info(dataMeta)
+	log.Debug(dataMeta)
 	if len(dataMeta) == 0 {
 		return 0, 0
 	}

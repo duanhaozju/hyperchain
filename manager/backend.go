@@ -46,7 +46,7 @@ func New(eventMux *event.TypeMux, blockPool *core.BlockPool, peerManager p2p.Pee
 			if err!=nil {
 				fmt.Println("nego view start")
 			}
-			fmt.Println("trigger negotiate view")
+			//fmt.Println("trigger negotiate view")
 			eventMux.Post(event.ConsensusEvent{
 				Payload:msg,
 			})
