@@ -46,7 +46,7 @@ am *accounts.AccountManager, commonHash crypto.CommonHash,path string, nodeId in
 			if err!=nil {
 				fmt.Println("nego view start")
 			}
-			fmt.Println("trigger negotiate view")
+			//fmt.Println("trigger negotiate view")
 			eventMux.Post(event.ConsensusEvent{
 				Payload:msg,
 			})

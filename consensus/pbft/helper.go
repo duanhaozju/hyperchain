@@ -32,14 +32,18 @@ func (a sortableUint64Slice) Less(i, j int) bool {
 
 func (pbft *pbftProtocal) postRequestEvent(event *types.Transaction) {
 
-	pbft.mux.Lock()
-	defer pbft.mux.Unlock()
+	pbft.muxBatch.Lock()
+	defer pbft.muxBatch.Unlock()
 	pbft.batchManager.Queue() <- event
 
 }
 
 func (pbft *pbftProtocal) postPbftEvent(event interface{}) {
+
+	pbft.muxPbft.Lock()
+	defer pbft.muxPbft.Unlock()
 	pbft.pbftManager.Queue() <- event
+
 }
 
 // =============================================================================

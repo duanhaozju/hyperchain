@@ -26,16 +26,17 @@ func init() {
 
 // batch is used to construct reqbatch, the middle layer between outer to pbft
 type pbftProtocal struct {
-	batchTimer       events.Timer
-	batchTimerActive bool
-	batchTimeout     time.Duration
-	batchSize        int
-	batchStore       []*types.Transaction //ordered message batch
-	helper           helper.Stack
-	batchManager     events.Manager
-	pbftManager      events.Manager
-	mux              sync.Mutex
-	reqStore         *requestStore //received messages
+	batchTimer       	events.Timer
+	batchTimerActive 	bool
+	batchTimeout     	time.Duration
+	batchSize        	int
+	batchStore       	[]*types.Transaction //ordered message batch
+	helper           	helper.Stack
+	batchManager     	events.Manager
+	pbftManager      	events.Manager
+	muxBatch			sync.Mutex
+	muxPbft				sync.Mutex
+	reqStore         	*requestStore //received messages
 
 	// PBFT data
 	activeView     bool   // view change happening
@@ -531,7 +532,7 @@ func (pbft *pbftProtocal) processConsensus(msg *protos.Message) error {
 		go pbft.postRequestEvent(tx)
 		return nil
 	} else {
-		pbft.postPbftEvent(consensus)
+		go pbft.postPbftEvent(consensus)
 		return nil
 	}
 
@@ -551,7 +552,7 @@ func (pbft *pbftProtocal) processStateUpdated(msg *protos.Message) error {
 	e := &stateUpdatedEvent{
 		seqNo: stateUpdatedMsg.SeqNo,
 	}
-	pbft.postPbftEvent(e)
+	go pbft.postPbftEvent(e)
 	return nil
 }
 
@@ -1034,19 +1035,14 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
 	// Store the request batch if, for whatever reason, we haven't received it from an earlier broadcast
 	if _, ok := pbft.validatedBatchStore[preprep.BatchDigest]; !ok && preprep.BatchDigest != "" {
-		//digest := hash(preprep.GetTransactionBatch())
-		//if digest != preprep.BatchDigest {
-		//	logger.Warningf("Pre-prepare and request digest do not match: request %s, digest %s", digest, preprep.BatchDigest)
-		//	return nil
-		//}
 		digest := preprep.BatchDigest
-		//pbft.reqBatchStore[digest] = preprep.GetTransactionBatch()
 		pbft.validatedBatchStore[digest] = preprep.GetTransactionBatch()
 		logger.Debugf("Replica %d storing request batch %s in outstanding request batch store", pbft.id, digest)
 		pbft.outstandingReqBatches[digest] = preprep.GetTransactionBatch()
 		pbft.persistRequestBatch(digest)
 	}
-	if !pbft.stateTransferring {
+
+	if !pbft.skipInProgress {
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new pre-prepare for request batch %s", preprep.BatchDigest))
 	}
 	
@@ -1084,7 +1080,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
 func (pbft *pbftProtocal) recvPrepare(prep *Prepare) error {
 
-	logger.Noticef("Replica %d received prepare from replica %d for view=%d/seqNo=%d",
+	logger.Debugf("Replica %d received prepare from replica %d for view=%d/seqNo=%d",
 		pbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber)
 
 	if pbft.inNegoView {
@@ -1177,8 +1173,6 @@ func (pbft *pbftProtocal) sendCommit(digest string, v uint64, n uint64) error {
 		}
 		cert.sentCommit = true
 
-
-		//pbft.recvCommit(commit)
 		payload, err := proto.Marshal(commit)
 		if err != nil {
 			logger.Errorf("ConsensusMessage_COMMIT Marshal Error", err)
@@ -1254,7 +1248,7 @@ func (pbft *pbftProtocal) executeAfterStateUpdate() {
 		if idx.n > pbft.seqNo && pbft.prepared(cert.digest, idx.v, idx.n) && !cert.validated {
 			logger.Debugf("Replica %d try to vaidate batch %s", pbft.id, cert.digest)
 			pbft.validateBatch(cert.prePrepare.TransactionBatch, idx.n, idx.v)
-			cert.validated = true
+			cert.sentValidate = true
 		}
 	}
 
@@ -1319,15 +1313,14 @@ func (pbft *pbftProtocal) executeOne(idx msgID) bool {
 		cert.sentExecute = true
 		pbft.execDoneSync(idx)
 	} else {
-		logger.Noticef("--------call execute--------view=%d/seqNo=%d--------", idx.v, idx.n)
+		logger.Noticef("--------Replica %d Call execute, view=%d/seqNo=%d--------", pbft.id, idx.v, idx.n)
 		var isPrimary bool
 		if pbft.primary(pbft.view) == pbft.id {
 			isPrimary = true
 		} else {
 			isPrimary = false
 		}
-		logger.Error("execute num is ",idx.n)
-		logger.Error("execute time is ",cert.prePrepare.TransactionBatch.Timestamp)
+
 		pbft.helper.Execute(idx.n, digest, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
 		cert.sentExecute = true
 		pbft.execDoneSync(idx)
@@ -1841,7 +1834,7 @@ func (pbft *pbftProtocal) negotiateView() error {
 		return nil
 	}
 
-	logger.Noticef("Replica %d now negotiate view", pbft.id)
+	logger.Debugf("Replica %d now negotiate view", pbft.id)
 
 	pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
 	pbft.negoViewRspStore = make(map[uint64]uint64)
@@ -1875,7 +1868,7 @@ func (pbft *pbftProtocal) recvNegoView(nv *NegotiateView) error {
 	}
 
 	sender := nv.ReplicaId
-	logger.Noticef("Replica %d receive negotiate view from %d", pbft.id, sender)
+	logger.Debugf("Replica %d receive negotiate view from %d", pbft.id, sender)
 	negoViewRsp := &NegotiateViewResponse{
 		ReplicaId:pbft.id,
 		View:pbft.view,
@@ -1896,17 +1889,17 @@ func (pbft *pbftProtocal) recvNegoView(nv *NegotiateView) error {
 
 func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) error {
 	if !pbft.inNegoView {
-		logger.Noticef("Replica %d already finished nego-view, ignore incoming nego-view response", pbft.id)
+		logger.Debugf("Replica %d already finished nego-view, ignore incoming nego-view response", pbft.id)
 		return nil
 	}
 
 	rspId, rspView := nvr.ReplicaId, nvr.View
 	if _, ok := pbft.negoViewRspStore[rspId]; ok {
-		logger.Debugf("Already recv view number from %d, ignore it", rspId)
+		logger.Warningf("Already recv view number from %d, ignore it", rspId)
 		return nil
 	}
 
-	logger.Noticef("Replica %d receive nego-view response from %d, view: %d", pbft.id, rspId, rspView)
+	logger.Debugf("Replica %d receive nego-view response from %d, view: %d", pbft.id, rspId, rspView)
 
 	pbft.negoViewRspStore[rspId] = rspView
 
@@ -1933,11 +1926,13 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) error {
 			pbft.negoViewRspTimer.Stop()
 			pbft.view = theView
 			pbft.inNegoView = false
-			logger.Noticef("Replica %d finished negotiating view: %d", pbft.id, pbft.view)
+			logger.Notice("################################################")
+			logger.Noticef("#   Replica %d finished negotiating view: %d", pbft.id, pbft.view)
+			logger.Notice("################################################")
 			pbft.processRequestsDuringNegoView()
 		} else {
 			pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
-			logger.Noticef("pbft recv at least N-f nego-view responses, but cannot find same view from 2f+1.")
+			logger.Errorf("pbft recv at least N-f nego-view responses, but cannot find same view from 2f+1.")
 		}
 	}
 	return nil
