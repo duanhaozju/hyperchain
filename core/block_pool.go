@@ -52,6 +52,7 @@ type BlockPool struct {
 	events              event.Subscription
 	mu                  sync.RWMutex
 	seqNoMu             sync.RWMutex
+	validationQueueMu   sync.RWMutex
 	stateLock           sync.Mutex
 	wg                  sync.WaitGroup // for shutdown sync
 
@@ -462,17 +463,23 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 		pool.maxSeqNo = validationEvent.SeqNo
 	}
 	// TODO Is necessary ?
+	pool.validationQueueMu.RLock()
 	if _, ok := pool.validationQueue[validationEvent.SeqNo]; ok {
 		log.Error("Receive Repeat ValidationEvent, ", validationEvent.SeqNo)
+		pool.validationQueueMu.RUnlock()
 		return
 	}
+	pool.validationQueueMu.RUnlock()
 	// (1) Check SeqNo
+	pool.seqNoMu.RLock()
 	if validationEvent.SeqNo < pool.demandSeqNo {
 		// Receive repeat ValidationEvent
 		log.Error("Receive Repeat ValidationEvent,seqno less than demandseqNo, ", validationEvent.SeqNo)
+		pool.seqNoMu.RUnlock()
 		return
 	} else if validationEvent.SeqNo == pool.demandSeqNo {
 		// Process
+		pool.seqNoMu.RUnlock()
 		pool.seqNoMu.Lock()
 		if _, success := pool.PreProcess(validationEvent, commonHash, encryption); success {
 			pool.demandSeqNo += 1
@@ -482,7 +489,9 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 		// Remove useless event
 		for i, _ := range pool.validationQueue {
 			if i <= validationEvent.SeqNo {
+				pool.validationQueueMu.Lock()
 				delete(pool.validationQueue, i)
+				pool.validationQueueMu.Unlock()
 			}
 		}
 		// Process remain event
@@ -494,16 +503,23 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 					pool.demandSeqNo += 1
 					log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
 				}
-				delete(pool.validationQueue, i)
 				pool.seqNoMu.Unlock()
+
+				pool.validationQueueMu.Lock()
+				delete(pool.validationQueue, i)
+				pool.validationQueueMu.Unlock()
+
 			} else {
 				break
 			}
 		}
 		return
 	} else {
+		pool.seqNoMu.RUnlock()
 		log.Notice("Receive ValidationEvent which is not demand, ", validationEvent.SeqNo, "save into cache temperarily")
+		pool.validationQueueMu.Lock()
 		pool.validationQueue[validationEvent.SeqNo] = validationEvent
+		pool.validationQueueMu.Unlock()
 	}
 }
 

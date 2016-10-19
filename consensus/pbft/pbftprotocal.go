@@ -91,18 +91,18 @@ type pbftProtocal struct {
 	viewChangeStore map[vcidx]*ViewChange        // track view-change messages
 
 	// implement the validate transaction batch process
-	vid                 	uint64				// track the validate squence number
+	vid                 	uint64							// track the validate squence number
 	lastVid             	uint64                       	// track the last validate batch seqNo
 	currentVid          	*uint64                      	// track the current validate batch seqNo
 	validatedBatchStore 	map[string]*TransactionBatch 	// track the validated transaction rnnbatch
 	cacheValidatedBatch 	map[string]*cacheBatch       	// track the cached validated batch
-	validateTimer		events.Timer
-	validateTimeout		time.Duration
+	validateTimer			events.Timer
+	validateTimeout			time.Duration
 
 	// negotiate view
-	inNegoView bool
+	inNegoView 			bool
 	negoViewRspStore 	map[uint64]uint64       // track replicaId, viewNo.
-	negoViewRspTimer 	events.Timer		// track timeout for N-f nego-view responses
+	negoViewRspTimer 	events.Timer			// track timeout for N-f nego-view responses
 	negoViewRspTimeout	time.Duration           // time limit for N-f nego-view responses
 
 }
@@ -336,7 +336,7 @@ func (pbft *pbftProtocal) RecvMsg(e []byte) error {
 	} else if msg.Type == protos.Message_NULL_REQUEST {
 		return pbft.processNullRequest(msg)
 	} else if msg.Type == protos.Message_NEGOTIATE_VIEW {
-		return pbft.negotiateView()
+		return pbft.processNegotiateView()
 	}
 		logger.Errorf("Unknown recvMsg: %+v", msg)
 
@@ -1828,7 +1828,7 @@ func (pbft *pbftProtocal) updateViewChangeSeqNo() {
 	logger.Debugf("Replica %d updating view change sequence number to %d", pbft.id, pbft.viewChangeSeqNo)
 }
 
-func (pbft *pbftProtocal) negotiateView() error {
+func (pbft *pbftProtocal) processNegotiateView() error {
 	if !pbft.inNegoView {
 		logger.Critical("Replica %d try to negotiateView, but it's not inNegoView. This indicates a bug")
 		return nil
@@ -1839,6 +1839,7 @@ func (pbft *pbftProtocal) negotiateView() error {
 	pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
 	pbft.negoViewRspStore = make(map[uint64]uint64)
 
+	// broadcast the negotiate message to other replica
 	negoViewMsg := &NegotiateView{
 		ReplicaId:pbft.id,
 	}
@@ -1848,17 +1849,28 @@ func (pbft *pbftProtocal) negotiateView() error {
 		return nil
 	}
 	consensusMsg := &ConsensusMessage{
-		Type: ConsensusMessage_NEGOTIATE_VIEW,
-		Payload: payload,
+		Type:		ConsensusMessage_NEGOTIATE_VIEW,
+		Payload:	payload,
 	}
 	msg := consensusMsgHelper(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
 
+	// post the negotiate message event to myself
 	nvr := &NegotiateViewResponse{
-		ReplicaId:pbft.id,
-		View:pbft.view,
+		ReplicaId:	pbft.id,
+		View:		pbft.view,
 	}
-	pbft.recvNegoViewRsp(nvr)
+	consensusPayload, err := proto.Marshal(nvr)
+	if err!=nil {
+		logger.Errorf("Marshal NegotiateViewResponse Error!")
+		return nil
+	}
+	responseMsg := &ConsensusMessage{
+		Type:		ConsensusMessage_NEGOTIATE_VIEW_RESPONSE,
+		Payload:	consensusPayload,
+	}
+	go pbft.postPbftEvent(responseMsg)
+
 	return nil
 }
 
@@ -1903,7 +1915,7 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) error {
 
 	pbft.negoViewRspStore[rspId] = rspView
 
-	if len(pbft.negoViewRspStore) >= pbft.N-pbft.f {
+	if len(pbft.negoViewRspStore) > pbft.N-pbft.f {
 
 		// can we find same view from 2f+1 peers?
 		viewCount := make(map[uint64]uint64)
@@ -1932,7 +1944,7 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) error {
 			pbft.processRequestsDuringNegoView()
 		} else {
 			pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
-			logger.Errorf("pbft recv at least N-f nego-view responses, but cannot find same view from 2f+1.")
+			logger.Warningf("pbft recv at least N-f nego-view responses, but cannot find same view from 2f+1.")
 		}
 	}
 	return nil
@@ -1940,7 +1952,7 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) error {
 
 func (pbft *pbftProtocal) restartNegoView() {
 	logger.Noticef("Replica %d restart negotiate view", pbft.id)
-	pbft.negotiateView()
+	pbft.processNegotiateView()
 }
 
 func (pbft *pbftProtocal) processRequestsDuringNegoView() {
