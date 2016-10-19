@@ -51,9 +51,9 @@ func Start(caConfigDir string, nodeId int) {
 
 	caConfig = LoadConfig(caConfigDir)
 	caPath = caConfig.GetString("server.caserverdir")
-	if (nodeId == 1) {
-		go StartCAServer(caConfigDir)
-	}
+	//if (nodeId == 1) {
+	//	go StartCAServer(caConfigDir)
+	//}
 }
 
 //启动ca服务器
