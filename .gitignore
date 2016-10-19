@@ -105,3 +105,6 @@ scripts/server.out
 scripts/sshkeys/
 
 log
+
+# build vendor
+build
