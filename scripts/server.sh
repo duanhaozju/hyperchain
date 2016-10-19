@@ -129,15 +129,14 @@ build(){
 
 distribute_the_binary(){
     echo "Sending the local complied file and configuration files to primary"
-	scp -r ../build/hyperchain satoshi@$PRIMARY:/home/satoshi/
+    ssh satoshi@$PRIMARY "ps aux | grep hyperchain | awk '{print \$2}' | xargs kill -9"
+	scp ../build/hyperchain satoshi@$PRIMARY:/home/satoshi
 	scp -r ../config/ satoshi@$PRIMARY:/home/satoshi/
 
-	scp -r innerserverlist.txt satoshi@$PRIMARY:/home/satoshi/
-	scp -r ./sub_scripts/deploy/killprocess.sh satoshi@$PRIMARY:/home/satoshi/
-	scp -r ./sub_scripts/deploy/server_deploy.sh satoshi@$PRIMARY:/home/satoshi/
+	scp innerserverlist.txt satoshi@$PRIMARY:/home/satoshi/
+	scp ./sub_scripts/deploy/server_deploy.sh satoshi@$PRIMARY:/home/satoshi/
 
-	ssh  satoshi@$PRIMARY "ps aux | grep hyperchain | awk '{print $2}' | xargs kill -9"
-	ssh  satoshi@$PRIMARY "chmod a+x server_deploy.sh && bash server_deploy.sh ${MAXNODE}"
+	ssh satoshi@$PRIMARY "chmod a+x server_deploy.sh && bash server_deploy.sh ${MAXNODE}"
 }
 
 #clean(){
@@ -159,7 +158,7 @@ auto_run(){
 #    echo "自动运行相应命令，启动全节点"
     for server_address in ${SERVER_ADDR[@]}; do
 	  echo $server_address
-
+      ssh satoshi@$server_address "ps aux | grep hyperchain | awk '{print \$2}' | xargs kill -9"
 	  gnome-terminal -x bash -c "ssh satoshi@$server_address \" cd /home/satoshi/ && ./hyperchain -o $ni -l 8001 -t 8081 || while true; do ifconfig && sleep 100; done\""
 	  ni=`expr $ni + 1`
 	done
@@ -170,6 +169,10 @@ if $FIRST_RUN; then
 	add_ssh_key_form_primary_to_others
 fi
 
-build
+#build
+for server_address in ${SERVER_ADDR[@]}; do
+  echo "kill $server_address"
+  ssh satoshi@$server_address "ps aux | grep hyperchain | awk '{print \$2}' | xargs kill -9"
+done
 distribute_the_binary
 auto_run
