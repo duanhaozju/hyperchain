@@ -9,7 +9,7 @@ import (
 	"hyperchain/common"
 )
 var (
-	PublicStateObjectMaps *PublicStateDB
+	PublicDB *PublicStateDB
 )
 type PublicStateObject struct{
 	State_object	*StateObject
@@ -22,12 +22,12 @@ type PublicStateDB struct{
 }
 
 func init(){
-	PublicStateObjectMaps = &PublicStateDB{}
+	PublicDB = &PublicStateDB{}
 }
 
 // clear all objects
 func (self *PublicStateDB) ClearAll(){
-	PublicStateObjectMaps = &PublicStateDB{}
+	PublicDB = &PublicStateDB{}
 }
 
 // clear all objects
@@ -39,7 +39,7 @@ func (self *PublicStateDB) Update(addr common.Address,publicStateObject PublicSt
 	self.PublicStateObjectMap[addr] = &publicStateObject
 }
 
-func (self *PublicStateDB) GetPublicStateObject(addr common.Address) PublicStateObject {
+func (self *PublicStateDB) GetPublicStateObject(addr common.Address) *PublicStateObject {
 	if _,ok := self.PublicStateObjectMap[addr];ok{
 		return self.PublicStateObjectMap[addr]
 	}else{
@@ -51,7 +51,7 @@ func (self *PublicStateDB) GetPublicStateObject(addr common.Address) PublicState
 func (self *PublicStateDB) ClearLowFrequence(frequence int){
 	for addr,publicStateObject := range self.PublicStateObjectMap{
 		if(publicStateObject.Frequence<frequence){
-			delete(PublicStateObjectMap,addr)
+			delete(PublicDB.PublicStateObjectMap,addr)
 		}
 	}
 }
@@ -60,7 +60,7 @@ func (self *PublicStateDB) ClearLowFrequence(frequence int){
 func (self *PublicStateDB) ClearOldTimestamp(timestamp time.Time){
 	for addr,publicStateObject := range self.PublicStateObjectMap{
 		if(publicStateObject.Timestamp.Before(timestamp)){
-			delete(PublicStateObjectMap,addr)
+			delete(PublicDB.PublicStateObjectMap,addr)
 		}
 	}
 }

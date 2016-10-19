@@ -8,7 +8,6 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/trie"
 	"math/big"
-	"time"
 )
 
 var log *logging.Logger // package-level logger
