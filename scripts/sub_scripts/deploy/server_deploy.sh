@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-MAXNODE=1
+MAXNODE=$1
 
 #kill the progress
 killprogress(){
@@ -16,37 +16,35 @@ killprogress(){
   done
 }
 
-while read line;do
- SERVER_ADDR+=" ${line}"
- done < ./innerserverlist.txt
+count=0
+while IFS='' read -r line || [[ -n "$line" ]]; do
+   let count=$count+1
+   if [ $count -eq 0 ]; then
+    continue
+   fi
+
+   SERVER_ADDR+=" ${line}"
+done < innerserverlist.txt
 
 scpfile() {
  # ssh-keygen -f "/home/satoshi/.ssh/known_hosts" -R $server_address
  expect <<EOF
        set timeout 60
-       spawn ssh -t satoshi@$1 "echo \"hello world\""
+       spawn ssh -t satoshi@$1"echo \"hello world\""
        expect {
          "yes/no" {send "yes\r";exp_continue }
          eof
        }
 EOF
 
-killprogress
+ killprogress $MAXNODE
+ scp -r config satoshi@$1:/home/satoshi/
  scp -r hyperchain satoshi@$1:/home/satoshi/
- scp -r peerconfig.json satoshi@$1:/home/satoshi/
- scp -r config.yaml satoshi@$1:/home/satoshi/
- scp -r genesis.json satoshi@$1:/home/satoshi/
- scp -r membersrvc.yaml satoshi@$1:/home/satoshi/
- ssh -t satoshi@$1 "rm -rf keystore"
- scp -r keystore satoshi@$1:/home/satoshi/
- ssh -t satoshi@$1 "rm -rf cert"
- scp -r cert satoshi@$1:/home/satoshi/
+ ssh -t satoshi@$1 "rm -rf build"
 }
 
 for server_address in ${SERVER_ADDR[@]}; do
-
  scpfile $server_address &
-
 done
 
 wait

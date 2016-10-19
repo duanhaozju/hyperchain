@@ -3,31 +3,31 @@
   "nodes":[
     {
     "id":1,
-    "address":"127.0.0.1",
-    "external_address":"192.168.137.76",
+    "address":"10.105.8.145",
+    "external_address":"182.254.220.52",
     "port":8001,
     "rpc_port":8081
   },
     {
     "id":2,
-    "address":"127.0.0.1",
-    "external_address":"192.168.137.76",
-    "port":8002,
-    "rpc_port":8082
+    "address":"10.105.2.6",
+    "external_address":"115.159.26.15",
+    "port":8001,
+    "rpc_port":8081
   },
     {
     "id":3,
-    "address":"127.0.0.1",
-    "external_address":"192.168.137.76",
-    "port":8003,
-    "rpc_port":8083
+    "address":"10.105.10.74",
+    "external_address":"115.159.212.225",
+    "port":8001,
+    "rpc_port":8081
   },
     {
     "id":4,
-    "address":"127.0.0.1",
-    "external_address":"192.168.137.76",
-    "port":8004,
-    "rpc_port":8084
+    "address":"10.105.36.220",
+    "external_address":"115.159.213.69",
+    "port":8001,
+    "rpc_port":8081
   }
 ]
 }

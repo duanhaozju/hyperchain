@@ -9,22 +9,16 @@ fi
 
 PASSWD="blockchain"
 
-# get the server list config
-while read line;do
- SERVER_ADDR+=" ${line}"
-done < ./serverlist.txt
+while IFS='' read -r line || [[ -n "$line" ]]; do
+   SERVER_ADDR+=" ${line}"
+done < innerserverlist.txt
 
 #########################
 # authorization         #
 #########################
 
-# add your local pubkey into every server
-echo "┌────────────────────────┐"
-echo "│    auto add ssh key    │"
-echo "└────────────────────────┘"
-
 addkey(){
-#  ssh-keygen -f "/home/fox/.ssh/known_hosts" -R $1
+#  ssh-keygen -f "/home/satoshi/.ssh/known_hosts" -R $1
   expect <<EOF
       set timeout 60
       spawn ssh-copy-id satoshi@$1

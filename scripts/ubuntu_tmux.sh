@@ -26,6 +26,11 @@ if ! type jq > /dev/null; then
     exit 1
 fi
 
+if ! type tmux > /dev/null; then
+    echo -e "Please install the `tmux` to parse the json file \n just type: \n sudo apt-get install tmux"
+    exit 1
+fi
+
 cd ../
 # build the project
 PROJECT_PATH=`pwd`
@@ -51,7 +56,7 @@ echo "Node number is: ${MAXPEERNUM}"
 # 杀死所有进程
 #kill the progress
 echo "kill the bind port process"
-for((i=1;i<=$MAXPEERNUM;i++))
+for((i=0;i<=$MAXPEERNUM;i++))
 do
     temp_port=`lsof -i :800$i | awk 'NR>=2{print $2}'`
     if [ x"$temp_port" != x"" ];then
@@ -67,10 +72,37 @@ echo "clear the old data"
 rm -rf "${DUMP_PATH}/build"
 
 #执行测试
-for((j=1;j<=$MAXPEERNUM;j++))
-do
-	gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${j} -l 800${j} -t 808${j}"
-done
+tmux_init()
+{
+	tmux new-session -s "hyperchain" -d -n "local"    # 开启一个会话
+	tmux new-window -n "other"
+	tmux split-window -v
+	tmux select-pane -t 1
+	tmux split-window -h
+	tmux select-pane -t 3
+	tmux split-window -h
+	sleep 2
+	count=0
+	for _pane in $(tmux list-panes  -t hyperchain -F '#P'); do
+		let count=count+1
+        tmux send-keys -t ${_pane} "cd ${DUMP_PATH} && ./hyperchain -o ${count} -l 800${count} -t 808${count}" Enter
+	done
+    tmux -2 attach-session -d           # tmux -2强制启用256color，连接已开启的tmux
+}
+
+# 判断是否已有开启的tmux会话，没有则开启
+if which tmux 2>&1 >/dev/null; then
+	if [ "hyperchain:" ==  `tmux ls | awk '{print$1}'` ];then
+		echo "exist tmux session"
+		tmux kill-session -t hyperchain
+	fi
+	echo "going to open 'tmux' to running auto local test,if you want to exit, just type 'Ctrl-b d'"
+	echo "将要开启'tmux' 运行自动化本地测试，如果你想退出，请按'Ctrl-b d'"
+	echo "如果你不想使用本脚本重新启动测试，请手动运行命令 ' tmux kill-session -t hyperchain '"
+	sleep 2
+    test -z "$TMUX" && (tmux attach || tmux_init)
+fi
+
 
 #count=0
 #while read line;do
@@ -79,7 +111,6 @@ done
 #        echo $line
 #
 #
-
 #    fi
 #    let count=count+1
 #done < ./serverlist.txt
