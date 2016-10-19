@@ -886,7 +886,7 @@ func (pbft *pbftProtocal) trySendPrePrepare() {
 
 	if pbft.currentVid != nil {
 		logger.Debugf("Replica %d not attempting to send pre-prepare bacause it is currently send %d, retry.", pbft.id, pbft.currentVid)
-		//TODO: zarc
+		return
 	}
 
 	logger.Debugf("Replica %d attempting to call sendPrePrepare", pbft.id)
@@ -1671,6 +1671,7 @@ func (pbft *pbftProtocal) moveWatermarks(n uint64) {
 				pbft.id, idx.v, idx.n)
 			pbft.persistDelRequestBatch(cert.digest)
 			delete(pbft.validatedBatchStore, cert.digest)
+			delete(pbft.outstandingReqBatches, cert.digest)
 			delete(pbft.certStore, idx)
 		}
 	}
