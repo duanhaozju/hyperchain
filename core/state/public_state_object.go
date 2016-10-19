@@ -15,6 +15,7 @@ type PublicStateObject struct{
 	State_object	*StateObject
 	Frequence	int
 	Timestamp	time.Time
+	LatestBlockNum	int
 }
 
 type PublicStateDB struct{
@@ -47,8 +48,8 @@ func (self *PublicStateDB) GetPublicStateObject(addr common.Address) *PublicStat
 	}
 }
 
-// TODO clear the the PublicStateObject which is less than frequence
-func (self *PublicStateDB) ClearLowFrequence(frequence int){
+// clear old PublicStateObject by frequence
+func (self *PublicStateDB) ClearStateObjectByFrequence(frequence int){
 	for addr,publicStateObject := range self.PublicStateObjectMap{
 		if(publicStateObject.Frequence<frequence){
 			delete(PublicDB.PublicStateObjectMap,addr)
@@ -56,8 +57,8 @@ func (self *PublicStateDB) ClearLowFrequence(frequence int){
 	}
 }
 
-// TODO clear the the PublicStateObject which is old than timestamp
-func (self *PublicStateDB) ClearOldTimestamp(timestamp time.Time){
+// clear old PublicStateObject by timestamp
+func (self *PublicStateDB) ClearStateObjectByTimestamp(timestamp time.Time){
 	for addr,publicStateObject := range self.PublicStateObjectMap{
 		if(publicStateObject.Timestamp.Before(timestamp)){
 			delete(PublicDB.PublicStateObjectMap,addr)
@@ -65,6 +66,11 @@ func (self *PublicStateDB) ClearOldTimestamp(timestamp time.Time){
 	}
 }
 
-
-
-
+// clear old PublicStateObject by LatestBlockNum
+func (self *PublicStateDB) ClearStateObjectByLatestBlockNum(blockNum int){
+	for addr,publicStateObject := range self.PublicStateObjectMap{
+		if(publicStateObject.LatestBlockNum < blockNum){
+			delete(PublicDB.PublicStateObjectMap,addr)
+		}
+	}
+}
