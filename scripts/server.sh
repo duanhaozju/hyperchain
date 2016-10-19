@@ -136,7 +136,7 @@ distribute_the_binary(){
 	scp -r ./sub_scripts/deploy/killprocess.sh satoshi@$PRIMARY:/home/satoshi/
 	scp -r ./sub_scripts/deploy/server_deploy.sh satoshi@$PRIMARY:/home/satoshi/
 
-	ssh  satoshi@$PRIMARY "chmod a+x killprocess.sh && bash killprocess.sh ${MAXNODE}"
+	ssh  satoshi@$PRIMARY "ps aux | grep hyperchain | awk '{print $2}' | xargs kill -9"
 	ssh  satoshi@$PRIMARY "chmod a+x server_deploy.sh && bash server_deploy.sh ${MAXNODE}"
 }
 

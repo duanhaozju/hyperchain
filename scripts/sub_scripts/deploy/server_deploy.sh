@@ -2,20 +2,6 @@
 set -e
 MAXNODE=$1
 
-#kill the progress
-killprogress(){
-
-  echo "kill the bind port process"
-  for((i=0;i<=$MAXNODE;i++))
-  do
-      test_port=`expr 8000 + $i`
-      temp_port=`lsof -i :$test_port | awk 'NR>=2{print $2}'`
-      if [ x"$temp_port" != x"" ];then
-          kill -9 $temp_port
-      fi
-  done
-}
-
 count=0
 while IFS='' read -r line || [[ -n "$line" ]]; do
    let count=$count+1
@@ -37,7 +23,7 @@ scpfile() {
        }
 EOF
 
- killprogress $MAXNODE
+ ps aux | grep hyperchain | awk '{print $2}' | xargs kill -9
  scp -r config satoshi@$1:/home/satoshi/
  scp -r hyperchain satoshi@$1:/home/satoshi/
  ssh -t satoshi@$1 "rm -rf build"
