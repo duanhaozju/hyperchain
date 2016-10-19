@@ -57,14 +57,14 @@ func (node *PublicNodeAPI) GetNodes() client.PeerInfos{
 	return node.pm.GetNodeInfo()
 }
 
-func outputNodeResult(node *client.PeerInfo) *NodeResult {
+/*func outputNodeResult(node *client.PeerInfo) *NodeResult {
 
 	return &NodeResult{
 		Status: node.Status,
-		CName: node.CName,
+		//CName: node.CName,
 		IP: node.IP,
 		Port: node.Port,
 	}
 
-}
+}*/
 

@@ -71,7 +71,7 @@ func main() {
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
 
 		//init block pool to save block
-		blockPool := core.NewBlockPool(eventMux)
+		blockPool := core.NewBlockPool(eventMux,cs)
 
 		//init manager
 		exist := make(chan bool)
