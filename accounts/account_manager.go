@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"hyperchain/common"
 	"hyperchain/crypto"
-	"math/big"
 	"os"
 	"path"
 	"path/filepath"
