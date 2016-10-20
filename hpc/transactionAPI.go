@@ -201,7 +201,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 	log.Infof("############# %d: start send request#############", time.Now().Unix())
 	start := time.Now().Unix()
-	end := start + 39600
+	end := start + 21600
 	//end:=start+500
 
 		for start := start; start < end; start = time.Now().Unix() {
@@ -214,11 +214,11 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				// For Hyperchain test
 
 				// TODO replace password with test value
-				//signature, err := tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
-				//if err != nil {
-				//	log.Errorf("Sign(tx) error :%v", err)
-				//}
-				//tx.Signature = signature
+				signature, err := tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
+				if err != nil {
+					log.Errorf("Sign(tx) error :%v", err)
+				}
+				tx.Signature = signature
 			} else {
 				// For Dashboard test
 
@@ -239,9 +239,9 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 			tx.TransactionHash = tx.BuildHash().Bytes()
 			// Unsign
-			//if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
-			//	return common.Hash{}, errors.New("invalid signature")
-			//}
+			if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
+				return common.Hash{}, errors.New("invalid signature")
+			}
 
 			txBytes, err := proto.Marshal(tx)
 			if err != nil {
@@ -254,7 +254,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				log.Warning("manager is Nil")
 			}
 		}
-		time.Sleep(1000 * time.Millisecond)
+		time.Sleep(300 * time.Millisecond)
 	}
 	/*tx.TimeStamp = time.Now().UnixNano()
 
