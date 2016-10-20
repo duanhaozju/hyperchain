@@ -67,10 +67,10 @@ ls build
 │   ├── keystore
 │   │   ├── 000f1a7a08ccc48e5d30f80850cf1cf283aa3abd
 │   │   ├── 6201cb0448964ac597faf6fdf1f472edf2a22b89
-│   │   ├── addresses
-│   │   │   └── address
 │   │   ├── b18c8575e3284e79b92100025a31378feb8100d6
-│   │   └── e93b92f1da08f925bdee44e91e7768380ae83307
+│   │   ├── e93b92f1da08f925bdee44e91e7768380ae83307
+│   │   └── addresses
+│   │       └── address
 │   ├── local_peerconfig.json
 │   ├── membersrvc.yaml
 │   ├── pbft.yaml
@@ -87,9 +87,9 @@ if you want hyerchain node one by one, you can type this command:
 ```bash
 cd build
 ./hyperchain -o 1 -l 8001 -t 8081 //run this on first node
-./hyperchain -o 2 -l 8001 -t 8081 //run this on second node
-./hyperchain -o 3 -l 8001 -t 8081 //run this on third node
-./hyperchain -o 4 -l 8001 -t 8081 //run this on fourth node
+./hyperchain -o 2 -l 8002 -t 8082 //run this on second node
+./hyperchain -o 3 -l 8003 -t 8083 //run this on third node
+./hyperchain -o 4 -l 8004 -t 8084 //run this on fourth node
 ```
 Note: if you want run 4 nodes in localhost, modify the `-l` and `-t` options, ensure the ports are different. 
 
