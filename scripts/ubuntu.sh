@@ -32,14 +32,21 @@ PROJECT_PATH=`pwd`
 DUMP_PATH="${PROJECT_PATH}/build"
 CONF_PATH="${PROJECT_PATH}/config"
 
+#清空数据
+if [ -d "${DUMP_PATH}" ];then
+	echo "clear the old data"
+	rm -rf "${DUMP_PATH}"
+fi
+# 创建输出文件夹
 if [ ! -d "${DUMP_PATH}" ];then
     echo "auto creat the build dir"
-    mkdir -p ${DUMP_PATH}
+    mkdir -p "${DUMP_PATH}/build"
 fi
 
 # 检查所有的配置文件
 echo -e "copy config dir  into build dir.."
 cp -rf "${CONF_PATH}" "${DUMP_PATH}/"
+cp -rf "${CONF_PATH}/keystore" "${DUMP_PATH}/build/"
 
 
 # 读取配置文件
@@ -62,32 +69,10 @@ done
 echo "build the project"
 govendor build -o ${DUMP_PATH}/hyperchain
 
-#清空数据
-echo "clear the old data"
-rm -rf "${DUMP_PATH}/build"
-
 #执行测试
 for((j=1;j<=$MAXPEERNUM;j++))
 do
 	gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${j} -l 800${j} -t 808${j}"
 done
-
-#count=0
-#while read line;do
-#    if [ $count -ne 0 ]; then
-#        # SERVER_ADDR+=" ${line}"
-#        echo $line
-#
-#
-
-#    fi
-#    let count=count+1
-#done < ./serverlist.txt
-
-
-#for (( i=0; i<$MAXPEERNUM;i++))
-#do
-#	gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${i} -l 800${i} -t 808${i}"
-#done
 
 
