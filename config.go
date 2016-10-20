@@ -40,7 +40,7 @@ type configsImpl struct {
 }
 
 //return a config instances
-func newconfigsImpl(globalConfigPath string) *configsImpl {
+func newconfigsImpl(globalConfigPath string,NodeID int, GRPCPort int, HTTPPort int) *configsImpl {
 	var cimpl configsImpl
 	config := viper.New()
 	viper.SetEnvPrefix("GLOBAL_ENV")
@@ -49,9 +49,9 @@ func newconfigsImpl(globalConfigPath string) *configsImpl {
 	if err != nil {
 		panic(fmt.Errorf("Error envPre %s reading %s", "GLOBAL", err))
 	}
-	cimpl.nodeID = config.GetInt("global.nodeid")
-	cimpl.gRPCPort = config.GetInt("global.grpcport")
-	cimpl.httpPort = config.GetInt("global.HTTPPort")
+	cimpl.nodeID = NodeID
+	cimpl.gRPCPort = GRPCPort
+	cimpl.httpPort = HTTPPort
 	cimpl.keystoreDir = config.GetString("global.account.keystoredir")
 	cimpl.keyNodeDir = config.GetString("global.account.keynodesdir")
 	cimpl.logDumpFileFlag = config.GetBool("global.logs.dumpfile")
@@ -65,11 +65,6 @@ func newconfigsImpl(globalConfigPath string) *configsImpl {
 	return &cimpl
 }
 
-func (cIml *configsImpl) initConfig(NodeID int, GRPCPort int, HTTPPort int) {
-	cIml.nodeID = NodeID
-	cIml.gRPCPort = GRPCPort
-	cIml.httpPort = HTTPPort
-}
 func (cIml *configsImpl) getNodeID() int            { return cIml.nodeID }
 func (cIml *configsImpl) getGRPCPort() int          { return cIml.gRPCPort }
 func (cIml *configsImpl) getHTTPPort() int          { return cIml.httpPort }

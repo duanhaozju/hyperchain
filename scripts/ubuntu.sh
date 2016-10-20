@@ -76,4 +76,7 @@ do
 	gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${j} -l 800${j} -t 808${j}"
 done
 
+# 启动相应的http查询服务
+
+python $PROJECT_PATH/jsonrpc/Dashboard/simpleHttpServer.py
 

@@ -17,9 +17,6 @@
 # node config
 
 global:
-    nodeid: 1
-    grpcport: 8001
-    httpport: 8081
 
 ##########################
 # data storage config #
