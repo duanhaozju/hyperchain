@@ -13,9 +13,9 @@ import (
 	"errors"
 	"io/ioutil"
 
+	"google.golang.org/grpc"
 	"hyperchain/core/crypto/primitives"
 	pb "hyperchain/membersrvc/protos"
-	"google.golang.org/grpc"
 )
 
 var (

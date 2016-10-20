@@ -8,6 +8,7 @@ package leveldb
 
 import (
 	"time"
+	"fmt"
 
 	"github.com/syndtr/goleveldb/leveldb/memdb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
@@ -241,11 +242,13 @@ drain:
 			return
 		}
 	} else {
+
 		err = db.writeJournal(b)
 		if err != nil {
 			return
 		}
 		if berr := b.memReplay(mdb.DB); berr != nil {
+			fmt.Println("batch size is -------------",b.size())
 			panic(berr)
 		}
 	}

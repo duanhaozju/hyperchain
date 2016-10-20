@@ -1,0 +1,65 @@
+
+ contract weiwei{
+    struct NameList{
+        string name;
+        address[] AddressList;
+    }
+    NameList[] nameLists;
+    string temp_name_list;
+
+
+    function getNameLists() constant returns(string){
+        for(uint256 i=0;i<nameLists.length;i++){
+            temp_name_list = strConcat(temp_name_list,",",nameLists[i].name);
+        }
+        return temp_name_list;
+    }
+
+    function getNameListsByName(string temp_name) returns(address[]){
+        for(uint256 i=0;i<nameLists.length;i++){
+            if(stringsEqual(nameLists[i].name,temp_name)){
+                return nameLists[i].AddressList;
+            }
+
+        }
+        return nameLists[0].AddressList;
+    }
+
+    function stringsEqual(string storage _a, string memory _b) internal returns (bool) {
+		bytes storage a = bytes(_a);
+		bytes memory b = bytes(_b);
+		if (a.length != b.length)
+			return false;
+		// @todo unroll this loop
+		for (uint i = 0; i < a.length; i ++)
+			if (a[i] != b[i])
+				return false;
+		return true;
+	}
+
+	function strConcat(string _a, string _b) internal returns (string){
+	    bytes memory _ba = bytes(_a);
+	    bytes memory _bb = bytes(_b);
+	    string memory abcde = new string(_ba.length + _bb.length);
+	    bytes memory babcde = bytes(abcde);
+	    uint k = 0;
+	    for (uint i = 0; i < _ba.length; i++) babcde[k++] = _ba[i];
+	    for (i = 0; i < _bb.length; i++) babcde[k++] = _bb[i];
+	    return string(babcde);
+	}
+
+	// todo optimize the method
+	function strConcat(string _a, string _b, string _c) internal returns (string){
+	    bytes memory _ba = bytes(_a);
+	    bytes memory _bb = bytes(_b);
+	    bytes memory _bc = bytes(_c);
+	    string memory abcde = new string(_ba.length + _bb.length + _bc.length);
+	    bytes memory babcde = bytes(abcde);
+	    uint k = 0;
+	    for (uint i = 0; i < _ba.length; i++) babcde[k++] = _ba[i];
+	    for (i = 0; i < _bb.length; i++) babcde[k++] = _bb[i];
+	    for (i = 0; i < _bc.length; i++) babcde[k++] = _bc[i];
+	    return string(babcde);
+	}
+
+ }

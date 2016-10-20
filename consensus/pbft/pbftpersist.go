@@ -105,7 +105,7 @@ func (pbft *pbftProtocal) restorePQSet(key string) []*ViewChange_PQ {
 }
 
 func (pbft *pbftProtocal) persistRequestBatch(digest string) {
-	reqBatch := pbft.reqBatchStore[digest]
+	reqBatch := pbft.validatedBatchStore[digest]
 	reqBatchPacked, err := proto.Marshal(reqBatch)
 	if err != nil {
 		logger.Warningf("Replica %d could not persist request batch %s: %s", pbft.id, digest, err)
@@ -167,12 +167,12 @@ func (pbft *pbftProtocal) restoreState() {
 	reqBatchesPacked, err := persist.ReadStateSet("reqBatch.")
 	if err == nil {
 		for k, v := range reqBatchesPacked {
-			reqBatch := &RequestBatch{}
+			reqBatch := &TransactionBatch{}
 			err = proto.Unmarshal(v, reqBatch)
 			if err != nil {
 				logger.Warningf("Replica %d could not restore request batch %s", pbft.id, k)
 			} else {
-				pbft.reqBatchStore[hash(reqBatch)] = reqBatch
+				pbft.validatedBatchStore[hash(reqBatch)] = reqBatch
 			}
 		}
 	} else {
@@ -204,8 +204,10 @@ func (pbft *pbftProtocal) restoreState() {
 	if pbft.seqNo < pbft.lastExec {
 		pbft.seqNo = pbft.lastExec
 	}
+	pbft.vid = pbft.seqNo
+	pbft.lastVid = pbft.seqNo
 	logger.Infof("Replica %d restored state: view: %d, seqNo: %d, pset: %d, qset: %d, reqBatches: %d, chkpts: %d",
-		pbft.id, pbft.view, pbft.seqNo, len(pbft.pset), len(pbft.qset), len(pbft.reqBatchStore), len(pbft.chkpts))
+		pbft.id, pbft.view, pbft.seqNo, len(pbft.pset), len(pbft.qset), len(pbft.validatedBatchStore), len(pbft.chkpts))
 }
 
 func (pbft *pbftProtocal) restoreLastSeqNo() {

@@ -1,11 +1,12 @@
 package core
 
 import (
-	"testing"
 	"fmt"
-	"hyperchain/crypto"
+	//	"hyperchain/crypto"
+	"testing"
 )
 
+/*
 func TestCalcResponseCount(t *testing.T) {
 	log.Info("test =============> > > TestInitDB")
 	InitDB(8089)
@@ -17,29 +18,39 @@ func TestCalcResponseCount(t *testing.T) {
 		t.Errorf("%d not equal 2, TestCalcResponseCount fail", count)
 	}
 }
-
-/*func TestCalcResponseCount(t *testing.T) {
+*/
+/*
+func TestCalcResponseCount(t *testing.T) {
 	log.Info("test =============> > > TestInitDB")
-	InitDB(8084)
+	InitDB(8082)
 	//blockUtilsCase.Number = GetHeightOfChain() + 1
 	//commonHash := crypto.NewKeccak256Hash("keccak256")
 	//WriteBlock(blockUtilsCase, commonHash)
 	fmt.Println(GetHeightOfChain())
-	for i := uint64(0); i <= GetHeightOfChain(); i += 1 {
-		count,_ := CalcResponseCount(i, int64(300))
+	fmt.Println(GetChainCopy().LatestBlockHash)
+*/ /*for i := uint64(0); i <= GetHeightOfChain(); i += 1 {
+	count,_ := CalcResponseCount(i, int64(300))
 
-		fmt.Println(count)
-	}
+	fmt.Println(count)
+}*/ /*
 
 }*/
+
+func TestChainHeight(t *testing.T) {
+	InitDB(8082)
+	fmt.Println(GetHeightOfChain())
+
+}
+
+/*
 func TestCalcCommitBatchAVGTime(t *testing.T) {
 	InitDB(8084)
 	blockUtilsCase.Number = GetHeightOfChain() + 1
 	commonHash := crypto.NewKeccak256Hash("keccak256")
 	WriteBlock(&blockUtilsCase, commonHash, 122)
-	fmt.Println(CalcCommitBatchAVGTime(GetHeightOfChain(),GetHeightOfChain()))
+	fmt.Println(CalcCommitBatchAVGTime(GetHeightOfChain(), GetHeightOfChain()))
 }
-
+*/
 /*func TestGetBlockHash(t *testing.T) {
 	log.Info("test =============> > > TestInitDB")
 	InitDB(8082)
@@ -51,6 +62,7 @@ func TestCalcCommitBatchAVGTime(t *testing.T) {
 	fmt.Printf("%#v", block)
 }*/
 
+/*
 func TestCalTransactionNums(t *testing.T) {
 	InitDB(8084)
 	blockUtilsCase.Number = GetHeightOfChain() + 1
@@ -66,6 +78,7 @@ func TestCalBlockGPS(t *testing.T) {
 	WriteBlock(&blockUtilsCase, commonHash, 122)
 	CalBlockGPS()
 }
+*/
 //func TestCall(t *testing.T) {
 //	InitDB(8084)
 //	db,_ := hyperdb.GetLDBDatabase()

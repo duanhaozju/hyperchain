@@ -1,0 +1,33 @@
+{
+  "maxpeernode":4,
+  "nodes":[
+    {
+    "id":1,
+    "address":"localhost",
+    "external_address":"localhost",
+    "port":8001,
+    "rpc_port":8081
+  },
+    {
+    "id":2,
+    "address":"localhost",
+    "external_address":"localhost",
+    "port":8002,
+    "rpc_port":8082
+  },
+    {
+    "id":3,
+    "address":"localhost",
+    "external_address":"localhost",
+    "port":8003,
+    "rpc_port":8083
+  },
+    {
+    "id":4,
+    "address":"localhost",
+    "external_address":"localhost",
+    "port":8004,
+    "rpc_port":8084
+  }
+]
+}

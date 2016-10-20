@@ -11,9 +11,9 @@ import (
 	"math/big"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 	"hyperchain/core/crypto/primitives"
 	pb "hyperchain/membersrvc/protos"
-	"golang.org/x/net/context"
 )
 
 // ECAA serves the administrator GRPC interface of the ECA.

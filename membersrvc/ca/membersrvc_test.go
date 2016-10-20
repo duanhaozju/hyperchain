@@ -12,8 +12,8 @@ import (
 
 	"fmt"
 
-	"hyperchain/core/crypto/primitives"
 	"google.golang.org/grpc"
+	"hyperchain/core/crypto/primitives"
 
 	"time"
 )

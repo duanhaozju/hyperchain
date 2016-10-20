@@ -1,35 +1,37 @@
 package core
 
 import (
-	"hyperchain/core/types"
-	"time"
-	"testing"
-	"os"
-	"hyperchain/hyperdb"
-	"strconv"
+	"fmt"
 	"github.com/syndtr/goleveldb/leveldb"
+	"hyperchain/core/types"
 	"hyperchain/crypto"
+	"hyperchain/hyperdb"
+	"os"
+	"strconv"
+	"testing"
+	"time"
+	"github.com/golang/protobuf/proto"
 )
 
 var transactionCases = []*types.Transaction{
 	&types.Transaction{
-		From: []byte("0000000000000000000000000000000000000001"),
-		To: []byte("0000000000000000000000000000000000000003"),
-		Value: []byte("100"),
-		TimeStamp: time.Now().UnixNano() - int64(time.Second),
+		From:      []byte("0000000000000000000000000000000000000001"),
+		To:        []byte("0000000000000000000000000000000000000003"),
+		Value:     []byte("100"),
+		Timestamp:time.Now().UnixNano() - int64(time.Second),
 		Signature: []byte("signature1"),
 	},
 	&types.Transaction{
-		From: []byte("0000000000000000000000000000000000000001"),
-		To: []byte("0000000000000000000000000000000000000002"),
-		Value: []byte("100"),TimeStamp: time.Now().UnixNano(),
+		From:  []byte("0000000000000000000000000000000000000001"),
+		To:    []byte("0000000000000000000000000000000000000002"),
+		Value: []byte("100"), Timestamp: time.Now().UnixNano(),
 		Signature: []byte("signature2"),
 	},
 	&types.Transaction{
-		From: []byte("0000000000000000000000000000000000000002"),
-		To: []byte("0000000000000000000000000000000000000003"),
-		Value: []byte("700"),
-		TimeStamp: time.Now().UnixNano(),
+		From:      []byte("0000000000000000000000000000000000000002"),
+		To:        []byte("0000000000000000000000000000000000000003"),
+		Value:     []byte("700"),
+		Timestamp: time.Now().UnixNano(),
 		Signature: []byte("signature3"),
 	},
 }
@@ -67,8 +69,6 @@ func TestPutTransaction(t *testing.T) {
 	}
 }
 
-
-
 // TestGetTransaction tests for GetTransaction
 func TestGetTransaction(t *testing.T) {
 	log.Info("test =============> > > TestGetTransaction")
@@ -87,6 +87,19 @@ func TestGetTransaction(t *testing.T) {
 		}
 	}
 }
+
+func TestGetTransactionBLk(t *testing.T) {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+	block, err := GetBlockByNumber(db, 5)
+	fmt.Println("tx hash", block.Transactions[2].BuildHash())
+	tx := block.Transactions[2]
+	bh, bn, i := GetTxWithBlock(db, tx.BuildHash().Bytes())
+	fmt.Println("block hash", bh, "block num :", bn, "tx index:", i)
+}
+
 // TestGetAllTransaction tests for GetAllTransaction
 func TestGetAllTransaction(t *testing.T) {
 	log.Info("test =============> > > TestGetAllTransaction")
@@ -145,14 +158,15 @@ func TestPutTransactions(t *testing.T) {
 		t.Errorf("TestPutTransactions fail")
 	}
 }
+
 var blockUtilsCase = types.Block{
-	ParentHash: []byte("parenthash"),
-	BlockHash: []byte("blockhash"),
+	ParentHash:   []byte("parenthash"),
+	BlockHash:    []byte("blockhash"),
 	Transactions: transactionCases,
-	Timestamp    : time.Now().UnixNano(),
-	MerkleRoot  : []byte("merkeleroot"),
-	Number       : 1,
-	WriteTime: time.Now().UnixNano() + int64(time.Second)/2,
+	Timestamp:    time.Now().UnixNano(),
+	MerkleRoot:   []byte("merkeleroot"),
+	Number:       1,
+	WriteTime:    time.Now().UnixNano() + int64(time.Second)/2,
 }
 
 // TestPutBlock tests for PutBlock
@@ -167,6 +181,8 @@ func TestPutBlock(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	block, err := GetBlock(db, blockUtilsCase.BlockHash)
+	fmt.Println(block.Number)
 	//height := GetHeightOfChain()
 	//for i:=uint64(1);i<=height;i++{
 	//	block ,_:= GetBlockByNumber(db,i)
@@ -198,8 +214,16 @@ func TestDeleteBlock(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	err = PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
+	if err != nil {
+		log.Fatal(err)
+	}
+	block, err := GetBlock(db, blockUtilsCase.BlockHash)
+	fmt.Println(block.Number)
 	err = DeleteBlock(db, blockUtilsCase.BlockHash)
-	_, err = GetBlock(db, blockUtilsCase.BlockHash)
+	//err = DeleteBlockByNum(db, 1)
+	block, err = GetBlock(db, blockUtilsCase.BlockHash)
+	fmt.Println(block.Number)
 	if err != leveldb.ErrNotFound {
 		t.Errorf("block delete fail, TestDeleteBlock fail")
 	}
@@ -225,3 +249,48 @@ func TestUpdateChain(t *testing.T) {
 		t.Errorf("TestUpdateChain fail")
 	}
 }
+
+func TestGetReplicas(t *testing.T) {
+	replicas := make([]uint64, 10)
+	for i := 0; i < 10; i += 1 {
+		replicas[i] = uint64(i)
+	}
+	SetReplicas(replicas)
+	t.Log(GetReplicas())
+}
+
+func TestGetId(t *testing.T) {
+	SetId(uint64(100))
+	t.Log(GetId())
+}
+
+func TestGetInvaildTx(t *testing.T) {
+	tx := transactionCases[0]
+	record := &types.InvalidTransactionRecord{
+		Tx:      tx,
+		ErrType: types.InvalidTransactionRecord_OUTOFBALANCE,
+	}
+	data,_ := proto.Marshal(record)
+	// save to db
+	db, _ := hyperdb.GetLDBDatabase()
+	db.Put(append(invalidTransactionPrefix, tx.TransactionHash...), data)
+
+	result,_ := GetInvaildTxErrType(db,tx.TransactionHash)
+	fmt.Println(result)
+
+}
+
+//func TestUpdate(t *testing.T) {
+//	InitDB(8000)
+//	db, _ := hyperdb.GetLDBDatabase()
+//	err := PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	UpdateChain(&blockUtilsCase, false)
+//	height := GetHeightOfChain()
+//	fmt.Println(height)
+//	block,_ := GetBlockByNumber(db,height)
+//	fmt.Println(block.Transactions[0])
+//}
+

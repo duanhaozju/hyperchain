@@ -6,183 +6,230 @@ import (
 	"time"
 	"hyperchain/common"
 	"strconv"
+	"hyperchain/core/types"
+	"hyperchain/core/state"
 )
 
-type PublicBlockAPI struct{}
-
-type BlockResult struct{
-	Number    uint64      `json:"number"`
-	Hash      common.Hash `json:"hash"`
-	WriteTime string      `json:"writeTime"`
-	AvgTime   int64      `json:"avgTime"`
-	TxCounts  uint64      `json:"txcounts"`
-	Counts    int64      `json:"Counts"`
-	Percents  string      `json:"percents"`
+type PublicBlockAPI struct{
+	db *hyperdb.LDBDatabase
 }
 
-func NewPublicBlockAPI() *PublicBlockAPI{
-	return &PublicBlockAPI{}
+type BlockResult struct {
+	Number       *Number      	`json:"number"`
+	Hash         common.Hash 	`json:"hash"`
+	ParentHash   common.Hash 	`json:"parentHash"`
+	WriteTime    string      	`json:"writeTime"`
+	AvgTime      *Number      	`json:"avgTime"`
+	TxCounts     *Number      	`json:"txcounts"`
+	Counts       *Number      	`json:"Counts"`
+	Percents     string      	`json:"percents"`
+	MerkleRoot   common.Hash	`json:"merkleRoot"`
+	Transactions []interface{}	`json:"transactions"`
 }
 
-// GetBlocks returns all the block
-func (blk *PublicBlockAPI) GetBlocks() []*BlockResult{
+func NewPublicBlockAPI(hyperDb *hyperdb.LDBDatabase) *PublicBlockAPI {
+	return &PublicBlockAPI{
+		db: hyperDb,
+	}
+}
+
+// GetBlocks returns all the block.
+func (blk *PublicBlockAPI) GetBlocks() ([]*BlockResult, error) {
 	var blocks []*BlockResult
 
-	block := lastestBlock()
-	height := block.Number
+	block, err := blk.lastestBlock()
+
+	if err != nil {
+		log.Errorf("%v", err)
+		return nil, err
+	}
+
+	height := *block.Number
+
+	// only genesis block
+	if height == 0 {
+		//blocks = append(blocks, block)
+		return nil, nil
+	}
 
 	for height > 0 {
-		blocks = append(blocks,blockResult(height))
+		b, err := getBlockByNumber(height, blk.db)
+		if err != nil {
+			return nil, err
+			break
+		}
+		blocks = append(blocks, b)
 		height--
 	}
 
-	return blocks
+	return blocks, nil
 }
 
-// LastestBlock returns the number and hash of the lastest block
-func (blk *PublicBlockAPI) LastestBlock() *BlockResult{
-	return lastestBlock()
+// LastestBlock returns the number and hash of the lastest block.
+func (blk *PublicBlockAPI) LastestBlock() (*BlockResult, error) {
+	return blk.lastestBlock()
 }
 
-func lastestBlock() *BlockResult {
-	db, err := hyperdb.GetLDBDatabase()
+// GetBlockByHash returns the block for the given block hash.
+func (blk *PublicBlockAPI) GetBlockByHash(hash common.Hash) (*BlockResult, error) {
+	return getBlockByHash(hash, blk.db)
+}
+
+// GetBlockByNumber returns the bock for the given block number.
+func (blk *PublicBlockAPI) GetBlockByNumber(number Number) (*BlockResult, error) {
+	block, err := getBlockByNumber(number, blk.db)
+	return block, err
+}
+
+func (blk *PublicBlockAPI) lastestBlock() (*BlockResult, error) {
 
 	currentChain := core.GetChainCopy()
 
 	lastestBlkHeight := currentChain.Height
 
-	block, err := core.GetBlockByNumber(db, lastestBlkHeight)
-
-	if err != nil {
-		log.Errorf("%v", err)
-	}
-
-	blockResult := blockResult(block.Number)
-
-	if err != nil {
-		log.Errorf("%v", err)
-	}
-
-	return blockResult
+	return getBlockByNumber(*NewUint64ToNumber(lastestBlkHeight) ,blk.db)
 }
 
-// blockResult convert type Block to type BlockResult according to height of the block
-func blockResult(height uint64) *BlockResult{
+// getBlockByNumber convert type Block to type BlockResult for the given block number.
+func getBlockByNumber(n Number, db *hyperdb.LDBDatabase) (*BlockResult, error) {
 
-	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {
-		log.Fatalf("%v", err)
+	if n == latestBlockNumber {
+		chain := core.GetChainCopy()
+		return getBlockByHash(common.BytesToHash(chain.LatestBlockHash), db)
+		//if block, err := getBlockByHash(common.BytesToHash(chain.LatestBlockHash), db); err != nil {
+		//	return nil, err
+		//} else {
+		//	return block, nil
+		//}
+	} else {
+		m := n.ToUint64()
+		if blk, err := core.GetBlockByNumber(db, m); err != nil {
+			return nil, err
+		} else {
+			return outputBlockResult(blk, db)
+		}
 	}
 
-	block, err := core.GetBlockByNumber(db,height)
+}
+
+func getBlockStateDb(n Number, db *hyperdb.LDBDatabase) (*state.StateDB, error) {
+
+	block, err := getBlockByNumber(n, db)
+
 	if err != nil {
-		log.Errorf("%v", err)
+		return nil, err
 	}
 
-	txCounts := uint64(len(block.Transactions))
-	count,percent := core.CalcResponseCount(height, int64(200))
+	stateDB, err := state.New(block.MerkleRoot, db)
+	if err != nil {
+		log.Errorf("Get stateDB error, %v", err)
+		return nil, err
+	}
+
+	return stateDB, nil
+}
+
+func outputBlockResult(block *types.Block, db *hyperdb.LDBDatabase) (*BlockResult, error) {
+
+	txCounts := int64(len(block.Transactions))
+	count, percent := core.CalcResponseCount(block.Number, int64(200))
+
+	transactions := make([]interface{}, txCounts)
+	var err error
+	for i, tx := range block.Transactions {
+		if transactions[i], err = outputTransaction(tx, db); err != nil {
+			return nil, err
+		}
+	}
+
 
 	return &BlockResult{
-		Number: height,
-		Hash: common.BytesToHash(block.BlockHash),
-		WriteTime: time.Unix(block.WriteTime / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
-		AvgTime: core.CalcResponseAVGTime(height,height),
-		TxCounts: txCounts,
-		Counts: count,
-		Percents: strconv.FormatFloat(percent*100, 'f', 2, 32)+"%",
+		Number:       NewUint64ToNumber(block.Number),
+		Hash:         common.BytesToHash(block.BlockHash),
+		ParentHash:   common.BytesToHash(block.ParentHash),
+		WriteTime:    time.Unix(block.WriteTime/int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+		AvgTime:      NewInt64ToNumber(core.CalcResponseAVGTime(block.Number, block.Number)),
+		TxCounts:     NewInt64ToNumber(txCounts),
+		Counts:       NewInt64ToNumber(count),
+		Percents:     strconv.FormatFloat(percent*100, 'f', 2, 32) + "%",
+		MerkleRoot:   common.BytesToHash(block.MerkleRoot),
+		Transactions: transactions,
+	}, nil
+}
+
+func getBlockByHash(hash common.Hash, db *hyperdb.LDBDatabase) (*BlockResult, error) {
+
+	block, err := core.GetBlock(db, hash[:])
+
+	if err != nil {
+		return nil, err
 	}
 
+	return outputBlockResult(block, db)
 }
 
 // 测试用
 type SendQueryArgs struct {
-	From string
-	To string
+	From Number
+	To   Number
 }
 type BatchTimeResult struct {
 	CommitTime int64
-	BatchTime int64
+	BatchTime  int64
 }
 type ExeTimeResult struct {
-	Count int       `json:"count"`
-	Time  int64	`json:"time"`
+	Count int   `json:"count"`
+	Time  int64 `json:"time"`
 }
 
 // QueryExecuteTime computes execute time of transactions fo all the block,
-// then return the avg time and the count of all the transaction
-func (blk *PublicBlockAPI) QueryExecuteTime(args SendQueryArgs) *ExeTimeResult{
-	//var from uint64 = 1
-	from, err := strconv.ParseUint(args.From, 10, 64)
-	to, err := strconv.ParseUint(args.To, 10, 64)
+// then return the avg time and the count of all the transaction.
+func (blk *PublicBlockAPI) QueryExecuteTime(args SendQueryArgs) *ExeTimeResult {
 
-	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
-	txs,err := core.GetAllTransaction(db)
+	//db, err := hyperdb.GetLDBDatabase()
+	//if err != nil {
+	//	log.Errorf("%v", err)
+	//}
+	txs, err := core.GetAllTransaction(blk.db)
 
 	if err != nil {
 		log.Errorf("%v", err)
 	}
 
 	count := len(txs)
-	//exeTime := core.CalcResponseAVGTime(from,core.GetHeightOfChain())
-	exeTime := core.CalcResponseAVGTime(from,to)
+	exeTime := core.CalcResponseAVGTime(args.From.ToUint64(), args.To.ToUint64())
 
 	return &ExeTimeResult{
 		Count: count,
-		Time: exeTime,
+		Time:  exeTime,
 	}
 }
 
-func (blk *PublicBlockAPI) QueryCommitAndBatchTime(args SendQueryArgs) (*BatchTimeResult,error) {
+// QueryCommitAndBatchTime returns commit time and batch time between from block and to block
+func (blk *PublicBlockAPI) QueryCommitAndBatchTime(args SendQueryArgs) (*BatchTimeResult, error) {
 
-	from, err := strconv.ParseUint(args.From, 10, 64)
-	to, err := strconv.ParseUint(args.To, 10, 64)
-
-	if err != nil {
-		return nil,err
-	}
-
-	commitTime, batchTime :=  core.CalcCommitBatchAVGTime(from,to)
+	commitTime, batchTime := core.CalcCommitBatchAVGTime(args.From.ToUint64(), args.To.ToUint64())
 
 	return &BatchTimeResult{
 		CommitTime: commitTime,
-		BatchTime: batchTime,
-	},nil
+		BatchTime:  batchTime,
+	}, nil
 }
 
-func (blk *PublicBlockAPI) QueryEvmAvgTime(args SendQueryArgs) (int64,error) {
+// QueryEvmAvgTime returns EVM average time between from block and to block
+func (blk *PublicBlockAPI) QueryEvmAvgTime(args SendQueryArgs) (int64, error) {
 
-	from, err := strconv.ParseUint(args.From, 10, 64)
-	to, err := strconv.ParseUint(args.To, 10, 64)
-
-	if err != nil {
-		return 0,err
-	}
-
-	evmTime :=  core.CalcEvmAVGTime(from,to)
+	evmTime := core.CalcEvmAVGTime(args.From.ToUint64(), args.To.ToUint64())
+	log.Info("-----evmTime----", evmTime)
 
 	return evmTime, nil
 }
-func (blk *PublicBlockAPI)QueryTransactionSum() string {
-	//return strconv.FormatUint(core.CalTransactionSum(),10)
-	currentChain := core.GetChainCopy()
-	sum := currentChain.CurrentTxSum
-	return strconv.FormatUint(sum,10)
-}
-func (blk *PublicBlockAPI)QueryBlockAvgTime(args SendQueryArgs)(int64,error)  {
-	from, err := strconv.ParseUint(args.From, 10, 64)
-	to, err := strconv.ParseUint(args.To, 10, 64)
 
-	if err != nil {
-		return 0,err
-	}
-
-	evmTime :=  core.CalcBlockAVGTime(from,to)
-
-	return evmTime, nil
-}
-func (blk *PublicBlockAPI)QueryBlockGPS()(error)  {
-	return core.CalBlockGPS()
+//func (blk *PublicBlockAPI)QueryTransactionSum() string {
+//	sum := core.CalTransactionSum()
+//	return sum.String()
+//}
+func (blk *PublicBlockAPI) QueryTransactionSum() uint64 {
+	sum := core.CalTransactionSum()
+	return sum
 }

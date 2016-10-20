@@ -1,23 +1,25 @@
 package compiler
 
 import (
-	"fmt"
-	"strings"
 	"encoding/json"
 	"flag"
+	"fmt"
+	"strings"
 )
+
 var (
-	excFlag  = flag.String("exc", "", "Comma separated types to exclude from binding")
+	excFlag = flag.String("exc", "", "Comma separated types to exclude from binding")
 )
-func CompileSourcefile(source string)  ([]string,[]string, error) {
+
+func CompileSourcefile(source string) ([]string, []string, []string, error) {
 	var (
 		abis  []string
 		bins  []string
 		types []string
 	)
 	solc, err := NewCompiler("")
-	if err != nil{
-		return nil,nil,err
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	contracts, err := solc.Compile(string(source))
 
@@ -37,8 +39,6 @@ func CompileSourcefile(source string)  ([]string,[]string, error) {
 		abis = append(abis, string(abi))
 		bins = append(bins, contract.Code)
 		types = append(types, name)
-		fmt.Println("the code is ",contract.Code)
 	}
-	return abis,bins,nil
+	return abis, bins, types, nil
 }
-

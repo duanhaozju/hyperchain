@@ -15,23 +15,23 @@ type AliveEvent struct{ Payload bool }
 type BroadcastConsensusEvent struct{ Payload []byte }
 
 //receive new block event from node consensus event for consensus module
-type NewBlockEvent struct{
-	Payload		[]byte
-	CommitTime	int64
+type NewBlockEvent struct {
+	Payload    []byte
+	CommitTime int64
 }
 
 //general tx local
-type NewTxEvent struct{ Payload []byte  }
+type NewTxEvent struct{ Payload []byte }
 
-type TxUniqueCastEvent struct{
-	Payload	[]byte
-	PeerId	uint64
+type TxUniqueCastEvent struct {
+	Payload []byte
+	PeerId  uint64
 }
 
-type NewBlockPoolEvent struct{ Payload []byte  }
+type NewBlockPoolEvent struct{ Payload []byte }
 
 //node receive checkpoint sync event and then,check db and send block require request to peers
-type SendCheckpointSyncEvent struct{Payload []byte }
+type SendCheckpointSyncEvent struct{ Payload []byte }
 
 //receive event from consensus module
 type StateUpdateEvent struct{ Payload []byte }
@@ -40,24 +40,42 @@ type StateUpdateEvent struct{ Payload []byte }
 type ReceiveSyncBlockEvent struct{ Payload []byte }
 
 //receive new block event from node consensus event for consensus module
-type ExeTxsEvent struct{
-	Transactions	[]types.Transaction
-	SeqNo		uint64
-	IsPrimary	bool
+type ExeTxsEvent struct {
+	Transactions []*types.Transaction
+	SeqNo        uint64
+	View         uint64
+	IsPrimary    bool
+	Timestamp  int64
 }
 
-type ValidateBatch struct {
-	Transactions	[]types.Transaction
-	SeqNo		uint64
+type ValidatedTxs struct {
+	Transactions []*types.Transaction
+	Hash         string
+	SeqNo        uint64
+	View         uint64
+	Timestamp  int64
 }
 
 // if the CommitStatus is true, we will commit the blocks and save the statedb
 // or we will rollback the statedb
 // Flag == true, commit; Flag == false, rollback
-type CommitOrRollbackBlockEvent struct{
-	SeqNo		uint64
-	CommitTime	int64
-	Flag		bool
+type CommitOrRollbackBlockEvent struct {
+	SeqNo      uint64
+	Timestamp  int64
+	CommitTime int64
+	Flag       bool
+	Hash       string
+	IsPrimary  bool
 }
 
+type RespInvalidTxsEvent struct {
+	Payload []byte
+}
 
+type VCResetEvent struct {
+	SeqNo uint64
+}
+
+type InformPrimaryEvent struct {
+	Primary	uint64
+}

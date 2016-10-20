@@ -1,22 +1,22 @@
 package api
 
 import (
+	"encoding/hex"
+	"github.com/golang/protobuf/proto"
+	"github.com/op/go-logging"
+	"hyperchain/core"
 	"hyperchain/core/types"
 	"hyperchain/event"
-	"github.com/golang/protobuf/proto"
 	"hyperchain/hyperdb"
-	"hyperchain/core"
 	"hyperchain/manager"
-	"github.com/op/go-logging"
-	"time"
-	"encoding/hex"
 	"math/big"
 	"strconv"
+	"time"
 )
 
-type TxArgs struct{
-	From string `json:"from"`
-	To string `json:"to"`
+type TxArgs struct {
+	From  string `json:"from"`
+	To    string `json:"to"`
 	Value string `json:"value"`
 }
 
@@ -29,18 +29,18 @@ type TransactionShow struct {
 
 type BalanceShow map[string]string
 
-type LastestBlockShow struct{
+type LastestBlockShow struct {
 	Number uint64
-	Hash string
+	Hash   string
 }
 
-type BlockShow struct{
-        Height uint64
-        TxCounts uint64
+type BlockShow struct {
+	Height    uint64
+	TxCounts  uint64
 	BatchTIme string
 	WriteTime string
-        Counts int64
-	Percents string
+	Counts    int64
+	Percents  string
 }
 
 var log *logging.Logger // package-level logger
@@ -59,7 +59,7 @@ func SendTransaction(args TxArgs) bool {
 	//tx = types.NewTransaction([]byte(args.From), []byte(args.To), []byte(args.Value))
 	tx = types.NewTestCreateTransaction()
 	//tx = types.NewTestCallTransaction()
-	if (core.VerifyBalance(tx)) {
+	if /*core.VerifyBalance(tx)*/ true {
 
 		// Balance is enough
 		/*txBytes, err := proto.Marshal(tx)
@@ -70,28 +70,27 @@ func SendTransaction(args TxArgs) bool {
 		//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		start := time.Now().Unix()
-		end:=start+6
+		//start := time.Now().Unix()
+		//end:=start+6
 
-		for start := start ; start < end; start = time.Now().Unix() {
-			for i := 0; i < 500; i++ {
-				tx.TimeStamp=time.Now().UnixNano()
-				txBytes, err := proto.Marshal(tx)
-				if err != nil {
-					log.Fatalf("proto.Marshal(tx) error: %v",err)
-				}
-				if manager.GetEventObject() != nil{
-					go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-				}else{
-					log.Warning("manager is Nil")
-				}
-				//time.Sleep(2 * time.Nanosecond)
-			}
-			time.Sleep(90 * time.Millisecond)
+		//for start := start ; start < end; start = time.Now().Unix() {
+		//	for i := 0; i < 100; i++ {
+		tx.Timestamp = time.Now().UnixNano()
+		txBytes, err := proto.Marshal(tx)
+		if err != nil {
+			log.Fatalf("proto.Marshal(tx) error: %v", err)
 		}
+		if manager.GetEventObject() != nil {
+			go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+		} else {
+			log.Warning("manager is Nil")
+		}
+		//time.Sleep(2 * time.Nanosecond)
+		//}
+		//time.Sleep(90 * time.Millisecond)
+		//}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
-
 
 		return true
 
@@ -102,7 +101,7 @@ func SendTransaction(args TxArgs) bool {
 }
 
 // GetAllTransactions return all transactions in the chain/db
-func GetAllTransactions()  []TransactionShow{
+func GetAllTransactions() []TransactionShow {
 
 	db, err := hyperdb.GetLDBDatabase()
 
@@ -120,19 +119,19 @@ func GetAllTransactions()  []TransactionShow{
 
 	for _, tx := range txs {
 		var ts = TransactionShow{
-			Value: string(tx.Value),
-			From: string(tx.From),
-			To: string(tx.To),
-			TimeStamp: time.Unix(tx.TimeStamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+			Value:     string(tx.Value),
+			From:      string(tx.From),
+			To:        string(tx.To),
+			TimeStamp: time.Unix(tx.Timestamp/int64(time.Second), 0).Format("2006-01-02 15:04:05"),
 		}
-		transactions = append(transactions,ts)
+		transactions = append(transactions, ts)
 	}
 
 	return transactions
 }
 
 // GetAllBalances returns all account's balance in the db,NOT CACHE DB!
-func GetAllBalances() BalanceShow{
+func GetAllBalances() BalanceShow {
 
 	var balances = make(BalanceShow)
 
@@ -152,83 +151,76 @@ func GetAllBalances() BalanceShow{
 }
 
 // LastestBlock returns the number and hash of the lastest block
-func LastestBlock() LastestBlockShow{
+func LastestBlock() LastestBlockShow {
 	currentChain := core.GetChainCopy()
-
-
 
 	return LastestBlockShow{
 		Number: currentChain.Height,
-		Hash: hex.EncodeToString(currentChain.LatestBlockHash),
+		Hash:   hex.EncodeToString(currentChain.LatestBlockHash),
 	}
 }
 
-
-func GetAllBlocks() []BlockShow{
+func GetAllBlocks() []BlockShow {
 
 	var blocks []BlockShow
 
 	height := LastestBlock().Number
 
 	for height > 0 {
-		blocks = append(blocks,blockShow(height))
+		blocks = append(blocks, blockShow(height))
 		height--
 	}
 
 	return blocks
 }
 
-func QueryExcuteTime(args TxArgs) int64{
+func QueryExcuteTime(args TxArgs) int64 {
 
 	var from big.Int
 	var to big.Int
 	from.SetString(args.From, 10)
 	to.SetString(args.To, 10)
 
-
-	return core.CalcResponseAVGTime(from.Uint64(),to.Uint64())
+	return core.CalcResponseAVGTime(from.Uint64(), to.Uint64())
 }
 
-func QueryCommitAndBatchTime(args TxArgs) (int64,int64){
+func QueryCommitAndBatchTime(args TxArgs) (int64, int64) {
 
 	var from big.Int
 	var to big.Int
 	from.SetString(args.From, 10)
 	to.SetString(args.To, 10)
 
-
-	return core.CalcCommitBatchAVGTime(from.Uint64(),to.Uint64())
+	return core.CalcCommitBatchAVGTime(from.Uint64(), to.Uint64())
 }
 
-func blockShow(height uint64) BlockShow{
+func blockShow(height uint64) BlockShow {
 
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatalf("Open database error: %v", err)
 	}
 
-	blockHash, err := core.GetBlockHash(db,height)
+	blockHash, err := core.GetBlockHash(db, height)
 	if err != nil {
 		log.Fatalf("GetBlockHash error: %v", err)
 	}
 
-	block, err := core.GetBlock(db,blockHash)
+	block, err := core.GetBlock(db, blockHash)
 	if err != nil {
 		log.Fatalf("GetBlock error: %v", err)
 	}
 
 	txCounts := uint64(len(block.Transactions))
-	count,percent := core.CalcResponseCount(height, int64(200))
+	count, percent := core.CalcResponseCount(height, int64(200))
 
 	return BlockShow{
-			Height: height,
-			TxCounts: txCounts,
-			BatchTIme: time.Unix(block.Timestamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
-			WriteTime: time.Unix(block.WriteTime / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
-			Counts: count,
-			Percents:strconv.FormatFloat(percent*100, 'f', 2, 32)+"%",
-
-		}
+		Height:    height,
+		TxCounts:  txCounts,
+		BatchTIme: time.Unix(block.Timestamp/int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+		WriteTime: time.Unix(block.WriteTime/int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+		Counts:    count,
+		Percents:  strconv.FormatFloat(percent*100, 'f', 2, 32) + "%",
+	}
 
 }
-

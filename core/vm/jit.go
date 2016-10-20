@@ -4,12 +4,9 @@ import (
 	"fmt"
 	"math/big"
 	"sync/atomic"
-	"time"
 
 	"hyperchain/common"
 	"hyperchain/core/crypto"
-	"hyperchain/logger"
-	"hyperchain/logger/glog"
 	"hyperchain/core/vm/params"
 	"github.com/hashicorp/golang-lru"
 )
@@ -120,13 +117,6 @@ func CompileProgram(program *Program) (err error) {
 			atomic.StoreInt32(&program.status, int32(progReady))
 		}
 	}()
-	if glog.V(logger.Debug) {
-		glog.Infof("compiling %x\n", program.Id[:4])
-		tstart := time.Now()
-		defer func() {
-			glog.Infof("compiled  %x instrc: %d time: %v\n", program.Id[:4], len(program.instructions), time.Since(tstart))
-		}()
-	}
 
 	// loop thru the opcodes and "compile" in to instructions
 	for pc := uint64(0); pc < uint64(len(program.code)); pc++ {
@@ -295,13 +285,6 @@ func runProgram(program *Program, pcstart uint64, mem *Memory, stack *stack, env
 		instrCount        = 0
 	)
 
-	if glog.V(logger.Debug) {
-		glog.Infof("running JIT program %x\n", program.Id[:4])
-		tstart := time.Now()
-		defer func() {
-			glog.Infof("JIT program %x done. time: %v instrc: %v\n", program.Id[:4], time.Since(tstart), instrCount)
-		}()
-	}
 
 	homestead := env.RuleSet().IsHomestead(env.BlockNumber())
 	for pc < uint64(len(program.instructions)) {
