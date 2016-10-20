@@ -13,8 +13,7 @@ import (
 	"hyperchain/common"
 
 	"hyperchain/hyperdb"
-
-	"fmt"
+	//"fmt"
 	"github.com/buger/jsonparser"
 	"hyperchain/core/state"
 	"hyperchain/crypto"
@@ -59,7 +58,7 @@ func CreateInitBlock(filename string) {
 
 	// You can use `ObjectEach` helper to iterate objects { "key1":object1, "key2":object2, .... "keyN":objectN }
 	jsonparser.ObjectEach(bytes, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
-		fmt.Printf("Key: '%s'\n Value: '%s'\n Type: %s\n", string(key), string(value), dataType)
+		//fmt.Printf("Key: '%s'\n Value: '%s'\n Type: %s\n", string(key), string(value), dataType)
 		object := stateDB.CreateAccount(common.HexToAddress(string(key)))
 		account, _ := strconv.ParseInt(string(value), 10, 64)
 		object.AddBalance(big.NewInt(account))
