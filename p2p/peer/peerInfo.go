@@ -17,6 +17,7 @@ type PeerInfo struct {
 	IP     string
 	Port   int64
 	ID     uint64
+	IsPrimary bool
 }
 
 type PeerInfos []PeerInfo

@@ -236,6 +236,7 @@ func (this *GrpcPeerManager) GetPeerInfo() peer.PeerInfos {
 		} else if retMsg.MessageType == pb.Message_PENDING {
 			perinfo.Status = peer.PENDING
 		}
+		perinfo.IsPrimary = per.IsPrimary
 
 		perinfos = append(perinfos, perinfo)
 	}
@@ -251,4 +252,14 @@ func (this *GrpcPeerManager) GetNodeId() int {
 	}
 
 	return _node_id
+}
+
+func (this *GrpcPeerManager) SetPrimary(id uint64) error{
+	peers := this.peersPool.GetPeers()
+	for _, per := range peers {
+		if per.ID == id {
+			per.IsPrimary = true
+		}
+	}
+	return nil
 }
