@@ -58,7 +58,14 @@ echo "Node number is: ${MAXPEERNUM}"
 # 杀死所有进程
 #kill the progress
 echo "kill the bind port process"
-ps -aux | grep hyperchain | awk '{print $2}' | xargs kill 9
+for((i=1;i<=$MAXPEERNUM;i++))
+do
+    temp_port=`lsof -i :800$i | awk 'NR>=2{print $2}'`
+    if [ x"$temp_port" != x"" ];then
+        kill -9 $temp_port
+    fi
+done
+
 # 编译项目
 echo "build the project"
 govendor build -o ${DUMP_PATH}/hyperchain
