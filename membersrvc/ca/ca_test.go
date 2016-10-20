@@ -9,9 +9,9 @@ import (
 
 	"database/sql"
 
+	"github.com/spf13/viper"
 	"hyperchain/core/crypto"
 	"hyperchain/core/crypto/primitives"
-	"github.com/spf13/viper"
 )
 
 const (

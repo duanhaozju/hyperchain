@@ -2,12 +2,13 @@ package pbft
 
 import (
 	"time"
+	"fmt"
 
 	"hyperchain/protos"
+	"hyperchain/core/types"
+	"hyperchain/consensus/helper/persist"
 
 	"github.com/golang/protobuf/proto"
-	"hyperchain/consensus/helper/persist"
-	"fmt"
 )
 
 // =============================================================================
@@ -28,28 +29,21 @@ func (a sortableUint64Slice) Less(i, j int) bool {
 // =============================================================================
 // helper functions for create batch
 // =============================================================================
-// covert the transaction to request
-func (pbft *pbftProtocal) txToReq(tx *protos.Message) *Request {
 
-	req := &Request{
-		Timestamp: 	tx.Timestamp,
-		Payload:   	tx.Payload,
-		ReplicaId: 	pbft.id,
-	}
+func (pbft *pbftProtocal) postRequestEvent(event *types.Transaction) {
 
-	return req
-}
-
-func (pbft *pbftProtocal) postRequestEvent(event *Request) {
-
-	pbft.mux.Lock()
-	defer pbft.mux.Unlock()
+	pbft.muxBatch.Lock()
+	defer pbft.muxBatch.Unlock()
 	pbft.batchManager.Queue() <- event
 
 }
 
 func (pbft *pbftProtocal) postPbftEvent(event interface{}) {
+
+	pbft.muxPbft.Lock()
+	defer pbft.muxPbft.Unlock()
 	pbft.pbftManager.Queue() <- event
+
 }
 
 // =============================================================================
@@ -143,7 +137,7 @@ func (pbft *pbftProtocal) allCorrectReplicasQuorum() int {
 
 func (pbft *pbftProtocal) prePrepared(digest string, v uint64, n uint64) bool {
 
-	_, mInLog := pbft.reqBatchStore[digest]
+	_, mInLog := pbft.validatedBatchStore[digest]
 
 	if digest != "" && !mInLog {
 		logger.Debugf("Replica %d havan't store the reqBatch")
@@ -244,39 +238,6 @@ func nullRequestMsgHelper(id uint64) *protos.Message {
 	return pbMsg
 }
 
-// pbftMsgHelper help convert the pbftMessage to pb.Message
-func pbftMsgHelper(msg *Message, id uint64) *protos.Message {
-
-	consensusMsg := &ConsensusMessage{Payload: &ConsensusMessage_PbftMessage{PbftMessage: msg}}
-	pbMsg := consensusMsgHelper(consensusMsg, id)
-
-	return pbMsg
-}
-
-// exeBatchHelper help convert the RequestBatch to pb.ExeMessage
-func exeBatchHelper(reqBatch *RequestBatch, no uint64) *protos.ExeMessage {
-
-	batches := []*protos.Message{}
-	requests := reqBatch.Batch
-
-	for i := 0; i < len(requests); i++ {
-		batch := &protos.Message{
-			Timestamp:	requests[i].Timestamp,
-			Payload:	requests[i].Payload,
-			Id:		requests[i].ReplicaId,
-		}
-		batches = append(batches, batch)
-	}
-
-	exeMsg := &protos.ExeMessage{
-		Batch:		batches,
-		Timestamp:	reqBatch.Timestamp,
-		No:		no,
-	}
-
-	return exeMsg
-}
-
 // StateUpdateHelper help convert checkPointInfo, blockchainInfo, replicas to pb.UpdateStateMessage
 func stateUpdateHelper(myId uint64, seqNo uint64, id []byte, replicaId []uint64) *protos.UpdateStateMessage {
 
@@ -334,6 +295,7 @@ func (pbft *pbftProtocal) startTimerIfOutstandingRequests() {
 			}
 			return digests
 		}()
+		//logger.Debug(getOutstandingDigests)
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("outstanding request batches %v", getOutstandingDigests))
 	} else if pbft.nullRequestTimeout > 0 {
 		pbft.nullReqTimerReset()
@@ -356,13 +318,13 @@ func (pbft *pbftProtocal) softStartTimer(timeout time.Duration, reason string) {
 	pbft.newViewTimer.SoftReset(timeout, viewChangeTimerEvent{})
 }
 
-func (pbft *pbftProtocal) startTimer(n uint64, timeout time.Duration, reason string) {
+func (pbft *pbftProtocal) startTimer(timeout time.Duration, reason string) {
 	logger.Debugf("Replica %d starting new view timer for %s: %s", pbft.id, timeout, reason)
 	pbft.timerActive = true
 	pbft.newViewTimer.Reset(timeout, viewChangeTimerEvent{})
 }
 
-func (pbft *pbftProtocal) stopTimer(n uint64) {
+func (pbft *pbftProtocal) stopTimer() {
 	logger.Debugf("Replica %d stopping a running new view timer", pbft.id)
 	pbft.timerActive = false
 	pbft.newViewTimer.Stop()

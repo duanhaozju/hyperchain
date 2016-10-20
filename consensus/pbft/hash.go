@@ -3,6 +3,8 @@ package pbft
 import (
 	"encoding/base64"
 
+	"hyperchain/core/types"
+
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/crypto/sha3"
 )
@@ -12,9 +14,9 @@ func hash(msg interface{}) string {
 
 	var raw []byte
 	switch converted := msg.(type) {
-	case *Request:
+	case *types.Transaction:
 		raw, _ = proto.Marshal(converted)
-	case *RequestBatch:
+	case *TransactionBatch:
 		raw, _ = proto.Marshal(converted)
 	default:
 		logger.Errorf("Asked to hash non-supported message type, ignoring")
@@ -27,5 +29,11 @@ func hash(msg interface{}) string {
 func computeCryptoHash(data []byte) (hash []byte) {
 	hash = make([]byte, 64)
 	sha3.ShakeSum256(hash, data)
+	return
+}
+
+func byteToString(data []byte) (re string) {
+
+	re = base64.StdEncoding.EncodeToString(data)
 	return
 }

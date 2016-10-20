@@ -9,6 +9,7 @@ message Message {
         CONSENSUS = 1;
         STATE_UPDATED = 2;
         NULL_REQUEST = 3;
+        NEGOTIATE_VIEW = 4;
     }
     Type type = 1;
     int64 timestamp = 2;

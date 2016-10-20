@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"hyperchain/consensus/events"
+	"github.com/golang/protobuf/proto"
 )
 
 type viewChangeQuorumEvent struct{}
@@ -92,7 +93,12 @@ func (pbft *pbftProtocal) calcQSet() map[qidx]*ViewChange_PQ {
 
 func (pbft *pbftProtocal) sendViewChange() events.Event {
 
-	pbft.stopTimer(uint64(0))
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try to send view change, but it's in nego-view", pbft.id)
+		return nil
+	}
+
+	pbft.stopTimer()
 
 	delete(pbft.newViewStore, pbft.view)
 	pbft.view++
@@ -147,8 +153,16 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 		pbft.id, vc.View, vc.H, len(vc.Cset), len(vc.Pset), len(vc.Qset))
 
 	//todo
-
-	msg := pbftMsgHelper(&Message{Payload: &Message_ViewChange{ViewChange: vc}}, pbft.id)
+	payload, err := proto.Marshal(vc)
+	if err != nil {
+		logger.Errorf("ConsensusMessage_VIEW_CHANGE Marshal Error", err)
+		return nil
+	}
+	consensusMsg := &ConsensusMessage{
+		Type:		ConsensusMessage_VIEW_CHANGE,
+		Payload:	payload,
+	}
+	msg := consensusMsgHelper(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
 	pbft.vcResendTimer.Reset(pbft.vcResendTimeout, viewChangeResendTimerEvent{})
 	return pbft.recvViewChange(vc)
@@ -157,6 +171,11 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 	logger.Infof("Replica %d received view-change from replica %d, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		pbft.id, vc.ReplicaId, vc.View, vc.H, len(vc.Cset), len(vc.Pset), len(vc.Qset))
+
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try to recvViewChange, but it's in nego-view", pbft.id)
+		return nil
+	}
 
 	// TODO verify
 	//if err := pbft.verify(vc); err != nil {
@@ -219,7 +238,7 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 	if !pbft.activeView && vc.View == pbft.view && quorum >= pbft.allCorrectReplicasQuorum() {
 		pbft.vcResendTimer.Stop()
 		// TODO first param
-		pbft.startTimer(uint64(0), pbft.lastNewViewTimeout, "new view change")
+		pbft.startTimer(pbft.lastNewViewTimeout, "new view change")
 		pbft.lastNewViewTimeout = 2 * pbft.lastNewViewTimeout
 		return viewChangeQuorumEvent{}
 	}
@@ -228,6 +247,11 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 }
 
 func (pbft *pbftProtocal) sendNewView() events.Event {
+
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try to sendNewView, but it's in nego-view", pbft.id)
+		return nil
+	}
 
 	if _, ok := pbft.newViewStore[pbft.view]; ok {
 		logger.Debugf("Replica %d already has new view in store for view %d, skipping", pbft.id, pbft.view)
@@ -258,8 +282,16 @@ func (pbft *pbftProtocal) sendNewView() events.Event {
 
 	logger.Infof("Replica %d is new primary, sending new-view, v:%d, X:%+v",
 		pbft.id, nv.View, nv.Xset)
-
-	msg := pbftMsgHelper(&Message{Payload: &Message_NewView{NewView: nv}}, pbft.id)
+	payload, err := proto.Marshal(nv)
+	if err != nil {
+		logger.Errorf("ConsensusMessage_NEW_VIEW Marshal Error", err)
+		return nil
+	}
+	consensusMsg := &ConsensusMessage{
+		Type:		ConsensusMessage_NEW_VIEW,
+		Payload:	payload,
+	}
+	msg := consensusMsgHelper(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
 	pbft.newViewStore[pbft.view] = nv
 	//return pbft.processNewView()
@@ -269,6 +301,12 @@ func (pbft *pbftProtocal) sendNewView() events.Event {
 func (pbft *pbftProtocal) recvNewView(nv *NewView) events.Event {
 	logger.Infof("Replica %d received new-view %d",
 		pbft.id, nv.View)
+
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try to recvNewView, but it's in nego-view", pbft.id)
+		return nil
+	}
+
 	if !(nv.View > 0 && nv.View >= pbft.view && pbft.primary(nv.View) == nv.ReplicaId && pbft.newViewStore[nv.View] == nil) {
 		logger.Infof("Replica %d rejecting invalid new-view from %d, v:%d",
 			pbft.id, nv.ReplicaId, nv.View)
@@ -339,7 +377,7 @@ func (pbft *pbftProtocal) feedMissingReqBatchIfNeeded(nv *NewView) (newReqBatchM
 			}
 
 
-			if _, ok := pbft.reqBatchStore[d]; !ok {
+			if _, ok := pbft.validatedBatchStore[d]; !ok {
 				logger.Warningf("Replica %d missing assigned, non-checkpointed request batch %s",
 					pbft.id, d)
 				if _, ok := pbft.missingReqBatches[d]; !ok {
@@ -498,7 +536,7 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	logger.Infof("Replica %d accepting new-view to view %d", pbft.id, pbft.view)
 
-	pbft.stopTimer(uint64(0))
+	pbft.stopTimer()
 	pbft.nullRequestTimer.Stop()
 
 	pbft.activeView = true
@@ -506,21 +544,46 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 
 	pbft.lastExec = pbft.h
 	pbft.seqNo = pbft.h
+	pbft.vid = pbft.h
+	pbft.lastVid = pbft.h
+	backendVid := uint64(pbft.vid+1)
+	pbft.helper.VcReset(backendVid)
+	xSetLen := len(nv.Xset)
+	upper := uint64(xSetLen) + pbft.h + uint64(1)
+	if pbft.primary(pbft.view) == pbft.id {
+		for i := pbft.h+uint64(1); i < upper; i++ {
+			d, ok := nv.Xset[i]
+			if !ok {
+				logger.Critical("view change Xset miss batch number %d", i)
+			} else if d == "" {
+				// This should not happen
+				logger.Critical("view change Xset has null batch, kick it out")
+			} else {
+				batch, ok := pbft.validatedBatchStore[d]
+				if !ok {
+					logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
+				} else {
+					pbft.recvRequestBatch(batch)
+				}
+			}
+		}
+	}
+	/*
 	for n, d := range nv.Xset {
 		if n <= pbft.h {
 			continue
 		}
 
-		reqBatch, ok := pbft.reqBatchStore[d]
+		reqBatch, ok := pbft.validatedBatchStore[d]
 		if !ok && d != "" {
 			logger.Criticalf("Replica %d is missing request batch for seqNo=%d with digest '%s' for assigned prepare after fetching, this indicates a serious bug", pbft.id, n, d)
 		}
 		preprep := &PrePrepare{
-			View:           pbft.view,
-			SequenceNumber: n,
-			BatchDigest:    d,
-			RequestBatch:   reqBatch,
-			ReplicaId:      pbft.id,
+			View:           	pbft.view,
+			SequenceNumber: 	n,
+			BatchDigest:    	d,
+			TransactionBatch:   	reqBatch,
+			ReplicaId:      	pbft.id,
 		}
 		cert := pbft.getCert(pbft.view, n)
 		cert.prePrepare = preprep
@@ -530,9 +593,10 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 		}
 		pbft.persistQSet()
 	}
+	*/
 
 	pbft.updateViewChangeSeqNo()
-
+/*
 	if pbft.primary(pbft.view) != pbft.id {
 		for n, d := range nv.Xset {
 			prep := &Prepare{
@@ -546,14 +610,23 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 				cert.sentPrepare = true
 				pbft.recvPrepare(prep)
 			}
-			msg := pbftMsgHelper(&Message{Payload: &Message_Prepare{Prepare: prep}}, pbft.id)
+			payload, err := proto.Marshal(prep)
+			if err != nil {
+				logger.Errorf("ConsensusMessage_PREPARE Marshal Error", err)
+				return nil
+			}
+			consensusMsg := &ConsensusMessage{
+				Type:		ConsensusMessage_PREPARE,
+				Payload:	payload,
+			}
+			msg := consensusMsgHelper(consensusMsg, pbft.id)
 			pbft.helper.InnerBroadcast(msg)
 		}
 	} else {
 		logger.Debugf("Replica %d is now primary, attempting to resubmit requests", pbft.id)
 		pbft.resubmitRequestBatches()
 	}
-
+*/
 	pbft.startTimerIfOutstandingRequests()
 	logger.Debugf("Replica %d done cleaning view change artifacts, calling into consumer", pbft.id)
 

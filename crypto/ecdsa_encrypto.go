@@ -1,37 +1,36 @@
 package crypto
 
 import (
-	"fmt"
-	"hyperchain/common"
 	"crypto/ecdsa"
-	"crypto/rand"
-	"github.com/syndtr/goleveldb/leveldb/errors"
-	"os"
-	"io"
-	"encoding/hex"
-	"io/ioutil"
 	"crypto/elliptic"
-	"hyperchain/crypto/sha3"
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
+	"github.com/syndtr/goleveldb/leveldb/errors"
+	"hyperchain/common"
 	"hyperchain/crypto/secp256k1"
+	"hyperchain/crypto/sha3"
+	"io"
+	"io/ioutil"
+	"os"
+	"path"
 )
 
-
-type EcdsaEncrypto struct{
+type EcdsaEncrypto struct {
 	name string
-	port string
+	id   string
 }
 
-func NewEcdsaEncrypto(name string) *EcdsaEncrypto  {
-	ee := &EcdsaEncrypto{name:name}
+func NewEcdsaEncrypto(name string) *EcdsaEncrypto {
+	ee := &EcdsaEncrypto{name: name}
 	return ee
 }
 
-
-func GenerateKey()(*ecdsa.PrivateKey,error)  {
+func GenerateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(secp256k1.S256(), rand.Reader)
 }
 
-func (ee *EcdsaEncrypto)Sign(hash []byte,  prv interface{})(sig []byte, err error)  {
+func (ee *EcdsaEncrypto) Sign(hash []byte, prv interface{}) (sig []byte, err error) {
 	privateKey := prv.(*ecdsa.PrivateKey)
 	if len(hash) != 32 {
 		return nil, fmt.Errorf("hash is required to be exactly 32 bytes (%d)", len(hash))
@@ -44,67 +43,73 @@ func (ee *EcdsaEncrypto)Sign(hash []byte,  prv interface{})(sig []byte, err erro
 }
 
 //UnSign recovers Address from txhash and signature
-func (ee *EcdsaEncrypto)UnSign(args ...interface{})(common.Address, error)  {
-	if len(args)!=2{
-		err :=errors.New("paramas invalid")
-		return common.Address{},err
+func (ee *EcdsaEncrypto) UnSign(args ...interface{}) (common.Address, error) {
+	if len(args) != 2 {
+		err := errors.New("paramas invalid")
+		return common.Address{}, err
 	}
 	hash := args[0].([]byte)
 	sig := args[1].([]byte)
-	pubBytes,err := secp256k1.RecoverPubkey(hash, sig)
-	if err!=nil{
-		return common.Address{},err
+	pubBytes, err := secp256k1.RecoverPubkey(hash, sig)
+	if err != nil {
+		return common.Address{}, err
 	}
 	var addr common.Address
-	copy(addr[:],Keccak256(pubBytes[1:])[12:])
-	return addr,nil
+	copy(addr[:], Keccak256(pubBytes[1:])[12:])
+	return addr, nil
 }
-func (ee *EcdsaEncrypto)GeneralKey()(interface{},error) {
-	key,err := GenerateKey()
-	if err!=nil{
-		return nil,err
+func (ee *EcdsaEncrypto) GeneralKey() (interface{}, error) {
+	key, err := GenerateKey()
+	if err != nil {
+		return nil, err
 	}
 
-	return key,nil
+	return key, nil
 
 }
+
 //load key by given port
 //func (ee *EcdsaEncrypto)GetKey() (interface{},error) {
 //	file := keystoredir+ee.port
 //	return LoadECDSA(file)
 //}
 
-func (ee *EcdsaEncrypto)GenerateNodeKey(port string,keydir string) error  {
-	ee.port = port
-	nodefile := keydir+"node/"+port
+func (ee *EcdsaEncrypto) GenerateNodeKey(nodeID string, keyNodeDir string) error {
+	ee.id = nodeID
+	nodeDir := path.Join(keyNodeDir, "node")
+	nodefile := path.Join(nodeDir, nodeID)
+
 	_, err := os.Stat(nodefile)
-	if err == nil || os.IsExist(err){//privatefile exists
+	if err == nil || os.IsExist(err) { //privatefile exists
 		return nil
 	}
-	key,err := GenerateKey()
-	if err!=nil{
+	key, err := GenerateKey()
+	if err != nil {
 		return err
 	}
-	err = os.MkdirAll(keydir+"node/", 0700)
-	if err !=nil{
+	err = os.MkdirAll(nodeDir, 0700)
+	if err != nil {
 		return err
 	}
-	if err =SaveECDSA(nodefile,key);err!=nil{
+	if err = SaveECDSA(nodefile, key); err != nil {
 		return err
 	}
 	return nil
 
 }
-func (ee *EcdsaEncrypto)GetNodeKey(keydir string)(interface{},error)  {
-	nodefile := keydir+"node/"+ee.port
+
+//keyNodeDir 需要从配置文件中读取
+func (ee *EcdsaEncrypto) GetNodeKey(keyNodeDir string) (interface{}, error) {
+	nodefile := path.Join(keyNodeDir, "node", ee.id)
 	return LoadECDSA(nodefile)
 
 }
 
-func (ee *EcdsaEncrypto)PrivKeyToAddress(prv interface {})common.Address  {
+func (ee *EcdsaEncrypto) PrivKeyToAddress(prv interface{}) common.Address {
 	p := prv.(ecdsa.PrivateKey)
 	return PubkeyToAddress(p.PublicKey)
 }
+
 // LoadECDSA loads a secp256k1 private key from the given file.
 // key data is expected to be hex-encoded.
 func LoadECDSA(file string) (*ecdsa.PrivateKey, error) {
@@ -125,6 +130,7 @@ func LoadECDSA(file string) (*ecdsa.PrivateKey, error) {
 
 	return ToECDSA(key), nil
 }
+
 // New methods using proper ecdsa keys from the stdlib
 func ToECDSA(prv []byte) *ecdsa.PrivateKey {
 	if len(prv) == 0 {
@@ -144,20 +150,22 @@ func FromECDSA(prv *ecdsa.PrivateKey) []byte {
 	}
 	return prv.D.Bytes()
 }
+
 // SaveECDSA saves a secp256k1 private key to the given file with
 // restrictive permissions. The key data is saved hex-encoded.
 func SaveECDSA(file string, key *ecdsa.PrivateKey) error {
 	k := hex.EncodeToString(FromECDSA(key))
 	return ioutil.WriteFile(file, []byte(k), 0600)
 }
+
 //SaveNodeInfo saves the info of node into local file
 //ip addr and pri
-func SaveNodeInfo(file string, port string ,addr common.Address, pri *ecdsa.PrivateKey) error {
+func SaveNodeInfo(file string, port string, addr common.Address, pri *ecdsa.PrivateKey) error {
 	prikey := hex.EncodeToString(FromECDSA(pri))
-	content := port +" "+common.ToHex(addr[:])+" "+prikey+" \n"
+	content := port + " " + common.ToHex(addr[:]) + " " + prikey + " \n"
 	fmt.Println(content)
 
-	f, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_RDWR,0600)
+	f, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
 	if err != nil {
 		return err
 	}

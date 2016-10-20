@@ -2,8 +2,8 @@
 // date: 16-9-13
 // last modified: 16-9-13 14:18
 // last Modified Author: chenquan
-// change log: 
-//		
+// change log:
+//
 package client
 
 const (
@@ -12,22 +12,23 @@ const (
 	STOP
 )
 
-type PeerInfo struct{
-	Status int
-	CName string
-	IP string
-	Port int
+type PeerInfo struct {
+	Status int `json:"status"`
+	IP     string `json:"ip"`
+	Port   int64 `json:"port"`
+	ID     uint64 `json:"id"`
+	IsPrimary bool `json:"isprimary"`
 }
 
-type PeerInfos []*PeerInfo
+type PeerInfos []PeerInfo
 
-func NewPeerInfos(pis ...*PeerInfo)PeerInfos{
+func NewPeerInfos(pis ...PeerInfo) PeerInfos {
 	var peerInfos PeerInfos
-	for _,pers := range pis{
-		peerInfos = append(peerInfos,pers)
+	for _, pers := range pis {
+		peerInfos = append(peerInfos, pers)
 	}
 	return peerInfos
 }
-func(this *PeerInfos)GetNumber() int{
+func (this *PeerInfos) GetNumber() int {
 	return len(*this)
 }

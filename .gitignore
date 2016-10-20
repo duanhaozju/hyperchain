@@ -102,7 +102,10 @@ crypto/addressInfo
 keystore/node
 scripts/read_server.py
 scripts/server.out
-scripts/server.txt
 scripts/sshkeys/
 
 log
+
+# build vendor
+build
+mac.sh

@@ -27,8 +27,8 @@ import (
 	"hyperchain/core/util"
 	membersrvc "hyperchain/membersrvc/protos"
 
-	_ "fmt"
 	"fmt"
+	_ "fmt"
 )
 
 var (
@@ -38,7 +38,6 @@ var (
 )
 
 func TestTLS(t *testing.T) {
-
 
 	// Skipping test for now, this is just to try tls connections
 	t.Skip()
@@ -60,7 +59,7 @@ func startTLSCA(t *testing.T) {
 
 	var opts []grpc.ServerOption
 	creds, err := credentials.NewServerTLSFromFile(viper.GetString("server.tls.cert.file"), viper.GetString("server.tls.key.file"))
-	fmt.Println("port is ",viper.GetString("server.port"))
+	fmt.Println("port is ", viper.GetString("server.port"))
 	if err != nil {
 		t.Logf("Failed creating credentials for TLS-CA service: %s", err)
 		t.Fail()

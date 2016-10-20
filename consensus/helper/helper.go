@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
+	"hyperchain/core/types"
 )
 
 var logger *logging.Logger // package-level logger
@@ -23,8 +24,11 @@ type helper struct {
 type Stack interface {
 	InnerBroadcast(msg *pb.Message) error
 	InnerUnicast(msg *pb.Message, to uint64) error
-	Execute(reqBatch *pb.ExeMessage) error
+	Execute(seqNo uint64, hash string, flag bool, isPrimary bool, time int64) error
 	UpdateState(updateState *pb.UpdateStateMessage) error
+	ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
+	VcReset(seqNo uint64) error
+	InformPrimary(primary uint64) error
 }
 
 // InnerBroadcast broadcast the consensus message between vp nodes
@@ -67,21 +71,19 @@ func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error {
 }
 
 // Execute transfers the transactions decided by consensus to outer
-func (h *helper) Execute(reqBatch *pb.ExeMessage) error {
+func (h *helper) Execute(seqNo uint64, hash string, flag bool, isPrimary bool, timestamp int64) error {
 
-	tmpMsg, err := proto.Marshal(reqBatch)
-
-	if err != nil {
-		return err
-	}
-
-	exeEvent := event.NewBlockEvent {
-		Payload:	tmpMsg,
+	writeEvent := event.CommitOrRollbackBlockEvent {
+		SeqNo:		seqNo,
+		Hash:		hash,
+		Timestamp:	timestamp,
 		CommitTime:	time.Now().UnixNano(),
+		Flag:		flag,
+		IsPrimary:	isPrimary,
 	}
 
 	// Post the event to outer
-	h.msgQ.Post(exeEvent)
+	h.msgQ.Post(writeEvent)
 
 	return nil
 }
@@ -98,8 +100,53 @@ func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
 	updateStateEvent := event.SendCheckpointSyncEvent {
 		Payload:	tmpMsg,
 	}
-	logger.Info("-------------post UpdateStateEvent----------")
+
+	// Post the event to outer
 	go h.msgQ.Post(updateStateEvent)
+
+	return nil
+}
+
+// UpdateState transfers the UpdateStateEvent to outer
+func (h *helper) ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error {
+
+	validateEvent := event.ExeTxsEvent {
+		Transactions:	txs,
+		Timestamp:      timeStamp,
+		SeqNo:		seqNo,
+		View:		view,
+		IsPrimary:	isPrimary,
+	}
+
+	// Post the event to outer
+	h.msgQ.Post(validateEvent)
+
+	return nil
+}
+
+// VcReset reset vid when view change is done
+func (h *helper) VcReset(seqNo uint64) error {
+
+	vcResetEvent := event.VCResetEvent{
+		SeqNo: seqNo,
+	}
+
+	// No need to "go h.msgQ.Post...", we'll wait for it to return
+	h.msgQ.Post(vcResetEvent)
+	time.Sleep(time.Millisecond * 10)
+
+	return nil
+}
+
+// Inform the primary id after negociate or
+func (h *helper) InformPrimary(primary uint64) error {
+
+	informPrimaryEvent := event.InformPrimaryEvent{
+		Primary: primary,
+	}
+
+	// No need to "go h.msgQ.Post...", we'll wait for it to return
+	h.msgQ.Post(informPrimaryEvent)
 
 	return nil
 }
