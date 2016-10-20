@@ -7,8 +7,6 @@
 package p2p
 
 import (
-	"github.com/golang/protobuf/proto"
-	"golang.org/x/net/context"
 	"hyperchain/event"
 	node "hyperchain/p2p/node"
 	peer "hyperchain/p2p/peer"
@@ -20,6 +18,9 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 )
 
 // gRPC peer manager struct, which to manage the gRPC peers
@@ -213,7 +214,6 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, M
 
 func (this *GrpcPeerManager) GetPeerInfo() peer.PeerInfos {
 	peers := this.peersPool.GetPeers()
-	var perinfo peer.PeerInfo
 	localNodeAddr := this.LocalNode.GetNodeAddr()
 
 	var keepAliveMessage = pb.Message{
@@ -224,6 +224,7 @@ func (this *GrpcPeerManager) GetPeerInfo() peer.PeerInfos {
 	}
 	var perinfos peer.PeerInfos
 	for _, per := range peers {
+		var perinfo peer.PeerInfo
 		log.Debug("rage the peer")
 		perinfo.IP = per.Addr.IP
 		perinfo.Port = per.Addr.Port
@@ -235,7 +236,7 @@ func (this *GrpcPeerManager) GetPeerInfo() peer.PeerInfos {
 		} else if retMsg.MessageType == pb.Message_PENDING {
 			perinfo.Status = peer.PENDING
 		}
-		perinfos = append(perinfos, &perinfo)
+		perinfos = append(perinfos, perinfo)
 	}
 	return perinfos
 }

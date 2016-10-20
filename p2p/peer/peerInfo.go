@@ -19,9 +19,9 @@ type PeerInfo struct {
 	ID     uint64
 }
 
-type PeerInfos []*PeerInfo
+type PeerInfos []PeerInfo
 
-func NewPeerInfos(pis ...*PeerInfo) PeerInfos {
+func NewPeerInfos(pis ...PeerInfo) PeerInfos {
 	var peerInfos PeerInfos
 	for _, pers := range pis {
 		peerInfos = append(peerInfos, pers)
