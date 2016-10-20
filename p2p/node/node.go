@@ -37,6 +37,8 @@ type Node struct {
 	higherEventManager *event.TypeMux
 	//common information
 	TEM transport.TransportEncryptManager
+	IsPrimary bool
+	DelayTable map[uint64]int64
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
@@ -74,6 +76,8 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	//handle the message
 	//review decrypt
 	log.Debug("消息类型", msg.MessageType)
+
+	this.DelayTable[msg.From.ID] = time.Now().UnixNano() - msg.MsgTimeStamp
 
 	switch msg.MessageType {
 	case pb.Message_HELLO:

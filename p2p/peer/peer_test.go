@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 var fakeNodeTEM = transport.NewHandShakeManger()
-var fakeNode = node.NewNode(8001,new(event.TypeMux),1,"test.cn",fakeNodeTEM)
+var fakeNode = node.NewNode(8001,new(event.TypeMux),1,fakeNodeTEM)
 var fakeNodeAddr =peerComm.ExtractAddress(peerComm.GetLocalIp(),8001,1)
 
 
@@ -33,7 +33,7 @@ func init(){
 }
 
 func TestNewPeerByIpAndPort(t *testing.T) {
-	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.Ip,fakeNodeAddr.Port,fakeNodeAddr.ID, fakeNodeTEM,localAddr)
+	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID, fakeNodeTEM,localAddr)
 	if err != nil{
 		t.Error(err)
 	}
@@ -41,7 +41,7 @@ func TestNewPeerByIpAndPort(t *testing.T) {
 }
 
 func TestPeer_Chat(t *testing.T) {
-	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.Ip,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr)
+	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr)
 	if err != nil{
 		t.Error(err)
 	}
@@ -60,7 +60,7 @@ func TestPeer_Chat(t *testing.T) {
 }
 
 func TestPeer_Chat2(t *testing.T) {
-	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.Ip,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr)
+	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr)
 	if err != nil{
 		t.Error(err)
 	}
@@ -79,7 +79,7 @@ func TestPeer_Chat2(t *testing.T) {
 }
 
 func TestPeer_Chat3(t *testing.T) {
-	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.Ip,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr)
+	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr)
 	if err != nil{
 		t.Error(err)
 	}

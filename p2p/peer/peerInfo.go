@@ -18,6 +18,7 @@ type PeerInfo struct {
 	Port   int64 `json:"port"`
 	ID     uint64 `json:"id"`
 	IsPrimary bool `json:"isprimary"`
+	Delay int64 `json:"delay"`
 }
 
 type PeerInfos []PeerInfo
