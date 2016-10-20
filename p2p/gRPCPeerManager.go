@@ -254,7 +254,7 @@ func (this *GrpcPeerManager) GetNodeId() int {
 	return _node_id
 }
 
-func (this *GrpcPeerManager) SetPrimary(id uint64) error{
+func (this *GrpcPeerManager) SetPrimary(id uint64) error {
 	peers := this.peersPool.GetPeers()
 	for _, per := range peers {
 		if per.ID == id {

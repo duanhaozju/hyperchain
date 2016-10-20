@@ -34,27 +34,27 @@ const (
 
 var (
 	tempReceiptsMap map[uint64]types.Receipts
-	public_batch hyperdb.Batch
-	batchsize = 0
+	public_batch    hyperdb.Batch
+	batchsize       = 0
 )
 
 type BlockPool struct {
-	demandNumber        uint64
-	demandSeqNo         uint64
-	maxNum              uint64
-	maxSeqNo            uint64
+	demandNumber uint64
+	demandSeqNo  uint64
+	maxNum       uint64
+	maxSeqNo     uint64
 
-	queue               map[uint64]*types.Block
-	validationQueue     map[uint64]event.ExeTxsEvent
+	queue           map[uint64]*types.Block
+	validationQueue map[uint64]event.ExeTxsEvent
 
-	consenter           consensus.Consenter
-	eventMux            *event.TypeMux
-	events              event.Subscription
-	mu                  sync.RWMutex
-	seqNoMu             sync.RWMutex
-	validationQueueMu   sync.RWMutex
-	stateLock           sync.Mutex
-	wg                  sync.WaitGroup // for shutdown sync
+	consenter         consensus.Consenter
+	eventMux          *event.TypeMux
+	events            event.Subscription
+	mu                sync.RWMutex
+	seqNoMu           sync.RWMutex
+	validationQueueMu sync.RWMutex
+	stateLock         sync.Mutex
+	wg                sync.WaitGroup // for shutdown sync
 
 	lastValidationState common.Hash
 }
@@ -93,8 +93,8 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *Block
 // abandon this transaction. And this method will return the new transactions and its' hash
 func (pool *BlockPool) ExecTxs(sequenceNum uint64, transactions []types.Transaction) ([]types.Transaction, common.Hash, error) {
 	var (
-		receipts types.Receipts
-		env = make(map[string]string)
+		receipts        types.Receipts
+		env             = make(map[string]string)
 		newTransactions []types.Transaction
 	)
 
@@ -128,7 +128,7 @@ func (pool *BlockPool) ExecTxs(sequenceNum uint64, transactions []types.Transact
 }
 
 func (pool *BlockPool) CommitOrRollbackBlockEvent(sequenceNum uint64, transactions []types.Transaction,
-timestamp int64, commitTime int64, CommitStatus bool) error {
+	timestamp int64, commitTime int64, CommitStatus bool) error {
 	// 1.init a new block
 	newBlock := new(types.Block)
 	for _, tx := range transactions {
@@ -213,7 +213,7 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 
 		block, _ := GetBlockByNumber(db, block.Number)
 		//rollback chain height,latestHash
-		UpdateChainByViewChange(block.Number - 1, block.ParentHash)
+		UpdateChainByViewChange(block.Number-1, block.ParentHash)
 		keyNum := strconv.FormatInt(int64(block.Number), 10)
 		DeleteBlock(db, append(blockNumPrefix, keyNum...))
 		WriteBlock(block, commonHash)
@@ -299,10 +299,10 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash) {
 		       return err
 	       }*/
 	/*
-		       keyNum := strconv.FormatInt(int64(block.Number), 10)
-		       //err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
+	   keyNum := strconv.FormatInt(int64(block.Number), 10)
+	   //err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
 
-		       err = db.Put(append(blockNumPrefix, keyNum...),block.BlockHash)*/
+	   err = db.Put(append(blockNumPrefix, keyNum...),block.BlockHash)*/
 
 	PutBlockTx(db, commonHash, block.BlockHash, block)
 	//log.Error("blocl num is ",block.Number)
@@ -310,7 +310,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash) {
 	//log.Error("blocl Timestamp is ",block.Timestamp)
 	//log.Error("blocl hash is ",block.BlockHash)
 
-	if block.Number % 10 == 0 && block.Number != 0 {
+	if block.Number%10 == 0 && block.Number != 0 {
 		WriteChainChan()
 	}
 	//TxSum.Add(TxSum,big.NewInt(int64(len(block.Transactions))))
@@ -407,13 +407,13 @@ func ProcessBlock(block *types.Block, commonHash crypto.CommonHash, commitTime i
 		       return err
 	       }*/
 	/*
-		       keyNum := strconv.FormatInt(int64(block.Number), 10)
-		       //err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
+	   keyNum := strconv.FormatInt(int64(block.Number), 10)
+	   //err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
 
-		       err = batch.Put(append(blockNumPrefix, keyNum...),block.BlockHash)*/
+	   err = batch.Put(append(blockNumPrefix, keyNum...),block.BlockHash)*/
 	//batch.Write()
 	end := time.Now().UnixNano()
-	log.Notice("write time is ", (end - begin) / int64(time.Millisecond))
+	log.Notice("write time is ", (end-begin)/int64(time.Millisecond))
 	//WriteBlockInDB(root,block,commitTime,commonHash)
 
 	/*
@@ -723,7 +723,6 @@ func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
 
 func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 
-
 	tmpDemandNumber := pool.demandNumber
 	// 1. Reset demandNumber , demandSeqNo and lastValidationState
 	pool.demandNumber = ev.SeqNo
@@ -731,7 +730,7 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	pool.demandSeqNo = ev.SeqNo
 	pool.maxSeqNo = ev.SeqNo - 1
 	db, _ := hyperdb.GetLDBDatabase()
-	block, _ := GetBlockByNumber(db, ev.SeqNo - 1)
+	block, _ := GetBlockByNumber(db, ev.SeqNo-1)
 	pool.lastValidationState = common.BytesToHash(block.MerkleRoot)
 	// 2. Delete Invalid Stuff
 	for i := pool.demandNumber; i < tmpDemandNumber; i += 1 {
@@ -741,21 +740,21 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 			log.Errorf("ViewChange, miss block %d ,error msg %s", i, err.Error())
 		}
 
-			for _, tx := range block.Transactions {
-				if err := db.Delete(append(transactionPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
-					log.Errorf("ViewChange, delete useless tx in block %d failed, error msg %s", i, err.Error())
-				}
-				if err := db.Delete(append(receiptsPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
-					log.Errorf("ViewChange, delete useless receipt in block %d failed, error msg %s", i, err.Error())
-				}
-				if err := db.Delete(append(txMetaSuffix, tx.GetTransactionHash().Bytes()...)); err != nil {
-					log.Errorf("ViewChange, delete useless txmeta in block %d failed, error msg %s", i, err.Error())
-				}
+		for _, tx := range block.Transactions {
+			if err := db.Delete(append(transactionPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
+				log.Errorf("ViewChange, delete useless tx in block %d failed, error msg %s", i, err.Error())
 			}
-			// delete block
-			if err := DeleteBlockByNum(db, i); err != nil {
-				log.Errorf("ViewChange, delete useless block %d failed, error msg %s", i, err.Error())
+			if err := db.Delete(append(receiptsPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
+				log.Errorf("ViewChange, delete useless receipt in block %d failed, error msg %s", i, err.Error())
 			}
+			if err := db.Delete(append(txMetaSuffix, tx.GetTransactionHash().Bytes()...)); err != nil {
+				log.Errorf("ViewChange, delete useless txmeta in block %d failed, error msg %s", i, err.Error())
+			}
+		}
+		// delete block
+		if err := DeleteBlockByNum(db, i); err != nil {
+			log.Errorf("ViewChange, delete useless block %d failed, error msg %s", i, err.Error())
+		}
 
 	}
 	blockcache, _ := GetBlockCache()
@@ -856,7 +855,7 @@ func (pool *BlockPool) AddBlockWithoutExecTxs(block *types.Block, commonHash cry
 
 		block, _ := GetBlockByNumber(db, block.Number)
 		//rollback chain height,latestHash
-		UpdateChainByViewChange(block.Number - 1, block.ParentHash)
+		UpdateChainByViewChange(block.Number-1, block.ParentHash)
 		keyNum := strconv.FormatInt(int64(block.Number), 10)
 		DeleteBlock(db, append(blockNumPrefix, keyNum...))
 		writeBlockWithoutExecTx(block, commonHash)
@@ -918,7 +917,7 @@ func writeBlockWithoutExecTx(block *types.Block, commonHash crypto.CommonHash) {
 	log.Notice("Block number", newChain.Height)
 	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
 
-	if block.Number % 10 == 0 && block.Number != 0 {
+	if block.Number%10 == 0 && block.Number != 0 {
 		WriteChainChan()
 	}
 }
