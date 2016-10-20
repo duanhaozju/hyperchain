@@ -75,3 +75,7 @@ type RespInvalidTxsEvent struct {
 type VCResetEvent struct {
 	SeqNo uint64
 }
+
+type InformPrimaryEvent struct {
+	Primary	uint64
+}

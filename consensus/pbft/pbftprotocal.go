@@ -397,6 +397,8 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 		tx := e
 		return pbft.processTxEvent(tx)
 	case viewChangedEvent:
+		primary := pbft.primary(pbft.view)
+		pbft.helper.InformPrimary(primary)
 		pbft.processRequestsDuringViewChange()
 	case batchTimerEvent:
 		logger.Debugf("Replica %d batch timer expired", pbft.id)
@@ -1942,6 +1944,8 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) error {
 			logger.Notice("################################################")
 			logger.Noticef("#   Replica %d finished negotiating view: %d", pbft.id, pbft.view)
 			logger.Notice("################################################")
+			primary := pbft.primary(pbft.view)
+			pbft.helper.InformPrimary(primary)
 			pbft.processRequestsDuringNegoView()
 		} else {
 			pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
