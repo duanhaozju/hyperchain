@@ -59,7 +59,6 @@ done
 
 
 addkey(){
-#  ssh-keygen -f "/home/fox/.ssh/known_hosts" -R $1
   expect <<EOF
       set timeout 60
       spawn ssh-copy-id satoshi@$1
@@ -75,7 +74,6 @@ ssh -t satoshi@$1 "sudo -i && apt-get install -y expect"
 
 add_ssh_key_into_primary(){
     echo "add your local ssh public key into primary node"
-#    echo "将你的本地ssh公钥添加到primary中"
     for server_address in ${SERVER_ADDR[@]}; do
 	  addkey $server_address &
 	done
@@ -83,39 +81,13 @@ add_ssh_key_into_primary(){
 
 }
 
-# count=0
-#	while read line;do
-#	    if [ $count -ne 0 ]; then
-#	        # SERVER_ADDR+=" ${line}"
-#	        echo $line
-#
-#
-#
-#	    fi
-#	    let count=count+1
-#	done < ./serverlist.txt
-
 add_ssh_key_form_primary_to_others(){
     echo "primary add its ssh key into others nodes"
-#    echo "primary 将它的ssh 公钥加入到其它节点中"
 	scp -r ./sub_scripts/deploy/server_addkey.sh satoshi@$PRIMARY:/home/satoshi/
 
 	COMMANDS="cd /home/satoshi && chmod a+x server_addkey.sh && bash server_addkey.sh"
 
 	ssh  satoshi@$PRIMARY $COMMANDS
-
-# count=0
-#	while read line;do
-#	    if [ $count -ne 0 ]; then
-#	        # SERVER_ADDR+=" ${line}"
-#	        ssh -t
-#
-#
-#
-#	    fi
-#	    let count=count+1
-#	done < ./innerlist.txt
-
 }
 
 
@@ -144,22 +116,15 @@ distribute_the_binary(){
 #    rm -rf $deploy_dir
 #}
 
-#read_server_list(){
-#    echo "读取server_list"
-#    while read line; do
-#        SERVER_ADDR+=" ${line}"
-#    done < serverlist.txt < "\n"
-#    echo $SERVER_ADDR
-#}
 
 ni=1
 auto_run(){
     echo "Auto start all nodes"
-#    echo "自动运行相应命令，启动全节点"
     for server_address in ${SERVER_ADDR[@]}; do
 	  echo $server_address
       ssh satoshi@$server_address "ps aux | grep hyperchain | awk '{print \$2}' | xargs kill -9"
-	  gnome-terminal -x bash -c "ssh satoshi@$server_address \" cd /home/satoshi/ && ./hyperchain -o $ni -l 8001 -t 8081 || while true; do ifconfig && sleep 100; done\""
+      ssh satoshi@$server_address "if [ ! -d /home/satoshi/build/ ]; then mkdir -p /home/satoshi/build/;fi"
+	  gnome-terminal -x bash -c "ssh satoshi@$server_address \" cd /home/satoshi/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o $ni -l 8001 -t 8081 || while true; do ifconfig && sleep 100; done\""
 	  ni=`expr $ni + 1`
 	done
 }

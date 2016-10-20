@@ -32,9 +32,7 @@ func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*argT)
 
-		config := newconfigsImpl(argv.ConfigPath)
-		// add condition judge if need the command line param override the config file config
-		config.initConfig(argv.NodeID, argv.GRPCPort, argv.HTTPPort)
+		config := newconfigsImpl(argv.ConfigPath,argv.NodeID, argv.GRPCPort, argv.HTTPPort)
 
 		membersrvc.Start(config.getMemberSRVCConfigPath(), config.getNodeID())
 

@@ -7,22 +7,13 @@
  *
  */
 
- var http  = require('http');
- var config = require('./peerconfig.json');
- var genesis = require('./genesis.json');
- var address = genesis.test1.alloc;
- var addresses = Object.keys(address);
- var params = {form:"",to:"",value:1};
- var hosts_url = [];
- var hosts_port = [];
- var MAXNODES = parseInt(config['MAXPEERS']);
- for (var i=1;i<=MAXNODES;i++){
-    hosts_url.push(config['external_node'+i]);
-    hosts_port.push(config['external_port'+i]);
- }
 
-console.log(hosts_url);
-console.log(hosts_port);
+ var http  = require('http');
+ var config = require('../../../config/peerconfig.json');
+ var genesis = require('../../../config/genesis.json');
+ var address = genesis.genesis.alloc;
+ var addresses = Object.keys(address);
+ var nodes = config.nodes;
 
 function testRequest(opt){
 var options = {
@@ -64,20 +55,9 @@ console.log(options);
 }
 
 //http.request(options, callback).end();
-for(var j=0;j<MAXNODES;j++){
-    if (j %2 ==0){
-     testRequest({
-        'url':hosts_url[j],
-        'port':hosts_port[j],
-        'from':addresses[0],
-        'to':addresses[2]
-        })
-    }else{
-     testRequest({
-        'url':hosts_url[j],
-        'port':hosts_port[j],
-        'from':addresses[1],
-        'to':addresses[3]
-        })
-    }
-}
+ testRequest({
+    'url':nodes[0].external_address,
+    'port':nodes[0].rpc_port,
+    'from':addresses[0],
+    'to':addresses[2]
+    })
