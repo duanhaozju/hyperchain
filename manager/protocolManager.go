@@ -346,7 +346,7 @@ func (self *ProtocolManager) viewChangeLoop() {
 			// receive invalid tx message, save to db
 			self.blockPool.ResetStatus(ev)
 		case event.InformPrimaryEvent:
-			log.Notice("InformPrimaryEvent")
+			//log.Notice("InformPrimaryEvent")
 			self.Peermanager.SetPrimary(ev.Primary)
 		}
 	}
