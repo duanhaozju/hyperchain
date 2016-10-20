@@ -123,7 +123,7 @@ auto_run(){
     for server_address in ${SERVER_ADDR[@]}; do
 	  echo $server_address
       ssh satoshi@$server_address "ps aux | grep hyperchain | awk '{print \$2}' | xargs kill -9"
-	  gnome-terminal -x bash -c "ssh satoshi@$server_address \" cd /home/satoshi/ && ./hyperchain -o $ni -l 8001 -t 8081 || while true; do ifconfig && sleep 100; done\""
+	  gnome-terminal -x bash -c "ssh satoshi@$server_address \" cd /home/satoshi/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o $ni -l 8001 -t 8081 || while true; do ifconfig && sleep 100; done\""
 	  ni=`expr $ni + 1`
 	done
 }
