@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"hyperchain/common"
 	"hyperchain/crypto"
-	"math/big"
 	"os"
 	"path"
 	"path/filepath"
@@ -126,9 +125,7 @@ func (am *AccountManager) SignWithPassphrase(addr common.Address, hash []byte, p
 
 // Unlock unlocks the given account indefinitely.
 func (am *AccountManager) Unlock(a Account, passphrase string) error {
-	duration := big.NewInt(36000)
-	d := time.Duration(duration.Int64()) * time.Second
-	return am.TimedUnlock(a, passphrase, d)
+	return am.TimedUnlock(a, passphrase, 0)
 }
 
 // Lock removes the private key with the given address from memory.

@@ -98,7 +98,7 @@ func (pm *ProtocolManager) Start() {
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
-	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{})
+	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{}, event.InformPrimaryEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
 	go pm.syncBlockLoop()
@@ -345,6 +345,9 @@ func (self *ProtocolManager) viewChangeLoop() {
 		case event.VCResetEvent:
 			// receive invalid tx message, save to db
 			self.blockPool.ResetStatus(ev)
+		case event.InformPrimaryEvent:
+			//log.Notice("InformPrimaryEvent")
+			self.Peermanager.SetPrimary(ev.Primary)
 		}
 	}
 }
