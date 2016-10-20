@@ -91,7 +91,7 @@ cd build
 ./hyperchain -o 3 -l 8001 -t 8081 //run this on third node
 ./hyperchain -o 4 -l 8001 -t 8081 //run this on fourth node
 ```
-Note: if you want run 4 nodes in localhost, modify the `-l` and `-t` options, ensure the ports are difference. 
+Note: if you want run 4 nodes in localhost, modify the `-l` and `-t` options, ensure the ports are different. 
 
 
 ## Configuration
