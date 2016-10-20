@@ -46,7 +46,9 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getContractCoun
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_lastestBlock","params":[],"id":1}'
 
 # 得到所有区块 GetBlocks
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params":[],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params":[{}],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params":[{"from":1, "to":1}],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params":[{"from":1, "to":5}],"id":1}'
 
 # 根据区块hash查询区块信息 GetBlockByHash
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlockByHash","params":["<block hash>"],"id":1}'
