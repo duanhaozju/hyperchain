@@ -39,6 +39,7 @@ type Peer struct {
 	Status     int
 	ID         uint64
 	chatMux    sync.Mutex
+	primary bool
 }
 
 // NewPeerByIpAndPort to create a Peer which with a connection,

@@ -236,6 +236,7 @@ func (this *GrpcPeerManager) GetPeerInfo() peer.PeerInfos {
 		} else if retMsg.MessageType == pb.Message_PENDING {
 			perinfo.Status = peer.PENDING
 		}
+
 		perinfos = append(perinfos, perinfo)
 	}
 	return perinfos
