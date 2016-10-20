@@ -570,16 +570,15 @@ func (pool *BlockPool) PreCheck(txs []*types.Transaction, commonHash crypto.Comm
 	var invalidTxSet []*types.InvalidTransactionRecord
 	// (1) check signature for each transaction
 	for _, tx := range txs {
-		//if !tx.ValidateSign(encryption, commonHash) {
-		//	log.Notice("Validation, found invalid signature, send from :", tx.Id)
-		//	invalidTxSet = append(invalidTxSet, &types.InvalidTransactionRecord{
-		//		Tx:      tx,
-		//		ErrType: types.InvalidTransactionRecord_SIGFAILED,
-		//	})
-		//} else {
-		//	validTxSet = append(validTxSet, tx)
-		//}
-		validTxSet = append(validTxSet, tx)
+		if !tx.ValidateSign(encryption, commonHash) {
+			log.Notice("Validation, found invalid signature, send from :", tx.Id)
+			invalidTxSet = append(invalidTxSet, &types.InvalidTransactionRecord{
+				Tx:      tx,
+				ErrType: types.InvalidTransactionRecord_SIGFAILED,
+			})
+		} else {
+			validTxSet = append(validTxSet, tx)
+		}
 	}
 	return validTxSet, invalidTxSet
 }
