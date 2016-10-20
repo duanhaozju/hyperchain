@@ -108,3 +108,5 @@ log
 
 # build vendor
 build
+
+mac.sh
