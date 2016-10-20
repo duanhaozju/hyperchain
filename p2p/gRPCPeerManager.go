@@ -237,7 +237,7 @@ func (this *GrpcPeerManager) GetPeerInfo() peer.PeerInfos {
 		}
 		perinfo.IsPrimary = per.IsPrimary
 		perinfo.Delay = this.LocalNode.DelayTable[per.ID]
-
+		perinfo.ID  = per.ID
 		perinfos = append(perinfos, perinfo)
 	}
 	var self_info = peer.PeerInfo{
