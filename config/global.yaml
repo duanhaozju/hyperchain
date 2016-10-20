@@ -17,9 +17,6 @@
 # node config
 
 global:
-    nodeid: 1
-    grpcport: 8001
-    httpport: 8081
 
 ##########################
 # data storage config #
@@ -47,7 +44,7 @@ global:
 # configs
 ############################
     configs:
-        peers: "config/peerconfig.json"
+        peers: "config/local_peerconfig.json"
         genesis: "config/genesis.json"
         membersrvc: "config/membersrvc.yaml"
         pbft: "config/pbft.yaml"

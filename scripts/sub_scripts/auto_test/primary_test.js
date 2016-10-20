@@ -7,9 +7,10 @@
  *
  */
 
+
  var http  = require('http');
- var config = require('./config/peerconfig.json');
- var genesis = require('./config/genesis.json');
+ var config = require('../../../config/peerconfig.json');
+ var genesis = require('../../../config/genesis.json');
  var address = genesis.genesis.alloc;
  var addresses = Object.keys(address);
  var nodes = config.nodes;
@@ -54,11 +55,9 @@ console.log(options);
 }
 
 //http.request(options, callback).end();
-for (var node in nodes) {
-     testRequest({
-        'url':nodes[node].external_address,
-        'port':nodes[node].rpc_port,
-        'from':addresses[0],
-        'to':addresses[2]
-        })
-}
+ testRequest({
+    'url':nodes[0].external_address,
+    'port':nodes[0].rpc_port,
+    'from':addresses[0],
+    'to':addresses[2]
+    })
