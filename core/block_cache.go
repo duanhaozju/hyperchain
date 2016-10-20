@@ -73,7 +73,8 @@ func (self *BlockCache) Clear() {
 func (self *BlockCache) All() map[string]BlockRecord {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	var ret map[string]BlockRecord
+	ret := make(map[string]BlockRecord)
+	//var ret map[string]BlockRecord
 	if self.data!=nil{
 	for k, v := range self.data {
 		ret[k] = v
