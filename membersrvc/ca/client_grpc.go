@@ -5,8 +5,8 @@ package ca
 import (
 	"time"
 
-	pb "hyperchain/membersrvc/protos"
 	"google.golang.org/grpc"
+	pb "hyperchain/membersrvc/protos"
 
 	"github.com/spf13/viper"
 )

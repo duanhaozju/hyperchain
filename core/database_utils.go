@@ -31,8 +31,8 @@ var (
 // InitDB initialization ldb and memdb
 // should be called while programming start-up
 // port: the server port
-func InitDB(port int) {
-	hyperdb.SetLDBPath(port)
+func InitDB(dbPath string, port int) {
+	hyperdb.SetLDBPath(dbPath, port)
 	memChainMap = newMemChain()
 	memChainStatusMap = newMemChainStatus()
 }
@@ -125,7 +125,7 @@ func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error)
 //get tx<-->block num,hash,index
 func GetTxWithBlock(db hyperdb.Database, key []byte) (uint64, int64) {
 	dataMeta, _ := db.Get(append(key, txMetaSuffix...))
-	log.Info(dataMeta)
+	log.Debug(dataMeta)
 	if len(dataMeta) == 0 {
 		return 0, 0
 	}

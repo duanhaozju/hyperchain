@@ -8,31 +8,24 @@ import "hyperchain/common"
 
 type KeyType interface {
 	sign()
-
 }
 
 type Encryption interface {
 
 	//sign byte
-	Sign(hash []byte,  prv interface{})(sig []byte, err error)
-	UnSign(args ...interface{})(common.Address, error)
+	Sign(hash []byte, prv interface{}) (sig []byte, err error)
+	UnSign(args ...interface{}) (common.Address, error)
 	//general private key
-	GeneralKey() (interface{},error)
+	GeneralKey() (interface{}, error)
 
 	//generates pri-pub key of node and save it to file
-	GenerateNodeKey(port string,keydir string) error
+	GenerateNodeKey(port string, keyNodeDir string) error
 
-	GetNodeKey(keydir string)(interface{},error)
+	GetNodeKey(keydir string) (interface{}, error)
 
 	//GeneralKey(path string)(*ecdsa.PrivateKey,error)
 
-
 	//GetKey()(interface{},error)
 
-
-	PrivKeyToAddress(prv interface{})common.Address
-
-
+	PrivKeyToAddress(prv interface{}) common.Address
 }
-
-

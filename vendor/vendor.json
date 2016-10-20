@@ -15,6 +15,12 @@
 			"revisionTime": "2015-09-15T16:53:35Z"
 		},
 		{
+			"checksumSHA1": "UaIfY3h+yVesmmrVelu0R5nqTpA=",
+			"path": "github.com/buger/jsonparser",
+			"revision": "f04e003e4115787c6272636780bc206e5ffad6c4",
+			"revisionTime": "2016-09-22T14:59:46Z"
+		},
+		{
 			"checksumSHA1": "5rPfda8jFccr3A6heL+JAmi9K9g=",
 			"origin": "github.com/stretchr/testify/vendor/github.com/davecgh/go-spew/spew",
 			"path": "github.com/davecgh/go-spew/spew",

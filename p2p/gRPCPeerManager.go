@@ -28,37 +28,38 @@ type GrpcPeerManager struct {
 	LocalNode     *node.Node
 	peersPool     *peerPool.PeersPool
 	TEM           transport.TransportEncryptManager
-	peerStatus    map[int]bool
+	peerStatus    map[uint64]bool
 	configs       peerComm.Config
 	MaxPeerNumber int
-	NodeId        int
-	CName         string
-	Port          int
+	NodeID        uint64
+	Port          int64
 	IP            string
 }
 
-func NewGrpcManager(configPath string, NodeId int) *GrpcPeerManager {
+func NewGrpcManager(configPath string, nodeID int) *GrpcPeerManager {
+	NodeID := uint64(nodeID)
+
 	// configs
 	var newgRPCManager GrpcPeerManager
 	configUtil := peerComm.NewConfigUtil(configPath)
 	newgRPCManager.configs = configUtil
 	newgRPCManager.MaxPeerNumber = newgRPCManager.configs.GetMaxPeerNumber()
-	newgRPCManager.NodeId = NodeId
+	newgRPCManager.NodeID = NodeID
 
-	newgRPCManager.IP = newgRPCManager.configs.GetIP(newgRPCManager.NodeId)
-	newgRPCManager.Port = newgRPCManager.configs.GetPort(newgRPCManager.NodeId)
-	newgRPCManager.CName = newgRPCManager.configs.GetCname(newgRPCManager.NodeId)
+	newgRPCManager.IP = newgRPCManager.configs.GetIP(newgRPCManager.NodeID)
+	newgRPCManager.Port = newgRPCManager.configs.GetPort(newgRPCManager.NodeID)
 
 	//HSM only instanced once, so peersPool and Node Hsm are same instance
 	newgRPCManager.TEM = transport.NewHandShakeManger()
 	// start local node
-	newgRPCManager.peerStatus = make(map[int]bool)
+	newgRPCManager.peerStatus = make(map[uint64]bool)
 	//init the flag map
 	for i := 1; i <= newgRPCManager.MaxPeerNumber; i++ {
-		if i == newgRPCManager.NodeId {
-			newgRPCManager.peerStatus[i] = true
+		_index := uint64(i)
+		if _index == newgRPCManager.NodeID {
+			newgRPCManager.peerStatus[_index] = true
 		} else {
-			newgRPCManager.peerStatus[i] = false
+			newgRPCManager.peerStatus[_index] = false
 		}
 	}
 	return &newgRPCManager
@@ -66,11 +67,11 @@ func NewGrpcManager(configPath string, NodeId int) *GrpcPeerManager {
 
 // Start start the Normal local listen server
 func (this *GrpcPeerManager) Start(aliveChain chan bool, eventMux *event.TypeMux) {
-	if this.NodeId == 0 || this.configs == nil {
+	if this.NodeID == 0 || this.configs == nil {
 		log.Error("the gRPC Manager hasn't initlized")
 		os.Exit(1)
 	}
-	this.LocalNode = node.NewNode(this.Port, eventMux, this.NodeId, this.CName, this.TEM)
+	this.LocalNode = node.NewNode(this.Port, eventMux, this.NodeID, this.TEM)
 	this.LocalNode.StartServer()
 	// connect to peer
 	// 如果进行单元测试,需要将参数设置为true
@@ -89,33 +90,34 @@ func (this *GrpcPeerManager) connectToPeers() {
 	// connect other peers
 	//TODO RETRY CONNECT 重试连接(未实现)
 	for this.peersPool.GetAliveNodeNum() < this.MaxPeerNumber-1 {
-		log.Debug("node:", this.NodeId, "process connecting task...")
+		log.Debug("node:", this.NodeID, "process connecting task...")
 		log.Debug("nodes number:", this.peersPool.GetAliveNodeNum())
 		nid := 1
 		for range time.Tick(200 * time.Millisecond) {
+			_index := uint64(nid)
 			//log.Println("status map", nid, status)
 			if nid > this.MaxPeerNumber {
 				break
 			}
-			if this.peerStatus[nid] {
+			if this.peerStatus[_index] {
 				nid++
 				continue
 			}
 			//if this node is not online, connect it
-			peerIp := this.configs.GetIP(nid)
-			peerPort := this.configs.GetPort(nid)
-			peerAddress := peerComm.ExtractAddress(peerIp, peerPort, int32(nid))
-			peer, connectErr := this.connectToPeer(peerAddress, int32(nid))
+			peerIp := this.configs.GetIP(_index)
+			peerPort := this.configs.GetPort(_index)
+			peerAddress := peerComm.ExtractAddress(peerIp, peerPort, _index)
+			peer, connectErr := this.connectToPeer(peerAddress, _index)
 			if connectErr != nil {
 				// cannot connect to other peer
-				log.Error("Node: ", peerAddress.Ip, ":", peerAddress.Port, " can not connect!\n")
+				log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n")
 
 				continue
 			} else {
 				// add  peer to peer pool
 				this.peersPool.PutPeer(*peerAddress, peer)
 				//this.TEM.[peer.Addr.Hash]=peer.TEM
-				this.peerStatus[nid] = true
+				this.peerStatus[_index] = true
 				log.Debug("Peer Node hash:", peerAddress.Hash, "has connected!")
 			}
 		}
@@ -123,12 +125,12 @@ func (this *GrpcPeerManager) connectToPeers() {
 }
 
 //connect to peer by ip address and port (why int32? because of protobuf limit)
-func (this *GrpcPeerManager) connectToPeer(peerAddress *pb.PeerAddress, nid int32) (*peer.Peer, error) {
+func (this *GrpcPeerManager) connectToPeer(peerAddress *pb.PeerAddress, nid uint64) (*peer.Peer, error) {
 	//if this node is not online, connect it
-	peer, peerErr := peer.NewPeerByIpAndPort(peerAddress.Ip, peerAddress.Port, nid, this.TEM, this.LocalNode.GetNodeAddr())
+	peer, peerErr := peer.NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, nid, this.TEM, this.LocalNode.GetNodeAddr())
 	if peerErr != nil {
 		// cannot connect to other peer
-		log.Error("Node: ", peerAddress.Address+" can not connect!\n")
+		log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n")
 		return nil, peerErr
 	} else {
 		return peer, nil
@@ -189,18 +191,16 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, M
 	//TODO for stateUpdate
 	go func() {
 		for _, p := range this.peersPool.GetPeers() {
-			for _, nodeID := range peerList {
+			for _, NodeID := range peerList {
 				// convert the uint64 to int
-				nodeId := strconv.FormatUint(nodeID, 10)
-				nid, _ := strconv.Atoi(nodeId)
 				// because the unicast node is not confirm so, here use double loop
-				if p.ID == nid {
-					log.Debug("send msg to ", nid)
+				if p.ID == NodeID {
+					log.Debug("send msg to ", NodeID)
 					resMsg, err := p.Chat(syncMessage)
 					if err != nil {
 						log.Error("Broadcast failed,Node", p.Addr)
 					} else {
-						log.Info("resMsg:", string(resMsg.Payload))
+						log.Debug("resMsg:", string(resMsg.Payload))
 						//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
 					}
 				}
@@ -225,9 +225,8 @@ func (this *GrpcPeerManager) GetPeerInfo() peer.PeerInfos {
 	var perinfos peer.PeerInfos
 	for _, per := range peers {
 		log.Debug("rage the peer")
-		perinfo.IP = per.Addr.Ip
-		perinfo.Port = int(per.Addr.Port)
-		perinfo.CName = per.CName
+		perinfo.IP = per.Addr.IP
+		perinfo.Port = per.Addr.Port
 		retMsg, err := per.Client.Chat(context.Background(), &keepAliveMessage)
 		if err != nil {
 			perinfo.Status = peer.STOP
@@ -243,5 +242,11 @@ func (this *GrpcPeerManager) GetPeerInfo() peer.PeerInfos {
 
 // GetNodeId GetLocalNodeIdHash string
 func (this *GrpcPeerManager) GetNodeId() int {
-	return this.NodeId
+	_id := strconv.FormatUint(this.NodeID, 10)
+	_node_id, _err := strconv.Atoi(_id)
+	if _err != nil {
+		log.Error("convert err", _err)
+	}
+
+	return _node_id
 }

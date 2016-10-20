@@ -39,10 +39,10 @@ echo "delete the database"
 rm -rf /tmp/hyperchain/
 
 echo "run the application"
-osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain && ./hyperchain -o 1 -l 8081 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json"'
-osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain && ./hyperchain -o 2 -l 8082 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json"'
-osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain && ./hyperchain -o 3 -l 8083 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json"'
-osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain && ./hyperchain -o 4 -l 8084 -p ./p2p/peerconfig.json -f ./consensus/pbft/ -g ./core/genesis.json"'
+osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain && ./hyperchain -o 1 -l 8001 -t 8081"'
+osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain && ./hyperchain -o 2 -l 8002 -t 8082"'
+osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain && ./hyperchain -o 3 -l 8003 -t 8083"'
+osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain && ./hyperchain -o 4 -l 8004 -t 8084"'
 
 
 python ./jsonrpc/Dashboard/simpleHttpServer.py

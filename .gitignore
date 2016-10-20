@@ -108,3 +108,6 @@ log
 
 # build vendor
 build
+keystore
+
+keynodes

@@ -35,10 +35,9 @@ type Peer struct {
 	Addr       *pb.PeerAddress
 	Connection *grpc.ClientConn
 	Client     pb.ChatClient
-	CName      string
 	TEM        transport.TransportEncryptManager
 	Status     int
-	ID         int
+	ID         uint64
 	chatMux    sync.Mutex
 }
 
@@ -47,10 +46,10 @@ type Peer struct {
 // the peer will auto store into the peer pool.
 // when creating a peer, the client instance will create a message whose type is HELLO
 // if get a response, save the peer into singleton peer pool instance
-func NewPeerByIpAndPort(ip string, port int32, nid int32, TEM transport.TransportEncryptManager, localAddr *pb.PeerAddress) (*Peer, error) {
+func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.TransportEncryptManager, localAddr *pb.PeerAddress) (*Peer, error) {
 	var peer Peer
 	peer.TEM = TEM
-	peerAddr := peerComm.ExtractAddress(ip, int(port), nid)
+	peerAddr := peerComm.ExtractAddress(ip, port, nid)
 
 	opts:=membersrvc.GetGrpcClientOpts()
 	conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), opts...)
@@ -87,7 +86,7 @@ func NewPeerByIpAndPort(ip string, port int32, nid int32, TEM transport.Transpor
 			}
 
 			log.Notice("secret", len(peer.TEM.GetSecret(peer.Addr.Hash)))
-			peer.ID = int(retMessage.From.ID)
+			peer.ID = retMessage.From.ID
 			if err != nil {
 				log.Error("cannot decrypt the nodeidinfo!")
 				errors.New("Decrypt ERROR")

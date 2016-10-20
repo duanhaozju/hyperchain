@@ -32,14 +32,18 @@ func (a sortableUint64Slice) Less(i, j int) bool {
 
 func (pbft *pbftProtocal) postRequestEvent(event *types.Transaction) {
 
-	pbft.mux.Lock()
-	defer pbft.mux.Unlock()
+	pbft.muxBatch.Lock()
+	defer pbft.muxBatch.Unlock()
 	pbft.batchManager.Queue() <- event
 
 }
 
 func (pbft *pbftProtocal) postPbftEvent(event interface{}) {
+
+	pbft.muxPbft.Lock()
+	defer pbft.muxPbft.Unlock()
 	pbft.pbftManager.Queue() <- event
+
 }
 
 // =============================================================================
@@ -291,6 +295,7 @@ func (pbft *pbftProtocal) startTimerIfOutstandingRequests() {
 			}
 			return digests
 		}()
+		//logger.Debug(getOutstandingDigests)
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("outstanding request batches %v", getOutstandingDigests))
 	} else if pbft.nullRequestTimeout > 0 {
 		pbft.nullReqTimerReset()

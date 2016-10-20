@@ -36,8 +36,8 @@ var options = {
 };
 //var post_data = JSON.stringify({"from":opt.from,"to":opt.to,"value":'1'});
 var post_data = JSON.stringify({
-    // "method": "tx_sendTransaction",
-    "method": "tx_sendTransactionOrContract",
+    "method": "tx_sendTransaction",
+    // "method": "tx_sendTransactionOrContract",
     "params": [
         {
             "from":opt.from,
@@ -53,7 +53,7 @@ console.log(options);
     var post_req = http.request(options, function(res) {
         res.setEncoding('utf8');
         res.on('data', function (chunk) {
-                  console.log('Response: OK');
+            console.log('Response: OK');
         });
        });
     post_req.on('error',function(err){

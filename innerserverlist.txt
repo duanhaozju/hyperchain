@@ -1,4 +1,0 @@
-10.105.89.219
-10.105.85.32
-10.105.80.128
-please leave this line to ensure the script could run correctly

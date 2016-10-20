@@ -555,16 +555,17 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 			d, ok := nv.Xset[i]
 			if !ok {
 				logger.Critical("view change Xset miss batch number %d", i)
-			}
-			if d == "" {
+			} else if d == "" {
 				// This should not happen
-				logger.Critical("view change Xset has null batch")
+				logger.Critical("view change Xset has null batch, kick it out")
+			} else {
+				batch, ok := pbft.validatedBatchStore[d]
+				if !ok {
+					logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
+				} else {
+					pbft.recvRequestBatch(batch)
+				}
 			}
-			batch, ok := pbft.validatedBatchStore[d]
-			if !ok {
-				logger.Criticalf("Replica %d is missing request batch for seqNo=%d with digest '%s' for assigned prepare after fetching, this indicates a serious bug", pbft.id, i, d)
-			}
-			pbft.recvRequestBatch(batch)
 		}
 	}
 	/*

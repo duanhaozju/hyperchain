@@ -1,10 +1,12 @@
 package hyperdb
 
 import (
-	"github.com/syndtr/goleveldb/leveldb"
-	"sync"
+	"path"
 	"strconv"
+	"sync"
+
 	"github.com/op/go-logging"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 type stateldb int32
@@ -14,11 +16,11 @@ type LDBInstance struct {
 	state  stateldb
 	dbsync sync.Mutex
 }
+
 var log *logging.Logger // package-level logger
 func init() {
 	log = logging.MustGetLogger("hyperdb")
 }
-
 
 const (
 	closed stateldb = iota
@@ -38,10 +40,11 @@ func getBaseDir() string {
 
 var (
 	baseLDBPath = getBaseDir() + "/hyperchain/cache/"
-	portLDBPath = "db"  //different port has different db path, default "db"
+	portLDBPath = "db" //different port has different db path, default "db"
 )
 
-func SetLDBPath(port int)  {
+func SetLDBPath(dbpath string, port int) {
+	baseLDBPath = path.Join(dbpath, "hyperchain/cache/")
 	portLDBPath = strconv.Itoa(port)
 }
 
@@ -50,8 +53,6 @@ func getDBPath() string {
 }
 
 //-- ------------------ ldb end ----------------------
-
-
 
 // GetLDBDatabase get a single instance of LDBDatabase
 // if LDBDatabase state is open, return db directly
@@ -67,7 +68,7 @@ func GetLDBDatabase() (*LDBDatabase, error) {
 		return ldbInstance.ldb, err
 	}
 	ldbInstance.ldb = &LDBDatabase{
-		db: db,
+		db:   db,
 		path: getDBPath(),
 	}
 	ldbInstance.state = opened

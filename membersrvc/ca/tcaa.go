@@ -6,8 +6,8 @@ package ca
 import (
 	"errors"
 
-	pb "hyperchain/membersrvc/protos"
 	"golang.org/x/net/context"
+	pb "hyperchain/membersrvc/protos"
 )
 
 // TCAA serves the administrator GRPC interface of the TCA.
