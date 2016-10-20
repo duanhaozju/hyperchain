@@ -4,8 +4,6 @@
 # generator the peer config file
 import json
 
-node = {"id":2,"address":"10.105.2.6","external_address":"115.159.26.15","port":8001,"rpc_port":8081}
-
 server_list_files = open('serverlist.txt','rb')
 inner_server_list_files = open('innerserverlist.txt','rb')
 
