@@ -34,4 +34,6 @@ type PeerManager interface {
 	SendMsgToPeers(payLoad []byte, peerList []uint64, MessageType recovery.Message_MsgType)
 	//get the peer information of all nodes.
 	GetPeerInfo() peer.PeerInfos
+	// set
+	SetPrimary(id uint64)error
 }
