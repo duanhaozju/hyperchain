@@ -30,7 +30,7 @@ global:
 
     logs:
         # dump the log file or not
-        dumpfile: true
+        dumpfile: false
         logsdir: "./build/logs"
         # loglevel contains those levels:
         #    High   CRITICAL
