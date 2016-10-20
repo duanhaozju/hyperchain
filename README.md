@@ -15,6 +15,10 @@
 
 `EVM`
 
+## LATEST TAG
+
+`Release_1.0_20161019`
+
 ## Product Description
 
 Hyperchain is a foundation consortium blockchain platform that meets the needs of industrial applications. Hyperchain integrates high-performance and reliable consensus algorithm and is compatible with the open source community's smart contract development language and execution environment. 
