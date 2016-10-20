@@ -131,7 +131,7 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 	receipt = types.NewReceipt(nil, gas)
 	receipt.ContractAddress = addr.Bytes()
 	//todo add tx hash in tx struct
-	//receipt.TxHash = tx.BuildHash().Bytes()
+	receipt.TxHash = tx.GetTransactionHash().Bytes()
 	// todo replace the gasused
 	receipt.GasUsed = 100000
 	receipt.Ret = ret
@@ -149,8 +149,14 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 
 func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 	gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
+	var sender vm.Account
 
-	sender := vmenv.Db().GetAccount(*from)
+	if !(vmenv.Db().Exist(*from)) {
+		sender = vmenv.Db().CreateAccount(*from)
+		vmenv.Db().AddBalance(*from,big.NewInt(100000))
+	} else {
+		sender = vmenv.Db().GetAccount(*from)
+	}
 	contractCreation := (nil == to)
 
 	//ret,err = env.Call(sender,*to,data,gas,gasPrice,value)

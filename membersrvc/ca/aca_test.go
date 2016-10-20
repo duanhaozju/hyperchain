@@ -16,9 +16,9 @@ import (
 	"crypto/x509"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 	"hyperchain/core/crypto/primitives"
 	pb "hyperchain/membersrvc/protos"
-	"golang.org/x/net/context"
 )
 
 var identity = "test_user0"

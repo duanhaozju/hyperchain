@@ -47,7 +47,7 @@ func TestPeer_Chat(t *testing.T) {
 	}
 	//t.Log(peer.Addr)
 
-	var broadCastMessage = &pb.Message{
+	var broadCastMessage = pb.Message{
 		MessageType:  pb.Message_CONSUS,
 		From:        localAddr,
 		Payload:     []byte("TEST"),
@@ -66,7 +66,7 @@ func TestPeer_Chat2(t *testing.T) {
 	}
 	//t.Log(peer.Addr)
 
-	var broadCastMessage = &pb.Message{
+	var broadCastMessage = pb.Message{
 		MessageType:  pb.Message_CONSUS,
 		From:        localAddr,
 		Payload:     []byte("TEST"),
@@ -85,7 +85,7 @@ func TestPeer_Chat3(t *testing.T) {
 	}
 	//t.Log(peer.Addr)
 
-	var broadCastMessage = &pb.Message{
+	var broadCastMessage = pb.Message{
 		MessageType:  pb.Message_CONSUS,
 		From:        localAddr,
 		Payload:     []byte("TEST"),
@@ -114,20 +114,21 @@ func TestPeer_Chat3(t *testing.T) {
 		t.Error("chat failed", err)
 	}
 
-	retData := localTEM.DecWithSecret(retmsg.Payload,retmsg.From.Hash)
+	//retData := localTEM.DecWithSecret(retmsg.Payload,retmsg.From.Hash)
+	//retData :=retmsg
 
-	log.Critical("解密之后",hex.EncodeToString(retData))
-	msg := &hypermessage.Message{}
-	umerr := proto.Unmarshal(retData,msg)
-	if umerr!=nil {
-		t.Error("Inner RecvMsg Unmarshal error: can not unmarshal pb.Message", err)
-	}
+	//log.Critical("解密之后",hex.EncodeToString(*retmsg))
+	//msg := &hypermessage.Message{}
+	//umerr := proto.Unmarshal(retmsg,msg)
+	//if umerr!=nil {
+	//	t.Error("Inner RecvMsg Unmarshal error: can not unmarshal pb.Message", err)
+	//}
 
-	t.Log("返回信息")
-	t.Log("返回信息Id: ",msg.Id)
-	t.Log("返回信息Timestamp: ",msg.Timestamp)
-	t.Log("返回信息Type: ",msg.Type)
-	t.Log("返回信息Payl:",msg.Payload)
+	t.Log("返回信息",retmsg)
+	//t.Log("返回信息Id: ",msg.Id)
+	//t.Log("返回信息Timestamp: ",msg.Timestamp)
+	//t.Log("返回信息Type: ",msg.Type)
+	//t.Log("返回信息Payl:",msg.Payload)
 
-	assert.Exactly(t,consensusMsg.Payload,msg.Payload)
+	assert.Exactly(t,[]byte{0x47, 0x4f, 0x54, 0x5f, 0x41, 0x5f, 0x43, 0x4f, 0x4e, 0x53, 0x45, 0x4e, 0x53, 0x55, 0x53, 0x5f, 0x4d, 0x45, 0x53, 0x53, 0x41, 0x47, 0x45},retmsg.Payload)
 }

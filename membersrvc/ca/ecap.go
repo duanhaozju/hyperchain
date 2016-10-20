@@ -18,10 +18,10 @@ import (
 	"hyperchain/core/crypto/primitives/ecies"
 
 	"github.com/golang/protobuf/proto"
-	"hyperchain/core/crypto/primitives"
-	pb "hyperchain/membersrvc/protos"
 	"github.com/spf13/viper"
 	"golang.org/x/net/context"
+	"hyperchain/core/crypto/primitives"
+	pb "hyperchain/membersrvc/protos"
 )
 
 // ECAP serves the public GRPC interface of the ECA.

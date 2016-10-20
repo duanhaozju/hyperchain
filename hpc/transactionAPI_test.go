@@ -58,18 +58,18 @@ func TestPublicTransactionAPI_SendTransaction(t *testing.T) {
 
 }
 
-func TestPublicTransactionAPI_SendTransactionOrContract(t *testing.T) {
-
-	// deploy contract test
-	args.To = nil
-	args.Payload = "0x6000805463ffffffff1916815560a0604052600b6060527f68656c6c6f20776f726c6400000000000000000000000000000000000000000060805260018054918190527f68656c6c6f20776f726c6400000000000000000000000000000000000000001681559060be907fb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf66020600261010084871615026000190190931692909204601f01919091048101905b8082111560ce576000815560010160ac565b50506101cd806100d26000396000f35b509056606060405260e060020a60003504633ad14af3811461003f578063569c5f6d146100675780638da9b7721461007c578063d09de08a146100ea575b610002565b34610002576000805460043563ffffffff8216016024350163ffffffff19919091161790555b005b346100025761010e60005463ffffffff165b90565b3461000257604080516020818101835260008252600180548451600261010083851615026000190190921691909104601f81018490048402820184019095528481526101289490928301828280156101c15780601f10610196576101008083540402835291602001916101c1565b34610002576100656000805463ffffffff19811663ffffffff909116600101179055565b6040805163ffffffff929092168252519081900360200190f35b60405180806020018281038252838181518152602001915080519060200190808383829060006004602084601f0104600302600f01f150905090810190601f1680156101885780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b820191906000526020600020905b8154815290600101906020018083116101a457829003601f168201915b5050505050905061007956"
-
-	if hash, err := api.SendTransactionOrContract(args); err == nil {
-		t.Logf("the new contract tx hash is %v", common.ToHex(hash[:]))
-	} else {
-		t.Errorf("%v", err)
-	}
-}
+//func TestPublicTransactionAPI_SendTransactionOrContract(t *testing.T) {
+//
+//	// deploy contract test
+//	args.To = nil
+//	args.Payload = "0x6000805463ffffffff1916815560a0604052600b6060527f68656c6c6f20776f726c6400000000000000000000000000000000000000000060805260018054918190527f68656c6c6f20776f726c6400000000000000000000000000000000000000001681559060be907fb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf66020600261010084871615026000190190931692909204601f01919091048101905b8082111560ce576000815560010160ac565b50506101cd806100d26000396000f35b509056606060405260e060020a60003504633ad14af3811461003f578063569c5f6d146100675780638da9b7721461007c578063d09de08a146100ea575b610002565b34610002576000805460043563ffffffff8216016024350163ffffffff19919091161790555b005b346100025761010e60005463ffffffff165b90565b3461000257604080516020818101835260008252600180548451600261010083851615026000190190921691909104601f81018490048402820184019095528481526101289490928301828280156101c15780601f10610196576101008083540402835291602001916101c1565b34610002576100656000805463ffffffff19811663ffffffff909116600101179055565b6040805163ffffffff929092168252519081900360200190f35b60405180806020018281038252838181518152602001915080519060200190808383829060006004602084601f0104600302600f01f150905090810190601f1680156101885780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b820191906000526020600020905b8154815290600101906020018083116101a457829003601f168201915b5050505050905061007956"
+//
+//	if hash, err := api.SendTransactionOrContract(args); err == nil {
+//		t.Logf("the new contract tx hash is %v", common.ToHex(hash[:]))
+//	} else {
+//		t.Errorf("%v", err)
+//	}
+//}
 
 func TestPublicTransactionAPI_GetTransactionByHash(t *testing.T) {
 
@@ -165,3 +165,88 @@ func TestPublicTransactionAPI_GetTransactionsByBlockNumberAndIndex(t *testing.T)
 		t.Logf("%#v", tx)
 	}
 }
+
+func TestPublicTransactionAPI_GetBlockTransactionCountByHash(t *testing.T) {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = core.PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if c,err := api.GetBlockTransactionCountByHash(common.BytesToHash(blockUtilsCase.BlockHash)); err != nil {
+		t.Error(err)
+	} else {
+		log.Info(c.ToInt64())
+	}
+}
+
+// test
+//func TestSigntx(t *testing.T)  {
+//	ee := crypto.NewEcdsaEncrypto("ECDSAEncryto")
+//	k, err:= ee.GeneralKey()
+//	if err!=nil{
+//		panic(err)
+//	}
+//
+//	key := k.(*ecdsa.PrivateKey)
+//	pub := key.PublicKey
+//	var addr common.Address
+//	addr = crypto.PubkeyToAddress(pub)
+//
+//	fmt.Println("public key is :")
+//	fmt.Println(pub)
+//	fmt.Println("private key is :")
+//	fmt.Println(key)
+//	//SaveNodeInfo("./port_address_privatekey","5004",addr,key)
+//
+//	//p,err:=ee.GetKey()
+//
+//	//priv := p.(*ecdsa.PrivateKey)
+//
+//	//var from1 = common.HexToAddress("0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd")
+//	var from1 = addr
+//	var to = common.HexToAddress("0x0000000000000000000000000000000000000003")
+//	tx := types.NewTransaction(from1[:], to[:], nil)
+//	//签名交易
+//	//tx:= NewTransaction(common.Address{},big.NewInt(100))
+//	s256 := crypto.NewKeccak256Hash("Keccak256")
+//	//hash := s256.Hash([]interface{}{tx.data.Amount,tx.data.Recipient})
+//	hash := tx.SighHash(s256)
+//	signature,err := ee.Sign(hash[:],key)
+//	fmt.Println(hash)
+//	fmt.Println("sig:",signature)
+//
+//	if err != nil {
+//		t.Error(err)
+//		t.FailNow()
+//
+//	}
+//	//验证签名
+//	from,err:= ee.UnSign(hash[:],signature)
+//	if err != nil {
+//		t.Error(err)
+//		t.FailNow()
+//	}
+//
+//	fmt.Println(from.Hex())
+//	fmt.Println(addr.Hex())
+//
+//	trans := new(types.Transaction)
+//	//var tx *types.Transaction
+//	if err := rlp.DecodeBytes(common.FromHex(args.Signature), trans); err != nil {
+//		log.Info("rlp.DecodeBytes error: ", err)
+//	}
+//	log.Infof("tx: %#v", trans)
+//	log.Info(trans.Signature)
+//	log.Infof("tx sign: %#v", trans.Signature)
+//	//
+//	//hex := common.ToHex(from.Bytes())
+//	//fmt.Println(common.ToHex(from[:]))
+//	//fmt.Println(common.ToHex(addr[:]))
+//	//fmt.Println(common.FromHex(hex))
+//
+//}

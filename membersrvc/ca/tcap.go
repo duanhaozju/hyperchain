@@ -18,12 +18,12 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/spf13/viper"
+	"golang.org/x/net/context"
 	"hyperchain/core/crypto/attributes"
 	"hyperchain/core/crypto/primitives"
 	"hyperchain/core/util"
 	pb "hyperchain/membersrvc/protos"
-	"github.com/spf13/viper"
-	"golang.org/x/net/context"
 
 	"google/protobuf"
 )

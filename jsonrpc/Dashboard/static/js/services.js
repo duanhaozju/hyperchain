@@ -225,7 +225,7 @@ function AccountService($resource,$q,ENV) {
                         method:"POST"
                     }
                 }).getAcc({
-                    method: "acot_getAccounts",
+                    method: "acc_getAccounts",
                     id: 1
                 },function(res){
                     if (res.error) {
@@ -244,7 +244,7 @@ function AccountService($resource,$q,ENV) {
                         method:"POST"
                     }
                 }).newAcc({
-                    method: "acot_newAccount",
+                    method: "acc_newAccount",
                     params: [password],
                     id: 1
                 },function(res){
@@ -264,7 +264,7 @@ function AccountService($resource,$q,ENV) {
                         method:"POST"
                     }
                 }).unlockac({
-                    method: "acot_unlockAccount",
+                    method: "acc_unlockAccount",
                     params: [
                         {
                             "address":address,
@@ -317,7 +317,7 @@ function ContractService($resource,$q ,$timeout, ENV) {
                         method:"POST"
                     }
                 }).compile({
-                    method: "tx_complieContract",
+                    method: "contract_compileContract",
                     params: [contract],
                     id: 1
                 },function(res){
@@ -337,7 +337,8 @@ function ContractService($resource,$q ,$timeout, ENV) {
                         method:"POST"
                     }
                 }).deploy({
-                    method: "tx_sendTransactionOrContract",
+                    // method: "tx_sendTransactionOrContract",
+                    method: "contract_deployContract",
                     params: [
                         {
                             "from": from,
@@ -392,7 +393,8 @@ function ContractService($resource,$q ,$timeout, ENV) {
                         method:"POST"
                     }
                 }).invoke({
-                    method: "tx_sendTransactionOrContract",
+                    // method: "tx_sendTransactionOrContract",
+                    method: "contract_invokeContract",
                     params: [
                         {
                             "from": from,

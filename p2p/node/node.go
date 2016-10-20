@@ -34,24 +34,20 @@ func init() {
 type Node struct {
 	address            *pb.PeerAddress
 	gRPCServer         *grpc.Server
-	NodeID             string
 	higherEventManager *event.TypeMux
 	//common information
-	Cname string
-	TEM   transport.TransportEncryptManager
+	TEM transport.TransportEncryptManager
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
-func NewNode(port int, hEventManager *event.TypeMux, nodeID int, Cname string, TEM transport.TransportEncryptManager) *Node {
+func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, TEM transport.TransportEncryptManager) *Node {
 	var newNode Node
-	newNode.address = peerComm.ExtractAddress(peerComm.GetLocalIp(), port, int32(nodeID))
-	newNode.Cname = Cname
+	newNode.address = peerComm.ExtractAddress(peerComm.GetLocalIp(), port, nodeID)
 	newNode.TEM = TEM
-	newNode.NodeID = strconv.Itoa(nodeID)
 	newNode.higherEventManager = hEventManager
 	log.Debug("节点启动")
 	log.Debug("本地节点hash", newNode.address.Hash)
-	log.Debug("本地节点ip", newNode.address.Ip)
+	log.Debug("本地节点ip", newNode.address.IP)
 	log.Debug("本地节点port", newNode.address.Port)
 
 	return &newNode
@@ -65,8 +61,8 @@ func (this *Node) GetNodeAddr() *pb.PeerAddress {
 func (this *Node) GetNodeHash() string {
 	return this.address.Hash
 }
-func (this *Node) GetNodeID() string {
-	return this.NodeID
+func (this *Node) GetNodeID() uint64 {
+	return this.address.ID
 }
 
 // Chat Implements the ServerSide Function
@@ -84,8 +80,8 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		{
 			log.Debug("=================================")
 			log.Debug("协商秘钥")
-			log.Debug("本地地址为", this.address.ID, this.address.Ip, this.address.Port)
-			log.Debug("远端地址为", msg.From.ID, msg.From.Ip, msg.From.Port)
+			log.Debug("本地地址为", this.address.ID, this.address.IP, this.address.Port)
+			log.Debug("远端地址为", msg.From.ID, msg.From.IP, msg.From.Port)
 			log.Debug("=================================")
 			response.MessageType = pb.Message_HELLO_RESPONSE
 			//review 协商密钥
@@ -124,9 +120,10 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			log.Debug("来自节点", msg.From.ID)
 			log.Debug(hex.EncodeToString(transferData))
 
-			go this.higherEventManager.Post(event.ConsensusEvent{
-				Payload: transferData,
-			})
+			go this.higherEventManager.Post(
+				event.ConsensusEvent{
+					Payload: transferData,
+				})
 		}
 	case pb.Message_SYNCMSG:
 		{
@@ -169,6 +166,13 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 						Payload: SyncMsg.Payload,
 					})
 				}
+			case recovery.Message_INVALIDRESP:
+				{
+					go this.higherEventManager.Post(event.RespInvalidTxsEvent{
+						Payload: SyncMsg.Payload,
+					})
+				}
+
 			}
 		}
 	case pb.Message_KEEPALIVE:
@@ -206,7 +210,7 @@ func (this *Node) StartServer() {
 		log.Fatalf("Failed to listen: %v", err)
 		log.Fatal("PLEASE RESTART THE SERVER NODE!")
 	}
-	opts:=membersrvc.GetGrpcServerOpts()
+	opts := membersrvc.GetGrpcServerOpts()
 	this.gRPCServer = grpc.NewServer(opts...)
 	//this.gRPCServer = grpc.NewServer()
 	pb.RegisterChatServer(this.gRPCServer, this)

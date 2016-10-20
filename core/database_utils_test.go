@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"testing"
 	"time"
+	"github.com/golang/protobuf/proto"
 )
 
 var transactionCases = []*types.Transaction{
@@ -17,20 +18,20 @@ var transactionCases = []*types.Transaction{
 		From:      []byte("0000000000000000000000000000000000000001"),
 		To:        []byte("0000000000000000000000000000000000000003"),
 		Value:     []byte("100"),
-		TimeStamp: time.Now().UnixNano() - int64(time.Second),
+		Timestamp:time.Now().UnixNano() - int64(time.Second),
 		Signature: []byte("signature1"),
 	},
 	&types.Transaction{
 		From:  []byte("0000000000000000000000000000000000000001"),
 		To:    []byte("0000000000000000000000000000000000000002"),
-		Value: []byte("100"), TimeStamp: time.Now().UnixNano(),
+		Value: []byte("100"), Timestamp: time.Now().UnixNano(),
 		Signature: []byte("signature2"),
 	},
 	&types.Transaction{
 		From:      []byte("0000000000000000000000000000000000000002"),
 		To:        []byte("0000000000000000000000000000000000000003"),
 		Value:     []byte("700"),
-		TimeStamp: time.Now().UnixNano(),
+		Timestamp: time.Now().UnixNano(),
 		Signature: []byte("signature3"),
 	},
 }
@@ -263,17 +264,33 @@ func TestGetId(t *testing.T) {
 	t.Log(GetId())
 }
 
+func TestGetInvaildTx(t *testing.T) {
+	tx := transactionCases[0]
+	record := &types.InvalidTransactionRecord{
+		Tx:      tx,
+		ErrType: types.InvalidTransactionRecord_OUTOFBALANCE,
+	}
+	data,_ := proto.Marshal(record)
+	// save to db
+	db, _ := hyperdb.GetLDBDatabase()
+	db.Put(append(invalidTransactionPrefix, tx.TransactionHash...), data)
+
+	result,_ := GetInvaildTxErrType(db,tx.TransactionHash)
+	fmt.Println(result)
+
+}
+
 //func TestUpdate(t *testing.T) {
-//	InitDB(8081)
+//	InitDB(8000)
+//	db, _ := hyperdb.GetLDBDatabase()
+//	err := PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	UpdateChain(&blockUtilsCase, false)
 //	height := GetHeightOfChain()
 //	fmt.Println(height)
-//	InitDB(8082)
-//	height = GetHeightOfChain()
-//	fmt.Println(height)
-//	InitDB(8083)
-//	height = GetHeightOfChain()
-//	fmt.Println(height)
-//	InitDB(8084)
-//	height = GetHeightOfChain()
-//	fmt.Println(height)
+//	block,_ := GetBlockByNumber(db,height)
+//	fmt.Println(block.Transactions[0])
 //}
+

@@ -4,8 +4,9 @@ Copyright Hyperchain Corp. 2016 All Rights Reserved.
 
 syntax = "proto3";
 
-package pbft;
+import "transaction.proto";
 
+package pbft;
 /*
  * mapping to PBFT paper names
  *
@@ -20,36 +21,27 @@ package pbft;
  * i: replicaId
  */
 
-message request {
-    int64 timestamp = 1;  // Generated at the client level. Ensures that client's requests are atomically ordered.
-    bytes payload = 2;  // opaque payload
-    uint64 replica_id = 3;
-    bytes signature = 4;
-}
-
 message consensus_message {
-    oneof payload {
-        request request = 1;
-        message pbft_message = 2;
+    enum Type {
+        TRANSACTION = 0;
+        TRANSATION_BATCH = 1;
+        PRE_PREPARE = 2;
+        PREPARE = 3;
+        COMMIT = 4;
+        CHECKPOINT = 5;
+        VIEW_CHANGE = 6;
+        NEW_VIEW = 7;
+        FRTCH_REQUEST_BATCH = 8;
+        RETURN_REQUEST_BATCH = 9;
+        NEGOTIATE_VIEW = 10;
+        NEGOTIATE_VIEW_RESPONSE = 11;
     }
+    Type type = 1;
+    bytes payload = 2;
 }
 
-message message {
-    oneof payload {
-        request_batch request_batch = 1;
-        pre_prepare pre_prepare = 2;
-        prepare prepare = 3;
-        commit commit = 4;
-        checkpoint checkpoint = 5;
-        view_change view_change = 6;
-        new_view new_view = 7;
-        fetch_request_batch fetch_request_batch = 8;
-        request_batch return_request_batch = 9;
-    }
-}
-
-message request_batch {
-    repeated request batch = 1;
+message transaction_batch {
+    repeated types.Transaction batch = 1;
     int64 timestamp = 2;
 }
 
@@ -57,7 +49,7 @@ message pre_prepare {
     uint64 view = 1;
     uint64 sequence_number = 2;
     string batch_digest = 3;
-    request_batch request_batch = 4;
+    transaction_batch transaction_batch = 4;
     uint64 replica_id = 5;
 }
 
@@ -121,6 +113,15 @@ message new_view {
 message fetch_request_batch {
     string batch_digest = 1;
     uint64 replica_id = 2;
+}
+
+message negotiate_view {
+    uint64 replica_id = 1;
+}
+
+message negotiate_view_response {
+    uint64 replica_id = 1;
+    uint64 view = 2;
 }
 
 // consensus metadata

@@ -29,29 +29,31 @@ func init() {
 }
 
 type ProtocolManager struct {
-	serverPort        int
-	blockPool         *core.BlockPool
-	fetcher           *core.Fetcher
-	Peermanager       p2p.PeerManager
+	serverPort  int
+	blockPool   *core.BlockPool
+	fetcher     *core.Fetcher
+	Peermanager p2p.PeerManager
 
-	nodeInfo          client.PeerInfos // node info ,store node status,ip,port
-	consenter         consensus.Consenter
+	nodeInfo  client.PeerInfos // node info ,store node status,ip,port
+	consenter consensus.Consenter
 	//encryption   crypto.Encryption
-	AccountManager    *accounts.AccountManager
-	commonHash        crypto.CommonHash
+	AccountManager *accounts.AccountManager
+	commonHash     crypto.CommonHash
 
-	noMorePeers       chan struct{}
-	eventMux          *event.TypeMux
-	txSub             event.Subscription
-	newBlockSub       event.Subscription
-	consensusSub      event.Subscription
+	noMorePeers   chan struct{}
+	eventMux      *event.TypeMux
+	txSub         event.Subscription
+	newBlockSub   event.Subscription
+	consensusSub  event.Subscription
+	viewChangeSub event.Subscription
+	respSub       event.Subscription
 
-	aLiveSub          event.Subscription
+	aLiveSub event.Subscription
 
 	syncCheckpointSub event.Subscription
 
-	syncBlockSub      event.Subscription
-	quitSync          chan struct{}
+	syncBlockSub event.Subscription
+	quitSync     chan struct{}
 
 	wg sync.WaitGroup
 }
@@ -92,14 +94,17 @@ func (pm *ProtocolManager) Start() {
 	pm.wg.Add(1)
 	go pm.fetcher.Start()
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
-	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{})
+	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{}, event.CommitOrRollbackBlockEvent{}, event.ExeTxsEvent{})
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
+	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
+	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
 	go pm.syncBlockLoop()
 	go pm.syncCheckpointLoop()
-
+	go pm.respHandlerLoop()
+	go pm.viewChangeLoop()
 	pm.wg.Wait()
 
 }
@@ -125,7 +130,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 				CurrentNumber:  core.GetChainCopy().Height,
 				PeerId:         UpdateStateMessage.Id,
 			}
-			log.Notice("syncCheckpointLoop : ", blockChainInfo.Height)
+
 			// For Test
 			// Midify the current highest block
 			/*
@@ -237,12 +242,14 @@ func (self *ProtocolManager) syncBlockLoop() {
 										log.Debug("Recv All blocks required, match")
 										for i := core.GetChainCopy().RequiredBlockNum + 1; i <= core.GetChainCopy().RecoveryNum; i += 1 {
 											blk, err := core.GetBlockByNumber(db, i)
-											//											originMerkleRoot := blk.MerkleRoot
+											//originMerkleRoot := blk.MerkleRoot
 											if err != nil {
 												continue
 											} else {
-												core.ProcessBlock(blk,self.commonHash,blk.CommitTime)
+												self.blockPool.ProcessBlock1(blk.Transactions, nil, blk.Number)
 												self.blockPool.SetDemandNumber(blk.Number + 1)
+												self.blockPool.SetDemandSeqNo(blk.Number + 1)
+
 												/*
 													if bytes.Compare(blk.MerkleRoot, originMerkleRoot) != 0 {
 														// stateDb has difference status
@@ -311,7 +318,33 @@ func (self *ProtocolManager) NewBlockLoop() {
 			log.Debug("write block success")
 			self.commitNewBlock(ev.Payload, ev.CommitTime)
 			//self.fetcher.Enqueue(ev.Payload)
+		case event.CommitOrRollbackBlockEvent:
+			self.blockPool.CommitBlock(ev, self.Peermanager)
 
+		case event.ExeTxsEvent:
+			go self.blockPool.Validate(ev, self.commonHash, self.AccountManager.Encryption)
+
+		}
+	}
+}
+
+func (self *ProtocolManager) respHandlerLoop() {
+
+	for obj := range self.respSub.Chan() {
+		switch ev := obj.Data.(type) {
+		case event.RespInvalidTxsEvent:
+			// receive invalid tx message, save to db
+			self.blockPool.StoreInvalidResp(ev)
+		}
+	}
+}
+func (self *ProtocolManager) viewChangeLoop() {
+
+	for obj := range self.viewChangeSub.Chan() {
+		switch ev := obj.Data.(type) {
+		case event.VCResetEvent:
+			// receive invalid tx message, save to db
+			self.blockPool.ResetStatus(ev)
 		}
 	}
 }
@@ -335,32 +368,14 @@ func (self *ProtocolManager) ConsensusLoop() {
 			go self.Peermanager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
 			//go self.peerManager.SendMsgToPeers(ev.Payload,)
 		case event.NewTxEvent:
-
+			log.Debug("###### enter NewTxEvent")
 			go self.sendMsg(ev.Payload)
 
 		case event.ConsensusEvent:
 			//call consensus module
 			log.Debug("###### enter ConsensusEvent")
-			//logger.GetLogger().Println("###### enter ConsensusEvent")
-			/*
-				receiveMessage := &protos.Message{}
-				proto.Unmarshal(ev.Payload, receiveMessage)
-				if receiveMessage.Type == 1 {
-					log.Notice("ReceiveSyncBlockEvent checkpoint in consensus ")
-				}
-			*/
 			self.consenter.RecvMsg(ev.Payload)
-		case event.ExeTxsEvent:
-			//self.blockPool.ExecTxs(ev.SequenceNum, ev.Transactions)
-			/*
-				case event.CommitOrRollbackBlockEvent:
-					self.blockPool.CommitOrRollbackBlockEvent(ev.SequenceNum,
-						ev.Transactions, ev.Timestamp, ev.CommitTime, ev.CommitStatus)
-			*/
-			self.blockPool.ExecTxs(ev.SeqNo, ev.Transactions)
-			/*case event.CommitOrRollbackBlockEvent:
-			self.blockPool.CommitOrRollbackBlockEvent(ev.SeqNo,
-				ev.Transactions,ev.CommitTime,ev.CommitStatus)*/
+
 		}
 
 	}
@@ -441,7 +456,7 @@ func (pm *ProtocolManager) commitNewBlock(payload []byte, commitTime int64) {
 	block.Number = msgList.No
 
 	log.Info("now is ", msgList.No)
-	pm.blockPool.AddBlock(block, pm.commonHash, commitTime)
+	pm.blockPool.AddBlock(block, pm.commonHash)
 	//core.WriteBlock(*block)
 
 }

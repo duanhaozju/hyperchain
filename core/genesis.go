@@ -1,11 +1,12 @@
 // fetcher implements block operate
 // author: Lizhong kuang
 // date: 2016-08-29
-// last modified:2016-08-29
+// last modified:2016-09-12
+// last moditier: Chen Quan
+// last moditier content: change the config read method
 package core
 
 import (
-	"encoding/json"
 	"hyperchain/core/types"
 	"io/ioutil"
 
@@ -13,9 +14,13 @@ import (
 
 	"hyperchain/hyperdb"
 
+	"fmt"
+	"github.com/buger/jsonparser"
 	"hyperchain/core/state"
-	"math/big"
 	"hyperchain/crypto"
+	"math/big"
+	"strconv"
+	"time"
 )
 
 func CreateInitBlock(filename string) {
@@ -34,7 +39,7 @@ func CreateInitBlock(filename string) {
 		Alloc      map[string]int64
 	}
 
-	var genesis = map[string]Genesis{}
+	//var genesis = map[string]Genesis{}
 
 	bytes, err := ioutil.ReadFile(filename)
 
@@ -43,50 +48,38 @@ func CreateInitBlock(filename string) {
 		return
 	}
 
-	if err := json.Unmarshal(bytes, &genesis); err != nil {
-		log.Error("Unmarshal: ", err.Error())
-		return
-	}
+	// start  the parse genesis content
 
-	if err != nil {
-		log.Fatalf("GetBalanceIns error, %v", err)
-	}
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	stateDB, _ := state.New(common.Hash{}, db)
-	for addr, account := range genesis["test1"].Alloc {
-		/*balance:=types.Balance{
-			AccountPublicKeyHash:[]byte(addr),
-			Value:account,
-		}*/
-		//address := common.HexToAddress(addr)
 
-		//statedb.AddBalance(address, common.String2Big(account))
-		object := stateDB.CreateAccount(common.HexToAddress(addr))
+	// You can use `ObjectEach` helper to iterate objects { "key1":object1, "key2":object2, .... "keyN":objectN }
+	jsonparser.ObjectEach(bytes, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
+		fmt.Printf("Key: '%s'\n Value: '%s'\n Type: %s\n", string(key), string(value), dataType)
+		object := stateDB.CreateAccount(common.HexToAddress(string(key)))
+		account, _ := strconv.ParseInt(string(value), 10, 64)
 		object.AddBalance(big.NewInt(account))
+		return nil
+	}, "genesis", "alloc")
 
-		/*
-			balanceIns.PutCacheBalance(common.HexToAddress(addr),[]byte(account))
-			balanceIns.PutDBBalance(common.HexToAddress(addr),[]byte(account))*/
-
-	}
 	root, _ := stateDB.Commit()
 
 	block := types.Block{
-		ParentHash: common.FromHex(genesis["test1"].ParentHash),
-		Timestamp:  genesis["test1"].Timestamp,
-		BlockHash:  common.FromHex(genesis["test1"].BlockHash),
-		Number:     genesis["test1"].Number,
+		ParentHash: common.FromHex("0x0000000000000000000000000000000000000000000000000000000000000000"),
+		Timestamp:  time.Now().Unix(),
+		BlockHash:  common.FromHex("0x0000000000000000000000000000000000000000000000000000000000000000"),
+		Number:     uint64(0),
 		MerkleRoot: root.Bytes(),
 	}
 
 	log.Debug("构造创世区块")
 	//if err := PutBlock(db, block.BlockHash, &block); err != nil {
 	commonHash := crypto.NewKeccak256Hash("keccak256")
-	if err := PutBlockTx(db, commonHash,block.BlockHash, &block); err != nil {
+	if err := PutBlockTx(db, commonHash, block.BlockHash, &block); err != nil {
 		log.Fatal(err)
 	}
 	UpdateChain(&block, true)

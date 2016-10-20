@@ -10,12 +10,24 @@ import (
 
 type Number int64
 
+const (
+	latestBlockNumber  = iota
+	pendingBlockNumber
+	earliestBlockNumber
+	//maxBlockNumber
+)
+
 func NewInt64ToNumber(n int64) *Number {
 	num := Number(n)
 	return &num
 }
 
 func NewUint64ToNumber(n uint64) *Number {
+	num := Number(n)
+	return &num
+}
+
+func NewIntToNumber(n int) *Number {
 	num := Number(n)
 	return &num
 }
@@ -27,7 +39,9 @@ func (n Number) MarshalJSON() ([]byte, error) {
 	return json.Marshal(n.Hex())
 }
 
-// UnmarshalJSON parses a hash in its hex from to a number
+// UnmarshalJSON parses a hash in its hex from to a number. It supports:
+// - "latest", "earliest" or "pending" as string arguments
+// - number
 func (n *Number) UnmarshalJSON(data []byte) error {
 
 	input := strings.TrimSpace(string(data))
@@ -35,10 +49,31 @@ func (n *Number) UnmarshalJSON(data []byte) error {
 		input = input[1 : len(input)-1]
 	}
 
+	if len(input) == 0 {
+		*n = Number(latestBlockNumber)
+		return nil
+	}
+
 	in := new(big.Int)
 	_, ok := in.SetString(input, 0)
 
 	if !ok { // test if user supplied string tag
+
+		strBlockNumber := input
+		if strBlockNumber == "latest" {
+			*n = Number(latestBlockNumber)
+			return nil
+		}
+
+		if strBlockNumber == "earliest" {
+			*n = Number(earliestBlockNumber)
+			return nil
+		}
+
+		if strBlockNumber == "pending" {
+			*n = Number(pendingBlockNumber)
+			return nil
+		}
 
 		return fmt.Errorf(`invalid number %s`, data)
 	}

@@ -9,10 +9,8 @@ It is generated from these files:
 	messages.proto
 
 It has these top-level messages:
-	Request
 	ConsensusMessage
-	Message
-	RequestBatch
+	TransactionBatch
 	PrePrepare
 	Prepare
 	Commit
@@ -22,6 +20,8 @@ It has these top-level messages:
 	PQset
 	NewView
 	FetchRequestBatch
+	NegotiateView
+	NegotiateViewResponse
 	Metadata
 */
 package pbft
@@ -29,6 +29,7 @@ package pbft
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
+import types "hyperchain/core/types"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -41,488 +42,78 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type Request struct {
-	Timestamp int64  `protobuf:"varint,1,opt,name=timestamp" json:"timestamp,omitempty"`
-	Payload   []byte `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
-	ReplicaId uint64 `protobuf:"varint,3,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
-	Signature []byte `protobuf:"bytes,4,opt,name=signature,proto3" json:"signature,omitempty"`
+type ConsensusMessage_Type int32
+
+const (
+	ConsensusMessage_TRANSACTION             ConsensusMessage_Type = 0
+	ConsensusMessage_TRANSATION_BATCH        ConsensusMessage_Type = 1
+	ConsensusMessage_PRE_PREPARE             ConsensusMessage_Type = 2
+	ConsensusMessage_PREPARE                 ConsensusMessage_Type = 3
+	ConsensusMessage_COMMIT                  ConsensusMessage_Type = 4
+	ConsensusMessage_CHECKPOINT              ConsensusMessage_Type = 5
+	ConsensusMessage_VIEW_CHANGE             ConsensusMessage_Type = 6
+	ConsensusMessage_NEW_VIEW                ConsensusMessage_Type = 7
+	ConsensusMessage_FRTCH_REQUEST_BATCH     ConsensusMessage_Type = 8
+	ConsensusMessage_RETURN_REQUEST_BATCH    ConsensusMessage_Type = 9
+	ConsensusMessage_NEGOTIATE_VIEW          ConsensusMessage_Type = 10
+	ConsensusMessage_NEGOTIATE_VIEW_RESPONSE ConsensusMessage_Type = 11
+)
+
+var ConsensusMessage_Type_name = map[int32]string{
+	0:  "TRANSACTION",
+	1:  "TRANSATION_BATCH",
+	2:  "PRE_PREPARE",
+	3:  "PREPARE",
+	4:  "COMMIT",
+	5:  "CHECKPOINT",
+	6:  "VIEW_CHANGE",
+	7:  "NEW_VIEW",
+	8:  "FRTCH_REQUEST_BATCH",
+	9:  "RETURN_REQUEST_BATCH",
+	10: "NEGOTIATE_VIEW",
+	11: "NEGOTIATE_VIEW_RESPONSE",
+}
+var ConsensusMessage_Type_value = map[string]int32{
+	"TRANSACTION":             0,
+	"TRANSATION_BATCH":        1,
+	"PRE_PREPARE":             2,
+	"PREPARE":                 3,
+	"COMMIT":                  4,
+	"CHECKPOINT":              5,
+	"VIEW_CHANGE":             6,
+	"NEW_VIEW":                7,
+	"FRTCH_REQUEST_BATCH":     8,
+	"RETURN_REQUEST_BATCH":    9,
+	"NEGOTIATE_VIEW":          10,
+	"NEGOTIATE_VIEW_RESPONSE": 11,
 }
 
-func (m *Request) Reset()                    { *m = Request{} }
-func (m *Request) String() string            { return proto.CompactTextString(m) }
-func (*Request) ProtoMessage()               {}
-func (*Request) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (x ConsensusMessage_Type) String() string {
+	return proto.EnumName(ConsensusMessage_Type_name, int32(x))
+}
+func (ConsensusMessage_Type) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{0, 0} }
 
 type ConsensusMessage struct {
-	// Types that are valid to be assigned to Payload:
-	//	*ConsensusMessage_Request
-	//	*ConsensusMessage_PbftMessage
-	Payload isConsensusMessage_Payload `protobuf_oneof:"payload"`
+	Type    ConsensusMessage_Type `protobuf:"varint,1,opt,name=type,enum=pbft.ConsensusMessage_Type" json:"type,omitempty"`
+	Payload []byte                `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
 }
 
 func (m *ConsensusMessage) Reset()                    { *m = ConsensusMessage{} }
 func (m *ConsensusMessage) String() string            { return proto.CompactTextString(m) }
 func (*ConsensusMessage) ProtoMessage()               {}
-func (*ConsensusMessage) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (*ConsensusMessage) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
-type isConsensusMessage_Payload interface {
-	isConsensusMessage_Payload()
-}
-
-type ConsensusMessage_Request struct {
-	Request *Request `protobuf:"bytes,1,opt,name=request,oneof"`
-}
-type ConsensusMessage_PbftMessage struct {
-	PbftMessage *Message `protobuf:"bytes,2,opt,name=pbft_message,json=pbftMessage,oneof"`
+type TransactionBatch struct {
+	Batch     []*types.Transaction `protobuf:"bytes,1,rep,name=batch" json:"batch,omitempty"`
+	Timestamp int64                `protobuf:"varint,2,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
-func (*ConsensusMessage_Request) isConsensusMessage_Payload()     {}
-func (*ConsensusMessage_PbftMessage) isConsensusMessage_Payload() {}
+func (m *TransactionBatch) Reset()                    { *m = TransactionBatch{} }
+func (m *TransactionBatch) String() string            { return proto.CompactTextString(m) }
+func (*TransactionBatch) ProtoMessage()               {}
+func (*TransactionBatch) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
-func (m *ConsensusMessage) GetPayload() isConsensusMessage_Payload {
-	if m != nil {
-		return m.Payload
-	}
-	return nil
-}
-
-func (m *ConsensusMessage) GetRequest() *Request {
-	if x, ok := m.GetPayload().(*ConsensusMessage_Request); ok {
-		return x.Request
-	}
-	return nil
-}
-
-func (m *ConsensusMessage) GetPbftMessage() *Message {
-	if x, ok := m.GetPayload().(*ConsensusMessage_PbftMessage); ok {
-		return x.PbftMessage
-	}
-	return nil
-}
-
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*ConsensusMessage) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _ConsensusMessage_OneofMarshaler, _ConsensusMessage_OneofUnmarshaler, _ConsensusMessage_OneofSizer, []interface{}{
-		(*ConsensusMessage_Request)(nil),
-		(*ConsensusMessage_PbftMessage)(nil),
-	}
-}
-
-func _ConsensusMessage_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*ConsensusMessage)
-	// payload
-	switch x := m.Payload.(type) {
-	case *ConsensusMessage_Request:
-		b.EncodeVarint(1<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Request); err != nil {
-			return err
-		}
-	case *ConsensusMessage_PbftMessage:
-		b.EncodeVarint(2<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.PbftMessage); err != nil {
-			return err
-		}
-	case nil:
-	default:
-		return fmt.Errorf("ConsensusMessage.Payload has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _ConsensusMessage_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*ConsensusMessage)
-	switch tag {
-	case 1: // payload.request
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Request)
-		err := b.DecodeMessage(msg)
-		m.Payload = &ConsensusMessage_Request{msg}
-		return true, err
-	case 2: // payload.pbft_message
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Message)
-		err := b.DecodeMessage(msg)
-		m.Payload = &ConsensusMessage_PbftMessage{msg}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _ConsensusMessage_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*ConsensusMessage)
-	// payload
-	switch x := m.Payload.(type) {
-	case *ConsensusMessage_Request:
-		s := proto.Size(x.Request)
-		n += proto.SizeVarint(1<<3 | proto.WireBytes)
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *ConsensusMessage_PbftMessage:
-		s := proto.Size(x.PbftMessage)
-		n += proto.SizeVarint(2<<3 | proto.WireBytes)
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
-}
-
-type Message struct {
-	// Types that are valid to be assigned to Payload:
-	//	*Message_RequestBatch
-	//	*Message_PrePrepare
-	//	*Message_Prepare
-	//	*Message_Commit
-	//	*Message_Checkpoint
-	//	*Message_ViewChange
-	//	*Message_NewView
-	//	*Message_FetchRequestBatch
-	//	*Message_ReturnRequestBatch
-	Payload isMessage_Payload `protobuf_oneof:"payload"`
-}
-
-func (m *Message) Reset()                    { *m = Message{} }
-func (m *Message) String() string            { return proto.CompactTextString(m) }
-func (*Message) ProtoMessage()               {}
-func (*Message) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
-
-type isMessage_Payload interface {
-	isMessage_Payload()
-}
-
-type Message_RequestBatch struct {
-	RequestBatch *RequestBatch `protobuf:"bytes,1,opt,name=request_batch,json=requestBatch,oneof"`
-}
-type Message_PrePrepare struct {
-	PrePrepare *PrePrepare `protobuf:"bytes,2,opt,name=pre_prepare,json=prePrepare,oneof"`
-}
-type Message_Prepare struct {
-	Prepare *Prepare `protobuf:"bytes,3,opt,name=prepare,oneof"`
-}
-type Message_Commit struct {
-	Commit *Commit `protobuf:"bytes,4,opt,name=commit,oneof"`
-}
-type Message_Checkpoint struct {
-	Checkpoint *Checkpoint `protobuf:"bytes,5,opt,name=checkpoint,oneof"`
-}
-type Message_ViewChange struct {
-	ViewChange *ViewChange `protobuf:"bytes,6,opt,name=view_change,json=viewChange,oneof"`
-}
-type Message_NewView struct {
-	NewView *NewView `protobuf:"bytes,7,opt,name=new_view,json=newView,oneof"`
-}
-type Message_FetchRequestBatch struct {
-	FetchRequestBatch *FetchRequestBatch `protobuf:"bytes,8,opt,name=fetch_request_batch,json=fetchRequestBatch,oneof"`
-}
-type Message_ReturnRequestBatch struct {
-	ReturnRequestBatch *RequestBatch `protobuf:"bytes,9,opt,name=return_request_batch,json=returnRequestBatch,oneof"`
-}
-
-func (*Message_RequestBatch) isMessage_Payload()       {}
-func (*Message_PrePrepare) isMessage_Payload()         {}
-func (*Message_Prepare) isMessage_Payload()            {}
-func (*Message_Commit) isMessage_Payload()             {}
-func (*Message_Checkpoint) isMessage_Payload()         {}
-func (*Message_ViewChange) isMessage_Payload()         {}
-func (*Message_NewView) isMessage_Payload()            {}
-func (*Message_FetchRequestBatch) isMessage_Payload()  {}
-func (*Message_ReturnRequestBatch) isMessage_Payload() {}
-
-func (m *Message) GetPayload() isMessage_Payload {
-	if m != nil {
-		return m.Payload
-	}
-	return nil
-}
-
-func (m *Message) GetRequestBatch() *RequestBatch {
-	if x, ok := m.GetPayload().(*Message_RequestBatch); ok {
-		return x.RequestBatch
-	}
-	return nil
-}
-
-func (m *Message) GetPrePrepare() *PrePrepare {
-	if x, ok := m.GetPayload().(*Message_PrePrepare); ok {
-		return x.PrePrepare
-	}
-	return nil
-}
-
-func (m *Message) GetPrepare() *Prepare {
-	if x, ok := m.GetPayload().(*Message_Prepare); ok {
-		return x.Prepare
-	}
-	return nil
-}
-
-func (m *Message) GetCommit() *Commit {
-	if x, ok := m.GetPayload().(*Message_Commit); ok {
-		return x.Commit
-	}
-	return nil
-}
-
-func (m *Message) GetCheckpoint() *Checkpoint {
-	if x, ok := m.GetPayload().(*Message_Checkpoint); ok {
-		return x.Checkpoint
-	}
-	return nil
-}
-
-func (m *Message) GetViewChange() *ViewChange {
-	if x, ok := m.GetPayload().(*Message_ViewChange); ok {
-		return x.ViewChange
-	}
-	return nil
-}
-
-func (m *Message) GetNewView() *NewView {
-	if x, ok := m.GetPayload().(*Message_NewView); ok {
-		return x.NewView
-	}
-	return nil
-}
-
-func (m *Message) GetFetchRequestBatch() *FetchRequestBatch {
-	if x, ok := m.GetPayload().(*Message_FetchRequestBatch); ok {
-		return x.FetchRequestBatch
-	}
-	return nil
-}
-
-func (m *Message) GetReturnRequestBatch() *RequestBatch {
-	if x, ok := m.GetPayload().(*Message_ReturnRequestBatch); ok {
-		return x.ReturnRequestBatch
-	}
-	return nil
-}
-
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*Message) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _Message_OneofMarshaler, _Message_OneofUnmarshaler, _Message_OneofSizer, []interface{}{
-		(*Message_RequestBatch)(nil),
-		(*Message_PrePrepare)(nil),
-		(*Message_Prepare)(nil),
-		(*Message_Commit)(nil),
-		(*Message_Checkpoint)(nil),
-		(*Message_ViewChange)(nil),
-		(*Message_NewView)(nil),
-		(*Message_FetchRequestBatch)(nil),
-		(*Message_ReturnRequestBatch)(nil),
-	}
-}
-
-func _Message_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*Message)
-	// payload
-	switch x := m.Payload.(type) {
-	case *Message_RequestBatch:
-		b.EncodeVarint(1<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.RequestBatch); err != nil {
-			return err
-		}
-	case *Message_PrePrepare:
-		b.EncodeVarint(2<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.PrePrepare); err != nil {
-			return err
-		}
-	case *Message_Prepare:
-		b.EncodeVarint(3<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Prepare); err != nil {
-			return err
-		}
-	case *Message_Commit:
-		b.EncodeVarint(4<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Commit); err != nil {
-			return err
-		}
-	case *Message_Checkpoint:
-		b.EncodeVarint(5<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Checkpoint); err != nil {
-			return err
-		}
-	case *Message_ViewChange:
-		b.EncodeVarint(6<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.ViewChange); err != nil {
-			return err
-		}
-	case *Message_NewView:
-		b.EncodeVarint(7<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.NewView); err != nil {
-			return err
-		}
-	case *Message_FetchRequestBatch:
-		b.EncodeVarint(8<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.FetchRequestBatch); err != nil {
-			return err
-		}
-	case *Message_ReturnRequestBatch:
-		b.EncodeVarint(9<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.ReturnRequestBatch); err != nil {
-			return err
-		}
-	case nil:
-	default:
-		return fmt.Errorf("Message.Payload has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _Message_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*Message)
-	switch tag {
-	case 1: // payload.request_batch
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(RequestBatch)
-		err := b.DecodeMessage(msg)
-		m.Payload = &Message_RequestBatch{msg}
-		return true, err
-	case 2: // payload.pre_prepare
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(PrePrepare)
-		err := b.DecodeMessage(msg)
-		m.Payload = &Message_PrePrepare{msg}
-		return true, err
-	case 3: // payload.prepare
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Prepare)
-		err := b.DecodeMessage(msg)
-		m.Payload = &Message_Prepare{msg}
-		return true, err
-	case 4: // payload.commit
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Commit)
-		err := b.DecodeMessage(msg)
-		m.Payload = &Message_Commit{msg}
-		return true, err
-	case 5: // payload.checkpoint
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Checkpoint)
-		err := b.DecodeMessage(msg)
-		m.Payload = &Message_Checkpoint{msg}
-		return true, err
-	case 6: // payload.view_change
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(ViewChange)
-		err := b.DecodeMessage(msg)
-		m.Payload = &Message_ViewChange{msg}
-		return true, err
-	case 7: // payload.new_view
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(NewView)
-		err := b.DecodeMessage(msg)
-		m.Payload = &Message_NewView{msg}
-		return true, err
-	case 8: // payload.fetch_request_batch
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(FetchRequestBatch)
-		err := b.DecodeMessage(msg)
-		m.Payload = &Message_FetchRequestBatch{msg}
-		return true, err
-	case 9: // payload.return_request_batch
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(RequestBatch)
-		err := b.DecodeMessage(msg)
-		m.Payload = &Message_ReturnRequestBatch{msg}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _Message_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*Message)
-	// payload
-	switch x := m.Payload.(type) {
-	case *Message_RequestBatch:
-		s := proto.Size(x.RequestBatch)
-		n += proto.SizeVarint(1<<3 | proto.WireBytes)
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Message_PrePrepare:
-		s := proto.Size(x.PrePrepare)
-		n += proto.SizeVarint(2<<3 | proto.WireBytes)
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Message_Prepare:
-		s := proto.Size(x.Prepare)
-		n += proto.SizeVarint(3<<3 | proto.WireBytes)
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Message_Commit:
-		s := proto.Size(x.Commit)
-		n += proto.SizeVarint(4<<3 | proto.WireBytes)
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Message_Checkpoint:
-		s := proto.Size(x.Checkpoint)
-		n += proto.SizeVarint(5<<3 | proto.WireBytes)
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Message_ViewChange:
-		s := proto.Size(x.ViewChange)
-		n += proto.SizeVarint(6<<3 | proto.WireBytes)
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Message_NewView:
-		s := proto.Size(x.NewView)
-		n += proto.SizeVarint(7<<3 | proto.WireBytes)
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Message_FetchRequestBatch:
-		s := proto.Size(x.FetchRequestBatch)
-		n += proto.SizeVarint(8<<3 | proto.WireBytes)
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Message_ReturnRequestBatch:
-		s := proto.Size(x.ReturnRequestBatch)
-		n += proto.SizeVarint(9<<3 | proto.WireBytes)
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
-}
-
-type RequestBatch struct {
-	Batch     []*Request `protobuf:"bytes,1,rep,name=batch" json:"batch,omitempty"`
-	Timestamp int64      `protobuf:"varint,2,opt,name=timestamp" json:"timestamp,omitempty"`
-}
-
-func (m *RequestBatch) Reset()                    { *m = RequestBatch{} }
-func (m *RequestBatch) String() string            { return proto.CompactTextString(m) }
-func (*RequestBatch) ProtoMessage()               {}
-func (*RequestBatch) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
-
-func (m *RequestBatch) GetBatch() []*Request {
+func (m *TransactionBatch) GetBatch() []*types.Transaction {
 	if m != nil {
 		return m.Batch
 	}
@@ -530,21 +121,21 @@ func (m *RequestBatch) GetBatch() []*Request {
 }
 
 type PrePrepare struct {
-	View           uint64        `protobuf:"varint,1,opt,name=view" json:"view,omitempty"`
-	SequenceNumber uint64        `protobuf:"varint,2,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
-	BatchDigest    string        `protobuf:"bytes,3,opt,name=batch_digest,json=batchDigest" json:"batch_digest,omitempty"`
-	RequestBatch   *RequestBatch `protobuf:"bytes,4,opt,name=request_batch,json=requestBatch" json:"request_batch,omitempty"`
-	ReplicaId      uint64        `protobuf:"varint,5,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	View             uint64            `protobuf:"varint,1,opt,name=view" json:"view,omitempty"`
+	SequenceNumber   uint64            `protobuf:"varint,2,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
+	BatchDigest      string            `protobuf:"bytes,3,opt,name=batch_digest,json=batchDigest" json:"batch_digest,omitempty"`
+	TransactionBatch *TransactionBatch `protobuf:"bytes,4,opt,name=transaction_batch,json=transactionBatch" json:"transaction_batch,omitempty"`
+	ReplicaId        uint64            `protobuf:"varint,5,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
 }
 
 func (m *PrePrepare) Reset()                    { *m = PrePrepare{} }
 func (m *PrePrepare) String() string            { return proto.CompactTextString(m) }
 func (*PrePrepare) ProtoMessage()               {}
-func (*PrePrepare) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+func (*PrePrepare) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
 
-func (m *PrePrepare) GetRequestBatch() *RequestBatch {
+func (m *PrePrepare) GetTransactionBatch() *TransactionBatch {
 	if m != nil {
-		return m.RequestBatch
+		return m.TransactionBatch
 	}
 	return nil
 }
@@ -559,7 +150,7 @@ type Prepare struct {
 func (m *Prepare) Reset()                    { *m = Prepare{} }
 func (m *Prepare) String() string            { return proto.CompactTextString(m) }
 func (*Prepare) ProtoMessage()               {}
-func (*Prepare) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+func (*Prepare) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
 
 type Commit struct {
 	View           uint64 `protobuf:"varint,1,opt,name=view" json:"view,omitempty"`
@@ -571,7 +162,7 @@ type Commit struct {
 func (m *Commit) Reset()                    { *m = Commit{} }
 func (m *Commit) String() string            { return proto.CompactTextString(m) }
 func (*Commit) ProtoMessage()               {}
-func (*Commit) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+func (*Commit) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
 
 type BlockInfo struct {
 	BlockNumber uint64 `protobuf:"varint,1,opt,name=block_number,json=blockNumber" json:"block_number,omitempty"`
@@ -581,7 +172,7 @@ type BlockInfo struct {
 func (m *BlockInfo) Reset()                    { *m = BlockInfo{} }
 func (m *BlockInfo) String() string            { return proto.CompactTextString(m) }
 func (*BlockInfo) ProtoMessage()               {}
-func (*BlockInfo) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
+func (*BlockInfo) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
 
 type Checkpoint struct {
 	SequenceNumber uint64 `protobuf:"varint,1,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
@@ -592,7 +183,7 @@ type Checkpoint struct {
 func (m *Checkpoint) Reset()                    { *m = Checkpoint{} }
 func (m *Checkpoint) String() string            { return proto.CompactTextString(m) }
 func (*Checkpoint) ProtoMessage()               {}
-func (*Checkpoint) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
+func (*Checkpoint) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
 
 type ViewChange struct {
 	View      uint64           `protobuf:"varint,1,opt,name=view" json:"view,omitempty"`
@@ -607,7 +198,7 @@ type ViewChange struct {
 func (m *ViewChange) Reset()                    { *m = ViewChange{} }
 func (m *ViewChange) String() string            { return proto.CompactTextString(m) }
 func (*ViewChange) ProtoMessage()               {}
-func (*ViewChange) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
+func (*ViewChange) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
 
 func (m *ViewChange) GetCset() []*ViewChange_C {
 	if m != nil {
@@ -639,7 +230,7 @@ type ViewChange_C struct {
 func (m *ViewChange_C) Reset()                    { *m = ViewChange_C{} }
 func (m *ViewChange_C) String() string            { return proto.CompactTextString(m) }
 func (*ViewChange_C) ProtoMessage()               {}
-func (*ViewChange_C) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9, 0} }
+func (*ViewChange_C) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7, 0} }
 
 type ViewChange_PQ struct {
 	SequenceNumber uint64 `protobuf:"varint,1,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
@@ -650,7 +241,7 @@ type ViewChange_PQ struct {
 func (m *ViewChange_PQ) Reset()                    { *m = ViewChange_PQ{} }
 func (m *ViewChange_PQ) String() string            { return proto.CompactTextString(m) }
 func (*ViewChange_PQ) ProtoMessage()               {}
-func (*ViewChange_PQ) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9, 1} }
+func (*ViewChange_PQ) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7, 1} }
 
 type PQset struct {
 	Set []*ViewChange_PQ `protobuf:"bytes,1,rep,name=set" json:"set,omitempty"`
@@ -659,7 +250,7 @@ type PQset struct {
 func (m *PQset) Reset()                    { *m = PQset{} }
 func (m *PQset) String() string            { return proto.CompactTextString(m) }
 func (*PQset) ProtoMessage()               {}
-func (*PQset) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
+func (*PQset) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
 
 func (m *PQset) GetSet() []*ViewChange_PQ {
 	if m != nil {
@@ -678,7 +269,7 @@ type NewView struct {
 func (m *NewView) Reset()                    { *m = NewView{} }
 func (m *NewView) String() string            { return proto.CompactTextString(m) }
 func (*NewView) ProtoMessage()               {}
-func (*NewView) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
+func (*NewView) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
 
 func (m *NewView) GetVset() []*ViewChange {
 	if m != nil {
@@ -702,7 +293,26 @@ type FetchRequestBatch struct {
 func (m *FetchRequestBatch) Reset()                    { *m = FetchRequestBatch{} }
 func (m *FetchRequestBatch) String() string            { return proto.CompactTextString(m) }
 func (*FetchRequestBatch) ProtoMessage()               {}
-func (*FetchRequestBatch) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
+func (*FetchRequestBatch) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
+
+type NegotiateView struct {
+	ReplicaId uint64 `protobuf:"varint,1,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+}
+
+func (m *NegotiateView) Reset()                    { *m = NegotiateView{} }
+func (m *NegotiateView) String() string            { return proto.CompactTextString(m) }
+func (*NegotiateView) ProtoMessage()               {}
+func (*NegotiateView) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
+
+type NegotiateViewResponse struct {
+	ReplicaId uint64 `protobuf:"varint,1,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	View      uint64 `protobuf:"varint,2,opt,name=view" json:"view,omitempty"`
+}
+
+func (m *NegotiateViewResponse) Reset()                    { *m = NegotiateViewResponse{} }
+func (m *NegotiateViewResponse) String() string            { return proto.CompactTextString(m) }
+func (*NegotiateViewResponse) ProtoMessage()               {}
+func (*NegotiateViewResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
 
 // consensus metadata
 type Metadata struct {
@@ -715,10 +325,8 @@ func (*Metadata) ProtoMessage()               {}
 func (*Metadata) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{13} }
 
 func init() {
-	proto.RegisterType((*Request)(nil), "pbft.request")
 	proto.RegisterType((*ConsensusMessage)(nil), "pbft.consensus_message")
-	proto.RegisterType((*Message)(nil), "pbft.message")
-	proto.RegisterType((*RequestBatch)(nil), "pbft.request_batch")
+	proto.RegisterType((*TransactionBatch)(nil), "pbft.transaction_batch")
 	proto.RegisterType((*PrePrepare)(nil), "pbft.pre_prepare")
 	proto.RegisterType((*Prepare)(nil), "pbft.prepare")
 	proto.RegisterType((*Commit)(nil), "pbft.commit")
@@ -730,61 +338,67 @@ func init() {
 	proto.RegisterType((*PQset)(nil), "pbft.PQset")
 	proto.RegisterType((*NewView)(nil), "pbft.new_view")
 	proto.RegisterType((*FetchRequestBatch)(nil), "pbft.fetch_request_batch")
+	proto.RegisterType((*NegotiateView)(nil), "pbft.negotiate_view")
+	proto.RegisterType((*NegotiateViewResponse)(nil), "pbft.negotiate_view_response")
 	proto.RegisterType((*Metadata)(nil), "pbft.metadata")
+	proto.RegisterEnum("pbft.ConsensusMessage_Type", ConsensusMessage_Type_name, ConsensusMessage_Type_value)
 }
 
 func init() { proto.RegisterFile("messages.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 797 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xc4, 0x56, 0x4d, 0x6f, 0xd3, 0x4c,
-	0x10, 0x7e, 0xfd, 0x91, 0xa4, 0x9e, 0xa4, 0x79, 0xdb, 0x6d, 0x0f, 0xa6, 0xa2, 0x52, 0x31, 0xa2,
-	0x14, 0x81, 0x82, 0x54, 0x90, 0xa8, 0x2a, 0x4e, 0x2d, 0x88, 0x22, 0x44, 0x95, 0xfa, 0x00, 0xdc,
-	0xac, 0x8d, 0xb3, 0x6d, 0xac, 0x26, 0xb6, 0x6b, 0x3b, 0x85, 0x1e, 0xe0, 0x08, 0x5c, 0xf8, 0x5b,
-	0x5c, 0xf8, 0x53, 0xec, 0x8e, 0xd7, 0x9f, 0x09, 0x69, 0x2f, 0x88, 0x43, 0xa4, 0x9d, 0x67, 0x9e,
-	0x99, 0x7d, 0x76, 0x76, 0x66, 0x1d, 0xe8, 0x4e, 0x58, 0x1c, 0xd3, 0x33, 0x16, 0xf7, 0xc2, 0x28,
-	0x48, 0x02, 0xa2, 0x87, 0x83, 0xd3, 0xc4, 0xfa, 0x02, 0xad, 0x88, 0x5d, 0x4c, 0x59, 0x9c, 0x90,
-	0xdb, 0x60, 0x24, 0x1e, 0x27, 0x25, 0x74, 0x12, 0x9a, 0xca, 0x96, 0xb2, 0xa3, 0xd9, 0x05, 0x40,
-	0x4c, 0x68, 0x85, 0xf4, 0x6a, 0x1c, 0xd0, 0xa1, 0xa9, 0x72, 0x5f, 0xc7, 0xce, 0x4c, 0xb2, 0x09,
-	0x10, 0xb1, 0x70, 0xec, 0xb9, 0xd4, 0xf1, 0x86, 0xa6, 0xc6, 0x9d, 0xba, 0x6d, 0x48, 0xe4, 0xf5,
-	0x50, 0xa4, 0x8d, 0xbd, 0x33, 0x9f, 0x26, 0xd3, 0x88, 0x99, 0x3a, 0x86, 0x16, 0x80, 0xf5, 0x19,
-	0x56, 0xdd, 0xc0, 0x8f, 0x99, 0x1f, 0x4f, 0x63, 0x47, 0x2a, 0x24, 0x0f, 0x72, 0x51, 0xa8, 0xa3,
-	0xbd, 0xbb, 0xdc, 0x13, 0x62, 0x7b, 0x12, 0x3c, 0xfa, 0xcf, 0xce, 0x45, 0xef, 0x42, 0x47, 0xb8,
-	0xb2, 0x50, 0xd4, 0x96, 0xf3, 0x25, 0xc8, 0xf9, 0x6d, 0x61, 0xbf, 0x4d, 0xcd, 0x03, 0x23, 0x3f,
-	0x8a, 0xf5, 0x55, 0x87, 0x56, 0xb6, 0xeb, 0x3e, 0x2c, 0xcb, 0xac, 0xce, 0x80, 0x26, 0xee, 0x48,
-	0xee, 0xbd, 0x56, 0xd9, 0x3b, 0x75, 0xf1, 0x8c, 0x1d, 0x09, 0x1c, 0x08, 0x9b, 0x3c, 0x85, 0x76,
-	0x18, 0x31, 0x87, 0xff, 0x42, 0x1a, 0x65, 0x2a, 0x56, 0xd3, 0xc8, 0x92, 0x83, 0xc7, 0x01, 0x5f,
-	0xf6, 0x53, 0x4b, 0x9c, 0x33, 0x8b, 0xd0, 0xca, 0xba, 0x0b, 0x76, 0xe6, 0x27, 0xdb, 0xd0, 0x74,
-	0x83, 0xc9, 0xc4, 0x4b, 0xb0, 0x84, 0xed, 0xdd, 0x4e, 0xca, 0x4c, 0x31, 0x4e, 0x94, 0x5e, 0x5e,
-	0x0f, 0x70, 0x47, 0xcc, 0x3d, 0x0f, 0x03, 0xcf, 0x4f, 0xcc, 0x06, 0x72, 0x57, 0x24, 0x37, 0xc7,
-	0x85, 0x8c, 0xc2, 0x12, 0xe2, 0x2f, 0x3d, 0xf6, 0xd1, 0x71, 0x47, 0xd4, 0xe7, 0x25, 0x6c, 0x96,
-	0xc5, 0x97, 0x1c, 0x22, 0x4a, 0x98, 0x87, 0x68, 0x91, 0x87, 0xb0, 0xe4, 0x73, 0x9f, 0x40, 0xcc,
-	0x16, 0x86, 0x74, 0xd3, 0x90, 0x0c, 0x15, 0xf2, 0xf9, 0xfa, 0x1d, 0x5f, 0x92, 0x37, 0xb0, 0x76,
-	0xca, 0x78, 0xa1, 0x9c, 0x6a, 0x85, 0x97, 0x30, 0xee, 0x56, 0x1a, 0x37, 0x87, 0xc0, 0x53, 0xac,
-	0x22, 0x6c, 0x97, 0x8b, 0xfd, 0x0a, 0xd6, 0x23, 0xc6, 0xbb, 0xc7, 0xaf, 0x65, 0x33, 0x16, 0xdd,
-	0x17, 0x49, 0x43, 0xca, 0x89, 0xca, 0x8d, 0x60, 0xd7, 0x2e, 0x9f, 0xdc, 0x85, 0x46, 0xd6, 0x05,
-	0xda, 0x4c, 0x07, 0xda, 0xa9, 0xaf, 0x3a, 0x32, 0x6a, 0x6d, 0x64, 0xac, 0x9f, 0x4a, 0xa5, 0x2b,
-	0x08, 0x01, 0x1d, 0xab, 0xa5, 0xe0, 0x88, 0xe0, 0x9a, 0xdc, 0x87, 0xff, 0x63, 0x91, 0xd3, 0x77,
-	0x99, 0xe3, 0x4f, 0x27, 0x03, 0x16, 0x61, 0x1e, 0xdd, 0xee, 0x66, 0xf0, 0x31, 0xa2, 0xe4, 0x0e,
-	0x74, 0x70, 0x4f, 0x67, 0xe8, 0x9d, 0x89, 0xc1, 0x10, 0x0d, 0x63, 0xd8, 0x6d, 0xc4, 0x5e, 0x20,
-	0x44, 0xf6, 0xea, 0x0d, 0xac, 0xff, 0xb1, 0x20, 0xb5, 0xf6, 0xad, 0x8e, 0x70, 0xa3, 0x36, 0xc2,
-	0xd6, 0x77, 0x25, 0x6f, 0xd4, 0xbf, 0x7e, 0x88, 0xaa, 0x14, 0xbd, 0x2e, 0xe5, 0x9b, 0x92, 0x0d,
-	0xc2, 0xbf, 0x56, 0x72, 0x0c, 0x30, 0x18, 0x07, 0xee, 0xb9, 0xe3, 0xf9, 0xa7, 0x01, 0xe6, 0x43,
-	0x4b, 0xee, 0x9a, 0x8a, 0x6a, 0x23, 0x26, 0xb7, 0xdc, 0xcc, 0x02, 0x46, 0x34, 0x1e, 0xc9, 0x47,
-	0xd4, 0x40, 0xe4, 0x88, 0x03, 0xd6, 0xb0, 0x3c, 0xb9, 0xf3, 0x0e, 0xa2, 0xcc, 0x3d, 0x48, 0x55,
-	0xa5, 0x5a, 0x7f, 0x7d, 0xbb, 0xa0, 0xca, 0x47, 0xd9, 0xb0, 0xf9, 0xca, 0xfa, 0xa1, 0x55, 0x86,
-	0x7d, 0x6e, 0x11, 0x3b, 0xa0, 0x8c, 0x64, 0x26, 0x65, 0xc4, 0x95, 0xe8, 0x6e, 0xcc, 0x44, 0x85,
-	0xb4, 0xa2, 0x99, 0x4a, 0x29, 0x7a, 0x87, 0x36, 0x12, 0xc8, 0x0e, 0xe8, 0xa1, 0x20, 0xea, 0x48,
-	0x5c, 0x9f, 0x25, 0xf6, 0x4f, 0x6c, 0x64, 0x08, 0xe6, 0x85, 0x60, 0x36, 0x16, 0x31, 0x05, 0xa3,
-	0x76, 0xba, 0xe6, 0xc2, 0x6f, 0x4b, 0xab, 0xf6, 0x6d, 0xd9, 0x78, 0x0e, 0xca, 0xe1, 0xcd, 0x0b,
-	0x59, 0xab, 0xd4, 0xc6, 0x10, 0xd4, 0xfe, 0xc9, 0xcd, 0xc3, 0xeb, 0x0d, 0xa5, 0xce, 0x36, 0x54,
-	0x56, 0x6b, 0xad, 0xa8, 0xb5, 0xf5, 0x18, 0x1a, 0xfd, 0x13, 0x71, 0xd2, 0x6d, 0xd0, 0x44, 0x49,
-	0x94, 0x05, 0x25, 0x11, 0x04, 0xeb, 0x97, 0x52, 0xbc, 0xbb, 0x73, 0x6f, 0xef, 0x1e, 0xc7, 0x44,
-	0x26, 0x15, 0x33, 0xcd, 0x3e, 0xe3, 0x36, 0xba, 0xc9, 0x23, 0xd0, 0x3f, 0x15, 0xd7, 0x6a, 0x56,
-	0x9f, 0xee, 0xde, 0x07, 0xee, 0x7a, 0xe9, 0x27, 0xd1, 0x95, 0x8d, 0xac, 0x6b, 0x66, 0x61, 0xe3,
-	0x19, 0x18, 0x79, 0x04, 0x59, 0x01, 0xed, 0x9c, 0x5d, 0x49, 0x4d, 0x62, 0x49, 0xd6, 0xa1, 0x71,
-	0x49, 0xc7, 0x53, 0x26, 0x8b, 0x92, 0x1a, 0xfb, 0xea, 0x9e, 0x62, 0xbd, 0x9f, 0xfb, 0x5d, 0x98,
-	0x29, 0xa6, 0x72, 0xdd, 0x74, 0xd6, 0xfb, 0xde, 0xda, 0x82, 0xa5, 0x09, 0x4b, 0xe8, 0x90, 0x26,
-	0x54, 0x6c, 0xcf, 0x2f, 0xeb, 0x38, 0x90, 0x92, 0x52, 0x63, 0xd0, 0xc4, 0xbf, 0x41, 0x4f, 0x7e,
-	0x07, 0x00, 0x00, 0xff, 0xff, 0xa0, 0x51, 0xf9, 0x39, 0x18, 0x09, 0x00, 0x00,
+	// 836 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xc4, 0x55, 0x51, 0x6f, 0xe3, 0x44,
+	0x10, 0x66, 0x6d, 0x27, 0x6d, 0xc6, 0x55, 0xce, 0xdd, 0x56, 0xaa, 0x55, 0xee, 0xa4, 0xc3, 0x12,
+	0xd0, 0x07, 0x64, 0x50, 0x79, 0x00, 0x21, 0x5e, 0x72, 0x3e, 0x73, 0x8d, 0xe0, 0x9c, 0x74, 0xeb,
+	0xe3, 0x90, 0x78, 0xb0, 0x36, 0xce, 0x36, 0xb1, 0x9a, 0xd8, 0x3e, 0x7b, 0x73, 0x90, 0x5f, 0x00,
+	0x2f, 0xfc, 0x32, 0x78, 0xe2, 0x67, 0xf0, 0x2b, 0xd8, 0x5d, 0x3b, 0x4d, 0xe2, 0x44, 0xd7, 0x7b,
+	0x82, 0x87, 0x48, 0x3b, 0xdf, 0x7e, 0x33, 0x3b, 0xf3, 0xcd, 0x4c, 0x0c, 0xdd, 0x39, 0x2b, 0x4b,
+	0x3a, 0x61, 0xa5, 0x9b, 0x17, 0x19, 0xcf, 0xb0, 0x91, 0x8f, 0x6e, 0xf9, 0xf9, 0x31, 0x2f, 0x68,
+	0x5a, 0xd2, 0x98, 0x27, 0x59, 0x5a, 0x5d, 0x38, 0x7f, 0x69, 0x70, 0x1c, 0x67, 0x69, 0xc9, 0xd2,
+	0x72, 0x51, 0x46, 0xb5, 0x17, 0xfe, 0x02, 0x0c, 0xbe, 0xcc, 0x99, 0x8d, 0x9e, 0xa2, 0x8b, 0xee,
+	0xe5, 0x63, 0x57, 0x7a, 0xbb, 0x3b, 0x34, 0x37, 0x14, 0x1c, 0xa2, 0x98, 0xd8, 0x86, 0x83, 0x9c,
+	0x2e, 0x67, 0x19, 0x1d, 0xdb, 0x9a, 0x70, 0x3a, 0x22, 0x2b, 0xd3, 0xf9, 0x07, 0x81, 0x21, 0x89,
+	0xf8, 0x11, 0x98, 0x21, 0xe9, 0x05, 0x37, 0x3d, 0x2f, 0xec, 0x0f, 0x02, 0xeb, 0x03, 0x7c, 0x0a,
+	0x56, 0x05, 0x48, 0x3b, 0x7a, 0xd6, 0x0b, 0xbd, 0x2b, 0x0b, 0x49, 0xda, 0x90, 0xf8, 0x91, 0xf8,
+	0x0d, 0x7b, 0xc4, 0xb7, 0x34, 0x6c, 0xc2, 0xc1, 0xca, 0xd0, 0x31, 0x40, 0xdb, 0x1b, 0xbc, 0x7c,
+	0xd9, 0x0f, 0x2d, 0x03, 0x77, 0x01, 0xbc, 0x2b, 0xdf, 0xfb, 0x7e, 0x38, 0xe8, 0x07, 0xa1, 0xd5,
+	0x92, 0x9e, 0x3f, 0xf6, 0xfd, 0xd7, 0x91, 0x77, 0xd5, 0x0b, 0x5e, 0xf8, 0x56, 0x1b, 0x1f, 0xc1,
+	0x61, 0x20, 0x6c, 0x09, 0x5a, 0x07, 0xf8, 0x0c, 0x4e, 0xbe, 0x23, 0xe2, 0x8d, 0x88, 0xf8, 0xd7,
+	0xaf, 0xfc, 0x9b, 0xb0, 0x7e, 0xf1, 0x50, 0xe4, 0x7e, 0x4a, 0xfc, 0xf0, 0x15, 0x09, 0x1a, 0x37,
+	0x1d, 0x8c, 0xa1, 0x1b, 0xf8, 0x2f, 0x06, 0x61, 0xbf, 0x17, 0xfa, 0x55, 0x18, 0xc0, 0x1f, 0xc2,
+	0xd9, 0x36, 0x26, 0xbc, 0x6e, 0x86, 0x83, 0xe0, 0xc6, 0xb7, 0x4c, 0xe7, 0x67, 0xd8, 0xd4, 0x38,
+	0x1a, 0x51, 0x1e, 0x4f, 0xf1, 0x05, 0xb4, 0xd4, 0x41, 0xc8, 0xa9, 0x5f, 0x98, 0x97, 0xd8, 0x95,
+	0x8a, 0x95, 0x6e, 0xb8, 0x26, 0x92, 0x8a, 0x80, 0x1f, 0x43, 0x87, 0x27, 0x42, 0x5d, 0x4e, 0xe7,
+	0xb9, 0xd2, 0x51, 0x27, 0x6b, 0xc0, 0xf9, 0x1b, 0x81, 0x99, 0x17, 0x2c, 0x12, 0xbf, 0x9c, 0x16,
+	0x4c, 0x64, 0x67, 0xbc, 0x4d, 0xd8, 0x2f, 0xaa, 0x4b, 0x06, 0x51, 0x67, 0xfc, 0x29, 0x3c, 0x2a,
+	0xd9, 0x9b, 0x05, 0x4b, 0x63, 0x16, 0xa5, 0x8b, 0xf9, 0x88, 0x15, 0x2a, 0x8e, 0x41, 0xba, 0x2b,
+	0x38, 0x50, 0x28, 0xfe, 0x08, 0x8e, 0xd4, 0x9b, 0xd1, 0x38, 0x11, 0x63, 0xc2, 0x6d, 0x5d, 0xb0,
+	0x3a, 0xc4, 0x54, 0xd8, 0x73, 0x05, 0xe1, 0xe7, 0x7b, 0x8a, 0xb1, 0x0d, 0xc1, 0x33, 0x2f, 0xcf,
+	0xaa, 0x91, 0xd8, 0xb9, 0x26, 0xd6, 0x06, 0xf4, 0x4c, 0xd5, 0xf4, 0x04, 0x40, 0xe4, 0x3b, 0x4b,
+	0x62, 0x1a, 0x25, 0x63, 0xbb, 0xa5, 0x92, 0xe9, 0xd4, 0x48, 0x7f, 0xec, 0xfc, 0x8e, 0xc4, 0xe4,
+	0xfc, 0x47, 0x05, 0x6d, 0xa7, 0x62, 0x34, 0x53, 0xf9, 0x0d, 0x41, 0x3b, 0xce, 0xe6, 0xf3, 0x84,
+	0xff, 0xdf, 0x99, 0x04, 0x00, 0xa3, 0x59, 0x16, 0xdf, 0x45, 0x49, 0x7a, 0x9b, 0xa9, 0x78, 0xca,
+	0xaa, 0x5f, 0xad, 0x92, 0x32, 0x15, 0x56, 0x3f, 0xf9, 0x64, 0xe5, 0x30, 0xa5, 0xe5, 0xb4, 0xde,
+	0xc0, 0x8e, 0x42, 0xae, 0x04, 0xe0, 0x8c, 0x01, 0xe2, 0x29, 0x8b, 0xef, 0xf2, 0x2c, 0x49, 0xf9,
+	0xbe, 0x42, 0xd0, 0xde, 0x42, 0xb6, 0xb3, 0xd4, 0x1a, 0x59, 0x8a, 0xfd, 0xd3, 0x04, 0x5c, 0x55,
+	0x27, 0x4e, 0xce, 0x1f, 0x3a, 0x98, 0x52, 0xa9, 0x28, 0x9e, 0xd2, 0x74, 0xb2, 0xbf, 0x9d, 0x47,
+	0x80, 0xa6, 0x75, 0x24, 0x34, 0x15, 0x99, 0x18, 0x71, 0xc9, 0xa4, 0x42, 0x72, 0x31, 0x4e, 0xaa,
+	0xa1, 0xda, 0x08, 0xe1, 0x7a, 0x44, 0x11, 0xc4, 0x0a, 0x19, 0xb9, 0x24, 0x1a, 0x8a, 0x78, 0xba,
+	0x4b, 0x1c, 0x5e, 0x13, 0xc5, 0x90, 0xcc, 0x37, 0x92, 0xd9, 0x7a, 0x17, 0x53, 0x32, 0x1a, 0xd5,
+	0xb5, 0x9b, 0xd5, 0x89, 0x5d, 0x2c, 0x93, 0x49, 0x4a, 0xf9, 0xa2, 0x60, 0xf6, 0x41, 0xa5, 0xe8,
+	0x3d, 0x70, 0xfe, 0x2d, 0x20, 0xef, 0xfd, 0x85, 0x6c, 0x28, 0x75, 0x3e, 0x06, 0x6d, 0x78, 0xfd,
+	0xfe, 0xee, 0xcd, 0x81, 0xd2, 0x76, 0x07, 0x6a, 0xa5, 0xb5, 0xbe, 0xd6, 0xda, 0xf9, 0x1c, 0x5a,
+	0xc3, 0x6b, 0x59, 0xe9, 0x27, 0xa0, 0x4b, 0x49, 0xd0, 0x3b, 0x24, 0x91, 0x04, 0xe7, 0x4f, 0x04,
+	0x87, 0xa9, 0x80, 0x55, 0xa7, 0xf6, 0x75, 0xef, 0x63, 0x81, 0xc9, 0x48, 0x9a, 0x8a, 0x74, 0xbc,
+	0x13, 0x89, 0xa8, 0x6b, 0xfc, 0x19, 0x18, 0xbf, 0xae, 0xdb, 0x6a, 0x57, 0xb4, 0x55, 0x60, 0xf7,
+	0x27, 0x71, 0xe5, 0xa7, 0xbc, 0x58, 0x12, 0xc5, 0x7a, 0x60, 0x17, 0xce, 0xbf, 0x82, 0xce, 0xbd,
+	0x07, 0xb6, 0x40, 0xbf, 0x63, 0xcb, 0x3a, 0x27, 0x79, 0x14, 0x1f, 0x91, 0xd6, 0x5b, 0x3a, 0x5b,
+	0xb0, 0x5a, 0x94, 0xca, 0xf8, 0x46, 0xfb, 0x1a, 0x39, 0xaf, 0xe1, 0xe4, 0x96, 0x49, 0xd5, 0x0a,
+	0xa9, 0x66, 0xc9, 0xeb, 0x7f, 0xe3, 0xa6, 0x98, 0xe8, 0xa1, 0xed, 0x6c, 0xce, 0xbd, 0xd0, 0xb5,
+	0x9b, 0xb2, 0x49, 0xc6, 0x13, 0xca, 0x59, 0xa5, 0xd5, 0xb6, 0x03, 0x6a, 0x3a, 0xfc, 0x00, 0x67,
+	0xdb, 0x0e, 0x22, 0xa5, 0x32, 0x97, 0x9f, 0xd3, 0x07, 0x3c, 0xef, 0x9b, 0xa0, 0x6d, 0xb4, 0xf5,
+	0x29, 0x1c, 0xce, 0x19, 0xa7, 0x63, 0xca, 0xa9, 0xac, 0x5e, 0xcc, 0x4a, 0x90, 0xd5, 0x9e, 0x95,
+	0x31, 0x6a, 0xab, 0x6f, 0xfb, 0x97, 0xff, 0x06, 0x00, 0x00, 0xff, 0xff, 0x1f, 0xe6, 0xe6, 0x86,
+	0x06, 0x08, 0x00, 0x00,
 }

@@ -26,30 +26,25 @@ import (
 	"hyperchain/core/util"
 	membersrvc "hyperchain/membersrvc/protos"
 
-	_ "fmt"
 	"fmt"
+	_ "fmt"
 	"strings"
-
 )
 
-
 var config1 *viper.Viper
-func TestTLSDemo(t *testing.T) {
 
+func TestTLSDemo(t *testing.T) {
 
 	// Skipping test for now, this is just to try tls connections
 	t.Skip()
 
-
-
 	requestTLSCertificateDemo(t)
-
 
 }
 
-func loadConfig() ( *viper.Viper) {
+func loadConfig() *viper.Viper {
 	const configPrefix = "CA"
-	config1 =viper.New()
+	config1 = viper.New()
 	config1.SetEnvPrefix(configPrefix)
 	config1.AutomaticEnv()
 	replacer := strings.NewReplacer(".", "_")
@@ -65,12 +60,11 @@ func loadConfig() ( *viper.Viper) {
 	return config1
 }
 
-
 func requestTLSCertificateDemo(t *testing.T) {
 	var opts []grpc.DialOption
 
 	config1 = loadConfig()
-	fmt.Println("connect port is ",config1.GetString("peer.pki.tlsca.paddr"))
+	fmt.Println("connect port is ", config1.GetString("peer.pki.tlsca.paddr"))
 
 	//creds, err := credentials.NewClientTLSFromFile(viper.GetString("server.tls.cert.file"), "tlsca")
 	creds, err := credentials.NewClientTLSFromFile(config1.GetString("server.tls.cert.file"), "tlsca")
@@ -80,7 +74,7 @@ func requestTLSCertificateDemo(t *testing.T) {
 	}
 
 	opts = append(opts, grpc.WithTransportCredentials(creds))
-	fmt.Println("connect port is ",config1.GetString("peer.pki.tlsca.paddr"))
+	fmt.Println("connect port is ", config1.GetString("peer.pki.tlsca.paddr"))
 	sockP, err := grpc.Dial(config1.GetString("peer.pki.tlsca.paddr"), opts...)
 	if err != nil {
 		t.Logf("Failed dialing in: %s", err)
@@ -136,8 +130,6 @@ func requestTLSCertificateDemo(t *testing.T) {
 	storeCertDemo("tls_peer.cert", resp.Cert.Cert, t)
 	storeCertDemo("tls_peer.ca", resp.RootCert.Cert, t)
 }
-
-
 
 func storePrivateKeyInClearDemo(alias string, privateKey interface{}, t *testing.T) {
 	rawKey, err := primitives.PrivateKeyToPEM(privateKey, nil)

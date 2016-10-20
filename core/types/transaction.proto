@@ -5,8 +5,25 @@ message Transaction {
 	bytes from = 1;
 	bytes to = 2;
 	bytes value = 3;
-	int64 timeStamp = 4;
+	int64 timestamp = 4;
 	bytes signature = 5;
-	uint64 peerId = 6;
+	uint64 id = 6;
 	bytes transactionHash = 7;
+}
+
+message InvalidTransactionRecord {
+    Transaction tx = 1;
+    ErrType errType = 2;
+    enum ErrType {
+        OUTOFBALANCE = 0;
+        SIGFAILED = 1;
+    }
+}
+message InvalidTransactionRecords {
+    repeated InvalidTransactionRecord records = 1;
+}
+
+message TransactionMeta {
+    uint64 BlockIndex = 1;
+    int64  Index = 2;
 }
