@@ -206,7 +206,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 		for start := start; start < end; start = time.Now().Unix() {
 
-		for i := 0; i < 125; i++ {
+		for i := 0; i < 25; i++ {
 			tx.Timestamp = time.Now().UnixNano()
 			tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
 
@@ -214,11 +214,11 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				// For Hyperchain test
 
 				// TODO replace password with test value
-				signature, err := tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
-				if err != nil {
-					log.Errorf("Sign(tx) error :%v", err)
-				}
-				tx.Signature = signature
+				//signature, err := tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
+				//if err != nil {
+				//	log.Errorf("Sign(tx) error :%v", err)
+				//}
+				//tx.Signature = signature
 			} else {
 				// For Dashboard test
 
@@ -239,9 +239,9 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 			tx.TransactionHash = tx.BuildHash().Bytes()
 			// Unsign
-			if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
-				return common.Hash{}, errors.New("invalid signature")
-			}
+			//if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
+			//	return common.Hash{}, errors.New("invalid signature")
+			//}
 
 			txBytes, err := proto.Marshal(tx)
 			if err != nil {
