@@ -9,6 +9,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/consensus/controller"
 	"hyperchain/core"
+	"hyperchain/core/blockpool"
 	"hyperchain/crypto"
 	"hyperchain/event"
 	"hyperchain/jsonrpc"
@@ -32,7 +33,7 @@ func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*argT)
 
-		config := newconfigsImpl(argv.ConfigPath,argv.NodeID, argv.GRPCPort, argv.HTTPPort)
+		config := newconfigsImpl(argv.ConfigPath, argv.NodeID, argv.GRPCPort, argv.HTTPPort)
 
 		membersrvc.Start(config.getMemberSRVCConfigPath(), config.getNodeID())
 
@@ -66,11 +67,11 @@ func main() {
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
 
 		//init block pool to save block
-		blockPool := core.NewBlockPool(eventMux,cs)
+		blockPool := blockpool.NewBlockPool(eventMux, cs)
 
 		//init manager
 		exist := make(chan bool)
-		pm := manager.New(eventMux, blockPool, grpcPeerMgr, cs,  am, kec256Hash,
+		pm := manager.New(eventMux, blockPool, grpcPeerMgr, cs, am, kec256Hash,
 			config.getNodeID())
 
 		go jsonrpc.Start(config.getHTTPPort(), eventMux, pm)
