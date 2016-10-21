@@ -31,7 +31,6 @@ func init() {
 type ProtocolManager struct {
 	serverPort  int
 	blockPool   *core.BlockPool
-	fetcher     *core.Fetcher
 	Peermanager p2p.PeerManager
 
 	nodeInfo  client.PeerInfos // node info ,store node status,ip,port
@@ -40,7 +39,6 @@ type ProtocolManager struct {
 	AccountManager *accounts.AccountManager
 	commonHash     crypto.CommonHash
 
-	noMorePeers   chan struct{}
 	eventMux      *event.TypeMux
 	txSub         event.Subscription
 	newBlockSub   event.Subscription
@@ -63,7 +61,7 @@ type NodeManager struct {
 
 var eventMuxAll *event.TypeMux
 
-func NewProtocolManager(blockPool *core.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
+func NewProtocolManager(blockPool *core.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux,  consenter consensus.Consenter,
 	//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 	am *accounts.AccountManager, commonHash crypto.CommonHash) *ProtocolManager {
 
@@ -74,7 +72,6 @@ func NewProtocolManager(blockPool *core.BlockPool, peerManager p2p.PeerManager, 
 		quitSync:    make(chan struct{}),
 		consenter:   consenter,
 		Peermanager: peerManager,
-		fetcher:     fetcher,
 		//encryption:encryption,
 		AccountManager: am,
 		commonHash:     commonHash,
@@ -92,9 +89,8 @@ func GetEventObject() *event.TypeMux {
 func (pm *ProtocolManager) Start() {
 
 	pm.wg.Add(1)
-	go pm.fetcher.Start()
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
-	pm.newBlockSub = pm.eventMux.Subscribe(event.NewBlockEvent{}, event.CommitOrRollbackBlockEvent{}, event.ExeTxsEvent{})
+	pm.newBlockSub = pm.eventMux.Subscribe(event.CommitOrRollbackBlockEvent{}, event.ExeTxsEvent{})
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
@@ -246,7 +242,7 @@ func (self *ProtocolManager) syncBlockLoop() {
 											if err != nil {
 												continue
 											} else {
-												self.blockPool.ProcessBlock1(blk.Transactions, nil, blk.Number)
+												self.blockPool.ProcessBlockInVm(blk.Transactions, nil, blk.Number)
 												self.blockPool.SetDemandNumber(blk.Number + 1)
 												self.blockPool.SetDemandSeqNo(blk.Number + 1)
 
@@ -311,13 +307,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 	for obj := range self.newBlockSub.Chan() {
 
 		switch ev := obj.Data.(type) {
-		case event.NewBlockEvent:
-			//accept msg from consensus module
-			//commit block into block pool
 
-			log.Debug("write block success")
-			self.commitNewBlock(ev.Payload, ev.CommitTime)
-			//self.fetcher.Enqueue(ev.Payload)
 		case event.CommitOrRollbackBlockEvent:
 			self.blockPool.CommitBlock(ev, self.Peermanager)
 
@@ -385,13 +375,6 @@ func (self *ProtocolManager) ConsensusLoop() {
 }
 
 func (self *ProtocolManager) sendMsg(payload []byte) {
-	//Todo sign tx
-	//payLoad := self.transformTx(payload)
-	//if payLoad == nil {
-	//	//log.Fatal("payLoad nil")
-	//	log.Error("payLoad nil")
-	//	return
-	//}
 	msg := &protos.Message{
 		Type:    protos.Message_TRANSACTION,
 		Payload: payload,
@@ -411,58 +394,6 @@ func (pm *ProtocolManager) BroadcastConsensus(payload []byte) {
 
 }
 
-//receive tx from web,sign it and marshal it,then give it to consensus module
-func (pm *ProtocolManager) transformTx(payload []byte) []byte {
-
-	//var transaction types.Transaction
-	transaction := &types.Transaction{}
-	//decode tx
-	proto.Unmarshal(payload, transaction)
-	//hash tx
-	h := transaction.SighHash(pm.commonHash)
-	addrHex := string(transaction.From)
-	addr := common.HexToAddress(addrHex)
-
-	sign, err := pm.AccountManager.SignWithPassphrase(addr, h[:], "123")
-	//sign, err := pm.accountManager.Sign(addr, h[:])
-	if err != nil {
-		log.Error(err)
-
-		return nil
-	}
-	transaction.Signature = sign
-	//encode tx
-	payLoad, err := proto.Marshal(transaction)
-	if err != nil {
-		return nil
-	}
-	return payLoad
-
-}
-
-// add new block into block pool
-func (pm *ProtocolManager) commitNewBlock(payload []byte, commitTime int64) {
-
-	msgList := &protos.ExeMessage{}
-	proto.Unmarshal(payload, msgList)
-	block := new(types.Block)
-	for _, item := range msgList.Batch {
-		tx := &types.Transaction{}
-
-		proto.Unmarshal(item.Payload, tx)
-
-		block.Transactions = append(block.Transactions, tx)
-	}
-	block.Timestamp = msgList.Timestamp
-	//block.CommitTime =commitTime
-
-	block.Number = msgList.No
-
-	log.Info("now is ", msgList.No)
-	pm.blockPool.AddBlock(block, pm.commonHash)
-	//core.WriteBlock(*block)
-
-}
 
 func (pm *ProtocolManager) GetNodeInfo() client.PeerInfos {
 	pm.nodeInfo = pm.Peermanager.GetPeerInfo()

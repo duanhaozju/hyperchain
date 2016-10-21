@@ -5,7 +5,6 @@
 package core
 
 import (
-	"encoding/json"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
 	"hyperchain/core/types"
@@ -22,9 +21,8 @@ var (
 	invalidTransactionPrefix = []byte("invalidtransaction-")
 	blockPrefix              = []byte("block-")
 	chainKey                 = []byte("chain-key")
-	balanceKey               = []byte("balance-key")
 	blockNumPrefix           = []byte("blockNum-")
-	bodySuffix               = []byte("-body")
+	//bodySuffix               = []byte("-body")
 	txMetaSuffix             = []byte{0x01}
 )
 
@@ -38,29 +36,6 @@ func InitDB(dbPath string, port int) {
 }
 
 //---------------------- Receipt Start ---------------------------------
-// WriteReceipts stores a batch of transaction receipts into the database.
-func WriteReceipts(receipts types.Receipts) error {
-	db, _ := hyperdb.GetLDBDatabase()
-	batch := db.NewBatch()
-	// Iterate over all the receipts and queue them for database injection
-	for _, receipt := range receipts {
-		//fmt.Println("the addr", receipt.ContractAddress)
-		data, err := proto.Marshal(receipt)
-		if err != nil {
-			return err
-		}
-
-		if err := batch.Put(append(receiptsPrefix, receipt.TxHash...), data); err != nil {
-			return err
-		}
-	}
-	// Write the scheduled data into the database
-	if err := batch.Write(); err != nil {
-		return err
-	}
-	return nil
-}
-
 // GetReceipt returns a receipt by hash
 func GetReceipt(txHash common.Hash) *types.ReceiptTrans {
 	db, _ := hyperdb.GetLDBDatabase()
@@ -194,36 +169,7 @@ func PutBlockTx(db hyperdb.Database, commonHash crypto.CommonHash, key []byte, t
 	if err := batch.Put(append(blockNumPrefix, keyNum...), t.BlockHash); err != nil {
 		return err
 	}
-	//put tx<-->block num,hash,index
 
-	//for i,tx:=range t.Transactions{
-	//  meta := struct {
-	//			BlockHash  common.Hash
-	//			BlockIndex uint64
-	//			Index      uint64
-	//		}{
-	//			BlockHash:  common.BytesToHash(t.BlockHash),
-	//			BlockIndex: t.Number,
-	//			Index:      uint64(i),
-	//		}
-	//keyTxBlock := append(tx.Hash(commonHash).Bytes(), txMetaSuffix...)
-	//dataTxBlock, err := json.Marshal(meta)
-	//if err != nil {
-	//	return err
-	//}
-	//err = batch.Put(keyTxBlock,dataTxBlock)
-
-	//txKey := tx.Hash(commonHash).Bytes()
-	//txKeyFact := append(transactionPrefix, txKey...)
-	//txValue, err := proto.Marshal(tx)
-	//if err != nil {
-	//	batch.Put(txKeyFact, txValue)
-	//}
-
-//}
-	//if err !=nil{
-	//	return err
-	//}
 
 	return batch.Write()
 }
@@ -276,36 +222,6 @@ func DeleteBlockByNum(db hyperdb.Database, blockNum uint64) error {
 //-- --------------------- BalanceMap ------------------------------------
 type balanceMapJson map[string][]byte
 
-// PutDBBalance put dbBalance into database
-func PutDBBalance(db hyperdb.Database, balance_db BalanceMap) error {
-
-	var bJson = make(balanceMapJson)
-	for key, value := range balance_db {
-		bJson[key.Str()] = value
-	}
-	data, err := json.Marshal(bJson)
-	if err != nil {
-		return err
-	}
-	return db.Put(balanceKey, data)
-}
-
-// GetDBBalance get dbBalance from database
-func GetDBBalance(db hyperdb.Database) (BalanceMap, error) {
-	var bJson balanceMapJson
-	var b = make(BalanceMap)
-	data, err := db.Get(balanceKey)
-	if err != nil {
-		return b, err
-	}
-	if err = json.Unmarshal(data, &bJson); err != nil {
-		return b, err
-	}
-	for key, value := range bJson {
-		b[common.StringToAddress(key)] = value
-	}
-	return b, nil
-}
 
 //-- --------------------- BalanceMap END---------------------------------
 
@@ -525,21 +441,3 @@ func getChain(db hyperdb.Database) (*types.Chain, error) {
 
 //-- --------------------- Chain END ----------------------------------
 
-// GetCurrentAndParentBlockHash get current blockHash and parent blockHash
-// for given blockNumber if there are any error, it will be return
-func GetCurrentAndParentBlockHash(blockNumber uint64) (currentHash, parentHash []byte, err error) {
-	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {
-		return nil, nil, err
-	}
-	currentHash, err = GetBlockHash(db, blockNumber)
-	if err != nil {
-		return nil, nil, err
-	}
-	block, err := GetBlock(db, currentHash)
-	if err != nil {
-		return nil, nil, err
-	}
-	parentHash = block.ParentHash
-	return
-}

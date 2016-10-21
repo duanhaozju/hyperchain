@@ -117,14 +117,6 @@ func EmptyHash(h Hash) bool {
 	return h == Hash{}
 }
 
-/////////// Address
-//func BytesToAddress(b []byte) Address {
-//	var a Address
-//	addrHex := string(b)
-//	addr := FromHex(addrHex)
-//	a.SetBytes(addr)
-//	return a
-//}
 func BytesToAddress(b []byte) Address {
 	var a Address
 	a.SetBytes(b)
