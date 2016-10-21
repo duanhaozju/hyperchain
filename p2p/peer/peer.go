@@ -39,6 +39,7 @@ type Peer struct {
 	Status     int
 	ID         uint64
 	chatMux    sync.Mutex
+	IsPrimary bool
 }
 
 // NewPeerByIpAndPort to create a Peer which with a connection,
@@ -62,6 +63,7 @@ func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.Transpo
 	peer.Connection = conn
 	peer.Client = pb.NewChatClient(peer.Connection)
 	peer.Addr = peerAddr
+	peer.IsPrimary = false
 	//TODO handshake operation
 	//peer.TEM = transport.NewHandShakeManger()
 	//package the information

@@ -46,7 +46,9 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getContractCoun
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_lastestBlock","params":[],"id":1}'
 
 # 得到所有区块 GetBlocks
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params":[],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params":[{}],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params":[{"from":1, "to":1}],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params":[{"from":1, "to":5}],"id":1}'
 
 # 根据区块hash查询区块信息 GetBlockByHash
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlockByHash","params":["<block hash>"],"id":1}'
@@ -68,7 +70,7 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_queryEvmAvgTime","p
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acc_newAccount","params":["123456"],"id": 1}'
 
 # 解锁账户 UnlockAccount
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acc_unlockAccount","params":["<account address>", "123456"],"id": 1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acc_unlockAccount","params":[{"address":0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd, "password":"123"}],"id": 1}'
 
 # 获取所有账户信息 GetAccounts
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acc_getAccounts","params":[],"id": 1}'

@@ -189,7 +189,6 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, M
 	}
 
 	// broadcast to special peers
-	//TODO for stateUpdate
 	go func() {
 		for _, p := range this.peersPool.GetPeers() {
 			for _, NodeID := range peerList {
@@ -236,8 +235,20 @@ func (this *GrpcPeerManager) GetPeerInfo() peer.PeerInfos {
 		} else if retMsg.MessageType == pb.Message_PENDING {
 			perinfo.Status = peer.PENDING
 		}
+		perinfo.IsPrimary = per.IsPrimary
+		perinfo.Delay = this.LocalNode.DelayTable[per.ID]
+		perinfo.ID  = per.ID
 		perinfos = append(perinfos, perinfo)
 	}
+	var self_info = peer.PeerInfo{
+		IP:this.LocalNode.GetNodeAddr().IP,
+		Port:this.LocalNode.GetNodeAddr().Port,
+		ID:this.LocalNode.GetNodeAddr().ID,
+		Status:peer.ALIVE,
+		IsPrimary:this.LocalNode.IsPrimary,
+		Delay:this.LocalNode.DelayTable[this.NodeID],
+	}
+	perinfos = append(perinfos, self_info)
 	return perinfos
 }
 
@@ -248,6 +259,18 @@ func (this *GrpcPeerManager) GetNodeId() int {
 	if _err != nil {
 		log.Error("convert err", _err)
 	}
-
 	return _node_id
+}
+
+func (this *GrpcPeerManager) SetPrimary(id uint64) error {
+	peers := this.peersPool.GetPeers()
+	for _, per := range peers {
+		if per.ID == id {
+			per.IsPrimary = true
+		}
+		if this.NodeID == id {
+			this.LocalNode.IsPrimary = true
+		}
+	}
+	return nil
 }

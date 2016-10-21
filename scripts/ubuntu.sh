@@ -77,6 +77,6 @@ do
 done
 
 # 启动相应的http查询服务
-
-python $PROJECT_PATH/jsonrpc/Dashboard/simpleHttpServer.py
+cd $PROJECT_PATH/jsonrpc/Dashboard/
+python simpleHttpServer.py
 

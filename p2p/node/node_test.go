@@ -20,6 +20,8 @@ import (
 	"encoding/hex"
 	hypermessage "hyperchain/protos"
 	"github.com/golang/protobuf/proto"
+	"hyperchain/membersrvc"
+	"github.com/hyperledger/fabric/core/config"
 )
 
 var testNode *Node
@@ -42,7 +44,7 @@ var fakeConsusData = "TEST"
 func init(){
 	mux := event.TypeMux{}
 	tem := transport.NewHandShakeManger()
-	testNode = NewNode(8001,&mux,1,"test.cn",tem)
+	testNode = NewNode(8001,&mux,1,tem)
 }
 
 func TestNode_GetNodeAddr(t *testing.T) {
@@ -57,7 +59,7 @@ func TestNode_GetNodeHash(t *testing.T) {
 
 func TestNode_GetNodeID(t *testing.T) {
 	nodeid := testNode.GetNodeID()
-	assert.Exactly(t,"1",nodeid)
+	assert.Exactly(t,uint64(1),nodeid)
 }
 func TestNode_StartServer(t *testing.T) {
 	testNode.StartServer()
@@ -84,6 +86,7 @@ func TestNode_Chat(t *testing.T) {
 }
 
 func TestNode_Chat2(t *testing.T) {
+	//membersrvc.Start("", 1)
 	testNode.StartServer()
 	//pretend a remote node send a message
 
