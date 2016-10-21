@@ -55,7 +55,8 @@ func (blk *PublicBlockAPI) GetBlocks(args BlockArgsTest) ([]*BlockResult, error)
 
 		// only genesis block
 		if height == 0 {
-			blocks = append(blocks, block)
+			//blocks = append(blocks, block)
+			return nil, nil
 		}
 
 		for height > 0 {
@@ -78,7 +79,7 @@ func (blk *PublicBlockAPI) GetBlocks(args BlockArgsTest) ([]*BlockResult, error)
 	}  else {
 		from := *args.From
 		to := *args.To
-		for from < to {
+		for from <= to {
 			b, err := blk.GetBlockByNumber(to)
 			if err != nil {
 				log.Errorf("%v", err)
