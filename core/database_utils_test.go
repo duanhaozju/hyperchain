@@ -49,7 +49,7 @@ func isDirExists(path string) bool {
 // TestInitDB tests for InitDB
 func TestInitDB(t *testing.T) {
 	log.Info("test =============> > > TestInitDB")
-	InitDB(2048)
+	InitDB("../build/database/hyperchain",2048)
 	hyperdb.GetLDBDatabase()
 }
 
@@ -96,8 +96,8 @@ func TestGetTransactionBLk(t *testing.T) {
 	block, err := GetBlockByNumber(db, 5)
 	fmt.Println("tx hash", block.Transactions[2].BuildHash())
 	tx := block.Transactions[2]
-	bh, bn, i := GetTxWithBlock(db, tx.BuildHash().Bytes())
-	fmt.Println("block hash", bh, "block num :", bn, "tx index:", i)
+	 bn, i := GetTxWithBlock(db, tx.BuildHash().Bytes())
+	fmt.Println( "block num :", bn, "tx index:", i)
 }
 
 // TestGetAllTransaction tests for GetAllTransaction

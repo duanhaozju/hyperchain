@@ -12,7 +12,7 @@ import (
 
 
 func TestGenesis(t *testing.T){
-	InitDB(123)
+	InitDB("../build/database",123)
 	CreateInitBlock("genesis.json")
 
 
