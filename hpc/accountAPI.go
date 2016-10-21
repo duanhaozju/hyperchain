@@ -21,8 +21,8 @@ type AccountResult struct {
 	Balance string `json:"balance"`
 }
 type UnlockParas struct {
-	Address  string
-	Password string
+	Address  string `json:"address"`
+	Password string `json:"password"`
 }
 
 func NewPublicAccountAPI(pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase) *PublicAccountAPI {
