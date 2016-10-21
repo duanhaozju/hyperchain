@@ -12,7 +12,9 @@ import (
 	"time"
 )
 
-var api = NewPublicTransactionAPI(nil, nil)
+
+var db, _ = hyperdb.GetLDBDatabase()
+var api = NewPublicTransactionAPI(nil, nil,db)
 var from = common.HexToAddress("0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd")
 var to = common.HexToAddress("0x0000000000000000000000000000000000000003")
 var args = SendTxArgs{
@@ -95,21 +97,21 @@ var transactionCases = []*types.Transaction{
 		From:      from[:],
 		To:        to[:],
 		Value:     value,
-		TimeStamp: time.Now().UnixNano() - int64(time.Second),
+		Timestamp: time.Now().UnixNano() - int64(time.Second),
 		Signature: []byte("signature1"),
 	},
 	&types.Transaction{
 		From:      from[:],
 		To:        to[:],
 		Value:     value,
-		TimeStamp: time.Now().UnixNano() - int64(time.Second),
+		Timestamp: time.Now().UnixNano() - int64(time.Second),
 		Signature: []byte("signature2"),
 	},
 	&types.Transaction{
 		From:      from[:],
 		To:        to[:],
 		Value:     value,
-		TimeStamp: time.Now().UnixNano() - int64(time.Second),
+		Timestamp: time.Now().UnixNano() - int64(time.Second),
 		Signature: []byte("signature3"),
 	},
 }
@@ -157,10 +159,10 @@ func TestPublicTransactionAPI_GetTransactionsByBlockNumberAndIndex(t *testing.T)
 		log.Fatal(err)
 	}
 
-	tx, err := api.GetTransactionsByBlockNumberAndIndex(1, 0)
+	tx, err := api.GetTransactionByBlockNumberAndIndex(1, 0)
 
 	if err != nil {
-		t.Errorf("%v", err)
+		t.Logf("%v", err)
 	} else {
 		t.Logf("%#v", tx)
 	}

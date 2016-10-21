@@ -138,7 +138,7 @@ func (h *helper) VcReset(seqNo uint64) error {
 	return nil
 }
 
-// Inform the primary id after negociate or
+// Inform the primary id after negotiate or
 func (h *helper) InformPrimary(primary uint64) error {
 
 	informPrimaryEvent := event.InformPrimaryEvent{

@@ -249,6 +249,7 @@ func (self *StateObject) EncodeObject() ([]byte, error) {
 	self.db.Put(self.codeHash, self.code)
 	return json.Marshal(ext)
 }
+
 func DecodeObject(address common.Address, db trie.Database, data []byte) (*StateObject, error) {
 	var (
 		obj = &StateObject{
