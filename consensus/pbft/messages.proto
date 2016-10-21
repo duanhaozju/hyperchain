@@ -35,6 +35,8 @@ message consensus_message {
         RETURN_REQUEST_BATCH = 9;
         NEGOTIATE_VIEW = 10;
         NEGOTIATE_VIEW_RESPONSE = 11;
+        RECOVERY_INIT = 12;
+        RECOVERY_RESPONSE = 13;
     }
     Type type = 1;
     bytes payload = 2;
@@ -122,6 +124,15 @@ message negotiate_view {
 message negotiate_view_response {
     uint64 replica_id = 1;
     uint64 view = 2;
+}
+
+message recovery_init {
+    uint64 replica_id = 1;
+}
+
+message recovery_response {
+    uint64 replica_id = 1;
+    repeated block_info blocks = 2;
 }
 
 // consensus metadata

@@ -39,7 +39,7 @@ func getBaseDir() string {
 }
 
 var (
-	baseLDBPath = getBaseDir() + "/hyperchain/cache/"
+	baseLDBPath = getBaseDir() + "/hyperchain/cache"
 	portLDBPath = "db" //different port has different db path, default "db"
 )
 
