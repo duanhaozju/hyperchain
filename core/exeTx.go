@@ -9,6 +9,7 @@ import (
 	"hyperchain/core/vm/params"
 	"hyperchain/hyperdb"
 	"math/big"
+	"time"
 )
 
 type Code []byte
@@ -76,10 +77,13 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 	var sender vm.Account
 
 	if !(vmenv.Db().Exist(*from)) {
+		createAccount_time := time.Now()
 		sender = vmenv.Db().CreateAccount(*from)
-		vmenv.Db().AddBalance(*from,big.NewInt(100000))
+		log.Notice("createAccount_time is",time.Since(createAccount_time))
 	} else {
+		getAccount_time := time.Now()
 		sender = vmenv.Db().GetAccount(*from)
+		log.Notice("getAccount_time is",time.Since(getAccount_time))
 	}
 	contractCreation := (nil == to)
 
