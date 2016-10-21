@@ -40,7 +40,7 @@ type txdata struct  {
 
 func TestManager(t *testing.T)  {
 
-	keydir := "../keystore/"
+	keydir := "../config/keystore/"
 
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	am := NewAccountManager(keydir,encryption)
