@@ -49,7 +49,7 @@ func isDirExists(path string) bool {
 // TestInitDB tests for InitDB
 func TestInitDB(t *testing.T) {
 	log.Info("test =============> > > TestInitDB")
-	InitDB(2048)
+	InitDB("../build/build/database",8001)
 	hyperdb.GetLDBDatabase()
 }
 
@@ -89,6 +89,7 @@ func TestGetTransaction(t *testing.T) {
 }
 
 func TestGetTransactionBLk(t *testing.T) {
+	InitDB("../build/build/database",8001)
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
@@ -96,8 +97,8 @@ func TestGetTransactionBLk(t *testing.T) {
 	block, err := GetBlockByNumber(db, 5)
 	fmt.Println("tx hash", block.Transactions[2].BuildHash())
 	tx := block.Transactions[2]
-	bh, bn, i := GetTxWithBlock(db, tx.BuildHash().Bytes())
-	fmt.Println("block hash", bh, "block num :", bn, "tx index:", i)
+	bn, i := GetTxWithBlock(db, tx.BuildHash().Bytes())
+	fmt.Println("block num :", bn, "tx index:", i)
 }
 
 // TestGetAllTransaction tests for GetAllTransaction
@@ -107,10 +108,9 @@ func TestGetAllTransaction(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	commonHash := crypto.NewKeccak256Hash("keccak256")
+	PutTransactions(db, commonHash, transactionCases)
 	trs, err := GetAllTransaction(db)
-	if err != nil {
-		log.Fatal(err)
-	}
 	for _, trans := range trs {
 		isPass := false
 		if string(trans.Signature) == "signature1" ||

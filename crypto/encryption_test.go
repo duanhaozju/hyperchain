@@ -18,8 +18,6 @@ func TestEncryption(t *testing.T){
 	encryption.GenerateNodeKey("123","../keystore/")
 	//key ,_ := encryption.GetNodeKey("../keystore/")
 
-	fmt.Print(encryption.port)
-
 
 
 }

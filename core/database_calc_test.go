@@ -37,7 +37,7 @@ func TestCalcResponseCount(t *testing.T) {
 }*/
 
 func TestChainHeight(t *testing.T) {
-	InitDB(8082)
+	InitDB("/tmp",8082)
 	fmt.Println(GetHeightOfChain())
 
 }

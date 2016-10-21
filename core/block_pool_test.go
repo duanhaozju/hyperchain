@@ -13,7 +13,7 @@ import (
 
 
 func TestBlockPool(t *testing.T){
-	InitDB(8082)
+	InitDB("/tmp",8082)
 	//CreateInitBlock("./genesis.json")
 	//eventMux:=new(event.TypeMux)
 	/*bx:=NewBlockPool(eventMux)
