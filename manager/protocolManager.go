@@ -31,7 +31,6 @@ func init() {
 type ProtocolManager struct {
 	serverPort  int
 	blockPool   *core.BlockPool
-	fetcher     *core.Fetcher
 	Peermanager p2p.PeerManager
 
 	nodeInfo  client.PeerInfos // node info ,store node status,ip,port
@@ -62,7 +61,7 @@ type NodeManager struct {
 
 var eventMuxAll *event.TypeMux
 
-func NewProtocolManager(blockPool *core.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, fetcher *core.Fetcher, consenter consensus.Consenter,
+func NewProtocolManager(blockPool *core.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux,  consenter consensus.Consenter,
 	//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 	am *accounts.AccountManager, commonHash crypto.CommonHash) *ProtocolManager {
 
@@ -73,7 +72,6 @@ func NewProtocolManager(blockPool *core.BlockPool, peerManager p2p.PeerManager, 
 		quitSync:    make(chan struct{}),
 		consenter:   consenter,
 		Peermanager: peerManager,
-		fetcher:     fetcher,
 		//encryption:encryption,
 		AccountManager: am,
 		commonHash:     commonHash,
@@ -91,7 +89,6 @@ func GetEventObject() *event.TypeMux {
 func (pm *ProtocolManager) Start() {
 
 	pm.wg.Add(1)
-	go pm.fetcher.Start()
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
 	pm.newBlockSub = pm.eventMux.Subscribe(event.CommitOrRollbackBlockEvent{}, event.ExeTxsEvent{})
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
@@ -245,7 +242,7 @@ func (self *ProtocolManager) syncBlockLoop() {
 											if err != nil {
 												continue
 											} else {
-												self.blockPool.ProcessBlock1(blk.Transactions, nil, blk.Number)
+												self.blockPool.ProcessBlockInVm(blk.Transactions, nil, blk.Number)
 												self.blockPool.SetDemandNumber(blk.Number + 1)
 												self.blockPool.SetDemandSeqNo(blk.Number + 1)
 

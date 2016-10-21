@@ -27,14 +27,11 @@ import (
 	"time"
 )
 
-const (
-	maxQueued = 64 // max limit of queued block in pool
-)
 
 var (
-	tempReceiptsMap map[uint64]types.Receipts
+
 	public_batch    hyperdb.Batch
-	batchsize       = 0
+
 )
 
 type BlockPool struct {
@@ -66,7 +63,6 @@ func (bp *BlockPool) SetDemandSeqNo(seqNo uint64) {
 }
 
 func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *BlockPool {
-	tempReceiptsMap = make(map[uint64]types.Receipts)
 
 	pool := &BlockPool{
 		eventMux:        eventMux,
@@ -88,63 +84,6 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *Block
 	return pool
 }
 
-// this method is used to Exec the transactions, if the err of one execution is not nil, we will
-// abandon this transaction. And this method will return the new transactions and its' hash
-func (pool *BlockPool) ExecTxs(sequenceNum uint64, transactions []types.Transaction) ([]types.Transaction, common.Hash, error) {
-	var (
-		receipts        types.Receipts
-		env             = make(map[string]string)
-		newTransactions []types.Transaction
-	)
-
-	// 1.prepare the current enviroment
-	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {
-		return nil, common.Hash{}, err
-	}
-	currentBlock, _ := GetBlock(db, GetLatestBlockHash())
-	statedb, err := state.New(common.BytesToHash(currentBlock.MerkleRoot), db)
-	if err != nil {
-		return nil, common.Hash{}, err
-	}
-	env["currentNumber"] = strconv.FormatUint(currentBlock.Number, 10)
-	env["currentGasLimit"] = "10000000"
-	vmenv := NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
-
-	// 2.exec all the transactions, if the err is nil, save the tx and append to newTransactions
-	for i, tx := range transactions {
-		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
-		receipt, _, _, err := ExecTransaction(tx, vmenv)
-		if err == nil {
-			newTransactions = append(newTransactions, tx)
-			receipts = append(receipts, receipt)
-		}
-	}
-
-	// 3.save the receipts to the tempReceiptsMap
-	tempReceiptsMap[sequenceNum] = receipts
-	return newTransactions, crypto.NewKeccak256Hash("Keccak256").Hash(newTransactions), nil
-}
-
-
-
-func (pool *BlockPool) eventLoop() {
-	defer pool.wg.Done()
-
-	for ev := range pool.events.Chan() {
-		switch ev.Data.(type) {
-		case event.NewBlockPoolEvent:
-			pool.mu.Lock()
-			/*if ev.Block != nil && pool.config.IsHomestead(ev.Block.Number()) {
-				pool.homestead = true
-			}
-
-			pool.resetState()*/
-			pool.mu.Unlock()
-
-		}
-	}
-}
 
 //check block sequence and validate in chain
 func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash) {
@@ -213,11 +152,7 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 
 }
 
-// WriteBlock need:
-// 1. Put block into db
-// 2. Put transactions in block into db  (-- cancel --)
-// 3. Update chain
-// 4. Update balance
+
 func WriteBlock(block *types.Block, commonHash crypto.CommonHash) {
 	log.Info("block number is ", block.Number)
 
@@ -225,12 +160,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash) {
 
 	block.ParentHash = currentChain.LatestBlockHash
 	db, _ := hyperdb.GetLDBDatabase()
-	//batch := db.NewBatch()
-	/*
-		if err := ProcessBlock(block, commonHash, commitTime); err != nil {
-			log.Fatal(err)
-		}
-	*/
+
 	block.WriteTime = time.Now().UnixNano()
 	block.EvmTime = time.Now().UnixNano()
 
@@ -245,39 +175,14 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash) {
 	log.Notice("Block number", newChain.Height)
 	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
 
-	/*	block.WriteTime = time.Now().UnixNano()
-		block.CommitTime = commitTime
-		block.BlockHash = block.Hash(commonHash).Bytes()
-		data, err := proto.Marshal(block)
-		if err != nil {
-			log.Critical(err)
-			return
-		}
-
-
-		keyFact := append(blockPrefix, block.BlockHash...)
-		err = db.Put(keyFact,data)
-	*/
-	/*if err := db.Put(keyFact, data); err != nil {
-		       return err
-	       }*/
-	/*
-	   keyNum := strconv.FormatInt(int64(block.Number), 10)
-	   //err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
-
-	   err = db.Put(append(blockNumPrefix, keyNum...),block.BlockHash)*/
 
 	PutBlockTx(db, commonHash, block.BlockHash, block)
-	//log.Error("blocl num is ",block.Number)
-	//log.Error("blocl merkle root is ",block.MerkleRoot)
-	//log.Error("blocl Timestamp is ",block.Timestamp)
-	//log.Error("blocl hash is ",block.BlockHash)
+
 
 	if block.Number%10 == 0 && block.Number != 0 {
 		WriteChainChan()
 	}
-	//TxSum.Add(TxSum,big.NewInt(int64(len(block.Transactions))))
-	//CommitStatedbToBlockchain()
+
 }
 
 
@@ -602,10 +507,6 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	UpdateChain(block, isGenesis)
 
 }
-
-
-
-
 
 
 func CanTransfer(from common.Address, statedb *state.StateDB, value *big.Int) bool {

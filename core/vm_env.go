@@ -14,7 +14,6 @@ var (
 	EnableJit bool
 )
 
-func checkLogs(tlog []Log, logs vm.Logs) error { return nil }
 
 type Account struct {
 	Balance string

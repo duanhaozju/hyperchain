@@ -177,29 +177,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, common.FromHex(args.Signature))
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 
-	// TODO set the PeerId of tx
-	//tx.PeerId = tran.pm.Peermanager.GetNodeId()
 
-	//if tran.pm == nil {
-	//
-	//	// Test environment
-	//	found = true
-	//} else {
-	//
-	//	// Development environment
-	//	am := tran.pm.AccountManager
-	//	_, found = am.Unlocked[args.From]
-	//}
-	//am := tran.pm.AccountManager
-
-	//if (!core.VerifyBalance(tx)) {
-	//	return common.Hash{}, errors.New("Not enough balance!")
-	//} else {
-	//if found == true {
-
-	// Balance is enough
-
-	//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 	if args.Request != nil {
 
 		// ** For Dashboard Test **
@@ -256,13 +234,12 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 		// ** For Hyperchain Test **
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		//start := time.Now().Unix()
-		//end := start + 21600
-		//end:=start+500
+		start := time.Now().Unix()
+		end:=start+10
 
-		//for start := start; start < end; start = time.Now().Unix() {
+		for start := start; start < end; start = time.Now().Unix() {
 
-			//for i := 0; i < 25; i++ {
+			for i := 0; i < 25; i++ {
 				tx.Timestamp = time.Now().UnixNano()
 				tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
 
@@ -309,19 +286,15 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				} else {
 					log.Warning("manager is Nil")
 				}
-			//}
-			//time.Sleep(300 * time.Millisecond)
-		//}
+			}
+			time.Sleep(300 * time.Millisecond)
+		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
 	}
 
 	return tx.GetTransactionHash(), nil
 
-	//} else {
-	//	return common.Hash{}, errors.New("account don't unlock")
-	//}
-	//}
 }
 
 // GetTransactionReceipt returns transaction's receipt for given transaction hash.

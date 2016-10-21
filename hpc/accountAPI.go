@@ -42,9 +42,9 @@ func (acc *PublicAccountAPI) NewAccount(password string) common.Address {
 		log.Fatal("New Account error,%v", err)
 	}
 
-	balanceIns, err := core.GetBalanceIns()
+/*	balanceIns, err := core.GetBalanceIns()
 	balanceIns.PutCacheBalance(ac.Address, []byte("0"))
-	balanceIns.PutDBBalance(ac.Address, []byte("0"))
+	balanceIns.PutDBBalance(ac.Address, []byte("0"))*/
 	return ac.Address
 }
 

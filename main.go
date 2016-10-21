@@ -44,9 +44,6 @@ func main() {
 		//init peer manager to start grpc server and client
 		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath(), config.getNodeID())
 
-		//init fetcher to accept block
-		fetcher := core.NewFetcher()
-
 		//init db
 		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())
 
@@ -73,7 +70,7 @@ func main() {
 
 		//init manager
 		exist := make(chan bool)
-		pm := manager.New(eventMux, blockPool, grpcPeerMgr, cs, fetcher, am, kec256Hash,
+		pm := manager.New(eventMux, blockPool, grpcPeerMgr, cs,  am, kec256Hash,
 			config.getNodeID())
 
 		go jsonrpc.Start(config.getHTTPPort(), eventMux, pm)

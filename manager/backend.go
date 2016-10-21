@@ -20,7 +20,7 @@ import (
 )
 
 // init protocol manager params and start
-func New(eventMux *event.TypeMux, blockPool *core.BlockPool, peerManager p2p.PeerManager, consenter consensus.Consenter, fetcher *core.Fetcher,
+func New(eventMux *event.TypeMux, blockPool *core.BlockPool, peerManager p2p.PeerManager, consenter consensus.Consenter,
 	//encryption crypto.Encryption, commonHash crypto.CommonHash,path string, nodeId int) (error) {
 	am *accounts.AccountManager, commonHash crypto.CommonHash, nodeId int) *ProtocolManager {
 
@@ -33,7 +33,7 @@ func New(eventMux *event.TypeMux, blockPool *core.BlockPool, peerManager p2p.Pee
 		{
 
 			//protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, fetcher, consenter, encryption, commonHash)
-			protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, fetcher, consenter, am, commonHash)
+			protocolManager := NewProtocolManager(blockPool, peerManager, eventMux,  consenter, am, commonHash)
 			protocolManager.Start()
 			// consensusEvent NegotiateView
 			negoView := &protos.Message{
@@ -46,7 +46,6 @@ func New(eventMux *event.TypeMux, blockPool *core.BlockPool, peerManager p2p.Pee
 			if err!=nil {
 				fmt.Println("nego view start")
 			}
-			//fmt.Println("trigger negotiate view")
 			eventMux.Post(event.ConsensusEvent{
 				Payload:msg,
 			})
