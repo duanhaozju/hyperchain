@@ -68,17 +68,13 @@ addkey(){
         eof
       }
 EOF
-
-ssh -t satoshi@$1 "sudo -i && apt-get install -y expect"
 }
 
 add_ssh_key_into_primary(){
     echo "add your local ssh public key into primary node"
     for server_address in ${SERVER_ADDR[@]}; do
-	  addkey $server_address &
+	  addkey $server_address
 	done
-	wait
-
 }
 
 add_ssh_key_form_primary_to_others(){
