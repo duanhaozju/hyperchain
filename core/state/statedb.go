@@ -429,36 +429,6 @@ func (s *StateDB) DeleteSuicides() {
 	}
 }
 
-//var stateObjectPrefix = []byte("stateObject-")
-//var stateDbPrefix = []byte("stateDb-")
-
-/*
-// Commit commits all state changes to the database.
-// we should not use statedb.db because it is useless
-// TODO test
-func (s *StateDB) Commit() (root common.Hash, err error) {
-	//batch := s.db.NewBatch()
-	db, _ := hyperdb.GetLDBDatabase()
-	bacth := db.NewBatch()
-	stateDbData, err := json.Marshal(s.stateObjects)
-	for addr, stateObject := range s.stateObjects {
-		if stateObject.dirty {
-			data, err := json.Marshal(stateObject)
-			if err != nil {
-				// err
-			}
-			keyFact := append(stateObjectPrefix, []byte(addr)...)
-			log.Notice("save the data")
-			bacth.Put(keyFact, data)
-			//log.Notice("save already")
-		}
-	}
-	db.Put(stateDbPrefix, stateDbData)
-
-	return common.Hash{}, bacth.Write()
-}
-*/
-
 func (s *StateDB) Commit() (common.Hash, error) {
 	batch := s.db.NewBatch()
 	root, _ := s.commit(batch)
