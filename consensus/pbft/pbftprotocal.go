@@ -105,6 +105,8 @@ type pbftProtocal struct {
 	negoViewRspTimer 	events.Timer			// track timeout for N-f nego-view responses
 	negoViewRspTimeout	time.Duration           // time limit for N-f nego-view responses
 
+	// recovery
+	inRecovery		bool			// inRecovery indicate if replica is in proactive recovery process
 }
 
 type qidx struct {
@@ -1967,3 +1969,27 @@ func (pbft *pbftProtocal) processRequestsDuringNegoView() {
 		logger.Critical("peer try to processRequestsDuringNegoView but nego-view is not finished")
 	}
 }
+
+// procativeRecovery broadcast a procative recovery message to ask others for recent blocks info
+func (pbft *pbftProtocal) procativeRecovery() events.Event {
+	// TODO:
+	// broadcast recovery msg
+	// return recvRcryRsp
+	return nil
+}
+
+// recvRcryRsp process other replicas' feedback info
+func (pbft *pbftProtocal) recvRcryRsp() events.Event {
+	// TODO:
+	return nil
+}
+
+// recvRcry process incoming proactive recovery message
+func (pbft *pbftProtocal) recvRcry() events.Event {
+	// TODO:
+
+	return nil
+}
+
+//
+
