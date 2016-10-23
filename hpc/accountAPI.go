@@ -21,7 +21,7 @@ type AccountResult struct {
 	Balance string `json:"balance"`
 }
 type UnlockParas struct {
-	Address  string `json:"address"`
+	Address  common.Address `json:"address"`
 	Password string `json:"password"`
 }
 
@@ -48,16 +48,12 @@ func (acc *PublicAccountAPI) NewAccount(password string) common.Address {
 	return ac.Address
 }
 
-//Unlock account according to args(address,password)
+// UnlockAccount unlocks account according to args(address,password), if success, return true.
 func (acc *PublicAccountAPI) UnlockAccount(args UnlockParas) (bool, error) {
-	password := string(args.Password)
-	address := common.HexToAddress(args.Address)
 
-	//keydir := "./keystore/"
-	//encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	am := acc.pm.AccountManager
 
-	s := string(args.Address)
+	s := args.Address.Hex()
 	if len(s) > 1 {
 		if s[0:2] == "0x" {
 			s = s[2:]
@@ -66,8 +62,8 @@ func (acc *PublicAccountAPI) UnlockAccount(args UnlockParas) (bool, error) {
 			s = "0" + s
 		}
 	}
-	ac := accounts.Account{Address: address, File: am.KeyStore.JoinPath(s)}
-	err := am.Unlock(ac, password)
+	ac := accounts.Account{Address: args.Address, File: am.KeyStore.JoinPath(s)}
+	err := am.Unlock(ac, args.Password)
 	if err != nil {
 		return false, errors.New("Incorrect address or password!")
 	}
