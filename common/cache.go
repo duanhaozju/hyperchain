@@ -22,7 +22,7 @@ func NewCache() (*Cache, error) {
 func (c *Cache) Purge() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	for k, v := range c.items {
+	for k, _ := range c.items {
 		delete(c.items, k)
 	}
 }
@@ -32,7 +32,7 @@ func (c *Cache) Add(key, value interface{}) bool {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	// Check for existing item
-	if ent, ok := c.items[key]; ok {
+	if _, ok := c.items[key]; ok {
 		c.items[key] = value
 		return false
 	} else {
@@ -65,7 +65,7 @@ func (c *Cache) Remove(key interface{}) bool {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if _, ok := c.items[key]; ok {
-		delete(c, key)
+		delete(c.items, key)
 		return true
 	}
 	return false
