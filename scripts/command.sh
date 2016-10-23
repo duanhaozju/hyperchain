@@ -2,16 +2,16 @@
 ########### tx 服务 ########## （说明：value可以是十六进制字符串、八进制字符串、十进制字符串或整数）
 # 普通交易 SendTransaction
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_sendTransaction","params":[{"from":"0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","to":"0x0000000000000000000000000000000000000003","value":"0x01"}],"id":1}'
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_sendTransaction","params":[{"from":"0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","to":"0x0000000000000000000000000000000000000003","value":1,"signature":"test signature"}],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_sendTransaction","params":[{"from":"0x52be2ed7d2f00ab0a1c4db043ed07ee6dacedaee","to":"0x0000000000000000000000000000000000000003","value":1,"signature":"test signature"}],"id":1}'
 
 # 测试：传送私钥 SendTransactionTest
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_sendTransactionTest","params":[{"from":"0xdac4c37ca97e3c025d7b3580c4a4a4adc096eebf","to":"0x0000000000000000000000000000000000000003","value":1,"privKey":"c2c1149d93f52d586b4ab9d9b634bf9b0221a2f6b78710d58bcbe417482884ca"}],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_sendTransaction","params":[{"from":"0x52be2ed7d2f00ab0a1c4db043ed07ee6dacedaee","to":"0x0000000000000000000000000000000000000003","value":1,"request":10,"privKey":"2717dc3cb5ae0b29f699ada212e69874f28a05305017beda2ff5102c13b8edab"}],"id":1}'
 
 # 根据交易hash查询交易信息 GetTransactionByHash
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByHash","params":["0xe17cdfcbb5e6825a41a823598ba2acaf1ae48b45513aa1ba4e2844bc75ea9e81"],"id":1}'
 
 # 根据区块hash和索引查询交易信息 GetTransactionByBlockHashAndIndex
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByBlockHashAndIndex","params":["0x87dba1c547fbdfec844e56c9ac2f412f2df989ad65a63ecc00fcb6b319f66adf",0],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByBlockHashAndIndex","params":["0x9e330e8890df02d22a7ade73b5060db6651658b676dc9b30e54537853e39c81d",0],"id":1}'
 
 # 根据区块number和索引查询交易信息 GetTransactionsByBlockNumberAndIndex
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByBlockNumberAndIndex","params":[1,0],"id":1}'
@@ -70,7 +70,7 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_queryEvmAvgTime","p
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acc_newAccount","params":["123456"],"id": 1}'
 
 # 解锁账户 UnlockAccount
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acc_unlockAccount","params":[{"address":0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd, "password":"123"}],"id": 1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acc_unlockAccount","params":[{"address":"0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd", "password":"123"}],"id": 1}'
 
 # 获取所有账户信息 GetAccounts
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acc_getAccounts","params":[],"id": 1}'

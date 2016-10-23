@@ -49,7 +49,7 @@ func (acc *PublicAccountAPI) NewAccount(password string) common.Address {
 }
 
 //Unlock account according to args(address,password)
-func (acc *PublicAccountAPI) UnlockAccount(args UnlockParas) error {
+func (acc *PublicAccountAPI) UnlockAccount(args UnlockParas) (bool, error) {
 	password := string(args.Password)
 	address := common.HexToAddress(args.Address)
 
@@ -69,9 +69,9 @@ func (acc *PublicAccountAPI) UnlockAccount(args UnlockParas) error {
 	ac := accounts.Account{Address: address, File: am.KeyStore.JoinPath(s)}
 	err := am.Unlock(ac, password)
 	if err != nil {
-		return errors.New("Incorrect address or password!")
+		return false, errors.New("Incorrect address or password!")
 	}
-	return nil
+	return true, nil
 }
 
 // GetAllBalances returns all account's balance in the db,NOT CACHE DB!
