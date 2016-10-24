@@ -34,12 +34,6 @@ func (s *StateSuite) TestGetAccounts(c *checker.C) {
 	s.state.UpdateStateObject(obj1)
 	s.state.UpdateStateObject(obj2)
 	s.state.Commit()
-
-	ret := s.state.GetAccounts()
-	for k, v := range ret {
-		fmt.Println("account: ", k, v)
-	}
-
 }
 func (s *StateSuite) TestDump(c *checker.C) {
 	// generate a few entries

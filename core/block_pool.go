@@ -347,7 +347,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		begin_time := time.Now()
 		receipt, _, _, _ := ExecTransaction(*tx, vmenv)
-		log.Notice("begin_time----------------",time.Since(begin_time))
+		log.Debug("begin_time----------------",time.Since(begin_time))
 		// save to DB
 		txValue, _ := proto.Marshal(tx)
 		if err := public_batch.Put(append(transactionPrefix, tx.GetTransactionHash().Bytes()...), txValue); err != nil {

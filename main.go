@@ -18,6 +18,10 @@ import (
 	"strconv"
 
 	"github.com/mkideal/cli"
+
+	//_ "net/http/pprof"
+	//"net/http"
+	//"log"
 )
 
 type argT struct {
@@ -47,7 +51,7 @@ func main() {
 		//init db
 		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())
 
-		core.InitEnv()
+		//core.InitEnv()
 		//init genesis
 		core.CreateInitBlock(config.getGenesisConfigPath())
 
@@ -74,6 +78,10 @@ func main() {
 			config.getNodeID())
 
 		go jsonrpc.Start(config.getHTTPPort(), eventMux, pm)
+
+		//go func() {
+		//	log.Println(http.ListenAndServe("localhost:6064", nil))
+		//}()
 
 		<-exist
 
