@@ -313,7 +313,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 			self.blockPool.CommitBlock(ev, self.Peermanager)
 
 		case event.ExeTxsEvent:
-			go self.blockPool.Validate(ev, self.commonHash, self.AccountManager.Encryption)
+			go self.blockPool.Validate(ev, self.commonHash, self.AccountManager.Encryption, self.Peermanager)
 
 		}
 	}

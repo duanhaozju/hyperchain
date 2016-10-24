@@ -19,7 +19,6 @@ import (
 	"strconv"
 
 	"github.com/mkideal/cli"
-
 	//_ "net/http/pprof"
 	//"net/http"
 	//"log"
@@ -52,7 +51,7 @@ func main() {
 		//init db
 		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())
 
-		core.InitEnv()
+		//core.InitEnv()
 		//init genesis
 		core.CreateInitBlock(config.getGenesisConfigPath())
 

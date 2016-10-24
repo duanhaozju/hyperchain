@@ -46,7 +46,6 @@ type BlockPool struct {
 
 	consenter         consensus.Consenter
 	eventMux          *event.TypeMux
-	events            event.Subscription
 	mu                sync.RWMutex
 	seqNoMu           sync.RWMutex
 	validationQueueMu sync.RWMutex
@@ -69,7 +68,6 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *Block
 		consenter:       consenter,
 		queue:           make(map[uint64]*types.Block),
 		validationQueue: make(map[uint64]event.ExeTxsEvent),
-		events:          eventMux.Subscribe(event.NewBlockPoolEvent{}),
 	}
 
 	currentChain := core.GetChainCopy()
@@ -81,7 +79,7 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *Block
 	return pool
 }
 
-//check block sequence and validate in chain
+// Run Serially
 func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash) {
 	if block.Number == 0 {
 		WriteBlock(block, commonHash)
@@ -92,27 +90,27 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 		pool.maxNum = block.Number
 	}
 	if _, ok := pool.queue[block.Number]; ok {
-		log.Info("replated block number,number is: ", block.Number)
+		log.Info("repeat block number,number is: ", block.Number)
 		return
 	}
 
 	log.Info("number is ", block.Number)
 
 	if pool.demandNumber == block.Number {
-		pool.mu.RLock()
+		pool.mu.Lock()
+		WriteBlock(block, commonHash)
 		pool.demandNumber += 1
 		log.Info("current demandNumber is ", pool.demandNumber)
-		WriteBlock(block, commonHash)
-		pool.mu.RUnlock()
+		pool.mu.Unlock()
 
 		for i := block.Number + 1; i <= pool.maxNum; i += 1 {
 			if _, ok := pool.queue[i]; ok {
-				pool.mu.RLock()
+				pool.mu.Lock()
+				WriteBlock(pool.queue[i], commonHash)
 				pool.demandNumber += 1
 				log.Info("current demandNumber is ", pool.demandNumber)
-				WriteBlock(pool.queue[i], commonHash)
+				pool.mu.Unlock()
 				delete(pool.queue, i)
-				pool.mu.RUnlock()
 			} else {
 				break
 			}
@@ -160,10 +158,10 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash) {
 	newChain := core.GetChainCopy()
 	log.Notice("Block number", newChain.Height)
 	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
-
 }
 
-func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption) {
+// Run Parallelly
+func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption, peerManager p2p.PeerManager) {
 	if validationEvent.SeqNo > pool.maxSeqNo {
 		pool.maxSeqNo = validationEvent.SeqNo
 	}
@@ -179,14 +177,14 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 	pool.seqNoMu.RLock()
 	if validationEvent.SeqNo < pool.demandSeqNo {
 		// Receive repeat ValidationEvent
-		log.Error("Receive Repeat ValidationEvent,seqno less than demandseqNo, ", validationEvent.SeqNo)
+		log.Error("Receive Repeat ValidationEvent, seqno less than demandseqNo, ", validationEvent.SeqNo)
 		pool.seqNoMu.RUnlock()
 		return
 	} else if validationEvent.SeqNo == pool.demandSeqNo {
 		// Process
 		pool.seqNoMu.RUnlock()
 		pool.seqNoMu.Lock()
-		if _, success := pool.PreProcess(validationEvent, commonHash, encryption); success {
+		if _, success := pool.PreProcess(validationEvent, commonHash, encryption, peerManager); success {
 			pool.demandSeqNo += 1
 			log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
 		}
@@ -204,7 +202,7 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 			if _, ok := pool.validationQueue[i]; ok {
 				pool.seqNoMu.Lock()
 				// Process
-				if _, success := pool.PreProcess(pool.validationQueue[i], commonHash, encryption); success {
+				if _, success := pool.PreProcess(pool.validationQueue[i], commonHash, encryption, peerManager); success {
 					pool.demandSeqNo += 1
 					log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
 				}
@@ -221,15 +219,14 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 		return
 	} else {
 		pool.seqNoMu.RUnlock()
-		log.Notice("Receive ValidationEvent which is not demand, ", validationEvent.SeqNo, "save into cache temperarily")
+		log.Notice("Receive ValidationEvent which is not demand, ", validationEvent.SeqNo, "save into cache temporarily")
 		pool.validationQueueMu.Lock()
 		pool.validationQueue[validationEvent.SeqNo] = validationEvent
 		pool.validationQueueMu.Unlock()
 	}
 }
 
-func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption) (error, bool) {
-	// check sign and balance
+func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption, peerManager p2p.PeerManager) (error, bool) {
 	var validTxSet []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
 	if validationEvent.IsPrimary {
@@ -237,10 +234,8 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	} else {
 		validTxSet = validationEvent.Transactions
 	}
-	//check balance
 	err, _, merkleRoot, txRoot, receiptRoot, validTxSet, invalidTxSet := pool.ProcessBlockInVm(validTxSet, invalidTxSet, validationEvent.SeqNo)
 	if err != nil {
-		// TODO Clear stateobject cache
 		return err, false
 	}
 	hash := commonHash.Hash([]interface{}{
@@ -249,14 +244,17 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 		receiptRoot,
 	})
 	blockCache, _ := GetBlockCache()
-	blockCache.Record(hash.Hex(), BlockRecord{
-		TxRoot:      txRoot,
-		ReceiptRoot: receiptRoot,
-		MerkleRoot:  merkleRoot,
-		InvalidTxs:  invalidTxSet,
-		ValidTxs:    validTxSet,
-		SeqNo:       validationEvent.SeqNo,
-	})
+
+	if len(invalidTxSet) != 0 {
+		blockCache.Record(hash.Hex(), BlockRecord{
+			TxRoot:      txRoot,
+			ReceiptRoot: receiptRoot,
+			MerkleRoot:  merkleRoot,
+			InvalidTxs:  invalidTxSet,
+			ValidTxs:    validTxSet,
+			SeqNo:       validationEvent.SeqNo,
+		})
+	}
 	log.Info("Invalid Tx number: ", len(invalidTxSet))
 	log.Info("Valid Tx number: ", len(validTxSet))
 	// Communicate with PBFT
@@ -267,10 +265,37 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 		Hash:         hash.Hex(),
 		Timestamp:    validationEvent.Timestamp,
 	})
+
+	// empty block generated, throw all invalid transactions back to original node directly
+	if validationEvent.IsPrimary && len(validTxSet) == 0 {
+		for _, t := range invalidTxSet {
+			payload, err := proto.Marshal(t)
+			if err != nil {
+				log.Error("Marshal tx error")
+			}
+			message := &recovery.Message{
+				MessageType:  recovery.Message_INVALIDRESP,
+				MsgTimeStamp: time.Now().UnixNano(),
+				Payload:      payload,
+			}
+			broadcastMsg, err := proto.Marshal(message)
+			if err != nil {
+				log.Error("Marshal Message")
+			}
+			if t.Tx.Id == uint64(peerManager.GetNodeId()) {
+				pool.StoreInvalidResp(event.RespInvalidTxsEvent{
+					Payload: broadcastMsg,
+				})
+				continue
+			}
+			var peers []uint64
+			peers = append(peers, t.Tx.Id)
+			peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_INVALIDRESP)
+		}
+	}
 	return nil, true
 }
 func (pool *BlockPool) CheckSign(txs []*types.Transaction, commonHash crypto.CommonHash, encryption crypto.Encryption) ([]*types.Transaction, []*types.InvalidTransactionRecord) {
-	//check sign
 	var validTxSet []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
 	// (1) check signature for each transaction
@@ -292,7 +317,6 @@ func (pool *BlockPool) CheckSign(txs []*types.Transaction, commonHash crypto.Com
 func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, []byte, []byte, []byte, []byte, []*types.Transaction, []*types.InvalidTransactionRecord) {
 	var validtxs []*types.Transaction
 	var (
-		//receipts types.Receipts
 		env = make(map[string]string)
 	)
 	db, err := hyperdb.GetLDBDatabase()
@@ -383,6 +407,12 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerMana
 				broadcastMsg, err := proto.Marshal(message)
 				if err != nil {
 					log.Error("Marshal Message")
+				}
+				if t.Tx.Id == uint64(peerManager.GetNodeId()) {
+					pool.StoreInvalidResp(event.RespInvalidTxsEvent{
+						Payload: broadcastMsg,
+					})
+					continue
 				}
 				var peers []uint64
 				peers = append(peers, t.Tx.Id)
