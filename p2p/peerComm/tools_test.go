@@ -13,7 +13,6 @@ import (
 
 func TestGetIpLocalIpAddr(t *testing.T) {
 	if assert.IsType(t, string(""), GetLocalIp()) {
-
 	} else {
 		t.Fail()
 	}
