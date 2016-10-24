@@ -83,7 +83,7 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 	} else {
 		getAccount_time := time.Now()
 		sender = vmenv.Db().GetAccount(*from)
-		log.Notice("getAccount_time is",time.Since(getAccount_time))
+		log.Debug("getAccount_time is",time.Since(getAccount_time))
 	}
 	contractCreation := (nil == to)
 
