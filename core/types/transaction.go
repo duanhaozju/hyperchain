@@ -167,7 +167,8 @@ contract mortal {
 
 func NewTestCallTransaction() *Transaction {
 	// it is the input of function add(uint32 num1,uint32 num2)
-	var input = common.FromHex("0x962b8398")
+	var input = common.FromHex("0x8da9b772")
+	//var input = common.FromHex("0x962b8398")
 
 	// it is the input of function increment()
 	//var input = common.FromHex("0xd09de08a")

@@ -108,7 +108,9 @@ func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.
 		receipt *types.Receipt
 		err error
 		ret []byte
-		testNum = 1
+		testCreateNum = 10
+		testCallNum = 10
+		testTransferNum = 10
 	)
 	//vm.Precompiled = vm.PrecompiledContracts()
 	vmenv := core.GetVMEnv()
@@ -118,25 +120,38 @@ func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.
 	state.AddBalance(common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec3"),big.NewInt(100000))
 
 	// create a new contract
-	log.Debug("create the contract--------------------------")
+	log.Debug("Create the contract-------------------------------------------------------------------------------")
+	receipt,ret,addr,err =core.ExecTransaction(*types.NewTestCreateTransaction(),vmenv)
 	now_time := time.Now()
-	for i := 0;i<testNum;i++{
+	for i := 0;i<testCreateNum;i++{
 		receipt,ret,addr,err =core.ExecTransaction(*types.NewTestCreateTransaction(),vmenv)
+		log.Debug("Create**********************************",i)
+		log.Debug("----------addr",common.ToHex(addr.Bytes()))
+		log.Debug("the nonce of account is ",state.GetNonce(common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec3")))
+		log.Debug("receipt",receipt.Ret)
 	}
-	log.Debug("the create contract time we used is ",time.Now().Sub(now_time))
-	log.Debug("----------addr",common.ToHex(addr.Bytes()))
-	log.Debug("the nonce of account is ",state.GetNonce(common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6")))
-	log.Debug("receipt",receipt.Ret)
+	log.Infof("the create contract time we used is ",time.Now().Sub(now_time))
 
-	log.Debug("create the contract--------------------------")
+	log.Debug("Call the contract-------------------------------------------------------------------------------")
 	now_time = time.Now()
-	for i := 0;i<testNum;i++{
+	for i := 0;i<testCallNum;i++{
+		log.Debug("Call**********************************",i)
 		tx := types.NewTestCallTransaction()
 		tx.To = addr.Bytes()
 		receipt,ret,_,_ = core.ExecTransaction(*tx,vmenv)
 	}
-	//state.GetAccount(addr).PrintStorages()
-	log.Debug("the call contract time we used is ",time.Now().Sub(now_time))
+	log.Infof("the call contract time we used is ",time.Now().Sub(now_time))
+	log.Debug("receipt",receipt.Ret)
 
+	log.Debug("Transfer the Balance-------------------------------------------------------------------------------")
+	now_time = time.Now()
+	for i := 0;i<testTransferNum;i++{
+		tx := types.NewTestCallTransaction()
+		tx.Value = nil
+		tx.To = addr.Bytes()
+		receipt,ret,addr,err =core.ExecTransaction(*tx,vmenv)
+		log.Debug("Transfer**********************************",i)
+	}
+	log.Infof("the Transfer Balance time we used is ",time.Now().Sub(now_time))
 	return ret, vmenv.State().Logs(), vmenv.Gas, err
 }
