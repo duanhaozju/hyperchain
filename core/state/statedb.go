@@ -8,6 +8,7 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/trie"
 	"math/big"
+	lru "github.com/hashicorp/golang-lru"
 )
 
 var log *logging.Logger // package-level logger
@@ -19,6 +20,10 @@ func init() {
 // created.
 var StartingNonce uint64
 
+const (
+	// Number of codehash->size associations to keep
+	codeSizeCacheSize = 10000
+)
 // StateDBs within the ethereum protocol are used to store anything
 // within the merkle trie. StateDBs take care of caching and storing
 // nested states. It's the general query interface to retrieve:
@@ -27,6 +32,8 @@ var StartingNonce uint64
 type StateDB struct {
 	db               hyperdb.Database
 	trie             *trie.SecureTrie
+
+	codeSizeCache	*lru.Cache
 	stateObjects     map[string]*StateObject
 	refund           *big.Int
 	thash, bhash     common.Hash
