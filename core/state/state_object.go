@@ -245,8 +245,8 @@ func (self *StateObject) EncodeObject() ([]byte, error) {
 		CodeHash:    self.codeHash,
 		Abi:         self.abi,
 	}
-	self.trie.CommitTo(self.db)
-	self.db.Put(self.codeHash, self.code)
+	//self.trie.CommitTo(self.db)
+	//self.db.Put(self.codeHash, self.code)
 	return json.Marshal(ext)
 }
 

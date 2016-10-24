@@ -19,6 +19,10 @@ import (
 	"strconv"
 
 	"github.com/mkideal/cli"
+
+	//_ "net/http/pprof"
+	//"net/http"
+	//"log"
 )
 
 type argT struct {
@@ -75,6 +79,10 @@ func main() {
 			config.getNodeID())
 
 		go jsonrpc.Start(config.getHTTPPort(), eventMux, pm)
+
+		//go func() {
+		//	log.Println(http.ListenAndServe("localhost:6064", nil))
+		//}()
 
 		<-exist
 
