@@ -37,10 +37,10 @@ type Node struct {
 	gRPCServer         *grpc.Server
 	higherEventManager *event.TypeMux
 	//common information
-	TEM transport.TransportEncryptManager
-	IsPrimary bool
-	DelayTable map[uint64]int64
-	DelayTableMutx sync.Mutex
+	TEM                transport.TransportEncryptManager
+	IsPrimary          bool
+	DelayTable         map[uint64]int64
+	DelayTableMutex    sync.Mutex
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
@@ -80,9 +80,9 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	//review decrypt
 	log.Debug("消息类型", msg.MessageType)
 	go func (){
-		this.DelayTableMutx.Lock()
+		this.DelayTableMutex.Lock()
 		this.DelayTable[msg.From.ID] = time.Now().UnixNano() - msg.MsgTimeStamp
-		this.DelayTableMutx.Unlock()
+		this.DelayTableMutex.Unlock()
 	}()
 	switch msg.MessageType {
 	case pb.Message_HELLO:

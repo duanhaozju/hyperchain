@@ -19,17 +19,19 @@ import (
 	"github.com/golang/protobuf/proto"
 	"encoding/hex"
 	"github.com/stretchr/testify/assert"
+	"hyperchain/membersrvc"
 )
 var fakeNodeTEM = transport.NewHandShakeManger()
-var fakeNode = node.NewNode(8001,new(event.TypeMux),1,fakeNodeTEM)
-var fakeNodeAddr =peerComm.ExtractAddress(peerComm.GetLocalIp(),8001,1)
+var fakeNode = node.NewNode(8123,new(event.TypeMux),1,fakeNodeTEM)
+var fakeNodeAddr =peerComm.ExtractAddress(peerComm.GetLocalIp(),8123,1)
 
 
-var localAddr = peerComm.ExtractAddress(peerComm.GetLocalIp(),8002,2)
+var localAddr = peerComm.ExtractAddress(peerComm.GetLocalIp(),8124,2)
 var localTEM = transport.NewHandShakeManger()
 
 func init(){
 	fakeNode.StartServer()
+	membersrvc.LoadConfig("$GOPATH/src/hyperchain/config/membersrvc.yaml")
 }
 
 func TestNewPeerByIpAndPort(t *testing.T) {

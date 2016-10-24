@@ -108,7 +108,7 @@ func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.Transpo
 // which implements the service that prototype file declares
 //
 func (this *Peer) Chat(msg pb.Message) (*pb.Message, error) {
-	log.Debug("调用了广播方法", msg.From.ID, ">>>", this.Addr.ID)
+	log.Debug("Invoke the broadcast method", msg.From.ID, ">>>", this.Addr.ID)
 	this.chatMux.Lock()
 	defer this.chatMux.Unlock()
 	msg.Payload = this.TEM.EncWithSecret(msg.Payload, this.Addr.Hash)
