@@ -98,7 +98,7 @@ func ReadSourceFromFile(filePath string) (string){
 
 func NewTestCreateTransaction() *Transaction {
 	// it is the code of hyperchain/core/vm/tests/solidity_files/example3.solc
-	_,bins,_,err := compiler.CompileSourcefile(ReadSourceFromFile("/Users/zhuohaizhen/golang/src/hyperchain/core/vm/tests/solidity_files/test.solc"))
+	_,bins,_,err := compiler.CompileSourcefile(ReadSourceFromFile("/usr/local/golang/src/hyperchain/core/vm/tests/solidity_files/test.solc"))
 	if err!=nil{
 		log.Errorf("the compiled source has error")
 		return nil
