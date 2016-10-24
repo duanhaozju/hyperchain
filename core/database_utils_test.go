@@ -7,7 +7,6 @@ import (
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
 	"os"
-	"strconv"
 	"testing"
 	"time"
 	"github.com/golang/protobuf/proto"
@@ -49,7 +48,7 @@ func isDirExists(path string) bool {
 // TestInitDB tests for InitDB
 func TestInitDB(t *testing.T) {
 	log.Info("test =============> > > TestInitDB")
-	InitDB(2048)
+	InitDB("/tmp",8001)
 	hyperdb.GetLDBDatabase()
 }
 
@@ -60,8 +59,9 @@ func TestPutTransaction(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	for i, trans := range transactionCases {
-		key := []byte("key" + strconv.Itoa(i))
+	commonHash := crypto.NewKeccak256Hash("keccak256")
+	for _, trans := range transactionCases {
+		key := trans.Hash(commonHash).Bytes()
 		err = PutTransaction(db, key, trans)
 		if err != nil {
 			log.Fatal(err)
@@ -76,8 +76,10 @@ func TestGetTransaction(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	for i, trans := range transactionCases {
-		key := []byte("key" + strconv.Itoa(i))
+	commonHash := crypto.NewKeccak256Hash("keccak256")
+	PutTransactions(db, commonHash, transactionCases)
+	for _, trans := range transactionCases {
+		key := trans.Hash(commonHash).Bytes()
 		tr, err := GetTransaction(db, key)
 		if err != nil {
 			log.Fatal(err)
@@ -89,15 +91,28 @@ func TestGetTransaction(t *testing.T) {
 }
 
 func TestGetTransactionBLk(t *testing.T) {
+	InitDB("/tmp",8001)
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
-	block, err := GetBlockByNumber(db, 5)
-	fmt.Println("tx hash", block.Transactions[2].BuildHash())
-	tx := block.Transactions[2]
-	bh, bn, i := GetTxWithBlock(db, tx.BuildHash().Bytes())
-	fmt.Println("block hash", bh, "block num :", bn, "tx index:", i)
+	err = PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
+	commonHash := crypto.NewKeccak256Hash("keccak256")
+	PutTransactions(db, commonHash, transactionCases)
+	if err != nil {
+		log.Fatal(err)
+	}
+	block, err := GetBlockByNumber(db, 1)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(block.Transactions)>0{
+		fmt.Println("tx hash", block.Transactions[0].BuildHash())
+		tx := block.Transactions[0]
+		bn, i := GetTxWithBlock(db, tx.BuildHash().Bytes())
+		fmt.Println("block num :", bn, "tx index:", i)
+	}
+
 }
 
 // TestGetAllTransaction tests for GetAllTransaction
@@ -107,10 +122,9 @@ func TestGetAllTransaction(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	commonHash := crypto.NewKeccak256Hash("keccak256")
+	PutTransactions(db, commonHash, transactionCases)
 	trs, err := GetAllTransaction(db)
-	if err != nil {
-		log.Fatal(err)
-	}
 	for _, trans := range trs {
 		isPass := false
 		if string(trans.Signature) == "signature1" ||
@@ -131,8 +145,10 @@ func TestDeleteTransaction(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	for i, _ := range transactionCases {
-		key := []byte("key" + strconv.Itoa(i))
+	for _, trans := range transactionCases {
+		commonHash := crypto.NewKeccak256Hash("keccak256")
+		key := trans.Hash(commonHash).Bytes()
+		PutTransaction(db,key,trans)
 		DeleteTransaction(db, key)
 		_, err := GetTransaction(db, key)
 		if err != leveldb.ErrNotFound {
@@ -198,6 +214,10 @@ func TestGetBlock(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	err = PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
+	if err != nil {
+		log.Fatal(err)
+	}
 	block, err := GetBlock(db, blockUtilsCase.BlockHash)
 	if err != nil {
 		log.Fatal(err)
@@ -223,7 +243,6 @@ func TestDeleteBlock(t *testing.T) {
 	err = DeleteBlock(db, blockUtilsCase.BlockHash)
 	//err = DeleteBlockByNum(db, 1)
 	block, err = GetBlock(db, blockUtilsCase.BlockHash)
-	fmt.Println(block.Number)
 	if err != leveldb.ErrNotFound {
 		t.Errorf("block delete fail, TestDeleteBlock fail")
 	}
@@ -239,6 +258,7 @@ var blockHashcases = [][]byte{
 // TestUpdateChain tests for UpdateChain
 func TestUpdateChain(t *testing.T) {
 	log.Info("test =============> > > TestUpdateChain")
+	InitDB("/tmp",8001)
 	UpdateChain(&blockUtilsCase, false)
 	lasthash := GetLatestBlockHash()
 	parentHash := GetParentBlockHash()
@@ -251,6 +271,7 @@ func TestUpdateChain(t *testing.T) {
 }
 
 func TestGetReplicas(t *testing.T) {
+	InitDB("/tmp",8001)
 	replicas := make([]uint64, 10)
 	for i := 0; i < 10; i += 1 {
 		replicas[i] = uint64(i)
@@ -260,6 +281,7 @@ func TestGetReplicas(t *testing.T) {
 }
 
 func TestGetId(t *testing.T) {
+	InitDB("/tmp",8001)
 	SetId(uint64(100))
 	t.Log(GetId())
 }
@@ -279,18 +301,4 @@ func TestGetInvaildTx(t *testing.T) {
 	fmt.Println(result)
 
 }
-
-//func TestUpdate(t *testing.T) {
-//	InitDB(8000)
-//	db, _ := hyperdb.GetLDBDatabase()
-//	err := PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//	UpdateChain(&blockUtilsCase, false)
-//	height := GetHeightOfChain()
-//	fmt.Println(height)
-//	block,_ := GetBlockByNumber(db,height)
-//	fmt.Println(block.Transactions[0])
-//}
 

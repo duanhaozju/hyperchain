@@ -11,7 +11,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"reflect"
 	"sync"
 	"time"
 )
@@ -222,24 +221,4 @@ func zeroKey(k *ecdsa.PrivateKey) {
 	for i := range b {
 		b[i] = 0
 	}
-}
-
-func ValidateAddr(from []byte) bool {
-	var accounts []Account
-	keydir, _ := filepath.Abs("./keystore")
-	accounts = getAllAccount(keydir)
-	addr := common.HexToAddress(string(from))
-	ac := Account{
-		Address: addr,
-		File:    keydir + "/" + string(from),
-	}
-	for _, account := range accounts {
-		if reflect.DeepEqual(ac, account) {
-			return true
-		}
-	}
-	//if _,found := am.unlocked[addr];found{
-	//	return true
-	//}
-	return false
 }

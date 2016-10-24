@@ -7,7 +7,6 @@ package crypto
 import (
 	"testing"
 
-	"fmt"
 )
 
 
@@ -17,8 +16,6 @@ func TestEncryption(t *testing.T){
 	//encryption.GetKey()
 	encryption.GenerateNodeKey("123","../keystore/")
 	//key ,_ := encryption.GetNodeKey("../keystore/")
-
-	fmt.Print(encryption.port)
 
 
 

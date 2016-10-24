@@ -113,6 +113,10 @@ func storeNewAddrToFile(a Account) error {
 	addr := hex.EncodeToString(a.Address[:])+"\n"
 	dir := filepath.Dir(a.File)
 	file := dir+"/addresses/address"
+	const dirPerm = 0777
+	if err := os.MkdirAll(filepath.Dir(file), dirPerm); err != nil {
+		return err
+	}
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_RDWR,0600)
 	if err != nil {
 		return err

@@ -9,8 +9,12 @@ import (
 
 	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
+	"github.com/op/go-logging"
 )
-
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("jsonrpc")
+}
 const (
 	stopPendingRequestTimeout = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
 

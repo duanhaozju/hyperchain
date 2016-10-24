@@ -3,7 +3,13 @@ package core
 import (
 	"hyperchain/core/types"
 	"sync"
+	"github.com/op/go-logging"
 )
+
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("core")
+}
 
 type BlockRecord struct {
 	TxRoot      []byte
@@ -13,7 +19,12 @@ type BlockRecord struct {
 	ValidTxs    []*types.Transaction
 	SeqNo       uint64
 }
+type stateType int32
 
+const (
+	closed stateType = iota // the instance is closed (be not)
+	opened
+)
 type Data map[string]BlockRecord
 
 type BlockCache struct {
