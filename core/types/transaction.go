@@ -9,8 +9,6 @@ import (
 	"time"
 	"os"
 	"io/ioutil"
-	"hyperchain/core/vm/compiler"
-	"github.com/labstack/gommon/log"
 )
 
 func (self *Transaction) BuildHash() common.Hash {
@@ -98,15 +96,15 @@ func ReadSourceFromFile(filePath string) (string){
 
 func NewTestCreateTransaction() *Transaction {
 	// it is the code of hyperchain/core/vm/tests/solidity_files/example3.solc
-	_,bins,_,err := compiler.CompileSourcefile(ReadSourceFromFile("/usr/local/golang/src/hyperchain/core/vm/tests/solidity_files/test.solc"))
+	/*_,bins,_,err := compiler.CompileSourcefile(ReadSourceFromFile("hyperchain/core/vm/tests/solidity_files/test.solc"))
 	if err!=nil{
 		log.Errorf("the compiled source has error")
 		return nil
-	}
+	}*/
 
-	var code = bins[0]
+	//var code = bins[0]
 	// it is the code of hyperchain/core/vm/tests/solidity_files/example1.solc
-	//var code = "0x60606040526000805463ffffffff191681557f6162636465666768696a6b6c6d6e6f707172737475767778797a00000000000060015560be90819061004390396000f3606060405260e060020a60003504633ad14af381146038578063569c5f6d14605c5780638da9b77214606b578063d09de08a146074575b005b6000805463ffffffff8116600435016024350163ffffffff19919091161790556036565b609260005463ffffffff165b90565b60ac6001546068565b60366000805463ffffffff19811663ffffffff909116600101179055565b6040805163ffffffff929092168252519081900360200190f35b60408051918252519081900360200190f3"
+	var code = "0x60606040526000805463ffffffff191681557f6162636465666768696a6b6c6d6e6f707172737475767778797a00000000000060015560be90819061004390396000f3606060405260e060020a60003504633ad14af381146038578063569c5f6d14605c5780638da9b77214606b578063d09de08a146074575b005b6000805463ffffffff8116600435016024350163ffffffff19919091161790556036565b609260005463ffffffff165b90565b60ac6001546068565b60366000805463ffffffff19811663ffffffff909116600101179055565b6040805163ffffffff929092168252519081900360200190f35b60408051918252519081900360200190f3"
 	var tx_value1 = &TransactionValue{Price: 100000, GasLimit: 100000, Amount: 100, Payload: common.FromHex(code)}
 	value, _ := proto.Marshal(tx_value1)
 	transaction := &Transaction{

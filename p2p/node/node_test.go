@@ -20,8 +20,6 @@ import (
 	"encoding/hex"
 	hypermessage "hyperchain/protos"
 	"github.com/golang/protobuf/proto"
-	"hyperchain/membersrvc"
-	"github.com/hyperledger/fabric/core/config"
 )
 
 var testNode *Node
