@@ -20,18 +20,27 @@ import (
 	"encoding/hex"
 	"github.com/stretchr/testify/assert"
 	"hyperchain/membersrvc"
+
 )
-var fakeNodeTEM = transport.NewHandShakeManger()
-var fakeNode = node.NewNode(8123,new(event.TypeMux),1,fakeNodeTEM)
-var fakeNodeAddr =peerComm.ExtractAddress(peerComm.GetLocalIp(),8123,1)
 
 
-var localAddr = peerComm.ExtractAddress(peerComm.GetLocalIp(),8124,2)
-var localTEM = transport.NewHandShakeManger()
+var fakeNodeTEM *transport.HandShakeManager
+var fakeNode  *node.Node
+var fakeNodeAddr *pb.PeerAddress
+var localAddr *pb.PeerAddress
+var localTEM *transport.HandShakeManager
+
+
+
 
 func init(){
+	membersrvc.Start("../../config/test/local_membersrvc.yaml", 1)
+	fakeNodeTEM = transport.NewHandShakeManger()
+	fakeNode = node.NewNode(8123,new(event.TypeMux),1,fakeNodeTEM)
+	fakeNodeAddr =peerComm.ExtractAddress(peerComm.GetLocalIp(),8123,1)
+	localAddr = peerComm.ExtractAddress(peerComm.GetLocalIp(),8124,2)
+	localTEM = transport.NewHandShakeManger()
 	fakeNode.StartServer()
-	membersrvc.LoadConfig("$GOPATH/src/hyperchain/config/membersrvc.yaml")
 }
 
 func TestNewPeerByIpAndPort(t *testing.T) {
