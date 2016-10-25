@@ -25,6 +25,8 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionReceipt"
 # 获取所有交易 GetTransactions
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactions","params":[],"id":1}'
 
+# 获取所有失败交易 GetDiscardTransactions
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getDiscardTransactions","params":[],"id":1}'
 
 ########## contract 服务 ##########
 #　部署合约 DeployContract
@@ -44,7 +46,7 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getContractCoun
 
 ########## block 服务 ##########
 # 得到最新区块 LastestBlock
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_lastestBlock","params":[],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_latestBlock","params":[],"id":1}'
 
 # 得到所有区块 GetBlocks
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params":[{}],"id":1}'

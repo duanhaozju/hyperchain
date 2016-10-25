@@ -11,7 +11,7 @@ function SummaryService($resource,$q,ENV) {
                         method:"POST"
                     }
                 }).getBlock({
-                    method: "block_lastestBlock",
+                    method: "block_latestBlock",
                     id: 1
                 },function(res){
                     if (res.error) {
@@ -99,6 +99,7 @@ function BlockService($resource,$q,ENV) {
                     }
                 }).getBlock({
                     method: "block_getBlocks",
+                    params: [{}],
                     id: 1
                 },function(res){
                     if (res.error) {

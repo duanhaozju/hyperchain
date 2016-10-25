@@ -61,10 +61,12 @@ type TransactionResult struct {
 	From        common.Address `json:"from"`
 	To          common.Address `json:"to"`
 	Amount      *Number        `json:"amount"`
-	Gas         *Number        `json:"gas"`
-	GasPrice    *Number        `json:"gasPrice"`
-	Timestamp   string         `json:"timestamp"`
+	//Gas         *Number        `json:"gas"`
+	//GasPrice    *Number        `json:"gasPrice"`
+	Timestamp   int64         `json:"timestamp"`
 	ExecuteTime *Number        `json:"executeTime"`
+	Invalid     bool           `json:"invalid"`
+	InvalidMsg  string	   `json:"invalidMsg"`
 }
 
 func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase) *PublicTransactionAPI {
@@ -213,9 +215,11 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 			}
 
 			tx.TransactionHash = tx.BuildHash().Bytes()
-			// Unsign
+			// Unsign Test
 			if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
-				return common.Hash{}, errors.New("invalid signature")
+				log.Error("invalid signature")
+				// 不要返回，因为要将失效交易存到db中
+				//return common.Hash{}, errors.New("invalid signature")
 			}
 
 			txBytes, err := proto.Marshal(tx)
@@ -271,9 +275,11 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				}
 
 				tx.TransactionHash = tx.BuildHash().Bytes()
-				// Unsign
+				// Unsign Test
 				if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
-					return common.Hash{}, errors.New("invalid signature")
+					log.Error("invalid signature")
+					// 不要返回，因为要将失效交易存到db中
+					//return common.Hash{}, errors.New("invalid signature")
 				}
 
 				txBytes, err := proto.Marshal(tx)
@@ -317,12 +323,11 @@ func (tran *PublicTransactionAPI) GetTransactions() ([]*TransactionResult, error
 
 	if err != nil {
 		log.Errorf("GetAllTransaction error: %v", err)
+		return nil, err
 	}
 
 	var transactions []*TransactionResult
 
-	log.Info("========== tx count ======= ", len(txs))
-	// TODO 1.得到交易所在的区块哈希 2.取出 tx.Value 中的 amount
 	for _, tx := range txs {
 		if ts, err := outputTransaction(tx, tran.db); err !=  nil {
 			return nil, err
@@ -333,6 +338,30 @@ func (tran *PublicTransactionAPI) GetTransactions() ([]*TransactionResult, error
 
 	return transactions, nil
 }
+
+func (tran *PublicTransactionAPI) GetDiscardTransactions() ([]*TransactionResult, error) {
+
+	reds, err := core.GetAllDiscardTransaction(tran.db)
+
+	if err != nil {
+		log.Errorf("GetAllDiscardTransaction error: %v", err)
+		return nil, err
+	}
+
+	var transactions []*TransactionResult
+
+	for _, red := range reds {
+		log.Notice(red.Tx.TransactionHash)
+		if ts, err := outputTransaction(red, tran.db); err !=  nil {
+			return nil, err
+		} else {
+			transactions = append(transactions,ts)
+		}
+	}
+
+	return transactions, nil
+}
+
 
 // GetTransactionByHash returns the transaction for the given transaction hash.
 func (tran *PublicTransactionAPI) GetTransactionByHash(hash common.Hash) (*TransactionResult, error) {
@@ -439,10 +468,21 @@ func (tran *PublicTransactionAPI) GetBlockTransactionCountByHash(hash common.Has
 //	return tx.SighHash(kec256Hash)
 //}
 
-func outputTransaction(tx *types.Transaction, db *hyperdb.LDBDatabase) (*TransactionResult, error) {
-	log.Debug("====== enter outputTransaction")
+//func outputTransaction(tx *types.Transaction, db *hyperdb.LDBDatabase) (*TransactionResult, error) {
+func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*TransactionResult, error) {
+
 	var txValue types.TransactionValue
 	var blk *types.Block
+
+	var tx *types.Transaction
+	var red *types.InvalidTransactionRecord
+
+	tx, found := trans.(*types.Transaction)
+
+	if found == false {
+		red = trans.(*types.InvalidTransactionRecord)
+		tx = red.Tx
+	}
 
 	txHash := tx.GetTransactionHash()
 
@@ -458,7 +498,7 @@ func outputTransaction(tx *types.Transaction, db *hyperdb.LDBDatabase) (*Transac
 		return nil, err
 	}
 
-	return &TransactionResult{
+	txRes := &TransactionResult{
 		Hash: 		txHash,
 		BlockNumber: 	NewUint64ToNumber(bn),
 		BlockHash: 	common.BytesToHash(blk.BlockHash),
@@ -466,9 +506,19 @@ func outputTransaction(tx *types.Transaction, db *hyperdb.LDBDatabase) (*Transac
 		From: 		common.BytesToAddress(tx.From),
 		To: 		common.BytesToAddress(tx.To),
 		Amount: 	NewInt64ToNumber(txValue.Amount),
-		Gas: 		NewInt64ToNumber(txValue.GasLimit),
-		GasPrice: 	NewInt64ToNumber(txValue.Price),
-		Timestamp: 	time.Unix(tx.Timestamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+		//Gas: 		NewInt64ToNumber(txValue.GasLimit),
+		//GasPrice: 	NewInt64ToNumber(txValue.Price),
+		Timestamp: 	tx.Timestamp/1e6,
 		ExecuteTime:	NewInt64ToNumber((blk.WriteTime - tx.Timestamp) / int64(time.Millisecond)),
-	}, nil
+		Invalid:	false,
+	}
+
+	if red == nil {
+		txRes.Invalid = false
+	} else {
+		txRes.Invalid = true
+		txRes.InvalidMsg = red.ErrType.String()
+	}
+
+	return txRes, nil
 }

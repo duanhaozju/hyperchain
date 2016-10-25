@@ -142,6 +142,27 @@ func GetAllTransaction(db *hyperdb.LDBDatabase) ([]*types.Transaction, error) {
 	return ts, err
 }
 
+func GetAllDiscardTransaction(db *hyperdb.LDBDatabase) ([]*types.InvalidTransactionRecord, error) {
+	var ts []*types.InvalidTransactionRecord = make([]*types.InvalidTransactionRecord, 0)
+	iter := db.NewIterator()
+	for ok := iter.Seek(InvalidTransactionPrefix); ok; ok = iter.Next() {
+		key := iter.Key()
+		log.Notice(key[len(InvalidTransactionPrefix):])
+		if len(string(key)) >= len(InvalidTransactionPrefix) && string(key[:len(InvalidTransactionPrefix)]) == string(InvalidTransactionPrefix) {
+			var t types.InvalidTransactionRecord
+			value := iter.Value()
+			proto.Unmarshal(value, &t)
+			log.Notice(t.Tx.TransactionHash)
+			ts = append(ts, &t)
+		} else {
+			break
+		}
+	}
+	iter.Release()
+	err := iter.Error()
+	return ts, err
+}
+
 //-- --------------------- Transaction END -----------------------------------
 
 //-- ------------------- Block ---------------------------------
