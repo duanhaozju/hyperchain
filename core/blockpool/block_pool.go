@@ -81,7 +81,9 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *Block
 	return pool
 }
 
-// Run Parallelly
+// Validate is an entry of `validate process`
+// When a validationEvent received, put it into the validationQueue
+// If the demand ValidationEvent arrived, call `PreProcess` function
 func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption, peerManager p2p.PeerManager) {
 	if validationEvent.SeqNo > pool.maxSeqNo {
 		pool.maxSeqNo = validationEvent.SeqNo
@@ -147,6 +149,7 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 	}
 }
 
+// Process an ValidationEvent
 func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption, peerManager p2p.PeerManager) (error, bool) {
 	var validTxSet []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
@@ -216,6 +219,8 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	}
 	return nil, true
 }
+
+// check the sender's signature of the transaction
 func (pool *BlockPool) CheckSign(txs []*types.Transaction, commonHash crypto.CommonHash, encryption crypto.Encryption) ([]*types.Transaction, []*types.InvalidTransactionRecord) {
 	var validTxSet []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
@@ -234,7 +239,8 @@ func (pool *BlockPool) CheckSign(txs []*types.Transaction, commonHash crypto.Com
 	return validTxSet, invalidTxSet
 }
 
-// Put block into evm and run
+// Put all transactions into the virtual machine and execute
+// Return the execution result, such as txs' merkle root, receipts' merkle root, accounts' merkle root and so on
 func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, []byte, []byte, []byte, []byte, []*types.Transaction, []*types.InvalidTransactionRecord) {
 	var validtxs []*types.Transaction
 	var (
@@ -278,7 +284,17 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		if err := public_batch.Put(append(core.ReceiptsPrefix, receipt.TxHash...), receiptValue); err != nil {
 			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
-
+		// set temporarily
+		// for primary node, the seqNo can be invalid. remove the incorrect txmeta info when commit block to avoid this error
+		meta := &types.TransactionMeta{
+			BlockIndex: seqNo,
+			Index:      int64(i),
+		}
+		metaValue, _ := proto.Marshal(meta)
+		if err := public_batch.Put(append(tx.GetTransactionHash().Bytes(), core.TxMetaSuffix...), metaValue); err != nil {
+			log.Error("Put txmeta into database failed! error msg, ", err.Error())
+			return err, nil, nil, nil, nil, nil, invalidTxs
+		}
 		// Update trie
 		txTrie.Update(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...), txValue)
 		receiptTrie.Update(append(core.ReceiptsPrefix, receipt.TxHash...), receiptValue)
@@ -294,16 +310,16 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
 }
 
-// write block into db
+// When receive an CommitOrRollbackBlockEvent, if flag is true, generate a block and call AddBlock function
+// CommitBlock function is just an entry of the commit logic
 func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHash crypto.CommonHash, peerManager p2p.PeerManager) {
 	blockCache, _ := GetBlockCache()
 	record := blockCache.Get(ev.Hash)
 	if ev.Flag {
-		// 1.init a new block
+		// 1.generate a new block with the argument in cache
 		newBlock := new(types.Block)
-		for _, tx := range record.ValidTxs {
-			newBlock.Transactions = append(newBlock.Transactions, tx)
-		}
+		newBlock.Transactions = make([]*types.Transaction, len(record.ValidTxs))
+		copy(newBlock.Transactions, record.ValidTxs)
 		currentChain := core.GetChainCopy()
 		newBlock.ParentHash = currentChain.LatestBlockHash
 		newBlock.MerkleRoot = record.MerkleRoot
@@ -316,8 +332,9 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHa
 		newBlock.EvmTime = time.Now().UnixNano()
 		newBlock.BlockHash = newBlock.Hash(commonHash).Bytes()
 
+		vid := record.SeqNo
 		// 2.save block and update chain
-		pool.AddBlock(newBlock, commonHash)
+		pool.AddBlock(newBlock, commonHash, vid, ev.IsPrimary)
 		// 3.throw invalid tx back to origin node if current peer is primary
 		if ev.IsPrimary {
 			for _, t := range record.InvalidTxs {
@@ -346,7 +363,10 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHa
 			}
 		}
 	} else {
-		// TODO
+		// this branch will never activated
+		// instead of send an CommitOrRollbackBlockEvent with `false` flag, PBFT send a `viewchange` or `self recovery`
+		// message to handle this issue
+		// TODO remove this branch
 		db, _ := hyperdb.GetLDBDatabase()
 		for _, t := range record.InvalidTxs {
 			db.Delete(append(core.TransactionPrefix, t.Tx.GetTransactionHash().Bytes()...))
@@ -356,10 +376,10 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHa
 	blockCache.Delete(ev.Hash)
 }
 
-// Run Serially
-func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash) {
+// Put a new generated block into pool, handle the block saved in queue serially
+func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, primary bool) {
 	if block.Number == 0 {
-		WriteBlock(block, commonHash)
+		WriteBlock(block, commonHash, 0, false)
 		return
 	}
 
@@ -375,7 +395,7 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 
 	if pool.demandNumber == block.Number {
 		pool.mu.Lock()
-		WriteBlock(block, commonHash)
+		WriteBlock(block, commonHash, vid, primary)
 		pool.demandNumber += 1
 		log.Info("current demandNumber is ", pool.demandNumber)
 		pool.mu.Unlock()
@@ -383,7 +403,7 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 		for i := block.Number + 1; i <= pool.maxNum; i += 1 {
 			if _, ok := pool.queue[i]; ok {
 				pool.mu.Lock()
-				WriteBlock(pool.queue[i], commonHash)
+				WriteBlock(pool.queue[i], commonHash, vid, primary)
 				pool.demandNumber += 1
 				log.Info("current demandNumber is ", pool.demandNumber)
 				pool.mu.Unlock()
@@ -398,31 +418,34 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 	}
 }
 
-func WriteBlock(block *types.Block, commonHash crypto.CommonHash) {
+// WriteBlock: save block into database
+func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, primary bool) {
 	log.Info("block number is ", block.Number)
 	core.UpdateChain(block, false)
 
-	// update our stateObject and statedb to blockchain
 	db, _ := hyperdb.GetLDBDatabase()
+	// for primary node, check whether vid equal to block's number
+	if primary && vid != block.Number {
+		log.Info("Replace invalid txmeta data, block number:", block.Number)
+		batch := db.NewBatch()
+		for i, tx := range block.Transactions {
+			meta := &types.TransactionMeta{
+				BlockIndex: block.Number,
+				Index:      int64(i),
+			}
+			metaValue, _ := proto.Marshal(meta)
+			if err := batch.Put(append(tx.GetTransactionHash().Bytes(), core.TxMetaSuffix...), metaValue); err != nil {
+				log.Error("Put txmeta into database failed! error msg, ", err.Error())
+				return
+			}
+		}
+		go batch.Write()
+	}
+
 	err := core.PutBlockTx(db, commonHash, block.BlockHash, block)
 	if err != nil {
 		log.Error("Put block into database failed! error msg, ", err.Error())
 	}
-	// Save txmeta
-
-	batch := db.NewBatch()
-	for i, tx := range block.Transactions {
-		meta := &types.TransactionMeta{
-			BlockIndex: block.Number,
-			Index:      int64(i),
-		}
-		metaValue, _ := proto.Marshal(meta)
-		if err := batch.Put(append(tx.GetTransactionHash().Bytes(), core.TxMetaSuffix...), metaValue); err != nil {
-			log.Error("Put txmeta into database failed! error msg, ", err.Error())
-			return
-		}
-	}
-	go batch.Write()
 
 	if block.Number%10 == 0 && block.Number != 0 {
 		core.WriteChainChan()
@@ -433,6 +456,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash) {
 	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
 }
 
+// save the invalid transaction into database for client query
 func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
 	msg := &recovery.Message{}
 	invalidTx := &types.InvalidTransactionRecord{}
@@ -446,6 +470,7 @@ func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
 	db.Put(append(core.InvalidTransactionPrefix, invalidTx.Tx.TransactionHash...), msg.Payload)
 }
 
+// reset blockchain to a stable checkpoint status when `viewchange` occur
 func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	tmpDemandNumber := pool.demandNumber
 	// 1. Reset demandNumber , demandSeqNo and lastValidationState
