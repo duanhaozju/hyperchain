@@ -382,7 +382,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 
 	pool.lastValidationState = root
 
-	go public_batch.Write()
+	public_batch.Write()
 
 	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
 }
