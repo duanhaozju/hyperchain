@@ -4,7 +4,10 @@
 #set -x
 echo "kill process"
 ps aux | grep hyperchain | awk '{print $2}' | xargs kill -9
-
+ports1=`lsof -i :8000 | awk 'NR>=2{print $2}'`
+if [ x"$ports1" != x"" ];then
+    kill -9 $ports1
+fi
 #rebuild the application
 cd ..
 # clean the build folder
