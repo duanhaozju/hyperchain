@@ -9,6 +9,7 @@ import (
 	"hyperchain/trie"
 	"math/big"
 	lru "github.com/hashicorp/golang-lru"
+	"sync"
 )
 
 var log *logging.Logger // package-level logger
@@ -32,15 +33,19 @@ const (
 type StateDB struct {
 	db               hyperdb.Database
 	trie             *trie.SecureTrie
-
 	codeSizeCache	*lru.Cache
+
+	//this map holds 'live' objects, which will get modified while processing a state transition
 	stateObjects     map[string]*StateObject
+	stateObjectDirty map[common.Address]struct{}
+
 	refund           *big.Int
 	thash, bhash     common.Hash
 	txIndex          int
 	logs             map[common.Hash]vm.Logs
 	logSize          uint
 	leastStateObject *StateObject
+	lock 		sync.Mutex
 }
 
 // Create a new state from a given trie
@@ -49,36 +54,34 @@ func New(root common.Hash, db hyperdb.Database) (*StateDB, error) {
 	if err != nil {
 		return nil, err
 	}
+	csc,err := lru.New(codeSizeCacheSize)
 	return &StateDB{
-		db:           db,
-		trie:         tr,
-		stateObjects: make(map[string]*StateObject),
-		refund:       new(big.Int),
-		logs:         make(map[common.Hash]vm.Logs),
+		db:           		db,
+		trie:         		tr,
+		codeSizeCache:		csc,
+		stateObjects: 		make(map[string]*StateObject),
+		stateObjectDirty:	make(map[common.Address]struct{}),
+		refund:       		new(big.Int),
+		logs:         		make(map[common.Hash]vm.Logs),
 	}, nil
 
 }
 
-/*
-func GetStateObjects(db hyperdb.Database) (map[string]*StateObject, error) {
-	//var stateDb StateDB
-	var stateDb map[string]*StateObject
-	var b = make(map[string]*StateObject)
-	data, err := db.Get(stateDbPrefix)
+func (self *StateDB) New(root common.Hash)(*StateDB,error){
+	// todo is needed?
+	//self.lock.Lock()
+	//defer self.lock.Unlock()
 
-	if err != nil {
-
-		return b, err
-	}
-	if err = json.Unmarshal(data, &stateDb); err != nil {
-
-		return b, err
-	}
-
-	return stateDb, nil
-
+	return &StateDB{
+		db:			self.db,
+		codeSizeCache:		self.codeSizeCache,
+		stateObjects:		make(map[common.Address]*StateObject),
+		stateObjectDirty:	make(map[common.Address]struct{}),
+		refund:			new(big.Int),
+		logs:			make(map[common.Hash]vm.Logs),
+	},nil
 }
-*/
+
 // Reset clears out all emphemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
 func (self *StateDB) Reset(root common.Hash) error {
@@ -91,13 +94,15 @@ func (self *StateDB) Reset(root common.Hash) error {
 			return err
 		}
 	}
-	*self = StateDB{
-		db:           self.db,
-		trie:         tr,
-		stateObjects: make(map[string]*StateObject),
-		refund:       new(big.Int),
-		logs:         make(map[common.Hash]vm.Logs),
-	}
+	self.trie = tr
+	self.stateObjects = make(map[common.Address]*StateObject)
+	self.stateObjectDirty = make(map[common.Address]struct{})
+	self.thash = common.Hash{}
+	self.bhash = common.Hash{}
+	self.logs = make(map[common.Hash]vm.Logs)
+	self.logSize = 0
+	self.refund = new(big.Int)
+	
 	return nil
 }
 
