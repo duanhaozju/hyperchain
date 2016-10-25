@@ -166,7 +166,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	})
 	blockCache, _ := GetBlockCache()
 
-	if len(invalidTxSet) != 0 {
+	if len(validTxSet) != 0 {
 		blockCache.Record(hash.Hex(), BlockRecord{
 			TxRoot:      txRoot,
 			ReceiptRoot: receiptRoot,
@@ -282,7 +282,6 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		// Update trie
 		txTrie.Update(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...), txValue)
 		receiptTrie.Update(append(core.ReceiptsPrefix, receipt.TxHash...), receiptValue)
-
 		validtxs = append(validtxs, tx)
 	}
 	root, _ := statedb.Commit()
