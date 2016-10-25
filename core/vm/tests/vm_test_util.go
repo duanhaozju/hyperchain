@@ -138,10 +138,12 @@ func RunVm(statedb *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *bi
 	log.Infof("the create contract time we used is ",time.Now().Sub(now_time))
 
 	log.Debug("Call the contract-------------------------------------------------------------------------------")
-	for i := 0;i<testCallNum;i++{
-		//receipt,ret,addr,err =core.ExecTransaction(*types.NewTestCreateTransaction(),*vmenv)
+	for i := 0;i<1;i++{
+		tx := types.NewTestCallTransaction()
+		tx.To = addr.Bytes()
+		receipt,ret,addr,err =core.ExecTransaction(*tx,vmenv)
 		log.Debug("----------addr",common.ToHex(addr.Bytes()))
-		log.Debug("the nonce of account is ",statedb.GetNonce(common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6")))
+		log.Debug("the nonce of account is ",statedb.GetNonce(common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec3")))
 		log.Debug("receipt",receipt.Ret)
 	}
 	log.Debug("the create contract time we used is ",time.Now().Sub(now_time))
