@@ -76,88 +76,9 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *Block
 	db, _ := hyperdb.GetLDBDatabase()
 	blk, _ := core.GetBlock(db, currentChain.LatestBlockHash)
 	pool.lastValidationState = common.BytesToHash(blk.MerkleRoot)
+
+	log.Noticef("Block pool Initialize demandNumber :%d, demandseqNo: %d\n", pool.demandNumber, pool.demandSeqNo)
 	return pool
-}
-
-// Run Serially
-func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash) {
-	if block.Number == 0 {
-		WriteBlock(block, commonHash)
-		return
-	}
-
-	if block.Number > pool.maxNum {
-		pool.maxNum = block.Number
-	}
-	if _, ok := pool.queue[block.Number]; ok {
-		log.Info("repeat block number,number is: ", block.Number)
-		return
-	}
-
-	log.Info("number is ", block.Number)
-
-	if pool.demandNumber == block.Number {
-		pool.mu.Lock()
-		WriteBlock(block, commonHash)
-		pool.demandNumber += 1
-		log.Info("current demandNumber is ", pool.demandNumber)
-		pool.mu.Unlock()
-
-		for i := block.Number + 1; i <= pool.maxNum; i += 1 {
-			if _, ok := pool.queue[i]; ok {
-				pool.mu.Lock()
-				WriteBlock(pool.queue[i], commonHash)
-				pool.demandNumber += 1
-				log.Info("current demandNumber is ", pool.demandNumber)
-				pool.mu.Unlock()
-				delete(pool.queue, i)
-			} else {
-				break
-			}
-		}
-		return
-	} else {
-		pool.queue[block.Number] = block
-	}
-}
-
-func WriteBlock(block *types.Block, commonHash crypto.CommonHash) {
-	log.Info("block number is ", block.Number)
-	currentChain := core.GetChainCopy()
-	block.ParentHash = currentChain.LatestBlockHash
-	db, _ := hyperdb.GetLDBDatabase()
-	block.WriteTime = time.Now().UnixNano()
-	block.EvmTime = time.Now().UnixNano()
-	block.BlockHash = block.Hash(commonHash).Bytes()
-	core.UpdateChain(block, false)
-
-	// update our stateObject and statedb to blockchain
-	err := core.PutBlockTx(db, commonHash, block.BlockHash, block)
-	if err != nil {
-		log.Error("Put block into database failed! error msg, ", err.Error())
-	}
-	// Save txmeta
-
-	batch := db.NewBatch()
-	for i, tx := range block.Transactions {
-		meta := &types.TransactionMeta{
-			BlockIndex: block.Number,
-			Index:      int64(i),
-		}
-		metaValue, _ := proto.Marshal(meta)
-		if err := batch.Put(append(tx.GetTransactionHash().Bytes(), core.TxMetaSuffix...), metaValue); err != nil {
-			return
-		}
-	}
-	go batch.Write()
-
-	if block.Number%10 == 0 && block.Number != 0 {
-		core.WriteChainChan()
-	}
-
-	newChain := core.GetChainCopy()
-	log.Notice("Block number", newChain.Height)
-	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
 }
 
 // Run Parallelly
@@ -346,7 +267,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		begin_time := time.Now()
 		receipt, _, _, _ := core.ExecTransaction(*tx, vmenv)
-		log.Info("begin_time----------------", time.Since(begin_time))
+		log.Debug("begin_time----------------", time.Since(begin_time))
 		// save to DB
 		txValue, _ := proto.Marshal(tx)
 		if err := public_batch.Put(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...), txValue); err != nil {
@@ -375,7 +296,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 }
 
 // write block into db
-func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerManager p2p.PeerManager) {
+func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHash crypto.CommonHash, peerManager p2p.PeerManager) {
 	blockCache, _ := GetBlockCache()
 	record := blockCache.Get(ev.Hash)
 	if ev.Flag {
@@ -384,14 +305,20 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerMana
 		for _, tx := range record.ValidTxs {
 			newBlock.Transactions = append(newBlock.Transactions, tx)
 		}
+		currentChain := core.GetChainCopy()
+		newBlock.ParentHash = currentChain.LatestBlockHash
 		newBlock.MerkleRoot = record.MerkleRoot
 		newBlock.TxRoot = record.TxRoot
 		newBlock.ReceiptRoot = record.ReceiptRoot
 		newBlock.Timestamp = ev.Timestamp
 		newBlock.CommitTime = ev.CommitTime
 		newBlock.Number = ev.SeqNo
+		newBlock.WriteTime = time.Now().UnixNano()
+		newBlock.EvmTime = time.Now().UnixNano()
+		newBlock.BlockHash = newBlock.Hash(commonHash).Bytes()
+
 		// 2.save block and update chain
-		pool.AddBlock(newBlock, crypto.NewKeccak256Hash("Keccak256"))
+		pool.AddBlock(newBlock, commonHash)
 		// 3.throw invalid tx back to origin node if current peer is primary
 		if ev.IsPrimary {
 			for _, t := range record.InvalidTxs {
@@ -420,14 +347,91 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerMana
 			}
 		}
 	} else {
+		// TODO
 		db, _ := hyperdb.GetLDBDatabase()
 		for _, t := range record.InvalidTxs {
 			db.Delete(append(core.TransactionPrefix, t.Tx.GetTransactionHash().Bytes()...))
 			db.Delete(append(core.ReceiptsPrefix, t.Tx.GetTransactionHash().Bytes()...))
 		}
-		// TODO Clear all stateobject cache
 	}
 	blockCache.Delete(ev.Hash)
+}
+
+// Run Serially
+func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash) {
+	if block.Number == 0 {
+		WriteBlock(block, commonHash)
+		return
+	}
+
+	if block.Number > pool.maxNum {
+		pool.maxNum = block.Number
+	}
+	if _, ok := pool.queue[block.Number]; ok {
+		log.Info("repeat block number,number is: ", block.Number)
+		return
+	}
+
+	log.Info("number is ", block.Number)
+
+	if pool.demandNumber == block.Number {
+		pool.mu.Lock()
+		WriteBlock(block, commonHash)
+		pool.demandNumber += 1
+		log.Info("current demandNumber is ", pool.demandNumber)
+		pool.mu.Unlock()
+
+		for i := block.Number + 1; i <= pool.maxNum; i += 1 {
+			if _, ok := pool.queue[i]; ok {
+				pool.mu.Lock()
+				WriteBlock(pool.queue[i], commonHash)
+				pool.demandNumber += 1
+				log.Info("current demandNumber is ", pool.demandNumber)
+				pool.mu.Unlock()
+				delete(pool.queue, i)
+			} else {
+				break
+			}
+		}
+		return
+	} else {
+		pool.queue[block.Number] = block
+	}
+}
+
+func WriteBlock(block *types.Block, commonHash crypto.CommonHash) {
+	log.Info("block number is ", block.Number)
+	core.UpdateChain(block, false)
+
+	// update our stateObject and statedb to blockchain
+	db, _ := hyperdb.GetLDBDatabase()
+	err := core.PutBlockTx(db, commonHash, block.BlockHash, block)
+	if err != nil {
+		log.Error("Put block into database failed! error msg, ", err.Error())
+	}
+	// Save txmeta
+
+	batch := db.NewBatch()
+	for i, tx := range block.Transactions {
+		meta := &types.TransactionMeta{
+			BlockIndex: block.Number,
+			Index:      int64(i),
+		}
+		metaValue, _ := proto.Marshal(meta)
+		if err := batch.Put(append(tx.GetTransactionHash().Bytes(), core.TxMetaSuffix...), metaValue); err != nil {
+			log.Error("Put txmeta into database failed! error msg, ", err.Error())
+			return
+		}
+	}
+	go batch.Write()
+
+	if block.Number%10 == 0 && block.Number != 0 {
+		core.WriteChainChan()
+	}
+
+	newChain := core.GetChainCopy()
+	log.Notice("Block number", newChain.Height)
+	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
 }
 
 func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {

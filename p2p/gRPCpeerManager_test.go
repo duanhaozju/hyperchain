@@ -10,11 +10,15 @@ package p2p
 import (
 	"hyperchain/event"
 	"testing"
+	"hyperchain/membersrvc"
 )
+func init(){
+	membersrvc.Start("../config/test/local_membersrvc2.yaml",1)
+}
 
 func TestGrpcPeerManager_Start(t *testing.T) {
 
-	path := "./peerconfig.json"
+	path := "../config/local_peerconfig.json"
 
 	grpcPeerMgr := NewGrpcManager(path, 1)
 	aliveChan := make(chan bool)

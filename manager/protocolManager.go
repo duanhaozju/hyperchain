@@ -310,7 +310,7 @@ func (self *ProtocolManager) NewBlockLoop() {
 		switch ev := obj.Data.(type) {
 
 		case event.CommitOrRollbackBlockEvent:
-			self.blockPool.CommitBlock(ev, self.Peermanager)
+			self.blockPool.CommitBlock(ev, self.commonHash, self.Peermanager)
 
 		case event.ExeTxsEvent:
 			go self.blockPool.Validate(ev, self.commonHash, self.AccountManager.Encryption, self.Peermanager)
