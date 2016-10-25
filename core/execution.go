@@ -7,6 +7,7 @@ import (
 	"hyperchain/core/vm/params"
 	"math/big"
 	//"hyperchain/core/vm/compiler"
+	"hyperchain/core/state"
 )
 
 // Call executes within the given contract
@@ -74,7 +75,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		address = &addr
 		createAccount = true
 	}
-
+	statedb, _ := env.Db().(*state.StateDB)
 	snapshotPreTransfer := env.MakeSnapshot()
 	var (
 		from = env.Db().GetAccount(caller.Address())

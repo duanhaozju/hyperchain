@@ -4,7 +4,10 @@
 #set -x
 echo "kill process"
 ps aux | grep hyperchain | awk '{print $2}' | xargs kill -9
-
+ports1=`lsof -i :8000 | awk 'NR>=2{print $2}'`
+if [ x"$ports1" != x"" ];then
+    kill -9 $ports1
+fi
 #rebuild the application
 cd ..
 # clean the build folder
@@ -24,6 +27,6 @@ osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain/build 
 osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain/build && ./hyperchain -o 4 -l 8004 -t 8084"'
 
 
-python ./jsonrpc/Dashboard/simpleHttpServer.py
+python ../jsonrpc/Dashboard/simpleHttpServer.py
 
 echo "All process are running background"

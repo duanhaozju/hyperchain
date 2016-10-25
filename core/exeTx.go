@@ -6,31 +6,13 @@ import (
 	"hyperchain/core/state"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
-	"hyperchain/core/vm/params"
-	"hyperchain/hyperdb"
+
 	"math/big"
 )
 
 type Code []byte
 
 var logger = glog.Logger{}
-var (
-	//TODO set the vm.config
-	//db, err    = hyperdb.GetLDBDatabase()
-	statedb *state.StateDB
-	env        = make(map[string]string)
-	vmenv      = (*Env)(nil)
-)
-
-func init() {
-
-	db, _    := hyperdb.GetLDBDatabase()
-	statedb, _ = state.New(common.Hash{}, db)
-	//vm.Precompiled = make(map[string]*vm.PrecompiledAccount)
-	env["currentNumber"] = "1"
-	env["currentGasLimit"] = "10000000"
-	vmenv = NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
-}
 
 
 // 这一块相当于ethereum里的TransitionDB
@@ -44,7 +26,7 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		gas        = tx.Gas()
 		gasPrice   = tx.GasPrice()
 		amount     = tx.Amount()
-		//statedb, _ = env.Db().(*state.StateDB)
+		statedb, _ = env.Db().(*state.StateDB)
 	)
 	if tx.To == nil {
 		ret, addr, err = Exec(env, &from, nil, data, gas, gasPrice, amount)
@@ -108,7 +90,3 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 	return ret, addr, err
 }
 
-
-func GetVMEnv() *Env {
-	return vmenv
-}
