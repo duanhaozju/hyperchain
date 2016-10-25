@@ -35,6 +35,15 @@ func init() {
 	log = logging.MustGetLogger("block-pool")
 }
 
+type BlockRecord struct {
+	TxRoot      []byte
+	ReceiptRoot []byte
+	MerkleRoot  []byte
+	InvalidTxs  []*types.InvalidTransactionRecord
+	ValidTxs    []*types.Transaction
+	SeqNo       uint64
+}
+
 type BlockPool struct {
 	demandNumber uint64
 	demandSeqNo  uint64
@@ -44,15 +53,15 @@ type BlockPool struct {
 	queue           map[uint64]*types.Block
 	validationQueue map[uint64]event.ExeTxsEvent
 
-	consenter         consensus.Consenter
-	eventMux          *event.TypeMux
-	mu                sync.RWMutex
-	seqNoMu           sync.RWMutex
-	validationQueueMu sync.RWMutex
-	stateLock         sync.Mutex
-	wg                sync.WaitGroup // for shutdown sync
-
+	consenter           consensus.Consenter
+	eventMux            *event.TypeMux
+	mu                  sync.RWMutex
+	seqNoMu             sync.RWMutex
+	validationQueueMu   sync.RWMutex
+	stateLock           sync.Mutex
+	wg                  sync.WaitGroup // for shutdown sync
 	lastValidationState common.Hash
+	blockCache          *common.Cache
 }
 
 func (bp *BlockPool) SetDemandNumber(number uint64) {
@@ -63,11 +72,13 @@ func (bp *BlockPool) SetDemandSeqNo(seqNo uint64) {
 }
 
 func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *BlockPool {
+	cache, _ := common.NewCache()
 	pool := &BlockPool{
 		eventMux:        eventMux,
 		consenter:       consenter,
 		queue:           make(map[uint64]*types.Block),
 		validationQueue: make(map[uint64]event.ExeTxsEvent),
+		blockCache:      cache,
 	}
 
 	currentChain := core.GetChainCopy()
@@ -167,10 +178,9 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 		txRoot,
 		receiptRoot,
 	})
-	blockCache, _ := GetBlockCache()
 
 	if len(validTxSet) != 0 {
-		blockCache.Record(hash.Hex(), BlockRecord{
+		pool.blockCache.Add(hash.Hex(), BlockRecord{
 			TxRoot:      txRoot,
 			ReceiptRoot: receiptRoot,
 			MerkleRoot:  merkleRoot,
@@ -313,8 +323,12 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 // When receive an CommitOrRollbackBlockEvent, if flag is true, generate a block and call AddBlock function
 // CommitBlock function is just an entry of the commit logic
 func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHash crypto.CommonHash, peerManager p2p.PeerManager) {
-	blockCache, _ := GetBlockCache()
-	record := blockCache.Get(ev.Hash)
+	ret, existed := pool.blockCache.Get(ev.Hash)
+	if !existed {
+		log.Notice("No record found when commit block, block hash:", ev.Hash)
+		return
+	}
+	record := ret.(BlockRecord)
 	if ev.Flag {
 		// 1.generate a new block with the argument in cache
 		newBlock := new(types.Block)
@@ -373,7 +387,7 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHa
 			db.Delete(append(core.ReceiptsPrefix, t.Tx.GetTransactionHash().Bytes()...))
 		}
 	}
-	blockCache.Delete(ev.Hash)
+	pool.blockCache.Remove(ev.Hash)
 }
 
 // Put a new generated block into pool, handle the block saved in queue serially
@@ -506,10 +520,11 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 		}
 
 	}
-	blockcache, _ := GetBlockCache()
 	// 3. Delete from blockcache
-	all := blockcache.All()
-	for _, record := range all {
+	keys := pool.blockCache.Keys()
+	for _, key := range keys {
+		ret, _ := pool.blockCache.Get(key)
+		record := ret.(BlockRecord)
 		for i, tx := range record.ValidTxs {
 			if err := db.Delete(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
 				log.Errorf("ViewChange, delete useless tx in block %d failed, error msg %s", i, err.Error())
@@ -522,7 +537,7 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 			}
 		}
 	}
-	blockcache.Clear()
+	pool.blockCache.Purge()
 	// 4. Reset chain
 	isGenesis := (block.Number == 0)
 	core.UpdateChain(block, isGenesis)
