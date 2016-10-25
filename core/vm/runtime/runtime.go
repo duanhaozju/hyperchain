@@ -21,9 +21,9 @@ import (
 	"time"
 
 	"hyperchain/common"
+	"hyperchain/core/crypto"
 	"hyperchain/core/state"
 	"hyperchain/core/vm"
-	"hyperchain/core/crypto"
 	//"hyperchain/hyperdb"
 	"hyperchain/hyperdb"
 )
@@ -97,7 +97,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 
 	if cfg.State == nil {
 		db, _ := hyperdb.NewMemDatabase()
-		cfg.State, _ = state.New(common.Hash{},db)
+		cfg.State, _ = state.New(common.Hash{}, db)
 	}
 	var (
 		vmenv    = NewEnv(cfg, cfg.State)

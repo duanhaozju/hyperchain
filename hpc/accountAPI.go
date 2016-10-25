@@ -2,13 +2,13 @@ package hpc
 
 import (
 	"errors"
+	"fmt"
 	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/state"
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
-	"fmt"
 )
 
 type PublicAccountAPI struct {
@@ -42,9 +42,9 @@ func (acc *PublicAccountAPI) NewAccount(password string) common.Address {
 		log.Fatal("New Account error,%v", err)
 	}
 
-/*	balanceIns, err := core.GetBalanceIns()
-	balanceIns.PutCacheBalance(ac.Address, []byte("0"))
-	balanceIns.PutDBBalance(ac.Address, []byte("0"))*/
+	/*	balanceIns, err := core.GetBalanceIns()
+		balanceIns.PutCacheBalance(ac.Address, []byte("0"))
+		balanceIns.PutDBBalance(ac.Address, []byte("0"))*/
 	return ac.Address
 }
 
@@ -75,23 +75,26 @@ func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 	var acts []*AccountResult
 	chain := core.GetChainCopy()
 
+	log.Notice("Current LatestBlockHash:", common.BytesToHash(chain.LatestBlockHash).Hex())
 	headBlock, err := getBlockByHash(common.BytesToHash(chain.LatestBlockHash), acc.db)
 	if err != nil {
 		log.Errorf("%v", err)
+		return nil
 	}
 
 	stateDB, err := state.New(headBlock.MerkleRoot, acc.db)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
+		return nil
 	}
 	ctx := stateDB.GetAccounts()
 
 	for k, v := range ctx {
-		log.Notice("balance is",v.Balance())
+		log.Notice("balance is", v.Balance())
 		var act = &AccountResult{
 			Account: k,
 			//Balance: fmt.Sprintf(`0x%x`, v.Balance()),
-			Balance:v.Balance().String(),
+			Balance: v.Balance().String(),
 		}
 		acts = append(acts, act)
 	}

@@ -75,7 +75,7 @@ func (self *StateDB) New(root common.Hash)(*StateDB,error){
 	return &StateDB{
 		db:			self.db,
 		codeSizeCache:		self.codeSizeCache,
-		stateObjects:		make(map[common.Address]*StateObject),
+		stateObjects:		make(map[string]*StateObject),
 		stateObjectDirty:	make(map[common.Address]struct{}),
 		refund:			new(big.Int),
 		logs:			make(map[common.Hash]vm.Logs),
@@ -95,7 +95,7 @@ func (self *StateDB) Reset(root common.Hash) error {
 		}
 	}
 	self.trie = tr
-	self.stateObjects = make(map[common.Address]*StateObject)
+	self.stateObjects = make(map[string]*StateObject)
 	self.stateObjectDirty = make(map[common.Address]struct{})
 	self.thash = common.Hash{}
 	self.bhash = common.Hash{}

@@ -7,6 +7,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/crypto"
 	"hyperchain/core/vm/params"
+	"github.com/labstack/gommon/log"
 )
 
 // Config are the configuration options for the EVM
@@ -180,6 +181,7 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 		}
 
 		if opPtr := evm.jumpTable[op]; opPtr.valid {
+			log.Debug("----------opPtr--------------",opPtr)
 			if opPtr.fn != nil {
 				opPtr.fn(instruction{}, &pc, evm.env, contract, mem, stack)
 			} else {
