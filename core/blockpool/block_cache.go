@@ -1,15 +1,14 @@
-package core
+// implement block cache
+// author: Jialei Rong
+// date: 2016-10-21
+// last modified:2016-10-21
+
+package blockpool
 
 import (
 	"hyperchain/core/types"
 	"sync"
-	"github.com/op/go-logging"
 )
-
-var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("core")
-}
 
 type BlockRecord struct {
 	TxRoot      []byte
@@ -25,6 +24,7 @@ const (
 	closed stateType = iota // the instance is closed (be not)
 	opened
 )
+
 type Data map[string]BlockRecord
 
 type BlockCache struct {
@@ -85,10 +85,10 @@ func (self *BlockCache) All() map[string]BlockRecord {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	var ret map[string]BlockRecord
-	if self.data!=nil{
-	for k, v := range self.data {
-		ret[k] = v
-	}
+	if self.data != nil {
+		for k, v := range self.data {
+			ret[k] = v
+		}
 	}
 	return ret
 }

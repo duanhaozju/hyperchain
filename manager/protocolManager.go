@@ -11,6 +11,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/consensus"
 	"hyperchain/core"
+	"hyperchain/core/blockpool"
 	"hyperchain/core/types"
 	"hyperchain/crypto"
 	"hyperchain/event"
@@ -30,7 +31,7 @@ func init() {
 
 type ProtocolManager struct {
 	serverPort  int
-	blockPool   *core.BlockPool
+	blockPool   *blockpool.BlockPool
 	Peermanager p2p.PeerManager
 
 	nodeInfo  client.PeerInfos // node info ,store node status,ip,port
@@ -61,7 +62,7 @@ type NodeManager struct {
 
 var eventMuxAll *event.TypeMux
 
-func NewProtocolManager(blockPool *core.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux,  consenter consensus.Consenter,
+func NewProtocolManager(blockPool *blockpool.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
 	//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 	am *accounts.AccountManager, commonHash crypto.CommonHash) *ProtocolManager {
 
@@ -309,10 +310,10 @@ func (self *ProtocolManager) NewBlockLoop() {
 		switch ev := obj.Data.(type) {
 
 		case event.CommitOrRollbackBlockEvent:
-			self.blockPool.CommitBlock(ev, self.Peermanager)
+			self.blockPool.CommitBlock(ev, self.commonHash, self.Peermanager)
 
 		case event.ExeTxsEvent:
-			go self.blockPool.Validate(ev, self.commonHash, self.AccountManager.Encryption)
+			go self.blockPool.Validate(ev, self.commonHash, self.AccountManager.Encryption, self.Peermanager)
 
 		}
 	}
@@ -393,7 +394,6 @@ func (pm *ProtocolManager) BroadcastConsensus(payload []byte) {
 	pm.Peermanager.BroadcastPeers(payload)
 
 }
-
 
 func (pm *ProtocolManager) GetNodeInfo() client.PeerInfos {
 	pm.nodeInfo = pm.Peermanager.GetPeerInfo()
