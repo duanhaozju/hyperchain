@@ -189,7 +189,7 @@ func (self *StateDB) ForEachAccounts() {
 func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
-		return stateObject.BalanceData
+		return stateObject.Balance()
 	}
 
 	return common.Big0
@@ -198,7 +198,7 @@ func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 func (self *StateDB) GetNonce(addr common.Address) uint64 {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
-		return stateObject.nonce
+		return stateObject.Nonce()
 	}
 	return StartingNonce
 }

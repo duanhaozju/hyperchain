@@ -7,7 +7,6 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/crypto"
 	"hyperchain/core/vm/params"
-	"github.com/labstack/gommon/log"
 )
 
 // Config are the configuration options for the EVM
