@@ -11,11 +11,13 @@ import (
 	"fmt"
 	"time"
 	"hyperchain/core/types"
+	"hyperchain/core/vm/params"
 )
-var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("p2p")
-}
+var (
+	log *logging.Logger // package-level logger
+	env	= make(map[string]string)
+	vmenv	= (*core.Env)(nil)
+)
 var sourcecode = `
 contract mortal {
      /* Define variable owner of the type address*/
@@ -101,42 +103,45 @@ func runVmTest(test VmTest) error {
 	return nil
 }
 
-func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.Int, error) {
+func RunVm(statedb *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.Int, error) {
 	// init the parameters
 	var (
 		addr common.Address
 		receipt *types.Receipt
 		err error
 		ret []byte
-		testNum = 1
+		testNum = 0
 	)
+	log = logging.MustGetLogger("p2p")
+	db,_ := hyperdb.GetLDBDatabase()
+	statedb,_ = state.New(common.Hash{},db)
+	env["currentNumber"] = "1"
+	env["currentGasLimit"] = "10000000"
 	//vm.Precompiled = vm.PrecompiledContracts()
-	vmenv := core.GetVMEnv()
+	vmenv = core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock,params.MainNetDAOForkBlock,true},statedb,env)
 	//core.InitTestEnv()
-	state = vmenv.State()
-	state.CreateAccount(common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec3"))
-	state.AddBalance(common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec3"),big.NewInt(100000))
+	statedb.CreateAccount(common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec3"))
+	statedb.AddBalance(common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec3"),big.NewInt(100000))
 
 	// create a new contract
 	log.Debug("create the contract--------------------------")
 	now_time := time.Now()
 	for i := 0;i<testNum;i++{
-		receipt,ret,addr,err =core.ExecTransaction(*types.NewTestCreateTransaction(),vmenv)
+		//receipt,ret,addr,err =core.ExecTransaction(*types.NewTestCreateTransaction(),*vmenv)
+		log.Debug("----------addr",common.ToHex(addr.Bytes()))
+		log.Debug("the nonce of account is ",statedb.GetNonce(common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6")))
+		log.Debug("receipt",receipt.Ret)
 	}
 	log.Debug("the create contract time we used is ",time.Now().Sub(now_time))
-	log.Debug("----------addr",common.ToHex(addr.Bytes()))
-	log.Debug("the nonce of account is ",state.GetNonce(common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6")))
-	log.Debug("receipt",receipt.Ret)
-
 	log.Debug("create the contract--------------------------")
 	now_time = time.Now()
 	for i := 0;i<testNum;i++{
 		tx := types.NewTestCallTransaction()
 		tx.To = addr.Bytes()
-		receipt,ret,_,_ = core.ExecTransaction(*tx,vmenv)
+		//receipt,ret,_,_ = core.ExecTransaction(*tx,*vmenv)
 	}
 	//state.GetAccount(addr).PrintStorages()
 	log.Debug("the call contract time we used is ",time.Now().Sub(now_time))
 
-	return ret, vmenv.State().Logs(), vmenv.Gas, err
+	return ret, statedb.Logs(), nil, err
 }
