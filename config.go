@@ -39,6 +39,7 @@ type configsImpl struct {
 	memberSRVCConfigPath    string
 	pbftConfigPath          string
 	syncReplicaInfoInterval string
+	syncReplica             bool
 }
 
 //return a config instances
@@ -65,6 +66,7 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	cimpl.memberSRVCConfigPath = config.GetString("global.configs.membersrvc")
 	cimpl.pbftConfigPath = config.GetString("global.configs.pbft")
 	cimpl.syncReplicaInfoInterval = config.GetString("global.replicainfo.interval")
+	cimpl.syncReplica = config.GetBool("global.replicainfo.enable")
 	return &cimpl
 }
 
@@ -103,3 +105,4 @@ func (cIml *configsImpl) getPBFTConfigPath() string { return cIml.pbftConfigPath
 func (cIml *configsImpl) getSyncReplicaInterval() (time.Duration, error) {
 	return time.ParseDuration(cIml.syncReplicaInfoInterval)
 }
+func (cIml *configsImpl) getSyncReplicaEnable() bool { return cIml.syncReplica }

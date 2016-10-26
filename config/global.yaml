@@ -50,3 +50,4 @@ global:
         pbft: "config/pbft.yaml"
     replicainfo:
         interval : 5s
+        enable   : false

@@ -66,6 +66,7 @@ type ProtocolManager struct {
 	syncBlockCache      *common.Cache
 	replicaStatus       *common.Cache
 	syncReplicaInterval time.Duration
+	syncReplica         bool
 }
 type NodeManager struct {
 	peerManager p2p.PeerManager
@@ -75,7 +76,7 @@ var eventMuxAll *event.TypeMux
 
 func NewProtocolManager(blockPool *blockpool.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
 	//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
-	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration) *ProtocolManager {
+	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool) *ProtocolManager {
 	synccache, _ := common.NewCache()
 	replicacache, _ := common.NewCache()
 	manager := &ProtocolManager{
@@ -89,6 +90,7 @@ func NewProtocolManager(blockPool *blockpool.BlockPool, peerManager p2p.PeerMana
 		syncBlockCache:      synccache,
 		replicaStatus:       replicacache,
 		syncReplicaInterval: interval,
+		syncReplica:         syncReplica,
 	}
 	manager.nodeInfo = make(client.PeerInfos, 0, 1000)
 	eventMuxAll = eventMux
@@ -109,15 +111,18 @@ func (pm *ProtocolManager) Start() {
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
 	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{}, event.InformPrimaryEvent{})
-	pm.syncStatusSub = pm.eventMux.Subscribe(event.ReplicaStatusEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
 	go pm.syncBlockLoop()
 	go pm.syncCheckpointLoop()
 	go pm.respHandlerLoop()
 	go pm.viewChangeLoop()
-	go pm.syncReplicaStatusLoop()
-	go pm.SyncReplicaStatus()
+
+	if pm.syncReplica {
+		pm.syncStatusSub = pm.eventMux.Subscribe(event.ReplicaStatusEvent{})
+		go pm.syncReplicaStatusLoop()
+		go pm.SyncReplicaStatus()
+	}
 	pm.wg.Wait()
 
 }
