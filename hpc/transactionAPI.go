@@ -235,7 +235,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		// ** For Hyperchain Test **
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
-		end:=start+230400
+		end:=start+1
 
 		for start := start; start < end; start = time.Now().Unix() {
 
