@@ -8,7 +8,7 @@ import (
 //the first parameter is the encrypted old balance with the whole network publickey
 //second parameter is the encrypted transfer amount with the whole network publickey
 //third parameter is the encrypted new balance with the whole network publickey
-func Node_Verify(whole_networkpublickey ecc_Publickey, oldBalance_hm []byte, transferAmount_hm []byte, newBalance_hm []byte) bool {
+func Node_Verify(whole_networkpublickey PaillierPublickey, oldBalance_hm []byte, transferAmount_hm []byte, newBalance_hm []byte) bool {
 	var flag bool
 	phm := New_Paillier_Hmencryption()
 	sum, _ := phm.Calculator(&whole_networkpublickey, "paillier", transferAmount_hm, newBalance_hm)
