@@ -13,10 +13,7 @@ import (
 	"hyperchain/common"
 
 	"hyperchain/hyperdb"
-<<<<<<< HEAD
-=======
 
->>>>>>> b70937fe97c752ea81818e636444fe33dac7161f
 	//"fmt"
 	"github.com/buger/jsonparser"
 	"hyperchain/core/state"
