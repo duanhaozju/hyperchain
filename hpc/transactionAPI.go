@@ -235,11 +235,11 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		// ** For Hyperchain Test **
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
-		end:=start+230400
+		end:=start+30
 
 		for start := start; start < end; start = time.Now().Unix() {
 
-			for i := 0; i < 25; i++ {
+			for i := 0; i < 100; i++ {
 				tx.Timestamp = time.Now().UnixNano()
 				tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
 
@@ -287,7 +287,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					log.Warning("manager is Nil")
 				}
 			}
-			time.Sleep(300 * time.Millisecond)
+			time.Sleep(90 * time.Millisecond)
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
