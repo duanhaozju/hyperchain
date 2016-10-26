@@ -5,6 +5,7 @@ import (
 
 	logging "github.com/op/go-logging"
 	"github.com/spf13/viper"
+	"time"
 )
 
 type configs interface {
@@ -24,23 +25,25 @@ type configs interface {
 }
 
 type configsImpl struct {
-	nodeID               int
-	gRPCPort             int
-	httpPort             int
-	keystoreDir          string
-	keyNodeDir           string
-	logDumpFileFlag      bool
-	logDumpFileDir       string
-	logLevel             string
-	databaseDir          string
-	peerConfigPath       string
-	genesisConfigPath    string
-	memberSRVCConfigPath string
-	pbftConfigPath       string
+	nodeID                  int
+	gRPCPort                int
+	httpPort                int
+	keystoreDir             string
+	keyNodeDir              string
+	logDumpFileFlag         bool
+	logDumpFileDir          string
+	logLevel                string
+	databaseDir             string
+	peerConfigPath          string
+	genesisConfigPath       string
+	memberSRVCConfigPath    string
+	pbftConfigPath          string
+	syncReplicaInfoInterval string
+	syncReplica             bool
 }
 
 //return a config instances
-func newconfigsImpl(globalConfigPath string,NodeID int, GRPCPort int, HTTPPort int) *configsImpl {
+func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort int) *configsImpl {
 	var cimpl configsImpl
 	config := viper.New()
 	viper.SetEnvPrefix("GLOBAL_ENV")
@@ -62,6 +65,8 @@ func newconfigsImpl(globalConfigPath string,NodeID int, GRPCPort int, HTTPPort i
 	cimpl.genesisConfigPath = config.GetString("global.configs.genesis")
 	cimpl.memberSRVCConfigPath = config.GetString("global.configs.membersrvc")
 	cimpl.pbftConfigPath = config.GetString("global.configs.pbft")
+	cimpl.syncReplicaInfoInterval = config.GetString("global.replicainfo.interval")
+	cimpl.syncReplica = config.GetBool("global.replicainfo.enable")
 	return &cimpl
 }
 
@@ -97,3 +102,7 @@ func (cIml *configsImpl) getMemberSRVCConfigPath() string {
 	return cIml.memberSRVCConfigPath
 }
 func (cIml *configsImpl) getPBFTConfigPath() string { return cIml.pbftConfigPath }
+func (cIml *configsImpl) getSyncReplicaInterval() (time.Duration, error) {
+	return time.ParseDuration(cIml.syncReplicaInfoInterval)
+}
+func (cIml *configsImpl) getSyncReplicaEnable() bool { return cIml.syncReplica }

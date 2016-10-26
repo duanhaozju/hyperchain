@@ -207,24 +207,15 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 			if err != nil {
 				log.Error("Marshal tx error")
 			}
-			message := &recovery.Message{
-				MessageType:  recovery.Message_INVALIDRESP,
-				MsgTimeStamp: time.Now().UnixNano(),
-				Payload:      payload,
-			}
-			broadcastMsg, err := proto.Marshal(message)
-			if err != nil {
-				log.Error("Marshal Message")
-			}
 			if t.Tx.Id == uint64(peerManager.GetNodeId()) {
 				pool.StoreInvalidResp(event.RespInvalidTxsEvent{
-					Payload: broadcastMsg,
+					Payload: payload,
 				})
 				continue
 			}
 			var peers []uint64
 			peers = append(peers, t.Tx.Id)
-			peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_INVALIDRESP)
+			peerManager.SendMsgToPeers(payload, peers, recovery.Message_INVALIDRESP)
 		}
 	}
 	return nil, true
@@ -356,24 +347,15 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHa
 				if err != nil {
 					log.Error("Marshal tx error")
 				}
-				message := &recovery.Message{
-					MessageType:  recovery.Message_INVALIDRESP,
-					MsgTimeStamp: time.Now().UnixNano(),
-					Payload:      payload,
-				}
-				broadcastMsg, err := proto.Marshal(message)
-				if err != nil {
-					log.Error("Marshal Message")
-				}
 				if t.Tx.Id == uint64(peerManager.GetNodeId()) {
 					pool.StoreInvalidResp(event.RespInvalidTxsEvent{
-						Payload: broadcastMsg,
+						Payload: payload,
 					})
 					continue
 				}
 				var peers []uint64
 				peers = append(peers, t.Tx.Id)
-				peerManager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_INVALIDRESP)
+				peerManager.SendMsgToPeers(payload, peers, recovery.Message_INVALIDRESP)
 			}
 		}
 	} else {
@@ -472,16 +454,15 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, pr
 
 // save the invalid transaction into database for client query
 func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
-	msg := &recovery.Message{}
 	invalidTx := &types.InvalidTransactionRecord{}
-	err := proto.Unmarshal(ev.Payload, msg)
-	err = proto.Unmarshal(msg.Payload, invalidTx)
+	err := proto.Unmarshal(ev.Payload, invalidTx)
 	if err != nil {
 		log.Error("Unmarshal Payload failed")
 	}
 	// save to db
+	log.Notice("invalidTx", common.BytesToHash(invalidTx.Tx.TransactionHash).Hex())
 	db, _ := hyperdb.GetLDBDatabase()
-	db.Put(append(core.InvalidTransactionPrefix, invalidTx.Tx.TransactionHash...), msg.Payload)
+	db.Put(append(core.InvalidTransactionPrefix, invalidTx.Tx.TransactionHash...), ev.Payload)
 }
 
 // reset blockchain to a stable checkpoint status when `viewchange` occur
