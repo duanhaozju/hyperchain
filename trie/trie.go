@@ -3,7 +3,6 @@ package trie
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"github.com/op/go-logging"
 	"hash"
@@ -570,54 +569,11 @@ func (h *hasher) store(n node, db DatabaseWriter, force bool) (node, error) {
 	}
 	// Serialize the node
 	h.tmp.Reset()
-	switch v := n.(type) {
-	case fullNode:
-		var buffer [17][]byte
-		for idx, cld := range v.Children {
-			switch vv := cld.(type) {
-			case hashNode:
-				buffer[idx] = []byte(vv)
-			case valueNode:
-				buffer[idx] = []byte(vv)
-			case nil:
-				buffer[idx] = nil
-			}
-		}
-		memNode := memFullNode{
-			Type:    "full",
-			Content: buffer,
-		}
-		data, err := json.Marshal(memNode)
-		h.tmp.Write(data)
-		if err != nil {
-			panic("encode error: " + err.Error())
-		}
-	case shortNode:
-		switch vv := v.Val.(type) {
-		case hashNode:
-			memNode := memShortNode{
-				Key:     v.Key,
-				Type:    "short",
-				Content: []byte(vv),
-			}
-			data, err := json.Marshal(memNode)
-			h.tmp.Write(data)
-			if err != nil {
-				panic("encode error: " + err.Error())
-			}
-		case valueNode:
-			memNode := memShortNode{
-				Key:     v.Key,
-				Type:    "short",
-				Content: []byte(vv),
-			}
-			data, err := json.Marshal(memNode)
-			h.tmp.Write(data)
-			if err != nil {
-				panic("encode error: " + err.Error())
-			}
-		}
+	data, err := encodeNode(n)
+	if err != nil {
+		panic("encode error: " + err.Error())
 	}
+	h.tmp.Write(data)
 	/*
 		if h.tmp.Len() < 32 && !force {
 			return n, nil // Nodes smaller than 32 bytes are stored inside their parent

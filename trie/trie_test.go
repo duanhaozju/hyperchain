@@ -72,13 +72,8 @@ func TestMissingNode(t *testing.T) {
 	updateString(trie, "120000", "qwerqwerqwerqwerqwerqwerqwerqwer")
 	updateString(trie, "123456", "asdfasdfasdfasdfasdfasdfasdfasdf")
 	root, _ := trie.Commit()
-
-	it := NewIterator(trie)
-	for it.Next() {
-		t.Log(string(it.Key), string(it.Value))
-	}
-
 	ClearGlobalCache()
+
 	trie, _ = New(root, db)
 	if trie == nil {
 		t.Errorf("New trie failed")

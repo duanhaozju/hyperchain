@@ -2,6 +2,7 @@ package trie
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hyperchain/common"
 	"io"
@@ -45,6 +46,47 @@ func (n fullNode) cache() (hashNode, bool)  { return n.hash, n.dirty }
 func (n shortNode) cache() (hashNode, bool) { return n.hash, n.dirty }
 func (n hashNode) cache() (hashNode, bool)  { return nil, true }
 func (n valueNode) cache() (hashNode, bool) { return nil, true }
+
+func encodeNode(n node) ([]byte, error) {
+	switch v := n.(type) {
+	case fullNode:
+		var buffer [17][]byte
+		for idx, cld := range v.Children {
+			switch vv := cld.(type) {
+			case hashNode:
+				buffer[idx] = []byte(vv)
+			case valueNode:
+				buffer[idx] = []byte(vv)
+			case nil:
+				buffer[idx] = nil
+			}
+		}
+		memNode := memFullNode{
+			Type:    "full",
+			Content: buffer,
+		}
+		return json.Marshal(memNode)
+
+	case shortNode:
+		switch vv := v.Val.(type) {
+		case hashNode:
+			memNode := memShortNode{
+				Key:     v.Key,
+				Type:    "short",
+				Content: []byte(vv),
+			}
+			return json.Marshal(memNode)
+		case valueNode:
+			memNode := memShortNode{
+				Key:     v.Key,
+				Type:    "short",
+				Content: []byte(vv),
+			}
+			return json.Marshal(memNode)
+		}
+	}
+	return nil, errors.New("Invalid node type to encode")
+}
 
 func mustDecodeNode(hash, buf []byte) node {
 	n, err := decodeNode(hash, buf)
