@@ -345,7 +345,21 @@ func (pbft *pbftProtocal) RecvMsg(e []byte) error {
 	return nil
 }
 
-func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
+func (pbft *pbftProtocal) RecvLocal(msg interface{}) error {
+
+	logger.Debugf("Replica %d received local message", pbft.id)
+
+	switch e := msg.(type) {
+	case event.ValidatedTxs:
+		return pbft.recvValidatedResult(e)
+	default:
+		logger.Warningf("Replica %d received an unknown message from local, type %T", pbft.id, e)
+	}
+
+	return nil
+}
+
+func (pbft *pbftProtocal) recvValidatedResult(result event.ValidatedTxs) error {
 
 	primary := pbft.primary(pbft.view)
 	if primary == pbft.id {

@@ -79,3 +79,7 @@ type VCResetEvent struct {
 type InformPrimaryEvent struct {
 	Primary uint64
 }
+
+type UpdateRoutingTable struct {
+
+}

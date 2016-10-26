@@ -235,11 +235,11 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		// ** For Hyperchain Test **
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
-		end:=start+230400
+		end:=start+6
 
 		for start := start; start < end; start = time.Now().Unix() {
 
-			for i := 0; i < 25; i++ {
+			for i := 0; i < 100; i++ {
 				tx.Timestamp = time.Now().UnixNano()
 				tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
 

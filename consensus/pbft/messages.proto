@@ -37,6 +37,7 @@ message consensus_message {
         NEGOTIATE_VIEW_RESPONSE = 11;
         RECOVERY_INIT = 12;
         RECOVERY_RESPONSE = 13;
+        ADD_NODE = 14;
     }
     Type type = 1;
     bytes payload = 2;
@@ -135,7 +136,12 @@ message recovery_response {
     repeated block_info blocks = 2;
 }
 
-// consensus metadata
-message metadata {
-    uint64 seqNo = 1;
+message add_node {
+    uint64 replica_id = 1;
+    string ip = 2;
+    string table_digest = 3;
+}
+
+message routing_table {
+    string table = 1;
 }

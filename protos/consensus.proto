@@ -17,12 +17,6 @@ message Message {
     uint64 id = 4;
 }
 
-message ExeMessage {
-    repeated Message batch = 1;
-    int64 timestamp = 2;
-    uint64 no = 3;
-}
-
 message UpdateStateMessage {
     uint64 id = 1;
     uint64 seqNo = 2;
@@ -43,4 +37,15 @@ message BlockchainInfo {
 
 message NullRequestMessage {
     uint64 seqNo = 1;
+}
+
+message NewNodeMessage {
+    string ip = 1;
+    uint64 n = 3;
+}
+
+message AddNodeMessage {
+    string ip = 1;
+    string routing_table = 2;
+    uint64 new_id = 3;
 }

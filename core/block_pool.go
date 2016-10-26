@@ -283,7 +283,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	log.Info("Invalid Tx number: ", len(invalidTxSet))
 	log.Info("Valid Tx number: ", len(validTxSet))
 	// Communicate with PBFT
-	pool.consenter.RecvValidatedResult(event.ValidatedTxs{
+	pool.consenter.RecvLocal(event.ValidatedTxs{
 		Transactions: validTxSet,
 		SeqNo:        validationEvent.SeqNo,
 		View:         validationEvent.View,
