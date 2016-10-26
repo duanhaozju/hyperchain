@@ -269,37 +269,18 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 		PeerId:         UpdateStateMessage.Id,
 	}
 
-	// For Test
-	// Midify the current highest block
-	/*
-		db, _ := hyperdb.GetLDBDatabase()
-		blk, _ := core.GetBlockByNumber(db, core.GetChainCopy().Height)
-		blk.BlockHash = []byte("fakehash")
-		core.UpdateChain(blk, false)
-	*/
-	//log.Error(required.PeerId)
 	core.UpdateRequire(blockChainInfo.Height, blockChainInfo.CurrentBlockHash, blockChainInfo.Height)
 	// save context
 	core.SetReplicas(UpdateStateMessage.Replicas)
 	core.SetId(UpdateStateMessage.Id)
 
 	payload, _ := proto.Marshal(required)
-	message := &recovery.Message{
-		MessageType:  recovery.Message_SYNCCHECKPOINT,
-		MsgTimeStamp: time.Now().UnixNano(),
-		Payload:      payload,
-	}
-	broadcastMsg, _ := proto.Marshal(message)
-	self.Peermanager.SendMsgToPeers(broadcastMsg, UpdateStateMessage.Replicas, recovery.Message_SYNCCHECKPOINT)
+	self.Peermanager.SendMsgToPeers(payload, UpdateStateMessage.Replicas, recovery.Message_SYNCCHECKPOINT)
 }
 
 func (self *ProtocolManager) ReceiveSyncRequest(ev event.StateUpdateEvent) {
-	receiveMessage := &recovery.Message{}
-	proto.Unmarshal(ev.Payload, receiveMessage)
-
 	checkpointMsg := &recovery.CheckPointMessage{}
-	proto.Unmarshal(receiveMessage.Payload, checkpointMsg)
-
+	proto.Unmarshal(ev.Payload, checkpointMsg)
 	db, _ := hyperdb.GetLDBDatabase()
 	blocks := &types.Blocks{}
 	for i := checkpointMsg.RequiredNumber; i > checkpointMsg.CurrentNumber; i -= 1 {
@@ -316,24 +297,16 @@ func (self *ProtocolManager) ReceiveSyncRequest(ev event.StateUpdateEvent) {
 		}
 
 		payload, _ := proto.Marshal(blocks)
-		message := &recovery.Message{
-			MessageType:  recovery.Message_SYNCBLOCK,
-			MsgTimeStamp: time.Now().UnixNano(),
-			Payload:      payload,
-		}
 		var peers []uint64
 		peers = append(peers, checkpointMsg.PeerId)
-		broadcastMsg, _ := proto.Marshal(message)
-		self.Peermanager.SendMsgToPeers(broadcastMsg, peers, recovery.Message_SYNCBLOCK)
+		self.Peermanager.SendMsgToPeers(payload, peers, recovery.Message_SYNCBLOCK)
 	}
 }
 
 func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 	if core.GetChainCopy().RequiredBlockNum != 0 {
-		message := &recovery.Message{}
-		proto.Unmarshal(ev.Payload, message)
 		blocks := &types.Blocks{}
-		proto.Unmarshal(message.Payload, blocks)
+		proto.Unmarshal(ev.Payload, blocks)
 		db, _ := hyperdb.GetLDBDatabase()
 		for i := len(blocks.Batch) - 1; i >= 0; i -= 1 {
 			if blocks.Batch[i].Number <= core.GetChainCopy().RequiredBlockNum {
@@ -398,7 +371,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 					if existed {
 						blks := ret.(map[string]types.Block)
 						if _, ok := blks[common.BytesToHash(blocks.Batch[i].BlockHash).Hex()]; ok {
-							log.Debug("Receive Duplicate Block: ", blocks.Batch[i].Number, common.BytesToHash(blocks.Batch[i].BlockHash).Hex())
+							log.Notice("Receive Duplicate Block: ", blocks.Batch[i].Number, common.BytesToHash(blocks.Batch[i].BlockHash).Hex())
 							continue
 						} else {
 							log.Debug("Receive Sync Block with different hash: ", blocks.Batch[i].Number, common.BytesToHash(blocks.Batch[i].BlockHash).Hex())
@@ -424,13 +397,7 @@ func (self *ProtocolManager) broadcastDemandBlock(number uint64, hash []byte, re
 		PeerId:         peerId,
 	}
 	payload, _ := proto.Marshal(required)
-	message := &recovery.Message{
-		MessageType:  recovery.Message_SYNCSINGLE,
-		MsgTimeStamp: time.Now().UnixNano(),
-		Payload:      payload,
-	}
-	broadcastMsg, _ := proto.Marshal(message)
-	self.Peermanager.SendMsgToPeers(broadcastMsg, replicas, recovery.Message_SYNCSINGLE)
+	self.Peermanager.SendMsgToPeers(payload, replicas, recovery.Message_SYNCSINGLE)
 }
 
 func (self *ProtocolManager) updateRequire(block *types.Block) {
