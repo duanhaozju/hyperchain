@@ -14,30 +14,40 @@ import (
 
 var (
 	log *logging.Logger // package-level logger
-	codeSizeCache	*lru.Cache 	// TODO is it could be faster?  it can be put outside of the StateDB
-	stateObjectSizeCache	map[common.Address] *StateObject	// TODO is it should be used as the lru.Cache
+	codeCache        *lru.Cache 	// TODO is it could be faster?  it can be put outside of the StateDB
+	abiCache        *lru.Cache 	// TODO is it could be faster?  it can be put outside of the StateDB
+	stateObjectCache        map[common.Address] *StateObject	// TODO is it should be used as the lru.Cache
+)
+
+const (
+	// Number of codehash->size associations to keep
+	codeSizeCacheSize = 10000
+	abiSizeCacheSize = 10000
 )
 func init() {
 	log = logging.MustGetLogger("state")
 	// 1.init the codeSizeCache
 	csc,err := lru.New(codeSizeCacheSize)
 	if err != nil{
-		codeSizeCache = csc
+		codeCache = csc
+	}else {
+		log.Errorf("the Cache cannot be initialized")
+	}
+	// 2.init the abiSizeCache
+	asc,err := lru.New(abiSizeCacheSize)
+	if err != nil{
+		abiCache = asc
 	}else {
 		log.Errorf("the Cache cannot be initialized")
 	}
 	// 2.init the stateObjectSizeCache
-	stateObjectSizeCache = make(map[common.Address] *StateObject)
+	stateObjectCache = make(map[common.Address] *StateObject)
 }
 
 // The starting nonce determines the default nonce when new accounts are being
 // created.
 var StartingNonce uint64
 
-const (
-	// Number of codehash->size associations to keep
-	codeSizeCacheSize = 10000
-)
 // StateDBs within the ethereum protocol are used to store anything
 // within the merkle trie. StateDBs take care of caching and storing
 // nested states. It's the general query interface to retrieve:
@@ -111,7 +121,8 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.logs = make(map[common.Hash]vm.Logs)
 	self.logSize = 0
 	self.refund = new(big.Int)
-	
+	// if reset we will clear all stateObjectSizeCache
+	stateObjectCache =  make(map[common.Address] *StateObject)
 	return nil
 }
 
@@ -325,7 +336,7 @@ func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObje
 	}
 
 	// 2.we will find the stateObject from stateObjectSizeCache
-	stateObject = stateObjectSizeCache[addr]
+	stateObject = stateObjectCache[addr]
 	if stateObject != nil{
 		log.Notice("we can get the StateObject from stateObjectSizeCache")
 		if stateObject.deleted{
@@ -345,7 +356,7 @@ func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObje
 	if err != nil {
 		return nil
 	}
-	stateObjectSizeCache[addr] = stateObject
+	stateObjectCache[addr] = stateObject
 	self.SetStateObject(stateObject)
 	return stateObject
 }
@@ -369,7 +380,7 @@ func (self *StateDB) newStateObject(addr common.Address) *StateObject {
 	stateObject := NewStateObject(addr, self.db)
 	stateObject.SetNonce(StartingNonce)
 	self.stateObjects[addr.Str()] = stateObject
-	stateObjectSizeCache[addr] = stateObject
+	stateObjectCache[addr] = stateObject
 	return stateObject
 }
 
@@ -482,7 +493,7 @@ func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
 			// and just mark it for deletion in the trie.
 			s.DeleteStateObject(stateObject)
 			stateObject.dirty = false
-			delete(stateObjectSizeCache,stateObject.Address())
+			delete(stateObjectCache,stateObject.Address())
 		} else {
 			if len(stateObject.code) > 0 {
 				if err := db.Put(stateObject.codeHash, stateObject.code); err != nil {
@@ -502,7 +513,7 @@ func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
 			// Update the object in the account trie.
 			s.UpdateStateObject(stateObject)
 			stateObject.dirty = false
-			stateObjectSizeCache[stateObject.Address()] = stateObject
+			stateObjectCache[stateObject.Address()] = stateObject
 		}
 	}
 	return s.trie.CommitTo(db)
