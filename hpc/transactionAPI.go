@@ -233,20 +233,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		// ** For Hyperchain Test **
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-		end := start + 30
-		//end:=start+500
-=======
-		end:=start+230400
->>>>>>> b70937fe97c752ea81818e636444fe33dac7161f
-=======
-		end:=start+30
->>>>>>> 08edb9ea5cfc3ef5f3b237d0e48b4339bd98f08e
-=======
 		end:=start+DURATION
->>>>>>> 56593618015132395436adcc69215f0b45d464a1
 
 		for start := start; start < end; start = time.Now().Unix() {
 			for i := 0; i < COUNT; i++ {
@@ -330,15 +317,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					return common.Hash{}, errors.New("Sending return timeout,may be something wrong.")
 				}
 			}
-<<<<<<< HEAD
-<<<<<<< HEAD
-			time.Sleep(100 * time.Millisecond)
-=======
-			time.Sleep(90 * time.Millisecond)
->>>>>>> 08edb9ea5cfc3ef5f3b237d0e48b4339bd98f08e
-=======
 			time.Sleep(SLEEPTIME * time.Millisecond)
->>>>>>> 56593618015132395436adcc69215f0b45d464a1
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())

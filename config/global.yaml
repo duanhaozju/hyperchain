@@ -22,8 +22,8 @@ global:
 # data storage config #
 ##########################
     account:
-        keystoredir: "./config/keystore"
-        keynodesdir: "./config/keynodes"
+        keystoredir: "./build/keystore"
+        keynodesdir: "./build/keynodes"
 
     logs:
         # dump the log file or not
