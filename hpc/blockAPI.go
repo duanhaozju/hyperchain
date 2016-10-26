@@ -22,7 +22,7 @@ type BlockResult struct {
 	WriteTime    string        `json:"writeTime"`
 	AvgTime      *Number       `json:"avgTime"`
 	TxCounts     *Number       `json:"txcounts"`
-	Counts       *Number       `json:"Counts"`
+	Counts       *Number       `json:"counts"`
 	Percents     string        `json:"percents"`
 	MerkleRoot   common.Hash   `json:"merkleRoot"`
 	Transactions []interface{} `json:"transactions"`
@@ -44,7 +44,7 @@ func (blk *PublicBlockAPI) GetBlocks(args BlockArgsTest) ([]*BlockResult, error)
 	var blocks []*BlockResult
 
 	if args.From == nil && args.To == nil {
-		block, err := blk.lastestBlock()
+		block, err := blk.latestBlock()
 
 		if err != nil {
 			log.Errorf("%v", err)
@@ -94,8 +94,8 @@ func (blk *PublicBlockAPI) GetBlocks(args BlockArgsTest) ([]*BlockResult, error)
 }
 
 // LastestBlock returns the number and hash of the lastest block.
-func (blk *PublicBlockAPI) LastestBlock() (*BlockResult, error) {
-	return blk.lastestBlock()
+func (blk *PublicBlockAPI) LatestBlock() (*BlockResult, error) {
+	return blk.latestBlock()
 }
 
 // GetBlockByHash returns the block for the given block hash.
@@ -109,7 +109,7 @@ func (blk *PublicBlockAPI) GetBlockByNumber(number Number) (*BlockResult, error)
 	return block, err
 }
 
-func (blk *PublicBlockAPI) lastestBlock() (*BlockResult, error) {
+func (blk *PublicBlockAPI) latestBlock() (*BlockResult, error) {
 
 	currentChain := core.GetChainCopy()
 
