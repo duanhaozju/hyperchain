@@ -50,9 +50,9 @@ func (pbft *pbftProtocal) postPbftEvent(event interface{}) {
 // helper functions for PBFT
 // =============================================================================
 
-// Given a certain view n, what is the expected primary?
-func (pbft *pbftProtocal) primary(n uint64) uint64 {
-	return (n % uint64(pbft.replicaCount) + 1)
+// Given a certain view v and replicaCount n, what is the expected primary?
+func (pbft *pbftProtocal) primary(v uint64, n uint64) uint64 {
+	return (v % uint64(n) + 1)
 }
 
 // Is the sequence number between watermarks?
