@@ -75,8 +75,8 @@ const (
 	//DURATION int64 = 230400
 	//COUNT = 25
 	//SLEEPTIME int = 300
-	DURATION int64 = 6
-	COUNT int = 10
+	DURATION int64 = 30
+	COUNT int = 100
 	SLEEPTIME time.Duration = 90
 )
 
