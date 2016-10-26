@@ -156,6 +156,9 @@ func (t *Trie) Update(key, value []byte) {
 // If a node was not found in the database, a MissingNodeError is returned.
 func (t *Trie) TryUpdate(key, value []byte) error {
 	k := compactHexDecode(key)
+	if len(key) == 0 {
+		return nil
+	}
 	if len(value) != 0 {
 		_, n, err := t.insert(t.root, nil, k, valueNode(value))
 		if err != nil {
@@ -259,6 +262,9 @@ func (t *Trie) Delete(key []byte) {
 // If a node was not found in the database, a MissingNodeError is returned.
 func (t *Trie) TryDelete(key []byte) error {
 	k := compactHexDecode(key)
+	if len(key) == 0 {
+		return nil
+	}
 	_, n, err := t.delete(t.root, nil, k)
 	if err != nil {
 		return err
@@ -399,9 +405,6 @@ func (t *Trie) resolve(n node, prefix, suffix []byte) (node, error) {
 }
 
 func (t *Trie) resolveHash(n hashNode, prefix, suffix []byte) (node, error) {
-	if v, ok := globalCache.Get(n); ok {
-		return v, nil
-	}
 	enc, err := t.db.Get(n)
 	if err != nil || enc == nil {
 		return nil, &MissingNodeError{
@@ -413,9 +416,6 @@ func (t *Trie) resolveHash(n hashNode, prefix, suffix []byte) (node, error) {
 		}
 	}
 	dec := mustDecodeNode(n, enc)
-	if dec != nil {
-		globalCache.Put(n, dec)
-	}
 	return dec, nil
 }
 
