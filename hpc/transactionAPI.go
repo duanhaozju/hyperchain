@@ -236,11 +236,15 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
 <<<<<<< HEAD
+<<<<<<< HEAD
 		end := start + 30
 		//end:=start+500
 =======
 		end:=start+230400
 >>>>>>> b70937fe97c752ea81818e636444fe33dac7161f
+=======
+		end:=start+30
+>>>>>>> 08edb9ea5cfc3ef5f3b237d0e48b4339bd98f08e
 
 		for start := start; start < end; start = time.Now().Unix() {
 
@@ -292,7 +296,11 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					log.Warning("manager is Nil")
 				}
 			}
+<<<<<<< HEAD
 			time.Sleep(100 * time.Millisecond)
+=======
+			time.Sleep(90 * time.Millisecond)
+>>>>>>> 08edb9ea5cfc3ef5f3b237d0e48b4339bd98f08e
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
