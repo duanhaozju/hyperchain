@@ -12,9 +12,22 @@ import (
 	"sync"
 )
 
-var log *logging.Logger // package-level logger
+var (
+	log *logging.Logger // package-level logger
+	codeSizeCache	*lru.Cache 	// TODO is it could be faster?  it can be put outside of the StateDB
+	stateObjectSizeCache	map[common.Address] *StateObject	// TODO is it should be used as the lru.Cache
+)
 func init() {
 	log = logging.MustGetLogger("state")
+	// 1.init the codeSizeCache
+	csc,err := lru.New(codeSizeCacheSize)
+	if err != nil{
+		codeSizeCache = csc
+	}else {
+		log.Errorf("the Cache cannot be initialized")
+	}
+	// 2.init the stateObjectSizeCache
+	stateObjectSizeCache = make(map[common.Address] *StateObject)
 }
 
 // The starting nonce determines the default nonce when new accounts are being
@@ -33,7 +46,6 @@ const (
 type StateDB struct {
 	db               hyperdb.Database
 	trie             *trie.SecureTrie
-	codeSizeCache	*lru.Cache
 
 	//this map holds 'live' objects, which will get modified while processing a state transition
 	stateObjects     map[string]*StateObject
@@ -54,11 +66,9 @@ func New(root common.Hash, db hyperdb.Database) (*StateDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	csc,err := lru.New(codeSizeCacheSize)
 	return &StateDB{
 		db:           		db,
 		trie:         		tr,
-		codeSizeCache:		csc,
 		stateObjects: 		make(map[string]*StateObject),
 		stateObjectDirty:	make(map[common.Address]struct{}),
 		refund:       		new(big.Int),
@@ -74,7 +84,6 @@ func (self *StateDB) New(root common.Hash)(*StateDB,error){
 
 	return &StateDB{
 		db:			self.db,
-		codeSizeCache:		self.codeSizeCache,
 		stateObjects:		make(map[string]*StateObject),
 		stateObjectDirty:	make(map[common.Address]struct{}),
 		refund:			new(big.Int),
@@ -306,6 +315,7 @@ func (self *StateDB) DeleteStateObject(stateObject *StateObject) {
 
 // Retrieve a state object given my the address. Nil if not found
 func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObject) {
+	// 1. we will find the stateObject from the StateDB firstly
 	stateObject = self.stateObjects[addr.Str()]
 	if stateObject != nil {
 		if stateObject.deleted {
@@ -314,6 +324,18 @@ func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObje
 		return stateObject
 	}
 
+	// 2.we will find the stateObject from stateObjectSizeCache
+	stateObject = stateObjectSizeCache[addr]
+	if stateObject != nil{
+		if stateObject.deleted{
+			stateObject = nil
+		}else {
+			self.SetStateObject(stateObject)
+			return stateObject
+		}
+	}
+
+	// 3.we will find the stateObject from the db by trie
 	data := self.trie.Get(addr[:])
 	if len(data) == 0 {
 		return nil
@@ -322,6 +344,7 @@ func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObje
 	if err != nil {
 		return nil
 	}
+	stateObjectSizeCache[addr] = stateObject
 	self.SetStateObject(stateObject)
 	return stateObject
 }
@@ -345,7 +368,7 @@ func (self *StateDB) newStateObject(addr common.Address) *StateObject {
 	stateObject := NewStateObject(addr, self.db)
 	stateObject.SetNonce(StartingNonce)
 	self.stateObjects[addr.Str()] = stateObject
-
+	stateObjectSizeCache[addr] = stateObject
 	return stateObject
 }
 
@@ -371,6 +394,8 @@ func (self *StateDB) CreateAccount(addr common.Address) vm.Account {
 // Setting, copying of the state methods
 //
 
+// TODO it could be better
+// 1.from the stateObjectCacheSize
 func (self *StateDB) Copy() *StateDB {
 	state, _ := New(common.Hash{}, self.db)
 	state.trie = self.trie
@@ -447,6 +472,7 @@ func (s *StateDB) Commit() (common.Hash, error) {
 	return root, batch.Write()
 }
 
+// TODO the logic could be optimized
 func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
 	s.refund = new(big.Int)
 	for _, stateObject := range s.stateObjects {
@@ -454,6 +480,8 @@ func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
 			// If the object has been removed, don't bother syncing it
 			// and just mark it for deletion in the trie.
 			s.DeleteStateObject(stateObject)
+			stateObject.dirty = false
+			delete(stateObjectSizeCache,stateObject.Address())
 		} else {
 			if len(stateObject.code) > 0 {
 				if err := db.Put(stateObject.codeHash, stateObject.code); err != nil {
@@ -472,8 +500,9 @@ func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
 			}
 			// Update the object in the account trie.
 			s.UpdateStateObject(stateObject)
+			stateObject.dirty = false
+			stateObjectSizeCache[stateObject.Address()] = stateObject
 		}
-		stateObject.dirty = false
 	}
 	return s.trie.CommitTo(db)
 }
