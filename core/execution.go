@@ -143,7 +143,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 
 		env.SetSnapshot(snapshotPreTransfer)
 	}
-	log.Noticef("test2_time is ",time.Since(test2_time))
+	log.Noticef("test2_time is ",time.Since(test2_time))  // the time is less than 1us
 	return ret, addr, err
 }
 

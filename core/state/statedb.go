@@ -327,6 +327,7 @@ func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObje
 	// 2.we will find the stateObject from stateObjectSizeCache
 	stateObject = stateObjectSizeCache[addr]
 	if stateObject != nil{
+		log.Notice("we can get the StateObject from stateObjectSizeCache")
 		if stateObject.deleted{
 			stateObject = nil
 		}else {
