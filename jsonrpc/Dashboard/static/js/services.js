@@ -11,7 +11,7 @@ function SummaryService($resource,$q,ENV) {
                         method:"POST"
                     }
                 }).getBlock({
-                    method: "block_lastestBlock",
+                    method: "block_latestBlock",
                     id: 1
                 },function(res){
                     if (res.error) {
@@ -99,6 +99,7 @@ function BlockService($resource,$q,ENV) {
                     }
                 }).getBlock({
                     method: "block_getBlocks",
+                    params: [{}],
                     id: 1
                 },function(res){
                     if (res.error) {
@@ -187,6 +188,7 @@ function TransactionService($resource,$q,ENV) {
             })
         },
         SendTransaction: function(from,to,value){
+            var time = new Date().getTime();
             return $q(function(resolve, reject){
                 $resource(ENV.API,{},{
                     sendTx:{
@@ -198,7 +200,8 @@ function TransactionService($resource,$q,ENV) {
                         {
                             "from":from,
                             "to":to,
-                            "value": value
+                            "value": value,
+                            "timestamp": time * 1e6
                         }
                     ],
                     id: 1
@@ -331,6 +334,7 @@ function ContractService($resource,$q ,$timeout, ENV) {
             })
         },
         deployContract: function(from, sourceCode){
+            var time = new Date().getTime();
             return $q(function(resolve, reject){
                 $resource(ENV.API,{},{
                     deploy:{
@@ -342,7 +346,8 @@ function ContractService($resource,$q ,$timeout, ENV) {
                     params: [
                         {
                             "from": from,
-                            "payload": sourceCode
+                            "payload": sourceCode,
+                            "timestamp": time * 1e6
                         }
                     ],
                     id: 1
@@ -387,6 +392,7 @@ function ContractService($resource,$q ,$timeout, ENV) {
         invokeContract: function(from, to, data) {
             console.log("======================");
             console.log(to);
+            var time = new Date().getTime();
             return $q(function(resolve, reject){
                 $resource(ENV.API,{},{
                     invoke:{
@@ -399,7 +405,8 @@ function ContractService($resource,$q ,$timeout, ENV) {
                         {
                             "from": from,
                             "to": to,
-                            "payload": data
+                            "payload": data,
+                            "timestamp": time * 1e6
                         }
                     ],
                     id: 1

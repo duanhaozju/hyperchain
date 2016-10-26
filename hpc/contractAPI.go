@@ -13,6 +13,7 @@ import (
 	"encoding/hex"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
+	"hyperchain/core"
 )
 
 type PublicContractAPI struct {
@@ -34,6 +35,12 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 	//var found bool
 	realArgs := prepareExcute(args)
 
+	// ################################# 测试代码 START ####################################### //
+	if realArgs.Timestamp == 0 {
+		realArgs.Timestamp = time.Now().UnixNano()
+	}
+	// ################################# 测试代码 END ####################################### //
+
 	payload := common.FromHex(realArgs.Payload)
 
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(),realArgs.Gas.ToInt64(),realArgs.Value.ToInt64(),payload)
@@ -48,13 +55,13 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 
 		// 部署合约
 		//tx = types.NewTransaction(realArgs.From[:], nil, value, []byte(args.Signature))
-		tx = types.NewTransaction(realArgs.From[:], nil, value)
+		tx = types.NewTransaction(realArgs.From[:], nil, value, realArgs.Timestamp)
 
 	} else {
 
 		// 调用合约或者普通交易(普通交易还需要加检查余额)
 		//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, []byte(args.Signature))
-		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
+		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp)
 	}
 
 	//if contract.pm == nil {
@@ -72,7 +79,6 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 
 	//if found == true {
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		tx.Timestamp = time.Now().UnixNano()
 		tx.Id = uint64(contract.pm.Peermanager.GetNodeId())
 
 		if realArgs.PrivKey == "" {
@@ -85,7 +91,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 			}
 			tx.Signature = signature
 		} else {
-			// For Dashboard test
+			// For Hyperboard test
 
 			key, err := hex.DecodeString(args.PrivKey)
 			if err != nil {
@@ -102,11 +108,12 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 			tx.Signature = sig
 		}
 
-		tx.TransactionHash = tx.GetTransactionHash().Bytes()
-
-		// Unsign
+		tx.TransactionHash = tx.BuildHash().Bytes()
+		// Unsign Test
 		if !tx.ValidateSign(contract.pm.AccountManager.Encryption, kec256Hash) {
-			return common.Hash{}, errors.New("invalid signature")
+			log.Error("invalid signature")
+			// 不要返回，因为要将失效交易存到db中
+			//return common.Hash{}, errors.New("invalid signature")
 		}
 
 		txBytes, err := proto.Marshal(tx)
@@ -115,9 +122,32 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 		}
 		if manager.GetEventObject() != nil {
 			go contract.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+			//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 		} else {
 			log.Warning("manager is Nil")
 		}
+
+		start_getErr := time.Now().Unix()
+		end_getErr :=start_getErr + TIMEOUT
+		var errMsg string
+		for start_getErr := start_getErr; start_getErr < end_getErr; start_getErr = time.Now().Unix() {
+			errType, _ := core.GetInvaildTxErrType(contract.db, tx.GetTransactionHash().Bytes());
+
+			if errType != -1 {
+				errMsg = errType.String()
+				break;
+			} else if rept := core.GetReceipt(tx.GetTransactionHash());rept != nil {
+				break
+			}
+
+
+		}
+		if start_getErr != end_getErr && errMsg != "" {
+			return common.Hash{}, errors.New(errMsg)
+		} else if start_getErr == end_getErr {
+			return common.Hash{}, errors.New("Sending return timeout,may be something wrong.")
+	}
+
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
 	//} else {
