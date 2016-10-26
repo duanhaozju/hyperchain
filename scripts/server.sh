@@ -68,22 +68,19 @@ addkey(){
         eof
       }
 EOF
-
-ssh -t satoshi@$1 "sudo -i && apt-get install -y expect"
 }
 
 add_ssh_key_into_primary(){
     echo "add your local ssh public key into primary node"
     for server_address in ${SERVER_ADDR[@]}; do
-	  addkey $server_address &
+	  addkey $server_address
 	done
-	wait
-
 }
 
 add_ssh_key_form_primary_to_others(){
     echo "primary add its ssh key into others nodes"
-	scp -r ./sub_scripts/deploy/server_addkey.sh satoshi@$PRIMARY:/home/satoshi/
+	scp ./sub_scripts/deploy/server_addkey.sh satoshi@$PRIMARY:/home/satoshi/
+	scp innerserverlist.txt satoshi@$PRIMARY:/home/satoshi/
 
 	COMMANDS="cd /home/satoshi && chmod a+x server_addkey.sh && bash server_addkey.sh"
 

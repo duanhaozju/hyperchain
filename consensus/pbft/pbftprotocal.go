@@ -105,6 +105,8 @@ type pbftProtocal struct {
 	negoViewRspTimer 	events.Timer			// track timeout for N-f nego-view responses
 	negoViewRspTimeout	time.Duration           // time limit for N-f nego-view responses
 
+	// recovery
+	inRecovery		bool			// inRecovery indicate if replica is in proactive recovery process
 }
 
 type qidx struct {
@@ -397,6 +399,8 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 		tx := e
 		return pbft.processTxEvent(tx)
 	case viewChangedEvent:
+		primary := pbft.primary(pbft.view)
+		pbft.helper.InformPrimary(primary)
 		pbft.processRequestsDuringViewChange()
 	case batchTimerEvent:
 		logger.Debugf("Replica %d batch timer expired", pbft.id)
@@ -1942,6 +1946,8 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) error {
 			logger.Notice("################################################")
 			logger.Noticef("#   Replica %d finished negotiating view: %d", pbft.id, pbft.view)
 			logger.Notice("################################################")
+			primary := pbft.primary(pbft.view)
+			pbft.helper.InformPrimary(primary)
 			pbft.processRequestsDuringNegoView()
 		} else {
 			pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
@@ -1963,3 +1969,27 @@ func (pbft *pbftProtocal) processRequestsDuringNegoView() {
 		logger.Critical("peer try to processRequestsDuringNegoView but nego-view is not finished")
 	}
 }
+
+// procativeRecovery broadcast a procative recovery message to ask others for recent blocks info
+func (pbft *pbftProtocal) procativeRecovery() events.Event {
+	// TODO:
+	// broadcast recovery msg
+	// return recvRcryRsp
+	return nil
+}
+
+// recvRcryRsp process other replicas' feedback info
+func (pbft *pbftProtocal) recvRcryRsp() events.Event {
+	// TODO:
+	return nil
+}
+
+// recvRcry process incoming proactive recovery message
+func (pbft *pbftProtocal) recvRcry() events.Event {
+	// TODO:
+
+	return nil
+}
+
+//
+

@@ -11,11 +11,13 @@ import (
 	"fmt"
 	"time"
 	"hyperchain/core/types"
+	"hyperchain/core/vm/params"
 )
-var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("p2p")
-}
+var (
+	log *logging.Logger // package-level logger
+	env	= make(map[string]string)
+	vmenv	= (*core.Env)(nil)
+)
 var sourcecode = `
 contract mortal {
      /* Define variable owner of the type address*/
@@ -89,7 +91,7 @@ func runVmTests(tests map[string]VmTest, skipTests []string) error {
 
 func runVmTest(test VmTest) error {
 	db, _ := hyperdb.NewMemDatabase()
-	statedb, _ := state.New(db)
+	statedb, _ := state.New(common.Hash{},db)
 	for addr, account := range test.Pre {
 		obj := StateObjectFromAccount(db, addr, account)
 		statedb.SetStateObject(obj)
@@ -101,61 +103,45 @@ func runVmTest(test VmTest) error {
 	return nil
 }
 
-func RunVm(state *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.Int, error) {
+func RunVm(statedb *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *big.Int, error) {
 	// init the parameters
 	var (
-	//code = common.FromHex(exec["code"])
-	//code_exe1 = common.FromHex(exec["code_exe1"])
-	//from  = common.HexToAddress(exec["caller"])
-	//gas = common.Big(exec["gasLimit"])
-	//price = common.Big(exec["gasPrice"])
-	//value = common.Big(exec["value"])
-	////data2 = common.FromHex(exec["data"])
-	//data_get = common.FromHex(exec["data_get"])
-	////data_inc = common.FromHex(exec["data_inc"])
-	//data_add = common.FromHex(exec["data_add"])
+		addr common.Address
+		receipt *types.Receipt
+		err error
+		ret []byte
+		testNum = 0
 	)
-	vmenv := core.GetVMEnv()
-	state = vmenv.State()
+	log = logging.MustGetLogger("p2p")
+	db,_ := hyperdb.GetLDBDatabase()
+	statedb,_ = state.New(common.Hash{},db)
+	env["currentNumber"] = "1"
+	env["currentGasLimit"] = "10000000"
+	//vm.Precompiled = vm.PrecompiledContracts()
+	vmenv = core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock,params.MainNetDAOForkBlock,true},statedb,env)
+	//core.InitTestEnv()
+	statedb.CreateAccount(common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec3"))
+	statedb.AddBalance(common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec3"),big.NewInt(100000))
 
 	// create a new contract
-	log.Info("create the contract--------------------------")
+	log.Debug("create the contract--------------------------")
 	now_time := time.Now()
-	//ret,addr,err :=core.Exec(&from,nil,code_exe1,gas, price, value)
-	//log.Info("ret",ret)
-	//log.Info("old addr",addr)
-	receipt,ret,addr,err :=core.ExecTransaction(*types.NewTestCreateTransaction())
-	//log.Info("new addr",addr)
-	log.Info("receipt",receipt.Ret)
-	//addr = state.GetLeastAccount().Address()
-
-	//for i := 0;i<1;i++{
-	//	//core.ExecSourceCode(&from,nil,([]byte)(sourcecode), gas, price, value)
-	//	core.Exec(&from,nil,([]byte)(code_exe1), gas, price, value)
-	//}
-	log.Notice("the create contract time we used is ",time.Now().Sub(now_time))
-	//ret,err := core.ExecSourceCode(&from,nil,([]byte)(sourcecode), gas, price, value)
-	//ret,err = core.ExecSourceCode(&from,nil,([]byte)(sourcecode), gas, price, value)
-	//state.ForEachAccounts()
-	//log.Notice("the code is ",common.ToHex(state.GetStateObject(addr).Code()))
-	// call the contract there times
-	log.Notice("the time now is",time.Now())
+	for i := 0;i<testNum;i++{
+		//receipt,ret,addr,err =core.ExecTransaction(*types.NewTestCreateTransaction(),*vmenv)
+		log.Debug("----------addr",common.ToHex(addr.Bytes()))
+		log.Debug("the nonce of account is ",statedb.GetNonce(common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6")))
+		log.Debug("receipt",receipt.Ret)
+	}
+	log.Debug("the create contract time we used is ",time.Now().Sub(now_time))
+	log.Debug("create the contract--------------------------")
 	now_time = time.Now()
-	log.Info("----------",common.ToHex(addr.Bytes()))
-	for i := 0;i<1;i++{
-		//log.Notice("the code is ",common.ToHex(state.GetStateObject(addr).Code()))
-		//ret,_,_ = core.Exec(&from, &addr, data_get, gas, price, value)
+	for i := 0;i<testNum;i++{
 		tx := types.NewTestCallTransaction()
 		tx.To = addr.Bytes()
-		receipt,ret,_,_ = core.ExecTransaction(*tx)
-		log.Info("the ret is ",common.ToHex(ret))
-		log.Info("the ret is ",ret)
-		vmenv.State().GetAccount(addr).PrintStorages()
-		//ret,addr,err = core.Exec(&from, &addr, data_get, gas, price, value)
+		//receipt,ret,_,_ = core.ExecTransaction(*tx,*vmenv)
 	}
 	//state.GetAccount(addr).PrintStorages()
-	log.Notice("the call contract time we used is ",time.Now().Sub(now_time))
+	log.Debug("the call contract time we used is ",time.Now().Sub(now_time))
 
-	// if err, print log
-	return ret, vmenv.State().Logs(), vmenv.Gas, err
+	return ret, statedb.Logs(), nil, err
 }

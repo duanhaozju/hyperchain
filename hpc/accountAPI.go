@@ -2,13 +2,13 @@ package hpc
 
 import (
 	"errors"
+	"fmt"
 	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/state"
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
-	"fmt"
 )
 
 type PublicAccountAPI struct {
@@ -21,8 +21,8 @@ type AccountResult struct {
 	Balance string `json:"balance"`
 }
 type UnlockParas struct {
-	Address  string
-	Password string
+	Address  common.Address `json:"address"`
+	Password string `json:"password"`
 }
 
 func NewPublicAccountAPI(pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase) *PublicAccountAPI {
@@ -42,22 +42,18 @@ func (acc *PublicAccountAPI) NewAccount(password string) common.Address {
 		log.Fatal("New Account error,%v", err)
 	}
 
-	balanceIns, err := core.GetBalanceIns()
-	balanceIns.PutCacheBalance(ac.Address, []byte("0"))
-	balanceIns.PutDBBalance(ac.Address, []byte("0"))
+	/*	balanceIns, err := core.GetBalanceIns()
+		balanceIns.PutCacheBalance(ac.Address, []byte("0"))
+		balanceIns.PutDBBalance(ac.Address, []byte("0"))*/
 	return ac.Address
 }
 
-//Unlock account according to args(address,password)
-func (acc *PublicAccountAPI) UnlockAccount(args UnlockParas) error {
-	password := string(args.Password)
-	address := common.HexToAddress(args.Address)
+// UnlockAccount unlocks account according to args(address,password), if success, return true.
+func (acc *PublicAccountAPI) UnlockAccount(args UnlockParas) (bool, error) {
 
-	//keydir := "./keystore/"
-	//encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	am := acc.pm.AccountManager
 
-	s := string(args.Address)
+	s := args.Address.Hex()
 	if len(s) > 1 {
 		if s[0:2] == "0x" {
 			s = s[2:]
@@ -66,12 +62,12 @@ func (acc *PublicAccountAPI) UnlockAccount(args UnlockParas) error {
 			s = "0" + s
 		}
 	}
-	ac := accounts.Account{Address: address, File: am.KeyStore.JoinPath(s)}
-	err := am.Unlock(ac, password)
+	ac := accounts.Account{Address: args.Address, File: am.KeyStore.JoinPath(s)}
+	err := am.Unlock(ac, args.Password)
 	if err != nil {
-		return errors.New("Incorrect address or password!")
+		return false, errors.New("Incorrect address or password!")
 	}
-	return nil
+	return true, nil
 }
 
 // GetAllBalances returns all account's balance in the db,NOT CACHE DB!
@@ -79,23 +75,26 @@ func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 	var acts []*AccountResult
 	chain := core.GetChainCopy()
 
+	log.Notice("Current LatestBlockHash:", common.BytesToHash(chain.LatestBlockHash).Hex())
 	headBlock, err := getBlockByHash(common.BytesToHash(chain.LatestBlockHash), acc.db)
 	if err != nil {
 		log.Errorf("%v", err)
+		return nil
 	}
 
 	stateDB, err := state.New(headBlock.MerkleRoot, acc.db)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
+		return nil
 	}
 	ctx := stateDB.GetAccounts()
 
 	for k, v := range ctx {
-		log.Notice("balance is",v.Balance())
+		log.Notice("balance is", v.Balance())
 		var act = &AccountResult{
 			Account: k,
 			//Balance: fmt.Sprintf(`0x%x`, v.Balance()),
-			Balance:v.Balance().String(),
+			Balance: v.Balance().String(),
 		}
 		acts = append(acts, act)
 	}

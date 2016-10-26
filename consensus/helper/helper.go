@@ -28,6 +28,7 @@ type Stack interface {
 	UpdateState(updateState *pb.UpdateStateMessage) error
 	ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
 	VcReset(seqNo uint64) error
+	InformPrimary(primary uint64) error
 }
 
 // InnerBroadcast broadcast the consensus message between vp nodes
@@ -125,6 +126,7 @@ func (h *helper) ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo 
 
 // VcReset reset vid when view change is done
 func (h *helper) VcReset(seqNo uint64) error {
+
 	vcResetEvent := event.VCResetEvent{
 		SeqNo: seqNo,
 	}
@@ -132,6 +134,19 @@ func (h *helper) VcReset(seqNo uint64) error {
 	// No need to "go h.msgQ.Post...", we'll wait for it to return
 	h.msgQ.Post(vcResetEvent)
 	time.Sleep(time.Millisecond * 10)
+
+	return nil
+}
+
+// Inform the primary id after negotiate or
+func (h *helper) InformPrimary(primary uint64) error {
+
+	informPrimaryEvent := event.InformPrimaryEvent{
+		Primary: primary,
+	}
+
+	// No need to "go h.msgQ.Post...", we'll wait for it to return
+	h.msgQ.Post(informPrimaryEvent)
 
 	return nil
 }

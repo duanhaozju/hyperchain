@@ -5,8 +5,8 @@
 package core
 
 import (
-	"encoding/json"
 	"github.com/golang/protobuf/proto"
+	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/core/types"
 	"hyperchain/crypto"
@@ -17,16 +17,20 @@ import (
 
 // the prefix of key, use to save to db
 var (
-	transactionPrefix        = []byte("transaction-")
-	receiptsPrefix           = []byte("receipts-")
-	invalidTransactionPrefix = []byte("invalidtransaction-")
-	blockPrefix              = []byte("block-")
-	chainKey                 = []byte("chain-key")
-	balanceKey               = []byte("balance-key")
-	blockNumPrefix           = []byte("blockNum-")
-	bodySuffix               = []byte("-body")
-	txMetaSuffix             = []byte{0x01}
+	TransactionPrefix        = []byte("transaction-")
+	ReceiptsPrefix           = []byte("receipts-")
+	InvalidTransactionPrefix = []byte("invalidtransaction-")
+	BlockPrefix              = []byte("block-")
+	ChainKey                 = []byte("chain-key")
+	BlockNumPrefix           = []byte("blockNum-")
+	//bodySuffix               = []byte("-body")
+	TxMetaSuffix = []byte{0x01}
+	log          *logging.Logger // package-level logger
 )
+
+func init() {
+	log = logging.MustGetLogger("")
+}
 
 // InitDB initialization ldb and memdb
 // should be called while programming start-up
@@ -38,33 +42,10 @@ func InitDB(dbPath string, port int) {
 }
 
 //---------------------- Receipt Start ---------------------------------
-// WriteReceipts stores a batch of transaction receipts into the database.
-func WriteReceipts(receipts types.Receipts) error {
-	db, _ := hyperdb.GetLDBDatabase()
-	batch := db.NewBatch()
-	// Iterate over all the receipts and queue them for database injection
-	for _, receipt := range receipts {
-		//fmt.Println("the addr", receipt.ContractAddress)
-		data, err := proto.Marshal(receipt)
-		if err != nil {
-			return err
-		}
-
-		if err := batch.Put(append(receiptsPrefix, receipt.TxHash...), data); err != nil {
-			return err
-		}
-	}
-	// Write the scheduled data into the database
-	if err := batch.Write(); err != nil {
-		return err
-	}
-	return nil
-}
-
 // GetReceipt returns a receipt by hash
 func GetReceipt(txHash common.Hash) *types.ReceiptTrans {
 	db, _ := hyperdb.GetLDBDatabase()
-	data, _ := db.Get(append(receiptsPrefix, txHash[:]...))
+	data, _ := db.Get(append(ReceiptsPrefix, txHash[:]...))
 	if len(data) == 0 {
 		return nil
 	}
@@ -88,7 +69,7 @@ func PutTransaction(db hyperdb.Database, key []byte, t *types.Transaction) error
 		return err
 	}
 	// add key by prefix to identification for a key-value database
-	keyFact := append(transactionPrefix, key...)
+	keyFact := append(TransactionPrefix, key...)
 	if err := db.Put(keyFact, data); err != nil {
 		return err
 	}
@@ -101,7 +82,7 @@ func PutTransactions(db hyperdb.Database, commonHash crypto.CommonHash, ts []*ty
 	batch := db.NewBatch()
 	for _, trans := range ts {
 		key := trans.Hash(commonHash).Bytes()
-		keyFact := append(transactionPrefix, key...)
+		keyFact := append(TransactionPrefix, key...)
 		value, err := proto.Marshal(trans)
 		if err != nil {
 			return nil
@@ -113,7 +94,7 @@ func PutTransactions(db hyperdb.Database, commonHash crypto.CommonHash, ts []*ty
 
 func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error) {
 	var transaction types.Transaction
-	keyFact := append(transactionPrefix, key...)
+	keyFact := append(TransactionPrefix, key...)
 	data, err := db.Get(keyFact)
 	if len(data) == 0 {
 		return &transaction, err
@@ -124,7 +105,7 @@ func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error)
 
 //get tx<-->block num,hash,index
 func GetTxWithBlock(db hyperdb.Database, key []byte) (uint64, int64) {
-	dataMeta, _ := db.Get(append(key, txMetaSuffix...))
+	dataMeta, _ := db.Get(append(key, TxMetaSuffix...))
 	log.Debug(dataMeta)
 	if len(dataMeta) == 0 {
 		return 0, 0
@@ -138,16 +119,16 @@ func GetTxWithBlock(db hyperdb.Database, key []byte) (uint64, int64) {
 }
 
 func DeleteTransaction(db hyperdb.Database, key []byte) error {
-	keyFact := append(transactionPrefix, key...)
+	keyFact := append(TransactionPrefix, key...)
 	return db.Delete(keyFact)
 }
 
 func GetAllTransaction(db *hyperdb.LDBDatabase) ([]*types.Transaction, error) {
 	var ts []*types.Transaction = make([]*types.Transaction, 0)
 	iter := db.NewIterator()
-	for ok := iter.Seek(transactionPrefix); ok; ok = iter.Next() {
+	for ok := iter.Seek(TransactionPrefix); ok; ok = iter.Next() {
 		key := iter.Key()
-		if len(string(key)) >= len(transactionPrefix) && string(key[:len(transactionPrefix)]) == string(transactionPrefix) {
+		if len(string(key)) >= len(TransactionPrefix) && string(key[:len(TransactionPrefix)]) == string(TransactionPrefix) {
 			var t types.Transaction
 			value := iter.Value()
 			proto.Unmarshal(value, &t)
@@ -169,12 +150,12 @@ func PutBlock(db hyperdb.Database, key []byte, t *types.Block) error {
 	if err != nil {
 		return err
 	}
-	keyFact := append(blockPrefix, key...)
+	keyFact := append(BlockPrefix, key...)
 	if err := db.Put(keyFact, data); err != nil {
 		return err
 	}
 	keyNum := strconv.FormatInt(int64(t.Number), 10)
-	err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
+	err = db.Put(append(BlockNumPrefix, keyNum...), t.BlockHash)
 	return err
 }
 func PutBlockTx(db hyperdb.Database, commonHash crypto.CommonHash, key []byte, t *types.Block) error {
@@ -182,7 +163,7 @@ func PutBlockTx(db hyperdb.Database, commonHash crypto.CommonHash, key []byte, t
 	if err != nil {
 		return err
 	}
-	keyFact := append(blockPrefix, key...)
+	keyFact := append(BlockPrefix, key...)
 	batch := db.NewBatch()
 	if err := batch.Put(keyFact, data); err != nil {
 		return err
@@ -191,51 +172,21 @@ func PutBlockTx(db hyperdb.Database, commonHash crypto.CommonHash, key []byte, t
 	//err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
 
 	//err = batch.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
-	if err := batch.Put(append(blockNumPrefix, keyNum...), t.BlockHash); err != nil {
+	if err := batch.Put(append(BlockNumPrefix, keyNum...), t.BlockHash); err != nil {
 		return err
 	}
-	//put tx<-->block num,hash,index
-
-	//for i,tx:=range t.Transactions{
-	//  meta := struct {
-	//			BlockHash  common.Hash
-	//			BlockIndex uint64
-	//			Index      uint64
-	//		}{
-	//			BlockHash:  common.BytesToHash(t.BlockHash),
-	//			BlockIndex: t.Number,
-	//			Index:      uint64(i),
-	//		}
-	//keyTxBlock := append(tx.Hash(commonHash).Bytes(), txMetaSuffix...)
-	//dataTxBlock, err := json.Marshal(meta)
-	//if err != nil {
-	//	return err
-	//}
-	//err = batch.Put(keyTxBlock,dataTxBlock)
-
-	//txKey := tx.Hash(commonHash).Bytes()
-	//txKeyFact := append(transactionPrefix, txKey...)
-	//txValue, err := proto.Marshal(tx)
-	//if err != nil {
-	//	batch.Put(txKeyFact, txValue)
-	//}
-
-//}
-	//if err !=nil{
-	//	return err
-	//}
 
 	return batch.Write()
 }
 
 func GetBlockHash(db hyperdb.Database, blockNumber uint64) ([]byte, error) {
 	keyNum := strconv.FormatInt(int64(blockNumber), 10)
-	return db.Get(append(blockNumPrefix, keyNum...))
+	return db.Get(append(BlockNumPrefix, keyNum...))
 }
 
 func GetBlock(db hyperdb.Database, key []byte) (*types.Block, error) {
 	var block types.Block
-	keyFact := append(blockPrefix, key...)
+	keyFact := append(BlockPrefix, key...)
 	data, err := db.Get(keyFact)
 	if len(data) == 0 {
 		return &block, err
@@ -254,58 +205,28 @@ func GetBlockByNumber(db hyperdb.Database, blockNumber uint64) (*types.Block, er
 }
 
 func DeleteBlock(db hyperdb.Database, key []byte) error {
-	keyFact := append(blockPrefix, key...)
+	keyFact := append(BlockPrefix, key...)
 	return db.Delete(keyFact)
 }
+
 //delete block data and block.num<--->block.hash
 func DeleteBlockByNum(db hyperdb.Database, blockNum uint64) error {
 	hash, err := GetBlockHash(db, blockNum)
 	if err != nil {
 		return err
 	}
-	keyFact := append(blockPrefix, hash...)
-	if err:= db.Delete(keyFact);err!=nil{
+	keyFact := append(BlockPrefix, hash...)
+	if err := db.Delete(keyFact); err != nil {
 		return err
 	}
-	keyNum := strconv.FormatInt(int64(blockNum),10)
-	return db.Delete(append(blockNumPrefix,keyNum...))
+	keyNum := strconv.FormatInt(int64(blockNum), 10)
+	return db.Delete(append(BlockNumPrefix, keyNum...))
 }
 
 //-- --------------------- Block END ----------------------------------
 
 //-- --------------------- BalanceMap ------------------------------------
 type balanceMapJson map[string][]byte
-
-// PutDBBalance put dbBalance into database
-func PutDBBalance(db hyperdb.Database, balance_db BalanceMap) error {
-
-	var bJson = make(balanceMapJson)
-	for key, value := range balance_db {
-		bJson[key.Str()] = value
-	}
-	data, err := json.Marshal(bJson)
-	if err != nil {
-		return err
-	}
-	return db.Put(balanceKey, data)
-}
-
-// GetDBBalance get dbBalance from database
-func GetDBBalance(db hyperdb.Database) (BalanceMap, error) {
-	var bJson balanceMapJson
-	var b = make(BalanceMap)
-	data, err := db.Get(balanceKey)
-	if err != nil {
-		return b, err
-	}
-	if err = json.Unmarshal(data, &bJson); err != nil {
-		return b, err
-	}
-	for key, value := range bJson {
-		b[common.StringToAddress(key)] = value
-	}
-	return b, nil
-}
 
 //-- --------------------- BalanceMap END---------------------------------
 
@@ -443,7 +364,7 @@ func putChain(db hyperdb.Database, t *types.Chain) error {
 	if err != nil {
 		return err
 	}
-	if err := db.Put(chainKey, data); err != nil {
+	if err := db.Put(ChainKey, data); err != nil {
 		return err
 	}
 	return nil
@@ -501,21 +422,21 @@ func UpdateChainByViewChange(height uint64, latestHash []byte) error {
 }
 
 //GetInvaildTxErrType gets ErrType of invalid tx
-func GetInvaildTxErrType(db hyperdb.Database,key []byte) (types.InvalidTransactionRecord_ErrType,error){
+func GetInvaildTxErrType(db hyperdb.Database, key []byte) (types.InvalidTransactionRecord_ErrType, error) {
 	var invalidTx types.InvalidTransactionRecord
-	keyFact := append(invalidTransactionPrefix,key...)
-	data,err := db.Get(keyFact)
-	if len(data)==0{
-		return -1,err
+	keyFact := append(InvalidTransactionPrefix, key...)
+	data, err := db.Get(keyFact)
+	if len(data) == 0 {
+		return -1, err
 	}
 	err = proto.Unmarshal(data, &invalidTx)
-	return invalidTx.ErrType,err
+	return invalidTx.ErrType, err
 }
 
 // getChain get chain from database
 func getChain(db hyperdb.Database) (*types.Chain, error) {
 	var chain types.Chain
-	data, err := db.Get(chainKey)
+	data, err := db.Get(ChainKey)
 	if len(data) == 0 {
 		return &chain, err
 	}
@@ -524,22 +445,3 @@ func getChain(db hyperdb.Database) (*types.Chain, error) {
 }
 
 //-- --------------------- Chain END ----------------------------------
-
-// GetCurrentAndParentBlockHash get current blockHash and parent blockHash
-// for given blockNumber if there are any error, it will be return
-func GetCurrentAndParentBlockHash(blockNumber uint64) (currentHash, parentHash []byte, err error) {
-	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {
-		return nil, nil, err
-	}
-	currentHash, err = GetBlockHash(db, blockNumber)
-	if err != nil {
-		return nil, nil, err
-	}
-	block, err := GetBlock(db, currentHash)
-	if err != nil {
-		return nil, nil, err
-	}
-	parentHash = block.ParentHash
-	return
-}

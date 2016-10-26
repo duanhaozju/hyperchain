@@ -14,7 +14,6 @@ func TestUpdateLeaks(t *testing.T) {
 	// Create an empty state database
 	db, _ := hyperdb.NewMemDatabase()
 	state, _ := New(common.Hash{}, db)
-
 	// Update it with some accounts
 	for i := byte(0); i < 255; i++ {
 		obj := state.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
@@ -82,12 +81,8 @@ func TestIntermediateLeaks(t *testing.T) {
 		}
 		finalState.UpdateStateObject(obj)
 	}
-	if _, err := transState.Commit(); err != nil {
-		t.Fatalf("failed to commit transition state: %v", err)
-	}
-	if _, err := finalState.Commit(); err != nil {
-		t.Fatalf("failed to commit final state: %v", err)
-	}
+	transState.Commit()
+	finalState.Commit()
 	// Cross check the databases to ensure they are the same
 	for _, key := range finalDb.Keys() {
 		if _, err := transDb.Get(key); err != nil {
@@ -95,6 +90,7 @@ func TestIntermediateLeaks(t *testing.T) {
 			t.Errorf("entry missing from the transition database: %x -> %x", key, val)
 		}
 	}
+
 	for _, key := range transDb.Keys() {
 		if _, err := finalDb.Get(key); err != nil {
 			val, _ := transDb.Get(key)

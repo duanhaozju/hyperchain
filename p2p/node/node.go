@@ -24,6 +24,7 @@ import (
 	//"hyperchain/membersrvc"
 
 	"hyperchain/membersrvc"
+	"sync"
 )
 
 var log *logging.Logger // package-level logger
@@ -36,7 +37,10 @@ type Node struct {
 	gRPCServer         *grpc.Server
 	higherEventManager *event.TypeMux
 	//common information
-	TEM transport.TransportEncryptManager
+	TEM                transport.TransportEncryptManager
+	IsPrimary          bool
+	DelayTable         map[uint64]int64
+	DelayTableMutex    sync.Mutex
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
@@ -45,6 +49,7 @@ func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, TEM transp
 	newNode.address = peerComm.ExtractAddress(peerComm.GetLocalIp(), port, nodeID)
 	newNode.TEM = TEM
 	newNode.higherEventManager = hEventManager
+	newNode.DelayTable = make(map[uint64]int64)
 	log.Debug("节点启动")
 	log.Debug("本地节点hash", newNode.address.Hash)
 	log.Debug("本地节点ip", newNode.address.IP)
@@ -74,7 +79,11 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	//handle the message
 	//review decrypt
 	log.Debug("消息类型", msg.MessageType)
-
+	go func (){
+		this.DelayTableMutex.Lock()
+		this.DelayTable[msg.From.ID] = time.Now().UnixNano() - msg.MsgTimeStamp
+		this.DelayTableMutex.Unlock()
+	}()
 	switch msg.MessageType {
 	case pb.Message_HELLO:
 		{

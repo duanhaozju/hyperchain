@@ -71,6 +71,10 @@ govendor build -o ${DUMP_PATH}/hyperchain
 echo "clear the old data"
 rm -rf "${DUMP_PATH}/build"
 
+# 复制数据
+mkdir -p "${DUMP_PATH}/build"
+cp -rf ${PROJECT_PATH}/config/keystore "${DUMP_PATH}/build/"
+
 #执行测试
 tmux_init()
 {

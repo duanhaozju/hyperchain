@@ -245,10 +245,11 @@ func (self *StateObject) EncodeObject() ([]byte, error) {
 		CodeHash:    self.codeHash,
 		Abi:         self.abi,
 	}
-	self.trie.CommitTo(self.db)
-	self.db.Put(self.codeHash, self.code)
+	//self.trie.CommitTo(self.db)
+	//self.db.Put(self.codeHash, self.code)
 	return json.Marshal(ext)
 }
+
 func DecodeObject(address common.Address, db trie.Database, data []byte) (*StateObject, error) {
 	var (
 		obj = &StateObject{

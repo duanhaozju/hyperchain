@@ -39,6 +39,7 @@ type Peer struct {
 	Status     int
 	ID         uint64
 	chatMux    sync.Mutex
+	IsPrimary bool
 }
 
 // NewPeerByIpAndPort to create a Peer which with a connection,
@@ -62,6 +63,7 @@ func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.Transpo
 	peer.Connection = conn
 	peer.Client = pb.NewChatClient(peer.Connection)
 	peer.Addr = peerAddr
+	peer.IsPrimary = false
 	//TODO handshake operation
 	//peer.TEM = transport.NewHandShakeManger()
 	//package the information
@@ -106,7 +108,7 @@ func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.Transpo
 // which implements the service that prototype file declares
 //
 func (this *Peer) Chat(msg pb.Message) (*pb.Message, error) {
-	log.Debug("调用了广播方法", msg.From.ID, ">>>", this.Addr.ID)
+	log.Debug("Invoke the broadcast method", msg.From.ID, ">>>", this.Addr.ID)
 	this.chatMux.Lock()
 	defer this.chatMux.Unlock()
 	msg.Payload = this.TEM.EncWithSecret(msg.Payload, this.Addr.Hash)

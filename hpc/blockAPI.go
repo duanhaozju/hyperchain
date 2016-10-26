@@ -1,30 +1,31 @@
 package hpc
 
 import (
-	"hyperchain/hyperdb"
-	"hyperchain/core"
-	"time"
+	"errors"
 	"hyperchain/common"
-	"strconv"
-	"hyperchain/core/types"
+	"hyperchain/core"
 	"hyperchain/core/state"
+	"hyperchain/core/types"
+	"hyperchain/hyperdb"
+	"strconv"
+	"time"
 )
 
-type PublicBlockAPI struct{
+type PublicBlockAPI struct {
 	db *hyperdb.LDBDatabase
 }
 
 type BlockResult struct {
-	Number       *Number      	`json:"number"`
-	Hash         common.Hash 	`json:"hash"`
-	ParentHash   common.Hash 	`json:"parentHash"`
-	WriteTime    string      	`json:"writeTime"`
-	AvgTime      *Number      	`json:"avgTime"`
-	TxCounts     *Number      	`json:"txcounts"`
-	Counts       *Number      	`json:"Counts"`
-	Percents     string      	`json:"percents"`
-	MerkleRoot   common.Hash	`json:"merkleRoot"`
-	Transactions []interface{}	`json:"transactions"`
+	Number       *Number       `json:"number"`
+	Hash         common.Hash   `json:"hash"`
+	ParentHash   common.Hash   `json:"parentHash"`
+	WriteTime    string        `json:"writeTime"`
+	AvgTime      *Number       `json:"avgTime"`
+	TxCounts     *Number       `json:"txcounts"`
+	Counts       *Number       `json:"Counts"`
+	Percents     string        `json:"percents"`
+	MerkleRoot   common.Hash   `json:"merkleRoot"`
+	Transactions []interface{} `json:"transactions"`
 }
 
 func NewPublicBlockAPI(hyperDb *hyperdb.LDBDatabase) *PublicBlockAPI {
@@ -33,33 +34,60 @@ func NewPublicBlockAPI(hyperDb *hyperdb.LDBDatabase) *PublicBlockAPI {
 	}
 }
 
+type BlockArgsTest struct {
+	From *Number `json:"from"`
+	To   *Number `json:"to"`
+}
+
 // GetBlocks returns all the block.
-func (blk *PublicBlockAPI) GetBlocks() ([]*BlockResult, error) {
+func (blk *PublicBlockAPI) GetBlocks(args BlockArgsTest) ([]*BlockResult, error) {
 	var blocks []*BlockResult
 
-	block, err := blk.lastestBlock()
+	if args.From == nil && args.To == nil {
+		block, err := blk.lastestBlock()
 
-	if err != nil {
-		log.Errorf("%v", err)
-		return nil, err
-	}
-
-	height := *block.Number
-
-	// only genesis block
-	if height == 0 {
-		//blocks = append(blocks, block)
-		return nil, nil
-	}
-
-	for height > 0 {
-		b, err := getBlockByNumber(height, blk.db)
 		if err != nil {
+			log.Errorf("%v", err)
 			return nil, err
-			break
 		}
-		blocks = append(blocks, b)
-		height--
+
+		height := *block.Number
+
+		// only genesis block
+		if height == 0 {
+			//blocks = append(blocks, block)
+			return nil, nil
+		}
+
+		for height > 0 {
+			b, err := getBlockByNumber(height, blk.db)
+			if err != nil {
+				return nil, err
+				break
+			}
+			blocks = append(blocks, b)
+			height--
+		}
+	} else if args.From == nil || args.To == nil || *args.From > *args.To || *args.From < 0 || *args.To < 0 {
+		return nil, errors.New("Invalid params")
+	} else if *args.From == *args.To {
+		if block, err := blk.GetBlockByNumber(*args.From); err != nil {
+			return nil, err
+		} else {
+			blocks = append(blocks, block)
+		}
+	} else {
+		from := *args.From
+		to := *args.To
+		for from <= to {
+			b, err := blk.GetBlockByNumber(to)
+			if err != nil {
+				log.Errorf("%v", err)
+				return nil, err
+			}
+			blocks = append(blocks, b)
+			to--
+		}
 	}
 
 	return blocks, nil
@@ -87,7 +115,7 @@ func (blk *PublicBlockAPI) lastestBlock() (*BlockResult, error) {
 
 	lastestBlkHeight := currentChain.Height
 
-	return getBlockByNumber(*NewUint64ToNumber(lastestBlkHeight) ,blk.db)
+	return getBlockByNumber(*NewUint64ToNumber(lastestBlkHeight), blk.db)
 }
 
 // getBlockByNumber convert type Block to type BlockResult for the given block number.
@@ -142,7 +170,6 @@ func outputBlockResult(block *types.Block, db *hyperdb.LDBDatabase) (*BlockResul
 		}
 	}
 
-
 	return &BlockResult{
 		Number:       NewUint64ToNumber(block.Number),
 		Hash:         common.BytesToHash(block.BlockHash),
@@ -160,7 +187,6 @@ func outputBlockResult(block *types.Block, db *hyperdb.LDBDatabase) (*BlockResul
 func getBlockByHash(hash common.Hash, db *hyperdb.LDBDatabase) (*BlockResult, error) {
 
 	block, err := core.GetBlock(db, hash[:])
-
 	if err != nil {
 		return nil, err
 	}

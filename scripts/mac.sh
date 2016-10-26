@@ -1,18 +1,23 @@
 #!/usr/bin/env bash
 # Stop on first error
-set -e
+#set -e
 #set -x
 echo "kill process"
-ps aux | grep hyperchain | awk '{print $2}' | args kill -9
-
+ps aux | grep hyperchain | awk '{print $2}' | xargs kill -9
+ports1=`lsof -i :8000 | awk 'NR>=2{print $2}'`
+if [ x"$ports1" != x"" ];then
+    kill -9 $ports1
+fi
 #rebuild the application
 cd ..
 # clean the build folder
-rm -rf ../build
+rm -rf ./build
 mkdir -p build
 echo "rebuild the application"
 govendor build -o ./build/hyperchain
-cp -rf ./config/keystore ./build
+cp -rf ./config ./build/
+mkdir -p ./build/build
+cp -rf ./config/keystore ./build/build
 cd -
 
 echo "run the application"

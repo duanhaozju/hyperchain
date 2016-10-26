@@ -8,11 +8,9 @@ import (
 	"fmt"
 	"hyperchain/common"
 	"hyperchain/crypto"
-	"math/big"
 	"os"
 	"path"
 	"path/filepath"
-	"reflect"
 	"sync"
 	"time"
 )
@@ -126,9 +124,7 @@ func (am *AccountManager) SignWithPassphrase(addr common.Address, hash []byte, p
 
 // Unlock unlocks the given account indefinitely.
 func (am *AccountManager) Unlock(a Account, passphrase string) error {
-	duration := big.NewInt(36000)
-	d := time.Duration(duration.Int64()) * time.Second
-	return am.TimedUnlock(a, passphrase, d)
+	return am.TimedUnlock(a, passphrase, 0)
 }
 
 // Lock removes the private key with the given address from memory.
@@ -225,24 +221,4 @@ func zeroKey(k *ecdsa.PrivateKey) {
 	for i := range b {
 		b[i] = 0
 	}
-}
-
-func ValidateAddr(from []byte) bool {
-	var accounts []Account
-	keydir, _ := filepath.Abs("./keystore")
-	accounts = getAllAccount(keydir)
-	addr := common.HexToAddress(string(from))
-	ac := Account{
-		Address: addr,
-		File:    keydir + "/" + string(from),
-	}
-	for _, account := range accounts {
-		if reflect.DeepEqual(ac, account) {
-			return true
-		}
-	}
-	//if _,found := am.unlocked[addr];found{
-	//	return true
-	//}
-	return false
 }

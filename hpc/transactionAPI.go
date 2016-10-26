@@ -177,29 +177,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, common.FromHex(args.Signature))
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 
-	// TODO set the PeerId of tx
-	//tx.PeerId = tran.pm.Peermanager.GetNodeId()
 
-	//if tran.pm == nil {
-	//
-	//	// Test environment
-	//	found = true
-	//} else {
-	//
-	//	// Development environment
-	//	am := tran.pm.AccountManager
-	//	_, found = am.Unlocked[args.From]
-	//}
-	//am := tran.pm.AccountManager
-
-	//if (!core.VerifyBalance(tx)) {
-	//	return common.Hash{}, errors.New("Not enough balance!")
-	//} else {
-	//if found == true {
-
-	// Balance is enough
-
-	//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
 	if args.Request != nil {
 
 		// ** For Dashboard Test **
@@ -257,8 +235,12 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		// ** For Hyperchain Test **
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
+<<<<<<< HEAD
 		end := start + 30
 		//end:=start+500
+=======
+		end:=start+230400
+>>>>>>> b70937fe97c752ea81818e636444fe33dac7161f
 
 		for start := start; start < end; start = time.Now().Unix() {
 
@@ -318,10 +300,6 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 	return tx.GetTransactionHash(), nil
 
-	//} else {
-	//	return common.Hash{}, errors.New("account don't unlock")
-	//}
-	//}
 }
 
 // GetTransactionReceipt returns transaction's receipt for given transaction hash.

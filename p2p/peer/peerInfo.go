@@ -13,10 +13,12 @@ const (
 )
 
 type PeerInfo struct {
-	Status int
-	IP     string
-	Port   int64
-	ID     uint64
+	Status int `json:"status"`
+	IP     string `json:"ip"`
+	Port   int64 `json:"port"`
+	ID     uint64 `json:"id"`
+	IsPrimary bool `json:"isprimary"`
+	Delay int64 `json:"delay"`
 }
 
 type PeerInfos []PeerInfo

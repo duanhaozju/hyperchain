@@ -158,27 +158,7 @@ func SaveECDSA(file string, key *ecdsa.PrivateKey) error {
 	return ioutil.WriteFile(file, []byte(k), 0600)
 }
 
-//SaveNodeInfo saves the info of node into local file
-//ip addr and pri
-func SaveNodeInfo(file string, port string, addr common.Address, pri *ecdsa.PrivateKey) error {
-	prikey := hex.EncodeToString(FromECDSA(pri))
-	content := port + " " + common.ToHex(addr[:]) + " " + prikey + " \n"
-	fmt.Println(content)
 
-	f, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
-	if err != nil {
-		return err
-	}
-	n, err := f.Write([]byte(content))
-	if err == nil && n < len([]byte(content)) {
-		err = io.ErrShortWrite
-	}
-	if err1 := f.Close(); err == nil {
-		err = err1
-	}
-	return err
-
-}
 func PubkeyToAddress(p ecdsa.PublicKey) common.Address {
 	pubBytes := FromECDSAPub(&p)
 	return common.BytesToAddress(Keccak256(pubBytes[1:])[12:])

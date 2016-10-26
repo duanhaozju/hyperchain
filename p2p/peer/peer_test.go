@@ -19,21 +19,32 @@ import (
 	"github.com/golang/protobuf/proto"
 	"encoding/hex"
 	"github.com/stretchr/testify/assert"
+	"hyperchain/membersrvc"
+
 )
-var fakeNodeTEM = transport.NewHandShakeManger()
-var fakeNode = node.NewNode(8001,new(event.TypeMux),1,"test.cn",fakeNodeTEM)
-var fakeNodeAddr =peerComm.ExtractAddress(peerComm.GetLocalIp(),8001,1)
 
 
-var localAddr = peerComm.ExtractAddress(peerComm.GetLocalIp(),8002,2)
-var localTEM = transport.NewHandShakeManger()
+var fakeNodeTEM *transport.HandShakeManager
+var fakeNode  *node.Node
+var fakeNodeAddr *pb.PeerAddress
+var localAddr *pb.PeerAddress
+var localTEM *transport.HandShakeManager
+
+
+
 
 func init(){
+	membersrvc.Start("../../config/test/local_membersrvc.yaml", 1)
+	fakeNodeTEM = transport.NewHandShakeManger()
+	fakeNode = node.NewNode(8123,new(event.TypeMux),1,fakeNodeTEM)
+	fakeNodeAddr =peerComm.ExtractAddress(peerComm.GetLocalIp(),8123,1)
+	localAddr = peerComm.ExtractAddress(peerComm.GetLocalIp(),8124,2)
+	localTEM = transport.NewHandShakeManger()
 	fakeNode.StartServer()
 }
 
 func TestNewPeerByIpAndPort(t *testing.T) {
-	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.Ip,fakeNodeAddr.Port,fakeNodeAddr.ID, fakeNodeTEM,localAddr)
+	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID, fakeNodeTEM,localAddr)
 	if err != nil{
 		t.Error(err)
 	}
@@ -41,7 +52,7 @@ func TestNewPeerByIpAndPort(t *testing.T) {
 }
 
 func TestPeer_Chat(t *testing.T) {
-	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.Ip,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr)
+	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr)
 	if err != nil{
 		t.Error(err)
 	}
@@ -60,7 +71,7 @@ func TestPeer_Chat(t *testing.T) {
 }
 
 func TestPeer_Chat2(t *testing.T) {
-	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.Ip,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr)
+	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr)
 	if err != nil{
 		t.Error(err)
 	}
@@ -79,7 +90,7 @@ func TestPeer_Chat2(t *testing.T) {
 }
 
 func TestPeer_Chat3(t *testing.T) {
-	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.Ip,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr)
+	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr)
 	if err != nil{
 		t.Error(err)
 	}
