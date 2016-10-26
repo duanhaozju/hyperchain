@@ -28,7 +28,10 @@ message CheckPointMessage{
     uint64 peerId = 3;
 
 }
-
+message ReplicaStatus {
+    bytes Addr = 1;
+    bytes Chain = 2;
+}
 
 
 
