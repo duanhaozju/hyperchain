@@ -37,10 +37,10 @@ type Node struct {
 	gRPCServer         *grpc.Server
 	higherEventManager *event.TypeMux
 	//common information
-	TEM                transport.TransportEncryptManager
-	IsPrimary          bool
-	DelayTable         map[uint64]int64
-	DelayTableMutex    sync.Mutex
+	TEM             transport.TransportEncryptManager
+	IsPrimary       bool
+	DelayTable      map[uint64]int64
+	DelayTableMutex sync.Mutex
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
@@ -79,7 +79,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	//handle the message
 	//review decrypt
 	log.Debug("消息类型", msg.MessageType)
-	go func (){
+	go func() {
 		this.DelayTableMutex.Lock()
 		this.DelayTable[msg.From.ID] = time.Now().UnixNano() - msg.MsgTimeStamp
 		this.DelayTableMutex.Unlock()
@@ -178,6 +178,12 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			case recovery.Message_INVALIDRESP:
 				{
 					go this.higherEventManager.Post(event.RespInvalidTxsEvent{
+						Payload: SyncMsg.Payload,
+					})
+				}
+			case recovery.Message_SYNCREPLICA:
+				{
+					go this.higherEventManager.Post(event.ReplicaStatusEvent{
 						Payload: SyncMsg.Payload,
 					})
 				}

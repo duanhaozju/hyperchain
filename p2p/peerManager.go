@@ -9,6 +9,7 @@ package p2p
 import (
 	"github.com/op/go-logging"
 	"hyperchain/event"
+	Server "hyperchain/p2p/node"
 	peer "hyperchain/p2p/peer"
 	"hyperchain/recovery"
 )
@@ -35,5 +36,7 @@ type PeerManager interface {
 	//get the peer information of all nodes.
 	GetPeerInfo() peer.PeerInfos
 	// set
-	SetPrimary(id uint64)error
+	SetPrimary(id uint64) error
+	// get local node instance
+	GetLocalNode() *Server.Node
 }

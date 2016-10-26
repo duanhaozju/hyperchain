@@ -237,16 +237,16 @@ func (this *GrpcPeerManager) GetPeerInfo() peer.PeerInfos {
 		}
 		perinfo.IsPrimary = per.IsPrimary
 		perinfo.Delay = this.LocalNode.DelayTable[per.ID]
-		perinfo.ID  = per.ID
+		perinfo.ID = per.ID
 		perinfos = append(perinfos, perinfo)
 	}
 	var self_info = peer.PeerInfo{
-		IP:this.LocalNode.GetNodeAddr().IP,
-		Port:this.LocalNode.GetNodeAddr().Port,
-		ID:this.LocalNode.GetNodeAddr().ID,
-		Status:peer.ALIVE,
-		IsPrimary:this.LocalNode.IsPrimary,
-		Delay:this.LocalNode.DelayTable[this.NodeID],
+		IP:        this.LocalNode.GetNodeAddr().IP,
+		Port:      this.LocalNode.GetNodeAddr().Port,
+		ID:        this.LocalNode.GetNodeAddr().ID,
+		Status:    peer.ALIVE,
+		IsPrimary: this.LocalNode.IsPrimary,
+		Delay:     this.LocalNode.DelayTable[this.NodeID],
 	}
 	perinfos = append(perinfos, self_info)
 	return perinfos
@@ -273,4 +273,8 @@ func (this *GrpcPeerManager) SetPrimary(id uint64) error {
 		}
 	}
 	return nil
+}
+
+func (this *GrpcPeerManager) GetLocalNode() *node.Node {
+	return this.LocalNode
 }

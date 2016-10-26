@@ -74,8 +74,9 @@ func main() {
 
 		//init manager
 		exist := make(chan bool)
+		syncReplicaInterval, _ := config.getSyncReplicaInterval()
 		pm := manager.New(eventMux, blockPool, grpcPeerMgr, cs, am, kec256Hash,
-			config.getNodeID())
+			config.getNodeID(), syncReplicaInterval)
 
 		go jsonrpc.Start(config.getHTTPPort(), eventMux, pm)
 
