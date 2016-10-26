@@ -400,6 +400,8 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 		return pbft.processTxEvent(tx)
 	case viewChangedEvent:
 		primary := pbft.primary(pbft.view)
+		//logger.Noticef("=============view changed event persist view==========")
+		pbft.persistView(pbft.view)
 		pbft.helper.InformPrimary(primary)
 		pbft.processRequestsDuringViewChange()
 	case batchTimerEvent:
@@ -1947,6 +1949,7 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) error {
 			logger.Noticef("#   Replica %d finished negotiating view: %d", pbft.id, pbft.view)
 			logger.Notice("################################################")
 			primary := pbft.primary(pbft.view)
+			pbft.persistView(pbft.view)
 			pbft.helper.InformPrimary(primary)
 			pbft.processRequestsDuringNegoView()
 		} else {
