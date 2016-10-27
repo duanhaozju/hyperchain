@@ -1,6 +1,8 @@
 package homomorphic_encryption
 
 import (
+	//"crypto/ecdsa"
+	//"crypto/rand"
 	"fmt"
 	"math/big"
 	"testing"
@@ -17,7 +19,7 @@ func Generate_wholenetpublickey(g []byte, n []byte, nsquare []byte) PaillierPubl
 	return publickey
 }
 
-func Test_Hm_transaction(t *testing.T) {
+func Test_Node_verify(t *testing.T) {
 	old := big.NewInt(500)
 	old_byte := old.Bytes()
 	trans := big.NewInt(200)
@@ -30,7 +32,8 @@ func Test_Hm_transaction(t *testing.T) {
 	transferamount = append(transferamount[:(16-len(trans_byte))], trans_byte...)
 
 	G1 := []byte{195, 153, 245, 222, 195, 152, 112, 47, 129, 79, 150, 122, 83, 4, 237, 142, 251, 215, 241, 160, 24, 216, 246, 105, 237, 83, 182, 53, 214, 53, 139, 73}
-	N1 := []byte{238, 223, 119, 206, 43, 23, 14, 2, 159, 122, 233, 6, 43, 53, 223}
+
+	N1 := []byte{238, 223, 119, 206, 43, 23, 14, 2, 159, 122, 233, 6, 43, 53, 223, 47}
 	nsquare1 := []byte{222, 228, 69, 213, 73, 95, 66, 80, 24, 124, 30, 174, 198, 90, 112, 198, 28, 116, 247, 151, 13, 92, 246, 31, 56, 225, 40, 131, 246, 8, 234, 161}
 	publickey := Generate_wholenetpublickey(G1, N1, nsquare1)
 
@@ -39,5 +42,29 @@ func Test_Hm_transaction(t *testing.T) {
 	newBalance_hm := []byte{60, 17, 254, 228, 200, 71, 7, 13, 242, 62, 3, 241, 78, 200, 135, 145, 94, 162, 142, 172, 63, 58, 141, 153, 211, 230, 51, 98, 86, 97, 157, 94}
 	flag := Node_Verify(publickey, oldBalance_hm, transferAmount_hm, newBalance_hm)
 	fmt.Println(flag)
-
 }
+
+//func Test_hm_transacton(t *testing.T) {
+//	old := big.NewInt(500)
+//	old_byte := old.Bytes()
+//	suffix_bigint := rand.Prime(rand.Reader, 64)
+//	suffix := suffix_bigint.Bytes()
+
+//	oldBalance := make([]byte, 16)
+//	oldBalance = append(old_byte, oldBalance[len(old_byte):])
+//	oldBalance = append(oldBalance[:(16-len(suffix))], suffix...)
+
+//	transfer := big.NewInt(200)
+//	transfer_byte := transfer.Bytes()
+//	transferAmount := make([]byte, 8)
+//	transferAmount = append(transfer_byte, transferAmount[len(transfer_byte):])
+
+//	//get whole_networkpublickey
+//	G1 := []byte{195, 153, 245, 222, 195, 152, 112, 47, 129, 79, 150, 122, 83, 4, 237, 142, 251, 215, 241, 160, 24, 216, 246, 105, 237, 83, 182, 53, 214, 53, 139, 73}
+//	N1 := []byte{238, 223, 119, 206, 43, 23, 14, 2, 159, 122, 233, 6, 43, 53, 223}
+//	nsquare1 := []byte{222, 228, 69, 213, 73, 95, 66, 80, 24, 124, 30, 174, 198, 90, 112, 198, 28, 116, 247, 151, 13, 92, 246, 31, 56, 225, 40, 131, 246, 8, 234, 161}
+//	publickey := Generate_wholenetpublickey(G1, N1, nsquare1)
+
+//	ee := New
+
+//}
