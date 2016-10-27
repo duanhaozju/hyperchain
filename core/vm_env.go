@@ -14,6 +14,10 @@ var (
 	EnableJit bool
 )
 
+func init(){
+	EnableJit = true
+	ForceJit = false
+}
 
 type Account struct {
 	Balance string

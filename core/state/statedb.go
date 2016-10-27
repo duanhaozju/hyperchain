@@ -8,11 +8,40 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/trie"
 	"math/big"
+	lru "github.com/hashicorp/golang-lru"
+	"sync"
 )
 
-var log *logging.Logger // package-level logger
+var (
+	log *logging.Logger // package-level logger
+	codeCache        *lru.Cache 	// TODO is it could be faster?  it can be put outside of the StateDB
+	abiCache        *lru.Cache 	// TODO is it could be faster?  it can be put outside of the StateDB
+	stateObjectCache        map[common.Address] *StateObject	// TODO is it should be used as the lru.Cache
+)
+
+const (
+	// Number of codehash->size associations to keep
+	codeSizeCacheSize = 10000
+	abiSizeCacheSize = 10000
+)
 func init() {
 	log = logging.MustGetLogger("state")
+	// 1.init the codeSizeCache
+	csc,err := lru.New(codeSizeCacheSize)
+	if err != nil{
+		codeCache = csc
+	}else {
+		log.Errorf("the Cache cannot be initialized")
+	}
+	// 2.init the abiSizeCache
+	asc,err := lru.New(abiSizeCacheSize)
+	if err != nil{
+		abiCache = asc
+	}else {
+		log.Errorf("the Cache cannot be initialized")
+	}
+	// 2.init the stateObjectSizeCache
+	stateObjectCache = make(map[common.Address] *StateObject)
 }
 
 // The starting nonce determines the default nonce when new accounts are being
@@ -27,13 +56,18 @@ var StartingNonce uint64
 type StateDB struct {
 	db               hyperdb.Database
 	trie             *trie.SecureTrie
+
+	//this map holds 'live' objects, which will get modified while processing a state transition
 	stateObjects     map[string]*StateObject
+	stateObjectDirty map[common.Address]struct{}
+
 	refund           *big.Int
 	thash, bhash     common.Hash
 	txIndex          int
 	logs             map[common.Hash]vm.Logs
 	logSize          uint
 	leastStateObject *StateObject
+	lock 		sync.Mutex
 }
 
 // Create a new state from a given trie
@@ -43,35 +77,30 @@ func New(root common.Hash, db hyperdb.Database) (*StateDB, error) {
 		return nil, err
 	}
 	return &StateDB{
-		db:           db,
-		trie:         tr,
-		stateObjects: make(map[string]*StateObject),
-		refund:       new(big.Int),
-		logs:         make(map[common.Hash]vm.Logs),
+		db:           		db,
+		trie:         		tr,
+		stateObjects: 		make(map[string]*StateObject),
+		stateObjectDirty:	make(map[common.Address]struct{}),
+		refund:       		new(big.Int),
+		logs:         		make(map[common.Hash]vm.Logs),
 	}, nil
 
 }
 
-/*
-func GetStateObjects(db hyperdb.Database) (map[string]*StateObject, error) {
-	//var stateDb StateDB
-	var stateDb map[string]*StateObject
-	var b = make(map[string]*StateObject)
-	data, err := db.Get(stateDbPrefix)
+func (self *StateDB) New(root common.Hash)(*StateDB,error){
+	// todo is needed?
+	//self.lock.Lock()
+	//defer self.lock.Unlock()
 
-	if err != nil {
-
-		return b, err
-	}
-	if err = json.Unmarshal(data, &stateDb); err != nil {
-
-		return b, err
-	}
-
-	return stateDb, nil
-
+	return &StateDB{
+		db:			self.db,
+		stateObjects:		make(map[string]*StateObject),
+		stateObjectDirty:	make(map[common.Address]struct{}),
+		refund:			new(big.Int),
+		logs:			make(map[common.Hash]vm.Logs),
+	},nil
 }
-*/
+
 // Reset clears out all emphemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
 func (self *StateDB) Reset(root common.Hash) error {
@@ -84,13 +113,16 @@ func (self *StateDB) Reset(root common.Hash) error {
 			return err
 		}
 	}
-	*self = StateDB{
-		db:           self.db,
-		trie:         tr,
-		stateObjects: make(map[string]*StateObject),
-		refund:       new(big.Int),
-		logs:         make(map[common.Hash]vm.Logs),
-	}
+	self.trie = tr
+	self.stateObjects = make(map[string]*StateObject)
+	self.stateObjectDirty = make(map[common.Address]struct{})
+	self.thash = common.Hash{}
+	self.bhash = common.Hash{}
+	self.logs = make(map[common.Hash]vm.Logs)
+	self.logSize = 0
+	self.refund = new(big.Int)
+	// if reset we will clear all stateObjectSizeCache
+	stateObjectCache =  make(map[common.Address] *StateObject)
 	return nil
 }
 
@@ -177,7 +209,7 @@ func (self *StateDB) ForEachAccounts() {
 func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
-		return stateObject.BalanceData
+		return stateObject.Balance()
 	}
 
 	return common.Big0
@@ -186,7 +218,7 @@ func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 func (self *StateDB) GetNonce(addr common.Address) uint64 {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
-		return stateObject.nonce
+		return stateObject.Nonce()
 	}
 	return StartingNonce
 }
@@ -294,6 +326,7 @@ func (self *StateDB) DeleteStateObject(stateObject *StateObject) {
 
 // Retrieve a state object given my the address. Nil if not found
 func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObject) {
+	// 1. we will find the stateObject from the StateDB firstly
 	stateObject = self.stateObjects[addr.Str()]
 	if stateObject != nil {
 		if stateObject.deleted {
@@ -302,6 +335,19 @@ func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObje
 		return stateObject
 	}
 
+	// 2.we will find the stateObject from stateObjectSizeCache
+	stateObject = stateObjectCache[addr]
+	if stateObject != nil{
+		log.Notice("we can get the StateObject from stateObjectSizeCache")
+		if stateObject.deleted{
+			stateObject = nil
+		}else {
+			self.SetStateObject(stateObject)
+			return stateObject
+		}
+	}
+
+	// 3.we will find the stateObject from the db by trie
 	data := self.trie.Get(addr[:])
 	if len(data) == 0 {
 		return nil
@@ -310,6 +356,7 @@ func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObje
 	if err != nil {
 		return nil
 	}
+	stateObjectCache[addr] = stateObject
 	self.SetStateObject(stateObject)
 	return stateObject
 }
@@ -333,7 +380,7 @@ func (self *StateDB) newStateObject(addr common.Address) *StateObject {
 	stateObject := NewStateObject(addr, self.db)
 	stateObject.SetNonce(StartingNonce)
 	self.stateObjects[addr.Str()] = stateObject
-
+	stateObjectCache[addr] = stateObject
 	return stateObject
 }
 
@@ -359,6 +406,8 @@ func (self *StateDB) CreateAccount(addr common.Address) vm.Account {
 // Setting, copying of the state methods
 //
 
+// TODO it could be better
+// 1.from the stateObjectCacheSize
 func (self *StateDB) Copy() *StateDB {
 	state, _ := New(common.Hash{}, self.db)
 	state.trie = self.trie
@@ -435,6 +484,7 @@ func (s *StateDB) Commit() (common.Hash, error) {
 	return root, batch.Write()
 }
 
+// TODO the logic could be optimized
 func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
 	s.refund = new(big.Int)
 	for _, stateObject := range s.stateObjects {
@@ -442,6 +492,8 @@ func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
 			// If the object has been removed, don't bother syncing it
 			// and just mark it for deletion in the trie.
 			s.DeleteStateObject(stateObject)
+			stateObject.dirty = false
+			delete(stateObjectCache,stateObject.Address())
 		} else {
 			if len(stateObject.code) > 0 {
 				if err := db.Put(stateObject.codeHash, stateObject.code); err != nil {
@@ -460,8 +512,9 @@ func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
 			}
 			// Update the object in the account trie.
 			s.UpdateStateObject(stateObject)
+			stateObject.dirty = false
+			stateObjectCache[stateObject.Address()] = stateObject
 		}
-		stateObject.dirty = false
 	}
 	return s.trie.CommitTo(db)
 }

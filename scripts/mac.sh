@@ -9,7 +9,7 @@ if [ x"$ports1" != x"" ];then
     kill -9 $ports1
 fi
 #rebuild the application
-cd ..
+#cd ..
 # clean the build folder
 rm -rf ./build
 mkdir -p build
@@ -27,6 +27,6 @@ osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain/build 
 osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain/build && ./hyperchain -o 4 -l 8004 -t 8084"'
 
 
-python ../jsonrpc/Dashboard/simpleHttpServer.py
+python ./jsonrpc/Dashboard/simpleHttpServer.py
 
 echo "All process are running background"
