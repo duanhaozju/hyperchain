@@ -84,11 +84,17 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 		if realArgs.PrivKey == "" {
 			// For Hyperchain test
 
-			// TODO replace password with test value
-			signature, err := contract.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
-			if err != nil {
-				log.Errorf("Sign(tx) error :%v", err)
+			var signature []byte
+			if realArgs.Signature == "" {
+
+				signature, err = contract.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
+				if err != nil {
+					log.Errorf("Sign(tx) error :%v", err)
+				}
+			} else {
+				tx.Signature = common.FromHex(realArgs.Signature)
 			}
+
 			tx.Signature = signature
 		} else {
 			// For Hyperboard test
