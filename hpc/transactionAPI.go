@@ -1,8 +1,6 @@
 package hpc
 
 import (
-	"github.com/golang/protobuf/proto"
-	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/types"
@@ -11,6 +9,9 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
 	"time"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/op/go-logging"
 	//"hyperchain/accounts"
 	"encoding/hex"
 	"errors"
@@ -49,7 +50,7 @@ type SendTxArgs struct {
 	//Signature string		`json:"signature"`
 	//Nonce    *jsonrpc.HexNumber  `json:"nonce"`
 	// --- test -----
-	PrivKey string `json:"privKey"`
+	PrivKey string  `json:"privKey"`
 	Request *Number `json:"request"`
 }
 
@@ -71,7 +72,7 @@ func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManage
 	return &PublicTransactionAPI{
 		eventMux: eventMux,
 		pm:       pm,
-		db:	  hyperDb,
+		db:       hyperDb,
 	}
 }
 
@@ -177,11 +178,10 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, common.FromHex(args.Signature))
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
 
-
 	if args.Request != nil {
 
 		// ** For Dashboard Test **
-		for i:=0; i < (*args.Request).ToInt(); i++ {
+		for i := 0; i < (*args.Request).ToInt(); i++ {
 			tx.Timestamp = time.Now().UnixNano()
 			tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
 
@@ -234,61 +234,61 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 		// ** For Hyperchain Test **
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		start := time.Now().Unix()
-		end:=start+230400
+		// start := time.Now().Unix()
+		// end:=start+230400
 
-		for start := start; start < end; start = time.Now().Unix() {
+		// for start := start; start < end; start = time.Now().Unix() {
 
-			for i := 0; i < 25; i++ {
-				tx.Timestamp = time.Now().UnixNano()
-				tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
+		// 	for i := 0; i < 25; i++ {
+		tx.Timestamp = time.Now().UnixNano()
+		tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
 
-				if realArgs.PrivKey == "" {
-					// For Hyperchain test
+		if realArgs.PrivKey == "" {
+			// For Hyperchain test
 
-					// TODO replace password with test value
-					signature, err := tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
-					if err != nil {
-						log.Errorf("Sign(tx) error :%v", err)
-					}
-					tx.Signature = signature
-				} else {
-					// For Dashboard test
-
-					key, err := hex.DecodeString(args.PrivKey)
-					if err != nil {
-						return common.Hash{}, err
-					}
-					pri := crypto.ToECDSA(key)
-
-					hash := tx.SighHash(kec256Hash).Bytes()
-					sig, err := encryption.Sign(hash, pri)
-					if err != nil {
-						return common.Hash{}, err
-					}
-
-					tx.Signature = sig
-				}
-
-				tx.TransactionHash = tx.BuildHash().Bytes()
-				// Unsign
-				if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
-					return common.Hash{}, errors.New("invalid signature")
-				}
-
-				txBytes, err := proto.Marshal(tx)
-				if err != nil {
-					log.Errorf("proto.Marshal(tx) error: %v", err)
-				}
-				if manager.GetEventObject() != nil {
-					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
-					//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-				} else {
-					log.Warning("manager is Nil")
-				}
+			// TODO replace password with test value
+			signature, err := tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
+			if err != nil {
+				log.Errorf("Sign(tx) error :%v", err)
 			}
-			time.Sleep(300 * time.Millisecond)
+			tx.Signature = signature
+		} else {
+			// For Dashboard test
+
+			key, err := hex.DecodeString(args.PrivKey)
+			if err != nil {
+				return common.Hash{}, err
+			}
+			pri := crypto.ToECDSA(key)
+
+			hash := tx.SighHash(kec256Hash).Bytes()
+			sig, err := encryption.Sign(hash, pri)
+			if err != nil {
+				return common.Hash{}, err
+			}
+
+			tx.Signature = sig
 		}
+
+		tx.TransactionHash = tx.BuildHash().Bytes()
+		// Unsign
+		if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
+			return common.Hash{}, errors.New("invalid signature")
+		}
+
+		txBytes, err := proto.Marshal(tx)
+		if err != nil {
+			log.Errorf("proto.Marshal(tx) error: %v", err)
+		}
+		if manager.GetEventObject() != nil {
+			go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+			//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+		} else {
+			log.Warning("manager is Nil")
+		}
+		// 	}
+		// 	time.Sleep(300 * time.Millisecond)
+		// }
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
 	}
@@ -324,10 +324,10 @@ func (tran *PublicTransactionAPI) GetTransactions() ([]*TransactionResult, error
 	log.Info("========== tx count ======= ", len(txs))
 	// TODO 1.得到交易所在的区块哈希 2.取出 tx.Value 中的 amount
 	for _, tx := range txs {
-		if ts, err := outputTransaction(tx, tran.db); err !=  nil {
+		if ts, err := outputTransaction(tx, tran.db); err != nil {
 			return nil, err
 		} else {
-			transactions = append(transactions,ts)
+			transactions = append(transactions, ts)
 		}
 	}
 
@@ -374,7 +374,7 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockHashAndIndex(hash common.
 // GetTransactionsByBlockNumberAndIndex returns the transaction for the given block number and index.
 func (tran *PublicTransactionAPI) GetTransactionByBlockNumberAndIndex(n Number, index Number) (*TransactionResult, error) {
 
-	block,err:=core.GetBlockByNumber(tran.db, uint64(n))
+	block, err := core.GetBlockByNumber(tran.db, uint64(n))
 	if err != nil {
 		log.Errorf("%v", err)
 		return nil, err
@@ -446,7 +446,7 @@ func outputTransaction(tx *types.Transaction, db *hyperdb.LDBDatabase) (*Transac
 
 	txHash := tx.GetTransactionHash()
 
-	if err := proto.Unmarshal(tx.Value,&txValue); err != nil {
+	if err := proto.Unmarshal(tx.Value, &txValue); err != nil {
 		log.Errorf("%v", err)
 		return nil, err
 	}
@@ -459,16 +459,16 @@ func outputTransaction(tx *types.Transaction, db *hyperdb.LDBDatabase) (*Transac
 	}
 
 	return &TransactionResult{
-		Hash: 		txHash,
-		BlockNumber: 	NewUint64ToNumber(bn),
-		BlockHash: 	common.BytesToHash(blk.BlockHash),
-		TxIndex: 	NewInt64ToNumber(txIndex),
-		From: 		common.BytesToAddress(tx.From),
-		To: 		common.BytesToAddress(tx.To),
-		Amount: 	NewInt64ToNumber(txValue.Amount),
-		Gas: 		NewInt64ToNumber(txValue.GasLimit),
-		GasPrice: 	NewInt64ToNumber(txValue.Price),
-		Timestamp: 	time.Unix(tx.Timestamp / int64(time.Second), 0).Format("2006-01-02 15:04:05"),
-		ExecuteTime:	NewInt64ToNumber((blk.WriteTime - tx.Timestamp) / int64(time.Millisecond)),
+		Hash:        txHash,
+		BlockNumber: NewUint64ToNumber(bn),
+		BlockHash:   common.BytesToHash(blk.BlockHash),
+		TxIndex:     NewInt64ToNumber(txIndex),
+		From:        common.BytesToAddress(tx.From),
+		To:          common.BytesToAddress(tx.To),
+		Amount:      NewInt64ToNumber(txValue.Amount),
+		Gas:         NewInt64ToNumber(txValue.GasLimit),
+		GasPrice:    NewInt64ToNumber(txValue.Price),
+		Timestamp:   time.Unix(tx.Timestamp/int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+		ExecuteTime: NewInt64ToNumber((blk.WriteTime - tx.Timestamp) / int64(time.Millisecond)),
 	}, nil
 }
