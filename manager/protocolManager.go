@@ -31,10 +31,10 @@ func init() {
 }
 
 type ReplicaInfo struct {
-	IP   string `protobuf:"bytes,1,opt,name=IP" json:"IP,omitempty"`
-	Port int64  `protobuf:"varint,2,opt,name=Port" json:"Port,omitempty"`
-	Hash string `protobuf:"bytes,3,opt,name=hash"hash json:"hash,omitempty"`
-	ID   uint64 `protobuf:"varint,4,opt,name=ID" jsonson:"ID,omitempty"`
+	IP              string `protobuf:"bytes,1,opt,name=IP" json:"IP,omitempty"`
+	Port            int64  `protobuf:"varint,2,opt,name=Port" json:"Port,omitempty"`
+	Hash            string `protobuf:"bytes,3,opt,name=hash"hash json:"hash,omitempty"`
+	ID              uint64 `protobuf:"varint,4,opt,name=ID" jsonson:"ID,omitempty"`
 
 	LatestBlockHash []byte `protobuf:"bytes,1,opt,name=latestBlockHash,proto3" json:"latestBlockHash,omitempty"`
 	ParentBlockHash []byte `proto3obuf:"bytes,2,opt,name=parentBlockHash,proto3" json:"parentBlockHash,omitempty"`
@@ -42,17 +42,17 @@ type ReplicaInfo struct {
 }
 
 type ProtocolManager struct {
-	serverPort  int
-	blockPool   *blockpool.BlockPool
-	Peermanager p2p.PeerManager
+	serverPort          int
+	blockPool           *blockpool.BlockPool
+	Peermanager         p2p.PeerManager
 
-	nodeInfo  client.PeerInfos // node info ,store node status,ip,port
-	consenter consensus.Consenter
+	nodeInfo            client.PeerInfos // node info ,store node status,ip,port
+	consenter           consensus.Consenter
 
-	AccountManager *accounts.AccountManager
-	commonHash     crypto.CommonHash
+	AccountManager      *accounts.AccountManager
+	commonHash          crypto.CommonHash
 
-	eventMux *event.TypeMux
+	eventMux            *event.TypeMux
 
 	newBlockSub         event.Subscription
 	consensusSub        event.Subscription
@@ -75,8 +75,8 @@ type NodeManager struct {
 var eventMuxAll *event.TypeMux
 
 func NewProtocolManager(blockPool *blockpool.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
-	//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
-	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool) *ProtocolManager {
+//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
+am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool) *ProtocolManager {
 	synccache, _ := common.NewCache()
 	replicacache, _ := common.NewCache()
 	manager := &ProtocolManager{
@@ -219,7 +219,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			var peers []uint64
 			peers = append(peers, ev.PeerId)
 			go self.Peermanager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
-			//go self.peerManager.SendMsgToPeers(ev.Payload,)
+		//go self.peerManager.SendMsgToPeers(ev.Payload,)
 		case event.NewTxEvent:
 			log.Debug("###### enter NewTxEvent")
 			go self.sendMsg(ev.Payload)
@@ -324,7 +324,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 
 						// receive all block in chain
 						if core.GetChainCopy().RequiredBlockNum <= core.GetChainCopy().Height {
-							lastBlk, _ := core.GetBlockByNumber(db, core.GetChainCopy().RequiredBlockNum+1)
+							lastBlk, _ := core.GetBlockByNumber(db, core.GetChainCopy().RequiredBlockNum + 1)
 							if common.Bytes2Hex(lastBlk.ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash) {
 								// execute all received block at one time
 								for i := core.GetChainCopy().RequiredBlockNum + 1; i <= core.GetChainCopy().RecoveryNum; i += 1 {
@@ -361,9 +361,9 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 								break
 							} else {
 								// the highest block in local is invalid, request the block
-								core.DeleteBlockByNum(db, lastBlk.Number-1)
-								core.UpdateChainByBlcokNum(db, lastBlk.Number-2)
-								self.broadcastDemandBlock(lastBlk.Number-1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
+								core.DeleteBlockByNum(db, lastBlk.Number - 1)
+								core.UpdateChainByBlcokNum(db, lastBlk.Number - 2)
+								self.broadcastDemandBlock(lastBlk.Number - 1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
 							}
 						}
 					}
@@ -458,7 +458,7 @@ func (self *ProtocolManager) SyncReplicaStatus() {
 				peerIds[idx] = peer.ID
 			}
 			self.Peermanager.SendMsgToPeers(payload, peerIds, recovery.Message_SYNCREPLICA)
-			// post to self
+		// post to self
 			self.eventMux.Post(event.ReplicaStatusEvent{
 				Payload: payload,
 			})
