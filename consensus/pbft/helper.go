@@ -107,6 +107,26 @@ func (pbft *pbftProtocal) getChkptCert(n uint64, id string) (cert *chkptCert) {
 	return
 }
 
+// Given a ip/digest get the addnode Cert
+func (pbft *pbftProtocal) getAddNodeCert(ip string, digest string) (cert *addNodeCert) {
+
+	idx := addNodeID{ip, digest}
+	cert, ok := pbft.addNodeCertStore[idx]
+
+	if ok {
+		return
+	}
+
+	addNodes := make(map[AddNode]bool)
+	cert = &addNodeCert{
+		addNodes:	addNodes,
+		count:	0,
+	}
+	pbft.addNodeCertStore[idx] = cert
+
+	return
+}
+
 
 // =============================================================================
 // prepare/commit quorum checks helper
@@ -304,7 +324,7 @@ func (pbft *pbftProtocal) startTimerIfOutstandingRequests() {
 
 func (pbft *pbftProtocal) nullReqTimerReset(){
 	timeout := pbft.nullRequestTimeout
-	if pbft.primary(pbft.view) != pbft.id {
+	if pbft.primary(pbft.view, pbft.N) != pbft.id {
 		// we're waiting for the primary to deliver a null request - give it a bit more time
 		timeout += pbft.requestTimeout
 	}

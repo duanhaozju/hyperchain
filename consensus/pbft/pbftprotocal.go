@@ -1,7 +1,6 @@
 package pbft
 
 import (
-	"encoding/base64"
 	"fmt"
 	"sort"
 	"sync"
@@ -114,8 +113,11 @@ type pbftProtocal struct {
 	inAddingNode		bool						// track if replica is in adding node
 	inGettingTable		bool						// track if replica is in getting routing table
 	addNodeCertStore	map[addNodeID]*addNodeCert	// track the received add node agree message
-	routingTable		string						// track the routing table from local
-	newIP				string						// track the new IP from local
+	routingTable		string						// store the routing table from local
+	tableDigest			string						// store the digest of routing table
+	newIP				string						// store the new IP from local
+	newID				uint64						// store the new id of the new replica
+	inTableError		bool						// track if the replica's routing table has error
 	inUpdatingN			bool						// track if there exist previous N and new N
 	previousN			uint64						// track the previous N
 	previousView		uint64						// track the previous view
@@ -171,7 +173,7 @@ type addNodeID struct {
 }
 
 type addNodeCert struct {
-	routingTable	string
+	table			string
 	addNodes		map[AddNode]bool
 	count			int
 }
@@ -274,6 +276,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
 	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
 	pbft.cacheValidatedBatch = make(map[string]*cacheBatch)
+	pbft.addNodeCertStore = make(map[addNodeID]*addNodeCert)
 
 	pbft.restoreState()
 
@@ -371,16 +374,7 @@ func (pbft *pbftProtocal) RecvLocal(msg interface{}) error {
 
 	logger.Debugf("Replica %d received local message", pbft.id)
 
-	switch e := msg.(type) {
-	case event.ValidatedTxs:
-		return pbft.recvValidatedResult(e)
-	case protos.NewNodeMessage:
-		return pbft.recvLocalNewNode(e)
-	case protos.AddNodeMessage:
-		return pbft.recvLocalAddNode(e)
-	default:
-		logger.Warningf("Replica %d received an unknown message from local, type %T", pbft.id, e)
-	}
+	go pbft.postPbftEvent(msg)
 
 	return nil
 }
@@ -390,7 +384,6 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 	logger.Debugf("Replica %d start solve event", pbft.id)
 
 	switch e := ee.(type) {
-
 	case *types.Transaction:
 		tx := e
 		return pbft.processTxEvent(tx)
@@ -479,7 +472,12 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		}
 		logger.Debugf("Replica %d nego-view response timer expired before N-f was reached, resending", pbft.id)
 		pbft.restartNegoView()
-
+	case event.ValidatedTxs:
+		err = pbft.recvValidatedResult(et)
+	case protos.NewNodeMessage:
+		err = pbft.recvLocalNewNode(et)
+	case protos.AddNodeMessage:
+		err = pbft.recvLocalAddNode(et)
 	default:
 		logger.Warningf("Replica %d received an unknown message type %T", pbft.id, et)
 	}
@@ -647,7 +645,7 @@ func (pbft *pbftProtocal) sendBatch() error {
 	pbft.batchStore = nil
 	logger.Infof("Creating batch with %d requests", len(reqBatch.Batch))
 
-	pbft.pbftManager.Queue() <- reqBatch
+	go pbft.postPbftEvent(reqBatch)
 
 	return nil
 }
@@ -1008,16 +1006,19 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 	}
 
 	if pbft.primary(pbft.view, pbft.N) != preprep.ReplicaId {
-		logger.Warningf("Pre-prepare from other than primary: got %d, should be %d", preprep.ReplicaId, pbft.primary(pbft.view, pbft.N))
+		logger.Warningf("Pre-prepare from other than primary: got %d, should be %d",
+			preprep.ReplicaId, pbft.primary(pbft.view, pbft.N))
 		return nil
 	}
 
 	if !pbft.inWV(preprep.View, preprep.SequenceNumber) {
 		if preprep.SequenceNumber != pbft.h && !pbft.skipInProgress {
-			logger.Warningf("Replica %d pre-prepare view different, or sequence number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d", pbft.id, preprep.View, pbft.primary(pbft.view, pbft.N), preprep.SequenceNumber, pbft.h)
+			logger.Warningf("Replica %d pre-prepare view different, or sequence number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d",
+				pbft.id, preprep.View, pbft.primary(pbft.view, pbft.N), preprep.SequenceNumber, pbft.h)
 		} else {
 			// This is perfectly normal
-			logger.Debugf("Replica %d pre-prepare view different, or sequence number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d", pbft.id, preprep.View, pbft.primary(pbft.view, pbft.N), preprep.SequenceNumber, pbft.h)
+			logger.Debugf("Replica %d pre-prepare view different, or sequence number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d",
+				pbft.id, preprep.View, pbft.primary(pbft.view, pbft.N), preprep.SequenceNumber, pbft.h)
 		}
 
 		return nil
@@ -1026,7 +1027,8 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 	cert := pbft.getCert(preprep.View, preprep.SequenceNumber)
 
 	if cert.digest != "" && cert.digest != preprep.BatchDigest {
-		logger.Warningf("Pre-prepare found for same view/seqNo but different digest: received %s, stored %s", preprep.BatchDigest, cert.digest)
+		logger.Warningf("Pre-prepare found for same view/seqNo but different digest: received %s, stored %s",
+			preprep.BatchDigest, cert.digest)
 		return nil
 	}
 
@@ -1095,10 +1097,12 @@ func (pbft *pbftProtocal) recvPrepare(prep *Prepare) error {
 
 	if !pbft.inWV(prep.View, prep.SequenceNumber) {
 		if prep.SequenceNumber != pbft.h && !pbft.skipInProgress {
-			logger.Warningf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
+			logger.Warningf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d",
+				pbft.id, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
 		} else {
 			// This is perfectly normal
-			logger.Debugf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
+			logger.Debugf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d",
+				pbft.id, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
 		}
 
 		return nil
@@ -1109,7 +1113,8 @@ func (pbft *pbftProtocal) recvPrepare(prep *Prepare) error {
 	ok := cert.prepare[*prep]
 
 	if ok {
-		logger.Warningf("Ignoring duplicate prepare from %d, --------view=%d/seqNo=%d--------", prep.ReplicaId, prep.View, prep.SequenceNumber)
+		logger.Warningf("Ignoring duplicate prepare from %d, --------view=%d/seqNo=%d--------",
+			prep.ReplicaId, prep.View, prep.SequenceNumber)
 		return nil
 	}
 
@@ -1202,10 +1207,12 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 
 	if !pbft.inWV(commit.View, commit.SequenceNumber) {
 		if commit.SequenceNumber != pbft.h && !pbft.skipInProgress {
-			logger.Warningf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, high water mark %d", pbft.id, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
+			logger.Warningf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, high water mark %d",
+				pbft.id, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
 		} else {
 			// This is perfectly normal
-			logger.Debugf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, high water mark %d", pbft.id, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
+			logger.Debugf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, high water mark %d",
+				pbft.id, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
 		}
 		return nil
 	}
@@ -1215,7 +1222,8 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 	ok := cert.commit[*commit]
 
 	if ok {
-		logger.Warningf("Ignoring duplicate commit from %d, --------view=%d/seqNo=%d--------", commit.ReplicaId, commit.View, commit.SequenceNumber)
+		logger.Warningf("Ignoring duplicate commit from %d, --------view=%d/seqNo=%d--------",
+			commit.ReplicaId, commit.View, commit.SequenceNumber)
 		return nil
 	}
 
@@ -1631,7 +1639,7 @@ func (pbft *pbftProtocal) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 		}
 	}
 
-	snapshotID, err := base64.StdEncoding.DecodeString(chkpt.Id)
+	snapshotID, err := stringToByte(chkpt.Id)
 	if err != nil {
 		err = fmt.Errorf("Replica %d received a weak checkpoint cert which could not be decoded (%s)", pbft.id, chkpt.Id)
 		logger.Error(err.Error())
@@ -1723,7 +1731,8 @@ func (pbft *pbftProtocal) moveWatermarks(n uint64) {
 
 func (pbft *pbftProtocal) updateHighStateTarget(target *stateUpdateTarget) {
 	if pbft.highStateTarget != nil && pbft.highStateTarget.seqNo >= target.seqNo {
-		logger.Infof("Replica %d not updating state target to seqNo %d, has target for seqNo %d", pbft.id, target.seqNo, pbft.highStateTarget.seqNo)
+		logger.Infof("Replica %d not updating state target to seqNo %d, has target for seqNo %d",
+			pbft.id, target.seqNo, pbft.highStateTarget.seqNo)
 		return
 	}
 
@@ -1987,8 +1996,6 @@ func (pbft *pbftProtocal) recvRcry() events.Event {
 	return nil
 }
 
-func (pbft *pbftProtocal) recvAddNode()
-
 // =============================================================================
 // receive local message methods
 // =============================================================================
@@ -2032,27 +2039,6 @@ func (pbft *pbftProtocal) recvValidatedResult(result event.ValidatedTxs) error {
 			pbft.sendViewChange()
 		}
 	}
-
-	return nil
-}
-
-func (pbft *pbftProtocal) recvLocalNewNode(msg protos.NewNodeMessage) error {
-
-	logger.Debugf("New replica received local newNode message for ip=%s/N=%d", msg.Ip, msg.N)
-
-	pbft.isNewNode = true
-	pbft.inAddingNode = true
-	pbft.inGettingTable = true
-	pbft.N = msg.N
-	pbft.f = (msg.N-1)/3
-
-	logger.Debug("New replica update N=%d/f=$d", pbft.N, pbft.f)
-
-	return nil
-}
-
-func (pbft *pbftProtocal) recvLocalAddNode(msg protos.AddNodeMessage) error {
-	// TODO
 
 	return nil
 }

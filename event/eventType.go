@@ -80,6 +80,9 @@ type InformPrimaryEvent struct {
 	Primary uint64
 }
 
+// if SelfFindErr == true, local routing table is right
+// if SelfFindErr == false, local routing table is wrong
 type UpdateRoutingTable struct {
-
+	RoutingTable	string
+	SelfFindErr		bool
 }

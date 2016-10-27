@@ -37,11 +37,12 @@ message consensus_message {
         NEGOTIATE_VIEW_RESPONSE = 11;
         RECOVERY_INIT = 12;
         RECOVERY_RESPONSE = 13;
-        NEW_NODE = 14;
-        ADD_NODE = 15;
+        ADD_NODE = 14;
+        AGREE_ADD_NODE = 15;
         ROUTING_TABLE = 16;
         READY_FOR_N = 17;
         UPDATE_N = 18;
+        AGREE_UPDATE_N = 19;
     }
     Type type = 1;
     bytes payload = 2;
@@ -140,19 +141,24 @@ message recovery_response {
     repeated block_info blocks = 2;
 }
 
-message new_node {
-    uint64 replica_id = 1;
-    string table_digest = 2;
-}
-
 message add_node {
     uint64 replica_id = 1;
-    string table_digest = 2;
+    string ip = 2;
+    string table_digest = 3;
+    uint64 new_id = 4;
+}
+
+message agree_add_node {
+    uint64 replica_id = 1;
+    string ip = 2;
+    string table_digest = 3;
+    uint64 new_id = 4;
 }
 
 message routing_table {
     uint64 replica_id = 1;
     string table = 2;
+    uint64 new_id = 3;
 }
 
 message ready_for_n {
@@ -165,4 +171,13 @@ message update_n {
     string tablde_digest = 2;
     uint64 n = 3;
     uint64 seqNo = 4;
+    uint64 view = 5;
+}
+
+message agree_update_n {
+    uint64 replica_id = 1;
+    string tablde_digest = 2;
+    uint64 n = 3;
+    uint64 seqNo = 4;
+    uint64 view = 5;
 }

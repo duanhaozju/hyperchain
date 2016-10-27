@@ -307,7 +307,7 @@ func (pbft *pbftProtocal) recvNewView(nv *NewView) events.Event {
 		return nil
 	}
 
-	if !(nv.View > 0 && nv.View >= pbft.view && pbft.primary(nv.View) == nv.ReplicaId && pbft.newViewStore[nv.View] == nil) {
+	if !(nv.View > 0 && nv.View >= pbft.view && pbft.primary(nv.View, pbft.N) == nv.ReplicaId && pbft.newViewStore[nv.View] == nil) {
 		logger.Infof("Replica %d rejecting invalid new-view from %d, v:%d",
 			pbft.id, nv.ReplicaId, nv.View)
 		return nil
@@ -550,7 +550,7 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	pbft.helper.VcReset(backendVid)
 	xSetLen := len(nv.Xset)
 	upper := uint64(xSetLen) + pbft.h + uint64(1)
-	if pbft.primary(pbft.view) == pbft.id {
+	if pbft.primary(pbft.view, pbft.N) == pbft.id {
 		for i := pbft.h+uint64(1); i < upper; i++ {
 			d, ok := nv.Xset[i]
 			if !ok {
