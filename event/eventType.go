@@ -84,3 +84,7 @@ type InformPrimaryEvent struct {
 type ReplicaStatusEvent struct {
 	Payload []byte
 }
+
+type StartJoinChainEvent  struct {
+
+}
