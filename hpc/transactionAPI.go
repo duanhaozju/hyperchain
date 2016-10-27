@@ -172,7 +172,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 						log.Errorf("Sign(tx) error :%v", err)
 					}
 				} else {
-					tx.Signature = realArgs.Signature
+					tx.Signature = common.FromHex(realArgs.Signature)
 				}
 
 				tx.Signature = signature
