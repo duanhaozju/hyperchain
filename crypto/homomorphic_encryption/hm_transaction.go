@@ -4,16 +4,12 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/hex"
-	//"os"
-
 	"hyperchain/crypto/ecies"
-	//"io"
 	"io/ioutil"
 	"math/big"
-	//"os"
 )
 
-type p struct {
+type pp struct {
 	N1 []byte
 	N2 []byte
 	N3 []byte
@@ -104,39 +100,33 @@ func Destination_Verify(transferAmount_hm []byte, transferAmount_ecc []byte, ecd
 }
 
 //put whole_networkpublickey to a file
-func PutWholeNetworkPublickey(file1 string, file2 string, file3 string, whole_networkpublickey *PaillierPublickey) (error, error, error) {
+func PutWholeNetworkPublickey(file string, whole_networkpublickey *PaillierPublickey) error {
+	var publickey pp
+	publickey.N1 = whole_networkpublickey.G.Bytes()
+	publickey.N2 = whole_networkpublickey.N.Bytes()
+	publickey.N3 = whole_networkpublickey.nsquare.Bytes()
 
-	N1 := whole_networkpublickey.G.Bytes()
-	N2 := whole_networkpublickey.N.Bytes()
-	N3 := whole_networkpublickey.nsquare.Bytes()
+	data, _ := Encode(publickey)
+	stringdata := hex.EncodeToString(data)
 
-	stringdata1 := hex.EncodeToString(N1)
-
-	stringdata2 := hex.EncodeToString(N2)
-	stringdata3 := hex.EncodeToString(N3)
-
-	err1 := ioutil.WriteFile(file1, []byte(stringdata1), 0600)
-	err2 := ioutil.WriteFile(file2, []byte(stringdata2), 0600)
-	err3 := ioutil.WriteFile(file3, []byte(stringdata3), 0600)
-
-	return err1, err2, err3
+	return ioutil.WriteFile(file, []byte(stringdata), 0600)
 }
 
 //get wholenetworkpublickey from a file
-func GetWholeNetworkPublickey(file1 string, file2 string, file3 string) (*PaillierPublickey, error) {
+func GetWholeNetworkPublickey(file string) (*PaillierPublickey, error) {
 
 	var pailpub PaillierPublickey
+	var publickey pp
 
-	N1, err := Getnumber(file1)
-	N2, err := Getnumber(file2)
-	N3, err := Getnumber(file3)
+	number, _ := Getnumber(file)
+	err := Decode(number, &publickey)
 
 	a1 := new(big.Int)
 	a2 := new(big.Int)
 	a3 := new(big.Int)
-	pailpub.G = a1.SetBytes(N1)
-	pailpub.N = a2.SetBytes(N2)
-	pailpub.nsquare = a3.SetBytes(N3)
+	pailpub.G = a1.SetBytes(publickey.N1)
+	pailpub.N = a2.SetBytes(publickey.N2)
+	pailpub.nsquare = a3.SetBytes(publickey.N3)
 
 	return &pailpub, err
 }
@@ -172,7 +162,6 @@ func CompareTwoBytes(a []byte, b []byte) int {
 //get a []byte's last 8 byte and div 3
 func CutByte(a []byte) []byte {
 	temp := make([]byte, 8)
-	//	temp := []byte{}
 	if len(a) > 8 {
 		copy(temp, a[len(a)-8:])
 		big_temp := new(big.Int)

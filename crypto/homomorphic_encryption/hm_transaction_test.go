@@ -53,14 +53,13 @@ func Test_getput(t *testing.T) {
 	fmt.Println(publickey.G)
 	fmt.Println(publickey.N)
 	fmt.Println(publickey.nsquare)
-	err1, err2, err3 := PutWholeNetworkPublickey("G:/testgetput.txt1", "G:/testgetput.txt2", "G:/testgetput.txt3", &publickey)
-	p, _ := GetWholeNetworkPublickey("G:/testgetput.txt1", "G:/testgetput.txt2", "G:/testgetput.txt3")
+	err := PutWholeNetworkPublickey("G:/testgetput.txt", &publickey)
+	p, _ := GetWholeNetworkPublickey("G:/testgetput.txt")
 	fmt.Println(p.G)
 	fmt.Println(p.N)
 	fmt.Println(p.nsquare)
-	fmt.Println(err1)
-	fmt.Println(err2)
-	fmt.Println(err3)
+	fmt.Println(err)
+
 }
 
 //func Test_hm_transacton(t *testing.T) {

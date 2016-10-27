@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"encoding/hex"
-	//"io"
 	"io/ioutil"
-	//"os"
 )
 
 func Encode(data interface{}) ([]byte, error) {
