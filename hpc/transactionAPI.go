@@ -1,6 +1,8 @@
 package hpc
 
 import (
+	"github.com/golang/protobuf/proto"
+	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/types"
@@ -9,9 +11,6 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
 	"time"
-
-	"github.com/golang/protobuf/proto"
-	"github.com/op/go-logging"
 	//"hyperchain/accounts"
 	"encoding/hex"
 	"errors"
@@ -51,8 +50,8 @@ type SendTxArgs struct {
 	Timestamp int64                 `json:"timestamp"`
 	//Nonce    *jsonrpc.HexNumber  `json:"nonce"`
 	// --- test -----
-	PrivKey string  `json:"privKey"`
-	Request *Number `json:"request"`
+	PrivKey   string `json:"privKey"`
+	Request   *Number `json:"request"`
 }
 
 type TransactionResult struct {
@@ -87,7 +86,7 @@ func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManage
 	return &PublicTransactionAPI{
 		eventMux: eventMux,
 		pm:       pm,
-		db:       hyperDb,
+		db:          hyperDb,
 	}
 }
 
@@ -141,13 +140,12 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	}
 
 	//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, common.FromHex(args.Signature))
-	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value)
+	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp)
 
 	if args.Request != nil {
 
-		// ** For Dashboard Test **
+		// ** For Hyperboard Test **
 		for i := 0; i < (*args.Request).ToInt(); i++ {
-			tx.Timestamp = time.Now().UnixNano()
 			// ################################# 测试代码 START ####################################### // (用不同的value代替之前不同的timestamp以标志不同的transaction)
 			txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), v, nil)
 
@@ -232,61 +230,93 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 		// ** For Hyperchain Test **
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		// start := time.Now().Unix()
-		// end:=start+230400
+		start := time.Now().Unix()
+		//end:=start+1
+		end := start + DURATION
 
-		// for start := start; start < end; start = time.Now().Unix() {
+		for start := start; start < end; start = time.Now().Unix() {
+			for i := 0; i < COUNT; i++ {
+				// ################################# 测试代码 START ####################################### // (用不同的value代替之前不同的timestamp以标志不同的transaction)
+				txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), v, nil)
 
-		// 	for i := 0; i < 25; i++ {
-		tx.Timestamp = time.Now().UnixNano()
-		tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
+				value, err := proto.Marshal(txValue)
 
-		if realArgs.PrivKey == "" {
-			// For Hyperchain test
+				if err != nil {
+					return common.Hash{}, err
+				}
+				tx.Value = value
+				v++
+				// ################################## 测试代码 END ####################################### //
+				tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
 
-			// TODO replace password with test value
-			signature, err := tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
-			if err != nil {
-				log.Errorf("Sign(tx) error :%v", err)
+				if realArgs.PrivKey == "" {
+					// For Hyperchain test
+
+					// TODO replace password with test value
+					signature, err := tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
+					if err != nil {
+						log.Errorf("Sign(tx) error :%v", err)
+					}
+					tx.Signature = signature
+				} else {
+					// For Hyperboard test
+
+					key, err := hex.DecodeString(args.PrivKey)
+					if err != nil {
+						return common.Hash{}, err
+					}
+					pri := crypto.ToECDSA(key)
+
+					hash := tx.SighHash(kec256Hash).Bytes()
+					sig, err := encryption.Sign(hash, pri)
+					if err != nil {
+						return common.Hash{}, err
+					}
+
+					tx.Signature = sig
+				}
+
+				tx.TransactionHash = tx.BuildHash().Bytes()
+				// Unsign Test
+				if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
+					log.Error("invalid signature")
+					// 不要返回，因为要将失效交易存到db中
+					//return common.Hash{}, errors.New("invalid signature")
+				}
+
+				txBytes, err := proto.Marshal(tx)
+				if err != nil {
+					log.Errorf("proto.Marshal(tx) error: %v", err)
+				}
+				if manager.GetEventObject() != nil {
+					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+					//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
+				} else {
+					log.Warning("manager is Nil")
+				}
+
+				start_getErr := time.Now().Unix()
+				end_getErr := start_getErr + TIMEOUT
+				var errMsg string
+				for start_getErr := start_getErr; start_getErr < end_getErr; start_getErr = time.Now().Unix() {
+					errType, _ := core.GetInvaildTxErrType(tran.db, tx.GetTransactionHash().Bytes());
+
+					if errType != -1 {
+						errMsg = errType.String()
+						break;
+					} else if rept := core.GetReceipt(tx.GetTransactionHash()); rept != nil {
+						break
+					}
+
+				}
+				if start_getErr != end_getErr && errMsg != "" {
+					return common.Hash{}, errors.New(errMsg)
+				} else if start_getErr == end_getErr {
+					return common.Hash{}, errors.New("Sending return timeout,may be something wrong.")
+				}
 			}
-			tx.Signature = signature
-		} else {
-			// For Dashboard test
-
-			key, err := hex.DecodeString(args.PrivKey)
-			if err != nil {
-				return common.Hash{}, err
-			}
-			pri := crypto.ToECDSA(key)
-
-			hash := tx.SighHash(kec256Hash).Bytes()
-			sig, err := encryption.Sign(hash, pri)
-			if err != nil {
-				return common.Hash{}, err
-			}
-
-			tx.Signature = sig
+			time.Sleep(SLEEPTIME * time.Millisecond)
 		}
-
-		tx.TransactionHash = tx.BuildHash().Bytes()
-		// Unsign
-		if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
-			return common.Hash{}, errors.New("invalid signature")
-		}
-
-		txBytes, err := proto.Marshal(tx)
-		if err != nil {
-			log.Errorf("proto.Marshal(tx) error: %v", err)
-		}
-		if manager.GetEventObject() != nil {
-			go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
-			//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-		} else {
-			log.Warning("manager is Nil")
-		}
-		// 	}
-		// 	time.Sleep(300 * time.Millisecond)
-		// }
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
 	}
@@ -322,7 +352,6 @@ func (tran *PublicTransactionAPI) GetTransactions() ([]*TransactionResult, error
 
 	for _, tx := range txs {
 		if ts, err := outputTransaction(tx, tran.db); err != nil {
-
 			return nil, err
 		} else {
 			transactions = append(transactions, ts)
@@ -490,7 +519,6 @@ func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*Transaction
 	if err != nil {
 		return nil, err
 	}
-
 
 	txRes := &TransactionResult{
 		Hash:                txHash,
