@@ -173,9 +173,10 @@ type addNodeID struct {
 }
 
 type addNodeCert struct {
-	table			string
-	addNodes		map[AddNode]bool
-	count			int
+	table	string
+	addNode	AddNode
+	agrees	map[AgreeAddNode]bool
+	count	int
 }
 
 // newBatch initializes a batch

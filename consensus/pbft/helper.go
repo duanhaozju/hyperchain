@@ -99,8 +99,7 @@ func (pbft *pbftProtocal) getChkptCert(n uint64, id string) (cert *chkptCert) {
 
 	chkpts := make(map[Checkpoint]bool)
 	cert = &chkptCert{
-		chkpts:		chkpts,
-		chkptCount:	0,
+		chkpts:	chkpts,
 	}
 	pbft.chkptCertStore[idx] = cert
 
@@ -117,10 +116,9 @@ func (pbft *pbftProtocal) getAddNodeCert(ip string, digest string) (cert *addNod
 		return
 	}
 
-	addNodes := make(map[AddNode]bool)
+	agrees := make(map[AgreeAddNode]bool)
 	cert = &addNodeCert{
-		addNodes:	addNodes,
-		count:	0,
+		agrees:	agrees,
 	}
 	pbft.addNodeCertStore[idx] = cert
 
