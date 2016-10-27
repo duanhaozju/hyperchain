@@ -109,7 +109,12 @@ type BroadRouteToNewPeerEvent struct {
 type UpdateRouteTableEvent struct {
 	ReplicaID uint64
 }
-
+// primary notify new peer to connect all other peers,after update n and f
 type ConnectChainEvent struct {
+
+}
+
+// new peer receive the start event and then start to connect the all peers and negociate view and recovery
+type receiveStartConnectEvent struct {
 
 }
