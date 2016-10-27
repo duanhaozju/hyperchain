@@ -41,7 +41,7 @@ func (self *StateDB) RawDump() World {
 			Nonce:    stateObject.nonce,
 			Root:     common.Bytes2Hex(stateObject.Root()),
 			CodeHash: common.Bytes2Hex(stateObject.codeHash),
-			Code:     common.Bytes2Hex(stateObject.Code()),
+			Code:     common.Bytes2Hex(stateObject.Code(self.db)),
 			Abi:      common.Bytes2Hex(stateObject.ABI()),
 			Storage:  make(map[string]string),
 		}
