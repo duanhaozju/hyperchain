@@ -6,35 +6,19 @@ import (
 	"hyperchain/core/state"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
-	"hyperchain/core/vm/params"
-	"hyperchain/hyperdb"
+
 	"math/big"
+	"time"
 )
 
 type Code []byte
 
 var logger = glog.Logger{}
-var (
-	//TODO set the vm.config
-	//db, err    = hyperdb.GetLDBDatabase()
-	statedb *state.StateDB
-	env        = make(map[string]string)
-	vmenv      = (*Env)(nil)
-)
-
-func init() {
-
-	db, _    := hyperdb.GetLDBDatabase()
-	statedb, _ = state.New(common.Hash{}, db)
-	//vm.Precompiled = make(map[string]*vm.PrecompiledAccount)
-	env["currentNumber"] = "1"
-	env["currentGasLimit"] = "10000000"
-	vmenv = NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
-}
 
 
 // 这一块相当于ethereum里的TransitionDB
 func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
+	exec_start_time := time.Now()
 	var (
 		from = common.BytesToAddress(tx.From)
 		//sender = common.BytesToAddress(tx.From)
@@ -44,14 +28,22 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		gas        = tx.Gas()
 		gasPrice   = tx.GasPrice()
 		amount     = tx.Amount()
-		//statedb, _ = env.Db().(*state.StateDB)
+		statedb, _ = env.Db().(*state.StateDB)
 	)
+	// TODO ZHZ_TEST the time of above will cost 10us
+
+	exec_begin_time := time.Now()
+	// TODO ZHZ_TEST this will cost 200us
 	if tx.To == nil {
 		ret, addr, err = Exec(env, &from, nil, data, gas, gasPrice, amount)
+		log.Noticef("the time of Exec in create contract",time.Since(exec_begin_time))
 	} else {
 		ret, _, err = Exec(env, &from, &to, data, gas, gasPrice, amount)
+		log.Noticef("the time of Exec in Call contract",time.Since(exec_begin_time))
 	}
 
+
+	// TODO ZHZ_TEST the time of below will cost 10us
 	receipt = types.NewReceipt(nil, gas)
 	receipt.ContractAddress = addr.Bytes()
 	//todo add tx hash in tx struct
@@ -68,6 +60,7 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		receipt.Status = types.Receipt_SUCCESS
 		receipt.Message = nil
 	}
+	log.Noticef("the time of ExecTransaction in contract",time.Since(exec_start_time))
 	return receipt, ret, addr, err
 }
 
@@ -108,7 +101,3 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 	return ret, addr, err
 }
 
-
-func GetVMEnv() *Env {
-	return vmenv
-}

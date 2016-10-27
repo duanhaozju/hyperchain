@@ -28,13 +28,10 @@ func TestUpdateLeaks(t *testing.T) {
 		state.UpdateStateObject(obj)
 	}
 	// Ensure that no data was leaked into the database
-	// TODO Fix Bug
-	/*
-		for _, key := range db.Keys() {
-			value, _ := db.Get(key)
-			t.Errorf("State leaked into database: %x -> %x", key, value)
-		}
-	*/
+	for _, key := range db.Keys() {
+		value, _ := db.Get(key)
+		t.Errorf("State leaked into database: %x -> %x", key, value)
+	}
 }
 
 // Tests that no intermediate state of an object is stored into the database,
@@ -84,26 +81,20 @@ func TestIntermediateLeaks(t *testing.T) {
 		}
 		finalState.UpdateStateObject(obj)
 	}
-	root1, _ := transState.Commit()
-	root2, _ := finalState.Commit()
-	t.Log(root1.Hex())
-	t.Log(root2.Hex())
+	transState.Commit()
+	finalState.Commit()
 	// Cross check the databases to ensure they are the same
-	// TODO  Fix Bug
-	/*
-		for _, key := range finalDb.Keys() {
-			if _, err := transDb.Get(key); err != nil {
-				val, _ := finalDb.Get(key)
-				t.Errorf("entry missing from the transition database: %x -> %x", key, val)
-			}
+	for _, key := range finalDb.Keys() {
+		if _, err := transDb.Get(key); err != nil {
+			val, _ := finalDb.Get(key)
+			t.Errorf("entry missing from the transition database: %x -> %x", key, val)
 		}
+	}
 
-		/*
-			for _, key := range transDb.Keys() {
-				if _, err := finalDb.Get(key); err != nil {
-					val, _ := transDb.Get(key)
-					t.Errorf("extra entry in the transition database: %x -> %x", key, val)
-				}
-			}
-	*/
+	for _, key := range transDb.Keys() {
+		if _, err := finalDb.Get(key); err != nil {
+			val, _ := transDb.Get(key)
+			t.Errorf("extra entry in the transition database: %x -> %x", key, val)
+		}
+	}
 }

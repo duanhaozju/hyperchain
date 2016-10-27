@@ -1,31 +1,31 @@
 package hpc
 
 import (
-	"hyperchain/hyperdb"
-	"hyperchain/core"
-	"time"
-	"hyperchain/common"
-	"strconv"
-	"hyperchain/core/types"
-	"hyperchain/core/state"
 	"errors"
+	"hyperchain/common"
+	"hyperchain/core"
+	"hyperchain/core/state"
+	"hyperchain/core/types"
+	"hyperchain/hyperdb"
+	"strconv"
+	"time"
 )
 
-type PublicBlockAPI struct{
+type PublicBlockAPI struct {
 	db *hyperdb.LDBDatabase
 }
 
 type BlockResult struct {
-	Number       *Number      	`json:"number"`
-	Hash         common.Hash 	`json:"hash"`
-	ParentHash   common.Hash 	`json:"parentHash"`
-	WriteTime    string      	`json:"writeTime"`
-	AvgTime      *Number      	`json:"avgTime"`
-	TxCounts     *Number      	`json:"txcounts"`
-	Counts       *Number      	`json:"Counts"`
-	Percents     string      	`json:"percents"`
-	MerkleRoot   common.Hash	`json:"merkleRoot"`
-	Transactions []interface{}	`json:"transactions"`
+	Number       *Number       `json:"number"`
+	Hash         common.Hash   `json:"hash"`
+	ParentHash   common.Hash   `json:"parentHash"`
+	WriteTime    string        `json:"writeTime"`
+	AvgTime      *Number       `json:"avgTime"`
+	TxCounts     *Number       `json:"txcounts"`
+	Counts       *Number       `json:"counts"`
+	Percents     string        `json:"percents"`
+	MerkleRoot   common.Hash   `json:"merkleRoot"`
+	Transactions []interface{} `json:"transactions"`
 }
 
 func NewPublicBlockAPI(hyperDb *hyperdb.LDBDatabase) *PublicBlockAPI {
@@ -35,8 +35,8 @@ func NewPublicBlockAPI(hyperDb *hyperdb.LDBDatabase) *PublicBlockAPI {
 }
 
 type BlockArgsTest struct {
-	From *Number	`json:"from"`
-	To *Number	`json:"to"`
+	From *Number `json:"from"`
+	To   *Number `json:"to"`
 }
 
 // GetBlocks returns all the block.
@@ -44,7 +44,7 @@ func (blk *PublicBlockAPI) GetBlocks(args BlockArgsTest) ([]*BlockResult, error)
 	var blocks []*BlockResult
 
 	if args.From == nil && args.To == nil {
-		block, err := blk.lastestBlock()
+		block, err := blk.latestBlock()
 
 		if err != nil {
 			log.Errorf("%v", err)
@@ -76,7 +76,7 @@ func (blk *PublicBlockAPI) GetBlocks(args BlockArgsTest) ([]*BlockResult, error)
 		} else {
 			blocks = append(blocks, block)
 		}
-	}  else {
+	} else {
 		from := *args.From
 		to := *args.To
 		for from <= to {
@@ -94,8 +94,8 @@ func (blk *PublicBlockAPI) GetBlocks(args BlockArgsTest) ([]*BlockResult, error)
 }
 
 // LastestBlock returns the number and hash of the lastest block.
-func (blk *PublicBlockAPI) LastestBlock() (*BlockResult, error) {
-	return blk.lastestBlock()
+func (blk *PublicBlockAPI) LatestBlock() (*BlockResult, error) {
+	return blk.latestBlock()
 }
 
 // GetBlockByHash returns the block for the given block hash.
@@ -109,13 +109,13 @@ func (blk *PublicBlockAPI) GetBlockByNumber(number Number) (*BlockResult, error)
 	return block, err
 }
 
-func (blk *PublicBlockAPI) lastestBlock() (*BlockResult, error) {
+func (blk *PublicBlockAPI) latestBlock() (*BlockResult, error) {
 
 	currentChain := core.GetChainCopy()
 
 	lastestBlkHeight := currentChain.Height
 
-	return getBlockByNumber(*NewUint64ToNumber(lastestBlkHeight) ,blk.db)
+	return getBlockByNumber(*NewUint64ToNumber(lastestBlkHeight), blk.db)
 }
 
 // getBlockByNumber convert type Block to type BlockResult for the given block number.
@@ -170,7 +170,6 @@ func outputBlockResult(block *types.Block, db *hyperdb.LDBDatabase) (*BlockResul
 		}
 	}
 
-
 	return &BlockResult{
 		Number:       NewUint64ToNumber(block.Number),
 		Hash:         common.BytesToHash(block.BlockHash),
@@ -188,7 +187,6 @@ func outputBlockResult(block *types.Block, db *hyperdb.LDBDatabase) (*BlockResul
 func getBlockByHash(hash common.Hash, db *hyperdb.LDBDatabase) (*BlockResult, error) {
 
 	block, err := core.GetBlock(db, hash[:])
-
 	if err != nil {
 		return nil, err
 	}

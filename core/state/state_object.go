@@ -40,6 +40,11 @@ type StateObject struct {
 	// Address belonging to this account
 	address common.Address
 	db      trie.Database // State database for storing state changes
+
+	// DB error
+	// the error which StateObject cannot be deal with will eventually be returned by StateDB.Commit
+	dbErr error
+
 	// Used to store account Storage
 	trie *trie.SecureTrie
 	// The BalanceData of the account
@@ -118,6 +123,13 @@ func (self *StateObject) Update() {
 	}
 }
 
+// setError remembers the first non-nil error it is called with
+func (self *StateObject) setError(err error){
+	if self.dbErr == nil{
+		self.dbErr = err
+	}
+}
+
 func (c *StateObject) AddBalance(amount *big.Int) {
 	c.SetBalance(new(big.Int).Add(c.BalanceData, amount))
 }
@@ -179,9 +191,23 @@ func (self *StateObject) SetABI(abi []byte) {
 	self.dirty = true
 }
 
-func (self *StateObject) Code() []byte {
-	return self.code
+// Code returns the contract code associated with this object,if any
+// TODO the code could be stored in cache
+func (self *StateObject) Code(db trie.Database) []byte {
+	if self.code != nil{
+		return self.code
+	}
+	if bytes.Equal(self.CodeHash(),emptyCodeHash){
+		return nil
+	}
+	code,err := db.Get(self.CodeHash())
+	if err != nil{
+		self.setError(fmt.Errorf("can't load code hash %x: %v",self.CodeHash(),err))
+	}
+	self.code = code
+	return code
 }
+
 
 func (self *StateObject) SetCode(code []byte) {
 	self.code = code
@@ -207,7 +233,6 @@ func (self *StateObject) Value() *big.Int {
 
 func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) {
 	// When iterating over the storage check the cache first
-	log.Info("+++++++++++++++++the address of stateObject is,", self.address, "+++++++++++++++++")
 	for h, value := range self.storage {
 		cb(h, value)
 	}
@@ -218,15 +243,19 @@ func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) {
 			cb(key, common.BytesToHash(it.Value))
 		}
 	}
-	log.Info("++++++++++++++++++++++++++++++++++")
 }
 
+// just for test
 func (self *StateObject) PrintStorages() {
 	// When iterating over the storage check the cache first
 	log.Info("+++++++++++++++++the address of stateObject is,", common.ToHex(self.address.Bytes()), "+++++++++++++++++")
 	for k, v := range self.Storage() {
 		log.Info("storage key is ------", k, "value is -----", v)
 	}
+}
+
+func (self *StateObject) CodeHash() []byte{
+	return self.codeHash
 }
 
 type extStateObject struct {
@@ -245,8 +274,8 @@ func (self *StateObject) EncodeObject() ([]byte, error) {
 		CodeHash:    self.codeHash,
 		Abi:         self.abi,
 	}
-	self.trie.CommitTo(self.db)
-	self.db.Put(self.codeHash, self.code)
+	//self.trie.CommitTo(self.db)
+	//self.db.Put(self.codeHash, self.code)
 	return json.Marshal(ext)
 }
 
