@@ -44,6 +44,25 @@ func Test_Node_verify(t *testing.T) {
 	fmt.Println(flag)
 }
 
+func Test_getput(t *testing.T) {
+	G1 := []byte{195, 153, 245, 222, 195, 152, 112, 47, 129, 79, 150, 122, 83, 4, 237, 142, 251, 215, 241, 160, 24, 216, 246, 105, 237, 83, 182, 53, 214, 53, 139, 73}
+
+	N1 := []byte{238, 223, 119, 206, 43, 23, 14, 2, 159, 122, 233, 6, 43, 53, 223, 47}
+	nsquare1 := []byte{222, 228, 69, 213, 73, 95, 66, 80, 24, 124, 30, 174, 198, 90, 112, 198, 28, 116, 247, 151, 13, 92, 246, 31, 56, 225, 40, 131, 246, 8, 234, 161}
+	publickey := Generate_wholenetpublickey(G1, N1, nsquare1)
+	fmt.Println(publickey.G)
+	fmt.Println(publickey.N)
+	fmt.Println(publickey.nsquare)
+	err1, err2, err3 := PutWholeNetworkPublickey("G:/testgetput.txt1", "G:/testgetput.txt2", "G:/testgetput.txt3", &publickey)
+	p, _ := GetWholeNetworkPublickey("G:/testgetput.txt1", "G:/testgetput.txt2", "G:/testgetput.txt3")
+	fmt.Println(p.G)
+	fmt.Println(p.N)
+	fmt.Println(p.nsquare)
+	fmt.Println(err1)
+	fmt.Println(err2)
+	fmt.Println(err3)
+}
+
 //func Test_hm_transacton(t *testing.T) {
 //	old := big.NewInt(500)
 //	old_byte := old.Bytes()

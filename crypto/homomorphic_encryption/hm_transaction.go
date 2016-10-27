@@ -4,12 +4,20 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/hex"
+	//"os"
+
 	"hyperchain/crypto/ecies"
-	"io"
+	//"io"
 	"io/ioutil"
 	"math/big"
-	"os"
+	//"os"
 )
+
+type p struct {
+	N1 []byte
+	N2 []byte
+	N3 []byte
+}
 
 //prepare the hm_transaction parameters
 func Pre_Transaction(oldBalance []byte, transferAmount []byte, illegal_balance_hm []byte, whole_networkpublickey PaillierPublickey, ecdsa_publickey *ecdsa.PublicKey) (bool, []byte, []byte, []byte, []byte) {
@@ -96,36 +104,40 @@ func Destination_Verify(transferAmount_hm []byte, transferAmount_ecc []byte, ecd
 }
 
 //put whole_networkpublickey to a file
-func Put_WholeNetworkPublickey(file string, whole_networkpublickey *PaillierPublickey) error {
-	data, err := Encode(whole_networkpublickey)
-	if err != nil {
-		return err
-	}
+func PutWholeNetworkPublickey(file1 string, file2 string, file3 string, whole_networkpublickey *PaillierPublickey) (error, error, error) {
 
-	stringdata := hex.EncodeToString(data)
-	return ioutil.WriteFile(file, []byte(stringdata), 0600)
+	N1 := whole_networkpublickey.G.Bytes()
+	N2 := whole_networkpublickey.N.Bytes()
+	N3 := whole_networkpublickey.nsquare.Bytes()
+
+	stringdata1 := hex.EncodeToString(N1)
+
+	stringdata2 := hex.EncodeToString(N2)
+	stringdata3 := hex.EncodeToString(N3)
+
+	err1 := ioutil.WriteFile(file1, []byte(stringdata1), 0600)
+	err2 := ioutil.WriteFile(file2, []byte(stringdata2), 0600)
+	err3 := ioutil.WriteFile(file3, []byte(stringdata3), 0600)
+
+	return err1, err2, err3
 }
 
 //get wholenetworkpublickey from a file
-func Get_WholeNetworkPublickey(file string) (*PaillierPublickey, error) {
+func GetWholeNetworkPublickey(file1 string, file2 string, file3 string) (*PaillierPublickey, error) {
 
 	var pailpub PaillierPublickey
 
-	buf := make([]byte, 64)
-	fd, err := os.Open(file)
-	if err != nil {
-		return nil, err
-	}
-	defer fd.Close()
-	if _, err := io.ReadFull(fd, buf); err != nil {
-		return nil, err
-	}
-	key, err := hex.DecodeString(string(buf))
-	if err != nil {
-		return nil, err
-	}
+	N1, err := Getnumber(file1)
+	N2, err := Getnumber(file2)
+	N3, err := Getnumber(file3)
 
-	err = Decode(key, &pailpub)
+	a1 := new(big.Int)
+	a2 := new(big.Int)
+	a3 := new(big.Int)
+	pailpub.G = a1.SetBytes(N1)
+	pailpub.N = a2.SetBytes(N2)
+	pailpub.nsquare = a3.SetBytes(N3)
+
 	return &pailpub, err
 }
 
