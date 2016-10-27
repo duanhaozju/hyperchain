@@ -165,7 +165,6 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				var signature []byte
 				if realArgs.Signature == "" {
 
-					// TODO replace password with test value
 					signature, err = tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
 					if err != nil {
 						log.Errorf("Sign(tx) error :%v", err)
