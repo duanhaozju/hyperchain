@@ -67,19 +67,20 @@ type CommitOrRollbackBlockEvent struct {
 	Hash       string
 	IsPrimary  bool
 }
-
+//set invalid tx into db
 type RespInvalidTxsEvent struct {
 	Payload []byte
 }
-
+// reset blockchain to a stable checkpoint status when `viewchange` occur
 type VCResetEvent struct {
 	SeqNo uint64
 }
-
+//set primary in peerManager when new view and primary
 type InformPrimaryEvent struct {
 	Primary uint64
 }
 
+//sync all nodes status event
 type ReplicaStatusEvent struct {
 	Payload []byte
 }

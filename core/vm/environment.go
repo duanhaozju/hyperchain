@@ -20,7 +20,7 @@ type Environment interface {
 	// The state database
 	Db() Database
 	// Creates a restorable snapshot
-	MakeSnapshot() Database
+	 MakeSnapshot() Database
 	// Set database to previous snapshot
 	SetSnapshot(Database)
 	// Address of the original invoker (first occurrence of the VM invoker)
