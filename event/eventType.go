@@ -85,6 +85,31 @@ type ReplicaStatusEvent struct {
 	Payload []byte
 }
 
+
 type StartJoinChainEvent  struct {
+	PrimaryIp string
+
+}
+type RouteTable struct {
+	Name string
+}
+// primary receive new peer msg from p2p
+type NewPeerArriveEvent struct {
+	IP         string
+	ReplicaID  uint64
+	RouteInfo *RouteTable
+}
+// broad route table to new peer,at the same time,broadcast all peer
+// to send their own routeTable to their own consensus module
+type BroadRouteToNewPeerEvent struct {
+	RouteInfo *RouteTable
+	Hash []byte
+}
+//after uodate n and f,post event to update routeTable,and accept new peer's connection
+type UpdateRouteTableEvent struct {
+	ReplicaID uint64
+}
+
+type ConnectChainEvent struct {
 
 }
