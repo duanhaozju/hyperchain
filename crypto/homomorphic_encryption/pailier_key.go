@@ -2,6 +2,7 @@ package homomorphic_encryption
 
 import (
 	"crypto/rand"
+	//"fmt"
 	"math/big"
 )
 
@@ -58,6 +59,8 @@ func Generate_paillierKey() (*PaillierKey, error) {
 	//这里G的确定还需要改进
 	G := new(big.Int)
 	rad, err3 := rand.Prime(rand.Reader, 256)
+	//	ggg := rad.Bytes()
+	//	fmt.Println(len(ggg))
 	if err3 != nil {
 		return nil, err3
 	}
