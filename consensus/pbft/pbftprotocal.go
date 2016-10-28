@@ -112,6 +112,7 @@ type pbftProtocal struct {
 	newNodeTimeout		time.Duration           	// time limit for N-f nego-view responses
 	inAddingNode		bool						// track if replica is in adding node
 	inGettingTable		bool						// track if replica is in getting routing table
+	tableReceived		bool						// track if replica already receive routing table
 	addNodeCertStore	map[addNodeID]*addNodeCert	// track the received add node agree message
 	routingTable		string						// store the routing table from local
 	tableDigest			string						// store the digest of routing table
@@ -173,10 +174,11 @@ type addNodeID struct {
 }
 
 type addNodeCert struct {
-	table	string
-	addNode	AddNode
-	agrees	map[AgreeAddNode]bool
-	count	int
+	table		string
+	addNode		AddNode
+	sentAgree	bool
+	agrees		map[AgreeAddNode]bool
+	count		int
 }
 
 // newBatch initializes a batch

@@ -47,14 +47,18 @@ func (pbft *pbftProtocal) recvLocalAddNode(msg protos.AddNodeMessage) error {
 	pbft.routingTable = msg.RoutingTable
 	pbft.tableDigest = hashString(pbft.routingTable)
 
-	pbft.inAddingNode = true
 	pbft.inTableError = false
+	pbft.tableReceived = true
 
 	if pbft.primary(pbft.view, pbft.N) == pbft.id {
+		pbft.inAddingNode = true
 		pbft.sendAddNode()
 	} else {
 		cert := pbft.getAddNodeCert(pbft.newIP, pbft.tableDigest)
 		cert.table = pbft.routingTable
+		if pbft.inAddingNode && cert.addNode.TableDigest == pbft.tableDigest {
+			pbft.sendAgreeAddNode()
+		}
 	}
 
 	return nil
@@ -117,6 +121,9 @@ func (pbft *pbftProtocal) recvRoutingTable(table *RoutingTable) error {
 		pbft.id = table.NewId
 		pbft.routingTable = table.Table
 		pbft.tableDigest = hashString(pbft.routingTable)
+		pbft.tableReceived = true
+		cert := pbft.getAddNodeCert(pbft.newIP, pbft.tableDigest)
+		cert.table = pbft.routingTable
 	} else if pbft.inTableError {
 		logger.Debugf("Replica %d received new routing table from primary %d", table.NewId, table.ReplicaId)
 		pbft.id = table.NewId
@@ -130,20 +137,17 @@ func (pbft *pbftProtocal) recvAddNode(addnode *AddNode) error {
 	logger.Debugf("Replica %d received addnode from replica %d for newIP=%s/newID=%d",
 		pbft.id, addnode.ReplicaId, addnode.Ip, addnode.NewId)
 
-	if pbft.isNewNode && pbft.inAddingNode {
-		// TODO
-	}
-
-	if !pbft.isNewNode && pbft.inAddingNode && !pbft.inTableError && pbft.tableDigest != addnode.TableDigest{
-		logger.Debugf("Replica %d find local routing table different from primary's", pbft.id)
-		pbft.inTableError = true
-		// TODO recovery
-		return nil
-	}
-
-	if pbft.inAddingNode {
+	if pbft.tableReceived {
 
 	}
+
+	return nil
+}
+
+func (pbft *pbftProtocal) sendAgreeAddNode() error {
+
+
+
 
 	return nil
 }
@@ -204,4 +208,20 @@ func (pbft *pbftProtocal) maybeUpdateTable(ip string, digest string) {
 		logger.Debugf("Replica %d update routing table, and local one is right", pbft.id)
 		pbft.helper.UpdateTable(pbft.routingTable, true)
 	}
+}
+
+func (pbft *pbftProtocal) sendReadyforN() {
+
+}
+
+func (pbft *pbftProtocal) recvReadyforN() {
+
+}
+
+func (pbft *pbftProtocal) sendUpdateN() {
+
+}
+
+func (pbft *pbftProtocal) recvUpdateN() {
+
 }
