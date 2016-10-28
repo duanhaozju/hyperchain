@@ -168,7 +168,7 @@ message ready_for_n {
 
 message update_n {
     uint64 replica_id = 1;
-    string tablde_digest = 2;
+    string table_digest = 2;
     uint64 n = 3;
     uint64 seqNo = 4;
     uint64 view = 5;
@@ -176,7 +176,7 @@ message update_n {
 
 message agree_update_n {
     uint64 replica_id = 1;
-    string tablde_digest = 2;
+    string table_digest = 2;
     uint64 n = 3;
     uint64 seqNo = 4;
     uint64 view = 5;

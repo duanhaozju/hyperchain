@@ -112,7 +112,7 @@ type pbftProtocal struct {
 	newNodeTimeout		time.Duration           	// time limit for N-f nego-view responses
 	inAddingNode		bool						// track if replica is in adding node
 	tableReceived		bool						// track if replica already receive routing table
-	addNodeCertStore	map[addNodeID]*addNodeCert	// track the received add node agree message
+	addNodeCertStore	map[string]*addNodeCert	// track the received add node agree message
 	routingTable		string						// store the routing table from local
 	tableDigest			string						// store the digest of routing table
 	newIP				string						// store the new IP from local
@@ -167,16 +167,14 @@ type cacheBatch struct {
 	vid       uint64
 }
 
-type addNodeID struct {
-	ip 			string
-	tableDigest	string
-}
-
 type addNodeCert struct {
 	table		string
 	addNode		*AddNode
-	agrees		map[AgreeAddNode]bool
-	count		uint64
+	agreeAdd	map[AgreeAddNode]bool
+	addCount	uint64
+	update		*UpdateN
+	agreeUpdate	map[AgreeUpdateN]bool
+	updateCount	uint64
 }
 
 // newBatch initializes a batch
@@ -279,7 +277,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
 	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
 	pbft.cacheValidatedBatch = make(map[string]*cacheBatch)
-	pbft.addNodeCertStore = make(map[addNodeID]*addNodeCert)
+	pbft.addNodeCertStore = make(map[string]*addNodeCert)
 
 	pbft.restoreState()
 

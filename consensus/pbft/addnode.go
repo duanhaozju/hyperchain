@@ -57,7 +57,7 @@ func (pbft *pbftProtocal) recvLocalAddNode(msg protos.AddNodeMessage) error {
 		return nil
 	}
 
-	cert := pbft.getAddNodeCert(pbft.newIP, pbft.tableDigest)
+	cert := pbft.getAddNodeCert(pbft.tableDigest)
 	cert.table = pbft.routingTable
 	if pbft.inAddingNode {
 		if cert.addNode.TableDigest == pbft.tableDigest {
@@ -101,7 +101,7 @@ func (pbft *pbftProtocal) sendAddNode() {
 		NewId:		pbft.newID,
 	}
 
-	cert := pbft.getAddNodeCert(pbft.newIP, pbft.tableDigest)
+	cert := pbft.getAddNodeCert(pbft.tableDigest)
 	cert.table = pbft.routingTable
 	cert.addNode = addNodeMsg
 
@@ -117,7 +117,7 @@ func (pbft *pbftProtocal) sendAddNode() {
 	broadcast := consensusMsgHelper(broadcastMsg, pbft.id)
 	pbft.helper.InnerBroadcast(broadcast)
 
-	pbft.maybeUpdateTable(pbft.newIP, pbft.tableDigest)
+	pbft.maybeUpdateTable(pbft.tableDigest)
 }
 
 
@@ -132,7 +132,7 @@ func (pbft *pbftProtocal) recvRoutingTable(table *RoutingTable) error {
 		pbft.routingTable = table.Table
 		pbft.tableDigest = hashString(pbft.routingTable)
 		pbft.tableReceived = true
-		cert := pbft.getAddNodeCert(pbft.newIP, pbft.tableDigest)
+		cert := pbft.getAddNodeCert(pbft.tableDigest)
 		cert.table = pbft.routingTable
 	} else if pbft.inTableError {
 		logger.Debugf("Replica %d received new routing table from primary %d", table.NewId, table.ReplicaId)
@@ -148,7 +148,7 @@ func (pbft *pbftProtocal) recvAddNode(addnode *AddNode) error {
 	logger.Debugf("Replica %d received addnode from replica %d for newIP=%s/newID=%d",
 		pbft.id, addnode.ReplicaId, addnode.Ip, addnode.NewId)
 
-	cert := pbft.getAddNodeCert(addnode.Ip, addnode.TableDigest)
+	cert := pbft.getAddNodeCert(addnode.TableDigest)
 
 	if pbft.tableReceived {
 		if pbft.tableDigest == addnode.TableDigest {
@@ -188,7 +188,7 @@ func (pbft *pbftProtocal) sendAgreeAddNode() {
 		return
 	}
 	msg := &ConsensusMessage{
-		Type: ConsensusMessage_ADD_NODE,
+		Type: ConsensusMessage_AGREE_ADD_NODE,
 		Payload: payload,
 	}
 
@@ -202,7 +202,7 @@ func (pbft *pbftProtocal) sendAgreeAddNode() {
 // Replica received agree for addnode
 func (pbft *pbftProtocal) recvAgreeAddNode(agree *AgreeAddNode) error {
 
-	logger.Debugf("Replica %d received addnode from replica %d for newIP=%s/newID=%d",
+	logger.Debugf("Replica %d received agree addnode from replica %d for newIP=%s/newID=%d",
 		pbft.id, agree.ReplicaId, agree.Ip, agree.NewId)
 
 	if pbft.primary(pbft.view, pbft.N) == agree.ReplicaId {
@@ -211,31 +211,31 @@ func (pbft *pbftProtocal) recvAgreeAddNode(agree *AgreeAddNode) error {
 
 	// TODO: check if in recovery
 
-	cert := pbft.getAddNodeCert(agree.Ip, agree.TableDigest)
+	cert := pbft.getAddNodeCert(agree.TableDigest)
 
-	ok := cert.agrees[*agree]
+	ok := cert.agreeAdd[*agree]
 	if ok {
 		logger.Warningf("Replica %d ignored duplicate agree addnode from %d", pbft.id, agree.ReplicaId)
 		return nil
 	}
 
-	cert.agrees[*agree] = true
-	cert.count++
+	cert.agreeAdd[*agree] = true
+	cert.addCount++
 
-	return pbft.maybeUpdateTable(agree.Ip, agree.TableDigest)
+	return pbft.maybeUpdateTable(agree.TableDigest)
 }
 
 // Check if replica prepared for update routing table
-func (pbft *pbftProtocal) maybeUpdateTable(ip string, digest string) error {
+func (pbft *pbftProtocal) maybeUpdateTable(digest string) error {
 
-	cert := pbft.getAddNodeCert(ip, digest)
+	cert := pbft.getAddNodeCert(digest)
 
 	if cert == nil {
-		logger.Errorf("Replica %d can't get the cert for ip=%s/digest=%s", pbft.id, ip, digest)
+		logger.Errorf("Replica %d can't get the cert for digest=%s", pbft.id, digest)
 		return nil
 	}
 
-	if cert.count < pbft.preparedReplicasQuorum() {
+	if cert.addCount < pbft.preparedReplicasQuorum() {
 		return nil
 	}
 
@@ -281,7 +281,7 @@ func (pbft *pbftProtocal) sendReadyforN() {
 		return
 	}
 	msg := &ConsensusMessage{
-		Type: ConsensusMessage_ADD_NODE,
+		Type: ConsensusMessage_READY_FOR_N,
 		Payload: payload,
 	}
 
@@ -290,6 +290,7 @@ func (pbft *pbftProtocal) sendReadyforN() {
 	pbft.helper.InnerUnicast(unicast, primary)
 }
 
+// Primary receive ready_for_n from new replica
 func (pbft *pbftProtocal) recvReadyforN(ready *ReadyForN) error {
 
 	if pbft.primary(pbft.view, pbft.N) == pbft.id {
@@ -304,41 +305,136 @@ func (pbft *pbftProtocal) recvReadyforN(ready *ReadyForN) error {
 		return nil
 	}
 
+	if !pbft.inAddingNode {
+		logger.Errorf("Primary %d is not in adding node, but received ready_for_n", pbft.id)
+		return nil
+	}
+
 	if ready.ReplicaId != pbft.newID || ready.TableDigest != pbft.tableDigest {
 		logger.Errorf("Primary %d found wrong info in ready_for_n, reject it", pbft.id)
 		return nil
 	}
 
-	//N := pbft.N + 1
-	//if pbft.previousView >= pbft.previousN {
-	//	pbft.view = pbft.view + 1
-	//}
+	// calculate the new N and view
+	n, view := pbft.getUpdatedNf()
 
-	//updateN := &UpdateN{
-	//	ReplicaId:		pbft.id,
-	//	TabldeDigest:	pbft.tableDigest,
-	//	N:				pbft.N,
-	//	SeqNo:			pbft.seqNo,
-	//	View: 			pbft.view,
-	//}
+	// broadcast the updateN message
+	updateN := &UpdateN{
+		ReplicaId:		pbft.id,
+		TableDigest:	pbft.tableDigest,
+		N:				n,
+		SeqNo:			pbft.seqNo,
+		View: 			view,
+	}
+
+	payload, err := proto.Marshal(updateN)
+	if err != nil {
+		logger.Errorf("Marshal updateN Error!")
+		return
+	}
+	msg := &ConsensusMessage{
+		Type: ConsensusMessage_UPDATE_N,
+		Payload: payload,
+	}
+
+	cert := pbft.getAddNodeCert(ready.TableDigest)
+	cert.update = updateN
+	broadcast := consensusMsgHelper(msg, pbft.id)
+	pbft.helper.InnerBroadcast(broadcast)
+
+	return pbft.maybeStartUpdateN(pbft.tableDigest)
+}
+
+
+func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
+
+	logger.Debugf("Replica %d received updateN message from %d", pbft.id, update.ReplicaId)
+
+	if !pbft.activeView {
+		logger.Warningf("Replica %d is in view change, reject the ready_for_n message", pbft.id)
+		return nil
+	}
+
+	if !pbft.inAddingNode {
+		logger.Errorf("Replica %d is not in adding node, but received ready_for_n", pbft.id)
+		return nil
+	}
+
+	if pbft.primary(pbft.view, pbft.N) != update.ReplicaId {
+		logger.Errorf("Replica %d received updateN from other than primary: got %d, should be %d",
+		pbft.id, update.ReplicaId, pbft.primary(pbft.view, pbft.N))
+		return nil
+	}
+
+	if !pbft.inW(update.SeqNo) {
+		logger.Errorf("Replica %d thinks the seqNo=%d from primary is out of watermark", pbft.id, update.SeqNo)
+		return nil
+	}
+
+	if update.TableDigest != update.TableDigest {
+		logger.Errorf("Replica %d has different table", pbft.id)
+		return nil
+	}
+
+	n, view := pbft.getUpdatedNf()
+	if n != update.N || view != update.View {
+		logger.Errorf("Replica %d has different idea: got n=%d/view=%d, should be n=%d/view=%d",
+		pbft.id, update.N, update.View, n, view)
+		return nil
+	}
+
+	agree := &AgreeUpdateN{
+		ReplicaId:	pbft.id,
+		TableDigest:	pbft.tableDigest,
+		N:				n,
+		View:			view,
+		SeqNo:			update.SeqNo,
+	}
+
+	payload, err := proto.Marshal(agree)
+	if err != nil {
+		logger.Errorf("Marshal updateN Error!")
+		return
+	}
+	msg := &ConsensusMessage{
+		Type: ConsensusMessage_AGREE_UPDATE_N,
+		Payload: payload,
+	}
+
+	broadcast := consensusMsgHelper(msg, pbft.id)
+	pbft.helper.InnerBroadcast(broadcast)
+
+	return pbft.recvAgreeUpdateN(agree)
+
+}
+
+func (pbft *pbftProtocal) recvAgreeUpdateN(agree *UpdateN) error {
+
+	logger.Debugf("Replica %d received agree updateN from replica %d for n=%d/view=%d/seqNo=%d",
+		pbft.id, agree.ReplicaId, agree.N, agree.View, agree.SeqNo)
+
+	if pbft.primary(pbft.view, pbft.N) == agree.ReplicaId {
+		logger.Warningf("Replica %d received agree updateN from primary, ignoring", pbft.id)
+	}
+
+	// TODO: check if in recovery
+
+	cert := pbft.getAddNodeCert(agree.TableDigest)
+
+	ok := cert.agreeUpdate[*agree]
+	if ok {
+		logger.Warningf("Replica %d ignored duplicate agree updateN from %d", pbft.id, agree.ReplicaId)
+		return nil
+	}
+
+	cert.agreeUpdate[*agree] = true
+	cert.updateCount++
+
+	return pbft.maybeStartUpdateN(agree.TableDigest)
+}
+
+func (pbft *pbftProtocal) maybeStartUpdateN(digest string) error {
 
 
 	return nil
-}
-
-
-func (pbft *pbftProtocal) recvUpdateN() {
-
-}
-
-func (pbft *pbftProtocal) sendAgreeUpdateN() {
-
-}
-
-func (pbft *pbftProtocal) recvAgreeUpdateN() {
-
-}
-
-func (pbft *pbftProtocal) maybeFinishUpdateN() {
-
 }

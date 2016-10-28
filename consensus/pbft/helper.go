@@ -107,10 +107,9 @@ func (pbft *pbftProtocal) getChkptCert(n uint64, id string) (cert *chkptCert) {
 }
 
 // Given a ip/digest get the addnode Cert
-func (pbft *pbftProtocal) getAddNodeCert(ip string, digest string) (cert *addNodeCert) {
+func (pbft *pbftProtocal) getAddNodeCert(digest string) (cert *addNodeCert) {
 
-	idx := addNodeID{ip, digest}
-	cert, ok := pbft.addNodeCertStore[idx]
+	cert, ok := pbft.addNodeCertStore[digest]
 
 	if ok {
 		return
@@ -118,9 +117,21 @@ func (pbft *pbftProtocal) getAddNodeCert(ip string, digest string) (cert *addNod
 
 	agrees := make(map[AgreeAddNode]bool)
 	cert = &addNodeCert{
-		agrees:	agrees,
+		agreeAdd:	agrees,
 	}
-	pbft.addNodeCertStore[idx] = cert
+	pbft.addNodeCertStore[digest] = cert
+
+	return
+}
+
+func (pbft *pbftProtocal) getUpdatedNf() (n uint64, v uint64) {
+
+	n = pbft.N + 1
+	if pbft.view < pbft.N {
+		v = pbft.view
+	} else {
+		v = pbft.view + 1
+	}
 
 	return
 }
