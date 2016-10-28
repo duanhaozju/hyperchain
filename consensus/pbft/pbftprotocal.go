@@ -38,20 +38,20 @@ type pbftProtocal struct {
 	reqStore         	*requestStore //received messages
 
 	// PBFT data
-	activeView     bool   // view change happening
-	byzantine      bool   // whether this node is intentionally acting as Byzantine; useful for debugging on the testnet
-	f              int    // max. number of faults we can tolerate
-	N              int    // max.number of validators in the network
-	h              uint64 // low watermark
-	id             uint64 // replica ID; PBFT `i`
-	K              uint64 // checkpoint period
-	logMultiplier  uint64 // use this value to calculate log size : k*logMultiplier
-	L              uint64 // log size
-	lastExec       uint64 // last request we executed
-	seqNo          uint64 // PBFT "n", strictly monotonic increasing sequence number
-	view           uint64 // current view
-	nvInitialSeqNo uint64 // initial seqNo in a new view
-	valid          bool   // whether we believe the state is up to date
+	activeView     bool   	// view change happening
+	byzantine      bool   	// whether this node is intentionally acting as Byzantine; useful for debugging on the testnet
+	f              uint64	// max. number of faults we can tolerate
+	N              uint64	// max.number of validators in the network
+	h              uint64 	// low watermark
+	id             uint64 	// replica ID; PBFT `i`
+	K              uint64 	// checkpoint period
+	logMultiplier  uint64 	// use this value to calculate log size : k*logMultiplier
+	L              uint64 	// log size
+	lastExec       uint64 	// last request we executed
+	seqNo          uint64 	// PBFT "n", strictly monotonic increasing sequence number
+	view           uint64 	// current view
+	nvInitialSeqNo uint64 	// initial seqNo in a new view
+	valid          bool   	// whether we believe the state is up to date
 
 	chkpts map[uint64]string         // state checkpoints; map lastExec to global hash
 	pset   map[uint64]*ViewChange_PQ // state checkpoints; map lastExec to global hash
@@ -111,7 +111,6 @@ type pbftProtocal struct {
 	newNodeTimer 		events.Timer				// track timeout for N-f nego-view responses
 	newNodeTimeout		time.Duration           	// time limit for N-f nego-view responses
 	inAddingNode		bool						// track if replica is in adding node
-	inGettingTable		bool						// track if replica is in getting routing table
 	tableReceived		bool						// track if replica already receive routing table
 	addNodeCertStore	map[addNodeID]*addNodeCert	// track the received add node agree message
 	routingTable		string						// store the routing table from local
@@ -139,12 +138,12 @@ type msgCert struct {
 	prePrepare   	*PrePrepare
 	sentPrepare  	bool
 	prepare      	map[Prepare]bool
-	prepareCount 	int
+	prepareCount 	uint64
 	sentValidate	bool
 	validated		bool
 	sentCommit   	bool
 	commit       	map[Commit]bool
-	commitCount  	int
+	commitCount  	uint64
 	sentExecute  	bool
 }
 
@@ -155,7 +154,7 @@ type chkptID struct {
 
 type chkptCert struct {
 	chkpts     map[Checkpoint]bool
-	chkptCount int
+	chkptCount uint64
 }
 
 type vcidx struct {
@@ -175,10 +174,9 @@ type addNodeID struct {
 
 type addNodeCert struct {
 	table		string
-	addNode		AddNode
-	sentAgree	bool
+	addNode		*AddNode
 	agrees		map[AgreeAddNode]bool
-	count		int
+	count		uint64
 }
 
 // newBatch initializes a batch
@@ -197,8 +195,10 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.vcResendTimer = pbftTimerFactory.CreateTimer()
 	pbft.nullRequestTimer = pbftTimerFactory.CreateTimer()
 	pbft.newViewTimer = pbftTimerFactory.CreateTimer()
-	pbft.N = config.GetInt("general.N")
-	pbft.f = config.GetInt("general.f")
+	N := config.GetInt("general.N")
+	pbft.N = uint64(N)
+	f := config.GetInt("general.f")
+	pbft.f = uint64(f)
 
 	if pbft.f*3+1 > pbft.N {
 		panic(fmt.Sprintf("need at least %d enough replicas to tolerate %d byzantine faults, but only %d replicas configured", pbft.f*3+1, pbft.f, pbft.N))
@@ -1594,6 +1594,7 @@ func (pbft *pbftProtocal) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 
 		// If f+1 other replicas have reported checkpoints that were (at one time) outside our watermarks
 		// we need to check to see if we have fallen behind.
+		len := len(pbft.hChkpts)
 		if len(pbft.hChkpts) >= pbft.f+1 {
 			chkptSeqNumArray := make([]uint64, len(pbft.hChkpts))
 			index := 0

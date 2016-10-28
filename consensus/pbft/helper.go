@@ -130,22 +130,22 @@ func (pbft *pbftProtocal) getAddNodeCert(ip string, digest string) (cert *addNod
 // prepare/commit quorum checks helper
 // =============================================================================
 
-func (pbft *pbftProtocal) preparedReplicasQuorum() int {
+func (pbft *pbftProtocal) preparedReplicasQuorum() uint64 {
 	return (2 * pbft.f)
 }
 
-func (pbft *pbftProtocal) committedReplicasQuorum() int {
+func (pbft *pbftProtocal) committedReplicasQuorum() uint64 {
 	return (2 * pbft.f + 1)
 }
 
 // intersectionQuorum returns the number of replicas that have to
 // agree to guarantee that at least one correct replica is shared by
 // two intersection quora
-func (pbft *pbftProtocal) intersectionQuorum() int {
+func (pbft *pbftProtocal) intersectionQuorum() uint64 {
 	return (pbft.N + pbft.f + 2) / 2
 }
 
-func (pbft *pbftProtocal) allCorrectReplicasQuorum() int {
+func (pbft *pbftProtocal) allCorrectReplicasQuorum() uint64 {
 	return (pbft.N - pbft.f)
 }
 
