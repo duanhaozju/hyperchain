@@ -55,7 +55,7 @@
                             <td>{{tx.from}}</td>
                             <td>{{tx.to}}</td>
                             <td class="center">{{tx.amount | hexStringToNum}}</td>
-                            <td class="center">{{tx.timestamp}}</td>
+                            <td class="center">{{tx.timestamp | timestampToDate}}</td>
                         </tr>
                         </tbody>
                         <tfoot>

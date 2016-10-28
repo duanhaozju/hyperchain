@@ -74,9 +74,9 @@ type TransactionResult struct {
 const (
 	//DURATION int64 = 230400
 	//COUNT = 25
-	//SLEEPTIME int = 300
-	DURATION int64 = 30
-	COUNT int = 100
+	//SLEEPTIME time.Duration = 300
+	DURATION int64 = 3
+	COUNT int = 10
 	SLEEPTIME time.Duration = 90
 )
 
@@ -352,29 +352,45 @@ func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*type
 }
 
 // GetTransactions return all transactions in the chain/db
-func (tran *PublicTransactionAPI) GetTransactions() ([]*TransactionResult, error) {
-
-	txs, err := core.GetAllTransaction(tran.db)
-
-	if err != nil {
-		log.Errorf("GetAllTransaction error: %v", err)
-		return nil, err
-	}
+func (tran *PublicTransactionAPI) GetTransactions(args IntervalArgs) ([]*TransactionResult, error) {
 
 	var transactions []*TransactionResult
 
-	for _, tx := range txs {
-		if ts, err := outputTransaction(tx, tran.db); err != nil {
+	if args.From == nil && args.To == nil {
+		txs, err := core.GetAllTransaction(tran.db)
+
+		if err != nil {
+			log.Errorf("GetAllTransaction error: %v", err)
+			return nil, err
+		}
+
+		for _, tx := range txs {
+			if ts, err := outputTransaction(tx, tran.db); err != nil {
+				return nil, err
+			} else {
+				transactions = append(transactions, ts)
+			}
+		}
+	} else {
+
+		if blocks, err := getBlocks(args, tran.db);err != nil {
 			return nil, err
 		} else {
-			transactions = append(transactions, ts)
+			for _, block := range blocks {
+				txs := block.Transactions
+
+				for _, t := range txs {
+					tx, _ := t.(*TransactionResult)
+					transactions = append(transactions, tx)
+				}
+			}
 		}
 	}
 
 	return transactions, nil
 }
 
-// GetDiscardTransactions return all invalid transaction that dont be saved on the blockchain.
+// GetDiscardTransactions returns all invalid transaction that dont be saved on the blockchain.
 func (tran *PublicTransactionAPI) GetDiscardTransactions() ([]*TransactionResult, error) {
 
 	reds, err := core.GetAllDiscardTransaction(tran.db)
@@ -503,6 +519,29 @@ func (tran *PublicTransactionAPI) GetSighHash(args SendTxArgs) (common.Hash, err
 	return tx.SighHash(kec256Hash), nil
 }
 
+// GetTransactionsCount returns the number of transaction in hyperchain.
+func (tran *PublicTransactionAPI) GetTransactionsCount() (*Number, error) {
+	if txs, err := core.GetAllTransaction(tran.db);err != nil {
+		return nil, err
+	} else if len(txs) == 0 {
+		return nil, nil
+	} else {
+		return NewIntToNumber(len(txs)), nil
+	}
+}
+
+// GetTxAvgTimeByBlockNumber returns tx execute avg time.
+func (tran *PublicTransactionAPI) GetTxAvgTimeByBlockNumber(args IntervalArgs) *Number {
+
+	exeTime := core.CalcResponseAVGTime((*args.From).ToUint64(), (*args.To).ToUint64())
+
+	if exeTime <= 0 {
+		return nil
+	}
+
+	return NewInt64ToNumber(exeTime)
+}
+
 //func outputTransaction(tx *types.Transaction, db *hyperdb.LDBDatabase) (*TransactionResult, error) {
 func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*TransactionResult, error) {
 
@@ -543,7 +582,7 @@ func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*Transaction
 		Amount:        NewInt64ToNumber(txValue.Amount),
 		//Gas: 		NewInt64ToNumber(txValue.GasLimit),
 		//GasPrice: 	NewInt64ToNumber(txValue.Price),
-		Timestamp:        tx.Timestamp / 1e6,
+		Timestamp:        tx.Timestamp,
 		ExecuteTime:        NewInt64ToNumber((blk.WriteTime - tx.Timestamp) / int64(time.Millisecond)),
 		Invalid:        false,
 	}
