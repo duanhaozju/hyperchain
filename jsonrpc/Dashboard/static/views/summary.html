@@ -35,7 +35,7 @@
                 <h3>AVG Time</h3>
             </div>
             <div class="ibox-content wrap">
-                <h1 class="no-margins"><span ng-bind="avgTime"></span>ms</h1>
+                <h1 class="no-margins"><span ng-bind="avgTime | hexStringToNum"></span>ms</h1>
 
                 <!--<div class="stat-percent font-bold text-info">20% <i class="fa fa-level-up"></i></div>-->
                 <!--<small>New orders</small>-->
@@ -49,7 +49,7 @@
                 <h3>Total Transaction</h3>
             </div>
             <div class="ibox-content wrap">
-                <h1 class="no-margins">#<span ng-bind="txCount"></span></h1>
+                <h1 class="no-margins">#<span ng-bind="txCount | hexStringToNum"></span></h1>
 
                 <!--<div class="stat-percent font-bold text-navy">44% <i class="fa fa-level-up"></i></div>-->
                 <!--<small>New visits</small>-->
@@ -65,37 +65,45 @@
                     <table class="table table-hover no-margins">
                         <thead>
                             <tr>
+                                <th>ID</th>
                                 <th>Status</th>
-                                <th>Cname</th>
                                 <th>IP</th>
                                 <th>Port</th>
+                                <th>IsPrimary</th>
+                                <th>Delay</th>
                             </tr>
                         </thead>
                         <tbody>
                         <tr ng-repeat="n in nodes">
                             <td>
-                                <div ng-if="n.Status == 0">
+                                <span ng-bind="n.id"></span>
+                            </td>
+                            <td>
+                                <div ng-if="n.status == 0">
                                     <i class="fa fa-circle text-navy"></i>&nbsp;
                                     <small>alive</small>
                                 </div>
-                                <div ng-if="n.Status == 1">
+                                <div ng-if="n.status == 1">
                                     <i class="fa fa-circle text-warning"></i>&nbsp;
                                     <small>pending</small>
                                 </div>
-                                <div ng-if="n.Status == 2">
+                                <div ng-if="n.status == 2">
                                     <i class="fa fa-circle text-danger"></i>&nbsp;
                                     <small>stopped</small>
                                 </div>
 
                             </td>
-                            <td>
-                                <span ng-bind="n.CName"></span>
-                            </td>
                             <td >
-                                <span ng-bind="n.IP"></span>
+                                <span ng-bind="n.ip"></span>
                             </td>
                             <td>
-                                <span ng-bind="n.Port"></span>
+                                <span ng-bind="n.port"></span>
+                            </td>
+                            <td>
+                                <span ng-bind="n.isprimary"></span>
+                            </td>
+                            <td>
+                                <span ng-bind="n.delay"></span>
                             </td>
                         </tr>
                         </tbody>
