@@ -209,6 +209,11 @@ func (pbft *pbftProtocal) recvAgreeAddNode(agree *AgreeAddNode) error {
 		logger.Warningf("Replica %d received agree addnode from primary, ignoring", pbft.id)
 	}
 
+	if !pbft.inAddingNode {
+		logger.Warningf("Replica %d received agree addnode but not in adding node, ignoring", pbft.id)
+		return nil
+	}
+
 	// TODO: check if in recovery
 
 	cert := pbft.getAddNodeCert(agree.TableDigest)
@@ -415,9 +420,13 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *UpdateN) error {
 
 	if pbft.primary(pbft.view, pbft.N) == agree.ReplicaId {
 		logger.Warningf("Replica %d received agree updateN from primary, ignoring", pbft.id)
+		return nil
 	}
 
-	// TODO: check if in recovery
+	if !pbft.inAddingNode {
+		logger.Warningf("Replica %d received agree updateN but not in adding node, ignoring", pbft.id)
+		return nil
+	}
 
 	cert := pbft.getAddNodeCert(agree.TableDigest)
 
@@ -435,6 +444,30 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *UpdateN) error {
 
 func (pbft *pbftProtocal) maybeStartUpdateN(digest string) error {
 
+	cert := pbft.getAddNodeCert(digest)
+
+	if cert == nil {
+		logger.Errorf("Replica %d can't get the cert for digest=%s", pbft.id, digest)
+		return nil
+	}
+
+	if cert.update == nil {
+		logger.Warningf("Replica %d has not received updateN yet", pbft.id)
+		return nil
+	}
+
+	if cert.updateCount < pbft.preparedReplicasQuorum() {
+		return nil
+	}
+
+	// update N, f, view
+	pbft.inUpdatingN = true
+	pbft.previousN = pbft.N
+	pbft.previousView = pbft.view
+	pbft.previousF = pbft.f
+	pbft.N = cert.update.N
+	pbft.view = cert.update.View
+	pbft.f = (cert.update.N-1) / 3
 
 	return nil
 }

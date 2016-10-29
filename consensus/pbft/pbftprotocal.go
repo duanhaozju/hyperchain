@@ -118,9 +118,11 @@ type pbftProtocal struct {
 	newIP				string						// store the new IP from local
 	newID				uint64						// store the new id of the new replica
 	inTableError		bool						// track if the replica's routing table has error
-	inUpdatingN			bool						// track if there exist previous N and new N
 	previousN			uint64						// track the previous N
 	previousView		uint64						// track the previous view
+	previousF			uint64						// track the previous f
+	inUpdatingN			bool						// track if there exist previous N and new N
+	keySeqNo			uint64						// store the key seqNo that should change n and view
 }
 
 type qidx struct {
