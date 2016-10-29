@@ -166,9 +166,9 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 }
 
 type CompileCode struct{
-	Abi []string `json:"abi"`
-	Bin []string	`json:"bin"`
-	Types []string	`json:"types"`
+	Abi []string
+	Bin []string
+	Types []string
 }
 
 // ComplieContract complies contract to ABI

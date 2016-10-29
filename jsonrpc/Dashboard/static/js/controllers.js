@@ -871,60 +871,12 @@ function modalInstanceInvokeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Co
                     // from 调用者地址，to 合约地址，data 为编码
                     ContractService.invokeContract(ENV.FROM,  $scope.address, data)
                         .then(function(res){
-                            var hex = res.ret
-
-                            var str;
-                            var i = 0, l = hex.length;
-                            if (hex.substring(0, 2) === '0x') {
-                                i = 2;
-                            }
-
-                            if (abimethod.outputs.length !=0) {
-
-                                // 目前只考虑返回值只有一个的情况。。。。。。。。。。
-                                for (var j = 0;j < abimethod.outputs.length;j++) {
-
-                                        var type = abimethod.outputs[j].type;
-                                        if (type == "uint8" || type == "uint16" || type == "uint32" || type == "uint64" || type == "uint128" || type == "uint256" || type == "int8" || type == "int16" || type == "int32" || type == "int64" || type == "int128" || type == "int256") {
-                                            str = parseInt(hex.substring(2, l), 16)
-                                            break;
-                                        }
-
-                                        if (type == "string") {
-                                            str = "";
-                                            for (i = j*64+2; i < l; i+=2) {
-                                                var code = parseInt(hex.substr(i, 2), 16);
-                                                str += String.fromCharCode(code);
-                                            }
-                                        }
-
-                                        if (type == "address[]") {
-                                            var length = 0;
-                                            // var address = [];
-                                            str = [];
-                                            for (i = j*64+2; i <= 128; i+=2) {
-                                                var code = parseInt(hex.substr(i, 2), 16);
-                                                if (i == 64 && code == 32) {
-                                                    console.log("invoke success!");
-                                                }
-                                                if (i > 64) {
-                                                    length += code;
-                                                }
-                                            }
-                                            for (i = 128+2; i < l; i+=64) {
-                                                str.push(hex.substr(i+24, 40))
-                                            }
-                                        }
-                                }
-
-                            } else {
-                                str = null
-                            }
+                            var hex16 = res.ret.substring(2,res.ret.length);
 
                             SweetAlert.swal({
                                 title: "Invoked successfully!",
                                 // text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! ",
-                                text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The result is <span class='text_red'>"+ str +"</span>",
+                                text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The result is <span class='text_red'>"+ parseInt(hex16,16) +"</span>",
                                 type: "success",
                                 customClass: 'swal-wide',
                                 html: true
