@@ -27,7 +27,7 @@ MAXNODE=`cat serverlist.txt | wc -l`
 #SERVER_LIST_CONTENT=`cat ./serverlist.txt`
 while IFS='' read -r line || [[ -n "$line" ]]; do
 	SERVER_ADDR+=" ${line}"
-done < serverlist.txt
+done < innerserverlist.txt
 
 echo $SERVER_ADDR
 
@@ -90,6 +90,7 @@ add_ssh_key_form_primary_to_others(){
 build(){
 	echo "Compiling and generating the configuration files..."
     cd ..
+    source ~/.bash_profile
     govendor build -o build/hyperchain
     cd scripts
 }
@@ -103,17 +104,13 @@ distribute_the_binary(){
 	scp ./sub_scripts/deploy/server_deploy.sh satoshi@$PRIMARY:/home/satoshi/
 
 	ssh satoshi@$PRIMARY "chmod a+x server_deploy.sh && bash server_deploy.sh ${MAXNODE}"
+	echo "finish"
 }
 
 if $FIRST_RUN; then
     add_ssh_key_into_all
 	add_ssh_key_form_primary_to_others
 fi
-
-for server_address in ${SERVER_ADDR[@]}; do
-  echo "kill $server_address"
-  ssh satoshi@$server_address "ps aux | grep hyperchain | awk '{print \$2}' | xargs kill -9"
-done
 
 build
 distribute_the_binary

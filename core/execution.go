@@ -8,7 +8,6 @@ import (
 	"math/big"
 	//"hyperchain/core/vm/compiler"
 	"hyperchain/core/state"
-	"time"
 )
 
 // Call executes within the given contract
@@ -52,7 +51,6 @@ func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPric
 }
 
 func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
-	another_test_time := time.Now()
 	evm := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
@@ -104,11 +102,8 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	contract := vm.NewContract(caller, to, value, gas, gasPrice)
 	contract.SetCallCode(codeAddr, code)
 	defer contract.Finalise()
-	log.Noticef("another test time cost is",time.Since(another_test_time))
 
-	evm_run_begin_time := time.Now()
 	ret, err = evm.Run(contract, input)
-	log.Noticef("evm_run_begin_time is ",time.Since(evm_run_begin_time))
 	/*
 		fmt.Println("---------------------------------------")
 		fmt.Println("caller.address",caller.Address())
@@ -124,7 +119,6 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// calculate the gas required to store the code. If the code could not
 	// be stored due to not enough gas set an error and let it be handled
 	// by the error checking condition below.
-	test2_time := time.Now()
 	if err == nil && createAccount {
 		dataGas := big.NewInt(int64(len(ret)))
 		dataGas.Mul(dataGas, params.CreateDataGas)
@@ -143,7 +137,6 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 
 		env.SetSnapshot(snapshotPreTransfer)
 	}
-	log.Noticef("test2_time is ",time.Since(test2_time))  // the time is less than 1us
 	return ret, addr, err
 }
 

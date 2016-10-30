@@ -241,7 +241,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		end := start + 30
 
 		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < 100; i++ {
+			for i := 0; i < 125; i++ {
 				// ################################# 测试代码 START ####################################### // (用不同的value代替之前不同的timestamp以标志不同的transaction)
 				txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), v, nil)
 
