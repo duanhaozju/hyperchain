@@ -11,6 +11,10 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	crand "crypto/rand"
+	"math/rand"
+	"reflect"
+	"testing/quick"
 )
 
 type TrieSuite struct {
@@ -72,13 +76,8 @@ func TestMissingNode(t *testing.T) {
 	updateString(trie, "120000", "qwerqwerqwerqwerqwerqwerqwerqwer")
 	updateString(trie, "123456", "asdfasdfasdfasdfasdfasdfasdfasdf")
 	root, _ := trie.Commit()
-
-	it := NewIterator(trie)
-	for it.Next() {
-		t.Log(string(it.Key), string(it.Value))
-	}
-
 	ClearGlobalCache()
+
 	trie, _ = New(root, db)
 	if trie == nil {
 		t.Errorf("New trie failed")
@@ -141,24 +140,7 @@ func TestMissingNode(t *testing.T) {
 	}
 }
 
-func TestInsert(t *testing.T) {
-	trie := newEmpty()
 
-	updateString(trie, "doe", "reindeer")
-	updateString(trie, "dog", "puppy")
-	updateString(trie, "dogglesworth", "cat")
-
-	updateString(trie, "doe1", "reindeer")
-	updateString(trie, "dog1", "puppy")
-	updateString(trie, "dogglesworth1", "cat")
-
-	root, _ := trie.Commit()
-	ClearGlobalCache()
-	trie, _ = New(root, trie.db)
-
-	traverse_trie(trie)
-
-}
 
 func TestGet(t *testing.T) {
 	trie := newEmpty()
@@ -184,41 +166,6 @@ func TestGet(t *testing.T) {
 	}
 }
 
-func TestDelete(t *testing.T) {
-	trie := newEmpty()
-	vals := []struct{ k, v string }{
-		{"do", "verb"},
-		{"ether", "wookiedoo"},
-		{"horse", "stallion"},
-		{"shaman", "horse"},
-	}
-	for _, val := range vals {
-		updateString(trie, val.k, val.v)
-	}
-	deleteString(trie, "ether")
-	deleteString(trie, "horse")
-	deleteString(trie, "shaman")
-	traverse_trie(trie)
-}
-
-func TestEmptyValues(t *testing.T) {
-	trie := newEmpty()
-
-	vals := []struct{ k, v string }{
-		{"do", "verb"},
-		{"ether", "wookiedoo"},
-		{"horse", "stallion"},
-		{"shaman", "horse"},
-		{"doge", "coin"},
-		{"ether", ""},
-		{"dog", "puppy"},
-		{"shaman", ""},
-	}
-	for _, val := range vals {
-		updateString(trie, val.k, val.v)
-	}
-	traverse_trie(trie)
-}
 
 func TestReplication(t *testing.T) {
 	trie := newEmpty()
@@ -369,60 +316,12 @@ func (s *TrieSuite) TestDeleteAfterLoad(c *checker.C) {
 
 }
 
-func TestRetrieve(t *testing.T) {
-	trie := newEmpty()
-
-	vals := []struct{ k, v string }{
-		{"do", "verb"},
-		{"ether", "wookiedoo"},
-		{"horse", "stallion"},
-		{"shaman", "horse"},
-		{"doge", "coin"},
-		{"dog", "puppy"},
-		{"somethingveryoddindeedthis is", "myothernodedata"},
-	}
-	for _, val := range vals {
-		updateString(trie, val.k, val.v)
-	}
-	root, _ := trie.Commit()
-	ClearGlobalCache()
-
-	newTrie, _ := New(root, trie.db)
-
-	deleteString(newTrie, "do")
-	deleteString(newTrie, "ether")
-	updateString(newTrie, "key1", "value1")
-	updateString(newTrie, "doge", "newcoin")
-	traverse_trie(newTrie)
-	root2, _ := newTrie.Commit()
-	ClearGlobalCache()
-
-	newTrie2, _ := New(root2, trie.db)
-	traverse_trie(newTrie2)
-}
-
-// Not an actual test
-func TestOutput(t *testing.T) {
-
-	base := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-	trie := newEmpty()
-	for i := 0; i < 50; i++ {
-		updateString(trie, fmt.Sprintf("%s%d", base, i), "valueeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
-	}
-	fmt.Println("############################## FULL ################################")
-
-	trie.Commit()
-	fmt.Println("############################## SMALL ################################")
-	trie2, _ := New(trie.Hash(), trie.db)
-	getString(trie2, base+"20")
-}
 
 func TestLargeValue(t *testing.T) {
 	trie := newEmpty()
 	trie.Update([]byte("key1"), []byte{99, 99, 99, 99})
 	trie.Update([]byte("key2"), bytes.Repeat([]byte{1}, 32))
 	trie.Hash()
-
 }
 
 type kv struct {
@@ -543,7 +442,7 @@ func deleteString(trie *Trie, k string) {
 func listMem(db *hyperdb.MemDatabase) {
 	for _, key := range db.Keys() {
 		val, _ := db.Get(key)
-		fmt.Printf("MEM key: %x, val: %x\n", string(key), string(val))
+		fmt.Printf("MEM key: %v, val: %v\n", key, val)
 	}
 }
 func traverse_trie(trie *Trie) {
@@ -552,3 +451,109 @@ func traverse_trie(trie *Trie) {
 		fmt.Printf("TRIE key: %v, val : %v\n", string(it.Key), string(it.Value))
 	}
 }
+
+type randTestStep struct {
+	op    int
+	key   []byte
+	value []byte
+}
+type randTest []randTestStep
+
+const (
+	opUpdate = iota
+	opDelete
+	opGet
+	opCommit
+	opHash
+	opReset
+	opItercheckhash
+	opMax
+)
+
+func (randTest) Generate(r *rand.Rand, size int) reflect.Value {
+	var allKeys [][]byte
+	genKey := func() []byte {
+		if len(allKeys) < 2 || r.Intn(100) < 10 {
+			// new key
+			key := make([]byte, 30)
+			crand.Read(key)
+			allKeys = append(allKeys, key)
+			return key
+		}
+		// use existing key
+		return allKeys[r.Intn(len(allKeys))]
+	}
+
+	var steps randTest
+	for i := 0; i < size; i++ {
+		step := randTestStep{op: r.Intn(opMax)}
+		switch step.op {
+		case opUpdate:
+			step.key = genKey()
+			step.value = []byte("value")
+			//binary.BigEndian.PutUint64(step.value, uint64(i))
+		case opGet, opDelete:
+			step.key = genKey()
+		}
+		steps = append(steps, step)
+	}
+	return reflect.ValueOf(steps)
+}
+
+func runRandTest(rt randTest) bool {
+	db, _ := hyperdb.NewMemDatabase()
+	tr, _ := New(common.Hash{}, db)
+	values := make(map[string]string) // tracks content of the trie
+
+	for _, step := range rt {
+		switch step.op {
+		case opUpdate:
+			tr.Update(step.key, step.value)
+			values[string(step.key)] = string(step.value)
+		case opDelete:
+			tr.Delete(step.key)
+			delete(values, string(step.key))
+		case opGet:
+			v := tr.Get(step.key)
+			want := values[string(step.key)]
+			if string(v) != want {
+				fmt.Printf("mismatch for key 0x%x, got 0x%x want 0x%x", step.key, v, want)
+				return false
+			}
+		case opCommit:
+			if _, err := tr.Commit(); err != nil {
+				panic(err)
+			}
+		case opHash:
+			tr.Hash()
+		case opReset:
+			hash, err := tr.Commit()
+			if err != nil {
+				panic(err)
+			}
+			newtr, err := New(hash, db)
+			if err != nil {
+				panic(err)
+			}
+			tr = newtr
+		case opItercheckhash:
+			checktr, _:= New(common.Hash{}, nil)
+			it := tr.Iterator()
+			for it.Next() {
+				checktr.Update(it.Key, it.Value)
+			}
+			if tr.Hash() != checktr.Hash() {
+				return false
+			}
+			return true
+		}
+	}
+	return true
+}
+
+func TestRandom(t *testing.T) {
+	if err := quick.Check(runRandTest, nil); err != nil {
+		t.Fatal(err)
+	}
+}
+
