@@ -8,6 +8,8 @@ import (
 	"sync"
 )
 
+type cond func(interface{}, interface{}) bool
+
 // Cache implements a thread safe cache
 type Cache struct {
 	items map[interface{}]interface{}
@@ -90,5 +92,20 @@ func (c *Cache) Keys() []interface{} {
 
 // Len returns the number of items in the cache.
 func (c *Cache) Len() int {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	return len(c.items)
+}
+
+func (c *Cache) RemoveWithCond(key interface{}, fn cond) bool {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	flag := false
+	for iterKey, _ := range c.items {
+		if fn(key, iterKey) {
+			delete(c.items, iterKey)
+			flag = true
+		}
+	}
+	return flag
 }

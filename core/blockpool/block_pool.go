@@ -22,6 +22,7 @@ import (
 	"hyperchain/trie"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -44,40 +45,30 @@ type BlockRecord struct {
 }
 
 type BlockPool struct {
-	demandNumber uint64
-	demandSeqNo  uint64
-	maxNum       uint64
-	maxSeqNo     uint64
-
-	queue           map[uint64]*types.Block
-	validationQueue map[uint64]event.ExeTxsEvent
-
+	demandNumber        uint64
+	demandSeqNo         uint64
+	maxNum              uint64
+	maxSeqNo            uint64
 	consenter           consensus.Consenter
 	eventMux            *event.TypeMux
-	mu                  sync.RWMutex
-	seqNoMu             sync.RWMutex
-	validationQueueMu   sync.RWMutex
 	stateLock           sync.Mutex
 	wg                  sync.WaitGroup // for shutdown sync
 	lastValidationState common.Hash
 	blockCache          *common.Cache
-}
-
-func (bp *BlockPool) SetDemandNumber(number uint64) {
-	bp.demandNumber = number
-}
-func (bp *BlockPool) SetDemandSeqNo(seqNo uint64) {
-	bp.demandSeqNo = seqNo
+	validationQueue     *common.Cache
+	queue               *common.Cache
 }
 
 func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *BlockPool {
-	cache, _ := common.NewCache()
+	blockcache, _ := common.NewCache()
+	queue, _ := common.NewCache()
+	validationqueue, _ := common.NewCache()
 	pool := &BlockPool{
 		eventMux:        eventMux,
 		consenter:       consenter,
-		queue:           make(map[uint64]*types.Block),
-		validationQueue: make(map[uint64]event.ExeTxsEvent),
-		blockCache:      cache,
+		queue:           queue,
+		validationQueue: validationqueue,
+		blockCache:      blockcache,
 	}
 
 	currentChain := core.GetChainCopy()
@@ -91,71 +82,65 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *Block
 	return pool
 }
 
+func (pool *BlockPool) SetDemandNumber(number uint64) {
+	atomic.StoreUint64(&pool.demandNumber, number)
+}
+func (pool *BlockPool) SetDemandSeqNo(seqNo uint64) {
+	atomic.StoreUint64(&pool.demandSeqNo, seqNo)
+}
+
 // Validate is an entry of `validate process`
 // When a validationEvent received, put it into the validationQueue
 // If the demand ValidationEvent arrived, call `PreProcess` function
+// IMPORTANT this function called in parallelly, Make sure all the variable are thread-safe
 func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption, peerManager p2p.PeerManager) {
 	if validationEvent.SeqNo > pool.maxSeqNo {
-		pool.maxSeqNo = validationEvent.SeqNo
+		atomic.StoreUint64(&pool.maxSeqNo, validationEvent.SeqNo)
 	}
-	// TODO Is necessary ?
-	pool.validationQueueMu.RLock()
-	if _, ok := pool.validationQueue[validationEvent.SeqNo]; ok {
+
+	if _, existed := pool.validationQueue.Get(validationEvent.SeqNo); existed {
 		log.Error("Receive Repeat ValidationEvent, ", validationEvent.SeqNo)
-		pool.validationQueueMu.RUnlock()
 		return
 	}
-	pool.validationQueueMu.RUnlock()
+
 	// (1) Check SeqNo
-	pool.seqNoMu.RLock()
 	if validationEvent.SeqNo < pool.demandSeqNo {
 		// Receive repeat ValidationEvent
 		log.Error("Receive Repeat ValidationEvent, seqno less than demandseqNo, ", validationEvent.SeqNo)
-		pool.seqNoMu.RUnlock()
 		return
 	} else if validationEvent.SeqNo == pool.demandSeqNo {
 		// Process
-		pool.seqNoMu.RUnlock()
-		pool.seqNoMu.Lock()
 		if _, success := pool.PreProcess(validationEvent, commonHash, encryption, peerManager); success {
-			pool.demandSeqNo += 1
+			atomic.AddUint64(&pool.demandSeqNo, 1)
 			log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
 		}
-		pool.seqNoMu.Unlock()
-		// Remove useless event
-		for i, _ := range pool.validationQueue {
-			if i <= validationEvent.SeqNo {
-				pool.validationQueueMu.Lock()
-				delete(pool.validationQueue, i)
-				pool.validationQueueMu.Unlock()
+		judge := func(key interface{}, iterKey interface{}) bool {
+			id := key.(uint64)
+			iterId := iterKey.(uint64)
+			if id >= iterId {
+				return true
 			}
+			return false
 		}
+		pool.validationQueue.RemoveWithCond(validationEvent.SeqNo, judge)
+
 		// Process remain event
-		for i := validationEvent.SeqNo + 1; i <= pool.maxSeqNo; i += 1 {
-			if _, ok := pool.validationQueue[i]; ok {
-				pool.seqNoMu.Lock()
-				// Process
-				if _, success := pool.PreProcess(pool.validationQueue[i], commonHash, encryption, peerManager); success {
-					pool.demandSeqNo += 1
+		for i := validationEvent.SeqNo + 1; i <= atomic.LoadUint64(&pool.maxSeqNo); i += 1 {
+			if ret, existed := pool.validationQueue.Get(i); existed {
+				ev := ret.(event.ExeTxsEvent)
+				if _, success := pool.PreProcess(ev, commonHash, encryption, peerManager); success {
+					pool.validationQueue.Remove(i)
+					atomic.AddUint64(&pool.demandSeqNo, 1)
 					log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
 				}
-				pool.seqNoMu.Unlock()
-
-				pool.validationQueueMu.Lock()
-				delete(pool.validationQueue, i)
-				pool.validationQueueMu.Unlock()
-
 			} else {
 				break
 			}
 		}
 		return
 	} else {
-		pool.seqNoMu.RUnlock()
 		log.Notice("Receive ValidationEvent which is not demand, ", validationEvent.SeqNo, "save into cache temporarily")
-		pool.validationQueueMu.Lock()
-		pool.validationQueue[validationEvent.SeqNo] = validationEvent
-		pool.validationQueueMu.Unlock()
+		pool.validationQueue.Add(validationEvent.SeqNo, validationEvent)
 	}
 }
 
@@ -377,9 +362,10 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 	}
 
 	if block.Number > pool.maxNum {
-		pool.maxNum = block.Number
+		atomic.StoreUint64(&pool.maxNum, block.Number)
 	}
-	if _, ok := pool.queue[block.Number]; ok {
+
+	if _, existed := pool.queue.Get(block.Number); existed {
 		log.Info("repeat block number,number is: ", block.Number)
 		return
 	}
@@ -387,27 +373,24 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 	log.Info("number is ", block.Number)
 
 	if pool.demandNumber == block.Number {
-		pool.mu.Lock()
 		WriteBlock(block, commonHash, vid, primary)
-		pool.demandNumber += 1
+		atomic.AddUint64(&pool.demandNumber, 1)
 		log.Info("current demandNumber is ", pool.demandNumber)
-		pool.mu.Unlock()
 
-		for i := block.Number + 1; i <= pool.maxNum; i += 1 {
-			if _, ok := pool.queue[i]; ok {
-				pool.mu.Lock()
-				WriteBlock(pool.queue[i], commonHash, vid, primary)
-				pool.demandNumber += 1
+		for i := block.Number + 1; i <= atomic.LoadUint64(&pool.maxNum); i += 1 {
+			if ret, existed := pool.queue.Get(i); existed {
+				blk := ret.(*types.Block)
+				WriteBlock(blk, commonHash, vid, primary)
+				pool.queue.Remove(i)
+				atomic.AddUint64(&pool.demandNumber, 1)
 				log.Info("current demandNumber is ", pool.demandNumber)
-				pool.mu.Unlock()
-				delete(pool.queue, i)
 			} else {
 				break
 			}
 		}
 		return
 	} else {
-		pool.queue[block.Number] = block
+		pool.queue.Add(block.Number, block)
 	}
 }
 
@@ -464,17 +447,17 @@ func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
 
 // reset blockchain to a stable checkpoint status when `viewchange` occur
 func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
-	tmpDemandNumber := pool.demandNumber
+	tmpDemandNumber := atomic.LoadUint64(&pool.demandNumber)
 	// 1. Reset demandNumber , demandSeqNo and lastValidationState
-	pool.demandNumber = ev.SeqNo
+	atomic.StoreUint64(&pool.demandNumber, ev.SeqNo)
+	atomic.StoreUint64(&pool.demandSeqNo, ev.SeqNo)
+	atomic.StoreUint64(&pool.maxSeqNo, ev.SeqNo-1)
 
-	pool.demandSeqNo = ev.SeqNo
-	pool.maxSeqNo = ev.SeqNo - 1
 	db, _ := hyperdb.GetLDBDatabase()
 	block, _ := core.GetBlockByNumber(db, ev.SeqNo-1)
 	pool.lastValidationState = common.BytesToHash(block.MerkleRoot)
 	// 2. Delete Invalid Stuff
-	for i := pool.demandNumber; i < tmpDemandNumber; i += 1 {
+	for i := ev.SeqNo; i < tmpDemandNumber; i += 1 {
 		// delete tx, txmeta and receipt
 		block, err := core.GetBlockByNumber(db, i)
 		if err != nil {
@@ -521,5 +504,3 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	core.UpdateChain(block, isGenesis)
 
 }
-
-
