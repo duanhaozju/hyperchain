@@ -5,10 +5,9 @@ import (
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
 	"hyperchain/crypto"
-	"math/big"
-	"time"
-	"os"
 	"io/ioutil"
+	"os"
+	"time"
 )
 
 func (self *Transaction) BuildHash() common.Hash {
@@ -62,12 +61,12 @@ func (self *Transaction) ValidateSign(encryption crypto.Encryption, ch crypto.Co
 
 // NewTransaction returns a new transaction
 //func NewTransaction(from []byte,to []byte,value []byte, signature []byte) *Transaction{
-func NewTransaction(from []byte,to []byte,value []byte, timestamp int64) *Transaction{
+func NewTransaction(from []byte, to []byte, value []byte, timestamp int64) *Transaction {
 
 	transaction := &Transaction{
-		From:      from,
-		To:        to,
-		Value:     value,
+		From:  from,
+		To:    to,
+		Value: value,
 		//Timestamp: time.Now().UnixNano(),
 		Timestamp: timestamp,
 	}
@@ -84,15 +83,15 @@ func NewTransactionValue(price, gasLimit, amount int64, payload []byte) *Transac
 	}
 }
 
-func ReadSourceFromFile(filePath string) (string){
+func ReadSourceFromFile(filePath string) string {
 
-	fi,err := os.Open(filePath)
-	if err!=nil {
+	fi, err := os.Open(filePath)
+	if err != nil {
 		return ""
 	}
-	file_raw_source,err := ioutil.ReadAll(fi)
+	file_raw_source, err := ioutil.ReadAll(fi)
 	defer fi.Close()
-	return string(file_raw_source);
+	return string(file_raw_source)
 }
 
 func NewTestCreateTransaction() *Transaction {
@@ -189,23 +188,9 @@ func NewTestCallTransaction() *Transaction {
 
 	return transaction
 }
-func (tx *Transaction) Payload() []byte {
+
+func (tx *Transaction) GetTransactionValue() *TransactionValue {
 	transactionValue := &TransactionValue{}
 	proto.Unmarshal(tx.Value, transactionValue)
-	return common.CopyBytes(transactionValue.Payload)
-}
-func (tx *Transaction) Gas() *big.Int {
-	transactionValue := &TransactionValue{}
-	proto.Unmarshal(tx.Value, transactionValue)
-	return new(big.Int).Set(big.NewInt(transactionValue.GasLimit))
-}
-func (tx *Transaction) GasPrice() *big.Int {
-	transactionValue := &TransactionValue{}
-	proto.Unmarshal(tx.Value, transactionValue)
-	return new(big.Int).Set(big.NewInt(transactionValue.Price))
-}
-func (tx *Transaction) Amount() *big.Int {
-	transactionValue := &TransactionValue{}
-	proto.Unmarshal(tx.Value, transactionValue)
-	return new(big.Int).Set(big.NewInt(transactionValue.Amount))
+	return transactionValue
 }

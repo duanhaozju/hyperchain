@@ -14,7 +14,6 @@ type Code []byte
 
 var logger = glog.Logger{}
 
-
 // 这一块相当于ethereum里的TransitionDB
 func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
 	var (
@@ -22,10 +21,11 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		//sender = common.BytesToAddress(tx.From)
 		to = common.BytesToAddress(tx.To)
 		// TODO these there parameters should be added into the tx
-		data       = tx.Payload()
-		gas        = tx.Gas()
-		gasPrice   = tx.GasPrice()
-		amount     = tx.Amount()
+		tv         = tx.GetTransactionValue()
+		data       = tv.GetPayload()
+		gas        = tv.GetGas()
+		gasPrice   = tv.GetGasPrice()
+		amount     = tv.GetAmount()
 		statedb, _ = env.Db().(*state.StateDB)
 	)
 	// TODO ZHZ_TEST the time of above will cost 10us
@@ -36,7 +36,6 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 	} else {
 		ret, _, err = Exec(env, &from, &to, data, gas, gasPrice, amount)
 	}
-
 
 	// TODO ZHZ_TEST the time of below will cost 10us
 	receipt = types.NewReceipt(nil, gas)
@@ -92,4 +91,3 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 
 	return ret, addr, err
 }
-
