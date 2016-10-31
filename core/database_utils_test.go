@@ -9,12 +9,13 @@ import (
 	"os"
 	"testing"
 	"time"
-	"github.com/golang/protobuf/proto"
+	"hyperchain/accounts"
+	"hyperchain/common"
 )
 
 var transactionCases = []*types.Transaction{
 	&types.Transaction{
-		From:      []byte("0000000000000000000000000000000000000001"),
+		From:      []byte("6201cb0448964ac597faf6fdf1f472edf2a22b89"),
 		To:        []byte("0000000000000000000000000000000000000003"),
 		Value:     []byte("100"),
 		Timestamp:time.Now().UnixNano() - int64(time.Second),
@@ -33,6 +34,46 @@ var transactionCases = []*types.Transaction{
 		Timestamp: time.Now().UnixNano(),
 		Signature: []byte("signature3"),
 	},
+}
+
+func TestSignTime(t *testing.T) {
+	tx := transactionCases[0]
+	kec256Hash := crypto.NewKeccak256Hash("keccak256")
+
+	hash := tx.SighHash(kec256Hash)
+	keydir := "../build/config/keystore"
+	//
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	am := accounts.NewAccountManager(keydir,encryption)
+	ac:=accounts.Account{
+		Address:common.HexToAddress(string(tx.From)),
+		File:am.KeyStore.JoinPath(string(tx.From)),
+	}
+
+	am.Unlock(ac,"123")
+	var set = []int{500}
+
+	for _,j:=range set{
+		start := time.Now()
+		for i:=0;i<j;i++{
+			am.SignWithPassphrase(common.HexToAddress(string(tx.From)),hash[:],"123")
+			//fmt.Println(signature)
+			//tx.ValidateSign(encryption,kec256Hash)
+		}
+		fmt.Printf("signtx test %dtxs: %s",j,time.Since(start))
+		fmt.Println()
+
+	}
+	for _,j:=range set{
+		start := time.Now()
+		for i:=0;i<j;i++{
+			//am.SignWithPassphrase(common.HexToAddress(string(tx.From)),hash[:],"123")
+			tx.ValidateSign(encryption,kec256Hash)
+		}
+		fmt.Printf("unsigntx test %dtxs: %s",j,time.Since(start))
+		fmt.Println()
+
+	}
 }
 
 func isDirExists(path string) bool {
@@ -286,19 +327,19 @@ func TestGetId(t *testing.T) {
 	t.Log(GetId())
 }
 
-func TestGetInvaildTx(t *testing.T) {
-	tx := transactionCases[0]
-	record := &types.InvalidTransactionRecord{
-		Tx:      tx,
-		ErrType: types.InvalidTransactionRecord_OUTOFBALANCE,
-	}
-	data,_ := proto.Marshal(record)
-	// save to db
-	db, _ := hyperdb.GetLDBDatabase()
-	db.Put(append(invalidTransactionPrefix, tx.TransactionHash...), data)
-
-	result,_ := GetInvaildTxErrType(db,tx.TransactionHash)
-	fmt.Println(result)
-
-}
+//func TestGetInvaildTx(t *testing.T) {
+//	tx := transactionCases[0]
+//	record := &types.InvalidTransactionRecord{
+//		Tx:      tx,
+//		ErrType: types.InvalidTransactionRecord_OUTOFBALANCE,
+//	}
+//	data,_ := proto.Marshal(record)
+//	// save to db
+//	db, _ := hyperdb.GetLDBDatabase()
+//	db.Put(append(invalidTransactionPrefix, tx.TransactionHash...), data)
+//
+//	result,_ := GetInvaildTxErrType(db,tx.TransactionHash)
+//	fmt.Println(result)
+//
+//}
 
