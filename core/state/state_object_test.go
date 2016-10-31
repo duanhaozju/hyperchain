@@ -45,6 +45,8 @@ func TestEncode(t *testing.T) {
 	obj.SetABI([]byte("abi"))
 	obj.SetBalance(big.NewInt(123))
 	obj.SetNonce(123)
+	obj.trie.Commit()
+	db.Put(obj.codeHash, obj.code)
 	buf, _ := obj.EncodeObject()
 	obj2, err := DecodeObject(common.HexToAddress("01234567890"), db, buf)
 	if err != nil {
