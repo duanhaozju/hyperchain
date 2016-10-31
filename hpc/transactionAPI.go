@@ -251,7 +251,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					return common.Hash{}, err
 				}
 				tx.Value = value
-				v++
+				//v++
 				// ################################## 测试代码 END ####################################### //
 				tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
 
