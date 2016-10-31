@@ -20,7 +20,6 @@ import (
 	"hyperchain/p2p"
 	"hyperchain/recovery"
 	"hyperchain/trie"
-	"math/big"
 	"strconv"
 	"sync"
 	"time"
@@ -192,7 +191,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	log.Info("Invalid Tx number: ", len(invalidTxSet))
 	log.Info("Valid Tx number: ", len(validTxSet))
 	// Communicate with PBFT
-	pool.consenter.RecvValidatedResult(event.ValidatedTxs{
+	pool.consenter.RecvLocal(event.ValidatedTxs{
 		Transactions: validTxSet,
 		SeqNo:        validationEvent.SeqNo,
 		View:         validationEvent.View,
@@ -264,15 +263,15 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 
 	public_batch = db.NewBatch()
 	for i, tx := range txs {
-		if !CanTransfer(common.BytesToAddress(tx.From), statedb, tx.Amount()) {
+		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
+		receipt, _, _, err := core.ExecTransaction(*tx, vmenv)
+		if err != nil && core.IsValueTransferErr(err) {
 			invalidTxs = append(invalidTxs, &types.InvalidTransactionRecord{
 				Tx:      tx,
 				ErrType: types.InvalidTransactionRecord_OUTOFBALANCE,
 			})
 			continue
 		}
-		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
-		receipt, _, _, _ := core.ExecTransaction(*tx, vmenv)
 		// save to DB
 		txValue, _ := proto.Marshal(tx)
 		if err := public_batch.Put(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...), txValue); err != nil {
@@ -523,6 +522,4 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 
 }
 
-func CanTransfer(from common.Address, statedb *state.StateDB, value *big.Int) bool {
-	return statedb.GetBalance(from).Cmp(value) >= 0
-}
+

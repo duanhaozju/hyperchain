@@ -48,9 +48,11 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 	receipt.Ret = ret
 	receipt.SetLogs(statedb.GetLogs(common.BytesToHash(receipt.TxHash)))
 
-	if err != nil && IsValueTransferErr(err) {
-		receipt.Status = types.Receipt_OUTOFBALANCE
-		receipt.Message = []byte(err.Error())
+	if err != nil {
+		if !IsValueTransferErr(err) {
+			receipt.Status = types.Receipt_FAILED
+			receipt.Message = []byte(err.Error())
+		}
 	} else {
 		receipt.Status = types.Receipt_SUCCESS
 		receipt.Message = nil
@@ -63,13 +65,9 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 	var sender vm.Account
 
 	if !(vmenv.Db().Exist(*from)) {
-		//createAccount_time := time.Now()
 		sender = vmenv.Db().CreateAccount(*from)
-		//log.Notice("createAccount_time is",time.Since(createAccount_time))
 	} else {
-		//getAccount_time := time.Now()
 		sender = vmenv.Db().GetAccount(*from)
-		//log.Notice("getAccount_time is",time.Since(getAccount_time))
 	}
 	contractCreation := (nil == to)
 
