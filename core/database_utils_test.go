@@ -6,11 +6,11 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
-	"os"
 	"testing"
 	"time"
 	"hyperchain/accounts"
 	"hyperchain/common"
+	"github.com/golang/protobuf/proto"
 )
 
 var transactionCases = []*types.Transaction{
@@ -73,16 +73,6 @@ func TestSignTime(t *testing.T) {
 		fmt.Printf("unsigntx test %dtxs: %s",j,time.Since(start))
 		fmt.Println()
 
-	}
-}
-
-func isDirExists(path string) bool {
-	fi, err := os.Stat(path)
-
-	if err != nil {
-		return os.IsExist(err)
-	} else {
-		return fi.IsDir()
 	}
 }
 
@@ -327,19 +317,19 @@ func TestGetId(t *testing.T) {
 	t.Log(GetId())
 }
 
-//func TestGetInvaildTx(t *testing.T) {
-//	tx := transactionCases[0]
-//	record := &types.InvalidTransactionRecord{
-//		Tx:      tx,
-//		ErrType: types.InvalidTransactionRecord_OUTOFBALANCE,
-//	}
-//	data,_ := proto.Marshal(record)
-//	// save to db
-//	db, _ := hyperdb.GetLDBDatabase()
-//	db.Put(append(invalidTransactionPrefix, tx.TransactionHash...), data)
-//
-//	result,_ := GetInvaildTxErrType(db,tx.TransactionHash)
-//	fmt.Println(result)
-//
-//}
+func TestGetInvaildTx(t *testing.T) {
+	tx := transactionCases[0]
+	record := &types.InvalidTransactionRecord{
+		Tx:      tx,
+		ErrType: types.InvalidTransactionRecord_OUTOFBALANCE,
+	}
+	data,_ := proto.Marshal(record)
+	// save to db
+	db, _ := hyperdb.GetLDBDatabase()
+	db.Put(append(InvalidTransactionPrefix, tx.TransactionHash...), data)
+
+	result,_ := GetInvaildTxErrType(db,tx.TransactionHash)
+	fmt.Println(result)
+
+}
 
