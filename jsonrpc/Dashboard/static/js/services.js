@@ -23,14 +23,14 @@ function SummaryService($resource,$q,ENV) {
                 })
             })
         },
-        getAvgTimeAndCount: function(from,to){
+        getAvgTime: function(from,to){
             return $q(function(resolve, reject){
                 $resource(ENV.API,{},{
                     query:{
                         method:"POST"
                     }
                 }).query({
-                    method: "block_queryExecuteTime",
+                    method: "tx_getTxAvgTimeByBlockNumber",
                     params: [
                         {
                             "from":from,
@@ -55,7 +55,7 @@ function SummaryService($resource,$q,ENV) {
                         method:"POST"
                     }
                 }).getTxSum({
-                    method: "block_queryTransactionSum",
+                    method: "tx_getTransactionsCount",
                     id: 1
                 },function(res){
                     if (res.error) {
@@ -176,6 +176,7 @@ function TransactionService($resource,$q,ENV) {
                     }
                 }).getTxs({
                     method: "tx_getTransactions",
+                    params: [{}],
                     id: 1
                 },function(res){
                     if (res.error) {

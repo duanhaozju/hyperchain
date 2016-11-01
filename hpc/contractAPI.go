@@ -84,11 +84,17 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 		if realArgs.PrivKey == "" {
 			// For Hyperchain test
 
-			// TODO replace password with test value
-			signature, err := contract.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
-			if err != nil {
-				log.Errorf("Sign(tx) error :%v", err)
+			var signature []byte
+			if realArgs.Signature == "" {
+
+				signature, err = contract.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
+				if err != nil {
+					log.Errorf("Sign(tx) error :%v", err)
+				}
+			} else {
+				tx.Signature = common.FromHex(realArgs.Signature)
 			}
+
 			tx.Signature = signature
 		} else {
 			// For Hyperboard test
@@ -155,18 +161,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 	//}
 
 	time.Sleep(2000 * time.Millisecond)
-	/*
-		receipt := core.GetReceipt(tx.BuildHash())
-		fmt.Println("GasUsed", receipt.GasUsed)
-		fmt.Println("PostState", receipt.PostState)
-		fmt.Println("ContractAddress", receipt.ContractAddress)
-		fmt.Println("CumulativeGasUsed", receipt.CumulativeGasUsed)
-		fmt.Println("Ret", receipt.Ret)
-		fmt.Println("TxHash", receipt.TxHash)
-		fmt.Println("Status", receipt.Status)
-		fmt.Println("Message", receipt.Message)
-		fmt.Println("Log", receipt.Logs)
-	*/
+
 	return tx.GetTransactionHash(), nil
 }
 
@@ -213,19 +208,42 @@ func (contract *PublicContractAPI) GetCode(addr common.Address, n Number) (strin
 	return fmt.Sprintf(`0x%x`, stateDb.GetCode(addr)), nil
 }
 
-// GetContractCountByAddr returns the number of contract that has been deployed by given account address,
+// GetContractCountByAddr returns the number of contract that has been deployed by given account address and block number,
 // if addr is nil, returns the number of all the contract that has been deployed.
-func (contract *PublicContractAPI) GetContractCountByAddr(addr common.Address) (uint64, error) {
+func (contract *PublicContractAPI) GetContractCountByAddr(addr common.Address, n Number) (*Number, error) {
 
-	stateDb, err := getBlockStateDb(Number(latestBlockNumber), contract.db)
+	stateDb, err := getBlockStateDb(n, contract.db)
 
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	return stateDb.GetNonce(addr), nil
+	return NewUint64ToNumber(stateDb.GetNonce(addr)), nil
 
 }
 
+// GetStorageByAddr returns the storage by given contract address and bock number.
+// The method is offered for hyperchain internal test.
+func (contract *PublicContractAPI) GetStorageByAddr(addr common.Address, n Number) (map[string]string, error) {
+	stateDb, err := getBlockStateDb(n, contract.db)
 
+	if err != nil {
+		return nil, err
+	}
+	mp := make(map[string]string)
+
+	if obj := stateDb.GetStateObject(addr);obj == nil {
+		return nil, nil
+	} else {
+		storages := obj.Storage()
+		if len(storages) == 0 {
+			return nil, nil
+		}
+
+		for k,v := range storages {
+			mp[k.Hex()] = v.Hex()
+		}
+	}
+	return mp,nil
+}
 

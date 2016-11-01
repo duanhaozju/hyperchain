@@ -31,14 +31,12 @@ func init() {
 	if err != nil{
 		codeCache = csc
 	}else {
-		log.Errorf("the Cache cannot be initialized")
 	}
 	// 2.init the abiSizeCache
 	asc,err := lru.New(abiSizeCacheSize)
 	if err != nil{
 		abiCache = asc
 	}else {
-		log.Errorf("the Cache cannot be initialized")
 	}
 	// 2.init the stateObjectSizeCache
 	stateObjectCache = make(map[common.Address] *StateObject)
@@ -338,7 +336,6 @@ func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObje
 	// 2.we will find the stateObject from stateObjectSizeCache
 	stateObject = stateObjectCache[addr]
 	if stateObject != nil{
-		log.Notice("we can get the StateObject from stateObjectSizeCache")
 		if stateObject.deleted{
 			stateObject = nil
 		}else {

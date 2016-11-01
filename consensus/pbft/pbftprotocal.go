@@ -345,46 +345,11 @@ func (pbft *pbftProtocal) RecvMsg(e []byte) error {
 	return nil
 }
 
-func (pbft *pbftProtocal) RecvValidatedResult(result event.ValidatedTxs) error {
+func (pbft *pbftProtocal) RecvLocal(msg interface{}) error {
 
-	primary := pbft.primary(pbft.view)
-	if primary == pbft.id {
-		logger.Debugf("Primary %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
+	logger.Debugf("Replica %d received local message", pbft.id)
 
-		batch := &TransactionBatch{
-			Batch:     result.Transactions,
-			Timestamp: result.Timestamp,
-		}
-		digest := result.Hash
-		pbft.validatedBatchStore[digest] = batch
-		pbft.outstandingReqBatches[digest] = batch
-		cache := &cacheBatch{
-			batch:     batch,
-			vid:       result.SeqNo,
-		}
-		pbft.cacheValidatedBatch[digest] = cache
-
-		pbft.trySendPrePrepare()
-	} else {
-		logger.Debugf("Replica %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
-
-		if !pbft.inWV(result.View, result.SeqNo) {
-			logger.Debugf("Replica %d receives validated result %s that is out of sequence numbers", pbft.id, result.Hash)
-			return nil
-		}
-
-		cert := pbft.getCert(result.View, result.SeqNo)
-		cert.validated = true
-
-		//logger.Notice("Replica  recived seqNo is sqeNo=%d, module digest is: %s,cert digest is: %s",result.SeqNo, result.Digest,cert.digest)
-
-		digest := result.Hash
-		if digest == cert.digest {
-			pbft.sendCommit(digest, result.View, result.SeqNo)
-		} else {
-			pbft.sendViewChange()
-		}
-	}
+	go pbft.postPbftEvent(msg)
 
 	return nil
 }
@@ -394,7 +359,6 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 	logger.Debugf("Replica %d start solve event", pbft.id)
 
 	switch e := ee.(type) {
-
 	case *types.Transaction:
 		tx := e
 		return pbft.processTxEvent(tx)
@@ -485,7 +449,8 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		}
 		logger.Debugf("Replica %d nego-view response timer expired before N-f was reached, resending", pbft.id)
 		pbft.restartNegoView()
-
+	case event.ValidatedTxs:
+		err = pbft.recvValidatedResult(et)
 	default:
 		logger.Warningf("Replica %d received an unknown message type %T", pbft.id, et)
 	}
@@ -1994,5 +1959,52 @@ func (pbft *pbftProtocal) recvRcry() events.Event {
 	return nil
 }
 
-//
+// =============================================================================
+// receive local message methods
+// =============================================================================
+func (pbft *pbftProtocal) recvValidatedResult(result event.ValidatedTxs) error {
 
+	primary := pbft.primary(pbft.view)
+	if primary == pbft.id {
+		logger.Debugf("Primary %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
+
+		batch := &TransactionBatch{
+			Batch:     result.Transactions,
+			Timestamp: result.Timestamp,
+		}
+		digest := result.Hash
+		pbft.validatedBatchStore[digest] = batch
+		pbft.outstandingReqBatches[digest] = batch
+		cache := &cacheBatch{
+			batch:     batch,
+			vid:       result.SeqNo,
+		}
+		pbft.cacheValidatedBatch[digest] = cache
+		if pbft.seqNo-pbft.lastExec > 5 {
+			time.Sleep(20 * time.Millisecond)
+		}
+		pbft.trySendPrePrepare()
+	} else {
+		logger.Debugf("Replica %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
+
+		if !pbft.inWV(result.View, result.SeqNo) {
+			logger.Debugf("Replica %d receives validated result %s that is out of sequence numbers", pbft.id, result.Hash)
+			return nil
+		}
+
+		cert := pbft.getCert(result.View, result.SeqNo)
+		cert.validated = true
+
+		//logger.Notice("Replica  recived seqNo is sqeNo=%d, module digest is: %s,cert digest is: %s",result.SeqNo, result.Digest,cert.digest)
+
+		digest := result.Hash
+		if digest == cert.digest {
+			pbft.sendCommit(digest, result.View, result.SeqNo)
+		} else {
+			logger.Warningf("Relica %d cannot agree with the validate result sent from primary", pbft.id)
+			pbft.sendViewChange()
+		}
+	}
+
+	return nil
+}

@@ -1,12 +1,22 @@
 package homomorphic_encryption
 
 import (
+	"crypto/ecdsa"
 	"crypto/rand"
+	"encoding/hex"
+	"hyperchain/crypto/ecies"
+	"io/ioutil"
 	"math/big"
 )
 
-//对传递给B的转账金额目前进行明文传输，所以不需要进行ecc的加密。传进来的参数目前也不需要ecc公钥
-func Pre_transaction(oldBalance []byte, transferAmount []byte, illegal_balance_hm []byte, whole_networkpublickey PaillierPublickey) (bool, []byte, []byte, []byte, []byte) {
+type pp struct {
+	N1 []byte
+	N2 []byte
+	N3 []byte
+}
+
+//prepare the hm_transaction parameters
+func Pre_Transaction(oldBalance []byte, transferAmount []byte, illegal_balance_hm []byte, whole_networkpublickey PaillierPublickey, ecdsa_publickey *ecdsa.PublicKey) (bool, []byte, []byte, []byte, []byte) {
 	var flag bool
 	newBalance_hm := make([]byte, 32)
 	transferAmount_hm := make([]byte, 32)
@@ -14,23 +24,21 @@ func Pre_transaction(oldBalance []byte, transferAmount []byte, illegal_balance_h
 	transferAmount_ecc := make([]byte, 129)
 
 	suffix := make([]byte, 8)
-	//	suffix := []byte{}
-	transferAmount = append(transferAmount[:(16-len(suffix))], suffix...)
-	mark := Comparetwobytes(oldBalance, transferAmount)
+	transferAmount = append(transferAmount, suffix...)
+	mark := CompareTwoBytes(oldBalance, transferAmount)
 
-	//填充transferAmount为16个字节
+	//filling transferAmount become  a 16 bytes slice
 	if mark == -1 {
 		flag = false
 		return flag, newBalance_local, newBalance_hm, transferAmount_hm, transferAmount_ecc
 	} else {
 
-		//middle := []byte{0, 0}
 		r, _ := rand.Prime(rand.Reader, 48)
 		suffix_pro := r.Bytes()
 		//suffix_final := append(middle, suffix_pro...)
 		transferAmount = append(transferAmount[:(16-len(suffix_pro))], suffix_pro...)
-		if Comparetwobytes(oldBalance, transferAmount) == -1 {
-			temp := Cutbyte(oldBalance)
+		if CompareTwoBytes(oldBalance, transferAmount) == -1 {
+			temp := CutByte(oldBalance)
 			transferAmount = append(transferAmount[:(16-len(temp))], temp...)
 		}
 		flag = true
@@ -46,10 +54,11 @@ func Pre_transaction(oldBalance []byte, transferAmount []byte, illegal_balance_h
 	newBalance_byte := newBalance_bigint.Bytes()
 
 	phm := New_Paillier_Hmencryption()
-	copy(newBalance_local, newBalance_byte)
+	newBalance_local = append(newBalance_local[:16-len(newBalance_byte)], newBalance_byte...)
 
 	transferAmount_hm, _ = phm.Encrypto_message(&whole_networkpublickey, transferAmount)
-	//判断是否具有非法同态金额,同时进行加密
+
+	//check illegal_balance_hm whether exist or not
 	if illegal_balance_hm == nil {
 		newBalance_hm, _ = phm.Encrypto_message(&whole_networkpublickey, newBalance_byte)
 	} else {
@@ -57,7 +66,10 @@ func Pre_transaction(oldBalance []byte, transferAmount []byte, illegal_balance_h
 		newBalance_hm, _ = phm.Calculator(&whole_networkpublickey, "paillier", newBalance_temp, illegal_balance_hm)
 	}
 
-	copy(transferAmount_ecc, transferAmount)
+	//ecdsa_encrypto the transferamount
+	ecies_publickey := ecies.ImportECDSAPublic(ecdsa_publickey)
+	transferAmount_ecc, _ = ecies.Encrypt(rand.Reader, ecies_publickey, transferAmount, nil, nil)
+
 	return flag, newBalance_local, newBalance_hm, transferAmount_hm, transferAmount_ecc
 
 }
@@ -70,12 +82,56 @@ func Node_Verify(whole_networkpublickey PaillierPublickey, oldBalance_hm []byte,
 	var flag bool
 	phm := New_Paillier_Hmencryption()
 	sum, _ := phm.Calculator(&whole_networkpublickey, "paillier", transferAmount_hm, newBalance_hm)
-	flag = Equaltwobytes(oldBalance_hm, sum)
+	flag = EqualTwoBytes(oldBalance_hm, sum)
 
 	return flag
 }
 
-func Equaltwobytes(a []byte, b []byte) bool {
+//destination verify whether the amount is right or not
+func Destination_Verify(transferAmount_hm []byte, transferAmount_ecc []byte, ecdsa_privatekey *ecdsa.PrivateKey, whole_networkpublickey PaillierPublickey) bool {
+
+	ecies_privatekey := ecies.ImportECDSA(ecdsa_privatekey)
+	transferAmount, _ := ecies_privatekey.Decrypt(rand.Reader, transferAmount_ecc, nil, nil)
+	phm := New_Paillier_Hmencryption()
+	transferAmount_hm_verify, _ := phm.Encrypto_message(&whole_networkpublickey, transferAmount)
+	flag := EqualTwoBytes(transferAmount_hm, transferAmount_hm_verify)
+
+	return flag
+}
+
+//put whole_networkpublickey to a file
+func PutWholeNetworkPublickey(file string, whole_networkpublickey *PaillierPublickey) error {
+	var publickey pp
+	publickey.N1 = whole_networkpublickey.G.Bytes()
+	publickey.N2 = whole_networkpublickey.N.Bytes()
+	publickey.N3 = whole_networkpublickey.nsquare.Bytes()
+
+	data, _ := Encode(publickey)
+	stringdata := hex.EncodeToString(data)
+
+	return ioutil.WriteFile(file, []byte(stringdata), 0600)
+}
+
+//get wholenetworkpublickey from a file
+func GetWholeNetworkPublickey(file string) (*PaillierPublickey, error) {
+
+	var pailpub PaillierPublickey
+	var publickey pp
+
+	number, _ := Getnumber(file)
+	err := Decode(number, &publickey)
+
+	a1 := new(big.Int)
+	a2 := new(big.Int)
+	a3 := new(big.Int)
+	pailpub.G = a1.SetBytes(publickey.N1)
+	pailpub.N = a2.SetBytes(publickey.N2)
+	pailpub.nsquare = a3.SetBytes(publickey.N3)
+
+	return &pailpub, err
+}
+
+func EqualTwoBytes(a []byte, b []byte) bool {
 	var flag bool
 	if len(a) == len(b) {
 		for i := 0; i < len(a); i++ {
@@ -92,9 +148,9 @@ func Equaltwobytes(a []byte, b []byte) bool {
 	return flag
 }
 
-//比较两个[]byte的实际大小
+//compare two bytes
 //flag=-1,a<b; flag=0,a=b; flag=1,a>b
-func Comparetwobytes(a []byte, b []byte) int {
+func CompareTwoBytes(a []byte, b []byte) int {
 	A := new(big.Int)
 	B := new(big.Int)
 	A = A.SetBytes(a)
@@ -103,17 +159,16 @@ func Comparetwobytes(a []byte, b []byte) int {
 	return flag
 }
 
-//取[]byte数组的后8个字节的1/3取整
-func Cutbyte(a []byte) []byte {
+//get a []byte's last 8 byte and div 3
+func CutByte(a []byte) []byte {
 	temp := make([]byte, 8)
-	//	temp := []byte{}
 	if len(a) > 8 {
 		copy(temp, a[len(a)-8:])
 		big_temp := new(big.Int)
 		big_temp = big_temp.SetBytes(temp)
 		big_three := big.NewInt(3)
 		div_big_temp := new(big.Int)
-		div_big_temp = div_big_temp.Div(div_big_temp, big_three)
+		div_big_temp = div_big_temp.Div(big_temp, big_three)
 		div_big_temp_byte := div_big_temp.Bytes()
 		temp = []byte{}
 		temp = append(temp[:8-len(div_big_temp_byte)], div_big_temp_byte...)
