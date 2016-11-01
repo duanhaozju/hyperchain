@@ -12,6 +12,7 @@ import (
 
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -19,7 +20,7 @@ func TestDes3(t *testing.T) {
 	first := time.Now().UnixNano()
 	fmt.Println(first)
 	for i := 0; i < 700; i += 1 {
-		key := []byte("sfe023f_sefiel#fi32lf3e!")
+		key := []byte("TnrEP|N.*lAgy<Q&@lBPd@J/")
 		result, err := TripleDesEncrypt([]byte("polaris@studygol"), key)
 		if err != nil {
 			panic(err)
@@ -48,6 +49,18 @@ func TestDes3(t *testing.T) {
 	println(string(hSM1.DecWithSecret(hSM0.EncWithSecret([]byte("hello, message length is not limited")))))
 	println(string(hSM0.DecWithSecret(hSM1.EncWithSecret([]byte("ok, I got it")))))*/
 
+}
+
+func TestGenerateLicense(t *testing.T) {
+	privateKey := string("TnrEP|N.*lAgy<Q&@lBPd@J/")
+	infoSuffix := string("Copyright 2016 The Hyperchain. All rights reserved.")
+	fmt.Println("suffix len:", len(infoSuffix))
+	timestamp := time.Now().UnixNano()
+	license, err := TripleDesEncrypt([]byte(strconv.FormatInt(timestamp, 16)+infoSuffix), []byte(privateKey))
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println("license:", license)
 }
 
 var HSM1 *HandShakeManager
