@@ -12,7 +12,6 @@ import (
 	"io/ioutil"
 	"os"
 	"time"
-	"fmt"
 )
 
 type Transaction struct {
