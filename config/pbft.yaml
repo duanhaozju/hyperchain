@@ -64,6 +64,9 @@ timeout:
     # How long to wait for N-f responses after send negotiate view
     negoView: 6s
 
+    # How long to wait before recovery finished
+    recovery: 10s
+
 ################################################################################
 #
 #   SECTION: EXECUTOR
