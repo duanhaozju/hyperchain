@@ -12,6 +12,7 @@ import (
 
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"strconv"
 	"time"
 )
@@ -21,7 +22,7 @@ func TestDes3(t *testing.T) {
 	fmt.Println(first)
 	for i := 0; i < 700; i += 1 {
 		key := []byte("TnrEP|N.*lAgy<Q&@lBPd@J/")
-		result, err := TripleDesEncrypt([]byte("polaris@studygol"), key)
+		result, err := TripleDesEncrypt([]byte("polaris@studygo"), key)
 		if err != nil {
 			panic(err)
 		}
@@ -54,13 +55,13 @@ func TestDes3(t *testing.T) {
 func TestGenerateLicense(t *testing.T) {
 	privateKey := string("TnrEP|N.*lAgy<Q&@lBPd@J/")
 	infoSuffix := string("Copyright 2016 The Hyperchain. All rights reserved.")
-	fmt.Println("suffix len:", len(infoSuffix))
-	timestamp := time.Now().UnixNano()
-	license, err := TripleDesEncrypt([]byte(strconv.FormatInt(timestamp, 16)+infoSuffix), []byte(privateKey))
+	timestamp := time.Now().Unix()
+	license, err := TripleDesEncrypt([]byte(strconv.FormatInt(timestamp, 10)+infoSuffix), []byte(privateKey))
 	if err != nil {
 		t.Error(err)
 	}
 	fmt.Println("license:", license)
+	ioutil.WriteFile("license.txt", license, 0644)
 }
 
 var HSM1 *HandShakeManager
