@@ -38,7 +38,7 @@ func checkLicense(licensePath string) error {
 	}
 	privateKey := string("TnrEP|N.*lAgy<Q&@lBPd@J/")
 	identificationSuffix := string("Copyright 2016 The Hyperchain. All rights reserved.")
-	encryptedInfo := []byte{206, 21, 208, 92, 82, 46, 155, 119, 43, 186, 40, 10, 39, 7, 36, 157, 147, 211, 14, 232, 175, 32, 72, 130, 237, 209, 85, 160, 30, 121, 121, 153, 124, 59, 41, 0, 189, 155, 236, 254, 129, 166, 164, 51, 98, 191, 196, 46, 136, 95, 191, 89, 139, 130, 175, 240, 0, 7, 30, 95, 50, 115, 140, 73, 226, 73, 160, 217, 189, 170, 221, 245}
+	encryptedInfo := []byte{20, 216, 140, 166, 131, 152, 24, 18, 69, 238, 229, 175, 32, 35, 226, 57, 145, 3, 58, 246, 209, 139, 119, 106, 171, 45, 175, 96, 195, 78, 223, 92, 82, 41, 83, 157, 187, 220, 98, 242, 158, 41, 207, 226, 5, 63, 37, 64, 241, 43, 74, 249, 220, 77, 69, 45, 239, 237, 116, 220, 78, 37, 51, 52}
 	identification, err := transport.TripleDesDecrypt(encryptedInfo, []byte(privateKey))
 	if err != nil {
 		return errors.New("Invalid License")
@@ -48,7 +48,7 @@ func checkLicense(licensePath string) error {
 	if strings.Compare(suffix, identificationSuffix) != 0 {
 		return errors.New("Invalid Identification")
 	}
-	timestamp, err := strconv.ParseInt(plainText[:len(plainText)-len(identificationSuffix)], 16, 64)
+	timestamp, err := strconv.ParseInt(plainText[:len(plainText)-len(identificationSuffix)], 10, 64)
 	if err != nil {
 		return errors.New("Invalid License Timestamp")
 	}
