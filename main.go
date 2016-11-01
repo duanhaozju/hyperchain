@@ -20,7 +20,6 @@ import (
 	"hyperchain/p2p"
 	"hyperchain/p2p/transport"
 	"io/ioutil"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
