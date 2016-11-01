@@ -3,21 +3,19 @@ package core
 import (
 	"fmt"
 	"testing"
-	"hyperchain/crypto"
-	"hyperchain/core/blockpool"
 )
 
-func TestCalcResponseCount(t *testing.T) {
-	log.Info("test =============> > > TestInitDB")
-	InitDB("/tmp",8089)
-	blockUtilsCase.Number = GetHeightOfChain() + 1
-	commonHash := crypto.NewKeccak256Hash("keccak256")
-	blockpool.WriteBlock(&blockUtilsCase, commonHash, 122,false)
-	count, _ := CalcResponseCount(GetHeightOfChain(), 1000)
-	if count != 2 {
-		t.Errorf("%d not equal 2, TestCalcResponseCount fail", count)
-	}
-}
+//func TestCalcResponseCount(t *testing.T) {
+//	log.Info("test =============> > > TestInitDB")
+//	InitDB("/tmp",8089)
+//	blockUtilsCase.Number = GetHeightOfChain() + 1
+//	commonHash := crypto.NewKeccak256Hash("keccak256")
+//	blockpool.WriteBlock(&blockUtilsCase, commonHash, 122,false)
+//	count, _ := CalcResponseCount(GetHeightOfChain(), 1000)
+//	if count != 2 {
+//		t.Errorf("%d not equal 2, TestCalcResponseCount fail", count)
+//	}
+//}
 //func TestCalcResponseCount(t *testing.T) {
 //	log.Info("test =============> > > TestInitDB")
 //	InitDB(8082)
