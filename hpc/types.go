@@ -6,14 +6,15 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
+	"hyperchain/core"
 )
 
 type Number int64
 
 const (
-	latestBlockNumber  = iota
-	pendingBlockNumber
-	earliestBlockNumber
+	//latestBlockNumber  = 0
+	pendingBlockNumber = 1
+	earliestBlockNumber = 2
 	//maxBlockNumber
 )
 
@@ -50,7 +51,8 @@ func (n *Number) UnmarshalJSON(data []byte) error {
 	}
 
 	if len(input) == 0 {
-		*n = Number(latestBlockNumber)
+		*n = *NewUint64ToNumber(core.GetChainCopy().Height)
+		//*n = Number(latestBlockNumber)
 		return nil
 	}
 
@@ -61,7 +63,8 @@ func (n *Number) UnmarshalJSON(data []byte) error {
 
 		strBlockNumber := input
 		if strBlockNumber == "latest" {
-			*n = Number(latestBlockNumber)
+			*n = *NewUint64ToNumber(core.GetChainCopy().Height)
+			//*n = Number(latestBlockNumber)
 			return nil
 		}
 

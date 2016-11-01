@@ -8,7 +8,6 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
 	"strconv"
-	"time"
 )
 
 type PublicBlockAPI struct {
@@ -19,7 +18,7 @@ type BlockResult struct {
 	Number       *Number       `json:"number"`
 	Hash         common.Hash   `json:"hash"`
 	ParentHash   common.Hash   `json:"parentHash"`
-	WriteTime    string        `json:"writeTime"`
+	WriteTime    int64        `json:"writeTime"`
 	AvgTime      *Number       `json:"avgTime"`
 	TxCounts     *Number       `json:"txcounts"`
 	Counts       *Number       `json:"counts"`
@@ -34,68 +33,19 @@ func NewPublicBlockAPI(hyperDb *hyperdb.LDBDatabase) *PublicBlockAPI {
 	}
 }
 
-type BlockArgsTest struct {
+type IntervalArgs struct {
 	From *Number `json:"from"`
 	To   *Number `json:"to"`
 }
 
 // GetBlocks returns all the block.
-func (blk *PublicBlockAPI) GetBlocks(args BlockArgsTest) ([]*BlockResult, error) {
-	var blocks []*BlockResult
-
-	if args.From == nil && args.To == nil {
-		block, err := blk.latestBlock()
-
-		if err != nil {
-			log.Errorf("%v", err)
-			return nil, err
-		}
-
-		height := *block.Number
-
-		// only genesis block
-		if height == 0 {
-			//blocks = append(blocks, block)
-			return nil, nil
-		}
-
-		for height > 0 {
-			b, err := getBlockByNumber(height, blk.db)
-			if err != nil {
-				return nil, err
-				break
-			}
-			blocks = append(blocks, b)
-			height--
-		}
-	} else if args.From == nil || args.To == nil || *args.From > *args.To || *args.From < 0 || *args.To < 0 {
-		return nil, errors.New("Invalid params")
-	} else if *args.From == *args.To {
-		if block, err := blk.GetBlockByNumber(*args.From); err != nil {
-			return nil, err
-		} else {
-			blocks = append(blocks, block)
-		}
-	} else {
-		from := *args.From
-		to := *args.To
-		for from <= to {
-			b, err := blk.GetBlockByNumber(to)
-			if err != nil {
-				log.Errorf("%v", err)
-				return nil, err
-			}
-			blocks = append(blocks, b)
-			to--
-		}
-	}
-
-	return blocks, nil
+func (blk *PublicBlockAPI) GetBlocks(args IntervalArgs) ([]*BlockResult, error) {
+	return getBlocks(args, blk.db)
 }
 
 // LastestBlock returns the number and hash of the lastest block.
 func (blk *PublicBlockAPI) LatestBlock() (*BlockResult, error) {
-	return blk.latestBlock()
+	return latestBlock(blk.db)
 }
 
 // GetBlockByHash returns the block for the given block hash.
@@ -109,35 +59,28 @@ func (blk *PublicBlockAPI) GetBlockByNumber(number Number) (*BlockResult, error)
 	return block, err
 }
 
-func (blk *PublicBlockAPI) latestBlock() (*BlockResult, error) {
+//func (blk *PublicBlockAPI) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (*Number, error) {
+//
+//}
+
+func latestBlock(db *hyperdb.LDBDatabase) (*BlockResult, error) {
 
 	currentChain := core.GetChainCopy()
 
 	lastestBlkHeight := currentChain.Height
 
-	return getBlockByNumber(*NewUint64ToNumber(lastestBlkHeight), blk.db)
+	return getBlockByNumber(*NewUint64ToNumber(lastestBlkHeight), db)
 }
 
 // getBlockByNumber convert type Block to type BlockResult for the given block number.
 func getBlockByNumber(n Number, db *hyperdb.LDBDatabase) (*BlockResult, error) {
 
-	if n == latestBlockNumber {
-		chain := core.GetChainCopy()
-		return getBlockByHash(common.BytesToHash(chain.LatestBlockHash), db)
-		//if block, err := getBlockByHash(common.BytesToHash(chain.LatestBlockHash), db); err != nil {
-		//	return nil, err
-		//} else {
-		//	return block, nil
-		//}
+	m := n.ToUint64()
+	if blk, err := core.GetBlockByNumber(db, m); err != nil {
+		return nil, err
 	} else {
-		m := n.ToUint64()
-		if blk, err := core.GetBlockByNumber(db, m); err != nil {
-			return nil, err
-		} else {
-			return outputBlockResult(blk, db)
-		}
+		return outputBlockResult(blk, db)
 	}
-
 }
 
 func getBlockStateDb(n Number, db *hyperdb.LDBDatabase) (*state.StateDB, error) {
@@ -174,7 +117,8 @@ func outputBlockResult(block *types.Block, db *hyperdb.LDBDatabase) (*BlockResul
 		Number:       NewUint64ToNumber(block.Number),
 		Hash:         common.BytesToHash(block.BlockHash),
 		ParentHash:   common.BytesToHash(block.ParentHash),
-		WriteTime:    time.Unix(block.WriteTime/int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+		//WriteTime:    time.Unix(block.WriteTime/int64(time.Second), 0).Format("2006-01-02 15:04:05"),
+		WriteTime:    block.WriteTime,
 		AvgTime:      NewInt64ToNumber(core.CalcResponseAVGTime(block.Number, block.Number)),
 		TxCounts:     NewInt64ToNumber(txCounts),
 		Counts:       NewInt64ToNumber(count),
@@ -194,6 +138,57 @@ func getBlockByHash(hash common.Hash, db *hyperdb.LDBDatabase) (*BlockResult, er
 	return outputBlockResult(block, db)
 }
 
+func getBlocks(args IntervalArgs, hyperDb *hyperdb.LDBDatabase) ([]*BlockResult, error) {
+	var blocks []*BlockResult
+	var from, to Number
+
+	if args.From == nil && args.To == nil {
+		block, err := latestBlock(hyperDb)
+
+		if err != nil {
+			log.Errorf("%v", err)
+			return nil, err
+		}
+
+		height := *block.Number
+
+		// only genesis block
+		if height == 0 {
+			blocks = append(blocks, block)
+			return blocks, nil
+		}
+
+		from = *NewInt64ToNumber(0)
+		to = height
+	} else if args.From == nil && args.To != nil {
+		from = *NewInt64ToNumber(0)
+		to = *args.To
+	} else if args.From != nil && args.To == nil {
+		from = *args.From
+		chain := core.GetChainCopy()
+		to = *NewUint64ToNumber(chain.Height)
+	} else {
+		from = *args.From
+		to = *args.To
+	}
+
+	if from > to || from < 0 || to < 0 {
+		return nil, errors.New("Invalid params")
+	}
+
+	for from <= to {
+		b, err := getBlockByNumber(to, hyperDb)
+		if err != nil {
+			log.Errorf("%v", err)
+			return nil, err
+		}
+		blocks = append(blocks, b)
+		to--
+	}
+
+	return blocks, nil
+}
+
 // 测试用
 type SendQueryArgs struct {
 	From Number
@@ -202,33 +197,6 @@ type SendQueryArgs struct {
 type BatchTimeResult struct {
 	CommitTime int64
 	BatchTime  int64
-}
-type ExeTimeResult struct {
-	Count int   `json:"count"`
-	Time  int64 `json:"time"`
-}
-
-// QueryExecuteTime computes execute time of transactions fo all the block,
-// then return the avg time and the count of all the transaction.
-func (blk *PublicBlockAPI) QueryExecuteTime(args SendQueryArgs) *ExeTimeResult {
-
-	//db, err := hyperdb.GetLDBDatabase()
-	//if err != nil {
-	//	log.Errorf("%v", err)
-	//}
-	txs, err := core.GetAllTransaction(blk.db)
-
-	if err != nil {
-		log.Errorf("%v", err)
-	}
-
-	count := len(txs)
-	exeTime := core.CalcResponseAVGTime(args.From.ToUint64(), args.To.ToUint64())
-
-	return &ExeTimeResult{
-		Count: count,
-		Time:  exeTime,
-	}
 }
 
 // QueryCommitAndBatchTime returns commit time and batch time between from block and to block
@@ -251,11 +219,3 @@ func (blk *PublicBlockAPI) QueryEvmAvgTime(args SendQueryArgs) (int64, error) {
 	return evmTime, nil
 }
 
-//func (blk *PublicBlockAPI)QueryTransactionSum() string {
-//	sum := core.CalTransactionSum()
-//	return sum.String()
-//}
-func (blk *PublicBlockAPI) QueryTransactionSum() uint64 {
-	sum := core.CalTransactionSum()
-	return sum
-}

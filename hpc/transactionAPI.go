@@ -74,9 +74,9 @@ type TransactionResult struct {
 const (
 	//DURATION int64 = 230400
 	//COUNT = 25
-	//SLEEPTIME int = 300
-	DURATION int64 = 30
-	COUNT int = 100
+	//SLEEPTIME time.Duration = 300
+	DURATION int64 = 3
+	COUNT int = 10
 	SLEEPTIME time.Duration = 90
 )
 
@@ -162,11 +162,17 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 			if realArgs.PrivKey == "" {
 				// For Hyperchain test signature
 
-				// TODO replace password with test value
-				signature, err := tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
-				if err != nil {
-					log.Errorf("Sign(tx) error :%v", err)
+				var signature []byte
+				if realArgs.Signature == "" {
+
+					signature, err = tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
+					if err != nil {
+						log.Errorf("Sign(tx) error :%v", err)
+					}
+				} else {
+					tx.Signature = common.FromHex(realArgs.Signature)
 				}
+
 				tx.Signature = signature
 			} else {
 				// For Hyperboard test signature
@@ -232,10 +238,10 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
 		//end:=start+1
-		end := start + DURATION
+		end := start + 30
 
 		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < COUNT; i++ {
+			for i := 0; i < 125; i++ {
 				// ################################# 测试代码 START ####################################### // (用不同的value代替之前不同的timestamp以标志不同的transaction)
 				txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), v, nil)
 
@@ -245,19 +251,26 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					return common.Hash{}, err
 				}
 				tx.Value = value
-				v++
+				//v++
 				// ################################## 测试代码 END ####################################### //
 				tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
 
 				if realArgs.PrivKey == "" {
 					// For Hyperchain test
 
-					// TODO replace password with test value
-					signature, err := tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
-					if err != nil {
-						log.Errorf("Sign(tx) error :%v", err)
+					var signature []byte
+					if realArgs.Signature == "" {
+
+						signature, err = tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
+						if err != nil {
+							log.Errorf("Sign(tx) error :%v", err)
+						}
+					} else {
+						tx.Signature = common.FromHex(realArgs.Signature)
 					}
+
 					tx.Signature = signature
+
 				} else {
 					// For Hyperboard test
 
@@ -295,7 +308,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					log.Warning("manager is Nil")
 				}
 
-				start_getErr := time.Now().Unix()
+			/*	start_getErr := time.Now().Unix()
 				end_getErr := start_getErr + TIMEOUT
 				var errMsg string
 				for start_getErr := start_getErr; start_getErr < end_getErr; start_getErr = time.Now().Unix() {
@@ -313,9 +326,9 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					return common.Hash{}, errors.New(errMsg)
 				} else if start_getErr == end_getErr {
 					return common.Hash{}, errors.New("Sending return timeout,may be something wrong.")
-				}
+				}*/
 			}
-			time.Sleep(SLEEPTIME * time.Millisecond)
+			time.Sleep(90 * time.Millisecond)
 		}
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
@@ -339,29 +352,45 @@ func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*type
 }
 
 // GetTransactions return all transactions in the chain/db
-func (tran *PublicTransactionAPI) GetTransactions() ([]*TransactionResult, error) {
-
-	txs, err := core.GetAllTransaction(tran.db)
-
-	if err != nil {
-		log.Errorf("GetAllTransaction error: %v", err)
-		return nil, err
-	}
+func (tran *PublicTransactionAPI) GetTransactions(args IntervalArgs) ([]*TransactionResult, error) {
 
 	var transactions []*TransactionResult
 
-	for _, tx := range txs {
-		if ts, err := outputTransaction(tx, tran.db); err != nil {
+	if args.From == nil && args.To == nil {
+		txs, err := core.GetAllTransaction(tran.db)
+
+		if err != nil {
+			log.Errorf("GetAllTransaction error: %v", err)
+			return nil, err
+		}
+
+		for _, tx := range txs {
+			if ts, err := outputTransaction(tx, tran.db); err != nil {
+				return nil, err
+			} else {
+				transactions = append(transactions, ts)
+			}
+		}
+	} else {
+
+		if blocks, err := getBlocks(args, tran.db);err != nil {
 			return nil, err
 		} else {
-			transactions = append(transactions, ts)
+			for _, block := range blocks {
+				txs := block.Transactions
+
+				for _, t := range txs {
+					tx, _ := t.(*TransactionResult)
+					transactions = append(transactions, tx)
+				}
+			}
 		}
 	}
 
 	return transactions, nil
 }
 
-// GetDiscardTransactions return all invalid transaction that dont be saved on the blockchain.
+// GetDiscardTransactions returns all invalid transaction that dont be saved on the blockchain.
 func (tran *PublicTransactionAPI) GetDiscardTransactions() ([]*TransactionResult, error) {
 
 	reds, err := core.GetAllDiscardTransaction(tran.db)
@@ -490,6 +519,29 @@ func (tran *PublicTransactionAPI) GetSighHash(args SendTxArgs) (common.Hash, err
 	return tx.SighHash(kec256Hash), nil
 }
 
+// GetTransactionsCount returns the number of transaction in hyperchain.
+func (tran *PublicTransactionAPI) GetTransactionsCount() (*Number, error) {
+	if txs, err := core.GetAllTransaction(tran.db);err != nil {
+		return nil, err
+	} else if len(txs) == 0 {
+		return nil, nil
+	} else {
+		return NewIntToNumber(len(txs)), nil
+	}
+}
+
+// GetTxAvgTimeByBlockNumber returns tx execute avg time.
+func (tran *PublicTransactionAPI) GetTxAvgTimeByBlockNumber(args IntervalArgs) *Number {
+
+	exeTime := core.CalcResponseAVGTime((*args.From).ToUint64(), (*args.To).ToUint64())
+
+	if exeTime <= 0 {
+		return nil
+	}
+
+	return NewInt64ToNumber(exeTime)
+}
+
 //func outputTransaction(tx *types.Transaction, db *hyperdb.LDBDatabase) (*TransactionResult, error) {
 func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*TransactionResult, error) {
 
@@ -530,7 +582,7 @@ func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*Transaction
 		Amount:        NewInt64ToNumber(txValue.Amount),
 		//Gas: 		NewInt64ToNumber(txValue.GasLimit),
 		//GasPrice: 	NewInt64ToNumber(txValue.Price),
-		Timestamp:        tx.Timestamp / 1e6,
+		Timestamp:        tx.Timestamp,
 		ExecuteTime:        NewInt64ToNumber((blk.WriteTime - tx.Timestamp) / int64(time.Millisecond)),
 		Invalid:        false,
 	}

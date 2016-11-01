@@ -20,7 +20,7 @@
 FIRST_RUN=false
 TEST_FLAG=true
 PASSWD="blockchain"
-PRIMARY=`head -1 ./serverlist.txt`
+TEST_MACHINE="182.254.155.98"
 
 MAXNODE=`cat serverlist.txt | wc -l`
 
@@ -88,8 +88,29 @@ auto_run(){
 	done
 }
 
+scp_binary_to_test_machine(){
+    cd $GOPATH/src/ && rm hyperchain.zip && zip -r hyperchain.zip ./hyperchain
+    scp hyperchain.zip satoshi@$TEST_MACHINE:/home/satoshi/
+    ssh satoshi@$TEST_MACHINE "rm -rf go/src/hyperchain && unzip -o hyperchain.zip -d /home/satoshi/go/src/"
+    ssh satoshi@$TEST_MACHINE "cd /home/satoshi/go/src/hyperchain/scripts && bash centos_server.sh $1"
+}
+
+kill_process(){
+    for server_address in ${SERVER_ADDR[@]}; do
+      echo -e "kill $server_address"
+      ssh satoshi@$server_address "ps aux | grep hyperchain | awk '{print \$2}' | xargs kill -9"
+      sleep 0.1s
+    done
+}
+
 if $FIRST_RUN; then
+    addkey $TEST_MACHINE
 	add_ssh_key_into_all
+	kill_process
+	scp_binary_to_test_machine "-f"
+else
+    kill_process
+    scp_binary_to_test_machine
 fi
 
 auto_run

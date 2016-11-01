@@ -3,7 +3,6 @@ package trie
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"github.com/op/go-logging"
 	"hash"
@@ -157,6 +156,9 @@ func (t *Trie) Update(key, value []byte) {
 // If a node was not found in the database, a MissingNodeError is returned.
 func (t *Trie) TryUpdate(key, value []byte) error {
 	k := compactHexDecode(key)
+	if len(key) == 0 {
+		return nil
+	}
 	if len(value) != 0 {
 		_, n, err := t.insert(t.root, nil, k, valueNode(value))
 		if err != nil {
@@ -260,6 +262,9 @@ func (t *Trie) Delete(key []byte) {
 // If a node was not found in the database, a MissingNodeError is returned.
 func (t *Trie) TryDelete(key []byte) error {
 	k := compactHexDecode(key)
+	if len(key) == 0 {
+		return nil
+	}
 	_, n, err := t.delete(t.root, nil, k)
 	if err != nil {
 		return err
@@ -400,9 +405,6 @@ func (t *Trie) resolve(n node, prefix, suffix []byte) (node, error) {
 }
 
 func (t *Trie) resolveHash(n hashNode, prefix, suffix []byte) (node, error) {
-	if v, ok := globalCache.Get(n); ok {
-		return v, nil
-	}
 	enc, err := t.db.Get(n)
 	if err != nil || enc == nil {
 		return nil, &MissingNodeError{
@@ -414,9 +416,6 @@ func (t *Trie) resolveHash(n hashNode, prefix, suffix []byte) (node, error) {
 		}
 	}
 	dec := mustDecodeNode(n, enc)
-	if dec != nil {
-		globalCache.Put(n, dec)
-	}
 	return dec, nil
 }
 
@@ -570,54 +569,11 @@ func (h *hasher) store(n node, db DatabaseWriter, force bool) (node, error) {
 	}
 	// Serialize the node
 	h.tmp.Reset()
-	switch v := n.(type) {
-	case fullNode:
-		var buffer [17][]byte
-		for idx, cld := range v.Children {
-			switch vv := cld.(type) {
-			case hashNode:
-				buffer[idx] = []byte(vv)
-			case valueNode:
-				buffer[idx] = []byte(vv)
-			case nil:
-				buffer[idx] = nil
-			}
-		}
-		memNode := memFullNode{
-			Type:    "full",
-			Content: buffer,
-		}
-		data, err := json.Marshal(memNode)
-		h.tmp.Write(data)
-		if err != nil {
-			panic("encode error: " + err.Error())
-		}
-	case shortNode:
-		switch vv := v.Val.(type) {
-		case hashNode:
-			memNode := memShortNode{
-				Key:     v.Key,
-				Type:    "short",
-				Content: []byte(vv),
-			}
-			data, err := json.Marshal(memNode)
-			h.tmp.Write(data)
-			if err != nil {
-				panic("encode error: " + err.Error())
-			}
-		case valueNode:
-			memNode := memShortNode{
-				Key:     v.Key,
-				Type:    "short",
-				Content: []byte(vv),
-			}
-			data, err := json.Marshal(memNode)
-			h.tmp.Write(data)
-			if err != nil {
-				panic("encode error: " + err.Error())
-			}
-		}
+	data, err := encodeNode(n)
+	if err != nil {
+		panic("encode error: " + err.Error())
 	}
+	h.tmp.Write(data)
 	/*
 		if h.tmp.Len() < 32 && !force {
 			return n, nil // Nodes smaller than 32 bytes are stored inside their parent

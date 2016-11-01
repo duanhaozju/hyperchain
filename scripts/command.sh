@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-########### tx 服务 ########## （说明：value可以是十六进制字符串、八进制字符串、十进制字符串或整数）
+################################ tx 服务 ################################ （说明：value可以是十六进制字符串、八进制字符串、十进制字符串或整数）
 # 普通交易 SendTransaction
 # 无私钥 —— 用于Hyperchain测试, 时间戳单位是毫秒
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_sendTransaction","params":[{"from":"0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","to":"0x0000000000000000000000000000000000000003","value":"0x01","timestamp":1477459062327000000}],"id":1}'
@@ -23,7 +23,8 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getBlockTransactionCou
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionReceipt","params":["<tx hash>"],"id":1}'
 
 # 获取所有交易 GetTransactions
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactions","params":[],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactions","params":[{}],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactions","params":[{"from":5, "to":"latest"}],"id":1}'
 
 # 获取所有失败交易 GetDiscardTransactions
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getDiscardTransactions","params":[],"id":1}'
@@ -31,7 +32,14 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getDiscardTransactions
 # 获取签名哈希 GetSighHash
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getSighHash","params":[{"from":"0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","to":"0x0000000000000000000000000000000000000003","value":"0x01"}],"id":1}'
 
-########## contract 服务 ##########
+# 获取链上的总交易量 GetTransactionsCount
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionsCount","params":[""],"id":1}'
+
+# 查询交易的平均处理时间 GetTxAvgTimeByBlockNumber
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTxAvgTimeByBlockNumber","params":[{"from":2,"to":8}],"id":1}'
+
+
+################################ contract 服务 #################################
 #　部署合约 DeployContract
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"contract_deployContract","params":[{"from":"0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","timestamp":1477459062327000000,"payload":"0x6000805463ffffffff1916815560a0604052600b6060527f68656c6c6f20776f726c6400000000000000000000000000000000000000000060805260018054918190527f68656c6c6f20776f726c6400000000000000000000000000000000000000001681559060be907fb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf66020600261010084871615026000190190931692909204601f01919091048101905b8082111560ce576000815560010160ac565b50506101cd806100d26000396000f35b509056606060405260e060020a60003504633ad14af3811461003f578063569c5f6d146100675780638da9b7721461007c578063d09de08a146100ea575b610002565b34610002576000805460043563ffffffff8216016024350163ffffffff19919091161790555b005b346100025761010e60005463ffffffff165b90565b3461000257604080516020818101835260008252600180548451600261010083851615026000190190921691909104601f81018490048402820184019095528481526101289490928301828280156101c15780601f10610196576101008083540402835291602001916101c1565b34610002576100656000805463ffffffff19811663ffffffff909116600101179055565b6040805163ffffffff929092168252519081900360200190f35b60405180806020018281038252838181518152602001915080519060200190808383829060006004602084601f0104600302600f01f150905090810190601f1680156101885780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b820191906000526020600020905b8154815290600101906020018083116101a457829003601f168201915b5050505050905061007956","privKey":"c2c1149d93f52d586b4ab9d9b634bf9b0221a2f6b78710d58bcbe417482884ca"}],"id":1}'
 
@@ -47,7 +55,11 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getCode","param
 # 获取账户部署合约数量 GetContractCountByAddr
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getContractCountByAddr","params": ["0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd"],"id": 1}'
 
-########## block 服务 ##########
+# 获取合约账户Storage GetStorageByAddr
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getStorageByAddr","params": ["<contract address>","latest"],"id": 1}'
+
+
+################################ block 服务 ####################################
 # 得到最新区块 LastestBlock
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_latestBlock","params":[],"id":1}'
 
@@ -55,6 +67,7 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_latestBlock","param
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params":[{}],"id":1}'
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params":[{"from":1, "to":1}],"id":1}'
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params":[{"from":1, "to":5}],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params":[{"from":5, "to":"latest"}],"id":1}'
 
 # 根据区块hash查询区块信息 GetBlockByHash
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlockByHash","params":["<block hash>"],"id":1}'
@@ -62,16 +75,14 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlockByHash","pa
 # 根据区块number查询区块信息 GetBlockByNumber, number可以是整数、十六进制字符串或者“latest”
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlockByNumber","params":[<block number>],"id":1}'
 
-# 查询交易平均处理时间
-curl localhost:8081 --data '{"jsonrpc":"2.0","method": "block_queryExecuteTime","params": [{"from":"the number of block","to":"the number of block"}],"id": 1}'
-
 # 查询区块commit、batch平均时间
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_queryCommitAndBatchTime","params":[{"from":"the number of block", "to":"the number of block"}],id: 1}'
 
 # 查询EVM平均处理时间
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_queryEvmAvgTime","params":[{"from":"the number of block","to":"the number of block"}],"id": 1}'
 
-########## account服务 ##########
+
+################################## account服务 ##################################
 # 新建一个账户 NewAccount
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acc_newAccount","params":["123456"],"id": 1}'
 
@@ -84,9 +95,11 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acc_getAccounts","params"
 # 查询账户余额 GetBalance
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acc_getBalance","params":["0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd"],"id": 1}'
 
-########## node服务 ##########
+
+################################# node服务 ######################################
 # 得到节点信息
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "node_getNodetxs","params":[],"id": 1}'
 
-######### 批量调用例子 #########
+
+################################# 批量调用例子 ###################################
 curl localhost:8081 --data '[{"jsonrpc":"2.0","method":"block_lastestBlock","params":[],"id":1}, {"jsonrpc":"2.0","method": "node_getNodes","id": 2}]'

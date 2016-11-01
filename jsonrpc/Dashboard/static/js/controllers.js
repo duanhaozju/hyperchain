@@ -367,12 +367,12 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
             $scope.number = res.number;
             // $rootScope.height = res.number;
 
-            SummaryService.getAvgTimeAndCount("1",res.number+"") // res.number 是十六进制字符串。这里参数可以是十进制字符串、整数或十六进制字符串
+            SummaryService.getAvgTime("1",res.number+"") // res.number 是十六进制字符串。这里参数可以是十进制字符串、整数或十六进制字符串
                 .then(function(res){
-                    if (res.time < 0) {
+                    if (!res) {
                         $scope.avgTime = 0
                     } else {
-                        $scope.avgTime = res.time;
+                        $scope.avgTime = res;
                     }
                 }, function(error){
                     console.log(error);
@@ -382,7 +382,11 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
         })
     SummaryService.getTransactionSum()
         .then(function(res){
-            $scope.txCount = res;
+            if (!res) {
+                $scope.txCount = 0;
+            } else {
+                $scope.txCount = res;
+            }
         }, function(error){
             console.log(error)
         })
@@ -463,9 +467,14 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
             return false;
         }
 
-        SummaryService.getAvgTimeAndCount($scope.blockAvg.from, $scope.blockAvg.to)
+        SummaryService.getAvgTime($scope.blockAvg.from, $scope.blockAvg.to)
             .then(function(res){
-                $scope.txAvgTime = res.time
+                if (!res) {
+                    $scope.txAvgTime = 0
+                } else {
+                    $scope.txAvgTime = res
+                }
+
             }, function(error){
                 console.log(error);
             })
