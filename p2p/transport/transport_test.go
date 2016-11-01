@@ -12,6 +12,7 @@ import (
 
 	"encoding/hex"
 	"fmt"
+	"hyperchain/common"
 	"io/ioutil"
 	"strconv"
 	"time"
@@ -60,8 +61,8 @@ func TestGenerateLicense(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Println("license:", license)
-	ioutil.WriteFile("license.txt", license, 0644)
+	fmt.Println("license:", common.Bytes2Hex(license))
+	ioutil.WriteFile("license.txt", []byte(common.Bytes2Hex(license)), 0644)
 }
 
 var HSM1 *HandShakeManager

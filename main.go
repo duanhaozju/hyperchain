@@ -41,10 +41,11 @@ func checkLicense(licensePath string) error {
 	privateKey := string("TnrEP|N.*lAgy<Q&@lBPd@J/")
 	identificationSuffix := string("Copyright 2016 The Hyperchain. All rights reserved.")
 
-	license, err := ioutil.ReadFile(licensePath)
+	ctx, err := ioutil.ReadFile(licensePath)
 	if err != nil {
 		return errors.New("No License Found")
 	}
+	license := common.Hex2Bytes(string(ctx))
 	identification, err := transport.TripleDesDecrypt(license, []byte(privateKey))
 	if err != nil {
 		return errors.New("Invalid License")
