@@ -6,10 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/op/go-logging"
-	"hash"
 	"hyperchain/common"
 	"hyperchain/crypto"
-	"hyperchain/crypto/sha3"
+	"sync"
 )
 
 var log *logging.Logger
@@ -471,12 +470,10 @@ func (t *Trie) hashRoot(db DatabaseWriter) (node, node, error) {
 }
 
 type hasher struct {
-	tmp *bytes.Buffer
-	sha hash.Hash
 }
 
 func newHasher() *hasher {
-	return &hasher{tmp: new(bytes.Buffer), sha: sha3.NewKeccak256()}
+	return &hasher{}
 }
 
 // hash collapses a node down into a hash node, also returning a copy of the
@@ -541,15 +538,24 @@ func (h *hasher) hashChildren(original node, db DatabaseWriter) (node, node, err
 	case fullNode:
 		// Hash the full node's children, caching the newly hashed subtrees
 		cached := fullNode{dirty: n.dirty}
-
+		var wg sync.WaitGroup
+		var e error
 		for i := 0; i < 16; i++ {
 			if n.Children[i] != nil {
-				if n.Children[i], cached.Children[i], err = h.hash(n.Children[i], db, false); err != nil {
-					return n, original, err
-				}
+				wg.Add(1)
+				go func(i int) {
+					if n.Children[i], cached.Children[i], err = h.hash(n.Children[i], db, false); err != nil {
+						e = err
+					}
+					wg.Done()
+				}(i)
 			} else {
 				n.Children[i] = valueNode(nil) // Ensure that nil children are encoded as empty strings.
 			}
+		}
+		wg.Wait()
+		if e != nil {
+			return n, original, err
 		}
 		cached.Children[16] = n.Children[16]
 		if n.Children[16] == nil {
@@ -569,7 +575,9 @@ func (h *hasher) store(n node, db DatabaseWriter, force bool) (node, error) {
 		return n, nil
 	}
 	// Serialize the node
-	h.tmp.Reset()
+	calculator := newHashCalculator()
+	calculator.tmp.Reset()
+	defer returnHasherToPool(calculator)
 	switch v := n.(type) {
 	case fullNode:
 		var buffer [17][]byte
@@ -588,7 +596,7 @@ func (h *hasher) store(n node, db DatabaseWriter, force bool) (node, error) {
 			Content: buffer,
 		}
 		data, err := json.Marshal(memNode)
-		h.tmp.Write(data)
+		calculator.tmp.Write(data)
 		if err != nil {
 			panic("encode error: " + err.Error())
 		}
@@ -601,7 +609,7 @@ func (h *hasher) store(n node, db DatabaseWriter, force bool) (node, error) {
 				Content: []byte(vv),
 			}
 			data, err := json.Marshal(memNode)
-			h.tmp.Write(data)
+			calculator.tmp.Write(data)
 			if err != nil {
 				panic("encode error: " + err.Error())
 			}
@@ -612,7 +620,7 @@ func (h *hasher) store(n node, db DatabaseWriter, force bool) (node, error) {
 				Content: []byte(vv),
 			}
 			data, err := json.Marshal(memNode)
-			h.tmp.Write(data)
+			calculator.tmp.Write(data)
 			if err != nil {
 				panic("encode error: " + err.Error())
 			}
@@ -626,12 +634,12 @@ func (h *hasher) store(n node, db DatabaseWriter, force bool) (node, error) {
 	// Larger nodes are replaced by their hash and stored in the database.
 	hash, _ := n.cache()
 	if hash == nil {
-		h.sha.Reset()
-		h.sha.Write(h.tmp.Bytes())
-		hash = hashNode(h.sha.Sum(nil))
+		calculator.sha.Reset()
+		calculator.sha.Write(calculator.tmp.Bytes())
+		hash = hashNode(calculator.sha.Sum(nil))
 	}
 	if db != nil {
-		return hash, db.Put(hash, h.tmp.Bytes())
+		return hash, db.Put(hash, calculator.tmp.Bytes())
 	}
 	return hash, nil
 }
