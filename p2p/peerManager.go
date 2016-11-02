@@ -39,4 +39,6 @@ type PeerManager interface {
 	SetPrimary(id uint64) error
 	// get local node instance
 	GetLocalNode() *Server.Node
+	// update routing table when new peer's join request is accepted
+	UpdateRoutingTable([]byte)
 }

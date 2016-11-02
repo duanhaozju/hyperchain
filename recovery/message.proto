@@ -18,6 +18,7 @@ message Message{
         SYNCSINGLE = 3;
         INVALIDRESP = 4;
         SYNCREPLICA = 5;
+        BROADCAST_NEWPEER = 6;
     }
 }
 
