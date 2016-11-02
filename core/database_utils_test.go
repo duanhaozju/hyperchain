@@ -40,7 +40,6 @@ func TestSignTime(t *testing.T) {
 	tx := transactionCases[0]
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 
-	hash := tx.SighHash(kec256Hash)
 	keydir := "../build/config/keystore"
 	//
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
@@ -51,24 +50,30 @@ func TestSignTime(t *testing.T) {
 	}
 
 	am.Unlock(ac,"123")
-	var set = []int{500}
+
+	tx.From = common.HexToAddress(string(tx.From)).Bytes()
+	hash := tx.SighHash(kec256Hash)
+	var set = []int{1,100}
 
 	for _,j:=range set{
 		start := time.Now()
 		for i:=0;i<j;i++{
-			am.SignWithPassphrase(common.HexToAddress(string(tx.From)),hash[:],"123")
-			//fmt.Println(signature)
+			tx.Signature,_ = am.SignWithPassphrase(common.BytesToAddress(tx.From),hash[:],"123")
+			//fmt.Println(tx.Signature)
 			//tx.ValidateSign(encryption,kec256Hash)
 		}
 		fmt.Printf("signtx test %dtxs: %s",j,time.Since(start))
 		fmt.Println()
 
 	}
+	//tx.Signature,_ = am.SignWithPassphrase(common.BytesToAddress(tx.From),hash[:],"123")
 	for _,j:=range set{
 		start := time.Now()
 		for i:=0;i<j;i++{
 			//am.SignWithPassphrase(common.HexToAddress(string(tx.From)),hash[:],"123")
-			tx.ValidateSign(encryption,kec256Hash)
+			if !tx.ValidateSign(encryption,kec256Hash){
+				t.Error("unsign error")
+			}
 		}
 		fmt.Printf("unsigntx test %dtxs: %s",j,time.Since(start))
 		fmt.Println()
