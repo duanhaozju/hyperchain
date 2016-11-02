@@ -34,39 +34,49 @@ type argT struct {
 	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
 }
 
-func checkLicense(licensePath string) error {
-	dateChecker := func(start, now, expire time.Time) bool {
-		return now.After(start) && now.Before(expire)
+func checkLicense(licensePath string) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.New("Invalid License Cause a Panic")
+		}
+	}()
+	dateChecker := func(now, expire time.Time) bool {
+		return now.Before(expire)
 	}
 	privateKey := string("TnrEP|N.*lAgy<Q&@lBPd@J/")
-	identificationSuffix := string("Copyright 2016 The Hyperchain. All rights reserved.")
+	identificationSuffix := string("Hyperchain")
 
 	license, err := ioutil.ReadFile(licensePath)
 	if err != nil {
-		return errors.New("No License Found")
+		err = errors.New("No License Found")
+		return
 	}
 	pattern, _ := regexp.Compile("Identification: (.*)")
 	identification := pattern.FindString(string(license))[16:]
+
 	ctx, err := transport.TripleDesDecrypt(common.Hex2Bytes(identification), []byte(privateKey))
 	if err != nil {
-		return errors.New("Invalid License")
+		err = errors.New("Invalid License")
+		return
 	}
 	plainText := string(ctx)
 	suffix := plainText[len(plainText)-len(identificationSuffix):]
 	if strings.Compare(suffix, identificationSuffix) != 0 {
-		return errors.New("Invalid Identification")
+		err = errors.New("Invalid Identification")
+		return
 	}
 	timestamp, err := strconv.ParseInt(plainText[:len(plainText)-len(identificationSuffix)], 10, 64)
 	if err != nil {
-		return errors.New("Invalid License Timestamp")
+		err = errors.New("Invalid License Timestamp")
+		return
 	}
-	startTime := time.Unix(timestamp, 0)
-	expiredTime := startTime.AddDate(3, 0, 0)
+	expiredTime := time.Unix(timestamp, 0)
 	currentTime := time.Now()
-	if validation := dateChecker(startTime, currentTime, expiredTime); !validation {
-		return errors.New("License Expired")
+	if validation := dateChecker(currentTime, expiredTime); !validation {
+		err = errors.New("License Expired")
+		return
 	}
-	return nil
+	return
 }
 
 func main() {
@@ -122,7 +132,6 @@ func main() {
 		go jsonrpc.Start(config.getHTTPPort(), eventMux, pm)
 
 		<-exist
-
 		return nil
 	})
 }

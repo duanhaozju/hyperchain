@@ -19,7 +19,7 @@ func GenerateLicense() {
 	// IMPORTANT this private
 	flag.Parse()
 	privateKey := string("TnrEP|N.*lAgy<Q&@lBPd@J/")
-	idSuffix := string("Copyright 2016 The Hyperchain. All rights reserved.")
+	idSuffix := string("Hyperchain")
 	date := time.Date(*year, time.Month(*month), *day, 0, 0, 0, 0, time.UTC)
 	timestamp := date.Unix()
 	id, err := transport.TripleDesEncrypt([]byte(strconv.FormatInt(timestamp, 10)+idSuffix), []byte(privateKey))
@@ -38,7 +38,7 @@ func GenerateLicense() {
 	ioutil.WriteFile(*path+"LICENSE", []byte(string(licenseTemplate)+ctx), 0644)
 	fmt.Println("####################  Generate License Success ###################")
 	fmt.Println("   Arguments:")
-	fmt.Println("   \tStart Date:", date)
+	fmt.Println("   \tExpired Date:", date)
 	fmt.Println("   Output Path:")
 	fmt.Println("   \t", *path+"LICENSE")
 
