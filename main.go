@@ -20,6 +20,7 @@ import (
 	"hyperchain/p2p"
 	"hyperchain/p2p/transport"
 	"io/ioutil"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -40,16 +41,17 @@ func checkLicense(licensePath string) error {
 	privateKey := string("TnrEP|N.*lAgy<Q&@lBPd@J/")
 	identificationSuffix := string("Copyright 2016 The Hyperchain. All rights reserved.")
 
-	ctx, err := ioutil.ReadFile(licensePath)
+	license, err := ioutil.ReadFile(licensePath)
 	if err != nil {
 		return errors.New("No License Found")
 	}
-	license := common.Hex2Bytes(string(ctx))
-	identification, err := transport.TripleDesDecrypt(license, []byte(privateKey))
+	pattern, _ := regexp.Compile("Identification: (.*)")
+	identification := pattern.FindString(string(license))[16:]
+	ctx, err := transport.TripleDesDecrypt(common.Hex2Bytes(identification), []byte(privateKey))
 	if err != nil {
 		return errors.New("Invalid License")
 	}
-	plainText := string(identification)
+	plainText := string(ctx)
 	suffix := plainText[len(plainText)-len(identificationSuffix):]
 	if strings.Compare(suffix, identificationSuffix) != 0 {
 		return errors.New("Invalid Identification")
@@ -72,6 +74,7 @@ func main() {
 		argv := ctx.Argv().(*argT)
 
 		config := newconfigsImpl(argv.ConfigPath, argv.NodeID, argv.GRPCPort, argv.HTTPPort)
+
 		if err := checkLicense(config.getLicense()); err != nil {
 			return err
 		}
