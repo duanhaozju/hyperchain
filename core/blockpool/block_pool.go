@@ -24,6 +24,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"sort"
 )
 
 var (
@@ -148,8 +149,23 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption, peerManager p2p.PeerManager) (error, bool) {
 	var validTxSet []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
+	var index []int
 	if validationEvent.IsPrimary {
-		validTxSet, invalidTxSet = pool.CheckSign(validationEvent.Transactions, commonHash, encryption)
+		invalidTxSet, index = pool.CheckSign(validationEvent.Transactions, commonHash, encryption)
+	} else {
+		validTxSet = validationEvent.Transactions
+	}
+
+	if len(index) > 0 {
+		sort.Ints(index)
+		count := 0
+		set := validationEvent.Transactions
+		for i := range index {
+			i = i-count
+			set = append(set[:i-1], set[i+1:]...)
+			count++
+		}
+		validTxSet = set
 	} else {
 		validTxSet = validationEvent.Transactions
 	}
@@ -206,22 +222,28 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 }
 
 // check the sender's signature of the transaction
-func (pool *BlockPool) CheckSign(txs []*types.Transaction, commonHash crypto.CommonHash, encryption crypto.Encryption) ([]*types.Transaction, []*types.InvalidTransactionRecord) {
-	var validTxSet []*types.Transaction
+func (pool *BlockPool) CheckSign(txs []*types.Transaction, commonHash crypto.CommonHash, encryption crypto.Encryption) ([]*types.InvalidTransactionRecord, []int) {
 	var invalidTxSet []*types.InvalidTransactionRecord
 	// (1) check signature for each transaction
-	for _, tx := range txs {
-		if !tx.ValidateSign(encryption, commonHash) {
-			log.Notice("Validation, found invalid signature, send from :", tx.Id)
-			invalidTxSet = append(invalidTxSet, &types.InvalidTransactionRecord{
-				Tx:      tx,
-				ErrType: types.InvalidTransactionRecord_SIGFAILED,
-			})
-		} else {
-			validTxSet = append(validTxSet, tx)
-		}
+	var wg sync.WaitGroup
+	var index []int
+	for i, tx := range txs {
+		wg.Add(1)
+		go func(tx *types.Transaction){
+			if !tx.ValidateSign(encryption, commonHash) {
+				log.Notice("Validation, found invalid signature, send from :", tx.Id)
+				invalidTxSet = append(invalidTxSet, &types.InvalidTransactionRecord{
+					Tx:      tx,
+					ErrType: types.InvalidTransactionRecord_SIGFAILED,
+				})
+				index = append(index, i)
+			}
+			wg.Done()
+		}(tx)
 	}
-	return validTxSet, invalidTxSet
+	wg.Wait()
+	return invalidTxSet, index
+	//return nil, nil
 }
 
 // Put all transactions into the virtual machine and execute
@@ -289,7 +311,6 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	receiptRoot := receiptTrie.Hash().Bytes()
 	pool.lastValidationState = root
 	go public_batch.Write()
-
 	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
 }
 
@@ -415,7 +436,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, pr
 				return
 			}
 		}
-		go batch.Write()
+		batch.Write()
 	}
 
 	err := core.PutBlockTx(db, commonHash, block.BlockHash, block)

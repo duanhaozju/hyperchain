@@ -86,13 +86,16 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	} else {
 		if !env.Db().Exist(*address) {
 			to = env.Db().CreateAccount(*address)
-			env.Transfer(from, to, value)
+			if statedb.GetCode(to.Address()) == nil {
+				env.Transfer(from, to, value)
+				return nil, common.Address{}, nil
+			}
+			//env.Transfer(from, to, value)
 		} else {
-
 			to = env.Db().GetAccount(*address)
 			if statedb.GetCode(to.Address()) == nil {
-
 				env.Transfer(from, to, value)
+				return nil, common.Address{}, nil
 			}
 		}
 	}
