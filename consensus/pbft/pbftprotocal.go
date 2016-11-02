@@ -883,13 +883,10 @@ func (pbft *pbftProtocal) recvRequestBatch(reqBatch *TransactionBatch) error {
 	digest := hash(reqBatch)
 	logger.Debugf("Replica %d received request batch %s", pbft.id, digest)
 
-	//pbft.reqBatchStore[digest] = reqBatch
-	//pbft.persistRequestBatch(digest)
 	if pbft.activeView {
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", digest))
 	}
 	if pbft.primary(pbft.view) == pbft.id && pbft.activeView {
-		//pbft.nullRequestTimer.Stop()
 		pbft.validateBatch(reqBatch, 0, 0)
 	} else {
 		logger.Debugf("Replica %d is backup, not sending pre-prepare for request batch %s", pbft.id, digest)
@@ -962,7 +959,7 @@ func (pbft *pbftProtocal) callSendPrePrepare(digest string) bool {
 	pbft.currentVid = &currentVid
 
 	if len(cache.batch.Batch) == 0 {
-		logger.Infof("Replica %d is primary, receives validated result %s that is empty", pbft.id, digest)
+		logger.Warningf("Replica %d is primary, receives validated result %s that is empty", pbft.id, digest)
 		pbft.lastVid = *pbft.currentVid
 		pbft.currentVid = nil
 		delete(pbft.cacheValidatedBatch, digest)
@@ -1247,10 +1244,10 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 
 	if !pbft.inWV(commit.View, commit.SequenceNumber) {
 		if commit.SequenceNumber != pbft.h && !pbft.skipInProgress {
-			logger.Warningf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, high water mark %d", pbft.id, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
+			logger.Warningf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
 		} else {
 			// This is perfectly normal
-			logger.Debugf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, high water mark %d", pbft.id, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
+			logger.Debugf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
 		}
 		return nil
 	}
@@ -1365,7 +1362,6 @@ func (pbft *pbftProtocal) executeOne(idx msgID) bool {
 		} else {
 			isPrimary = false
 		}
-
 		pbft.helper.Execute(idx.n, digest, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
 		cert.sentExecute = true
 		pbft.execDoneSync(idx)
@@ -2045,7 +2041,7 @@ func (pbft *pbftProtocal) recvValidatedResult(result event.ValidatedTxs) error {
 			vid:       result.SeqNo,
 		}
 		pbft.cacheValidatedBatch[digest] = cache
-		if pbft.seqNo-pbft.lastExec > 5 {
+		if pbft.seqNo-pbft.lastExec > 20 {
 			time.Sleep(20 * time.Millisecond)
 		}
 		pbft.trySendPrePrepare()
@@ -2059,8 +2055,6 @@ func (pbft *pbftProtocal) recvValidatedResult(result event.ValidatedTxs) error {
 
 		cert := pbft.getCert(result.View, result.SeqNo)
 		cert.validated = true
-
-		//logger.Notice("Replica  recived seqNo is sqeNo=%d, module digest is: %s,cert digest is: %s",result.SeqNo, result.Digest,cert.digest)
 
 		digest := result.Hash
 		if digest == cert.digest {

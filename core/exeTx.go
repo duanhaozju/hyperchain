@@ -8,6 +8,7 @@ import (
 	"hyperchain/core/vm"
 
 	"math/big"
+	//"time"
 )
 
 type Code []byte
@@ -16,6 +17,7 @@ var logger = glog.Logger{}
 
 // 这一块相当于ethereum里的TransitionDB
 func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
+	//start := time.Now()
 	var (
 		from = common.BytesToAddress(tx.From)
 		//sender = common.BytesToAddress(tx.From)
@@ -56,6 +58,7 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		receipt.Status = types.Receipt_SUCCESS
 		receipt.Message = nil
 	}
+	//log.Error("manager exec tx time : ", time.Since(start))
 	return receipt, ret, addr, err
 }
 
