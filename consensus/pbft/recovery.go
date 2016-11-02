@@ -83,9 +83,6 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 
 	logger.Noticef("Replica %d now recvRecoveryRsp", pbft.id)
 
-	// TODO:
-	// if find target...updatestate
-	// if find same...done
 	if !pbft.inRecovery {
 		logger.Debugf("Replica %d finished recovery, ignore recovery response", pbft.id)
 		return nil
@@ -330,7 +327,6 @@ func (pbft *pbftProtocal) restartRecovery() {
 
 	logger.Noticef("Replica %d now restartRecovery", pbft.id)
 
-	logger.Noticef("Replica %d restart recovery", pbft.id)
 	pbft.initRecovery()
 }
 
