@@ -111,10 +111,7 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 		return
 	} else if validationEvent.SeqNo == pool.demandSeqNo {
 		// Process
-		start := time.Now().UnixNano()
 		if _, success := pool.PreProcess(validationEvent, commonHash, encryption, peerManager); success {
-			end := time.Now().UnixNano()
-			log.Errorf("manage validate time for %d : %d", pool.demandSeqNo, (end-start)/1000000)
 			atomic.AddUint64(&pool.demandSeqNo, 1)
 			log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
 		}
@@ -132,10 +129,7 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 		for i := validationEvent.SeqNo + 1; i <= atomic.LoadUint64(&pool.maxSeqNo); i += 1 {
 			if ret, existed := pool.validationQueue.Get(i); existed {
 				ev := ret.(event.ExeTxsEvent)
-				start := time.Now().UnixNano()
 				if _, success := pool.PreProcess(ev, commonHash, encryption, peerManager); success {
-					end := time.Now().UnixNano()
-					log.Errorf("manage validate time for %d : %d", pool.demandSeqNo, (end-start)/1000000)
 					pool.validationQueue.Remove(i)
 					atomic.AddUint64(&pool.demandSeqNo, 1)
 					log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
@@ -175,12 +169,10 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	} else {
 		validTxSet = validationEvent.Transactions
 	}
-	start := time.Now()
 	err, _, merkleRoot, txRoot, receiptRoot, validTxSet, invalidTxSet := pool.ProcessBlockInVm(validTxSet, invalidTxSet, validationEvent.SeqNo)
 	if err != nil {
 		return err, false
 	}
-	log.Error("manager process in vm　time : ", time.Since(start))
 	hash := commonHash.Hash([]interface{}{
 		merkleRoot,
 		txRoot,
@@ -231,7 +223,6 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 
 // check the sender's signature of the transaction
 func (pool *BlockPool) CheckSign(txs []*types.Transaction, commonHash crypto.CommonHash, encryption crypto.Encryption) ([]*types.InvalidTransactionRecord, []int) {
-	start := time.Now().UnixNano()
 	var invalidTxSet []*types.InvalidTransactionRecord
 	// (1) check signature for each transaction
 	var wg sync.WaitGroup
@@ -251,8 +242,6 @@ func (pool *BlockPool) CheckSign(txs []*types.Transaction, commonHash crypto.Com
 		}(tx)
 	}
 	wg.Wait()
-	end := time.Now().UnixNano()
-	log.Error("manager check sign time : ", (end-start)/1000000)
 	return invalidTxSet, index
 	//return nil, nil
 }
@@ -280,7 +269,6 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	vmenv := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
 
 	public_batch = db.NewBatch()
-	start := time.Now()
 	for i, tx := range txs {
 		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(*tx, vmenv)
@@ -317,25 +305,18 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		receiptTrie.Update(append(core.ReceiptsPrefix, receipt.TxHash...), receiptValue)
 		validtxs = append(validtxs, tx)
 	}
-	log.Error("manager process for time : ", time.Since(start))
-	commitTime := time.Now()
 	root, _ := statedb.Commit()
-	log.Notice("StateDB Commit", time.Since(commitTime))
-
-	hashTime := time.Now()
 	merkleRoot := root.Bytes()
 	txRoot := txTrie.Hash().Bytes()
 	receiptRoot := receiptTrie.Hash().Bytes()
 	pool.lastValidationState = root
 	go public_batch.Write()
-	log.Error("manager commit time : ", time.Since(hashTime))
 	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
 }
 
 // When receive an CommitOrRollbackBlockEvent, if flag is true, generate a block and call AddBlock function
 // CommitBlock function is just an entry of the commit logic
 func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHash crypto.CommonHash, peerManager p2p.PeerManager) {
-	start := time.Now().UnixNano()
 	ret, existed := pool.blockCache.Get(ev.Hash)
 	if !existed {
 		log.Notice("No record found when commit block, block hash:", ev.Hash)
@@ -392,8 +373,6 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHa
 		}
 	}
 	pool.blockCache.Remove(ev.Hash)
-	end := time.Now().UnixNano()
-	log.Errorf("manage write block time for %d : %d", ev.SeqNo, (end-start)/1000000)
 }
 
 // Put a new generated block into pool, handle the block saved in queue serially

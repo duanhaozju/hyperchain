@@ -1976,9 +1976,6 @@ func (pbft *pbftProtocal) recvValidatedResult(result event.ValidatedTxs) error {
 			vid:       result.SeqNo,
 		}
 		pbft.cacheValidatedBatch[digest] = cache
-		//logger.Error("pbft.seqNo-pbft.lastExec: ", pbft.seqNo-pbft.lastExec)
-		end := time.Now().UnixNano()
-		logger.Errorf("replica receive validated result for %d : %d", result.SeqNo, (end-result.Timestamp)/1000000)
 		if pbft.seqNo-pbft.lastExec > 20 {
 			time.Sleep(20 * time.Millisecond)
 		}
@@ -1995,8 +1992,6 @@ func (pbft *pbftProtocal) recvValidatedResult(result event.ValidatedTxs) error {
 		cert.validated = true
 
 		digest := result.Hash
-		end := time.Now().UnixNano()
-		logger.Errorf("replica receive validated result for %d : %d", result.SeqNo, (end-result.Timestamp)/1000000)
 		if digest == cert.digest {
 			pbft.sendCommit(digest, result.View, result.SeqNo)
 		} else {
