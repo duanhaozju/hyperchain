@@ -63,16 +63,3 @@ timeout:
 
     # How long to wait for N-f responses after send negotiate view
     negoView: 6s
-
-################################################################################
-#
-#   SECTION: EXECUTOR
-#
-#   - This section applies to the distinct executor service
-#
-################################################################################
-executor:
-
-    # The queue size for execution requests, ordering proceeds and queues execution
-    # requests.  This value should always exceed the pbft log size
-    queuesize: 30

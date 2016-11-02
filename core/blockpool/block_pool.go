@@ -175,11 +175,12 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	} else {
 		validTxSet = validationEvent.Transactions
 	}
-
+	start := time.Now()
 	err, _, merkleRoot, txRoot, receiptRoot, validTxSet, invalidTxSet := pool.ProcessBlockInVm(validTxSet, invalidTxSet, validationEvent.SeqNo)
 	if err != nil {
 		return err, false
 	}
+	log.Error("manager process in vm　time : ", time.Since(start))
 	hash := commonHash.Hash([]interface{}{
 		merkleRoot,
 		txRoot,
@@ -230,6 +231,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 
 // check the sender's signature of the transaction
 func (pool *BlockPool) CheckSign(txs []*types.Transaction, commonHash crypto.CommonHash, encryption crypto.Encryption) ([]*types.InvalidTransactionRecord, []int) {
+	start := time.Now().UnixNano()
 	var invalidTxSet []*types.InvalidTransactionRecord
 	// (1) check signature for each transaction
 	var wg sync.WaitGroup
@@ -249,6 +251,8 @@ func (pool *BlockPool) CheckSign(txs []*types.Transaction, commonHash crypto.Com
 		}(tx)
 	}
 	wg.Wait()
+	end := time.Now().UnixNano()
+	log.Error("manager check sign time : ", (end-start)/1000000)
 	return invalidTxSet, index
 	//return nil, nil
 }
@@ -276,6 +280,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	vmenv := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
 
 	public_batch = db.NewBatch()
+	start := time.Now()
 	for i, tx := range txs {
 		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(*tx, vmenv)
@@ -312,13 +317,18 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		receiptTrie.Update(append(core.ReceiptsPrefix, receipt.TxHash...), receiptValue)
 		validtxs = append(validtxs, tx)
 	}
+	log.Error("manager process for time : ", time.Since(start))
+	commitTime := time.Now()
 	root, _ := statedb.Commit()
+	log.Notice("StateDB Commit", time.Since(commitTime))
+
+	hashTime := time.Now()
 	merkleRoot := root.Bytes()
 	txRoot := txTrie.Hash().Bytes()
 	receiptRoot := receiptTrie.Hash().Bytes()
 	pool.lastValidationState = root
 	go public_batch.Write()
-
+	log.Error("manager commit time : ", time.Since(hashTime))
 	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
 }
 
@@ -447,7 +457,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, pr
 				return
 			}
 		}
-		go batch.Write()
+		batch.Write()
 	}
 
 	err := core.PutBlockTx(db, commonHash, block.BlockHash, block)

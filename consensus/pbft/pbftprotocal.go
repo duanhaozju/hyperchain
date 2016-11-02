@@ -1111,8 +1111,6 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 		return pbft.sendCommit(digest, v, n)
 	} else {
 		if !cert.sentValidate {
-			end := time.Now().UnixNano()
-			logger.Errorf("replica call validate for %d : %d", cert.prePrepare.SequenceNumber, (end-cert.prePrepare.TransactionBatch.Timestamp)/1000000)
 			pbft.validateBatch(cert.prePrepare.TransactionBatch, n, v)
 			cert.sentValidate = true
 		}
@@ -1199,8 +1197,6 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 			delete(pbft.outstandingReqBatches, commit.BatchDigest)
 			idx := msgID{v: commit.View, n: commit.SequenceNumber}
 			pbft.committedCert[idx] = cert.digest
-			end := time.Now().UnixNano()
-			logger.Errorf("replica receive committed time for %d : %d", commit.SequenceNumber, (end-cert.prePrepare.TransactionBatch.Timestamp)/1000000)
 			pbft.executeOutstanding()
 			if commit.SequenceNumber == pbft.viewChangeSeqNo {
 				logger.Infof("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
@@ -1292,8 +1288,6 @@ func (pbft *pbftProtocal) executeOne(idx msgID) bool {
 		} else {
 			isPrimary = false
 		}
-		end := time.Now().UnixNano()
-		logger.Errorf("replica call execute time for %d : %d",cert.prePrepare.SequenceNumber, (end-cert.prePrepare.TransactionBatch.Timestamp)/1000000)
 		pbft.helper.Execute(idx.n, digest, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
 		cert.sentExecute = true
 		pbft.execDoneSync(idx)
