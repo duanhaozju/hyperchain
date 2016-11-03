@@ -490,7 +490,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		}
 		logger.Debugf("Replica %d nego-view response timer expired before N-f was reached, resending", pbft.id)
 		pbft.restartNegoView()
-	case event.ValidatedTxs:
+	case protos.ValidatedTxs:
 		err = pbft.recvValidatedResult(et)
 	case negoViewDoneEvent:
 		logger.Notice("################################################")
@@ -2060,7 +2060,7 @@ func (pbft *pbftProtocal) processRequestsDuringRecovery() {
 // =============================================================================
 // receive local message methods
 // =============================================================================
-func (pbft *pbftProtocal) recvValidatedResult(result event.ValidatedTxs) error {
+func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error {
 
 	primary := pbft.primary(pbft.view)
 	if primary == pbft.id {
@@ -2108,7 +2108,7 @@ func (pbft *pbftProtocal) recvValidatedResult(result event.ValidatedTxs) error {
 // =============================================================================
 // receive local message methods
 // =============================================================================
-func (pbft *pbftProtocal) recvValidatedResult(result event.ValidatedTxs) error {
+func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error {
 
 	primary := pbft.primary(pbft.view, pbft.N)
 	if primary == pbft.id {

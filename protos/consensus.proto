@@ -42,7 +42,7 @@ message NullRequestMessage {
 }
 
 message ValidatedTxs {
-    repeated types.Transaction transaction = 1;
+    repeated types.Transaction transactions = 1;
     string hash = 2;
     uint64 seqNo = 3;
     uint64 view = 4;
