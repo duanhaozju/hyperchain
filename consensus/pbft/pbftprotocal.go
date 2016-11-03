@@ -1,7 +1,6 @@
 package pbft
 
 import (
-	"encoding/base64"
 	"fmt"
 	"sort"
 	"sync"
@@ -10,7 +9,6 @@ import (
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
 	"hyperchain/core/types"
-	"hyperchain/event"
 	"hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"
@@ -111,18 +109,18 @@ type pbftProtocal struct {
 	rcRspStore             map[uint64]*RecoveryResponse      // rcRspStore store recovery responses from replicas
 	rcPQCSenderStore       map[uint64]bool			 // rcPQCSenderStore store those who sent PQC info to self
 
-	// add node
+	// add and del node
 	isNewNode			bool						// track if replica is the new node
-	newNodeTimer 		events.Timer				// track timeout for N-f nego-view responses
-	newNodeTimeout		time.Duration           	// time limit for N-f nego-view responses
+	localKey			string						// track new node's local key (payload from local)
+	addNodeTimer 		events.Timer				// track timeout for new node responses
+	addNodeTimeout		time.Duration           	// time limit for new node responses
 	inAddingNode		bool						// track if replica is in adding node
-	tableReceived		bool						// track if replica already receive routing table
-	addNodeCertStore	map[string]*addNodeCert	// track the received add node agree message
-	routingTable		string						// store the routing table from local
-	tableDigest			string						// store the digest of routing table
-	newIP				string						// store the new IP from local
-	newID				uint64						// store the new id of the new replica
-	inTableError		bool						// track if the replica's routing table has error
+	addNodeCertStore	map[string]*addNodeCert		// track the received add node agree message
+	isDelNode			bool						// track if replica is the new node
+	delNodeTimer 		events.Timer				// track timeout for new node responses
+	delNodeTimeout		time.Duration           	// time limit for new node responses
+	inDeletingNode		bool						// track if replica is in adding node
+	delNodeCertStore	map[string]*delNodeCert		// track the received add node agree message
 	previousN			uint64						// track the previous N
 	previousView		uint64						// track the previous view
 	previousF			uint64						// track the previous f
@@ -180,12 +178,20 @@ type cacheBatch struct {
 }
 
 type addNodeCert struct {
-	table		string
-	addNode		*AddNode
-	agreeAdd	map[AgreeAddNode]bool
+	addNodes	map[AddNode]bool
 	addCount	uint64
+	finishAdd	bool
 	update		*UpdateN
-	agreeUpdate	map[AgreeUpdateN]bool
+	agrees		map[AgreeUpdateN]bool
+	updateCount	uint64
+}
+
+type delNodeCert struct {
+	delNodes	map[DelNode]bool
+	delCount	uint64
+	finishDel	bool
+	update		*UpdateN
+	agrees		map[AgreeUpdateN]bool
 	updateCount	uint64
 }
 
@@ -405,7 +411,7 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 		tx := e
 		return pbft.processTxEvent(tx)
 	case viewChangedEvent:
-		primary := pbft.primary(pbft.view)
+		primary := pbft.primary(pbft.view, pbft.N)
 		pbft.persistView(pbft.view)
 		pbft.helper.InformPrimary(primary)
 		pbft.processRequestsDuringViewChange()
@@ -496,7 +502,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		logger.Notice("################################################")
 		logger.Noticef("#   Replica %d finished negotiating view: %d", pbft.id, pbft.view)
 		logger.Notice("################################################")
-		primary := pbft.primary(pbft.view)
+		primary := pbft.primary(pbft.view, pbft.N)
 		pbft.persistView(pbft.view)
 		pbft.helper.InformPrimary(primary)
 		pbft.processRequestsDuringNegoView()
@@ -606,7 +612,7 @@ func (pbft *pbftProtocal) processNullRequest(msg *protos.Message) error {
 
 func (pbft *pbftProtocal) processTxEvent(tx *types.Transaction) error {
 
-	primary := pbft.primary(pbft.view)
+	primary := pbft.primary(pbft.view, pbft.N)
 	if !pbft.activeView || pbft.inNegoView || pbft.inRecovery {
 		pbft.reqStore.storeOutstanding(tx)
 	} else if primary != pbft.id {
@@ -914,7 +920,7 @@ func (pbft *pbftProtocal) recvRequestBatch(reqBatch *TransactionBatch) error {
 	if pbft.activeView {
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", digest))
 	}
-	if pbft.primary(pbft.view) == pbft.id && pbft.activeView {
+	if pbft.primary(pbft.view, pbft.N) == pbft.id && pbft.activeView {
 		pbft.validateBatch(reqBatch, 0, 0)
 	} else {
 		logger.Debugf("Replica %d is backup, not sending pre-prepare for request batch %s", pbft.id, digest)
@@ -1162,7 +1168,7 @@ func (pbft *pbftProtocal) recvPrepare(prep *Prepare) error {
 		return nil
 	}
 
-	if pbft.primary(prep.View) == prep.ReplicaId && !pbft.inRecovery{
+	if pbft.primary(prep.View, pbft.N) == prep.ReplicaId && !pbft.inRecovery{
 		logger.Warningf("Replica %d received prepare from primary, ignoring", pbft.id)
 		return nil
 	}
@@ -2062,7 +2068,7 @@ func (pbft *pbftProtocal) processRequestsDuringRecovery() {
 // =============================================================================
 func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error {
 
-	primary := pbft.primary(pbft.view)
+	primary := pbft.primary(pbft.view, pbft.N)
 	if primary == pbft.id {
 		logger.Debugf("Primary %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
 
@@ -2098,53 +2104,6 @@ func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error 
 			pbft.sendCommit(digest, result.View, result.SeqNo)
 		} else {
 			logger.Warningf("Relica %d cannot agree with the validate result sent from primary", pbft.id)
-			pbft.sendViewChange()
-		}
-	}
-
-	return nil
-}
-
-// =============================================================================
-// receive local message methods
-// =============================================================================
-func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error {
-
-	primary := pbft.primary(pbft.view, pbft.N)
-	if primary == pbft.id {
-		logger.Debugf("Primary %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
-
-		batch := &TransactionBatch{
-			Batch:     result.Transactions,
-			Timestamp: result.Timestamp,
-		}
-		digest := result.Hash
-		pbft.validatedBatchStore[digest] = batch
-		pbft.outstandingReqBatches[digest] = batch
-		cache := &cacheBatch{
-			batch:     batch,
-			vid:       result.SeqNo,
-		}
-		pbft.cacheValidatedBatch[digest] = cache
-
-		pbft.trySendPrePrepare()
-	} else {
-		logger.Debugf("Replica %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
-
-		if !pbft.inWV(result.View, result.SeqNo) {
-			logger.Debugf("Replica %d receives validated result %s that is out of sequence numbers", pbft.id, result.Hash)
-			return nil
-		}
-
-		cert := pbft.getCert(result.View, result.SeqNo)
-		cert.validated = true
-
-		//logger.Notice("Replica  recived seqNo is sqeNo=%d, module digest is: %s,cert digest is: %s",result.SeqNo, result.Digest,cert.digest)
-
-		digest := result.Hash
-		if digest == cert.digest {
-			pbft.sendCommit(digest, result.View, result.SeqNo)
-		} else {
 			pbft.sendViewChange()
 		}
 	}

@@ -156,31 +156,33 @@ message recovery_returnPQC {
 
 message add_node {
     uint64 replica_id = 1;
-    string hash = 2;
+    string key = 2;
 }
 
 message del_node {
     uint64 replica_id = 1;
-    string hash = 2;
+    string key = 2;
 }
 
 message ready_for_n {
     uint64 replica_id = 1;
-    string table_digest = 2;
+    string key = 2;
 }
 
 message update_n {
     uint64 replica_id = 1;
-    string table_digest = 2;
+    string key = 2;
     uint64 n = 3;
     uint64 seqNo = 4;
     uint64 view = 5;
+    bool flag = 6;
 }
 
 message agree_update_n {
     uint64 replica_id = 1;
-    string table_digest = 2;
+    string key = 2;
     uint64 n = 3;
     uint64 seqNo = 4;
     uint64 view = 5;
+    bool flag = 6;
 }

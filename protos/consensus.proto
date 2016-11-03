@@ -53,6 +53,10 @@ message NewNodeMessage {
     bytes payload = 1;
 }
 
+message AddNodeMessage {
+    bytes payload = 1;
+}
+
 message DelNodeMessage {
     bytes payload = 1;
 }

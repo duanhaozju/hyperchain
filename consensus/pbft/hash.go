@@ -43,10 +43,3 @@ func stringToByte(data string) (re []byte, err error) {
 	re, err = base64.StdEncoding.DecodeString(data)
 	return
 }
-
-func hashString(data string) (re string) {
-
-	raw, _ := stringToByte(data)
-	re = base64.StdEncoding.EncodeToString(computeCryptoHash(raw))
-	return
-}
