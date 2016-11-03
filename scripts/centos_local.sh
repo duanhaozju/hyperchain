@@ -20,7 +20,7 @@
 FIRST_RUN=false
 TEST_FLAG=true
 PASSWD="blockchain"
-TEST_MACHINE="182.254.155.98"
+TEST_MACHINE="115.159.160.74"
 
 MAXNODE=`cat serverlist.txt | wc -l`
 
@@ -82,6 +82,7 @@ auto_run(){
     echo "Auto start all nodes"
     for server_address in ${SERVER_ADDR[@]}; do
 	  echo $server_address
+	  ssh satoshi@$server_address "ps aux | grep hyperchain | awk '{print \$2}' | xargs kill -9"
       ssh satoshi@$server_address "if [ ! -d /home/satoshi/build/ ]; then mkdir -p /home/satoshi/build/;fi"
 	  gnome-terminal -x bash -c "ssh satoshi@$server_address \" cd /home/satoshi/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o $ni -l 8001 -t 8081 || while true; do ifconfig && sleep 100; done\""
 	  ni=`expr $ni + 1`
@@ -95,21 +96,11 @@ scp_binary_to_test_machine(){
     ssh satoshi@$TEST_MACHINE "cd /home/satoshi/go/src/hyperchain/scripts && bash centos_server.sh $1"
 }
 
-kill_process(){
-    for server_address in ${SERVER_ADDR[@]}; do
-      echo -e "kill $server_address"
-      ssh satoshi@$server_address "ps aux | grep hyperchain | awk '{print \$2}' | xargs kill -9"
-      sleep 0.1s
-    done
-}
-
 if $FIRST_RUN; then
     addkey $TEST_MACHINE
 	add_ssh_key_into_all
-	kill_process
 	scp_binary_to_test_machine "-f"
 else
-    kill_process
     scp_binary_to_test_machine
 fi
 
