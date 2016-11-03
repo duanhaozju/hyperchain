@@ -219,7 +219,7 @@ func (pbft *pbftProtocal) restoreState() {
 		pbft.view = view
 		//logger.Noticef("=========restore view %d=======", view)
 	} else {
-		logger.Noticef("Replica %d could not restore reqBatchStore: %s", pbft.id, err)
+		logger.Noticef("Replica %d could not restore view: %s", pbft.id, err)
 	}
 
 	pbft.restoreLastSeqNo() // assign value to lastExec

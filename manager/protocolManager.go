@@ -31,10 +31,10 @@ func init() {
 }
 
 type ReplicaInfo struct {
-	IP              string `protobuf:"bytes,1,opt,name=IP" json:"IP,omitempty"`
-	Port            int64  `protobuf:"varint,2,opt,name=Port" json:"Port,omitempty"`
-	Hash            string `protobuf:"bytes,3,opt,name=hash"hash json:"hash,omitempty"`
-	ID              uint64 `protobuf:"varint,4,opt,name=ID" jsonson:"ID,omitempty"`
+	IP   string `protobuf:"bytes,1,opt,name=IP" json:"IP,omitempty"`
+	Port int64  `protobuf:"varint,2,opt,name=Port" json:"Port,omitempty"`
+	Hash string `protobuf:"bytes,3,opt,name=hash"hash json:"hash,omitempty"`
+	ID   uint64 `protobuf:"varint,4,opt,name=ID" jsonson:"ID,omitempty"`
 
 	LatestBlockHash []byte `protobuf:"bytes,1,opt,name=latestBlockHash,proto3" json:"latestBlockHash,omitempty"`
 	ParentBlockHash []byte `proto3obuf:"bytes,2,opt,name=parentBlockHash,proto3" json:"parentBlockHash,omitempty"`
@@ -42,17 +42,17 @@ type ReplicaInfo struct {
 }
 
 type ProtocolManager struct {
-	serverPort          int
-	blockPool           *blockpool.BlockPool
-	Peermanager         p2p.PeerManager
+	serverPort  int
+	blockPool   *blockpool.BlockPool
+	Peermanager p2p.PeerManager
 
-	nodeInfo            client.PeerInfos // node info ,store node status,ip,port
-	consenter           consensus.Consenter
+	nodeInfo  client.PeerInfos // node info ,store node status,ip,port
+	consenter consensus.Consenter
 
-	AccountManager      *accounts.AccountManager
-	commonHash          crypto.CommonHash
+	AccountManager *accounts.AccountManager
+	commonHash     crypto.CommonHash
 
-	eventMux            *event.TypeMux
+	eventMux *event.TypeMux
 
 	newBlockSub         event.Subscription
 	consensusSub        event.Subscription
@@ -61,12 +61,14 @@ type ProtocolManager struct {
 	syncCheckpointSub   event.Subscription
 	syncBlockSub        event.Subscription
 	syncStatusSub       event.Subscription
+	peerMaintainSub     event.Subscription
 	quitSync            chan struct{}
 	wg                  sync.WaitGroup
 	syncBlockCache      *common.Cache
 	replicaStatus       *common.Cache
 	syncReplicaInterval time.Duration
 	syncReplica         bool
+	initType            int
 }
 type NodeManager struct {
 	peerManager p2p.PeerManager
@@ -75,8 +77,7 @@ type NodeManager struct {
 var eventMuxAll *event.TypeMux
 
 func NewProtocolManager(blockPool *blockpool.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
-//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
-am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool) *ProtocolManager {
+	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, initType int) *ProtocolManager {
 	synccache, _ := common.NewCache()
 	replicacache, _ := common.NewCache()
 	manager := &ProtocolManager{
@@ -91,6 +92,7 @@ am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duratio
 		replicaStatus:       replicacache,
 		syncReplicaInterval: interval,
 		syncReplica:         syncReplica,
+		initType:            initType,
 	}
 	manager.nodeInfo = make(client.PeerInfos, 0, 1000)
 	eventMuxAll = eventMux
@@ -111,17 +113,27 @@ func (pm *ProtocolManager) Start() {
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
 	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{}, event.InformPrimaryEvent{})
+	pm.peerMaintainSub = pm.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{}, event.UpdateRoutingTableEvent{}, event.RoutingTableUpdatedEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
 	go pm.syncBlockLoop()
 	go pm.syncCheckpointLoop()
 	go pm.respHandlerLoop()
 	go pm.viewChangeLoop()
+	go pm.peerMaintainLoop()
 
 	if pm.syncReplica {
 		pm.syncStatusSub = pm.eventMux.Subscribe(event.ReplicaStatusEvent{})
 		go pm.syncReplicaStatusLoop()
 		go pm.SyncReplicaStatus()
+	}
+	if pm.initType == 0 {
+		// start in normal mode
+		pm.NegotiateView()
+	}
+	if pm.initType == 1 {
+		// join the chain dynamically
+		pm.Peermanager.ConnectToOthers()
 	}
 	pm.wg.Wait()
 
@@ -213,21 +225,58 @@ func (self *ProtocolManager) ConsensusLoop() {
 	for obj := range self.consensusSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.BroadcastConsensusEvent:
-			log.Debug("######enter broadcast")
 			go self.BroadcastConsensus(ev.Payload)
+
 		case event.TxUniqueCastEvent:
 			var peers []uint64
 			peers = append(peers, ev.PeerId)
 			go self.Peermanager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
-		//go self.peerManager.SendMsgToPeers(ev.Payload,)
+
 		case event.NewTxEvent:
-			log.Debug("###### enter NewTxEvent")
 			go self.sendMsg(ev.Payload)
 
 		case event.ConsensusEvent:
-			//call consensus module
-			log.Debug("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
+		}
+	}
+}
+
+func (self *ProtocolManager) peerMaintainLoop() {
+
+	for obj := range self.peerMaintainSub.Chan() {
+		switch ev := obj.Data.(type) {
+		case event.NewPeerEvent:
+			// a new peer required to join the network and past the local CA validation
+			// payload is the new peer's address information
+			self.consenter.RecvLocal(ev)
+		case event.BroadcastNewPeerEvent:
+			// receive this event from consensus module
+			// broadcast the local CA validition result to other replica
+			// ATTENTION: Payload is a consenus message
+			// TODO replace GetAllPeers
+			peers := self.Peermanager.GetAllPeers()
+			var peerIds []int
+			for _, peer := range peers {
+				peerIds := append(peerIds, peer.ID)
+			}
+			self.Peermanager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_BROADCAST_NEWPEER)
+		case event.RecvNewPeerEvent:
+			// receive from replica for a new peer CA validation
+			// deliver it to consensus module
+			// ATTENTION: Payload is a consenus message
+			// TODO modify node code
+			self.consenter.RecvMsg(ev)
+
+		case event.UpdateRoutingTableEvent:
+			// a new peer's join chain request has been accepted
+			// update routing table
+			self.Peermanager.UpdateRoutingTable(ev.Payload)
+
+		case event.RoutingTableUpdatedEvent:
+			// send negotiate event
+			if self.initType == 1 {
+				self.NegotiateView()
+			}
 		}
 	}
 }
@@ -247,7 +296,6 @@ func (self *ProtocolManager) sendMsg(payload []byte) {
 
 // Broadcast consensus msg to a batch of peers not knowing about it
 func (self *ProtocolManager) BroadcastConsensus(payload []byte) {
-	log.Debug("begin call broadcast")
 	self.Peermanager.BroadcastPeers(payload)
 
 }
@@ -265,7 +313,7 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 	proto.Unmarshal(UpdateStateMessage.TargetId, blockChainInfo)
 
 	if core.GetChainCopy().RecoveryNum >= blockChainInfo.Height {
-		log.Info("receive duplicate stateupdate request, just ignore it")
+		log.Notice("receive duplicate stateupdate request, just ignore it")
 		return
 	}
 	required := &recovery.CheckPointMessage{
@@ -324,7 +372,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 
 						// receive all block in chain
 						if core.GetChainCopy().RequiredBlockNum <= core.GetChainCopy().Height {
-							lastBlk, _ := core.GetBlockByNumber(db, core.GetChainCopy().RequiredBlockNum + 1)
+							lastBlk, _ := core.GetBlockByNumber(db, core.GetChainCopy().RequiredBlockNum+1)
 							if common.Bytes2Hex(lastBlk.ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash) {
 								// execute all received block at one time
 								for i := core.GetChainCopy().RequiredBlockNum + 1; i <= core.GetChainCopy().RecoveryNum; i += 1 {
@@ -361,9 +409,9 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 								break
 							} else {
 								// the highest block in local is invalid, request the block
-								core.DeleteBlockByNum(db, lastBlk.Number - 1)
-								core.UpdateChainByBlcokNum(db, lastBlk.Number - 2)
-								self.broadcastDemandBlock(lastBlk.Number - 1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
+								core.DeleteBlockByNum(db, lastBlk.Number-1)
+								core.UpdateChainByBlcokNum(db, lastBlk.Number-2)
+								self.broadcastDemandBlock(lastBlk.Number-1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
 							}
 						}
 					}
@@ -458,7 +506,7 @@ func (self *ProtocolManager) SyncReplicaStatus() {
 				peerIds[idx] = peer.ID
 			}
 			self.Peermanager.SendMsgToPeers(payload, peerIds, recovery.Message_SYNCREPLICA)
-		// post to self
+			// post to self
 			self.eventMux.Post(event.ReplicaStatusEvent{
 				Payload: payload,
 			})
@@ -496,4 +544,20 @@ func (self *ProtocolManager) packReplicaStatus() ([]byte, []byte) {
 	addrData, _ := proto.Marshal(peerAddress)
 	chainData, _ := proto.Marshal(currentChain)
 	return addrData, chainData
+}
+
+func (self *ProtocolManager) NegotiateView() {
+	negoView := &protos.Message{
+		Type:      protos.Message_NEGOTIATE_VIEW,
+		Timestamp: time.Now().UnixNano(),
+		Payload:   nil,
+		Id:        0,
+	}
+	msg, err := proto.Marshal(negoView)
+	if err != nil {
+		log.Notice("nego view start")
+	}
+	self.eventMux.Post(event.ConsensusEvent{
+		Payload: msg,
+	})
 }

@@ -67,14 +67,17 @@ type CommitOrRollbackBlockEvent struct {
 	Hash       string
 	IsPrimary  bool
 }
+
 //set invalid tx into db
 type RespInvalidTxsEvent struct {
 	Payload []byte
 }
+
 // reset blockchain to a stable checkpoint status when `viewchange` occur
 type VCResetEvent struct {
 	SeqNo uint64
 }
+
 //set primary in peerManager when new view and primary
 type InformPrimaryEvent struct {
 	Primary uint64
@@ -85,36 +88,29 @@ type ReplicaStatusEvent struct {
 	Payload []byte
 }
 
-
-type StartJoinChainEvent  struct {
-	PrimaryIp string
-
-}
-type RouteTable struct {
-	Name string
-}
-// primary receive new peer msg from p2p
-type NewPeerArriveEvent struct {
-	IP         string
-	ReplicaID  uint64
-	RouteInfo *RouteTable
-}
-// broad route table to new peer,at the same time,broadcast all peer
-// to send their own routeTable to their own consensus module
-type BroadRouteToNewPeerEvent struct {
-	RouteInfo *RouteTable
-	Hash []byte
-}
-//after uodate n and f,post event to update routeTable,and accept new peer's connection
-type UpdateRouteTableEvent struct {
-	ReplicaID uint64
-}
-// primary notify new peer to connect all other peers,after update n and f
-type ConnectChainEvent struct {
-
+/* Peer Maintain Event */
+//a new peer past ca validation
+type NewPeerEvent struct {
+	Payload []byte
 }
 
-// new peer receive the start event and then start to connect the all peers and negociate view and recovery
-type receiveStartConnectEvent struct {
+//broadcast local ca validation result for new peer to all replicas
+//payload is a consenus message after encoding
+type BroadcastNewPeerEvent struct {
+	Payload []byte
+}
 
+//recv remote replica CA validation result for a new peer
+//payload is a consenus message after encoding
+type RecvNewPeerEvent struct {
+	Payload []byte
+}
+
+//a new peer's join chain request has been accept, update routing table
+type UpdateRoutingTableEvent struct {
+	Payload []byte
+}
+
+// update routing table finished
+type RoutingTableUpdatedEvent struct {
 }
