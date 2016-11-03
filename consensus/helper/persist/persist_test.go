@@ -22,33 +22,33 @@ func TestDaoOnState(t *testing.T) {
 
 	var err = StoreState(k, v1)
 	if err != nil {
-		t.Errorf(`error StoreState("k", "v1")`, err) //todo: try to format a common error style
+		t.Errorf(`error type %v : StoreState(%q, %v)`, err, k, v1)
 	}
 	value, err := ReadState(k)
 	if bytes.Compare(value, v1) != 0 || err != nil {
-		t.Errorf(`error ReadState("k") != "v1"`)
+		t.Errorf(`error type %v : ReadState(%q) = %v, actual: %v`, err, k, value, v1)
 	}
 
 	err = StoreState(k, v2)
 	if err != nil {
-		t.Errorf(`error StoreState("k", "v2")`)
+		t.Errorf(`error type %v : StoreState(%q, %v)`, err, k, v2)
 	}
 
 	value2, err := ReadState(k)
 	if bytes.Compare(value2, v2) != 0 || err != nil {
-		t.Errorf(`error ReadState("k") != "v2"`)
+		t.Errorf(`error type %v : ReadState(%q) = %v, actual: %v`, err, k, value2, v2)
 	}
 
 	nk := "no_exists_key"
 	err = DelState(nk)
 	if err != nil {
-		t.Errorf(`error DelState("no_exists_key")`)
+		t.Errorf(`error type %v : DelState(%q)`, err, nk)
 	}
 
 	DelState(k)
 	_, err = ReadState(k)
 	if (err != nil && err != errors.ErrNotFound) {
-		t.Error(`error ReadState("k"), no value for k`)
+		t.Errorf(`error type % v: ReadState(%q)`, err, k)
 	}
 }
 
@@ -66,7 +66,7 @@ func TestReadStateSet(t *testing.T) {
 		"key1":[]byte("hello1"),
 	}
 	if err != nil || !reflect.DeepEqual(target, v) {
-		t.Error(`"error ReadStateSet("key1") not found "hello1"`)
+		t.Errorf(`"error ReadStateSet("key1") not found "hello1"`)
 	}
 
 	v, err = ReadStateSet("k")
@@ -76,7 +76,7 @@ func TestReadStateSet(t *testing.T) {
 	}
 
 	if err != nil || !reflect.DeepEqual(target, v) {
-		t.Error(`"error ReadStateSet("k")`)
+		t.Errorf(`"error ReadStateSet("k")`)
 	}
 
 	v, err = ReadStateSet("")
@@ -86,17 +86,16 @@ func TestReadStateSet(t *testing.T) {
 		"sssdddss" : []byte("hello3"),
 	}
 	if err != nil || !reflect.DeepEqual(target, v) {
-		t.Error(`"error ReadStateSet("k")`)
+		t.Errorf(`"error ReadStateSet("k")`)
 	}
 
 	v, err = ReadStateSet("no key")
 	target = map[string][]byte{}
 
 	if err != nil || !reflect.DeepEqual(target, v) {
-		t.Error(`"error ReadStateSet("k")`)
+		t.Errorf(`"error ReadStateSet("k")`)
 	}
 	for k := range kvs {// clear the test data
 		DelState(k)
 	}
-
 }
