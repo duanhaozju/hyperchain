@@ -54,7 +54,7 @@
                             <button class="btn btn-primary" type="submit" ng-click="queryTxAvg()">Query</button>
 
                             <span>TxAvgTime:</span>
-                            <span class="text_red">{{txAvgTime}}ms</span>
+                            <span class="text_red">{{txAvgTime | hexStringToNum}}ms</span>
                         </form><br/>
                         <form role="form" class="form-inline">
                             <span style="font-weight: bold">计算block commit & batch时间：</span>
@@ -110,7 +110,7 @@
                         <tr ng-repeat="blk in blocks">
                             <td>{{blk.number | hexStringToNum}}</td>
                             <td>{{blk.hash}}</td>
-                            <td class="center">{{blk.writeTime}}</td>
+                            <td class="center">{{blk.writeTime | timestampToDate}}</td>
                             <td class="center">{{blk.avgTime | hexStringToNum}}ms</td>
                             <td class="center">{{blk.txcounts | hexStringToNum}}</td>
                             <td class="center">{{blk.percents}}</td>

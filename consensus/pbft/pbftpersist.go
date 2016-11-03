@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"encoding/base64"
+	"encoding/binary"
 	"github.com/pkg/errors"
 	//"reflect"
 )
@@ -140,6 +141,18 @@ func (pbft *pbftProtocal) persistDelCheckpoint(seqNo uint64) {
 	persist.DelState(key)
 }
 
+func (pbft *pbftProtocal) persistView(view uint64) {
+	key := fmt.Sprintf("view")
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, view)
+	persist.StoreState(key, b)
+}
+
+func (pbft *pbftProtocal) persistDelView() {
+	key := fmt.Sprintf("view")
+	persist.DelState(key)
+}
+
 func (pbft *pbftProtocal) restoreState() {
 	updateSeqView := func(set []*ViewChange_PQ) {
 		for _, e := range set {
@@ -198,6 +211,15 @@ func (pbft *pbftProtocal) restoreState() {
 		pbft.moveWatermarks(highSeq)
 	} else {
 		logger.Warningf("Replica %d could not restore checkpoints: %s", pbft.id, err)
+	}
+
+	b, err := persist.ReadState("view")
+	if err == nil {
+		view := binary.LittleEndian.Uint64(b)
+		pbft.view = view
+		//logger.Noticef("=========restore view %d=======", view)
+	} else {
+		logger.Noticef("Replica %d could not restore view: %s", pbft.id, err)
 	}
 
 	pbft.restoreLastSeqNo() // assign value to lastExec

@@ -37,6 +37,8 @@ message consensus_message {
         NEGOTIATE_VIEW_RESPONSE = 11;
         RECOVERY_INIT = 12;
         RECOVERY_RESPONSE = 13;
+        RECOVERY_FETCH_QPC = 14;
+        RECOVERY_RETURN_QPC = 15;
         ADD_NODE = 14;
         AGREE_ADD_NODE = 15;
         ROUTING_TABLE = 16;
@@ -137,8 +139,20 @@ message recovery_init {
 }
 
 message recovery_response {
-    uint64 replica_id = 1;
-    repeated block_info blocks = 2;
+    uint64               replica_id = 1;
+    map<uint64, string>  chkpts     = 2;
+}
+
+message recovery_fetchPQC {
+     uint64 replica_id = 1;
+     uint64 h          = 2;
+}
+
+message recovery_returnPQC {
+     uint64                  replica_id = 1;
+     repeated pre_prepare    prepre_set = 2;
+     repeated bool           pre_sent   = 3;
+     repeated bool           cmt_sent   = 4;
 }
 
 message add_node {

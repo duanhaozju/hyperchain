@@ -150,7 +150,6 @@ func FromECDSA(prv *ecdsa.PrivateKey) []byte {
 	}
 	return prv.D.Bytes()
 }
-
 // SaveECDSA saves a secp256k1 private key to the given file with
 // restrictive permissions. The key data is saved hex-encoded.
 func SaveECDSA(file string, key *ecdsa.PrivateKey) error {

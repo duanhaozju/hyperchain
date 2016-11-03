@@ -31,7 +31,7 @@ general:
     logmultiplier: 4
 
     # How many requests should the primary send per pre-prepare when in "batch" mode
-    batchsize: 100
+    batchsize: 800
 
     # Whether the replica should act as a byzantine one; useful for debugging on testnets
     byzantine: false
@@ -63,16 +63,5 @@ timeout:
 
     # How long to wait for N-f responses after send negotiate view
     negoView: 6s
-
-################################################################################
-#
-#   SECTION: EXECUTOR
-#
-#   - This section applies to the distinct executor service
-#
-################################################################################
-executor:
-
-    # The queue size for execution requests, ordering proceeds and queues execution
-    # requests.  This value should always exceed the pbft log size
-    queuesize: 30
+    # How long to wait before recovery finished
+    recovery: 1s

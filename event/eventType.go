@@ -68,21 +68,49 @@ type CommitOrRollbackBlockEvent struct {
 	IsPrimary  bool
 }
 
+//set invalid tx into db
 type RespInvalidTxsEvent struct {
 	Payload []byte
 }
 
+// reset blockchain to a stable checkpoint status when `viewchange` occur
 type VCResetEvent struct {
 	SeqNo uint64
 }
 
+//set primary in peerManager when new view and primary
 type InformPrimaryEvent struct {
 	Primary uint64
 }
 
-// if SelfFindErr == true, local routing table is right
-// if SelfFindErr == false, local routing table is wrong
-type UpdateRoutingTable struct {
-	RoutingTable	string
-	SelfFindErr		bool
+//sync all nodes status event
+type ReplicaStatusEvent struct {
+	Payload []byte
+}
+
+/* Peer Maintain Event */
+//a new peer past ca validation
+type NewPeerEvent struct {
+	Payload []byte
+}
+
+//broadcast local ca validation result for new peer to all replicas
+//payload is a consenus message after encoding
+type BroadcastNewPeerEvent struct {
+	Payload []byte
+}
+
+//recv remote replica CA validation result for a new peer
+//payload is a consenus message after encoding
+type RecvNewPeerEvent struct {
+	Payload []byte
+}
+
+//a new peer's join chain request has been accept, update routing table
+type UpdateRoutingTableEvent struct {
+	Payload []byte
+}
+
+// update routing table finished
+type RoutingTableUpdatedEvent struct {
 }

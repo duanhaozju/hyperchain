@@ -86,17 +86,19 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	} else {
 		if !env.Db().Exist(*address) {
 			to = env.Db().CreateAccount(*address)
-			env.Transfer(from, to, value)
+			if statedb.GetCode(to.Address()) == nil {
+				env.Transfer(from, to, value)
+				return nil, common.Address{}, nil
+			}
+			//env.Transfer(from, to, value)
 		} else {
-
 			to = env.Db().GetAccount(*address)
 			if statedb.GetCode(to.Address()) == nil {
-
 				env.Transfer(from, to, value)
+				return nil, common.Address{}, nil
 			}
 		}
 	}
-
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
@@ -105,7 +107,6 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	defer contract.Finalise()
 
 	ret, err = evm.Run(contract, input)
-
 	/*
 		fmt.Println("---------------------------------------")
 		fmt.Println("caller.address",caller.Address())
@@ -139,7 +140,6 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 
 		env.SetSnapshot(snapshotPreTransfer)
 	}
-
 	return ret, addr, err
 }
 

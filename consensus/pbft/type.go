@@ -37,3 +37,9 @@ type stateUpdateTarget struct {
 }
 
 type negoViewRspTimerEvent struct{}
+
+type negoViewDoneEvent struct{}
+
+type recoveryRestartTimerEvent struct{}
+
+type recoveryDoneEvent struct{}

@@ -98,6 +98,11 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 		return nil
 	}
 
+	if pbft.inRecovery {
+		logger.Noticef("Replica %d try to send view change, but it's in recovery", pbft.id)
+		return nil
+	}
+
 	pbft.stopTimer()
 
 	delete(pbft.newViewStore, pbft.view)
@@ -174,6 +179,11 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 
 	if pbft.inNegoView {
 		logger.Debugf("Replica %d try to recvViewChange, but it's in nego-view", pbft.id)
+		return nil
+	}
+
+	if pbft.inRecovery {
+		logger.Noticef("Replica %d try to recvcViewChange, but it's in recovery", pbft.id)
 		return nil
 	}
 
@@ -307,7 +317,12 @@ func (pbft *pbftProtocal) recvNewView(nv *NewView) events.Event {
 		return nil
 	}
 
-	if !(nv.View > 0 && nv.View >= pbft.view && pbft.primary(nv.View, pbft.N) == nv.ReplicaId && pbft.newViewStore[nv.View] == nil) {
+	if pbft.inRecovery {
+		logger.Noticef("Replica %d try to recvNewView, but it's in recovery", pbft.id)
+		return nil
+	}
+
+	if !(nv.View > 0 && nv.View >= pbft.view && pbft.primary(nv.View) == nv.ReplicaId && pbft.newViewStore[nv.View] == nil) {
 		logger.Infof("Replica %d rejecting invalid new-view from %d, v:%d",
 			pbft.id, nv.ReplicaId, nv.View)
 		return nil
@@ -522,7 +537,7 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 		pbft.stateTransfer(target)
 	}
 
-
+	//TODO: 从节点不需要拿batch,只要更新状态信息就行
 	newReqBatchMissing = pbft.feedMissingReqBatchIfNeeded(nv)
 	if len(pbft.missingReqBatches) == 0 {
 		return pbft.processReqInNewView(nv)
@@ -550,7 +565,7 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	pbft.helper.VcReset(backendVid)
 	xSetLen := len(nv.Xset)
 	upper := uint64(xSetLen) + pbft.h + uint64(1)
-	if pbft.primary(pbft.view, pbft.N) == pbft.id {
+	if pbft.primary(pbft.view) == pbft.id {
 		for i := pbft.h+uint64(1); i < upper; i++ {
 			d, ok := nv.Xset[i]
 			if !ok {

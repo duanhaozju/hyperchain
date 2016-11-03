@@ -5,10 +5,9 @@ import (
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
 	"hyperchain/crypto"
-	"math/big"
-	"time"
-	"os"
 	"io/ioutil"
+	"os"
+	"time"
 )
 
 func (self *Transaction) BuildHash() common.Hash {
@@ -62,13 +61,14 @@ func (self *Transaction) ValidateSign(encryption crypto.Encryption, ch crypto.Co
 
 // NewTransaction returns a new transaction
 //func NewTransaction(from []byte,to []byte,value []byte, signature []byte) *Transaction{
-func NewTransaction(from []byte,to []byte,value []byte) *Transaction{
+func NewTransaction(from []byte, to []byte, value []byte, timestamp int64) *Transaction {
 
 	transaction := &Transaction{
-		From:      from,
-		To:        to,
-		Value:     value,
-		Timestamp: time.Now().UnixNano(),
+		From:  from,
+		To:    to,
+		Value: value,
+		//Timestamp: time.Now().UnixNano(),
+		Timestamp: timestamp,
 	}
 
 	return transaction
@@ -83,15 +83,15 @@ func NewTransactionValue(price, gasLimit, amount int64, payload []byte) *Transac
 	}
 }
 
-func ReadSourceFromFile(filePath string) (string){
+func ReadSourceFromFile(filePath string) string {
 
-	fi,err := os.Open(filePath)
-	if err!=nil {
+	fi, err := os.Open(filePath)
+	if err != nil {
 		return ""
 	}
-	file_raw_source,err := ioutil.ReadAll(fi)
+	file_raw_source, err := ioutil.ReadAll(fi)
 	defer fi.Close()
-	return string(file_raw_source);
+	return string(file_raw_source)
 }
 
 func NewTestCreateTransaction() *Transaction {
@@ -104,7 +104,8 @@ func NewTestCreateTransaction() *Transaction {
 
 	//var code = bins[0]
 	// it is the code of hyperchain/core/vm/tests/solidity_files/example1.solc
-	var code = "0x60606040526000805463ffffffff191681557f6162636465666768696a6b6c6d6e6f707172737475767778797a00000000000060015560be90819061004390396000f3606060405260e060020a60003504633ad14af381146038578063569c5f6d14605c5780638da9b77214606b578063d09de08a146074575b005b6000805463ffffffff8116600435016024350163ffffffff19919091161790556036565b609260005463ffffffff165b90565b60ac6001546068565b60366000805463ffffffff19811663ffffffff909116600101179055565b6040805163ffffffff929092168252519081900360200190f35b60408051918252519081900360200190f3"
+	var code = "0x60606040526000805463ffffffff191681557f6162636465666768696a6b6c6d6e6f707172737475767778797a00000000000060015560cf90819061004390396000f3606060405260e060020a60003504633ad14af38114603a578063569c5f6d1460615780638da9b772146074578063d09de08a146081575b6002565b346002576000805463ffffffff8116600435016024350163ffffffff19919091161790555b005b3460025760a360005463ffffffff165b90565b3460025760bd6001546071565b34600257605f6000805463ffffffff19811663ffffffff909116600101179055565b6040805163ffffffff929092168252519081900360200190f35b60408051918252519081900360200190f3"
+	//var code = "0x60606040526000805463ffffffff191681557f6162636465666768696a6b6c6d6e6f707172737475767778797a00000000000060015560be90819061004390396000f3606060405260e060020a60003504633ad14af381146038578063569c5f6d14605c5780638da9b77214606b578063d09de08a146074575b005b6000805463ffffffff8116600435016024350163ffffffff19919091161790556036565b609260005463ffffffff165b90565b60ac6001546068565b60366000805463ffffffff19811663ffffffff909116600101179055565b6040805163ffffffff929092168252519081900360200190f35b60408051918252519081900360200190f3"
 	var tx_value1 = &TransactionValue{Price: 100000, GasLimit: 100000, Amount: 100, Payload: common.FromHex(code)}
 	value, _ := proto.Marshal(tx_value1)
 	transaction := &Transaction{
@@ -167,7 +168,8 @@ contract mortal {
 
 func NewTestCallTransaction() *Transaction {
 	// it is the input of function add(uint32 num1,uint32 num2)
-	var input = common.FromHex("0x962b8398")
+	var input = common.FromHex("0x8da9b772")
+	//var input = common.FromHex("0x962b8398")
 
 	// it is the input of function increment()
 	//var input = common.FromHex("0xd09de08a")
@@ -186,23 +188,9 @@ func NewTestCallTransaction() *Transaction {
 
 	return transaction
 }
-func (tx *Transaction) Payload() []byte {
+
+func (tx *Transaction) GetTransactionValue() *TransactionValue {
 	transactionValue := &TransactionValue{}
 	proto.Unmarshal(tx.Value, transactionValue)
-	return common.CopyBytes(transactionValue.Payload)
-}
-func (tx *Transaction) Gas() *big.Int {
-	transactionValue := &TransactionValue{}
-	proto.Unmarshal(tx.Value, transactionValue)
-	return new(big.Int).Set(big.NewInt(transactionValue.GasLimit))
-}
-func (tx *Transaction) GasPrice() *big.Int {
-	transactionValue := &TransactionValue{}
-	proto.Unmarshal(tx.Value, transactionValue)
-	return new(big.Int).Set(big.NewInt(transactionValue.Price))
-}
-func (tx *Transaction) Amount() *big.Int {
-	transactionValue := &TransactionValue{}
-	proto.Unmarshal(tx.Value, transactionValue)
-	return new(big.Int).Set(big.NewInt(transactionValue.Amount))
+	return transactionValue
 }
