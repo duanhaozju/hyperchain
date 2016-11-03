@@ -82,11 +82,12 @@ type ReplicaStatusEvent struct {
 
 /* Peer Maintain Event */
 //a new peer past ca validation
-type NewPeerEvent struct {
+//broadcast local ca validation result for new peer to all replicas
+//payload is a consenus message after encoding
+type BroadcastNewPeerEvent struct {
 	Payload []byte
 }
 
-//broadcast local ca validation result for new peer to all replicas
 //recv remote replica CA validation result for a new peer
 //payload is a consenus message after encoding
 type RecvNewPeerEvent struct {

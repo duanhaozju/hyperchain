@@ -50,9 +50,9 @@ message ValidatedTxs {
 }
 
 message NewNodeMessage {
-    string payload = 1;
+    bytes payload = 1;
 }
 
 message DelNodeMessage {
-    string payload = 1;
+    bytes payload = 1;
 }
