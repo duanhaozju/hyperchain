@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "hyperchain/core/types/transaction.proto";
+
 package protos;
 
 // This message type is used between consensus and outside
@@ -39,13 +41,18 @@ message NullRequestMessage {
     uint64 seqNo = 1;
 }
 
-message NewNodeMessage {
-    string ip = 1;
-    uint64 n = 3;
+message ValidatedTxs {
+    repeated types.Transaction transaction = 1;
+    string hash = 2;
+    uint64 seqNo = 3;
+    uint64 view = 4;
+    int64 timestamp = 5;
 }
 
-message AddNodeMessage {
-    string ip = 1;
-    string routing_table = 2;
-    uint64 new_id = 3;
+message NewNodeMessage {
+    string payload = 1;
+}
+
+message DelNodeMessage {
+    string payload = 1;
 }

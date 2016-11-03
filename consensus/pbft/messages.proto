@@ -39,12 +39,11 @@ message consensus_message {
         RECOVERY_RESPONSE = 13;
         RECOVERY_FETCH_QPC = 14;
         RECOVERY_RETURN_QPC = 15;
-        ADD_NODE = 14;
-        AGREE_ADD_NODE = 15;
-        ROUTING_TABLE = 16;
-        READY_FOR_N = 17;
-        UPDATE_N = 18;
-        AGREE_UPDATE_N = 19;
+        ADD_NODE = 16;
+        DEL_NODE = 17;
+        READY_FOR_N = 18;
+        UPDATE_N = 19;
+        AGREE_UPDATE_N = 20;
     }
     Type type = 1;
     bytes payload = 2;
@@ -157,22 +156,12 @@ message recovery_returnPQC {
 
 message add_node {
     uint64 replica_id = 1;
-    string ip = 2;
-    string table_digest = 3;
-    uint64 new_id = 4;
+    string hash = 2;
 }
 
-message agree_add_node {
+message del_node {
     uint64 replica_id = 1;
-    string ip = 2;
-    string table_digest = 3;
-    uint64 new_id = 4;
-}
-
-message routing_table {
-    uint64 replica_id = 1;
-    string table = 2;
-    uint64 new_id = 3;
+    string hash = 2;
 }
 
 message ready_for_n {
