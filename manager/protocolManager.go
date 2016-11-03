@@ -255,9 +255,9 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			// ATTENTION: Payload is a consenus message
 			// TODO replace GetAllPeers
 			peers := self.Peermanager.GetAllPeers()
-			var peerIds []int
+			var peerIds []uint64
 			for _, peer := range peers {
-				peerIds := append(peerIds, peer.ID)
+				peerIds = append(peerIds, peer.ID)
 			}
 			self.Peermanager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_BROADCAST_NEWPEER)
 		case event.RecvNewPeerEvent:
@@ -265,7 +265,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			// deliver it to consensus module
 			// ATTENTION: Payload is a consenus message
 			// TODO modify node code
-			self.consenter.RecvMsg(ev)
+			self.consenter.RecvMsg(ev.Payload)
 
 		case event.UpdateRoutingTableEvent:
 			// a new peer's join chain request has been accepted

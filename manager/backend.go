@@ -7,15 +7,9 @@ package manager
 import (
 	"hyperchain/consensus"
 	"hyperchain/core/blockpool"
-
 	"hyperchain/crypto"
 	"hyperchain/p2p"
-
 	"hyperchain/accounts"
-	"hyperchain/protos"
-
-	"fmt"
-	"github.com/golang/protobuf/proto"
 	"hyperchain/event"
 	"time"
 )
@@ -26,10 +20,9 @@ func New(eventMux *event.TypeMux, blockPool *blockpool.BlockPool, peerManager p2
 
 	aliveChan := make(chan int)
 	go peerManager.Start(aliveChan, eventMux)
-
 	//wait for all peer are connected
 	select {
-	case initType <- aliveChan:
+    case initType := <- aliveChan:
 		{
 			protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, consenter, am, commonHash, syncReplicaInterval, syncReplica, initType)
 			protocolManager.Start()
