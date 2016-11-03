@@ -9,11 +9,10 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/event"
 	"fmt"
-	"errors"
+
 	"encoding/hex"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
-	"hyperchain/core"
 )
 
 type PublicContractAPI struct {
@@ -133,7 +132,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 			log.Warning("manager is Nil")
 		}
 
-		start_getErr := time.Now().Unix()
+		/*start_getErr := time.Now().Unix()
 		end_getErr :=start_getErr + TIMEOUT
 		var errMsg string
 		for start_getErr := start_getErr; start_getErr < end_getErr; start_getErr = time.Now().Unix() {
@@ -152,7 +151,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 			return common.Hash{}, errors.New(errMsg)
 		} else if start_getErr == end_getErr {
 			return common.Hash{}, errors.New("Sending return timeout,may be something wrong.")
-	}
+	}*/
 
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())

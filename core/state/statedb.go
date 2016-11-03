@@ -484,6 +484,7 @@ func (s *StateDB) Commit() (common.Hash, error) {
 // TODO the logic could be optimized
 func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
 	s.refund = new(big.Int)
+
 	for _, stateObject := range s.stateObjects {
 		if stateObject.remove {
 			// If the object has been removed, don't bother syncing it
