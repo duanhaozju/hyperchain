@@ -41,4 +41,6 @@ type PeerManager interface {
 	GetLocalNode() *Server.Node
 	// update routing table when new peer's join request is accepted
 	UpdateRoutingTable([]byte)
+	// use by new peer when join the chain dynamically only
+	ConnectToOthers()
 }

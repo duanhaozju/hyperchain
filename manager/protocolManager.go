@@ -128,8 +128,12 @@ func (pm *ProtocolManager) Start() {
 		go pm.SyncReplicaStatus()
 	}
 	if pm.initType == 0 {
-		// start in normal
+		// start in normal mode
 		pm.NegotiateView()
+	}
+	if pm.initType == 1 {
+		// join the chain dynamically
+		pm.Peermanager.ConnectToOthers()
 	}
 	pm.wg.Wait()
 
@@ -221,20 +225,17 @@ func (self *ProtocolManager) ConsensusLoop() {
 	for obj := range self.consensusSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.BroadcastConsensusEvent:
-			log.Debug("######enter broadcast")
 			go self.BroadcastConsensus(ev.Payload)
+
 		case event.TxUniqueCastEvent:
 			var peers []uint64
 			peers = append(peers, ev.PeerId)
 			go self.Peermanager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
-		//go self.peerManager.SendMsgToPeers(ev.Payload,)
+
 		case event.NewTxEvent:
-			log.Debug("###### enter NewTxEvent")
 			go self.sendMsg(ev.Payload)
 
 		case event.ConsensusEvent:
-			//call consensus module
-			log.Debug("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 		}
 	}
@@ -259,11 +260,11 @@ func (self *ProtocolManager) peerMaintainLoop() {
 				peerIds := append(peerIds, peer.ID)
 			}
 			self.Peermanager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_BROADCAST_NEWPEER)
-			// TODO modify node code
 		case event.RecvNewPeerEvent:
 			// receive from replica for a new peer CA validation
 			// deliver it to consensus module
 			// ATTENTION: Payload is a consenus message
+			// TODO modify node code
 			self.consenter.RecvMsg(ev)
 
 		case event.UpdateRoutingTableEvent:
@@ -295,7 +296,6 @@ func (self *ProtocolManager) sendMsg(payload []byte) {
 
 // Broadcast consensus msg to a batch of peers not knowing about it
 func (self *ProtocolManager) BroadcastConsensus(payload []byte) {
-	log.Debug("begin call broadcast")
 	self.Peermanager.BroadcastPeers(payload)
 
 }
@@ -313,7 +313,7 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 	proto.Unmarshal(UpdateStateMessage.TargetId, blockChainInfo)
 
 	if core.GetChainCopy().RecoveryNum >= blockChainInfo.Height {
-		log.Info("receive duplicate stateupdate request, just ignore it")
+		log.Notice("receive duplicate stateupdate request, just ignore it")
 		return
 	}
 	required := &recovery.CheckPointMessage{
@@ -560,5 +560,4 @@ func (self *ProtocolManager) NegotiateView() {
 	self.eventMux.Post(event.ConsensusEvent{
 		Payload: msg,
 	})
-
 }
