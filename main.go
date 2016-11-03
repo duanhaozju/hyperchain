@@ -32,6 +32,7 @@ type argT struct {
 	ConfigPath string `cli:"c,conf" usage:"配置文件所在路径" dft:"./config/global.yaml"`
 	GRPCPort   int    `cli:"l,rpcport" usage:"远程连接端口" dft:"8001"`
 	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
+	IsInit     bool   `cli:"i,init" usage:"是否是创世节点"`
 }
 
 func checkLicense(licensePath string) (err error) {
@@ -97,7 +98,7 @@ func main() {
 		eventMux := new(event.TypeMux)
 
 		//init peer manager to start grpc server and client
-		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath(), config.getNodeID())
+		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath(), config.getNodeID(), argv.IsInit)
 
 		//init db
 		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())

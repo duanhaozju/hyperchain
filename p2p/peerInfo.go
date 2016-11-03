@@ -4,7 +4,7 @@
 // last Modified Author: chenquan
 // change log:
 //
-package client
+package p2p
 
 const (
 	ALIVE = iota
@@ -13,12 +13,12 @@ const (
 )
 
 type PeerInfo struct {
-	Status int `json:"status"`
-	IP     string `json:"ip"`
-	Port   int64 `json:"port"`
-	ID     uint64 `json:"id"`
+	Status    int `json:"status"`
+	IP        string `json:"ip"`
+	Port      int64 `json:"port"`
+	ID        uint64 `json:"id"`
 	IsPrimary bool `json:"isprimary"`
-	Delay int64 `json:"delay"`
+	Delay     int64 `json:"delay"`
 }
 
 type PeerInfos []PeerInfo

@@ -91,7 +91,7 @@ type ReplicaStatusEvent struct {
 /* Peer Maintain Event */
 //a new peer past ca validation
 type NewPeerEvent struct {
-	Payload []byte
+	Payload []byte //ip port marshaled
 }
 
 //broadcast local ca validation result for new peer to all replicas

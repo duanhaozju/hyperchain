@@ -5,7 +5,7 @@
 // change log:  1. add a header comment of this file
 //		2. modified the hello message handler, DO NOT save the peer into the peer pool
 
-package Server
+package p2p
 
 import (
 	"encoding/hex"
@@ -37,19 +37,21 @@ type Node struct {
 	gRPCServer         *grpc.Server
 	higherEventManager *event.TypeMux
 	//common information
-	TEM             transport.TransportEncryptManager
-	IsPrimary       bool
-	DelayTable      map[uint64]int64
-	DelayTableMutex sync.Mutex
+	TEM                transport.TransportEncryptManager
+	IsPrimary          bool
+	DelayTable         map[uint64]int64
+	DelayTableMutex    sync.Mutex
+	PeesPool           *PeersPool
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
-func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, TEM transport.TransportEncryptManager) *Node {
+func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, TEM transport.TransportEncryptManager, peersPool *PeersPool) *Node {
 	var newNode Node
 	newNode.address = peerComm.ExtractAddress(peerComm.GetLocalIp(), port, nodeID)
 	newNode.TEM = TEM
 	newNode.higherEventManager = hEventManager
 	newNode.DelayTable = make(map[uint64]int64)
+	newNode.PeesPool = peersPool
 	log.Debug("节点启动")
 	log.Debug("本地节点hash", newNode.address.Hash)
 	log.Debug("本地节点ip", newNode.address.IP)
@@ -112,6 +114,30 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	case pb.Message_HELLO_RESPONSE:
 		{
 			log.Warning("Invalidate HELLO_RESPONSE message")
+		}
+	case pb.Message_INTRODUCE:
+		{
+			//返回路由表信息
+			response.MessageType = pb.Message_INTRODUCE_RESPONSE
+			routers := this.PeesPool.ToRoutingTable()
+			response.Payload = routers
+		}
+	case pb.Message_INTRODUCE_RESPONSE:
+		{
+
+		}
+	case pb.Message_ATTEND:
+		{
+			//新节点全部连接上之后通知
+			this.higherEventManager.Post(event.NewPeerEvent{
+				Payload: msg.Payload,
+			})
+			//response
+			response.MessageType = pb.Message_ATTEND_RESPNSE
+		}
+	case pb.Message_ATTEND_RESPNSE:
+		{
+			//不可能有这种消息
 		}
 	case pb.Message_CONSUS:
 		{
@@ -187,6 +213,12 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 						Payload: SyncMsg.Payload,
 					})
 				}
+			case recovery.Message_BROADCAST_NEWPEER:
+				{
+					go this.higherEventManager.Post(event.RecvNewPeerEvent{
+						Payload:SyncMsg.Payload,
+					})
+				}
 
 			}
 		}
@@ -211,7 +243,26 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		log.Warning("Unkown Message type!")
 	}
 	// 返回信息加密
-	if msg.MessageType != pb.Message_HELLO && msg.MessageType != pb.Message_HELLO_RESPONSE {
+	switch msg.MessageType {
+	case pb.Message_HELLO:{
+
+	}
+	case pb.Message_HELLO_RESPONSE:{
+
+	}
+	case pb.Message_ATTEND:{
+
+	}
+	case pb.Message_ATTEND_RESPNSE:{
+
+	}
+	case pb.Message_INTRODUCE:{
+
+	}
+	case pb.Message_INTRODUCE_RESPONSE:{
+
+	}
+	default:
 		response.Payload = this.TEM.EncWithSecret(response.Payload, msg.From.Hash)
 	}
 	return &response, nil
@@ -220,7 +271,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 // StartServer start the gRPC server
 func (this *Node) StartServer() {
 	log.Info("Starting the grpc listening server...")
-	lis, err := net.Listen("tcp", ":"+strconv.Itoa(int(this.address.Port)))
+	lis, err := net.Listen("tcp", ":" + strconv.Itoa(int(this.address.Port)))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 		log.Fatal("PLEASE RESTART THE SERVER NODE!")
