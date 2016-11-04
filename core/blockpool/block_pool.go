@@ -1,7 +1,9 @@
 // implementblock pool
 // author: Lizhong kuang
 // date: 2016-08-29
-// last modified:2016-09-01
+// last modified:2016-11-4
+// last modifier:Jialei Rong
+// modify-content:refactor
 package blockpool
 
 import (
@@ -61,9 +63,14 @@ type BlockPool struct {
 }
 
 func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *BlockPool {
-	blockcache, _ := common.NewCache()
-	queue, _ := common.NewCache()
-	validationqueue, _ := common.NewCache()
+	var err error
+	blockcache, err := common.NewCache()
+	if err != nil {return nil}
+	queue, err := common.NewCache()
+	if err != nil {return nil}
+	validationqueue, err := common.NewCache()
+	if err != nil {return nil}
+
 	pool := &BlockPool{
 		eventMux:        eventMux,
 		consenter:       consenter,
@@ -71,12 +78,14 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *Block
 		validationQueue: validationqueue,
 		blockCache:      blockcache,
 	}
-
 	currentChain := core.GetChainCopy()
 	pool.demandNumber = currentChain.Height + 1
 	pool.demandSeqNo = currentChain.Height + 1
-	db, _ := hyperdb.GetLDBDatabase()
-	blk, _ := core.GetBlock(db, currentChain.LatestBlockHash)
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {return nil}
+
+	blk, err := core.GetBlock(db, currentChain.LatestBlockHash)
+	if err != nil {return nil}
 	pool.lastValidationState = common.BytesToHash(blk.MerkleRoot)
 
 	log.Noticef("Block pool Initialize demandNumber :%d, demandseqNo: %d\n", pool.demandNumber, pool.demandSeqNo)
@@ -114,6 +123,9 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 		if _, success := pool.PreProcess(validationEvent, commonHash, encryption, peerManager); success {
 			atomic.AddUint64(&pool.demandSeqNo, 1)
 			log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
+		} else {
+			log.Error("PreProcess Failed")
+			return
 		}
 		judge := func(key interface{}, iterKey interface{}) bool {
 			id := key.(uint64)
@@ -133,6 +145,9 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 					pool.validationQueue.Remove(i)
 					atomic.AddUint64(&pool.demandSeqNo, 1)
 					log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
+				} else {
+					log.Error("PreProcess Failed")
+					return
 				}
 			} else {
 				break
@@ -155,19 +170,15 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	} else {
 		validTxSet = validationEvent.Transactions
 	}
+
 	if len(index) > 0 {
 		sort.Ints(index)
 		count := 0
 		set := validationEvent.Transactions
-		for _, idx := range index {
-			idx = idx-count
-			if idx == 0 {
-				set = set[1:]
-				count++
-			} else {
-				set = append(set[:idx - 1], set[idx + 1:]...)
-				count++
-			}
+		for i := range index {
+			i = i-count
+			set = append(set[:i-1], set[i+1:]...)
+			count++
 		}
 		validTxSet = set
 	} else {
@@ -175,6 +186,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	}
 	err, _, merkleRoot, txRoot, receiptRoot, validTxSet, invalidTxSet := pool.ProcessBlockInVm(validTxSet, invalidTxSet, validationEvent.SeqNo)
 	if err != nil {
+		log.Error("ProcessBlock Failed!, block number: ", validationEvent.SeqNo)
 		return err, false
 	}
 	hash := commonHash.Hash([]interface{}{
@@ -231,23 +243,19 @@ func (pool *BlockPool) CheckSign(txs []*types.Transaction, commonHash crypto.Com
 	// (1) check signature for each transaction
 	var wg sync.WaitGroup
 	var index []int
-	var mu sync.Mutex
-	for i, _ := range txs {
+	for i, tx := range txs {
 		wg.Add(1)
-		go func(i int){
-			tx := txs[i]
+		go func(tx *types.Transaction){
 			if !tx.ValidateSign(encryption, commonHash) {
 				log.Notice("Validation, found invalid signature, send from :", tx.Id)
 				invalidTxSet = append(invalidTxSet, &types.InvalidTransactionRecord{
 					Tx:      tx,
 					ErrType: types.InvalidTransactionRecord_SIGFAILED,
 				})
-				mu.Lock()
 				index = append(index, i)
-				mu.Unlock()
 			}
 			wg.Done()
-		}(i)
+		}(tx)
 	}
 	wg.Wait()
 	return invalidTxSet, index
@@ -265,13 +273,12 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	if err != nil {
 		return err, nil, nil, nil, nil, nil, invalidTxs
 	}
-	txTrie, _ := trie.New(common.Hash{}, db)
-	receiptTrie, _ := trie.New(common.Hash{}, db)
+	txTrie, err := trie.New(common.Hash{}, db)
+	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
+	receiptTrie, err := trie.New(common.Hash{}, db)
+	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
 	statedb, err := state.New(pool.lastValidationState, db)
-	if err != nil {
-		log.Error("New StateDB ERROR")
-		return err, nil, nil, nil, nil, nil, invalidTxs
-	}
+	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
 	env["currentGasLimit"] = "10000000"
 	vmenv := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
@@ -288,13 +295,23 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 			continue
 		}
 		// save to DB
-		txValue, _ := proto.Marshal(tx)
+		txValue, err := proto.Marshal(tx)
+		if err != nil {
+			log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
+			return err, nil, nil, nil, nil, nil, invalidTxs
+		}
 		if err := public_batch.Put(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...), txValue); err != nil {
+			log.Error("Put tx data into database failed! error msg, ", err.Error())
 			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
 
-		receiptValue, _ := proto.Marshal(receipt)
+		receiptValue, err := proto.Marshal(receipt)
+		if err != nil {
+			log.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
+			return err, nil, nil, nil, nil, nil, invalidTxs
+		}
 		if err := public_batch.Put(append(core.ReceiptsPrefix, receipt.TxHash...), receiptValue); err != nil {
+			log.Error("Put receipt data into database failed! error msg, ", err.Error())
 			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
 		// set temporarily
@@ -303,7 +320,11 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 			BlockIndex: seqNo,
 			Index:      int64(i),
 		}
-		metaValue, _ := proto.Marshal(meta)
+		metaValue, err := proto.Marshal(meta)
+		if err != nil {
+			log.Error("Invalid txmeta struct to marshal! error msg, ", err.Error())
+			return err, nil, nil, nil, nil, nil, invalidTxs
+		}
 		if err := public_batch.Put(append(tx.GetTransactionHash().Bytes(), core.TxMetaSuffix...), metaValue); err != nil {
 			log.Error("Put txmeta into database failed! error msg, ", err.Error())
 			return err, nil, nil, nil, nil, nil, invalidTxs
@@ -313,7 +334,11 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		receiptTrie.Update(append(core.ReceiptsPrefix, receipt.TxHash...), receiptValue)
 		validtxs = append(validtxs, tx)
 	}
-	root, _ := statedb.Commit()
+	root, err := statedb.Commit()
+	if err != nil {
+		log.Error("Commit state db failed! error msg, ", err.Error())
+		return err, nil, nil, nil, nil, nil, invalidTxs
+	}
 	merkleRoot := root.Bytes()
 	txRoot := txTrie.Hash().Bytes()
 	receiptRoot := receiptTrie.Hash().Bytes()
@@ -372,7 +397,6 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHa
 	}
 	// instead of send an CommitOrRollbackBlockEvent with `false` flag, PBFT send a `viewchange` or `self recovery`
 	// message to handle this issue
-	// related data in db will be removed in ResetStatus function during the viewchange process
 	pool.blockCache.Remove(ev.Hash)
 }
 
@@ -421,7 +445,11 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, pr
 	log.Info("block number is ", block.Number)
 	core.UpdateChain(block, false)
 
-	db, _ := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Error("Get Database Instance Failed! error msg,", err.Error())
+		return
+	}
 	// for primary node, check whether vid equal to block's number
 	if primary && vid != block.Number {
 		log.Info("Replace invalid txmeta data, block number:", block.Number)
@@ -431,7 +459,11 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, pr
 				BlockIndex: block.Number,
 				Index:      int64(i),
 			}
-			metaValue, _ := proto.Marshal(meta)
+			metaValue, err := proto.Marshal(meta)
+			if err != nil {
+				log.Error("Invalid txmeta sturct, marshal failed! error msg,", err.Error())
+				return
+			}
 			if err := batch.Put(append(tx.GetTransactionHash().Bytes(), core.TxMetaSuffix...), metaValue); err != nil {
 				log.Error("Put txmeta into database failed! error msg, ", err.Error())
 				return
@@ -440,9 +472,10 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, pr
 		batch.Write()
 	}
 
-	err := core.PutBlockTx(db, commonHash, block.BlockHash, block)
+	err = core.PutBlockTx(db, commonHash, block.BlockHash, block)
 	if err != nil {
 		log.Error("Put block into database failed! error msg, ", err.Error())
+		return
 	}
 
 	if block.Number%10 == 0 && block.Number != 0 {
@@ -463,7 +496,11 @@ func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
 	}
 	// save to db
 	log.Notice("invalidTx", common.BytesToHash(invalidTx.Tx.TransactionHash).Hex())
-	db, _ := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Error("Get Database Instance Failed! error msg,", err.Error())
+		return
+	}
 	db.Put(append(core.InvalidTransactionPrefix, invalidTx.Tx.TransactionHash...), ev.Payload)
 }
 
@@ -475,7 +512,13 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	atomic.StoreUint64(&pool.demandSeqNo, ev.SeqNo)
 	atomic.StoreUint64(&pool.maxSeqNo, ev.SeqNo-1)
 
-	db, _ := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Error("Get Database Instance Failed! error msg,", err.Error())
+		return
+	}
+
+
 	block, _ := core.GetBlockByNumber(db, ev.SeqNo-1)
 	pool.lastValidationState = common.BytesToHash(block.MerkleRoot)
 	// 2. Delete Invalid Stuff

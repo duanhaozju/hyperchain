@@ -6,6 +6,7 @@ import (
 	logging "github.com/op/go-logging"
 	"github.com/spf13/viper"
 	"time"
+	"hyperchain/jsonrpc"
 )
 
 type configs interface {
@@ -22,6 +23,10 @@ type configs interface {
 	getGenesisConfigPath() string
 	getMemberSRVCConfigPath() string
 	getPBFTConfigPath() string
+	getSyncReplicaInterval() (time.Duration, error)
+	getSyncReplicaEnable() bool
+	getLicense() string
+	getRateLimitConfig () jsonrpc.RateLimitConfig
 }
 
 type configsImpl struct {
@@ -40,6 +45,12 @@ type configsImpl struct {
 	pbftConfigPath          string
 	syncReplicaInfoInterval string
 	syncReplica             bool
+	license                 string
+	rateLimitEnable         bool
+	txRatePeak               int64
+	txFillRate        string
+	contractRatePeak               int64
+	contractFillRate        string
 }
 
 //return a config instances
@@ -65,8 +76,14 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	cimpl.genesisConfigPath = config.GetString("global.configs.genesis")
 	cimpl.memberSRVCConfigPath = config.GetString("global.configs.membersrvc")
 	cimpl.pbftConfigPath = config.GetString("global.configs.pbft")
-	cimpl.syncReplicaInfoInterval = config.GetString("global.replicainfo.interval")
-	cimpl.syncReplica = config.GetBool("global.replicainfo.enable")
+	cimpl.syncReplicaInfoInterval = config.GetString("global.configs.replicainfo.interval")
+	cimpl.syncReplica = config.GetBool("global.configs.replicainfo.enable")
+	cimpl.license = config.GetString("global.configs.license")
+	cimpl.rateLimitEnable = config.GetBool("global.configs.ratelimit.enable")
+	cimpl.txRatePeak = config.GetInt64("global.configs.ratelimit.txRatePeak")
+	cimpl.txFillRate = config.GetString("global.configs.ratelimit.txFillRate")
+	cimpl.contractRatePeak = config.GetInt64("global.configs.ratelimit.contractRatePeak")
+	cimpl.contractFillRate = config.GetString("global.configs.ratelimit.contractFillRate")
 	return &cimpl
 }
 
@@ -106,3 +123,15 @@ func (cIml *configsImpl) getSyncReplicaInterval() (time.Duration, error) {
 	return time.ParseDuration(cIml.syncReplicaInfoInterval)
 }
 func (cIml *configsImpl) getSyncReplicaEnable() bool { return cIml.syncReplica }
+func (cIml *configsImpl) getLicense() string         { return cIml.license }
+func (cIml *configsImpl) getRateLimitConfig () jsonrpc.RateLimitConfig {
+	txFillRate, _ := time.ParseDuration(cIml.txFillRate)
+	contractFillRate, _ := time.ParseDuration(cIml.contractFillRate)
+	return jsonrpc.RateLimitConfig{
+		Enable: cIml.rateLimitEnable,
+		TxRatePeak: cIml.txRatePeak,
+		TxFillRate: txFillRate,
+		ContractRatePeak: cIml.contractRatePeak,
+		ContractFillRate: contractFillRate,
+	}
+}
