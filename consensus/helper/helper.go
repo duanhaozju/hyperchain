@@ -29,7 +29,7 @@ type Stack interface {
 	ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
 	VcReset(seqNo uint64) error
 	InformPrimary(primary uint64) error
-	UpdateTable(routingTable string, flag bool) error
+	UpdateTable(payload []byte) error
 }
 
 // InnerBroadcast broadcast the consensus message between vp nodes
@@ -153,11 +153,10 @@ func (h *helper) InformPrimary(primary uint64) error {
 }
 
 // Inform to update routing table
-func (h *helper) UpdateTable(routingTable string, flag bool) error {
+func (h *helper) UpdateTable(payload []byte) error {
 
-	updateTable := event.UpdateRoutingTable{
-		RoutingTable:	routingTable,
-		SelfFindErr:	flag,
+	updateTable := event.UpdateRoutingTableEvent{
+		Payload: payload,
 	}
 
 	h.msgQ.Post(updateTable)

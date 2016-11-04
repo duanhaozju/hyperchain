@@ -7,7 +7,7 @@ import (
 )
 
 // New replica receive local NewNode message
-func (pbft *pbftProtocal) recvLocalNewNode(msg protos.NewNodeMessage) error {
+func (pbft *pbftProtocal) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 
 	logger.Debugf("New replica %d received local newNode message", pbft.id)
 
@@ -25,7 +25,7 @@ func (pbft *pbftProtocal) recvLocalNewNode(msg protos.NewNodeMessage) error {
 }
 
 // Replica receive local message about new node and routing table
-func (pbft *pbftProtocal) recvLocalAddNode(msg protos.AddNodeMessage) error {
+func (pbft *pbftProtocal) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 
 	if pbft.isNewNode {
 		logger.Warningf("New replica received local addNode message, there may be something wrong")
@@ -42,7 +42,7 @@ func (pbft *pbftProtocal) recvLocalAddNode(msg protos.AddNodeMessage) error {
 }
 
 // Replica receive local message about new node and routing table
-func (pbft *pbftProtocal) recvLocalDelNode(msg protos.DelNodeMessage) error {
+func (pbft *pbftProtocal) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 
 	key := byteToString(msg.Payload)
 	logger.Debugf("Replica %d received local delnode message for del node %v", pbft.id, key)
@@ -167,7 +167,7 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 
 	if !pbft.inAddingNode {
 		// TODO: or just follow others?
-		logger.Warningf("Replica %d haven't locally prepared for update routing table", pbft.id, key)
+		logger.Warningf("Replica %d haven't locally prepared for update routing table, but others have agreed", pbft.id, key)
 		return nil
 	}
 
@@ -286,13 +286,14 @@ func (pbft *pbftProtocal) recvReadyforN(ready *ReadyForN) error {
 		Key:		ready.Key,
 		N:			n,
 		View: 		view,
+		SeqNo:		pbft.seqNo,
 		Flag:		true,
 	}
 
 	payload, err := proto.Marshal(updateN)
 	if err != nil {
 		logger.Errorf("Marshal updateN Error!")
-		return
+		return nil
 	}
 	msg := &ConsensusMessage{
 		Type: ConsensusMessage_UPDATE_N,
@@ -313,19 +314,19 @@ func (pbft *pbftProtocal) sendUpdateN(key string) {
 
 	if !pbft.activeView {
 		logger.Warningf("Primary %d is in view change, reject the ready_for_n message", pbft.id)
-		return nil
+		return
 	}
 
 	cert := pbft.getDelNodeCert(key)
 
 	if cert == nil {
 		logger.Errorf("Primary %d can't get the addnode cert for key=%s", pbft.id, key)
-		return nil
+		return
 	}
 
 	if !cert.finishDel {
 		logger.Errorf("Primary %d has not done with addnode for key=%s", pbft.id, key)
-		return nil
+		return
 	}
 
 	// calculate the new N and view
@@ -354,7 +355,7 @@ func (pbft *pbftProtocal) sendUpdateN(key string) {
 	broadcast := consensusMsgHelper(msg, pbft.id)
 	pbft.helper.InnerBroadcast(broadcast)
 
-	return pbft.maybeUpdateN(key, false)
+	pbft.maybeUpdateN(key, false)
 }
 
 func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
@@ -380,6 +381,11 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 			return nil
 		}
 
+		if !pbft.inW(update.SeqNo) {
+			logger.Warningf("Replica %d received updateN but the seqNo not in view", pbft.id)
+			return nil
+		}
+
 		cert := pbft.getAddNodeCert(update.Key)
 		if cert == nil {
 			logger.Errorf("Primary %d can't get the addnode cert for key=%s", pbft.id, update.Key)
@@ -399,7 +405,7 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 		payload, err := proto.Marshal(agree)
 		if err != nil {
 			logger.Errorf("Marshal AgreeUpdateN Error!")
-			return
+			return nil
 		}
 		msg := &ConsensusMessage{
 			Type: ConsensusMessage_AGREE_UPDATE_N,
@@ -437,7 +443,7 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 		payload, err := proto.Marshal(agree)
 		if err != nil {
 			logger.Errorf("Marshal AgreeUpdateN Error!")
-			return
+			return nil
 		}
 		msg := &ConsensusMessage{
 			Type: ConsensusMessage_AGREE_UPDATE_N,
@@ -446,12 +452,11 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 
 		broadcast := consensusMsgHelper(msg, pbft.id)
 		pbft.helper.InnerBroadcast(broadcast)
-		pbft.inUpdatingN = true
 		return pbft.recvAgreeUpdateN(agree)
 	}
 }
 
-func (pbft *pbftProtocal) recvAgreeUpdateN(agree *UpdateN) error {
+func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) error {
 
 	logger.Debugf("Replica %d received agree updateN from replica %d for n=%d/view=%d",
 		pbft.id, agree.ReplicaId, agree.N, agree.View)
@@ -515,10 +520,16 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, flag bool) error {
 		}
 
 		// update N, f, view
+		pbft.mux.Lock()
+		defer pbft.mux.Unlock()
 		pbft.inUpdatingN = false
-		pbft.N = cert.update.N
+		pbft.previousN = pbft.N
+		pbft.previousView = pbft.view
+		pbft.previousF = pbft.f
+		pbft.keypoint = cert.update.SeqNo
+		pbft.N = int(cert.update.N)
 		pbft.view = cert.update.View
-		pbft.f = (cert.update.N-1) / 3
+		pbft.f = (pbft.N-1) / 3
 
 	} else {
 		cert := pbft.getAddNodeCert(digest)
@@ -543,10 +554,11 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, flag bool) error {
 		}
 
 		// update N, f, view
-		pbft.inUpdatingN = false
-		pbft.N = cert.update.N
+		pbft.mux.Lock()
+		defer pbft.mux.Unlock()
+		pbft.N = int(cert.update.N)
 		pbft.view = cert.update.View
-		pbft.f = (cert.update.N-1) / 3
+		pbft.f = (pbft.N-1) / 3
 	}
 
 	return nil

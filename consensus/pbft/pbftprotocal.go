@@ -39,8 +39,8 @@ type pbftProtocal struct {
 	// PBFT data
 	activeView     bool   	// view change happening
 	byzantine      bool   	// whether this node is intentionally acting as Byzantine; useful for debugging on the testnet
-	f              uint64	// max. number of faults we can tolerate
-	N              uint64	// max.number of validators in the network
+	f              int		// max. number of faults we can tolerate
+	N              int		// max.number of validators in the network
 	h              uint64 	// low watermark
 	id             uint64 	// replica ID; PBFT `i`
 	K              uint64 	// checkpoint period
@@ -115,12 +115,17 @@ type pbftProtocal struct {
 	addNodeTimeout		time.Duration           	// time limit for new node responses
 	inAddingNode		bool						// track if replica is in adding node
 	addNodeCertStore	map[string]*addNodeCert		// track the received add node agree message
+	inUpdatingN			bool						// track if there exist previous N and new N
+	previousN			int							// track the previous N
+	previousF			int							// track the previous F
+	previousView		uint64						// track the previous View
+	mux					sync.Mutex
+	keypoint			uint64						// track the key seqNo decided by primary
 	newid				uint64						// track the local new id after delete
 	delNodeTimer 		events.Timer				// track timeout for del node responses
 	delNodeTimeout		time.Duration           	// time limit for del node responses
 	inDeletingNode		bool						// track if replica is in adding node
 	delNodeCertStore	map[string]*delNodeCert		// track the received add node agree message
-	inUpdatingN			bool						// track if there exist previous N and new N
 }
 
 type qidx struct {
@@ -143,12 +148,12 @@ type msgCert struct {
 	prePrepare   	*PrePrepare
 	sentPrepare  	bool
 	prepare      	map[Prepare]bool
-	prepareCount 	uint64
+	prepareCount 	int
 	sentValidate	bool
 	validated		bool
 	sentCommit   	bool
 	commit       	map[Commit]bool
-	commitCount  	uint64
+	commitCount  	int
 	sentExecute  	bool
 }
 
@@ -159,7 +164,7 @@ type chkptID struct {
 
 type chkptCert struct {
 	chkpts     map[Checkpoint]bool
-	chkptCount uint64
+	chkptCount int
 }
 
 type vcidx struct {
@@ -174,20 +179,20 @@ type cacheBatch struct {
 
 type addNodeCert struct {
 	addNodes	map[AddNode]bool
-	addCount	uint64
+	addCount	int
 	finishAdd	bool
 	update		*UpdateN
 	agrees		map[AgreeUpdateN]bool
-	updateCount	uint64
+	updateCount	int
 }
 
 type delNodeCert struct {
 	delNodes	map[DelNode]bool
-	delCount	uint64
+	delCount	int
 	finishDel	bool
 	update		*UpdateN
 	agrees		map[AgreeUpdateN]bool
-	updateCount	uint64
+	updateCount	int
 }
 
 // newBatch initializes a batch
@@ -206,8 +211,8 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.vcResendTimer = pbftTimerFactory.CreateTimer()
 	pbft.nullRequestTimer = pbftTimerFactory.CreateTimer()
 	pbft.newViewTimer = pbftTimerFactory.CreateTimer()
-	pbft.N = uint64(config.GetInt("general.N"))
-	pbft.f = uint64(config.GetInt("general.f"))
+	pbft.N = config.GetInt("general.N")
+	pbft.f = config.GetInt("general.f")
 
 	if pbft.f*3+1 > pbft.N {
 		panic(fmt.Sprintf("need at least %d enough replicas to tolerate %d byzantine faults, but only %d replicas configured", pbft.f*3+1, pbft.f, pbft.N))

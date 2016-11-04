@@ -51,8 +51,8 @@ func (pbft *pbftProtocal) postPbftEvent(event interface{}) {
 // =============================================================================
 
 // Given a certain view v and replicaCount n, what is the expected primary?
-func (pbft *pbftProtocal) primary(v uint64, n uint64) uint64 {
-	return (v % n) + 1
+func (pbft *pbftProtocal) primary(v uint64, n int) uint64 {
+	return (v % uint64(n)) + 1
 }
 
 // Is the sequence number between watermarks?
@@ -146,10 +146,10 @@ func (pbft *pbftProtocal) getDelNodeCert(digest string) (cert *delNodeCert) {
 	return
 }
 
-func (pbft *pbftProtocal) getAddNV() (n uint64, v uint64) {
+func (pbft *pbftProtocal) getAddNV() (n int64, v uint64) {
 
-	n = pbft.N + 1
-	if pbft.view < pbft.N {
+	n = int64(pbft.N) + 1
+	if pbft.view < uint64(pbft.N) {
 		v = pbft.view
 	} else {
 		v = pbft.view + 1
@@ -158,10 +158,10 @@ func (pbft *pbftProtocal) getAddNV() (n uint64, v uint64) {
 	return
 }
 
-func (pbft *pbftProtocal) getDelNV() (n uint64, v uint64) {
+func (pbft *pbftProtocal) getDelNV() (n int64, v uint64) {
 
-	n = pbft.N - 1
-	if pbft.view < pbft.N {
+	n = int64(pbft.N) - 1
+	if pbft.view < uint64(pbft.N) {
 		v = pbft.view
 	} else {
 		v = pbft.view - 1
@@ -175,22 +175,22 @@ func (pbft *pbftProtocal) getDelNV() (n uint64, v uint64) {
 // prepare/commit quorum checks helper
 // =============================================================================
 
-func (pbft *pbftProtocal) preparedReplicasQuorum() uint64 {
+func (pbft *pbftProtocal) preparedReplicasQuorum() int {
 	return (2 * pbft.f)
 }
 
-func (pbft *pbftProtocal) committedReplicasQuorum() uint64 {
+func (pbft *pbftProtocal) committedReplicasQuorum() int {
 	return (2 * pbft.f + 1)
 }
 
 // intersectionQuorum returns the number of replicas that have to
 // agree to guarantee that at least one correct replica is shared by
 // two intersection quora
-func (pbft *pbftProtocal) intersectionQuorum() uint64 {
+func (pbft *pbftProtocal) intersectionQuorum() int {
 	return (pbft.N + pbft.f + 2) / 2
 }
 
-func (pbft *pbftProtocal) allCorrectReplicasQuorum() uint64 {
+func (pbft *pbftProtocal) allCorrectReplicasQuorum() int {
 	return (pbft.N - pbft.f)
 }
 
