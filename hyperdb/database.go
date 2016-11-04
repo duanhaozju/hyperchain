@@ -3,10 +3,13 @@ package hyperdb
 import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
+	"sync"
 )
 
 // the Database for LevelDB
 // LDBDatabase implements the DataBase interface
+var dbMux sync.Mutex
+
 type LDBDatabase struct {
 	path string
 	db   *leveldb.DB
@@ -33,6 +36,8 @@ func NewLDBDataBase(filepath string) (*LDBDatabase, error) {
 // Put sets value for the given key, if the key exists, it will overwrite
 // the value
 func (self *LDBDatabase) Put(key []byte, value []byte) error {
+	dbMux.Lock()
+	defer dbMux.Unlock()
 	return self.db.Put(key, value, nil)
 }
 
@@ -45,6 +50,8 @@ func (self *LDBDatabase) Get(key []byte) ([]byte, error) {
 
 // Delete deletes the value for the given key
 func (self *LDBDatabase) Delete(key []byte) error {
+	dbMux.Lock()
+	defer dbMux.Unlock()
 	return self.db.Delete(key, nil)
 }
 
@@ -85,5 +92,7 @@ func (b *ldbBatch) Put(key, value []byte) error {
 
 // Write write batch-operation to databse
 func (b *ldbBatch) Write() error {
+	dbMux.Lock()
+	defer  dbMux.Unlock()
 	return b.db.Write(b.b, nil)
 }
