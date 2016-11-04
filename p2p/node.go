@@ -25,6 +25,7 @@ import (
 
 	"hyperchain/membersrvc"
 	"sync"
+	"math"
 )
 
 var log *logging.Logger // package-level logger
@@ -42,6 +43,9 @@ type Node struct {
 	DelayTable         map[uint64]int64
 	DelayTableMutex    sync.Mutex
 	PeesPool           *PeersPool
+	N                  int
+	attendChan         chan int
+
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
@@ -56,10 +60,30 @@ func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, TEM transp
 	log.Debug("本地节点hash", newNode.address.Hash)
 	log.Debug("本地节点ip", newNode.address.IP)
 	log.Debug("本地节点port", newNode.address.Port)
-
 	return &newNode
 
 }
+
+//新节点需要监听相应的attend类型
+func (this *Node)attendNoticeProcess() {
+	N := this.PeesPool.alivePeers
+	f := math.Floor((this.PeesPool.alivePeers - 1) / 3)
+	num := 0
+	for attendFlag := range this.attendChan {
+		switch attendFlag {
+		case 1:
+			num += 1
+			if num >= (N - f) {
+				//TODO 修改向上post的消息类型
+				this.higherEventManager.Post(event.AlreadyInChainEvent{})
+				num = 0
+
+			}
+		}
+	}
+}
+
+
 func (this *Node) GetNodeAddr() *pb.PeerAddress {
 	return this.address
 }
@@ -80,7 +104,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	response.From = this.address
 	//handle the message
 	//review decrypt
-	log.Debug("消息类型", msg.MessageType)
+	log.Debug("MSG TYPE: ", msg.MessageType)
 	go func() {
 		this.DelayTableMutex.Lock()
 		this.DelayTable[msg.From.ID] = time.Now().UnixNano() - msg.MsgTimeStamp
@@ -90,19 +114,18 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	case pb.Message_HELLO:
 		{
 			log.Debug("=================================")
-			log.Debug("协商秘钥")
-			log.Debug("本地地址为", this.address.ID, this.address.IP, this.address.Port)
-			log.Debug("远端地址为", msg.From.ID, msg.From.IP, msg.From.Port)
+			log.Debug("negotiating key")
+			log.Debug("local addr is ", this.address.ID, this.address.IP, this.address.Port)
+			log.Debug("remote addr is", msg.From.ID, msg.From.IP, msg.From.Port)
 			log.Debug("=================================")
 			response.MessageType = pb.Message_HELLO_RESPONSE
-			//review 协商密钥
 			remotePublicKey := msg.Payload
 			genErr := this.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
 			if genErr != nil {
 				log.Error("gen sec error", genErr)
 			}
-			log.Notice("远端地址hash：", msg.From.Hash)
-			log.Notice("协商秘钥为：", this.TEM.GetSecret(msg.From.Hash))
+			log.Notice("remote addr hash：", msg.From.Hash)
+			log.Notice("negotiated key is ", this.TEM.GetSecret(msg.From.Hash))
 			//every times get the public key is same
 			transportPublicKey := this.TEM.GetLocalPublicKey()
 			//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
@@ -137,22 +160,22 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 	case pb.Message_ATTEND_RESPNSE:
 		{
-			//不可能有这种消息
+			//这里需要进行判断是并且进行更新
+			this.attendChan <- 1
 		}
 	case pb.Message_CONSUS:
 		{
 			log.Debug("<<<< GOT A CONSUS MESSAGE >>>>")
-
-			log.Debug("××××××Node解密信息××××××")
-			log.Debug("Node待解密信息", hex.EncodeToString(msg.Payload))
+			log.Debug("××××××Node decrypt the msg××××××")
+			log.Debug("Node need to decrypt msg ", hex.EncodeToString(msg.Payload))
 			transferData := this.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
-			log.Debug("Node解密后信息", hex.EncodeToString(transferData))
-			log.Debug("Node解密后信息2", string(transferData))
+			log.Debug("Node has decryped msg", hex.EncodeToString(transferData))
+			log.Debug("Node decryped msg2", string(transferData))
 			response.Payload = []byte("GOT_A_CONSENSUS_MESSAGE")
 			if string(transferData) == "TEST" {
 				response.Payload = []byte("GOT_A_TEST_CONSENSUS_MESSAGE")
 			}
-			log.Debug("来自节点", msg.From.ID)
+			log.Debug("from Node", msg.From.ID)
 			log.Debug(hex.EncodeToString(transferData))
 
 			go this.higherEventManager.Post(

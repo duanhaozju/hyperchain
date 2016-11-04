@@ -42,22 +42,28 @@ type GrpcPeerManager struct {
 	//Port          int64
 	//IP            string
 	//这个在peer和node中都要更新
-	Routers       pb.Routers
-	//是否初始化,可能需要作为一个标识存在,但是
+	//Routers       pb.Routers
+	//是否为创世节点,可能需要作为一个标识存在,但是
 	Original      bool
+	//是否上线
+	IsOnline      bool
 	//interducer information
 	Introducer    pb.PeerAddress
+	// N
+
+	//N int
+
 }
 
 func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP string, introducerPort uint64) *GrpcPeerManager {
 	NodeID := uint64(nodeID)
-
 	// configs
 	var newgRPCManager GrpcPeerManager
 	configUtil := peerComm.NewConfigUtil(configPath)
 	newgRPCManager.configs = configUtil
 	//newgRPCManager.MaxPeerNumber = newgRPCManager.configs.GetMaxPeerNumber()
 	newgRPCManager.NodeID = NodeID
+	newgRPCManager.LocalNode.N = MAX_PEER_NUM
 	newgRPCManager.Original = isOriginal
 	newgRPCManager.Introducer = peerComm.ExtractAddress(introducerIP, introducerPort, nodeID)
 	//HSM only instanced once, so peersPool and Node Hsm are same instance
@@ -87,7 +93,10 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux)
 		//连接其他节点
 		this.connectToPeers()
 		aliveChain <- 0
+		this.IsOnline = true
 	} else {
+		//启动attend监听routine
+		go this.LocalNode.attendNoticeProcess()
 		//TODO 连接介绍人节点
 		this.connectToIntroducer(this.Introducer)
 		aliveChain <- 1
@@ -109,7 +118,8 @@ func (this *GrpcPeerManager)ConnectToOthers() {
 		From:this.LocalNode.address,
 	}
 	for _, peer := range allPeersWithTemp {
-		ret, err := peer.Chat(newNodeMessage)
+		//review 返回值不做处理
+		_, err := peer.Chat(newNodeMessage)
 		if err != nil {
 			log.Error("notice other node Attend Failed", err)
 		}
@@ -147,6 +157,7 @@ func (this *GrpcPeerManager) connectToIntroducer(introducerAddress pb.PeerAddres
 		log.Error("routing table unmarshal err ", unmarshalError)
 	}
 	this.peersPool.MergeFormRoutersToTemp(routers)
+	this.LocalNode.N = len(this.GetAllPeersWithTemp())
 
 }
 
@@ -195,10 +206,10 @@ func (this *GrpcPeerManager) connectToPeers() {
 			}
 		}
 	}
-	//todo 生成路由表
-	this.Routers = pb.Routers{
-		Routers:this.peersPool.GetPeers(),
-	}
+	////todo 生成路由表
+	//this.Routers = pb.Routers{
+	//	Routers:this.peersPool.GetPeers(),
+	//}
 
 }
 
@@ -223,7 +234,6 @@ func (this *GrpcPeerManager) GetAllPeers() []*Peer {
 func (this *GrpcPeerManager) GetAllPeersWithTemp() []*Peer {
 	return this.peersPool.GetPeersWithTemp()
 }
-
 
 // BroadcastPeers Broadcast Massage to connected peers
 func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
@@ -361,11 +371,36 @@ func (this *GrpcPeerManager) GetLocalNode() *Node {
 }
 
 func (this *GrpcPeerManager) UpdateRoutingTable(payload []byte) {
-	if this.Original {
-		this.peersPool.MergeTempPeers()
-	} else {
-		//新节点在一开始的时候就已经将介绍人的节点列表加入了所以这里不需要处理
+	//这里的payload 应该是前面传输过去的 address,里面应该只有一个
+
+	var toUpdateAddress pb.PeerAddress
+	err := proto.Unmarshal(payload, toUpdateAddress)
+	if err != nil {
+		log.Error(err)
 	}
-	//post
-	this.LocalNode.higherEventManager.Post(event.RoutingTableUpdatedEvent{})
+	//新节点peer
+	newPeer := this.peersPool.peers[toUpdateAddress.Hash]
+	//新消息
+	attendResponseMsg := pb.Message{
+		MessageType:pb.Message_ATTEND_RESPNSE,
+		Payload:proto.Marshal(this.LocalNode.address),
+		MsgTimeStamp:time.Now().UnixNano(),
+		From:this.LocalNode.address,
+	}
+
+	if this.IsOnline {
+		this.peersPool.MergeTempPeers(toUpdateAddress)
+		//通知新节点进行接洽
+		newPeer.Chat(attendResponseMsg)
+		this.LocalNode.N += 1
+	} else {
+		//新节点
+		//新节点在一开始的时候就已经将介绍人的节点列表加入了所以这里不需要处理
+		//the new attend node
+		this.IsOnline = true
+		this.peersPool.MergeTempPeersForNewNode()
+		this.LocalNode.N = this.peersPool.GetAliveNodeNum()
+	}
 }
+//post
+//this.LocalNode.higherEventManager.Post(event.RoutingTableUpdatedEvent{})

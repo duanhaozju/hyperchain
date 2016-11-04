@@ -112,5 +112,5 @@ type UpdateRoutingTableEvent struct {
 }
 
 // update routing table finished
-type RoutingTableUpdatedEvent struct {
+type AlreadyInChainEvent struct {
 }
