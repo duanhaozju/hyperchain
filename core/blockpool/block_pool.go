@@ -155,15 +155,19 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	} else {
 		validTxSet = validationEvent.Transactions
 	}
-
 	if len(index) > 0 {
 		sort.Ints(index)
 		count := 0
 		set := validationEvent.Transactions
-		for i := range index {
-			i = i-count
-			set = append(set[:i-1], set[i+1:]...)
-			count++
+		for _, idx := range index {
+			idx = idx-count
+			if idx == 0 {
+				set = set[1:]
+				count++
+			} else {
+				set = append(set[:idx - 1], set[idx + 1:]...)
+				count++
+			}
 		}
 		validTxSet = set
 	} else {
@@ -227,19 +231,23 @@ func (pool *BlockPool) CheckSign(txs []*types.Transaction, commonHash crypto.Com
 	// (1) check signature for each transaction
 	var wg sync.WaitGroup
 	var index []int
-	for i, tx := range txs {
+	var mu sync.Mutex
+	for i, _ := range txs {
 		wg.Add(1)
-		go func(tx *types.Transaction){
+		go func(i int){
+			tx := txs[i]
 			if !tx.ValidateSign(encryption, commonHash) {
 				log.Notice("Validation, found invalid signature, send from :", tx.Id)
 				invalidTxSet = append(invalidTxSet, &types.InvalidTransactionRecord{
 					Tx:      tx,
 					ErrType: types.InvalidTransactionRecord_SIGFAILED,
 				})
+				mu.Lock()
 				index = append(index, i)
+				mu.Unlock()
 			}
 			wg.Done()
-		}(tx)
+		}(i)
 	}
 	wg.Wait()
 	return invalidTxSet, index
