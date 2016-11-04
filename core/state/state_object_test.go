@@ -16,8 +16,19 @@ func TestStorageTree(t *testing.T) {
 	obj.SetState(common.StringToHash("key1"), common.StringToHash("value1"))
 	obj.SetState(common.StringToHash("key2"), common.StringToHash("value2"))
 	obj.Update()
+
+	val1:= obj.GetState(common.StringToHash("key1"))
+	val2:= obj.GetState(common.StringToHash("key2"))
+	if val1!=common.StringToHash("value1")||val2!=common.StringToHash("value2"){
+		t.Error("setstate fail")
+	}
+
 	obj.SetState(common.StringToHash("key1"), common.StringToHash(""))
 	obj.Update()
+	val1= obj.GetState(common.StringToHash("key1"))
+	if val1!=common.StringToHash(""){
+		t.Error("setstate fail")
+	}
 }
 
 func TestCopy(t *testing.T) {
