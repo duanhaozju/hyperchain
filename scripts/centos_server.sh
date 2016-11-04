@@ -22,7 +22,7 @@ TEST_FLAG=true
 PASSWD="blockchain"
 PRIMARY=`head -1 ./innerserverlist.txt`
 
-MAXNODE=`cat serverlist.txt | wc -l`
+MAXNODE=`cat innerserverlist.txt | wc -l`
 
 #SERVER_LIST_CONTENT=`cat ./serverlist.txt`
 while IFS='' read -r line || [[ -n "$line" ]]; do

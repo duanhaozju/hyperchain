@@ -103,7 +103,7 @@ func CalTransactionSum() uint64 {
 // whose blockNumber from 'from' to 'to', include 'from' and 'to'
 // return : avg Millisecond
 func CalcResponseAVGTime(from, to uint64) int64 {
-	if from > to {
+	if from > to && to != 0 {
 		log.Error("from less than to")
 		return -1
 	}
