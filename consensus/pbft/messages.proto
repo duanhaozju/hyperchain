@@ -173,7 +173,6 @@ message update_n {
     uint64 replica_id = 1;
     string key = 2;
     uint64 n = 3;
-    uint64 seqNo = 4;
     uint64 view = 5;
     bool flag = 6;
 }
@@ -182,7 +181,6 @@ message agree_update_n {
     uint64 replica_id = 1;
     string key = 2;
     uint64 n = 3;
-    uint64 seqNo = 4;
     uint64 view = 5;
     bool flag = 6;
 }

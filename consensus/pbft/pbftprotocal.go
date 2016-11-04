@@ -79,7 +79,6 @@ type pbftProtocal struct {
 	missingReqBatches map[string]bool                        // for all the assigned, non-checkpointed request batches we might be missing during view-change
 
 								 // implementation of PBFT `in`
-								 //reqBatchStore   map[string]*TransactionBatch // track request batches
 	certStore       map[msgID]*msgCert                       // track quorum certificates for requests
 	checkpointStore map[Checkpoint]bool                      // track checkpoints as set
 	committedCert   map[msgID]string                         // track the committed cert to help excute
@@ -97,17 +96,17 @@ type pbftProtocal struct {
 	validateTimeout			time.Duration
 
 								 // negotiate view
-	inNegoView 		bool
-	negoViewRspStore 	map[uint64]uint64               // track replicaId, viewNo.
-	negoViewRspTimer 	events.Timer                    // track timeout for N-f nego-view responses
-	negoViewRspTimeout    	time.Duration                     // time limit for N-f nego-view responses
+	inNegoView			bool
+	negoViewRspStore 	map[uint64]uint64	// track replicaId, viewNo.
+	negoViewRspTimer 	events.Timer		// track timeout for N-f nego-view responses
+	negoViewRspTimeout	time.Duration		// time limit for N-f nego-view responses
 
 								 // recovery
-	inRecovery             bool                              // inRecovery indicate if replica is in proactive recovery process
-	recoveryRestartTimer   events.Timer                      // recoveryRestartTimer track how long a recovery is finished and fires if needed
-	recoveryRestartTimeout time.Duration                     // time limit for recovery process
-	rcRspStore             map[uint64]*RecoveryResponse      // rcRspStore store recovery responses from replicas
-	rcPQCSenderStore       map[uint64]bool			 // rcPQCSenderStore store those who sent PQC info to self
+	inRecovery             bool                             // inRecovery indicate if replica is in proactive recovery process
+	recoveryRestartTimer   events.Timer                     // recoveryRestartTimer track how long a recovery is finished and fires if needed
+	recoveryRestartTimeout time.Duration                    // time limit for recovery process
+	rcRspStore             map[uint64]*RecoveryResponse     // rcRspStore store recovery responses from replicas
+	rcPQCSenderStore       map[uint64]bool			 		// rcPQCSenderStore store those who sent PQC info to self
 
 	// add and del node
 	isNewNode			bool						// track if replica is the new node
@@ -116,16 +115,12 @@ type pbftProtocal struct {
 	addNodeTimeout		time.Duration           	// time limit for new node responses
 	inAddingNode		bool						// track if replica is in adding node
 	addNodeCertStore	map[string]*addNodeCert		// track the received add node agree message
-	isDelNode			bool						// track if replica is the new node
-	delNodeTimer 		events.Timer				// track timeout for new node responses
-	delNodeTimeout		time.Duration           	// time limit for new node responses
+	newid				uint64						// track the local new id after delete
+	delNodeTimer 		events.Timer				// track timeout for del node responses
+	delNodeTimeout		time.Duration           	// time limit for del node responses
 	inDeletingNode		bool						// track if replica is in adding node
 	delNodeCertStore	map[string]*delNodeCert		// track the received add node agree message
-	previousN			uint64						// track the previous N
-	previousView		uint64						// track the previous view
-	previousF			uint64						// track the previous f
 	inUpdatingN			bool						// track if there exist previous N and new N
-	keySeqNo			uint64						// store the key seqNo that should change n and view
 }
 
 type qidx struct {
@@ -211,10 +206,8 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.vcResendTimer = pbftTimerFactory.CreateTimer()
 	pbft.nullRequestTimer = pbftTimerFactory.CreateTimer()
 	pbft.newViewTimer = pbftTimerFactory.CreateTimer()
-	N := config.GetInt("general.N")
-	pbft.N = uint64(N)
-	f := config.GetInt("general.f")
-	pbft.f = uint64(f)
+	pbft.N = uint64(config.GetInt("general.N"))
+	pbft.f = uint64(config.GetInt("general.f"))
 
 	if pbft.f*3+1 > pbft.N {
 		panic(fmt.Sprintf("need at least %d enough replicas to tolerate %d byzantine faults, but only %d replicas configured", pbft.f*3+1, pbft.f, pbft.N))
@@ -275,7 +268,6 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 
 	// init the logs
 	pbft.certStore = make(map[msgID]*msgCert)
-	//pbft.reqBatchStore = make(map[string]*TransactionBatch)
 	pbft.checkpointStore = make(map[Checkpoint]bool)
 	pbft.chkpts = make(map[uint64]string)
 	pbft.pset = make(map[uint64]*ViewChange_PQ)
@@ -296,6 +288,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
 	pbft.cacheValidatedBatch = make(map[string]*cacheBatch)
 	pbft.addNodeCertStore = make(map[string]*addNodeCert)
+	pbft.delNodeCertStore = make(map[string]*delNodeCert)
 
 	pbft.restoreState()
 
@@ -520,12 +513,31 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		logger.Notice("################################################")
 		logger.Noticef("#   Replica %d finished recovery", pbft.id)
 		logger.Notice("################################################")
+		if pbft.isNewNode {
+			pbft.sendReadyForN()
+		}
 		pbft.processRequestsDuringRecovery()
 		return nil
 	case recoveryRestartTimerEvent:
 		logger.Noticef("Replica %d recovery restart timer expires", pbft.id)
 		pbft.restartRecovery()
 		return nil
+	case *protos.NewNodeMessage:
+		err = pbft.recvLocalNewNode(et)
+	case *protos.AddNodeMessage:
+		err = pbft.recvLocalAddNode(et)
+	case *protos.DelNodeMessage:
+		err = pbft.recvLocalDelNode(et)
+	case *AddNode:
+		err = pbft.recvAgreeAddNode(et)
+	case *DelNode:
+		err = pbft.recvAgreeDelNode(et)
+	case *ReadyForN:
+		err = pbft.recvReadyforN(et)
+	case *UpdateN:
+		err = pbft.recvUpdateN(et)
+	case *AgreeUpdateN:
+		err = pbft.recvAgreeUpdateN(et)
 	default:
 		logger.Warningf("Replica %d received an unknown message type %T", pbft.id, et)
 	}
@@ -860,6 +872,41 @@ func (pbft *pbftProtocal) eventToMsg(msg *ConsensusMessage) (interface{}, error)
 			logger.Errorf("Unmarshal error, can not unmarshal ConsensusMessage_RECOVERY_RETURN_QPC:", err)
 		}
 		return rcr, err
+	case ConsensusMessage_ADD_NODE:
+		an := &AddNode{}
+		err := proto.Unmarshal(msg.Payload, an)
+		if err != nil {
+			logger.Errorf("Unmarshal error, can not unmarshal ConsensusMessage_ADD_NODE:", err)
+		}
+		return an, err
+	case ConsensusMessage_DEL_NODE:
+		dn := &DelNode{}
+		err := proto.Unmarshal(msg.Payload, dn)
+		if err != nil {
+			logger.Errorf("Unmarshal error, can not unmarshal ConsensusMessage_DEL_NODE:", err)
+		}
+		return dn, err
+	case ConsensusMessage_READY_FOR_N:
+		rfn := &ReadyForN{}
+		err := proto.Unmarshal(msg.Payload, rfn)
+		if err != nil {
+			logger.Errorf("Unmarshal error, can not unmarshal ConsensusMessage_READY_FOR_N:", err)
+		}
+		return rfn, err
+	case ConsensusMessage_UPDATE_N:
+		un := &UpdateN{}
+		err := proto.Unmarshal(msg.Payload, un)
+		if err != nil {
+			logger.Errorf("Unmarshal error, can not unmarshal ConsensusMessage_UPDATE_N:", err)
+		}
+		return un, err
+	case ConsensusMessage_AGREE_UPDATE_N:
+		aun := &AgreeUpdateN{}
+		err := proto.Unmarshal(msg.Payload, aun)
+		if err != nil {
+			logger.Errorf("Unmarshal error, can not unmarshal ConsensusMessage_AGREE_UPDATE_N:", err)
+		}
+		return aun, err
 	default:
 		return nil, fmt.Errorf("Invalid message: %v", msg)
 	}

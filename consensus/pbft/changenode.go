@@ -48,6 +48,7 @@ func (pbft *pbftProtocal) recvLocalDelNode(msg protos.DelNodeMessage) error {
 	logger.Debugf("Replica %d received local delnode message for del node %v", pbft.id, key)
 
 	pbft.inDeletingNode = true
+	pbft.newid = msg.Id
 	pbft.sendAgreeDelNode(key)
 
 	return nil
@@ -88,11 +89,6 @@ func (pbft *pbftProtocal) sendAgreeAddNode(key string) {
 func (pbft *pbftProtocal) sendAgreeDelNode(key string) {
 
 	logger.Debugf("Replica %d try to send delnode message for quit node", pbft.id)
-
-	if pbft.isDelNode {
-		logger.Debugf("Quit replica does not need to send delnode message")
-		return
-	}
 
 	del := &DelNode{
 		ReplicaId:	pbft.id,
@@ -165,13 +161,13 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 		return nil
 	}
 
-	if cert.addCount < pbft.preparedReplicasQuorum() {
+	if cert.addCount < pbft.committedReplicasQuorum() {
 		return nil
 	}
 
 	if !pbft.inAddingNode {
-		// TODO: just follow others?
-		logger.Errorf("Replica %d haven't locally prepared for update routing table", pbft.id, key)
+		// TODO: or just follow others?
+		logger.Warningf("Replica %d haven't locally prepared for update routing table", pbft.id, key)
 		return nil
 	}
 
@@ -183,6 +179,7 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 	}
 
 	pbft.helper.UpdateTable(payload)
+	pbft.inAddingNode = false
 
 	return nil
 }
@@ -197,13 +194,13 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string) error {
 		return nil
 	}
 
-	if cert.delCount < pbft.preparedReplicasQuorum() {
+	if cert.delCount < pbft.committedReplicasQuorum() {
 		return nil
 	}
 
 	if !pbft.inDeletingNode {
-		// TODO: just follow others?
-		logger.Errorf("Replica %d haven't locally prepared for update routing table", pbft.id, key)
+		// TODO: or just follow others?
+		logger.Warningf("Replica %d haven't locally prepared for update routing table", pbft.id, key)
 		return nil
 	}
 
@@ -215,6 +212,7 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string) error {
 	}
 
 	pbft.helper.UpdateTable(payload)
+	pbft.inDeletingNode = false
 	pbft.sendUpdateN(key)
 
 	return nil
@@ -287,7 +285,6 @@ func (pbft *pbftProtocal) recvReadyforN(ready *ReadyForN) error {
 		ReplicaId:	pbft.id,
 		Key:		ready.Key,
 		N:			n,
-		SeqNo:		pbft.seqNo,
 		View: 		view,
 		Flag:		true,
 	}
@@ -306,7 +303,7 @@ func (pbft *pbftProtocal) recvReadyforN(ready *ReadyForN) error {
 	broadcast := consensusMsgHelper(msg, pbft.id)
 	pbft.helper.InnerBroadcast(broadcast)
 
-	return pbft.maybeStartUpdateN(ready.Key, true)
+	return pbft.maybeUpdateN(ready.Key, true)
 }
 
 // Primary send update_n after finish del node
@@ -339,7 +336,6 @@ func (pbft *pbftProtocal) sendUpdateN(key string) {
 		ReplicaId:	pbft.id,
 		Key:		key,
 		N:			n,
-		SeqNo:		pbft.seqNo,
 		View: 		view,
 		Flag:		false,
 	}
@@ -358,7 +354,7 @@ func (pbft *pbftProtocal) sendUpdateN(key string) {
 	broadcast := consensusMsgHelper(msg, pbft.id)
 	pbft.helper.InnerBroadcast(broadcast)
 
-	return pbft.maybeStartUpdateN(key, false)
+	return pbft.maybeUpdateN(key, false)
 }
 
 func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
@@ -373,11 +369,6 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 	if pbft.primary(pbft.view, pbft.N) != update.ReplicaId {
 		logger.Errorf("Replica %d received updateN from other than primary: got %d, should be %d",
 		pbft.id, update.ReplicaId, pbft.primary(pbft.view, pbft.N))
-		return nil
-	}
-
-	if !pbft.inW(update.SeqNo) {
-		logger.Errorf("Replica %d thinks the seqNo=%d from primary is out of watermark", pbft.id, update.SeqNo)
 		return nil
 	}
 
@@ -402,7 +393,6 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 			Key:		update.Key,
 			N:			n,
 			View:		view,
-			SeqNo:		update.SeqNo,
 			Flag:		true,
 		}
 
@@ -418,7 +408,7 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 
 		broadcast := consensusMsgHelper(msg, pbft.id)
 		pbft.helper.InnerBroadcast(broadcast)
-
+		pbft.inUpdatingN = true
 		return pbft.recvAgreeUpdateN(agree)
 	} else {
 		n, view := pbft.getDelNV()
@@ -441,7 +431,6 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 			Key:		update.Key,
 			N:			n,
 			View:		view,
-			SeqNo:		update.SeqNo,
 			Flag:		false,
 		}
 
@@ -457,15 +446,15 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 
 		broadcast := consensusMsgHelper(msg, pbft.id)
 		pbft.helper.InnerBroadcast(broadcast)
-
+		pbft.inUpdatingN = true
 		return pbft.recvAgreeUpdateN(agree)
 	}
 }
 
 func (pbft *pbftProtocal) recvAgreeUpdateN(agree *UpdateN) error {
 
-	logger.Debugf("Replica %d received agree updateN from replica %d for n=%d/view=%d/seqNo=%d",
-		pbft.id, agree.ReplicaId, agree.N, agree.View, agree.SeqNo)
+	logger.Debugf("Replica %d received agree updateN from replica %d for n=%d/view=%d",
+		pbft.id, agree.ReplicaId, agree.N, agree.View)
 
 	if pbft.primary(pbft.view, pbft.N) == agree.ReplicaId {
 		logger.Warningf("Replica %d received agree updateN from primary, ignoring", pbft.id)
@@ -484,7 +473,7 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *UpdateN) error {
 		cert.agrees[*agree] = true
 		cert.updateCount++
 
-		return pbft.maybeStartUpdateN(agree.Key, true)
+		return pbft.maybeUpdateN(agree.Key, true)
 	} else {
 		cert := pbft.getDelNodeCert(agree.Key)
 
@@ -497,11 +486,11 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *UpdateN) error {
 		cert.agrees[*agree] = true
 		cert.updateCount++
 
-		return pbft.maybeStartUpdateN(agree.Key, false)
+		return pbft.maybeUpdateN(agree.Key, false)
 	}
 }
 
-func (pbft *pbftProtocal) maybeStartUpdateN(digest string, flag bool) error {
+func (pbft *pbftProtocal) maybeUpdateN(digest string, flag bool) error {
 
 	if flag {
 		cert := pbft.getAddNodeCert(digest)
@@ -520,11 +509,13 @@ func (pbft *pbftProtocal) maybeStartUpdateN(digest string, flag bool) error {
 			return nil
 		}
 
+		if !pbft.inUpdatingN {
+			logger.Warningf("Replica %d haven't locally prepared for update_n, but got 2f prepared", pbft.id)
+			return nil
+		}
+
 		// update N, f, view
-		pbft.inUpdatingN = true
-		pbft.previousN = pbft.N
-		pbft.previousView = pbft.view
-		pbft.previousF = pbft.f
+		pbft.inUpdatingN = false
 		pbft.N = cert.update.N
 		pbft.view = cert.update.View
 		pbft.f = (cert.update.N-1) / 3
@@ -546,11 +537,13 @@ func (pbft *pbftProtocal) maybeStartUpdateN(digest string, flag bool) error {
 			return nil
 		}
 
+		if !pbft.inUpdatingN {
+			logger.Warningf("Replica %d haven't locally prepared for update_n, but got 2f prepared", pbft.id)
+			return nil
+		}
+
 		// update N, f, view
-		pbft.inUpdatingN = true
-		pbft.previousN = pbft.N
-		pbft.previousView = pbft.view
-		pbft.previousF = pbft.f
+		pbft.inUpdatingN = false
 		pbft.N = cert.update.N
 		pbft.view = cert.update.View
 		pbft.f = (cert.update.N-1) / 3

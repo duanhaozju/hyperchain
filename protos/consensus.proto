@@ -59,4 +59,5 @@ message AddNodeMessage {
 
 message DelNodeMessage {
     bytes payload = 1;
+    uint64 id = 2;
 }
