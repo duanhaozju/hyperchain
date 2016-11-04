@@ -8,8 +8,6 @@ package p2p
 
 import (
 	"errors"
-	"github.com/op/go-logging"
-	peer "hyperchain/p2p/peer"
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/transport"
 	"strconv"
@@ -35,12 +33,6 @@ type PeersPool struct {
 
 // the peers pool instance
 var prPoolIns PeersPool
-var log *logging.Logger // package-level logger
-
-//initialize the peers pool
-func init() {
-	log = logging.MustGetLogger("p2p/peerPool")
-}
 
 // NewPeerPool get a new peer pool instance
 func NewPeerPool(TEM transport.TransportEncryptManager) *PeersPool {
@@ -164,7 +156,6 @@ func (this *PeersPool)ToRoutingTable() pb.Routers {
 	var routers pb.Routers
 
 	for _, pers := range peers {
-		pers.RemoteAddr
 		routers.Routers = append(routers.Routers, pers.RemoteAddr)
 	}
 	//需要进行排序
@@ -176,7 +167,7 @@ func (this *PeersPool)ToRoutingTable() pb.Routers {
 // merge the route into the temp peer list
 func (this *PeersPool)MergeFormRoutersToTemp(routers pb.Routers) {
 	for _, peerAddress := range routers.Routers {
-		newPeer, err := NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, this.alivePeers + 1, this.TEM)
+		newPeer, err := NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, uint64(this.alivePeers + 1), this.TEM)
 		if err != nil {
 			log.Error("merge from routers error ", err)
 		}

@@ -272,7 +272,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			// update routing table
 			self.Peermanager.UpdateRoutingTable(ev.Payload)
 
-		case event.RoutingTableUpdatedEvent:
+		case event.AlreadyInChainEvent:
 			// send negotiate event
 			if self.initType == 1 {
 				self.NegotiateView()

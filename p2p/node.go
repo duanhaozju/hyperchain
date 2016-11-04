@@ -10,7 +10,6 @@ package p2p
 import (
 	"encoding/hex"
 	"github.com/golang/protobuf/proto"
-	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"hyperchain/event"
@@ -28,10 +27,6 @@ import (
 	"math"
 )
 
-var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("p2p/Server")
-}
 
 type Node struct {
 	address            *pb.PeerAddress
@@ -67,13 +62,13 @@ func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, TEM transp
 //新节点需要监听相应的attend类型
 func (this *Node)attendNoticeProcess() {
 	N := this.PeesPool.alivePeers
-	f := math.Floor((this.PeesPool.alivePeers - 1) / 3)
+	f := math.Floor(float64((this.PeesPool.alivePeers - 1) / 3))
 	num := 0
 	for attendFlag := range this.attendChan {
 		switch attendFlag {
 		case 1:
 			num += 1
-			if num >= (N - f) {
+			if num >= (N - int(f)) {
 				//TODO 修改向上post的消息类型
 				this.higherEventManager.Post(event.AlreadyInChainEvent{})
 				num = 0

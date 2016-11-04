@@ -55,7 +55,7 @@ type GrpcPeerManager struct {
 
 }
 
-func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP string, introducerPort uint64) *GrpcPeerManager {
+func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP string, introducerPort int64) *GrpcPeerManager {
 	NodeID := uint64(nodeID)
 	// configs
 	var newgRPCManager GrpcPeerManager
@@ -65,7 +65,7 @@ func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP
 	newgRPCManager.NodeID = NodeID
 	newgRPCManager.LocalNode.N = MAX_PEER_NUM
 	newgRPCManager.Original = isOriginal
-	newgRPCManager.Introducer = peerComm.ExtractAddress(introducerIP, introducerPort, nodeID)
+	newgRPCManager.Introducer = *peerComm.ExtractAddress(introducerIP, introducerPort, NodeID)
 	//HSM only instanced once, so peersPool and Node Hsm are same instance
 	newgRPCManager.TEM = transport.NewHandShakeManger()
 	// start local node
@@ -82,7 +82,7 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux)
 	}
 	//newgRPCManager.IP = newgRPCManager.configs.GetIP(newgRPCManager.NodeID)
 	port := this.configs.GetPort(this.NodeID)
-	this.LocalNode = NewNode(port, eventMux, this.NodeID, this.TEM, *this.peersPool)
+	this.LocalNode = NewNode(port, eventMux, this.NodeID, this.TEM, this.peersPool)
 	this.LocalNode.StartServer()
 	// connect to peer
 	// 如果进行单元测试,需要将参数设置为true
@@ -111,9 +111,10 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux)
 func (this *GrpcPeerManager)ConnectToOthers() {
 	//TODO更新路由表之后进行连接
 	allPeersWithTemp := this.peersPool.GetPeersWithTemp()
+	payload, _ := proto.Marshal(this.LocalNode.address)
 	newNodeMessage := pb.Message{
 		MessageType:pb.Message_ATTEND,
-		Payload:proto.Marshal(this.LocalNode.address),
+		Payload:payload,
 		MsgTimeStamp:time.Now().UnixNano(),
 		From:this.LocalNode.address,
 	}
@@ -130,19 +131,18 @@ func (this *GrpcPeerManager) connectToIntroducer(introducerAddress pb.PeerAddres
 	//连接介绍人,并且将其路由表取回,然后进行存储
 	peer, peerErr := NewPeerByIpAndPort(introducerAddress.IP, introducerAddress.Port, 0, this.TEM)
 	//将介绍人的信息放入路由表中
-	this.peersPool.PutPeer(peer)
+	this.peersPool.PutPeer(*peer.RemoteAddr,peer)
 	if peerErr != nil {
 		// cannot connect to other peer
 		log.Error("Node: ", introducerAddress.IP, ":", introducerAddress.Port, " can not connect!\n")
-		return nil, peerErr
-	} else {
-		return peer, nil
+		return
 	}
 
 	//发送introduce 信息,取得路由表
+	payload, _ := proto.Marshal(this.LocalNode.address)
 	introduce_message := pb.Message{
 		MessageType:pb.Message_INTRODUCE,
-		Payload:proto.Marshal(this.LocalNode.address),
+		Payload:payload,
 		MsgTimeStamp:time.Now().UnixNano(),
 		From:this.LocalNode.address,
 	}
@@ -152,7 +152,7 @@ func (this *GrpcPeerManager) connectToIntroducer(introducerAddress pb.PeerAddres
 	}
 
 	var routers pb.Routers
-	unmarshalError := proto.Unmarshal(retMsg, routers)
+	unmarshalError := proto.Unmarshal(retMsg.Payload, &routers)
 	if unmarshalError != nil {
 		log.Error("routing table unmarshal err ", unmarshalError)
 	}
@@ -289,7 +289,7 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, M
 					log.Debug("send msg to ", NodeID)
 					resMsg, err := p.Chat(syncMessage)
 					if err != nil {
-						log.Error("Broadcast failed,Node", p.Addr)
+						log.Error("Broadcast failed,Node")
 					} else {
 						log.Debug("resMsg:", string(resMsg.Payload))
 						//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
@@ -374,16 +374,17 @@ func (this *GrpcPeerManager) UpdateRoutingTable(payload []byte) {
 	//这里的payload 应该是前面传输过去的 address,里面应该只有一个
 
 	var toUpdateAddress pb.PeerAddress
-	err := proto.Unmarshal(payload, toUpdateAddress)
+	err := proto.Unmarshal(payload, &toUpdateAddress)
 	if err != nil {
 		log.Error(err)
 	}
 	//新节点peer
 	newPeer := this.peersPool.peers[toUpdateAddress.Hash]
 	//新消息
+	payload, _ = proto.Marshal(this.LocalNode.address)
 	attendResponseMsg := pb.Message{
 		MessageType:pb.Message_ATTEND_RESPNSE,
-		Payload:proto.Marshal(this.LocalNode.address),
+		Payload:payload,
 		MsgTimeStamp:time.Now().UnixNano(),
 		From:this.LocalNode.address,
 	}

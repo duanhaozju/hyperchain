@@ -106,7 +106,7 @@ func main() {
 		if atoi_err != nil {
 			fmt.Errorf("错误,代理节点信息格式错误%v", atoi_err)
 		}
-		introducer_port = uint64(introducer_port)
+		introducer_port = int64(introducer_port)
 		//introducer port
 		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath(), config.getNodeID(), argv.IsInit, introducer_ip, introducer_port)
 

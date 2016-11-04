@@ -9,7 +9,6 @@ package p2p
 
 import (
 	"errors"
-	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"hyperchain/p2p/peerComm"
@@ -26,10 +25,6 @@ import (
 // init the package-level logger system,
 // after this declare and init function,
 // you can use the `log` whole the package scope
-var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("p2p/Server")
-}
 
 type Peer struct {
 	RemoteAddr *pb.PeerAddress
@@ -64,7 +59,7 @@ func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.Transpo
 	peer.IsPrimary = false
 	//TODO handshake operation
 	peer.handShake()
-
+	return &peer, nil
 }
 
 func NewPeerByIpAndPortNewNode(ip string, port int64, TEM transport.TransportEncryptManager, localAddr *pb.PeerAddress) {
@@ -82,7 +77,7 @@ func (peer *Peer) handShake() {
 	retMessage, err2 := peer.Client.Chat(context.Background(), &helloMessage)
 	if err2 != nil {
 		log.Error("cannot establish a connection")
-		return nil, err2
+		return
 	} else {
 		//review 取得对方的秘钥
 		if retMessage.MessageType == pb.Message_HELLO_RESPONSE {
@@ -98,20 +93,10 @@ func (peer *Peer) handShake() {
 			log.Notice("hash:", peer.RemoteAddr.Hash)
 			log.Notice("协商秘钥：")
 			log.Notice(peer.TEM.GetSecret(peer.RemoteAddr.Hash))
-			return &peer, nil
+			return
 		}
 	}
-	return nil, errors.New("cannot establish a connection")
 }
-
-
-
-
-
-
-
-
-
 
 // Chat is a function to send a message to peer,
 // this function invokes the remote function peer-to-peer,
