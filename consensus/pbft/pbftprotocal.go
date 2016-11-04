@@ -290,6 +290,11 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.addNodeCertStore = make(map[string]*addNodeCert)
 	pbft.delNodeCertStore = make(map[string]*delNodeCert)
 
+	pbft.isNewNode = false
+	pbft.inAddingNode = false
+	pbft.inDeletingNode = false
+	pbft.inUpdatingN = false
+
 	pbft.restoreState()
 
 	pbft.viewChangeSeqNo = ^uint64(0) // infinity
