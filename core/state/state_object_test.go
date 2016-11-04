@@ -56,14 +56,14 @@ func TestEncode(t *testing.T) {
 	obj.SetABI([]byte("abi"))
 	obj.SetBalance(big.NewInt(123))
 	obj.SetNonce(123)
-	//buf, _ := obj.EncodeObject()
-	//obj2, err := DecodeObject(common.HexToAddress("01234567890"), db, buf)
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
-	//if !SOCompare(obj, obj2) {
-	//	t.Error("Decode failed")
-	//}
+	buf, _ := obj.EncodeObject()
+	obj2, err := DecodeObject(common.HexToAddress("01234567890"), db, buf)
+	if err != nil {
+		fmt.Println(err)
+	}
+	if !SOCompare(obj, obj2) {
+		t.Error("Decode failed")
+	}
 }
 
 func SOCompare(so1 *StateObject, so2 *StateObject) bool {
