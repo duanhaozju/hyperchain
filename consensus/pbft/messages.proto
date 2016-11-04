@@ -4,7 +4,7 @@ Copyright Hyperchain Corp. 2016 All Rights Reserved.
 
 syntax = "proto3";
 
-import "transaction.proto";
+import "hyperchain/core/types/transaction.proto";
 
 package pbft;
 /*
@@ -37,6 +37,8 @@ message consensus_message {
         NEGOTIATE_VIEW_RESPONSE = 11;
         RECOVERY_INIT = 12;
         RECOVERY_RESPONSE = 13;
+        RECOVERY_FETCH_QPC = 14;
+        RECOVERY_RETURN_QPC = 15;
     }
     Type type = 1;
     bytes payload = 2;
@@ -131,8 +133,20 @@ message recovery_init {
 }
 
 message recovery_response {
-    uint64 replica_id = 1;
-    repeated block_info blocks = 2;
+    uint64               replica_id = 1;
+    map<uint64, string>  chkpts     = 2;
+}
+
+message recovery_fetchPQC {
+     uint64 replica_id = 1;
+     uint64 h          = 2;
+}
+
+message recovery_returnPQC {
+     uint64                  replica_id = 1;
+     repeated pre_prepare    prepre_set = 2;
+     repeated bool           pre_sent   = 3;
+     repeated bool           cmt_sent   = 4;
 }
 
 // consensus metadata
