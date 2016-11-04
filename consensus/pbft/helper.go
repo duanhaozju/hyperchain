@@ -50,9 +50,9 @@ func (pbft *pbftProtocal) postPbftEvent(event interface{}) {
 // helper functions for PBFT
 // =============================================================================
 
-// Given a certain view n, what is the expected primary?
-func (pbft *pbftProtocal) primary(n uint64) uint64 {
-	return (n % uint64(pbft.replicaCount) + 1)
+// Given a certain view v and replicaCount n, what is the expected primary?
+func (pbft *pbftProtocal) primary(v uint64, n int) uint64 {
+	return (v % uint64(n)) + 1
 }
 
 // Is the sequence number between watermarks?
@@ -99,10 +99,73 @@ func (pbft *pbftProtocal) getChkptCert(n uint64, id string) (cert *chkptCert) {
 
 	chkpts := make(map[Checkpoint]bool)
 	cert = &chkptCert{
-		chkpts:		chkpts,
-		chkptCount:	0,
+		chkpts:	chkpts,
 	}
 	pbft.chkptCertStore[idx] = cert
+
+	return
+}
+
+// Given a ip/digest get the addnode Cert
+func (pbft *pbftProtocal) getAddNodeCert(digest string) (cert *addNodeCert) {
+
+	cert, ok := pbft.addNodeCertStore[digest]
+
+	if ok {
+		return
+	}
+
+	adds := make(map[AddNode]bool)
+	agrees := make(map[AgreeUpdateN]bool)
+	cert = &addNodeCert{
+		addNodes:	adds,
+		agrees:		agrees,
+	}
+	pbft.addNodeCertStore[digest] = cert
+
+	return
+}
+
+// Given a ip/digest get the addnode Cert
+func (pbft *pbftProtocal) getDelNodeCert(digest string) (cert *delNodeCert) {
+
+	cert, ok := pbft.delNodeCertStore[digest]
+
+	if ok {
+		return
+	}
+
+	dels := make(map[DelNode]bool)
+	agrees := make(map[AgreeUpdateN]bool)
+	cert = &delNodeCert{
+		delNodes:	dels,
+		agrees:		agrees,
+	}
+	pbft.delNodeCertStore[digest] = cert
+
+	return
+}
+
+func (pbft *pbftProtocal) getAddNV() (n int64, v uint64) {
+
+	n = int64(pbft.N) + 1
+	if pbft.view < uint64(pbft.N) {
+		v = pbft.view
+	} else {
+		v = pbft.view + 1
+	}
+
+	return
+}
+
+func (pbft *pbftProtocal) getDelNV() (n int64, v uint64) {
+
+	n = int64(pbft.N) - 1
+	if pbft.view < uint64(pbft.N) {
+		v = pbft.view
+	} else {
+		v = pbft.view - 1
+	}
 
 	return
 }
@@ -304,7 +367,7 @@ func (pbft *pbftProtocal) startTimerIfOutstandingRequests() {
 
 func (pbft *pbftProtocal) nullReqTimerReset(){
 	timeout := pbft.nullRequestTimeout
-	if pbft.primary(pbft.view) != pbft.id {
+	if pbft.primary(pbft.view, pbft.N) != pbft.id {
 		// we're waiting for the primary to deliver a null request - give it a bit more time
 		timeout += pbft.requestTimeout
 	}

@@ -29,6 +29,8 @@ type Stack interface {
 	ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
 	VcReset(seqNo uint64) error
 	InformPrimary(primary uint64) error
+	BroadcastAddNode(msg *pb.Message) error
+	UpdateTable(payload []byte) error
 }
 
 // InnerBroadcast broadcast the consensus message between vp nodes
@@ -147,6 +149,36 @@ func (h *helper) InformPrimary(primary uint64) error {
 
 	// No need to "go h.msgQ.Post...", we'll wait for it to return
 	h.msgQ.Post(informPrimaryEvent)
+
+	return nil
+}
+
+func (h *helper) BroadcastAddNode(msg *pb.Message) error {
+
+	tmpMsg, err := proto.Marshal(msg)
+
+	if err != nil {
+		return err
+	}
+
+	broadcastEvent := event.BroadcastNewPeerEvent{
+		Payload: tmpMsg,
+	}
+
+	// Post the event to outer
+	go h.msgQ.Post(broadcastEvent)
+
+	return nil
+}
+
+// Inform to update routing table
+func (h *helper) UpdateTable(payload []byte) error {
+
+	updateTable := event.UpdateRoutingTableEvent{
+		Payload: payload,
+	}
+
+	h.msgQ.Post(updateTable)
 
 	return nil
 }

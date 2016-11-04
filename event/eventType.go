@@ -48,14 +48,6 @@ type ExeTxsEvent struct {
 	Timestamp    int64
 }
 
-type ValidatedTxs struct {
-	Transactions []*types.Transaction
-	Hash         string
-	SeqNo        uint64
-	View         uint64
-	Timestamp    int64
-}
-
 // if the CommitStatus is true, we will commit the blocks and save the statedb
 // or we will rollback the statedb
 // Flag == true, commit; Flag == false, rollback

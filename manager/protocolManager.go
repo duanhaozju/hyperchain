@@ -45,8 +45,8 @@ type ProtocolManager struct {
 	blockPool         *blockpool.BlockPool
 	Peermanager       p2p.PeerManager
 
-	nodeInfo          p2p.PeerInfos // node info ,store node status,ip,port
-	consenter         consensus.Consenter
+	nodeInfo  p2p.PeerInfos // node info ,store node status,ip,port
+	consenter consensus.Consenter
 
 	AccountManager    *accounts.AccountManager
 	commonHash        crypto.CommonHash
@@ -247,24 +247,25 @@ func (self *ProtocolManager) peerMaintainLoop() {
 		case event.NewPeerEvent:
 			// a new peer required to join the network and past the local CA validation
 			// payload is the new peer's address information
-			self.consenter.RecvLocal(ev)
+			msg := protos.AddNodeMessage{
+				Payload: ev.Payload,
+			}
+			self.consenter.RecvLocal(msg)
 		case event.BroadcastNewPeerEvent:
 			// receive this event from consensus module
 			// broadcast the local CA validition result to other replica
 			// ATTENTION: Payload is a consenus message
-			// TODO replace GetAllPeers
-			peers := self.Peermanager.GetAllPeers()
+			peers := self.Peermanager.GetAllPeersWithTemp()
 			var peerIds []int
 			for _, peer := range peers {
-				peerIds := append(peerIds, peer.ID)
+				peerIds = append(peerIds, peer.ID)
 			}
 			self.Peermanager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_BROADCAST_NEWPEER)
 		case event.RecvNewPeerEvent:
 			// receive from replica for a new peer CA validation
 			// deliver it to consensus module
 			// ATTENTION: Payload is a consenus message
-			// TODO modify node code
-			self.consenter.RecvMsg(ev)
+			self.consenter.RecvMsg(ev.Payload)
 
 		case event.UpdateRoutingTableEvent:
 			// a new peer's join chain request has been accepted

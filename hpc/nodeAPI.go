@@ -2,7 +2,7 @@ package hpc
 
 import (
 	"hyperchain/manager"
-	"hyperchain/p2p/peer"
+	"hyperchain/p2p"
 )
 
 type PublicNodeAPI struct{
@@ -25,7 +25,7 @@ func NewPublicNodeAPI( pm *manager.ProtocolManager) *PublicNodeAPI{
 }
 
 // GetNodes returns status of all the nodes
-func (node *PublicNodeAPI) GetNodes() client.PeerInfos{
+func (node *PublicNodeAPI) GetNodes() p2p.PeerInfos{
 //func (node *PublicNodeAPI) GetNodes() []*NodeResult{
 
 	//block, err := lastestBlock() // 从一个节点的节点列表中 获取每个节点当前的最新区块
