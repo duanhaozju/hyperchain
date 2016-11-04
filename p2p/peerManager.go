@@ -9,8 +9,6 @@ package p2p
 import (
 	"github.com/op/go-logging"
 	"hyperchain/event"
-	Server "hyperchain/p2p/node"
-	peer "hyperchain/p2p/peer"
 	"hyperchain/recovery"
 )
 
@@ -24,7 +22,8 @@ func init() {
 // data transfer. Those should be invoked by the higher layer.
 type PeerManager interface {
 	// get the all peer list to broadcast
-	GetAllPeers() []*peer.Peer
+	GetAllPeers() []*Peer
+	GetAllPeersWithTemp() []*Peer
 	// initialize the peerManager which is for init the local node
 	Start(aliveChain chan bool, eventMux *event.TypeMux)
 	// Get local node id
@@ -34,9 +33,13 @@ type PeerManager interface {
 	// send a message to specific peer  UNICAST
 	SendMsgToPeers(payLoad []byte, peerList []uint64, MessageType recovery.Message_MsgType)
 	//get the peer information of all nodes.
-	GetPeerInfo() peer.PeerInfos
+	GetPeerInfo() PeerInfos
 	// set
 	SetPrimary(id uint64) error
 	// get local node instance
-	GetLocalNode() *Server.Node
+	GetLocalNode() *Node
+	// update routing table when new peer's join request is accepted
+	UpdateRoutingTable(payLoad []byte)
+	// use by new peer when join the chain dynamically only
+	ConnectToOthers()
 }

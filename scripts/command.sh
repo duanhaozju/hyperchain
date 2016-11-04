@@ -98,7 +98,7 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"acc_getBalance","params":
 
 ################################# node服务 ######################################
 # 得到节点信息
-curl localhost:8081 --data '{"jsonrpc":"2.0","method": "node_getNodes","id": 1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "node_getNodetxs","params":[],"id": 1}'
 
 
 ################################# 批量调用例子 ###################################
