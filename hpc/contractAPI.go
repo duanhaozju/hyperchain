@@ -9,23 +9,29 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/event"
 	"fmt"
-
+	"errors"
 	"encoding/hex"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
+	"hyperchain/core"
+	"github.com/juju/ratelimit"
 )
 
 type PublicContractAPI struct {
 	eventMux *event.TypeMux
 	pm *manager.ProtocolManager
 	db *hyperdb.LDBDatabase
+	tokenBucket *ratelimit.Bucket
+	ratelimitEnable bool
 }
 
-func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase) *PublicContractAPI {
+func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, ratelimitEnable bool, bmax int64, rate time.Duration) *PublicContractAPI {
 	return &PublicContractAPI{
 		eventMux :eventMux,
 		pm:pm,
 		db:hyperDb,
+		tokenBucket: ratelimit.NewBucket(rate, bmax),
+		ratelimitEnable: ratelimitEnable,
 	}
 }
 
@@ -132,7 +138,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 			log.Warning("manager is Nil")
 		}
 
-		/*start_getErr := time.Now().Unix()
+		start_getErr := time.Now().Unix()
 		end_getErr :=start_getErr + TIMEOUT
 		var errMsg string
 		for start_getErr := start_getErr; start_getErr < end_getErr; start_getErr = time.Now().Unix() {
@@ -151,7 +157,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 			return common.Hash{}, errors.New(errMsg)
 		} else if start_getErr == end_getErr {
 			return common.Hash{}, errors.New("Sending return timeout,may be something wrong.")
-	}*/
+	}
 
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
@@ -187,11 +193,17 @@ func (contract *PublicContractAPI) CompileContract(ct string) (*CompileCode,erro
 
 // DeployContract deploys contract.
 func (contract *PublicContractAPI) DeployContract(args SendTxArgs) (common.Hash, error) {
+	if contract.ratelimitEnable && contract.tokenBucket.TakeAvailable(1) <= 0 {
+		return common.Hash{}, errors.New("System is too busy to response ")
+	}
 	return deployOrInvoke(contract, args)
 }
 
 // InvokeContract invokes contract.
 func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash, error) {
+	if contract.ratelimitEnable && contract.tokenBucket.TakeAvailable(1) <= 0 {
+		return common.Hash{}, errors.New("System is too busy to response ")
+	}
 	return deployOrInvoke(contract, args)
 }
 
