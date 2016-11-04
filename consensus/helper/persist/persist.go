@@ -17,6 +17,11 @@ func StoreState(key string, value []byte) error {
 	return db.Put([]byte("consensus."+key), value)
 }
 
+//DelAllState: remove all state
+func DelAllState() error {
+	db, _ := hyperdb.GetLDBDatabase()
+	return db.Destroy()
+}
 
 // DelState removes a key,value pair
 func DelState(key string) error {
