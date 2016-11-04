@@ -361,17 +361,10 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHa
 				peerManager.SendMsgToPeers(payload, peers, recovery.Message_INVALIDRESP)
 			}
 		}
-	} else {
-		// this branch will never activated
-		// instead of send an CommitOrRollbackBlockEvent with `false` flag, PBFT send a `viewchange` or `self recovery`
-		// message to handle this issue
-		// TODO remove this branch
-		db, _ := hyperdb.GetLDBDatabase()
-		for _, t := range record.InvalidTxs {
-			db.Delete(append(core.TransactionPrefix, t.Tx.GetTransactionHash().Bytes()...))
-			db.Delete(append(core.ReceiptsPrefix, t.Tx.GetTransactionHash().Bytes()...))
-		}
 	}
+	// instead of send an CommitOrRollbackBlockEvent with `false` flag, PBFT send a `viewchange` or `self recovery`
+	// message to handle this issue
+	// related data in db will be removed in ResetStatus function during the viewchange process
 	pool.blockCache.Remove(ev.Hash)
 }
 
