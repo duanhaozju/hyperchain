@@ -15,6 +15,10 @@ import (
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"
 	"github.com/syndtr/goleveldb/leveldb"
+	"fmt"
+	"encoding/binary"
+	//"github.com/pkg/errors"
+	"hyperchain/core"
 )
 
 func TestPersistPSet(t *testing.T)  {
@@ -183,12 +187,79 @@ func TestBatchRelatedPersistFunctions(t *testing.T)  {
 	if err != leveldb.ErrNotFound {
 		t.Errorf(`error persistDelAllRequestBatches, not clear all baches`)
 	}
+}
+
+func TestCheckpointPersist(t *testing.T)  {
+	pbft := new(pbftProtocal)
+	seqNo := uint64(1)
+	id := []byte("checkpoint00000000001")
+	pbft.persistCheckpoint(seqNo, id)
+
+	key := fmt.Sprintf("chkpt.%d", seqNo)
+	rs, err := persist.ReadState(key)
+	if err != nil || !reflect.DeepEqual(rs, id) {
+		t.Errorf(`error persistCheckpoint(%v, %v) not success`, seqNo, id)
+	}
+
+	pbft.persistDelCheckpoint(seqNo)
+	rs, err = persist.ReadState(key)
+	if err != leveldb.ErrNotFound {
+		t.Errorf("error persistDelCheckpoint(%q) not success", key)
+	}
+}
+
+
+func TestViewPersist(t *testing.T)  {
+	pbft := new(pbftProtocal)
+	view := uint64(128)
+	key := fmt.Sprintf("view")
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, view)
+	pbft.persistView(view)
+	rs, err := persist.ReadState(key)
+	if err == leveldb.ErrNotFound || !reflect.DeepEqual(rs, b) {
+		t.Errorf(`error persistView(%q) not success`, key)
+	}
+
+	pbft.persistDelView()
+	rs, err = persist.ReadState(key)
+	if err != leveldb.ErrNotFound {
+		t.Error(`error persistDelView() not success`)
+	}
+}
+
+func TestSeqnoFunctions(t *testing.T)  {
+	defer clearDB()
+	pbft := new(pbftProtocal)
+
+	core.InitDB("/temp/leveldb", 8088)
+	lseqno, error := pbft.getLastSeqNo()
+
+	if lseqno != 0 || error == nil {
+		t.Errorf(`error getLastSeqNo() = (%v, %v), actual: %v, %v`, lseqno, error, 0,  "Height of chain is 0")
+	}
+
+	clearDB()
+
+	core.UpdateChain(&types.Block{
+		Timestamp:12,
+		Number:1222,
+	}, false)
+
+	lseqno, error = pbft.getLastSeqNo()
+	if error != nil || lseqno != 1222 {
+		t.Errorf(`error getLastSeqNo() = (%v, %v), actual: %v, %v`, lseqno, error, 1222,  nil)
+	}
+}
+
+func TestRestoreLastSeqNo(t *testing.T)  {
+	defer clearDB()
+
 
 }
 
+
+
 func clearDB()  {
-	persist.DelState("qset")
-	persist.DelState("pset")
-	persist.DelState("reqBatch.t1")
-	persist.DelState("reqBatch.t2")
+	persist.DelAllState()
 }
