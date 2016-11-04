@@ -470,7 +470,6 @@ func (t *Trie) hashRoot(db DatabaseWriter) (node, node, error) {
 }
 
 type hasher struct {
-	mux	sync.Mutex
 }
 
 func newHasher() *hasher {
@@ -640,8 +639,6 @@ func (h *hasher) store(n node, db DatabaseWriter, force bool) (node, error) {
 		hash = hashNode(calculator.sha.Sum(nil))
 	}
 	if db != nil {
-		h.mux.Lock()
-		defer h.mux.Unlock()
 		return hash, db.Put(hash, calculator.tmp.Bytes())
 	}
 	return hash, nil
