@@ -115,8 +115,8 @@
 			"checksumSHA1": "p/AkbrCV0vCPuGy/xnCrZuusM8g=",
 			"origin": "github.com/hyperledger/fabric/vendor/github.com/mattn/go-sqlite3",
 			"path": "github.com/mattn/go-sqlite3",
-			"revision": "5cb39849ec2adc35055e5233556848eb7370cc85",
-			"revisionTime": "2016-08-16T18:33:26Z"
+			"revision": "b9eb6967da73f017cedd79564196033584b93c2f",
+			"revisionTime": "2016-11-03T17:19:54Z"
 		},
 		{
 			"checksumSHA1": "LUrnGREfnifW4WDMaavmc9MlLI0=",
