@@ -49,6 +49,7 @@ func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, TEM transp
 	newNode.higherEventManager = hEventManager
 	newNode.DelayTable = make(map[uint64]int64)
 	newNode.PeesPool = peersPool
+	newNode.attendChan = make(chan int)
 	log.Debug("节点启动")
 	log.Debug("本地节点hash", newNode.address.Hash)
 	log.Debug("本地节点ip", newNode.address.IP)
@@ -58,20 +59,27 @@ func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, TEM transp
 }
 
 //新节点需要监听相应的attend类型
-func (this *Node)attendNoticeProcess() {
-	N := this.PeesPool.alivePeers
-	f := math.Floor(float64((this.PeesPool.alivePeers - 1) / 3))
+func (this *Node)attendNoticeProcess(N int) {
+	f := int(math.Floor(float64((N - 1) / 3)))
 	num := 0
-	for attendFlag := range this.attendChan {
-		switch attendFlag {
-		case 1:
-			num += 1
-			if num >= (N - int(f)) {
-				//TODO 修改向上post的消息类型
-				this.higherEventManager.Post(event.AlreadyInChainEvent{})
-				num = 0
+	for {
+		select {
+		case attendFlag := <-this.attendChan:
+			{
+				log.Warning("连接到一个节点...!!!!!! N:", N, "f", f, "num", num)
+				if attendFlag == 1 {
+					num += 1
+					if num >= (N - f) {
+						//TODO 修改向上post的消息类型
+						log.Critical("新节点已经连接到chain上>>>>><<<<<<<<<<")
+						this.higherEventManager.Post(event.AlreadyInChainEvent{})
+						num = 0
 
+					}
+				} else {
+					log.Warning("非法链接...!!!!!! N:", N, "f", f, "num", num)
 			}
+		}
 		}
 	}
 }

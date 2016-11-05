@@ -81,22 +81,28 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux)
 		os.Exit(1)
 	}
 	//newgRPCManager.IP = newgRPCManager.configs.GetIP(newgRPCManager.NodeID)
+	// 重构peerpool 不采用单例模式进行管理
 	port := this.configs.GetPort(this.NodeID)
+
+	this.peersPool = NewPeerPool(this.TEM)
 	this.LocalNode = NewNode(port, eventMux, this.NodeID, this.TEM, this.peersPool)
 	this.LocalNode.StartServer()
 	this.LocalNode.N = MAX_PEER_NUM
 	// connect to peer
 	// 如果进行单元测试,需要将参数设置为true
-	// 重构peerpool 不采用单例模式进行管理
-	this.peersPool = NewPeerPool(this.TEM)
+
+
 	if this.Original {
 		//连接其他节点
 		this.connectToPeers()
+
+		log.Critical("路由表:", this.peersPool.peerAddr)
+
 		aliveChain <- 0
 		this.IsOnline = true
 	} else {
 		//启动attend监听routine
-		go this.LocalNode.attendNoticeProcess()
+		go this.LocalNode.attendNoticeProcess(this.LocalNode.N)
 		//TODO 连接介绍人节点
 		this.connectToIntroducer(this.NodeID, this.Introducer)
 		aliveChain <- 1
@@ -156,7 +162,12 @@ func (this *GrpcPeerManager) connectToIntroducer(id uint64, introducerAddress pb
 	if unmarshalError != nil {
 		log.Error("routing table unmarshal err ", unmarshalError)
 	}
+	log.Warning("合并路由表", routers)
 	this.peersPool.MergeFormRoutersToTemp(routers)
+	for _, p := range this.peersPool.GetPeersWithTemp() {
+		log.Warning("路由表中的节点", p)
+		this.LocalNode.attendChan <- 1
+	}
 	this.LocalNode.N = len(this.GetAllPeersWithTemp())
 }
 
@@ -191,6 +202,7 @@ func (this *GrpcPeerManager) connectToPeers() {
 			peerIp := this.configs.GetIP(_index)
 			peerPort := this.configs.GetPort(_index)
 			peerAddress := peerComm.ExtractAddress(peerIp, peerPort, _index)
+
 			peer, connectErr := this.connectToPeer(peerAddress, _index)
 			if connectErr != nil {
 				// cannot connect to other peer
@@ -199,10 +211,11 @@ func (this *GrpcPeerManager) connectToPeers() {
 				continue
 			} else {
 				// add  peer to peer pool
+				log.Critical("将地址加入到地址池", *peerAddress)
 				this.peersPool.PutPeer(*peerAddress, peer)
 				//this.TEM.[peer.Addr.Hash]=peer.TEM
 				peerStatus[_index] = true
-				log.Debug("Peer Node hash:", peerAddress.Hash, "has connected!")
+				log.Debug("Peer Node ID:", peerAddress.ID, "has connected!")
 			}
 		}
 	}
@@ -222,6 +235,7 @@ func (this *GrpcPeerManager) connectToPeer(peerAddress *pb.PeerAddress, nid uint
 		log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n")
 		return nil, peerErr
 	} else {
+		log.Critical("连接到节点", nid)
 		return peer, nil
 	}
 
@@ -263,6 +277,7 @@ func broadcast(broadCastMessage pb.Message, pPool *PeersPool) {
 
 // SendMsgToPeers Send msg to specific peer peerlist
 func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, MessageType recovery.Message_MsgType) {
+	log.Critical("need send message to ", peerList)
 	var mpPaylod = &recovery.Message{
 		MessageType:  MessageType,
 		MsgTimeStamp: time.Now().UnixNano(),
@@ -282,12 +297,23 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, M
 
 	// broadcast to special peers
 	go func() {
-		for _, p := range this.peersPool.GetPeers() {
-			for _, NodeID := range peerList {
+		for _, NodeID := range peerList {
+			peers := this.peersPool.GetPeers()
+			p0 := peers[0]
+			log.Critical("peers0", p0.ID)
+			p1 := peers[1]
+			log.Critical("peers0", p1.ID)
+			p2 := peers[2]
+			log.Critical("peers0", p2.ID)
+
+			for _, p := range peers {
+				log.Critical("range nodeid", p.RemoteAddr)
+				log.Critical("range nodeid", p.ID)
 				// convert the uint64 to int
 				// because the unicast node is not confirm so, here use double loop
-				if p.ID == NodeID {
+				if p.RemoteAddr.ID == NodeID {
 					log.Debug("send msg to ", NodeID)
+
 					resMsg, err := p.Chat(syncMessage)
 					if err != nil {
 						log.Error("Broadcast failed,Node")

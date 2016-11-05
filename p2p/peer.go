@@ -47,6 +47,7 @@ func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.Transpo
 	var peer Peer
 	peer.TEM = TEM
 	peer.localAddr = localAddr
+	peer.ID = nid
 	peer.RemoteAddr = peerComm.ExtractAddress(ip, port, nid)
 	opts := membersrvc.GetGrpcClientOpts()
 	conn, err := grpc.Dial(ip + ":" + strconv.Itoa(int(port)), opts...)

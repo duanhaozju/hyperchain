@@ -227,6 +227,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			go self.BroadcastConsensus(ev.Payload)
 
 		case event.TxUniqueCastEvent:
+			log.Critical("receive the pbft uniquecast request <<>>><<>>>")
 			var peers []uint64
 			peers = append(peers, ev.PeerId)
 			go self.Peermanager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
@@ -245,6 +246,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 	for obj := range self.peerMaintainSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.NewPeerEvent:
+			log.Warning("NewPeerEvent")
 			// a new peer required to join the network and past the local CA validation
 			// payload is the new peer's address information
 			msg := protos.AddNodeMessage{
@@ -252,6 +254,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			}
 			self.consenter.RecvLocal(msg)
 		case event.BroadcastNewPeerEvent:
+			log.Warning("BroadcastNewPeerEvent")
 			// receive this event from consensus module
 			// broadcast the local CA validition result to other replica
 			// ATTENTION: Payload is a consenus message
@@ -262,17 +265,20 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			}
 			self.Peermanager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_BROADCAST_NEWPEER)
 		case event.RecvNewPeerEvent:
+			log.Warning("RecvNewPeerEvent")
 			// receive from replica for a new peer CA validation
 			// deliver it to consensus module
 			// ATTENTION: Payload is a consenus message
 			self.consenter.RecvMsg(ev.Payload)
 
 		case event.UpdateRoutingTableEvent:
+			log.Warning("UpdateRoutingTableEvent")
 			// a new peer's join chain request has been accepted
 			// update routing table
 			self.Peermanager.UpdateRoutingTable(ev.Payload)
 
 		case event.AlreadyInChainEvent:
+			log.Warning("AlreadyInChainEvent")
 			// send negotiate event
 			if self.initType == 1 {
 				self.NegotiateView()
