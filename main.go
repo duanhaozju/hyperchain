@@ -33,7 +33,7 @@ type argT struct {
 	ConfigPath string `cli:"c,conf" usage:"配置文件所在路径" dft:"./config/global.yaml"`
 	GRPCPort   int    `cli:"l,rpcport" usage:"远程连接端口" dft:"8001"`
 	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
-	IsInit     bool   `cli:"i,init" usage:"是否是创世节点" dft:"true"`
+	IsInit     bool   `cli:"i,init" usage:"是否是创世节点" dft:"false"`
 	Introducer string `cli:"r,introducer" usage:"加入代理节点信息,格127.0.0.1:8001"dft:"127.0.0.1:8001"`
 }
 

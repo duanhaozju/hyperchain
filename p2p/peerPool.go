@@ -38,9 +38,13 @@ var prPoolIns PeersPool
 func NewPeerPool(TEM transport.TransportEncryptManager) *PeersPool {
 	var newPrPoolIns PeersPool
 	newPrPoolIns.peers = make(map[string]*Peer)
-	newPrPoolIns.tempPeers = make(map[string]*Peer)
 	newPrPoolIns.peerAddr = make(map[string]pb.PeerAddress)
 	newPrPoolIns.peerKeys = make(map[pb.PeerAddress]string)
+
+	newPrPoolIns.tempPeers = make(map[string]*Peer)
+	newPrPoolIns.tempPeerAddr = make(map[string]pb.PeerAddress)
+	newPrPoolIns.tempPeerKeys = make(map[pb.PeerAddress]string)
+
 	newPrPoolIns.TEM = TEM
 	newPrPoolIns.alivePeers = 0
 	return &newPrPoolIns
@@ -129,7 +133,9 @@ func (this *PeersPool) GetPeers() []*Peer {
 	var clients []*Peer
 	for _, cl := range this.peers {
 		clients = append(clients, cl)
+		log.Critical("取得路由表:", cl)
 	}
+
 	return clients
 }
 
@@ -176,6 +182,7 @@ func (this *PeersPool)MergeFormRoutersToTemp(routers pb.Routers) {
 }
 // Merge the temp peer into peers list
 func (this *PeersPool) MergeTempPeers(address pb.PeerAddress) {
+	log.Critical("old节点合并路由表!!!!!!!!!!!!!!!!!!!")
 	//使用共识结果进行更新
 	for _, tempPeer := range this.tempPeers {
 		if tempPeer.RemoteAddr.Hash == address.Hash {
