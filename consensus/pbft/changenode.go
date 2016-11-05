@@ -166,9 +166,13 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 	}
 
 	if !pbft.inAddingNode {
-		// TODO: or just follow others?
-		logger.Warningf("Replica %d haven't locally prepared for update routing table, but others have agreed", pbft.id, key)
-		return nil
+		if cert.finishAdd {
+			logger.Warningf("Replica %d have already finish adding node", pbft.id)
+		} else {
+			// TODO: or just follow others?
+			logger.Warningf("Replica %d haven't locally prepared for update routing table, but others have agreed", pbft.id, key)
+			return nil
+		}
 	}
 
 	cert.finishAdd = true
