@@ -138,7 +138,7 @@ func main() {
 		syncReplicaInterval, _ := config.getSyncReplicaInterval()
 		syncReplicaEnable := config.getSyncReplicaEnable()
 		pm := manager.New(eventMux, blockPool, grpcPeerMgr, cs, am, kec256Hash,
-			config.getNodeID(), syncReplicaInterval, syncReplicaEnable)
+			config.getNodeID(), syncReplicaInterval, syncReplicaEnable, config.getGRPCPort())
 
 		go jsonrpc.Start(config.getHTTPPort(), eventMux, pm)
 

@@ -148,17 +148,19 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 	case pb.Message_INTRODUCE_RESPONSE:
 		{
+			log.Warning("节点已经接受请求", msg.From)
+			//this.higherEventManager.Post(event.)
 
 		}
 	case pb.Message_ATTEND:
 		{
-			log.Critical("Message_ATTEND############")
+			log.Warning("Message_ATTEND############")
 			//新节点全部连接上之后通知
 			this.higherEventManager.Post(event.NewPeerEvent{
 				Payload: msg.Payload,
 			})
 			//response
-			response.MessageType = pb.Message_ATTEND_RESPNSE
+			//response.MessageType = pb.Message_ATTEND_RESPNSE
 		}
 	case pb.Message_ATTEND_RESPNSE:
 		{

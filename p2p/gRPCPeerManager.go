@@ -75,7 +75,7 @@ func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP
 }
 
 // Start start the Normal local listen server
-func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux) {
+func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux, GRPCProt int64) {
 	if this.NodeID == 0 || this.configs == nil {
 		log.Error("the gRPC Manager hasn't initlized")
 		os.Exit(1)
@@ -83,6 +83,9 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux)
 	//newgRPCManager.IP = newgRPCManager.configs.GetIP(newgRPCManager.NodeID)
 	// 重构peerpool 不采用单例模式进行管理
 	port := this.configs.GetPort(this.NodeID)
+	if port == int64(0) {
+		port = GRPCProt
+	}
 
 	this.peersPool = NewPeerPool(this.TEM)
 	this.LocalNode = NewNode(port, eventMux, this.NodeID, this.TEM, this.peersPool)
@@ -105,6 +108,7 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux)
 		go this.LocalNode.attendNoticeProcess(this.LocalNode.N)
 		//TODO 连接介绍人节点
 		this.connectToIntroducer(this.NodeID, this.Introducer)
+		//this.ConnectToOthers()
 		aliveChain <- 1
 	}
 
@@ -163,11 +167,23 @@ func (this *GrpcPeerManager) connectToIntroducer(id uint64, introducerAddress pb
 	if unmarshalError != nil {
 		log.Error("routing table unmarshal err ", unmarshalError)
 	}
-	log.Warning("合并路由表", routers)
+	log.Warning("合并路由表并链接", routers)
 	this.peersPool.MergeFormRoutersToTemp(routers)
 	for _, p := range this.peersPool.GetPeersWithTemp() {
 		log.Warning("路由表中的节点", p)
-		this.LocalNode.attendChan <- 1
+		//review 		this.LocalNode.attendChan <- 1
+		//attend_message := pb.Message{
+		//	MessageType:pb.Message_ATTEND,
+		//	Payload:payload,
+		//	MsgTimeStamp:time.Now().UnixNano(),
+		//	From:this.LocalNode.address,
+		//}
+		//retMsg,err := p.Chat(attend_message)
+		//if err != nil{
+		//	log.Error(err)
+		//}else{
+		//	retMsg
+		//}
 	}
 	this.LocalNode.N = len(this.GetAllPeersWithTemp())
 }
@@ -408,11 +424,16 @@ func (this *GrpcPeerManager) UpdateRoutingTable(payload []byte) {
 	}
 	//新节点peer
 	//newPeer := this.peersPool.tempPeers[this.peersPool.tempPeerKeys[toUpdateAddress]]
-	newPeer, _ := NewPeerByAddress(&toUpdateAddress, toUpdateAddress.ID, this.TEM, this.LocalNode.address)
 	log.Warning("hash:",toUpdateAddress )
+	newPeer, err := NewPeerByAddress(&toUpdateAddress, toUpdateAddress.ID, this.TEM, this.LocalNode.address)
+	if err != nil {
+		log.Error(err)
+	}
+
 	log.Warning("newPeer: ", newPeer)
 	//新消息
 	payload, _ = proto.Marshal(this.LocalNode.address)
+
 	attendResponseMsg := pb.Message{
 		MessageType:pb.Message_ATTEND_RESPNSE,
 		Payload:payload,

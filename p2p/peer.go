@@ -69,6 +69,7 @@ func NewPeerByAddress(address *pb.PeerAddress, nid uint64, TEM transport.Transpo
 	var peer Peer
 	peer.TEM = TEM
 	peer.localAddr = localAddr
+	peer.RemoteAddr = address
 	opts := membersrvc.GetGrpcClientOpts()
 	conn, err := grpc.Dial(address.IP + ":" + strconv.Itoa(int(address.Port)), opts...)
 	//conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
@@ -80,6 +81,7 @@ func NewPeerByAddress(address *pb.PeerAddress, nid uint64, TEM transport.Transpo
 	peer.Connection = conn
 	peer.Client = pb.NewChatClient(peer.Connection)
 	peer.IsPrimary = false
+	log.Warning("newpeer :", peer)
 	//TODO handshake operation
 	peer.handShake()
 	return &peer, nil
