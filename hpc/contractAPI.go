@@ -13,7 +13,6 @@ import (
 	"encoding/hex"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
-	"hyperchain/core"
 	"github.com/juju/ratelimit"
 )
 
