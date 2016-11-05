@@ -73,7 +73,7 @@ govendor build -o ${DUMP_PATH}/hyperchain
 #执行测试
 for((j=1;j<=$MAXPEERNUM;j++))
 do
-	gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${j} -l 800${j} -t 808${j}"
+	gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${j} -l 800${j} -t 808${j} -i true"
 done
 
 # 启动相应的http查询服务
