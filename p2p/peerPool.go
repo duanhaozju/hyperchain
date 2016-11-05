@@ -181,17 +181,17 @@ func (this *PeersPool)MergeFormRoutersToTemp(routers pb.Routers) {
 	}
 }
 // Merge the temp peer into peers list
-func (this *PeersPool) MergeTempPeers(address pb.PeerAddress) {
+func (this *PeersPool) MergeTempPeers(peer *Peer) {
 	log.Critical("old节点合并路由表!!!!!!!!!!!!!!!!!!!")
 	//使用共识结果进行更新
-	for _, tempPeer := range this.tempPeers {
-		if tempPeer.RemoteAddr.Hash == address.Hash {
-			this.peers[tempPeer.RemoteAddr.Hash] = tempPeer
-			this.peerAddr[tempPeer.RemoteAddr.Hash] = *tempPeer.RemoteAddr
-			this.peerKeys[*tempPeer.RemoteAddr] = tempPeer.RemoteAddr.Hash
-			delete(this.tempPeers, tempPeer.RemoteAddr.Hash)
-		}
-	}
+	//for _, tempPeer := range this.tempPeers {
+	//	if tempPeer.RemoteAddr.Hash == address.Hash {
+	this.peers[peer.RemoteAddr.Hash] = peer
+	this.peerAddr[peer.RemoteAddr.Hash] = *peer.RemoteAddr
+	this.peerKeys[*peer.RemoteAddr] = peer.RemoteAddr.Hash
+	delete(this.tempPeers, peer.RemoteAddr.Hash)
+	//}
+	//}
 }
 
 func (this *PeersPool) MergeTempPeersForNewNode() {

@@ -75,14 +75,14 @@ func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP
 }
 
 // Start start the Normal local listen server
-func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,port int64) {
+func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux) {
 	if this.NodeID == 0 || this.configs == nil {
 		log.Error("the gRPC Manager hasn't initlized")
 		os.Exit(1)
 	}
 	//newgRPCManager.IP = newgRPCManager.configs.GetIP(newgRPCManager.NodeID)
 	// 重构peerpool 不采用单例模式进行管理
-	//port := this.configs.GetPort(this.NodeID)
+	port := this.configs.GetPort(this.NodeID)
 
 	this.peersPool = NewPeerPool(this.TEM)
 	this.LocalNode = NewNode(port, eventMux, this.NodeID, this.TEM, this.peersPool)
@@ -407,7 +407,8 @@ func (this *GrpcPeerManager) UpdateRoutingTable(payload []byte) {
 		log.Error(err)
 	}
 	//新节点peer
-	newPeer := this.peersPool.tempPeers[toUpdateAddress.Hash]
+	//newPeer := this.peersPool.tempPeers[this.peersPool.tempPeerKeys[toUpdateAddress]]
+	newPeer, _ := NewPeerByAddress(&toUpdateAddress, toUpdateAddress.ID, this.TEM, this.LocalNode.address)
 	log.Warning("hash:",toUpdateAddress )
 	log.Warning("newPeer: ", newPeer)
 	//新消息
@@ -420,7 +421,7 @@ func (this *GrpcPeerManager) UpdateRoutingTable(payload []byte) {
 	}
 
 	if this.IsOnline {
-		this.peersPool.MergeTempPeers(toUpdateAddress)
+		this.peersPool.MergeTempPeers(newPeer)
 		//通知新节点进行接洽
 		newPeer.Chat(attendResponseMsg)
 		this.LocalNode.N += 1
