@@ -14,6 +14,7 @@ import (
 	//"hyperchain/accounts"
 	"encoding/hex"
 	"errors"
+	"github.com/juju/ratelimit"
 )
 
 const (
@@ -35,6 +36,8 @@ type PublicTransactionAPI struct {
 	eventMux *event.TypeMux
 	pm       *manager.ProtocolManager
 	db       *hyperdb.LDBDatabase
+	tokenBucket *ratelimit.Bucket
+	ratelimitEnable bool
 }
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
@@ -82,11 +85,13 @@ const (
 
 const TIMEOUT int64 = 2
 
-func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase) *PublicTransactionAPI {
+func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, ratelimitEnable bool , bmax int64, rate time.Duration) *PublicTransactionAPI {
 	return &PublicTransactionAPI{
 		eventMux: eventMux,
 		pm:       pm,
 		db:          hyperDb,
+		tokenBucket: ratelimit.NewBucket(rate, bmax),
+		ratelimitEnable: ratelimitEnable,
 	}
 }
 
@@ -118,7 +123,9 @@ func prepareExcute(args SendTxArgs) SendTxArgs {
 // SendTransaction is to build a transaction object,and then post event NewTxEvent,
 // if the sender's balance is enough, return tx hash
 func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error) {
-
+	if tran.ratelimitEnable && tran.tokenBucket.TakeAvailable(1) <= 0 {
+		return common.Hash{}, errors.New("System is too busy to response ")
+	}
 	var tx *types.Transaction
 	//var found bool
 
@@ -238,10 +245,10 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
 		start := time.Now().Unix()
 		//end:=start+1
-		end := start + 30
+		end := start + 1
 
 		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < 200; i++ {
+			for i := 0; i < 1; i++ {
 				// ################################# 测试代码 START ####################################### // (用不同的value代替之前不同的timestamp以标志不同的transaction)
 				txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), v, nil)
 

@@ -9,6 +9,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/crypto"
 	"sync"
+	"github.com/pkg/errors"
 )
 
 var log *logging.Logger
@@ -73,7 +74,7 @@ func New(root common.Hash, db Database) (*Trie, error) {
 	trie := &Trie{db: db, originalRoot: root}
 	if (root != common.Hash{}) && root != emptyRoot {
 		if db == nil {
-			panic("trie.New: cannot use existing root without a database")
+			return nil, errors.New("trie.New: cannot use existing root without a database")
 		}
 		if v, _ := trie.db.Get(root[:]); len(v) == 0 {
 			return nil, &MissingNodeError{

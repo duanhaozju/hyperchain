@@ -1,20 +1,27 @@
 package hpc
 
 import (
-	"encoding/json"
-	"github.com/golang/protobuf/proto"
+	"fmt"
+	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/core"
-	"hyperchain/core/types"
 	"hyperchain/hyperdb"
-	"os"
+	"hyperchain/manager"
+	"hyperchain/p2p"
 	"testing"
-	"time"
 )
 
-
+var peermanager = &p2p.GrpcPeerManager{
+	NodeID: 1,
+}
 var db, _ = hyperdb.GetLDBDatabase()
-var api = NewPublicTransactionAPI(nil, nil,db)
+var pm = &manager.ProtocolManager{
+	Peermanager:    peermanager,
+	AccountManager: am,
+}
+var keydir = "../config/keystore/"
+
+var am = accounts.NewAccountManager(keydir, encryption)
 var from = common.HexToAddress("0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd")
 var to = common.HexToAddress("0x0000000000000000000000000000000000000003")
 var args = SendTxArgs{
@@ -26,229 +33,142 @@ var args = SendTxArgs{
 	Payload:  "",
 }
 var newTx common.Hash
+var publicTransactionAPI = NewPublicTransactionAPI(nil, pm, db)
 
-func putTransactionToDefaultDB() {
-	db, err := hyperdb.GetLDBDatabase()
+func Test_GetBlockTransactionCountByHash(t *testing.T) {
 
-	if err != nil {
-		log.Error(err)
-	}
-
-	txValue := types.NewTransactionValue(100, 100, 1, nil)
-
-	value, err := proto.Marshal(txValue)
-
-	if err != nil {
-		log.Error(err)
-	}
-
-	tx := types.NewTransaction(from[:], to[:], value)
-
-	hash := tx.BuildHash()
-
-	core.PutTransaction(db, hash[:], tx)
-	newTx = hash
-}
-
-func TestPublicTransactionAPI_SendTransaction(t *testing.T) {
-
-	if hash, err := api.SendTransaction(args); err == nil {
-		t.Logf("the new tx hash is %v", common.ToHex(hash[:]))
-	} else {
-		t.Errorf("%v", err)
-	}
-
-}
-
-//func TestPublicTransactionAPI_SendTransactionOrContract(t *testing.T) {
-//
-//	// deploy contract test
-//	args.To = nil
-//	args.Payload = "0x6000805463ffffffff1916815560a0604052600b6060527f68656c6c6f20776f726c6400000000000000000000000000000000000000000060805260018054918190527f68656c6c6f20776f726c6400000000000000000000000000000000000000001681559060be907fb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf66020600261010084871615026000190190931692909204601f01919091048101905b8082111560ce576000815560010160ac565b50506101cd806100d26000396000f35b509056606060405260e060020a60003504633ad14af3811461003f578063569c5f6d146100675780638da9b7721461007c578063d09de08a146100ea575b610002565b34610002576000805460043563ffffffff8216016024350163ffffffff19919091161790555b005b346100025761010e60005463ffffffff165b90565b3461000257604080516020818101835260008252600180548451600261010083851615026000190190921691909104601f81018490048402820184019095528481526101289490928301828280156101c15780601f10610196576101008083540402835291602001916101c1565b34610002576100656000805463ffffffff19811663ffffffff909116600101179055565b6040805163ffffffff929092168252519081900360200190f35b60405180806020018281038252838181518152602001915080519060200190808383829060006004602084601f0104600302600f01f150905090810190601f1680156101885780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b820191906000526020600020905b8154815290600101906020018083116101a457829003601f168201915b5050505050905061007956"
-//
-//	if hash, err := api.SendTransactionOrContract(args); err == nil {
-//		t.Logf("the new contract tx hash is %v", common.ToHex(hash[:]))
-//	} else {
-//		t.Errorf("%v", err)
-//	}
-//}
-
-func TestPublicTransactionAPI_GetTransactionByHash(t *testing.T) {
-
-	putTransactionToDefaultDB()
-
-	txGet, err := api.GetTransactionByHash(newTx)
-
-	if err != nil {
-		t.Errorf("%v", err)
-	}
-
-	t.Logf("get transaction by tx hash: %#v\n", common.ToHex(txGet.Hash[:]))
-	e := json.NewEncoder(os.Stdout)
-	e.Encode(txGet)
-}
-
-var txValue = types.NewTransactionValue(100, 100, 1, nil)
-
-var value, err = proto.Marshal(txValue)
-
-var transactionCases = []*types.Transaction{
-	&types.Transaction{
-		From:      from[:],
-		To:        to[:],
-		Value:     value,
-		Timestamp: time.Now().UnixNano() - int64(time.Second),
-		Signature: []byte("signature1"),
-	},
-	&types.Transaction{
-		From:      from[:],
-		To:        to[:],
-		Value:     value,
-		Timestamp: time.Now().UnixNano() - int64(time.Second),
-		Signature: []byte("signature2"),
-	},
-	&types.Transaction{
-		From:      from[:],
-		To:        to[:],
-		Value:     value,
-		Timestamp: time.Now().UnixNano() - int64(time.Second),
-		Signature: []byte("signature3"),
-	},
-}
-
-var blockUtilsCase = types.Block{
-	ParentHash:   common.StringToHash("parenthash").Bytes(),
-	BlockHash:    common.StringToHash("blockhash").Bytes(),
-	Transactions: transactionCases,
-	Timestamp:    time.Now().UnixNano(),
-	MerkleRoot:   []byte("merkeleroot"),
-	Number:       1,
-	WriteTime:    time.Now().UnixNano() + int64(time.Second)/2,
-}
-
-func TestPublicTransactionAPI_GetTransactionByBlockHashAndIndex(t *testing.T) {
-
-	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = core.PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	tx, err := api.GetTransactionByBlockHashAndIndex(common.BytesToHash(blockUtilsCase.BlockHash), 0)
-
-	if err != nil {
-		t.Errorf("%v", err)
-	} else {
-		t.Logf("%#v", tx)
-	}
-
-}
-
-func TestPublicTransactionAPI_GetTransactionsByBlockNumberAndIndex(t *testing.T) {
-	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = core.PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	tx, err := api.GetTransactionByBlockNumberAndIndex(1, 0)
-
-	if err != nil {
-		t.Logf("%v", err)
-	} else {
-		t.Logf("%#v", tx)
+	hash := [32]byte{'1', '2'}
+	_, err := publicTransactionAPI.GetBlockTransactionCountByHash(hash)
+	if err == nil {
+		t.Errorf("GetBlockTransactionCountByHash wrong")
 	}
 }
 
-func TestPublicTransactionAPI_GetBlockTransactionCountByHash(t *testing.T) {
-	db, err := hyperdb.GetLDBDatabase()
+func Test_GetDiscardTransactions(t *testing.T) {
+	_, err := publicTransactionAPI.GetDiscardTransactions()
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = core.PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if c,err := api.GetBlockTransactionCountByHash(common.BytesToHash(blockUtilsCase.BlockHash)); err != nil {
-		t.Error(err)
-	} else {
-		log.Info(c.ToInt64())
+		t.Errorf("GetDiscardTransactions wrong")
 	}
 }
 
-// test
-//func TestSigntx(t *testing.T)  {
-//	ee := crypto.NewEcdsaEncrypto("ECDSAEncryto")
-//	k, err:= ee.GeneralKey()
-//	if err!=nil{
-//		panic(err)
-//	}
-//
-//	key := k.(*ecdsa.PrivateKey)
-//	pub := key.PublicKey
-//	var addr common.Address
-//	addr = crypto.PubkeyToAddress(pub)
-//
-//	fmt.Println("public key is :")
-//	fmt.Println(pub)
-//	fmt.Println("private key is :")
-//	fmt.Println(key)
-//	//SaveNodeInfo("./port_address_privatekey","5004",addr,key)
-//
-//	//p,err:=ee.GetKey()
-//
-//	//priv := p.(*ecdsa.PrivateKey)
-//
-//	//var from1 = common.HexToAddress("0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd")
-//	var from1 = addr
-//	var to = common.HexToAddress("0x0000000000000000000000000000000000000003")
-//	tx := types.NewTransaction(from1[:], to[:], nil)
-//	//签名交易
-//	//tx:= NewTransaction(common.Address{},big.NewInt(100))
-//	s256 := crypto.NewKeccak256Hash("Keccak256")
-//	//hash := s256.Hash([]interface{}{tx.data.Amount,tx.data.Recipient})
-//	hash := tx.SighHash(s256)
-//	signature,err := ee.Sign(hash[:],key)
-//	fmt.Println(hash)
-//	fmt.Println("sig:",signature)
-//
-//	if err != nil {
-//		t.Error(err)
-//		t.FailNow()
-//
-//	}
-//	//验证签名
-//	from,err:= ee.UnSign(hash[:],signature)
-//	if err != nil {
-//		t.Error(err)
-//		t.FailNow()
-//	}
-//
-//	fmt.Println(from.Hex())
-//	fmt.Println(addr.Hex())
-//
-//	trans := new(types.Transaction)
-//	//var tx *types.Transaction
-//	if err := rlp.DecodeBytes(common.FromHex(args.Signature), trans); err != nil {
-//		log.Info("rlp.DecodeBytes error: ", err)
-//	}
-//	log.Infof("tx: %#v", trans)
-//	log.Info(trans.Signature)
-//	log.Infof("tx sign: %#v", trans.Signature)
-//	//
-//	//hex := common.ToHex(from.Bytes())
-//	//fmt.Println(common.ToHex(from[:]))
-//	//fmt.Println(common.ToHex(addr[:]))
-//	//fmt.Println(common.FromHex(hex))
-//
-//}
+func Test_GetSighHash(t *testing.T) {
+	var from = common.HexToAddress("0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd")
+	var to = common.HexToAddress("0x0000000000000000000000000000000000000003")
+	var args = SendTxArgs{
+		From:     from,
+		To:       &to,
+		Gas:      NewInt64ToNumber(1000),
+		GasPrice: NewInt64ToNumber(1000),
+		Value:    NewInt64ToNumber(1000),
+		Payload:  "",
+		PrivKey:  "123456",
+	}
+	ref, err := publicTransactionAPI.GetSighHash(args)
+	if err != nil {
+		fmt.Println(ref)
+		t.Errorf(err.Error())
+	}
+}
+
+func Test_GetTransactionByBlockHashAndIndex(t *testing.T) {
+	core.InitDB("C:/hyperchain", 8023)
+
+	var peermanager = &p2p.GrpcPeerManager{
+		NodeID: 1,
+	}
+	var keydir = "../config/keystore/"
+	var am = accounts.NewAccountManager(keydir, encryption)
+	var db, _ = hyperdb.GetLDBDatabase()
+	var pm = &manager.ProtocolManager{
+		Peermanager:    peermanager,
+		AccountManager: am,
+	}
+	var publicTransactionAPI = NewPublicTransactionAPI(nil, pm, db)
+
+	_, err := publicTransactionAPI.GetTransactionByBlockHashAndIndex([32]byte{42, 136, 73, 59, 200, 83, 12, 108, 225, 221, 83, 243, 113, 218, 60, 174, 47, 163, 144, 111, 225, 233, 176, 255, 193, 180, 10, 131, 111, 227, 45, 239}, Number(1))
+	if err == nil {
+		t.Errorf("GetTransactionByBlockHashAndIndex wrong ")
+	}
+}
+
+func Test_GetTransactionByBlockNumberAndIndex(t *testing.T) {
+	_, err := publicTransactionAPI.GetTransactionByBlockNumberAndIndex(Number(-1), Number(1))
+	if err == nil {
+		t.Errorf("GetTransactionByBlockNumberAndIndex wrong ")
+	}
+}
+
+func Test_GetTransactionByBlockNumberAndIndex2(t *testing.T) {
+	core.InitDB("C:/hyperchain", 8023)
+	var peermanager = &p2p.GrpcPeerManager{
+		NodeID: 1,
+	}
+	var keydir = "../config/keystore/"
+	var am = accounts.NewAccountManager(keydir, encryption)
+	var db, _ = hyperdb.GetLDBDatabase()
+	var pm = &manager.ProtocolManager{
+		Peermanager:    peermanager,
+		AccountManager: am,
+	}
+	var publicTransactionAPI = NewPublicTransactionAPI(nil, pm, db)
+
+	ref, err := publicTransactionAPI.GetTransactionByBlockNumberAndIndex(Number(1), Number(1))
+	fmt.Println(ref)
+	fmt.Println(err)
+
+}
+
+func Test_GetTransactionReceipt(t *testing.T) {
+	ref, err := publicTransactionAPI.GetTransactionReceipt([32]byte{42, 136, 73, 59, 200, 83, 12, 108, 225, 221, 83, 243, 113, 218, 60, 174, 47, 163, 144, 111, 225, 233, 176, 255, 193, 180, 10, 131, 111, 227, 45, 239})
+	fmt.Println("GetTransactionReceipt:", ref)
+	fmt.Println("GetTransactionReceipt:", err)
+
+}
+
+func Test_GetTransactions(t *testing.T) {
+	core.InitDB("C:/hyperchain", 8023)
+	var peermanager = &p2p.GrpcPeerManager{
+		NodeID: 1,
+	}
+	var keydir = "../config/keystore/"
+	var am = accounts.NewAccountManager(keydir, encryption)
+	var db, _ = hyperdb.GetLDBDatabase()
+	var pm = &manager.ProtocolManager{
+		Peermanager:    peermanager,
+		AccountManager: am,
+	}
+	var publicTransactionAPI = NewPublicTransactionAPI(nil, pm, db)
+
+	//	var publicTransactionAPI2 = NewPublicTransactionAPI(nil, pm, nil)
+
+	num1 := Number(0000000000000000000000000000000000000001)
+	num2 := Number(0000000000000000000000000000000000000003)
+	Inargs := IntervalArgs{
+		From: &num1,
+		To:   &num2,
+	}
+	ref, err := publicTransactionAPI.GetTransactions(Inargs)
+	if err == nil {
+		fmt.Println(ref)
+		t.Errorf("GetTransactions wrong")
+	}
+
+	//	ref1, err1 := publicTransactionAPI2.GetTransactions(Inargs)
+	//	fmt.Println(ref1)
+	//	fmt.Println(err1)
+
+}
+
+func Test_GetTransactionsCount(t *testing.T) {
+
+	ref, err := publicTransactionAPI.GetTransactionsCount()
+	fmt.Println(*ref)
+	fmt.Println(err)
+}
+
+func Test_SendTransaction(t *testing.T) {
+	ref, err := publicTransactionAPI.SendTransaction(args)
+	if err != nil {
+		t.Errorf(ref.Hex())
+	}
+}

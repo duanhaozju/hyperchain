@@ -9,12 +9,20 @@ import (
 	"fmt"
 	"hyperchain/manager"
 	"hyperchain/hpc"
+	"time"
 )
 
 const (
 	maxHTTPRequestContentLength = 1024 * 128
 )
 
+type RateLimitConfig struct {
+	Enable bool
+	TxFillRate time.Duration
+	TxRatePeak int64
+	ContractFillRate time.Duration
+	ContractRatePeak int64
+}
 type httpReadWrite struct{
 	io.Reader
 	io.Writer
@@ -24,14 +32,14 @@ func (hrw *httpReadWrite) Close() error{
 	return nil
 }
 
-func Start(httpPort int,eventMux *event.TypeMux,pm *manager.ProtocolManager) error{
+func Start(httpPort int,eventMux *event.TypeMux,pm *manager.ProtocolManager, cfg RateLimitConfig) error{
 	//log.Info("=============enter Start()=================")
 	eventMux = eventMux
 
 	server := NewServer()
 
 	// 得到API，注册服务
-	apis := hpc.GetAPIs(eventMux, pm)
+	apis := hpc.GetAPIs(eventMux, pm, cfg.Enable, cfg.TxRatePeak, cfg.TxFillRate, cfg.ContractRatePeak, cfg.ContractFillRate)
 
 	// api.Namespace 是API的命名空间，api.Service 是一个拥有命名空间对应对象的所有方法的对象
 	for _, api := range apis {
