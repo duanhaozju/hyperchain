@@ -152,6 +152,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 	case pb.Message_ATTEND:
 		{
+			log.Critical("Message_ATTEND############")
 			//新节点全部连接上之后通知
 			this.higherEventManager.Post(event.NewPeerEvent{
 				Payload: msg.Payload,
@@ -239,6 +240,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 				}
 			case recovery.Message_BROADCAST_NEWPEER:
 				{
+					log.Warning("receive Message_BROADCAST_NEWPEER")
 					go this.higherEventManager.Post(event.RecvNewPeerEvent{
 						Payload:SyncMsg.Payload,
 					})

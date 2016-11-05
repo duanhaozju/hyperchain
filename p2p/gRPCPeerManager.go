@@ -75,14 +75,14 @@ func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP
 }
 
 // Start start the Normal local listen server
-func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux) {
+func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,port int64) {
 	if this.NodeID == 0 || this.configs == nil {
 		log.Error("the gRPC Manager hasn't initlized")
 		os.Exit(1)
 	}
 	//newgRPCManager.IP = newgRPCManager.configs.GetIP(newgRPCManager.NodeID)
 	// 重构peerpool 不采用单例模式进行管理
-	port := this.configs.GetPort(this.NodeID)
+	//port := this.configs.GetPort(this.NodeID)
 
 	this.peersPool = NewPeerPool(this.TEM)
 	this.LocalNode = NewNode(port, eventMux, this.NodeID, this.TEM, this.peersPool)
@@ -146,6 +146,7 @@ func (this *GrpcPeerManager) connectToIntroducer(id uint64, introducerAddress pb
 
 	//发送introduce 信息,取得路由表
 	payload, _ := proto.Marshal(this.LocalNode.address)
+	log.Warning("address: ", this.LocalNode.address)
 	introduce_message := pb.Message{
 		MessageType:pb.Message_INTRODUCE,
 		Payload:payload,
@@ -406,7 +407,9 @@ func (this *GrpcPeerManager) UpdateRoutingTable(payload []byte) {
 		log.Error(err)
 	}
 	//新节点peer
-	newPeer := this.peersPool.peers[toUpdateAddress.Hash]
+	newPeer := this.peersPool.tempPeers[toUpdateAddress.Hash]
+	log.Warning("hash:",toUpdateAddress )
+	log.Warning("newPeer: ", newPeer)
 	//新消息
 	payload, _ = proto.Marshal(this.LocalNode.address)
 	attendResponseMsg := pb.Message{

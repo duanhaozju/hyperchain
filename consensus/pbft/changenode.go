@@ -33,7 +33,7 @@ func (pbft *pbftProtocal) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 	}
 
 	key := byteToString(msg.Payload)
-	logger.Debugf("Replica %d received local addNode message for new node %v", pbft.id, key)
+	logger.Errorf("Replica %d received local addNode message for new node %v", pbft.id, key)
 
 	pbft.inAddingNode = true
 	pbft.sendAgreeAddNode(key)
@@ -114,7 +114,7 @@ func (pbft *pbftProtocal) sendAgreeDelNode(key string) {
 // Replica received addnode for new node
 func (pbft *pbftProtocal) recvAgreeAddNode(add *AddNode) error {
 
-	logger.Debugf("Replica %d received addnode from replica %d for %s",
+	logger.Errorf("Replica %d received addnode from replica %d for %s",
 		pbft.id, add.ReplicaId, add.Key)
 
 	cert := pbft.getAddNodeCert(add.Key)
@@ -211,6 +211,7 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string) error {
 		return nil
 	}
 
+	logger.Errorf("Replica %d try to update routing table", pbft.id)
 	pbft.helper.UpdateTable(payload)
 	pbft.inDeletingNode = false
 	pbft.sendUpdateN(key)

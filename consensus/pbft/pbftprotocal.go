@@ -398,7 +398,7 @@ func (pbft *pbftProtocal) RecvMsg(e []byte) error {
 
 func (pbft *pbftProtocal) RecvLocal(msg interface{}) error {
 
-	logger.Debugf("Replica %d received local message", pbft.id)
+	logger.Errorf("Replica %d received local message", pbft.id)
 
 	go pbft.postPbftEvent(msg)
 

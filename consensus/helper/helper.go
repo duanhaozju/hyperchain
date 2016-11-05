@@ -67,7 +67,6 @@ func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error {
 	}
 
 	// Post the event to outer
-	logger.Critical("inner unicast pbft <><><>")
 	go h.msgQ.Post(unicastEvent)
 
 	return nil

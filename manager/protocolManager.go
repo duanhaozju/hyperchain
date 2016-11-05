@@ -112,7 +112,7 @@ func (pm *ProtocolManager) Start() {
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
 	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{}, event.InformPrimaryEvent{})
-	pm.peerMaintainSub = pm.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{}, event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{})
+	pm.peerMaintainSub = pm.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{}, event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{}, event.RecvNewPeerEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
 	go pm.syncBlockLoop()
@@ -249,7 +249,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			log.Warning("NewPeerEvent")
 			// a new peer required to join the network and past the local CA validation
 			// payload is the new peer's address information
-			msg := protos.AddNodeMessage{
+			msg := &protos.AddNodeMessage{
 				Payload: ev.Payload,
 			}
 			self.consenter.RecvLocal(msg)
