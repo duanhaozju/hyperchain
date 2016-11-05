@@ -31,7 +31,8 @@ func GenerateLicense() {
 		fmt.Println(err)
 		return
 	}
-	ctx := "\t12. Identification: " + string(common.Bytes2Hex(id))
+	ctx := "\n\t12. Identification: " + string(common.Bytes2Hex(id))
+	fmt.Println("getsss",ctx)
 	ioutil.WriteFile(*path+"LICENSE", []byte(string(licenseTemplate)+ctx), 0644)
 	fmt.Println("####################  Generate License Success ###################")
 	fmt.Println("   Arguments:")
