@@ -248,7 +248,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		end := start + 1
 
 		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < 1; i++ {
+			for i := 0; i < 100; i++ {
 				// ################################# 测试代码 START ####################################### // (用不同的value代替之前不同的timestamp以标志不同的transaction)
 				txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), v, nil)
 
@@ -301,10 +301,9 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				// Unsign Test
 				if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
 					log.Error("invalid signature")
-					// 不要返回，因为要将失效交易存到db中
-					//return common.Hash{}, errors.New("invalid signature")
+					// ATTENTION, return invalid transactino directly
+					return common.Hash{}, errors.New("invalid signature")
 				}
-
 				txBytes, err := proto.Marshal(tx)
 				if err != nil {
 					log.Errorf("proto.Marshal(tx) error: %v", err)

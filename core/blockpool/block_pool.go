@@ -180,9 +180,6 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 			if idx == 0 {
 				set = set[1:]
 				count++
-			} else if idx == len(set) - 1 {
-				set = set[:len(set) - 1]
-				count++
 			} else {
 				set = append(set[:idx - 1], set[idx + 1:]...)
 				count++
