@@ -176,11 +176,11 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					if err != nil {
 						log.Errorf("Sign(tx) error :%v", err)
 					}
+					tx.Signature = signature
 				} else {
 					tx.Signature = common.FromHex(realArgs.Signature)
 				}
 
-				tx.Signature = signature
 			} else {
 				// For Hyperboard test signature
 
@@ -203,8 +203,8 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 			// Unsign Test
 			if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
 				log.Error("invalid signature")
-				// 不要返回，因为要将失效交易存到db中
-				//return common.Hash{}, errors.New("invalid signature")
+				// ATTENTION, return invalid transactino directly
+				return common.Hash{}, errors.New("invalid signature")
 			}
 
 			txBytes, err := proto.Marshal(tx)
@@ -218,25 +218,25 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				log.Warning("manager is Nil")
 			}
 
-			start_getErr := time.Now().Unix()
-			end_getErr := start_getErr + TIMEOUT
-			var errMsg string
-			for start_getErr := start_getErr; start_getErr < end_getErr; start_getErr = time.Now().Unix() {
-				errType, _ := core.GetInvaildTxErrType(tran.db, tx.GetTransactionHash().Bytes());
-
-				if errType != -1 {
-					errMsg = errType.String()
-					break;
-				} else if rept := core.GetReceipt(tx.GetTransactionHash()); rept != nil {
-					break
-				}
-
-			}
-			if start_getErr != end_getErr && errMsg != "" {
-				return common.Hash{}, errors.New(errMsg)
-			} else if start_getErr == end_getErr {
-				return common.Hash{}, errors.New("Sending return timeout,may be something wrong.")
-			}
+			//start_getErr := time.Now().Unix()
+			//end_getErr := start_getErr + TIMEOUT
+			//var errMsg string
+			//for start_getErr := start_getErr; start_getErr < end_getErr; start_getErr = time.Now().Unix() {
+			//	errType, _ := core.GetInvaildTxErrType(tran.db, tx.GetTransactionHash().Bytes());
+			//
+			//	if errType != -1 {
+			//		errMsg = errType.String()
+			//		break;
+			//	} else if rept := core.GetReceipt(tx.GetTransactionHash()); rept != nil {
+			//		break
+			//	}
+			//
+			//}
+			//if start_getErr != end_getErr && errMsg != "" {
+			//	return common.Hash{}, errors.New(errMsg)
+			//} else if start_getErr == end_getErr {
+			//	return common.Hash{}, errors.New("Sending return timeout,may be something wrong.")
+			//}
 		}
 
 	} else {
