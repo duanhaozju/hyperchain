@@ -29,6 +29,7 @@ import (
 type Peer struct {
 	RemoteAddr *pb.PeerAddress
 	Connection *grpc.ClientConn
+	localAddr  *pb.PeerAddress
 	Client     pb.ChatClient
 	TEM        transport.TransportEncryptManager
 	Status     int
@@ -42,9 +43,10 @@ type Peer struct {
 // the peer will auto store into the peer pool.
 // when creating a peer, the client instance will create a message whose type is HELLO
 // if get a response, save the peer into singleton peer pool instance
-func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.TransportEncryptManager) (*Peer, error) {
+func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.TransportEncryptManager, localAddr *pb.PeerAddress) (*Peer, error) {
 	var peer Peer
 	peer.TEM = TEM
+	peer.localAddr = localAddr
 	peer.RemoteAddr = peerComm.ExtractAddress(ip, port, nid)
 	opts := membersrvc.GetGrpcClientOpts()
 	conn, err := grpc.Dial(ip + ":" + strconv.Itoa(int(port)), opts...)
@@ -62,8 +64,24 @@ func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.Transpo
 	return &peer, nil
 }
 
-func NewPeerByIpAndPortNewNode(ip string, port int64, TEM transport.TransportEncryptManager, localAddr *pb.PeerAddress) {
-
+func NewPeerByAddress(address *pb.PeerAddress, nid uint64, TEM transport.TransportEncryptManager, localAddr *pb.PeerAddress) (*Peer, error) {
+	var peer Peer
+	peer.TEM = TEM
+	peer.localAddr = localAddr
+	opts := membersrvc.GetGrpcClientOpts()
+	conn, err := grpc.Dial(address.IP + ":" + strconv.Itoa(int(address.Port)), opts...)
+	//conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
+	if err != nil {
+		errors.New("Cannot establish a connection!")
+		log.Error("err:", err)
+		return nil, err
+	}
+	peer.Connection = conn
+	peer.Client = pb.NewChatClient(peer.Connection)
+	peer.IsPrimary = false
+	//TODO handshake operation
+	peer.handShake()
+	return &peer, nil
 }
 
 func (peer *Peer) handShake() {
@@ -71,7 +89,7 @@ func (peer *Peer) handShake() {
 	helloMessage := pb.Message{
 		MessageType:  pb.Message_HELLO,
 		Payload:      peer.TEM.GetLocalPublicKey(),
-		From:         peer.RemoteAddr,
+		From:         peer.localAddr,
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	retMessage, err2 := peer.Client.Chat(context.Background(), &helloMessage)

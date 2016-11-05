@@ -112,7 +112,7 @@ func (pm *ProtocolManager) Start() {
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
 	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{}, event.InformPrimaryEvent{})
-	pm.peerMaintainSub = pm.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{}, event.UpdateRoutingTableEvent{}, event.RoutingTableUpdatedEvent{})
+	pm.peerMaintainSub = pm.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{}, event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
 	go pm.syncBlockLoop()
@@ -256,7 +256,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			// broadcast the local CA validition result to other replica
 			// ATTENTION: Payload is a consenus message
 			peers := self.Peermanager.GetAllPeersWithTemp()
-			var peerIds []int
+			var peerIds []uint64
 			for _, peer := range peers {
 				peerIds = append(peerIds, peer.ID)
 			}

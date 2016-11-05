@@ -63,7 +63,7 @@ func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP
 	newgRPCManager.configs = configUtil
 	//newgRPCManager.MaxPeerNumber = newgRPCManager.configs.GetMaxPeerNumber()
 	newgRPCManager.NodeID = NodeID
-	newgRPCManager.LocalNode.N = MAX_PEER_NUM
+
 	newgRPCManager.Original = isOriginal
 	newgRPCManager.Introducer = *peerComm.ExtractAddress(introducerIP, introducerPort, NodeID)
 	//HSM only instanced once, so peersPool and Node Hsm are same instance
@@ -84,11 +84,11 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux)
 	port := this.configs.GetPort(this.NodeID)
 	this.LocalNode = NewNode(port, eventMux, this.NodeID, this.TEM, this.peersPool)
 	this.LocalNode.StartServer()
+	this.LocalNode.N = MAX_PEER_NUM
 	// connect to peer
 	// 如果进行单元测试,需要将参数设置为true
 	// 重构peerpool 不采用单例模式进行管理
 	this.peersPool = NewPeerPool(this.TEM)
-
 	if this.Original {
 		//连接其他节点
 		this.connectToPeers()
@@ -98,7 +98,7 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux)
 		//启动attend监听routine
 		go this.LocalNode.attendNoticeProcess()
 		//TODO 连接介绍人节点
-		this.connectToIntroducer(this.Introducer)
+		this.connectToIntroducer(this.NodeID, this.Introducer)
 		aliveChain <- 1
 	}
 
@@ -127,9 +127,9 @@ func (this *GrpcPeerManager)ConnectToOthers() {
 	}
 }
 
-func (this *GrpcPeerManager) connectToIntroducer(introducerAddress pb.PeerAddress) {
+func (this *GrpcPeerManager) connectToIntroducer(id uint64, introducerAddress pb.PeerAddress) {
 	//连接介绍人,并且将其路由表取回,然后进行存储
-	peer, peerErr := NewPeerByIpAndPort(introducerAddress.IP, introducerAddress.Port, 0, this.TEM)
+	peer, peerErr := NewPeerByIpAndPort(introducerAddress.IP, introducerAddress.Port, id, this.TEM, this.LocalNode.address)
 	//将介绍人的信息放入路由表中
 	this.peersPool.PutPeer(*peer.RemoteAddr,peer)
 	if peerErr != nil {
@@ -158,11 +158,11 @@ func (this *GrpcPeerManager) connectToIntroducer(introducerAddress pb.PeerAddres
 	}
 	this.peersPool.MergeFormRoutersToTemp(routers)
 	this.LocalNode.N = len(this.GetAllPeersWithTemp())
-
 }
 
 func (this *GrpcPeerManager) connectToPeers() {
 	var peerStatus  map[uint64]bool
+	peerStatus = make(map[uint64]bool)
 	for i := 1; i <= MAX_PEER_NUM; i++ {
 		_index := uint64(i)
 		if _index == this.NodeID {
@@ -174,7 +174,7 @@ func (this *GrpcPeerManager) connectToPeers() {
 	// connect other peers
 	//TODO RETRY CONNECT 重试连接(未实现)
 	for this.peersPool.GetAliveNodeNum() < MAX_PEER_NUM - 1 {
-		log.Debug("node:", this.NodeID, "process connecting task...")
+		log.Debug("node:", this.NodeID, "连接节点...")
 		log.Debug("nodes number:", this.peersPool.GetAliveNodeNum())
 		nid := 1
 		for range time.Tick(200 * time.Millisecond) {
@@ -216,7 +216,7 @@ func (this *GrpcPeerManager) connectToPeers() {
 //connect to peer by ip address and port (why int32? because of protobuf limit)
 func (this *GrpcPeerManager) connectToPeer(peerAddress *pb.PeerAddress, nid uint64) (*Peer, error) {
 	//if this node is not online, connect it
-	peer, peerErr := NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, nid, this.TEM)
+	peer, peerErr := NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, nid, this.TEM, this.LocalNode.address)
 	if peerErr != nil {
 		// cannot connect to other peer
 		log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n")
@@ -237,6 +237,9 @@ func (this *GrpcPeerManager) GetAllPeersWithTemp() []*Peer {
 
 // BroadcastPeers Broadcast Massage to connected peers
 func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
+	if !this.IsOnline {
+		return
+	}
 	var broadCastMessage = pb.Message{
 		MessageType:  pb.Message_CONSUS,
 		From:         this.LocalNode.GetNodeAddr(),
@@ -255,9 +258,7 @@ func broadcast(broadCastMessage pb.Message, pPool *PeersPool) {
 		//REVIEW Chat 方法必须要传实例，否则将会重复加密，请一定要注意！！
 		//REVIEW Chat Function must give a message instance, not a point, if not the encrypt will break the payload!
 		go peer.Chat(broadCastMessage)
-
 	}
-
 }
 
 // SendMsgToPeers Send msg to specific peer peerlist

@@ -20,8 +20,6 @@ import (
 	"net"
 	"strconv"
 	"time"
-	//"hyperchain/membersrvc"
-
 	"hyperchain/membersrvc"
 	"sync"
 	"math"
@@ -138,7 +136,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			//返回路由表信息
 			response.MessageType = pb.Message_INTRODUCE_RESPONSE
 			routers := this.PeesPool.ToRoutingTable()
-			response.Payload = routers
+			response.Payload, _ = proto.Marshal(&routers)
 		}
 	case pb.Message_INTRODUCE_RESPONSE:
 		{

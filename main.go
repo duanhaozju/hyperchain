@@ -33,7 +33,7 @@ type argT struct {
 	ConfigPath string `cli:"c,conf" usage:"配置文件所在路径" dft:"./config/global.yaml"`
 	GRPCPort   int    `cli:"l,rpcport" usage:"远程连接端口" dft:"8001"`
 	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
-	IsInit     bool   `cli:"i,init" usage:"是否是创世节点"`
+	IsInit     bool   `cli:"i,init" usage:"是否是创世节点" dft:"true"`
 	Introducer string `cli:"r,introducer" usage:"加入代理节点信息,格127.0.0.1:8001"dft:"127.0.0.1:8001"`
 }
 
@@ -101,14 +101,14 @@ func main() {
 
 		//init peer manager to start grpc server and client
 		//introducer ip
-		introducer_ip := strings.Split(argv.Introducer, ":")[1]
-		introducer_port, atoi_err := strconv.Atoi(strings.Split(argv.Introducer, ":")[2])
+		introducerIp := strings.Split(argv.Introducer, ":")[0]
+		introducerPort, atoi_err := strconv.Atoi(strings.Split(argv.Introducer, ":")[1])
 		if atoi_err != nil {
 			fmt.Errorf("错误,代理节点信息格式错误%v", atoi_err)
 		}
-		introducer_port = int64(introducer_port)
+		introducerPortInt64 := int64(introducerPort)
 		//introducer port
-		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath(), config.getNodeID(), argv.IsInit, introducer_ip, introducer_port)
+		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath(), config.getNodeID(), argv.IsInit, introducerIp, introducerPortInt64)
 
 		//init db
 		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())

@@ -167,11 +167,11 @@ func (this *PeersPool)ToRoutingTable() pb.Routers {
 // merge the route into the temp peer list
 func (this *PeersPool)MergeFormRoutersToTemp(routers pb.Routers) {
 	for _, peerAddress := range routers.Routers {
-		newPeer, err := NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, uint64(this.alivePeers + 1), this.TEM)
+		newPeer, err := NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, uint64(this.alivePeers + 1), this.TEM, &this.localNode)
 		if err != nil {
 			log.Error("merge from routers error ", err)
 		}
-		this.PutPeerToTemp(newPeer.RemoteAddr, newPeer)
+		this.PutPeerToTemp(*newPeer.RemoteAddr, newPeer)
 	}
 }
 // Merge the temp peer into peers list
@@ -180,8 +180,8 @@ func (this *PeersPool) MergeTempPeers(address pb.PeerAddress) {
 	for _, tempPeer := range this.tempPeers {
 		if tempPeer.RemoteAddr.Hash == address.Hash {
 			this.peers[tempPeer.RemoteAddr.Hash] = tempPeer
-			this.peerAddr[tempPeer.RemoteAddr.Hash] = tempPeer.RemoteAddr
-			this.peerKeys[tempPeer.RemoteAddr] = tempPeer.RemoteAddr.Hash
+			this.peerAddr[tempPeer.RemoteAddr.Hash] = *tempPeer.RemoteAddr
+			this.peerKeys[*tempPeer.RemoteAddr] = tempPeer.RemoteAddr.Hash
 			delete(this.tempPeers, tempPeer.RemoteAddr.Hash)
 		}
 	}
@@ -191,8 +191,8 @@ func (this *PeersPool) MergeTempPeersForNewNode() {
 	//使用共识结果进行更新
 	for _, tempPeer := range this.tempPeers {
 		this.peers[tempPeer.RemoteAddr.Hash] = tempPeer
-		this.peerAddr[tempPeer.RemoteAddr.Hash] = tempPeer.RemoteAddr
-		this.peerKeys[tempPeer.RemoteAddr] = tempPeer.RemoteAddr.Hash
+		this.peerAddr[tempPeer.RemoteAddr.Hash] = *tempPeer.RemoteAddr
+		this.peerKeys[*tempPeer.RemoteAddr] = tempPeer.RemoteAddr.Hash
 		delete(this.tempPeers, tempPeer.RemoteAddr.Hash)
 
 	}

@@ -236,12 +236,12 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 		// ** For Hyperchain Test **
 		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		start := time.Now().Unix()
-		//end:=start+1
-		end := start + 30
-
-		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < 200; i++ {
+		//start := time.Now().Unix()
+		////end:=start+1
+		//end := start + 30
+		//
+		//for start := start; start < end; start = time.Now().Unix() {
+		//	for i := 0; i < 200; i++ {
 				// ################################# 测试代码 START ####################################### // (用不同的value代替之前不同的timestamp以标志不同的transaction)
 				txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), v, nil)
 
@@ -328,11 +328,11 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				} else if start_getErr == end_getErr {
 					return common.Hash{}, errors.New("Sending return timeout,may be something wrong.")
 				}*/
-			}
-			time.Sleep(1000 * time.Millisecond)
-		}
-
-		log.Infof("############# %d: end send request#############", time.Now().Unix())
+		//	}
+		//	time.Sleep(1000 * time.Millisecond)
+		//}
+		//
+		//log.Infof("############# %d: end send request#############", time.Now().Unix())
 	}
 
 	return tx.GetTransactionHash(), nil

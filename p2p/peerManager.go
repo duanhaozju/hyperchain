@@ -25,7 +25,7 @@ type PeerManager interface {
 	GetAllPeers() []*Peer
 	GetAllPeersWithTemp() []*Peer
 	// initialize the peerManager which is for init the local node
-	Start(aliveChain chan bool, eventMux *event.TypeMux)
+	Start(aliveChain chan int, eventMux *event.TypeMux)
 	// Get local node id
 	GetNodeId() int
 	// broadcast information to peers
