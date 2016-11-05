@@ -1985,7 +1985,7 @@ func (pbft *pbftProtocal) processNegotiateView() error {
 		return nil
 	}
 
-	logger.Debugf("Replica %d now negotiate view", pbft.id)
+	logger.Errorf("Replica %d now negotiate view", pbft.id)
 
 	pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
 	pbft.negoViewRspStore = make(map[uint64]uint64)
@@ -2005,6 +2005,7 @@ func (pbft *pbftProtocal) processNegotiateView() error {
 	}
 	msg := consensusMsgHelper(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
+	logger.Errorf("Replica %d broadcast negociate view message", pbft.id)
 
 	// post the negotiate message event to myself
 	nvr := &NegotiateViewResponse{

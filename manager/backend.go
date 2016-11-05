@@ -25,10 +25,10 @@ am *accounts.AccountManager, commonHash crypto.CommonHash, nodeId int, syncRepli
 	//select {
 	//case initType := <-aliveChan:
 	//	{
-			protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, consenter, am, commonHash, syncReplicaInterval, syncReplica, initType)
-			protocolManager.Start()
-			//start server
-			return protocolManager
+	protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, consenter, am, commonHash, syncReplicaInterval, syncReplica, initType)
+	protocolManager.Start()
+	//start server
+	return protocolManager
 	//}
 	//}
 }

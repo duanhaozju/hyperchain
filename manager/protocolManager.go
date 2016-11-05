@@ -224,6 +224,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 	for obj := range self.consensusSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.BroadcastConsensusEvent:
+			log.Warning("BroadcastConsensusEvent")
 			go self.BroadcastConsensus(ev.Payload)
 
 		case event.TxUniqueCastEvent:
@@ -281,6 +282,12 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			log.Warning("AlreadyInChainEvent")
 			// send negotiate event
 			if self.initType == 1 {
+				payload := self.Peermanager.GetLocalAddressPayload()
+				msg := &protos.NewNodeMessage{
+					Payload: payload,
+				}
+				self.consenter.RecvLocal(msg)
+				self.Peermanager.SetOnline()
 				self.NegotiateView()
 			}
 		}

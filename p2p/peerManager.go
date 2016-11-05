@@ -42,4 +42,8 @@ type PeerManager interface {
 	UpdateRoutingTable(payLoad []byte)
 	// use by new peer when join the chain dynamically only
 	ConnectToOthers()
+	// set the new node online
+	SetOnline()
+	// get local address payload
+	GetLocalAddressPayload() []byte
 }

@@ -268,7 +268,9 @@ func (this *GrpcPeerManager) GetAllPeersWithTemp() []*Peer {
 
 // BroadcastPeers Broadcast Massage to connected peers
 func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
+	log.Warning("P2P broadcast")
 	if !this.IsOnline {
+		log.Warning("IsOnline")
 		return
 	}
 	var broadCastMessage = pb.Message{
@@ -277,11 +279,13 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 		Payload:      payLoad,
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
+	log.Warning("call broadcast")
 	go broadcast(broadCastMessage, this.peersPool)
 }
 
 // inner the broadcast method which serve BroadcastPeers function
 func broadcast(broadCastMessage pb.Message, pPool *PeersPool) {
+	log.Warning("GetPeers: ", pPool.GetPeers())
 	for _, peer := range pPool.GetPeers() {
 		//REVIEW 这里没有返回值,不知道本次通信是否成功
 		//log.Notice(string(broadCastMessage.Payload))
@@ -290,6 +294,16 @@ func broadcast(broadCastMessage pb.Message, pPool *PeersPool) {
 		//REVIEW Chat Function must give a message instance, not a point, if not the encrypt will break the payload!
 		go peer.Chat(broadCastMessage)
 	}
+}
+
+func (this *GrpcPeerManager) SetOnline() {
+	this.IsOnline = true
+	this.peersPool.MergeTempPeersForNewNode()
+}
+
+func (this *GrpcPeerManager) GetLocalAddressPayload() (payload []byte) {
+	payload, _ = proto.Marshal(this.LocalNode.address)
+	return 
 }
 
 // SendMsgToPeers Send msg to specific peer peerlist
