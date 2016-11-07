@@ -12,7 +12,6 @@ import (
 	"hyperchain/p2p/transport"
 	"strconv"
 	"strings"
-	"sort"
 )
 
 type PeersPool struct {
@@ -165,7 +164,7 @@ func (this *PeersPool)ToRoutingTable() pb.Routers {
 		routers.Routers = append(routers.Routers, pers.RemoteAddr)
 	}
 	//需要进行排序
-	sort.Sort(routers)
+	//sort.Sort(routers)
 	return routers
 }
 

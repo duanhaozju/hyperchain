@@ -34,7 +34,7 @@ type argT struct {
 	GRPCPort   int    `cli:"l,rpcport" usage:"远程连接端口" dft:"8001"`
 	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
 	IsInit     bool   `cli:"i,init" usage:"是否是创世节点" dft:"false"`
-	Introducer string `cli:"r,introducer" usage:"加入代理节点信息,格127.0.0.1:8001"dft:"127.0.0.1:8001"`
+	Introducer string `cli:"r,introducer" usage:"加入代理节点信息,格127.0.0.1:8001"dft:"127.0.0.1:8001:1"`
 }
 
 func checkLicense(licensePath string) (err error) {
@@ -106,9 +106,14 @@ func main() {
 		if atoi_err != nil {
 			fmt.Errorf("错误,代理节点信息格式错误%v", atoi_err)
 		}
-		introducerPortInt64 := int64(introducerPort)
+		introducerID, atoi_err := strconv.Atoi(strings.Split(argv.Introducer, ":")[2])
+		if atoi_err != nil {
+			fmt.Errorf("错误,代理节点信息格式错误%v", atoi_err)
+		}
+		introducerPortint64 := int64(introducerPort)
+		introducerIDUint64 := uint64(introducerID)
 		//introducer port
-		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath(), config.getNodeID(), argv.IsInit, introducerIp, introducerPortInt64)
+		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath(), config.getNodeID(), argv.IsInit, introducerIp, introducerPortint64,introducerIDUint64)
 
 		//init db
 		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())

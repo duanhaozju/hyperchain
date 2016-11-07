@@ -55,7 +55,7 @@ type GrpcPeerManager struct {
 
 }
 
-func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP string, introducerPort int64) *GrpcPeerManager {
+func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP string, introducerPort int64,introducer_ID uint64) *GrpcPeerManager {
 	NodeID := uint64(nodeID)
 	// configs
 	var newgRPCManager GrpcPeerManager
@@ -65,7 +65,7 @@ func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP
 	newgRPCManager.NodeID = NodeID
 
 	newgRPCManager.Original = isOriginal
-	newgRPCManager.Introducer = *peerComm.ExtractAddress(introducerIP, introducerPort, NodeID)
+	newgRPCManager.Introducer = *peerComm.ExtractAddress(introducerIP, introducerPort, introducer_ID)
 	//HSM only instanced once, so peersPool and Node Hsm are same instance
 	newgRPCManager.TEM = transport.NewHandShakeManger()
 	// start local node
@@ -107,7 +107,7 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 		//启动attend监听routineddddd
 		go this.LocalNode.attendNoticeProcess(this.LocalNode.N)
 		//TODO 连接介绍人节点
-		this.connectToIntroducer(this.NodeID, this.Introducer)
+		this.connectToIntroducer(this.Introducer)
 		//this.ConnectToOthers()
 		aliveChain <- 1
 	}
@@ -137,14 +137,14 @@ func (this *GrpcPeerManager)ConnectToOthers() {
 	}
 }
 
-func (this *GrpcPeerManager) connectToIntroducer(id uint64, introducerAddress pb.PeerAddress) {
+func (this *GrpcPeerManager) connectToIntroducer( introducerAddress pb.PeerAddress) {
 	//连接介绍人,并且将其路由表取回,然后进行存储
-	peer, peerErr := NewPeerByIpAndPort(introducerAddress.IP, introducerAddress.Port, id, this.TEM, this.LocalNode.address)
+	peer, peerErr := NewPeerByIpAndPort(introducerAddress.IP, introducerAddress.Port, introducerAddress.ID, this.TEM, this.LocalNode.address)
 	//将介绍人的信息放入路由表中
 	this.peersPool.PutPeer(*peer.RemoteAddr,peer)
 	if peerErr != nil {
 		// cannot connect to other peer
-		log.Error("Node: ", introducerAddress.IP, ":", introducerAddress.Port, " can not connect!\n")
+		log.Error("Node: ", introducerAddress.IP, ":", introducerAddress.Port, " casn not connect!\n")
 		return
 	}
 
