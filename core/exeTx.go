@@ -13,7 +13,9 @@ import (
 
 type Code []byte
 
-var logger = glog.Logger{}
+var (
+	logger = glog.Logger{}
+)
 
 // 这一块相当于ethereum里的TransitionDB
 func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
@@ -25,7 +27,7 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		// TODO these there parameters should be added into the tx
 		tv         = tx.GetTransactionValue()
 		data       = tv.GetPayload()
-		gas        = tv.GetGas()
+		gas        = big.NewInt(1000000)
 		gasPrice   = tv.GetGasPrice()
 		amount     = tv.GetAmount()
 		statedb, _ = env.Db().(*state.StateDB)
