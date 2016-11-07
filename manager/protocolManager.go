@@ -132,6 +132,11 @@ func (pm *ProtocolManager) Start() {
 	}
 	if pm.initType == 1 {
 		// join the chain dynamically
+		payload := pm.Peermanager.GetLocalAddressPayload()
+		msg := &protos.NewNodeMessage{
+			Payload: payload,
+		}
+		pm.consenter.RecvLocal(msg)
 		pm.Peermanager.ConnectToOthers()
 	}
 	pm.wg.Wait()
@@ -224,6 +229,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 	for obj := range self.consensusSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.BroadcastConsensusEvent:
+			log.Warning("BroadcastConsensusEvent")
 			go self.BroadcastConsensus(ev.Payload)
 
 		case event.TxUniqueCastEvent:
@@ -281,6 +287,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			log.Warning("AlreadyInChainEvent")
 			// send negotiate event
 			if self.initType == 1 {
+				self.Peermanager.SetOnline()
 				self.NegotiateView()
 			}
 		}

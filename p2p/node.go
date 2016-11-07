@@ -38,7 +38,7 @@ type Node struct {
 	PeesPool           *PeersPool
 	N                  int
 	attendChan         chan int
-
+	sentEvent			bool
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
@@ -50,6 +50,7 @@ func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, TEM transp
 	newNode.DelayTable = make(map[uint64]int64)
 	newNode.PeesPool = peersPool
 	newNode.attendChan = make(chan int)
+	newNode.sentEvent = false
 	log.Debug("节点启动")
 	log.Debug("本地节点hash", newNode.address.Hash)
 	log.Debug("本地节点ip", newNode.address.IP)
@@ -69,10 +70,11 @@ func (this *Node)attendNoticeProcess(N int) {
 				log.Warning("连接到一个节点...!!!!!! N:", N, "f", f, "num", num)
 				if attendFlag == 1 {
 					num += 1
-					if num >= (N - f) {
+					if num >= (N - f) && !this.sentEvent {
 						//TODO 修改向上post的消息类型
 						log.Critical("新节点已经连接到chain上>>>>><<<<<<<<<<")
 						this.higherEventManager.Post(event.AlreadyInChainEvent{})
+						this.sentEvent = true
 						num = 0
 
 					}
@@ -224,6 +226,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 				}
 			case recovery.Message_RELAYTX:
 				{
+					log.Warning("Message_RELAYTX: ")
 					go this.higherEventManager.Post(event.ConsensusEvent{
 						Payload: SyncMsg.Payload,
 					})

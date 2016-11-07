@@ -9,7 +9,7 @@ import (
 // New replica receive local NewNode message
 func (pbft *pbftProtocal) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 
-	logger.Debugf("New replica %d received local newNode message", pbft.id)
+	logger.Errorf("New replica %d received local newNode message", pbft.id)
 
 	if pbft.isNewNode {
 		logger.Warningf("New replica %d received duplicate local newNode message", pbft.id)
@@ -20,6 +20,7 @@ func (pbft *pbftProtocal) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 	pbft.inAddingNode = true
 	key := byteToString(msg.Payload)
 	pbft.localKey = key
+	logger.Error("localkey: ", key)
 
 	return nil
 }
@@ -114,7 +115,7 @@ func (pbft *pbftProtocal) sendAgreeDelNode(key string) {
 // Replica received addnode for new node
 func (pbft *pbftProtocal) recvAgreeAddNode(add *AddNode) error {
 
-	logger.Errorf("Replica %d received addnode from replica %d for %s",
+	logger.Errorf("Replica %d received addnode from replica %d for %v",
 		pbft.id, add.ReplicaId, add.Key)
 
 	cert := pbft.getAddNodeCert(add.Key)
@@ -134,7 +135,7 @@ func (pbft *pbftProtocal) recvAgreeAddNode(add *AddNode) error {
 // Replica received delnode for quit node
 func (pbft *pbftProtocal) recvAgreeDelNode(del *DelNode) error {
 
-	logger.Debugf("Replica %d received agree addnode from replica %d for %s",
+	logger.Debugf("Replica %d received agree addnode from replica %d for %v",
 		pbft.id, del.ReplicaId, del.Key)
 
 	cert := pbft.getDelNodeCert(del.Key)
@@ -194,7 +195,7 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string) error {
 	cert := pbft.getDelNodeCert(key)
 
 	if cert == nil {
-		logger.Errorf("Replica %d can't get the delnode cert for key=%s", pbft.id, key)
+		logger.Errorf("Replica %d can't get the delnode cert for key=%v", pbft.id, key)
 		return nil
 	}
 
@@ -253,6 +254,7 @@ func (pbft *pbftProtocal) sendReadyForN() {
 	primary := pbft.primary(pbft.view, pbft.N)
 	unicast := consensusMsgHelper(msg, pbft.id)
 	pbft.helper.InnerUnicast(unicast, primary)
+	logger.Errorf("Replica %d send readyforn to primary %d", pbft.id, primary)
 }
 
 // Primary receive ready_for_n from new replica
@@ -315,7 +317,7 @@ func (pbft *pbftProtocal) recvReadyforN(ready *ReadyForN) error {
 // Primary send update_n after finish del node
 func (pbft *pbftProtocal) sendUpdateN(key string) {
 
-	logger.Debug("Replica %d try to send update_n after finish del node", pbft.id)
+	logger.Errorf("Replica %d try to send update_n after finish del node", pbft.id)
 
 	if !pbft.activeView {
 		logger.Warningf("Primary %d is in view change, reject the ready_for_n message", pbft.id)
@@ -365,7 +367,7 @@ func (pbft *pbftProtocal) sendUpdateN(key string) {
 
 func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 
-	logger.Debugf("Replica %d received updateN message from %d", pbft.id, update.ReplicaId)
+	logger.Errorf("Replica %d received updateN message from %d", pbft.id, update.ReplicaId)
 
 	if !pbft.activeView {
 		logger.Warningf("Replica %d is in view change, reject the update_n message", pbft.id)
@@ -535,6 +537,7 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, flag bool) error {
 		pbft.N = int(cert.update.N)
 		pbft.view = cert.update.View
 		pbft.f = (pbft.N-1) / 3
+		logger.Warningf("Replica %d update N=%d/f=%d/view=%d")
 
 	} else {
 		cert := pbft.getAddNodeCert(digest)

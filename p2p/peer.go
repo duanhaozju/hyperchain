@@ -124,7 +124,7 @@ func (peer *Peer) handShake() {
 // which implements the service that prototype file declares
 //
 func (this *Peer) Chat(msg pb.Message) (*pb.Message, error) {
-	log.Debug("Invoke the broadcast method", msg.From.ID, ">>>", this.RemoteAddr.ID)
+	log.Warning("Invoke the broadcast method", msg.From.ID, ">>>", this.RemoteAddr.ID)
 	this.chatMux.Lock()
 	defer this.chatMux.Unlock()
 	msg.Payload = this.TEM.EncWithSecret(msg.Payload, this.RemoteAddr.Hash)
