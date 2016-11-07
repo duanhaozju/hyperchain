@@ -116,6 +116,19 @@ func (this *Peer) Chat(msg pb.Message) (*pb.Message, error) {
 	r, err := this.Client.Chat(context.Background(), &msg)
 	if err != nil {
 		log.Error("err:", err)
+		log.Error("retry to connect again")
+		this.Connection.Close()
+		opts:=membersrvc.GetGrpcClientOpts()
+		conn, err := grpc.Dial(this.Addr.IP+":"+strconv.Itoa(int(this.Addr.Port)), opts...)
+		//conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
+		if err != nil {
+			errors.New("Cannot establish a connection!")
+			log.Error("err:", err)
+			return nil, err
+		}
+		this.Connection = conn
+		this.Client = pb.NewChatClient(this.Connection)
+
 	}
 	// 返回信息解密
 	if r != nil {
@@ -123,6 +136,7 @@ func (this *Peer) Chat(msg pb.Message) (*pb.Message, error) {
 			r.Payload = this.TEM.DecWithSecret(r.Payload, r.From.Hash)
 		}
 	}
+
 	return r, err
 }
 
