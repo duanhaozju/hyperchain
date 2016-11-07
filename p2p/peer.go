@@ -9,7 +9,6 @@ package p2p
 
 import (
 	"errors"
-	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"hyperchain/p2p/peerComm"
@@ -26,14 +25,11 @@ import (
 // init the package-level logger system,
 // after this declare and init function,
 // you can use the `log` whole the package scope
-var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("p2p/Server")
-}
 
 type Peer struct {
 	RemoteAddr *pb.PeerAddress
 	Connection *grpc.ClientConn
+	localAddr  *pb.PeerAddress
 	Client     pb.ChatClient
 	TEM        transport.TransportEncryptManager
 	Status     int
@@ -47,9 +43,11 @@ type Peer struct {
 // the peer will auto store into the peer pool.
 // when creating a peer, the client instance will create a message whose type is HELLO
 // if get a response, save the peer into singleton peer pool instance
-func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.TransportEncryptManager) (*Peer, error) {
+func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.TransportEncryptManager, localAddr *pb.PeerAddress) (*Peer, error) {
 	var peer Peer
 	peer.TEM = TEM
+	peer.localAddr = localAddr
+	peer.ID = nid
 	peer.RemoteAddr = peerComm.ExtractAddress(ip, port, nid)
 	opts := membersrvc.GetGrpcClientOpts()
 	conn, err := grpc.Dial(ip + ":" + strconv.Itoa(int(port)), opts...)
@@ -64,11 +62,29 @@ func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.Transpo
 	peer.IsPrimary = false
 	//TODO handshake operation
 	peer.handShake()
-
+	return &peer, nil
 }
 
-func NewPeerByIpAndPortNewNode(ip string, port int64, TEM transport.TransportEncryptManager, localAddr *pb.PeerAddress) {
-
+func NewPeerByAddress(address *pb.PeerAddress, nid uint64, TEM transport.TransportEncryptManager, localAddr *pb.PeerAddress) (*Peer, error) {
+	var peer Peer
+	peer.TEM = TEM
+	peer.localAddr = localAddr
+	peer.RemoteAddr = address
+	opts := membersrvc.GetGrpcClientOpts()
+	conn, err := grpc.Dial(address.IP + ":" + strconv.Itoa(int(address.Port)), opts...)
+	//conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
+	if err != nil {
+		errors.New("Cannot establish a connection!")
+		log.Error("err:", err)
+		return nil, err
+	}
+	peer.Connection = conn
+	peer.Client = pb.NewChatClient(peer.Connection)
+	peer.IsPrimary = false
+	log.Warning("newpeer :", peer)
+	//TODO handshake operation
+	peer.handShake()
+	return &peer, nil
 }
 
 func (peer *Peer) handShake() {
@@ -76,13 +92,13 @@ func (peer *Peer) handShake() {
 	helloMessage := pb.Message{
 		MessageType:  pb.Message_HELLO,
 		Payload:      peer.TEM.GetLocalPublicKey(),
-		From:         peer.RemoteAddr,
+		From:         peer.localAddr,
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	retMessage, err2 := peer.Client.Chat(context.Background(), &helloMessage)
 	if err2 != nil {
 		log.Error("cannot establish a connection")
-		return nil, err2
+		return
 	} else {
 		//review 取得对方的秘钥
 		if retMessage.MessageType == pb.Message_HELLO_RESPONSE {
@@ -98,20 +114,10 @@ func (peer *Peer) handShake() {
 			log.Notice("hash:", peer.RemoteAddr.Hash)
 			log.Notice("协商秘钥：")
 			log.Notice(peer.TEM.GetSecret(peer.RemoteAddr.Hash))
-			return &peer, nil
+			return
 		}
 	}
-	return nil, errors.New("cannot establish a connection")
 }
-
-
-
-
-
-
-
-
-
 
 // Chat is a function to send a message to peer,
 // this function invokes the remote function peer-to-peer,

@@ -8,8 +8,6 @@ package p2p
 
 import (
 	"errors"
-	"github.com/op/go-logging"
-	peer "hyperchain/p2p/peer"
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/transport"
 	"strconv"
@@ -35,20 +33,18 @@ type PeersPool struct {
 
 // the peers pool instance
 var prPoolIns PeersPool
-var log *logging.Logger // package-level logger
-
-//initialize the peers pool
-func init() {
-	log = logging.MustGetLogger("p2p/peerPool")
-}
 
 // NewPeerPool get a new peer pool instance
 func NewPeerPool(TEM transport.TransportEncryptManager) *PeersPool {
 	var newPrPoolIns PeersPool
 	newPrPoolIns.peers = make(map[string]*Peer)
-	newPrPoolIns.tempPeers = make(map[string]*Peer)
 	newPrPoolIns.peerAddr = make(map[string]pb.PeerAddress)
 	newPrPoolIns.peerKeys = make(map[pb.PeerAddress]string)
+
+	newPrPoolIns.tempPeers = make(map[string]*Peer)
+	newPrPoolIns.tempPeerAddr = make(map[string]pb.PeerAddress)
+	newPrPoolIns.tempPeerKeys = make(map[pb.PeerAddress]string)
+
 	newPrPoolIns.TEM = TEM
 	newPrPoolIns.alivePeers = 0
 	return &newPrPoolIns
@@ -137,7 +133,9 @@ func (this *PeersPool) GetPeers() []*Peer {
 	var clients []*Peer
 	for _, cl := range this.peers {
 		clients = append(clients, cl)
+		log.Critical("取得路由表:", cl)
 	}
+
 	return clients
 }
 
@@ -164,7 +162,6 @@ func (this *PeersPool)ToRoutingTable() pb.Routers {
 	var routers pb.Routers
 
 	for _, pers := range peers {
-		pers.RemoteAddr
 		routers.Routers = append(routers.Routers, pers.RemoteAddr)
 	}
 	//需要进行排序
@@ -176,20 +173,35 @@ func (this *PeersPool)ToRoutingTable() pb.Routers {
 // merge the route into the temp peer list
 func (this *PeersPool)MergeFormRoutersToTemp(routers pb.Routers) {
 	for _, peerAddress := range routers.Routers {
-		newPeer, err := NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, this.alivePeers + 1, this.TEM)
+		newPeer, err := NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, uint64(this.alivePeers + 1), this.TEM, &this.localNode)
 		if err != nil {
 			log.Error("merge from routers error ", err)
 		}
-		this.PutPeerToTemp(newPeer.RemoteAddr, newPeer)
+		this.PutPeerToTemp(*newPeer.RemoteAddr, newPeer)
 	}
 }
 // Merge the temp peer into peers list
-func (this *PeersPool) MergeTempPeers() {
+func (this *PeersPool) MergeTempPeers(peer *Peer) {
+	log.Critical("old节点合并路由表!!!!!!!!!!!!!!!!!!!")
+	//使用共识结果进行更新
+	//for _, tempPeer := range this.tempPeers {
+	//	if tempPeer.RemoteAddr.Hash == address.Hash {
+	this.peers[peer.RemoteAddr.Hash] = peer
+	this.peerAddr[peer.RemoteAddr.Hash] = *peer.RemoteAddr
+	this.peerKeys[*peer.RemoteAddr] = peer.RemoteAddr.Hash
+	delete(this.tempPeers, peer.RemoteAddr.Hash)
+	//}
+	//}
+}
+
+func (this *PeersPool) MergeTempPeersForNewNode() {
+	//使用共识结果进行更新
 	for _, tempPeer := range this.tempPeers {
 		this.peers[tempPeer.RemoteAddr.Hash] = tempPeer
-		this.peerAddr[tempPeer.RemoteAddr.Hash] = tempPeer.RemoteAddr
-		this.peerKeys[tempPeer.RemoteAddr] = tempPeer.RemoteAddr.Hash
+		this.peerAddr[tempPeer.RemoteAddr.Hash] = *tempPeer.RemoteAddr
+		this.peerKeys[*tempPeer.RemoteAddr] = tempPeer.RemoteAddr.Hash
 		delete(this.tempPeers, tempPeer.RemoteAddr.Hash)
+
 	}
 }
 

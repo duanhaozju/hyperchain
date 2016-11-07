@@ -42,24 +42,30 @@ type GrpcPeerManager struct {
 	//Port          int64
 	//IP            string
 	//这个在peer和node中都要更新
-	Routers       pb.Routers
-	//是否初始化,可能需要作为一个标识存在,但是
+	//Routers       pb.Routers
+	//是否为创世节点,可能需要作为一个标识存在,但是
 	Original      bool
+	//是否上线
+	IsOnline      bool
 	//interducer information
 	Introducer    pb.PeerAddress
+	// N
+
+	//N int
+
 }
 
-func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP string, introducerPort uint64) *GrpcPeerManager {
+func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP string, introducerPort int64) *GrpcPeerManager {
 	NodeID := uint64(nodeID)
-
 	// configs
 	var newgRPCManager GrpcPeerManager
 	configUtil := peerComm.NewConfigUtil(configPath)
 	newgRPCManager.configs = configUtil
 	//newgRPCManager.MaxPeerNumber = newgRPCManager.configs.GetMaxPeerNumber()
 	newgRPCManager.NodeID = NodeID
+
 	newgRPCManager.Original = isOriginal
-	newgRPCManager.Introducer = peerComm.ExtractAddress(introducerIP, introducerPort, nodeID)
+	newgRPCManager.Introducer = *peerComm.ExtractAddress(introducerIP, introducerPort, NodeID)
 	//HSM only instanced once, so peersPool and Node Hsm are same instance
 	newgRPCManager.TEM = transport.NewHandShakeManger()
 	// start local node
@@ -69,27 +75,40 @@ func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP
 }
 
 // Start start the Normal local listen server
-func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux) {
+func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux, GRPCProt int64) {
 	if this.NodeID == 0 || this.configs == nil {
 		log.Error("the gRPC Manager hasn't initlized")
 		os.Exit(1)
 	}
 	//newgRPCManager.IP = newgRPCManager.configs.GetIP(newgRPCManager.NodeID)
+	// 重构peerpool 不采用单例模式进行管理
 	port := this.configs.GetPort(this.NodeID)
-	this.LocalNode = NewNode(port, eventMux, this.NodeID, this.TEM, *this.peersPool)
+	if port == int64(0) {
+		port = GRPCProt
+	}
+
+	this.peersPool = NewPeerPool(this.TEM)
+	this.LocalNode = NewNode(port, eventMux, this.NodeID, this.TEM, this.peersPool)
 	this.LocalNode.StartServer()
+	this.LocalNode.N = MAX_PEER_NUM
 	// connect to peer
 	// 如果进行单元测试,需要将参数设置为true
-	// 重构peerpool 不采用单例模式进行管理
-	this.peersPool = NewPeerPool(this.TEM)
+
 
 	if this.Original {
 		//连接其他节点
 		this.connectToPeers()
+
+		log.Critical("路由表:", this.peersPool.peerAddr)
+
 		aliveChain <- 0
+		this.IsOnline = true
 	} else {
+		//启动attend监听routine
+		go this.LocalNode.attendNoticeProcess(this.LocalNode.N)
 		//TODO 连接介绍人节点
-		this.connectToIntroducer(this.Introducer)
+		this.connectToIntroducer(this.NodeID, this.Introducer)
+		//this.ConnectToOthers()
 		aliveChain <- 1
 	}
 
@@ -102,37 +121,39 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux)
 func (this *GrpcPeerManager)ConnectToOthers() {
 	//TODO更新路由表之后进行连接
 	allPeersWithTemp := this.peersPool.GetPeersWithTemp()
+	payload, _ := proto.Marshal(this.LocalNode.address)
 	newNodeMessage := pb.Message{
 		MessageType:pb.Message_ATTEND,
-		Payload:proto.Marshal(this.LocalNode.address),
+		Payload:payload,
 		MsgTimeStamp:time.Now().UnixNano(),
 		From:this.LocalNode.address,
 	}
 	for _, peer := range allPeersWithTemp {
-		ret, err := peer.Chat(newNodeMessage)
+		//review 返回值不做处理
+		_, err := peer.Chat(newNodeMessage)
 		if err != nil {
 			log.Error("notice other node Attend Failed", err)
 		}
 	}
 }
 
-func (this *GrpcPeerManager) connectToIntroducer(introducerAddress pb.PeerAddress) {
+func (this *GrpcPeerManager) connectToIntroducer(id uint64, introducerAddress pb.PeerAddress) {
 	//连接介绍人,并且将其路由表取回,然后进行存储
-	peer, peerErr := NewPeerByIpAndPort(introducerAddress.IP, introducerAddress.Port, 0, this.TEM)
+	peer, peerErr := NewPeerByIpAndPort(introducerAddress.IP, introducerAddress.Port, id, this.TEM, this.LocalNode.address)
 	//将介绍人的信息放入路由表中
-	this.peersPool.PutPeer(peer)
+	this.peersPool.PutPeer(*peer.RemoteAddr,peer)
 	if peerErr != nil {
 		// cannot connect to other peer
 		log.Error("Node: ", introducerAddress.IP, ":", introducerAddress.Port, " can not connect!\n")
-		return nil, peerErr
-	} else {
-		return peer, nil
+		return
 	}
 
 	//发送introduce 信息,取得路由表
+	payload, _ := proto.Marshal(this.LocalNode.address)
+	log.Warning("address: ", this.LocalNode.address)
 	introduce_message := pb.Message{
 		MessageType:pb.Message_INTRODUCE,
-		Payload:proto.Marshal(this.LocalNode.address),
+		Payload:payload,
 		MsgTimeStamp:time.Now().UnixNano(),
 		From:this.LocalNode.address,
 	}
@@ -142,16 +163,34 @@ func (this *GrpcPeerManager) connectToIntroducer(introducerAddress pb.PeerAddres
 	}
 
 	var routers pb.Routers
-	unmarshalError := proto.Unmarshal(retMsg, routers)
+	unmarshalError := proto.Unmarshal(retMsg.Payload, &routers)
 	if unmarshalError != nil {
 		log.Error("routing table unmarshal err ", unmarshalError)
 	}
+	log.Warning("合并路由表并链接", routers)
 	this.peersPool.MergeFormRoutersToTemp(routers)
-
+	for _, p := range this.peersPool.GetPeersWithTemp() {
+		log.Warning("路由表中的节点", p)
+		//review 		this.LocalNode.attendChan <- 1
+		//attend_message := pb.Message{
+		//	MessageType:pb.Message_ATTEND,
+		//	Payload:payload,
+		//	MsgTimeStamp:time.Now().UnixNano(),
+		//	From:this.LocalNode.address,
+		//}
+		//retMsg,err := p.Chat(attend_message)
+		//if err != nil{
+		//	log.Error(err)
+		//}else{
+		//	retMsg
+		//}
+	}
+	this.LocalNode.N = len(this.GetAllPeersWithTemp())
 }
 
 func (this *GrpcPeerManager) connectToPeers() {
 	var peerStatus  map[uint64]bool
+	peerStatus = make(map[uint64]bool)
 	for i := 1; i <= MAX_PEER_NUM; i++ {
 		_index := uint64(i)
 		if _index == this.NodeID {
@@ -163,7 +202,7 @@ func (this *GrpcPeerManager) connectToPeers() {
 	// connect other peers
 	//TODO RETRY CONNECT 重试连接(未实现)
 	for this.peersPool.GetAliveNodeNum() < MAX_PEER_NUM - 1 {
-		log.Debug("node:", this.NodeID, "process connecting task...")
+		log.Debug("node:", this.NodeID, "连接节点...")
 		log.Debug("nodes number:", this.peersPool.GetAliveNodeNum())
 		nid := 1
 		for range time.Tick(200 * time.Millisecond) {
@@ -180,6 +219,7 @@ func (this *GrpcPeerManager) connectToPeers() {
 			peerIp := this.configs.GetIP(_index)
 			peerPort := this.configs.GetPort(_index)
 			peerAddress := peerComm.ExtractAddress(peerIp, peerPort, _index)
+
 			peer, connectErr := this.connectToPeer(peerAddress, _index)
 			if connectErr != nil {
 				// cannot connect to other peer
@@ -188,29 +228,31 @@ func (this *GrpcPeerManager) connectToPeers() {
 				continue
 			} else {
 				// add  peer to peer pool
+				log.Critical("将地址加入到地址池", *peerAddress)
 				this.peersPool.PutPeer(*peerAddress, peer)
 				//this.TEM.[peer.Addr.Hash]=peer.TEM
 				peerStatus[_index] = true
-				log.Debug("Peer Node hash:", peerAddress.Hash, "has connected!")
+				log.Debug("Peer Node ID:", peerAddress.ID, "has connected!")
 			}
 		}
 	}
-	//todo 生成路由表
-	this.Routers = pb.Routers{
-		Routers:this.peersPool.GetPeers(),
-	}
+	////todo 生成路由表
+	//this.Routers = pb.Routers{
+	//	Routers:this.peersPool.GetPeers(),
+	//}
 
 }
 
 //connect to peer by ip address and port (why int32? because of protobuf limit)
 func (this *GrpcPeerManager) connectToPeer(peerAddress *pb.PeerAddress, nid uint64) (*Peer, error) {
 	//if this node is not online, connect it
-	peer, peerErr := NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, nid, this.TEM)
+	peer, peerErr := NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, nid, this.TEM, this.LocalNode.address)
 	if peerErr != nil {
 		// cannot connect to other peer
 		log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n")
 		return nil, peerErr
 	} else {
+		log.Critical("连接到节点", nid)
 		return peer, nil
 	}
 
@@ -224,9 +266,11 @@ func (this *GrpcPeerManager) GetAllPeersWithTemp() []*Peer {
 	return this.peersPool.GetPeersWithTemp()
 }
 
-
 // BroadcastPeers Broadcast Massage to connected peers
 func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
+	if !this.IsOnline {
+		return
+	}
 	var broadCastMessage = pb.Message{
 		MessageType:  pb.Message_CONSUS,
 		From:         this.LocalNode.GetNodeAddr(),
@@ -245,13 +289,12 @@ func broadcast(broadCastMessage pb.Message, pPool *PeersPool) {
 		//REVIEW Chat 方法必须要传实例，否则将会重复加密，请一定要注意！！
 		//REVIEW Chat Function must give a message instance, not a point, if not the encrypt will break the payload!
 		go peer.Chat(broadCastMessage)
-
 	}
-
 }
 
 // SendMsgToPeers Send msg to specific peer peerlist
 func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, MessageType recovery.Message_MsgType) {
+	log.Critical("need send message to ", peerList)
 	var mpPaylod = &recovery.Message{
 		MessageType:  MessageType,
 		MsgTimeStamp: time.Now().UnixNano(),
@@ -271,15 +314,26 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, M
 
 	// broadcast to special peers
 	go func() {
-		for _, p := range this.peersPool.GetPeers() {
-			for _, NodeID := range peerList {
+		for _, NodeID := range peerList {
+			peers := this.peersPool.GetPeers()
+			p0 := peers[0]
+			log.Critical("peers0", p0.ID)
+			p1 := peers[1]
+			log.Critical("peers0", p1.ID)
+			p2 := peers[2]
+			log.Critical("peers0", p2.ID)
+
+			for _, p := range peers {
+				log.Critical("range nodeid", p.RemoteAddr)
+				log.Critical("range nodeid", p.ID)
 				// convert the uint64 to int
 				// because the unicast node is not confirm so, here use double loop
-				if p.ID == NodeID {
+				if p.RemoteAddr.ID == NodeID {
 					log.Debug("send msg to ", NodeID)
+
 					resMsg, err := p.Chat(syncMessage)
 					if err != nil {
-						log.Error("Broadcast failed,Node", p.RemoteAddr)
+						log.Error("Broadcast failed,Node")
 					} else {
 						log.Debug("resMsg:", string(resMsg.Payload))
 						//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
@@ -361,11 +415,45 @@ func (this *GrpcPeerManager) GetLocalNode() *Node {
 }
 
 func (this *GrpcPeerManager) UpdateRoutingTable(payload []byte) {
-	if this.Original {
-		this.peersPool.MergeTempPeers()
-	} else {
-		//新节点在一开始的时候就已经将介绍人的节点列表加入了所以这里不需要处理
+	//这里的payload 应该是前面传输过去的 address,里面应该只有一个
+
+	var toUpdateAddress pb.PeerAddress
+	err := proto.Unmarshal(payload, &toUpdateAddress)
+	if err != nil {
+		log.Error(err)
 	}
-	//post
-	this.LocalNode.higherEventManager.Post(event.RoutingTableUpdatedEvent{})
+	//新节点peer
+	//newPeer := this.peersPool.tempPeers[this.peersPool.tempPeerKeys[toUpdateAddress]]
+	log.Warning("hash:",toUpdateAddress )
+	newPeer, err := NewPeerByAddress(&toUpdateAddress, toUpdateAddress.ID, this.TEM, this.LocalNode.address)
+	if err != nil {
+		log.Error(err)
+	}
+
+	log.Warning("newPeer: ", newPeer)
+	//新消息
+	payload, _ = proto.Marshal(this.LocalNode.address)
+
+	attendResponseMsg := pb.Message{
+		MessageType:pb.Message_ATTEND_RESPNSE,
+		Payload:payload,
+		MsgTimeStamp:time.Now().UnixNano(),
+		From:this.LocalNode.address,
+	}
+
+	if this.IsOnline {
+		this.peersPool.MergeTempPeers(newPeer)
+		//通知新节点进行接洽
+		newPeer.Chat(attendResponseMsg)
+		this.LocalNode.N += 1
+	} else {
+		//新节点
+		//新节点在一开始的时候就已经将介绍人的节点列表加入了所以这里不需要处理
+		//the new attend node
+		this.IsOnline = true
+		this.peersPool.MergeTempPeersForNewNode()
+		this.LocalNode.N = this.peersPool.GetAliveNodeNum()
+	}
 }
+//post
+//this.LocalNode.higherEventManager.Post(event.RoutingTableUpdatedEvent{})
