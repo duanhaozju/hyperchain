@@ -9,7 +9,7 @@ if [ x"$ports1" != x"" ];then
     kill -9 $ports1
 fi
 #rebuild the application
-#cd ..
+cd ..
 # clean the build folder
 rm -rf ./build
 mkdir -p build
@@ -21,10 +21,10 @@ cp -rf ./config/keystore ./build/build
 cd -
 
 echo "run the application"
-osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain/build && ./hyperchain -o 1 -l 8001 -t 8081"'
-osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain/build && ./hyperchain -o 2 -l 8002 -t 8082"'
-osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain/build && ./hyperchain -o 3 -l 8003 -t 8083"'
-osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain/build && ./hyperchain -o 4 -l 8004 -t 8084"'
+osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain/build && ./hyperchain -o 1 -l 8001 -t 8081 -i true"'
+osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain/build && ./hyperchain -o 2 -l 8002 -t 8082 -i true"'
+osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain/build && ./hyperchain -o 3 -l 8003 -t 8083 -i true"'
+osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain/build && ./hyperchain -o 4 -l 8004 -t 8084 -i true"'
 
 
 python ./jsonrpc/Dashboard/simpleHttpServer.py
