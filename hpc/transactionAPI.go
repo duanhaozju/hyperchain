@@ -427,7 +427,7 @@ func (tran *PublicTransactionAPI) GetSighHash(args SendTxArgs) (common.Hash, err
 
 	realArgs := prepareExcute(args)
 
-	if realArgs.Timestamp == "" {
+	if realArgs.Timestamp == 0 {
 		return common.Hash{}, errors.New("lack of param timestamp")
 	}
 
