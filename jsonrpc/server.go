@@ -19,7 +19,7 @@ const (
 	stopPendingRequestTimeout = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
 
 	MetadataApi     = "rpc"
-	DefaultHTTPApis = "tx,node,block,acot"
+	DefaultHTTPApis = "tx,node,block,acc"
 )
 
 // CodecOption specifies which type of messages this codec supports
