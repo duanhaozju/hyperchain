@@ -262,11 +262,24 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 }
 
+type ReceiptResult struct {
+	TxHash            string		`json:"txHash"`
+	PostState         string		`json:"postState"`
+	ContractAddress   string		`json:"contractAddress"`
+	Ret               string		`json:"ret"`
+}
+
 // GetTransactionReceipt returns transaction's receipt for given transaction hash.
-func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*types.ReceiptTrans, error) {
+func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*ReceiptResult, error) {
 
 	if errType, err := core.GetInvaildTxErrType(tran.db, hash.Bytes()); errType == -1 {
-		return core.GetReceipt(hash), nil
+		receipt := core.GetReceipt(hash)
+		return &ReceiptResult{
+			TxHash: 	 receipt.TxHash,
+			PostState: 	 receipt.PostState,
+			ContractAddress: receipt.ContractAddress,
+			Ret: 		 receipt.Ret,
+		}, nil
 	} else if err != nil {
 		return nil, err
 	} else {
