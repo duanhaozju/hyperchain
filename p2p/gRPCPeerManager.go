@@ -303,7 +303,7 @@ func (this *GrpcPeerManager) SetOnline() {
 
 func (this *GrpcPeerManager) GetLocalAddressPayload() (payload []byte) {
 	payload, _ = proto.Marshal(this.LocalNode.address)
-	return 
+	return
 }
 
 // SendMsgToPeers Send msg to specific peer peerlist
@@ -330,20 +330,13 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, M
 	go func() {
 		for _, NodeID := range peerList {
 			peers := this.peersPool.GetPeers()
-			p0 := peers[0]
-			log.Critical("peers0", p0.ID)
-			p1 := peers[1]
-			log.Critical("peers0", p1.ID)
-			p2 := peers[2]
-			log.Critical("peers0", p2.ID)
-
 			for _, p := range peers {
 				log.Critical("range nodeid", p.RemoteAddr)
 				log.Critical("range nodeid", p.ID)
 				// convert the uint64 to int
 				// because the unicast node is not confirm so, here use double loop
 				if p.RemoteAddr.ID == NodeID {
-					log.Debug("send msg to ", NodeID)
+					log.Warning("send msg to ", NodeID)
 
 					resMsg, err := p.Chat(syncMessage)
 					if err != nil {

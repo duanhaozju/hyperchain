@@ -20,6 +20,7 @@ func (pbft *pbftProtocal) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 	pbft.inAddingNode = true
 	key := byteToString(msg.Payload)
 	pbft.localKey = key
+	logger.Error("localkey: ", key)
 
 	return nil
 }
@@ -253,6 +254,7 @@ func (pbft *pbftProtocal) sendReadyForN() {
 	primary := pbft.primary(pbft.view, pbft.N)
 	unicast := consensusMsgHelper(msg, pbft.id)
 	pbft.helper.InnerUnicast(unicast, primary)
+	logger.Errorf("Replica %d send readyforn to primary %d", pbft.id, primary)
 }
 
 // Primary receive ready_for_n from new replica

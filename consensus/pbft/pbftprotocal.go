@@ -389,6 +389,7 @@ func (pbft *pbftProtocal) RecvMsg(e []byte) error {
 	} else if msg.Type == protos.Message_NULL_REQUEST {
 		return pbft.processNullRequest(msg)
 	} else if msg.Type == protos.Message_NEGOTIATE_VIEW {
+		logger.Error("recv negotiate view")
 		return pbft.processNegotiateView()
 	}
 		logger.Errorf("Unknown recvMsg: %+v", msg)
@@ -524,6 +525,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		logger.Noticef("#   Replica %d finished recovery", pbft.id)
 		logger.Notice("################################################")
 		if pbft.isNewNode {
+			logger.Errorf("new node")
 			pbft.sendReadyForN()
 		}
 		pbft.processRequestsDuringRecovery()
