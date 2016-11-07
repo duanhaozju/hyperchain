@@ -17,7 +17,10 @@ message InvalidTransactionRecord {
     enum ErrType {
         OUTOFBALANCE = 0;
         SIGFAILED = 1;
+        INVOKE_CONTRACT_FAILED=2;
+        DEPLOY_CONTRACT_FAILED=3;
     }
+    bytes errMsg = 3;
 }
 message InvalidTransactionRecords {
     repeated InvalidTransactionRecord records = 1;

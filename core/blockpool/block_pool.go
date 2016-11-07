@@ -257,6 +257,7 @@ func (pool *BlockPool) CheckSign(txs []*types.Transaction, commonHash crypto.Com
 				invalidTxSet = append(invalidTxSet, &types.InvalidTransactionRecord{
 					Tx:      tx,
 					ErrType: types.InvalidTransactionRecord_SIGFAILED,
+					ErrMsg:  []byte("Invalid signature"),
 				})
 				mu.Lock()
 				index = append(index, i)
@@ -295,10 +296,26 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	for i, tx := range txs {
 		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(*tx, vmenv)
-		if err != nil && core.IsValueTransferErr(err) {
+		if err != nil{
+			var errType types.InvalidTransactionRecord_ErrType
+			if core.IsValueTransferErr(err) {
+				errType = types.InvalidTransactionRecord_OUTOFBALANCE
+			} else if core.IsExecContractErr(err) {
+				tmp := err.(*core.ExecContractError)
+				if tmp.GetType() == 0 {
+					errType = types.InvalidTransactionRecord_DEPLOY_CONTRACT_FAILED
+				} else if tmp.GetType() == 1{
+					errType = types.InvalidTransactionRecord_INVOKE_CONTRACT_FAILED
+				} else {
+					// For extension
+				}
+			} else {
+				// For extension
+			}
 			invalidTxs = append(invalidTxs, &types.InvalidTransactionRecord{
 				Tx:      tx,
-				ErrType: types.InvalidTransactionRecord_OUTOFBALANCE,
+				ErrType: errType,
+				ErrMsg:  []byte(err.Error()),
 			})
 			continue
 		}
@@ -527,7 +544,10 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	}
 
 
-	block, _ := core.GetBlockByNumber(db, ev.SeqNo-1)
+	block, err := core.GetBlockByNumber(db, ev.SeqNo-1)
+	if err != nil {
+		return
+	}
 	pool.lastValidationState = common.BytesToHash(block.MerkleRoot)
 	// 2. Delete Invalid Stuff
 	for i := ev.SeqNo; i < tmpDemandNumber; i += 1 {
@@ -558,6 +578,9 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	keys := pool.blockCache.Keys()
 	for _, key := range keys {
 		ret, _ := pool.blockCache.Get(key)
+		if ret == nil {
+			continue
+		}
 		record := ret.(BlockRecord)
 		for i, tx := range record.ValidTxs {
 			if err := db.Delete(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
