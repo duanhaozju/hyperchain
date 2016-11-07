@@ -30,7 +30,6 @@ import (
 )
 
 var (
-	public_batch hyperdb.Batch
 	log          *logging.Logger // package-level logger
 )
 
@@ -292,7 +291,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	env["currentGasLimit"] = "10000000"
 	vmenv := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
 
-	public_batch = db.NewBatch()
+	public_batch := db.NewBatch()
 	for i, tx := range txs {
 		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(*tx, vmenv)
