@@ -540,7 +540,23 @@ func (tran *PublicTransactionAPI) GetTransactionsCount() (*Number, error) {
 // GetTxAvgTimeByBlockNumber returns tx execute avg time.
 func (tran *PublicTransactionAPI) GetTxAvgTimeByBlockNumber(args IntervalArgs) *Number {
 
-	exeTime := core.CalcResponseAVGTime((*args.From).ToUint64(), (*args.To).ToUint64())
+	var from,to uint64
+
+	if args.From == nil && args.To == nil {
+		from = 1
+		to = core.GetChainCopy().Height
+	} else if args.From != nil && args.To == nil {
+		from = (*args.From).ToUint64()
+		to = core.GetChainCopy().Height
+	} else if args.From == nil && args.To != nil {
+		from = 1
+		to = (*args.To).ToUint64()
+	} else {
+		from = (*args.From).ToUint64()
+		to = (*args.To).ToUint64()
+	}
+
+	exeTime := core.CalcResponseAVGTime(from, to)
 
 	if exeTime <= 0 {
 		return nil
