@@ -183,6 +183,9 @@ func getBlocks(args IntervalArgs, hyperDb *hyperdb.LDBDatabase) ([]*BlockResult,
 			return nil, err
 		}
 		blocks = append(blocks, b)
+		if to == 0 {
+			break
+		}
 		to--
 	}
 

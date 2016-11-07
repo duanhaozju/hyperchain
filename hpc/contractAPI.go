@@ -76,7 +76,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 		signature, err = contract.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
 		if err != nil {
 			log.Errorf("Sign(tx) error :%v", err)
-			return common.Hash{}, errors.New("sigature failed")
+			return common.Hash{}, err
 		}
 		tx.Signature = signature
 	} else {
