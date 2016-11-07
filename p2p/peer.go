@@ -138,6 +138,7 @@ func (this *Peer) Chat(msg pb.Message) (*pb.Message, error) {
 			r.Payload = this.TEM.DecWithSecret(r.Payload, r.From.Hash)
 		}
 	}
+	log.Warning("返回结果",r.MessageType)
 	return r, err
 }
 
