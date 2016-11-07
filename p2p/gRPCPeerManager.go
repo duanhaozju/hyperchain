@@ -104,7 +104,7 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 		aliveChain <- 0
 		this.IsOnline = true
 	} else {
-		//启动attend监听routine
+		//启动attend监听routineddddd
 		go this.LocalNode.attendNoticeProcess(this.LocalNode.N)
 		//TODO 连接介绍人节点
 		this.connectToIntroducer(this.NodeID, this.Introducer)
