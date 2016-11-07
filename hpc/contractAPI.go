@@ -104,7 +104,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 
 	log.Infof("############# %d: end send request#############", time.Now().Unix())
 
-	time.Sleep(2000 * time.Millisecond)
+	//time.Sleep(2000 * time.Millisecond)
 
 	return tx.GetTransactionHash(), nil
 }
