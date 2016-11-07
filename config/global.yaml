@@ -48,6 +48,14 @@ global:
         genesis: "config/genesis.json"
         membersrvc: "config/membersrvc.yaml"
         pbft: "config/pbft.yaml"
-    replicainfo:
-        interval : 5s
-        enable   : false
+        license: "config/LICENSE"
+        replicainfo:
+            interval : 500s
+            enable   : false
+        ratelimit:
+            enable   : true
+            txRatePeak : 20
+            txFillRate: 50ms
+            contractRatePeak : 20
+            contractFillRate: 50ms
+

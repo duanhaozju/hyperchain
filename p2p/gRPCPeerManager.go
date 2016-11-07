@@ -72,12 +72,11 @@ func (this *GrpcPeerManager) Start(aliveChain chan bool, eventMux *event.TypeMux
 		log.Error("the gRPC Manager hasn't initlized")
 		os.Exit(1)
 	}
+	// 重构peerpool 不采用单例模式进行管理
+	this.peersPool = peerPool.NewPeerPool(this.TEM)
 	this.LocalNode = node.NewNode(this.Port, eventMux, this.NodeID, this.TEM)
 	this.LocalNode.StartServer()
 	// connect to peer
-	// 如果进行单元测试,需要将参数设置为true
-	// 重构peerpool 不采用单例模式进行管理
-	this.peersPool = peerPool.NewPeerPool(this.TEM)
 	// 读取待连接的节点信息
 	this.connectToPeers()
 	log.Notice("┌────────────────────────────┐")

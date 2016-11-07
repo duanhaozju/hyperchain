@@ -278,7 +278,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.negoViewRspTimer = pbftTimerFactory.CreateTimer()
 
 	// recovery
-	pbft.inRecovery = true
+	//pbft.inRecovery = true
 	pbft.recoveryRestartTimeout, err = time.ParseDuration(config.GetString("timeout.recovery"))
 	if err != nil {
 		panic(fmt.Errorf("Cannot parse recovery timeout: %s", err))
@@ -472,7 +472,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		pbft.persistView(pbft.view)
 		pbft.helper.InformPrimary(primary)
 		pbft.processRequestsDuringNegoView()
-		pbft.initRecovery()
+		//pbft.initRecovery()
 		return nil
 	case *RecoveryInit:
 		return pbft.recvRecovery(et)

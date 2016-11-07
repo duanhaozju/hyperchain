@@ -50,6 +50,7 @@ type Peer struct {
 func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.TransportEncryptManager, localAddr *pb.PeerAddress) (*Peer, error) {
 	var peer Peer
 	peer.TEM = TEM
+	peer.ID = nid
 	peerAddr := peerComm.ExtractAddress(ip, port, nid)
 
 	opts:=membersrvc.GetGrpcClientOpts()

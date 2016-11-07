@@ -10,6 +10,7 @@ import (
 
 // the Database for LevelDB
 // LDBDatabase implements the DataBase interface
+
 type LDBDatabase struct {
 	path string
 	db   *leveldb.DB

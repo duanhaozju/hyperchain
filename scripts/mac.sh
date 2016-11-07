@@ -18,7 +18,6 @@ govendor build -o ./build/hyperchain
 cp -rf ./config ./build/
 mkdir -p ./build/build
 cp -rf ./config/keystore ./build/build
-cd -
 
 echo "run the application"
 osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain/build && ./hyperchain -o 1 -l 8001 -t 8081"'

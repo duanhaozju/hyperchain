@@ -9,23 +9,28 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/event"
 	"fmt"
-
+	"errors"
 	"encoding/hex"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
+	"github.com/juju/ratelimit"
 )
 
 type PublicContractAPI struct {
 	eventMux *event.TypeMux
 	pm *manager.ProtocolManager
 	db *hyperdb.LDBDatabase
+	tokenBucket *ratelimit.Bucket
+	ratelimitEnable bool
 }
 
-func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase) *PublicContractAPI {
+func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, ratelimitEnable bool, bmax int64, rate time.Duration) *PublicContractAPI {
 	return &PublicContractAPI{
 		eventMux :eventMux,
 		pm:pm,
 		db:hyperDb,
+		tokenBucket: ratelimit.NewBucket(rate, bmax),
+		ratelimitEnable: ratelimitEnable,
 	}
 }
 
@@ -90,11 +95,10 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 				if err != nil {
 					log.Errorf("Sign(tx) error :%v", err)
 				}
+				tx.Signature = signature
 			} else {
 				tx.Signature = common.FromHex(realArgs.Signature)
 			}
-
-			tx.Signature = signature
 		} else {
 			// For Hyperboard test
 
@@ -118,7 +122,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 		if !tx.ValidateSign(contract.pm.AccountManager.Encryption, kec256Hash) {
 			log.Error("invalid signature")
 			// 不要返回，因为要将失效交易存到db中
-			//return common.Hash{}, errors.New("invalid signature")
+			return common.Hash{}, errors.New("invalid signature")
 		}
 
 		txBytes, err := proto.Marshal(tx)
@@ -132,26 +136,26 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 			log.Warning("manager is Nil")
 		}
 
-		/*start_getErr := time.Now().Unix()
-		end_getErr :=start_getErr + TIMEOUT
-		var errMsg string
-		for start_getErr := start_getErr; start_getErr < end_getErr; start_getErr = time.Now().Unix() {
-			errType, _ := core.GetInvaildTxErrType(contract.db, tx.GetTransactionHash().Bytes());
-
-			if errType != -1 {
-				errMsg = errType.String()
-				break;
-			} else if rept := core.GetReceipt(tx.GetTransactionHash());rept != nil {
-				break
-			}
-
-
-		}
-		if start_getErr != end_getErr && errMsg != "" {
-			return common.Hash{}, errors.New(errMsg)
-		} else if start_getErr == end_getErr {
-			return common.Hash{}, errors.New("Sending return timeout,may be something wrong.")
-	}*/
+	//	start_getErr := time.Now().Unix()
+	//	end_getErr :=start_getErr + TIMEOUT
+	//	var errMsg string
+	//	for start_getErr := start_getErr; start_getErr < end_getErr; start_getErr = time.Now().Unix() {
+	//		errType, _ := core.GetInvaildTxErrType(contract.db, tx.GetTransactionHash().Bytes());
+	//
+	//		if errType != -1 {
+	//			errMsg = errType.String()
+	//			break;
+	//		} else if rept := core.GetReceipt(tx.GetTransactionHash());rept != nil {
+	//			break
+	//		}
+	//
+	//
+	//	}
+	//	if start_getErr != end_getErr && errMsg != "" {
+	//		return common.Hash{}, errors.New(errMsg)
+	//	} else if start_getErr == end_getErr {
+	//		return common.Hash{}, errors.New("Sending return timeout,may be something wrong.")
+	//}
 
 
 		log.Infof("############# %d: end send request#############", time.Now().Unix())
@@ -187,11 +191,17 @@ func (contract *PublicContractAPI) CompileContract(ct string) (*CompileCode,erro
 
 // DeployContract deploys contract.
 func (contract *PublicContractAPI) DeployContract(args SendTxArgs) (common.Hash, error) {
+	if contract.ratelimitEnable && contract.tokenBucket.TakeAvailable(1) <= 0 {
+		return common.Hash{}, errors.New("System is too busy to response ")
+	}
 	return deployOrInvoke(contract, args)
 }
 
 // InvokeContract invokes contract.
 func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash, error) {
+	if contract.ratelimitEnable && contract.tokenBucket.TakeAvailable(1) <= 0 {
+		return common.Hash{}, errors.New("System is too busy to response ")
+	}
 	return deployOrInvoke(contract, args)
 }
 

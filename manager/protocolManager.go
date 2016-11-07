@@ -33,7 +33,7 @@ func init() {
 type ReplicaInfo struct {
 	IP              string `protobuf:"bytes,1,opt,name=IP" json:"IP,omitempty"`
 	Port            int64  `protobuf:"varint,2,opt,name=Port" json:"Port,omitempty"`
-	Hash            string `protobuf:"bytes,3,opt,name=hash"hash json:"hash,omitempty"`
+	Hash            string `protobuf:"bytes,3,opt,name=hash" json:"hash,omitempty"`
 	ID              uint64 `protobuf:"varint,4,opt,name=ID" jsonson:"ID,omitempty"`
 
 	LatestBlockHash []byte `protobuf:"bytes,1,opt,name=latestBlockHash,proto3" json:"latestBlockHash,omitempty"`

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"hyperchain/core"
+	"errors"
 )
 
 type Number int64
@@ -81,7 +82,14 @@ func (n *Number) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf(`invalid number %s`, data)
 	}
 
-	*n = Number(in.Int64())
+	if v, err := strconv.ParseInt(input, 0, 0);err != nil {
+		return errors.New("number out of range")
+	} else if (v < 0) {
+		return errors.New("number can't be negative")
+	} else {
+		*n = *NewInt64ToNumber(v)
+		return nil
+	}
 
 	return nil
 }
