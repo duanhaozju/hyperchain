@@ -10,8 +10,6 @@ import (
 	"hyperchain/event"
 	"fmt"
 	"errors"
-	"encoding/hex"
-	"hyperchain/crypto"
 	"hyperchain/hyperdb"
 	"github.com/juju/ratelimit"
 )
@@ -36,7 +34,6 @@ func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, 
 
 func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, error) {
 	var tx *types.Transaction
-	//var found bool
 	realArgs := prepareExcute(args)
 
 	// ################################# 测试代码 START ####################################### //
@@ -68,100 +65,44 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp)
 	}
 
-	//if contract.pm == nil {
-	//
-	//	// Test environment
-	//	found = true
-	//} else {
-	//
-	//	// Development environment
-	//	am := contract.pm.AccountManager
-	//	_, found = am.Unlocked[args.From]
-	//
-	//}
-	//am := tran.pm.AccountManager
+	log.Infof("############# %d: start send request#############", time.Now().Unix())
+	tx.Id = uint64(contract.pm.Peermanager.GetNodeId())
 
-	//if found == true {
-		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		tx.Id = uint64(contract.pm.Peermanager.GetNodeId())
+	// For Hyperchain test
 
-		if realArgs.PrivKey == "" {
-			// For Hyperchain test
+	var signature []byte
+	if realArgs.Signature == "" {
 
-			var signature []byte
-			if realArgs.Signature == "" {
-
-				signature, err = contract.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
-				if err != nil {
-					log.Errorf("Sign(tx) error :%v", err)
-				}
-				tx.Signature = signature
-			} else {
-				tx.Signature = common.FromHex(realArgs.Signature)
-			}
-		} else {
-			// For Hyperboard test
-
-			key, err := hex.DecodeString(args.PrivKey)
-			if err != nil {
-				return common.Hash{}, err
-			}
-			pri := crypto.ToECDSA(key)
-
-			hash := tx.SighHash(kec256Hash).Bytes()
-			sig, err := encryption.Sign(hash, pri)
-			if err != nil {
-				return common.Hash{}, err
-			}
-
-			tx.Signature = sig
-		}
-
-		tx.TransactionHash = tx.BuildHash().Bytes()
-		// Unsign Test
-		if !tx.ValidateSign(contract.pm.AccountManager.Encryption, kec256Hash) {
-			log.Error("invalid signature")
-			// 不要返回，因为要将失效交易存到db中
-			return common.Hash{}, errors.New("invalid signature")
-		}
-
-		txBytes, err := proto.Marshal(tx)
+		signature, err = contract.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
 		if err != nil {
-			log.Errorf("proto.Marshal(tx) error: %v", err)
+			log.Errorf("Sign(tx) error :%v", err)
+			return common.Hash{}, errors.New("sigature failed")
 		}
-		if manager.GetEventObject() != nil {
-			go contract.eventMux.Post(event.NewTxEvent{Payload: txBytes})
-			//go manager.GetEventObject().Post(event.NewTxEvent{Payload: txBytes})
-		} else {
-			log.Warning("manager is Nil")
-		}
+		tx.Signature = signature
+	} else {
+		tx.Signature = common.FromHex(realArgs.Signature)
+	}
 
-	//	start_getErr := time.Now().Unix()
-	//	end_getErr :=start_getErr + TIMEOUT
-	//	var errMsg string
-	//	for start_getErr := start_getErr; start_getErr < end_getErr; start_getErr = time.Now().Unix() {
-	//		errType, _ := core.GetInvaildTxErrType(contract.db, tx.GetTransactionHash().Bytes());
-	//
-	//		if errType != -1 {
-	//			errMsg = errType.String()
-	//			break;
-	//		} else if rept := core.GetReceipt(tx.GetTransactionHash());rept != nil {
-	//			break
-	//		}
-	//
-	//
-	//	}
-	//	if start_getErr != end_getErr && errMsg != "" {
-	//		return common.Hash{}, errors.New(errMsg)
-	//	} else if start_getErr == end_getErr {
-	//		return common.Hash{}, errors.New("Sending return timeout,may be something wrong.")
-	//}
+	tx.TransactionHash = tx.BuildHash().Bytes()
 
+	// Unsign Test
+	if !tx.ValidateSign(contract.pm.AccountManager.Encryption, kec256Hash) {
+		log.Error("invalid signature")
+		// ATTENTION, return invalid transactino directly
+		return common.Hash{}, errors.New("invalid signature")
+	}
 
-		log.Infof("############# %d: end send request#############", time.Now().Unix())
-	//} else {
-	//	return common.Hash{}, errors.New("account don't unlock")
-	//}
+	if txBytes, err := proto.Marshal(tx); err != nil {
+		log.Errorf("proto.Marshal(tx) error: %v", err)
+		return common.Hash{}, errors.New("proto.Marshal(tx) happened error")
+	} else if manager.GetEventObject() != nil {
+		go contract.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+	} else {
+		log.Error("manager is Nil")
+		return common.Hash{}, errors.New("EventObject is nil")
+	}
+
+	log.Infof("############# %d: end send request#############", time.Now().Unix())
 
 	time.Sleep(2000 * time.Millisecond)
 
@@ -169,9 +110,9 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 }
 
 type CompileCode struct{
-	Abi []string
-	Bin []string
-	Types []string
+	Abi []string `json:"abi"`
+	Bin []string	`json:"bin"`
+	Types []string	`json:"types"`
 }
 
 // ComplieContract complies contract to ABI
@@ -206,7 +147,7 @@ func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash,
 }
 
 // GetCode returns the code from the given contract address and block number.
-func (contract *PublicContractAPI) GetCode(addr common.Address, n Number) (string, error) {
+func (contract *PublicContractAPI) GetCode(addr common.Address, n BlockNumber) (string, error) {
 
 	stateDb, err := getBlockStateDb(n, contract.db)
 	if err != nil {
@@ -219,7 +160,7 @@ func (contract *PublicContractAPI) GetCode(addr common.Address, n Number) (strin
 
 // GetContractCountByAddr returns the number of contract that has been deployed by given account address and block number,
 // if addr is nil, returns the number of all the contract that has been deployed.
-func (contract *PublicContractAPI) GetContractCountByAddr(addr common.Address, n Number) (*Number, error) {
+func (contract *PublicContractAPI) GetContractCountByAddr(addr common.Address, n BlockNumber) (*Number, error) {
 
 	stateDb, err := getBlockStateDb(n, contract.db)
 
@@ -233,7 +174,7 @@ func (contract *PublicContractAPI) GetContractCountByAddr(addr common.Address, n
 
 // GetStorageByAddr returns the storage by given contract address and bock number.
 // The method is offered for hyperchain internal test.
-func (contract *PublicContractAPI) GetStorageByAddr(addr common.Address, n Number) (map[string]string, error) {
+func (contract *PublicContractAPI) GetStorageByAddr(addr common.Address, n BlockNumber) (map[string]string, error) {
 	stateDb, err := getBlockStateDb(n, contract.db)
 
 	if err != nil {

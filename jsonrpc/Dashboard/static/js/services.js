@@ -448,6 +448,26 @@ function ContractService($resource,$q ,$timeout, ENV) {
                 })
             })
         }
+        // getContract: function(addr){
+        //     return $q(function(resolve, reject){
+        //         $resource(ENV.API,{},{
+        //             get:{
+        //                 method:"POST"
+        //             }
+        //         }).get({
+        //             method: "contract_getContractByAddr",
+        //             params: [addr],
+        //             id: 1
+        //         },function(res){
+        //             if (res.error) {
+        //                 reject(res.error)
+        //             } else {
+        //                 resolve(res.result)
+        //             }
+        //
+        //         })
+        //     })
+        // }
         // getReceipt: function(txHash){
         //     return $q(function(resolve, reject){
         //         $resource(ENV.API,{},{

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 ################################ tx 服务 ################################ （说明：value可以是十六进制字符串、八进制字符串、十进制字符串或整数）
 # 普通交易 SendTransaction
-# 无私钥 —— 用于Hyperchain测试, 时间戳单位是毫秒
+# 无request —— 用于Hyperchain测试, 时间戳单位是纳秒
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_sendTransaction","params":[{"from":"0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","to":"0x0000000000000000000000000000000000000003","value":"0x01","timestamp":1477459062327000000}],"id":1}'
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_sendTransaction","params":[{"from":"0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","to":"0x0000000000000000000000000000000000000003","value":"0x01","timestamp":1477459062327000000, "signature":""}],"id":1}'
-# 有私钥 —— 用于Dashboard测试 （后期不传私钥，而是直接签名）
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_sendTransaction","params":[{"from":"4762d4f39099727dc58d1cec8d8f80f5c683a054","to":"0x0000000000000000000000000000000000000003","value":1,"timestamp":1477459062327000000,"privKey":"1ba5956644d2805f9166546de683fdd2a28e6f03bf02cdae5672cb43fef051b4","request":10}],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_sendTransaction","params":[{"from":"0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","to":"0x0000000000000000000000000000000000000003","value":"0x01","timestamp":1477459062327000000, "signature":"test signature"}],"id":1}'
+# 有request —— 用于Dashboard测试
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_sendTransaction","params":[{"from":"4762d4f39099727dc58d1cec8d8f80f5c683a054","to":"0x0000000000000000000000000000000000000003","value":1,"timestamp":1477459062327000000,"signature":"test signature","request":10}],"id":1}'
 
 # 根据交易hash查询交易信息 GetTransactionByHash
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByHash","params":["0xe1404deb79b84d4303dd9ec25f53f0833975633eaf3016b10d12084b698479d5"],"id":1}'
