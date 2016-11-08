@@ -199,13 +199,13 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	} else {
 
 		// ** For Hyperchain Test **
-		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		start := time.Now().Unix()
-		//end:=start+1
-		end := start + 1
-
-		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < 100; i++ {
+		//log.Infof("############# %d: start send request#############", time.Now().Unix())
+		//start := time.Now().Unix()
+		////end:=start+1
+		//end := start + 1
+		//
+		//for start := start; start < end; start = time.Now().Unix() {
+		//	for i := 0; i < 100; i++ {
 				// ################################# 测试代码 START ####################################### // (用不同的value代替之前不同的timestamp以标志不同的transaction)
 				txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), v, nil)
 
@@ -251,11 +251,11 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					log.Error("manager is Nil")
 					return common.Hash{}, errors.New("EventObject is nil")
 				}
-			}
-			time.Sleep(1000 * time.Millisecond)
-		}
-
-		log.Infof("############# %d: end send request#############", time.Now().Unix())
+	//		}
+	//		time.Sleep(1000 * time.Millisecond)
+	//	}
+	//
+	//	log.Infof("############# %d: end send request#############", time.Now().Unix())
 	}
 
 	return tx.GetTransactionHash(), nil
