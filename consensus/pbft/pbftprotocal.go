@@ -401,7 +401,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 
 	switch et := e.(type) {
 	case viewChangeTimerEvent:
-		logger.Infof("Replica %d view change timer expired, sending view change: %s", pbft.id, pbft.newViewTimerReason)
+		logger.Warningf("Replica %d view change timer expired, sending view change: %s", pbft.id, pbft.newViewTimerReason)
 		pbft.timerActive = false
 		pbft.sendViewChange()
 	case *ConsensusMessage:
@@ -448,7 +448,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 			logger.Warningf("Replica %d had its view change resend timer expire but it's in an active view, this is benign but may indicate a bug", pbft.id)
 			return nil
 		}
-		logger.Debugf("Replica %d view change resend timer expired before view change quorum was reached, resending", pbft.id)
+		logger.Warningf("Replica %d view change resend timer expired before view change quorum was reached, resending", pbft.id)
 		pbft.view-- // sending the view change increments this
 		return pbft.sendViewChange()
 	case *NegotiateView:
@@ -680,7 +680,7 @@ func (pbft *pbftProtocal) nullRequestHandler() {
 
 	if pbft.primary(pbft.view) != pbft.id {
 		// backup expected a null request, but primary never sent one
-		logger.Infof("Replica %d null request timer expired, sending view change", pbft.id)
+		logger.Warningf("Replica %d null request timer expired, sending view change", pbft.id)
 
 		pbft.sendViewChange()
 	} else {
@@ -1054,6 +1054,8 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 		return nil
 	}
 
+	pbft.nullRequestTimer.Stop()
+
 	if !pbft.inWV(preprep.View, preprep.SequenceNumber) {
 		if preprep.SequenceNumber != pbft.h && !pbft.skipInProgress {
 			logger.Warningf("Replica %d pre-prepare view different, or sequence number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d", pbft.id, preprep.View, pbft.view, preprep.SequenceNumber, pbft.h)
@@ -1087,8 +1089,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 	if !pbft.skipInProgress && !pbft.inRecovery {
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new pre-prepare for request batch %s", preprep.BatchDigest))
 	}
-	
-	pbft.nullRequestTimer.Stop()
+
 	logger.Debug("receive  pre-prepare first seq is:",preprep.SequenceNumber)
 	if pbft.primary(pbft.view) != pbft.id && pbft.prePrepared(preprep.BatchDigest, preprep.View, preprep.SequenceNumber) && !cert.sentPrepare {
 		logger.Debugf("Backup %d broadcasting prepare for view=%d/seqNo=%d", pbft.id, preprep.View, preprep.SequenceNumber)
@@ -1273,7 +1274,7 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 			pbft.committedCert[idx] = cert.digest
 			pbft.executeOutstanding()
 			if commit.SequenceNumber == pbft.viewChangeSeqNo {
-				logger.Infof("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
+				logger.Warningf("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
 				pbft.sendViewChange()
 			}
 		}
@@ -1437,7 +1438,7 @@ func (pbft *pbftProtocal) checkpoint(n uint64, info *protos.BlockchainInfo) {
 
 func (pbft *pbftProtocal) recvCheckpoint(chkpt *Checkpoint) events.Event {
 
-	logger.Infof("Replica %d received checkpoint from replica %d, seqNo %d, digest %s",
+	logger.Debugf("Replica %d received checkpoint from replica %d, seqNo %d, digest %s",
 		pbft.id, chkpt.ReplicaId, chkpt.SequenceNumber, chkpt.Id)
 
 	if pbft.inNegoView {

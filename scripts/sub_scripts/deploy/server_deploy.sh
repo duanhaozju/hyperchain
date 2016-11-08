@@ -21,7 +21,5 @@ scpfile() {
 }
 
 for server_address in ${SERVER_ADDR[@]}; do
- scpfile $server_address &
+ scpfile $server_address
 done
-
-wait
