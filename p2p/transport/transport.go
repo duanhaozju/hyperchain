@@ -17,7 +17,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"hyperchain/p2p/transport/ecdh"
-	"crypto/aes"
+	//"crypto/aes"
 )
 
 var log *logging.Logger // package-level logger
