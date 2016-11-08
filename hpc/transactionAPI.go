@@ -271,9 +271,12 @@ type ReceiptResult struct {
 
 // GetTransactionReceipt returns transaction's receipt for given transaction hash.
 func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*ReceiptResult, error) {
-
 	if errType, err := core.GetInvaildTxErrType(tran.db, hash.Bytes()); errType == -1 {
 		receipt := core.GetReceipt(hash)
+		if receipt == nil {
+			return nil, nil
+		}
+
 		return &ReceiptResult{
 			TxHash: 	 receipt.TxHash,
 			PostState: 	 receipt.PostState,
