@@ -82,14 +82,12 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 		ret, addr, err = vmenv.Create(sender, data, gas, gasPrice, value)
 		if err != nil {
 			ret = nil
-			err = ExecContractErr(0, "contract creation failed, error msg:", err.Error())
 			log.Error("VM create err:", err)
 		}
 	} else {
 		log.Debug("------call contract")
 		ret, err = vmenv.Call(sender, *to, data, gas, gasPrice, value)
 		if err != nil {
-			err = ExecContractErr(1, "contract invocation failed, error msg:", err.Error())
 			log.Error("VM call err:", err)
 		}
 	}

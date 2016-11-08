@@ -287,6 +287,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	receiptTrie, err := trie.New(common.Hash{}, db)
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
 	statedb, err := state.New(pool.lastValidationState, db)
+
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
 	env["currentGasLimit"] = "10000000"
