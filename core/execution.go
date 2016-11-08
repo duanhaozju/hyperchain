@@ -52,8 +52,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// limit.
 	if env.Depth() > int(params.CallCreateDepth.Int64()) {
 		caller.ReturnGas(gas, gasPrice)
-
-		return nil, common.Address{}, vm.DepthError
+		return nil, common.Address{}, ExecContractErr(1, "Max call depth exceeded 1024")
 	}
 
 	// TODO
@@ -133,8 +132,12 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// when we're in homestead this also counts for code storage gas errors.
 	if err != nil && (env.RuleSet().IsHomestead(env.BlockNumber()) || err != vm.CodeStoreOutOfGasError) {
 		contract.UseGas(contract.Gas)
-
 		env.SetSnapshot(snapshotPreTransfer)
+		if createAccount {
+			err = ExecContractErr(0, "contract creation failed, error msg", err.Error())
+		} else {
+			err = ExecContractErr(1, "contract invocation failed, error msg:", err.Error())
+		}
 	}
 	return ret, addr, err
 }
