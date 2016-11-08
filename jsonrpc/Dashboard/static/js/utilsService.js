@@ -11630,8 +11630,17 @@ angular
 
                 var p = [];
 
-                for (var key in params) {
-                    p.push(params[key])
+                // for (var key in params) {
+                //     p.push(params[key])
+                // }
+                // 排序
+                for (var i = 0; i <  abimethod.inputs.length; i++) {
+                    for (var k in params) {
+                        if (abimethod.inputs[i].name == k) {
+                            p.push(params[k])
+                            break;
+                        }
+                    }
                 }
 
                 console.log(params)
