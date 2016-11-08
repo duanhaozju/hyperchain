@@ -27,7 +27,7 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		// TODO these there parameters should be added into the tx
 		tv         = tx.GetTransactionValue()
 		data       = tv.GetPayload()
-		gas        = big.NewInt(1000000)
+		gas        = big.NewInt(100000000)
 		gasPrice   = tv.GetGasPrice()
 		amount     = tv.GetAmount()
 		statedb, _ = env.Db().(*state.StateDB)
