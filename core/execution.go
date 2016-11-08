@@ -89,7 +89,6 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 			//env.Transfer(from, to, value)
 		} else {
 			to = env.Db().GetAccount(*address)
-			log.Notice("deploy stateObject *********")
 			if statedb.GetCode(to.Address()) == nil {
 				env.Transfer(from, to, value)
 				return nil, common.Address{}, nil
