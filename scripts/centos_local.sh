@@ -20,7 +20,7 @@
 FIRST_RUN=false
 TEST_FLAG=true
 PASSWD="blockchain"
-TEST_MACHINE="172.16.0.6"
+TEST_MACHINE="115.159.27.148"
 
 MAXNODE=`cat serverlist.txt | wc -l`
 
