@@ -97,13 +97,13 @@ build(){
 
 distribute_the_binary(){
     echo "Sending the local complied file and configuration files to primary"
-	scp ../build/hyperchain satoshi@$PRIMARY:/home/satoshi
-	scp -r ../config/ satoshi@$PRIMARY:/home/satoshi/
+	cp -f ../build/hyperchain /home/satoshi
+	cp -f -r ../config/ /home/satoshi/
 
-	scp innerserverlist.txt satoshi@$PRIMARY:/home/satoshi/
-	scp ./sub_scripts/deploy/server_deploy.sh satoshi@$PRIMARY:/home/satoshi/
+	cp -f innerserverlist.txt /home/satoshi/
+	cp -f ./sub_scripts/deploy/server_deploy.sh /home/satoshi/
 
-	ssh satoshi@$PRIMARY "chmod a+x server_deploy.sh && bash server_deploy.sh ${MAXNODE}"
+	cd /home/satoshi && chmod a+x server_deploy.sh && bash server_deploy.sh $MAXNODE
 	echo "finish"
 }
 
