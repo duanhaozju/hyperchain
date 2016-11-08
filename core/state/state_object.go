@@ -115,7 +115,6 @@ func (self *StateObject) SetState(key, value common.Hash) {
 // Update updates the current cached storage to the trie
 func (self *StateObject) Update() {
 	for key, value := range self.storage {
-		log.Error("Update storage")
 		if (value == common.Hash{}) {
 			self.trie.Delete(key[:])
 			continue
