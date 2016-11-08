@@ -1054,6 +1054,8 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 		return nil
 	}
 
+	pbft.nullRequestTimer.Stop()
+
 	if !pbft.inWV(preprep.View, preprep.SequenceNumber) {
 		if preprep.SequenceNumber != pbft.h && !pbft.skipInProgress {
 			logger.Warningf("Replica %d pre-prepare view different, or sequence number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d", pbft.id, preprep.View, pbft.view, preprep.SequenceNumber, pbft.h)
@@ -1087,8 +1089,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 	if !pbft.skipInProgress && !pbft.inRecovery {
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new pre-prepare for request batch %s", preprep.BatchDigest))
 	}
-	
-	pbft.nullRequestTimer.Stop()
+
 	logger.Debug("receive  pre-prepare first seq is:",preprep.SequenceNumber)
 	if pbft.primary(pbft.view) != pbft.id && pbft.prePrepared(preprep.BatchDigest, preprep.View, preprep.SequenceNumber) && !cert.sentPrepare {
 		logger.Debugf("Backup %d broadcasting prepare for view=%d/seqNo=%d", pbft.id, preprep.View, preprep.SequenceNumber)
@@ -1437,7 +1438,7 @@ func (pbft *pbftProtocal) checkpoint(n uint64, info *protos.BlockchainInfo) {
 
 func (pbft *pbftProtocal) recvCheckpoint(chkpt *Checkpoint) events.Event {
 
-	logger.Errorf("Replica %d received checkpoint from replica %d, seqNo %d, digest %s",
+	logger.Debugf("Replica %d received checkpoint from replica %d, seqNo %d, digest %s",
 		pbft.id, chkpt.ReplicaId, chkpt.SequenceNumber, chkpt.Id)
 
 	if pbft.inNegoView {
