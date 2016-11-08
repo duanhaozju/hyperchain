@@ -448,7 +448,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 			logger.Warningf("Replica %d had its view change resend timer expire but it's in an active view, this is benign but may indicate a bug", pbft.id)
 			return nil
 		}
-		logger.Debugf("Replica %d view change resend timer expired before view change quorum was reached, resending", pbft.id)
+		logger.Warningf("Replica %d view change resend timer expired before view change quorum was reached, resending", pbft.id)
 		pbft.view-- // sending the view change increments this
 		return pbft.sendViewChange()
 	case *NegotiateView:
@@ -1273,7 +1273,7 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 			pbft.committedCert[idx] = cert.digest
 			pbft.executeOutstanding()
 			if commit.SequenceNumber == pbft.viewChangeSeqNo {
-				logger.Infof("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
+				logger.Warningf("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
 				pbft.sendViewChange()
 			}
 		}
