@@ -111,5 +111,9 @@ func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf(`0x%x`, stateDB.GetStateObject(addr).BalanceData), nil
+	if stateobject := stateDB.GetStateObject(addr);stateobject != nil {
+		return fmt.Sprintf(`0x%x`, stateobject.BalanceData), nil
+	} else {
+		return "", errors.New("StateObject is nil")
+	}
 }

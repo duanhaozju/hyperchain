@@ -39,11 +39,7 @@ func DelegateCall(env vm.Environment, caller vm.ContractRef, addr common.Address
 
 // Create creates a new contract with the given code
 func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPrice, value *big.Int) (ret []byte, address common.Address, err error) {
-	//fmt.Println("Create")
 	ret, address, err = exec(env, caller, nil, nil, nil, code, gas, gasPrice, value)
-	// Here we get an error if we run into maximum stack depth,
-	// See: https://github.com/ethereum/yellowpaper/pull/131
-	// and YP definitions for CREATE instruction
 	if err != nil {
 		return nil, address, err
 	}
@@ -93,6 +89,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 			//env.Transfer(from, to, value)
 		} else {
 			to = env.Db().GetAccount(*address)
+			log.Notice("deploy stateObject *********")
 			if statedb.GetCode(to.Address()) == nil {
 				env.Transfer(from, to, value)
 				return nil, common.Address{}, nil

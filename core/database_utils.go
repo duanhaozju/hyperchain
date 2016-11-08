@@ -161,6 +161,17 @@ func GetAllDiscardTransaction(db *hyperdb.LDBDatabase) ([]*types.InvalidTransact
 	return ts, err
 }
 
+func GetDiscardTransaction(db hyperdb.Database, key []byte) (*types.InvalidTransactionRecord, error) {
+	var invalidTransaction types.InvalidTransactionRecord
+	keyFact := append(InvalidTransactionPrefix, key...)
+	data, err := db.Get(keyFact)
+	if len(data) == 0 {
+		return &invalidTransaction, err
+	}
+	err = proto.Unmarshal(data, &invalidTransaction)
+	return &invalidTransaction, err
+}
+
 //-- --------------------- Transaction END -----------------------------------
 
 //-- ------------------- Block ---------------------------------

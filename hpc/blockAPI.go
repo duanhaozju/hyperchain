@@ -15,7 +15,7 @@ type PublicBlockAPI struct {
 }
 
 type BlockResult struct {
-	Number       *Number       `json:"number"`
+	Number       *BlockNumber       `json:"number"`
 	Hash         common.Hash   `json:"hash"`
 	ParentHash   common.Hash   `json:"parentHash"`
 	WriteTime    int64        `json:"writeTime"`
@@ -34,8 +34,8 @@ func NewPublicBlockAPI(hyperDb *hyperdb.LDBDatabase) *PublicBlockAPI {
 }
 
 type IntervalArgs struct {
-	From *Number `json:"from"`
-	To   *Number `json:"to"`
+	From *BlockNumber `json:"from"`
+	To   *BlockNumber `json:"to"`
 }
 
 // GetBlocks returns all the block.
@@ -54,7 +54,7 @@ func (blk *PublicBlockAPI) GetBlockByHash(hash common.Hash) (*BlockResult, error
 }
 
 // GetBlockByNumber returns the bock for the given block number.
-func (blk *PublicBlockAPI) GetBlockByNumber(number Number) (*BlockResult, error) {
+func (blk *PublicBlockAPI) GetBlockByNumber(number BlockNumber) (*BlockResult, error) {
 	block, err := getBlockByNumber(number, blk.db)
 	return block, err
 }
@@ -69,11 +69,11 @@ func latestBlock(db *hyperdb.LDBDatabase) (*BlockResult, error) {
 
 	lastestBlkHeight := currentChain.Height
 
-	return getBlockByNumber(*NewUint64ToNumber(lastestBlkHeight), db)
+	return getBlockByNumber(*NewUint64ToBlockNumber(lastestBlkHeight), db)
 }
 
 // getBlockByNumber convert type Block to type BlockResult for the given block number.
-func getBlockByNumber(n Number, db *hyperdb.LDBDatabase) (*BlockResult, error) {
+func getBlockByNumber(n BlockNumber, db *hyperdb.LDBDatabase) (*BlockResult, error) {
 
 	m := n.ToUint64()
 	if blk, err := core.GetBlockByNumber(db, m); err != nil {
@@ -83,7 +83,7 @@ func getBlockByNumber(n Number, db *hyperdb.LDBDatabase) (*BlockResult, error) {
 	}
 }
 
-func getBlockStateDb(n Number, db *hyperdb.LDBDatabase) (*state.StateDB, error) {
+func getBlockStateDb(n BlockNumber, db *hyperdb.LDBDatabase) (*state.StateDB, error) {
 
 	block, err := getBlockByNumber(n, db)
 
@@ -114,7 +114,7 @@ func outputBlockResult(block *types.Block, db *hyperdb.LDBDatabase) (*BlockResul
 	}
 
 	return &BlockResult{
-		Number:       NewUint64ToNumber(block.Number),
+		Number:       NewUint64ToBlockNumber(block.Number),
 		Hash:         common.BytesToHash(block.BlockHash),
 		ParentHash:   common.BytesToHash(block.ParentHash),
 		//WriteTime:    time.Unix(block.WriteTime/int64(time.Second), 0).Format("2006-01-02 15:04:05"),
@@ -140,7 +140,7 @@ func getBlockByHash(hash common.Hash, db *hyperdb.LDBDatabase) (*BlockResult, er
 
 func getBlocks(args IntervalArgs, hyperDb *hyperdb.LDBDatabase) ([]*BlockResult, error) {
 	var blocks []*BlockResult
-	var from, to Number
+	var from, to BlockNumber
 
 	if args.From == nil && args.To == nil {
 		block, err := latestBlock(hyperDb)
@@ -158,15 +158,15 @@ func getBlocks(args IntervalArgs, hyperDb *hyperdb.LDBDatabase) ([]*BlockResult,
 			return blocks, nil
 		}
 
-		from = *NewInt64ToNumber(0)
+		from = *NewUint64ToBlockNumber(0)
 		to = height
 	} else if args.From == nil && args.To != nil {
-		from = *NewInt64ToNumber(0)
+		from = *NewUint64ToBlockNumber(0)
 		to = *args.To
 	} else if args.From != nil && args.To == nil {
 		from = *args.From
 		chain := core.GetChainCopy()
-		to = *NewUint64ToNumber(chain.Height)
+		to = *NewUint64ToBlockNumber(chain.Height)
 	} else {
 		from = *args.From
 		to = *args.To
@@ -183,6 +183,9 @@ func getBlocks(args IntervalArgs, hyperDb *hyperdb.LDBDatabase) ([]*BlockResult,
 			return nil, err
 		}
 		blocks = append(blocks, b)
+		if to == 0 {
+			break
+		}
 		to--
 	}
 

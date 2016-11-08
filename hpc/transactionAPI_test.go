@@ -42,7 +42,7 @@ func putTransactionToDefaultDB() {
 		log.Error(err)
 	}
 
-	tx := types.NewTransaction(from[:], to[:], value)
+	tx := types.NewTransaction(from[:], to[:], value, time.Now().UnixNano())
 
 	hash := tx.BuildHash()
 
