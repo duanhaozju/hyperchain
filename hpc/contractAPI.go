@@ -145,6 +145,10 @@ func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash,
 	if contract.ratelimitEnable && contract.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, errors.New("System is too busy to response ")
 	}
+	if(args.To==nil){
+		return common.Hash{}, errors.New("invalid contract address")
+
+	}
 	return deployOrInvoke(contract, args)
 }
 
