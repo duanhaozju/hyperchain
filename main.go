@@ -34,7 +34,7 @@ type argT struct {
 	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
 }
 
-func checkLicense(licensePath string) (err error) {
+func checkLicense(licensePath string) (err error, expiredTime time.Time) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.New("Invalid License Cause a Panic")
@@ -70,7 +70,7 @@ func checkLicense(licensePath string) (err error) {
 		err = errors.New("Invalid License Timestamp")
 		return
 	}
-	expiredTime := time.Unix(timestamp, 0)
+	expiredTime = time.Unix(timestamp, 0)
 	currentTime := time.Now()
 	if validation := dateChecker(currentTime, expiredTime); !validation {
 		err = errors.New("License Expired")
@@ -85,7 +85,8 @@ func main() {
 
 		config := newconfigsImpl(argv.ConfigPath, argv.NodeID, argv.GRPCPort, argv.HTTPPort)
 
-		if err := checkLicense(config.getLicense()); err != nil {
+		err, expiredTime := checkLicense(config.getLicense())
+		if err != nil {
 			return err
 		}
 
@@ -129,7 +130,7 @@ func main() {
 		syncReplicaInterval, _ := config.getSyncReplicaInterval()
 		syncReplicaEnable := config.getSyncReplicaEnable()
 		pm := manager.New(eventMux, blockPool, grpcPeerMgr, cs, am, kec256Hash,
-			config.getNodeID(), syncReplicaInterval, syncReplicaEnable)
+			config.getNodeID(), syncReplicaInterval, syncReplicaEnable, exist, expiredTime)
 
 		go jsonrpc.Start(config.getHTTPPort(), eventMux, pm, config.getRateLimitConfig())
 		<-exist
