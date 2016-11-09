@@ -1,8 +1,5 @@
-// p2p handshake and communicate
-// author: Lizhong kuang
-// date: 2016-09-08
-// lastModified:
-// add the TransportEncryptManager interface
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package transport
 
 import (

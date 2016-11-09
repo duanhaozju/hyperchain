@@ -1,9 +1,5 @@
-// implementblock pool
-// author: Lizhong kuang
-// date: 2016-08-29
-// last modified:2016-11-4
-// last modifier:Jialei Rong
-// modify-content:refactor
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package blockpool
 
 import (

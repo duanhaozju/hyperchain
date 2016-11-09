@@ -1,9 +1,5 @@
-// fetcher implements block operate
-// author: Lizhong kuang
-// date: 2016-08-29
-// last modified:2016-09-12
-// last moditier: Chen Quan
-// last moditier content: change the config read method
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package core
 
 import (

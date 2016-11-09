@@ -1,9 +1,5 @@
-// peer manager
-// author: Lizhong kuang
-// date: 2016-08-24
-// last modified:2016-08-25 Quan Chen
-// change log:	modified the  PeerManager interface definition
-//		implements GrpcPeerManager methods
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package p2p
 
 import (

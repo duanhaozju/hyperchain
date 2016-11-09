@@ -1,9 +1,5 @@
-// author: chenquan
-// date: 16-9-2
-// last modified: 16-9-2 13:59
-// last Modified Author: chenquan
-// change log:
-//
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package common
 
 import (

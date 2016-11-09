@@ -1,4 +1,5 @@
-// Package trie implements Merkle Patricia Tries.
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package trie
 
 import (

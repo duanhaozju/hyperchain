@@ -1,9 +1,5 @@
-// author: chenquan
-// date: 16-8-25
-// last modified: 16-8-29 13:23
-// last Modified Author: chenquan
-// change log: given a test param into the new peer pool, this is the convenience to test
-//
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package peerPool
 
 import (

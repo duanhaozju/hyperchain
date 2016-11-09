@@ -1,3 +1,5 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package homomorphic_encryption
 
 type Homomorphic_Encrypton interface {

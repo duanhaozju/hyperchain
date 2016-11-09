@@ -1,7 +1,5 @@
-// Hash interface defined
-// author: Lizhong kuang
-// date: 2016-08-25
-// last modified:2016-08-25
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package core
 
 import (

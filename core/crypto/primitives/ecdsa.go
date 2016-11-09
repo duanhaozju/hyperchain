@@ -1,5 +1,5 @@
-// author: Lizhong kuang
-// date: 2016-09-29
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package primitives
 
 import (

@@ -1,28 +1,5 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
-/** Multiply point by scalar in constant time.
- *  Returns: 1: multiplication was successful
- *           0: scalar was invalid (zero or overflow)
- *  Args:    ctx:      pointer to a context object (cannot be NULL)
- *  Out:     point:    the multiplied point (usually secret)
- *  In:      point:    pointer to a 64-byte bytepublic point,
-                       encoded as two 256bit big-endian numbers.
- *           scalar:   a 32-byte scalar with which to multiply the point
- */
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 int secp256k1_pubkey_scalar_mul(const secp256k1_context* ctx, unsigned char *point, const unsigned char *scalar) {
     int ret = 0;
     int overflow = 0;

@@ -1,7 +1,5 @@
-// implement common cache
-// author: Jialei Rong
-// date: 2016-10-25
-// last modified:2016-10-25
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package common
 
 import (

@@ -26,7 +26,7 @@ type configs interface {
 	getSyncReplicaInterval() (time.Duration, error)
 	getSyncReplicaEnable() bool
 	getLicense() string
-	getRateLimitConfig () jsonrpc.RateLimitConfig
+	getRateLimitConfig() jsonrpc.RateLimitConfig
 }
 
 type configsImpl struct {
