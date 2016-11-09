@@ -487,31 +487,26 @@ func (tran *PublicTransactionAPI) GetTransactionsCount() (*Number, error) {
 }
 
 // GetTxAvgTimeByBlockNumber returns tx execute avg time.
-func (tran *PublicTransactionAPI) GetTxAvgTimeByBlockNumber(args IntervalArgs) *Number {
+func (tran *PublicTransactionAPI) GetTxAvgTimeByBlockNumber(args IntervalArgs) (Number, error) {
 
-	var from,to uint64
 
-	if args.From == nil && args.To == nil {
-		from = 1
-		to = core.GetChainCopy().Height
-	} else if args.From != nil && args.To == nil {
-		from = (*args.From).ToUint64()
-		to = core.GetChainCopy().Height
-	} else if args.From == nil && args.To != nil {
-		from = 1
-		to = (*args.To).ToUint64()
-	} else {
-		from = (*args.From).ToUint64()
-		to = (*args.To).ToUint64()
+	// If the client send BlockNumber "",it will convert to 0.
+	// If client send BlockNumber 0,it will return error
+	realArgs, err := prepareIntervalArgs(args)
+	if err != nil {
+		return 0, err
 	}
+
+	from := realArgs.From.ToUint64()
+	to := realArgs.To.ToUint64()
 
 	exeTime := core.CalcResponseAVGTime(from, to)
 
 	if exeTime <= 0 {
-		return nil
+		return 0, nil
 	}
 
-	return NewInt64ToNumber(exeTime)
+	return *NewInt64ToNumber(exeTime), nil
 }
 
 func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*TransactionResult, error) {
