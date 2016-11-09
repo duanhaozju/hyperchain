@@ -65,6 +65,8 @@ type ProtocolManager struct {
 	replicaStatus       *common.Cache
 	syncReplicaInterval time.Duration
 	syncReplica         bool
+	expired             chan bool
+	expiredTime         time.Time
 }
 type NodeManager struct {
 	peerManager p2p.PeerManager
@@ -74,7 +76,7 @@ var eventMuxAll *event.TypeMux
 
 func NewProtocolManager(blockPool *blockpool.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
 //encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
-am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool) *ProtocolManager {
+am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, expired chan bool, expiredTime time.Time) *ProtocolManager {
 	synccache, _ := common.NewCache()
 	replicacache, _ := common.NewCache()
 	manager := &ProtocolManager{
@@ -89,6 +91,8 @@ am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duratio
 		replicaStatus:       replicacache,
 		syncReplicaInterval: interval,
 		syncReplica:         syncReplica,
+		expired:             expired,
+		expiredTime:         expiredTime,
 	}
 	manager.nodeInfo = make(client.PeerInfos, 0, 1000)
 	eventMuxAll = eventMux
@@ -115,7 +119,7 @@ func (pm *ProtocolManager) Start() {
 	go pm.syncCheckpointLoop()
 	go pm.respHandlerLoop()
 	go pm.viewChangeLoop()
-
+	go pm.checkExpired()
 	if pm.syncReplica {
 		pm.syncStatusSub = pm.eventMux.Subscribe(event.ReplicaStatusEvent{})
 		go pm.syncReplicaStatusLoop()
@@ -494,4 +498,22 @@ func (self *ProtocolManager) packReplicaStatus() ([]byte, []byte) {
 	addrData, _ := proto.Marshal(peerAddress)
 	chainData, _ := proto.Marshal(currentChain)
 	return addrData, chainData
+}
+
+func (self *ProtocolManager) checkExpired() {
+	expiredChecker := func(currentTime, expiredTime time.Time) bool {
+		return currentTime.Before(expiredTime)
+	}
+	ticker := time.NewTicker(1 * time.Minute)
+	for {
+		select {
+		case <-ticker.C:
+			currentTime := time.Now()
+			if !expiredChecker(currentTime, self.expiredTime) {
+				log.Notice("License Expired")
+				self.expired <- true
+			}
+		}
+	}
+
 }
