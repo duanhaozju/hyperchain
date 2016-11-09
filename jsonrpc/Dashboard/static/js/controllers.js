@@ -856,13 +856,8 @@ function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Contract
             flag = false;
             SweetAlert.swal("Waiting...", "please waiting...", "warning");
 
-            var arr = []
-            for (var k in $scope.params) {
-                arr.push($scope.params[k])
-            }
-
             // var constructParamBytes = UtilsService.encodeConstructorParams($scope.contracts[$scope.ctName].methods, $scope.params);
-            UtilsService.encodeConstructorParams($scope.contracts[$scope.ctName].methods, arr)
+            UtilsService.encodeConstructorParams($scope.contracts[$scope.ctName].methods, $scope.params)
                 .then(function(constructParamBytes){
                     console.log(constructParamBytes);
                     var payload = $scope.sourceCode + constructParamBytes
