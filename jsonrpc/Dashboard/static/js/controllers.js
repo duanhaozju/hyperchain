@@ -367,16 +367,22 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
             $scope.number = res.number;
             // $rootScope.height = res.number;
 
-            SummaryService.getAvgTime("1",res.number+"") // res.number 是十六进制字符串。这里参数可以是十进制字符串、整数或十六进制字符串
-                .then(function(res){
-                    if (!res) {
-                        $scope.avgTime = 0
-                    } else {
-                        $scope.avgTime = res;
-                    }
-                }, function(error){
-                    console.log(error);
-                })
+            if (res.number == 0 || res.number == "0x0") {
+                $scope.avgTime = 0
+            } else {
+                SummaryService.getAvgTime("1",res.number+"") // res.number 是十六进制字符串。这里参数可以是十进制字符串、整数或十六进制字符串
+                    .then(function(res){
+                        if (!res) {
+                            $scope.avgTime = 0
+                        } else {
+                            $scope.avgTime = res;
+                        }
+                    }, function(error){
+                        console.log(error);
+                    })
+            }
+
+
         }, function(error){
             console.log(error)
         })
