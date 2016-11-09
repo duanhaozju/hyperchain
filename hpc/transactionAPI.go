@@ -168,7 +168,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				signature, err = tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
 				if err != nil {
 					log.Errorf("Sign(tx) error :%v", err)
-					return common.Hash{}, errors.New("sigature failed")
+					return common.Hash{}, err
 				}
 				tx.Signature = signature
 			} else {
@@ -199,13 +199,13 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	} else {
 
 		// ** For Hyperchain Test **
-		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		start := time.Now().Unix()
-		//end:=start+1
-		end := start + 1
-
-		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < 100; i++ {
+		//log.Infof("############# %d: start send request#############", time.Now().Unix())
+		//start := time.Now().Unix()
+		////end:=start+1
+		//end := start + 1
+		//
+		//for start := start; start < end; start = time.Now().Unix() {
+		//	for i := 0; i < 100; i++ {
 				// ################################# 测试代码 START ####################################### // (用不同的value代替之前不同的timestamp以标志不同的transaction)
 				txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), v, nil)
 
@@ -226,7 +226,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					signature, err = tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
 					if err != nil {
 						log.Errorf("Sign(tx) error :%v", err)
-						return common.Hash{}, errors.New("sigature failed")
+						return common.Hash{}, err
 					}
 					tx.Signature = signature
 				} else {
@@ -251,22 +251,38 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					log.Error("manager is Nil")
 					return common.Hash{}, errors.New("EventObject is nil")
 				}
-			}
-			time.Sleep(1000 * time.Millisecond)
-		}
-
-		log.Infof("############# %d: end send request#############", time.Now().Unix())
+	//		}
+	//		time.Sleep(1000 * time.Millisecond)
+	//	}
+	//
+	//	log.Infof("############# %d: end send request#############", time.Now().Unix())
 	}
 
 	return tx.GetTransactionHash(), nil
 
 }
 
-// GetTransactionReceipt returns transaction's receipt for given transaction hash.
-func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*types.ReceiptTrans, error) {
+type ReceiptResult struct {
+	TxHash            string		`json:"txHash"`
+	PostState         string		`json:"postState"`
+	ContractAddress   string		`json:"contractAddress"`
+	Ret               string		`json:"ret"`
+}
 
+// GetTransactionReceipt returns transaction's receipt for given transaction hash.
+func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*ReceiptResult, error) {
 	if errType, err := core.GetInvaildTxErrType(tran.db, hash.Bytes()); errType == -1 {
-		return core.GetReceipt(hash), nil
+		receipt := core.GetReceipt(hash)
+		if receipt == nil {
+			return nil, nil
+		}
+
+		return &ReceiptResult{
+			TxHash: 	 receipt.TxHash,
+			PostState: 	 receipt.PostState,
+			ContractAddress: receipt.ContractAddress,
+			Ret: 		 receipt.Ret,
+		}, nil
 	} else if err != nil {
 		return nil, err
 	} else {

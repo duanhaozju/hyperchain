@@ -99,10 +99,8 @@ distribute_the_binary(){
     echo "Sending the local complied file and configuration files to primary"
 	scp ../build/hyperchain satoshi@$PRIMARY:/home/satoshi
 	scp -r ../config/ satoshi@$PRIMARY:/home/satoshi/
-
 	scp innerserverlist.txt satoshi@$PRIMARY:/home/satoshi/
 	scp ./sub_scripts/deploy/server_deploy.sh satoshi@$PRIMARY:/home/satoshi/
-
 	ssh satoshi@$PRIMARY "chmod a+x server_deploy.sh && bash server_deploy.sh ${MAXNODE}"
 	echo "finish"
 }

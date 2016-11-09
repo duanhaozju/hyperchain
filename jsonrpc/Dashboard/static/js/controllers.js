@@ -966,7 +966,7 @@ function modalInstanceInvokeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Co
 
                                     SweetAlert.swal({
                                         title: "Invoked successfully!",
-                                        text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The result is <span class='text_red'>"+ result +"</span>",
+                                        text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The result is <span class='text_red' style='word-wrap:break-word'>"+ result +"</span>",
                                         type: "success",
                                         customClass: 'swal-wide',
                                         html: true

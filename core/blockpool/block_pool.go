@@ -287,6 +287,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	receiptTrie, err := trie.New(common.Hash{}, db)
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
 	statedb, err := state.New(pool.lastValidationState, db)
+
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
 	env["currentGasLimit"] = "10000000"
@@ -544,7 +545,10 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	}
 
 
-	block, _ := core.GetBlockByNumber(db, ev.SeqNo-1)
+	block, err := core.GetBlockByNumber(db, ev.SeqNo-1)
+	if err != nil {
+		return
+	}
 	pool.lastValidationState = common.BytesToHash(block.MerkleRoot)
 	// 2. Delete Invalid Stuff
 	for i := ev.SeqNo; i < tmpDemandNumber; i += 1 {
@@ -575,6 +579,9 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	keys := pool.blockCache.Keys()
 	for _, key := range keys {
 		ret, _ := pool.blockCache.Get(key)
+		if ret == nil {
+			continue
+		}
 		record := ret.(BlockRecord)
 		for i, tx := range record.ValidTxs {
 			if err := db.Delete(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
