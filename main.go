@@ -1,7 +1,5 @@
-// init ProtcolManager
-// author: Lizhong kuang
-// date: 2016-08-23
-// last modified:2016-08-29
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package main
 
 import (

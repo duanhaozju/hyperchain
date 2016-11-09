@@ -1,7 +1,5 @@
-// author: Lizhong kuang
-// date: 16-8-26
-// last modified: 16-8-26 13:08
-
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package core
 
 import (

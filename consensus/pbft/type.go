@@ -1,3 +1,5 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package pbft
 
 // batchTimerEvent is sent when the batch timer expires

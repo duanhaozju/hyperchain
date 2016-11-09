@@ -1,10 +1,5 @@
-// gRPC Server
-// author: Chen Quan
-// date: 2016-08-24
-// last modified:2016-08-24
-// change log:  1. add a header comment of this file
-//		2. modified the hello message handler, DO NOT save the peer into the peer pool
-
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package Server
 
 import (

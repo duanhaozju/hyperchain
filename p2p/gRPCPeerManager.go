@@ -1,9 +1,5 @@
-// author: chenquan
-// date: 16-9-19
-// last modified: 16-9-19 20:46
-// last Modified Author: chenquan
-// change log:
-//
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package p2p
 
 import (

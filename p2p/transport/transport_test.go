@@ -1,9 +1,5 @@
-// author: chenquan
-// date: 16-8-25
-// last modified: 16-8-29 13:59
-// last Modified Author: chenquan
-// change log: add a header comment of this file
-//
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 
 package transport
 
