@@ -252,4 +252,3 @@ func (pbft *pbftProtocal) getLastSeqNo() (uint64, error) {
 
 	return h, nil
 }
-

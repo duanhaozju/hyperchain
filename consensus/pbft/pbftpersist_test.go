@@ -254,8 +254,6 @@ func TestSeqnoFunctions(t *testing.T)  {
 
 func TestRestoreLastSeqNo(t *testing.T)  {
 	defer clearDB()
-
-
 }
 
 
