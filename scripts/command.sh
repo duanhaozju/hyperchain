@@ -50,10 +50,10 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"contract_compileContract"
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_invokeContract","params": [{"from": "<caller address>", "to": "<contract address>", "timestamp":1477459062327000000, "payload": "<encode data>"}],"id": 1}'
 
 # 获取合约code GetCode
-curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getCode","params": ["<contract address>"],"id": 1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getCode","params": ["<contract address>","<block number>"],"id": 1}'
 
 # 获取账户部署合约数量 GetContractCountByAddr
-curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getContractCountByAddr","params": ["0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd"],"id": 1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getContractCountByAddr","params": ["0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","<block number>"],"id": 1}'
 
 # 获取合约账户Storage GetStorageByAddr
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getStorageByAddr","params": ["<contract address>","latest"],"id": 1}'

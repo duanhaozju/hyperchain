@@ -103,7 +103,6 @@ func (c *Contract) Finalise() {
 
 // UseGas attempts the use gas and subtracts it and returns true on success
 func (c *Contract) UseGas(gas *big.Int) (ok bool) {
-	return true
 	ok = useGas(c.Gas, gas)
 	if ok {
 		c.UsedGas.Add(c.UsedGas, gas)

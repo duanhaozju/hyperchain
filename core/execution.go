@@ -50,10 +50,10 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	evm := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
+	snapshotPreTransfer := env.MakeSnapshot()
 	if env.Depth() > int(params.CallCreateDepth.Int64()) {
 		caller.ReturnGas(gas, gasPrice)
-
-		return nil, common.Address{}, vm.DepthError
+		return nil, common.Address{}, ExecContractErr(1, "Max call depth exceeded 1024")
 	}
 
 	// TODO
@@ -72,7 +72,6 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		createAccount = true
 	}
 	statedb, _ := env.Db().(*state.StateDB)
-	snapshotPreTransfer := env.MakeSnapshot()
 	var (
 		from = env.Db().GetAccount(caller.Address())
 		to   vm.Account
@@ -133,8 +132,13 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// when we're in homestead this also counts for code storage gas errors.
 	if err != nil && (env.RuleSet().IsHomestead(env.BlockNumber()) || err != vm.CodeStoreOutOfGasError) {
 		contract.UseGas(contract.Gas)
-
 		env.SetSnapshot(snapshotPreTransfer)
+		log.Critical("Revert Statedb")
+		if createAccount {
+			err = ExecContractErr(0, "contract creation failed, error msg", err.Error())
+		} else {
+			err = ExecContractErr(1, "contract invocation failed, error msg:", err.Error())
+		}
 	}
 	return ret, addr, err
 }
