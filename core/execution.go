@@ -82,12 +82,11 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		to = env.Db().CreateAccount(*address)
 	} else {
 		if !env.Db().Exist(*address) {
+			// IMPORTANT
+			// There is no necessary to judge whether the code is nil
+			// During the contract deploy the code is empty too!
 			to = env.Db().CreateAccount(*address)
-			if statedb.GetCode(to.Address()) == nil {
-				env.Transfer(from, to, value)
-				return nil, common.Address{}, nil
-			}
-			//env.Transfer(from, to, value)
+			env.Transfer(from, to, value)
 		} else {
 			to = env.Db().GetAccount(*address)
 			if statedb.GetCode(to.Address()) == nil {
