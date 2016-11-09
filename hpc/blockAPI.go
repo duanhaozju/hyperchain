@@ -160,10 +160,10 @@ func getBlocks(args IntervalArgs, hyperDb *hyperdb.LDBDatabase) ([]*BlockResult,
 			return blocks, nil
 		}
 
-		from = *NewUint64ToBlockNumber(0)
+		from = *NewUint64ToBlockNumber(1)
 		to = height
 	} else if args.From == nil && args.To != nil {
-		from = *NewUint64ToBlockNumber(0)
+		from = *NewUint64ToBlockNumber(1)
 		to = *args.To
 	} else if args.From != nil && args.To == nil {
 		from = *args.From
@@ -174,7 +174,7 @@ func getBlocks(args IntervalArgs, hyperDb *hyperdb.LDBDatabase) ([]*BlockResult,
 		to = *args.To
 	}
 
-	if from > to || from < 0 || to < 0 {
+	if from > to || from < 1 || to < 1 {
 		return nil, errors.New("Invalid params")
 	}
 
@@ -185,7 +185,7 @@ func getBlocks(args IntervalArgs, hyperDb *hyperdb.LDBDatabase) ([]*BlockResult,
 			return nil, err
 		}
 		blocks = append(blocks, b)
-		if to == 0 {
+		if to == 1 {
 			break
 		}
 		to--
