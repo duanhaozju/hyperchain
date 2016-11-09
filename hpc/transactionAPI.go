@@ -239,7 +239,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
 					log.Error("invalid signature")
 					// ATTENTION, return invalid transactino directly
-					//return common.Hash{}, errors.New("invalid signature")
+					return common.Hash{}, errors.New("invalid signature")
 				}
 
 				if txBytes, err := proto.Marshal(tx); err != nil {
