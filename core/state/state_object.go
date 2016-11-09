@@ -262,6 +262,7 @@ type extStateObject struct {
 	BalanceData *big.Int
 	Root        common.Hash
 	CodeHash    []byte
+	Nonce       uint64
 }
 
 func (self *StateObject) EncodeObject() ([]byte, error) {
@@ -269,6 +270,7 @@ func (self *StateObject) EncodeObject() ([]byte, error) {
 		BalanceData: self.BalanceData,
 		Root:        self.trie.Hash(),
 		CodeHash:    self.codeHash,
+		Nonce:       self.nonce,
 	}
 	//self.trie.CommitTo(self.db)
 	//self.db.Put(self.codeHash, self.code)
@@ -299,9 +301,6 @@ func DecodeObject(address common.Address, db trie.Database, data []byte) (*State
 	}
 	obj.BalanceData = ext.BalanceData
 	obj.codeHash = ext.CodeHash
-	obj.trie, err = trie.NewSecure(ext.Root, db)
-	if err != nil {
-		return nil, err
-	}
+	obj.nonce = ext.Nonce
 	return obj, nil
 }
