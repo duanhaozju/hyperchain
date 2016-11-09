@@ -558,7 +558,8 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 
 	pbft.activeView = true
 	delete(pbft.newViewStore, pbft.view-1)
-
+	// empty the outstandingReqBatch, it is useless since new primary will resend pre-prepare
+	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
 	pbft.lastExec = pbft.h
 	pbft.seqNo = pbft.h
 	pbft.vid = pbft.h
@@ -585,65 +586,8 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 			}
 		}
 	}
-	/*
-	for n, d := range nv.Xset {
-		if n <= pbft.h {
-			continue
-		}
-
-		reqBatch, ok := pbft.validatedBatchStore[d]
-		if !ok && d != "" {
-			logger.Criticalf("Replica %d is missing request batch for seqNo=%d with digest '%s' for assigned prepare after fetching, this indicates a serious bug", pbft.id, n, d)
-		}
-		preprep := &PrePrepare{
-			View:           	pbft.view,
-			SequenceNumber: 	n,
-			BatchDigest:    	d,
-			TransactionBatch:   	reqBatch,
-			ReplicaId:      	pbft.id,
-		}
-		cert := pbft.getCert(pbft.view, n)
-		cert.prePrepare = preprep
-		cert.digest = d
-		if n > pbft.seqNo {
-			pbft.seqNo = n
-		}
-		pbft.persistQSet()
-	}
-	*/
 
 	pbft.updateViewChangeSeqNo()
-/*
-	if pbft.primary(pbft.view) != pbft.id {
-		for n, d := range nv.Xset {
-			prep := &Prepare{
-				View:           pbft.view,
-				SequenceNumber: n,
-				BatchDigest:    d,
-				ReplicaId:      pbft.id,
-			}
-			if n > pbft.h {
-				cert := pbft.getCert(pbft.view, n)
-				cert.sentPrepare = true
-				pbft.recvPrepare(prep)
-			}
-			payload, err := proto.Marshal(prep)
-			if err != nil {
-				logger.Errorf("ConsensusMessage_PREPARE Marshal Error", err)
-				return nil
-			}
-			consensusMsg := &ConsensusMessage{
-				Type:		ConsensusMessage_PREPARE,
-				Payload:	payload,
-			}
-			msg := consensusMsgHelper(consensusMsg, pbft.id)
-			pbft.helper.InnerBroadcast(msg)
-		}
-	} else {
-		logger.Debugf("Replica %d is now primary, attempting to resubmit requests", pbft.id)
-		pbft.resubmitRequestBatches()
-	}
-*/
 	pbft.startTimerIfOutstandingRequests()
 	logger.Debugf("Replica %d done cleaning view change artifacts, calling into consumer", pbft.id)
 
