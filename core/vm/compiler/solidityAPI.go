@@ -31,6 +31,7 @@ func CompileSourcefile(source string) ([]string, []string, []string, error) {
 	}
 	if err != nil {
 		fmt.Printf("Failed to build Solidity contract: %v\n", err)
+		return nil,nil,nil,err
 	}
 	// Gather all non-excluded contract for binding
 	for name, contract := range contracts {
