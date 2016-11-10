@@ -346,6 +346,7 @@ func UpdateChainByBlcokNum(db hyperdb.Database, blockNumber uint64) error {
 	block, err := GetBlockByNumber(db, blockNumber)
 	if err != nil {
 		log.Warning("no required block number")
+		return err
 	}
 	memChainMap.data.LatestBlockHash = block.BlockHash
 	memChainMap.data.ParentBlockHash = block.ParentHash
