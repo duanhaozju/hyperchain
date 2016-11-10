@@ -242,7 +242,11 @@ func (self *ProtocolManager) sendMsg(payload []byte) {
 		Timestamp: time.Now().UnixNano(),
 		Id:        0,
 	}
-	msgSend, _ := proto.Marshal(msg)
+	msgSend, err := proto.Marshal(msg)
+	if err != nil {
+		log.Notice("sendMsg marshal message failed")
+		return
+	}
 	self.consenter.RecvMsg(msgSend)
 
 }
@@ -281,29 +285,41 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 	core.SetReplicas(UpdateStateMessage.Replicas)
 	core.SetId(UpdateStateMessage.Id)
 
-	payload, _ := proto.Marshal(required)
+	payload, err := proto.Marshal(required)
+	if err != nil {
+		log.Error("SendSyncRequest marshal message failed")
+		return
+	}
 	self.Peermanager.SendMsgToPeers(payload, UpdateStateMessage.Replicas, recovery.Message_SYNCCHECKPOINT)
 }
 
 func (self *ProtocolManager) ReceiveSyncRequest(ev event.StateUpdateEvent) {
 	checkpointMsg := &recovery.CheckPointMessage{}
 	proto.Unmarshal(ev.Payload, checkpointMsg)
-	db, _ := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Error("No Database Found")
+		return
+	}
 	blocks := &types.Blocks{}
 	for i := checkpointMsg.RequiredNumber; i > checkpointMsg.CurrentNumber; i -= 1 {
 		block, err := core.GetBlockByNumber(db, i)
 		if err != nil {
-			log.Warning("no required block number")
+			log.Error("no required block number:", i)
+			continue
 		}
 
 		if blocks.Batch == nil {
 			blocks.Batch = append(blocks.Batch, block)
 		} else {
 			blocks.Batch[0] = block
-
 		}
 
-		payload, _ := proto.Marshal(blocks)
+		payload, err := proto.Marshal(blocks)
+		if err != nil {
+			log.Error("ReceiveSyncRequest marshal message failed")
+			continue
+		}
 		var peers []uint64
 		peers = append(peers, checkpointMsg.PeerId)
 		self.Peermanager.SendMsgToPeers(payload, peers, recovery.Message_SYNCBLOCK)
@@ -314,7 +330,11 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 	if core.GetChainCopy().RequiredBlockNum != 0 {
 		blocks := &types.Blocks{}
 		proto.Unmarshal(ev.Payload, blocks)
-		db, _ := hyperdb.GetLDBDatabase()
+		db, err := hyperdb.GetLDBDatabase()
+		if err != nil {
+			log.Error("No Database Found")
+			return
+		}
 		for i := len(blocks.Batch) - 1; i >= 0; i -= 1 {
 			if blocks.Batch[i].Number <= core.GetChainCopy().RequiredBlockNum {
 				log.Debug("Receive Block: ", blocks.Batch[i].Number, common.BytesToHash(blocks.Batch[i].BlockHash).Hex())
@@ -322,17 +342,25 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 					acceptHash := blocks.Batch[i].HashBlock(self.commonHash).Bytes()
 					if common.Bytes2Hex(acceptHash) == common.Bytes2Hex(core.GetChainCopy().RequireBlockHash) {
 						core.PutBlockTx(db, self.commonHash, blocks.Batch[i].BlockHash, blocks.Batch[i])
-						self.updateRequire(blocks.Batch[i])
+						if err := self.updateRequire(blocks.Batch[i]); err != nil {
+							log.Error("UpdateRequired failed!")
+							return
+						}
 
 						// receive all block in chain
 						if core.GetChainCopy().RequiredBlockNum <= core.GetChainCopy().Height {
-							lastBlk, _ := core.GetBlockByNumber(db, core.GetChainCopy().RequiredBlockNum + 1)
+							lastBlk, err := core.GetBlockByNumber(db, core.GetChainCopy().RequiredBlockNum + 1)
+							if err != nil {
+								log.Error("StateUpdate Failed!")
+								return
+							}
 							if common.Bytes2Hex(lastBlk.ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash) {
 								// execute all received block at one time
 								for i := core.GetChainCopy().RequiredBlockNum + 1; i <= core.GetChainCopy().RecoveryNum; i += 1 {
 									blk, err := core.GetBlockByNumber(db, i)
 									if err != nil {
-										continue
+										log.Error("StateUpdate Failed")
+										return
 									} else {
 										self.blockPool.ProcessBlockInVm(blk.Transactions, nil, blk.Number)
 										self.blockPool.SetDemandNumber(blk.Number + 1)
@@ -347,7 +375,11 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 								payload := &protos.StateUpdatedMessage{
 									SeqNo: core.GetChainCopy().Height,
 								}
-								msg, _ := proto.Marshal(payload)
+								msg, err := proto.Marshal(payload)
+								if err != nil {
+									log.Error("StateUpdate marshal stateupdated message failed")
+									return
+								}
 								msgSend := &protos.Message{
 									Type:      protos.Message_STATE_UPDATED,
 									Payload:   msg,
@@ -357,6 +389,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 								msgPayload, err := proto.Marshal(msgSend)
 								if err != nil {
 									log.Error(err)
+									return
 								}
 								time.Sleep(2000 * time.Millisecond)
 								self.consenter.RecvMsg(msgPayload)
@@ -403,12 +436,21 @@ func (self *ProtocolManager) broadcastDemandBlock(number uint64, hash []byte, re
 		CurrentNumber:  core.GetChainCopy().Height,
 		PeerId:         peerId,
 	}
-	payload, _ := proto.Marshal(required)
+	payload, err := proto.Marshal(required)
+	if err != nil {
+		log.Error("broadcastDemandBlock, marshal message failed")
+		return
+	}
 	self.Peermanager.SendMsgToPeers(payload, replicas, recovery.Message_SYNCSINGLE)
 }
 
-func (self *ProtocolManager) updateRequire(block *types.Block) {
-	db, _ := hyperdb.GetLDBDatabase()
+func (self *ProtocolManager) updateRequire(block *types.Block) error {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		// TODO
+		log.Error("updateRequire get database failed")
+		return err
+	}
 	var tmp = block.Number - 1
 	var tmpHash = block.ParentHash
 	flag := false
@@ -441,6 +483,7 @@ func (self *ProtocolManager) updateRequire(block *types.Block) {
 	}
 	core.UpdateRequire(tmp, tmpHash, core.GetChainCopy().RecoveryNum)
 	log.Debug("Next Required", core.GetChainCopy().RequiredBlockNum, common.BytesToHash(core.GetChainCopy().RequireBlockHash).Hex())
+	return nil
 }
 
 func (self *ProtocolManager) SyncReplicaStatus() {
@@ -449,11 +492,18 @@ func (self *ProtocolManager) SyncReplicaStatus() {
 		select {
 		case <-ticker.C:
 			addr, chain := self.packReplicaStatus()
+			if addr == nil || chain == nil {
+				continue
+			}
 			status := &recovery.ReplicaStatus{
 				Addr:  addr,
 				Chain: chain,
 			}
-			payload, _ := proto.Marshal(status)
+			payload, err := proto.Marshal(status)
+			if err != nil {
+				log.Error("marshal syncReplicaStatus message failed")
+				continue
+			}
 			peers := self.Peermanager.GetAllPeers()
 			var peerIds = make([]uint64, len(peers))
 			for idx, peer := range peers {
@@ -484,6 +534,7 @@ func (self *ProtocolManager) RecordReplicaStatus(ev event.ReplicaStatusEvent) {
 		ParentBlockHash: chain.ParentBlockHash,
 		Height:          chain.Height,
 	}
+	log.Critical("recv Replica Status", replicaInfo)
 	self.replicaStatus.Add(addr.ID, replicaInfo)
 }
 func (self *ProtocolManager) packReplicaStatus() ([]byte, []byte) {
@@ -495,8 +546,16 @@ func (self *ProtocolManager) packReplicaStatus() ([]byte, []byte) {
 	currentChain.RecoveryNum = 0
 	currentChain.CurrentTxSum = 0
 	// marshal
-	addrData, _ := proto.Marshal(peerAddress)
-	chainData, _ := proto.Marshal(currentChain)
+	addrData, err := proto.Marshal(peerAddress)
+	if err != nil {
+		log.Error("packReplicaStatus failed!")
+		return nil, nil
+	}
+	chainData, err := proto.Marshal(currentChain)
+	if err != nil {
+		log.Error("packReplicaStatus failed!")
+		return nil, nil
+	}
 	return addrData, chainData
 }
 
