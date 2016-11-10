@@ -11662,8 +11662,21 @@ angular
             },
             encodeConstructorParams: function(abi, params){
                 return $q(function(resolve, reject){
+
+                    var p = [];
+
+                    for (var i = 0; i <  abi.inputs.length; i++) {
+                        for (var k in params) {
+                            if (abi.inputs[i].name == k) {
+                                p.push(params[k])
+                                break;
+                            }
+                        }
+                    }
+
                     console.log(abi)
                     console.log(params)
+                    console.log(p)
                     data = abi.filter(function (json) {
                             return json.type === 'constructor' && json.inputs.length === params.length;
                         }).map(function (json) {

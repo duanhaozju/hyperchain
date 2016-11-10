@@ -44,13 +44,6 @@ func (n *Number) UnmarshalJSON(data []byte) error {
 		input = input[1 : len(input)-1]
 	}
 
-	if len(input) == 0 {
-		*n = *NewUint64ToNumber(core.GetChainCopy().Height)
-		//*n = Number(latestBlockNumber)
-		return nil
-	}
-
-
 	in := new(big.Int)
 	_, ok := in.SetString(input, 0)
 
@@ -121,13 +114,6 @@ func (n *BlockNumber) UnmarshalJSON(data []byte) error {
 		input = input[1 : len(input)-1]
 	}
 
-	if len(input) == 0 {
-		*n = *NewUint64ToBlockNumber(core.GetChainCopy().Height)
-		//*n = Number(latestBlockNumber)
-		return nil
-	}
-
-
 	in := new(big.Int)
 	_, ok := in.SetString(input, 0)
 
@@ -150,13 +136,18 @@ func (n *BlockNumber) UnmarshalJSON(data []byte) error {
 			return nil
 		}
 
+		if strBlockNumber == "" {
+			*n = BlockNumber(0)
+			return nil
+		}
+
 		return fmt.Errorf(`invalid number %s`, data)
 	}
 
 	if v, err := strconv.ParseUint(input, 0, 0);err != nil {
 		return errors.New("number out of range")
-	} else if (v < 0) {
-		return errors.New("number can't be negative")
+	} else if (v <= 0) {
+		return errors.New("number can't be negative or zero")
 	} else {
 		*n = *NewUint64ToBlockNumber(v)
 		return nil

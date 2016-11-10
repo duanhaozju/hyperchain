@@ -35,19 +35,20 @@ func NewPublicAccountAPI(pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDataba
 }
 
 //New Account according to args from html
-func (acc *PublicAccountAPI) NewAccount(password string) common.Address {
+func (acc *PublicAccountAPI) NewAccount(password string) (common.Address, error) {
 	//keydir := "./keystore/"
 	//encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	am := acc.pm.AccountManager
 	ac, err := am.NewAccount(password)
 	if err != nil {
-		log.Fatal("New Account error,%v", err)
+		log.Errorf("New Account error,%v", err)
+		return common.Address{}, err
 	}
 
 	/*	balanceIns, err := core.GetBalanceIns()
 		balanceIns.PutCacheBalance(ac.Address, []byte("0"))
 		balanceIns.PutDBBalance(ac.Address, []byte("0"))*/
-	return ac.Address
+	return ac.Address, nil
 }
 
 // UnlockAccount unlocks account according to args(address,password), if success, return true.
@@ -106,16 +107,23 @@ func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 // GetBalance returns account balance for given account address.
 func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
 
-	headBlock, _ := core.GetBlock(acc.db, core.GetChainCopy().LatestBlockHash)
-	stateDB, err := state.New(common.BytesToHash(headBlock.MerkleRoot), acc.db)
-	if err != nil {
-		log.Errorf("Get stateDB error, %v", err)
+	if headBlock, err := core.GetBlock(acc.db, core.GetChainCopy().LatestBlockHash);err != nil {
+		log.Errorf("Get Block error, %v", err)
 		return "", err
-	}
+	} else if headBlock != nil {
 
-	if stateobject := stateDB.GetStateObject(addr);stateobject != nil {
-		return fmt.Sprintf(`0x%x`, stateobject.BalanceData), nil
+		if stateDB, err := state.New(common.BytesToHash(headBlock.MerkleRoot), acc.db);err == nil && stateDB != nil {
+			if stateobject := stateDB.GetStateObject(addr);stateobject != nil {
+				return fmt.Sprintf(`0x%x`, stateobject.BalanceData), nil
+			} else {
+				return "", errors.New("stateobject is nil, the account may not exist")
+			}
+		} else if err != nil {
+			return "", err
+		} else {
+			return "", errors.New("statedb is nil")
+		}
 	} else {
-		return "", errors.New("StateObject is nil")
+		return "", nil
 	}
 }
