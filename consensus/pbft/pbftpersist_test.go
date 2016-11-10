@@ -19,6 +19,7 @@ import (
 	"encoding/binary"
 	//"github.com/pkg/errors"
 	"hyperchain/core"
+
 )
 
 func TestPersistPSet(t *testing.T)  {
@@ -254,10 +255,106 @@ func TestSeqnoFunctions(t *testing.T)  {
 
 func TestRestoreLastSeqNo(t *testing.T)  {
 	defer clearDB()
+	pbft := new(pbftProtocal)
+	core.InitDB("/temp/leveldb", 8088)
+	pbft.restoreLastSeqNo()
 }
 
+func TestRestoreState(t *testing.T)  {
+	defer clearDB()
+	pbft := new(pbftProtocal)
+	pbft.K = 1
+	pbft.replicaCount = 3
+	core.InitDB("./temp/leveldb", 8088)
 
+	var pset []*ViewChange_PQ
+	pbft.pset = make(map[uint64]*ViewChange_PQ)
+	vcpq := ViewChange_PQ{
+		1,
+		"digest",
+		2,
+	}
+	pbft.pset[1234] = &vcpq
+	pset = append(pset, &vcpq)
+	pbft.persistPSet()
+
+	pbft.restoreState()
+	if pbft.view != 2 || pbft.seqNo != 1 {
+		t.Error("restoreState.updateSeqView error")
+	}
+
+	var qset []*ViewChange_PQ
+
+	pbft.qset = make(map[qidx]*ViewChange_PQ)
+	vcpq = ViewChange_PQ{
+		4,
+		"digest",
+		6,
+	}
+	pbft.qset[qidx{"112", uint64(112)}] = &vcpq
+	qset = append(qset, &vcpq)
+
+	pbft.persistQSet()
+	pbft.restoreState()
+	if pbft.view != 6 || pbft.seqNo != 4 {
+		t.Error("restoreState.updateSeqView error")
+	}
+
+	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
+	pbft.validatedBatchStore["t1"] = &TransactionBatch{Timestamp:111}
+	pbft.validatedBatchStore["t2"] =
+		&TransactionBatch{
+			Timestamp:int64(222),
+			Batch:[]*types.Transaction{
+				{
+					From:[]byte("A"),
+					To:[]byte("B"),
+					Value:[]byte("123"),
+				},
+				{
+					From:[]byte("B}"),
+					To:[]byte("A"),
+					Value:[]byte("321"),
+				},
+			},
+		}
+	pbft.persistRequestBatch("t1")
+	pbft.persistRequestBatch("t2")
+
+	pbft.restoreState()
+	rs := pbft.validatedBatchStore[hash(pbft.validatedBatchStore["t1"])]
+
+	if !reflect.DeepEqual(pbft.validatedBatchStore["t1"], rs){
+		t.Error("error restoreState reqBatchesPacked")
+	}
+
+	view := Int64ToBytes(1234)
+	persist.StoreState("view", view)
+	pbft.restoreState()
+
+	if !(pbft.view == binary.LittleEndian.Uint64(view)){
+		t.Error("error restoreState restore view")
+	}
+
+	seqNo := uint64(0)
+	pbft.chkpts = make(map[uint64]string)
+	id := []byte("checkpoint00000000001")
+	pbft.persistCheckpoint(seqNo, id)
+	pbft.restoreState()
+
+	if seqNo != pbft.h {
+		t.Error("error restoreState moveWatermarks")
+	}
+
+}
+
+func Int64ToBytes(i int64) []byte {
+	var buf = make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, uint64(i))
+	return buf
+}
 
 func clearDB()  {
 	persist.DelAllState()
 }
+

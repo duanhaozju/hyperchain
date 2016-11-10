@@ -19,8 +19,11 @@ func StoreState(key string, value []byte) error {
 
 //DelAllState: remove all state
 func DelAllState() error {
-	db, _ := hyperdb.GetLDBDatabase()
-	return db.Destroy()
+	db, err := hyperdb.GetLDBDatabase()
+	if err == nil {
+		db.Destroy()
+	}
+	return err
 }
 
 // DelState removes a key,value pair
