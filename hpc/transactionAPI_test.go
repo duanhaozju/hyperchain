@@ -36,6 +36,7 @@ func putTransactionToDefaultDB() {
 		log.Error(err)
 	}
 
+
 	txValue := types.NewTransactionValue(100, 100, 1, nil)
 
 	value, err := proto.Marshal(txValue)
