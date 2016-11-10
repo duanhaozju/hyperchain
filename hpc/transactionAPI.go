@@ -131,6 +131,12 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 	// ################################# 测试代码 START ####################################### //
 	var v int64 = realArgs.Value.ToInt64()
+
+
+	if(args.From.Hex()==(common.Address{}).Hex()){
+		return common.Hash{},errors.New("address shouldn't be null")
+	}
+
 	if realArgs.Timestamp == 0 {
 		realArgs.Timestamp = time.Now().UnixNano()
 	}
@@ -448,6 +454,7 @@ func (tran *PublicTransactionAPI) GetSighHash(args SendTxArgs) (common.Hash, err
 	if realArgs.Timestamp == 0 {
 		return common.Hash{}, errors.New("lack of param timestamp")
 	}
+
 
 	payload := common.FromHex(realArgs.Payload)
 
