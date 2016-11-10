@@ -49,6 +49,7 @@ func CreateInitBlock(filename string) {
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
 
 	stateDB, _ := state.New(common.Hash{}, db)
@@ -77,6 +78,7 @@ func CreateInitBlock(filename string) {
 	commonHash := crypto.NewKeccak256Hash("keccak256")
 	if err := PutBlockTx(db, commonHash, block.BlockHash, &block); err != nil {
 		log.Fatal(err)
+		return
 	}
 	UpdateChain(&block, true)
 	log.Info("current chain block number is", GetChainCopy().Height)
