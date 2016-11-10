@@ -42,13 +42,16 @@ func InitDB(dbPath string, port int) {
 //---------------------- Receipt Start ---------------------------------
 // GetReceipt returns a receipt by hash
 func GetReceipt(txHash common.Hash) *types.ReceiptTrans {
-	db, _ := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		return nil
+	}
 	data, _ := db.Get(append(ReceiptsPrefix, txHash[:]...))
 	if len(data) == 0 {
 		return nil
 	}
 	var receipt types.Receipt
-	err := proto.Unmarshal(data, &receipt)
+	err = proto.Unmarshal(data, &receipt)
 	if err != nil {
 		log.Errorf("GetReceipt err:", err)
 	}
@@ -104,7 +107,6 @@ func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error)
 //get tx<-->block num,hash,index
 func GetTxWithBlock(db hyperdb.Database, key []byte) (uint64, int64) {
 	dataMeta, _ := db.Get(append(key, TxMetaSuffix...))
-	log.Debug(dataMeta)
 	if len(dataMeta) == 0 {
 		return 0, 0
 	}
