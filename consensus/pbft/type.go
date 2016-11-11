@@ -45,3 +45,5 @@ type negoViewDoneEvent struct{}
 type recoveryRestartTimerEvent struct{}
 
 type recoveryDoneEvent struct{}
+
+type firstRequestTimerEvent struct{}
