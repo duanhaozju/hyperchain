@@ -234,6 +234,7 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 	if len(replicas) >= pbft.f+1 {
 		logger.Warningf("Replica %d received f+1 view-change messages, triggering view-change to view %d",
 			pbft.id, minView)
+		pbft.firstRequestTimer.Stop()
 		// subtract one, because sendViewChange() increments
 		pbft.view = minView - 1
 		return pbft.sendViewChange()

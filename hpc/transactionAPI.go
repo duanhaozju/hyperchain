@@ -156,6 +156,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	if args.Request != nil {
 
 		// ** For Hyperboard Test **
+
 		for i := 0; i < (*args.Request).ToInt(); i++ {
 			// ################################# 测试代码 START ####################################### // (用不同的value代替之前不同的timestamp以标志不同的transaction)
 			txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), v, nil)
