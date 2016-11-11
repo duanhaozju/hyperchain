@@ -4,7 +4,7 @@ package hpc
 
 import (
 	"hyperchain/manager"
-	"hyperchain/p2p/peer"
+	"hyperchain/p2p"
 	"github.com/pkg/errors"
 )
 
@@ -28,7 +28,7 @@ func NewPublicNodeAPI( pm *manager.ProtocolManager) *PublicNodeAPI{
 }
 
 // GetNodes returns status of all the nodes
-func (node *PublicNodeAPI) GetNodes() (client.PeerInfos, error){
+func (node *PublicNodeAPI) GetNodes() (p2p.PeerInfos, error) {
 //func (node *PublicNodeAPI) GetNodes() []*NodeResult{
 
 	if node.pm == nil {

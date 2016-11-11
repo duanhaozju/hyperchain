@@ -1,17 +1,15 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package Server
+package p2p
 
 import (
 	"encoding/hex"
 	"github.com/golang/protobuf/proto"
-	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"hyperchain/event"
 	"hyperchain/p2p/peerComm"
 	pb "hyperchain/p2p/peermessage"
-	"hyperchain/p2p/transport"
 	"hyperchain/recovery"
 	"net"
 	"strconv"
@@ -20,31 +18,31 @@ import (
 
 	"hyperchain/membersrvc"
 	"sync"
+	"errors"
 )
 
-var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("p2p/Server")
-}
 
 type Node struct {
 	address            *pb.PeerAddress
 	gRPCServer         *grpc.Server
 	higherEventManager *event.TypeMux
 	//common information
-	TEM             transport.TransportEncryptManager
-	IsPrimary       bool
-	DelayTable      map[uint64]int64
-	DelayTableMutex sync.Mutex
+	IsPrimary          bool
+	DelayTable         map[uint64]int64
+	DelayTableMutex    sync.Mutex
+	PeerPool           *PeersPool
+
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
-func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, TEM transport.TransportEncryptManager) *Node {
+func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, peerspool *PeersPool) *Node {
 	var newNode Node
 	newNode.address = peerComm.ExtractAddress(peerComm.GetLocalIp(), port, nodeID)
-	newNode.TEM = TEM
 	newNode.higherEventManager = hEventManager
 	newNode.DelayTable = make(map[uint64]int64)
+	newNode.PeerPool = peerspool
+
+
 	log.Debug("节点启动")
 	log.Debug("本地节点hash", newNode.address.Hash)
 	log.Debug("本地节点ip", newNode.address.IP)
@@ -72,7 +70,6 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	response.MsgTimeStamp = time.Now().UnixNano()
 	response.From = this.address
 	//handle the message
-	//review decrypt
 	log.Debug("消息类型", msg.MessageType)
 	go func() {
 		this.DelayTableMutex.Lock()
@@ -88,25 +85,70 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			log.Debug("远端地址为", msg.From.ID, msg.From.IP, msg.From.Port)
 			log.Debug("=================================")
 			response.MessageType = pb.Message_HELLO_RESPONSE
-			//review 协商密钥
 			remotePublicKey := msg.Payload
-			genErr := this.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
+			genErr := this.PeerPool.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
 			if genErr != nil {
 				log.Error("gen sec error", genErr)
 			}
-			log.Notice("远端地址hash：", msg.From.Hash)
-			log.Notice("协商秘钥为：", this.TEM.GetSecret(msg.From.Hash))
+			log.Warning("hello远端id:", msg.From.ID, this.PeerPool.TEM.GetSecret(msg.From.Hash))
 			//every times get the public key is same
-			transportPublicKey := this.TEM.GetLocalPublicKey()
+			transportPublicKey := this.PeerPool.TEM.GetLocalPublicKey()
 			//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
 			response.Payload = transportPublicKey
 			//REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
 			//REVIEW This no need to call hello event handler
+			//判断是否需要反向建立链接
+
 			return &response, nil
 		}
 	case pb.Message_HELLO_RESPONSE:
 		{
 			log.Warning("Invalidate HELLO_RESPONSE message")
+		}
+	case pb.Message_RECONNECT:
+		{
+			log.Warning("节点在重连")
+			response.MessageType = pb.Message_RECONNECT_RESPONSE
+			remotePublicKey := msg.Payload
+			genErr := this.PeerPool.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
+			if genErr != nil {
+				log.Error("gen sec error", genErr)
+			}
+			log.Warning("重连远端id:", msg.From.ID, this.PeerPool.TEM.GetSecret(msg.From.Hash))
+			//every times get the public key is same
+			transportPublicKey := this.PeerPool.TEM.GetLocalPublicKey()
+			//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
+			response.Payload = transportPublicKey
+			//REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
+			//REVIEW This no need to call hello event handler
+			//判断是否需要反向建立链接需要重新建立新链接
+			go this.reconnect(msg)
+
+		}
+	case pb.Message_RECONNECT_RESPONSE:
+		{
+			log.Debug("=================================")
+			log.Debug("协商秘钥")
+			log.Debug("本地地址为", this.address.ID, this.address.IP, this.address.Port)
+			log.Debug("远端地址为", msg.From.ID, msg.From.IP, msg.From.Port)
+			log.Debug("=================================")
+			response.MessageType = pb.Message_HELLO_RESPONSE
+			remotePublicKey := msg.Payload
+			genErr := this.PeerPool.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
+			if genErr != nil {
+				log.Error("gen sec error", genErr)
+			}
+			log.Warning("hello远端id:", msg.From.ID, this.PeerPool.TEM.GetSecret(msg.From.Hash))
+			//every times get the public key is same
+			transportPublicKey := this.PeerPool.TEM.GetLocalPublicKey()
+			//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
+			response.Payload = transportPublicKey
+			//REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
+			//REVIEW This no need to call hello event handler
+			//判断是否需要反向建立链接
+
+			return &response, nil
+
 		}
 	case pb.Message_CONSUS:
 		{
@@ -114,7 +156,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 
 			log.Debug("××××××Node解密信息××××××")
 			log.Debug("Node待解密信息", hex.EncodeToString(msg.Payload))
-			transferData := this.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
+			transferData := this.PeerPool.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
 			log.Debug("Node解密后信息", hex.EncodeToString(transferData))
 			log.Debug("Node解密后信息2", string(transferData))
 			response.Payload = []byte("GOT_A_CONSENSUS_MESSAGE")
@@ -133,7 +175,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		{
 			// package the response msg
 			response.MessageType = pb.Message_RESPONSE
-			transferData := this.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
+			transferData := this.PeerPool.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
 			response.Payload = []byte("got a sync msg")
 			log.Debug("<<<< GOT A Unicast MESSAGE >>>>")
 			var SyncMsg recovery.Message
@@ -207,7 +249,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	}
 	// 返回信息加密
 	if msg.MessageType != pb.Message_HELLO && msg.MessageType != pb.Message_HELLO_RESPONSE {
-		response.Payload = this.TEM.EncWithSecret(response.Payload, msg.From.Hash)
+		response.Payload = this.PeerPool.TEM.EncWithSecret(response.Payload, msg.From.Hash)
 	}
 	return &response, nil
 }
@@ -233,4 +275,47 @@ func (this *Node) StartServer() {
 func (this *Node) StopServer() {
 	this.gRPCServer.GracefulStop()
 
+}
+
+func (this *Node)reconnect(msg *pb.Message) {
+	opts := membersrvc.GetGrpcClientOpts()
+	conn, err := grpc.Dial(msg.From.IP + ":" + strconv.Itoa(int(msg.From.Port)), opts...)
+	//conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
+	if err != nil {
+		errors.New("Cannot establish a connection!")
+		log.Error("err:", err)
+	}
+
+	Client := pb.NewChatClient(conn)
+
+	this.PeerPool.peers[this.PeerPool.peerKeys[*msg.From]].Client = Client
+	this.PeerPool.peers[this.PeerPool.peerKeys[*msg.From]].Connection = conn
+	//esatblish the connect and regenerate the secrate
+	helloMessage := pb.Message{
+		MessageType:  pb.Message_RECONNECT_RESPONSE,
+		Payload:      this.PeerPool.TEM.GetLocalPublicKey(),
+		From:         this.address,
+		MsgTimeStamp: time.Now().UnixNano(),
+	}
+
+	retMessage, err2 := this.PeerPool.peers[this.PeerPool.peerKeys[*msg.From]].Client.Chat(context.Background(), &helloMessage)
+	if err2 != nil {
+		log.Error("cannot establish a connection")
+	} else {
+		//review 取得对方的秘钥
+		if retMessage.MessageType == pb.Message_HELLO_RESPONSE {
+			remotePublicKey := retMessage.Payload
+			genErr := this.PeerPool.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
+			if genErr != nil {
+				log.Error("genErr", err)
+			}
+
+			if err != nil {
+				log.Error("cannot decrypt the nodeidinfo!")
+				errors.New("Decrypt ERROR")
+			}
+			log.Critical("重连反连接ID:", msg.From.ID, this.PeerPool.TEM.GetSecret(msg.From.Hash))
+			log.Critical(this.PeerPool.TEM.GetSecret(msg.From.Hash))
+		}
+	}
 }
