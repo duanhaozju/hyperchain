@@ -15,7 +15,6 @@ import (
 	"hyperchain/event"
 	"hyperchain/hyperdb"
 	"hyperchain/p2p"
-	"hyperchain/p2p/peer"
 	"hyperchain/p2p/peermessage"
 	"hyperchain/protos"
 	"hyperchain/recovery"
@@ -40,27 +39,27 @@ type ReplicaInfo struct {
 }
 
 type ProtocolManager struct {
-	serverPort          int
-	blockPool           *blockpool.BlockPool
-	Peermanager         p2p.PeerManager
+	serverPort        int
+	blockPool         *blockpool.BlockPool
+	Peermanager       p2p.PeerManager
 
-	nodeInfo            client.PeerInfos // node info ,store node status,ip,port
-	consenter           consensus.Consenter
+	nodeInfo          p2p.PeerInfos // node info ,store node status,ip,port
+	consenter         consensus.Consenter
 
-	AccountManager      *accounts.AccountManager
-	commonHash          crypto.CommonHash
+	AccountManager    *accounts.AccountManager
+	commonHash        crypto.CommonHash
 
-	eventMux            *event.TypeMux
+	eventMux          *event.TypeMux
 
-	newBlockSub         event.Subscription
-	consensusSub        event.Subscription
-	viewChangeSub       event.Subscription
-	respSub             event.Subscription
-	syncCheckpointSub   event.Subscription
-	syncBlockSub        event.Subscription
-	syncStatusSub       event.Subscription
-	quitSync            chan struct{}
-	wg                  sync.WaitGroup
+	newBlockSub       event.Subscription
+	consensusSub      event.Subscription
+	viewChangeSub     event.Subscription
+	respSub           event.Subscription
+	syncCheckpointSub event.Subscription
+	syncBlockSub      event.Subscription
+	syncStatusSub     event.Subscription
+	quitSync          chan struct{}
+	wg                sync.WaitGroup
 	syncBlockCache      *common.Cache
 	replicaStatus       *common.Cache
 	syncReplicaInterval time.Duration
@@ -94,7 +93,7 @@ am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duratio
 		expired:             expired,
 		expiredTime:         expiredTime,
 	}
-	manager.nodeInfo = make(client.PeerInfos, 0, 1000)
+	manager.nodeInfo = make(p2p.PeerInfos, 0, 1000)
 	eventMuxAll = eventMux
 	return manager
 }
@@ -258,7 +257,7 @@ func (self *ProtocolManager) BroadcastConsensus(payload []byte) {
 
 }
 
-func (self *ProtocolManager) GetNodeInfo() client.PeerInfos {
+func (self *ProtocolManager) GetNodeInfo() p2p.PeerInfos {
 	self.nodeInfo = self.Peermanager.GetPeerInfo()
 	log.Info("nodeInfo is ", self.nodeInfo)
 	return self.nodeInfo
