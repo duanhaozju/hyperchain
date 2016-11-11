@@ -357,4 +357,3 @@ func Int64ToBytes(i int64) []byte {
 func clearDB()  {
 	persist.DelAllState()
 }
-
