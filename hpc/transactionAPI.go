@@ -15,6 +15,7 @@ import (
 	"time"
 	"errors"
 	"github.com/juju/ratelimit"
+	"github.com/ethereum/go-ethereum/errs"
 )
 
 const (
@@ -156,6 +157,9 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	if args.Request != nil {
 
 		// ** For Hyperboard Test **
+		if(*args.Request).ToInt()<0{
+			return common.Hash{}, errors.New("request can't be less than 0")
+		}
 		for i := 0; i < (*args.Request).ToInt(); i++ {
 			// ################################# 测试代码 START ####################################### // (用不同的value代替之前不同的timestamp以标志不同的transaction)
 			txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), v, nil)
@@ -404,6 +408,8 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockHashAndIndex(hash common.
 		tx := block.Transactions[index]
 
 		return outputTransaction(tx, tran.db)
+	}else {
+		return nil,errors.New("index or count is error")
 	}
 
 	return nil, nil
@@ -425,6 +431,8 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockNumberAndIndex(n BlockNum
 		tx := block.Transactions[index]
 
 		return outputTransaction(tx, tran.db)
+	}else{
+		return nil,errors.New("index or count is error")
 	}
 
 	return nil, nil

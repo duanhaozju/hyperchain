@@ -77,8 +77,8 @@ func (n Number) ToUint64() uint64 {
 }
 
 func (n Number) ToInt() int {
-	if n <= 0 {
-		return 0
+	if n < 0 {
+		return -1
 	}
 	return int(n)
 }
