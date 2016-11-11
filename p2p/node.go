@@ -118,11 +118,11 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			//every times get the public key is same
 			transportPublicKey := this.PeerPool.TEM.GetLocalPublicKey()
 			//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
-			response.Payload = transportPublicKey
 			//REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
 			//REVIEW This no need to call hello event handler
 			//判断是否需要反向建立链接需要重新建立新链接
 			go this.reconnect(msg)
+			response.Payload = transportPublicKey
 
 		}
 	case pb.Message_RECONNECT_RESPONSE:
@@ -138,7 +138,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			if genErr != nil {
 				log.Error("gen sec error", genErr)
 			}
-			log.Warning("hello远端id:", msg.From.ID, this.PeerPool.TEM.GetSecret(msg.From.Hash))
+			log.Warning("Message_HELLO_RESPONSE远端id:", msg.From.ID, this.PeerPool.TEM.GetSecret(msg.From.Hash))
 			//every times get the public key is same
 			transportPublicKey := this.PeerPool.TEM.GetLocalPublicKey()
 			//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
@@ -248,7 +248,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		log.Warning("Unkown Message type!")
 	}
 	// 返回信息加密
-	if msg.MessageType != pb.Message_HELLO && msg.MessageType != pb.Message_HELLO_RESPONSE {
+	if msg.MessageType != pb.Message_HELLO && msg.MessageType != pb.Message_HELLO_RESPONSE && msg.MessageType != pb.Message_RECONNECT_RESPONSE && msg.MessageType != pb.Message_RECONNECT {
 		response.Payload = this.PeerPool.TEM.EncWithSecret(response.Payload, msg.From.Hash)
 	}
 	return &response, nil
@@ -287,9 +287,13 @@ func (this *Node)reconnect(msg *pb.Message) {
 	}
 
 	Client := pb.NewChatClient(conn)
-
-	this.PeerPool.peers[this.PeerPool.peerKeys[*msg.From]].Client = Client
-	this.PeerPool.peers[this.PeerPool.peerKeys[*msg.From]].Connection = conn
+	if _, ok := this.PeerPool.peers[msg.From.Hash]; ok {
+		log.Warning("存在该远端节点,并且尝试重新连接...")
+	} else {
+		return
+	}
+	this.PeerPool.peers[msg.From.Hash].Client = Client
+	this.PeerPool.peers[msg.From.Hash].Connection = conn
 	//esatblish the connect and regenerate the secrate
 	helloMessage := pb.Message{
 		MessageType:  pb.Message_RECONNECT_RESPONSE,
@@ -298,9 +302,9 @@ func (this *Node)reconnect(msg *pb.Message) {
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 
-	retMessage, err2 := this.PeerPool.peers[this.PeerPool.peerKeys[*msg.From]].Client.Chat(context.Background(), &helloMessage)
+	retMessage, err2 := this.PeerPool.peers[msg.From.Hash].Client.Chat(context.Background(), &helloMessage)
 	if err2 != nil {
-		log.Error("cannot establish a connection")
+		log.Error("cannot establish a connection", err2)
 	} else {
 		//review 取得对方的秘钥
 		if retMessage.MessageType == pb.Message_HELLO_RESPONSE {

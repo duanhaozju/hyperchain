@@ -34,10 +34,11 @@ type Peer struct {
 // the peer will auto store into the peer pool.
 // when creating a peer, the client instance will create a message whose type is HELLO
 // if get a response, save the peer into singleton peer pool instance
-func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.TransportEncryptManager, localAddr *pb.PeerAddress) (*Peer, error) {
+func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.TransportEncryptManager, localAddr *pb.PeerAddress, peerPool *PeersPool) (*Peer, error) {
 	var peer Peer
 	peer.TEM = TEM
 	peer.ID = nid
+	peer.PeerPool = peerPool
 	peerAddr := peerComm.ExtractAddress(ip, port, nid)
 
 	opts:=membersrvc.GetGrpcClientOpts()
@@ -91,10 +92,11 @@ func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.Transpo
 	return nil, errors.New("cannot establish a connection")
 }
 
-func NewPeerByIpAndPortReconnect(ip string, port int64, nid uint64, TEM transport.TransportEncryptManager, localAddr *pb.PeerAddress) (*Peer, error) {
+func NewPeerByIpAndPortReconnect(ip string, port int64, nid uint64, TEM transport.TransportEncryptManager, localAddr *pb.PeerAddress, peerPool *PeersPool) (*Peer, error) {
 	var peer Peer
 	peer.TEM = TEM
 	peer.ID = nid
+	peer.PeerPool = peerPool
 	peerAddr := peerComm.ExtractAddress(ip, port, nid)
 
 	opts := membersrvc.GetGrpcClientOpts()
@@ -120,8 +122,9 @@ func NewPeerByIpAndPortReconnect(ip string, port int64, nid uint64, TEM transpor
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	retMessage, err2 := peer.Client.Chat(context.Background(), &helloMessage)
+	log.Warning("重连返回值...", retMessage)
 	if err2 != nil {
-		log.Error("cannot establish a connection")
+		log.Error("cannot establish a connection", err2)
 		return nil, err2
 	} else {
 		//review 取得对方的秘钥
