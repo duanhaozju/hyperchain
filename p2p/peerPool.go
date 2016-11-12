@@ -35,19 +35,12 @@ func NewPeerPool(TEM transport.TransportEncryptManager) *PeersPool {
 // PutPeer put a peer into the peer pool and get a peer point
 func (this *PeersPool) PutPeer(addr pb.PeerAddress, client *Peer) (*Peer, error) {
 	addrString := addr.Hash
-	//log.Println("Add a peer:",addrString)
-	//if _, ok := this.peerKeys[addr]; ok {
-	//	// the pool already has this client
-	//	log.Error(addr.IP, addr.Port, "The client already in")
-	//	return this.peers[addrString], errors.New("The client already in")
-	//
-	//} else {
-		this.alivePeers += 1
-		this.peerKeys[addr] = addrString
-		this.peerAddr[addrString] = addr
-		this.peers[addrString] = client
-		return client, nil
-	//}
+	this.alivePeers += 1
+	this.peerKeys[addr] = addrString
+	this.peerAddr[addrString] = addr
+	this.peers[addrString] = client
+	return client, nil
+
 
 }
 
@@ -69,6 +62,9 @@ func (this *PeersPool) GetAliveNodeNum() int {
 // GetPeerByString get peer by address string
 func GetPeerByString(addr string) *Peer {
 	address := strings.Split(addr, ":")
+	if len(address) < 2{
+		log.Error(`given string is not like "localhost:1234",please check it!`)
+	}
 	p, err := strconv.Atoi(address[1])
 	if err != nil {
 		log.Error(`given string is not like "localhost:1234", pls check it`)
@@ -94,7 +90,3 @@ func (this *PeersPool) GetPeers() []*Peer {
 	return clients
 }
 
-// DelPeer delete a peer by the given peer address (Not Used)
-func DelPeer(addr pb.PeerAddress) {
-	delete(prPoolIns.peers, prPoolIns.peerKeys[addr])
-}

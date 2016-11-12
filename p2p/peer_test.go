@@ -5,7 +5,6 @@ package p2p
 
 import (
 	"testing"
-	node "hyperchain/p2p/node"
 	"hyperchain/event"
 	"hyperchain/p2p/transport"
 	"hyperchain/p2p/peerComm"
@@ -21,10 +20,11 @@ import (
 
 
 var fakeNodeTEM *transport.HandShakeManager
-var fakeNode  *node.Node
+var fakeNode  *Node
 var fakeNodeAddr *pb.PeerAddress
 var localAddr *pb.PeerAddress
 var localTEM *transport.HandShakeManager
+var peerPool *PeersPool
 
 
 
@@ -32,15 +32,16 @@ var localTEM *transport.HandShakeManager
 func init(){
 	membersrvc.Start("../../config/test/local_membersrvc.yaml", 1)
 	fakeNodeTEM = transport.NewHandShakeManger()
-	fakeNode = node.NewNode(8123,new(event.TypeMux),1,fakeNodeTEM)
+	fakeNode = NewNode(8123,new(event.TypeMux),1,fakeNodeTEM)
 	fakeNodeAddr =peerComm.ExtractAddress(peerComm.GetLocalIp(),8123,1)
 	localAddr = peerComm.ExtractAddress(peerComm.GetLocalIp(),8124,2)
 	localTEM = transport.NewHandShakeManger()
 	fakeNode.StartServer()
+	peerPool = NewPeerPool(fakeNodeTEM)
 }
 
 func TestNewPeerByIpAndPort(t *testing.T) {
-	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID, fakeNodeTEM,localAddr)
+	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID, fakeNodeTEM,localAddr,peerPool)
 	if err != nil{
 		t.Error(err)
 	}
@@ -48,7 +49,7 @@ func TestNewPeerByIpAndPort(t *testing.T) {
 }
 
 func TestPeer_Chat(t *testing.T) {
-	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr)
+	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr,peerPool)
 	if err != nil{
 		t.Error(err)
 	}
@@ -67,7 +68,7 @@ func TestPeer_Chat(t *testing.T) {
 }
 
 func TestPeer_Chat2(t *testing.T) {
-	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr)
+	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr,peerPool)
 	if err != nil{
 		t.Error(err)
 	}
@@ -86,7 +87,7 @@ func TestPeer_Chat2(t *testing.T) {
 }
 
 func TestPeer_Chat3(t *testing.T) {
-	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr)
+	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr,peerPool)
 	if err != nil{
 		t.Error(err)
 	}

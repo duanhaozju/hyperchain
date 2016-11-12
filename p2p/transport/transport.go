@@ -46,7 +46,11 @@ func NewHandShakeManger() *HandShakeManager {
 	var hSM HandShakeManager
 	hSM.secrets = make(map[string][]byte)
 	hSM.e = ecdh.NewEllipticECDH(elliptic.P384())
-	hSM.privateKey, hSM.publicKey, _ = hSM.e.GenerateKey(rand.Reader)
+	var err error
+	hSM.privateKey, hSM.publicKey, err = hSM.e.GenerateKey(rand.Reader)
+	if err != nil{
+		panic("Generate key failed, please restart the node!")
+	}
 	return &hSM
 }
 func (hSM *HandShakeManager) GetLocalPublicKey() []byte {
