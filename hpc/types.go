@@ -9,7 +9,6 @@ import (
 	"strings"
 	"hyperchain/core"
 	"math/big"
-	"errors"
 )
 
 type Number int64
@@ -53,9 +52,9 @@ func (n *Number) UnmarshalJSON(data []byte) error {
 	}
 
 	if v, err := strconv.ParseUint(input, 0, 0);err != nil {
-		return errors.New("number out of range")
+		return fmt.Errorf("number %v may be out of range",input)
 	} else if (v < 0) {
-		return errors.New("number can't be negative")
+		return fmt.Errorf("number can't be negative or zero, but get %v", input)
 	} else {
 		*n = *NewUint64ToNumber(v)
 		return nil
@@ -117,11 +116,13 @@ func (n *BlockNumber) UnmarshalJSON(data []byte) error {
 	in := new(big.Int)
 	_, ok := in.SetString(input, 0)
 
+	latest_number := core.GetChainCopy().Height
+
 	if !ok { // test if user supplied string tag
 
 		strBlockNumber := input
 		if strBlockNumber == "latest" {
-			*n = *NewUint64ToBlockNumber(core.GetChainCopy().Height)
+			*n = *NewUint64ToBlockNumber(latest_number)
 			//*n = BlockNumber(latestBlockNumber)
 			return nil
 		}
@@ -140,9 +141,11 @@ func (n *BlockNumber) UnmarshalJSON(data []byte) error {
 	}
 
 	if v, err := strconv.ParseUint(input, 0, 0);err != nil {
-		return errors.New("number out of range")
+		return fmt.Errorf("number %v may be out of range",input)
 	} else if (v <= 0) {
-		return errors.New("number can't be negative or zero")
+		return fmt.Errorf("number can't be negative or zero, but get %v", input)
+	} else if v > latest_number{
+		return fmt.Errorf("block number is out of range, and now latest block number is %d", latest_number)
 	} else {
 		*n = *NewUint64ToBlockNumber(v)
 		return nil
