@@ -137,13 +137,13 @@ func (n *BlockNumber) UnmarshalJSON(data []byte) error {
 			return nil
 		}
 
-		return fmt.Errorf(`invalid number %s`, data)
+		return fmt.Errorf(`invalid block number %s`, data)
 	}
 
 	if v, err := strconv.ParseUint(input, 0, 0);err != nil {
-		return fmt.Errorf("number %v may be out of range",input)
+		return fmt.Errorf("block number %v may be out of range",input)
 	} else if (v <= 0) {
-		return fmt.Errorf("number can't be negative or zero, but get %v", input)
+		return fmt.Errorf("block number can't be negative or zero, but get %v", input)
 	} else if v > latest_number{
 		return fmt.Errorf("block number is out of range, and now latest block number is %d", latest_number)
 	} else {
