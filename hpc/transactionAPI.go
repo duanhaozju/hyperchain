@@ -134,7 +134,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 
 	if(args.From.Hex()==(common.Address{}).Hex()){
-		return common.Hash{},errors.New("address shouldn't be null")
+		return common.Hash{},errors.New("address is invalid")
 	}
 
 	if realArgs.Timestamp == 0 {
