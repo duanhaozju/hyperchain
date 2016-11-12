@@ -34,9 +34,12 @@ func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, 
 	}
 }
 
-func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, error) {
+func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (common.Hash, error) {
 	var tx *types.Transaction
-	realArgs := prepareExcute(args)
+	realArgs, err := prepareExcute(args, txType)
+	if err != nil {
+		return common.Hash{}, err
+	}
 
 	// ################################# 测试代码 START ####################################### //
 	if realArgs.Timestamp == 0 {
@@ -52,9 +55,6 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 
 	if err != nil {
 		return common.Hash{}, err
-	}
-	if(args.From.Hex()==(common.Address{}).Hex()){
-		return common.Hash{},errors.New("address is invalid")
 	}
 
 	if args.To == nil {
@@ -75,15 +75,13 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 
 	// For Hyperchain test
 
-	var signature []byte
 	if realArgs.Signature == "" {
-
-		signature, err = contract.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
-		if err != nil {
+		if signature, err := contract.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes()); err != nil {
 			log.Errorf("Sign(tx) error :%v", err)
 			return common.Hash{}, err
+		} else {
+			tx.Signature = signature
 		}
-		tx.Signature = signature
 	} else {
 		tx.Signature = common.FromHex(realArgs.Signature)
 	}
@@ -140,7 +138,7 @@ func (contract *PublicContractAPI) DeployContract(args SendTxArgs) (common.Hash,
 	if contract.ratelimitEnable && contract.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, errors.New("System is too busy to response ")
 	}
-	return deployOrInvoke(contract, args)
+	return deployOrInvoke(contract, args, 1)
 }
 
 // InvokeContract invokes contract.
@@ -148,11 +146,7 @@ func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash,
 	if contract.ratelimitEnable && contract.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, errors.New("System is too busy to response ")
 	}
-	if(args.To==nil){
-		return common.Hash{}, errors.New("invalid contract address")
-
-	}
-	return deployOrInvoke(contract, args)
+	return deployOrInvoke(contract, args, 2)
 }
 
 // GetCode returns the code from the given contract address and block number.

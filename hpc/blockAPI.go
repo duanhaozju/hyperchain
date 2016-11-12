@@ -43,39 +43,12 @@ type IntervalArgs struct {
 func prepareIntervalArgs(args IntervalArgs) (IntervalArgs, error) {
 	var from, to *BlockNumber
 
-	if args.From == nil && args.To == nil {
-
-		chain := core.GetChainCopy()
-		height := NewUint64ToBlockNumber(chain.Height)
-
-		// only genesis block
-		if *height == 0 {
-			return IntervalArgs{}, errors.New("there is no block in chain")
-		}
-
-		from = NewUint64ToBlockNumber(1)
-		to = height
-	} else if args.From == nil && args.To != nil {
-		from = NewUint64ToBlockNumber(1)
-		to = args.To
-	} else if args.From != nil && args.To == nil {
-		from = args.From
-		chain := core.GetChainCopy()
-		to = NewUint64ToBlockNumber(chain.Height)
-	} else if *args.From == 0 && *args.To != 0 {	// If the client send BlockNumber "",it will convert to 0.
-							// If client send BlockNumber 0,it will return error
-		from = NewUint64ToBlockNumber(1)
-		to = args.To
-	} else if *args.From != 0 && *args.To == 0 {
-		from = args.From
-		chain := core.GetChainCopy()
-		to = NewUint64ToBlockNumber(chain.Height)
+	if args.From == nil || args.To == nil {
+		return IntervalArgs{}, errors.New("missing params 'from' or 'to'",)
 	} else {
 		from = args.From
 		to = args.To
 	}
-
-
 
 	if *from > *to || *from < 1 || *to < 1 {
 		return IntervalArgs{}, errors.New("Invalid params")
@@ -110,8 +83,6 @@ func (blk *PublicBlockAPI) GetBlockByNumber(number BlockNumber) (*BlockResult, e
 
 func (blk *PublicBlockAPI) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (Number, error) {
 
-	// If the client send BlockNumber "",it will convert to 0.
-	// If client send BlockNumber 0,it will return error
 	realArgs, err := prepareIntervalArgs(args)
 	if err != nil {
 		return 0, err
@@ -209,10 +180,6 @@ func getBlocks(args IntervalArgs, hyperDb *hyperdb.LDBDatabase) ([]*BlockResult,
 
 	from := *realArgs.From
 	to := *realArgs.To
-
-	if from > to || from < 1 || to < 1 {
-		return nil, errors.New("Invalid params")
-	}
 
 	for from <= to {
 		b, err := getBlockByNumber(to, hyperDb)
