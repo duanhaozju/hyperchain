@@ -21,7 +21,8 @@ func init(){
 	membersrvc.Start("../../config/test/local_membersrvc.yaml",1)
 	fakePeerPool = NewPeerPool(transport.NewHandShakeManger())
 	fakeAddr = peerComm.ExtractAddress("127.0.0.1",int64(8001),uint64(1))
-	fakePeer, _ = NewPeerByIpAndPort("127.0.0.1", int64(8001), uint64(1), transport.NewHandShakeManger(), fakeAddr)
+	TEM := transport.NewHandShakeManger()
+	fakePeer, _ = NewPeerByIpAndPort("127.0.0.1", int64(8001), uint64(1), TEM, fakeAddr,NewPeerPool(TEM))
 
 
 }

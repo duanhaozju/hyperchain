@@ -30,6 +30,8 @@ var FakeRemoteMsg = pb.Message{
 var fakeRemoteTem *transport.HandShakeManager
 var fakeRemotePublicKey []byte
 
+var peerPool *PeersPool
+
 //var fakeConsusData = "080110d9c3a7a29b8ba9bc141a710a6f08d69497989b8ba9bc1412610a28363230316362303434383936346163353937666166366664663166343732656466326132326238391228303030303030303030303030303030303030303030303030303030303030303030303030303030321a01312081f28b989b8ba9bc1418012001"
 var fakeConsusData = "TEST"
 
@@ -40,7 +42,8 @@ func init(){
 	fakeRemotePublicKey = fakeRemoteTem.GetLocalPublicKey()
 
 	tem := transport.NewHandShakeManger()
-	testNode = NewNode(8001,&mux,1,tem)
+	peerPool = NewPeerPool(tem)
+	testNode = NewNode(8001,&mux,1,peerPool)
 	membersrvc.Start("../../config/test/local_membersrvc.yaml",1)
 }
 
@@ -77,7 +80,7 @@ func TestNode_Chat(t *testing.T) {
 
 	fakeRemoteTem.GenerateSecret(ret.Payload,ret.From.Hash)
 	fakeRemoteSecret := fakeRemoteTem.GetSecret(ret.From.Hash)
-	localSecret := testNode.TEM.GetSecret(fakerRemoteAddr.Hash)
+	localSecret := testNode.PeerPool.TEM.GetSecret(fakerRemoteAddr.Hash)
 	assert.Exactly(t,fakeRemoteSecret,localSecret)
 }
 
@@ -93,7 +96,7 @@ func TestNode_Chat2(t *testing.T) {
 	}
 	fakeRemoteTem.GenerateSecret(ret.Payload,ret.From.Hash)
 	fakeRemoteSecret := fakeRemoteTem.GetSecret(ret.From.Hash)
-	localSecret := testNode.TEM.GetSecret(fakerRemoteAddr.Hash)
+	localSecret := testNode.PeerPool.TEM.GetSecret(fakerRemoteAddr.Hash)
 	assert.Exactly(t,fakeRemoteSecret,localSecret)
 
 

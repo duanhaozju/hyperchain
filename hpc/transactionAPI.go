@@ -94,14 +94,24 @@ func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManage
 	}
 }
 
-func prepareExcute(args SendTxArgs) SendTxArgs {
+// txType 0 represents send normal tx, txType 1 represents deploy contract, txType 2 represents invoke contract.
+func prepareExcute(args SendTxArgs, txType int) (SendTxArgs,error) {
 	if args.Gas == nil {
 		args.Gas = NewInt64ToNumber(defaultGas)
 	}
 	if args.GasPrice == nil {
 		args.GasPrice = NewInt64ToNumber(defaustGasPrice)
 	}
-	return args
+	if(args.From.Hex()==(common.Address{}).Hex()){
+		return SendTxArgs{},errors.New("address 'from' is invalid")
+	}
+	if (txType == 0 || txType == 2) && args.To == nil {
+		return SendTxArgs{}, errors.New("address 'to' is invalid")
+	}
+	if args.Timestamp == 0 || time.Now().UnixNano() < args.Timestamp {
+		return SendTxArgs{}, errors.New("timestamp is invalid")
+	}
+	return args, nil
 }
 
 //func (tran *PublicTransactionAPI) SendRawTransaction(args SendTxArgs) (common.Hash, error) {
@@ -127,18 +137,10 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	}
 	var tx *types.Transaction
 
-	realArgs := prepareExcute(args)
-	// ################################# 测试代码 START ####################################### //
-	var v int64 = realArgs.Value.ToInt64()
-
-	if(args.From.Hex()==(common.Address{}).Hex()){
-		return common.Hash{},errors.New("address shouldn't be null")
+	realArgs, err := prepareExcute(args, 0)
+	if err != nil {
+		return common.Hash{}, err
 	}
-
-	if realArgs.Timestamp == 0 {
-		realArgs.Timestamp = time.Now().UnixNano()
-	}
-	// ################################# 测试代码 END ####################################### //
 
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), nil)
 
@@ -150,34 +152,21 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 	//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, common.FromHex(args.Signature))
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp)
+	tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
 
 	if args.Request != nil {
 
 		// ** For Hyperboard Test **
 
 		for i := 0; i < (*args.Request).ToInt(); i++ {
-			// ################################# 测试代码 START ####################################### // (用不同的value代替之前不同的timestamp以标志不同的transaction)
-			txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), v, nil)
 
-			value, err := proto.Marshal(txValue)
-
-			if err != nil {
-				return common.Hash{}, err
-			}
-			tx.Value = value
-			//v++
-			// ################################# 测试代码 END ####################################### //
-			tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
-
-			var signature []byte
 			if realArgs.Signature == "" {
-
-				signature, err = tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
-				if err != nil {
+				if signature, err := tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes()); err != nil {
 					log.Errorf("Sign(tx) error :%v", err)
 					return common.Hash{}, err
+				} else {
+					tx.Signature = signature
 				}
-				tx.Signature = signature
 			} else {
 				tx.Signature = common.FromHex(realArgs.Signature)
 			}
@@ -213,29 +202,13 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//
 		//for start := start; start < end; start = time.Now().Unix() {
 		//	for i := 0; i < 100; i++ {
-				// ################################# 测试代码 START ####################################### // (用不同的value代替之前不同的timestamp以标志不同的transaction)
-				txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), v, nil)
-
-				value, err := proto.Marshal(txValue)
-
-				if err != nil {
-					return common.Hash{}, err
-				}
-				tx.Value = value
-				//tx.Timestamp = time.Now().UnixNano()
-				//v++
-				// ################################## 测试代码 END ####################################### //
-				tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
-
-				var signature []byte
 				if realArgs.Signature == "" {
-
-					signature, err = tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
-					if err != nil {
+					if signature, err := tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes()); err != nil {
 						log.Errorf("Sign(tx) error :%v", err)
 						return common.Hash{}, err
+					} else {
+						tx.Signature = signature
 					}
-					tx.Signature = signature
 				} else {
 					tx.Signature = common.FromHex(realArgs.Signature)
 				}
@@ -303,33 +276,15 @@ func (tran *PublicTransactionAPI) GetTransactions(args IntervalArgs) ([]*Transac
 
 	var transactions []*TransactionResult
 
-	if args.From == nil && args.To == nil {
-		txs, err := core.GetAllTransaction(tran.db)
-
-		if err != nil {
-			log.Errorf("GetAllTransaction error: %v", err)
-			return nil, err
-		}
-
-		for _, tx := range txs {
-			if ts, err := outputTransaction(tx, tran.db); err != nil {
-				return nil, err
-			} else {
-				transactions = append(transactions, ts)
-			}
-		}
+	if blocks, err := getBlocks(args, tran.db);err != nil {
+		return nil, err
 	} else {
+		for _, block := range blocks {
+			txs := block.Transactions
 
-		if blocks, err := getBlocks(args, tran.db);err != nil {
-			return nil, err
-		} else {
-			for _, block := range blocks {
-				txs := block.Transactions
-
-				for _, t := range txs {
-					tx, _ := t.(*TransactionResult)
-					transactions = append(transactions, tx)
-				}
+			for _, t := range txs {
+				tx, _ := t.(*TransactionResult)
+				transactions = append(transactions, tx)
 			}
 		}
 	}
@@ -350,7 +305,6 @@ func (tran *PublicTransactionAPI) GetDiscardTransactions() ([]*TransactionResult
 	var transactions []*TransactionResult
 
 	for _, red := range reds {
-		log.Notice(red.Tx.TransactionHash)
 		if ts, err := outputTransaction(red, tran.db); err != nil {
 			return nil, err
 		} else {
@@ -443,17 +397,15 @@ func (tran *PublicTransactionAPI) GetBlockTransactionCountByHash(hash common.Has
 	return NewIntToNumber(txCount), nil
 }
 
-// 这个方法先保留
-func (tran *PublicTransactionAPI) GetSighHash(args SendTxArgs) (common.Hash, error) {
+// GetSignHash returns the hash for client signature.
+func (tran *PublicTransactionAPI) GetSignHash(args SendTxArgs) (common.Hash, error) {
 
 	var tx *types.Transaction
 
-	realArgs := prepareExcute(args)
-
-	if realArgs.Timestamp == 0 {
-		return common.Hash{}, errors.New("lack of param timestamp")
+	realArgs,err := prepareExcute(args, 1) // Allow the param "to" is empty
+	if err != nil {
+		return common.Hash{}, err
 	}
-
 
 	payload := common.FromHex(realArgs.Payload)
 
@@ -495,9 +447,6 @@ func (tran *PublicTransactionAPI) GetTransactionsCount() (*Number, error) {
 // GetTxAvgTimeByBlockNumber returns tx execute avg time.
 func (tran *PublicTransactionAPI) GetTxAvgTimeByBlockNumber(args IntervalArgs) (Number, error) {
 
-
-	// If the client send BlockNumber "",it will convert to 0.
-	// If client send BlockNumber 0,it will return error
 	realArgs, err := prepareIntervalArgs(args)
 	if err != nil {
 		return 0, err

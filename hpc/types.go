@@ -136,11 +136,6 @@ func (n *BlockNumber) UnmarshalJSON(data []byte) error {
 			return nil
 		}
 
-		if strBlockNumber == "" {
-			*n = BlockNumber(0)
-			return nil
-		}
-
 		return fmt.Errorf(`invalid number %s`, data)
 	}
 
