@@ -103,10 +103,13 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs,error) {
 		args.GasPrice = NewInt64ToNumber(defaustGasPrice)
 	}
 	if(args.From.Hex()==(common.Address{}).Hex()){
-		return SendTxArgs{},errors.New("address is invalid")
+		return SendTxArgs{},errors.New("address 'from' is invalid")
 	}
 	if (txType == 0 || txType == 2) && args.To == nil {
 		return SendTxArgs{}, errors.New("address 'to' is invalid")
+	}
+	if args.Timestamp == 0 || time.Now().UnixNano() < args.Timestamp {
+		return SendTxArgs{}, errors.New("timestamp is invalid")
 	}
 	return args, nil
 }
@@ -138,11 +141,6 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	if err != nil {
 		return common.Hash{}, err
 	}
-	// ################################# 测试代码 START ####################################### //
-	if realArgs.Timestamp == 0 {
-		realArgs.Timestamp = time.Now().UnixNano()
-	}
-	// ################################# 测试代码 END ####################################### //
 
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), nil)
 
@@ -399,7 +397,7 @@ func (tran *PublicTransactionAPI) GetBlockTransactionCountByHash(hash common.Has
 	return NewIntToNumber(txCount), nil
 }
 
-// 这个方法先保留
+// GetSignHash returns the hash for client signature.
 func (tran *PublicTransactionAPI) GetSignHash(args SendTxArgs) (common.Hash, error) {
 
 	var tx *types.Transaction
@@ -408,11 +406,6 @@ func (tran *PublicTransactionAPI) GetSignHash(args SendTxArgs) (common.Hash, err
 	if err != nil {
 		return common.Hash{}, err
 	}
-
-	if realArgs.Timestamp == 0 {
-		return common.Hash{}, errors.New("lack of param timestamp")
-	}
-
 
 	payload := common.FromHex(realArgs.Payload)
 
