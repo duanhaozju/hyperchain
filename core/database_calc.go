@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"errors"
 )
 
 // CalcResponseCount calculate response count of a block for given blockNumber
@@ -204,6 +205,32 @@ func CalcEvmAVGTime(from, to uint64) int64 {
 	}
 
 }
+
+func CalBlockGenerateAvgTime(from, to uint64) (int64,error){
+	if from > to && to != 0 {
+		log.Error("from less than to")
+		return -1,errors.New("from less than to")
+	}
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Error(err)
+		return -1,err
+	}
+	var sum int64 = 0
+	var length int64 = 0
+	for i := from; i <= to; i++ {
+		block, err := GetBlockByNumber(db, i)
+		if err != nil {
+			log.Error(err)
+			return -1,err
+		}
+		sum += (block.WriteTime - block.Timestamp) / int64(time.Millisecond)
+		length++
+	}
+
+	return sum / length, nil
+}
+
 func CalBlockGPS() error {
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
