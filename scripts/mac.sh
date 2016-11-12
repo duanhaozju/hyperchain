@@ -9,6 +9,7 @@ if [ x"$ports1" != x"" ];then
     kill -9 $ports1
 fi
 #rebuild the application
+cd ..
 # clean the build folder
 rm -rf ./build
 mkdir -p build
