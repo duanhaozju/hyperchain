@@ -128,10 +128,8 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	var tx *types.Transaction
 
 	realArgs := prepareExcute(args)
-
 	// ################################# 测试代码 START ####################################### //
 	var v int64 = realArgs.Value.ToInt64()
-
 
 	if(args.From.Hex()==(common.Address{}).Hex()){
 		return common.Hash{},errors.New("address is invalid")
@@ -224,7 +222,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					return common.Hash{}, err
 				}
 				tx.Value = value
-				tx.Timestamp = time.Now().UnixNano()
+				//tx.Timestamp = time.Now().UnixNano()
 				//v++
 				// ################################## 测试代码 END ####################################### //
 				tx.Id = uint64(tran.pm.Peermanager.GetNodeId())

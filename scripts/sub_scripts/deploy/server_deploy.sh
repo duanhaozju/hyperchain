@@ -15,9 +15,9 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
 done < innerserverlist.txt
 
 scpfile() {
- scp -r config satoshi@$1:/home/satoshi/
- scp hyperchain satoshi@$1:/home/satoshi/
- ssh satoshi@$1 "rm -rf build"
+ scp -r config hyperchain@$1:/home/hyperchain/
+ scp hyperchain hyperchain@$1:/home/hyperchain/
+ ssh hyperchain@$1 "rm -rf build"
 }
 
 for server_address in ${SERVER_ADDR[@]}; do

@@ -52,7 +52,11 @@ func CreateInitBlock(filename string) {
 		return
 	}
 
-	stateDB, _ := state.New(common.Hash{}, db)
+	stateDB, err := state.New(common.Hash{}, db)
+	if err != nil {
+		log.Error("genesis.go file create statedb failed!")
+		return
+	}
 
 	// You can use `ObjectEach` helper to iterate objects { "key1":object1, "key2":object2, .... "keyN":objectN }
 	jsonparser.ObjectEach(bytes, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
@@ -63,7 +67,11 @@ func CreateInitBlock(filename string) {
 		return nil
 	}, "genesis", "alloc")
 
-	root, _ := stateDB.Commit()
+	root, err := stateDB.Commit()
+	if err != nil {
+		log.Error("Genesis.go file statedb commit failed!")
+		return
+	}
 
 	block := types.Block{
 		ParentHash: common.FromHex("0x0000000000000000000000000000000000000000000000000000000000000000"),
