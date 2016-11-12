@@ -1,11 +1,8 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package peerPool
+package p2p
 
 import (
-	"errors"
-	"github.com/op/go-logging"
-	peer "hyperchain/p2p/peer"
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/transport"
 	"strconv"
@@ -13,7 +10,7 @@ import (
 )
 
 type PeersPool struct {
-	peers      map[string]*peer.Peer
+	peers      map[string]*Peer
 	peerAddr   map[string]pb.PeerAddress
 	peerKeys   map[pb.PeerAddress]string
 	TEM        transport.TransportEncryptManager
@@ -22,17 +19,11 @@ type PeersPool struct {
 
 // the peers pool instance
 var prPoolIns PeersPool
-var log *logging.Logger // package-level logger
-
-//initialize the peers pool
-func init() {
-	log = logging.MustGetLogger("p2p/peerPool")
-}
 
 // NewPeerPool get a new peer pool instance
 func NewPeerPool(TEM transport.TransportEncryptManager) *PeersPool {
 	var newPrPoolIns PeersPool
-	newPrPoolIns.peers = make(map[string]*peer.Peer)
+	newPrPoolIns.peers = make(map[string]*Peer)
 	newPrPoolIns.peerAddr = make(map[string]pb.PeerAddress)
 	newPrPoolIns.peerKeys = make(map[pb.PeerAddress]string)
 	newPrPoolIns.TEM = TEM
@@ -42,26 +33,26 @@ func NewPeerPool(TEM transport.TransportEncryptManager) *PeersPool {
 }
 
 // PutPeer put a peer into the peer pool and get a peer point
-func (this *PeersPool) PutPeer(addr pb.PeerAddress, client *peer.Peer) (*peer.Peer, error) {
+func (this *PeersPool) PutPeer(addr pb.PeerAddress, client *Peer) (*Peer, error) {
 	addrString := addr.Hash
 	//log.Println("Add a peer:",addrString)
-	if _, ok := this.peerKeys[addr]; ok {
-		// the pool already has this client
-		log.Error(addr.IP, addr.Port, "The client already in")
-		return this.peers[addrString], errors.New("The client already in")
-
-	} else {
+	//if _, ok := this.peerKeys[addr]; ok {
+	//	// the pool already has this client
+	//	log.Error(addr.IP, addr.Port, "The client already in")
+	//	return this.peers[addrString], errors.New("The client already in")
+	//
+	//} else {
 		this.alivePeers += 1
 		this.peerKeys[addr] = addrString
 		this.peerAddr[addrString] = addr
 		this.peers[addrString] = client
 		return client, nil
-	}
+	//}
 
 }
 
 // GetPeer get a peer point by the peer address
-func (this *PeersPool) GetPeer(addr pb.PeerAddress) *peer.Peer {
+func (this *PeersPool) GetPeer(addr pb.PeerAddress) *Peer {
 	if clientName, ok := this.peerKeys[addr]; ok {
 		client := this.peers[clientName]
 		return client
@@ -76,7 +67,7 @@ func (this *PeersPool) GetAliveNodeNum() int {
 }
 
 // GetPeerByString get peer by address string
-func GetPeerByString(addr string) *peer.Peer {
+func GetPeerByString(addr string) *Peer {
 	address := strings.Split(addr, ":")
 	p, err := strconv.Atoi(address[1])
 	if err != nil {
@@ -95,8 +86,8 @@ func GetPeerByString(addr string) *peer.Peer {
 }
 
 // GetPeers  get peers from the peer pool
-func (this *PeersPool) GetPeers() []*peer.Peer {
-	var clients []*peer.Peer
+func (this *PeersPool) GetPeers() []*Peer {
+	var clients []*Peer
 	for _, cl := range this.peers {
 		clients = append(clients, cl)
 	}
