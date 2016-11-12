@@ -41,12 +41,6 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 		return common.Hash{}, err
 	}
 
-	// ################################# 测试代码 START ####################################### //
-	if realArgs.Timestamp == 0 {
-		realArgs.Timestamp = time.Now().UnixNano()
-	}
-	// ################################# 测试代码 END ####################################### //
-
 	payload := common.FromHex(realArgs.Payload)
 
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(),realArgs.Gas.ToInt64(),realArgs.Value.ToInt64(),payload)
