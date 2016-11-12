@@ -2,7 +2,7 @@
 
 FIRST_RUN=false
 TEST_FLAG=true
-PASSWD="blockchain"
+PASSWD="hyperchain"
 PRIMARY=`head -1 ./serverlist.txt`
 MAXNODE=`cat serverlist.txt | wc -l`
 
