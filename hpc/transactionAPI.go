@@ -103,13 +103,16 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs,error) {
 		args.GasPrice = NewInt64ToNumber(defaustGasPrice)
 	}
 	if(args.From.Hex()==(common.Address{}).Hex()){
-		return SendTxArgs{},errors.New("address 'from' is invalid")
+		return SendTxArgs{}, errors.New("address 'from' is invalid")
 	}
 	if (txType == 0 || txType == 2) && args.To == nil {
 		return SendTxArgs{}, errors.New("address 'to' is invalid")
 	}
-	if args.Timestamp == 0 || time.Now().UnixNano() < args.Timestamp {
-		return SendTxArgs{}, errors.New("timestamp is invalid")
+	if args.Timestamp == 0 || (5*int64(time.Second)+time.Now().UnixNano()) < args.Timestamp {
+		return SendTxArgs{}, errors.New("'timestamp' is invalid")
+	}
+	if args.Signature == "" {
+		return SendTxArgs{}, errors.New("'signature' is null")
 	}
 	return args, nil
 }
@@ -153,25 +156,14 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, common.FromHex(args.Signature))
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp)
 	tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
+	tx.Signature = common.FromHex(realArgs.Signature)
+	tx.TransactionHash = tx.BuildHash().Bytes()
 
 	if args.Request != nil {
 
 		// ** For Hyperboard Test **
 
 		for i := 0; i < (*args.Request).ToInt(); i++ {
-
-			if realArgs.Signature == "" {
-				if signature, err := tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes()); err != nil {
-					log.Errorf("Sign(tx) error :%v", err)
-					return common.Hash{}, err
-				} else {
-					tx.Signature = signature
-				}
-			} else {
-				tx.Signature = common.FromHex(realArgs.Signature)
-			}
-
-			tx.TransactionHash = tx.BuildHash().Bytes()
 
 			// Unsign Test
 			if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
@@ -202,18 +194,6 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//
 		//for start := start; start < end; start = time.Now().Unix() {
 		//	for i := 0; i < 100; i++ {
-				if realArgs.Signature == "" {
-					if signature, err := tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes()); err != nil {
-						log.Errorf("Sign(tx) error :%v", err)
-						return common.Hash{}, err
-					} else {
-						tx.Signature = signature
-					}
-				} else {
-					tx.Signature = common.FromHex(realArgs.Signature)
-				}
-
-				tx.TransactionHash = tx.BuildHash().Bytes()
 
 				// Unsign Test
 				if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
