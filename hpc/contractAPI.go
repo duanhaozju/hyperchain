@@ -54,7 +54,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs) (common.Hash, 
 		return common.Hash{}, err
 	}
 	if(args.From.Hex()==(common.Address{}).Hex()){
-		return common.Hash{},errors.New("address shouldn't be null")
+		return common.Hash{},errors.New("address is invalid")
 	}
 
 	if args.To == nil {
