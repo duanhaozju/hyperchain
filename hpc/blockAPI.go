@@ -9,7 +9,6 @@ import (
 	"hyperchain/core/state"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
-	"strconv"
 )
 
 type PublicBlockAPI struct {
@@ -23,8 +22,8 @@ type BlockResult struct {
 	WriteTime    int64        `json:"writeTime"`
 	AvgTime      *Number       `json:"avgTime"`
 	TxCounts     *Number       `json:"txcounts"`
-	Counts       *Number       `json:"counts"`
-	Percents     string        `json:"percents"`
+	//Counts       *Number       `json:"counts"`
+	//Percents     string        `json:"percents"`
 	MerkleRoot   common.Hash   `json:"merkleRoot"`
 	Transactions []interface{} `json:"transactions"`
 }
@@ -109,9 +108,21 @@ func (blk *PublicBlockAPI) GetBlockByNumber(number BlockNumber) (*BlockResult, e
 	return block, err
 }
 
-//func (blk *PublicBlockAPI) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (*Number, error) {
-//
-//}
+func (blk *PublicBlockAPI) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (Number, error) {
+
+	// If the client send BlockNumber "",it will convert to 0.
+	// If client send BlockNumber 0,it will return error
+	realArgs, err := prepareIntervalArgs(args)
+	if err != nil {
+		return 0, err
+	}
+
+	if t,err := core.CalBlockGenerateAvgTime(realArgs.From.ToUint64(), realArgs.To.ToUint64()); err != nil {
+		return 0, err
+	} else {
+		return *NewInt64ToNumber(t), nil
+	}
+}
 
 func latestBlock(db *hyperdb.LDBDatabase) (*BlockResult, error) {
 
@@ -153,7 +164,7 @@ func getBlockStateDb(n BlockNumber, db *hyperdb.LDBDatabase) (*state.StateDB, er
 func outputBlockResult(block *types.Block, db *hyperdb.LDBDatabase) (*BlockResult, error) {
 
 	txCounts := int64(len(block.Transactions))
-	count, percent := core.CalcResponseCount(block.Number, int64(200))
+	//count, percent := core.CalcResponseCount(block.Number, int64(200))
 
 	transactions := make([]interface{}, txCounts)
 	var err error
@@ -171,8 +182,8 @@ func outputBlockResult(block *types.Block, db *hyperdb.LDBDatabase) (*BlockResul
 		WriteTime:    block.WriteTime,
 		AvgTime:      NewInt64ToNumber(core.CalcResponseAVGTime(block.Number, block.Number)),
 		TxCounts:     NewInt64ToNumber(txCounts),
-		Counts:       NewInt64ToNumber(count),
-		Percents:     strconv.FormatFloat(percent*100, 'f', 2, 32) + "%",
+		//Counts:       NewInt64ToNumber(count),
+		//Percents:     strconv.FormatFloat(percent*100, 'f', 2, 32) + "%",
 		MerkleRoot:   common.BytesToHash(block.MerkleRoot),
 		Transactions: transactions,
 	}, nil
