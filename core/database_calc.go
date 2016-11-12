@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"errors"
 )
 
 // CalcResponseCount calculate response count of a block for given blockNumber
@@ -21,6 +22,10 @@ func CalcResponseCount(blockNumber uint64, millTime int64) (int64, float64) {
 	}
 	blockHash, err := GetBlockHash(db, blockNumber)
 	block, err := GetBlock(db, blockHash)
+	if err != nil {
+		log.Error("Block not existed in database, err msg:", err.Error())
+		return 0,0
+	}
 	var count int64 = 0
 	for _, trans := range block.Transactions {
 		if block.WriteTime-trans.Timestamp <= millTime*int64(time.Millisecond) {
@@ -204,16 +209,50 @@ func CalcEvmAVGTime(from, to uint64) int64 {
 	}
 
 }
+
+func CalBlockGenerateAvgTime(from, to uint64) (int64,error){
+	if from > to && to != 0 {
+		log.Error("from less than to")
+		return -1,errors.New("from less than to")
+	}
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Error(err)
+		return -1,err
+	}
+	var sum int64 = 0
+	var length int64 = 0
+	for i := from; i <= to; i++ {
+		block, err := GetBlockByNumber(db, i)
+		if err != nil {
+			log.Error(err)
+			return -1,err
+		}
+		sum += (block.WriteTime - block.Timestamp) / int64(time.Millisecond)
+		length++
+	}
+
+	return sum / length, nil
+}
+
 func CalBlockGPS() error {
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
 	height := GetHeightOfChain()
-	genesis, _ := GetBlockByNumber(db, uint64(1))
+	genesis, err := GetBlockByNumber(db, uint64(1))
+	if err != nil {
+		log.Error("Block not existed", err.Error())
+		return err
+	}
 	startTime := genesis.WriteTime
 	startSec := time.Unix(startTime/int64(time.Second), 0).Second()
-	latest, _ := GetBlockByNumber(db, height)
+	latest, err := GetBlockByNumber(db, height)
+	if err != nil {
+		log.Error("Block not existed", err.Error())
+		return err
+	}
 	endTime := latest.WriteTime
 	content := []string{}
 	s := "start time: " + time.Unix(0, startTime).Format("2006-01-02 15:04:05") + " end time: " + time.Unix(0, endTime).Format("2006-01-02 15:04:05") + "\n"
@@ -222,7 +261,11 @@ func CalBlockGPS() error {
 	flag := true
 	var avg float64 = 0
 	for i := uint64(1); i <= height; i++ {
-		block, _ := GetBlockByNumber(db, i)
+		block, err := GetBlockByNumber(db, i)
+		if err != nil {
+			log.Error("Block not existed", err.Error())
+			return err
+		}
 		if block.WriteTime-startTime > int64(20*time.Second) {
 			break
 		}
@@ -234,7 +277,11 @@ func CalBlockGPS() error {
 	s = s + "total blocks: " + strconv.FormatUint(height, 10) + "      blocks per second: " + strconv.FormatFloat(avg, 'f', 2, 32) + "\n"
 	content = append(content, s)
 	for i := uint64(1); i <= height; i++ {
-		block, _ := GetBlockByNumber(db, i)
+		block, err := GetBlockByNumber(db, i)
+		if err != nil {
+			log.Error("Block not existed", err.Error())
+			return err
+		}
 		//println(time.Unix(block.WriteTime / int64(time.Second), 0).Format("2006-01-02 15:04:05"),"********",block.Number)
 		endSec := time.Unix(block.WriteTime/int64(time.Second), 0).Second()
 		if block.WriteTime >= startTime && endSec-startSec == 0 {

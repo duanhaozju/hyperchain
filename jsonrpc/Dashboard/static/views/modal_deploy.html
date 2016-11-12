@@ -17,7 +17,7 @@
             <div class="form-group" ng-repeat="p in contracts[ctName].params.inputs">
                 <label class="col-sm-2 control-label">{{p.name}}：</label>
                 <div class="col-lg-9">
-                    <input type="text" class="form-control" ng-model="params[p.name]" style="width:100%">
+                    <input type="text" class="form-control" ng-model="params[p.name]" ng-init="params[p.name]=''" style="width:100%">
                 </div>
             </div>
         <div class="form-group"><label class="col-sm-2 control-label">from：</label>

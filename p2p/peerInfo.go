@@ -1,6 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package client
+package p2p
 
 const (
 	ALIVE = iota

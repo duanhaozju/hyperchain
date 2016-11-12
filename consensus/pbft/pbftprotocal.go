@@ -78,6 +78,8 @@ type pbftProtocal struct {
 	newViewTimerReason    string                             // what triggered the timer
 	nullRequestTimer      events.Timer                       // timeout triggering a null request
 	nullRequestTimeout    time.Duration                      // duration for this timeout
+	firstRequestTimer     events.Timer		         // firstRequestTimer is set for replicas in case of primary start and shut down immediately
+	firstRequestTimeout   time.Duration			 // duration for this timeout
 
 	viewChangePeriod  uint64                                 // period between automatic view changes
 	viewChangeSeqNo   uint64                                 // next seqNo to perform view change
@@ -180,6 +182,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.vcResendTimer = pbftTimerFactory.CreateTimer()
 	pbft.nullRequestTimer = pbftTimerFactory.CreateTimer()
 	pbft.newViewTimer = pbftTimerFactory.CreateTimer()
+	pbft.firstRequestTimer = pbftTimerFactory.CreateTimer()
 	pbft.N = config.GetInt("general.N")
 	pbft.f = config.GetInt("general.f")
 
@@ -216,6 +219,12 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.nullRequestTimeout, err = time.ParseDuration(config.GetString("timeout.nullrequest"))
 	if err != nil {
 		pbft.nullRequestTimeout = 0
+	}
+
+	pbft.firstRequestTimeout, err = time.ParseDuration(config.GetString("timeout.firstReq"))
+	if err != nil {
+		logger.Noticef("Replica %d read first request timeout fail", pbft.id)
+		pbft.firstRequestTimeout = 30
 	}
 
 	pbft.activeView = true
@@ -471,6 +480,11 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		logger.Noticef("#   Replica %d finished negotiating view: %d", pbft.id, pbft.view)
 		logger.Notice("################################################")
 		primary := pbft.primary(pbft.view)
+		if primary == pbft.id {
+			pbft.sendNullRequest()
+		} else {
+			pbft.firstRequestTimer.Reset(pbft.firstRequestTimeout, firstRequestTimerEvent{})
+		}
 		pbft.persistView(pbft.view)
 		pbft.helper.InformPrimary(primary)
 		pbft.processRequestsDuringNegoView()
@@ -494,6 +508,9 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		logger.Noticef("Replica %d recovery restart timer expires", pbft.id)
 		pbft.restartRecovery()
 		return nil
+	case firstRequestTimerEvent:
+		logger.Noticef("Replica %d first request timer expires", pbft.id)
+		return pbft.sendViewChange()
 	default:
 		logger.Warningf("Replica %d received an unknown message type %T", pbft.id, et)
 	}
@@ -573,6 +590,9 @@ func (pbft *pbftProtocal) processStateUpdated(msg *protos.Message) error {
 func (pbft *pbftProtocal) processNullRequest(msg *protos.Message) error {
 	if pbft.inNegoView {
 		return nil
+	}
+	if pbft.primary(pbft.view) != pbft.id {
+		pbft.firstRequestTimer.Stop()
 	}
 	pbft.nullReqTimerReset()
 	return nil
@@ -1039,6 +1059,10 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 	if pbft.inNegoView {
 		logger.Debugf("Replica %d try recvPrePrepare, but it's in nego-view", pbft.id)
 		return nil
+	}
+
+	if pbft.primary(pbft.view) != pbft.id {
+		pbft.firstRequestTimer.Stop()
 	}
 
 	//logger.Notice("receive  pre-prepare first seq is:",preprep.SequenceNumber)

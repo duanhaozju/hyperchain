@@ -21,11 +21,13 @@ message Message{
     enum MsgType {
         HELLO           = 0;
         HELLO_RESPONSE  = 1;
-        RESPONSE        = 2;
-        CONSUS          = 3;
-        KEEPALIVE       = 4;
-        SYNCMSG         = 5;
-        PENDING         = 6;
+        RECONNECT = 2;
+        RECONNECT_RESPONSE = 3;
+        RESPONSE = 4;
+        CONSUS = 5;
+        KEEPALIVE = 6;
+        SYNCMSG = 7;
+        PENDING = 8;
     }
 }
 

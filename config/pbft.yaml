@@ -65,3 +65,6 @@ timeout:
     negoView: 6s
     # How long to wait before recovery finished
     recovery: 1s
+
+    # How long to wait before first request should come
+    firstReq: 30s
