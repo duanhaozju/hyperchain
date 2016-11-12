@@ -103,10 +103,10 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs,error) {
 		args.GasPrice = NewInt64ToNumber(defaustGasPrice)
 	}
 	if(args.From.Hex()==(common.Address{}).Hex()){
-		return SendTxArgs{},errors.New("address shouldn't be null")
+		return SendTxArgs{},errors.New("address is invalid")
 	}
 	if (txType == 0 || txType == 2) && args.To == nil {
-		return SendTxArgs{}, errors.New("address 'to' shouldn't be null")
+		return SendTxArgs{}, errors.New("address 'to' is invalid")
 	}
 	return args, nil
 }
