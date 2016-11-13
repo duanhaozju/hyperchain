@@ -2,7 +2,7 @@
 
 FIRST_RUN=false
 TEST_FLAG=true
-PASSWD="blockchain"
+PASSWD="hyperchain"
 PRIMARY=`head -1 ./serverlist.txt`
 MAXNODE=`cat serverlist.txt | wc -l`
 
@@ -36,7 +36,7 @@ addkey(){
       spawn ssh-copy-id hyperchain@$1
       expect {
         "yes/no" {send "yes\r";exp_continue }
-        "s password:" {send "$PASSWD\r";exp_continue }
+        "Password:" {send "$PASSWD\r";exp_continue }
         eof
       }
 EOF
@@ -83,7 +83,12 @@ auto_run(){
     for server_address in ${SERVER_ADDR[@]}; do
 	  echo $server_address
       ssh hyperchain@$server_address "if [ ! -d /home/hyperchain/build/ ]; then mkdir -p /home/hyperchain/build/;fi"
+	  # this line for ubuntu
 	  gnome-terminal -x bash -c "ssh hyperchain@$server_address \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o $ni -l 8001 -t 8081 || while true; do sleep 1000s; done\""
+
+	  # this line for mac
+#	  osascript -e 'tell app "Terminal" to do script "ssh hyperchain@'$server_address' \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o '$ni' -l 8001 -t 8081 || while true; do sleep 1000s; done\""'
+
 	  ni=`expr $ni + 1`
 	done
 }

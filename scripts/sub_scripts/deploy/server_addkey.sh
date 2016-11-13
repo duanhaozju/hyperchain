@@ -24,7 +24,7 @@ addkey(){
       spawn ssh-copy-id hyperchain@$1
       expect {
         "yes/no" {send "yes\r";exp_continue }
-        "s password:" {send "$PASSWD\r";exp_continue }
+        "Password:" {send "$PASSWD\r";exp_continue }
         eof
       }
 EOF
