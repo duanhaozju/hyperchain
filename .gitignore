@@ -108,6 +108,6 @@ log
 
 # build vendor
 build
-mac.sh
+#mac.sh
 
 *.DS_Store
