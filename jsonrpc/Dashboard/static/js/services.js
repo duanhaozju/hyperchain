@@ -99,7 +99,10 @@ function BlockService($resource,$q,ENV) {
                     }
                 }).getBlock({
                     method: "block_getBlocks",
-                    params: [{}],
+                    params: [{
+                        "from": 1,
+                        "to": "latest"
+                    }],
                     id: 1
                 },function(res){
                     if (res.error) {
@@ -176,7 +179,10 @@ function TransactionService($resource,$q,ENV) {
                     }
                 }).getTxs({
                     method: "tx_getTransactions",
-                    params: [{}],
+                    params: [{
+                        "from": 1,
+                        "to": "latest"
+                    }],
                     id: 1
                 },function(res){
                     if (res.error) {
