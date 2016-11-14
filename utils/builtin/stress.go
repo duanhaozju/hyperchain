@@ -14,7 +14,7 @@ import (
 	"math/rand"
 )
 
-func StressTest(nodeFile string, duration int, tps int, instant int, testType int, ratio float64, randNormalTx int, randContractTx int, randContract int, code string, methoddata string ,silense bool, load bool) bool {
+func StressTest(nodeFile string, duration int, tps int, instant int, testType int, ratio float64, randNormalTx int, randContractTx int, randContract int, code string, methoddata string ,silense bool, load bool, estimation int) bool {
 	if tps == 0 || instant == 0 {
 		output(silense, "invalid tps or instant parameter")
 		return false
@@ -55,6 +55,8 @@ func StressTest(nodeFile string, duration int, tps int, instant int, testType in
 	timeEnd := time.Now().UnixNano()
 	logger.Notice("=============== Stress Test Finish ===============")
 	logger.Notice("=============== Performance Behavior  =======================")
+	time.Sleep(15 * time.Second)
+	queryStatistic(timeBegin + int64(estimation) * time.Second.Nanoseconds(), timeEnd - int64(estimation) * time.Second.Nanoseconds(), globalNodes[0])
 	return true
 }
 
@@ -382,5 +384,4 @@ func queryStatistic(begin, end int64, server string) {
 		logger.Notice(string(resp))
 	}
 	// Get Latency
-
 }

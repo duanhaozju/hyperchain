@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"errors"
+	"fmt"
 )
 
 // CalcResponseCount calculate response count of a block for given blockNumber
@@ -235,7 +236,7 @@ func CalBlockGenerateAvgTime(from, to uint64) (int64,error){
 	return sum / length, nil
 }
 
-func CalBlockGPS() error {
+func CalBlockGPS(begin, end int64) (error, string) {
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
@@ -244,73 +245,93 @@ func CalBlockGPS() error {
 	genesis, err := GetBlockByNumber(db, uint64(1))
 	if err != nil {
 		log.Error("Block not existed", err.Error())
-		return err
+		return err, ""
 	}
 	startTime := genesis.WriteTime
-	startSec := time.Unix(startTime/int64(time.Second), 0).Second()
+	//startSec := time.Unix(startTime/int64(time.Second), 0).Second()
 	latest, err := GetBlockByNumber(db, height)
 	if err != nil {
 		log.Error("Block not existed", err.Error())
-		return err
+		return err, ""
 	}
 	endTime := latest.WriteTime
-	content := []string{}
+	//content := []string{}
 	s := "start time: " + time.Unix(0, startTime).Format("2006-01-02 15:04:05") + " end time: " + time.Unix(0, endTime).Format("2006-01-02 15:04:05") + "\n"
 
-	count := 0
-	flag := true
+	//count := 0
+	//flag := true
 	var avg float64 = 0
 	for i := uint64(1); i <= height; i++ {
 		block, err := GetBlockByNumber(db, i)
 		if err != nil {
 			log.Error("Block not existed", err.Error())
-			return err
+			return err, ""
 		}
-		if block.WriteTime-startTime > int64(20*time.Second) {
+		if block.WriteTime > end {
 			break
 		}
-		if block.WriteTime-startTime > int64(10*time.Second) {
+		if block.WriteTime > begin {
 			avg += 1
 		}
 	}
-	avg = avg / 10
+	avg = avg / (float64(end - begin) * 1.0 / float64(time.Second.Nanoseconds()))
 	s = s + "total blocks: " + strconv.FormatUint(height, 10) + "      blocks per second: " + strconv.FormatFloat(avg, 'f', 2, 32) + "\n"
-	content = append(content, s)
-	for i := uint64(1); i <= height; i++ {
+	return nil, s
+	//for i := uint64(1); i <= height; i++ {
+	//	block, err := GetBlockByNumber(db, i)
+	//	if err != nil {
+	//		log.Error("Block not existed", err.Error())
+	//		return err
+	//	}
+	//	//println(time.Unix(block.WriteTime / int64(time.Second), 0).Format("2006-01-02 15:04:05"),"********",block.Number)
+	//	endSec := time.Unix(block.WriteTime/int64(time.Second), 0).Second()
+	//	if block.WriteTime >= startTime && endSec-startSec == 0 {
+	//		count++
+	//		if i == height {
+	//			current := time.Unix(0, startTime).Format("2006-01-02 15:04:05")
+	//			s = current + ":" + strconv.Itoa(count) + " blocks generated" + "\n"
+	//			content = append(content, s)
+	//		}
+	//		continue
+	//	}
+	//	current := time.Unix(0, startTime).Format("2006-01-02 15:04:05")
+	//	s = current + ":" + strconv.Itoa(count) + " blocks generated" + "\n"
+	//	content = append(content, s)
+	//	flag = false
+	//	if flag == false {
+	//		startTime = block.WriteTime
+	//		startSec = time.Unix(startTime/int64(time.Second), 0).Second()
+	//		count = 1
+	//		flag = true
+	//		if i == height {
+	//			s = current + ":" + strconv.Itoa(count) + " blocks generated" + "\n"
+	//			content = append(content, s)
+	//		}
+	//	}
+	//
+	//}
+	//path := "/tmp/hyperchain/cache/statis/block_time_statis"
+	//return storeData(path, content)
+	//return nil,
+}
+
+func GetBlockWriteTime(begin, end int64) (error, []string) {
+	var ctx []string
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		return err, nil
+	}
+	for i := uint64(begin); i <= uint64(end); i++ {
 		block, err := GetBlockByNumber(db, i)
 		if err != nil {
 			log.Error("Block not existed", err.Error())
-			return err
+			return err, nil
 		}
-		//println(time.Unix(block.WriteTime / int64(time.Second), 0).Format("2006-01-02 15:04:05"),"********",block.Number)
-		endSec := time.Unix(block.WriteTime/int64(time.Second), 0).Second()
-		if block.WriteTime >= startTime && endSec-startSec == 0 {
-			count++
-			if i == height {
-				current := time.Unix(0, startTime).Format("2006-01-02 15:04:05")
-				s = current + ":" + strconv.Itoa(count) + " blocks generated" + "\n"
-				content = append(content, s)
-			}
-			continue
-		}
-		current := time.Unix(0, startTime).Format("2006-01-02 15:04:05")
-		s = current + ":" + strconv.Itoa(count) + " blocks generated" + "\n"
-		content = append(content, s)
-		flag = false
-		if flag == false {
-			startTime = block.WriteTime
-			startSec = time.Unix(startTime/int64(time.Second), 0).Second()
-			count = 1
-			flag = true
-			if i == height {
-				s = current + ":" + strconv.Itoa(count) + " blocks generated" + "\n"
-				content = append(content, s)
-			}
-		}
-
+		info := fmt.Sprintf("Block Number: %d, Write Time: %s", i, time.Unix(0, block.WriteTime).Format("2006-01-02 15:04:05"))
+		ctx = append(ctx, info)
 	}
-	path := "/tmp/hyperchain/cache/statis/block_time_statis"
-	return storeData(path, content)
+	return nil, ctx
+
 }
 func storeData(file string, content []string) error {
 	dir := filepath.Dir(file)
