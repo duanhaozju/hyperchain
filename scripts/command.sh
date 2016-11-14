@@ -2,7 +2,7 @@
 ################################ tx 服务 ################################ （说明：value可以是十六进制字符串、八进制字符串、十进制字符串或整数）
 # 普通交易 SendTransaction
 # 无request —— 用于Hyperchain测试, 时间戳单位是纳秒
-curl localhost:8081 —data '{"jsonrpc":"2.0","method":"tx_sendTransaction","params":[{"from":"000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","to":"0x80958818f0a025273111fba92ed14c3dd483caeb","timestamp":1478959217012956575,"value":53,"signature":"a68c4b492f020c2cc98bd15b64020a569365e1ed0a17cb38e8c472758f01dc2c2c60041e0ea90e6ffe3580d7629138c51f3927263dda23bc001e8e9bc368a0c900"}],"id":1}'
+curl localhost:8081 —-data '{"jsonrpc":"2.0","method":"tx_sendTransaction","params":[{"from":"000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","to":"0x80958818f0a025273111fba92ed14c3dd483caeb","timestamp":1478959217012956575,"value":53,"signature":"a68c4b492f020c2cc98bd15b64020a569365e1ed0a17cb38e8c472758f01dc2c2c60041e0ea90e6ffe3580d7629138c51f3927263dda23bc001e8e9bc368a0c900"}],"id":1}'
 # 有request —— 用于Dashboard测试
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_sendTransaction","params":[{"from":"4762d4f39099727dc58d1cec8d8f80f5c683a054","to":"0x0000000000000000000000000000000000000003","value":1,"timestamp":1478959217012956575,"signature":"test signature","request":10}],"id":1}'
 
