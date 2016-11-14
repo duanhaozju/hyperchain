@@ -594,6 +594,8 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	pool.blockCache.Purge()
 	// 4. Reset chain
 	isGenesis := (block.Number == 0)
+	// 5. Clear global cache
+	state.PurgeGlobalCache()
 	core.UpdateChain(block, isGenesis)
 
 }
