@@ -1,4 +1,3 @@
-// a simulation of bank, we can transfer money from account1 to account2
 contract SimulateBank{
     address owner;
     bytes32 bankName;

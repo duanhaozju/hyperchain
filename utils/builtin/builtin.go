@@ -16,9 +16,9 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"strconv"
 	"sync"
 	"time"
+	"strings"
 )
 
 var (
@@ -40,10 +40,14 @@ func init() {
 
 const (
 	keystore           = "./keystore"
+	normalTxStore      = "./testdata/normal_tx"
+	contractTxStore    = "./testdata/contract_tx"
+	contractStore      = "./testdata/contract"
 	transferUpperLimit = 100
 	transferLowerLimit = 0
 	defaultGas         = 10000
 	defaultGasPrice    = 10000
+	timestampRange     = 10000000000
 	genesisPassword    = "123"
 
 	normalTransactionNumber   = 10
@@ -71,7 +75,7 @@ func NewAccount(password string, silense bool) (string, bool) {
 	}
 }
 
-func NewTransaction(password string, from string, to string, amount string, payload string, t int, ip string, silense bool) (string, bool) {
+func NewTransaction(password string, from string, to string, timestamp int64, amount int64, payload string, t int, ip string, port int, silense bool) (string, bool) {
 	if password == "" {
 		output(silense, "Please enter your password")
 		if silense == false {
@@ -93,12 +97,16 @@ func NewTransaction(password string, from string, to string, amount string, payl
 			return "", false
 		}
 	}
-	_timestamp = time.Now().UnixNano()
+	if timestamp <= 0 {
+		_timestamp = time.Now().UnixNano() - timestampRange
+	} else {
+		_timestamp = timestamp
+	}
 
-	if amount == "" {
+	if amount < 0 {
 		_amount = generateTransferAmount()
 	} else {
-		_amount, _ = strconv.ParseInt(amount, 10, 64)
+		_amount = amount
 	}
 	if to == "" {
 		_to = generateAddress()
@@ -123,7 +131,7 @@ func NewTransaction(password string, from string, to string, amount string, payl
 		output(silense, "\tvalue:", _amount)
 		output(silense, "\tsignature:", common.Bytes2Hex(signature))
 		output(silense, "JSONRPC COMMAND:")
-		command := fmt.Sprintf("curl %s:8081 --data '{\"jsonrpc\":\"2.0\",\"method\":\"tx_sendTransaction\",\"params\":[{\"from\":\"%s\",\"to\":\"%s\",\"timestamp\":%d,\"value\":%d,\"signature\":\"%s\"}],\"id\":1}'", ip, _from, _to, _timestamp, _amount, common.Bytes2Hex(signature))
+		command := fmt.Sprintf("curl %s:%d --data '{\"jsonrpc\":\"2.0\",\"method\":\"tx_sendTransaction\",\"params\":[{\"from\":\"%s\",\"to\":\"%s\",\"timestamp\":%d,\"value\":%d,\"signature\":\"%s\"}],\"id\":1}'", ip, port,_from, _to, _timestamp, _amount, common.Bytes2Hex(signature))
 		output(silense, "\t", command)
 		return command, true
 	} else {
@@ -150,11 +158,11 @@ func NewTransaction(password string, from string, to string, amount string, payl
 		output(silense, "\tsignature:", common.Bytes2Hex(signature))
 		output(silense, "JSONRPC COMMAND:")
 		if to == "" {
-			command := fmt.Sprintf("curl %s:8081 --data '{\"jsonrpc\":\"2.0\",\"method\":\"contract_deployContract\",\"params\":[{\"from\":\"%s\",\"timestamp\":%d,\"payload\":\"%s\",\"signature\":\"%s\"}],\"id\":1}'", ip, _from, _timestamp, _payload, common.Bytes2Hex(signature))
+			command := fmt.Sprintf("curl %s:%d --data '{\"jsonrpc\":\"2.0\",\"method\":\"contract_deployContract\",\"params\":[{\"from\":\"%s\",\"timestamp\":%d,\"payload\":\"%s\",\"signature\":\"%s\"}],\"id\":1}'", ip, port,_from, _timestamp, _payload, common.Bytes2Hex(signature))
 			output(silense, "\t", command)
 			return command, true
 		} else {
-			command := fmt.Sprintf("curl %s:8081 --data '{\"jsonrpc\":\"2.0\",\"method\":\"contract_invokeContract\",\"params\":[{\"from\":\"%s\", \"to\":\"%s\",\"timestamp\":%d,\"payload\":\"%s\",\"signature\":\"%s\"}],\"id\":1}'", ip, _from, to, _timestamp, _payload, common.Bytes2Hex(signature))
+			command := fmt.Sprintf("curl %s:%d --data '{\"jsonrpc\":\"2.0\",\"method\":\"contract_invokeContract\",\"params\":[{\"from\":\"%s\", \"to\":\"%s\",\"timestamp\":%d,\"payload\":\"%s\",\"signature\":\"%s\"}],\"id\":1}'", ip, port,_from, to, _timestamp, _payload, common.Bytes2Hex(signature))
 			output(silense, "\t", command)
 			return command, true
 		}
@@ -180,7 +188,7 @@ func output(silense bool, msg ...interface{}) {
 	}
 }
 
-func StressTest(nodeFile string, duration int, tps int, instant int, testType int, ratio float64, silense bool) bool {
+func StressTest(nodeFile string, duration int, tps int, instant int, testType int, ratio float64, randNormalTx int, randContractTx int, randContract int, code string, methoddata string ,silense bool, load bool) bool {
 	if tps == 0 || instant == 0 {
 		output(silense, "invalid tps or instant parameter")
 		return false
@@ -189,8 +197,8 @@ func StressTest(nodeFile string, duration int, tps int, instant int, testType in
 	if err != nil {
 		return false
 	}
-	generateNormalTransaction()
-	generateContractTransaction()
+	generateNormalTransaction(load, randNormalTx)
+	generateContractTransaction(load, randContract, randContractTx, code, methoddata)
 	start := time.Now().Unix()
 	end := start + int64(duration)
 	var interval time.Duration
@@ -281,10 +289,16 @@ func loadNodeInfo(nodeFile string) ([]string, int, error) {
 	}
 	defer file.Close()
 
-	// TODO Regular Expressions
 	scanner := bufio.NewScanner(file)
-
+	pattern, _ := regexp.Compile("http[s]?...([0-9]{2,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3})|localhost.[0-9]{4}")
 	for scanner.Scan() {
+		if scanner.Text() == ""{
+			continue
+		}
+		match := pattern.Match([]byte(scanner.Text()))
+		if match == false {
+			continue
+		}
 		nodes = append(nodes, scanner.Text())
 		n += 1
 	}
@@ -293,56 +307,105 @@ func loadNodeInfo(nodeFile string) ([]string, int, error) {
 		return nil, 0, err
 	}
 	globalNodes = nodes
+	logger.Notice(nodes, n)
 	return nodes, n, nil
 }
 
-func generateNormalTransaction() {
+func generateNormalTransaction(load bool, n int) {
 	logger.Notice("================ Generate Normal Transactions ================")
-	for i := 0; i < normalTransactionNumber; i += 1 {
+	var cnt int
+	var tmp []string
+	var ret []string
+	if n == 0 {
+		n = normalTransactionNumber
+	}
+	if load {
+		cnt, ret = read(normalTxStore, n)
+		if cnt > 0 {
+			normalTxPool = append(normalTxPool, ret...)
+		}
+	}
+	for i := 0; i < n-cnt; i += 1 {
 		sender := genesisAccount[rand.Intn(len(genesisAccount))]
 		receiver := generateAddress()
 		amount := generateTransferAmount()
-		command, success := NewTransaction(genesisPassword, sender, receiver, strconv.FormatInt(amount, 10), "", 0, "localhost", true)
+		command, success := NewTransaction(genesisPassword, sender, receiver, 0, amount, "", 0, "localhost", 8081, true)
+
 		if success == false {
 			logger.Error("create normal transaction failed")
 		} else {
 			pattern, _ := regexp.Compile(".*'(.*?)'")
 			cmd := pattern.FindStringSubmatch(command)[1]
 			normalTxPool = append(normalTxPool, cmd)
+			tmp = append(tmp, cmd)
 		}
+	}
+	if len(tmp) > 0 {
+		write(normalTxStore,tmp)
 	}
 	logger.Notice(normalTxPool)
 	logger.Noticef("================ %d Normal Transactions Generated ================", len(normalTxPool))
 }
 
-func generateContractTransaction() {
-	generateContract()
+func generateContractTransaction(load bool ,n, m int, code, methoddata string) {
+	var cnt int
+	var ret []string
+	var cnt2 int
+	var tmp []string
+	if n == 0 {
+		n = contractNumber
+	}
+	if m == 0 {
+		m = contractTransactionNumber
+	}
+	if load {
+		cnt, ret = read(contractTxStore, m)
+		contractTxPool = append(contractTxPool, ret...)
+
+		cnt2, ret = read(contractStore, n)
+		contract = append(contract, ret...)
+	}
+	generateContract(n-cnt2, code)
 	logger.Notice("================ Generate Contract Transactions ================")
-	for i := 0; i < contractTransactionNumber; i += 1 {
+	for i := 0; i < m-cnt; i += 1 {
 		sender := genesisAccount[rand.Intn(len(genesisAccount))]
 		if contract == nil {
 			logger.Fatal("empty contract pool")
 			return
 		}
 		receiver := contract[rand.Intn(len(contract))]
-		command, success := NewTransaction(genesisPassword, sender, receiver, "", methodid, 1, "localhost", true)
+		if methoddata == "" {
+			if code != ""{
+				logger.Fatal("Please specify related invocation payload")
+				continue
+			} else {
+				methoddata = methodid
+			}
+		}
+		command, success := NewTransaction(genesisPassword, sender, receiver, 0, 0, methoddata, 1, "localhost", 8081, true)
 		if success == false {
 			logger.Error("create contract transaction failed")
 		} else {
 			pattern, _ := regexp.Compile(".*'(.*?)'")
 			cmd := pattern.FindStringSubmatch(command)[1]
 			contractTxPool = append(contractTxPool, cmd)
+			tmp = append(tmp, cmd)
 		}
 	}
+	write(contractTxStore, tmp)
 	logger.Notice(contractTxPool)
 	logger.Noticef("================ %d Contract Transactions Generated ================", len(contractTxPool))
 }
 
-func generateContract() {
+func generateContract(n int, code string) {
+	var tmp []string
 	logger.Notice("================ Generate Contract ================")
-	for i := 0; i < contractNumber; i += 1 {
+	for i := 0; i < n; i += 1 {
 		sender := genesisAccount[rand.Intn(len(genesisAccount))]
-		command, success := NewTransaction(genesisPassword, sender, "", "", payload, 1, "localhost", true)
+		if code == "" {
+			code = payload
+		}
+		command, success := NewTransaction(genesisPassword, sender, "", 0, 0, code, 1, "localhost", 8081, true)
 		if success {
 			pattern, _ := regexp.Compile(".*'(.*)'")
 			cmd := pattern.FindStringSubmatch(command)[1]
@@ -365,6 +428,7 @@ func generateContract() {
 					} else {
 						contractAddr := pattern.FindStringSubmatch(string(resp))[1]
 						contract = append(contract, contractAddr)
+						tmp = append(tmp, contractAddr)
 					}
 				}
 			}
@@ -372,6 +436,7 @@ func generateContract() {
 			logger.Fatal("Create deploy transaction failed")
 		}
 	}
+	write(contractStore, tmp)
 	logger.Notice(contract)
 	logger.Noticef("================ %d Contracts Generated ================", len(contract))
 }
@@ -407,4 +472,54 @@ func randomChoice(ratio float64) int {
 		tmp = append(tmp, 1)
 	}
 	return tmp[rand.Intn(len(tmp))]
+}
+
+func read(path string, n int) (int, []string) {
+	file, err := os.Open(path)
+	if err != nil {
+		return 0, nil
+	}
+	defer file.Close()
+	var ret []string
+	var count int = 0
+	// TODO read from file randomly
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() && count < n {
+		ret = append(ret, scanner.Text())
+		count += 1
+	}
+	if err := scanner.Err(); err != nil {
+		return 0, nil
+	}
+	return len(ret), ret
+}
+
+func write(path string, data []string) error {
+	var file *os.File
+	var err error
+	idx := strings.LastIndex(path, "/")
+	if idx != -1 {
+		subpath := path[:idx]
+		err := os.MkdirAll(subpath, 0777)
+		if err != nil {
+			return err
+		}
+	}
+	if _, e := os.Stat(path); os.IsNotExist(e) {
+		file, err = os.Create(path)
+		if err != nil {
+			logger.Error(err)
+			return err
+		}
+	} else {
+		file, err = os.OpenFile(path, os.O_RDWR|os.O_APPEND, 0644)
+		if err != nil {
+			return err
+		}
+	}
+	for _, entry := range data {
+		_, err = file.WriteString(entry+"\n")
+	}
+	file.Close()
+	return nil
 }
