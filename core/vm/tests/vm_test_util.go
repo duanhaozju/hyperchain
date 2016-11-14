@@ -93,7 +93,7 @@ func runVmTests(tests map[string]VmTest, skipTests []string) error {
 
 func runVmTest(test VmTest) error {
 	db, _ := hyperdb.NewMemDatabase()
-	statedb, _ := state.New(common.Hash{},db)
+	statedb, _ := state.New(common.Hash{},db, true)
 	for addr, account := range test.Pre {
 		obj := StateObjectFromAccount(db, addr, account)
 		statedb.SetStateObject(obj)
@@ -118,7 +118,7 @@ func RunVm(statedb *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *bi
 	)
 	log = logging.MustGetLogger("p2p")
 	db,_ := hyperdb.GetLDBDatabase()
-	statedb,_ = state.New(common.Hash{},db)
+	statedb,_ = state.New(common.Hash{},db, true)
 	env["currentNumber"] = "1"
 	env["currentGasLimit"] = "10000000"
 	//vm.Precompiled = vm.PrecompiledContracts()

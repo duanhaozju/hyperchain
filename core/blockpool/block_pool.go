@@ -55,9 +55,10 @@ type BlockPool struct {
 	blockCache          *common.Cache
 	validationQueue     *common.Cache
 	queue               *common.Cache
+	globalCacheEnable   bool
 }
 
-func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *BlockPool {
+func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter, globalCacheEnable bool) *BlockPool {
 	var err error
 	blockcache, err := common.NewCache()
 	if err != nil {return nil}
@@ -72,6 +73,7 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *Block
 		queue:           queue,
 		validationQueue: validationqueue,
 		blockCache:      blockcache,
+		globalCacheEnable: globalCacheEnable,
 	}
 	currentChain := core.GetChainCopy()
 	pool.demandNumber = currentChain.Height + 1
@@ -282,7 +284,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
 	receiptTrie, err := trie.New(common.Hash{}, db)
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
-	statedb, err := state.New(pool.lastValidationState, db)
+	statedb, err := state.New(pool.lastValidationState, db, pool.globalCacheEnable)
 
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)

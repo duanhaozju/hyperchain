@@ -120,7 +120,8 @@ func main() {
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
 
 		//init block pool to save block
-		blockPool := blockpool.NewBlockPool(eventMux, cs)
+		globalCacheEnable := config.getGlobalCacheEnable()
+		blockPool := blockpool.NewBlockPool(eventMux, cs, globalCacheEnable)
 		if blockPool == nil {
 			return errors.New("Initialize BlockPool failed")
 		}
