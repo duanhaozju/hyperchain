@@ -28,6 +28,12 @@ type BlockResult struct {
 	Transactions []interface{} `json:"transactions"`
 }
 
+type StatisticResult struct {
+	BPS string `json:"BPS"`
+	TimeList    []string `json:"TimeList"`
+}
+
+
 func NewPublicBlockAPI(hyperDb *hyperdb.LDBDatabase) *PublicBlockAPI {
 	return &PublicBlockAPI{
 		db: hyperDb,
@@ -225,5 +231,25 @@ func (blk *PublicBlockAPI) QueryEvmAvgTime(args SendQueryArgs) (int64, error) {
 	log.Info("-----evmTime----", evmTime)
 
 	return evmTime, nil
+}
+
+func (blk *PublicBlockAPI) QueryTPS(args SendQueryArgs) (*StatisticResult, error) {
+	err, ret := core.CalBlockGPS(args.From.ToInt64(), args.To.ToInt64())
+	if err != nil {
+		return nil, err
+	}
+	return &StatisticResult{
+		BPS: ret,
+	}, nil
+}
+
+func (blk *PublicBlockAPI) QueryWriteTime(args SendQueryArgs) (*StatisticResult, error){
+	err, ret := core.GetBlockWriteTime(args.From.ToInt64(), args.To.ToInt64())
+	if err != nil {
+		return nil, err
+	}
+	return &StatisticResult{
+		TimeList: ret,
+	}, nil
 }
 
