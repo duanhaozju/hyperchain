@@ -397,7 +397,7 @@ func TestCBCEncryptCBCDecrypt(t *testing.T) {
 	}
 }
 
-// TestAESRelatedUtilFunctions tests various functions commonly used in fabric wrt AES
+// TestAESRelatedUtilFunctions tests various functions commonly used in hyperchain wrt AES
 func TestAESRelatedUtilFunctions(t *testing.T) {
 
 	key, err := primitives.GenAESKey()
