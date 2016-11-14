@@ -1,19 +1,72 @@
-Command Line Options
+NAME:
+     utils :the internal test util command line interface
 
--from string
-    use to specify transaction sender address
--l string
-    use to specify transaction payload
--o string
-    Two option:(1)account: create account  (2)transaction: create normal transaction or contract transaction
--p string
-    use to specify account password
--t int
-    use to specify transaction type to generate, o represent normal transaction, 1 represent contract transaction
--to string
-    use to specify transaction receiver address
--v string
-    use to specify transaction transfer amount
+USAGE:
+     ./utils -o <option> [arguments...]
+
+VERSION:
+      1.0
+
+OPTIONS:
+      account:
+            description: generate a test account
+            selectable arguments: (1) p
+
+      transaction:
+            description: generate a test transaction
+            selectable arguments: (1) p (2) from (3) to (4) timestamp (5) v (6) l (7) t (8) ip (9) port (10) s
+
+      test:
+            description: execute a stress test
+            selectable arguments: (1) nodefile (2) duration (3) tps (4) instant (5) type (6) ratio (7) rand_normal_tx
+                                  (8) rand_contract_tx (9) rand_contract (10) code (11) invoke_payload (12) load
+
+Command Line Arguments:
+    -code string
+        use to specify the contract bin code during the stress test
+    -duration int
+        use to specify the duration of the stress test
+    -from string
+        use to specify transaction sender address
+    -instant int
+        use to specify the instantaneous transaction number
+    -invoke_payload string
+        use to specify the contract invocation payload during the stress test
+    -ip string
+        use to specify the ip address (default "localhost")
+    -l string
+        use to specify transaction payload
+    -load
+        use the generated transaction saved in the file
+    -nodefile string
+        use to specify node address configuration file path (default "./nodes.json")
+    -o string
+        Two option:(1)account: create account  (2)transaction: create normal transaction or contract transaction
+    -p string
+        use to specify account password
+    -port int
+        use to specify the server port (default 8081)
+    -rand_contract int
+        use to specify the number of random contract which used in stress test
+    -rand_contract_tx int
+        use to specify the number of random contract transaction which used in stress test
+    -rand_normal_tx int
+        use to specify the number of random normal transaction which used in stress test
+    -ratio float
+        use to specify the normal transaction's proportion, 1 - ratio represent the contract transaction's proportion (default 0.5)
+    -s	use to mask output
+    -t int
+        use to specify transaction type to generate, 0 represent normal transaction, 1 represent contract transaction
+    -timestamp int
+        use to specify transaction's timestamp, use the current system time if no value been passed
+    -to string
+        use to specify transaction receiver address
+    -tps int
+        use to specify the tps during the stress test
+    -type int
+        use to specify the stress test type, 0 represent normal transaction test, 1 represent contract transaction test, 2 represent normal and contract mix test
+    -v int
+        use to specify transaction transfer amount (default -1)
 
 
 Example:
@@ -32,7 +85,7 @@ Example:
 2. New Normal Transaction
 
     2.1.
-    ./utils -o transaction -t 0 -from 0xb4bd63bc7e8146b813c71c8f7cc4b21c03b80d80 -p 123455 -to 0xb8775c50762c677de8e603a2e99eec359ba7e36b -v 100
+    ./utils -o transaction -t 0 -from 0xb4bd63bc7e8146b813c71c8f7cc4b21c03b80d80 -p 123456 -to 0xb8775c50762c677de8e603a2e99eec359ba7e36b -v 100
 
     output looks like:
 
@@ -51,6 +104,7 @@ Example:
     2.2.
     ./utils -o transaction -from 0xb4bd63bc7e8146b813c71c8f7cc4b21c03b80d80  -p 123456 -v 100
 
+    genesis 地址:./utils -o transaction -from 0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd  -p 123 -v 100
     output looks like:
 
     ```
@@ -69,7 +123,7 @@ Example:
 
 3. New Contract Deploy Transaction
     ./utils -o transaction -t 1 -from 0xb4bd63bc7e8146b813c71c8f7cc4b21c03b80d80  -p 123456 -l 0x6060604052610114806100126000396000f360606040526000357c010000000000000000000000000000000000000000000000000000000090048063bcdfe0d51461003c57610037565b610002565b346100025761004e60048050506100bc565b60405180806020018281038252838181518152602001915080519060200190808383829060006004602084601f0104600302600f01f150905090810190601f1680156100ae5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b6020604051908101604052806000815260200150604060405190810160405280600b81526020017f48656c6c6f20576f726c640000000000000000000000000000000000000000008152602001509050610111565b9056
-
+    (no `to` field specified)
     output looks like:
 
     ```
@@ -99,3 +153,14 @@ Example:
     JSONRPC COMMAND:
     	 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"contract_invokeContract","params":[{"from":"0x201a29d2ef31797dfb54b5d8f6aed55a2ebb069c", "to":"0x5fc7a6887e959da2f1f48f991b4f3f358a133a47","timestamp":1478932647811296166,"payload":"0x569c5f6d","signature":"7789559287a02a73a69793663c093fc0f1d4552db403f8da177f779bce2e7a0a5e16717d8560d12e8b62fafd94ddd91b6f5b232a9aed868ef7ea440f4555fd4501"}],"id":1}'
     ```
+
+5. Stress Test
+    5.1.  normal transaction stress test with 1000 tps and 10 instant concurrency elapsed 30 seconds
+    ./utils -o test -tps 1000 -instant 10 -duration 30 -type 0 -load=true
+    5.2.  contract transaction stress test with 1000 tps and 10 instant concurrency elapsed 30 seconds
+    ./utils -o test -tps 1000 -instant 10 -duration 30 -type 1 -load=true -code "balabala" -invoke_payload "balabala"
+    5.3.  mix transaction stress test with 1000 tps and 10 instant concurrency elapsed 30 seconds (70 percent normal transaction and 30 percent contract transaction)
+    ./utils -o test -tps 1000 -instant 10 -duration 30 -type 2 -ratio 0.7 -load=false -rand_normal_tx 30 -rand_contract_tx 50 -rand_contract 20
+
+    IMPORTANT:
+    keep in mind that remove the testdata directory when you clear the hyperchain node's database!

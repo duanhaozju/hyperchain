@@ -1727,7 +1727,7 @@ func (pbft *pbftProtocal) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 	if pbft.skipInProgress {
 		logger.Infof("Replica %d is catching up and witnessed a weak certificate for checkpoint %d, weak cert attested to by %d of %d (%v)",
 			pbft.id, chkpt.SequenceNumber, i, pbft.replicaCount, checkpointMembers)
-		// The view should not be set to active, this should be handled by the yet unimplemented SUSPECT, see https://github.com/hyperledger/fabric/issues/1120
+		// The view should not be set to active, this should be handled by the yet unimplemented SUSPECT
 		pbft.retryStateTransfer(target)
 	}
 }

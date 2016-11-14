@@ -65,21 +65,9 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 	}
 
 	log.Infof("############# %d: start send request#############", time.Now().Unix())
+
 	tx.Id = uint64(contract.pm.Peermanager.GetNodeId())
-
-	// For Hyperchain test
-
-	if realArgs.Signature == "" {
-		if signature, err := contract.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes()); err != nil {
-			log.Errorf("Sign(tx) error :%v", err)
-			return common.Hash{}, err
-		} else {
-			tx.Signature = signature
-		}
-	} else {
-		tx.Signature = common.FromHex(realArgs.Signature)
-	}
-
+	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.BuildHash().Bytes()
 
 	// Unsign Test

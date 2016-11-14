@@ -8,7 +8,6 @@ server:
         # set to negative to use the system default setting
         gomaxprocs: -1
 
-        # path to the OBC state directory and CA state subdirectory
         rootpath: "/tmp/hyperchain/production"
         cadir: ".membersrvc"
 
@@ -79,7 +78,7 @@ eca:
                 # The optional JSON_Metadata field is of the following format:
                 #   { "registrar": { "roles": <array-of-role-names>, "delegateRoles": <array-of-role-names> } }
                 # The 'registrar' section is used to control access to registration of new users directly via the ECAA.RegisterUser GRPC call.
-                # (See the 'fabric/membersrvc/protos/ca.proto' file for the definition of ECAA.RegisterUser.)
+                # (See the 'hyperchain/membersrvc/protos/ca.proto' file for the definition of ECAA.RegisterUser.)
                 # Note that this also controls who can register users via the client SDK.
                 #
                 # Only users with a 'registrar' section may be a registrar to register other users.  In particular,
