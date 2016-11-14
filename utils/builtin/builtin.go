@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"sync"
 	"time"
+	"strings"
 )
 
 var (
@@ -39,6 +40,9 @@ func init() {
 
 const (
 	keystore           = "./keystore"
+	normalTxStore      = "./testdata/normal_tx"
+	contractTxStore    = "./testdata/contract_tx"
+	contractStore      = "./testdata/contract"
 	transferUpperLimit = 100
 	transferLowerLimit = 0
 	defaultGas         = 10000
@@ -184,7 +188,7 @@ func output(silense bool, msg ...interface{}) {
 	}
 }
 
-func StressTest(nodeFile string, duration int, tps int, instant int, testType int, ratio float64, randNormalTx int, randContractTx int, randContract int, code string, methoddata string ,silense bool) bool {
+func StressTest(nodeFile string, duration int, tps int, instant int, testType int, ratio float64, randNormalTx int, randContractTx int, randContract int, code string, methoddata string ,silense bool, load bool) bool {
 	if tps == 0 || instant == 0 {
 		output(silense, "invalid tps or instant parameter")
 		return false
@@ -193,8 +197,8 @@ func StressTest(nodeFile string, duration int, tps int, instant int, testType in
 	if err != nil {
 		return false
 	}
-	generateNormalTransaction(randNormalTx)
-	generateContractTransaction(randContract, randContractTx, code, methoddata)
+	generateNormalTransaction(load, randNormalTx)
+	generateContractTransaction(load, randContract, randContractTx, code, methoddata)
 	start := time.Now().Unix()
 	end := start + int64(duration)
 	var interval time.Duration
@@ -307,12 +311,21 @@ func loadNodeInfo(nodeFile string) ([]string, int, error) {
 	return nodes, n, nil
 }
 
-func generateNormalTransaction(n int) {
+func generateNormalTransaction(load bool, n int) {
 	logger.Notice("================ Generate Normal Transactions ================")
+	var cnt int
+	var tmp []string
+	var ret []string
 	if n == 0 {
 		n = normalTransactionNumber
 	}
-	for i := 0; i < n; i += 1 {
+	if load {
+		cnt, ret = read(normalTxStore, n)
+		if cnt > 0 {
+			normalTxPool = append(normalTxPool, ret...)
+		}
+	}
+	for i := 0; i < n-cnt; i += 1 {
 		sender := genesisAccount[rand.Intn(len(genesisAccount))]
 		receiver := generateAddress()
 		amount := generateTransferAmount()
@@ -324,19 +337,37 @@ func generateNormalTransaction(n int) {
 			pattern, _ := regexp.Compile(".*'(.*?)'")
 			cmd := pattern.FindStringSubmatch(command)[1]
 			normalTxPool = append(normalTxPool, cmd)
+			tmp = append(tmp, cmd)
 		}
+	}
+	if len(tmp) > 0 {
+		write(normalTxStore,tmp)
 	}
 	logger.Notice(normalTxPool)
 	logger.Noticef("================ %d Normal Transactions Generated ================", len(normalTxPool))
 }
 
-func generateContractTransaction(n, m int, code, methoddata string) {
-	generateContract(n, code)
-	logger.Notice("================ Generate Contract Transactions ================")
+func generateContractTransaction(load bool ,n, m int, code, methoddata string) {
+	var cnt int
+	var ret []string
+	var cnt2 int
+	var tmp []string
+	if n == 0 {
+		n = contractNumber
+	}
 	if m == 0 {
 		m = contractTransactionNumber
 	}
-	for i := 0; i < m; i += 1 {
+	if load {
+		cnt, ret = read(contractTxStore, m)
+		contractTxPool = append(contractTxPool, ret...)
+
+		cnt2, ret = read(contractStore, n)
+		contract = append(contract, ret...)
+	}
+	generateContract(n-cnt2, code)
+	logger.Notice("================ Generate Contract Transactions ================")
+	for i := 0; i < m-cnt; i += 1 {
 		sender := genesisAccount[rand.Intn(len(genesisAccount))]
 		if contract == nil {
 			logger.Fatal("empty contract pool")
@@ -358,17 +389,17 @@ func generateContractTransaction(n, m int, code, methoddata string) {
 			pattern, _ := regexp.Compile(".*'(.*?)'")
 			cmd := pattern.FindStringSubmatch(command)[1]
 			contractTxPool = append(contractTxPool, cmd)
+			tmp = append(tmp, cmd)
 		}
 	}
+	write(contractTxStore, tmp)
 	logger.Notice(contractTxPool)
 	logger.Noticef("================ %d Contract Transactions Generated ================", len(contractTxPool))
 }
 
 func generateContract(n int, code string) {
+	var tmp []string
 	logger.Notice("================ Generate Contract ================")
-	if n == 0 {
-		n = contractNumber
-	}
 	for i := 0; i < n; i += 1 {
 		sender := genesisAccount[rand.Intn(len(genesisAccount))]
 		if code == "" {
@@ -397,6 +428,7 @@ func generateContract(n int, code string) {
 					} else {
 						contractAddr := pattern.FindStringSubmatch(string(resp))[1]
 						contract = append(contract, contractAddr)
+						tmp = append(tmp, contractAddr)
 					}
 				}
 			}
@@ -404,6 +436,7 @@ func generateContract(n int, code string) {
 			logger.Fatal("Create deploy transaction failed")
 		}
 	}
+	write(contractStore, tmp)
 	logger.Notice(contract)
 	logger.Noticef("================ %d Contracts Generated ================", len(contract))
 }
@@ -439,4 +472,54 @@ func randomChoice(ratio float64) int {
 		tmp = append(tmp, 1)
 	}
 	return tmp[rand.Intn(len(tmp))]
+}
+
+func read(path string, n int) (int, []string) {
+	file, err := os.Open(path)
+	if err != nil {
+		return 0, nil
+	}
+	defer file.Close()
+	var ret []string
+	var count int = 0
+	// TODO read from file randomly
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() && count < n {
+		ret = append(ret, scanner.Text())
+		count += 1
+	}
+	if err := scanner.Err(); err != nil {
+		return 0, nil
+	}
+	return len(ret), ret
+}
+
+func write(path string, data []string) error {
+	var file *os.File
+	var err error
+	idx := strings.LastIndex(path, "/")
+	if idx != -1 {
+		subpath := path[:idx]
+		err := os.MkdirAll(subpath, 0777)
+		if err != nil {
+			return err
+		}
+	}
+	if _, e := os.Stat(path); os.IsNotExist(e) {
+		file, err = os.Create(path)
+		if err != nil {
+			logger.Error(err)
+			return err
+		}
+	} else {
+		file, err = os.OpenFile(path, os.O_RDWR|os.O_APPEND, 0644)
+		if err != nil {
+			return err
+		}
+	}
+	for _, entry := range data {
+		_, err = file.WriteString(entry+"\n")
+	}
+	file.Close()
+	return nil
 }

@@ -30,10 +30,10 @@ var testType = flag.Int("type", 0, "use to specify the stress test type, 0 repre
 var ratio = flag.Float64("ratio", 0.5, "use to specify the normal transaction's proportion, 1 - ratio represent the contract transaction's proportion")
 var code = flag.String("code", "", "use to specify the contract bin code during the stress test")
 var methoddata = flag.String("invoke_payload", "", "use to specify the contract invocation payload during the stress test")
-
 var normalTxNum = flag.Int("rand_normal_tx", 0, "use to specify the number of random normal transaction which used in stress test")
 var contractTxNum = flag.Int("rand_contract_tx", 0, "use to specify the number of random contract transaction which used in stress test")
 var contractNum = flag.Int("rand_contract", 0, "use to specify the number of random contract which used in stress test")
+var load = flag.Bool("load", false, "use the generated transaction saved in the file")
 
 func main() {
 	flag.Parse()
@@ -44,7 +44,7 @@ func main() {
 	} else if strings.ToLower(*option) == "transaction" {
 		builtin.NewTransaction(*password, *from, *to, *timestamp,*amount, *payload, *t, *ip, *port,*silense)
 	} else if strings.ToLower(*option) == "test" {
-		builtin.StressTest(*nodeFile, *duration, *tps, *instant, *testType, *ratio, *normalTxNum, *contractTxNum, *contractNum, *code, *methoddata,*silense)
+		builtin.StressTest(*nodeFile, *duration, *tps, *instant, *testType, *ratio, *normalTxNum, *contractTxNum, *contractNum, *code, *methoddata,*silense, *load)
 	}
 }
 
