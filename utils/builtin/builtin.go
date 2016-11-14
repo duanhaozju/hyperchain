@@ -16,7 +16,6 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -44,6 +43,7 @@ const (
 	transferLowerLimit = 0
 	defaultGas         = 10000
 	defaultGasPrice    = 10000
+	timestampRange     = 10000000000
 	genesisPassword    = "123"
 
 	normalTransactionNumber   = 10
@@ -71,7 +71,7 @@ func NewAccount(password string, silense bool) (string, bool) {
 	}
 }
 
-func NewTransaction(password string, from string, to string, amount string, payload string, t int, ip string, silense bool) (string, bool) {
+func NewTransaction(password string, from string, to string, timestamp int64, amount int64, payload string, t int, ip string, port int, silense bool) (string, bool) {
 	if password == "" {
 		output(silense, "Please enter your password")
 		if silense == false {
@@ -93,12 +93,16 @@ func NewTransaction(password string, from string, to string, amount string, payl
 			return "", false
 		}
 	}
-	_timestamp = time.Now().UnixNano()
+	if timestamp <= 0 {
+		_timestamp = time.Now().UnixNano() - timestampRange
+	} else {
+		_timestamp = timestamp
+	}
 
-	if amount == "" {
+	if amount < 0 {
 		_amount = generateTransferAmount()
 	} else {
-		_amount, _ = strconv.ParseInt(amount, 10, 64)
+		_amount = amount
 	}
 	if to == "" {
 		_to = generateAddress()
@@ -123,7 +127,7 @@ func NewTransaction(password string, from string, to string, amount string, payl
 		output(silense, "\tvalue:", _amount)
 		output(silense, "\tsignature:", common.Bytes2Hex(signature))
 		output(silense, "JSONRPC COMMAND:")
-		command := fmt.Sprintf("curl %s:8081 --data '{\"jsonrpc\":\"2.0\",\"method\":\"tx_sendTransaction\",\"params\":[{\"from\":\"%s\",\"to\":\"%s\",\"timestamp\":%d,\"value\":%d,\"signature\":\"%s\"}],\"id\":1}'", ip, _from, _to, _timestamp, _amount, common.Bytes2Hex(signature))
+		command := fmt.Sprintf("curl %s:%d --data '{\"jsonrpc\":\"2.0\",\"method\":\"tx_sendTransaction\",\"params\":[{\"from\":\"%s\",\"to\":\"%s\",\"timestamp\":%d,\"value\":%d,\"signature\":\"%s\"}],\"id\":1}'", ip, port,_from, _to, _timestamp, _amount, common.Bytes2Hex(signature))
 		output(silense, "\t", command)
 		return command, true
 	} else {
@@ -150,11 +154,11 @@ func NewTransaction(password string, from string, to string, amount string, payl
 		output(silense, "\tsignature:", common.Bytes2Hex(signature))
 		output(silense, "JSONRPC COMMAND:")
 		if to == "" {
-			command := fmt.Sprintf("curl %s:8081 --data '{\"jsonrpc\":\"2.0\",\"method\":\"contract_deployContract\",\"params\":[{\"from\":\"%s\",\"timestamp\":%d,\"payload\":\"%s\",\"signature\":\"%s\"}],\"id\":1}'", ip, _from, _timestamp, _payload, common.Bytes2Hex(signature))
+			command := fmt.Sprintf("curl %s:%d --data '{\"jsonrpc\":\"2.0\",\"method\":\"contract_deployContract\",\"params\":[{\"from\":\"%s\",\"timestamp\":%d,\"payload\":\"%s\",\"signature\":\"%s\"}],\"id\":1}'", ip, port,_from, _timestamp, _payload, common.Bytes2Hex(signature))
 			output(silense, "\t", command)
 			return command, true
 		} else {
-			command := fmt.Sprintf("curl %s:8081 --data '{\"jsonrpc\":\"2.0\",\"method\":\"contract_invokeContract\",\"params\":[{\"from\":\"%s\", \"to\":\"%s\",\"timestamp\":%d,\"payload\":\"%s\",\"signature\":\"%s\"}],\"id\":1}'", ip, _from, to, _timestamp, _payload, common.Bytes2Hex(signature))
+			command := fmt.Sprintf("curl %s:%d --data '{\"jsonrpc\":\"2.0\",\"method\":\"contract_invokeContract\",\"params\":[{\"from\":\"%s\", \"to\":\"%s\",\"timestamp\":%d,\"payload\":\"%s\",\"signature\":\"%s\"}],\"id\":1}'", ip, port,_from, to, _timestamp, _payload, common.Bytes2Hex(signature))
 			output(silense, "\t", command)
 			return command, true
 		}
@@ -180,7 +184,7 @@ func output(silense bool, msg ...interface{}) {
 	}
 }
 
-func StressTest(nodeFile string, duration int, tps int, instant int, testType int, ratio float64, silense bool) bool {
+func StressTest(nodeFile string, duration int, tps int, instant int, testType int, ratio float64, randNormalTx int, randContractTx int, randContract int, code string, methoddata string ,silense bool) bool {
 	if tps == 0 || instant == 0 {
 		output(silense, "invalid tps or instant parameter")
 		return false
@@ -189,8 +193,8 @@ func StressTest(nodeFile string, duration int, tps int, instant int, testType in
 	if err != nil {
 		return false
 	}
-	generateNormalTransaction()
-	generateContractTransaction()
+	generateNormalTransaction(randNormalTx)
+	generateContractTransaction(randContract, randContractTx, code, methoddata)
 	start := time.Now().Unix()
 	end := start + int64(duration)
 	var interval time.Duration
@@ -281,10 +285,16 @@ func loadNodeInfo(nodeFile string) ([]string, int, error) {
 	}
 	defer file.Close()
 
-	// TODO Regular Expressions
 	scanner := bufio.NewScanner(file)
-
+	pattern, _ := regexp.Compile("http[s]?...([0-9]{2,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3})|localhost.[0-9]{4}")
 	for scanner.Scan() {
+		if scanner.Text() == ""{
+			continue
+		}
+		match := pattern.Match([]byte(scanner.Text()))
+		if match == false {
+			continue
+		}
 		nodes = append(nodes, scanner.Text())
 		n += 1
 	}
@@ -293,16 +303,21 @@ func loadNodeInfo(nodeFile string) ([]string, int, error) {
 		return nil, 0, err
 	}
 	globalNodes = nodes
+	logger.Notice(nodes, n)
 	return nodes, n, nil
 }
 
-func generateNormalTransaction() {
+func generateNormalTransaction(n int) {
 	logger.Notice("================ Generate Normal Transactions ================")
-	for i := 0; i < normalTransactionNumber; i += 1 {
+	if n == 0 {
+		n = normalTransactionNumber
+	}
+	for i := 0; i < n; i += 1 {
 		sender := genesisAccount[rand.Intn(len(genesisAccount))]
 		receiver := generateAddress()
 		amount := generateTransferAmount()
-		command, success := NewTransaction(genesisPassword, sender, receiver, strconv.FormatInt(amount, 10), "", 0, "localhost", true)
+		command, success := NewTransaction(genesisPassword, sender, receiver, 0, amount, "", 0, "localhost", 8081, true)
+
 		if success == false {
 			logger.Error("create normal transaction failed")
 		} else {
@@ -315,17 +330,28 @@ func generateNormalTransaction() {
 	logger.Noticef("================ %d Normal Transactions Generated ================", len(normalTxPool))
 }
 
-func generateContractTransaction() {
-	generateContract()
+func generateContractTransaction(n, m int, code, methoddata string) {
+	generateContract(n, code)
 	logger.Notice("================ Generate Contract Transactions ================")
-	for i := 0; i < contractTransactionNumber; i += 1 {
+	if m == 0 {
+		m = contractTransactionNumber
+	}
+	for i := 0; i < m; i += 1 {
 		sender := genesisAccount[rand.Intn(len(genesisAccount))]
 		if contract == nil {
 			logger.Fatal("empty contract pool")
 			return
 		}
 		receiver := contract[rand.Intn(len(contract))]
-		command, success := NewTransaction(genesisPassword, sender, receiver, "", methodid, 1, "localhost", true)
+		if methoddata == "" {
+			if code != ""{
+				logger.Fatal("Please specify related invocation payload")
+				continue
+			} else {
+				methoddata = methodid
+			}
+		}
+		command, success := NewTransaction(genesisPassword, sender, receiver, 0, 0, methoddata, 1, "localhost", 8081, true)
 		if success == false {
 			logger.Error("create contract transaction failed")
 		} else {
@@ -338,11 +364,17 @@ func generateContractTransaction() {
 	logger.Noticef("================ %d Contract Transactions Generated ================", len(contractTxPool))
 }
 
-func generateContract() {
+func generateContract(n int, code string) {
 	logger.Notice("================ Generate Contract ================")
-	for i := 0; i < contractNumber; i += 1 {
+	if n == 0 {
+		n = contractNumber
+	}
+	for i := 0; i < n; i += 1 {
 		sender := genesisAccount[rand.Intn(len(genesisAccount))]
-		command, success := NewTransaction(genesisPassword, sender, "", "", payload, 1, "localhost", true)
+		if code == "" {
+			code = payload
+		}
+		command, success := NewTransaction(genesisPassword, sender, "", 0, 0, code, 1, "localhost", 8081, true)
 		if success {
 			pattern, _ := regexp.Compile(".*'(.*)'")
 			cmd := pattern.FindStringSubmatch(command)[1]
