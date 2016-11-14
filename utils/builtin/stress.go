@@ -27,6 +27,7 @@ func StressTest(nodeFile string, duration int, tps int, instant int, testType in
 	generateNormalTransaction(load, randNormalTx)
 	generateContractTransaction(load, randContract, randContractTx, code, methoddata)
 	start := time.Now().Unix()
+	timeBegin := time.Now().UnixNano()
 	end := start + int64(duration)
 	var interval time.Duration
 	tmp := float64(instant) / float64(tps)
@@ -51,6 +52,9 @@ func StressTest(nodeFile string, duration int, tps int, instant int, testType in
 		time.Sleep(interval)
 	}
 	wg.Wait()
+	timeEnd := time.Now().UnixNano()
+	logger.Notice("=============== Stress Test Finish ===============")
+	logger.Notice("=============== Performance Behavior  =======================")
 	return true
 }
 
@@ -366,4 +370,17 @@ func write(path string, data []string) error {
 	}
 	file.Close()
 	return nil
+}
+
+func queryStatistic(begin, end int64, server string) {
+	// Get TPS
+	cmd := fmt.Sprintf("{\"jsonrpc\":\"2.0\",\"method\":\"block_queryTPS\",\"params\":[{\"from\":%d,\"to\":%d}],\"id\":1}", begin, end)
+	resp, err := communication(cmd, server)
+	if err != nil {
+		logger.Error("Get Statistic Data failed")
+	} else {
+		logger.Notice(string(resp))
+	}
+	// Get Latency
+
 }
