@@ -183,7 +183,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.nullRequestTimer = pbftTimerFactory.CreateTimer()
 	pbft.newViewTimer = pbftTimerFactory.CreateTimer()
 	pbft.firstRequestTimer = pbftTimerFactory.CreateTimer()
-	pbft.N = config.GetInt("general.N")
+	pbft.N = config.GetInt("general.nodes")
 	pbft.f = config.GetInt("general.f")
 
 	if pbft.f*3+1 > pbft.N {

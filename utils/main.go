@@ -34,6 +34,7 @@ var normalTxNum = flag.Int("rand_normal_tx", 0, "use to specify the number of ra
 var contractTxNum = flag.Int("rand_contract_tx", 0, "use to specify the number of random contract transaction which used in stress test")
 var contractNum = flag.Int("rand_contract", 0, "use to specify the number of random contract which used in stress test")
 var load = flag.Bool("load", false, "use the generated transaction saved in the file")
+var estimation = flag.Int("e", 0, "use to specify the statistic estimation")
 
 func main() {
 	flag.Parse()
@@ -43,8 +44,10 @@ func main() {
 		builtin.NewAccount(*password, *silense)
 	} else if strings.ToLower(*option) == "transaction" {
 		builtin.NewTransaction(*password, *from, *to, *timestamp,*amount, *payload, *t, *ip, *port,*silense)
-	} else if strings.ToLower(*option) == "test" {
-		builtin.StressTest(*nodeFile, *duration, *tps, *instant, *testType, *ratio, *normalTxNum, *contractTxNum, *contractNum, *code, *methoddata,*silense, *load)
+	} else if strings.ToLower(*option) == "execute_transaction"{
+		builtin.ExecuteTransaction(*password, *from, *to, *timestamp, *amount, *payload, *t, *ip, *port, *silense)
+	} else if strings.ToLower(*option) == "stress_test" {
+		builtin.StressTest(*nodeFile, *duration, *tps, *instant, *testType, *ratio, *normalTxNum, *contractTxNum, *contractNum, *code, *methoddata,*silense, *load, *estimation)
 	}
 }
 
