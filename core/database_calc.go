@@ -132,9 +132,7 @@ func CalcResponseAVGTime(from, to uint64) int64 {
 			log.Error(err)
 			return -1
 		}
-		for _, trans := range block.Transactions {
-			sum += block.WriteTime - trans.Timestamp
-		}
+		sum += (block.WriteTime - block.Timestamp) * int64(len(block.Transactions))
 		length += int64(len(block.Transactions))
 	}
 
@@ -143,7 +141,6 @@ func CalcResponseAVGTime(from, to uint64) int64 {
 	} else {
 		return sum / (length * int64(time.Millisecond))
 	}
-
 }
 
 func CalcBlockAVGTime(from, to uint64) int64 {
