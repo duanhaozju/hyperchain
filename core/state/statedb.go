@@ -388,9 +388,6 @@ func (self *StateDB) newStateObject(addr common.Address) *StateObject {
 	stateObject := NewStateObject(addr, self.db)
 	stateObject.SetNonce(StartingNonce)
 	self.stateObjects[addr.Str()] = stateObject
-	if self.globalCacheEnable {
-		stateObjectCache[addr] = stateObject
-	}
 	return stateObject
 }
 

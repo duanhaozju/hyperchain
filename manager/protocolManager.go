@@ -395,7 +395,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 								break
 							} else {
 								// the highest block in local is invalid, request the block
-								core.DeleteBlockByNum(db, lastBlk.Number - 1)
+								self.blockPool.RemoveBlockData(lastBlk.Number-1, lastBlk.Number)
 								core.UpdateChainByBlcokNum(db, lastBlk.Number - 2)
 								self.broadcastDemandBlock(lastBlk.Number - 1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
 							}
