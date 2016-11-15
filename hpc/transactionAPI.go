@@ -54,6 +54,7 @@ type SendTxArgs struct {
 	//Nonce    *jsonrpc.HexNumber  `json:"nonce"`
 	// --- test -----
 	Request   *Number `json:"request"`
+	Query     bool    `json:"query"`
 }
 
 type TransactionResult struct {
@@ -176,7 +177,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				log.Errorf("proto.Marshal(tx) error: %v", err)
 				return common.Hash{}, errors.New("proto.Marshal(tx) happened error")
 			} else if manager.GetEventObject() != nil {
-				go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+				go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes, Query: args.Query})
 			} else {
 				log.Error("manager is Nil")
 				return common.Hash{}, errors.New("EventObject is nil")
@@ -206,7 +207,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					log.Errorf("proto.Marshal(tx) error: %v", err)
 					return common.Hash{}, errors.New("proto.Marshal(tx) happened error")
 				} else if manager.GetEventObject() != nil {
-					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes, Query: args.Query})
 				} else {
 					log.Error("manager is Nil")
 					return common.Hash{}, errors.New("EventObject is nil")

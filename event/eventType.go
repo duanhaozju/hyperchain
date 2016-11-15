@@ -19,7 +19,10 @@ type NewBlockEvent struct {
 }
 
 //general tx local
-type NewTxEvent struct{ Payload []byte }
+type NewTxEvent struct{
+	Payload []byte
+	Query   bool
+}
 
 type TxUniqueCastEvent struct {
 	Payload []byte

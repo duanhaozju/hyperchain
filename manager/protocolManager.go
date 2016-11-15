@@ -222,8 +222,14 @@ func (self *ProtocolManager) ConsensusLoop() {
 			go self.Peermanager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
 		//go self.peerManager.SendMsgToPeers(ev.Payload,)
 		case event.NewTxEvent:
-			log.Debug("###### enter NewTxEvent")
-			go self.sendMsg(ev.Payload)
+			if ev.Query == true {
+				tx := &types.Transaction{}
+				proto.Unmarshal(ev.Payload, tx)
+				self.blockPool.RunInSandBox(tx)
+			} else {
+				log.Debug("###### enter NewTxEvent")
+				go self.sendMsg(ev.Payload)
+			}
 
 		case event.ConsensusEvent:
 			//call consensus module
