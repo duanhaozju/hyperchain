@@ -12,6 +12,8 @@ import (
 	"time"
 	"hyperchain/consensus/events"
 	"strings"
+	"hyperchain/core/types"
+	"reflect"
 )
 
 func TestSortableUint64SliceFunctions(t *testing.T) {
@@ -189,5 +191,64 @@ func TestPrePrepared(t *testing.T)  {
 
 	if !rs {
 		t.Errorf("error prePrepared(%q, %d, %d) = %t, actual: %t", digest, v, seqNo, rs, true)
+	}
+}
+
+func TestPreparedReplicasQuorum(t *testing.T)  {
+	pbft := new (pbftProtocal)
+	pbft.f = 1
+	k := pbft.preparedReplicasQuorum()
+	if  k != 2 {
+		t.Errorf("error preparedReplicasQuorum() = %d, expected: 2", k)
+	}
+}
+
+func TestCommittedReplicasQuorum(t *testing.T)  {
+	pbft := new (pbftProtocal)
+	pbft.f = 1
+	k := pbft.committedReplicasQuorum()
+	if  k != 3 {
+		t.Errorf("error committedReplicasQuorum() = %d, expected: 3", k)
+	}
+}
+
+func TestIntersectionQuorum(t *testing.T)  {
+	pbft := new (pbftProtocal)
+	pbft.N = 1
+	pbft.f = 1
+	k := pbft.intersectionQuorum()
+	if k != 2 {
+		t.Errorf("error intersectionQuorum() = %d, expected: %d", k, 2)
+	}
+	pbft.N = 1
+	pbft.f = 4
+	k = pbft.intersectionQuorum()
+	if k != 3 {
+		t.Errorf("error intersectionQuorum() = %d, expected: %d", k, 3)
+	}
+}
+
+func TestAllCorrectReplicasQuorum(t *testing.T)  {
+	pbft := new (pbftProtocal)
+	pbft.N = 100
+	pbft.f = 33
+	k := pbft.allCorrectReplicasQuorum()
+	if k != 67 {
+		t.Errorf("error allCorrectReplicasQuorum() = %d, expected: %d", k, 67)
+	}
+}
+
+func TestPostRequestEvent(t *testing.T)  {
+	pbft := new(pbftProtocal)
+
+	queue := pbft.pbftManager.Queue()
+	tx := &types.Transaction{Id:123}
+
+	pbft.pbftManager = events.NewManagerImpl()
+	pbft.postRequestEvent(tx)
+
+	trx := <- queue
+	if reflect.DeepEqual(trx, tx) != true {
+		t.Errorf("error postRequestEvent(), not post successful!")
 	}
 }

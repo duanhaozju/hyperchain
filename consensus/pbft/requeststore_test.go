@@ -86,3 +86,14 @@ func BenchmarkOrderedRequests(b *testing.B) {
 		}
 	}
 }
+
+func TestLen(t *testing.T)  {
+	oq := &orderedRequests{}
+	if oq.Len() != 0 {
+		t.Errorf("orderedRequests len() error!")
+	}
+	oq = nil
+	oq.Len()
+
+
+}
