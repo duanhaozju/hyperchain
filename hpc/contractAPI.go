@@ -81,7 +81,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 		log.Errorf("proto.Marshal(tx) error: %v", err)
 		return common.Hash{}, errors.New("proto.Marshal(tx) happened error")
 	} else if manager.GetEventObject() != nil {
-		go contract.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+		go contract.eventMux.Post(event.NewTxEvent{Payload: txBytes, Simulate:args.Simulate})
 	} else {
 		log.Error("manager is Nil")
 		return common.Hash{}, errors.New("EventObject is nil")

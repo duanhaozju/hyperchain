@@ -222,7 +222,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			go self.Peermanager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
 		//go self.peerManager.SendMsgToPeers(ev.Payload,)
 		case event.NewTxEvent:
-			if ev.Query == true {
+			if ev.Simulate == true {
 				tx := &types.Transaction{}
 				proto.Unmarshal(ev.Payload, tx)
 				self.blockPool.RunInSandBox(tx)

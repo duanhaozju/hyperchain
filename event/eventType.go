@@ -21,7 +21,7 @@ type NewBlockEvent struct {
 //general tx local
 type NewTxEvent struct{
 	Payload []byte
-	Query   bool
+	Simulate bool
 }
 
 type TxUniqueCastEvent struct {

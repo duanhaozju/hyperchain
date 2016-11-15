@@ -603,6 +603,7 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	core.UpdateChain(block, isGenesis)
 }
 func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
+	log.Notice("Run in sandbox")
 	// TODO add block number to specify the initial status
 	var env = make(map[string]string)
 	fakeBlockNumber := core.GetHeightOfChain()
