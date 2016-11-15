@@ -54,8 +54,8 @@ global:
             enable   : false
         ratelimit:
             enable   : true
-            txRatePeak : 5000
+            txRatePeak : 40
             txFillRate: 0.2ms
-            contractRatePeak : 20
-            contractFillRate: 50ms
+            contractRatePeak : 40
+            contractFillRate: 0.2ms
 
