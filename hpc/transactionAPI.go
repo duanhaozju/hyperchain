@@ -94,7 +94,7 @@ func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManage
 	}
 }
 
-// txType 0 represents send normal tx, txType 1 represents deploy contract, txType 2 represents invoke contract.
+// txType 0 represents send normal tx, txType 1 represents deploy contract, txType 2 represents invoke contract, txType 3 represents signHash.
 func prepareExcute(args SendTxArgs, txType int) (SendTxArgs,error) {
 	if args.Gas == nil {
 		args.Gas = NewInt64ToNumber(defaultGas)
@@ -111,7 +111,7 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs,error) {
 	if args.Timestamp == 0 || (5*int64(time.Second)+time.Now().UnixNano()) < args.Timestamp {
 		return SendTxArgs{}, errors.New("'timestamp' is invalid")
 	}
-	if args.Signature == "" {
+	if txType != 3 && args.Signature == "" {
 		return SendTxArgs{}, errors.New("'signature' is null")
 	}
 	return args, nil
@@ -382,7 +382,7 @@ func (tran *PublicTransactionAPI) GetSignHash(args SendTxArgs) (common.Hash, err
 
 	var tx *types.Transaction
 
-	realArgs,err := prepareExcute(args, 1) // Allow the param "to" is empty
+	realArgs,err := prepareExcute(args, 3) // Allow the param "to" and "signature" is empty
 	if err != nil {
 		return common.Hash{}, err
 	}
