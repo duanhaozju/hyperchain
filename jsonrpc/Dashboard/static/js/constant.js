@@ -6,9 +6,29 @@
 angular
     .module('starter')
     .constant('ENV',{
-        "API": "http://115.159.180.201:8081",
+        "API": "http://localhost:8081",
         "PATTERN": [
             {name: "pattern0", value: "contract HelloWorld{    string hello= \"hello world\";    function getHello() returns(string) {    return hello;    }}"},
+            {name:"pattern10",value:"contract Bank{struct Bill{bytes32 no;string amt;string billType;string issueDate;string dueDate;address drwr;address  accptr;address pyee;address hodr;uint state;address endr;address ende;string resp;}struct User{string nm;bytes32 cmId;string acct;address userAddress;}struct BillRecord{bytes32 no;}"+
+"mapping(bytes32=>BillRecord[])billRecords;"+
+"mapping(address=>bytes32[])userBills;"+
+"mapping(address=>User)Users;"+
+"mapping(address=>bytes32[]) unSignBills;"+
+"mapping(address=>bytes32[]) signBills;"+
+"mapping(bytes32=>Bill)allBills;"+
+"function newUser(bytes32 cmId,string nm,string acct,address userAddress){"+
+ "   Users[userAddress].nm=nm;"+
+  "  Users[userAddress].acct=acct;"+
+"}"+
+"function queryUserInfoById(address userAddress) returns(string,bytes32,string){"+
+ "   User user=Users[userAddress];"+
+  "  return (user.nm,user.cmId,user.acct);}"+
+"function pubBillInfo(bytes32 no,string amt,string billType,string issueDate,string dueDate,address drwr,address accptr,address pyee,address hodr ){Bill bill=allBills[no];bill.no=no;bill.amt=amt;bill.billType=billType;bill.issueDate=issueDate;bill.drwr=drwr;bill.accptr=accptr;bill.pyee=pyee;bill.hodr=hodr;"+
+"}"+
+    "function queryMyBill(address userAddress)returns(bytes32[]){"+
+    "return userBills[userAddress];"+
+"}"+
+"function endrRequst(bytes32 no,address endr,address ende)returns(bool,bytes32){if(allBills[no].state==2){return (false,'has been endr');}else{allBills[no].state=2;allBills[no].endr=endr;allBills[no].ende=ende;unSignBills[ende].push(no);return (true,'success');}}function queryMyUnBill(address userAddress)returns(bytes32[]){return unSignBills[userAddress];}function queryBillInfo(address userAddress,bytes32 no) returns(bytes32,string,string,string,address,address,address,address){Bill bill=allBills[no];if(bill.drwr==userAddress){return (bill.no,bill.amt,bill.billType,bill.issueDate,bill.drwr,bill.accptr,bill.pyee,bill.hodr);}}function endrResponse(bytes32 no,address ende,string resp){allBills[no].state=3;allBills[no].resp=resp;for (uint8 unSignBill = 0; unSignBill < unSignBills[ende].length; unSignBill++)if (unSignBills[ende][unSignBill]== no) {delete(unSignBills[ende][unSignBill]);}}}"},
             {name: "pattern1", value: 'contract Accumulator{    uint32 sum = 0;   function increment(){         sum = sum + 1;     }      function getSum() returns(uint32){         return sum;     }   function add(uint32 num1,uint32 num2) {         sum = sum+num1+num2;     } }'},
             {name: "pattern2", value: "contract SimulateBank{" +
             "address owner;" +
