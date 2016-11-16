@@ -87,6 +87,7 @@ Example:
     2.1.
     ./utils -o transaction -t 0 -from 0xb4bd63bc7e8146b813c71c8f7cc4b21c03b80d80 -p 123456 -to 0xb8775c50762c677de8e603a2e99eec359ba7e36b -v 100
 
+    000f1a7a08ccc48e5d30f80850cf1cf283aa3abd
     output looks like:
 
     ```
