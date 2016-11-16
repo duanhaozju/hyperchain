@@ -261,7 +261,7 @@ func (pbft *pbftProtocal) sendReadyForN() {
 func (pbft *pbftProtocal) recvReadyforN(ready *ReadyForN) error {
 
 	if pbft.primary(pbft.view, pbft.N) == pbft.id {
-		logger.Debugf("Primary %d received ready_for_n from %d", pbft.id, ready.ReplicaId)
+		logger.Errorf("Primary %d received ready_for_n from %d", pbft.id, ready.ReplicaId)
 	} else {
 		logger.Errorf("Replica %d received ready_for_n from %d", pbft.id, ready.ReplicaId)
 		return nil

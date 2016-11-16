@@ -69,7 +69,7 @@ cd ${DUMP_PATH}
 #执行测试
 for((j=1;j<=$MAXPEERNUM;j++))
 do
-	gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${j} -l 800${j} -t 808${j}"
+	gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${j} -l 800${j} -t 808${j} -i true"
 
     # this command for run 4 in 1 window
 #	./hyperchain -o ${j} -l 800${j} -t 808${j}
