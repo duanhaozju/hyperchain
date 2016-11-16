@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
-# Author: Chen Quan
-# Date  : 2016-10-12
-# Hint  :this shell script is used for local test and it will clean the tmp dir and rebuild the project
-#        please ensure `govendor` installed, this script is suitable for MacOS and Ubuntu 16.04
 
 # exit if error occurred
 set -e
-#set -x
 
 # test the env
 # 检查环境
@@ -70,13 +65,12 @@ done
 echo "build the project"
 govendor build -o ${DUMP_PATH}/hyperchain
 
+cd ${DUMP_PATH}
 #执行测试
 for((j=1;j<=$MAXPEERNUM;j++))
 do
-	gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${j} -l 800${j} -t 808${j} -i true"
+	gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${j} -l 800${j} -t 808${j}"
+
+    # this command for run 4 in 1 window
+#	./hyperchain -o ${j} -l 800${j} -t 808${j}
 done
-
-# 启动相应的http查询服务
-cd $PROJECT_PATH/jsonrpc/Dashboard/
-python simpleHttpServer.py
-
