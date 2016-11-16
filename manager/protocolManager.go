@@ -58,6 +58,7 @@ type ProtocolManager struct {
 	syncCheckpointSub event.Subscription
 	syncBlockSub      event.Subscription
 	syncStatusSub     event.Subscription
+	validateSub       event.Subscription
 	quitSync          chan struct{}
 	wg                sync.WaitGroup
 	syncBlockCache      *common.Cache
@@ -112,6 +113,7 @@ func (pm *ProtocolManager) Start() {
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
 	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{}, event.InformPrimaryEvent{})
+	pm.validateSub = pm.eventMux.Subscribe(event.ExeTxsEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
 	go pm.syncBlockLoop()
@@ -119,6 +121,7 @@ func (pm *ProtocolManager) Start() {
 	go pm.respHandlerLoop()
 	go pm.viewChangeLoop()
 	go pm.checkExpired()
+	go pm.ValidateLoop()
 	if pm.syncReplica {
 		pm.syncStatusSub = pm.eventMux.Subscribe(event.ReplicaStatusEvent{})
 		go pm.syncReplicaStatusLoop()
@@ -165,6 +168,16 @@ func (self *ProtocolManager) NewBlockLoop() {
 		case event.CommitOrRollbackBlockEvent:
 			// start commit block serially
 			self.blockPool.CommitBlock(ev, self.commonHash, self.Peermanager)
+
+		}
+	}
+}
+
+func (self *ProtocolManager) ValidateLoop() {
+
+	for obj := range self.newBlockSub.Chan() {
+
+		switch ev := obj.Data.(type) {
 
 		case event.ExeTxsEvent:
 			// start validation parallelly
