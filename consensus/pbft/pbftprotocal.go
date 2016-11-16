@@ -1017,7 +1017,7 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 		return
 	}
 
-	logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
+	logger.Errorf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
 	pbft.seqNo = n
 	preprep := &PrePrepare{
 		View:             pbft.view,

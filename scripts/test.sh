@@ -17,7 +17,7 @@ distribute_the_binary(){
     cd $GOPATH/src/
     rm -rf hyperchain/build
     rm hyperchain.tar.gz
-    tar -zcvf hyperchain.tar.gz ./hyperchain
+    tar -zcf hyperchain.tar.gz ./hyperchain
     scp hyperchain.tar.gz hyperchain@$PRIMARY:/home/hyperchain/
     ssh hyperchain@$PRIMARY "rm -rf go/src/hyperchain"
     ssh hyperchain@$PRIMARY "tar -C /home/hyperchain/go/src -xzf hyperchain.tar.gz"
@@ -40,10 +40,10 @@ auto_run(){
 	  echo $server_address
       ssh hyperchain@$server_address "if [ ! -d /home/hyperchain/build/ ]; then mkdir -p /home/hyperchain/build/;fi"
 	  # this line for ubuntu
-	  #gnome-terminal -x bash -c "ssh hyperchain@$server_address \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o $ni -l 8001 -t 8081 || while true; do sleep 1000s; done\""
+	  gnome-terminal -x bash -c "ssh hyperchain@$server_address \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o $ni -l 8001 -t 8081 \""
 
 	  # this line for mac
-	  osascript -e 'tell app "Terminal" to do script "ssh hyperchain@'$server_address' \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o '$ni' -l 8001 -t 8081 || while true; do sleep 1000s; done\""'
+#	  osascript -e 'tell app "Terminal" to do script "ssh hyperchain@'$server_address' \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o '$ni' -l 8001 -t 8081 \""'
 
 	  ni=`expr $ni + 1`
 	done
@@ -54,7 +54,7 @@ for server_address in ${SERVER_ADDR[@]}; do
   echo "kill $server_address"
   ssh hyperchain@$server_address "rm -rf build"
   ssh hyperchain@$server_address "pkill hyperchains"
-  ssh hyperchain@$server_address "ps aux | grep hyperchain -o | awk '{print \$2}' | xargs kill -9"
+  ssh hyperchain@$server_address "ps aux | grep 'hyperchain -o' | awk '{print \$2}' | xargs kill -9"
 done
 
 distribute_the_binary
