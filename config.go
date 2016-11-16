@@ -27,6 +27,7 @@ type configs interface {
 	getSyncReplicaEnable() bool
 	getLicense() string
 	getRateLimitConfig() jsonrpc.RateLimitConfig
+	getGlobalCacheEnable() bool
 }
 
 type configsImpl struct {
@@ -51,6 +52,7 @@ type configsImpl struct {
 	txFillRate        string
 	contractRatePeak               int64
 	contractFillRate        string
+	globalCacheEnable     bool
 }
 
 //return a config instances
@@ -84,6 +86,7 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	cimpl.txFillRate = config.GetString("global.configs.ratelimit.txFillRate")
 	cimpl.contractRatePeak = config.GetInt64("global.configs.ratelimit.contractRatePeak")
 	cimpl.contractFillRate = config.GetString("global.configs.ratelimit.contractFillRate")
+	cimpl.globalCacheEnable = config.GetBool("global.configs.globalcache.enable")
 	return &cimpl
 }
 
@@ -135,3 +138,4 @@ func (cIml *configsImpl) getRateLimitConfig () jsonrpc.RateLimitConfig {
 		ContractFillRate: contractFillRate,
 	}
 }
+func (cIml *configsImpl) getGlobalCacheEnable() bool {return cIml.globalCacheEnable}

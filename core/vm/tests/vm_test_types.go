@@ -52,7 +52,7 @@ func (self Log) Topics() [][]byte {
 }
 
 func StateObjectFromAccount(db hyperdb.Database, addr string, account Account) *state.StateObject {
-	obj := state.NewStateObject(common.HexToAddress(addr),db)
+	obj := state.NewStateObject(common.HexToAddress(addr),db, true)
 	obj.SetBalance(common.Big(account.Balance))
 
 	if common.IsHex(account.Code) {

@@ -85,7 +85,7 @@ func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 		return nil
 	}
 
-	stateDB, err := state.New(headBlock.MerkleRoot, acc.db)
+	stateDB, err := state.New(headBlock.MerkleRoot, acc.db, false)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
 		return nil
@@ -112,7 +112,7 @@ func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
 		return "", err
 	} else if headBlock != nil {
 
-		if stateDB, err := state.New(common.BytesToHash(headBlock.MerkleRoot), acc.db);err == nil && stateDB != nil {
+		if stateDB, err := state.New(common.BytesToHash(headBlock.MerkleRoot), acc.db, false);err == nil && stateDB != nil {
 			if stateobject := stateDB.GetStateObject(addr);stateobject != nil {
 				return fmt.Sprintf(`0x%x`, stateobject.BalanceData), nil
 			} else {

@@ -55,9 +55,10 @@ type BlockPool struct {
 	blockCache          *common.Cache
 	validationQueue     *common.Cache
 	queue               *common.Cache
+	globalCacheEnable   bool
 }
 
-func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *BlockPool {
+func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter, globalCacheEnable bool) *BlockPool {
 	var err error
 	blockcache, err := common.NewCache()
 	if err != nil {return nil}
@@ -72,6 +73,7 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *Block
 		queue:           queue,
 		validationQueue: validationqueue,
 		blockCache:      blockcache,
+		globalCacheEnable: globalCacheEnable,
 	}
 	currentChain := core.GetChainCopy()
 	pool.demandNumber = currentChain.Height + 1
@@ -282,7 +284,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
 	receiptTrie, err := trie.New(common.Hash{}, db)
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
-	statedb, err := state.New(pool.lastValidationState, db)
+	statedb, err := state.New(pool.lastValidationState, db, pool.globalCacheEnable)
 
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
@@ -547,29 +549,8 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	}
 	pool.lastValidationState = common.BytesToHash(block.MerkleRoot)
 	// 2. Delete Invalid Stuff
-	for i := ev.SeqNo; i < tmpDemandNumber; i += 1 {
-		// delete tx, txmeta and receipt
-		block, err := core.GetBlockByNumber(db, i)
-		if err != nil {
-			log.Errorf("ViewChange, miss block %d ,error msg %s", i, err.Error())
-		}
-
-		for _, tx := range block.Transactions {
-			if err := db.Delete(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
-				log.Errorf("ViewChange, delete useless tx in block %d failed, error msg %s", i, err.Error())
-			}
-			if err := db.Delete(append(core.ReceiptsPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
-				log.Errorf("ViewChange, delete useless receipt in block %d failed, error msg %s", i, err.Error())
-			}
-			if err := db.Delete(append(tx.GetTransactionHash().Bytes(), core.TxMetaSuffix...)); err != nil {
-				log.Errorf("ViewChange, delete useless txmeta in block %d failed, error msg %s", i, err.Error())
-			}
-		}
-		// delete block
-		if err := core.DeleteBlockByNum(db, i); err != nil {
-			log.Errorf("ViewChange, delete useless block %d failed, error msg %s", i, err.Error())
-		}
-
+	if err := pool.RemoveBlockData(ev.SeqNo, tmpDemandNumber - 1);  err != nil {
+		log.Errorf("ViewChange, Remove block data failed, error msg %s", err.Error())
 	}
 	// 3. Delete from blockcache
 	keys := pool.blockCache.Keys()
@@ -595,5 +576,39 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	// 4. Reset chain
 	isGenesis := (block.Number == 0)
 	core.UpdateChain(block, isGenesis)
+}
 
+func (pool *BlockPool) RemoveBlockData(from, to uint64) error {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Error("Get Database Instance Failed! error msg,", err.Error())
+		return err
+	}
+	for i := from; i < to; i += 1 {
+		// delete tx, txmeta and receipt
+		block, err := core.GetBlockByNumber(db, i)
+		if err != nil {
+			log.Errorf("ViewChange, miss block %d ,error msg %s", i, err.Error())
+			continue
+		}
+
+		for _, tx := range block.Transactions {
+			if err := db.Delete(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
+				log.Errorf("ViewChange, delete useless tx in block %d failed, error msg %s", i, err.Error())
+			}
+			if err := db.Delete(append(core.ReceiptsPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
+				log.Errorf("ViewChange, delete useless receipt in block %d failed, error msg %s", i, err.Error())
+			}
+			if err := db.Delete(append(tx.GetTransactionHash().Bytes(), core.TxMetaSuffix...)); err != nil {
+				log.Errorf("ViewChange, delete useless txmeta in block %d failed, error msg %s", i, err.Error())
+			}
+		}
+		// delete block
+		if err := core.DeleteBlockByNum(db, i); err != nil {
+			log.Errorf("ViewChange, delete useless block %d failed, error msg %s", i, err.Error())
+		}
+	}
+	// IMPORTANT Clear Global Cache
+	state.PurgeGlobalCache()
+	return nil
 }
