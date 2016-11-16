@@ -1,20 +1,20 @@
 package builtin
 
 import (
-	"time"
-	"sync"
-	"net/http"
-	"bytes"
-	"io/ioutil"
-	"os"
 	"bufio"
-	"regexp"
+	"bytes"
 	"fmt"
-	"strings"
+	"io/ioutil"
 	"math/rand"
+	"net/http"
+	"os"
+	"regexp"
+	"strings"
+	"sync"
+	"time"
 )
 
-func StressTest(nodeFile string, duration int, tps int, instant int, testType int, ratio float64, randNormalTx int, randContractTx int, randContract int, code string, methoddata string ,silense bool, load bool, estimation int) bool {
+func StressTest(nodeFile string, duration int, tps int, instant int, testType int, ratio float64, randNormalTx int, randContractTx int, randContract int, code string, methoddata string, silense bool, load bool, estimation int) bool {
 	if tps == 0 || instant == 0 {
 		output(silense, "invalid tps or instant parameter")
 		return false
@@ -56,7 +56,7 @@ func StressTest(nodeFile string, duration int, tps int, instant int, testType in
 	logger.Notice("=============== Stress Test Finish ===============")
 	logger.Notice("=============== Performance Behavior  =======================")
 	time.Sleep(15 * time.Second)
-	queryStatistic(timeBegin + int64(estimation) * time.Second.Nanoseconds(), timeEnd - int64(estimation) * time.Second.Nanoseconds(), globalNodes[0])
+	queryStatistic(timeBegin+int64(estimation)*time.Second.Nanoseconds(), timeEnd-int64(estimation)*time.Second.Nanoseconds(), globalNodes[2])
 	return true
 }
 
@@ -125,7 +125,7 @@ func loadNodeInfo(nodeFile string) ([]string, int, error) {
 	scanner := bufio.NewScanner(file)
 	pattern, _ := regexp.Compile("http[s]?...([0-9]{2,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3})|localhost.[0-9]{4}")
 	for scanner.Scan() {
-		if scanner.Text() == ""{
+		if scanner.Text() == "" {
 			continue
 		}
 		match := pattern.Match([]byte(scanner.Text()))
@@ -162,14 +162,14 @@ func generateNormalTransaction(load bool, n int) {
 		sender := genesisAccount[rand.Intn(len(genesisAccount))]
 		receiver := generateAddress()
 		amount := generateTransferAmount()
-		command, success := NewTransaction(genesisPassword, sender, receiver, 0, amount, "", 0, "localhost", 8081, true)
+		command, success := NewTransaction(genesisPassword, sender, receiver, 0, amount, "", 0, "localhost", 8081, false ,true)
 
 		if success == false {
 			logger.Error("create normal transaction failed")
 		} else {
 			pattern, _ := regexp.Compile(".*'(.*?)'")
 			ret := pattern.FindStringSubmatch(command)
-			if ret == nil || len(ret) < 2{
+			if ret == nil || len(ret) < 2 {
 				return
 			}
 			normalTxPool = append(normalTxPool, ret[1])
@@ -177,13 +177,13 @@ func generateNormalTransaction(load bool, n int) {
 		}
 	}
 	if len(tmp) > 0 {
-		write(normalTxStore,tmp)
+		write(normalTxStore, tmp)
 	}
 	logger.Notice(normalTxPool)
 	logger.Noticef("================ %d Normal Transactions Generated ================", len(normalTxPool))
 }
 
-func generateContractTransaction(load bool ,n, m int, code, methoddata string) {
+func generateContractTransaction(load bool, n, m int, code, methoddata string) {
 	var cnt int
 	var ret []string
 	var cnt2 int
@@ -211,14 +211,14 @@ func generateContractTransaction(load bool ,n, m int, code, methoddata string) {
 		}
 		receiver := contract[rand.Intn(len(contract))]
 		if methoddata == "" {
-			if code != ""{
+			if code != "" {
 				logger.Fatal("Please specify related invocation payload")
 				continue
 			} else {
 				methoddata = methodid
 			}
 		}
-		command, success := NewTransaction(genesisPassword, sender, receiver, 0, 0, methoddata, 1, "localhost", 8081, true)
+		command, success := NewTransaction(genesisPassword, sender, receiver, 0, 0, methoddata, 1, "localhost", 8081, false, true)
 		if success == false {
 			logger.Error("create contract transaction failed")
 		} else {
@@ -244,7 +244,7 @@ func generateContract(n int, code string) {
 		if code == "" {
 			code = payload
 		}
-		command, success := NewTransaction(genesisPassword, sender, "", 0, 0, code, 1, "localhost", 8081, true)
+		command, success := NewTransaction(genesisPassword, sender, "", 0, 0, code, 1, "localhost", 8081, false, true)
 		if success {
 			pattern, _ := regexp.Compile(".*'(.*)'")
 			ret := pattern.FindStringSubmatch(command)
@@ -368,7 +368,7 @@ func write(path string, data []string) error {
 		}
 	}
 	for _, entry := range data {
-		_, err = file.WriteString(entry+"\n")
+		_, err = file.WriteString(entry + "\n")
 	}
 	file.Close()
 	return nil

@@ -21,6 +21,7 @@ var payload = flag.String("l", "", "use to specify transaction payload")
 var t = flag.Int("t", 0, "use to specify transaction type to generate, 0 represent normal transaction, 1 represent contract transaction")
 var ip = flag.String("ip", "localhost", "use to specify the ip address")
 var port = flag.Int("port", 8081, "use to specify the server port")
+var simulate = flag.Bool("simulate", false, "use to specify wthether the generated transaction run in sandbox")
 // stress test related
 var nodeFile = flag.String("nodefile", "./nodes.json", "use to specify node address configuration file path")
 var duration = flag.Int("duration", 0, "use to specify the duration of the stress test")
@@ -43,9 +44,9 @@ func main() {
 	} else if strings.ToLower(*option) == "account" {
 		builtin.NewAccount(*password, *silense)
 	} else if strings.ToLower(*option) == "transaction" {
-		builtin.NewTransaction(*password, *from, *to, *timestamp,*amount, *payload, *t, *ip, *port,*silense)
+		builtin.NewTransaction(*password, *from, *to, *timestamp,*amount, *payload, *t, *ip, *port, *simulate, *silense)
 	} else if strings.ToLower(*option) == "execute_transaction"{
-		builtin.ExecuteTransaction(*password, *from, *to, *timestamp, *amount, *payload, *t, *ip, *port, *silense)
+		builtin.ExecuteTransaction(*password, *from, *to, *timestamp, *amount, *payload, *t, *ip, *port, *simulate, *silense)
 	} else if strings.ToLower(*option) == "stress_test" {
 		builtin.StressTest(*nodeFile, *duration, *tps, *instant, *testType, *ratio, *normalTxNum, *contractTxNum, *contractNum, *code, *methoddata,*silense, *load, *estimation)
 	}
