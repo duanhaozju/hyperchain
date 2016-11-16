@@ -58,7 +58,6 @@ type ProtocolManager struct {
 	syncCheckpointSub event.Subscription
 	syncBlockSub      event.Subscription
 	syncStatusSub     event.Subscription
-	transactionSub    event.Subscription
 	quitSync          chan struct{}
 	wg                sync.WaitGroup
 	syncBlockCache      *common.Cache
@@ -107,13 +106,12 @@ func GetEventObject() *event.TypeMux {
 func (pm *ProtocolManager) Start() {
 
 	pm.wg.Add(1)
-	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.BroadcastConsensusEvent{})
+	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
 	pm.newBlockSub = pm.eventMux.Subscribe(event.CommitOrRollbackBlockEvent{}, event.ExeTxsEvent{})
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
 	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{}, event.InformPrimaryEvent{})
-	pm.transactionSub = pm.eventMux.Subscribe(event.NewTxEvent{}, event.TxUniqueCastEvent{})
 	go pm.NewBlockLoop()
 	go pm.ConsensusLoop()
 	go pm.syncBlockLoop()
@@ -121,7 +119,6 @@ func (pm *ProtocolManager) Start() {
 	go pm.respHandlerLoop()
 	go pm.viewChangeLoop()
 	go pm.checkExpired()
-	go pm.TransactionLoop()
 	if pm.syncReplica {
 		pm.syncStatusSub = pm.eventMux.Subscribe(event.ReplicaStatusEvent{})
 		go pm.syncReplicaStatusLoop()
@@ -219,18 +216,6 @@ func (self *ProtocolManager) ConsensusLoop() {
 		case event.BroadcastConsensusEvent:
 			log.Debug("######enter broadcast")
 			go self.BroadcastConsensus(ev.Payload)
-		case event.ConsensusEvent:
-			//call consensus module
-			log.Debug("###### enter ConsensusEvent")
-			self.consenter.RecvMsg(ev.Payload)
-		}
-	}
-}
-func (self *ProtocolManager) TransactionLoop() {
-
-	// automatically stops if unsubscribe
-	for obj := range self.consensusSub.Chan() {
-		switch ev := obj.Data.(type) {
 		case event.TxUniqueCastEvent:
 			var peers []uint64
 			peers = append(peers, ev.PeerId)
@@ -239,6 +224,11 @@ func (self *ProtocolManager) TransactionLoop() {
 		case event.NewTxEvent:
 			log.Debug("###### enter NewTxEvent")
 			go self.sendMsg(ev.Payload)
+
+		case event.ConsensusEvent:
+			//call consensus module
+			log.Debug("###### enter ConsensusEvent")
+			self.consenter.RecvMsg(ev.Payload)
 		}
 	}
 }
