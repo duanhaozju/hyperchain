@@ -90,7 +90,6 @@ func (h *helper) Execute(seqNo uint64, hash string, flag bool, isPrimary bool, t
 
 // UpdateState transfers the UpdateStateEvent to outer
 func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
-
 	tmpMsg, err := proto.Marshal(updateState)
 
 	if err != nil {
