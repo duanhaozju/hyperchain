@@ -473,7 +473,7 @@ func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*Transaction
 				//Gas: 		NewInt64ToNumber(txValue.GasLimit),
 				//GasPrice: 	NewInt64ToNumber(txValue.Price),
 				Timestamp:      t.Timestamp,
-				ExecuteTime:    NewInt64ToNumber((blk.WriteTime - t.Timestamp) / int64(time.Millisecond)),
+				ExecuteTime:    NewInt64ToNumber((blk.WriteTime - blk.Timestamp) / int64(time.Millisecond)),
 				Invalid:        false,
 			}
 		} else {
