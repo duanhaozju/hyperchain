@@ -85,7 +85,7 @@ func (h *helper) Execute(seqNo uint64, hash string, flag bool, isPrimary bool, t
 	}
 
 	// Post the event to outer
-	h.msgQ.Post(writeEvent)
+	go h.msgQ.Post(writeEvent)
 
 	return nil
 }
@@ -121,7 +121,7 @@ func (h *helper) ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo 
 	}
 
 	// Post the event to outer
-	h.msgQ.Post(validateEvent)
+	go h.msgQ.Post(validateEvent)
 
 	return nil
 }
@@ -147,8 +147,7 @@ func (h *helper) InformPrimary(primary uint64) error {
 		Primary: primary,
 	}
 
-	// No need to "go h.msgQ.Post...", we'll wait for it to return
-	h.msgQ.Post(informPrimaryEvent)
+	go h.msgQ.Post(informPrimaryEvent)
 
 	return nil
 }
