@@ -1164,7 +1164,7 @@ func (pbft *pbftProtocal) recvPrepare(prep *Prepare) error {
 
 	if !pbft.inWV(prep.View, prep.SequenceNumber) {
 		if prep.SequenceNumber != pbft.h && !pbft.skipInProgress {
-			logger.Warningf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
+			logger.Warningf("Replica %d ignoring prepare form replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
 		} else {
 			// This is perfectly normal
 			logger.Debugf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
@@ -1271,7 +1271,7 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 
 	if !pbft.inWV(commit.View, commit.SequenceNumber) {
 		if commit.SequenceNumber != pbft.h && !pbft.skipInProgress {
-			logger.Warningf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
+			logger.Warningf("Replica %d ignoring commit from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
 		} else {
 			// This is perfectly normal
 			logger.Debugf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
