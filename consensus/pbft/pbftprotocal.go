@@ -680,7 +680,7 @@ func (pbft *pbftProtocal) sendBatch() error {
 	pbft.batchStore = nil
 	logger.Infof("Creating batch with %d requests", len(reqBatch.Batch))
 
-	pbft.pbftManager.Queue() <- reqBatch
+	go pbft.postPbftEvent(reqBatch)
 
 	return nil
 }
@@ -2076,9 +2076,9 @@ func (pbft *pbftProtocal) recvValidatedResult(result event.ValidatedTxs) error {
 			vid:       result.SeqNo,
 		}
 		pbft.cacheValidatedBatch[digest] = cache
-		if pbft.seqNo-pbft.lastExec > 20 {
-			time.Sleep(20 * time.Millisecond)
-		}
+		//if pbft.seqNo-pbft.lastExec > 20 {
+		//	time.Sleep(20 * time.Millisecond)
+		//}
 		pbft.trySendPrePrepare()
 	} else {
 		logger.Debugf("Replica %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
