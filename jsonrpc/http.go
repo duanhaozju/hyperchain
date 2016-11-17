@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	maxHTTPRequestContentLength = 1024 * 128
+	maxHTTPRequestContentLength = 1024 * 256
 )
 
 type RateLimitConfig struct {
