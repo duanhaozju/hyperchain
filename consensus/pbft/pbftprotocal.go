@@ -194,7 +194,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	//pbft.K = uint64(config.GetInt("general.K"))
 	pbft.K = uint64(10)
 	//pbft.logMultiplier = uint64(config.GetInt("general.logmultiplier"))
-	pbft.logMultiplier = uint64(10)
+	pbft.logMultiplier = uint64(4)
 	//if pbft.logMultiplier < 2 {
 	//	panic("Log multiplier must be greater than or equal to 2")
 	//}
