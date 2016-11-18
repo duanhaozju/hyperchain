@@ -44,7 +44,7 @@ global:
 # configs
 ############################
     configs:
-        peers: "config/peerconfig.json"
+        peers: "config/local_peerconfig.json"
         genesis: "config/genesis.json"
         membersrvc: "config/membersrvc.yaml"
         pbft: "config/pbft.yaml"
@@ -54,9 +54,9 @@ global:
             enable   : false
         ratelimit:
             enable   : true
-            txRatePeak : 5000
-            txFillRate: 0.2ms
-            contractRatePeak : 20
-            contractFillRate: 50ms
+            txRatePeak : 100
+            txFillRate: 0.5ms
+            contractRatePeak : 100
+            contractFillRate: 0.5ms
         globalcache:
             enable  : true

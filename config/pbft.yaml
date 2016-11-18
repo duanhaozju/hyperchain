@@ -1,69 +1,51 @@
-################################################################################
-#
-#   PBFT PROPERTIES
-#
-#   - List all algorithm-specific properties here.
-#   - Nest keys where appropriate, and sort alphabetically for easier parsing.
-#
-################################################################################
-general:
+###########################################################
+#  _   _                        ____ _           _        #
+# | | | |_   _ _ __   ___ _ __ / ___| |__   __ _(_)_ __   #
+# | |_| | | | | '_ \ / _ \ '__| |   | '_ \ / _\` | | '_ \ #
+# |  _  | |_| | |_) |  __/ |  | |___| | | | (_| | | | | | #
+# |_| |_|\__, | .__/ \___|_|   \____|_| |_|\__,_|_|_| |_| #
+#        |___/|_|                                         #
+###########################################################
 
-    # Operational mode: currently only batch ( this value is case-insensitive)
-    mode: batch
+## PBFT PROPERTIES
+# Note: please READ the comments carefully when modify
+#
 
-    # Maximum number of validators/replicas we expect in the network
+pbft:
+
+    # Number of replicas
     nodes: 4
 
-    # Number of byzantine nodes we will tolerate
-    f: 1
-
-    # Checkpoint period is the maximum number of pbft requests that must be
-    # re-processed in a view change. A smaller checkpoint period will decrease
-    # the amount of time required to recover from an error, but will decrease
-    # overall throughput in normal case operation.
-    K: 10
-
-    # Affects the receive log size which is K * logmultiplier
-    # The primary will only send sequence numbers which fall within K * logmultiplier/2 of
-    # its high watermark, so this cannot be set to less than 2
-    # For high volume/high latency environments, a higher log size may increase throughput
-    logmultiplier: 4
-
-    # How many requests should the primary send per pre-prepare when in "batch" mode
+    # How many transactions should the primary pack before sending pre-prepare
     batchsize: 500
 
-    # Whether the replica should act as a byzantine one; useful for debugging on testnets
-    byzantine: false
-
-    # After how many checkpoint periods the primary gets cycled automatically.  Set to 0 to disable.
-    viewchangeperiod: 0
 
 # Timeouts
 timeout:
 
-    # Send a pre-prepare if there are pending requests, batchsize isn't reached yet,
-    # and this much time has elapsed since the current batch was formed
+    # How long to wait for N-f responses after send negotiate view
+    negoview: 6s
+
+    # How long to wait before recovery finished(This is for release1.2)
+    recovery: 1s
+
+    # How long to wait before first request should come
+    firstrequest: 30s
+
+    # Primary send a pre-prepare if there are pending requests, although batchsize isn't reached yet,
     batch: 1s
 
-    # How long may a request take between reception and execution, must be greater than the batch timeout
+    # How long may a request(transaction batch) take between reception and execution, must be greater than the batch timeout
     request: 3s
 
-    # How long may a validate Txs process will take by outter
+    # How long may a validate (transaction batch) process will take by local Validation
     validate: 1s
+
+    # Primary send it to inform aliveness, must be greater than request timeout
+    nullrequest: 4s
 
     # How long may a view change take
     viewchange: 4s
 
     # How long to wait for a view change quorum before resending (the same) view change
     resendviewchange: 10s
-
-    # Interval to send "keep-alive" null requests.  Set to 0 to disable. If enabled, must be greater than request timeout
-    nullrequest: 4s
-
-    # How long to wait for N-f responses after send negotiate view
-    negoView: 6s
-    # How long to wait before recovery finished
-    recovery: 1s
-
-    # How long to wait before first request should come
-    firstReq: 30s

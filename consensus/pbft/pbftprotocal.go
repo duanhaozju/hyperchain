@@ -183,23 +183,27 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.nullRequestTimer = pbftTimerFactory.CreateTimer()
 	pbft.newViewTimer = pbftTimerFactory.CreateTimer()
 	pbft.firstRequestTimer = pbftTimerFactory.CreateTimer()
-	pbft.N = config.GetInt("general.nodes")
-	pbft.f = config.GetInt("general.f")
+	pbft.N = config.GetInt("pbft.nodes")
+	//pbft.f = config.GetInt("general.f")
+	pbft.f = (pbft.N-1) / 3
 
-	if pbft.f*3+1 > pbft.N {
-		panic(fmt.Sprintf("need at least %d enough replicas to tolerate %d byzantine faults, but only %d replicas configured", pbft.f*3+1, pbft.f, pbft.N))
-	}
+	//if pbft.f*3+1 > pbft.N {
+	//	panic(fmt.Sprintf("need at least %d enough replicas to tolerate %d byzantine faults, but only %d replicas configured", pbft.f*3+1, pbft.f, pbft.N))
+	//}
 
-	pbft.K = uint64(config.GetInt("general.K"))
-
-	pbft.logMultiplier = uint64(config.GetInt("general.logmultiplier"))
-	if pbft.logMultiplier < 2 {
-		panic("Log multiplier must be greater than or equal to 2")
-	}
+	//pbft.K = uint64(config.GetInt("general.K"))
+	pbft.K = uint64(10)
+	//pbft.logMultiplier = uint64(config.GetInt("general.logmultiplier"))
+	pbft.logMultiplier = uint64(10)
+	//if pbft.logMultiplier < 2 {
+	//	panic("Log multiplier must be greater than or equal to 2")
+	//}
 
 	pbft.L = pbft.logMultiplier * pbft.K // log size
-	pbft.viewChangePeriod = uint64(config.GetInt("general.viewchangeperiod"))
-	pbft.byzantine = config.GetBool("general.byzantine")
+	//pbft.viewChangePeriod = uint64(config.GetInt("general.viewchangeperiod"))
+	pbft.viewChangePeriod = uint64(0)
+	//pbft.byzantine = config.GetBool("general.byzantine")
+	pbft.byzantine = false
 
 	pbft.vcResendTimeout, err = time.ParseDuration(config.GetString("timeout.resendviewchange"))
 	if err != nil {
@@ -221,7 +225,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 		pbft.nullRequestTimeout = 0
 	}
 
-	pbft.firstRequestTimeout, err = time.ParseDuration(config.GetString("timeout.firstReq"))
+	pbft.firstRequestTimeout, err = time.ParseDuration(config.GetString("timeout.firstrequest"))
 	if err != nil {
 		logger.Noticef("Replica %d read first request timeout fail", pbft.id)
 		pbft.firstRequestTimeout = 30
@@ -282,7 +286,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 
 	// negotiate view
 	pbft.inNegoView = true
-	pbft.negoViewRspTimeout, err = time.ParseDuration(config.GetString("timeout.negoView"))
+	pbft.negoViewRspTimeout, err = time.ParseDuration(config.GetString("timeout.negoview"))
 	if err != nil {
 		panic(fmt.Errorf("Cannot parse negotiate view timeout: %s", err))
 	}
@@ -304,7 +308,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 
 	// initialize the batchTimeout
 	pbft.batchTimer = etf.CreateTimer()
-	pbft.batchSize = config.GetInt("general.batchsize")
+	pbft.batchSize = config.GetInt("pbft.batchsize")
 	pbft.batchStore = nil
 	pbft.batchTimeout, err = time.ParseDuration(config.GetString("timeout.batch"))
 	if err != nil {
