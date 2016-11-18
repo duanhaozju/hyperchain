@@ -1434,6 +1434,12 @@ func (pbft *pbftProtocal) execDoneSync(idx msgID) {
 	}
 
 	pbft.currentExec = nil
+	// optimization: if we are in view changing waiting for executing to target seqNo,
+	// one-time processNewView() is enough. No need to processNewView() every time in execDoneSync()
+	if !pbft.activeView && pbft.lastExec == pbft.nvInitialSeqNo {
+		pbft.processNewView()
+	}
+
 	pbft.executeOutstanding()
 
 }
