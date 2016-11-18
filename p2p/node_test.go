@@ -30,8 +30,6 @@ var FakeRemoteMsg = pb.Message{
 var fakeRemoteTem *transport.HandShakeManager
 var fakeRemotePublicKey []byte
 
-var peerPool *PeersPool
-
 //var fakeConsusData = "080110d9c3a7a29b8ba9bc141a710a6f08d69497989b8ba9bc1412610a28363230316362303434383936346163353937666166366664663166343732656466326132326238391228303030303030303030303030303030303030303030303030303030303030303030303030303030321a01312081f28b989b8ba9bc1418012001"
 var fakeConsusData = "TEST"
 
@@ -44,7 +42,7 @@ func init(){
 	tem := transport.NewHandShakeManger()
 	peerPool = NewPeerPool(tem)
 	testNode = NewNode(8001,&mux,1,peerPool)
-	membersrvc.Start("../../config/test/local_membersrvc.yaml",1)
+	membersrvc.Start("../config/test/local_membersrvc.yaml",1)
 }
 
 func TestNode_GetNodeAddr(t *testing.T) {
