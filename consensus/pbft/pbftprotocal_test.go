@@ -844,5 +844,123 @@ func TestMaybeSendCommit(t *testing.T) {
 
 func TestSendCommit(t *testing.T) {
 
+	core.InitDB("/temp/leveldb", 8088)
+	defer clearDB()
+
+	id := 1
+	pbftConfigPath := getPbftConfigPath()
+	config := loadConfig(pbftConfigPath)
+	eventMux := new(event.TypeMux)
+	h := helper.NewHelper(eventMux)
+	pbft := newPbft(uint64(id), config, h)
+	pbft.id = uint64(2)
+	pbft.inNegoView = false
+
+	// normal
+	d := "digest"
+	v := uint64(0)
+	n := uint64(1)
+
+	err := pbft.sendCommit(d, v, n)
+	if err != nil {
+		t.Errorf("sendCommit err")
+	}
+	cert := pbft.getCert(v, n)
+	if cert.sentCommit == false {
+		t.Errorf("cert sent commit false, expect true")
+	}
+}
+
+func TestRecvCommit(t *testing.T) {
+
+	core.InitDB("/temp/leveldb", 8088)
+	defer clearDB()
+
+	id := 1
+	pbftConfigPath := getPbftConfigPath()
+	config := loadConfig(pbftConfigPath)
+	eventMux := new(event.TypeMux)
+	h := helper.NewHelper(eventMux)
+	pbft := newPbft(uint64(id), config, h)
+	pbft.id = uint64(2)
+	pbft.inNegoView = false
+
+	// normal, committed, execute
+	v := uint64(0)
+	n := uint64(1)
+	d := "digest"
+	replicaId := uint64(1)
+	cmt := &Commit{
+		View:		v,
+		SequenceNumber:	n,
+		BatchDigest:	d,
+		ReplicaId:	replicaId,
+	}
+
+	pbft.validatedBatchStore[d] = &TransactionBatch{}
+	txBatch := &TransactionBatch{
+		Timestamp:	int64(1),
+	}
+	preprep := &PrePrepare{
+		View: 		v,
+		SequenceNumber:	n,
+		BatchDigest:	d,
+		TransactionBatch: txBatch,
+	}
+	cert := pbft.getCert(v, n)
+	cert.digest = d
+	cert.prePrepare = preprep // now preprepared
+	cert.prepareCount = pbft.preparedReplicasQuorum() // now prepared
+	cert.commitCount = pbft.committedReplicasQuorum() // now committed
+	cert.sentExecute = false
+	cert.validated = true
+	err := pbft.recvCommit(cmt)
+	if err != nil {
+		t.Errorf("recvCommit normal, expect excute")
+	}
+	certIdx := msgID{v: v, n: n}
+	cert = pbft.certStore[certIdx]
+	if cert == nil {
+		t.Errorf("recvCommit normal, expect cert not nil")
+	}
+	if cert.commit[*cmt] != true {
+		t.Errorf("recvCommit normal, expect commit exist")
+	}
+
+	if cert.sentExecute != true {
+		t.Errorf("recvCommit should send execute")
+	}
+
+	// normal, not committed
+	v2 := uint64(0)
+	n2 := uint64(2)
+	d2 := "digest2"
+	replicaId = uint64(1)
+	cmt2 := &Commit{
+		View:		v2,
+		SequenceNumber:	n2,
+		BatchDigest:	d2,
+		ReplicaId:	replicaId,
+	}
+
+	pbft.validatedBatchStore[d] = &TransactionBatch{}
+	txBatch2 := &TransactionBatch{
+		Timestamp:	int64(1),
+	}
+	preprep2 := &PrePrepare{
+		View: 		v2,
+		SequenceNumber:	n2,
+		BatchDigest:	d2,
+		TransactionBatch: txBatch2,
+	}
+	cert = pbft.getCert(v2, n2)
+	cert.digest = d
+	cert.prePrepare = preprep2// now preprepared
+	cert.prepareCount = pbft.preparedReplicasQuorum() // now prepared
+
+	pbft.recvCommit(cmt2)
+	if cert.commitCount >= pbft.committedReplicasQuorum() {
+		t.Errorf("recv commit, expect not commited")
+	}
 }
 

@@ -986,7 +986,6 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 		}
 	}
 	if !pbft.inWV(pbft.view, n) {
-		fmt.Println("should enter this")
 		logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because it is out of sequence numbers", pbft.id, digest)
 		return
 	}
@@ -1183,7 +1182,6 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 		return pbft.sendCommit(digest, v, n)
 	} else {
 		if !cert.sentValidate {
-			fmt.Println("should enter this")
 			pbft.validateBatch(cert.prePrepare.TransactionBatch, n, v)
 			cert.sentValidate = true
 		}
@@ -1194,7 +1192,6 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 }
 
 func (pbft *pbftProtocal) sendCommit(digest string, v uint64, n uint64) error {
-
 
 	cert := pbft.getCert(v, n)
 
@@ -1250,7 +1247,6 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 		}
 		return nil
 	}
-
 	cert := pbft.getCert(commit.View, commit.SequenceNumber)
 
 	ok := cert.commit[*commit]
@@ -1259,7 +1255,6 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 		logger.Warningf("Ignoring duplicate commit from %d, --------view=%d/seqNo=%d--------", commit.ReplicaId, commit.View, commit.SequenceNumber)
 		return nil
 	}
-
 	cert.commit[*commit] = true
 	cert.commitCount++
 
@@ -1321,7 +1316,6 @@ func (pbft *pbftProtocal) executeOne(idx msgID) bool {
 		logger.Debugf("Replica %d already checkpoint for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
 		return false
 	}
-
 	// check if already executed
 	if cert.sentExecute == true {
 		logger.Debugf("Replica %d already execute for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
