@@ -1006,7 +1006,15 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	for _, cert := range pbft.certStore { // check for other PRE-PREPARE for same digest, but different seqNo
 		if p := cert.prePrepare; p != nil {
 			if p.View == pbft.view && p.SequenceNumber != n && p.BatchDigest == digest && digest != "" {
-				logger.Infof("Other pre-prepare found with same digest but different seqNo: %d instead of %d", p.SequenceNumber, n)
+				// This will happen if primary receive same digest result of txs
+				// It may result in DDos attack
+				logger.Warningf("Other pre-prepare found with same digest but different seqNo: %d instead of %d", p.SequenceNumber, n)
+				pbft.lastVid = *pbft.currentVid
+				pbft.currentVid = nil
+				delete(pbft.cacheValidatedBatch, digest)
+				delete(pbft.validatedBatchStore, digest)
+				delete(pbft.outstandingReqBatches, digest)
+				pbft.stopTimer()
 				return
 			}
 		}

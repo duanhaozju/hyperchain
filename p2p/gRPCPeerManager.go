@@ -239,7 +239,9 @@ func (this *GrpcPeerManager) GetPeerInfo() PeerInfos {
 			perinfo.Status = PENDING
 		}
 		perinfo.IsPrimary = per.IsPrimary
+		this.LocalNode.DelayTableMutex.RLock()
 		perinfo.Delay = this.LocalNode.DelayTable[per.ID]
+		this.LocalNode.DelayTableMutex.RUnlock()
 		perinfo.ID = per.ID
 		perinfos = append(perinfos, perinfo)
 	}
