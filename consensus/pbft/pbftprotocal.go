@@ -334,14 +334,12 @@ func (pbft *pbftProtocal) Close() {
 
 // RecvMsg is used by outer to send message to consensus
 func (pbft *pbftProtocal) RecvMsg(e []byte) error {
-
 	msg := &protos.Message{}
 	err := proto.Unmarshal(e, msg)
 	if err != nil {
 		logger.Errorf("Inner RecvMsg Unmarshal error: can not unmarshal pb.Message", err)
 		return err
 	}
-
 	if msg.Type == protos.Message_TRANSACTION {
 		return pbft.processTransaction(msg)
 	} else if msg.Type == protos.Message_CONSENSUS {
@@ -509,7 +507,6 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 
 // process the trasaction message
 func (pbft *pbftProtocal) processTransaction(msg *protos.Message) error {
-
 	// Parse the transaction payload to transaction
 	tx := &types.Transaction{}
 	err := proto.Unmarshal(msg.Payload, tx)
@@ -533,7 +530,7 @@ func (pbft *pbftProtocal) processConsensus(msg *protos.Message) error {
 		logger.Errorf("processConsensus, unmarshal error: can not unmarshal ConsensusMessage", err)
 		return err
 	}
-
+	// This transaction type is send by other replicas to primary
 	if consensus.Type == ConsensusMessage_TRANSACTION {
 		tx := &types.Transaction{}
 		err := proto.Unmarshal(consensus.Payload, tx)
@@ -586,7 +583,7 @@ func (pbft *pbftProtocal) processTxEvent(tx *types.Transaction) error {
 		payload, err := proto.Marshal(tx)
 		if err != nil {
 			logger.Errorf("CConsensusMessage_TRANSACTION Marshal Error", err)
-			return nil
+			return err
 		}
 		consensusMsg := &ConsensusMessage{
 			Type:    ConsensusMessage_TRANSACTION,
@@ -605,6 +602,7 @@ func (pbft *pbftProtocal) processRequestsDuringViewChange() error {
 	if pbft.activeView {
 		pbft.processCachedTransactions()
 	} else {
+		// return error
 		logger.Critical("peer try to processReqDuringViewChange but view change is not finished")
 	}
 	return nil
@@ -921,11 +919,9 @@ func (pbft *pbftProtocal) validateBatch(txBatch *TransactionBatch, vid uint64, v
 		}
 		pbft.helper.ValidateBatch(txBatch.Batch, txBatch.Timestamp, vid, view, false)
 	}
-
 }
 
 func (pbft *pbftProtocal) trySendPrePrepare() {
-
 
 	if pbft.currentVid != nil {
 		logger.Debugf("Replica %d not attempting to send pre-prepare bacause it is currently send %d, retry.", pbft.id, pbft.currentVid)
@@ -989,8 +985,8 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 			}
 		}
 	}
-
 	if !pbft.inWV(pbft.view, n) {
+		fmt.Println("should enter this")
 		logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because it is out of sequence numbers", pbft.id, digest)
 		return
 	}
@@ -1054,6 +1050,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 		return nil
 	}
 
+
 	if !pbft.inWV(preprep.View, preprep.SequenceNumber) {
 		if preprep.SequenceNumber != pbft.h && !pbft.skipInProgress {
 			logger.Warningf("Replica %d pre-prepare view different, or sequence number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d", pbft.id, preprep.View, pbft.primary(pbft.view), preprep.SequenceNumber, pbft.h)
@@ -1090,6 +1087,8 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 	
 	pbft.nullRequestTimer.Stop()
 	logger.Debug("receive  pre-prepare first seq is:",preprep.SequenceNumber)
+
+
 	if pbft.primary(pbft.view) != pbft.id && pbft.prePrepared(preprep.BatchDigest, preprep.View, preprep.SequenceNumber) && !cert.sentPrepare {
 		logger.Debugf("Backup %d broadcasting prepare for view=%d/seqNo=%d", pbft.id, preprep.View, preprep.SequenceNumber)
 		prep := &Prepare{
@@ -1161,7 +1160,6 @@ func (pbft *pbftProtocal) recvPrepare(prep *Prepare) error {
 	return pbft.maybeSendCommit(prep.BatchDigest, prep.View, prep.SequenceNumber)
 }
 
-//
 func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) error {
 
 	cert := pbft.getCert(v, n)
@@ -1185,6 +1183,7 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 		return pbft.sendCommit(digest, v, n)
 	} else {
 		if !cert.sentValidate {
+			fmt.Println("should enter this")
 			pbft.validateBatch(cert.prePrepare.TransactionBatch, n, v)
 			cert.sentValidate = true
 		}
@@ -1395,6 +1394,15 @@ func (pbft *pbftProtocal) execDoneSync(idx msgID) {
 	}
 
 	pbft.currentExec = nil
+
+	// optimization: if we are in view changing waiting for executing to target seqNo,
+	// one-time processNewView() is enough. No need to processNewView() every time in execDoneSync()
+	if !pbft.activeView && pbft.lastExec == pbft.nvInitialSeqNo {
+		pbft.processNewView()
+	}
+
+
+
 	pbft.executeOutstanding()
 
 }
