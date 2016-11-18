@@ -12,10 +12,12 @@ import (
 	"hyperchain/manager"
 	"hyperchain/hpc"
 	"time"
+	"github.com/astaxie/beego"
+	_ "hyperchain/jsonrpc/restful/routers"
 )
 
 const (
-	maxHTTPRequestContentLength = 1024 * 128
+	maxHTTPRequestContentLength = 1024 * 256
 )
 
 type RateLimitConfig struct {
@@ -35,7 +37,6 @@ func (hrw *httpReadWrite) Close() error{
 }
 
 func Start(httpPort int,eventMux *event.TypeMux,pm *manager.ProtocolManager, cfg RateLimitConfig) error{
-	//log.Info("=============enter Start()=================")
 	eventMux = eventMux
 
 	server := NewServer()
@@ -50,14 +51,6 @@ func Start(httpPort int,eventMux *event.TypeMux,pm *manager.ProtocolManager, cfg
 			return err
 		}
 	}
-	//go func() {
-	//	log.Info("start the simple httpserver")
-	//	cmd := exec.Command("pyhton $GOPATH/src/hyperchain/jsonrpc/Dashboard/simpleHttpServer.py")
-	//	//cmd := exec.Command("pwd")
-	//	cmd.Stdout = os.Stdout
-	//	cmd.Stderr = os.Stderr
-	//	log.Info(cmd.Run())
-	//}()
 
 	startHttp(httpPort, server)
 
@@ -66,7 +59,6 @@ func Start(httpPort int,eventMux *event.TypeMux,pm *manager.ProtocolManager, cfg
 
 
 func startHttp(httpPort int, srv *Server) {
-	//log.Info("=============enter startHttp()=================")
 	// TODO AllowedOrigins should be a parameter
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
@@ -76,11 +68,20 @@ func startHttp(httpPort int, srv *Server) {
 	// Insert the middleware
 	handler := c.Handler(newJSONHTTPHandler(srv))
 
-	http.ListenAndServe(":"+strconv.Itoa(httpPort),handler)
+	go http.ListenAndServe(":"+strconv.Itoa(httpPort),handler)
+
+	// ===================================== 2016.11.15 START ================================ //
+	// Restful路由接口
+	//实例化路由
+	//router := routers.NewRouter()
+	//启动路由服务
+	//http.ListenAndServe(":9000",router)
+	beego.BConfig.CopyRequestBody = true
+	beego.Run("127.0.0.1:9000")
+	// ===================================== 2016.11.15 END  ================================ //
 }
 
 func newJSONHTTPHandler(srv *Server) http.HandlerFunc{
-	//log.Info("=============enter newJSONHTTPHandler()=================")
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.ContentLength > maxHTTPRequestContentLength {
 			http.Error(w,

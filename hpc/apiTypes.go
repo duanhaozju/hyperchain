@@ -17,6 +17,8 @@ type API struct {
 	Public    bool        // indication if the methods must be considered safe for public use
 }
 
+var Apis []API
+
 func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnable bool, txPeak int64 , txRate time.Duration, contractPeak int64, contractRate time.Duration) []API{
 
 	db, err := hyperdb.GetLDBDatabase()
@@ -25,7 +27,7 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnab
 		log.Errorf("Open database error: %v", err)
 	}
 
-	return []API{
+	Apis = []API{
 		{
 			Namespace: "tx",
 			Version: "0.4",
@@ -57,4 +59,15 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnab
 			Public: true,
 		},
 	}
+
+	return Apis
+}
+
+func GetApiObjectByNamespace(name string) API{
+	for _,api := range Apis {
+		if api.Namespace == name {
+			return api
+		}
+	}
+	return API{}
 }
