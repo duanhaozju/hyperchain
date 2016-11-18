@@ -58,5 +58,3 @@ global:
             txFillRate: 0.5ms
             contractRatePeak : 100
             contractFillRate: 0.5ms
-        globalcache:
-            enable  : true
