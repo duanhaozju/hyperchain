@@ -17,7 +17,7 @@ done < innerserverlist.txt
 scpfile() {
  scp -r config hyperchain@$1:/home/hyperchain/
  scp hyperchain hyperchain@$1:/home/hyperchain/
- ssh hyperchain@$1 "rm -rf build"
+# ssh hyperchain@$1 "rm -rf build"
 }
 
 for server_address in ${SERVER_ADDR[@]}; do

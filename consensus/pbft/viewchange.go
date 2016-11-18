@@ -565,8 +565,10 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	pbft.seqNo = pbft.h
 	pbft.vid = pbft.h
 	pbft.lastVid = pbft.h
-	backendVid := uint64(pbft.vid+1)
-	pbft.helper.VcReset(backendVid)
+	if !pbft.skipInProgress {
+		backendVid := uint64(pbft.vid+1)
+		pbft.helper.VcReset(backendVid)
+	}
 	xSetLen := len(nv.Xset)
 	upper := uint64(xSetLen) + pbft.h + uint64(1)
 	if pbft.primary(pbft.view) == pbft.id {

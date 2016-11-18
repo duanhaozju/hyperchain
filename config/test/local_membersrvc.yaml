@@ -11,7 +11,7 @@ server:
         rootpath: "./build/production"
         cadir: "./build/membersrvc"
 
-        caserverdir: "../../config/"
+        caserverdir: "../config/"
 
         # port the CA services are listening on
         port: ":50051"
