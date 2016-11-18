@@ -83,7 +83,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 
 	if cfg.State == nil {
 		db, _ := hyperdb.NewMemDatabase()
-		cfg.State, _ = state.New(common.Hash{}, db, true)
+		cfg.State, _ = state.New(common.Hash{}, db)
 	}
 	var (
 		vmenv    = NewEnv(cfg, cfg.State)

@@ -18,19 +18,19 @@ func TestGrpcPeerManager_Start(t *testing.T) {
 	grpcPeerMgr := NewGrpcManager(path, 1)
 	aliveChan := make(chan bool)
 	eventMux := new(event.TypeMux)
-	go grpcPeerMgr.Start(aliveChan, eventMux,false)
+	go grpcPeerMgr.Start(aliveChan, eventMux)
 
 	grpcPeerMgr2 := NewGrpcManager(path, 2)
 
-	go grpcPeerMgr2.Start(aliveChan, eventMux,false)
+	go grpcPeerMgr2.Start(aliveChan, eventMux)
 
 	grpcPeerMgr3 := NewGrpcManager(path, 3)
 
-	go grpcPeerMgr3.Start(aliveChan, eventMux,false)
+	go grpcPeerMgr3.Start(aliveChan, eventMux)
 
 	grpcPeerMgr4 := NewGrpcManager(path, 4)
 
-	go grpcPeerMgr4.Start(aliveChan, eventMux,false)
+	go grpcPeerMgr4.Start(aliveChan, eventMux)
 	// wait the sub thread done
 	nodeCount := 0
 	for flag := range aliveChan {

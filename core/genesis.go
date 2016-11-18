@@ -52,7 +52,7 @@ func CreateInitBlock(filename string) {
 		return
 	}
 
-	stateDB, err := state.New(common.Hash{}, db, true)
+	stateDB, err := state.New(common.Hash{}, db)
 	if err != nil {
 		log.Error("genesis.go file create statedb failed!")
 		return

@@ -30,7 +30,7 @@ type argT struct {
 	ConfigPath  string `cli:"c,conf" usage:"配置文件所在路径" dft:"./config/global.yaml"`
 	GRPCPort    int    `cli:"l,rpcport" usage:"远程连接端口" dft:"8001"`
 	HTTPPort    int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
-	IsReconnect bool  `cli:"r,isReconnect" usage:"是否重新链接" dft:"false"`
+	IsReconnect bool  `cli:"r,isReconnect" usage:"是否重新链接 dft:"false"`
 }
 
 func checkLicense(licensePath string) (err error, expiredTime time.Time) {
@@ -120,8 +120,7 @@ func main() {
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
 
 		//init block pool to save block
-		globalCacheEnable := config.getGlobalCacheEnable()
-		blockPool := blockpool.NewBlockPool(eventMux, cs, globalCacheEnable)
+		blockPool := blockpool.NewBlockPool(eventMux, cs)
 		if blockPool == nil {
 			return errors.New("Initialize BlockPool failed")
 		}

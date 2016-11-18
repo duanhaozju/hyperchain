@@ -83,10 +83,6 @@ func (hSM *HandShakeManager) EncWithSecret(message []byte, peerHash string) []by
 	//return encrypted
 
 	//aes
-	if _,ok := hSM.secrets[peerHash];!ok{
-		panic("the peer hasn't negotiate the share secret, and please restart this node")
-		return []byte("")
-	}
 	key := hSM.secrets[peerHash][:16]
 	var iv = []byte(key)[:aes.BlockSize]
 	encrypted := make([]byte, len(message))
@@ -112,10 +108,6 @@ func (hSM *HandShakeManager) DecWithSecret(message []byte, peerHash string) []by
 
 	//aes
 	//
-	if _,ok := hSM.secrets[peerHash];!ok{
-		panic("the peer hasn't negotiate the share secret, and please restart this node")
-		return []byte("")
-	}
 	key := hSM.secrets[peerHash][:16]
 	var iv = []byte(key)[:aes.BlockSize]
 	decrypted := make([]byte, len(message))

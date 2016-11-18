@@ -129,7 +129,7 @@ func getBlockStateDb(n BlockNumber, db *hyperdb.LDBDatabase) (*state.StateDB, er
 		return nil, err
 	}
 
-	stateDB, err := state.New(block.MerkleRoot, db, false)
+	stateDB, err := state.New(block.MerkleRoot, db)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
 		return nil, err

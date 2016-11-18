@@ -30,10 +30,9 @@ var peerPool *PeersPool
 
 
 func init(){
-	membersrvc.Start("../config/test/local_membersrvc.yaml", 1)
+	membersrvc.Start("../../config/test/local_membersrvc.yaml", 1)
 	fakeNodeTEM = transport.NewHandShakeManger()
-	peerPool = NewPeerPool(fakeNodeTEM)
-	fakeNode = NewNode(8123,new(event.TypeMux),1,peerPool)
+	fakeNode = NewNode(8123,new(event.TypeMux),1,fakeNodeTEM)
 	fakeNodeAddr =peerComm.ExtractAddress(peerComm.GetLocalIp(),8123,1)
 	localAddr = peerComm.ExtractAddress(peerComm.GetLocalIp(),8124,2)
 	localTEM = transport.NewHandShakeManger()

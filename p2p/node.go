@@ -29,7 +29,7 @@ type Node struct {
 	//common information
 	IsPrimary          bool
 	DelayTable         map[uint64]int64
-	DelayTableMutex    sync.RWMutex
+	DelayTableMutex    sync.Mutex
 	PeerPool           *PeersPool
 
 }

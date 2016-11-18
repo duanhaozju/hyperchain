@@ -41,7 +41,7 @@ func init() {
 	}else {
 	}
 	// 2.init the stateObjectSizeCache
-	stateObjectCache = make(map[common.Address] *StateObject)
+	// stateObjectCache = make(map[common.Address] *StateObject)
 }
 
 // The starting nonce determines the default nonce when new accounts are being
@@ -68,11 +68,10 @@ type StateDB struct {
 	logSize          uint
 	leastStateObject *StateObject
 	lock 		sync.Mutex
-	globalCacheEnable bool
 }
 
 // Create a new state from a given trie
-func New(root common.Hash, db hyperdb.Database, enable bool) (*StateDB, error) {
+func New(root common.Hash, db hyperdb.Database) (*StateDB, error) {
 	tr, err := trie.NewSecure(root, db)
 	if err != nil {
 		return nil, err
@@ -84,7 +83,6 @@ func New(root common.Hash, db hyperdb.Database, enable bool) (*StateDB, error) {
 		stateObjectDirty:	make(map[common.Address]struct{}),
 		refund:       		new(big.Int),
 		logs:         		make(map[common.Hash]vm.Logs),
-		globalCacheEnable:      enable,
 	}, nil
 
 }
@@ -124,9 +122,7 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.logSize = 0
 	self.refund = new(big.Int)
 	// if reset we will clear all stateObjectSizeCache
-	if self.globalCacheEnable {
-		stateObjectCache =  make(map[common.Address] *StateObject)
-	}
+	// stateObjectCache =  make(map[common.Address] *StateObject)
 	return nil
 }
 
@@ -341,17 +337,15 @@ func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObje
 
 	// TODO fix in the next version
 	// 2.we will find the stateObject from stateObjectSizeCache
-	if self.globalCacheEnable {
-		stateObject = stateObjectCache[addr]
-		if stateObject != nil{
-			if stateObject.deleted{
-				stateObject = nil
-			}else {
-				self.SetStateObject(stateObject)
-				return stateObject
-			}
-		}
-	}
+	//stateObject = stateObjectCache[addr]
+	//if stateObject != nil{
+	//	if stateObject.deleted{
+	//		stateObject = nil
+	//	}else {
+	//		self.SetStateObject(stateObject)
+	//		return stateObject
+	//	}
+	//}
 
 	// 3.we will find the stateObject from the db by trie
 	data := self.trie.Get(addr[:])
@@ -362,9 +356,7 @@ func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObje
 	if err != nil {
 		return nil
 	}
-	if self.globalCacheEnable {
-		stateObjectCache[addr] = stateObject
-	}
+	// stateObjectCache[addr] = stateObject
 	self.SetStateObject(stateObject)
 	return stateObject
 }
@@ -388,6 +380,7 @@ func (self *StateDB) newStateObject(addr common.Address) *StateObject {
 	stateObject := NewStateObject(addr, self.db)
 	stateObject.SetNonce(StartingNonce)
 	self.stateObjects[addr.Str()] = stateObject
+	// stateObjectCache[addr] = stateObject
 	return stateObject
 }
 
@@ -416,7 +409,7 @@ func (self *StateDB) CreateAccount(addr common.Address) vm.Account {
 // TODO it could be better
 // 1.from the stateObjectCacheSize
 func (self *StateDB) Copy() *StateDB {
-	state, _ := New(common.Hash{}, self.db, self.globalCacheEnable)
+	state, _ := New(common.Hash{}, self.db)
 	state.trie = self.trie
 	for k, stateObject := range self.stateObjects {
 		state.stateObjects[k] = stateObject.Copy()
@@ -501,9 +494,7 @@ func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
 			// and just mark it for deletion in the trie.
 			s.DeleteStateObject(stateObject)
 			stateObject.dirty = false
-			if s.globalCacheEnable {
-				delete(stateObjectCache,stateObject.Address())
-			}
+			//delete(stateObjectCache,stateObject.Address())
 		} else {
 			if len(stateObject.code) > 0 {
 				if err := db.Put(stateObject.codeHash, stateObject.code); err != nil {
@@ -523,13 +514,8 @@ func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
 			// Update the object in the account trie.
 			s.UpdateStateObject(stateObject)
 			stateObject.dirty = false
-			if s.globalCacheEnable {
-				stateObjectCache[stateObject.Address()] = stateObject
-			}
+			// stateObjectCache[stateObject.Address()] = stateObject
 		}
 	}
 	return s.trie.CommitTo(db)
-}
-func  PurgeGlobalCache() {
-	stateObjectCache =  make(map[common.Address] *StateObject)
 }
