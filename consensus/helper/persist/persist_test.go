@@ -15,7 +15,7 @@ import (
 )
 
 func TestDaoOnState(t *testing.T) {
-
+	defer DelAllState()
 	k := "k"
 	v1 := []byte("v1")
 	v2 := []byte("v2")
@@ -98,4 +98,8 @@ func TestReadStateSet(t *testing.T) {
 	for k := range kvs {// clear the test data
 		DelState(k)
 	}
+}
+
+func TestGetHeightofChain(t *testing.T)  {
+	//GetHeightofChain()
 }

@@ -12,8 +12,11 @@ import (
 	"time"
 	"hyperchain/consensus/events"
 	"strings"
+
 	//"hyperchain/core/types"
 	//"reflect"
+	"hyperchain/core/types"
+	"reflect"
 )
 
 func TestSortableUint64SliceFunctions(t *testing.T) {
@@ -238,17 +241,244 @@ func TestAllCorrectReplicasQuorum(t *testing.T)  {
 	}
 }
 
+
+type mockEvent struct {
+	info string
+}
+
+type mockReceiver struct {
+	processEventImpl func(event events.Event) events.Event
+}
+
+func (mr *mockReceiver) ProcessEvent(event events.Event) events.Event {
+	if mr.processEventImpl != nil {
+		return mr.processEventImpl(event)
+	}
+	return nil
+}
+
 func TestPostRequestEvent(t *testing.T)  {
 	pbft := new(pbftProtocal)
 
-	//queue := pbft.pbftManager.Queue()
-	//tx := &types.Transaction{Id:123}
+	tx := &types.Transaction{Id:123}
+	evts := make(chan events.Event)
+
+	pbft.batchManager = events.NewManagerImpl()
+	pbft.batchManager.SetReceiver(&mockReceiver{
+		processEventImpl : func(event events.Event) events.Event{
+			evts <- event
+			return nil
+		},
+	})
+	pbft.batchManager.Start()
+	pbft.postRequestEvent(tx)
+
+	go func() {
+		select {
+		case e := <- evts:
+			if !reflect.DeepEqual(e, tx) {
+				t.Errorf("error postRequestEvent ")
+			}
+		case <- time.After(3*time.Second) :
+			t.Errorf("error postRequestEvent event not received")
+		}
+	}()
+}
+
+func TestPostPbftEvent(t *testing.T)  {
+	pbft := new(pbftProtocal)
+	mEvent := &mockEvent{info:"pbftEvent"}
+
+	evts := make(chan events.Event)
+	pbft.pbftManager = events.NewManagerImpl()
+	pbft.pbftManager.SetReceiver(&mockReceiver{
+		processEventImpl : func(event events.Event) events.Event{
+			evts <- event
+			return nil
+		},
+	})
+	pbft.pbftManager.Start()
+
+	pbft.postPbftEvent(mEvent)
+
+	go func() {
+		select {
+		case e := <- evts:
+			if !reflect.DeepEqual(e, mEvent) {
+				t.Errorf("error postPbftEvent ")
+			}
+		case <- time.After(3*time.Second) :
+			t.Errorf("error postPbftEvent event not received")
+		}
+	}()
+}
+
+func TestPrepared(t *testing.T)  {
+	pbft := new(pbftProtocal)
+
+	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
+	pbft.view = 2
+	pbft.seqNo = 100
+
+	pbft.validatedBatchStore["d1"] = &TransactionBatch{nil, int64(1001)}
+
+	digest := ""
+	v := uint64(2)
+	seqNo := uint64(100)
+
+	pbft.prePrepared(digest, v, seqNo)
+
+	rs := pbft.prepared("xxx", 12, 12)
+	if rs {
+		t.Errorf("error prepared(%s, %d, %d) = true, expected: false", "xxx", 12, 12)
+	}
+
+	digest = "d1"
+	pbft.certStore = make(map[msgID]*msgCert)
+	prepare := make(map[Prepare]bool)
+	prePrepare0 := &PrePrepare{
+		View:v,
+		SequenceNumber:seqNo,
+		BatchDigest: digest,
+	}
+
+	commit := make(map[Commit]bool)
+	cert0 := &msgCert{
+		prepare:	prepare,
+		commit:		commit,
+		digest:     digest,
+		prePrepare: prePrepare0,
+
+	}
+
+	idx := msgID{v, seqNo}
+	pbft.certStore[idx] = cert0
+
+	rs = pbft.prepared(digest, v, seqNo)
+	if rs == false {
+		t.Errorf("error prepared(%s, %d, %d) = false, expected: true", digest, v, seqNo)
+	}
+
+}
+
+func TestConsensusMsgHelper(t *testing.T)  {
+	msg := &ConsensusMessage{
+		Type:ConsensusMessage_CHECKPOINT,
+	}
+	rs := consensusMsgHelper(msg, 1211)
+	if rs.Id != 1211 {
+		t.Errorf("error consensusMsgHelper failed!")
+	}
+}
+
+func TestNullRequestMsgHelper(t *testing.T)  {
+	msg := nullRequestMsgHelper(1211)
+	if msg.Id != 1211 {
+		t.Errorf("error nullRequestMsgHelper(%d) failed!", 1211)
+	}
+}
+
+func TestStateUpdateHelper(t *testing.T)  {
+	r := []uint64 {121111}
+	msg := stateUpdateHelper(1, 2, []byte("121111"), r)
+
+	if msg.Id != 1 || msg.SeqNo != 2 ||
+		!reflect.DeepEqual(msg.Replicas, r)||
+		!reflect.DeepEqual(msg.TargetId, []byte("121111")) {
+		t.Errorf("error stateUpdateHelper failed!")
+	}
+}
+
+func TestCommitted(t *testing.T)  {
+	pbft := new(pbftProtocal)
+
+	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
+	pbft.view = 2
+	pbft.seqNo = 100
+
+	pbft.validatedBatchStore["d1"] = &TransactionBatch{nil, int64(1001)}
+
+	digest := ""
+	v := uint64(2)
+	seqNo := uint64(100)
+
+	pbft.prePrepared(digest, v, seqNo)
+
+	rs := pbft.committed(digest, v, seqNo)
+	if rs {
+		t.Errorf("error committed(%s, %d, %d) = true, expected: false", digest, v, seqNo)
+	}
+
+	digest = "d1"
+	pbft.certStore = make(map[msgID]*msgCert)
+	prepare := make(map[Prepare]bool)
+	prePrepare0 := &PrePrepare{
+		View:v,
+		SequenceNumber:seqNo,
+		BatchDigest: digest,
+	}
+
+	commit := make(map[Commit]bool)
+	cert0 := &msgCert{
+		prepare:	prepare,
+		commit:		commit,
+		digest:     digest,
+		prePrepare: prePrepare0,
+
+	}
+	cert0.commitCount = 100
+
+	idx := msgID{v, seqNo}
+	pbft.certStore[idx] = cert0
+
+	rs = pbft.committed(digest, v, seqNo)
+
+	if rs == false {
+		t.Errorf("error committed(%s, %d, %d) = false, expected: true", digest, v, seqNo)
+	}
+}
+
+func TestNullReqTimerReset(t *testing.T)  {
+	pbft := new(pbftProtocal)
+	pbft.nullRequestTimeout = 5 * time.Second
+	pbft.view = 3
+	pbft.id = 3
+	pbft.requestTimeout = 3 * time.Second
+	pbft.replicaCount = 2
 
 	pbft.pbftManager = events.NewManagerImpl()
-	//pbft.postRequestEvent(tx)
-	//
-	//trx := <- queue
-	//if reflect.DeepEqual(trx, tx) != true {
-	//	t.Errorf("error postRequestEvent(), not post successful!")
-	//}
+	pbftTimerFactory := events.NewTimerFactoryImpl(pbft.pbftManager)
+	pbft.nullRequestTimer = pbftTimerFactory.CreateTimer()
+
+	pbft.nullReqTimerReset()
+	pbft.id = 5
+	pbft.nullReqTimerReset()
+}
+
+func TestStartTimerIfOutstandingRequests(t *testing.T)  {
+	pbft := new(pbftProtocal)
+	pbft.skipInProgress = true
+
+	pbft.startTimerIfOutstandingRequests()
+	pbft.skipInProgress = false
+
+	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
+	pbft.outstandingReqBatches["t1"] = &TransactionBatch{Timestamp:121}
+	pbft.pbftManager = events.NewManagerImpl()
+	pbftTimerFactory := events.NewTimerFactoryImpl(pbft.pbftManager)
+	pbft.newViewTimer = pbftTimerFactory.CreateTimer()
+	pbft.timerActive = false
+	pbft.startTimerIfOutstandingRequests()
+
+	if pbft.timerActive == false {
+		t.Errorf("error startTimerIfOutstandingRequests failed!")
+	}
+	pbft.timerActive = false
+	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
+	pbft.startTimerIfOutstandingRequests()
+
+	if pbft.timerActive == true {
+		t.Errorf("error startTimerIfOutstandingRequests failed!")
+	}
+
 }
