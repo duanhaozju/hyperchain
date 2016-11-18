@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func StressTest(nodeFile string, duration int, tps int, instant int, testType int, ratio float64, randNormalTx int, randContractTx int, randContract int, code string, methoddata string, silense bool, load bool, estimation int) bool {
+func StressTest(nodeFile string, duration int, tps int, instant int, testType int, ratio float64, randNormalTx int, randContractTx int, randContract int, code string, methoddata string, silense bool, simulate bool, load bool, estimation int) bool {
 	if tps == 0 || instant == 0 {
 		output(silense, "invalid tps or instant parameter")
 		return false
@@ -24,8 +24,8 @@ func StressTest(nodeFile string, duration int, tps int, instant int, testType in
 	if err != nil {
 		return false
 	}
-	generateNormalTransaction(load, randNormalTx)
-	generateContractTransaction(load, randContract, randContractTx, code, methoddata)
+	generateNormalTransaction(load, randNormalTx, simulate)
+	generateContractTransaction(load, randContract, randContractTx, code, methoddata, simulate)
 	start := time.Now().Unix()
 	timeBegin := time.Now().UnixNano()
 	end := start + int64(duration)
@@ -144,7 +144,7 @@ func loadNodeInfo(nodeFile string) ([]string, int, error) {
 	return nodes, n, nil
 }
 
-func generateNormalTransaction(load bool, n int) {
+func generateNormalTransaction(load bool, n int, simulate bool) {
 	logger.Notice("================ Generate Normal Transactions ================")
 	var cnt int
 	var tmp []string
@@ -162,7 +162,7 @@ func generateNormalTransaction(load bool, n int) {
 		sender := genesisAccount[rand.Intn(len(genesisAccount))]
 		receiver := generateAddress()
 		amount := generateTransferAmount()
-		command, success := NewTransaction(genesisPassword, sender, receiver, 0, amount, "", 0, "localhost", 8081, false ,true)
+		command, success := NewTransaction(genesisPassword, sender, receiver, 0, amount, "", 0, "localhost", 8081, simulate ,true)
 
 		if success == false {
 			logger.Error("create normal transaction failed")
@@ -183,7 +183,7 @@ func generateNormalTransaction(load bool, n int) {
 	logger.Noticef("================ %d Normal Transactions Generated ================", len(normalTxPool))
 }
 
-func generateContractTransaction(load bool, n, m int, code, methoddata string) {
+func generateContractTransaction(load bool, n, m int, code, methoddata string, simulate bool) {
 	var cnt int
 	var ret []string
 	var cnt2 int
@@ -218,7 +218,7 @@ func generateContractTransaction(load bool, n, m int, code, methoddata string) {
 				methoddata = methodid
 			}
 		}
-		command, success := NewTransaction(genesisPassword, sender, receiver, 0, 0, methoddata, 1, "localhost", 8081, false, true)
+		command, success := NewTransaction(genesisPassword, sender, receiver, 0, 0, methoddata, 1, "localhost", 8081, simulate, true)
 		if success == false {
 			logger.Error("create contract transaction failed")
 		} else {

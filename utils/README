@@ -167,6 +167,8 @@ Example:
     ./utils -o stress_test -tps 1000 -instant 10 -duration 30 -type 1 -load=true -code "balabala" -invoke_payload "balabala"
     5.3.  mix transaction stress test with 1000 tps and 10 instant concurrency elapsed 30 seconds (70 percent normal transaction and 30 percent contract transaction)
     ./utils -o stress_test -tps 1000 -instant 10 -duration 30 -type 2 -ratio 0.7 -load=load -rand_normal_tx 30 -rand_contract_tx 50 -rand_contract 20
+    5.4.  simulate transaction stress test with 1000 tps and 10 instant concurrency elapsed 30 seconds
+    ./utils -o stress_test -tps 1000 -instant 10 -duration 30 -type 0 -load=load -rand_normal_tx 30 -rand_contract_tx 50 -rand_contract 20 -simulate=true
 
     IMPORTANT:
     keep in mind that remove the testdata directory when you clear the hyperchain node's d atabase!

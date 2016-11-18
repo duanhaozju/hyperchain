@@ -48,7 +48,7 @@ func main() {
 	} else if strings.ToLower(*option) == "execute_transaction"{
 		builtin.ExecuteTransaction(*password, *from, *to, *timestamp, *amount, *payload, *t, *ip, *port, *simulate, *silense)
 	} else if strings.ToLower(*option) == "stress_test" {
-		builtin.StressTest(*nodeFile, *duration, *tps, *instant, *testType, *ratio, *normalTxNum, *contractTxNum, *contractNum, *code, *methoddata,*silense, *load, *estimation)
+		builtin.StressTest(*nodeFile, *duration, *tps, *instant, *testType, *ratio, *normalTxNum, *contractTxNum, *contractNum, *code, *methoddata, *silense, *simulate, *load, *estimation)
 	}
 }
 
