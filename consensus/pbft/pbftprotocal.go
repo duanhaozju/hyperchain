@@ -183,23 +183,27 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.nullRequestTimer = pbftTimerFactory.CreateTimer()
 	pbft.newViewTimer = pbftTimerFactory.CreateTimer()
 	pbft.firstRequestTimer = pbftTimerFactory.CreateTimer()
-	pbft.N = config.GetInt("general.nodes")
-	pbft.f = config.GetInt("general.f")
+	pbft.N = config.GetInt("pbft.nodes")
+	//pbft.f = config.GetInt("general.f")
+	pbft.f = (pbft.N-1) / 3
 
-	if pbft.f*3+1 > pbft.N {
-		panic(fmt.Sprintf("need at least %d enough replicas to tolerate %d byzantine faults, but only %d replicas configured", pbft.f*3+1, pbft.f, pbft.N))
-	}
+	//if pbft.f*3+1 > pbft.N {
+	//	panic(fmt.Sprintf("need at least %d enough replicas to tolerate %d byzantine faults, but only %d replicas configured", pbft.f*3+1, pbft.f, pbft.N))
+	//}
 
-	pbft.K = uint64(config.GetInt("general.K"))
-
-	pbft.logMultiplier = uint64(config.GetInt("general.logmultiplier"))
-	if pbft.logMultiplier < 2 {
-		panic("Log multiplier must be greater than or equal to 2")
-	}
+	//pbft.K = uint64(config.GetInt("general.K"))
+	pbft.K = uint64(10)
+	//pbft.logMultiplier = uint64(config.GetInt("general.logmultiplier"))
+	pbft.logMultiplier = uint64(10)
+	//if pbft.logMultiplier < 2 {
+	//	panic("Log multiplier must be greater than or equal to 2")
+	//}
 
 	pbft.L = pbft.logMultiplier * pbft.K // log size
-	pbft.viewChangePeriod = uint64(config.GetInt("general.viewchangeperiod"))
-	pbft.byzantine = config.GetBool("general.byzantine")
+	//pbft.viewChangePeriod = uint64(config.GetInt("general.viewchangeperiod"))
+	pbft.viewChangePeriod = uint64(0)
+	//pbft.byzantine = config.GetBool("general.byzantine")
+	pbft.byzantine = false
 
 	pbft.vcResendTimeout, err = time.ParseDuration(config.GetString("timeout.resendviewchange"))
 	if err != nil {
@@ -221,7 +225,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 		pbft.nullRequestTimeout = 0
 	}
 
-	pbft.firstRequestTimeout, err = time.ParseDuration(config.GetString("timeout.firstReq"))
+	pbft.firstRequestTimeout, err = time.ParseDuration(config.GetString("timeout.firstrequest"))
 	if err != nil {
 		logger.Noticef("Replica %d read first request timeout fail", pbft.id)
 		pbft.firstRequestTimeout = 30
@@ -282,7 +286,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 
 	// negotiate view
 	pbft.inNegoView = true
-	pbft.negoViewRspTimeout, err = time.ParseDuration(config.GetString("timeout.negoView"))
+	pbft.negoViewRspTimeout, err = time.ParseDuration(config.GetString("timeout.negoview"))
 	if err != nil {
 		panic(fmt.Errorf("Cannot parse negotiate view timeout: %s", err))
 	}
@@ -304,7 +308,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 
 	// initialize the batchTimeout
 	pbft.batchTimer = etf.CreateTimer()
-	pbft.batchSize = config.GetInt("general.batchsize")
+	pbft.batchSize = config.GetInt("pbft.batchsize")
 	pbft.batchStore = nil
 	pbft.batchTimeout, err = time.ParseDuration(config.GetString("timeout.batch"))
 	if err != nil {
@@ -1172,7 +1176,7 @@ func (pbft *pbftProtocal) recvPrepare(prep *Prepare) error {
 
 	if !pbft.inWV(prep.View, prep.SequenceNumber) {
 		if prep.SequenceNumber != pbft.h && !pbft.skipInProgress {
-			logger.Warningf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
+			logger.Warningf("Replica %d ignoring prepare form replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
 		} else {
 			// This is perfectly normal
 			logger.Debugf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
@@ -1279,7 +1283,7 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 
 	if !pbft.inWV(commit.View, commit.SequenceNumber) {
 		if commit.SequenceNumber != pbft.h && !pbft.skipInProgress {
-			logger.Warningf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
+			logger.Warningf("Replica %d ignoring commit from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
 		} else {
 			// This is perfectly normal
 			logger.Debugf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
