@@ -34,7 +34,6 @@ func (c *ContractsController) CompileContract() {
 	}
 
 	c.ServeJSON()
-	return
 }
 
 func (c *ContractsController) DeployContract() {
@@ -57,7 +56,6 @@ func (c *ContractsController) DeployContract() {
 	}
 
 	c.ServeJSON()
-	return
 }
 
 func (c *ContractsController) InvokeContract() {
@@ -80,7 +78,6 @@ func (c *ContractsController) InvokeContract() {
 	}
 
 	c.ServeJSON()
-	return
 }
 
 func (c *ContractsController) GetCode() {
@@ -116,5 +113,4 @@ func (c *ContractsController) GetCode() {
 		}
 	}
 	c.ServeJSON()
-	return
 }

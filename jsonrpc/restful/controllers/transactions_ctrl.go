@@ -5,38 +5,12 @@ import (
 	"hyperchain/hpc"
 	"hyperchain/jsonrpc/restful/utils"
 	"encoding/json"
-	//"hyperchain/common"
 	"strconv"
 )
 
 type TransactionsController struct {
 	beego.Controller
 }
-
-//type RegisterRequest struct {
-//	Phone    string `json:"phone"`
-//	Code     string `json:"code"`
-//	Password string `json:"password"`
-//}
-
-
-//
-//func (t *TransactionsController) Register() {
-//
-//	var request RegisterRequest
-//	json.Unmarshal(t.Ctx.Input.RequestBody, &request)
-//	phone := request.Phone
-//	code := request.Code
-//	password := request.Password
-//
-//	beego.Debug(phone)
-//	beego.Debug(code)
-//	beego.Debug(password)
-//
-//	//result := Result{Status:"error", Message:resp}
-//	//t.Data["json"] = result
-//	//t.ServeJSON()
-//}
 
 type requestInterval struct {
 	From *hpc.BlockNumber `form:"from"`

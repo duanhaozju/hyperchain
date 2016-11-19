@@ -140,36 +140,22 @@ func (b *BlocksController) GetBlockByHashOrNum() {
 	return
 }
 
-//func (b *BlocksController) GetBlockByNumber() {
-//	blkNum, err := utils.CheckBlockNumber(b.Ctx.Input.Param(":blkNum"))
-//	if err != nil {
-//		b.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
-//		b.ServeJSON()
-//		return
-//	}
-//
-//	PublicBlockAPIInterface := hpc.GetApiObjectByNamespace("block").Service
-//	PublicBlockAPI := PublicBlockAPIInterface.(*hpc.PublicBlockAPI)
-//
-//	block, err := PublicBlockAPI.GetBlockByNumber(blkNum)
-//	if err != nil {
-//		b.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
-//	} else {
-//		b.Data["json"] = NewJSONObject(block, nil)
-//	}
-//	b.ServeJSON()
-//}
+func (b *BlocksController) GetBlockTransactionCountByHash() {
 
-func (b *BlocksController) GetLatestBlock() {
-	PublicBlockAPIInterface := hpc.GetApiObjectByNamespace("block").Service
-	PublicBlockAPI := PublicBlockAPIInterface.(*hpc.PublicBlockAPI)
-
-	block, err := PublicBlockAPI.LatestBlock()
+	hash, err := utils.CheckHash(b.Ctx.Input.Param(":blkHash"))
 	if err != nil {
-		b.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+		b.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
 	} else {
-		b.Data["json"] = NewJSONObject(block, nil)
+		PublicTxAPIInterface := hpc.GetApiObjectByNamespace("tx").Service
+		PublicTxAPI := PublicTxAPIInterface.(*hpc.PublicTransactionAPI)
+
+		num, err := PublicTxAPI.GetBlockTransactionCountByHash(hash)
+		if err != nil {
+			b.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+		} else {
+			b.Data["json"] = NewJSONObject(num, nil)
+		}
 	}
+
 	b.ServeJSON()
 }
-
