@@ -21,7 +21,6 @@ var payload = flag.String("l", "", "use to specify transaction payload")
 var t = flag.Int("t", 0, "use to specify transaction type to generate, 0 represent normal transaction, 1 represent contract transaction")
 var ip = flag.String("ip", "localhost", "use to specify the ip address")
 var port = flag.Int("port", 8081, "use to specify the server port")
-var simulate = flag.Bool("simulate", false, "use to specify wthether the generated transaction run in sandbox")
 // stress test related
 var nodeFile = flag.String("nodefile", "./nodes.json", "use to specify node address configuration file path")
 var duration = flag.Int("duration", 0, "use to specify the duration of the stress test")
@@ -34,7 +33,6 @@ var methoddata = flag.String("invoke_payload", "", "use to specify the contract 
 var normalTxNum = flag.Int("rand_normal_tx", 0, "use to specify the number of random normal transaction which used in stress test")
 var contractTxNum = flag.Int("rand_contract_tx", 0, "use to specify the number of random contract transaction which used in stress test")
 var contractNum = flag.Int("rand_contract", 0, "use to specify the number of random contract which used in stress test")
-var simulateNum = flag.Int("rand_simulate_tx", 0, "use to specify the number of simulate contract tx which used in stress test")
 var load = flag.Bool("load", false, "use the generated transaction saved in the file")
 var estimation = flag.Int("e", 0, "use to specify the statistic estimation")
 var accountNum = flag.Int("acct_num", 0, "use to specify the account num")
@@ -46,15 +44,15 @@ func main() {
 	} else if strings.ToLower(*option) == "account" {
 		builtin.NewAccount(*password, *silense)
 	} else if strings.ToLower(*option) == "transaction" {
-		builtin.NewTransaction(*password, *from, *to, *timestamp,*amount, *payload, *t, *ip, *port, *simulate, *silense)
+		builtin.NewTransaction(*password, *from, *to, *timestamp,*amount, *payload, *t, *ip, *port,*silense)
 	} else if strings.ToLower(*option) == "execute_transaction"{
-		builtin.ExecuteTransaction(*password, *from, *to, *timestamp, *amount, *payload, *t, *ip, *port, *simulate, *silense)
+		builtin.ExecuteTransaction(*password, *from, *to, *timestamp, *amount, *payload, *t, *ip, *port, *silense)
 	} else if strings.ToLower(*option) == "stress_test" {
-		builtin.StressTest(*nodeFile, *duration, *tps, *instant, *testType, *ratio, *normalTxNum, *contractTxNum, *contractNum,*simulateNum, *code, *methoddata, *silense, *simulate, *load, *estimation)
-	} else if strings.ToLower(*option) == "accounts" {
-		builtin.NewAccounts(*accountNum, *password, *silense)
+		builtin.StressTest(*nodeFile, *duration, *tps, *instant, *testType, *ratio, *normalTxNum, *contractTxNum, *contractNum, *code, *methoddata,*silense, *load, *estimation)
 	} else if strings.ToLower(*option) == "nh" {
-		builtin.NHBANK()
+		builtin.NHBANK(*tps, *instant, *duration)
+	} else if strings.ToLower(*option) == "accounts" {
+		builtin.NewAccounts(*accountNum, "123", false)
 	}
 }
 
