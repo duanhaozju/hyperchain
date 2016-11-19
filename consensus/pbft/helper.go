@@ -305,6 +305,7 @@ func (pbft *pbftProtocal) startTimerIfOutstandingRequests() {
 }
 
 func (pbft *pbftProtocal) nullReqTimerReset(){
+	logger.Critical("Reset null request timer")
 	timeout := pbft.nullRequestTimeout
 	if pbft.primary(pbft.view) != pbft.id {
 		// we're waiting for the primary to deliver a null request - give it a bit more time

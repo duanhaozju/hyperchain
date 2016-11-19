@@ -372,6 +372,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	receiptRoot := receiptTrie.Hash().Bytes()
 	pool.lastValidationState.Store(root)
 	go public_batch.Write()
+	log.Error("Block Number", seqNo, "Merkle ROOT", root.Hex())
 	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
 }
 

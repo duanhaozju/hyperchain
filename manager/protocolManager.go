@@ -214,7 +214,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 	for obj := range self.consensusSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.BroadcastConsensusEvent:
-			log.Debug("######enter broadcast")
+			log.Info("######enter broadcast")
 			go self.BroadcastConsensus(ev.Payload)
 		case event.TxUniqueCastEvent:
 			var peers []uint64
@@ -233,7 +233,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 		case event.ConsensusEvent:
 			//call consensus module
-			log.Debug("###### enter ConsensusEvent")
+			log.Info("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 		}
 	}
