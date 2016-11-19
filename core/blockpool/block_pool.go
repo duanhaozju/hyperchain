@@ -546,31 +546,10 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 		return
 	}
 	pool.lastValidationState = common.BytesToHash(block.MerkleRoot)
+
 	// 2. Delete Invalid Stuff
-	for i := ev.SeqNo; i < tmpDemandNumber; i += 1 {
-		// delete tx, txmeta and receipt
-		block, err := core.GetBlockByNumber(db, i)
-		if err != nil {
-			log.Errorf("ViewChange, miss block %d ,error msg %s", i, err.Error())
-		}
+	pool.RemoveData(ev.SeqNo, tmpDemandNumber)
 
-		for _, tx := range block.Transactions {
-			if err := db.Delete(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
-				log.Errorf("ViewChange, delete useless tx in block %d failed, error msg %s", i, err.Error())
-			}
-			if err := db.Delete(append(core.ReceiptsPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
-				log.Errorf("ViewChange, delete useless receipt in block %d failed, error msg %s", i, err.Error())
-			}
-			if err := db.Delete(append(tx.GetTransactionHash().Bytes(), core.TxMetaSuffix...)); err != nil {
-				log.Errorf("ViewChange, delete useless txmeta in block %d failed, error msg %s", i, err.Error())
-			}
-		}
-		// delete block
-		if err := core.DeleteBlockByNum(db, i); err != nil {
-			log.Errorf("ViewChange, delete useless block %d failed, error msg %s", i, err.Error())
-		}
-
-	}
 	// 3. Delete from blockcache
 	keys := pool.blockCache.Keys()
 	for _, key := range keys {
@@ -581,13 +560,13 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 		record := ret.(BlockRecord)
 		for i, tx := range record.ValidTxs {
 			if err := db.Delete(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
-				log.Errorf("ViewChange, delete useless tx in block %d failed, error msg %s", i, err.Error())
+				log.Errorf("ViewChange, delete useless tx in cache %d failed, error msg %s", i, err.Error())
 			}
 			if err := db.Delete(append(core.ReceiptsPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
-				log.Errorf("ViewChange, delete useless receipt in block %d failed, error msg %s", i, err.Error())
+				log.Errorf("ViewChange, delete useless receipt in cache %d failed, error msg %s", i, err.Error())
 			}
 			if err := db.Delete(append(tx.GetTransactionHash().Bytes(), core.TxMetaSuffix...)); err != nil {
-				log.Errorf("ViewChange, delete useless txmeta in block %d failed, error msg %s", i, err.Error())
+				log.Errorf("ViewChange, delete useless txmeta in cache %d failed, error msg %s", i, err.Error())
 			}
 		}
 	}
@@ -595,5 +574,50 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	// 4. Reset chain
 	isGenesis := (block.Number == 0)
 	core.UpdateChain(block, isGenesis)
+}
 
+func (pool *BlockPool) RemoveData(from, to uint64) {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Error("Get Database Instance Failed! error msg,", err.Error())
+		return
+	}
+	// delete tx, txmeta and receipt
+	for i := from; i < to; i += 1 {
+		block, err := core.GetBlockByNumber(db, i)
+		if err != nil {
+			log.Errorf("miss block %d ,error msg %s", i, err.Error())
+			continue
+		}
+
+		for _, tx := range block.Transactions {
+			if err := db.Delete(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
+				log.Errorf("delete useless tx in block %d failed, error msg %s", i, err.Error())
+			}
+			if err := db.Delete(append(core.ReceiptsPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
+				log.Errorf("delete useless receipt in block %d failed, error msg %s", i, err.Error())
+			}
+			if err := db.Delete(append(tx.GetTransactionHash().Bytes(), core.TxMetaSuffix...)); err != nil {
+				log.Errorf("delete useless txmeta in block %d failed, error msg %s", i, err.Error())
+			}
+		}
+		// delete block
+		if err := core.DeleteBlockByNum(db, i); err != nil {
+			log.Errorf("ViewChange, delete useless block %d failed, error msg %s", i, err.Error())
+		}
+	}
+}
+func (pool *BlockPool) CutdownBlock(number uint64) {
+	pool.RemoveData(number, number + 1)
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Error("Get Database Instance Failed! error msg,", err.Error())
+		return
+	}
+	block, err := core.GetBlockByNumber(db, number - 1)
+	if err != nil {
+		log.Errorf("miss block %d ,error msg %s", number - 1, err.Error())
+		return
+	}
+	pool.lastValidationState = common.BytesToHash(block.MerkleRoot)
 }

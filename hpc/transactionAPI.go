@@ -159,6 +159,14 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.BuildHash().Bytes()
 
+	//delete repeated tx
+	var exist, _= core.JudgeTransactionExist(tran.db, tx.TransactionHash)
+
+
+	if exist{
+		return common.Hash{}, errors.New("repeated tx")
+	}
+
 	if args.Request != nil {
 
 		// ** For Hyperboard Test **
