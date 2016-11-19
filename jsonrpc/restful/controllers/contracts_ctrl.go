@@ -82,7 +82,7 @@ func (c *ContractsController) InvokeContract() {
 
 func (c *ContractsController) GetCode() {
 
-	p_blkNum := c.Input().Get("blkNum")
+	p_blkNum := c.Input().Get("blockNumber")
 	p_address := c.Input().Get("address") // contract address
 
 	PublicContractAPIInterface := hpc.GetApiObjectByNamespace("contract").Service
@@ -90,7 +90,7 @@ func (c *ContractsController) GetCode() {
 
 	// check the number of params
 	if p_blkNum == ""{
-		c.Data["json"] = NewJSONObject(nil, &invalidParamsError{"the param 'blkNum' can't be empty"})
+		c.Data["json"] = NewJSONObject(nil, &invalidParamsError{"the param 'blockNumber' can't be empty"})
 		c.ServeJSON()
 		return
 	}

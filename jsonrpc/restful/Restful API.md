@@ -1,64 +1,5 @@
 # Hyperchain RESTful接口设计
 
-
-# Blockchain
-
-##1.1 获取最新区块 
-**Method:** `GET` <br/>
-
-**URI:** `/v1/blockchain/blocks/latest`<br/>
-
-**Request:** `localhost:9000/v1/blockchain/blocks/latest`<br/>
-
-**Response:**<br/>
-```json
-{
-  "code": 200,
-  "message": "SUCCESS",
-  "result": {
-    "number": "0x4",
-    "hash": "0x9c450b2470e82ae22144b04ba727360705d1432637808d4a9701de114ff617b5",
-    "parentHash": "0xaaa29f2d348e8737b6bfa9937cf2d93cbabf9a48d7c7311c84e9b63870fb44d8",
-    "writeTime": 1479522703681186330,
-    "avgTime": "0x4",
-    "txcounts": "0x1",
-    "merkleRoot": "0x3396bc716c64854bb3a90f55aebdba45c953f39eda95f0f275ad13e7063d765a",
-    "transactions": [
-      {
-        "hash": "0x163493ca333b478c77f31441ff8767afcfbbdfe3c0287eb981351d8bf661fcf8",
-        "blockNumber": "0x4",
-        "blockHash": "0x9c450b2470e82ae22144b04ba727360705d1432637808d4a9701de114ff617b5",
-        "txIndex": "0x0",
-        "from": "0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd",
-        "to": "0x0000000000000000000000000000000000000000",
-        "amount": "0x0",
-        "timestamp": 1478959217012956575,
-        "executeTime": "0x4",
-        "invalid": false,
-        "invalidMsg": ""
-      }
-    ]
-  }
-}
-```
-
-## 1.2 获取交易总数量
-**Method:** `GET`<br/>
-
-**URI:** `/v1/blockchain/transactions/count`<br/>
-
-**Request:** `localhost:9000/v1/blockchain/transactions/count`<br/>
-
-**Response:** <br/>
-```json
-{
-  "code": 200,
-  "message": "SUCCESS",
-  "result": "0x2"
-}
-```
-
-
 # Transactions
 ##2.1 获取所有交易
 **Method:** `GET`<br/>
@@ -106,7 +47,7 @@
 ##2.2 获取交易（hash）
 **Method:** `GET`<br/>
 
-**URI: **`/v1/transactions/:txHash`<br/>
+**URI: **`/v1/transactions/:transactionHash`<br/>
 
 **Request:** `localhost:9000/v1/transactions/0xb6835407fb8d7ff3533eaecf5c32151add9ad58bf17e3179587eb71e8ce8a9b2`<br/>
 
@@ -131,12 +72,12 @@
 }
 ```
 
-## 2.3 获取交易（blkNum）
+## 2.3 获取交易（blockNumber）
 **Method:** `GET`<br/>
 
 **URI:** `/v1/transactions/query`<br/>
 
-**Request:** `localhost:9000/v1/transactions/query?blkNum=1&index=0`<br/>
+**Request:** `localhost:9000/v1/transactions/query?blockNumber=1&index=0`<br/>
 
 **Response:** <br/>
 ```json
@@ -159,12 +100,12 @@
 }
 ```
 
-##2.4 获取交易（blkhash）
+##2.4 获取交易（blockHash）
 **Method:** `GET`<br/>
 
 **URI:** `/v1/transactions/query`<br/>
 
-**Request:** `localhost:9000/v1/transactions/query?blkHash=0xaaa29f2d348e8737b6bfa9937cf2d93cbabf9a48d7c7311c84e9b63870fb44d8&index=0`<br/>
+**Request:** `localhost:9000/v1/transactions/query?blockHash=0xaaa29f2d348e8737b6bfa9937cf2d93cbabf9a48d7c7311c84e9b63870fb44d8&index=0`<br/>
 
 **Response:** <br/>
 ```json
@@ -215,7 +156,7 @@
 ## 2.6 获取交易回执
 **Method:** `GET`<br/>
 
-**URI:** `/v1/transactions/:txHash/receipt`<br/>
+**URI:** `/v1/transactions/:transactionHash/receipt`<br/>
 
 **Request:** `localhost:9000/v1/transactions/0x163493ca333b478c77f31441ff8767afcfbbdfe3c0287eb981351d8bf661fcf8/receipt`<br/>
 
@@ -236,7 +177,7 @@
 ##2.7 获取区块交易数量
 **Method:** `GET`<br/>
 
-**URI:** `/v1/blocks/:blkHash/transactions/count`<br/>
+**URI:** `/v1/blocks/:blockHash/transactions/count`<br/>
 
 **Request:** `localhost:9000/v1/blocks/0x5f0d026ded386f6a797a95791a6e47f7ed384728b3e2febf7e12397fe3adbba9/transactions/count`<br/>
 
@@ -249,7 +190,23 @@
 }
 ```
 
-## 2.8 获取签名哈希 
+##2.8 获取交易总数量
+**Method:** `GET`<br/>
+
+**URI:** `/v1/transactions/count`<br/>
+
+**Request:** `localhost:9000/v1/transactions/count`<br/>
+
+**Response:** <br/>
+```json
+{
+  "code": 200,
+  "message": "SUCCESS",
+  "result": "0x2"
+}
+```
+
+## 2.9 获取签名哈希 
 **Method:** `POST`<br/>
 
 **URI:** `/v1/transactions/get-hash-for-sign`<br/>
@@ -273,7 +230,7 @@
 }
 ```
 
-## 2.9 获取交易平均 处理时间
+## 2.10 获取交易平均 处理时间
 **Method:** `POST`<br/>
 
 **URI:** `/v1/transactions/average-time`<br/>
@@ -360,7 +317,7 @@
 
 **URI:** `/v1/blocks/query`<br/>
 
-**Request:** `localhost:9000/v1/blocks/query?blkHash=0x6443238a7384940188b8c7da57850c2af1230e63be2d4b82d9f9fcb4c08325ba`<br/>
+**Request:** `localhost:9000/v1/blocks/query?blockHash=0x6443238a7384940188b8c7da57850c2af1230e63be2d4b82d9f9fcb4c08325ba`<br/>
 
 **Response:**<br/>
 ```json
@@ -399,7 +356,7 @@
 
 **URI:** `/v1/blocks/query`<br/>
 
-**Request:** `localhost:9000/v1/blocks/query?blkNum=2`<br/>
+**Request:** `localhost:9000/v1/blocks/query?blockNumber=2`<br/>
 
 **Response:**<br/>
 ```json
@@ -432,6 +389,46 @@
   }
   }
 ```
+
+##3.4 获取最新区块 
+**Method:** `GET` <br/>
+
+**URI:** `/v1/blocks/latest`<br/>
+
+**Request:** `localhost:9000/v1/blocks/latest`<br/>
+
+**Response:**<br/>
+```json
+{
+  "code": 200,
+  "message": "SUCCESS",
+  "result": {
+    "number": "0x4",
+    "hash": "0x9c450b2470e82ae22144b04ba727360705d1432637808d4a9701de114ff617b5",
+    "parentHash": "0xaaa29f2d348e8737b6bfa9937cf2d93cbabf9a48d7c7311c84e9b63870fb44d8",
+    "writeTime": 1479522703681186330,
+    "avgTime": "0x4",
+    "txcounts": "0x1",
+    "merkleRoot": "0x3396bc716c64854bb3a90f55aebdba45c953f39eda95f0f275ad13e7063d765a",
+    "transactions": [
+      {
+        "hash": "0x163493ca333b478c77f31441ff8767afcfbbdfe3c0287eb981351d8bf661fcf8",
+        "blockNumber": "0x4",
+        "blockHash": "0x9c450b2470e82ae22144b04ba727360705d1432637808d4a9701de114ff617b5",
+        "txIndex": "0x0",
+        "from": "0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd",
+        "to": "0x0000000000000000000000000000000000000000",
+        "amount": "0x0",
+        "timestamp": 1478959217012956575,
+        "executeTime": "0x4",
+        "invalid": false,
+        "invalidMsg": ""
+      }
+    ]
+  }
+}
+```
+
 # Contracts
 ##4.1 编译合约 
 **Method:** `POST`<br/>
@@ -502,7 +499,7 @@
 
 **URI:** `/v1/contracts/query`<br/>
 
-**Request:** `localhost:9000/v1/contracts/query?address=0xb8dc305352edef315f6a7844948c864717e93c84&blkNum=5`<br/>
+**Request:** `localhost:9000/v1/contracts/query?address=0xb8dc305352edef315f6a7844948c864717e93c84&blockNumber=5`<br/>
 
 **Response:**<br/>
 
@@ -521,7 +518,7 @@
 
 **URI:** `/v1/accounts/:address/contracts/count`<br/>
 
-**Request:** `localhost:9000/v1/accounts/0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd/contracts/count?blkNum=1`<br/>
+**Request:** `localhost:9000/v1/accounts/0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd/contracts/count?blockNumber=1`<br/>
 
 **Response:**<br/>
 ```json

@@ -11,7 +11,7 @@ type AccountsController struct {
 }
 
 func (a *AccountsController) GetContractCountByAddr() {
-	p_blkNum := a.Input().Get("blkNum")
+	p_blkNum := a.Input().Get("blockNumber")
 	p_address := a.Ctx.Input.Param(":address") // account address
 
 	PublicContractAPIInterface := hpc.GetApiObjectByNamespace("contract").Service
@@ -19,7 +19,7 @@ func (a *AccountsController) GetContractCountByAddr() {
 
 	// check the number of params
 	if p_blkNum == ""{
-		a.Data["json"] = NewJSONObject(nil, &invalidParamsError{"the param 'blkNum' can't be empty"})
+		a.Data["json"] = NewJSONObject(nil, &invalidParamsError{"the param 'blockNumber' can't be empty"})
 		a.ServeJSON()
 		return
 	}

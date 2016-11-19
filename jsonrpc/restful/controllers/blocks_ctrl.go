@@ -16,7 +16,7 @@ type BlocksController struct {
 }
 
 func (b *BlocksController) GetTransactionByBlockNumberAndIndex() {
-	blkNum, err := utils.CheckBlockNumber(b.Ctx.Input.Param(":blkNum"))
+	blkNum, err := utils.CheckBlockNumber(b.Ctx.Input.Param(":blockNumber"))
 	if err != nil {
 		b.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
 		b.ServeJSON()
@@ -42,7 +42,7 @@ func (b *BlocksController) GetTransactionByBlockNumberAndIndex() {
 }
 
 func (b *BlocksController) GetTransactionByBlockHashAndIndex() {
-	blkHash, err := utils.CheckHash(b.Ctx.Input.Param(":blkHash"))
+	blkHash, err := utils.CheckHash(b.Ctx.Input.Param(":blockHash"))
 	if err != nil {
 		b.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
 		b.ServeJSON()
@@ -90,8 +90,8 @@ func (b *BlocksController) GetBlocks() {
 }
 
 func (b *BlocksController) GetBlockByHashOrNum() {
-	p_blkNum := b.Input().Get("blkNum")
-	p_blkHash := b.Input().Get("blkHash")
+	p_blkNum := b.Input().Get("blockNumber")
+	p_blkHash := b.Input().Get("blockHash")
 
 	PublicBlockAPIInterface := hpc.GetApiObjectByNamespace("block").Service
 	PublicBlockAPI := PublicBlockAPIInterface.(*hpc.PublicBlockAPI)
@@ -142,7 +142,7 @@ func (b *BlocksController) GetBlockByHashOrNum() {
 
 func (b *BlocksController) GetBlockTransactionCountByHash() {
 
-	hash, err := utils.CheckHash(b.Ctx.Input.Param(":blkHash"))
+	hash, err := utils.CheckHash(b.Ctx.Input.Param(":blockHash"))
 	if err != nil {
 		b.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
 	} else {
@@ -157,5 +157,18 @@ func (b *BlocksController) GetBlockTransactionCountByHash() {
 		}
 	}
 
+	b.ServeJSON()
+}
+
+func (b *BlocksController) GetLatestBlock() {
+	PublicBlockAPIInterface := hpc.GetApiObjectByNamespace("block").Service
+	PublicBlockAPI := PublicBlockAPIInterface.(*hpc.PublicBlockAPI)
+
+	block, err := PublicBlockAPI.LatestBlock()
+	if err != nil {
+		b.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+	} else {
+		b.Data["json"] = NewJSONObject(block, nil)
+	}
 	b.ServeJSON()
 }

@@ -64,8 +64,8 @@ func (t *TransactionsController) GetTransactions() {
 
 func (t *TransactionsController) GetTransactionByHash() {
 
-	//log.Error(t.Ctx.Input.Param(":txHash"))
-	hash, err := utils.CheckHash(t.Ctx.Input.Param(":txHash"))
+	//log.Error(t.Ctx.Input.Param(":transactionHash"))
+	hash, err := utils.CheckHash(t.Ctx.Input.Param(":transactionHash"))
 	//log.Error(hash.Hex())
 	if err != nil {
 		t.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
@@ -86,8 +86,8 @@ func (t *TransactionsController) GetTransactionByHash() {
 }
 
 func (t *TransactionsController) GetTransactionByBlockNumberOrBlockHash() {
-	p_blkNum := t.Input().Get("blkNum")
-	p_blkHash := t.Input().Get("blkHash")
+	p_blkNum := t.Input().Get("blockNumber")
+	p_blkHash := t.Input().Get("blockHash")
 	p_index := t.Input().Get("index")
 
 	PublicTxAPIInterface := hpc.GetApiObjectByNamespace("tx").Service
@@ -141,7 +141,7 @@ func (t *TransactionsController) GetTransactionByBlockNumberOrBlockHash() {
 }
 
 func (t *TransactionsController) GetTransactionReceipt() {
-	hash, err := utils.CheckHash(t.Ctx.Input.Param(":txHash"))
+	hash, err := utils.CheckHash(t.Ctx.Input.Param(":transactionHash"))
 	//log.Error(hash.Hex())
 	if err != nil {
 		t.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
@@ -201,6 +201,19 @@ func (t *TransactionsController) GetTxAvgTimeByBlockNumber() {
 		t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
 	} else {
 		t.Data["json"] = NewJSONObject(num, nil)
+	}
+	t.ServeJSON()
+}
+
+func (t *TransactionsController) GetTransactionsCount() {
+	PublicTxAPIInterface := hpc.GetApiObjectByNamespace("tx").Service
+	PublicTxAPI := PublicTxAPIInterface.(*hpc.PublicTransactionAPI)
+
+	count, err := PublicTxAPI.GetTransactionsCount()
+	if err != nil {
+		t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+	} else {
+		t.Data["json"] = NewJSONObject(count, nil)
 	}
 	t.ServeJSON()
 }
