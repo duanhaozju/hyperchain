@@ -65,7 +65,6 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp)
 	}
 
-	log.Infof("############# %d: start send request#############", time.Now().Unix())
 
 	tx.Id = uint64(contract.pm.Peermanager.GetNodeId())
 	tx.Signature = common.FromHex(realArgs.Signature)
@@ -89,14 +88,11 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 		log.Errorf("proto.Marshal(tx) error: %v", err)
 		return common.Hash{}, errors.New("proto.Marshal(tx) happened error")
 	} else if manager.GetEventObject() != nil {
-		go contract.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+		go contract.eventMux.Post(event.NewTxEvent{Payload: txBytes, Simulate:args.Simulate})
 	} else {
 		log.Error("manager is Nil")
 		return common.Hash{}, errors.New("EventObject is nil")
 	}
-
-	log.Infof("############# %d: end send request#############", time.Now().Unix())
-
 	//time.Sleep(2000 * time.Millisecond)
 
 	return tx.GetTransactionHash(), nil

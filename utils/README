@@ -14,12 +14,16 @@ OPTIONS:
 
       transaction:
             description: generate a test transaction
-            selectable arguments: (1) p (2) from (3) to (4) timestamp (5) v (6) l (7) t (8) ip (9) port (10) s
+            selectable arguments: (1) p (2) from (3) to (4) timestamp (5) v (6) l (7) t (8) ip (9) port (10) s (11) simulate
 
-      test:
+      stress_test:
             description: execute a stress test
             selectable arguments: (1) nodefile (2) duration (3) tps (4) instant (5) type (6) ratio (7) rand_normal_tx
                                   (8) rand_contract_tx (9) rand_contract (10) code (11) invoke_payload (12) load
+
+      execute_transaction:
+            description: execute a transaction with the parameters been specify
+            selectable arguments: (1) p (2) from (3) to (4) timestamp (5) v (6) l (7) t (8) ip (9) port (10) s (11) simulate
 
 Command Line Arguments:
     -code string
@@ -55,6 +59,8 @@ Command Line Arguments:
     -ratio float
         use to specify the normal transaction's proportion, 1 - ratio represent the contract transaction's proportion (default 0.5)
     -s	use to mask output
+    -simulate
+        use to specify wthether the generated transaction run in sandbox
     -t int
         use to specify transaction type to generate, 0 represent normal transaction, 1 represent contract transaction
     -timestamp int
@@ -161,7 +167,18 @@ Example:
     5.2.  contract transaction stress test with 1000 tps and 10 instant concurrency elapsed 30 seconds
     ./utils -o stress_test -tps 1000 -instant 10 -duration 30 -type 1 -load=true -code "balabala" -invoke_payload "balabala"
     5.3.  mix transaction stress test with 1000 tps and 10 instant concurrency elapsed 30 seconds (70 percent normal transaction and 30 percent contract transaction)
-    ./utils -o stress_test -tps 1000 -instant 10 -duration 30 -type 2 -ratio 0.7 -load=false -rand_normal_tx 30 -rand_contract_tx 50 -rand_contract 20
+    ./utils -o stress_test -tps 1000 -instant 10 -duration 30 -type 2 -ratio 0.7 -load=load -rand_normal_tx 30 -rand_contract_tx 50 -rand_contract 20
+    5.4.  simulate transaction stress test with 1000 tps and 10 instant concurrency elapsed 30 seconds
+    ./utils -o stress_test -tps 1000 -instant 10 -duration 30 -type 0 -load=load -rand_normal_tx 30 -rand_contract_tx 50 -rand_contract 20 -simulate=true
 
     IMPORTANT:
     keep in mind that remove the testdata directory when you clear the hyperchain node's d atabase!
+
+6. Execute Transaction
+   6.1 Execute transaction in the real environment
+   ./utils -o transaction -t 0 -from 000f1a7a08ccc48e5d30f80850cf1cf283aa3abd -p 123 -to 0xb8775c50762c677de8e603a2e99eec359ba7e36b -v 100
+   ./utils -o transaction -t 0 -from 000f1a7a08ccc48e5d30f80850cf1cf283aa3abd -p 123 -to 0xb8775c50762c677de8e603a2e99eec359ba7e36b -v 100 -simulate=false
+
+   6.2 Execute transaction in the sandbox
+   ./utils -o transaction -t 0 -from 000f1a7a08ccc48e5d30f80850cf1cf283aa3abd -p 123 -to 0xb8775c50762c677de8e603a2e99eec359ba7e36b -v 100 -simulate=true
+   ./utils -o transaction -t 1 -from 000f1a7a08ccc48e5d30f80850cf1cf283aa3abd -p 123 -l 0x6060604052610114806100126000396000f360606040526000357c010000000000000000000000000000000000000000000000000000000090048063bcdfe0d51461003c57610037565b610002565b346100025761004e60048050506100bc565b60405180806020018281038252838181518152602001915080519060200190808383829060006004602084601f0104600302600f01f150905090810190601f1680156100ae5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b6020604051908101604052806000815260200150604060405190810160405280600b81526020017f48656c6c6f20576f726c640000000000000000000000000000000000000000008152602001509050610111565b9056 -simulate=true
