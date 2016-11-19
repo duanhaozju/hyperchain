@@ -19,7 +19,8 @@ func StressTest(nodeFile string, duration int, tps int, instant int, testType in
 		output(silense, "invalid tps or instant parameter")
 		return false
 	}
-	initGenesis()
+	_, globalAccounts = read(accountList, accountNumber)
+	logger.Notice("accounts", globalAccounts)
 	nodes, n, err := loadNodeInfo(nodeFile)
 	if err != nil {
 		return false
@@ -97,6 +98,9 @@ func sendRequest(address string, testType int, ratio float64, wg sync.WaitGroup)
 			// contract
 			cmd = contractTxPool[rand.Intn(len(contractTxPool))]
 		}
+	} else if testType == 3 {
+		// nonghang
+		cmd, _ = NewTransaction(genesisPassword, globalAccounts[rand.Intn(len(globalAccounts))], NHcontract, time.Now().UnixNano(), 0, NHmethod2, 1, "", 0, false, true)
 	} else {
 		// mix transaction with normal contract tx and simulate contract tx
 		if contractTxPool == nil || simulateTxPool == nil {
@@ -349,6 +353,7 @@ func initGenesis() {
 	genesisAccount = append(genesisAccount, "0x6201cb0448964ac597faf6fdf1f472edf2a22b89")
 	genesisAccount = append(genesisAccount, "0xb18c8575e3284e79b92100025a31378feb8100d6")
 }
+
 
 func communication(cmd string, server string) ([]byte, error) {
 	client := http.Client{}

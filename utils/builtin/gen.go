@@ -29,6 +29,16 @@ func NewAccount(password string, silense bool) (string, bool) {
 	}
 }
 
+func NewAccounts(count int, password string, silense bool) bool {
+	if password == "" {
+		password = genesisPassword
+	}
+	for i := 0; i < count; i += 1 {
+		NewAccount(password, silense)
+	}
+	return true
+}
+
 func NewTransaction(password string, from string, to string, timestamp int64, amount int64, payload string, t int, ip string, port int, simulate bool, silense bool) (string, bool) {
 	if password == "" {
 		output(silense, "Please enter your password")
@@ -67,12 +77,13 @@ func NewTransaction(password string, from string, to string, timestamp int64, am
 	} else {
 		_to = to
 	}
-	am := accounts.NewAccountManager(keystore, encryption)
 	if t == 0 {
 		txValue := types.NewTransactionValue(int64(defaultGasPrice), int64(defaultGas), _amount, nil)
 		value, _ := proto.Marshal(txValue)
 		tx := types.NewTransaction(common.HexToAddress(_from).Bytes(), common.HexToAddress(_to).Bytes(), value, _timestamp)
+		begin := time.Now()
 		signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), password)
+		logger.Notice("Sign elapsed", time.Since(begin))
 		if err != nil {
 			output(silense, "Create Transaction failed!, detail error message: ", err)
 			return "", false
