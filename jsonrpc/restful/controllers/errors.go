@@ -28,3 +28,15 @@ func (e *invalidParamsError) Code() int {
 func (e *invalidParamsError) Error() string {
 	return e.message
 }
+
+//type contractError struct {
+//	message string
+//}
+//
+//func (e *contractError) Code() int {
+//	return -32602
+//}
+//
+//func (e *contractError) Error() string {
+//	return e.message
+//}

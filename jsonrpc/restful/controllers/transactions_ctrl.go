@@ -6,6 +6,7 @@ import (
 	"hyperchain/jsonrpc/restful/utils"
 	"encoding/json"
 	"strconv"
+	"github.com/op/go-logging"
 )
 
 type TransactionsController struct {
@@ -15,6 +16,14 @@ type TransactionsController struct {
 type requestInterval struct {
 	From *hpc.BlockNumber `form:"from"`
 	To *hpc.BlockNumber `form:"to"`
+}
+
+var (
+	log        *logging.Logger // package-level logger
+)
+
+func init() {
+	log = logging.MustGetLogger("controllers")
 }
 
 func (t *TransactionsController) SendTransaction() {
@@ -142,7 +151,6 @@ func (t *TransactionsController) GetTransactionByBlockNumberOrBlockHash() {
 
 func (t *TransactionsController) GetTransactionReceipt() {
 	hash, err := utils.CheckHash(t.Ctx.Input.Param(":transactionHash"))
-	//log.Error(hash.Hex())
 	if err != nil {
 		t.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
 		t.ServeJSON()
@@ -156,7 +164,20 @@ func (t *TransactionsController) GetTransactionReceipt() {
 	if err != nil {
 		t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
 	} else {
-		t.Data["json"] = NewJSONObject(rep, nil)
+		if rep != nil && rep.Ret == "0x0" {
+			if tx, err := PublicTxAPI.GetTransactionByHash(hash);err != nil {
+				t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+			} else if tx.Invalid == true {
+				// 交易非法
+				t.Data["json"] = NewJSONObject(nil, &callbackError{tx.InvalidMsg})
+			} else {
+				// 交易合法
+				t.Data["json"] = NewJSONObject(rep, nil)
+			}
+
+		} else {
+			t.Data["json"] = NewJSONObject(rep, nil)
+		}
 	}
 	t.ServeJSON()
 }

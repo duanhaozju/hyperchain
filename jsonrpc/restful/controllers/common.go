@@ -1,10 +1,5 @@
 package controllers
 
-import (
-	"net/http"
-	"encoding/json"
-)
-
 type JSONObject struct {
 	Code int `json:"code"`
 	Message string `json:"message"`
@@ -37,14 +32,4 @@ func NewJSONObject (data interface{}, err JSONError) *JSONObject{
 	}
 
 
-}
-
-func write(w http.ResponseWriter, data interface{}) {
-	//
-	//if err != nil {
-	//	json.NewEncoder(w).Encode(&callbackError{err.Error()})
-	//} else {
-	//	json.NewEncoder(w).Encode(data)
-	//}
-	json.NewEncoder(w).Encode(data)
 }
