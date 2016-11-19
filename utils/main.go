@@ -34,6 +34,7 @@ var methoddata = flag.String("invoke_payload", "", "use to specify the contract 
 var normalTxNum = flag.Int("rand_normal_tx", 0, "use to specify the number of random normal transaction which used in stress test")
 var contractTxNum = flag.Int("rand_contract_tx", 0, "use to specify the number of random contract transaction which used in stress test")
 var contractNum = flag.Int("rand_contract", 0, "use to specify the number of random contract which used in stress test")
+var simulateNum = flag.Int("ran_simulate_tx", 0, "use to specify the number of simulate contract tx which used in stress test")
 var load = flag.Bool("load", false, "use the generated transaction saved in the file")
 var estimation = flag.Int("e", 0, "use to specify the statistic estimation")
 
@@ -48,7 +49,7 @@ func main() {
 	} else if strings.ToLower(*option) == "execute_transaction"{
 		builtin.ExecuteTransaction(*password, *from, *to, *timestamp, *amount, *payload, *t, *ip, *port, *simulate, *silense)
 	} else if strings.ToLower(*option) == "stress_test" {
-		builtin.StressTest(*nodeFile, *duration, *tps, *instant, *testType, *ratio, *normalTxNum, *contractTxNum, *contractNum, *code, *methoddata, *silense, *simulate, *load, *estimation)
+		builtin.StressTest(*nodeFile, *duration, *tps, *instant, *testType, *ratio, *normalTxNum, *contractTxNum, *contractNum,*simulateNum, *code, *methoddata, *silense, *simulate, *load, *estimation)
 	}
 }
 

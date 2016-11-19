@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func StressTest(nodeFile string, duration int, tps int, instant int, testType int, ratio float64, randNormalTx int, randContractTx int, randContract int, code string, methoddata string, silense bool, simulate bool, load bool, estimation int) bool {
+func StressTest(nodeFile string, duration int, tps int, instant int, testType int, ratio float64, randNormalTx int, randContractTx int, randContract int, simulateNum int, code string, methoddata string, silense bool, simulate bool, load bool, estimation int) bool {
 	if tps == 0 || instant == 0 {
 		output(silense, "invalid tps or instant parameter")
 		return false
@@ -26,6 +26,7 @@ func StressTest(nodeFile string, duration int, tps int, instant int, testType in
 	}
 	generateNormalTransaction(load, randNormalTx, simulate)
 	generateContractTransaction(load, randContract, randContractTx, code, methoddata, simulate)
+	generateSimulateTransaction(load, simulateNum, methoddata)
 	start := time.Now().Unix()
 	timeBegin := time.Now().UnixNano()
 	end := start + int64(duration)
@@ -84,7 +85,7 @@ func sendRequest(address string, testType int, ratio float64, wg sync.WaitGroup)
 			return
 		}
 		cmd = contractTxPool[rand.Intn(len(contractTxPool))]
-	} else {
+	} else if testType == 2 {
 		if normalTxPool == nil || contractTxPool == nil {
 			logger.Fatal("empty contract transaction pool or normal transaction pool")
 			return
@@ -96,9 +97,21 @@ func sendRequest(address string, testType int, ratio float64, wg sync.WaitGroup)
 			// contract
 			cmd = contractTxPool[rand.Intn(len(contractTxPool))]
 		}
+	} else {
+		// mix transaction with normal contract tx and simulate contract tx
+		if contractTxPool == nil || simulateTxPool == nil {
+			logger.Fatal("empty contract transaction pool or simulate transaction pool")
+			return
+		}
+		if randomChoice(ratio) == 0 {
+			// normal
+			cmd = contractTxPool[rand.Intn(len(contractTxPool))]
+		} else {
+			// contract
+			cmd = simulateTxPool[rand.Intn(len(simulateTxPool))]
+		}
 	}
 	var jsonStr = []byte(cmd)
-
 	req, err := http.NewRequest("POST", address, bytes.NewBuffer(jsonStr))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -291,6 +304,45 @@ func generateContract(n int, code string) {
 	logger.Noticef("================ %d Contracts Generated ================", len(contract))
 }
 
+func generateSimulateTransaction(load bool, n int, methoddata string) {
+	var cnt int
+	var ret []string
+	var tmp []string
+	if n == 0 {
+		n = simulateNumber
+	}
+	if load {
+		cnt, ret = read(simulateStore, n)
+		simulateTxPool = append(simulateTxPool, ret...)
+	}
+	for i := 0; i < n - cnt; i += 1 {
+		// TODO
+		sender := genesisAccount[rand.Intn(len(genesisAccount))]
+		if contract == nil {
+			logger.Fatal("empty contract pool")
+			return
+		}
+		receiver := contract[rand.Intn(len(contract))]
+		if methoddata == "" {
+			methoddata = methodid
+		}
+		command, success := NewTransaction(genesisPassword, sender, receiver, 0, 0, methoddata, 1, "localhost", 8081, true, true)
+		if success == false {
+			logger.Error("create contract transaction failed")
+		} else {
+			pattern, _ := regexp.Compile(".*'(.*?)'")
+			ret := pattern.FindStringSubmatch(command)
+			if ret == nil || len(ret) < 2 {
+				return
+			}
+			simulateTxPool = append(simulateTxPool, ret[1])
+			tmp = append(tmp, ret[1])
+		}
+	}
+	write(simulateStore, tmp)
+	logger.Notice(simulateTxPool)
+	logger.Noticef("================ %d Simulate Transactions Generated ================", len(simulateTxPool))
+}
 func initGenesis() {
 	genesisAccount = append(genesisAccount, "0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd")
 	genesisAccount = append(genesisAccount, "0xe93b92f1da08f925bdee44e91e7768380ae83307")

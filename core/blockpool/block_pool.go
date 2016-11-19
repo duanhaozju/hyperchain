@@ -24,6 +24,7 @@ import (
 	"time"
 	"sort"
 	"errors"
+	"fmt"
 )
 
 var (
@@ -185,7 +186,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	} else {
 		validTxSet = validationEvent.Transactions
 	}
-	err, _, merkleRoot, txRoot, receiptRoot, validTxSet, invalidTxSet := pool.ProcessBlockInVm(validTxSet, invalidTxSet, validationEvent.SeqNo)
+	err, _, merkleRoot, txRoot, receiptRoot, validTxSet, invalidTxSet := pool.InVm(validTxSet, invalidTxSet, validationEvent.SeqNo)
 	if err != nil {
 		log.Error("ProcessBlock Failed!, block number: ", validationEvent.SeqNo)
 		return err, false
@@ -270,7 +271,7 @@ func (pool *BlockPool) CheckSign(txs []*types.Transaction, commonHash crypto.Com
 
 // Put all transactions into the virtual machine and execute
 // Return the execution result, such as txs' merkle root, receipts' merkle root, accounts' merkle root and so on
-func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, []byte, []byte, []byte, []byte, []*types.Transaction, []*types.InvalidTransactionRecord) {
+func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*types.InvProcessBlockalidTransactionRecord, seqNo uint64) (error, []byte, []byte, []byte, []byte, []*types.Transaction, []*types.InvalidTransactionRecord) {
 	var validtxs []*types.Transaction
 	var (
 		env = make(map[string]string)
@@ -603,7 +604,6 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	core.UpdateChain(block, isGenesis)
 }
 func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
-	log.Notice("Run in sandbox")
 	// TODO add block number to specify the initial status
 	var env = make(map[string]string)
 	fakeBlockNumber := core.GetHeightOfChain()
