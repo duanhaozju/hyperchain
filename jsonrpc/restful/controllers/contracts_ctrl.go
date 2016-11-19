@@ -83,7 +83,7 @@ func (c *ContractsController) InvokeContract() {
 func (c *ContractsController) GetCode() {
 
 	p_blkNum := c.Input().Get("blkNum")
-	p_address := c.Input().Get("address")
+	p_address := c.Input().Get("address") // contract address
 
 	PublicContractAPIInterface := hpc.GetApiObjectByNamespace("contract").Service
 	PublicContractAPI := PublicContractAPIInterface.(*hpc.PublicContractAPI)

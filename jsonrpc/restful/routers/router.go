@@ -21,18 +21,14 @@ func init() {
 			beego.NSRouter("/list", &controllers.TransactionsController{}, "get:GetTransactions"),
 			beego.NSRouter("/:txHash", &controllers.TransactionsController{}, "get:GetTransactionByHash"),
 			beego.NSRouter("/query", &controllers.TransactionsController{}, "get:GetTransactionByBlockNumberOrBlockHash"),
-			//beego.NSRouter("/{blkHash}/{index}", &controllers.TransactionsController{}, "get:GetTransactionByBlockHashAndIndex"),
 			beego.NSRouter("/:txHash/receipt", &controllers.TransactionsController{}, "get:GetTransactionReceipt"),
-			//beego.NSRouter("/count", &controllers.TransactionsController{}, "get:GetTransactionsCount"),
-			beego.NSRouter("/sign-hash", &controllers.TransactionsController{}, "post:GetSignHash"),
+			beego.NSRouter("/get-hash-for-sign", &controllers.TransactionsController{}, "post:GetSignHash"),
+			beego.NSRouter("/average-time", &controllers.TransactionsController{}, "get:GetTxAvgTimeByBlockNumber"),
 		),
 
 		beego.NSNamespace("/blocks",
-			//beego.NSRouter("/:blkNum/:index", &controllers.BlocksController{}, "get:GetTransactionByBlockNumberAndIndex"),
-			//beego.NSRouter("/:blkHash/:index", &controllers.BlocksController{}, "get:GetTransactionByBlockHashAndIndex"),
 			beego.NSRouter("/list", &controllers.BlocksController{}, "get:GetBlocks"),
 			beego.NSRouter("/query", &controllers.BlocksController{}, "get:GetBlockByHashOrNum"),
-			//beego.NSRouter("/latest", &controllers.BlocksController{}, "get:GetLatestBlock"),
 			beego.NSRouter("/:blkHash/transactions/count", &controllers.BlocksController{}, "get:GetBlockTransactionCountByHash"),
 		),
 
@@ -42,6 +38,11 @@ func init() {
 			beego.NSRouter("/invoke", &controllers.ContractsController{}, "post:InvokeContract"),
 			beego.NSRouter("/query", &controllers.ContractsController{}, "get:GetCode"),
 		),
+
+		beego.NSNamespace("/accounts",
+			beego.NSRouter("/:address/contracts/count", &controllers.AccountsController{}, "get:GetContractCountByAddr"),
+		),
+
 	)
 	beego.AddNamespace(ns)
 }

@@ -1,5 +1,6 @@
 # Hyperchain RESTful接口设计
 
+
 # Blockchain
 
 ##1.1 获取最新区块 
@@ -211,7 +212,7 @@
 }
 ```
 
-## 2.6 获取receipt 
+## 2.6 获取交易回执
 **Method:** `GET`<br/>
 
 **URI:** `/v1/transactions/:txHash/receipt`<br/>
@@ -251,9 +252,9 @@
 ## 2.8 获取签名哈希 
 **Method:** `POST`<br/>
 
-**URI:** `/v1/transactions/sign-hash`<br/>
+**URI:** `/v1/transactions/get-hash-for-sign`<br/>
 
-**Request:** `localhost:9000/v1/transactions/sign-hash`<br/>
+**Request:** `localhost:9000/v1/transactions/get-hash-for-sign`<br/>
 ```json
 {
 	"from":"0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd",
@@ -269,6 +270,22 @@
   "code": 200,
   "message": "SUCCESS",
   "result": "0xbd7c8f92833739c3bad6851d2164da0540179c569db37d616e4058a44471ac58"
+}
+```
+
+## 2.9 获取交易平均 处理时间
+**Method:** `POST`<br/>
+
+**URI:** `/v1/transactions/average-time`<br/>
+
+**Request:** `localhost:9000/v1/transactions/average-time?from=1&to=1`<br/>
+
+**Response:** <br/>
+```json
+{
+  "code": 200,
+  "message": "SUCCESS",
+  "result": "0x6"
 }
 ```
 
@@ -494,5 +511,23 @@
   "code": 200,
   "message": "SUCCESS",
   "result": "0x606060405260e060020a60003504633ad14af381146030578063569c5f6d14605e578063d09de08a146084575b6002565b346002576000805460e060020a60243560043563ffffffff8416010181020463ffffffff199091161790555b005b3460025760005463ffffffff166040805163ffffffff9092168252519081900360200190f35b34600257605c6000805460e060020a63ffffffff821660010181020463ffffffff1990911617905556"
+}
+```
+
+# Accounts
+
+## 5.1 获取账户已部署合约数量
+**Method:** `GET`<br/>
+
+**URI:** `/v1/accounts/:address/contracts/count`<br/>
+
+**Request:** `localhost:9000/v1/accounts/0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd/contracts/count?blkNum=1`<br/>
+
+**Response:**<br/>
+```json
+{
+  "code": 200,
+  "message": "SUCCESS",
+  "result": "0x1"
 }
 ```

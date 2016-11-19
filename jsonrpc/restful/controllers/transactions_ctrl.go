@@ -161,19 +161,6 @@ func (t *TransactionsController) GetTransactionReceipt() {
 	t.ServeJSON()
 }
 
-func (t *TransactionsController) GetTransactionsCount() {
-	PublicTxAPIInterface := hpc.GetApiObjectByNamespace("tx").Service
-	PublicTxAPI := PublicTxAPIInterface.(*hpc.PublicTransactionAPI)
-
-	count, err := PublicTxAPI.GetTransactionsCount()
-	if err != nil {
-		t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
-	} else {
-		t.Data["json"] = NewJSONObject(count, nil)
-	}
-	t.ServeJSON()
-}
-
 func (t *TransactionsController) GetSignHash() {
 	var args hpc.SendTxArgs
 
@@ -195,4 +182,25 @@ func (t *TransactionsController) GetSignHash() {
 	t.ServeJSON()
 }
 
+func (t *TransactionsController) GetTxAvgTimeByBlockNumber() {
+	from := t.Input().Get("from")
+	to := t.Input().Get("to")
+	args, err := utils.CheckIntervalArgs(from, to)
+	if err != nil {
+		t.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
+		t.ServeJSON()
+		return
+	}
 
+	PublicTxAPIInterface := hpc.GetApiObjectByNamespace("tx").Service
+	PublicTxAPI := PublicTxAPIInterface.(*hpc.PublicTransactionAPI)
+
+	num, err := PublicTxAPI.GetTxAvgTimeByBlockNumber(args)
+
+	if err != nil {
+		t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+	} else {
+		t.Data["json"] = NewJSONObject(num, nil)
+	}
+	t.ServeJSON()
+}
