@@ -36,6 +36,7 @@ var contractNum = flag.Int("rand_contract", 0, "use to specify the number of ran
 var load = flag.Bool("load", false, "use the generated transaction saved in the file")
 var estimation = flag.Int("e", 0, "use to specify the statistic estimation")
 var accountNum = flag.Int("acct_num", 0, "use to specify the account num")
+var simulate = flag.Bool("simulate", false, "use to specify the simulate")
 
 func main() {
 	flag.Parse()
@@ -44,13 +45,11 @@ func main() {
 	} else if strings.ToLower(*option) == "account" {
 		builtin.NewAccount(*password, *silense)
 	} else if strings.ToLower(*option) == "transaction" {
-		builtin.NewTransaction(*password, *from, *to, *timestamp,*amount, *payload, *t, *ip, *port,*silense)
+		builtin.NewTransaction(*password, *from, *to, *timestamp,*amount, *payload, *t, *ip, *port, *silense, *simulate)
 	} else if strings.ToLower(*option) == "execute_transaction"{
-		builtin.ExecuteTransaction(*password, *from, *to, *timestamp, *amount, *payload, *t, *ip, *port, *silense)
-	} else if strings.ToLower(*option) == "stress_test" {
-		builtin.StressTest(*nodeFile, *duration, *tps, *instant, *testType, *ratio, *normalTxNum, *contractTxNum, *contractNum, *code, *methoddata,*silense, *load, *estimation)
-	} else if strings.ToLower(*option) == "nh" {
-		builtin.NHBANK(*tps, *instant, *duration)
+		builtin.ExecuteTransaction(*password, *from, *to, *timestamp, *amount, *payload, *t, *ip, *port, *silense, *simulate)
+	}  else if strings.ToLower(*option) == "nh" {
+		builtin.NHBANK(*tps, *instant, *duration, *estimation, *simulate)
 	} else if strings.ToLower(*option) == "accounts" {
 		builtin.NewAccounts(*accountNum, "123", false)
 	}

@@ -1,11 +1,11 @@
 package builtin
 
 import (
-	"time"
-	"sync"
-	"regexp"
 	"fmt"
+	"regexp"
 	"strconv"
+	"sync"
+	"time"
 )
 
 var (
@@ -15,8 +15,9 @@ var (
 	// QueryUser
 	NHmethod2 = "0xb5cf8eab"
 )
-func NHBANK(duration, tps, instant, estimation int) {
-	_,  globalAccounts = read(accountList, accountNumber)
+
+func NHBANK(duration, tps, instant, estimation int, simulate bool) {
+	_, globalAccounts = read(accountList, accountNumber)
 	logger.Notice(len(globalAccounts))
 	contractAddr, success := deploy()
 	NHcontract = contractAddr
@@ -28,26 +29,30 @@ func NHBANK(duration, tps, instant, estimation int) {
 	logger.Notice("New User Finish")
 	time.Sleep(10 * time.Second)
 	timeBegin := time.Now().UnixNano()
-	getUserInfo(duration,tps, instant)
+	getUserInfo(duration, tps, instant, simulate)
 	timeEnd := time.Now().UnixNano()
 	queryStatistic(timeBegin+int64(estimation)*time.Second.Nanoseconds(), timeEnd-int64(estimation)*time.Second.Nanoseconds(), globalNodes[2])
 }
-func deploy() (string, bool){
+func deploy() (string, bool) {
 	node := globalNodes[0]
 	pattern, err := regexp.Compile(".*:..(.*):(.*)")
-	if err != nil {return "", false}
+	if err != nil {
+		return "", false
+	}
 	ret := pattern.FindStringSubmatch(string(node))
 	if ret == nil || len(ret) < 3 {
 		return "", false
 	}
 	ip := ret[1]
 	port, _ := strconv.ParseInt(ret[2], 10, 64)
-	resp, success := ExecuteTransaction(genesisPassword, globalAccounts[0], "", time.Now().UnixNano(), 0, NHcode, 1, ip, int(port),true)
+	resp, success := ExecuteTransaction(genesisPassword, globalAccounts[0], "", time.Now().UnixNano(), 0, NHcode, 1, ip, int(port), true, true)
 	if success == false {
 		return "", false
 	} else {
 		pattern, err := regexp.Compile(".*contractAddress...(.*?)\"")
-		if err != nil {return "", false}
+		if err != nil {
+			return "", false
+		}
 		ret := pattern.FindStringSubmatch(string(resp))
 		if ret == nil || len(ret) < 2 {
 			return "", false
@@ -59,7 +64,9 @@ func deploy() (string, bool){
 func newUser(contractAddr string, accounts []string) {
 	node := globalNodes[0]
 	pattern, err := regexp.Compile(".*:..(.*):(.*)")
-	if err != nil {return}
+	if err != nil {
+		return
+	}
 	ret := pattern.FindStringSubmatch(string(node))
 	if ret == nil || len(ret) < 3 {
 		return
@@ -69,15 +76,13 @@ func newUser(contractAddr string, accounts []string) {
 	logger.Notice(ip, port)
 	// deploy account to blockchain
 	for i := 0; i < len(accounts); i += 1 {
-		begin := time.Now()
-		command, success := NewTransaction(genesisPassword, accounts[i], contractAddr, time.Now().UnixNano(), 0, NHmethod1, 1, ip, int(port), true)
-		logger.Notice("ELAPSED", time.Since(begin))
+		command, success := NewTransaction(genesisPassword, accounts[i], contractAddr, time.Now().UnixNano(), 0, NHmethod1, 1, ip, int(port), true, true)
 		if success == false {
 			logger.Error("create transaction failed")
 		} else {
 			pattern, _ := regexp.Compile(".*'(.*?)'")
 			ret := pattern.FindStringSubmatch(command)
-			if ret == nil || len(ret) < 2{
+			if ret == nil || len(ret) < 2 {
 				logger.Error("create transaction failed")
 			}
 			cmd := ret[1]
@@ -91,7 +96,7 @@ func newUser(contractAddr string, accounts []string) {
 		}
 	}
 }
-func getUserInfo(tps, instant, duration int) {
+func getUserInfo(tps, instant, duration int, simulate bool) {
 	if tps == 0 || instant == 0 {
 		output(false, "invalid tps or instant parameter")
 		return
@@ -116,8 +121,14 @@ func getUserInfo(tps, instant, duration int) {
 	logger.Notice("\tInstant Concurrency: ", instant)
 	logger.Notice("\tDuration: ", duration)
 	var wg sync.WaitGroup
+	var testType int
+	if simulate == true {
+		testType = 3
+	} else {
+		testType = 2
+	}
 	for time.Now().Unix() < end {
-		go sendBatch(globalNodes, len(globalNodes), instant, 2, 0, wg)
+		go sendBatch(globalNodes, len(globalNodes), instant, testType, 0, wg)
 		time.Sleep(interval)
 	}
 	wg.Wait()
