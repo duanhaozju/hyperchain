@@ -84,6 +84,15 @@ func sendRequest(address string, testType int, ratio float64, wg sync.WaitGroup)
 			return
 		}
 		cmd = contractTxPool[rand.Intn(len(contractTxPool))]
+	} else if testType == 2 {
+		// nonghang
+		cmd, _ = NewTransaction(genesisPassword, globalAccounts[rand.Intn(len(globalAccounts))], NHcontract, time.Now().UnixNano(), 0, NHmethod2, 1, "", 0, true)
+		pattern, _ := regexp.Compile(".*'(.*?)'")
+		ret := pattern.FindStringSubmatch(cmd)
+		if ret == nil || len(ret) < 2 {
+			return
+		}
+		cmd = ret[1]
 	} else {
 		if normalTxPool == nil || contractTxPool == nil {
 			logger.Fatal("empty contract transaction pool or normal transaction pool")
