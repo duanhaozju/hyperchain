@@ -239,7 +239,7 @@ func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*Rece
 
 		return &ReceiptResult{
 			TxHash: 	 receipt.TxHash,
-			//PostState: 	 receipt.PostState,
+			PostState: 	 receipt.PostState,
 			ContractAddress: receipt.ContractAddress,
 			Ret: 		 receipt.Ret,
 		}, nil
