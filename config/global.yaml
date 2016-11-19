@@ -37,7 +37,7 @@ global:
         #           INFO
         #    Low    DEBUG
 
-        loglevel: "INFO"
+        loglevel: "NOTICE"
     database:
         dir: "./build/database/"
 ###########################
