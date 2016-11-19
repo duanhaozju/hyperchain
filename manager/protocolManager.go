@@ -214,7 +214,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 	for obj := range self.consensusSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.BroadcastConsensusEvent:
-			log.Debug("######enter broadcast")
+			log.Info("######enter broadcast")
 			go self.BroadcastConsensus(ev.Payload)
 		case event.TxUniqueCastEvent:
 			var peers []uint64
@@ -222,12 +222,18 @@ func (self *ProtocolManager) ConsensusLoop() {
 			go self.Peermanager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
 		//go self.peerManager.SendMsgToPeers(ev.Payload,)
 		case event.NewTxEvent:
-			log.Debug("###### enter NewTxEvent")
-			go self.sendMsg(ev.Payload)
+			if ev.Simulate == true {
+				tx := &types.Transaction{}
+				proto.Unmarshal(ev.Payload, tx)
+				self.blockPool.RunInSandBox(tx)
+			} else {
+				log.Debug("###### enter NewTxEvent")
+				go self.sendMsg(ev.Payload)
+			}
 
 		case event.ConsensusEvent:
 			//call consensus module
-			log.Debug("###### enter ConsensusEvent")
+			log.Info("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 		}
 	}
@@ -397,7 +403,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 								// the highest block in local is invalid, request the block
 								// TODO clear global cache
 								// TODO clear receipt, txmeta, tx
-								core.DeleteBlockByNum(db, lastBlk.Number - 1)
+								self.blockPool.CutdownBlock(lastBlk.Number - 1)
 								core.UpdateChainByBlcokNum(db, lastBlk.Number - 2)
 								self.broadcastDemandBlock(lastBlk.Number - 1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
 							}
