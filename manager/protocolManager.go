@@ -280,6 +280,12 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 	}
 
 	core.UpdateRequire(blockChainInfo.Height, blockChainInfo.CurrentBlockHash, blockChainInfo.Height)
+	/* JUST FOR TEST */
+	//db, _ := hyperdb.GetLDBDatabase()
+	//blk, _  := core.GetBlockByNumber(db, core.GetChainCopy().Height)
+	//blk.BlockHash = []byte("FakeHash")
+	//core.UpdateChain(blk, false)
+	/* JUST FOR TEST END */
 	// save context
 	core.SetReplicas(UpdateStateMessage.Replicas)
 	core.SetId(UpdateStateMessage.Id)
@@ -395,9 +401,8 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 								break
 							} else {
 								// the highest block in local is invalid, request the block
-								// TODO clear global cache
-								// TODO clear receipt, txmeta, tx
-								core.DeleteBlockByNum(db, lastBlk.Number - 1)
+								log.Errorf("Required %s, got %s", common.Bytes2Hex(lastBlk.ParentHash), common.Bytes2Hex(core.GetChainCopy().LatestBlockHash))
+								self.blockPool.CutdownBlock(lastBlk.Number - 1)
 								core.UpdateChainByBlcokNum(db, lastBlk.Number - 2)
 								self.broadcastDemandBlock(lastBlk.Number - 1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
 							}
