@@ -14,6 +14,7 @@ import (
 	"errors"
 	"hyperchain/hyperdb"
 	"github.com/juju/ratelimit"
+	"hyperchain/core"
 )
 
 type PublicContractAPI struct {
@@ -70,6 +71,17 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.BuildHash().Bytes()
 
+
+	//delete repeated tx
+	var exist, _= core.JudgeTransactionExist(contract.db, tx.TransactionHash)
+
+
+	if exist{
+		return common.Hash{}, errors.New("repeated tx")
+	}
+
+
+
 	// Unsign Test
 	if !tx.ValidateSign(contract.pm.AccountManager.Encryption, kec256Hash) {
 		log.Error("invalid signature")
@@ -92,6 +104,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 	//time.Sleep(2000 * time.Millisecond)
 
 	return tx.GetTransactionHash(), nil
+
 }
 
 type CompileCode struct{
