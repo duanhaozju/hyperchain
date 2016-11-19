@@ -185,4 +185,4 @@ Example:
 
 
    ./utils -o accounts -acct_num 500
-   ./utils -o nh -tps 2000 -instant 100 -duration 100
+   ./utils -o nh -tps 2000 -instant 100 -duration 100 -simulate=true
