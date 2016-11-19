@@ -15,7 +15,7 @@ var (
 	// QueryUser
 	NHmethod2 = "0xb5cf8eab"
 )
-func NHBANK(duration, tps, instant int) {
+func NHBANK(duration, tps, instant, estimation int) {
 	_,  globalAccounts = read(accountList, accountNumber)
 	logger.Notice(len(globalAccounts))
 	contractAddr, success := deploy()
@@ -27,7 +27,10 @@ func NHBANK(duration, tps, instant int) {
 	newUser(contractAddr, globalAccounts)
 	logger.Notice("New User Finish")
 	time.Sleep(10 * time.Second)
+	timeBegin := time.Now().UnixNano()
 	getUserInfo(duration,tps, instant)
+	timeEnd := time.Now().UnixNano()
+	queryStatistic(timeBegin+int64(estimation)*time.Second.Nanoseconds(), timeEnd-int64(estimation)*time.Second.Nanoseconds(), globalNodes[2])
 }
 func deploy() (string, bool){
 	node := globalNodes[0]
