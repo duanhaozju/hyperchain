@@ -169,7 +169,7 @@ Example:
     5.3.  mix transaction stress test with 1000 tps and 10 instant concurrency elapsed 30 seconds (70 percent normal transaction and 30 percent contract transaction)
     ./utils -o stress_test -tps 1000 -instant 10 -duration 30 -type 2 -ratio 0.7 -load=load -rand_normal_tx 30 -rand_contract_tx 50 -rand_contract 20
     5.4.  simulate transaction stress test with 1000 tps and 10 instant concurrency elapsed 30 seconds
-    ./utils -o stress_test -tps 1000 -instant 10 -duration 30 -type 0 -load=load -rand_normal_tx 30 -rand_contract_tx 50 -rand_contract 20 -simulate=true
+    ./utils -o stress_test -tps 1000 -instant 10 -duration 30 -type 4 -radio 0.1 -load=true -rand_contract_tx 50 -rand_contract 20 -simulate=true
 
     IMPORTANT:
     keep in mind that remove the testdata directory when you clear the hyperchain node's d atabase!
@@ -182,3 +182,7 @@ Example:
    6.2 Execute transaction in the sandbox
    ./utils -o transaction -t 0 -from 000f1a7a08ccc48e5d30f80850cf1cf283aa3abd -p 123 -to 0xb8775c50762c677de8e603a2e99eec359ba7e36b -v 100 -simulate=true
    ./utils -o transaction -t 1 -from 000f1a7a08ccc48e5d30f80850cf1cf283aa3abd -p 123 -l 0x6060604052610114806100126000396000f360606040526000357c010000000000000000000000000000000000000000000000000000000090048063bcdfe0d51461003c57610037565b610002565b346100025761004e60048050506100bc565b60405180806020018281038252838181518152602001915080519060200190808383829060006004602084601f0104600302600f01f150905090810190601f1680156100ae5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b6020604051908101604052806000815260200150604060405190810160405280600b81526020017f48656c6c6f20576f726c640000000000000000000000000000000000000000008152602001509050610111565b9056 -simulate=true
+
+
+   ./utils -o accounts -acct_num 500
+   ./utils -o nh -tps 2000 -instant 100 -duration 100
