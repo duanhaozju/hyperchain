@@ -272,7 +272,7 @@ func CalBlockGPS(begin, end int64) (error, string) {
 		}
 	}
 	avg = avg / (float64(end - begin) * 1.0 / float64(time.Second.Nanoseconds()))
-	s = s + "total blocks: " + strconv.FormatUint(height, 10) + "      blocks per second: " + strconv.FormatFloat(avg, 'f', 2, 32) + "\n"
+	s = s + "total blocks: " + strconv.FormatUint(height, 10) + " blocks per second: " + strconv.FormatFloat(avg, 'f', 2, 32) + " tps: " + strconv.FormatFloat(avg * float64(500), 'f', 2, 32) + "\n"
 	return nil, s
 	//for i := uint64(1); i <= height; i++ {
 	//	block, err := GetBlockByNumber(db, i)
