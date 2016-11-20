@@ -1,7 +1,9 @@
-# Hyperchain RESTful接口设计
+# Hyperchain RESTful接口
+
+[TOC]
 
 # Transactions
-##2.1 获取所有交易
+##1.1 按区块区间查询交易
 **Method:** `GET`<br/>
 
 **URI:** `/v1/transactions/list`<br/>
@@ -44,7 +46,7 @@
 }
 ```
 
-##2.2 获取交易（hash）
+##1.2 查询交易（hash）
 **Method:** `GET`<br/>
 
 **URI: **`/v1/transactions/:transactionHash`<br/>
@@ -72,7 +74,7 @@
 }
 ```
 
-## 2.3 获取交易（blockNumber）
+## 1.3 查询交易（blockNumber）
 **Method:** `GET`<br/>
 
 **URI:** `/v1/transactions/query`<br/>
@@ -100,7 +102,7 @@
 }
 ```
 
-##2.4 获取交易（blockHash）
+##1.4 查询交易（blockHash）
 **Method:** `GET`<br/>
 
 **URI:** `/v1/transactions/query`<br/>
@@ -128,7 +130,7 @@
 }
 ```
 
-##2.5 发送交易
+##1.5 发送交易
 **Method:** `POST`<br/>
 
 **URI:** `/v1/transactions/send`<br/>
@@ -153,7 +155,7 @@
 }
 ```
 
-## 2.6 获取交易回执
+## 1.6 查询指定交易回执信息
 **Method:** `GET`<br/>
 
 **URI:** `/v1/transactions/:transactionHash/receipt`<br/>
@@ -174,7 +176,7 @@
 }
 ```
 
-##2.7 获取区块交易数量
+##1.7 查询区块交易数量
 **Method:** `GET`<br/>
 
 **URI:** `/v1/blocks/:blockHash/transactions/count`<br/>
@@ -190,7 +192,7 @@
 }
 ```
 
-##2.8 获取交易总数量
+##1.8 查询链上所有交易量
 **Method:** `GET`<br/>
 
 **URI:** `/v1/transactions/count`<br/>
@@ -206,7 +208,7 @@
 }
 ```
 
-## 2.9 获取签名哈希 
+## 1.9 获取交易签名哈希 
 **Method:** `POST`<br/>
 
 **URI:** `/v1/transactions/get-hash-for-sign`<br/>
@@ -230,7 +232,7 @@
 }
 ```
 
-## 2.10 获取交易平均 处理时间
+## 1.10 查询指定区块中交易平均处理时间
 **Method:** `POST`<br/>
 
 **URI:** `/v1/transactions/average-time`<br/>
@@ -247,7 +249,7 @@
 ```
 
 # Blocks
-##3.1 获取所有区块
+##2.1 查询所有区块
 **Method:** `GET`<br/>
 
 **URI:** `/v1/blocks/list`<br/>
@@ -312,7 +314,7 @@
 }
 ```
 
-##3.2 获取区块（hash）
+##2.2 查询区块（hash）
 **Method:** `GET`<br/>
 
 **URI:** `/v1/blocks/query`<br/>
@@ -351,7 +353,7 @@
 }
 ```
 
-##3.3 获取区块（number）
+##2.3 查询区块（number）
 **Method:** `GET`<br/>
 
 **URI:** `/v1/blocks/query`<br/>
@@ -390,7 +392,7 @@
   }
 ```
 
-##3.4 获取最新区块 
+##2.4 获取最新区块 
 **Method:** `GET` <br/>
 
 **URI:** `/v1/blocks/latest`<br/>
@@ -430,7 +432,7 @@
 ```
 
 # Contracts
-##4.1 编译合约 
+##3.1 编译合约 
 **Method:** `POST`<br/>
 
 **URI:** `/v1/contracts/compile`<br/>
@@ -461,7 +463,7 @@
 }
 ```
 
-##4.2 部署合约
+##3.2 部署合约
 **Method:** `POST`<br/>
 
 **URI:** `/v1/contracts/deploy`<br/>
@@ -485,7 +487,7 @@
 }
 ```
 
-##4.3 调用合约 
+##3.3 调用合约 
 **Method:** `POST`<br/>
 
 **URI:** `/v1/contracts/invoke`<br/>
@@ -494,7 +496,7 @@
 
 **Response:**<br/>
 
-##4.4 获取合约编码 
+##3.4 获取合约编码 
 **Method:** `GET`<br/>
 
 **URI:** `/v1/contracts/query`<br/>
@@ -513,7 +515,7 @@
 
 # Accounts
 
-## 5.1 获取账户已部署合约数量
+## 4.1 获取账户已部署合约数量
 **Method:** `GET`<br/>
 
 **URI:** `/v1/accounts/:address/contracts/count`<br/>
@@ -527,4 +529,53 @@
   "message": "SUCCESS",
   "result": "0x1"
 }
+```
+
+# Nodes
+## 5.1 获取节点信息
+**Method:** `GET`<br/>
+
+**URI:** `/v1/nodes/list`<br/>
+
+**Request:** `localhost:9000/v1/nodes/list`<br/>
+
+**Response:**<br/>
+```json
+{
+  "code": 200,
+  "message": "SUCCESS",
+  "result": [
+    {
+      "status": 0,
+      "ip": "127.0.0.1",
+      "port": 8002,
+      "id": 2,
+      "isprimary": false,
+      "delay": 368690
+    },
+    {
+      "status": 0,
+      "ip": "127.0.0.1",
+      "port": 8003,
+      "id": 3,
+      "isprimary": false,
+      "delay": 287223
+    },
+    {
+      "status": 0,
+      "ip": "127.0.0.1",
+      "port": 8004,
+      "id": 4,
+      "isprimary": false,
+      "delay": 295107
+    },
+    {
+      "status": 0,
+      "ip": "172.16.1.103",
+      "port": 8001,
+      "id": 1,
+      "isprimary": false,
+      "delay": 0
+    }
+  ]
 ```

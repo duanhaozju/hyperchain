@@ -40,6 +40,10 @@ func init() {
 			beego.NSRouter("/:address/contracts/count", &controllers.AccountsController{}, "get:GetContractCountByAddr"),
 		),
 
+		beego.NSNamespace("/nodes",
+			beego.NSRouter("/list", &controllers.NodesController{}, "get:GetNodes"),
+		),
+
 	)
 	beego.AddNamespace(ns)
 }
