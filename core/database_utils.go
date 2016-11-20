@@ -103,6 +103,18 @@ func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error)
 	err = proto.Unmarshal(data, &transaction)
 	return &transaction, err
 }
+func JudgeTransactionExist(db hyperdb.Database, key []byte) (bool, error) {
+	var transaction types.Transaction
+	keyFact := append(TransactionPrefix, key...)
+	data, err := db.Get(keyFact)
+	if len(data) == 0 {
+		return false, err
+	}
+	err = proto.Unmarshal(data, &transaction)
+	return true, err
+}
+
+
 
 func JudgeTransactionExist(db hyperdb.Database, key []byte) (bool, error) {
 	var transaction types.Transaction

@@ -159,7 +159,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.BuildHash().Bytes()
 
-
+	//delete repeated tx
 	var exist, _= core.JudgeTransactionExist(tran.db, tx.TransactionHash)
 
 
@@ -247,7 +247,7 @@ func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*Rece
 
 		return &ReceiptResult{
 			TxHash: 	 receipt.TxHash,
-			//PostState: 	 receipt.PostState,
+			PostState: 	 receipt.PostState,
 			ContractAddress: receipt.ContractAddress,
 			Ret: 		 receipt.Ret,
 		}, nil

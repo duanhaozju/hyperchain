@@ -85,7 +85,8 @@ func (h *helper) Execute(seqNo uint64, hash string, flag bool, isPrimary bool, t
 	}
 
 	// Post the event to outer
-	go h.msgQ.Post(writeEvent)
+	// !!! CANNOT use go, it will result in concurrent problems when writing blocks
+	h.msgQ.Post(writeEvent)
 
 	return nil
 }

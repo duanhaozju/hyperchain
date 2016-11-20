@@ -70,6 +70,13 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 	tx.Id = uint64(contract.pm.Peermanager.GetNodeId())
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.BuildHash().Bytes()
+	//delete repeated tx
+	var exist, _= core.JudgeTransactionExist(contract.db, tx.TransactionHash)
+
+
+	if exist{
+		return common.Hash{}, errors.New("repeated tx")
+	}
 
 
 	//delete repeated tx
