@@ -76,7 +76,7 @@ func newUser(contractAddr string, accounts []string) {
 	logger.Notice(ip, port)
 	// deploy account to blockchain
 	for i := 0; i < len(accounts); i += 1 {
-		command, success := NewTransaction(genesisPassword, accounts[i], contractAddr, time.Now().UnixNano(), 0, NHmethod1, 1, ip, int(port), true, true)
+		command, success := NewTransaction(genesisPassword, accounts[i], contractAddr, time.Now().UnixNano(), 0, NHmethod1, 1, ip, int(port), true, false)
 		if success == false {
 			logger.Error("create transaction failed")
 		} else {
