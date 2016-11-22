@@ -1,68 +1,166 @@
 //author:zsx
 //data:2016-11-2
-//GetAccounts需要写入区块，只测试了空的
-//getbanlance 还未写入 只测试了空的，但是空的账户应该返回账户空或者余额0，现在出现了空指针异常，分析代码后暂认为是逻辑有一点问题
+
 package hpc
 
-//import (
-//	//	"fmt"
-//	//	"hyperchain/accounts"
-//	"hyperchain/consensus"
-//	"hyperchain/core"
-//	"hyperchain/core/blockpool"
-//	"hyperchain/core/types"
-//	"hyperchain/crypto"
-//	"hyperchain/event"
-//	//	"hyperchain/hyperdb"
-//	//	"hyperchain/manager"
-//	//	"strings"
-//	"testing"
-//	"time"
-//)
+import (
+	"fmt"
+	"hyperchain/accounts"
+	"hyperchain/common"
+	"hyperchain/core"
 
-//func Test_AccountAPI(t *testing.T) {
-//	core.InitDB("./build/keystore", 8023)
-//	keydir := "../config/keystore/"
-//	encryption := crypto.NewEcdsaEncrypto("ecdsa")
-//	am := accounts.NewAccountManager(keydir, encryption)
-//	pm := &manager.ProtocolManager{
+	"hyperchain/crypto"
+	"hyperchain/hyperdb"
+	"hyperchain/manager"
+	"testing"
+)
 
-//		AccountManager: am,
-//	}
-//	db, _ := hyperdb.GetLDBDatabase()
-//	fmt.Println("-----------------start test----------------------")
-//	publicAccountAPI := NewPublicAccountAPI(pm, db)
-//	ad := publicAccountAPI.NewAccount("123456")
-//	if len(ad) == 0 {
-//		t.Errorf("newAccount wrong")
-//	}
-//	unlockParas := &UnlockParas{
-//		Address:  ad,
-//		Password: "123456",
-//	}
-//	ref, _ := publicAccountAPI.UnlockAccount(*unlockParas)
-//	if !ref {
+//测试成功创建一个新的account
+func Test_NewAccount1(t *testing.T) {
+	//单例数据库状态设置为close
+	hyperdb.Setclose()
+	//初始化数据
+	core.InitDB("./build/keystore", 8001)
 
-//		t.Errorf("UnlockParas  wrong")
-//	}
-//	unlockParas2 := &UnlockParas{
-//		Address:  ad,
-//		Password: "1234567",
-//	}
+	//初始化AccountManager
+	keydir := "../config/keystore/"
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	am := accounts.NewAccountManager(keydir, encryption)
 
-//	_, err := publicAccountAPI.UnlockAccount(*unlockParas2)
-//	if !strings.EqualFold("Incorrect address or password!", err.Error()) {
-//		fmt.Println(err.Error())
-//		t.Errorf("UnlockParas  wrong")
-//	}
+	//初始化pm
+	pm := &manager.ProtocolManager{
 
-//	ref_getaccount := publicAccountAPI.GetAccounts()
-//	if ref_getaccount != nil {
-//		t.Errorf("GetAccounts  wrong")
-//	}
-//	fmt.Println("getbalance testing")
-//	//	ref_getbanlance, _ := publicAccountAPI.GetBalance(ad)
-//	//	if !strings.EqualFold(ref_getbanlance, "") {
-//	//	}
-//	//	t.Errorf("GetBalanc wrong")
-//}
+		AccountManager: am,
+	}
+
+	//获取db句柄
+	db, _ := hyperdb.GetLDBDatabase()
+
+	//初始化API
+	publicAccountAPI := NewPublicAccountAPI(pm, db)
+
+	ad ,err:= publicAccountAPI.NewAccount("123456")
+	if err !=nil{
+		t.Errorf("NewAccount(123456) fail")
+	}
+
+	if len(ad) != 20 {
+		log.Noticef("publicAccountAPI.NewAccount fail，创建一个新账户失败")
+		log.Noticef("新账户地址：%d", len(ad))
+		fmt.Println(ad)
+	}
+
+}
+func Test_UnlockAccount(t *testing.T) {
+
+	//初始化AccountManager
+	keydir := "../config/keystore/"
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	am := accounts.NewAccountManager(keydir, encryption)
+
+	//初始化pm
+	pm := &manager.ProtocolManager{
+
+		AccountManager: am,
+	}
+
+	//获取db句柄
+	db, _ := hyperdb.GetLDBDatabase()
+
+	//初始化API
+	publicAccountAPI := NewPublicAccountAPI(pm, db)
+
+	ad ,_:= publicAccountAPI.NewAccount("123456")
+
+	unlockParas := &UnlockParas{
+		Address:  ad,
+		Password: "123456",
+	}
+
+	unlockParas2 := &UnlockParas{
+		Address:  ad,
+		Password: "1234567",
+	}
+
+	//用123456解锁
+	ref, _ := publicAccountAPI.UnlockAccount(*unlockParas)
+	if !ref {
+		t.Errorf("publicAccountAPI.UnlockAccount fail 解锁失败")
+	}
+
+	//用错误密码解锁
+	ref, _ = publicAccountAPI.UnlockAccount(*unlockParas2)
+	if ref {
+		t.Errorf("publicAccountAPI.UnlockAccount fail 错误密码解锁成功")
+	}
+}
+
+func Test_GetAccounts(t *testing.T) {
+
+	//初始化AccountManager
+	keydir := "../config/keystore/"
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	am := accounts.NewAccountManager(keydir, encryption)
+
+	//初始化pm
+	pm := &manager.ProtocolManager{
+
+		AccountManager: am,
+	}
+
+	//获取db句柄
+	db, _ := hyperdb.GetLDBDatabase()
+
+	//初始化API
+	publicAccountAPI := NewPublicAccountAPI(pm, db)
+
+	//从有效的build找所有账户
+	ref := publicAccountAPI.GetAccounts()
+	if ref == nil {
+		t.Errorf("publicAccountAPI.GetAccounts() fail 不能获取账户 ")
+	}
+}
+
+//测试成功获得账户余额
+func Test_GetBalance1(t *testing.T) {
+
+	//初始化AccountManager
+	keydir := "../config/keystore/"
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	am := accounts.NewAccountManager(keydir, encryption)
+
+	//初始化pm
+	pm := &manager.ProtocolManager{
+
+		AccountManager: am,
+	}
+
+	//获取db句柄
+	db, _ := hyperdb.GetLDBDatabase()
+
+	//初始化API
+	publicAccountAPI := NewPublicAccountAPI(pm, db)
+
+	add := common.HexToAddress("0x0ed0dd439e44c140ab9fa6fc39459eaf20b2f5a7")
+	ref, err := publicAccountAPI.GetBalance(add)
+
+	if err != nil {
+		fmt.Println(err)
+		t.Errorf("publicAccountAPI.GetBalance1 fail 未能获得账户余额")
+	}
+
+	if ref != "0x640" {
+		fmt.Println(ref)
+		t.Errorf("publicAccountAPI.GetBalance1 fail 账户余额错误")
+	}
+
+	//不存在的账户
+	add1 := common.HexToAddress("0x0ed0dd439e44c140ab9fa6fc39459eaf20b2f444")
+
+	ref, err = publicAccountAPI.GetBalance(add1)
+
+	fmt.Printf(err.Error())
+	if err==nil {
+		t.Errorf("publicAccountAPI.GetBalance1 fail 空账户返回错误不对")
+	}
+}
