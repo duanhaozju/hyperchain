@@ -964,3 +964,92 @@ func TestRecvCommit(t *testing.T) {
 	}
 }
 
+func TestExecuteAfterStateUpdate(t *testing.T) {
+	core.InitDB("/temp/leveldb", 8088)
+	defer clearDB()
+
+	id := 1
+	pbftConfigPath := getPbftConfigPath()
+	config := loadConfig(pbftConfigPath)
+	eventMux := new(event.TypeMux)
+	h := helper.NewHelper(eventMux)
+	pbft := newPbft(uint64(id), config, h)
+	pbft.id = uint64(2)
+	pbft.inNegoView = false
+	pbft.seqNo = uint64(5)
+
+
+	// certs in certstore
+	// cert1: idx.n <= pbft.seqNo
+	v1, n1, _ := uint64(0), uint64(1), "d1"
+	cert1 := pbft.getCert(v1, n1)
+	pbft.executeAfterStateUpdate()
+	if cert1.sentValidate == true {
+		t.Errorf("executeAfterStateUpdate n < seqNo not handle this")
+	}
+
+	// cert2: idx.n > pbft.seqNo, not prepared
+	v2, n2, d2 := uint64(0), uint64(6), "d2"
+	cert2 := pbft.getCert(v2, n2)
+	txBatch := &TransactionBatch{}
+	pbft.validatedBatchStore[d2] = txBatch
+
+	pp := &PrePrepare{
+		View:		v2,
+		SequenceNumber: n2,
+		BatchDigest:    d2,
+		ReplicaId:	uint64(1),
+		TransactionBatch: txBatch,
+	}
+	cert2.prePrepare = pp // now preprepared
+	cert2.digest = d2
+	cert2.prepareCount = pbft.preparedReplicasQuorum() - 1
+	pbft.executeAfterStateUpdate()
+	if cert2.sentValidate == true {
+		t.Errorf("executeAfterStateUpdate n > seqNo, but not prepared, not handle this")
+	}
+
+	// cert3: idx.n > pbft.seqNo, prepared, already validated
+	v3, n3, d3 := uint64(0), uint64(7), "d3"
+	cert3 := pbft.getCert(v3, n3)
+	pbft.validatedBatchStore[d3] = txBatch
+	pp3 := &PrePrepare{
+		View:		v3,
+		SequenceNumber:	n3,
+		BatchDigest: 	d3,
+		ReplicaId: 	uint64(1),
+		TransactionBatch: txBatch,
+	}
+	cert3.prePrepare = pp3
+	cert3.digest = d3
+	cert3.prepareCount = pbft.preparedReplicasQuorum()
+	cert3.validated = true
+	pbft.executeAfterStateUpdate()
+	if cert3.sentValidate == true {
+		t.Errorf("executeAfterStateUpdate n > seqNo, prepared, already validated")
+	}
+	//cert4: idx.n > pbft.seqNo, prepared, not validated yet
+	v4, n4, d4 := uint64(0), uint64(8), "d4"
+	cert4 := pbft.getCert(v4, n4)
+	pbft.validatedBatchStore[d4] = txBatch
+	pp4 := &PrePrepare{
+		View: 		v4,
+		SequenceNumber: n4,
+		BatchDigest:    d4,
+		ReplicaId: 	uint64(1),
+		TransactionBatch: txBatch,
+	}
+	cert4.prePrepare = pp4
+	cert4.digest = d4
+	cert4.prepareCount = pbft.preparedReplicasQuorum()
+	cert4.validated = false
+	pbft.executeAfterStateUpdate()
+	if cert4.sentValidate == false {
+		t.Errorf("executeAfterStateUpdate, expect sentValidate")
+	}
+
+}
+
+func TestExecuteOutstanding(t *testing.T) {
+
+}
