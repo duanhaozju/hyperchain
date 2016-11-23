@@ -1050,6 +1050,531 @@ func TestExecuteAfterStateUpdate(t *testing.T) {
 
 }
 
-func TestExecuteOutstanding(t *testing.T) {
+func TestExecuteOne(t *testing.T) {
 
+	core.InitDB("/temp/leveldb", 8088)
+	defer clearDB()
+
+	id := 1
+	pbftConfigPath := getPbftConfigPath()
+	config := loadConfig(pbftConfigPath)
+	eventMux := new(event.TypeMux)
+	h := helper.NewHelper(eventMux)
+	pbft := newPbft(uint64(id), config, h)
+	pbft.id = uint64(2)
+	pbft.inNegoView = false
+	pbft.seqNo = uint64(0)
+
+	// the cert is nil
+	idx1 := msgID{0, 1}
+	ret := pbft.executeOne(idx1)
+	if ret == true {
+		t.Errorf("cert is nil , expect false")
+	}
+
+	// the cert preprepare is nil
+	idx2 := msgID{0, 1}
+	cert2 := pbft.getCert(0, 1)
+	cert2.prePrepare = nil
+	ret = pbft.executeOne(idx2)
+	if ret == true {
+		t.Errorf("cert.prePrepare is nil, expect false")
+	}
+
+	// cert already sentExecute
+	idx3 := msgID{0, 1}
+	cert3 := pbft.getCert(0, 1)
+	pp3 := &PrePrepare{
+		View: 	0,
+		SequenceNumber:	1,
+		BatchDigest:    "digest",
+		TransactionBatch: nil,
+		ReplicaId:	1,
+	}
+	cert3.prePrepare = pp3
+	cert3.sentExecute = true
+	ret = pbft.executeOne(idx3)
+	if ret == true {
+		t.Errorf("cert sentExecute, expect return false")
+	}
+
+	// not the one to execute
+	idx4 := msgID{0, 2}
+	cert4 := pbft.getCert(0, 2)
+	pp4 := &PrePrepare{
+		View:		0,
+		SequenceNumber:	2,
+		BatchDigest:	"digest",
+		TransactionBatch:	nil,
+		ReplicaId:	1,
+	}
+	cert4.prePrepare = pp4
+	cert4.sentExecute = false
+	pbft.lastExec = uint64(0)
+	ret = pbft.executeOne(idx4)
+	if ret == true {
+		t.Errorf("not the one to execute, expect return false")
+	}
+
+	// in skipInProgress
+	idx5 := msgID{0, 3}
+	cert5 := pbft.getCert(0, 3)
+	pp5 := &PrePrepare{
+		View:		0,
+		SequenceNumber:	3,
+		BatchDigest:	"digest",
+		TransactionBatch: nil,
+		ReplicaId:	1,
+	}
+	cert5.prePrepare = pp5
+	cert5.sentExecute = false
+	pbft.lastExec = uint64(2)
+	pbft.skipInProgress = true
+	ret = pbft.executeOne(idx5)
+	if ret == true {
+		t.Errorf("in the checkpoint, expect false")
+	}
+
+	// not committed
+	idx6 := msgID{0, 4}
+	cert6 := pbft.getCert(0, 4)
+	pp6 := &PrePrepare{
+		View:		0,
+		SequenceNumber: 3,
+		BatchDigest:	"digest",
+		TransactionBatch: nil,
+		ReplicaId:	1,
+	}
+	cert6.prePrepare = pp6
+	cert6.sentExecute = false
+	pbft.lastExec = uint64(3)
+	pbft.skipInProgress = false
+	ret = pbft.executeOne(idx6)
+	if ret == true {
+		t.Errorf("not committed, expect false")
+	}
+
+
+	// normal
+	idx7 := msgID{0, 5}
+	cert7 := pbft.getCert(0, 5)
+	txBatch := &TransactionBatch{
+		Timestamp:	1,
+	}
+	pp7 := &PrePrepare{
+		View:		0,
+		SequenceNumber: 5,
+		BatchDigest:	"digest",
+		TransactionBatch: txBatch,
+		ReplicaId:	1,
+	}
+
+	cert7.prePrepare = pp7
+	pbft.validatedBatchStore["digest"] = txBatch
+
+	cert7.sentExecute = false
+	pbft.lastExec = uint64(4)
+	pbft.skipInProgress = false
+	cert7.digest = "digest"
+	cert7.prepareCount = pbft.preparedReplicasQuorum()
+	cert7.commitCount = pbft.committedReplicasQuorum()
+	ret = pbft.executeOne(idx7)
+	if ret == false {
+		t.Errorf("expect true")
+	}
+}
+
+func TestExecDoneSync(t *testing.T) {
+	core.InitDB("/temp/leveldb", 8088)
+	defer clearDB()
+
+	id := 1
+	pbftConfigPath := getPbftConfigPath()
+	config := loadConfig(pbftConfigPath)
+	eventMux := new(event.TypeMux)
+	h := helper.NewHelper(eventMux)
+	pbft := newPbft(uint64(id), config, h)
+	pbft.id = uint64(2)
+	pbft.inNegoView = false
+	pbft.seqNo = uint64(0)
+
+	pbft.currentExec = nil
+	pbft.skipInProgress = false
+	pbft.execDoneSync(msgID{0, 1})
+	if pbft.skipInProgress == false {
+		t.Errorf("currentExec is nil, expect true")
+	}
+}
+
+func TestCheckpoint(t *testing.T) {
+	core.InitDB("/temp/leveldb", 8088)
+	defer clearDB()
+
+	id := 1
+	pbftConfigPath := getPbftConfigPath()
+	config := loadConfig(pbftConfigPath)
+	eventMux := new(event.TypeMux)
+	h := helper.NewHelper(eventMux)
+	pbft := newPbft(uint64(id), config, h)
+	pbft.id = uint64(2)
+	pbft.inNegoView = false
+	pbft.seqNo = uint64(0)
+
+	bcInfo := &protos.BlockchainInfo{
+		Height:		10,
+		PreviousBlockHash:	[]byte("previous"),
+		CurrentBlockHash:	[]byte("current"),
+	}
+	identity, _ := proto.Marshal(bcInfo)
+	idAsString := byteToString(identity)
+	seqNo := uint64(10)
+	pbft.checkpoint(seqNo, bcInfo)
+	idString, _ := pbft.chkpts[seqNo]
+	if idString != idAsString {
+		t.Errorf("checkpoint error")
+	}
+}
+
+func TestRecvCheckpoint(t *testing.T) {
+
+	core.InitDB("/temp/leveldb", 8088)
+	defer clearDB()
+
+	id := 1
+	pbftConfigPath := getPbftConfigPath()
+	config := loadConfig(pbftConfigPath)
+	eventMux := new(event.TypeMux)
+	h := helper.NewHelper(eventMux)
+	pbft := newPbft(uint64(id), config, h)
+	pbft.id = uint64(2)
+	pbft.inNegoView = false
+	pbft.seqNo = uint64(0)
+
+	bcInfo := &protos.BlockchainInfo{
+		Height:		10,
+		PreviousBlockHash:	[]byte("previous"),
+		CurrentBlockHash:	[]byte("current"),
+	}
+	identity, _ := proto.Marshal(bcInfo)
+	idAsString := byteToString(identity)
+	seqNo := uint64(10)
+	chkpt := &Checkpoint{
+		SequenceNumber:		seqNo,
+		ReplicaId:		uint64(3),
+		Id:			idAsString,
+	}
+	cert := pbft.getChkptCert(seqNo, chkpt.Id)
+	cert.chkptCount = pbft.intersectionQuorum()-1
+	pbft.chkpts[seqNo] = idAsString
+	pbft.recvCheckpoint(chkpt)
+	if pbft.h != 10 {
+		t.Errorf("should movewatermarks")
+	}
+}
+
+func TestWeakCheckpointSetOutOfRange(t *testing.T) {
+
+	core.InitDB("/temp/leveldb", 8088)
+	defer clearDB()
+
+	id := 1
+	pbftConfigPath := getPbftConfigPath()
+	config := loadConfig(pbftConfigPath)
+	eventMux := new(event.TypeMux)
+	h := helper.NewHelper(eventMux)
+	pbft := newPbft(uint64(id), config, h)
+	pbft.id = uint64(2)
+	pbft.inNegoView = false
+	pbft.seqNo = uint64(0)
+
+	bcInfo := &protos.BlockchainInfo{
+		Height:		50,
+		PreviousBlockHash:	[]byte("previous"),
+		CurrentBlockHash:	[]byte("current"),
+	}
+	identity, _ := proto.Marshal(bcInfo)
+	idAsString := byteToString(identity)
+	seqNo := uint64(50)
+	chkpt := &Checkpoint{
+		SequenceNumber:		seqNo,
+		ReplicaId:		uint64(3),
+		Id:			idAsString,
+	}
+	pbft.hChkpts[1] = uint64(50)
+
+	pbft.weakCheckpointSetOutOfRange(chkpt)
+
+	if pbft.h == 0 {
+		t.Errorf("should move water marks")
+	}
+}
+
+func TestWitnessCheckpointWeakCert(t *testing.T) {
+	core.InitDB("/temp/leveldb", 8088)
+	defer clearDB()
+
+	id := 1
+	pbftConfigPath := getPbftConfigPath()
+	config := loadConfig(pbftConfigPath)
+	eventMux := new(event.TypeMux)
+	h := helper.NewHelper(eventMux)
+	pbft := newPbft(uint64(id), config, h)
+	pbft.id = uint64(2)
+	pbft.inNegoView = false
+	pbft.seqNo = uint64(0)
+
+	bcInfo := &protos.BlockchainInfo{
+		Height:		10,
+		PreviousBlockHash:	[]byte("previous"),
+		CurrentBlockHash:	[]byte("current"),
+	}
+	identity, _ := proto.Marshal(bcInfo)
+	idAsString := byteToString(identity)
+	seqNo := uint64(10)
+	chkpt := &Checkpoint{
+		SequenceNumber:		seqNo,
+		ReplicaId:		uint64(3),
+		Id:			idAsString,
+	}
+	pbft.checkpointStore[*chkpt] = true
+	chkpt2 := &Checkpoint{
+		SequenceNumber:  	seqNo,
+		ReplicaId:		uint64(2),
+		Id:			idAsString,
+	}
+	pbft.checkpointStore[*chkpt2] = true
+
+	pbft.highStateTarget = nil
+
+	pbft.witnessCheckpointWeakCert(chkpt)
+
+	if pbft.highStateTarget == nil {
+		t.Errorf("should update highStateTarget")
+	}
+}
+
+func TestFetchRequestBatches(t *testing.T) {
+	// TODO
+}
+
+func TestRecvFetchRequestBatch(t *testing.T) {
+	// TODO
+}
+
+func TestRecvReturnRequestBatch(t *testing.T) {
+
+	core.InitDB("/temp/leveldb", 8088)
+	defer clearDB()
+
+	id := 1
+	pbftConfigPath := getPbftConfigPath()
+	config := loadConfig(pbftConfigPath)
+	eventMux := new(event.TypeMux)
+	h := helper.NewHelper(eventMux)
+	pbft := newPbft(uint64(id), config, h)
+	pbft.id = uint64(2)
+	pbft.inNegoView = false
+	pbft.activeView = true
+	pbft.seqNo = uint64(0)
+
+	txBatch := &TransactionBatch{
+		Batch:		nil,
+		Timestamp:	1,
+	}
+
+	digest := hash(txBatch)
+	pbft.missingReqBatches[digest] = true
+	pbft.recvReturnRequestBatch(txBatch)
+	_, ok := pbft.missingReqBatches[digest]
+	if ok {
+		t.Errorf("missing request batch should be 0")
+	}
+}
+
+func TestMoveWatermarks(t *testing.T) {
+
+	core.InitDB("/temp/leveldb", 8088)
+	defer clearDB()
+
+	id := 1
+	pbftConfigPath := getPbftConfigPath()
+	config := loadConfig(pbftConfigPath)
+	eventMux := new(event.TypeMux)
+	h := helper.NewHelper(eventMux)
+	pbft := newPbft(uint64(id), config, h)
+	pbft.id = uint64(2)
+	pbft.inNegoView = false
+	pbft.activeView = true
+	pbft.seqNo = uint64(0)
+	// set current h to 50
+	pbft.h = uint64(50)
+	// fill some record into store
+	cert := pbft.getCert(0, 1)
+	cert.digest = "v0n1digest"
+	// validatedBatchStore
+	pbft.validatedBatchStore[cert.digest] = &TransactionBatch{}
+	// outstanding req batch
+	pbft.outstandingReqBatches[cert.digest] = &TransactionBatch{}
+
+	testChkpt := &Checkpoint{
+		SequenceNumber:		10,
+	}
+	// checkpointstore
+	pbft.checkpointStore[*testChkpt] = true
+	// chkptCertStore
+	chkpts := make(map[Checkpoint]bool)
+	chkpts[*testChkpt] = true
+	pbft.getChkptCert(10, "chkptId")
+
+	// pset
+	vcP := &ViewChange_PQ{}
+	pbft.pset[10] = vcP
+
+	// qset
+	qIdx := qidx{d: "chkpt", n: 10}
+	vcQ := &ViewChange_PQ{}
+	pbft.qset[qIdx] = vcQ
+
+	// chkpts
+	pbft.chkpts[10] = "chkpt"
+
+	// this seqno should not trigger movewatermark
+	pbft.moveWatermarks(40)
+
+	if _, ok := pbft.chkpts[10]; ok != true {
+		t.Errorf("should not move watermark, expect true")
+	}
+	// test if all delete
+	pbft.moveWatermarks(60)
+	// validatedBatchStore
+	if _, ok := pbft.validatedBatchStore[cert.digest]; ok {
+		t.Errorf("should not move watermark, expect vb record not exist")
+	}
+	// outstanding req batch
+	if _, ok := pbft.outstandingReqBatches[cert.digest]; ok {
+		t.Errorf("should not move watermark, expect ob record not exist")
+	}
+	// checkpoint store
+	if _, ok := pbft.checkpointStore[*testChkpt]; ok {
+		t.Errorf("should not move watermark, expect checkpoint store record not exist")
+	}
+	// checkpoint cert store
+	if _, ok := pbft.chkptCertStore[chkptID{n:10, id:"chkptId"}]; ok {
+		t.Errorf("should not move watermark, expect chkptCertStore record not exist")
+	}
+	if _, ok := pbft.pset[10]; ok {
+		t.Errorf("should not move watermark, expect pset record not exist")
+	}
+	if _, ok := pbft.qset[qidx{d: "chkpt", n: 10}]; ok {
+		t.Errorf("should not move watermark, expect qset record not exist")
+	}
+	if _, ok := pbft.chkpts[10]; ok {
+		t.Errorf("should not move watermark, expect chkpts record not exist")
+	}
+	if _, ok := pbft.chkpts[10]; ok != false {
+		t.Errorf("should not move watermark, expect false")
+	}
+}
+
+func TestUpdateHighStateTarget(t *testing.T) {
+
+	core.InitDB("/temp/leveldb", 8088)
+	defer clearDB()
+
+	id := 1
+	pbftConfigPath := getPbftConfigPath()
+	config := loadConfig(pbftConfigPath)
+	eventMux := new(event.TypeMux)
+	h := helper.NewHelper(eventMux)
+	pbft := newPbft(uint64(id), config, h)
+	pbft.id = uint64(2)
+	pbft.inNegoView = false
+	pbft.activeView = true
+	pbft.seqNo = uint64(0)
+
+	checkpoint := checkpointMessage{
+		seqNo:		20,
+		id:		[]byte("checkpoint"),
+	}
+	peers := []uint64{1, 2}
+	curTarget := &stateUpdateTarget {
+		checkpointMessage:	checkpoint,
+		replicas:		peers,
+	}
+	pbft.highStateTarget = curTarget
+
+	// new target seqNo <= cur target seqNo
+	newCheckpoint1 := checkpointMessage{
+		seqNo:		10,
+		id:		[]byte("checkpoint"),
+	}
+	newTargetSmaller := &stateUpdateTarget{
+		checkpointMessage:	newCheckpoint1,
+		replicas:		peers,
+	}
+	pbft.updateHighStateTarget(newTargetSmaller)
+	if pbft.highStateTarget.checkpointMessage.seqNo > curTarget.checkpointMessage.seqNo {
+		t.Errorf("should not update high state target, expect not change")
+	}
+
+	// new target seqNo > cur target seqNo
+	newCheckpoint2 := checkpointMessage{
+		seqNo:		30,
+		id:		[]byte("checkpoint"),
+	}
+	newTargetLarger := &stateUpdateTarget {
+		checkpointMessage:	newCheckpoint2,
+		replicas:		peers,
+	}
+	pbft.updateHighStateTarget(newTargetLarger)
+	if pbft.highStateTarget.checkpointMessage.seqNo <= curTarget.checkpointMessage.seqNo {
+		t.Errorf("shoul update high state target, expect change")
+	}
+}
+
+func TestStateTransfer(t *testing.T) {
+	// TODO
+}
+
+func TestRetryStateTransfer(t *testing.T) {
+
+	core.InitDB("/temp/leveldb", 8088)
+	defer clearDB()
+
+	id := 1
+	pbftConfigPath := getPbftConfigPath()
+	config := loadConfig(pbftConfigPath)
+	eventMux := new(event.TypeMux)
+	h := helper.NewHelper(eventMux)
+	pbft := newPbft(uint64(id), config, h)
+	pbft.id = uint64(2)
+	pbft.inNegoView = false
+	pbft.activeView = true
+	pbft.seqNo = uint64(0)
+
+	pbft.stateTransferring = false
+	newCheckpoint := checkpointMessage{
+		seqNo:		10,
+		id:		[]byte("checkpoint"),
+	}
+	peers := []uint64{1,2}
+	target := &stateUpdateTarget{
+		checkpointMessage:	newCheckpoint,
+		replicas:		peers,
+	}
+	pbft.retryStateTransfer(target)
+	if pbft.stateTransferring == false {
+		t.Errorf("should in statetransferring")
+	}
+
+	pbft.stateTransferring = false
+	pbft.highStateTarget = target
+	pbft.retryStateTransfer(nil)
+	if pbft.stateTransferring == false {
+		t.Errorf("should in statetransferring")
+	}
+}
+
+func TestResubmitRequestBatches(t *testing.T) {
+	// TODO
 }

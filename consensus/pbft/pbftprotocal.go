@@ -1441,16 +1441,13 @@ func (pbft *pbftProtocal) recvCheckpoint(chkpt *Checkpoint) events.Event {
 
 	logger.Infof("Replica %d received checkpoint from replica %d, seqNo %d, digest %s",
 		pbft.id, chkpt.ReplicaId, chkpt.SequenceNumber, chkpt.Id)
-
 	if pbft.inNegoView {
 		logger.Debugf("Replica %d try to recvCheckpoint, but it's in nego-view", pbft.id)
 		return nil
 	}
-
 	if pbft.weakCheckpointSetOutOfRange(chkpt) {
 		return nil
 	}
-
 	if !pbft.inW(chkpt.SequenceNumber) {
 		if chkpt.SequenceNumber != pbft.h && !pbft.skipInProgress {
 			// It is perfectly normal that we receive checkpoints for the watermark we just raised, as we raise it after 2f+1, leaving f replies left
@@ -1468,7 +1465,6 @@ func (pbft *pbftProtocal) recvCheckpoint(chkpt *Checkpoint) events.Event {
 		logger.Warningf("Ignoring duplicate checkpoint from %d, --------seqNo=%d--------", chkpt.ReplicaId, chkpt.SequenceNumber)
 		return nil
 	}
-
 	cert.chkpts[*chkpt] = true
 	cert.chkptCount++
 	pbft.checkpointStore[*chkpt] = true
@@ -1480,12 +1476,10 @@ func (pbft *pbftProtocal) recvCheckpoint(chkpt *Checkpoint) events.Event {
 		// We do have a weak cert
 		pbft.witnessCheckpointWeakCert(chkpt)
 	}
-
 	if cert.chkptCount < pbft.intersectionQuorum() {
 		// We do not have a quorum yet
 		return nil
 	}
-
 	// It is actually just fine if we do not have this checkpoint
 	// and should not trigger a state transfer
 	// Imagine we are executing sequence number k-1 and we are slow for some reason
@@ -1510,7 +1504,6 @@ func (pbft *pbftProtocal) recvCheckpoint(chkpt *Checkpoint) events.Event {
 		}
 		return nil
 	}
-
 	logger.Infof("Replica %d found checkpoint quorum for seqNo %d, digest %s",
 		pbft.id, chkpt.SequenceNumber, chkpt.Id)
 
@@ -1671,7 +1664,6 @@ func (pbft *pbftProtocal) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 }
 
 func (pbft *pbftProtocal) witnessCheckpointWeakCert(chkpt *Checkpoint) {
-
 	// Only ever invoked for the first weak cert, so guaranteed to be f+1
 	checkpointMembers := make([]uint64, pbft.f+1)
 	i := 0
@@ -1682,14 +1674,12 @@ func (pbft *pbftProtocal) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 			i++
 		}
 	}
-
 	snapshotID, err := base64.StdEncoding.DecodeString(chkpt.Id)
 	if err != nil {
 		err = fmt.Errorf("Replica %d received a weak checkpoint cert which could not be decoded (%s)", pbft.id, chkpt.Id)
 		logger.Error(err.Error())
 		return
 	}
-
 	target := &stateUpdateTarget{
 		checkpointMessage: checkpointMessage{
 			seqNo: chkpt.SequenceNumber,
@@ -2020,7 +2010,6 @@ func (pbft *pbftProtocal) processRequestsDuringRecovery() {
 		logger.Critical("Replica %d try to processRequestsDuringRecovery but recovery is not finished", pbft.id)
 	}
 }
-
 
 // =============================================================================
 // receive local message methods
