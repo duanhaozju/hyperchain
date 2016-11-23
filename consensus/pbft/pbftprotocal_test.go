@@ -20,10 +20,12 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/consensus/helper"
 	"hyperchain/consensus/events"
+	"os"
 )
 
 func getPbftConfigPath() string {
-	return "/Users/zarczhao/Documents/GoWorkspace/src/hyperchain/config/pbft.yaml"
+	gopath := os.Getenv("GOPATH")
+	return gopath  + "/src/hyperchain/config/pbft.yaml"
 }
 
 func TestRecvMsgMaliciousEvent(t *testing.T) {

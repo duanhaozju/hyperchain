@@ -8,9 +8,11 @@ import (
 	"hyperchain/core/types"
 	//"bytes"
 	"container/list"
+	"os"
 )
 
 func TestOrderedRequests(t *testing.T) {
+	print(os.Getenv("GOPATH"))
 	or := &orderedRequests{}
 	or.empty()
 
