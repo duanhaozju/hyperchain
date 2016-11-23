@@ -5,20 +5,21 @@ import (
 	"testing"
 )
 
+
 func TestMyAPI(t *testing.T)  {
-	fn := filepath.Join("json_files", "myTest.json")
+	fn := filepath.Join(vmTestDir, "myTest.json")
 	if err := RunVmTest(fn, StateSkipTests); err != nil {
 		t.Error(err)
 	}
 }
 
-/*
-func TestStateTransition(t *testing.T) {
-	fn := filepath.Join(stateTestDir, "stTransitionTest.json")
-	if err := RunVmTest(fn, StateSkipTests); err != nil {
-		t.Error(err)
-	}
-}
+
+//func TestStateTransition(t *testing.T) {
+//	fn := filepath.Join(stateTestDir, "stTransitionTest.json")
+//	if err := RunVmTest(fn, StateSkipTests); err != nil {
+//		t.Error(err)
+//	}
+//}
 
 func TestVMArithmetic(t *testing.T) {
 	fn := filepath.Join(vmTestDir, "vmArithmeticTest.json")
@@ -119,4 +120,3 @@ func TestVMRandom(t *testing.T) {
 		}
 	}
 }
-*/

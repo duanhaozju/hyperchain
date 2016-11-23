@@ -1,18 +1,3 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package crypto
 
@@ -28,6 +13,8 @@ import (
 
 	"errors"
 	"hyperchain/common"
+	"math/big"
+	"crypto/rand"
 )
 
 var testAddrHex = "970e8128ab834e8eac17ab8e3812f010678cf791"
@@ -152,4 +139,44 @@ func checkAddr(t *testing.T, addr0, addr1 common.Address) {
 	if addr0 != addr1 {
 		t.Fatalf("address mismatch: want: %x have: %x", addr0, addr1)
 	}
+}
+
+func TestEcdsaEncrypto_Sign(t *testing.T) {
+	key,_ := GenerateKey()
+	length, err := rand.Int(rand.Reader, big.NewInt(1024))
+	if err != nil {
+		t.Fatalf("Failed generating AES key [%s]", err)
+	}
+	msg, err := GetRandomBytes(int(length.Int64()) + 1)
+	fmt.Println("length of msg:",len(msg))
+	if err != nil {
+		t.Fatalf("Failed generating AES key [%s]", err)
+	}
+	ee := NewEcdsaEncrypto("ecsda")
+	var s256 = NewKeccak256Hash("Keccak256")
+	hash := s256.Hash(msg)
+	msg = hash[:]
+	for i:=1;i<8;i++{
+		start := time.Now()
+		sigma, _ := ee.Sign(msg,key)
+		fmt.Println("---sign with time---:",time.Since(start))
+		address := ee.PrivKeyToAddress(*key)
+		start = time.Now()
+		check,_ := ee.UnSign(msg,sigma)
+		if(check==address){
+			fmt.Println("unsign with time:",time.Since(start))
+		}
+	}
+
+}
+func GetRandomBytes(len int) ([]byte, error) {
+	key := make([]byte, len)
+
+	// TODO: rand could fill less bytes then len
+	_, err := rand.Read(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return key, nil
 }

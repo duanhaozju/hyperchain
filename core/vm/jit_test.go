@@ -7,6 +7,7 @@ import (
 
 	"hyperchain/common"
 	"hyperchain/crypto"
+	"hyperchain/core/vm/vmtest"
 )
 
 const maxRun = 1000
@@ -148,6 +149,12 @@ type Env struct {
 	gasLimit *big.Int
 	depth    int
 	evm      *EVM
+	Gas        *big.Int
+	number     *big.Int
+	time       *big.Int
+
+	ruleSet    RuleSet
+	state      *vmtest.StateDB
 }
 
 func NewEnv(noJit, forceJit bool) *Env {
@@ -158,6 +165,7 @@ func NewEnv(noJit, forceJit bool) *Env {
 	})
 	return env
 }
+
 
 func (self *Env) RuleSet() RuleSet       { return ruleSet{new(big.Int)} }
 func (self *Env) Vm() Vm                 { return self.evm }
