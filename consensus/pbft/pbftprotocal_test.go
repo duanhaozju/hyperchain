@@ -237,7 +237,7 @@ func TestProcessNullRequest(t *testing.T) {
 	}
 }
 
-func TestProcessNegotiateView(t *testing.T) {
+func TestRecvProcessNegotiateView(t *testing.T) {
 
 	core.InitDB("/temp/leveldb", 8088)
 	defer clearDB()
@@ -1577,4 +1577,134 @@ func TestRetryStateTransfer(t *testing.T) {
 
 func TestResubmitRequestBatches(t *testing.T) {
 	// TODO
+}
+
+func TestSkipTo(t *testing.T) {
+	// TODO
+}
+
+func TestUpdateState(t *testing.T) {
+	// TODO
+}
+
+func TestUpdateViewChangeSeqNo(t *testing.T) {
+	// TODO
+}
+
+func TestProcessNegotiateView(t *testing.T) {
+
+}
+
+func TestRecvNegoView(t *testing.T) {
+
+}
+
+func TestRecvNegoViewRsp(t *testing.T) {
+
+	core.InitDB("/temp/leveldb", 8088)
+	defer clearDB()
+
+	id := 1
+	pbftConfigPath := getPbftConfigPath()
+	config := loadConfig(pbftConfigPath)
+	eventMux := new(event.TypeMux)
+	h := helper.NewHelper(eventMux)
+	pbft := newPbft(uint64(id), config, h)
+	pbft.id = uint64(2)
+	pbft.inNegoView = true
+	pbft.activeView = true
+	pbft.seqNo = uint64(0)
+
+	var ret events.Event
+	pbft.negoViewRspStore = make(map[uint64]uint64)
+
+	// duplicate negoViewRsp
+	nvr1 := &NegotiateViewResponse{
+		ReplicaId:	1,
+		View:		0,
+	}
+	pbft.negoViewRspStore[nvr1.ReplicaId] = nvr1.View
+	ret = pbft.recvNegoViewRsp(nvr1)
+	if ret != nil {
+		t.Errorf("recvNegoViewRsp duplicate, expect ret nil")
+	}
+
+	// recv negoViewRsp doesn't above N-f
+	nvr2 := &NegotiateViewResponse{
+		ReplicaId:	2,
+		View:		0,
+	}
+	ret = pbft.recvNegoViewRsp(nvr2)
+	if ret != nil {
+		t.Errorf("recvNegoViewRsp not reach N-f+1, expect ret nil")
+	}
+
+	// recv negoViewRsp above N-f but cannot find quorum
+	nvr3 := &NegotiateViewResponse{
+		ReplicaId:	3,
+		View:		1,
+	}
+	ret = pbft.recvNegoViewRsp(nvr3)
+	if ret != nil {
+		t.Errorf("recvNegoViewRsp above N-f, but cannot find quorum, expect ret nil")
+	}
+
+	// recv negoViewRsp above N-f and find quorum
+	nvr4 := &NegotiateViewResponse{
+		ReplicaId:	4,
+		View:		0,
+	}
+	ret = pbft.recvNegoViewRsp(nvr4)
+	if _, ok := ret.(negoViewDoneEvent); !ok {
+		t.Errorf("recvNegoViewRsp achieve quorum, expect ret negoViewDoneEvent")
+	}
+}
+
+func TestRecvValidateResult(t *testing.T) {
+
+	core.InitDB("/temp/leveldb", 8088)
+	defer clearDB()
+
+	id := 1
+	pbftConfigPath := getPbftConfigPath()
+	config := loadConfig(pbftConfigPath)
+	eventMux := new(event.TypeMux)
+	h := helper.NewHelper(eventMux)
+	pbft := newPbft(uint64(id), config, h)
+	pbft.inNegoView = false
+	pbft.activeView = true
+	pbft.seqNo = uint64(0)
+
+	// primary recv ValidateResult
+	pbft.id = uint64(1)
+	pbft.view = uint64(0)
+
+	txes := make([]*types.Transaction, 1)
+	vali := event.ValidatedTxs{
+		Transactions: 	txes,
+		Hash:		"hash",
+		SeqNo:		1,
+		View: 		0,
+		Timestamp:	1,
+	}
+	pbft.recvValidatedResult(vali)
+	if _, ok := pbft.validatedBatchStore["hash"]; !ok {
+		t.Errorf("primary recv ValidatedResult, expect exist in validatedBatchStore")
+	}
+
+	if _, ok := pbft.outstandingReqBatches["hash"]; !ok {
+		t.Errorf("primary recv Validatedresult, expect exist in outstandingReqBatches")
+	}
+
+	// replica recvValidatedResult
+	pbft.id = uint64(2)
+	pbft.recvValidatedResult(vali)
+	cert, ok := pbft.certStore[msgID{v: 0, n: 1}]
+	if ok != true {
+		t.Errorf("replica recv validated result, expect exist in cert store")
+	}
+	if cert.validated != true {
+		t.Errorf("replica recv validated result, expect validated")
+	}
+
 }
