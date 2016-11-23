@@ -147,7 +147,6 @@ func (pbft *pbftProtocal) prePrepared(digest string, v uint64, n uint64) bool {
 	//if q, ok := pbft.qset[qidx{digest, n}]; ok && q.View == v {
 	//	return true
 	//}
-
 	cert := pbft.certStore[msgID{v, n}]
 
 	if cert != nil {

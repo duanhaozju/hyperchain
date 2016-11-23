@@ -1,25 +1,17 @@
 //author :zsx
 //data: 2016-11-3
-//getNodes未判断空指针
+
+//publicNodeAPI.GetNodes()要获取节点信息，要启动的模块太多，放在集成测试中测试
 package hpc
 
-//import (
-//	"hyperchain/accounts"
-//	"hyperchain/crypto"
-//	"hyperchain/manager"
-//	"testing"
-//)
+import (
+	"testing"
+)
 
-//func Test_GetNodes(t *testing.T) {
-//	keydir := "../config/keystore/"
-//	encryption := crypto.NewEcdsaEncrypto("ecdsa")
-//	am := accounts.NewAccountManager(keydir, encryption)
-//	pm1 := &manager.ProtocolManager{
-
-//		AccountManager: am,
-//	}
-//	publicNodeAPI := &PublicNodeAPI{
-//		pm: pm1,
-//	}
-//	publicNodeAPI.GetNodes()
-//}
+func Test_GetNodes(t *testing.T) {
+	publicNodeAPI := &PublicNodeAPI{}
+	_, err := publicNodeAPI.GetNodes()
+	if err == nil {
+		t.Errorf("publicNodeAPI.GetNodes()")
+	}
+}
