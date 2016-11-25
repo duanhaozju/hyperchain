@@ -109,7 +109,7 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs,error) {
 	if (txType == 0 || txType == 2) && args.To == nil {
 		return SendTxArgs{}, errors.New("address 'to' is invalid")
 	}
-	if args.Timestamp == 0 || (5*int64(time.Second)+time.Now().UnixNano()) < args.Timestamp {
+	if args.Timestamp == 0 || (5*int64(time.Minute)+time.Now().UnixNano()) < args.Timestamp {
 		return SendTxArgs{}, errors.New("'timestamp' is invalid")
 	}
 	if txType != 3 && args.Signature == "" {
