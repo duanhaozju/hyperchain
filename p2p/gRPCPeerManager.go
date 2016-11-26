@@ -166,13 +166,15 @@ func broadcast(grpcPeerManager *GrpcPeerManager,broadCastMessage pb.Message, pPo
 		//TODO 其实这里不需要处理返回值，需要将其go起来
 		//REVIEW Chat 方法必须要传实例，否则将会重复加密，请一定要注意！！
 		//REVIEW Chat Function must give a message instance, not a point, if not the encrypt will break the payload!
-		go func(){
+		go func(p2 *Peer){
 			start := time.Now().UnixNano()
-			_,err := peer.Chat(broadCastMessage)
-			if err != nil {
-				grpcPeerManager.LocalNode.DelayChan <- UpdateTable{updateID:peer.Addr.ID,updateTime:time.Now().UnixNano() - start}
+			_,err := p2.Chat(broadCastMessage)
+			if err == nil {
+				grpcPeerManager.LocalNode.DelayChan <- UpdateTable{updateID:p2.Addr.ID,updateTime:time.Now().UnixNano() - start}
+			}else{
+				log.Error("chat failed",err);
 			}
-		}()
+		}(peer)
 
 
 	}
@@ -210,9 +212,9 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, M
 					resMsg, err := p.Chat(syncMessage)
 
 					if err != nil {
-						this.LocalNode.DelayChan <- UpdateTable{updateID:p.Addr.ID,updateTime:time.Now().UnixNano() - start}
 						log.Error("Broadcast failed,Node", p.Addr)
 					} else {
+						this.LocalNode.DelayChan <- UpdateTable{updateID:p.Addr.ID,updateTime:time.Now().UnixNano() - start}
 						log.Debug("resMsg:", string(resMsg.Payload))
 						//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
 					}

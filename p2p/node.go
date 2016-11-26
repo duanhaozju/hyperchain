@@ -62,12 +62,14 @@ func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, peerspool 
 }
 
 func (this *Node)UpdateDelayTableThread(){
-	for v := range this.DelayChan {
+	for v := range this.DelayChan{
+		if v.updateID > 0{
 		this.delayTableMutex.Lock()
 		this.delayTable[v.updateID] = v.updateTime
 		this.delayTableMutex.Unlock();
-	}
+		}
 
+	}
 }
 
 
