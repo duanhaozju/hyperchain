@@ -25,8 +25,7 @@ func TestDisassemble(t *testing.T) {
 
 	code2 := []byte{byte(PUSH6)}
 	ret2 := Disassemble(code2)
-	t.Log(ret2)
-	if ret1!=nil{
+	if ret2!=nil{
 		t.Error("Disassemble error")
 	}
 }

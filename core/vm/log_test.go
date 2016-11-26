@@ -53,6 +53,24 @@ func NewTestLog() Log {
 	(*log).Index = 1
 	return *log
 }
+func NewTestLogTrans() LogTrans {
+	topics := []string{
+		common.StringToHash("topic1").Hex(),
+		common.StringToHash("topic2").Hex(),
+		common.StringToHash("topic3").Hex(),
+	}
+	lt := LogTrans{
+		Address:common.StringToAddress("123456").Hex(),
+		Topics:topics,
+		Data:common.BytesToHash([]byte("data")).Hex(),
+		BlockNumber:123,
+		TxHash:common.StringToHash("txhash").Hex(),
+		TxIndex:2,
+		BlockHash:common.StringToHash("blockhash").Hex(),
+		Index:1,
+	}
+	return lt
+}
 func (s *LogSuite) TestEncodeDecodeLogs(c *checker.C) {
 	var logs Logs
 	var logs2 Logs
@@ -66,4 +84,29 @@ func (s *LogSuite) TestEncodeDecodeLogs(c *checker.C) {
 	for index, log := range logs2 {
 		CheckLogEqual(*logs[index], *log, c)
 	}
+}
+func (s *LogSuite) TestToLogsTrans(c *checker.C)  {
+	var logs Logs
+	var log Log
+	log = NewTestLog()
+	logs = append(logs,&log)
+	logs = append(logs,&log)
+
+	logTrans := logs.ToLogsTrans()
+	lt1 := NewTestLogTrans()
+	for _,lt := range logTrans{
+		CheckTranEqual(lt1,lt,c)
+	}
+
+}
+
+func CheckTranEqual(lt1,lt2 LogTrans,c *checker.C)  {
+	c.Assert(lt1.Address, checker.DeepEquals, lt2.Address)
+	c.Assert(lt1.Topics, checker.DeepEquals, lt2.Topics)
+	c.Assert(lt1.Data, checker.DeepEquals, lt2.Data)
+	c.Assert(lt1.BlockNumber, checker.DeepEquals, lt2.BlockNumber)
+	c.Assert(lt1.TxHash, checker.DeepEquals, lt2.TxHash)
+	c.Assert(lt1.TxIndex, checker.DeepEquals, lt2.TxIndex)
+	c.Assert(lt1.BlockHash, checker.DeepEquals, lt2.BlockHash)
+	c.Assert(lt1.Index, checker.DeepEquals, lt2.Index)
 }

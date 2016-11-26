@@ -8,7 +8,6 @@ import (
 	"hyperchain/hyperdb"
 )
 
-func checkLogs(tlog []Log, logs vm.Logs) error {	return nil	}
 
 type Account struct {
 	Balance string
@@ -17,12 +16,6 @@ type Account struct {
 	Storage map[string]string
 }
 
-type Log struct {
-	AddressF string   `json:"address"`
-	DataF    string   `json:"data"`
-	TopicsF  []string `json:"topics"`
-	BloomF   string   `json:"bloom"`
-}
 
 type VmTest struct {
 	Callcreates interface{}
@@ -30,7 +23,6 @@ type VmTest struct {
 	Env           VmEnv
 	Exec          map[string]string
 	Transaction   map[string]string
-	Logs          []Log
 	Gas           string
 	Out           string
 	Post          map[string]Account
@@ -38,16 +30,7 @@ type VmTest struct {
 	PostStateRoot string
 }
 
-func (self Log) Address() []byte      { return common.Hex2Bytes(self.AddressF) }
-func (self Log) Data() []byte         { return common.Hex2Bytes(self.DataF) }
-func (self Log) RlpData() interface{} { return nil }
-func (self Log) Topics() [][]byte {
-	t := make([][]byte, len(self.TopicsF))
-	for i, topic := range self.TopicsF {
-		t[i] = common.Hex2Bytes(topic)
-	}
-	return t
-}
+
 
 func StateObjectFromAccount(db hyperdb.Database, addr string, account Account) *state.StateObject {
 	obj := state.NewStateObject(common.HexToAddress(addr),db)

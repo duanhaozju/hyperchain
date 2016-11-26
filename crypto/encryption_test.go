@@ -141,30 +141,51 @@ func checkAddr(t *testing.T, addr0, addr1 common.Address) {
 	}
 }
 
-func TestEcdsaEncrypto_Sign(t *testing.T) {
+func TestSignTimeWithCryptoEcdsa(t *testing.T) {
 	key,_ := GenerateKey()
-	length, err := rand.Int(rand.Reader, big.NewInt(1024))
-	if err != nil {
-		t.Fatalf("Failed generating AES key [%s]", err)
-	}
-	msg, err := GetRandomBytes(int(length.Int64()) + 1)
-	fmt.Println("length of msg:",len(msg))
-	if err != nil {
-		t.Fatalf("Failed generating AES key [%s]", err)
-	}
+
 	ee := NewEcdsaEncrypto("ecsda")
 	var s256 = NewKeccak256Hash("Keccak256")
-	hash := s256.Hash(msg)
-	msg = hash[:]
+
 	for i:=1;i<8;i++{
+		length, err := rand.Int(rand.Reader, big.NewInt(1024))
+		if err != nil {
+			t.Fatalf("Failed generating AES key [%s]", err)
+		}
+		msg, err := GetRandomBytes(int(length.Int64()) + 1)
+		//fmt.Println("length of msg:",len(msg))
+		if err != nil {
+			t.Fatalf("Failed generating AES key [%s]", err)
+		}
+		hash := s256.Hash(msg)
+		msg = hash[:]
+
 		start := time.Now()
-		sigma, _ := ee.Sign(msg,key)
+		sigma, err := ee.Sign(msg,key)
+		if err!=nil{
+			t.Error("sign error")
+		}
 		fmt.Println("---sign with time---:",time.Since(start))
 		address := ee.PrivKeyToAddress(*key)
 		start = time.Now()
-		check,_ := ee.UnSign(msg,sigma)
+		check,err := ee.UnSign(msg,sigma)
+		if(err!=nil){
+			t.Error("unsign error")
+		}
 		if(check==address){
-			fmt.Println("unsign with time:",time.Since(start))
+			fmt.Println("---unsign with time---:",time.Since(start))
+		}
+		start = time.Now()
+		r,s,err1:=ecdsa.Sign(rand.Reader,key,msg)
+		if err1!=nil{
+			t.Error("ecdsa sign error")
+		}
+		fmt.Println("***ecdsa sign time***:",time.Since(start))
+		pubkey := key.PublicKey
+		start = time.Now()
+		check1:= ecdsa.Verify(&pubkey,msg,r,s)
+		if check1{
+			fmt.Println("***ecdsa unsign time***:",time.Since(start))
 		}
 	}
 
