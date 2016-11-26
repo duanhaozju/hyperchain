@@ -55,6 +55,7 @@ func TestEncode(t *testing.T) {
 	obj.SetCode([]byte("code"))
 	obj.SetABI([]byte("abi"))
 	obj.SetBalance(big.NewInt(123))
+	obj.SubBalance(big.NewInt(111))
 	obj.SetNonce(123)
 	obj.trie.Commit()
 	db.Put(obj.codeHash, obj.code)
@@ -67,7 +68,17 @@ func TestEncode(t *testing.T) {
 		t.Error("Decode failed")
 	}
 }
+func TestGetNull(t *testing.T) {
+	db, _ := hyperdb.NewMemDatabase()
+	obj := NewStateObject(common.HexToAddress("01234567890"), db)
+	if (obj.GetState(common.StringToHash("key1"))!=common.Hash{}){
+		t.Error("expected null,but got something return")
+	}
 
+	if(obj.getAddr(common.StringToHash("key1"))!=common.Hash{}){
+		t.Error("expected null,but got somthing return")
+	}
+}
 func SOCompare(so1 *StateObject, so2 *StateObject) bool {
 	if bytes.Compare(so1.address.Bytes(), so2.address.Bytes()) != 0 {
 		fmt.Println("address mismatch")

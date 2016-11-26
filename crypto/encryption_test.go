@@ -91,6 +91,15 @@ func TestInvalidSign(t *testing.T) {
 		t.Errorf("expected sign with hash 33 byte to error")
 	}
 }
+func TestEcdsaEncrypto_GenerateNodeKey(t *testing.T) {
+	id:="id1"
+	nodeDir := "/tmp/hyperchain/nodedir"
+	defer os.Remove(nodeDir)
+	err:= encryption.GenerateNodeKey(id,nodeDir)
+	if err != nil {
+		t.Error("generate node key error")
+	}
+}
 
 func TestLoadECDSAFile(t *testing.T) {
 	keyBytes := common.FromHex(testPrivHex)

@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"hyperchain/core/vm"
 )
 
 func TestStateDB_GetAccounts(t *testing.T) {
@@ -177,5 +178,72 @@ func compareStateObjects(so0, so1 *StateObject, t *testing.T) {
 	}
 	if so0.dirty != so1.dirty {
 		t.Fatalf("Dirty mismatch: have %v, want %v", so0.dirty, so1.dirty)
+	}
+}
+
+func TestLog(t *testing.T) {
+	thash := common.BytesToHash([]byte{1,2,3})
+	bhash := common.BytesToHash([]byte{4,5,6})
+	ti :=1
+	state:= setup()
+	state.StartRecord(thash,bhash,ti)
+	var log *vm.Log
+	var topic []common.Hash
+	topic=append(topic,common.Hash{})
+	topic=append(topic,common.Hash{})
+	log = vm.NewLog(toAddr([]byte{0x01}),topic,[]byte{1},uint64(1))
+	state.AddLog(log)
+	if len(state.Logs())!=1{
+		t.Error("state addlog error")
+	}
+
+	getlog:= state.GetLogs(thash)[0]
+	if getlog.BlockHash!=bhash{
+		t.Error("getlogs error")
+	}
+	if getlog.TxHash !=thash{
+		t.Error("getlogs error")
+	}
+	if getlog.TxIndex!=uint(ti){
+		t.Error("getlogs error")
+	}
+}
+func TestStateDB_AddRefund(t *testing.T) {
+	state := setup()
+	state.AddRefund(common.Big("5"))
+	if state.GetRefund().Cmp(common.Big("5"))!=0{
+		t.Error("state addrefund error")
+	}
+}
+func TestStateDB_SetGet(t *testing.T) {
+	state:=setup()
+	addr := toAddr([]byte{0x01})
+	code := []byte{2,2,2,2,2}
+	abi:= []byte{3, 3, 3, 3, 3, 3, 3}
+	state.SetABI(addr,abi)
+	state.SetCode(addr,code)
+	state.SetNonce(addr,uint64(8))
+
+	if x:=state.GetABI(addr);bytes.Compare(x,abi)!=0{
+		t.Error("state set get abi error")
+	}
+	if x:=state.GetCode(addr);bytes.Compare(x,code)!=0{
+		t.Error("state set get code error")
+	}
+	if state.GetNonce(addr)!=uint64(8){
+		t.Error("state set get nonce error")
+	}
+	balance0:= state.GetBalance(addr)
+	state.AddBalance(addr,common.Big("5"))
+	if x:=state.GetBalance(addr);x.Cmp(balance0.Add(balance0,common.Big("5")))!=0{
+		t.Error("state add&get banlance error")
+	}
+}
+
+func TestStateDB_IntermediateRoot(t *testing.T) {
+	state:=setup()
+	root:=state.IntermediateRoot()
+	if len(root)==0{
+		t.Error("root should not be nil")
 	}
 }

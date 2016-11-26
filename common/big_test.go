@@ -4,6 +4,7 @@ package common
 import (
 	"bytes"
 	"testing"
+	"fmt"
 )
 
 func TestMisc(t *testing.T) {
@@ -70,5 +71,19 @@ func TestBigCopy(t *testing.T) {
 
 	if bytes.Compare(z, zbytes) != 0 {
 		t.Error("Got", zbytes)
+	}
+}
+
+func TestFirstBitSet(t *testing.T) {
+	a:=Big("8")
+	res := FirstBitSet(a)
+	if res!=3{
+		t.Error("Got",res)
+	}
+	b:=Big("0")
+	res = FirstBitSet(b)
+	fmt.Println(res)
+	if res!=0{
+		t.Error("Got",res)
 	}
 }

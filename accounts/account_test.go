@@ -117,3 +117,41 @@ func TestTimedUnlock(t *testing.T) {
 		t.Fatal("Signing should've failed with ErrLocked timeout expired, got ", err)
 	}
 }
+
+func TestAccountManager_Lock(t *testing.T) {
+	dir, am := tmpManager(t)
+	defer os.RemoveAll(dir)
+
+	pass := "foo"
+	a1, err := am.NewAccount(pass)
+
+	// Signing without passphrase fails because account is locked
+	_, err = am.Sign(a1.Address, testSigData)
+	if err != ErrLocked {
+		t.Fatal("Signing should've failed with ErrLocked before unlocking, got ", err)
+	}
+
+	// Signing with passphrase works
+	if err = am.TimedUnlock(a1, pass, 100*time.Millisecond); err != nil {
+		t.Fatal(err)
+	}
+
+	// Signing without passphrase works because account is temp unlocked
+	_, err = am.Sign(a1.Address, testSigData)
+	if err != nil {
+		t.Fatal("Signing shouldn't return an error after unlocking, got ", err)
+	}
+	if err =am.Lock(a1.Address); err!=nil{
+		t.Fatal(err)
+	}
+	_, err = am.Sign(a1.Address, testSigData)
+	if err != ErrLocked {
+		t.Fatal("Signing should've failed with ErrLocked timeout expired, got ", err)
+	}
+}
+func TestAccountManager_UnlockAllAccount(t *testing.T) {
+	keydir := "./config/keystore"
+	_,am := tmpManager(t)
+	am.UnlockAllAccount(keydir)
+
+}
