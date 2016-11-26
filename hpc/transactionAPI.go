@@ -423,17 +423,14 @@ func (tran *PublicTransactionAPI) GetSignHash(args SendTxArgs) (common.Hash, err
 }
 
 // GetTransactionsCount returns the number of transaction in hyperchain.
-func (tran *PublicTransactionAPI) GetTransactionsCount() (interface{}, error) {
-
-	chain := core.GetChainCopy()
-
-	return struct {
-		Count *Number `json:"count,"`
-		Timestamp int64	`json:"timestamp"`
-	}{
-		Count: NewUint64ToNumber(chain.CurrentTxSum),
-		Timestamp: time.Now().UnixNano(),
-	}, nil
+func (tran *PublicTransactionAPI) GetTransactionsCount() (*Number, error) {
+	if txs, err := core.GetAllTransaction(tran.db);err != nil {
+		return nil, err
+	} else if len(txs) == 0 {
+		return nil, nil
+	} else {
+		return NewIntToNumber(len(txs)), nil
+	}
 }
 
 // GetTxAvgTimeByBlockNumber returns tx execute avg time.
