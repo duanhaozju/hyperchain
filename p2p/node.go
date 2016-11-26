@@ -28,9 +28,16 @@ type Node struct {
 	higherEventManager *event.TypeMux
 	//common information
 	IsPrimary          bool
-	DelayTable         map[uint64]int64
-	DelayTableMutex    sync.RWMutex
+	delayTable         map[uint64]int64
+	delayTableMutex    sync.RWMutex
+	DelayChan          chan UpdateTable
 	PeerPool           *PeersPool
+
+}
+
+type UpdateTable struct {
+	updateID   uint64
+	updateTime int64
 
 }
 
@@ -39,9 +46,11 @@ func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, peerspool 
 	var newNode Node
 	newNode.address = peerComm.ExtractAddress(peerComm.GetLocalIp(), port, nodeID)
 	newNode.higherEventManager = hEventManager
-	newNode.DelayTable = make(map[uint64]int64)
+	newNode.delayTable = make(map[uint64]int64)
 	newNode.PeerPool = peerspool
-
+	newNode.DelayChan = make(chan UpdateTable)
+	//listen the update
+	go newNode.UpdateDelayTableThread();
 
 	log.Debug("节点启动")
 	log.Debug("本地节点hash", newNode.address.Hash)
@@ -51,6 +60,17 @@ func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, peerspool 
 	return &newNode
 
 }
+
+func (this *Node)UpdateDelayTableThread(){
+	for v := range this.DelayChan {
+		this.delayTableMutex.Lock()
+		this.delayTable[v.updateID] = v.updateTime
+		this.delayTableMutex.Unlock();
+	}
+
+}
+
+
 func (this *Node) GetNodeAddr() *pb.PeerAddress {
 	return this.address
 }
@@ -71,11 +91,11 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	response.From = this.address
 	//handle the message
 	log.Debug("消息类型", msg.MessageType)
-	go func() {
-		this.DelayTableMutex.Lock()
-		this.DelayTable[msg.From.ID] = time.Now().UnixNano() - msg.MsgTimeStamp
-		this.DelayTableMutex.Unlock()
-	}()
+	//go func() {
+	//	this.delayTableMutex.Lock()
+	//	this.delayTable[msg.From.ID] = time.Now().UnixNano() - msg.MsgTimeStamp
+	//	this.delayTableMutex.Unlock()
+	//}()
 	switch msg.MessageType {
 	case pb.Message_HELLO:
 		{

@@ -155,18 +155,25 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 		Payload:      payLoad,
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
-	go broadcast(broadCastMessage, this.peersPool)
+	go broadcast(this,broadCastMessage, this.peersPool)
 }
 
 // inner the broadcast method which serve BroadcastPeers function
-func broadcast(broadCastMessage pb.Message, pPool *PeersPool) {
+func broadcast(grpcPeerManager *GrpcPeerManager,broadCastMessage pb.Message, pPool *PeersPool) {
 	for _, peer := range pPool.GetPeers() {
 		//REVIEW 这里没有返回值,不知道本次通信是否成功
 		//log.Notice(string(broadCastMessage.Payload))
 		//TODO 其实这里不需要处理返回值，需要将其go起来
 		//REVIEW Chat 方法必须要传实例，否则将会重复加密，请一定要注意！！
 		//REVIEW Chat Function must give a message instance, not a point, if not the encrypt will break the payload!
-		go peer.Chat(broadCastMessage)
+		go func(){
+			start := time.Now().UnixNano()
+			_,err := peer.Chat(broadCastMessage)
+			if err != nil {
+				grpcPeerManager.LocalNode.DelayChan <- UpdateTable{updateID:peer.Addr.ID,updateTime:time.Now().UnixNano() - start}
+			}
+		}()
+
 
 	}
 
@@ -199,8 +206,11 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, M
 				// because the unicast node is not confirm so, here use double loop
 				if p.ID == NodeID {
 					log.Debug("send msg to ", NodeID)
+					start := time.Now().UnixNano()
 					resMsg, err := p.Chat(syncMessage)
+
 					if err != nil {
+						this.LocalNode.DelayChan <- UpdateTable{updateID:p.Addr.ID,updateTime:time.Now().UnixNano() - start}
 						log.Error("Broadcast failed,Node", p.Addr)
 					} else {
 						log.Debug("resMsg:", string(resMsg.Payload))
@@ -239,9 +249,9 @@ func (this *GrpcPeerManager) GetPeerInfo() PeerInfos {
 			perinfo.Status = PENDING
 		}
 		perinfo.IsPrimary = per.IsPrimary
-		this.LocalNode.DelayTableMutex.RLock()
-		perinfo.Delay = this.LocalNode.DelayTable[per.ID]
-		this.LocalNode.DelayTableMutex.RUnlock()
+		this.LocalNode.delayTableMutex.RLock()
+		perinfo.Delay = this.LocalNode.delayTable[per.ID]
+		this.LocalNode.delayTableMutex.RUnlock()
 		perinfo.ID = per.ID
 		perinfos = append(perinfos, perinfo)
 	}
@@ -251,7 +261,7 @@ func (this *GrpcPeerManager) GetPeerInfo() PeerInfos {
 		ID:        this.LocalNode.GetNodeAddr().ID,
 		Status:    ALIVE,
 		IsPrimary: this.LocalNode.IsPrimary,
-		Delay:     this.LocalNode.DelayTable[this.NodeID],
+		Delay:     this.LocalNode.delayTable[this.NodeID],
 	}
 	perinfos = append(perinfos, self_info)
 	return perinfos
