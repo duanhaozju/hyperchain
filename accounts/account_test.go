@@ -1,6 +1,5 @@
-/**
- * Created by Meiling Hu on 9/2/16.
- */
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package accounts
 
 import (

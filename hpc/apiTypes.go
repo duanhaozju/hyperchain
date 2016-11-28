@@ -1,9 +1,12 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package hpc
 
 import (
 	"hyperchain/event"
 	"hyperchain/manager"
 	"hyperchain/hyperdb"
+	"time"
 )
 
 // API describes the set of methods offered over the RPC interface
@@ -14,7 +17,7 @@ type API struct {
 	Public    bool        // indication if the methods must be considered safe for public use
 }
 
-func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager) []API{
+func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnable bool, txPeak int64 , txRate time.Duration, contractPeak int64, contractRate time.Duration) []API{
 
 	db, err := hyperdb.GetLDBDatabase()
 
@@ -26,7 +29,7 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager) []API{
 		{
 			Namespace: "tx",
 			Version: "0.4",
-			Service: NewPublicTransactionAPI(eventMux, pm, db),
+			Service: NewPublicTransactionAPI(eventMux, pm, db, ratelimitEnable, txPeak, txRate),
 			Public: true,
 		},
 		{
@@ -42,7 +45,7 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager) []API{
 			Public: true,
 		},
 		{
-			Namespace: "acc",
+			Namespace: "account",
 			Version: "0.4",
 			Service: NewPublicAccountAPI(pm, db),
 			Public: true,
@@ -50,7 +53,7 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager) []API{
 		{
 			Namespace: "contract",
 			Version: "0.4",
-			Service: NewPublicContractAPI(eventMux, pm, db),
+			Service: NewPublicContractAPI(eventMux, pm, db, ratelimitEnable, contractPeak, contractRate),
 			Public: true,
 		},
 	}

@@ -9,6 +9,17 @@
             <!--printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting,-->
             <!--remaining essentially unchanged.</p>-->
         <form method="get" class="form-horizontal">
+            <!--<div class="col-lg-2" ng-repeat="param in md.inputs">-->
+                <!--<div>{{param.name}}</div>-->
+                <!--<input type="text" class="form-control" ng-model="method.params[param.name]">-->
+            <!--</div>-->
+            {{params.inputs}}
+            <div class="form-group" ng-repeat="p in contracts[ctName].params.inputs">
+                <label class="col-sm-2 control-label">{{p.name}}：</label>
+                <div class="col-lg-9">
+                    <input type="text" class="form-control" ng-model="params[p.name]" ng-init="params[p.name]=''" style="width:100%">
+                </div>
+            </div>
         <div class="form-group"><label class="col-sm-2 control-label">from：</label>
             <div class="col-lg-9">
                 <input type="text" class="form-control" ng-model="contract.from" style="width:100%">
@@ -19,7 +30,7 @@
                     <!--<input type="text" class="form-control">-->
                 <!--</div>-->
             <!--</div>-->
-    </form>
+        </form>
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-white" ng-click="cancel()">Close</button>

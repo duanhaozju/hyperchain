@@ -1,3 +1,5 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package core
 
 import (
@@ -7,7 +9,6 @@ import (
 	"hyperchain/core/vm/params"
 	"math/big"
 	//"hyperchain/core/vm/compiler"
-	"hyperchain/core/state"
 )
 
 // Call executes within the given contract
@@ -39,11 +40,7 @@ func DelegateCall(env vm.Environment, caller vm.ContractRef, addr common.Address
 
 // Create creates a new contract with the given code
 func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPrice, value *big.Int) (ret []byte, address common.Address, err error) {
-	//fmt.Println("Create")
 	ret, address, err = exec(env, caller, nil, nil, nil, code, gas, gasPrice, value)
-	// Here we get an error if we run into maximum stack depth,
-	// See: https://github.com/ethereum/yellowpaper/pull/131
-	// and YP definitions for CREATE instruction
 	if err != nil {
 		return nil, address, err
 	}
@@ -54,10 +51,10 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	evm := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
+	snapshotPreTransfer := env.MakeSnapshot()
 	if env.Depth() > int(params.CallCreateDepth.Int64()) {
 		caller.ReturnGas(gas, gasPrice)
-
-		return nil, common.Address{}, vm.DepthError
+		return nil, common.Address{}, ExecContractErr(1, "Max call depth exceeded 1024")
 	}
 
 	// TODO
@@ -75,8 +72,6 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		address = &addr
 		createAccount = true
 	}
-	statedb, _ := env.Db().(*state.StateDB)
-	snapshotPreTransfer := env.MakeSnapshot()
 	var (
 		from = env.Db().GetAccount(caller.Address())
 		to   vm.Account
@@ -85,18 +80,14 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		to = env.Db().CreateAccount(*address)
 	} else {
 		if !env.Db().Exist(*address) {
+			// IMPORTANT
+			// There is no necessary to judge whether the code is nil
+			// During the contract deploy the code is empty too!
 			to = env.Db().CreateAccount(*address)
-			if statedb.GetCode(to.Address()) == nil {
-				env.Transfer(from, to, value)
-				return nil, common.Address{}, nil
-			}
-			//env.Transfer(from, to, value)
+			env.Transfer(from, to, value)
 		} else {
 			to = env.Db().GetAccount(*address)
-			if statedb.GetCode(to.Address()) == nil {
-				env.Transfer(from, to, value)
-				return nil, common.Address{}, nil
-			}
+			env.Transfer(from, to, value)
 		}
 	}
 	// initialise a new contract and set the code that is to be used by the
@@ -137,8 +128,12 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// when we're in homestead this also counts for code storage gas errors.
 	if err != nil && (env.RuleSet().IsHomestead(env.BlockNumber()) || err != vm.CodeStoreOutOfGasError) {
 		contract.UseGas(contract.Gas)
-
 		env.SetSnapshot(snapshotPreTransfer)
+		if createAccount {
+			err = ExecContractErr(0, "contract creation failed, error msg", err.Error())
+		} else {
+			err = ExecContractErr(1, "contract invocation failed, error msg:", err.Error())
+		}
 	}
 	return ret, addr, err
 }

@@ -1,3 +1,5 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package state
 
 import (
@@ -259,20 +261,18 @@ func (self *StateObject) CodeHash() []byte{
 }
 
 type extStateObject struct {
-	Nonce       uint64
 	BalanceData *big.Int
 	Root        common.Hash
 	CodeHash    []byte
-	Abi         ABI
+	Nonce       uint64
 }
 
 func (self *StateObject) EncodeObject() ([]byte, error) {
 	ext := extStateObject{
-		Nonce:       self.nonce,
 		BalanceData: self.BalanceData,
 		Root:        self.trie.Hash(),
 		CodeHash:    self.codeHash,
-		Abi:         self.abi,
+		Nonce:       self.nonce,
 	}
 	//self.trie.CommitTo(self.db)
 	//self.db.Put(self.codeHash, self.code)
@@ -301,9 +301,8 @@ func DecodeObject(address common.Address, db trie.Database, data []byte) (*State
 			return nil, fmt.Errorf("can't get code for hash %x: %v", ext.CodeHash, err)
 		}
 	}
-	obj.nonce = ext.Nonce
 	obj.BalanceData = ext.BalanceData
 	obj.codeHash = ext.CodeHash
-	obj.abi = ext.Abi
+	obj.nonce = ext.Nonce
 	return obj, nil
 }

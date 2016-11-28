@@ -1,5 +1,5 @@
-// author: Lizhong kuang
-// date: 2016-09-29
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package primitives_test
 
 import (
@@ -397,7 +397,7 @@ func TestCBCEncryptCBCDecrypt(t *testing.T) {
 	}
 }
 
-// TestAESRelatedUtilFunctions tests various functions commonly used in fabric wrt AES
+// TestAESRelatedUtilFunctions tests various functions commonly used in hyperchain wrt AES
 func TestAESRelatedUtilFunctions(t *testing.T) {
 
 	key, err := primitives.GenAESKey()

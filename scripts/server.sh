@@ -1,30 +1,11 @@
 #!/usr/bin/env bash
-# this script is used to auto deploy the compiled binary code.
-# and auto run the predefined command.
-# Author: Chen Quan
-# Update Date: 2016-10-19
-# Features:
-# 1. auto add the ssh key into the primary sever
-# 2. auto add the primary's ssh key charo the non-primary server
-# 3. accelerate the distributes speed
-# 4. auto read the server list file and auto run the suit command
-
-# stop when error
-#set -e
-#set -x
-#parse the arguments
-# some arguments don't have a corresponding value to go with it such
-# as in the --default example).
-# note: if this is set to -gt 0 the /etc/hosts part is not recognized ( may be a bug )
 
 FIRST_RUN=false
 TEST_FLAG=true
-PASSWD="blockchain"
+PASSWD="hyperchain"
 PRIMARY=`head -1 ./serverlist.txt`
-
 MAXNODE=`cat serverlist.txt | wc -l`
 
-#SERVER_LIST_CONTENT=`cat ./serverlist.txt`
 while IFS='' read -r line || [[ -n "$line" ]]; do
 	SERVER_ADDR+=" ${line}"
 done < serverlist.txt
@@ -49,79 +30,65 @@ case $key in
 esac
 done
 
-#echo $FIRST_RUN
-#echo $TEST_FLAG
-
-#deploy_dir=`pwd`"/../deploy"
-#if [ ! -d $deploy_dir ];then
-#    mkdir -p $deploy_dir
-#fi
-
-
 addkey(){
   expect <<EOF
       set timeout 60
-      spawn ssh-copy-id satoshi@$1
+      spawn ssh-copy-id hyperchain@$1
       expect {
         "yes/no" {send "yes\r";exp_continue }
-        "s password:" {send "$PASSWD\r";exp_continue }
+        "Password:" {send "$PASSWD\r";exp_continue }
         eof
       }
 EOF
 }
 
 add_ssh_key_into_primary(){
-    echo "add your local ssh public key into primary node"
+    echo "Add your local ssh public key into primary node"
     for server_address in ${SERVER_ADDR[@]}; do
 	  addkey $server_address
 	done
 }
 
 add_ssh_key_form_primary_to_others(){
-    echo "primary add its ssh key into others nodes"
-	scp ./sub_scripts/deploy/server_addkey.sh satoshi@$PRIMARY:/home/satoshi/
-	scp innerserverlist.txt satoshi@$PRIMARY:/home/satoshi/
-
-	COMMANDS="cd /home/satoshi && chmod a+x server_addkey.sh && bash server_addkey.sh"
-
-	ssh  satoshi@$PRIMARY $COMMANDS
+    echo "Primary add its ssh key into others nodes"
+	scp ./sub_scripts/deploy/server_addkey.sh hyperchain@$PRIMARY:/home/hyperchain/
+	scp innerserverlist.txt hyperchain@$PRIMARY:/home/hyperchain/
+	ssh  hyperchain@$PRIMARY "cd /home/hyperchain && chmod a+x server_addkey.sh && bash server_addkey.sh"
 }
-
-
-build(){
-	echo "Compiling and generating the configuration files..."
-    cd ..
-    govendor build -o build/hyperchain
-    cd scripts
-}
-
 
 distribute_the_binary(){
-    echo "Sending the local complied file and configuration files to primary"
-    ssh satoshi@$PRIMARY "ps aux | grep hyperchain | awk '{print \$2}' | xargs kill -9"
-	scp ../build/hyperchain satoshi@$PRIMARY:/home/satoshi
-	scp -r ../config/ satoshi@$PRIMARY:/home/satoshi/
+    echo "Send the project to primary:"
+    cd $GOPATH/src/
+    rm -rf hyperchain/build
+    rm hyperchain.tar.gz
+    tar -zcf hyperchain.tar.gz ./hyperchain
+    scp hyperchain.tar.gz hyperchain@$PRIMARY:/home/hyperchain/
+    ssh hyperchain@$PRIMARY "rm -rf go/src/hyperchain"
+    ssh hyperchain@$PRIMARY "tar -C /home/hyperchain/go/src -xzf hyperchain.tar.gz"
+    echo "Primary build the project:"
+	ssh hyperchain@$PRIMARY "source ~/.bashrc && cd go/src/hyperchain && govendor build && mv hyperchain /home/hyperchain"
 
-	scp innerserverlist.txt satoshi@$PRIMARY:/home/satoshi/
-	scp ./sub_scripts/deploy/server_deploy.sh satoshi@$PRIMARY:/home/satoshi/
+	echo "Send the config files to primary:"
+	cd $GOPATH/src/hyperchain/scripts
+	scp -r ../config/ hyperchain@$PRIMARY:/home/hyperchain/
+	scp ./sub_scripts/deploy/server_deploy.sh hyperchain@$PRIMARY:/home/hyperchain/
 
-	ssh satoshi@$PRIMARY "chmod a+x server_deploy.sh && bash server_deploy.sh ${MAXNODE}"
+    echo "Primary send files to others:"
+	ssh hyperchain@$PRIMARY "chmod a+x server_deploy.sh && bash server_deploy.sh ${MAXNODE}"
 }
-
-#clean(){
-#    echo "清除本地生成的文件(build 文件夹)"
-#    rm -rf $deploy_dir
-#}
-
 
 ni=1
 auto_run(){
     echo "Auto start all nodes"
     for server_address in ${SERVER_ADDR[@]}; do
 	  echo $server_address
-      ssh satoshi@$server_address "ps aux | grep hyperchain | awk '{print \$2}' | xargs kill -9"
-      ssh satoshi@$server_address "if [ ! -d /home/satoshi/build/ ]; then mkdir -p /home/satoshi/build/;fi"
-	  gnome-terminal -x bash -c "ssh satoshi@$server_address \" cd /home/satoshi/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o $ni -l 8001 -t 8081 || while true; do ifconfig && sleep 100; done\""
+      ssh hyperchain@$server_address "if [ ! -d /home/hyperchain/build/ ]; then mkdir -p /home/hyperchain/build/;fi"
+	  # this line for ubuntu
+	 # gnome-terminal -x bash -c "ssh hyperchain@$server_address \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o $ni -l 8001 -t 8081 || while true; do sleep 1000s; done\""
+
+	  # this line for mac
+	  osascript -e 'tell app "Terminal" to do script "ssh hyperchain@'$server_address' \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o '$ni' -l 8001 -t 8081 || while true; do sleep 1000s; done\""'
+
 	  ni=`expr $ni + 1`
 	done
 }
@@ -131,10 +98,11 @@ if $FIRST_RUN; then
 	add_ssh_key_form_primary_to_others
 fi
 
-build
 for server_address in ${SERVER_ADDR[@]}; do
   echo "kill $server_address"
-  ssh satoshi@$server_address "ps aux | grep hyperchain | awk '{print \$2}' | xargs kill -9"
+  ssh hyperchain@$server_address "pkill hyperchains"
+  ssh hyperchain@$server_address "ps aux | grep hyperchain -o | awk '{print \$2}' | xargs kill -9"
 done
+
 distribute_the_binary
 auto_run

@@ -1,9 +1,5 @@
-// author: chenquan
-// date: 16-9-20
-// last modified: 16-9-20 13:09
-// last Modified Author: Chen quan
-// change log:
-//
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package peerComm
 
 import (

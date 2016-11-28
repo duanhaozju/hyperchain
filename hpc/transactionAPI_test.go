@@ -1,3 +1,5 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package hpc
 
 import (
@@ -34,6 +36,7 @@ func putTransactionToDefaultDB() {
 		log.Error(err)
 	}
 
+
 	txValue := types.NewTransactionValue(100, 100, 1, nil)
 
 	value, err := proto.Marshal(txValue)
@@ -42,7 +45,7 @@ func putTransactionToDefaultDB() {
 		log.Error(err)
 	}
 
-	tx := types.NewTransaction(from[:], to[:], value)
+	tx := types.NewTransaction(from[:], to[:], value, time.Now().UnixNano())
 
 	hash := tx.BuildHash()
 

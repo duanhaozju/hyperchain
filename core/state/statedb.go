@@ -1,3 +1,5 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package state
 
 import (
@@ -39,7 +41,7 @@ func init() {
 	}else {
 	}
 	// 2.init the stateObjectSizeCache
-	stateObjectCache = make(map[common.Address] *StateObject)
+	// stateObjectCache = make(map[common.Address] *StateObject)
 }
 
 // The starting nonce determines the default nonce when new accounts are being
@@ -120,7 +122,7 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.logSize = 0
 	self.refund = new(big.Int)
 	// if reset we will clear all stateObjectSizeCache
-	stateObjectCache =  make(map[common.Address] *StateObject)
+	// stateObjectCache =  make(map[common.Address] *StateObject)
 	return nil
 }
 
@@ -333,16 +335,17 @@ func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObje
 		return stateObject
 	}
 
+	// TODO fix in the next version
 	// 2.we will find the stateObject from stateObjectSizeCache
-	stateObject = stateObjectCache[addr]
-	if stateObject != nil{
-		if stateObject.deleted{
-			stateObject = nil
-		}else {
-			self.SetStateObject(stateObject)
-			return stateObject
-		}
-	}
+	//stateObject = stateObjectCache[addr]
+	//if stateObject != nil{
+	//	if stateObject.deleted{
+	//		stateObject = nil
+	//	}else {
+	//		self.SetStateObject(stateObject)
+	//		return stateObject
+	//	}
+	//}
 
 	// 3.we will find the stateObject from the db by trie
 	data := self.trie.Get(addr[:])
@@ -353,7 +356,7 @@ func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObje
 	if err != nil {
 		return nil
 	}
-	stateObjectCache[addr] = stateObject
+	// stateObjectCache[addr] = stateObject
 	self.SetStateObject(stateObject)
 	return stateObject
 }
@@ -377,7 +380,7 @@ func (self *StateDB) newStateObject(addr common.Address) *StateObject {
 	stateObject := NewStateObject(addr, self.db)
 	stateObject.SetNonce(StartingNonce)
 	self.stateObjects[addr.Str()] = stateObject
-	stateObjectCache[addr] = stateObject
+	// stateObjectCache[addr] = stateObject
 	return stateObject
 }
 
@@ -491,7 +494,7 @@ func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
 			// and just mark it for deletion in the trie.
 			s.DeleteStateObject(stateObject)
 			stateObject.dirty = false
-			delete(stateObjectCache,stateObject.Address())
+			//delete(stateObjectCache,stateObject.Address())
 		} else {
 			if len(stateObject.code) > 0 {
 				if err := db.Put(stateObject.codeHash, stateObject.code); err != nil {
@@ -511,7 +514,7 @@ func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
 			// Update the object in the account trie.
 			s.UpdateStateObject(stateObject)
 			stateObject.dirty = false
-			stateObjectCache[stateObject.Address()] = stateObject
+			// stateObjectCache[stateObject.Address()] = stateObject
 		}
 	}
 	return s.trie.CommitTo(db)

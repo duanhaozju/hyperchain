@@ -1,3 +1,5 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package pbft
 
 import (
@@ -32,12 +34,7 @@ func GetPlugin(id uint64, h helper.Stack, pbftConfigPath string) consensus.Conse
 func New(id uint64, h helper.Stack, pbftConfigPath string) consensus.Consenter {
 
 	config = loadConfig(pbftConfigPath)
-	switch strings.ToLower(config.GetString("general.mode")) {
-	case "batch":
-		return newPbft(id, config, h)
-	default:
-		panic(fmt.Errorf("Invalid PBFT mode: %s", config.GetString("general.mode")))
-	}
+	return newPbft(id, config, h)
 
 }
 
@@ -51,22 +48,6 @@ func loadConfig(pbftConfigPath string) (config *viper.Viper) {
 	config.AutomaticEnv()
 	replacer := strings.NewReplacer(".", "_")
 	config.SetEnvKeyReplacer(replacer)
-
-	//config.AddConfigPath("./")
-	//config.AddConfigPath("../consensus/pbft")
-	//config.AddConfigPath("../../consensus/pbft")
-	// Path to look for the config file in based on GOPATH
-	//gopath := os.Getenv("GOPATH")
-	//for _, p := range filepath.SplitList(gopath) {
-	//	pbftpath := filepath.Join(p, pbftConfigPath)
-	//	config.AddConfigPath(pbftpath)
-	//}
-
-	// Chen Quan 2016-10-14
-	//config.SetConfigName("config")
-	//config.AddConfigPath(pbftConfigPath)
-	// 修改为读取确定文件
-
 	config.SetConfigFile(pbftConfigPath)
 	err := config.ReadInConfig()
 	if err != nil {

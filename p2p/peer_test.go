@@ -1,14 +1,11 @@
-// author: chenquan
-// date: 16-8-25
-// last modified: 16-8-29 13:58
-// last Modified Author: chenquan
-// change log: add a comment of this file function
-//
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 
 package p2p
 
 import (
 	"testing"
+	node "hyperchain/p2p/node"
 	"hyperchain/event"
 	"hyperchain/p2p/transport"
 	"hyperchain/p2p/peerComm"
@@ -19,13 +16,16 @@ import (
 	"encoding/hex"
 	"github.com/stretchr/testify/assert"
 	"hyperchain/membersrvc"
+
 )
+
 
 var fakeNodeTEM *transport.HandShakeManager
 var fakeNode  *Node
 var fakeNodeAddr *pb.PeerAddress
 var localAddr *pb.PeerAddress
 var localTEM *transport.HandShakeManager
+var peerPool *PeersPool
 
 func init() {
 	membersrvc.Start("../../config/test/local_membersrvc.yaml", 1)
@@ -35,6 +35,7 @@ func init() {
 	localAddr = peerComm.ExtractAddress(peerComm.GetLocalIp(), 8124, 2)
 	localTEM = transport.NewHandShakeManger()
 	fakeNode.StartServer()
+	peerPool = NewPeerPool(fakeNodeTEM)
 }
 
 func TestNewPeerByIpAndPort(t *testing.T) {
@@ -46,8 +47,8 @@ func TestNewPeerByIpAndPort(t *testing.T) {
 }
 
 func TestPeer_Chat(t *testing.T) {
-	peer, err := NewPeerByIpAndPort(fakeNodeAddr.IP, fakeNodeAddr.Port, fakeNodeAddr.ID, localTEM, localAddr)
-	if err != nil {
+	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr)
+	if err != nil{
 		t.Error(err)
 	}
 	//t.Log(peer.Addr)

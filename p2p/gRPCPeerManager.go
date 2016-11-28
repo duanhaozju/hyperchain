@@ -1,9 +1,5 @@
-// author: chenquan
-// date: 16-9-19
-// last modified: 16-9-19 20:46
-// last Modified Author: chenquan
-// change log:
-//
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package p2p
 
 import (
@@ -15,7 +11,6 @@ import (
 	"os"
 	"strconv"
 	"time"
-
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
 )
@@ -61,7 +56,8 @@ func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP
 	var newgRPCManager GrpcPeerManager
 	configUtil := peerComm.NewConfigUtil(configPath)
 	newgRPCManager.configs = configUtil
-	//newgRPCManager.MaxPeerNumber = newgRPCManager.configs.GetMaxPeerNumber()
+	//get the maxpeer from config
+	newgRPCManager.MaxPeerNumber = newgRPCManager.configs.GetMaxPeerNumber()
 	newgRPCManager.NodeID = NodeID
 
 	newgRPCManager.Original = isOriginal
@@ -75,11 +71,14 @@ func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP
 }
 
 // Start start the Normal local listen server
-func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux, GRPCProt int64) {
+func (this *GrpcPeerManager) Start(aliveChain chan bool, eventMux *event.TypeMux, isReconnect bool, GRPCProt int64) {
 	if this.NodeID == 0 || this.configs == nil {
 		log.Error("the gRPC Manager hasn't initlized")
 		os.Exit(1)
 	}
+	// 重构peerpool 不采用单例模式进行管理
+	this.peersPool = NewPeerPool(this.TEM)
+	this.LocalNode = NewNode(this.Port, eventMux, this.NodeID, this.peersPool)
 	//newgRPCManager.IP = newgRPCManager.configs.GetIP(newgRPCManager.NodeID)
 	// 重构peerpool 不采用单例模式进行管理
 	port := this.configs.GetPort(this.NodeID)
@@ -96,8 +95,8 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 
 
 	if this.Original {
-		//连接其他节点
-		this.connectToPeers()
+		// 读取待连接的节点信息
+		this.connectToPeers(isReconnect)
 
 		log.Critical("路由表:", this.peersPool.peerAddr)
 
@@ -111,6 +110,8 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 		//this.ConnectToOthers()
 		aliveChain <- 1
 	}
+
+
 
 	log.Notice("┌────────────────────────────┐")
 	log.Notice("│  All NODES WERE CONNECTED  │")
@@ -188,7 +189,7 @@ func (this *GrpcPeerManager) connectToIntroducer( introducerAddress pb.PeerAddre
 	this.LocalNode.N = len(this.GetAllPeersWithTemp())
 }
 
-func (this *GrpcPeerManager) connectToPeers() {
+func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 	var peerStatus  map[uint64]bool
 	peerStatus = make(map[uint64]bool)
 	for i := 1; i <= MAX_PEER_NUM; i++ {
@@ -199,6 +200,7 @@ func (this *GrpcPeerManager) connectToPeers() {
 			peerStatus[_index] = false
 		}
 	}
+func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 	// connect other peers
 	//TODO RETRY CONNECT 重试连接(未实现)
 	for this.peersPool.GetAliveNodeNum() < MAX_PEER_NUM - 1 {
@@ -219,11 +221,10 @@ func (this *GrpcPeerManager) connectToPeers() {
 			peerIp := this.configs.GetIP(_index)
 			peerPort := this.configs.GetPort(_index)
 			peerAddress := peerComm.ExtractAddress(peerIp, peerPort, _index)
-
-			peer, connectErr := this.connectToPeer(peerAddress, _index)
+			peer, connectErr := this.connectToPeer(peerAddress, _index, isReconnect)
 			if connectErr != nil {
 				// cannot connect to other peer
-				log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n")
+				log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n", connectErr)
 
 				continue
 			} else {
@@ -243,10 +244,20 @@ func (this *GrpcPeerManager) connectToPeers() {
 
 }
 
+
+
+
 //connect to peer by ip address and port (why int32? because of protobuf limit)
-func (this *GrpcPeerManager) connectToPeer(peerAddress *pb.PeerAddress, nid uint64) (*Peer, error) {
+func (this *GrpcPeerManager) connectToPeer(peerAddress *pb.PeerAddress, nid uint64, isReconnect bool) (*Peer, error) {
 	//if this node is not online, connect it
-	peer, peerErr := NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, nid, this.TEM, this.LocalNode.address)
+	var peer *Peer
+	var peerErr error
+	if isReconnect {
+		peer, peerErr = NewPeerByIpAndPortReconnect(peerAddress.IP, peerAddress.Port, nid, this.TEM, this.LocalNode.GetNodeAddr(), this.peersPool)
+
+	} else {
+		peer, peerErr = NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, nid, this.TEM, this.LocalNode.GetNodeAddr(), this.peersPool)
+	}
 	if peerErr != nil {
 		// cannot connect to other peer
 		log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n")
@@ -284,17 +295,21 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 }
 
 // inner the broadcast method which serve BroadcastPeers function
-func broadcast(broadCastMessage pb.Message, pPool *PeersPool) {
-	log.Warning("GetPeers: ", pPool.GetPeers())
+func broadcast(grpcPeerManager *GrpcPeerManager,broadCastMessage pb.Message, pPool *PeersPool) {
 	for _, peer := range pPool.GetPeers() {
 		//REVIEW 这里没有返回值,不知道本次通信是否成功
 		//log.Notice(string(broadCastMessage.Payload))
 		//TODO 其实这里不需要处理返回值，需要将其go起来
 		//REVIEW Chat 方法必须要传实例，否则将会重复加密，请一定要注意！！
 		//REVIEW Chat Function must give a message instance, not a point, if not the encrypt will break the payload!
-		go peer.Chat(broadCastMessage)
-	}
-}
+		go func(){
+			start := time.Now().UnixNano()
+			_,err := peer.Chat(broadCastMessage)
+			if err != nil {
+				grpcPeerManager.LocalNode.DelayChan <- UpdateTable{updateID:peer.Addr.ID,updateTime:time.Now().UnixNano() - start}
+			}
+		}()
+
 
 func (this *GrpcPeerManager) SetOnline() {
 	this.IsOnline = true
@@ -335,12 +350,14 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, M
 				log.Critical("range nodeid", p.ID)
 				// convert the uint64 to int
 				// because the unicast node is not confirm so, here use double loop
-				if p.RemoteAddr.ID == NodeID {
-					log.Warning("send msg to ", NodeID)
-
+				if p.ID == NodeID {
+					log.Debug("send msg to ", NodeID)
+					start := time.Now().UnixNano()
 					resMsg, err := p.Chat(syncMessage)
+
 					if err != nil {
-						log.Error("Broadcast failed,Node")
+						this.LocalNode.DelayChan <- UpdateTable{updateID:p.Addr.ID,updateTime:time.Now().UnixNano() - start}
+						log.Error("Broadcast failed,Node", p.Addr)
 					} else {
 						log.Debug("resMsg:", string(resMsg.Payload))
 						//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
@@ -378,7 +395,9 @@ func (this *GrpcPeerManager) GetPeerInfo() PeerInfos {
 			perinfo.Status = PENDING
 		}
 		perinfo.IsPrimary = per.IsPrimary
-		perinfo.Delay = this.LocalNode.DelayTable[per.ID]
+		this.LocalNode.delayTableMutex.RLock()
+		perinfo.Delay = this.LocalNode.delayTable[per.ID]
+		this.LocalNode.delayTableMutex.RUnlock()
 		perinfo.ID = per.ID
 		perinfos = append(perinfos, perinfo)
 	}
@@ -388,7 +407,7 @@ func (this *GrpcPeerManager) GetPeerInfo() PeerInfos {
 		ID:        this.LocalNode.GetNodeAddr().ID,
 		Status:    ALIVE,
 		IsPrimary: this.LocalNode.IsPrimary,
-		Delay:     this.LocalNode.DelayTable[this.NodeID],
+		Delay:     this.LocalNode.delayTable[this.NodeID],
 	}
 	perinfos = append(perinfos, self_info)
 	return perinfos
@@ -406,6 +425,11 @@ func (this *GrpcPeerManager) GetNodeId() int {
 
 func (this *GrpcPeerManager) SetPrimary(id uint64) error {
 	peers := this.peersPool.GetPeers()
+	this.LocalNode.IsPrimary = false
+	for _, per := range peers {
+		per.IsPrimary = false
+	}
+
 	for _, per := range peers {
 		if per.ID == id {
 			per.IsPrimary = true

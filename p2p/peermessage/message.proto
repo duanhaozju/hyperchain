@@ -30,11 +30,13 @@ message Message{
         KEEPALIVE = 8;
         SYNCMSG = 9;
         PENDING = 10;
+        RECONNECT = 2;
+        RECONNECT_RESPONSE = 3;
     }
 }
 
 
-// Routers table this is the router table which for transfer 
+// Routers table this is the router table which for transfer
 message Routers {
     repeated PeerAddress routers = 1;
 }

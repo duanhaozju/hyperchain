@@ -1,3 +1,5 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package core
 
 import (
@@ -9,7 +11,7 @@ import (
 	"os"
 	"testing"
 	"time"
-	"github.com/golang/protobuf/proto"
+
 )
 
 var transactionCases = []*types.Transaction{
@@ -286,7 +288,7 @@ func TestGetId(t *testing.T) {
 	t.Log(GetId())
 }
 
-func TestGetInvaildTx(t *testing.T) {
+/*func TestGetInvaildTx(t *testing.T) {
 	tx := transactionCases[0]
 	record := &types.InvalidTransactionRecord{
 		Tx:      tx,
@@ -300,5 +302,5 @@ func TestGetInvaildTx(t *testing.T) {
 	result,_ := GetInvaildTxErrType(db,tx.TransactionHash)
 	fmt.Println(result)
 
-}
+}*/
 

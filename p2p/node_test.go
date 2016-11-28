@@ -1,9 +1,5 @@
-// author: chenquan
-// date: 16-8-25
-// last modified: 16-8-29 13:59
-// last Modified Author: chenquan
-// change log: add a header comment of this file
-//
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 
 package p2p
 
@@ -43,8 +39,9 @@ func init() {
 	fakeRemotePublicKey = fakeRemoteTem.GetLocalPublicKey()
 
 	tem := transport.NewHandShakeManger()
-	testNode = NewNode(8001, &mux, 1, tem)
-	membersrvc.Start("../../config/test/local_membersrvc.yaml", 1)
+	peerPool = NewPeerPool(tem)
+	testNode = NewNode(8001,&mux,1,peerPool)
+	membersrvc.Start("../config/test/local_membersrvc.yaml",1)
 }
 
 func TestNode_GetNodeAddr(t *testing.T) {

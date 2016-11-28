@@ -23,9 +23,8 @@ func init() {
 type PeerManager interface {
 	// get the all peer list to broadcast
 	GetAllPeers() []*Peer
-	GetAllPeersWithTemp() []*Peer
 	// initialize the peerManager which is for init the local node
-	Start(aliveChain chan int, eventMux *event.TypeMux, GRPCProt int64)
+	Start(aliveChain chan bool, eventMux *event.TypeMux, isReconnect bool, GRPCProt int64)
 	// Get local node id
 	GetNodeId() int
 	// broadcast information to peers

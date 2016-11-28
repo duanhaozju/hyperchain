@@ -19,7 +19,8 @@ import (
 const (
 	version = 3
 )
-
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 type Key struct {
 	Address		common.Address
 	// we only store privkey as pubkey/address can be derived from it
