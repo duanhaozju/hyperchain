@@ -449,13 +449,13 @@ func (this *GrpcPeerManager) UpdateRoutingTable(payload []byte) {
 	}
 	//新节点peer
 	//newPeer := this.peersPool.tempPeers[this.peersPool.tempPeerKeys[toUpdateAddress]]
-	log.Warning("hash:",toUpdateAddress )
+	log.Debugf("hash: %v",toUpdateAddress )
 	newPeer, err := NewPeerByAddress(&toUpdateAddress, toUpdateAddress.ID, this.TEM, this.LocalNode.address)
 	if err != nil {
 		log.Error(err)
 	}
 
-	log.Warning("newPeer: ", newPeer)
+	log.Debugf("newPeer: %v", newPeer)
 	//新消息
 	payload, _ = proto.Marshal(this.LocalNode.address)
 
