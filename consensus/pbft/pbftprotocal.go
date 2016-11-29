@@ -332,7 +332,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.negoViewRspTimer = pbftTimerFactory.CreateTimer()
 
 	// recovery
-	//pbft.inRecovery = true
+	pbft.inRecovery = true
 	pbft.recoveryRestartTimeout, err = time.ParseDuration(config.GetString("timeout.recovery"))
 	if err != nil {
 		panic(fmt.Errorf("Cannot parse recovery timeout: %s", err))
@@ -405,7 +405,6 @@ func (pbft *pbftProtocal) RecvMsg(e []byte) error {
 	} else if msg.Type == protos.Message_NULL_REQUEST {
 		return pbft.processNullRequest(msg)
 	} else if msg.Type == protos.Message_NEGOTIATE_VIEW {
-		logger.Error("recv negotiate view")
 		return pbft.processNegotiateView()
 	}
 		logger.Errorf("Unknown recvMsg: %+v", msg)
@@ -2029,7 +2028,7 @@ func (pbft *pbftProtocal) processNegotiateView() error {
 		return nil
 	}
 
-	logger.Errorf("Replica %d now negotiate view", pbft.id)
+	logger.Debugf("Replica %d now negotiate view", pbft.id)
 
 	pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
 	pbft.negoViewRspStore = make(map[uint64]uint64)
@@ -2049,7 +2048,7 @@ func (pbft *pbftProtocal) processNegotiateView() error {
 	}
 	msg := consensusMsgHelper(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
-	logger.Errorf("Replica %d broadcast negociate view message", pbft.id)
+	logger.Debugf("Replica %d broadcast negociate view message", pbft.id)
 
 	// post the negotiate message event to myself
 	nvr := &NegotiateViewResponse{
@@ -2144,7 +2143,7 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Eve
 }
 
 func (pbft *pbftProtocal) restartNegoView() {
-	logger.Noticef("Replica %d restart negotiate view", pbft.id)
+	logger.Debugf("Replica %d restart negotiate view", pbft.id)
 	pbft.processNegotiateView()
 }
 

@@ -124,7 +124,7 @@ func (this *PeersPool) GetPeers() []*Peer {
 	var clients []*Peer
 	for _, cl := range this.peers {
 		clients = append(clients, cl)
-		log.Critical("取得路由表:", cl)
+		//log.Critical("取得路由表:", cl)
 	}
 
 	return clients
@@ -173,7 +173,7 @@ func (this *PeersPool)MergeFormRoutersToTemp(routers pb.Routers) {
 }
 // Merge the temp peer into peers list
 func (this *PeersPool) MergeTempPeers(peer *Peer) {
-	log.Critical("old节点合并路由表!!!!!!!!!!!!!!!!!!!")
+	//log.Critical("old节点合并路由表!!!!!!!!!!!!!!!!!!!")
 	//使用共识结果进行更新
 	//for _, tempPeer := range this.tempPeers {
 	//	if tempPeer.RemoteAddr.Hash == address.Hash {

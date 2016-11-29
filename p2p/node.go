@@ -290,7 +290,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 				}
 			case recovery.Message_RELAYTX:
 				{
-					log.Warning("Message_RELAYTX: ")
+					//log.Warning("Message_RELAYTX: ")
 					go this.higherEventManager.Post(event.ConsensusEvent{
 						Payload: SyncMsg.Payload,
 					})

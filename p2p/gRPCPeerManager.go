@@ -90,7 +90,7 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 	if this.Original {
 		// 读取待连接的节点信息
 		this.connectToPeers(isReconnect)
-		log.Critical("路由表:", this.peersPool.peerAddr)
+		//log.Critical("路由表:", this.peersPool.peerAddr)
 
 		aliveChain <- 0
 		this.IsOnline = true
@@ -196,12 +196,11 @@ func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 	//TODO RETRY CONNECT 重试连接(未实现)
 	for this.peersPool.GetAliveNodeNum() < MAX_PEER_NUM - 1 {
 		log.Debug("node:", this.NodeID, "连接节点...")
-		log.Debug("nodes number:", this.peersPool.GetAliveNodeNum())
+		log.Warning("nodes number:", this.peersPool.GetAliveNodeNum())
 		nid := 1
 		for range time.Tick(200 * time.Millisecond) {
 			_index := uint64(nid)
-			nid++
-			//log.Println("status map", nid, status)
+
 			if nid > MAX_PEER_NUM {
 				break
 			}
@@ -209,6 +208,7 @@ func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 				nid++
 				continue
 			}
+			log.Warning("status map", nid, peerStatus[_index])
 			//if this node is not online, connect it
 			peerIp := this.configs.GetIP(_index)
 			peerPort := this.configs.GetPort(_index)
@@ -217,16 +217,17 @@ func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 			if connectErr != nil {
 				// cannot connect to other peer
 				log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n", connectErr)
-
 				continue
 			} else {
 				// add  peer to peer pool
-				log.Critical("将地址加入到地址池", *peerAddress)
+				//log.Critical("将地址加入到地址池", *peerAddress)
 				this.peersPool.PutPeer(*peerAddress, peer)
 				//this.TEM.[peer.Addr.Hash]=peer.TEM
 				peerStatus[_index] = true
 				log.Debug("Peer Node ID:", peerAddress.ID, "has connected!")
+				log.Warning("nodes number:", this.peersPool.GetAliveNodeNum())
 			}
+
 		}
 	}
 	////todo 生成路由表
@@ -250,12 +251,13 @@ func (this *GrpcPeerManager) connectToPeer(peerAddress *pb.PeerAddress, nid uint
 	} else {
 		peer, peerErr = NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, nid, this.TEM, this.LocalNode.GetNodeAddr(), this.peersPool)
 	}
+
 	if peerErr != nil {
 		// cannot connect to other peer
 		log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n")
 		return nil, peerErr
 	} else {
-		log.Critical("连接到节点", nid)
+		//log.Critical("连接到节点", nid,isReconnect)
 		return peer, nil
 	}
 
@@ -272,7 +274,7 @@ func (this *GrpcPeerManager) GetAllPeersWithTemp() []*Peer {
 
 // BroadcastPeers Broadcast Massage to connected peers
 func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
-	log.Warning("P2P broadcast")
+	//log.Warning("P2P broadcast")
 	if !this.IsOnline {
 		log.Warning("IsOnline")
 		return
@@ -283,7 +285,7 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 		Payload:      payLoad,
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
-	log.Warning("call broadcast")
+	//log.Warning("call broadcast")
 	go broadcast(this,broadCastMessage, this.peersPool)
 }
 
@@ -318,7 +320,7 @@ func (this *GrpcPeerManager) GetLocalAddressPayload() (payload []byte) {
 
 // SendMsgToPeers Send msg to specific peer peerlist
 func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, MessageType recovery.Message_MsgType) {
-	log.Critical("need send message to ", peerList)
+	//log.Critical("need send message to ", peerList)
 	var mpPaylod = &recovery.Message{
 		MessageType:  MessageType,
 		MsgTimeStamp: time.Now().UnixNano(),
@@ -337,31 +339,28 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, M
 	}
 
 	// broadcast to special peers
-	go func() {
-		for _, NodeID := range peerList {
-			peers := this.peersPool.GetPeers()
-			for _, p := range peers {
-				log.Critical("range nodeid", p.RemoteAddr)
-				log.Critical("range nodeid", p.ID)
-				// convert the uint64 to int
-				// because the unicast node is not confirm so, here use double loop
-				if p.ID == NodeID {
-					log.Debug("send msg to ", NodeID)
-					start := time.Now().UnixNano()
-					resMsg, err := p.Chat(syncMessage)
-
-					if err != nil {
-						this.LocalNode.DelayChan <- UpdateTable{updateID:p.Addr.ID,updateTime:time.Now().UnixNano() - start}
-						log.Error("Broadcast failed,Node", p.Addr)
-					} else {
-						log.Debug("resMsg:", string(resMsg.Payload))
-						//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
-					}
+	for _, NodeID := range peerList {
+		peers := this.peersPool.GetPeers()
+		for _, p := range peers {
+			//log.Critical("range nodeid", p.RemoteAddr)
+			//log.Critical("range nodeid", p.ID)
+			// convert the uint64 to int
+			// because the unicast node is not confirm so, here use double loop
+			if p.ID == NodeID {
+				log.Debug("send msg to ", NodeID)
+				start := time.Now().UnixNano()
+				resMsg, err := p.Chat(syncMessage)
+				if err != nil {
+					log.Error("Broadcast failed,Node", p.Addr)
+				} else {
+					this.LocalNode.DelayChan <- UpdateTable{updateID:p.Addr.ID,updateTime:time.Now().UnixNano() - start}
+					log.Debug("resMsg:", string(resMsg.Payload))
+					//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
 				}
 			}
-
 		}
-	}()
+
+	}
 
 }
 
