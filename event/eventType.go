@@ -1,7 +1,5 @@
-// common event defined
-// author: Lizhong kuang
-// date: 2016-08-24
-// last modified:2016-08-25
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package event
 
 import "hyperchain/core/types"
@@ -21,7 +19,10 @@ type NewBlockEvent struct {
 }
 
 //general tx local
-type NewTxEvent struct{ Payload []byte }
+type NewTxEvent struct{
+	Payload []byte
+	Simulate bool
+}
 
 type TxUniqueCastEvent struct {
 	Payload []byte

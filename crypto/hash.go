@@ -1,3 +1,5 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package crypto
 
 import (
@@ -20,6 +22,8 @@ func NewKeccak256Hash(name string) *Keccak256Hash  {
 //Hash transfers object x into common.Hash with length 32
 func (k256 *Keccak256Hash)Hash(x interface{}) (h common.Hash) {
 	serialize_data,err := json.Marshal(x)
+	common.ParseData(x)
+
 	if err!=nil{
 		panic(err)
 	}

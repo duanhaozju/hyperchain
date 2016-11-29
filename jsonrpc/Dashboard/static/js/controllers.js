@@ -367,16 +367,22 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
             $scope.number = res.number;
             // $rootScope.height = res.number;
 
-            SummaryService.getAvgTime("1",res.number+"") // res.number 是十六进制字符串。这里参数可以是十进制字符串、整数或十六进制字符串
-                .then(function(res){
-                    if (!res) {
-                        $scope.avgTime = 0
-                    } else {
-                        $scope.avgTime = res;
-                    }
-                }, function(error){
-                    console.log(error);
-                })
+            if (res.number == 0 || res.number == "0x0") {
+                $scope.avgTime = 0
+            } else {
+                SummaryService.getAvgTime("1",res.number+"") // res.number 是十六进制字符串。这里参数可以是十进制字符串、整数或十六进制字符串
+                    .then(function(res){
+                        if (!res) {
+                            $scope.avgTime = 0
+                        } else {
+                            $scope.avgTime = res;
+                        }
+                    }, function(error){
+                        console.log(error);
+                    })
+            }
+
+
         }, function(error){
             console.log(error)
         })
@@ -600,7 +606,8 @@ function AddProjectCtrl($scope, $state, ENV, ContractService) {
         type: "1",
         pattern: "",
         abi: [],
-        bin: []
+        bin: [],
+        ctNames: []
     };
 
     $scope.disable = false;
@@ -625,11 +632,12 @@ function AddProjectCtrl($scope, $state, ENV, ContractService) {
                 $scope.flag = true;
                 var abis = [];
 
-                for (var i = 0;i < res.Abi.length; i++) {
-                    abis.push(JSON.parse(res.Abi[i]));
+                for (var i = 0;i < res.abi.length; i++) {
+                    abis.push(JSON.parse(res.abi[i]));
                 }
                 $scope.project.abi = abis
-                $scope.project.bin = res.Bin
+                $scope.project.bin = res.bin
+                $scope.project.ctNames = res.types
 
             }, function(error){
                 alert(error.message);
@@ -642,9 +650,13 @@ function AddProjectCtrl($scope, $state, ENV, ContractService) {
 
         // todo 现有合约个数
         var contractStorage = JSON.parse(localStorage.getItem(ENV.STORAGE));
-        var len;
+        var len, flag;
 
-        var ctNames = getContractName("contract $", $scope.project.pattern.value);
+        if (!contractStorage) {
+            flag = true
+        } else {
+            flag = false
+        }
 
         // contract
         for (var i = 0;i < $scope.project.abi.length; i++) {
@@ -660,16 +672,26 @@ function AddProjectCtrl($scope, $state, ENV, ContractService) {
             _contract.hash = "";
             _contract.address = "";
 
+            for (var j = 0; j < $scope.project.abi[i].length; j++) {
+                if ($scope.project.abi[i][j].type == "constructor") {
+                    _contract.params = $scope.project.abi[i][j];
+                }
+            }
+
             // 合约存到localstorage中
-            if (!contractStorage) {
+            if (flag) {
                 len = 1;
-                _contract.contractName = len + "_" + ctNames[i];
+                _contract.id = len;
+                _contract.contractName = len + "_" + $scope.project.ctNames[i];
                 var objContract = _defineProperty({}, _contract.contractName, _contract);
                 localStorage.setItem(ENV.STORAGE,JSON.stringify(objContract))
+                flag = false;
+                contractStorage = JSON.parse(localStorage.getItem(ENV.STORAGE));
             } else {
                 len = Object.keys(contractStorage).length;
                 len++;
-                _contract.contractName = len + "_" + ctNames[i];
+                _contract.id = len;
+                _contract.contractName = len + "_" + $scope.project.ctNames[i]
                 contractStorage[_contract.contractName] = _contract;
                 localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage));
             }
@@ -681,20 +703,29 @@ function AddProjectCtrl($scope, $state, ENV, ContractService) {
 }
 
 
-function ContractCtrl($scope, $uibModal, DTOptionsBuilder, SweetAlert, ENV) {
+function ContractCtrl($scope, $uibModal, $state, DTOptionsBuilder, SweetAlert, ENV) {
 
     // 从localstorage中取出所有合约
-    $scope.contracts = JSON.parse(localStorage.getItem(ENV.STORAGE));
+    var contractStorage = JSON.parse(localStorage.getItem(ENV.STORAGE));
 
+    $scope.contracts = contractStorage;
+    console.log($scope.contracts);
     $scope.contract = {
         from: ENV.FROM
     };
+    $scope.cAddr = '';
+    $scope.cName = '';
 
     datatables($scope, DTOptionsBuilder);
 
     $scope.modal_deploy = function (ctName, code) {
         $scope.ctName = ctName;
         $scope.sourceCode = code;
+
+        $scope.params = {}
+
+       // $scope.params = $scope.contracts[ctName].params.inputs;
+
         var modalInstance = $uibModal.open({
             templateUrl: 'static/views/modal_deploy.html',
             controller: modalInstanceCtrl,
@@ -736,9 +767,53 @@ function ContractCtrl($scope, $uibModal, DTOptionsBuilder, SweetAlert, ENV) {
                 }
             });
     }
+
+    $scope.addOne = function(ct){
+
+        var str = ct.contractName.split("_");
+        var newIndex =  Object.keys(contractStorage).length + 1;
+        var newcName = newIndex + "" + "_" + str[1];
+
+        var newContract = Object.assign({},ct);
+        newContract.id = newIndex;
+        newContract.contractName = newcName;
+        newContract.address = "";
+        newContract.hash = "";
+
+        if (ct.status == 1) {
+            // 已部署，添加一个同样的但是未部署的
+            newContract.status = 0
+        }
+        $scope.contracts[newcName] = newContract;
+        contractStorage[newcName] = newContract;
+        localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage))
+    };
+
+    $scope.getContract = function(cName, cAddr){
+
+        if (cName == "" || cAddr == "") {
+            alert("字段不能为空！");
+            return;
+        }
+
+        var str = cName.split("_");
+        var newIndex =  Object.keys(contractStorage).length + 1;
+        var newcName = newIndex + "" + "_" + str[1];
+
+        var newContract = Object.assign({},contractStorage[cName]);
+
+        newContract.id = newIndex;
+        newContract.address = cAddr;
+        newContract.contractName = newcName;
+
+        $scope.contracts[newcName] = newContract;
+        contractStorage[newcName] = newContract;
+        localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage))
+
+    }
 }
 
-function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, ContractService) {
+function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, ContractService, UtilsService) {
 
     var deployContract = function(from, sourceCode){
         ContractService.deployContract(from,sourceCode)
@@ -782,47 +857,60 @@ function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Contract
 
     $scope.ok = function () {
         // deployContract($scope.from, $scope.sourceCode);
-
+        console.log($scope.params)
         if (flag) {
             flag = false;
             SweetAlert.swal("Waiting...", "please waiting...", "warning");
 
-            ContractService.deployContract($scope.contract.from, $scope.sourceCode)
-                .then(function(res){
-                    var contractStorage = JSON.parse(localStorage.getItem(ENV.STORAGE));
-                    for (var name in contractStorage) {
-                        if ( name == $scope.ctName) {
-                            contractStorage[name].status = 1;
-                            // contractStorage[name].hash = res;
+            // var constructParamBytes = UtilsService.encodeConstructorParams($scope.contracts[$scope.ctName].methods, $scope.params);
+            UtilsService.encodeConstructorParams($scope.contracts[$scope.ctName].methods, $scope.params)
+                .then(function(constructParamBytes){
+                    console.log(constructParamBytes);
+                    var payload = $scope.sourceCode + constructParamBytes
+                    console.log(payload)
+                    ContractService.deployContract($scope.contract.from, payload)
+                        .then(function(res){
+                            var contractStorage = JSON.parse(localStorage.getItem(ENV.STORAGE));
+                            for (var name in contractStorage) {
+                                if ( name == $scope.ctName) {
+                                    contractStorage[name].status = 1;
+                                    // contractStorage[name].hash = res;
 
-                            // ContractService.getReceipt(res)
-                            //     .then(function(data){
-                            contractStorage[name].address = res.contractAddress;
+                                    // ContractService.getReceipt(res)
+                                    //     .then(function(data){
+                                    contractStorage[name].address = res.contractAddress;
 
-                            $scope.contracts[name] = contractStorage[name];
-                            localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage))
+                                    $scope.contracts[name] = contractStorage[name];
+                                    localStorage.setItem(ENV.STORAGE, JSON.stringify(contractStorage))
 
-                            SweetAlert.swal({
-                                title: "Deployed successfully!",
-                                text: "The contract address is <span class='text_red'>0x"+res.contractAddress+"</span>",
-                                type: "success",
-                                customClass: 'swal-wide',
-                                html: true
-                            });
-                            $uibModalInstance.close();
-                            // }, function(error){
-                            //     console.log(error)
-                            // })
+                                    SweetAlert.swal({
+                                        title: "Deployed successfully!",
+                                        text: "The contract address is <span class='text_red'>0x"+res.contractAddress+"</span>",
+                                        type: "success",
+                                        customClass: 'swal-wide',
+                                        html: true
+                                    });
+                                    $uibModalInstance.close();
+                                    // }, function(error){
+                                    //     console.log(error)
+                                    // })
 
-                            break;
-                        }
-                    }
+                                    break;
+                                }
+                            }
 
-                    flag = true;
+                            flag = true;
+                        }, function(err){
+                            SweetAlert.swal("Error", err.message, "error");
+                            flag = true;
+                        });
+
                 }, function(err){
                     SweetAlert.swal("Error", err.message, "error");
                     flag = true;
                 });
+
+
         } else {
             SweetAlert.swal("Waiting...", "please waiting...", "warning");
         }
@@ -871,19 +959,23 @@ function modalInstanceInvokeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Co
                     // from 调用者地址，to 合约地址，data 为编码
                     ContractService.invokeContract(ENV.FROM,  $scope.address, data)
                         .then(function(res){
-                            var hex16 = res.ret.substring(2,res.ret.length);
+                            var hex = res.ret
 
-                            SweetAlert.swal({
-                                title: "Invoked successfully!",
-                                // text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! ",
-                                text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The result is <span class='text_red'>"+ parseInt(hex16,16) +"</span>",
-                                type: "success",
-                                customClass: 'swal-wide',
-                                html: true
-                            });
-                            $uibModalInstance.close();
+                            UtilsService.unpackOutput(abimethod,res.ret)
+                                .then(function(result){
+                                    console.log(result);
 
-                            flag = true;
+                                    SweetAlert.swal({
+                                        title: "Invoked successfully!",
+                                        text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The result is <span class='text_red' style='word-wrap:break-word'>"+ result +"</span>",
+                                        type: "success",
+                                        customClass: 'swal-wide',
+                                        html: true
+                                    });
+                                    $uibModalInstance.close();
+
+                                    flag = true;
+                                });
 
                         }, function(error){
                             // $scope.status = error.message;

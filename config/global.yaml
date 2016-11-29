@@ -52,3 +52,10 @@ global:
         replicainfo:
             interval : 500s
             enable   : false
+        ratelimit:
+            enable   : true
+            txRatePeak : 100
+            txFillRate: 0.5ms
+            contractRatePeak : 100
+            contractFillRate: 0.5ms
+

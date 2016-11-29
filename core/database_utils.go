@@ -1,7 +1,5 @@
-// Hash interface defined
-// author: Lizhong kuang
-// date: 2016-08-25
-// last modified:2016-08-25
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package core
 
 import (
@@ -44,13 +42,16 @@ func InitDB(dbPath string, port int) {
 //---------------------- Receipt Start ---------------------------------
 // GetReceipt returns a receipt by hash
 func GetReceipt(txHash common.Hash) *types.ReceiptTrans {
-	db, _ := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		return nil
+	}
 	data, _ := db.Get(append(ReceiptsPrefix, txHash[:]...))
 	if len(data) == 0 {
 		return nil
 	}
 	var receipt types.Receipt
-	err := proto.Unmarshal(data, &receipt)
+	err = proto.Unmarshal(data, &receipt)
 	if err != nil {
 		log.Errorf("GetReceipt err:", err)
 	}
@@ -102,11 +103,22 @@ func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error)
 	err = proto.Unmarshal(data, &transaction)
 	return &transaction, err
 }
+func JudgeTransactionExist(db hyperdb.Database, key []byte) (bool, error) {
+	var transaction types.Transaction
+	keyFact := append(TransactionPrefix, key...)
+	data, err := db.Get(keyFact)
+	if len(data) == 0 {
+		return false, err
+	}
+	err = proto.Unmarshal(data, &transaction)
+	return true, err
+}
+
+
 
 //get tx<-->block num,hash,index
 func GetTxWithBlock(db hyperdb.Database, key []byte) (uint64, int64) {
 	dataMeta, _ := db.Get(append(key, TxMetaSuffix...))
-	log.Debug(dataMeta)
 	if len(dataMeta) == 0 {
 		return 0, 0
 	}
@@ -159,6 +171,17 @@ func GetAllDiscardTransaction(db *hyperdb.LDBDatabase) ([]*types.InvalidTransact
 	iter.Release()
 	err := iter.Error()
 	return ts, err
+}
+
+func GetDiscardTransaction(db hyperdb.Database, key []byte) (*types.InvalidTransactionRecord, error) {
+	var invalidTransaction types.InvalidTransactionRecord
+	keyFact := append(InvalidTransactionPrefix, key...)
+	data, err := db.Get(keyFact)
+	if len(data) == 0 {
+		return &invalidTransaction, err
+	}
+	err = proto.Unmarshal(data, &invalidTransaction)
+	return &invalidTransaction, err
 }
 
 //-- --------------------- Transaction END -----------------------------------
@@ -337,6 +360,7 @@ func UpdateChainByBlcokNum(db hyperdb.Database, blockNumber uint64) error {
 	block, err := GetBlockByNumber(db, blockNumber)
 	if err != nil {
 		log.Warning("no required block number")
+		return err
 	}
 	memChainMap.data.LatestBlockHash = block.BlockHash
 	memChainMap.data.ParentBlockHash = block.ParentHash

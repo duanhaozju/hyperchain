@@ -1,3 +1,5 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package pbft
 
 import (
@@ -73,6 +75,8 @@ type pbftProtocal struct {
 	newViewTimerReason    string                             // what triggered the timer
 	nullRequestTimer      events.Timer                       // timeout triggering a null request
 	nullRequestTimeout    time.Duration                      // duration for this timeout
+	firstRequestTimer     events.Timer		         // firstRequestTimer is set for replicas in case of primary start and shut down immediately
+	firstRequestTimeout   time.Duration			 // duration for this timeout
 
 	viewChangePeriod  uint64                                 // period between automatic view changes
 	viewChangeSeqNo   uint64                                 // next seqNo to perform view change
@@ -211,23 +215,28 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.vcResendTimer = pbftTimerFactory.CreateTimer()
 	pbft.nullRequestTimer = pbftTimerFactory.CreateTimer()
 	pbft.newViewTimer = pbftTimerFactory.CreateTimer()
-	pbft.N = config.GetInt("general.N")
-	pbft.f = config.GetInt("general.f")
+	pbft.firstRequestTimer = pbftTimerFactory.CreateTimer()
+	pbft.N = config.GetInt("pbft.nodes")
+	//pbft.f = config.GetInt("general.f")
+	pbft.f = (pbft.N-1) / 3
 
-	if pbft.f*3+1 > pbft.N {
-		panic(fmt.Sprintf("need at least %d enough replicas to tolerate %d byzantine faults, but only %d replicas configured", pbft.f*3+1, pbft.f, pbft.N))
-	}
+	//if pbft.f*3+1 > pbft.N {
+	//	panic(fmt.Sprintf("need at least %d enough replicas to tolerate %d byzantine faults, but only %d replicas configured", pbft.f*3+1, pbft.f, pbft.N))
+	//}
 
-	pbft.K = uint64(config.GetInt("general.K"))
-
-	pbft.logMultiplier = uint64(config.GetInt("general.logmultiplier"))
-	if pbft.logMultiplier < 2 {
-		panic("Log multiplier must be greater than or equal to 2")
-	}
+	//pbft.K = uint64(config.GetInt("general.K"))
+	pbft.K = uint64(10)
+	//pbft.logMultiplier = uint64(config.GetInt("general.logmultiplier"))
+	pbft.logMultiplier = uint64(4)
+	//if pbft.logMultiplier < 2 {
+	//	panic("Log multiplier must be greater than or equal to 2")
+	//}
 
 	pbft.L = pbft.logMultiplier * pbft.K // log size
-	pbft.viewChangePeriod = uint64(config.GetInt("general.viewchangeperiod"))
-	pbft.byzantine = config.GetBool("general.byzantine")
+	//pbft.viewChangePeriod = uint64(config.GetInt("general.viewchangeperiod"))
+	pbft.viewChangePeriod = uint64(0)
+	//pbft.byzantine = config.GetBool("general.byzantine")
+	pbft.byzantine = false
 
 	pbft.vcResendTimeout, err = time.ParseDuration(config.GetString("timeout.resendviewchange"))
 	if err != nil {
@@ -247,6 +256,12 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.nullRequestTimeout, err = time.ParseDuration(config.GetString("timeout.nullrequest"))
 	if err != nil {
 		pbft.nullRequestTimeout = 0
+	}
+
+	pbft.firstRequestTimeout, err = time.ParseDuration(config.GetString("timeout.firstrequest"))
+	if err != nil {
+		logger.Noticef("Replica %d read first request timeout fail", pbft.id)
+		pbft.firstRequestTimeout = 30
 	}
 
 	pbft.activeView = true
@@ -273,6 +288,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 
 	// init the logs
 	pbft.certStore = make(map[msgID]*msgCert)
+	//pbft.reqBatchStore = make(map[string]*TransactionBatch)
 	pbft.checkpointStore = make(map[Checkpoint]bool)
 	pbft.chkpts = make(map[uint64]string)
 	pbft.pset = make(map[uint64]*ViewChange_PQ)
@@ -309,7 +325,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 
 	// negotiate view
 	pbft.inNegoView = true
-	pbft.negoViewRspTimeout, err = time.ParseDuration(config.GetString("timeout.negoView"))
+	pbft.negoViewRspTimeout, err = time.ParseDuration(config.GetString("timeout.negoview"))
 	if err != nil {
 		panic(fmt.Errorf("Cannot parse negotiate view timeout: %s", err))
 	}
@@ -331,7 +347,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 
 	// initialize the batchTimeout
 	pbft.batchTimer = etf.CreateTimer()
-	pbft.batchSize = config.GetInt("general.batchsize")
+	pbft.batchSize = config.GetInt("pbft.batchsize")
 	pbft.batchStore = nil
 	pbft.batchTimeout, err = time.ParseDuration(config.GetString("timeout.batch"))
 	if err != nil {
@@ -389,7 +405,6 @@ func (pbft *pbftProtocal) RecvMsg(e []byte) error {
 	} else if msg.Type == protos.Message_NULL_REQUEST {
 		return pbft.processNullRequest(msg)
 	} else if msg.Type == protos.Message_NEGOTIATE_VIEW {
-		logger.Error("recv negotiate view")
 		return pbft.processNegotiateView()
 	}
 		logger.Errorf("Unknown recvMsg: %+v", msg)
@@ -439,7 +454,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 
 	switch et := e.(type) {
 	case viewChangeTimerEvent:
-		logger.Infof("Replica %d view change timer expired, sending view change: %s", pbft.id, pbft.newViewTimerReason)
+		logger.Warningf("Replica %d view change timer expired, sending view change: %s", pbft.id, pbft.newViewTimerReason)
 		pbft.timerActive = false
 		pbft.sendViewChange()
 	case *ConsensusMessage:
@@ -486,7 +501,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 			logger.Warningf("Replica %d had its view change resend timer expire but it's in an active view, this is benign but may indicate a bug", pbft.id)
 			return nil
 		}
-		logger.Debugf("Replica %d view change resend timer expired before view change quorum was reached, resending", pbft.id)
+		logger.Warningf("Replica %d view change resend timer expired before view change quorum was reached, resending", pbft.id)
 		pbft.view-- // sending the view change increments this
 		return pbft.sendViewChange()
 	case *NegotiateView:
@@ -507,6 +522,11 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		logger.Noticef("#   Replica %d finished negotiating view: %d", pbft.id, pbft.view)
 		logger.Notice("################################################")
 		primary := pbft.primary(pbft.view, pbft.N)
+		if primary == pbft.id {
+			pbft.sendNullRequest()
+		} else {
+			pbft.firstRequestTimer.Reset(pbft.firstRequestTimeout, firstRequestTimerEvent{})
+		}
 		pbft.persistView(pbft.view)
 		pbft.helper.InformPrimary(primary)
 		pbft.processRequestsDuringNegoView()
@@ -550,6 +570,9 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		err = pbft.recvUpdateN(et)
 	case *AgreeUpdateN:
 		err = pbft.recvAgreeUpdateN(et)
+	case firstRequestTimerEvent:
+		logger.Noticef("Replica %d first request timer expires", pbft.id)
+		return pbft.sendViewChange()
 	default:
 		logger.Warningf("Replica %d received an unknown message type %T", pbft.id, et)
 	}
@@ -629,6 +652,9 @@ func (pbft *pbftProtocal) processStateUpdated(msg *protos.Message) error {
 func (pbft *pbftProtocal) processNullRequest(msg *protos.Message) error {
 	if pbft.inNegoView {
 		return nil
+	}
+	if pbft.primary(pbft.view, pbft.N) != pbft.id {
+		pbft.firstRequestTimer.Stop()
 	}
 	pbft.nullReqTimerReset()
 	return nil
@@ -738,7 +764,7 @@ func (pbft *pbftProtocal) nullRequestHandler() {
 
 	if pbft.primary(pbft.view, pbft.N) != pbft.id {
 		// backup expected a null request, but primary never sent one
-		logger.Infof("Replica %d null request timer expired, sending view change", pbft.id)
+		logger.Warningf("Replica %d null request timer expired, sending view change", pbft.id)
 
 		pbft.sendViewChange()
 	} else {
@@ -1077,7 +1103,15 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	for _, cert := range pbft.certStore { // check for other PRE-PREPARE for same digest, but different seqNo
 		if p := cert.prePrepare; p != nil {
 			if p.View == pbft.view && p.SequenceNumber != n && p.BatchDigest == digest && digest != "" {
-				logger.Infof("Other pre-prepare found with same digest but different seqNo: %d instead of %d", p.SequenceNumber, n)
+				// This will happen if primary receive same digest result of txs
+				// It may result in DDos attack
+				logger.Warningf("Other pre-prepare found with same digest but different seqNo: %d instead of %d", p.SequenceNumber, n)
+				pbft.lastVid = *pbft.currentVid
+				pbft.currentVid = nil
+				delete(pbft.cacheValidatedBatch, digest)
+				delete(pbft.validatedBatchStore, digest)
+				delete(pbft.outstandingReqBatches, digest)
+				pbft.stopTimer()
 				return
 			}
 		}
@@ -1132,6 +1166,10 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 		return nil
 	}
 
+	if pbft.primary(pbft.view, pbft.N) != pbft.id {
+		pbft.firstRequestTimer.Stop()
+	}
+
 	//logger.Notice("receive  pre-prepare first seq is:",preprep.SequenceNumber)
 
 	logger.Debug("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
@@ -1147,15 +1185,13 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 			preprep.ReplicaId, pbft.primary(pbft.view, pbft.N))
 		return nil
 	}
-
+	pbft.nullRequestTimer.Stop()
 	if !pbft.inWV(preprep.View, preprep.SequenceNumber) {
 		if preprep.SequenceNumber != pbft.h && !pbft.skipInProgress {
-			logger.Warningf("Replica %d pre-prepare view different, or sequence number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d",
-				pbft.id, preprep.View, pbft.primary(pbft.view, pbft.N), preprep.SequenceNumber, pbft.h)
+			logger.Warningf("Replica %d pre-prepare view different, or sequence number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d", pbft.id, preprep.View, pbft.view, preprep.SequenceNumber, pbft.h)
 		} else {
 			// This is perfectly normal
-			logger.Debugf("Replica %d pre-prepare view different, or sequence number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d",
-				pbft.id, preprep.View, pbft.primary(pbft.view, pbft.N), preprep.SequenceNumber, pbft.h)
+			logger.Debugf("Replica %d pre-prepare view different, or sequence number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d", pbft.id, preprep.View, pbft.view, preprep.SequenceNumber, pbft.h)
 		}
 
 		return nil
@@ -1184,8 +1220,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 	if !pbft.skipInProgress && !pbft.inRecovery {
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new pre-prepare for request batch %s", preprep.BatchDigest))
 	}
-	
-	pbft.nullRequestTimer.Stop()
+
 	logger.Debug("receive  pre-prepare first seq is:",preprep.SequenceNumber)
 	if pbft.primary(pbft.view, pbft.N) != pbft.id && pbft.prePrepared(preprep.BatchDigest, preprep.View, preprep.SequenceNumber) && !cert.sentPrepare {
 		logger.Debugf("Backup %d broadcasting prepare for view=%d/seqNo=%d", pbft.id, preprep.View, preprep.SequenceNumber)
@@ -1344,7 +1379,7 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 
 	if !pbft.inWV(commit.View, commit.SequenceNumber) {
 		if commit.SequenceNumber != pbft.h && !pbft.skipInProgress {
-			logger.Warningf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
+			logger.Warningf("Replica %d ignoring commit from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
 		} else {
 			// This is perfectly normal
 			logger.Debugf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
@@ -1374,7 +1409,7 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 			pbft.committedCert[idx] = cert.digest
 			pbft.executeOutstanding()
 			if commit.SequenceNumber == pbft.viewChangeSeqNo {
-				logger.Infof("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
+				logger.Warningf("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
 				pbft.sendViewChange()
 			}
 		}
@@ -1496,6 +1531,12 @@ func (pbft *pbftProtocal) execDoneSync(idx msgID) {
 	}
 
 	pbft.currentExec = nil
+	// optimization: if we are in view changing waiting for executing to target seqNo,
+	// one-time processNewView() is enough. No need to processNewView() every time in execDoneSync()
+	if !pbft.activeView && pbft.lastExec == pbft.nvInitialSeqNo {
+		pbft.processNewView()
+	}
+
 	pbft.executeOutstanding()
 
 }
@@ -1538,7 +1579,7 @@ func (pbft *pbftProtocal) checkpoint(n uint64, info *protos.BlockchainInfo) {
 
 func (pbft *pbftProtocal) recvCheckpoint(chkpt *Checkpoint) events.Event {
 
-	logger.Infof("Replica %d received checkpoint from replica %d, seqNo %d, digest %s",
+	logger.Debugf("Replica %d received checkpoint from replica %d, seqNo %d, digest %s",
 		pbft.id, chkpt.ReplicaId, chkpt.SequenceNumber, chkpt.Id)
 
 	if pbft.inNegoView {
@@ -1987,7 +2028,7 @@ func (pbft *pbftProtocal) processNegotiateView() error {
 		return nil
 	}
 
-	logger.Errorf("Replica %d now negotiate view", pbft.id)
+	logger.Debugf("Replica %d now negotiate view", pbft.id)
 
 	pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
 	pbft.negoViewRspStore = make(map[uint64]uint64)
@@ -2007,7 +2048,7 @@ func (pbft *pbftProtocal) processNegotiateView() error {
 	}
 	msg := consensusMsgHelper(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
-	logger.Errorf("Replica %d broadcast negociate view message", pbft.id)
+	logger.Debugf("Replica %d broadcast negociate view message", pbft.id)
 
 	// post the negotiate message event to myself
 	nvr := &NegotiateViewResponse{
@@ -2102,7 +2143,7 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Eve
 }
 
 func (pbft *pbftProtocal) restartNegoView() {
-	logger.Noticef("Replica %d restart negotiate view", pbft.id)
+	logger.Debugf("Replica %d restart negotiate view", pbft.id)
 	pbft.processNegotiateView()
 }
 
@@ -2144,9 +2185,9 @@ func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error 
 			vid:       result.SeqNo,
 		}
 		pbft.cacheValidatedBatch[digest] = cache
-		if pbft.seqNo-pbft.lastExec > 20 {
-			time.Sleep(20 * time.Millisecond)
-		}
+		//if pbft.seqNo-pbft.lastExec > 20 {
+		//	time.Sleep(20 * time.Millisecond)
+		//}
 		pbft.trySendPrePrepare()
 	} else {
 		logger.Debugf("Replica %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)

@@ -1,3 +1,5 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package pbft
 
 import (
@@ -230,8 +232,9 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 
 	// We only enter this if there are enough view change messages _greater_ than our current view
 	if len(replicas) >= pbft.f+1 {
-		logger.Infof("Replica %d received f+1 view-change messages, triggering view-change to view %d",
+		logger.Warningf("Replica %d received f+1 view-change messages, triggering view-change to view %d",
 			pbft.id, minView)
+		pbft.firstRequestTimer.Stop()
 		// subtract one, because sendViewChange() increments
 		pbft.view = minView - 1
 		return pbft.sendViewChange()
@@ -556,13 +559,16 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 
 	pbft.activeView = true
 	delete(pbft.newViewStore, pbft.view-1)
-
+	// empty the outstandingReqBatch, it is useless since new primary will resend pre-prepare
+	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
 	pbft.lastExec = pbft.h
 	pbft.seqNo = pbft.h
 	pbft.vid = pbft.h
 	pbft.lastVid = pbft.h
-	backendVid := uint64(pbft.vid+1)
-	pbft.helper.VcReset(backendVid)
+	if !pbft.skipInProgress {
+		backendVid := uint64(pbft.vid+1)
+		pbft.helper.VcReset(backendVid)
+	}
 	xSetLen := len(nv.Xset)
 	upper := uint64(xSetLen) + pbft.h + uint64(1)
 	if pbft.primary(pbft.view, pbft.N) == pbft.id {
@@ -583,65 +589,8 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 			}
 		}
 	}
-	/*
-	for n, d := range nv.Xset {
-		if n <= pbft.h {
-			continue
-		}
-
-		reqBatch, ok := pbft.validatedBatchStore[d]
-		if !ok && d != "" {
-			logger.Criticalf("Replica %d is missing request batch for seqNo=%d with digest '%s' for assigned prepare after fetching, this indicates a serious bug", pbft.id, n, d)
-		}
-		preprep := &PrePrepare{
-			View:           	pbft.view,
-			SequenceNumber: 	n,
-			BatchDigest:    	d,
-			TransactionBatch:   	reqBatch,
-			ReplicaId:      	pbft.id,
-		}
-		cert := pbft.getCert(pbft.view, n)
-		cert.prePrepare = preprep
-		cert.digest = d
-		if n > pbft.seqNo {
-			pbft.seqNo = n
-		}
-		pbft.persistQSet()
-	}
-	*/
 
 	pbft.updateViewChangeSeqNo()
-/*
-	if pbft.primary(pbft.view) != pbft.id {
-		for n, d := range nv.Xset {
-			prep := &Prepare{
-				View:           pbft.view,
-				SequenceNumber: n,
-				BatchDigest:    d,
-				ReplicaId:      pbft.id,
-			}
-			if n > pbft.h {
-				cert := pbft.getCert(pbft.view, n)
-				cert.sentPrepare = true
-				pbft.recvPrepare(prep)
-			}
-			payload, err := proto.Marshal(prep)
-			if err != nil {
-				logger.Errorf("ConsensusMessage_PREPARE Marshal Error", err)
-				return nil
-			}
-			consensusMsg := &ConsensusMessage{
-				Type:		ConsensusMessage_PREPARE,
-				Payload:	payload,
-			}
-			msg := consensusMsgHelper(consensusMsg, pbft.id)
-			pbft.helper.InnerBroadcast(msg)
-		}
-	} else {
-		logger.Debugf("Replica %d is now primary, attempting to resubmit requests", pbft.id)
-		pbft.resubmitRequestBatches()
-	}
-*/
 	pbft.startTimerIfOutstandingRequests()
 	logger.Debugf("Replica %d done cleaning view change artifacts, calling into consumer", pbft.id)
 

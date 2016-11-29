@@ -1,3 +1,5 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package hyperdb
 
 import (
@@ -7,6 +9,7 @@ import (
 
 // the Database for LevelDB
 // LDBDatabase implements the DataBase interface
+
 type LDBDatabase struct {
 	path string
 	db   *leveldb.DB

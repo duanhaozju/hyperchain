@@ -23,6 +23,7 @@
                     <table  datatable="ng" dt-options="dtOptions" class="table table-striped table-hover dataTables-example" data-page-size="10">
                         <thead>
                         <tr>
+                            <th class="table_th">ID</th>
                             <th class="table_th">Contract Name</th>
                             <th class="table_th">Project Name</th>
                             <th class="table_th">Type</th>
@@ -32,6 +33,7 @@
                         </thead>
                         <tbody>
                         <tr ng-repeat="(name,ct) in contracts">
+                            <td>{{ct.id}}</td>
                             <td>{{ct.contractName}}</td>
                             <td>{{ct.projectName}}</td>
                             <td ng-switch="ct.type">
@@ -48,6 +50,8 @@
                                 <!--<button ng-switch-when="1" class="btn btn-warning btn-circle" type="button" ui-sref="contract.invokeContract"><i class="fa fa-flag"></i></button>-->
                                 <button ng-switch-when="1" class="btn btn-warning btn-circle" type="button" ng-click="modal_invoke(ct.address, ct.methods)"><i class="fa fa-flag"></i></button>
                                 <button class="btn btn-danger btn-circle" type="button" ng-click="delete(ct.contractName)"><i class="fa fa-trash-o"></i></button>
+                                <button class="btn btn-warning btn-circle" type="button" ng-click="addOne(ct)" alt="add same contract"><i class="fa fa-plus"></i></button>
+                            </td>
                         </tr>
 
                         </tbody>
@@ -59,7 +63,13 @@
                         </tr>
                         </tfoot>
                     </table>
-
+                </div>
+                <button class="btn btn-primary" type="butotn" ng-click="getContract(cName, cAddr)"><i class="fa fa-plus"></i>&nbsp;Get contract</button><br/>
+                <div>
+                    <input type="text" class="form-control" ng-model="cName" placeholder="输入上表中其中一个合约名称" style="width:30%">
+                </div><br/>
+                <div>
+                    <input type="text" class="form-control" ng-model="cAddr" placeholder="输入合约应有地址" style="width:30%">
                 </div>
             </div>
         </div>

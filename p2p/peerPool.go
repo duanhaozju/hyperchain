@@ -1,32 +1,24 @@
-// author: chenquan
-// date: 16-8-25
-// last modified: 16-8-29 13:23
-// last Modified Author: chenquan
-// change log: given a test param into the new peer pool, this is the convenience to test
-//
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package p2p
 
 import (
-	"errors"
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/transport"
 	"strconv"
 	"strings"
+	"errors"
 )
 
 type PeersPool struct {
 	peers        map[string]*Peer
-
 	peerAddr     map[string]pb.PeerAddress
 	peerKeys     map[pb.PeerAddress]string
-
 	tempPeers    map[string]*Peer
 	tempPeerAddr map[string]pb.PeerAddress
 	tempPeerKeys map[pb.PeerAddress]string
-
 	TEM          transport.TransportEncryptManager
 	alivePeers   int
-
 	localNode    pb.PeerAddress
 }
 
@@ -132,7 +124,7 @@ func (this *PeersPool) GetPeers() []*Peer {
 	var clients []*Peer
 	for _, cl := range this.peers {
 		clients = append(clients, cl)
-		log.Critical("取得路由表:", cl)
+		//log.Critical("取得路由表:", cl)
 	}
 
 	return clients
@@ -172,7 +164,7 @@ func (this *PeersPool)ToRoutingTable() pb.Routers {
 // merge the route into the temp peer list
 func (this *PeersPool)MergeFormRoutersToTemp(routers pb.Routers) {
 	for _, peerAddress := range routers.Routers {
-		newPeer, err := NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, uint64(this.alivePeers + 1), this.TEM, &this.localNode)
+		newPeer, err := NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, uint64(this.alivePeers + 1), this.TEM, &this.localNode,this)
 		if err != nil {
 			log.Error("merge from routers error ", err)
 		}
@@ -181,7 +173,7 @@ func (this *PeersPool)MergeFormRoutersToTemp(routers pb.Routers) {
 }
 // Merge the temp peer into peers list
 func (this *PeersPool) MergeTempPeers(peer *Peer) {
-	log.Critical("old节点合并路由表!!!!!!!!!!!!!!!!!!!")
+	//log.Critical("old节点合并路由表!!!!!!!!!!!!!!!!!!!")
 	//使用共识结果进行更新
 	//for _, tempPeer := range this.tempPeers {
 	//	if tempPeer.RemoteAddr.Hash == address.Hash {

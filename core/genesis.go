@@ -1,9 +1,5 @@
-// fetcher implements block operate
-// author: Lizhong kuang
-// date: 2016-08-29
-// last modified:2016-09-12
-// last moditier: Chen Quan
-// last moditier content: change the config read method
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package core
 
 import (
@@ -53,9 +49,14 @@ func CreateInitBlock(filename string) {
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
 
-	stateDB, _ := state.New(common.Hash{}, db)
+	stateDB, err := state.New(common.Hash{}, db)
+	if err != nil {
+		log.Error("genesis.go file create statedb failed!")
+		return
+	}
 
 	// You can use `ObjectEach` helper to iterate objects { "key1":object1, "key2":object2, .... "keyN":objectN }
 	jsonparser.ObjectEach(bytes, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
@@ -66,7 +67,11 @@ func CreateInitBlock(filename string) {
 		return nil
 	}, "genesis", "alloc")
 
-	root, _ := stateDB.Commit()
+	root, err := stateDB.Commit()
+	if err != nil {
+		log.Error("Genesis.go file statedb commit failed!")
+		return
+	}
 
 	block := types.Block{
 		ParentHash: common.FromHex("0x0000000000000000000000000000000000000000000000000000000000000000"),
@@ -81,6 +86,7 @@ func CreateInitBlock(filename string) {
 	commonHash := crypto.NewKeccak256Hash("keccak256")
 	if err := PutBlockTx(db, commonHash, block.BlockHash, &block); err != nil {
 		log.Fatal(err)
+		return
 	}
 	UpdateChain(&block, true)
 	log.Info("current chain block number is", GetChainCopy().Height)

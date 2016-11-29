@@ -1,7 +1,5 @@
-// implement ProtocolManager
-// author: Lizhong kuang
-// date: 2016-08-24
-// last modified:2016-10-26
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package manager
 
 import (
@@ -30,10 +28,10 @@ func init() {
 }
 
 type ReplicaInfo struct {
-	IP   string `protobuf:"bytes,1,opt,name=IP" json:"IP,omitempty"`
-	Port int64  `protobuf:"varint,2,opt,name=Port" json:"Port,omitempty"`
-	Hash string `protobuf:"bytes,3,opt,name=hash"hash json:"hash,omitempty"`
-	ID   uint64 `protobuf:"varint,4,opt,name=ID" jsonson:"ID,omitempty"`
+	IP              string `protobuf:"bytes,1,opt,name=IP" json:"IP,omitempty"`
+	Port            int64  `protobuf:"varint,2,opt,name=Port" json:"Port,omitempty"`
+	Hash            string `protobuf:"bytes,3,opt,name=hash" json:"hash,omitempty"`
+	ID              uint64 `protobuf:"varint,4,opt,name=ID" jsonson:"ID,omitempty"`
 
 	LatestBlockHash []byte `protobuf:"bytes,1,opt,name=latestBlockHash,proto3" json:"latestBlockHash,omitempty"`
 	ParentBlockHash []byte `proto3obuf:"bytes,2,opt,name=parentBlockHash,proto3" json:"parentBlockHash,omitempty"`
@@ -45,8 +43,8 @@ type ProtocolManager struct {
 	blockPool         *blockpool.BlockPool
 	Peermanager       p2p.PeerManager
 
-	nodeInfo  p2p.PeerInfos // node info ,store node status,ip,port
-	consenter consensus.Consenter
+	nodeInfo          p2p.PeerInfos // node info ,store node status,ip,port
+	consenter         consensus.Consenter
 
 	AccountManager    *accounts.AccountManager
 	commonHash        crypto.CommonHash
@@ -67,6 +65,8 @@ type ProtocolManager struct {
 	replicaStatus       *common.Cache
 	syncReplicaInterval time.Duration
 	syncReplica         bool
+	expired             chan bool
+	expiredTime         time.Time
 	initType            int
 }
 type NodeManager struct {
@@ -76,7 +76,8 @@ type NodeManager struct {
 var eventMuxAll *event.TypeMux
 
 func NewProtocolManager(blockPool *blockpool.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
-	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, initType int) *ProtocolManager {
+//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
+am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, initType int,  expired chan bool, expiredTime time.Time) *ProtocolManager {
 	synccache, _ := common.NewCache()
 	replicacache, _ := common.NewCache()
 	manager := &ProtocolManager{
@@ -91,6 +92,8 @@ func NewProtocolManager(blockPool *blockpool.BlockPool, peerManager p2p.PeerMana
 		replicaStatus:       replicacache,
 		syncReplicaInterval: interval,
 		syncReplica:         syncReplica,
+		expired:             expired,
+		expiredTime:         expiredTime,
 		initType:            initType,
 	}
 	manager.nodeInfo = make(p2p.PeerInfos, 0, 1000)
@@ -121,6 +124,7 @@ func (pm *ProtocolManager) Start() {
 	go pm.viewChangeLoop()
 	go pm.peerMaintainLoop()
 
+	go pm.checkExpired()
 	if pm.syncReplica {
 		pm.syncStatusSub = pm.eventMux.Subscribe(event.ReplicaStatusEvent{})
 		go pm.syncReplicaStatusLoop()
@@ -229,19 +233,26 @@ func (self *ProtocolManager) ConsensusLoop() {
 	for obj := range self.consensusSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.BroadcastConsensusEvent:
-			log.Warning("BroadcastConsensusEvent")
+			log.Info("######enter broadcast")
 			go self.BroadcastConsensus(ev.Payload)
-
 		case event.TxUniqueCastEvent:
-			log.Critical("receive the pbft uniquecast request <<>>><<>>>")
 			var peers []uint64
 			peers = append(peers, ev.PeerId)
 			go self.Peermanager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
 
 		case event.NewTxEvent:
-			go self.sendMsg(ev.Payload)
+			if ev.Simulate == true {
+				tx := &types.Transaction{}
+				proto.Unmarshal(ev.Payload, tx)
+				self.blockPool.RunInSandBox(tx)
+			} else {
+				log.Debug("###### enter NewTxEvent")
+				go self.sendMsg(ev.Payload)
+			}
 
 		case event.ConsensusEvent:
+			//call consensus module
+			log.Info("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 		}
 	}
@@ -302,7 +313,11 @@ func (self *ProtocolManager) sendMsg(payload []byte) {
 		Timestamp: time.Now().UnixNano(),
 		Id:        0,
 	}
-	msgSend, _ := proto.Marshal(msg)
+	msgSend, err := proto.Marshal(msg)
+	if err != nil {
+		log.Notice("sendMsg marshal message failed")
+		return
+	}
 	self.consenter.RecvMsg(msgSend)
 
 }
@@ -340,29 +355,41 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 	core.SetReplicas(UpdateStateMessage.Replicas)
 	core.SetId(UpdateStateMessage.Id)
 
-	payload, _ := proto.Marshal(required)
+	payload, err := proto.Marshal(required)
+	if err != nil {
+		log.Error("SendSyncRequest marshal message failed")
+		return
+	}
 	self.Peermanager.SendMsgToPeers(payload, UpdateStateMessage.Replicas, recovery.Message_SYNCCHECKPOINT)
 }
 
 func (self *ProtocolManager) ReceiveSyncRequest(ev event.StateUpdateEvent) {
 	checkpointMsg := &recovery.CheckPointMessage{}
 	proto.Unmarshal(ev.Payload, checkpointMsg)
-	db, _ := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Error("No Database Found")
+		return
+	}
 	blocks := &types.Blocks{}
 	for i := checkpointMsg.RequiredNumber; i > checkpointMsg.CurrentNumber; i -= 1 {
 		block, err := core.GetBlockByNumber(db, i)
 		if err != nil {
-			log.Warning("no required block number")
+			log.Error("no required block number:", i)
+			continue
 		}
 
 		if blocks.Batch == nil {
 			blocks.Batch = append(blocks.Batch, block)
 		} else {
 			blocks.Batch[0] = block
-
 		}
 
-		payload, _ := proto.Marshal(blocks)
+		payload, err := proto.Marshal(blocks)
+		if err != nil {
+			log.Error("ReceiveSyncRequest marshal message failed")
+			continue
+		}
 		var peers []uint64
 		peers = append(peers, checkpointMsg.PeerId)
 		self.Peermanager.SendMsgToPeers(payload, peers, recovery.Message_SYNCBLOCK)
@@ -373,7 +400,11 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 	if core.GetChainCopy().RequiredBlockNum != 0 {
 		blocks := &types.Blocks{}
 		proto.Unmarshal(ev.Payload, blocks)
-		db, _ := hyperdb.GetLDBDatabase()
+		db, err := hyperdb.GetLDBDatabase()
+		if err != nil {
+			log.Error("No Database Found")
+			return
+		}
 		for i := len(blocks.Batch) - 1; i >= 0; i -= 1 {
 			if blocks.Batch[i].Number <= core.GetChainCopy().RequiredBlockNum {
 				log.Debug("Receive Block: ", blocks.Batch[i].Number, common.BytesToHash(blocks.Batch[i].BlockHash).Hex())
@@ -381,17 +412,25 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 					acceptHash := blocks.Batch[i].HashBlock(self.commonHash).Bytes()
 					if common.Bytes2Hex(acceptHash) == common.Bytes2Hex(core.GetChainCopy().RequireBlockHash) {
 						core.PutBlockTx(db, self.commonHash, blocks.Batch[i].BlockHash, blocks.Batch[i])
-						self.updateRequire(blocks.Batch[i])
+						if err := self.updateRequire(blocks.Batch[i]); err != nil {
+							log.Error("UpdateRequired failed!")
+							return
+						}
 
 						// receive all block in chain
 						if core.GetChainCopy().RequiredBlockNum <= core.GetChainCopy().Height {
-							lastBlk, _ := core.GetBlockByNumber(db, core.GetChainCopy().RequiredBlockNum+1)
+							lastBlk, err := core.GetBlockByNumber(db, core.GetChainCopy().RequiredBlockNum + 1)
+							if err != nil {
+								log.Error("StateUpdate Failed!")
+								return
+							}
 							if common.Bytes2Hex(lastBlk.ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash) {
 								// execute all received block at one time
 								for i := core.GetChainCopy().RequiredBlockNum + 1; i <= core.GetChainCopy().RecoveryNum; i += 1 {
 									blk, err := core.GetBlockByNumber(db, i)
 									if err != nil {
-										continue
+										log.Error("StateUpdate Failed")
+										return
 									} else {
 										self.blockPool.ProcessBlockInVm(blk.Transactions, nil, blk.Number)
 										self.blockPool.SetDemandNumber(blk.Number + 1)
@@ -406,7 +445,11 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 								payload := &protos.StateUpdatedMessage{
 									SeqNo: core.GetChainCopy().Height,
 								}
-								msg, _ := proto.Marshal(payload)
+								msg, err := proto.Marshal(payload)
+								if err != nil {
+									log.Error("StateUpdate marshal stateupdated message failed")
+									return
+								}
 								msgSend := &protos.Message{
 									Type:      protos.Message_STATE_UPDATED,
 									Payload:   msg,
@@ -416,15 +459,18 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 								msgPayload, err := proto.Marshal(msgSend)
 								if err != nil {
 									log.Error(err)
+									return
 								}
 								time.Sleep(2000 * time.Millisecond)
 								self.consenter.RecvMsg(msgPayload)
 								break
 							} else {
 								// the highest block in local is invalid, request the block
-								core.DeleteBlockByNum(db, lastBlk.Number-1)
-								core.UpdateChainByBlcokNum(db, lastBlk.Number-2)
-								self.broadcastDemandBlock(lastBlk.Number-1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
+								// TODO clear global cache
+								// TODO clear receipt, txmeta, tx
+								self.blockPool.CutdownBlock(lastBlk.Number - 1)
+								core.UpdateChainByBlcokNum(db, lastBlk.Number - 2)
+								self.broadcastDemandBlock(lastBlk.Number - 1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
 							}
 						}
 					}
@@ -462,12 +508,21 @@ func (self *ProtocolManager) broadcastDemandBlock(number uint64, hash []byte, re
 		CurrentNumber:  core.GetChainCopy().Height,
 		PeerId:         peerId,
 	}
-	payload, _ := proto.Marshal(required)
+	payload, err := proto.Marshal(required)
+	if err != nil {
+		log.Error("broadcastDemandBlock, marshal message failed")
+		return
+	}
 	self.Peermanager.SendMsgToPeers(payload, replicas, recovery.Message_SYNCSINGLE)
 }
 
-func (self *ProtocolManager) updateRequire(block *types.Block) {
-	db, _ := hyperdb.GetLDBDatabase()
+func (self *ProtocolManager) updateRequire(block *types.Block) error {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		// TODO
+		log.Error("updateRequire get database failed")
+		return err
+	}
 	var tmp = block.Number - 1
 	var tmpHash = block.ParentHash
 	flag := false
@@ -500,6 +555,7 @@ func (self *ProtocolManager) updateRequire(block *types.Block) {
 	}
 	core.UpdateRequire(tmp, tmpHash, core.GetChainCopy().RecoveryNum)
 	log.Debug("Next Required", core.GetChainCopy().RequiredBlockNum, common.BytesToHash(core.GetChainCopy().RequireBlockHash).Hex())
+	return nil
 }
 
 func (self *ProtocolManager) SyncReplicaStatus() {
@@ -508,11 +564,18 @@ func (self *ProtocolManager) SyncReplicaStatus() {
 		select {
 		case <-ticker.C:
 			addr, chain := self.packReplicaStatus()
+			if addr == nil || chain == nil {
+				continue
+			}
 			status := &recovery.ReplicaStatus{
 				Addr:  addr,
 				Chain: chain,
 			}
-			payload, _ := proto.Marshal(status)
+			payload, err := proto.Marshal(status)
+			if err != nil {
+				log.Error("marshal syncReplicaStatus message failed")
+				continue
+			}
 			peers := self.Peermanager.GetAllPeers()
 			var peerIds = make([]uint64, len(peers))
 			for idx, peer := range peers {
@@ -543,6 +606,7 @@ func (self *ProtocolManager) RecordReplicaStatus(ev event.ReplicaStatusEvent) {
 		ParentBlockHash: chain.ParentBlockHash,
 		Height:          chain.Height,
 	}
+	log.Critical("recv Replica Status", replicaInfo)
 	self.replicaStatus.Add(addr.ID, replicaInfo)
 }
 func (self *ProtocolManager) packReplicaStatus() ([]byte, []byte) {
@@ -554,9 +618,35 @@ func (self *ProtocolManager) packReplicaStatus() ([]byte, []byte) {
 	currentChain.RecoveryNum = 0
 	currentChain.CurrentTxSum = 0
 	// marshal
-	addrData, _ := proto.Marshal(peerAddress)
-	chainData, _ := proto.Marshal(currentChain)
+	addrData, err := proto.Marshal(peerAddress)
+	if err != nil {
+		log.Error("packReplicaStatus failed!")
+		return nil, nil
+	}
+	chainData, err := proto.Marshal(currentChain)
+	if err != nil {
+		log.Error("packReplicaStatus failed!")
+		return nil, nil
+	}
 	return addrData, chainData
+}
+
+func (self *ProtocolManager) checkExpired() {
+	expiredChecker := func(currentTime, expiredTime time.Time) bool {
+		return currentTime.Before(expiredTime)
+	}
+	ticker := time.NewTicker(1 * time.Hour)
+	for {
+		select {
+		case <-ticker.C:
+			currentTime := time.Now()
+			if !expiredChecker(currentTime, self.expiredTime) {
+				log.Error("License Expired")
+				self.expired <- true
+			}
+		}
+	}
+
 }
 
 func (self *ProtocolManager) NegotiateView() {

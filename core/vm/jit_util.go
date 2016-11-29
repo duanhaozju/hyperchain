@@ -1,3 +1,5 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package vm
 
 // Parse parses all opcodes from the given code byte slice. This function

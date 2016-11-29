@@ -1,3 +1,5 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package pbft
 
 import (
@@ -10,7 +12,7 @@ import (
 // procativeRecovery broadcast a procative recovery message to ask others for recent blocks info
 func (pbft *pbftProtocal) initRecovery() events.Event {
 
-	logger.Noticef("Replica %d now initRecovery", pbft.id)
+	logger.Debugf("Replica %d now initRecovery", pbft.id)
 
 	pbft.rcRspStore = make(map[uint64]*RecoveryResponse)
 
@@ -45,7 +47,7 @@ func (pbft *pbftProtocal) initRecovery() events.Event {
 // recvRcry process incoming proactive recovery message
 func (pbft *pbftProtocal) recvRecovery(recoveryInit *RecoveryInit) events.Event {
 
-	logger.Noticef("Replica %d now recvRecovery", pbft.id)
+	logger.Debugf("Replica %d now recvRecovery from replica %d", pbft.id, recoveryInit.ReplicaId)
 
 	if pbft.skipInProgress {
 		logger.Debugf("Replica %d recvRecovery, but it's in state transfer and ignores it.", pbft.id)
@@ -81,7 +83,7 @@ func (pbft *pbftProtocal) recvRecovery(recoveryInit *RecoveryInit) events.Event 
 // recvRcryRsp process other replicas' feedback as with initRecovery
 func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 
-	logger.Noticef("Replica %d now recvRecoveryRsp", pbft.id)
+	logger.Debugf("Replica %d now recvRecoveryRsp from replica %d", pbft.id, rsp.ReplicaId)
 
 	if !pbft.inRecovery {
 		logger.Debugf("Replica %d finished recovery, ignore recovery response", pbft.id)
@@ -135,7 +137,7 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 // findHighestChkptQuorum finds highest one of chkpts which achieve quorum
 func (pbft *pbftProtocal) findHighestChkptQuorum() (n uint64, d string, replicas []uint64, find bool, behind bool) {
 
-	logger.Noticef("Replica %d now enter findHighestChkptQuorum", pbft.id)
+	logger.Debugf("Replica %d now enter findHighestChkptQuorum", pbft.id)
 
 	chkpts := make(map[cidx]map[uint64]bool)
 	for from, rsp := range pbft.rcRspStore {
@@ -182,7 +184,7 @@ func (pbft *pbftProtocal) findHighestChkptQuorum() (n uint64, d string, replicas
 // fetchRecoveryPQC fetch PQC info after receive stateUpdated event
 func (pbft *pbftProtocal) fetchRecoveryPQC() events.Event {
 
-	logger.Noticef("Replica %d now fetchRecoveryPQC", pbft.id)
+	logger.Debugf("Replica %d now fetchRecoveryPQC", pbft.id)
 
 	pbft.rcPQCSenderStore = make(map[uint64]bool)
 

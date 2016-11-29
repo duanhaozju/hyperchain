@@ -1,8 +1,6 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package state
-/**
-Author: ZhuoHaizhen
-Date: 2016.10.18
- */
 
 import (
 	"time"

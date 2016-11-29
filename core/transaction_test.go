@@ -1,16 +1,10 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package core
 
-import (
-	"testing"
-	"fmt"
-	"hyperchain/crypto"
-	"hyperchain/common"
-	"hyperchain/core/types"
-	"hyperchain/accounts"
-	"crypto/ecdsa"
-)
 
-func TestUnsign(t *testing.T) {
+
+/*func TestUnsign(t *testing.T) {
 
 	encryption :=crypto.NewEcdsaEncrypto("ecdsa")
 	keydir := "../config/keystore/"
@@ -27,8 +21,8 @@ func TestUnsign(t *testing.T) {
 	from1:=common.BytesToAddress(common.FromHex("0x6201cb0448964ac597faf6fdf1f472edf2a22b89"))
 	from2:=common.BytesToAddress(common.FromHex("0xb18c8575e3284e79b92100025a31378feb8100d6"))
 
-	tx1 := types.NewTransaction(from1[:],[]byte{},[]byte{1})
-	tx2 := types.NewTransaction(from2[:],[]byte{},[]byte{1})
+*//*	tx1 := types.NewTransaction(from1[:],[]byte{},[]byte{1})
+	tx2 := types.NewTransaction(from2[:],[]byte{},[]byte{1})*//*
 
 	kec256Hash:=crypto.NewKeccak256Hash("keccak256")
 
@@ -46,4 +40,4 @@ func TestUnsign(t *testing.T) {
 	//h3:=kec256Hash.Hash(tx2)
 	ff,_:=encryption.UnSign(h2[:],sign2)
 	fmt.Println(ff)
-}
+}*/

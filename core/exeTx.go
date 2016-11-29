@@ -1,3 +1,5 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package core
 
 import (
@@ -13,7 +15,9 @@ import (
 
 type Code []byte
 
-var logger = glog.Logger{}
+var (
+	logger = glog.Logger{}
+)
 
 // 这一块相当于ethereum里的TransitionDB
 func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
@@ -25,7 +29,7 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		// TODO these there parameters should be added into the tx
 		tv         = tx.GetTransactionValue()
 		data       = tv.GetPayload()
-		gas        = tv.GetGas()
+		gas        = big.NewInt(100000000)
 		gasPrice   = tv.GetGasPrice()
 		amount     = tv.GetAmount()
 		statedb, _ = env.Db().(*state.StateDB)
@@ -50,7 +54,7 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 	receipt.SetLogs(statedb.GetLogs(common.BytesToHash(receipt.TxHash)))
 
 	if err != nil {
-		if !IsValueTransferErr(err) {
+		if !IsValueTransferErr(err) && !IsExecContractErr(err) {
 			receipt.Status = types.Receipt_FAILED
 			receipt.Message = []byte(err.Error())
 		}

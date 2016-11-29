@@ -1,10 +1,5 @@
-// author: chenquan
-// date: 16-8-26
-// last modified: 16-8-26 13:08
-// last Modified Author: chenquan
-// change log:
-// comment: this file can not test easily, so just waiting the integration test
-//
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package p2p
 
 import (
@@ -23,19 +18,19 @@ func TestGrpcPeerManager_Start(t *testing.T) {
 	grpcPeerMgr := NewGrpcManager(path, 1)
 	aliveChan := make(chan bool)
 	eventMux := new(event.TypeMux)
-	go grpcPeerMgr.Start(aliveChan, eventMux)
+	go grpcPeerMgr.Start(aliveChan, eventMux,false)
 
 	grpcPeerMgr2 := NewGrpcManager(path, 2)
 
-	go grpcPeerMgr2.Start(aliveChan, eventMux)
+	go grpcPeerMgr2.Start(aliveChan, eventMux,false)
 
 	grpcPeerMgr3 := NewGrpcManager(path, 3)
 
-	go grpcPeerMgr3.Start(aliveChan, eventMux)
+	go grpcPeerMgr3.Start(aliveChan, eventMux,false)
 
 	grpcPeerMgr4 := NewGrpcManager(path, 4)
 
-	go grpcPeerMgr4.Start(aliveChan, eventMux)
+	go grpcPeerMgr4.Start(aliveChan, eventMux,false)
 	// wait the sub thread done
 	nodeCount := 0
 	for flag := range aliveChan {

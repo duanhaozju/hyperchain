@@ -1,7 +1,5 @@
-// init ProtcolManager
-// author: Lizhong kuang
-// date: 2016-08-23
-// last modified:2016-08-29
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package main
 
 import (
@@ -34,10 +32,13 @@ type argT struct {
 	GRPCPort   int    `cli:"l,rpcport" usage:"远程连接端口" dft:"8001"`
 	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
 	IsInit     bool   `cli:"i,init" usage:"是否是创世节点" dft:"false"`
-	Introducer string `cli:"r,introducer" usage:"加入代理节点信息,格127.0.0.1:8001:1"dft:"127.0.0.1:8001:1"`
+	Introducer string `cli:"r,introducer" usage:"加入代理节点信息,格127.0.0.|1:8001"dft:"127.0.0.1:8001:1"`
+	IsReconnect bool  `cli:"e,isReconnect" usage:"是否重新链接" dft:"false"`
 }
 
-func checkLicense(licensePath string) (err error) {
+
+
+func checkLicense(licensePath string) (err error, expiredTime time.Time) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.New("Invalid License Cause a Panic")
@@ -73,7 +74,7 @@ func checkLicense(licensePath string) (err error) {
 		err = errors.New("Invalid License Timestamp")
 		return
 	}
-	expiredTime := time.Unix(timestamp, 0)
+	expiredTime = time.Unix(timestamp, 0)
 	currentTime := time.Now()
 	if validation := dateChecker(currentTime, expiredTime); !validation {
 		err = errors.New("License Expired")
@@ -88,7 +89,8 @@ func main() {
 
 		config := newconfigsImpl(argv.ConfigPath, argv.NodeID, argv.GRPCPort, argv.HTTPPort)
 
-		if err := checkLicense(config.getLicense()); err != nil {
+		err, expiredTime := checkLicense(config.getLicense())
+		if err != nil {
 			return err
 		}
 
@@ -137,15 +139,31 @@ func main() {
 
 		//init block pool to save block
 		blockPool := blockpool.NewBlockPool(eventMux, cs)
-
+		if blockPool == nil {
+			return errors.New("Initialize BlockPool failed")
+		}
 		//init manager
 		exist := make(chan bool)
 		syncReplicaInterval, _ := config.getSyncReplicaInterval()
 		syncReplicaEnable := config.getSyncReplicaEnable()
-		pm := manager.New(eventMux, blockPool, grpcPeerMgr, cs, am, kec256Hash,
-			config.getNodeID(), syncReplicaInterval, syncReplicaEnable, config.getGRPCPort())
+		pm := manager.New(eventMux,
+				blockPool,
+				grpcPeerMgr,
+				cs,
+				am,
+				kec256Hash,
+				argv.IsReconnect, //reconnect
+				syncReplicaInterval,
+				syncReplicaEnable,
+				exist,
+				expiredTime,
+				config.getGRPCPort())
+		rateLimitCfg := config.getRateLimitConfig()
+		go jsonrpc.Start(config.getHTTPPort(), eventMux, pm, rateLimitCfg)
 
-		go jsonrpc.Start(config.getHTTPPort(), eventMux, pm)
+		//go func() {
+		//	log.Println(http.ListenAndServe("localhost:6064", nil))
+		//}()
 
 		<-exist
 		return nil
