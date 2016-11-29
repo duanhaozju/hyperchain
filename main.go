@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"fmt"
 )
 
 type argT struct {
@@ -32,58 +33,10 @@ type argT struct {
 	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
 	IsInit     bool   `cli:"i,init" usage:"是否是创世节点" dft:"false"`
 	Introducer string `cli:"r,introducer" usage:"加入代理节点信息,格127.0.0.|1:8001"dft:"127.0.0.1:8001:1"`
-	IsReconnect bool  `cli:"r,isReconnect" usage:"是否重新链接" dft:"false"`
+	IsReconnect bool  `cli:"e,isReconnect" usage:"是否重新链接" dft:"false"`
 }
 
-func checkLicense(licensePath string) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = errors.New("Invalid License Cause a Panic")
-		}
-	}()
-	dateChecker := func(now, expire time.Time) bool {
-		return now.Before(expire)
-	}
-	privateKey := string("TnrEP|N.*lAgy<Q&@lBPd@J/")
-	identificationSuffix := string("Hyperchain")
 
-	license, err := ioutil.ReadFile(licensePath)
-	if err != nil {
-		err = errors.New("No License Found")
-		return
-	}
-	pattern, _ := regexp.Compile("Identification: (.*)")
-	identification := pattern.FindString(string(license))[16:]
-
-	ctx, err := transport.TripleDesDecrypt(common.Hex2Bytes(identification), []byte(privateKey))
-	if err != nil {
-		err = errors.New("Invalid License")
-		return
-	}
-	plainText := string(ctx)
-	suffix := plainText[len(plainText)-len(identificationSuffix):]
-	if strings.Compare(suffix, identificationSuffix) != 0 {
-		err = errors.New("Invalid Identification")
-		return
-	}
-	timestamp, err := strconv.ParseInt(plainText[:len(plainText)-len(identificationSuffix)], 10, 64)
-	if err != nil {
-		err = errors.New("Invalid License Timestamp")
-		return
-	}
-	expiredTime := time.Unix(timestamp, 0)
-	currentTime := time.Now()
-	if validation := dateChecker(currentTime, expiredTime); !validation {
-		err = errors.New("License Expired")
-		return
-	}
-	return
-	NodeID      int    `cli:"o,id" usage:"node ID" dft:"1"`
-	ConfigPath  string `cli:"c,conf" usage:"配置文件所在路径" dft:"./config/global.yaml"`
-	GRPCPort    int    `cli:"l,rpcport" usage:"远程连接端口" dft:"8001"`
-	HTTPPort    int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
-	IsReconnect bool  `cli:"r,isReconnect" usage:"是否重新链接" dft:"false"`
-}
 
 func checkLicense(licensePath string) (err error, expiredTime time.Time) {
 	defer func() {
@@ -136,7 +89,8 @@ func main() {
 
 		config := newconfigsImpl(argv.ConfigPath, argv.NodeID, argv.GRPCPort, argv.HTTPPort)
 
-		if err := checkLicense(config.getLicense()); err != nil {
+		err, expiredTime := checkLicense(config.getLicense())
+		if err != nil {
 			return err
 		}
 
@@ -192,10 +146,20 @@ func main() {
 		exist := make(chan bool)
 		syncReplicaInterval, _ := config.getSyncReplicaInterval()
 		syncReplicaEnable := config.getSyncReplicaEnable()
-		pm := manager.New(eventMux, blockPool, grpcPeerMgr, cs, am, kec256Hash,
-			config.getNodeID(), syncReplicaInterval, syncReplicaEnable, exist, expiredTime, argv.IsReconnect, config.getGRPCPort())
-
-		go jsonrpc.Start(config.getHTTPPort(), eventMux, pm)
+		pm := manager.New(eventMux,
+				blockPool,
+				grpcPeerMgr,
+				cs,
+				am,
+				kec256Hash,
+				argv.IsReconnect, //reconnect
+				syncReplicaInterval,
+				syncReplicaEnable,
+				exist,
+				expiredTime,
+				config.getGRPCPort())
+		rateLimitCfg := config.getRateLimitConfig()
+		go jsonrpc.Start(config.getHTTPPort(), eventMux, pm, rateLimitCfg)
 
 		//go func() {
 		//	log.Println(http.ListenAndServe("localhost:6064", nil))

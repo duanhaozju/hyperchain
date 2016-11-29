@@ -18,6 +18,7 @@ import (
 	"sync"
 	"errors"
 	"math"
+	"hyperchain/p2p/transport"
 )
 
 
@@ -30,22 +31,19 @@ type Node struct {
 	delayTable         map[uint64]int64
 	delayTableMutex    sync.RWMutex
 	DelayChan          chan UpdateTable
+	sentEvent			bool
+	attendChan         chan int
 	PeerPool           *PeersPool
+	N                  int
+	DelayTable         map[uint64]int64
+	DelayTableMutex    sync.Mutex
+	TEM                transport.TransportEncryptManager
 
 }
 
 type UpdateTable struct {
 	updateID   uint64
 	updateTime int64
-
-	TEM                transport.TransportEncryptManager
-	IsPrimary          bool
-	DelayTable         map[uint64]int64
-	DelayTableMutex    sync.Mutex
-	PeesPool           *PeersPool
-	N                  int
-	attendChan         chan int
-	sentEvent			bool
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
@@ -55,11 +53,10 @@ func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, TEM transp
 	newNode.TEM = TEM
 	newNode.higherEventManager = hEventManager
 	newNode.DelayTable = make(map[uint64]int64)
-	newNode.PeesPool = peersPool
+	newNode.PeerPool = peersPool
 	newNode.attendChan = make(chan int)
 	newNode.sentEvent = false
 	newNode.delayTable = make(map[uint64]int64)
-	newNode.PeerPool = peerspool
 	newNode.DelayChan = make(chan UpdateTable)
 	//listen the update
 	go newNode.UpdateDelayTableThread();
@@ -131,11 +128,6 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	response.From = this.address
 	//handle the message
 	log.Debug("消息类型", msg.MessageType)
-	//go func() {
-	//	this.delayTableMutex.Lock()
-	//	this.delayTable[msg.From.ID] = time.Now().UnixNano() - msg.MsgTimeStamp
-	//	this.delayTableMutex.Unlock()
-	//}()
 	switch msg.MessageType {
 	case pb.Message_HELLO:
 		{
@@ -216,7 +208,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		{
 			//返回路由表信息
 			response.MessageType = pb.Message_INTRODUCE_RESPONSE
-			routers := this.PeesPool.ToRoutingTable()
+			routers := this.PeerPool.ToRoutingTable()
 			response.Payload, _ = proto.Marshal(&routers)
 		}
 	case pb.Message_INTRODUCE_RESPONSE:
@@ -369,6 +361,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		response.Payload = this.TEM.EncWithSecret(response.Payload, msg.From.Hash)
 	if msg.MessageType != pb.Message_HELLO && msg.MessageType != pb.Message_HELLO_RESPONSE && msg.MessageType != pb.Message_RECONNECT_RESPONSE && msg.MessageType != pb.Message_RECONNECT {
 		response.Payload = this.PeerPool.TEM.EncWithSecret(response.Payload, msg.From.Hash)
+	}
 	}
 	return &response, nil
 }

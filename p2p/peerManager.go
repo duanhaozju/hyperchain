@@ -23,8 +23,9 @@ func init() {
 type PeerManager interface {
 	// get the all peer list to broadcast
 	GetAllPeers() []*Peer
+	GetAllPeersWithTemp() []*Peer
 	// initialize the peerManager which is for init the local node
-	Start(aliveChain chan bool, eventMux *event.TypeMux, isReconnect bool, GRPCProt int64)
+	Start(aliveChain chan int, eventMux *event.TypeMux, isReconnect bool, GRPCProt int64)
 	// Get local node id
 	GetNodeId() int
 	// broadcast information to peers
@@ -45,4 +46,11 @@ type PeerManager interface {
 	SetOnline()
 	// get local address payload
 	GetLocalAddressPayload() []byte
+}
+
+// delete node interface
+type DeleteNode interface{
+	GetLocalNodeHash() string
+	GetRouterHashifDelete() string
+	DeleteNode(hash string) // if self {...} else{...}
 }

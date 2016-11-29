@@ -196,108 +196,35 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	} else {
 
 		// ** For Hyperchain Test **
-		log.Infof("############# %d: start send request#############", time.Now().Unix())
-		start := time.Now().Unix()
+		//log.Infof("############# %d: start send request#############", time.Now().Unix())
+		//start := time.Now().Unix()
 		////end:=start+1
-		end := start + 10
+		//end := start + 1
 		//
-		for start := start; start < end; start = time.Now().Unix() {
-			for i := 0; i < 100; i++ {
-				// ################################# 测试代码 START ####################################### // (用不同的value代替之前不同的timestamp以标志不同的transaction)
-				txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), v, nil)
+		//for start := start; start < end; start = time.Now().Unix() {
+		//	for i := 0; i < 100; i++ {
 
-				value, err := proto.Marshal(txValue)
-
-				if err != nil {
-					return common.Hash{}, err
-				}
-				tx.Value = value
-				tx.Timestamp = time.Now().UnixNano()
-				//v++
-				// ################################## 测试代码 END ####################################### //
-				tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
-
-				if realArgs.PrivKey == "" {
-					// For Hyperchain test
-
-					var signature []byte
-					if realArgs.Signature == "" {
-
-						signature, err = tran.pm.AccountManager.Sign(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes())
-						if err != nil {
-							log.Errorf("Sign(tx) error :%v", err)
-						}
-					} else {
-						tx.Signature = common.FromHex(realArgs.Signature)
-					}
-
-					tx.Signature = signature
-
-				} else {
-					// For Hyperboard test
-
-					key, err := hex.DecodeString(args.PrivKey)
-					if err != nil {
-						return common.Hash{}, err
-					}
-					pri := crypto.ToECDSA(key)
-
-					hash := tx.SighHash(kec256Hash).Bytes()
-					sig, err := encryption.Sign(hash, pri)
-					if err != nil {
-						return common.Hash{}, err
-					}
-
-					tx.Signature = sig
-				}
-
-				tx.TransactionHash = tx.BuildHash().Bytes()
-				// Unsign Test
-				if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
-					log.Error("invalid signature")
-					// ATTENTION, return invalid transactino directly
-					return common.Hash{}, errors.New("invalid signature")
-				}
-
-				if txBytes, err := proto.Marshal(tx); err != nil {
-					log.Errorf("proto.Marshal(tx) error: %v", err)
-					return common.Hash{}, errors.New("proto.Marshal(tx) happened error")
-				} else if manager.GetEventObject() != nil {
-					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
-				} else {
-					log.Error("manager is Nil")
-					return common.Hash{}, errors.New("EventObject is nil")
-				}
-	//		}
-	//		time.Sleep(1000 * time.Millisecond)
-	//	}
-	//
-	//	log.Infof("############# %d: end send request#############", time.Now().Unix())
-
-			/*	start_getErr := time.Now().Unix()
-				end_getErr := start_getErr + TIMEOUT
-				var errMsg string
-				for start_getErr := start_getErr; start_getErr < end_getErr; start_getErr = time.Now().Unix() {
-					errType, _ := core.GetInvaildTxErrType(tran.db, tx.GetTransactionHash().Bytes());
-
-					if errType != -1 {
-						errMsg = errType.String()
-						break;
-					} else if rept := core.GetReceipt(tx.GetTransactionHash()); rept != nil {
-						break
-					}
-
-				}
-				if start_getErr != end_getErr && errMsg != "" {
-					return common.Hash{}, errors.New(errMsg)
-				} else if start_getErr == end_getErr {
-					return common.Hash{}, errors.New("Sending return timeout,may be something wrong.")
-				}*/
-			}
-			time.Sleep(300 * time.Millisecond)
+		// Unsign Test
+		if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
+			log.Error("invalid signature")
+			// ATTENTION, return invalid transactino directly
+			return common.Hash{}, errors.New("invalid signature")
 		}
+
+		if txBytes, err := proto.Marshal(tx); err != nil {
+			log.Errorf("proto.Marshal(tx) error: %v", err)
+			return common.Hash{}, errors.New("proto.Marshal(tx) happened error")
+		} else if manager.GetEventObject() != nil {
+			go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
+		} else {
+			log.Error("manager is Nil")
+			return common.Hash{}, errors.New("EventObject is nil")
+		}
+		//		}
+		//		time.Sleep(1000 * time.Millisecond)
+		//	}
 		//
-		log.Infof("############# %d: end send request#############", time.Now().Unix())
+		//	log.Infof("############# %d: end send request#############", time.Now().Unix())
 	}
 
 	return tx.GetTransactionHash(), nil
@@ -338,28 +265,11 @@ func (tran *PublicTransactionAPI) GetTransactions(args IntervalArgs) ([]*Transac
 
 	var transactions []*TransactionResult
 
-	if args.From == nil && args.To == nil {
-		txs, err := core.GetAllTransaction(tran.db)
-
-		if err != nil {
-			log.Errorf("GetAllTransaction error: %v", err)
-			return nil, err
-		}
-
-		for _, tx := range txs {
-			if ts, err := outputTransaction(tx, tran.db); err != nil {
-				return nil, err
-			} else {
-				transactions = append(transactions, ts)
-			}
-		}
+	if blocks, err := getBlocks(args, tran.db);err != nil {
+		return nil, err
 	} else {
-
-		if blocks, err := getBlocks(args, tran.db);err != nil {
-			return nil, err
-		} else {
-			for _, block := range blocks {
-				txs := block.Transactions
+		for _, block := range blocks {
+			txs := block.Transactions
 
 			for _, t := range txs {
 				tx, _ := t.(*TransactionResult)

@@ -57,28 +57,24 @@ func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP
 	configUtil := peerComm.NewConfigUtil(configPath)
 	newgRPCManager.configs = configUtil
 	//get the maxpeer from config
-	newgRPCManager.MaxPeerNumber = newgRPCManager.configs.GetMaxPeerNumber()
 	newgRPCManager.NodeID = NodeID
 
 	newgRPCManager.Original = isOriginal
 	newgRPCManager.Introducer = *peerComm.ExtractAddress(introducerIP, introducerPort, introducer_ID)
 	//HSM only instanced once, so peersPool and Node Hsm are same instance
 	newgRPCManager.TEM = transport.NewHandShakeManger()
-	// start local node
-	//init the flag map
-
 	return &newgRPCManager
 }
 
 // Start start the Normal local listen server
-func (this *GrpcPeerManager) Start(aliveChain chan bool, eventMux *event.TypeMux, isReconnect bool, GRPCProt int64) {
+func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux, isReconnect bool, GRPCProt int64) {
 	if this.NodeID == 0 || this.configs == nil {
 		log.Error("the gRPC Manager hasn't initlized")
 		os.Exit(1)
 	}
 	// 重构peerpool 不采用单例模式进行管理
 	this.peersPool = NewPeerPool(this.TEM)
-	this.LocalNode = NewNode(this.Port, eventMux, this.NodeID, this.peersPool)
+	this.LocalNode = NewNode(GRPCProt, eventMux, this.NodeID, this.TEM,this.peersPool)
 	//newgRPCManager.IP = newgRPCManager.configs.GetIP(newgRPCManager.NodeID)
 	// 重构peerpool 不采用单例模式进行管理
 	port := this.configs.GetPort(this.NodeID)
@@ -91,19 +87,15 @@ func (this *GrpcPeerManager) Start(aliveChain chan bool, eventMux *event.TypeMux
 	this.LocalNode.StartServer()
 	this.LocalNode.N = MAX_PEER_NUM
 	// connect to peer
-	// 如果进行单元测试,需要将参数设置为true
-
-
 	if this.Original {
 		// 读取待连接的节点信息
 		this.connectToPeers(isReconnect)
-
 		log.Critical("路由表:", this.peersPool.peerAddr)
 
 		aliveChain <- 0
 		this.IsOnline = true
 	} else {
-		//启动attend监听routineddddd
+		//启动attend监听routine
 		go this.LocalNode.attendNoticeProcess(this.LocalNode.N)
 		//TODO 连接介绍人节点
 		this.connectToIntroducer(this.Introducer)
@@ -140,7 +132,7 @@ func (this *GrpcPeerManager)ConnectToOthers() {
 
 func (this *GrpcPeerManager) connectToIntroducer( introducerAddress pb.PeerAddress) {
 	//连接介绍人,并且将其路由表取回,然后进行存储
-	peer, peerErr := NewPeerByIpAndPort(introducerAddress.IP, introducerAddress.Port, introducerAddress.ID, this.TEM, this.LocalNode.address)
+	peer, peerErr := NewPeerByIpAndPort(introducerAddress.IP, introducerAddress.Port, introducerAddress.ID, this.TEM, this.LocalNode.address,this.peersPool)
 	//将介绍人的信息放入路由表中
 	this.peersPool.PutPeer(*peer.RemoteAddr,peer)
 	if peerErr != nil {
@@ -200,7 +192,6 @@ func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 			peerStatus[_index] = false
 		}
 	}
-func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 	// connect other peers
 	//TODO RETRY CONNECT 重试连接(未实现)
 	for this.peersPool.GetAliveNodeNum() < MAX_PEER_NUM - 1 {
@@ -209,6 +200,7 @@ func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 		nid := 1
 		for range time.Tick(200 * time.Millisecond) {
 			_index := uint64(nid)
+			nid++
 			//log.Println("status map", nid, status)
 			if nid > MAX_PEER_NUM {
 				break
@@ -273,6 +265,7 @@ func (this *GrpcPeerManager) connectToPeer(peerAddress *pb.PeerAddress, nid uint
 func (this *GrpcPeerManager) GetAllPeers() []*Peer {
 	return this.peersPool.GetPeers()
 }
+
 func (this *GrpcPeerManager) GetAllPeersWithTemp() []*Peer {
 	return this.peersPool.GetPeersWithTemp()
 }
@@ -291,7 +284,7 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	log.Warning("call broadcast")
-	go broadcast(broadCastMessage, this.peersPool)
+	go broadcast(this,broadCastMessage, this.peersPool)
 }
 
 // inner the broadcast method which serve BroadcastPeers function
@@ -302,13 +295,15 @@ func broadcast(grpcPeerManager *GrpcPeerManager,broadCastMessage pb.Message, pPo
 		//TODO 其实这里不需要处理返回值，需要将其go起来
 		//REVIEW Chat 方法必须要传实例，否则将会重复加密，请一定要注意！！
 		//REVIEW Chat Function must give a message instance, not a point, if not the encrypt will break the payload!
-		go func(){
+		go func(p *Peer ) {
 			start := time.Now().UnixNano()
-			_,err := peer.Chat(broadCastMessage)
+			_, err := p.Chat(broadCastMessage)
 			if err != nil {
-				grpcPeerManager.LocalNode.DelayChan <- UpdateTable{updateID:peer.Addr.ID,updateTime:time.Now().UnixNano() - start}
+				grpcPeerManager.LocalNode.DelayChan <- UpdateTable{updateID:peer.Addr.ID, updateTime:time.Now().UnixNano() - start}
 			}
-		}()
+		}(peer)
+	}
+}
 
 
 func (this *GrpcPeerManager) SetOnline() {

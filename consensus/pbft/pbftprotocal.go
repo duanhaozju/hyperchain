@@ -3,7 +3,6 @@
 package pbft
 
 import (
-	"encoding/base64"
 	"fmt"
 	"sort"
 	"sync"
@@ -12,7 +11,6 @@ import (
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
 	"hyperchain/core/types"
-	"hyperchain/event"
 	"hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"
@@ -267,7 +265,6 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	}
 
 	pbft.activeView = true
-	pbft.replicaCount = pbft.N
 
 	logger.Infof("PBFT Max number of validating peers (N) = %v", pbft.N)
 	logger.Infof("PBFT Max number of failing peers (f) = %v", pbft.f)
@@ -525,7 +522,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		logger.Notice("################################################")
 		logger.Noticef("#   Replica %d finished negotiating view: %d", pbft.id, pbft.view)
 		logger.Notice("################################################")
-		primary := pbft.primary(pbft.view)
+		primary := pbft.primary(pbft.view, pbft.N)
 		if primary == pbft.id {
 			pbft.sendNullRequest()
 		} else {
@@ -657,7 +654,7 @@ func (pbft *pbftProtocal) processNullRequest(msg *protos.Message) error {
 	if pbft.inNegoView {
 		return nil
 	}
-	if pbft.primary(pbft.view) != pbft.id {
+	if pbft.primary(pbft.view, pbft.N) != pbft.id {
 		pbft.firstRequestTimer.Stop()
 	}
 	pbft.nullReqTimerReset()
@@ -1170,7 +1167,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 		return nil
 	}
 
-	if pbft.primary(pbft.view) != pbft.id {
+	if pbft.primary(pbft.view, pbft.N) != pbft.id {
 		pbft.firstRequestTimer.Stop()
 	}
 

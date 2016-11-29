@@ -32,6 +32,7 @@ type Peer struct {
 	chatMux    sync.Mutex
 	IsPrimary  bool
 	PeerPool   *PeersPool
+	Addr pb.PeerAddress
 
 }
 
@@ -46,13 +47,11 @@ func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.Transpo
 	peer.ID = nid
 	peer.PeerPool = peerPool
 	peerAddr := peerComm.ExtractAddress(ip, port, nid)
-
+	peer.Addr = *peerAddr
 	opts:=membersrvc.GetGrpcClientOpts()
 	conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), opts...)
 	peer.localAddr = localAddr
 	peer.RemoteAddr = peerComm.ExtractAddress(ip, port, nid)
-	opts := membersrvc.GetGrpcClientOpts()
-	conn, err := grpc.Dial(ip + ":" + strconv.Itoa(int(port)), opts...)
 	//conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
 	if err != nil {
 		errors.New("Cannot establish a connection!")
@@ -112,18 +111,14 @@ func (peer *Peer) handShake() {
 
 			log.Notice("secret", len(peer.TEM.GetSecret(peer.RemoteAddr.Hash)))
 			peer.ID = retMessage.From.ID
-			if err != nil {
-				log.Error("cannot decrypt the nodeidinfo!")
-				errors.New("Decrypt ERROR")
-			}
 			log.Critical("节点:", peer.Addr.ID)
 			log.Critical("hash:", peer.Addr.Hash)
 			log.Critical("协商秘钥：")
 			log.Critical(peer.TEM.GetSecret(peer.Addr.Hash))
-			return &peer, nil
+			//return &peer, nil
 		}
 	}
-	return nil, errors.New("cannot establish a connection")
+	//return nil, errors.New("cannot establish a connection")
 }
 
 func NewPeerByIpAndPortReconnect(ip string, port int64, nid uint64, TEM transport.TransportEncryptManager, localAddr *pb.PeerAddress, peerPool *PeersPool) (*Peer, error) {
@@ -143,7 +138,7 @@ func NewPeerByIpAndPortReconnect(ip string, port int64, nid uint64, TEM transpor
 	}
 	peer.Connection = conn
 	peer.Client = pb.NewChatClient(peer.Connection)
-	peer.Addr = peerAddr
+	peer.Addr = *peerAddr
 	peer.IsPrimary = false
 	//TODO handshake operation
 	//peer.TEM = transport.NewHandShakeManger()
@@ -206,6 +201,7 @@ func (this *Peer) Chat(msg pb.Message) (*pb.Message, error) {
 	}
 	// 返回信息解密
 	if r != nil {
+		log.Warning("返回信息",r)
 		if r.MessageType != pb.Message_HELLO && r.MessageType != pb.Message_HELLO_RESPONSE {
 			r.Payload = this.TEM.DecWithSecret(r.Payload, r.From.Hash)
 		}

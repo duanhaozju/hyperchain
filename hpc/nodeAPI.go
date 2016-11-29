@@ -1,3 +1,5 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package hpc
 
 import (
@@ -26,8 +28,8 @@ func NewPublicNodeAPI( pm *manager.ProtocolManager) *PublicNodeAPI{
 }
 
 // GetNodes returns status of all the nodes
-func (node *PublicNodeAPI) GetNodes() p2p.PeerInfos{
-//func (node *PublicNodeAPI) GetNodes() []*NodeResult{
+func (node *PublicNodeAPI) GetNodes() (p2p.PeerInfos, error) {
+	//func (node *PublicNodeAPI) GetNodes() []*NodeResult{
 
 	if node.pm == nil {
 		return nil, errors.New("peerManager is nil")

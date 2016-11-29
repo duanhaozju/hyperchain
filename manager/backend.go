@@ -12,18 +12,48 @@ import (
 	"time"
 )
 
+/*
+	pm := manager.New(	eventMux,
+				blockPool,
+				grpcPeerMgr,
+				cs,
+				am,
+				kec256Hash,
+				config.getNodeID(),
+				syncReplicaInterval,
+				syncReplicaEnable,
+				exist,
+				expiredTime,
+				argv.IsReconnect,
+				config.getGRPCPort())
+ */
+
 // init protocol manager params and start
-func New(eventMux *event.TypeMux, blockPool *blockpool.BlockPool, peerManager p2p.PeerManager, consenter consensus.Consenter,
-am *accounts.AccountManager, commonHash crypto.CommonHash, nodeId int, syncReplicaInterval time.Duration, syncReplica bool, port int) *ProtocolManager {
+func New(
+	eventMux *event.TypeMux,
+	blockPool *blockpool.BlockPool,
+	peerManager p2p.PeerManager,
+	consenter consensus.Consenter,
+	am *accounts.AccountManager,
+	commonHash crypto.CommonHash,
+	isReconnect bool,
+	syncReplicaInterval time.Duration,
+	syncReplica bool,
+	exist chan bool,
+	expiredTime time.Time,
+	//port
+	port int) *ProtocolManager {
 
 	aliveChan := make(chan int)
-	go peerManager.Start(aliveChan, eventMux, int64(port))
+	//add reconnect param
+
+	go peerManager.Start(aliveChan, eventMux, isReconnect,int64(port))
 	//wait for all peer are connected
 	initType := <-aliveChan
 	//select {
 	//case initType := <-aliveChan:
 	//	{
-	protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, consenter, am, commonHash, syncReplicaInterval, syncReplica, initType)
+	protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, consenter, am, commonHash, syncReplicaInterval, syncReplica, initType, exist, expiredTime)
 	protocolManager.Start()
 	//start server
 	return protocolManager
