@@ -275,7 +275,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			// receive this event from consensus module
 			// broadcast the local CA validition result to other replica
 			// ATTENTION: Payload is a consenus message
-			peers := self.Peermanager.GetAllPeersWithTemp()
+			peers := self.Peermanager.GetAllPeers()
 			var peerIds []uint64
 			for _, peer := range peers {
 				peerIds = append(peerIds, peer.ID)
