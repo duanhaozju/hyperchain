@@ -19,6 +19,7 @@ message Message{
         INVALIDRESP = 4;
         SYNCREPLICA = 5;
         BROADCAST_NEWPEER = 6;
+        BROADCAST_DELPEER = 7;
     }
 }
 

@@ -21,6 +21,7 @@ func init() {
 // PeerManager provides the basic functions which supports the peer to peer
 // data transfer. Those should be invoked by the higher layer.
 type PeerManager interface {
+	DeleteNode
 	// get the all peer list to broadcast
 	GetAllPeers() []*Peer
 	GetAllPeersWithTemp() []*Peer
@@ -51,6 +52,6 @@ type PeerManager interface {
 // delete node interface
 type DeleteNode interface{
 	GetLocalNodeHash() string
-	GetRouterHashifDelete() string
-	DeleteNode(hash string) // if self {...} else{...}
+	GetRouterHashifDelete(hash string) (string,uint64)
+	DeleteNode(hash string) error// if self {...} else{...}
 }

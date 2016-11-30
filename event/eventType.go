@@ -102,8 +102,25 @@ type RecvNewPeerEvent struct {
 //a new peer's join chain request has been accept, update routing table
 type UpdateRoutingTableEvent struct {
 	Payload []byte
+	Type    bool
 }
 
 // update routing table finished
 type AlreadyInChainEvent struct {
 }
+
+// a peer's exit event
+type DelPeerEvent struct {
+	Payload []byte
+}
+
+type BroadcastDelPeerEvent struct {
+	Payload []byte
+}
+
+type RecvDelPeerEvent struct {
+	Payload []byte
+}
+
+
+

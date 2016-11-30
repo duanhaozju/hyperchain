@@ -314,7 +314,13 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 						Payload:SyncMsg.Payload,
 					})
 				}
-
+			case recovery.Message_BROADCAST_DELPEER:
+				{
+					log.Warning("receive Message_BROADCAST_DELPEER")
+					go this.higherEventManager.Post(event.RecvDelPeerEvent{
+						Payload:SyncMsg.Payload,
+					})
+				}
 			}
 		}
 	case pb.Message_KEEPALIVE:
