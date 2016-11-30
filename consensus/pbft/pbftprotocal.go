@@ -107,6 +107,7 @@ type pbftProtocal struct {
 
 								 // recovery
 	inRecovery             bool                             // inRecovery indicate if replica is in proactive recovery process
+	recoveryToSeqNo	       uint64							// recoveryToSeqNo is the target seqNo we want to recovery to
 	recoveryRestartTimer   events.Timer                     // recoveryRestartTimer track how long a recovery is finished and fires if needed
 	recoveryRestartTimeout time.Duration                    // time limit for recovery process
 	rcRspStore             map[uint64]*RecoveryResponse     // rcRspStore store recovery responses from replicas
@@ -542,7 +543,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		return pbft.recvRecoveryReturnPQC(et)
 	case recoveryDoneEvent:
 		logger.Notice("################################################")
-		logger.Noticef("#   Replica %d finished recovery", pbft.id)
+		logger.Noticef("#   Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
 		logger.Notice("################################################")
 		if pbft.isNewNode {
 			logger.Errorf("new node")
@@ -984,8 +985,22 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 	pbft.executeAfterStateUpdate()
 
 	if pbft.inRecovery {
+		// TODO: need pqc event
+		if pbft.lastExec == pbft.recoveryToSeqNo {
+			// This is a somewhat subtle situation, we are behind by checkpoint, but others are just on chkpt.
+			// Hence, no need to fetch preprepare, prepare, commit
+			pbft.inRecovery = false
+			pbft.recoveryRestartTimer.Stop()
+			go pbft.postPbftEvent(recoveryDoneEvent{})
+			return nil
+		}
 		pbft.recoveryRestartTimer.Reset(pbft.recoveryRestartTimeout, recoveryRestartTimerEvent{})
-		pbft.fetchRecoveryPQC()
+		if pbft.highStateTarget==nil {
+			logger.Errorf("Try to fetch QPC, but highStateTarget is nil")
+			return nil
+		}
+		peers := pbft.highStateTarget.replicas
+		pbft.fetchRecoveryPQC(peers)
 		return nil
 	}
 
@@ -1412,6 +1427,8 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 				logger.Warningf("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
 				pbft.sendViewChange()
 			}
+		} else {
+			logger.Noticef("Replica %d committed for seqNo: %d, but sentExecute: %v, validated: %v", pbft.id, commit.SequenceNumber,cert.sentExecute, cert.validated)
 		}
 	}
 
@@ -1512,6 +1529,11 @@ func (pbft *pbftProtocal) execDoneSync(idx msgID) {
 		logger.Debugf("Replica %d finish execution %d, trying next", pbft.id, *pbft.currentExec)
 		pbft.lastExec = *pbft.currentExec
 		delete(pbft.committedCert, idx)
+		if pbft.lastExec == pbft.recoveryToSeqNo {
+			pbft.inRecovery = false
+			pbft.recoveryRestartTimer.Stop()
+			go pbft.postPbftEvent(recoveryDoneEvent{})
+		}
 		if pbft.lastExec%pbft.K == 0 {
 			bcInfo := getBlockchainInfo()
 			height := bcInfo.Height

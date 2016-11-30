@@ -58,9 +58,12 @@ func (pbft *pbftProtocal) recvRecovery(recoveryInit *RecoveryInit) events.Event 
 		chkpts[n] = d
 	}
 
+	lastExec := pbft.lastExec
+
 	rc := &RecoveryResponse{
 		ReplicaId:	pbft.id,
 		Chkpts:		chkpts,
+		LastExec:   lastExec,
 	}
 
 	rcMsg, err := proto.Marshal(rc)
@@ -98,11 +101,15 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 
 	// find quorum chkpt
 	if len(pbft.rcRspStore) > pbft.N-pbft.f {
-		n, d, replicas, find, behind := pbft.findHighestChkptQuorum()
+		n, d, replicas, find, chkptBehind := pbft.findHighestChkptQuorum()
+		lastExec, peers := pbft.findLastExecQuorum()
+
 		if find {
 			pbft.recoveryRestartTimer.Stop()
-			if behind {
-				logger.Noticef("Replica %d in recovery find chkpt, behind", pbft.id)
+			pbft.recoveryToSeqNo = lastExec
+
+			if chkptBehind {
+				logger.Noticef("Replica %d in recovery find chkpt: %d, behind, others seqNo: %d, self: %d", pbft.id, n, lastExec, pbft.lastExec)
 
 				pbft.moveWatermarks(n)
 
@@ -122,12 +129,19 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 
 				pbft.updateHighStateTarget(target)
 				pbft.stateTransfer(target)
-			} else {
-				logger.Noticef("Replica %d in recovery find chkpt, same height: %d", pbft.id, n)
-				// self are not behind, which indicates we are all newly started replicas
-				pbft.inRecovery = false
+			} else if pbft.lastExec<lastExec {
+				// This is a somewhat subtle situation: we are not behind by checkpoint, but are  behind by seqNo
+				logger.Noticef("Replica %d in recovery find chkpt, same: %d, different lastExec, self: %d, others: %d" , pbft.id, n, pbft.lastExec, lastExec)
+				pbft.recoveryRestartTimer.Reset(pbft.recoveryRestartTimeout, recoveryRestartTimerEvent{})
+				pbft.fetchRecoveryPQC(peers)
 
+			} else if pbft.lastExec==lastExec {
+				// This case indicates we are exactly the same as others
+				logger.Noticef("Replica %d in recovery find chkpt, same: %d, same lastExec: %d", pbft.id, n, pbft.lastExec)
+				pbft.inRecovery = false
 				return recoveryDoneEvent{}
+			} else {
+				logger.Errorf("This should not happen! Replica %d in recovery find chkpt, same: %d, but self.lastExec: is ahead of others: %d", pbft.id, n, pbft.lastExec, lastExec)
 			}
 		}
 	}
@@ -135,11 +149,12 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 }
 
 // findHighestChkptQuorum finds highest one of chkpts which achieve quorum
-func (pbft *pbftProtocal) findHighestChkptQuorum() (n uint64, d string, replicas []uint64, find bool, behind bool) {
+func (pbft *pbftProtocal) findHighestChkptQuorum() (n uint64, d string, replicas []uint64, find bool, chkptBehind bool) {
 
 	logger.Debugf("Replica %d now enter findHighestChkptQuorum", pbft.id)
 
 	chkpts := make(map[cidx]map[uint64]bool)
+
 	for from, rsp := range pbft.rcRspStore {
 		for chkptN, chkptD := range rsp.GetChkpts() {
 			chkptIdx := cidx{
@@ -158,16 +173,17 @@ func (pbft *pbftProtocal) findHighestChkptQuorum() (n uint64, d string, replicas
 	}
 
 	find = false
+	chkptBehind = false
 	n = pbft.h
+
 	// Since replica sends all of its chkpt, we may encounter several chkpts which reach 2f+1.
 	// In this case, others will move watermarks sooner or later.
 	// Hopefully, we find only one chkpt which reaches 2f+1 and this chkpt is their pbft.h
 	for ci, peers := range chkpts {
 		if len(peers) >= 2*pbft.f+1 {
 			find = true
-			behind = false
 			if ci.n > n {
-				behind = true
+				chkptBehind = true
 				n = ci.n
 				d = ci.d
 				replicas = make([]uint64, len(peers))
@@ -181,10 +197,43 @@ func (pbft *pbftProtocal) findHighestChkptQuorum() (n uint64, d string, replicas
 	return
 }
 
-// fetchRecoveryPQC fetch PQC info after receive stateUpdated event
-func (pbft *pbftProtocal) fetchRecoveryPQC() events.Event {
+func (pbft *pbftProtocal) findLastExecQuorum() (lastExec uint64, peers []uint64) {
 
-	logger.Debugf("Replica %d now fetchRecoveryPQC", pbft.id)
+	lastExecs := make(map[uint64]map[uint64]bool)
+	peers	  = make([]uint64, 2*pbft.f+1)
+	for _, rsp := range pbft.rcRspStore {
+
+		replicas, ok := lastExecs[rsp.LastExec]
+		if ok {
+			replicas[rsp.ReplicaId] = true
+		} else {
+			replicas := make(map[uint64]bool)
+			replicas[rsp.ReplicaId] = true
+			lastExecs[rsp.LastExec] = replicas
+		}
+
+		if len(lastExecs[rsp.LastExec]) >= 2*pbft.f+1 {
+			lastExec = rsp.LastExec
+			replicas = lastExecs[rsp.LastExec]
+			for peer := range replicas {
+				peers = append(peers, peer)
+			}
+			break
+		}
+	}
+
+	return
+}
+
+// fetchRecoveryPQC fetch PQC info after receive stateUpdated event
+func (pbft *pbftProtocal) fetchRecoveryPQC(peers []uint64) events.Event {
+
+	logger.Noticef("Replica %d now fetchRecoveryPQC", pbft.id)
+
+	if peers==nil {
+		logger.Errorf("Replica %d try to fetchRecoveryPQC, but target peers are nil")
+		return nil
+	}
 
 	pbft.rcPQCSenderStore = make(map[uint64]bool)
 
@@ -203,11 +252,6 @@ func (pbft *pbftProtocal) fetchRecoveryPQC() events.Event {
 		Payload: payload,
 	}
 
-	peers := pbft.highStateTarget.replicas
-	if peers==nil {
-		logger.Errorf("Try to fetch QPC, but highStateTarget doesn't contain dests")
-		return nil
-	}
 	for _, dest := range peers {
 		msg := consensusMsgHelper(conMsg, dest)
 		pbft.helper.InnerUnicast(msg, dest)
@@ -267,8 +311,6 @@ func (pbft *pbftProtocal) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) even
 
 	logger.Noticef("Replica %d now recvRecoveryReturnPQC from replica %d", pbft.id, PQCInfo.ReplicaId)
 
-	var event events.Event
-
 	if !pbft.inRecovery {
 		logger.Errorf("Replica %d receive recoveryReturnQPC, but it's not in recovery", pbft.id)
 		return nil
@@ -285,7 +327,6 @@ func (pbft *pbftProtocal) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) even
 		logger.Noticef("Replica %d already receive %d returnPQC", pbft.id, len(pbft.rcPQCSenderStore))
 		pbft.recoveryRestartTimer.Stop()
 		pbft.inRecovery = false
-		event = recoveryDoneEvent{}
 	}
 
 	prepreSet := PQCInfo.GetPrepreSet()
@@ -321,7 +362,7 @@ func (pbft *pbftProtocal) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) even
 		}
 	}
 
-	return event
+	return nil
 }
 
 // restartRecovery restart recovery immediately when recoveryRestartTimer expires

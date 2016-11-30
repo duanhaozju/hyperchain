@@ -361,6 +361,7 @@ func (*RecoveryInit) Descriptor() ([]byte, []int) { return fileDescriptor0, []in
 type RecoveryResponse struct {
 	ReplicaId uint64            `protobuf:"varint,1,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
 	Chkpts    map[uint64]string `protobuf:"bytes,2,rep,name=chkpts" json:"chkpts,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	LastExec  uint64            `protobuf:"varint,3,opt,name=lastExec" json:"lastExec,omitempty"`
 }
 
 func (m *RecoveryResponse) Reset()                    { *m = RecoveryResponse{} }
