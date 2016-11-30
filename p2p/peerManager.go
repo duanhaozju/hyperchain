@@ -46,11 +46,13 @@ type PeerManager interface {
 	SetOnline()
 	// get local address payload
 	GetLocalAddressPayload() []byte
+
+	DeleteNode
 }
 
 // delete node interface
 type DeleteNode interface{
 	GetLocalNodeHash() string
-	GetRouterHashifDelete() string
+	GetRouterHashifDelete(hash string) (string,uint64)
 	DeleteNode(hash string) // if self {...} else{...}
 }

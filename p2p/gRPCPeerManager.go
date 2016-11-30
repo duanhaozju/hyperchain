@@ -13,6 +13,8 @@ import (
 	"time"
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
+	"encoding/hex"
+	"hyperchain/crypto"
 )
 
 const MAX_PEER_NUM = 4
@@ -480,5 +482,43 @@ func (this *GrpcPeerManager) UpdateRoutingTable(payload []byte) {
 		this.LocalNode.N = this.peersPool.GetAliveNodeNum()
 	}
 }
-//post
-//this.LocalNode.higherEventManager.Post(event.RoutingTableUpdatedEvent{})
+
+/*********************************
+ * delete LocalNode part
+ ********************************/
+func (this *GrpcPeerManager) GetLocalNodeHash() string{
+	return this.LocalNode.address.Hash
+}
+
+func (this *GrpcPeerManager) GetRouterHashifDelete(hash string) (string,uint64){
+	hasher := crypto.NewKeccak256Hash("keccak256Hanser")
+	routers := this.peersPool.ToRoutingTableWithout(hash)
+	hash = hex.EncodeToString(hasher.Hash(routers).Bytes())
+
+	var ID uint64
+	for _,pers := range this.peersPool.GetPeers(){
+		if pers.Addr.Hash == hash{
+			ID=pers.Addr.ID
+		}
+	}
+	return hex.EncodeToString(hasher.Hash(routers).Bytes()),ID
+}
+
+
+func (this *GrpcPeerManager)  DeleteNode(hash string) error{
+	if this.LocalNode.address.Hash == hash {
+		// delete local node and stop all server
+		this.LocalNode.StopServer()
+
+	} else{
+		// delete the specific node
+		for _,pers := range this.peersPool.GetPeers(){
+			if pers.Addr.Hash == hash{
+				this.peersPool.DeletePeer(pers)
+			}
+		}
+
+	}
+
+
+}

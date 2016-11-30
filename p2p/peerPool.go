@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"errors"
+	"hyperchain/p2p/peerComm"
+	"google.golang.org/grpc/peer"
 )
 
 type PeersPool struct {
@@ -159,6 +161,21 @@ func (this *PeersPool)ToRoutingTable() pb.Routers {
 	//sort.Sort(routers)
 	return routers
 }
+// get routing table with specific hash
+func (this *PeersPool)ToRoutingTableWithout(hash string)pb.Routers{
+	peers := this.GetPeers()
+	var routers pb.Routers
+
+	for _, pers := range peers {
+		if pers.Addr.Hash == hash{
+			continue
+		}
+		routers.Routers = append(routers.Routers, pers.RemoteAddr)
+	}
+	//需要进行排序
+	//sort.Sort(routers)
+	return routers
+}
 
 
 // merge the route into the temp peer list
@@ -202,4 +219,11 @@ func (this *PeersPool)RejectTempPeers() {
 		delete(this.tempPeers, tempPeer.RemoteAddr.Hash)
 		this.alivePeers -= 1
 	}
+}
+
+func (this *PeersPool)DeletePeer(p *Peer){
+	this.alivePeers -= 1
+	delete(this.peers, p.RemoteAddr.Hash)
+	delete(this.peerAddr, p.RemoteAddr.Hash)
+	delete(this.peerKeys, p.RemoteAddr)
 }
