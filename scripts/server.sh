@@ -101,7 +101,8 @@ fi
 for server_address in ${SERVER_ADDR[@]}; do
   echo "kill $server_address"
   ssh hyperchain@$server_address "pkill hyperchains"
-  ssh hyperchain@$server_address "ps aux | grep hyperchain -o | awk '{print \$2}' | xargs kill -9"
+  ssh hyperchain@$server_address "ps aux | grep 'hyperchain -o' | awk '{print \$2}' | xargs kill -9"
+  ssh hyperchain@$server_address "rm -rf build"
 done
 
 distribute_the_binary

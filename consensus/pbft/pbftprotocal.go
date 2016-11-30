@@ -183,21 +183,23 @@ type cacheBatch struct {
 }
 
 type addNodeCert struct {
-	addNodes	map[AddNode]bool
-	addCount	int
-	finishAdd	bool
-	update		*UpdateN
-	agrees		map[AgreeUpdateN]bool
-	updateCount	int
+	addNodes		map[AddNode]bool
+	addCount		int
+	finishAdd		bool
+	update			*UpdateN
+	agrees			map[AgreeUpdateN]bool
+	updateCount		int
+	finishUpdate	bool
 }
 
 type delNodeCert struct {
-	delNodes	map[DelNode]bool
-	delCount	int
-	finishDel	bool
-	update		*UpdateN
-	agrees		map[AgreeUpdateN]bool
-	updateCount	int
+	delNodes		map[DelNode]bool
+	delCount		int
+	finishDel		bool
+	update			*UpdateN
+	agrees			map[AgreeUpdateN]bool
+	updateCount		int
+	finishUpdate	bool
 }
 
 // newBatch initializes a batch
@@ -566,7 +568,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case *DelNode:
 		err = pbft.recvAgreeDelNode(et)
 	case *ReadyForN:
-		err = pbft.recvReadyforN(et)
+		err = pbft.recvReadyforNforAdd(et)
 	case *UpdateN:
 		err = pbft.recvUpdateN(et)
 	case *AgreeUpdateN:

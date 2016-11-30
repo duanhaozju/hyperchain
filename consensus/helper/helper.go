@@ -32,7 +32,8 @@ type Stack interface {
 	VcReset(seqNo uint64) error
 	InformPrimary(primary uint64) error
 	BroadcastAddNode(msg *pb.Message) error
-	UpdateTable(payload []byte) error
+	BroadcastDelNode(msg *pb.Message) error
+	UpdateTable(payload []byte, flag bool) error
 }
 
 // InnerBroadcast broadcast the consensus message between vp nodes
@@ -155,6 +156,7 @@ func (h *helper) InformPrimary(primary uint64) error {
 	return nil
 }
 
+// Broadcast addnode message to others
 func (h *helper) BroadcastAddNode(msg *pb.Message) error {
 
 	tmpMsg, err := proto.Marshal(msg)
@@ -173,11 +175,31 @@ func (h *helper) BroadcastAddNode(msg *pb.Message) error {
 	return nil
 }
 
+// Broadcast delnode message to others
+func (h *helper) BroadcastDelNode(msg *pb.Message) error {
+
+	tmpMsg, err := proto.Marshal(msg)
+
+	if err != nil {
+		return err
+	}
+
+	broadcastEvent := event.BroadcastDelPeerEvent{
+		Payload: tmpMsg,
+	}
+
+	// Post the event to outer
+	go h.msgQ.Post(broadcastEvent)
+
+	return nil
+}
+
 // Inform to update routing table
-func (h *helper) UpdateTable(payload []byte) error {
+func (h *helper) UpdateTable(payload []byte, flag bool) error {
 
 	updateTable := event.UpdateRoutingTableEvent{
-		Payload: payload,
+		Payload:payload,
+		Type:	flag,
 	}
 
 	h.msgQ.Post(updateTable)

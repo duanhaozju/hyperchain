@@ -107,7 +107,7 @@ func (pbft *pbftProtocal) sendAgreeDelNode(key string) {
 	}
 
 	broadcast := consensusMsgHelper(msg, pbft.id)
-	pbft.helper.BroadcastAddNode(broadcast)
+	pbft.helper.BroadcastDelNode(broadcast)
 	pbft.recvAgreeDelNode(del)
 
 }
@@ -168,10 +168,11 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 
 	if !pbft.inAddingNode {
 		if cert.finishAdd {
-			logger.Warningf("Replica %d have already finish adding node", pbft.id)
+			logger.Warningf("Replica %d have already finished adding node", pbft.id)
+			return nil
 		} else {
 			// TODO: or just follow others?
-			logger.Warningf("Replica %d haven't locally prepared for update routing table, but others have agreed", pbft.id, key)
+			logger.Warningf("Replica %d haven't locally prepared for update routing table for %s, but others have agreed", pbft.id, key)
 			return nil
 		}
 	}
@@ -183,7 +184,7 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 		return nil
 	}
 
-	pbft.helper.UpdateTable(payload)
+	pbft.helper.UpdateTable(payload, true)
 	pbft.inAddingNode = false
 
 	return nil
@@ -204,9 +205,14 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string) error {
 	}
 
 	if !pbft.inDeletingNode {
-		// TODO: or just follow others?
-		logger.Warningf("Replica %d haven't locally prepared for update routing table", pbft.id, key)
-		return nil
+		if cert.finishDel {
+			logger.Warningf("Replica %d have already finished deleting node", pbft.id)
+			return nil
+		} else {
+			// TODO: or just follow others?
+			logger.Warningf("Replica %d haven't locally prepared for update routing table for %s, but others have agreed", pbft.id, key)
+			return nil
+		}
 	}
 
 	cert.finishDel = true
@@ -217,9 +223,9 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string) error {
 	}
 
 	logger.Errorf("Replica %d try to update routing table", pbft.id)
-	pbft.helper.UpdateTable(payload)
+	pbft.helper.UpdateTable(payload, false)
 	pbft.inDeletingNode = false
-	pbft.sendUpdateN(key)
+	pbft.sendUpdateNforDel(key)
 
 	return nil
 }
@@ -258,12 +264,12 @@ func (pbft *pbftProtocal) sendReadyForN() {
 }
 
 // Primary receive ready_for_n from new replica
-func (pbft *pbftProtocal) recvReadyforN(ready *ReadyForN) error {
+func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) error {
 
 	if pbft.primary(pbft.view, pbft.N) == pbft.id {
 		logger.Errorf("Primary %d received ready_for_n from %d", pbft.id, ready.ReplicaId)
 	} else {
-		logger.Errorf("Replica %d received ready_for_n from %d", pbft.id, ready.ReplicaId)
+		logger.Errorf("Replica %d is not primary but received ready_for_n from %d", pbft.id, ready.ReplicaId)
 		return nil
 	}
 
@@ -293,7 +299,7 @@ func (pbft *pbftProtocal) recvReadyforN(ready *ReadyForN) error {
 		Key:		ready.Key,
 		N:			n,
 		View: 		view,
-		SeqNo:		pbft.seqNo,
+		SeqNo:		pbft.seqNo + 1,
 		Flag:		true,
 	}
 
@@ -315,7 +321,7 @@ func (pbft *pbftProtocal) recvReadyforN(ready *ReadyForN) error {
 }
 
 // Primary send update_n after finish del node
-func (pbft *pbftProtocal) sendUpdateN(key string) {
+func (pbft *pbftProtocal) sendUpdateNforDel(key string) {
 
 	logger.Errorf("Replica %d try to send update_n after finish del node", pbft.id)
 
@@ -421,7 +427,6 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 
 		broadcast := consensusMsgHelper(msg, pbft.id)
 		pbft.helper.InnerBroadcast(broadcast)
-		pbft.inUpdatingN = true
 		return pbft.recvAgreeUpdateN(agree)
 	} else {
 		n, view := pbft.getDelNV()
@@ -465,7 +470,7 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 
 func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) error {
 
-	logger.Debugf("Replica %d received agree updateN from replica %d for n=%d/view=%d",
+	logger.Warningf("Replica %d received agree updateN from replica %d for n=%d/view=%d",
 		pbft.id, agree.ReplicaId, agree.N, agree.View)
 
 	if pbft.primary(pbft.view, pbft.N) == agree.ReplicaId {
@@ -512,24 +517,25 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, flag bool) error {
 			return nil
 		}
 
+		if cert.finishUpdate {
+			logger.Warningf("Replica %d already finish update for digest %s", pbft.id, digest)
+			return nil
+		}
+
+		logger.Error("count: ", cert.updateCount)
+		if cert.updateCount < pbft.committedReplicasQuorum() {
+			return nil
+		}
+
 		if cert.update == nil {
-			logger.Warningf("Replica %d has not received updateN yet", pbft.id)
-			return nil
-		}
-
-		if cert.updateCount < pbft.preparedReplicasQuorum() {
-			return nil
-		}
-
-		if !pbft.inUpdatingN {
 			logger.Warningf("Replica %d haven't locally prepared for update_n, but got 2f prepared", pbft.id)
-			return nil
 		}
 
 		// update N, f, view
 		pbft.mux.Lock()
 		defer pbft.mux.Unlock()
-		pbft.inUpdatingN = false
+		cert.finishUpdate = true
+		pbft.inUpdatingN = true
 		pbft.previousN = pbft.N
 		pbft.previousView = pbft.view
 		pbft.previousF = pbft.f
@@ -537,7 +543,8 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, flag bool) error {
 		pbft.N = int(cert.update.N)
 		pbft.view = cert.update.View
 		pbft.f = (pbft.N-1) / 3
-		logger.Warningf("Replica %d update N=%d/f=%d/view=%d")
+		logger.Warningf("Replica %d update after adding, N=%d/f=%d/view=%d for digest %s",
+			pbft.id, pbft.N, pbft.f, pbft.view, digest)
 
 	} else {
 		cert := pbft.getAddNodeCert(digest)
@@ -547,8 +554,8 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, flag bool) error {
 			return nil
 		}
 
-		if cert.update == nil {
-			logger.Warningf("Replica %d has not received updateN yet", pbft.id)
+		if cert.finishUpdate {
+			logger.Warningf("Replica %d already finish update for digest %s", pbft.id, digest)
 			return nil
 		}
 
@@ -556,17 +563,19 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, flag bool) error {
 			return nil
 		}
 
-		if !pbft.inUpdatingN {
+		if cert.update == nil {
 			logger.Warningf("Replica %d haven't locally prepared for update_n, but got 2f prepared", pbft.id)
-			return nil
 		}
 
 		// update N, f, view
 		pbft.mux.Lock()
 		defer pbft.mux.Unlock()
+		cert.finishUpdate = true
 		pbft.N = int(cert.update.N)
 		pbft.view = cert.update.View
 		pbft.f = (pbft.N-1) / 3
+		logger.Warningf("Replica %d update after deleting, N=%d/f=%d/view=%d for digest %s",
+			pbft.id, pbft.N, pbft.f, pbft.view, digest)
 	}
 
 	return nil

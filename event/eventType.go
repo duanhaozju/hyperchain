@@ -100,6 +100,7 @@ type RecvNewPeerEvent struct {
 }
 
 //a new peer's join chain request has been accept, update routing table
+// type: true for add, false for delete
 type UpdateRoutingTableEvent struct {
 	Payload []byte
 	Type    bool
