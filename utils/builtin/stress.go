@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func StressTest(nodeFile string, duration int, tps int, instant int, testType int, ratio float64, randNormalTx int, randContractTx int, randContract int, code string, methoddata string, silense bool, load bool, estimation int) bool {
+func StressTest(nodeFile string, duration int, tps int, instant int, testType int, ratio float64, randNormalTx int, randContractTx int, randContract int, code string, methoddata string, silense bool, load bool, estimation int, keystore string) bool {
 	if tps == 0 || instant == 0 {
 		output(silense, "invalid tps or instant parameter")
 		return false
@@ -162,7 +162,7 @@ func generateNormalTransaction(load bool, n int) {
 		sender := genesisAccount[rand.Intn(len(genesisAccount))]
 		receiver := generateAddress()
 		amount := generateTransferAmount()
-		command, success := NewTransaction(genesisPassword, sender, receiver, 0, amount, "", 0, "localhost", 8081, true)
+		command, success := NewTransaction(genesisPassword, sender, receiver, 0, amount, "", 0, "localhost", 8081, true, keystore)
 
 		if success == false {
 			logger.Error("create normal transaction failed")
@@ -218,7 +218,7 @@ func generateContractTransaction(load bool, n, m int, code, methoddata string) {
 				methoddata = methodid
 			}
 		}
-		command, success := NewTransaction(genesisPassword, sender, receiver, 0, 0, methoddata, 1, "localhost", 8081, true)
+		command, success := NewTransaction(genesisPassword, sender, receiver, 0, 0, methoddata, 1, "localhost", 8081, true, keystore)
 		if success == false {
 			logger.Error("create contract transaction failed")
 		} else {
@@ -244,7 +244,7 @@ func generateContract(n int, code string) {
 		if code == "" {
 			code = payload
 		}
-		command, success := NewTransaction(genesisPassword, sender, "", 0, 0, code, 1, "localhost", 8081, true)
+		command, success := NewTransaction(genesisPassword, sender, "", 0, 0, code, 1, "localhost", 8081, true, keystore)
 		if success {
 			pattern, _ := regexp.Compile(".*'(.*)'")
 			ret := pattern.FindStringSubmatch(command)

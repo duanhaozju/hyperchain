@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-func ExecuteTransaction(password string, from string, to string, timestamp int64, amount int64, payload string, t int, ip string, port int, silense bool) (string, bool) {
-	command, success := NewTransaction(password, from, to, timestamp, amount, payload, t, ip, port, silense)
+func ExecuteTransaction(password string, from string, to string, timestamp int64, amount int64, payload string, t int, ip string, port int, silense bool, keystore string) (string, bool) {
+	command, success := NewTransaction(password, from, to, timestamp, amount, payload, t, ip, port, silense, keystore)
 	var execRes string
 	if success == false {
 		logger.Error("create transaction failed")

@@ -11,6 +11,7 @@ var silense = flag.Bool("s", false, "use to mask output")
 
 // account releated
 var password = flag.String("p", "", "use to specify account password")
+var keystore = flag.String("keystore", "./keystore", "use to specify keystore directory")
 
 // transaction related
 var from = flag.String("from", "", "use to specify transaction sender address")
@@ -41,13 +42,13 @@ func main() {
 	if *option == "" {
 		flag.PrintDefaults()
 	} else if strings.ToLower(*option) == "account" {
-		builtin.NewAccount(*password, *silense)
+		builtin.NewAccount(*password, *silense, *keystore)
 	} else if strings.ToLower(*option) == "transaction" {
-		builtin.NewTransaction(*password, *from, *to, *timestamp,*amount, *payload, *t, *ip, *port,*silense)
+		builtin.NewTransaction(*password, *from, *to, *timestamp,*amount, *payload, *t, *ip, *port,*silense, *keystore)
 	} else if strings.ToLower(*option) == "execute_transaction"{
-		builtin.ExecuteTransaction(*password, *from, *to, *timestamp, *amount, *payload, *t, *ip, *port, *silense)
+		builtin.ExecuteTransaction(*password, *from, *to, *timestamp, *amount, *payload, *t, *ip, *port, *silense, *keystore)
 	} else if strings.ToLower(*option) == "stress_test" {
-		builtin.StressTest(*nodeFile, *duration, *tps, *instant, *testType, *ratio, *normalTxNum, *contractTxNum, *contractNum, *code, *methoddata,*silense, *load, *estimation)
+		builtin.StressTest(*nodeFile, *duration, *tps, *instant, *testType, *ratio, *normalTxNum, *contractTxNum, *contractNum, *code, *methoddata,*silense, *load, *estimation, *keystore)
 	}
 }
 

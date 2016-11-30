@@ -11,7 +11,7 @@ import (
 	"math/rand"
 )
 
-func NewAccount(password string, silense bool) (string, bool) {
+func NewAccount(password string, silense bool, keystore string) (string, bool) {
 	if password == "" {
 		output(silense, "Please enter your password")
 		return "", false
@@ -29,7 +29,7 @@ func NewAccount(password string, silense bool) (string, bool) {
 	}
 }
 
-func NewTransaction(password string, from string, to string, timestamp int64, amount int64, payload string, t int, ip string, port int, silense bool) (string, bool) {
+func NewTransaction(password string, from string, to string, timestamp int64, amount int64, payload string, t int, ip string, port int, silense bool, keystore string) (string, bool) {
 	if password == "" {
 		output(silense, "Please enter your password")
 		if silense == false {
@@ -45,7 +45,7 @@ func NewTransaction(password string, from string, to string, timestamp int64, am
 	if from != "" {
 		_from = from
 	} else {
-		_from, success = NewAccount(password, silense)
+		_from, success = NewAccount(password, silense, keystore)
 		if success == false {
 			output(silense, "Create account failed!")
 			return "", false
