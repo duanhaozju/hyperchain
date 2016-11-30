@@ -6,7 +6,12 @@ import (
 	"hyperchain/manager"
 	"hyperchain/p2p"
 	"github.com/pkg/errors"
+	"hyperchain/event"
 )
+
+type NodeArgs struct {
+	nodeHash string `json:"nodehash"`
+}
 
 type PublicNodeAPI struct{
 	pm *manager.ProtocolManager
@@ -36,6 +41,12 @@ func (node *PublicNodeAPI) GetNodes() (p2p.PeerInfos, error) {
 	}
 
 	return node.pm.GetNodeInfo(), nil
+}
+
+func (node *PublicNodeAPI) DelNode(args NodeArgs) {
+	node.pm.GetEventObject().Post(event.DelPeerEvent{
+		Payload: []byte(args.nodeHash),
+	})
 }
 
 /*func outputNodeResult(node *client.PeerInfo) *NodeResult {

@@ -101,7 +101,9 @@ am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duratio
 	eventMuxAll = eventMux
 	return manager
 }
-
+func (pm *ProtocolManager) GetEventObject() *event.TypeMux {
+	return pm.eventMux
+}
 func GetEventObject() *event.TypeMux {
 	return eventMuxAll
 }
