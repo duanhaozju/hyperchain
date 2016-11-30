@@ -166,8 +166,8 @@ func broadcast(broadCastMessage pb.Message, pPool *PeersPool) {
 		//TODO 其实这里不需要处理返回值，需要将其go起来
 		//REVIEW Chat 方法必须要传实例，否则将会重复加密，请一定要注意！！
 		//REVIEW Chat Function must give a message instance, not a point, if not the encrypt will break the payload!
-		func(p2 *Peer){
-			go p2.Chat(broadCastMessage)
+		go func(p2 *Peer){
+			p2.Chat(broadCastMessage)
 		}(peer)
 
 	}
