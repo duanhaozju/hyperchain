@@ -270,7 +270,9 @@ func CalBlockGPS(begin, end int64) (error, string) {
 		}
 		if block.WriteTime > begin {
 			avg += 1
-			s = s + "start time: " + time.Unix(0, block.WriteTime).Format("2006-01-02 15:04:05")
+			if(avg==1){
+				s = s + "start time: " + time.Unix(0, block.WriteTime).Format("2006-01-02 15:04:05")
+			}
 
 		}
 	}
