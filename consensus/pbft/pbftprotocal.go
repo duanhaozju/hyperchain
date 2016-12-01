@@ -113,6 +113,10 @@ type pbftProtocal struct {
 	rcRspStore             map[uint64]*RecoveryResponse     // rcRspStore store recovery responses from replicas
 	rcPQCSenderStore       map[uint64]bool			 		// rcPQCSenderStore store those who sent PQC info to self
 
+
+	vcResendLimit	       	int				// vcResendLimit indicates a replica's view change resending upbound.
+	vcResendCount	       	int				// vcResendCount represent times of same view change info resend
+
 	// add and del node
 	isNewNode			bool						// track if replica is the new node
 	localKey			string						// track new node's local key (payload from local)
@@ -341,6 +345,11 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 		panic(fmt.Errorf("Cannot parse recovery timeout: %s", err))
 	}
 	pbft.recoveryRestartTimer = pbftTimerFactory.CreateTimer()
+
+	// vcResendLimit
+	pbft.vcResendLimit = config.GetInt("pbft.vcresendlimit")
+	logger.Noticef("Replica %d set vcResendLimit %d", pbft.id, pbft.vcResendLimit)
+	pbft.vcResendCount = 0
 
 	// batchManager is used to solve batch message, like *Request
 	pbft.batchManager = events.NewManagerImpl()
@@ -2157,6 +2166,9 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Eve
 			pbft.negoViewRspTimer.Stop()
 			pbft.view = theView
 			pbft.inNegoView = false
+			if !pbft.activeView {
+				pbft.activeView = true
+			}
 			return negoViewDoneEvent{}
 		} else {
 			pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
