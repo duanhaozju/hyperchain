@@ -96,6 +96,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 	//time.Sleep(2000 * time.Millisecond)
 
 	return tx.GetTransactionHash(), nil
+
 }
 
 type CompileCode struct{
