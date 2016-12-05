@@ -95,14 +95,11 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"account_getBalance","para
 
 ################################# node服务 ######################################
 # 得到节点信息
-curl localhost:8081 --data '{"jsonrpc":"2.0","method": "node_getNodetxs","params":[],"id": 1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "node_getNodeHash","params":[],"id": 1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "node_delNode","params":[{"nodehash":<nodehash>}],"id": 1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "node_getNodeHash","params":[],"id": 1}'
 
 
 ################################# 批量调用例子 ###################################
 curl localhost:8081 --data '[{"jsonrpc":"2.0","method":"block_lastestBlock","params":[],"id":1}, {"jsonrpc":"2.0","method": "node_getNodes","id": 2}]'
 
-################################# del node api ###################################
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"node_delnode","params":[],"id": 1}'
-
-################################# get del node hash api ###################################
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"node_delnode","params":[],"id": 1}'
