@@ -164,8 +164,6 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Info(keyBytes)
-
 	key := crypto.ToECDSA(keyBytes)
 	return &Key{
 		Address:    crypto.PubkeyToAddress(key.PublicKey),
@@ -194,7 +192,6 @@ func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byt
 	if err != nil {
 		return nil, err
 	}
-
 	derivedKey, err := getKDFKey(keyProtected.Crypto, auth)
 	if err != nil {
 		return nil, err
