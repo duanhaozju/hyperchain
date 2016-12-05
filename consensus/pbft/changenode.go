@@ -9,7 +9,7 @@ import (
 // New replica receive local NewNode message
 func (pbft *pbftProtocal) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 
-	logger.Errorf("New replica %d received local newNode message", pbft.id)
+	logger.Debugf("New replica %d received local newNode message", pbft.id)
 
 	if pbft.isNewNode {
 		logger.Warningf("New replica %d received duplicate local newNode message", pbft.id)
@@ -20,7 +20,6 @@ func (pbft *pbftProtocal) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 	pbft.inAddingNode = true
 	key := byteToString(msg.Payload)
 	pbft.localKey = key
-	logger.Error("localkey: ", key)
 
 	return nil
 }
@@ -34,7 +33,7 @@ func (pbft *pbftProtocal) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 	}
 
 	key := byteToString(msg.Payload)
-	logger.Errorf("Replica %d received local addNode message for new node %v", pbft.id, key)
+	logger.Debugf("Replica %d received local addNode message for new node %v", pbft.id, key)
 
 	pbft.inAddingNode = true
 	pbft.sendAgreeAddNode(key)
@@ -115,7 +114,7 @@ func (pbft *pbftProtocal) sendAgreeDelNode(key string) {
 // Replica received addnode for new node
 func (pbft *pbftProtocal) recvAgreeAddNode(add *AddNode) error {
 
-	logger.Errorf("Replica %d received addnode from replica %d for %v",
+	logger.Debugf("Replica %d received addnode from replica %d for %v",
 		pbft.id, add.ReplicaId, add.Key)
 
 	cert := pbft.getAddNodeCert(add.Key)
@@ -168,7 +167,11 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 
 	if !pbft.inAddingNode {
 		if cert.finishAdd {
-			logger.Warningf("Replica %d have already finished adding node", pbft.id)
+			if cert.addCount <= pbft.N {
+				logger.Debugf("Replica %d have already finished adding node", pbft.id)
+				return nil
+			}
+			logger.Warningf("Replica %d have already finished adding node, but still recevice add msg", pbft.id)
 			return nil
 		} else {
 			// TODO: or just follow others?
@@ -206,7 +209,11 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string) error {
 
 	if !pbft.inDeletingNode {
 		if cert.finishDel {
-			logger.Warningf("Replica %d have already finished deleting node", pbft.id)
+			if cert.delCount < pbft.N {
+				logger.Debugf("Replica %d have already finished deleting node", pbft.id)
+				return nil
+			}
+			logger.Warningf("Replica %d have already finished deleting node, but still recevice del msg", pbft.id)
 			return nil
 		} else {
 			// TODO: or just follow others?
@@ -222,7 +229,7 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string) error {
 		return nil
 	}
 
-	logger.Errorf("Replica %d try to update routing table", pbft.id)
+	logger.Debugf("Replica %d try to update routing table", pbft.id)
 	pbft.helper.UpdateTable(payload, false)
 	pbft.inDeletingNode = false
 	pbft.sendUpdateNforDel(key)
@@ -257,17 +264,17 @@ func (pbft *pbftProtocal) sendReadyForN() {
 		Payload: payload,
 	}
 
-	primary := pbft.primary(pbft.view, pbft.N)
+	primary := pbft.primary(pbft.view)
 	unicast := consensusMsgHelper(msg, pbft.id)
 	pbft.helper.InnerUnicast(unicast, primary)
-	logger.Errorf("Replica %d send readyforn to primary %d", pbft.id, primary)
+	logger.Debugf("Replica %d send readyforn to primary %d", pbft.id, primary)
 }
 
 // Primary receive ready_for_n from new replica
 func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) error {
 
-	if pbft.primary(pbft.view, pbft.N) == pbft.id {
-		logger.Errorf("Primary %d received ready_for_n from %d", pbft.id, ready.ReplicaId)
+	if pbft.primary(pbft.view) == pbft.id {
+		logger.Debugf("Primary %d received ready_for_n from %d", pbft.id, ready.ReplicaId)
 	} else {
 		logger.Errorf("Replica %d is not primary but received ready_for_n from %d", pbft.id, ready.ReplicaId)
 		return nil
@@ -373,16 +380,16 @@ func (pbft *pbftProtocal) sendUpdateNforDel(key string) {
 
 func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 
-	logger.Errorf("Replica %d received updateN message from %d", pbft.id, update.ReplicaId)
+	logger.Debugf("Replica %d received updateN message from %d", pbft.id, update.ReplicaId)
 
 	if !pbft.activeView {
 		logger.Warningf("Replica %d is in view change, reject the update_n message", pbft.id)
 		return nil
 	}
 
-	if pbft.primary(pbft.view, pbft.N) != update.ReplicaId {
+	if pbft.primary(pbft.view) != update.ReplicaId {
 		logger.Errorf("Replica %d received updateN from other than primary: got %d, should be %d",
-		pbft.id, update.ReplicaId, pbft.primary(pbft.view, pbft.N))
+		pbft.id, update.ReplicaId, pbft.primary(pbft.view))
 		return nil
 	}
 
@@ -470,10 +477,10 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 
 func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) error {
 
-	logger.Warningf("Replica %d received agree updateN from replica %d for n=%d/view=%d",
+	logger.Debugf("Replica %d received agree updateN from replica %d for n=%d/view=%d",
 		pbft.id, agree.ReplicaId, agree.N, agree.View)
 
-	if pbft.primary(pbft.view, pbft.N) == agree.ReplicaId {
+	if pbft.primary(pbft.view) == agree.ReplicaId {
 		logger.Warningf("Replica %d received agree updateN from primary, ignoring", pbft.id)
 		return nil
 	}
@@ -517,12 +524,11 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, flag bool) error {
 			return nil
 		}
 
-		if cert.finishUpdate {
-			logger.Warningf("Replica %d already finish update for digest %s", pbft.id, digest)
+		if cert.finishUpdate && cert.updateCount < pbft.N + 1 {
+			logger.Debugf("Replica %d already finish update for digest %s", pbft.id, digest)
 			return nil
 		}
 
-		logger.Error("count: ", cert.updateCount)
 		if cert.updateCount < pbft.committedReplicasQuorum() {
 			return nil
 		}
@@ -543,8 +549,8 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, flag bool) error {
 		pbft.N = int(cert.update.N)
 		pbft.view = cert.update.View
 		pbft.f = (pbft.N-1) / 3
-		logger.Warningf("Replica %d update after adding, N=%d/f=%d/view=%d for digest %s",
-			pbft.id, pbft.N, pbft.f, pbft.view, digest)
+		logger.Noticef("Replica %d update after adding, N=%d/f=%d/view=%d/keypoint=%d",
+			pbft.id, pbft.N, pbft.f, pbft.view, pbft.keypoint)
 
 	} else {
 		cert := pbft.getAddNodeCert(digest)
@@ -554,8 +560,8 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, flag bool) error {
 			return nil
 		}
 
-		if cert.finishUpdate {
-			logger.Warningf("Replica %d already finish update for digest %s", pbft.id, digest)
+		if cert.finishUpdate && cert.updateCount < pbft.N {
+			logger.Debugf("Replica %d already finish update for digest %s", pbft.id, digest)
 			return nil
 		}
 
@@ -574,8 +580,8 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, flag bool) error {
 		pbft.N = int(cert.update.N)
 		pbft.view = cert.update.View
 		pbft.f = (pbft.N-1) / 3
-		logger.Warningf("Replica %d update after deleting, N=%d/f=%d/view=%d for digest %s",
-			pbft.id, pbft.N, pbft.f, pbft.view, digest)
+		logger.Noticef("Replica %d update after deleting, N=%d/f=%d/view=%d/keypoint=%d",
+			pbft.id, pbft.N, pbft.f, pbft.view, pbft)
 	}
 
 	return nil

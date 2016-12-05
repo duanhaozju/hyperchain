@@ -426,7 +426,7 @@ func (pbft *pbftProtocal) RecvMsg(e []byte) error {
 
 func (pbft *pbftProtocal) RecvLocal(msg interface{}) error {
 
-	logger.Errorf("Replica %d received local message", pbft.id)
+	logger.Debugf("Replica %d received local message", pbft.id)
 
 	go pbft.postPbftEvent(msg)
 
@@ -442,7 +442,7 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 		tx := e
 		return pbft.processTxEvent(tx)
 	case viewChangedEvent:
-		primary := pbft.primary(pbft.view, pbft.N)
+		primary := pbft.primary(pbft.view)
 		pbft.persistView(pbft.view)
 		pbft.helper.InformPrimary(primary)
 		pbft.processRequestsDuringViewChange()
@@ -502,7 +502,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 			logger.Debugf("Replica %d try to process viewChangeQuorumEvent, but it's in nego-view", pbft.id)
 			return nil
 		}
-		if pbft.primary(pbft.view, pbft.N) == pbft.id {
+		if pbft.primary(pbft.view) == pbft.id {
 			return pbft.sendNewView()
 		}
 		return pbft.processNewView()
@@ -533,7 +533,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		logger.Notice("################################################")
 		logger.Noticef("#   Replica %d finished negotiating view: %d", pbft.id, pbft.view)
 		logger.Notice("################################################")
-		primary := pbft.primary(pbft.view, pbft.N)
+		primary := pbft.primary(pbft.view)
 		if primary == pbft.id {
 			pbft.sendNullRequest()
 		} else {
@@ -557,7 +557,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		logger.Noticef("#   Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
 		logger.Notice("################################################")
 		if pbft.isNewNode {
-			logger.Errorf("new node")
+			logger.Debug("new node")
 			pbft.sendReadyForN()
 		}
 		pbft.processRequestsDuringRecovery()
@@ -665,7 +665,7 @@ func (pbft *pbftProtocal) processNullRequest(msg *protos.Message) error {
 	if pbft.inNegoView {
 		return nil
 	}
-	if pbft.primary(pbft.view, pbft.N) != pbft.id {
+	if pbft.primary(pbft.view) != pbft.id {
 		pbft.firstRequestTimer.Stop()
 	}
 	pbft.nullReqTimerReset()
@@ -674,7 +674,7 @@ func (pbft *pbftProtocal) processNullRequest(msg *protos.Message) error {
 
 func (pbft *pbftProtocal) processTxEvent(tx *types.Transaction) error {
 
-	primary := pbft.primary(pbft.view, pbft.N)
+	primary := pbft.primary(pbft.view)
 	if !pbft.activeView || pbft.inNegoView || pbft.inRecovery {
 		pbft.reqStore.storeOutstanding(tx)
 	} else if primary != pbft.id {
@@ -774,7 +774,7 @@ func (pbft *pbftProtocal) nullRequestHandler() {
 		return
 	}
 
-	if pbft.primary(pbft.view, pbft.N) != pbft.id {
+	if pbft.primary(pbft.view) != pbft.id {
 		// backup expected a null request, but primary never sent one
 		logger.Warningf("Replica %d null request timer expired, sending view change", pbft.id)
 
@@ -1031,7 +1031,7 @@ func (pbft *pbftProtocal) recvRequestBatch(reqBatch *TransactionBatch) error {
 	if pbft.activeView {
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", digest))
 	}
-	if pbft.primary(pbft.view, pbft.N) == pbft.id && pbft.activeView {
+	if pbft.primary(pbft.view) == pbft.id && pbft.activeView {
 		pbft.validateBatch(reqBatch, 0, 0)
 	} else {
 		logger.Debugf("Replica %d is backup, not sending pre-prepare for request batch %s", pbft.id, digest)
@@ -1049,7 +1049,7 @@ func (pbft *pbftProtocal) sendNullRequest() {
 
 func (pbft *pbftProtocal) validateBatch(txBatch *TransactionBatch, vid uint64, view uint64) {
 
-	primary := pbft.primary(pbft.view, pbft.N)
+	primary := pbft.primary(pbft.view)
 	if primary == pbft.id {
 		logger.Debugf("Primary %d try to validate batch %s", pbft.id, hash(txBatch))
 
@@ -1192,7 +1192,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 		return nil
 	}
 
-	if pbft.primary(pbft.view, pbft.N) != pbft.id {
+	if pbft.primary(pbft.view) != pbft.id {
 		pbft.firstRequestTimer.Stop()
 	}
 
@@ -1206,9 +1206,9 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 		return nil
 	}
 
-	if pbft.primary(pbft.view, pbft.N) != preprep.ReplicaId {
+	if pbft.primary(pbft.view) != preprep.ReplicaId {
 		logger.Warningf("Pre-prepare from other than primary: got %d, should be %d",
-			preprep.ReplicaId, pbft.primary(pbft.view, pbft.N))
+			preprep.ReplicaId, pbft.primary(pbft.view))
 		return nil
 	}
 	pbft.nullRequestTimer.Stop()
@@ -1248,7 +1248,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 	}
 
 	logger.Debug("receive  pre-prepare first seq is:",preprep.SequenceNumber)
-	if pbft.primary(pbft.view, pbft.N) != pbft.id && pbft.prePrepared(preprep.BatchDigest, preprep.View, preprep.SequenceNumber) && !cert.sentPrepare {
+	if pbft.primary(pbft.view) != pbft.id && pbft.prePrepared(preprep.BatchDigest, preprep.View, preprep.SequenceNumber) && !cert.sentPrepare {
 		logger.Debugf("Backup %d broadcasting prepare for view=%d/seqNo=%d", pbft.id, preprep.View, preprep.SequenceNumber)
 		prep := &Prepare{
 			View:           preprep.View,
@@ -1288,7 +1288,7 @@ func (pbft *pbftProtocal) recvPrepare(prep *Prepare) error {
 		return nil
 	}
 
-	if pbft.primary(prep.View, pbft.N) == prep.ReplicaId && !pbft.inRecovery{
+	if pbft.primary(prep.View) == prep.ReplicaId && !pbft.inRecovery{
 		logger.Warningf("Replica %d received prepare from primary, ignoring", pbft.id)
 		return nil
 	}
@@ -1341,7 +1341,7 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 		return nil
 	}
 
-	if pbft.primary(pbft.view, pbft.N) == pbft.id {
+	if pbft.primary(pbft.view) == pbft.id {
 
 		return pbft.sendCommit(digest, v, n)
 	} else {
@@ -1439,7 +1439,7 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 				pbft.sendViewChange()
 			}
 		} else {
-			logger.Noticef("Replica %d committed for seqNo: %d, but sentExecute: %v, validated: %v", pbft.id, commit.SequenceNumber,cert.sentExecute, cert.validated)
+			logger.Debugf("Replica %d committed for seqNo: %d, but sentExecute: %v, validated: %v", pbft.id, commit.SequenceNumber,cert.sentExecute, cert.validated)
 		}
 	}
 
@@ -1521,7 +1521,7 @@ func (pbft *pbftProtocal) executeOne(idx msgID) bool {
 	} else {
 		logger.Noticef("--------Replica %d Call execute, view=%d/seqNo=%d--------", pbft.id, idx.v, idx.n)
 		var isPrimary bool
-		if pbft.primary(pbft.view, pbft.N) == pbft.id {
+		if pbft.primary(pbft.view) == pbft.id {
 			isPrimary = true
 		} else {
 			isPrimary = false
@@ -1890,6 +1890,11 @@ func (pbft *pbftProtocal) moveWatermarks(n uint64) {
 		return
 	}
 
+	if pbft.inUpdatingN && pbft.keypoint <= h {
+		pbft.inUpdatingN = false
+		logger.Noticef("Replica %d finish updating N after adding", pbft.id)
+	}
+
 	for idx, cert := range pbft.certStore {
 		if idx.n <= h {
 			logger.Debugf("Replica %d cleaning quorum certificate for view=%d/seqNo=%d",
@@ -1995,7 +2000,7 @@ func (pbft *pbftProtocal) retryStateTransfer(optional *stateUpdateTarget) {
 }
 
 func (pbft *pbftProtocal) resubmitRequestBatches() {
-	if pbft.primary(pbft.view, pbft.N) != pbft.id {
+	if pbft.primary(pbft.view) != pbft.id {
 		return
 	}
 
@@ -2205,7 +2210,7 @@ func (pbft *pbftProtocal) processRequestsDuringRecovery() {
 // =============================================================================
 func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error {
 
-	primary := pbft.primary(pbft.view, pbft.N)
+	primary := pbft.primary(pbft.view)
 	if primary == pbft.id {
 		logger.Debugf("Primary %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
 

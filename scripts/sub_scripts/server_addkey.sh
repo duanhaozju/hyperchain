@@ -17,8 +17,19 @@ done < innerserverlist.txt
 # authorization         #
 #########################
 
-addkey(){
-#  ssh-keygen -f "/home/hyperchain/.ssh/known_hosts" -R $1
+addkeyForCentOS(){
+  expect <<EOF
+      set timeout 60
+      spawn ssh-copy-id hyperchain@$1
+      expect {
+        "yes/no" {send "yes\r";exp_continue }
+        "password:" {send "$PASSWD\r";exp_continue }
+        eof
+      }
+EOF
+}
+
+addkeyForSuse(){
   expect <<EOF
       set timeout 60
       spawn ssh-copy-id hyperchain@$1
@@ -30,8 +41,15 @@ addkey(){
 EOF
 }
 
-for server_address in ${SERVER_ADDR[@]}; do
-  addkey $server_address &
-done
+echo $1
 
+if $1; then
+    for server_address in ${SERVER_ADDR[@]}; do
+      addkeyForCentOS $server_address &
+    done
+else
+    for server_address in ${SERVER_ADDR[@]}; do
+      addkeyForSuse $server_address &
+    done
+fi
 wait
