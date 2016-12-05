@@ -292,13 +292,17 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			self.consenter.RecvMsg(ev.Payload)
 		case event.DelPeerEvent:
 			// a peer submit a request to exit the alliance
-			log.Warning("DelPeerEvent")
+			delHash := ev.Payload
+			routerHash, id := self.Peermanager.GetRouterHashifDelete(string(delHash))
 			msg := &protos.DelNodeMessage{
-				Payload: ev.Payload,
+				DelHash: delHash,
+				RouterHash: routerHash,
+				Id: id,
 			}
+			log.Warning("DelPeerEvent", "delHash: ", delHash, "routerHash: ", routerHash, "id: ", id)
 			self.consenter.RecvLocal(msg)
 		case event.BroadcastDelPeerEvent:
-			log.Warning("BroadcastNewPeerEvent")
+			log.Warning("BroadcastDelPeerEvent")
 			// receive this event from consensus module
 			// broadcast to other replica
 			// TODO Don't send to the exit peer itself
