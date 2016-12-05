@@ -117,7 +117,7 @@ func (peer *Peer) handShake() error {
 				return genErr
 			}
 
-			log.Notice("secret", len(peer.TEM.GetSecret(peer.RemoteAddr.Hash)))
+			log.Debug("secret", len(peer.TEM.GetSecret(peer.RemoteAddr.Hash)))
 			peer.ID = retMessage.From.ID
 			//log.Critical("节点:", peer.Addr.ID)
 			//log.Critical("hash:", peer.Addr.Hash)

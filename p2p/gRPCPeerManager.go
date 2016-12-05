@@ -198,7 +198,7 @@ func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 	//TODO RETRY CONNECT 重试连接(未实现)
 	for this.peersPool.GetAliveNodeNum() < MAX_PEER_NUM - 1 {
 		log.Debug("node:", this.NodeID, "连接节点...")
-		log.Warning("nodes number:", this.peersPool.GetAliveNodeNum())
+		log.Debug("nodes number:", this.peersPool.GetAliveNodeNum())
 		nid := 1
 		for range time.Tick(200 * time.Millisecond) {
 			_index := uint64(nid)
@@ -210,7 +210,7 @@ func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 				nid++
 				continue
 			}
-			log.Warning("status map", nid, peerStatus[_index])
+			log.Debug("status map", nid, peerStatus[_index])
 			//if this node is not online, connect it
 			peerIp := this.configs.GetIP(_index)
 			peerPort := this.configs.GetPort(_index)
@@ -227,7 +227,7 @@ func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 				//this.TEM.[peer.Addr.Hash]=peer.TEM
 				peerStatus[_index] = true
 				log.Debug("Peer Node ID:", peerAddress.ID, "has connected!")
-				log.Warning("nodes number:", this.peersPool.GetAliveNodeNum())
+				log.Debug("nodes number:", this.peersPool.GetAliveNodeNum())
 			}
 
 		}

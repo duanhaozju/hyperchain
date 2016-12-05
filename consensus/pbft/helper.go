@@ -53,8 +53,12 @@ func (pbft *pbftProtocal) postPbftEvent(event interface{}) {
 // =============================================================================
 
 // Given a certain view v and replicaCount n, what is the expected primary?
-func (pbft *pbftProtocal) primary(v uint64, n int) uint64 {
-	return (v % uint64(n)) + 1
+func (pbft *pbftProtocal) primary(v uint64) uint64 {
+	if pbft.inUpdatingN {
+		return (v % uint64(pbft.previousN)) + 1
+	} else {
+		return (v % uint64(pbft.N)) + 1
+	}
 }
 
 // Is the sequence number between watermarks?
@@ -64,7 +68,11 @@ func (pbft *pbftProtocal) inW(n uint64) bool {
 
 // Is the view right? And is the sequence number between watermarks?
 func (pbft *pbftProtocal) inWV(v uint64, n uint64) bool {
-	return pbft.view == v && pbft.inW(n)
+	if pbft.inUpdatingN {
+		return pbft.previousView == v && pbft.inW(n)
+	} else {
+		return pbft.view == v && pbft.inW(n)
+	}
 }
 
 // Given a digest/view/seq, is there an entry in the certLog?
@@ -178,22 +186,38 @@ func (pbft *pbftProtocal) getDelNV() (n int64, v uint64) {
 // =============================================================================
 
 func (pbft *pbftProtocal) preparedReplicasQuorum() int {
-	return (2 * pbft.f)
+	if pbft.inUpdatingN {
+		return (2 * pbft.previousF)
+	} else {
+		return (2 * pbft.f)
+	}
 }
 
 func (pbft *pbftProtocal) committedReplicasQuorum() int {
-	return (2 * pbft.f + 1)
+	if pbft.inUpdatingN {
+		return (2 * pbft.previousF + 1)
+	} else {
+		return (2 * pbft.f + 1)
+	}
 }
 
 // intersectionQuorum returns the number of replicas that have to
 // agree to guarantee that at least one correct replica is shared by
 // two intersection quora
 func (pbft *pbftProtocal) intersectionQuorum() int {
-	return (pbft.N + pbft.f + 2) / 2
+	if pbft.inUpdatingN {
+		return (pbft.previousN + pbft.previousF + 2) / 2
+	} else {
+		return (pbft.N + pbft.f + 2) / 2
+	}
 }
 
 func (pbft *pbftProtocal) allCorrectReplicasQuorum() int {
-	return (pbft.N - pbft.f)
+	if pbft.inUpdatingN {
+		return (pbft.previousN - pbft.previousF)
+	} else {
+		return (pbft.N - pbft.f)
+	}
 }
 
 // =============================================================================
@@ -369,7 +393,7 @@ func (pbft *pbftProtocal) startTimerIfOutstandingRequests() {
 
 func (pbft *pbftProtocal) nullReqTimerReset(){
 	timeout := pbft.nullRequestTimeout
-	if pbft.primary(pbft.view, pbft.N) != pbft.id {
+	if pbft.primary(pbft.view) != pbft.id {
 		// we're waiting for the primary to deliver a null request - give it a bit more time
 		timeout += pbft.requestTimeout
 	}

@@ -88,12 +88,12 @@ func (this *Node)attendNoticeProcess(N int) {
 		select {
 		case attendFlag := <-this.attendChan:
 			{
-				log.Warning("连接到一个节点...!!!!!! N:", N, "f", f, "num", num)
+				log.Debug("连接到一个节点...!!!!!! N:", N, "f", f, "num", num)
 				if attendFlag == 1 {
 					num += 1
 					if num >= (N - f) && !this.sentEvent {
 						//TODO 修改向上post的消息类型
-						log.Critical("新节点已经连接到chain上>>>>><<<<<<<<<<")
+						log.Debug("新节点已经连接到chain上>>>>><<<<<<<<<<")
 						this.higherEventManager.Post(event.AlreadyInChainEvent{})
 						this.sentEvent = true
 						num = 0
@@ -219,7 +219,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 	case pb.Message_ATTEND:
 		{
-			log.Warning("Message_ATTEND############")
+			log.Debug("Message_ATTEND############")
 			//新节点全部连接上之后通知
 			this.higherEventManager.Post(event.NewPeerEvent{
 				Payload: msg.Payload,
@@ -309,7 +309,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 				}
 			case recovery.Message_BROADCAST_NEWPEER:
 				{
-					log.Warning("receive Message_BROADCAST_NEWPEER")
+					log.Debug("receive Message_BROADCAST_NEWPEER")
 					go this.higherEventManager.Post(event.RecvNewPeerEvent{
 						Payload:SyncMsg.Payload,
 					})

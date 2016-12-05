@@ -228,7 +228,7 @@ func (pbft *pbftProtocal) findLastExecQuorum() (lastExec uint64, peers []uint64)
 // fetchRecoveryPQC fetch PQC info after receive stateUpdated event
 func (pbft *pbftProtocal) fetchRecoveryPQC(peers []uint64) events.Event {
 
-	logger.Noticef("Replica %d now fetchRecoveryPQC", pbft.id)
+	logger.Debugf("Replica %d now fetchRecoveryPQC", pbft.id)
 
 	if peers==nil {
 		logger.Errorf("Replica %d try to fetchRecoveryPQC, but target peers are nil")
@@ -309,10 +309,10 @@ func (pbft *pbftProtocal) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Even
 // recvRecoveryReturnPQC process PQC info target peers return
 func (pbft *pbftProtocal) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.Event {
 
-	logger.Noticef("Replica %d now recvRecoveryReturnPQC from replica %d", pbft.id, PQCInfo.ReplicaId)
+	logger.Debugf("Replica %d now recvRecoveryReturnPQC from replica %d", pbft.id, PQCInfo.ReplicaId)
 
 	if !pbft.inRecovery {
-		logger.Errorf("Replica %d receive recoveryReturnQPC, but it's not in recovery", pbft.id)
+		logger.Warningf("Replica %d receive recoveryReturnQPC, but it's not in recovery", pbft.id)
 		return nil
 	}
 
@@ -324,7 +324,7 @@ func (pbft *pbftProtocal) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) even
 	pbft.rcPQCSenderStore[sender] = true
 
 	if len(pbft.rcPQCSenderStore) > pbft.f+1 {
-		logger.Noticef("Replica %d already receive %d returnPQC", pbft.id, len(pbft.rcPQCSenderStore))
+		logger.Debugf("Replica %d already receive %d returnPQC", pbft.id, len(pbft.rcPQCSenderStore))
 		pbft.recoveryRestartTimer.Stop()
 		pbft.inRecovery = false
 	}

@@ -268,7 +268,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 	for obj := range self.peerMaintainSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.NewPeerEvent:
-			log.Warning("NewPeerEvent")
+			log.Debug("NewPeerEvent")
 			// a new peer required to join the network and past the local CA validation
 			// payload is the new peer's address information
 			msg := &protos.AddNodeMessage{
@@ -276,7 +276,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			}
 			self.consenter.RecvLocal(msg)
 		case event.BroadcastNewPeerEvent:
-			log.Warning("BroadcastNewPeerEvent")
+			log.Debug("BroadcastNewPeerEvent")
 			// receive this event from consensus module
 			// broadcast the local CA validition result to other replica
 			peers := self.Peermanager.GetAllPeers()
@@ -286,7 +286,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			}
 			self.Peermanager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_BROADCAST_NEWPEER)
 		case event.RecvNewPeerEvent:
-			log.Warning("RecvNewPeerEvent")
+			log.Debug("RecvNewPeerEvent")
 			// receive from replica for a new peer CA validation
 			// deliver it to consensus module
 			self.consenter.RecvMsg(ev.Payload)
@@ -309,12 +309,12 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			}
 			self.Peermanager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_BROADCAST_DELPEER)
 		case event.RecvDelPeerEvent:
-			log.Warning("RecvNewPeerEvent")
+			log.Debug("RecvNewPeerEvent")
 			// receive from replica for a peer exit request submission
 			// deliver it to consensus module
 			self.consenter.RecvMsg(ev.Payload)
 		case event.UpdateRoutingTableEvent:
-			log.Warning("UpdateRoutingTableEvent")
+			log.Debug("UpdateRoutingTableEvent")
 			// a new peer's join chain request has been accepted
 			// update local routing table
 			// TODO notify consensus module to add flag
@@ -326,7 +326,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 				self.Peermanager.DeleteNode(hex.EncodeToString(ev.Payload))
 			}
 		case event.AlreadyInChainEvent:
-			log.Warning("AlreadyInChainEvent")
+			log.Debug("AlreadyInChainEvent")
 			// send negotiate event
 			if self.initType == 1 {
 				self.Peermanager.SetOnline()
