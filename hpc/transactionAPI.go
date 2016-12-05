@@ -54,6 +54,7 @@ type SendTxArgs struct {
 	//Nonce    *jsonrpc.HexNumber  `json:"nonce"`
 	// --- test -----
 	Request   *Number `json:"request"`
+	Simulate  bool        `json:"simulate"`
 }
 
 type TransactionResult struct {
@@ -108,7 +109,7 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs,error) {
 	if (txType == 0 || txType == 2) && args.To == nil {
 		return SendTxArgs{}, errors.New("address 'to' is invalid")
 	}
-	if args.Timestamp == 0 || (5*int64(time.Second)+time.Now().UnixNano()) < args.Timestamp {
+	if args.Timestamp == 0 || (5*int64(time.Minute)+time.Now().UnixNano()) < args.Timestamp {
 		return SendTxArgs{}, errors.New("'timestamp' is invalid")
 	}
 	if txType != 3 && args.Signature == "" {
@@ -184,7 +185,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 				log.Errorf("proto.Marshal(tx) error: %v", err)
 				return common.Hash{}, errors.New("proto.Marshal(tx) happened error")
 			} else if manager.GetEventObject() != nil {
-				go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+				go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
 			} else {
 				log.Error("manager is Nil")
 				return common.Hash{}, errors.New("EventObject is nil")
@@ -214,7 +215,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 					log.Errorf("proto.Marshal(tx) error: %v", err)
 					return common.Hash{}, errors.New("proto.Marshal(tx) happened error")
 				} else if manager.GetEventObject() != nil {
-					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes})
+					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
 				} else {
 					log.Error("manager is Nil")
 					return common.Hash{}, errors.New("EventObject is nil")
@@ -430,14 +431,17 @@ func (tran *PublicTransactionAPI) GetSignHash(args SendTxArgs) (common.Hash, err
 }
 
 // GetTransactionsCount returns the number of transaction in hyperchain.
-func (tran *PublicTransactionAPI) GetTransactionsCount() (*Number, error) {
-	if txs, err := core.GetAllTransaction(tran.db);err != nil {
-		return nil, err
-	} else if len(txs) == 0 {
-		return nil, nil
-	} else {
-		return NewIntToNumber(len(txs)), nil
-	}
+func (tran *PublicTransactionAPI) GetTransactionsCount() (interface{}, error) {
+
+	chain := core.GetChainCopy()
+
+	return struct {
+		Count *Number `json:"count,"`
+		Timestamp int64	`json:"timestamp"`
+	}{
+		Count: NewUint64ToNumber(chain.CurrentTxSum),
+		Timestamp: time.Now().UnixNano(),
+	}, nil
 }
 
 // GetTxAvgTimeByBlockNumber returns tx execute avg time.

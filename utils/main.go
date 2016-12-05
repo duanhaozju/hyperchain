@@ -11,7 +11,6 @@ var silense = flag.Bool("s", false, "use to mask output")
 
 // account releated
 var password = flag.String("p", "", "use to specify account password")
-var keystore = flag.String("keystore", "./keystore", "use to specify keystore directory")
 
 // transaction related
 var from = flag.String("from", "", "use to specify transaction sender address")
@@ -36,19 +35,23 @@ var contractTxNum = flag.Int("rand_contract_tx", 0, "use to specify the number o
 var contractNum = flag.Int("rand_contract", 0, "use to specify the number of random contract which used in stress test")
 var load = flag.Bool("load", false, "use the generated transaction saved in the file")
 var estimation = flag.Int("e", 0, "use to specify the statistic estimation")
+var accountNum = flag.Int("acct_num", 0, "use to specify the account num")
+var simulate = flag.Bool("simulate", false, "use to specify the simulate")
 
 func main() {
 	flag.Parse()
 	if *option == "" {
 		flag.PrintDefaults()
 	} else if strings.ToLower(*option) == "account" {
-		builtin.NewAccount(*password, *silense, *keystore)
+		builtin.NewAccount(*password, *silense)
 	} else if strings.ToLower(*option) == "transaction" {
-		builtin.NewTransaction(*password, *from, *to, *timestamp,*amount, *payload, *t, *ip, *port,*silense, *keystore)
+		builtin.NewTransaction(*password, *from, *to, *timestamp,*amount, *payload, *t, *ip, *port, *silense, *simulate)
 	} else if strings.ToLower(*option) == "execute_transaction"{
-		builtin.ExecuteTransaction(*password, *from, *to, *timestamp, *amount, *payload, *t, *ip, *port, *silense, *keystore)
-	} else if strings.ToLower(*option) == "stress_test" {
-		builtin.StressTest(*nodeFile, *duration, *tps, *instant, *testType, *ratio, *normalTxNum, *contractTxNum, *contractNum, *code, *methoddata,*silense, *load, *estimation, *keystore)
+		builtin.ExecuteTransaction(*password, *from, *to, *timestamp, *amount, *payload, *t, *ip, *port, *silense, *simulate)
+	}  else if strings.ToLower(*option) == "nh" {
+		builtin.NHBANK(*tps, *instant, *duration, *estimation, *simulate)
+	} else if strings.ToLower(*option) == "accounts" {
+		builtin.NewAccounts(*accountNum, "123", false)
 	}
 }
 

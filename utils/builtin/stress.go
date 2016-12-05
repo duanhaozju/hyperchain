@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func StressTest(nodeFile string, duration int, tps int, instant int, testType int, ratio float64, randNormalTx int, randContractTx int, randContract int, code string, methoddata string, silense bool, load bool, estimation int, keystore string) bool {
+func StressTest(nodeFile string, duration int, tps int, instant int, testType int, ratio float64, randNormalTx int, randContractTx int, randContract int, code string, methoddata string, silense bool, load bool, estimation int) bool {
 	if tps == 0 || instant == 0 {
 		output(silense, "invalid tps or instant parameter")
 		return false
@@ -84,6 +84,24 @@ func sendRequest(address string, testType int, ratio float64, wg sync.WaitGroup)
 			return
 		}
 		cmd = contractTxPool[rand.Intn(len(contractTxPool))]
+	} else if testType == 2 {
+		// nonghang actual transaction
+		cmd, _ = NewTransaction(genesisPassword, globalAccounts[rand.Intn(len(globalAccounts))], NHcontract, time.Now().UnixNano(), 0, NHmethod2, 1, "", 0, true, false)
+		pattern, _ := regexp.Compile(".*'(.*?)'")
+		ret := pattern.FindStringSubmatch(cmd)
+		if ret == nil || len(ret) < 2 {
+			return
+		}
+		cmd = ret[1]
+	} else if testType == 3 {
+		// nonghang simulate transaction
+		cmd, _ = NewTransaction(genesisPassword, globalAccounts[rand.Intn(len(globalAccounts))], NHcontract, time.Now().UnixNano(), 0, NHmethod2, 1, "", 0, true, true)
+		pattern, _ := regexp.Compile(".*'(.*?)'")
+		ret := pattern.FindStringSubmatch(cmd)
+		if ret == nil || len(ret) < 2 {
+			return
+		}
+		cmd = ret[1]
 	} else {
 		if normalTxPool == nil || contractTxPool == nil {
 			logger.Fatal("empty contract transaction pool or normal transaction pool")
@@ -162,7 +180,7 @@ func generateNormalTransaction(load bool, n int) {
 		sender := genesisAccount[rand.Intn(len(genesisAccount))]
 		receiver := generateAddress()
 		amount := generateTransferAmount()
-		command, success := NewTransaction(genesisPassword, sender, receiver, 0, amount, "", 0, "localhost", 8081, true, keystore)
+		command, success := NewTransaction(genesisPassword, sender, receiver, 0, amount, "", 0, "localhost", 8081, true, false)
 
 		if success == false {
 			logger.Error("create normal transaction failed")
@@ -218,7 +236,7 @@ func generateContractTransaction(load bool, n, m int, code, methoddata string) {
 				methoddata = methodid
 			}
 		}
-		command, success := NewTransaction(genesisPassword, sender, receiver, 0, 0, methoddata, 1, "localhost", 8081, true, keystore)
+		command, success := NewTransaction(genesisPassword, sender, receiver, 0, 0, methoddata, 1, "localhost", 8081, true, false)
 		if success == false {
 			logger.Error("create contract transaction failed")
 		} else {
@@ -244,7 +262,7 @@ func generateContract(n int, code string) {
 		if code == "" {
 			code = payload
 		}
-		command, success := NewTransaction(genesisPassword, sender, "", 0, 0, code, 1, "localhost", 8081, true, keystore)
+		command, success := NewTransaction(genesisPassword, sender, "", 0, 0, code, 1, "localhost", 8081, true, false)
 		if success {
 			pattern, _ := regexp.Compile(".*'(.*)'")
 			ret := pattern.FindStringSubmatch(command)

@@ -11,7 +11,7 @@ import (
 	"math/rand"
 )
 
-func NewAccount(password string, silense bool, keystore string) (string, bool) {
+func NewAccount(password string, silense bool) (string, bool) {
 	if password == "" {
 		output(silense, "Please enter your password")
 		return "", false
@@ -28,8 +28,16 @@ func NewAccount(password string, silense bool, keystore string) (string, bool) {
 		return account.Address.Hex(), true
 	}
 }
-
-func NewTransaction(password string, from string, to string, timestamp int64, amount int64, payload string, t int, ip string, port int, silense bool, keystore string) (string, bool) {
+func NewAccounts(count int, password string, silense bool) bool {
+	if password == "" {
+		password = genesisPassword
+	}
+	for i := 0; i < count; i += 1 {
+		NewAccount(password, silense)
+	}
+	return true
+}
+func NewTransaction(password string, from string, to string, timestamp int64, amount int64, payload string, t int, ip string, port int, silense bool, simulate bool) (string, bool) {
 	if password == "" {
 		output(silense, "Please enter your password")
 		if silense == false {
@@ -45,7 +53,7 @@ func NewTransaction(password string, from string, to string, timestamp int64, am
 	if from != "" {
 		_from = from
 	} else {
-		_from, success = NewAccount(password, silense, keystore)
+		_from, success = NewAccount(password, silense)
 		if success == false {
 			output(silense, "Create account failed!")
 			return "", false
@@ -67,7 +75,6 @@ func NewTransaction(password string, from string, to string, timestamp int64, am
 	} else {
 		_to = to
 	}
-	am := accounts.NewAccountManager(keystore, encryption)
 	if t == 0 {
 		txValue := types.NewTransactionValue(int64(defaultGasPrice), int64(defaultGas), _amount, nil)
 		value, _ := proto.Marshal(txValue)
@@ -85,7 +92,12 @@ func NewTransaction(password string, from string, to string, timestamp int64, am
 		output(silense, "\tvalue:", _amount)
 		output(silense, "\tsignature:", common.Bytes2Hex(signature))
 		output(silense, "JSONRPC COMMAND:")
-		command := fmt.Sprintf("curl %s:%d --data '{\"jsonrpc\":\"2.0\",\"method\":\"tx_sendTransaction\",\"params\":[{\"from\":\"%s\",\"to\":\"%s\",\"timestamp\":%d,\"value\":%d,\"signature\":\"%s\"}],\"id\":1}'", ip, port,_from, _to, _timestamp, _amount, common.Bytes2Hex(signature))
+		var command string
+		if simulate == true {
+			command = fmt.Sprintf("curl %s:%d --data '{\"jsonrpc\":\"2.0\",\"method\":\"tx_sendTransaction\",\"params\":[{\"from\":\"%s\",\"to\":\"%s\",\"timestamp\":%d,\"value\":%d,\"signature\":\"%s\",\"simulate\":true}],\"id\":1}'", ip, port,_from, _to, _timestamp, _amount, common.Bytes2Hex(signature))
+		} else {
+			command = fmt.Sprintf("curl %s:%d --data '{\"jsonrpc\":\"2.0\",\"method\":\"tx_sendTransaction\",\"params\":[{\"from\":\"%s\",\"to\":\"%s\",\"timestamp\":%d,\"value\":%d,\"signature\":\"%s\"}],\"id\":1}'", ip, port,_from, _to, _timestamp, _amount, common.Bytes2Hex(signature))
+		}
 		output(silense, "\t", command)
 		return command, true
 	} else {
@@ -112,11 +124,21 @@ func NewTransaction(password string, from string, to string, timestamp int64, am
 		output(silense, "\tsignature:", common.Bytes2Hex(signature))
 		output(silense, "JSONRPC COMMAND:")
 		if to == "" {
-			command := fmt.Sprintf("curl %s:%d --data '{\"jsonrpc\":\"2.0\",\"method\":\"contract_deployContract\",\"params\":[{\"from\":\"%s\",\"timestamp\":%d,\"payload\":\"%s\",\"signature\":\"%s\"}],\"id\":1}'", ip, port,_from, _timestamp, _payload, common.Bytes2Hex(signature))
+			var command string
+			if simulate {
+				command = fmt.Sprintf("curl %s:%d --data '{\"jsonrpc\":\"2.0\",\"method\":\"contract_deployContract\",\"params\":[{\"from\":\"%s\",\"timestamp\":%d,\"payload\":\"%s\",\"signature\":\"%s\",\"simulate\":true}],\"id\":1}'", ip, port,_from, _timestamp, _payload, common.Bytes2Hex(signature))
+			} else {
+				command = fmt.Sprintf("curl %s:%d --data '{\"jsonrpc\":\"2.0\",\"method\":\"contract_deployContract\",\"params\":[{\"from\":\"%s\",\"timestamp\":%d,\"payload\":\"%s\",\"signature\":\"%s\"}],\"id\":1}'", ip, port,_from, _timestamp, _payload, common.Bytes2Hex(signature))
+			}
 			output(silense, "\t", command)
 			return command, true
 		} else {
-			command := fmt.Sprintf("curl %s:%d --data '{\"jsonrpc\":\"2.0\",\"method\":\"contract_invokeContract\",\"params\":[{\"from\":\"%s\", \"to\":\"%s\",\"timestamp\":%d,\"payload\":\"%s\",\"signature\":\"%s\"}],\"id\":1}'", ip, port,_from, to, _timestamp, _payload, common.Bytes2Hex(signature))
+			var command string
+			if simulate {
+				command = fmt.Sprintf("curl %s:%d --data '{\"jsonrpc\":\"2.0\",\"method\":\"contract_invokeContract\",\"params\":[{\"from\":\"%s\", \"to\":\"%s\",\"timestamp\":%d,\"payload\":\"%s\",\"signature\":\"%s\",\"simulate\":true}],\"id\":1}'", ip, port,_from, to, _timestamp, _payload, common.Bytes2Hex(signature))
+			} else {
+				command = fmt.Sprintf("curl %s:%d --data '{\"jsonrpc\":\"2.0\",\"method\":\"contract_invokeContract\",\"params\":[{\"from\":\"%s\", \"to\":\"%s\",\"timestamp\":%d,\"payload\":\"%s\",\"signature\":\"%s\"}],\"id\":1}'", ip, port,_from, to, _timestamp, _payload, common.Bytes2Hex(signature))
+			}
 			output(silense, "\t", command)
 			return command, true
 		}
