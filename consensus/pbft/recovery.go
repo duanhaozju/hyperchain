@@ -263,7 +263,7 @@ func (pbft *pbftProtocal) fetchRecoveryPQC(peers []uint64) events.Event {
 // returnRecoveryPQC return  recovery PQC to the peer behind
 func (pbft *pbftProtocal) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 
-	logger.Noticef("Replica %d now returnRecoveryPQC", pbft.id)
+	logger.Debugf("Replica %d now returnRecoveryPQC", pbft.id)
 
 	dest, h := fetch.ReplicaId, fetch.H
 

@@ -58,6 +58,7 @@ message AddNodeMessage {
 }
 
 message DelNodeMessage {
-    bytes payload = 1;
-    uint64 id = 2;
+    bytes delHash = 1;
+    string routerHash = 2;
+    uint64 id = 3;
 }

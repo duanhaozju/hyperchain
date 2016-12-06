@@ -137,9 +137,10 @@ func (pbft *pbftProtocal) getAddNodeCert(digest string) (cert *addNodeCert) {
 }
 
 // Given a ip/digest get the addnode Cert
-func (pbft *pbftProtocal) getDelNodeCert(digest string) (cert *delNodeCert) {
+func (pbft *pbftProtocal) getDelNodeCert(delHash string, routerHash string) (cert *delNodeCert) {
 
-	cert, ok := pbft.delNodeCertStore[digest]
+	id := delID{delHash: delHash, routerHash: routerHash}
+	cert, ok := pbft.delNodeCertStore[id]
 
 	if ok {
 		return
@@ -151,7 +152,7 @@ func (pbft *pbftProtocal) getDelNodeCert(digest string) (cert *delNodeCert) {
 		delNodes:	dels,
 		agrees:		agrees,
 	}
-	pbft.delNodeCertStore[digest] = cert
+	pbft.delNodeCertStore[id] = cert
 
 	return
 }

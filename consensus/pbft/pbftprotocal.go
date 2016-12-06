@@ -134,7 +134,7 @@ type pbftProtocal struct {
 	delNodeTimer 		events.Timer				// track timeout for del node responses
 	delNodeTimeout		time.Duration           	// time limit for del node responses
 	inDeletingNode		bool						// track if replica is in adding node
-	delNodeCertStore	map[string]*delNodeCert		// track the received add node agree message
+	delNodeCertStore	map[delID]*delNodeCert		// track the received add node agree message
 }
 
 type qidx struct {
@@ -196,7 +196,13 @@ type addNodeCert struct {
 	finishUpdate	bool
 }
 
+type delID struct{
+	delHash		string
+	routerHash	string
+}
+
 type delNodeCert struct {
+	newId			uint64
 	delNodes		map[DelNode]bool
 	delCount		int
 	finishDel		bool
@@ -316,7 +322,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
 	pbft.cacheValidatedBatch = make(map[string]*cacheBatch)
 	pbft.addNodeCertStore = make(map[string]*addNodeCert)
-	pbft.delNodeCertStore = make(map[string]*delNodeCert)
+	pbft.delNodeCertStore = make(map[delID]*delNodeCert)
 
 	pbft.isNewNode = false
 	pbft.inAddingNode = false

@@ -163,6 +163,7 @@ message add_node {
 message del_node {
     uint64 replica_id = 1;
     string key = 2;
+    string router_hash = 3;
 }
 
 message ready_for_n {
@@ -173,7 +174,8 @@ message ready_for_n {
 message update_n {
     uint64 replica_id = 1;
     string key = 2;
-    int64 n = 3;
+    string routerHash = 3;
+    int64 n = 4;
     uint64 view = 5;
     uint64 seqNo = 6;
     bool flag = 7;
@@ -182,7 +184,8 @@ message update_n {
 message agree_update_n {
     uint64 replica_id = 1;
     string key = 2;
-    int64 n = 3;
+    string routerHash = 3;
+    int64 n = 4;
     uint64 view = 5;
     uint64 seqNo = 6;
     bool flag = 7;

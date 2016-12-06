@@ -97,7 +97,6 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"account_getBalance","para
 # 得到节点信息
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "node_getNodeHash","params":[],"id": 1}'
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "node_delNode","params":[{"nodehash":<nodehash>}],"id": 1}'
-curl localhost:8081 --data '{"jsonrpc":"2.0","method": "node_getNodeHash","params":[],"id": 1}'
 
 
 ################################# 批量调用例子 ###################################
