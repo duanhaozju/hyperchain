@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"errors"
+	"sort"
 )
 
 type PeersPool struct {
@@ -159,7 +160,7 @@ func (this *PeersPool)ToRoutingTable() pb.Routers {
 	//sort.Sort(routers)
 	return routers
 }
-// get routing table with specific hash
+// get routing table without specificToRoutingTableWithout hash
 func (this *PeersPool)ToRoutingTableWithout(hash string)pb.Routers{
 	peers := this.GetPeers()
 	var routers pb.Routers
@@ -170,8 +171,11 @@ func (this *PeersPool)ToRoutingTableWithout(hash string)pb.Routers{
 		}
 		routers.Routers = append(routers.Routers, pers.RemoteAddr)
 	}
+	localNode := this.localNode;
+	//加入自己
+	routers.Routers = append(routers.Routers,&localNode)
 	//需要进行排序
-	//sort.Sort(routers)
+	sort.Sort(routers)
 	return routers
 }
 
