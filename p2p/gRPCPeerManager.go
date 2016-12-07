@@ -497,9 +497,10 @@ func (this *GrpcPeerManager) GetRouterHashifDelete(hash string) (string,uint64){
 	hash = hex.EncodeToString(hasher.Hash(routers).Bytes())
 
 	var ID uint64
-	for _,pers := range this.peersPool.GetPeers(){
-		if pers.Addr.Hash == hash{
-			ID=pers.Addr.ID
+	localHash := this.LocalNode.address.Hash
+	for i,rs := range routers.Routers{
+		if rs.Hash == localHash{
+			ID=i+1;
 		}
 	}
 	return hex.EncodeToString(hasher.Hash(routers).Bytes()),ID
@@ -518,6 +519,7 @@ func (this *GrpcPeerManager)  DeleteNode(hash string) error{
 				this.peersPool.DeletePeer(pers)
 			}
 		}
+		//TODO update node id
 
 	}
 	return nil
