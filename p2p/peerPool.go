@@ -9,6 +9,8 @@ import (
 	"strings"
 	"errors"
 	"sort"
+	"hyperchain/jsonrpc/restful/routers"
+	"hyperchain/p2p/peerComm"
 )
 
 type PeersPool struct {
@@ -176,6 +178,10 @@ func (this *PeersPool)ToRoutingTableWithout(hash string)pb.Routers{
 	routers.Routers = append(routers.Routers,&localNode)
 	//需要进行排序
 	sort.Sort(routers)
+
+	for idx,_ := range routers.Routers{
+		routers.Routers[idx].ID = uint64(idx+1)
+	}
 	return routers
 }
 
