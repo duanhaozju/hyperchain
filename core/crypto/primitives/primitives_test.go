@@ -356,12 +356,14 @@ func TestX509(t *testing.T) {
 
 	// Generate a self signed cert
 	der, key, err := NewSelfSignedCert()
+	//fmt.Println(der)
 	if err != nil {
 		t.Fatalf("Failed genereting self signed cert")
 	}
 
 	// Test DERCertToPEM
 	pem := DERCertToPEM(der)
+	fmt.Println(string(pem))
 	certFromPEM, derFromPem, err := PEMtoCertificateAndDER(pem)
 	if err != nil {
 		t.Fatalf("Failed converting PEM to (x509, DER) [%s]", err)
