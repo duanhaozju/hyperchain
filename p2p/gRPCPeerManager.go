@@ -493,8 +493,11 @@ func (this *GrpcPeerManager) GetLocalNodeHash() string{
 
 func (this *GrpcPeerManager) GetRouterHashifDelete(hash string) (string,uint64){
 	hasher := crypto.NewKeccak256Hash("keccak256Hanser")
+	log.Warning("hasher: ", hasher)
 	routers := this.peersPool.ToRoutingTableWithout(hash)
+	log.Warning("router: ", routers)
 	hash = hex.EncodeToString(hasher.Hash(routers).Bytes())
+	log.Warning("hash: ", hash)
 
 	var ID uint64
 	for _,pers := range this.peersPool.GetPeers(){
