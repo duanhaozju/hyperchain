@@ -10,7 +10,7 @@ import (
 )
 
 type NodeArgs struct {
-	nodeHash string `json:"nodehash"`
+	NodeHash string `json:"nodehash"`
 }
 
 type PublicNodeAPI struct{
@@ -53,7 +53,7 @@ func (node *PublicNodeAPI) DelNode(args NodeArgs) error {
 		return errors.New("protocolManager is nil")
 	}
 	node.pm.GetEventObject().Post(event.DelPeerEvent{
-		Payload: []byte(args.nodeHash),
+		Payload: []byte(args.NodeHash),
 	})
 	return nil
 }

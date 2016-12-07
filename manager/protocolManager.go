@@ -299,7 +299,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 				RouterHash: routerHash,
 				Id: id,
 			}
-			log.Warning("DelPeerEvent", "delHash: ", delHash, "routerHash: ", routerHash, "id: ", id)
+			log.Warning("DelPeerEvent", "delHash: ", delHash, "delstring: ", string(delHash),"routerHash: ", routerHash, "id: ", id)
 			self.consenter.RecvLocal(msg)
 		case event.BroadcastDelPeerEvent:
 			log.Warning("BroadcastDelPeerEvent")
