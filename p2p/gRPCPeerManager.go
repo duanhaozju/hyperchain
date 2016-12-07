@@ -520,6 +520,29 @@ func (this *GrpcPeerManager)  DeleteNode(hash string) error{
 			}
 		}
 		//TODO update node id
+		hasher := crypto.NewKeccak256Hash("keccak256Hanser")
+		routers := this.peersPool.ToRoutingTableWithout(hash)
+		hash = hex.EncodeToString(hasher.Hash(routers).Bytes())
+
+		if hash == this.LocalNode.address.Hash {
+			log.Critical("THIS NODE WAS BEEN CLOSED...")
+			return nil
+		}
+
+		for _,per :=range this.peersPool.GetPeers(){
+			if per.Addr.Hash == hash{
+				this.peersPool.DeletePeer(per)
+			}else{
+				for _,router := range routers.Routers{
+					if router.Hash == per.Addr.Hash{
+						per.Addr = peerComm.ExtractAddress(router.IP,router.Port,router.ID)
+					}
+				}
+			}
+
+		}
+		return nil
+
 
 	}
 	return nil
