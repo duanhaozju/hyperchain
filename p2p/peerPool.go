@@ -9,7 +9,6 @@ import (
 	"strings"
 	"errors"
 	"sort"
-	"hyperchain/jsonrpc/restful/routers"
 	"hyperchain/p2p/peerComm"
 )
 
@@ -22,19 +21,19 @@ type PeersPool struct {
 	tempPeerKeys map[pb.PeerAddress]string
 	TEM          transport.TransportEncryptManager
 	alivePeers   int
-	localNode    pb.PeerAddress
+	localNode    *pb.PeerAddress
 }
 
 // the peers pool instance
 var prPoolIns PeersPool
 
 // NewPeerPool get a new peer pool instance
-func NewPeerPool(TEM transport.TransportEncryptManager) *PeersPool {
+func NewPeerPool(TEM transport.TransportEncryptManager,port int64,id uint64) *PeersPool {
 	var newPrPoolIns PeersPool
 	newPrPoolIns.peers = make(map[string]*Peer)
 	newPrPoolIns.peerAddr = make(map[string]pb.PeerAddress)
 	newPrPoolIns.peerKeys = make(map[pb.PeerAddress]string)
-
+	newPrPoolIns.localNode = peerComm.ExtractAddress(peerComm.GetLocalIp(),port,id)
 	newPrPoolIns.tempPeers = make(map[string]*Peer)
 	newPrPoolIns.tempPeerAddr = make(map[string]pb.PeerAddress)
 	newPrPoolIns.tempPeerKeys = make(map[pb.PeerAddress]string)
@@ -173,12 +172,12 @@ func (this *PeersPool)ToRoutingTableWithout(hash string)pb.Routers{
 		}
 		routers.Routers = append(routers.Routers, pers.RemoteAddr)
 	}
-	localNode := this.localNode;
 	//加入自己
-	routers.Routers = append(routers.Routers,&localNode)
+	routers.Routers = append(routers.Routers,this.localNode)
 	//需要进行排序
+	log.Error("old routers: ", routers.Routers)
 	sort.Sort(routers)
-
+	log.Error("new routers: ", routers.Routers)
 	for idx,_ := range routers.Routers{
 		routers.Routers[idx].ID = uint64(idx+1)
 	}
@@ -189,7 +188,7 @@ func (this *PeersPool)ToRoutingTableWithout(hash string)pb.Routers{
 // merge the route into the temp peer list
 func (this *PeersPool)MergeFormRoutersToTemp(routers pb.Routers) {
 	for _, peerAddress := range routers.Routers {
-		newPeer, err := NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, uint64(this.alivePeers + 1), this.TEM, &this.localNode,this)
+		newPeer, err := NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, uint64(this.alivePeers + 1), this.TEM, this.localNode,this)
 		if err != nil {
 			log.Error("merge from routers error ", err)
 		}

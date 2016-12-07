@@ -1,7 +1,5 @@
 package peermessage
 
-import "strings"
-
 // Len is the number of elements in the collection.
 func (routers Routers) Len() int {
 	return len(routers.Routers)
@@ -21,11 +19,7 @@ func (routers Routers) Less(i, j int) bool {
 	id1 := routers.Routers[i].ID
 	id2 := routers.Routers[j].ID
 
-	if id1 - id2 >=0{
-		return true;
-	} else{
-		return false;
- 	}
+	return id1 < id2
 
 }
 // Swap swaps the elements with indexes i and j.

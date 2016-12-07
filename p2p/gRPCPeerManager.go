@@ -74,9 +74,6 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 		log.Error("the gRPC Manager hasn't initlized")
 		os.Exit(1)
 	}
-	// 重构peerpool 不采用单例模式进行管理
-	this.peersPool = NewPeerPool(this.TEM)
-	this.LocalNode = NewNode(GRPCProt, eventMux, this.NodeID, this.TEM,this.peersPool)
 	//newgRPCManager.IP = newgRPCManager.configs.GetIP(newgRPCManager.NodeID)
 	// 重构peerpool 不采用单例模式进行管理
 	port := this.configs.GetPort(this.NodeID)
@@ -84,7 +81,7 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 		port = GRPCProt
 	}
 
-	this.peersPool = NewPeerPool(this.TEM)
+	this.peersPool = NewPeerPool(this.TEM,GRPCProt,this.NodeID)
 	this.LocalNode = NewNode(port, eventMux, this.NodeID, this.TEM, this.peersPool)
 	this.LocalNode.StartServer()
 	this.LocalNode.N = MAX_PEER_NUM
@@ -493,7 +490,6 @@ func (this *GrpcPeerManager) GetLocalNodeHash() string{
 
 func (this *GrpcPeerManager) GetRouterHashifDelete(hash string) (string,uint64){
 	hasher := crypto.NewKeccak256Hash("keccak256Hanser")
-	log.Warning("hasher: ", hasher)
 	routers := this.peersPool.ToRoutingTableWithout(hash)
 	log.Warning("router: ", routers)
 	hash = hex.EncodeToString(hasher.Hash(routers).Bytes())
@@ -501,9 +497,13 @@ func (this *GrpcPeerManager) GetRouterHashifDelete(hash string) (string,uint64){
 
 	var ID uint64
 	localHash := this.LocalNode.address.Hash
-	for i,rs := range routers.Routers{
+	for _,rs := range routers.Routers{
+		log.Error("ID: ", rs.ID)
+		log.Notice("RS hash: ", rs.Hash)
 		if rs.Hash == localHash{
-			ID=i+1;
+			log.Notice("rs hash: ", rs.Hash)
+			log.Notice("id: ", rs.ID)
+			ID=rs.ID;
 		}
 	}
 	return hex.EncodeToString(hasher.Hash(routers).Bytes()),ID
@@ -538,7 +538,7 @@ func (this *GrpcPeerManager)  DeleteNode(hash string) error{
 			}else{
 				for _,router := range routers.Routers{
 					if router.Hash == per.Addr.Hash{
-						per.Addr = peerComm.ExtractAddress(router.IP,router.Port,router.ID)
+						per.Addr = *peerComm.ExtractAddress(router.IP,router.Port,router.ID)
 					}
 				}
 			}
