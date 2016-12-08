@@ -511,14 +511,19 @@ func (this *GrpcPeerManager) GetRouterHashifDelete(hash string) (string,uint64){
 
 
 func (this *GrpcPeerManager)  DeleteNode(hash string) error{
+	log.Warning("111111")
+	log.Warning("hash: ", hash)
 	if this.LocalNode.address.Hash == hash {
+		log.Warning("222222")
 		// delete local node and stop all server
 		this.LocalNode.StopServer()
 
 	} else{
+		log.Warning("333333")
 		// delete the specific node
 		for _,pers := range this.peersPool.GetPeers(){
 			if pers.Addr.Hash == hash{
+				log.Warning("444444")
 				this.peersPool.DeletePeer(pers)
 			}
 		}

@@ -176,7 +176,7 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 }
 
 func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
-	logger.Infof("Replica %d received view-change from replica %d, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
+	logger.Warningf("Replica %d received view-change from replica %d, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		pbft.id, vc.ReplicaId, vc.View, vc.H, len(vc.Cset), len(vc.Pset), len(vc.Qset))
 
 	if pbft.inNegoView {

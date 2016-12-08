@@ -44,8 +44,12 @@ func (pbft *pbftProtocal) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 // Replica receive local message about new node and routing table
 func (pbft *pbftProtocal) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 
-	key := string(msg.DelHash)
-	logger.Errorf("Replica %d received local delnode message for del node %v", pbft.id, msg.DelHash)
+	key := string(msg.DelPayload)
+	logger.Errorf("Replica %d received local delnode message for del node %s", pbft.id, key)
+	if pbft.N == 4 {
+		logger.Criticalf("Replica %d receive del msg, but we don't support delete as there're only 4 nodes")
+		return nil
+	}
 
 	pbft.inDeletingNode = true
 	pbft.newid = msg.Id
@@ -177,11 +181,12 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 			}
 			logger.Warningf("Replica %d have already finished adding node, but still recevice add msg", pbft.id)
 			return nil
-		} else {
-			// TODO: or just follow others?
-			logger.Warningf("Replica %d haven't locally prepared for update routing table for %s, but others have agreed", pbft.id, key)
-			return nil
 		}
+	//else {
+	//		// TODO: or just follow others?
+	//		logger.Warningf("Replica %d haven't locally prepared for update routing table for %s, but others have agreed", pbft.id, key)
+	//		return nil
+	//	}
 	}
 
 	cert.finishAdd = true
@@ -196,18 +201,17 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 // Check if replica prepared for update routing table after del node
 func (pbft *pbftProtocal) maybeUpdateTableForDel(key string, routerHash string) error {
 
-	logger.Error("111111", "key: ", key)
 	cert := pbft.getDelNodeCert(key, routerHash)
 
 	if cert == nil {
 		logger.Errorf("Replica %d can't get the delnode cert for key=%v", pbft.id, key)
 		return nil
 	}
-	logger.Error("222222", ", count: ", cert.delCount)
+
 	if cert.delCount < pbft.committedReplicasQuorum() {
 		return nil
 	}
-	logger.Error("333333")
+
 	if !pbft.inDeletingNode {
 		if cert.finishDel {
 			if cert.delCount < pbft.N {
@@ -216,11 +220,12 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string, routerHash string) 
 			}
 			logger.Warningf("Replica %d have already finished deleting node, but still recevice del msg", pbft.id)
 			return nil
-		} else {
-			// TODO: or just follow others?
-			logger.Warningf("Replica %d haven't locally prepared for update routing table for %s, but others have agreed", pbft.id, key)
-			return nil
 		}
+		//} else {
+		//	// TODO: or just follow others?
+		//	logger.Warningf("Replica %d haven't locally prepared for update routing table for %s, but others have agreed", pbft.id, key)
+		//	return nil
+		//}
 	}
 
 	cert.finishDel = true
@@ -229,7 +234,9 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string, routerHash string) 
 	logger.Errorf("Replica %d try to update routing table", pbft.id)
 	pbft.helper.UpdateTable(payload, false)
 	pbft.inDeletingNode = false
-	pbft.sendUpdateNforDel(key, routerHash)
+	if pbft.primary(pbft.view) == pbft.id {
+		pbft.sendUpdateNforDel(key, routerHash)
+	}
 
 	return nil
 }
@@ -337,7 +344,7 @@ func (pbft *pbftProtocal) sendUpdateNforDel(key string, routerHash string) {
 	cert := pbft.getDelNodeCert(key, routerHash)
 
 	if cert == nil {
-		logger.Errorf("Primary %d can't get the addnode cert for key=%s", pbft.id, key)
+		logger.Errorf("Primary %d can't get the delnode cert for key=%s", pbft.id, key)
 		return
 	}
 
@@ -378,7 +385,7 @@ func (pbft *pbftProtocal) sendUpdateNforDel(key string, routerHash string) {
 
 func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 
-	logger.Debugf("Replica %d received updateN message from %d", pbft.id, update.ReplicaId)
+	logger.Criticalf("Replica %d received updateN message from %d", pbft.id, update.ReplicaId)
 
 	if !pbft.activeView {
 		logger.Warningf("Replica %d is in view change, reject the update_n message", pbft.id)
@@ -476,7 +483,7 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 
 func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) error {
 
-	logger.Debugf("Replica %d received agree updateN from replica %d for n=%d/view=%d",
+	logger.Criticalf("Replica %d received agree updateN from replica %d for n=%d/view=%d",
 		pbft.id, agree.ReplicaId, agree.N, agree.View)
 
 	if pbft.primary(pbft.view) == agree.ReplicaId {
@@ -523,17 +530,23 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, routerHash string, flag bo
 			return nil
 		}
 
-		if cert.finishUpdate && cert.updateCount < pbft.N + 1 {
-			logger.Debugf("Replica %d already finish update for digest %s", pbft.id, digest)
-			return nil
-		}
-
 		if cert.updateCount < pbft.committedReplicasQuorum() {
 			return nil
 		}
 
 		if cert.update == nil {
 			logger.Warningf("Replica %d haven't locally prepared for update_n, but got 2f prepared", pbft.id)
+			return nil
+		}
+
+		if cert.finishUpdate {
+			if cert.updateCount < pbft.N + 1 {
+				logger.Debugf("Replica %d already finish update for digest %s", pbft.id, digest)
+				return nil
+			} else {
+				logger.Warningf("Replica %d already finish update but still try to update N for digest %s", pbft.id, digest)
+				return nil
+			}
 		}
 
 		// update N, f, view
@@ -559,17 +572,23 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, routerHash string, flag bo
 			return nil
 		}
 
-		if cert.finishUpdate && cert.updateCount < pbft.N {
-			logger.Debugf("Replica %d already finish update for digest %s", pbft.id, digest)
-			return nil
-		}
-
 		if cert.updateCount < pbft.preparedReplicasQuorum() {
 			return nil
 		}
 
 		if cert.update == nil {
 			logger.Warningf("Replica %d haven't locally prepared for update_n, but got 2f prepared", pbft.id)
+			return nil
+		}
+
+		if cert.finishUpdate {
+			if cert.updateCount < pbft.N {
+				logger.Debugf("Replica %d already finish update for digest %s", pbft.id, digest)
+				return nil
+			} else {
+				logger.Warningf("Replica %d already finish update but still try to update N for digest %s", pbft.id, digest)
+				return nil
+			}
 		}
 
 		// update N, f, view

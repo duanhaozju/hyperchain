@@ -230,6 +230,7 @@ func (this *PeersPool)RejectTempPeers() {
 
 func (this *PeersPool)DeletePeer(p *Peer){
 	this.alivePeers -= 1
+	p.Connection.Close()
 	delete(this.peers, p.RemoteAddr.Hash)
 	delete(this.peerAddr, p.RemoteAddr.Hash)
 	delete(this.peerKeys, *p.RemoteAddr)

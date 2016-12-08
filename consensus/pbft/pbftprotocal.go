@@ -7,7 +7,6 @@ import (
 	"sort"
 	"sync"
 	"time"
-	"encoding/hex"
 
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
@@ -782,7 +781,7 @@ func (pbft *pbftProtocal) checkDuplicate(tx *types.Transaction) (ok bool) {
 	ok = true
 
 	for _, txStore := range pbft.duplicator {
-		key := hex.EncodeToString(tx.TransactionHash)
+		key := string(tx.TransactionHash)
 		if txStore.has(key) {
 			ok = false
 			break

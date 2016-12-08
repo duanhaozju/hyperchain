@@ -25,7 +25,7 @@ func (a *transactionStore) Len() int {
 
 func (a *transactionStore) wrapRequest(tx *types.Transaction) transactionContainer {
 	return transactionContainer{
-		key: hex.EncodeToString(tx.TransactionHash),
+		key: string(tx.TransactionHash),
 		tx: tx,
 	}
 }

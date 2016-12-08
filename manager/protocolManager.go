@@ -20,7 +20,6 @@ import (
 	"hyperchain/recovery"
 	"sync"
 	"time"
-	"encoding/hex"
 )
 
 var log *logging.Logger // package-level logger
@@ -292,14 +291,14 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			self.consenter.RecvMsg(ev.Payload)
 		case event.DelPeerEvent:
 			// a peer submit a request to exit the alliance
-			delHash := ev.Payload
-			routerHash, id := self.Peermanager.GetRouterHashifDelete(string(delHash))
+			log.Warning("DelPeerEvent")
+			payload := ev.Payload
+			routerHash, id := self.Peermanager.GetRouterHashifDelete(string(payload))
 			msg := &protos.DelNodeMessage{
-				DelHash: delHash,
+				DelPayload: payload,
 				RouterHash: routerHash,
 				Id: id,
 			}
-			log.Warning("DelPeerEvent", "delHash: ", delHash, "delstring: ", string(delHash),"routerHash: ", routerHash, "id: ", id)
 			self.consenter.RecvLocal(msg)
 		case event.BroadcastDelPeerEvent:
 			log.Warning("BroadcastDelPeerEvent")
@@ -318,7 +317,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			// deliver it to consensus module
 			self.consenter.RecvMsg(ev.Payload)
 		case event.UpdateRoutingTableEvent:
-			log.Debug("UpdateRoutingTableEvent")
+			log.Warning("UpdateRoutingTableEvent")
 			// a new peer's join chain request has been accepted
 			// update local routing table
 			// TODO notify consensus module to add flag
@@ -327,7 +326,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 				self.Peermanager.UpdateRoutingTable(ev.Payload)
 			} else {
 				// remove a peer
-				self.Peermanager.DeleteNode(hex.EncodeToString(ev.Payload))
+				self.Peermanager.DeleteNode(string(ev.Payload))
 			}
 		case event.AlreadyInChainEvent:
 			log.Debug("AlreadyInChainEvent")
