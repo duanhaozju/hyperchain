@@ -12,7 +12,13 @@ import (
 
 func (self *Transaction) BuildHash() common.Hash {
 	ch := crypto.NewKeccak256Hash("keccak256")
-	return ch.Hash(self)
+	return ch.Hash([]interface{}{
+		self.From,
+		self.To,
+		self.Timestamp,
+		self.Signature,
+		self.Value,
+	})
 }
 
 func (self *Transaction) GetTransactionHash() common.Hash {
