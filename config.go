@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-
 	logging "github.com/op/go-logging"
 	"github.com/spf13/viper"
 	"time"
@@ -27,6 +26,7 @@ type configs interface {
 	getSyncReplicaEnable() bool
 	getLicense() string
 	getRateLimitConfig() jsonrpc.RateLimitConfig
+	getStateType() string
 }
 
 type configsImpl struct {
@@ -51,6 +51,7 @@ type configsImpl struct {
 	txFillRate        string
 	contractRatePeak               int64
 	contractFillRate        string
+	stateType            string
 }
 
 //return a config instances
@@ -84,6 +85,7 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	cimpl.txFillRate = config.GetString("global.configs.ratelimit.txFillRate")
 	cimpl.contractRatePeak = config.GetInt64("global.configs.ratelimit.contractRatePeak")
 	cimpl.contractFillRate = config.GetString("global.configs.ratelimit.contractFillRate")
+	cimpl.stateType = config.GetString("global.structure.state")
 	return &cimpl
 }
 
@@ -135,3 +137,4 @@ func (cIml *configsImpl) getRateLimitConfig () jsonrpc.RateLimitConfig {
 		ContractFillRate: contractFillRate,
 	}
 }
+func (cIml *configsImpl) getStateType() string { return cIml.stateType }

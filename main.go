@@ -138,7 +138,9 @@ func main() {
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
 
 		//init block pool to save block
-		blockPool := blockpool.NewBlockPool(eventMux, cs)
+		blockPool := blockpool.NewBlockPool(eventMux, cs, blockpool.BlockPoolConfig{
+			StateType: config.getStateType(),
+		})
 		if blockPool == nil {
 			return errors.New("Initialize BlockPool failed")
 		}

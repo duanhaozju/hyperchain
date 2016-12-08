@@ -25,6 +25,7 @@ import (
 	"time"
 	"sort"
 	"errors"
+	"hyperchain/core/vm"
 )
 
 var (
@@ -33,6 +34,10 @@ var (
 
 func init() {
 	log = logging.MustGetLogger("block-pool")
+}
+
+type BlockPoolConfig struct {
+	StateType   string
 }
 
 type BlockRecord struct {
@@ -57,9 +62,10 @@ type BlockPool struct {
 	blockCache          *common.Cache
 	validationQueue     *common.Cache
 	queue               *common.Cache
+	conf                BlockPoolConfig
 }
 
-func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *BlockPool {
+func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter, conf BlockPoolConfig) *BlockPool {
 	var err error
 	blockcache, err := common.NewCache()
 	if err != nil {return nil}
@@ -84,6 +90,7 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *Block
 	blk, err := core.GetBlock(db, currentChain.LatestBlockHash)
 	if err != nil {return nil}
 	pool.lastValidationState.Store(common.BytesToHash(blk.MerkleRoot))
+	pool.conf = conf
 
 	log.Noticef("Block pool Initialize demandNumber :%d, demandseqNo: %d\n", pool.demandNumber, pool.demandSeqNo)
 	return pool
@@ -694,4 +701,12 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 	pool.lastValidationState.Store(common.BytesToHash(block.MerkleRoot))
 }
 
-
+func (pool *BlockPool) GetStateInstance() vm.Database {
+	switch pool.conf.StateType {
+	case "statedb":
+		return nil
+	default:
+		panic("no state type specified! Modify hyperchain global.yaml file in config directory")
+	}
+	return nil
+}

@@ -40,6 +40,9 @@ global:
         loglevel: "NOTICE"
     database:
         dir: "./build/database/"
+
+    structure:
+        state: "statedb" # two available options: statedb and hashtable
 ###########################
 # configs
 ############################
