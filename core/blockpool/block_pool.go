@@ -9,7 +9,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/consensus"
 	"hyperchain/core"
-	"hyperchain/core/state"
+	statedb "hyperchain/core/state"
 	"hyperchain/core/types"
 	"hyperchain/core/vm/params"
 	"hyperchain/crypto"
@@ -296,16 +296,16 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	if ok == false {
 		return errors.New("Get StateDB Status Failed!"), nil, nil, nil, nil, nil, invalidTxs
 	}
-	statedb, err := state.New(initStatus, db)
 
+	state, err := pool.GetStateInstance(initStatus, db)
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
 	env["currentGasLimit"] = "10000000"
-	vmenv := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
+	vmenv := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, state, env)
 
 	public_batch := db.NewBatch()
 	for i, tx := range txs {
-		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
+		state.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(*tx, vmenv)
 		if err != nil{
 			var errType types.InvalidTransactionRecord_ErrType
@@ -370,7 +370,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		receiptTrie.Update(append(core.ReceiptsPrefix, receipt.TxHash...), receiptValue)
 		validtxs = append(validtxs, tx)
 	}
-	root, err := statedb.Commit()
+	root, err := state.Commit()
 	if err != nil {
 		log.Error("Commit state db failed! error msg, ", err.Error())
 		return err, nil, nil, nil, nil, nil, invalidTxs
@@ -603,11 +603,11 @@ func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 	if ok == false {
 		return errors.New("Get StateDB Status Failed!")
 	}
-	statedb, err := state.New(initStatus, db)
+	state, err := pool.GetStateInstance(initStatus, db)
 	if err != nil {
 		return err
 	}
-	sandBox := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
+	sandBox := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, state, env)
 	receipt, _, _, err := core.ExecTransaction(*tx, sandBox)
 	if err != nil{
 		var errType types.InvalidTransactionRecord_ErrType
@@ -701,12 +701,13 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 	pool.lastValidationState.Store(common.BytesToHash(block.MerkleRoot))
 }
 
-func (pool *BlockPool) GetStateInstance() vm.Database {
+func (pool *BlockPool) GetStateInstance(root common.Hash, db hyperdb.Database) (vm.Database, error) {
 	switch pool.conf.StateType {
 	case "statedb":
-		return nil
+		return statedb.New(root, db)
+	case "hashtable":
+		return nil, nil
 	default:
-		panic("no state type specified! Modify hyperchain global.yaml file in config directory")
+		return nil, errors.New("no state type specified")
 	}
-	return nil
 }

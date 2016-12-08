@@ -81,11 +81,12 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	} else {
 		if !env.Db().Exist(*address) {
 			// IMPORTANT
-			// There is no necessary to judge whether the code is nil
-			// During the contract deploy the code is empty too!
+			// Never skip the virtual machine's execution by judge whether account's code field is empty
 			to = env.Db().CreateAccount(*address)
 			env.Transfer(from, to, value)
 		} else {
+			// IMPORTANT
+			// Never skip the virtual machine's execution by judge whether account's code field is empty
 			to = env.Db().GetAccount(*address)
 			env.Transfer(from, to, value)
 		}
@@ -164,6 +165,7 @@ func execDelegateCall(env vm.Environment, caller vm.ContractRef, originAddr, toA
 
 	ret, err = evm.Run(contract, input)
 	if err != nil {
+		// use all gas left in caller
 		contract.UseGas(contract.Gas)
 
 		env.SetSnapshot(snapshot)

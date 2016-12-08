@@ -22,7 +22,7 @@ type Environment interface {
 	// The state database
 	Db() Database
 	// Creates a restorable snapshot
-	 MakeSnapshot() Database
+	MakeSnapshot() Database
 	// Set database to previous snapshot
 	SetSnapshot(Database)
 	// Address of the original invoker (first occurrence of the VM invoker)
@@ -39,8 +39,9 @@ type Environment interface {
 	Difficulty() *big.Int
 	// The gas limit of the block
 	GasLimit() *big.Int
-	// Determines whether it's possible to transact
+	// Determines vm type
 	VmType() Type
+	// Determines whether it's possible to transact
 	CanTransfer(from common.Address, balance *big.Int) bool
 	// Transfers amount from one account to the other
 	Transfer(from, to Account, amount *big.Int)
@@ -93,6 +94,15 @@ type Database interface {
 	Delete(common.Address) bool
 	Exist(common.Address) bool
 	IsDeleted(common.Address) bool
+
+	StartRecord(common.Hash, common.Hash, int)
+	AddLog(log *Log)
+	GetLogs(hash common.Hash) Logs
+
+	Copy() Database
+	Set(Database)
+
+	Commit() (common.Hash, error)
 }
 
 // Account represents a contract or basic ethereum account.

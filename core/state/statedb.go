@@ -408,7 +408,7 @@ func (self *StateDB) CreateAccount(addr common.Address) vm.Account {
 
 // TODO it could be better
 // 1.from the stateObjectCacheSize
-func (self *StateDB) Copy() *StateDB {
+func (self *StateDB) Copy() vm.Database {
 	state, _ := New(common.Hash{}, self.db)
 	state.trie = self.trie
 	for k, stateObject := range self.stateObjects {
@@ -424,7 +424,12 @@ func (self *StateDB) Copy() *StateDB {
 	return state
 }
 
-func (self *StateDB) Set(state *StateDB) {
+func (self *StateDB) Set(db vm.Database) {
+	state, ok := db.(*StateDB)
+	if ok == false {
+		log.Error("Set statedb failed!")
+		return
+	}
 	self.trie = state.trie
 	self.stateObjects = state.stateObjects
 

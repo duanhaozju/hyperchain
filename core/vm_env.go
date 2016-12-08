@@ -96,7 +96,7 @@ func (r RuleSet) IsHomestead(n *big.Int) bool {
 type Env struct {
 	ruleSet    RuleSet
 	depth      int
-	state      *state.StateDB
+	state      vm.Database
 	Gas        *big.Int
 	origin     common.Address
 	coinbase   common.Address
@@ -112,7 +112,7 @@ type Env struct {
 	evm *vm.EVM
 }
 
-func NewEnv(ruleSet RuleSet, state *state.StateDB) *Env {
+func NewEnv(ruleSet RuleSet, state vm.Database) *Env {
 	env := &Env{
 		ruleSet: ruleSet,
 		state:   state,
@@ -120,7 +120,7 @@ func NewEnv(ruleSet RuleSet, state *state.StateDB) *Env {
 	return env
 }
 
-func NewEnvFromMap(ruleSet RuleSet, state *state.StateDB, envValues map[string]string) *Env {
+func NewEnvFromMap(ruleSet RuleSet, state vm.Database, envValues map[string]string) *Env {
 	env := NewEnv(ruleSet, state)
 	env.time = common.Big(envValues["currentTimestamp"])
 	env.gasLimit = common.Big(envValues["currentGasLimit"])
@@ -136,7 +136,6 @@ func NewEnvFromMap(ruleSet RuleSet, state *state.StateDB, envValues map[string]s
 
 func (self *Env) RuleSet() vm.RuleSet      { return self.ruleSet }
 func (self *Env) Vm() vm.Vm                { return self.evm }
-func (self *Env) State() *state.StateDB    { return self.state }
 func (self *Env) Origin() common.Address   { return self.origin }
 func (self *Env) BlockNumber() *big.Int    { return self.number }
 func (self *Env) Coinbase() common.Address { return self.coinbase }
@@ -160,7 +159,7 @@ func (self *Env) MakeSnapshot() vm.Database {
 	return self.state.Copy()
 }
 func (self *Env) SetSnapshot(copy vm.Database) {
-	self.state.Set(copy.(*state.StateDB))
+	self.state.Set(copy)
 }
 
 func (self *Env) Transfer(from, to vm.Account, amount *big.Int) {

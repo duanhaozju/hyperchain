@@ -5,7 +5,6 @@ package core
 import (
 	glog "github.com/op/go-logging"
 	"hyperchain/common"
-	"hyperchain/core/state"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 
@@ -26,13 +25,11 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		from = common.BytesToAddress(tx.From)
 		//sender = common.BytesToAddress(tx.From)
 		to = common.BytesToAddress(tx.To)
-		// TODO these there parameters should be added into the tx
 		tv         = tx.GetTransactionValue()
 		data       = tv.GetPayload()
 		gas        = big.NewInt(100000000)
 		gasPrice   = tv.GetGasPrice()
 		amount     = tv.GetAmount()
-		statedb, _ = env.Db().(*state.StateDB)
 	)
 	// TODO ZHZ_TEST the time of above will cost 10us
 
@@ -46,12 +43,11 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 	// TODO ZHZ_TEST the time of below will cost 10us
 	receipt = types.NewReceipt(nil, gas)
 	receipt.ContractAddress = addr.Bytes()
-	//todo add tx hash in tx struct
 	receipt.TxHash = tx.GetTransactionHash().Bytes()
 	// todo replace the gasused
 	receipt.GasUsed = 100000
 	receipt.Ret = ret
-	receipt.SetLogs(statedb.GetLogs(common.BytesToHash(receipt.TxHash)))
+	receipt.SetLogs(env.Db().GetLogs(common.BytesToHash(receipt.TxHash)))
 
 	if err != nil {
 		if !IsValueTransferErr(err) && !IsExecContractErr(err) {

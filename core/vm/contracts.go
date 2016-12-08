@@ -8,7 +8,6 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/crypto"
 	"hyperchain/core/vm/params"
-	"fmt"
 )
 
 
@@ -29,7 +28,6 @@ var Precompiled = PrecompiledContracts()
 // PrecompiledContracts returns the default set of precompiled ethereum
 // contracts defined by the ethereum yellow paper.
 func PrecompiledContracts() map[string]*PrecompiledAccount {
-	fmt.Errorf("I am initial PrecompiledAccount")
 	return map[string]*PrecompiledAccount{
 		// ECRECOVER
 		string(common.LeftPadBytes([]byte{1}, 20)): &PrecompiledAccount{func(l int) *big.Int {
