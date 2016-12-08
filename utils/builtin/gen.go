@@ -79,7 +79,9 @@ func NewTransaction(password string, from string, to string, timestamp int64, am
 		txValue := types.NewTransactionValue(int64(defaultGasPrice), int64(defaultGas), _amount, nil)
 		value, _ := proto.Marshal(txValue)
 		tx := types.NewTransaction(common.HexToAddress(_from).Bytes(), common.HexToAddress(_to).Bytes(), value, _timestamp)
+
 		signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), password)
+
 		if err != nil {
 			output(silense, "Create Transaction failed!, detail error message: ", err)
 			return "", false

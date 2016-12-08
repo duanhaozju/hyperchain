@@ -18,7 +18,7 @@ func (pbft *pbftProtocal) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 
 	pbft.isNewNode = true
 	pbft.inAddingNode = true
-	key := byteToString(msg.Payload)
+	key := string(msg.Payload)
 	pbft.localKey = key
 
 	return nil
@@ -32,7 +32,7 @@ func (pbft *pbftProtocal) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 		return nil
 	}
 
-	key := byteToString(msg.Payload)
+	key := string(msg.Payload)
 	logger.Debugf("Replica %d received local addNode message for new node %v", pbft.id, key)
 
 	pbft.inAddingNode = true
@@ -44,12 +44,12 @@ func (pbft *pbftProtocal) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 // Replica receive local message about new node and routing table
 func (pbft *pbftProtocal) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 
-	key := byteToString(msg.Payload)
-	logger.Debugf("Replica %d received local delnode message for del node %v", pbft.id, key)
+	key := string(msg.DelHash)
+	logger.Errorf("Replica %d received local delnode message for del node %v", pbft.id, msg.DelHash)
 
 	pbft.inDeletingNode = true
 	pbft.newid = msg.Id
-	pbft.sendAgreeDelNode(key)
+	pbft.sendAgreeDelNode(key, msg.RouterHash, msg.Id)
 
 	return nil
 }
@@ -86,13 +86,17 @@ func (pbft *pbftProtocal) sendAgreeAddNode(key string) {
 }
 
 // Repica broadcast delnode message for quit node
-func (pbft *pbftProtocal) sendAgreeDelNode(key string) {
+func (pbft *pbftProtocal) sendAgreeDelNode(key string, routerHash string, newId uint64) {
 
-	logger.Debugf("Replica %d try to send delnode message for quit node", pbft.id)
+	logger.Errorf("Replica %d try to send delnode message for quit node", pbft.id)
+
+	cert := pbft.getDelNodeCert(key, routerHash)
+	cert.newId = newId
 
 	del := &DelNode{
 		ReplicaId:	pbft.id,
 		Key:		key,
+		RouterHash:	routerHash,
 	}
 
 	payload, err := proto.Marshal(del)
@@ -134,10 +138,10 @@ func (pbft *pbftProtocal) recvAgreeAddNode(add *AddNode) error {
 // Replica received delnode for quit node
 func (pbft *pbftProtocal) recvAgreeDelNode(del *DelNode) error {
 
-	logger.Debugf("Replica %d received agree addnode from replica %d for %v",
+	logger.Errorf("Replica %d received agree delnode from replica %d for %v",
 		pbft.id, del.ReplicaId, del.Key)
 
-	cert := pbft.getDelNodeCert(del.Key)
+	cert := pbft.getDelNodeCert(del.Key, del.RouterHash)
 
 	ok := cert.delNodes[*del]
 	if ok {
@@ -148,7 +152,7 @@ func (pbft *pbftProtocal) recvAgreeDelNode(del *DelNode) error {
 	cert.delNodes[*del] = true
 	cert.delCount++
 
-	return pbft.maybeUpdateTableForDel(del.Key)
+	return pbft.maybeUpdateTableForDel(del.Key, del.RouterHash)
 }
 
 // Check if replica prepared for update routing table after add node
@@ -181,11 +185,7 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 	}
 
 	cert.finishAdd = true
-	payload, err := stringToByte(key)
-	if err != nil {
-		logger.Errorf("Replica %d parse string to byte error", pbft.id)
-		return nil
-	}
+	payload := []byte(key)
 
 	pbft.helper.UpdateTable(payload, true)
 	pbft.inAddingNode = false
@@ -194,19 +194,20 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 }
 
 // Check if replica prepared for update routing table after del node
-func (pbft *pbftProtocal) maybeUpdateTableForDel(key string) error {
+func (pbft *pbftProtocal) maybeUpdateTableForDel(key string, routerHash string) error {
 
-	cert := pbft.getDelNodeCert(key)
+	logger.Error("111111", "key: ", key)
+	cert := pbft.getDelNodeCert(key, routerHash)
 
 	if cert == nil {
 		logger.Errorf("Replica %d can't get the delnode cert for key=%v", pbft.id, key)
 		return nil
 	}
-
+	logger.Error("222222", ", count: ", cert.delCount)
 	if cert.delCount < pbft.committedReplicasQuorum() {
 		return nil
 	}
-
+	logger.Error("333333")
 	if !pbft.inDeletingNode {
 		if cert.finishDel {
 			if cert.delCount < pbft.N {
@@ -223,16 +224,12 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string) error {
 	}
 
 	cert.finishDel = true
-	payload, err := stringToByte(key)
-	if err != nil {
-		logger.Errorf("Replica %d parse string to byte error", pbft.id)
-		return nil
-	}
+	payload := []byte(key)
 
-	logger.Debugf("Replica %d try to update routing table", pbft.id)
+	logger.Errorf("Replica %d try to update routing table", pbft.id)
 	pbft.helper.UpdateTable(payload, false)
 	pbft.inDeletingNode = false
-	pbft.sendUpdateNforDel(key)
+	pbft.sendUpdateNforDel(key, routerHash)
 
 	return nil
 }
@@ -324,11 +321,11 @@ func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) error {
 	broadcast := consensusMsgHelper(msg, pbft.id)
 	pbft.helper.InnerBroadcast(broadcast)
 
-	return pbft.maybeUpdateN(ready.Key, true)
+	return pbft.maybeUpdateN(ready.Key, "", true)
 }
 
 // Primary send update_n after finish del node
-func (pbft *pbftProtocal) sendUpdateNforDel(key string) {
+func (pbft *pbftProtocal) sendUpdateNforDel(key string, routerHash string) {
 
 	logger.Errorf("Replica %d try to send update_n after finish del node", pbft.id)
 
@@ -337,7 +334,7 @@ func (pbft *pbftProtocal) sendUpdateNforDel(key string) {
 		return
 	}
 
-	cert := pbft.getDelNodeCert(key)
+	cert := pbft.getDelNodeCert(key, routerHash)
 
 	if cert == nil {
 		logger.Errorf("Primary %d can't get the addnode cert for key=%s", pbft.id, key)
@@ -356,6 +353,7 @@ func (pbft *pbftProtocal) sendUpdateNforDel(key string) {
 	updateN := &UpdateN{
 		ReplicaId:	pbft.id,
 		Key:		key,
+		RouterHash:	routerHash,
 		N:			n,
 		View: 		view,
 		Flag:		false,
@@ -375,7 +373,7 @@ func (pbft *pbftProtocal) sendUpdateNforDel(key string) {
 	broadcast := consensusMsgHelper(msg, pbft.id)
 	pbft.helper.InnerBroadcast(broadcast)
 
-	pbft.maybeUpdateN(key, false)
+	pbft.maybeUpdateN(key, routerHash, false)
 }
 
 func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
@@ -443,7 +441,7 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 			return nil
 		}
 
-		cert := pbft.getDelNodeCert(update.Key)
+		cert := pbft.getDelNodeCert(update.Key, update.RouterHash)
 		if cert == nil {
 			logger.Errorf("Primary %d can't get the delnode cert for key=%s", pbft.id, update.Key)
 			return nil
@@ -454,6 +452,7 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 		agree := &AgreeUpdateN{
 			ReplicaId:	pbft.id,
 			Key:		update.Key,
+			RouterHash:	update.RouterHash,
 			N:			n,
 			View:		view,
 			Flag:		false,
@@ -497,9 +496,9 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) error {
 		cert.agrees[*agree] = true
 		cert.updateCount++
 
-		return pbft.maybeUpdateN(agree.Key, true)
+		return pbft.maybeUpdateN(agree.Key, "", true)
 	} else {
-		cert := pbft.getDelNodeCert(agree.Key)
+		cert := pbft.getDelNodeCert(agree.Key, agree.RouterHash)
 
 		ok := cert.agrees[*agree]
 		if ok {
@@ -510,11 +509,11 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) error {
 		cert.agrees[*agree] = true
 		cert.updateCount++
 
-		return pbft.maybeUpdateN(agree.Key, false)
+		return pbft.maybeUpdateN(agree.Key, agree.RouterHash, false)
 	}
 }
 
-func (pbft *pbftProtocal) maybeUpdateN(digest string, flag bool) error {
+func (pbft *pbftProtocal) maybeUpdateN(digest string, routerHash string, flag bool) error {
 
 	if flag {
 		cert := pbft.getAddNodeCert(digest)
@@ -553,7 +552,7 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, flag bool) error {
 			pbft.id, pbft.N, pbft.f, pbft.view, pbft.keypoint)
 
 	} else {
-		cert := pbft.getAddNodeCert(digest)
+		cert := pbft.getDelNodeCert(digest, routerHash)
 
 		if cert == nil {
 			logger.Errorf("Replica %d can't get the cert for digest=%s", pbft.id, digest)
@@ -580,8 +579,10 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, flag bool) error {
 		pbft.N = int(cert.update.N)
 		pbft.view = cert.update.View
 		pbft.f = (pbft.N-1) / 3
-		logger.Noticef("Replica %d update after deleting, N=%d/f=%d/view=%d/keypoint=%d",
-			pbft.id, pbft.N, pbft.f, pbft.view, pbft)
+		oldId := pbft.id
+		pbft.id = cert.newId
+		logger.Noticef("Replica %d update after deleting, N=%d/f=%d/view=%d, new local id is %d",
+			oldId, pbft.N, pbft.f, pbft.view, pbft.id)
 	}
 
 	return nil

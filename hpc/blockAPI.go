@@ -233,14 +233,12 @@ func (blk *PublicBlockAPI) QueryEvmAvgTime(args SendQueryArgs) (int64, error) {
 	return evmTime, nil
 }
 
-func (blk *PublicBlockAPI) QueryTPS(args SendQueryArgs) (*StatisticResult, error) {
+func (blk *PublicBlockAPI) QueryTPS(args SendQueryArgs) (string, error) {
 	err, ret := core.CalBlockGPS(args.From.ToInt64(), args.To.ToInt64())
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return &StatisticResult{
-		BPS: ret,
-	}, nil
+	return  ret, nil
 }
 
 func (blk *PublicBlockAPI) QueryWriteTime(args SendQueryArgs) (*StatisticResult, error){
