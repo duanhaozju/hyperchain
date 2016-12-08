@@ -282,9 +282,6 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 
 	pbft.restoreState()
 
-	txStore := newTransactionStore()
-	pbft.duplicator[pbft.vid+1] = txStore
-
 	pbft.viewChangeSeqNo = ^uint64(0) // infinity
 	pbft.updateViewChangeSeqNo()
 
@@ -409,8 +406,6 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 		return nil
 	case clearDuplicator:
 		pbft.duplicator = make(map[uint64]*transactionStore)
-		txStore := newTransactionStore()
-		pbft.duplicator[pbft.h+1] = txStore
 	case *types.Transaction:
 		tx := e
 		return pbft.processTxEvent(tx)
@@ -736,9 +731,6 @@ func (pbft *pbftProtocal) sendBatch() error {
 	}
 	pbft.batchStore = nil
 	logger.Infof("Creating batch with %d requests", len(reqBatch.Batch))
-
-	reqStore := newTransactionStore()
-	pbft.duplicator[pbft.vid+2] = reqStore
 
 	go pbft.postPbftEvent(reqBatch)
 
