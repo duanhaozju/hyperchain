@@ -4,11 +4,18 @@ import (
 	"github.com/astaxie/beego"
 	"encoding/json"
 	"hyperchain/hpc"
-	"hyperchain/jsonrpc/restful/utils"
+	"hyperchain/rest_api/utils"
 )
 
 type ContractsController struct {
 	beego.Controller
+	PublicContractAPI *hpc.PublicContractAPI
+}
+
+func (c *ContractsController) Prepare() {
+	PublicContractAPIInterface := hpc.GetApiObjectByNamespace("contract").Service
+	PublicContractAPI := PublicContractAPIInterface.(*hpc.PublicContractAPI)
+	c.PublicContractAPI = PublicContractAPI
 }
 
 func (c *ContractsController) CompileContract() {
@@ -23,10 +30,7 @@ func (c *ContractsController) CompileContract() {
 		return
 	}
 
-	PublicContractAPIInterface := hpc.GetApiObjectByNamespace("contract").Service
-	PublicContractAPI := PublicContractAPIInterface.(*hpc.PublicContractAPI)
-
-	compiled_res, err := PublicContractAPI.CompileContract(jsonObj.Source)
+	compiled_res, err := c.PublicContractAPI.CompileContract(jsonObj.Source)
 	if err != nil {
 		c.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
 	} else {
@@ -45,10 +49,7 @@ func (c *ContractsController) DeployContract() {
 		return
 	}
 
-	PublicContractAPIInterface := hpc.GetApiObjectByNamespace("contract").Service
-	PublicContractAPI := PublicContractAPIInterface.(*hpc.PublicContractAPI)
-
-	hash, err := PublicContractAPI.DeployContract(args)
+	hash, err := c.PublicContractAPI.DeployContract(args)
 	if err != nil {
 		c.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
 	} else {
@@ -67,10 +68,7 @@ func (c *ContractsController) InvokeContract() {
 		return
 	}
 
-	PublicContractAPIInterface := hpc.GetApiObjectByNamespace("contract").Service
-	PublicContractAPI := PublicContractAPIInterface.(*hpc.PublicContractAPI)
-
-	hash, err := PublicContractAPI.InvokeContract(args)
+	hash, err := c.PublicContractAPI.InvokeContract(args)
 	if err != nil {
 		c.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
 	} else {
@@ -84,9 +82,6 @@ func (c *ContractsController) GetCode() {
 
 	p_blkNum := c.Input().Get("blockNumber")
 	p_address := c.Input().Get("address") // contract address
-
-	PublicContractAPIInterface := hpc.GetApiObjectByNamespace("contract").Service
-	PublicContractAPI := PublicContractAPIInterface.(*hpc.PublicContractAPI)
 
 	// check the number of params
 	if p_blkNum == ""{
@@ -106,10 +101,41 @@ func (c *ContractsController) GetCode() {
 	} else if address, err := utils.CheckAddress(p_address); err != nil{
 		c.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
 	} else {
-		if block, err := PublicContractAPI.GetCode(address, blkNum); err != nil {
+		if block, err := c.PublicContractAPI.GetCode(address, blkNum); err != nil {
 			c.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
 		} else {
 			c.Data["json"] = NewJSONObject(block, nil)
+		}
+	}
+	c.ServeJSON()
+}
+
+func (c *ContractsController) GetContractCountByAddr() {
+	p_blkNum := c.Input().Get("blockNumber")
+	p_address := c.Ctx.Input.Param(":address") // account address
+
+	// check the number of params
+	if p_blkNum == ""{
+		c.Data["json"] = NewJSONObject(nil, &invalidParamsError{"the param 'blockNumber' can't be empty"})
+		c.ServeJSON()
+		return
+	}
+	if p_address == "" {
+		c.Data["json"] = NewJSONObject(nil, &invalidParamsError{"the param 'address' can't be empty"})
+		c.ServeJSON()
+		return
+	}
+
+	// check params type
+	if blkNum, err := utils.CheckBlockNumber(p_blkNum); err != nil {
+		c.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
+	} else if address, err := utils.CheckAddress(p_address); err != nil{
+		c.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
+	} else {
+		if count, err := c.PublicContractAPI.GetContractCountByAddr(address, blkNum); err != nil {
+			c.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+		} else {
+			c.Data["json"] = NewJSONObject(count, nil)
 		}
 	}
 	c.ServeJSON()
