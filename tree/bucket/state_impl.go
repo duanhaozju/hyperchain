@@ -47,11 +47,8 @@ func (stateImpl *StateImpl) Initialize(configs map[string]interface{}) error {
 }
 
 // Get - method implementation for interface 'statemgmt.HashableState'
-// 根据key得到相应的value值，从openchaindb中,StateCF
 func (stateImpl *StateImpl) Get(chaincodeID string, key string) ([]byte, error) {
-	// 1.组装成一个新的key
 	dataKey := newDataKey(chaincodeID, key)
-	// 2.从数据库中得到相应的DataNode
 	dataNode, err := fetchDataNodeFromDB(dataKey)
 	if err != nil {
 		return nil, err
@@ -63,7 +60,6 @@ func (stateImpl *StateImpl) Get(chaincodeID string, key string) ([]byte, error) 
 }
 
 // PrepareWorkingSet - method implementation for interface 'statemgmt.HashableState'
-// 将StateDelta的内容加入到StateImpl.DataNodesDelta中
 func (stateImpl *StateImpl) PrepareWorkingSet(stateDelta *bucket.StateDelta) error {
 	logger.Debug("Enter - PrepareWorkingSet()")
 	if stateDelta.IsEmpty() {
@@ -77,9 +73,6 @@ func (stateImpl *StateImpl) PrepareWorkingSet(stateDelta *bucket.StateDelta) err
 }
 
 // ClearWorkingSet - method implementation for interface 'statemgmt.HashableState'
-// clear workingset有两种情况，如果已经change持久化了，则lasthash就是persistedhash，同时
-// 可以更新cache了，否则，把所有清光且持久化的hash即是上一次hash
-// lasthash是最新的hash，新于持久化hash
 func (stateImpl *StateImpl) ClearWorkingSet(changesPersisted bool) {
 	logger.Debug("Enter - ClearWorkingSet()")
 	if changesPersisted {
@@ -223,37 +216,38 @@ func (stateImpl *StateImpl) AddChangesForPersistence(writeBatch *gorocksdb.Write
 	return nil
 }
 
+// TODO it should be done later
 func (stateImpl *StateImpl) addDataNodeChangesForPersistence(writeBatch *gorocksdb.WriteBatch) {
-	openchainDB := db.GetDBHandle()
-	// 1.得到DataNodeDelta中所有的BucketKey
-	affectedBuckets := stateImpl.dataNodesDelta.getAffectedBuckets()
-	for _, affectedBucket := range affectedBuckets {
-		dataNodes := stateImpl.dataNodesDelta.getSortedDataNodesFor(affectedBucket)
-		for _, dataNode := range dataNodes {
-			if dataNode.isDelete() {
-				logger.Debugf("Deleting data node key = %#v", dataNode.dataKey)
-				writeBatch.DeleteCF(openchainDB.StateCF, dataNode.dataKey.getEncodedBytes())
-			} else {
-				logger.Debugf("Adding data node with value = %#v", dataNode.value)
-				writeBatch.PutCF(openchainDB.StateCF, dataNode.dataKey.getEncodedBytes(), dataNode.value)
-			}
-		}
-	}
+	//openchainDB := db.GetDBHandle()
+	//affectedBuckets := stateImpl.dataNodesDelta.getAffectedBuckets()
+	//for _, affectedBucket := range affectedBuckets {
+	//	dataNodes := stateImpl.dataNodesDelta.getSortedDataNodesFor(affectedBucket)
+	//	for _, dataNode := range dataNodes {
+	//		if dataNode.isDelete() {
+	//			logger.Debugf("Deleting data node key = %#v", dataNode.dataKey)
+	//			writeBatch.DeleteCF(openchainDB.StateCF, dataNode.dataKey.getEncodedBytes())
+	//		} else {
+	//			logger.Debugf("Adding data node with value = %#v", dataNode.value)
+	//			writeBatch.PutCF(openchainDB.StateCF, dataNode.dataKey.getEncodedBytes(), dataNode.value)
+	//		}
+	//	}
+	//}
 }
 
+// TODO it should be done later
 func (stateImpl *StateImpl) addBucketNodeChangesForPersistence(writeBatch *gorocksdb.WriteBatch) {
-	openchainDB := db.GetDBHandle()
-	secondLastLevel := conf.getLowestLevel() - 1
-	for level := secondLastLevel; level >= 0; level-- {
-		bucketNodes := stateImpl.bucketTreeDelta.getBucketNodesAt(level)
-		for _, bucketNode := range bucketNodes {
-			if bucketNode.markedForDeletion {
-				writeBatch.DeleteCF(openchainDB.StateCF, bucketNode.bucketKey.getEncodedBytes())
-			} else {
-				writeBatch.PutCF(openchainDB.StateCF, bucketNode.bucketKey.getEncodedBytes(), bucketNode.marshal())
-			}
-		}
-	}
+	//openchainDB := db.GetDBHandle()
+	//secondLastLevel := conf.getLowestLevel() - 1
+	//for level := secondLastLevel; level >= 0; level-- {
+	//	bucketNodes := stateImpl.bucketTreeDelta.getBucketNodesAt(level)
+	//	for _, bucketNode := range bucketNodes {
+	//		if bucketNode.markedForDeletion {
+	//			writeBatch.DeleteCF(openchainDB.StateCF, bucketNode.bucketKey.getEncodedBytes())
+	//		} else {
+	//			writeBatch.PutCF(openchainDB.StateCF, bucketNode.bucketKey.getEncodedBytes(), bucketNode.marshal())
+	//		}
+	//	}
+	//}
 }
 
 func (stateImpl *StateImpl) updateBucketCache() {

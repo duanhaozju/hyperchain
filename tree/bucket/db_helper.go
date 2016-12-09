@@ -4,7 +4,6 @@ import (
 )
 
 func fetchDataNodeFromDB(dataKey *dataKey) (*dataNode, error) {
-	/*
 	openchainDB := db.GetDBHandle()
 	nodeBytes, err := openchainDB.GetFromStateCF(dataKey.getEncodedBytes())
 	if err != nil {
@@ -19,7 +18,7 @@ func fetchDataNodeFromDB(dataKey *dataKey) (*dataNode, error) {
 	if nodeBytes == nil {
 		return nil, nil
 	}
-	return unmarshalDataNode(dataKey, nodeBytes), nil*/
+	return unmarshalDataNode(dataKey, nodeBytes), nil
 	return nil,nil
 }
 
