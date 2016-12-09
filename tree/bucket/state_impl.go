@@ -3,8 +3,9 @@ package buckettree
 import (
 	"bytes"
 	"github.com/op/go-logging"
-	"github.com/hyperledger/fabric/core/ledger/statemgmt"
 	"github.com/tecbot/gorocksdb"
+	"hyperchain/core/bucket"
+	"github.com/hyperledger/fabric/core/ledger/statemgmt"
 )
 
 var logger = logging.MustGetLogger("buckettree")
@@ -63,7 +64,7 @@ func (stateImpl *StateImpl) Get(chaincodeID string, key string) ([]byte, error) 
 
 // PrepareWorkingSet - method implementation for interface 'statemgmt.HashableState'
 // 将StateDelta的内容加入到StateImpl.DataNodesDelta中
-func (stateImpl *StateImpl) PrepareWorkingSet(stateDelta *statemgmt.StateDelta) error {
+func (stateImpl *StateImpl) PrepareWorkingSet(stateDelta *bucket.StateDelta) error {
 	logger.Debug("Enter - PrepareWorkingSet()")
 	if stateDelta.IsEmpty() {
 		logger.Debug("Ignoring working-set as it is empty")

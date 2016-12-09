@@ -4,6 +4,7 @@ import (
 )
 
 func fetchDataNodeFromDB(dataKey *dataKey) (*dataNode, error) {
+	/*
 	openchainDB := db.GetDBHandle()
 	nodeBytes, err := openchainDB.GetFromStateCF(dataKey.getEncodedBytes())
 	if err != nil {
@@ -18,12 +19,13 @@ func fetchDataNodeFromDB(dataKey *dataKey) (*dataNode, error) {
 	if nodeBytes == nil {
 		return nil, nil
 	}
-	return unmarshalDataNode(dataKey, nodeBytes), nil
+	return unmarshalDataNode(dataKey, nodeBytes), nil*/
+	return nil,nil
 }
 
 // 1.
 func fetchBucketNodeFromDB(bucketKey *bucketKey) (*bucketNode, error) {
-	openchainDB := db.GetDBHandle()
+	/*openchainDB := db.GetDBHandle()
 	nodeBytes, err := openchainDB.GetFromStateCF(bucketKey.getEncodedBytes())
 	if err != nil {
 		return nil, err
@@ -31,13 +33,14 @@ func fetchBucketNodeFromDB(bucketKey *bucketKey) (*bucketNode, error) {
 	if nodeBytes == nil {
 		return nil, nil
 	}
-	return unmarshalBucketNode(bucketKey, nodeBytes), nil
+	return unmarshalBucketNode(bucketKey, nodeBytes), nil*/
+	return nil,nil
 }
 
 type rawKey []byte
 
 func fetchDataNodesFromDBFor(bucketKey *bucketKey) (dataNodes, error) {
-	logger.Debugf("Fetching from DB data nodes for bucket [%s]", bucketKey)
+	/*logger.Debugf("Fetching from DB data nodes for bucket [%s]", bucketKey)
 	openchainDB := db.GetDBHandle()
 	itr := openchainDB.GetStateCFIterator()
 	defer itr.Close()
@@ -66,5 +69,6 @@ func fetchDataNodesFromDBFor(bucketKey *bucketKey) (dataNodes, error) {
 		dataNodes = append(dataNodes, dataNode)
 	}
 	logger.Debugf("Returning results [%v]", dataNodes)
-	return dataNodes, nil
+	return dataNodes, nil*/
+	return nil,nil
 }

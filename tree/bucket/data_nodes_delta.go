@@ -3,7 +3,7 @@ package buckettree
 import (
 	"bytes"
 	"sort"
-	"github.com/hyperledger/fabric/core/ledger/statemgmt"
+	"hyperchain/core/bucket"
 )
 
 // Code for managing changes in data nodes
@@ -25,19 +25,17 @@ type dataNodesDelta struct {
 	byBucket map[bucketKey]dataNodes
 }
 
-// 将stateDelta中的所有数据都加入到dataNodesDelta里
-// stateDelta中记录的是所有更改了的chaincode的原生数据
-// dataNodesDelta是记录了bucket tree的叶子数据
-func newDataNodesDelta(stateDelta *statemgmt.StateDelta) *dataNodesDelta {
+// TODO should be test by rjl and zhz
+func newDataNodesDelta(stateDelta *bucket.StateDelta) *dataNodesDelta {
 	dataNodesDelta := &dataNodesDelta{make(map[bucketKey]dataNodes)}
-	chaincodeIDs := stateDelta.GetUpdatedChaincodeIds(false)
-	for _, chaincodeID := range chaincodeIDs {
-		updates := stateDelta.GetUpdates(chaincodeID)
+	accountIDs := stateDelta.GetUpdatedAccountIds(false)
+	for _, accountID := range accountIDs {
+		updates := stateDelta.GetUpdates(accountID)
 		for key, updatedValue := range updates {
 			if stateDelta.RollBackwards {
-				dataNodesDelta.add(chaincodeID, key, updatedValue.GetPreviousValue())
+				dataNodesDelta.add(accountID, key, updatedValue.GetPreviousValue())
 			} else {
-				dataNodesDelta.add(chaincodeID, key, updatedValue.GetValue())
+				dataNodesDelta.add(accountID, key, updatedValue.GetValue())
 			}
 		}
 	}
