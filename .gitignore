@@ -112,3 +112,4 @@ build
 
 *.DS_Store
 hyperchain.iml
+**/.DS_Store

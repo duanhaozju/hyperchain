@@ -1,15 +1,20 @@
-package bucket
+package hyperstate
 
 import (
 	"sort"
 	"github.com/golang/protobuf/proto"
 	"fmt"
+	"bytes"
+	"hyperchain/crypto"
 )
 /*
 	StateDelta
  */
 // StateDelta holds the changes to existing state. This struct is used for holding the uncommitted changes during execution of a tx-batch
 // Also, to be used for transferring the state to another peer in chunks
+var (
+	kec256Hash = crypto.NewKeccak256Hash("keccak256")
+)
 type StateDelta struct {
 	AccountDeltas map[string]*AccountDelta
 	// RollBackwards allows one to contol whether this delta will roll the state
@@ -129,27 +134,25 @@ func (stateDelta *StateDelta) getOrCreateAccountDelta(accountID string) *Account
 // ComputeCryptoHash computes crypto-hash for the data held
 // returns nil if no data is present
 func (stateDelta *StateDelta) ComputeCryptoHash() []byte {
-	//if stateDelta.IsEmpty() {
-	//	return nil
-	//}
-	//var buffer bytes.Buffer
-	//sortedChaincodeIds := stateDelta.GetUpdatedAccountIds(true)
-	//for _, accountID := range sortedChaincodeIds {
-	//	buffer.WriteString(accountID)
-	//	accountStateDelta := stateDelta.AccountDeltas[accountID]
-	//	sortedKeys := accountStateDelta.getSortedKeys()
-	//	for _, key := range sortedKeys {
-	//		buffer.WriteString(key)
-	//		updatedValue := accountStateDelta.get(key)
-	//		if !updatedValue.IsDeleted() {
-	//			buffer.Write(updatedValue.Value)
-	//		}
-	//	}
-	//}
-	//hashingContent := buffer.Bytes()
-	//log.Debugf("computing hash on %#v", hashingContent)
-	//return util.ComputeCryptoHash(hashingContent)
-	return nil
+	if stateDelta.IsEmpty() {
+		return nil
+	}
+	var buffer bytes.Buffer
+	sortedAccountIds := stateDelta.GetUpdatedAccountIds(true)
+	for _, accountID := range sortedAccountIds {
+		buffer.WriteString(accountID)
+		accountStateDelta := stateDelta.AccountDeltas[accountID]
+		sortedKeys := accountStateDelta.getSortedKeys()
+		for _, key := range sortedKeys {
+			buffer.WriteString(key)
+			updatedValue := accountStateDelta.get(key)
+			if !updatedValue.IsDeleted() {
+				buffer.Write(updatedValue.Value)
+			}
+		}
+	}
+	hashingContent := buffer.Bytes()
+	return kec256Hash.Hash(hashingContent).Bytes()
 }
 /*
 	AccountDelta
@@ -201,7 +204,6 @@ func (accountStateDelta *AccountDelta) getSortedKeys() []string {
 		updatedKeys = append(updatedKeys, k)
 	}
 	sort.Strings(updatedKeys)
-	log.Debugf("Sorted keys = %#v", updatedKeys)
 	return updatedKeys
 }
 /*

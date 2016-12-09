@@ -4,6 +4,9 @@ import (
 	"sync"
 	//"time"
 	"unsafe"
+	"github.com/hyperledger/fabric/core/ledger/statemgmt"
+	"hyperchain/hyperdb"
+	"github.com/labstack/gommon/log"
 )
 
 var defaultBucketCacheMaxSize = 100 // MBs
@@ -31,10 +34,14 @@ func newBucketCache(maxSizeMBs int) *bucketCache {
 	return &bucketCache{c: make(map[bucketKey]*bucketNode), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 }
 
-// TODO replace there with our own db interface
+// TODO cache will be done later
 func (cache *bucketCache) loadAllBucketNodesFromDB() {
 	/*if !cache.isEnabled {
 		return
+	}
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Fatal(err)
 	}
 	openchainDB := db.GetDBHandle()
 	itr := openchainDB.GetStateCFIterator()

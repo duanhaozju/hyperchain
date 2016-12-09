@@ -42,7 +42,7 @@ global:
         dir: "./build/database/"
 
     structure:
-        state: "pmt" # two available options: pmt or bucket
+        state: "rawstate" # two available options: rawstate or hyperstate
 ###########################
 # configs
 ############################

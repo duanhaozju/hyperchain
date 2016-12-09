@@ -1,9 +1,11 @@
 package buckettree
 
 import (
+	"hyperchain/hyperdb"
 )
 
 func fetchDataNodeFromDB(dataKey *dataKey) (*dataNode, error) {
+
 	openchainDB := db.GetDBHandle()
 	nodeBytes, err := openchainDB.GetFromStateCF(dataKey.getEncodedBytes())
 	if err != nil {
