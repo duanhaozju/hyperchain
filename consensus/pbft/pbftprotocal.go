@@ -8,6 +8,7 @@ import (
 	"sort"
 	"sync"
 	"time"
+	"encoding/hex"
 
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
@@ -39,6 +40,7 @@ type pbftProtocal struct {
 	muxBatch			sync.Mutex
 	muxPbft				sync.Mutex
 	reqStore         	*requestStore                   //received messages
+	duplicator			map[uint64]*transactionStore
 
 								 // PBFT data
 	activeView     bool                                      // view change happening
@@ -276,6 +278,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
 	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
 	pbft.cacheValidatedBatch = make(map[string]*cacheBatch)
+	pbft.duplicator = make(map[uint64]*transactionStore)
 
 	pbft.restoreState()
 
@@ -382,11 +385,27 @@ func (pbft *pbftProtocal) RecvLocal(msg interface{}) error {
 	return nil
 }
 
+func (pbft *pbftProtocal) RemoveCachedBatch(vid uint64) {
+
+	logger.Debugf("Replica %d received local remove message", pbft.id)
+	event := removeCache{vid: vid}
+	go pbft.postRequestEvent(event)
+}
+
 func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 
 	logger.Debugf("Replica %d start solve event", pbft.id)
 
 	switch e := ee.(type) {
+	case removeCache:
+		vid := e.vid
+		ok := pbft.recvRemoveCache(vid)
+		if !ok {
+			logger.Warningf("Replica %d received local remove cached batch msg, but can not find mapping batch", pbft.id)
+		}
+		return nil
+	case clearDuplicator:
+		pbft.duplicator = make(map[uint64]*transactionStore)
 	case *types.Transaction:
 		tx := e
 		return pbft.processTxEvent(tx)
@@ -452,6 +471,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 			logger.Debugf("Replica %d try to process viewChangeQuorumEvent, but it's in nego-view", pbft.id)
 			return nil
 		}
+		go pbft.postRequestEvent(clearDuplicator{})
 		if pbft.primary(pbft.view) == pbft.id {
 			return pbft.sendNewView()
 		}
@@ -655,6 +675,19 @@ func (pbft *pbftProtocal) processCachedTransactions() {
 func (pbft *pbftProtocal) leaderProcReq(tx *types.Transaction) error {
 
 	logger.Debugf("Batch primary %d queueing new request", pbft.id)
+
+	if pbft.checkDuplicate(tx) {
+		_, ok := pbft.duplicator[pbft.vid+1]
+		if !ok {
+			txStore := newTransactionStore()
+			pbft.duplicator[pbft.vid+1] = txStore
+		}
+		pbft.duplicator[pbft.vid+1].add(tx)
+	} else {
+		logger.Warningf("Replica %d receive duplicate transaction", pbft.id)
+		return nil
+	}
+
 	pbft.batchStore = append(pbft.batchStore, tx)
 
 	if !pbft.batchTimerActive {
@@ -666,6 +699,21 @@ func (pbft *pbftProtocal) leaderProcReq(tx *types.Transaction) error {
 	}
 
 	return nil
+}
+
+func (pbft *pbftProtocal) checkDuplicate(tx *types.Transaction) (ok bool) {
+
+	ok = true
+
+	for _, txStore := range pbft.duplicator {
+		key := hex.EncodeToString(tx.TransactionHash)
+		if txStore.has(key) {
+			ok = false
+			break
+		}
+	}
+
+	return
 }
 
 func (pbft *pbftProtocal) sendBatch() error {
@@ -2111,4 +2159,14 @@ func (pbft *pbftProtocal) recvValidatedResult(result event.ValidatedTxs) error {
 	}
 
 	return nil
+}
+
+func (pbft *pbftProtocal) recvRemoveCache(vid uint64) bool {
+
+	_, ok := pbft.duplicator[vid]
+	if ok {
+		delete(pbft.duplicator, vid)
+	}
+
+	return ok
 }
