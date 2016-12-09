@@ -152,7 +152,6 @@ func (stateDelta *StateDelta) ComputeCryptoHash() []byte {
 		}
 	}
 	hashingContent := buffer.Bytes()
-	log.Debugf("computing hash on %#v", hashingContent)
 	return kec256Hash.Hash(hashingContent).Bytes()
 }
 /*
@@ -205,7 +204,6 @@ func (accountStateDelta *AccountDelta) getSortedKeys() []string {
 		updatedKeys = append(updatedKeys, k)
 	}
 	sort.Strings(updatedKeys)
-	log.Debugf("Sorted keys = %#v", updatedKeys)
 	return updatedKeys
 }
 /*
