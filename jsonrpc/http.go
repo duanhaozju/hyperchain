@@ -37,7 +37,7 @@ func (hrw *httpReadWrite) Close() error{
 	return nil
 }
 
-func Start(httpPort int,logsPath string,eventMux *event.TypeMux,pm *manager.ProtocolManager, cfg RateLimitConfig) error{
+func Start(httpPort int, restPort int, logsPath string,eventMux *event.TypeMux,pm *manager.ProtocolManager, cfg RateLimitConfig) error{
 	eventMux = eventMux
 
 	server := NewServer()
@@ -53,13 +53,13 @@ func Start(httpPort int,logsPath string,eventMux *event.TypeMux,pm *manager.Prot
 		}
 	}
 
-	startHttp(httpPort, logsPath, server)
+	startHttp(httpPort, restPort,logsPath, server)
 
 	return nil
 }
 
 
-func startHttp(httpPort int, logsPath string, srv *Server) {
+func startHttp(httpPort int, restPort int, logsPath string, srv *Server) {
 	// TODO AllowedOrigins should be a parameter
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
@@ -76,12 +76,13 @@ func startHttp(httpPort int, logsPath string, srv *Server) {
 	beego.BConfig.CopyRequestBody = true
 	beego.SetLogFuncCall(true)
 
-	logs.SetLogger(logs.AdapterFile, `{"filename": "` + logsPath + "/RESTful-API-" + time.Now().Format("2006-01-02 15:04:05") +`"}`)
+	logs.SetLogger(logs.AdapterFile, `{"filename": "` + logsPath + "/RESTful-API-" + strconv.Itoa(restPort) + "-" + time.Now().Format("2006-01-02 15:04:05") +`"}`)
 	beego.BeeLogger.DelLogger("console")
 
 	// todo 读取　app.conf　配置文件
+	// the first param adapterName is ini/json/xml/yaml.
 	//beego.LoadAppConfig("ini", "jsonrpc/RESTful_api/conf/app.conf")
-	beego.Run("127.0.0.1:9000")
+	beego.Run("127.0.0.1:"+ strconv.Itoa(restPort))
 	// ===================================== 2016.11.15 END  ================================ //
 }
 
