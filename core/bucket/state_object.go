@@ -123,14 +123,18 @@ func (self *StateObject) Storage() Storage {
 func (self *StateObject) GetState(key common.Hash) common.Hash {
 	value, exists := self.storage[key]
 	if !exists {
-		value,err := self.db.Get(key)
-		if (err != nil || len(value)==0) {
+		dbKey := append(self.Address().Bytes(),key.Bytes())
+		dbValue,err := self.db.Get(dbKey)
+
+		if (err != nil || len(dbValue)==0) {
 			log.Debug("get value from db error or there is no data in db ")
-		}else if(len(value)>0){
-			self.storage[key] = value
+		}else if(len(dbValue)>0){
+			self.storage[key] = dbValue
 		}
+		return dbValue
+	}else {
+		return value
 	}
-	return value
 }
 func (self *StateObject) SetState(key, value common.Hash) {
 	self.storage[key] = value

@@ -1,0 +1,49 @@
+package buckettree
+
+type byBucketNumber map[int]*bucketNode
+
+type bucketTreeDelta struct {
+	byLevel map[int]byBucketNumber
+}
+
+func newBucketTreeDelta() *bucketTreeDelta {
+	return &bucketTreeDelta{make(map[int]byBucketNumber)}
+}
+
+func (bucketTreeDelta *bucketTreeDelta) getOrCreateBucketNode(bucketKey *bucketKey) *bucketNode {
+	byBucketNumber := bucketTreeDelta.byLevel[bucketKey.level]
+	if byBucketNumber == nil {
+		byBucketNumber = make(map[int]*bucketNode)
+		bucketTreeDelta.byLevel[bucketKey.level] = byBucketNumber
+	}
+	bucketNode := byBucketNumber[bucketKey.bucketNumber]
+	if bucketNode == nil {
+		bucketNode = newBucketNode(bucketKey)
+		byBucketNumber[bucketKey.bucketNumber] = bucketNode
+	}
+	return bucketNode
+}
+
+func (bucketTreeDelta *bucketTreeDelta) isEmpty() bool {
+	return bucketTreeDelta.byLevel == nil || len(bucketTreeDelta.byLevel) == 0
+}
+
+func (bucketTreeDelta *bucketTreeDelta) getBucketNodesAt(level int) []*bucketNode {
+	bucketNodes := []*bucketNode{}
+	byBucketNumber := bucketTreeDelta.byLevel[level]
+	if byBucketNumber == nil {
+		return nil
+	}
+	for _, bucketNode := range byBucketNumber {
+		bucketNodes = append(bucketNodes, bucketNode)
+	}
+	return bucketNodes
+}
+
+func (bucketTreeDelta *bucketTreeDelta) getRootNode() *bucketNode {
+	bucketNodes := bucketTreeDelta.getBucketNodesAt(0)
+	if bucketNodes == nil || len(bucketNodes) == 0 {
+		panic("This method should be called after processing is completed (i.e., the root node has been created)")
+	}
+	return bucketNodes[0]
+}
