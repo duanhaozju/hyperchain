@@ -703,9 +703,9 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 
 func (pool *BlockPool) GetStateInstance(root common.Hash, db hyperdb.Database) (vm.Database, error) {
 	switch pool.conf.StateType {
-	case "statedb":
+	case "pmt":
 		return statedb.New(root, db)
-	case "hashtable":
+	case "bucket":
 		return nil, nil
 	default:
 		return nil, errors.New("no state type specified")

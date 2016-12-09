@@ -42,7 +42,7 @@ global:
         dir: "./build/database/"
 
     structure:
-        state: "statedb" # two available options: statedb and hashtable
+        state: "pmt" # two available options: pmt or bucket
 ###########################
 # configs
 ############################
