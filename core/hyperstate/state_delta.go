@@ -1,4 +1,4 @@
-package bucket
+package hyperstate
 
 import (
 	"sort"

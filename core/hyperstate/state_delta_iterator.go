@@ -1,4 +1,4 @@
-package bucket
+package hyperstate
 
 // StateDeltaIterator - An iterator implementation over state-delta
 type StateDeltaIterator struct {

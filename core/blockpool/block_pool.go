@@ -10,7 +10,7 @@ import (
 	"hyperchain/consensus"
 	"hyperchain/core"
 	statedb "hyperchain/core/state"
-	"hyperchain/core/bucket"
+	"hyperchain/core/hyperstate"
 	"hyperchain/core/types"
 	"hyperchain/core/vm/params"
 	"hyperchain/crypto"
@@ -704,10 +704,10 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 
 func (pool *BlockPool) GetStateInstance(root common.Hash, db hyperdb.Database) (vm.Database, error) {
 	switch pool.conf.StateType {
-	case "pmt":
+	case "rawstate":
 		return statedb.New(root, db)
-	case "bucket":
-		return bucket.New(root, db)
+	case "hyperstate":
+		return nil, nil
 	default:
 		return nil, errors.New("no state type specified")
 	}
