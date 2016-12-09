@@ -125,7 +125,6 @@ func (self *StateObject) GetState(key common.Hash) common.Hash {
 	if !exists {
 		dbKey := append(self.Address().Bytes(),key.Bytes())
 		dbValue,err := self.db.Get(dbKey)
-
 		if (err != nil || len(dbValue)==0) {
 			log.Debug("get value from db error or there is no data in db ")
 		}else if(len(dbValue)>0){

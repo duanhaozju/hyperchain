@@ -2,10 +2,8 @@ package buckettree
 
 import (
 	"sync"
-	"time"
+	//"time"
 	"unsafe"
-	"github.com/hyperledger/fabric/core/ledger/statemgmt"
-	"github.com/hyperledger/fabric/core/ledger/perfstat"
 )
 
 var defaultBucketCacheMaxSize = 100 // MBs
@@ -33,8 +31,9 @@ func newBucketCache(maxSizeMBs int) *bucketCache {
 	return &bucketCache{c: make(map[bucketKey]*bucketNode), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 }
 
+// TODO replace there with our own db interface
 func (cache *bucketCache) loadAllBucketNodesFromDB() {
-	if !cache.isEnabled {
+	/*if !cache.isEnabled {
 		return
 	}
 	openchainDB := db.GetDBHandle()
@@ -65,7 +64,7 @@ func (cache *bucketCache) loadAllBucketNodesFromDB() {
 		itr.Value().Free()
 		count++
 	}
-	logger.Infof("Loaded buckets data in cache. Total buckets in DB = [%d]. Total cache size:=%d", count, cache.size)
+	logger.Infof("Loaded buckets data in cache. Total buckets in DB = [%d]. Total cache size:=%d", count, cache.size)*/
 }
 
 func (cache *bucketCache) putWithoutLock(key bucketKey, node *bucketNode) {
@@ -94,9 +93,9 @@ func (cache *bucketCache) putWithoutLock(key bucketKey, node *bucketNode) {
 		cache.c[key] = node
 	}
 }
-
+// TODO performance status should be done
 func (cache *bucketCache) get(key bucketKey) (*bucketNode, error) {
-	defer perfstat.UpdateTimeStat("timeSpent", time.Now())
+	//defer perfstat.UpdateTimeStat("timeSpent", time.Now())
 	if !cache.isEnabled {
 		return fetchBucketNodeFromDB(&key)
 	}

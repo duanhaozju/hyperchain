@@ -36,7 +36,7 @@ func (c *bucketHashCalculator) computeCryptoHash() []byte {
 	if c.hashingData == nil {
 		return nil
 	}
-	return openchainUtil.ComputeCryptoHash(c.hashingData)
+	return ComputeCryptoHash(c.hashingData)
 }
 
 func (c *bucketHashCalculator) appendCurrentChaincodeData() {

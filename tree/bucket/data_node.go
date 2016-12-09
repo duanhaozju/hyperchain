@@ -2,7 +2,6 @@ package buckettree
 
 import (
 	"fmt"
-	"github.com/hyperledger/fabric/core/ledger/statemgmt"
 )
 
 type dataNode struct {
@@ -31,7 +30,7 @@ func (dataNode *dataNode) isDelete() bool {
 }
 
 func (dataNode *dataNode) getKeyElements() (string, string) {
-	return statemgmt.DecodeCompositeKey(dataNode.getCompositeKey())
+	return DecodeCompositeKey(dataNode.getCompositeKey())
 }
 
 func (dataNode *dataNode) getValue() []byte {

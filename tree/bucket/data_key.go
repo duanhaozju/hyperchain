@@ -11,7 +11,7 @@ type dataKey struct {
 
 func newDataKey(chaincodeID string, key string) *dataKey {
 	logger.Debugf("Enter - newDataKey. chaincodeID=[%s], key=[%s]", chaincodeID, key)
-	compositeKey := statemgmt.ConstructCompositeKey(chaincodeID, key)
+	compositeKey := ConstructCompositeKey(chaincodeID, key)
 	bucketHash := conf.computeBucketHash(compositeKey)
 	// Adding one because - we start bucket-numbers 1 onwards
 	bucketNumber := int(bucketHash)%conf.getNumBucketsAtLowestLevel() + 1
@@ -28,7 +28,7 @@ func minimumPossibleDataKeyBytesFor(bucketKey *bucketKey) []byte {
 
 func minimumPossibleDataKeyBytes(bucketNumber int, chaincodeID string, key string) []byte {
 	b := encodeBucketNumber(bucketNumber)
-	b = append(b, statemgmt.ConstructCompositeKey(chaincodeID, key)...)
+	b = append(b, ConstructCompositeKey(chaincodeID, key)...)
 	return b
 }
 
@@ -37,11 +37,11 @@ func (key *dataKey) getBucketKey() *bucketKey {
 }
 
 func encodeBucketNumber(bucketNumber int) []byte {
-	return util.EncodeOrderPreservingVarUint64(uint64(bucketNumber))
+	return EncodeOrderPreservingVarUint64(uint64(bucketNumber))
 }
 
 func decodeBucketNumber(encodedBytes []byte) (int, int) {
-	bucketNum, bytesConsumed := util.DecodeOrderPreservingVarUint64(encodedBytes)
+	bucketNum, bytesConsumed := DecodeOrderPreservingVarUint64(encodedBytes)
 	return int(bucketNum), bytesConsumed
 }
 
