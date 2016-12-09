@@ -8,7 +8,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
-	"hyperchain/trie"
+	"hyperchain/tree/pmt"
 	"math/big"
 	lru "github.com/hashicorp/golang-lru"
 	"sync"
@@ -55,7 +55,7 @@ var StartingNonce uint64
 // * Accounts
 type StateDB struct {
 	db               hyperdb.Database
-	trie             *trie.SecureTrie
+	trie             *pmt.SecureTrie
 
 	//this map holds 'live' objects, which will get modified while processing a state transition
 	stateObjects     map[string]*StateObject
@@ -72,7 +72,7 @@ type StateDB struct {
 
 // Create a new state from a given trie
 func New(root common.Hash, db hyperdb.Database) (*StateDB, error) {
-	tr, err := trie.NewSecure(root, db)
+	tr, err := pmt.NewSecure(root, db)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func (self *StateDB) Reset(root common.Hash) error {
 		tr  = self.trie
 	)
 	if self.trie.Hash() != root {
-		if tr, err = trie.NewSecure(root, self.db); err != nil {
+		if tr, err = pmt.NewSecure(root, self.db); err != nil {
 			return err
 		}
 	}
@@ -490,7 +490,7 @@ func (s *StateDB) Commit() (common.Hash, error) {
 }
 
 // TODO the logic could be optimized
-func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
+func (s *StateDB) commit(db pmt.DatabaseWriter) (common.Hash, error) {
 	s.refund = new(big.Int)
 
 	for _, stateObject := range s.stateObjects {

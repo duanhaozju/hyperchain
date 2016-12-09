@@ -10,6 +10,7 @@ import (
 	"hyperchain/consensus"
 	"hyperchain/core"
 	statedb "hyperchain/core/state"
+	"hyperchain/core/bucket"
 	"hyperchain/core/types"
 	"hyperchain/core/vm/params"
 	"hyperchain/crypto"
@@ -17,7 +18,7 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/p2p"
 	"hyperchain/recovery"
-	"hyperchain/trie"
+	"hyperchain/tree/pmt"
 	"hyperchain/protos"
 	"strconv"
 	"sync"
@@ -287,9 +288,9 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	if err != nil {
 		return err, nil, nil, nil, nil, nil, invalidTxs
 	}
-	txTrie, err := trie.New(common.Hash{}, db)
+	txTrie, err := pmt.New(common.Hash{}, db)
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
-	receiptTrie, err := trie.New(common.Hash{}, db)
+	receiptTrie, err := pmt.New(common.Hash{}, db)
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
 	v := pool.lastValidationState.Load()
 	initStatus, ok := v.(common.Hash)
@@ -706,7 +707,7 @@ func (pool *BlockPool) GetStateInstance(root common.Hash, db hyperdb.Database) (
 	case "pmt":
 		return statedb.New(root, db)
 	case "bucket":
-		return nil, nil
+		return bucket.New(root, db)
 	default:
 		return nil, errors.New("no state type specified")
 	}

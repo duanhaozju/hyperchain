@@ -84,7 +84,7 @@ func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 		log.Errorf("%v", err)
 		return nil
 	}
-
+	// TODO CHANGE TO INTERFACE
 	stateDB, err := state.New(headBlock.MerkleRoot, acc.db)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)

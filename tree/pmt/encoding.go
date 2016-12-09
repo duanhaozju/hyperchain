@@ -1,6 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package trie
+package pmt
 
 func compactEncode(hexSlice []byte) []byte {
 	terminator := byte(0)
