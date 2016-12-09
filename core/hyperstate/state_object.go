@@ -11,8 +11,6 @@ import (
 	"hyperchain/crypto/rlp"
 	"github.com/op/go-logging"
 	"hyperchain/hyperdb"
-	"hyperchain/tree/bucket"
-	"github.com/hyperledger/fabric/core/ledger/statemgmt/trie"
 )
 
 var (
@@ -58,8 +56,6 @@ type StateObject struct {
 	address common.Address // Ethereum address of this account
 	data    Account
 	db      *StateDB
-	bucketTree *state
-
 	// DB error.
 	// State objects are used by the consensus core and VM which are
 	// unable to deal with database-level errors. Any error that occurs
@@ -137,31 +133,11 @@ func (c *StateObject) touch() {
 	c.touched = true
 }
 
-func (c *StateObject) getTrie(db trie.Database) *trie.SecureTrie {
-	if c.trie == nil {
-		var err error
-		c.trie, err = trie.NewSecure(c.data.Root, db, 0)
-		if err != nil {
-			c.trie, _ = trie.NewSecure(common.Hash{}, db, 0)
-			c.setError(fmt.Errorf("can't create storage trie: %v", err))
-		}
-	}
-	return c.trie
-}
-
 // GetState returns a value in account storage.
 func (self *StateObject) GetState(db hyperdb.Database, key common.Hash) common.Hash {
 	value, exists := self.cachedStorage[key]
 	if exists {
 		return value
-	}
-	// Load from DB in case it is missing.
-	if enc := self.getTrie(db).Get(key[:]); len(enc) > 0 {
-		_, content, _, err := rlp.Split(enc)
-		if err != nil {
-			self.setError(err)
-		}
-		value.SetBytes(content)
 	}
 	if (value != common.Hash{}) {
 		self.cachedStorage[key] = value
@@ -189,40 +165,7 @@ func (self *StateObject) setState(key, value common.Hash) {
 	}
 }
 
-// updateTrie writes cached storage modifications into the object's storage trie.
-func (self *StateObject) updateTrie(db hyperdb.Database) {
-	tr := self.getTrie(db)
-	for key, value := range self.dirtyStorage {
-		delete(self.dirtyStorage, key)
-		if (value == common.Hash{}) {
-			tr.Delete(key[:])
-			continue
-		}
-		// Encoding []byte cannot fail, ok to ignore the error.
-		v, _ := rlp.EncodeToBytes(bytes.TrimLeft(value[:], "\x00"))
-		tr.Update(key[:], v)
-	}
-}
 
-// UpdateRoot sets the trie root to the current root hash of
-func (self *StateObject) updateRoot(db hyperdb.Database) {
-	self.updateTrie(db)
-	self.data.Root = self.trie.Hash()
-}
-
-// CommitTrie the storage trie of the object to dwb.
-// This updates the trie root.
-func (self *StateObject) CommitTrie(db trie.Database, dbw trie.DatabaseWriter) error {
-	self.updateTrie(db)
-	if self.dbErr != nil {
-		return self.dbErr
-	}
-	root, err := self.trie.CommitTo(dbw)
-	if err == nil {
-		self.data.Root = root
-	}
-	return err
-}
 
 // AddBalance removes amount from c's balance.
 // It is used to add funds to the destination account of a transfer.
@@ -273,7 +216,6 @@ func (c *StateObject) ReturnGas(gas, price *big.Int) {}
 
 func (self *StateObject) deepCopy(db *StateDB, onDirty func(addr common.Address)) *StateObject {
 	stateObject := newObject(db, self.address, self.data, onDirty)
-	stateObject.trie = self.trie
 	stateObject.code = self.code
 	stateObject.dirtyStorage = self.dirtyStorage.Copy()
 	stateObject.cachedStorage = self.dirtyStorage.Copy()
@@ -367,14 +309,5 @@ func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) {
 	// When iterating over the storage check the cache first
 	for h, value := range self.cachedStorage {
 		cb(h, value)
-	}
-
-	it := self.getTrie(self.db.db).Iterator()
-	for it.Next() {
-		// ignore cached values
-		key := common.BytesToHash(self.trie.GetKey(it.Key))
-		if _, ok := self.cachedStorage[key]; !ok {
-			cb(key, common.BytesToHash(it.Value))
-		}
 	}
 }

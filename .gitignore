@@ -5,6 +5,9 @@
 *.a
 *.so
 #*.json
+/tree/bucket
+/core/hyperstate/hashable_state.go
+/core/hyperstate/state.go
 
 test.go
 core/chche
