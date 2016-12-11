@@ -3,9 +3,8 @@ package buckettree
 import (
 	"bytes"
 	"github.com/op/go-logging"
-	"github.com/tecbot/gorocksdb"
-	"hyperchain/core/bucket"
-	"github.com/hyperledger/fabric/core/ledger/statemgmt"
+	"hyperchain/core/hyperstate"
+	"hyperchain/hyperdb"
 )
 
 var logger = logging.MustGetLogger("buckettree")
@@ -60,7 +59,7 @@ func (stateImpl *StateImpl) Get(chaincodeID string, key string) ([]byte, error) 
 }
 
 // PrepareWorkingSet - method implementation for interface 'statemgmt.HashableState'
-func (stateImpl *StateImpl) PrepareWorkingSet(stateDelta *bucket.StateDelta) error {
+func (stateImpl *StateImpl) PrepareWorkingSet(stateDelta *hyperstate.StateDelta) error {
 	logger.Debug("Enter - PrepareWorkingSet()")
 	if stateDelta.IsEmpty() {
 		logger.Debug("Ignoring working-set as it is empty")
@@ -199,7 +198,7 @@ func computeDataNodesCryptoHash(bucketKey *bucketKey, updatedNodes dataNodes, ex
 }
 
 // AddChangesForPersistence - method implementation for interface 'statemgmt.HashableState'
-func (stateImpl *StateImpl) AddChangesForPersistence(writeBatch *gorocksdb.WriteBatch) error {
+func (stateImpl *StateImpl) AddChangesForPersistence(writeBatch *hyperdb.Batch) error {
 
 	if stateImpl.dataNodesDelta == nil {
 		return nil
@@ -217,7 +216,7 @@ func (stateImpl *StateImpl) AddChangesForPersistence(writeBatch *gorocksdb.Write
 }
 
 // TODO it should be done later
-func (stateImpl *StateImpl) addDataNodeChangesForPersistence(writeBatch *gorocksdb.WriteBatch) {
+func (stateImpl *StateImpl) addDataNodeChangesForPersistence(writeBatch *hyperdb.Batch) {
 	//openchainDB := db.GetDBHandle()
 	//affectedBuckets := stateImpl.dataNodesDelta.getAffectedBuckets()
 	//for _, affectedBucket := range affectedBuckets {
@@ -235,7 +234,7 @@ func (stateImpl *StateImpl) addDataNodeChangesForPersistence(writeBatch *gorocks
 }
 
 // TODO it should be done later
-func (stateImpl *StateImpl) addBucketNodeChangesForPersistence(writeBatch *gorocksdb.WriteBatch) {
+func (stateImpl *StateImpl) addBucketNodeChangesForPersistence(writeBatch *hyperdb.Batch) {
 	//openchainDB := db.GetDBHandle()
 	//secondLastLevel := conf.getLowestLevel() - 1
 	//for level := secondLastLevel; level >= 0; level-- {
@@ -274,14 +273,4 @@ func (stateImpl *StateImpl) updateBucketCache() {
 func (stateImpl *StateImpl) PerfHintKeyChanged(chaincodeID string, key string) {
 	// We can create a cache. Pull all the keys for the bucket (to which given key belongs) in a separate thread
 	// This prefetching can help making method 'ComputeCryptoHash' faster.
-}
-
-// GetStateSnapshotIterator - method implementation for interface 'statemgmt.HashableState'
-func (stateImpl *StateImpl) GetStateSnapshotIterator(snapshot *gorocksdb.Snapshot) (statemgmt.StateSnapshotIterator, error) {
-	return newStateSnapshotIterator(snapshot)
-}
-
-// GetRangeScanIterator - method implementation for interface 'statemgmt.HashableState'
-func (stateImpl *StateImpl) GetRangeScanIterator(chaincodeID string, startKey string, endKey string) (statemgmt.RangeScanIterator, error) {
-	return newRangeScanIterator(chaincodeID, startKey, endKey)
 }

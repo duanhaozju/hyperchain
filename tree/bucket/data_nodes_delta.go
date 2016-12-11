@@ -3,7 +3,7 @@ package buckettree
 import (
 	"bytes"
 	"sort"
-	"hyperchain/core/bucket"
+	"hyperchain/core/hyperstate"
 )
 
 // Code for managing changes in data nodes
@@ -26,7 +26,7 @@ type dataNodesDelta struct {
 }
 
 // TODO should be test by rjl and zhz
-func newDataNodesDelta(stateDelta *bucket.StateDelta) *dataNodesDelta {
+func newDataNodesDelta(stateDelta *hyperstate.StateDelta) *dataNodesDelta {
 	dataNodesDelta := &dataNodesDelta{make(map[bucketKey]dataNodes)}
 	accountIDs := stateDelta.GetUpdatedAccountIds(false)
 	for _, accountID := range accountIDs {

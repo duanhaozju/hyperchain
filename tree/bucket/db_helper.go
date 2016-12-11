@@ -6,8 +6,10 @@ import (
 
 func fetchDataNodeFromDB(dataKey *dataKey) (*dataNode, error) {
 
-	openchainDB := db.GetDBHandle()
-	nodeBytes, err := openchainDB.GetFromStateCF(dataKey.getEncodedBytes())
+	db, err := hyperdb.GetLDBDatabase()
+	// TODO is the key ok?
+	nodeBytes, err := db.Get(dataKey.getEncodedBytes())
+
 	if err != nil {
 		return nil, err
 	}

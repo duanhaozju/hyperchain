@@ -78,7 +78,7 @@ func (bucketNode *bucketNode) computeCryptoHash() []byte {
 		return cryptoHashContent
 	}
 	logger.Debugf("Computing crypto-hash for bucket [%s] by merging [%d] children", bucketNode.bucketKey, numChildren)
-	return openchainUtil.ComputeCryptoHash(cryptoHashContent)
+	return ComputeCryptoHash(cryptoHashContent)
 }
 
 func (bucketNode *bucketNode) String() string {

@@ -4,9 +4,6 @@ import (
 	"sync"
 	//"time"
 	"unsafe"
-	"github.com/hyperledger/fabric/core/ledger/statemgmt"
-	"hyperchain/hyperdb"
-	"github.com/labstack/gommon/log"
 )
 
 var defaultBucketCacheMaxSize = 100 // MBs
