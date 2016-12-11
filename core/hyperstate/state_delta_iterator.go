@@ -1,6 +1,5 @@
 package hyperstate
 
-import "github.com/labstack/gommon/log"
 
 // StateDeltaIterator - An iterator implementation over state-delta
 type StateDeltaIterator struct {
