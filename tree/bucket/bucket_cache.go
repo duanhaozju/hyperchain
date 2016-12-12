@@ -4,6 +4,7 @@ import (
 	"sync"
 	//"time"
 	"unsafe"
+	"hyperchain/hyperdb"
 )
 
 var defaultBucketCacheMaxSize = 100 // MBs
@@ -33,42 +34,14 @@ func newBucketCache(maxSizeMBs int) *bucketCache {
 
 // TODO cache will be done later
 func (cache *bucketCache) loadAllBucketNodesFromDB() {
-	/*if !cache.isEnabled {
+	if !cache.isEnabled {
 		return
 	}
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
-	openchainDB := db.GetDBHandle()
-	itr := openchainDB.GetStateCFIterator()
-	defer itr.Close()
-	itr.Seek([]byte{byte(0)})
-	count := 0
-	cache.lock.Lock()
-	defer cache.lock.Unlock()
-	for ; itr.Valid(); itr.Next() {
-		key := itr.Key().Data()
-		if key[0] != byte(0) {
-			itr.Key().Free()
-			itr.Value().Free()
-			break
-		}
-		bKey := decodeBucketKey(statemgmt.Copy(itr.Key().Data()))
-		nodeBytes := statemgmt.Copy(itr.Value().Data())
-		bucketNode := unmarshalBucketNode(&bKey, nodeBytes)
-		size := bKey.size() + bucketNode.size()
-		cache.size += size
-		if cache.size >= cache.maxSize {
-			cache.size -= size
-			break
-		}
-		cache.c[bKey] = bucketNode
-		itr.Key().Free()
-		itr.Value().Free()
-		count++
-	}
-	logger.Infof("Loaded buckets data in cache. Total buckets in DB = [%d]. Total cache size:=%d", count, cache.size)*/
+	logger.Infof("Loaded buckets data in cache. Total buckets in DB = [%d]. Total cache size:=%d", count, cache.size)
 }
 
 func (cache *bucketCache) putWithoutLock(key bucketKey, node *bucketNode) {
