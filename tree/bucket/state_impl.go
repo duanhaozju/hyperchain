@@ -217,36 +217,38 @@ func (stateImpl *StateImpl) AddChangesForPersistence(writeBatch *hyperdb.Batch) 
 
 // TODO it should be done later
 func (stateImpl *StateImpl) addDataNodeChangesForPersistence(writeBatch *hyperdb.Batch) {
-	//openchainDB := db.GetDBHandle()
-	//affectedBuckets := stateImpl.dataNodesDelta.getAffectedBuckets()
-	//for _, affectedBucket := range affectedBuckets {
-	//	dataNodes := stateImpl.dataNodesDelta.getSortedDataNodesFor(affectedBucket)
-	//	for _, dataNode := range dataNodes {
-	//		if dataNode.isDelete() {
-	//			logger.Debugf("Deleting data node key = %#v", dataNode.dataKey)
-	//			writeBatch.DeleteCF(openchainDB.StateCF, dataNode.dataKey.getEncodedBytes())
-	//		} else {
-	//			logger.Debugf("Adding data node with value = %#v", dataNode.value)
-	//			writeBatch.PutCF(openchainDB.StateCF, dataNode.dataKey.getEncodedBytes(), dataNode.value)
-	//		}
-	//	}
-	//}
+	affectedBuckets := stateImpl.dataNodesDelta.getAffectedBuckets()
+	for _, affectedBucket := range affectedBuckets {
+		dataNodes := stateImpl.dataNodesDelta.getSortedDataNodesFor(affectedBucket)
+		for _, dataNode := range dataNodes {
+			if dataNode.isDelete() {
+				logger.Debugf("Deleting data node key = %#v", dataNode.dataKey)
+				writeBatch.Put("", dataNode.dataKey.getEncodedBytes())
+				//writeBatch.PutCF(openchainDB.StateCF, dataNode.dataKey.getEncodedBytes())
+			} else {
+				logger.Debugf("Adding data node with value = %#v", dataNode.value)
+				writeBatch.Put("", dataNode.dataKey.getEncodedBytes(), dataNode.value)
+				//writeBatch.Put(openchainDB.StateCF, dataNode.dataKey.getEncodedBytes(), dataNode.value)
+			}
+		}
+	}
 }
 
 // TODO it should be done later
 func (stateImpl *StateImpl) addBucketNodeChangesForPersistence(writeBatch *hyperdb.Batch) {
-	//openchainDB := db.GetDBHandle()
-	//secondLastLevel := conf.getLowestLevel() - 1
-	//for level := secondLastLevel; level >= 0; level-- {
-	//	bucketNodes := stateImpl.bucketTreeDelta.getBucketNodesAt(level)
-	//	for _, bucketNode := range bucketNodes {
-	//		if bucketNode.markedForDeletion {
-	//			writeBatch.DeleteCF(openchainDB.StateCF, bucketNode.bucketKey.getEncodedBytes())
-	//		} else {
-	//			writeBatch.PutCF(openchainDB.StateCF, bucketNode.bucketKey.getEncodedBytes(), bucketNode.marshal())
-	//		}
-	//	}
-	//}
+	secondLastLevel := conf.getLowestLevel() - 1
+	for level := secondLastLevel; level >= 0; level-- {
+		bucketNodes := stateImpl.bucketTreeDelta.getBucketNodesAt(level)
+		for _, bucketNode := range bucketNodes {
+			if bucketNode.markedForDeletion {
+				//writeBatch.DeleteCF(openchainDB.StateCF, bucketNode.bucketKey.getEncodedBytes())
+				writeBatch.Put("", bucketNode.bucketKey.getEncodedBytes())
+			} else {
+				//writeBatch.PutCF(openchainDB.StateCF, bucketNode.bucketKey.getEncodedBytes(), bucketNode.marshal())
+				writeBatch.Put("", bucketNode.bucketKey.getEncodedBytes(), bucketNode.marshal())
+			}
+		}
+	}
 }
 
 func (stateImpl *StateImpl) updateBucketCache() {
