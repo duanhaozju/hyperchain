@@ -95,7 +95,7 @@ func TestPbftTimeFunctions(t *testing.T)  {
 
 func TestPrimary(t *testing.T)  {
 	pp := new (pbftProtocal)
-	pp.replicaCount = 100
+	pp.N = 100
 	x := pp.primary(3)
 	if x != 4 {
 		t.Errorf("primary(%d) == %d, actual: %d", 3, x, 4)
@@ -444,7 +444,7 @@ func TestNullReqTimerReset(t *testing.T)  {
 	pbft.view = 3
 	pbft.id = 3
 	pbft.requestTimeout = 3 * time.Second
-	pbft.replicaCount = 2
+	pbft.N = 2
 
 	pbft.pbftManager = events.NewManagerImpl()
 	pbftTimerFactory := events.NewTimerFactoryImpl(pbft.pbftManager)

@@ -7,7 +7,7 @@ import(
 	"hyperchain/consensus/helper"
 	"hyperchain/core"
 	"reflect"
-	types "hyperchain/core/types"
+	"hyperchain/core/types"
 
 	"encoding/base64"
 	"github.com/golang/protobuf/proto"

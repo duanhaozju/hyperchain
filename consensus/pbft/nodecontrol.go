@@ -318,7 +318,6 @@ func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) error {
 	cert.update = updateN
 	broadcast := consensusMsgHelper(msg, pbft.id)
 	pbft.helper.InnerBroadcast(broadcast)
-	logger.Critical("send update n")
 	return pbft.maybeUpdateN(ready.Key, "", true)
 }
 

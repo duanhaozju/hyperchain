@@ -186,7 +186,7 @@ func TestBatchRelatedPersistFunctions(t *testing.T)  {
 	pbft.persistDelAllRequestBatches()
 	rs, err = persist.ReadState("reqBatch." + "t2")
 	if err != leveldb.ErrNotFound {
-		t.Errorf(`error persistDelAllRequestBatches, not clear all baches`)
+		t.Error(`error persistDelAllRequestBatches, not clear all baches`)
 	}
 }
 
@@ -213,7 +213,7 @@ func TestCheckpointPersist(t *testing.T)  {
 func TestViewPersist(t *testing.T)  {
 	pbft := new(pbftProtocal)
 	view := uint64(128)
-	key := fmt.Sprintf("view")
+	key := fmt.Sprint("view")
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, view)
 	pbft.persistView(view)
@@ -264,7 +264,7 @@ func TestRestoreState(t *testing.T)  {
 	defer clearDB()
 	pbft := new(pbftProtocal)
 	pbft.K = 1
-	pbft.replicaCount = 3
+	pbft.N = 3
 	core.InitDB("./temp/leveldb", 8088)
 
 	var pset []*ViewChange_PQ

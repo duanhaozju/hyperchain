@@ -6,14 +6,7 @@ import (
 	"hyperchain/core"
 	"hyperchain/consensus/helper"
 	"reflect"
-	"os"
 )
-
-func getPbftConfigPath() string {
-	gopath := os.Getenv("GOPATH")
-	return gopath  + "/src/hyperchain/config/pbft.yaml"
-}
-
 
 func TestInitRecovery(t *testing.T) {
 	core.InitDB("./build/keystore", 8001)

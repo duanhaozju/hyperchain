@@ -95,7 +95,7 @@ func BenchmarkOrderedRequests(b *testing.B) {
 func TestLen(t *testing.T)  {
 	oq := &orderedRequests{presence:make(map[string]*list.Element), order:list.List{}}
 	if oq.Len() != 0 {
-		t.Errorf("error orderedRequests len() error!")
+		t.Error("error orderedRequests len() error!")
 	}
 	//oq = nil
 	t1 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("100")}
@@ -116,20 +116,20 @@ func TestRemoves(t *testing.T)  {
 	tr := []*types.Transaction{t1, t2}
 	oq.removes(tr)
 	if oq.Len() != 0 {
-		t.Errorf("error removes not worked!")
+		t.Error("error removes not worked!")
 	}
 	t3 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("400")}
 	tr = []*types.Transaction{t3}
 	rs := oq.removes(tr)
 	if rs != false {
-		t.Errorf("error removes failed to removes(nil)")
+		t.Error("error removes failed to removes(nil)")
 	}
 }
 
 func TestNewRequestStore(t *testing.T)  {
 	rs := newRequestStore()
 	if rs.outstandingRequests == nil || rs.pendingRequests == nil {
-		t.Errorf("error newRequestStore not worked!")
+		t.Error("error newRequestStore not worked!")
 	}
 }
 
@@ -160,13 +160,13 @@ func TestStorePendingsAndRemove(t *testing.T)  {
 	rs.storePendings(tr)
 	for _, tx := range tr {
 		if rs.pendingRequests.has(hash(tx)) == false {
-			t.Errorf("error storePendings failed!")
+			t.Error("error storePendings failed!")
 		}
 	}
 
 	rs.remove(t1)
 	if rs.pendingRequests.has(hash(t1)) || rs.outstandingRequests.has(hash(t1)) {
-		t.Errorf("error pendingRequests failed!")
+		t.Error("error pendingRequests failed!")
 	}
 
 }
@@ -176,12 +176,12 @@ func TestHasNonPending(t *testing.T)  {
 	t1 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("100")}
 	hnp := rs.hasNonPending()
 	if hnp == true {
-		t.Errorf("error hasNonPending() = true, expected false")
+		t.Error("error hasNonPending() = true, expected false")
 	}
 	rs.storeOutstanding(t1)
 	hnp = rs.hasNonPending()
 	if hnp == false {
-		t.Errorf("error hasNonPending() = false, expected true")
+		t.Error("error hasNonPending() = false, expected true")
 	}
 }
 
