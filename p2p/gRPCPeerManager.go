@@ -281,7 +281,7 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	//log.Warning("call broadcast")
-	go broadcast(this,broadCastMessage, this.peersPool)
+	go broadcast(this, broadCastMessage, this.peersPool)
 }
 
 // inner the broadcast method which serve BroadcastPeers function
@@ -451,7 +451,7 @@ func (this *GrpcPeerManager) UpdateRoutingTable(payload []byte) {
 		log.Error(err)
 	}
 
-	log.Debugf("newPeer: %v", newPeer)
+	log.Debug("newPeer: %v", newPeer)
 	//新消息
 	payload, _ = proto.Marshal(this.LocalNode.address)
 
@@ -487,15 +487,12 @@ func (this *GrpcPeerManager) GetLocalNodeHash() string{
 func (this *GrpcPeerManager) GetRouterHashifDelete(hash string) (string,uint64){
 	hasher := crypto.NewKeccak256Hash("keccak256Hanser")
 	routers := this.peersPool.ToRoutingTableWithout(hash)
-	log.Warning("router: ", routers)
 	hash = hex.EncodeToString(hasher.Hash(routers).Bytes())
-	log.Warning("hash: ", hash)
 
 	var ID uint64
 	localHash := this.LocalNode.address.Hash
 	for _,rs := range routers.Routers{
-		log.Error("ID: ", rs.ID)
-		log.Notice("RS hash: ", rs.Hash)
+		log.Debug("RS hash: ", rs.Hash)
 		if rs.Hash == localHash{
 			log.Notice("rs hash: ", rs.Hash)
 			log.Notice("id: ", rs.ID)
@@ -507,19 +504,15 @@ func (this *GrpcPeerManager) GetRouterHashifDelete(hash string) (string,uint64){
 
 
 func (this *GrpcPeerManager)  DeleteNode(hash string) error{
-	log.Warning("111111")
-	log.Warning("hash: ", hash)
+
 	if this.LocalNode.address.Hash == hash {
-		log.Warning("222222")
 		// delete local node and stop all server
 		this.LocalNode.StopServer()
 
 	} else{
-		log.Warning("333333")
 		// delete the specific node
 		for _,pers := range this.peersPool.GetPeers(){
 			if pers.Addr.Hash == hash{
-				log.Warning("444444")
 				this.peersPool.DeletePeer(pers)
 			}
 		}

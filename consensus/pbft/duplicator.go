@@ -6,7 +6,6 @@ import (
 	"container/list"
 
 	"hyperchain/core/types"
-
 )
 
 type transactionContainer struct {

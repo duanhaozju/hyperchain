@@ -175,9 +175,7 @@ func (this *PeersPool)ToRoutingTableWithout(hash string)pb.Routers{
 	//加入自己
 	routers.Routers = append(routers.Routers,this.localNode)
 	//需要进行排序
-	log.Error("old routers: ", routers.Routers)
 	sort.Sort(routers)
-	log.Error("new routers: ", routers.Routers)
 	for idx,_ := range routers.Routers{
 		routers.Routers[idx].ID = uint64(idx+1)
 	}

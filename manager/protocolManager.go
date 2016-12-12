@@ -256,7 +256,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 		case event.ConsensusEvent:
 			//call consensus module
-			log.Info("###### enter ConsensusEvent")
+			log.Debug("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 		}
 	}
@@ -291,7 +291,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			self.consenter.RecvMsg(ev.Payload)
 		case event.DelPeerEvent:
 			// a peer submit a request to exit the alliance
-			log.Warning("DelPeerEvent")
+			log.Debug("DelPeerEvent")
 			payload := ev.Payload
 			routerHash, id := self.Peermanager.GetRouterHashifDelete(string(payload))
 			msg := &protos.DelNodeMessage{
@@ -301,7 +301,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			}
 			self.consenter.RecvLocal(msg)
 		case event.BroadcastDelPeerEvent:
-			log.Warning("BroadcastDelPeerEvent")
+			log.Debug("BroadcastDelPeerEvent")
 			// receive this event from consensus module
 			// broadcast to other replica
 			// TODO Don't send to the exit peer itself
@@ -317,7 +317,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			// deliver it to consensus module
 			self.consenter.RecvMsg(ev.Payload)
 		case event.UpdateRoutingTableEvent:
-			log.Warning("UpdateRoutingTableEvent")
+			log.Debug("UpdateRoutingTableEvent")
 			// a new peer's join chain request has been accepted
 			// update local routing table
 			// TODO notify consensus module to add flag

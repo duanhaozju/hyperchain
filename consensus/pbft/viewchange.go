@@ -208,9 +208,7 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 	// record same vc from self times
 	if vc.ReplicaId == pbft.id {
 		pbft.vcResendCount++
-		logger.Warningf("=========================================")
 		logger.Warningf("Replica %d already recv view change from itself for %d times", pbft.id, pbft.vcResendCount)
-		logger.Warningf("=========================================")
 	}
 
 	if _, ok := pbft.viewChangeStore[vcidx{vc.View, vc.ReplicaId}]; ok {
