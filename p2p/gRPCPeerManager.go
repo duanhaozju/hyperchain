@@ -15,44 +15,42 @@ import (
 	"golang.org/x/net/context"
 	"encoding/hex"
 	"hyperchain/crypto"
+	"strings"
+	"fmt"
 )
 
 const MAX_PEER_NUM = 4
 
 // gRPC peer manager struct, which to manage the gRPC peers
 type GrpcPeerManager struct {
-	//本地节点
 	LocalNode     *Node
-	//节点池,相当于列表
 	peersPool     *PeersPool
-	//在peer /node中都需要使用,应当存储
 	TEM           transport.TransportEncryptManager
-	//连接节点的时候使用,不需要作为成员变量存在
-	//peerStatus    map[uint64]bool
-	//配置文件读取类
 	configs       peerComm.Config
-	//这个是动态变化的,不能作为初始化的时候的判断条件
-	//MaxPeerNumber int
-	//需要持有
 	NodeID        uint64
-	//这些信息都放在localAddr中就好了
-	//Port          int64
-	//IP            string
-	//这个在peer和node中都要更新
-	//Routers       pb.Routers
-	//是否为创世节点,可能需要作为一个标识存在,但是
 	Original      bool
-	//是否上线
 	IsOnline      bool
 	//interducer information
 	Introducer    pb.PeerAddress
-	// N
-
-	//N int
 
 }
 
-func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP string, introducerPort int64,introducer_ID uint64) *GrpcPeerManager {
+func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducer string) *GrpcPeerManager {
+	//introducer ip
+	introducerIP := strings.Split(introducer, ":")[0]
+	introducerPort, atoi_err := strconv.Atoi(strings.Split(introducer, ":")[1])
+	if atoi_err != nil {
+		fmt.Errorf("err,the format of introducer is error %v", atoi_err)
+		return nil;
+	}
+	introducerID, atoi_err := strconv.Atoi(strings.Split(introducer, ":")[2])
+	if atoi_err != nil {
+		fmt.Errorf("err,the format of introducer is error %v", atoi_err)
+		return nil;
+	}
+	introducer_Port := int64(introducerPort)
+	introducer_ID := uint64(introducerID)
+
 	NodeID := uint64(nodeID)
 	// configs
 	var newgRPCManager GrpcPeerManager
@@ -62,7 +60,7 @@ func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducerIP
 	newgRPCManager.NodeID = NodeID
 
 	newgRPCManager.Original = isOriginal
-	newgRPCManager.Introducer = *peerComm.ExtractAddress(introducerIP, introducerPort, introducer_ID)
+	newgRPCManager.Introducer = *peerComm.ExtractAddress(introducerIP, introducer_Port, introducer_ID)
 	//HSM only instanced once, so peersPool and Node Hsm are same instance
 	newgRPCManager.TEM = transport.NewHandShakeManger()
 	return &newgRPCManager
@@ -74,8 +72,6 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 		log.Error("the gRPC Manager hasn't initlized")
 		os.Exit(1)
 	}
-	//newgRPCManager.IP = newgRPCManager.configs.GetIP(newgRPCManager.NodeID)
-	// 重构peerpool 不采用单例模式进行管理
 	port := this.configs.GetPort(this.NodeID)
 	if port == int64(0) {
 		port = GRPCProt
@@ -94,9 +90,9 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 		aliveChain <- 0
 		this.IsOnline = true
 	} else {
-		//启动attend监听routine
+		// start attend routine
 		go this.LocalNode.attendNoticeProcess(this.LocalNode.N)
-		//TODO 连接介绍人节点
+		//TODO connect to introducer
 		this.connectToIntroducer(this.Introducer)
 		//this.ConnectToOthers()
 		aliveChain <- 1
@@ -105,7 +101,7 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 
 
 	log.Notice("┌────────────────────────────┐")
-	log.Notice("│  All NODES WERE CONNECTED  │")
+	log.Notice("│  All NODES WERE CONNECTED                   |")
 	log.Notice("└────────────────────────────┘")
 
 }

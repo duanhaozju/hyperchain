@@ -61,10 +61,10 @@ func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, TEM transp
 	//listen the update
 	go newNode.UpdateDelayTableThread();
 
-	log.Debug("节点启动")
-	log.Debug("本地节点hash", newNode.address.Hash)
-	log.Debug("本地节点ip", newNode.address.IP)
-	log.Debug("本地节点port", newNode.address.Port)
+	log.Debug("node start ")
+	log.Debug("local node hash", newNode.address.Hash)
+	log.Debug("local node ip", newNode.address.IP)
+	log.Debug("local node port", newNode.address.Port)
 	return &newNode
 
 }
@@ -90,19 +90,19 @@ func (this *Node)attendNoticeProcess(N int) {
 		select {
 		case attendFlag := <-this.attendChan:
 			{
-				log.Debug("连接到一个节点...!!!!!! N:", N, "f", f, "num", num)
+				log.Debug("Connect to a new peer ... N:", N, "f", f, "num", num)
 				if attendFlag == 1 {
 					num += 1
 					if num >= (N - f) && !this.sentEvent {
 						//TODO 修改向上post的消息类型
-						log.Debug("新节点已经连接到chain上>>>>><<<<<<<<<<")
+						log.Debug("new node has online ")
 						this.higherEventManager.Post(event.AlreadyInChainEvent{})
 						this.sentEvent = true
 						num = 0
 
 					}
 				} else {
-					log.Warning("非法链接...!!!!!! N:", N, "f", f, "num", num)
+					log.Warning("invalid connection ... N:", N, "f", f, "num", num)
 			}
 		}
 		}

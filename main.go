@@ -102,20 +102,7 @@ func main() {
 		eventMux := new(event.TypeMux)
 
 		//init peer manager to start grpc server and client
-		//introducer ip
-		introducerIp := strings.Split(argv.Introducer, ":")[0]
-		introducerPort, atoi_err := strconv.Atoi(strings.Split(argv.Introducer, ":")[1])
-		if atoi_err != nil {
-			fmt.Errorf("错误,代理节点信息格式错误%v", atoi_err)
-		}
-		introducerID, atoi_err := strconv.Atoi(strings.Split(argv.Introducer, ":")[2])
-		if atoi_err != nil {
-			fmt.Errorf("错误,代理节点信息格式错误%v", atoi_err)
-		}
-		introducerPortint64 := int64(introducerPort)
-		introducerIDUint64 := uint64(introducerID)
-		//introducer port
-		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath(), config.getNodeID(), argv.IsInit, introducerIp, introducerPortint64,introducerIDUint64)
+		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath(), config.getNodeID(), argv.IsInit, argv.Introducer)
 
 		//init db
 		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())

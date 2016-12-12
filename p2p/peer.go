@@ -33,6 +33,7 @@ type Peer struct {
 	IsPrimary  bool
 	PeerPool   *PeersPool
 	Addr pb.PeerAddress
+	Certificate string
 
 }
 
@@ -41,18 +42,16 @@ type Peer struct {
 // the peer will auto store into the peer pool.
 // when creating a peer, the client instance will create a message whose type is HELLO
 // if get a response, save the peer into singleton peer pool instance
-func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.TransportEncryptManager, localAddr *pb.PeerAddress, peerPool *PeersPool) (*Peer, error) {
-	var peer Peer
+func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.TransportEncryptManager, localAddr *pb.PeerAddress, peerPool *PeersPool) (peer *Peer, err error) {
 	peer.TEM = TEM
 	peer.ID = nid
 	peer.PeerPool = peerPool
-	peerAddr := peerComm.ExtractAddress(ip, port, nid)
-	peer.Addr = *peerAddr
+	peerAddress := peerComm.ExtractAddress(ip, port, nid)
+	peer.Addr = *peerAddress
 	opts:=membersrvc.GetGrpcClientOpts()
 	conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), opts...)
 	peer.localAddr = localAddr
 	peer.RemoteAddr = peerComm.ExtractAddress(ip, port, nid)
-	//conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
 	if err != nil {
 		errors.New("Cannot establish a connection!")
 		log.Error("err:", err)
@@ -61,12 +60,11 @@ func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.Transpo
 	peer.Connection = conn
 	peer.Client = pb.NewChatClient(peer.Connection)
 	peer.IsPrimary = false
-	//TODO handshake operation
+	//review handshake operation
 	handShakeErr := peer.handShake()
 	if handShakeErr != nil{
 		return nil, handShakeErr
 	}
-	return &peer, nil
 	return &peer, nil
 }
 
@@ -77,7 +75,6 @@ func NewPeerByAddress(address *pb.PeerAddress, nid uint64, TEM transport.Transpo
 	peer.RemoteAddr = address
 	opts := membersrvc.GetGrpcClientOpts()
 	conn, err := grpc.Dial(address.IP + ":" + strconv.Itoa(int(address.Port)), opts...)
-	//conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
 	if err != nil {
 		errors.New("Cannot establish a connection!")
 		log.Error("err:", err)
@@ -86,8 +83,7 @@ func NewPeerByAddress(address *pb.PeerAddress, nid uint64, TEM transport.Transpo
 	peer.Connection = conn
 	peer.Client = pb.NewChatClient(peer.Connection)
 	peer.IsPrimary = false
-	//log.Warning("newpeer :", peer)
-	//TODO handshake operation
+	//review handshake operation
 	handShakeErr := peer.handShake()
 	if handShakeErr != nil{
 		return nil, handShakeErr
@@ -95,39 +91,35 @@ func NewPeerByAddress(address *pb.PeerAddress, nid uint64, TEM transport.Transpo
 	return &peer, nil
 }
 
-func (peer *Peer) handShake() error {
-	//review 开始交换秘钥
+func (peer *Peer) handShake() (err error) {
+	//review start exchange the secret
 	helloMessage := pb.Message{
 		MessageType:  pb.Message_HELLO,
 		Payload:      peer.TEM.GetLocalPublicKey(),
 		From:         peer.localAddr,
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
-	retMessage, err2 := peer.Client.Chat(context.Background(), &helloMessage)
-	if err2 != nil {
-		log.Error("cannot establish a connection",err2)
-		return err2
+	retMessage, err := peer.Client.Chat(context.Background(), &helloMessage)
+	if err != nil {
+		log.Error("cannot establish a connection",err)
+		return
 	} else {
-		//review 取得对方的秘钥
+		//review get the remote peer secret
 		if retMessage.MessageType == pb.Message_HELLO_RESPONSE {
 			remotePublicKey := retMessage.Payload
-			genErr := peer.TEM.GenerateSecret(remotePublicKey, peer.RemoteAddr.Hash)
-			if genErr != nil {
-				log.Error("genErr", genErr)
-				return genErr
+			err := peer.TEM.GenerateSecret(remotePublicKey, peer.RemoteAddr.Hash)
+			if err != nil {
+				log.Error("genErr", err)
+				return
 			}
 
 			log.Debug("secret", len(peer.TEM.GetSecret(peer.RemoteAddr.Hash)))
 			peer.ID = retMessage.From.ID
-			//log.Critical("节点:", peer.Addr.ID)
-			//log.Critical("hash:", peer.Addr.Hash)
-			//log.Critical("协商秘钥：")
-			//log.Critical(peer.TEM.GetSecret(peer.Addr.Hash))
 			return  nil
 		}
-		return errors.New("ret message is not Hello Response!")
+		err =  errors.New("ret message is not Hello Response!")
+		return
 	}
-	//return nil, errors.New("cannot establish a connection")
 }
 
 func NewPeerByIpAndPortReconnect(ip string, port int64, nid uint64, TEM transport.TransportEncryptManager, localAddr *pb.PeerAddress, peerPool *PeersPool) (*Peer, error) {
@@ -139,7 +131,6 @@ func NewPeerByIpAndPortReconnect(ip string, port int64, nid uint64, TEM transpor
 
 	opts := membersrvc.GetGrpcClientOpts()
 	conn, err := grpc.Dial(ip + ":" + strconv.Itoa(int(port)), opts...)
-	//conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
 	if err != nil {
 		errors.New("Cannot establish a connection!")
 		log.Error("err:", err)
@@ -149,10 +140,8 @@ func NewPeerByIpAndPortReconnect(ip string, port int64, nid uint64, TEM transpor
 	peer.Client = pb.NewChatClient(peer.Connection)
 	peer.Addr = *peerAddr
 	peer.IsPrimary = false
-	//TODO handshake operation
-	//peer.TEM = transport.NewHandShakeManger()
-	//package the information
-	//review 开始交换秘钥
+	// review handshake operation
+	// review start exchange the secret
 	helloMessage := pb.Message{
 		MessageType:  pb.Message_RECONNECT,
 		Payload:      peer.TEM.GetLocalPublicKey(),
@@ -160,12 +149,11 @@ func NewPeerByIpAndPortReconnect(ip string, port int64, nid uint64, TEM transpor
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	retMessage, err2 := peer.Client.Chat(context.Background(), &helloMessage)
-	//log.Warning("重连返回值...", retMessage)
 	if err2 != nil {
 		log.Error("cannot establish a connection", err2)
 		return nil, err2
 	} else {
-		//review 取得对方的秘钥
+		//review get the remote peer secrets
 		if retMessage.MessageType == pb.Message_RECONNECT_RESPONSE {
 			remotePublicKey := retMessage.Payload
 			genErr := peer.TEM.GenerateSecret(remotePublicKey, peer.Addr.Hash)
@@ -179,10 +167,6 @@ func NewPeerByIpAndPortReconnect(ip string, port int64, nid uint64, TEM transpor
 				log.Error("cannot decrypt the nodeidinfo!")
 				errors.New("Decrypt ERROR")
 			}
-			//log.Critical("节点:", peer.Addr.ID)
-			//log.Critical("hash:", peer.Addr.Hash)
-			//log.Critical("协商秘钥：")
-			//log.Critical(peer.TEM.GetSecret(peer.Addr.Hash))
 			return &peer, nil
 		}
 	}
@@ -195,29 +179,23 @@ func NewPeerByIpAndPortReconnect(ip string, port int64, nid uint64, TEM transpor
 //
 func (this *Peer) Chat(msg pb.Message) (*pb.Message, error) {
 	log.Debug("Invoke the broadcast method", msg.From.ID, ">>>", this.Addr.ID)
-	//this.chatMux.Lock()
-	//defer this.chatMux.Unlock()
 
 	msg.Payload = this.TEM.EncWithSecret(msg.Payload, this.Addr.Hash)
 	r, err := this.Client.Chat(context.Background(), &msg)
 	if err != nil {
 		this.Status = 2;
 		log.Error("err:", err)
-		//log.Error("retry to connect again")
-		//log.Warning("watting for updating")
 		return nil,err
 	} else {
 		this.Status = 1;
 	}
-	// 返回信息解密
+	// decode the return message
 	if r != nil {
-		//log.Warning("返回信息",r)
 		if r.MessageType != pb.Message_HELLO && r.MessageType != pb.Message_HELLO_RESPONSE {
 			r.Payload = this.TEM.DecWithSecret(r.Payload, r.From.Hash)
 		}
 
 	}
-	//log.Warning("返回结果",r.MessageType)
 	return r, err
 }
 
