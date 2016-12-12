@@ -84,6 +84,7 @@ func (this *Node)UpdateDelayTableThread(){
 
 //新节点需要监听相应的attend类型
 func (this *Node)attendNoticeProcess(N int) {
+	isPrimaryConnectFlag := false
 	f := int(math.Floor(float64((N - 1) / 3)))
 	num := 0
 	for {
@@ -93,7 +94,7 @@ func (this *Node)attendNoticeProcess(N int) {
 				log.Debug("Connect to a new peer ... N:", N, "f", f, "num", num)
 				if attendFlag == 1 {
 					num += 1
-					if num >= (N - f) && !this.sentEvent {
+					if num >= (N - f) && !this.sentEvent && isPrimaryConnectFlag{
 						//TODO 修改向上post的消息类型
 						log.Debug("new node has online ")
 						this.higherEventManager.Post(event.AlreadyInChainEvent{})
@@ -101,9 +102,20 @@ func (this *Node)attendNoticeProcess(N int) {
 						num = 0
 
 					}
-				} else {
+				} else if attendFlag == 2{
+					isPrimaryConnectFlag =true;
+					if num >= (N - f) && !this.sentEvent && isPrimaryConnectFlag{
+						//TODO 修改向上post的消息类型
+						log.Debug("new node has online ")
+						this.higherEventManager.Post(event.AlreadyInChainEvent{})
+						this.sentEvent = true
+						num = 0
+
+					}
+
+			}else{
 					log.Warning("invalid connection ... N:", N, "f", f, "num", num)
-			}
+				}
 		}
 		}
 	}
@@ -163,14 +175,14 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 	case pb.Message_RECONNECT:
 		{
-			log.Warning("节点在重连")
+			log.Warning("node is reconnecting.")
 			response.MessageType = pb.Message_RECONNECT_RESPONSE
 			remotePublicKey := msg.Payload
 			genErr := this.PeerPool.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
 			if genErr != nil {
 				log.Error("gen sec error", genErr)
 			}
-			log.Warning("重连远端id:", msg.From.ID, this.PeerPool.TEM.GetSecret(msg.From.Hash))
+			log.Warning("reconnect the remote node id:", msg.From.ID, this.PeerPool.TEM.GetSecret(msg.From.Hash))
 			//every times get the public key is same
 			transportPublicKey := this.PeerPool.TEM.GetLocalPublicKey()
 			//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
@@ -184,9 +196,9 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	case pb.Message_RECONNECT_RESPONSE:
 		{
 			log.Debug("=================================")
-			log.Debug("协商秘钥")
-			log.Debug("本地地址为", this.address.ID, this.address.IP, this.address.Port)
-			log.Debug("远端地址为", msg.From.ID, msg.From.IP, msg.From.Port)
+			log.Debug("exchange the secret")
+			log.Debug("local node is ", this.address.ID, this.address.IP, this.address.Port)
+			log.Debug("remote node is", msg.From.ID, msg.From.IP, msg.From.Port)
 			log.Debug("=================================")
 			response.MessageType = pb.Message_HELLO_RESPONSE
 			remotePublicKey := msg.Payload
@@ -194,7 +206,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			if genErr != nil {
 				log.Error("gen sec error", genErr)
 			}
-			log.Warning("Message_HELLO_RESPONSE远端id:", msg.From.ID, this.PeerPool.TEM.GetSecret(msg.From.Hash))
+			log.Warning("Message_HELLO_RESPONSE remote id:", msg.From.ID, this.PeerPool.TEM.GetSecret(msg.From.Hash))
 			//every times get the public key is same
 			transportPublicKey := this.PeerPool.TEM.GetLocalPublicKey()
 			//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
@@ -231,18 +243,23 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 	case pb.Message_ATTEND_RESPNSE:
 		{
-			//这里需要进行判断是并且进行更新
-			this.attendChan <- 1
+			// here need to judge if update
+			//if primary
+			if this.IsPrimary {
+				this.attendChan <- 2
+			}else{
+				this.attendChan <- 1
+			}
+
 		}
 	case pb.Message_CONSUS:
 		{
 			log.Debug("<<<< GOT A CONSUS MESSAGE >>>>")
 
-			log.Debug("××××××Node解密信息××××××")
-			log.Debug("Node待解密信息", hex.EncodeToString(msg.Payload))
+			log.Debug("×××××× Node decode the information ××××××")
+			log.Debug("Node redeay to decode information", hex.EncodeToString(msg.Payload))
 			transferData := this.PeerPool.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
-			log.Debug("Node解密后信息", hex.EncodeToString(transferData))
-			log.Debug("Node解密后信息2", string(transferData))
+			log.Debug("Node decoded information", hex.EncodeToString(transferData))
 			response.Payload = []byte("GOT_A_CONSENSUS_MESSAGE")
 			if string(transferData) == "TEST" {
 				response.Payload = []byte("GOT_A_TEST_CONSENSUS_MESSAGE")
