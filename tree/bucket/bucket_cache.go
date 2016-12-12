@@ -4,7 +4,6 @@ import (
 	"sync"
 	//"time"
 	"unsafe"
-	"hyperchain/hyperdb"
 )
 
 var defaultBucketCacheMaxSize = 100 // MBs
@@ -37,11 +36,6 @@ func (cache *bucketCache) loadAllBucketNodesFromDB() {
 	if !cache.isEnabled {
 		return
 	}
-	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {
-		logger.Fatal(err)
-	}
-	logger.Infof("Loaded buckets data in cache. Total buckets in DB = [%d]. Total cache size:=%d", count, cache.size)
 }
 
 func (cache *bucketCache) putWithoutLock(key bucketKey, node *bucketNode) {

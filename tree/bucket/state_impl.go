@@ -215,7 +215,7 @@ func (stateImpl *StateImpl) AddChangesForPersistence(writeBatch *hyperdb.Batch) 
 	return nil
 }
 
-// TODO it should be done later
+// TODO it should be test later
 func (stateImpl *StateImpl) addDataNodeChangesForPersistence(writeBatch hyperdb.Batch) {
 	affectedBuckets := stateImpl.dataNodesDelta.getAffectedBuckets()
 	for _, affectedBucket := range affectedBuckets {
@@ -227,13 +227,12 @@ func (stateImpl *StateImpl) addDataNodeChangesForPersistence(writeBatch hyperdb.
 			} else {
 				logger.Debugf("Adding data node with value = %#v", dataNode.value)
 				writeBatch.Put(dataNode.dataKey.getEncodedBytes(), dataNode.value)
-				//writeBatch.Put(openchainDB.StateCF, dataNode.dataKey.getEncodedBytes(), dataNode.value)
 			}
 		}
 	}
 }
 
-// TODO it should be done later
+// TODO it should be test later
 func (stateImpl *StateImpl) addBucketNodeChangesForPersistence(writeBatch hyperdb.Batch) {
 
 	secondLastLevel := conf.getLowestLevel() - 1
@@ -241,16 +240,15 @@ func (stateImpl *StateImpl) addBucketNodeChangesForPersistence(writeBatch hyperd
 		bucketNodes := stateImpl.bucketTreeDelta.getBucketNodesAt(level)
 		for _, bucketNode := range bucketNodes {
 			if bucketNode.markedForDeletion {
-				//writeBatch.DeleteCF(openchainDB.StateCF, bucketNode.bucketKey.getEncodedBytes())
 				writeBatch.Delete(bucketNode.bucketKey.getEncodedBytes())
 			} else {
-				//writeBatch.PutCF(openchainDB.StateCF, bucketNode.bucketKey.getEncodedBytes(), bucketNode.marshal())
 				writeBatch.Put(bucketNode.bucketKey.getEncodedBytes(), bucketNode.marshal())
 			}
 		}
 	}
 }
 
+// TODO to do test with cache
 func (stateImpl *StateImpl) updateBucketCache() {
 	if stateImpl.bucketTreeDelta == nil || stateImpl.bucketTreeDelta.isEmpty() {
 		return

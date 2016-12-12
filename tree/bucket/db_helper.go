@@ -6,11 +6,9 @@ import (
 type rawKey []byte
 
 func fetchDataNodeFromDB(dataKey *dataKey) (*dataNode, error) {
-
 	db, err := hyperdb.GetLDBDatabase()
 	// TODO is the key ok?
 	nodeBytes, err := db.Get(dataKey.getEncodedBytes())
-
 	if err != nil {
 		return nil, err
 	}
@@ -24,13 +22,11 @@ func fetchDataNodeFromDB(dataKey *dataKey) (*dataNode, error) {
 		return nil, nil
 	}
 	return unmarshalDataNode(dataKey, nodeBytes), nil
-	return nil,nil
 }
 
 // TODO test
 func fetchBucketNodeFromDB(bucketKey *bucketKey) (*bucketNode, error) {
-	db,err := hyperdb.GetLDBDatabase()
-	//nodeBytes, err := openchainDB.GetFromStateCF(bucketKey.getEncodedBytes())
+	db,_ := hyperdb.GetLDBDatabase()
 	nodeBytes, err := db.Get(bucketKey.getEncodedBytes())
 	if err != nil {
 		return nil, err
@@ -42,7 +38,7 @@ func fetchBucketNodeFromDB(bucketKey *bucketKey) (*bucketNode, error) {
 }
 
 
-// TODO how to featch datanodes
+// TODO how to featch datanodes iterate
 func fetchDataNodesFromDBFor(bucketKey *bucketKey) (dataNodes, error) {
 	logger.Debugf("Fetching from DB data nodes for bucket [%s]", bucketKey)
 	//db,_ := hyperdb.GetLDBDatabase()
