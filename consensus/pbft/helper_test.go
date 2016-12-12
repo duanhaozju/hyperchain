@@ -22,10 +22,10 @@ import (
 func TestSortableUint64SliceFunctions(t *testing.T) {
 	slice := sortableUint64Slice{1, 2, 3, 4, 5}
 	if slice.Len() != 5{
-		t.Errorf("error slice.len != 5")
+		t.Error("error slice.len != 5")
 	}
 	if slice.Less(2, 3) != true{
-		t.Errorf("error slice[2] >= slice[3]")
+		t.Error("error slice[2] >= slice[3]")
 	}
 	if slice.Swap(2, 3); !(slice[2] == 4 && slice[3] ==3){
 		t.Error("error exchange slice[2], slice[3]")
@@ -277,10 +277,10 @@ func TestPostRequestEvent(t *testing.T)  {
 		select {
 		case e := <- evts:
 			if !reflect.DeepEqual(e, tx) {
-				t.Errorf("error postRequestEvent ")
+				t.Error("error postRequestEvent ")
 			}
 		case <- time.After(3*time.Second) :
-			t.Errorf("error postRequestEvent event not received")
+			t.Error("error postRequestEvent event not received")
 		}
 	}()
 }
@@ -305,10 +305,10 @@ func TestPostPbftEvent(t *testing.T)  {
 		select {
 		case e := <- evts:
 			if !reflect.DeepEqual(e, mEvent) {
-				t.Errorf("error postPbftEvent ")
+				t.Error("error postPbftEvent ")
 			}
 		case <- time.After(3*time.Second) :
-			t.Errorf("error postPbftEvent event not received")
+			t.Error("error postPbftEvent event not received")
 		}
 	}()
 }
@@ -367,7 +367,7 @@ func TestConsensusMsgHelper(t *testing.T)  {
 	}
 	rs := consensusMsgHelper(msg, 1211)
 	if rs.Id != 1211 {
-		t.Errorf("error consensusMsgHelper failed!")
+		t.Error("error consensusMsgHelper failed!")
 	}
 }
 
@@ -385,7 +385,7 @@ func TestStateUpdateHelper(t *testing.T)  {
 	if msg.Id != 1 || msg.SeqNo != 2 ||
 		!reflect.DeepEqual(msg.Replicas, r)||
 		!reflect.DeepEqual(msg.TargetId, []byte("121111")) {
-		t.Errorf("error stateUpdateHelper failed!")
+		t.Error("error stateUpdateHelper failed!")
 	}
 }
 
@@ -471,14 +471,14 @@ func TestStartTimerIfOutstandingRequests(t *testing.T)  {
 	pbft.startTimerIfOutstandingRequests()
 
 	if pbft.timerActive == false {
-		t.Errorf("error startTimerIfOutstandingRequests failed!")
+		t.Error("error startTimerIfOutstandingRequests failed!")
 	}
 	pbft.timerActive = false
 	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
 	pbft.startTimerIfOutstandingRequests()
 
 	if pbft.timerActive == true {
-		t.Errorf("error startTimerIfOutstandingRequests failed!")
+		t.Error("error startTimerIfOutstandingRequests failed!")
 	}
 
 }

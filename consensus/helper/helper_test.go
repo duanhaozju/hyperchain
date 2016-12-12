@@ -24,7 +24,7 @@ func TestNewHelper(t *testing.T) {
 
 	help := NewHelper(m)
 	if !reflect.DeepEqual(help, h) {
-		t.Errorf("error NewHelper")
+		t.Error("error NewHelper")
 	}
 }
 
@@ -44,10 +44,10 @@ func TestInnerBroadcast(t *testing.T) {
 		select {
 		case e := <-sub.Chan():
 			if ! reflect.DeepEqual(e.Data, broadcastEvent) {
-				t.Fatalf("Received wrong message from sub.Chan")
+				t.Fatal("Received wrong message from sub.Chan")
 			}
 		case <-time.After(1 * time.Second):
-			t.Fatalf("Timed out waiting for message to fire")
+			t.Fatal("Timed out waiting for message to fire")
 		}
 	}()
 }
@@ -68,10 +68,10 @@ func TestInnerUnicast(t *testing.T) {
 		select {
 		case e := <-sub.Chan():
 			if !reflect.DeepEqual(e.Data, unicastEvent) {
-				t.Fatalf("Received wrong message from sub.Chan")
+				t.Fatal("Received wrong message from sub.Chan")
 			}
 		case <-time.After(1 * time.Second):
-			t.Fatalf("Timed out waiting for message to fire")
+			t.Fatal("Timed out waiting for message to fire")
 		}
 	}()
 }
@@ -88,7 +88,7 @@ func TestExecute(t *testing.T) {
 
 		}
 		case <-time.After(1 * time.Second):
-			t.Fatalf("Timed out waiting for message to fire")
+			t.Fatal("Timed out waiting for message to fire")
 		}
 	}()
 	h.Execute(1, "hhhhhaaaaahhhh", true, false, timestamp)
@@ -110,10 +110,10 @@ func TestUpdateState(t *testing.T) {
 		select {
 		case e := <-sub.Chan():
 			if !reflect.DeepEqual(e.Data, updateStateEvent) {
-				t.Fatalf("Received wrong message from sub.Chan")
+				t.Fatal("Received wrong message from sub.Chan")
 			}
 		case <-time.After(1 * time.Second):
-			t.Fatalf("Timed out waiting for message to fire")
+			t.Fatal("Timed out waiting for message to fire")
 		}
 	}()
 	h.UpdateState(updateState)
@@ -135,10 +135,10 @@ func TestValidateBatch(t *testing.T) {
 		select {
 		case e := <-sub.Chan():
 			if !reflect.DeepEqual(e.Data, validateEvent) {
-				t.Fatalf("Received wrong message from sub.Chan")
+				t.Fatal("Received wrong message from sub.Chan")
 			}
 		case <-time.After(1 * time.Second):
-			t.Fatalf("Timed out waiting for message to fire")
+			t.Fatal("Timed out waiting for message to fire")
 		}
 	}()
 
@@ -156,10 +156,10 @@ func TestVcReset(t *testing.T) {
 		select {
 		case e := <-sub.Chan():
 			if !reflect.DeepEqual(e.Data, vcResetEvent) {
-				t.Fatalf("Received wrong message from sub.Chan")
+				t.Fatal("Received wrong message from sub.Chan")
 			}
 		case <-time.After(5 * time.Second):
-			t.Fatalf("Timed out waiting for message to fire")
+			t.Fatal("Timed out waiting for message to fire")
 		}
 	}()
 	h.VcReset(12345)
@@ -176,10 +176,10 @@ func TestInformPrimary(t *testing.T) {
 		select {
 		case e := <-sub.Chan():
 			if !reflect.DeepEqual(e.Data, informPrimaryEvent) {
-				t.Fatalf("Received wrong message from sub.Chan")
+				t.Fatal("Received wrong message from sub.Chan")
 			}
 		case <-time.After(1 * time.Second):
-			t.Fatalf("Timed out waiting for message to fire")
+			t.Fatal("Timed out waiting for message to fire")
 		}
 	}()
 	h.InformPrimary(9)
