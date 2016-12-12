@@ -318,7 +318,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 				}
 			case recovery.Message_BROADCAST_DELPEER:
 				{
-					log.Warning("receive Message_BROADCAST_DELPEER")
+					log.Debug("receive Message_BROADCAST_DELPEER")
 					go this.higherEventManager.Post(event.RecvDelPeerEvent{
 						Payload:SyncMsg.Payload,
 					})
