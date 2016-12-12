@@ -135,6 +135,7 @@ message recovery_init {
 message recovery_response {
     uint64               replica_id = 1;
     map<uint64, string>  chkpts     = 2;
+    uint64               lastExec   = 3;
 }
 
 message recovery_fetchPQC {
