@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger/fabric/core/util"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
 )
@@ -152,7 +151,7 @@ func AssertPanic(t testing.TB, msg string) {
 }
 
 func ComputeCryptoHash(content ...[]byte) []byte {
-	return util.ComputeCryptoHash(AppendAll(content...))
+	return ComputeCryptoHash(AppendAll(content...))
 }
 
 func AppendAll(content ...[]byte) []byte {
@@ -163,9 +162,6 @@ func AppendAll(content ...[]byte) []byte {
 	return combinedContent
 }
 
-func GenerateID(t *testing.T) string {
-	return util.GenerateUUID()
-}
 
 func ConstructRandomBytes(t testing.TB, size int) []byte {
 	value := make([]byte, size)
