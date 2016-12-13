@@ -3,15 +3,12 @@
 package core
 
 import (
-	"fmt"
 	"github.com/syndtr/goleveldb/leveldb"
 	"hyperchain/core/types"
-	"hyperchain/crypto"
 	"hyperchain/hyperdb"
 	"os"
 	"testing"
 	"time"
-
 )
 
 var transactionCases = []*types.Transaction{
@@ -61,10 +58,8 @@ func TestPutTransaction(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	commonHash := crypto.NewKeccak256Hash("keccak256")
 	for _, trans := range transactionCases {
-		key := trans.Hash(commonHash).Bytes()
-		err = PutTransaction(db, key, trans)
+		err, _ = PersistTransaction(db.NewBatch(), trans, "1.0", true, true)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -78,11 +73,9 @@ func TestGetTransaction(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	commonHash := crypto.NewKeccak256Hash("keccak256")
-	PutTransactions(db, commonHash, transactionCases)
+	PersistTransactions(db.NewBatch(), transactionCases, "1.0", true, true)
 	for _, trans := range transactionCases {
-		key := trans.Hash(commonHash).Bytes()
-		tr, err := GetTransaction(db, key)
+		tr, err := GetTransaction(db, trans.GetTransactionHash().Bytes())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -93,28 +86,31 @@ func TestGetTransaction(t *testing.T) {
 }
 
 func TestGetTransactionBLk(t *testing.T) {
-	InitDB("/tmp",8001)
+	InitDB("/tmp",9999)
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
-	commonHash := crypto.NewKeccak256Hash("keccak256")
-	PutTransactions(db, commonHash, transactionCases)
+	txMeta := types.TransactionMeta{
+		BlockIndex: 1,
+		Index:1,
+	}
+	for _, tx := range transactionCases {
+		//PersistTransaction(db.NewBatch(), tx, "1.0", true, true)
+		PersistTransactionMeta(db.NewBatch(), &txMeta, tx.GetTransactionHash(), true, true)
+	}
 	if err != nil {
 		log.Fatal(err)
 	}
-	block, err := GetBlockByNumber(db, 1)
-	if err != nil {
-		log.Fatal(err)
+	txs, _ := GetAllTransaction(db)
+	for i := 0; i < len(txs); i += 1 {
+		tx := txs[i]
+		//t.Log(tx)
+		bn, _ := GetTxWithBlock(db, tx.GetTransactionHash().Bytes())
+		if bn != 1 {
+			t.Error("get tx with block failed")
+		}
 	}
-	if len(block.Transactions)>0{
-		fmt.Println("tx hash", block.Transactions[0].BuildHash())
-		tx := block.Transactions[0]
-		bn, i := GetTxWithBlock(db, tx.BuildHash().Bytes())
-		fmt.Println("block num :", bn, "tx index:", i)
-	}
-
 }
 
 // TestGetAllTransaction tests for GetAllTransaction
@@ -124,8 +120,7 @@ func TestGetAllTransaction(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	commonHash := crypto.NewKeccak256Hash("keccak256")
-	PutTransactions(db, commonHash, transactionCases)
+	PersistTransactions(db.NewBatch(), transactionCases, "1.0", true, true)
 	trs, err := GetAllTransaction(db)
 	for _, trans := range trs {
 		isPass := false
@@ -148,13 +143,11 @@ func TestDeleteTransaction(t *testing.T) {
 		log.Fatal(err)
 	}
 	for _, trans := range transactionCases {
-		commonHash := crypto.NewKeccak256Hash("keccak256")
-		key := trans.Hash(commonHash).Bytes()
-		PutTransaction(db,key,trans)
-		DeleteTransaction(db, key)
-		_, err := GetTransaction(db, key)
+		PersistTransaction(db.NewBatch(), trans, "1.0", true, true)
+		DeleteTransaction(db, trans.GetTransactionHash().Bytes())
+		_, err := GetTransaction(db, trans.GetTransactionHash().Bytes())
 		if err != leveldb.ErrNotFound {
-			t.Errorf("the transaction key [%s] delete fail, TestDeleteTransaction fail", string(key))
+			t.Errorf("the transaction key [%s] delete fail, TestDeleteTransaction fail", trans.GetTransactionHash().Hex())
 		}
 	}
 }
@@ -166,14 +159,24 @@ func TestPutTransactions(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	commonHash := crypto.NewKeccak256Hash("keccak256")
-	PutTransactions(db, commonHash, transactionCases)
+	PersistTransactions(db.NewBatch(), transactionCases, "1.0", true, true)
 	trs, err := GetAllTransaction(db)
 	if err != nil {
 		log.Fatal(err)
 	}
 	if len(trs) < 3 {
-		t.Errorf("TestPutTransactions fail")
+		t.Error("TestPutTransactions fail")
+	}
+	for _, trans := range trs {
+		isPass := false
+		if string(trans.Signature) == "signature1" ||
+			string(trans.Signature) == "signature2" ||
+			string(trans.Signature) == "signature3" {
+			isPass = true
+		}
+		if !isPass {
+			t.Errorf("%s not exist", string(trans.Signature))
+		}
 	}
 }
 
@@ -195,18 +198,11 @@ func TestPutBlock(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
-	if err != nil {
-		log.Fatal(err)
-	}
+	PersistBlock(db.NewBatch(), &blockUtilsCase, "1.0", true, true)
 	block, err := GetBlock(db, blockUtilsCase.BlockHash)
-	fmt.Println(block.Number)
-	//height := GetHeightOfChain()
-	//for i:=uint64(1);i<=height;i++{
-	//	block ,_:= GetBlockByNumber(db,i)
-	//	PutBlock(db,block.BlockHash,block)
-	//}
-
+	if block.Number !=  1 {
+		t.Error("test put block failed")
+	}
 }
 
 // TestGetBlock tests for GetBlock
@@ -216,7 +212,7 @@ func TestGetBlock(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
+	err, _ = PersistBlock(db.NewBatch(), &blockUtilsCase, "1.0", true, true)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -236,17 +232,14 @@ func TestDeleteBlock(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
+	err, _ = PersistBlock(db.NewBatch(), &blockUtilsCase, "1.0", true, true)
 	if err != nil {
 		log.Fatal(err)
 	}
-	block, err := GetBlock(db, blockUtilsCase.BlockHash)
-	fmt.Println(block.Number)
 	err = DeleteBlock(db, blockUtilsCase.BlockHash)
-	//err = DeleteBlockByNum(db, 1)
-	block, err = GetBlock(db, blockUtilsCase.BlockHash)
+	_, err = GetBlock(db, blockUtilsCase.BlockHash)
 	if err != leveldb.ErrNotFound {
-		t.Errorf("block delete fail, TestDeleteBlock fail")
+		t.Error("block delete fail, TestDeleteBlock fail")
 	}
 }
 
@@ -265,10 +258,10 @@ func TestUpdateChain(t *testing.T) {
 	lasthash := GetLatestBlockHash()
 	parentHash := GetParentBlockHash()
 	if string(lasthash) != string(blockUtilsCase.BlockHash) {
-		t.Errorf("TestUpdateChain fail")
+		t.Error("TestUpdateChain fail")
 	}
 	if string(parentHash) != string(blockUtilsCase.ParentHash) {
-		t.Errorf("TestUpdateChain fail")
+		t.Error("TestUpdateChain fail")
 	}
 }
 

@@ -2,18 +2,6 @@
 // source: transaction.proto
 // DO NOT EDIT!
 
-/*
-Package types is a generated protocol buffer package.
-
-It is generated from these files:
-	transaction.proto
-
-It has these top-level messages:
-	Transaction
-	InvalidTransactionRecord
-	InvalidTransactionRecords
-	TransactionMeta
-*/
 package types
 
 import proto "github.com/golang/protobuf/proto"
@@ -24,12 +12,6 @@ import math "math"
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the proto package it is being compiled against.
-// A compilation error at this line likely means your copy of the
-// proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type InvalidTransactionRecord_ErrType int32
 
@@ -57,7 +39,7 @@ func (x InvalidTransactionRecord_ErrType) String() string {
 	return proto.EnumName(InvalidTransactionRecord_ErrType_name, int32(x))
 }
 func (InvalidTransactionRecord_ErrType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor0, []int{1, 0}
+	return fileDescriptor5, []int{1, 0}
 }
 
 type Transaction struct {
@@ -74,7 +56,7 @@ type Transaction struct {
 func (m *Transaction) Reset()                    { *m = Transaction{} }
 func (m *Transaction) String() string            { return proto.CompactTextString(m) }
 func (*Transaction) ProtoMessage()               {}
-func (*Transaction) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (*Transaction) Descriptor() ([]byte, []int) { return fileDescriptor5, []int{0} }
 
 func (m *Transaction) GetVersion() []byte {
 	if m != nil {
@@ -135,7 +117,7 @@ type InvalidTransactionRecord struct {
 func (m *InvalidTransactionRecord) Reset()                    { *m = InvalidTransactionRecord{} }
 func (m *InvalidTransactionRecord) String() string            { return proto.CompactTextString(m) }
 func (*InvalidTransactionRecord) ProtoMessage()               {}
-func (*InvalidTransactionRecord) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (*InvalidTransactionRecord) Descriptor() ([]byte, []int) { return fileDescriptor5, []int{1} }
 
 func (m *InvalidTransactionRecord) GetTx() *Transaction {
 	if m != nil {
@@ -165,7 +147,7 @@ type InvalidTransactionRecords struct {
 func (m *InvalidTransactionRecords) Reset()                    { *m = InvalidTransactionRecords{} }
 func (m *InvalidTransactionRecords) String() string            { return proto.CompactTextString(m) }
 func (*InvalidTransactionRecords) ProtoMessage()               {}
-func (*InvalidTransactionRecords) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+func (*InvalidTransactionRecords) Descriptor() ([]byte, []int) { return fileDescriptor5, []int{2} }
 
 func (m *InvalidTransactionRecords) GetRecords() []*InvalidTransactionRecord {
 	if m != nil {
@@ -182,7 +164,7 @@ type TransactionMeta struct {
 func (m *TransactionMeta) Reset()                    { *m = TransactionMeta{} }
 func (m *TransactionMeta) String() string            { return proto.CompactTextString(m) }
 func (*TransactionMeta) ProtoMessage()               {}
-func (*TransactionMeta) Descriptor() ([]byte, []int) { return fileDescriptor3, []int{3} }
+func (*TransactionMeta) Descriptor() ([]byte, []int) { return fileDescriptor5, []int{3} }
 
 func (m *TransactionMeta) GetBlockIndex() uint64 {
 	if m != nil {
@@ -206,9 +188,9 @@ func init() {
 	proto.RegisterEnum("types.InvalidTransactionRecord_ErrType", InvalidTransactionRecord_ErrType_name, InvalidTransactionRecord_ErrType_value)
 }
 
-func init() { proto.RegisterFile("transaction.proto", fileDescriptor3) }
+func init() { proto.RegisterFile("transaction.proto", fileDescriptor5) }
 
-var fileDescriptor3 = []byte{
+var fileDescriptor5 = []byte{
 	// 392 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x84, 0x52, 0x4f, 0x6f, 0xd3, 0x30,
 	0x14, 0xc7, 0xee, 0x9f, 0xb0, 0xd7, 0xb1, 0x95, 0x27, 0x34, 0x19, 0x84, 0x20, 0xca, 0x85, 0x9c,

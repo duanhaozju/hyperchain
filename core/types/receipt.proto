@@ -2,7 +2,7 @@ syntax = "proto3";
 package types;
 
 message Receipt {
-    bytes Version  = 1;
+    bytes version = 1;
 	bytes PostState = 2;
 	int64 CumulativeGasUsed = 3;
 	bytes TxHash = 4;
