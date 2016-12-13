@@ -113,6 +113,7 @@ type pbftProtocal struct {
 
 								 // recovery
 	inRecovery             bool                              // inRecovery indicate if replica is in proactive recovery process
+	recoveryToSeqNo	       uint64				 // recoveryToSeqNo is the target seqNo expected to recover to
 	recoveryRestartTimer   events.Timer                      // recoveryRestartTimer track how long a recovery is finished and fires if needed
 	recoveryRestartTimeout time.Duration                     // time limit for recovery process
 	rcRspStore             map[uint64]*RecoveryResponse      // rcRspStore store recovery responses from replicas
@@ -296,7 +297,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.negoViewRspTimer = pbftTimerFactory.CreateTimer()
 
 	// recovery
-	//pbft.inRecovery = true
+	pbft.inRecovery = true
 	pbft.recoveryRestartTimeout, err = time.ParseDuration(config.GetString("timeout.recovery"))
 	if err != nil {
 		panic(fmt.Errorf("Cannot parse recovery timeout: %s", err))
@@ -512,7 +513,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		pbft.persistView(pbft.view)
 		pbft.helper.InformPrimary(primary)
 		pbft.processRequestsDuringNegoView()
-		//pbft.initRecovery()
+		pbft.initRecovery()
 		return nil
 	case *RecoveryInit:
 		return pbft.recvRecovery(et)
@@ -524,7 +525,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		return pbft.recvRecoveryReturnPQC(et)
 	case recoveryDoneEvent:
 		logger.Notice("################################################")
-		logger.Noticef("#   Replica %d finished recovery", pbft.id)
+		logger.Noticef("#   Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
 		logger.Notice("################################################")
 		pbft.processRequestsDuringRecovery()
 		return nil
@@ -939,11 +940,24 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 	pbft.executeAfterStateUpdate()
 
 	if pbft.inRecovery {
+		if pbft.lastExec == pbft.recoveryToSeqNo {
+			// This is a somewhat subtle situation, we are behind by checkpoint, but others are just on chkpt.
+			// Hence, no need to fetch preprepare, prepare, commit
+			pbft.inRecovery = false
+			pbft.recoveryRestartTimer.Stop()
+			go pbft.postPbftEvent(recoveryDoneEvent{})
+			return nil
+		}
+
 		pbft.recoveryRestartTimer.Reset(pbft.recoveryRestartTimeout, recoveryRestartTimerEvent{})
-		pbft.fetchRecoveryPQC()
+		if pbft.highStateTarget == nil {
+			logger.Errorf("Try to fetch QPC, but highStateTarget is nil")
+			return nil
+		}
+		peers := pbft.highStateTarget.replicas
+		pbft.fetchRecoveryPQC(peers)
 		return nil
 	}
-
 	return nil
 }
 
@@ -1463,6 +1477,11 @@ func (pbft *pbftProtocal) execDoneSync(idx msgID) {
 		logger.Debugf("Replica %d finish execution %d, trying next", pbft.id, *pbft.currentExec)
 		pbft.lastExec = *pbft.currentExec
 		delete(pbft.committedCert, idx)
+		if pbft.lastExec == pbft.recoveryToSeqNo {
+			pbft.inRecovery = false
+			pbft.recoveryRestartTimer.Stop()
+			go pbft.postPbftEvent(recoveryDoneEvent{})
+		}
 		if pbft.lastExec%pbft.K == 0 {
 			bcInfo := getBlockchainInfo()
 			height := bcInfo.Height
