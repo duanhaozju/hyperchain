@@ -25,9 +25,10 @@ func fetchDataNodeFromDB(dataKey *dataKey) (*dataNode, error) {
 }
 
 // TODO test
-func fetchBucketNodeFromDB(bucketKey *bucketKey) (*bucketNode, error) {
+func fetchBucketNodeFromDB(accountID string,bucketKey *bucketKey) (*bucketNode, error) {
 	db,_ := hyperdb.GetLDBDatabase()
-	nodeBytes, err := db.Get(bucketKey.getEncodedBytes())
+	nodeKey := append(accountID,bucketKey.getEncodedBytes()...)
+	nodeBytes, err := db.Get(nodeKey)
 	if err != nil {
 		return nil, err
 	}

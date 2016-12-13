@@ -28,6 +28,7 @@ type dataNodesDelta struct {
 // TODO should be test by rjl and zhz
 func newDataNodesDelta(stateDelta *hyperstate.StateDelta) *dataNodesDelta {
 	dataNodesDelta := &dataNodesDelta{make(map[bucketKey]dataNodes)}
+	// TODO optimized
 	accountIDs := stateDelta.GetUpdatedAccountIds(false)
 	for _, accountID := range accountIDs {
 		updates := stateDelta.GetUpdates(accountID)
@@ -45,8 +46,8 @@ func newDataNodesDelta(stateDelta *hyperstate.StateDelta) *dataNodesDelta {
 	return dataNodesDelta
 }
 
-func (dataNodesDelta *dataNodesDelta) add(chaincodeID string, key string, value []byte) {
-	dataKey := newDataKey(chaincodeID, key)
+func (dataNodesDelta *dataNodesDelta) add(accountID string, key string, value []byte) {
+	dataKey := newDataKey(accountID, key)
 	bucketKey := dataKey.getBucketKey()
 	dataNode := newDataNode(dataKey, value)
 	logger.Debugf("Adding dataNode=[%s] against bucketKey=[%s]", dataNode, bucketKey)

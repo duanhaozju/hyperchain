@@ -8,10 +8,10 @@ type dataKey struct {
 	bucketKey    *bucketKey
 	compositeKey []byte
 }
-
-func newDataKey(chaincodeID string, key string) *dataKey {
-	logger.Debugf("Enter - newDataKey. chaincodeID=[%s], key=[%s]", chaincodeID, key)
-	compositeKey := ConstructCompositeKey(chaincodeID, key)
+func newDataKey(accountID string, key string) *dataKey {
+	logger.Debugf("Enter - newDataKey. accontID=[%s], key=[%s]", accountID, key)
+	compositeKey := ConstructCompositeKey(accountID, key)
+	// TODO hash can be replaced
 	bucketHash := conf.computeBucketHash(compositeKey)
 	// Adding one because - we start bucket-numbers 1 onwards
 	bucketNumber := int(bucketHash)%conf.getNumBucketsAtLowestLevel() + 1
@@ -26,9 +26,9 @@ func minimumPossibleDataKeyBytesFor(bucketKey *bucketKey) []byte {
 	return min
 }
 
-func minimumPossibleDataKeyBytes(bucketNumber int, chaincodeID string, key string) []byte {
+func minimumPossibleDataKeyBytes(bucketNumber int, accountID string, key string) []byte {
 	b := encodeBucketNumber(bucketNumber)
-	b = append(b, ConstructCompositeKey(chaincodeID, key)...)
+	b = append(b, ConstructCompositeKey(accountID, key)...)
 	return b
 }
 
