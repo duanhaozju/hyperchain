@@ -43,6 +43,11 @@ type BlockRecord struct {
 	SeqNo       uint64
 }
 
+type BlockPoolConf struct {
+	BlockVersion       string
+	TransactionVersion string
+}
+
 type BlockPool struct {
 	demandNumber        uint64
 	demandSeqNo         uint64
@@ -56,9 +61,10 @@ type BlockPool struct {
 	blockCache          *common.Cache
 	validationQueue     *common.Cache
 	queue               *common.Cache
+	conf                BlockPoolConf
 }
 
-func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *BlockPool {
+func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter, conf BlockPoolConf) *BlockPool {
 	var err error
 	blockcache, err := common.NewCache()
 	if err != nil {return nil}
@@ -73,6 +79,7 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *Block
 		queue:           queue,
 		validationQueue: validationqueue,
 		blockCache:      blockcache,
+		conf:            conf,
 	}
 	currentChain := core.GetChainCopy()
 	pool.demandNumber = currentChain.Height + 1
@@ -322,6 +329,9 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 			})
 			continue
 		}
+		// Set Transaction Version
+		tx.Version = []byte(pool.conf.TransactionVersion)
+		receipt.Version = []byte(pool.conf.TransactionVersion)
 		// save to DB
 		txValue, err := proto.Marshal(tx)
 		if err != nil {
@@ -400,6 +410,7 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHa
 		newBlock.WriteTime = time.Now().UnixNano()
 		newBlock.EvmTime = time.Now().UnixNano()
 		newBlock.BlockHash = newBlock.Hash(commonHash).Bytes()
+		newBlock.Version = []byte(pool.conf.BlockVersion)
 
 		vid := record.SeqNo
 		// 2.save block and update chain

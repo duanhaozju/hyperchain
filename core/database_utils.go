@@ -21,7 +21,6 @@ var (
 	BlockPrefix              = []byte("block-")
 	ChainKey                 = []byte("chain-key")
 	BlockNumPrefix           = []byte("blockNum-")
-	//bodySuffix               = []byte("-body")
 	TxMetaSuffix = []byte{0x01}
 	log          *logging.Logger // package-level logger
 )
@@ -103,6 +102,7 @@ func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error)
 	err = proto.Unmarshal(data, &transaction)
 	return &transaction, err
 }
+
 func JudgeTransactionExist(db hyperdb.Database, key []byte) (bool, error) {
 	var transaction types.Transaction
 	keyFact := append(TransactionPrefix, key...)

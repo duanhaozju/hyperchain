@@ -58,6 +58,7 @@ type SendTxArgs struct {
 }
 
 type TransactionResult struct {
+	Version     string         `json:"version"`
 	Hash        common.Hash    `json:"hash"`
 	BlockNumber *BlockNumber   `json:"blockNumber"`
 	BlockHash   *common.Hash    `json:"blockHash"`
@@ -475,6 +476,7 @@ func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*Transaction
 		if blk, err := core.GetBlockByNumber(db, bn); err == nil {
 			bHash := common.BytesToHash(blk.BlockHash)
 			txRes = &TransactionResult{
+				Version:       string(t.Version),
 				Hash:          txHash,
 				BlockNumber:   NewUint64ToBlockNumber(bn),
 				BlockHash:     &bHash,
@@ -499,6 +501,7 @@ func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*Transaction
 		}
 		txHash := t.Tx.GetTransactionHash()
 		txRes = &TransactionResult{
+			Version:       string(t.Tx.Version),
 			Hash:          txHash,
 			BlockNumber:   nil,
 			BlockHash:     nil,

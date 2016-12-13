@@ -2,15 +2,16 @@ syntax = "proto3";
 package types;
 
 message Receipt {
-	bytes PostState = 1;
-	int64 CumulativeGasUsed = 2;
-	bytes TxHash = 3;
-	bytes ContractAddress = 4;
-    int64 GasUsed = 5;
-    bytes Ret = 6;
-    bytes Logs = 7;
-    STATUS Status = 8;
-    bytes Message = 9;
+    bytes Version  = 1;
+	bytes PostState = 2;
+	int64 CumulativeGasUsed = 3;
+	bytes TxHash = 4;
+	bytes ContractAddress = 5;
+    int64 GasUsed = 6;
+    bytes Ret = 7;
+    bytes Logs = 8;
+    STATUS Status = 9;
+    bytes Message = 10;
     enum STATUS {
         SUCCESS       = 0;
         FAILED        = 1;
