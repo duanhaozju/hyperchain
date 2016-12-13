@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"hyperchain/core/types"
+	"strings"
+	"encoding/base64"
 )
 
 
@@ -43,5 +45,13 @@ func TestHash(t *testing.T) {
 		t.Error("Hash ReqBatch error")
 	} else {
 		t.Logf("Hash ReqBatch pass, hashReqBatch is: %s", hashReqBatch)
+	}
+}
+
+func TestByteToString(t *testing.T)  {
+	s := []byte("hello, world!")
+	re := byteToString(s)
+	if strings.Compare(base64.StdEncoding.EncodeToString(s), re) != 0 {
+		t.Error("error byteToString()")
 	}
 }

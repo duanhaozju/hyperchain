@@ -35,6 +35,7 @@ type Subscription interface {
 //
 // The zero value is ready to use.
 type TypeMux struct {
+
 	mutex   sync.RWMutex
 	subm    map[reflect.Type][]*muxsub
 	stopped bool
