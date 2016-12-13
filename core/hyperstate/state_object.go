@@ -5,24 +5,19 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-
+	"hyperchain/crypto"
 	"hyperchain/common"
-	"hyperchain/core/crypto"
-	"hyperchain/crypto/rlp"
-	"github.com/op/go-logging"
+	"github.com/ethereum/go-ethereum/trie"
+	"github.com/ethereum/go-ethereum/logger/glog"
+	"github.com/ethereum/go-ethereum/logger"
+	"encoding/json"
 	"hyperchain/hyperdb"
 )
 
-var (
-	emptyCodeHash = crypto.Keccak256(nil)
-	log *logging.Logger // package-level logger
+var emptyCodeHash = crypto.Keccak256(nil)
 
-)
 type Code []byte
 
-func init() {
-	log = logging.MustGetLogger("core/hyperstate")
-}
 func (self Code) String() string {
 	return string(self) //strings.Join(Disassemble(self), " ")
 }
@@ -33,7 +28,6 @@ func (self Storage) String() (str string) {
 	for key, value := range self {
 		str += fmt.Sprintf("%X : %X\n", key, value)
 	}
-
 	return
 }
 
@@ -46,25 +40,30 @@ func (self Storage) Copy() Storage {
 	return cpy
 }
 
-// StateObject represents an Ethereum account which is being modified.
+// StateObject represents an hyperchain account which is being modified.
 //
 // The usage pattern is as follows:
 // First you need to obtain a state object.
 // Account values can be accessed and modified through the object.
-// Finally, call CommitTrie to write the modified storage trie into a database.
+// Finally, call Commit to write the modified storage into a database.
 type StateObject struct {
-	address common.Address // Ethereum address of this account
+	address common.Address // Hyperchain address of this account
 	data    Account
 	db      *StateDB
+
 	// DB error.
 	// State objects are used by the consensus core and VM which are
 	// unable to deal with database-level errors. Any error that occurs
 	// during a database read is memoized here and will eventually be returned
 	// by StateDB.Commit.
 	dbErr error
+
+	root common.Hash      // storage fingerprint
 	code Code             // contract bytecode, which gets set when code is loaded
+
 	cachedStorage Storage // Storage entry cache to avoid duplicate reads
 	dirtyStorage  Storage // Storage entries that need to be flushed to disk
+
 	// Cache flags.
 	// When an object is marked suicided it will be delete from the trie
 	// during the "update" phase of the state transition.
@@ -100,9 +99,22 @@ func newObject(db *StateDB, address common.Address, data Account, onDirty func(a
 	return &StateObject{db: db, address: address, data: data, cachedStorage: make(Storage), dirtyStorage: make(Storage), onDirty: onDirty}
 }
 
-// EncodeRLP implements rlp.Encoder.
-func (c *StateObject) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, c.data)
+
+// Marshal stateObject
+func (c *StateObject) Marshal() ([]byte, error) {
+	account := Account{
+		Nonce:    c.data.Nonce,
+		Balance:  c.data.Balance,
+		Root:     c.data.Root,
+		CodeHash: c.data.CodeHash,
+	}
+	return json.Marshal(account)
+}
+// Unmarshal stateObject
+func Unmarshal(data []byte) (Account, error) {
+	var account Account
+	err := json.Unmarshal(data, &account)
+	return account, err
 }
 
 // setError remembers the first non-nil error it is called with.
@@ -118,7 +130,7 @@ func (self *StateObject) markSuicided() {
 		self.onDirty(self.Address())
 		self.onDirty = nil
 	}
-	log.Debug("%x: #%d %v X\n", self.Address(), self.Nonce(), self.Balance())
+	log.Infof("%x: #%d %v X\n", self.Address(), self.Nonce(), self.Balance())
 }
 
 func (c *StateObject) touch() {
@@ -139,6 +151,10 @@ func (self *StateObject) GetState(db hyperdb.Database, key common.Hash) common.H
 	if exists {
 		return value
 	}
+	// Load from DB in case it is missing.
+	val, _ := db.Get(CompositeStorageKey(self.address.Bytes(), key.Bytes()))
+	value.SetBytes(val)
+
 	if (value != common.Hash{}) {
 		self.cachedStorage[key] = value
 	}
@@ -146,7 +162,7 @@ func (self *StateObject) GetState(db hyperdb.Database, key common.Hash) common.H
 }
 
 // SetState updates a value in account storage.
-func (self *StateObject) SetState(db hyperdb.Database, key, value common.Hash) {
+func (self *StateObject) SetState(db trie.Database, key, value common.Hash) {
 	self.db.journal = append(self.db.journal, storageChange{
 		account:  &self.address,
 		key:      key,
@@ -156,6 +172,7 @@ func (self *StateObject) SetState(db hyperdb.Database, key, value common.Hash) {
 }
 
 func (self *StateObject) setState(key, value common.Hash) {
+	// Write both cache
 	self.cachedStorage[key] = value
 	self.dirtyStorage[key] = value
 
@@ -165,7 +182,41 @@ func (self *StateObject) setState(key, value common.Hash) {
 	}
 }
 
+func (self *StateObject) Flush(db hyperdb.Batch) {
+	for key, value := range self.dirtyStorage {
+		delete(self.dirtyStorage, key)
+		if (value == common.Hash{}) {
+			// delete
+			db.Put(CompositeStorageKey(self.address.Bytes(), key.Bytes()), nil)
+		} else {
+			db.Put(CompositeStorageKey(self.address.Bytes(), key.Bytes()), value.Bytes())
+		}
+	}
+}
 
+func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
+
+}
+
+// UpdateRoot sets the trie root to the current root hash of
+func (self *StateObject) updateRoot(db trie.Database) {
+	self.updateTrie(db)
+	self.data.Root = self.trie.Hash()
+}
+
+// CommitTrie the storage trie of the object to dwb.
+// This updates the trie root.
+func (self *StateObject) CommitTrie(db trie.Database, dbw trie.DatabaseWriter) error {
+	self.updateTrie(db)
+	if self.dbErr != nil {
+		return self.dbErr
+	}
+	root, err := self.trie.CommitTo(dbw)
+	if err == nil {
+		self.data.Root = root
+	}
+	return err
+}
 
 // AddBalance removes amount from c's balance.
 // It is used to add funds to the destination account of a transfer.
@@ -181,7 +232,9 @@ func (c *StateObject) AddBalance(amount *big.Int) {
 	}
 	c.SetBalance(new(big.Int).Add(c.Balance(), amount))
 
-	log.Infof("%x: #%d %v (+ %v)\n", c.Address(), c.Nonce(), c.Balance(), amount)
+	if glog.V(logger.Core) {
+		glog.Infof("%x: #%d %v (+ %v)\n", c.Address(), c.Nonce(), c.Balance(), amount)
+	}
 }
 
 // SubBalance removes amount from c's balance.
@@ -192,7 +245,9 @@ func (c *StateObject) SubBalance(amount *big.Int) {
 	}
 	c.SetBalance(new(big.Int).Sub(c.Balance(), amount))
 
-	log.Infof("%x: #%d %v (- %v)\n", c.Address(), c.Nonce(), c.Balance(), amount)
+	if glog.V(logger.Core) {
+		glog.Infof("%x: #%d %v (- %v)\n", c.Address(), c.Nonce(), c.Balance(), amount)
+	}
 }
 
 func (self *StateObject) SetBalance(amount *big.Int) {
@@ -216,6 +271,7 @@ func (c *StateObject) ReturnGas(gas, price *big.Int) {}
 
 func (self *StateObject) deepCopy(db *StateDB, onDirty func(addr common.Address)) *StateObject {
 	stateObject := newObject(db, self.address, self.data, onDirty)
+	stateObject.trie = self.trie
 	stateObject.code = self.code
 	stateObject.dirtyStorage = self.dirtyStorage.Copy()
 	stateObject.cachedStorage = self.dirtyStorage.Copy()
@@ -235,7 +291,7 @@ func (c *StateObject) Address() common.Address {
 }
 
 // Code returns the contract code associated with this object, if any.
-func (self *StateObject) Code(db hyperdb.Database) []byte {
+func (self *StateObject) Code(db trie.Database) []byte {
 	if self.code != nil {
 		return self.code
 	}
@@ -310,4 +366,14 @@ func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) {
 	for h, value := range self.cachedStorage {
 		cb(h, value)
 	}
+
+	it := self.getTrie(self.db.db).Iterator()
+	for it.Next() {
+		// ignore cached values
+		key := common.BytesToHash(self.trie.GetKey(it.Key))
+		if _, ok := self.cachedStorage[key]; !ok {
+			cb(key, common.BytesToHash(it.Value))
+		}
+	}
+
 }

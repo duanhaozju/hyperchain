@@ -6,17 +6,30 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/logger"
+	"github.com/ethereum/go-ethereum/logger/glog"
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/trie"
 	lru "github.com/hashicorp/golang-lru"
-	"hyperchain/common"
-	"hyperchain/core/vm"
-	"hyperchain/crypto/rlp"
-	"hyperchain/hyperdb"
 )
 
+// Trie cache generation limit after which to evic trie nodes from memory.
+var MaxTrieCacheGen = uint16(120)
 
 const (
+	// Number of past tries to keep. This value is chosen such that
+	// reasonable chain reorg depths will hit an existing trie.
+	maxPastTries = 12
+
 	// Number of codehash->size associations to keep.
 	codeSizeCacheSize = 100000
+
+	// whether turn on fake hash function
+	enableFakeHashFn =  true
 )
 
 type revision struct {
@@ -30,7 +43,9 @@ type revision struct {
 // * Contracts
 // * Accounts
 type StateDB struct {
-	db            hyperdb.Database
+	db            ethdb.Database
+	trie          *trie.SecureTrie
+	pastTries     []*trie.SecureTrie
 	codeSizeCache *lru.Cache
 
 	// This map holds 'live' objects, which will get modified while processing a state transition.

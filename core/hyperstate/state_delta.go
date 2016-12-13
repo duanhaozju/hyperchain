@@ -5,16 +5,12 @@ import (
 	"github.com/golang/protobuf/proto"
 	"fmt"
 	"bytes"
-	"hyperchain/crypto"
 )
 /*
 	StateDelta
  */
 // StateDelta holds the changes to existing state. This struct is used for holding the uncommitted changes during execution of a tx-batch
 // Also, to be used for transferring the state to another peer in chunks
-var (
-	kec256Hash = crypto.NewKeccak256Hash("keccak256")
-)
 type StateDelta struct {
 	AccountDeltas map[string]*AccountDelta
 	// RollBackwards allows one to contol whether this delta will roll the state
