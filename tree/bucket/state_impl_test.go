@@ -1,6 +1,10 @@
 package buckettree
 
-import "github.com/hyperledger/fabric/core/ledger/statemgmt"
+import (
+	"testing"
+	"hyperchain/tree/bucket/testutil"
+	"github.com/hyperledger/fabric/core/ledger/statemgmt"
+)
 
 // TODO test
 // 1.addDataNodeChangesForPersistence
