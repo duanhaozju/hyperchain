@@ -395,6 +395,7 @@ func TestNullRequestHandler(t *testing.T) {
 
 	pbft.inNegoView = false
 	pbft.activeView = true
+	pbft.inRecovery = false
 	pbft.nullRequestHandler()
 	if pbft.activeView == true {
 		t.Error("test null request handler, pbft not primary, should send view change")
@@ -616,6 +617,8 @@ func TestSendPrePrepare(t *testing.T) {
 		ReplicaId:		pbft.id,
 	}
 
+	curVid := uint64(0)
+	pbft.currentVid = &curVid
 	// same digest different seqNo
 
 	pbft.seqNo = uint64(0)
@@ -639,9 +642,8 @@ func TestSendPrePrepare(t *testing.T) {
 	// normal
 	pbft.seqNo = uint64(0)
 	pbft.view = uint64(0)
-	curVid := uint64(0)
+	curVid = uint64(0)
 	pbft.currentVid = &curVid
-
 	pbft.sendPrePrepare(nil, "normal")
 
 	cert = pbft.getCert(uint64(0), uint64(1))
@@ -1377,6 +1379,8 @@ func TestRecvReturnRequestBatch(t *testing.T) {
 	pbft.id = uint64(2)
 	pbft.inNegoView = false
 	pbft.activeView = true
+	pbft.inRecovery = false
+
 	pbft.seqNo = uint64(0)
 
 	txBatch := &TransactionBatch{
