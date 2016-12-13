@@ -1,6 +1,5 @@
-/**
- * Created by Meiling Hu on 11/25/16.
- */
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package vm
 
 import (
@@ -17,7 +16,7 @@ var (
 	EnableJit bool = true
 	MainNetHomesteadBlock = big.NewInt(1150000) // Mainnet homestead block
 	MainNetDAOForkBlock = big.NewInt(1920000)
-	gas = big.NewInt(10000)
+	gas = big.NewInt(1000000)
 	gasPrice  = big.NewInt(10000)
 )
 func NewEnv2(ruleSet RuleSet, state *StateDB) *Env {

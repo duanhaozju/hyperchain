@@ -1,6 +1,5 @@
-/**
- * Created by Meiling Hu on 11/17/16.
- */
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package vm
 
 import (

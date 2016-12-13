@@ -1,6 +1,5 @@
-/**
- * Created by Meiling Hu on 10/31/16.
- */
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package state
 import (
 	"math/big"
