@@ -98,10 +98,6 @@ func SOCompare(so1 *StateObject, so2 *StateObject) bool {
 		fmt.Println("root mismatch")
 		return false
 	}
-	if bytes.Compare(so1.abi, so2.abi) != 0 {
-		fmt.Println("abi mismatch")
-		return false
-	}
 	if bytes.Compare(so1.code, so2.code) != 0 {
 		fmt.Println("code mismatch")
 		return false
