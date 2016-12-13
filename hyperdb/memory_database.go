@@ -109,3 +109,10 @@ func (b *memBatch) Write() error {
 	}
 	return nil
 }
+
+func (b *memBatch) Delete(key []byte) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	return b.Delete(key)
+}

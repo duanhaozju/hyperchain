@@ -90,3 +90,9 @@ func (b *ldbBatch) Put(key, value []byte) error {
 func (b *ldbBatch) Write() error {
 	return b.db.Write(b.b, nil)
 }
+
+// Put put the key-value to ldbBatch
+func (b *ldbBatch) Delete(key []byte) error {
+	b.b.Delete(key)
+	return nil
+}
