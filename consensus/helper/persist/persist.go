@@ -10,6 +10,7 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/core"
 	"hyperchain/core/types"
+	"encoding/base64"
 )
 
 
@@ -75,6 +76,12 @@ func ReadStateSet(prefix string) (map[string][]byte, error) {
 func GetBlockchainInfo() *types.Chain {
 	bcInfo := core.GetChainUntil()
 	return bcInfo
+}
+
+func GetBlockHeightAndHash() (uint64, string) {
+	bcInfo := core.GetChainCopy()
+	hash := base64.StdEncoding.EncodeToString(bcInfo.GetLatestBlockHash())
+	return bcInfo.Height, hash
 }
 
 func GetHeightofChain() uint64 {
