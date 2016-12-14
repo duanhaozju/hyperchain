@@ -170,7 +170,6 @@ func (self *StateDB) GetAccounts() map[string]vm.Account {
 	iter := leveldb.NewIteratorWithPrefix([]byte(accountIdentifier))
 	for iter.Next() {
 		addr := SplitCompositeAccountKey(iter.Key())
-		log.Error("DEBUG", string(iter.Key()))
 		if addr == nil {
 			continue
 		}
@@ -546,7 +545,7 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 		case isDirty:
 			// Write any contract code associated with the state object
 			if stateObject.code != nil && stateObject.dirtyCode {
-				if err := dbw.Put(stateObject.CodeHash(), stateObject.code); err != nil {
+				if err := dbw.Put(CompositeCodeHash(stateObject.Address().Bytes(), stateObject.CodeHash()), stateObject.code); err != nil {
 					return common.Hash{}, err
 				}
 				stateObject.dirtyCode = false

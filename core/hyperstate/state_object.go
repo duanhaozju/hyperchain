@@ -285,7 +285,7 @@ func (self *StateObject) Code(db hyperdb.Database) []byte {
 	if bytes.Equal(self.CodeHash(), emptyCodeHash) {
 		return nil
 	}
-	code, err := db.Get(self.CodeHash())
+	code, err := db.Get(CompositeCodeHash(self.address.Bytes(), self.CodeHash()))
 	if err != nil {
 		self.setError(fmt.Errorf("can't load code hash %x: %v", self.CodeHash(), err))
 	}
@@ -359,8 +359,8 @@ func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) ma
 	if ok == false {
 		return ret
 	}
-	iter := leveldb.NewIterator()
-	for ok := iter.Seek(GetStorageKeyPrefix(self.address.Bytes())); ok; ok = iter.Next() {
+	iter := leveldb.NewIteratorWithPrefix(GetStorageKeyPrefix(self.address.Bytes()))
+	for iter.Next() {
 		key := common.BytesToHash(SplitCompositeStorageKey(self.address.Bytes(), iter.Key()))
 		// ignore cached values
 		if _, ok := self.cachedStorage[key]; !ok {
