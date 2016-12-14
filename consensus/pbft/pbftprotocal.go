@@ -1117,6 +1117,19 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 		return nil
 	}
 
+	// add this for recovery, avoid saving batch with seqno that already executed
+	if pbft.currentExec != nil {
+		if preprep.SequenceNumber <= *pbft.currentExec {
+			logger.Debugf("Replica %d reject out-of-date pre-prepare for seqNo=%d/view=%d", pbft.id, preprep.SequenceNumber, preprep.View)
+			return nil
+		}
+	} else {
+		if preprep.SequenceNumber <= pbft.lastExec {
+			logger.Debugf("Replica %d reject out-of-date pre-prepare for seqNo=%d/view=%d", pbft.id, preprep.SequenceNumber, preprep.View)
+			return nil
+		}
+	}
+
 	cert := pbft.getCert(preprep.View, preprep.SequenceNumber)
 
 	if cert.digest != "" && cert.digest != preprep.BatchDigest {
@@ -1320,13 +1333,8 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 		if !cert.sentExecute && cert.validated {
 			pbft.lastNewViewTimeout = pbft.newViewTimeout
 			delete(pbft.outstandingReqBatches, commit.BatchDigest)
-			for digest, batch := range pbft.outstandingReqBatches {
-				logger.Critical("digest: ", digest)
-				logger.Critical("batch: ", batch)
-			}
 			idx := msgID{v: commit.View, n: commit.SequenceNumber}
 			pbft.committedCert[idx] = cert.digest
-			logger.Warningf("Replica %d commit for seqNo=%d/view=%d, digest=%s", pbft.id, commit.SequenceNumber, commit.View, commit.BatchDigest)
 			pbft.executeOutstanding()
 			if commit.SequenceNumber == pbft.viewChangeSeqNo {
 				logger.Warningf("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
@@ -1364,11 +1372,6 @@ func (pbft *pbftProtocal) executeOutstanding() {
 		if pbft.executeOne(idx) {
 			break
 		}
-	}
-
-	for digest, batch := range pbft.outstandingReqBatches {
-		logger.Critical("digest: ", digest)
-		logger.Critical("batch: ", batch)
 	}
 
 	pbft.startTimerIfOutstandingRequests()
