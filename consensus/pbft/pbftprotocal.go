@@ -2017,7 +2017,7 @@ func (pbft *pbftProtocal) processNegotiateView() error {
 		return nil
 	}
 
-	logger.Debugf("Replica %d now negotiate view", pbft.id)
+	logger.Noticef("Replica %d now negotiate view", pbft.id)
 
 	pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
 	pbft.negoViewRspStore = make(map[uint64]uint64)
@@ -2094,7 +2094,7 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Eve
 		return nil
 	}
 
-	logger.Debugf("Replica %d receive nego-view response from %d, view: %d", pbft.id, rspId, rspView)
+	logger.Noticef("Replica %d receive nego-view response from %d, view: %d", pbft.id, rspId, rspView)
 
 	pbft.negoViewRspStore[rspId] = rspView
 

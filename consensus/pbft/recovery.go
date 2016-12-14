@@ -7,7 +7,13 @@ import (
 	"hyperchain/consensus/events"
 	"encoding/base64"
 	"fmt"
+	"hyperchain/consensus/helper/persist"
 )
+
+type blkIdx struct {
+	height uint64
+	hash   string
+}
 
 // procativeRecovery broadcast a procative recovery message to ask others for recent blocks info
 func (pbft *pbftProtocal) initRecovery() events.Event {
@@ -58,16 +64,14 @@ func (pbft *pbftProtocal) recvRecovery(recoveryInit *RecoveryInit) events.Event 
 		chkpts[n] = d
 	}
 
-	lastExec := pbft.lastExec
-	blockInfo := getBlockchainInfo()
-	id, _ := proto.Marshal(blockInfo)
-	idAsString := byteToString(id)
+
+	height, curHash := persist.GetBlockHeightAndHash()
 
 	rc := &RecoveryResponse{
 		ReplicaId:	 pbft.id,
 		Chkpts:		 chkpts,
-		LastExec:        lastExec,
-		LastBlockInfo:   idAsString,
+		BlockHeight:     height,
+		LastBlockHash:   curHash,
 	}
 
 	rcMsg, err := proto.Marshal(rc)
@@ -111,29 +115,36 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 
 	// find quorum chkpt
 	n, d, replicas, find, _ := pbft.findHighestChkptQuorum()
-	lastExec, _ := pbft.findLastExecQuorum()
+	lastExec, curHash, execFind := pbft.findLastExecQuorum()
 
 	if !find {
 		logger.Debugf("Replica %d did not find chkpt quorum", pbft.id)
 		return nil
 	}
 
+	if !execFind {
+		logger.Debugf("Replica %d did not find lastexec quorum", pbft.id)
+		return nil
+	}
+
 	pbft.recoveryRestartTimer.Stop()
 	pbft.recoveryToSeqNo = lastExec
 
-	blockInfo := getBlockchainInfo()
-	id, _ := proto.Marshal(blockInfo)
-	idAsString := byteToString(id)
+	//blockInfo := getBlockchainInfo()
+	//id, _ := proto.Marshal(blockInfo)
+	//idAsString := byteToString(id)
+	selfLastExec, selfCurHash := persist.GetBlockHeightAndHash()
+
 
 	logger.Noticef("Replica %d in recovery find quorum chkpt: %d, self: %d, " +
 		"others lastExec: %d, self: %d", pbft.id, n, pbft.h, lastExec, pbft.lastExec)
 	logger.Noticef("Replica %d in recovery, " +
-		"others lastBlockInfo: %s, self: %s", pbft.id, rsp.LastBlockInfo, idAsString)
+		"others lastBlockInfo: %s, self: %s", pbft.id, rsp.BlockHeight, selfCurHash)
 
 	// Fast catch up
-	if lastExec == pbft.lastExec && idAsString == rsp.LastBlockInfo {
+	if lastExec == selfLastExec && curHash == selfCurHash {
 		logger.Noticef("Replica %d in recovery same lastExec: %d, " +
-			"same block hash: %s, fast catch up", pbft.id, n, pbft.lastExec, idAsString)
+			"same block hash: %s, fast catch up", pbft.id, n, lastExec, curHash)
 		pbft.inRecovery = false
 		return recoveryDoneEvent{}
 	}
@@ -211,26 +222,28 @@ func (pbft *pbftProtocal) findHighestChkptQuorum() (n uint64, d string, replicas
 	return
 }
 
-func (pbft *pbftProtocal) findLastExecQuorum() (lastExec uint64, peers []uint64) {
+func (pbft *pbftProtocal) findLastExecQuorum() (lastExec uint64, hash string, find bool) {
 
-	lastExecs := make(map[uint64]map[uint64]bool)
-	peers	  = make([]uint64, 2*pbft.f+1)
+	lastExecs := make(map[blkIdx]map[uint64]bool)
+	find = false
 	for _, rsp := range pbft.rcRspStore {
-		replicas, ok := lastExecs[rsp.LastExec]
+		idx := blkIdx{
+			height:rsp.BlockHeight,
+			hash:rsp.LastBlockHash,
+		}
+		replicas, ok := lastExecs[idx]
 		if ok {
 			replicas[rsp.ReplicaId] = true
 		} else {
 			replicas := make(map[uint64]bool)
 			replicas[rsp.ReplicaId] = true
-			lastExecs[rsp.LastExec] = replicas
+			lastExecs[idx] = replicas
 		}
 
-		if len(lastExecs[rsp.LastExec]) >= 2*pbft.f+1 {
-			lastExec = rsp.LastExec
-			replicas = lastExecs[rsp.LastExec]
-			for peer := range replicas {
-				peers = append(peers, peer)
-			}
+		if len(lastExecs[idx]) >= 2*pbft.f+1 {
+			lastExec = idx.height
+			hash = idx.hash
+			find = true
 			break
 		}
 	}
