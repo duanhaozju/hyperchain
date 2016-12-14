@@ -159,6 +159,29 @@ func (self *StateDB) GetAccount(addr common.Address) vm.Account {
 	return self.GetStateObject(addr)
 }
 
+func (self *StateDB) GetAccounts() map[string]vm.Account {
+	ret := make(map[string]vm.Account)
+	// TODO be more elegant
+	leveldb, ok := self.db.(*hyperdb.LDBDatabase)
+	if ok == false {
+		return ret
+	}
+
+	iter := leveldb.NewIteratorWithPrefix([]byte(accountIdentifier))
+	for iter.Next() {
+		addr := SplitCompositeAccountKey(iter.Key())
+		log.Error("DEBUG", string(iter.Key()))
+		if addr == nil {
+			continue
+		}
+		address := common.BytesToAddress(addr)
+		var account Account
+		json.Unmarshal(iter.Value(), &account)
+		newobj := newObject(self, address, account, self.MarkStateObjectDirty)
+		ret[address.Hex()] = newobj
+	}
+	return ret
+}
 // Retrieve the balance from the given address or 0 if object not found
 func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 	stateObject := self.GetStateObject(addr)
@@ -298,7 +321,7 @@ func (self *StateDB) updateStateObject(stateObject *StateObject) {
 	if err != nil {
 		log.Error("marshal stateobject failed", addr.Hex())
 	}
-	self.db.Put(addr.Bytes(), data)
+	self.db.Put(CompositeAccountKey(addr.Bytes()), data)
 }
 
 // deleteStateObject removes the given object from the database
@@ -319,7 +342,7 @@ func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObje
 	}
 
 	// Load the object from the database.
-	data, err := self.db.Get(addr.Bytes())
+	data, err := self.db.Get(CompositeAccountKey(addr.Bytes()))
 	if err != nil {
 		return nil
 	}

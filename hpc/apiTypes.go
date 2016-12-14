@@ -19,7 +19,7 @@ type API struct {
 
 var Apis []API
 
-func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnable bool, txPeak int64 , txRate time.Duration, contractPeak int64, contractRate time.Duration) []API{
+func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnable bool, txPeak int64 , txRate time.Duration, contractPeak int64, contractRate time.Duration, stateType string) []API{
 
 	db, err := hyperdb.GetLDBDatabase()
 
@@ -49,13 +49,13 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnab
 		{
 			Namespace: "account",
 			Version: "0.4",
-			Service: NewPublicAccountAPI(pm, db),
+			Service: NewPublicAccountAPI(pm, db, stateType),
 			Public: true,
 		},
 		{
 			Namespace: "contract",
 			Version: "0.4",
-			Service: NewPublicContractAPI(eventMux, pm, db, ratelimitEnable, contractPeak, contractRate),
+			Service: NewPublicContractAPI(eventMux, pm, db, ratelimitEnable, contractPeak, contractRate, stateType),
 			Public: true,
 		},
 	}

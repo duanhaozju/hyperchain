@@ -23,15 +23,17 @@ type PublicContractAPI struct {
 	db *hyperdb.LDBDatabase
 	tokenBucket *ratelimit.Bucket
 	ratelimitEnable bool
+	stateType string
 }
 
-func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, ratelimitEnable bool, bmax int64, rate time.Duration) *PublicContractAPI {
+func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, ratelimitEnable bool, bmax int64, rate time.Duration, stateType string) *PublicContractAPI {
 	return &PublicContractAPI{
 		eventMux :eventMux,
 		pm:pm,
 		db:hyperDb,
 		tokenBucket: ratelimit.NewBucket(rate, bmax),
 		ratelimitEnable: ratelimitEnable,
+		stateType: stateType,
 	}
 }
 
@@ -139,7 +141,7 @@ func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash,
 // GetCode returns the code from the given contract address and block number.
 func (contract *PublicContractAPI) GetCode(addr common.Address, n BlockNumber) (string, error) {
 
-	stateDb, err := getBlockStateDb(n, contract.db)
+	stateDb, err := getBlockStateDb(n, contract.db, contract.stateType)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
 		return "", err
@@ -152,7 +154,7 @@ func (contract *PublicContractAPI) GetCode(addr common.Address, n BlockNumber) (
 // if addr is nil, returns the number of all the contract that has been deployed.
 func (contract *PublicContractAPI) GetContractCountByAddr(addr common.Address, n BlockNumber) (*Number, error) {
 
-	stateDb, err := getBlockStateDb(n, contract.db)
+	stateDb, err := getBlockStateDb(n, contract.db, contract.stateType)
 
 	if err != nil {
 		return nil, err
@@ -165,17 +167,20 @@ func (contract *PublicContractAPI) GetContractCountByAddr(addr common.Address, n
 // GetStorageByAddr returns the storage by given contract address and bock number.
 // The method is offered for hyperchain internal test.
 func (contract *PublicContractAPI) GetStorageByAddr(addr common.Address, n BlockNumber) (map[string]string, error) {
-	stateDb, err := getBlockStateDb(n, contract.db)
+	stateDb, err := getBlockStateDb(n, contract.db, contract.stateType)
 
 	if err != nil {
 		return nil, err
 	}
 	mp := make(map[string]string)
 
-	if obj := stateDb.GetStateObject(addr);obj == nil {
+	if obj := stateDb.GetAccount(addr);obj == nil {
 		return nil, nil
 	} else {
-		storages := obj.Storage()
+		cb := func(key, value common.Hash) (bool) {
+			return true
+		}
+		storages := obj.ForEachStorage(cb)
 		if len(storages) == 0 {
 			return nil, nil
 		}

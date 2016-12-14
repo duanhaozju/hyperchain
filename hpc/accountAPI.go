@@ -4,11 +4,9 @@ package hpc
 
 import (
 	"errors"
-	"fmt"
 	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/core"
-	"hyperchain/core/state"
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
 )
@@ -16,6 +14,7 @@ import (
 type PublicAccountAPI struct {
 	pm *manager.ProtocolManager
 	db *hyperdb.LDBDatabase
+	stateType string
 }
 
 type AccountResult struct {
@@ -27,10 +26,11 @@ type UnlockParas struct {
 	Password string `json:"password"`
 }
 
-func NewPublicAccountAPI(pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase) *PublicAccountAPI {
+func NewPublicAccountAPI(pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, stateType string) *PublicAccountAPI {
 	return &PublicAccountAPI{
 		pm: pm,
 		db: hyperDb,
+		stateType: stateType,
 	}
 }
 
@@ -84,8 +84,7 @@ func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 		log.Errorf("%v", err)
 		return nil
 	}
-	// TODO CHANGE TO INTERFACE
-	stateDB, err := state.New(headBlock.MerkleRoot, acc.db)
+	stateDB, err := GetStateInstance(headBlock.MerkleRoot, acc.db, acc.stateType)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
 		return nil
@@ -93,10 +92,8 @@ func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 	ctx := stateDB.GetAccounts()
 
 	for k, v := range ctx {
-		log.Notice("balance is", v.Balance())
 		var act = &AccountResult{
 			Account: k,
-			//Balance: fmt.Sprintf(`0x%x`, v.Balance()),
 			Balance: v.Balance().String(),
 		}
 		acts = append(acts, act)
@@ -111,10 +108,10 @@ func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
 		log.Errorf("Get Block error, %v", err)
 		return "", err
 	} else if headBlock != nil {
-
-		if stateDB, err := state.New(common.BytesToHash(headBlock.MerkleRoot), acc.db);err == nil && stateDB != nil {
-			if stateobject := stateDB.GetStateObject(addr);stateobject != nil {
-				return fmt.Sprintf(`0x%x`, stateobject.BalanceData), nil
+		stateDB, err := GetStateInstance(common.BytesToHash(headBlock.MerkleRoot), acc.db, acc.stateType)
+		if err == nil && stateDB != nil {
+			if stateobject := stateDB.GetAccount(addr); stateobject != nil {
+				return stateobject.Balance().String(), nil
 			} else {
 				return "", errors.New("stateobject is nil, the account may not exist")
 			}
@@ -127,3 +124,4 @@ func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
 		return "", nil
 	}
 }
+

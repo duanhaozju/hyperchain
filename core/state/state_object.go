@@ -233,18 +233,22 @@ func (self *StateObject) Value() *big.Int {
 	panic("Value on StateObject should never be called")
 }
 
-func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) {
+func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) map[common.Hash]common.Hash {
 	// When iterating over the storage check the cache first
+	var ret map[common.Hash]common.Hash
 	for h, value := range self.storage {
 		cb(h, value)
+		ret[h] = value
 	}
 	it := self.trie.Iterator()
 	for it.Next() {
 		key := common.BytesToHash(self.trie.GetKey(it.Key))
 		if _, ok := self.storage[key]; !ok {
 			cb(key, common.BytesToHash(it.Value))
+			ret[key] = common.BytesToHash(it.Value)
 		}
 	}
+	return ret
 }
 
 // just for test

@@ -17,9 +17,12 @@ import (
 	"math/big"
 	"strconv"
 	"time"
+	"hyperchain/core/hyperstate"
+	"hyperchain/core/vm"
+	"errors"
 )
 
-func CreateInitBlock(filename string) {
+func CreateInitBlock(filename string, stateType string) {
 	log.Info("genesis start")
 
 	if GetHeightOfChain() > 0 {
@@ -51,8 +54,7 @@ func CreateInitBlock(filename string) {
 		log.Fatal(err)
 		return
 	}
-
-	stateDB, err := state.New(common.Hash{}, db)
+	stateDB, err := GetStateInstance(common.Hash{}, db, stateType)
 	if err != nil {
 		log.Error("genesis.go file create statedb failed!")
 		return
@@ -91,4 +93,14 @@ func CreateInitBlock(filename string) {
 	UpdateChain(&block, true)
 	log.Info("current chain block number is", GetChainCopy().Height)
 
+}
+func GetStateInstance(root common.Hash, db hyperdb.Database, stateType string) (vm.Database, error) {
+	switch stateType {
+	case "rawstate":
+		return state.New(root, db)
+	case "hyperstate":
+		return hyperstate.New(root, db)
+	default:
+		return nil, errors.New("no state type specified")
+	}
 }

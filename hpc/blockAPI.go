@@ -6,9 +6,9 @@ import (
 	"errors"
 	"hyperchain/common"
 	"hyperchain/core"
-	"hyperchain/core/state"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
+	"hyperchain/core/vm"
 )
 
 type PublicBlockAPI struct {
@@ -88,7 +88,6 @@ func (blk *PublicBlockAPI) GetBlockByNumber(number BlockNumber) (*BlockResult, e
 }
 
 func (blk *PublicBlockAPI) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (Number, error) {
-
 	realArgs, err := prepareIntervalArgs(args)
 	if err != nil {
 		return 0, err
@@ -102,11 +101,8 @@ func (blk *PublicBlockAPI) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (N
 }
 
 func latestBlock(db *hyperdb.LDBDatabase) (*BlockResult, error) {
-
 	currentChain := core.GetChainCopy()
-
 	lastestBlkHeight := currentChain.Height
-
 	return getBlockByNumber(*NewUint64ToBlockNumber(lastestBlkHeight), db)
 }
 
@@ -121,15 +117,14 @@ func getBlockByNumber(n BlockNumber, db *hyperdb.LDBDatabase) (*BlockResult, err
 	}
 }
 
-func getBlockStateDb(n BlockNumber, db *hyperdb.LDBDatabase) (*state.StateDB, error) {
+func getBlockStateDb(n BlockNumber, db *hyperdb.LDBDatabase, stateType string) (vm.Database, error) {
 
 	block, err := getBlockByNumber(n, db)
 
 	if err != nil {
 		return nil, err
 	}
-
-	stateDB, err := state.New(block.MerkleRoot, db)
+	stateDB, err := GetStateInstance(block.MerkleRoot, db, stateType)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
 		return nil, err

@@ -103,6 +103,11 @@ type Database interface {
 	RevertToSnapshot(interface{})
 
 	Commit() (common.Hash, error)
+
+	/*
+		API QUERY
+	 */
+	GetAccounts() map[string]Account
 }
 
 // Account represents a contract or basic ethereum account.
@@ -115,6 +120,6 @@ type Account interface {
 	Address() common.Address
 	ReturnGas(*big.Int, *big.Int)
 	SetCode(common.Hash, []byte)
-	ForEachStorage(cb func(key, value common.Hash) bool)
+	ForEachStorage(cb func(key, value common.Hash) (bool)) map[common.Hash]common.Hash
 	Value() *big.Int
 }

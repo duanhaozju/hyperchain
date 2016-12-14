@@ -121,7 +121,7 @@ func main() {
 		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())
 
 		//init genesis
-		core.CreateInitBlock(config.getGenesisConfigPath())
+		core.CreateInitBlock(config.getGenesisConfigPath(), config.getStateType())
 
 		//init pbft consensus
 		cs := controller.NewConsenter(uint64(config.getNodeID()), eventMux, config.getPBFTConfigPath())
@@ -161,7 +161,7 @@ func main() {
 				expiredTime,
 				config.getGRPCPort())
 		rateLimitCfg := config.getRateLimitConfig()
-		go jsonrpc.Start(config.getHTTPPort(), eventMux, pm, rateLimitCfg)
+		go jsonrpc.Start(config.getHTTPPort(), eventMux, pm, rateLimitCfg, config.getStateType())
 
 		//go func() {
 		//	log.Println(http.ListenAndServe("localhost:6064", nil))

@@ -180,9 +180,9 @@ func (self *StateDB) SetLeastAccount(account *vm.Account) {
 }
 
 // return all StateObject saved in the trie instead of in CACHE
-func (self *StateDB) GetAccounts() map[string]*StateObject {
+func (self *StateDB) GetAccounts() map[string]vm.Account {
 	// return self.stateObjects
-	ret := make(map[string]*StateObject)
+	ret := make(map[string]vm.Account)
 	it := self.trie.Iterator()
 	for it.Next() {
 		addr := self.trie.GetKey(it.Key)
@@ -196,13 +196,6 @@ func (self *StateDB) GetAccounts() map[string]*StateObject {
 }
 
 func (self *StateDB) ForEachAccounts() {
-	var n = 0
-	for _, v := range self.GetAccounts() {
-		log.Info("+++++++++++++++++++++the ", n, " account+++++++++++++++++++++++")
-		log.Info("Account key:", common.ToHex(v.address.Bytes()), "----------value:", v)
-		n = n + 1
-	}
-
 }
 
 // Retrieve the BalanceData from the given address or 0 if object not found

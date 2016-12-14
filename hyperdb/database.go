@@ -4,7 +4,9 @@ package hyperdb
 
 import (
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/util"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
+
 )
 
 // the Database for LevelDB
@@ -54,6 +56,9 @@ func (self *LDBDatabase) Delete(key []byte) error {
 // NewIterator returns a Iterator for traversing the database
 func (self *LDBDatabase) NewIterator() iterator.Iterator {
 	return self.db.NewIterator(nil, nil)
+}
+func (self *LDBDatabase) NewIteratorWithPrefix(prefix []byte) iterator.Iterator {
+	return self.db.NewIterator(util.BytesPrefix(prefix), nil)
 }
 
 // Close close the LDBDataBase

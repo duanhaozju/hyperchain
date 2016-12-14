@@ -348,14 +348,16 @@ func (self *StateObject) Value() *big.Int {
 	panic("Value on StateObject should never be called")
 }
 
-func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) {
+func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) map[common.Hash]common.Hash {
 	// When iterating over the storage check the cache first
+	var ret map[common.Hash]common.Hash
 	for h, value := range self.cachedStorage {
 		cb(h, value)
+		ret[h] = value
 	}
 	leveldb, ok := self.db.db.(*hyperdb.LDBDatabase)
 	if ok == false {
-		return
+		return ret
 	}
 	iter := leveldb.NewIterator()
 	for ok := iter.Seek(GetStorageKeyPrefix(self.address.Bytes())); ok; ok = iter.Next() {
@@ -363,6 +365,8 @@ func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) {
 		// ignore cached values
 		if _, ok := self.cachedStorage[key]; !ok {
 			cb(key, common.BytesToHash(iter.Value()))
+			ret[key] = common.BytesToHash(iter.Value())
 		}
 	}
+	return ret
 }
