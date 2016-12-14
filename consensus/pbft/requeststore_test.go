@@ -8,6 +8,9 @@ import (
 	"strconv"
 
 	"hyperchain/core/types"
+	//"bytes"
+	"container/list"
+
 )
 
 func TestOrderedRequests(t *testing.T) {
@@ -86,5 +89,132 @@ func BenchmarkOrderedRequests(b *testing.B) {
 		for _, r := range reqs {
 			or.remove(r)
 		}
+	}
+}
+
+func TestLen(t *testing.T)  {
+	oq := &orderedRequests{presence:make(map[string]*list.Element), order:list.List{}}
+	if oq.Len() != 0 {
+		t.Errorf("error orderedRequests len() error!")
+	}
+	//oq = nil
+	t1 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("100")}
+	t2 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("200")}
+	oq.add(t1)
+	oq.add(t2)
+	if oq.Len() != 2 {
+		t.Errorf("error Len() = %d, expected: %d", oq.Len(), 2)
+	}
+}
+
+func TestRemoves(t *testing.T)  {
+	oq := &orderedRequests{presence:make(map[string]*list.Element)}
+	t1 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("100")}
+	t2 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("200")}
+	oq.add(t1)
+	oq.add(t2)
+	tr := []*types.Transaction{t1, t2}
+	oq.removes(tr)
+	if oq.Len() != 0 {
+		t.Errorf("error removes not worked!")
+	}
+	t3 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("400")}
+	tr = []*types.Transaction{t3}
+	rs := oq.removes(tr)
+	if rs != false {
+		t.Errorf("error removes failed to removes(nil)")
+	}
+}
+
+func TestNewRequestStore(t *testing.T)  {
+	rs := newRequestStore()
+	if rs.outstandingRequests == nil || rs.pendingRequests == nil {
+		t.Errorf("error newRequestStore not worked!")
+	}
+}
+
+func TestStoreOutstanding(t *testing.T)  {
+	rs := newRequestStore()
+	t1 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("100")}
+	rs.storeOutstanding(t1)
+	if rs.outstandingRequests.has(hash(t1)) == false {
+		t.Errorf("error storeOutstanding(%v) failed", t1)
+	}
+}
+
+func TestStorePending(t *testing.T)  {
+	rs := newRequestStore()
+	t1 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("100")}
+	rs.storePending(t1)
+	if rs.pendingRequests.has(hash(t1)) == false {
+		t.Errorf("error storePending(%v) failed", t1)
+	}
+}
+
+func TestStorePendingsAndRemove(t *testing.T)  {
+	rs := newRequestStore()
+	t1 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("100")}
+	t2 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("200")}
+	tr := []*types.Transaction{t1, t2}
+
+	rs.storePendings(tr)
+	for _, tx := range tr {
+		if rs.pendingRequests.has(hash(tx)) == false {
+			t.Errorf("error storePendings failed!")
+		}
+	}
+
+	rs.remove(t1)
+	if rs.pendingRequests.has(hash(t1)) || rs.outstandingRequests.has(hash(t1)) {
+		t.Errorf("error pendingRequests failed!")
+	}
+
+}
+
+func TestHasNonPending(t *testing.T)  {
+	rs := newRequestStore()
+	t1 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("100")}
+	hnp := rs.hasNonPending()
+	if hnp == true {
+		t.Errorf("error hasNonPending() = true, expected false")
+	}
+	rs.storeOutstanding(t1)
+	hnp = rs.hasNonPending()
+	if hnp == false {
+		t.Errorf("error hasNonPending() = false, expected true")
+	}
+}
+
+func TestGetNextNonPending(t *testing.T)  {
+	rs := newRequestStore()
+	t1 := &types.Transaction{From:[]byte("from addr1"), To:[]byte("to addr"), Value:[]byte("100")}
+	t2 := &types.Transaction{From:[]byte("from addr2"), To:[]byte("to addr"), Value:[]byte("200")}
+	t3 := &types.Transaction{From:[]byte("from addr3"), To:[]byte("to addr"), Value:[]byte("100")}
+	t4 := &types.Transaction{From:[]byte("from addr4"), To:[]byte("to addr"), Value:[]byte("200")}
+
+	rs.storeOutstanding(t1)
+	rs.storeOutstanding(t2)
+	rs.storeOutstanding(t3)
+	rs.storeOutstanding(t4)
+
+	nn := rs.getNextNonPending(4)
+	if len(nn) != 4 {
+		t.Errorf("error getNextNonPending(%d) failed", 4)
+	}
+	nn = rs.getNextNonPending(3)
+	if len(nn) != 3 {
+		t.Errorf("error getNextNonPending(%d) failed", 3)
+	}
+	nn = rs.getNextNonPending(5)
+	if len(nn) != 4 {
+		t.Errorf("error getNextNonPending(%d) failed", 5)
+	}
+
+	rs.pendingRequests.add(t1)
+	rs.pendingRequests.add(t2)
+
+	nn = rs.getNextNonPending(4)
+	if len(nn) != 2 {
+		t.Errorf("error getNextNonPending(%d) failed", 2)
 	}
 }

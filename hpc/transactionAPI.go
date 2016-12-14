@@ -286,6 +286,10 @@ func (tran *PublicTransactionAPI) GetTransactionByHash(hash common.Hash) (*Trans
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
 func (tran *PublicTransactionAPI) GetTransactionByBlockHashAndIndex(hash common.Hash, index Number) (*TransactionResult, error) {
 
+	if common.EmptyHash(hash) == true {
+		return nil, errors.New("Invalid hash")
+	}
+
 	block, err := core.GetBlock(tran.db, hash[:])
 	if err != nil {
 		log.Errorf("%v", err)
@@ -327,6 +331,10 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockNumberAndIndex(n BlockNum
 
 // GetBlockTransactionCountByHash returns the number of block transactions for given block hash.
 func (tran *PublicTransactionAPI) GetBlockTransactionCountByHash(hash common.Hash) (*Number, error) {
+
+	if common.EmptyHash(hash) == true {
+		return nil, errors.New("Invalid hash")
+	}
 
 	block, err := core.GetBlock(tran.db, hash[:])
 	if err != nil {

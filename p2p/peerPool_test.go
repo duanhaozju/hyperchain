@@ -33,6 +33,6 @@ func TestPeersPool_PutPeer(t *testing.T) {
 }
 
 func TestDelPeer(t *testing.T) {
-	tempPeer := fakePeerPool.GetPeer(*fakeAddr)
+	tempPeer := fakePeerPool.GetPeer(*fakeAddr)////.,,
 	assert.Exactly(t,fakePeer,tempPeer)
 }

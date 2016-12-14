@@ -170,6 +170,10 @@ func outputBlockResult(block *types.Block, db *hyperdb.LDBDatabase) (*BlockResul
 
 func getBlockByHash(hash common.Hash, db *hyperdb.LDBDatabase) (*BlockResult, error) {
 
+	if common.EmptyHash(hash) == true {
+		return nil, errors.New("Invalid hash")
+	}
+
 	block, err := core.GetBlock(db, hash[:])
 	if err != nil {
 		return nil, err

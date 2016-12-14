@@ -5,6 +5,9 @@ package hyperdb
 import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
+	"github.com/syndtr/goleveldb/leveldb/util"
+	"bytes"
+	"github.com/pkg/errors"
 )
 
 // the Database for LevelDB
@@ -54,6 +57,27 @@ func (self *LDBDatabase) Delete(key []byte) error {
 // NewIterator returns a Iterator for traversing the database
 func (self *LDBDatabase) NewIterator() iterator.Iterator {
 	return self.db.NewIterator(nil, nil)
+}
+
+//Destroy, clean the whole database,
+//warning: bad performance if to many data in the db
+func (self *LDBDatabase) Destroy() error{
+	return self.DestroyByRange(nil, nil)
+}
+
+//DestroyByRange, clean data which key in range [start, end)
+func (self *LDBDatabase) DestroyByRange(start , end []byte) error {
+	if bytes.Compare(start, end) > 0 {
+		return errors.Errorf("start key: %v, is bigger than end key: %v", start, end)
+	}
+	it := self.db.NewIterator(&util.Range{Start:start, Limit:end}, nil)
+	for it.Next() {
+		err := self.Delete(it.Key())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Close close the LDBDataBase
