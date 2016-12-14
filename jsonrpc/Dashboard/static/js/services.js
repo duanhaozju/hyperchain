@@ -99,10 +99,7 @@ function BlockService($resource,$q,ENV) {
                     }
                 }).getBlock({
                     method: "block_getBlocks",
-                    params: [{
-                        "from": 1,
-                        "to": "latest"
-                    }],
+                    params: [{}],
                     id: 1
                 },function(res){
                     if (res.error) {
@@ -169,7 +166,38 @@ function BlockService($resource,$q,ENV) {
     }
 }
 
-function TransactionService($resource,$q,ENV) {
+function TransactionService($resource,$q,ENV,UtilsService) {
+
+    var getTxSignHash = function(txData){
+        return $q(function(resolve, reject){
+            $resource(ENV.API,{},{
+                getHash:{
+                    method:"POST"
+                }
+            }).getHash({
+                method: "tx_getSignHash",
+                params: [
+                    {
+                        "from":txData.from,
+                        "to": txData.to,
+                        "value": txData.value,
+                        "timestamp": txData.timestamp,
+                        "nonce": txData.nonce
+                    }
+                ],
+                id: 1
+            },function(res){
+                console.log(res);
+                if (res.error) {
+                    reject(res.error)
+                } else {
+                    resolve(res.result)
+                }
+
+            })
+        })
+    }
+
     return {
         getAllTxs: function(){
             return $q(function(resolve, reject){
@@ -179,10 +207,7 @@ function TransactionService($resource,$q,ENV) {
                     }
                 }).getTxs({
                     method: "tx_getTransactions",
-                    params: [{
-                        "from": 1,
-                        "to": "latest"
-                    }],
+                    params: [{}],
                     id: 1
                 },function(res){
                     if (res.error) {
@@ -194,33 +219,53 @@ function TransactionService($resource,$q,ENV) {
                 })
             })
         },
-        SendTransaction: function(from,to,value){
-            var time = new Date().getTime();
-            return $q(function(resolve, reject){
-                $resource(ENV.API,{},{
-                    sendTx:{
-                        method:"POST"
-                    }
-                }).sendTx({
-                    method: "tx_sendTransaction",
-                    params: [
-                        {
-                            "from":from,
-                            "to":to,
-                            "value": value,
-                            "timestamp": time * 1e6
-                        }
-                    ],
-                    id: 1
-                },function(res){
-                    console.log(res);
-                    if (res.error) {
-                        reject(res.error)
-                    } else {
-                        resolve(res.result)
-                    }
+        SendTransaction: function(privkey,to,value){
 
+            var from = UtilsService.getAddress(privkey);
+
+            var txData = {
+                from: from,
+                to: to,
+                value: value,
+                timestamp: (new Date().getTime())*1e6, //to ns
+                nonce: parseInt(UtilsService.random_16bits(), 10)
+            };
+
+            return $q(function(resolve, reject){
+
+                getTxSignHash(txData).then(function(hash){
+                    txData.signature = UtilsService.getSignature(hash, privkey);
+                    $resource(ENV.API,{},{
+                        sendTx:{
+                            method:"POST"
+                        }
+                    }).sendTx({
+                        method: "tx_sendTransaction",
+                        params: [
+                            {
+                                "from":txData.from,
+                                "to":txData.to,
+                                "value": txData.value,
+                                "timestamp": txData.timestamp,
+                                "signature": txData.signature,
+                                "nonce": txData.nonce
+                            }
+                        ],
+                        id: 1
+                    },function(res){
+                        console.log(res);
+                        if (res.error) {
+                            reject(res.error)
+                        } else {
+                            resolve(res.result)
+                        }
+
+                    })
+                }, function(err){
+                    reject(err)
                 })
+
+
             })
         }
     }
@@ -295,7 +340,7 @@ function AccountService($resource,$q,ENV) {
     }
 }
 
-function ContractService($resource,$q ,$timeout, ENV) {
+function ContractService($resource,$q ,$timeout, ENV, UtilsService) {
 
     var getReceipt = function(txHash){
         return $q(function(resolve, reject){
@@ -309,6 +354,65 @@ function ContractService($resource,$q ,$timeout, ENV) {
                 id: 1
             },function(res){
                 console.log(res)
+                if (res.error) {
+                    reject(res.error)
+                } else {
+                    resolve(res.result)
+                }
+
+            })
+        })
+    }
+
+    var getDeploySignHash = function(txData){
+        return $q(function(resolve, reject){
+            $resource(ENV.API,{},{
+                getHash:{
+                    method:"POST"
+                }
+            }).getHash({
+                method: "tx_getSignHash",
+                params: [
+                    {
+                        "from":txData.from,
+                        "payload": txData.payload,
+                        "timestamp": txData.timestamp,
+                        "nonce": txData.nonce
+                    }
+                ],
+                id: 1
+            },function(res){
+                console.log(res);
+                if (res.error) {
+                    reject(res.error)
+                } else {
+                    resolve(res.result)
+                }
+
+            })
+        })
+    }
+
+    var getInvokeSignHash = function(txData){
+        return $q(function(resolve, reject){
+            $resource(ENV.API,{},{
+                getHash:{
+                    method:"POST"
+                }
+            }).getHash({
+                method: "tx_getSignHash",
+                params: [
+                    {
+                        "from":txData.from,
+                        "to": txData.to,
+                        "payload": txData.payload,
+                        "timestamp": txData.timestamp,
+                        "nonce": txData.nonce
+                    }
+                ],
+                id: 1
+            },function(res){
+                console.log(res);
                 if (res.error) {
                     reject(res.error)
                 } else {
@@ -340,36 +444,51 @@ function ContractService($resource,$q ,$timeout, ENV) {
                 })
             })
         },
-        deployContract: function(from, sourceCode){
-            var time = new Date().getTime();
+        deployContract: function(privkey, sourceCode){
+            var from = UtilsService.getAddress(privkey)
+            // console.log("from",from)
+            var txData = {
+                from: from,
+                payload: sourceCode,
+                timestamp: (new Date().getTime())*1e6, //to ns
+                nonce: parseInt(UtilsService.random_16bits(), 10)
+            };
+
             return $q(function(resolve, reject){
-                $resource(ENV.API,{},{
-                    deploy:{
-                        method:"POST"
-                    }
-                }).deploy({
-                    // method: "tx_sendTransactionOrContract",
-                    method: "contract_deployContract",
-                    params: [
-                        {
-                            "from": from,
-                            "payload": sourceCode,
-                            "timestamp": time * 1e6
+
+                getDeploySignHash(txData).then(function(hash){
+                    txData.signature = UtilsService.getSignature(hash, privkey);
+                    console.warn(hash)
+                    console.warn(txData)
+                    $resource(ENV.API,{},{
+                        deploy:{
+                            method:"POST"
                         }
-                    ],
-                    id: 1
-                },function(res){
-                    console.log(res);
-                    if (res.error) {
-                        reject(res.error)
-                    } else {
+                    }).deploy({
+                        // method: "tx_sendTransactionOrContract",
+                        method: "contract_deployContract",
+                        params: [
+                            {
+                                "from": txData.from,
+                                "payload": txData.payload,
+                                "timestamp": txData.timestamp,
+                                "signature": txData.signature,
+                                "nonce": txData.nonce
+                            }
+                        ],
+                        id: 1
+                    },function(res){
+                        console.log(res);
+                        if (res.error) {
+                            reject(res.error)
+                        } else {
 
-                        var flag = false;
-                        // var result;
+                            var flag = false;
+                            // var result;
 
-                        var startTime = new Date().getTime();
-                        var getResp = function(){
-                            console.log(flag);
+                            var startTime = new Date().getTime();
+                            var getResp = function(){
+                                console.log(flag);
                                 if (!flag) {
                                     if ((new Date().getTime() - startTime) < 8000) {
                                         getReceipt(res.result)
@@ -389,68 +508,86 @@ function ContractService($resource,$q ,$timeout, ENV) {
                                         reject({message: "timeout"})
                                     }
                                 }
-                        };
-                        $timeout(getResp, 400);
-                    }
+                            };
+                            $timeout(getResp, 400);
+                        }
 
+                    })
+
+                },function(err){
+                    reject(err)
                 })
             })
         },
-        invokeContract: function(from, to, data) {
-            console.log("======================");
-            console.log(to);
-            var time = new Date().getTime();
+        invokeContract: function(privkey, to, data) {
+            var from = UtilsService.getAddress(privkey);
+
+            var txData = {
+                from: from,
+                to: to,
+                payload: data,
+                timestamp: (new Date().getTime())*1e6, //to ns
+                nonce: parseInt(UtilsService.random_16bits(), 10)
+            };
+
             return $q(function(resolve, reject){
-                $resource(ENV.API,{},{
-                    invoke:{
-                        method:"POST"
-                    }
-                }).invoke({
-                    // method: "tx_sendTransactionOrContract",
-                    method: "contract_invokeContract",
-                    params: [
-                        {
-                            "from": from,
-                            "to": to,
-                            "payload": data,
-                            "timestamp": time * 1e6
+
+                getInvokeSignHash(txData).then(function(hash){
+                    txData.signature = UtilsService.getSignature(hash, privkey);
+                    $resource(ENV.API,{},{
+                        invoke:{
+                            method:"POST"
                         }
-                    ],
-                    id: 1
-                },function(res){
-                    console.log(res)
-                    if (res.error) {
-                        reject(res.error)
-                    } else {
-
-                        var flag = false;
-
-                        var startTime = new Date().getTime();
-                        var getResp = function(){
-                            console.log(flag);
-                            if (!flag) {
-                                if ((new Date().getTime() - startTime) < 5000) {
-                                    getReceipt(res.result)
-                                        .then(function(data){
-                                            console.log(data);
-
-                                            if(data){
-                                                flag = true;
-                                                resolve(data)
-                                            }
-                                        }, function(error){
-                                            console.log(error);
-                                            reject(error)
-                                        });
-                                    $timeout(getResp, 400)
-                                } else {
-                                    reject({message: "timeout"})
-                                }
+                    }).invoke({
+                        method: "contract_invokeContract",
+                        params: [
+                            {
+                                "from": txData.from,
+                                "to": txData.to,
+                                "payload": txData.payload,
+                                "timestamp": txData.timestamp,
+                                "signature": txData.signature,
+                                "nonce": UtilsService.random_16bits()
                             }
-                        };
-                        $timeout(getResp, 400);
-                    }
+                        ],
+                        id: 1
+                    },function(res){
+                        console.log(res)
+                        if (res.error) {
+                            reject(res.error)
+                        } else {
 
+                            var flag = false;
+
+                            var startTime = new Date().getTime();
+                            var getResp = function(){
+                                console.log(flag);
+                                if (!flag) {
+                                    if ((new Date().getTime() - startTime) < 5000) {
+                                        getReceipt(res.result)
+                                            .then(function(data){
+                                                console.log(data);
+
+                                                if(data){
+                                                    flag = true;
+                                                    resolve(data)
+                                                }
+                                            }, function(error){
+                                                console.log(error);
+                                                reject(error)
+                                            });
+                                        $timeout(getResp, 400)
+                                    } else {
+                                        reject({message: "timeout"})
+                                    }
+                                }
+                            };
+                            $timeout(getResp, 400);
+                        }
+
+                    })
+                },function(err){
+                    reject(err)
                 })
             })
         }
@@ -465,27 +602,6 @@ function ContractService($resource,$q ,$timeout, ENV) {
         //             params: [addr],
         //             id: 1
         //         },function(res){
-        //             if (res.error) {
-        //                 reject(res.error)
-        //             } else {
-        //                 resolve(res.result)
-        //             }
-        //
-        //         })
-        //     })
-        // }
-        // getReceipt: function(txHash){
-        //     return $q(function(resolve, reject){
-        //         $resource(ENV.API,{},{
-        //             get:{
-        //                 method:"POST"
-        //             }
-        //         }).get({
-        //             method: "tx_getTransactionReceipt",
-        //             params: [txHash],
-        //             id: 1
-        //         },function(res){
-        //             console.log(res)
         //             if (res.error) {
         //                 reject(res.error)
         //             } else {

@@ -104,6 +104,9 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs,error) {
 	if txType != 3 && args.Signature == "" {
 		return SendTxArgs{}, errors.New("'signature' is null")
 	}
+	if args.Nonce == 0 {
+		return SendTxArgs{}, errors.New("'nonce' is null")
+	}
 	return args, nil
 }
 

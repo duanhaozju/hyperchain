@@ -404,14 +404,15 @@ function SummaryCtrl($scope, $rootScope, SummaryService) {
         })
 }
 
-function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockService, TransactionService) {
+function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockService, TransactionService, ENV) {
     $scope.status = "";
     $scope.blkGPSstatus = "";
 
     $scope.tx = {
         from: "6201cb0448964ac597faf6fdf1f472edf2a22b89",
         to: "000f1a7a08ccc48e5d30f80850cf1cf283aa3abd",
-        value: "1"
+        value: "1",
+        privkey: ENV.PRIVKEY
     };
 
     $scope.blockAvg = {
@@ -454,7 +455,7 @@ function BlockCtrl($scope, $timeout, DTOptionsBuilder, SummaryService, BlockServ
         }
 
         $scope.status = "please waitting.....";
-        TransactionService.SendTransaction($scope.tx.from, $scope.tx.to, $scope.tx.value)
+        TransactionService.SendTransaction($scope.tx.privkey, $scope.tx.to, $scope.tx.value)
             .then(function(res){
                 $scope.status = res;
                 $timeout(function(){
@@ -711,7 +712,8 @@ function ContractCtrl($scope, $uibModal, $state, DTOptionsBuilder, SweetAlert, E
     $scope.contracts = contractStorage;
     console.log($scope.contracts);
     $scope.contract = {
-        from: ENV.FROM
+        from: ENV.FROM,
+        privkey: ENV.PRIVKEY
     };
     $scope.cAddr = '';
     $scope.cName = '';
@@ -868,7 +870,7 @@ function modalInstanceCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Contract
                     console.log(constructParamBytes);
                     var payload = $scope.sourceCode + constructParamBytes
                     console.log(payload)
-                    ContractService.deployContract($scope.contract.from, payload)
+                    ContractService.deployContract($scope.contract.privkey, payload)
                         .then(function(res){
                             var contractStorage = JSON.parse(localStorage.getItem(ENV.STORAGE));
                             for (var name in contractStorage) {
@@ -956,18 +958,102 @@ function modalInstanceInvokeCtrl ($scope, $uibModalInstance, SweetAlert, ENV, Co
                     console.log(data);
                     SweetAlert.swal("Waiting...", "please waiting...", "warning");
 
-                    // from 调用者地址，to 合约地址，data 为编码
-                    ContractService.invokeContract(ENV.FROM,  $scope.address, data)
+                    // privkey 私钥 ，to 合约地址，data 为编码
+                    ContractService.invokeContract($scope.contract.privkey,  $scope.address, data)
                         .then(function(res){
                             var hex = res.ret
+
+                            // 输出数据的类型
+                            console.warn("============ the outputs sequence is ================")
+                            var types = []
+                            for (var i = 0;i < abimethod.outputs.length;i++) {
+                                console.log(abimethod.outputs[i].type)
+                                types.push(abimethod.outputs[i].type)
+                            }
 
                             UtilsService.unpackOutput(abimethod,res.ret)
                                 .then(function(result){
                                     console.log(result);
 
+                                    var data = "";
+                                    if ((result instanceof Array) && result.length == 0) {
+                                        data = "无返回值"
+                                    } else {
+                                        if (result instanceof Array) {
+                                            var i = 0   // i 表示返回参数的位置
+                                            for (; i < result.length;i++) {
+                                                if (i == 0) {
+                                                    data += "{"
+                                                }
+                                                if (i == 0 && types.length == 1) {
+                                                    data += "["
+                                                }
+
+                                                if (result[i] instanceof Array) {
+
+                                                    var j = 0;  // j 表示返回的参数是数组的话，j就是其索引
+                                                    for (;j < result[i].length;j++) {
+                                                        if (j == 0) {
+                                                            data += "["
+                                                        }
+                                                        if (types[i].startsWith("byte")) {
+                                                            data += UtilsService.hex_to_ascii(result[i][j]) + ","
+                                                        } else {
+                                                            data += result[i][j] + ","
+                                                        }
+                                                    }
+
+                                                    if (j == result[i].length) {
+                                                        if (data.substr(data.length-1,1) == ",") {
+                                                            data = data.slice(0,data.length-1)
+
+                                                        }
+                                                        data += "],"
+                                                    }
+                                                } else {
+                                                    // if (types.length == 1 && types[0].startsWith("byte")) {
+                                                    //     data += UtilsService.hex_to_ascii(result[i])
+                                                    // } else if (types[i].startsWith("byte")) {
+                                                    //     data += UtilsService.hex_to_ascii(result[i])
+                                                    // } else {
+                                                    //     data += result[i]
+                                                    // }
+                                                    if (types.length == 1) {
+                                                        if (types[0].startsWith("byte")) {
+                                                            data += UtilsService.hex_to_ascii(result[i])
+                                                        } else {
+                                                            data += result[i]
+                                                        }
+                                                    } else if (types[i].startsWith("byte")) {
+                                                        data += UtilsService.hex_to_ascii(result[i])
+                                                    } else {
+                                                        data += result[i]
+                                                    }
+                                                    data += ","
+                                                }
+                                            }
+
+                                            if (i == result.length) {
+                                                if (data.substr(data.length-1,1) == ",") {
+                                                    data = data.slice(0,data.length-1)
+                                                }
+                                                if (types.length == 1) {
+                                                    data += "]"
+                                                }
+                                                data += "}"
+                                            }
+                                        } else {
+                                            data = result
+                                        }
+                                    }
+
+
+
+
+
                                     SweetAlert.swal({
                                         title: "Invoked successfully!",
-                                        text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! The result is <span class='text_red' style='word-wrap:break-word'>"+ result +"</span>",
+                                        text: "You have invoked the <span class='text_red'>"+ $scope.method.name +"</span> method of contract successfully! There has "+result.length+" results. The result is <span class='text_red' style='word-wrap: break-word'>"+ data +"</span>",
                                         type: "success",
                                         customClass: 'swal-wide',
                                         html: true
