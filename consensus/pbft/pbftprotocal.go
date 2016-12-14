@@ -1093,7 +1093,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
 	//logger.Notice("receive  pre-prepare first seq is:",preprep.SequenceNumber)
 
-	logger.Debug("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
+	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
 		pbft.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
 	if !pbft.activeView {
@@ -1324,6 +1324,7 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 			delete(pbft.outstandingReqBatches, commit.BatchDigest)
 			idx := msgID{v: commit.View, n: commit.SequenceNumber}
 			pbft.committedCert[idx] = cert.digest
+			logger.Warningf("Replica %d commit for seqNo=%d/view=%d, digest=%s", pbft.id, commit.SequenceNumber, commit.View, commit.BatchDigest)
 			pbft.executeOutstanding()
 			if commit.SequenceNumber == pbft.viewChangeSeqNo {
 				logger.Warningf("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
