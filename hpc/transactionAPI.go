@@ -33,10 +33,10 @@ func init() {
 }
 
 type PublicTransactionAPI struct {
-	eventMux *event.TypeMux
-	pm       *manager.ProtocolManager
-	db       *hyperdb.LDBDatabase
-	tokenBucket *ratelimit.Bucket
+	eventMux        *event.TypeMux
+	pm              *manager.ProtocolManager
+	db              *hyperdb.LDBDatabase
+	tokenBucket     *ratelimit.Bucket
 	ratelimitEnable bool
 }
 
@@ -69,6 +69,7 @@ type TransactionResult struct {
 	//GasPrice    *Number        `json:"gasPrice"`
 	Timestamp   int64         `json:"timestamp"`
 	ExecuteTime *Number        `json:"executeTime"`
+	Payload string 		  `json:"payload"`
 	Invalid     bool           `json:"invalid"`
 	InvalidMsg  string           `json:"invalidMsg"`
 }
@@ -85,7 +86,7 @@ const (
 
 const TIMEOUT int64 = 2
 
-func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, ratelimitEnable bool , bmax int64, rate time.Duration) *PublicTransactionAPI {
+func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, ratelimitEnable bool, bmax int64, rate time.Duration) *PublicTransactionAPI {
 	return &PublicTransactionAPI{
 		eventMux: eventMux,
 		pm:       pm,
@@ -96,20 +97,20 @@ func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManage
 }
 
 // txType 0 represents send normal tx, txType 1 represents deploy contract, txType 2 represents invoke contract, txType 3 represents signHash.
-func prepareExcute(args SendTxArgs, txType int) (SendTxArgs,error) {
+func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 	if args.Gas == nil {
 		args.Gas = NewInt64ToNumber(defaultGas)
 	}
 	if args.GasPrice == nil {
 		args.GasPrice = NewInt64ToNumber(defaustGasPrice)
 	}
-	if(args.From.Hex()==(common.Address{}).Hex()){
+	if (args.From.Hex() == (common.Address{}).Hex()) {
 		return SendTxArgs{}, errors.New("address 'from' is invalid")
 	}
 	if (txType == 0 || txType == 2) && args.To == nil {
 		return SendTxArgs{}, errors.New("address 'to' is invalid")
 	}
-	if args.Timestamp == 0 || (5*int64(time.Minute)+time.Now().UnixNano()) < args.Timestamp {
+	if args.Timestamp == 0 || (5 * int64(time.Minute) + time.Now().UnixNano()) < args.Timestamp {
 		return SendTxArgs{}, errors.New("'timestamp' is invalid")
 	}
 	if txType != 3 && args.Signature == "" {
@@ -161,10 +162,9 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	tx.TransactionHash = tx.BuildHash().Bytes()
 
 	//delete repeated tx
-	var exist, _= core.JudgeTransactionExist(tran.db, tx.TransactionHash)
+	var exist, _ = core.JudgeTransactionExist(tran.db, tx.TransactionHash)
 
-
-	if exist{
+	if exist {
 		return common.Hash{}, errors.New("repeated tx")
 	}
 
@@ -204,27 +204,27 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		//for start := start; start < end; start = time.Now().Unix() {
 		//	for i := 0; i < 100; i++ {
 
-				// Unsign Test
-				if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
-					log.Error("invalid signature")
-					// ATTENTION, return invalid transactino directly
-					return common.Hash{}, errors.New("invalid signature")
-				}
+		// Unsign Test
+		if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
+			log.Error("invalid signature")
+			// ATTENTION, return invalid transactino directly
+			return common.Hash{}, errors.New("invalid signature")
+		}
 
-				if txBytes, err := proto.Marshal(tx); err != nil {
-					log.Errorf("proto.Marshal(tx) error: %v", err)
-					return common.Hash{}, errors.New("proto.Marshal(tx) happened error")
-				} else if manager.GetEventObject() != nil {
-					go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
-				} else {
-					log.Error("manager is Nil")
-					return common.Hash{}, errors.New("EventObject is nil")
-				}
-	//		}
-	//		time.Sleep(1000 * time.Millisecond)
-	//	}
-	//
-	//	log.Infof("############# %d: end send request#############", time.Now().Unix())
+		if txBytes, err := proto.Marshal(tx); err != nil {
+			log.Errorf("proto.Marshal(tx) error: %v", err)
+			return common.Hash{}, errors.New("proto.Marshal(tx) happened error")
+		} else if manager.GetEventObject() != nil {
+			go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
+		} else {
+			log.Error("manager is Nil")
+			return common.Hash{}, errors.New("EventObject is nil")
+		}
+		//		}
+		//		time.Sleep(1000 * time.Millisecond)
+		//	}
+		//
+		//	log.Infof("############# %d: end send request#############", time.Now().Unix())
 	}
 
 	return tx.GetTransactionHash(), nil
@@ -265,7 +265,7 @@ func (tran *PublicTransactionAPI) GetTransactions(args IntervalArgs) ([]*Transac
 
 	var transactions []*TransactionResult
 
-	if blocks, err := getBlocks(args, tran.db);err != nil {
+	if blocks, err := getBlocks(args, tran.db); err != nil {
 		return nil, err
 	} else {
 		for _, block := range blocks {
@@ -372,6 +372,37 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockNumberAndIndex(n BlockNum
 	return nil, nil
 }
 
+// GetTransactionsByTime returns the transactions for the given time duration.
+func (tran *PublicTransactionAPI) GetTransactionsByTime(startTime, endTime int64) ([]*TransactionResult, error) {
+	currentChain := core.GetChainCopy()
+	height := currentChain.Height
+
+	var txs = make([]*TransactionResult,0)
+
+	for i := height; i >= uint64(1); i-- {
+		block, _ := core.GetBlockByNumber(tran.db, i)
+		if block.WriteTime > endTime {
+			continue
+		}
+		if block.WriteTime < startTime {
+			return txs,nil
+		}
+		if block.WriteTime >= startTime && block.WriteTime <= endTime {
+			trans := block.GetTransactions()
+			for t := range trans {
+				tx, err := outputTransaction(t, tran.db)
+				if err != nil {
+					return nil, err
+				}
+				txs = append(txs, tx)
+			}
+		}
+	}
+	return txs,nil
+}
+
+
+
 // GetBlockTransactionCountByHash returns the number of block transactions for given block hash.
 func (tran *PublicTransactionAPI) GetBlockTransactionCountByHash(hash common.Hash) (*Number, error) {
 
@@ -391,7 +422,7 @@ func (tran *PublicTransactionAPI) GetSignHash(args SendTxArgs) (common.Hash, err
 
 	var tx *types.Transaction
 
-	realArgs,err := prepareExcute(args, 3) // Allow the param "to" and "signature" is empty
+	realArgs, err := prepareExcute(args, 3) // Allow the param "to" and "signature" is empty
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -428,8 +459,8 @@ func (tran *PublicTransactionAPI) GetTransactionsCount() (interface{}, error) {
 	chain := core.GetChainCopy()
 
 	return struct {
-		Count *Number `json:"count,"`
-		Timestamp int64	`json:"timestamp"`
+		Count     *Number `json:"count,"`
+		Timestamp int64        `json:"timestamp"`
 	}{
 		Count: NewUint64ToNumber(chain.CurrentTxSum),
 		Timestamp: time.Now().UnixNano(),
@@ -486,6 +517,7 @@ func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*Transaction
 				//GasPrice: 	NewInt64ToNumber(txValue.Price),
 				Timestamp:      t.Timestamp,
 				ExecuteTime:    NewInt64ToNumber((blk.WriteTime - blk.Timestamp) / int64(time.Millisecond)),
+				Payload:        common.ToHex(txValue.Payload),
 				Invalid:        false,
 			}
 		} else {
@@ -510,8 +542,9 @@ func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*Transaction
 			//GasPrice: 	NewInt64ToNumber(txValue.Price),
 			Timestamp:      t.Tx.Timestamp,
 			ExecuteTime:    nil,
+			Payload:        common.ToHex(txValue.Payload),
 			Invalid:        true,
-			InvalidMsg: 	t.ErrType.String(),
+			InvalidMsg:        t.ErrType.String(),
 		}
 	}
 
