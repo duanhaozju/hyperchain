@@ -339,7 +339,6 @@ func (pbft *pbftProtocal) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) even
 	if len(pbft.rcPQCSenderStore) > pbft.f+1 {
 		logger.Debugf("Replica %d already receive %d returnPQC", pbft.id, len(pbft.rcPQCSenderStore))
 		pbft.recoveryRestartTimer.Stop()
-		pbft.inRecovery = false
 	}
 
 	prepreSet := PQCInfo.GetPrepreSet()
