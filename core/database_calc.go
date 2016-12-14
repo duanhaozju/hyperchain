@@ -253,7 +253,7 @@ func CalBlockGPS(begin, end int64) (error, string) {
 	}
 	endTime := latest.WriteTime
 	//content := []string{}
-	s := "start time: " + time.Unix(0, startTime).Format("2006-01-02 15:04:05") + " end time: " + time.Unix(0, endTime).Format("2006-01-02 15:04:05") + "\n"
+	s := "genesis Block time: " + time.Unix(0, startTime).Format("2006-01-02 15:04:05") + " latest Block time: " + time.Unix(0, endTime).Format("2006-01-02 15:04:05") + "\n"
 
 	//count := 0
 	//flag := true
@@ -265,10 +265,15 @@ func CalBlockGPS(begin, end int64) (error, string) {
 			return err, ""
 		}
 		if block.WriteTime > end {
+			s = s + " end time: " + time.Unix(0, block.WriteTime).Format("2006-01-02 15:04:05") + "\n"
 			break
 		}
 		if block.WriteTime > begin {
 			avg += 1
+			if(avg==1){
+				s = s + "start time: " + time.Unix(0, block.WriteTime).Format("2006-01-02 15:04:05")
+			}
+
 		}
 	}
 	avg = avg / (float64(end - begin) * 1.0 / float64(time.Second.Nanoseconds()))

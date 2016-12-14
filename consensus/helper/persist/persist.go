@@ -15,26 +15,46 @@ import (
 
 // StoreState stores a key,value pair
 func StoreState(key string, value []byte) error {
-	db, _ := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		return err
+	}
 	return db.Put([]byte("consensus."+key), value)
 }
 
+//DelAllState: remove all state
+func DelAllState() error {
+	db, err := hyperdb.GetLDBDatabase()
+	if err == nil {
+		db.Destroy()
+	}
+	return err
+}
 
 // DelState removes a key,value pair
 func DelState(key string) error {
-	db, _ := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		return err
+	}
 	return db.Delete([]byte("consensus."+key))
 }
 
 // ReadState retrieves a value to a key
 func ReadState(key string) ([]byte, error) {
-	db, _ := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		return nil, err
+	}
 	return db.Get([]byte("consensus."+key))
 }
 
 // ReadStateSet retrieves all key-value pairs where the key starts with prefix
 func ReadStateSet(prefix string) (map[string][]byte, error) {
-	db, _ := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		return nil, err
+	}
 	prefixRaw := []byte("consensus." + prefix)
 
 	ret := make(map[string][]byte)
@@ -48,14 +68,6 @@ func ReadStateSet(prefix string) (map[string][]byte, error) {
 		key = key[len("consensus."):]
 		ret[key] = append([]byte(nil), it.Value()...)
 	}
-	//for ok := it.Seek(prefixRaw); ok; ok = it.Next() {
-	//	key := it.Key()
-	//	if len(key) > len(prefixRaw) && string(key[0 : len(prefixRaw)]) == string(prefixRaw) {
-	//		ret[string(key)] = it.Value()
-	//	} else {
-	//		break
-	//	}
-	//}
 	it.Release()
 	return ret, nil
 }

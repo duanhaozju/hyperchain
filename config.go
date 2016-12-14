@@ -27,6 +27,8 @@ type configs interface {
 	getSyncReplicaEnable() bool
 	getLicense() string
 	getRateLimitConfig() jsonrpc.RateLimitConfig
+	getBlockVersion() string
+	getTransactionVersion() string
 }
 
 type configsImpl struct {
@@ -47,10 +49,12 @@ type configsImpl struct {
 	syncReplica             bool
 	license                 string
 	rateLimitEnable         bool
-	txRatePeak               int64
-	txFillRate        string
-	contractRatePeak               int64
+	txRatePeak              int64
+	txFillRate              string
+	contractRatePeak        int64
 	contractFillRate        string
+	blockVersion            string
+	transactionVersion      string
 }
 
 //return a config instances
@@ -63,6 +67,9 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	if err != nil {
 		panic(fmt.Errorf("Error envPre %s reading %s", "GLOBAL", err))
 	}
+	/*
+		system config
+	 */
 	cimpl.nodeID = NodeID
 	cimpl.gRPCPort = GRPCPort
 	cimpl.httpPort = HTTPPort
@@ -76,14 +83,29 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	cimpl.genesisConfigPath = config.GetString("global.configs.genesis")
 	cimpl.memberSRVCConfigPath = config.GetString("global.configs.membersrvc")
 	cimpl.pbftConfigPath = config.GetString("global.configs.pbft")
+	/*
+		statement synchronization
+	 */
 	cimpl.syncReplicaInfoInterval = config.GetString("global.configs.replicainfo.interval")
 	cimpl.syncReplica = config.GetBool("global.configs.replicainfo.enable")
+	/*
+		license
+	 */
 	cimpl.license = config.GetString("global.configs.license")
+	/*
+		rate limit
+	 */
 	cimpl.rateLimitEnable = config.GetBool("global.configs.ratelimit.enable")
 	cimpl.txRatePeak = config.GetInt64("global.configs.ratelimit.txRatePeak")
 	cimpl.txFillRate = config.GetString("global.configs.ratelimit.txFillRate")
 	cimpl.contractRatePeak = config.GetInt64("global.configs.ratelimit.contractRatePeak")
 	cimpl.contractFillRate = config.GetString("global.configs.ratelimit.contractFillRate")
+
+	/*
+		Version
+	 */
+	cimpl.blockVersion = config.GetString("global.version.blockversion")
+	cimpl.transactionVersion = config.GetString("global.version.transactionversion")
 	return &cimpl
 }
 
@@ -134,4 +156,10 @@ func (cIml *configsImpl) getRateLimitConfig () jsonrpc.RateLimitConfig {
 		ContractRatePeak: cIml.contractRatePeak,
 		ContractFillRate: contractFillRate,
 	}
+}
+func (cIml *configsImpl) getBlockVersion() string {
+	return cIml.blockVersion
+}
+func (cIml *configsImpl) getTransactionVersion() string {
+	return cIml.transactionVersion
 }

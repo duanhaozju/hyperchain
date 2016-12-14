@@ -8,6 +8,7 @@ import (
 	"sort"
 	"sync"
 	"time"
+	"encoding/hex"
 
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
@@ -39,6 +40,7 @@ type pbftProtocal struct {
 	muxBatch			sync.Mutex
 	muxPbft				sync.Mutex
 	reqStore         	*requestStore                   //received messages
+	duplicator			map[uint64]*transactionStore
 
 								 // PBFT data
 	activeView     bool                                      // view change happening
@@ -116,6 +118,7 @@ type pbftProtocal struct {
 	recoveryRestartTimeout time.Duration                     // time limit for recovery process
 	rcRspStore             map[uint64]*RecoveryResponse      // rcRspStore store recovery responses from replicas
 	rcPQCSenderStore       map[uint64]bool			 // rcPQCSenderStore store those who sent PQC info to self
+	recvNewViewInRecovery  bool				 // recvNewViewInRecovery record whether receive new view during recovery
 }
 
 type qidx struct {
@@ -277,6 +280,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
 	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
 	pbft.cacheValidatedBatch = make(map[string]*cacheBatch)
+	pbft.duplicator = make(map[uint64]*transactionStore)
 
 	pbft.restoreState()
 
@@ -295,6 +299,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 
 	// recovery
 	pbft.inRecovery = true
+	pbft.recvNewViewInRecovery = false
 	pbft.recoveryRestartTimeout, err = time.ParseDuration(config.GetString("timeout.recovery"))
 	if err != nil {
 		panic(fmt.Errorf("Cannot parse recovery timeout: %s", err))
@@ -383,11 +388,27 @@ func (pbft *pbftProtocal) RecvLocal(msg interface{}) error {
 	return nil
 }
 
+func (pbft *pbftProtocal) RemoveCachedBatch(vid uint64) {
+
+	logger.Debugf("Replica %d received local remove message", pbft.id)
+	event := removeCache{vid: vid}
+	go pbft.postRequestEvent(event)
+}
+
 func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 
 	logger.Debugf("Replica %d start solve event", pbft.id)
 
 	switch e := ee.(type) {
+	case removeCache:
+		vid := e.vid
+		ok := pbft.recvRemoveCache(vid)
+		if !ok {
+			logger.Warningf("Replica %d received local remove cached batch msg, but can not find mapping batch", pbft.id)
+		}
+		return nil
+	case clearDuplicator:
+		pbft.duplicator = make(map[uint64]*transactionStore)
 	case *types.Transaction:
 		tx := e
 		return pbft.processTxEvent(tx)
@@ -453,6 +474,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 			logger.Debugf("Replica %d try to process viewChangeQuorumEvent, but it's in nego-view", pbft.id)
 			return nil
 		}
+		go pbft.postRequestEvent(clearDuplicator{})
 		if pbft.primary(pbft.view) == pbft.id {
 			return pbft.sendNewView()
 		}
@@ -507,6 +529,13 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		logger.Notice("################################################")
 		logger.Noticef("#   Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
 		logger.Notice("################################################")
+		if pbft.recvNewViewInRecovery {
+			logger.Noticef("#  Replica %d find itself received NewView during Recovery" +
+				", will restart negotiate view", pbft.id)
+			pbft.inRecovery = true
+			pbft.inNegoView = true
+			pbft.restartNegoView()
+		}
 		pbft.processRequestsDuringRecovery()
 		return nil
 	case recoveryRestartTimerEvent:
@@ -656,6 +685,19 @@ func (pbft *pbftProtocal) processCachedTransactions() {
 func (pbft *pbftProtocal) leaderProcReq(tx *types.Transaction) error {
 
 	logger.Debugf("Batch primary %d queueing new request", pbft.id)
+
+	if pbft.checkDuplicate(tx) {
+		_, ok := pbft.duplicator[pbft.vid+1]
+		if !ok {
+			txStore := newTransactionStore()
+			pbft.duplicator[pbft.vid+1] = txStore
+		}
+		pbft.duplicator[pbft.vid+1].add(tx)
+	} else {
+		logger.Warningf("Replica %d receive duplicate transaction", pbft.id)
+		return nil
+	}
+
 	pbft.batchStore = append(pbft.batchStore, tx)
 
 	if !pbft.batchTimerActive {
@@ -667,6 +709,21 @@ func (pbft *pbftProtocal) leaderProcReq(tx *types.Transaction) error {
 	}
 
 	return nil
+}
+
+func (pbft *pbftProtocal) checkDuplicate(tx *types.Transaction) (ok bool) {
+
+	ok = true
+
+	for _, txStore := range pbft.duplicator {
+		key := hex.EncodeToString(tx.TransactionHash)
+		if txStore.has(key) {
+			ok = false
+			break
+		}
+	}
+
+	return
 }
 
 func (pbft *pbftProtocal) sendBatch() error {
@@ -2102,7 +2159,7 @@ func (pbft *pbftProtocal) recvValidatedResult(result event.ValidatedTxs) error {
 
 	primary := pbft.primary(pbft.view)
 	if primary == pbft.id {
-		logger.Debugf("Primary %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
+		logger.Debugf("Primary %d received validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
 
 		batch := &TransactionBatch{
 			Batch:     result.Transactions,
@@ -2141,4 +2198,14 @@ func (pbft *pbftProtocal) recvValidatedResult(result event.ValidatedTxs) error {
 	}
 
 	return nil
+}
+
+func (pbft *pbftProtocal) recvRemoveCache(vid uint64) bool {
+
+	_, ok := pbft.duplicator[vid]
+	if ok {
+		delete(pbft.duplicator, vid)
+	}
+
+	return ok
 }
