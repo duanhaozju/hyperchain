@@ -118,6 +118,7 @@ type pbftProtocal struct {
 	recoveryRestartTimeout time.Duration                     // time limit for recovery process
 	rcRspStore             map[uint64]*RecoveryResponse      // rcRspStore store recovery responses from replicas
 	rcPQCSenderStore       map[uint64]bool			 // rcPQCSenderStore store those who sent PQC info to self
+	recvNewViewInRecovery  bool				 // recvNewViewInRecovery record whether receive new view during recovery
 }
 
 type qidx struct {
@@ -298,6 +299,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 
 	// recovery
 	pbft.inRecovery = true
+	pbft.recvNewViewInRecovery = false
 	pbft.recoveryRestartTimeout, err = time.ParseDuration(config.GetString("timeout.recovery"))
 	if err != nil {
 		panic(fmt.Errorf("Cannot parse recovery timeout: %s", err))
@@ -527,6 +529,13 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		logger.Notice("################################################")
 		logger.Noticef("#   Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
 		logger.Notice("################################################")
+		if pbft.recvNewViewInRecovery {
+			logger.Noticef("#  Replica %d find itself received NewView during Recovery" +
+				", will restart negotiate view", pbft.id)
+			pbft.inRecovery = true
+			pbft.inNegoView = true
+			pbft.restartNegoView()
+		}
 		pbft.processRequestsDuringRecovery()
 		return nil
 	case recoveryRestartTimerEvent:
@@ -2150,7 +2159,7 @@ func (pbft *pbftProtocal) recvValidatedResult(result event.ValidatedTxs) error {
 
 	primary := pbft.primary(pbft.view)
 	if primary == pbft.id {
-		logger.Debugf("Primary %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
+		logger.Debugf("Primary %d received validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
 
 		batch := &TransactionBatch{
 			Batch:     result.Transactions,

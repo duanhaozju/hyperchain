@@ -322,6 +322,7 @@ func (pbft *pbftProtocal) recvNewView(nv *NewView) events.Event {
 
 	if pbft.inRecovery {
 		logger.Noticef("Replica %d try to recvNewView, but it's in recovery", pbft.id)
+		pbft.recvNewViewInRecovery = true
 		return nil
 	}
 
