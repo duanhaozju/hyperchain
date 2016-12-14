@@ -31,6 +31,7 @@ type argT struct {
 	ConfigPath string `cli:"c,conf" usage:"配置文件所在路径" dft:"./config/global.yaml"`
 	GRPCPort   int    `cli:"l,rpcport" usage:"远程连接端口" dft:"8001"`
 	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
+	RESTPort   int	  `cli:"f,restport" useage:"restful开放端口" dft:"9000"`
 	IsInit     bool   `cli:"i,init" usage:"是否是创世节点" dft:"false"`
 	Introducer string `cli:"r,introducer" usage:"加入代理节点信息,格127.0.0.1:8001"dft:"127.0.0.1:8001:1"`
 	IsReconnect bool  `cli:"e,isReconnect" usage:"是否重新链接" dft:"false"`
@@ -87,7 +88,7 @@ func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*argT)
 
-		config := newconfigsImpl(argv.ConfigPath, argv.NodeID, argv.GRPCPort, argv.HTTPPort)
+		config := newconfigsImpl(argv.ConfigPath, argv.NodeID, argv.GRPCPort, argv.HTTPPort, argv.RESTPort)
 
 		err, expiredTime := checkLicense(config.getLicense())
 		if err != nil {
@@ -159,7 +160,7 @@ func main() {
 				expiredTime,
 				config.getGRPCPort())
 		rateLimitCfg := config.getRateLimitConfig()
-		go jsonrpc.Start(config.getHTTPPort(), eventMux, pm, rateLimitCfg)
+		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(),config.getLogDumpFileDir(),eventMux, pm, rateLimitCfg)
 
 		//go func() {
 		//	log.Println(http.ListenAndServe("localhost:6064", nil))

@@ -33,6 +33,7 @@ type configsImpl struct {
 	nodeID                  int
 	gRPCPort                int
 	httpPort                int
+	restPort		int
 	keystoreDir             string
 	keyNodeDir              string
 	logDumpFileFlag         bool
@@ -54,7 +55,7 @@ type configsImpl struct {
 }
 
 //return a config instances
-func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort int) *configsImpl {
+func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort int, RESTPort int) *configsImpl {
 	var cimpl configsImpl
 	config := viper.New()
 	viper.SetEnvPrefix("GLOBAL_ENV")
@@ -66,6 +67,7 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	cimpl.nodeID = NodeID
 	cimpl.gRPCPort = GRPCPort
 	cimpl.httpPort = HTTPPort
+	cimpl.restPort = RESTPort
 	cimpl.keystoreDir = config.GetString("global.account.keystoredir")
 	cimpl.keyNodeDir = config.GetString("global.account.keynodesdir")
 	cimpl.logDumpFileFlag = config.GetBool("global.logs.dumpfile")
@@ -90,6 +92,7 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 func (cIml *configsImpl) getNodeID() int            { return cIml.nodeID }
 func (cIml *configsImpl) getGRPCPort() int          { return cIml.gRPCPort }
 func (cIml *configsImpl) getHTTPPort() int          { return cIml.httpPort }
+func (cIml *configsImpl) getRESTPort() int          { return cIml.restPort }
 func (cIml *configsImpl) getKeystoreDir() string    { return cIml.keystoreDir }
 func (cIml *configsImpl) getKeyNodeDir() string     { return cIml.keyNodeDir }
 func (cIml *configsImpl) getLogDumpFileFlag() bool  { return cIml.logDumpFileFlag }

@@ -7,14 +7,19 @@ import (
 
 type NodesController struct {
 	beego.Controller
+	PublicNodeAPI *hpc.PublicNodeAPI
+
+}
+
+func (n *NodesController) Prepare() {
+	PublicNodeAPIInterface := hpc.GetApiObjectByNamespace("node").Service
+	PublicNodeAPI := PublicNodeAPIInterface.(*hpc.PublicNodeAPI)
+	n.PublicNodeAPI = PublicNodeAPI
 }
 
 func (n *NodesController) GetNodes() {
 
-	PublicNodeAPIInterface := hpc.GetApiObjectByNamespace("node").Service
-	PublicNodeAPI := PublicNodeAPIInterface.(*hpc.PublicNodeAPI)
-
-	if nodes, err := PublicNodeAPI.GetNodes();err != nil {
+	if nodes, err := n.PublicNodeAPI.GetNodes();err != nil {
 		n.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
 	} else {
 		n.Data["json"] = NewJSONObject(nodes, nil)

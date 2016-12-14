@@ -4,6 +4,7 @@ import (
 	"hyperchain/hpc"
 	"encoding/json"
 	"hyperchain/common"
+
 )
 
 // CheckIntervalArgs
@@ -12,8 +13,9 @@ func CheckIntervalArgs(from, to string) (hpc.IntervalArgs, error) {
 	var intervalArgs hpc.IntervalArgs
 
 	jsonStr := "{\"from\":\""+from+"\",\"to\":\""+to+"\"}"
-	//fmt.Println(jsonStr)
+
 	err := json.Unmarshal([]byte(jsonStr), &intervalArgs)
+
 	if err != nil {
 		return hpc.IntervalArgs{}, err
 	}

@@ -2,16 +2,14 @@ package routers
 
 import (
 	"github.com/astaxie/beego"
-	"hyperchain/jsonrpc/restful/controllers"
+	"hyperchain/rest_api/controllers"
 )
 
-func init() {
+func NewRouter() {
+
 	ns := beego.NewNamespace("/v1",
 
 		beego.NSNamespace("/transactions",
-			//beego.NSInclude(
-			//	&controllers.TransactionsController{},
-			//),
 			beego.NSRouter("/send", &controllers.TransactionsController{}, "post:SendTransaction"),
 			beego.NSRouter("/list", &controllers.TransactionsController{}, "get:GetTransactions"),
 			beego.NSRouter("/:transactionHash", &controllers.TransactionsController{}, "get:GetTransactionByHash"),
@@ -25,7 +23,7 @@ func init() {
 		beego.NSNamespace("/blocks",
 			beego.NSRouter("/list", &controllers.BlocksController{}, "get:GetBlocks"),
 			beego.NSRouter("/query", &controllers.BlocksController{}, "get:GetBlockByHashOrNum"),
-			beego.NSRouter("/:blockHash/transactions/count", &controllers.BlocksController{}, "get:GetBlockTransactionCountByHash"),
+			beego.NSRouter("/:blockHash/transactions/count", &controllers.TransactionsController{}, "get:GetBlockTransactionCountByHash"),
 			beego.NSRouter("/latest", &controllers.BlocksController{}, "get:GetLatestBlock"),
 		),
 
@@ -37,7 +35,7 @@ func init() {
 		),
 
 		beego.NSNamespace("/accounts",
-			beego.NSRouter("/:address/contracts/count", &controllers.AccountsController{}, "get:GetContractCountByAddr"),
+			beego.NSRouter("/:address/contracts/count", &controllers.ContractsController{}, "get:GetContractCountByAddr"),
 		),
 
 		beego.NSNamespace("/nodes",

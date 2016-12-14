@@ -12,8 +12,9 @@ import (
 	"hyperchain/manager"
 	"hyperchain/hpc"
 	"time"
+	"hyperchain/rest_api/routers"
 	"github.com/astaxie/beego"
-	_ "hyperchain/jsonrpc/restful/routers"
+	"github.com/astaxie/beego/logs"
 )
 
 const (
@@ -36,7 +37,7 @@ func (hrw *httpReadWrite) Close() error{
 	return nil
 }
 
-func Start(httpPort int,eventMux *event.TypeMux,pm *manager.ProtocolManager, cfg RateLimitConfig) error{
+func Start(httpPort int, restPort int, logsPath string,eventMux *event.TypeMux,pm *manager.ProtocolManager, cfg RateLimitConfig) error{
 	eventMux = eventMux
 
 	server := NewServer()
@@ -52,13 +53,13 @@ func Start(httpPort int,eventMux *event.TypeMux,pm *manager.ProtocolManager, cfg
 		}
 	}
 
-	startHttp(httpPort, server)
+	startHttp(httpPort, restPort,logsPath, server)
 
 	return nil
 }
 
 
-func startHttp(httpPort int, srv *Server) {
+func startHttp(httpPort int, restPort int, logsPath string, srv *Server) {
 	// TODO AllowedOrigins should be a parameter
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
@@ -71,13 +72,17 @@ func startHttp(httpPort int, srv *Server) {
 	go http.ListenAndServe(":"+strconv.Itoa(httpPort),handler)
 
 	// ===================================== 2016.11.15 START ================================ //
-	// Restful路由接口
-	//实例化路由
-	//router := routers.NewRouter()
-	//启动路由服务
-	//http.ListenAndServe(":9000",router)
+	routers.NewRouter()
 	beego.BConfig.CopyRequestBody = true
-	beego.Run("127.0.0.1:9000")
+	beego.SetLogFuncCall(true)
+
+	logs.SetLogger(logs.AdapterFile, `{"filename": "` + logsPath + "/RESTful-API-" + strconv.Itoa(restPort) + "-" + time.Now().Format("2006-01-02 15:04:05") +`"}`)
+	beego.BeeLogger.DelLogger("console")
+
+	// todo 读取　app.conf　配置文件
+	// the first param adapterName is ini/json/xml/yaml.
+	//beego.LoadAppConfig("ini", "jsonrpc/RESTful_api/conf/app.conf")
+	beego.Run("127.0.0.1:"+ strconv.Itoa(restPort))
 	// ===================================== 2016.11.15 END  ================================ //
 }
 
