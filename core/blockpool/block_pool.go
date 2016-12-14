@@ -707,7 +707,7 @@ func (pool *BlockPool) GetStateInstance(root common.Hash, db hyperdb.Database) (
 	case "rawstate":
 		return statedb.New(root, db)
 	case "hyperstate":
-		return nil, nil
+		return hyperstate.New(root, db)
 	default:
 		return nil, errors.New("no state type specified")
 	}

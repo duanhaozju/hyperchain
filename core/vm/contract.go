@@ -13,7 +13,7 @@ type ContractRef interface {
 	ReturnGas(*big.Int, *big.Int)
 	Address() common.Address
 	Value() *big.Int
-	SetCode([]byte)
+	SetCode(common.Hash, []byte)
 	ForEachStorage(callback func(key, value common.Hash) bool)
 }
 
@@ -130,7 +130,7 @@ func (c *Contract) Value() *big.Int {
 }
 
 // SetCode sets the code to the contract
-func (self *Contract) SetCode(code []byte) {
+func (self *Contract) SetCode(hash common.Hash, code []byte) {
 	self.Code = code
 }
 // SetABI sets the ABI to the contract

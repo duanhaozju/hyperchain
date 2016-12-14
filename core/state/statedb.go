@@ -277,7 +277,7 @@ func (self *StateDB) SetNonce(addr common.Address, nonce uint64) {
 func (self *StateDB) SetCode(addr common.Address, code []byte) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.SetCode(code)
+		stateObject.SetCode(common.Hash{}, code)
 	}
 	self.leastStateObject = stateObject
 }
@@ -523,4 +523,16 @@ func (s *StateDB) commit(db pmt.DatabaseWriter) (common.Hash, error) {
 		}
 	}
 	return s.trie.CommitTo(db)
+}
+
+func (self *StateDB) Snapshot() interface{} {
+	return self.Copy()
+}
+
+func (self *StateDB) RevertToSnapshot(copy interface{}) {
+	statedb, ok := copy.(vm.Database)
+	if ok == false {
+		return
+	}
+	self.Set(statedb)
 }

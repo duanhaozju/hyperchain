@@ -53,7 +53,7 @@ func StateObjectFromAccount(db hyperdb.Database, addr string, account Account) *
 	if common.IsHex(account.Code) {
 		account.Code = account.Code[2:]
 	}
-	obj.SetCode(common.Hex2Bytes(account.Code))
+	obj.SetCode(common.Hash{}, common.Hex2Bytes(account.Code))
 	obj.SetNonce(common.Big(account.Nonce).Uint64())
 
 	return obj
@@ -155,11 +155,11 @@ func (self *Env) SetDepth(i int) { self.depth = i }
 func (self *Env) CanTransfer(from common.Address, balance *big.Int) bool {
 	return self.state.GetBalance(from).Cmp(balance) >= 0
 }
-func (self *Env) MakeSnapshot() vm.Database {
-	return self.state.Copy()
+func (self *Env) MakeSnapshot() interface{} {
+	return self.state.Snapshot()
 }
-func (self *Env) SetSnapshot(copy vm.Database) {
-	self.state.Set(copy)
+func (self *Env) SetSnapshot(copy interface{}) {
+	self.state.RevertToSnapshot(copy)
 }
 
 func (self *Env) Transfer(from, to vm.Account, amount *big.Int) {

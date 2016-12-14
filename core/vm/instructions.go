@@ -348,6 +348,7 @@ func opCalldataCopy(instr instruction, pc *uint64, env Environment, contract *Co
 }
 
 func opExtCodeSize(instr instruction, pc *uint64, env Environment, contract *Contract, memory *Memory, stack *stack) {
+	// TODO use cache to optimize
 	addr := common.BigToAddress(stack.pop())
 	l := big.NewInt(int64(len(env.Db().GetCode(addr))))
 	stack.push(l)

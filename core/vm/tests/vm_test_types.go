@@ -58,7 +58,7 @@ func StateObjectFromAccount(db hyperdb.Database, addr string, account Account) *
 	if common.IsHex(account.Code) {
 		account.Code = account.Code[2:]
 	}
-	obj.SetCode(common.Hex2Bytes(account.Code))
+	obj.SetCode(common.Hash{}, common.Hex2Bytes(account.Code))
 	obj.SetNonce(common.Big(account.Nonce).Uint64())
 
 	return obj

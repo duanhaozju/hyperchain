@@ -211,7 +211,7 @@ func (self *StateObject) Code(db pmt.Database) []byte {
 }
 
 
-func (self *StateObject) SetCode(code []byte) {
+func (self *StateObject) SetCode(hash common.Hash, code []byte) {
 	self.code = code
 	self.codeHash = crypto.Keccak256(code)
 	self.dirty = true

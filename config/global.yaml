@@ -42,7 +42,7 @@ global:
         dir: "./build/database/"
 
     structure:
-        state: "rawstate" # two available options: rawstate or hyperstate
+        state: "hyperstate" # two available options: rawstate or hyperstate
 ###########################
 # configs
 ############################

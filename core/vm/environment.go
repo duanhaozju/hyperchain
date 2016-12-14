@@ -22,9 +22,9 @@ type Environment interface {
 	// The state database
 	Db() Database
 	// Creates a restorable snapshot
-	MakeSnapshot() Database
+	MakeSnapshot() interface{}
 	// Set database to previous snapshot
-	SetSnapshot(Database)
+	SetSnapshot(interface{})
 	// Address of the original invoker (first occurrence of the VM invoker)
 	Origin() common.Address
 	// The block number this VM is invoked on
@@ -99,8 +99,8 @@ type Database interface {
 	AddLog(log *Log)
 	GetLogs(hash common.Hash) Logs
 
-	Copy() Database
-	Set(Database)
+	Snapshot() interface{}
+	RevertToSnapshot(interface{})
 
 	Commit() (common.Hash, error)
 }
@@ -114,8 +114,7 @@ type Account interface {
 	Balance() *big.Int
 	Address() common.Address
 	ReturnGas(*big.Int, *big.Int)
-	SetCode([]byte)
+	SetCode(common.Hash, []byte)
 	ForEachStorage(cb func(key, value common.Hash) bool)
-	PrintStorages()
 	Value() *big.Int
 }
