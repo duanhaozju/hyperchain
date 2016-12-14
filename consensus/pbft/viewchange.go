@@ -322,6 +322,10 @@ func (pbft *pbftProtocal) recvNewView(nv *NewView) events.Event {
 
 	if pbft.inRecovery {
 		logger.Noticef("Replica %d try to recvNewView, but it's in recovery", pbft.id)
+		logger.Noticef("Replica %d will restart nego view since its view may be out-of-date",
+			pbft.id)
+		pbft.recoveryRestartTimer.Stop()
+		pbft.restartNegoView()
 		return nil
 	}
 
