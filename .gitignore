@@ -93,7 +93,6 @@ cache/*
 # keystore
 #keystore.txt
 hyperchain
-logs/
 cache/
 crypto/addressInfo
 
@@ -103,8 +102,6 @@ keystore/node
 scripts/read_server.py
 scripts/server.out
 scripts/sshkeys/
-
-log
 
 # build vendor
 build
