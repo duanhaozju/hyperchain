@@ -140,21 +140,21 @@ distribute_the_binary(){
 runXinXinLinux(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        gnome-terminal -x bash -c "ssh hyperchain@$server_address \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o $ni -l 8001 -t 8081 \""
+        gnome-terminal -x bash -c "ssh hyperchain@$server_address \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o $ni -l 8001 -t 8081 -i true \""
         ni=`expr $ni + 1`
     done
 }
 runXinXinMac(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        osascript -e 'tell app "Terminal" to do script "ssh hyperchain@'$server_address' \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o '$ni' -l 8001 -t 8081 \""'
+        osascript -e 'tell app "Terminal" to do script "ssh hyperchain@'$server_address' \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o '$ni' -l 8001 -t 8081 -i true \""'
         ni=`expr $ni + 1`
     done
 }
 runXin1(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        ssh hyperchain@$server_address "./hyperchain -o ${ni} -l 8001 -t 8081" &
+        ssh hyperchain@$server_address "./hyperchain -o ${ni} -l 8001 -t 8081 -i true" &
         ni=`expr $ni + 1`
     done
 }
