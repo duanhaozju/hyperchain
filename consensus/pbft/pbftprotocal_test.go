@@ -1,11 +1,5 @@
-// author: Zhenlong Zhao
-// email: zhenlongzhao@hyperchain.cn
-// date: 16/11/15
-// last modified: 16/11/15
-// last Modified Author: zhenlongzhao
-// change log:
-
-
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package pbft
 
 import (

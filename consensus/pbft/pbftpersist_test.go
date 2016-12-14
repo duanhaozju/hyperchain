@@ -1,10 +1,5 @@
-// author: Xiaoyi Wang
-// email: wangxiaoyi@hyperchain.cn
-// date: 16/11/4
-// last modified: 16/11/4
-// last Modified Author: Xiaoyi Wang
-// change log: 1. new test for pbftpersist
-
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package pbft
 
 import (

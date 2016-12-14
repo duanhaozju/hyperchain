@@ -1,9 +1,12 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package pbft
 
 import (
 	"hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/pkg/errors"
 )
 
 // New replica receive local NewNode message
@@ -13,7 +16,12 @@ func (pbft *pbftProtocal) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 
 	if pbft.isNewNode {
 		logger.Warningf("New replica %d received duplicate local newNode message", pbft.id)
-		return nil
+		return errors.New("New replica received duplicate local newNode message")
+	}
+
+	if len(msg.Payload) == 0 {
+		logger.Warningf("New replica %d received nil local newNode message", pbft.id)
+		return errors.New("New replica received nil local newNode message")
 	}
 
 	pbft.isNewNode = true
@@ -29,7 +37,12 @@ func (pbft *pbftProtocal) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 
 	if pbft.isNewNode {
 		logger.Warningf("New replica received local addNode message, there may be something wrong")
-		return nil
+		return errors.New("New replica received local addNode message")
+	}
+
+	if len(msg.Payload) == 0 {
+		logger.Warningf("New replica %d received nil local addNode message", pbft.id)
+		return errors.New("New replica received nil local addNode message")
 	}
 
 	key := string(msg.Payload)
@@ -46,9 +59,15 @@ func (pbft *pbftProtocal) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 
 	key := string(msg.DelPayload)
 	logger.Debugf("Replica %d received local delnode message for del node %s", pbft.id, key)
+
 	if pbft.N == 4 {
 		logger.Criticalf("Replica %d receive del msg, but we don't support delete as there're only 4 nodes")
-		return nil
+		return errors.New("Deleting is not supported as there're only 4 nodes")
+	}
+
+	if len(msg.DelPayload) == 0 || len(msg.RouterHash) == 0 || msg.Id == 0 {
+		logger.Warningf("New replica %d received invalid local delNode message", pbft.id)
+		return errors.New("New replica received invalid local delNode message")
 	}
 
 	pbft.inDeletingNode = true
