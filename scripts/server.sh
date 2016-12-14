@@ -130,7 +130,7 @@ distribute_the_binary(){
 	echo "Send the config files to primary:"
 	cd $GOPATH/src/hyperchain/scripts
 	scp -r ../config/ hyperchain@$PRIMARY:/home/hyperchain/
-	scp ./sub_scripts/deploy/server_deploy.sh hyperchain@$PRIMARY:/home/hyperchain/
+	scp ./sub_scripts/server_deploy.sh hyperchain@$PRIMARY:/home/hyperchain/
 
     echo "Primary send files to others:"
 	ssh hyperchain@$PRIMARY "chmod a+x server_deploy.sh && bash server_deploy.sh ${MAXNODE}"
