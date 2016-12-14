@@ -1060,13 +1060,11 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	delete(pbft.cacheValidatedBatch, digest)
 	//pbft.persistQSet()
 	payload, err := proto.Marshal(preprep)
-	logger.Debug("call---send pre-pare Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
-		pbft.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
-
 	if err != nil {
 		logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
 		return
 	}
+
 	consensusMsg := &ConsensusMessage{
 		Type:    ConsensusMessage_PRE_PREPARE,
 		Payload: payload,
@@ -1093,7 +1091,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
 	//logger.Notice("receive  pre-prepare first seq is:",preprep.SequenceNumber)
 
-	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest: ",
+	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest=%s ",
 		pbft.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
 	if !pbft.activeView {
@@ -1322,6 +1320,10 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 		if !cert.sentExecute && cert.validated {
 			pbft.lastNewViewTimeout = pbft.newViewTimeout
 			delete(pbft.outstandingReqBatches, commit.BatchDigest)
+			for digest, batch := range pbft.outstandingReqBatches {
+				logger.Critical("digest: ", digest)
+				logger.Critical("batch: ", batch)
+			}
 			idx := msgID{v: commit.View, n: commit.SequenceNumber}
 			pbft.committedCert[idx] = cert.digest
 			logger.Warningf("Replica %d commit for seqNo=%d/view=%d, digest=%s", pbft.id, commit.SequenceNumber, commit.View, commit.BatchDigest)
@@ -1362,6 +1364,11 @@ func (pbft *pbftProtocal) executeOutstanding() {
 		if pbft.executeOne(idx) {
 			break
 		}
+	}
+
+	for digest, batch := range pbft.outstandingReqBatches {
+		logger.Critical("digest: ", digest)
+		logger.Critical("batch: ", batch)
 	}
 
 	pbft.startTimerIfOutstandingRequests()
