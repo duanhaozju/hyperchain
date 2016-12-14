@@ -141,7 +141,7 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 				pbft.inRecovery = false
 				return recoveryDoneEvent{}
 			} else {
-				logger.Errorf("This should not happen! Replica %d in recovery find chkpt, same: %d, but self.lastExec: is ahead of others: %d", pbft.id, n, pbft.lastExec, lastExec)
+				logger.Errorf("This should not happen! Replica %d in recovery find chkpt, same: %d, but self.lastExec: %d is ahead of others: %d", pbft.id, n, pbft.lastExec, lastExec)
 			}
 		}
 	}
