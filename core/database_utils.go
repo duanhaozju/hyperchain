@@ -281,7 +281,6 @@ func GetDiscardTransaction(db hyperdb.Database, key []byte) (*types.InvalidTrans
 	Transaction Meta
  */
 
-
 // Persist tx meta content to a batch, KEEP IN MIND call batch.Write to flush all data to disk
 func PersistTransactionMeta(batch hyperdb.Batch, transactionMeta *types.TransactionMeta, txHash common.Hash, flush bool, sync bool) error {
 	if transactionMeta == nil || batch == nil {
@@ -311,7 +310,33 @@ func DeleteTransactionMeta(db hyperdb.Database, key []byte) error {
 	keyFact := append(key, TxMetaSuffix...)
 	return db.Delete(keyFact)
 }
+/*
+	Invalid Transaction
+ */
 
+func PersistInvalidTransactionRecord(batch hyperdb.Batch, invalidTx *types.InvalidTransactionRecord, flush bool, sync bool) (error, []byte) {
+	// save to db
+	if batch == nil || invalidTx == nil {
+		return errors.New("empty  pointer"), nil
+	}
+	data, err := proto.Marshal(invalidTx)
+	if err != nil {
+		return err, nil
+	}
+	if err := batch.Put(append(InvalidTransactionPrefix, invalidTx.Tx.TransactionHash...), data); err != nil {
+		log.Error("Put invalid tx into database failed! error msg, ", err.Error())
+		return err, nil
+	}
+	// flush to disk immediately
+	if flush  {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
+	}
+	return nil, data
+}
 
 /*
 	Block

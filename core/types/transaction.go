@@ -17,6 +17,7 @@ func (self *Transaction) BuildHash() common.Hash {
 		self.To,
 		self.Value,
 		self.Timestamp,
+		self.Nonce,
 		self.Signature,
 	})
 }
@@ -38,6 +39,7 @@ func (self *Transaction) SighHash(ch crypto.CommonHash) common.Hash {
 		self.Timestamp,
 		self.From,
 		self.To,
+		self.Nonce,
 	})
 }
 
@@ -67,7 +69,7 @@ func (self *Transaction) ValidateSign(encryption crypto.Encryption, ch crypto.Co
 
 // NewTransaction returns a new transaction
 //func NewTransaction(from []byte,to []byte,value []byte, signature []byte) *Transaction{
-func NewTransaction(from []byte, to []byte, value []byte, timestamp int64) *Transaction {
+func NewTransaction(from []byte, to []byte, value []byte, timestamp int64, nonce int64) *Transaction {
 
 	transaction := &Transaction{
 		From:  from,
@@ -75,6 +77,7 @@ func NewTransaction(from []byte, to []byte, value []byte, timestamp int64) *Tran
 		Value: value,
 		//Timestamp: time.Now().UnixNano(),
 		Timestamp: timestamp,
+		Nonce: nonce,
 	}
 
 	return transaction

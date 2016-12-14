@@ -102,9 +102,8 @@ func TestGetTransactionBLk(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	txs, _ := GetAllTransaction(db)
-	for i := 0; i < len(txs); i += 1 {
-		tx := txs[i]
+	for i := 0; i < len(transactionCases); i += 1 {
+		tx := transactionCases[i]
 		//t.Log(tx)
 		bn, _ := GetTxWithBlock(db, tx.GetTransactionHash().Bytes())
 		if bn != 1 {
