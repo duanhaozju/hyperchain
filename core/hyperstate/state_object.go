@@ -112,6 +112,14 @@ func Unmarshal(data []byte) (Account, error) {
 	return account, err
 }
 
+// String
+func (c *StateObject) String() string {
+	var str string
+	str = fmt.Sprintf("stateObject: Nonce %d, Balance %d, Root %s, CodeHash %s\n", c.Nonce(), c.Balance(), c.root.Hex(), common.BytesToHash(c.CodeHash()).Hex())
+	return str
+}
+
+
 // setError remembers the first non-nil error it is called with.
 func (self *StateObject) setError(err error) {
 	if self.dbErr == nil {

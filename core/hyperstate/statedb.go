@@ -465,6 +465,7 @@ func (self *StateDB) RevertToSnapshot(copy interface{}) {
 	// Replay the journal to undo changes.
 	for i := len(self.journal) - 1; i >= snapshot; i-- {
 		self.journal[i].undo(self)
+		log.Error("UNDO", self.journal[i])
 	}
 	self.journal = self.journal[:snapshot]
 
