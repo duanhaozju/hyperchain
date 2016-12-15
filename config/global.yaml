@@ -40,6 +40,10 @@ global:
         loglevel: "NOTICE"
     database:
         dir: "./build/database/"
+
+    version:
+        blockversion: "1.0"
+        transactionversion: "1.0"
 ###########################
 # configs
 ############################

@@ -16,6 +16,7 @@ type PublicBlockAPI struct {
 }
 
 type BlockResult struct {
+	Version      string             `json:"version"`
 	Number       *BlockNumber       `json:"number"`
 	Hash         common.Hash   `json:"hash"`
 	ParentHash   common.Hash   `json:"parentHash"`
@@ -43,6 +44,11 @@ func NewPublicBlockAPI(hyperDb *hyperdb.LDBDatabase) *PublicBlockAPI {
 type IntervalArgs struct {
 	From *BlockNumber `json:"from"`
 	To   *BlockNumber `json:"to"`
+}
+
+type IntervalTime struct {
+	StartTime int64 `json:"startTime"`
+	Endtime int64 `json:"endTime"`
 }
 
 // If the client send BlockNumber "",it will convert to 0.If client send BlockNumber 0,it will return error
@@ -81,10 +87,32 @@ func (blk *PublicBlockAPI) GetBlockByHash(hash common.Hash) (*BlockResult, error
 	return getBlockByHash(hash, blk.db)
 }
 
-// GetBlockByNumber returns the bock for the given block number.
+// GetBlockByNumber returns the block for the given block number.
 func (blk *PublicBlockAPI) GetBlockByNumber(number BlockNumber) (*BlockResult, error) {
 	block, err := getBlockByNumber(number, blk.db)
 	return block, err
+}
+
+type BlocksIntervalResult struct{
+	SumOfBlocks *Number `json:"sumOfBlocks"`
+	StartBlock *BlockNumber `json:"startBlock"`
+	EndBlock *BlockNumber `json:"endBlock"`
+}
+
+// GetBlocksByTime returns the block for the given block time duration.
+func (blk *PublicBlockAPI) GetBlocksByTime(args IntervalTime) (*BlocksIntervalResult, error){
+
+	if args.StartTime > args.Endtime {
+		return nil, errors.New("invalid params")
+	}
+
+	sumOfBlocks, startBlock, endBlock := getBlocksByTime(args.StartTime,args.Endtime,blk.db)
+
+	return &BlocksIntervalResult{
+		SumOfBlocks: NewUint64ToNumber(sumOfBlocks),
+		StartBlock: startBlock,
+		EndBlock: endBlock,
+	}, nil
 }
 
 func (blk *PublicBlockAPI) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (Number, error) {
@@ -121,6 +149,32 @@ func getBlockByNumber(n BlockNumber, db *hyperdb.LDBDatabase) (*BlockResult, err
 	}
 }
 
+// GetBlockByNumber returns the bolck for the given block time duration.
+func getBlocksByTime(startTime,endTime int64, db *hyperdb.LDBDatabase)(sumOfBlocks uint64,startBlock,endBlock *BlockNumber){
+	currentChain := core.GetChainCopy()
+	height := currentChain.Height
+
+	var i uint64
+	for i := height; i >= uint64(1); i-- {
+		block, _ := getBlockByNumber(*NewUint64ToBlockNumber(i),db)
+		if block.WriteTime > endTime  {
+			continue
+		}
+		if block.WriteTime < startTime {
+			startBlock = NewUint64ToBlockNumber(i+1)
+			return sumOfBlocks, startBlock, endBlock
+		}
+		if block.WriteTime >= startTime && block.WriteTime <= endTime {
+			sumOfBlocks += 1
+			if(sumOfBlocks==1){
+				endBlock = NewUint64ToBlockNumber(i)
+			}
+		}
+	}
+	startBlock = NewUint64ToBlockNumber(i+1)
+	return sumOfBlocks,startBlock,endBlock
+}
+
 func getBlockStateDb(n BlockNumber, db *hyperdb.LDBDatabase) (*state.StateDB, error) {
 
 	block, err := getBlockByNumber(n, db)
@@ -152,6 +206,7 @@ func outputBlockResult(block *types.Block, db *hyperdb.LDBDatabase) (*BlockResul
 	}
 
 	return &BlockResult{
+		Version:      string(block.Version),
 		Number:       NewUint64ToBlockNumber(block.Number),
 		Hash:         common.BytesToHash(block.BlockHash),
 		ParentHash:   common.BytesToHash(block.ParentHash),
@@ -167,6 +222,10 @@ func outputBlockResult(block *types.Block, db *hyperdb.LDBDatabase) (*BlockResul
 }
 
 func getBlockByHash(hash common.Hash, db *hyperdb.LDBDatabase) (*BlockResult, error) {
+
+	if common.EmptyHash(hash) == true {
+		return nil, errors.New("Invalid hash")
+	}
 
 	block, err := core.GetBlock(db, hash[:])
 	if err != nil {

@@ -22,17 +22,17 @@
                     <div class="test_wrap">
                         <form role="form" class="form-inline">
                             <div class="form-group col-lg-4">
-                                <label for="sender" class="sr-only">Sender</label>
+                                <label for="sender" class="sr-only">From</label>
                                 <input type="text" placeholder="Sender address" id="sender"
-                                       class="form-control" ng-model="tx.from" style="width:100%">
+                                       class="form-control" ng-model="tx.privkey" style="width:100%">
                             </div>
                             <div class="form-group col-lg-4">
-                                <label for="receiver" class="sr-only">Password</label>
+                                <label for="receiver" class="sr-only">To</label>
                                 <input type="text" placeholder="Receiver address" id="receiver"
                                        class="form-control" ng-model="tx.to" style="width:100%">
                             </div>
                             <div class="form-group">
-                                <label for="amount" class="sr-only">Password</label>
+                                <label for="amount" class="sr-only">Value</label>
                                 <input type="text" placeholder="Amount" id="amount" ng-model="tx.value"
                                        class="form-control">
                             </div>
@@ -91,7 +91,7 @@
                             <button class="btn btn-primary" type="submit" ng-click="queryEvmTime()">Query</button>
 
                             <span>EvmAvgTime:</span>
-                            <span class="text_red">{{evmTime}}us</span>
+                            <span class="text_red">{{evmTime}}ms</span>
                         </form><br/>
                     </div>
 
