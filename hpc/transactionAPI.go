@@ -32,10 +32,10 @@ func init() {
 }
 
 type PublicTransactionAPI struct {
-	eventMux *event.TypeMux
-	pm       *manager.ProtocolManager
-	db       *hyperdb.LDBDatabase
-	tokenBucket *ratelimit.Bucket
+	eventMux        *event.TypeMux
+	pm              *manager.ProtocolManager
+	db              *hyperdb.LDBDatabase
+	tokenBucket     *ratelimit.Bucket
 	ratelimitEnable bool
 }
 
@@ -70,6 +70,7 @@ type TransactionResult struct {
 	Timestamp   int64         `json:"timestamp"`
 	Nonce       int64         `json:"nonce"`
 	ExecuteTime *Number        `json:"executeTime"`
+	Payload string 		  `json:"payload"`
 	Invalid     bool           `json:"invalid"`
 	InvalidMsg  string           `json:"invalidMsg"`
 }
@@ -329,6 +330,37 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockNumberAndIndex(n BlockNum
 	return nil, nil
 }
 
+// GetTransactionsByTime returns the transactions for the given time duration.
+func (tran *PublicTransactionAPI) GetTransactionsByTime(startTime, endTime int64) ([]*TransactionResult, error) {
+	currentChain := core.GetChainCopy()
+	height := currentChain.Height
+
+	var txs = make([]*TransactionResult,0)
+
+	for i := height; i >= uint64(1); i-- {
+		block, _ := core.GetBlockByNumber(tran.db, i)
+		if block.WriteTime > endTime {
+			continue
+		}
+		if block.WriteTime < startTime {
+			return txs,nil
+		}
+		if block.WriteTime >= startTime && block.WriteTime <= endTime {
+			trans := block.GetTransactions()
+			for t := range trans {
+				tx, err := outputTransaction(t, tran.db)
+				if err != nil {
+					return nil, err
+				}
+				txs = append(txs, tx)
+			}
+		}
+	}
+	return txs,nil
+}
+
+
+
 // GetBlockTransactionCountByHash returns the number of block transactions for given block hash.
 func (tran *PublicTransactionAPI) GetBlockTransactionCountByHash(hash common.Hash) (*Number, error) {
 
@@ -381,14 +413,17 @@ func (tran *PublicTransactionAPI) GetSignHash(args SendTxArgs) (common.Hash, err
 }
 
 // GetTransactionsCount returns the number of transaction in hyperchain.
-func (tran *PublicTransactionAPI) GetTransactionsCount() (*Number, error) {
-	if txs, err := core.GetAllTransaction(tran.db);err != nil {
-		return nil, err
-	} else if len(txs) == 0 {
-		return nil, nil
-	} else {
-		return NewIntToNumber(len(txs)), nil
-	}
+func (tran *PublicTransactionAPI) GetTransactionsCount() (interface{}, error) {
+
+	chain := core.GetChainCopy()
+
+	return struct {
+		Count     *Number `json:"count,"`
+		Timestamp int64        `json:"timestamp"`
+	}{
+		Count: NewUint64ToNumber(chain.CurrentTxSum),
+		Timestamp: time.Now().UnixNano(),
+	}, nil
 }
 
 // GetTxAvgTimeByBlockNumber returns tx execute avg time.
@@ -469,6 +504,7 @@ func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*Transaction
 			//GasPrice: 	NewInt64ToNumber(txValue.Price),
 			Timestamp:      t.Tx.Timestamp,
 			ExecuteTime:    nil,
+			Payload:        common.ToHex(txValue.Payload),
 			Invalid:        true,
 			InvalidMsg: 	t.ErrType.String(),
 		}

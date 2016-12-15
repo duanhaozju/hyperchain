@@ -36,7 +36,7 @@ func TestRecvMsgMaliciousEvent(t *testing.T) {
 	maliciousEv := []byte("testbytes")
 	err := pbft.RecvMsg(maliciousEv)
 	if err == nil {
-		t.Errorf("Recv receive malicious bytes, expect err")
+		t.Error("Recv receive malicious bytes, expect err")
 	}
 }
 
@@ -75,7 +75,7 @@ func TestRecvMsgProcessTransaction(t *testing.T) {
 
 	err = pbft.RecvMsg(msg)
 	if err != nil {
-		t.Errorf("RecvMsg error not nil, expect nil")
+		t.Error("RecvMsg error not nil, expect nil")
 	}
 }
 
@@ -92,7 +92,7 @@ func TestRecvMsgProcessConsensus(t *testing.T) {
 	pbft := newPbft(uint64(id), config, h)
 	defer pbft.Close()
 
- 	//  Messsage(Message_CONSENSUS) contains
+	//  Messsage(Message_CONSENSUS) contains
 	// ConsensusMessage(ConsenssusMessage_TRANSACTION)
 	tx := &types.Transaction{
 		From: 		[]byte{1},
@@ -111,7 +111,7 @@ func TestRecvMsgProcessConsensus(t *testing.T) {
 	}
 	csPayload, err := proto.Marshal(cs)
 	if err != nil {
-		t.Errorf("TestProcessConsensus Marshal error")
+		t.Error("TestProcessConsensus Marshal error")
 	}
 
 	message := &protos.Message{
@@ -122,12 +122,12 @@ func TestRecvMsgProcessConsensus(t *testing.T) {
 	}
 	msg, err := proto.Marshal(message)
 	if err != nil {
-		t.Errorf("TestProcessConsensus Marshal error")
+		t.Error("TestProcessConsensus Marshal error")
 	}
 
 	err = pbft.RecvMsg(msg)
 	if err != nil {
-		t.Errorf("ProcessConsensus not nil, expect nil")
+		t.Error("ProcessConsensus not nil, expect nil")
 	}
 
 	//Message(Message_CONSENSUS) contains
@@ -156,7 +156,7 @@ func TestRecvMsgProcessConsensus(t *testing.T) {
 
 	err = pbft.RecvMsg(msg)
 	if err != nil {
-		t.Errorf("ProcessConsensus not nil, expect nil")
+		t.Error("ProcessConsensus not nil, expect nil")
 	}
 
 	//  Messsage(Message_CONSENSUS) contains
@@ -229,13 +229,13 @@ func TestProcessNullRequest(t *testing.T) {
 
 	err := pbft.RecvMsg(msg)
 	if err != nil {
-		t.Errorf("RecvMsg error not nil, expect nil")
+		t.Error("RecvMsg error not nil, expect nil")
 	}
 
 	pbft.inNegoView = true
 	err = pbft.RecvMsg(msg)
 	if err != nil {
-		t.Errorf("RecvMsg error not nil, expect nil")
+		t.Error("RecvMsg error not nil, expect nil")
 	}
 }
 
@@ -262,7 +262,7 @@ func TestRecvProcessNegotiateView(t *testing.T) {
 	pbft.inNegoView = true
 	err := pbft.RecvMsg(msg)
 	if err != nil {
-		t.Errorf("recv error not nil, expect nil")
+		t.Error("recv error not nil, expect nil")
 	}
 }
 
@@ -282,7 +282,7 @@ func TestProcessTxEvent(t *testing.T) {
 	pbft.activeView = false
 	err := pbft.processTxEvent(tx)
 	if err != nil {
-		t.Errorf("processTxEvent error, expect nil")
+		t.Error("processTxEvent error, expect nil")
 	}
 
 	pbft.activeView = true
@@ -292,7 +292,7 @@ func TestProcessTxEvent(t *testing.T) {
 
 	err = pbft.processTxEvent(tx)
 	if err != nil {
-		t.Errorf("processTxEvent error, expect nil")
+		t.Error("processTxEvent error, expect nil")
 	}
 
 	pbft.id = uint64(1)
@@ -342,11 +342,11 @@ func TestLeaderProcReq(t *testing.T) {
 	pbft.leaderProcReq(tx)
 
 	if len(pbft.batchStore) != 1 {
-		t.Errorf("leaderProcReq batch, batch store not 1 tx, expect 1")
+		t.Error("leaderProcReq batch, batch store not 1 tx, expect 1")
 	}
 
 	if pbft.batchTimerActive == false {
-		t.Errorf("leaderProcReq batch timer active flase, expect true")
+		t.Error("leaderProcReq batch timer active flase, expect true")
 	}
 }
 
@@ -367,10 +367,10 @@ func TestSendBatch(t *testing.T) {
 
 	err := pbft.sendBatch()
 	if err != nil {
-		t.Errorf("sendBatch error, expect err nil")
+		t.Error("sendBatch error, expect err nil")
 	}
 	if pbft.batchTimerActive {
-		t.Errorf("after sendbatch, batchtimer still open, expect stop")
+		t.Error("after sendbatch, batchtimer still open, expect stop")
 	}
 }
 
@@ -390,14 +390,15 @@ func TestNullRequestHandler(t *testing.T) {
 	pbft.nullRequestHandler()
 	// pbft in negotiate view should not do anything
 	if pbft.activeView == false {
-		t.Errorf("test null request handler, pbft in nego view, should not send view change")
+		t.Error("test null request handler, pbft in nego view, should not send view change")
 	}
 
 	pbft.inNegoView = false
 	pbft.activeView = true
+	pbft.inRecovery = false
 	pbft.nullRequestHandler()
 	if pbft.activeView == true {
-		t.Errorf("test null request handler, pbft not primary, should send view change")
+		t.Error("test null request handler, pbft not primary, should send view change")
 	}
 }
 
@@ -417,26 +418,26 @@ func TestRecvStateUpdatedEvent(t *testing.T) {
 	// pbft in nego view do nothing
 	pbft.recvStateUpdatedEvent(nil)
 	if pbft.stateTransferring == false {
-		t.Errorf("recvStateUpdatedEvent, pbft in nego view, should do nothing")
+		t.Error("recvStateUpdatedEvent, pbft in nego view, should do nothing")
 	}
 
 	// normal
 	pbft.inNegoView = false
 	// et.seqNo < pbft.h  hightStateTarget == nil
-	event := &stateUpdatedEvent{
+	e := &stateUpdatedEvent{
 		seqNo:	uint64(40),
 	}
 	pbft.h = uint64(50)
 	pbft.highStateTarget = nil
 
-	err := pbft.recvStateUpdatedEvent(event)
+	err := pbft.recvStateUpdatedEvent(e)
 	if err != nil {
-		t.Errorf("recvStateupdatedEvent, expect error nil")
+		t.Error("recvStateupdatedEvent, expect error nil")
 	}
 
 	// et.seqNo < pbft.h  et.seqNo<pbft.highStateTarget.seqNo
 	if pbft.stateTransferring == true {
-		t.Errorf("recvStateUpdateEvent, pbft should end state transfer")
+		t.Error("recvStateUpdateEvent, pbft should end state transfer")
 	}
 	pbft.highStateTarget = &stateUpdateTarget{
 		checkpointMessage:	checkpointMessage{
@@ -445,31 +446,31 @@ func TestRecvStateUpdatedEvent(t *testing.T) {
 		},
 		replicas:		[]uint64{1, 2},
 	}
-	pbft.recvStateUpdatedEvent(event)
+	pbft.recvStateUpdatedEvent(e)
 	if pbft.stateTransferring == false {
-		t.Errorf("recvStateUpdatedEvent, pbft should in statetransferring")
+		t.Error("recvStateUpdatedEvent, pbft should in statetransferring")
 	}
 	pbft.stateTransferring = false
 
 	// et.seqNo >= pbft.h
-	event = &stateUpdatedEvent{
+	e = &stateUpdatedEvent{
 		seqNo: 	uint64(80),
 	}
-	err = pbft.recvStateUpdatedEvent(event)
-	if pbft.lastExec != event.seqNo {
-		t.Errorf("recvStateUpdatedEvent, pbft should update lastExec")
+	err = pbft.recvStateUpdatedEvent(e)
+	if pbft.lastExec != e.seqNo {
+		t.Error("recvStateUpdatedEvent, pbft should update lastExec")
 	}
-	if pbft.h != event.seqNo {
-		t.Errorf("recvStateUpdatedEvent, pbft should move water mark")
+	if pbft.h != e.seqNo {
+		t.Error("recvStateUpdatedEvent, pbft should move water mark")
 	}
 
 	// pbft in recovery
-	event = &stateUpdatedEvent{
+	e = &stateUpdatedEvent{
 		seqNo: 	uint64(90),
 	}
-	err = pbft.recvStateUpdatedEvent(event)
+	err = pbft.recvStateUpdatedEvent(e)
 	if err != nil {
-		t.Errorf("recvStateUpdatedEvent, pbft in recovery, expect error nil")
+		t.Error("recvStateUpdatedEvent, pbft in recovery, expect error nil")
 	}
 
 
@@ -492,13 +493,13 @@ func TestRecvRequestBatch(t *testing.T) {
 	reqBatch := &TransactionBatch{}
 	err := pbft.recvRequestBatch(reqBatch)
 	if err != nil {
-		t.Errorf("RecvReqBatch, pbft in nego view, expect error nil")
+		t.Error("RecvReqBatch, pbft in nego view, expect error nil")
 	}
 
 	pbft.inNegoView = false
 	pbft.recvRequestBatch(reqBatch)
 	if pbft.vid != uint64(1) {
-		t.Errorf("RecvReqBatch vid should add 1")
+		t.Error("RecvReqBatch vid should add 1")
 	}
 }
 
@@ -517,7 +518,7 @@ func TestValidateBatch(t *testing.T) {
 	batch := &TransactionBatch{}
 	pbft.validateBatch(batch, 0, 0)
 	if pbft.vid != uint64(1) {
-		t.Errorf("RecvReqBatch vid should add 1")
+		t.Error("RecvReqBatch vid should add 1")
 	}
 
 	// not primary, not inWV
@@ -543,7 +544,7 @@ func TestCallSendPrePrepare(t *testing.T) {
 	// cache nil
 	ret := pbft.callSendPrePrepare("")
 	if ret == true {
-		t.Errorf("cache nil, expect return true")
+		t.Error("cache nil, expect return true")
 	}
 
 	// cache.vid != pbft.lastVid + 1
@@ -571,7 +572,7 @@ func TestCallSendPrePrepare(t *testing.T) {
 	pbft.cacheValidatedBatch["a"] = batch2
 	ret = pbft.callSendPrePrepare("a")
 	if ret == false || pbft.currentVid != nil {
-		t.Errorf("len of cache.batch.Batch is 0, expect return true")
+		t.Error("len of cache.batch.Batch is 0, expect return true")
 	}
 
 	// sendPreprepare
@@ -616,6 +617,8 @@ func TestSendPrePrepare(t *testing.T) {
 		ReplicaId:		pbft.id,
 	}
 
+	curVid := uint64(0)
+	pbft.currentVid = &curVid
 	// same digest different seqNo
 
 	pbft.seqNo = uint64(0)
@@ -625,7 +628,7 @@ func TestSendPrePrepare(t *testing.T) {
 
 	pbft.sendPrePrepare(nil, "digest")
 	if pbft.seqNo == 1 {
-		t.Errorf("sendPrePrepare should not handle this preprepare")
+		t.Error("sendPrePrepare should not handle this preprepare")
 	}
 
 	// not inWV
@@ -633,23 +636,22 @@ func TestSendPrePrepare(t *testing.T) {
 	pbft.seqNo = H
 	pbft.sendPrePrepare(nil, "")
 	if pbft.seqNo == 1 {
-		t.Errorf("sendPrePrepare should not handle this preprepare")
+		t.Error("sendPrePrepare should not handle this preprepare")
 	}
 
 	// normal
 	pbft.seqNo = uint64(0)
 	pbft.view = uint64(0)
-	curVid := uint64(0)
+	curVid = uint64(0)
 	pbft.currentVid = &curVid
-
 	pbft.sendPrePrepare(nil, "normal")
 
 	cert = pbft.getCert(uint64(0), uint64(1))
 	if cert.digest != "normal" {
-		t.Errorf("should be 'normal'")
+		t.Error("should be 'normal'")
 	}
 	if pbft.currentVid != nil {
-		t.Errorf("should be nil")
+		t.Error("should be nil")
 	}
 }
 
@@ -669,7 +671,7 @@ func TestRecvPrePrepare(t *testing.T) {
 
 	// normal self replica 1, recv from replica 0
 	txBatch := &TransactionBatch{
-		Batch:		[]*types.Transaction{&types.Transaction{}},
+		Batch:		[]*types.Transaction{},
 		Timestamp:	int64(1),
 	}
 	pp := &PrePrepare{
@@ -683,14 +685,14 @@ func TestRecvPrePrepare(t *testing.T) {
 
 	cert := pbft.getCert(pp.View, pp.SequenceNumber)
 	if cert.sentPrepare == false {
-		t.Errorf("recv preprepare, should send prepare")
+		t.Error("recv preprepare, should send prepare")
 	}
 
 	// pbft in negotiate view
 	pbft.inNegoView = true
 	err := pbft.recvPrePrepare(pp)
 	if err != nil {
-		t.Errorf("recv preprepare, in nego view, should not handle")
+		t.Error("recv preprepare, in nego view, should not handle")
 	}
 	pbft.inNegoView = false
 
@@ -698,7 +700,7 @@ func TestRecvPrePrepare(t *testing.T) {
 	pbft.activeView = false
 	err = pbft.recvPrePrepare(pp)
 	if err != nil {
-		t.Errorf("recv preprepare, in view change, should not handle")
+		t.Error("recv preprepare, in view change, should not handle")
 	}
 	pbft.activeView = true
 
@@ -712,7 +714,7 @@ func TestRecvPrePrepare(t *testing.T) {
 	}
 	err = pbft.recvPrePrepare(pp2)
 	if err != nil {
-		t.Errorf("recv preprepare, replicaId is not primary, should not handle")
+		t.Error("recv preprepare, replicaId is not primary, should not handle")
 	}
 
 	// pp not in WV
@@ -727,7 +729,7 @@ func TestRecvPrePrepare(t *testing.T) {
 	pbft.recvPrePrepare(pp3)
 	cert = pbft.getCert(pp3.View, pp3.SequenceNumber)
 	if cert.digest == pp3.BatchDigest {
-		t.Errorf("recv preprepare, not in WV, expect not receipt")
+		t.Error("recv preprepare, not in WV, expect not receipt")
 	}
 
 
@@ -754,7 +756,7 @@ func TestRecvPrepare(t *testing.T) {
 	pbft.inNegoView = true
 	err := pbft.recvPrepare(&Prepare{})
 	if err != nil {
-		t.Errorf("recvPrepare while in negotiate view")
+		t.Error("recvPrepare while in negotiate view")
 	}
 	pbft.inNegoView = false
 
@@ -768,7 +770,7 @@ func TestRecvPrepare(t *testing.T) {
 	}
 	err = pbft.recvPrepare(prep)
 	if err != nil {
-		t.Errorf("recvPrepare from primary")
+		t.Error("recvPrepare from primary")
 	}
 
 	// recv prepare not in WV
@@ -781,7 +783,7 @@ func TestRecvPrepare(t *testing.T) {
 	}
 	err = pbft.recvPrepare(prep2)
 	if err != nil {
-		t.Errorf("recvPrepare not in WV")
+		t.Error("recvPrepare not in WV")
 	}
 
 
@@ -822,7 +824,7 @@ func TestMaybeSendCommit(t *testing.T) {
 
 	err := pbft.maybeSendCommit(pp.BatchDigest, pp.View, pp.SequenceNumber)
 	if err != nil {
-		t.Errorf("should end in not prepared")
+		t.Error("should end in not prepared")
 	}
 
 	// normal replica
@@ -837,7 +839,7 @@ func TestMaybeSendCommit(t *testing.T) {
 	}
 	pbft.maybeSendCommit(pp2.BatchDigest, pp2.View, pp2.SequenceNumber)
 	if cert.sentValidate == false {
-		t.Errorf("replica is expected to sentValidate")
+		t.Error("replica is expected to sentValidate")
 	}
 
 	// normal primary
@@ -865,11 +867,11 @@ func TestSendCommit(t *testing.T) {
 
 	err := pbft.sendCommit(d, v, n)
 	if err != nil {
-		t.Errorf("sendCommit err")
+		t.Error("sendCommit err")
 	}
 	cert := pbft.getCert(v, n)
 	if cert.sentCommit == false {
-		t.Errorf("cert sent commit false, expect true")
+		t.Error("cert sent commit false, expect true")
 	}
 }
 
@@ -918,19 +920,19 @@ func TestRecvCommit(t *testing.T) {
 	cert.validated = true
 	err := pbft.recvCommit(cmt)
 	if err != nil {
-		t.Errorf("recvCommit normal, expect excute")
+		t.Error("recvCommit normal, expect excute")
 	}
 	certIdx := msgID{v: v, n: n}
 	cert = pbft.certStore[certIdx]
 	if cert == nil {
-		t.Errorf("recvCommit normal, expect cert not nil")
+		t.Error("recvCommit normal, expect cert not nil")
 	}
 	if cert.commit[*cmt] != true {
-		t.Errorf("recvCommit normal, expect commit exist")
+		t.Error("recvCommit normal, expect commit exist")
 	}
 
 	if cert.sentExecute != true {
-		t.Errorf("recvCommit should send execute")
+		t.Error("recvCommit should send execute")
 	}
 
 	// normal, not committed
@@ -962,7 +964,7 @@ func TestRecvCommit(t *testing.T) {
 
 	pbft.recvCommit(cmt2)
 	if cert.commitCount >= pbft.committedReplicasQuorum() {
-		t.Errorf("recv commit, expect not commited")
+		t.Error("recv commit, expect not commited")
 	}
 }
 
@@ -987,7 +989,7 @@ func TestExecuteAfterStateUpdate(t *testing.T) {
 	cert1 := pbft.getCert(v1, n1)
 	pbft.executeAfterStateUpdate()
 	if cert1.sentValidate == true {
-		t.Errorf("executeAfterStateUpdate n < seqNo not handle this")
+		t.Error("executeAfterStateUpdate n < seqNo not handle this")
 	}
 
 	// cert2: idx.n > pbft.seqNo, not prepared
@@ -1008,7 +1010,7 @@ func TestExecuteAfterStateUpdate(t *testing.T) {
 	cert2.prepareCount = pbft.preparedReplicasQuorum() - 1
 	pbft.executeAfterStateUpdate()
 	if cert2.sentValidate == true {
-		t.Errorf("executeAfterStateUpdate n > seqNo, but not prepared, not handle this")
+		t.Error("executeAfterStateUpdate n > seqNo, but not prepared, not handle this")
 	}
 
 	// cert3: idx.n > pbft.seqNo, prepared, already validated
@@ -1028,7 +1030,7 @@ func TestExecuteAfterStateUpdate(t *testing.T) {
 	cert3.validated = true
 	pbft.executeAfterStateUpdate()
 	if cert3.sentValidate == true {
-		t.Errorf("executeAfterStateUpdate n > seqNo, prepared, already validated")
+		t.Error("executeAfterStateUpdate n > seqNo, prepared, already validated")
 	}
 	//cert4: idx.n > pbft.seqNo, prepared, not validated yet
 	v4, n4, d4 := uint64(0), uint64(8), "d4"
@@ -1047,7 +1049,7 @@ func TestExecuteAfterStateUpdate(t *testing.T) {
 	cert4.validated = false
 	pbft.executeAfterStateUpdate()
 	if cert4.sentValidate == false {
-		t.Errorf("executeAfterStateUpdate, expect sentValidate")
+		t.Error("executeAfterStateUpdate, expect sentValidate")
 	}
 
 }
@@ -1071,7 +1073,7 @@ func TestExecuteOne(t *testing.T) {
 	idx1 := msgID{0, 1}
 	ret := pbft.executeOne(idx1)
 	if ret == true {
-		t.Errorf("cert is nil , expect false")
+		t.Error("cert is nil , expect false")
 	}
 
 	// the cert preprepare is nil
@@ -1080,7 +1082,7 @@ func TestExecuteOne(t *testing.T) {
 	cert2.prePrepare = nil
 	ret = pbft.executeOne(idx2)
 	if ret == true {
-		t.Errorf("cert.prePrepare is nil, expect false")
+		t.Error("cert.prePrepare is nil, expect false")
 	}
 
 	// cert already sentExecute
@@ -1097,7 +1099,7 @@ func TestExecuteOne(t *testing.T) {
 	cert3.sentExecute = true
 	ret = pbft.executeOne(idx3)
 	if ret == true {
-		t.Errorf("cert sentExecute, expect return false")
+		t.Error("cert sentExecute, expect return false")
 	}
 
 	// not the one to execute
@@ -1115,7 +1117,7 @@ func TestExecuteOne(t *testing.T) {
 	pbft.lastExec = uint64(0)
 	ret = pbft.executeOne(idx4)
 	if ret == true {
-		t.Errorf("not the one to execute, expect return false")
+		t.Error("not the one to execute, expect return false")
 	}
 
 	// in skipInProgress
@@ -1134,7 +1136,7 @@ func TestExecuteOne(t *testing.T) {
 	pbft.skipInProgress = true
 	ret = pbft.executeOne(idx5)
 	if ret == true {
-		t.Errorf("in the checkpoint, expect false")
+		t.Error("in the checkpoint, expect false")
 	}
 
 	// not committed
@@ -1153,7 +1155,7 @@ func TestExecuteOne(t *testing.T) {
 	pbft.skipInProgress = false
 	ret = pbft.executeOne(idx6)
 	if ret == true {
-		t.Errorf("not committed, expect false")
+		t.Error("not committed, expect false")
 	}
 
 
@@ -1182,7 +1184,7 @@ func TestExecuteOne(t *testing.T) {
 	cert7.commitCount = pbft.committedReplicasQuorum()
 	ret = pbft.executeOne(idx7)
 	if ret == false {
-		t.Errorf("expect true")
+		t.Error("expect true")
 	}
 }
 
@@ -1204,7 +1206,7 @@ func TestExecDoneSync(t *testing.T) {
 	pbft.skipInProgress = false
 	pbft.execDoneSync(msgID{0, 1})
 	if pbft.skipInProgress == false {
-		t.Errorf("currentExec is nil, expect true")
+		t.Error("currentExec is nil, expect true")
 	}
 }
 
@@ -1233,7 +1235,7 @@ func TestCheckpoint(t *testing.T) {
 	pbft.checkpoint(seqNo, bcInfo)
 	idString, _ := pbft.chkpts[seqNo]
 	if idString != idAsString {
-		t.Errorf("checkpoint error")
+		t.Error("checkpoint error")
 	}
 }
 
@@ -1270,7 +1272,7 @@ func TestRecvCheckpoint(t *testing.T) {
 	pbft.chkpts[seqNo] = idAsString
 	pbft.recvCheckpoint(chkpt)
 	if pbft.h != 10 {
-		t.Errorf("should movewatermarks")
+		t.Error("should movewatermarks")
 	}
 }
 
@@ -1307,7 +1309,7 @@ func TestWeakCheckpointSetOutOfRange(t *testing.T) {
 	pbft.weakCheckpointSetOutOfRange(chkpt)
 
 	if pbft.h == 0 {
-		t.Errorf("should move water marks")
+		t.Error("should move water marks")
 	}
 }
 
@@ -1351,7 +1353,7 @@ func TestWitnessCheckpointWeakCert(t *testing.T) {
 	pbft.witnessCheckpointWeakCert(chkpt)
 
 	if pbft.highStateTarget == nil {
-		t.Errorf("should update highStateTarget")
+		t.Error("should update highStateTarget")
 	}
 }
 
@@ -1377,6 +1379,8 @@ func TestRecvReturnRequestBatch(t *testing.T) {
 	pbft.id = uint64(2)
 	pbft.inNegoView = false
 	pbft.activeView = true
+	pbft.inRecovery = false
+
 	pbft.seqNo = uint64(0)
 
 	txBatch := &TransactionBatch{
@@ -1389,7 +1393,7 @@ func TestRecvReturnRequestBatch(t *testing.T) {
 	pbft.recvReturnRequestBatch(txBatch)
 	_, ok := pbft.missingReqBatches[digest]
 	if ok {
-		t.Errorf("missing request batch should be 0")
+		t.Error("missing request batch should be 0")
 	}
 }
 
@@ -1444,37 +1448,37 @@ func TestMoveWatermarks(t *testing.T) {
 	pbft.moveWatermarks(40)
 
 	if _, ok := pbft.chkpts[10]; ok != true {
-		t.Errorf("should not move watermark, expect true")
+		t.Error("should not move watermark, expect true")
 	}
 	// test if all delete
 	pbft.moveWatermarks(60)
 	// validatedBatchStore
 	if _, ok := pbft.validatedBatchStore[cert.digest]; ok {
-		t.Errorf("should not move watermark, expect vb record not exist")
+		t.Error("should not move watermark, expect vb record not exist")
 	}
 	// outstanding req batch
 	if _, ok := pbft.outstandingReqBatches[cert.digest]; ok {
-		t.Errorf("should not move watermark, expect ob record not exist")
+		t.Error("should not move watermark, expect ob record not exist")
 	}
 	// checkpoint store
 	if _, ok := pbft.checkpointStore[*testChkpt]; ok {
-		t.Errorf("should not move watermark, expect checkpoint store record not exist")
+		t.Error("should not move watermark, expect checkpoint store record not exist")
 	}
 	// checkpoint cert store
 	if _, ok := pbft.chkptCertStore[chkptID{n:10, id:"chkptId"}]; ok {
-		t.Errorf("should not move watermark, expect chkptCertStore record not exist")
+		t.Error("should not move watermark, expect chkptCertStore record not exist")
 	}
 	if _, ok := pbft.pset[10]; ok {
-		t.Errorf("should not move watermark, expect pset record not exist")
+		t.Error("should not move watermark, expect pset record not exist")
 	}
 	if _, ok := pbft.qset[qidx{d: "chkpt", n: 10}]; ok {
-		t.Errorf("should not move watermark, expect qset record not exist")
+		t.Error("should not move watermark, expect qset record not exist")
 	}
 	if _, ok := pbft.chkpts[10]; ok {
-		t.Errorf("should not move watermark, expect chkpts record not exist")
+		t.Error("should not move watermark, expect chkpts record not exist")
 	}
 	if _, ok := pbft.chkpts[10]; ok != false {
-		t.Errorf("should not move watermark, expect false")
+		t.Error("should not move watermark, expect false")
 	}
 }
 
@@ -1516,7 +1520,7 @@ func TestUpdateHighStateTarget(t *testing.T) {
 	}
 	pbft.updateHighStateTarget(newTargetSmaller)
 	if pbft.highStateTarget.checkpointMessage.seqNo > curTarget.checkpointMessage.seqNo {
-		t.Errorf("should not update high state target, expect not change")
+		t.Error("should not update high state target, expect not change")
 	}
 
 	// new target seqNo > cur target seqNo
@@ -1530,7 +1534,7 @@ func TestUpdateHighStateTarget(t *testing.T) {
 	}
 	pbft.updateHighStateTarget(newTargetLarger)
 	if pbft.highStateTarget.checkpointMessage.seqNo <= curTarget.checkpointMessage.seqNo {
-		t.Errorf("shoul update high state target, expect change")
+		t.Error("shoul update high state target, expect change")
 	}
 }
 
@@ -1566,14 +1570,14 @@ func TestRetryStateTransfer(t *testing.T) {
 	}
 	pbft.retryStateTransfer(target)
 	if pbft.stateTransferring == false {
-		t.Errorf("should in statetransferring")
+		t.Error("should in statetransferring")
 	}
 
 	pbft.stateTransferring = false
 	pbft.highStateTarget = target
 	pbft.retryStateTransfer(nil)
 	if pbft.stateTransferring == false {
-		t.Errorf("should in statetransferring")
+		t.Error("should in statetransferring")
 	}
 }
 
@@ -1628,7 +1632,7 @@ func TestRecvNegoViewRsp(t *testing.T) {
 	pbft.negoViewRspStore[nvr1.ReplicaId] = nvr1.View
 	ret = pbft.recvNegoViewRsp(nvr1)
 	if ret != nil {
-		t.Errorf("recvNegoViewRsp duplicate, expect ret nil")
+		t.Error("recvNegoViewRsp duplicate, expect ret nil")
 	}
 
 	// recv negoViewRsp doesn't above N-f
@@ -1638,7 +1642,7 @@ func TestRecvNegoViewRsp(t *testing.T) {
 	}
 	ret = pbft.recvNegoViewRsp(nvr2)
 	if ret != nil {
-		t.Errorf("recvNegoViewRsp not reach N-f+1, expect ret nil")
+		t.Error("recvNegoViewRsp not reach N-f+1, expect ret nil")
 	}
 
 	// recv negoViewRsp above N-f but cannot find quorum
@@ -1648,7 +1652,7 @@ func TestRecvNegoViewRsp(t *testing.T) {
 	}
 	ret = pbft.recvNegoViewRsp(nvr3)
 	if ret != nil {
-		t.Errorf("recvNegoViewRsp above N-f, but cannot find quorum, expect ret nil")
+		t.Error("recvNegoViewRsp above N-f, but cannot find quorum, expect ret nil")
 	}
 
 	// recv negoViewRsp above N-f and find quorum
@@ -1658,7 +1662,7 @@ func TestRecvNegoViewRsp(t *testing.T) {
 	}
 	ret = pbft.recvNegoViewRsp(nvr4)
 	if _, ok := ret.(negoViewDoneEvent); !ok {
-		t.Errorf("recvNegoViewRsp achieve quorum, expect ret negoViewDoneEvent")
+		t.Error("recvNegoViewRsp achieve quorum, expect ret negoViewDoneEvent")
 	}
 }
 
@@ -1691,11 +1695,11 @@ func TestRecvValidateResult(t *testing.T) {
 	}
 	pbft.recvValidatedResult(vali)
 	if _, ok := pbft.validatedBatchStore["hash"]; !ok {
-		t.Errorf("primary recv ValidatedResult, expect exist in validatedBatchStore")
+		t.Error("primary recv ValidatedResult, expect exist in validatedBatchStore")
 	}
 
 	if _, ok := pbft.outstandingReqBatches["hash"]; !ok {
-		t.Errorf("primary recv Validatedresult, expect exist in outstandingReqBatches")
+		t.Error("primary recv Validatedresult, expect exist in outstandingReqBatches")
 	}
 
 	// replica recvValidatedResult
@@ -1703,10 +1707,10 @@ func TestRecvValidateResult(t *testing.T) {
 	pbft.recvValidatedResult(vali)
 	cert, ok := pbft.certStore[msgID{v: 0, n: 1}]
 	if ok != true {
-		t.Errorf("replica recv validated result, expect exist in cert store")
+		t.Error("replica recv validated result, expect exist in cert store")
 	}
 	if cert.validated != true {
-		t.Errorf("replica recv validated result, expect validated")
+		t.Error("replica recv validated result, expect validated")
 	}
 
 }
