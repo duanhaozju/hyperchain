@@ -35,7 +35,7 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 	if blockChainInfo.Height < core.GetChainCopy().Height {
 		// cut down block to latest stable checkpoint
 		tmp := blockChainInfo.Height - blockChainInfo.Height % 10
-		log.Infof("state update target %d, current height %d, Cut down to %d first", blockChainInfo.Height, core.GetChainCopy().Height, tmp)
+		log.Noticef("state update target %d, current height %d, Cut down to %d first", blockChainInfo.Height, core.GetChainCopy().Height, tmp)
 		for i := core.GetChainCopy().Height; i > tmp; i -= 1 {
 			self.blockPool.CutdownBlock(i)
 		}
@@ -44,7 +44,7 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 		self.blockPool.SetDemandSeqNo(tmp+1)
 		// update chain
 		core.UpdateChainByBlcokNum(db, tmp)
-
+		log.Noticef("current chain height %d, current chain latest block hash %s", core.GetChainCopy().Height, common.Bytes2Hex(core.GetChainCopy().LatestBlockHash))
 	} else if blockChainInfo.Height == core.GetChainCopy().Height {
 		// compare current latest block and peer's block hash
 		latestBlock, err := core.GetBlockByNumber(db, core.GetChainCopy().Height)
@@ -70,6 +70,34 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 		// normal state update process
 	}
 
+	// check whether it's necessary to request block from remote peer
+	if blockChainInfo.Height == core.GetChainCopy().Height {
+		// state update success
+		payload := &protos.StateUpdatedMessage{
+			SeqNo: core.GetChainCopy().Height,
+		}
+		msg, err := proto.Marshal(payload)
+		if err != nil {
+			log.Error("StateUpdate marshal stateupdated message failed")
+			return
+		}
+		msgSend := &protos.Message{
+			Type:      protos.Message_STATE_UPDATED,
+			Payload:   msg,
+			Timestamp: time.Now().UnixNano(),
+			Id:        1,
+		}
+		msgPayload, err := proto.Marshal(msgSend)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		log.Notice("send state updated message")
+		self.consenter.RecvMsg(msgPayload)
+		return
+	}
+
+	// send block request message to remote peer
 	required := &recovery.CheckPointMessage{
 		RequiredNumber: blockChainInfo.Height,
 		CurrentNumber:  core.GetChainCopy().Height,
@@ -77,7 +105,7 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 	}
 
 	core.UpdateRequire(blockChainInfo.Height, blockChainInfo.CurrentBlockHash, blockChainInfo.Height)
-	log.Info("state update, current height %d, target height %d", core.GetChainCopy().Height, blockChainInfo.Height)
+	log.Noticef("state update, current height %d, target height %d", core.GetChainCopy().Height, blockChainInfo.Height)
 	// save context
 	core.SetReplicas(UpdateStateMessage.Replicas)
 	core.SetId(UpdateStateMessage.Id)
@@ -189,6 +217,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 									return
 								}
 								time.Sleep(2000 * time.Millisecond)
+								log.Notice("send state updated message")
 								self.consenter.RecvMsg(msgPayload)
 								break
 							} else {
