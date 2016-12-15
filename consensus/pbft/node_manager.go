@@ -149,7 +149,7 @@ func (pbft *pbftProtocal) recvAgreeAddNode(add *AddNode) error {
 	ok := cert.addNodes[*add]
 	if ok {
 		logger.Warningf("Replica %d ignored duplicate addnode from %d", pbft.id, add.ReplicaId)
-		return nil
+		return errors.New("Receive duplicate addnode message")
 	}
 
 	cert.addNodes[*add] = true
@@ -169,7 +169,7 @@ func (pbft *pbftProtocal) recvAgreeDelNode(del *DelNode) error {
 	ok := cert.delNodes[*del]
 	if ok {
 		logger.Warningf("Replica %d ignored duplicate agree addnode from %d", pbft.id, del.ReplicaId)
-		return nil
+		return errors.New("Receive duplicate delnode message")
 	}
 
 	cert.delNodes[*del] = true
@@ -182,11 +182,6 @@ func (pbft *pbftProtocal) recvAgreeDelNode(del *DelNode) error {
 func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 
 	cert := pbft.getAddNodeCert(key)
-
-	if cert == nil {
-		logger.Errorf("Replica %d can't get the addnode cert for key=%s", pbft.id, key)
-		return nil
-	}
 
 	if cert.addCount < pbft.committedReplicasQuorum() {
 		return nil
