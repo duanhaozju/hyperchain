@@ -64,20 +64,5 @@ func (s *JournalSuite) TestMarshal(c *checker.C) {
 		prev: true,
 	})
 
-	var memJourList  memJournal
-	for idx, entry := range jourList {
-		data, err := entry.Marshal()
-		if err != nil {
-			c.Error(err)
-		}
-		if idx == 0 {
-			ch := &createObjectChange{}
-		}
-		memJourList = append(memJourList, memJournalEntry{
-			Type: strconv.FormatInt(int64(idx), 10),
-			Entry: data,
-		})
-	}
-
 }
 

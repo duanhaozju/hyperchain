@@ -5,6 +5,7 @@ import (
 	"hyperchain/common"
 	"fmt"
 	"encoding/json"
+	"hyperchain/hyperdb"
 )
 
 type journalEntry interface {
@@ -15,12 +16,14 @@ type journalEntry interface {
 
 type journal []journalEntry
 
-type memJournalEntry struct {
-	Type  string
-	Entry []byte
+func (self *journal) Marshal() []byte {
+
 }
 
-type memJournal []memJournalEntry
+func UnmarshalJournal(data []byte, ret *journal) error {
+	return nil
+}
+
 
 type (
 	// Changes to the account database
