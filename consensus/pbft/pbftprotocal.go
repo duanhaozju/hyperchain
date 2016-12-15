@@ -506,6 +506,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		logger.Notice("################################################")
 		logger.Noticef("#   Replica %d finished negotiating view: %d", pbft.id, pbft.view)
 		logger.Notice("################################################")
+		logger.Notice("-----Hyperchain negotiate view successfully!-----")
 		primary := pbft.primary(pbft.view)
 		if primary == pbft.id {
 			pbft.sendNullRequest()
@@ -529,6 +530,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		logger.Notice("################################################")
 		logger.Noticef("#   Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
 		logger.Notice("################################################")
+		logger.Notice("-----Hyperchain recover successfully!-----")
 		if pbft.recvNewViewInRecovery {
 			logger.Noticef("#  Replica %d find itself received NewView during Recovery" +
 				", will restart negotiate view", pbft.id)
@@ -2017,7 +2019,7 @@ func (pbft *pbftProtocal) processNegotiateView() error {
 		return nil
 	}
 
-	logger.Noticef("Replica %d now negotiate view", pbft.id)
+	logger.Debugf("Replica %d now negotiate view...", pbft.id)
 
 	pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
 	pbft.negoViewRspStore = make(map[uint64]uint64)
@@ -2094,7 +2096,7 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Eve
 		return nil
 	}
 
-	logger.Noticef("Replica %d receive nego-view response from %d, view: %d", pbft.id, rspId, rspView)
+	logger.Debugf("Replica %d receive nego-view response from %d, view: %d", pbft.id, rspId, rspView)
 
 	pbft.negoViewRspStore[rspId] = rspView
 
@@ -2131,7 +2133,7 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Eve
 }
 
 func (pbft *pbftProtocal) restartNegoView() {
-	logger.Noticef("Replica %d restart negotiate view", pbft.id)
+	logger.Debugf("Replica %d restart negotiate view", pbft.id)
 	pbft.processNegotiateView()
 }
 
