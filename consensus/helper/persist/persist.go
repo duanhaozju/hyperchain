@@ -80,7 +80,7 @@ func GetBlockchainInfo() *types.Chain {
 
 func GetBlockHeightAndHash() (uint64, string) {
 	bcInfo := core.GetChainCopy()
-	hash := base64.StdEncoding.EncodeToString(bcInfo.GetLatestBlockHash())
+	hash := base64.StdEncoding.EncodeToString(bcInfo.LatestBlockHash)
 	return bcInfo.Height, hash
 }
 

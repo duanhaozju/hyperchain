@@ -2,15 +2,6 @@
 // source: receipt_wrapper.proto
 // DO NOT EDIT!
 
-/*
-Package types is a generated protocol buffer package.
-
-It is generated from these files:
-	receipt_wrapper.proto
-
-It has these top-level messages:
-	ReceiptWrapper
-*/
 package types
 
 import proto "github.com/golang/protobuf/proto"
@@ -22,12 +13,6 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the proto package it is being compiled against.
-// A compilation error at this line likely means your copy of the
-// proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
-
 type ReceiptWrapper struct {
 	ReceiptVersion []byte `protobuf:"bytes,1,opt,name=receiptVersion,proto3" json:"receiptVersion,omitempty"`
 	Receipt        []byte `protobuf:"bytes,2,opt,name=receipt,proto3" json:"receipt,omitempty"`
@@ -37,20 +22,6 @@ func (m *ReceiptWrapper) Reset()                    { *m = ReceiptWrapper{} }
 func (m *ReceiptWrapper) String() string            { return proto.CompactTextString(m) }
 func (*ReceiptWrapper) ProtoMessage()               {}
 func (*ReceiptWrapper) Descriptor() ([]byte, []int) { return fileDescriptor4, []int{0} }
-
-func (m *ReceiptWrapper) GetReceiptVersion() []byte {
-	if m != nil {
-		return m.ReceiptVersion
-	}
-	return nil
-}
-
-func (m *ReceiptWrapper) GetReceipt() []byte {
-	if m != nil {
-		return m.Receipt
-	}
-	return nil
-}
 
 func init() {
 	proto.RegisterType((*ReceiptWrapper)(nil), "types.ReceiptWrapper")

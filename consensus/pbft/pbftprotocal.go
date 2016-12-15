@@ -3,14 +3,17 @@
 package pbft
 
 import (
+	"encoding/base64"
 	"fmt"
 	"sort"
 	"sync"
 	"time"
+	//"encoding/hex"
 
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
 	"hyperchain/core/types"
+	//"hyperchain/event"
 	"hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"
@@ -113,7 +116,7 @@ type pbftProtocal struct {
 	recoveryRestartTimeout time.Duration                    // time limit for recovery process
 	rcRspStore             map[uint64]*RecoveryResponse     // rcRspStore store recovery responses from replicas
 	rcPQCSenderStore       map[uint64]bool			 		// rcPQCSenderStore store those who sent PQC info to self
-
+	recvNewViewInRecovery  bool
 
 	vcResendLimit	       	int				// vcResendLimit indicates a replica's view change resending upbound.
 	vcResendCount	       	int				// vcResendCount represent times of same view change info resend
@@ -279,7 +282,6 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	}
 
 	pbft.activeView = true
-	pbft.replicaCount = pbft.N
 
 	logger.Infof("PBFT Max number of validating peers (N) = %v", pbft.N)
 	logger.Infof("PBFT Max number of failing peers (f) = %v", pbft.f)

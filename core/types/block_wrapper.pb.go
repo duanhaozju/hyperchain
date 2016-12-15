@@ -2,15 +2,6 @@
 // source: block_wrapper.proto
 // DO NOT EDIT!
 
-/*
-Package types is a generated protocol buffer package.
-
-It is generated from these files:
-	block_wrapper.proto
-
-It has these top-level messages:
-	BlockWrapper
-*/
 package types
 
 import proto "github.com/golang/protobuf/proto"
@@ -22,12 +13,6 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the proto package it is being compiled against.
-// A compilation error at this line likely means your copy of the
-// proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
-
 type BlockWrapper struct {
 	BlockVersion []byte `protobuf:"bytes,1,opt,name=blockVersion,proto3" json:"blockVersion,omitempty"`
 	Block        []byte `protobuf:"bytes,2,opt,name=block,proto3" json:"block,omitempty"`
@@ -37,20 +22,6 @@ func (m *BlockWrapper) Reset()                    { *m = BlockWrapper{} }
 func (m *BlockWrapper) String() string            { return proto.CompactTextString(m) }
 func (*BlockWrapper) ProtoMessage()               {}
 func (*BlockWrapper) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{0} }
-
-func (m *BlockWrapper) GetBlockVersion() []byte {
-	if m != nil {
-		return m.BlockVersion
-	}
-	return nil
-}
-
-func (m *BlockWrapper) GetBlock() []byte {
-	if m != nil {
-		return m.Block
-	}
-	return nil
-}
 
 func init() {
 	proto.RegisterType((*BlockWrapper)(nil), "types.BlockWrapper")
