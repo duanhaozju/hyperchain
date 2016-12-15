@@ -17,6 +17,7 @@ import (
 	"math/big"
 	"strconv"
 	"time"
+	"fmt"
 )
 
 func CreateInitBlock(filename string) {
@@ -70,6 +71,7 @@ func CreateInitBlock(filename string) {
 	root, err := stateDB.Commit()
 	if err != nil {
 		log.Error("Genesis.go file statedb commit failed!")
+		fmt.Println(err.Error())
 		return
 	}
 

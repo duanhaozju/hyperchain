@@ -39,6 +39,10 @@ func ReadStateSet(prefix string) (map[string][]byte, error) {
 
 	ret := make(map[string][]byte)
 	it := db.NewIterator()
+	if it==nil{
+		err := errors.New(fmt.Sprintf("Can't get Iterator"))
+		return nil, err
+	}
 	if !it.Seek(prefixRaw) {
 		err := errors.New(fmt.Sprintf("Cannot find key with %s in database", prefixRaw))
 		return nil, err
