@@ -70,7 +70,7 @@ type TransactionResult struct {
 	Timestamp   int64         `json:"timestamp"`
 	Nonce       int64         `json:"nonce"`
 	ExecuteTime *Number        `json:"executeTime"`
-	Payload string 		  `json:"payload"`
+	Payload     string	  `json:"payload"`
 	Invalid     bool           `json:"invalid"`
 	InvalidMsg  string           `json:"invalidMsg"`
 }
@@ -103,7 +103,10 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs,error) {
 		return SendTxArgs{}, errors.New("'timestamp' is invalid")
 	}
 	if txType != 3 && args.Signature == "" {
-		return SendTxArgs{}, errors.New("'signature' is null")
+		return SendTxArgs{}, errors.New("'signature' can't be empty")
+	}
+	if args.Nonce == 0 {
+		return SendTxArgs{}, errors.New("'nonce' can't be empty")
 	}
 	return args, nil
 }
@@ -331,7 +334,12 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockNumberAndIndex(n BlockNum
 }
 
 // GetTransactionsByTime returns the transactions for the given time duration.
-func (tran *PublicTransactionAPI) GetTransactionsByTime(startTime, endTime int64) ([]*TransactionResult, error) {
+func (tran *PublicTransactionAPI) GetTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
+
+	if args.StartTime > args.Endtime {
+		return nil, errors.New("invalid params")
+	}
+
 	currentChain := core.GetChainCopy()
 	height := currentChain.Height
 
@@ -339,15 +347,16 @@ func (tran *PublicTransactionAPI) GetTransactionsByTime(startTime, endTime int64
 
 	for i := height; i >= uint64(1); i-- {
 		block, _ := core.GetBlockByNumber(tran.db, i)
-		if block.WriteTime > endTime {
+		if block.WriteTime > args.Endtime {
 			continue
 		}
-		if block.WriteTime < startTime {
+		if block.WriteTime < args.StartTime {
 			return txs,nil
 		}
-		if block.WriteTime >= startTime && block.WriteTime <= endTime {
+		if block.WriteTime >= args.StartTime && block.WriteTime <= args.Endtime {
 			trans := block.GetTransactions()
-			for t := range trans {
+			log.Error(len(trans))
+			for _, t := range trans {
 				tx, err := outputTransaction(t, tran.db)
 				if err != nil {
 					return nil, err
@@ -358,8 +367,6 @@ func (tran *PublicTransactionAPI) GetTransactionsByTime(startTime, endTime int64
 	}
 	return txs,nil
 }
-
-
 
 // GetBlockTransactionCountByHash returns the number of block transactions for given block hash.
 func (tran *PublicTransactionAPI) GetBlockTransactionCountByHash(hash common.Hash) (*Number, error) {
@@ -478,6 +485,7 @@ func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*Transaction
 				//GasPrice: 	NewInt64ToNumber(txValue.Price),
 				Timestamp:     t.Timestamp,
 				ExecuteTime:   NewInt64ToNumber((blk.WriteTime - blk.Timestamp) / int64(time.Millisecond)),
+				Payload:	common.ToHex(txValue.Payload),
 				Invalid:       false,
 			}
 		} else {
@@ -504,7 +512,7 @@ func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*Transaction
 			//GasPrice: 	NewInt64ToNumber(txValue.Price),
 			Timestamp:      t.Tx.Timestamp,
 			ExecuteTime:    nil,
-			Payload:        common.ToHex(txValue.Payload),
+			Payload:	common.ToHex(txValue.Payload),
 			Invalid:        true,
 			InvalidMsg: 	t.ErrType.String(),
 		}

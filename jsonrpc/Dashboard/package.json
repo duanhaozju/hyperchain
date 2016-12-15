@@ -9,6 +9,7 @@
   "author": "Xiaomin Ma",
   "license": "ISC",
   "dependencies": {
-    "w3.js": "^1.0.5"
+    "ethereumjs-util": "^5.0.1",
+    "hpc-web3": "^0.1.26-alpha"
   }
 }
