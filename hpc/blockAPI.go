@@ -46,6 +46,11 @@ type IntervalArgs struct {
 	To   *BlockNumber `json:"to"`
 }
 
+type IntervalTime struct {
+	StartTime int64 `json:"startTime"`
+	Endtime int64 `json:"endTime"`
+}
+
 // If the client send BlockNumber "",it will convert to 0.If client send BlockNumber 0,it will return error
 func prepareIntervalArgs(args IntervalArgs) (IntervalArgs, error) {
 	var from, to *BlockNumber
@@ -90,19 +95,24 @@ func (blk *PublicBlockAPI) GetBlockByNumber(number BlockNumber) (*BlockResult, e
 
 type BlocksIntervalResult struct{
 	SumOfBlocks *Number `json:"sumOfBlocks"`
-	StartBlock BlockNumber `json:"startBlock"`
-	EndBlock BlockNumber `json:"endBlock"`
+	StartBlock *BlockNumber `json:"startBlock"`
+	EndBlock *BlockNumber `json:"endBlock"`
 }
 
 // GetBlocksByTime returns the block for the given block time duration.
-func (blk *PublicBlockAPI) GetBlocksByTime(startTime,endTime int64) (*BlocksIntervalResult){
-	sumOfBlocks, startBlock, endBlock := getBlocksByTime(startTime,endTime,blk.db)
+func (blk *PublicBlockAPI) GetBlocksByTime(args IntervalTime) (*BlocksIntervalResult, error){
+
+	if args.StartTime > args.Endtime {
+		return nil, errors.New("invalid params")
+	}
+
+	sumOfBlocks, startBlock, endBlock := getBlocksByTime(args.StartTime,args.Endtime,blk.db)
 
 	return &BlocksIntervalResult{
 		SumOfBlocks: NewUint64ToNumber(sumOfBlocks),
 		StartBlock: startBlock,
 		EndBlock: endBlock,
-	}
+	}, nil
 }
 
 func (blk *PublicBlockAPI) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (Number, error) {
@@ -140,23 +150,28 @@ func getBlockByNumber(n BlockNumber, db *hyperdb.LDBDatabase) (*BlockResult, err
 }
 
 // GetBlockByNumber returns the bolck for the given block time duration.
-func getBlocksByTime(startTime,endTime int64, db *hyperdb.LDBDatabase)(sumOfBlocks uint64,startBlock,endBlock BlockNumber){
+func getBlocksByTime(startTime,endTime int64, db *hyperdb.LDBDatabase)(sumOfBlocks uint64,startBlock,endBlock *BlockNumber){
 	currentChain := core.GetChainCopy()
 	height := currentChain.Height
 
-	for i := uint64(1); i <= height; i++ {
-		block, _ := getBlockByNumber((BlockNumber(i)),db)
+	var i uint64
+	for i := height; i >= uint64(1); i-- {
+		block, _ := getBlockByNumber(*NewUint64ToBlockNumber(i),db)
 		if block.WriteTime > endTime  {
-			endBlock = BlockNumber(i-1)
-			return sumOfBlocks,startBlock,endBlock
+			continue
 		}
-		if block.WriteTime > -startTime {
+		if block.WriteTime < startTime {
+			startBlock = NewUint64ToBlockNumber(i+1)
+			return sumOfBlocks, startBlock, endBlock
+		}
+		if block.WriteTime >= startTime && block.WriteTime <= endTime {
 			sumOfBlocks += 1
 			if(sumOfBlocks==1){
-				startBlock = BlockNumber(i)
+				endBlock = NewUint64ToBlockNumber(i)
 			}
 		}
 	}
+	startBlock = NewUint64ToBlockNumber(i+1)
 	return sumOfBlocks,startBlock,endBlock
 }
 

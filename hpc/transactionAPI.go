@@ -334,22 +334,26 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockNumberAndIndex(n BlockNum
 }
 
 // GetTransactionsByTime returns the transactions for the given time duration.
-func (tran *PublicTransactionAPI) GetTransactionsByTime(startTime, endTime int64) ([]*TransactionResult, error) {
+func (tran *PublicTransactionAPI) GetTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
+
+	if args.StartTime > args.Endtime {
+		return nil, errors.New("invalid params")
+	}
+
 	currentChain := core.GetChainCopy()
 	height := currentChain.Height
-	log.Error(startTime)
-	log.Error(endTime)
+
 	var txs = make([]*TransactionResult,0)
 
 	for i := height; i >= uint64(1); i-- {
 		block, _ := core.GetBlockByNumber(tran.db, i)
-		if block.WriteTime > endTime {
+		if block.WriteTime > args.Endtime {
 			continue
 		}
-		if block.WriteTime < startTime {
+		if block.WriteTime < args.StartTime {
 			return txs,nil
 		}
-		if block.WriteTime >= startTime && block.WriteTime <= endTime {
+		if block.WriteTime >= args.StartTime && block.WriteTime <= args.Endtime {
 			trans := block.GetTransactions()
 			log.Error(len(trans))
 			for _, t := range trans {
@@ -363,8 +367,6 @@ func (tran *PublicTransactionAPI) GetTransactionsByTime(startTime, endTime int64
 	}
 	return txs,nil
 }
-
-
 
 // GetBlockTransactionCountByHash returns the number of block transactions for given block hash.
 func (tran *PublicTransactionAPI) GetBlockTransactionCountByHash(hash common.Hash) (*Number, error) {

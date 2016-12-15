@@ -35,7 +35,7 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionsCount",
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTxAvgTimeByBlockNumber","params":[{"from":2,"to":8}],"id":1}'
 
 # 得到时间段内的所有交易
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionsByTime","params":[1, 1478959217012956575],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionsByTime","params":[{"startTime":1, "endTime":1581776001230590326}],"id":1}'
 
 
 ################################ contract 服务 #################################
@@ -68,7 +68,7 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params"
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params":[{"from":5, "to":"latest"}],"id":1}'
 
 # 得到时间段内的区块数量
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocksByTime","params":[1, 1478959217012956575],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocksByTime","params":[{"startTime":1, "endTime":1581777983699073419}],"id":1}'
 
 # 根据区块hash查询区块信息 GetBlockByHash
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlockByHash","params":["<block hash>"],"id":1}'
