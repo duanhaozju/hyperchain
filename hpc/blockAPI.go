@@ -82,10 +82,27 @@ func (blk *PublicBlockAPI) GetBlockByHash(hash common.Hash) (*BlockResult, error
 	return getBlockByHash(hash, blk.db)
 }
 
-// GetBlockByNumber returns the bock for the given block number.
+// GetBlockByNumber returns the block for the given block number.
 func (blk *PublicBlockAPI) GetBlockByNumber(number BlockNumber) (*BlockResult, error) {
 	block, err := getBlockByNumber(number, blk.db)
 	return block, err
+}
+
+type BlocksIntervalResult struct{
+	SumOfBlocks *Number `json:"sumOfBlocks"`
+	StartBlock BlockNumber `json:"startBlock"`
+	EndBlock BlockNumber `json:"endBlock"`
+}
+
+// GetBlocksByTime returns the block for the given block time duration.
+func (blk *PublicBlockAPI) GetBlocksByTime(startTime,endTime int64) (*BlocksIntervalResult){
+	sumOfBlocks, startBlock, endBlock := getBlocksByTime(startTime,endTime,blk.db)
+
+	return &BlocksIntervalResult{
+		SumOfBlocks: NewUint64ToNumber(sumOfBlocks),
+		StartBlock: startBlock,
+		EndBlock: endBlock,
+	}
 }
 
 func (blk *PublicBlockAPI) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (Number, error) {
@@ -120,6 +137,27 @@ func getBlockByNumber(n BlockNumber, db *hyperdb.LDBDatabase) (*BlockResult, err
 	} else {
 		return outputBlockResult(blk, db)
 	}
+}
+
+// GetBlockByNumber returns the bolck for the given block time duration.
+func getBlocksByTime(startTime,endTime int64, db *hyperdb.LDBDatabase)(sumOfBlocks uint64,startBlock,endBlock BlockNumber){
+	currentChain := core.GetChainCopy()
+	height := currentChain.Height
+
+	for i := uint64(1); i <= height; i++ {
+		block, _ := getBlockByNumber((BlockNumber(i)),db)
+		if block.WriteTime > endTime  {
+			endBlock = BlockNumber(i-1)
+			return sumOfBlocks,startBlock,endBlock
+		}
+		if block.WriteTime > -startTime {
+			sumOfBlocks += 1
+			if(sumOfBlocks==1){
+				startBlock = BlockNumber(i)
+			}
+		}
+	}
+	return sumOfBlocks,startBlock,endBlock
 }
 
 func getBlockStateDb(n BlockNumber, db *hyperdb.LDBDatabase) (*state.StateDB, error) {
