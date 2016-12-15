@@ -103,10 +103,10 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs,error) {
 		return SendTxArgs{}, errors.New("'timestamp' is invalid")
 	}
 	if txType != 3 && args.Signature == "" {
-		return SendTxArgs{}, errors.New("'signature' is null")
+		return SendTxArgs{}, errors.New("'signature' don't be empty")
 	}
 	if args.Nonce == 0 {
-		return SendTxArgs{}, errors.New("'nonce' is null")
+		return SendTxArgs{}, errors.New("'nonce' don't be empty")
 	}
 	return args, nil
 }
@@ -337,7 +337,8 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockNumberAndIndex(n BlockNum
 func (tran *PublicTransactionAPI) GetTransactionsByTime(startTime, endTime int64) ([]*TransactionResult, error) {
 	currentChain := core.GetChainCopy()
 	height := currentChain.Height
-
+	log.Error(startTime)
+	log.Error(endTime)
 	var txs = make([]*TransactionResult,0)
 
 	for i := height; i >= uint64(1); i-- {
@@ -350,7 +351,8 @@ func (tran *PublicTransactionAPI) GetTransactionsByTime(startTime, endTime int64
 		}
 		if block.WriteTime >= startTime && block.WriteTime <= endTime {
 			trans := block.GetTransactions()
-			for t := range trans {
+			log.Error(len(trans))
+			for _, t := range trans {
 				tx, err := outputTransaction(t, tran.db)
 				if err != nil {
 					return nil, err
