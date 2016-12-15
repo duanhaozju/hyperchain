@@ -34,7 +34,7 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 	// 2. compare current height and target height
 	if blockChainInfo.Height < core.GetChainCopy().Height {
 		// cut down block to latest stable checkpoint
-		tmp := blockChainInfo.Height - blockChainInfo % 10
+		tmp := blockChainInfo.Height - blockChainInfo.Height % 10
 		log.Infof("state update target %d, current height %d, Cut down to %d first", blockChainInfo.Height, core.GetChainCopy().Height, tmp)
 		for i := core.GetChainCopy().Height; i > tmp; i -= 1 {
 			self.blockPool.CutdownBlock(i)
@@ -52,7 +52,7 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 			log.Infof("missing match target blockhash and latest block's hash, target block hash %s, latest block hash %s",
 				common.Bytes2Hex(blockChainInfo.CurrentBlockHash), common.Bytes2Hex(latestBlock.BlockHash))
 			// cut down block to latest stable checkpoint
-			tmp := blockChainInfo.Height - blockChainInfo % 10
+			tmp := blockChainInfo.Height - blockChainInfo.Height % 10
 			log.Infof("state update target %d, current height %d, Cut down to %d first", blockChainInfo.Height, core.GetChainCopy().Height, tmp)
 			for i := core.GetChainCopy().Height; i > tmp; i -= 1 {
 				self.blockPool.CutdownBlock(i)
