@@ -547,7 +547,7 @@ function ContractService($resource,$q ,$timeout, ENV, UtilsService) {
                                 "payload": txData.payload,
                                 "timestamp": txData.timestamp,
                                 "signature": txData.signature,
-                                "nonce": UtilsService.random_16bits()
+                                "nonce": txData.nonce
                             }
                         ],
                         id: 1

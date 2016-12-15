@@ -36817,13 +36817,16 @@ angular
                     //     p.push(params[k])
                     // }
 
-                    for (var i = 0;i < abi.length;i++) {
-                        if (abi[i].type == "constructor") {
-                            for (var i = 0; i <  abi[i].inputs.length; i++) {
+                    console.log(params)
+
+                    data = abi.filter(function (json) {
+                            return json.type === 'constructor' && json.inputs.length === Object.keys(params).length;
+                        }).map(function (json) {
+                            return json.inputs.map(function (input) {
                                 for (var k in params) {
-                                    if (abi[i].inputs[i].name == k) {
+                                    if (input.name == k) {
                                         var patt = new RegExp(/int(\d*)\[(\d*)\]/g)
-                                        var isNumberArray = patt.test(abi[i].inputs[i].type)
+                                        var isNumberArray = patt.test(input.type)
 
                                         if (isNumberArray) {
                                             if (params[k].indexOf(",") != -1) {
@@ -36840,16 +36843,6 @@ angular
                                         break;
                                     }
                                 }
-                            }
-                        }
-                    }
-
-                    console.log(params)
-
-                    data = abi.filter(function (json) {
-                            return json.type === 'constructor' && json.inputs.length === p.length;
-                        }).map(function (json) {
-                            return json.inputs.map(function (input) {
                                 return input.type;
                             });
                         }).map(function (types) {
