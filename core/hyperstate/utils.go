@@ -1,6 +1,8 @@
 package hyperstate
 
-import "bytes"
+import (
+	"bytes"
+)
 
 const storageIdentifier = "-Storage"
 const accountIdentifier = "-Account"
@@ -20,13 +22,14 @@ func GetStorageKeyPrefix(address []byte) []byte {
 	return ret
 }
 
-func SplitCompositeStorageKey(address []byte, key []byte) []byte {
+func SplitCompositeStorageKey(address []byte, key []byte) ([]byte, bool) {
 	prefix := append([]byte(storageIdentifier), address...)
-	idx := bytes.Index(key, prefix)
-	if idx == - 1 {
-		return nil
+	prefixLen := len(prefix)
+	if bytes.HasPrefix(key, prefix) {
+		return key[prefixLen:], true
+	} else {
+		return nil, false
 	}
-	return key[idx:]
 }
 /*
 	Code
@@ -42,11 +45,11 @@ func CompositeAccountKey(address []byte) []byte {
 	return append([]byte(accountIdentifier), address...)
 }
 
-func SplitCompositeAccountKey(key []byte) []byte {
-	prefix := []byte(accountIdentifier)
-	idx := bytes.Index(key, prefix)
-	if idx == - 1 {
-		return nil
+func SplitCompositeAccountKey(key []byte) ([]byte, bool) {
+	identifierLen := len([]byte(accountIdentifier))
+	if bytes.HasPrefix(key, []byte(accountIdentifier)) {
+		return key[identifierLen:], true
+	} else {
+		return nil, false
 	}
-	return key[idx:]
 }

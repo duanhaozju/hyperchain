@@ -3,255 +3,354 @@
 package hpc
 
 import (
-	"encoding/json"
-	"github.com/golang/protobuf/proto"
+	"fmt"
+	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/core"
-	"hyperchain/core/types"
+	"hyperchain/crypto"
+	"hyperchain/event"
 	"hyperchain/hyperdb"
-	"os"
+	"hyperchain/manager"
+	"hyperchain/p2p"
+	"strconv"
 	"testing"
 	"time"
 )
 
-
-var db, _ = hyperdb.GetLDBDatabase()
-var api = NewPublicTransactionAPI(nil, nil,db)
-var from = common.HexToAddress("0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd")
-var to = common.HexToAddress("0x0000000000000000000000000000000000000003")
-var args = SendTxArgs{
-	From:     from,
-	To:       &to,
-	Gas:      NewInt64ToNumber(1000),
-	GasPrice: NewInt64ToNumber(1000),
-	Value:    NewInt64ToNumber(1000),
-	Payload:  "",
-}
-var newTx common.Hash
-
-func putTransactionToDefaultDB() {
-	db, err := hyperdb.GetLDBDatabase()
-
-	if err != nil {
-		log.Error(err)
+func Test_SendTransaction(t *testing.T) {
+	//单例数据库状态设置为close
+	hyperdb.Setclose()
+	//初始化数据
+	core.InitDB("./build/keystore", 8004)
+	peermanager := &p2p.GrpcPeerManager{
+		NodeID: 1,
+	}
+	db, _ := hyperdb.GetLDBDatabase()
+	keydir := "./build/keystore/"
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	encryption.GenerateNodeKey(strconv.Itoa(1), "./build/keynodes")
+	am := accounts.NewAccountManager(keydir, encryption)
+	eventMux1 := new(event.TypeMux)
+	expiredTime:=time.Time{}
+	pm := manager.NewProtocolManager(nil, peermanager, eventMux1, nil, am, nil, 0, true,nil,expiredTime)
+	publicTransactionAPI := NewPublicTransactionAPI(eventMux1, pm, db, false, 1, 10000)
+	from := common.HexToAddress("0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd")
+	to := common.HexToAddress("0x0000000000000000000000000000000000000003")
+	args := SendTxArgs{
+		From:     from,
+		To:       &to,
+		Gas:      NewInt64ToNumber(1000),
+		GasPrice: NewInt64ToNumber(1000),
+		Value:    NewInt64ToNumber(1000),
+		Payload:  "",
+	}
+	args1 := SendTxArgs{
+		From:      from,
+		To:        &to,
+		Gas:       NewInt64ToNumber(1000),
+		GasPrice:  NewInt64ToNumber(1000),
+		Value:     NewInt64ToNumber(1000),
+		Payload:   "",
+		Signature: "123",
+	}
+	num := Number(3)
+	args3 := SendTxArgs{
+		From:     from,
+		To:       &to,
+		Gas:      NewInt64ToNumber(1000),
+		GasPrice: NewInt64ToNumber(1000),
+		Value:    NewInt64ToNumber(1000),
+		Payload:  "",
+		Request:  &num,
 	}
 
-
-	txValue := types.NewTransactionValue(100, 100, 1, nil)
-
-	value, err := proto.Marshal(txValue)
-
-	if err != nil {
-		log.Error(err)
+	ref, err := publicTransactionAPI.SendTransaction(args)
+	if err.Error() != "account is locked" {
+		t.Errorf("SendTransaction fail 期望的输出是account is locked")
 	}
 
-	tx := types.NewTransaction(from[:], to[:], value, time.Now().UnixNano())
+	am.UnlockAllAccount("./build/keystore")
 
-	hash := tx.BuildHash()
-
-	core.PutTransaction(db, hash[:], tx)
-	newTx = hash
-}
-
-func TestPublicTransactionAPI_SendTransaction(t *testing.T) {
-
-	if hash, err := api.SendTransaction(args); err == nil {
-		t.Logf("the new tx hash is %v", common.ToHex(hash[:]))
-	} else {
-		t.Errorf("%v", err)
+	ref, err = publicTransactionAPI.SendTransaction(args)
+	if err != nil {
+		t.Errorf("SendTransaction fail 交易应该成功")
 	}
 
-}
-
-//func TestPublicTransactionAPI_SendTransactionOrContract(t *testing.T) {
-//
-//	// deploy contract test
-//	args.To = nil
-//	args.Payload = "0x6000805463ffffffff1916815560a0604052600b6060527f68656c6c6f20776f726c6400000000000000000000000000000000000000000060805260018054918190527f68656c6c6f20776f726c6400000000000000000000000000000000000000001681559060be907fb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf66020600261010084871615026000190190931692909204601f01919091048101905b8082111560ce576000815560010160ac565b50506101cd806100d26000396000f35b509056606060405260e060020a60003504633ad14af3811461003f578063569c5f6d146100675780638da9b7721461007c578063d09de08a146100ea575b610002565b34610002576000805460043563ffffffff8216016024350163ffffffff19919091161790555b005b346100025761010e60005463ffffffff165b90565b3461000257604080516020818101835260008252600180548451600261010083851615026000190190921691909104601f81018490048402820184019095528481526101289490928301828280156101c15780601f10610196576101008083540402835291602001916101c1565b34610002576100656000805463ffffffff19811663ffffffff909116600101179055565b6040805163ffffffff929092168252519081900360200190f35b60405180806020018281038252838181518152602001915080519060200190808383829060006004602084601f0104600302600f01f150905090810190601f1680156101885780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b820191906000526020600020905b8154815290600101906020018083116101a457829003601f168201915b5050505050905061007956"
-//
-//	if hash, err := api.SendTransactionOrContract(args); err == nil {
-//		t.Logf("the new contract tx hash is %v", common.ToHex(hash[:]))
-//	} else {
-//		t.Errorf("%v", err)
-//	}
-//}
-
-func TestPublicTransactionAPI_GetTransactionByHash(t *testing.T) {
-
-	putTransactionToDefaultDB()
-
-	txGet, err := api.GetTransactionByHash(newTx)
-
-	if err != nil {
-		t.Errorf("%v", err)
+	ref, err = publicTransactionAPI.SendTransaction(args1)
+	if err.Error() != "invalid signature" {
+		t.Errorf("SendTransaction fail 期望的输出是invalid signature")
 	}
 
-	t.Logf("get transaction by tx hash: %#v\n", common.ToHex(txGet.Hash[:]))
-	e := json.NewEncoder(os.Stdout)
-	e.Encode(txGet)
-}
-
-var txValue = types.NewTransactionValue(100, 100, 1, nil)
-
-var value, err = proto.Marshal(txValue)
-
-var transactionCases = []*types.Transaction{
-	&types.Transaction{
-		From:      from[:],
-		To:        to[:],
-		Value:     value,
-		Timestamp: time.Now().UnixNano() - int64(time.Second),
-		Signature: []byte("signature1"),
-	},
-	&types.Transaction{
-		From:      from[:],
-		To:        to[:],
-		Value:     value,
-		Timestamp: time.Now().UnixNano() - int64(time.Second),
-		Signature: []byte("signature2"),
-	},
-	&types.Transaction{
-		From:      from[:],
-		To:        to[:],
-		Value:     value,
-		Timestamp: time.Now().UnixNano() - int64(time.Second),
-		Signature: []byte("signature3"),
-	},
-}
-
-var blockUtilsCase = types.Block{
-	ParentHash:   common.StringToHash("parenthash").Bytes(),
-	BlockHash:    common.StringToHash("blockhash").Bytes(),
-	Transactions: transactionCases,
-	Timestamp:    time.Now().UnixNano(),
-	MerkleRoot:   []byte("merkeleroot"),
-	Number:       1,
-	WriteTime:    time.Now().UnixNano() + int64(time.Second)/2,
-}
-
-func TestPublicTransactionAPI_GetTransactionByBlockHashAndIndex(t *testing.T) {
-
-	db, err := hyperdb.GetLDBDatabase()
+	ref, err = publicTransactionAPI.SendTransaction(args3)
 	if err != nil {
-		log.Fatal(err)
+		t.Errorf("SendTransaction fail 交易应该成功")
+	}
+	pm2 := manager.NewProtocolManager(nil, peermanager, nil, nil, am, nil, 0, true,nil,expiredTime)
+	publicTransactionAPI2 := NewPublicTransactionAPI(eventMux1, pm2, db, true, 1, 10000)
+	fmt.Println("11111111111111111111111111111111")
+	ref, err = publicTransactionAPI2.SendTransaction(args)
+	if err.Error() != "EventObject is nil" {
+		fmt.Println(err)
+		t.Errorf("SendTransaction fail 期望的输出是EventObject is nil")
 	}
 
-	err = core.PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	tx, err := api.GetTransactionByBlockHashAndIndex(common.BytesToHash(blockUtilsCase.BlockHash), 0)
-
-	if err != nil {
-		t.Errorf("%v", err)
-	} else {
-		t.Logf("%#v", tx)
-	}
-
-}
-
-func TestPublicTransactionAPI_GetTransactionsByBlockNumberAndIndex(t *testing.T) {
-	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = core.PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	tx, err := api.GetTransactionByBlockNumberAndIndex(1, 0)
-
-	if err != nil {
-		t.Logf("%v", err)
-	} else {
-		t.Logf("%#v", tx)
+	ref, err = publicTransactionAPI2.SendTransaction(args1)
+	if err.Error() != "System is too busy to response " {
+		fmt.Println(err)
+		t.Errorf("SendTransaction fail 期望的输出是System is too busy to response")
+		fmt.Println(ref)
 	}
 }
 
-func TestPublicTransactionAPI_GetBlockTransactionCountByHash(t *testing.T) {
-	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {
-		log.Fatal(err)
+func Test_GetTransactionReceipt(t *testing.T) {
+
+	peermanager := &p2p.GrpcPeerManager{
+		NodeID: 1,
+	}
+	db, _ := hyperdb.GetLDBDatabase()
+	keydir := "./build/keystore/"
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	encryption.GenerateNodeKey(strconv.Itoa(1), "./build/keynodes")
+	am := accounts.NewAccountManager(keydir, encryption)
+	eventMux1 := new(event.TypeMux)
+	expiredTime:=time.Time{}
+	pm := manager.NewProtocolManager(nil, peermanager, eventMux1, nil, am, nil, 0, true,nil,expiredTime)
+	publicTransactionAPI := NewPublicTransactionAPI(eventMux1, pm, db, false, 1, 10000)
+
+	from := common.HexToAddress("0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd")
+	to := common.HexToAddress("0x0000000000000000000000000000000000000003")
+	args := SendTxArgs{
+		From:     from,
+		To:       &to,
+		Gas:      NewInt64ToNumber(1000),
+		GasPrice: NewInt64ToNumber(1000),
+		Value:    NewInt64ToNumber(1000),
+		Payload:  "",
 	}
 
-	err = core.PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
-	if err != nil {
-		log.Fatal(err)
+	args2 := SendTxArgs{
+		From:      from,
+		Gas:       NewInt64ToNumber(1000),
+		GasPrice:  NewInt64ToNumber(1000),
+		Value:     NewInt64ToNumber(1000),
+		Payload:   "",
+		Timestamp: time.Now().UnixNano(),
 	}
 
-	if c,err := api.GetBlockTransactionCountByHash(common.BytesToHash(blockUtilsCase.BlockHash)); err != nil {
-		t.Error(err)
-	} else {
-		log.Info(c.ToInt64())
+	args3 := SendTxArgs{
+		From:      from,
+		To:        &to,
+		Gas:       NewInt64ToNumber(1000),
+		GasPrice:  NewInt64ToNumber(1000),
+		Value:     NewInt64ToNumber(1000),
+		Payload:   "",
+		Timestamp: time.Now().UnixNano(),
 	}
+
+	args8 := SendTxArgs{
+		To:        &to,
+		Gas:       NewInt64ToNumber(1000),
+		GasPrice:  NewInt64ToNumber(1000),
+		Value:     NewInt64ToNumber(1000),
+		Payload:   "",
+		Timestamp: time.Now().UnixNano(),
+	}
+	hash := common.HexToHash("")
+
+	hash2 := common.HexToHash("0xca8c9e383b7c2737210cb68152630caf2486df92aad88a2bbb25fc0c4849930e")
+
+	ref, err := publicTransactionAPI.GetTransactionReceipt(hash)
+	fmt.Println(ref)
+	if err == nil {
+		t.Errorf("GetTransactionReceipt1 wrong")
+	}
+
+	ref, err = publicTransactionAPI.GetTransactionReceipt(hash2)
+	if err != nil {
+		t.Errorf("GetTransactionReceipt2 wrong")
+	}
+
+	num := BlockNumber(1)
+	num1 := BlockNumber(2)
+
+	args4 := IntervalArgs{
+		From: &num,
+		To:   &num1,
+	}
+
+	args5 := IntervalArgs{}
+
+	args6 := IntervalArgs{
+		From: &num,
+	}
+
+	args7 := IntervalArgs{
+		To: &num1,
+	}
+
+	//	args5 := &IntervalArgs{
+	//		From: Number(1),
+	//		To:   Number(2),
+	//	}
+
+	ref1, err := publicTransactionAPI.GetTransactions(args4)
+	fmt.Println(ref1)
+	if err != nil {
+		t.Errorf("publicTransactionAPI.GetTransactions(args4) wrong")
+	}
+
+	ref1, err = publicTransactionAPI.GetTransactions(args5)
+	fmt.Println("publicTransactionAPI.GetTransactions(args5)")
+	if err != nil {
+		t.Errorf("publicTransactionAPI.GetTransactions(args5) wrong")
+	}
+
+	ref2, err := publicTransactionAPI.GetDiscardTransactions()
+	if err != nil {
+		t.Errorf("publicTransactionAPI.GetDiscardTransactions() fail")
+	}
+
+	hash3 := common.HexToHash("0x31f347530e693d16486107fbc9256b29609d69db100c9a8401a038e781a49a52")
+	_, err = publicTransactionAPI.getDiscardTransactionByHash(hash3)
+	if err != nil {
+		t.Errorf("publicTransactionAPI.getDiscardTransactionByHash(hash3) fail")
+	}
+
+	hash4 := common.HexToHash("0x31f347530e693d16486107fbc9256b29609d69db100c9a8401a038e781a42222")
+	ref4, err := publicTransactionAPI.getDiscardTransactionByHash(hash4)
+	if err.Error() != "leveldb: not found" {
+		fmt.Println(ref4)
+		t.Errorf("publicTransactionAPI.getDiscardTransactionByHash(hash4) fail")
+	}
+
+	//	正确的区块哈希
+	hash5 := common.HexToHash("0x1e8e6912eb9b88d0bdf7ed81651bbf8016341787ca3440f0c82906fb48bce7c5")
+	_, err = publicTransactionAPI.GetTransactionByBlockHashAndIndex(hash5, Number(1))
+	if err != nil {
+		t.Errorf("publicTransactionAPI.GetTransactionByBlockHashAndIndex(hash5, Number(1)) fail")
+	}
+
+	_, err = publicTransactionAPI.GetTransactionByBlockHashAndIndex(hash5, Number(-1))
+	if err == nil {
+		t.Errorf("publicTransactionAPI.GetTransactionByBlockHashAndIndex(hash5, Number(-1)) fail")
+	}
+
+	_, err = publicTransactionAPI.GetTransactionByBlockHashAndIndex(hash3, Number(1))
+	if err == nil {
+		t.Errorf("publicTransactionAPI.GetTransactionByBlockHashAndIndex(hash3, Number(1)) fail")
+	}
+
+	//正确的hash
+	ref6, err := publicTransactionAPI.GetBlockTransactionCountByHash(hash5)
+	if err != nil {
+		fmt.Println("ref6:")
+		fmt.Println(ref6)
+		t.Errorf("publicTransactionAPI.GetBlockTransactionCountByHash(hash5) fail ")
+	}
+	//错误的hash
+	ref6, err = publicTransactionAPI.GetBlockTransactionCountByHash(hash3)
+	if err.Error() != "leveldb: not found" {
+		fmt.Println(ref6)
+		fmt.Println(err)
+		t.Errorf(" publicTransactionAPI.GetBlockTransactionCountByHash(hash3) fail")
+	}
+
+	//缺少timestamp
+	ref7, err := publicTransactionAPI.GetSignHash(args)
+	if err.Error() != "lack of param timestamp" {
+		fmt.Println(ref7)
+		fmt.Println(err)
+		t.Errorf("publicTransactionAPI.GetSighHash(args) fail")
+	}
+	//from 为空
+	ref7, err = publicTransactionAPI.GetSignHash(args8)
+	fmt.Println(ref7)
+	fmt.Println(err)
+
+	//正确
+	ref7, err = publicTransactionAPI.GetSignHash(args3)
+	if err != nil {
+		fmt.Println(ref7)
+		fmt.Println(err)
+		t.Errorf("publicTransactionAPI.GetSighHash(args) fail")
+	}
+
+	//没有to为部署合约
+	ref7, err = publicTransactionAPI.GetSignHash(args2)
+	if err != nil {
+		fmt.Println(ref7)
+		fmt.Println(err)
+		t.Errorf("publicTransactionAPI.GetSighHash(args) fail")
+	}
+
+	ref8, err := publicTransactionAPI.GetTransactionsCount()
+	if err != nil || ref8 == nil {
+		fmt.Println("GetTransactionsCount()")
+		fmt.Println(ref8)
+		fmt.Println(err)
+	}
+
+	ref9 ,_:= publicTransactionAPI.GetTxAvgTimeByBlockNumber(args4)
+	fmt.Println("arg4")
+	fmt.Println(ref9)
+
+	ref9 ,_= publicTransactionAPI.GetTxAvgTimeByBlockNumber(args5)
+	fmt.Println("arg5")
+	fmt.Println(ref9)
+
+	ref9 ,_= publicTransactionAPI.GetTxAvgTimeByBlockNumber(args6)
+	fmt.Println("arg6")
+	fmt.Println(ref9)
+
+	ref9 ,_= publicTransactionAPI.GetTxAvgTimeByBlockNumber(args7)
+	fmt.Println("arg7")
+	fmt.Println(ref9)
+
+
+	ref10, err := publicTransactionAPI.GetTransactionByHash(hash3)
+	if err != nil {
+		fmt.Println(ref10)
+		fmt.Println(err)
+		t.Errorf("GetTransactionByHash(hash5) fail")
+	}
+
+	ref10, err = publicTransactionAPI.GetTransactionByHash(hash4)
+	if err.Error() != "leveldb: not found" {
+		fmt.Println(ref10)
+		fmt.Println(err)
+		t.Errorf("GetTransactionByHash(hash4) fail")
+	}
+
+	//单例数据库状态设置为close
+	hyperdb.Setclose()
+	//初始化数据
+	core.InitDB("./build/keystore1", 8004)
+	db1, _ := hyperdb.GetLDBDatabase()
+	publicTransactionAPI2 := NewPublicTransactionAPI(eventMux1, pm, db1, false, 1, 10000)
+	ref, err = publicTransactionAPI2.GetTransactionReceipt(hash2)
+	if err == nil {
+		t.Errorf("publicTransactionAPI2.GetTransactionReceipt(hash2)")
+	}
+	if err == nil {
+		t.Errorf("GetTransactionReceipt3 wrong")
+	}
+
+	ref1, err = publicTransactionAPI2.GetTransactions(args5)
+	if err != nil {
+		t.Errorf("publicTransactionAPI2.GetTransactions(args5) wrong")
+	}
+
+	ref2, err = publicTransactionAPI2.GetDiscardTransactions()
+	fmt.Println(ref2)
+	if err != nil {
+		t.Errorf("publicTransactionAPI2.GetDiscardTransactions()")
+	}
+
+	ref8, err = publicTransactionAPI2.GetTransactionsCount()
+	if ref8 != nil {
+		fmt.Println("GetTransactionsCount()")
+		fmt.Println(ref8)
+		fmt.Println(err)
+	}
+
 }
-
-// test
-//func TestSigntx(t *testing.T)  {
-//	ee := crypto.NewEcdsaEncrypto("ECDSAEncryto")
-//	k, err:= ee.GeneralKey()
-//	if err!=nil{
-//		panic(err)
-//	}
-//
-//	key := k.(*ecdsa.PrivateKey)
-//	pub := key.PublicKey
-//	var addr common.Address
-//	addr = crypto.PubkeyToAddress(pub)
-//
-//	fmt.Println("public key is :")
-//	fmt.Println(pub)
-//	fmt.Println("private key is :")
-//	fmt.Println(key)
-//	//SaveNodeInfo("./port_address_privatekey","5004",addr,key)
-//
-//	//p,err:=ee.GetKey()
-//
-//	//priv := p.(*ecdsa.PrivateKey)
-//
-//	//var from1 = common.HexToAddress("0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd")
-//	var from1 = addr
-//	var to = common.HexToAddress("0x0000000000000000000000000000000000000003")
-//	tx := types.NewTransaction(from1[:], to[:], nil)
-//	//签名交易
-//	//tx:= NewTransaction(common.Address{},big.NewInt(100))
-//	s256 := crypto.NewKeccak256Hash("Keccak256")
-//	//hash := s256.Hash([]interface{}{tx.data.Amount,tx.data.Recipient})
-//	hash := tx.SighHash(s256)
-//	signature,err := ee.Sign(hash[:],key)
-//	fmt.Println(hash)
-//	fmt.Println("sig:",signature)
-//
-//	if err != nil {
-//		t.Error(err)
-//		t.FailNow()
-//
-//	}
-//	//验证签名
-//	from,err:= ee.UnSign(hash[:],signature)
-//	if err != nil {
-//		t.Error(err)
-//		t.FailNow()
-//	}
-//
-//	fmt.Println(from.Hex())
-//	fmt.Println(addr.Hex())
-//
-//	trans := new(types.Transaction)
-//	//var tx *types.Transaction
-//	if err := rlp.DecodeBytes(common.FromHex(args.Signature), trans); err != nil {
-//		log.Info("rlp.DecodeBytes error: ", err)
-//	}
-//	log.Infof("tx: %#v", trans)
-//	log.Info(trans.Signature)
-//	log.Infof("tx sign: %#v", trans.Signature)
-//	//
-//	//hex := common.ToHex(from.Bytes())
-//	//fmt.Println(common.ToHex(from[:]))
-//	//fmt.Println(common.ToHex(addr[:]))
-//	//fmt.Println(common.FromHex(hex))
-//
-//}

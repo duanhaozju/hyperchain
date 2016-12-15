@@ -176,7 +176,9 @@ func (pbft *pbftProtocal) findHighestChkptQuorum() (n uint64, d string, replicas
 	chkptBehind = false
 	n = pbft.h
 
-	// Since replica sends all of its chkpt, we may encounter several chkpts which reach 2f+1.
+	// Since replica sends all of its chkpt, we may encounter several, instead of single one,
+	// chkpts, which reach 2f+1
+
 	// In this case, others will move watermarks sooner or later.
 	// Hopefully, we find only one chkpt which reaches 2f+1 and this chkpt is their pbft.h
 	for ci, peers := range chkpts {

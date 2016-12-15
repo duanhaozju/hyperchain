@@ -18,8 +18,19 @@ func TestStorageTree(t *testing.T) {
 	obj.SetState(common.StringToHash("key1"), common.StringToHash("value1"))
 	obj.SetState(common.StringToHash("key2"), common.StringToHash("value2"))
 	obj.Update()
+
+	val1:= obj.GetState(common.StringToHash("key1"))
+	val2:= obj.GetState(common.StringToHash("key2"))
+	if val1!=common.StringToHash("value1")||val2!=common.StringToHash("value2"){
+		t.Error("setstate fail")
+	}
+
 	obj.SetState(common.StringToHash("key1"), common.StringToHash(""))
 	obj.Update()
+	val1= obj.GetState(common.StringToHash("key1"))
+	if val1!=common.StringToHash(""){
+		t.Error("setstate fail")
+	}
 }
 
 func TestCopy(t *testing.T) {
@@ -46,6 +57,7 @@ func TestEncode(t *testing.T) {
 	obj.SetCode([]byte("code"))
 	obj.SetABI([]byte("abi"))
 	obj.SetBalance(big.NewInt(123))
+	obj.SubBalance(big.NewInt(111))
 	obj.SetNonce(123)
 	obj.trie.Commit()
 	db.Put(obj.codeHash, obj.code)
@@ -58,7 +70,17 @@ func TestEncode(t *testing.T) {
 		t.Error("Decode failed")
 	}
 }
+func TestGetNull(t *testing.T) {
+	db, _ := hyperdb.NewMemDatabase()
+	obj := NewStateObject(common.HexToAddress("01234567890"), db)
+	if (obj.GetState(common.StringToHash("key1"))!=common.Hash{}){
+		t.Error("expected null,but got something return")
+	}
 
+	if(obj.getAddr(common.StringToHash("key1"))!=common.Hash{}){
+		t.Error("expected null,but got somthing return")
+	}
+}
 func SOCompare(so1 *StateObject, so2 *StateObject) bool {
 	if bytes.Compare(so1.address.Bytes(), so2.address.Bytes()) != 0 {
 		fmt.Println("address mismatch")
@@ -74,10 +96,6 @@ func SOCompare(so1 *StateObject, so2 *StateObject) bool {
 	}
 	if bytes.Compare(so1.Root(), so2.Root()) != 0 {
 		fmt.Println("root mismatch")
-		return false
-	}
-	if bytes.Compare(so1.abi, so2.abi) != 0 {
-		fmt.Println("abi mismatch")
 		return false
 	}
 	if bytes.Compare(so1.code, so2.code) != 0 {

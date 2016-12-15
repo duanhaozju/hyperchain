@@ -20,7 +20,6 @@ import (
 	"hyperchain/recovery"
 	"sync"
 	"time"
-	"encoding/hex"
 )
 
 var log *logging.Logger // package-level logger
@@ -257,7 +256,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 		case event.ConsensusEvent:
 			//call consensus module
-			log.Info("###### enter ConsensusEvent")
+			log.Debug("###### enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 		}
 	}
@@ -292,17 +291,17 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			self.consenter.RecvMsg(ev.Payload)
 		case event.DelPeerEvent:
 			// a peer submit a request to exit the alliance
-			delHash := ev.Payload
-			routerHash, id := self.Peermanager.GetRouterHashifDelete(string(delHash))
+			log.Debug("DelPeerEvent")
+			payload := ev.Payload
+			routerHash, id := self.Peermanager.GetRouterHashifDelete(string(payload))
 			msg := &protos.DelNodeMessage{
-				DelHash: delHash,
+				DelPayload: payload,
 				RouterHash: routerHash,
 				Id: id,
 			}
-			log.Warning("DelPeerEvent", "delHash: ", delHash, "delstring: ", string(delHash),"routerHash: ", routerHash, "id: ", id)
 			self.consenter.RecvLocal(msg)
 		case event.BroadcastDelPeerEvent:
-			log.Warning("BroadcastDelPeerEvent")
+			log.Debug("BroadcastDelPeerEvent")
 			// receive this event from consensus module
 			// broadcast to other replica
 			// TODO Don't send to the exit peer itself
@@ -327,7 +326,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 				self.Peermanager.UpdateRoutingTable(ev.Payload)
 			} else {
 				// remove a peer
-				self.Peermanager.DeleteNode(hex.EncodeToString(ev.Payload))
+				self.Peermanager.DeleteNode(string(ev.Payload))
 			}
 		case event.AlreadyInChainEvent:
 			log.Debug("AlreadyInChainEvent")

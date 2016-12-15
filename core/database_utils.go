@@ -19,7 +19,7 @@ var (
 	ReceiptsPrefix           = []byte("receipts-")
 	InvalidTransactionPrefix = []byte("invalidtransaction-")
 	BlockPrefix              = []byte("block-")
-	ChainKey                 = []byte("chain-key")
+	ChainKey                 = []byte("chain-key-")
 	BlockNumPrefix           = []byte("blockNum-")
 	//bodySuffix               = []byte("-body")
 	TxMetaSuffix = []byte{0x01}

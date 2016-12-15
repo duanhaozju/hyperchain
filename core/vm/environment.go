@@ -108,6 +108,7 @@ type Database interface {
 		API QUERY
 	 */
 	GetAccounts() map[string]Account
+	Dump() []byte
 }
 
 // Account represents a contract or basic ethereum account.

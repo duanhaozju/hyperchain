@@ -14,14 +14,14 @@ type viewChangeQuorumEvent struct{}
 
 func (pbft *pbftProtocal) correctViewChange(vc *ViewChange) bool {
 	for _, p := range append(vc.Pset, vc.Qset...) {
-		if !(p.View < vc.View && p.SequenceNumber > vc.H && p.SequenceNumber <= vc.H+pbft.L) {
+		if !(p.View < vc.View && p.SequenceNumber > vc.H && p.SequenceNumber <= vc.H + pbft.L) {
 			logger.Debugf("Replica %d invalid p entry in view-change: vc(v:%d h:%d) p(v:%d n:%d)", pbft.id, vc.View, vc.H, p.View, p.SequenceNumber)
 			return false
 		}
 	}
 
 	for _, c := range vc.Cset {
-		if !(c.SequenceNumber >= vc.H && c.SequenceNumber <= vc.H+pbft.L) {
+		if !(c.SequenceNumber >= vc.H && c.SequenceNumber <= vc.H + pbft.L) {
 			logger.Debugf("Replica %d invalid c entry in view-change: vc(v:%d h:%d) c(n:%d)", pbft.id, vc.View, vc.H, c.SequenceNumber)
 			return false
 		}
@@ -126,16 +126,16 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 		}
 	}
 
-	vc := &ViewChange {
-		View:	pbft.view,
-		H:	pbft.h,
+	vc := &ViewChange{
+		View:    pbft.view,
+		H:    pbft.h,
 		ReplicaId: pbft.id,
 	}
 
 	for n, id := range pbft.chkpts {
-		vc.Cset = append(vc.Cset, &ViewChange_C {
+		vc.Cset = append(vc.Cset, &ViewChange_C{
 			SequenceNumber: n,
-			Id:		id,
+			Id:        id,
 		})
 	}
 
@@ -166,8 +166,8 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 		return nil
 	}
 	consensusMsg := &ConsensusMessage{
-		Type:		ConsensusMessage_VIEW_CHANGE,
-		Payload:	payload,
+		Type:        ConsensusMessage_VIEW_CHANGE,
+		Payload:    payload,
 	}
 	msg := consensusMsgHelper(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
@@ -208,9 +208,7 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 	// record same vc from self times
 	if vc.ReplicaId == pbft.id {
 		pbft.vcResendCount++
-		logger.Warningf("=========================================")
 		logger.Warningf("Replica %d already recv view change from itself for %d times", pbft.id, pbft.vcResendCount)
-		logger.Warningf("=========================================")
 	}
 
 	if _, ok := pbft.viewChangeStore[vcidx{vc.View, vc.ReplicaId}]; ok {
@@ -252,7 +250,7 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 
 	// We only enter this if there are enough view change messages _greater_ than our current view
 	if len(replicas) >= pbft.f+1 {
-		logger.Warningf("Replica %d received f+1 view-change messages, triggering view-change to view %d",
+		logger.Infof("Replica %d received f+1 view-change messages, triggering view-change to view %d",
 			pbft.id, minView)
 		pbft.firstRequestTimer.Stop()
 		// subtract one, because sendViewChange() increments
@@ -321,8 +319,8 @@ func (pbft *pbftProtocal) sendNewView() events.Event {
 		return nil
 	}
 	consensusMsg := &ConsensusMessage{
-		Type:		ConsensusMessage_NEW_VIEW,
-		Payload:	payload,
+		Type:       ConsensusMessage_NEW_VIEW,
+		Payload:    payload,
 	}
 	msg := consensusMsgHelper(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
@@ -398,7 +396,7 @@ func (pbft *pbftProtocal) canExecuteToTarget(specLastExec uint64, initialCp View
 		pbft.nvInitialSeqNo = 0
 		logger.Infof("Replica %d cannot execute to the view change checkpoint with seqNo %d", pbft.id, initialCp.SequenceNumber)
 	}
-	return  canExecuteToTarget
+	return canExecuteToTarget
 }
 
 func (pbft *pbftProtocal) feedMissingReqBatchIfNeeded(nv *NewView) (newReqBatchMissing bool) {
@@ -413,7 +411,6 @@ func (pbft *pbftProtocal) feedMissingReqBatchIfNeeded(nv *NewView) (newReqBatchM
 				// NULL request; skip
 				continue
 			}
-
 
 			if _, ok := pbft.validatedBatchStore[d]; !ok {
 				logger.Warningf("Replica %d missing assigned, non-checkpointed request batch %s",
@@ -483,7 +480,6 @@ func (pbft *pbftProtocal) primaryProcessNewView(initialCp ViewChange_C, replicas
 	return nil
 }
 
-
 func (pbft *pbftProtocal) processNewView() events.Event {
 	var newReqBatchMissing bool
 	nv, ok := pbft.newViewStore[pbft.view]
@@ -504,7 +500,7 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 			pbft.id, pbft.viewChangeStore)
 		return pbft.sendViewChange()
 	}
-// 以上 primary 不必做
+	// 以上 primary 不必做
 	speculativeLastExec := pbft.lastExec
 	if pbft.currentExec != nil {
 		speculativeLastExec = *pbft.currentExec
@@ -519,7 +515,7 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 			}
 		}
 	}
-// --
+	// --
 	msgList := pbft.assignSequenceNumbers(nv.Vset, cp.SequenceNumber)
 
 	if msgList == nil {
@@ -533,7 +529,7 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 			pbft.id, msgList, nv.Xset)
 		return pbft.sendViewChange()
 	}
-// -- primary 不必做
+	// -- primary 不必做
 	if pbft.h < cp.SequenceNumber {
 		pbft.moveWatermarks(cp.SequenceNumber)
 	}
@@ -592,7 +588,7 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	xSetLen := len(nv.Xset)
 	upper := uint64(xSetLen) + pbft.h + uint64(1)
 	if pbft.primary(pbft.view) == pbft.id {
-		for i := pbft.h+uint64(1); i < upper; i++ {
+		for i := pbft.h + uint64(1); i < upper; i++ {
 			d, ok := nv.Xset[i]
 			if !ok {
 				logger.Critical("view change Xset miss batch number %d", i)
@@ -627,7 +623,8 @@ func (pbft *pbftProtocal) getViewChanges() (vset []*ViewChange) {
 func (pbft *pbftProtocal) selectInitialCheckpoint(vset []*ViewChange) (checkpoint ViewChange_C, ok bool, replicas []uint64) {
 	checkpoints := make(map[ViewChange_C][]*ViewChange)
 	for _, vc := range vset {
-		for _, c := range vc.Cset { // TODO, verify that we strip duplicate checkpoints from this set
+		for _, c := range vc.Cset {
+			// TODO, verify that we strip duplicate checkpoints from this set
 			checkpoints[*c] = append(checkpoints[*c], vc)
 			logger.Debugf("Replica %d appending checkpoint from replica %d with seqNo=%d, h=%d, and checkpoint digest %s", pbft.id, vc.ReplicaId, vc.H, c.SequenceNumber, c.Id)
 		}
@@ -641,7 +638,8 @@ func (pbft *pbftProtocal) selectInitialCheckpoint(vset []*ViewChange) (checkpoin
 
 	for idx, vcList := range checkpoints {
 		// need weak certificate for the checkpoint
-		if len(vcList) <= pbft.f { // type casting necessary to match types
+		if len(vcList) <= pbft.f {
+			// type casting necessary to match types
 			logger.Debugf("Replica %d has no weak certificate for n:%d, vcList was %d long",
 				pbft.id, idx.SequenceNumber, len(vcList))
 			continue
@@ -683,7 +681,7 @@ func (pbft *pbftProtocal) assignSequenceNumbers(vset []*ViewChange, h uint64) (m
 
 	// "for all n such that h < n <= h + L"
 	nLoop:
-	for n := h + 1; n <= h+pbft.L; n++ {
+	for n := h + 1; n <= h + pbft.L; n++ {
 		// "∃m ∈ S..."
 		for _, m := range vset {
 			// "...with <n,d,v> ∈ m.P"
@@ -719,7 +717,7 @@ func (pbft *pbftProtocal) assignSequenceNumbers(vset []*ViewChange, h uint64) (m
 					}
 				}
 
-				if quorum < pbft.f+1 {
+				if quorum < pbft.f + 1 {
 					continue
 				}
 

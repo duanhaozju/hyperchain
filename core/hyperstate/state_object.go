@@ -8,6 +8,7 @@ import (
 	"hyperchain/common"
 	"encoding/json"
 	"hyperchain/hyperdb"
+	"github.com/pkg/errors"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -96,7 +97,7 @@ func newObject(db *StateDB, address common.Address, data Account, onDirty func(a
 
 
 // Marshal stateObject
-func (c *StateObject) Marshal() ([]byte, error) {
+func (c *StateObject) MarshalJSON() ([]byte, error) {
 	account := Account{
 		Nonce:    c.data.Nonce,
 		Balance:  c.data.Balance,
@@ -106,10 +107,13 @@ func (c *StateObject) Marshal() ([]byte, error) {
 	return json.Marshal(account)
 }
 // Unmarshal stateObject
-func Unmarshal(data []byte) (Account, error) {
-	var account Account
-	err := json.Unmarshal(data, &account)
-	return account, err
+func UnmarshalJSON(data []byte, v interface{}) error {
+	account, ok := v.(*Account)
+	if ok == false {
+		return errors.New("invalid type")
+	}
+	err := json.Unmarshal(data, account)
+	return err
 }
 
 // String
@@ -137,7 +141,7 @@ func (self *StateObject) markSuicided() {
 }
 
 func (c *StateObject) touch() {
-	c.db.journal = append(c.db.journal, touchChange{
+	c.db.journal = append(c.db.journal, &touchChange{
 		account: &c.address,
 		prev:    c.touched,
 	})
@@ -166,7 +170,7 @@ func (self *StateObject) GetState(db hyperdb.Database, key common.Hash) common.H
 
 // SetState updates a value in account storage.
 func (self *StateObject) SetState(db hyperdb.Database, key, value common.Hash) {
-	self.db.journal = append(self.db.journal, storageChange{
+	self.db.journal = append(self.db.journal, &storageChange{
 		account:  &self.address,
 		key:      key,
 		prevalue: self.GetState(db, key),
@@ -190,7 +194,7 @@ func (self *StateObject) Flush(db hyperdb.Batch) error {
 		delete(self.dirtyStorage, key)
 		if (value == common.Hash{}) {
 			// delete
-			if err := db.Put(CompositeStorageKey(self.address.Bytes(), key.Bytes()), nil); err != nil {
+			if err := db.Delete(CompositeStorageKey(self.address.Bytes(), key.Bytes())); err != nil {
 				return err
 			}
 		} else {
@@ -199,6 +203,7 @@ func (self *StateObject) Flush(db hyperdb.Batch) error {
 			}
 		}
 	}
+	self.root = self.GenerateFingerPrintOfStorage()
 	return nil
 }
 
@@ -246,7 +251,7 @@ func (c *StateObject) SubBalance(amount *big.Int) {
 }
 
 func (self *StateObject) SetBalance(amount *big.Int) {
-	self.db.journal = append(self.db.journal, balanceChange{
+	self.db.journal = append(self.db.journal, &balanceChange{
 		account: &self.address,
 		prev:    new(big.Int).Set(self.data.Balance),
 	})
@@ -303,7 +308,7 @@ func (self *StateObject) Code(db hyperdb.Database) []byte {
 
 func (self *StateObject) SetCode(codeHash common.Hash, code []byte) {
 	prevcode := self.Code(self.db.db)
-	self.db.journal = append(self.db.journal, codeChange{
+	self.db.journal = append(self.db.journal, &codeChange{
 		account:  &self.address,
 		prevhash: self.CodeHash(),
 		prevcode: prevcode,
@@ -322,7 +327,7 @@ func (self *StateObject) setCode(codeHash common.Hash, code []byte) {
 }
 
 func (self *StateObject) SetNonce(nonce uint64) {
-	self.db.journal = append(self.db.journal, nonceChange{
+	self.db.journal = append(self.db.journal, &nonceChange{
 		account: &self.address,
 		prev:    self.data.Nonce,
 	})
@@ -369,7 +374,11 @@ func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) ma
 	}
 	iter := leveldb.NewIteratorWithPrefix(GetStorageKeyPrefix(self.address.Bytes()))
 	for iter.Next() {
-		key := common.BytesToHash(SplitCompositeStorageKey(self.address.Bytes(), iter.Key()))
+		k, ok := SplitCompositeStorageKey(self.address.Bytes(), iter.Key())
+		if ok == false {
+			continue
+		}
+		key := common.BytesToHash(k)
 		// ignore cached values
 		if _, ok := self.cachedStorage[key]; !ok {
 			cb(key, common.BytesToHash(iter.Value()))

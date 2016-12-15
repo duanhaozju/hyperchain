@@ -115,7 +115,7 @@ func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
 }
 
 func (self *StateDB) AddLog(log *vm.Log) {
-	self.journal = append(self.journal, addLogChange{txhash: self.thash})
+	self.journal = append(self.journal, &addLogChange{txhash: self.thash})
 
 	log.TxHash = self.thash
 	log.BlockHash = self.bhash
@@ -138,7 +138,7 @@ func (self *StateDB) Logs() vm.Logs {
 }
 
 func (self *StateDB) AddRefund(gas *big.Int) {
-	self.journal = append(self.journal, refundChange{prev: new(big.Int).Set(self.refund)})
+	self.journal = append(self.journal, &refundChange{prev: new(big.Int).Set(self.refund)})
 	self.refund.Add(self.refund, gas)
 }
 
@@ -169,8 +169,8 @@ func (self *StateDB) GetAccounts() map[string]vm.Account {
 
 	iter := leveldb.NewIteratorWithPrefix([]byte(accountIdentifier))
 	for iter.Next() {
-		addr := SplitCompositeAccountKey(iter.Key())
-		if addr == nil {
+		addr, ok := SplitCompositeAccountKey(iter.Key())
+		if ok == false {
 			continue
 		}
 		address := common.BytesToAddress(addr)
@@ -299,7 +299,7 @@ func (self *StateDB) Delete(addr common.Address) bool {
 	if stateObject == nil {
 		return false
 	}
-	self.journal = append(self.journal, suicideChange{
+	self.journal = append(self.journal, &suicideChange{
 		account:     &addr,
 		prev:        stateObject.suicided,
 		prevbalance: new(big.Int).Set(stateObject.Balance()),
@@ -316,7 +316,7 @@ func (self *StateDB) Delete(addr common.Address) bool {
 // updateStateObject writes the given object to the trie.
 func (self *StateDB) updateStateObject(stateObject *StateObject) {
 	addr := stateObject.Address()
-	data, err := stateObject.Marshal()
+	data, err := stateObject.MarshalJSON()
 	if err != nil {
 		log.Error("marshal stateobject failed", addr.Hex())
 	}
@@ -346,7 +346,7 @@ func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObje
 		return nil
 	}
 	var account Account
-	err = json.Unmarshal(data, &account)
+	err = UnmarshalJSON(data, &account)
 	if err != nil {
 		return nil
 	}
@@ -383,9 +383,9 @@ func (self *StateDB) createObject(addr common.Address) (newobj, prev *StateObjec
 	newobj.setNonce(0) // sets the object to dirty
 	if prev == nil {
 		log.Infof("(+) %x\n", addr)
-		self.journal = append(self.journal, createObjectChange{account: &addr})
+		self.journal = append(self.journal, &createObjectChange{account: &addr})
 	} else {
-		self.journal = append(self.journal, resetObjectChange{prev: prev})
+		self.journal = append(self.journal, &resetObjectChange{prev: prev})
 	}
 	self.setStateObject(newobj)
 	return newobj, prev
@@ -559,7 +559,8 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 			batch.Write()
 			// Update the object in the main account trie.
 			s.updateStateObject(stateObject)
-			sd, _ := stateObject.Marshal()
+			// Add to change set
+			sd, _ := stateObject.MarshalJSON()
 			d := append(stateObject.address.Bytes(), sd...)
 			set = append(set, d)
 		}

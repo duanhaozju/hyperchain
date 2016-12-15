@@ -228,6 +228,9 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 
 	// empty block generated, throw all invalid transactions back to original node directly
 	if validationEvent.IsPrimary && len(validTxSet) == 0 {
+		// 1. Remove all cached transaction in this block, because empty block won't enter network
+		pool.consenter.RemoveCachedBatch(validationEvent.SeqNo)
+		// 2. Throw all invalid transaction back to the origin node
 		for _, t := range invalidTxSet {
 			payload, err := proto.Marshal(t)
 			if err != nil {
@@ -299,6 +302,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	}
 
 	state, err := pool.GetStateInstance(initStatus, db)
+	log.Critical("Before", string(state.Dump()))
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
 	env["currentGasLimit"] = "10000000"
@@ -372,6 +376,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		validtxs = append(validtxs, tx)
 	}
 	root, err := state.Commit()
+	log.Critical("After", string(state.Dump()))
 	if err != nil {
 		log.Error("Commit state db failed! error msg, ", err.Error())
 		return err, nil, nil, nil, nil, nil, invalidTxs
@@ -381,6 +386,9 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	receiptRoot := receiptTrie.Hash().Bytes()
 	pool.lastValidationState.Store(root)
 	go public_batch.Write()
+	log.Notice("MERKLE ROOT", root.Hex())
+	log.Notice("TX ROOT", common.Bytes2Hex(txRoot))
+	log.Notice("RECEIPT ROOT", common.Bytes2Hex(receiptRoot))
 	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
 }
 
@@ -440,7 +448,7 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHa
 // Put a new generated block into pool, handle the block saved in queue serially
 func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, primary bool) {
 	if block.Number == 0 {
-		WriteBlock(block, commonHash, 0, false)
+		WriteBlock(block, commonHash, 0, false, pool.consenter)
 		return
 	}
 
@@ -456,14 +464,14 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 	log.Info("number is ", block.Number)
 
 	if pool.demandNumber == block.Number {
-		WriteBlock(block, commonHash, vid, primary)
+		WriteBlock(block, commonHash, vid, primary, pool.consenter)
 		atomic.AddUint64(&pool.demandNumber, 1)
 		log.Info("current demandNumber is ", pool.demandNumber)
 
 		for i := block.Number + 1; i <= atomic.LoadUint64(&pool.maxNum); i += 1 {
 			if ret, existed := pool.queue.Get(i); existed {
 				blk := ret.(*types.Block)
-				WriteBlock(blk, commonHash, vid, primary)
+				WriteBlock(blk, commonHash, vid, primary, pool.consenter)
 				pool.queue.Remove(i)
 				atomic.AddUint64(&pool.demandNumber, 1)
 				log.Info("current demandNumber is ", pool.demandNumber)
@@ -478,7 +486,7 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 }
 
 // WriteBlock: save block into database
-func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, primary bool) {
+func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, primary bool, consenter consensus.Consenter) {
 	log.Info("block number is ", block.Number)
 	core.UpdateChain(block, false)
 
@@ -522,6 +530,12 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, pr
 	newChain := core.GetChainCopy()
 	log.Notice("Block number", newChain.Height)
 	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
+	/*
+		Remove Cached Transactions which used to check transaction duplication
+	 */
+	if primary {
+		consenter.RemoveCachedBatch(vid)
+	}
 }
 
 // save the invalid transaction into database for client query

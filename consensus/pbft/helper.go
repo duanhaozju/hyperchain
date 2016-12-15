@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"hyperchain/protos"
-	"hyperchain/core/types"
 	"hyperchain/consensus/helper/persist"
 
 	"github.com/golang/protobuf/proto"
@@ -32,7 +31,7 @@ func (a sortableUint64Slice) Less(i, j int) bool {
 // helper functions for create batch
 // =============================================================================
 
-func (pbft *pbftProtocal) postRequestEvent(event *types.Transaction) {
+func (pbft *pbftProtocal) postRequestEvent(event interface{}) {
 
 	pbft.muxBatch.Lock()
 	defer pbft.muxBatch.Unlock()
@@ -230,14 +229,13 @@ func (pbft *pbftProtocal) prePrepared(digest string, v uint64, n uint64) bool {
 	_, mInLog := pbft.validatedBatchStore[digest]
 
 	if digest != "" && !mInLog {
-		logger.Debugf("Replica %d havan't store the reqBatch")
+		logger.Debugf("Replica %d havan't store the reqBatch", pbft.id)
 		return false
 	}
 
 	//if q, ok := pbft.qset[qidx{digest, n}]; ok && q.View == v {
 	//	return true
 	//}
-
 	cert := pbft.certStore[msgID{v, n}]
 
 	if cert != nil {

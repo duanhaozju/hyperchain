@@ -47,3 +47,9 @@ type recoveryRestartTimerEvent struct{}
 type recoveryDoneEvent struct{}
 
 type firstRequestTimerEvent struct{}
+
+type removeCache struct {
+	vid uint64
+}
+
+type clearDuplicator struct {}

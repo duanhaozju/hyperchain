@@ -74,9 +74,6 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 		log.Error("the gRPC Manager hasn't initlized")
 		os.Exit(1)
 	}
-	// 重构peerpool 不采用单例模式进行管理
-	this.peersPool = NewPeerPool(this.TEM)
-	this.LocalNode = NewNode(GRPCProt, eventMux, this.NodeID, this.TEM,this.peersPool)
 	//newgRPCManager.IP = newgRPCManager.configs.GetIP(newgRPCManager.NodeID)
 	// 重构peerpool 不采用单例模式进行管理
 	port := this.configs.GetPort(this.NodeID)
@@ -84,7 +81,7 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 		port = GRPCProt
 	}
 
-	this.peersPool = NewPeerPool(this.TEM)
+	this.peersPool = NewPeerPool(this.TEM,GRPCProt,this.NodeID)
 	this.LocalNode = NewNode(port, eventMux, this.NodeID, this.TEM, this.peersPool)
 	this.LocalNode.StartServer()
 	this.LocalNode.N = MAX_PEER_NUM
@@ -288,7 +285,7 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	//log.Warning("call broadcast")
-	go broadcast(this,broadCastMessage, this.peersPool)
+	go broadcast(this, broadCastMessage, this.peersPool)
 }
 
 // inner the broadcast method which serve BroadcastPeers function
@@ -458,7 +455,7 @@ func (this *GrpcPeerManager) UpdateRoutingTable(payload []byte) {
 		log.Error(err)
 	}
 
-	log.Debugf("newPeer: %v", newPeer)
+	log.Debug("newPeer: %v", newPeer)
 	//新消息
 	payload, _ = proto.Marshal(this.LocalNode.address)
 
@@ -497,9 +494,13 @@ func (this *GrpcPeerManager) GetRouterHashifDelete(hash string) (string,uint64){
 	hash = hex.EncodeToString(hasher.Hash(routers).Bytes())
 
 	var ID uint64
-	for _,pers := range this.peersPool.GetPeers(){
-		if pers.Addr.Hash == hash{
-			ID=pers.Addr.ID
+	localHash := this.LocalNode.address.Hash
+	for _,rs := range routers.Routers{
+		log.Debug("RS hash: ", rs.Hash)
+		if rs.Hash == localHash{
+			log.Notice("rs hash: ", rs.Hash)
+			log.Notice("id: ", rs.ID)
+			ID=rs.ID;
 		}
 	}
 	return hex.EncodeToString(hasher.Hash(routers).Bytes()),ID
@@ -507,6 +508,7 @@ func (this *GrpcPeerManager) GetRouterHashifDelete(hash string) (string,uint64){
 
 
 func (this *GrpcPeerManager)  DeleteNode(hash string) error{
+
 	if this.LocalNode.address.Hash == hash {
 		// delete local node and stop all server
 		this.LocalNode.StopServer()
@@ -518,6 +520,30 @@ func (this *GrpcPeerManager)  DeleteNode(hash string) error{
 				this.peersPool.DeletePeer(pers)
 			}
 		}
+		//TODO update node id
+		hasher := crypto.NewKeccak256Hash("keccak256Hanser")
+		routers := this.peersPool.ToRoutingTableWithout(hash)
+		hash = hex.EncodeToString(hasher.Hash(routers).Bytes())
+
+		if hash == this.LocalNode.address.Hash {
+			log.Critical("THIS NODE WAS BEEN CLOSED...")
+			return nil
+		}
+
+		for _,per :=range this.peersPool.GetPeers(){
+			if per.Addr.Hash == hash{
+				this.peersPool.DeletePeer(per)
+			}else{
+				for _,router := range routers.Routers{
+					if router.Hash == per.Addr.Hash{
+						per.Addr = *peerComm.ExtractAddress(router.IP,router.Port,router.ID)
+					}
+				}
+			}
+
+		}
+		return nil
+
 
 	}
 	return nil
