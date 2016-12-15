@@ -70,6 +70,7 @@ type TransactionResult struct {
 	Timestamp   int64         `json:"timestamp"`
 	Nonce       int64         `json:"nonce"`
 	ExecuteTime *Number        `json:"executeTime"`
+	Payload     string	  `json:"payload"`
 	Invalid     bool           `json:"invalid"`
 	InvalidMsg  string           `json:"invalidMsg"`
 }
@@ -446,6 +447,7 @@ func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*Transaction
 				//GasPrice: 	NewInt64ToNumber(txValue.Price),
 				Timestamp:     t.Timestamp,
 				ExecuteTime:   NewInt64ToNumber((blk.WriteTime - blk.Timestamp) / int64(time.Millisecond)),
+				Payload:	common.ToHex(txValue.Payload),
 				Invalid:       false,
 			}
 		} else {
@@ -472,6 +474,7 @@ func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*Transaction
 			//GasPrice: 	NewInt64ToNumber(txValue.Price),
 			Timestamp:      t.Tx.Timestamp,
 			ExecuteTime:    nil,
+			Payload:	common.ToHex(txValue.Payload),
 			Invalid:        true,
 			InvalidMsg: 	t.ErrType.String(),
 		}
