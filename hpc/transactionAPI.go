@@ -103,10 +103,10 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs,error) {
 		return SendTxArgs{}, errors.New("'timestamp' is invalid")
 	}
 	if txType != 3 && args.Signature == "" {
-		return SendTxArgs{}, errors.New("'signature' don't be empty")
+		return SendTxArgs{}, errors.New("'signature' can't be empty")
 	}
 	if args.Nonce == 0 {
-		return SendTxArgs{}, errors.New("'nonce' don't be empty")
+		return SendTxArgs{}, errors.New("'nonce' can't be empty")
 	}
 	return args, nil
 }
