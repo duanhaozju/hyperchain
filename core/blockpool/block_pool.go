@@ -589,6 +589,8 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 		}
 	}
 	pool.blockCache.Purge()
+	// todo is necessary to purge validationQueue
+	pool.validationQueue.Purge()
 	// 4. Reset chain
 	isGenesis := (block.Number == 0)
 	core.UpdateChain(block, isGenesis)
