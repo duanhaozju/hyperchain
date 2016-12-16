@@ -4,6 +4,7 @@ import (
 	"testing"
 	"hyperchain/common"
 	"math/big"
+	"encoding/json"
 )
 
 func TestMarshal(t *testing.T) {
@@ -64,4 +65,43 @@ func TestMarshal(t *testing.T) {
 	err = UnmarshalJournal(res, &jo)
 	t.Log(jo)
 
+}
+
+func TestPointer(t *testing.T) {
+	type FamilyMember struct {
+		Name    string
+		Age     int
+		Parents []string
+	}
+	type A struct {
+		Obj FamilyMember
+	}
+	type B struct {
+		Obj *FamilyMember
+	}
+
+	fam := FamilyMember{
+		Name: "hfl",
+		Age: 18,
+		Parents: []string{"mike", "alice"},
+	}
+
+	t.Log("fam: ", fam)
+	tmp1 := &A{Obj: fam}
+	tmp2 := &B{Obj: &fam}
+
+	t.Log("tmp1: ", tmp1, "tmp2: ", tmp2)
+
+	res1, err1 := json.Marshal(tmp1)
+	res2, err2 := json.Marshal(tmp2)
+	t.Log("res1: ", string(res1), "err1: ", err1)
+	t.Log("res2: ", string(res2), "err2: ", err2)
+
+	tmp3 := A{}
+	tmp4 := B{}
+	err3 := json.Unmarshal(res1, &tmp3)
+	err4 := json.Unmarshal(res2, &tmp4)
+	t.Log("tmp3: ", tmp3, "err3: ", err3)
+	t.Log("tmp4: ", tmp4, "err4: ", err4)
+	t.Log(tmp4.Obj)
 }
