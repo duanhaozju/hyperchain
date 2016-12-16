@@ -20,10 +20,8 @@ var (
 
 // 这一块相当于ethereum里的TransitionDB
 func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
-	//start := time.Now()
 	var (
 		from = common.BytesToAddress(tx.From)
-		//sender = common.BytesToAddress(tx.From)
 		to = common.BytesToAddress(tx.To)
 		tv         = tx.GetTransactionValue()
 		data       = tv.GetPayload()
@@ -31,20 +29,19 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		gasPrice   = tv.GetGasPrice()
 		amount     = tv.GetAmount()
 	)
-	// TODO ZHZ_TEST the time of above will cost 10us
+	//ZHZ_TEST the time of above will cost 10us
 
-	// TODO ZHZ_TEST this will cost 200us
+	//ZHZ_TEST this will cost 200us
 	if tx.To == nil {
 		ret, addr, err = Exec(env, &from, nil, data, gas, gasPrice, amount)
 	} else {
 		ret, _, err = Exec(env, &from, &to, data, gas, gasPrice, amount)
 	}
 
-	// TODO ZHZ_TEST the time of below will cost 10us
+	//ZHZ_TEST the time of below will cost 10us
 	receipt = types.NewReceipt(nil, gas)
 	receipt.ContractAddress = addr.Bytes()
 	receipt.TxHash = tx.GetTransactionHash().Bytes()
-	// todo replace the gasused
 	receipt.GasUsed = 100000
 	receipt.Ret = ret
 	receipt.SetLogs(env.Db().GetLogs(common.BytesToHash(receipt.TxHash)))
@@ -58,7 +55,6 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		receipt.Status = types.Receipt_SUCCESS
 		receipt.Message = nil
 	}
-	//log.Error("manager exec tx time : ", time.Since(start))
 	return receipt, ret, addr, err
 }
 

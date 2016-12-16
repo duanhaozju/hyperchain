@@ -43,6 +43,10 @@ global:
 
     structure:
         state: "hyperstate" # two available options: rawstate or hyperstate
+
+    version:
+        blockversion: "1.0"
+        transactionversion: "1.0"
 ###########################
 # configs
 ############################

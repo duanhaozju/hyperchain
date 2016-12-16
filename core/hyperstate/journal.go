@@ -5,7 +5,6 @@ import (
 	"hyperchain/common"
 	"fmt"
 	"encoding/json"
-	"hyperchain/hyperdb"
 )
 
 type journalEntry interface {
@@ -17,7 +16,7 @@ type journalEntry interface {
 type journal []journalEntry
 
 func (self *journal) Marshal() []byte {
-
+	return nil
 }
 
 func UnmarshalJournal(data []byte, ret *journal) error {

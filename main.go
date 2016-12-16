@@ -122,7 +122,7 @@ func main() {
 		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())
 
 		//init genesis
-		core.CreateInitBlock(config.getGenesisConfigPath(), config.getStateType())
+		core.CreateInitBlock(config.getGenesisConfigPath(), config.getStateType(), config.blockVersion)
 
 		//init pbft consensus
 		cs := controller.NewConsenter(uint64(config.getNodeID()), eventMux, config.getPBFTConfigPath())
@@ -139,9 +139,12 @@ func main() {
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
 
 		//init block pool to save block
-		blockPool := blockpool.NewBlockPool(eventMux, cs, blockpool.BlockPoolConfig{
+		blockPoolConf := blockpool.BlockPoolConf{
+			BlockVersion: config.getBlockVersion(),
+			TransactionVersion: config.getTransactionVersion(),
 			StateType: config.getStateType(),
-		})
+		}
+		blockPool := blockpool.NewBlockPool(eventMux, cs, blockPoolConf)
 		if blockPool == nil {
 			return errors.New("Initialize BlockPool failed")
 		}

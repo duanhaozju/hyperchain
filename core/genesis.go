@@ -13,7 +13,6 @@ import (
 	//"fmt"
 	"github.com/buger/jsonparser"
 	"hyperchain/core/state"
-	"hyperchain/crypto"
 	"math/big"
 	"strconv"
 	"time"
@@ -22,7 +21,7 @@ import (
 	"errors"
 )
 
-func CreateInitBlock(filename string, stateType string) {
+func CreateInitBlock(filename string, stateType string, blockVersion string) {
 	log.Info("genesis start")
 
 	if GetHeightOfChain() > 0 {
@@ -84,9 +83,7 @@ func CreateInitBlock(filename string, stateType string) {
 	}
 
 	log.Debug("构造创世区块")
-	//if err := PutBlock(db, block.BlockHash, &block); err != nil {
-	commonHash := crypto.NewKeccak256Hash("keccak256")
-	if err := PutBlockTx(db, commonHash, block.BlockHash, &block); err != nil {
+	if err, _ := PersistBlock(db.NewBatch(), &block, blockVersion, true, true); err != nil {
 		log.Fatal(err)
 		return
 	}

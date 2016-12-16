@@ -5,9 +5,6 @@
 *.a
 *.so
 #*.json
-/core/hyperstate/hashable_state.go
-/core/hyperstate/state.go
-/core/hyperstate/state_delta_iterator.go
 
 test.go
 core/chche
@@ -111,5 +108,3 @@ build
 #mac.sh
 
 *.DS_Store
-hyperchain.iml
-**/.DS_Store

@@ -2,15 +2,6 @@
 // source: transaction_value.proto
 // DO NOT EDIT!
 
-/*
-Package types is a generated protocol buffer package.
-
-It is generated from these files:
-	transaction_value.proto
-
-It has these top-level messages:
-	TransactionValue
-*/
 package types
 
 import proto "github.com/golang/protobuf/proto"
@@ -21,12 +12,6 @@ import math "math"
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the proto package it is being compiled against.
-// A compilation error at this line likely means your copy of the
-// proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type TransactionValue struct {
 	Price              int64  `protobuf:"varint,1,opt,name=price" json:"price,omitempty"`
@@ -41,15 +26,15 @@ type TransactionValue struct {
 func (m *TransactionValue) Reset()                    { *m = TransactionValue{} }
 func (m *TransactionValue) String() string            { return proto.CompactTextString(m) }
 func (*TransactionValue) ProtoMessage()               {}
-func (*TransactionValue) Descriptor() ([]byte, []int) { return fileDescriptor4, []int{0} }
+func (*TransactionValue) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{0} }
 
 func init() {
 	proto.RegisterType((*TransactionValue)(nil), "types.TransactionValue")
 }
 
-func init() { proto.RegisterFile("transaction_value.proto", fileDescriptor4) }
+func init() { proto.RegisterFile("transaction_value.proto", fileDescriptor6) }
 
-var fileDescriptor4 = []byte{
+var fileDescriptor6 = []byte{
 	// 202 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0x12, 0x2f, 0x29, 0x4a, 0xcc,
 	0x2b, 0x4e, 0x4c, 0x2e, 0xc9, 0xcc, 0xcf, 0x8b, 0x2f, 0x4b, 0xcc, 0x29, 0x4d, 0xd5, 0x2b, 0x28,
