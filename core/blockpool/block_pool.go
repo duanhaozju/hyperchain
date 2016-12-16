@@ -589,6 +589,7 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 		}
 	}
 	pool.blockCache.Purge()
+	pool.validationQueue.Purge()
 	// 4. Reset chain
 	isGenesis := (block.Number == 0)
 	core.UpdateChain(block, isGenesis)
@@ -699,9 +700,13 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 		log.Errorf("miss block %d ,error msg %s", number - 1, err.Error())
 		return
 	}
+	// clear all stuff in block cache and validation cache
 	pool.lastValidationState.Store(common.BytesToHash(block.MerkleRoot))
 }
 func (pool *BlockPool) PurgeValidateQueue() {
 	pool.validationQueue.Purge()
+}
+func (pool *BlockPool) PurgeBlockCache() {
+	pool.blockCache.Purge()
 }
 

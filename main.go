@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"hyperchain/hyperdb"
 )
 
 type argT struct {
@@ -128,6 +129,7 @@ func main() {
 		if blockPool == nil {
 			return errors.New("Initialize BlockPool failed")
 		}
+
 		//init manager
 		exist := make(chan bool)
 		syncReplicaInterval, _ := config.getSyncReplicaInterval()
