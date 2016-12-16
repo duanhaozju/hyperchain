@@ -129,15 +129,6 @@ func main() {
 		if blockPool == nil {
 			return errors.New("Initialize BlockPool failed")
 		}
-		// JUST FOR TEST
-		// MODIFY LATEST BLOCK HASH WHEN RECONNECT
-		if argv.IsReconnect == true && argv.NodeID == 4 {
-			db, _ := hyperdb.GetLDBDatabase()
-			latest, _ := core.GetBlockByNumber(db, core.GetChainCopy().Height)
-			latest.BlockHash = []byte("fakeBlockHash")
-			core.PersistBlock(db.NewBatch(), latest, config.getBlockVersion(), true, true)
-			core.UpdateChainByBlcokNum(db, core.GetChainCopy().Height)
-		}
 
 		//init manager
 		exist := make(chan bool)
