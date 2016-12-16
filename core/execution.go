@@ -57,7 +57,6 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		return nil, common.Address{}, ExecContractErr(1, "Max call depth exceeded 1024")
 	}
 
-	// TODO
 	if !env.CanTransfer(caller.Address(), value) {
 		//caller.ReturnGas(gas, gasPrice)
 		return nil, common.Address{}, ValueTransferErr("insufficient funds to transfer value. Req %v, has %v", value, env.Db().GetBalance(caller.Address()))

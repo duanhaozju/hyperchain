@@ -190,7 +190,11 @@ func (self *StateObject) setState(key, value common.Hash) {
 }
 
 func (self *StateObject) Flush(db hyperdb.Batch) error {
+	// IMPORTANT root should calculate first
+	// otherwise dirty storage will be removed in persist phase
+	self.GenerateFingerPrintOfStorage()
 	for key, value := range self.dirtyStorage {
+		log.Notice("DEBUG key: %s, value %s", key.Hex(), value.Hex())
 		delete(self.dirtyStorage, key)
 		if (value == common.Hash{}) {
 			// delete
@@ -203,7 +207,6 @@ func (self *StateObject) Flush(db hyperdb.Batch) error {
 			}
 		}
 	}
-	self.root = self.GenerateFingerPrintOfStorage()
 	return nil
 }
 
@@ -214,10 +217,14 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 			d := append(k.Bytes(), v.Bytes()...)
 			set = append(set, d)
 		}
-		self.root = kec256Hash.Hash([]interface{}{
-			self.root,
-			set,
-		})
+		// if no change happen, it's no need to re-calculate root
+		if len(set) != 0 {
+			self.root = kec256Hash.Hash([]interface{}{
+				self.root,
+				set,
+			})
+		}
+		log.Error("storage hash", self.root.Hex())
 		return self.root
 	}
 	return common.Hash{}
