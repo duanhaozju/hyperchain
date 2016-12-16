@@ -27,7 +27,7 @@ timeout:
     negoview: 6s
 
     # How long to wait before recovery finished(This is for release1.2)
-    recovery: 5s
+    recovery: 15s
 
     # How long to wait before first request should come
     firstrequest: 30s
