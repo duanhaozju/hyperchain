@@ -25,15 +25,17 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 	proto.Unmarshal(ev.Payload, UpdateStateMessage)
 	blockChainInfo := &protos.BlockchainInfo{}
 	proto.Unmarshal(UpdateStateMessage.TargetId, blockChainInfo)
+	log.Noticef("send sync block request to fetch missing block, current height %d, target height %d", core.GetChainCopy().Height, blockChainInfo.Height)
 	if core.GetChainCopy().RecoveryNum >= blockChainInfo.Height || core.GetChainCopy().Height > blockChainInfo.Height {
 		log.Info("receive invalid state update request, just ignore it")
 		return
 	}
 	if core.GetChainCopy().Height == blockChainInfo.Height {
+		log.Notice("state update target same with current height")
 		// compare current latest block and peer's block hash
 		latestBlock, err := core.GetBlockByNumber(db, core.GetChainCopy().Height)
 		if err != nil || latestBlock == nil || bytes.Compare(blockChainInfo.CurrentBlockHash, latestBlock.BlockHash) != 0 {
-			log.Infof("missing match target blockhash and latest block's hash, target block hash %s, latest block hash %s",
+			log.Noticef("missing match target blockhash and latest block's hash, target block hash %s, latest block hash %s",
 				common.Bytes2Hex(blockChainInfo.CurrentBlockHash), common.Bytes2Hex(latestBlock.BlockHash))
 			// cut down block to latest stable checkpoint
 			self.blockPool.CutdownBlock(blockChainInfo.Height)
@@ -43,7 +45,7 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 			// update chain
 			core.UpdateChainByBlcokNum(db, blockChainInfo.Height-1)
 		} else {
-			log.Info("match target blockhash and latest block's hash")
+			log.Notice("match target blockhash and latest block's hash")
 			self.sendStateUpdatedEvent()
 			return
 		}

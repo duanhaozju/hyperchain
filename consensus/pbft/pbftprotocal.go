@@ -1945,7 +1945,7 @@ func (pbft *pbftProtocal) retryStateTransfer(optional *stateUpdateTarget) {
 
 	pbft.stateTransferring = true
 
-	logger.Debugf("Replica %d is initiating state transfer to seqNo %d", pbft.id, target.seqNo)
+	logger.Noticef("Replica %d is initiating state transfer to seqNo %d", pbft.id, target.seqNo)
 
 	//pbft.batch.pbftManager.Queue() <- stateUpdateEvent // Todo for stateupdate
 	//pbft.consumer.skipTo(target.seqNo, target.id, target.replicas)
@@ -1992,6 +1992,7 @@ func (pbft *pbftProtocal) skipTo(seqNo uint64, id []byte, replicas []uint64) {
 		return
 	}
 	//pbft.UpdateState(&checkpointMessage{seqNo, id}, info, replicas)
+	logger.Notice("seqNo: ", seqNo, "id: ", id, "replicas: ", replicas)
 	pbft.updateState(seqNo, id, replicas)
 }
 

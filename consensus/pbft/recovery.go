@@ -18,7 +18,7 @@ type blkIdx struct {
 // procativeRecovery broadcast a procative recovery message to ask others for recent blocks info
 func (pbft *pbftProtocal) initRecovery() events.Event {
 
-	logger.Debugf("Replica %d now initRecovery", pbft.id)
+	logger.Noticef("Replica %d now initRecovery", pbft.id)
 
 	pbft.rcRspStore = make(map[uint64]*RecoveryResponse)
 
@@ -143,11 +143,38 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 
 	// Fast catch up
 	if lastExec == selfLastExec && curHash == selfCurHash {
-		logger.Debugf("Replica %d in recovery same lastExec: %d, " +
+		logger.Noticef("Replica %d in recovery same lastExec: %d, " +
 			"same block hash: %s, fast catch up", pbft.id, selfLastExec, curHash)
 		pbft.inRecovery = false
 		return recoveryDoneEvent{}
 	}
+
+	if lastExec == selfLastExec && curHash !=  selfCurHash {
+		logger.Noticef("Replica %d in recovery self lastExec: %d, others: %d" +
+			"miss match self block hash: %s, other block hash %s", pbft.id, selfLastExec, lastExec, selfCurHash, curHash)
+
+		id, err := base64.StdEncoding.DecodeString(d)
+		if nil != err {
+			err = fmt.Errorf("Replica %d received a view change whose hash could not be decoded (%s)", pbft.id, d)
+			logger.Error(err.Error())
+			return nil
+		}
+
+		target := &stateUpdateTarget{
+			checkpointMessage: checkpointMessage{
+				seqNo: lastExec,
+				id:    id,
+			},
+			replicas: replicas,
+		}
+
+		pbft.updateHighStateTarget(target)
+		pbft.stateTransfer(target)
+		return nil
+	}
+
+	logger.Noticef("Replica %d in recovery self lastExec: %d, others: %d" +
+		"miss match self block hash: %s, other block hash %s", pbft.id, selfLastExec, lastExec, selfCurHash, curHash)
 
 	pbft.moveWatermarks(n)
 	id, err := base64.StdEncoding.DecodeString(d)
