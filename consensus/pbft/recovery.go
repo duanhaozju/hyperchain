@@ -6,7 +6,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"hyperchain/consensus/events"
 	"encoding/base64"
-	"fmt"
 	"hyperchain/consensus/helper/persist"
 )
 
@@ -114,7 +113,7 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	}
 
 	// find quorum chkpt
-	n, d, replicas, find, _ := pbft.findHighestChkptQuorum()
+	n, lastid, replicas, find, chkptBehind := pbft.findHighestChkptQuorum()
 	lastExec, curHash, execFind := pbft.findLastExecQuorum()
 
 	if !find {
@@ -149,39 +148,18 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		return recoveryDoneEvent{}
 	}
 
-	if lastExec == selfLastExec && curHash !=  selfCurHash {
-		logger.Noticef("Replica %d in recovery self lastExec: %d, others: %d" +
-			"miss match self block hash: %s, other block hash %s", pbft.id, selfLastExec, lastExec, selfCurHash, curHash)
-
-		id, err := base64.StdEncoding.DecodeString(d)
-		if nil != err {
-			err = fmt.Errorf("Replica %d received a view change whose hash could not be decoded (%s)", pbft.id, d)
-			logger.Error(err.Error())
-			return nil
-		}
-
-		target := &stateUpdateTarget{
-			checkpointMessage: checkpointMessage{
-				seqNo: lastExec,
-				id:    id,
-			},
-			replicas: replicas,
-		}
-
-		pbft.updateHighStateTarget(target)
-		pbft.stateTransfer(target)
-		return nil
-	}
-
 	logger.Noticef("Replica %d in recovery self lastExec: %d, others: %d" +
 		"miss match self block hash: %s, other block hash %s", pbft.id, selfLastExec, lastExec, selfCurHash, curHash)
 
-	pbft.moveWatermarks(n)
-	id, err := base64.StdEncoding.DecodeString(d)
-	if nil != err {
-		err = fmt.Errorf("Replica %d received a view change whose hash could not be decoded (%s)", pbft.id, d)
-		logger.Error(err.Error())
-		return nil
+	var id []byte
+	if n != 0 {
+		id, err := base64.StdEncoding.DecodeString(lastid)
+		if nil != err {
+			logger.Errorf("Replica %d cannot decode blockInfoId %s to %+v", pbft.id, lastid, id)
+			return nil
+		}
+	} else {
+		id = []byte("XXX GENESIS")
 	}
 
 	target := &stateUpdateTarget{
@@ -193,9 +171,18 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	}
 
 	pbft.updateHighStateTarget(target)
-	pbft.stateTransfer(target)
 
-	return nil
+	if chkptBehind {
+		pbft.moveWatermarks(n)
+		pbft.stateTransfer(target)
+
+		return nil
+	} else {
+		pbft.helper.VcReset(n+1)
+		state := &stateUpdatedEvent{seqNo: n}
+		go pbft.postPbftEvent(state)
+		return nil
+	}
 }
 
 // findHighestChkptQuorum finds highest one of chkpts which achieve quorum
@@ -234,13 +221,15 @@ func (pbft *pbftProtocal) findHighestChkptQuorum() (n uint64, d string, replicas
 	for ci, peers := range chkpts {
 		if len(peers) >= 2*pbft.f+1 {
 			find = true
-			if ci.n > n {
-				chkptBehind = true
+			if ci.n >= n {
 				n = ci.n
 				d = ci.d
 				replicas = make([]uint64, len(peers))
 				for peer := range peers {
 					replicas = append(replicas, peer)
+				}
+				if ci.n > n {
+					chkptBehind = true
 				}
 			}
 		}
