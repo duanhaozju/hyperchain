@@ -10,17 +10,11 @@ import (
 	"hyperchain/core"
 	"hyperchain/core/types"
 	"hyperchain/common"
-	"bytes"
 )
 
 
 // Entry of state update
 func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
-	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {
-		log.Error("Get database handle failed")
-		return
-	}
 	UpdateStateMessage := &protos.UpdateStateMessage{}
 	proto.Unmarshal(ev.Payload, UpdateStateMessage)
 	blockChainInfo := &protos.BlockchainInfo{}

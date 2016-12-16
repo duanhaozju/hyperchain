@@ -39,7 +39,8 @@ type ProtocolManager struct {
 
 	eventMux          *event.TypeMux
 
-	newBlockSub       event.Subscription
+	validateSub       event.Subscription
+	commitSub         event.Subscription
 	consensusSub      event.Subscription
 	viewChangeSub     event.Subscription
 	respSub           event.Subscription
@@ -94,12 +95,14 @@ func GetEventObject() *event.TypeMux {
 func (pm *ProtocolManager) Start() {
 	pm.wg.Add(1)
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
-	pm.newBlockSub = pm.eventMux.Subscribe(event.CommitOrRollbackBlockEvent{}, event.ExeTxsEvent{})
+	pm.validateSub = pm.eventMux.Subscribe(event.ExeTxsEvent{})
+	pm.commitSub = pm.eventMux.Subscribe(event.CommitOrRollbackBlockEvent{})
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
 	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{}, event.InformPrimaryEvent{})
-	go pm.NewBlockLoop()
+	go pm.validateLoop()
+	go pm.commitLoop()
 	go pm.ConsensusLoop()
 	go pm.syncBlockLoop()
 	go pm.syncCheckpointLoop()
@@ -142,23 +145,31 @@ func (self *ProtocolManager) syncBlockLoop() {
 	}
 }
 
-// listen block msg
-func (self *ProtocolManager) NewBlockLoop() {
+// listen validate msg
+func (self *ProtocolManager) validateLoop() {
 
-	for obj := range self.newBlockSub.Chan() {
+	for obj := range self.validateSub.Chan() {
+
+		switch ev := obj.Data.(type) {
+		case event.ExeTxsEvent:
+			// start validation serially
+			self.blockPool.Validate(ev, self.commonHash, self.AccountManager.Encryption, self.Peermanager)
+		}
+	}
+}
+// listen commit msg
+func (self *ProtocolManager) commitLoop() {
+	for obj := range self.validateSub.Chan() {
 
 		switch ev := obj.Data.(type) {
 
 		case event.CommitOrRollbackBlockEvent:
 			// start commit block serially
 			self.blockPool.CommitBlock(ev, self.commonHash, self.Peermanager)
-
-		case event.ExeTxsEvent:
-			// start validation parallelly
-			go self.blockPool.Validate(ev, self.commonHash, self.AccountManager.Encryption, self.Peermanager)
 		}
 	}
 }
+
 
 func (self *ProtocolManager) respHandlerLoop() {
 
