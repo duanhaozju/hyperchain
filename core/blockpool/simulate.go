@@ -5,33 +5,33 @@ import (
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"
 	"hyperchain/core"
-	"strconv"
 	"hyperchain/common"
 	"errors"
-	"hyperchain/core/vm/params"
 	"hyperchain/event"
 )
 
+// run transaction in a sandbox
+// execution result will not been add to database
 func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
-	// TODO add block number to specify the initial status
-	var env = make(map[string]string)
-	fakeBlockNumber := core.GetHeightOfChain()
-	env["currentNumber"] = strconv.FormatUint(fakeBlockNumber, 10)
-	env["currentGasLimit"] = "10000000"
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		return err
 	}
+	// load latest state status
 	v := pool.lastValidationState.Load()
 	initStatus, ok := v.(common.Hash)
 	if ok == false {
 		return errors.New("Get StateDB Status Failed!")
 	}
+	// initialize state
+	// todo use state copy instead of itself
 	state, err := pool.GetStateInstance(initStatus, db)
 	if err != nil {
 		return err
 	}
-	sandBox := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, state, env)
+	// initialize execution environment
+	fakeBlockNumber := core.GetHeightOfChain()
+	sandBox := initEnvironment(state, fakeBlockNumber)
 	receipt, _, _, err := core.ExecTransaction(*tx, sandBox)
 	if err != nil{
 		var errType types.InvalidTransactionRecord_ErrType
@@ -59,11 +59,13 @@ func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 			log.Error("Marshal tx error")
 			return nil
 		}
+		// persist execution result to local
 		pool.StoreInvalidResp(event.RespInvalidTxsEvent{
 			Payload: payload,
 		})
 		return nil
 	} else {
+		// persist execution result to local
 		err, _ := core.PersistReceipt(db.NewBatch(), receipt, pool.conf.TransactionVersion, true, true)
 		if err != nil {
 			log.Error("Put receipt data into database failed! error msg, ", err.Error())

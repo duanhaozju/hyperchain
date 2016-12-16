@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"hyperchain/common"
 	"errors"
+	"hyperchain/core/vm"
 )
 
 // Validate is an entry of `validate process`
@@ -25,25 +26,27 @@ import (
 // If the demand ValidationEvent arrived, call `PreProcess` function
 // IMPORTANT this function called in parallelly, Make sure all the variable are thread-safe
 func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption, peerManager p2p.PeerManager) {
+	// check whether this is necessary to update max seqNo
 	if validationEvent.SeqNo > atomic.LoadUint64(&pool.maxSeqNo) {
 		atomic.StoreUint64(&pool.maxSeqNo, validationEvent.SeqNo)
 	}
-
+	// check validation event duplication
 	if _, existed := pool.validationQueue.Get(validationEvent.SeqNo); existed {
 		log.Error("receive repeat validation event, ", validationEvent.SeqNo)
 		return
 	}
 
-	// (1) Check SeqNo
+	// check SeqNo
 	if validationEvent.SeqNo < atomic.LoadUint64(&pool.demandSeqNo) {
-		// Receive repeat ValidationEvent
+		// receive invalid validation event
 		log.Error("receive invalid validation event, seqno less than demandseqNo, ", validationEvent.SeqNo)
 		return
 	} else if validationEvent.SeqNo == atomic.LoadUint64(&pool.demandSeqNo) {
-		// Process
+		// process
 		if _, success := pool.PreProcess(validationEvent, commonHash, encryption, peerManager); success {
 			atomic.AddUint64(&pool.demandSeqNo, 1)
-			log.Notice("current demandSeqNo is, ", pool.demandSeqNo)
+			currentDemandSeqNo := atomic.LoadUint64(&pool.demandSeqNo)
+			log.Noticef("current demandSeqNo is %d", currentDemandSeqNo)
 		} else {
 			log.Error("pre process failed")
 			return
@@ -58,16 +61,17 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 		}
 		pool.validationQueue.RemoveWithCond(validationEvent.SeqNo, judge)
 
-		// Process remain event
+		// process remain event
 		for i := validationEvent.SeqNo + 1; i <= atomic.LoadUint64(&pool.maxSeqNo); i += 1 {
 			if ret, existed := pool.validationQueue.Get(i); existed {
 				ev := ret.(event.ExeTxsEvent)
 				if _, success := pool.PreProcess(ev, commonHash, encryption, peerManager); success {
 					pool.validationQueue.Remove(i)
 					atomic.AddUint64(&pool.demandSeqNo, 1)
-					log.Notice("Current demandSeqNo is, ", pool.demandSeqNo)
+					currentDemandSeqNo := atomic.LoadUint64(&pool.demandSeqNo)
+					log.Noticef("current demandSeqNo is %d", currentDemandSeqNo)
 				} else {
-					log.Error("PreProcess Failed")
+					log.Error("pre process failed")
 					return
 				}
 			} else {
@@ -76,7 +80,7 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 		}
 		return
 	} else {
-		log.Notice("Receive ValidationEvent which is not demand, ", validationEvent.SeqNo, "save into cache temporarily")
+		log.Noticef("receive validation event  %d which is not demand, save into cache temporarily", validationEvent.SeqNo)
 		pool.validationQueue.Add(validationEvent.SeqNo, validationEvent)
 	}
 }
@@ -91,7 +95,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	} else {
 		validTxSet = validationEvent.Transactions
 	}
-
+	// remove invalid transaction from transaction list
 	if len(index) > 0 {
 		sort.Ints(index)
 		count := 0
@@ -110,17 +114,20 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	} else {
 		validTxSet = validationEvent.Transactions
 	}
+	// process block in virtual machine
 	err, _, merkleRoot, txRoot, receiptRoot, validTxSet, invalidTxSet := pool.ProcessBlockInVm(validTxSet, invalidTxSet, validationEvent.SeqNo)
 	if err != nil {
-		log.Error("ProcessBlock Failed!, block number: ", validationEvent.SeqNo)
+		log.Error("process block failed!, block number: ", validationEvent.SeqNo)
 		return err, false
 	}
+	// calculate validation result hash for comparison with others
 	hash := commonHash.Hash([]interface{}{
 		merkleRoot,
 		txRoot,
 		receiptRoot,
 	})
-
+	// save validation result into cache
+	// load them in commit phase
 	if len(validTxSet) != 0 {
 		pool.blockCache.Add(hash.Hex(), BlockRecord{
 			TxRoot:      txRoot,
@@ -131,9 +138,9 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 			SeqNo:       validationEvent.SeqNo,
 		})
 	}
-	log.Info("Invalid Tx number: ", len(invalidTxSet))
-	log.Info("Valid Tx number: ", len(validTxSet))
-	// Communicate with PBFT
+	log.Info("invalid transaction number: ", len(invalidTxSet))
+	log.Info("valid transaction number: ", len(validTxSet))
+	// communicate with PBFT
 	pool.consenter.RecvLocal(protos.ValidatedTxs{
 		Transactions: validTxSet,
 		SeqNo:        validationEvent.SeqNo,
@@ -144,7 +151,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 
 	// empty block generated, throw all invalid transactions back to original node directly
 	if validationEvent.IsPrimary && len(validTxSet) == 0 {
-		// 1. Remove all cached transaction in this block, because empty block won't enter network
+		// 1. Remove all cached transaction in this block (which for transaction duplication check purpose), because empty block won't enter network
 		pool.consenter.RemoveCachedBatch(validationEvent.SeqNo)
 		// 2. Throw all invalid transaction back to the origin node
 		for _, t := range invalidTxSet {
@@ -152,6 +159,8 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 			if err != nil {
 				log.Error("Marshal tx error")
 			}
+			// original node is local
+			// store invalid transaction directly, instead of send by network
 			if t.Tx.Id == uint64(peerManager.GetNodeId()) {
 				pool.StoreInvalidResp(event.RespInvalidTxsEvent{
 					Payload: payload,
@@ -160,6 +169,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 			}
 			var peers []uint64
 			peers = append(peers, t.Tx.Id)
+			// send back to original node
 			peerManager.SendMsgToPeers(payload, peers, recovery.Message_INVALIDRESP)
 		}
 	}
@@ -177,7 +187,7 @@ func (pool *BlockPool) checkSign(txs []*types.Transaction, commonHash crypto.Com
 		go func(i int){
 			tx := txs[i]
 			if !tx.ValidateSign(encryption, commonHash) {
-				log.Notice("Validation, found invalid signature, send from :", tx.Id)
+				log.Notice("validation, found invalid signature, send from :", tx.Id)
 				invalidTxSet = append(invalidTxSet, &types.InvalidTransactionRecord{
 					Tx:      tx,
 					ErrType: types.InvalidTransactionRecord_SIGFAILED,
@@ -192,7 +202,6 @@ func (pool *BlockPool) checkSign(txs []*types.Transaction, commonHash crypto.Com
 	}
 	wg.Wait()
 	return invalidTxSet, index
-	//return nil, nil
 }
 
 
@@ -200,34 +209,34 @@ func (pool *BlockPool) checkSign(txs []*types.Transaction, commonHash crypto.Com
 // Return the execution result, such as txs' merkle root, receipts' merkle root, accounts' merkle root and so on
 func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, []byte, []byte, []byte, []byte, []*types.Transaction, []*types.InvalidTransactionRecord) {
 	var validtxs []*types.Transaction
-	var (
-		env = make(map[string]string)
-	)
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		return err, nil, nil, nil, nil, nil, invalidTxs
 	}
+	// build transaction and receipt patricia merkle tree
+	// for calculate fingerprint of a batch of transactions and receipts
 	txTrie, err := pmt.New(common.Hash{}, db)
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
 	receiptTrie, err := pmt.New(common.Hash{}, db)
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
+	// load latest state fingerprint
 	v := pool.lastValidationState.Load()
 	initStatus, ok := v.(common.Hash)
 	if ok == false {
-		return errors.New("Get StateDB Status Failed!"), nil, nil, nil, nil, nil, invalidTxs
+		return errors.New("get state status failed!"), nil, nil, nil, nil, nil, invalidTxs
 	}
-
+	// initialize state
 	state, err := pool.GetStateInstance(initStatus, db)
-	log.Critical("Before", string(state.Dump()))
+	log.Critical("BEFORE", string(state.Dump()))
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
-	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
-	env["currentGasLimit"] = "10000000"
-	vmenv := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, state, env)
-
-	public_batch := db.NewBatch()
+	// initialize execution environment ruleset
+	vmenv := initEnvironment(state, seqNo)
+	// execute transaction one by one
+	batch := db.NewBatch()
 	for i, tx := range txs {
 		state.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(*tx, vmenv)
+		// invalid transaction, check invalid type
 		if err != nil{
 			var errType types.InvalidTransactionRecord_ErrType
 			if core.IsValueTransferErr(err) {
@@ -251,51 +260,62 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 			})
 			continue
 		}
+		// persist transaction
 		var data []byte
-		// Persist transaction
-		err, data = core.PersistTransaction(public_batch, tx, pool.conf.TransactionVersion, false, false);
+		err, data = core.PersistTransaction(batch, tx, pool.conf.TransactionVersion, false, false);
 		if err != nil {
 			log.Error("Put tx data into database failed! error msg, ", err.Error())
 			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
 		txTrie.Update(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...), data)
 
-		// Persist receipt
-		err, data = core.PersistReceipt(public_batch, receipt, pool.conf.TransactionVersion, false, false)
+		// persist receipt
+		err, data = core.PersistReceipt(batch, receipt, pool.conf.TransactionVersion, false, false)
 		if  err != nil {
 			log.Error("Put receipt data into database failed! error msg, ", err.Error())
 			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
 		receiptTrie.Update(append(core.ReceiptsPrefix, receipt.TxHash...), data)
 
-		// Persist transaction meta
+		// persist transaction meta
 		// set temporarily
 		// for primary node, the seqNo can be invalid. remove the incorrect txmeta info when commit block to avoid this error
 		meta := &types.TransactionMeta{
 			BlockIndex: seqNo,
 			Index:      int64(i),
 		}
-		if err := core.PersistTransactionMeta(public_batch, meta, tx.GetTransactionHash(), false, false); err != nil {
+		if err := core.PersistTransactionMeta(batch, meta, tx.GetTransactionHash(), false, false); err != nil {
 			log.Error("Put txmeta into database failed! error msg, ", err.Error())
 			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
 
 		validtxs = append(validtxs, tx)
 	}
+	// flush all state change
 	root, err := state.Commit()
-	log.Critical("After", string(state.Dump()))
 	if err != nil {
 		log.Error("Commit state db failed! error msg, ", err.Error())
 		return err, nil, nil, nil, nil, nil, invalidTxs
 	}
+	// generate new state fingerprint
 	merkleRoot := root.Bytes()
+	// generate transactions and receipts fingerprint
 	txRoot := txTrie.Hash().Bytes()
 	receiptRoot := receiptTrie.Hash().Bytes()
+	// store latest state status
 	pool.lastValidationState.Store(root)
 	// IMPORTANT never forget to call batch.Write, otherwise, all data in batch will be lost
-	go public_batch.Write()
-	log.Notice("MERKLE ROOT", root.Hex())
-	log.Notice("TX ROOT", common.Bytes2Hex(txRoot))
-	log.Notice("RECEIPT ROOT", common.Bytes2Hex(receiptRoot))
+	go batch.Write()
+	// FOR TEST
+	log.Critical("AFTER", string(state.Dump()))
 	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
+}
+
+
+func initEnvironment(state vm.Database, seqNo uint64) vm.Environment {
+	env := make(map[string]string)
+	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
+	env["currentGasLimit"] = "10000000"
+	vmenv := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, state, env)
+	return vmenv
 }

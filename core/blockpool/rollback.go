@@ -52,6 +52,10 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 			}
 		}
 	}
+	// clear cache, all data in cache is useless because consensus module will resend those validation event
+	// IMPORTANT
+	// if validation cache is not clear, new validation event could be ignored, which leads to some event
+	// will never be execute!
 	pool.blockCache.Purge()
 	// 4. Purge validationQueue
 	pool.validationQueue.Purge()
@@ -80,10 +84,7 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 		return
 	}
 	pool.lastValidationState.Store(common.BytesToHash(block.MerkleRoot))
-	// 4. purge block cache and validation queue
-	pool.blockCache.Purge()
-	pool.validationQueue.Purge()
-	// 5. reset chain data
+	// 4. reset chain data
 	core.UpdateChainByBlcokNum(db, block.Number)
 }
 

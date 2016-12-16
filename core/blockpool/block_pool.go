@@ -43,18 +43,22 @@ type BlockPoolConf struct {
 }
 
 type BlockPool struct {
+	// IMPORTANT atomic variable. make sure use atomic operation to use those variable
 	demandNumber        uint64         // current demand number for commit
 	demandSeqNo         uint64         // current demand seqNo for validation
 	maxNum              uint64         // max block number in queue cache for commit
 	maxSeqNo            uint64         // max validation event number in validation queue
+	lastValidationState atomic.Value        // latest state root hash
+	// external stuff
 	consenter           consensus.Consenter // consensus module handler
 	eventMux            *event.TypeMux      // message queue
 	stateLock           sync.Mutex          // block pool lock
 	wg                  sync.WaitGroup      // for shutdown sync
-	lastValidationState atomic.Value        // latest state root hash
+	// thread safe cache
 	blockCache          *common.Cache       // cache for validation result
 	validationQueue     *common.Cache       // cache for storing validation event
 	queue               *common.Cache       // cache for storing commit event
+	// config
 	conf                BlockPoolConf       // block configuration
 }
 
@@ -77,8 +81,8 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter, conf B
 	}
 	// 1. set demand number and demand seqNo
 	currentChain := core.GetChainCopy()
-	pool.demandNumber = currentChain.Height + 1
-	pool.demandSeqNo = currentChain.Height + 1
+	atomic.StoreUint64(&pool.demandNumber, currentChain.Height+1)
+	atomic.AddUint64(&pool.demandSeqNo, currentChain.Height+1)
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {return nil}
 	// get latest block
@@ -104,6 +108,7 @@ func (pool *BlockPool) SetDemandSeqNo(seqNo uint64) {
 // obtain state handler via configuration in block.conf
 // two state: (1)raw state (2) hyper state are supported
 func (pool *BlockPool) GetStateInstance(root common.Hash, db hyperdb.Database) (vm.Database, error) {
+	// todo change to singleton
 	switch pool.conf.StateType {
 	case "rawstate":
 		return statedb.New(root, db)

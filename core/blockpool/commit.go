@@ -115,13 +115,13 @@ func(pool *BlockPool) WriteBlock(block *types.Block, commonHash crypto.CommonHas
 
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
-		log.Error("Get Database Instance Failed! error msg,", err.Error())
+		log.Error("get database instance failed! error msg,", err.Error())
 		return
 	}
 	// for primary node, check whether vid equal to block's number
 	batch := db.NewBatch()
 	if primary && vid != block.Number {
-		log.Info("Replace invalid txmeta data, block number:", block.Number)
+		log.Info("replace invalid txmeta data, block number:", block.Number)
 		for i, tx := range block.Transactions {
 			meta := &types.TransactionMeta{
 				BlockIndex: block.Number,
@@ -129,7 +129,7 @@ func(pool *BlockPool) WriteBlock(block *types.Block, commonHash crypto.CommonHas
 			}
 			// replace with correct value
 			if err := core.PersistTransactionMeta(batch, meta, tx.GetTransactionHash(), false, false); err != nil {
-				log.Error("Invalid txmeta sturct, marshal failed! error msg,", err.Error())
+				log.Error("invalid txmeta sturct, marshal failed! error msg,", err.Error())
 				return
 			}
 		}
