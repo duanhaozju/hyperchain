@@ -503,10 +503,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case event.ValidatedTxs:
 		err = pbft.recvValidatedResult(et)
 	case negoViewDoneEvent:
-		logger.Notice("################################################")
-		logger.Noticef("#   Replica %d finished negotiating view: %d", pbft.id, pbft.view)
-		logger.Notice("################################################")
-		logger.Notice("-----Hyperchain negotiate view successfully!-----")
+		logger.Noticef("######## Replica %d finished negotiating view: %d", pbft.id, pbft.view)
 		primary := pbft.primary(pbft.view)
 		if primary == pbft.id {
 			pbft.sendNullRequest()
@@ -527,10 +524,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case *RecoveryReturnPQC:
 		return pbft.recvRecoveryReturnPQC(et)
 	case recoveryDoneEvent:
-		logger.Notice("################################################")
-		logger.Noticef("#   Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
-		logger.Notice("################################################")
-		logger.Notice("-----Hyperchain recover successfully!-----")
+		logger.Noticef("######## Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
 		if pbft.recvNewViewInRecovery {
 			logger.Noticef("#  Replica %d find itself received NewView during Recovery" +
 				", will restart negotiate view", pbft.id)
@@ -1945,7 +1939,7 @@ func (pbft *pbftProtocal) retryStateTransfer(optional *stateUpdateTarget) {
 
 	pbft.stateTransferring = true
 
-	logger.Noticef("Replica %d is initiating state transfer to seqNo %d", pbft.id, target.seqNo)
+	logger.Infof("Replica %d is initiating state transfer to seqNo %d", pbft.id, target.seqNo)
 
 	//pbft.batch.pbftManager.Queue() <- stateUpdateEvent // Todo for stateupdate
 	//pbft.consumer.skipTo(target.seqNo, target.id, target.replicas)
