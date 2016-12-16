@@ -228,19 +228,14 @@ func DeleteTransaction(db hyperdb.Database, key []byte) error {
 
 func GetAllTransaction(db *hyperdb.LDBDatabase) ([]*types.Transaction, error) {
 	var ts []*types.Transaction = make([]*types.Transaction, 0)
-	iter := db.NewIterator()
-	for ok := iter.Seek(TransactionPrefix); ok; ok = iter.Next() {
-		key := iter.Key()
-		if len(string(key)) >= len(TransactionPrefix) && string(key[:len(TransactionPrefix)]) == string(TransactionPrefix) {
-			var wrapper types.TransactionWrapper
-			var transaction types.Transaction
-			value := iter.Value()
-			proto.Unmarshal(value, &wrapper)
-			proto.Unmarshal(wrapper.Transaction, &transaction)
-			ts = append(ts, &transaction)
-		} else {
-			break
-		}
+	iter := db.NewIteratorWithPrefix(TransactionPrefix)
+	for iter.Next() {
+		var wrapper types.TransactionWrapper
+		var transaction types.Transaction
+		value := iter.Value()
+		proto.Unmarshal(value, &wrapper)
+		proto.Unmarshal(wrapper.Transaction, &transaction)
+		ts = append(ts, &transaction)
 	}
 	iter.Release()
 	err := iter.Error()
@@ -249,17 +244,12 @@ func GetAllTransaction(db *hyperdb.LDBDatabase) ([]*types.Transaction, error) {
 
 func GetAllDiscardTransaction(db *hyperdb.LDBDatabase) ([]*types.InvalidTransactionRecord, error) {
 	var ts []*types.InvalidTransactionRecord = make([]*types.InvalidTransactionRecord, 0)
-	iter := db.NewIterator()
-	for ok := iter.Seek(InvalidTransactionPrefix); ok; ok = iter.Next() {
-		key := iter.Key()
-		if len(string(key)) >= len(InvalidTransactionPrefix) && string(key[:len(InvalidTransactionPrefix)]) == string(InvalidTransactionPrefix) {
-			var t types.InvalidTransactionRecord
-			value := iter.Value()
-			proto.Unmarshal(value, &t)
-			ts = append(ts, &t)
-		} else {
-			break
-		}
+	iter := db.NewIteratorWithPrefix(InvalidTransactionPrefix)
+	for iter.Next() {
+		var t types.InvalidTransactionRecord
+		value := iter.Value()
+		proto.Unmarshal(value, &t)
+		ts = append(ts, &t)
 	}
 	iter.Release()
 	err := iter.Error()

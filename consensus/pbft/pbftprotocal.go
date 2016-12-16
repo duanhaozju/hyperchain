@@ -969,6 +969,7 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 		pbft.fetchRecoveryPQC(peers)
 		return nil
 	}
+
 	return nil
 }
 
@@ -1238,6 +1239,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 		logger.Debug("after pre-prepare seq is:",prep.BatchDigest)
 
 		return pbft.helper.InnerBroadcast(msg)
+
 	}
 
 	return nil

@@ -363,7 +363,7 @@ func (pbft *pbftProtocal) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) even
 		// recv preprepare
 		cert := pbft.getCert(preprep.View, preprep.SequenceNumber)
 		if cert.digest != preprep.BatchDigest {
-			pbft.recvPrePrepare(preprep)
+			go pbft.postPbftEvent(preprep)
 		}
 		// recv prepare
 		if preSent[i] {
@@ -373,7 +373,7 @@ func (pbft *pbftProtocal) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) even
 				BatchDigest:		preprep.BatchDigest,
 				ReplicaId:		sender,
 			}
-			pbft.recvPrepare(prep)
+			go pbft.postPbftEvent(prep)
 		}
 		// recv commit
 		if cmtSent[i] {
@@ -383,7 +383,7 @@ func (pbft *pbftProtocal) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) even
 				BatchDigest:		preprep.BatchDigest,
 				ReplicaId:		sender,
 			}
-			pbft.recvCommit(cmt)
+			go pbft.postPbftEvent(cmt)
 		}
 	}
 
