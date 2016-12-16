@@ -26,29 +26,9 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 	blockChainInfo := &protos.BlockchainInfo{}
 	proto.Unmarshal(UpdateStateMessage.TargetId, blockChainInfo)
 	log.Noticef("send sync block request to fetch missing block, current height %d, target height %d", core.GetChainCopy().Height, blockChainInfo.Height)
-	if core.GetChainCopy().RecoveryNum >= blockChainInfo.Height || core.GetChainCopy().Height > blockChainInfo.Height {
+	if core.GetChainCopy().RecoveryNum >= blockChainInfo.Height || core.GetChainCopy().Height >= blockChainInfo.Height {
 		log.Info("receive invalid state update request, just ignore it")
 		return
-	}
-	if core.GetChainCopy().Height == blockChainInfo.Height {
-		log.Notice("state update target same with current height")
-		// compare current latest block and peer's block hash
-		latestBlock, err := core.GetBlockByNumber(db, core.GetChainCopy().Height)
-		if err != nil || latestBlock == nil || bytes.Compare(blockChainInfo.CurrentBlockHash, latestBlock.BlockHash) != 0 {
-			log.Noticef("missing match target blockhash and latest block's hash, target block hash %s, latest block hash %s",
-				common.Bytes2Hex(blockChainInfo.CurrentBlockHash), common.Bytes2Hex(latestBlock.BlockHash))
-			// cut down block to latest stable checkpoint
-			self.blockPool.CutdownBlock(blockChainInfo.Height)
-			// update demand number and demand seq no
-			self.blockPool.SetDemandNumber(blockChainInfo.Height)
-			self.blockPool.SetDemandSeqNo(blockChainInfo.Height)
-			// update chain
-			core.UpdateChainByBlcokNum(db, blockChainInfo.Height-1)
-		} else {
-			log.Notice("match target blockhash and latest block's hash")
-			self.sendStateUpdatedEvent()
-			return
-		}
 	}
 	// send block request message to remote peer
 	required := &recovery.CheckPointMessage{
@@ -268,5 +248,6 @@ func (self *ProtocolManager) sendStateUpdatedEvent() {
 	time.Sleep(2 * time.Second)
 	// IMPORTANT clear block cache of blockpool
 	self.blockPool.PurgeValidateQueue()
+	self.blockPool.PurgeBlockCache()
 	self.consenter.RecvMsg(msgPayload)
 }
