@@ -948,7 +948,6 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 	pbft.moveWatermarks(pbft.lastExec) // The watermark movement handles moving this to a checkpoint boundary
 	pbft.skipInProgress = false
 	pbft.validateState()
-	pbft.executeAfterStateUpdate()
 
 	if pbft.inRecovery {
 		if pbft.lastExec == pbft.recoveryToSeqNo {
@@ -969,6 +968,9 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 		pbft.fetchRecoveryPQC(peers)
 		return nil
 	}
+
+	pbft.executeAfterStateUpdate()
+
 	return nil
 }
 
@@ -1238,6 +1240,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 		logger.Debug("after pre-prepare seq is:",prep.BatchDigest)
 
 		return pbft.helper.InnerBroadcast(msg)
+
 	}
 
 	return nil

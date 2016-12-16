@@ -25,78 +25,30 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 	proto.Unmarshal(ev.Payload, UpdateStateMessage)
 	blockChainInfo := &protos.BlockchainInfo{}
 	proto.Unmarshal(UpdateStateMessage.TargetId, blockChainInfo)
-
-	// 1. check whether during the state update process
-	if core.GetChainCopy().RecoveryNum != 0 || blockChainInfo.Height < 0 {
-		log.Info("receive invalid stateupdate request, just ignore it")
+	log.Notice("Replica: ", UpdateStateMessage.Replicas)
+	if core.GetChainCopy().RecoveryNum >= blockChainInfo.Height || core.GetChainCopy().Height > blockChainInfo.Height {
+		log.Info("receive invalid state update request, just ignore it")
 		return
 	}
-	// 2. compare current height and target height
-	if blockChainInfo.Height < core.GetChainCopy().Height {
-		// cut down block to latest stable checkpoint
-		tmp := blockChainInfo.Height - blockChainInfo.Height % 10
-		log.Noticef("state update target %d, current height %d, Cut down to %d first", blockChainInfo.Height, core.GetChainCopy().Height, tmp)
-		for i := core.GetChainCopy().Height; i > tmp; i -= 1 {
-			self.blockPool.CutdownBlock(i)
-		}
-		// update demand number and demand seq no
-		self.blockPool.SetDemandNumber(tmp+1)
-		self.blockPool.SetDemandSeqNo(tmp+1)
-		// update chain
-		core.UpdateChainByBlcokNum(db, tmp)
-		log.Noticef("current chain height %d, current chain latest block hash %s", core.GetChainCopy().Height, common.Bytes2Hex(core.GetChainCopy().LatestBlockHash))
-	} else if blockChainInfo.Height == core.GetChainCopy().Height {
+	if core.GetChainCopy().Height == blockChainInfo.Height {
 		// compare current latest block and peer's block hash
 		latestBlock, err := core.GetBlockByNumber(db, core.GetChainCopy().Height)
 		if err != nil || latestBlock == nil || bytes.Compare(blockChainInfo.CurrentBlockHash, latestBlock.BlockHash) != 0 {
 			log.Infof("missing match target blockhash and latest block's hash, target block hash %s, latest block hash %s",
 				common.Bytes2Hex(blockChainInfo.CurrentBlockHash), common.Bytes2Hex(latestBlock.BlockHash))
 			// cut down block to latest stable checkpoint
-			tmp := blockChainInfo.Height - blockChainInfo.Height % 10
-			log.Infof("state update target %d, current height %d, Cut down to %d first", blockChainInfo.Height, core.GetChainCopy().Height, tmp)
-			for i := core.GetChainCopy().Height; i > tmp; i -= 1 {
-				self.blockPool.CutdownBlock(i)
-			}
+			self.blockPool.CutdownBlock(blockChainInfo.Height)
 			// update demand number and demand seq no
-			self.blockPool.SetDemandNumber(tmp+1)
-			self.blockPool.SetDemandSeqNo(tmp+1)
+			self.blockPool.SetDemandNumber(blockChainInfo.Height)
+			self.blockPool.SetDemandSeqNo(blockChainInfo.Height)
 			// update chain
-			core.UpdateChainByBlcokNum(db, tmp)
+			core.UpdateChainByBlcokNum(db, blockChainInfo.Height-1)
 		} else {
 			log.Info("match target blockhash and latest block's hash")
+			self.sendStateUpdatedEvent()
 			return
 		}
-	} else {
-		// normal state update process
 	}
-
-	// check whether it's necessary to request block from remote peer
-	if blockChainInfo.Height == core.GetChainCopy().Height {
-		// state update success
-		payload := &protos.StateUpdatedMessage{
-			SeqNo: core.GetChainCopy().Height,
-		}
-		msg, err := proto.Marshal(payload)
-		if err != nil {
-			log.Error("StateUpdate marshal stateupdated message failed")
-			return
-		}
-		msgSend := &protos.Message{
-			Type:      protos.Message_STATE_UPDATED,
-			Payload:   msg,
-			Timestamp: time.Now().UnixNano(),
-			Id:        1,
-		}
-		msgPayload, err := proto.Marshal(msgSend)
-		if err != nil {
-			log.Error(err)
-			return
-		}
-		log.Notice("send state updated message")
-		self.consenter.RecvMsg(msgPayload)
-		return
-	}
-
 	// send block request message to remote peer
 	required := &recovery.CheckPointMessage{
 		RequiredNumber: blockChainInfo.Height,
@@ -196,29 +148,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 								core.UpdateRequire(uint64(0), []byte{}, uint64(0))
 								core.SetReplicas(nil)
 								core.SetId(0)
-
-								payload := &protos.StateUpdatedMessage{
-									SeqNo: core.GetChainCopy().Height,
-								}
-								msg, err := proto.Marshal(payload)
-								if err != nil {
-									log.Error("StateUpdate marshal stateupdated message failed")
-									return
-								}
-								msgSend := &protos.Message{
-									Type:      protos.Message_STATE_UPDATED,
-									Payload:   msg,
-									Timestamp: time.Now().UnixNano(),
-									Id:        1,
-								}
-								msgPayload, err := proto.Marshal(msgSend)
-								if err != nil {
-									log.Error(err)
-									return
-								}
-								time.Sleep(2000 * time.Millisecond)
-								log.Notice("send state updated message")
-								self.consenter.RecvMsg(msgPayload)
+								self.sendStateUpdatedEvent()
 								break
 							} else {
 								// the highest block in local is invalid, request the block
@@ -312,7 +242,30 @@ func (self *ProtocolManager) updateRequire(block *types.Block) error {
 	return nil
 }
 
-func (self *ProtocolManager) CheckHash() {
-
+func (self *ProtocolManager) sendStateUpdatedEvent() {
+	// state update success
+	payload := &protos.StateUpdatedMessage{
+		SeqNo: core.GetChainCopy().Height,
+	}
+	msg, err := proto.Marshal(payload)
+	if err != nil {
+		log.Error("StateUpdate marshal stateupdated message failed")
+		return
+	}
+	msgSend := &protos.Message{
+		Type:      protos.Message_STATE_UPDATED,
+		Payload:   msg,
+		Timestamp: time.Now().UnixNano(),
+		Id:        1,
+	}
+	msgPayload, err := proto.Marshal(msgSend)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	log.Notice("send state updated message")
+	time.Sleep(2 * time.Second)
+	// IMPORTANT clear block cache of blockpool
+	self.blockPool.PurgeBlockCache()
+	self.consenter.RecvMsg(msgPayload)
 }
-

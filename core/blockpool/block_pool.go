@@ -701,5 +701,7 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 	}
 	pool.lastValidationState.Store(common.BytesToHash(block.MerkleRoot))
 }
-
+func (pool *BlockPool) PurgeBlockCache() {
+	pool.blockCache.Purge()
+}
 
