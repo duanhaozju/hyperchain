@@ -25,7 +25,6 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 	proto.Unmarshal(ev.Payload, UpdateStateMessage)
 	blockChainInfo := &protos.BlockchainInfo{}
 	proto.Unmarshal(UpdateStateMessage.TargetId, blockChainInfo)
-	log.Notice("Replica: ", UpdateStateMessage.Replicas)
 	if core.GetChainCopy().RecoveryNum >= blockChainInfo.Height || core.GetChainCopy().Height > blockChainInfo.Height {
 		log.Info("receive invalid state update request, just ignore it")
 		return
@@ -263,9 +262,9 @@ func (self *ProtocolManager) sendStateUpdatedEvent() {
 		log.Error(err)
 		return
 	}
-	log.Notice("send state updated message")
+	log.Debug("send state updated message")
 	time.Sleep(2 * time.Second)
 	// IMPORTANT clear block cache of blockpool
-	self.blockPool.PurgeBlockCache()
+	self.blockPool.PurgeValidateQueue()
 	self.consenter.RecvMsg(msgPayload)
 }

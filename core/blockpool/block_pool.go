@@ -110,7 +110,7 @@ func (pool *BlockPool) SetDemandSeqNo(seqNo uint64) {
 // If the demand ValidationEvent arrived, call `PreProcess` function
 // IMPORTANT this function called in parallelly, Make sure all the variable are thread-safe
 func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption, peerManager p2p.PeerManager) {
-	if validationEvent.SeqNo > pool.maxSeqNo {
+	if validationEvent.SeqNo > atomic.LoadUint64(&pool.maxSeqNo) {
 		atomic.StoreUint64(&pool.maxSeqNo, validationEvent.SeqNo)
 	}
 
@@ -120,11 +120,11 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 	}
 
 	// (1) Check SeqNo
-	if validationEvent.SeqNo < pool.demandSeqNo {
+	if validationEvent.SeqNo < atomic.LoadUint64(&pool.demandSeqNo)  {
 		// Receive repeat ValidationEvent
 		log.Error("Receive Repeat ValidationEvent, seqno less than demandseqNo, ", validationEvent.SeqNo)
 		return
-	} else if validationEvent.SeqNo == pool.demandSeqNo {
+	} else if validationEvent.SeqNo == atomic.LoadUint64(&pool.demandSeqNo)  {
 		// Process
 		if _, success := pool.PreProcess(validationEvent, commonHash, encryption, peerManager); success {
 			atomic.AddUint64(&pool.demandSeqNo, 1)
@@ -701,7 +701,7 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 	}
 	pool.lastValidationState.Store(common.BytesToHash(block.MerkleRoot))
 }
-func (pool *BlockPool) PurgeBlockCache() {
-	pool.blockCache.Purge()
+func (pool *BlockPool) PurgeValidateQueue() {
+	pool.validationQueue.Purge()
 }
 
