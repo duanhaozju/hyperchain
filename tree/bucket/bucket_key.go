@@ -29,6 +29,7 @@ func constructRootBucketKey() *bucketKey {
 	return newBucketKey(0, 1)
 }
 
+// TODO the Decode function should be changed
 func decodeBucketKey(keyBytes []byte) bucketKey {
 	level, numBytesRead := proto.DecodeVarint(keyBytes[1:])
 	bucketNumber, _ := proto.DecodeVarint(keyBytes[numBytesRead+1:])
@@ -61,7 +62,6 @@ func (bucketKey *bucketKey) getChildKey(index int) *bucketKey {
 func (bucketKey *bucketKey) getEncodedBytes(treePrefix string) []byte {
 	encodedBytes := []byte{}
 	encodedBytes = append(encodedBytes,[]byte(treePrefix)...)
-	encodedBytes = append(encodedBytes, byte(0))
 	encodedBytes = append(encodedBytes, proto.EncodeVarint(uint64(bucketKey.level))...)
 	encodedBytes = append(encodedBytes, proto.EncodeVarint(uint64(bucketKey.bucketNumber))...)
 	return encodedBytes

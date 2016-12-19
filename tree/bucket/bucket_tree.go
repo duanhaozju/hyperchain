@@ -113,7 +113,7 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 	afftectedBuckets := bucketTree.dataNodesDelta.getAffectedBuckets()
 	for _, bucketKey := range afftectedBuckets {
 		updatedDataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(bucketKey)
-		existingDataNodes, err := fetchDataNodesFromDBFor(bucketKey)
+		existingDataNodes, err := fetchDataNodesFromDBFor(bucketTree.treePrefix,bucketKey)
 		if err != nil {
 			return err
 		}

@@ -5,9 +5,9 @@ import (
 )
 type rawKey []byte
 
+// TODO test
 func fetchDataNodeFromDB(dataKey *dataKey) (*dataNode, error) {
 	db, err := hyperdb.GetLDBDatabase()
-	// TODO is the key ok?
 	nodeBytes, err := db.Get(dataKey.getEncodedBytes())
 	if err != nil {
 		return nil, err
@@ -43,11 +43,12 @@ func fetchBucketNodeFromDB(treePrefix string,bucketKey *bucketKey) (*bucketNode,
 
 
 // TODO it need to be tested
-func fetchDataNodesFromDBFor(bucketKey *bucketKey) (dataNodes, error) {
+func fetchDataNodesFromDBFor(treePrefix string,bucketKey *bucketKey) (dataNodes, error) {
 	db,_ := hyperdb.GetLDBDatabase()
 	iter := db.NewIterator()
 
-	minimumDataKeyBytes := minimumPossibleDataKeyBytesFor(bucketKey)
+	minimumDataKeyBytes := minimumPossibleDataKeyBytesFor(bucketKey,treePrefix)
+
 	var dataNodes dataNodes
 	iter.Seek(minimumDataKeyBytes)
 

@@ -2,18 +2,17 @@ package bucket
 
 import (
 	"testing"
-	"github.com/spf13/viper"
 	"BucketTree/bucket/testutil"
 )
 
 func TestConfigInit(t *testing.T) {
-	configs := viper.GetStringMap("ledger.state.dataStructure.configs")
+	/*configs := viper.GetStringMap("ledger.state.dataStructure.configs")
 	t.Logf("Configs loaded from yaml = %#v", configs)
 	testDBWrapper.CleanDB(t)
 	stateImpl := NewBucketTree("testAccountAddr")
 	stateImpl.Initialize(configs)
 	testutil.AssertEquals(t, conf.getNumBucketsAtLowestLevel(), configs[ConfigNumBuckets])
-	testutil.AssertEquals(t, conf.getMaxGroupingAtEachLevel(), configs[ConfigMaxGroupingAtEachLevel])
+	testutil.AssertEquals(t, conf.getMaxGroupingAtEachLevel(), configs[ConfigMaxGroupingAtEachLevel])*/
 }
 
 func TestConfig(t *testing.T) {

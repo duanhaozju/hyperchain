@@ -20,16 +20,10 @@ func newDataKey(accountID string, key string) *dataKey {
 	return dataKey
 }
 
-func minimumPossibleDataKeyBytesFor(bucketKey *bucketKey) []byte {
+func minimumPossibleDataKeyBytesFor(bucketKey *bucketKey,treePrefix string) []byte {
 	min := encodeBucketNumber(bucketKey.bucketNumber)
-	min = append(min, byte(0))
+	min = append(min, []byte(treePrefix)...)
 	return min
-}
-
-func minimumPossibleDataKeyBytes(bucketNumber int, accountID string, key string) []byte {
-	b := encodeBucketNumber(bucketNumber)
-	b = append(b, ConstructCompositeKey(accountID, key)...)
-	return b
 }
 
 func (key *dataKey) getBucketKey() *bucketKey {
