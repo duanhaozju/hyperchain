@@ -15,13 +15,13 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/event"
 	"hyperchain/protos"
-	"hyperchain/consensus/helper/persist"
-	"hyperchain/common"
+	//"hyperchain/consensus/helper/persist"
+	//"hyperchain/common"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
-	"hyperchain/core"
+	//"hyperchain/core"
 )
 
 var logger *logging.Logger // package-level logger
@@ -462,10 +462,10 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		return pbft.recvCheckpoint(et)
 	case *stateUpdatedEvent:
 		//pbft.batch.reqStore = newRequestStore()
-		height, hash := persist.GetBlockHeightAndHash()
-		logger.Critical("height: ", height, "hash: ", hash)
-		chain := core.GetChainCopy()
-		logger.Critical("height: ", chain.Height, "hash: ", common.Bytes2Hex(chain.LatestBlockHash))
+		//height, hash := persist.GetBlockHeightAndHash()
+		//logger.Critical("height: ", height, "hash: ", hash)
+		//chain := core.GetChainCopy()
+		//logger.Critical("height: ", chain.Height, "hash: ", common.Bytes2Hex(chain.LatestBlockHash))
 		err = pbft.recvStateUpdatedEvent(et)
 	case *ViewChange:
 		return pbft.recvViewChange(et)
@@ -1993,7 +1993,7 @@ func (pbft *pbftProtocal) skipTo(seqNo uint64, id []byte, replicas []uint64) {
 		return
 	}
 	//pbft.UpdateState(&checkpointMessage{seqNo, id}, info, replicas)
-	logger.Notice("seqNo: ", seqNo, "id: ", id, "replicas: ", replicas)
+	logger.Debug("seqNo: ", seqNo, "id: ", id, "replicas: ", replicas)
 	pbft.updateState(seqNo, id, replicas)
 }
 

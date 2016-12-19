@@ -377,7 +377,6 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	merkleRoot := root.Bytes()
 	txRoot := txTrie.Hash().Bytes()
 	receiptRoot := receiptTrie.Hash().Bytes()
-	log.Noticef("seqNo %d merkle root %s tx root %s receipt root %s", seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	pool.lastValidationState.Store(root)
 	go public_batch.Write()
 	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
@@ -453,12 +452,9 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 		return
 	}
 
-	log.Info("number is ", block.Number)
-
 	if pool.demandNumber == block.Number {
 		WriteBlock(block, commonHash, vid, primary, pool.consenter)
 		atomic.AddUint64(&pool.demandNumber, 1)
-		log.Info("current demandNumber is ", pool.demandNumber)
 
 		for i := block.Number + 1; i <= atomic.LoadUint64(&pool.maxNum); i += 1 {
 			if ret, existed := pool.queue.Get(i); existed {
@@ -479,7 +475,6 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 
 // WriteBlock: save block into database
 func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, primary bool, consenter consensus.Consenter) {
-	log.Info("block number is ", block.Number)
 	core.UpdateChain(block, false)
 
 	db, err := hyperdb.GetLDBDatabase()
@@ -513,11 +508,9 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, pr
 	// flush to disk
 	// IMPORTANT never remove this statement, otherwise the whole batch of data will lose
 	batch.Write()
-
 	if block.Number%10 == 0 && block.Number != 0 {
 		core.WriteChainChan()
 	}
-
 	newChain := core.GetChainCopy()
 	log.Notice("Block number", newChain.Height)
 	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
@@ -594,7 +587,6 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	// 4. Reset chain
 	isGenesis := (block.Number == 0)
 	core.UpdateChain(block, isGenesis)
-	log.Errorf("VC RESET hash", common.Bytes2Hex(core.GetChainCopy().LatestBlockHash))
 }
 func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 	// TODO add block number to specify the initial status
