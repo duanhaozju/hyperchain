@@ -25,11 +25,11 @@ type dataNodesDelta struct {
 }
 
 // TODO should be test by rjl and zhz
-func newDataNodesDelta(accountID string,key_valueMap K_VMap) *dataNodesDelta {
+func newDataNodesDelta(treePrefix string,key_valueMap K_VMap) *dataNodesDelta {
 	dataNodesDelta := &dataNodesDelta{make(map[bucketKey]dataNodes)}
 	// TODO optimized
 	for key, value := range key_valueMap {
-		dataNodesDelta.add(accountID, key,value)
+		dataNodesDelta.add(treePrefix, key,value)
 	}
 	for _, dataNodes := range dataNodesDelta.byBucket {
 		sort.Sort(dataNodes)
@@ -37,8 +37,8 @@ func newDataNodesDelta(accountID string,key_valueMap K_VMap) *dataNodesDelta {
 	return dataNodesDelta
 }
 
-func (dataNodesDelta *dataNodesDelta) add(accountID string, key string, value []byte) {
-	dataKey := newDataKey(accountID, key)
+func (dataNodesDelta *dataNodesDelta) add(treePrefix string, key string, value []byte) {
+	dataKey := newDataKey(treePrefix, key)
 	bucketKey := dataKey.getBucketKey()
 	dataNode := newDataNode(dataKey, value)
 	logger.Debugf("Adding dataNode=[%s] against bucketKey=[%s]", dataNode, bucketKey)
