@@ -65,7 +65,7 @@ func (state *State) GetHash() ([]byte,error){
 
 // TODO test
 // AddChangesForPersistence adds key-value pairs to writeBatch
-func (state *State) AddChangesForPersistence(blockNumber uint64, writeBatch *hyperdb.Batch) {
+func (state *State) AddChangesForPersistence(writeBatch *hyperdb.Batch) {
 	logger.Debug("state.addChangesForPersistence()...start")
 	if state.updateStateImpl {
 		state.stateImpl.PrepareWorkingSet(state.key_valueMap)
