@@ -27,7 +27,7 @@ func fetchDataNodeFromDB(dataKey *dataKey) (*dataNode, error) {
 // TODO test
 func fetchBucketNodeFromDB(treePrefix string,bucketKey *bucketKey) (*bucketNode, error) {
 	db,_ := hyperdb.GetLDBDatabase()
-	nodeKey := append([]byte(treePrefix),bucketKey.getEncodedBytes()...)
+	nodeKey := bucketKey.getEncodedBytes(treePrefix)
 	nodeBytes, err := db.Get(nodeKey)
 	if err.Error() == "leveldb: not found"{
 		return nil,nil
