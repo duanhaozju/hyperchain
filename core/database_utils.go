@@ -493,8 +493,13 @@ func UpdateChain(block *types.Block, genesis bool) error {
 	defer memChainMap.lock.Unlock()
 	memChainMap.data.LatestBlockHash = block.BlockHash
 	memChainMap.data.ParentBlockHash = block.ParentHash
+	if genesis {
+		memChainMap.data.Height = 0
+		memChainMap.data.CurrentTxSum = 0
+	}
 	if !genesis {
 		memChainMap.data.Height = block.Number
+		// todo
 		memChainMap.data.CurrentTxSum += uint64(len(block.Transactions))
 	}
 	db, err := hyperdb.GetLDBDatabase()

@@ -15,10 +15,13 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/event"
 	"hyperchain/protos"
+	"hyperchain/consensus/helper/persist"
+	"hyperchain/common"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
+	"hyperchain/core"
 )
 
 var logger *logging.Logger // package-level logger
@@ -459,6 +462,10 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		return pbft.recvCheckpoint(et)
 	case *stateUpdatedEvent:
 		//pbft.batch.reqStore = newRequestStore()
+		height, hash := persist.GetBlockHeightAndHash()
+		logger.Critical("height: ", height, "hash: ", hash)
+		chain := core.GetChainCopy()
+		logger.Critical("height: ", chain.Height, "hash: ", common.Bytes2Hex(chain.LatestBlockHash))
 		err = pbft.recvStateUpdatedEvent(et)
 	case *ViewChange:
 		return pbft.recvViewChange(et)
@@ -856,7 +863,7 @@ func (pbft *pbftProtocal) eventToMsg(msg *ConsensusMessage) (interface{}, error)
 		rrb := &TransactionBatch{}
 		err := proto.Unmarshal(msg.Payload, rrb)
 		if err != nil {
-			logger.Error("Unmarshal error, can not unmarshal ConsensusMessage_RETURN_REQUEST_BATCH:", err)
+			logger.Error("Unmarshal stringerror, can not unmarshal ConsensusMessage_RETURN_REQUEST_BATCH:", err)
 			return nil, err
 		}
 		return returnRequestBatchEvent(rrb), nil

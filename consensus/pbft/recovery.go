@@ -178,6 +178,7 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 
 		return nil
 	} else {
+		logger.Critical("send stateupdated")
 		pbft.helper.VcReset(n+1)
 		state := &stateUpdatedEvent{seqNo: n}
 		go pbft.postPbftEvent(state)

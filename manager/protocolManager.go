@@ -159,7 +159,7 @@ func (self *ProtocolManager) validateLoop() {
 }
 // listen commit msg
 func (self *ProtocolManager) commitLoop() {
-	for obj := range self.validateSub.Chan() {
+	for obj := range self.commitSub.Chan() {
 
 		switch ev := obj.Data.(type) {
 

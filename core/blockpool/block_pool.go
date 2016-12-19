@@ -377,6 +377,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	merkleRoot := root.Bytes()
 	txRoot := txTrie.Hash().Bytes()
 	receiptRoot := receiptTrie.Hash().Bytes()
+	log.Noticef("seqNo %d merkle root %s tx root %s receipt root %s", seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	pool.lastValidationState.Store(root)
 	go public_batch.Write()
 	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
@@ -593,6 +594,7 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	// 4. Reset chain
 	isGenesis := (block.Number == 0)
 	core.UpdateChain(block, isGenesis)
+	log.Errorf("VC RESET hash", common.Bytes2Hex(core.GetChainCopy().LatestBlockHash))
 }
 func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 	// TODO add block number to specify the initial status

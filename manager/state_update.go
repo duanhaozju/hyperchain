@@ -119,6 +119,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 										self.blockPool.SetDemandSeqNo(blk.Number + 1)
 									}
 								}
+								log.Critical("revovery num: ", core.GetChainCopy().RecoveryNum)
 								core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum)
 								core.UpdateRequire(uint64(0), []byte{}, uint64(0))
 								core.SetReplicas(nil)
