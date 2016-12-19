@@ -55,9 +55,7 @@ type StateObject struct {
 	// by StateDB.Commit.
 	dbErr error
 
-	root common.Hash      // storage fingerprint
 	code Code             // contract bytecode, which gets set when code is loaded
-
 	cachedStorage Storage // Storage entry cache to avoid duplicate reads
 	dirtyStorage  Storage // Storage entries that need to be flushed to disk
 
@@ -119,7 +117,7 @@ func UnmarshalJSON(data []byte, v interface{}) error {
 // String
 func (c *StateObject) String() string {
 	var str string
-	str = fmt.Sprintf("stateObject: Nonce %d, Balance %d, Root %s, CodeHash %s\n", c.Nonce(), c.Balance(), c.root.Hex(), common.BytesToHash(c.CodeHash()).Hex())
+	str = fmt.Sprintf("stateObject: Nonce %d, Balance %d, Root %s, CodeHash %s\n", c.Nonce(), c.Balance(), c.Root().Hex(), common.BytesToHash(c.CodeHash()).Hex())
 	return str
 }
 
@@ -194,7 +192,7 @@ func (self *StateObject) Flush(db hyperdb.Batch) error {
 	// otherwise dirty storage will be removed in persist phase
 	self.GenerateFingerPrintOfStorage()
 	for key, value := range self.dirtyStorage {
-		log.Notice("DEBUG key: %s, value %s", key.Hex(), value.Hex())
+		log.Debugf("flush dirty storage item key: %s, value %s", key.Hex(), value.Hex())
 		delete(self.dirtyStorage, key)
 		if (value == common.Hash{}) {
 			// delete
@@ -219,13 +217,12 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 		}
 		// if no change happen, it's no need to re-calculate root
 		if len(set) != 0 {
-			self.root = kec256Hash.Hash([]interface{}{
-				self.root,
+			self.SetRoot(kec256Hash.Hash([]interface{}{
+				self.Root(),
 				set,
-			})
+			}))
 		}
-		log.Error("storage hash", self.root.Hex())
-		return self.root
+		return self.Root()
 	}
 	return common.Hash{}
 }
@@ -284,7 +281,6 @@ func (self *StateObject) deepCopy(db *StateDB, onDirty func(addr common.Address)
 	stateObject.suicided = self.suicided
 	stateObject.dirtyCode = self.dirtyCode
 	stateObject.deleted = self.deleted
-	stateObject.root = self.root
 	return stateObject
 }
 
@@ -361,6 +357,13 @@ func (self *StateObject) Nonce() uint64 {
 	return self.data.Nonce
 }
 
+func (self *StateObject) Root() common.Hash {
+	return self.data.Root
+}
+
+func (self *StateObject) SetRoot(root common.Hash) {
+	self.data.Root = root
+}
 // Never called, but must be present to allow StateObject to be used
 // as a vm.Account interface that also satisfies the vm.ContractRef
 // interface. Interfaces are awesome.

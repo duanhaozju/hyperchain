@@ -1,4 +1,4 @@
-package buckettree
+package bucket
 
 // TODO test
 // 1.fetchDataNodeFromDB

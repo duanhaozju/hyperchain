@@ -1,4 +1,4 @@
-package buckettree
+package bucket
 import 	(
 	"golang.org/x/crypto/sha3"
 	"encoding/binary"

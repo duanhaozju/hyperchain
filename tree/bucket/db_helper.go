@@ -1,4 +1,4 @@
-package buckettree
+package bucket
 
 import (
 	"hyperchain/hyperdb"
@@ -29,6 +29,9 @@ func fetchBucketNodeFromDB(accountID string,bucketKey *bucketKey) (*bucketNode, 
 	db,_ := hyperdb.GetLDBDatabase()
 	nodeKey := append([]byte(accountID),bucketKey.getEncodedBytes()...)
 	nodeBytes, err := db.Get(nodeKey)
+	if err.Error() == "leveldb: not found"{
+		return nil,nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -39,9 +42,29 @@ func fetchBucketNodeFromDB(accountID string,bucketKey *bucketKey) (*bucketNode, 
 }
 
 
-// TODO how to featch datanodes iterate
+// TODO it need to be tested
 func fetchDataNodesFromDBFor(bucketKey *bucketKey) (dataNodes, error) {
-	logger.Debugf("Fetching from DB data nodes for bucket [%s]", bucketKey)
-	//db,_ := hyperdb.GetLDBDatabase()
-	return nil, nil
+	db,_ := hyperdb.GetLDBDatabase()
+	iter := db.NewIterator()
+
+	minimumDataKeyBytes := minimumPossibleDataKeyBytesFor(bucketKey)
+	var dataNodes dataNodes
+	iter.Seek(minimumDataKeyBytes)
+
+	for ; iter.Valid(); iter.Next() {
+		keyBytes := iter.Key()
+		valueBytes := iter.Value()
+
+		dataKey := newDataKeyFromEncodedBytes(keyBytes)
+		logger.Debugf("Retrieved data key [%s] from DB for bucket [%s]", dataKey, bucketKey)
+		if !dataKey.getBucketKey().equals(bucketKey) {
+			logger.Debugf("Data key [%s] from DB does not belong to bucket = [%s]. Stopping further iteration and returning results [%v]", dataKey, bucketKey, dataNodes)
+			return dataNodes, nil
+		}
+		dataNode := unmarshalDataNode(dataKey, valueBytes)
+		logger.Debugf("Data node [%s] from DB belongs to bucket = [%s]. Including the key in results...", dataNode, bucketKey)
+		dataNodes = append(dataNodes, dataNode)
+	}
+	logger.Debugf("Returning results [%v]", dataNodes)
+	return dataNodes, nil
 }

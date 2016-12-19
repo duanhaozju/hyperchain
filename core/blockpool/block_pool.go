@@ -118,3 +118,4 @@ func (pool *BlockPool) GetStateInstance(root common.Hash, db hyperdb.Database) (
 		return nil, errors.New("no state type specified")
 	}
 }
+

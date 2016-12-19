@@ -1,4 +1,4 @@
-package buckettree
+package bucket
 
 import (
 	"fmt"
@@ -30,7 +30,7 @@ type config struct {
 	hashFunc               hashFunc
 }
 
-func initConfig(configs map[string]interface{}) {
+func  initConfig(configs map[string]interface{}) {
 	logger.Infof("configs passed during initialization = %#v", configs)
 
 	numBuckets, ok := configs[ConfigNumBuckets].(int)

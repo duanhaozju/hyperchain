@@ -1,13 +1,13 @@
-package buckettree
+package bucket
 
 import (
 	"bytes"
 	"github.com/op/go-logging"
-	"hyperchain/core/hyperstate"
 	"hyperchain/hyperdb"
 )
 
 var logger = logging.MustGetLogger("buckettree")
+type K_VMap map[string][]byte
 
 // StateImpl - implements the interface - 'statemgmt.HashableState'
 type StateImpl struct {
@@ -21,8 +21,8 @@ type StateImpl struct {
 }
 
 // NewStateImpl constructs a new StateImpl
-func NewStateImpl(contractAddr string) *StateImpl {
-	return &StateImpl{AccountID:contractAddr}
+func NewStateImpl(accountID string) *StateImpl {
+	return &StateImpl{AccountID:accountID}
 }
 
 // Initialize - method implementation for interface 'statemgmt.HashableState'
@@ -61,14 +61,14 @@ func (stateImpl *StateImpl) Get(key string) ([]byte, error) {
 
 // PrepareWorkingSet - method implementation for interface 'statemgmt.HashableState'
 // TODO test the stateImpl just accept the stateDelta which accountID equals
-func (stateImpl *StateImpl) PrepareWorkingSet(stateDelta *hyperstate.StateDelta) error {
+func (stateImpl *StateImpl) PrepareWorkingSet(key_valueMap K_VMap) error {
 	logger.Debug("Enter - PrepareWorkingSet()")
 
-	if stateDelta.IsEmpty() {
+	if key_valueMap == nil || len(key_valueMap) == 0 {
 		logger.Debug("Ignoring working-set as it is empty")
 		return nil
 	}
-	stateImpl.dataNodesDelta = newDataNodesDelta(stateDelta)
+	stateImpl.dataNodesDelta = newDataNodesDelta(stateImpl.AccountID,key_valueMap)
 	stateImpl.bucketTreeDelta = newBucketTreeDelta()
 	stateImpl.recomputeCryptoHash = true
 	return nil
@@ -121,6 +121,7 @@ func (stateImpl *StateImpl) processDataNodeDelta() error {
 		logger.Debugf("Crypto-hash for lowest-level bucket [%s] is [%x]", bucketKey, cryptoHashForBucket)
 		parentBucket := stateImpl.bucketTreeDelta.getOrCreateBucketNode(bucketKey.getParentKey())
 		parentBucket.setChildCryptoHash(bucketKey, cryptoHashForBucket)
+		logger.Notice("*******************the cryptoHashForBucket is ",cryptoHashForBucket)
 	}
 	return nil
 }

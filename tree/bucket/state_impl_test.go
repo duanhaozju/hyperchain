@@ -1,8 +1,9 @@
-package buckettree
+package bucket
 
 import (
+	"testing"
+	"BucketTree/bucket/testutil"
 )
-
 // TODO test
 // 1.addDataNodeChangesForPersistence
 // 2.addBucketNodeChangesForPersistence
@@ -11,41 +12,43 @@ import (
 // TODO add
 // 1.GetStateSnapshotIterator
 // 2.GetRangeScanIterator
+var (
+	TestAccountID = "testStateImplName"
+)
 
-//
-//func TestStateImpl_ComputeHash_AllInMemory_NoContents(t *testing.T) {
-//	testDBWrapper.CleanDB(t)
-//	stateImplTestWrapper := newStateImplTestWrapper(t)
-//	hash := stateImplTestWrapper.prepareWorkingSetAndComputeCryptoHash(statemgmt.NewStateDelta())
-//	testutil.AssertEquals(t, hash, nil)
-//}
-//
-//func TestStateImpl_ComputeHash_AllInMemory_1(t *testing.T) {
-//	// number of buckets at each level 26,9,3,1
-//	testHasher, stateImplTestWrapper, stateDelta := createFreshDBAndInitTestStateImplWithCustomHasher(t, 26, 3)
-//	testHasher.populate("chaincodeID1", "key1", 0)
-//	testHasher.populate("chaincodeID2", "key2", 0)
-//	testHasher.populate("chaincodeID3", "key3", 0)
-//	testHasher.populate("chaincodeID4", "key4", 3)
-//
-//	stateDelta.Set("chaincodeID1", "key1", []byte("value1"), nil)
-//	stateDelta.Set("chaincodeID2", "key2", []byte("value2"), nil)
-//	stateDelta.Set("chaincodeID3", "key3", []byte("value3"), nil)
-//	stateDelta.Set("chaincodeID4", "key4", []byte("value4"), nil)
-//
-//	rootHash := stateImplTestWrapper.prepareWorkingSetAndComputeCryptoHash(stateDelta)
-//
-//	expectedHashBucket3_1 := expectedBucketHashForTest(
-//		[]string{"chaincodeID1", "key1", "value1"},
-//		[]string{"chaincodeID2", "key2", "value2"},
-//		[]string{"chaincodeID3", "key3", "value3"},
-//	)
-//	expectedHashBucket3_4 := expectedBucketHashForTest(
-//		[]string{"chaincodeID4", "key4", "value4"},
-//	)
-//	expectedHash := testutil.ComputeCryptoHash(expectedHashBucket3_1, expectedHashBucket3_4)
-//	testutil.AssertEquals(t, rootHash, expectedHash)
-//}
+func TestStateImpl_ComputeHash_AllInMemory_NoContents(t *testing.T) {
+	/*testDBWrapper.CleanDB(t)
+	stateImplTestWrapper := newStateImplTestWrapper(t,TestAccountID)
+	hash := stateImplTestWrapper.prepareWorkingSetAndComputeCryptoHash(NewStateDelta())
+	testutil.AssertEquals(t, hash, nil)*/
+}
+
+func TestStateImpl_ComputeHash_AllInMemory_1(t *testing.T) {
+	// number of buckets at each level 26,9,3,1
+	testHasher, stateImplTestWrapper, stateDelta := createFreshDBAndInitTestStateImplWithCustomHasher(t, 26, 3,"TestStateImpl_ComputeHash_AllInMemory_1")
+	testHasher.populate("chaincodeID1", "key1", 0)
+	testHasher.populate("chaincodeID2", "key2", 0)
+	testHasher.populate("chaincodeID3", "key3", 0)
+	testHasher.populate("chaincodeID4", "key4", 3)
+
+	stateDelta[append("chaincodeID1", "key1")]= []byte("value1")
+	stateDelta[append("chaincodeID2", "key2")]= []byte("value2")
+	stateDelta[append("chaincodeID3", "key3")]= []byte("value3")
+	stateDelta[append("chaincodeID4", "key4")]= []byte("value4")
+
+	rootHash := stateImplTestWrapper.prepareWorkingSetAndComputeCryptoHash(stateDelta)
+
+	expectedHashBucket3_1 := expectedBucketHashForTest(
+		[]string{"chaincodeID1", "key1", "value1"},
+		[]string{"chaincodeID2", "key2", "value2"},
+		[]string{"chaincodeID3", "key3", "value3"},
+	)
+	expectedHashBucket3_4 := expectedBucketHashForTest(
+		[]string{"chaincodeID4", "key4", "value4"},
+	)
+	expectedHash := testutil.ComputeCryptoHash(expectedHashBucket3_1, expectedHashBucket3_4)
+	testutil.AssertEquals(t, rootHash, expectedHash)
+}
 //
 //func TestStateImpl_ComputeHash_AllInMemory_2(t *testing.T) {
 //	// number of buckets at each level 26,13,7,4,2,1

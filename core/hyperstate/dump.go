@@ -46,7 +46,6 @@ func (self *StateDB) RawDump() World {
 		}
 		code, _ := self.db.Get(CompositeCodeHash(address, account.CodeHash))
 		// code could by empty
-		log.Error("dump hash", account.Root.Hex())
 		user := User{
 			Balance:  account.Balance.String(),
 			Nonce:    account.Nonce,
@@ -57,9 +56,8 @@ func (self *StateDB) RawDump() World {
 		}
 		storageIt := leveldb.NewIteratorWithPrefix(GetStorageKeyPrefix(address))
 		for storageIt.Next() {
-			log.Errorf("dump %s  %s", common.Bytes2Hex(storageIt.Key()), common.Bytes2Hex(storageIt.Value()))
 			storageKey, _ := SplitCompositeStorageKey(address, storageIt.Key())
-			log.Errorf("dump format %s %s", common.Bytes2Hex(storageKey), common.Bytes2Hex(storageIt.Value()))
+			log.Debugf("dump key %s value %s", common.Bytes2Hex(storageKey), common.Bytes2Hex(storageIt.Value()))
 			user.Storage[common.Bytes2Hex(storageKey)] = common.Bytes2Hex(storageIt.Value())
 		}
 		world.Users[common.Bytes2Hex(address)] = user

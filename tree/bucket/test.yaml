@@ -5,7 +5,7 @@
 ###############################################################################
 peer:
     # Path on the file system where peer will store data
-    fileSystemPath: /var/hyperchain/test/ledger/statemgmt/buckettree/testdb
+    fileSystemPath: /tmp/hyperchain/cachedb
 ledger:
   state:
     dataStructure:

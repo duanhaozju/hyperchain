@@ -14,6 +14,7 @@ import (
 
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
+	"hyperchain/core/util"
 )
 
 type TestRandomNumberGenerator struct {
@@ -151,7 +152,7 @@ func AssertPanic(t testing.TB, msg string) {
 }
 
 func ComputeCryptoHash(content ...[]byte) []byte {
-	return ComputeCryptoHash(AppendAll(content...))
+	return util.ComputeCryptoHash(AppendAll(content...))
 }
 
 func AppendAll(content ...[]byte) []byte {

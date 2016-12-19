@@ -2,7 +2,6 @@ package hyperstate
 
 import (
 	"bytes"
-	"hyperchain/common"
 )
 
 const storageIdentifier = "-storage"
@@ -26,7 +25,6 @@ func GetStorageKeyPrefix(address []byte) []byte {
 func SplitCompositeStorageKey(address []byte, key []byte) ([]byte, bool) {
 	prefix := append([]byte(storageIdentifier), address...)
 	prefixLen := len(prefix)
-	log.Error("SplitCompositeStorageKey", common.Bytes2Hex(key), common.Bytes2Hex(prefix))
 	if bytes.HasPrefix(key, prefix) {
 		return key[prefixLen:], true
 	} else {

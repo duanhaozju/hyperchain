@@ -1,9 +1,8 @@
-package buckettree
+package bucket
 
 import (
 	"bytes"
 	"sort"
-	"hyperchain/core/hyperstate"
 )
 
 // Code for managing changes in data nodes
@@ -26,19 +25,11 @@ type dataNodesDelta struct {
 }
 
 // TODO should be test by rjl and zhz
-func newDataNodesDelta(stateDelta *hyperstate.StateDelta) *dataNodesDelta {
+func newDataNodesDelta(accountID string,key_valueMap K_VMap) *dataNodesDelta {
 	dataNodesDelta := &dataNodesDelta{make(map[bucketKey]dataNodes)}
 	// TODO optimized
-	accountIDs := stateDelta.GetUpdatedAccountIds(false)
-	for _, accountID := range accountIDs {
-		updates := stateDelta.GetUpdates(accountID)
-		for key, updatedValue := range updates {
-			if stateDelta.RollBackwards {
-				dataNodesDelta.add(accountID, key, updatedValue.GetPreviousValue())
-			} else {
-				dataNodesDelta.add(accountID, key, updatedValue.GetValue())
-			}
-		}
+	for key, value := range key_valueMap {
+		dataNodesDelta.add(accountID, key,value)
 	}
 	for _, dataNodes := range dataNodesDelta.byBucket {
 		sort.Sort(dataNodes)

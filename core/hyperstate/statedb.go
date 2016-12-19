@@ -17,7 +17,6 @@ import (
 const (
 	// Number of codehash->size associations to keep.
 	codeSizeCacheSize = 100000
-
 	// whether turn on fake hash function
 	enableFakeHashFn =  true
 	// whether to remove empty stateObject
@@ -60,6 +59,7 @@ type StateDB struct {
 
 // Create a new state from a given root
 func New(root common.Hash, db hyperdb.Database) (*StateDB, error) {
+	// TODO add root validation check
 	csc, _ := lru.New(codeSizeCacheSize)
 	return &StateDB{
 		db:                db,
@@ -94,7 +94,7 @@ func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 func (self *StateDB) Reset(root common.Hash) error {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-
+	// TODO add root validation check
 	self.root = root
 	self.stateObjects = make(map[common.Address]*StateObject)
 	self.stateObjectsDirty = make(map[common.Address]struct{})
@@ -116,7 +116,6 @@ func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
 
 func (self *StateDB) AddLog(log *vm.Log) {
 	self.journal = append(self.journal, &addLogChange{txhash: self.thash})
-
 	log.TxHash = self.thash
 	log.BlockHash = self.bhash
 	log.TxIndex = uint(self.txIndex)
@@ -465,7 +464,6 @@ func (self *StateDB) RevertToSnapshot(copy interface{}) {
 	// Replay the journal to undo changes.
 	for i := len(self.journal) - 1; i >= snapshot; i-- {
 		self.journal[i].undo(self)
-		log.Error("UNDO", self.journal[i])
 	}
 	self.journal = self.journal[:snapshot]
 
@@ -483,6 +481,7 @@ func (self *StateDB) GetRefund() *big.Int {
 // IntermediateRoot computes the current root hash of the state trie.
 // It is called in between transactions to get the root hash that
 // goes into transaction receipts.
+// Deprecated
 func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	return common.Hash{}
 }
@@ -492,6 +491,7 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 //
 // DeleteSuicides should not be used for consensus related updates
 // under any circumstances.
+// Deprecated
 func (s *StateDB) DeleteSuicides() {
 	// Reset refund so that any used-gas calculations can use this method.
 	s.clearJournalAndRefund()
@@ -525,6 +525,7 @@ func (s *StateDB) CommitBatch(deleteEmptyObjects bool) (root common.Hash, batch 
 }
 
 func (s *StateDB) clearJournalAndRefund() {
+	// TODO add journal persist
 	s.journal = nil
 	s.validRevisions = s.validRevisions[:0]
 	s.refund = new(big.Int)

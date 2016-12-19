@@ -1,4 +1,4 @@
-package buckettree
+package bucket
 
 import (
 	"fmt"

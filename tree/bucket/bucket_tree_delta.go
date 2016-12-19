@@ -1,4 +1,4 @@
-package buckettree
+package bucket
 
 type byBucketNumber map[int]*bucketNode
 

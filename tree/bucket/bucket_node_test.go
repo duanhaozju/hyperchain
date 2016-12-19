@@ -1,9 +1,10 @@
-package buckettree
+package bucket
 
 import 	(
 	"testing"
-	"hyperchain/tree/bucket/testutil"
+	"BucketTree/bucket/testutil"
 )
+
 func TestBucketNodeComputeHash(t *testing.T) {
 	conf = newConfig(26, 3, fnvHash)
 	bucketNode := newBucketNode(newBucketKey(2, 7))
@@ -15,6 +16,7 @@ func TestBucketNodeComputeHash(t *testing.T) {
 
 	childKey3 := newBucketKey(3, 21)
 	bucketNode.setChildCryptoHash(childKey3, []byte("cryptoHashChild3"))
+	testutil.ComputeCryptoHash([]byte("cryptoHashChild1cryptoHashChild3"))
 	testutil.AssertEquals(t, bucketNode.computeCryptoHash(), testutil.ComputeCryptoHash([]byte("cryptoHashChild1cryptoHashChild3")))
 
 	childKey2 := newBucketKey(3, 20)
@@ -54,4 +56,3 @@ func TestBucketNodeMarshalUnmarshal(t *testing.T) {
 	testutil.AssertEquals(t, bucketNode.bucketKey, deserializedBucketNode.bucketKey)
 	testutil.AssertEquals(t, bucketNode.childrenCryptoHash, deserializedBucketNode.childrenCryptoHash)
 }
-
