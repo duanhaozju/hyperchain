@@ -25,7 +25,7 @@ func TestMain(m *testing.M) {
 
 func newStateImplTestWrapper(t testing.TB,accountID string) *stateImplTestWrapper {
 	var configMap map[string]interface{}
-	stateImpl := NewStateImpl(accountID)
+	stateImpl := NewBucketTree(accountID)
 	err := stateImpl.Initialize(configMap)
 	testutil.AssertNoError(t, err, "Error while constrcuting stateImpl")
 	return &stateImplTestWrapper{configMap, stateImpl, t}
@@ -83,7 +83,7 @@ func createFreshDBAndInitTestStateImplWithCustomHasher(t testing.TB, numBuckets 
 	}
 
 	testDBWrapper.CleanDB(t)
-	stateImpl := NewStateImpl(testAccontID)
+	stateImpl := NewBucketTree(testAccontID)
 	stateImpl.Initialize(configMap)
 	stateImplTestWrapper := &stateImplTestWrapper{configMap, stateImpl, t}
 	key_valueMap := make(K_VMap)

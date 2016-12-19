@@ -21,7 +21,7 @@ type BucketTree struct {
 }
 
 // NewStateImpl constructs a new StateImpl
-func NewStateImpl(tree_prefix string) *BucketTree {
+func NewBucketTree(tree_prefix string) *BucketTree {
 	return &BucketTree{treePrefix:tree_prefix}
 }
 

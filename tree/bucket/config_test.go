@@ -10,7 +10,7 @@ func TestConfigInit(t *testing.T) {
 	configs := viper.GetStringMap("ledger.state.dataStructure.configs")
 	t.Logf("Configs loaded from yaml = %#v", configs)
 	testDBWrapper.CleanDB(t)
-	stateImpl := NewStateImpl("testAccountAddr")
+	stateImpl := NewBucketTree("testAccountAddr")
 	stateImpl.Initialize(configs)
 	testutil.AssertEquals(t, conf.getNumBucketsAtLowestLevel(), configs[ConfigNumBuckets])
 	testutil.AssertEquals(t, conf.getMaxGroupingAtEachLevel(), configs[ConfigMaxGroupingAtEachLevel])
