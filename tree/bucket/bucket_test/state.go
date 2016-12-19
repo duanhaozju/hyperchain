@@ -21,7 +21,7 @@ func init(){
 // This encapsulates a particular implementation for managing the state persistence
 // This is not thread safe
 type State struct {
-	stateImpl    bucket.StateImpl
+	stateImpl    bucket.BucketTree
 	key_valueMap  bucket.K_VMap
 	updateStateImpl bool
 }

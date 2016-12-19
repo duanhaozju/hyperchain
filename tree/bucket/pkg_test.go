@@ -9,7 +9,7 @@ import (
 )
 type stateImplTestWrapper struct {
 	configMap map[string]interface{}
-	stateImpl *StateImpl
+	stateImpl *BucketTree
 	t         testing.TB
 }
 

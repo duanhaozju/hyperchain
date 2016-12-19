@@ -10,8 +10,8 @@ var logger = logging.MustGetLogger("buckettree")
 type K_VMap map[string][]byte
 
 // StateImpl - implements the interface - 'statemgmt.HashableState'
-type StateImpl struct {
-	AccountID              string
+type BucketTree struct {
+	treePrefix              string
 	dataNodesDelta         *dataNodesDelta
 	bucketTreeDelta        *bucketTreeDelta
 	persistedStateHash     []byte
@@ -21,14 +21,14 @@ type StateImpl struct {
 }
 
 // NewStateImpl constructs a new StateImpl
-func NewStateImpl(accountID string) *StateImpl {
-	return &StateImpl{AccountID:accountID}
+func NewStateImpl(tree_prefix string) *BucketTree {
+	return &BucketTree{treePrefix:tree_prefix}
 }
 
 // Initialize - method implementation for interface 'statemgmt.HashableState'
-func (stateImpl *StateImpl) Initialize(configs map[string]interface{}) error {
+func (stateImpl *BucketTree) Initialize(configs map[string]interface{}) error {
 	initConfig(configs)
-	rootBucketNode, err := fetchBucketNodeFromDB(stateImpl.AccountID,constructRootBucketKey())
+	rootBucketNode, err := fetchBucketNodeFromDB(stateImpl.treePrefix,constructRootBucketKey())
 	if err != nil {
 		return err
 	}
@@ -41,14 +41,14 @@ func (stateImpl *StateImpl) Initialize(configs map[string]interface{}) error {
 	if !ok {
 		bucketCacheMaxSize = defaultBucketCacheMaxSize
 	}
-	stateImpl.bucketCache = newBucketCache(stateImpl.AccountID,bucketCacheMaxSize)
+	stateImpl.bucketCache = newBucketCache(stateImpl.treePrefix,bucketCacheMaxSize)
 	stateImpl.bucketCache.loadAllBucketNodesFromDB()
 	return nil
 }
 
 // Get - method implementation for interface 'statemgmt.HashableState'
-func (stateImpl *StateImpl) Get(key string) ([]byte, error) {
-	dataKey := newDataKey(stateImpl.AccountID, key)
+func (stateImpl *BucketTree) Get(key string) ([]byte, error) {
+	dataKey := newDataKey(stateImpl.treePrefix, key)
 	dataNode, err := fetchDataNodeFromDB(dataKey)
 	if err != nil {
 		return nil, err
@@ -61,21 +61,21 @@ func (stateImpl *StateImpl) Get(key string) ([]byte, error) {
 
 // PrepareWorkingSet - method implementation for interface 'statemgmt.HashableState'
 // TODO test the stateImpl just accept the stateDelta which accountID equals
-func (stateImpl *StateImpl) PrepareWorkingSet(key_valueMap K_VMap) error {
+func (stateImpl *BucketTree) PrepareWorkingSet(key_valueMap K_VMap) error {
 	logger.Debug("Enter - PrepareWorkingSet()")
 
 	if key_valueMap == nil || len(key_valueMap) == 0 {
 		logger.Debug("Ignoring working-set as it is empty")
 		return nil
 	}
-	stateImpl.dataNodesDelta = newDataNodesDelta(stateImpl.AccountID,key_valueMap)
+	stateImpl.dataNodesDelta = newDataNodesDelta(stateImpl.treePrefix,key_valueMap)
 	stateImpl.bucketTreeDelta = newBucketTreeDelta()
 	stateImpl.recomputeCryptoHash = true
 	return nil
 }
 
 // ClearWorkingSet - method implementation for interface 'statemgmt.HashableState'
-func (stateImpl *StateImpl) ClearWorkingSet(changesPersisted bool) {
+func (stateImpl *BucketTree) ClearWorkingSet(changesPersisted bool) {
 	logger.Debug("Enter - ClearWorkingSet()")
 	if changesPersisted {
 		stateImpl.persistedStateHash = stateImpl.lastComputedCryptoHash
@@ -89,7 +89,7 @@ func (stateImpl *StateImpl) ClearWorkingSet(changesPersisted bool) {
 }
 
 // ComputeCryptoHash - method implementation for interface 'statemgmt.HashableState'
-func (stateImpl *StateImpl) ComputeCryptoHash() ([]byte, error) {
+func (stateImpl *BucketTree) ComputeCryptoHash() ([]byte, error) {
 	logger.Debug("Enter - ComputeCryptoHash()")
 	if stateImpl.recomputeCryptoHash {
 		logger.Debug("Recomputing crypto-hash...")
@@ -109,7 +109,7 @@ func (stateImpl *StateImpl) ComputeCryptoHash() ([]byte, error) {
 	return stateImpl.lastComputedCryptoHash, nil
 }
 
-func (stateImpl *StateImpl) processDataNodeDelta() error {
+func (stateImpl *BucketTree) processDataNodeDelta() error {
 	afftectedBuckets := stateImpl.dataNodesDelta.getAffectedBuckets()
 	for _, bucketKey := range afftectedBuckets {
 		updatedDataNodes := stateImpl.dataNodesDelta.getSortedDataNodesFor(bucketKey)
@@ -126,7 +126,7 @@ func (stateImpl *StateImpl) processDataNodeDelta() error {
 	return nil
 }
 
-func (stateImpl *StateImpl) processBucketTreeDelta() error {
+func (stateImpl *BucketTree) processBucketTreeDelta() error {
 	secondLastLevel := conf.getLowestLevel() - 1
 	for level := secondLastLevel; level >= 0; level-- {
 		bucketNodes := stateImpl.bucketTreeDelta.getBucketNodesAt(level)
@@ -155,7 +155,7 @@ func (stateImpl *StateImpl) processBucketTreeDelta() error {
 	return nil
 }
 
-func (stateImpl *StateImpl) computeRootNodeCryptoHash() []byte {
+func (stateImpl *BucketTree) computeRootNodeCryptoHash() []byte {
 	return stateImpl.bucketTreeDelta.getRootNode().computeCryptoHash()
 }
 
@@ -202,7 +202,7 @@ func computeDataNodesCryptoHash(bucketKey *bucketKey, updatedNodes dataNodes, ex
 }
 
 // AddChangesForPersistence - method implementation for interface 'statemgmt.HashableState'
-func (stateImpl *StateImpl) AddChangesForPersistence(writeBatch *hyperdb.Batch) error {
+func (stateImpl *BucketTree) AddChangesForPersistence(writeBatch hyperdb.Batch) error {
 
 	if stateImpl.dataNodesDelta == nil {
 		return nil
@@ -220,40 +220,40 @@ func (stateImpl *StateImpl) AddChangesForPersistence(writeBatch *hyperdb.Batch) 
 }
 
 // TODO it should be test later
-func (stateImpl *StateImpl) addDataNodeChangesForPersistence(writeBatch *hyperdb.Batch) {
+func (stateImpl *BucketTree) addDataNodeChangesForPersistence(writeBatch hyperdb.Batch) {
 	affectedBuckets := stateImpl.dataNodesDelta.getAffectedBuckets()
 	for _, affectedBucket := range affectedBuckets {
 		dataNodes := stateImpl.dataNodesDelta.getSortedDataNodesFor(affectedBucket)
 		for _, dataNode := range dataNodes {
 			if dataNode.isDelete() {
 				logger.Debugf("Deleting data node key = %#v", dataNode.dataKey)
-				(*writeBatch).Delete(dataNode.dataKey.getEncodedBytes())
+				writeBatch.Delete(dataNode.dataKey.getEncodedBytes())
 			} else {
 				logger.Debugf("Adding data node with value = %#v", dataNode.value)
-				(*writeBatch).Put(dataNode.dataKey.getEncodedBytes(), dataNode.value)
+				writeBatch.Put(dataNode.dataKey.getEncodedBytes(), dataNode.value)
 			}
 		}
 	}
 }
 
 // TODO it should be test later
-func (stateImpl *StateImpl) addBucketNodeChangesForPersistence(writeBatch *hyperdb.Batch) {
+func (stateImpl *BucketTree) addBucketNodeChangesForPersistence(writeBatch hyperdb.Batch) {
 
 	secondLastLevel := conf.getLowestLevel() - 1
 	for level := secondLastLevel; level >= 0; level-- {
 		bucketNodes := stateImpl.bucketTreeDelta.getBucketNodesAt(level)
 		for _, bucketNode := range bucketNodes {
 			if bucketNode.markedForDeletion {
-				(*writeBatch).Delete(bucketNode.bucketKey.getEncodedBytes())
+				writeBatch.Delete(bucketNode.bucketKey.getEncodedBytes())
 			} else {
-				(*writeBatch).Put(bucketNode.bucketKey.getEncodedBytes(), bucketNode.marshal())
+				writeBatch.Put(bucketNode.bucketKey.getEncodedBytes(), bucketNode.marshal())
 			}
 		}
 	}
 }
 
 // TODO to do test with cache
-func (stateImpl *StateImpl) updateBucketCache() {
+func (stateImpl *BucketTree) updateBucketCache() {
 	if stateImpl.bucketTreeDelta == nil || stateImpl.bucketTreeDelta.isEmpty() {
 		return
 	}
@@ -274,7 +274,7 @@ func (stateImpl *StateImpl) updateBucketCache() {
 }
 
 // PerfHintKeyChanged - method implementation for interface 'statemgmt.HashableState'
-func (stateImpl *StateImpl) PerfHintKeyChanged(accountID string, key string) {
+func (stateImpl *BucketTree) PerfHintKeyChanged(accountID string, key string) {
 	// We can create a cache. Pull all the keys for the bucket (to which given key belongs) in a separate thread
 	// This prefetching can help making method 'ComputeCryptoHash' faster.
 }
