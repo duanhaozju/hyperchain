@@ -16,6 +16,7 @@ import (
 	"hyperchain/p2p/transport/ecdh"
 	//"crypto/aes"
 	"crypto/aes"
+	"github.com/pkg/errors"
 )
 
 var log *logging.Logger // package-level logger
@@ -85,7 +86,8 @@ func (hSM *HandShakeManager) EncWithSecret(message []byte, peerHash string)  ([]
 	//aes
 	if _,ok := hSM.secrets[peerHash];!ok{
 		//panic("the peer hasn't negotiate the share secret, and please restart this node")
-		return []byte(""),error.Error("the peer hasn't negotiate the share secret, and please restart this node")
+
+		return []byte(""),errors.New("the peer hasn't negotiate the share secret, and please restart this node")
 	}
 	key := hSM.secrets[peerHash][:16]
 	var iv = []byte(key)[:aes.BlockSize]
@@ -93,7 +95,7 @@ func (hSM *HandShakeManager) EncWithSecret(message []byte, peerHash string)  ([]
 	aesBlockEncrypter, _ := aes.NewCipher(key)
 	aesEncrypter := cipher.NewCFBEncrypter(aesBlockEncrypter, iv)
 	aesEncrypter.XORKeyStream(encrypted, []byte(message))
-	return encrypted
+	return encrypted,nil
 	//return message
 
 }
@@ -114,7 +116,7 @@ func (hSM *HandShakeManager) DecWithSecret(message []byte, peerHash string)  ([]
 	//
 	if _,ok := hSM.secrets[peerHash];!ok{
 		//panic("the peer hasn't negotiate the share secret, and please restart this node")
-		return []byte(""),error.Error("the peer hasn't negotiate the share secret, and please restart this node")
+		return []byte(""),errors.New("the peer hasn't negotiate the share secret, and please restart this node")
 	}
 	key := hSM.secrets[peerHash][:16]
 	var iv = []byte(key)[:aes.BlockSize]
@@ -122,7 +124,7 @@ func (hSM *HandShakeManager) DecWithSecret(message []byte, peerHash string)  ([]
 	aesBlockDecrypter, _ := aes.NewCipher([]byte(key))
 	aesDecrypter := cipher.NewCFBDecrypter(aesBlockDecrypter, iv)
 	aesDecrypter.XORKeyStream(decrypted, message)
-	return decrypted
+	return decrypted,nil
 	//return message
 
 }
