@@ -278,3 +278,17 @@ func (bucketTree *BucketTree) PerfHintKeyChanged(accountID string, key string) {
 	// We can create a cache. Pull all the keys for the bucket (to which given key belongs) in a separate thread
 	// This prefetching can help making method 'ComputeCryptoHash' faster.
 }
+
+// TODO test
+// it should be used when the statedb reset
+func (bucket *BucketTree) Reset(){
+
+}
+
+// TODO test important
+// the func can make the buckettree revert to target block
+func (bucket *BucketTree) RevertToTargetBlock(){
+
+}
+
+
