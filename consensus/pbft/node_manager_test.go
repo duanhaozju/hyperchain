@@ -174,3 +174,88 @@ func TestRecvAgreeAddOrDelNode(t *testing.T) {
 
 }
 
+func TestMaybeUpdateTableForAdd(t *testing.T) {
+
+	core.InitDB("/temp/leveldb", 8088)
+	defer clearDB()
+
+	id := 1
+	pbftConfigPath := getPbftConfigPath()
+	config := loadConfig(pbftConfigPath)
+	eventMux := new(event.TypeMux)
+	h := helper.NewHelper(eventMux)
+	pbft := newPbft(uint64(id), config, h)
+	defer pbft.Close()
+
+	cert := pbft.getAddNodeCert("key")
+	cert.addCount = 1
+	err := pbft.maybeUpdateTableForAdd("key")
+	if err != "Not enough add message to update table" {
+		t.Error("Fail to reject update table when addcount < 2f + 1")
+	}
+
+	cert.addCount = 3
+	pbft.inAddingNode = false
+	cert.finishAdd = true
+	err = pbft.maybeUpdateTableForAdd("key")
+	if err != "Replica has already finished adding node" {
+		t.Error("Fail to reject others useless add msg")
+	}
+
+	cert.addCount = 5
+	err = pbft.maybeUpdateTableForAdd("key")
+	if err != "Replica has already finished adding node, but still recevice add msg from somewho" {
+		t.Error("Fail to reject somewho's addnode msg, something wrong maybe happening")
+	}
+
+	cert.addCount = 3
+	pbft.inAddingNode = false
+	cert.finishAdd = false
+	err = pbft.maybeUpdateTableForAdd("key")
+	if err != nil {
+		t.Error("Fail to handle valid add node msg")
+	}
+}
+
+func TestMaybeUpdateTableForDel(t *testing.T) {
+
+	core.InitDB("/temp/leveldb", 8088)
+	defer clearDB()
+
+	id := 1
+	pbftConfigPath := getPbftConfigPath()
+	config := loadConfig(pbftConfigPath)
+	eventMux := new(event.TypeMux)
+	h := helper.NewHelper(eventMux)
+	pbft := newPbft(uint64(id), config, h)
+	defer pbft.Close()
+
+	cert := pbft.getDelNodeCert("key", "hash")
+	cert.delCount = 1
+	err := pbft.maybeUpdateTableForDel("key", "hash")
+	if err != "Not enough add message to update table" {
+		t.Error("Fail to reject update table when addcount < 2f + 1")
+	}
+
+	cert.delCount = 3
+	pbft.inAddingNode = false
+	cert.finishDel = true
+	err = pbft.maybeUpdateTableForDel("key", "hash")
+	if err != "Replica has already finished deleting node" {
+		t.Error("Fail to reject others useless del msg")
+	}
+
+	cert.delCount = 5
+	err = pbft.maybeUpdateTableForAdd("key")
+	if err != "Replica has already finished adding node, but still recevice add msg from somewho" {
+		t.Error("Fail to reject somewho's addnode msg, something wrong maybe happening")
+	}
+
+	cert.delCount = 3
+	pbft.inAddingNode = false
+	cert.finishDel = false
+	err = pbft.maybeUpdateTableForAdd("key")
+	if err != nil {
+		t.Error("Fail to handle valid add node msg")
+	}
+}

@@ -184,17 +184,17 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 	cert := pbft.getAddNodeCert(key)
 
 	if cert.addCount < pbft.committedReplicasQuorum() {
-		return nil
+		return errors.New("Not enough add message to update table")
 	}
 
 	if !pbft.inAddingNode {
 		if cert.finishAdd {
 			if cert.addCount <= pbft.N {
-				logger.Debugf("Replica %d have already finished adding node", pbft.id)
-				return nil
+				logger.Debugf("Replica %d has already finished adding node", pbft.id)
+				return errors.New("Replica has already finished adding node")
 			} else {
-				logger.Warningf("Replica %d have already finished adding node, but still recevice add msg", pbft.id)
-				return nil
+				logger.Warningf("Replica %d has already finished adding node, but still recevice add msg from somewho", pbft.id)
+				return errors.New("Replica has already finished adding node, but still recevice add msg from somewho")
 			}
 		}
 	}
@@ -213,23 +213,18 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string, routerHash string) 
 
 	cert := pbft.getDelNodeCert(key, routerHash)
 
-	if cert == nil {
-		logger.Errorf("Replica %d can't get the delnode cert for key=%v", pbft.id, key)
-		return nil
-	}
-
 	if cert.delCount < pbft.committedReplicasQuorum() {
-		return nil
+		return errors.New("Not enough del message to update table")
 	}
 
 	if !pbft.inDeletingNode {
 		if cert.finishDel {
 			if cert.delCount < pbft.N {
 				logger.Debugf("Replica %d have already finished deleting node", pbft.id)
-				return nil
+				return errors.New("Replica has already finished deleting node")
 			} else {
-				logger.Warningf("Replica %d have already finished deleting node, but still recevice del msg", pbft.id)
-				return nil
+				logger.Warningf("Replica %d has already finished deleting node, but still recevice del msg from somewho", pbft.id)
+				return errors.New("Replica has already finished deleting node, but still recevice del msg from somewho")
 			}
 		}
 	}
