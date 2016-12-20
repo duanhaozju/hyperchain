@@ -301,7 +301,7 @@ func (this *Node)reconnect(msg *pb.Message) {
 
 	Client := pb.NewChatClient(conn)
 	if _, ok := this.PeerPool.peers[msg.From.Hash]; ok {
-		log.Warning("Already exist this remote, and try to reconnect...")
+		log.Warning("This remote Node already existed, and try to reconnect...")
 	} else {
 		return
 	}
