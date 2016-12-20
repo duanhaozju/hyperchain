@@ -19,6 +19,8 @@ pbft:
     # How many transactions should the primary pack before sending pre-prepare
     batchsize: 500
 
+    # How many times of same vc from self before a replica start recovery
+    vcresendlimit: 10
 
 # Timeouts
 timeout:
