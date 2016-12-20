@@ -59,9 +59,9 @@ func (bucketKey *bucketKey) getChildKey(index int) *bucketKey {
 	return newBucketKey(bucketKey.level+1, bucketNumberOfChild)
 }
 
-func (bucketKey *bucketKey) getEncodedBytes(treePrefix string) []byte {
+func (bucketKey *bucketKey) getEncodedBytes() []byte {
 	encodedBytes := []byte{}
-	encodedBytes = append(encodedBytes,[]byte(treePrefix)...)
+	encodedBytes = append(encodedBytes, byte(0))
 	encodedBytes = append(encodedBytes, proto.EncodeVarint(uint64(bucketKey.level))...)
 	encodedBytes = append(encodedBytes, proto.EncodeVarint(uint64(bucketKey.bucketNumber))...)
 	return encodedBytes

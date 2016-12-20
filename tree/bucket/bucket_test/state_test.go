@@ -7,6 +7,7 @@ import (
 	"hyperchain/tree/bucket/bucket_test"
 	"hyperchain/tree/bucket"
 	"hyperchain/tree/bucket/testutil"
+	"hyperchain/hyperdb"
 )
 var (
 	logger = logging.MustGetLogger("bucket_test")
@@ -52,6 +53,8 @@ func TestState_GetHash(t *testing.T){
 	testutil.AssertEquals(t, rootHash, expectedHash)
 }
 func TestState_(t *testing.T){
+	db,err := hyperdb.GetLDBDatabase()
+	writeBatch := db.NewBatch()
 	state := bucket_test.NewState()
 	key_valueMap := bucket.K_VMap{}
 	key_valueMap["key1"] = []byte("value1")
@@ -69,6 +72,9 @@ func TestState_(t *testing.T){
 	}else {
 		logger.Debugf("--------------the state.GetHash() is ",(hash))
 	}
+
+	state.AddChangesForPersistence(writeBatch)
+	state.CommitStateDelta()
 }
 func expectedBucketHashContentForTest(data ...[]string) []byte {
 	expectedContent := []byte{}
