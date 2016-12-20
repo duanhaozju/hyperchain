@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/viper"
 	"time"
 	"hyperchain/jsonrpc"
+	"hyperchain/tree/bucket"
 )
 
 type configs interface {
@@ -29,6 +30,7 @@ type configs interface {
 	getStateType() string
 	getBlockVersion() string
 	getTransactionVersion() string
+	getBucketTreeConf() bucket.Conf
 }
 
 type configsImpl struct {
@@ -46,17 +48,27 @@ type configsImpl struct {
 	genesisConfigPath       string
 	memberSRVCConfigPath    string
 	pbftConfigPath          string
+	// sync replica info
 	syncReplicaInfoInterval string
 	syncReplica             bool
+	// license
 	license                 string
+	// rate limit related
 	rateLimitEnable         bool
 	txRatePeak              int64
 	txFillRate              string
 	contractRatePeak        int64
 	contractFillRate        string
+	// data structure version related
 	blockVersion            string
 	transactionVersion      string
-	stateType            string
+	// state type
+	stateType               string
+	// bucket tree related
+	stateSize               int       // state db bucket tree size
+	stateLevelGroup         int       // state db bucket tree level group
+	storageSize             int       // storage bucket tree size
+	storageLevelGroup       int       // storage bucket tree level group
 }
 
 //return a config instances
@@ -110,6 +122,14 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	 */
 	cimpl.blockVersion = config.GetString("global.version.blockversion")
 	cimpl.transactionVersion = config.GetString("global.version.transactionversion")
+
+	/*
+		Bucket tree
+	 */
+	cimpl.stateSize = config.GetInt("global.configs.buckettree.state.size")
+	cimpl.stateLevelGroup = config.GetInt("global.configs.buckettree.state.levelGroup")
+	cimpl.storageSize = config.GetInt("global.configs.buckettree.storage.size")
+	cimpl.storageLevelGroup = config.GetInt("global.configs.buckettree.storage.levelGroup")
 	return &cimpl
 }
 
@@ -168,4 +188,13 @@ func (cIml *configsImpl) getBlockVersion() string {
 }
 func (cIml *configsImpl) getTransactionVersion() string {
 	return cIml.transactionVersion
+}
+
+func (cIml *configsImpl) getBucketTreeConf() bucket.Conf {
+	return bucket.Conf{
+		StateSize: cIml.stateSize,
+		StateLevelGroup: cIml.stateLevelGroup,
+		StorageSize: cIml.storageSize,
+		StorageLevelGroup: cIml.storageLevelGroup,
+	}
 }

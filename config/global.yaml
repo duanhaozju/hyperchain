@@ -65,4 +65,12 @@ global:
             txFillRate: 0.5ms
             contractRatePeak : 100
             contractFillRate: 0.5ms
-
+        buckettree:
+            state:
+                size: 10009
+                levelGroup: 10
+                cacheSize: 10    # 10 MB
+            storage:
+                size: 1009
+                levelGroup: 10
+                cacheSize: 10   # 10 MB

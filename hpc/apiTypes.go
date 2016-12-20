@@ -7,6 +7,7 @@ import (
 	"hyperchain/manager"
 	"hyperchain/hyperdb"
 	"time"
+	"hyperchain/tree/bucket"
 )
 
 // API describes the set of methods offered over the RPC interface
@@ -19,7 +20,7 @@ type API struct {
 
 var Apis []API
 
-func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnable bool, txPeak int64 , txRate time.Duration, contractPeak int64, contractRate time.Duration, stateType string) []API{
+func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnable bool, txPeak int64 , txRate time.Duration, contractPeak int64, contractRate time.Duration, stateType string, bucketConf bucket.Conf) []API{
 
 	db, err := hyperdb.GetLDBDatabase()
 
@@ -49,13 +50,13 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnab
 		{
 			Namespace: "account",
 			Version: "0.4",
-			Service: NewPublicAccountAPI(pm, db, stateType),
+			Service: NewPublicAccountAPI(pm, db, stateType, bucketConf),
 			Public: true,
 		},
 		{
 			Namespace: "contract",
 			Version: "0.4",
-			Service: NewPublicContractAPI(eventMux, pm, db, ratelimitEnable, contractPeak, contractRate, stateType),
+			Service: NewPublicContractAPI(eventMux, pm, db, ratelimitEnable, contractPeak, contractRate, stateType, bucketConf),
 			Public: true,
 		},
 	}

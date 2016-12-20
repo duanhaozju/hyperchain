@@ -15,6 +15,8 @@ import (
 	"hyperchain/hyperdb"
 	"github.com/juju/ratelimit"
 	"hyperchain/core"
+	"hyperchain/tree/bucket"
+	"hyperchain/core/vm"
 )
 
 type PublicContractAPI struct {
@@ -24,9 +26,10 @@ type PublicContractAPI struct {
 	tokenBucket *ratelimit.Bucket
 	ratelimitEnable bool
 	stateType string
+	bucketConf bucket.Conf
 }
 
-func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, ratelimitEnable bool, bmax int64, rate time.Duration, stateType string) *PublicContractAPI {
+func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, ratelimitEnable bool, bmax int64, rate time.Duration, stateType string, bucketConf bucket.Conf) *PublicContractAPI {
 	return &PublicContractAPI{
 		eventMux :eventMux,
 		pm:pm,
@@ -34,6 +37,7 @@ func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, 
 		tokenBucket: ratelimit.NewBucket(rate, bmax),
 		ratelimitEnable: ratelimitEnable,
 		stateType: stateType,
+		bucketConf: bucketConf,
 	}
 }
 
@@ -139,7 +143,7 @@ func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash,
 // GetCode returns the code from the given contract address and block number.
 func (contract *PublicContractAPI) GetCode(addr common.Address, n BlockNumber) (string, error) {
 
-	stateDb, err := getBlockStateDb(n, contract.db, contract.stateType)
+	stateDb, err := getBlockStateDb(n, contract.db, contract.stateType, contract.bucketConf)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
 		return "", err
@@ -152,7 +156,7 @@ func (contract *PublicContractAPI) GetCode(addr common.Address, n BlockNumber) (
 // if addr is nil, returns the number of all the contract that has been deployed.
 func (contract *PublicContractAPI) GetContractCountByAddr(addr common.Address, n BlockNumber) (*Number, error) {
 
-	stateDb, err := getBlockStateDb(n, contract.db, contract.stateType)
+	stateDb, err := getBlockStateDb(n, contract.db, contract.stateType, contract.bucketConf)
 
 	if err != nil {
 		return nil, err
@@ -165,7 +169,7 @@ func (contract *PublicContractAPI) GetContractCountByAddr(addr common.Address, n
 // GetStorageByAddr returns the storage by given contract address and bock number.
 // The method is offered for hyperchain internal test.
 func (contract *PublicContractAPI) GetStorageByAddr(addr common.Address, n BlockNumber) (map[string]string, error) {
-	stateDb, err := getBlockStateDb(n, contract.db, contract.stateType)
+	stateDb, err := getBlockStateDb(n, contract.db, contract.stateType, contract.bucketConf)
 
 	if err != nil {
 		return nil, err
@@ -190,3 +194,15 @@ func (contract *PublicContractAPI) GetStorageByAddr(addr common.Address, n Block
 	return mp,nil
 }
 
+func getBlockStateDb(n BlockNumber, db *hyperdb.LDBDatabase, stateType string, bucketConf bucket.Conf) (vm.Database, error) {
+	block, err := getBlockByNumber(n, db)
+	if err != nil {
+		return nil, err
+	}
+	stateDB, err := GetStateInstance(block.MerkleRoot, db, stateType, bucketConf)
+	if err != nil {
+		log.Errorf("Get stateDB error, %v", err)
+		return nil, err
+	}
+	return stateDB, nil
+}

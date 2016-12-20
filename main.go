@@ -89,7 +89,6 @@ func main() {
 		argv := ctx.Argv().(*argT)
 
 		config := newconfigsImpl(argv.ConfigPath, argv.NodeID, argv.GRPCPort, argv.HTTPPort, argv.RESTPort)
-
 		err, expiredTime := checkLicense(config.getLicense())
 		if err != nil {
 			return err
@@ -122,7 +121,7 @@ func main() {
 		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())
 
 		//init genesis
-		core.CreateInitBlock(config.getGenesisConfigPath(), config.getStateType(), config.blockVersion)
+		core.CreateInitBlock(config.getGenesisConfigPath(), config.getStateType(), config.blockVersion, config.getBucketTreeConf())
 
 		//init pbft consensus
 		cs := controller.NewConsenter(uint64(config.getNodeID()), eventMux, config.getPBFTConfigPath())
@@ -144,7 +143,7 @@ func main() {
 			TransactionVersion: config.getTransactionVersion(),
 			StateType: config.getStateType(),
 		}
-		blockPool := blockpool.NewBlockPool(eventMux, cs, blockPoolConf)
+		blockPool := blockpool.NewBlockPool(eventMux, cs, blockPoolConf, config.getBucketTreeConf())
 		if blockPool == nil {
 			return errors.New("Initialize BlockPool failed")
 		}
@@ -165,7 +164,7 @@ func main() {
 				expiredTime,
 				config.getGRPCPort())
 		rateLimitCfg := config.getRateLimitConfig()
-		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(),config.getLogDumpFileDir(),eventMux, pm, rateLimitCfg, config.getStateType())
+		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(),config.getLogDumpFileDir(),eventMux, pm, rateLimitCfg, config.getStateType(), config.getBucketTreeConf())
 
 		//go func() {
 		//	log.Println(http.ListenAndServe("localhost:6064", nil))

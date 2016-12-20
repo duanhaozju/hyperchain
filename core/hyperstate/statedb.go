@@ -11,6 +11,8 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/vm"
 	"encoding/json"
+	"hyperchain/tree/bucket"
+	"github.com/pkg/errors"
 )
 
 
@@ -18,7 +20,7 @@ const (
 	// Number of codehash->size associations to keep.
 	codeSizeCacheSize = 100000
 	// whether turn on fake hash function
-	enableFakeHashFn =  true
+	enableFakeHashFn = false
 	// whether to remove empty stateObject
 	deleteEmptyObjects = false
 )
@@ -54,13 +56,28 @@ type StateDB struct {
 	validRevisions []revision
 	nextRevisionId int
 
-	lock sync.Mutex
+	// bucket tree related
+	bktConf        bucket.Conf
+	bucketTree     *bucket.BucketTree
+	lock           sync.Mutex
 }
 
 // Create a new state from a given root
-func New(root common.Hash, db hyperdb.Database) (*StateDB, error) {
-	// TODO add root validation check
+func New(root common.Hash, db hyperdb.Database, bktConf bucket.Conf) (*StateDB, error) {
 	csc, _ := lru.New(codeSizeCacheSize)
+	bucketPrefix, _ := CompositeStateBucketPrefix()
+	bucketTree := bucket.NewBucketTree(string(bucketPrefix))
+	bucketTree.Initialize(SetupBucketConfig(bktConf.StateSize, bktConf.StateLevelGroup))
+	// check root hash validation
+	curHash, err := bucketTree.ComputeCryptoHash()
+	if err != nil {
+		log.Errorf("new state db failed, error message %s", err.Error())
+		return nil, err
+	}
+	if !validateRoot(root, common.BytesToHash(curHash)) {
+		log.Errorf("invalid root, correct root hash of state bucket tree is %s", common.Bytes2Hex(curHash))
+		return nil, errors.New("invalid state bucket tree root")
+	}
 	return &StateDB{
 		db:                db,
 		root:              root,
@@ -69,14 +86,20 @@ func New(root common.Hash, db hyperdb.Database) (*StateDB, error) {
 		stateObjectsDirty: make(map[common.Address]struct{}),
 		refund:            new(big.Int),
 		logs:              make(map[common.Hash]vm.Logs),
+		bktConf:           bktConf,
+		bucketTree:        bucketTree,
 	}, nil
 }
 
 // New creates a new statedb by reusing journalled data to avoid costly
 // disk io.
+// Deprecated
 func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
+	bucketPrefix, _ := CompositeStateBucketPrefix()
+	bucketTree := bucket.NewBucketTree(string(bucketPrefix))
+	bucketTree.Initialize(SetupBucketConfig(self.bktConf.StateSize, self.bktConf.StateLevelGroup))
 
 	return &StateDB{
 		db:                self.db,
@@ -86,6 +109,8 @@ func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 		stateObjectsDirty: make(map[common.Address]struct{}),
 		refund:            new(big.Int),
 		logs:              make(map[common.Hash]vm.Logs),
+		bktConf:           self.bktConf,
+		bucketTree:        bucketTree,
 	}, nil
 }
 
@@ -104,6 +129,7 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.logs = make(map[common.Hash]vm.Logs)
 	self.logSize = 0
 	self.clearJournalAndRefund()
+	// TODO Bucket Tree reset to avoid memory leak
 	return nil
 }
 
@@ -175,7 +201,7 @@ func (self *StateDB) GetAccounts() map[string]vm.Account {
 		address := common.BytesToAddress(addr)
 		var account Account
 		json.Unmarshal(iter.Value(), &account)
-		newobj := newObject(self, address, account, self.MarkStateObjectDirty)
+		newobj := newObject(self, address, account, self.MarkStateObjectDirty, false, nil)
 		ret[address.Hex()] = newobj
 	}
 	return ret
@@ -350,7 +376,7 @@ func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObje
 		return nil
 	}
 	// Insert into the live set.
-	obj := newObject(self, addr, account, self.MarkStateObjectDirty)
+	obj := newObject(self, addr, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.bktConf.StorageSize, self.bktConf.StorageLevelGroup))
 	self.setStateObject(obj)
 	return obj
 }
@@ -378,7 +404,7 @@ func (self *StateDB) MarkStateObjectDirty(addr common.Address) {
 // the given address, it is overwritten and returned as the second return value.
 func (self *StateDB) createObject(addr common.Address) (newobj, prev *StateObject) {
 	prev = self.GetStateObject(addr)
-	newobj = newObject(self, addr, Account{}, self.MarkStateObjectDirty)
+	newobj = newObject(self, addr, Account{}, self.MarkStateObjectDirty, true, SetupBucketConfig(self.bktConf.StorageSize, self.bktConf.StorageLevelGroup))
 	newobj.setNonce(0) // sets the object to dirty
 	if prev == nil {
 		log.Infof("(+) %x\n", addr)
@@ -534,6 +560,7 @@ func (s *StateDB) clearJournalAndRefund() {
 func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root common.Hash, err error) {
 	defer s.clearJournalAndRefund()
 	var set ChangeSet
+	workingSet := bucket.NewKVMap()
 	// Commit objects to the trie.
 	for addr, stateObject := range s.stateObjects {
 		_, isDirty := s.stateObjectsDirty[addr]
@@ -542,8 +569,12 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 			// If the object has been removed, don't bother syncing it
 			// and just mark it for deletion in the trie.
 			s.deleteStateObject(stateObject)
-			d := stateObject.address.Bytes()
-			set = append(set, d)
+			if enableFakeHashFn {
+				d := stateObject.address.Bytes()
+				set = append(set, d)
+			} else {
+				workingSet[stateObject.address.Hex()] = nil
+			}
 		case isDirty:
 			// Write any contract code associated with the state object
 			if stateObject.code != nil && stateObject.dirtyCode {
@@ -553,17 +584,20 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 				stateObject.dirtyCode = false
 			}
 			// Write any storage changes in the state object to its storage trie.
-			batch := s.db.NewBatch()
-			if err := stateObject.Flush(batch); err != nil {
+			if err := stateObject.Flush(dbw); err != nil {
 				return common.Hash{}, err
 			}
-			batch.Write()
 			// Update the object in the main account trie.
 			s.updateStateObject(stateObject)
 			// Add to change set
-			sd, _ := stateObject.MarshalJSON()
-			d := append(stateObject.address.Bytes(), sd...)
-			set = append(set, d)
+			if enableFakeHashFn {
+				sd, _ := stateObject.MarshalJSON()
+				d := append(stateObject.address.Bytes(), sd...)
+				set = append(set, d)
+			} else {
+				sd, _ := stateObject.MarshalJSON()
+				workingSet[stateObject.address.Hex()] = sd
+			}
 		}
 		delete(s.stateObjectsDirty, addr)
 	}
@@ -573,8 +607,23 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 		s.root = SimpleHashFn(s.root, set)
 	} else {
 		// Use bucket tree instead
+		s.bucketTree.PrepareWorkingSet(workingSet)
+		hash, err := s.bucketTree.ComputeCryptoHash()
+		if err != nil {
+			log.Error("calculate hash for statedb failed")
+			return common.Hash{}, err
+		}
+		s.root = common.BytesToHash(hash)
+		s.bucketTree.AddChangesForPersistence(dbw)
 	}
 	return s.root, err
 }
 
-
+// check bucket root validation
+func validateRoot(root common.Hash, curRoot common.Hash) bool {
+	if root != curRoot {
+		return false
+	} else {
+		return true
+	}
+}

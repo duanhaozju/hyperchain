@@ -19,9 +19,10 @@ import (
 	"hyperchain/core/hyperstate"
 	"hyperchain/core/vm"
 	"errors"
+	"hyperchain/tree/bucket"
 )
 
-func CreateInitBlock(filename string, stateType string, blockVersion string) {
+func CreateInitBlock(filename string, stateType string, blockVersion string, bktConf bucket.Conf) {
 	log.Info("genesis start")
 
 	if GetHeightOfChain() > 0 {
@@ -53,7 +54,7 @@ func CreateInitBlock(filename string, stateType string, blockVersion string) {
 		log.Fatal(err)
 		return
 	}
-	stateDB, err := GetStateInstance(common.Hash{}, db, stateType)
+	stateDB, err := GetStateInstance(common.Hash{}, db, stateType, bktConf)
 	if err != nil {
 		log.Error("genesis.go file create statedb failed!")
 		return
@@ -91,12 +92,12 @@ func CreateInitBlock(filename string, stateType string, blockVersion string) {
 	log.Info("current chain block number is", GetChainCopy().Height)
 
 }
-func GetStateInstance(root common.Hash, db hyperdb.Database, stateType string) (vm.Database, error) {
+func GetStateInstance(root common.Hash, db hyperdb.Database, stateType string, bktConf bucket.Conf) (vm.Database, error) {
 	switch stateType {
 	case "rawstate":
 		return state.New(root, db)
 	case "hyperstate":
-		return hyperstate.New(root, db)
+		return hyperstate.New(root, db, bktConf)
 	default:
 		return nil, errors.New("no state type specified")
 	}
