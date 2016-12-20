@@ -5,31 +5,29 @@ import (
 	"hyperchain/common"
 	"fmt"
 	"encoding/json"
+	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
-type journalEntry interface {
-	undo(*StateDB)
+type JournalEntry interface {
+	//undo(*StateDB)
 	String() string
 	Marshal() ([]byte, error)
 }
 
-type journal []journalEntry
-
-type rong struct {
-	journalList []journalEntry
+type Journal struct {
+	JournalList []JournalEntry
 }
 
-func (self *rong) Marshal() ([]byte, error) {
+func (self *Journal) Marshal() ([]byte, error) {
 	var list [][]byte
 	var err error
-	for _, j := range self.journalList {
+	for _, j := range self.JournalList {
 		res, err := j.Marshal()
 		if err != nil {
 			break
 		}
 		list = append(list, res)
 	}
-
 	if err != nil {
 		return nil, err
 	} else {
@@ -37,202 +35,302 @@ func (self *rong) Marshal() ([]byte, error) {
 	}
 }
 
-func UnmarshalJournal(data []byte, ret *rong) error {
+func UnmarshalJournal(data []byte) (*Journal, error) {
 
 	var list [][]byte
+	var jos []JournalEntry
 	err := json.Unmarshal(data, &list)
-
-	return err
+	if err != nil {
+		return nil, err
+	}
+	for _, res := range list {
+		var jo interface{}
+		err = json.Unmarshal(res, &jo)
+		if err != nil {
+			return nil, err
+		}
+		m := jo.(map[string]interface{})
+		if len(m) == 1 {
+			if m["Account"] != nil {
+				var tmp CreateObjectChange
+				err = json.Unmarshal(res, &tmp)
+				if err != nil {
+					return nil, err
+				}
+				jos = append(jos, &tmp)
+			} else if m["StateObj"] != nil {
+				var tmp ResetObjectChange
+				err = json.Unmarshal(res, &tmp)
+				if err != nil {
+					return nil, err
+				}
+				jos = append(jos, &tmp)
+			} else if m["Prev"] != nil {
+				var tmp RefundChange
+				err = json.Unmarshal(res, &tmp)
+				if err != nil {
+					return nil, err
+				}
+				jos = append(jos, &tmp)
+			} else if m["Txhash"] != nil {
+				var tmp AddLogChange
+				err = json.Unmarshal(res, &tmp)
+				if err != nil {
+					return nil, err
+				}
+				jos = append(jos, &tmp)
+			} else {
+				return nil, errors.New("Cannot unmarshal")
+			}
+		} else if len(m) == 2 {
+			if m["BalanceAccount"] != nil && m["BalancePrev"] != nil {
+				var tmp BalanceChange
+				err = json.Unmarshal(res, &tmp)
+				if err != nil {
+					return nil, err
+				}
+				jos = append(jos, &tmp)
+			} else if m["NonceAccount"] != nil && m["NoncePrev"] != nil {
+				var tmp NonceChange
+				err = json.Unmarshal(res, &tmp)
+				if err != nil {
+					return nil, err
+				}
+				jos = append(jos, &tmp)
+			} else if m["TouchAccount"] != nil && m["TouchPrev"] != nil {
+				var tmp TouchChange
+				err = json.Unmarshal(res, &tmp)
+				if err != nil {
+					return nil, err
+				}
+				jos = append(jos, &tmp)
+			} else {
+				return nil, errors.New("Cannot unmarshal")
+			}
+		} else if len(m) == 3 {
+			if m["Account"] != nil && m["Prev"] != nil && m["Prevbalance"] != nil {
+				var tmp SuicideChange
+				err = json.Unmarshal(res, &tmp)
+				if err != nil {
+					return nil, err
+				}
+				jos = append(jos, &tmp)
+			} else if m["Account"] != nil && m["Key"] != nil && m["Prevalue"] != nil {
+				var tmp StorageChange
+				err = json.Unmarshal(res, &tmp)
+				if err != nil {
+					return nil, err
+				}
+				jos = append(jos, &tmp)
+			} else if m["Account"] != nil && m["Prevcode"] != nil && m["Prevhash"] != nil {
+				var tmp CodeChange
+				err = json.Unmarshal(res, &tmp)
+				if err != nil {
+					return nil, err
+				}
+				jos = append(jos, &tmp)
+			} else {
+				return nil, errors.New("Cannot unmarshal")
+			}
+		} else {
+			return nil, errors.New("Cannot unmarshal")
+		}
+	}
+	if err != nil {
+		return nil, err
+	} else {
+		ret := &Journal{JournalList: jos}
+		return ret, nil
+	}
 }
-
 
 type (
 	// Changes to the account database
-	createObjectChange struct {
-		account *common.Address
+	CreateObjectChange struct {
+		Account *common.Address
 	}
-	resetObjectChange struct {
-		prev *StateObject
+	ResetObjectChange struct {
+		StateObj *StateObject
 	}
-	suicideChange struct {
-		account     *common.Address
-		prev        bool // whether account had already suicided
-		prevbalance *big.Int
+	SuicideChange struct {
+		Account     *common.Address
+		Prev        bool // whether account had already suicided
+		Prevbalance *big.Int
 	}
 
 	// Changes to individual accounts.
-	balanceChange struct {
-		account *common.Address
-		prev    *big.Int
+	BalanceChange struct {
+		BalanceAccount *common.Address
+		BalancePrev    *big.Int
 	}
-	nonceChange struct {
-		account *common.Address
-		prev    uint64
+	NonceChange struct {
+		NonceAccount *common.Address
+		NoncePrev    uint64
 	}
-	storageChange struct {
-		account       *common.Address
-		key, prevalue common.Hash
+	StorageChange struct {
+		Account       *common.Address
+		Key, Prevalue common.Hash
 	}
-	codeChange struct {
-		account            *common.Address
-		prevcode, prevhash []byte
+	CodeChange struct {
+		Account            *common.Address
+		Prevcode, Prevhash []byte
 	}
 
 	// Changes to other state values.
-	refundChange struct {
-		prev *big.Int
+	RefundChange struct {
+		Prev *big.Int
 	}
-	addLogChange struct {
-		txhash common.Hash
+	AddLogChange struct {
+		Txhash common.Hash
 	}
-	touchChange struct {
-		account *common.Address
-		prev    bool
+	TouchChange struct {
+		TouchAccount *common.Address
+		TouchPrev    bool
 	}
 )
 // createObjectChange
-func (ch *createObjectChange) undo(s *StateDB) {
-	delete(s.stateObjects, *ch.account)
-	delete(s.stateObjectsDirty, *ch.account)
-}
-func (ch *createObjectChange) String() string {
+//func (ch *CreateObjectChange) undo(s *StateDB) {
+//	delete(s.stateObjects, *ch.Account)
+//	delete(s.stateObjectsDirty, *ch.Account)
+//}
+func (ch *CreateObjectChange) String() string {
 	var str string
-	str = fmt.Sprintf("journal [createObjectChange] %s\n", ch.account.Hex())
+	str = fmt.Sprintf("journal [createObjectChange] %s\n", ch.Account.Hex())
 	return str
 }
-func (ch *createObjectChange) Marshal()([]byte, error) {
+func (ch *CreateObjectChange) Marshal()([]byte, error) {
 	return json.Marshal(ch)
 }
 
 // resetObjectChange
-func (ch *resetObjectChange) undo(s *StateDB) {
-	s.setStateObject(ch.prev)
-}
-func (ch *resetObjectChange) String() string {
+//func (ch *resetObjectChange) undo(s *StateDB) {
+//	s.setStateObject(ch.prev)
+//}
+func (ch *ResetObjectChange) String() string {
 	var str string
-	str = fmt.Sprintf("journal [resetObjectChange] %s\n", ch.prev.String())
+	str = fmt.Sprintf("journal [resetObjectChange] %s\n", ch.StateObj.String())
 	return str
 }
 
-func (ch *resetObjectChange) Marshal()([]byte, error) {
+func (ch *ResetObjectChange) Marshal()([]byte, error) {
 	return json.Marshal(ch)
 }
 // suicideChange
-func (ch *suicideChange) undo(s *StateDB) {
-	obj := s.GetStateObject(*ch.account)
-	if obj != nil {
-		obj.suicided = ch.prev
-		obj.setBalance(ch.prevbalance)
-	}
-}
-func (ch *suicideChange) String() string {
+//func (ch *suicideChange) undo(s *StateDB) {
+//	obj := s.GetStateObject(*ch.account)
+//	if obj != nil {
+//		obj.suicided = ch.prev
+//		obj.setBalance(ch.prevbalance)
+//	}
+//}
+func (ch *SuicideChange) String() string {
 	var str string
-	str = fmt.Sprintf("journal [suicideChange] %s\n", ch.account.Hex())
+	str = fmt.Sprintf("journal [suicideChange] %s\n", ch.Account.Hex())
 	return str
 }
-func (ch *suicideChange) Marshal()([]byte, error) {
+func (ch *SuicideChange) Marshal()([]byte, error) {
 	return json.Marshal(ch)
 }
 
 // touchChange
-var ripemd = common.HexToAddress("0000000000000000000000000000000000000003")
-
-func (ch *touchChange) undo(s *StateDB) {
-	if !ch.prev && *ch.account != ripemd {
-		delete(s.stateObjects, *ch.account)
-		delete(s.stateObjectsDirty, *ch.account)
-	}
-}
-func (ch *touchChange) String() string {
+//var ripemd = common.HexToAddress("0000000000000000000000000000000000000003")
+//
+//func (ch *TouchChange) undo(s *StateDB) {
+//	if !ch.Prev && *ch.Account != ripemd {
+//		delete(s.stateObjects, *ch.Account)
+//		delete(s.stateObjectsDirty, *ch.Account)
+//	}
+//}
+func (ch *TouchChange) String() string {
 	var str string
-	str = fmt.Sprintf("journal [touchChange] %s\n", ch.account.Hex())
+	str = fmt.Sprintf("journal [touchChange] %s\n", ch.TouchAccount.Hex())
 	return str
 }
-func (ch *touchChange) Marshal()([]byte, error) {
+func (ch *TouchChange) Marshal()([]byte, error) {
 	return json.Marshal(ch)
 }
 
 // balanceChange
-func (ch *balanceChange) undo(s *StateDB) {
-	s.GetStateObject(*ch.account).setBalance(ch.prev)
-}
-func (ch *balanceChange) String() string {
+//func (ch *balanceChange) undo(s *StateDB) {
+//	s.GetStateObject(*ch.account).setBalance(ch.prev)
+//}
+func (ch *BalanceChange) String() string {
 	var str string
-	str = fmt.Sprintf("journal [balanceChange] %s previous balance %s \n", ch.account.Hex(), ch.prev.String())
+	str = fmt.Sprintf("journal [balanceChange] %s previous balance %s \n", ch.BalanceAccount.Hex(), ch.BalancePrev.String())
 	return str
 }
-func (ch *balanceChange) Marshal()([]byte, error) {
+func (ch *BalanceChange) Marshal()([]byte, error) {
 	return json.Marshal(ch)
 }
 
 // nonceChange
-func (ch *nonceChange) undo(s *StateDB) {
-	s.GetStateObject(*ch.account).setNonce(ch.prev)
-}
+//func (ch *nonceChange) undo(s *StateDB) {
+//	s.GetStateObject(*ch.account).setNonce(ch.prev)
+//}
 
-func (ch *nonceChange) String() string {
+func (ch *NonceChange) String() string {
 	var str string
-	str = fmt.Sprintf("journal [nonceChange] %s previous nonce %d \n", ch.account.Hex(), ch.prev)
+	str = fmt.Sprintf("journal [nonceChange] %s previous nonce %d \n", ch.NonceAccount.Hex(), ch.NoncePrev)
 	return str
 
 }
-func (ch *nonceChange) Marshal()([]byte, error) {
+func (ch *NonceChange) Marshal()([]byte, error) {
 	return json.Marshal(ch)
 }
 
 // codeChange
-func (ch *codeChange) undo(s *StateDB) {
-	s.GetStateObject(*ch.account).setCode(common.BytesToHash(ch.prevhash), ch.prevcode)
-}
-func (ch *codeChange) String() string {
+//func (ch *codeChange) undo(s *StateDB) {
+//	s.GetStateObject(*ch.account).setCode(common.BytesToHash(ch.prevhash), ch.prevcode)
+//}
+func (ch *CodeChange) String() string {
 	var str string
-	str = fmt.Sprintf("journal [codeChange] %s previous codeHash %s \n", ch.account.Hex(), common.BytesToHash(ch.prevhash).Hex())
+	str = fmt.Sprintf("journal [codeChange] %s previous codeHash %s \n", ch.Account.Hex(), common.BytesToHash(ch.Prevhash).Hex())
 	return str
 }
-func (ch *codeChange) Marshal()([]byte, error) {
+func (ch *CodeChange) Marshal()([]byte, error) {
 	return json.Marshal(ch)
 }
 
-// storageChange
-func (ch *storageChange) undo(s *StateDB) {
-	s.GetStateObject(*ch.account).setState(ch.key, ch.prevalue)
-}
-func (ch *storageChange) String() string {
+//// storageChange
+//func (ch *storageChange) undo(s *StateDB) {
+//	s.GetStateObject(*ch.account).setState(ch.key, ch.prevalue)
+//}
+func (ch *StorageChange) String() string {
 	var str string
-	str = fmt.Sprintf("journal [storageChange] %s previous key %s  previous value %s \n", ch.account.Hex(), ch.key.Hex(), ch.prevalue.Hex())
+	str = fmt.Sprintf("journal [storageChange] %s previous key %s  previous value %s \n", ch.Account.Hex(), ch.Key.Hex(), ch.Prevalue.Hex())
 	return str
 }
-func (ch *storageChange) Marshal()([]byte, error) {
+func (ch *StorageChange) Marshal()([]byte, error) {
 	return json.Marshal(ch)
 }
 
-// refundChange
-func (ch *refundChange) undo(s *StateDB) {
-	s.refund = ch.prev
-}
-func (ch *refundChange) String() string {
+//// refundChange
+//func (ch *RefundChange) undo(s *StateDB) {
+//	s.refund = ch.Prev
+//}
+func (ch *RefundChange) String() string {
 	var str string
-	str = fmt.Sprintf("journal [refundChange] previous value %s \n", ch.prev.String())
+	str = fmt.Sprintf("journal [refundChange] previous value %s \n", ch.Prev.String())
 	return str
 }
-func (ch *refundChange) Marshal()([]byte, error) {
+func (ch *RefundChange) Marshal()([]byte, error) {
 	return json.Marshal(ch)
 }
 
 // addLogChange
-func (ch *addLogChange) undo(s *StateDB) {
-	logs := s.logs[ch.txhash]
-	if len(logs) == 1 {
-		delete(s.logs, ch.txhash)
-	} else {
-		s.logs[ch.txhash] = logs[:len(logs)-1]
-	}
-}
-func (ch *addLogChange) String() string {
+//func (ch *AddLogChange) undo(s *StateDB) {
+//	logs := s.logs[ch.Txhash]
+//	if len(logs) == 1 {
+//		delete(s.logs, ch.Txhash)
+//	} else {
+//		s.logs[ch.Txhash] = logs[:len(logs)-1]
+//	}
+//}
+func (ch *AddLogChange) String() string {
 	var str string
-	str = fmt.Sprintf("journal [addLogChange] tx hash %s \n", ch.txhash.Hex())
+	str = fmt.Sprintf("journal [addLogChange] tx hash %s \n", ch.Txhash.Hex())
 	return str
 }
-func (ch *addLogChange) Marshal()([]byte, error) {
+func (ch *AddLogChange) Marshal()([]byte, error) {
 	return json.Marshal(ch)
 }

@@ -48,7 +48,7 @@ type StateDB struct {
 
 	// Journal of state modifications. This is the backbone of
 	// Snapshot and RevertToSnapshot.
-	journal        journal
+	journal        Journal
 	validRevisions []revision
 	nextRevisionId int
 
