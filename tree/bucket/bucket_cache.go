@@ -14,22 +14,22 @@ var defaultBucketCacheMaxSize = 100 // MBs
 // be controlled - by keeping seletive buckets in the cache (most likely first few levels of the bucket tree - because,
 // higher the level of the bucket, more are the chances that the bucket would be required for recomputation of hash)
 type bucketCache struct {
-	Prefix    string
-	isEnabled bool
-	c         map[bucketKey]*bucketNode
-	lock      sync.RWMutex
-	size      uint64
-	maxSize   uint64
+	TreePrefix string
+	isEnabled  bool
+	c          map[bucketKey]*bucketNode
+	lock       sync.RWMutex
+	size       uint64
+	maxSize    uint64
 }
 
-func newBucketCache(prefix string,maxSizeMBs int) *bucketCache {
+func newBucketCache(treePrefix string,maxSizeMBs int) *bucketCache {
 	isEnabled := true
 	if maxSizeMBs <= 0 {
 		isEnabled = false
 	} else {
 		logger.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", maxSizeMBs)
 	}
-	return &bucketCache{Prefix: prefix,c: make(map[bucketKey]*bucketNode), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
+	return &bucketCache{TreePrefix: treePrefix,c: make(map[bucketKey]*bucketNode), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 }
 
 // TODO cache will be done later
@@ -69,13 +69,13 @@ func (cache *bucketCache) putWithoutLock(key bucketKey, node *bucketNode) {
 func (cache *bucketCache) get(key bucketKey) (*bucketNode, error) {
 	//defer perfstat.UpdateTimeStat("timeSpent", time.Now())
 	if !cache.isEnabled {
-		return fetchBucketNodeFromDB(cache.Prefix,&key)
+		return fetchBucketNodeFromDB(cache.TreePrefix,&key)
 	}
 	cache.lock.RLock()
 	defer cache.lock.RUnlock()
 	bucketNode := cache.c[key]
 	if bucketNode == nil {
-		return fetchBucketNodeFromDB(cache.Prefix,&key)
+		return fetchBucketNodeFromDB(cache.TreePrefix,&key)
 	}
 	return bucketNode, nil
 }

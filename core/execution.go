@@ -98,17 +98,6 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	defer contract.Finalise()
 
 	ret, err = evm.Run(contract, input)
-	/*
-		fmt.Println("---------------------------------------")
-		fmt.Println("caller.address",caller.Address())
-		fmt.Println("address",address)
-		fmt.Println("codeaddress",codeAddr)
-		fmt.Println("input",input)
-		fmt.Println("code",code)
-		fmt.Println("---------------------------------------")
-		fmt.Println("ret",ret)
-	*/
-
 	// if the contract creation ran successfully and no errors were returned
 	// calculate the gas required to store the code. If the code could not
 	// be stored due to not enough gas set an error and let it be handled

@@ -22,7 +22,7 @@ const (
 	// whether turn on fake hash function
 	enableFakeHashFn = false
 	// whether to remove empty stateObject
-	deleteEmptyObjects = false
+	deleteEmptyObjects = true
 )
 
 type revision struct {
@@ -355,7 +355,7 @@ func (self *StateDB) deleteStateObject(stateObject *StateObject) {
 	stateObject.deleted = true
 	addr := stateObject.Address()
 	// todo save into a batch instead of save to disk directly
-	self.db.Delete(addr.Bytes())
+	self.db.Delete(CompositeAccountKey(addr.Bytes()))
 }
 
 // Retrieve a state object given my the address. Returns nil if not found.
@@ -493,6 +493,7 @@ func (self *StateDB) RevertToSnapshot(copy interface{}) {
 	// Replay the journal to undo changes.
 	for i := len(self.journal) - 1; i >= snapshot; i-- {
 		self.journal[i].undo(self)
+		log.Infof("undo operation: %s", self.journal[i])
 	}
 	self.journal = self.journal[:snapshot]
 

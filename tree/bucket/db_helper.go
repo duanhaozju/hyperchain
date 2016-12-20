@@ -9,6 +9,7 @@ type rawKey []byte
 func fetchDataNodeFromDB(dataKey *dataKey) (*dataNode, error) {
 	db, err := hyperdb.GetLDBDatabase()
 	nodeBytes, err := db.Get(dataKey.getEncodedBytes())
+	nodeBytes = append([]byte("DataNode"),nodeBytes...)
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +29,8 @@ func fetchDataNodeFromDB(dataKey *dataKey) (*dataNode, error) {
 func fetchBucketNodeFromDB(treePrefix string,bucketKey *bucketKey) (*bucketNode, error) {
 	db,_ := hyperdb.GetLDBDatabase()
 	//nodeKey := bucketKey.getEncodedBytes(treePrefix)
-	nodeKey := append([]byte(treePrefix),bucketKey.getEncodedBytes()...)
+	nodeKey := append([]byte("BucketNode"),[]byte(treePrefix)...)
+	nodeKey = append(nodeKey,bucketKey.getEncodedBytes()...)
 	nodeBytes, err := db.Get(nodeKey)
 
 	if err != nil {
@@ -51,12 +53,13 @@ func fetchDataNodesFromDBFor(treePrefix string,bucketKey *bucketKey) (dataNodes,
 	minimumDataKeyBytes := minimumPossibleDataKeyBytesFor(bucketKey,treePrefix)
 
 	var dataNodes dataNodes
-
+	// IMPORTANT return value obtained by iterator is sorted
 	iter := db.NewIteratorWithPrefix(minimumDataKeyBytes)
-	for ; iter.Valid(); iter.Next() {
+	for iter.Next() {
 		keyBytes := iter.Key()
 		valueBytes := iter.Value()
 
+		keyBytes = keyBytes[8:]
 		dataKey := newDataKeyFromEncodedBytes(keyBytes)
 		logger.Debugf("Retrieved data key [%s] from DB for bucket [%s]", dataKey, bucketKey)
 		if !dataKey.getBucketKey().equals(bucketKey) {

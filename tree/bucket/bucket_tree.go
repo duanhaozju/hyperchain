@@ -240,10 +240,10 @@ func (bucketTree *BucketTree) addDataNodeChangesForPersistence(writeBatch hyperd
 		for _, dataNode := range dataNodes {
 			if dataNode.isDelete() {
 				logger.Debugf("Deleting data node key = %#v", dataNode.dataKey)
-				writeBatch.Delete(dataNode.dataKey.getEncodedBytes())
+				writeBatch.Delete(append([]byte("DataNode"),dataNode.dataKey.getEncodedBytes()...))
 			} else {
 				logger.Debugf("Adding data node with value = %#v", dataNode.value)
-				writeBatch.Put(dataNode.dataKey.getEncodedBytes(), dataNode.value)
+				writeBatch.Put(append([]byte("DataNode"),dataNode.dataKey.getEncodedBytes()...), dataNode.value)
 			}
 		}
 	}
@@ -257,9 +257,9 @@ func (bucketTree *BucketTree) addBucketNodeChangesForPersistence(writeBatch hype
 		bucketNodes := bucketTree.bucketTreeDelta.getBucketNodesAt(level)
 		for _, bucketNode := range bucketNodes {
 			if bucketNode.markedForDeletion {
-				writeBatch.Delete(append([]byte(bucketTree.treePrefix),bucketNode.bucketKey.getEncodedBytes()...))
+				writeBatch.Delete(append([]byte("BucketNode"),append([]byte(bucketTree.treePrefix),bucketNode.bucketKey.getEncodedBytes()...)...))
 			} else {
-				writeBatch.Put(append([]byte(bucketTree.treePrefix),bucketNode.bucketKey.getEncodedBytes()...), bucketNode.marshal())
+				writeBatch.Put(append([]byte("BucketNode"),append([]byte(bucketTree.treePrefix),bucketNode.bucketKey.getEncodedBytes()...)...), bucketNode.marshal())
 			}
 		}
 	}
@@ -291,3 +291,17 @@ func (bucketTree *BucketTree) PerfHintKeyChanged(accountID string, key string) {
 	// We can create a cache. Pull all the keys for the bucket (to which given key belongs) in a separate thread
 	// This prefetching can help making method 'ComputeCryptoHash' faster.
 }
+
+// TODO test
+// it should be used when the statedb reset
+func (bucket *BucketTree) Reset(){
+	bucket.ClearWorkingSet(false)
+}
+
+// TODO test important
+// the func can make the buckettree revert to target block
+func (bucket *BucketTree) RevertToTargetBlock(){
+
+}
+
+

@@ -85,8 +85,5 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 			log.Error("VM call err:", err)
 		}
 	}
-	// todo replace the gasused
-	// todo just for test
-
 	return ret, addr, err
 }
