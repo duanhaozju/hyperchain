@@ -65,6 +65,9 @@ func TestState_(t *testing.T){
 	key_valueMap["key6"] = []byte("value6")
 	key_valueMap["key7"] = []byte("value7")
 	key_valueMap["key8"] = []byte("value8")
+	key_valueMap["key9"] = []byte("value9")
+	key_valueMap["key10"] = []byte("value10")
+	key_valueMap["key11"] = []byte("value11")
 	state.SetK_VMap(key_valueMap)
 	hash,err := state.GetHash()
 	if err != nil{
@@ -75,6 +78,7 @@ func TestState_(t *testing.T){
 
 	state.AddChangesForPersistence(writeBatch)
 	state.CommitStateDelta()
+
 }
 func expectedBucketHashContentForTest(data ...[]string) []byte {
 	expectedContent := []byte{}

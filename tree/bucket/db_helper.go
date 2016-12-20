@@ -30,10 +30,11 @@ func fetchBucketNodeFromDB(treePrefix string,bucketKey *bucketKey) (*bucketNode,
 	//nodeKey := bucketKey.getEncodedBytes(treePrefix)
 	nodeKey := append([]byte(treePrefix),bucketKey.getEncodedBytes()...)
 	nodeBytes, err := db.Get(nodeKey)
-	if err.Error() == "leveldb: not found"{
-		return nil,nil
-	}
+
 	if err != nil {
+		if err.Error() == "leveldb: not found"{
+			return nil,nil
+		}
 		return nil, err
 	}
 	if nodeBytes == nil {
@@ -46,13 +47,12 @@ func fetchBucketNodeFromDB(treePrefix string,bucketKey *bucketKey) (*bucketNode,
 // TODO it need to be tested
 func fetchDataNodesFromDBFor(treePrefix string,bucketKey *bucketKey) (dataNodes, error) {
 	db,_ := hyperdb.GetLDBDatabase()
-	iter := db.NewIterator()
 
 	minimumDataKeyBytes := minimumPossibleDataKeyBytesFor(bucketKey,treePrefix)
 
 	var dataNodes dataNodes
-	iter.Seek(minimumDataKeyBytes)
 
+	iter := db.NewIteratorWithPrefix(minimumDataKeyBytes)
 	for ; iter.Valid(); iter.Next() {
 		keyBytes := iter.Key()
 		valueBytes := iter.Value()
