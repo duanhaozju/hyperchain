@@ -8,7 +8,6 @@ import (
 	"hyperchain/core"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
-	"hyperchain/core/vm"
 )
 
 type PublicBlockAPI struct {
@@ -171,18 +170,6 @@ func getBlocksByTime(startTime,endTime int64, db *hyperdb.LDBDatabase)(sumOfBloc
 	return sumOfBlocks,startBlock,endBlock
 }
 
-func getBlockStateDb(n BlockNumber, db *hyperdb.LDBDatabase, stateType string) (vm.Database, error) {
-	block, err := getBlockByNumber(n, db)
-	if err != nil {
-		return nil, err
-	}
-	stateDB, err := GetStateInstance(block.MerkleRoot, db, stateType)
-	if err != nil {
-		log.Errorf("Get stateDB error, %v", err)
-		return nil, err
-	}
-	return stateDB, nil
-}
 
 func outputBlockResult(block *types.Block, db *hyperdb.LDBDatabase) (*BlockResult, error) {
 

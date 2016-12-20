@@ -4,20 +4,32 @@ import (
 	"bytes"
 	"github.com/op/go-logging"
 	"hyperchain/hyperdb"
+	"hyperchain/common"
 )
 
 var logger = logging.MustGetLogger("buckettree")
 type K_VMap map[string][]byte
 
+func NewKVMap() K_VMap{
+	ret := make(map[string][]byte)
+	return ret
+}
 // StateImpl - implements the interface - 'statemgmt.HashableState'
 type BucketTree struct {
-	treePrefix              string
+	treePrefix             string
 	dataNodesDelta         *dataNodesDelta
 	bucketTreeDelta        *bucketTreeDelta
 	persistedStateHash     []byte
 	lastComputedCryptoHash []byte
 	recomputeCryptoHash    bool
 	bucketCache            *bucketCache
+}
+
+type Conf struct {
+	StateSize                  int
+	StateLevelGroup            int
+	StorageSize                int
+	StorageLevelGroup          int
 }
 
 // NewStateImpl constructs a new StateImpl
@@ -121,7 +133,8 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 		logger.Debugf("Crypto-hash for lowest-level bucket [%s] is [%x]", bucketKey, cryptoHashForBucket)
 		parentBucket := bucketTree.bucketTreeDelta.getOrCreateBucketNode(bucketKey.getParentKey())
 		parentBucket.setChildCryptoHash(bucketKey, cryptoHashForBucket)
-		logger.Notice("*******************the cryptoHashForBucket is ",cryptoHashForBucket)
+		logger.Noticef("bucket tree prefix %s bucket key %s, bucket hash %s",
+			bucketTree.treePrefix, bucketKey.String(), common.Bytes2Hex(cryptoHashForBucket))
 	}
 	return nil
 }
@@ -130,24 +143,24 @@ func (bucketTree *BucketTree) processBucketTreeDelta() error {
 	secondLastLevel := conf.getLowestLevel() - 1
 	for level := secondLastLevel; level >= 0; level-- {
 		bucketNodes := bucketTree.bucketTreeDelta.getBucketNodesAt(level)
-		logger.Debugf("Bucket tree delta. Number of buckets at level [%d] are [%d]", level, len(bucketNodes))
+		logger.Noticef("Bucket tree delta. Number of buckets at level [%d] are [%d]", level, len(bucketNodes))
 		for _, bucketNode := range bucketNodes {
-			logger.Debugf("bucketNode in tree-delta [%s]", bucketNode)
+			logger.Noticef("bucketNode in tree-delta [%s]", bucketNode)
 			dbBucketNode, err := bucketTree.bucketCache.get(*bucketNode.bucketKey)
-			logger.Debugf("bucket node from db [%s]", dbBucketNode)
+			logger.Noticef("bucket node from db [%s]", dbBucketNode)
 			if err != nil {
 				return err
 			}
 			if dbBucketNode != nil {
 				bucketNode.mergeBucketNode(dbBucketNode)
-				logger.Debugf("After merge... bucketNode in tree-delta [%s]", bucketNode)
+				logger.Noticef("After merge... bucketNode in tree-delta [%s]", bucketNode)
 			}
 			if level == 0 {
 				return nil
 			}
-			logger.Debugf("Computing cryptoHash for bucket [%s]", bucketNode)
+			logger.Noticef("Computing cryptoHash for bucket [%s]", bucketNode)
 			cryptoHash := bucketNode.computeCryptoHash()
-			logger.Debugf("cryptoHash for bucket [%s] is [%x]", bucketNode, cryptoHash)
+			logger.Noticef("cryptoHash for bucket [%s] is [%x]", bucketNode, cryptoHash)
 			parentBucket := bucketTree.bucketTreeDelta.getOrCreateBucketNode(bucketNode.bucketKey.getParentKey())
 			parentBucket.setChildCryptoHash(bucketNode.bucketKey, cryptoHash)
 		}
@@ -160,7 +173,7 @@ func (bucketTree *BucketTree) computeRootNodeCryptoHash() []byte {
 }
 
 func computeDataNodesCryptoHash(bucketKey *bucketKey, updatedNodes dataNodes, existingNodes dataNodes) []byte {
-	logger.Debugf("Computing crypto-hash for bucket [%s]. numUpdatedNodes=[%d], numExistingNodes=[%d]", bucketKey, len(updatedNodes), len(existingNodes))
+	logger.Noticef("Computing crypto-hash for bucket [%s]. numUpdatedNodes=[%d], numExistingNodes=[%d]", bucketKey, len(updatedNodes), len(existingNodes))
 	bucketHashCalculator := newBucketHashCalculator(bucketKey)
 	i := 0
 	j := 0

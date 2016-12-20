@@ -7,6 +7,12 @@ import (
 const storageIdentifier = "-storage"
 const accountIdentifier = "-account"
 const codeIdentifier = "-code"
+const bucketTreeIdentifier = "-bucket"
+
+// ConfigNumBuckets - config name 'numBuckets' as it appears in yaml file
+const ConfigNumBuckets = "numBuckets"
+// ConfigMaxGroupingAtEachLevel - config name 'maxGroupingAtEachLevel' as it appears in yaml file
+const ConfigMaxGroupingAtEachLevel = "maxGroupingAtEachLevel"
 
 /*
 	Storage
@@ -53,3 +59,20 @@ func SplitCompositeAccountKey(key []byte) ([]byte, bool) {
 		return nil, false
 	}
 }
+/*
+	Bucket Tree
+ */
+func CompositeStateBucketPrefix() ([]byte, bool) {
+	return append([]byte(bucketTreeIdentifier), []byte("-state")...), true
+}
+func CompositeStorageBucketPrefix(address []byte) ([]byte, bool) {
+	return append([]byte(bucketTreeIdentifier), address...), true
+}
+// construct bucket tree configuration
+func SetupBucketConfig(size int, levelGroup int) map[string]interface{} {
+	ret := make(map[string]interface{})
+	ret[ConfigNumBuckets] = size
+	ret[ConfigMaxGroupingAtEachLevel] = levelGroup
+	return ret
+}
+

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"hyperchain/hyperdb"
 	"github.com/pkg/errors"
+	"hyperchain/tree/bucket"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -59,6 +60,8 @@ type StateObject struct {
 	cachedStorage Storage // Storage entry cache to avoid duplicate reads
 	dirtyStorage  Storage // Storage entries that need to be flushed to disk
 
+	bucketTree    *bucket.BucketTree      // a bucket tree use to calculate fingerprint of storage efficiency
+	bucketConf    map[string]interface{}  // bucket tree config
 	// Cache flags.
 	// When an object is marked suicided it will be delete from the db
 	// during the "update" phase of the state transition.
@@ -83,14 +86,22 @@ type Account struct {
 }
 
 // newObject creates a state object.
-func newObject(db *StateDB, address common.Address, data Account, onDirty func(addr common.Address)) *StateObject {
+func newObject(db *StateDB, address common.Address, data Account, onDirty func(addr common.Address), setup bool, bktConf map[string]interface{}) *StateObject {
 	if data.Balance == nil {
 		data.Balance = new(big.Int)
 	}
 	if data.CodeHash == nil {
 		data.CodeHash = emptyCodeHash
 	}
-	return &StateObject{db: db, address: address, data: data, cachedStorage: make(Storage), dirtyStorage: make(Storage), onDirty: onDirty}
+	obj := &StateObject{db: db, address: address, data: data, cachedStorage: make(Storage), dirtyStorage: make(Storage), onDirty: onDirty}
+	// initialize bucket tree
+	if setup {
+		prefix, _ := CompositeStorageBucketPrefix(address.Bytes())
+		obj.bucketTree = bucket.NewBucketTree(string(prefix))
+		obj.bucketTree.Initialize(bktConf)
+		obj.bucketConf = bktConf
+	}
+	return obj
 }
 
 
@@ -205,6 +216,8 @@ func (self *StateObject) Flush(db hyperdb.Batch) error {
 			}
 		}
 	}
+	// flush all bucket tree modified to batch
+	self.bucketTree.AddChangesForPersistence(db)
 	return nil
 }
 
@@ -223,6 +236,25 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 			}))
 		}
 		return self.Root()
+	} else {
+		// use bucket tree
+		// 1. convert dirty storage entries to working set
+		workingSet := bucket.NewKVMap()
+		for k, v := range self.dirtyStorage {
+			workingSet[k.Hex()] = v.Bytes()
+		}
+		self.bucketTree.PrepareWorkingSet(workingSet)
+		// 2. calculate hash
+		hash, err := self.bucketTree.ComputeCryptoHash()
+		if err != nil {
+			log.Errorf("calculate storage hash for stateObject [%s] failed", self.address.Hex())
+			return common.Hash{}
+		}
+		// 3. assign to self.ROOT
+		self.SetRoot(common.BytesToHash(hash))
+		// 4. persist bucket change
+		return self.Root()
+
 	}
 	return common.Hash{}
 }
@@ -274,7 +306,7 @@ func (self *StateObject) setBalance(amount *big.Int) {
 func (c *StateObject) ReturnGas(gas, price *big.Int) {}
 
 func (self *StateObject) deepCopy(db *StateDB, onDirty func(addr common.Address)) *StateObject {
-	stateObject := newObject(db, self.address, self.data, onDirty)
+	stateObject := newObject(db, self.address, self.data, onDirty, true, self.bucketConf)
 	stateObject.code = self.code
 	stateObject.dirtyStorage = self.dirtyStorage.Copy()
 	stateObject.cachedStorage = self.dirtyStorage.Copy()

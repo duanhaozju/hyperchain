@@ -9,12 +9,14 @@ import (
 	"hyperchain/core"
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
+	"hyperchain/tree/bucket"
 )
 
 type PublicAccountAPI struct {
-	pm *manager.ProtocolManager
-	db *hyperdb.LDBDatabase
-	stateType string
+	pm             *manager.ProtocolManager
+	db             *hyperdb.LDBDatabase
+	stateType      string
+	bucketConf     bucket.Conf
 }
 
 type AccountResult struct {
@@ -26,11 +28,12 @@ type UnlockParas struct {
 	Password string `json:"password"`
 }
 
-func NewPublicAccountAPI(pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, stateType string) *PublicAccountAPI {
+func NewPublicAccountAPI(pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, stateType string, bucketConf bucket.Conf) *PublicAccountAPI {
 	return &PublicAccountAPI{
 		pm: pm,
 		db: hyperDb,
 		stateType: stateType,
+		bucketConf: bucketConf,
 	}
 }
 
@@ -84,7 +87,7 @@ func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 		log.Errorf("%v", err)
 		return nil
 	}
-	stateDB, err := GetStateInstance(headBlock.MerkleRoot, acc.db, acc.stateType)
+	stateDB, err := GetStateInstance(headBlock.MerkleRoot, acc.db, acc.stateType, acc.bucketConf)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
 		return nil
@@ -108,7 +111,7 @@ func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
 		log.Errorf("Get Block error, %v", err)
 		return "", err
 	} else if headBlock != nil {
-		stateDB, err := GetStateInstance(common.BytesToHash(headBlock.MerkleRoot), acc.db, acc.stateType)
+		stateDB, err := GetStateInstance(common.BytesToHash(headBlock.MerkleRoot), acc.db, acc.stateType, acc.bucketConf)
 		if err == nil && stateDB != nil {
 			if stateobject := stateDB.GetAccount(addr); stateobject != nil {
 				return stateobject.Balance().String(), nil

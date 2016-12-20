@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 	"errors"
 	"hyperchain/core/vm"
+	"hyperchain/tree/bucket"
 )
 
 var (
@@ -60,9 +61,10 @@ type BlockPool struct {
 	queue               *common.Cache       // cache for storing commit event
 	// config
 	conf                BlockPoolConf       // block configuration
+	bucketTreeConf      bucket.Conf
 }
 
-func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter, conf BlockPoolConf) *BlockPool {
+func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter, conf BlockPoolConf, bktConf bucket.Conf) *BlockPool {
 	var err error
 	blockcache, err := common.NewCache()
 	if err != nil {return nil}
@@ -78,6 +80,7 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter, conf B
 		validationQueue: validationqueue,
 		blockCache:      blockcache,
 		conf:            conf,
+		bucketTreeConf:  bktConf,
 	}
 	// 1. set demand number and demand seqNo
 	currentChain := core.GetChainCopy()
@@ -113,7 +116,7 @@ func (pool *BlockPool) GetStateInstance(root common.Hash, db hyperdb.Database) (
 	case "rawstate":
 		return statedb.New(root, db)
 	case "hyperstate":
-		return hyperstate.New(root, db)
+		return hyperstate.New(root, db, pool.bucketTreeConf)
 	default:
 		return nil, errors.New("no state type specified")
 	}
