@@ -1,13 +1,25 @@
 package hyperstate
 
 import (
+	checker "gopkg.in/check.v1"
 	"testing"
 	"hyperchain/common"
 	"math/big"
+	"encoding/json"
+	"strconv"
+	"fmt"
 )
+type JournalSuite struct {
+}
 
-func TestMarshal(t *testing.T) {
-	var jourList []journalEntry
+func Test(t *testing.T) {
+	checker.TestingT(t)
+}
+
+var _ = checker.Suite(&JournalSuite{})
+
+func (s *JournalSuite) TestMarshal(c *checker.C) {
+	var jourList journal
 	addr1 := common.BytesToAddress([]byte("1"))
 	addr2 := common.BytesToAddress([]byte("2"))
 	addr3 := common.BytesToAddress([]byte("3"))
@@ -52,16 +64,5 @@ func TestMarshal(t *testing.T) {
 		prev: true,
 	})
 
-	test := rong{journalList: jourList}
-	t.Log(test)
-	res, err := test.Marshal()
-	t.Log(res)
-	if err != nil {
-		t.Error("journal marshal err")
-	}
-
-	jo := rong{}
-	err = UnmarshalJournal(res, &jo)
-	t.Log(jo)
-
 }
+

@@ -15,34 +15,12 @@ type journalEntry interface {
 
 type journal []journalEntry
 
-type rong struct {
-	journalList []journalEntry
+func (self *journal) Marshal() []byte {
+	return nil
 }
 
-func (self *rong) Marshal() ([]byte, error) {
-	var list [][]byte
-	var err error
-	for _, j := range self.journalList {
-		res, err := j.Marshal()
-		if err != nil {
-			break
-		}
-		list = append(list, res)
-	}
-
-	if err != nil {
-		return nil, err
-	} else {
-		return json.Marshal(list)
-	}
-}
-
-func UnmarshalJournal(data []byte, ret *rong) error {
-
-	var list [][]byte
-	err := json.Unmarshal(data, &list)
-
-	return err
+func UnmarshalJournal(data []byte, ret *journal) error {
+	return nil
 }
 
 
