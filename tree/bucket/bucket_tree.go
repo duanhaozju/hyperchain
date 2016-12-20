@@ -257,9 +257,9 @@ func (bucketTree *BucketTree) addBucketNodeChangesForPersistence(writeBatch hype
 		bucketNodes := bucketTree.bucketTreeDelta.getBucketNodesAt(level)
 		for _, bucketNode := range bucketNodes {
 			if bucketNode.markedForDeletion {
-				writeBatch.Delete(append([]byte(bucketTree.treePrefix),bucketNode.bucketKey.getEncodedBytes()...))
+				writeBatch.Delete(append([]byte("BucketNode"),append([]byte(bucketTree.treePrefix),bucketNode.bucketKey.getEncodedBytes()...)...))
 			} else {
-				writeBatch.Put(append([]byte(bucketTree.treePrefix),bucketNode.bucketKey.getEncodedBytes()...), bucketNode.marshal())
+				writeBatch.Put(append([]byte("BucketNode"),append([]byte(bucketTree.treePrefix),bucketNode.bucketKey.getEncodedBytes()...)...), bucketNode.marshal())
 			}
 		}
 	}
