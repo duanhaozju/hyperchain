@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"hyperchain/consensus/events"
 	"github.com/golang/protobuf/proto"
-	"time"
 )
 
 type viewChangeQuorumEvent struct{}
@@ -588,7 +587,6 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 				} else {
 					logger.Critical("send validate")
 					pbft.recvRequestBatch(batch)
-					time.Sleep(10 * time.Millisecond)
 				}
 			}
 		}

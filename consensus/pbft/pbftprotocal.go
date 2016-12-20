@@ -1417,7 +1417,6 @@ func (pbft *pbftProtocal) executeAfterStateUpdate() {
 			logger.Debugf("Replica %d try to vaidate batch %s", pbft.id, cert.digest)
 			pbft.validateBatch(cert.prePrepare.TransactionBatch, idx.n, idx.v)
 			cert.sentValidate = true
-			time.Sleep(10 * time.Millisecond)
 		}
 	}
 
