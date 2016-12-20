@@ -114,6 +114,7 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 
 	// find quorum chkpt
 	n, lastid, replicas, find, chkptBehind := pbft.findHighestChkptQuorum()
+	logger.Debug("n: ", n, "lastid: ", lastid, "replicas: ", replicas, "find: ", find, "chkptBehind: ", chkptBehind)
 	lastExec, curHash, execFind := pbft.findLastExecQuorum()
 
 	if !find {
@@ -142,18 +143,19 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 
 	// Fast catch up
 	if lastExec == selfLastExec && curHash == selfCurHash {
-		logger.Noticef("Replica %d in recovery same lastExec: %d, " +
+		logger.Debugf("Replica %d in recovery same lastExec: %d, " +
 			"same block hash: %s, fast catch up", pbft.id, selfLastExec, curHash)
 		pbft.inRecovery = false
 		return recoveryDoneEvent{}
 	}
 
-	logger.Noticef("Replica %d in recovery self lastExec: %d, others: %d" +
+	logger.Debugf("Replica %d in recovery self lastExec: %d, others: %d" +
 		"miss match self block hash: %s, other block hash %s", pbft.id, selfLastExec, lastExec, selfCurHash, curHash)
 
 	var id []byte
+	var err error
 	if n != 0 {
-		id, err := base64.StdEncoding.DecodeString(lastid)
+		id, err = base64.StdEncoding.DecodeString(lastid)
 		if nil != err {
 			logger.Errorf("Replica %d cannot decode blockInfoId %s to %+v", pbft.id, lastid, id)
 			return nil
@@ -178,6 +180,7 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 
 		return nil
 	} else {
+		logger.Critical("send stateupdated")
 		pbft.helper.VcReset(n+1)
 		state := &stateUpdatedEvent{seqNo: n}
 		go pbft.postPbftEvent(state)
@@ -222,14 +225,14 @@ func (pbft *pbftProtocal) findHighestChkptQuorum() (n uint64, d string, replicas
 		if len(peers) >= 2*pbft.f+1 {
 			find = true
 			if ci.n >= n {
+				if ci.n > n {
+					chkptBehind = true
+				}
 				n = ci.n
 				d = ci.d
 				replicas = make([]uint64, len(peers))
 				for peer := range peers {
 					replicas = append(replicas, peer)
-				}
-				if ci.n > n {
-					chkptBehind = true
 				}
 			}
 		}

@@ -452,12 +452,9 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 		return
 	}
 
-	log.Info("number is ", block.Number)
-
 	if pool.demandNumber == block.Number {
 		WriteBlock(block, commonHash, vid, primary, pool.consenter)
 		atomic.AddUint64(&pool.demandNumber, 1)
-		log.Info("current demandNumber is ", pool.demandNumber)
 
 		for i := block.Number + 1; i <= atomic.LoadUint64(&pool.maxNum); i += 1 {
 			if ret, existed := pool.queue.Get(i); existed {
@@ -478,7 +475,6 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 
 // WriteBlock: save block into database
 func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, primary bool, consenter consensus.Consenter) {
-	log.Info("block number is ", block.Number)
 	core.UpdateChain(block, false)
 
 	db, err := hyperdb.GetLDBDatabase()
@@ -512,11 +508,9 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, pr
 	// flush to disk
 	// IMPORTANT never remove this statement, otherwise the whole batch of data will lose
 	batch.Write()
-
 	if block.Number%10 == 0 && block.Number != 0 {
 		core.WriteChainChan()
 	}
-
 	newChain := core.GetChainCopy()
 	log.Notice("Block number", newChain.Height)
 	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))

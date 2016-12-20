@@ -414,7 +414,6 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 		return pbft.processTxEvent(tx)
 	case viewChangedEvent:
 		primary := pbft.primary(pbft.view)
-		//logger.Noticef("=============view changed event persist view==========")
 		pbft.persistView(pbft.view)
 		pbft.helper.InformPrimary(primary)
 		pbft.processRequestsDuringViewChange()
@@ -458,7 +457,6 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case *Checkpoint:
 		return pbft.recvCheckpoint(et)
 	case *stateUpdatedEvent:
-		//pbft.batch.reqStore = newRequestStore()
 		err = pbft.recvStateUpdatedEvent(et)
 	case *ViewChange:
 		return pbft.recvViewChange(et)
@@ -856,7 +854,7 @@ func (pbft *pbftProtocal) eventToMsg(msg *ConsensusMessage) (interface{}, error)
 		rrb := &TransactionBatch{}
 		err := proto.Unmarshal(msg.Payload, rrb)
 		if err != nil {
-			logger.Error("Unmarshal error, can not unmarshal ConsensusMessage_RETURN_REQUEST_BATCH:", err)
+			logger.Error("Unmarshal stringerror, can not unmarshal ConsensusMessage_RETURN_REQUEST_BATCH:", err)
 			return nil, err
 		}
 		return returnRequestBatchEvent(rrb), nil
@@ -1986,7 +1984,7 @@ func (pbft *pbftProtocal) skipTo(seqNo uint64, id []byte, replicas []uint64) {
 		return
 	}
 	//pbft.UpdateState(&checkpointMessage{seqNo, id}, info, replicas)
-	logger.Notice("seqNo: ", seqNo, "id: ", id, "replicas: ", replicas)
+	logger.Debug("seqNo: ", seqNo, "id: ", id, "replicas: ", replicas)
 	pbft.updateState(seqNo, id, replicas)
 }
 
