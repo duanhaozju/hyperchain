@@ -553,7 +553,7 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 }
 
 func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
-	logger.Infof("Replica %d accepting new-view to view %d", pbft.id, pbft.view)
+	logger.Debugf("Replica %d accepting new-view to view %d", pbft.id, pbft.view)
 
 	pbft.stopTimer()
 	pbft.nullRequestTimer.Stop()
@@ -585,6 +585,7 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 				if !ok {
 					logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
 				} else {
+					logger.Critical("send validate")
 					pbft.recvRequestBatch(batch)
 				}
 			}
