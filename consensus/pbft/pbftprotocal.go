@@ -15,13 +15,10 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/event"
 	"hyperchain/protos"
-	//"hyperchain/consensus/helper/persist"
-	//"hyperchain/common"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
-	//"hyperchain/core"
 )
 
 var logger *logging.Logger // package-level logger
@@ -417,7 +414,6 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 		return pbft.processTxEvent(tx)
 	case viewChangedEvent:
 		primary := pbft.primary(pbft.view)
-		//logger.Noticef("=============view changed event persist view==========")
 		pbft.persistView(pbft.view)
 		pbft.helper.InformPrimary(primary)
 		pbft.processRequestsDuringViewChange()
@@ -461,11 +457,6 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case *Checkpoint:
 		return pbft.recvCheckpoint(et)
 	case *stateUpdatedEvent:
-		//pbft.batch.reqStore = newRequestStore()
-		//height, hash := persist.GetBlockHeightAndHash()
-		//logger.Critical("height: ", height, "hash: ", hash)
-		//chain := core.GetChainCopy()
-		//logger.Critical("height: ", chain.Height, "hash: ", common.Bytes2Hex(chain.LatestBlockHash))
 		err = pbft.recvStateUpdatedEvent(et)
 	case *ViewChange:
 		return pbft.recvViewChange(et)
