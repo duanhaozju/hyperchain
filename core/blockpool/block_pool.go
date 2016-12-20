@@ -111,7 +111,6 @@ func (pool *BlockPool) SetDemandSeqNo(seqNo uint64) {
 // obtain state handler via configuration in block.conf
 // two state: (1)raw state (2) hyper state are supported
 func (pool *BlockPool) GetStateInstance(root common.Hash, db hyperdb.Database) (vm.Database, error) {
-	// todo change to singleton
 	switch pool.conf.StateType {
 	case "rawstate":
 		return statedb.New(root, db)

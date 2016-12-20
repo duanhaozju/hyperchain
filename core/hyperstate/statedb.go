@@ -65,6 +65,7 @@ type StateDB struct {
 // Create a new state from a given root
 func New(root common.Hash, db hyperdb.Database, bktConf bucket.Conf) (*StateDB, error) {
 	csc, _ := lru.New(codeSizeCacheSize)
+	// initialize bucket tree
 	bucketPrefix, _ := CompositeStateBucketPrefix()
 	bucketTree := bucket.NewBucketTree(string(bucketPrefix))
 	bucketTree.Initialize(SetupBucketConfig(bktConf.StateSize, bktConf.StateLevelGroup))
@@ -186,7 +187,6 @@ func (self *StateDB) GetAccount(addr common.Address) vm.Account {
 
 func (self *StateDB) GetAccounts() map[string]vm.Account {
 	ret := make(map[string]vm.Account)
-	// TODO be more elegant
 	leveldb, ok := self.db.(*hyperdb.LDBDatabase)
 	if ok == false {
 		return ret
@@ -214,7 +214,7 @@ func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 	}
 	return common.Big0
 }
-
+// Nonce is the contract number state object has deployed
 func (self *StateDB) GetNonce(addr common.Address) uint64 {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
@@ -339,19 +339,22 @@ func (self *StateDB) Delete(addr common.Address) bool {
 //
 
 // updateStateObject writes the given object to the trie.
-func (self *StateDB) updateStateObject(stateObject *StateObject) {
+func (self *StateDB) updateStateObject(stateObject *StateObject) []byte {
 	addr := stateObject.Address()
 	data, err := stateObject.MarshalJSON()
 	if err != nil {
 		log.Error("marshal stateobject failed", addr.Hex())
 	}
+	// todo save into a batch instead of save to disk directly
 	self.db.Put(CompositeAccountKey(addr.Bytes()), data)
+	return data
 }
 
 // deleteStateObject removes the given object from the database
 func (self *StateDB) deleteStateObject(stateObject *StateObject) {
 	stateObject.deleted = true
 	addr := stateObject.Address()
+	// todo save into a batch instead of save to disk directly
 	self.db.Delete(addr.Bytes())
 }
 
@@ -588,15 +591,13 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 				return common.Hash{}, err
 			}
 			// Update the object in the main account trie.
-			s.updateStateObject(stateObject)
+			d := s.updateStateObject(stateObject)
 			// Add to change set
 			if enableFakeHashFn {
-				sd, _ := stateObject.MarshalJSON()
-				d := append(stateObject.address.Bytes(), sd...)
-				set = append(set, d)
+				c := append(stateObject.address.Bytes(), d...)
+				set = append(set, c)
 			} else {
-				sd, _ := stateObject.MarshalJSON()
-				workingSet[stateObject.address.Hex()] = sd
+				workingSet[stateObject.address.Hex()] = d
 			}
 		}
 		delete(s.stateObjectsDirty, addr)
