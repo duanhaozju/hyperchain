@@ -282,7 +282,7 @@ func (bucketTree *BucketTree) PerfHintKeyChanged(accountID string, key string) {
 // TODO test
 // it should be used when the statedb reset
 func (bucket *BucketTree) Reset(){
-
+	bucket.ClearWorkingSet(false)
 }
 
 // TODO test important

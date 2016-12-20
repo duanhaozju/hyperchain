@@ -75,10 +75,23 @@ func TestState_(t *testing.T){
 	}else {
 		logger.Debugf("--------------the state.GetHash() is ",(hash))
 	}
-
 	state.AddChangesForPersistence(writeBatch)
+
+	//state.Reset(false)
+	//hash,err = state.GetHash()
+	//if err != nil{
+	//	logger.Debugf("--------------GetHash error")
+	//}else {
+	//	logger.Debugf("--------------the state.GetHash() is ",(hash))
+	//}
+
 	state.CommitStateDelta()
 
+}
+
+func featchDataNodeFromDBTest(){
+	//db,_ := hyperdb.GetLDBDatabase()
+	//db.Get()
 }
 func expectedBucketHashContentForTest(data ...[]string) []byte {
 	expectedContent := []byte{}

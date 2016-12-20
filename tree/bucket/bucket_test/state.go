@@ -94,3 +94,7 @@ func (state *State) CommitStateDelta() error {
 	state.stateImpl.AddChangesForPersistence(writeBatch)
 	return writeBatch.Write()
 }
+
+func (state *State) Reset(changePersists bool){
+	state.stateImpl.Reset()
+}
