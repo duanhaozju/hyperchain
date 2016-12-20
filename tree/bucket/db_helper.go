@@ -53,7 +53,7 @@ func fetchDataNodesFromDBFor(treePrefix string,bucketKey *bucketKey) (dataNodes,
 	var dataNodes dataNodes
 
 	iter := db.NewIteratorWithPrefix(minimumDataKeyBytes)
-	for ; iter.Valid(); iter.Next() {
+	for iter.Next() {
 		keyBytes := iter.Key()
 		valueBytes := iter.Value()
 
