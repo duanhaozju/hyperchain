@@ -240,10 +240,10 @@ func (bucketTree *BucketTree) addDataNodeChangesForPersistence(writeBatch hyperd
 		for _, dataNode := range dataNodes {
 			if dataNode.isDelete() {
 				logger.Debugf("Deleting data node key = %#v", dataNode.dataKey)
-				writeBatch.Delete(dataNode.dataKey.getEncodedBytes())
+				writeBatch.Delete(append([]byte("DataNode"),dataNode.dataKey.getEncodedBytes()...))
 			} else {
 				logger.Debugf("Adding data node with value = %#v", dataNode.value)
-				writeBatch.Put(dataNode.dataKey.getEncodedBytes(), dataNode.value)
+				writeBatch.Put(append([]byte("DataNode"),dataNode.dataKey.getEncodedBytes()...), dataNode.value)
 			}
 		}
 	}

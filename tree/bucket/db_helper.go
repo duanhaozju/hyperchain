@@ -9,6 +9,7 @@ type rawKey []byte
 func fetchDataNodeFromDB(dataKey *dataKey) (*dataNode, error) {
 	db, err := hyperdb.GetLDBDatabase()
 	nodeBytes, err := db.Get(dataKey.getEncodedBytes())
+	nodeBytes = append([]byte("DataNode"),nodeBytes...)
 	if err != nil {
 		return nil, err
 	}
@@ -58,6 +59,7 @@ func fetchDataNodesFromDBFor(treePrefix string,bucketKey *bucketKey) (dataNodes,
 		keyBytes := iter.Key()
 		valueBytes := iter.Value()
 
+		keyBytes = keyBytes[8:]
 		dataKey := newDataKeyFromEncodedBytes(keyBytes)
 		logger.Debugf("Retrieved data key [%s] from DB for bucket [%s]", dataKey, bucketKey)
 		if !dataKey.getBucketKey().equals(bucketKey) {
