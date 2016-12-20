@@ -205,8 +205,28 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 		return nil
 	}
 
+	// record same vc from self times
+	if vc.ReplicaId == pbft.id {
+		pbft.vcResendCount++
+		logger.Warningf("=========================================")
+		logger.Warningf("Replica %d already recv view change from itself for %d times", pbft.id, pbft.vcResendCount)
+		logger.Warningf("=========================================")
+	}
+
 	if _, ok := pbft.viewChangeStore[vcidx{vc.View, vc.ReplicaId}]; ok {
-		logger.Warningf("Replica %d already has a view change message for view %d from replica %d", pbft.id, vc.View, vc.ReplicaId)
+		logger.Warningf("Replica %d already has a view change message" +
+			" for view %d from replica %d", pbft.id, vc.View, vc.ReplicaId)
+
+		if pbft.vcResendCount >= pbft.vcResendLimit {
+			logger.Noticef("Replica %d view change resend reach upbound, try to recovery", pbft.id)
+			pbft.vcResendTimer.Stop()
+			pbft.vcResendCount = 0
+			pbft.inNegoView = true
+			pbft.inRecovery = true
+			pbft.activeView = true
+			pbft.processNegotiateView()
+		}
+
 		return nil
 	}
 
