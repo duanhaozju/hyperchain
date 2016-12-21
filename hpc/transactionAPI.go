@@ -193,6 +193,7 @@ type ReceiptResult struct {
 	PostState         string		`json:"postState"`
 	ContractAddress   string		`json:"contractAddress"`
 	Ret               string		`json:"ret"`
+	Log               []interface{}         `json:"log"`
 }
 
 // GetTransactionReceipt returns transaction's receipt for given transaction hash.
@@ -202,12 +203,16 @@ func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*Rece
 		if receipt == nil {
 			return nil, nil
 		}
-
+		logs := make([]interface{}, len(receipt.Logs))
+		for idx := range receipt.Logs {
+			logs[idx] = receipt.Logs[idx]
+		}
 		return &ReceiptResult{
 			TxHash: 	 receipt.TxHash,
 			PostState: 	 receipt.PostState,
 			ContractAddress: receipt.ContractAddress,
 			Ret: 		 receipt.Ret,
+			Log:             logs,
 		}, nil
 	} else if err != nil {
 		return nil, err

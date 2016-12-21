@@ -263,7 +263,11 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 		// 1. convert dirty storage entries to working set
 		workingSet := bucket.NewKVMap()
 		for k, v := range self.dirtyStorage {
-			workingSet[k.Hex()] = v.Bytes()
+			if (v == common.Hash{}) {
+				workingSet[k.Hex()] = nil
+			} else {
+				workingSet[k.Hex()] = v.Bytes()
+			}
 		}
 		self.bucketTree.PrepareWorkingSet(workingSet)
 		// 2. calculate hash

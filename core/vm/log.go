@@ -60,7 +60,6 @@ type LogTrans struct {
 	BlockNumber uint64
 	TxHash      string
 	TxIndex     uint
-	BlockHash   string
 	Index       uint
 }
 
@@ -76,7 +75,6 @@ func (ls Logs) ToLogsTrans() []LogTrans {
 			Data:        common.BytesToHash(log.Data).Hex(),
 			BlockNumber: log.BlockNumber,
 			Topics:      topics,
-			BlockHash:   log.BlockHash.Hex(),
 			TxHash:      log.TxHash.Hex(),
 			Index:       log.Index,
 			TxIndex:     log.TxIndex,
