@@ -1,6 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package homomorphic_encryption
+package hmEncryption
 
 import (
 	"crypto/ecdsa"
@@ -9,6 +9,7 @@ import (
 	"hyperchain/crypto/ecies"
 	"io/ioutil"
 	"math/big"
+	//"fmt"
 )
 
 type pp struct {
@@ -18,51 +19,84 @@ type pp struct {
 }
 
 //prepare the hm_transaction parameters
-func Pre_Transaction(oldBalance []byte, transferAmount []byte, illegal_balance_hm []byte, whole_networkpublickey PaillierPublickey, ecdsa_publickey *ecdsa.PublicKey) (bool, []byte, []byte, []byte, []byte) {
-	var flag bool
+//oldBalance 16byte
+//transferAmount 16byte
+//illegal_balance_hm 32byte
+
+func PreHmTransaction(oldBalance []byte, transferAmount []byte, illegal_balance_hm []byte, whole_networkpublickey PaillierPublickey, ecdsa_publickey *ecdsa.PublicKey) (bool, []byte, []byte, []byte) {
+	//var flag bool
 	newBalance_hm := make([]byte, 32)
 	transferAmount_hm := make([]byte, 32)
-	newBalance_local := make([]byte, 16)
+	//newBalance_local := make([]byte, 16)
 	transferAmount_ecc := make([]byte, 129)
 
-	suffix := make([]byte, 8)
-	transferAmount = append(transferAmount, suffix...)
-	mark := CompareTwoBytes(oldBalance, transferAmount)
+	oldBalanceFillbyte := make([]byte,8)
+	transferAmountFillbyte := make([]byte,8)
+	newBalanceFillByte := make([]byte,8)
 
-	//filling transferAmount become  a 16 bytes slice
-	if mark == -1 {
-		flag = false
-		return flag, newBalance_local, newBalance_hm, transferAmount_hm, transferAmount_ecc
-	} else {
+	//suffix := make([]byte, 8)
+	//transferAmount = append(transferAmount, suffix...)
+	//mark := CompareTwoBytes(oldBalance, transferAmount)
+	//
+	////filling transferAmount become  a 16 bytes slice
+	//if mark == -1 {
+	//	flag = false
+	//	return flag,newBalance_local, newBalance_hm, transferAmount_hm, transferAmount_ecc
+	//} else {
+	//
+	//	r, _ := rand.Prime(rand.Reader, 48)
+	//	suffix_pro := r.Bytes()
+	//	//suffix_final := append(middle, suffix_pro...)
+	//	transferAmount = append(transferAmount[:(16-len(suffix_pro))], suffix_pro...)
+	//	if CompareTwoBytes(oldBalance, transferAmount) == -1 {
+	//		temp := CutByte(oldBalance)
+	//		transferAmount = append(transferAmount[:(16-len(temp))], temp...)
+	//	}
+	//	flag = true
+	//}
 
-		r, _ := rand.Prime(rand.Reader, 48)
-		suffix_pro := r.Bytes()
-		//suffix_final := append(middle, suffix_pro...)
-		transferAmount = append(transferAmount[:(16-len(suffix_pro))], suffix_pro...)
-		if CompareTwoBytes(oldBalance, transferAmount) == -1 {
-			temp := CutByte(oldBalance)
-			transferAmount = append(transferAmount[:(16-len(temp))], temp...)
-		}
-		flag = true
+	//将oldbalance 和　transferamount 填充成８个字节
+
+	if len(oldBalance)<=8  {
+		oldBalanceFillbyte = append(oldBalanceFillbyte[:(8-len(oldBalance))],oldBalance...)
+	}
+	if len(transferAmount)<=8 {
+		transferAmountFillbyte = append(transferAmountFillbyte[:(8-len(transferAmount))],transferAmount...)
 	}
 
+
 	oldBalance_bigint := new(big.Int)
-	oldBalance_bigint = oldBalance_bigint.SetBytes(oldBalance)
+	oldBalance_bigint = oldBalance_bigint.SetBytes(oldBalanceFillbyte)
 	transferAmount_bigint := new(big.Int)
-	transferAmount_bigint = transferAmount_bigint.SetBytes(transferAmount)
+	transferAmount_bigint = transferAmount_bigint.SetBytes(transferAmountFillbyte)
+
+	if oldBalance_bigint.Cmp(transferAmount_bigint) ==-1 {
+		return false,nil,nil,nil;
+	}
+
+
 
 	newBalance_bigint := new(big.Int)
 	newBalance_bigint = newBalance_bigint.Sub(oldBalance_bigint, transferAmount_bigint)
 	newBalance_byte := newBalance_bigint.Bytes()
 
-	phm := New_Paillier_Hmencryption()
-	newBalance_local = append(newBalance_local[:16-len(newBalance_byte)], newBalance_byte...)
+	if len(newBalance_byte)<=8 {
+		newBalanceFillByte = append(newBalanceFillByte[:(8-len(newBalance_byte))],newBalance_byte...)
+	}
 
-	transferAmount_hm, _ = phm.Encrypto_message(&whole_networkpublickey, transferAmount)
+	//fmt.Println(len(newBalanceFillByte))
+	//fmt.Println(len(transferAmountFillbyte))
+	//fmt.Println(len(oldBalanceFillbyte))
+
+	phm := New_Paillier_Hmencryption()
+	//newBalance_local = append(newBalance_local[:16-len(newBalance_byte)], newBalance_byte...)
+
+	transferAmount_hm, _ = phm.Encrypto_message(&whole_networkpublickey, transferAmountFillbyte)
 
 	//check illegal_balance_hm whether exist or not
 	if illegal_balance_hm == nil {
 		newBalance_hm, _ = phm.Encrypto_message(&whole_networkpublickey, newBalance_byte)
+		//fmt.Println(newBalance_hm)
 	} else {
 		newBalance_temp, _ := phm.Encrypto_message(&whole_networkpublickey, newBalance_byte)
 		newBalance_hm, _ = phm.Calculator(&whole_networkpublickey, "paillier", newBalance_temp, illegal_balance_hm)
@@ -70,9 +104,11 @@ func Pre_Transaction(oldBalance []byte, transferAmount []byte, illegal_balance_h
 
 	//ecdsa_encrypto the transferamount
 	ecies_publickey := ecies.ImportECDSAPublic(ecdsa_publickey)
-	transferAmount_ecc, _ = ecies.Encrypt(rand.Reader, ecies_publickey, transferAmount, nil, nil)
+	transferAmount_ecc, _ = ecies.Encrypt(rand.Reader, ecies_publickey, transferAmountFillbyte, nil, nil)
+	//fmt.Println(len(transferAmount_ecc))
 
-	return flag, newBalance_local, newBalance_hm, transferAmount_hm, transferAmount_ecc
+
+	return true, newBalance_hm, transferAmount_hm, transferAmount_ecc
 
 }
 
@@ -80,7 +116,7 @@ func Pre_Transaction(oldBalance []byte, transferAmount []byte, illegal_balance_h
 //the first parameter is the encrypted old balance with the whole network publickey
 //second parameter is the encrypted transfer amount with the whole network publickey
 //third parameter is the encrypted new balance with the whole network publickey
-func Node_Verify(whole_networkpublickey PaillierPublickey, oldBalance_hm []byte, transferAmount_hm []byte, newBalance_hm []byte) bool {
+func NodeVerify(whole_networkpublickey PaillierPublickey, oldBalance_hm []byte, transferAmount_hm []byte, newBalance_hm []byte) bool {
 	var flag bool
 	phm := New_Paillier_Hmencryption()
 	sum, _ := phm.Calculator(&whole_networkpublickey, "paillier", transferAmount_hm, newBalance_hm)
@@ -90,7 +126,7 @@ func Node_Verify(whole_networkpublickey PaillierPublickey, oldBalance_hm []byte,
 }
 
 //destination verify whether the amount is right or not
-func Destination_Verify(transferAmount_hm []byte, transferAmount_ecc []byte, ecdsa_privatekey *ecdsa.PrivateKey, whole_networkpublickey PaillierPublickey) bool {
+func DestinationVerify(transferAmount_hm []byte, transferAmount_ecc []byte, ecdsa_privatekey *ecdsa.PrivateKey, whole_networkpublickey PaillierPublickey) bool {
 
 	ecies_privatekey := ecies.ImportECDSA(ecdsa_privatekey)
 	transferAmount, _ := ecies_privatekey.Decrypt(rand.Reader, transferAmount_ecc, nil, nil)

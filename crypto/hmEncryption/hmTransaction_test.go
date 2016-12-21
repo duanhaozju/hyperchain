@@ -1,6 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package homomorphic_encryption
+package hmEncryption
 
 import (
 	//"crypto/ecdsa"
@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"math/big"
 	"testing"
+
+	"hyperchain/crypto"
 )
 
 func Generate_wholenetpublickey(g []byte, n []byte, nsquare []byte) PaillierPublickey {
@@ -21,7 +23,7 @@ func Generate_wholenetpublickey(g []byte, n []byte, nsquare []byte) PaillierPubl
 	return publickey
 }
 
-func Test_Node_verify(t *testing.T) {
+func Test_NodeVerify(t *testing.T) {
 	old := big.NewInt(500)
 	old_byte := old.Bytes()
 	trans := big.NewInt(200)
@@ -42,7 +44,7 @@ func Test_Node_verify(t *testing.T) {
 	oldBalance_hm := []byte{139, 222, 135, 44, 112, 98, 183, 241, 13, 118, 121, 159, 232, 199, 15, 122, 142, 199, 189, 205, 14, 101, 203, 237, 113, 142, 85, 61, 15, 114, 205, 208}
 	transferAmount_hm := []byte{33, 91, 137, 191, 96, 106, 118, 67, 185, 132, 43, 1, 104, 139, 5, 168, 242, 111, 122, 196, 29, 56, 118, 141, 111, 103, 112, 191, 17, 82, 21, 98}
 	newBalance_hm := []byte{60, 17, 254, 228, 200, 71, 7, 13, 242, 62, 3, 241, 78, 200, 135, 145, 94, 162, 142, 172, 63, 58, 141, 153, 211, 230, 51, 98, 86, 97, 157, 94}
-	flag := Node_Verify(publickey, oldBalance_hm, transferAmount_hm, newBalance_hm)
+	flag := NodeVerify(publickey, oldBalance_hm, transferAmount_hm, newBalance_hm)
 	fmt.Println(flag)
 }
 
@@ -88,3 +90,75 @@ func Test_getput(t *testing.T) {
 //	ee := New
 
 //}
+//PreTransaction(oldBalance []byte, transferAmount []byte, illegal_balance_hm []byte,
+// whole_networkpublickey PaillierPublickey, ecdsa_publickey *ecdsa.PublicKey) (bool, []byte, []byte, []byte)
+//newBalance_hm, transferAmount_hm, transferAmount_ecc
+//NodeVerify(whole_networkpublickey PaillierPublickey, oldBalance_hm []byte, transferAmount_hm []byte, newBalance_hm []byte) bool
+func Test_hmTransaction(t *testing.T){
+	paillerkey,_:= Generate_paillierKey()
+	wholepublickey := paillerkey.PaillierPublickey
+	//paillerprivate := paillerkey.PaillierPrivatekey
+
+	old := big.NewInt(6000000000000000000)
+	old_byte := old.Bytes()
+	fmt.Println(len(old_byte))
+	trans := big.NewInt(300000000000000)
+	trans_byte := trans.Bytes()
+
+	phm := New_Paillier_Hmencryption()
+	hmoldBalance,_:= phm.Encrypto_message(&wholepublickey,old_byte)
+	realold := phm.Decrypto_Ciphertext(paillerkey,hmoldBalance)
+	fmt.Println(hmoldBalance)
+	fmt.Println(old_byte)
+	fmt.Println(realold)
+
+	ecdsa_private,_:=crypto.GenerateKey()
+	ecdsa_publickey := ecdsa_private.PublicKey
+
+	//HmillegalBanlance := make([]byte,32)
+
+	index,hmnewbalance,hmTransferAmount,transferamounecc := PreHmTransaction(old_byte,trans_byte,nil,wholepublickey,&ecdsa_publickey)
+	fmt.Println(index)
+	fmt.Println(hmnewbalance)
+	fmt.Println(hmTransferAmount)
+	fmt.Println(len(transferamounecc))
+
+	testbig := new(big.Int)
+	testbig.SetBytes(transferamounecc)
+	ss := testbig.String()
+	fmt.Println(len(ss))
+
+
+
+	sum,_ :=phm.Calculator(&wholepublickey,"paillier",hmnewbalance,hmTransferAmount)
+	desum := phm.Decrypto_Ciphertext(paillerkey,sum)
+
+	fmt.Println(len(sum))
+	fmt.Println(desum)
+
+
+	flag := EqualTwoBytes(hmoldBalance,sum)
+
+	fmt.Println(flag)
+
+}
+
+func Test_Big(t *testing.T){
+	old := big.NewInt(500)
+	fmt.Println(old)
+
+	old_byte := old.Bytes()
+	//将byte[]转为大整数
+	big := new(big.Int)
+	big.SetBytes(old_byte)
+	fmt.Println(big)
+
+	//bigint类型转字符串类型，10进制
+	ss := old.String()
+	//将字符串类型按10进制转为大整数类型
+
+	bigint,_:=big.SetString(ss,10)
+	fmt.Println(ss)
+	fmt.Println(bigint)
+}
+
