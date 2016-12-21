@@ -529,3 +529,8 @@ func (self *StateDB) RevertToSnapshot(copy interface{}) {
 	}
 	self.Set(statedb)
 }
+
+// For Compatibility
+func (self *StateDB) SetSeqNo(seqNo uint64) {
+
+}

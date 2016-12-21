@@ -2,12 +2,15 @@ package hyperstate
 
 import (
 	"bytes"
+	"strconv"
 )
-
-const storageIdentifier = "-storage"
-const accountIdentifier = "-account"
-const codeIdentifier = "-code"
-const bucketTreeIdentifier = "-bucket"
+const (
+	storageIdentifier = "-storage"
+	accountIdentifier = "-account"
+	codeIdentifier = "-code"
+	bucketTreeIdentifier = "-bucket"
+	journalIdentifier = "-journal"
+)
 
 // ConfigNumBuckets - config name 'numBuckets' as it appears in yaml file
 const ConfigNumBuckets = "numBuckets"
@@ -76,3 +79,11 @@ func SetupBucketConfig(size int, levelGroup int) map[string]interface{} {
 	return ret
 }
 
+/*
+	Journal
+ */
+
+func CompositeJournalKey(blockNumber uint64) []byte {
+	s := strconv.FormatUint(blockNumber, 10)
+	return append([]byte(journalIdentifier), []byte(s)...)
+}

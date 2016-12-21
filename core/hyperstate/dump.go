@@ -40,7 +40,7 @@ func (self *StateDB) RawDump() World {
 			continue
 		}
 		var account Account
-		err := UnmarshalJSON(it.Value(), &account)
+		err := Unmarshal(it.Value(), &account)
 		if err != nil {
 			continue
 		}

@@ -85,6 +85,12 @@ type Account struct {
 	CodeHash []byte
 }
 
+// MemAccount use for state object marshal and unmarshal in journal
+type MemAccount struct {
+	Address common.Address
+	Account
+}
+
 // newObject creates a state object.
 func newObject(db *StateDB, address common.Address, data Account, onDirty func(addr common.Address), setup bool, bktConf map[string]interface{}) *StateObject {
 	if data.Balance == nil {
@@ -105,8 +111,16 @@ func newObject(db *StateDB, address common.Address, data Account, onDirty func(a
 }
 
 
-// Marshal stateObject
+// marshal whole state object with address for journal usage
 func (c *StateObject) MarshalJSON() ([]byte, error) {
+	account := MemAccount{
+		Address:  c.address,
+		Account:  c.data,
+	}
+	return json.Marshal(account)
+}
+// marshal for state object persist
+func (c *StateObject) Marshal() ([]byte, error) {
 	account := Account{
 		Nonce:    c.data.Nonce,
 		Balance:  c.data.Balance,
@@ -115,8 +129,16 @@ func (c *StateObject) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(account)
 }
-// Unmarshal stateObject
-func UnmarshalJSON(data []byte, v interface{}) error {
+// unmarshal state object for journal usage
+func (c *StateObject) UnmarshalJSON(data []byte) error {
+	account := &MemAccount{}
+	err := json.Unmarshal(data, account)
+	c.data = account.Account
+	c.address = account.Address
+	return err
+}
+// Unmarshal stateObject in disk
+func Unmarshal(data []byte, v interface{}) error {
 	account, ok := v.(*Account)
 	if ok == false {
 		return errors.New("invalid type")
@@ -128,7 +150,7 @@ func UnmarshalJSON(data []byte, v interface{}) error {
 // String
 func (c *StateObject) String() string {
 	var str string
-	str = fmt.Sprintf("stateObject: Nonce %d, Balance %d, Root %s, CodeHash %s\n", c.Nonce(), c.Balance(), c.Root().Hex(), common.BytesToHash(c.CodeHash()).Hex())
+	str = fmt.Sprintf("stateObject: %x nonce [%d], balance [%d], root [%s], codeHash [%s]\n", c.address, c.Nonce(), c.Balance(), c.Root().Hex(), common.BytesToHash(c.CodeHash()).Hex())
 	return str
 }
 
@@ -150,9 +172,9 @@ func (self *StateObject) markSuicided() {
 }
 
 func (c *StateObject) touch() {
-	c.db.journal = append(c.db.journal, &touchChange{
-		account: &c.address,
-		prev:    c.touched,
+	c.db.journal.JournalList = append(c.db.journal.JournalList, &TouchChange{
+		Account: &c.address,
+		Prev:    c.touched,
 	})
 	if c.onDirty != nil {
 		c.onDirty(c.Address())
@@ -179,10 +201,10 @@ func (self *StateObject) GetState(db hyperdb.Database, key common.Hash) common.H
 
 // SetState updates a value in account storage.
 func (self *StateObject) SetState(db hyperdb.Database, key, value common.Hash) {
-	self.db.journal = append(self.db.journal, &storageChange{
-		account:  &self.address,
-		key:      key,
-		prevalue: self.GetState(db, key),
+	self.db.journal.JournalList = append(self.db.journal.JournalList, &StorageChange{
+		Account:  &self.address,
+		Key:      key,
+		Prevalue: self.GetState(db, key),
 	})
 	self.setState(key, value)
 }
@@ -287,9 +309,9 @@ func (c *StateObject) SubBalance(amount *big.Int) {
 }
 
 func (self *StateObject) SetBalance(amount *big.Int) {
-	self.db.journal = append(self.db.journal, &balanceChange{
-		account: &self.address,
-		prev:    new(big.Int).Set(self.data.Balance),
+	self.db.journal.JournalList = append(self.db.journal.JournalList, &BalanceChange{
+		Account: &self.address,
+		Prev:    new(big.Int).Set(self.data.Balance),
 	})
 	self.setBalance(amount)
 }
@@ -343,10 +365,10 @@ func (self *StateObject) Code(db hyperdb.Database) []byte {
 
 func (self *StateObject) SetCode(codeHash common.Hash, code []byte) {
 	prevcode := self.Code(self.db.db)
-	self.db.journal = append(self.db.journal, &codeChange{
-		account:  &self.address,
-		prevhash: self.CodeHash(),
-		prevcode: prevcode,
+	self.db.journal.JournalList = append(self.db.journal.JournalList, &CodeChange{
+		Account:  &self.address,
+		Prevhash: self.CodeHash(),
+		Prevcode: prevcode,
 	})
 	self.setCode(codeHash, code)
 }
@@ -362,9 +384,9 @@ func (self *StateObject) setCode(codeHash common.Hash, code []byte) {
 }
 
 func (self *StateObject) SetNonce(nonce uint64) {
-	self.db.journal = append(self.db.journal, &nonceChange{
-		account: &self.address,
-		prev:    self.data.Nonce,
+	self.db.journal.JournalList = append(self.db.journal.JournalList, &NonceChange{
+		Account: &self.address,
+		Prev:    self.data.Nonce,
 	})
 	self.setNonce(nonce)
 }

@@ -52,7 +52,7 @@ type StateDB struct {
 
 	// Journal of state modifications. This is the backbone of
 	// Snapshot and RevertToSnapshot.
-	journal        journal
+	journal        Journal
 	validRevisions []revision
 	nextRevisionId int
 
@@ -60,6 +60,8 @@ type StateDB struct {
 	bktConf        bucket.Conf
 	bucketTree     *bucket.BucketTree
 	lock           sync.Mutex
+	// current block pool status
+	curSeqNo    uint64
 }
 
 // Create a new state from a given root
@@ -129,11 +131,15 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.txIndex = 0
 	self.logs = make(map[common.Hash]vm.Logs)
 	self.logSize = 0
-	self.clearJournalAndRefund()
+	//self.clearJournalAndRefund()
 	// TODO Bucket Tree reset to avoid memory leak
 	return nil
 }
 
+// record current seqNo
+func (self *StateDB) SetSeqNo(seqNo uint64) {
+	self.curSeqNo = seqNo
+}
 
 func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
 	self.thash = thash
@@ -142,7 +148,7 @@ func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
 }
 
 func (self *StateDB) AddLog(log *vm.Log) {
-	self.journal = append(self.journal, &addLogChange{txhash: self.thash})
+	self.journal.JournalList = append(self.journal.JournalList, &AddLogChange{Txhash: self.thash})
 	log.TxHash = self.thash
 	log.BlockHash = self.bhash
 	log.TxIndex = uint(self.txIndex)
@@ -164,7 +170,7 @@ func (self *StateDB) Logs() vm.Logs {
 }
 
 func (self *StateDB) AddRefund(gas *big.Int) {
-	self.journal = append(self.journal, &refundChange{prev: new(big.Int).Set(self.refund)})
+	self.journal.JournalList = append(self.journal.JournalList, &RefundChange{Prev: new(big.Int).Set(self.refund)})
 	self.refund.Add(self.refund, gas)
 }
 
@@ -324,10 +330,10 @@ func (self *StateDB) Delete(addr common.Address) bool {
 	if stateObject == nil {
 		return false
 	}
-	self.journal = append(self.journal, &suicideChange{
-		account:     &addr,
-		prev:        stateObject.suicided,
-		prevbalance: new(big.Int).Set(stateObject.Balance()),
+	self.journal.JournalList = append(self.journal.JournalList, &SuicideChange{
+		Account:     &addr,
+		Prev:        stateObject.suicided,
+		Prevbalance: new(big.Int).Set(stateObject.Balance()),
 	})
 	stateObject.markSuicided()
 	stateObject.data.Balance = new(big.Int)
@@ -359,7 +365,7 @@ func (self *StateDB) deleteStateObject(stateObject *StateObject) {
 }
 
 // Retrieve a state object given my the address. Returns nil if not found.
-func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObject) {
+func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 	// Prefer 'live' objects.
 	if obj := self.stateObjects[addr]; obj != nil {
 		if obj.deleted {
@@ -374,7 +380,7 @@ func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObje
 		return nil
 	}
 	var account Account
-	err = UnmarshalJSON(data, &account)
+	err = Unmarshal(data, &account)
 	if err != nil {
 		return nil
 	}
@@ -411,9 +417,9 @@ func (self *StateDB) createObject(addr common.Address) (newobj, prev *StateObjec
 	newobj.setNonce(0) // sets the object to dirty
 	if prev == nil {
 		log.Infof("(+) %x\n", addr)
-		self.journal = append(self.journal, &createObjectChange{account: &addr})
+		self.journal.JournalList = append(self.journal.JournalList, &CreateObjectChange{Account: &addr})
 	} else {
-		self.journal = append(self.journal, &resetObjectChange{prev: prev})
+		self.journal.JournalList = append(self.journal.JournalList, &ResetObjectChange{Prev: prev})
 	}
 	self.setStateObject(newobj)
 	return newobj, prev
@@ -470,7 +476,7 @@ func (self *StateDB) Copy() *StateDB {
 func (self *StateDB) Snapshot() interface{} {
 	id := self.nextRevisionId
 	self.nextRevisionId++
-	self.validRevisions = append(self.validRevisions, revision{id, len(self.journal)})
+	self.validRevisions = append(self.validRevisions, revision{id, len(self.journal.JournalList)})
 	return id
 }
 
@@ -491,11 +497,11 @@ func (self *StateDB) RevertToSnapshot(copy interface{}) {
 	snapshot := self.validRevisions[idx].journalIndex
 
 	// Replay the journal to undo changes.
-	for i := len(self.journal) - 1; i >= snapshot; i-- {
-		self.journal[i].undo(self)
-		log.Infof("undo operation: %s", self.journal[i])
+	for i := len(self.journal.JournalList) - 1; i >= snapshot; i-- {
+		self.journal.JournalList[i].undo(self)
+		log.Infof("undo operation: %s", self.journal.JournalList[i])
 	}
-	self.journal = self.journal[:snapshot]
+	self.journal.JournalList = self.journal.JournalList[:snapshot]
 
 	// Remove invalidated snapshots from the stack.
 	self.validRevisions = self.validRevisions[:idx]
@@ -524,7 +530,7 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 // Deprecated
 func (s *StateDB) DeleteSuicides() {
 	// Reset refund so that any used-gas calculations can use this method.
-	s.clearJournalAndRefund()
+	// s.clearJournalAndRefund()
 
 	for addr := range s.stateObjectsDirty {
 		stateObject := s.stateObjects[addr]
@@ -554,15 +560,27 @@ func (s *StateDB) CommitBatch(deleteEmptyObjects bool) (root common.Hash, batch 
 	return root, batch
 }
 
-func (s *StateDB) clearJournalAndRefund() {
-	// TODO add journal persist
-	s.journal = nil
+func (s *StateDB) clearJournalAndRefund(batch hyperdb.Batch) {
+	// 1. persist current journal to disk
+	if len(s.journal.JournalList) != 0 {
+		if s.curSeqNo == 0 {
+			log.Warningf("make sure the seqNo of journal is [%d]", s.curSeqNo)
+		}
+		journal, err := s.journal.Marshal()
+		if err != nil {
+			log.Errorf("marshal seqNo [%d] journal failed", s.curSeqNo)
+		}
+		batch.Put(CompositeJournalKey(s.curSeqNo), journal)
+	}
+	// 2. clear journal
+	s.journal = Journal{}
 	s.validRevisions = s.validRevisions[:0]
+	// 3. clear refund
 	s.refund = new(big.Int)
 }
 
 func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root common.Hash, err error) {
-	defer s.clearJournalAndRefund()
+	defer s.clearJournalAndRefund(dbw)
 	var set ChangeSet
 	workingSet := bucket.NewKVMap()
 	// Commit objects to the trie.

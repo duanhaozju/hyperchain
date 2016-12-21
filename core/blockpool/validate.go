@@ -19,6 +19,7 @@ import (
 	"hyperchain/common"
 	"errors"
 	"hyperchain/core/vm"
+	"hyperchain/core/hyperstate"
 )
 
 // Validate is an entry of `validate process`
@@ -227,6 +228,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	}
 	// initialize state
 	state, err := pool.GetStateInstance(initStatus, db)
+	state.SetSeqNo(seqNo)
 	log.Critical("BEFORE", string(state.Dump()))
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
 	// initialize execution environment ruleset
@@ -308,6 +310,10 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	go batch.Write()
 	// FOR TEST
 	log.Critical("AFTER", string(state.Dump()))
+	// FOR TEST
+	j, _ := db.Get(hyperstate.CompositeJournalKey(seqNo))
+	journal, _ := hyperstate.UnmarshalJournal(j)
+	log.Critical("marshaled journal", journal)
 	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
 }
 

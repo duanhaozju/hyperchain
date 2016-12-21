@@ -94,21 +94,22 @@ type Database interface {
 	Delete(common.Address) bool
 	Exist(common.Address) bool
 	IsDeleted(common.Address) bool
-
+	// Log
 	StartRecord(common.Hash, common.Hash, int)
 	AddLog(log *Log)
 	GetLogs(hash common.Hash) Logs
-
+	// Dump and Load
 	Snapshot() interface{}
 	RevertToSnapshot(interface{})
 
 	Commit() (common.Hash, error)
 
-	/*
-		API QUERY
-	 */
+	// Query
 	GetAccounts() map[string]Account
 	Dump() []byte
+	// Atomic Related
+	SetSeqNo(uint64)
+
 }
 
 // Account represents a contract or basic ethereum account.
