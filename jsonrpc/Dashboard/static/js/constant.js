@@ -42,8 +42,7 @@ angular
             {name: "abi-decoder-example", value: 'contract MyContract{ function MutiReturns()returns(uint32[],bytes32[],address[],string,int32){ uint32[] memory aa; bytes32[] memory bb; address[] memory cc; aa = new uint32[](3); aa[0] = 1; aa[1] = 2; aa[2] = 3; bb = new bytes32[](2); bb[0] = "holo"; bb[1] = "123"; cc = new address[](4); cc[0] = 0x1000; cc[1] = 0x1001; cc[2] = 0x1002; cc[3] = 0x1003; return (aa,bb,cc,"hello!",267); } }'},
             {name:"hello", value: 'contract HelloWorld{ string hello= "hello world"; function getHello() returns(string) { return hello; } }'},
             {name:"xiaomin", value: 'contract TestWeb3{ function testWeb3(bytes32 a,bytes32 b,bytes32 c,uint d) returns(bytes32,bytes32,bytes32,uint){ return (a,b,c,d); } }'},
-            {name:"testArrary", value: 'contract hello{ function get(uint[] a, uint[] b) returns (uint[] c, uint[] d) {c=a;d=b;} function gett(int[3] b) returns (int[3]) {return b;}}'},
-            {name:"testBool", value: 'contract testBool {function test(bool a) returns (bool) {return a;}}'}
+            {name:"testArrary", value: 'contract hello{ function get(uint[] a, uint[] b) returns (uint[] c, uint[] d) {c=a;d=b;} function gett(int[3] b) returns (int[3]) {return b;}}'}
         ],
         "CONTRACT": [],
         "FROM": "0x17d806c92fa941b4b7a8ffffc58fa2f297a3bffc",

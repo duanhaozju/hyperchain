@@ -36763,12 +36763,6 @@ angular
                                     n_params_arr.push(params[k])
                                     p.push(n_params_arr)
                                 }
-                            } else if(abimethod.inputs[i].type == "bool") {
-                                if (params[k] = "true") {
-                                    params[k] = true
-                                } else if (params[k] = "false") {
-                                    params[k] = false
-                                }
                             } else {
                                 p.push(params[k])
                             }
@@ -36842,12 +36836,6 @@ angular
                                                 var n_params_arr = []
                                                 n_params_arr.push(params[k])
                                                 p.push(n_params_arr)
-                                            }
-                                        } else if(input.type == "bool") {
-                                            if (params[k] == "true") {
-                                                params[k] = true
-                                            } else if (params[k] == "false") {
-                                                params[k] = false
                                             }
                                         } else {
                                             p.push(params[k])

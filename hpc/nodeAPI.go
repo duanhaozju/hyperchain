@@ -5,7 +5,6 @@ package hpc
 import (
 	"hyperchain/manager"
 	"hyperchain/p2p"
-	"github.com/pkg/errors"
 	"hyperchain/event"
 )
 
@@ -35,7 +34,7 @@ func NewPublicNodeAPI( pm *manager.ProtocolManager) *PublicNodeAPI{
 // GetNodes returns status of all the nodes
 func (node *PublicNodeAPI) GetNodes() (p2p.PeerInfos, error) {
 	if node.pm == nil {
-		return nil, errors.New("protocolManager is nil")
+		return nil, &callbackError{"protocolManager is nil"}
 	}
 
 	return node.pm.GetNodeInfo(), nil
@@ -43,14 +42,14 @@ func (node *PublicNodeAPI) GetNodes() (p2p.PeerInfos, error) {
 
 func (node *PublicNodeAPI) GetNodeHash() (string, error){
 	if node.pm == nil {
-		return "", errors.New("protocolManager is nil")
+		return "", &callbackError{"protocolManager is nil"}
 	}
 	return node.pm.Peermanager.GetLocalNodeHash(), nil
 }
 
 func (node *PublicNodeAPI) DelNode(args NodeArgs) error {
 	if node.pm == nil {
-		return errors.New("protocolManager is nil")
+		return &callbackError{"protocolManager is nil"}
 	}
 	node.pm.GetEventObject().Post(event.DelPeerEvent{
 		Payload: []byte(args.NodeHash),
