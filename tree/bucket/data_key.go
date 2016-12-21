@@ -39,6 +39,7 @@ func decodeBucketNumber(encodedBytes []byte) (int, int) {
 	return int(bucketNum), bytesConsumed
 }
 
+// TODO maybe could change the bucketNum and the compositeKey
 func (key *dataKey) getEncodedBytes() []byte {
 	encodedBytes := encodeBucketNumber(key.bucketKey.bucketNumber)
 	encodedBytes = append(encodedBytes, key.compositeKey...)

@@ -6,6 +6,7 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/common"
 	"math/big"
+	"github.com/golang/protobuf/proto"
 )
 
 var logger = logging.MustGetLogger("buckettree")
@@ -17,17 +18,7 @@ func NewKVMap() K_VMap {
 	return ret
 }
 
-// the value which updated by datanode
-type UpdatedValue struct {
-	Value         []byte
-	PreviousValue []byte
-}
 
-// the set of UpdatedValue
-type UpdatedValueSet struct {
-	blockNum        *big.Int
-	UpdatedValueMap map[string] *UpdatedValue
-}
 
 // StateImpl - implements the interface - 'statemgmt.HashableState'
 type BucketTree struct {
@@ -202,10 +193,13 @@ func computeDataNodesCryptoHash(bucketKey *bucketKey, updatedNodes dataNodes, ex
 		switch c {
 		case -1:
 			nextNode = updatedNode
-			//updatedValueSet.UpdatedValueMap[].
+			compositeKey := string(updatedNode.getCompositeKey()[:])
+			updatedValueSet.Set(compositeKey,updatedNode.value,nil)
 			i++
 		case 0:
 			nextNode = updatedNode
+			compositeKey := string(updatedNode.getCompositeKey()[:])
+			updatedValueSet.Set(compositeKey,updatedNode.value,existingNode.value)
 			i++
 			j++
 		case 1:
@@ -247,6 +241,7 @@ func (bucketTree *BucketTree) AddChangesForPersistence(writeBatch hyperdb.Batch)
 	}
 	bucketTree.addDataNodeChangesForPersistence(writeBatch)
 	bucketTree.addBucketNodeChangesForPersistence(writeBatch)
+	bucketTree.addUpdatedValueSetForPersistence(writeBatch)
 	return nil
 }
 
@@ -282,6 +277,15 @@ func (bucketTree *BucketTree) addBucketNodeChangesForPersistence(writeBatch hype
 		}
 	}
 }
+
+// TODO it should be test later
+func (bucketTree *BucketTree) addUpdatedValueSetForPersistence(writeBatch hyperdb.Batch) {
+	buffer := proto.NewBuffer([]byte{})
+	updatedValueSet := bucketTree.updatedValueSet
+	updatedValueSet.Marshal(buffer)
+	writeBatch.Put(append([]byte("UpdatedValueSet"),[]byte(updatedValueSet.BlockNum)...),buffer.Bytes())
+}
+
 
 // TODO to do test with cache
 func (bucketTree *BucketTree) updateBucketCache() {

@@ -13,7 +13,7 @@ func newBucketTreeDelta() *bucketTreeDelta {
 }
 
 func newUpdatedValueSet(blockNumber *big.Int) *UpdatedValueSet {
-	return &UpdatedValueSet{blockNum:blockNumber,UpdatedValueMap:make(map[string] *UpdatedValue)}
+	return &UpdatedValueSet{BlockNum:blockNumber, UpdatedKVs:make(map[string] *UpdatedValue)}
 }
 
 func (bucketTreeDelta *bucketTreeDelta) getOrCreateBucketNode(bucketKey *bucketKey) *bucketNode {
