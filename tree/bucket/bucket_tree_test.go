@@ -15,6 +15,11 @@ var (
 	TestAccountID = "testStateImplName"
 )
 
+
+func TestBucketTree_RevertToTargetBlock(t *testing.T){
+	
+}
+
 func TestStateImpl_ComputeHash_AllInMemory_NoContents(t *testing.T) {
 	/*testDBWrapper.CleanDB(t)
 	stateImplTestWrapper := newStateImplTestWrapper(t,TestAccountID)

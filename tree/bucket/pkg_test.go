@@ -6,6 +6,7 @@ import (
 	"BucketTree/bucket/testutil"
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	"math/big"
 )
 type stateImplTestWrapper struct {
 	configMap map[string]interface{}
@@ -63,7 +64,7 @@ func (testWrapper *stateImplTestWrapper) prepareWorkingSetAndComputeCryptoHash(k
 
 
 func (testWrapper *stateImplTestWrapper) prepareWorkingSet(key_valueMap K_VMap) {
-	err := testWrapper.stateImpl.PrepareWorkingSet(key_valueMap)
+	err := testWrapper.stateImpl.PrepareWorkingSet(key_valueMap,big.NewInt(1))
 	testutil.AssertNoError(testWrapper.t, err, "Error while PrepareWorkingSet")
 }
 

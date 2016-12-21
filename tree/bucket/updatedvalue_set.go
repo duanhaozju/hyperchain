@@ -131,7 +131,7 @@ func (updatedValueSet *UpdatedValueSet) HasChanges() bool {
 	return len(updatedValueSet.UpdatedKVs) > 0
 }
 
-func (updatedValueSet *UpdatedValueSet) getSortedKeys() []string {
+func (updatedValueSet *UpdatedValueSet) GetSortedKeys() []string {
 	updatedKeys := []string{}
 	for k := range updatedValueSet.UpdatedKVs {
 		updatedKeys = append(updatedKeys, k)
@@ -139,4 +139,8 @@ func (updatedValueSet *UpdatedValueSet) getSortedKeys() []string {
 	sort.Strings(updatedKeys)
 	logger.Debugf("Sorted keys = %#v", updatedKeys)
 	return updatedKeys
+}
+
+func (updatedValueSet *UpdatedValueSet) UpdatedValueKVs(updatedDataNodes , existingDataNodes dataNodes){
+
 }

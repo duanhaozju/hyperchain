@@ -63,12 +63,6 @@ func TestState_(t *testing.T){
 	key_valueMap["key3"] = []byte("value3")
 	key_valueMap["key4"] = []byte("value4")
 	key_valueMap["key5"] = []byte("value5")
-	key_valueMap["key6"] = []byte("value6")
-	key_valueMap["key7"] = []byte("value7")
-	key_valueMap["key8"] = []byte("value8")
-	key_valueMap["key9"] = []byte("value9")
-	key_valueMap["key10"] = []byte("value10")
-	key_valueMap["key11"] = []byte("value11")
 	state.SetK_VMap(key_valueMap,big.NewInt(2))
 	hash,err := state.GetHash()
 	if err != nil{
@@ -76,8 +70,7 @@ func TestState_(t *testing.T){
 	}else {
 		logger.Debugf("--------------the state.GetHash() is ",(hash))
 	}
-	state.AddChangesForPersistence(writeBatch)
-
+	//state.AddChangesForPersistence(writeBatch)
 	//state.Reset(false)
 	//hash,err = state.GetHash()
 	//if err != nil{
@@ -85,9 +78,12 @@ func TestState_(t *testing.T){
 	//}else {
 	//	logger.Debugf("--------------the state.GetHash() is ",(hash))
 	//}
+	state.CommitStateDelta(writeBatch)
+}
 
-	state.CommitStateDelta()
-
+func TestRevertToTargetBlock(t *testing.T) {
+	state := bucket_test.NewState()
+	state.StateImpl.RevertToTargetBlock(big.NewInt(2),big.NewInt(1))
 }
 
 func featchDataNodeFromDBTest(){

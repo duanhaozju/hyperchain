@@ -22,9 +22,9 @@ func init(){
 // This encapsulates a particular implementation for managing the state persistence
 // This is not thread safe
 type State struct {
-	currentBlockNum	*big.Int
-	stateImpl    bucket.BucketTree
-	key_valueMap  bucket.K_VMap
+	currentBlockNum *big.Int
+	StateImpl       bucket.BucketTree
+	key_valueMap    bucket.K_VMap
 	updateStateImpl bool
 }
 
@@ -55,10 +55,10 @@ func (state *State) GetHash() ([]byte,error){
 	logger.Debug("Enter - GetHash()")
 	if state.updateStateImpl {
 		logger.Debug("udpateing stateImpl with working-set")
-		state.stateImpl.PrepareWorkingSet(state.key_valueMap,big.NewInt(1))
+		state.StateImpl.PrepareWorkingSet(state.key_valueMap,state.currentBlockNum)
 		state.updateStateImpl = false
 	}
-	hash,err := state.stateImpl.ComputeCryptoHash()
+	hash,err := state.StateImpl.ComputeCryptoHash()
 	if err != nil {
 		return nil,err
 	}
@@ -71,10 +71,10 @@ func (state *State) GetHash() ([]byte,error){
 func (state *State) AddChangesForPersistence(writeBatch hyperdb.Batch) {
 	logger.Debug("state.addChangesForPersistence()...start")
 	if state.updateStateImpl {
-		state.stateImpl.PrepareWorkingSet(state.key_valueMap,state.currentBlockNum)
+		state.StateImpl.PrepareWorkingSet(state.key_valueMap,state.currentBlockNum)
 		state.updateStateImpl = false
 	}
-	state.stateImpl.AddChangesForPersistence(writeBatch)
+	state.StateImpl.AddChangesForPersistence(writeBatch)
 	// TODO should add the metadata to the writeBatch?
 	logger.Debug("state.addChangesForPersistence()...finished")
 }
@@ -82,22 +82,15 @@ func (state *State) AddChangesForPersistence(writeBatch hyperdb.Batch) {
 // TODO test
 // CommitStateDelta commits the changes from state.ApplyStateDelta to the
 // DB.
-func (state *State) CommitStateDelta() error {
+func (state *State) CommitStateDelta(writeBatch hyperdb.Batch) error {
 	if state.updateStateImpl {
-		state.stateImpl.PrepareWorkingSet(state.key_valueMap,state.currentBlockNum)
+		state.StateImpl.PrepareWorkingSet(state.key_valueMap,state.currentBlockNum)
 		state.updateStateImpl = false
 	}
-
-	db,err := hyperdb.GetLDBDatabase()
-	writeBatch := db.NewBatch()
-	if err != nil{
-		logger.Error("get DB err")
-		return err
-	}
-	state.stateImpl.AddChangesForPersistence(writeBatch)
+	state.StateImpl.AddChangesForPersistence(writeBatch)
 	return writeBatch.Write()
 }
 
 func (state *State) Reset(changePersists bool){
-	state.stateImpl.Reset()
+	state.StateImpl.Reset()
 }

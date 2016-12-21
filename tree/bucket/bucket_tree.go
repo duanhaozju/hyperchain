@@ -143,6 +143,10 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 		parentBucket.setChildCryptoHash(bucketKey, cryptoHashForBucket)
 		logger.Noticef("bucket tree prefix %s bucket key %s, bucket hash %s",
 			bucketTree.treePrefix, bucketKey.String(), common.Bytes2Hex(cryptoHashForBucket))
+
+		/*logger.Debug("start to record the UpdatedValue to UpdatedValueSet")
+		bucketTree.updatedValueSet.UpdatedValueKVs(updatedDataNodes,existingDataNodes)
+		logger.Debug(" to record the UpdatedValue to UpdatedValueSet")*/
 	}
 	return nil
 }
@@ -193,13 +197,16 @@ func computeDataNodesCryptoHash(bucketKey *bucketKey, updatedNodes dataNodes, ex
 		switch c {
 		case -1:
 			nextNode = updatedNode
-			compositeKey := string(updatedNode.getCompositeKey()[:])
+			compositeKey := string(updatedNode.getCompositeKey())
 			updatedValueSet.Set(compositeKey,updatedNode.value,nil)
 			i++
 		case 0:
 			nextNode = updatedNode
-			compositeKey := string(updatedNode.getCompositeKey()[:])
-			updatedValueSet.Set(compositeKey,updatedNode.value,existingNode.value)
+			if bytes.Compare(updatedNode.getValue(),existingNode.getValue()) != 0{
+				compositeKey := string(updatedNode.getCompositeKey())
+				updatedValueSet.Set(compositeKey,updatedNode.value,existingNode.getValue())
+			}
+
 			i++
 			j++
 		case 1:
@@ -213,6 +220,10 @@ func computeDataNodesCryptoHash(bucketKey *bucketKey, updatedNodes dataNodes, ex
 
 	var remainingNodes dataNodes
 	if i < len(updatedNodes) {
+		for i := 0;i<len(updatedNodes);i++ {
+			compositeKey := string(updatedNodes[i].getCompositeKey()[:])
+			updatedValueSet.Set(compositeKey,updatedNodes[i].value,nil)
+		}
 		remainingNodes = updatedNodes[i:]
 	} else if j < len(existingNodes) {
 		remainingNodes = existingNodes[j:]
@@ -322,8 +333,42 @@ func (bucket *BucketTree) Reset() {
 
 // TODO test important
 // the func can make the buckettree revert to target block
-func (bucket *BucketTree) RevertToTargetBlock(blockNum *big.Int) {
+func (bucket *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *big.Int) (error){
+	logger.Debug("Start RevertToTargetBlock, from ",currentBlockNum)
+	db,_ := hyperdb.GetLDBDatabase()
+	writeBatch := db.NewBatch()
+	keyValueMap := NewKVMap()
 
+	for i := currentBlockNum.Int64();i > toBlockNum.Int64(); i -- {
+		value,err := db.Get(append([]byte("UpdatedValueSet"), big.NewInt(i).Bytes()...))
+		if err != nil{
+			logger.Debug("Test RevertToTargetBlock Error",err.Error())
+			return err
+		}
+		if value == nil || len(value)== 0{
+			logger.Debug("There is no value update")
+			continue
+		}
+		logger.Debug(i,"ValueValue",value)
+		updatedValueSet := newUpdatedValueSet(toBlockNum)
+		buffer := proto.NewBuffer(value)
+		updatedValueSet.UnMarshal(buffer)
+		revertToTargetBlock(updatedValueSet,&keyValueMap,writeBatch)
+	}
+
+	//bucket.PrepareWorkingSet(keyValueMap,toBlockNum)
+	//bucket.AddChangesForPersistence(writeBatch)
+	writeBatch.Write()
+	logger.Debug("End RevertToTargetBlock, to ", toBlockNum)
+	return nil
 }
 
-
+// TODO add verify about value and previousvalue
+func revertToTargetBlock(updatedValueSet *UpdatedValueSet,keyValueMap *K_VMap,writeBatch hyperdb.Batch)  {
+	for key,updatedValue := range updatedValueSet.UpdatedKVs{
+		logger.Debug(key,"------------------previous value is ",updatedValue.PreviousValue,"------------------current value is ",updatedValue.Value)
+		(*keyValueMap)[key] = updatedValue.PreviousValue
+		writeBatch.Delete([]byte(key))
+	}
+	writeBatch.Write()
+}
