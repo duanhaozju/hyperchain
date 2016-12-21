@@ -1,5 +1,9 @@
 package hyperdb
 
+
+
+
+//////////////////////////////////////// use pool
 //import (
 //	"github.com/garyburd/redigo/redis"
 //	"github.com/syndtr/goleveldb/leveldb/iterator"
@@ -8,7 +12,7 @@ package hyperdb
 //	"sync"
 //	"time"
 //)
-
+//
 //type LDBDatabase struct {
 //	path string
 //	rd_pool *redis.Pool
@@ -116,9 +120,9 @@ package hyperdb
 //
 //	return err
 //}
+//
 
-//
-//
+///////////////////////////////////////////////////////////didn't use pool
 //import (
 //	"github.com/garyburd/redigo/redis"
 //	"github.com/syndtr/goleveldb/leveldb/iterator"

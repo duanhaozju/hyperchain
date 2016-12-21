@@ -79,28 +79,6 @@ func getDBPath() string {
 
 
 /////////////////////////////////////////////////////redis/
-//func GetLDBDatabase() (*LDBDatabase, error) {
-//	ldbInstance.dbsync.Lock()
-//	defer ldbInstance.dbsync.Unlock()
-//	if ldbInstance.state == opened {
-//		return ldbInstance.ldb, nil
-//	}
-//
-//	db,err:= NewLDBDatabase(portLDBPath)
-//	if err!=nil{
-//		return nil, err
-//	}
-//	ldbInstance.ldb=db
-//	ldbInstance.state = opened
-//	return db, nil
-//}
-
-//
-//func GetLDBDatabase() (*LDBDatabase, error) {
-//	return NewLDBDatabase(portLDBPath)
-//}
-
-//////////////////////////////////////////ssdb
 func GetLDBDatabase() (*LDBDatabase, error) {
 	ldbInstance.dbsync.Lock()
 	defer ldbInstance.dbsync.Unlock()
@@ -108,7 +86,7 @@ func GetLDBDatabase() (*LDBDatabase, error) {
 		return ldbInstance.ldb, nil
 	}
 
-	db,err:= NewLDBDatabase(portLDBPath,"127.0.0.1")
+	db,err:= NewLDBDatabase(portLDBPath)
 	if err!=nil{
 		return nil, err
 	}
@@ -116,3 +94,25 @@ func GetLDBDatabase() (*LDBDatabase, error) {
 	ldbInstance.state = opened
 	return db, nil
 }
+
+
+//func GetLDBDatabase() (*LDBDatabase, error) {
+//	return NewLDBDatabase(portLDBPath)
+//}
+
+//////////////////////////////////////////ssdb
+//func GetLDBDatabase() (*LDBDatabase, error) {
+//	ldbInstance.dbsync.Lock()
+//	defer ldbInstance.dbsync.Unlock()
+//	if ldbInstance.state == opened {
+//		return ldbInstance.ldb, nil
+//	}
+//
+//	db,err:= NewLDBDatabase(portLDBPath,"127.0.0.1")
+//	if err!=nil{
+//		return nil, err
+//	}
+//	ldbInstance.ldb=db
+//	ldbInstance.state = opened
+//	return db, nil
+//}

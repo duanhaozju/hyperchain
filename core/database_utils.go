@@ -11,6 +11,8 @@ import (
 	"hyperchain/hyperdb"
 	"strconv"
 	"sync"
+	"os"
+	"fmt"
 )
 
 // the prefix of key, use to save to db
@@ -201,6 +203,23 @@ func PutBlock(db hyperdb.Database, key []byte, t *types.Block) error {
 	return err
 }
 func PutBlockTx(db hyperdb.Database, commonHash crypto.CommonHash, key []byte, t *types.Block) error {
+	if t.Number%50==0{
+
+		time:=t.WriteTime-t.Timestamp
+		str:="number "+strconv.FormatUint(t.Number,10)+":"+strconv.FormatInt(time,10)+"\n"
+		// 以只写的模式，打开文件
+		f, err := os.OpenFile("/home/frank/1.txt", os.O_WRONLY, 0644)
+		if err != nil {
+			fmt.Println("cacheFileList.yml file create failed. err: " + err.Error())
+		} else {
+			// 查找文件末尾的偏移量
+			n, _ := f.Seek(0, os.SEEK_END)
+			// 从末尾的偏移量开始写入内容
+			_, err = f.WriteAt([]byte(str), n)
+
+			f.Close()
+		}
+	}
 	data, err := proto.Marshal(t)
 	if err != nil {
 		return err

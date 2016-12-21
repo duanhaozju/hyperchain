@@ -24,6 +24,8 @@ import (
 	"time"
 	"sort"
 	"errors"
+	"os"
+	"fmt"
 )
 
 var (
@@ -290,7 +292,23 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	}
 	statedb, err := state.New(initStatus, db)
 
-	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
+	if err != nil {
+		f, err1 := os.OpenFile("/home/frank/1.txt", os.O_WRONLY, 0644)
+		if err1 != nil {
+			fmt.Println("cacheFileList.yml file create failed. err: " + err.Error())
+		} else {
+			// 查找文件末尾的偏移量
+			n, _ := f.Seek(0, os.SEEK_END)
+			// 从末尾的偏移量开始写入内容
+			currentTime := time.Now().Local()
+			newFormat := currentTime.Format("2006-01-02 15:04:05.000")
+			str:=newFormat+"block pool 302 the err of statebd :"+err.Error()
+			_, err = f.WriteAt([]byte(str), n)
+
+			f.Close()
+		}
+		return err, nil, nil, nil, nil, nil, invalidTxs
+	}
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
 	env["currentGasLimit"] = "10000000"
 	vmenv := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
