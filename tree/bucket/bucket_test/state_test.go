@@ -8,6 +8,7 @@ import (
 	"hyperchain/tree/bucket"
 	"hyperchain/tree/bucket/testutil"
 	"hyperchain/hyperdb"
+	"math/big"
 )
 var (
 	logger = logging.MustGetLogger("bucket_test")
@@ -25,7 +26,7 @@ func TestState_GetHash(t *testing.T){
 	key_valueMap["key6"] = []byte("value6")
 	key_valueMap["key7"] = []byte("value7")
 	key_valueMap["key8"] = []byte("value8")
-	state.SetK_VMap(key_valueMap)
+	state.SetK_VMap(key_valueMap,big.NewInt(2))
 	rootHash,err := state.GetHash()
 	if err != nil{
 		logger.Debugf("--------------GetHash error")
@@ -68,7 +69,7 @@ func TestState_(t *testing.T){
 	key_valueMap["key9"] = []byte("value9")
 	key_valueMap["key10"] = []byte("value10")
 	key_valueMap["key11"] = []byte("value11")
-	state.SetK_VMap(key_valueMap)
+	state.SetK_VMap(key_valueMap,big.NewInt(2))
 	hash,err := state.GetHash()
 	if err != nil{
 		logger.Debugf("--------------GetHash error")

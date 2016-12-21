@@ -6,6 +6,7 @@ import (
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
 	"hyperchain/tree/bucket"
+	"math/big"
 )
 
 var (
@@ -21,6 +22,7 @@ func init(){
 // This encapsulates a particular implementation for managing the state persistence
 // This is not thread safe
 type State struct {
+	currentBlockNum	*big.Int
 	stateImpl    bucket.BucketTree
 	key_valueMap  bucket.K_VMap
 	updateStateImpl bool
@@ -34,17 +36,18 @@ func NewState() *State {
 	if err != nil {
 		panic(fmt.Errorf("Error during initialization of state implementation: %s", err))
 	}
-	return &State{*stateImpl, make(map[string][]byte),false}
+	return &State{big.NewInt(1),*stateImpl, make(map[string][]byte),false}
 }
 
 // TODO test
 // set the Key_value map to the state
-func (state *State) SetK_VMap(key_valueMap bucket.K_VMap){
+func (state *State) SetK_VMap(key_valueMap bucket.K_VMap,blockNum *big.Int){
 	if(state.key_valueMap != nil){
 		logger.Debugf("the state has key_valueMap,overwrite it")
 	}
 	state.key_valueMap = key_valueMap
 	state.updateStateImpl = true
+	state.currentBlockNum = blockNum
 }
 
 // TODO test
@@ -52,7 +55,7 @@ func (state *State) GetHash() ([]byte,error){
 	logger.Debug("Enter - GetHash()")
 	if state.updateStateImpl {
 		logger.Debug("udpateing stateImpl with working-set")
-		state.stateImpl.PrepareWorkingSet(state.key_valueMap)
+		state.stateImpl.PrepareWorkingSet(state.key_valueMap,big.NewInt(1))
 		state.updateStateImpl = false
 	}
 	hash,err := state.stateImpl.ComputeCryptoHash()
@@ -68,7 +71,7 @@ func (state *State) GetHash() ([]byte,error){
 func (state *State) AddChangesForPersistence(writeBatch hyperdb.Batch) {
 	logger.Debug("state.addChangesForPersistence()...start")
 	if state.updateStateImpl {
-		state.stateImpl.PrepareWorkingSet(state.key_valueMap)
+		state.stateImpl.PrepareWorkingSet(state.key_valueMap,state.currentBlockNum)
 		state.updateStateImpl = false
 	}
 	state.stateImpl.AddChangesForPersistence(writeBatch)
@@ -81,7 +84,7 @@ func (state *State) AddChangesForPersistence(writeBatch hyperdb.Batch) {
 // DB.
 func (state *State) CommitStateDelta() error {
 	if state.updateStateImpl {
-		state.stateImpl.PrepareWorkingSet(state.key_valueMap)
+		state.stateImpl.PrepareWorkingSet(state.key_valueMap,state.currentBlockNum)
 		state.updateStateImpl = false
 	}
 

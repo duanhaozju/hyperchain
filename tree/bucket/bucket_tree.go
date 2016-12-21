@@ -283,7 +283,7 @@ func (bucketTree *BucketTree) addUpdatedValueSetForPersistence(writeBatch hyperd
 	buffer := proto.NewBuffer([]byte{})
 	updatedValueSet := bucketTree.updatedValueSet
 	updatedValueSet.Marshal(buffer)
-	writeBatch.Put(append([]byte("UpdatedValueSet"),[]byte(updatedValueSet.BlockNum)...),buffer.Bytes())
+	writeBatch.Put(append([]byte("UpdatedValueSet"),updatedValueSet.BlockNum.Bytes()...),buffer.Bytes())
 }
 
 
