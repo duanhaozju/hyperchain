@@ -117,6 +117,7 @@ import (
 	"time"
 	"os"
 	"fmt"
+	"errors"
 )
 
 type LDBDatabase struct {
@@ -183,6 +184,10 @@ func (self *LDBDatabase) Get(key []byte) ([]byte, error) {
 			f.Close()
 		}
 	}
+
+	if err==nil&&len(dat)==0{
+		err= errors.New("not found")
+	}
 	return dat, err
 }
 
@@ -246,7 +251,7 @@ func (batch *rd_Batch) Write() error {
 		list=append(list,string(k),string(v))
 	}
 	_,err:=con.Do("mset",list)
-	if err==nil{
+	if err!=nil{
 		batch.map1=make(map[string][]byte)
 		f, err1 := os.OpenFile("/home/frank/1.txt", os.O_WRONLY, 0644)
 		if err1 != nil {
