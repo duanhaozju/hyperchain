@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"hyperchain/tree/bucket"
 	"github.com/pkg/errors"
+	"sync/atomic"
 )
 
 
@@ -61,7 +62,11 @@ type StateDB struct {
 	bucketTree     *bucket.BucketTree
 	lock           sync.Mutex
 	// current block pool status
-	curSeqNo    uint64
+	curSeqNo       uint64        // current seqNo in process
+	oldestSeqNo    uint64        // oldest seqNo in content cache cache
+	// atomic related
+	batchCache     *common.Cache // use to store batch handler for different block process
+	contentCache   *common.Cache // use to store modification set for different block process
 }
 
 // Create a new state from a given root
@@ -72,6 +77,9 @@ func New(root common.Hash, db hyperdb.Database, bktConf bucket.Conf) (*StateDB, 
 	bucketTree := bucket.NewBucketTree(string(bucketPrefix))
 	bucketTree.Initialize(SetupBucketConfig(bktConf.StateSize, bktConf.StateLevelGroup))
 	// check root hash validation
+	// initialize cache
+	batchCache, _ := common.NewCache()
+	contentCache, _ := common.NewCache()
 	curHash, err := bucketTree.ComputeCryptoHash()
 	if err != nil {
 		log.Errorf("new state db failed, error message %s", err.Error())
@@ -91,6 +99,8 @@ func New(root common.Hash, db hyperdb.Database, bktConf bucket.Conf) (*StateDB, 
 		logs:              make(map[common.Hash]vm.Logs),
 		bktConf:           bktConf,
 		bucketTree:        bucketTree,
+		batchCache:        batchCache,
+		contentCache:      contentCache,
 	}, nil
 }
 
@@ -119,11 +129,15 @@ func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 
 // Reset clears out all emphemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
-func (self *StateDB) Reset(root common.Hash) error {
+func (self *StateDB) Reset() error {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	// TODO add root validation check
-	self.root = root
+	// save modification set to content cache
+	if self.curSeqNo == 0 {
+		log.Warning("make sure current seqNo is zero during the state reset")
+	}
+	self.contentCache.Add(self.curSeqNo, self.stateObjects)
+	// clear all stuff
 	self.stateObjects = make(map[common.Address]*StateObject)
 	self.stateObjectsDirty = make(map[common.Address]struct{})
 	self.thash = common.Hash{}
@@ -131,22 +145,47 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.txIndex = 0
 	self.logs = make(map[common.Hash]vm.Logs)
 	self.logSize = 0
-	//self.clearJournalAndRefund()
+	// reset bucket tree
 	// TODO Bucket Tree reset to avoid memory leak
 	return nil
 }
 
-// record current seqNo
-func (self *StateDB) SetSeqNo(seqNo uint64) {
-	self.curSeqNo = seqNo
-}
 
+// record current seqNo
+func (self *StateDB) MarkProcessStart(seqNo uint64) {
+	atomic.StoreUint64(&self.curSeqNo, seqNo)
+}
+// record oldest seqNo
+func (self *StateDB) MarkProcessFinish(seqNo uint64) {
+	atomic.StoreUint64(&self.oldestSeqNo, seqNo)
+}
+// batch cache related
+// fetch a batch from batch cache with correspondent seqNo
+// create a new batch if not exist in cache
+func (self *StateDB) FetchBatch(seqNo uint64) hyperdb.Batch {
+	if self.batchCache.Contains(seqNo) {
+		// already exist
+		batch, _ := self.batchCache.Get(seqNo)
+		return batch.(hyperdb.Batch)
+	} else {
+		// not exist right now
+		batch := self.db.NewBatch()
+		self.batchCache.Add(seqNo, batch)
+		return batch
+	}
+}
+// delete a batch handler in cache with correspondent seqNo
+// avoid memory leak
+func (self *StateDB) DeleteBatch(seqNo uint64) {
+	self.batchCache.Remove(seqNo)
+}
+// mark a transaction process's beginning
 func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
 	self.thash = thash
 	self.bhash = bhash
 	self.txIndex = ti
 }
-
+// add logs generated in vm to state
 func (self *StateDB) AddLog(log *vm.Log) {
 	self.journal.JournalList = append(self.journal.JournalList, &AddLogChange{Txhash: self.thash})
 	log.TxHash = self.thash
@@ -156,11 +195,11 @@ func (self *StateDB) AddLog(log *vm.Log) {
 	self.logs[self.thash] = append(self.logs[self.thash], log)
 	self.logSize++
 }
-
+// obtain logs by transaction hash
 func (self *StateDB) GetLogs(hash common.Hash) vm.Logs {
 	return self.logs[hash]
 }
-
+// get all logs in state
 func (self *StateDB) Logs() vm.Logs {
 	var logs vm.Logs
 	for _, lgs := range self.logs {
@@ -168,7 +207,8 @@ func (self *StateDB) Logs() vm.Logs {
 	}
 	return logs
 }
-
+// add refund to state temporarily
+// Deprecated
 func (self *StateDB) AddRefund(gas *big.Int) {
 	self.journal.JournalList = append(self.journal.JournalList, &RefundChange{Prev: new(big.Int).Set(self.refund)})
 	self.refund.Add(self.refund, gas)
@@ -186,11 +226,11 @@ func (self *StateDB) Empty(addr common.Address) bool {
 	so := self.GetStateObject(addr)
 	return so == nil || so.empty()
 }
-
+// Get account by address
 func (self *StateDB) GetAccount(addr common.Address) vm.Account {
 	return self.GetStateObject(addr)
 }
-
+// Get all account in database
 func (self *StateDB) GetAccounts() map[string]vm.Account {
 	ret := make(map[string]vm.Account)
 	leveldb, ok := self.db.(*hyperdb.LDBDatabase)
@@ -229,7 +269,7 @@ func (self *StateDB) GetNonce(addr common.Address) uint64 {
 
 	return 0
 }
-
+// code is the contract's code
 func (self *StateDB) GetCode(addr common.Address) []byte {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
@@ -240,7 +280,7 @@ func (self *StateDB) GetCode(addr common.Address) []byte {
 	}
 	return nil
 }
-
+// Get code len
 func (self *StateDB) GetCodeSize(addr common.Address) int {
 	stateObject := self.GetStateObject(addr)
 	if stateObject == nil {
@@ -256,7 +296,7 @@ func (self *StateDB) GetCodeSize(addr common.Address) int {
 	}
 	return size
 }
-
+// Get code hash
 func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 	stateObject := self.GetStateObject(addr)
 	if stateObject == nil {
@@ -264,7 +304,7 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 	}
 	return common.BytesToHash(stateObject.CodeHash())
 }
-
+// get a storage entry in stateObject
 func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 	stateObject := self.GetStateObject(a)
 	if stateObject != nil {
@@ -272,7 +312,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 	}
 	return common.Hash{}
 }
-
+// check whether an account has been suicide
 func (self *StateDB) IsDeleted(addr common.Address) bool {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
@@ -284,35 +324,35 @@ func (self *StateDB) IsDeleted(addr common.Address) bool {
 /*
  * SETTERS
  */
-
+// add balance to an account
 func (self *StateDB) AddBalance(addr common.Address, amount *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.AddBalance(amount)
 	}
 }
-
+// set balance
 func (self *StateDB) SetBalance(addr common.Address, amount *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetBalance(amount)
 	}
 }
-
+// set nonce
 func (self *StateDB) SetNonce(addr common.Address, nonce uint64) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetNonce(nonce)
 	}
 }
-
+// set code
 func (self *StateDB) SetCode(addr common.Address, code []byte) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetCode(kec256Hash.Hash(stateObject.code), code)
 	}
 }
-
+// set a storang entry to a state object
 func (self *StateDB) SetState(addr common.Address, key common.Hash, value common.Hash) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
@@ -562,15 +602,16 @@ func (s *StateDB) CommitBatch(deleteEmptyObjects bool) (root common.Hash, batch 
 
 func (s *StateDB) clearJournalAndRefund(batch hyperdb.Batch) {
 	// 1. persist current journal to disk
+	curSeqNo := atomic.LoadUint64(&s.curSeqNo)
 	if len(s.journal.JournalList) != 0 {
-		if s.curSeqNo == 0 {
-			log.Warningf("make sure the seqNo of journal is [%d]", s.curSeqNo)
+		if curSeqNo == 0 {
+			log.Warningf("make sure the seqNo of journal is [%d]", curSeqNo)
 		}
 		journal, err := s.journal.Marshal()
 		if err != nil {
-			log.Errorf("marshal seqNo [%d] journal failed", s.curSeqNo)
+			log.Errorf("marshal seqNo [%d] journal failed", curSeqNo)
 		}
-		batch.Put(CompositeJournalKey(s.curSeqNo), journal)
+		batch.Put(CompositeJournalKey(curSeqNo), journal)
 	}
 	// 2. clear journal
 	s.journal = Journal{}

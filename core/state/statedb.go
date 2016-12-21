@@ -531,6 +531,17 @@ func (self *StateDB) RevertToSnapshot(copy interface{}) {
 }
 
 // For Compatibility
-func (self *StateDB) SetSeqNo(seqNo uint64) {
+func (self *StateDB) MarkProcessStart(seqNo uint64) {
+
+}
+func (self *StateDB) MarkProcessFinish(seqNo uint64) {
+
+}
+
+func (self *StateDB) FetchBatch(seqNo uint64) hyperdb.Batch {
+	return nil
+}
+
+func (self *StateDB) DeleteBatch(seqNo uint64) {
 
 }

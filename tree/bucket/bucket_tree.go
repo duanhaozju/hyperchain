@@ -89,7 +89,7 @@ func (bucketTree *BucketTree) Get(key string) ([]byte, error) {
 
 // PrepareWorkingSet - method implementation for interface 'statemgmt.HashableState'
 // TODO test the stateImpl just accept the stateDelta which accountID equals
-func (bucketTree *BucketTree) PrepareWorkingSet(key_valueMap K_VMap,blockNum *big.Int) error {
+func (bucketTree *BucketTree) PrepareWorkingSet(key_valueMap K_VMap) error {
 	logger.Debug("Enter - PrepareWorkingSet()")
 	if key_valueMap == nil || len(key_valueMap) == 0 {
 		logger.Debug("Ignoring working-set as it is empty")
@@ -98,7 +98,6 @@ func (bucketTree *BucketTree) PrepareWorkingSet(key_valueMap K_VMap,blockNum *bi
 	bucketTree.dataNodesDelta = newDataNodesDelta(bucketTree.treePrefix, key_valueMap)
 	bucketTree.bucketTreeDelta = newBucketTreeDelta()
 	bucketTree.recomputeCryptoHash = true
-	bucketTree.updatedValueSet = newUpdatedValueSet(blockNum)
 	return nil
 }
 

@@ -214,12 +214,10 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	if err != nil {
 		return err, nil, nil, nil, nil, nil, invalidTxs
 	}
-	// build transaction and receipt patricia merkle tree
+	// initailize calculator
 	// for calculate fingerprint of a batch of transactions and receipts
-	txTrie, err := pmt.New(common.Hash{}, db)
-	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
-	receiptTrie, err := pmt.New(common.Hash{}, db)
-	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
+	pool.initializeTransactionCalculator()
+	pool.initializeReceiptCalculator()
 	// load latest state fingerprint
 	v := pool.lastValidationState.Load()
 	initStatus, ok := v.(common.Hash)
@@ -228,9 +226,10 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	}
 	// initialize state
 	state, err := pool.GetStateInstance(initStatus, db)
-	state.SetSeqNo(seqNo)
-	log.Critical("BEFORE", string(state.Dump()))
 	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
+
+	state.MarkProcessStart(seqNo)
+	log.Critical("BEFORE", string(state.Dump()))
 	// initialize execution environment ruleset
 	vmenv := initEnvironment(state, seqNo)
 	// execute transaction one by one
@@ -269,16 +268,14 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 			log.Error("Put tx data into database failed! error msg, ", err.Error())
 			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
-		txTrie.Update(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...), data)
-
+		pool.calculateTransactionsFingerprint(tx, data, false)
 		// persist receipt
 		err, data = core.PersistReceipt(batch, receipt, pool.conf.TransactionVersion, false, false)
 		if  err != nil {
 			log.Error("Put receipt data into database failed! error msg, ", err.Error())
 			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
-		receiptTrie.Update(append(core.ReceiptsPrefix, receipt.TxHash...), data)
-
+		pool.calculateReceiptFingerprint(receipt, data, false)
 		// persist transaction meta
 		// set temporarily
 		// for primary node, the seqNo can be invalid. remove the incorrect txmeta info when commit block to avoid this error
@@ -302,8 +299,10 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	// generate new state fingerprint
 	merkleRoot := root.Bytes()
 	// generate transactions and receipts fingerprint
-	txRoot := txTrie.Hash().Bytes()
-	receiptRoot := receiptTrie.Hash().Bytes()
+	res, _ := pool.calculateTransactionsFingerprint(nil, nil, true)
+	txRoot := res.Bytes()
+	res, _ = pool.calculateReceiptFingerprint(nil, nil, true)
+	receiptRoot := res.Bytes()
 	// store latest state status
 	pool.lastValidationState.Store(root)
 	// IMPORTANT never forget to call batch.Write, otherwise, all data in batch will be lost
@@ -317,11 +316,109 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
 }
 
-
+// initialize transaction execution environment
 func initEnvironment(state vm.Database, seqNo uint64) vm.Environment {
 	env := make(map[string]string)
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
 	env["currentGasLimit"] = "10000000"
 	vmenv := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, state, env)
 	return vmenv
+}
+// initialize transaction calculator
+func (pool *BlockPool) initializeTransactionCalculator() error {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Error("get database handler failed in initializeTransactionCalculator")
+		return err
+	}
+	switch pool.conf.StateType {
+	case "rawstate":
+		tree, err := pmt.New(common.Hash{}, db)
+		if err != nil {
+			log.Error("initialize pmt failed in initializeTransactionCalculator")
+			return err
+		}
+		pool.transactionCalculator = tree
+	case "hyperstate":
+		pool.transactionBuffer = nil
+	}
+	return nil
+}
+// initialize receipt calculator
+func (pool *BlockPool) initializeReceiptCalculator() error {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Error("get database handler failed in initializeTransactionCalculator")
+		return err
+	}
+	switch pool.conf.StateType {
+	case "rawstate":
+		tree, err := pmt.New(common.Hash{}, db)
+		if err != nil {
+			log.Error("initialize pmt failed in initializeTransactionCalculator")
+			return err
+		}
+		pool.receiptCalculator = tree
+	case "hyperstate":
+		pool.receiptBuffer = nil
+	}
+	return nil
+}
+
+// calculate a batch of transaction
+func (pool *BlockPool) calculateTransactionsFingerprint(transaction *types.Transaction, data []byte, flush bool) (common.Hash, error) {
+	switch pool.conf.StateType {
+	case "rawstate":
+		calculator := pool.transactionCalculator.(*pmt.SecureTrie)
+		if flush == false {
+			// put transaction to buffer temporarily
+			calculator.Update(append(core.TransactionPrefix, transaction.GetTransactionHash().Bytes()...), data)
+			return common.Hash{}, nil
+		} else {
+			// calculate hash together
+			return calculator.Commit()
+		}
+	case "hyperstate":
+		if flush == false {
+			// put transaction to buffer temporarily
+			pool.transactionBuffer = append(pool.transactionBuffer, data)
+			return common.Hash{}, nil
+		} else {
+			// calculate hash together
+			kec256Hash := crypto.NewKeccak256Hash("keccak256")
+			hash := kec256Hash.Hash(pool.transactionBuffer)
+			pool.transactionBuffer = nil
+			return hash, nil
+		}
+	}
+	return common.Hash{}, nil
+}
+
+// calculate a batch of receipt
+func (pool *BlockPool)calculateReceiptFingerprint(receipt *types.Receipt, data []byte, flush bool)(common.Hash, error) {
+	switch pool.conf.StateType {
+	case "rawstate":
+		calculator := pool.receiptCalculator.(*pmt.SecureTrie)
+		if flush == false {
+			// put transaction to buffer temporarily
+			calculator.Update(append(core.ReceiptsPrefix, receipt.TxHash...), data)
+			return common.Hash{}, nil
+		} else {
+			// calculate hash together
+			return calculator.Commit()
+		}
+	case "hyperstate":
+		if flush == false {
+			// put transaction to buffer temporarily
+			pool.receiptBuffer = append(pool.receiptBuffer, data)
+			return common.Hash{}, nil
+		} else {
+			// calculate hash together
+			kec256Hash := crypto.NewKeccak256Hash("keccak256")
+			hash := kec256Hash.Hash(pool.receiptBuffer)
+			pool.receiptBuffer = nil
+			return hash, nil
+		}
+	}
+	return common.Hash{}, nil
 }

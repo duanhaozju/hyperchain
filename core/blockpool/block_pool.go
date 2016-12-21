@@ -20,7 +20,8 @@ import (
 )
 
 var (
-	log          *logging.Logger // package-level logger
+	log                          *logging.Logger // package-level logger
+	globalState                        vm.Database
 )
 
 func init() {
@@ -61,7 +62,12 @@ type BlockPool struct {
 	queue               *common.Cache       // cache for storing commit event
 	// config
 	conf                BlockPoolConf       // block configuration
-	bucketTreeConf      bucket.Conf
+	bucketTreeConf      bucket.Conf         // bucket tree configuration for hyperstate use only
+	// buffer
+	transactionCalculator   interface{}       // a batch of transactions calculator
+	receiptCalculator       interface{}       // a batch of receipts calculator
+	transactionBuffer       [][]byte // transaction buffer
+	receiptBuffer           [][]byte // receipt buffer
 }
 
 func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter, conf BlockPoolConf, bktConf bucket.Conf) *BlockPool {
@@ -115,7 +121,14 @@ func (pool *BlockPool) GetStateInstance(root common.Hash, db hyperdb.Database) (
 	case "rawstate":
 		return statedb.New(root, db)
 	case "hyperstate":
-		return hyperstate.New(root, db, pool.bucketTreeConf)
+		// IMPORTANT initialize hyperstate only once
+		if globalState == nil {
+			var err error
+			globalState, err = hyperstate.New(root, db, pool.bucketTreeConf)
+			return globalState, err
+		} else {
+			return globalState, nil
+		}
 	default:
 		return nil, errors.New("no state type specified")
 	}

@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	"hyperchain/common"
+	"hyperchain/hyperdb"
 )
 
 // RuleSet is an interface that defines the current rule set during the
@@ -107,9 +108,13 @@ type Database interface {
 	// Query
 	GetAccounts() map[string]Account
 	Dump() []byte
-	// Atomic Related
-	SetSeqNo(uint64)
 
+	// Atomic Related
+	MarkProcessStart(uint64)
+	MarkProcessFinish(uint64)
+
+	FetchBatch(seqNo uint64) hyperdb.Batch
+	DeleteBatch(seqNo uint64)
 }
 
 // Account represents a contract or basic ethereum account.
@@ -125,3 +130,4 @@ type Account interface {
 	ForEachStorage(cb func(key, value common.Hash) (bool)) map[common.Hash]common.Hash
 	Value() *big.Int
 }
+
