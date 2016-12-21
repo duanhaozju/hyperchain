@@ -1,5 +1,7 @@
 package bucket
 
+import "math/big"
+
 type byBucketNumber map[int]*bucketNode
 
 type bucketTreeDelta struct {
@@ -8,6 +10,10 @@ type bucketTreeDelta struct {
 
 func newBucketTreeDelta() *bucketTreeDelta {
 	return &bucketTreeDelta{make(map[int]byBucketNumber)}
+}
+
+func newUpdatedValueSet(blockNumber *big.Int) *UpdatedValueSet {
+	return &UpdatedValueSet{blockNum:blockNumber,UpdatedValueMap:make(map[string] *UpdatedValue)}
 }
 
 func (bucketTreeDelta *bucketTreeDelta) getOrCreateBucketNode(bucketKey *bucketKey) *bucketNode {
