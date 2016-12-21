@@ -251,8 +251,9 @@ func (batch *rd_Batch) Write() error {
 		list=append(list,string(k),string(v))
 	}
 	_,err:=con.Do("mset",list)
-	if err!=nil{
-		batch.map1=make(map[string][]byte)
+	if err==nil {
+		batch.map1 = make(map[string][]byte)
+	}else{
 		f, err1 := os.OpenFile("/home/frank/1.txt", os.O_WRONLY, 0644)
 		if err1 != nil {
 			fmt.Println("cacheFileList.yml file create failed. err: " + err.Error())
@@ -268,6 +269,5 @@ func (batch *rd_Batch) Write() error {
 			f.Close()
 		}
 	}
-
 	return err
 }
