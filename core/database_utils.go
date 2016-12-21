@@ -7,10 +7,10 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/core/types"
-	"hyperchain/crypto"
 	"hyperchain/hyperdb"
 	"strconv"
 	"sync"
+	"errors"
 )
 
 // the prefix of key, use to save to db
@@ -21,9 +21,8 @@ var (
 	BlockPrefix              = []byte("block-")
 	ChainKey                 = []byte("chain-key")
 	BlockNumPrefix           = []byte("blockNum-")
-	//bodySuffix               = []byte("-body")
-	TxMetaSuffix = []byte{0x01}
-	log          *logging.Logger // package-level logger
+	TxMetaSuffix             = []byte{0x01}
+	log                      *logging.Logger // package-level logger
 )
 
 func init() {
@@ -39,7 +38,9 @@ func InitDB(dbPath string, port int) {
 	memChainStatusMap = newMemChainStatus()
 }
 
-//---------------------- Receipt Start ---------------------------------
+/*
+	Receipt
+ */
 // GetReceipt returns a receipt by hash
 func GetReceipt(txHash common.Hash) *types.ReceiptTrans {
 	db, err := hyperdb.GetLDBDatabase()
@@ -50,68 +51,159 @@ func GetReceipt(txHash common.Hash) *types.ReceiptTrans {
 	if len(data) == 0 {
 		return nil
 	}
-	var receipt types.Receipt
-	err = proto.Unmarshal(data, &receipt)
+	var receiptWrapper types.ReceiptWrapper
+	err = proto.Unmarshal(data, &receiptWrapper)
 	if err != nil {
 		log.Errorf("GetReceipt err:", err)
+		return nil
 	}
-	//a:= receipt.ToReceiptTrans()
-	//fmt.Println("address",common.ToHex(a.ContractAddress))
-	//fmt.Println("TxHash",a.TxHash)
+	// TODO use different policy to unmarshal receipt depend on version
+	var receipt types.Receipt
+	err = proto.Unmarshal(receiptWrapper.Receipt, &receipt)
+	if err != nil {
+		log.Errorf("GetReceipt err:", err)
+		return nil
+	}
 	return receipt.ToReceiptTrans()
 }
 
-//---------------------- Receipts End ---------------------------------
-
-//-- ------------------- Transaction ---------------------------------
-func PutTransaction(db hyperdb.Database, key []byte, t *types.Transaction) error {
-	data, err := proto.Marshal(t)
+// Persist receipt content to a batch, KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false
+func PersistReceipt(batch hyperdb.Batch, receipt *types.Receipt, version string, flush bool, sync bool) (error, []byte) {
+	// check pointer value
+	if receipt == nil || batch == nil {
+		return errors.New("empty pointer"), nil
+	}
+	// process
+	data, err := proto.Marshal(receipt)
 	if err != nil {
-		return err
+		log.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
+		return err, nil
 	}
-	// add key by prefix to identification for a key-value database
-	keyFact := append(TransactionPrefix, key...)
-	if err := db.Put(keyFact, data); err != nil {
-		return err
+	wrapper := &types.ReceiptWrapper{
+		ReceiptVersion: []byte(version),
+		Receipt:        data,
 	}
-	return nil
-}
-
-// PutTransactions put transaction into database using Batch
-// Each Transaction's key is its hash
-func PutTransactions(db hyperdb.Database, commonHash crypto.CommonHash, ts []*types.Transaction) error {
-	batch := db.NewBatch()
-	for _, trans := range ts {
-		key := trans.Hash(commonHash).Bytes()
-		keyFact := append(TransactionPrefix, key...)
-		value, err := proto.Marshal(trans)
-		if err != nil {
-			return nil
+	data, err = proto.Marshal(wrapper)
+	if err := batch.Put(append(ReceiptsPrefix, receipt.TxHash...), data); err != nil {
+		log.Error("Put receipt data into database failed! error msg, ", err.Error())
+		return err, nil
+	}
+	// flush to disk immediately
+	if flush  {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
 		}
-		batch.Put(keyFact, value)
 	}
-	return batch.Write()
+	return nil, data
 }
 
+func DeleteReceipt(db hyperdb.Database, key []byte) error {
+	keyFact := append(ReceiptsPrefix, key...)
+	return db.Delete(keyFact)
+}
+
+/*
+	Transaction
+ */
+// Query Transaction
 func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error) {
+	if db == nil || key == nil {
+		return nil, errors.New("empty pointer")
+	}
+	var wrapper     types.TransactionWrapper
 	var transaction types.Transaction
 	keyFact := append(TransactionPrefix, key...)
 	data, err := db.Get(keyFact)
 	if len(data) == 0 {
 		return &transaction, err
 	}
-	err = proto.Unmarshal(data, &transaction)
+	err = proto.Unmarshal(data, &wrapper)
+	if err != nil {
+		log.Errorf("GetTransaction err:", err)
+		return &transaction, err
+	}
+
+	// TODO use different policy to unmarshal receipt depend on version
+	err = proto.Unmarshal(wrapper.Transaction, &transaction)
 	return &transaction, err
 }
+// Persist transaction content to a batch, KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false
+func PersistTransaction(batch hyperdb.Batch, transaction *types.Transaction, version string, flush bool, sync bool) (error, []byte) {
+	// check pointer value
+	if transaction == nil || batch == nil {
+		return errors.New("empty pointer"), nil
+	}
+	// process
+	data, err := proto.Marshal(transaction)
+	if err != nil {
+		log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
+		return err, nil
+	}
+	wrapper := &types.TransactionWrapper{
+		TransactionVersion: []byte(version),
+		Transaction:        data,
+	}
+	data, err = proto.Marshal(wrapper)
+	if err := batch.Put(append(TransactionPrefix, transaction.GetTransactionHash().Bytes()...), data); err != nil {
+		log.Error("Put tx data into database failed! error msg, ", err.Error())
+		return err, nil
+	}
+	// flush to disk immediately
+	if flush  {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
+	}
+	return nil, data
+}
 
+// Persist transactions content to a batch, KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false
+func PersistTransactions(batch hyperdb.Batch, transactions []*types.Transaction, version string, flush bool, sync bool) error {
+	// check pointer value
+	if transactions == nil || batch == nil {
+		return errors.New("empty pointer")
+	}
+	// process
+	for _, transaction := range transactions {
+		data, err := proto.Marshal(transaction)
+		if err != nil {
+			log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
+			return err
+		}
+		wrapper := &types.TransactionWrapper{
+			TransactionVersion: []byte(version),
+			Transaction:        data,
+		}
+		data, err =  proto.Marshal(wrapper)
+		if err := batch.Put(append(TransactionPrefix, transaction.GetTransactionHash().Bytes()...), data); err != nil {
+			log.Error("Put tx data into database failed! error msg, ", err.Error())
+			return err
+		}
+	}
+	// flush to disk immediately
+	if flush  {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
+	}
+	return nil
+}
+
+// Judge whether a transaction has been saved in database
 func JudgeTransactionExist(db hyperdb.Database, key []byte) (bool, error) {
-	var transaction types.Transaction
+	var wrapper types.TransactionWrapper
 	keyFact := append(TransactionPrefix, key...)
 	data, err := db.Get(keyFact)
 	if len(data) == 0 {
-		return false, err
+			return false, err
 	}
-	err = proto.Unmarshal(data, &transaction)
+	err = proto.Unmarshal(data, &wrapper)
 	return true, err
 }
 
@@ -140,10 +232,12 @@ func GetAllTransaction(db *hyperdb.LDBDatabase) ([]*types.Transaction, error) {
 	for ok := iter.Seek(TransactionPrefix); ok; ok = iter.Next() {
 		key := iter.Key()
 		if len(string(key)) >= len(TransactionPrefix) && string(key[:len(TransactionPrefix)]) == string(TransactionPrefix) {
-			var t types.Transaction
+			var wrapper types.TransactionWrapper
+			var transaction types.Transaction
 			value := iter.Value()
-			proto.Unmarshal(value, &t)
-			ts = append(ts, &t)
+			proto.Unmarshal(value, &wrapper)
+			proto.Unmarshal(wrapper.Transaction, &transaction)
+			ts = append(ts, &transaction)
 		} else {
 			break
 		}
@@ -183,41 +277,105 @@ func GetDiscardTransaction(db hyperdb.Database, key []byte) (*types.InvalidTrans
 	return &invalidTransaction, err
 }
 
-//-- --------------------- Transaction END -----------------------------------
+/*
+	Transaction Meta
+ */
 
-//-- ------------------- Block ---------------------------------
-func PutBlock(db hyperdb.Database, key []byte, t *types.Block) error {
-	data, err := proto.Marshal(t)
+// Persist tx meta content to a batch, KEEP IN MIND call batch.Write to flush all data to disk
+func PersistTransactionMeta(batch hyperdb.Batch, transactionMeta *types.TransactionMeta, txHash common.Hash, flush bool, sync bool) error {
+	if transactionMeta == nil || batch == nil {
+		return errors.New("empty transactionmeta pointer")
+	}
+	data, err := proto.Marshal(transactionMeta)
 	if err != nil {
+		log.Error("Invalid txmeta struct to marshal! error msg, ", err.Error())
 		return err
 	}
-	keyFact := append(BlockPrefix, key...)
-	if err := db.Put(keyFact, data); err != nil {
+	if err := batch.Put(append(txHash.Bytes(), TxMetaSuffix...), data); err != nil {
+		log.Error("Put txmeta into database failed! error msg, ", err.Error())
 		return err
 	}
-	keyNum := strconv.FormatInt(int64(t.Number), 10)
-	err = db.Put(append(BlockNumPrefix, keyNum...), t.BlockHash)
-	return err
+	// flush to disk immediately
+	if flush  {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
+	}
+	return nil
 }
-func PutBlockTx(db hyperdb.Database, commonHash crypto.CommonHash, key []byte, t *types.Block) error {
-	data, err := proto.Marshal(t)
+
+func DeleteTransactionMeta(db hyperdb.Database, key []byte) error {
+	keyFact := append(key, TxMetaSuffix...)
+	return db.Delete(keyFact)
+}
+/*
+	Invalid Transaction
+ */
+
+func PersistInvalidTransactionRecord(batch hyperdb.Batch, invalidTx *types.InvalidTransactionRecord, flush bool, sync bool) (error, []byte) {
+	// save to db
+	if batch == nil || invalidTx == nil {
+		return errors.New("empty  pointer"), nil
+	}
+	data, err := proto.Marshal(invalidTx)
 	if err != nil {
-		return err
+		return err, nil
 	}
-	keyFact := append(BlockPrefix, key...)
-	batch := db.NewBatch()
-	if err := batch.Put(keyFact, data); err != nil {
-		return err
+	if err := batch.Put(append(InvalidTransactionPrefix, invalidTx.Tx.TransactionHash...), data); err != nil {
+		log.Error("Put invalid tx into database failed! error msg, ", err.Error())
+		return err, nil
 	}
-	keyNum := strconv.FormatInt(int64(t.Number), 10)
-	//err = db.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
+	// flush to disk immediately
+	if flush  {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
+	}
+	return nil, data
+}
 
-	//err = batch.Put(append(blockNumPrefix, keyNum...), t.BlockHash)
-	if err := batch.Put(append(BlockNumPrefix, keyNum...), t.BlockHash); err != nil {
-		return err
+/*
+	Block
+ */
+func PersistBlock(batch hyperdb.Batch, block *types.Block, version string, flush bool, sync bool) (error, []byte) {
+	// check pointer value
+	if block == nil || batch == nil {
+		return errors.New("empty block pointer"), nil
+	}
+	// process
+	data, err := proto.Marshal(block)
+	if err != nil {
+		log.Error("Invalid block struct to marshal! error msg, ", err.Error())
+		return err, nil
+	}
+	wrapper := &types.BlockWrapper{
+		BlockVersion: []byte(version),
+		Block:        data,
+	}
+	data, err =  proto.Marshal(wrapper)
+	if err := batch.Put(append(BlockPrefix, block.BlockHash...), data); err != nil {
+		log.Error("Put block data into database failed! error msg, ", err.Error())
+		return err, nil
 	}
 
-	return batch.Write()
+	// save number <-> hash associate
+	keyNum := strconv.FormatInt(int64(block.Number), 10)
+	if err := batch.Put(append(BlockNumPrefix, keyNum...), block.BlockHash); err != nil {
+		return err, nil
+	}
+	// flush to disk immediately
+	if flush {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
+	}
+	return nil, data
 }
 
 func GetBlockHash(db hyperdb.Database, blockNumber uint64) ([]byte, error) {
@@ -226,21 +384,30 @@ func GetBlockHash(db hyperdb.Database, blockNumber uint64) ([]byte, error) {
 }
 
 func GetBlock(db hyperdb.Database, key []byte) (*types.Block, error) {
-	var block types.Block
-	keyFact := append(BlockPrefix, key...)
-	data, err := db.Get(keyFact)
+	var wrapper types.BlockWrapper
+	var block   types.Block
+	key = append(BlockPrefix, key...)
+	data, err := db.Get(key)
 	if len(data) == 0 {
 		return &block, err
 	}
+	err = proto.Unmarshal(data, &wrapper)
+	if err != nil {
+		return &block, err
+	}
+	data = wrapper.Block
+	// TODO use different policy to unmarshal block data
 	err = proto.Unmarshal(data, &block)
 	return &block, err
 }
 
 func GetBlockByNumber(db hyperdb.Database, blockNumber uint64) (*types.Block, error) {
+	if db == nil {
+		return nil, errors.New("empty database pointer")
+	}
 	hash, err := GetBlockHash(db, blockNumber)
 	if err != nil {
 		return nil, err
-
 	}
 	return GetBlock(db, hash)
 }
@@ -264,12 +431,7 @@ func DeleteBlockByNum(db hyperdb.Database, blockNum uint64) error {
 	return db.Delete(append(BlockNumPrefix, keyNum...))
 }
 
-//-- --------------------- Block END ----------------------------------
 
-//-- --------------------- BalanceMap ------------------------------------
-type balanceMapJson map[string][]byte
-
-//-- --------------------- BalanceMap END---------------------------------
 
 //-- ------------------- Chain ----------------------------------------
 

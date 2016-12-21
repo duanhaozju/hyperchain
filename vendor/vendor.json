@@ -57,6 +57,12 @@
 			"revisionTime": "2016-10-30T02:48:15Z"
 		},
 		{
+			"checksumSHA1": "FgN7an+eD/Mp/kYFsKpIKNptfzI=",
+			"path": "github.com/belogik/goes",
+			"revision": "e54d722c3aff588e4c737fe11c07359019240824",
+			"revisionTime": "2015-12-29T12:50:03Z"
+		},
+		{
 			"checksumSHA1": "4+wnUoVOdK9cHy7rqdQdweYKiOA=",
 			"path": "github.com/bitly/go-simplejson",
 			"revision": "aabad6e819789e569bd6aabf444c935aa9ba1e44",

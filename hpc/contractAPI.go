@@ -56,13 +56,13 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 
 		// 部署合约
 		//tx = types.NewTransaction(realArgs.From[:], nil, value, []byte(args.Signature))
-		tx = types.NewTransaction(realArgs.From[:], nil, value, realArgs.Timestamp)
+		tx = types.NewTransaction(realArgs.From[:], nil, value, realArgs.Timestamp, realArgs.Nonce)
 
 	} else {
 
 		// 调用合约或者普通交易(普通交易还需要加检查余额)
 		//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, []byte(args.Signature))
-		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp)
+		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
 	}
 
 
@@ -93,8 +93,6 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 		log.Error("manager is Nil")
 		return common.Hash{}, errors.New("EventObject is nil")
 	}
-	//time.Sleep(2000 * time.Millisecond)
-
 	return tx.GetTransactionHash(), nil
 
 }

@@ -86,7 +86,7 @@ func TestRecvMsgProcessConsensus(t *testing.T) {
 	pbft := newPbft(uint64(id), config, h)
 	defer pbft.Close()
 
- 	//  Messsage(Message_CONSENSUS) contains
+	//  Messsage(Message_CONSENSUS) contains
 	// ConsensusMessage(ConsenssusMessage_TRANSACTION)
 	tx := &types.Transaction{
 		From: 		[]byte{1},
