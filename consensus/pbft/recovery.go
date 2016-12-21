@@ -19,6 +19,10 @@ func (pbft *pbftProtocal) initRecovery() events.Event {
 
 	logger.Noticef("Replica %d now initRecovery", pbft.id)
 
+	// update watermarks
+	height := persist.GetHeightofChain()
+	pbft.moveWatermarks(height)
+
 	pbft.rcRspStore = make(map[uint64]*RecoveryResponse)
 
 	recoveryMsg := &RecoveryInit{
