@@ -9,7 +9,8 @@ import (
 	"math/big"
 	"testing"
 
-	"hyperchain/crypto"
+	//"hyperchain/crypto"
+	//"github.com/astaxie/beego/toolbox"
 )
 
 func Generate_wholenetpublickey(g []byte, n []byte, nsquare []byte) PaillierPublickey {
@@ -130,19 +131,19 @@ func Test_hmTransaction(t *testing.T){
 	fmt.Println(old_byte)
 	fmt.Println(realold)
 
-	ecdsa_private,_:=crypto.GenerateKey()
-	ecdsa_publickey := ecdsa_private.PublicKey
+	//ecdsa_private,_:=crypto.GenerateKey()
+	//ecdsa_publickey := ecdsa_private.PublicKey
 
 	//HmillegalBanlance := make([]byte,32)
 
-	index,hmnewbalance,hmTransferAmount,transferamounecc := PreHmTransaction(old_byte,trans_byte,nil,wholepublickey,&ecdsa_publickey)
+	index,hmnewbalance,hmTransferAmount:= PreHmTransaction(old_byte,trans_byte,nil,wholepublickey)
 	fmt.Println(index)
 	fmt.Println(hmnewbalance)
 	fmt.Println(hmTransferAmount)
-	fmt.Println(len(transferamounecc))
+	//fmt.Println(len(transferamounecc))
 
 	testbig := new(big.Int)
-	testbig.SetBytes(transferamounecc)
+	//testbig.SetBytes(transferamounecc)
 	ss := testbig.String()
 	fmt.Println(len(ss))
 
@@ -179,4 +180,13 @@ func Test_Big(t *testing.T){
 	fmt.Println(ss)
 	fmt.Println(bigint)
 }
+
+
+//func Test_createccpub(t *testing.T){
+//	x := new(big.Int)
+//	y := new(big.Int)
+//
+//
+//
+//}
 

@@ -23,12 +23,12 @@ type pp struct {
 //transferAmount 16byte
 //illegal_balance_hm 32byte
 
-func PreHmTransaction(oldBalance []byte, transferAmount []byte, illegal_balance_hm []byte, whole_networkpublickey PaillierPublickey, ecdsa_publickey *ecdsa.PublicKey) (bool, []byte, []byte, []byte) {
+func PreHmTransaction(oldBalance []byte, transferAmount []byte, illegal_balance_hm []byte, whole_networkpublickey PaillierPublickey) (bool, []byte, []byte) {
 	//var flag bool
 	newBalance_hm := make([]byte, 32)
 	transferAmount_hm := make([]byte, 32)
 	//newBalance_local := make([]byte, 16)
-	transferAmount_ecc := make([]byte, 129)
+	//transferAmount_ecc := make([]byte, 129)
 
 	oldBalanceFillbyte := make([]byte,8)
 	transferAmountFillbyte := make([]byte,8)
@@ -103,12 +103,12 @@ func PreHmTransaction(oldBalance []byte, transferAmount []byte, illegal_balance_
 	}
 
 	//ecdsa_encrypto the transferamount
-	ecies_publickey := ecies.ImportECDSAPublic(ecdsa_publickey)
-	transferAmount_ecc, _ = ecies.Encrypt(rand.Reader, ecies_publickey, transferAmountFillbyte, nil, nil)
+	//ecies_publickey := ecies.ImportECDSAPublic(ecdsa_publickey)
+	//transferAmount_ecc, _ = ecies.Encrypt(rand.Reader, ecies_publickey, transferAmountFillbyte, nil, nil)
 	//fmt.Println(len(transferAmount_ecc))
 
 
-	return true, newBalance_hm, transferAmount_hm, transferAmount_ecc
+	return true, newBalance_hm, transferAmount_hm
 
 }
 
