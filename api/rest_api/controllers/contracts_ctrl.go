@@ -3,8 +3,8 @@ package controllers
 import (
 	"github.com/astaxie/beego"
 	"encoding/json"
-	"hyperchain/hpc"
-	"hyperchain/rest_api/utils"
+	"hyperchain/api"
+	"hyperchain/api/rest_api/utils"
 )
 
 type ContractsController struct {

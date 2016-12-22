@@ -2,8 +2,8 @@ package controllers
 
 import (
 	"github.com/astaxie/beego"
-	"hyperchain/hpc"
-	"hyperchain/rest_api/utils"
+	"hyperchain/api"
+	"hyperchain/api/rest_api/utils"
 	"strconv"
 )
 
@@ -95,8 +95,8 @@ func (b *BlocksController) GetBlockByHashOrNum() {
 //	if err != nil {
 //		b.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
 //	} else {
-//		PublicTxAPIInterface := hpc.GetApiObjectByNamespace("tx").Service
-//		PublicTxAPI := PublicTxAPIInterface.(*hpc.PublicTransactionAPI)
+//		PublicTxAPIInterface := api.GetApiObjectByNamespace("tx").Service
+//		PublicTxAPI := PublicTxAPIInterface.(*api.PublicTransactionAPI)
 //
 //		num, err := PublicTxAPI.GetBlockTransactionCountByHash(hash)
 //		if err != nil {

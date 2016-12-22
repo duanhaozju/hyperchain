@@ -59,6 +59,10 @@ func (self *LDBDatabase) NewIterator() iterator.Iterator {
 	return self.db.NewIterator(nil, nil)
 }
 
+func (self *LDBDatabase) NewIteratorWithPrefix(prefix []byte) iterator.Iterator {
+	return self.db.NewIterator(util.BytesPrefix(prefix), nil)
+}
+
 //Destroy, clean the whole database,
 //warning: bad performance if to many data in the db
 func (self *LDBDatabase) Destroy() error{
@@ -107,6 +111,12 @@ type ldbBatch struct {
 // Put put the key-value to ldbBatch
 func (b *ldbBatch) Put(key, value []byte) error {
 	b.b.Put(key, value)
+	return nil
+}
+
+// Delete delete the key-value to ldbBatch
+func (b *ldbBatch) Delete(key []byte) error {
+	b.b.Delete(key)
 	return nil
 }
 

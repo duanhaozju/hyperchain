@@ -44,7 +44,7 @@ func (acc *PublicAccountAPI) NewAccount(password string) (common.Address, error)
 		return common.Address{}, &callbackError{err.Error()}
 	}
 
-	/*	balanceIns, err := core.GetBalanceIns()
+	/*	balanceIns, err :=types.go.GetBalanceIns()
 		balanceIns.PutCacheBalance(ac.Address, []byte("0"))
 		balanceIns.PutDBBalance(ac.Address, []byte("0"))*/
 	return ac.Address, nil

@@ -198,7 +198,7 @@ func getBlockStateDb(n BlockNumber, db *hyperdb.LDBDatabase) (*state.StateDB, er
 func outputBlockResult(block *types.Block, db *hyperdb.LDBDatabase) (*BlockResult, error) {
 
 	txCounts := int64(len(block.Transactions))
-	//count, percent := core.CalcResponseCount(block.Number, int64(200))
+	//count, percent :=types.go.CalcResponseCount(block.Number, int64(200))
 
 	transactions := make([]interface{}, txCounts)
 	var err error
