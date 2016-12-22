@@ -514,7 +514,6 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case *Checkpoint:
 		return pbft.recvCheckpoint(et)
 	case *stateUpdatedEvent:
-		//pbft.batch.reqStore = newRequestStore()
 		err = pbft.recvStateUpdatedEvent(et)
 	case *ViewChange:
 		return pbft.recvViewChange(et)
@@ -559,10 +558,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case protos.ValidatedTxs:
 		err = pbft.recvValidatedResult(et)
 	case negoViewDoneEvent:
-		logger.Notice("################################################")
-		logger.Noticef("#   Replica %d finished negotiating view: %d", pbft.id, pbft.view)
-		logger.Notice("################################################")
-		logger.Notice("-----Hyperchain negotiate view successfully!-----")
+		logger.Noticef("######## Replica %d finished negotiating view: %d", pbft.id, pbft.view)
 		primary := pbft.primary(pbft.view)
 		if primary == pbft.id {
 			pbft.sendNullRequest()
@@ -583,10 +579,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case *RecoveryReturnPQC:
 		return pbft.recvRecoveryReturnPQC(et)
 	case recoveryDoneEvent:
-		logger.Notice("################################################")
-		logger.Noticef("#   Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
-		logger.Notice("################################################")
-		logger.Notice("-----Hyperchain recover successfully!-----")
+		logger.Noticef("######## Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
 		if pbft.recvNewViewInRecovery {
 			logger.Noticef("#  Replica %d find itself received NewView during Recovery" +
 				", will restart negotiate view", pbft.id)
@@ -938,7 +931,7 @@ func (pbft *pbftProtocal) eventToMsg(msg *ConsensusMessage) (interface{}, error)
 		rrb := &TransactionBatch{}
 		err := proto.Unmarshal(msg.Payload, rrb)
 		if err != nil {
-			logger.Error("Unmarshal error, can not unmarshal ConsensusMessage_RETURN_REQUEST_BATCH:", err)
+			logger.Error("Unmarshal stringerror, can not unmarshal ConsensusMessage_RETURN_REQUEST_BATCH:", err)
 			return nil, err
 		}
 		return returnRequestBatchEvent(rrb), nil
@@ -1080,6 +1073,7 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 		pbft.fetchRecoveryPQC(peers)
 		return nil
 	}
+
 	return nil
 }
 
@@ -1351,6 +1345,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 		logger.Debug("after pre-prepare seq is:",prep.BatchDigest)
 
 		return pbft.helper.InnerBroadcast(msg)
+
 	}
 
 	return nil
@@ -2068,7 +2063,7 @@ func (pbft *pbftProtocal) retryStateTransfer(optional *stateUpdateTarget) {
 
 	pbft.stateTransferring = true
 
-	logger.Debugf("Replica %d is initiating state transfer to seqNo %d", pbft.id, target.seqNo)
+	logger.Infof("Replica %d is initiating state transfer to seqNo %d", pbft.id, target.seqNo)
 
 	//pbft.batch.pbftManager.Queue() <- stateUpdateEvent // Todo for stateupdate
 	//pbft.consumer.skipTo(target.seqNo, target.id, target.replicas)
@@ -2115,6 +2110,7 @@ func (pbft *pbftProtocal) skipTo(seqNo uint64, id []byte, replicas []uint64) {
 		return
 	}
 	//pbft.UpdateState(&checkpointMessage{seqNo, id}, info, replicas)
+	logger.Debug("seqNo: ", seqNo, "id: ", id, "replicas: ", replicas)
 	pbft.updateState(seqNo, id, replicas)
 }
 

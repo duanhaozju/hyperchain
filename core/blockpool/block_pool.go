@@ -111,7 +111,7 @@ func (pool *BlockPool) SetDemandSeqNo(seqNo uint64) {
 // If the demand ValidationEvent arrived, call `PreProcess` function
 // IMPORTANT this function called in parallelly, Make sure all the variable are thread-safe
 func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption, peerManager p2p.PeerManager) {
-	if validationEvent.SeqNo > pool.maxSeqNo {
+	if validationEvent.SeqNo > atomic.LoadUint64(&pool.maxSeqNo) {
 		atomic.StoreUint64(&pool.maxSeqNo, validationEvent.SeqNo)
 	}
 
@@ -121,11 +121,11 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 	}
 
 	// (1) Check SeqNo
-	if validationEvent.SeqNo < pool.demandSeqNo {
+	if validationEvent.SeqNo < atomic.LoadUint64(&pool.demandSeqNo)  {
 		// Receive repeat ValidationEvent
 		log.Error("Receive Repeat ValidationEvent, seqno less than demandseqNo, ", validationEvent.SeqNo)
 		return
-	} else if validationEvent.SeqNo == pool.demandSeqNo {
+	} else if validationEvent.SeqNo == atomic.LoadUint64(&pool.demandSeqNo)  {
 		// Process
 		if _, success := pool.PreProcess(validationEvent, commonHash, encryption, peerManager); success {
 			atomic.AddUint64(&pool.demandSeqNo, 1)
@@ -453,12 +453,9 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 		return
 	}
 
-	log.Info("number is ", block.Number)
-
 	if pool.demandNumber == block.Number {
 		WriteBlock(block, commonHash, vid, primary, pool.consenter)
 		atomic.AddUint64(&pool.demandNumber, 1)
-		log.Info("current demandNumber is ", pool.demandNumber)
 
 		for i := block.Number + 1; i <= atomic.LoadUint64(&pool.maxNum); i += 1 {
 			if ret, existed := pool.queue.Get(i); existed {
@@ -479,7 +476,6 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 
 // WriteBlock: save block into database
 func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, primary bool, consenter consensus.Consenter) {
-	log.Info("block number is ", block.Number)
 	core.UpdateChain(block, false)
 
 	db, err := hyperdb.GetLDBDatabase()
@@ -513,11 +509,9 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, pr
 	// flush to disk
 	// IMPORTANT never remove this statement, otherwise the whole batch of data will lose
 	batch.Write()
-
 	if block.Number%10 == 0 && block.Number != 0 {
 		core.WriteChainChan()
 	}
-
 	newChain := core.GetChainCopy()
 	log.Notice("Block number", newChain.Height)
 	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
@@ -590,6 +584,7 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 		}
 	}
 	pool.blockCache.Purge()
+	pool.validationQueue.Purge()
 	// 4. Reset chain
 	isGenesis := (block.Number == 0)
 	core.UpdateChain(block, isGenesis)
@@ -700,7 +695,13 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 		log.Errorf("miss block %d ,error msg %s", number - 1, err.Error())
 		return
 	}
+	// clear all stuff in block cache and validation cache
 	pool.lastValidationState.Store(common.BytesToHash(block.MerkleRoot))
 }
-
+func (pool *BlockPool) PurgeValidateQueue() {
+	pool.validationQueue.Purge()
+}
+func (pool *BlockPool) PurgeBlockCache() {
+	pool.blockCache.Purge()
+}
 

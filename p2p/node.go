@@ -163,14 +163,14 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 	case pb.Message_RECONNECT:
 		{
-			log.Warning("节点在重连")
+			log.Warning("A Node is Reconnecting")
 			response.MessageType = pb.Message_RECONNECT_RESPONSE
 			remotePublicKey := msg.Payload
 			genErr := this.PeerPool.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
 			if genErr != nil {
 				log.Error("gen sec error", genErr)
 			}
-			log.Warning("重连远端id:", msg.From.ID, this.PeerPool.TEM.GetSecret(msg.From.Hash))
+			log.Warning("reconnect remote id:", msg.From.ID, this.PeerPool.TEM.GetSecret(msg.From.Hash))
 			//every times get the public key is same
 			transportPublicKey := this.PeerPool.TEM.GetLocalPublicKey()
 			//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
@@ -184,9 +184,9 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	case pb.Message_RECONNECT_RESPONSE:
 		{
 			log.Debug("=================================")
-			log.Debug("协商秘钥")
-			log.Debug("本地地址为", this.address.ID, this.address.IP, this.address.Port)
-			log.Debug("远端地址为", msg.From.ID, msg.From.IP, msg.From.Port)
+			log.Debug("negotiate keys ")
+			log.Debug("", this.address.ID, this.address.IP, this.address.Port)
+			log.Debug("remote addr is ", msg.From.ID, msg.From.IP, msg.From.Port)
 			log.Debug("=================================")
 			response.MessageType = pb.Message_HELLO_RESPONSE
 			remotePublicKey := msg.Payload
@@ -194,7 +194,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			if genErr != nil {
 				log.Error("gen sec error", genErr)
 			}
-			log.Warning("Message_HELLO_RESPONSE远端id:", msg.From.ID, this.PeerPool.TEM.GetSecret(msg.From.Hash))
+			log.Warning("Message_HELLO_RESPONSE remote id:", msg.From.ID, this.PeerPool.TEM.GetSecret(msg.From.Hash))
 			//every times get the public key is same
 			transportPublicKey := this.PeerPool.TEM.GetLocalPublicKey()
 			//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
@@ -238,11 +238,15 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		{
 			log.Debug("<<<< GOT A CONSUS MESSAGE >>>>")
 
-			log.Debug("××××××Node解密信息××××××")
-			log.Debug("Node待解密信息", hex.EncodeToString(msg.Payload))
-			transferData := this.PeerPool.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
-			log.Debug("Node解密后信息", hex.EncodeToString(transferData))
-			log.Debug("Node解密后信息2", string(transferData))
+			log.Debug("×××××× Node Decode MSG ××××××")
+			log.Debug("Node need to decode msg: ", hex.EncodeToString(msg.Payload))
+			transferData,err := this.PeerPool.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
+			if err != nil{
+				log.Error("cannot decode the message",err)
+				return nil,err
+			}
+			//log.Debug("Node解密后信息", hex.EncodeToString(transferData))
+			//log.Debug("Node解密后信息2", string(transferData))
 			response.Payload = []byte("GOT_A_CONSENSUS_MESSAGE")
 			if string(transferData) == "TEST" {
 				response.Payload = []byte("GOT_A_TEST_CONSENSUS_MESSAGE")
@@ -259,7 +263,11 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		{
 			// package the response msg
 			response.MessageType = pb.Message_RESPONSE
-			transferData := this.PeerPool.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
+			transferData,err := this.PeerPool.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
+			if err != nil{
+				log.Error("cannot decode the message",err);
+				return nil,err
+			}
 			response.Payload = []byte("got a sync msg")
 			log.Debug("<<<< GOT A Unicast MESSAGE >>>>")
 			var SyncMsg recovery.Message
@@ -368,7 +376,12 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	default:
 		response.Payload = this.TEM.EncWithSecret(response.Payload, msg.From.Hash)
 	if msg.MessageType != pb.Message_HELLO && msg.MessageType != pb.Message_HELLO_RESPONSE && msg.MessageType != pb.Message_RECONNECT_RESPONSE && msg.MessageType != pb.Message_RECONNECT {
-		response.Payload = this.PeerPool.TEM.EncWithSecret(response.Payload, msg.From.Hash)
+		var err error;
+		response.Payload,err = this.PeerPool.TEM.EncWithSecret(response.Payload, msg.From.Hash)
+		if err != nil {
+			log.Error("encode error",err)
+		}
+
 	}
 	}
 	return &response, nil
@@ -408,7 +421,7 @@ func (this *Node)reconnect(msg *pb.Message) {
 
 	Client := pb.NewChatClient(conn)
 	if _, ok := this.PeerPool.peers[msg.From.Hash]; ok {
-		log.Warning("存在该远端节点,并且尝试重新连接...")
+		log.Warning("This remote Node already existed, and try to reconnect...")
 	} else {
 		return
 	}
@@ -438,7 +451,7 @@ func (this *Node)reconnect(msg *pb.Message) {
 				log.Error("cannot decrypt the nodeidinfo!")
 				errors.New("Decrypt ERROR")
 			}
-			log.Critical("重连反连接ID:", msg.From.ID, this.PeerPool.TEM.GetSecret(msg.From.Hash))
+			log.Critical("reconnect to reverse ID :", msg.From.ID, this.PeerPool.TEM.GetSecret(msg.From.Hash))
 			log.Critical(this.PeerPool.TEM.GetSecret(msg.From.Hash))
 		}
 	}
