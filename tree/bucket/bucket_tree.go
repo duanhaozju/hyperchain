@@ -6,6 +6,8 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/common"
 	"math/big"
+	"github.com/golang/protobuf/proto"
+	"errors"
 )
 
 var logger = logging.MustGetLogger("buckettree")
@@ -17,17 +19,7 @@ func NewKVMap() K_VMap {
 	return ret
 }
 
-// the value which updated by datanode
-type UpdatedValue struct {
-	Value         []byte
-	PreviousValue []byte
-}
 
-// the set of UpdatedValue
-type UpdatedValueSet struct {
-	blockNum        *big.Int
-	UpdatedValueMap map[string] *UpdatedValue
-}
 
 // StateImpl - implements the interface - 'statemgmt.HashableState'
 type BucketTree struct {
@@ -39,6 +31,7 @@ type BucketTree struct {
 	recomputeCryptoHash    bool
 	bucketCache            *bucketCache
 	updatedValueSet        *UpdatedValueSet
+	treeHashMap	       map[*big.Int][]byte
 }
 
 type Conf struct {
@@ -71,6 +64,7 @@ func (bucketTree *BucketTree) Initialize(configs map[string]interface{}) error {
 	}
 	bucketTree.bucketCache = newBucketCache(bucketTree.treePrefix, bucketCacheMaxSize)
 	bucketTree.bucketCache.loadAllBucketNodesFromDB()
+	bucketTree.treeHashMap = make(map[*big.Int][]byte)
 	return nil
 }
 
@@ -188,6 +182,16 @@ func (bucketTree *BucketTree) computeRootNodeCryptoHash() []byte {
 	return bucketTree.bucketTreeDelta.getRootNode().computeCryptoHash()
 }
 
+// TODO test
+func (bucketTree *BucketTree) GetTreeHash(blockNum *big.Int) ([]byte,error){
+	value,ok := bucketTree.treeHashMap[blockNum]
+	if ok{
+		return value,nil
+	}else {
+		return nil,errors.New("has no hash of this blockNum")
+	}
+}
+
 func computeDataNodesCryptoHash(bucketKey *bucketKey, updatedNodes dataNodes, existingNodes dataNodes,updatedValueSet *UpdatedValueSet) []byte {
 	logger.Noticef("Computing crypto-hash for bucket [%s]. numUpdatedNodes=[%d], numExistingNodes=[%d]", bucketKey, len(updatedNodes), len(existingNodes))
 	bucketHashCalculator := newBucketHashCalculator(bucketKey)
@@ -201,10 +205,16 @@ func computeDataNodesCryptoHash(bucketKey *bucketKey, updatedNodes dataNodes, ex
 		switch c {
 		case -1:
 			nextNode = updatedNode
-			//updatedValueSet.UpdatedValueMap[].
+			compositeKey := string(updatedNode.getCompositeKey())
+			updatedValueSet.Set(compositeKey,updatedNode.value,nil)
 			i++
 		case 0:
 			nextNode = updatedNode
+			if bytes.Compare(updatedNode.getValue(),existingNode.getValue()) != 0{
+				compositeKey := string(updatedNode.getCompositeKey())
+				updatedValueSet.Set(compositeKey,updatedNode.value,existingNode.getValue())
+			}
+
 			i++
 			j++
 		case 1:
@@ -218,6 +228,10 @@ func computeDataNodesCryptoHash(bucketKey *bucketKey, updatedNodes dataNodes, ex
 
 	var remainingNodes dataNodes
 	if i < len(updatedNodes) {
+		for i := 0;i<len(updatedNodes);i++ {
+			compositeKey := string(updatedNodes[i].getCompositeKey()[:])
+			updatedValueSet.Set(compositeKey,updatedNodes[i].value,nil)
+		}
 		remainingNodes = updatedNodes[i:]
 	} else if j < len(existingNodes) {
 		remainingNodes = existingNodes[j:]
@@ -232,7 +246,7 @@ func computeDataNodesCryptoHash(bucketKey *bucketKey, updatedNodes dataNodes, ex
 }
 
 // AddChangesForPersistence - method implementation for interface 'statemgmt.HashableState'
-func (bucketTree *BucketTree) AddChangesForPersistence(writeBatch hyperdb.Batch) error {
+func (bucketTree *BucketTree) AddChangesForPersistence(writeBatch hyperdb.Batch,currentBlockNum *big.Int) error {
 
 	if bucketTree.dataNodesDelta == nil {
 		return nil
@@ -246,6 +260,11 @@ func (bucketTree *BucketTree) AddChangesForPersistence(writeBatch hyperdb.Batch)
 	}
 	bucketTree.addDataNodeChangesForPersistence(writeBatch)
 	bucketTree.addBucketNodeChangesForPersistence(writeBatch)
+	bucketTree.addUpdatedValueSetForPersistence(writeBatch)
+	// TODO test
+	// 1.add the computehash to a temp array
+	// 2.add the bucketcache record to bucketCache
+	bucketTree.updateBucketCacheWithoutPersist(currentBlockNum)
 	return nil
 }
 
@@ -282,6 +301,31 @@ func (bucketTree *BucketTree) addBucketNodeChangesForPersistence(writeBatch hype
 	}
 }
 
+// TODO it should be test later
+func (bucketTree *BucketTree) addUpdatedValueSetForPersistence(writeBatch hyperdb.Batch) {
+	buffer := proto.NewBuffer([]byte{})
+	updatedValueSet := bucketTree.updatedValueSet
+	updatedValueSet.Marshal(buffer)
+	writeBatch.Put(append([]byte("UpdatedValueSet"),updatedValueSet.BlockNum.Bytes()...),buffer.Bytes())
+}
+
+// TODO test
+func (bucketTree *BucketTree) updateBucketCacheWithoutPersist(currentBlockNum *big.Int){
+	value, ok := bucketTree.treeHashMap[currentBlockNum]
+	if ok{
+		logger.Debug("the map has the block tree hash ",currentBlockNum)
+		if(bytes.Compare(value,bucketTree.lastComputedCryptoHash)==0){
+			logger.Debug("the key hash is same as before ",value)
+		}
+	}
+	bucketTree.treeHashMap[currentBlockNum] = bucketTree.lastComputedCryptoHash
+	bucketTree.updateBucketCache()
+	bucketTree.dataNodesDelta = nil
+	bucketTree.bucketTreeDelta = nil
+	bucketTree.recomputeCryptoHash = false
+}
+
+
 // TODO to do test with cache
 func (bucketTree *BucketTree) updateBucketCache() {
 	if bucketTree.bucketTreeDelta == nil || bucketTree.bucketTreeDelta.isEmpty() {
@@ -317,8 +361,44 @@ func (bucket *BucketTree) Reset() {
 
 // TODO test important
 // the func can make the buckettree revert to target block
-func (bucket *BucketTree) RevertToTargetBlock(blockNum *big.Int) {
+func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *big.Int) (error){
+	logger.Debug("Start RevertToTargetBlock, from ",currentBlockNum)
+	db,_ := hyperdb.GetLDBDatabase()
+	writeBatch := db.NewBatch()
+	keyValueMap := NewKVMap()
+	bucketTree.bucketCache.clearAllCache()
 
+	for i := currentBlockNum.Int64();i > toBlockNum.Int64(); i -- {
+		value,err := db.Get(append([]byte("UpdatedValueSet"), big.NewInt(i).Bytes()...))
+		if err != nil{
+			logger.Debug("Test RevertToTargetBlock Error",err.Error())
+			return err
+		}
+		if value == nil || len(value)== 0{
+			logger.Debug("There is no value update")
+			continue
+		}
+		logger.Debug(i,"ValueValue",value)
+		updatedValueSet := newUpdatedValueSet(big.NewInt(i))
+		buffer := proto.NewBuffer(value)
+		updatedValueSet.UnMarshal(buffer)
+		revertToTargetBlock(bucketTree.treePrefix,big.NewInt(i),updatedValueSet,&keyValueMap)
+		bucketTree.PrepareWorkingSet(keyValueMap,big.NewInt(i))
+		bucketTree.AddChangesForPersistence(writeBatch,big.NewInt(i))
+		keyValueMap = NewKVMap()
+		writeBatch.Delete(append([]byte("UpdatedValueSet"), big.NewInt(i).Bytes()...))
+	}
+
+	writeBatch.Write()
+	logger.Debug("End RevertToTargetBlock, to ", toBlockNum)
+	return nil
 }
 
-
+// TODO add verify about value and previousvalue
+func revertToTargetBlock(treePrefix string,blockNum *big.Int,updatedValueSet *UpdatedValueSet,keyValueMap *K_VMap)  {
+	length := len(treePrefix) + len(blockNum.Bytes())
+	for key,updatedValue := range updatedValueSet.UpdatedKVs{
+		logger.Debug(key[length:],"------------------previous value is ",updatedValue.PreviousValue,"------------------current value is ",updatedValue.Value)
+		(*keyValueMap)[key[length:]] = updatedValue.PreviousValue
+	}
+}

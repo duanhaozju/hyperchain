@@ -8,6 +8,7 @@ import (
 	"hyperchain/tree/bucket"
 	"hyperchain/tree/bucket/testutil"
 	"hyperchain/hyperdb"
+	"math/big"
 )
 var (
 	logger = logging.MustGetLogger("bucket_test")
@@ -25,7 +26,7 @@ func TestState_GetHash(t *testing.T){
 	key_valueMap["key6"] = []byte("value6")
 	key_valueMap["key7"] = []byte("value7")
 	key_valueMap["key8"] = []byte("value8")
-	state.SetK_VMap(key_valueMap)
+	state.SetK_VMap(key_valueMap,big.NewInt(2))
 	rootHash,err := state.GetHash()
 	if err != nil{
 		logger.Debugf("--------------GetHash error")
@@ -52,7 +53,7 @@ func TestState_GetHash(t *testing.T){
 
 	testutil.AssertEquals(t, rootHash, expectedHash)
 }
-func TestState_(t *testing.T){
+func TestState_1(t *testing.T){
 	db,err := hyperdb.GetLDBDatabase()
 	writeBatch := db.NewBatch()
 	state := bucket_test.NewState()
@@ -62,21 +63,49 @@ func TestState_(t *testing.T){
 	key_valueMap["key3"] = []byte("value3")
 	key_valueMap["key4"] = []byte("value4")
 	key_valueMap["key5"] = []byte("value5")
-	key_valueMap["key6"] = []byte("value6")
-	key_valueMap["key7"] = []byte("value7")
-	key_valueMap["key8"] = []byte("value8")
-	key_valueMap["key9"] = []byte("value9")
-	key_valueMap["key10"] = []byte("value10")
-	key_valueMap["key11"] = []byte("value11")
-	state.SetK_VMap(key_valueMap)
+	state.SetK_VMap(key_valueMap,big.NewInt(2))
 	hash,err := state.GetHash()
 	if err != nil{
 		logger.Debugf("--------------GetHash error")
 	}else {
 		logger.Debugf("--------------the state.GetHash() is ",(hash))
 	}
-	state.AddChangesForPersistence(writeBatch)
+	state.CommitStateDelta(writeBatch)
+}
 
+func TestState_2(t *testing.T){
+	db,err := hyperdb.GetLDBDatabase()
+	writeBatch := db.NewBatch()
+	state := bucket_test.NewState()
+	key_valueMap := bucket.K_VMap{}
+	key_valueMap["key1"] = []byte("value1")
+	key_valueMap["key2"] = []byte("value2")
+	key_valueMap["key3"] = []byte("value3")
+	key_valueMap["key4"] = []byte("value4")
+	key_valueMap["key5"] = []byte("value5")
+	state.SetK_VMap(key_valueMap,big.NewInt(2))
+	hash,err := state.GetHash()
+	if err != nil{
+		logger.Debugf("--------------GetHash error")
+	}else {
+		logger.Debugf("--------------the state.GetHash() is ",(hash))
+	}
+	state.CommitStateDelta(writeBatch)
+	key_valueMap = bucket.K_VMap{}
+	key_valueMap["key6"] = []byte("value6")
+	key_valueMap["key7"] = []byte("value7")
+	key_valueMap["key8"] = []byte("value8")
+	key_valueMap["key9"] = []byte("value9")
+	key_valueMap["key10"] = []byte("value10")
+	state.SetK_VMap(key_valueMap,big.NewInt(3))
+	hash,err = state.GetHash()
+	if err != nil{
+		logger.Debugf("--------------GetHash error")
+	}else {
+		logger.Debugf("--------------the state.GetHash() is ",(hash))
+	}
+	state.CommitStateDelta(writeBatch)
+	//state.AddChangesForPersistence(writeBatch)
 	//state.Reset(false)
 	//hash,err = state.GetHash()
 	//if err != nil{
@@ -84,9 +113,11 @@ func TestState_(t *testing.T){
 	//}else {
 	//	logger.Debugf("--------------the state.GetHash() is ",(hash))
 	//}
+}
 
-	state.CommitStateDelta()
-
+func TestRevertToTargetBlock(t *testing.T) {
+	state := bucket_test.NewState()
+	state.Bucket_tree.RevertToTargetBlock(big.NewInt(2),big.NewInt(1))
 }
 
 func featchDataNodeFromDBTest(){
