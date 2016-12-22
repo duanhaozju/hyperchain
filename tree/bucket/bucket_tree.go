@@ -356,6 +356,7 @@ func (bucket *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *big.I
 		revertToTargetBlock(bucket.treePrefix,big.NewInt(i),updatedValueSet,&keyValueMap)
 		bucket.PrepareWorkingSet(keyValueMap,big.NewInt(i))
 		bucket.AddChangesForPersistence(writeBatch)
+		keyValueMap = NewKVMap()
 		writeBatch.Delete(append([]byte("UpdatedValueSet"), big.NewInt(i).Bytes()...))
 	}
 
