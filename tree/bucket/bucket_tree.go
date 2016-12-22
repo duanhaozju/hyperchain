@@ -350,25 +350,24 @@ func (bucket *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *big.I
 			continue
 		}
 		logger.Debug(i,"ValueValue",value)
-		updatedValueSet := newUpdatedValueSet(toBlockNum)
+		updatedValueSet := newUpdatedValueSet(big.NewInt(i))
 		buffer := proto.NewBuffer(value)
 		updatedValueSet.UnMarshal(buffer)
-		revertToTargetBlock(updatedValueSet,&keyValueMap,writeBatch)
+		revertToTargetBlock(updatedValueSet,&keyValueMap)
+		bucket.PrepareWorkingSet(keyValueMap,big.NewInt(i))
+		bucket.AddChangesForPersistence(writeBatch)
+		writeBatch.Delete(append([]byte("UpdatedValueSet"), big.NewInt(i).Bytes()...))
 	}
 
-	//bucket.PrepareWorkingSet(keyValueMap,toBlockNum)
-	//bucket.AddChangesForPersistence(writeBatch)
 	writeBatch.Write()
 	logger.Debug("End RevertToTargetBlock, to ", toBlockNum)
 	return nil
 }
 
 // TODO add verify about value and previousvalue
-func revertToTargetBlock(updatedValueSet *UpdatedValueSet,keyValueMap *K_VMap,writeBatch hyperdb.Batch)  {
+func revertToTargetBlock(updatedValueSet *UpdatedValueSet,keyValueMap *K_VMap)  {
 	for key,updatedValue := range updatedValueSet.UpdatedKVs{
-		logger.Debug(key,"------------------previous value is ",updatedValue.PreviousValue,"------------------current value is ",updatedValue.Value)
-		(*keyValueMap)[key] = updatedValue.PreviousValue
-		writeBatch.Delete([]byte(key))
+		logger.Debug(key[14:],"------------------previous value is ",updatedValue.PreviousValue,"------------------current value is ",updatedValue.Value)
+		(*keyValueMap)[key[14:]] = updatedValue.PreviousValue
 	}
-	writeBatch.Write()
 }
