@@ -6,6 +6,7 @@ import (
 	"hyperchain/event"
 	"hyperchain/common"
 	"hyperchain/core"
+	"hyperchain/core/hyperstate"
 )
 
 
@@ -59,9 +60,11 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	pool.blockCache.Purge()
 	// 4. Purge validationQueue
 	pool.validationQueue.Purge()
-	// 5. Reset chain
+	// 5. Revert state
+	// TODO
+	// 6. Reset chain
 	isGenesis := (block.Number == 0)
-	core.UpdateChain(block, isGenesis)
+	core.UpdateChain(db.NewBatch(), block, isGenesis, true, true)
 }
 
 // remove a block and reset blockchain status to the last status
@@ -84,8 +87,10 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 		return
 	}
 	pool.lastValidationState.Store(common.BytesToHash(block.MerkleRoot))
-	// 4. reset chain data
-	core.UpdateChainByBlcokNum(db, block.Number)
+	// 4. revert state
+	// TODO
+	// 5. reset chain data
+	core.UpdateChainByBlcokNum(db, block.Number, true, true)
 }
 
 // remove transaction receipt txmeta and block itself in a specific range
@@ -123,4 +128,37 @@ func (pool *BlockPool) removeDataInRange(from, to uint64) {
 	}
 }
 
-
+// this function will revert all state change in [target+1, current] range
+func (pool *BlockPool) revertState(current uint64, target uint64) {
+	switch pool.conf.StateType{
+	case "rawstate":
+		// todo revert rawstate
+	case "hyperstate":
+		db, err := hyperdb.GetLDBDatabase()
+		if err != nil {
+			log.Error("get database handler failed")
+		}
+		// get latest state
+		state, err := pool.GetStateInstance(common.Hash{}, db)
+		s := state.(*hyperstate.StateDB)
+		if err != nil {
+			log.Error("get state instance failed")
+		}
+		for i := current; i > target; i -= 1 {
+			d, err := db.Get(hyperstate.CompositeJournalKey(i))
+			if err != nil {
+				log.Errorf("get #%d journal failed", i)
+				continue
+			}
+			journal, err := hyperstate.UnmarshalJournal(d)
+			if err != nil {
+				log.Errorf("unmarshal #%d journal failed", i)
+				return
+			}
+			for j := len(journal.JournalList) - 1; j >= 0; j -= 1 {
+				journal.JournalList[j].Undo(s, true)
+			}
+		}
+		// TODO
+	}
+}

@@ -183,19 +183,21 @@ func (c *StateObject) touch() {
 	c.touched = true
 }
 
-// GetState returns a value in account storage.
-func (self *StateObject) GetState(db hyperdb.Database, key common.Hash) common.Hash {
+// GetState from live state object return a storage entry's value if existed
+func (self *StateObject) GetState(key common.Hash) common.Hash {
 	value, exists := self.cachedStorage[key]
 	if exists {
 		return value
+	} else {
+		return common.Hash{}
 	}
+}
+// GetState from database return a storage entry's value if existed
+func GetStateFromDB(db hyperdb.Database,address common.Address, key common.Hash) common.Hash {
+	var value common.Hash
 	// Load from DB in case it is missing.
-	val, _ := db.Get(CompositeStorageKey(self.address.Bytes(), key.Bytes()))
+	val, _ := db.Get(CompositeStorageKey(address.Bytes(), key.Bytes()))
 	value.SetBytes(val)
-
-	if (value != common.Hash{}) {
-		self.cachedStorage[key] = value
-	}
 	return value
 }
 
@@ -204,13 +206,14 @@ func (self *StateObject) SetState(db hyperdb.Database, key, value common.Hash) {
 	self.db.journal.JournalList = append(self.db.journal.JournalList, &StorageChange{
 		Account:  &self.address,
 		Key:      key,
-		Prevalue: self.GetState(db, key),
+		Prevalue: self.db.GetState(self.address, key),
 	})
 	self.setState(key, value)
 }
 
 func (self *StateObject) setState(key, value common.Hash) {
 	// Write both cache
+	log.Errorf("put storage item key %s value %s to storage cache and dirty cache", key.Hex(), value.Hex())
 	self.cachedStorage[key] = value
 	self.dirtyStorage[key] = value
 
@@ -225,14 +228,15 @@ func (self *StateObject) Flush(db hyperdb.Batch) error {
 	// otherwise dirty storage will be removed in persist phase
 	self.GenerateFingerPrintOfStorage()
 	for key, value := range self.dirtyStorage {
-		log.Debugf("flush dirty storage item key: %s, value %s", key.Hex(), value.Hex())
 		delete(self.dirtyStorage, key)
 		if (value == common.Hash{}) {
 			// delete
+			log.Errorf("flush dirty storage address [%s] delete item key: [%s]", self.address.Hex(), key.Hex())
 			if err := db.Delete(CompositeStorageKey(self.address.Bytes(), key.Bytes())); err != nil {
 				return err
 			}
 		} else {
+			log.Errorf("flush dirty storage address [%s] put item key: [%s], value [%s]", self.address.Hex(), key.Hex(), value.Hex())
 			if err := db.Put(CompositeStorageKey(self.address.Bytes(), key.Bytes()), value.Bytes()); err != nil {
 				return err
 			}
@@ -263,6 +267,7 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 		// 1. convert dirty storage entries to working set
 		workingSet := bucket.NewKVMap()
 		for k, v := range self.dirtyStorage {
+			log.Errorf("calculate state object %s storage hash, dirty entry key %s value %s", self.address.Hex(), k.Hex(), v.Hex())
 			if (v == common.Hash{}) {
 				workingSet[k.Hex()] = nil
 			} else {
@@ -278,6 +283,7 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 		}
 		// 3. assign to self.ROOT
 		self.SetRoot(common.BytesToHash(hash))
+		log.Errorf("state object %s storage root hash %s", self.address.Hex(), self.Root().Hex())
 		// 4. persist bucket change
 		return self.Root()
 
@@ -290,12 +296,12 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 func (c *StateObject) AddBalance(amount *big.Int) {
 	// EIP158: We must check emptiness for the objects such that the account
 	// clearing (0,0,0 objects) can take effect.
-	if amount.Cmp(common.Big0) == 0 {
-		if c.empty() {
-			c.touch()
-		}
-		return
-	}
+	//if amount.Cmp(common.Big0) == 0 {
+	//	if c.empty() {
+	//		c.touch()
+	//	}
+	//	return
+	//}
 	c.SetBalance(new(big.Int).Add(c.Balance(), amount))
 
 	log.Infof("%x: #%d %v (+ %v)\n", c.Address(), c.Nonce(), c.Balance(), amount)

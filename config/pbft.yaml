@@ -7,7 +7,7 @@ pbft:
     nodes: 4
 
     # How many transactions should the primary pack before sending pre-prepare
-    batchsize: 500
+    batchsize: 1
 
     # How many times of same vc from self before a replica start recovery
     vcresendlimit: 10
@@ -25,19 +25,19 @@ timeout:
     firstrequest: 30s
 
     # Primary send a pre-prepare if there are pending requests, although batchsize isn't reached yet,
-    batch: 1s
+    batch: 100ms
 
     # How long may a request(transaction batch) take between reception and execution, must be greater than the batch timeout
-    request: 3s
+    request: 60s
 
     # How long may a validate (transaction batch) process will take by local Validation
     validate: 1s
 
     # Primary send it to inform aliveness, must be greater than request timeout
-    nullrequest: 4s
+    nullrequest: 100s
 
     # How long may a view change take
-    viewchange: 4s
+    viewchange: 60s
 
     # How long to wait for a view change quorum before resending (the same) view change
-    resendviewchange: 10s
+    resendviewchange: 60s

@@ -8,6 +8,7 @@ import (
 	"hyperchain/common"
 	"errors"
 	"hyperchain/tree/bucket"
+	"hyperchain/core"
 )
 
 func GetStateInstance(root common.Hash, db hyperdb.Database, stateType string, bucketConf bucket.Conf) (vm.Database, error) {
@@ -15,7 +16,8 @@ func GetStateInstance(root common.Hash, db hyperdb.Database, stateType string, b
 	case "rawstate":
 		return state.New(root, db)
 	case "hyperstate":
-		return hyperstate.New(root, db, bucketConf)
+		height := core.GetHeightOfChain()
+		return hyperstate.New(root, db, bucketConf, height)
 	default:
 		return nil, errors.New("no state type specified")
 	}

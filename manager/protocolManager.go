@@ -471,7 +471,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 										self.blockPool.SetDemandSeqNo(blk.Number + 1)
 									}
 								}
-								core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum)
+								core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum, true, true)
 								core.UpdateRequire(uint64(0), []byte{}, uint64(0))
 								core.SetReplicas(nil)
 								core.SetId(0)

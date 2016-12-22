@@ -17,6 +17,7 @@ import (
 
 // When receive an CommitOrRollbackBlockEvent, if flag is true, generate a block and call AddBlock function
 // CommitBlock function is just an entry of the commit logic
+// TODO refactor
 func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHash crypto.CommonHash, peerManager p2p.PeerManager) {
 	ret, existed := pool.blockCache.Get(ev.Hash)
 	if !existed {
@@ -34,16 +35,16 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHa
 		newBlock.MerkleRoot = record.MerkleRoot
 		newBlock.TxRoot = record.TxRoot
 		newBlock.ReceiptRoot = record.ReceiptRoot
-		newBlock.Timestamp = ev.Timestamp
-		newBlock.CommitTime = ev.CommitTime
-		newBlock.Number = ev.SeqNo
-		newBlock.WriteTime = time.Now().UnixNano()
-		newBlock.EvmTime = time.Now().UnixNano()
+		newBlock.Timestamp = ev.Timestamp          // primary make batch time
+		newBlock.CommitTime = ev.CommitTime        // local commit time
+		newBlock.Number = ev.SeqNo                 // actually block number
+		newBlock.WriteTime = time.Now().UnixNano() // local write time
+		newBlock.EvmTime = time.Now().UnixNano()   // local write time
 		newBlock.BlockHash = newBlock.Hash(commonHash).Bytes()
 
 		vid := record.SeqNo
 		// 2.save block and update chain
-		pool.AddBlock(newBlock, commonHash, vid, ev.IsPrimary)
+		pool.AddBlock(newBlock, record.Receipts, commonHash, vid, ev.IsPrimary)
 		// 3.throw invalid tx back to origin node if current peer is primary
 		if ev.IsPrimary {
 			for _, t := range record.InvalidTxs {
@@ -69,9 +70,9 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHa
 }
 
 // Put a new generated block into pool, handle the block saved in queue serially
-func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, primary bool) {
+func (pool *BlockPool) AddBlock(block *types.Block, receipts []*types.Receipt, commonHash crypto.CommonHash, vid uint64, primary bool) {
 	if block.Number == 0 {
-		pool.WriteBlock(block, commonHash, 0, false)
+		pool.WriteBlock(block, receipts, commonHash, 0, false)
 		return
 	}
 
@@ -85,16 +86,15 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 	}
 
 	log.Info("number is ", block.Number)
-
 	if pool.demandNumber == block.Number {
-		pool.WriteBlock(block, commonHash, vid, primary)
+		pool.WriteBlock(block, receipts, commonHash, vid, primary)
 		atomic.AddUint64(&pool.demandNumber, 1)
 		log.Info("current demandNumber is ", pool.demandNumber)
 
 		for i := block.Number + 1; i <= atomic.LoadUint64(&pool.maxNum); i += 1 {
 			if ret, existed := pool.queue.Get(i); existed {
 				blk := ret.(*types.Block)
-				pool.WriteBlock(blk, commonHash, vid, primary)
+				pool.WriteBlock(blk, receipts, commonHash, vid, primary)
 				pool.queue.Remove(i)
 				atomic.AddUint64(&pool.demandNumber, 1)
 				log.Info("current demandNumber is ", pool.demandNumber)
@@ -109,17 +109,17 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 }
 
 // WriteBlock: save block into database
-func(pool *BlockPool) WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, primary bool) {
+func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, commonHash crypto.CommonHash, vid uint64, primary bool) {
+	time.Sleep(1 * time.Second)
 	log.Info("block number is ", block.Number)
-	core.UpdateChain(block, false)
-
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Error("get database instance failed! error msg,", err.Error())
 		return
 	}
 	// for primary node, check whether vid equal to block's number
-	batch := db.NewBatch()
+	state, _ := pool.GetStateInstance(common.Hash{}, db)
+	batch := state.FetchBatch(vid)
 	if primary && vid != block.Number {
 		log.Info("replace invalid txmeta data, block number:", block.Number)
 		for i, tx := range block.Transactions {
@@ -134,26 +134,30 @@ func(pool *BlockPool) WriteBlock(block *types.Block, commonHash crypto.CommonHas
 			}
 		}
 	}
-
+	// reassign receipt
+	pool.reAssignTransactionLog(batch, receipts, block.Number, common.BytesToHash(block.BlockHash))
 	err, _ = core.PersistBlock(batch, block, pool.conf.BlockVersion, false, false)
 	if err != nil {
 		log.Error("Put block into database failed! error msg, ", err.Error())
 		return
 	}
+	core.UpdateChain(batch, block, false, false, false)
 	// flush to disk
 	// IMPORTANT never remove this statement, otherwise the whole batch of data will lose
 	batch.Write()
-
-	if block.Number%10 == 0 && block.Number != 0 {
+	// mark the block process finish, remove some stuff avoid of memory leak
+	// IMPORTANT this should be done after batch.Write been called
+	state.MarkProcessFinish(vid)
+	// write checkpoint data
+	// FOR TEST
+	log.Criticalf("state #%d %s", vid, string(state.Dump()))
+	if block.Number %10 == 0 && block.Number != 0 {
 		core.WriteChainChan()
 	}
-
 	newChain := core.GetChainCopy()
 	log.Notice("Block number", newChain.Height)
 	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
-	/*
-		Remove Cached Transactions which used to check transaction duplication
-	 */
+	// remove Cached Transactions which used to check transaction duplication
 	if primary {
 		pool.consenter.RemoveCachedBatch(vid)
 	}
@@ -177,5 +181,28 @@ func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
 	if err != nil {
 		log.Error("save invalid transaction record failed,", err.Error())
 		return
+	}
+}
+
+
+// re assign block hash and block number to transaction logs
+// during the validation, block number and block hash can be incorrect
+func (pool *BlockPool) reAssignTransactionLog(batch hyperdb.Batch, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) {
+	for _, receipt := range receipts {
+		logs, err := receipt.GetLogs()
+		if err != nil {
+			log.Error("re assign transaction log, unmarshal receipt failed")
+			return
+		}
+		if len(logs) == 0 {
+			continue
+		}
+		for _, log := range logs {
+			log.BlockHash = blockHash
+			log.BlockNumber = blockNumber
+		}
+		receipt.SetLogs(logs)
+		// replace original receipt
+		core.PersistReceipt(batch, receipt, pool.conf.TransactionVersion, false, false)
 	}
 }

@@ -38,7 +38,6 @@ func CreateInitBlock(filename string, stateType string, blockVersion string, bkt
 		Alloc      map[string]int64
 	}
 
-	//var genesis = map[string]Genesis{}
 
 	bytes, err := ioutil.ReadFile(filename)
 
@@ -47,32 +46,35 @@ func CreateInitBlock(filename string, stateType string, blockVersion string, bkt
 		return
 	}
 
-	// start  the parse genesis content
-
+	// start the parse genesis content
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 	stateDB, err := GetStateInstance(common.Hash{}, db, stateType, bktConf)
+	stateDB.MarkProcessStart(0)
 	if err != nil {
-		log.Error("genesis.go file create statedb failed!")
+		log.Error("genesis create statedb failed!")
 		return
 	}
 
-	// You can use `ObjectEach` helper to iterate objects { "key1":object1, "key2":object2, .... "keyN":objectN }
 	jsonparser.ObjectEach(bytes, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
-		//fmt.Printf("Key: '%s'\n Value: '%s'\n Type: %s\n", string(key), string(value), dataType)
 		object := stateDB.CreateAccount(common.HexToAddress(string(key)))
 		account, _ := strconv.ParseInt(string(value), 10, 64)
 		object.AddBalance(big.NewInt(account))
 		return nil
 	}, "genesis", "alloc")
-
 	root, err := stateDB.Commit()
+
 	if err != nil {
 		log.Error("Genesis.go file statedb commit failed!")
 		return
+	}
+	// flush state change to disk immediately
+	batch := stateDB.FetchBatch(0)
+	if batch != nil {
+		batch.Write()
 	}
 
 	block := types.Block{
@@ -83,12 +85,15 @@ func CreateInitBlock(filename string, stateType string, blockVersion string, bkt
 		MerkleRoot: root.Bytes(),
 	}
 
-	log.Debug("构造创世区块")
+	log.Debug("construct genesis block")
+	// flush block content to disk immediately
 	if err, _ := PersistBlock(db.NewBatch(), &block, blockVersion, true, true); err != nil {
 		log.Fatal(err)
 		return
 	}
-	UpdateChain(&block, true)
+	// flush change of chain to disk immediately
+	UpdateChain(db.NewBatch(), &block, true, true, true)
+	stateDB.MarkProcessFinish(0)
 	log.Info("current chain block number is", GetChainCopy().Height)
 
 }
@@ -97,7 +102,7 @@ func GetStateInstance(root common.Hash, db hyperdb.Database, stateType string, b
 	case "rawstate":
 		return state.New(root, db)
 	case "hyperstate":
-		return hyperstate.New(root, db, bktConf)
+		return hyperstate.New(root, db, bktConf, 0)
 	default:
 		return nil, errors.New("no state type specified")
 	}

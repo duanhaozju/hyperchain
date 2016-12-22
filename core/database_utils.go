@@ -501,24 +501,22 @@ func GetParentBlockHash() []byte {
 
 // UpdateChain update latest blockHash as given blockHash
 // and the height of chain add 1
-func UpdateChain(block *types.Block, genesis bool) error {
+func UpdateChain(batch hyperdb.Batch, block *types.Block, genesis bool, flush bool, sync bool) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
 	memChainMap.data.LatestBlockHash = block.BlockHash
 	memChainMap.data.ParentBlockHash = block.ParentHash
 	if !genesis {
 		memChainMap.data.Height = block.Number
+		// TODO a bug will occur during the block reset
 		memChainMap.data.CurrentTxSum += uint64(len(block.Transactions))
 	}
-	db, err := hyperdb.GetLDBDatabase()
-	if err != nil {
-		return err
-	}
-	return putChain(db, &memChainMap.data)
+	return putChain(batch, &memChainMap.data, flush, sync)
 }
 
-//　根据blockNumber更新chain,chain的height直接赋值为block.Number
-func UpdateChainByBlcokNum(db hyperdb.Database, blockNumber uint64) error {
+// update chain according block number, set chain current height to the block number
+// return error if correspondent block missing
+func UpdateChainByBlcokNum(db hyperdb.Database, blockNumber uint64, flush bool, sync bool) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
 	block, err := GetBlockByNumber(db, blockNumber)
@@ -529,7 +527,7 @@ func UpdateChainByBlcokNum(db hyperdb.Database, blockNumber uint64) error {
 	memChainMap.data.LatestBlockHash = block.BlockHash
 	memChainMap.data.ParentBlockHash = block.ParentHash
 	memChainMap.data.Height = block.Number
-	return putChain(db, &memChainMap.data)
+	return putChain(db.NewBatch(), &memChainMap.data, flush, sync)
 }
 
 // GetHeightOfChain get height of chain
@@ -566,13 +564,20 @@ func WriteChainChan() {
 }
 
 // putChain put chain database
-func putChain(db hyperdb.Database, t *types.Chain) error {
+func putChain(batch hyperdb.Batch, t *types.Chain, flush bool, sync bool) error {
 	data, err := proto.Marshal(t)
 	if err != nil {
 		return err
 	}
-	if err := db.Put(ChainKey, data); err != nil {
+	if err := batch.Put(ChainKey, data); err != nil {
 		return err
+	}
+	if flush {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
 	}
 	return nil
 }
@@ -588,7 +593,7 @@ func UpdateRequire(num uint64, hash []byte, recoveryNum uint64) error {
 	if err != nil {
 		return err
 	}
-	return putChain(db, &memChainMap.data)
+	return putChain(db.NewBatch(), &memChainMap.data, true, true)
 }
 
 func SetReplicas(replicas []uint64) {
@@ -614,7 +619,7 @@ func GetId() uint64 {
 	defer memChainStatusMap.lock.Unlock()
 	return memChainStatusMap.data.Id
 }
-
+// Deprecated
 func UpdateChainByViewChange(height uint64, latestHash []byte) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
@@ -625,7 +630,7 @@ func UpdateChainByViewChange(height uint64, latestHash []byte) error {
 	if err != nil {
 		return err
 	}
-	return putChain(db, &memChainMap.data)
+	return putChain(db.NewBatch(), &memChainMap.data, true, true)
 }
 
 //GetInvaildTxErrType gets ErrType of invalid tx

@@ -24,8 +24,8 @@ func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 		return errors.New("Get StateDB Status Failed!")
 	}
 	// initialize state
-	// todo use state copy instead of itself
-	state, err := pool.GetStateInstance(initStatus, db)
+	// IMPORTANT all change to state will not been persist cause never commit will been invoked
+	state, err := pool.GetStateInstanceForSimulate(initStatus, db)
 	if err != nil {
 		return err
 	}

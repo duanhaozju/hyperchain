@@ -70,7 +70,7 @@ type StateDB struct {
 }
 
 // Create a new state from a given root
-func New(root common.Hash, db hyperdb.Database, bktConf bucket.Conf) (*StateDB, error) {
+func New(root common.Hash, db hyperdb.Database, bktConf bucket.Conf, height uint64) (*StateDB, error) {
 	csc, _ := lru.New(codeSizeCacheSize)
 	// initialize bucket tree
 	bucketPrefix, _ := CompositeStateBucketPrefix()
@@ -81,6 +81,7 @@ func New(root common.Hash, db hyperdb.Database, bktConf bucket.Conf) (*StateDB, 
 	batchCache, _ := common.NewCache()
 	contentCache, _ := common.NewCache()
 	curHash, err := bucketTree.ComputeCryptoHash()
+	log.Criticalf("latest state root %x", curHash)
 	if err != nil {
 		log.Errorf("new state db failed, error message %s", err.Error())
 		return nil, err
@@ -89,7 +90,7 @@ func New(root common.Hash, db hyperdb.Database, bktConf bucket.Conf) (*StateDB, 
 		log.Errorf("invalid root, correct root hash of state bucket tree is %s", common.Bytes2Hex(curHash))
 		return nil, errors.New("invalid state bucket tree root")
 	}
-	return &StateDB{
+	state := &StateDB{
 		db:                db,
 		root:              root,
 		codeSizeCache:     csc,
@@ -101,7 +102,11 @@ func New(root common.Hash, db hyperdb.Database, bktConf bucket.Conf) (*StateDB, 
 		bucketTree:        bucketTree,
 		batchCache:        batchCache,
 		contentCache:      contentCache,
-	}, nil
+	}
+	// set oldest seqNo
+	log.Criticalf("oldest height when initialize %d", height + 1)
+	state.LoadLatest(height + 1)
+	return state, nil
 }
 
 // New creates a new statedb by reusing journalled data to avoid costly
@@ -130,11 +135,20 @@ func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 // Reset clears out all emphemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
 func (self *StateDB) Reset() error {
+	log.Critical("reset state db")
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	// save modification set to content cache
 	if self.curSeqNo == 0 {
 		log.Warning("make sure current seqNo is zero during the state reset")
+	}
+	if len(self.stateObjects) > 0 {
+		log.Criticalf("save validation result to content cache, with %d element", len(self.stateObjects))
+	}
+	// IMPORTANT reset obj.onDirty callback function and bucket tree
+	for _, obj := range self.stateObjects {
+		obj.onDirty = self.MarkStateObjectDirty
+		obj.bucketTree.Reset()
 	}
 	self.contentCache.Add(self.curSeqNo, self.stateObjects)
 	// clear all stuff
@@ -146,29 +160,59 @@ func (self *StateDB) Reset() error {
 	self.logs = make(map[common.Hash]vm.Logs)
 	self.logSize = 0
 	// reset bucket tree
-	// TODO Bucket Tree reset to avoid memory leak
+	self.bucketTree.Reset()
 	return nil
 }
 
 
-// record current seqNo
+// mark a block's process is begin
+// initialize some stuff
 func (self *StateDB) MarkProcessStart(seqNo uint64) {
+	// reset state
+	self.Reset()
+	// set current seqNo
+	log.Criticalf("current process seqNo #%d", seqNo)
 	atomic.StoreUint64(&self.curSeqNo, seqNo)
 }
-// record oldest seqNo
+// mark a block's process has finished
+// remove some stuff in cache to avoid of memory leak
 func (self *StateDB) MarkProcessFinish(seqNo uint64) {
+	// remove all batch handler with related seqNo less than `seqNo`
+	// cause if empty valiation event happen(no validate transaction in a batch), this type of validation event
+	// doesn't have commit event. Which can lead to memory leak if just remove seqNo related batch and content
+	judge := func(key interface{}, iterKey interface{}) bool {
+		id := key.(uint64)
+		iterId := iterKey.(uint64)
+		if id >= iterId {
+			return true
+		}
+		return false
+	}
+	self.batchCache.RemoveWithCond(seqNo, judge)
+	// remove content
+	log.Criticalf("finish seqNo #%d processing, move oldest from #%d to #%d", seqNo, atomic.LoadUint64(&self.oldestSeqNo), seqNo+1)
+	atomic.StoreUint64(&self.oldestSeqNo, seqNo + 1)
+	// remove all content with related seqNo less than `seqNo`
+	self.contentCache.RemoveWithCond(seqNo, judge)
+}
+// set oldest when state been initialize
+// seqNo should be the chain's height
+func (self *StateDB) LoadLatest(seqNo uint64) {
 	atomic.StoreUint64(&self.oldestSeqNo, seqNo)
 }
+
 // batch cache related
 // fetch a batch from batch cache with correspondent seqNo
 // create a new batch if not exist in cache
 func (self *StateDB) FetchBatch(seqNo uint64) hyperdb.Batch {
 	if self.batchCache.Contains(seqNo) {
 		// already exist
+		log.Criticalf("fetch batch for #%d exist in batch cache", seqNo)
 		batch, _ := self.batchCache.Get(seqNo)
 		return batch.(hyperdb.Batch)
 	} else {
 		// not exist right now
+		log.Criticalf("create one batch for #%d", seqNo)
 		batch := self.db.NewBatch()
 		self.batchCache.Add(seqNo, batch)
 		return batch
@@ -177,6 +221,7 @@ func (self *StateDB) FetchBatch(seqNo uint64) hyperdb.Batch {
 // delete a batch handler in cache with correspondent seqNo
 // avoid memory leak
 func (self *StateDB) DeleteBatch(seqNo uint64) {
+	log.Criticalf("remove batch for #%d from batch cache", seqNo)
 	self.batchCache.Remove(seqNo)
 }
 // mark a transaction process's beginning
@@ -186,10 +231,12 @@ func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
 	self.txIndex = ti
 }
 // add logs generated in vm to state
+// doesn't assign block hash now
+// because the blcok hash hasn't been calculated
+// correctly block  hash will be assigned in the commit phase
 func (self *StateDB) AddLog(log *vm.Log) {
 	self.journal.JournalList = append(self.journal.JournalList, &AddLogChange{Txhash: self.thash})
 	log.TxHash = self.thash
-	log.BlockHash = self.bhash
 	log.TxIndex = uint(self.txIndex)
 	log.Index = self.logSize
 	self.logs[self.thash] = append(self.logs[self.thash], log)
@@ -306,10 +353,77 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 }
 // get a storage entry in stateObject
 func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
-	stateObject := self.GetStateObject(a)
-	if stateObject != nil {
-		return stateObject.GetState(self.db, b)
+	// Prefer `live` object
+	var liveObj *StateObject
+	if obj := self.stateObjects[a]; obj != nil {
+		liveObj = obj
+		if obj.deleted {
+			return common.Hash{}
+		} else {
+			value := obj.GetState(b)
+			// if storage entry exist in live object's storage cache
+			if (value != common.Hash{}) {
+				log.Criticalf("get state for %x in live objects, key %x, value %x", a.Hex(), b.Hex(), value.Hex())
+				return value
+			}
+		}
 	}
+	// find in content cache
+	if self.curSeqNo > 0 {
+		for i := self.curSeqNo - 1; i >= atomic.LoadUint64(&self.oldestSeqNo); i -= 1 {
+			res, existed := self.contentCache.Get(i)
+			if existed == false {
+				log.Error("load content from content cache failed")
+				continue
+			}
+			content := res.(map[common.Address]*StateObject)
+			if obj := content[a]; obj != nil {
+				if obj.deleted {
+					return common.Hash{}
+				} else {
+					value := obj.GetState(b)
+					if (value != common.Hash{}) {
+						log.Criticalf("get state for %x in content cache, key %x, value %x", a.Hex(), b.Hex(), value.Hex())
+						if liveObj == nil {
+							// save obj itself to current cache
+							self.setStateObject(obj)
+						} else {
+							// save into live obj's cache storage avoid disk cost for next fetch
+							liveObj.cachedStorage[b] = value
+						}
+						return value
+					}
+				}
+			}
+		}
+	}
+	// load from database
+	value := GetStateFromDB(self.db, a, b)
+	if (value != common.Hash{}) {
+		if liveObj == nil {
+			log.Criticalf("get state for %x in database, key %x, value %x, add to live state object's storage cache", a.Hex(), b.Hex(), value.Hex())
+			// Load the object from the database.
+			data, err := self.db.Get(CompositeAccountKey(a.Bytes()))
+			if err != nil {
+				return common.Hash{}
+			}
+			var account Account
+			err = Unmarshal(data, &account)
+			if err != nil {
+				return common.Hash{}
+			}
+			// Insert into the live set.
+			obj := newObject(self, a, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.bktConf.StorageSize, self.bktConf.StorageLevelGroup))
+			obj.cachedStorage[b] = value
+			self.setStateObject(obj)
+		} else {
+			// save into live obj's cache storage avoid disk cost for next fetch
+			log.Criticalf("get state for %x in database, key %x, value %x, add %x to live objects", a.Hex(), b.Hex(), value.Hex(), a.Hex())
+			liveObj.cachedStorage[b] = value
+		}
+		return value
+	}
+	log.Criticalf("find state for %x %x failed", a.Hex(), b.Hex())
 	return common.Hash{}
 }
 // check whether an account has been suicide
@@ -352,10 +466,12 @@ func (self *StateDB) SetCode(addr common.Address, code []byte) {
 		stateObject.SetCode(kec256Hash.Hash(stateObject.code), code)
 	}
 }
-// set a storang entry to a state object
+// set a storage entry to a state object
 func (self *StateDB) SetState(addr common.Address, key common.Hash, value common.Hash) {
+	log.Error("hyper statedb set state start")
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
+		log.Error("hyper statedb set state find state object in live objects")
 		stateObject.SetState(self.db, key, value)
 	}
 }
@@ -374,6 +490,7 @@ func (self *StateDB) Delete(addr common.Address) bool {
 		Account:     &addr,
 		Prev:        stateObject.suicided,
 		Prevbalance: new(big.Int).Set(stateObject.Balance()),
+		PreObject:   stateObject,
 	})
 	stateObject.markSuicided()
 	stateObject.data.Balance = new(big.Int)
@@ -385,23 +502,22 @@ func (self *StateDB) Delete(addr common.Address) bool {
 //
 
 // updateStateObject writes the given object to the trie.
-func (self *StateDB) updateStateObject(stateObject *StateObject) []byte {
+func (self *StateDB) updateStateObject(batch hyperdb.Batch,stateObject *StateObject) []byte {
 	addr := stateObject.Address()
 	data, err := stateObject.MarshalJSON()
 	if err != nil {
 		log.Error("marshal stateobject failed", addr.Hex())
 	}
-	// todo save into a batch instead of save to disk directly
-	self.db.Put(CompositeAccountKey(addr.Bytes()), data)
+	batch.Put(CompositeAccountKey(addr.Bytes()), data)
 	return data
 }
 
 // deleteStateObject removes the given object from the database
-func (self *StateDB) deleteStateObject(stateObject *StateObject) {
+func (self *StateDB) deleteStateObject(batch hyperdb.Batch,stateObject *StateObject) {
+	log.Criticalf("delete state object %s during state commit, seqNo #%d", stateObject.address.Hex(), self.curSeqNo)
 	stateObject.deleted = true
 	addr := stateObject.Address()
-	// todo save into a batch instead of save to disk directly
-	self.db.Delete(CompositeAccountKey(addr.Bytes()))
+	batch.Delete(CompositeAccountKey(addr.Bytes()))
 }
 
 // Retrieve a state object given my the address. Returns nil if not found.
@@ -409,14 +525,36 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 	// Prefer 'live' objects.
 	if obj := self.stateObjects[addr]; obj != nil {
 		if obj.deleted {
+			log.Criticalf("search state object %x in the live objects, but it has been suicide", addr)
 			return nil
 		}
+		log.Criticalf("search state object %x in the live objects", addr)
 		return obj
 	}
-
+	// Load from the content cache
+	if self.curSeqNo != 0 {
+		for i := self.curSeqNo - 1; i >= atomic.LoadUint64(&self.oldestSeqNo); i -= 1 {
+			res, existed := self.contentCache.Get(i)
+			if existed == false {
+				log.Error("load content from content cache failed")
+				continue
+			}
+			content := res.(map[common.Address]*StateObject)
+			if obj := content[addr]; obj != nil {
+				if obj.deleted {
+					log.Criticalf("search state object %x in the content cache, but it has been suicide", addr)
+					return nil
+				}
+				log.Criticalf("search state object %x in the content cache, add it to live objects", addr)
+				self.setStateObject(obj)
+				return obj
+			}
+		}
+	}
 	// Load the object from the database.
 	data, err := self.db.Get(CompositeAccountKey(addr.Bytes()))
 	if err != nil {
+		log.Critical("no state object been find")
 		return nil
 	}
 	var account Account
@@ -425,6 +563,7 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 		return nil
 	}
 	// Insert into the live set.
+	log.Criticalf("find state object %x in database, add it to live objects", addr)
 	obj := newObject(self, addr, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.bktConf.StorageSize, self.bktConf.StorageLevelGroup))
 	self.setStateObject(obj)
 	return obj
@@ -538,7 +677,7 @@ func (self *StateDB) RevertToSnapshot(copy interface{}) {
 
 	// Replay the journal to undo changes.
 	for i := len(self.journal.JournalList) - 1; i >= snapshot; i-- {
-		self.journal.JournalList[i].undo(self)
+		self.journal.JournalList[i].Undo(self, false)
 		log.Info("undo operation: %s", self.journal.JournalList[i])
 	}
 	self.journal.JournalList = self.journal.JournalList[:snapshot]
@@ -585,18 +724,19 @@ func (s *StateDB) DeleteSuicides() {
 }
 
 // Commit commits all state changes to the database.
-func (s *StateDB) Commit() (root common.Hash, err error) {
-	root, batch := s.CommitBatch(deleteEmptyObjects)
-	return root, batch.Write()
+func (s *StateDB) Commit() (common.Hash, error) {
+	root, _ := s.CommitBatch(deleteEmptyObjects)
+	// IMPORTANT doesn't flush batch util recv commit event for atomic assurance
+	return root, nil
 }
 
 // CommitBatch commits all state changes to a write batch but does not
 // execute the batch. It is used to validate state changes against
 // the root hash stored in a block.
 func (s *StateDB) CommitBatch(deleteEmptyObjects bool) (root common.Hash, batch hyperdb.Batch) {
-	batch = s.db.NewBatch()
+	curSeqNo := atomic.LoadUint64(&s.curSeqNo)
+	batch = s.FetchBatch(curSeqNo)
 	root, _ = s.commit(batch, deleteEmptyObjects)
-
 	return root, batch
 }
 
@@ -629,9 +769,10 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 		_, isDirty := s.stateObjectsDirty[addr]
 		switch {
 		case stateObject.suicided || (isDirty && deleteEmptyObjects && stateObject.empty()):
+			log.Errorf("seqNo #%d, state object %s been suicide or clearing out for empty", s.curSeqNo, stateObject.address.Hex())
 			// If the object has been removed, don't bother syncing it
 			// and just mark it for deletion in the trie.
-			s.deleteStateObject(stateObject)
+			s.deleteStateObject(dbw, stateObject)
 			if enableFakeHashFn {
 				d := stateObject.address.Bytes()
 				set = append(set, d)
@@ -640,6 +781,7 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 			}
 		case isDirty:
 			// Write any contract code associated with the state object
+			log.Errorf("seqNo #%d, state object %s been updated", s.curSeqNo, stateObject.address.Hex())
 			if stateObject.code != nil && stateObject.dirtyCode {
 				if err := dbw.Put(CompositeCodeHash(stateObject.Address().Bytes(), stateObject.CodeHash()), stateObject.code); err != nil {
 					return common.Hash{}, err
@@ -651,7 +793,7 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 				return common.Hash{}, err
 			}
 			// Update the object in the main account trie.
-			d := s.updateStateObject(stateObject)
+			d := s.updateStateObject(dbw, stateObject)
 			// Add to change set
 			if enableFakeHashFn {
 				c := append(stateObject.address.Bytes(), d...)
@@ -668,6 +810,7 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 		s.root = SimpleHashFn(s.root, set)
 	} else {
 		// Use bucket tree instead
+		log.Errorf("begin to calculate state db root hash for #%d", s.curSeqNo)
 		s.bucketTree.PrepareWorkingSet(workingSet)
 		hash, err := s.bucketTree.ComputeCryptoHash()
 		if err != nil {

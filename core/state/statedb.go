@@ -131,10 +131,11 @@ func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
 	self.bhash = bhash
 	self.txIndex = ti
 }
-
+// doesn't assign block hash now
+// because the blcok hash hasn't been calculated
+// correctly block  hash will be assigned in the commit phase
 func (self *StateDB) AddLog(log *vm.Log) {
 	log.TxHash = self.thash
-	log.BlockHash = self.bhash
 	log.TxIndex = uint(self.txIndex)
 	log.Index = self.logSize
 	self.logs[self.thash] = append(self.logs[self.thash], log)

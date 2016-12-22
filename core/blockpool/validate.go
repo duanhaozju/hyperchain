@@ -19,7 +19,6 @@ import (
 	"hyperchain/common"
 	"errors"
 	"hyperchain/core/vm"
-	"hyperchain/core/hyperstate"
 )
 
 // Validate is an entry of `validate process`
@@ -116,28 +115,22 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 		validTxSet = validationEvent.Transactions
 	}
 	// process block in virtual machine
-	err, _, merkleRoot, txRoot, receiptRoot, validTxSet, invalidTxSet := pool.ProcessBlockInVm(validTxSet, invalidTxSet, validationEvent.SeqNo)
+	err, validateResult := pool.ProcessBlockInVm(validTxSet, invalidTxSet, validationEvent.SeqNo)
 	if err != nil {
 		log.Error("process block failed!, block number: ", validationEvent.SeqNo)
 		return err, false
 	}
 	// calculate validation result hash for comparison with others
 	hash := commonHash.Hash([]interface{}{
-		merkleRoot,
-		txRoot,
-		receiptRoot,
+		validateResult.MerkleRoot,
+		validateResult.TxRoot,
+		validateResult.ReceiptRoot,
 	})
 	// save validation result into cache
 	// load them in commit phase
 	if len(validTxSet) != 0 {
-		pool.blockCache.Add(hash.Hex(), BlockRecord{
-			TxRoot:      txRoot,
-			ReceiptRoot: receiptRoot,
-			MerkleRoot:  merkleRoot,
-			InvalidTxs:  invalidTxSet,
-			ValidTxs:    validTxSet,
-			SeqNo:       validationEvent.SeqNo,
-		})
+		validateResult.SeqNo = validationEvent.SeqNo
+		pool.blockCache.Add(hash.Hex(), *validateResult)
 	}
 	log.Info("invalid transaction number: ", len(invalidTxSet))
 	log.Info("valid transaction number: ", len(validTxSet))
@@ -208,32 +201,39 @@ func (pool *BlockPool) checkSign(txs []*types.Transaction, commonHash crypto.Com
 
 // Put all transactions into the virtual machine and execute
 // Return the execution result, such as txs' merkle root, receipts' merkle root, accounts' merkle root and so on
-func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, []byte, []byte, []byte, []byte, []*types.Transaction, []*types.InvalidTransactionRecord) {
+func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, *BlockRecord) {
 	var validtxs []*types.Transaction
+	var receipts []*types.Receipt
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
-		return err, nil, nil, nil, nil, nil, invalidTxs
+		return err, &BlockRecord{
+			InvalidTxs: invalidTxs,
+		}
 	}
 	// initailize calculator
 	// for calculate fingerprint of a batch of transactions and receipts
 	pool.initializeTransactionCalculator()
 	pool.initializeReceiptCalculator()
 	// load latest state fingerprint
+	// for compatibility, doesn't remove the statement below
 	v := pool.lastValidationState.Load()
 	initStatus, ok := v.(common.Hash)
 	if ok == false {
-		return errors.New("get state status failed!"), nil, nil, nil, nil, nil, invalidTxs
+		return errors.New("get state status failed!"), &BlockRecord{
+			InvalidTxs: invalidTxs,
+		}
 	}
 	// initialize state
 	state, err := pool.GetStateInstance(initStatus, db)
-	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
+	if err != nil {return err, &BlockRecord{
+		InvalidTxs: invalidTxs,
+	}}
 
 	state.MarkProcessStart(seqNo)
-	log.Critical("BEFORE", string(state.Dump()))
 	// initialize execution environment ruleset
 	vmenv := initEnvironment(state, seqNo)
 	// execute transaction one by one
-	batch := db.NewBatch()
+	batch := state.FetchBatch(seqNo)
 	for i, tx := range txs {
 		state.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(*tx, vmenv)
@@ -265,17 +265,22 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		var data []byte
 		err, data = core.PersistTransaction(batch, tx, pool.conf.TransactionVersion, false, false);
 		if err != nil {
-			log.Error("Put tx data into database failed! error msg, ", err.Error())
-			return err, nil, nil, nil, nil, nil, invalidTxs
+			log.Error("put tx data into database failed! error msg, ", err.Error())
+			return err, &BlockRecord{
+				InvalidTxs: invalidTxs,
+			}
 		}
 		pool.calculateTransactionsFingerprint(tx, data, false)
 		// persist receipt
 		err, data = core.PersistReceipt(batch, receipt, pool.conf.TransactionVersion, false, false)
 		if  err != nil {
-			log.Error("Put receipt data into database failed! error msg, ", err.Error())
-			return err, nil, nil, nil, nil, nil, invalidTxs
+			log.Error("put receipt data into database failed! error msg, ", err.Error())
+			return err, &BlockRecord{
+				InvalidTxs: invalidTxs,
+			}
 		}
 		pool.calculateReceiptFingerprint(receipt, data, false)
+		receipts = append(receipts, receipt)
 		// persist transaction meta
 		// set temporarily
 		// for primary node, the seqNo can be invalid. remove the incorrect txmeta info when commit block to avoid this error
@@ -285,16 +290,19 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		}
 		if err := core.PersistTransactionMeta(batch, meta, tx.GetTransactionHash(), false, false); err != nil {
 			log.Error("Put txmeta into database failed! error msg, ", err.Error())
-			return err, nil, nil, nil, nil, nil, invalidTxs
+			return err, &BlockRecord{
+				InvalidTxs: invalidTxs,
+			}
 		}
-
 		validtxs = append(validtxs, tx)
 	}
 	// flush all state change
 	root, err := state.Commit()
 	if err != nil {
 		log.Error("Commit state db failed! error msg, ", err.Error())
-		return err, nil, nil, nil, nil, nil, invalidTxs
+		return err, &BlockRecord{
+			InvalidTxs: invalidTxs,
+		}
 	}
 	// generate new state fingerprint
 	merkleRoot := root.Bytes()
@@ -305,15 +313,17 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	receiptRoot := res.Bytes()
 	// store latest state status
 	pool.lastValidationState.Store(root)
-	// IMPORTANT never forget to call batch.Write, otherwise, all data in batch will be lost
-	go batch.Write()
-	// FOR TEST
-	log.Critical("AFTER", string(state.Dump()))
-	// FOR TEST
-	j, _ := db.Get(hyperstate.CompositeJournalKey(seqNo))
-	journal, _ := hyperstate.UnmarshalJournal(j)
-	log.Critical("marshaled journal", journal)
-	return nil, nil, merkleRoot, txRoot, receiptRoot, validtxs, invalidTxs
+	// IMPORTANT doesn't call batch.Write util recv commit event for atomic assurance
+	log.Criticalf("validate result for #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
+		seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
+	return nil, &BlockRecord{
+		TxRoot:      txRoot,
+		ReceiptRoot: receiptRoot,
+		MerkleRoot:  merkleRoot,
+		Receipts:    receipts,
+		ValidTxs:    validtxs,
+		InvalidTxs:  invalidTxs,
+	}
 }
 
 // initialize transaction execution environment
@@ -364,7 +374,6 @@ func (pool *BlockPool) initializeReceiptCalculator() error {
 	}
 	return nil
 }
-
 // calculate a batch of transaction
 func (pool *BlockPool) calculateTransactionsFingerprint(transaction *types.Transaction, data []byte, flush bool) (common.Hash, error) {
 	switch pool.conf.StateType {
@@ -393,7 +402,6 @@ func (pool *BlockPool) calculateTransactionsFingerprint(transaction *types.Trans
 	}
 	return common.Hash{}, nil
 }
-
 // calculate a batch of receipt
 func (pool *BlockPool)calculateReceiptFingerprint(receipt *types.Receipt, data []byte, flush bool)(common.Hash, error) {
 	switch pool.conf.StateType {
@@ -410,6 +418,7 @@ func (pool *BlockPool)calculateReceiptFingerprint(receipt *types.Receipt, data [
 	case "hyperstate":
 		if flush == false {
 			// put transaction to buffer temporarily
+			log.Infof("append receipt %s", receipt.ToReceiptTrans())
 			pool.receiptBuffer = append(pool.receiptBuffer, data)
 			return common.Hash{}, nil
 		} else {

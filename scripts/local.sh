@@ -68,7 +68,7 @@ do
 	-d|--delete)
 	    DELETEDATA=false; shift;;
 	-r|--rebuild)
-	    REBUILD=flase; shift;;
+	    REBUILD=false; shift;;
     -e|--env)
         ENV=false; shift;;
     -m|--mode)

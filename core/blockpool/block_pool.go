@@ -35,8 +35,10 @@ type BlockRecord struct {
 	MerkleRoot  []byte
 	InvalidTxs  []*types.InvalidTransactionRecord
 	ValidTxs    []*types.Transaction
+	Receipts    []*types.Receipt
 	SeqNo       uint64
 }
+
 // block pool configuration
 type BlockPoolConf struct {
 	BlockVersion       string
@@ -124,11 +126,25 @@ func (pool *BlockPool) GetStateInstance(root common.Hash, db hyperdb.Database) (
 		// IMPORTANT initialize hyperstate only once
 		if globalState == nil {
 			var err error
-			globalState, err = hyperstate.New(root, db, pool.bucketTreeConf)
+			height := core.GetHeightOfChain()
+			globalState, err = hyperstate.New(root, db, pool.bucketTreeConf, height)
 			return globalState, err
 		} else {
 			return globalState, nil
 		}
+	default:
+		return nil, errors.New("no state type specified")
+	}
+}
+// create a latest state for simulate usage
+// different with function `GetStateInstance`, this function will create a new instance each time when got invocation
+func (pool *BlockPool) GetStateInstanceForSimulate(root common.Hash, db hyperdb.Database) (vm.Database, error) {
+	switch pool.conf.StateType {
+	case "rawstate":
+		return statedb.New(root, db)
+	case "hyperstate":
+		height := core.GetHeightOfChain()
+		return hyperstate.New(root, db, pool.bucketTreeConf, height)
 	default:
 		return nil, errors.New("no state type specified")
 	}
