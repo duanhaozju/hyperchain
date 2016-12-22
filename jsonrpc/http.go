@@ -15,6 +15,7 @@ import (
 	"hyperchain/rest_api/routers"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
+	"hyperchain/crypto/hmEncryption"
 )
 
 const (
@@ -37,13 +38,13 @@ func (hrw *httpReadWrite) Close() error{
 	return nil
 }
 
-func Start(httpPort int, restPort int, logsPath string,eventMux *event.TypeMux,pm *manager.ProtocolManager, cfg RateLimitConfig) error{
+func Start(httpPort int, restPort int, logsPath string,eventMux *event.TypeMux,pm *manager.ProtocolManager, cfg RateLimitConfig, publicKey *hmEncryption.PaillierPublickey) error{
 	eventMux = eventMux
 
 	server := NewServer()
 
 	// 得到API，注册服务
-	apis := hpc.GetAPIs(eventMux, pm, cfg.Enable, cfg.TxRatePeak, cfg.TxFillRate, cfg.ContractRatePeak, cfg.ContractFillRate)
+	apis := hpc.GetAPIs(eventMux, pm, cfg.Enable, cfg.TxRatePeak, cfg.TxFillRate, cfg.ContractRatePeak, cfg.ContractFillRate, publicKey)
 
 	// api.Namespace 是API的命名空间，api.Service 是一个拥有命名空间对应对象的所有方法的对象
 	for _, api := range apis {

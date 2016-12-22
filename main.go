@@ -164,7 +164,7 @@ func main() {
 				expiredTime,
 				config.getGRPCPort())
 		rateLimitCfg := config.getRateLimitConfig()
-		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(),config.getLogDumpFileDir(),eventMux, pm, rateLimitCfg)
+		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(),config.getLogDumpFileDir(),eventMux, pm, rateLimitCfg, config.getPaillerPublickey())
 
 		//go func() {
 		//	log.Println(http.ListenAndServe("localhost:6064", nil))

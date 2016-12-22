@@ -71,7 +71,7 @@ func PreHmTransaction(oldBalance []byte, transferAmount []byte, illegal_balance_
 	transferAmount_bigint = transferAmount_bigint.SetBytes(transferAmountFillbyte)
 
 	if oldBalance_bigint.Cmp(transferAmount_bigint) ==-1 {
-		return false,nil,nil,nil;
+		return false,nil,nil;
 	}
 
 
