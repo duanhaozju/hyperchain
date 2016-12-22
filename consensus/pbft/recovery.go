@@ -241,7 +241,7 @@ func (pbft *pbftProtocal) findHighestChkptQuorum() (n uint64, d string, replicas
 				}
 				n = ci.n
 				d = ci.d
-				replicas = make([]uint64, len(peers))
+				replicas = make([]uint64, 0, len(peers))
 				for peer := range peers {
 					replicas = append(replicas, peer)
 				}
