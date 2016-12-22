@@ -353,7 +353,7 @@ func (bucket *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *big.I
 		updatedValueSet := newUpdatedValueSet(big.NewInt(i))
 		buffer := proto.NewBuffer(value)
 		updatedValueSet.UnMarshal(buffer)
-		revertToTargetBlock(updatedValueSet,&keyValueMap)
+		revertToTargetBlock(bucket.treePrefix,big.NewInt(i),updatedValueSet,&keyValueMap)
 		bucket.PrepareWorkingSet(keyValueMap,big.NewInt(i))
 		bucket.AddChangesForPersistence(writeBatch)
 		writeBatch.Delete(append([]byte("UpdatedValueSet"), big.NewInt(i).Bytes()...))
@@ -365,9 +365,10 @@ func (bucket *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *big.I
 }
 
 // TODO add verify about value and previousvalue
-func revertToTargetBlock(updatedValueSet *UpdatedValueSet,keyValueMap *K_VMap)  {
+func revertToTargetBlock(treePrefix string,blockNum *big.Int,updatedValueSet *UpdatedValueSet,keyValueMap *K_VMap)  {
+	length := len(treePrefix) + len(blockNum.Bytes())
 	for key,updatedValue := range updatedValueSet.UpdatedKVs{
-		logger.Debug(key[14:],"------------------previous value is ",updatedValue.PreviousValue,"------------------current value is ",updatedValue.Value)
-		(*keyValueMap)[key[14:]] = updatedValue.PreviousValue
+		logger.Debug(key[length:],"------------------previous value is ",updatedValue.PreviousValue,"------------------current value is ",updatedValue.Value)
+		(*keyValueMap)[key[length:]] = updatedValue.PreviousValue
 	}
 }
