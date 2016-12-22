@@ -19,7 +19,7 @@ func Generate_wholenetpublickey(g []byte, n []byte, nsquare []byte) PaillierPubl
 	nsquare1 := new(big.Int)
 	publickey.G = G1.SetBytes(g)
 	publickey.N = n1.SetBytes(n)
-	publickey.nsquare = nsquare1.SetBytes(nsquare)
+	publickey.Nsquare = nsquare1.SetBytes(nsquare)
 	return publickey
 }
 
@@ -56,12 +56,12 @@ func Test_getput(t *testing.T) {
 	publickey := Generate_wholenetpublickey(G1, N1, nsquare1)
 	fmt.Println(publickey.G)
 	fmt.Println(publickey.N)
-	fmt.Println(publickey.nsquare)
+	fmt.Println(publickey.Nsquare)
 	err := PutWholeNetworkPublickey("G:/testgetput.txt", &publickey)
 	p, _ := GetWholeNetworkPublickey("G:/testgetput.txt")
 	fmt.Println(p.G)
 	fmt.Println(p.N)
-	fmt.Println(p.nsquare)
+	fmt.Println(p.Nsquare)
 	fmt.Println(err)
 
 }
@@ -97,6 +97,24 @@ func Test_getput(t *testing.T) {
 func Test_hmTransaction(t *testing.T){
 	paillerkey,_:= Generate_paillierKey()
 	wholepublickey := paillerkey.PaillierPublickey
+	wholeprivate := paillerkey.PaillierPrivatekey
+
+	fmt.Println(wholeprivate.P.String())
+	fmt.Println(wholeprivate.Q.String())
+	fmt.Println(wholeprivate.Lambda.String())
+	fmt.Println()
+
+	fmt.Println(wholepublickey.N.String())
+	fmt.Println(wholepublickey.Nsquare.String())
+	fmt.Println(wholepublickey.G.String())
+	fmt.Println()
+
+	bign := new(big.Int)
+	bign.SetString(wholepublickey.N.String(),10)
+	fmt.Println(*wholepublickey.N)
+	fmt.Println(*bign)
+
+
 	//paillerprivate := paillerkey.PaillierPrivatekey
 
 	old := big.NewInt(6000000000000000000)

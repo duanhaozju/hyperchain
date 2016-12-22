@@ -18,7 +18,7 @@ type PaillierPublickey struct {
 	N *big.Int
 
 	//nsquare=n^2
-	nsquare *big.Int
+	Nsquare *big.Int
 
 	//G使得 gcd(L(G^lambda mod N^2),N)=1
 	G *big.Int
@@ -68,7 +68,7 @@ func Generate_paillierKey() (*PaillierKey, error) {
 	}
 	publickey.G = G.Set(rad)
 	nsquare := new(big.Int)
-	publickey.nsquare = nsquare.Mul(N, N)
+	publickey.Nsquare = nsquare.Mul(N, N)
 
 	p_1 := new(big.Int)
 	q_1 := new(big.Int)
@@ -91,7 +91,7 @@ func Generate_paillierKey() (*PaillierKey, error) {
 
 	//check whether G is good
 	modpow := new(big.Int)
-	modpow = modpow.Exp(key.G, key.Lambda, key.nsquare)
+	modpow = modpow.Exp(key.G, key.Lambda, key.Nsquare)
 	modpow = modpow.Sub(modpow, BigONE)
 	modpow = modpow.Div(modpow, key.N)
 	modpow = modpow.GCD(new(big.Int), new(big.Int), modpow, key.N)
@@ -113,28 +113,28 @@ func (publickey *PaillierPublickey) Paillier_Encrypto(message *big.Int, rand *bi
 	//		return nil, err
 	//	}
 	modpow_1 := new(big.Int)
-	modpow_1 = modpow_1.Exp(publickey.G, message, publickey.nsquare)
+	modpow_1 = modpow_1.Exp(publickey.G, message, publickey.Nsquare)
 
 	modpow_2 := new(big.Int)
-	modpow_2 = modpow_2.Exp(rand, publickey.N, publickey.nsquare)
+	modpow_2 = modpow_2.Exp(rand, publickey.N, publickey.Nsquare)
 
 	mutiply := new(big.Int)
 	mutiply = mutiply.Mul(modpow_1, modpow_2)
 
-	enmessage := mutiply.Mod(mutiply, publickey.nsquare)
+	enmessage := mutiply.Mod(mutiply, publickey.Nsquare)
 	return enmessage, nil
 }
 
 func (key *PaillierKey) Paillier_Decrypto(em *big.Int) *big.Int {
 	BigONE := big.NewInt(1)
 	modpow_1 := new(big.Int)
-	modpow_1 = modpow_1.Exp(key.G, key.Lambda, key.nsquare)
+	modpow_1 = modpow_1.Exp(key.G, key.Lambda, key.Nsquare)
 	modpow_1 = modpow_1.Sub(modpow_1, BigONE)
 	modpow_1 = modpow_1.Div(modpow_1, key.N)
 	modpow_1 = modpow_1.ModInverse(modpow_1, key.N)
 
 	modpow_2 := new(big.Int)
-	modpow_2 = modpow_2.Exp(em, key.Lambda, key.nsquare)
+	modpow_2 = modpow_2.Exp(em, key.Lambda, key.Nsquare)
 	modpow_2 = modpow_2.Sub(modpow_2, BigONE)
 	modpow_2 = modpow_2.Div(modpow_2, key.N)
 
@@ -150,7 +150,7 @@ func (publickey *PaillierPublickey) Paillier_Cipher_add(em1 *big.Int, em2 *big.I
 	mutiply := new(big.Int)
 	mutiply = mutiply.Mul(em1, em2)
 	mutiply_modnsquare := new(big.Int)
-	mutiply_modnsquare = mutiply_modnsquare.Mod(mutiply, publickey.nsquare)
+	mutiply_modnsquare = mutiply_modnsquare.Mod(mutiply, publickey.Nsquare)
 
 	return mutiply_modnsquare
 }

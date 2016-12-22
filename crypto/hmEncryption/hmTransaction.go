@@ -142,7 +142,7 @@ func PutWholeNetworkPublickey(file string, whole_networkpublickey *PaillierPubli
 	var publickey pp
 	publickey.N1 = whole_networkpublickey.G.Bytes()
 	publickey.N2 = whole_networkpublickey.N.Bytes()
-	publickey.N3 = whole_networkpublickey.nsquare.Bytes()
+	publickey.N3 = whole_networkpublickey.Nsquare.Bytes()
 
 	data, _ := Encode(publickey)
 	stringdata := hex.EncodeToString(data)
@@ -164,7 +164,7 @@ func GetWholeNetworkPublickey(file string) (*PaillierPublickey, error) {
 	a3 := new(big.Int)
 	pailpub.G = a1.SetBytes(publickey.N1)
 	pailpub.N = a2.SetBytes(publickey.N2)
-	pailpub.nsquare = a3.SetBytes(publickey.N3)
+	pailpub.Nsquare = a3.SetBytes(publickey.N3)
 
 	return &pailpub, err
 }
