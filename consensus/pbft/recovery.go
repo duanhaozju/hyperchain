@@ -19,6 +19,10 @@ func (pbft *pbftProtocal) initRecovery() events.Event {
 
 	logger.Noticef("Replica %d now initRecovery", pbft.id)
 
+	// update watermarks
+	height := persist.GetHeightofChain()
+	pbft.moveWatermarks(height)
+
 	pbft.rcRspStore = make(map[uint64]*RecoveryResponse)
 
 	recoveryMsg := &RecoveryInit{
@@ -127,8 +131,15 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		return nil
 	}
 
+	if pbft.recoveryToSeqNo != nil {
+		logger.Debugf("Replica %d in recovery receive rcRsp from replica %d" +
+			"but chkpt quorum and seqNo quorum already found. " +
+			"Ignore it", pbft.id, rsp.ReplicaId)
+		return nil
+	}
+
 	pbft.recoveryRestartTimer.Stop()
-	pbft.recoveryToSeqNo = lastExec
+	pbft.recoveryToSeqNo = &lastExec
 
 	//blockInfo := getBlockchainInfo()
 	//id, _ := proto.Marshal(blockInfo)
