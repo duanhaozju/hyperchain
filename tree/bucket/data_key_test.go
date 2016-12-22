@@ -2,7 +2,7 @@ package bucket
 
 import (
 	"testing"
-	"BucketTree/bucket/testutil"
+	"hyperchain/tree/bucket/testutil"
 )
 func TestDataKey(t *testing.T) {
 	conf = newConfig(26, 3, fnvHash)

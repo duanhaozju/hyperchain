@@ -3,7 +3,7 @@ package bucket
 import (
 	"testing"
 	"sort"
-	"BucketTree/bucket/testutil"
+	"hyperchain/tree/bucket/testutil"
 )
 // TODO test
 // 1.newDataNodesDelta

@@ -23,7 +23,7 @@ func init(){
 // This is not thread safe
 type State struct {
 	currentBlockNum *big.Int
-	StateImpl       bucket.BucketTree
+	Bucket_tree     bucket.BucketTree
 	key_valueMap    bucket.K_VMap
 	updateStateImpl bool
 }
@@ -55,10 +55,10 @@ func (state *State) GetHash() ([]byte,error){
 	logger.Debug("Enter - GetHash()")
 	if state.updateStateImpl {
 		logger.Debug("udpateing stateImpl with working-set")
-		state.StateImpl.PrepareWorkingSet(state.key_valueMap,state.currentBlockNum)
+		state.Bucket_tree.PrepareWorkingSet(state.key_valueMap,state.currentBlockNum)
 		state.updateStateImpl = false
 	}
-	hash,err := state.StateImpl.ComputeCryptoHash()
+	hash,err := state.Bucket_tree.ComputeCryptoHash()
 	if err != nil {
 		return nil,err
 	}
@@ -71,10 +71,10 @@ func (state *State) GetHash() ([]byte,error){
 func (state *State) AddChangesForPersistence(writeBatch hyperdb.Batch) {
 	logger.Debug("state.addChangesForPersistence()...start")
 	if state.updateStateImpl {
-		state.StateImpl.PrepareWorkingSet(state.key_valueMap,state.currentBlockNum)
+		state.Bucket_tree.PrepareWorkingSet(state.key_valueMap,state.currentBlockNum)
 		state.updateStateImpl = false
 	}
-	state.StateImpl.AddChangesForPersistence(writeBatch)
+	state.Bucket_tree.AddChangesForPersistence(writeBatch)
 	// TODO should add the metadata to the writeBatch?
 	logger.Debug("state.addChangesForPersistence()...finished")
 }
@@ -84,13 +84,19 @@ func (state *State) AddChangesForPersistence(writeBatch hyperdb.Batch) {
 // DB.
 func (state *State) CommitStateDelta(writeBatch hyperdb.Batch) error {
 	if state.updateStateImpl {
-		state.StateImpl.PrepareWorkingSet(state.key_valueMap,state.currentBlockNum)
+		state.Bucket_tree.PrepareWorkingSet(state.key_valueMap,state.currentBlockNum)
 		state.updateStateImpl = false
 	}
-	state.StateImpl.AddChangesForPersistence(writeBatch)
+	state.Bucket_tree.AddChangesForPersistence(writeBatch)
 	return writeBatch.Write()
 }
 
+func (state *State) RevertToTargetBlock(currentBlockNum, toBlockNum *big.Int) (error){
+	logger.Debug("start to revert to target block")
+	defer logger.Debug("end to revert to target block")
+	return state.Bucket_tree.RevertToTargetBlock()
+}
+
 func (state *State) Reset(changePersists bool){
-	state.StateImpl.Reset()
+	state.Bucket_tree.Reset()
 }

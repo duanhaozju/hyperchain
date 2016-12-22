@@ -7,6 +7,7 @@ import (
 	"hyperchain/common"
 	"math/big"
 	"github.com/golang/protobuf/proto"
+	"errors"
 )
 
 var logger = logging.MustGetLogger("buckettree")
@@ -30,6 +31,7 @@ type BucketTree struct {
 	recomputeCryptoHash    bool
 	bucketCache            *bucketCache
 	updatedValueSet        *UpdatedValueSet
+	treeHashMap	       map[*big.Int][]byte
 }
 
 type Conf struct {
@@ -62,6 +64,7 @@ func (bucketTree *BucketTree) Initialize(configs map[string]interface{}) error {
 	}
 	bucketTree.bucketCache = newBucketCache(bucketTree.treePrefix, bucketCacheMaxSize)
 	bucketTree.bucketCache.loadAllBucketNodesFromDB()
+	bucketTree.treeHashMap = make(map[*big.Int][]byte)
 	return nil
 }
 
@@ -143,10 +146,6 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 		parentBucket.setChildCryptoHash(bucketKey, cryptoHashForBucket)
 		logger.Noticef("bucket tree prefix %s bucket key %s, bucket hash %s",
 			bucketTree.treePrefix, bucketKey.String(), common.Bytes2Hex(cryptoHashForBucket))
-
-		/*logger.Debug("start to record the UpdatedValue to UpdatedValueSet")
-		bucketTree.updatedValueSet.UpdatedValueKVs(updatedDataNodes,existingDataNodes)
-		logger.Debug(" to record the UpdatedValue to UpdatedValueSet")*/
 	}
 	return nil
 }
@@ -182,6 +181,16 @@ func (bucketTree *BucketTree) processBucketTreeDelta() error {
 
 func (bucketTree *BucketTree) computeRootNodeCryptoHash() []byte {
 	return bucketTree.bucketTreeDelta.getRootNode().computeCryptoHash()
+}
+
+// TODO test
+func (bucketTree *BucketTree) GetTreeHash(blockNum *big.Int) ([]byte,error){
+	value,ok := bucketTree.treeHashMap[blockNum]
+	if ok{
+		return value,nil
+	}else {
+		return nil,errors.New("has no hash of this blockNum")
+	}
 }
 
 func computeDataNodesCryptoHash(bucketKey *bucketKey, updatedNodes dataNodes, existingNodes dataNodes,updatedValueSet *UpdatedValueSet) []byte {
@@ -238,7 +247,7 @@ func computeDataNodesCryptoHash(bucketKey *bucketKey, updatedNodes dataNodes, ex
 }
 
 // AddChangesForPersistence - method implementation for interface 'statemgmt.HashableState'
-func (bucketTree *BucketTree) AddChangesForPersistence(writeBatch hyperdb.Batch) error {
+func (bucketTree *BucketTree) AddChangesForPersistence(writeBatch hyperdb.Batch,currentBlockNum *big.Int) error {
 
 	if bucketTree.dataNodesDelta == nil {
 		return nil
@@ -253,6 +262,10 @@ func (bucketTree *BucketTree) AddChangesForPersistence(writeBatch hyperdb.Batch)
 	bucketTree.addDataNodeChangesForPersistence(writeBatch)
 	bucketTree.addBucketNodeChangesForPersistence(writeBatch)
 	bucketTree.addUpdatedValueSetForPersistence(writeBatch)
+	// TODO test
+	// 1.add the computehash to a temp array
+	// 2.add the bucketcache record to bucketCache
+	bucketTree.updateBucketCacheWithoutPersist(currentBlockNum)
 	return nil
 }
 
@@ -297,6 +310,22 @@ func (bucketTree *BucketTree) addUpdatedValueSetForPersistence(writeBatch hyperd
 	writeBatch.Put(append([]byte("UpdatedValueSet"),updatedValueSet.BlockNum.Bytes()...),buffer.Bytes())
 }
 
+// TODO test
+func (bucketTree *BucketTree) updateBucketCacheWithoutPersist(currentBlockNum *big.Int){
+	value, ok := bucketTree.treeHashMap[currentBlockNum]
+	if ok{
+		logger.Debug("the map has the block tree hash ",currentBlockNum)
+		if(bytes.Compare(value,bucketTree.lastComputedCryptoHash)==0){
+			logger.Debug("the key hash is same as before ",value)
+		}
+	}
+	bucketTree.treeHashMap[currentBlockNum] = bucketTree.lastComputedCryptoHash
+	bucketTree.updateBucketCache()
+	bucketTree.dataNodesDelta = nil
+	bucketTree.bucketTreeDelta = nil
+	bucketTree.recomputeCryptoHash = false
+}
+
 
 // TODO to do test with cache
 func (bucketTree *BucketTree) updateBucketCache() {
@@ -333,11 +362,12 @@ func (bucket *BucketTree) Reset() {
 
 // TODO test important
 // the func can make the buckettree revert to target block
-func (bucket *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *big.Int) (error){
+func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *big.Int) (error){
 	logger.Debug("Start RevertToTargetBlock, from ",currentBlockNum)
 	db,_ := hyperdb.GetLDBDatabase()
 	writeBatch := db.NewBatch()
 	keyValueMap := NewKVMap()
+	bucketTree.bucketCache.clearAllCache()
 
 	for i := currentBlockNum.Int64();i > toBlockNum.Int64(); i -- {
 		value,err := db.Get(append([]byte("UpdatedValueSet"), big.NewInt(i).Bytes()...))
@@ -353,9 +383,9 @@ func (bucket *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *big.I
 		updatedValueSet := newUpdatedValueSet(big.NewInt(i))
 		buffer := proto.NewBuffer(value)
 		updatedValueSet.UnMarshal(buffer)
-		revertToTargetBlock(bucket.treePrefix,big.NewInt(i),updatedValueSet,&keyValueMap)
-		bucket.PrepareWorkingSet(keyValueMap,big.NewInt(i))
-		bucket.AddChangesForPersistence(writeBatch)
+		revertToTargetBlock(bucketTree.treePrefix,big.NewInt(i),updatedValueSet,&keyValueMap)
+		bucketTree.PrepareWorkingSet(keyValueMap,big.NewInt(i))
+		bucketTree.AddChangesForPersistence(writeBatch,big.NewInt(i))
 		keyValueMap = NewKVMap()
 		writeBatch.Delete(append([]byte("UpdatedValueSet"), big.NewInt(i).Bytes()...))
 	}

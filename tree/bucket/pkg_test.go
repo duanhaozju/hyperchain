@@ -3,7 +3,7 @@ package bucket
 import (
 	"testing"
 	"os"
-	"BucketTree/bucket/testutil"
+	"hyperchain/tree/bucket/testutil"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"math/big"

@@ -2,7 +2,7 @@ package bucket
 
 import 	(
 	"testing"
-	"BucketTree/bucket/testutil"
+	"hyperchain/tree/bucket/testutil"
 )
 
 func TestBucketNodeComputeHash(t *testing.T) {
