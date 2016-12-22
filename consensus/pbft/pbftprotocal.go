@@ -938,6 +938,9 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 	pbft.lastExec = et.seqNo
 	pbft.vid = et.seqNo
 	pbft.lastVid = et.seqNo
+	bcInfo := getCurrentBlockInfo()
+	id, _ := proto.Marshal(bcInfo)
+	pbft.persistCheckpoint(et.seqNo, id)
 	pbft.moveWatermarks(pbft.lastExec) // The watermark movement handles moving this to a checkpoint boundary
 	pbft.skipInProgress = false
 	pbft.validateState()
