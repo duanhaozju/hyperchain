@@ -119,15 +119,11 @@ func (peer *Peer) handShake() error {
 
 			log.Debug("secret", len(peer.TEM.GetSecret(peer.RemoteAddr.Hash)))
 			peer.ID = retMessage.From.ID
-			if err != nil {
-				log.Error("cannot decrypt the nodeidinfo!")
-				errors.New("Decrypt ERROR")
-			}
 			log.Critical("Node ID:", peer.Addr.ID)
 			log.Critical("hash:", peer.Addr.Hash)
 			log.Critical("negotiate ID：")
 			log.Critical(peer.TEM.GetSecret(peer.Addr.Hash))
-			return &peer, nil
+			return  nil
 		}
 		return errors.New("ret message is not Hello Response!")
 	}

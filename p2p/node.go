@@ -351,38 +351,17 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			log.Warning("Got a PADDING Message")
 		}
 	default:
+		log.Warning(msg.MessageType)
 		log.Warning("Unkown Message type!")
 	}
-	// 返回信息加密
-	switch msg.MessageType {
-	case pb.Message_HELLO:{
-
-	}
-	case pb.Message_HELLO_RESPONSE:{
-
-	}
-	case pb.Message_ATTEND:{
-
-	}
-	case pb.Message_ATTEND_RESPNSE:{
-
-	}
-	case pb.Message_INTRODUCE:{
-
-	}
-	case pb.Message_INTRODUCE_RESPONSE:{
-
-	}
-	default:
-		response.Payload = this.TEM.EncWithSecret(response.Payload, msg.From.Hash)
 	if msg.MessageType != pb.Message_HELLO && msg.MessageType != pb.Message_HELLO_RESPONSE && msg.MessageType != pb.Message_RECONNECT_RESPONSE && msg.MessageType != pb.Message_RECONNECT {
-		var err error;
+		var err error
+
 		response.Payload,err = this.PeerPool.TEM.EncWithSecret(response.Payload, msg.From.Hash)
 		if err != nil {
 			log.Error("encode error",err)
 		}
 
-	}
 	}
 	return &response, nil
 }
