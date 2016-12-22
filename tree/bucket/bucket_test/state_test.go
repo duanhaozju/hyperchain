@@ -117,7 +117,7 @@ func TestState_2(t *testing.T){
 
 func TestRevertToTargetBlock(t *testing.T) {
 	state := bucket_test.NewState()
-	state.StateImpl.RevertToTargetBlock(big.NewInt(3),big.NewInt(1))
+	state.StateImpl.RevertToTargetBlock(big.NewInt(2),big.NewInt(1))
 }
 
 func featchDataNodeFromDBTest(){
