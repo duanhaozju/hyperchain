@@ -63,6 +63,11 @@ func TestState_1_simple(t *testing.T){
 	key_valueMap["key3"] = []byte("value3")
 	key_valueMap["key4"] = []byte("value4")
 	key_valueMap["key5"] = []byte("value5")
+	key_valueMap["key6"] = []byte("value6")
+	key_valueMap["key7"] = []byte("value7")
+	key_valueMap["key8"] = []byte("value8")
+	key_valueMap["key9"] = []byte("value9")
+	key_valueMap["key10"] = []byte("value10")
 	state.SetK_VMap(key_valueMap,big.NewInt(2))
 	hash,err := state.GetHash()
 	if err != nil{
@@ -85,7 +90,7 @@ func TestState_2_without_persist(t *testing.T){
 	key_valueMap["key4"] = []byte("value4")
 	key_valueMap["key5"] = []byte("value5")
 	state.Bucket_tree.PrepareWorkingSet(key_valueMap,big.NewInt(2))
-	hash,err := state.GetHash()
+	hash,err := state.Bucket_tree.ComputeCryptoHash()
 	if err != nil{
 		logger.Debugf("--------------GetHash error")
 	}else {
@@ -101,7 +106,7 @@ func TestState_2_without_persist(t *testing.T){
 	key_valueMap["key9"] = []byte("value9")
 	key_valueMap["key10"] = []byte("value10")
 	state.Bucket_tree.PrepareWorkingSet(key_valueMap,big.NewInt(3))
-	hash,err = state.GetHash()
+	hash,err = state.Bucket_tree.ComputeCryptoHash()
 	if err != nil{
 		logger.Debugf("--------------GetHash error")
 	}else {
@@ -112,13 +117,8 @@ func TestState_2_without_persist(t *testing.T){
 
 	// block 4
 	key_valueMap = bucket.K_VMap{}
-	key_valueMap["key6"] = []byte("value6")
-	key_valueMap["key7"] = []byte("value7")
-	key_valueMap["key8"] = []byte("value8")
-	key_valueMap["key9"] = []byte("value9")
-	key_valueMap["key10"] = []byte("value10")
 	state.Bucket_tree.PrepareWorkingSet(key_valueMap,big.NewInt(4))
-	hash,err = state.GetHash()
+	hash,err = state.Bucket_tree.ComputeCryptoHash()
 	if err != nil{
 		logger.Debugf("--------------GetHash error")
 	}else {
@@ -136,14 +136,13 @@ func TestState_2_without_persist(t *testing.T){
 	key_valueMap["key14"] = []byte("value14")
 	key_valueMap["key15"] = []byte("value15")
 	state.Bucket_tree.PrepareWorkingSet(key_valueMap,big.NewInt(5))
-	hash,err = state.GetHash()
+	hash,err = state.Bucket_tree.ComputeCryptoHash()
 	if err != nil{
 		logger.Debugf("--------------GetHash error")
 	}else {
 		logger.Debugf("--------------the state.GetHash() is ",(hash))
 	}
 	state.Bucket_tree.AddChangesForPersistence(writeBatch,big.NewInt(5))
-	//writeBatch.Write()
 
 }
 
@@ -229,7 +228,7 @@ func TestState_3_persist(t *testing.T){
 
 func TestRevertToTargetBlock(t *testing.T) {
 	state := bucket_test.NewState()
-	state.Bucket_tree.RevertToTargetBlock(big.NewInt(2),big.NewInt(1))
+	state.Bucket_tree.RevertToTargetBlock(big.NewInt(5),big.NewInt(4))
 }
 
 func featchDataNodeFromDBTest(){
