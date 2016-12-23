@@ -57,16 +57,18 @@ func TestSigntx(t *testing.T)  {
 	if err!=nil{
 		panic(err)
 	}
-	//priv := p.(*ecdsa.PrivateKey)
+	priv := k.(*ecdsa.PrivateKey)
 
 	//签名交易
-	//tx:= NewTransaction(common.Address{},big.NewInt(100))
-	//s256 := NewKeccak256Hash("Keccak256")
-	//hash := s256.Hash([]interface{}{tx.data.Amount,tx.data.Recipient})
-	//signature,err := ee.Sign(hash[:],priv)
+	tx:= NewTransaction(common.Address{},big.NewInt(100))
+	s256 := NewKeccak256Hash("Keccak256")
+	hash := s256.Hash([]interface{}{tx.data.Amount,tx.data.Recipient})
+	signature,err := ee.Sign(hash[:],priv)
+
+	fmt.Println(signature)
 
 	if err != nil {
-		t.Error(err)
+	 	t.Error(err)
 		t.FailNow()
 
 	}

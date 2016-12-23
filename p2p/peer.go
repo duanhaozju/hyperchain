@@ -197,7 +197,6 @@ func (this *Peer) Chat(msg pb.Message) (*pb.Message, error) {
 	log.Debug("Invoke the broadcast method", msg.From.ID, ">>>", this.Addr.ID)
 	//this.chatMux.Lock()
 	//defer this.chatMux.Unlock()
-
 	msg.Payload = this.TEM.EncWithSecret(msg.Payload, this.Addr.Hash)
 	r, err := this.Client.Chat(context.Background(), &msg)
 	if err != nil {

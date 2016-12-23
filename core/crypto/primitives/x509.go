@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"hyperchain/core/crypto/utils"
+	"os"
 )
 
 var (
@@ -127,6 +128,16 @@ func GetCriticalExtension(cert *x509.Certificate, oid asn1.ObjectIdentifier) ([]
 // NewSelfSignedCert create a self signed certificate
 func NewSelfSignedCert() ([]byte, interface{}, error) {
 	privKey, err := NewECDSAKey()
+
+	//储存privateKey
+	var block pem.Block
+	block.Type="ECDSA PRIVATE KEY"
+	der,_ := PrivateKeyToDER(privKey)
+	block.Bytes = der
+	file,_ := os.Create("ecert.priv")
+	pem.Encode(file,&block)
+	//--------------------------
+
 	if err != nil {
 		return nil, nil, err
 	}
@@ -154,7 +165,7 @@ func NewSelfSignedCert() ([]byte, interface{}, error) {
 			},
 		},
 		NotBefore: time.Now().Add(-1 * time.Hour),
-		NotAfter:  time.Now().Add(1 * time.Hour),
+		NotAfter:  time.Now().Add(8760 * time.Hour),//暂定证书有效期为一年
 
 		SignatureAlgorithm: x509.ECDSAWithSHA384,
 

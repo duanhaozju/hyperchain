@@ -12,7 +12,7 @@ func TestEncryption(t *testing.T){
 	encryption :=NewEcdsaEncrypto("ecdsa")
 	//encryption.GeneralKey("123")
 	//encryption.GetKey()
-	encryption.GenerateNodeKey("123","../keystore/")
+	encryption.GenerateNodeKey("123","../config/keystore/")
 	//key ,_ := encryption.GetNodeKey("../keystore/")
 
 
