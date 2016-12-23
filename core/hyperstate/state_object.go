@@ -243,7 +243,7 @@ func (self *StateObject) Flush(db hyperdb.Batch) error {
 		}
 	}
 	// flush all bucket tree modified to batch
-	self.bucketTree.AddChangesForPersistence(db)
+	self.bucketTree.AddChangesForPersistence(db, big.NewInt(int64(self.db.curSeqNo)))
 	return nil
 }
 
@@ -274,13 +274,16 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 				workingSet[k.Hex()] = v.Bytes()
 			}
 		}
-		self.bucketTree.PrepareWorkingSet(workingSet)
+		hash1, _ := self.bucketTree.ComputeCryptoHash()
+		log.Errorf("state object %s storage root hash %s before #%d", self.address.Hex(), common.Bytes2Hex(hash1), self.db.curSeqNo)
+		self.bucketTree.PrepareWorkingSet(workingSet, big.NewInt(int64(self.db.curSeqNo)))
 		// 2. calculate hash
 		hash, err := self.bucketTree.ComputeCryptoHash()
 		if err != nil {
 			log.Errorf("calculate storage hash for stateObject [%s] failed", self.address.Hex())
 			return common.Hash{}
 		}
+		log.Errorf("state object %s storage root hash %s after #%d", self.address.Hex(), common.Bytes2Hex(hash), self.db.curSeqNo)
 		// 3. assign to self.ROOT
 		self.SetRoot(common.BytesToHash(hash))
 		log.Errorf("state object %s storage root hash %s", self.address.Hex(), self.Root().Hex())

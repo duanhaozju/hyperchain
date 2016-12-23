@@ -148,7 +148,6 @@ func (self *StateDB) Reset() error {
 	// IMPORTANT reset obj.onDirty callback function and bucket tree
 	for _, obj := range self.stateObjects {
 		obj.onDirty = self.MarkStateObjectDirty
-		obj.bucketTree.Reset()
 	}
 	self.contentCache.Add(self.curSeqNo, self.stateObjects)
 	// clear all stuff
@@ -159,8 +158,6 @@ func (self *StateDB) Reset() error {
 	self.txIndex = 0
 	self.logs = make(map[common.Hash]vm.Logs)
 	self.logSize = 0
-	// reset bucket tree
-	self.bucketTree.Reset()
 	return nil
 }
 
@@ -811,14 +808,14 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 	} else {
 		// Use bucket tree instead
 		log.Errorf("begin to calculate state db root hash for #%d", s.curSeqNo)
-		s.bucketTree.PrepareWorkingSet(workingSet)
+		s.bucketTree.PrepareWorkingSet(workingSet, big.NewInt(int64(s.curSeqNo)))
 		hash, err := s.bucketTree.ComputeCryptoHash()
 		if err != nil {
 			log.Error("calculate hash for statedb failed")
 			return common.Hash{}, err
 		}
 		s.root = common.BytesToHash(hash)
-		s.bucketTree.AddChangesForPersistence(dbw)
+		s.bucketTree.AddChangesForPersistence(dbw, big.NewInt(int64(s.curSeqNo)))
 	}
 	return s.root, err
 }
