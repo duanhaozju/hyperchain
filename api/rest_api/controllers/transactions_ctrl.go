@@ -2,8 +2,8 @@ package controllers
 
 import (
 	"github.com/astaxie/beego"
-	"hyperchain/hpc"
-	"hyperchain/rest_api/utils"
+	"hyperchain/api"
+	"hyperchain/api/rest_api/utils"
 	"encoding/json"
 	"strconv"
 )

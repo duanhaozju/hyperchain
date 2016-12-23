@@ -3,12 +3,12 @@
 package hpc
 
 import (
-	"errors"
 	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/state"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
+	"fmt"
 )
 
 type PublicBlockAPI struct {
@@ -56,14 +56,14 @@ func prepareIntervalArgs(args IntervalArgs) (IntervalArgs, error) {
 	var from, to *BlockNumber
 
 	if args.From == nil || args.To == nil {
-		return IntervalArgs{}, errors.New("missing params 'from' or 'to'",)
+		return IntervalArgs{}, &invalidParamsError{"missing params 'from' or 'to'"}
 	} else {
 		from = args.From
 		to = args.To
 	}
 
 	if *from > *to || *from < 1 || *to < 1 {
-		return IntervalArgs{}, errors.New("Invalid params")
+		return IntervalArgs{}, &invalidParamsError{"invalid params"}
 	}
 
 	return IntervalArgs{
@@ -103,7 +103,7 @@ type BlocksIntervalResult struct{
 func (blk *PublicBlockAPI) GetBlocksByTime(args IntervalTime) (*BlocksIntervalResult, error){
 
 	if args.StartTime > args.Endtime {
-		return nil, errors.New("invalid params")
+		return nil, &invalidParamsError{"invalid params"}
 	}
 
 	sumOfBlocks, startBlock, endBlock := getBlocksByTime(args.StartTime,args.Endtime,blk.db)
@@ -122,8 +122,10 @@ func (blk *PublicBlockAPI) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (N
 		return 0, err
 	}
 
-	if t,err := core.CalBlockGenerateAvgTime(realArgs.From.ToUint64(), realArgs.To.ToUint64()); err != nil {
-		return 0, err
+	if t,err := core.CalBlockGenerateAvgTime(realArgs.From.ToUint64(), realArgs.To.ToUint64()); err != nil && err.Error() == leveldb_not_found_error {
+		return 0, &leveldbNotFoundError{"block"}
+	} else if err != nil {
+		return 0, &callbackError{err.Error()}
 	} else {
 		return *NewInt64ToNumber(t), nil
 	}
@@ -142,8 +144,10 @@ func latestBlock(db *hyperdb.LDBDatabase) (*BlockResult, error) {
 func getBlockByNumber(n BlockNumber, db *hyperdb.LDBDatabase) (*BlockResult, error) {
 
 	m := n.ToUint64()
-	if blk, err := core.GetBlockByNumber(db, m); err != nil {
-		return nil, err
+	if blk, err := core.GetBlockByNumber(db, m); err != nil && err.Error() == leveldb_not_found_error {
+		return nil, &leveldbNotFoundError{fmt.Sprintf("block by %d",n)}
+	} else if err != nil {
+		return nil, &callbackError{err.Error()}
 	} else {
 		return outputBlockResult(blk, db)
 	}
@@ -178,7 +182,6 @@ func getBlocksByTime(startTime,endTime int64, db *hyperdb.LDBDatabase)(sumOfBloc
 func getBlockStateDb(n BlockNumber, db *hyperdb.LDBDatabase) (*state.StateDB, error) {
 
 	block, err := getBlockByNumber(n, db)
-
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +189,7 @@ func getBlockStateDb(n BlockNumber, db *hyperdb.LDBDatabase) (*state.StateDB, er
 	stateDB, err := state.New(block.MerkleRoot, db)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
-		return nil, err
+		return nil, &callbackError{err.Error()}
 	}
 
 	return stateDB, nil
@@ -195,7 +198,7 @@ func getBlockStateDb(n BlockNumber, db *hyperdb.LDBDatabase) (*state.StateDB, er
 func outputBlockResult(block *types.Block, db *hyperdb.LDBDatabase) (*BlockResult, error) {
 
 	txCounts := int64(len(block.Transactions))
-	//count, percent := core.CalcResponseCount(block.Number, int64(200))
+	//count, percent :=types.go.CalcResponseCount(block.Number, int64(200))
 
 	transactions := make([]interface{}, txCounts)
 	var err error
@@ -224,12 +227,14 @@ func outputBlockResult(block *types.Block, db *hyperdb.LDBDatabase) (*BlockResul
 func getBlockByHash(hash common.Hash, db *hyperdb.LDBDatabase) (*BlockResult, error) {
 
 	if common.EmptyHash(hash) == true {
-		return nil, errors.New("Invalid hash")
+		return nil, &invalidParamsError{"invalid hash"}
 	}
 
 	block, err := core.GetBlock(db, hash[:])
-	if err != nil {
-		return nil, err
+	if err != nil && err.Error() == leveldb_not_found_error {
+		return nil, &leveldbNotFoundError{fmt.Sprintf("block by %#x", hash)}
+	} else if err != nil {
+		return nil, &callbackError{err.Error()}
 	}
 
 	return outputBlockResult(block, db)
@@ -295,7 +300,7 @@ func (blk *PublicBlockAPI) QueryEvmAvgTime(args SendQueryArgs) (int64, error) {
 func (blk *PublicBlockAPI) QueryTPS(args SendQueryArgs) (string, error) {
 	err, ret := core.CalBlockGPS(args.From.ToInt64(), args.To.ToInt64())
 	if err != nil {
-		return "", err
+		return "", &callbackError{err.Error()}
 	}
 	return  ret, nil
 }
@@ -303,7 +308,7 @@ func (blk *PublicBlockAPI) QueryTPS(args SendQueryArgs) (string, error) {
 func (blk *PublicBlockAPI) QueryWriteTime(args SendQueryArgs) (*StatisticResult, error){
 	err, ret := core.GetBlockWriteTime(args.From.ToInt64(), args.To.ToInt64())
 	if err != nil {
-		return nil, err
+		return nil, &callbackError{err.Error()}
 	}
 	return &StatisticResult{
 		TimeList: ret,

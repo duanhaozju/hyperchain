@@ -3,7 +3,6 @@
 package hpc
 
 import (
-	"errors"
 	"fmt"
 	"hyperchain/accounts"
 	"hyperchain/common"
@@ -42,10 +41,10 @@ func (acc *PublicAccountAPI) NewAccount(password string) (common.Address, error)
 	ac, err := am.NewAccount(password)
 	if err != nil {
 		log.Errorf("New Account error,%v", err)
-		return common.Address{}, err
+		return common.Address{}, &callbackError{err.Error()}
 	}
 
-	/*	balanceIns, err := core.GetBalanceIns()
+	/*	balanceIns, err :=types.go.GetBalanceIns()
 		balanceIns.PutCacheBalance(ac.Address, []byte("0"))
 		balanceIns.PutDBBalance(ac.Address, []byte("0"))*/
 	return ac.Address, nil
@@ -68,7 +67,7 @@ func (acc *PublicAccountAPI) UnlockAccount(args UnlockParas) (bool, error) {
 	ac := accounts.Account{Address: args.Address, File: am.KeyStore.JoinPath(s)}
 	err := am.Unlock(ac, args.Password)
 	if err != nil {
-		return false, errors.New("Incorrect address or password!")
+		return false, &invalidParamsError{"incorrect address or password!"}
 	}
 	return true, nil
 }
@@ -107,21 +106,23 @@ func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 // GetBalance returns account balance for given account address.
 func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
 
-	if headBlock, err := core.GetBlock(acc.db, core.GetChainCopy().LatestBlockHash);err != nil {
+	if headBlock, err := core.GetBlock(acc.db, core.GetChainCopy().LatestBlockHash);err != nil && err.Error() == leveldb_not_found_error{
+		return "", &leveldbNotFoundError{"latest block"}
+	} else if err != nil {
 		log.Errorf("Get Block error, %v", err)
-		return "", err
-	} else if headBlock != nil {
+		return "", &callbackError{err.Error()}
+	}else if headBlock != nil {
 
 		if stateDB, err := state.New(common.BytesToHash(headBlock.MerkleRoot), acc.db);err == nil && stateDB != nil {
 			if stateobject := stateDB.GetStateObject(addr);stateobject != nil {
 				return fmt.Sprintf(`0x%x`, stateobject.BalanceData), nil
 			} else {
-				return "", errors.New("stateobject is nil, the account may not exist")
+				return "", &leveldbNotFoundError{"stateobject, the account may not exist"}
 			}
 		} else if err != nil {
 			return "", err
 		} else {
-			return "", errors.New("statedb is nil")
+			return "", &leveldbNotFoundError{"statedb"}
 		}
 	} else {
 		return "", nil

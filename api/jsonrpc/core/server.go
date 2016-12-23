@@ -261,8 +261,10 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 
 	if req.callb.errPos >= 0 { // test if method returned an error
 		if !reply[req.callb.errPos].IsNil() {
-			e := reply[req.callb.errPos].Interface().(error)
-			res := codec.CreateErrorResponse(&req.id, &callbackError{e.Error()})
+			//e := reply[req.callb.errPos].Interface().(error)
+			//res := codec.CreateErrorResponse(&req.id, &callbackError{e.Error()})
+			e := reply[req.callb.errPos].Interface().(RPCError)
+			res := codec.CreateErrorResponse(&req.id, e)
 			return res, nil
 		}
 	}

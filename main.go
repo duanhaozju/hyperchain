@@ -12,7 +12,7 @@ import (
 	"hyperchain/core/blockpool"
 	"hyperchain/crypto"
 	"hyperchain/event"
-	"hyperchain/jsonrpc"
+	"hyperchain/api/jsonrpc/core"
 	"hyperchain/manager"
 	"hyperchain/membersrvc"
 	"hyperchain/p2p"
