@@ -22,16 +22,22 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"fmt"
 )
 
 type argT struct {
 	cli.Helper
-	NodeID      int    `cli:"o,id" usage:"node ID" dft:"1"`
-	ConfigPath  string `cli:"c,conf" usage:"配置文件所在路径" dft:"./config/global.yaml"`
-	GRPCPort    int    `cli:"l,rpcport" usage:"远程连接端口" dft:"8001"`
-	HTTPPort    int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
-	IsReconnect bool  `cli:"r,isReconnect" usage:"是否重新链接" dft:"false"`
+	NodeID     int    `cli:"o,id" usage:"node ID" dft:"1"`
+	ConfigPath string `cli:"c,conf" usage:"配置文件所在路径" dft:"./config/global.yaml"`
+	GRPCPort   int    `cli:"l,rpcport" usage:"远程连接端口" dft:"8001"`
+	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
+	RESTPort   int	  `cli:"f,restport" useage:"restful开放端口" dft:"9000"`
+	IsInit     bool   `cli:"i,init" usage:"是否是创世节点" dft:"false"`
+	Introducer string `cli:"r,introducer" usage:"加入代理节点信息,格127.0.0.1:8001"dft:"127.0.0.1:8001:1"`
+	IsReconnect bool  `cli:"e,isReconnect" usage:"是否重新链接" dft:"false"`
 }
+
+
 
 func checkLicense(licensePath string) (err error, expiredTime time.Time) {
 	defer func() {
@@ -82,7 +88,7 @@ func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*argT)
 
-		config := newconfigsImpl(argv.ConfigPath, argv.NodeID, argv.GRPCPort, argv.HTTPPort)
+		config := newconfigsImpl(argv.ConfigPath, argv.NodeID, argv.GRPCPort, argv.HTTPPort, argv.RESTPort)
 
 		err, expiredTime := checkLicense(config.getLicense())
 		if err != nil {
@@ -97,7 +103,20 @@ func main() {
 		eventMux := new(event.TypeMux)
 
 		//init peer manager to start grpc server and client
-		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath(), config.getNodeID())
+		//introducer ip
+		introducerIp := strings.Split(argv.Introducer, ":")[0]
+		introducerPort, atoi_err := strconv.Atoi(strings.Split(argv.Introducer, ":")[1])
+		if atoi_err != nil {
+			fmt.Errorf("错误,代理节点信息格式错误%v", atoi_err)
+		}
+		introducerID, atoi_err := strconv.Atoi(strings.Split(argv.Introducer, ":")[2])
+		if atoi_err != nil {
+			fmt.Errorf("错误,代理节点信息格式错误%v", atoi_err)
+		}
+		introducerPortint64 := int64(introducerPort)
+		introducerIDUint64 := uint64(introducerID)
+		//introducer port
+		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath(), config.getNodeID(), argv.IsInit, introducerIp, introducerPortint64,introducerIDUint64)
 
 		//init db
 		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())
@@ -120,18 +139,38 @@ func main() {
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
 
 		//init block pool to save block
-		blockPool := blockpool.NewBlockPool(eventMux, cs)
+		blockPoolConf := blockpool.BlockPoolConf{
+			BlockVersion: config.getBlockVersion(),
+			TransactionVersion: config.getTransactionVersion(),
+		}
+		blockPool := blockpool.NewBlockPool(eventMux, cs, blockPoolConf)
 		if blockPool == nil {
 			return errors.New("Initialize BlockPool failed")
 		}
+
 		//init manager
 		exist := make(chan bool)
 		syncReplicaInterval, _ := config.getSyncReplicaInterval()
 		syncReplicaEnable := config.getSyncReplicaEnable()
-		pm := manager.New(eventMux, blockPool, grpcPeerMgr, cs, am, kec256Hash,
-			config.getNodeID(), syncReplicaInterval, syncReplicaEnable, exist, expiredTime, argv.IsReconnect)
+		pm := manager.New(eventMux,
+				blockPool,
+				grpcPeerMgr,
+				cs,
+				am,
+				kec256Hash,
+				argv.IsReconnect, //reconnect
+				syncReplicaInterval,
+				syncReplicaEnable,
+				exist,
+				expiredTime,
+				config.getGRPCPort())
+		rateLimitCfg := config.getRateLimitConfig()
+		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(),config.getLogDumpFileDir(),eventMux, pm, rateLimitCfg)
 
-		go jsonrpc.Start(config.getHTTPPort(), eventMux, pm, config.getRateLimitConfig())
+		//go func() {
+		//	log.Println(http.ListenAndServe("localhost:6064", nil))
+		//}()
+
 		<-exist
 		return nil
 	})

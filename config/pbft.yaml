@@ -1,14 +1,4 @@
-###########################################################
-#  _   _                        ____ _           _        #
-# | | | |_   _ _ __   ___ _ __ / ___| |__   __ _(_)_ __   #
-# | |_| | | | | '_ \ / _ \ '__| |   | '_ \ / _\` | | '_ \ #
-# |  _  | |_| | |_) |  __/ |  | |___| | | | (_| | | | | | #
-# |_| |_|\__, | .__/ \___|_|   \____|_| |_|\__,_|_|_| |_| #
-#        |___/|_|                                         #
-###########################################################
-
-## PBFT PROPERTIES
-# Note: please READ the comments carefully when modify
+################################################################################
 #
 
 pbft:
@@ -19,6 +9,8 @@ pbft:
     # How many transactions should the primary pack before sending pre-prepare
     batchsize: 500
 
+    # How many times of same vc from self before a replica start recovery
+    vcresendlimit: 10
 
 # Timeouts
 timeout:
@@ -27,7 +19,7 @@ timeout:
     negoview: 6s
 
     # How long to wait before recovery finished(This is for release1.2)
-    recovery: 1s
+    recovery: 15s
 
     # How long to wait before first request should come
     firstrequest: 30s

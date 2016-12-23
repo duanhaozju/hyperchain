@@ -192,7 +192,6 @@ func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byt
 	if err != nil {
 		return nil, err
 	}
-
 	derivedKey, err := getKDFKey(keyProtected.Crypto, auth)
 	if err != nil {
 		return nil, err

@@ -21,23 +21,35 @@ message Message{
     enum MsgType {
         HELLO           = 0;
         HELLO_RESPONSE  = 1;
-        RECONNECT = 2;
-        RECONNECT_RESPONSE = 3;
-        RESPONSE = 4;
-        CONSUS = 5;
-        KEEPALIVE = 6;
-        SYNCMSG = 7;
-        PENDING = 8;
+        INTRODUCE = 2;
+        INTRODUCE_RESPONSE = 3;
+        ATTEND = 4;
+        ATTEND_RESPNSE = 5;
+        RESPONSE = 6;
+        CONSUS = 7;
+        KEEPALIVE = 8;
+        SYNCMSG = 9;
+        PENDING = 10;
+        RECONNECT = 11;
+        RECONNECT_RESPONSE = 12;
     }
 }
+
+
+// Routers table this is the router table which for transfer
+message Routers {
+    repeated PeerAddress routers = 1;
+}
+
 
 //PeerAddress the peer address
 message PeerAddress {
         string IP      =   1;
         int64  Port    =   2;
-        string hash    =   3;
-        uint64 ID      =   4;
+        uint64 ID      =   3;
+        string hash    =   4;
 }
+
 
 service Chat {
     // double arrow data tranfer

@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"hyperchain/protos"
-	"hyperchain/core/types"
 	"hyperchain/consensus/helper/persist"
 
 	"github.com/golang/protobuf/proto"
@@ -32,7 +31,7 @@ func (a sortableUint64Slice) Less(i, j int) bool {
 // helper functions for create batch
 // =============================================================================
 
-func (pbft *pbftProtocal) postRequestEvent(event *types.Transaction) {
+func (pbft *pbftProtocal) postRequestEvent(event interface{}) {
 
 	pbft.muxBatch.Lock()
 	defer pbft.muxBatch.Unlock()
@@ -52,9 +51,13 @@ func (pbft *pbftProtocal) postPbftEvent(event interface{}) {
 // helper functions for PBFT
 // =============================================================================
 
-// Given a certain view n, what is the expected primary?
-func (pbft *pbftProtocal) primary(n uint64) uint64 {
-	return (n % uint64(pbft.replicaCount) + 1)
+// Given a certain view v and replicaCount n, what is the expected primary?
+func (pbft *pbftProtocal) primary(v uint64) uint64 {
+	if pbft.inUpdatingN {
+		return (v % uint64(pbft.previousN)) + 1
+	} else {
+		return (v % uint64(pbft.N)) + 1
+	}
 }
 
 // Is the sequence number between watermarks?
@@ -64,7 +67,11 @@ func (pbft *pbftProtocal) inW(n uint64) bool {
 
 // Is the view right? And is the sequence number between watermarks?
 func (pbft *pbftProtocal) inWV(v uint64, n uint64) bool {
-	return pbft.view == v && pbft.inW(n)
+	if pbft.inUpdatingN {
+		return pbft.previousView == v && pbft.inW(n)
+	} else {
+		return pbft.view == v && pbft.inW(n)
+	}
 }
 
 // Given a digest/view/seq, is there an entry in the certLog?
@@ -101,10 +108,74 @@ func (pbft *pbftProtocal) getChkptCert(n uint64, id string) (cert *chkptCert) {
 
 	chkpts := make(map[Checkpoint]bool)
 	cert = &chkptCert{
-		chkpts:		chkpts,
-		chkptCount:	0,
+		chkpts:	chkpts,
 	}
 	pbft.chkptCertStore[idx] = cert
+
+	return
+}
+
+// Given a ip/digest get the addnode Cert
+func (pbft *pbftProtocal) getAddNodeCert(digest string) (cert *addNodeCert) {
+
+	cert, ok := pbft.addNodeCertStore[digest]
+
+	if ok {
+		return
+	}
+
+	adds := make(map[AddNode]bool)
+	agrees := make(map[AgreeUpdateN]bool)
+	cert = &addNodeCert{
+		addNodes:	adds,
+		agrees:		agrees,
+	}
+	pbft.addNodeCertStore[digest] = cert
+
+	return
+}
+
+// Given a ip/digest get the addnode Cert
+func (pbft *pbftProtocal) getDelNodeCert(delHash string, routerHash string) (cert *delNodeCert) {
+
+	id := delID{delHash: delHash, routerHash: routerHash}
+	cert, ok := pbft.delNodeCertStore[id]
+
+	if ok {
+		return
+	}
+
+	dels := make(map[DelNode]bool)
+	agrees := make(map[AgreeUpdateN]bool)
+	cert = &delNodeCert{
+		delNodes:	dels,
+		agrees:		agrees,
+	}
+	pbft.delNodeCertStore[id] = cert
+
+	return
+}
+
+func (pbft *pbftProtocal) getAddNV() (n int64, v uint64) {
+
+	n = int64(pbft.N) + 1
+	if pbft.view < uint64(pbft.N) {
+		v = pbft.view
+	} else {
+		v = pbft.view + 1
+	}
+
+	return
+}
+
+func (pbft *pbftProtocal) getDelNV() (n int64, v uint64) {
+
+	n = int64(pbft.N) - 1
+	if pbft.view < uint64(pbft.N) {
+		v = pbft.view
+	} else {
+		v = pbft.view - 1
+	}
 
 	return
 }
@@ -115,22 +186,38 @@ func (pbft *pbftProtocal) getChkptCert(n uint64, id string) (cert *chkptCert) {
 // =============================================================================
 
 func (pbft *pbftProtocal) preparedReplicasQuorum() int {
-	return (2 * pbft.f)
+	if pbft.inUpdatingN {
+		return (2 * pbft.previousF)
+	} else {
+		return (2 * pbft.f)
+	}
 }
 
 func (pbft *pbftProtocal) committedReplicasQuorum() int {
-	return (2 * pbft.f + 1)
+	if pbft.inUpdatingN {
+		return (2 * pbft.previousF + 1)
+	} else {
+		return (2 * pbft.f + 1)
+	}
 }
 
 // intersectionQuorum returns the number of replicas that have to
 // agree to guarantee that at least one correct replica is shared by
 // two intersection quora
 func (pbft *pbftProtocal) intersectionQuorum() int {
-	return (pbft.N + pbft.f + 2) / 2
+	if pbft.inUpdatingN {
+		return (pbft.previousN + pbft.previousF + 2) / 2
+	} else {
+		return (pbft.N + pbft.f + 2) / 2
+	}
 }
 
 func (pbft *pbftProtocal) allCorrectReplicasQuorum() int {
-	return (pbft.N - pbft.f)
+	if pbft.inUpdatingN {
+		return (pbft.previousN - pbft.previousF)
+	} else {
+		return (pbft.N - pbft.f)
+	}
 }
 
 // =============================================================================
@@ -142,14 +229,13 @@ func (pbft *pbftProtocal) prePrepared(digest string, v uint64, n uint64) bool {
 	_, mInLog := pbft.validatedBatchStore[digest]
 
 	if digest != "" && !mInLog {
-		logger.Debugf("Replica %d havan't store the reqBatch")
+		logger.Debugf("Replica %d havan't store the reqBatch", pbft.id)
 		return false
 	}
 
 	//if q, ok := pbft.qset[qidx{digest, n}]; ok && q.View == v {
 	//	return true
 	//}
-
 	cert := pbft.certStore[msgID{v, n}]
 
 	if cert != nil {

@@ -6,4 +6,7 @@ message TransactionValue {
 	int64 gasLimit = 2;
 	int64 amount = 3;
 	bytes payload = 4;
+	bytes encryptedAmount = 5;
+	bytes homomorphicAmount = 6;
+	bytes homomorphicBalance = 7;
 }

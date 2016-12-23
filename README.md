@@ -244,7 +244,7 @@ general:
 ## Known Issues
 
 ## Documentation
-Hyperchain documentation is available on the Hyperchain Documentation website https://git.hyperchain.cn/hyperchain/hyperchain.Updated documentation will be available on that page when any documents are updated post-release.
+Hyperchain documentation is available on the Hyperchain Documentation website (preparing)  Updated documentation will be available on that page when any documents are updated post-release.
 Hyperchain has the following product documentations:
 
 - White Paper

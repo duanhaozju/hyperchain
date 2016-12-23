@@ -18,6 +18,7 @@ import (
 	"hyperchain/p2p"
 	"hyperchain/recovery"
 	"hyperchain/trie"
+	"hyperchain/protos"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -45,6 +46,11 @@ type BlockRecord struct {
 	SeqNo       uint64
 }
 
+type BlockPoolConf struct {
+	BlockVersion       string
+	TransactionVersion string
+}
+
 type BlockPool struct {
 	demandNumber        uint64
 	demandSeqNo         uint64
@@ -58,9 +64,10 @@ type BlockPool struct {
 	blockCache          *common.Cache
 	validationQueue     *common.Cache
 	queue               *common.Cache
+	conf                BlockPoolConf
 }
 
-func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *BlockPool {
+func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter, conf BlockPoolConf) *BlockPool {
 	var err error
 	blockcache, err := common.NewCache()
 	if err != nil {return nil}
@@ -75,6 +82,7 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *Block
 		queue:           queue,
 		validationQueue: validationqueue,
 		blockCache:      blockcache,
+		conf:            conf,
 	}
 	currentChain := core.GetChainCopy()
 	pool.demandNumber = currentChain.Height + 1
@@ -90,6 +98,9 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter) *Block
 	return pool
 }
 
+func (pool *BlockPool) GetConfig() BlockPoolConf {
+	return pool.conf
+}
 func (pool *BlockPool) SetDemandNumber(number uint64) {
 	atomic.StoreUint64(&pool.demandNumber, number)
 }
@@ -102,7 +113,7 @@ func (pool *BlockPool) SetDemandSeqNo(seqNo uint64) {
 // If the demand ValidationEvent arrived, call `PreProcess` function
 // IMPORTANT this function called in parallelly, Make sure all the variable are thread-safe
 func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption, peerManager p2p.PeerManager) {
-	if validationEvent.SeqNo > pool.maxSeqNo {
+	if validationEvent.SeqNo > atomic.LoadUint64(&pool.maxSeqNo) {
 		atomic.StoreUint64(&pool.maxSeqNo, validationEvent.SeqNo)
 	}
 
@@ -112,11 +123,11 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 	}
 
 	// (1) Check SeqNo
-	if validationEvent.SeqNo < pool.demandSeqNo {
+	if validationEvent.SeqNo < atomic.LoadUint64(&pool.demandSeqNo)  {
 		// Receive repeat ValidationEvent
 		log.Error("Receive Repeat ValidationEvent, seqno less than demandseqNo, ", validationEvent.SeqNo)
 		return
-	} else if validationEvent.SeqNo == pool.demandSeqNo {
+	} else if validationEvent.SeqNo == atomic.LoadUint64(&pool.demandSeqNo)  {
 		// Process
 		if _, success := pool.PreProcess(validationEvent, commonHash, encryption, peerManager); success {
 			atomic.AddUint64(&pool.demandSeqNo, 1)
@@ -211,7 +222,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	log.Info("Invalid Tx number: ", len(invalidTxSet))
 	log.Info("Valid Tx number: ", len(validTxSet))
 	// Communicate with PBFT
-	pool.consenter.RecvLocal(event.ValidatedTxs{
+	pool.consenter.RecvLocal(protos.ValidatedTxs{
 		Transactions: validTxSet,
 		SeqNo:        validationEvent.SeqNo,
 		View:         validationEvent.View,
@@ -221,6 +232,9 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 
 	// empty block generated, throw all invalid transactions back to original node directly
 	if validationEvent.IsPrimary && len(validTxSet) == 0 {
+		// 1. Remove all cached transaction in this block, because empty block won't enter network
+		pool.consenter.RemoveCachedBatch(validationEvent.SeqNo)
+		// 2. Throw all invalid transaction back to the origin node
 		for _, t := range invalidTxSet {
 			payload, err := proto.Marshal(t)
 			if err != nil {
@@ -315,6 +329,8 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 
 	public_batch := db.NewBatch()
 	for i, tx := range txs {
+		var err error
+		var data []byte
 		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(*tx, vmenv)
 		if err != nil{
@@ -340,44 +356,36 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 			})
 			continue
 		}
-		// save to DB
-		txValue, err := proto.Marshal(tx)
+		// Persist transaction
+		tx.Version = []byte(pool.conf.TransactionVersion)
+		err, data = core.PersistTransaction(public_batch, tx, pool.conf.TransactionVersion, false, false);
 		if err != nil {
-			log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
-			return err, nil, nil, nil, nil, nil, invalidTxs
-		}
-		if err := public_batch.Put(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...), txValue); err != nil {
 			log.Error("Put tx data into database failed! error msg, ", err.Error())
 			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
+		txTrie.Update(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...), data)
 
-		receiptValue, err := proto.Marshal(receipt)
-		if err != nil {
-			log.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
-			return err, nil, nil, nil, nil, nil, invalidTxs
-		}
-		if err := public_batch.Put(append(core.ReceiptsPrefix, receipt.TxHash...), receiptValue); err != nil {
+		// Persist receipt
+		receipt.Version = []byte(pool.conf.TransactionVersion)
+		err, data = core.PersistReceipt(public_batch, receipt, pool.conf.TransactionVersion, false, false)
+		if  err != nil {
 			log.Error("Put receipt data into database failed! error msg, ", err.Error())
 			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
+		receiptTrie.Update(append(core.ReceiptsPrefix, receipt.TxHash...), data)
+
+		// Persist transaction meta
 		// set temporarily
 		// for primary node, the seqNo can be invalid. remove the incorrect txmeta info when commit block to avoid this error
 		meta := &types.TransactionMeta{
 			BlockIndex: seqNo,
 			Index:      int64(i),
 		}
-		metaValue, err := proto.Marshal(meta)
-		if err != nil {
-			log.Error("Invalid txmeta struct to marshal! error msg, ", err.Error())
-			return err, nil, nil, nil, nil, nil, invalidTxs
-		}
-		if err := public_batch.Put(append(tx.GetTransactionHash().Bytes(), core.TxMetaSuffix...), metaValue); err != nil {
+		if err := core.PersistTransactionMeta(public_batch, meta, tx.GetTransactionHash(), false, false); err != nil {
 			log.Error("Put txmeta into database failed! error msg, ", err.Error())
 			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
-		// Update trie
-		txTrie.Update(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...), txValue)
-		receiptTrie.Update(append(core.ReceiptsPrefix, receipt.TxHash...), receiptValue)
+
 		validtxs = append(validtxs, tx)
 	}
 	root, err := statedb.Commit()
@@ -418,6 +426,7 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHa
 		newBlock.WriteTime = time.Now().UnixNano()
 		newBlock.EvmTime = time.Now().UnixNano()
 		newBlock.BlockHash = newBlock.Hash(commonHash).Bytes()
+		newBlock.Version = []byte(pool.conf.BlockVersion)
 
 		vid := record.SeqNo
 		// 2.save block and update chain
@@ -449,7 +458,7 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHa
 // Put a new generated block into pool, handle the block saved in queue serially
 func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, primary bool) {
 	if block.Number == 0 {
-		WriteBlock(block, commonHash, 0, false)
+		WriteBlock(block, commonHash, 0, false, pool.consenter)
 		return
 	}
 
@@ -462,17 +471,14 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 		return
 	}
 
-	log.Info("number is ", block.Number)
-
 	if pool.demandNumber == block.Number {
-		WriteBlock(block, commonHash, vid, primary)
+		WriteBlock(block, commonHash, vid, primary, pool.consenter)
 		atomic.AddUint64(&pool.demandNumber, 1)
-		log.Info("current demandNumber is ", pool.demandNumber)
 
 		for i := block.Number + 1; i <= atomic.LoadUint64(&pool.maxNum); i += 1 {
 			if ret, existed := pool.queue.Get(i); existed {
 				blk := ret.(*types.Block)
-				WriteBlock(blk, commonHash, vid, primary)
+				WriteBlock(blk, commonHash, vid, primary, pool.consenter)
 				pool.queue.Remove(i)
 				atomic.AddUint64(&pool.demandNumber, 1)
 				log.Info("current demandNumber is ", pool.demandNumber)
@@ -487,8 +493,7 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 }
 
 // WriteBlock: save block into database
-func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, primary bool) {
-	log.Info("block number is ", block.Number)
+func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, primary bool, consenter consensus.Consenter) {
 	core.UpdateChain(block, false)
 
 	db, err := hyperdb.GetLDBDatabase()
@@ -497,40 +502,43 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, pr
 		return
 	}
 	// for primary node, check whether vid equal to block's number
+	batch := db.NewBatch()
 	if primary && vid != block.Number {
 		log.Info("Replace invalid txmeta data, block number:", block.Number)
-		batch := db.NewBatch()
 		for i, tx := range block.Transactions {
 			meta := &types.TransactionMeta{
 				BlockIndex: block.Number,
 				Index:      int64(i),
 			}
-			metaValue, err := proto.Marshal(meta)
-			if err != nil {
+			// replace with correct value
+			if err := core.PersistTransactionMeta(batch, meta, tx.GetTransactionHash(), false, false); err != nil {
 				log.Error("Invalid txmeta sturct, marshal failed! error msg,", err.Error())
 				return
 			}
-			if err := batch.Put(append(tx.GetTransactionHash().Bytes(), core.TxMetaSuffix...), metaValue); err != nil {
-				log.Error("Put txmeta into database failed! error msg, ", err.Error())
-				return
-			}
 		}
-		batch.Write()
 	}
 
-	err = core.PutBlockTx(db, commonHash, block.BlockHash, block)
+
+	err, _ = core.PersistBlock(batch, block, string(block.Version), false, false)
 	if err != nil {
 		log.Error("Put block into database failed! error msg, ", err.Error())
 		return
 	}
-
+	// flush to disk
+	// IMPORTANT never remove this statement, otherwise the whole batch of data will lose
+	batch.Write()
 	if block.Number%10 == 0 && block.Number != 0 {
 		core.WriteChainChan()
 	}
-
 	newChain := core.GetChainCopy()
 	log.Notice("Block number", newChain.Height)
 	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
+	/*
+		Remove Cached Transactions which used to check transaction duplication
+	 */
+	if primary {
+		consenter.RemoveCachedBatch(vid)
+	}
 }
 
 // save the invalid transaction into database for client query
@@ -564,8 +572,7 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 		return
 	}
 
-
-	block, err := core.GetBlockByNumber(db, ev.SeqNo-1)
+	block, err := core.GetBlockByNumber(db, ev.SeqNo - 1)
 	if err != nil {
 		return
 	}
@@ -582,18 +589,20 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 		}
 		record := ret.(BlockRecord)
 		for i, tx := range record.ValidTxs {
-			if err := db.Delete(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
+			if err := core.DeleteTransaction(db, tx.GetTransactionHash().Bytes()); err != nil {
 				log.Errorf("ViewChange, delete useless tx in cache %d failed, error msg %s", i, err.Error())
 			}
-			if err := db.Delete(append(core.ReceiptsPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
+
+			if err := core.DeleteReceipt(db, tx.GetTransactionHash().Bytes()); err != nil {
 				log.Errorf("ViewChange, delete useless receipt in cache %d failed, error msg %s", i, err.Error())
 			}
-			if err := db.Delete(append(tx.GetTransactionHash().Bytes(), core.TxMetaSuffix...)); err != nil {
+			if err := core.DeleteTransactionMeta(db, tx.GetTransactionHash().Bytes()); err != nil {
 				log.Errorf("ViewChange, delete useless txmeta in cache %d failed, error msg %s", i, err.Error())
 			}
 		}
 	}
 	pool.blockCache.Purge()
+	pool.validationQueue.Purge()
 	// 4. Reset chain
 	isGenesis := (block.Number == 0)
 	core.UpdateChain(block, isGenesis)
@@ -650,12 +659,8 @@ func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 		})
 		return nil
 	} else {
-		receiptValue, err := proto.Marshal(receipt)
+		err, _ := core.PersistReceipt(db.NewBatch(), receipt, pool.conf.TransactionVersion, true, true)
 		if err != nil {
-			log.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
-			return err
-		}
-		if err := db.Put(append(core.ReceiptsPrefix, receipt.TxHash...), receiptValue); err != nil {
 			log.Error("Put receipt data into database failed! error msg, ", err.Error())
 			return err
 		}
@@ -679,13 +684,13 @@ func (pool *BlockPool) RemoveData(from, to uint64) {
 		}
 
 		for _, tx := range block.Transactions {
-			if err := db.Delete(append(core.TransactionPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
+			if err := core.DeleteTransaction(db, tx.GetTransactionHash().Bytes()); err != nil {
 				log.Errorf("delete useless tx in block %d failed, error msg %s", i, err.Error())
 			}
-			if err := db.Delete(append(core.ReceiptsPrefix, tx.GetTransactionHash().Bytes()...)); err != nil {
+			if err := core.DeleteReceipt(db, tx.GetTransactionHash().Bytes()); err != nil {
 				log.Errorf("delete useless receipt in block %d failed, error msg %s", i, err.Error())
 			}
-			if err := db.Delete(append(tx.GetTransactionHash().Bytes(), core.TxMetaSuffix...)); err != nil {
+			if err := core.DeleteTransactionMeta(db, tx.GetTransactionHash().Bytes()); err != nil {
 				log.Errorf("delete useless txmeta in block %d failed, error msg %s", i, err.Error())
 			}
 		}
@@ -708,7 +713,13 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 		log.Errorf("miss block %d ,error msg %s", number - 1, err.Error())
 		return
 	}
+	// clear all stuff in block cache and validation cache
 	pool.lastValidationState.Store(common.BytesToHash(block.MerkleRoot))
 }
-
+func (pool *BlockPool) PurgeValidateQueue() {
+	pool.validationQueue.Purge()
+}
+func (pool *BlockPool) PurgeBlockCache() {
+	pool.blockCache.Purge()
+}
 

@@ -12,6 +12,9 @@ import (
 	"hyperchain/manager"
 	"hyperchain/hpc"
 	"time"
+	"hyperchain/rest_api/routers"
+	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/logs"
 )
 
 const (
@@ -34,8 +37,7 @@ func (hrw *httpReadWrite) Close() error{
 	return nil
 }
 
-func Start(httpPort int,eventMux *event.TypeMux,pm *manager.ProtocolManager, cfg RateLimitConfig) error{
-	//log.Info("=============enter Start()=================")
+func Start(httpPort int, restPort int, logsPath string,eventMux *event.TypeMux,pm *manager.ProtocolManager, cfg RateLimitConfig) error{
 	eventMux = eventMux
 
 	server := NewServer()
@@ -50,23 +52,14 @@ func Start(httpPort int,eventMux *event.TypeMux,pm *manager.ProtocolManager, cfg
 			return err
 		}
 	}
-	//go func() {
-	//	log.Info("start the simple httpserver")
-	//	cmd := exec.Command("pyhton $GOPATH/src/hyperchain/jsonrpc/Dashboard/simpleHttpServer.py")
-	//	//cmd := exec.Command("pwd")
-	//	cmd.Stdout = os.Stdout
-	//	cmd.Stderr = os.Stderr
-	//	log.Info(cmd.Run())
-	//}()
 
-	startHttp(httpPort, server)
+	startHttp(httpPort, restPort,logsPath, server)
 
 	return nil
 }
 
 
-func startHttp(httpPort int, srv *Server) {
-	//log.Info("=============enter startHttp()=================")
+func startHttp(httpPort int, restPort int, logsPath string, srv *Server) {
 	// TODO AllowedOrigins should be a parameter
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
@@ -76,11 +69,24 @@ func startHttp(httpPort int, srv *Server) {
 	// Insert the middleware
 	handler := c.Handler(newJSONHTTPHandler(srv))
 
-	http.ListenAndServe(":"+strconv.Itoa(httpPort),handler)
+	go http.ListenAndServe(":"+strconv.Itoa(httpPort),handler)
+
+	// ===================================== 2016.11.15 START ================================ //
+	routers.NewRouter()
+	beego.BConfig.CopyRequestBody = true
+	beego.SetLogFuncCall(true)
+
+	logs.SetLogger(logs.AdapterFile, `{"filename": "` + logsPath + "/RESTful-API-" + strconv.Itoa(restPort) + "-" + time.Now().Format("2006-01-02 15:04:05") +`"}`)
+	beego.BeeLogger.DelLogger("console")
+
+	// todo 读取　app.conf　配置文件
+	// the first param adapterName is ini/json/xml/yaml.
+	//beego.LoadAppConfig("ini", "jsonrpc/RESTful_api/conf/app.conf")
+	beego.Run("127.0.0.1:"+ strconv.Itoa(restPort))
+	// ===================================== 2016.11.15 END  ================================ //
 }
 
 func newJSONHTTPHandler(srv *Server) http.HandlerFunc{
-	//log.Info("=============enter newJSONHTTPHandler()=================")
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.ContentLength > maxHTTPRequestContentLength {
 			http.Error(w,

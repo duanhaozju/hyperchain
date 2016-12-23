@@ -42,56 +42,6 @@ func (pbft *pbftProtocal) persistPQSet(key string, set []*ViewChange_PQ) {
 	persist.StoreState(key, raw)
 }
 
-//func (pbft *pbftProtocal) persistDelPSet(n uint64) {
-//	raw, err := persist.ReadState("pset")
-//
-//	if err != nil {
-//		logger.Errorf("Read State Set Error %s", err)
-//		return
-//	} else {
-//		pqset := &PQset{}
-//		if umErr := proto.Unmarshal(raw, pqset); umErr != nil {
-//			logger.Error(umErr)
-//			return
-//		} else {
-//			pset := pqset.GetSet()
-//			var newPset []*ViewChange_PQ
-//			for _, p := range pset {
-//				if p.SequenceNumber == n {
-//					continue
-//				}
-//				newPset = append(newPset, p)
-//			}
-//			pbft.persistPQSet("pset", newPset)
-//		}
-//	}
-//}
-//
-//func (pbft *pbftProtocal) persistDelQSet(idx qidx) {
-//	raw, err := persist.ReadState("qset")
-//
-//	if err!= nil {
-//		logger.Errorf("Read State Set Error %s", err)
-//		return
-//	} else {
-//		pqset := &PQset{}
-//		if umErr := proto.Unmarshal(raw, pqset); umErr != nil {
-//			logger.Error(umErr)
-//			return
-//		} else {
-//			qset := pqset.GetSet()
-//			var newQset []*ViewChange_PQ
-//			for _, q := range qset {
-//				if idx.d == q.BatchDigest && idx.n == q.SequenceNumber {
-//					continue
-//				}
-//				newQset = append(newQset, q)
-//			}
-//			pbft.persistPQSet("qset", newQset)
-//		}
-//	}
-//}
-
 func (pbft *pbftProtocal) restorePQSet(key string) []*ViewChange_PQ {
 	raw, err := persist.ReadState(key)
 	if err != nil {
@@ -219,7 +169,7 @@ func (pbft *pbftProtocal) restoreState() {
 	if err == nil {
 		view := binary.LittleEndian.Uint64(b)
 		pbft.view = view
-		//logger.Noticef("=========restore view %d=======", view)
+		logger.Noticef("=========restore view %d=======", view)
 	} else {
 		logger.Noticef("Replica %d could not restore view: %s", pbft.id, err)
 	}
@@ -254,4 +204,3 @@ func (pbft *pbftProtocal) getLastSeqNo() (uint64, error) {
 
 	return h, nil
 }
-

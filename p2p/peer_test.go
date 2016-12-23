@@ -5,6 +5,7 @@ package p2p
 
 import (
 	"testing"
+	node "hyperchain/p2p/node"
 	"hyperchain/event"
 	"hyperchain/p2p/transport"
 	"hyperchain/p2p/peerComm"
@@ -26,31 +27,27 @@ var localAddr *pb.PeerAddress
 var localTEM *transport.HandShakeManager
 var peerPool *PeersPool
 
-
-
-
-func init(){
-	membersrvc.Start("../config/test/local_membersrvc.yaml", 1)
+func init() {
+	membersrvc.Start("../../config/test/local_membersrvc.yaml", 1)
 	fakeNodeTEM = transport.NewHandShakeManger()
-	peerPool = NewPeerPool(fakeNodeTEM)
-	fakeNode = NewNode(8123,new(event.TypeMux),1,peerPool)
-	fakeNodeAddr =peerComm.ExtractAddress(peerComm.GetLocalIp(),8123,1)
-	localAddr = peerComm.ExtractAddress(peerComm.GetLocalIp(),8124,2)
+	fakeNode = NewNode(8123, new(event.TypeMux), 1, fakeNodeTEM)
+	fakeNodeAddr = peerComm.ExtractAddress(peerComm.GetLocalIp(), 8123, 1)
+	localAddr = peerComm.ExtractAddress(peerComm.GetLocalIp(), 8124, 2)
 	localTEM = transport.NewHandShakeManger()
 	fakeNode.StartServer()
 	peerPool = NewPeerPool(fakeNodeTEM)
 }
 
 func TestNewPeerByIpAndPort(t *testing.T) {
-	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID, fakeNodeTEM,localAddr,peerPool)
-	if err != nil{
+	peer, err := NewPeerByIpAndPort(fakeNodeAddr.IP, fakeNodeAddr.Port, fakeNodeAddr.ID, fakeNodeTEM, localAddr)
+	if err != nil {
 		t.Error(err)
 	}
-	t.Log(peer.Addr)
+	t.Log(peer.RemoteAddr)
 }
 
 func TestPeer_Chat(t *testing.T) {
-	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr,peerPool)
+	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr)
 	if err != nil{
 		t.Error(err)
 	}
@@ -62,15 +59,15 @@ func TestPeer_Chat(t *testing.T) {
 		Payload:     []byte("TEST"),
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
-	ret,err := peer.Chat(broadCastMessage)
+	ret, err := peer.Chat(broadCastMessage)
 	t.Log(string(ret.Payload))
-	decrypted := localTEM.DecWithSecret(ret.Payload,peer.Addr.Hash)
+	decrypted := localTEM.DecWithSecret(ret.Payload, peer.RemoteAddr.Hash)
 	t.Log(string(decrypted))
 }
 
 func TestPeer_Chat2(t *testing.T) {
-	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr,peerPool)
-	if err != nil{
+	peer, err := NewPeerByIpAndPort(fakeNodeAddr.IP, fakeNodeAddr.Port, fakeNodeAddr.ID, localTEM, localAddr)
+	if err != nil {
 		t.Error(err)
 	}
 	//t.Log(peer.Addr)
@@ -81,15 +78,15 @@ func TestPeer_Chat2(t *testing.T) {
 		Payload:     []byte("TEST"),
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
-	ret,err := peer.Chat(broadCastMessage)
+	ret, err := peer.Chat(broadCastMessage)
 	t.Log(string(ret.Payload))
-	decrypted := localTEM.DecWithSecret(ret.Payload,peer.Addr.Hash)
+	decrypted := localTEM.DecWithSecret(ret.Payload, peer.RemoteAddr.Hash)
 	t.Log(string(decrypted))
 }
 
 func TestPeer_Chat3(t *testing.T) {
-	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr,peerPool)
-	if err != nil{
+	peer, err := NewPeerByIpAndPort(fakeNodeAddr.IP, fakeNodeAddr.Port, fakeNodeAddr.ID, localTEM, localAddr)
+	if err != nil {
 		t.Error(err)
 	}
 	//t.Log(peer.Addr)
@@ -109,17 +106,17 @@ func TestPeer_Chat3(t *testing.T) {
 		Id:uint64(2),
 	}
 
-	tranferData,err := proto.Marshal(consensusMsg)
-	if err !=nil{
+	tranferData, err := proto.Marshal(consensusMsg)
+	if err != nil {
 		log.Error("marshal err", err)
 	}
-	log.Critical("marshal之后",hex.EncodeToString(tranferData))
+	log.Critical("marshal之后", hex.EncodeToString(tranferData))
 
 	broadCastMessage.Payload = tranferData
 	//传输
-	retmsg,err := peer.Chat(broadCastMessage)
+	retmsg, err := peer.Chat(broadCastMessage)
 
-	if err != nil{
+	if err != nil {
 		t.Error("chat failed", err)
 	}
 
@@ -133,11 +130,11 @@ func TestPeer_Chat3(t *testing.T) {
 	//	t.Error("Inner RecvMsg Unmarshal error: can not unmarshal pb.Message", err)
 	//}
 
-	t.Log("返回信息",retmsg)
+	t.Log("返回信息", retmsg)
 	//t.Log("返回信息Id: ",msg.Id)
 	//t.Log("返回信息Timestamp: ",msg.Timestamp)
 	//t.Log("返回信息Type: ",msg.Type)
 	//t.Log("返回信息Payl:",msg.Payload)
 
-	assert.Exactly(t,[]byte{0x47, 0x4f, 0x54, 0x5f, 0x41, 0x5f, 0x43, 0x4f, 0x4e, 0x53, 0x45, 0x4e, 0x53, 0x55, 0x53, 0x5f, 0x4d, 0x45, 0x53, 0x53, 0x41, 0x47, 0x45},retmsg.Payload)
+	assert.Exactly(t, []byte{0x47, 0x4f, 0x54, 0x5f, 0x41, 0x5f, 0x43, 0x4f, 0x4e, 0x53, 0x45, 0x4e, 0x53, 0x55, 0x53, 0x5f, 0x4d, 0x45, 0x53, 0x53, 0x41, 0x47, 0x45}, retmsg.Payload)
 }

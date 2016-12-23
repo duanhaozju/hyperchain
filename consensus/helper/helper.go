@@ -31,6 +31,9 @@ type Stack interface {
 	ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
 	VcReset(seqNo uint64) error
 	InformPrimary(primary uint64) error
+	BroadcastAddNode(msg *pb.Message) error
+	BroadcastDelNode(msg *pb.Message) error
+	UpdateTable(payload []byte, flag bool) error
 }
 
 // InnerBroadcast broadcast the consensus message between vp nodes
@@ -93,7 +96,6 @@ func (h *helper) Execute(seqNo uint64, hash string, flag bool, isPrimary bool, t
 
 // UpdateState transfers the UpdateStateEvent to outer
 func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
-
 	tmpMsg, err := proto.Marshal(updateState)
 
 	if err != nil {
@@ -136,7 +138,7 @@ func (h *helper) VcReset(seqNo uint64) error {
 
 	// No need to "go h.msgQ.Post...", we'll wait for it to return
 	h.msgQ.Post(vcResetEvent)
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 50)
 
 	return nil
 }
@@ -149,6 +151,57 @@ func (h *helper) InformPrimary(primary uint64) error {
 	}
 
 	go h.msgQ.Post(informPrimaryEvent)
+
+	return nil
+}
+
+// Broadcast addnode message to others
+func (h *helper) BroadcastAddNode(msg *pb.Message) error {
+
+	tmpMsg, err := proto.Marshal(msg)
+
+	if err != nil {
+		return err
+	}
+
+	broadcastEvent := event.BroadcastNewPeerEvent{
+		Payload: tmpMsg,
+	}
+
+	// Post the event to outer
+	go h.msgQ.Post(broadcastEvent)
+
+	return nil
+}
+
+// Broadcast delnode message to others
+func (h *helper) BroadcastDelNode(msg *pb.Message) error {
+
+	tmpMsg, err := proto.Marshal(msg)
+
+	if err != nil {
+		return err
+	}
+
+	broadcastEvent := event.BroadcastDelPeerEvent{
+		Payload: tmpMsg,
+	}
+
+	// Post the event to outer
+	go h.msgQ.Post(broadcastEvent)
+
+	return nil
+}
+
+// Inform to update routing table
+func (h *helper) UpdateTable(payload []byte, flag bool) error {
+
+	updateTable := event.UpdateRoutingTableEvent{
+		Payload:payload,
+		Type:	flag,
+	}
+
+	h.msgQ.Post(updateTable)
 
 	return nil
 }

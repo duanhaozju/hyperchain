@@ -26,14 +26,18 @@
                     <!--<div>{{param.name}}</div>-->
                     <!--<input type="text" class="form-control" ng-model="method.params[param.name]">-->
                     <!--</div>-->
-
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Privatekey：</label>
+                        <div class="col-lg-9">
+                            <input type="text" class="form-control" ng-model="contract.privkey" style="width:100%">
+                        </div>
+                    </div>
                     <div class="form-group" ng-repeat="param in md.inputs">
                         <label class="col-sm-2 control-label">{{param.name}}：</label>
                         <div class="col-lg-9">
                             <input type="text" class="form-control" ng-model="method.params[param.name]" ng-init="method.params[param.name]=''" style="width:100%">
                         </div>
                     </div>
-
                 </div>
             </div>
             <!--<div class="col-lg-2">-->

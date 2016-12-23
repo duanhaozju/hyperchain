@@ -21,12 +21,9 @@ var (
 
 // 这一块相当于ethereum里的TransitionDB
 func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
-	//start := time.Now()
 	var (
 		from = common.BytesToAddress(tx.From)
-		//sender = common.BytesToAddress(tx.From)
 		to = common.BytesToAddress(tx.To)
-		// TODO these there parameters should be added into the tx
 		tv         = tx.GetTransactionValue()
 		data       = tv.GetPayload()
 		gas        = big.NewInt(100000000)
@@ -34,21 +31,19 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		amount     = tv.GetAmount()
 		statedb, _ = env.Db().(*state.StateDB)
 	)
-	// TODO ZHZ_TEST the time of above will cost 10us
+	//ZHZ_TEST the time of above will cost 10us
 
-	// TODO ZHZ_TEST this will cost 200us
+	//ZHZ_TEST this will cost 200us
 	if tx.To == nil {
 		ret, addr, err = Exec(env, &from, nil, data, gas, gasPrice, amount)
 	} else {
 		ret, _, err = Exec(env, &from, &to, data, gas, gasPrice, amount)
 	}
 
-	// TODO ZHZ_TEST the time of below will cost 10us
+	//ZHZ_TEST the time of below will cost 10us
 	receipt = types.NewReceipt(nil, gas)
 	receipt.ContractAddress = addr.Bytes()
-	//todo add tx hash in tx struct
 	receipt.TxHash = tx.GetTransactionHash().Bytes()
-	// todo replace the gasused
 	receipt.GasUsed = 100000
 	receipt.Ret = ret
 	receipt.SetLogs(statedb.GetLogs(common.BytesToHash(receipt.TxHash)))
@@ -62,7 +57,6 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 		receipt.Status = types.Receipt_SUCCESS
 		receipt.Message = nil
 	}
-	//log.Error("manager exec tx time : ", time.Since(start))
 	return receipt, ret, addr, err
 }
 
