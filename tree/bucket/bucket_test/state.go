@@ -15,7 +15,6 @@ var (
 	configs map[string]interface{}
 )
 func init(){
-
 	configs = viper.GetStringMap("ledger.state.dataStructure.configs")
 }
 // State structure for maintaining world state.
@@ -68,13 +67,13 @@ func (state *State) GetHash() ([]byte,error){
 
 // TODO test
 // AddChangesForPersistence adds key-value pairs to writeBatch
-func (state *State) AddChangesForPersistence(writeBatch hyperdb.Batch) {
+func (state *State) AddChangesForPersistence(writeBatch hyperdb.Batch,blockNum *big.Int) {
 	logger.Debug("state.addChangesForPersistence()...start")
 	if state.updateStateImpl {
 		state.Bucket_tree.PrepareWorkingSet(state.key_valueMap,state.currentBlockNum)
 		state.updateStateImpl = false
 	}
-	state.Bucket_tree.AddChangesForPersistence(writeBatch)
+	state.Bucket_tree.AddChangesForPersistence(writeBatch,blockNum)
 	// TODO should add the metadata to the writeBatch?
 	logger.Debug("state.addChangesForPersistence()...finished")
 }
@@ -82,19 +81,19 @@ func (state *State) AddChangesForPersistence(writeBatch hyperdb.Batch) {
 // TODO test
 // CommitStateDelta commits the changes from state.ApplyStateDelta to the
 // DB.
-func (state *State) CommitStateDelta(writeBatch hyperdb.Batch) error {
+func (state *State) CommitStateDelta(writeBatch hyperdb.Batch,blockNum *big.Int) error {
 	if state.updateStateImpl {
 		state.Bucket_tree.PrepareWorkingSet(state.key_valueMap,state.currentBlockNum)
 		state.updateStateImpl = false
 	}
-	state.Bucket_tree.AddChangesForPersistence(writeBatch)
+	state.Bucket_tree.AddChangesForPersistence(writeBatch,blockNum)
 	return writeBatch.Write()
 }
 
 func (state *State) RevertToTargetBlock(currentBlockNum, toBlockNum *big.Int) (error){
 	logger.Debug("start to revert to target block")
 	defer logger.Debug("end to revert to target block")
-	return state.Bucket_tree.RevertToTargetBlock()
+	return state.Bucket_tree.RevertToTargetBlock(currentBlockNum,toBlockNum)
 }
 
 func (state *State) Reset(changePersists bool){

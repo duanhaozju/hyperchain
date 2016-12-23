@@ -53,7 +53,7 @@ func TestState_GetHash(t *testing.T){
 
 	testutil.AssertEquals(t, rootHash, expectedHash)
 }
-func TestState_1(t *testing.T){
+func TestState_1_simple(t *testing.T){
 	db,err := hyperdb.GetLDBDatabase()
 	writeBatch := db.NewBatch()
 	state := bucket_test.NewState()
@@ -70,49 +70,161 @@ func TestState_1(t *testing.T){
 	}else {
 		logger.Debugf("--------------the state.GetHash() is ",(hash))
 	}
-	state.CommitStateDelta(writeBatch)
+	state.CommitStateDelta(writeBatch,big.NewInt(2))
 }
 
-func TestState_2(t *testing.T){
+func TestState_2_without_persist(t *testing.T){
 	db,err := hyperdb.GetLDBDatabase()
 	writeBatch := db.NewBatch()
 	state := bucket_test.NewState()
+	// block 2
 	key_valueMap := bucket.K_VMap{}
 	key_valueMap["key1"] = []byte("value1")
 	key_valueMap["key2"] = []byte("value2")
 	key_valueMap["key3"] = []byte("value3")
 	key_valueMap["key4"] = []byte("value4")
 	key_valueMap["key5"] = []byte("value5")
-	state.SetK_VMap(key_valueMap,big.NewInt(2))
+	state.Bucket_tree.PrepareWorkingSet(key_valueMap,big.NewInt(2))
 	hash,err := state.GetHash()
 	if err != nil{
 		logger.Debugf("--------------GetHash error")
 	}else {
 		logger.Debugf("--------------the state.GetHash() is ",(hash))
 	}
-	state.CommitStateDelta(writeBatch)
+	state.Bucket_tree.AddChangesForPersistence(writeBatch,big.NewInt(2))
+	//writeBatch.Write()
+	// block 3
 	key_valueMap = bucket.K_VMap{}
 	key_valueMap["key6"] = []byte("value6")
 	key_valueMap["key7"] = []byte("value7")
 	key_valueMap["key8"] = []byte("value8")
 	key_valueMap["key9"] = []byte("value9")
 	key_valueMap["key10"] = []byte("value10")
-	state.SetK_VMap(key_valueMap,big.NewInt(3))
+	state.Bucket_tree.PrepareWorkingSet(key_valueMap,big.NewInt(3))
 	hash,err = state.GetHash()
 	if err != nil{
 		logger.Debugf("--------------GetHash error")
 	}else {
 		logger.Debugf("--------------the state.GetHash() is ",(hash))
 	}
-	state.CommitStateDelta(writeBatch)
-	//state.AddChangesForPersistence(writeBatch)
-	//state.Reset(false)
-	//hash,err = state.GetHash()
-	//if err != nil{
-	//	logger.Debugf("--------------GetHash error")
-	//}else {
-	//	logger.Debugf("--------------the state.GetHash() is ",(hash))
-	//}
+	state.Bucket_tree.AddChangesForPersistence(writeBatch,big.NewInt(3))
+	//writeBatch.Write()
+
+	// block 4
+	key_valueMap = bucket.K_VMap{}
+	key_valueMap["key6"] = []byte("value6")
+	key_valueMap["key7"] = []byte("value7")
+	key_valueMap["key8"] = []byte("value8")
+	key_valueMap["key9"] = []byte("value9")
+	key_valueMap["key10"] = []byte("value10")
+	state.Bucket_tree.PrepareWorkingSet(key_valueMap,big.NewInt(4))
+	hash,err = state.GetHash()
+	if err != nil{
+		logger.Debugf("--------------GetHash error")
+	}else {
+		logger.Debugf("--------------the state.GetHash() is ",(hash))
+	}
+	state.Bucket_tree.AddChangesForPersistence(writeBatch,big.NewInt(4))
+	//writeBatch.Write()
+
+
+	// block 5
+	key_valueMap = bucket.K_VMap{}
+	key_valueMap["key11"] = []byte("value11")
+	key_valueMap["key12"] = []byte("value12")
+	key_valueMap["key13"] = []byte("value13")
+	key_valueMap["key14"] = []byte("value14")
+	key_valueMap["key15"] = []byte("value15")
+	state.Bucket_tree.PrepareWorkingSet(key_valueMap,big.NewInt(5))
+	hash,err = state.GetHash()
+	if err != nil{
+		logger.Debugf("--------------GetHash error")
+	}else {
+		logger.Debugf("--------------the state.GetHash() is ",(hash))
+	}
+	state.Bucket_tree.AddChangesForPersistence(writeBatch,big.NewInt(5))
+	//writeBatch.Write()
+
+}
+
+func TestState_3_persist(t *testing.T){
+	testDBWrapper := testutil.NewTestDBWrapper()
+	testDBWrapper.CleanDB(t)
+
+	db,err := hyperdb.GetLDBDatabase()
+	writeBatch := db.NewBatch()
+
+	state := bucket_test.NewState()
+	hash1,err := state.GetHash()
+	testutil.AssertEquals(t,[]byte(nil),hash1)
+
+	// block 2
+	key_valueMap := bucket.K_VMap{}
+	key_valueMap["key1"] = []byte("value1")
+	key_valueMap["key2"] = []byte("value2")
+	key_valueMap["key3"] = []byte("value3")
+	key_valueMap["key4"] = []byte("value4")
+	key_valueMap["key5"] = []byte("value5")
+	state.Bucket_tree.PrepareWorkingSet(key_valueMap,big.NewInt(2))
+	hash2,err := state.GetHash()
+	if err != nil{
+		logger.Debugf("--------------GetHash error")
+	}else {
+		logger.Debugf("--------------the state.GetHash() is ",(hash2))
+	}
+	state.Bucket_tree.AddChangesForPersistence(writeBatch,big.NewInt(2))
+	writeBatch.Write()
+	testutil.AssertNotEquals(t,hash1,hash2)
+	// block 3
+	key_valueMap = bucket.K_VMap{}
+	key_valueMap["key6"] = []byte("value6")
+	key_valueMap["key7"] = []byte("value7")
+	key_valueMap["key8"] = []byte("value8")
+	key_valueMap["key9"] = []byte("value9")
+	key_valueMap["key10"] = []byte("value10")
+	state.Bucket_tree.PrepareWorkingSet(key_valueMap,big.NewInt(3))
+	hash3,err := state.GetHash()
+	if err != nil{
+		logger.Debugf("--------------GetHash error")
+	}else {
+		logger.Debugf("--------------the state.GetHash() is ",(hash3))
+	}
+	state.Bucket_tree.AddChangesForPersistence(writeBatch,big.NewInt(3))
+	writeBatch.Write()
+	testutil.AssertNotEquals(t,hash2,hash3)
+
+	// block 4
+	key_valueMap = bucket.K_VMap{}
+	key_valueMap["key6"] = []byte("value6")
+	key_valueMap["key7"] = []byte("value7")
+	key_valueMap["key8"] = []byte("value8")
+	key_valueMap["key9"] = []byte("value9")
+	key_valueMap["key10"] = []byte("value10")
+	state.Bucket_tree.PrepareWorkingSet(key_valueMap,big.NewInt(4))
+	hash4,err := state.GetHash()
+	if err != nil{
+		logger.Debugf("--------------GetHash error")
+	}else {
+		logger.Debugf("--------------the state.GetHash() is ",(hash4))
+	}
+	state.Bucket_tree.AddChangesForPersistence(writeBatch,big.NewInt(4))
+	writeBatch.Write()
+	testutil.AssertEquals(t,hash3,hash4)
+
+
+	// block 5
+	key_valueMap = bucket.K_VMap{}
+	key_valueMap["key10"] = []byte("value10-2")
+	state.Bucket_tree.PrepareWorkingSet(key_valueMap,big.NewInt(5))
+	hash5,err := state.GetHash()
+	if err != nil{
+		logger.Debugf("--------------GetHash error")
+	}else {
+		logger.Debugf("--------------the state.GetHash() is ",(hash5))
+	}
+	state.Bucket_tree.AddChangesForPersistence(writeBatch,big.NewInt(5))
+	testutil.AssertNotEquals(t,hash2,hash3)
+	writeBatch.Write()
 }
 
 func TestRevertToTargetBlock(t *testing.T) {
