@@ -368,6 +368,20 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 	keyValueMap := NewKVMap()
 	bucketTree.bucketCache.clearAllCache()
 
+	for i:= currentBlockNum.Int64()+1;;i++{
+		value,err := db.Get(append([]byte("UpdatedValueSet"), big.NewInt(i).Bytes()...))
+		if err != nil{
+			if  err.Error()=="leveldb not found" {
+				logger.Debug("all UpdatedValueSet before ",i,"has been clear")
+				break
+			}else {
+				return err
+			}
+
+		}
+		logger.Debug("delete the UpdatedValueSet of block ",i,"before ",value)
+	}
+
 	for i := currentBlockNum.Int64();i > toBlockNum.Int64(); i -- {
 		value,err := db.Get(append([]byte("UpdatedValueSet"), big.NewInt(i).Bytes()...))
 		if err != nil{

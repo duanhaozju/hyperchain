@@ -1,19 +1,18 @@
 package bucket
 import 	(
-	"golang.org/x/crypto/sha3"
 	"encoding/binary"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"bytes"
+	"hyperchain/crypto"
 )
 var stateKeyDelimiter = []byte{0x00}
 
 
 // ComputeCryptoHash should be used in openchain code so that we can change the actual algo used for crypto-hash at one place
-func ComputeCryptoHash(data []byte) (hash []byte) {
-	hash = make([]byte, 64)
-	sha3.ShakeSum256(hash, data)
-	return
+func ComputeCryptoHash(data []byte) ([]byte) {
+	kec256Hash := crypto.NewKeccak256Hash("keccak256")
+	return kec256Hash.Hash(data)
 }
 
 

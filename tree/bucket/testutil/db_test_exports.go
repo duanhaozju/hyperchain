@@ -46,5 +46,8 @@ func (testDB *TestDBWrapper) cleanup() {
 
 func (testDB *TestDBWrapper) removeDBPath() {
 	dbPath := viper.GetString("peer.fileSystemPath")
+	if dbPath == "" || len(dbPath) == 0{
+		dbPath = "/tmp/hyperchain/cachedb"
+	}
 	os.RemoveAll(dbPath)
 }
