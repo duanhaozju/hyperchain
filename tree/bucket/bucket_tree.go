@@ -393,7 +393,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 			logger.Debug("There is no value update")
 			continue
 		}
-		logger.Debug(i,"ValueValue",value)
+		logger.Debug(i,"UpdatedValueSet is ",value)
 		updatedValueSet := newUpdatedValueSet(big.NewInt(i))
 		buffer := proto.NewBuffer(value)
 		updatedValueSet.UnMarshal(buffer)
