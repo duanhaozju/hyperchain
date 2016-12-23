@@ -24,7 +24,7 @@ const MAX_PEER_NUM = 4
 // gRPC peer manager struct, which to manage the gRPC peers
 type GrpcPeerManager struct {
 	LocalNode     *Node
-	peersPool     *PeersPool
+	peersPool     PeersPool
 	TEM           transport.TransportEncryptManager
 	configs       peerComm.Config
 	NodeID        uint64
@@ -33,12 +33,12 @@ type GrpcPeerManager struct {
 	//interducer information
 	Introducer    pb.PeerAddress
 	IP string
-	Port int64
-	RpcPort int64
+	Port int
+	RpcPort int
 
 }
 
-func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducer string,rpcPort int64) *GrpcPeerManager {
+func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducer string,HTTPPort int) *GrpcPeerManager {
 	//introducer ip
 	introducerIP := strings.Split(introducer, ":")[0]
 	introducerPort, atoi_err := strconv.Atoi(strings.Split(introducer, ":")[1])
@@ -66,7 +66,7 @@ func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducer s
 	newgRPCManager.Introducer = *peerComm.ExtractAddress(introducerIP, introducer_Port, introducer_ID)
 	newgRPCManager.IP = newgRPCManager.configs.GetIP(newgRPCManager.NodeID)
 	newgRPCManager.Port = newgRPCManager.configs.GetPort(newgRPCManager.NodeID)
-	newgRPCManager.RpcPort = rpcPort
+	newgRPCManager.RpcPort = HTTPPort
 
 	//HSM only instanced once, so peersPool and Node Hsm are same instance
 	newgRPCManager.TEM = transport.NewHandShakeManger()
@@ -74,17 +74,17 @@ func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducer s
 }
 
 // Start start the Normal local listen server
-func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux, isReconnect bool, GRPCProt int64) {
+func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux, isReconnect bool, GRPCPort int) {
 	if this.NodeID == 0 || this.configs == nil {
 		log.Error("the gRPC Manager hasn't initlized")
 		os.Exit(1)
 	}
 	port := this.configs.GetPort(this.NodeID)
 	if port == int64(0) {
-		port = GRPCProt
+		port = GRPCPort
 	}
 
-	this.peersPool = NewPeerPool(this.TEM,GRPCProt,this.NodeID)
+	this.peersPool = NewPeerPoolIml(this.TEM,GRPCPort,this.NodeID)
 	this.LocalNode = NewNode(port,this.RpcPort, eventMux, this.NodeID, this.TEM, this.peersPool)
 	this.LocalNode.StartServer()
 	this.LocalNode.N = MAX_PEER_NUM
@@ -292,7 +292,7 @@ func (this *GrpcPeerManager) BroadcastPeers(payLoad []byte) {
 }
 
 // inner the broadcast method which serve BroadcastPeers function
-func broadcast(grpcPeerManager *GrpcPeerManager,broadCastMessage pb.Message, pPool *PeersPool) {
+func broadcast(grpcPeerManager *GrpcPeerManager,broadCastMessage pb.Message, pPool PeersPool) {
 	for _, peer := range pPool.GetPeers() {
 		//REVIEW 这里没有返回值,不知道本次通信是否成功
 		//log.Notice(string(broadCastMessage.Payload))
