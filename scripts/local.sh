@@ -112,6 +112,7 @@ if $REBUILD; then
 fi
 
 cd ${DUMP_PATH}
+<<<<<<< Updated upstream
 
 # Run all the nodes
 runXinXinLinux(){
@@ -143,3 +144,14 @@ else
         runXinXinMac
     fi
 fi
+=======
+#执行测试
+for((j=1;j<=$MAXPEERNUM;j++))
+do
+	#gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${j} -l 800${j} -t 808${j}"
+    cd ${DUMP_PATH} && ./hyperchain -o ${j} -l 1100${j} -t 1108${j} &
+
+    # this command for run 4 in 1 window
+#	./hyperchain -o ${j} -l 800${j} -t 808${j}
+done
+>>>>>>> Stashed changes

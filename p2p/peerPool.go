@@ -5,8 +5,6 @@ package p2p
 import (
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/transport"
-	"strconv"
-	"strings"
 	"errors"
 	"sort"
 	"hyperchain/p2p/peerComm"
@@ -25,11 +23,10 @@ type PeersPool struct {
 }
 
 // the peers pool instance
-var prPoolIns PeersPool
+//var prPoolIns PeersPool
 
 // NewPeerPool get a new peer pool instance
-func NewPeerPool(TEM transport.TransportEncryptManager,port int64,id uint64) *PeersPool {
-	var newPrPoolIns PeersPool
+func NewPeerPool(TEM transport.TransportEncryptManager,port int64,id uint64) (newPrPoolIns *PeersPool) {
 	newPrPoolIns.peers = make(map[string]*Peer)
 	newPrPoolIns.peerAddr = make(map[string]pb.PeerAddress)
 	newPrPoolIns.peerKeys = make(map[pb.PeerAddress]string)
@@ -37,11 +34,9 @@ func NewPeerPool(TEM transport.TransportEncryptManager,port int64,id uint64) *Pe
 	newPrPoolIns.tempPeers = make(map[string]*Peer)
 	newPrPoolIns.tempPeerAddr = make(map[string]pb.PeerAddress)
 	newPrPoolIns.tempPeerKeys = make(map[pb.PeerAddress]string)
-
 	newPrPoolIns.TEM = TEM
 	newPrPoolIns.alivePeers = 0
-	return &newPrPoolIns
-
+	return
 }
 
 // PutPeer put a peer into the peer pool and get a peer point
@@ -102,24 +97,6 @@ func (this *PeersPool) GetAliveNodeNum() int {
 	return this.alivePeers
 }
 
-// GetPeerByString get peer by address string
-func GetPeerByString(addr string) *Peer {
-	address := strings.Split(addr, ":")
-	p, err := strconv.Atoi(address[1])
-	if err != nil {
-		log.Error(`given string is not like "localhost:1234", pls check it`)
-		return nil
-	}
-	pAddr := pb.PeerAddress{
-		IP:   address[0],
-		Port: int64(p),
-	}
-	if peerAddr, ok := prPoolIns.peerAddr[pAddr.String()]; ok {
-		return prPoolIns.peers[prPoolIns.peerKeys[peerAddr]]
-	} else {
-		return nil
-	}
-}
 
 // GetPeers  get peers from the peer pool
 func (this *PeersPool) GetPeers() []*Peer {
@@ -144,10 +121,6 @@ func (this *PeersPool) GetPeersWithTemp() []*Peer {
 	return clients
 }
 
-// DelPeer delete a peer by the given peer address (Not Used)
-func DelPeer(addr pb.PeerAddress) {
-	delete(prPoolIns.peers, prPoolIns.peerKeys[addr])
-}
 
 //将peerspool转换成能够传输的列表
 func (this *PeersPool)ToRoutingTable() pb.Routers {

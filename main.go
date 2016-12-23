@@ -102,7 +102,8 @@ func main() {
 		eventMux := new(event.TypeMux)
 
 		//init peer manager to start grpc server and client
-		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath(), config.getNodeID(), argv.IsInit, argv.Introducer)
+		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath(), config.getNodeID(), argv.IsInit, argv.Introducer,argv.HTTPPort)
+
 
 		//init db
 		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())

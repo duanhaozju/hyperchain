@@ -32,10 +32,13 @@ type GrpcPeerManager struct {
 	IsOnline      bool
 	//interducer information
 	Introducer    pb.PeerAddress
+	IP string
+	Port int64
+	RpcPort int64
 
 }
 
-func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducer string) *GrpcPeerManager {
+func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducer string,rpcPort int64) *GrpcPeerManager {
 	//introducer ip
 	introducerIP := strings.Split(introducer, ":")[0]
 	introducerPort, atoi_err := strconv.Atoi(strings.Split(introducer, ":")[1])
@@ -61,6 +64,10 @@ func NewGrpcManager(configPath string, nodeID int, isOriginal bool, introducer s
 
 	newgRPCManager.Original = isOriginal
 	newgRPCManager.Introducer = *peerComm.ExtractAddress(introducerIP, introducer_Port, introducer_ID)
+	newgRPCManager.IP = newgRPCManager.configs.GetIP(newgRPCManager.NodeID)
+	newgRPCManager.Port = newgRPCManager.configs.GetPort(newgRPCManager.NodeID)
+	newgRPCManager.RpcPort = rpcPort
+
 	//HSM only instanced once, so peersPool and Node Hsm are same instance
 	newgRPCManager.TEM = transport.NewHandShakeManger()
 	return &newgRPCManager
@@ -78,7 +85,7 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 	}
 
 	this.peersPool = NewPeerPool(this.TEM,GRPCProt,this.NodeID)
-	this.LocalNode = NewNode(port, eventMux, this.NodeID, this.TEM, this.peersPool)
+	this.LocalNode = NewNode(port,this.RpcPort, eventMux, this.NodeID, this.TEM, this.peersPool)
 	this.LocalNode.StartServer()
 	this.LocalNode.N = MAX_PEER_NUM
 	// connect to peer
@@ -241,10 +248,10 @@ func (this *GrpcPeerManager) connectToPeer(peerAddress *pb.PeerAddress, nid uint
 	var peer *Peer
 	var peerErr error
 	if isReconnect {
-		peer, peerErr = NewPeerByIpAndPortReconnect(peerAddress.IP, peerAddress.Port, nid, this.TEM, this.LocalNode.GetNodeAddr(), this.peersPool)
+		peer, peerErr = NewPeerByIpAndPortReconnect(peerAddress.IP, peerAddress.Port,this.RpcPort, nid, this.TEM, this.LocalNode.GetNodeAddr(), this.peersPool)
 
 	} else {
-		peer, peerErr = NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, nid, this.TEM, this.LocalNode.GetNodeAddr(), this.peersPool)
+		peer, peerErr = NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port,this.RpcPort, nid, this.TEM, this.LocalNode.GetNodeAddr(), this.peersPool)
 	}
 
 	if peerErr != nil {
@@ -374,8 +381,9 @@ func (this *GrpcPeerManager) GetPeerInfo() PeerInfos {
 	for _, per := range peers {
 		var perinfo PeerInfo
 		log.Debug("rage the peer")
-		perinfo.IP = per.RemoteAddr.IP
-		perinfo.Port = per.RemoteAddr.Port
+		perinfo.IP = per.Addr.IP
+		perinfo.Port = per.Addr.Port
+		perinfo.RPCPort = per.Addr.RpcPort
 		retMsg, err := per.Client.Chat(context.Background(), &keepAliveMessage)
 		if err != nil {
 			perinfo.Status = STOP
@@ -395,6 +403,7 @@ func (this *GrpcPeerManager) GetPeerInfo() PeerInfos {
 		IP:        this.LocalNode.GetNodeAddr().IP,
 		Port:      this.LocalNode.GetNodeAddr().Port,
 		ID:        this.LocalNode.GetNodeAddr().ID,
+		RPCPort:   this.LocalNode.address.RpcPort,
 		Status:    ALIVE,
 		IsPrimary: this.LocalNode.IsPrimary,
 		Delay:     this.LocalNode.delayTable[this.NodeID],

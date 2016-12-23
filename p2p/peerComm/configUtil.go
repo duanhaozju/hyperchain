@@ -15,6 +15,10 @@ type Config interface {
 	GetMaxPeerNumber() int
 }
 
+type ConfigWriter interface {
+	SaveAddress(addr Address) error
+}
+
 type ConfigUtil struct {
 	configs *viper.Viper
 	nodes   map[uint64]Address

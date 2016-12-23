@@ -47,10 +47,11 @@ type UpdateTable struct {
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
-func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, TEM transport.TransportEncryptManager, peersPool *PeersPool) *Node {
+func NewNode(port int64,rpcPort int64, hEventManager *event.TypeMux, nodeID uint64, TEM transport.TransportEncryptManager, peersPool *PeersPool) *Node {
 	var newNode Node
 	newNode.address = peerComm.ExtractAddress(peerComm.GetLocalIp(), port, nodeID)
 	newNode.TEM = TEM
+	newNode.address.RpcPort = rpcPort
 	newNode.higherEventManager = hEventManager
 	newNode.DelayTable = make(map[uint64]int64)
 	newNode.PeerPool = peersPool
