@@ -208,9 +208,9 @@ func PutBlockTx(db hyperdb.Database, commonHash crypto.CommonHash, key []byte, t
 		time:=t.WriteTime-t.Timestamp
 		str:="number "+strconv.FormatUint(t.Number,10)+":"+strconv.FormatInt(time,10)+"\n"
 		// 以只写的模式，打开文件
-		f, err := os.OpenFile("/home/frank/1.txt", os.O_WRONLY, 0644)
+		f, err := os.OpenFile("/home/frank/1.txt", os.O_WRONLY|os.O_CREATE, 0644)
 		if err != nil {
-			fmt.Println("cacheFileList.yml file create failed. err: " + err.Error())
+			fmt.Println("1.txt file create failed. err: " + err.Error())
 		} else {
 			// 查找文件末尾的偏移量
 			n, _ := f.Seek(0, os.SEEK_END)

@@ -134,30 +134,45 @@ func NewLDBDatabase(portLDBPath string) (*LDBDatabase, error) {
 	}
 	port+=14121 //8001 22122
 	//set max pool con 4
-	rdP:=redis.NewPool(func () (redis.Conn, error) { return redis.Dial("tcp", ":"+strconv.Itoa(port),redis.DialConnectTimeout(60*time.Second))},4)
+	rdP:=redis.NewPool(func () (redis.Conn, error) { return redis.Dial("tcp", ":"+strconv.Itoa(port),redis.DialConnectTimeout(60*time.Second))},15)
 
 	return &LDBDatabase{path:portLDBPath,rd_pool:rdP},err
 }
 
 
 func (self *LDBDatabase) Put(key []byte, value []byte) error {
-	con:=self.rd_pool.Get()
-	defer con.Close()
-	_,err:=con.Do("set",key, value)
-	if err!=nil{
-		f, err1 := os.OpenFile("/home/frank/1.txt", os.O_WRONLY, 0644)
-		if err1 != nil {
-			fmt.Println("cacheFileList.yml file create failed. err: " + err.Error())
-		} else {
-			// 查找文件末尾的偏移量
-			n, _ := f.Seek(0, os.SEEK_END)
-			// 从末尾的偏移量开始写入内容
-			currentTime := time.Now().Local()
-			newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-			str:=newFormat+`con.Do("set",,key, value):`+err.Error()
-			_, err = f.WriteAt([]byte(str), n)
 
-			f.Close()
+	num:=0
+	var err error
+
+	for {
+		con := self.rd_pool.Get()
+		_, err = con.Do("set", key, value)
+		con.Close()
+
+		if err != nil {
+			num++
+			f, err1 := os.OpenFile("/home/frank/1.txt", os.O_WRONLY|os.O_CREATE, 0644)
+			if err1 != nil {
+				fmt.Println("1.txt file create failed. err: " + err.Error())
+			} else {
+				// 查找文件末尾的偏移量
+				n, _ := f.Seek(0, os.SEEK_END)
+				// 从末尾的偏移量开始写入内容
+				currentTime := time.Now().Local()
+				newFormat := currentTime.Format("2006-01-02 15:04:05.000")
+
+				str := portLDBPath + newFormat + `con.Do("set",,key, value):` + err.Error() + "\n"
+				_, err1 = f.WriteAt([]byte(str), n)
+
+				f.Close()
+			}
+		}else{
+			break
+		}
+
+		if err.Error() !="ERR Connection timed out"||num>3{
+			break
 		}
 	}
 	return err
@@ -165,28 +180,41 @@ func (self *LDBDatabase) Put(key []byte, value []byte) error {
 
 
 func (self *LDBDatabase) Get(key []byte) ([]byte, error) {
-	con:=self.rd_pool.Get()
-	defer con.Close()
-	dat,err := redis.Bytes(con.Do("get",key))
-	if err!=nil{
-		f, err1 := os.OpenFile("/home/frank/1.txt", os.O_WRONLY, 0644)
-		if err1 != nil {
-			fmt.Println("cacheFileList.yml file create failed. err: " + err.Error())
-		} else {
-			// 查找文件末尾的偏移量
-			n, _ := f.Seek(0, os.SEEK_END)
-			// 从末尾的偏移量开始写入内容
-			currentTime := time.Now().Local()
-			newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-			str:=newFormat+`con.Do("get",key):`+err.Error()
-			_, err = f.WriteAt([]byte(str), n)
 
-			f.Close()
+	num:=0
+	var dat []byte
+	var err error
+
+	for {
+		con := self.rd_pool.Get()
+		dat, err = redis.Bytes(con.Do("get", key))
+		con.Close()
+
+		if err == nil {
+			if len(dat) == 0 {
+				err = errors.New("not found")
+			}
+			break
+		}else {
+			num++
+			f, err1 := os.OpenFile("/home/frank/1.txt", os.O_WRONLY | os.O_CREATE, 0644)
+			if err1 != nil {
+				fmt.Println("1.txt file create failed. err: " + err.Error())
+			} else if err.Error() != "redigo: nil returned" {
+				// 查找文件末尾的偏移量
+				n, _ := f.Seek(0, os.SEEK_END)
+				// 从末尾的偏移量开始写入内容
+				currentTime := time.Now().Local()
+				newFormat := currentTime.Format("2006-01-02 15:04:05.000")
+				str := portLDBPath + newFormat + `con.Do("get",key):` + err.Error() + "  num:" + strconv.Itoa(num) + "\n"
+				_, err1 = f.WriteAt([]byte(str), n)
+				f.Close()
+			}
 		}
-	}
+		if err.Error() !="ERR Connection timed out"||num>3{
+			break
+		}
 
-	if err==nil&&len(dat)==0{
-		err= errors.New("not found")
 	}
 	return dat, err
 }
@@ -244,30 +272,42 @@ func (batch *rd_Batch) Put(key, value []byte) error {
 //one transaction from MULTI TO EXEC
 func (batch *rd_Batch) Write() error {
 
-	list:=make([]string,0,20)
-	con:=batch.rd_pool.Get()
-	defer con.Close()
-	for k, v := range batch.map1 {
-		list=append(list,string(k),string(v))
-	}
-	_,err:=con.Do("mset",list)
-	if err==nil {
-		batch.map1 = make(map[string][]byte)
-	}else{
-		f, err1 := os.OpenFile("/home/frank/1.txt", os.O_WRONLY, 0644)
-		if err1 != nil {
-			fmt.Println("cacheFileList.yml file create failed. err: " + err.Error())
-		} else {
-			// 查找文件末尾的偏移量
-			n, _ := f.Seek(0, os.SEEK_END)
-			// 从末尾的偏移量开始写入内容
-			currentTime := time.Now().Local()
-			newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-			str:=newFormat+`con.Do("mset",list) :`+err.Error()
-			_, err = f.WriteAt([]byte(str), n)
+	num:=0;
+	var err error
 
-			f.Close()
+ 	for {
+		list := make([]string, 0, 20)
+		con := batch.rd_pool.Get()
+
+		for k, v := range batch.map1 {
+			list = append(list, string(k), string(v))
+		}
+		_, err:= con.Do("mset", list)
+		con.Close()
+		if err == nil {
+			batch.map1 = make(map[string][]byte)
+			break
+		} else {
+			num++
+			f, err1 := os.OpenFile("/home/frank/1.txt", os.O_WRONLY|os.O_CREATE, 0644)
+			if err1 != nil {
+				fmt.Println("1.txt file create failed. err: " + err.Error())
+			} else {
+				// 查找文件末尾的偏移量
+				n, _ := f.Seek(0, os.SEEK_END)
+				// 从末尾的偏移量开始写入内容
+				currentTime := time.Now().Local()
+				newFormat := currentTime.Format("2006-01-02 15:04:05.000")
+				str := portLDBPath + newFormat + `con.Do("mset",list) :` + err.Error() +" num:"+strconv.Itoa(num)+"\n"
+				_, err1 = f.WriteAt([]byte(str), n)
+
+				f.Close()
+			}
+		}
+		if err.Error()!="ERR Connection timed out"||num>3{
+			break
 		}
 	}
+
 	return err
 }
