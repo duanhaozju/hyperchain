@@ -266,6 +266,15 @@ func getBlockchainInfo() *protos.BlockchainInfo {
 	}
 }
 
+func getCurrentBlockInfo() *protos.BlockchainInfo {
+	height, curHash, prevHash := persist.GetCurrentBlockInfo()
+	return &protos.BlockchainInfo{
+		Height:				height,
+		CurrentBlockHash:	curHash,
+		PreviousBlockHash:	prevHash,
+	}
+}
+
 // =============================================================================
 // helper functions for timer
 // =============================================================================
