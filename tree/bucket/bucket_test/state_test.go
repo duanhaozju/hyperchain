@@ -227,8 +227,8 @@ func TestState_3_persist(t *testing.T){
 }
 
 func TestRevertToTargetBlock(t *testing.T) {
-	//testDBWrapper := testutil.NewTestDBWrapper()
-	//testDBWrapper.CleanDB(t)
+	testDBWrapper := testutil.NewTestDBWrapper()
+	testDBWrapper.CleanDB(t)
 
 	db,err := hyperdb.GetLDBDatabase()
 	writeBatch := db.NewBatch()
@@ -300,12 +300,38 @@ func TestRevertToTargetBlock(t *testing.T) {
 	state.Bucket_tree.AddChangesForPersistence(writeBatch,big.NewInt(5))
 	writeBatch.Write()
 
-	// revert to target number
+	// revert to target number 5
 	fromBlock := big.NewInt(5)
-	toBlock := big.NewInt(4)
+	toBlock := big.NewInt(5)
 	state.Bucket_tree.RevertToTargetBlock(fromBlock,toBlock)
-	hash_revert,err := state.GetHash()
-	logger.Debugf("after revert from %d",fromBlock," to %d",toBlock,"--------------the state.GetHash() is ",(hash_revert))
+	hash_revert5,err := state.GetHash()
+	logger.Debugf("after revert from %d",fromBlock," to %d",toBlock,"--------------the state.GetHash() is ",(hash_revert5))
+	testutil.AssertEquals(t,hash5,hash_revert5)
+
+	// revert to target number 4
+	fromBlock = big.NewInt(5)
+	toBlock = big.NewInt(4)
+	state.Bucket_tree.RevertToTargetBlock(fromBlock,toBlock)
+	hash_revert4,err := state.GetHash()
+	logger.Debugf("after revert from %d",fromBlock," to %d",toBlock,"--------------the state.GetHash() is ",(hash_revert4))
+	testutil.AssertEquals(t,hash4,hash_revert4)
+
+	// revert to target number 2
+	fromBlock = big.NewInt(3)
+	toBlock = big.NewInt(2)
+	state.Bucket_tree.RevertToTargetBlock(fromBlock,toBlock)
+	hash_revert2,err := state.GetHash()
+	logger.Debugf("after revert from %d",fromBlock," to %d",toBlock,"--------------the state.GetHash() is ",(hash_revert2))
+	testutil.AssertEquals(t,hash2,hash_revert2)
+
+	// revert to target number 1
+	fromBlock = big.NewInt(2)
+	toBlock = big.NewInt(1)
+	state.Bucket_tree.RevertToTargetBlock(fromBlock,toBlock)
+	hash_revert1,err := state.GetHash()
+	logger.Debugf("after revert from %d",fromBlock," to %d",toBlock,"--------------the state.GetHash() is ",(hash_revert1))
+	testutil.AssertEquals(t,hash1,hash_revert1)
+
 }
 
 func featchDataNodeFromDBTest(){

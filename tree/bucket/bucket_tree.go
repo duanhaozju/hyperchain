@@ -372,15 +372,24 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 	for i:= currentBlockNum.Int64()+1;;i++{
 		value,err := db.Get(append([]byte("UpdatedValueSet"), big.NewInt(i).Bytes()...))
 		if err != nil{
-			if  err.Error()=="leveldb not found" {
+			if  err.Error()=="leveldb: not found" {
 				logger.Debug("all UpdatedValueSet before ",i,"has been clear")
 				break
 			}else {
+				logger.Debug("clear UpdatedValueSet error",err)
 				return err
 			}
 
 		}
-		logger.Debug("delete the UpdatedValueSet of block ",i,"before ",value)
+		logger.Debugf("the blockNum is ",i," UpdatedValueSet is ",value)
+		updatedValueSet := newUpdatedValueSet(big.NewInt(i))
+		buffer := proto.NewBuffer(value)
+		updatedValueSet.UnMarshal(buffer)
+		revertToTargetBlock(bucketTree.treePrefix,big.NewInt(i),updatedValueSet,&keyValueMap)
+		bucketTree.PrepareWorkingSet(keyValueMap,big.NewInt(i))
+		bucketTree.AddChangesForPersistence(writeBatch,big.NewInt(i))
+		keyValueMap = NewKVMap()
+		writeBatch.Delete(append([]byte("UpdatedValueSet"), big.NewInt(i).Bytes()...))
 	}
 
 	for i := currentBlockNum.Int64();i > toBlockNum.Int64(); i -- {
@@ -393,7 +402,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 			logger.Debug("There is no value update")
 			continue
 		}
-		logger.Debug(i,"UpdatedValueSet is ",value)
+		logger.Debugf("the blockNum is ",i," UpdatedValueSet is ",value)
 		updatedValueSet := newUpdatedValueSet(big.NewInt(i))
 		buffer := proto.NewBuffer(value)
 		updatedValueSet.UnMarshal(buffer)
@@ -403,7 +412,6 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 		keyValueMap = NewKVMap()
 		writeBatch.Delete(append([]byte("UpdatedValueSet"), big.NewInt(i).Bytes()...))
 	}
-
 	writeBatch.Write()
 	logger.Debug("End RevertToTargetBlock, to ", toBlockNum)
 	return nil
