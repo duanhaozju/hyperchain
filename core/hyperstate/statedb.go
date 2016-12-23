@@ -42,7 +42,6 @@ type StateDB struct {
 	// This map holds 'live' objects, which will get modified while processing a state transition.
 	stateObjects      map[common.Address]*StateObject
 	stateObjectsDirty map[common.Address]struct{}
-
 	// The refund counter, also used by state transitioning.
 	refund *big.Int
 
@@ -142,14 +141,18 @@ func (self *StateDB) Reset() error {
 	if self.curSeqNo == 0 {
 		log.Warning("make sure current seqNo is zero during the state reset")
 	}
-	if len(self.stateObjects) > 0 {
-		log.Criticalf("save validation result to content cache, with %d element", len(self.stateObjects))
-	}
 	// IMPORTANT reset obj.onDirty callback function and bucket tree
+	dirtyCopy := make(map[common.Address]*StateObject)
 	for _, obj := range self.stateObjects {
-		obj.onDirty = self.MarkStateObjectDirty
+		if _, dirty := self.stateObjectsDirty[obj.address]; dirty == true {
+			obj.onDirty = self.MarkStateObjectDirty
+			dirtyCopy[obj.address] = obj
+		}
 	}
-	self.contentCache.Add(self.curSeqNo, self.stateObjects)
+	self.contentCache.Add(self.curSeqNo, dirtyCopy)
+	if len(dirtyCopy) > 0 {
+		log.Criticalf("save validation result to content cache, with %d element", len(dirtyCopy))
+	}
 	// clear all stuff
 	self.stateObjects = make(map[common.Address]*StateObject)
 	self.stateObjectsDirty = make(map[common.Address]struct{})
@@ -165,8 +168,6 @@ func (self *StateDB) Reset() error {
 // mark a block's process is begin
 // initialize some stuff
 func (self *StateDB) MarkProcessStart(seqNo uint64) {
-	// reset state
-	self.Reset()
 	// set current seqNo
 	log.Criticalf("current process seqNo #%d", seqNo)
 	atomic.StoreUint64(&self.curSeqNo, seqNo)
@@ -799,7 +800,6 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 				workingSet[stateObject.address.Hex()] = d
 			}
 		}
-		delete(s.stateObjectsDirty, addr)
 	}
 	// Write trie changes.
 	// Calculate Hash

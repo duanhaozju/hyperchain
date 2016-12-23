@@ -298,6 +298,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	}
 	// flush all state change
 	root, err := state.Commit()
+	state.Reset()
 	if err != nil {
 		log.Error("Commit state db failed! error msg, ", err.Error())
 		return err, &BlockRecord{

@@ -103,7 +103,7 @@ func (self *StateDB) New(root common.Hash)(*StateDB,error){
 
 // Reset clears out all emphemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
-func (self *StateDB) Reset(root common.Hash) error {
+func (self *StateDB) ResetTo(root common.Hash) error {
 	var (
 		err error
 		tr  = self.trie
@@ -133,7 +133,7 @@ func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
 }
 // doesn't assign block hash now
 // because the blcok hash hasn't been calculated
-// correctly block  hash will be assigned in the commit phase
+// correctly block  and block hash will be assigned in the commit phase
 func (self *StateDB) AddLog(log *vm.Log) {
 	log.TxHash = self.thash
 	log.TxIndex = uint(self.txIndex)
@@ -545,4 +545,8 @@ func (self *StateDB) FetchBatch(seqNo uint64) hyperdb.Batch {
 
 func (self *StateDB) DeleteBatch(seqNo uint64) {
 
+}
+
+func (self *StateDB) Reset() error {
+	return nil
 }

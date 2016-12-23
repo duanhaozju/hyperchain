@@ -104,7 +104,7 @@ type Database interface {
 	RevertToSnapshot(interface{})
 
 	Commit() (common.Hash, error)
-
+	Reset() error
 	// Query
 	GetAccounts() map[string]Account
 	Dump() []byte

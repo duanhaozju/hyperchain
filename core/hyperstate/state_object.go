@@ -283,11 +283,9 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 			log.Errorf("calculate storage hash for stateObject [%s] failed", self.address.Hex())
 			return common.Hash{}
 		}
-		log.Errorf("state object %s storage root hash %s after #%d", self.address.Hex(), common.Bytes2Hex(hash), self.db.curSeqNo)
 		// 3. assign to self.ROOT
 		self.SetRoot(common.BytesToHash(hash))
-		log.Errorf("state object %s storage root hash %s", self.address.Hex(), self.Root().Hex())
-		// 4. persist bucket change
+		log.Errorf("state object %s storage root hash %s after #%d", self.address.Hex(), common.Bytes2Hex(hash), self.db.curSeqNo)
 		return self.Root()
 
 	}
