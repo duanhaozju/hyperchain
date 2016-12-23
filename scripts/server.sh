@@ -53,7 +53,7 @@ do
 	-d|--delete)
 	    DELETEDATA=false; shift;;
 	-r|--rebuild)
-	    REBUILD=flase; shift;;
+	    REBUILD=false; shift;;
     -l|--local)
         LOCAL_ENV=false; shift;;
     -s|--server)
