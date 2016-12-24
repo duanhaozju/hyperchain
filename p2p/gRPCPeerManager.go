@@ -202,9 +202,6 @@ func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 
 }
 
-
-
-
 //connect to peer by ip address and port (why int32? because of protobuf limit)
 func (this *GrpcPeerManager) connectToPeer(peerAddress *pb.PeerAddr, nid uint64, isReconnect bool) (*Peer, error) {
 	//if this node is not online, connect it
