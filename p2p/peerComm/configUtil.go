@@ -56,7 +56,7 @@ func NewConfigUtil(configDir string) *ConfigUtil {
 	return &newConfigUtil
 }
 
-//
+
 func (confutil *ConfigUtil) GetPort(nodeID uint64) int64 {
 	return confutil.nodes[nodeID].Port
 }

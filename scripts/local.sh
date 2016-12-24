@@ -68,7 +68,7 @@ do
 	-d|--delete)
 	    DELETEDATA=false; shift;;
 	-r|--rebuild)
-	    REBUILD=flase; shift;;
+	    REBUILD=false; shift;;
     -e|--env)
         ENV=false; shift;;
     -m|--mode)
@@ -118,19 +118,19 @@ cd ${DUMP_PATH}
 runXinXinLinux(){
     for((j=1;j<=$MAXPEERNUM;j++))
     do
-        gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${j} -l 800${j} -t 808${j} -i true"
+        gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${j} -l 800${j} -t 808${j} -f 900${j} -i true"
     done
 }
 runXinXinMac(){
     for((j=1;j<=$MAXPEERNUM;j++))
     do
-        osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH' && ./hyperchain -o '$j' -l 800'$j' -t 808'$j' -i true"'
+        osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH' && ./hyperchain -o '$j' -l 800'$j' -t 808'$j' -f 900'$j' -i true"'
     done
 }
 runXin1(){
     for((j=1;j<=$MAXPEERNUM;j++))
     do
-        ./hyperchain -o ${j} -l 800${j} -t 808${j} -i true &
+        ./hyperchain -o ${j} -l 800${j} -t 808${j} -f 900${j} -i true &
     done
 }
 

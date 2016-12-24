@@ -1,0 +1,40 @@
+<div class="inmodal">
+    <div class="modal-header">
+        <!--<i class="fa fa-laptop modal-icon"></i>-->
+        <h4 class="modal-title">Deploy Contract</h4>
+        <!--<small class="font-bold">Lorem Ipsum is simply dummy text of the printing and typesetting industry.</small>-->
+    </div>
+    <div class="modal-body">
+        <!--<p><strong>Lorem Ipsum is simply dummy</strong> text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown-->
+            <!--printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting,-->
+            <!--remaining essentially unchanged.</p>-->
+        <form method="get" class="form-horizontal">
+            <!--<div class="col-lg-2" ng-repeat="param in md.inputs">-->
+                <!--<div>{{param.name}}</div>-->
+                <!--<input type="text" class="form-control" ng-model="method.params[param.name]">-->
+            <!--</div>-->
+            {{params.inputs}}
+            <div class="form-group" ng-repeat="p in contracts[ctName].params.inputs">
+                <label class="col-sm-2 control-label">{{p.name}}：</label>
+                <div class="col-lg-9">
+                    <input type="text" class="form-control" ng-model="params[p.name]" ng-init="params[p.name]=''" style="width:100%">
+                </div>
+            </div>
+        <div class="form-group"><label class="col-sm-2 control-label">Privatekey：</label>
+            <div class="col-lg-9">
+                <input type="text" class="form-control" ng-model="contract.privkey" style="width:100%">
+            </div>
+        </div>
+            <!--<div class="form-group"><label class="col-sm-2 control-label">param2：</label>-->
+                <!--<div class="col-lg-4">-->
+                    <!--<input type="text" class="form-control">-->
+                <!--</div>-->
+            <!--</div>-->
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-white" ng-click="cancel()">Close</button>
+        <button type="button" class="btn btn-primary" ng-click="ok()">Deploy</button>
+    </div>
+</div>
+

@@ -229,14 +229,13 @@ func (pbft *pbftProtocal) prePrepared(digest string, v uint64, n uint64) bool {
 	_, mInLog := pbft.validatedBatchStore[digest]
 
 	if digest != "" && !mInLog {
-		logger.Debugf("Replica %d havan't store the reqBatch")
+		logger.Debugf("Replica %d havan't store the reqBatch", pbft.id)
 		return false
 	}
 
 	//if q, ok := pbft.qset[qidx{digest, n}]; ok && q.View == v {
 	//	return true
 	//}
-
 	cert := pbft.certStore[msgID{v, n}]
 
 	if cert != nil {
@@ -352,6 +351,15 @@ func getBlockchainInfo() *protos.BlockchainInfo {
 		Height:			height,
 		CurrentBlockHash: 	curBlkHash,
 		PreviousBlockHash: 	preBlkHash,
+	}
+}
+
+func getCurrentBlockInfo() *protos.BlockchainInfo {
+	height, curHash, prevHash := persist.GetCurrentBlockInfo()
+	return &protos.BlockchainInfo{
+		Height:				height,
+		CurrentBlockHash:	curHash,
+		PreviousBlockHash:	prevHash,
 	}
 }
 

@@ -138,9 +138,10 @@ message recovery_init {
 }
 
 message recovery_response {
-    uint64               replica_id = 1;
-    map<uint64, string>  chkpts     = 2;
-    uint64               lastExec   = 3;
+    uint64               replica_id    = 1;
+    map<uint64, string>  chkpts        = 2;
+    uint64               blockHeight      = 3;
+    string               lastBlockHash = 4;
 }
 
 message recovery_fetchPQC {

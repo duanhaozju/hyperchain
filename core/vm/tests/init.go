@@ -7,17 +7,16 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 )
 
 var (
-	baseDir            = filepath.Join(".", "files")
+	baseDir            = filepath.Join(".", "json_files")
 	blockTestDir       = filepath.Join(baseDir, "BlockchainTests")
 	stateTestDir       = filepath.Join(baseDir, "StateTests")
 	transactionTestDir = filepath.Join(baseDir, "TransactionTests")
-	vmTestDir          = filepath.Join(baseDir, "VMTests")
+	vmTestDir          = baseDir
 	rlpTestDir         = filepath.Join(baseDir, "RLPTests")
 
 	BlockSkipTests = []string{
@@ -57,19 +56,6 @@ func readJson(reader io.Reader, value interface{}) error {
 	return nil
 }
 
-func readJsonHttp(uri string, value interface{}) error {
-	resp, err := http.Get(uri)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	err = readJson(resp.Body, value)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
 func readJsonFile(fn string, value interface{}) error {
 	file, err := os.Open(fn)

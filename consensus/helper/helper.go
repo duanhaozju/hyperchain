@@ -96,7 +96,6 @@ func (h *helper) Execute(seqNo uint64, hash string, flag bool, isPrimary bool, t
 
 // UpdateState transfers the UpdateStateEvent to outer
 func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
-
 	tmpMsg, err := proto.Marshal(updateState)
 
 	if err != nil {
@@ -139,7 +138,7 @@ func (h *helper) VcReset(seqNo uint64) error {
 
 	// No need to "go h.msgQ.Post...", we'll wait for it to return
 	h.msgQ.Post(vcResetEvent)
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 50)
 
 	return nil
 }

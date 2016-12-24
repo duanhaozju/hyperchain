@@ -26,8 +26,8 @@ func init() {
 type TransportEncryptManager interface {
 	GetLocalPublicKey() []byte
 	GenerateSecret(remotePublicKey []byte, peerHash string) error
-	EncWithSecret(message []byte, peerHash string) []byte
-	DecWithSecret(message []byte, peerHash string) []byte
+	EncWithSecret(message []byte, peerHash string) ([]byte,error)
+	DecWithSecret(message []byte, peerHash string) ([]byte,error)
 	GetSecret(peerHash string) string
 	GetSceretPoolSize() int
 	PrintAllSecHash()
@@ -68,7 +68,7 @@ func (hSM *HandShakeManager) GenerateSecret(remotePublicKey []byte, peerHash str
 	}
 }
 
-func (hSM *HandShakeManager) EncWithSecret(message []byte, peerHash string) []byte {
+func (hSM *HandShakeManager) EncWithSecret(message []byte, peerHash string)  ([]byte,error) {
 
 	// 3DES
 	//key := []byte("sfe023f_sefiel#fi32lf3e!")
@@ -100,7 +100,7 @@ func (hSM *HandShakeManager) EncWithSecret(message []byte, peerHash string) []by
 
 }
 
-func (hSM *HandShakeManager) DecWithSecret(message []byte, peerHash string) []byte {
+func (hSM *HandShakeManager) DecWithSecret(message []byte, peerHash string)  ([]byte,error){
 
 	//3DES
 	//key := []byte("sfe023f_sefiel#fi32lf3e!")

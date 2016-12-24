@@ -6,7 +6,7 @@ import (
 	logging "github.com/op/go-logging"
 	"github.com/spf13/viper"
 	"time"
-	"hyperchain/jsonrpc"
+	"hyperchain/api/jsonrpc/core"
 )
 
 type configs interface {
@@ -27,12 +27,15 @@ type configs interface {
 	getSyncReplicaEnable() bool
 	getLicense() string
 	getRateLimitConfig() jsonrpc.RateLimitConfig
+	getBlockVersion() string
+	getTransactionVersion() string
 }
 
 type configsImpl struct {
 	nodeID                  int
 	gRPCPort                int
 	httpPort                int
+	restPort		int
 	keystoreDir             string
 	keyNodeDir              string
 	logDumpFileFlag         bool
@@ -47,14 +50,16 @@ type configsImpl struct {
 	syncReplica             bool
 	license                 string
 	rateLimitEnable         bool
-	txRatePeak               int64
-	txFillRate        string
-	contractRatePeak               int64
+	txRatePeak              int64
+	txFillRate              string
+	contractRatePeak        int64
 	contractFillRate        string
+	blockVersion            string
+	transactionVersion      string
 }
 
 //return a config instances
-func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort int) *configsImpl {
+func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort int, RESTPort int) *configsImpl {
 	var cimpl configsImpl
 	config := viper.New()
 	viper.SetEnvPrefix("GLOBAL_ENV")
@@ -63,9 +68,13 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	if err != nil {
 		panic(fmt.Errorf("Error envPre %s reading %s", "GLOBAL", err))
 	}
+	/*
+		system config
+	 */
 	cimpl.nodeID = NodeID
 	cimpl.gRPCPort = GRPCPort
 	cimpl.httpPort = HTTPPort
+	cimpl.restPort = RESTPort
 	cimpl.keystoreDir = config.GetString("global.account.keystoredir")
 	cimpl.keyNodeDir = config.GetString("global.account.keynodesdir")
 	cimpl.logDumpFileFlag = config.GetBool("global.logs.dumpfile")
@@ -76,20 +85,36 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	cimpl.genesisConfigPath = config.GetString("global.configs.genesis")
 	cimpl.memberSRVCConfigPath = config.GetString("global.configs.membersrvc")
 	cimpl.pbftConfigPath = config.GetString("global.configs.pbft")
+	/*
+		statement synchronization
+	 */
 	cimpl.syncReplicaInfoInterval = config.GetString("global.configs.replicainfo.interval")
 	cimpl.syncReplica = config.GetBool("global.configs.replicainfo.enable")
+	/*
+		license
+	 */
 	cimpl.license = config.GetString("global.configs.license")
+	/*
+		rate limit
+	 */
 	cimpl.rateLimitEnable = config.GetBool("global.configs.ratelimit.enable")
 	cimpl.txRatePeak = config.GetInt64("global.configs.ratelimit.txRatePeak")
 	cimpl.txFillRate = config.GetString("global.configs.ratelimit.txFillRate")
 	cimpl.contractRatePeak = config.GetInt64("global.configs.ratelimit.contractRatePeak")
 	cimpl.contractFillRate = config.GetString("global.configs.ratelimit.contractFillRate")
+
+	/*
+		Version
+	 */
+	cimpl.blockVersion = config.GetString("global.version.blockversion")
+	cimpl.transactionVersion = config.GetString("global.version.transactionversion")
 	return &cimpl
 }
 
 func (cIml *configsImpl) getNodeID() int            { return cIml.nodeID }
 func (cIml *configsImpl) getGRPCPort() int          { return cIml.gRPCPort }
 func (cIml *configsImpl) getHTTPPort() int          { return cIml.httpPort }
+func (cIml *configsImpl) getRESTPort() int          { return cIml.restPort }
 func (cIml *configsImpl) getKeystoreDir() string    { return cIml.keystoreDir }
 func (cIml *configsImpl) getKeyNodeDir() string     { return cIml.keyNodeDir }
 func (cIml *configsImpl) getLogDumpFileFlag() bool  { return cIml.logDumpFileFlag }
@@ -134,4 +159,10 @@ func (cIml *configsImpl) getRateLimitConfig () jsonrpc.RateLimitConfig {
 		ContractRatePeak: cIml.contractRatePeak,
 		ContractFillRate: contractFillRate,
 	}
+}
+func (cIml *configsImpl) getBlockVersion() string {
+	return cIml.blockVersion
+}
+func (cIml *configsImpl) getTransactionVersion() string {
+	return cIml.transactionVersion
 }
