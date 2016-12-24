@@ -257,7 +257,7 @@ func TestRevertToTargetBlock(t *testing.T) {
 	key_valueMap = bucket.K_VMap{}
 	key_valueMap["key6"] = []byte("value6")
 	key_valueMap["key7"] = []byte("value7")
-	key_valueMap["key8"] = []byte("value8")
+	key_valueMap["key8"] = []byte("value8-2")
 	key_valueMap["key9"] = []byte("value9")
 	key_valueMap["key10"] = []byte("value10")
 	state.Bucket_tree.PrepareWorkingSet(key_valueMap,big.NewInt(3))
