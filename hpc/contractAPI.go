@@ -15,6 +15,8 @@ import (
 	"hyperchain/hyperdb"
 	"github.com/juju/ratelimit"
 	"hyperchain/core"
+	"hyperchain/crypto/hmEncryption"
+	"math/big"
 )
 
 type PublicContractAPI struct {
@@ -23,15 +25,17 @@ type PublicContractAPI struct {
 	db *hyperdb.LDBDatabase
 	tokenBucket *ratelimit.Bucket
 	ratelimitEnable bool
+	publicKey *hmEncryption.PaillierPublickey
 }
 
-func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, ratelimitEnable bool, bmax int64, rate time.Duration) *PublicContractAPI {
+func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, ratelimitEnable bool, bmax int64, rate time.Duration, publicKey *hmEncryption.PaillierPublickey) *PublicContractAPI {
 	return &PublicContractAPI{
 		eventMux :eventMux,
 		pm:pm,
 		db:hyperDb,
 		tokenBucket: ratelimit.NewBucket(rate, bmax),
 		ratelimitEnable: ratelimitEnable,
+		publicKey: publicKey,
 	}
 }
 
@@ -158,6 +162,43 @@ func (contract *PublicContractAPI) GetContractCountByAddr(addr common.Address, n
 
 	return NewUint64ToNumber(stateDb.GetNonce(addr)), nil
 
+}
+
+type EncryptoArgs struct{
+	Balance Number `json:"balance"`
+	Amount Number `json:"amount"`
+	HmBalance string `json:"hmBalance"`
+}
+
+type HmResult struct {
+	NewBalance_hm string `json:"newBalance"`
+	Amount_hm string `json:"amount"`
+}
+
+func (contract *PublicContractAPI) EncryptoMessage(args EncryptoArgs) (*HmResult, error){
+
+	balance_bigint := new(big.Int)
+	balance_bigint.SetInt64(args.Balance.ToInt64())
+
+	amount_bigint := new(big.Int)
+	amount_bigint.SetInt64(args.Amount.ToInt64())
+
+	hmBalance_bigint := new(big.Int)
+	hmBalance_bigint.SetString(args.HmBalance, 10)
+
+	isValid, newBalance_hm, amount_hm := hmEncryption.PreHmTransaction(balance_bigint.Bytes(),amount_bigint.Bytes(),hmBalance_bigint.Bytes(),*contract.publicKey)
+
+	newBalance_hm_bigint := new(big.Int)
+	amount_hm_bigint := new(big.Int)
+
+	if !isValid {
+		return &HmResult{},errors.New("out of balance")
+	}
+
+	return &HmResult{
+		NewBalance_hm: newBalance_hm_bigint.SetBytes(newBalance_hm).String(),
+		Amount_hm: amount_hm_bigint.SetBytes(amount_hm).String(),
+	}, nil
 }
 
 // GetStorageByAddr returns the storage by given contract address and bock number.

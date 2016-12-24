@@ -178,7 +178,7 @@ func (cIml *configsImpl) getTransactionVersion() string {
 	return cIml.transactionVersion
 }
 
-func (cIml *configsImpl) getPaillerPublickey() hmEncryption.PaillierPublickey {
+func (cIml *configsImpl) getPaillerPublickey() *hmEncryption.PaillierPublickey {
 	bigN := new(big.Int)
 	bigNsquare := new(big.Int)
 	bigG := new(big.Int)
@@ -187,7 +187,7 @@ func (cIml *configsImpl) getPaillerPublickey() hmEncryption.PaillierPublickey {
 	g,_ := bigG.SetString(cIml.paillpublickeyG,10)
 
 
-	return hmEncryption.PaillierPublickey{
+	return &hmEncryption.PaillierPublickey{
 		N: n,
 		Nsquare: nsquare,
 		G: g,
