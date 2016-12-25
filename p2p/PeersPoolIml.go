@@ -5,6 +5,7 @@ import (
 	"hyperchain/p2p/transport"
 	"errors"
 	"sort"
+	"google.golang.org/grpc"
 )
 
 type PeersPoolIml struct {
@@ -23,7 +24,8 @@ type PeersPoolIml struct {
 //var prPoolIns PeersPool
 
 // NewPeerPool get a new peer pool instance
-func NewPeerPoolIml(TEM transport.TransportEncryptManager,localAddr *pb.PeerAddr) (newPrPoolIns *PeersPoolIml) {
+func NewPeerPoolIml(TEM transport.TransportEncryptManager,localAddr *pb.PeerAddr) *PeersPoolIml {
+	var newPrPoolIns PeersPoolIml
 	newPrPoolIns.peers = make(map[string]*Peer)
 	newPrPoolIns.peerAddr = make(map[string]pb.PeerAddr)
 	newPrPoolIns.peerKeys = make(map[pb.PeerAddr]string)
@@ -33,58 +35,58 @@ func NewPeerPoolIml(TEM transport.TransportEncryptManager,localAddr *pb.PeerAddr
 	newPrPoolIns.tempPeerKeys = make(map[pb.PeerAddr]string)
 	newPrPoolIns.TEM = TEM
 	newPrPoolIns.alivePeers = 0
-	return
+	return &newPrPoolIns
 }
 
 // PutPeer put a peer into the peer pool and get a peer point
-func (this *PeersPoolIml) PutPeer(addr pb.PeerAddr, client *Peer) error {
+func (this PeersPoolIml) PutPeer(addr pb.PeerAddr, client *Peer) error {
 	addrString := addr.Hash
 	//log.Println("Add a peer:",addrString)
 	if _, ok := this.peerKeys[addr]; ok {
 		// the pool already has this client
 		log.Error(addr.IP, addr.Port, "The client already in")
-		return this.peers[addrString], errors.New("The client already in")
+		return errors.New("The client already in")
 
 	} else {
 		this.alivePeers += 1
 		this.peerKeys[addr] = addrString
 		this.peerAddr[addrString] = addr
 		this.peers[addrString] = client
-		return client, nil
+		return nil
 	}
 
 }
 
 // PutPeer put a peer into the peer pool and get a peer point
-func (this *PeersPoolIml) PutPeerToTemp(addr pb.PeerAddr, client *Peer) (*Peer, error) {
+func (this PeersPoolIml) PutPeerToTemp(addr pb.PeerAddr, client *Peer) error {
 	addrString := addr.Hash
 	//log.Println("Add a peer:",addrString)
 	if _, ok := this.tempPeerKeys[addr]; ok {
 		// the pool already has this client
 		log.Error(addr.IP, addr.Port, "The client already in temp")
-		return this.tempPeers[addrString], errors.New("The client already in")
+		return errors.New("The client already in")
 
 	} else {
 		this.alivePeers += 1
 		this.tempPeerKeys[addr] = addrString
 		this.tempPeerAddr[addrString] = addr
 		this.tempPeers[addrString] = client
-		return client, nil
+		return nil
 	}
 
 }
 
 // GetPeerByHash
-func (this *PeersPoolIml) GetPeerByHash(hash string) *Peer{
+func (this PeersPoolIml) GetPeerByHash(hash string) *Peer{
 	if _,ok := this.peerAddr[hash];ok{
 		peerAddr := this.peerAddr[hash]
-		return this.peers[peerAddr]
+		return this.peers[peerAddr.Hash]
 	}
 	return nil
 }
 
 // GetPeer get a peer point by the peer address
-func (this *PeersPoolIml) GetPeer(addr pb.PeerAddr) *Peer {
+func (this PeersPoolIml) GetPeer(addr pb.PeerAddr) *Peer {
 	if clientName, ok := this.peerKeys[addr]; ok {
 		client := this.peers[clientName]
 		return client
@@ -96,13 +98,13 @@ func (this *PeersPoolIml) GetPeer(addr pb.PeerAddr) *Peer {
 
 
 // GetAliveNodeNum get all alive node num
-func (this *PeersPoolIml) GetAliveNodeNum() int {
+func (this PeersPoolIml) GetAliveNodeNum() int {
 	return this.alivePeers
 }
 
 
 // GetPeers  get peers from the peer pool
-func (this *PeersPoolIml) GetPeers() []*Peer {
+func (this PeersPoolIml) GetPeers() []*Peer {
 	var clients []*Peer
 	for _, cl := range this.peers {
 		clients = append(clients, cl)
@@ -113,7 +115,7 @@ func (this *PeersPoolIml) GetPeers() []*Peer {
 }
 
 // GetPeers  get peers from the peer pool
-func (this *PeersPoolIml) GetPeersWithTemp() []*Peer {
+func (this PeersPoolIml) GetPeersWithTemp() []*Peer {
 	var clients []*Peer
 	for _, cl := range this.peers {
 		clients = append(clients, cl)
@@ -126,7 +128,7 @@ func (this *PeersPoolIml) GetPeersWithTemp() []*Peer {
 
 
 //将peerspool转换成能够传输的列表
-func (this *PeersPoolIml)ToRoutingTable() pb.Routers {
+func (this PeersPoolIml)ToRoutingTable() pb.Routers {
 	peers := this.GetPeers()
 	var routers pb.Routers
 
@@ -138,7 +140,7 @@ func (this *PeersPoolIml)ToRoutingTable() pb.Routers {
 	return routers
 }
 // get routing table without specificToRoutingTableWithout hash
-func (this *PeersPoolIml)ToRoutingTableWithout(hash string)pb.Routers{
+func (this PeersPoolIml)ToRoutingTableWithout(hash string)pb.Routers{
 	peers := this.GetPeers()
 	var routers pb.Routers
 
@@ -149,18 +151,18 @@ func (this *PeersPoolIml)ToRoutingTableWithout(hash string)pb.Routers{
 		routers.Routers = append(routers.Routers, pers.PeerAddr.ToPeerAddress())
 	}
 	//加入自己
-	routers.Routers = append(routers.Routers,this.localAddr)
+	routers.Routers = append(routers.Routers,this.localAddr.ToPeerAddress())
 	//需要进行排序
 	sort.Sort(routers)
 	for idx,_ := range routers.Routers{
-		routers.Routers[idx].ID = uint64(idx+1)
+		routers.Routers[idx].ID = int32(idx+1)
 	}
 	return routers
 }
 
 
 // merge the route into the temp peer list
-func (this *PeersPoolIml)MergeFormRoutersToTemp(routers pb.Routers) {
+func (this PeersPoolIml)MergeFormRoutersToTemp(routers pb.Routers) {
 	for _, peerAddress := range routers.Routers {
 		peerAddr := pb.RecoverPeerAddr(peerAddress)
 		newPeer, err := NewPeer(peerAddr,this.localAddr,this.TEM)
@@ -171,7 +173,7 @@ func (this *PeersPoolIml)MergeFormRoutersToTemp(routers pb.Routers) {
 	}
 }
 // Merge the temp peer into peers list
-func (this *PeersPoolIml) MergeTempPeers(peer *Peer) {
+func (this PeersPoolIml) MergeTempPeers(peer *Peer) {
 	//log.Critical("old节点合并路由表!!!!!!!!!!!!!!!!!!!")
 	//使用共识结果进行更新
 	//for _, tempPeer := range this.tempPeers {
@@ -184,7 +186,7 @@ func (this *PeersPoolIml) MergeTempPeers(peer *Peer) {
 	//}
 }
 
-func (this *PeersPoolIml) MergeTempPeersForNewNode() {
+func (this PeersPoolIml) MergeTempPeersForNewNode() {
 	//使用共识结果进行更新
 	for _, tempPeer := range this.tempPeers {
 		this.peers[tempPeer.PeerAddr.Hash] = tempPeer
@@ -196,18 +198,28 @@ func (this *PeersPoolIml) MergeTempPeersForNewNode() {
 }
 
 //reject the temp peer list
-func (this *PeersPoolIml)RejectTempPeers() {
+func (this PeersPoolIml)RejectTempPeers() {
 	for _, tempPeer := range this.tempPeers {
 		delete(this.tempPeers, tempPeer.PeerAddr.Hash)
 		this.alivePeers -= 1
 	}
 }
 
-func (this *PeersPoolIml)DeletePeer(p *Peer){
+func (this PeersPoolIml)DeletePeer(peer *Peer){
 	this.alivePeers -= 1
-	p.Connection.Close()
-	delete(this.peers, p.PeerAddr.Hash)
-	delete(this.peerAddr, p.PeerAddr.Hash)
-	delete(this.peerKeys, *p.PeerAddr)
+	peer.Connection.Close()
+	delete(this.peers, peer.PeerAddr.Hash)
+	delete(this.peerAddr, peer.PeerAddr.Hash)
+	delete(this.peerKeys, *peer.PeerAddr)
 }
 
+func (this PeersPoolIml) SetConnectionByHash(hash string,conn *grpc.ClientConn) error{
+	//TODO check error
+	this.peers[hash].Connection = conn
+	return nil
+}
+func (this PeersPoolIml) SetClientByHash(hash string, client pb.ChatClient) error{
+	//TODO check error
+	this.peers[hash].Client = client
+	return nil
+}

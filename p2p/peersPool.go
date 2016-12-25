@@ -4,6 +4,7 @@ package p2p
 
 import (
 	pb "hyperchain/p2p/peermessage"
+	"google.golang.org/grpc"
 )
 
 //PeerPool provide the basic peer manager function
@@ -26,6 +27,6 @@ type PeersPool interface{
 }
 
 type PeerSetter interface {
-	SetConnectionByHash(hash string,conn pb.ChatClient) error
-	SetClientByHash(hash string, pb.ChatClient) error
+	SetConnectionByHash(hash string,conn *grpc.ClientConn) error
+	SetClientByHash(hash string, client pb.ChatClient) error
 }

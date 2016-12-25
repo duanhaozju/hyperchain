@@ -28,7 +28,7 @@ type Peer struct {
 	Status     int
 	chatMux    sync.Mutex
 	IsPrimary  bool
-	PeerPool   PeersPool
+	//PeerPool   PeersPool
 	Certificate string
 
 }
@@ -39,18 +39,19 @@ type Peer struct {
 // if get a response, save the peer into singleton peer pool instance
 // NewPeer 用于返回一个新的NewPeer 用于与远端的peer建立连接，这个peer将会存储在peerPool中
 // 如果取得相应的连接返回值，将会将peer存储在单例的PeersPool中进行存储
-func NewPeer(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport.TransportEncryptManager,peerspool PeersPool)(peer *Peer, err error){
+func NewPeer(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport.TransportEncryptManager) (*Peer, error){
+	var peer Peer
 	peer.TEM = TEM
 	peer.LocalAddr = localAddr
 	peer.PeerAddr = peerAddr
-	peer.PeerPool = peerspool
+	//peer.PeerPool = peerspool
 	//TODO rewrite the tls options get method
 	opts := membersrvc.GetGrpcClientOpts()
 	// dial to remote
 	conn, err := grpc.Dial(peerAddr.IP + ":" + strconv.Itoa(peerAddr.Port), opts...)
 	if err != nil {
 		log.Error("err:", errors.New("Cannot establish a connection!"))
-		return
+		return nil,err
 	}
 	peer.Connection = conn
 	peer.Client = pb.NewChatClient(conn)
@@ -71,7 +72,7 @@ func (peer *Peer) handShake() (err error) {
 	helloMessage := pb.Message{
 		MessageType:  pb.Message_HELLO,
 		Payload:      peer.TEM.GetLocalPublicKey(),
-		From:         peer.LocalAddr,
+		From:         peer.LocalAddr.ToPeerAddress(),
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	retMessage, err := peer.Client.Chat(context.Background(), &helloMessage)
@@ -92,11 +93,11 @@ func (peer *Peer) handShake() (err error) {
 	return errors.New("ret message is not Hello Response!")
 }
 
-func NewPeerReconnect(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport.TransportEncryptManager, peerPool PeersPool) (peer *Peer, err error) {
+func NewPeerReconnect(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport.TransportEncryptManager) (peer *Peer, err error) {
 	peer.TEM = TEM
 	peer.PeerAddr = peerAddr
 	peer.LocalAddr = localAddr
-	peer.PeerPool = peerPool
+	//peer.PeerPool = peerPool
 
 	opts := membersrvc.GetGrpcClientOpts()
 	// dial to remote
@@ -115,7 +116,7 @@ func NewPeerReconnect(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport
 	helloMessage := pb.Message{
 		MessageType:  pb.Message_RECONNECT,
 		Payload:      peer.TEM.GetLocalPublicKey(),
-		From:         peer.LocalAddr,
+		From:         peer.LocalAddr.ToPeerAddress(),
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 
@@ -135,7 +136,7 @@ func NewPeerReconnect(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport
 		}
 		log.Debug("remote Peer address:", peer.PeerAddr)
 		log.Debug(peer.TEM.GetSecret(peer.PeerAddr.Hash))
-		return &peer, nil
+		return peer, nil
 	}
 	return nil, errors.New("cannot establish a connection")
 }

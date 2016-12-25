@@ -12,9 +12,9 @@ type PeerInfo struct {
 
 	Status int `json:"status"`
 	IP     string `json:"ip"`
-	Port   int64 `json:"port"`
-	RPCPort int64 `json:"port"`
-	ID     uint64 `json:"id"`
+	Port   int `json:"port"`
+	RPCPort int `json:"port"`
+	ID     int `json:"id"`
 	IsPrimary bool `json:"isprimary"`
 	Delay     int64 `json:"delay"`
 }

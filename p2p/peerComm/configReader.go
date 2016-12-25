@@ -5,7 +5,6 @@ package peerComm
 import (
 	"io/ioutil"
 	"encoding/json"
-	pb "hyperchain/p2p/peermessage"
 )
 
 type ConfigReader struct {
@@ -50,8 +49,8 @@ func NewConfigReader(configpath string) *ConfigReader {
 	return &configReader
 }
 
-func (config *ConfigReader) GetLocalID() int{
-	return config.config.SelfConfig.NodeID
+func (conf *ConfigReader) GetLocalID() int{
+	return conf.config.SelfConfig.NodeID
 }
 
 func (conf *ConfigReader) GetLocalIP() string {
@@ -90,51 +89,10 @@ func (conf *ConfigReader) GetPort(nodeID int) int {
 	return conf.nodes[nodeID].Port
 }
 
-func (conf *ConfigReader) GetIP(nodeID int) string {
+func (conf *ConfigReader) GetIP(nodeID int)string{
 	return conf.nodes[nodeID].IP
 }
 
-func (conf *ConfigReader) GetMaxPeerNumber() int {
+func (conf *ConfigReader) GetMaxPeerNumber()int{
 	return conf.maxNode
-
-}
-
-func (conf *ConfigReader) SaveAddress(addr Address) error{
-	conf.nodes[addr.ID]=Address{
-		ID:addr.ID,
-		IP:addr.IP,
-		Port:addr.Port,
-		RPCPort:addr.RPCPort,
-	}
-
-	pcNode := PeerConfigNodes{
-		ExternalAddress : addr.IP,
-		RPCPort :int(addr.RPCPort),
-		Port : int(addr.Port),
-		ID :int(addr.ID),
-		Address :addr.IP,
-	}
-	conf.config.Maxpeernode +=1
-	conf.config.PeerNodes = append(conf.config.PeerNodes,pcNode)
-
-	confSerlized,err := json.Marshal(conf.config)
-	if err != nil{
-		log.Warning(err)
-	}
-
-
-	//fmt.Println("asda",string(confSerlized))
-
-	ioutil.WriteFile(conf.path,confSerlized,0777)
-
-	return nil
-}
-
-func persist(addr pb.PeerAddress) (address Address) {
-	return Address{
-		ID:addr.ID,
-		IP:addr.IP,
-		Port:addr.Port,
-		RPCPort:addr.Port,
-	}
 }

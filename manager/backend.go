@@ -47,7 +47,7 @@ func New(
 	aliveChan := make(chan int)
 	//add reconnect param
 
-	go peerManager.Start(aliveChan, eventMux, isReconnect,int64(port))
+	go peerManager.Start(aliveChan, eventMux, isReconnect)
 	//wait for all peer are connected
 	initType := <-aliveChan
 	//select {

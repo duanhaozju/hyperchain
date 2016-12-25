@@ -27,21 +27,20 @@ type Node struct {
 	higherEventManager *event.TypeMux
 	//common information
 	IsPrimary          bool
-	delayTable         map[uint64]int64
+	delayTable         map[int]int64
 	delayTableMutex    sync.RWMutex
 	DelayChan          chan UpdateTable
 	sentEvent          bool
 	attendChan         chan int
 	PeersPool          PeersPool
 	N                  int
-	DelayTable         map[uint64]int64
 	DelayTableMutex    sync.Mutex
 	TEM                transport.TransportEncryptManager
 
 }
 
 type UpdateTable struct {
-	updateID   uint64
+	updateID   int
 	updateTime int64
 }
 
@@ -51,11 +50,10 @@ func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TEM transport
 	newNode.localAddr = localAddr
 	newNode.TEM = TEM
 	newNode.higherEventManager = hEventManager
-	newNode.DelayTable = make(map[uint64]int64)
 	newNode.PeersPool = peersPool
 	newNode.attendChan = make(chan int)
 	newNode.sentEvent = false
-	newNode.delayTable = make(map[uint64]int64)
+	newNode.delayTable = make(map[int]int64)
 	newNode.DelayChan = make(chan UpdateTable)
 	//listen the update
 	go newNode.UpdateDelayTableThread();
@@ -415,7 +413,6 @@ func (node *Node)reconnect(msg *pb.Message) {
 	peer := node.PeersPool.GetPeerByHash(msg.From.Hash)
 	if  peer == nil {
 		log.Warning("This remote Node already existed, and try to reconnect...")
-		return nil
 	}
 
 	node.PeersPool.SetClientByHash(msg.From.Hash,Client)

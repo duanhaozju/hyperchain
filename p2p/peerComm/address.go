@@ -3,15 +3,15 @@
 package peerComm
 
 type Address struct {
-	ID      uint64
-	Port    int64
-	RPCPort int64
+	ID      int
+	Port    int
+	RPCPort int
 	IP      string
 }
 
-func NewAddress(id int64, port int64, rpcPort int64, ip string) Address {
+func NewAddress(id int, port int, rpcPort int, ip string) Address {
 	address := Address{
-		ID:      uint64(id),
+		ID:      id,
 		Port:    port,
 		RPCPort: rpcPort,
 		IP:      ip,
