@@ -208,6 +208,31 @@ func (contract *PublicContractAPI) EncryptoMessage(args EncryptoArgs) (*HmResult
 	}, nil
 }
 
+type ValueArgs struct {
+	RawValue []int64 `json:"rawValue"`
+	EncryValue []string `json:"encryValue"`
+}
+
+func (contract *PublicContractAPI) CheckHmValue(args ValueArgs) ([]bool, error){
+	if len(args.RawValue) != len(args.EncryValue) {
+		return nil, errors.New("invalid params, two array length not equal")
+	}
+
+	result := make([]bool, len(args.RawValue))
+	for i,v := range args.RawValue {
+		encryVlue_bigint := new(big.Int)
+		encryVlue_bigint.SetString(args.EncryValue[i], 10)
+
+		rawValue_bigint := new(big.Int)
+		rawValue_bigint.SetInt64(v)
+
+		isvalid := hmEncryption.DestinationVerify(encryVlue_bigint.Bytes(), rawValue_bigint.Bytes(), *contract.publicKey)
+		result[i] = isvalid
+	}
+
+	return result, nil
+}
+
 // GetStorageByAddr returns the storage by given contract address and bock number.
 // The method is offered for hyperchain internal test.
 func (contract *PublicContractAPI) GetStorageByAddr(addr common.Address, n BlockNumber) (map[string]string, error) {

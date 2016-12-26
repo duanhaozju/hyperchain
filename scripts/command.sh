@@ -58,6 +58,7 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getContractCoun
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getStorageByAddr","params": ["<contract address>","latest"],"id": 1}'
 
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_encryptoMessage","params": [{"balance":100, "amount":10, "hmBalance":"123456"}],"id": 1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_checkHmValue","params": [{"rawValue": [1,2], "encryValue": ["123", "456"]}],"id": 1}'
 
 ################################ block 服务 ####################################
 # 得到最新区块 LastestBlock
