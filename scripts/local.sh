@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+set -xev
 # test the env
 if ! type go > /dev/null; then
     echo -e "Please install the go env correctly!"
@@ -42,7 +42,7 @@ DUMP_PATH="${PROJECT_PATH}/build"
 CONF_PATH="${PROJECT_PATH}/config"
 
 # Load the config files
-PEER_CONFIG="${CONF_PATH}/peerconfig.json"
+PEER_CONFIG="${CONF_PATH}/local_peerconfig.json"
 MAXPEERNUM=`cat ${PEER_CONFIG} | jq ".maxpeernode"`
 echo "Node number is: ${MAXPEERNUM}"
 
@@ -99,6 +99,14 @@ echo "copy config dir into build dir.."
 cp -rf "${CONF_PATH}" "${DUMP_PATH}/"
 cp -rf "${CONF_PATH}/keystore" "${DUMP_PATH}/build/"
 
+# cp the config files into nodes
+for((j=1;j<=$MAXPEERNUM;j++))
+do
+    mkdir -p ${DUMP_PATH}/node${j}/
+    cp -rf  ${CONF_PATH} ${DUMP_PATH}/node${j}/
+    cp -rf  ${CONF_PATH}/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/config/local_peerconfig.json
+
+done
 
 killProcess
 
@@ -111,8 +119,14 @@ if $REBUILD; then
     govendor build -o ${DUMP_PATH}/hyperchain
 fi
 
+# cp the hyperchain files into nodes
+
+for((j=1;j<=$MAXPEERNUM;j++))
+do
+    cp -rf ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
+done
+
 cd ${DUMP_PATH}
-<<<<<<< Updated upstream
 
 # Run all the nodes
 runXinXinLinux(){
@@ -124,7 +138,7 @@ runXinXinLinux(){
 runXinXinMac(){
     for((j=1;j<=$MAXPEERNUM;j++))
     do
-        osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH' && ./hyperchain -o '$j' -l 800'$j' -t 808'$j' -f 900'$j' -i true"'
+        osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${j}' && ./hyperchain"'
     done
 }
 runXin1(){
@@ -144,14 +158,3 @@ else
         runXinXinMac
     fi
 fi
-=======
-#执行测试
-for((j=1;j<=$MAXPEERNUM;j++))
-do
-	#gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${j} -l 800${j} -t 808${j}"
-    cd ${DUMP_PATH} && ./hyperchain -o ${j} -l 1100${j} -t 1108${j} &
-
-    # this command for run 4 in 1 window
-#	./hyperchain -o ${j} -l 800${j} -t 808${j}
-done
->>>>>>> Stashed changes

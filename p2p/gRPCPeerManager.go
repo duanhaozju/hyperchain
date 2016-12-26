@@ -52,7 +52,7 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 	if this.LocalAddr.ID == 0 || this.configs == nil {
 		panic("the PeerManager hasn't initlized")
 	}
-	this.peersPool = *NewPeerPoolIml(this.TEM,this.LocalAddr)
+	this.peersPool = NewPeerPoolIml(this.TEM,this.LocalAddr)
 	this.LocalNode = NewNode(this.LocalAddr,eventMux,this.TEM, this.peersPool)
 	this.LocalNode.StartServer()
 	this.LocalNode.N = MAX_PEER_NUM
@@ -164,6 +164,7 @@ func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 		log.Debug("nodes number:", this.peersPool.GetAliveNodeNum())
 		nid := 1
 		for range time.Tick(200 * time.Millisecond) {
+
 			_index := nid
 
 			if nid > MAX_PEER_NUM {
@@ -187,7 +188,6 @@ func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 				continue
 			} else {
 				// add  peer to peer pool
-				//log.Critical("将地址加入到地址池", *peerAddress)
 				this.peersPool.PutPeer(*peerAddress, peer)
 				//this.TEM.[peer.Addr.Hash]=peer.TEM
 				peerStatus[_index] = true
@@ -211,7 +211,6 @@ func (this *GrpcPeerManager) connectToPeer(peerAddress *pb.PeerAddr, nid int, is
 	var peerErr error
 	if isReconnect {
 		peer, peerErr = NewPeerReconnect(peerAddress,this.LocalAddr,this.TEM)
-
 	} else {
 		peer, peerErr = NewPeer(peerAddress,this.LocalAddr,this.TEM)
 	}
