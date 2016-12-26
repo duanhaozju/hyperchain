@@ -89,6 +89,12 @@ func (bucketTree *BucketTree) PrepareWorkingSet(key_valueMap K_VMap, blockNum *b
 		logger.Debug("Ignoring working-set as it is empty")
 		return nil
 	}
+	if (bucketTree.treePrefix == "-bucket-state"){
+		for k,v := range key_valueMap{
+			logger.Criticalf("blockNum is",blockNum.Int64(),"key_valueMap——————key is",k,"value is",common.Bytes2Hex(v))
+		}
+	}
+
 	bucketTree.dataNodesDelta = newDataNodesDelta(bucketTree.treePrefix, key_valueMap)
 	bucketTree.bucketTreeDelta = newBucketTreeDelta()
 	bucketTree.recomputeCryptoHash = true
@@ -316,9 +322,9 @@ func (bucketTree *BucketTree) addUpdatedValueSetForPersistence(writeBatch hyperd
 func (bucketTree *BucketTree) updateBucketCacheWithoutPersist(currentBlockNum *big.Int){
 	value, ok := bucketTree.treeHashMap[currentBlockNum]
 	if ok{
-		logger.Debug("the map has the block tree hash ",currentBlockNum)
+		logger.Critical("the map has the block tree hash ",currentBlockNum)
 		if(bytes.Compare(value,bucketTree.lastComputedCryptoHash)==0){
-			logger.Debug("the key hash is same as before ",value)
+			logger.Critical("the key hash is same as before ",value)
 		}
 	}
 	bucketTree.treeHashMap[currentBlockNum] = bucketTree.lastComputedCryptoHash
@@ -395,8 +401,13 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 		dbKey = append(dbKey,[]byte(bucketTree.treePrefix)...)
 		value,err := db.Get(dbKey)
 		if err != nil{
-			logger.Debug("Current BlockNum is",i,"Test RevertToTargetBlock Error",err.Error())
-			return err
+			if  err.Error()=="leveldb: not found" {
+				logger.Debug("current block has no change",i)
+				continue
+			}else {
+				logger.Debug("Current BlockNum is",i,"Test RevertToTargetBlock Error",err.Error())
+				return err
+			}
 		}
 		if value == nil || len(value)== 0{
 			logger.Debug("There is no value update")

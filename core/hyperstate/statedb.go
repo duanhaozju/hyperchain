@@ -824,9 +824,13 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 		for k, v := range workingSet {
 			log.Criticalf("working set key %s, value %s", k, common.Bytes2Hex(v))
 		}
+		hash, err := s.bucketTree.ComputeCryptoHash()
+
+		log.Critical("before blockNum is ",s.curSeqNo,"hash is",common.Bytes2Hex(hash))
 		s.bucketTree.PrepareWorkingSet(workingSet, big.NewInt(int64(s.curSeqNo)))
 
-		hash, err := s.bucketTree.ComputeCryptoHash()
+		hash, err = s.bucketTree.ComputeCryptoHash()
+		log.Critical("after blockNum is ",s.curSeqNo,"hash is",common.Bytes2Hex(hash))
 		if err != nil {
 			log.Error("calculate hash for statedb failed")
 			return common.Hash{}, err
