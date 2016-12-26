@@ -47,6 +47,7 @@ func NewGrpcManager(configPath string, nodeID int) *GrpcPeerManager {
 	newgRPCManager.TEM = transport.NewHandShakeManger()
 	// start local node
 	newgRPCManager.peerStatus = make(map[uint64]bool)
+
 	//init the flag map
 	for i := 1; i <= newgRPCManager.MaxPeerNumber; i++ {
 		_index := uint64(i)
@@ -81,9 +82,18 @@ func (this *GrpcPeerManager) Start(aliveChain chan bool, eventMux *event.TypeMux
 }
 
 func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
+	//calc f
+	// if reconnect no need to connect all peer
+	f := (this.MaxPeerNumber  - 1) /3
+	num := this.MaxPeerNumber - f
+	if isReconnect{
+		num = this.MaxPeerNumber - f - 1
+	}else{
+		num = this.MaxPeerNumber
+	}
 	// connect other peers
 	//TODO RETRY CONNECT 重试连接(未实现)
-	for this.peersPool.GetAliveNodeNum() < this.MaxPeerNumber-1 {
+	for this.peersPool.GetAliveNodeNum() < num {
 		log.Debug("node:", this.NodeID, "process connecting task...")
 		log.Debug("nodes number:", this.peersPool.GetAliveNodeNum())
 		nid := 1
