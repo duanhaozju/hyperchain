@@ -35,7 +35,7 @@ func NewState() *State {
 	if err != nil {
 		panic(fmt.Errorf("Error during initialization of state implementation: %s", err))
 	}
-	return &State{big.NewInt(1),*stateImpl, make(map[string][]byte),false}
+	return &State{big.NewInt(0),*stateImpl, make(map[string][]byte),false}
 }
 
 // TODO test

@@ -395,7 +395,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 		dbKey = append(dbKey,[]byte(bucketTree.treePrefix)...)
 		value,err := db.Get(dbKey)
 		if err != nil{
-			logger.Debug("Test RevertToTargetBlock Error",err.Error())
+			logger.Debug("Current BlockNum is",i,"Test RevertToTargetBlock Error",err.Error())
 			return err
 		}
 		if value == nil || len(value)== 0{

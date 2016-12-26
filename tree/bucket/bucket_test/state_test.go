@@ -234,13 +234,25 @@ func TestRevertToTargetBlock(t *testing.T) {
 	writeBatch := db.NewBatch()
 
 	state := bucket_test.NewState()
-	hash1,err := state.GetHash()
-	logger.Debugf("--------------the state.GetHash() is ",(hash1))
+	hash0,err := state.GetHash()
+	logger.Debugf("--------------the hash0 is ",(hash0))
 
-	// block 2
+	// block 1
 	key_valueMap := bucket.K_VMap{}
 	key_valueMap["key1"] = []byte("value1")
 	key_valueMap["key2"] = []byte("value2")
+	state.Bucket_tree.PrepareWorkingSet(key_valueMap,big.NewInt(1))
+	hash1,err := state.GetHash()
+	if err != nil{
+		logger.Debugf("--------------GetHash error")
+	}else {
+		logger.Debugf("--------------the state.GetHash() is ",(hash1))
+	}
+	state.Bucket_tree.AddChangesForPersistence(writeBatch,big.NewInt(1))
+	writeBatch.Write()
+
+	// block 2
+	key_valueMap = bucket.K_VMap{}
 	key_valueMap["key3"] = []byte("value3")
 	key_valueMap["key4"] = []byte("value4")
 	key_valueMap["key5"] = []byte("value5")
@@ -324,13 +336,13 @@ func TestRevertToTargetBlock(t *testing.T) {
 	logger.Debugf("after revert from %d",fromBlock," to %d",toBlock,"--------------the state.GetHash() is ",(hash_revert2))
 	testutil.AssertEquals(t,hash2,hash_revert2)
 
-	// revert to target number 1
+	// revert to target number 0
 	fromBlock = big.NewInt(2)
-	toBlock = big.NewInt(1)
+	toBlock = big.NewInt(0)
 	state.Bucket_tree.RevertToTargetBlock(fromBlock,toBlock)
-	hash_revert1,err := state.GetHash()
-	logger.Debugf("after revert from %d",fromBlock," to %d",toBlock,"--------------the state.GetHash() is ",(hash_revert1))
-	testutil.AssertEquals(t,hash1,hash_revert1)
+	hash_revert0,err := state.GetHash()
+	logger.Debugf("after revert from %d",fromBlock," to %d",toBlock,"--------------the state.GetHash() is ",(hash_revert0))
+	testutil.AssertEquals(t,hash0,hash_revert0)
 
 }
 
