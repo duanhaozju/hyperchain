@@ -225,12 +225,12 @@ func (self *StateDB) GetCode(addr common.Address) []byte {
 	return nil
 }
 
-func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
+func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Hash) {
 	stateObject := self.GetStateObject(a)
 	if stateObject != nil {
 		return stateObject.GetState(b)
 	}
-	return common.Hash{}
+	return false, common.Hash{}
 }
 
 func (self *StateDB) GetABI(addr common.Address) []byte {

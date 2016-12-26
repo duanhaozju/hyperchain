@@ -22,59 +22,57 @@ import (
 func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHash crypto.CommonHash, peerManager p2p.PeerManager) {
 	ret, existed := pool.blockCache.Get(ev.Hash)
 	if !existed {
-		log.Notice("No record found when commit block, block hash:", ev.Hash)
+		log.Notice("No record found when commit block, record hash:", ev.Hash)
 		return
 	}
 	record := ret.(BlockRecord)
-	if ev.Flag {
-		// 1.generate a new block with the argument in cache
-		newBlock := new(types.Block)
-		newBlock.Transactions = make([]*types.Transaction, len(record.ValidTxs))
-		copy(newBlock.Transactions, record.ValidTxs)
-		currentChain := core.GetChainCopy()
-		newBlock.ParentHash = currentChain.LatestBlockHash
-		newBlock.MerkleRoot = record.MerkleRoot
-		newBlock.TxRoot = record.TxRoot
-		newBlock.ReceiptRoot = record.ReceiptRoot
-		newBlock.Timestamp = ev.Timestamp          // primary make batch time
-		newBlock.CommitTime = ev.CommitTime        // local commit time
-		newBlock.Number = ev.SeqNo                 // actually block number
-		newBlock.WriteTime = time.Now().UnixNano() // local write time
-		newBlock.EvmTime = time.Now().UnixNano()   // local write time
-		newBlock.BlockHash = newBlock.Hash(commonHash).Bytes()
-		vid := record.VID
-		tempBlockNumber := record.SeqNo
-		if tempBlockNumber != ev.SeqNo {
-			log.Errorf("miss match temp block number<#%d>and actually block number<#%d> for vid #%d validation. commit for block #%d failed",
-				tempBlockNumber, ev.SeqNo, vid, ev.SeqNo)
-			return
-		}
-		log.Criticalf("commit for block #%d, parent hash %s, merkle root %s, tx root %s, receipt root %s, vid #%d", newBlock.Number,
-			common.Bytes2Hex(newBlock.ParentHash), common.Bytes2Hex(newBlock.MerkleRoot), common.Bytes2Hex(newBlock.TxRoot),
-			common.Bytes2Hex(newBlock.ReceiptRoot), vid)
-		// 2.save block and update chain
-		pool.AddBlock(newBlock, record.Receipts, commonHash, vid, ev.IsPrimary)
-		// 3.throw invalid tx back to origin node if current peer is primary
-		if ev.IsPrimary {
-			for _, t := range record.InvalidTxs {
-				payload, err := proto.Marshal(t)
-				if err != nil {
-					log.Error("Marshal tx error")
-				}
-				if t.Tx.Id == uint64(peerManager.GetNodeId()) {
-					pool.StoreInvalidResp(event.RespInvalidTxsEvent{
-						Payload: payload,
-					})
-					continue
-				}
-				var peers []uint64
-				peers = append(peers, t.Tx.Id)
-				peerManager.SendMsgToPeers(payload, peers, recovery.Message_INVALIDRESP)
+	// 1.generate a new block with the argument in cache
+	newBlock := &types.Block{
+		ParentHash:  core.GetChainCopy().LatestBlockHash,
+		MerkleRoot:  record.MerkleRoot,
+		TxRoot:      record.TxRoot,
+		ReceiptRoot: record.ReceiptRoot,
+		Timestamp:   ev.Timestamp,
+		CommitTime:  ev.Timestamp,
+		Number:      ev.SeqNo,
+		WriteTime:   time.Now().UnixNano(),
+		EvmTime:     time.Now().UnixNano(),
+	}
+	newBlock.Transactions = make([]*types.Transaction, len(record.ValidTxs))
+	copy(newBlock.Transactions, record.ValidTxs)
+	newBlock.BlockHash = newBlock.Hash(commonHash).Bytes()
+
+	vid := record.VID
+	tempBlockNumber := record.SeqNo
+	// check block number validation
+	if tempBlockNumber != ev.SeqNo {
+		log.Errorf("miss match temp block number<#%d>and actually block number<#%d> for vid #%d validation. commit for block #%d failed",
+			tempBlockNumber, ev.SeqNo, vid, ev.SeqNo)
+		return
+	}
+	log.Criticalf("commit for block #%d, parent hash %s, merkle root %s, tx root %s, receipt root %s, vid #%d", newBlock.Number,
+		common.Bytes2Hex(newBlock.ParentHash), common.Bytes2Hex(newBlock.MerkleRoot), common.Bytes2Hex(newBlock.TxRoot),
+		common.Bytes2Hex(newBlock.ReceiptRoot), vid)
+	// 2.save block and update chain
+	pool.AddBlock(newBlock, record.Receipts, commonHash, vid, ev.IsPrimary)
+	// 3.throw invalid tx back to origin node if current peer is primary
+	if ev.IsPrimary {
+		for _, t := range record.InvalidTxs {
+			payload, err := proto.Marshal(t)
+			if err != nil {
+				log.Error("Marshal tx error")
 			}
+			if t.Tx.Id == uint64(peerManager.GetNodeId()) {
+				pool.StoreInvalidResp(event.RespInvalidTxsEvent{
+					Payload: payload,
+				})
+				continue
+			}
+			var peers []uint64
+			peers = append(peers, t.Tx.Id)
+			peerManager.SendMsgToPeers(payload, peers, recovery.Message_INVALIDRESP)
 		}
 	}
-	// instead of send an CommitOrRollbackBlockEvent with `false` flag, PBFT send a `viewchange` or `self recovery`
-	// message to handle this issue
 	pool.blockCache.Remove(ev.Hash)
 }
 
@@ -127,22 +125,26 @@ func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, 
 	// for primary node, check whether vid equal to block's number
 	state, _ := pool.GetStateInstance(common.BytesToHash(block.MerkleRoot), db)
 	batch := state.FetchBatch(block.Number)
-	// reassign receipt
-	pool.reAssignTransactionLog(batch, receipts, block.Number, common.BytesToHash(block.BlockHash))
-	err, _ = core.PersistBlock(batch, block, pool.conf.BlockVersion, false, false)
-	if err != nil {
-		log.Error("Put block into database failed! error msg, ", err.Error())
+
+	if err := pool.persistTransactions(batch, block.Transactions, block.Number); err != nil {
+		log.Errorf("persist transactions of #%d failed.", block.Number)
+		return
+	}
+	if err := pool.persistReceipts(batch, receipts, block.Number, common.BytesToHash(block.BlockHash)); err != nil {
+		log.Errorf("persist receipts of #%d failed.", block.Number)
+		return
+	}
+	if err, _ := core.PersistBlock(batch, block, pool.conf.BlockVersion, false, false); err != nil {
+		log.Errorf("persist block #%d into database failed! error msg, ", block.Number, err.Error())
 		return
 	}
 	core.UpdateChain(batch, block, false, false, false)
-	// flush to disk
-	// IMPORTANT never remove this statement, otherwise the whole batch of data will lose
 	batch.Write()
 	// mark the block process finish, remove some stuff avoid of memory leak
 	// IMPORTANT this should be done after batch.Write been called
 	state.MarkProcessFinish(block.Number)
+	log.Criticalf("state #%d %s", vid, string(state.Dump()))
 	// write checkpoint data
-	log.Criticalf("state #%d %s", vid, string(state.Dump(vid)))
 	if block.Number % 10 == 0 && block.Number != 0 {
 		core.WriteChainChan()
 	}
@@ -188,26 +190,43 @@ func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
 	}
 }
 
-
+func (pool *BlockPool) persistTransactions(batch hyperdb.Batch, transactions []*types.Transaction, blockNumber uint64) error {
+	for i, transaction := range transactions {
+		if err, _ := core.PersistTransaction(batch, transaction, pool.conf.TransactionVersion, false, false); err != nil {
+			log.Error("put tx data into database failed! error msg, ", err.Error())
+			return err
+		}
+		// persist transaction meta data
+		meta := &types.TransactionMeta{
+			BlockIndex: blockNumber,
+			Index:      int64(i),
+		}
+		if err := core.PersistTransactionMeta(batch, meta, transaction.GetTransactionHash(), false, false); err != nil {
+			log.Error("Put txmeta into database failed! error msg, ", err.Error())
+			return err
+		}
+	}
+	return nil
+}
 // re assign block hash and block number to transaction logs
 // during the validation, block number and block hash can be incorrect
-func (pool *BlockPool) reAssignTransactionLog(batch hyperdb.Batch, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) {
+func (pool *BlockPool) persistReceipts(batch hyperdb.Batch, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) error {
 	for _, receipt := range receipts {
 		logs, err := receipt.GetLogs()
 		if err != nil {
 			log.Error("re assign transaction log, unmarshal receipt failed")
-			return
-		}
-		if len(logs) == 0 {
-			continue
+			return err
 		}
 		for _, log := range logs {
 			log.BlockHash = blockHash
 			log.BlockNumber = blockNumber
 		}
 		receipt.SetLogs(logs)
-		// replace original receipt
-		core.PersistReceipt(batch, receipt, pool.conf.TransactionVersion, false, false)
+		if err, _ := core.PersistReceipt(batch, receipt, pool.conf.TransactionVersion, false, false); err != nil {
+			log.Error("Put receipt into database failed! error msg, ", err.Error())
+			return err
+		}
 	}
+	return nil
 }
 

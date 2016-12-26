@@ -158,7 +158,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			// remove persisted journals
 			db.Delete(hyperstate.CompositeJournalKey(uint64(i)))
 		}
-		log.Criticalf("revert to #%d, %s", targetNumber, string(state.Dump(uint64(targetNumber))))
+		log.Criticalf("revert to #%d, %s", targetNumber, string(state.Dump()))
 
 		// revert related stateObject storage bucket tree
 		for addr := range dirtyStateObjectSet.Iter() {
@@ -167,7 +167,6 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			bucketTree := bucket.NewBucketTree(string(prefix))
 			bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.bucketTreeConf.StorageSize, pool.bucketTreeConf.StorageLevelGroup))
 			bucketTree.RevertToTargetBlock(big.NewInt(currentNumber), big.NewInt(targetNumber))
-			log.Critical("currentNumber is",currentNumber,"targetNumber is ",targetNumber)
 			hash, _ := bucketTree.ComputeCryptoHash()
 			log.Criticalf("re-compute %s storage hash %s", address.Hex(), common.Bytes2Hex(hash))
 			obj, err := db.Get(hyperstate.CompositeAccountKey(address.Bytes()))
@@ -191,12 +190,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 		bucketTree := bucket.NewBucketTree(string(prefix))
 		bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.bucketTreeConf.StateSize, pool.bucketTreeConf.StateLevelGroup))
 
-		beforeRootHash,_ := bucketTree.ComputeCryptoHash()
-		log.Criticalf("before RootHash is",common.Bytes2Hex(beforeRootHash))
-		log.Criticalf("currentBlockNum is",currentNumber,"targetNumber is",targetNumber)
 		bucketTree.RevertToTargetBlock(big.NewInt(currentNumber), big.NewInt(targetNumber))
-		beforeRootHash,_ = bucketTree.ComputeCryptoHash()
-		log.Criticalf("after RootHash is",common.Bytes2Hex(beforeRootHash))
 		currentRootHash, err := bucketTree.ComputeCryptoHash()
 		if err != nil {
 			log.Errorf("re-compute state bucket tree hash failed, error :%s", err.Error())

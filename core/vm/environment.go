@@ -89,7 +89,7 @@ type Database interface {
 	AddRefund(*big.Int)
 	GetRefund() *big.Int
 
-	GetState(common.Address, common.Hash) common.Hash
+	GetState(common.Address, common.Hash) (bool, common.Hash)
 	SetState(common.Address, common.Hash, common.Hash)
 
 	Delete(common.Address) bool
@@ -110,7 +110,7 @@ type Database interface {
 	Reset() error
 	// Query
 	GetAccounts() map[string]Account
-	Dump(uint64) []byte
+	Dump() []byte
 
 	// Atomic Related
 	MarkProcessStart(uint64)

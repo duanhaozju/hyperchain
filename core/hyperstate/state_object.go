@@ -184,29 +184,34 @@ func (c *StateObject) touch() {
 }
 
 // GetState from live state object return a storage entry's value if existed
-func (self *StateObject) GetState(key common.Hash) common.Hash {
+func (self *StateObject) GetState(key common.Hash) (bool, common.Hash) {
 	value, exists := self.cachedStorage[key]
 	if exists {
-		return value
+		return true, value
 	} else {
-		return common.Hash{}
+		return false, common.Hash{}
 	}
 }
 // GetState from database return a storage entry's value if existed
-func GetStateFromDB(db hyperdb.Database,address common.Address, key common.Hash) common.Hash {
+func GetStateFromDB(db hyperdb.Database,address common.Address, key common.Hash) (bool, common.Hash) {
 	var value common.Hash
 	// Load from DB in case it is missing.
-	val, _ := db.Get(CompositeStorageKey(address.Bytes(), key.Bytes()))
+	val, err := db.Get(CompositeStorageKey(address.Bytes(), key.Bytes()))
+	if err != nil {
+		return false, common.Hash{}
+	}
 	value.SetBytes(val)
-	return value
+	return true, value
 }
 
 // SetState updates a value in account storage.
 func (self *StateObject) SetState(db hyperdb.Database, key, value common.Hash) {
+	exist, previous := self.db.GetState(self.address, key)
 	self.db.journal.JournalList = append(self.db.journal.JournalList, &StorageChange{
 		Account:  &self.address,
 		Key:      key,
-		Prevalue: self.db.GetState(self.address, key),
+		Prevalue: previous,
+		Exist:    exist,
 	})
 	self.setState(key, value)
 }
@@ -221,6 +226,10 @@ func (self *StateObject) setState(key, value common.Hash) {
 		self.onDirty(self.Address())
 		self.onDirty = nil
 	}
+}
+func (self *StateObject) removeState(key common.Hash) {
+	delete(self.cachedStorage, key)
+	delete(self.dirtyStorage, key)
 }
 
 func (self *StateObject) Flush(db hyperdb.Batch) error {
@@ -268,7 +277,7 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 		prev := self.Root()
 		workingSet := bucket.NewKVMap()
 		for k, v := range self.dirtyStorage {
-			log.Debugf("calculate state object %s storage hash, dirty entry key %s value %s", self.address.Hex(), k.Hex(), v.Hex())
+			log.Errorf("calculate state object %s storage hash, dirty entry key %s value %s", self.address.Hex(), k.Hex(), v.Hex())
 			if (v == common.Hash{}) {
 				workingSet[k.Hex()] = nil
 			} else {
@@ -285,7 +294,7 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 		}
 		// 3. assign to self.ROOT
 		self.SetRoot(common.BytesToHash(hash))
-		log.Debugf("state object %s storage root hash %s after #%d", self.address.Hex(), self.Root().Hex(), self.db.curSeqNo)
+		log.Errorf("state object %s storage root hash %s after #%d", self.address.Hex(), self.Root().Hex(), self.db.curSeqNo)
 		if (self.Root() != common.Hash{} || prev != common.Hash{}) {
 			// storage hash changed
 			self.db.journal.JournalList = append(self.db.journal.JournalList, &StorageHashChange{

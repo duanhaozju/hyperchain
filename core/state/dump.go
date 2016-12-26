@@ -56,7 +56,7 @@ func (self *StateDB) RawDump() World {
 	return world
 }
 
-func (self *StateDB) Dump(height uint64) []byte {
+func (self *StateDB) Dump() []byte {
 	json, err := json.MarshalIndent(self.RawDump(), "", "    ")
 	if err != nil {
 		fmt.Println("dump err", err)

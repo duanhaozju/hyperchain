@@ -377,7 +377,7 @@ func jitCalculateGasAndSize(env Environment, contract *Contract, instr instructi
 
 		var g *big.Int
 		y, x := stack.data[stack.len()-2], stack.data[stack.len()-1]
-		val := statedb.GetState(contract.Address(), common.BigToHash(x))
+		_, val := statedb.GetState(contract.Address(), common.BigToHash(x))
 
 		// This checks for 3 scenario's and calculates gas accordingly
 		// 1. From a zero-value address to a non-zero value         (NEW VALUE)

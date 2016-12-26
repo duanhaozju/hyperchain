@@ -218,7 +218,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 			InvalidTxs: invalidTxs,
 		}
 	}
-	// initailize calculator
+	// initialize calculator
 	// for calculate fingerprint of a batch of transactions and receipts
 	if err := pool.initializeTransactionCalculator(); err != nil {
 		log.Errorf("validate #%d initialize transaction calculator", pool.tempBlockNumber)
@@ -250,18 +250,17 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	}
 
 	state.MarkProcessStart(pool.tempBlockNumber)
-	// initialize execution environment ruleset
-	vmenv := initEnvironment(state, pool.tempBlockNumber)
+	// initialize execution environment rule set
+	env := initEnvironment(state, pool.tempBlockNumber)
 	// execute transaction one by one
 	batch := state.FetchBatch(pool.tempBlockNumber)
 	for i, tx := range txs {
 		state.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
-		receipt, _, _, err := core.ExecTransaction(*tx, vmenv)
+		receipt, _, _, err := core.ExecTransaction(tx, env)
 		// invalid transaction, check invalid type
 		if err != nil {
 			var errType types.InvalidTransactionRecord_ErrType
 			if core.IsValueTransferErr(err) {
-				log.Criticalf("[DEBUG] OUT OF BALANCE")
 				errType = types.InvalidTransactionRecord_OUTOFBALANCE
 			} else if core.IsExecContractErr(err) {
 				tmp := err.(*core.ExecContractError)
@@ -269,11 +268,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 					errType = types.InvalidTransactionRecord_DEPLOY_CONTRACT_FAILED
 				} else if tmp.GetType() == 1{
 					errType = types.InvalidTransactionRecord_INVOKE_CONTRACT_FAILED
-				} else {
-					// For extension
 				}
-			} else {
-				// For extension
 			}
 			invalidTxs = append(invalidTxs, &types.InvalidTransactionRecord{
 				Tx:      tx,
@@ -282,39 +277,9 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 			})
 			continue
 		}
-		// persist transaction
-		var data []byte
-		err, data = core.PersistTransaction(batch, tx, pool.conf.TransactionVersion, false, false);
-		if err != nil {
-			log.Error("put tx data into database failed! error msg, ", err.Error())
-			return err, &BlockRecord{
-				InvalidTxs: invalidTxs,
-			}
-		}
-		pool.calculateTransactionsFingerprint(tx, data, false)
-		// persist receipt
-		err, data = core.PersistReceipt(batch, receipt, pool.conf.TransactionVersion, false, false)
-		if  err != nil {
-			log.Error("put receipt data into database failed! error msg, ", err.Error())
-			return err, &BlockRecord{
-				InvalidTxs: invalidTxs,
-			}
-		}
-		pool.calculateReceiptFingerprint(receipt, data, false)
+		pool.calculateTransactionsFingerprint(tx, false)
+		pool.calculateReceiptFingerprint(receipt, false)
 		receipts = append(receipts, receipt)
-		// persist transaction meta
-		// set temporarily
-		// for primary node, the seqNo can be invalid. remove the incorrect txmeta info when commit block to avoid this error
-		meta := &types.TransactionMeta{
-			BlockIndex: pool.tempBlockNumber,
-			Index:      int64(i),
-		}
-		if err := core.PersistTransactionMeta(batch, meta, tx.GetTransactionHash(), false, false); err != nil {
-			log.Error("Put txmeta into database failed! error msg, ", err.Error())
-			return err, &BlockRecord{
-				InvalidTxs: invalidTxs,
-			}
-		}
 		validtxs = append(validtxs, tx)
 	}
 	// submit validation result
@@ -388,11 +353,19 @@ func (pool *BlockPool) initializeReceiptCalculator() error {
 	return nil
 }
 // calculate a batch of transaction
-func (pool *BlockPool) calculateTransactionsFingerprint(transaction *types.Transaction, data []byte, flush bool) (common.Hash, error) {
+func (pool *BlockPool) calculateTransactionsFingerprint(transaction *types.Transaction, flush bool) (common.Hash, error) {
+	if transaction == nil && flush == false {
+		return common.Hash{}, errors.New("empty pointer")
+	}
 	switch pool.conf.StateType {
 	case "rawstate":
 		calculator := pool.transactionCalculator.(*pmt.Trie)
 		if flush == false {
+			err, data := core.WrapperTransaction(transaction, pool.conf.TransactionVersion)
+			if err != nil {
+				log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
+				return common.Hash{}, err
+			}
 			// put transaction to buffer temporarily
 			calculator.Update(append(core.TransactionPrefix, transaction.GetTransactionHash().Bytes()...), data)
 			return common.Hash{}, nil
@@ -402,6 +375,11 @@ func (pool *BlockPool) calculateTransactionsFingerprint(transaction *types.Trans
 		}
 	case "hyperstate":
 		if flush == false {
+			err, data := core.WrapperTransaction(transaction, pool.conf.TransactionVersion)
+			if err != nil {
+				log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
+				return common.Hash{}, err
+			}
 			// put transaction to buffer temporarily
 			pool.transactionBuffer = append(pool.transactionBuffer, data)
 			return common.Hash{}, nil
@@ -416,11 +394,23 @@ func (pool *BlockPool) calculateTransactionsFingerprint(transaction *types.Trans
 	return common.Hash{}, nil
 }
 // calculate a batch of receipt
-func (pool *BlockPool)calculateReceiptFingerprint(receipt *types.Receipt, data []byte, flush bool)(common.Hash, error) {
+func (pool *BlockPool) calculateReceiptFingerprint(receipt *types.Receipt, flush bool)(common.Hash, error) {
+	// 1. marshal receipt to byte slice
+	if receipt == nil  && flush == false {
+		log.Error("empty recepit pointer")
+		return common.Hash{}, errors.New("empty pointer")
+	}
 	switch pool.conf.StateType {
 	case "rawstate":
 		calculator := pool.receiptCalculator.(*pmt.Trie)
 		if flush == false {
+			// process
+			err, data := core.WrapperReceipt(receipt, pool.conf.TransactionVersion)
+			if err != nil {
+				log.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
+				return common.Hash{}, err
+			}
+
 			// put transaction to buffer temporarily
 			calculator.Update(append(core.ReceiptsPrefix, receipt.TxHash...), data)
 			return common.Hash{}, nil
@@ -430,8 +420,13 @@ func (pool *BlockPool)calculateReceiptFingerprint(receipt *types.Receipt, data [
 		}
 	case "hyperstate":
 		if flush == false {
+			// process
+			err, data := core.WrapperReceipt(receipt, pool.conf.TransactionVersion)
+			if err != nil {
+				log.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
+				return common.Hash{}, err
+			}
 			// put transaction to buffer temporarily
-			log.Infof("append receipt %s", receipt.ToReceiptTrans())
 			pool.receiptBuffer = append(pool.receiptBuffer, data)
 			return common.Hash{}, nil
 		} else {
@@ -458,9 +453,9 @@ func (pool *BlockPool) submitValidationResult(state vm.Database, batch hyperdb.B
 		// generate new state fingerprint
 		merkleRoot := root.Bytes()
 		// generate transactions and receipts fingerprint
-		res, _ := pool.calculateTransactionsFingerprint(nil, nil, true)
+		res, _ := pool.calculateTransactionsFingerprint(nil, true)
 		txRoot := res.Bytes()
-		res, _ = pool.calculateReceiptFingerprint(nil, nil, true)
+		res, _ = pool.calculateReceiptFingerprint(nil, true)
 		receiptRoot := res.Bytes()
 		// store latest state status
 		// actually it's useless
@@ -477,9 +472,9 @@ func (pool *BlockPool) submitValidationResult(state vm.Database, batch hyperdb.B
 		// generate new state fingerprint
 		merkleRoot := root.Bytes()
 		// generate transactions and receipts fingerprint
-		res, _ := pool.calculateTransactionsFingerprint(nil, nil, true)
+		res, _ := pool.calculateTransactionsFingerprint(nil, true)
 		txRoot := res.Bytes()
-		res, _ = pool.calculateReceiptFingerprint(nil, nil, true)
+		res, _ = pool.calculateReceiptFingerprint(nil, true)
 		receiptRoot := res.Bytes()
 		// store latest state status
 		// actually it's useless
@@ -489,4 +484,7 @@ func (pool *BlockPool) submitValidationResult(state vm.Database, batch hyperdb.B
 		return nil, merkleRoot, txRoot, receiptRoot
 	}
 	return errors.New("miss state type"), nil, nil, nil
+}
+func (pool *BlockPool) debug(tx *types.Transaction) {
+	log.Errorf("debug debug %p", tx)
 }

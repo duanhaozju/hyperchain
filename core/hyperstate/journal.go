@@ -196,6 +196,7 @@ type (
 		Account       *common.Address `json:"account,omitempty"`
 		Key           common.Hash     `json:"key,omitempty"`
 		Prevalue      common.Hash     `json:"prevalue,omitempty"`
+		Exist         bool            `json:"exist,omitempty"`
 		Type          string          `json:"type,omitempty"`
 	}
 	CodeChange struct {
@@ -469,9 +470,17 @@ func (ch *CodeChange) GetType() string {
 // storageChange
 func (ch *StorageChange) Undo(s *StateDB, writeThrough bool) {
 	if !writeThrough {
-		s.GetStateObject(*ch.Account).setState(ch.Key, ch.Prevalue)
+		if ch.Exist {
+			s.GetStateObject(*ch.Account).setState(ch.Key, ch.Prevalue)
+		} else {
+			s.GetStateObject(*ch.Account).removeState(ch.Key)
+		}
 	} else {
-		s.db.Put(CompositeStorageKey(ch.Account.Bytes(), ch.Key.Bytes()), ch.Prevalue.Bytes())
+		if ch.Exist {
+			s.db.Put(CompositeStorageKey(ch.Account.Bytes(), ch.Key.Bytes()), ch.Prevalue.Bytes())
+		} else {
+			s.db.Delete(CompositeStorageKey(ch.Account.Bytes(), ch.Key.Bytes()))
+		}
 	}
 }
 func (ch *StorageChange) String() string {

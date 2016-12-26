@@ -32,7 +32,7 @@ func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 	// initialize execution environment
 	fakeBlockNumber := core.GetHeightOfChain()
 	sandBox := initEnvironment(state, fakeBlockNumber)
-	receipt, _, _, err := core.ExecTransaction(*tx, sandBox)
+	receipt, _, _, err := core.ExecTransaction(tx, sandBox)
 	if err != nil{
 		var errType types.InvalidTransactionRecord_ErrType
 		if core.IsValueTransferErr(err) {
@@ -43,11 +43,7 @@ func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 				errType = types.InvalidTransactionRecord_DEPLOY_CONTRACT_FAILED
 			} else if tmp.GetType() == 1{
 				errType = types.InvalidTransactionRecord_INVOKE_CONTRACT_FAILED
-			} else {
-				// For extension
 			}
-		} else {
-			// For extension
 		}
 		t :=  &types.InvalidTransactionRecord{
 			Tx:      tx,

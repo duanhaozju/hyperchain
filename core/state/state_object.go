@@ -98,7 +98,7 @@ func (self *StateObject) Storage() Storage {
 	return self.storage
 }
 
-func (self *StateObject) GetState(key common.Hash) common.Hash {
+func (self *StateObject) GetState(key common.Hash) (bool, common.Hash) {
 	value, exists := self.storage[key]
 	if !exists {
 		value = self.getAddr(key)
@@ -106,7 +106,7 @@ func (self *StateObject) GetState(key common.Hash) common.Hash {
 			self.storage[key] = value
 		}
 	}
-	return value
+	return true, value
 }
 
 func (self *StateObject) SetState(key, value common.Hash) {

@@ -465,8 +465,8 @@ func opMstore8(instr instruction, pc *uint64, env Environment, contract *Contrac
 
 func opSload(instr instruction, pc *uint64, env Environment, contract *Contract, memory *Memory, stack *stack) {
 	loc := common.BigToHash(stack.pop())
-	val := env.Db().GetState(contract.Address(), loc).Big()
-	stack.push(val)
+	_, val := env.Db().GetState(contract.Address(), loc)
+	stack.push(val.Big())
 }
 
 func opSstore(instr instruction, pc *uint64, env Environment, contract *Contract, memory *Memory, stack *stack) {

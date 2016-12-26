@@ -93,12 +93,6 @@ func (bucketTree *BucketTree) PrepareWorkingSet(key_valueMap K_VMap, blockNum *b
 		logger.Debug("Ignoring working-set as it is empty")
 		return nil
 	}
-	if (bucketTree.treePrefix == "-bucket-state"){
-		for k,v := range key_valueMap{
-			logger.Critical("--------------------blockNum is",blockNum.Int64(),"key_valueMap——————key is",k,"value is",common.Bytes2Hex(v))
-		}
-	}
-
 	bucketTree.dataNodesDelta = newDataNodesDelta(bucketTree.treePrefix, key_valueMap)
 	bucketTree.bucketTreeDelta = newBucketTreeDelta()
 	bucketTree.recomputeCryptoHash = true
@@ -150,10 +144,9 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 		//logger.Critical("blockhash is",common.Bytes2Hex(hash),"---------------------existingDataNodes length is ",len(existingDataNodes))
 		updatedDataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(bucketKey)
 		existingDataNodes, err := bucketTree.dataNodeCache.fetchDataNodesFromCacheFor(bucketTree.treePrefix, *bucketKey)
-		if (bucketTree.treePrefix == "-bucket-state"){
-			logger.Critical("---------------------updatedDataNodes length is ",len(updatedDataNodes))
-			logger.Critical("bucket num is",bucketKey.bucketNumber,"bucket level is",bucketKey.level)
-			logger.Critical("---------------------existingDataNodes length is ",len(existingDataNodes))
+		if (bucketTree.treePrefix == "-bucket-state") {
+			logger.Criticalf("updatedDataNodes length = %d",len(updatedDataNodes))
+			logger.Criticalf("existingDataNodes length = %d",len(existingDataNodes))
 		}
 		if err != nil {
 			return err
@@ -229,11 +222,9 @@ func computeDataNodesCryptoHash(bucketKey *bucketKey, updatedNodes dataNodes, ex
 			updatedValueSet.Set(compositeKey,updatedNode.value,nil)
 			i++
 		case 0:
-			logger.Errorf("find same as existed node, key %s", updatedNode.dataKey)
 			nextNode = updatedNode
 			if bytes.Compare(updatedNode.getValue(),existingNode.value) != 0{
 				compositeKey := string(updatedNode.getCompositeKey())
-				logger.Criticalf("update updated value set, current value %s, origin value %s", common.Bytes2Hex(updatedNode.value), common.Bytes2Hex(existingNode.value))
 				updatedValueSet.Set(compositeKey,updatedNode.value,existingNode.value)
 			}
 
@@ -297,10 +288,10 @@ func (bucketTree *BucketTree) addDataNodeChangesForPersistence(writeBatch hyperd
 		dataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(affectedBucket)
 		for _, datanode := range dataNodes {
 			if datanode.isDelete() {
-				logger.Errorf("Deleting data node key = %#v", datanode.dataKey)
+				logger.Debugf("Deleting data node key = %#v", datanode.dataKey)
 				writeBatch.Delete(append([]byte(DataNodePrefix), datanode.dataKey.getEncodedBytes()...))
 			} else {
-				logger.Errorf("Adding data node with value = %s", common.Bytes2Hex(datanode.value))
+				logger.Debugf("Adding data node with value = %s", common.Bytes2Hex(datanode.value))
 				writeBatch.Put(append([]byte(DataNodePrefix), datanode.dataKey.getEncodedBytes()...), datanode.value)
 			}
 		}
@@ -346,9 +337,7 @@ func (updatedValueSet *UpdatedValueSet) Print(){
 	for k,v := range updatedValueSet.UpdatedKVs{
 		logger.Critical("Print key is ",k)
 		logger.Critical("previous value is ",common.Bytes2Hex(v.PreviousValue))
-		//logger.Critical("----------previous value is ",common.Bytes2Hex(ComputeCryptoHash(v.PreviousValue)))
 		logger.Critical("value is ",common.Bytes2Hex(v.Value))
-		//logger.Critical("----------value is ",common.Bytes2Hex(ComputeCryptoHash(v.Value)))
 	}
 }
 
@@ -364,15 +353,6 @@ func (bucketTree *BucketTree) updateCacheWithoutPersist(currentBlockNum *big.Int
 	bucketTree.treeHashMap[currentBlockNum] = bucketTree.lastComputedCryptoHash
 	bucketTree.updateDataNodeCache()
 	bucketTree.updateBucketCache()
-	if (bucketTree.treePrefix == "-bucket-state"){
-		logger.Critical("Start verify the updateCacheWithoutPersist")
-		for k,v := range bucketTree.updatedValueSet.UpdatedKVs{
-			logger.Critical("the key is ",k)
-			logger.Critical("the previous value is ",common.Bytes2Hex(ComputeCryptoHash(v.PreviousValue)))
-			logger.Critical("the current value is ",common.Bytes2Hex(ComputeCryptoHash(v.Value)))
-		}
-		logger.Critical("End verify the updateCacheWithoutPersist")
-	}
 	bucketTree.dataNodesDelta = nil
 	bucketTree.bucketTreeDelta = nil
 	bucketTree.updatedValueSet = nil

@@ -362,19 +362,19 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 	return common.BytesToHash(stateObject.CodeHash())
 }
 // get a storage entry in stateObject
-func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
+func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Hash) {
 	// Prefer `live` object
 	var liveObj *StateObject
 	if obj := self.stateObjects[a]; obj != nil {
 		liveObj = obj
 		if obj.deleted {
-			return common.Hash{}
+			return false, common.Hash{}
 		} else {
-			value := obj.GetState(b)
+			existed, value := obj.GetState(b)
 			// if storage entry exist in live object's storage cache
-			if (value != common.Hash{}) {
+			if existed {
 				log.Debugf("get state for %x in live objects, key %x, value %x", a.Hex(), b.Hex(), value.Hex())
-				return value
+				return true, value
 			}
 		}
 	}
@@ -389,10 +389,10 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 			content := res.(map[common.Address]*StateObject)
 			if obj := content[a]; obj != nil {
 				if obj.deleted {
-					return common.Hash{}
+					return false, common.Hash{}
 				} else {
-					value := obj.GetState(b)
-					if (value != common.Hash{}) {
+					existed, value:= obj.GetState(b)
+					if existed {
 						log.Debugf("get state for %x in content cache, key %x, value %x", a.Hex(), b.Hex(), value.Hex())
 						if liveObj == nil {
 							// save obj itself to current cache
@@ -401,26 +401,27 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 							// save into live obj's cache storage avoid disk cost for next fetch
 							liveObj.cachedStorage[b] = value
 						}
-						return value
+						return true, value
 					}
 				}
 			}
 		}
 	}
 	// load from database
-	value := GetStateFromDB(self.db, a, b)
-	if (value != common.Hash{}) {
+	existed, value := GetStateFromDB(self.db, a, b)
+	if existed {
+		// add related obj to live cache
 		if liveObj == nil {
 			log.Debugf("get state for %x in database, key %x, value %x, add to live state object's storage cache", a.Hex(), b.Hex(), value.Hex())
 			// Load the object from the database.
 			data, err := self.db.Get(CompositeAccountKey(a.Bytes()))
 			if err != nil {
-				return common.Hash{}
+				return false, common.Hash{}
 			}
 			var account Account
 			err = Unmarshal(data, &account)
 			if err != nil {
-				return common.Hash{}
+				return false, common.Hash{}
 			}
 			// Insert into the live set.
 			obj := newObject(self, a, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.bktConf.StorageSize, self.bktConf.StorageLevelGroup))
@@ -431,10 +432,10 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 			log.Debugf("get state for %x in database, key %x, value %x, add %x to live objects", a.Hex(), b.Hex(), value.Hex(), a.Hex())
 			liveObj.cachedStorage[b] = value
 		}
-		return value
+		return true, value
 	}
 	log.Debugf("find state for %x %x failed", a.Hex(), b.Hex())
-	return common.Hash{}
+	return false, common.Hash{}
 }
 // check whether an account has been suicide
 func (self *StateDB) IsDeleted(addr common.Address) bool {
@@ -527,6 +528,13 @@ func (self *StateDB) deleteStateObject(batch hyperdb.Batch,stateObject *StateObj
 	stateObject.deleted = true
 	addr := stateObject.Address()
 	batch.Delete(CompositeAccountKey(addr.Bytes()))
+	// delete related storage content
+	// TODO some storage entries can be leave if it has been flush to disk still in previous batch
+	db, _ := self.db.(*hyperdb.LDBDatabase)
+	iter := db.NewIteratorWithPrefix(GetStorageKeyPrefix(stateObject.address.Bytes()))
+	for iter.Next() {
+		db.Delete(iter.Key())
+	}
 }
 
 // Retrieve a state object given my the address. Returns nil if not found.
@@ -819,9 +827,6 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 	} else {
 		// Use bucket tree instead
 		log.Debugf("begin to calculate state db root hash for #%d", s.curSeqNo)
-		for k, v := range workingSet {
-			log.Criticalf("#%d working set key %s, value %s",  s.curSeqNo, k, common.Bytes2Hex(v))
-		}
 		hash, err := s.bucketTree.ComputeCryptoHash()
 
 		s.bucketTree.PrepareWorkingSet(workingSet, big.NewInt(int64(s.curSeqNo)))

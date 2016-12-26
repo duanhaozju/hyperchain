@@ -70,21 +70,14 @@ func GetReceipt(txHash common.Hash) *types.ReceiptTrans {
 // Persist receipt content to a batch, KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false
 func PersistReceipt(batch hyperdb.Batch, receipt *types.Receipt, version string, flush bool, sync bool) (error, []byte) {
 	// check pointer value
-	if receipt == nil || batch == nil {
-		return errors.New("empty pointer"), nil
+	if receipt == nil || batch == nil { return errors.New("empty pointer"), nil
 	}
 	// process
-	receipt.Version = []byte(version)
-	data, err := proto.Marshal(receipt)
+	err, data := WrapperReceipt(receipt, version)
 	if err != nil {
-		log.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
+		log.Error("wrapper receipt failed.")
 		return err, nil
 	}
-	wrapper := &types.ReceiptWrapper{
-		ReceiptVersion: []byte(version),
-		Receipt:        data,
-	}
-	data, err = proto.Marshal(wrapper)
 	if err := batch.Put(append(ReceiptsPrefix, receipt.TxHash...), data); err != nil {
 		log.Error("Put receipt data into database failed! error msg, ", err.Error())
 		return err, nil
@@ -96,6 +89,27 @@ func PersistReceipt(batch hyperdb.Batch, receipt *types.Receipt, version string,
 		} else {
 			go batch.Write()
 		}
+	}
+	return nil, data
+}
+func WrapperReceipt(receipt *types.Receipt, version string) (error, []byte){
+	if receipt == nil  {
+		return errors.New("empty pointer"), nil
+	}
+	receipt.Version = []byte(version)
+	data, err := proto.Marshal(receipt)
+	if err != nil {
+		log.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
+		return err, nil
+	}
+	wrapper := &types.ReceiptWrapper{
+		ReceiptVersion: []byte(version),
+		Receipt:        data,
+	}
+	data, err = proto.Marshal(wrapper)
+	if err != nil {
+		log.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
+		return err, nil
 	}
 	return nil, data
 }
@@ -136,18 +150,11 @@ func PersistTransaction(batch hyperdb.Batch, transaction *types.Transaction, ver
 	if transaction == nil || batch == nil {
 		return errors.New("empty pointer"), nil
 	}
-	// process
-	transaction.Version = []byte(version)
-	data, err := proto.Marshal(transaction)
+	err, data := WrapperTransaction(transaction, version)
 	if err != nil {
-		log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
+		logger.Errorf("wrapper transaction failed.")
 		return err, nil
 	}
-	wrapper := &types.TransactionWrapper{
-		TransactionVersion: []byte(version),
-		Transaction:        data,
-	}
-	data, err = proto.Marshal(wrapper)
 	if err := batch.Put(append(TransactionPrefix, transaction.GetTransactionHash().Bytes()...), data); err != nil {
 		log.Error("Put tx data into database failed! error msg, ", err.Error())
 		return err, nil
@@ -163,6 +170,29 @@ func PersistTransaction(batch hyperdb.Batch, transaction *types.Transaction, ver
 	return nil, data
 }
 
+func WrapperTransaction(transaction *types.Transaction, version string) (error, []byte) {
+	if transaction == nil {
+		return errors.New("empty pointer"), nil
+	}
+	// process
+	transaction.Version = []byte(version)
+	data, err := proto.Marshal(transaction)
+	if err != nil {
+		log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
+		return err, nil
+	}
+	wrapper := &types.TransactionWrapper{
+		TransactionVersion: []byte(version),
+		Transaction:        data,
+	}
+	data, err = proto.Marshal(wrapper)
+	if err != nil {
+		log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
+		return err, nil
+	}
+	return nil, data
+}
+
 // Persist transactions content to a batch, KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false
 func PersistTransactions(batch hyperdb.Batch, transactions []*types.Transaction, version string, flush bool, sync bool) error {
 	// check pointer value
@@ -171,16 +201,11 @@ func PersistTransactions(batch hyperdb.Batch, transactions []*types.Transaction,
 	}
 	// process
 	for _, transaction := range transactions {
-		data, err := proto.Marshal(transaction)
+		err, data := WrapperTransaction(transaction, version)
 		if err != nil {
-			log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
+			logger.Errorf("wrapper transaction failed.")
 			return err
 		}
-		wrapper := &types.TransactionWrapper{
-			TransactionVersion: []byte(version),
-			Transaction:        data,
-		}
-		data, err =  proto.Marshal(wrapper)
 		if err := batch.Put(append(TransactionPrefix, transaction.GetTransactionHash().Bytes()...), data); err != nil {
 			log.Error("Put tx data into database failed! error msg, ", err.Error())
 			return err
@@ -379,6 +404,7 @@ func PersistBlock(batch hyperdb.Batch, block *types.Block, version string, flush
 	}
 	return nil, data
 }
+
 
 func GetBlockHash(db hyperdb.Database, blockNumber uint64) ([]byte, error) {
 	keyNum := strconv.FormatInt(int64(blockNumber), 10)
