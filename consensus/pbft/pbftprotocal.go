@@ -110,13 +110,13 @@ type pbftProtocal struct {
 	negoViewRspTimeout	time.Duration		// time limit for N-f nego-view responses
 
 								 // recovery
-	inRecovery             bool                             // inRecovery indicate if replica is in proactive recovery process
-	recoveryToSeqNo	       uint64							// recoveryToSeqNo is the target seqNo we want to recovery to
-	recoveryRestartTimer   events.Timer                     // recoveryRestartTimer track how long a recovery is finished and fires if needed
-	recoveryRestartTimeout time.Duration                    // time limit for recovery process
-	rcRspStore             map[uint64]*RecoveryResponse     // rcRspStore store recovery responses from replicas
-	rcPQCSenderStore       map[uint64]bool			 		// rcPQCSenderStore store those who sent PQC info to self
-	recvNewViewInRecovery  bool
+	inRecovery             bool                              // inRecovery indicate if replica is in proactive recovery process
+	recoveryToSeqNo	       *uint64				 // recoveryToSeqNo is the target seqNo expected to recover to
+	recoveryRestartTimer   events.Timer                      // recoveryRestartTimer track how long a recovery is finished and fires if needed
+	recoveryRestartTimeout time.Duration                     // time limit for recovery process
+	rcRspStore             map[uint64]*RecoveryResponse      // rcRspStore store recovery responses from replicas
+	rcPQCSenderStore       map[uint64]bool			 // rcPQCSenderStore store those who sent PQC info to self
+	recvNewViewInRecovery  bool				 // recvNewViewInRecovery record whether receive new view during recovery
 
 	vcResendLimit	       	int				// vcResendLimit indicates a replica's view change resending upbound.
 	vcResendCount	       	int				// vcResendCount represent times of same view change info resend
@@ -351,6 +351,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 
 	// recovery
 	pbft.inRecovery = true
+	pbft.recoveryToSeqNo = nil
 	pbft.recvNewViewInRecovery = false
 	pbft.recoveryRestartTimeout, err = time.ParseDuration(config.GetString("timeout.recovery"))
 	if err != nil {
@@ -514,7 +515,6 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case *Checkpoint:
 		return pbft.recvCheckpoint(et)
 	case *stateUpdatedEvent:
-		//pbft.batch.reqStore = newRequestStore()
 		err = pbft.recvStateUpdatedEvent(et)
 	case *ViewChange:
 		return pbft.recvViewChange(et)
@@ -559,10 +559,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case protos.ValidatedTxs:
 		err = pbft.recvValidatedResult(et)
 	case negoViewDoneEvent:
-		logger.Notice("################################################")
-		logger.Noticef("#   Replica %d finished negotiating view: %d", pbft.id, pbft.view)
-		logger.Notice("################################################")
-		logger.Notice("-----Hyperchain negotiate view successfully!-----")
+		logger.Noticef("######## Replica %d finished negotiating view: %d", pbft.id, pbft.view)
 		primary := pbft.primary(pbft.view)
 		if primary == pbft.id {
 			pbft.sendNullRequest()
@@ -583,10 +580,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case *RecoveryReturnPQC:
 		return pbft.recvRecoveryReturnPQC(et)
 	case recoveryDoneEvent:
-		logger.Notice("################################################")
-		logger.Noticef("#   Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
-		logger.Notice("################################################")
-		logger.Notice("-----Hyperchain recover successfully!-----")
+		logger.Noticef("######## Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
 		if pbft.recvNewViewInRecovery {
 			logger.Noticef("#  Replica %d find itself received NewView during Recovery" +
 				", will restart negotiate view", pbft.id)
@@ -938,7 +932,7 @@ func (pbft *pbftProtocal) eventToMsg(msg *ConsensusMessage) (interface{}, error)
 		rrb := &TransactionBatch{}
 		err := proto.Unmarshal(msg.Payload, rrb)
 		if err != nil {
-			logger.Error("Unmarshal error, can not unmarshal ConsensusMessage_RETURN_REQUEST_BATCH:", err)
+			logger.Error("Unmarshal stringerror, can not unmarshal ConsensusMessage_RETURN_REQUEST_BATCH:", err)
 			return nil, err
 		}
 		return returnRequestBatchEvent(rrb), nil
@@ -1056,16 +1050,25 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 	pbft.lastExec = et.seqNo
 	pbft.vid = et.seqNo
 	pbft.lastVid = et.seqNo
+	bcInfo := getCurrentBlockInfo()
+	id, _ := proto.Marshal(bcInfo)
+	pbft.persistCheckpoint(et.seqNo, id)
 	pbft.moveWatermarks(pbft.lastExec) // The watermark movement handles moving this to a checkpoint boundary
 	pbft.skipInProgress = false
 	pbft.validateState()
 	pbft.executeAfterStateUpdate()
 
 	if pbft.inRecovery {
-		if pbft.lastExec == pbft.recoveryToSeqNo {
+		if pbft.recoveryToSeqNo == nil {
+			logger.Errorf("Replica %d in recovery recvStateUpdatedEvent but " +
+				"its recoveryToSeqNo is nil")
+			return nil
+		}
+		if pbft.lastExec == *pbft.recoveryToSeqNo {
 			// This is a somewhat subtle situation, we are behind by checkpoint, but others are just on chkpt.
 			// Hence, no need to fetch preprepare, prepare, commit
 			pbft.inRecovery = false
+			pbft.recoveryToSeqNo = nil
 			pbft.recoveryRestartTimer.Stop()
 			go pbft.postPbftEvent(recoveryDoneEvent{})
 			return nil
@@ -1080,6 +1083,7 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 		pbft.fetchRecoveryPQC(peers)
 		return nil
 	}
+
 	return nil
 }
 
@@ -1351,6 +1355,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 		logger.Debug("after pre-prepare seq is:",prep.BatchDigest)
 
 		return pbft.helper.InnerBroadcast(msg)
+
 	}
 
 	return nil
@@ -1618,10 +1623,18 @@ func (pbft *pbftProtocal) execDoneSync(idx msgID) {
 		logger.Debugf("Replica %d finish execution %d, trying next", pbft.id, *pbft.currentExec)
 		pbft.lastExec = *pbft.currentExec
 		delete(pbft.committedCert, idx)
-		if pbft.lastExec == pbft.recoveryToSeqNo {
-			pbft.inRecovery = false
-			pbft.recoveryRestartTimer.Stop()
-			go pbft.postPbftEvent(recoveryDoneEvent{})
+		if pbft.inRecovery {
+			if pbft.recoveryToSeqNo == nil {
+				logger.Errorf("Replica %d in recovery execDoneSync but " +
+					"its recoveryToSeqNo is nil")
+				return
+			}
+			if pbft.lastExec == *pbft.recoveryToSeqNo {
+				pbft.inRecovery = false
+				pbft.recoveryToSeqNo = nil
+				pbft.recoveryRestartTimer.Stop()
+				go pbft.postPbftEvent(recoveryDoneEvent{})
+			}
 		}
 		if pbft.lastExec%pbft.K == 0 {
 			bcInfo := getBlockchainInfo()
@@ -2068,7 +2081,7 @@ func (pbft *pbftProtocal) retryStateTransfer(optional *stateUpdateTarget) {
 
 	pbft.stateTransferring = true
 
-	logger.Debugf("Replica %d is initiating state transfer to seqNo %d", pbft.id, target.seqNo)
+	logger.Infof("Replica %d is initiating state transfer to seqNo %d", pbft.id, target.seqNo)
 
 	//pbft.batch.pbftManager.Queue() <- stateUpdateEvent // Todo for stateupdate
 	//pbft.consumer.skipTo(target.seqNo, target.id, target.replicas)
@@ -2115,6 +2128,7 @@ func (pbft *pbftProtocal) skipTo(seqNo uint64, id []byte, replicas []uint64) {
 		return
 	}
 	//pbft.UpdateState(&checkpointMessage{seqNo, id}, info, replicas)
+	logger.Debug("seqNo: ", seqNo, "id: ", id, "replicas: ", replicas)
 	pbft.updateState(seqNo, id, replicas)
 }
 

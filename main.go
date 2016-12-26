@@ -12,7 +12,7 @@ import (
 	"hyperchain/core/blockpool"
 	"hyperchain/crypto"
 	"hyperchain/event"
-	"hyperchain/jsonrpc"
+	"hyperchain/api/jsonrpc/core"
 	"hyperchain/manager"
 	"hyperchain/membersrvc"
 	"hyperchain/p2p"
@@ -147,6 +147,7 @@ func main() {
 		if blockPool == nil {
 			return errors.New("Initialize BlockPool failed")
 		}
+
 		//init manager
 		exist := make(chan bool)
 		syncReplicaInterval, _ := config.getSyncReplicaInterval()
