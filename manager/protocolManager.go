@@ -54,7 +54,7 @@ type ProtocolManager struct {
 	syncReplicaInterval time.Duration
 	syncReplica         bool
 	expired             chan bool
-	expiredTime         time.Time
+	licensePath         string
 }
 type NodeManager struct {
 	peerManager p2p.PeerManager
@@ -64,7 +64,7 @@ var eventMuxAll *event.TypeMux
 
 func NewProtocolManager(blockPool *blockpool.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
 //encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
-am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, expired chan bool, expiredTime time.Time) *ProtocolManager {
+am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, expired chan bool, licensePath string) *ProtocolManager {
 	synccache, _ := common.NewCache()
 	replicacache, _ := common.NewCache()
 	manager := &ProtocolManager{
@@ -80,7 +80,7 @@ am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duratio
 		syncReplicaInterval: interval,
 		syncReplica:         syncReplica,
 		expired:             expired,
-		expiredTime:         expiredTime,
+		licensePath:         licensePath,
 	}
 	manager.nodeInfo = make(p2p.PeerInfos, 0, 1000)
 	eventMuxAll = eventMux
