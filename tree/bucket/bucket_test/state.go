@@ -28,9 +28,9 @@ type State struct {
 }
 
 // NewState constructs a new State. This Initializes encapsulated state implementation
-func NewState() *State {
+func NewState(treePrefix string) *State {
 	logger.Infof("Initializing state implementation [%s]", testStateImplName)
-	stateImpl := bucket.NewBucketTree(testStateImplName)
+	stateImpl := bucket.NewBucketTree(treePrefix)
 	err := stateImpl.Initialize(configs)
 	if err != nil {
 		panic(fmt.Errorf("Error during initialization of state implementation: %s", err))

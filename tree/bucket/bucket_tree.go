@@ -368,7 +368,6 @@ func (bucketTree *BucketTree) updateDataNodeCache(){
 	if bucketTree.dataNodesDelta == nil {
 		return
 	}
-	db,_ := hyperdb.GetLDBDatabase()
 	affectedBuckets := bucketTree.dataNodesDelta.getAffectedBuckets()
 	for _, affectedBucket := range affectedBuckets {
 		dataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(affectedBucket)
@@ -423,6 +422,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 	db,_ := hyperdb.GetLDBDatabase()
 	writeBatch := db.NewBatch()
 	keyValueMap := NewKVMap()
+	bucketTree.dataNodeCache.clearDataNodeCache()
 	bucketTree.dataNodeCache.isEnabled = false
 
 	for i:= currentBlockNum.Int64() + 1;;i++{
@@ -488,9 +488,12 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 		}
 	}*/
 	logger.Debug("End RevertToTargetBlock, to ", toBlockNum)
-	bucketTree.dataNodeCache.isEnabled = true
 	hash, _ := bucketTree.ComputeCryptoHash()
-	logger.Debug("revert bucket tree current block number %d, current block hash %s", toBlockNum, common.Bytes2Hex(hash))
+	logger.Criticalf("revert bucket tree current treefix is %v current block number %d, current block hash %s", bucketTree.treePrefix,toBlockNum, common.Bytes2Hex(hash))
+
+	bucketTree.dataNodeCache.isEnabled = true
+	hash, _ = bucketTree.ComputeCryptoHash()
+	logger.Criticalf("revert bucket tree current treefix is %v current block number %d, current block hash %s", bucketTree.treePrefix,toBlockNum, common.Bytes2Hex(hash))
 	return nil
 }
 

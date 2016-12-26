@@ -5,6 +5,7 @@ import (
 	"sync"
 	"encoding/json"
 	"github.com/pkg/errors"
+	"hyperchain/common"
 )
 var DataNodeCachePrefix = "-dataNodecache"
 type DataNodeMap map[string] *DataNode
@@ -40,8 +41,6 @@ func (datanodecache *DataNodeCache) Remove(dataNode *DataNode) error{
 	}
 
 	delete(datanodecache.c[bucketKey],string(dataKeyBytes))
-
-
 
 	db,_ := hyperdb.GetLDBDatabase()
 	dbkey := append([]byte(DataNodePrefix), dataNode.dataKey.getEncodedBytes()...)
@@ -110,10 +109,11 @@ func (datanodecache *DataNodeCache) fetchDataNodesFromCacheFor(bucketKey BucketK
 	db,_ := hyperdb.GetLDBDatabase()
 	minimumDataKeyBytes := minimumPossibleDataKeyBytesFor(&bucketKey,datanodecache.TreePrefix)
 	minimumDataKeyBytes = append([]byte(DataNodeCachePrefix),minimumDataKeyBytes...)
-	var res DataNodes
 	// IMPORTANT return value obtained by iterator is sorted
 	iter := db.NewIteratorWithPrefix(minimumDataKeyBytes)
+	num := 0
 	for iter.Next() {
+		num ++
 		keyBytes := iter.Key()
 		valueBytes := iter.Value()
 		keyBytes = keyBytes[len(DataNodePrefix)+len(DataNodeCachePrefix):]
@@ -121,14 +121,24 @@ func (datanodecache *DataNodeCache) fetchDataNodesFromCacheFor(bucketKey BucketK
 		dataKey := newDataKeyFromEncodedBytes(keyBytes)
 		logger.Debugf("Retrieved data key [%s] from DB for bucket [%s]", dataKey, bucketKey)
 		if !dataKey.getBucketKey().equals(&bucketKey) {
-			logger.Errorf("Data key [%s] from DB does not belong to bucket = [%s]. Stopping further iteration and returning results [%v]", dataKey, bucketKey, res)
-			return res, nil
+			logger.Errorf("Data key [%s] from DB does not belong to bucket = [%s]. Stopping further iteration and returning results [%v]", dataKey, bucketKey, dataNodes)
+			return dataNodes, nil
 		}
 		dataNode := unmarshalDataNode(dataKey, valueBytes)
 		logger.Debugf("Data node [%s] from DB belongs to bucket = [%s]. Including the key in results...", dataNode, bucketKey)
-		res = append(res, dataNode)
+		dataNodes = append(dataNodes, dataNode)
 	}
-	return res, nil
+	if num <= 0{
+		dataNodes,err = fetchDataNodesFromDBByBucketKey(datanodecache.TreePrefix,&bucketKey)
+		if err != nil{
+			logger.Errorf("fetchDataNodesFromDBByBucketKey Error")
+			return dataNodes,err
+		}
+		for _,dataNode := range dataNodes {
+			datanodecache.Put(dataNode)
+		}
+	}
+	return dataNodes, nil
 
 }
 
@@ -136,7 +146,7 @@ func (datanodecache *DataNodeCache) clearDataNodeCache() {
 	db, _ := hyperdb.GetLDBDatabase()
 	iter := db.NewIteratorWithPrefix([]byte(DataNodeCachePrefix))
 	for iter.Next() {
-		logger.Debugf("delete clearDataNodeCache")
+		logger.Errorf("delete clearDataNodeCache",common.Bytes2Hex(ComputeCryptoHash(iter.Value())))
 		keyBytes := iter.Key()
 		db.Delete(keyBytes)
 	}
@@ -144,13 +154,14 @@ func (datanodecache *DataNodeCache) clearDataNodeCache() {
 }
 
 func (dataNodeCache *DataNodeCache) revertDataNodeCacheFromDB() error{
-	dataNodeCache.c = make(map[BucketKey]DataNodeMap)
+	/*dataNodeCache.c = make(map[BucketKey]DataNodeMap)
 	dataNodes,err := fetchDataNodesFromDB(dataNodeCache.TreePrefix)
 	if (err != nil){
 		return err
 	}
 	for _,dataNode := range dataNodes {
 		dataNodeCache.Put(dataNode)
-	}
+	}*/
+
 	return nil
 }
