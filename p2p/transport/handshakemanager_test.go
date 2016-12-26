@@ -15,6 +15,8 @@ func TestNewHandShakeMangerNew(t *testing.T) {
 
 func TestNewGetLocalPublicKey(t *testing.T)  {
 	nHSM := NewHandShakeMangerNew()
+
+
 	fmt.Println(nHSM.GetLocalPublicKey())
 	//fmt.Println(nHSM)
 }

@@ -18,6 +18,7 @@ import (
 	"errors"
 	"math"
 	"hyperchain/p2p/transport"
+	"hyperchain/core/crypto/primitives"
 )
 
 
@@ -147,10 +148,32 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			response.MessageType = pb.Message_HELLO_RESPONSE
 			//review 协商密钥
 
-			msg.Signature.Ecert
+			//TODO
+			ecertByte := msg.Signature.Ecert
+			rcertByte := msg.Signature.Rcert
+
+			if len(ecertByte) == 0{
+				panic("cannot find ecert,please check the configuration.")
+			}
+
+			if len(rcertByte) == 0{
+				panic("cannot find ecert,please check the configuration.")
+			}
+
+			ecert := primitives.ParseCertificate(string(ecertByte))
+			rcert := primitives.ParseCertificate(string(rcertByte))
+
+			verifyEcert := primitives.VerifySignature(ecert)
+			verifyRcert := primitives.VerifySignature(rcert)
 
 			remotePublicKey := msg.Payload
 			genErr := node.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
+
+			if !verifyEcert {
+				return &response,errors.New("ecert is wrong.")
+			}
+			node.TEM.SetSignPublicKey(ecert.PublicKey)
+			node.TEM.SetIsVerified(verifyRcert,msg.From.Hash)
 			if genErr != nil {
 				log.Error("gen sec error", genErr)
 			}

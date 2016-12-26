@@ -75,7 +75,7 @@ func TestECACert(t *testing.T) {
 	der,_,_ := NewSelfSignedCert()
 	//fmt.Println("PrivateKey:" + string(key));
 	pem := DERCertToPEM(der)
-	file,_ := os.Create("ecert.cert")
+	file,_ := os.Create("rcert.cert")
 	file.WriteString(string(pem))
 	//fmt.Println(string(pem))
 }

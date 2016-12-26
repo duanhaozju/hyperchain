@@ -26,6 +26,8 @@ func init() {
 type TransportEncryptManager interface {
 	GetLocalPublicKey() []byte
 	GenerateSecret(remotePublicKey []byte, peerHash string) error
+	SetSignPublicKey(pub crypto.PublicKey,peerHash string)
+	SetIsVerified(is_verified bool,peerHash string)
 	EncWithSecret(message []byte, peerHash string) ([]byte,error)
 	DecWithSecret(message []byte, peerHash string) ([]byte,error)
 	GetSecret(peerHash string) string

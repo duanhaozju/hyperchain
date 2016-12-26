@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 	"hyperchain/membersrvc"
+	"hyperchain/core/crypto/primitives"
 )
 
 // init the package-level logger system,
@@ -68,18 +69,36 @@ func NewPeer(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport.Transpor
 // handShake connect to remote peer, and negotiate the secret
 // handShake 用于与相应的远端peer进行通信，并进行密钥协商
 func (peer *Peer) handShake() (err error) {
-	pb.Signature{
-		//TODO
+
+	eca,getErr1 := primitives.GetConfig("../config/cert/server/eca.cert")
+	if getErr1 != nil{
+		log.Error("cannot read ecert.",err)
 	}
+	ecertBtye := []byte(eca)
+
+	rca,getErr2 := primitives.GetConfig("../config/cert/server/rca.cert")
+	if getErr2 != nil{
+		log.Error("cannot read ecert.",err)
+	}
+	rcertByte := []byte(rca)
+
+	signature := pb.Signature{
+		Ecert:ecertBtye,
+		Rcert:rcertByte,
+	}
+
 	//review start exchange the secret
 	helloMessage := pb.Message{
 		MessageType:  pb.Message_HELLO,
 		Payload:      peer.TEM.GetLocalPublicKey(),
 		From:         peer.LocalAddr.ToPeerAddress(),
 		MsgTimeStamp: time.Now().UnixNano(),
+		Signature: &signature,
 	}
 	retMessage, err := peer.Client.Chat(context.Background(), &helloMessage)
-	retMessage.Signature.Ecert
+
+	//retMessage.Signature.Ecert
+
 	if err != nil {
 		log.Error("cannot establish a connection",err)
 		return
@@ -159,6 +178,8 @@ func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
 	if err != nil {
 		this.Status = 2;
 		log.Error("err:", err)
+		//TODO
+		panic(err)
 		return nil,err
 	}
 	this.Status = 1;
