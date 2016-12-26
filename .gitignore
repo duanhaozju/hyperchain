@@ -110,3 +110,5 @@ build
 *.DS_Store
 hyperchain.iml
 mac.sh
+
+jsonrpc/Dashboard/node_modules
