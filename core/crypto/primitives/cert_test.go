@@ -205,3 +205,24 @@ func TestPayload(t *testing.T){
 
 }
 
+func TestGetCert(t *testing.T){
+	cert,err := GetConfig("../../../config/cert/server/eca.cert1")
+
+	if err != nil{
+		fmt.Println(err)
+		fmt.Println("1231231")
+		return
+	}
+	byteCert := []byte(cert)
+
+	//fmt.Println(byteCert)
+
+	ecrt := ParseCertificate(string(byteCert))
+
+	//fmt.Println(ecrt)
+
+	bol := VerifySignature(ecrt)
+
+	fmt.Println(bol)
+}
+
