@@ -1,5 +1,8 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
+//author:Zhangkejie
+//changelog:modify the some cert's Messages.
+//date:2016-12-07
 package primitives
 
 import (
@@ -12,10 +15,11 @@ import (
 	"encoding/pem"
 	"errors"
 	"math/big"
-	"net"
+	//"net"
 	"time"
 
 	"hyperchain/core/crypto/utils"
+	"os"
 )
 
 var (
@@ -124,6 +128,16 @@ func GetCriticalExtension(cert *x509.Certificate, oid asn1.ObjectIdentifier) ([]
 // NewSelfSignedCert create a self signed certificate
 func NewSelfSignedCert() ([]byte, interface{}, error) {
 	privKey, err := NewECDSAKey()
+
+	//储存privateKey
+	var block pem.Block
+	block.Type="ECDSA PRIVATE KEY"
+	der,_ := PrivateKeyToDER(privKey)
+	block.Bytes = der
+	file,_ := os.Create("ecert.priv")
+	pem.Encode(file,&block)
+	//--------------------------
+
 	if err != nil {
 		return nil, nil, err
 	}
@@ -131,13 +145,13 @@ func NewSelfSignedCert() ([]byte, interface{}, error) {
 	testExtKeyUsage := []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}
 	testUnknownExtKeyUsage := []asn1.ObjectIdentifier{[]int{1, 2, 3}, []int{2, 59, 1}}
 	extraExtensionData := []byte("extra extension")
-	commonName := "test.example.com"
+	commonName := "test.hyperchain.cn"
 	template := x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
 			CommonName:   commonName,
-			Organization: []string{"Σ Acme Co"},
-			Country:      []string{"US"},
+			Organization: []string{"Hyperchain"},
+			Country:      []string{"CHN"},
 			ExtraNames: []pkix.AttributeTypeAndValue{
 				{
 					Type:  []int{2, 5, 4, 42},
@@ -146,12 +160,12 @@ func NewSelfSignedCert() ([]byte, interface{}, error) {
 				// This should override the Country, above.
 				{
 					Type:  []int{2, 5, 4, 6},
-					Value: "NL",
+					Value: "ZH",
 				},
 			},
 		},
 		NotBefore: time.Now().Add(-1 * time.Hour),
-		NotAfter:  time.Now().Add(1 * time.Hour),
+		NotAfter:  time.Now().Add(8760 * time.Hour),//暂定证书有效期为一年
 
 		SignatureAlgorithm: x509.ECDSAWithSHA384,
 
@@ -164,17 +178,17 @@ func NewSelfSignedCert() ([]byte, interface{}, error) {
 		BasicConstraintsValid: true,
 		IsCA: true,
 
-		OCSPServer:            []string{"http://ocsp.example.com"},
-		IssuingCertificateURL: []string{"http://crt.example.com/ca1.crt"},
+		//OCSPServer:            []string{"http://ocsp.example.com"},
+		//IssuingCertificateURL: []string{"http://crt.example.com/ca1.crt"},
 
-		DNSNames:       []string{"test.example.com"},
-		EmailAddresses: []string{"gopher@golang.org"},
-		IPAddresses:    []net.IP{net.IPv4(127, 0, 0, 1).To4(), net.ParseIP("2001:4860:0:2001::68")},
+		//DNSNames:       []string{"test.example.com"},
+		//EmailAddresses: []string{"gopher@golang.org"},
+		//IPAddresses:    []net.IP{net.IPv4(127, 0, 0, 1).To4(), net.ParseIP("2001:4860:0:2001::68")},
 
-		PolicyIdentifiers:   []asn1.ObjectIdentifier{[]int{1, 2, 3}},
-		PermittedDNSDomains: []string{".example.com", "example.com"},
+		//PolicyIdentifiers:   []asn1.ObjectIdentifier{[]int{1, 2, 3}},
+		//PermittedDNSDomains: []string{".example.com", "example.com"},
 
-		CRLDistributionPoints: []string{"http://crl1.example.com/ca1.crl", "http://crl2.example.com/ca1.crl"},
+		//CRLDistributionPoints: []string{"http://crl1.example.com/ca1.crl", "http://crl2.example.com/ca1.crl"},
 
 		ExtraExtensions: []pkix.Extension{
 			{

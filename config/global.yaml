@@ -48,6 +48,8 @@ global:
 # configs
 ############################
     configs:
+        ecert: "config/cert/server/eca.cert"
+        priv: "config/cert/server/eca.priv"
         peers: "config/local_peerconfig.json"
         genesis: "config/genesis.json"
         membersrvc: "config/membersrvc.yaml"

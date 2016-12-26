@@ -1,5 +1,8 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
+//changelog:修改新的handshankemanager的实现。
+//last Modified Author: zhangkejie
+//date:2016-12-23
 package p2p
 
 import (
@@ -43,7 +46,9 @@ func NewGrpcManager(configPath string) *GrpcPeerManager {
 	newgRPCManager.IsOriginal = config.IsOrigin()
 	newgRPCManager.Introducer = pb.NewPeerAddr(config.GetIntroducerIP(),config.GetIntroducerPort(),config.GetIntroducerJSONRPCPort(),config.GetIntroducerID())
 	//HSM only instanced once, so peersPool and Node Hsm are same instance
-	newgRPCManager.TEM = transport.NewHandShakeManger()
+
+	//新的handshakemanager
+	newgRPCManager.TEM = transport.NewHandShakeMangerNew();
 	return &newgRPCManager
 }
 
