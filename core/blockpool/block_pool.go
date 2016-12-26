@@ -701,7 +701,7 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 	}
 	// clear all stuff in block cache and validation cache
 	pool.lastValidationState.Store(common.BytesToHash(block.MerkleRoot))
-	core.UpdateChainByBlcokNum(db, block.Number - 1)
+	core.UpdateChainByBlcokNum(db, block.Number)
 }
 func (pool *BlockPool) PurgeValidateQueue() {
 	pool.validationQueue.Purge()
