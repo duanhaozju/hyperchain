@@ -42,11 +42,11 @@ func Generate_paillierKey() (*PaillierKey, error) {
 	BigONE := new(big.Int)
 	BigONE = BigONE.SetInt64(1)
 
-	p, err1 := rand.Prime(rand.Reader, 64)
+	p, err1 := rand.Prime(rand.Reader, 32)
 	if err1 != nil {
 		return nil, err1
 	}
-	q, err2 := rand.Prime(rand.Reader, 64)
+	q, err2 := rand.Prime(rand.Reader, 32)
 	if err2 != nil {
 		return nil, err2
 	}

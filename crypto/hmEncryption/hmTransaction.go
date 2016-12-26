@@ -3,10 +3,7 @@
 package hmEncryption
 
 import (
-	"crypto/ecdsa"
-	"crypto/rand"
 	"encoding/hex"
-	"hyperchain/crypto/ecies"
 	"io/ioutil"
 	"math/big"
 	//"fmt"
@@ -25,8 +22,8 @@ type pp struct {
 
 func PreHmTransaction(oldBalance []byte, transferAmount []byte, illegal_balance_hm []byte, whole_networkpublickey PaillierPublickey) (bool, []byte, []byte) {
 	//var flag bool
-	newBalance_hm := make([]byte, 32)
-	transferAmount_hm := make([]byte, 32)
+	newBalance_hm := make([]byte, 16)
+	transferAmount_hm := make([]byte, 16)
 	//newBalance_local := make([]byte, 16)
 	//transferAmount_ecc := make([]byte, 129)
 
@@ -126,13 +123,13 @@ func NodeVerify(whole_networkpublickey PaillierPublickey, oldBalance_hm []byte, 
 }
 
 //destination verify whether the amount is right or not
-func DestinationVerify(transferAmount_hm []byte, transferAmount_ecc []byte, ecdsa_privatekey *ecdsa.PrivateKey, whole_networkpublickey PaillierPublickey) bool {
+func DestinationVerify(hmtransferAmount []byte, transferAmount []byte,  whole_networkpublickey PaillierPublickey) bool {
 
-	ecies_privatekey := ecies.ImportECDSA(ecdsa_privatekey)
-	transferAmount, _ := ecies_privatekey.Decrypt(rand.Reader, transferAmount_ecc, nil, nil)
+	//ecies_privatekey := ecies.ImportECDSA(ecdsa_privatekey)
+	//transferAmount, _ := ecies_privatekey.Decrypt(rand.Reader, transferAmount_ecc, nil, nil)
 	phm := New_Paillier_Hmencryption()
-	transferAmount_hm_verify, _ := phm.Encrypto_message(&whole_networkpublickey, transferAmount)
-	flag := EqualTwoBytes(transferAmount_hm, transferAmount_hm_verify)
+	hmtransferAmount_verify, _ := phm.Encrypto_message(&whole_networkpublickey, transferAmount)
+	flag := EqualTwoBytes(hmtransferAmount, hmtransferAmount_verify)
 
 	return flag
 }

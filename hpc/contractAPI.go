@@ -182,11 +182,18 @@ func (contract *PublicContractAPI) EncryptoMessage(args EncryptoArgs) (*HmResult
 
 	amount_bigint := new(big.Int)
 	amount_bigint.SetInt64(args.Amount.ToInt64())
+	var isValid bool;
+	var newBalance_hm []byte;
+	var amount_hm    []byte;
 
-	hmBalance_bigint := new(big.Int)
-	hmBalance_bigint.SetString(args.HmBalance, 10)
+	if args.HmBalance==""{
+		isValid, newBalance_hm, amount_hm = hmEncryption.PreHmTransaction(balance_bigint.Bytes(),amount_bigint.Bytes(),nil,*contract.publicKey)
+	}else{
+		hmBalance_bigint := new(big.Int)
+		hmBalance_bigint.SetString(args.HmBalance, 10)
+		isValid, newBalance_hm, amount_hm = hmEncryption.PreHmTransaction(balance_bigint.Bytes(),amount_bigint.Bytes(),hmBalance_bigint.Bytes(),*contract.publicKey)
+	}
 
-	isValid, newBalance_hm, amount_hm := hmEncryption.PreHmTransaction(balance_bigint.Bytes(),amount_bigint.Bytes(),hmBalance_bigint.Bytes(),*contract.publicKey)
 
 	newBalance_hm_bigint := new(big.Int)
 	amount_hm_bigint := new(big.Int)

@@ -118,10 +118,10 @@ func Test_hmTransaction(t *testing.T){
 
 	//paillerprivate := paillerkey.PaillierPrivatekey
 
-	old := big.NewInt(6000000000000000000)
+	old := big.NewInt(100)
 	old_byte := old.Bytes()
 	fmt.Println(len(old_byte))
-	trans := big.NewInt(300000000000000)
+	trans := big.NewInt(10)
 	trans_byte := trans.Bytes()
 
 	phm := New_Paillier_Hmencryption()
@@ -141,11 +141,12 @@ func Test_hmTransaction(t *testing.T){
 	fmt.Println(hmnewbalance)
 	fmt.Println(hmTransferAmount)
 	//fmt.Println(len(transferamounecc))
+	fmt.Println()
 
 	testbig := new(big.Int)
-	//testbig.SetBytes(transferamounecc)
-	ss := testbig.String()
-	fmt.Println(len(ss))
+	testbig.SetBytes(hmnewbalance)
+	fmt.Println(testbig)
+	fmt.Println(testbig.BitLen())
 
 
 
@@ -162,24 +163,96 @@ func Test_hmTransaction(t *testing.T){
 
 }
 
-func Test_Big(t *testing.T){
-	old := big.NewInt(500)
-	fmt.Println(old)
 
+func Test_hmencryption(t *testing.T){
+	//keypair := new(PaillierKey)
+	private :=new(PaillierPrivatekey)
+	public :=new(PaillierPublickey)
+	private.P,_= new(big.Int).SetString("4168938673",10)
+	private.Q,_=new(big.Int).SetString("3433902229",10)
+	private.Lambda,_=new(big.Int).SetString("132553035131260752",10)
+
+	public.N,_=new(big.Int).SetString("14315727801779002117",10)
+	public.G,_=new(big.Int).SetString("90976693534933209671098397317966944738726332459523400324197777885595356310417",10)
+	public.Nsquare,_=new(big.Int).SetString("204940062494628260128356353732290481689",10)
+	fmt.Println(len("204940062494628260128356353732290481689"))
+	old := big.NewInt(100)
 	old_byte := old.Bytes()
-	//将byte[]转为大整数
-	big := new(big.Int)
-	big.SetBytes(old_byte)
-	fmt.Println(big)
+	//fmt.Println(len(old_byte))
+	trans := big.NewInt(90)
+	trans_byte := trans.Bytes()
 
-	//bigint类型转字符串类型，10进制
-	ss := old.String()
-	//将字符串类型按10进制转为大整数类型
+	phm := New_Paillier_Hmencryption()
+	hmoldBalance,_:= phm.Encrypto_message(public,old_byte)
+	hmoldbig := new(big.Int).SetBytes(hmoldBalance)
+	fmt.Println(hmoldbig)
 
-	bigint,_:=big.SetString(ss,10)
-	fmt.Println(ss)
-	fmt.Println(bigint)
+
+
+
+
+
+	index,hmnewbalance,hmTransferAmount:= PreHmTransaction(old_byte,trans_byte,nil,*public)
+
+	sum,_:= phm.Calculator(public,"paillier",hmnewbalance,hmTransferAmount)
+
+	hmsum :=new(big.Int).SetBytes(sum)
+
+	hmnew :=new(big.Int).SetBytes(hmnewbalance)
+	hmtrf :=new(big.Int).SetBytes(hmTransferAmount)
+
+	fmt.Println(index)
+	fmt.Println(hmnew)
+	fmt.Println(hmtrf)
+	fmt.Println(hmsum)
+
 }
+
+func Test_Big(t *testing.T){
+	//old := big.NewInt(500)
+	//fmt.Println(old)
+	//
+	//old_byte := old.Bytes()
+	////将byte[]转为大整数
+	//big := new(big.Int)
+	//big.SetBytes(old_byte)
+	//fmt.Println(big)
+	//
+	////bigint类型转字符串类型，10进制
+	//ss := old.String()
+	////将字符串类型按10进制转为大整数类型
+	//
+	//bigint,_:=big.SetString(ss,10)
+	//fmt.Println(ss)
+	//fmt.Println(bigint)
+
+	transfer := new(big.Int)
+
+	transfer.SetString("183003357837956770250501280563466144409",10)
+	fmt.Println(transfer)
+	fmt.Println(len(transfer.String()))
+	remain,_:=new(big.Int).SetString("104421979747789724691932366515971813173",10)
+	fmt.Println(remain)
+	fmt.Println(len(remain.String()))
+	mul:=new(big.Int)
+	mul = mul.Mul(transfer,remain)
+
+
+	nsquare,_:=new(big.Int).SetString("204940062494628260128356353732290481689",10)
+
+
+
+
+	mod:=new(big.Int)
+	mod = mod.Mod(mul,nsquare)
+	fmt.Println("201210379221173114992221939430310283117")
+	fmt.Println(len("201210379221173114992221939430310283117"))
+	fmt.Println(mul)
+	fmt.Println(len(mul.String()))
+	fmt.Println(mod)
+}
+
+
 
 
 //func Test_createccpub(t *testing.T){
