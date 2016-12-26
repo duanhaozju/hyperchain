@@ -13,7 +13,7 @@ type Config struct {
 	conf *viper.Viper
 }
 
-//New return a new instance of Config by configPath
+//NewConfig return a new instance of Config by configPath
 func NewConfig(configPath string) *Config  {
 	vp := viper.New()
 	vp.SetConfigFile(configPath)
