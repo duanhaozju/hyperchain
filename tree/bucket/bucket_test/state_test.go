@@ -337,6 +337,8 @@ func TestRevertToTargetBlock(t *testing.T) {
 	testutil.AssertEquals(t,hash2,hash_revert2)
 
 	// revert to target number 0
+
+	state = bucket_test.NewState()
 	fromBlock = big.NewInt(2)
 	toBlock = big.NewInt(0)
 	state.Bucket_tree.RevertToTargetBlock(fromBlock,toBlock)
