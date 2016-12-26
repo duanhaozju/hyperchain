@@ -94,6 +94,7 @@ func CreateInitBlock(filename string, stateType string, blockVersion string, bkt
 	// flush change of chain to disk immediately
 	UpdateChain(db.NewBatch(), &block, true, true, true)
 	stateDB.MarkProcessFinish(0)
+	log.Criticalf("Genesis state %s", string(stateDB.Dump()))
 	log.Info("current chain block number is", GetChainCopy().Height)
 
 }

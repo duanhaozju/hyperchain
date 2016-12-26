@@ -121,7 +121,8 @@ func (c *StateObject) MarshalJSON() ([]byte, error) {
 }
 // marshal for state object persist
 func (c *StateObject) Marshal() ([]byte, error) {
-	account := Account{
+	log.Criticalf("[DEBUG] nonce %d, balance %d, root %s, codehash %s", c.data.Nonce, c.data.Balance, c.data.Root.Hex(), common.Bytes2Hex(c.data.CodeHash))
+	account := &Account{
 		Nonce:    c.data.Nonce,
 		Balance:  c.data.Balance,
 		Root:     c.data.Root,
@@ -265,6 +266,7 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 	} else {
 		// use bucket tree
 		// 1. convert dirty storage entries to working set
+		prev := self.Root()
 		workingSet := bucket.NewKVMap()
 		for k, v := range self.dirtyStorage {
 			log.Errorf("calculate state object %s storage hash, dirty entry key %s value %s", self.address.Hex(), k.Hex(), v.Hex())
@@ -274,8 +276,7 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 				workingSet[k.Hex()] = v.Bytes()
 			}
 		}
-		hash1, _ := self.bucketTree.ComputeCryptoHash()
-		log.Errorf("state object %s storage root hash %s before #%d", self.address.Hex(), common.Bytes2Hex(hash1), self.db.curSeqNo)
+		log.Errorf("state object %s storage root hash %s before #%d", self.address.Hex(), prev.Hex(), self.db.curSeqNo)
 		self.bucketTree.PrepareWorkingSet(workingSet, big.NewInt(int64(self.db.curSeqNo)))
 		// 2. calculate hash
 		hash, err := self.bucketTree.ComputeCryptoHash()
@@ -285,7 +286,14 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 		}
 		// 3. assign to self.ROOT
 		self.SetRoot(common.BytesToHash(hash))
-		log.Errorf("state object %s storage root hash %s after #%d", self.address.Hex(), common.Bytes2Hex(hash), self.db.curSeqNo)
+		log.Errorf("state object %s storage root hash %s after #%d", self.address.Hex(), self.Root().Hex(), self.db.curSeqNo)
+		if (self.Root() != common.Hash{} || prev != common.Hash{}) {
+			// storage hash changed
+			self.db.journal.JournalList = append(self.db.journal.JournalList, &StorageHashChange{
+				Account: &self.address,
+				Prev:    prev.Bytes(),
+			})
+		}
 		return self.Root()
 
 	}
@@ -297,12 +305,9 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 func (c *StateObject) AddBalance(amount *big.Int) {
 	// EIP158: We must check emptiness for the objects such that the account
 	// clearing (0,0,0 objects) can take effect.
-	//if amount.Cmp(common.Big0) == 0 {
-	//	if c.empty() {
-	//		c.touch()
-	//	}
-	//	return
-	//}
+	if amount.Cmp(common.Big0) == 0 {
+		return
+	}
 	c.SetBalance(new(big.Int).Add(c.Balance(), amount))
 
 	log.Infof("%x: #%d %v (+ %v)\n", c.Address(), c.Nonce(), c.Balance(), amount)

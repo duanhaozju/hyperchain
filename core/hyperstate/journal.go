@@ -20,6 +20,7 @@ const (
 	RefundChangeType = "RefundChange"
 	AddLogChangeType = "AddLogChange"
 	TouchChangeType = "TouchChange"
+	StorageHashChangeType = "StorageHashChange"
 )
 
 type JournalEntry interface {
@@ -27,6 +28,7 @@ type JournalEntry interface {
 	String() string
 	Marshal() ([]byte, error)
 	SetType()
+	GetType() string
 }
 
 type Journal struct {
@@ -141,6 +143,13 @@ func UnmarshalJournal(data []byte) (*Journal, error) {
 				return nil, err
 			}
 			jos = append(jos, &tmp)
+		case "StorageHashChange":
+			var tmp StorageHashChange
+			err = json.Unmarshal(res, &tmp)
+			if err != nil {
+				return nil, err
+			}
+			jos = append(jos, &tmp)
 		default:
 			log.Error("unmarshal journal failed")
 			return nil, errors.New("unmarshal journal failed")
@@ -210,6 +219,11 @@ type (
 		Prev    bool            `json:"prev,omitempty"`
 		Type    string          `json:"type,omitempty"`
 	}
+	StorageHashChange struct {
+		Account *common.Address `json:"account,omitempty"`
+		Prev    []byte          `json:"prev,omitempty"`
+		Type    string          `json:"type,omitempty"`
+	}
 )
 // createObjectChange
 func (ch *CreateObjectChange) Undo(s *StateDB, writeThrough bool) {
@@ -230,6 +244,9 @@ func (ch *CreateObjectChange) Marshal()([]byte, error) {
 }
 func (ch *CreateObjectChange) SetType() {
 	ch.Type = CreateObjectChangeType
+}
+func (ch *CreateObjectChange) GetType() string {
+	return ch.Type
 }
 // resetObjectChange
 func (ch *ResetObjectChange) Undo(s *StateDB, writeThrough bool) {
@@ -255,6 +272,9 @@ func (ch *ResetObjectChange) Marshal()([]byte, error) {
 }
 func (ch *ResetObjectChange) SetType() {
 	ch.Type = ResetObjectChangeType
+}
+func (ch *ResetObjectChange) GetType() string {
+	return ch.Type
 }
 // suicideChange
 func (ch *SuicideChange) Undo(s *StateDB, writeThrough bool) {
@@ -288,6 +308,9 @@ func (ch *SuicideChange) Marshal()([]byte, error) {
 func (ch *SuicideChange) SetType() {
 	ch.Type = SuicideChangeType
 }
+func (ch *SuicideChange) GetType() string {
+	return ch.Type
+}
 // touchChange
 var ripemd = common.HexToAddress("0000000000000000000000000000000000000003")
 
@@ -312,6 +335,9 @@ func (ch *TouchChange) Marshal()([]byte, error) {
 func (ch *TouchChange) SetType() {
 	ch.Type = TouchChangeType
 }
+func (ch *TouchChange) GetType() string {
+	return ch.Type
+}
 // balanceChange
 func (ch *BalanceChange) Undo(s *StateDB, writeThrough bool) {
 	if !writeThrough {
@@ -322,10 +348,10 @@ func (ch *BalanceChange) Undo(s *StateDB, writeThrough bool) {
 			log.Errorf("miss state object %s when undo balance change", ch.Account.Hex())
 			return
 		}
-		var obj *Account
+		obj := &Account{}
 		err = Unmarshal(d, obj)
 		if err != nil {
-			log.Errorf("unmarshal state object %s when undo balance change", ch.Account.Hex())
+			log.Errorf("unmarshal state object %s when undo balance change, error message %s", ch.Account.Hex(), err.Error())
 			return
 		}
 		// undo modification
@@ -349,6 +375,9 @@ func (ch *BalanceChange) Marshal()([]byte, error) {
 func (ch *BalanceChange) SetType() {
 	ch.Type = BalanceChangeType
 }
+func (ch *BalanceChange) GetType() string {
+	return ch.Type
+}
 // nonceChange
 func (ch *NonceChange) Undo(s *StateDB, writeThrough bool) {
 	if !writeThrough {
@@ -356,20 +385,20 @@ func (ch *NonceChange) Undo(s *StateDB, writeThrough bool) {
 	} else {
 		d, err := s.db.Get(CompositeAccountKey(ch.Account.Bytes()))
 		if err != nil {
-			log.Errorf("miss state object %s when undo balance change", ch.Account.Hex())
+			log.Errorf("miss state object %s when undo nonce change", ch.Account.Hex())
 			return
 		}
-		var obj *Account
+		obj := &Account{}
 		err = Unmarshal(d, obj)
 		if err != nil {
-			log.Errorf("unmarshal state object %s when undo balance change", ch.Account.Hex())
+			log.Errorf("unmarshal state object %s when undo nonce change, error message %s", ch.Account.Hex(), err.Error())
 			return
 		}
 		// undo modification
 		obj.Nonce = ch.Prev
 		d, err = json.Marshal(obj)
 		if err != nil {
-			log.Errorf("marshal state object %s when undo balance change", ch.Account.Hex())
+			log.Errorf("marshal state object %s when undo nonce change", ch.Account.Hex())
 			return
 		}
 		s.db.Put(CompositeAccountKey(ch.Account.Bytes()), d)
@@ -388,6 +417,9 @@ func (ch *NonceChange) Marshal()([]byte, error) {
 func (ch *NonceChange) SetType() {
 	ch.Type = NonceChangeType
 }
+func (ch *NonceChange) GetType() string {
+	return ch.Type
+}
 
 // codeChange
 func (ch *CodeChange) Undo(s *StateDB, writeThrough bool) {
@@ -396,13 +428,13 @@ func (ch *CodeChange) Undo(s *StateDB, writeThrough bool) {
 	} else {
 		d, err := s.db.Get(CompositeAccountKey(ch.Account.Bytes()))
 		if err != nil {
-			log.Errorf("miss state object %s when undo balance change", ch.Account.Hex())
+			log.Errorf("miss state object %s when undo code change", ch.Account.Hex())
 			return
 		}
-		var obj *Account
+		obj := &Account{}
 		err = Unmarshal(d, obj)
 		if err != nil {
-			log.Errorf("unmarshal state object %s when undo balance change", ch.Account.Hex())
+			log.Errorf("unmarshal state object %s when undo code change, error message: %s", ch.Account.Hex(), err.Error())
 			return
 		}
 		// remove previous code
@@ -411,7 +443,7 @@ func (ch *CodeChange) Undo(s *StateDB, writeThrough bool) {
 		obj.CodeHash = ch.Prevhash
 		d, err = json.Marshal(obj)
 		if err != nil {
-			log.Errorf("marshal state object %s when undo balance change", ch.Account.Hex())
+			log.Errorf("marshal state object %s when undo code change", ch.Account.Hex())
 			return
 		}
 		s.db.Put(CompositeAccountKey(ch.Account.Bytes()), d)
@@ -429,6 +461,9 @@ func (ch *CodeChange) Marshal()([]byte, error) {
 }
 func (ch *CodeChange) SetType() {
 	ch.Type = CodeChangeType
+}
+func (ch *CodeChange) GetType() string {
+	return ch.Type
 }
 
 // storageChange
@@ -450,6 +485,9 @@ func (ch *StorageChange) Marshal()([]byte, error) {
 func (ch *StorageChange) SetType() {
 	ch.Type = StorageChangeType
 }
+func (ch *StorageChange) GetType() string {
+	return ch.Type
+}
 
 // refundChange
 func (ch *RefundChange) Undo(s *StateDB, writeThrough bool) {
@@ -465,6 +503,9 @@ func (ch *RefundChange) Marshal()([]byte, error) {
 }
 func (ch *RefundChange) SetType() {
 	ch.Type = RefundChangeType
+}
+func (ch *RefundChange) GetType() string {
+	return ch.Type
 }
 
 // addLogChange
@@ -486,4 +527,47 @@ func (ch *AddLogChange) Marshal()([]byte, error) {
 }
 func (ch *AddLogChange) SetType() {
 	ch.Type = AddLogChangeType
+}
+func (ch *AddLogChange) GetType() string {
+	return ch.Type
+}
+// StorageHashChange
+func (ch *StorageHashChange) Undo(s *StateDB, writeThrough bool) {
+	if !writeThrough {
+
+	} else {
+		d, err := s.db.Get(CompositeAccountKey(ch.Account.Bytes()))
+		if err != nil {
+			log.Errorf("miss state object %s when undo code change", ch.Account.Hex())
+			return
+		}
+		obj := &Account{}
+		err = Unmarshal(d, obj)
+		if err != nil {
+			log.Errorf("unmarshal state object %s when undo code change, error message: %s", ch.Account.Hex(), err.Error())
+			return
+		}
+		obj.Root = common.BytesToHash(ch.Prev)
+		d, err = json.Marshal(obj)
+		if err != nil {
+			log.Errorf("marshal state object %s when undo code change", ch.Account.Hex())
+			return
+		}
+		s.db.Put(CompositeAccountKey(ch.Account.Bytes()), d)
+	}
+}
+
+func (ch *StorageHashChange) String() string {
+	var str string
+	str = fmt.Sprintf("journal [storagehashChange] address %s prev %s\n", ch.Account.Hex(), common.Bytes2Hex(ch.Prev))
+	return str
+}
+func (ch *StorageHashChange) Marshal() ([]byte, error) {
+	return json.Marshal(ch)
+}
+func (ch *StorageHashChange) SetType() {
+	ch.Type = StorageHashChangeType
+}
+func (ch *StorageHashChange) GetType() string {
+	return ch.Type
 }

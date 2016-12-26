@@ -13,6 +13,7 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/core"
 	"hyperchain/common"
+	"hyperchain/core/hyperstate"
 )
 
 // When receive an CommitOrRollbackBlockEvent, if flag is true, generate a block and call AddBlock function
@@ -160,6 +161,20 @@ func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, 
 	// remove Cached Transactions which used to check transaction duplication
 	if primary {
 		pool.consenter.RemoveCachedBatch(vid)
+	}
+	// FOR TEST
+	// get journals
+	// TODO journal prefix number is not correct
+	j, err := db.Get(hyperstate.CompositeJournalKey(vid))
+	if err != nil {
+		return
+	}
+	journals, err := hyperstate.UnmarshalJournal(j)
+	if err != nil {
+		return
+	}
+	for _, entry := range journals.JournalList {
+		log.Errorf("#%d journal %s", vid, entry)
 	}
 }
 

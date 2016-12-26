@@ -27,6 +27,7 @@ import (
 // IMPORTANT this function called in parallelly, Make sure all the variable are thread-safe
 func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption, peerManager p2p.PeerManager) {
 	// check whether this is necessary to update max seqNo
+	log.Noticef("begin to validate #%d", validationEvent.SeqNo)
 	if validationEvent.SeqNo > atomic.LoadUint64(&pool.maxSeqNo) {
 		atomic.StoreUint64(&pool.maxSeqNo, validationEvent.SeqNo)
 	}

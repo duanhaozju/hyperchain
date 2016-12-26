@@ -102,6 +102,9 @@ type Database interface {
 	// Dump and Load
 	Snapshot() interface{}
 	RevertToSnapshot(interface{})
+	// Reset status
+	Purge()
+	ResetToTarget(uint64, common.Hash)
 
 	Commit() (common.Hash, error)
 	Reset() error
@@ -115,6 +118,7 @@ type Database interface {
 
 	FetchBatch(seqNo uint64) hyperdb.Batch
 	DeleteBatch(seqNo uint64)
+
 }
 
 // Account represents a contract or basic ethereum account.

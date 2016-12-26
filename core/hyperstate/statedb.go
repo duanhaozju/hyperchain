@@ -104,7 +104,7 @@ func New(root common.Hash, db hyperdb.Database, bktConf bucket.Conf, height uint
 	}
 	// set oldest seqNo
 	log.Criticalf("oldest height when initialize %d", height + 1)
-	state.LoadLatest(height + 1)
+	state.setLatest(height + 1)
 	return state, nil
 }
 
@@ -195,8 +195,20 @@ func (self *StateDB) MarkProcessFinish(seqNo uint64) {
 }
 // set oldest when state been initialize
 // seqNo should be the chain's height
-func (self *StateDB) LoadLatest(seqNo uint64) {
+func (self *StateDB) setLatest(seqNo uint64) {
 	atomic.StoreUint64(&self.oldestSeqNo, seqNo)
+}
+
+// clear out all uncommitted data and revert to a target state
+func (self *StateDB) Purge() {
+	self.batchCache.Purge()
+	self.contentCache.Purge()
+}
+
+// reset oldest seqNo and root to target
+func (self *StateDB) ResetToTarget(oldest uint64, root common.Hash) {
+	atomic.StoreUint64(&self.oldestSeqNo, oldest)
+	self.root = root
 }
 
 // batch cache related
@@ -502,7 +514,7 @@ func (self *StateDB) Delete(addr common.Address) bool {
 // updateStateObject writes the given object to the trie.
 func (self *StateDB) updateStateObject(batch hyperdb.Batch,stateObject *StateObject) []byte {
 	addr := stateObject.Address()
-	data, err := stateObject.MarshalJSON()
+	data, err := stateObject.Marshal()
 	if err != nil {
 		log.Error("marshal stateobject failed", addr.Hex())
 	}
@@ -797,6 +809,7 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 				c := append(stateObject.address.Bytes(), d...)
 				set = append(set, c)
 			} else {
+				log.Criticalf("working set %s", common.Bytes2Hex(d))
 				workingSet[stateObject.address.Hex()] = d
 			}
 		}
@@ -808,7 +821,11 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 	} else {
 		// Use bucket tree instead
 		log.Errorf("begin to calculate state db root hash for #%d", s.curSeqNo)
+		for k, v := range workingSet {
+			log.Criticalf("working set key %s, value %s", k, common.Bytes2Hex(v))
+		}
 		s.bucketTree.PrepareWorkingSet(workingSet, big.NewInt(int64(s.curSeqNo)))
+
 		hash, err := s.bucketTree.ComputeCryptoHash()
 		if err != nil {
 			log.Error("calculate hash for statedb failed")

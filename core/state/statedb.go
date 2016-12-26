@@ -550,3 +550,10 @@ func (self *StateDB) DeleteBatch(seqNo uint64) {
 func (self *StateDB) Reset() error {
 	return nil
 }
+
+func (self *StateDB) Purge() {
+}
+
+func (self *StateDB) ResetToTarget(uint64, common.Hash) {
+
+}

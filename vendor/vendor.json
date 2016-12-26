@@ -82,6 +82,12 @@
 			"revisionTime": "2016-06-15T09:26:46Z"
 		},
 		{
+			"checksumSHA1": "xfgP1l6KQ2oSDvk+vdUpUw5V5i0=",
+			"path": "github.com/deckarep/golang-set",
+			"revision": "0c62f01318f81fb34e5ea393d2ec62141e9715e9",
+			"revisionTime": "2016-12-13T18:45:00Z"
+		},
+		{
 			"checksumSHA1": "xgjI2W3RGiQwNlxsOW2V9fJ9kaM=",
 			"path": "github.com/fsnotify/fsnotify",
 			"revision": "f12c6236fe7b5cf6bcf30e5935d08cb079d78334",
