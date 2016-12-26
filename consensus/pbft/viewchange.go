@@ -214,7 +214,6 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 	}
 
 	if _, ok := pbft.viewChangeStore[vcidx{vc.View, vc.ReplicaId}]; ok {
-
 		logger.Warningf("Replica %d already has a view change message" +
 			" for view %d from replica %d", pbft.id, vc.View, vc.ReplicaId)
 
@@ -227,6 +226,7 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 			pbft.activeView = true
 			pbft.processNegotiateView()
 		}
+
 		return nil
 	}
 
@@ -342,6 +342,7 @@ func (pbft *pbftProtocal) recvNewView(nv *NewView) events.Event {
 
 	if pbft.inRecovery {
 		logger.Noticef("Replica %d try to recvNewView, but it's in recovery", pbft.id)
+		pbft.recvNewViewInRecovery = true
 		return nil
 	}
 
@@ -572,7 +573,7 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 }
 
 func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
-	logger.Infof("Replica %d accepting new-view to view %d", pbft.id, pbft.view)
+	logger.Debugf("Replica %d accepting new-view to view %d", pbft.id, pbft.view)
 
 	pbft.stopTimer()
 	pbft.nullRequestTimer.Stop()
@@ -604,6 +605,7 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 				if !ok {
 					logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
 				} else {
+					logger.Critical("send validate")
 					pbft.recvRequestBatch(batch)
 				}
 			}

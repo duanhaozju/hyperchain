@@ -2,16 +2,6 @@
 // source: chain.proto
 // DO NOT EDIT!
 
-/*
-Package types is a generated protocol buffer package.
-
-It is generated from these files:
-	chain.proto
-
-It has these top-level messages:
-	Chain
-	ChainStatus
-*/
 package types
 
 import proto "github.com/golang/protobuf/proto"
@@ -22,12 +12,6 @@ import math "math"
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the proto package it is being compiled against.
-// A compilation error at this line likely means your copy of the
-// proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type Chain struct {
 	LatestBlockHash  []byte `protobuf:"bytes,1,opt,name=latestBlockHash,proto3" json:"latestBlockHash,omitempty"`
@@ -42,7 +26,7 @@ type Chain struct {
 func (m *Chain) Reset()                    { *m = Chain{} }
 func (m *Chain) String() string            { return proto.CompactTextString(m) }
 func (*Chain) ProtoMessage()               {}
-func (*Chain) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (*Chain) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{0} }
 
 type ChainStatus struct {
 	Replicas []uint64 `protobuf:"varint,1,rep,packed,name=replicas" json:"replicas,omitempty"`
@@ -52,16 +36,16 @@ type ChainStatus struct {
 func (m *ChainStatus) Reset()                    { *m = ChainStatus{} }
 func (m *ChainStatus) String() string            { return proto.CompactTextString(m) }
 func (*ChainStatus) ProtoMessage()               {}
-func (*ChainStatus) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{1} }
+func (*ChainStatus) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{1} }
 
 func init() {
 	proto.RegisterType((*Chain)(nil), "types.Chain")
 	proto.RegisterType((*ChainStatus)(nil), "types.ChainStatus")
 }
 
-func init() { proto.RegisterFile("chain.proto", fileDescriptor1) }
+func init() { proto.RegisterFile("chain.proto", fileDescriptor2) }
 
-var fileDescriptor1 = []byte{
+var fileDescriptor2 = []byte{
 	// 229 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x64, 0x90, 0xb1, 0x4e, 0xc3, 0x30,
 	0x10, 0x86, 0xd5, 0x34, 0x09, 0xe8, 0x52, 0x01, 0xba, 0x01, 0x45, 0x4c, 0x55, 0xa6, 0x8a, 0x81,

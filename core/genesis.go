@@ -13,7 +13,6 @@ import (
 	//"fmt"
 	"github.com/buger/jsonparser"
 	"hyperchain/core/state"
-	"hyperchain/crypto"
 	"math/big"
 	"strconv"
 	"time"
@@ -82,9 +81,7 @@ func CreateInitBlock(filename string) {
 	}
 
 	log.Debug("构造创世区块")
-	//if err := PutBlock(db, block.BlockHash, &block); err != nil {
-	commonHash := crypto.NewKeccak256Hash("keccak256")
-	if err := PutBlockTx(db, commonHash, block.BlockHash, &block); err != nil {
+	if err, _ := PersistBlock(db.NewBatch(), &block, "1.0", true, true); err != nil {
 		log.Fatal(err)
 		return
 	}
