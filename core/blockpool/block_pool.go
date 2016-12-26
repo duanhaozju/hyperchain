@@ -21,7 +21,7 @@ import (
 
 var (
 	log                          *logging.Logger // package-level logger
-	globalState                        vm.Database
+	globalState                  vm.Database
 )
 
 func init() {
@@ -30,28 +30,29 @@ func init() {
 
 // represent a validation result
 type BlockRecord struct {
-	TxRoot      []byte
-	ReceiptRoot []byte
-	MerkleRoot  []byte
-	InvalidTxs  []*types.InvalidTransactionRecord
-	ValidTxs    []*types.Transaction
-	Receipts    []*types.Receipt
-	SeqNo       uint64
+	TxRoot      []byte                             // hash of a batch of transactions
+	ReceiptRoot []byte                             // hash of a batch of receipts
+	MerkleRoot  []byte                             // hash of state
+	InvalidTxs  []*types.InvalidTransactionRecord  // invalid transaction list
+	ValidTxs    []*types.Transaction               // valid transaction list
+	Receipts    []*types.Receipt                   // receipt list
+	SeqNo       uint64                             // temp block number for this batch
+	VID         uint64                             // validation ID. may larger than SeqNo
 }
 
 // block pool configuration
 type BlockPoolConf struct {
-	BlockVersion       string
-	TransactionVersion string
-	StateType   string
+	BlockVersion       string                     // block structure version
+	TransactionVersion string                     // transaction structure version
+	StateType          string                     // state type identifier, "rawstate"  or "hyperstate"
 }
 
 type BlockPool struct {
 	// IMPORTANT atomic variable. make sure use atomic operation to use those variable
-	demandNumber        uint64         // current demand number for commit
-	demandSeqNo         uint64         // current demand seqNo for validation
-	maxNum              uint64         // max block number in queue cache for commit
-	maxSeqNo            uint64         // max validation event number in validation queue
+	demandNumber        uint64              // current demand number for commit
+	demandSeqNo         uint64              // current demand seqNo for validation
+	maxNum              uint64              // max block number in queue cache for commit
+	maxSeqNo            uint64              // max validation event number in validation queue
 	lastValidationState atomic.Value        // latest state root hash
 	// external stuff
 	consenter           consensus.Consenter // consensus module handler
@@ -68,8 +69,10 @@ type BlockPool struct {
 	// buffer
 	transactionCalculator   interface{}       // a batch of transactions calculator
 	receiptCalculator       interface{}       // a batch of receipts calculator
-	transactionBuffer       [][]byte // transaction buffer
-	receiptBuffer           [][]byte // receipt buffer
+	transactionBuffer       [][]byte          // transaction buffer
+	receiptBuffer           [][]byte          // receipt buffer
+	// status variant
+	tempBlockNumber         uint64            // temporarily block number
 }
 
 func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter, conf BlockPoolConf, bktConf bucket.Conf) *BlockPool {
@@ -94,6 +97,8 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter, conf B
 	currentChain := core.GetChainCopy()
 	atomic.StoreUint64(&pool.demandNumber, currentChain.Height+1)
 	atomic.AddUint64(&pool.demandSeqNo, currentChain.Height+1)
+	// initialize temp block number as current height plus 1
+	pool.tempBlockNumber = currentChain.Height + 1
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {return nil}
 	// get latest block

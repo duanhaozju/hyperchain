@@ -48,7 +48,8 @@ func (key *dataKey) getEncodedBytes() []byte {
 
 func newDataKeyFromEncodedBytes(encodedBytes []byte) *dataKey {
 	bucketNum, l := decodeBucketNumber(encodedBytes)
-	compositeKey := encodedBytes[l:]
+	compositeKey := make([]byte, len(encodedBytes) - l)
+	copy(compositeKey, encodedBytes[l:])
 	return &dataKey{newBucketKeyAtLowestLevel(bucketNum), compositeKey}
 }
 

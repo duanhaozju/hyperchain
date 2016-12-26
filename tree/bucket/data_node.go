@@ -2,6 +2,7 @@ package bucket
 
 import (
 	"fmt"
+	"hyperchain/common"
 )
 
 type dataNode struct {
@@ -18,7 +19,9 @@ func unmarshalDataNodeFromBytes(keyBytes []byte, valueBytes []byte) *dataNode {
 }
 
 func unmarshalDataNode(dataKey *dataKey, serializedBytes []byte) *dataNode {
-	return &dataNode{dataKey, serializedBytes}
+	value := make([]byte, len(serializedBytes))
+	copy(value, serializedBytes)
+	return &dataNode{dataKey, value}
 }
 
 func (dataNode *dataNode) getCompositeKey() []byte {
@@ -38,5 +41,5 @@ func (dataNode *dataNode) getValue() []byte {
 }
 
 func (dataNode *dataNode) String() string {
-	return fmt.Sprintf("dataKey=[%s], value=[%s]", dataNode.dataKey, string(dataNode.value))
+	return fmt.Sprintf("dataKey=[%s], value=[%s]", dataNode.dataKey, common.Bytes2Hex(dataNode.value))
 }

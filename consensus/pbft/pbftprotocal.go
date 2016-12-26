@@ -447,7 +447,7 @@ func (pbft *pbftProtocal) RecvLocal(msg interface{}) error {
 
 func (pbft *pbftProtocal) RemoveCachedBatch(vid uint64) {
 
-	logger.Debugf("Replica %d received local remove message", pbft.id)
+	logger.Debugf("Replica %d received local remove message, vid = %d", pbft.id, vid)
 	event := removeCache{vid: vid}
 	go pbft.postRequestEvent(event)
 }
@@ -461,7 +461,7 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 		vid := e.vid
 		ok := pbft.recvRemoveCache(vid)
 		if !ok {
-			logger.Warningf("Replica %d received local remove cached batch msg, but can not find mapping batch", pbft.id)
+			logger.Warningf("Replica %d received local remove cached batch msg, but can not find mapping batch %d", pbft.id, vid)
 		}
 		return nil
 	case clearDuplicator:
@@ -768,6 +768,7 @@ func (pbft *pbftProtocal) leaderProcReq(tx *types.Transaction) error {
 		_, ok := pbft.duplicator[pbft.vid+1]
 		if !ok {
 			txStore := newTransactionStore()
+			logger.Debugf("Replica %d create duplicate cache for vid = %d", pbft.id, pbft.vid+1)
 			pbft.duplicator[pbft.vid+1] = txStore
 		}
 		pbft.duplicator[pbft.vid+1].add(tx)
@@ -820,7 +821,7 @@ func (pbft *pbftProtocal) sendBatch() error {
 	pbft.batchStore = nil
 	logger.Infof("Creating batch with %d requests", len(reqBatch.Batch))
 
-	go pbft.postPbftEvent(reqBatch)
+	go pbft.postRequestEvent(reqBatch)
 
 	return nil
 }
