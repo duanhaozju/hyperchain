@@ -193,8 +193,8 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 				logger.Debugf("Replica %d has already finished adding node", pbft.id)
 				return errors.New("Replica has already finished adding node")
 			} else {
-				logger.Warningf("Replica %d has already finished adding node, but still recevice add msg from somewho", pbft.id)
-				return errors.New("Replica has already finished adding node, but still recevice add msg from somewho")
+				logger.Warningf("Replica %d has already finished adding node, but still recevice add msg from someone else", pbft.id)
+				return errors.New("Replica has already finished adding node, but still recevice add msg from someone else")
 			}
 		}
 	}
@@ -223,8 +223,8 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string, routerHash string) 
 				logger.Debugf("Replica %d have already finished deleting node", pbft.id)
 				return errors.New("Replica has already finished deleting node")
 			} else {
-				logger.Warningf("Replica %d has already finished deleting node, but still recevice del msg from somewho", pbft.id)
-				return errors.New("Replica has already finished deleting node, but still recevice del msg from somewho")
+				logger.Warningf("Replica %d has already finished deleting node, but still recevice del msg from someone else", pbft.id)
+				return errors.New("Replica has already finished deleting node, but still recevice del msg from someone else")
 			}
 		}
 	}
@@ -243,15 +243,16 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string, routerHash string) 
 }
 
 // New replica send ready_for_n to primary after recovery
-func (pbft *pbftProtocal) sendReadyForN() {
+func (pbft *pbftProtocal) sendReadyForN() error {
 
 	if !pbft.isNewNode {
 		logger.Errorf("Replica %d is not new one, but try to send ready_for_n", pbft.id)
-		return
+		return errors.New("Replica is an old node, but try to send redy_for_n")
 	}
 
 	if pbft.localKey == "" {
-		logger.Errorf("Replica %d don't have local key to ready_for_n", pbft.id)
+		logger.Errorf("Replica %d doesn't have local key for ready_for_n", pbft.id)
+		return errors.New("Rplica doesn't have local key for ready_for_n")
 	}
 
 	ready := &ReadyForN{
@@ -262,7 +263,7 @@ func (pbft *pbftProtocal) sendReadyForN() {
 	payload, err := proto.Marshal(ready)
 	if err != nil {
 		logger.Errorf("Marshal ReadyForN Error!")
-		return
+		return errors.New("Marshal ReadyForN Error!")
 	}
 	msg := &ConsensusMessage{
 		Type: ConsensusMessage_READY_FOR_N,
@@ -272,6 +273,8 @@ func (pbft *pbftProtocal) sendReadyForN() {
 	primary := pbft.primary(pbft.view)
 	unicast := consensusMsgHelper(msg, pbft.id)
 	pbft.helper.InnerUnicast(unicast, primary)
+
+	return nil
 }
 
 // Primary receive ready_for_n from new replica
@@ -281,24 +284,19 @@ func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) error {
 		logger.Debugf("Primary %d received ready_for_n from %d", pbft.id, ready.ReplicaId)
 	} else {
 		logger.Errorf("Replica %d is not primary but received ready_for_n from %d", pbft.id, ready.ReplicaId)
-		return nil
+		return errors.New("Replica is not primary but received ready_for_n")
 	}
 
 	if !pbft.activeView {
 		logger.Warningf("Primary %d is in view change, reject the ready_for_n message", pbft.id)
-		return nil
+		return errors.New("Primary is in view change, reject the ready_for_n message")
 	}
 
 	cert := pbft.getAddNodeCert(ready.Key)
 
-	if cert == nil {
-		logger.Errorf("Primary %d can't get the addnode cert for key=%s", pbft.id, ready.Key)
-		return nil
-	}
-
 	if !cert.finishAdd {
 		logger.Errorf("Primary %d has not done with addnode for key=%s", pbft.id, ready.Key)
-		return nil
+		return errors.New("Primary has not done with addnode")
 	}
 
 	// calculate the new N and view
@@ -317,7 +315,7 @@ func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) error {
 	payload, err := proto.Marshal(updateN)
 	if err != nil {
 		logger.Errorf("Marshal updateN Error!")
-		return nil
+		return errors.New("Marshal updateN Error!")
 	}
 	msg := &ConsensusMessage{
 		Type: ConsensusMessage_UPDATE_N,
@@ -331,25 +329,20 @@ func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) error {
 }
 
 // Primary send update_n after finish del node
-func (pbft *pbftProtocal) sendUpdateNforDel(key string, routerHash string) {
+func (pbft *pbftProtocal) sendUpdateNforDel(key string, routerHash string) error {
 
 	logger.Debugf("Replica %d try to send update_n after finish del node", pbft.id)
 
 	if !pbft.activeView {
 		logger.Warningf("Primary %d is in view change, reject the ready_for_n message", pbft.id)
-		return
+		return errors.New("Primary is in view change, choose not send the ready_for_n message")
 	}
 
 	cert := pbft.getDelNodeCert(key, routerHash)
 
-	if cert == nil {
-		logger.Errorf("Primary %d can't get the delnode cert for key=%s", pbft.id, key)
-		return
-	}
-
 	if !cert.finishDel {
-		logger.Errorf("Primary %d has not done with addnode for key=%s", pbft.id, key)
-		return
+		logger.Errorf("Primary %d has not done with delnode for key=%s", pbft.id, key)
+		return errors.New("Primary hasn't done with delnode")
 	}
 
 	// calculate the new N and view
@@ -368,7 +361,7 @@ func (pbft *pbftProtocal) sendUpdateNforDel(key string, routerHash string) {
 	payload, err := proto.Marshal(updateN)
 	if err != nil {
 		logger.Errorf("Marshal updateN Error!")
-		return
+		return errors.New("Marshal updateN Error!")
 	}
 	msg := &ConsensusMessage{
 		Type: ConsensusMessage_UPDATE_N,
@@ -379,7 +372,7 @@ func (pbft *pbftProtocal) sendUpdateNforDel(key string, routerHash string) {
 	broadcast := consensusMsgHelper(msg, pbft.id)
 	pbft.helper.InnerBroadcast(broadcast)
 
-	pbft.maybeUpdateN(key, routerHash, false)
+	return pbft.maybeUpdateN(key, routerHash, false)
 }
 
 func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
@@ -388,13 +381,13 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 
 	if !pbft.activeView {
 		logger.Warningf("Replica %d is in view change, reject the update_n message", pbft.id)
-		return nil
+		return errors.New("Replica reject update_n msg as it's in viewchange")
 	}
 
 	if pbft.primary(pbft.view) != update.ReplicaId {
-		logger.Errorf("Replica %d received updateN from other than primary: got %d, should be %d",
+		logger.Errorf("Replica %d received update_n from other than primary: got %d, should be %d",
 		pbft.id, update.ReplicaId, pbft.primary(pbft.view))
-		return nil
+		return errors.New("Replica reject update_n msg as it's not from primary")
 	}
 
 	if update.Flag {
@@ -402,20 +395,15 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 		if n != update.N || view != update.View {
 			logger.Errorf("Replica %d has different idea: got n=%d/view=%d, should be n=%d/view=%d",
 				pbft.id, update.N, update.View, n, view)
-			return nil
+			return errors.New("Replica has different idea about n and view")
 		}
 
 		if !pbft.inW(update.SeqNo) {
 			logger.Warningf("Replica %d received updateN but the seqNo not in view", pbft.id)
-			return nil
+			return errors.New("Replica reject not-in-view msg")
 		}
 
 		cert := pbft.getAddNodeCert(update.Key)
-		if cert == nil {
-			logger.Errorf("Primary %d can't get the addnode cert for key=%s", pbft.id, update.Key)
-			return nil
-		}
-
 		cert.update = update
 
 		agree := &AgreeUpdateN{
@@ -429,7 +417,7 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 		payload, err := proto.Marshal(agree)
 		if err != nil {
 			logger.Errorf("Marshal AgreeUpdateN Error!")
-			return nil
+			return errors.New("Marshal AgreeUpdateN Error!")
 		}
 		msg := &ConsensusMessage{
 			Type: ConsensusMessage_AGREE_UPDATE_N,
@@ -444,15 +432,10 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 		if n != update.N || view != update.View {
 			logger.Errorf("Replica %d has different idea: got n=%d/view=%d, should be n=%d/view=%d",
 				pbft.id, update.N, update.View, n, view)
-			return nil
+			return errors.New("Replica has different idea about n and view")
 		}
 
 		cert := pbft.getDelNodeCert(update.Key, update.RouterHash)
-		if cert == nil {
-			logger.Errorf("Primary %d can't get the delnode cert for key=%s", pbft.id, update.Key)
-			return nil
-		}
-
 		cert.update = update
 
 		agree := &AgreeUpdateN{
@@ -487,7 +470,7 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) error {
 
 	if pbft.primary(pbft.view) == agree.ReplicaId {
 		logger.Warningf("Replica %d received agree updateN from primary, ignoring", pbft.id)
-		return nil
+		return errors.New("")
 	}
 
 	if agree.Flag {
@@ -496,7 +479,7 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) error {
 		ok := cert.agrees[*agree]
 		if ok {
 			logger.Warningf("Replica %d ignored duplicate agree updateN from %d", pbft.id, agree.ReplicaId)
-			return nil
+			return errors.New("Replica ignored duplicate agree updateN msg")
 		}
 
 		cert.agrees[*agree] = true
@@ -509,7 +492,7 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) error {
 		ok := cert.agrees[*agree]
 		if ok {
 			logger.Warningf("Replica %d ignored duplicate agree updateN from %d", pbft.id, agree.ReplicaId)
-			return nil
+			return errors.New("Replica ignored duplicate agree updateN msg")
 		}
 
 		cert.agrees[*agree] = true
@@ -524,27 +507,22 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, routerHash string, flag bo
 	if flag {
 		cert := pbft.getAddNodeCert(digest)
 
-		if cert == nil {
-			logger.Errorf("Replica %d can't get the cert for digest=%s", pbft.id, digest)
-			return nil
-		}
-
 		if cert.updateCount < pbft.committedReplicasQuorum() {
-			return nil
+			return errors.New("Not enough agree message to update n")
 		}
 
 		if cert.update == nil {
 			logger.Warningf("Replica %d haven't locally prepared for update_n, but got 2f prepared", pbft.id)
-			return nil
+			return errors.New("Replica hasn't locally prepared for updating n after adding")
 		}
 
 		if cert.finishUpdate {
 			if cert.updateCount <= pbft.N + 1 {
 				logger.Debugf("Replica %d already finish update for digest %s", pbft.id, digest)
-				return nil
+				return errors.New("Replica has already finished updating n after adding")
 			} else {
 				logger.Warningf("Replica %d already finish update but still try to update N for digest %s", pbft.id, digest)
-				return nil
+				return errors.New("Replica has already finished updating n after adding, but still recevice agree msg from someone else")
 			}
 		}
 
@@ -560,33 +538,29 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, routerHash string, flag bo
 		pbft.N = int(cert.update.N)
 		pbft.view = cert.update.View
 		pbft.f = (pbft.N-1) / 3
+		pbft.persistView(pbft.view)
 		logger.Noticef("Replica %d update after adding, N=%d/f=%d/view=%d/keypoint=%d",
 			pbft.id, pbft.N, pbft.f, pbft.view, pbft.keypoint)
 
 	} else {
 		cert := pbft.getDelNodeCert(digest, routerHash)
 
-		if cert == nil {
-			logger.Errorf("Replica %d can't get the cert for digest=%s", pbft.id, digest)
-			return nil
-		}
-
 		if cert.updateCount < pbft.preparedReplicasQuorum() {
-			return nil
+			return errors.New("Not enough agree message to update n after deleting")
 		}
 
 		if cert.update == nil {
 			logger.Warningf("Replica %d haven't locally prepared for update_n, but got 2f prepared", pbft.id)
-			return nil
+			return errors.New("Replica hasn't locally prepared for updating n after deleting")
 		}
 
 		if cert.finishUpdate {
 			if cert.updateCount <= pbft.N {
 				logger.Debugf("Replica %d already finish update for digest %s", pbft.id, digest)
-				return nil
+				return errors.New("Replica has already finished updating n after deleting")
 			} else {
 				logger.Warningf("Replica %d already finish update but still try to update N for digest %s", pbft.id, digest)
-				return nil
+				return errors.New("Replica has already finished updating n after deleting, but still recevice agree msg from someone else")
 			}
 		}
 
@@ -599,6 +573,7 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, routerHash string, flag bo
 		pbft.f = (pbft.N-1) / 3
 		oldId := pbft.id
 		pbft.id = cert.newId
+		pbft.persistView(pbft.view)
 		logger.Noticef("Replica %d update after deleting, N=%d/f=%d/view=%d, new local id is %d",
 			oldId, pbft.N, pbft.f, pbft.view, pbft.id)
 	}
