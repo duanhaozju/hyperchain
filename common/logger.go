@@ -101,7 +101,7 @@ func SetModuleLogLevel(module string, logLevel string) (string, error) {
 	}
 
 	logging.SetLevel(logging.Level(level), module)
-	loggingLogger.Debugf("Module '%s' logger enabled for log level: %s", module, level)
+	loggingLogger.Infof("Module '%s' logger enabled for log level: %s", module, level)
 	return logLevelString, err
 }
 
