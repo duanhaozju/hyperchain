@@ -172,12 +172,13 @@ func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
 	log.Debug("BROADCAST:", msg.From.ID, ">>>", this.PeerAddr.ID)
 	msg.Payload,err = this.TEM.EncWithSecret(msg.Payload, this.PeerAddr.Hash)
 	if err != nil{
+		log.Error("enc with secret ",err)
 		return nil,err
 	}
 	response, err = this.Client.Chat(context.Background(), &msg)
 	if err != nil {
 		this.Status = 2;
-		log.Error("err:", err)
+		log.Error("response err:", err)
 		//TODO
 		panic(err)
 		return nil,err
@@ -187,9 +188,11 @@ func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
 	if response != nil && response.MessageType != pb.Message_HELLO && response.MessageType != pb.Message_HELLO_RESPONSE{
 		response.Payload,err = this.TEM.DecWithSecret(response.Payload, response.From.Hash)
 		if err != nil{
+			log.Error("decwithSec err:", err)
 			return nil,err
 		}
 	}
+	log.Debug("response",response.MessageType)
 	return response, err
 }
 

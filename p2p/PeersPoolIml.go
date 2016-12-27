@@ -48,7 +48,7 @@ func (this *PeersPoolIml) PutPeer(addr pb.PeerAddr, client *Peer) error {
 		return errors.New("The client already in")
 
 	} else {
-		log.Critical(this.alivePeers)
+		log.Debug("alive peers number is:", this.alivePeers)
 		this.alivePeers += 1
 		this.peerKeys[addr] = addrString
 		this.peerAddr[addrString] = addr

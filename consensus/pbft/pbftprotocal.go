@@ -2220,6 +2220,7 @@ func (pbft *pbftProtocal) recvNegoView(nv *NegotiateView) events.Event {
 		Payload: payload,
 	}
 	msg := consensusMsgHelper(consensusMsg, pbft.id)
+	logger.Debug("innerunicast ", msg.Type)
 	pbft.helper.InnerUnicast(msg, sender)
 	return nil
 }

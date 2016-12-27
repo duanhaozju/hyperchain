@@ -282,7 +282,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		{
 			log.Debug("<<<< GOT A CONSUS MESSAGE >>>>")
 
-			log.Debug("×××××× Node Decode MSG ××××××")
+			log.Debug("**** Node Decode MSG ****")
 			log.Debug("Node need to decode msg: ", hex.EncodeToString(msg.Payload))
 			transferData,err := node.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
 			if err != nil{

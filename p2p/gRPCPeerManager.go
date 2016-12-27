@@ -292,7 +292,8 @@ func (this *GrpcPeerManager) GetLocalAddressPayload() (payload []byte) {
 
 // SendMsgToPeers Send msg to specific peer peerlist
 func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, MessageType recovery.Message_MsgType) {
-	//log.Critical("need send message to ", peerList)
+
+	log.Debug("need send message to ", peerList)
 	var mpPaylod = &recovery.Message{
 		MessageType:  MessageType,
 		MsgTimeStamp: time.Now().UnixNano(),
@@ -314,11 +315,10 @@ func (this *GrpcPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, M
 	for _, NodeID := range peerList {
 		peers := this.peersPool.GetPeers()
 		for _, p := range peers {
-			//log.Critical("range nodeid", p.RemoteAddr)
-			//log.Critical("range nodeid", p.ID)
-			// convert the uint64 to int
-			// because the unicast node is not confirm so, here use double loop
-			if p.LocalAddr.ID == int(NodeID) {
+			log.Debug("range nodeid", p.PeerAddr)
+			 //convert the uint64 to int
+			 //because the unicast node is not confirm so, here use double loop
+			if p.PeerAddr.ID == int(NodeID) {
 				log.Debug("send msg to ", NodeID)
 				start := time.Now().UnixNano()
 				resMsg, err := p.Chat(syncMessage)
