@@ -5,41 +5,44 @@ import (
 	"hyperchain/common"
 )
 
-type dataNode struct {
-	dataKey *dataKey
+type DataNode struct {
+	dataKey *DataKey
 	value   []byte
 }
 
-func newDataNode(dataKey *dataKey, value []byte) *dataNode {
-	return &dataNode{dataKey, value}
+func newDataNode(dataKey *DataKey, value []byte) *DataNode {
+	if value == nil {
+		logger.Error("DEBUG newDataNode empty value")
+	}
+	return &DataNode{dataKey, value}
 }
 
-func unmarshalDataNodeFromBytes(keyBytes []byte, valueBytes []byte) *dataNode {
+func unmarshalDataNodeFromBytes(keyBytes []byte, valueBytes []byte) *DataNode {
 	return unmarshalDataNode(newDataKeyFromEncodedBytes(keyBytes), valueBytes)
 }
 
-func unmarshalDataNode(dataKey *dataKey, serializedBytes []byte) *dataNode {
+func unmarshalDataNode(dataKey *DataKey, serializedBytes []byte) *DataNode {
 	value := make([]byte, len(serializedBytes))
 	copy(value, serializedBytes)
-	return &dataNode{dataKey, value}
+	return &DataNode{dataKey, value}
 }
 
-func (dataNode *dataNode) getCompositeKey() []byte {
+func (dataNode *DataNode) getCompositeKey() []byte {
 	return dataNode.dataKey.compositeKey
 }
 
-func (dataNode *dataNode) isDelete() bool {
+func (dataNode *DataNode) isDelete() bool {
 	return dataNode.value == nil
 }
 
-func (dataNode *dataNode) getKeyElements() (string, string) {
+func (dataNode *DataNode) getKeyElements() (string, string) {
 	return DecodeCompositeKey(dataNode.getCompositeKey())
 }
 
-func (dataNode *dataNode) getValue() []byte {
+func (dataNode *DataNode) getValue() []byte {
 	return dataNode.value
 }
 
-func (dataNode *dataNode) String() string {
+func (dataNode *DataNode) String() string {
 	return fmt.Sprintf("dataKey=[%s], value=[%s]", dataNode.dataKey, common.Bytes2Hex(dataNode.value))
 }

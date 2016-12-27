@@ -5,18 +5,18 @@ import (
 )
 
 type bucketHashCalculator struct {
-	bucketKey          *bucketKey
+	bucketKey          *BucketKey
 	currentChaincodeID string
-	dataNodes          []*dataNode
+	dataNodes          []*DataNode
 	hashingData        []byte
 }
 
-func newBucketHashCalculator(bucketKey *bucketKey) *bucketHashCalculator {
+func newBucketHashCalculator(bucketKey *BucketKey) *bucketHashCalculator {
 	return &bucketHashCalculator{bucketKey, "", nil, nil}
 }
 
 // addNextNode - this method assumes that the datanodes are added in the increasing order of the keys
-func (c *bucketHashCalculator) addNextNode(dataNode *dataNode) {
+func (c *bucketHashCalculator) addNextNode(dataNode *DataNode) {
 	chaincodeID, _ := dataNode.getKeyElements()
 	if chaincodeID != c.currentChaincodeID {
 		c.appendCurrentChaincodeData()
@@ -30,9 +30,10 @@ func (c *bucketHashCalculator) computeCryptoHash() []byte {
 	if c.currentChaincodeID != "" {
 		c.appendCurrentChaincodeData()
 		c.currentChaincodeID = ""
+		// TODO
 		c.dataNodes = nil
 	}
-	logger.Debugf("Hashable content for bucket [%s]: length=%d, contentInStringForm=[%s]", c.bucketKey, len(c.hashingData), string(c.hashingData))
+	logger.Errorf("Hashable content for bucket [%s]: length=%d, contentInStringForm=[%s]", c.bucketKey, len(c.hashingData), string(c.hashingData))
 	if c.hashingData == nil {
 		return nil
 	}

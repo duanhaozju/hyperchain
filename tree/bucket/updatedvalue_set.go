@@ -106,25 +106,11 @@ func (updatedValueSet *UpdatedValueSet) Get(key string) *UpdatedValue {
 }
 
 func (updatedValueSet *UpdatedValueSet) Set(key string, updatedValue, previousValue []byte) {
-	updatedKVs, ok := updatedValueSet.UpdatedKVs[key]
-	if ok {
-		// Key already exists, just set the updated value
-		updatedKVs.Value = updatedValue
-	} else {
-		// New key. Create a new entry in the map
-		updatedValueSet.UpdatedKVs[key] = &UpdatedValue{updatedValue, previousValue}
-	}
+	updatedValueSet.UpdatedKVs[key] = &UpdatedValue{updatedValue, previousValue}
 }
 
 func (updatedValueSet *UpdatedValueSet) Remove(key string, previousValue []byte) {
-	updatedKVs, ok := updatedValueSet.UpdatedKVs[key]
-	if ok {
-		// Key already exists, just set the value
-		updatedKVs.Value = nil
-	} else {
-		// New key. Create a new entry in the map
-		updatedValueSet.UpdatedKVs[key] = &UpdatedValue{nil, previousValue}
-	}
+	updatedValueSet.UpdatedKVs[key] = &UpdatedValue{nil, nil}
 }
 
 func (updatedValueSet *UpdatedValueSet) HasChanges() bool {
@@ -141,6 +127,6 @@ func (updatedValueSet *UpdatedValueSet) GetSortedKeys() []string {
 	return updatedKeys
 }
 
-func (updatedValueSet *UpdatedValueSet) UpdatedValueKVs(updatedDataNodes , existingDataNodes dataNodes){
+func (updatedValueSet *UpdatedValueSet) UpdatedValueKVs(updatedDataNodes , existingDataNodes DataNodes){
 
 }

@@ -12,12 +12,12 @@ import (
 
 func TestDataNodesSort(t *testing.T) {
 	conf = newConfig(26, 3, fnvHash)
-	dataNodes := dataNodes{}
+	dataNodes := DataNodes{}
 	dataNode1 := newDataNode(newDataKey("chaincodeID1", "key1"), []byte("value1_1"))
 	dataNode2 := newDataNode(newDataKey("chaincodeID1", "key2"), []byte("value1_2"))
 	dataNode3 := newDataNode(newDataKey("chaincodeID2", "key1"), []byte("value2_1"))
 	dataNode4 := newDataNode(newDataKey("chaincodeID2", "key2"), []byte("value2_2"))
-	dataNodes = append(dataNodes, []*dataNode{dataNode2, dataNode4, dataNode3, dataNode1}...)
+	dataNodes = append(dataNodes, []*DataNode{dataNode2, dataNode4, dataNode3, dataNode1}...)
 	sort.Sort(dataNodes)
 	testutil.AssertSame(t, dataNodes[0], dataNode1)
 	testutil.AssertSame(t, dataNodes[1], dataNode2)

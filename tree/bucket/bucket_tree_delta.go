@@ -2,7 +2,7 @@ package bucket
 
 import "math/big"
 
-type byBucketNumber map[int]*bucketNode
+type byBucketNumber map[int]*BucketNode
 
 type bucketTreeDelta struct {
 	byLevel map[int]byBucketNumber
@@ -16,10 +16,10 @@ func newUpdatedValueSet(blockNumber *big.Int) *UpdatedValueSet {
 	return &UpdatedValueSet{BlockNum:blockNumber, UpdatedKVs:make(map[string] *UpdatedValue)}
 }
 
-func (bucketTreeDelta *bucketTreeDelta) getOrCreateBucketNode(bucketKey *bucketKey) *bucketNode {
+func (bucketTreeDelta *bucketTreeDelta) getOrCreateBucketNode(bucketKey *BucketKey) *BucketNode {
 	byBucketNumber := bucketTreeDelta.byLevel[bucketKey.level]
 	if byBucketNumber == nil {
-		byBucketNumber = make(map[int]*bucketNode)
+		byBucketNumber = make(map[int]*BucketNode)
 		bucketTreeDelta.byLevel[bucketKey.level] = byBucketNumber
 	}
 	bucketNode := byBucketNumber[bucketKey.bucketNumber]
@@ -34,8 +34,8 @@ func (bucketTreeDelta *bucketTreeDelta) isEmpty() bool {
 	return bucketTreeDelta.byLevel == nil || len(bucketTreeDelta.byLevel) == 0
 }
 
-func (bucketTreeDelta *bucketTreeDelta) getBucketNodesAt(level int) []*bucketNode {
-	bucketNodes := []*bucketNode{}
+func (bucketTreeDelta *bucketTreeDelta) getBucketNodesAt(level int) []*BucketNode {
+	bucketNodes := []*BucketNode{}
 	byBucketNumber := bucketTreeDelta.byLevel[level]
 	if byBucketNumber == nil {
 		return nil
@@ -46,7 +46,7 @@ func (bucketTreeDelta *bucketTreeDelta) getBucketNodesAt(level int) []*bucketNod
 	return bucketNodes
 }
 
-func (bucketTreeDelta *bucketTreeDelta) getRootNode() *bucketNode {
+func (bucketTreeDelta *bucketTreeDelta) getRootNode() *BucketNode {
 	bucketNodes := bucketTreeDelta.getBucketNodesAt(0)
 	if bucketNodes == nil || len(bucketNodes) == 0 {
 		panic("This method should be called after processing is completed (i.e., the root node has been created)")

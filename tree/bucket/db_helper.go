@@ -6,10 +6,10 @@ import (
 type rawKey []byte
 
 // TODO test
-func fetchDataNodeFromDB(dataKey *dataKey) (*dataNode, error) {
+func fetchDataNodeFromDB(dataKey *DataKey) (*DataNode, error) {
 	db, err := hyperdb.GetLDBDatabase()
 	nodeBytes, err := db.Get(dataKey.getEncodedBytes())
-	nodeBytes = append([]byte("DataNode"),nodeBytes...)
+	nodeBytes = append([]byte(DataNodePrefix),nodeBytes...)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +26,7 @@ func fetchDataNodeFromDB(dataKey *dataKey) (*dataNode, error) {
 }
 
 // TODO test
-func fetchBucketNodeFromDB(treePrefix string,bucketKey *bucketKey) (*bucketNode, error) {
+func fetchBucketNodeFromDB(treePrefix string,bucketKey *BucketKey) (*BucketNode, error) {
 	db,_ := hyperdb.GetLDBDatabase()
 	//nodeKey := bucketKey.getEncodedBytes(treePrefix)
 	nodeKey := append([]byte("BucketNode"),[]byte(treePrefix)...)
@@ -45,21 +45,45 @@ func fetchBucketNodeFromDB(treePrefix string,bucketKey *bucketKey) (*bucketNode,
 	return unmarshalBucketNode(bucketKey, nodeBytes), nil
 }
 
-
 // TODO it need to be tested
-func fetchDataNodesFromDBFor(treePrefix string,bucketKey *bucketKey) (dataNodes, error) {
+func fetchDataNodesFromDB(treePrefix string) (DataNodes, error) {
 	db,_ := hyperdb.GetLDBDatabase()
 
-	minimumDataKeyBytes := minimumPossibleDataKeyBytesFor(bucketKey,treePrefix)
+	minimumDataKeyBytes := append([]byte(DataNodePrefix))
 
-	var dataNodes dataNodes
+	var dataNodes DataNodes
 	// IMPORTANT return value obtained by iterator is sorted
 	iter := db.NewIteratorWithPrefix(minimumDataKeyBytes)
 	for iter.Next() {
 		keyBytes := iter.Key()
 		valueBytes := iter.Value()
 
-		keyBytes = keyBytes[8:]
+		keyBytes = keyBytes[len(DataNodePrefix):]
+		dataKey := newDataKeyFromEncodedBytes(keyBytes)
+		dataNode := unmarshalDataNode(dataKey, valueBytes)
+		logger.Debugf("Data node [%s] from DB belongs to bucket = [%s]. Including the key in results...", dataNode, dataNode.dataKey.bucketKey)
+		dataNodes = append(dataNodes, dataNode)
+	}
+	logger.Debugf("Returning results [%v]", dataNodes)
+	return dataNodes, nil
+}
+
+
+
+// TODO it need to be tested
+func fetchDataNodesFromDBByBucketKey(treePrefix string,bucketKey *BucketKey) (DataNodes, error) {
+	db,_ := hyperdb.GetLDBDatabase()
+
+	minimumDataKeyBytes := minimumPossibleDataKeyBytesFor(bucketKey,treePrefix)
+
+	var dataNodes DataNodes
+	// IMPORTANT return value obtained by iterator is sorted
+	iter := db.NewIteratorWithPrefix(minimumDataKeyBytes)
+	for iter.Next() {
+		keyBytes := iter.Key()
+		valueBytes := iter.Value()
+
+		keyBytes = keyBytes[len(DataNodePrefix):]
 		dataKey := newDataKeyFromEncodedBytes(keyBytes)
 		logger.Debugf("Retrieved data key [%s] from DB for bucket [%s]", dataKey, bucketKey)
 		if !dataKey.getBucketKey().equals(bucketKey) {

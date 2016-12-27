@@ -104,6 +104,7 @@ func (config *config) computeParentBucketNumber(bucketNumber int) int {
 	if bucketNumber%config.getMaxGroupingAtEachLevel() != 0 {
 		parentBucketNumber++
 	}
+	logger.Errorf("bucketNumber %d group %d, res %d ", bucketNumber, config.getMaxGroupingAtEachLevel(), parentBucketNumber)
 	return parentBucketNumber
 }
 
