@@ -27,8 +27,9 @@ import (
 // IMPORTANT this function called in parallelly, Make sure all the variable are thread-safe
 func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption, peerManager p2p.PeerManager) {
 	// check whether this is necessary to update max seqNo
-	log.Noticef("begin to validate #%d", validationEvent.SeqNo)
+	log.Noticef("begin to validate for vid #%d. current temp block number #%d", validationEvent.SeqNo, pool.tempBlockNumber)
 	if validationEvent.SeqNo > atomic.LoadUint64(&pool.maxSeqNo) {
+		log.Debugf("validation seqNo #%d larger than max seqNo", validationEvent.SeqNo)
 		atomic.StoreUint64(&pool.maxSeqNo, validationEvent.SeqNo)
 	}
 	// check validation event duplication
@@ -129,15 +130,21 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	})
 	// save validation result into cache
 	// load them in commit phase
-	if len(validTxSet) != 0 {
-		validateResult.SeqNo = validationEvent.SeqNo
+	// update some variant
+	if len(validateResult.ValidTxs) != 0 {
+		validateResult.VID = validationEvent.SeqNo
+		validateResult.SeqNo = pool.tempBlockNumber
+		// regard the batch as a valid block
+		// increase tempBlockNumber for next validation
+		// tempBlockNumber doesn't has concurrency dangerous
+		pool.tempBlockNumber += 1
 		pool.blockCache.Add(hash.Hex(), *validateResult)
 	}
-	log.Info("invalid transaction number: ", len(invalidTxSet))
-	log.Info("valid transaction number: ", len(validTxSet))
+	log.Debug("invalid transaction number: ", len(validateResult.InvalidTxs))
+	log.Debug("valid transaction number: ", len(validateResult.ValidTxs))
 	// communicate with PBFT
 	pool.consenter.RecvLocal(protos.ValidatedTxs{
-		Transactions: validTxSet,
+		Transactions: validateResult.ValidTxs,
 		SeqNo:        validationEvent.SeqNo,
 		View:         validationEvent.View,
 		Hash:         hash.Hex(),
@@ -145,17 +152,17 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	})
 
 	// empty block generated, throw all invalid transactions back to original node directly
-	if validationEvent.IsPrimary && len(validTxSet) == 0 {
+	if validationEvent.IsPrimary && len(validateResult.ValidTxs) == 0 {
 		// 1. Remove all cached transaction in this block (which for transaction duplication check purpose), because empty block won't enter network
 		pool.consenter.RemoveCachedBatch(validationEvent.SeqNo)
 		// 2. Throw all invalid transaction back to the origin node
-		for _, t := range invalidTxSet {
+		for _, t := range validateResult.InvalidTxs {
 			payload, err := proto.Marshal(t)
 			if err != nil {
 				log.Error("Marshal tx error")
 			}
 			// original node is local
-			// store invalid transaction directly, instead of send by network
+			// store invalid transaction directly
 			if t.Tx.Id == uint64(peerManager.GetNodeId()) {
 				pool.StoreInvalidResp(event.RespInvalidTxsEvent{
 					Payload: payload,
@@ -214,13 +221,13 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	// initailize calculator
 	// for calculate fingerprint of a batch of transactions and receipts
 	if err := pool.initializeTransactionCalculator(); err != nil {
-		log.Errorf("validate #%d initialize transaction calculator", seqNo)
+		log.Errorf("validate #%d initialize transaction calculator", pool.tempBlockNumber)
 		return err, &BlockRecord{
 			InvalidTxs: invalidTxs,
 		}
 	}
 	if err := pool.initializeReceiptCalculator(); err != nil {
-		log.Errorf("validate #%d initialize receipt calculator", seqNo)
+		log.Errorf("validate #%d initialize receipt calculator", pool.tempBlockNumber)
 		return err, &BlockRecord{
 			InvalidTxs: invalidTxs,
 		}
@@ -242,11 +249,11 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		}
 	}
 
-	state.MarkProcessStart(seqNo)
+	state.MarkProcessStart(pool.tempBlockNumber)
 	// initialize execution environment ruleset
-	vmenv := initEnvironment(state, seqNo)
+	vmenv := initEnvironment(state, pool.tempBlockNumber)
 	// execute transaction one by one
-	batch := state.FetchBatch(seqNo)
+	batch := state.FetchBatch(pool.tempBlockNumber)
 	for i, tx := range txs {
 		state.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(*tx, vmenv)
@@ -254,6 +261,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		if err != nil {
 			var errType types.InvalidTransactionRecord_ErrType
 			if core.IsValueTransferErr(err) {
+				log.Criticalf("[DEBUG] OUT OF BALANCE")
 				errType = types.InvalidTransactionRecord_OUTOFBALANCE
 			} else if core.IsExecContractErr(err) {
 				tmp := err.(*core.ExecContractError)
@@ -298,7 +306,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		// set temporarily
 		// for primary node, the seqNo can be invalid. remove the incorrect txmeta info when commit block to avoid this error
 		meta := &types.TransactionMeta{
-			BlockIndex: seqNo,
+			BlockIndex: pool.tempBlockNumber,
 			Index:      int64(i),
 		}
 		if err := core.PersistTransactionMeta(batch, meta, tx.GetTransactionHash(), false, false); err != nil {
@@ -319,8 +327,8 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	}
 	// generate new state fingerprint
 	// IMPORTANT doesn't call batch.Write util recv commit event for atomic assurance
-	log.Criticalf("validate result for #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
-		seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
+	log.Criticalf("validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
+		pool.tempBlockNumber, seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	return nil, &BlockRecord{
 		TxRoot:      txRoot,
 		ReceiptRoot: receiptRoot,

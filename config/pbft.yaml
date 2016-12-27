@@ -25,10 +25,10 @@ timeout:
     firstrequest: 30s
 
     # Primary send a pre-prepare if there are pending requests, although batchsize isn't reached yet,
-    batch: 100ms
+    batch: 1s
 
     # How long may a request(transaction batch) take between reception and execution, must be greater than the batch timeout
-    request: 6s
+    request: 10s
 
     # How long may a validate (transaction batch) process will take by local Validation
     validate: 1s

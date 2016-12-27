@@ -3,10 +3,9 @@ package bucket
 import (
 	"hyperchain/hyperdb"
 	"sync"
-	"hyperchain/common"
 )
 var DataNodeCachePrefix = "-dataNodecache"
-type dataNodeMap map[*DataKey] dataNode
+type dataNodeMap map[*dataKey] dataNode
 
 type dataNodeCache struct {
 	TreePrefix string
@@ -26,7 +25,7 @@ func newDataNodeCache(treePrefix string,maxSizeMBs int) *dataNodeCache {
 	return &dataNodeCache{TreePrefix: treePrefix,c: make(map[bucketKey]*dataNodeMap), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 }
 
-func (datanodecache *dataNodeCache) Remove(bucketkey bucketKey,datakey *DataKey){
+func (datanodecache *dataNodeCache) Remove(bucketkey bucketKey,datakey *dataKey){
 	logger.Criticalf("Remove the datanode to dataNodeCache %d",len(datanodecache.c))
 	if  datanodecache.c == nil || len(datanodecache.c) == 0 || datanodecache.c[bucketkey] == nil {
 		logger.Error("There is no data in cache")
@@ -35,7 +34,7 @@ func (datanodecache *dataNodeCache) Remove(bucketkey bucketKey,datakey *DataKey)
 	delete(*datanodecache.c[bucketkey],datakey)
 }
 
-func (datanodecache *dataNodeCache) Put(bucketkey bucketKey,datakey *DataKey,datanode dataNode){
+func (datanodecache *dataNodeCache) Put(bucketkey bucketKey,datakey *dataKey,datanode dataNode){
 	logger.Criticalf("put the datanode to dataNodeCache %d",len(datanodecache.c))
 	if(datanodecache.c[bucketkey] == nil){
 		datanodemap := make(dataNodeMap)
@@ -47,7 +46,7 @@ func (datanodecache *dataNodeCache) Put(bucketkey bucketKey,datakey *DataKey,dat
 	}
 }
 
-func (datanodecache *dataNodeCache) Get(bucket_key bucketKey,data_key *DataKey)  (*dataNode, error) {
+func (datanodecache *dataNodeCache) Get(bucket_key bucketKey,data_key *dataKey)  (*dataNode, error) {
 	//defer perfstat.UpdateTimeStat("timeSpent", time.Now())
 	/*if !datanodecache.isEnabled {
 		return fetchDataNodeFromDB(data_key)
@@ -83,33 +82,27 @@ func (datanodecache *dataNodeCache) fetchDataNodesFromCacheFor(treePrefix string
 	db,_ := hyperdb.GetLDBDatabase()
 	minimumDataKeyBytes := minimumPossibleDataKeyBytesFor(&bucketKey,treePrefix)
 	minimumDataKeyBytes = append([]byte(DataNodeCachePrefix),minimumDataKeyBytes...)
-	var datanodes dataNodes
-
+	var res dataNodes
 	// IMPORTANT return value obtained by iterator is sorted
 	iter := db.NewIteratorWithPrefix(minimumDataKeyBytes)
 	for iter.Next() {
 		keyBytes := iter.Key()
-		logger.Error("fetchDataNodesFromCacheFor,",common.Bytes2Hex(keyBytes))
 		valueBytes := iter.Value()
 		keyBytes = keyBytes[len(DataNodePrefix)+len(DataNodeCachePrefix):]
-		if (treePrefix == "-bucket-state"){
-			logger.Critical(common.Bytes2Hex(keyBytes),"******************fetchDataNodesFromCacheFor the raw value is ",common.Bytes2Hex(valueBytes))
-			logger.Critical(common.Bytes2Hex(keyBytes),"******************fetchDataNodesFromCacheFor the value is ",common.Bytes2Hex(ComputeCryptoHash(valueBytes)))
-		}
+
 		dataKey := newDataKeyFromEncodedBytes(keyBytes)
-		logger.Errorf("*****************The address is [%v]",&dataKey)
-		logger.Errorf("Retrieved data key [%s] from DB for bucket [%s]", dataKey, bucketKey)
+		logger.Debugf("Retrieved data key [%s] from DB for bucket [%s]", dataKey, bucketKey)
 		if !dataKey.getBucketKey().equals(&bucketKey) {
-			logger.Errorf("Data key [%s] from DB does not belong to bucket = [%s]. Stopping further iteration and returning results [%v]", dataKey, bucketKey, datanodes)
-			return datanodes, nil
+			logger.Errorf("Data key [%s] from DB does not belong to bucket = [%s]. Stopping further iteration and returning results [%v]", dataKey, bucketKey, res)
+			return res, nil
 		}
-		datanode := unmarshalDataNode(dataKey, valueBytes)
-		logger.Errorf("Data node [%s] from DB belongs to bucket = [%s]. Including the key in results...", datanode, bucketKey)
-		datanodes[len(datanodes)] = datanode
-		logger.Errorf("*********Returning results [%v]", datanodes)
+		dataNode := unmarshalDataNode(dataKey, valueBytes)
+		logger.Errorf("Data node [%s] from DB belongs to bucket = [%s]. Including the key in results...", dataNode, bucketKey)
+		res = append(res, dataNode)
+		logger.Errorf("datanode %p", dataNode)
 	}
-	logger.Errorf("Returning results [%v]", datanodes)
-	return datanodes, nil
+	return res, nil
+
 }
 
 func (datanodecache *dataNodeCache) clearDataNodeCache() {

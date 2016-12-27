@@ -42,8 +42,16 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHa
 		newBlock.WriteTime = time.Now().UnixNano() // local write time
 		newBlock.EvmTime = time.Now().UnixNano()   // local write time
 		newBlock.BlockHash = newBlock.Hash(commonHash).Bytes()
-
-		vid := record.SeqNo
+		vid := record.VID
+		tempBlockNumber := record.SeqNo
+		if tempBlockNumber != ev.SeqNo {
+			log.Errorf("miss match temp block number<#%d>and actually block number<#%d> for vid #%d validation. commit for block #%d failed",
+				tempBlockNumber, ev.SeqNo, vid, ev.SeqNo)
+			return
+		}
+		log.Criticalf("commit for block #%d, parent hash %s, merkle root %s, tx root %s, receipt root %s, vid #%d", newBlock.Number,
+			common.Bytes2Hex(newBlock.ParentHash), common.Bytes2Hex(newBlock.MerkleRoot), common.Bytes2Hex(newBlock.TxRoot),
+			common.Bytes2Hex(newBlock.ReceiptRoot), vid)
 		// 2.save block and update chain
 		pool.AddBlock(newBlock, record.Receipts, commonHash, vid, ev.IsPrimary)
 		// 3.throw invalid tx back to origin node if current peer is primary
@@ -111,8 +119,6 @@ func (pool *BlockPool) AddBlock(block *types.Block, receipts []*types.Receipt, c
 
 // WriteBlock: save block into database
 func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, commonHash crypto.CommonHash, vid uint64, primary bool) {
-	time.Sleep(1 * time.Second)
-	log.Info("block number is ", block.Number)
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Error("get database instance failed! error msg,", err.Error())
@@ -120,21 +126,7 @@ func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, 
 	}
 	// for primary node, check whether vid equal to block's number
 	state, _ := pool.GetStateInstance(common.BytesToHash(block.MerkleRoot), db)
-	batch := state.FetchBatch(vid)
-	if primary && vid != block.Number {
-		log.Info("replace invalid txmeta data, block number:", block.Number)
-		for i, tx := range block.Transactions {
-			meta := &types.TransactionMeta{
-				BlockIndex: block.Number,
-				Index:      int64(i),
-			}
-			// replace with correct value
-			if err := core.PersistTransactionMeta(batch, meta, tx.GetTransactionHash(), false, false); err != nil {
-				log.Error("invalid txmeta sturct, marshal failed! error msg,", err.Error())
-				return
-			}
-		}
-	}
+	batch := state.FetchBatch(block.Number)
 	// reassign receipt
 	pool.reAssignTransactionLog(batch, receipts, block.Number, common.BytesToHash(block.BlockHash))
 	err, _ = core.PersistBlock(batch, block, pool.conf.BlockVersion, false, false)
@@ -148,24 +140,21 @@ func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, 
 	batch.Write()
 	// mark the block process finish, remove some stuff avoid of memory leak
 	// IMPORTANT this should be done after batch.Write been called
-	state.MarkProcessFinish(vid)
+	state.MarkProcessFinish(block.Number)
 	// write checkpoint data
-	// FOR TEST
 	log.Criticalf("state #%d %s", vid, string(state.Dump(vid)))
 	if block.Number % 10 == 0 && block.Number != 0 {
 		core.WriteChainChan()
 	}
-	newChain := core.GetChainCopy()
-	log.Notice("Block number", newChain.Height)
-	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
+	log.Notice("Block number", block.Number)
+	log.Notice("Block hash", hex.EncodeToString(block.BlockHash))
 	// remove Cached Transactions which used to check transaction duplication
 	if primary {
 		pool.consenter.RemoveCachedBatch(vid)
 	}
 	// FOR TEST
 	// get journals
-	// TODO journal prefix number is not correct
-	j, err := db.Get(hyperstate.CompositeJournalKey(vid))
+	j, err := db.Get(hyperstate.CompositeJournalKey(block.Number))
 	if err != nil {
 		return
 	}
@@ -174,7 +163,7 @@ func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, 
 		return
 	}
 	for _, entry := range journals.JournalList {
-		log.Errorf("#%d journal %s", vid, entry)
+		log.Errorf("#%d journal %s", block.Number, entry)
 	}
 }
 

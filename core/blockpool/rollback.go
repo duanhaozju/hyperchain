@@ -23,7 +23,7 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	atomic.StoreUint64(&pool.demandNumber, ev.SeqNo)
 	atomic.StoreUint64(&pool.demandSeqNo, ev.SeqNo)
 	atomic.StoreUint64(&pool.maxSeqNo, ev.SeqNo-1)
-
+	pool.tempBlockNumber = ev.SeqNo
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
@@ -58,6 +58,7 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 	atomic.StoreUint64(&pool.demandNumber, number)
 	atomic.StoreUint64(&pool.demandSeqNo, number)
 	atomic.StoreUint64(&pool.maxSeqNo, number - 1)
+	pool.tempBlockNumber = number
 	// 2. revert state
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
@@ -207,7 +208,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			return errors.New("revert state failed")
 		}
 		// revert state instance oldest and root
-		state.ResetToTarget(uint64(targetNumber), common.BytesToHash(targetRootHash))
+		state.ResetToTarget(uint64(targetNumber+1), common.BytesToHash(targetRootHash))
 	case "rawstate":
 		// there is no need to revert state, because PMT can assure the correction
 		pool.lastValidationState.Store(common.BytesToHash(targetRootHash))

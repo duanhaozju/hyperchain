@@ -134,7 +134,7 @@ func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 // Reset clears out all emphemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
 func (self *StateDB) Reset() error {
-	log.Critical("reset state db")
+	log.Debug("reset state db")
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	// save modification set to content cache
@@ -151,7 +151,7 @@ func (self *StateDB) Reset() error {
 	}
 	self.contentCache.Add(self.curSeqNo, dirtyCopy)
 	if len(dirtyCopy) > 0 {
-		log.Criticalf("save validation result to content cache, with %d element", len(dirtyCopy))
+		log.Debugf("save validation result to content cache, with %d element", len(dirtyCopy))
 	}
 	// clear all stuff
 	self.stateObjects = make(map[common.Address]*StateObject)
@@ -373,7 +373,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 			value := obj.GetState(b)
 			// if storage entry exist in live object's storage cache
 			if (value != common.Hash{}) {
-				log.Criticalf("get state for %x in live objects, key %x, value %x", a.Hex(), b.Hex(), value.Hex())
+				log.Debugf("get state for %x in live objects, key %x, value %x", a.Hex(), b.Hex(), value.Hex())
 				return value
 			}
 		}
@@ -551,10 +551,10 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 			content := res.(map[common.Address]*StateObject)
 			if obj := content[addr]; obj != nil {
 				if obj.deleted {
-					log.Criticalf("search state object %x in the content cache, but it has been suicide", addr)
+					log.Debugf("search state object %x in the content cache, but it has been suicide", addr)
 					return nil
 				}
-				log.Criticalf("search state object %x in the content cache, add it to live objects", addr)
+				log.Debugf("search state object %x in the content cache, add it to live objects", addr)
 				self.setStateObject(obj)
 				return obj
 			}
@@ -572,7 +572,7 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 		return nil
 	}
 	// Insert into the live set.
-	log.Criticalf("find state object %x in database, add it to live objects", addr)
+	log.Debugf("find state object %x in database, add it to live objects", addr)
 	obj := newObject(self, addr, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.bktConf.StorageSize, self.bktConf.StorageLevelGroup))
 	self.setStateObject(obj)
 	return obj
@@ -820,8 +820,7 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 		// Use bucket tree instead
 		log.Debugf("begin to calculate state db root hash for #%d", s.curSeqNo)
 		for k, v := range workingSet {
-			log.Criticalf("***********************working set key %s", k)
-			log.Criticalf("***********************working set value %s", common.Bytes2Hex(bucket.ComputeCryptoHash(v)))
+			log.Criticalf("#%d working set key %s, value %s",  s.curSeqNo, k, common.Bytes2Hex(v))
 		}
 		hash, err := s.bucketTree.ComputeCryptoHash()
 
