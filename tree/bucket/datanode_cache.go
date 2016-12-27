@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 var DataNodeCachePrefix = "-dataNodecache"
-type dataNodeMap map[*dataKey] dataNode
+type dataNodeMap map[*DataKey] dataNode
 
 type dataNodeCache struct {
 	TreePrefix string
@@ -25,8 +25,7 @@ func newDataNodeCache(treePrefix string,maxSizeMBs int) *dataNodeCache {
 	return &dataNodeCache{TreePrefix: treePrefix,c: make(map[bucketKey]*dataNodeMap), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 }
 
-func (datanodecache *dataNodeCache) Remove(bucketkey bucketKey,datakey *dataKey){
-	logger.Criticalf("Remove the datanode to dataNodeCache %d",len(datanodecache.c))
+func (datanodecache *dataNodeCache) Remove(bucketkey bucketKey,datakey *DataKey){
 	if  datanodecache.c == nil || len(datanodecache.c) == 0 || datanodecache.c[bucketkey] == nil {
 		logger.Error("There is no data in cache")
 		return
@@ -34,8 +33,7 @@ func (datanodecache *dataNodeCache) Remove(bucketkey bucketKey,datakey *dataKey)
 	delete(*datanodecache.c[bucketkey],datakey)
 }
 
-func (datanodecache *dataNodeCache) Put(bucketkey bucketKey,datakey *dataKey,datanode dataNode){
-	logger.Criticalf("put the datanode to dataNodeCache %d",len(datanodecache.c))
+func (datanodecache *dataNodeCache) Put(bucketkey bucketKey,datakey *DataKey,datanode dataNode){
 	if(datanodecache.c[bucketkey] == nil){
 		datanodemap := make(dataNodeMap)
 		datanodemap[datakey] = datanode
@@ -46,7 +44,7 @@ func (datanodecache *dataNodeCache) Put(bucketkey bucketKey,datakey *dataKey,dat
 	}
 }
 
-func (datanodecache *dataNodeCache) Get(bucket_key bucketKey,data_key *dataKey)  (*dataNode, error) {
+func (datanodecache *dataNodeCache) Get(bucket_key bucketKey,data_key *DataKey)  (*dataNode, error) {
 	//defer perfstat.UpdateTimeStat("timeSpent", time.Now())
 	/*if !datanodecache.isEnabled {
 		return fetchDataNodeFromDB(data_key)
@@ -97,9 +95,8 @@ func (datanodecache *dataNodeCache) fetchDataNodesFromCacheFor(treePrefix string
 			return res, nil
 		}
 		dataNode := unmarshalDataNode(dataKey, valueBytes)
-		logger.Errorf("Data node [%s] from DB belongs to bucket = [%s]. Including the key in results...", dataNode, bucketKey)
+		logger.Debugf("Data node [%s] from DB belongs to bucket = [%s]. Including the key in results...", dataNode, bucketKey)
 		res = append(res, dataNode)
-		logger.Errorf("datanode %p", dataNode)
 	}
 	return res, nil
 
@@ -109,7 +106,7 @@ func (datanodecache *dataNodeCache) clearDataNodeCache() {
 	db, _ := hyperdb.GetLDBDatabase()
 	iter := db.NewIteratorWithPrefix([]byte(DataNodeCachePrefix))
 	for iter.Next() {
-		logger.Criticalf("delete clearDataNodeCache")
+		logger.Debugf("delete clearDataNodeCache")
 		keyBytes := iter.Key()
 		db.Delete(keyBytes)
 	}
