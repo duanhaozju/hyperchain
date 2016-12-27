@@ -420,7 +420,6 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 	db,_ := hyperdb.GetLDBDatabase()
 	writeBatch := db.NewBatch()
 	keyValueMap := NewKVMap()
-	bucketTree.dataNodeCache.clearDataNodeCache()
 	bucketTree.dataNodeCache.isEnabled = false
 
 	for i:= currentBlockNum.Int64() + 1;;i++{
@@ -483,8 +482,8 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 		}
 	}*/
 	logger.Debug("End RevertToTargetBlock, to ", toBlockNum)
-	hash, _ := bucketTree.ComputeCryptoHash()
 	bucketTree.dataNodeCache.isEnabled = true
+	hash, _ := bucketTree.ComputeCryptoHash()
 	logger.Debug("revert bucket tree current block number %d, current block hash %s", toBlockNum, common.Bytes2Hex(hash))
 	return nil
 }
@@ -495,4 +494,5 @@ func revertToTargetBlock(treePrefix string,blockNum *big.Int,updatedValueSet *Up
 	for key, updatedValue := range updatedValueSet.UpdatedKVs {
 		(*keyValueMap)[key[length:]] = updatedValue.PreviousValue
 	}
+
 }
