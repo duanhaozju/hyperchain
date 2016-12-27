@@ -19,6 +19,8 @@ import (
 	"math"
 	"hyperchain/p2p/transport"
 	"hyperchain/core/crypto/primitives"
+	"hyperchain/p2p/transport/ecdh"
+	"crypto/elliptic"
 )
 
 
@@ -172,13 +174,17 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			if !verifyEcert {
 				return &response,errors.New("ecert is wrong.")
 			}
-			node.TEM.SetSignPublicKey(ecert.PublicKey)
+
+			e := ecdh.NewEllipticECDH(elliptic.P384())
+			pub,_ := e.Unmarshal(msg.Payload)
+			node.TEM.SetSignPublicKey(pub,msg.From.Hash)
 			node.TEM.SetIsVerified(verifyRcert,msg.From.Hash)
 			if genErr != nil {
 				log.Error("gen sec error", genErr)
 			}
 			log.Notice("remote addr hash：", msg.From.Hash)
 			log.Notice("negotiated key is ", node.TEM.GetSecret(msg.From.Hash))
+			log.Notice("remote publickey is:",remotePublicKey)
 			//every times get the public key is same
 			transportPublicKey := node.TEM.GetLocalPublicKey()
 			//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!

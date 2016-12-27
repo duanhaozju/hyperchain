@@ -46,3 +46,8 @@ func TestHandShake(t *testing.T) {
 
 	fmt.Println(signature.Signature)
 }
+
+func TestSetPublikey(t *testing.T)  {
+
+
+}

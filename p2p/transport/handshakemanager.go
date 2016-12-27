@@ -80,11 +80,11 @@ func (hSMN *HandShakeManagerNew) GenerateSecret(remotePublicKey []byte, peerHash
 }
 
 func (hSMN *HandShakeManagerNew) SetSignPublicKey(pub crypto.PublicKey,peerHash string){
-	hSMN.isVerified[peerHash] = pub
+	hSMN.signPublickey[peerHash] = pub
 }
 
 func (hSMN *HandShakeManagerNew) SetIsVerified(is_verified bool,peerHash string){
-	hSMN.signPublickey[peerHash] = is_verified
+	hSMN.isVerified[peerHash] = is_verified
 }
 
 func (hSMN *HandShakeManagerNew) EncWithSecret(message []byte, peerHash string)  ([]byte,error) {
