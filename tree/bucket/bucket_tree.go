@@ -32,7 +32,7 @@ type BucketTree struct {
 	lastComputedCryptoHash []byte
 	recomputeCryptoHash    bool
 	bucketCache            *bucketCache
-	dataNodeCache          *dataNodeCache
+	dataNodeCache          *DataNodeCache
 	updatedValueSet        *UpdatedValueSet
 	treeHashMap	       map[*big.Int][]byte
 }
@@ -202,7 +202,7 @@ func (bucketTree *BucketTree) GetTreeHash(blockNum *big.Int) ([]byte,error){
 	}
 }
 
-func computeDataNodesCryptoHash(bucketKey *bucketKey, updatedNodes dataNodes, existingNodes dataNodes,updatedValueSet *UpdatedValueSet) []byte {
+func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes dataNodes, existingNodes dataNodes,updatedValueSet *UpdatedValueSet) []byte {
 	logger.Debugf("Computing crypto-hash for bucket [%s]. numUpdatedNodes=[%d], numExistingNodes=[%d]", bucketKey, len(updatedNodes), len(existingNodes))
 	bucketHashCalculator := newBucketHashCalculator(bucketKey)
 	i := 0
@@ -211,7 +211,7 @@ func computeDataNodesCryptoHash(bucketKey *bucketKey, updatedNodes dataNodes, ex
 		updatedNode := updatedNodes[i]
 		existingNode := existingNodes[j]
 		c := bytes.Compare(updatedNode.dataKey.compositeKey, existingNode.dataKey.compositeKey)
-		var nextNode *dataNode
+		var nextNode *DataNode
 		switch c {
 		case -1:
 			nextNode = updatedNode
@@ -420,7 +420,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 	db,_ := hyperdb.GetLDBDatabase()
 	writeBatch := db.NewBatch()
 	keyValueMap := NewKVMap()
-	bucketTree.dataNodeCache.isEnabled = false
+	//bucketTree.dataNodeCache.isEnabled = false
 
 	for i:= currentBlockNum.Int64() + 1;;i++{
 		dbKey := append([]byte("UpdatedValueSet"), big.NewInt(i).Bytes()...)
@@ -482,7 +482,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 		}
 	}*/
 	logger.Debug("End RevertToTargetBlock, to ", toBlockNum)
-	bucketTree.dataNodeCache.isEnabled = true
+	//bucketTree.dataNodeCache.isEnabled = true
 	hash, _ := bucketTree.ComputeCryptoHash()
 	logger.Debug("revert bucket tree current block number %d, current block hash %s", toBlockNum, common.Bytes2Hex(hash))
 	return nil

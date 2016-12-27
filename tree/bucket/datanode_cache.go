@@ -5,27 +5,27 @@ import (
 	"sync"
 )
 var DataNodeCachePrefix = "-dataNodecache"
-type dataNodeMap map[*DataKey] dataNode
+type DataNodeMap map[*DataKey]DataNode
 
-type dataNodeCache struct {
+type DataNodeCache struct {
 	TreePrefix string
 	isEnabled  bool
-	c          map[bucketKey] *dataNodeMap
+	c          map[BucketKey] *DataNodeMap
 	lock       sync.RWMutex
 	size       uint64
 	maxSize    uint64
 }
-func newDataNodeCache(treePrefix string,maxSizeMBs int) *dataNodeCache {
+func newDataNodeCache(treePrefix string,maxSizeMBs int) *DataNodeCache {
 	isEnabled := true
 	if maxSizeMBs <= 0 {
 		isEnabled = false
 	} else {
 		logger.Infof("Constructing datanode-cache with max bucket cache size = [%d] MBs", maxSizeMBs)
 	}
-	return &dataNodeCache{TreePrefix: treePrefix,c: make(map[bucketKey]*dataNodeMap), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
+	return &DataNodeCache{TreePrefix: treePrefix,c: make(map[BucketKey]*DataNodeMap), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 }
 
-func (datanodecache *dataNodeCache) Remove(bucketkey bucketKey,datakey *DataKey){
+func (datanodecache *DataNodeCache) Remove(bucketkey BucketKey,datakey *DataKey){
 	if  datanodecache.c == nil || len(datanodecache.c) == 0 || datanodecache.c[bucketkey] == nil {
 		logger.Error("There is no data in cache")
 		return
@@ -33,9 +33,9 @@ func (datanodecache *dataNodeCache) Remove(bucketkey bucketKey,datakey *DataKey)
 	delete(*datanodecache.c[bucketkey],datakey)
 }
 
-func (datanodecache *dataNodeCache) Put(bucketkey bucketKey,datakey *DataKey,datanode dataNode){
+func (datanodecache *DataNodeCache) Put(bucketkey BucketKey,datakey *DataKey,datanode DataNode){
 	if(datanodecache.c[bucketkey] == nil){
-		datanodemap := make(dataNodeMap)
+		datanodemap := make(DataNodeMap)
 		datanodemap[datakey] = datanode
 		datanodecache.c[bucketkey] = &datanodemap
 	}else {
@@ -44,7 +44,7 @@ func (datanodecache *dataNodeCache) Put(bucketkey bucketKey,datakey *DataKey,dat
 	}
 }
 
-func (datanodecache *dataNodeCache) Get(bucket_key bucketKey,data_key *DataKey)  (*dataNode, error) {
+func (datanodecache *DataNodeCache) Get(bucket_key BucketKey,data_key *DataKey)  (*DataNode, error) {
 	//defer perfstat.UpdateTimeStat("timeSpent", time.Now())
 	/*if !datanodecache.isEnabled {
 		return fetchDataNodeFromDB(data_key)
@@ -62,7 +62,7 @@ func (datanodecache *dataNodeCache) Get(bucket_key bucketKey,data_key *DataKey) 
 
 
 
-func (datanodecache *dataNodeCache) fetchDataNodesFromCacheFor(treePrefix string,bucketKey bucketKey)  (dataNodes, error) {
+func (datanodecache *DataNodeCache) fetchDataNodesFromCacheFor(treePrefix string,bucketKey BucketKey)  (dataNodes, error) {
 	if(datanodecache.isEnabled == false){
 		return fetchDataNodesFromDBFor(treePrefix,&bucketKey)
 	}
@@ -77,6 +77,7 @@ func (datanodecache *dataNodeCache) fetchDataNodesFromCacheFor(treePrefix string
 	}
 	logger.Criticalf("fetchDataNodesFromCacheFor the datanode to dataNodeCache %d",len(datanodes))
 	return datanodes,nil*/
+
 	db,_ := hyperdb.GetLDBDatabase()
 	minimumDataKeyBytes := minimumPossibleDataKeyBytesFor(&bucketKey,treePrefix)
 	minimumDataKeyBytes = append([]byte(DataNodeCachePrefix),minimumDataKeyBytes...)
@@ -102,7 +103,7 @@ func (datanodecache *dataNodeCache) fetchDataNodesFromCacheFor(treePrefix string
 
 }
 
-func (datanodecache *dataNodeCache) clearDataNodeCache() {
+func (datanodecache *DataNodeCache) clearDataNodeCache() {
 	db, _ := hyperdb.GetLDBDatabase()
 	iter := db.NewIteratorWithPrefix([]byte(DataNodeCachePrefix))
 	for iter.Next() {
@@ -110,6 +111,9 @@ func (datanodecache *dataNodeCache) clearDataNodeCache() {
 		keyBytes := iter.Key()
 		db.Delete(keyBytes)
 	}
-	datanodecache = &dataNodeCache{TreePrefix: datanodecache.TreePrefix,c: make(map[bucketKey]*dataNodeMap), maxSize: uint64(datanodecache.maxSize * 1024 * 1024), isEnabled: datanodecache.isEnabled}
+	datanodecache = &DataNodeCache{TreePrefix: datanodecache.TreePrefix,c: make(map[BucketKey]*DataNodeMap), maxSize: uint64(datanodecache.maxSize * 1024 * 1024), isEnabled: datanodecache.isEnabled}
+}
+
+func (dataNodeCache *DataNodeCache) revertDataNodeCache(){
 
 }

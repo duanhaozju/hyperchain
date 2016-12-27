@@ -6,7 +6,7 @@ import (
 type rawKey []byte
 
 // TODO test
-func fetchDataNodeFromDB(dataKey *DataKey) (*dataNode, error) {
+func fetchDataNodeFromDB(dataKey *DataKey) (*DataNode, error) {
 	db, err := hyperdb.GetLDBDatabase()
 	nodeBytes, err := db.Get(dataKey.getEncodedBytes())
 	nodeBytes = append([]byte("DataNode"),nodeBytes...)
@@ -26,7 +26,7 @@ func fetchDataNodeFromDB(dataKey *DataKey) (*dataNode, error) {
 }
 
 // TODO test
-func fetchBucketNodeFromDB(treePrefix string,bucketKey *bucketKey) (*bucketNode, error) {
+func fetchBucketNodeFromDB(treePrefix string,bucketKey *BucketKey) (*bucketNode, error) {
 	db,_ := hyperdb.GetLDBDatabase()
 	//nodeKey := bucketKey.getEncodedBytes(treePrefix)
 	nodeKey := append([]byte("BucketNode"),[]byte(treePrefix)...)
@@ -47,7 +47,7 @@ func fetchBucketNodeFromDB(treePrefix string,bucketKey *bucketKey) (*bucketNode,
 
 
 // TODO it need to be tested
-func fetchDataNodesFromDBFor(treePrefix string,bucketKey *bucketKey) (dataNodes, error) {
+func fetchDataNodesFromDBFor(treePrefix string,bucketKey *BucketKey) (dataNodes, error) {
 	db,_ := hyperdb.GetLDBDatabase()
 
 	minimumDataKeyBytes := minimumPossibleDataKeyBytesFor(bucketKey,treePrefix)

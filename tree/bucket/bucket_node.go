@@ -6,18 +6,18 @@ import (
 )
 
 type bucketNode struct {
-	bucketKey          *bucketKey
+	bucketKey          *BucketKey
 	childrenCryptoHash [][]byte
 	childrenUpdated    []bool
 	markedForDeletion  bool
 }
 
-func newBucketNode(bucketKey *bucketKey) *bucketNode {
+func newBucketNode(bucketKey *BucketKey) *bucketNode {
 	maxChildren := conf.getMaxGroupingAtEachLevel()
 	return &bucketNode{bucketKey, make([][]byte, maxChildren), make([]bool, maxChildren), false}
 }
 
-func unmarshalBucketNode(bucketKey *bucketKey, serializedBytes []byte) *bucketNode {
+func unmarshalBucketNode(bucketKey *BucketKey, serializedBytes []byte) *bucketNode {
 	bucketNode := newBucketNode(bucketKey)
 	buffer := proto.NewBuffer(serializedBytes)
 	for i := 0; i < conf.getMaxGroupingAtEachLevel(); i++ {
@@ -41,7 +41,7 @@ func (bucketNode *bucketNode) marshal() []byte {
 	return buffer.Bytes()
 }
 
-func (bucketNode *bucketNode) setChildCryptoHash(childKey *bucketKey, cryptoHash []byte) {
+func (bucketNode *bucketNode) setChildCryptoHash(childKey *BucketKey, cryptoHash []byte) {
 	i := bucketNode.bucketKey.getChildIndex(childKey)
 	bucketNode.childrenCryptoHash[i] = cryptoHash
 	bucketNode.childrenUpdated[i] = true

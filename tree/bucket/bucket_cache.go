@@ -16,7 +16,7 @@ var defaultBucketCacheMaxSize = 100 // MBs
 type bucketCache struct {
 	TreePrefix string
 	isEnabled  bool
-	c          map[bucketKey]*bucketNode
+	c          map[BucketKey]*bucketNode
 	lock       sync.RWMutex
 	size       uint64
 	maxSize    uint64
@@ -29,7 +29,7 @@ func newBucketCache(treePrefix string,maxSizeMBs int) *bucketCache {
 	} else {
 		logger.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", maxSizeMBs)
 	}
-	return &bucketCache{TreePrefix: treePrefix,c: make(map[bucketKey]*bucketNode), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
+	return &bucketCache{TreePrefix: treePrefix,c: make(map[BucketKey]*bucketNode), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 }
 
 func (cache *bucketCache) clearAllCache(){
@@ -38,7 +38,7 @@ func (cache *bucketCache) clearAllCache(){
 	} else {
 		logger.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", cache.maxSize)
 	}
-	cache = &bucketCache{TreePrefix: cache.TreePrefix,c: make(map[bucketKey]*bucketNode), maxSize: uint64(cache.maxSize * 1024 * 1024), isEnabled: isEnabled}
+	cache = &bucketCache{TreePrefix: cache.TreePrefix,c: make(map[BucketKey]*bucketNode), maxSize: uint64(cache.maxSize * 1024 * 1024), isEnabled: isEnabled}
 }
 
 // TODO cache will be done later
@@ -48,7 +48,7 @@ func (cache *bucketCache) loadAllBucketNodesFromDB() {
 	}
 }
 
-func (cache *bucketCache) putWithoutLock(key bucketKey, node *bucketNode) {
+func (cache *bucketCache) putWithoutLock(key BucketKey, node *bucketNode) {
 	if !cache.isEnabled {
 		return
 	}
@@ -75,7 +75,7 @@ func (cache *bucketCache) putWithoutLock(key bucketKey, node *bucketNode) {
 	}
 }
 // TODO performance status should be done
-func (cache *bucketCache) get(key bucketKey) (*bucketNode, error) {
+func (cache *bucketCache) get(key BucketKey) (*bucketNode, error) {
 	//defer perfstat.UpdateTimeStat("timeSpent", time.Now())
 	if !cache.isEnabled {
 		return fetchBucketNodeFromDB(cache.TreePrefix,&key)
@@ -89,7 +89,7 @@ func (cache *bucketCache) get(key bucketKey) (*bucketNode, error) {
 	return bucketNode, nil
 }
 
-func (cache *bucketCache) removeWithoutLock(key bucketKey) {
+func (cache *bucketCache) removeWithoutLock(key BucketKey) {
 	if !cache.isEnabled {
 		return
 	}
@@ -100,7 +100,7 @@ func (cache *bucketCache) removeWithoutLock(key bucketKey) {
 	}
 }
 
-func (bk bucketKey) size() uint64 {
+func (bk BucketKey) size() uint64 {
 	return uint64(unsafe.Sizeof(bk))
 }
 

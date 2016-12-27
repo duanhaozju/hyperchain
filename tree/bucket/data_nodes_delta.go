@@ -6,7 +6,7 @@ import (
 )
 
 // Code for managing changes in data nodes
-type dataNodes []*dataNode
+type dataNodes []*DataNode
 
 func (dataNodes dataNodes) Len() int {
 	return len(dataNodes)
@@ -21,12 +21,12 @@ func (dataNodes dataNodes) Less(i, j int) bool {
 }
 
 type dataNodesDelta struct {
-	byBucket map[bucketKey]dataNodes
+	byBucket map[BucketKey]dataNodes
 }
 
 // TODO should be test by rjl and zhz
 func newDataNodesDelta(treePrefix string,key_valueMap K_VMap) *dataNodesDelta {
-	dataNodesDelta := &dataNodesDelta{make(map[bucketKey]dataNodes)}
+	dataNodesDelta := &dataNodesDelta{make(map[BucketKey]dataNodes)}
 	// TODO optimized
 	for key, value := range key_valueMap {
 		dataNodesDelta.add(treePrefix, key,value)
@@ -45,8 +45,8 @@ func (dataNodesDelta *dataNodesDelta) add(treePrefix string, key string, value [
 	dataNodesDelta.byBucket[*bucketKey] = append(dataNodesDelta.byBucket[*bucketKey], dataNode)
 }
 
-func (dataNodesDelta *dataNodesDelta) getAffectedBuckets() []*bucketKey {
-	changedBuckets := []*bucketKey{}
+func (dataNodesDelta *dataNodesDelta) getAffectedBuckets() []*BucketKey {
+	changedBuckets := []*BucketKey{}
 	for bucketKey := range dataNodesDelta.byBucket {
 		copyOfBucketKey := bucketKey.clone()
 		logger.Debugf("Adding changed bucket [%s]", copyOfBucketKey)
@@ -56,6 +56,6 @@ func (dataNodesDelta *dataNodesDelta) getAffectedBuckets() []*bucketKey {
 	return changedBuckets
 }
 
-func (dataNodesDelta *dataNodesDelta) getSortedDataNodesFor(bucketKey *bucketKey) dataNodes {
+func (dataNodesDelta *dataNodesDelta) getSortedDataNodesFor(bucketKey *BucketKey) dataNodes {
 	return dataNodesDelta.byBucket[*bucketKey]
 }

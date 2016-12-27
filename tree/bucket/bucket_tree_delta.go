@@ -16,7 +16,7 @@ func newUpdatedValueSet(blockNumber *big.Int) *UpdatedValueSet {
 	return &UpdatedValueSet{BlockNum:blockNumber, UpdatedKVs:make(map[string] *UpdatedValue)}
 }
 
-func (bucketTreeDelta *bucketTreeDelta) getOrCreateBucketNode(bucketKey *bucketKey) *bucketNode {
+func (bucketTreeDelta *bucketTreeDelta) getOrCreateBucketNode(bucketKey *BucketKey) *bucketNode {
 	byBucketNumber := bucketTreeDelta.byLevel[bucketKey.level]
 	if byBucketNumber == nil {
 		byBucketNumber = make(map[int]*bucketNode)

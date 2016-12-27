@@ -5,18 +5,18 @@ import (
 )
 
 type bucketHashCalculator struct {
-	bucketKey          *bucketKey
+	bucketKey          *BucketKey
 	currentChaincodeID string
-	dataNodes          []*dataNode
+	dataNodes          []*DataNode
 	hashingData        []byte
 }
 
-func newBucketHashCalculator(bucketKey *bucketKey) *bucketHashCalculator {
+func newBucketHashCalculator(bucketKey *BucketKey) *bucketHashCalculator {
 	return &bucketHashCalculator{bucketKey, "", nil, nil}
 }
 
 // addNextNode - this method assumes that the datanodes are added in the increasing order of the keys
-func (c *bucketHashCalculator) addNextNode(dataNode *dataNode) {
+func (c *bucketHashCalculator) addNextNode(dataNode *DataNode) {
 	chaincodeID, _ := dataNode.getKeyElements()
 	if chaincodeID != c.currentChaincodeID {
 		c.appendCurrentChaincodeData()

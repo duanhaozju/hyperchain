@@ -5,7 +5,7 @@ import (
 )
 
 type DataKey struct {
-	bucketKey    *bucketKey
+	bucketKey    *BucketKey
 	compositeKey []byte
 }
 func newDataKey(treePrefix string, key string) *DataKey {
@@ -20,13 +20,13 @@ func newDataKey(treePrefix string, key string) *DataKey {
 	return dataKey
 }
 
-func minimumPossibleDataKeyBytesFor(bucketKey *bucketKey,treePrefix string) []byte {
+func minimumPossibleDataKeyBytesFor(bucketKey *BucketKey,treePrefix string) []byte {
 	min := append([]byte("DataNode"),encodeBucketNumber(bucketKey.bucketNumber)...)
 	min = append(min, []byte(treePrefix)...)
 	return min
 }
 
-func (key *DataKey) getBucketKey() *bucketKey {
+func (key *DataKey) getBucketKey() *BucketKey {
 	return key.bucketKey
 }
 
