@@ -161,7 +161,6 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 		// Get the memory location of pc
 		// 得到pc的内存地址
 		op = contract.GetOp(pc)
-		fmt.Println("OPCODE", op)
 		// calculate the new memory size and gas price for the current executing opcode
 		// 对当前执行的操作码计算新的内存大小和gas价格
 		newMemSize, cost, err = calculateGasAndSize(evm.env, contract, caller, op, statedb, mem, stack)

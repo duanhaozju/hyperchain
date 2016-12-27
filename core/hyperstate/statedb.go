@@ -80,7 +80,7 @@ func New(root common.Hash, db hyperdb.Database, bktConf bucket.Conf, height uint
 	batchCache, _ := common.NewCache()
 	contentCache, _ := common.NewCache()
 	curHash, err := bucketTree.ComputeCryptoHash()
-	log.Criticalf("latest state root %x", curHash)
+	log.Debugf("latest state root %x", curHash)
 	if err != nil {
 		log.Errorf("new state db failed, error message %s", err.Error())
 		return nil, err
@@ -103,7 +103,7 @@ func New(root common.Hash, db hyperdb.Database, bktConf bucket.Conf, height uint
 		contentCache:      contentCache,
 	}
 	// set oldest seqNo
-	log.Criticalf("oldest height when initialize %d", height + 1)
+	log.Debugf("oldest height when initialize %d", height + 1)
 	state.setLatest(height + 1)
 	return state, nil
 }
@@ -134,7 +134,7 @@ func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 // Reset clears out all emphemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
 func (self *StateDB) Reset() error {
-	log.Critical("reset state db")
+	log.Debug("reset state db")
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	// save modification set to content cache
@@ -151,7 +151,7 @@ func (self *StateDB) Reset() error {
 	}
 	self.contentCache.Add(self.curSeqNo, dirtyCopy)
 	if len(dirtyCopy) > 0 {
-		log.Criticalf("save validation result to content cache, with %d element", len(dirtyCopy))
+		log.Debugf("save validation result to content cache, with %d element", len(dirtyCopy))
 	}
 	// clear all stuff
 	self.stateObjects = make(map[common.Address]*StateObject)
@@ -169,7 +169,7 @@ func (self *StateDB) Reset() error {
 // initialize some stuff
 func (self *StateDB) MarkProcessStart(seqNo uint64) {
 	// set current seqNo
-	log.Criticalf("current process seqNo #%d", seqNo)
+	log.Debugf("current process seqNo #%d", seqNo)
 	atomic.StoreUint64(&self.curSeqNo, seqNo)
 }
 // mark a block's process has finished
@@ -222,7 +222,7 @@ func (self *StateDB) FetchBatch(seqNo uint64) hyperdb.Batch {
 		return batch.(hyperdb.Batch)
 	} else {
 		// not exist right now
-		log.Criticalf("create one batch for #%d", seqNo)
+		log.Debugf("create one batch for #%d", seqNo)
 		batch := self.db.NewBatch()
 		self.batchCache.Add(seqNo, batch)
 		return batch
@@ -373,7 +373,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 			value := obj.GetState(b)
 			// if storage entry exist in live object's storage cache
 			if (value != common.Hash{}) {
-				log.Criticalf("get state for %x in live objects, key %x, value %x", a.Hex(), b.Hex(), value.Hex())
+				log.Debugf("get state for %x in live objects, key %x, value %x", a.Hex(), b.Hex(), value.Hex())
 				return value
 			}
 		}
@@ -393,7 +393,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 				} else {
 					value := obj.GetState(b)
 					if (value != common.Hash{}) {
-						log.Criticalf("get state for %x in content cache, key %x, value %x", a.Hex(), b.Hex(), value.Hex())
+						log.Debugf("get state for %x in content cache, key %x, value %x", a.Hex(), b.Hex(), value.Hex())
 						if liveObj == nil {
 							// save obj itself to current cache
 							self.setStateObject(obj)
@@ -411,7 +411,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 	value := GetStateFromDB(self.db, a, b)
 	if (value != common.Hash{}) {
 		if liveObj == nil {
-			log.Criticalf("get state for %x in database, key %x, value %x, add to live state object's storage cache", a.Hex(), b.Hex(), value.Hex())
+			log.Debugf("get state for %x in database, key %x, value %x, add to live state object's storage cache", a.Hex(), b.Hex(), value.Hex())
 			// Load the object from the database.
 			data, err := self.db.Get(CompositeAccountKey(a.Bytes()))
 			if err != nil {
@@ -428,12 +428,12 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 			self.setStateObject(obj)
 		} else {
 			// save into live obj's cache storage avoid disk cost for next fetch
-			log.Criticalf("get state for %x in database, key %x, value %x, add %x to live objects", a.Hex(), b.Hex(), value.Hex(), a.Hex())
+			log.Debugf("get state for %x in database, key %x, value %x, add %x to live objects", a.Hex(), b.Hex(), value.Hex(), a.Hex())
 			liveObj.cachedStorage[b] = value
 		}
 		return value
 	}
-	log.Criticalf("find state for %x %x failed", a.Hex(), b.Hex())
+	log.Debugf("find state for %x %x failed", a.Hex(), b.Hex())
 	return common.Hash{}
 }
 // check whether an account has been suicide
@@ -478,10 +478,9 @@ func (self *StateDB) SetCode(addr common.Address, code []byte) {
 }
 // set a storage entry to a state object
 func (self *StateDB) SetState(addr common.Address, key common.Hash, value common.Hash) {
-	log.Error("hyper statedb set state start")
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		log.Error("hyper statedb set state find state object in live objects")
+		log.Debug("hyper statedb set state find state object in live objects")
 		stateObject.SetState(self.db, key, value)
 	}
 }
@@ -535,10 +534,10 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 	// Prefer 'live' objects.
 	if obj := self.stateObjects[addr]; obj != nil {
 		if obj.deleted {
-			log.Criticalf("search state object %x in the live objects, but it has been suicide", addr)
+			log.Debugf("search state object %x in the live objects, but it has been suicide", addr)
 			return nil
 		}
-		log.Criticalf("search state object %x in the live objects", addr)
+		log.Debugf("search state object %x in the live objects", addr)
 		return obj
 	}
 	// Load from the content cache
@@ -552,10 +551,10 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 			content := res.(map[common.Address]*StateObject)
 			if obj := content[addr]; obj != nil {
 				if obj.deleted {
-					log.Criticalf("search state object %x in the content cache, but it has been suicide", addr)
+					log.Debugf("search state object %x in the content cache, but it has been suicide", addr)
 					return nil
 				}
-				log.Criticalf("search state object %x in the content cache, add it to live objects", addr)
+				log.Debugf("search state object %x in the content cache, add it to live objects", addr)
 				self.setStateObject(obj)
 				return obj
 			}
@@ -564,7 +563,7 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 	// Load the object from the database.
 	data, err := self.db.Get(CompositeAccountKey(addr.Bytes()))
 	if err != nil {
-		log.Critical("no state object been find")
+		log.Debugf("no state object been find")
 		return nil
 	}
 	var account Account
@@ -573,7 +572,7 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 		return nil
 	}
 	// Insert into the live set.
-	log.Criticalf("find state object %x in database, add it to live objects", addr)
+	log.Debugf("find state object %x in database, add it to live objects", addr)
 	obj := newObject(self, addr, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.bktConf.StorageSize, self.bktConf.StorageLevelGroup))
 	self.setStateObject(obj)
 	return obj
@@ -791,7 +790,7 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 			}
 		case isDirty:
 			// Write any contract code associated with the state object
-			log.Errorf("seqNo #%d, state object %s been updated", s.curSeqNo, stateObject.address.Hex())
+			log.Debugf("seqNo #%d, state object %s been updated", s.curSeqNo, stateObject.address.Hex())
 			if stateObject.code != nil && stateObject.dirtyCode {
 				if err := dbw.Put(CompositeCodeHash(stateObject.Address().Bytes(), stateObject.CodeHash()), stateObject.code); err != nil {
 					return common.Hash{}, err
@@ -809,7 +808,6 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 				c := append(stateObject.address.Bytes(), d...)
 				set = append(set, c)
 			} else {
-				log.Criticalf("working set %s", common.Bytes2Hex(d))
 				workingSet[stateObject.address.Hex()] = d
 			}
 		}
@@ -820,23 +818,23 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 		s.root = SimpleHashFn(s.root, set)
 	} else {
 		// Use bucket tree instead
-		log.Errorf("begin to calculate state db root hash for #%d", s.curSeqNo)
+		log.Debugf("begin to calculate state db root hash for #%d", s.curSeqNo)
 		for k, v := range workingSet {
-			log.Criticalf("working set key %s, value %s", k, common.Bytes2Hex(v))
+			log.Debugf("working set key %s, value %s", k, common.Bytes2Hex(v))
 		}
 		hash, err := s.bucketTree.ComputeCryptoHash()
 
-		log.Critical("before blockNum is ",s.curSeqNo,"hash is",common.Bytes2Hex(hash))
 		s.bucketTree.PrepareWorkingSet(workingSet, big.NewInt(int64(s.curSeqNo)))
 
 		hash, err = s.bucketTree.ComputeCryptoHash()
-		log.Critical("after blockNum is ",s.curSeqNo,"hash is",common.Bytes2Hex(hash))
 		if err != nil {
 			log.Error("calculate hash for statedb failed")
 			return common.Hash{}, err
 		}
 		s.root = common.BytesToHash(hash)
+
 		s.bucketTree.AddChangesForPersistence(dbw, big.NewInt(int64(s.curSeqNo)))
+		hash, err = s.bucketTree.ComputeCryptoHash()
 	}
 	return s.root, err
 }

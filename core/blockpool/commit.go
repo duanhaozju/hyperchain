@@ -13,7 +13,6 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/core"
 	"hyperchain/common"
-	"hyperchain/core/hyperstate"
 )
 
 // When receive an CommitOrRollbackBlockEvent, if flag is true, generate a block and call AddBlock function
@@ -111,7 +110,7 @@ func (pool *BlockPool) AddBlock(block *types.Block, receipts []*types.Receipt, c
 
 // WriteBlock: save block into database
 func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, commonHash crypto.CommonHash, vid uint64, primary bool) {
-	time.Sleep(1 * time.Second)
+	time.Sleep(300 * time.Millisecond)
 	log.Info("block number is ", block.Number)
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
@@ -119,7 +118,7 @@ func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, 
 		return
 	}
 	// for primary node, check whether vid equal to block's number
-	state, _ := pool.GetStateInstance(common.Hash{}, db)
+	state, _ := pool.GetStateInstance(common.BytesToHash(block.MerkleRoot), db)
 	batch := state.FetchBatch(vid)
 	if primary && vid != block.Number {
 		log.Info("replace invalid txmeta data, block number:", block.Number)
@@ -151,13 +150,12 @@ func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, 
 	state.MarkProcessFinish(vid)
 	// write checkpoint data
 	// FOR TEST
-	log.Criticalf("state #%d %s", vid, string(state.Dump()))
-	if block.Number %10 == 0 && block.Number != 0 {
+	log.Criticalf("state #%d %s", vid, string(state.Dump(vid)))
+	if block.Number % 10 == 0 && block.Number != 0 {
 		core.WriteChainChan()
 	}
-	newChain := core.GetChainCopy()
-	log.Notice("Block number", newChain.Height)
-	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
+	log.Notice("Block number", block.Number)
+	log.Notice("Block hash", hex.EncodeToString(block.BlockHash))
 	// remove Cached Transactions which used to check transaction duplication
 	if primary {
 		pool.consenter.RemoveCachedBatch(vid)
@@ -165,17 +163,17 @@ func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, 
 	// FOR TEST
 	// get journals
 	// TODO journal prefix number is not correct
-	j, err := db.Get(hyperstate.CompositeJournalKey(vid))
-	if err != nil {
-		return
-	}
-	journals, err := hyperstate.UnmarshalJournal(j)
-	if err != nil {
-		return
-	}
-	for _, entry := range journals.JournalList {
-		log.Errorf("#%d journal %s", vid, entry)
-	}
+	//j, err := db.Get(hyperstate.CompositeJournalKey(vid))
+	//if err != nil {
+	//	return
+	//}
+	//journals, err := hyperstate.UnmarshalJournal(j)
+	//if err != nil {
+	//	return
+	//}
+	//for _, entry := range journals.JournalList {
+	//	log.Errorf("#%d journal %s", vid, entry)
+	//}
 }
 
 // save the invalid transaction into database for client query
@@ -221,3 +219,4 @@ func (pool *BlockPool) reAssignTransactionLog(batch hyperdb.Batch, receipts []*t
 		core.PersistReceipt(batch, receipt, pool.conf.TransactionVersion, false, false)
 	}
 }
+

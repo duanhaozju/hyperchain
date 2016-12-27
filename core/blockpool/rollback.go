@@ -38,7 +38,6 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 		log.Errorf("revert state from %d to %d failed", tmpDemandNumber - 1, ev.SeqNo - 1)
 		return
 	}
-	// FOR TEST
 	// 3. Delete related transaction, receipt, txmeta, and block itself in a specific range
 	pool.removeDataInRange(ev.SeqNo, tmpDemandNumber)
 	// 4. remove uncommitted data
@@ -78,7 +77,7 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 		return
 	}
 	// 5. reset chain data
-	core.UpdateChainByBlcokNum(db, block.Number - 1, true, true)
+	core.UpdateChainByBlcokNum(db, block.Number, true, true)
 }
 
 // removeDataInRange remove transaction receipt txmeta and block itself in a specific range
@@ -158,7 +157,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			// remove persisted journals
 			db.Delete(hyperstate.CompositeJournalKey(uint64(i)))
 		}
-		log.Criticalf("revert to #%d, %s", targetNumber, string(state.Dump()))
+		log.Criticalf("revert to #%d, %s", targetNumber, string(state.Dump(uint64(targetNumber))))
 
 		// revert related stateObject storage bucket tree
 		for addr := range dirtyStateObjectSet.Iter() {
@@ -167,6 +166,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			bucketTree := bucket.NewBucketTree(string(prefix))
 			bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.bucketTreeConf.StorageSize, pool.bucketTreeConf.StorageLevelGroup))
 			bucketTree.RevertToTargetBlock(big.NewInt(currentNumber), big.NewInt(targetNumber))
+			log.Critical("currentNumber is",currentNumber,"targetNumber is ",targetNumber)
 			hash, _ := bucketTree.ComputeCryptoHash()
 			log.Criticalf("re-compute %s storage hash %s", address.Hex(), common.Bytes2Hex(hash))
 			obj, err := db.Get(hyperstate.CompositeAccountKey(address.Bytes()))
@@ -184,13 +184,18 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 				log.Errorf("after revert to #%d, state object %s revert failed, required storage hash %s, got %s",
 					targetNumber, address.Hex(), account.Root.Hex(), common.Bytes2Hex(hash))
 			}
-			// recheck storage hash for each related contract account
 		}
 		// revert state bucket tree
 		prefix, _ := hyperstate.CompositeStateBucketPrefix()
 		bucketTree := bucket.NewBucketTree(string(prefix))
 		bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.bucketTreeConf.StateSize, pool.bucketTreeConf.StateLevelGroup))
+
+		beforeRootHash,_ := bucketTree.ComputeCryptoHash()
+		log.Criticalf("before RootHash is",common.Bytes2Hex(beforeRootHash))
+		log.Criticalf("currentBlockNum is",currentNumber,"targetNumber is",targetNumber)
 		bucketTree.RevertToTargetBlock(big.NewInt(currentNumber), big.NewInt(targetNumber))
+		beforeRootHash,_ = bucketTree.ComputeCryptoHash()
+		log.Criticalf("after RootHash is",common.Bytes2Hex(beforeRootHash))
 		currentRootHash, err := bucketTree.ComputeCryptoHash()
 		if err != nil {
 			log.Errorf("re-compute state bucket tree hash failed, error :%s", err.Error())
@@ -202,7 +207,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			return errors.New("revert state failed")
 		}
 		// revert state instance oldest and root
-		state.ResetToTarget(uint64(targetNumber - 1), common.BytesToHash(targetRootHash))
+		state.ResetToTarget(uint64(targetNumber), common.BytesToHash(targetRootHash))
 	case "rawstate":
 		// there is no need to revert state, because PMT can assure the correction
 		pool.lastValidationState.Store(common.BytesToHash(targetRootHash))
