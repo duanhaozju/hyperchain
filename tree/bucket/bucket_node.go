@@ -5,19 +5,19 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-type bucketNode struct {
+type BucketNode struct {
 	bucketKey          *BucketKey
 	childrenCryptoHash [][]byte
 	childrenUpdated    []bool
 	markedForDeletion  bool
 }
 
-func newBucketNode(bucketKey *BucketKey) *bucketNode {
+func newBucketNode(bucketKey *BucketKey) *BucketNode {
 	maxChildren := conf.getMaxGroupingAtEachLevel()
-	return &bucketNode{bucketKey, make([][]byte, maxChildren), make([]bool, maxChildren), false}
+	return &BucketNode{bucketKey, make([][]byte, maxChildren), make([]bool, maxChildren), false}
 }
 
-func unmarshalBucketNode(bucketKey *BucketKey, serializedBytes []byte) *bucketNode {
+func unmarshalBucketNode(bucketKey *BucketKey, serializedBytes []byte) *BucketNode {
 	bucketNode := newBucketNode(bucketKey)
 	buffer := proto.NewBuffer(serializedBytes)
 	for i := 0; i < conf.getMaxGroupingAtEachLevel(); i++ {
@@ -33,7 +33,7 @@ func unmarshalBucketNode(bucketKey *BucketKey, serializedBytes []byte) *bucketNo
 	return bucketNode
 }
 
-func (bucketNode *bucketNode) marshal() []byte {
+func (bucketNode *BucketNode) marshal() []byte {
 	buffer := proto.NewBuffer([]byte{})
 	for i := 0; i < conf.getMaxGroupingAtEachLevel(); i++ {
 		buffer.EncodeRawBytes(bucketNode.childrenCryptoHash[i])
@@ -41,13 +41,13 @@ func (bucketNode *bucketNode) marshal() []byte {
 	return buffer.Bytes()
 }
 
-func (bucketNode *bucketNode) setChildCryptoHash(childKey *BucketKey, cryptoHash []byte) {
+func (bucketNode *BucketNode) setChildCryptoHash(childKey *BucketKey, cryptoHash []byte) {
 	i := bucketNode.bucketKey.getChildIndex(childKey)
 	bucketNode.childrenCryptoHash[i] = cryptoHash
 	bucketNode.childrenUpdated[i] = true
 }
 
-func (bucketNode *bucketNode) mergeBucketNode(anotherBucketNode *bucketNode) {
+func (bucketNode *BucketNode) mergeBucketNode(anotherBucketNode *BucketNode) {
 	if !bucketNode.bucketKey.equals(anotherBucketNode.bucketKey) {
 		panic(fmt.Errorf("Nodes with different keys can not be merged. BaseKey=[%#v], MergeKey=[%#v]", bucketNode.bucketKey, anotherBucketNode.bucketKey))
 	}
@@ -58,7 +58,7 @@ func (bucketNode *bucketNode) mergeBucketNode(anotherBucketNode *bucketNode) {
 	}
 }
 
-func (bucketNode *bucketNode) computeCryptoHash() []byte {
+func (bucketNode *BucketNode) computeCryptoHash() []byte {
 	cryptoHashContent := []byte{}
 	numChildren := 0
 	for i, childCryptoHash := range bucketNode.childrenCryptoHash {
@@ -81,7 +81,7 @@ func (bucketNode *bucketNode) computeCryptoHash() []byte {
 	return ComputeCryptoHash(cryptoHashContent)
 }
 
-func (bucketNode *bucketNode) String() string {
+func (bucketNode *BucketNode) String() string {
 	numChildren := 0
 	for i := range bucketNode.childrenCryptoHash {
 		if bucketNode.childrenCryptoHash[i] != nil {

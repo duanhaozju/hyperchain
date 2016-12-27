@@ -13,42 +13,42 @@ var defaultBucketCacheMaxSize = 100 // MBs
 // buckets are pre-determined, the memory demand may not be very high or can easily
 // be controlled - by keeping seletive buckets in the cache (most likely first few levels of the bucket tree - because,
 // higher the level of the bucket, more are the chances that the bucket would be required for recomputation of hash)
-type bucketCache struct {
+type BucketCache struct {
 	TreePrefix string
 	isEnabled  bool
-	c          map[BucketKey]*bucketNode
+	c          map[BucketKey]*BucketNode
 	lock       sync.RWMutex
 	size       uint64
 	maxSize    uint64
 }
 
-func newBucketCache(treePrefix string,maxSizeMBs int) *bucketCache {
+func newBucketCache(treePrefix string,maxSizeMBs int) *BucketCache {
 	isEnabled := true
 	if maxSizeMBs <= 0 {
 		isEnabled = false
 	} else {
 		logger.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", maxSizeMBs)
 	}
-	return &bucketCache{TreePrefix: treePrefix,c: make(map[BucketKey]*bucketNode), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
+	return &BucketCache{TreePrefix: treePrefix,c: make(map[BucketKey]*BucketNode), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 }
 
-func (cache *bucketCache) clearAllCache(){
+func (cache *BucketCache) clearAllCache(){
 	isEnabled := true
 	if cache.isEnabled{
 	} else {
 		logger.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", cache.maxSize)
 	}
-	cache = &bucketCache{TreePrefix: cache.TreePrefix,c: make(map[BucketKey]*bucketNode), maxSize: uint64(cache.maxSize * 1024 * 1024), isEnabled: isEnabled}
+	cache = &BucketCache{TreePrefix: cache.TreePrefix,c: make(map[BucketKey]*BucketNode), maxSize: uint64(cache.maxSize * 1024 * 1024), isEnabled: isEnabled}
 }
 
 // TODO cache will be done later
-func (cache *bucketCache) loadAllBucketNodesFromDB() {
+func (cache *BucketCache) loadAllBucketNodesFromDB() {
 	if !cache.isEnabled {
 		return
 	}
 }
 
-func (cache *bucketCache) putWithoutLock(key BucketKey, node *bucketNode) {
+func (cache *BucketCache) putWithoutLock(key BucketKey, node *BucketNode) {
 	if !cache.isEnabled {
 		return
 	}
@@ -75,7 +75,7 @@ func (cache *bucketCache) putWithoutLock(key BucketKey, node *bucketNode) {
 	}
 }
 // TODO performance status should be done
-func (cache *bucketCache) get(key BucketKey) (*bucketNode, error) {
+func (cache *BucketCache) get(key BucketKey) (*BucketNode, error) {
 	//defer perfstat.UpdateTimeStat("timeSpent", time.Now())
 	if !cache.isEnabled {
 		return fetchBucketNodeFromDB(cache.TreePrefix,&key)
@@ -89,7 +89,7 @@ func (cache *bucketCache) get(key BucketKey) (*bucketNode, error) {
 	return bucketNode, nil
 }
 
-func (cache *bucketCache) removeWithoutLock(key BucketKey) {
+func (cache *BucketCache) removeWithoutLock(key BucketKey) {
 	if !cache.isEnabled {
 		return
 	}
@@ -104,7 +104,7 @@ func (bk BucketKey) size() uint64 {
 	return uint64(unsafe.Sizeof(bk))
 }
 
-func (bNode *bucketNode) size() uint64 {
+func (bNode *BucketNode) size() uint64 {
 	size := uint64(unsafe.Sizeof(*bNode))
 	numChildHashes := len(bNode.childrenCryptoHash)
 	if numChildHashes > 0 {

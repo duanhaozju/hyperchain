@@ -6,27 +6,27 @@ import (
 )
 
 // Code for managing changes in data nodes
-type dataNodes []*DataNode
+type DataNodes []*DataNode
 
-func (dataNodes dataNodes) Len() int {
+func (dataNodes DataNodes) Len() int {
 	return len(dataNodes)
 }
 
-func (dataNodes dataNodes) Swap(i, j int) {
+func (dataNodes DataNodes) Swap(i, j int) {
 	dataNodes[i], dataNodes[j] = dataNodes[j], dataNodes[i]
 }
 
-func (dataNodes dataNodes) Less(i, j int) bool {
+func (dataNodes DataNodes) Less(i, j int) bool {
 	return bytes.Compare(dataNodes[i].dataKey.compositeKey, dataNodes[j].dataKey.compositeKey) < 0
 }
 
 type dataNodesDelta struct {
-	byBucket map[BucketKey]dataNodes
+	byBucket map[BucketKey]DataNodes
 }
 
 // TODO should be test by rjl and zhz
 func newDataNodesDelta(treePrefix string,key_valueMap K_VMap) *dataNodesDelta {
-	dataNodesDelta := &dataNodesDelta{make(map[BucketKey]dataNodes)}
+	dataNodesDelta := &dataNodesDelta{make(map[BucketKey]DataNodes)}
 	// TODO optimized
 	for key, value := range key_valueMap {
 		dataNodesDelta.add(treePrefix, key,value)
@@ -56,6 +56,6 @@ func (dataNodesDelta *dataNodesDelta) getAffectedBuckets() []*BucketKey {
 	return changedBuckets
 }
 
-func (dataNodesDelta *dataNodesDelta) getSortedDataNodesFor(bucketKey *BucketKey) dataNodes {
+func (dataNodesDelta *dataNodesDelta) getSortedDataNodesFor(bucketKey *BucketKey) DataNodes {
 	return dataNodesDelta.byBucket[*bucketKey]
 }

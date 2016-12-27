@@ -340,8 +340,8 @@ func TestRevertToTargetBlock(t *testing.T) {
 	}else {
 		logger.Debugf("--------------the hash4 is ",common.Bytes2Hex(hash4))
 	}
-	writeBatch2.Write()
 	state.Bucket_tree.AddChangesForPersistence(writeBatch4,big.NewInt(4))
+	writeBatch2.Write()
 	writeBatch3.Write()
 	writeBatch4.Write()
 
@@ -354,7 +354,7 @@ func TestRevertToTargetBlock(t *testing.T) {
 	if err != nil{
 		logger.Debugf("--------------GetHash error")
 	}else {
-		logger.Debugf("--------------the hash5 is ",common.Bytes2Hex(hash6))
+		logger.Debugf("--------------the hash6 is ",common.Bytes2Hex(hash6))
 	}
 	state.Bucket_tree.AddChangesForPersistence(writeBatch6,big.NewInt(6))
 	writeBatch6.Write()
@@ -362,11 +362,11 @@ func TestRevertToTargetBlock(t *testing.T) {
 
 	state = bucket_test.NewState()
 	fromBlock := big.NewInt(6)
-	toBlock := big.NewInt(0)
+	toBlock := big.NewInt(1)
 	state.Bucket_tree.RevertToTargetBlock(fromBlock,toBlock)
-	hash_revert0,err := state.GetHash()
-	logger.Debugf("after revert from %d",fromBlock," to %d",toBlock,"--------------the state.GetHash() is ",common.Bytes2Hex(hash_revert0))
-	testutil.AssertEquals(t,hash0,hash_revert0)
+	hash_revert1,err := state.GetHash()
+	logger.Debugf("after revert from %d",fromBlock," to %d",toBlock,"--------------the state.GetHash() is ",common.Bytes2Hex(hash_revert1))
+	testutil.AssertEquals(t,hash1,hash_revert1)
 	//
 	//state = bucket_test.NewState()
 	//fromBlock = big.NewInt(4)

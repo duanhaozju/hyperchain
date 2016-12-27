@@ -141,6 +141,6 @@ func (updatedValueSet *UpdatedValueSet) GetSortedKeys() []string {
 	return updatedKeys
 }
 
-func (updatedValueSet *UpdatedValueSet) UpdatedValueKVs(updatedDataNodes , existingDataNodes dataNodes){
+func (updatedValueSet *UpdatedValueSet) UpdatedValueKVs(updatedDataNodes , existingDataNodes DataNodes){
 
 }

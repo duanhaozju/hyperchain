@@ -12,7 +12,7 @@ import (
 
 func TestDataNodesSort(t *testing.T) {
 	conf = newConfig(26, 3, fnvHash)
-	dataNodes := dataNodes{}
+	dataNodes := DataNodes{}
 	dataNode1 := newDataNode(newDataKey("chaincodeID1", "key1"), []byte("value1_1"))
 	dataNode2 := newDataNode(newDataKey("chaincodeID1", "key2"), []byte("value1_2"))
 	dataNode3 := newDataNode(newDataKey("chaincodeID2", "key1"), []byte("value2_1"))
