@@ -129,14 +129,23 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 		}
 		dirtyStateObjectSet := mapset.NewSet()
 		// get latest state instance
-		state, _ := pool.GetStateInstance(common.Hash{}, db)
+		latestBlock, err := core.GetBlockByNumber(db, uint64(currentNumber))
+		if err != nil {
+			log.Errorf("get latest block = #%d failed.", currentNumber)
+			return err
+		}
+		state, err := pool.GetStateInstance(common.BytesToHash(latestBlock.MerkleRoot), db)
+		if err != nil {
+			log.Errorf("get latest state = #%d failed.", currentNumber)
+			return err
+		}
 		// revert state change with changeset [targetNumber+1, currentNumber]
 		// IMPORTANT undo changes in reverse
 		for i := currentNumber; i >= targetNumber + 1; i -= 1 {
-			log.Noticef("undo changes for #%d", i)
+			log.Debugf("undo changes for #%d", i)
 			j, err := db.Get(hyperstate.CompositeJournalKey(uint64(i)))
 			if err != nil {
-				log.Warningf("get journal in database for #%d failed", i)
+				log.Warningf("get journal in database for #%d failed. make sure #%d doesn't have state change", i, i)
 				continue
 			}
 			journal, err := hyperstate.UnmarshalJournal(j)
@@ -146,7 +155,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			}
 			// IMPORTANT undo journal in reverse
 			for j := len(journal.JournalList) - 1; j >= 0; j -= 1 {
-				log.Criticalf("journal %s", journal.JournalList[j].String())
+				log.Debugf("journal %s", journal.JournalList[j].String())
 				tmpState := state.(*hyperstate.StateDB)
 				journal.JournalList[j].Undo(tmpState, true)
 				if journal.JournalList[j].GetType() == hyperstate.StorageHashChangeType {
@@ -158,7 +167,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			// remove persisted journals
 			db.Delete(hyperstate.CompositeJournalKey(uint64(i)))
 		}
-		log.Criticalf("revert to #%d, %s", targetNumber, string(state.Dump()))
+		log.Debugf("revert to #%d, %s", targetNumber, string(state.Dump()))
 
 		// revert related stateObject storage bucket tree
 		for addr := range dirtyStateObjectSet.Iter() {
@@ -168,7 +177,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.bucketTreeConf.StorageSize, pool.bucketTreeConf.StorageLevelGroup))
 			bucketTree.RevertToTargetBlock(big.NewInt(currentNumber), big.NewInt(targetNumber))
 			hash, _ := bucketTree.ComputeCryptoHash()
-			log.Criticalf("re-compute %s storage hash %s", address.Hex(), common.Bytes2Hex(hash))
+			log.Debugf("re-compute %s storage hash %s", address.Hex(), common.Bytes2Hex(hash))
 			obj, err := db.Get(hyperstate.CompositeAccountKey(address.Bytes()))
 			if err != nil {
 				log.Warningf("missing state object %s, it may be deleted", address.Hex())

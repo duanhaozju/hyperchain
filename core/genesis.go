@@ -52,6 +52,7 @@ func CreateInitBlock(filename string, stateType string, blockVersion string, bkt
 		log.Fatal(err)
 		return
 	}
+	// create state instance with empty root hash
 	stateDB, err := GetStateInstance(common.Hash{}, db, stateType, bktConf)
 	stateDB.MarkProcessStart(0)
 	if err != nil {
