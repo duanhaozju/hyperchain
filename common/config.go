@@ -54,6 +54,11 @@ func (cf *Config) GetDuration(key string) time.Duration {
 	return cf.conf.GetDuration(key)
 }
 
-func (cf *Config) Set(key string, value struct{})  {
+func (cf *Config) GetStringMap(key string) map[string]interface{}  {
+	return cf.conf.GetStringMap(key)
+}
+
+func (cf *Config) Set(key string, value interface{})  {
 	cf.conf.Set(key, value)
 }
+
