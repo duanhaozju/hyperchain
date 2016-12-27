@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -xev
+#set -xev
 # test the env
 if ! type go > /dev/null; then
     echo -e "Please install the go env correctly!"
@@ -138,7 +138,7 @@ runXinXinLinux(){
 runXinXinMac(){
     for((j=1;j<=$MAXPEERNUM;j++))
     do
-        osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${j}' && ./hyperchain"'
+        osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${j}' && ./hyperchain  -o '${j}'"'
     done
 }
 runXin1(){

@@ -41,7 +41,9 @@ func NewGrpcManager(configPath string) *GrpcPeerManager {
 	// configs
 	var newgRPCManager GrpcPeerManager
 	newgRPCManager.configs = config
+
 	newgRPCManager.LocalAddr = pb.NewPeerAddr(config.GetLocalIP(),config.GetLocalGRPCPort(),config.GetLocalJsonRPCPort(),config.GetLocalID())
+	log.Critical("local ID",newgRPCManager.LocalAddr.ID)
 	//get the maxpeer from config
 	newgRPCManager.IsOriginal = config.IsOrigin()
 	newgRPCManager.Introducer = pb.NewPeerAddr(config.GetIntroducerIP(),config.GetIntroducerPort(),config.GetIntroducerJSONRPCPort(),config.GetIntroducerID())
