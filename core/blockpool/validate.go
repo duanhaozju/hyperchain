@@ -213,8 +213,18 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	}
 	// initailize calculator
 	// for calculate fingerprint of a batch of transactions and receipts
-	pool.initializeTransactionCalculator()
-	pool.initializeReceiptCalculator()
+	if err := pool.initializeTransactionCalculator(); err != nil {
+		log.Errorf("validate #%d initialize transaction calculator", seqNo)
+		return err, &BlockRecord{
+			InvalidTxs: invalidTxs,
+		}
+	}
+	if err := pool.initializeReceiptCalculator(); err != nil {
+		log.Errorf("validate #%d initialize receipt calculator", seqNo)
+		return err, &BlockRecord{
+			InvalidTxs: invalidTxs,
+		}
+	}
 	// load latest state fingerprint
 	// for compatibility, doesn't remove the statement below
 	v := pool.lastValidationState.Load()
@@ -226,9 +236,11 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	}
 	// initialize state
 	state, err := pool.GetStateInstance(initStatus, db)
-	if err != nil {return err, &BlockRecord{
-		InvalidTxs: invalidTxs,
-	}}
+	if err != nil {
+		return err, &BlockRecord{
+			InvalidTxs: invalidTxs,
+		}
+	}
 
 	state.MarkProcessStart(seqNo)
 	// initialize execution environment ruleset
@@ -239,7 +251,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		state.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(*tx, vmenv)
 		// invalid transaction, check invalid type
-		if err != nil{
+		if err != nil {
 			var errType types.InvalidTransactionRecord_ErrType
 			if core.IsValueTransferErr(err) {
 				errType = types.InvalidTransactionRecord_OUTOFBALANCE
@@ -297,9 +309,8 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		}
 		validtxs = append(validtxs, tx)
 	}
-	// flush all state change
-	root, err := state.Commit()
-	state.Reset()
+	// submit validation result
+	err, merkleRoot, txRoot, receiptRoot := pool.submitValidationResult(state, batch)
 	if err != nil {
 		log.Error("Commit state db failed! error msg, ", err.Error())
 		return err, &BlockRecord{
@@ -307,14 +318,6 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		}
 	}
 	// generate new state fingerprint
-	merkleRoot := root.Bytes()
-	// generate transactions and receipts fingerprint
-	res, _ := pool.calculateTransactionsFingerprint(nil, nil, true)
-	txRoot := res.Bytes()
-	res, _ = pool.calculateReceiptFingerprint(nil, nil, true)
-	receiptRoot := res.Bytes()
-	// store latest state status
-	pool.lastValidationState.Store(root)
 	// IMPORTANT doesn't call batch.Write util recv commit event for atomic assurance
 	log.Criticalf("validate result for #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
 		seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
@@ -380,7 +383,7 @@ func (pool *BlockPool) initializeReceiptCalculator() error {
 func (pool *BlockPool) calculateTransactionsFingerprint(transaction *types.Transaction, data []byte, flush bool) (common.Hash, error) {
 	switch pool.conf.StateType {
 	case "rawstate":
-		calculator := pool.transactionCalculator.(*pmt.SecureTrie)
+		calculator := pool.transactionCalculator.(*pmt.Trie)
 		if flush == false {
 			// put transaction to buffer temporarily
 			calculator.Update(append(core.TransactionPrefix, transaction.GetTransactionHash().Bytes()...), data)
@@ -408,7 +411,7 @@ func (pool *BlockPool) calculateTransactionsFingerprint(transaction *types.Trans
 func (pool *BlockPool)calculateReceiptFingerprint(receipt *types.Receipt, data []byte, flush bool)(common.Hash, error) {
 	switch pool.conf.StateType {
 	case "rawstate":
-		calculator := pool.receiptCalculator.(*pmt.SecureTrie)
+		calculator := pool.receiptCalculator.(*pmt.Trie)
 		if flush == false {
 			// put transaction to buffer temporarily
 			calculator.Update(append(core.ReceiptsPrefix, receipt.TxHash...), data)
@@ -432,4 +435,50 @@ func (pool *BlockPool)calculateReceiptFingerprint(receipt *types.Receipt, data [
 		}
 	}
 	return common.Hash{}, nil
+}
+
+func (pool *BlockPool) submitValidationResult(state vm.Database, batch hyperdb.Batch) (error, []byte, []byte, []byte) {
+	switch  pool.conf.StateType {
+	case "hyperstate":
+		// flush all state change
+		root, err := state.Commit()
+		state.Reset()
+		if err != nil {
+			log.Error("Commit state db failed! error msg, ", err.Error())
+			return err, nil, nil, nil
+		}
+		// generate new state fingerprint
+		merkleRoot := root.Bytes()
+		// generate transactions and receipts fingerprint
+		res, _ := pool.calculateTransactionsFingerprint(nil, nil, true)
+		txRoot := res.Bytes()
+		res, _ = pool.calculateReceiptFingerprint(nil, nil, true)
+		receiptRoot := res.Bytes()
+		// store latest state status
+		// actually it's useless
+		pool.lastValidationState.Store(root)
+		return nil, merkleRoot, txRoot, receiptRoot
+		// IMPORTANT doesn't call batch.Write util recv commit event for atomic assurance
+	case "rawstate":
+		// flush all state change
+		root, err := state.Commit()
+		if err != nil {
+			log.Error("Commit state db failed! error msg, ", err.Error())
+			return err, nil, nil, nil
+		}
+		// generate new state fingerprint
+		merkleRoot := root.Bytes()
+		// generate transactions and receipts fingerprint
+		res, _ := pool.calculateTransactionsFingerprint(nil, nil, true)
+		txRoot := res.Bytes()
+		res, _ = pool.calculateReceiptFingerprint(nil, nil, true)
+		receiptRoot := res.Bytes()
+		// store latest state status
+		// actually it's useless
+		pool.lastValidationState.Store(root)
+		// flush content in batch to disk immediately
+		batch.Write()
+		return nil, merkleRoot, txRoot, receiptRoot
+	}
+	return errors.New("miss state type"), nil, nil, nil
 }

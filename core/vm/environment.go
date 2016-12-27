@@ -110,7 +110,7 @@ type Database interface {
 	Reset() error
 	// Query
 	GetAccounts() map[string]Account
-	Dump() []byte
+	Dump(uint64) []byte
 
 	// Atomic Related
 	MarkProcessStart(uint64)

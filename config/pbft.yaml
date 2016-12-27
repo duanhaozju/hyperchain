@@ -34,10 +34,10 @@ timeout:
     validate: 1s
 
     # Primary send it to inform aliveness, must be greater than request timeout
-    nullrequest: 8s
+    nullrequest: 10s
 
     # How long may a view change take
-    viewchange: 6s
+    viewchange: 8s
 
     # How long to wait for a view change quorum before resending (the same) view change
-    resendviewchange: 6s
+    resendviewchange: 10s

@@ -119,7 +119,7 @@ func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, 
 		return
 	}
 	// for primary node, check whether vid equal to block's number
-	state, _ := pool.GetStateInstance(common.Hash{}, db)
+	state, _ := pool.GetStateInstance(common.BytesToHash(block.MerkleRoot), db)
 	batch := state.FetchBatch(vid)
 	if primary && vid != block.Number {
 		log.Info("replace invalid txmeta data, block number:", block.Number)
@@ -151,8 +151,8 @@ func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, 
 	state.MarkProcessFinish(vid)
 	// write checkpoint data
 	// FOR TEST
-	log.Criticalf("state #%d %s", vid, string(state.Dump()))
-	if block.Number %10 == 0 && block.Number != 0 {
+	log.Criticalf("state #%d %s", vid, string(state.Dump(vid)))
+	if block.Number % 10 == 0 && block.Number != 0 {
 		core.WriteChainChan()
 	}
 	newChain := core.GetChainCopy()
@@ -221,3 +221,4 @@ func (pool *BlockPool) reAssignTransactionLog(batch hyperdb.Batch, receipts []*t
 		core.PersistReceipt(batch, receipt, pool.conf.TransactionVersion, false, false)
 	}
 }
+

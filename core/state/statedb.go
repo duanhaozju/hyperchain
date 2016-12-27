@@ -540,7 +540,7 @@ func (self *StateDB) MarkProcessFinish(seqNo uint64) {
 }
 
 func (self *StateDB) FetchBatch(seqNo uint64) hyperdb.Batch {
-	return nil
+	return self.db.NewBatch()
 }
 
 func (self *StateDB) DeleteBatch(seqNo uint64) {

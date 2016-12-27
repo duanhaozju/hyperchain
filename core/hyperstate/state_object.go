@@ -121,7 +121,6 @@ func (c *StateObject) MarshalJSON() ([]byte, error) {
 }
 // marshal for state object persist
 func (c *StateObject) Marshal() ([]byte, error) {
-	log.Criticalf("[DEBUG] nonce %d, balance %d, root %s, codehash %s", c.data.Nonce, c.data.Balance, c.data.Root.Hex(), common.Bytes2Hex(c.data.CodeHash))
 	account := &Account{
 		Nonce:    c.data.Nonce,
 		Balance:  c.data.Balance,
@@ -214,7 +213,7 @@ func (self *StateObject) SetState(db hyperdb.Database, key, value common.Hash) {
 
 func (self *StateObject) setState(key, value common.Hash) {
 	// Write both cache
-	log.Errorf("put storage item key %s value %s to storage cache and dirty cache", key.Hex(), value.Hex())
+	log.Debugf("put storage item key %s value %s to storage cache and dirty cache", key.Hex(), value.Hex())
 	self.cachedStorage[key] = value
 	self.dirtyStorage[key] = value
 
@@ -232,12 +231,12 @@ func (self *StateObject) Flush(db hyperdb.Batch) error {
 		delete(self.dirtyStorage, key)
 		if (value == common.Hash{}) {
 			// delete
-			log.Errorf("flush dirty storage address [%s] delete item key: [%s]", self.address.Hex(), key.Hex())
+			log.Debugf("flush dirty storage address [%s] delete item key: [%s]", self.address.Hex(), key.Hex())
 			if err := db.Delete(CompositeStorageKey(self.address.Bytes(), key.Bytes())); err != nil {
 				return err
 			}
 		} else {
-			log.Errorf("flush dirty storage address [%s] put item key: [%s], value [%s]", self.address.Hex(), key.Hex(), value.Hex())
+			log.Debugf("flush dirty storage address [%s] put item key: [%s], value [%s]", self.address.Hex(), key.Hex(), value.Hex())
 			if err := db.Put(CompositeStorageKey(self.address.Bytes(), key.Bytes()), value.Bytes()); err != nil {
 				return err
 			}
@@ -269,14 +268,14 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 		prev := self.Root()
 		workingSet := bucket.NewKVMap()
 		for k, v := range self.dirtyStorage {
-			log.Errorf("calculate state object %s storage hash, dirty entry key %s value %s", self.address.Hex(), k.Hex(), v.Hex())
+			log.Debugf("calculate state object %s storage hash, dirty entry key %s value %s", self.address.Hex(), k.Hex(), v.Hex())
 			if (v == common.Hash{}) {
 				workingSet[k.Hex()] = nil
 			} else {
 				workingSet[k.Hex()] = v.Bytes()
 			}
 		}
-		log.Errorf("state object %s storage root hash %s before #%d", self.address.Hex(), prev.Hex(), self.db.curSeqNo)
+		log.Debugf("state object %s storage root hash %s before #%d", self.address.Hex(), prev.Hex(), self.db.curSeqNo)
 		self.bucketTree.PrepareWorkingSet(workingSet, big.NewInt(int64(self.db.curSeqNo)))
 		// 2. calculate hash
 		hash, err := self.bucketTree.ComputeCryptoHash()
@@ -286,7 +285,7 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 		}
 		// 3. assign to self.ROOT
 		self.SetRoot(common.BytesToHash(hash))
-		log.Errorf("state object %s storage root hash %s after #%d", self.address.Hex(), self.Root().Hex(), self.db.curSeqNo)
+		log.Debugf("state object %s storage root hash %s after #%d", self.address.Hex(), self.Root().Hex(), self.db.curSeqNo)
 		if (self.Root() != common.Hash{} || prev != common.Hash{}) {
 			// storage hash changed
 			self.db.journal.JournalList = append(self.db.journal.JournalList, &StorageHashChange{

@@ -23,9 +23,9 @@ type World struct {
 	Users map[string]User 	    `json:"accounts"`
 }
 
-func (self *StateDB) RawDump() World {
+func (self *StateDB) RawDump(height uint64) World {
 	world := World{
-		Root:     self.root.Hex(),
+		// TODO
 		Users:    make(map[string]User),
 	}
 
@@ -65,8 +65,8 @@ func (self *StateDB) RawDump() World {
 	return world
 }
 
-func (self *StateDB) Dump() []byte {
-	json, err := json.MarshalIndent(self.RawDump(), "", "    ")
+func (self *StateDB) Dump(height uint64) []byte {
+	json, err := json.MarshalIndent(self.RawDump(height), "", "    ")
 	if err != nil {
 		fmt.Println("dump err", err)
 	}
