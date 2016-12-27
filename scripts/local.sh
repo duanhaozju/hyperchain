@@ -132,7 +132,7 @@ cd ${DUMP_PATH}
 runXinXinLinux(){
     for((j=1;j<=$MAXPEERNUM;j++))
     do
-        gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${j} -l 800${j} -t 808${j} -f 900${j} -i true"
+        gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${j}"
     done
 }
 runXinXinMac(){
