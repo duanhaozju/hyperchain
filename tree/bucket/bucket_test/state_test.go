@@ -267,8 +267,8 @@ func TestRevertToTargetBlock(t *testing.T) {
 	state := bucket_test.NewState()
 	// block 0
 	key_valueMap := bucket.K_VMap{}
-	key_valueMap["key1"] = []byte("value1")
 	key_valueMap["key2"] = []byte("value2")
+	key_valueMap["key1"] = []byte("value1")
 	key_valueMap["key3"] = []byte("value3")
 	key_valueMap["key4"] = []byte("value4")
 	state.Bucket_tree.PrepareWorkingSet(key_valueMap,big.NewInt(0))
@@ -319,7 +319,7 @@ func TestRevertToTargetBlock(t *testing.T) {
 	// block 3
 	writeBatch3 := db.NewBatch()
 	key_valueMap = bucket.NewKVMap()
-	key_valueMap["key2"] = []byte("value2-3")
+	key_valueMap["key21"] = []byte("value2-3")
 
 	state.Bucket_tree.PrepareWorkingSet(key_valueMap,big.NewInt(3))
 	//hash3,err := state.GetHash()

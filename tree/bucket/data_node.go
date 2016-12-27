@@ -5,11 +5,11 @@ import (
 )
 
 type dataNode struct {
-	dataKey *dataKey
+	dataKey *DataKey
 	value   []byte
 }
 
-func newDataNode(dataKey *dataKey, value []byte) *dataNode {
+func newDataNode(dataKey *DataKey, value []byte) *dataNode {
 	return &dataNode{dataKey, value}
 }
 
@@ -17,7 +17,7 @@ func unmarshalDataNodeFromBytes(keyBytes []byte, valueBytes []byte) *dataNode {
 	return unmarshalDataNode(newDataKeyFromEncodedBytes(keyBytes), valueBytes)
 }
 
-func unmarshalDataNode(dataKey *dataKey, serializedBytes []byte) *dataNode {
+func unmarshalDataNode(dataKey *DataKey, serializedBytes []byte) *dataNode {
 	return &dataNode{dataKey, serializedBytes}
 }
 

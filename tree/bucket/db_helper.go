@@ -6,7 +6,7 @@ import (
 type rawKey []byte
 
 // TODO test
-func fetchDataNodeFromDB(dataKey *dataKey) (*dataNode, error) {
+func fetchDataNodeFromDB(dataKey *DataKey) (*dataNode, error) {
 	db, err := hyperdb.GetLDBDatabase()
 	nodeBytes, err := db.Get(dataKey.getEncodedBytes())
 	nodeBytes = append([]byte("DataNode"),nodeBytes...)

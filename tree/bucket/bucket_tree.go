@@ -88,6 +88,8 @@ func (bucketTree *BucketTree) Get(key string) ([]byte, error) {
 // PrepareWorkingSet - method implementation for interface 'statemgmt.HashableState'
 // TODO test the stateImpl just accept the stateDelta which accountID equals
 func (bucketTree *BucketTree) PrepareWorkingSet(key_valueMap K_VMap, blockNum *big.Int) error {
+	//sort.Sort(key_valueMap)
+
 	logger.Debug("Enter - PrepareWorkingSet()")
 	if key_valueMap == nil || len(key_valueMap) == 0 {
 		logger.Debug("Ignoring working-set as it is empty")
@@ -123,6 +125,7 @@ func (bucketTree *BucketTree) ClearWorkingSet(changesPersisted bool) {
 // ComputeCryptoHash - method implementation for interface 'statemgmt.HashableState'
 func (bucketTree *BucketTree) ComputeCryptoHash() ([]byte, error) {
 	logger.Debug("Enter - ComputeCryptoHash()")
+	// TODO there maybe have concurrent error
 	if bucketTree.recomputeCryptoHash {
 		logger.Debug("Recomputing crypto-hash...")
 		err := bucketTree.processDataNodeDelta()
@@ -160,6 +163,13 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 		}
 		// TODO test, add the logic of record the UpdatedValueSet
 		cryptoHashForBucket := computeDataNodesCryptoHash(bucketKey, updatedDataNodes, existingDataNodes,bucketTree.updatedValueSet)
+		if bucketTree.treePrefix == "-bucket-state" {
+			logger.Critical("processDataNodeDelta*****************************start",bucketTree.updatedValueSet.BlockNum.Int64())
+			bucketTree.updatedValueSet.Print()
+			logger.Critical("processDataNodeDelta*****************************end",bucketTree.updatedValueSet.BlockNum.Int64())
+		}
+
+
 		logger.Debugf("Crypto-hash for lowest-level bucket [%s] is [%x]", bucketKey, cryptoHashForBucket)
 		parentBucket := bucketTree.bucketTreeDelta.getOrCreateBucketNode(bucketKey.getParentKey())
 		parentBucket.setChildCryptoHash(bucketKey, cryptoHashForBucket)
@@ -248,7 +258,7 @@ func computeDataNodesCryptoHash(bucketKey *bucketKey, updatedNodes dataNodes, ex
 
 	var remainingNodes dataNodes
 	if i < len(updatedNodes) {
-		for i := 0;i<len(updatedNodes);i++ {
+		for i := 0;i<len(updatedNodes)&&!updatedNodes[i].isDelete();i++ {
 			compositeKey := string(updatedNodes[i].getCompositeKey()[:])
 			updatedValueSet.Set(compositeKey,updatedNodes[i].value,nil)
 		}
@@ -389,12 +399,11 @@ func (bucketTree *BucketTree) updateDataNodeCache(){
 				dbkey := append([]byte(DataNodePrefix), dataNode.dataKey.getEncodedBytes()...)
 				dbkey = append([]byte(DataNodeCachePrefix),dbkey...)
 				db.Delete(dbkey)
-
 			} else {
 				bucketTree.dataNodeCache.Put(*affectedBucket,dataNode.dataKey,*dataNode)
 				dbkey := append([]byte(DataNodePrefix), dataNode.dataKey.getEncodedBytes()...)
 				dbkey = append([]byte(DataNodeCachePrefix),dbkey...)
-				db.Put(dbkey, dataNode.value)
+				db.Put(dbkey, dataNode.getValue())
 			}
 		}
 	}

@@ -820,7 +820,8 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 		// Use bucket tree instead
 		log.Debugf("begin to calculate state db root hash for #%d", s.curSeqNo)
 		for k, v := range workingSet {
-			log.Criticalf("working set key %s, value %s", k, common.Bytes2Hex(v))
+			log.Criticalf("***********************working set key %s", k)
+			log.Criticalf("***********************working set value %s", common.Bytes2Hex(bucket.ComputeCryptoHash(v)))
 		}
 		hash, err := s.bucketTree.ComputeCryptoHash()
 
