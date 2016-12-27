@@ -11,9 +11,6 @@ type DataNode struct {
 }
 
 func newDataNode(dataKey *DataKey, value []byte) *DataNode {
-	if value == nil {
-		logger.Error("DEBUG newDataNode empty value")
-	}
 	return &DataNode{dataKey, value}
 }
 

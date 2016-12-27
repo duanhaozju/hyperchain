@@ -13,7 +13,6 @@ func newDataKey(treePrefix string, key string) *DataKey {
 	compositeKey := ConstructCompositeKey(treePrefix, key)
 	// TODO hash can be replaced
 	bucketHash := conf.computeBucketHash(compositeKey)
-	logger.Errorf("123123123 compositeKey %v", compositeKey)
 	// Adding one because - we start bucket-numbers 1 onwards
 	bucketNumber := int(bucketHash)%conf.getNumBucketsAtLowestLevel() + 1
 	dataKey := &DataKey{newBucketKeyAtLowestLevel(bucketNumber), compositeKey}
@@ -22,7 +21,7 @@ func newDataKey(treePrefix string, key string) *DataKey {
 }
 
 func minimumPossibleDataKeyBytesFor(bucketKey *BucketKey,treePrefix string) []byte {
-	min := append([]byte("DataNode"),encodeBucketNumber(bucketKey.bucketNumber)...)
+	min := append([]byte(DataNodePrefix),encodeBucketNumber(bucketKey.bucketNumber)...)
 	min = append(min, []byte(treePrefix)...)
 	return min
 }

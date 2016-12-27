@@ -45,23 +45,17 @@ func (bucketNode *BucketNode) setChildCryptoHash(childKey *BucketKey, cryptoHash
 	i := bucketNode.bucketKey.getChildIndex(childKey)
 	bucketNode.childrenCryptoHash[i] = cryptoHash
 	bucketNode.childrenUpdated[i] = true
-	logger.Errorf("DEBUG set idx = %d is true", i)
 }
 
 func (bucketNode *BucketNode) mergeBucketNode(anotherBucketNode *BucketNode) {
-	logger.Error("mergeBucketNode")
 	if !bucketNode.bucketKey.equals(anotherBucketNode.bucketKey) {
 		panic(fmt.Errorf("Nodes with different keys can not be merged. BaseKey=[%#v], MergeKey=[%#v]", bucketNode.bucketKey, anotherBucketNode.bucketKey))
 	}
-	logger.Error("before mergeBucketNode", bucketNode.childrenCryptoHash)
 	for i, childCryptoHash := range anotherBucketNode.childrenCryptoHash {
 		if !bucketNode.childrenUpdated[i] {
-			logger.Errorf("overwrite idx = %d value = %v", i, childCryptoHash)
 			bucketNode.childrenCryptoHash[i] = childCryptoHash
 		}
 	}
-	logger.Error("after mergeBucketNode", bucketNode.childrenCryptoHash)
-	logger.Error("another", anotherBucketNode.childrenCryptoHash)
 }
 
 func (bucketNode *BucketNode) computeCryptoHash() []byte {
@@ -70,20 +64,20 @@ func (bucketNode *BucketNode) computeCryptoHash() []byte {
 	for i, childCryptoHash := range bucketNode.childrenCryptoHash {
 		if childCryptoHash != nil {
 			numChildren++
-			logger.Errorf("Appending crypto-hash for child bucket = [%s]", bucketNode.bucketKey.getChildKey(i))
+			logger.Debugf("Appending crypto-hash for child bucket = [%s]", bucketNode.bucketKey.getChildKey(i))
 			cryptoHashContent = append(cryptoHashContent, childCryptoHash...)
 		}
 	}
 	if numChildren == 0 {
-		logger.Errorf("Returning <nil> crypto-hash of bucket = [%s] - because, it has not children", bucketNode.bucketKey)
+		logger.Debugf("Returning <nil> crypto-hash of bucket = [%s] - because, it has not children", bucketNode.bucketKey)
 		bucketNode.markedForDeletion = true
 		return nil
 	}
 	if numChildren == 1 {
-		logger.Errorf("Propagating crypto-hash of single child node for bucket = [%s]", bucketNode.bucketKey)
+		logger.Debugf("Propagating crypto-hash of single child node for bucket = [%s]", bucketNode.bucketKey)
 		return cryptoHashContent
 	}
-	logger.Errorf("Computing crypto-hash for bucket [%s] by merging [%d] children", bucketNode.bucketKey, numChildren)
+	logger.Debugf("Computing crypto-hash for bucket [%s] by merging [%d] children", bucketNode.bucketKey, numChildren)
 	return ComputeCryptoHash(cryptoHashContent)
 }
 

@@ -29,7 +29,7 @@ func fetchDataNodeFromDB(dataKey *DataKey) (*DataNode, error) {
 func fetchBucketNodeFromDB(treePrefix string,bucketKey *BucketKey) (*BucketNode, error) {
 	db,_ := hyperdb.GetLDBDatabase()
 	//nodeKey := bucketKey.getEncodedBytes(treePrefix)
-	nodeKey := append([]byte("BucketNode"),[]byte(treePrefix)...)
+	nodeKey := append([]byte(BucketNodePrefix),[]byte(treePrefix)...)
 	nodeKey = append(nodeKey,bucketKey.getEncodedBytes()...)
 	nodeBytes, err := db.Get(nodeKey)
 

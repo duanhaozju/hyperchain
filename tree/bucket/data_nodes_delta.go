@@ -41,7 +41,7 @@ func (dataNodesDelta *dataNodesDelta) add(treePrefix string, key string, value [
 	dataKey := newDataKey(treePrefix, key)
 	bucketKey := dataKey.getBucketKey()
 	dataNode := newDataNode(dataKey, value)
-	logger.Criticalf("Adding dataNode=[%s] against bucketKey=[%s]", dataNode, bucketKey)
+	logger.Debugf("Adding dataNode=[%s] against bucketKey=[%s]", dataNode, bucketKey)
 	dataNodesDelta.byBucket[*bucketKey] = append(dataNodesDelta.byBucket[*bucketKey], dataNode)
 }
 

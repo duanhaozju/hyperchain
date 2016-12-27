@@ -33,7 +33,6 @@ func (c *bucketHashCalculator) computeCryptoHash() []byte {
 		// TODO
 		c.dataNodes = nil
 	}
-	logger.Errorf("Hashable content for bucket [%s]: length=%d, contentInStringForm=[%s]", c.bucketKey, len(c.hashingData), string(c.hashingData))
 	if c.hashingData == nil {
 		return nil
 	}

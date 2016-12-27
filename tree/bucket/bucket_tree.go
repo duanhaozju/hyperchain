@@ -13,6 +13,8 @@ import (
 var (
 	logger = logging.MustGetLogger("buckettree")
 	DataNodePrefix = "DataNode"
+	BucketNodePrefix = "BucketNode"
+	UpdatedValueSetPrefix = "UpdatedValueSet"
 )
 type K_VMap map[string][]byte
 
@@ -58,7 +60,6 @@ func (bucketTree *BucketTree) Initialize(configs map[string]interface{}) error {
 	}
 	if rootBucketNode != nil {
 		bucketTree.persistedStateHash = rootBucketNode.computeCryptoHash()
-		logger.Errorf("persistedStateHash %s", common.Bytes2Hex(bucketTree.persistedStateHash))
 		bucketTree.lastComputedCryptoHash = bucketTree.persistedStateHash
 	}
 
@@ -90,14 +91,6 @@ func (bucketTree *BucketTree) Get(key string) ([]byte, error) {
 // TODO test the stateImpl just accept the stateDelta which accountID equals
 func (bucketTree *BucketTree) PrepareWorkingSet(key_valueMap K_VMap, blockNum *big.Int) error {
 	//sort.Sort(key_valueMap)
-
-	logger.Criticalf("After PrepareWorkingSet start",bucketTree.treePrefix)
-	for k,v := range key_valueMap{
-		logger.Errorf("Print key is %v",k)
-		logger.Errorf("Print value is %v",v)
-	}
-	logger.Criticalf("After PrepareWorkingSet end",bucketTree.treePrefix)
-
 	logger.Debug("Enter - PrepareWorkingSet()")
 	if key_valueMap == nil || len(key_valueMap) == 0 {
 		logger.Debug("Ignoring working-set as it is empty")
@@ -148,18 +141,10 @@ func (bucketTree *BucketTree) ComputeCryptoHash() ([]byte, error) {
 
 func (bucketTree *BucketTree) processDataNodeDelta() error {
 	afftectedBuckets := bucketTree.dataNodesDelta.getAffectedBuckets()
-	//hash,_ := bucketTree.ComputeCryptoHash()
 	for _, bucketKey := range afftectedBuckets {
 
 		updatedDataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(bucketKey)
 		existingDataNodes, err := bucketTree.dataNodeCache.fetchDataNodesFromCacheFor(*bucketKey)
-		if(bucketTree.treePrefix != "-bucket-state"){
-			logger.Critical("-----------------------updatedDataNodes",len(existingDataNodes))
-			logger.Critical("-----------------------existingDataNodes",len(existingDataNodes))
-			for _,v := range existingDataNodes{
-				logger.Critical("-----------------------",common.Bytes2Hex(ComputeCryptoHash(v.value)))
-			}
-		}
 		if err != nil {
 			return err
 		}
@@ -234,13 +219,12 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 			updatedValueSet.Set(compositeKey,updatedNode.value, nil)
 			i++
 		case 0:
-			logger.Errorf("find same as existed node, key %s", updatedNode.dataKey)
 			nextNode = updatedNode
 			if bytes.Compare(updatedNode.getValue(),existingNode.value) != 0{
 				compositeKey := string(updatedNode.getCompositeKey())
-				logger.Errorf("update updated value set, current value %s, origin value %s", common.Bytes2Hex(updatedNode.value), common.Bytes2Hex(existingNode.value))
+				logger.Debugf("update updated value set, current value %s, origin value %s", common.Bytes2Hex(updatedNode.value), common.Bytes2Hex(existingNode.value))
 				if updatedNode.value == nil {
-					logger.Error("DEBUG computeDataNodesCryptoHash, empty value")
+					logger.Debugf("DEBUG computeDataNodesCryptoHash, empty value")
 				}
 				updatedValueSet.Set(compositeKey,updatedNode.value,existingNode.value)
 			}
@@ -252,7 +236,7 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 			j++
 		}
 		if !nextNode.isDelete() {
-			logger.Error("DEBUG addNextNode")
+			logger.Debugf("DEBUG addNextNode")
 			bucketHashCalculator.addNextNode(nextNode)
 		}
 	}
@@ -270,12 +254,12 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 
 	for _, remainingNode := range remainingNodes {
 		if !remainingNode.isDelete() {
-			logger.Error("DEBUG addNextNode")
+			logger.Debugf("DEBUG addNextNode")
 			bucketHashCalculator.addNextNode(remainingNode)
 		}
 	}
 	tmp :=  bucketHashCalculator.computeCryptoHash()
-	logger.Errorf("DEBUG computeCryptoHash computeCryptoHash %s", common.Bytes2Hex(tmp))
+	logger.Debugf("DEBUG computeCryptoHash computeCryptoHash %s", common.Bytes2Hex(tmp))
 	return tmp
 }
 
@@ -287,7 +271,7 @@ func (bucketTree *BucketTree) AddChangesForPersistence(writeBatch hyperdb.Batch,
 
 	if bucketTree.recomputeCryptoHash {
 		hash, err := bucketTree.ComputeCryptoHash()
-		logger.Errorf("DEBUG after revert  current hash %s", common.Bytes2Hex(hash))
+		logger.Debugf("DEBUG after revert  current hash %s", common.Bytes2Hex(hash))
 		if err != nil {
 			return nil
 		}
@@ -328,9 +312,9 @@ func (bucketTree *BucketTree) addBucketNodeChangesForPersistence(writeBatch hype
 		bucketNodes := bucketTree.bucketTreeDelta.getBucketNodesAt(level)
 		for _, bucketNode := range bucketNodes {
 			if bucketNode.markedForDeletion {
-				writeBatch.Delete(append([]byte("BucketNode"), append([]byte(bucketTree.treePrefix), bucketNode.bucketKey.getEncodedBytes()...)...))
+				writeBatch.Delete(append([]byte(BucketNodePrefix), append([]byte(bucketTree.treePrefix), bucketNode.bucketKey.getEncodedBytes()...)...))
 			} else {
-				writeBatch.Put(append([]byte("BucketNode"), append([]byte(bucketTree.treePrefix), bucketNode.bucketKey.getEncodedBytes()...)...), bucketNode.marshal())
+				writeBatch.Put(append([]byte(BucketNodePrefix), append([]byte(bucketTree.treePrefix), bucketNode.bucketKey.getEncodedBytes()...)...), bucketNode.marshal())
 			}
 		}
 	}
@@ -344,7 +328,7 @@ func (bucketTree *BucketTree) addUpdatedValueSetForPersistence(writeBatch hyperd
 		logger.Errorf("marshal updated value set failed")
 		return
 	}
-	dbKey := append([]byte("UpdatedValueSet"), updatedValueSet.BlockNum.Bytes()...)
+	dbKey := append([]byte(UpdatedValueSetPrefix), updatedValueSet.BlockNum.Bytes()...)
 	dbKey = append(dbKey,[]byte(bucketTree.treePrefix)...)
 	writeBatch.Put(dbKey, data)
 }
@@ -449,16 +433,14 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 	bucketTree.dataNodeCache.isEnabled = false
 
 	for i:= currentBlockNum.Int64() + 1;;i++{
-		dbKey := append([]byte("UpdatedValueSet"), big.NewInt(i).Bytes()...)
+		dbKey := append([]byte(UpdatedValueSetPrefix), big.NewInt(i).Bytes()...)
 		dbKey = append(dbKey,[]byte(bucketTree.treePrefix)...)
 		_,err := db.Get(dbKey)
 		if err != nil{
 			if  err.Error()== "leveldb: not found" {
-				logger.Error("all UpdatedValueSet before", i ,"has been clear")
 				currentBlockNum = big.NewInt(i-1)
 				break
 			}else {
-				logger.Error("clear UpdatedValueSet error",err)
 				return err
 			}
 
@@ -468,11 +450,10 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 	}
 
 	for i := currentBlockNum.Int64(); i > toBlockNum.Int64(); i -- {
-		dbKey := append([]byte("UpdatedValueSet"), big.NewInt(i).Bytes()...)
+		dbKey := append([]byte(UpdatedValueSetPrefix), big.NewInt(i).Bytes()...)
 		dbKey = append(dbKey,[]byte(bucketTree.treePrefix)...)
 		value, err := db.Get(dbKey)
 		if err != nil{
-			logger.Error("Current BlockNum is",i,"bucketTree.treePrefix is ",bucketTree.treePrefix,"Test RevertToTargetBlock Error",err.Error())
 			if err.Error() == "leveldb: not found" {
 				logger.Debug("current block has no change",i)
 				continue
@@ -488,20 +469,10 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 		}
 		updatedValueSet := newUpdatedValueSet(big.NewInt(i))
 		err = json.Unmarshal(value, updatedValueSet)
-		logger.Error("---------------the blockNum is start ",i)
-		updatedValueSet.Print(bucketTree.treePrefix)
-		logger.Error("---------------the blockNum is end ",i)
 		if err != nil {
 			logger.Errorf("unmarshal bucket updated values failed. for #%d", i)
 		}
 		revertToTargetBlock(bucketTree.treePrefix, big.NewInt(i), updatedValueSet, &keyValueMap)
-		logger.Criticalf("After revertToTargetBlock start",bucketTree.treePrefix)
-		for k,v := range keyValueMap{
-			logger.Errorf("Print key is %v",k)
-			logger.Errorf("Print value is %v",v)
-		}
-		logger.Criticalf("After revertToTargetBlock end",bucketTree.treePrefix)
-
 		bucketTree.PrepareWorkingSet(keyValueMap,big.NewInt(i))
 		bucketTree.AddChangesForPersistence(writeBatch,big.NewInt(i))
 		keyValueMap = NewKVMap()
@@ -510,21 +481,15 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 	}
 	writeBatch.Write()
 	/*for i := currentBlockNum.Int64();i > toBlockNum.Int64(); i -- {
-		dbKey := append([]byte("UpdatedValueSet"), big.NewInt(i).Bytes()...)
+		dbKey := append([]byte(UpdatedValueSetPrefix), big.NewInt(i).Bytes()...)
 		dbKey = append(dbKey, []byte(bucketTree.treePrefix)...)
 		_, err := db.Get(dbKey)
 		if err != nil {
 			logger.Error("test blockNum is ",i,"error is ",err.Error())
 		}
 	}*/
-	logger.Debug("End RevertToTargetBlock, to ", toBlockNum)
-	hash, _ := bucketTree.ComputeCryptoHash()
-	logger.Criticalf("revert bucket tree current treefix is %v current block number %d, current block hash %s", bucketTree.treePrefix,toBlockNum, common.Bytes2Hex(hash))
-
 	bucketTree.bucketCache.isEnabled = true
 	bucketTree.dataNodeCache.isEnabled = true
-	hash, _ = bucketTree.ComputeCryptoHash()
-	logger.Criticalf("revert bucket tree current treefix is %v current block number %d, current block hash %s", bucketTree.treePrefix,toBlockNum, common.Bytes2Hex(hash))
 	return nil
 }
 
@@ -533,7 +498,6 @@ func revertToTargetBlock(treePrefix string,blockNum *big.Int,updatedValueSet *Up
 	for key, updatedValue := range updatedValueSet.UpdatedKVs {
 		realTreePrefix,realKey := DecodeCompositeKey([]byte(key))
 		(*keyValueMap)[realKey] = updatedValue.PreviousValue
-		logger.Errorf("ACTUALLY KEY %s", string(realKey))
 		if(treePrefix != realTreePrefix){
 			logger.Errorf("--------------------revertToTargetBlock error")
 		}

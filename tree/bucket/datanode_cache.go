@@ -5,7 +5,6 @@ import (
 	"sync"
 	"encoding/json"
 	"github.com/pkg/errors"
-	"hyperchain/common"
 )
 var DataNodeCachePrefix = "-dataNodecache"
 type DataNodeMap map[string] *DataNode
@@ -146,7 +145,6 @@ func (datanodecache *DataNodeCache) clearDataNodeCache() {
 	db, _ := hyperdb.GetLDBDatabase()
 	iter := db.NewIteratorWithPrefix([]byte(DataNodeCachePrefix))
 	for iter.Next() {
-		logger.Errorf("delete clearDataNodeCache",common.Bytes2Hex(ComputeCryptoHash(iter.Value())))
 		keyBytes := iter.Key()
 		db.Delete(keyBytes)
 	}
