@@ -8,12 +8,10 @@ import (
 	"sort"
 	"sync"
 	"time"
-	//"encoding/hex"
 
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
 	"hyperchain/core/types"
-	//"hyperchain/event"
 	"hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"

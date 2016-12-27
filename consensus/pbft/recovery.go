@@ -3,10 +3,12 @@
 package pbft
 
 import (
-	"github.com/golang/protobuf/proto"
-	"hyperchain/consensus/events"
 	"encoding/base64"
+
+	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper/persist"
+
+	"github.com/golang/protobuf/proto"
 )
 
 type blkIdx struct {

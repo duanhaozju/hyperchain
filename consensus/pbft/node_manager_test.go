@@ -7,7 +7,6 @@ import (
 
 	"hyperchain/protos"
 	"hyperchain/event"
-	"hyperchain/core"
 	"hyperchain/consensus/helper"
 )
 
@@ -38,9 +37,8 @@ func TestRecvLocalNewNode(t *testing.T) {
 
 func TestRecvLocalAddNode(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
-
 	id := 1
 	pbftConfigPath := getPbftConfigPath()
 	config := loadConfig(pbftConfigPath)
@@ -72,9 +70,8 @@ func TestRecvLocalAddNode(t *testing.T) {
 
 func TestRecvLocalDelNode(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
-
 	id := 1
 	pbftConfigPath := getPbftConfigPath()
 	config := loadConfig(pbftConfigPath)
@@ -108,9 +105,8 @@ func TestRecvLocalDelNode(t *testing.T) {
 
 func TestSendAgreeAddNode(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
-
 	id := 1
 	pbftConfigPath := getPbftConfigPath()
 	config := loadConfig(pbftConfigPath)
@@ -138,9 +134,8 @@ func TestSendAgreeAddNode(t *testing.T) {
 
 func TestRecvAgreeAddOrDelNode(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
-
 	id := 1
 	pbftConfigPath := getPbftConfigPath()
 	config := loadConfig(pbftConfigPath)
@@ -176,9 +171,8 @@ func TestRecvAgreeAddOrDelNode(t *testing.T) {
 
 func TestMaybeUpdateTableForAdd(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
-
 	id := 1
 	pbftConfigPath := getPbftConfigPath()
 	config := loadConfig(pbftConfigPath)
@@ -219,9 +213,8 @@ func TestMaybeUpdateTableForAdd(t *testing.T) {
 
 func TestMaybeUpdateTableForDel(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
-
 	id := 1
 	pbftConfigPath := getPbftConfigPath()
 	config := loadConfig(pbftConfigPath)
@@ -262,9 +255,8 @@ func TestMaybeUpdateTableForDel(t *testing.T) {
 
 func TestSendReadyForN(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
-
 	id := 1
 	pbftConfigPath := getPbftConfigPath()
 	config := loadConfig(pbftConfigPath)
@@ -294,9 +286,8 @@ func TestSendReadyForN(t *testing.T) {
 
 func TestRecvReadyforNforAdd(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
-
 	id := 1
 	pbftConfigPath := getPbftConfigPath()
 	config := loadConfig(pbftConfigPath)
@@ -340,9 +331,8 @@ func TestRecvReadyforNforAdd(t *testing.T) {
 
 func TestSendUpdateNforDel(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
-
 	id := 1
 	pbftConfigPath := getPbftConfigPath()
 	config := loadConfig(pbftConfigPath)
@@ -368,9 +358,8 @@ func TestSendUpdateNforDel(t *testing.T) {
 
 func TestRecvUpdateN(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
-
 	id := 1
 	pbftConfigPath := getPbftConfigPath()
 	config := loadConfig(pbftConfigPath)
@@ -438,9 +427,9 @@ func TestRecvUpdateN(t *testing.T) {
 }
 
 func TestRecvAgreeUpdateN(t *testing.T) {
-	core.InitDB("/temp/leveldb", 8088)
-	defer clearDB()
 
+	initDB()
+	defer clearDB()
 	id := 1
 	pbftConfigPath := getPbftConfigPath()
 	config := loadConfig(pbftConfigPath)
@@ -483,9 +472,9 @@ func TestRecvAgreeUpdateN(t *testing.T) {
 }
 
 func TestMaybeUpdateN(t *testing.T) {
-	core.InitDB("/temp/leveldb", 8088)
-	defer clearDB()
 
+	initDB()
+	defer clearDB()
 	id := 1
 	pbftConfigPath := getPbftConfigPath()
 	config := loadConfig(pbftConfigPath)

@@ -4,13 +4,13 @@ package pbft
 
 import (
 	"fmt"
+	"encoding/base64"
+	"encoding/binary"
+
 	"hyperchain/consensus/helper/persist"
 
 	"github.com/golang/protobuf/proto"
-	"encoding/base64"
-	"encoding/binary"
 	"github.com/pkg/errors"
-	//"reflect"
 )
 
 func (pbft *pbftProtocal) persistQSet() {
