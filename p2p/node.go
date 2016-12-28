@@ -137,6 +137,17 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	response.MessageType = pb.Message_RESPONSE
 	response.MsgTimeStamp = time.Now().UnixNano()
 	response.From = node.localAddr.ToPeerAddress()
+
+	//验签
+	signPub := node.TEM.GetSignPublicKey(msg.From.Hash)
+	ecdsaEncrypto := primitives.NewEcdsaEncrypto("ecdsa")
+	bol,_ := ecdsaEncrypto.VerifySign(signPub,msg.Payload,msg.Signature.Signature)
+
+	if bol == false {
+		return &response,errors.New("signature is wrong!!")
+	}
+
+
 	//handle the message
 	log.Debug("MSG Type: ", msg.MessageType)
 	switch msg.MessageType {

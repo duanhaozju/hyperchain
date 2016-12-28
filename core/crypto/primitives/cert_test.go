@@ -22,6 +22,7 @@ import (
 	//"encoding/json"
 	"os"
 	"crypto/ecdsa"
+	"crypto"
 )
 
 /*const  ECert  = `-----BEGIN CERTIFICATE-----
@@ -207,24 +208,24 @@ func TestPayload(t *testing.T){
 }
 
 func TestGetCert(t *testing.T){
-	cert,err := GetConfig("../../../config/cert/server/eca.cert1")
+	//cert,err := GetConfig("../../../config/cert/server/eca.cert1")
+	//
+	//if err != nil{
+	//	fmt.Println(err)
+	//	fmt.Println("1231231")
+	//	return
+	//}
+	//byteCert := []byte(cert)
+	//
+	////fmt.Println(byteCert)
+	//
+	//ecrt := ParseCertificate(string(byteCert))
+	//
+	////fmt.Println(ecrt)
+	//
+	//bol := VerifySignature(ecrt)
 
-	if err != nil{
-		fmt.Println(err)
-		fmt.Println("1231231")
-		return
-	}
-	byteCert := []byte(cert)
-
-	//fmt.Println(byteCert)
-
-	ecrt := ParseCertificate(string(byteCert))
-
-	//fmt.Println(ecrt)
-
-	bol := VerifySignature(ecrt)
-
-	fmt.Println(bol)
+	//fmt.Println(bol)
 }
 
 func TestCreateCert(t *testing.T){
@@ -305,4 +306,42 @@ func TestCheckCert(t *testing.T)  {
 	fmt.Println(err2)
 
 
+}
+
+func TestESign(t *testing.T) {
+	payload := []byte{1,23}
+	var pri interface{}
+	var parErr error
+	var sign []byte
+	var err error
+	priStr,getErr := GetConfig("../../../config/cert/ecert.priv")
+	if getErr == nil{
+		//var parErr error
+		pri,parErr = ParseKey(priStr)
+	}
+
+	ecdsaEncrypto := NewEcdsaEncrypto("ecdsa")
+
+	if parErr == nil{
+		sign,err = ecdsaEncrypto.Sign(payload,pri)
+
+		if err == nil{
+			fmt.Println(sign)
+		}
+	}
+
+	var aaa crypto.PublicKey
+
+	aaa = nil
+	//
+	//fmt.Println("#############")
+	//fmt.Println(aaa)
+	//
+	//fmt.Println("#############")
+
+	ecdPri := pri.(*ecdsa.PrivateKey)
+	pub := ecdPri.PublicKey
+fmt.Println(pub)
+	bol,_ := ecdsaEncrypto.VerifySign(&pub,payload,sign)
+	fmt.Println(bol)
 }
