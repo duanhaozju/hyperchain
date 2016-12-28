@@ -78,7 +78,7 @@ func (peer *Peer) handShake() (err error) {
 
 	rca,getErr2 := primitives.GetConfig("../config/cert/server/rca.cert")
 	if getErr2 != nil{
-		log.Error("cannot read ecert.",err)
+		log.Error("cannot read rcert.",err)
 	}
 	rcertByte := []byte(rca)
 
@@ -180,7 +180,7 @@ func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
 		this.Status = 2;
 		log.Error("response err:", err)
 		//TODO
-		panic(err)
+		//panic(err)
 		return nil,err
 	}
 	this.Status = 1;

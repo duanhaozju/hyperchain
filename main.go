@@ -31,9 +31,7 @@ type argT struct {
 	GRPCPort   int    `cli:"l,rpcport" usage:"远程连接端口" dft:"8001"`
 	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
 	RESTPort   int	  `cli:"f,restport" useage:"restful开放端口" dft:"9000"`
-	IsInit     bool   `cli:"i,init" usage:"是否是创世节点" dft:"false"`
-	Introducer string `cli:"r,introducer" usage:"加入代理节点信息,格127.0.0.1:8001"dft:"127.0.0.1:8001:1"`
-	IsReconnect bool  `cli:"e,isReconnect" usage:"是否重新链接" dft:"false"`
+	//IsReconnect bool  `cli:"e,isReconnect" usage:"是否重新链接" dft:"false"`
 }
 
 
@@ -145,12 +143,10 @@ func main() {
 				cs,
 				am,
 				kec256Hash,
-				argv.IsReconnect, //reconnect
 				syncReplicaInterval,
 				syncReplicaEnable,
 				exist,
-				expiredTime,
-				config.getGRPCPort())
+				expiredTime)
 		rateLimitCfg := config.getRateLimitConfig()
 		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(),config.getLogDumpFileDir(),eventMux, pm, rateLimitCfg)
 

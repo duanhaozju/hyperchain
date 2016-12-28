@@ -191,9 +191,13 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			response.Payload = transportPublicKey
 			//REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
 			//REVIEW This no need to call hello event handler
+			//TODO reverse connect the current peer
 			//判断是否需要反向建立链接
-
-			return &response, nil
+			reconnectErr := node.reconnect(msg)
+			if reconnectErr != nil{
+				log.Error("recverse connect to ",msg.From,"error:",reconnectErr)
+			}
+				return &response, nil
 		}
 	case pb.Message_HELLO_RESPONSE:
 		{
@@ -240,7 +244,10 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			//REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
 			//REVIEW This no need to call hello event handler
 			//判断是否需要反向建立链接
-
+			reconnectErr := node.reconnect(msg)
+			if reconnectErr != nil{
+				log.Error("recverse connect to ",msg.From,"error:",reconnectErr)
+			}
 			return &response, nil
 
 		}
@@ -433,7 +440,16 @@ func (node *Node) StopServer() {
 
 }
 
-func (node *Node)reconnect(msg *pb.Message) {
+func (node *Node)reconnect(msg *pb.Message) error {
+	if(node.PeersPool.GetPeer(*pb.RecoverPeerAddr(msg.From)) != nil){
+		peer := node.PeersPool.GetPeer(*pb.RecoverPeerAddr(msg.From))
+		// if peer status equal 2 then delete the peer and rebuild the connection
+		if(peer.Status == 2 && peer.TEM.GetSecret(msg.From.Hash) != ""){
+			node.PeersPool.DeletePeer(peer)
+		} else {
+			return nil
+		}
+	}
 	opts := membersrvc.GetGrpcClientOpts()
 	conn, err := grpc.Dial(msg.From.IP + ":" + strconv.Itoa(int(msg.From.Port)), opts...)
 	//conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
@@ -450,18 +466,38 @@ func (node *Node)reconnect(msg *pb.Message) {
 	node.PeersPool.SetClientByHash(msg.From.Hash,Client)
 	node.PeersPool.SetConnectionByHash(msg.From.Hash,conn)
 
+	eca,getErr1 := primitives.GetConfig("../config/cert/server/eca.cert")
+	if getErr1 != nil{
+		log.Error("cannot read ecert.",err)
+	}
+	ecertBtye := []byte(eca)
+
+	rca,getErr2 := primitives.GetConfig("../config/cert/server/rca.cert")
+	if getErr2 != nil{
+		log.Error("cannot read rcert.",err)
+	}
+	rcertByte := []byte(rca)
+
+	signature := pb.Signature{
+		Ecert:ecertBtye,
+		Rcert:rcertByte,
+	}
+
+
 	//esatblish the connect and regenerate the secrate
 	helloMessage := pb.Message{
 		MessageType:  pb.Message_RECONNECT_RESPONSE,
 		Payload:      node.TEM.GetLocalPublicKey(),
 		From:         node.localAddr.ToPeerAddress(),
 		MsgTimeStamp: time.Now().UnixNano(),
+		Signature: &signature,
 	}
 
 	retMessage, err := peer.Client.Chat(context.Background(), &helloMessage)
 
 	if err != nil {
 		log.Error("cannot establish a connection", err)
+		return
 	} else {
 		//review 取得对方的秘钥
 		if retMessage.MessageType == pb.Message_HELLO_RESPONSE {
@@ -479,4 +515,6 @@ func (node *Node)reconnect(msg *pb.Message) {
 			log.Critical(node.TEM.GetSecret(msg.From.Hash))
 		}
 	}
+	return
+
 }

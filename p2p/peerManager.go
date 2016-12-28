@@ -27,7 +27,7 @@ type PeerManager interface {
 	MsgSender
 	InfoGetter
 	// initialize the peerManager which is for init the local node
-	Start(aliveChain chan int, eventMux *event.TypeMux, isReconnect bool)
+	Start(aliveChain chan int, eventMux *event.TypeMux)
 }
 
 // MsgSender Send msg to others peer
