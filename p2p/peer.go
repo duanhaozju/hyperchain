@@ -43,6 +43,7 @@ type Peer struct {
 func NewPeer(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport.TransportEncryptManager) (*Peer, error){
 	var peer Peer
 	peer.TEM = TEM
+	log.Critical("TEM",TEM)
 	peer.LocalAddr = localAddr
 	peer.PeerAddr = peerAddr
 	//peer.PeerPool = peerspool

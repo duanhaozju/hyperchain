@@ -17,6 +17,7 @@ import (
 	"golang.org/x/net/context"
 	"encoding/hex"
 	"hyperchain/crypto"
+	"hyperchain/common"
 )
 
 const MAX_PEER_NUM = 4
@@ -35,11 +36,11 @@ type GrpcPeerManager struct {
 
 }
 
-func NewGrpcManager(configPath string) *GrpcPeerManager {
-	config := peerComm.NewConfigReader(configPath)
+func NewGrpcManager(conf *common.Config) *GrpcPeerManager {
+	var newgRPCManager GrpcPeerManager
+	config := peerComm.NewConfigReader(conf.GetString("global.configs.peers"))
 	log.Critical(config.GetLocalJsonRPCPort())
 	// configs
-	var newgRPCManager GrpcPeerManager
 	newgRPCManager.configs = config
 
 	newgRPCManager.LocalAddr = pb.NewPeerAddr(config.GetLocalIP(),config.GetLocalGRPCPort(),config.GetLocalJsonRPCPort(),config.GetLocalID())
@@ -49,7 +50,7 @@ func NewGrpcManager(configPath string) *GrpcPeerManager {
 	newgRPCManager.Introducer = pb.NewPeerAddr(config.GetIntroducerIP(),config.GetIntroducerPort(),config.GetIntroducerJSONRPCPort(),config.GetIntroducerID())
 	//HSM only instanced once, so peersPool and Node Hsm are same instance
 
-	//新的handshakemanager
+	//handshakemanager
 	newgRPCManager.TEM = transport.NewHandShakeMangerNew();
 	return &newgRPCManager
 }

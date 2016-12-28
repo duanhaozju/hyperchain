@@ -39,10 +39,7 @@ func New(
 	syncReplicaInterval time.Duration,
 	syncReplica bool,
 	exist chan bool,
-	expiredTime time.Time,
-	//port
-	//port int
-) *ProtocolManager {
+	expiredTime time.Time) *ProtocolManager {
 
 	aliveChan := make(chan int)
 	//add reconnect param
