@@ -111,4 +111,4 @@ build
 hyperchain.iml
 mac.sh
 
-jsonrpc/Dashboard/node_modules
+api/jsonrpc/Dashboard/node_modules

@@ -12,5 +12,6 @@ type Database interface {
 
 type Batch interface {
 	Put(key, value []byte) error
+	Delete(key []byte) error
 	Write() error
 }
