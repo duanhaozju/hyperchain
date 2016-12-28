@@ -30,7 +30,6 @@ type argT struct {
 	ConfigPath  string `cli:"c,conf" usage:"配置文件所在路径" dft:"./config/global.yaml"`
 	GRPCPort    int    `cli:"l,rpcport" usage:"远程连接端口" dft:"8001"`
 	HTTPPort    int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
-	IsReconnect bool  `cli:"r,isReconnect" usage:"是否重新链接" dft:"false"`
 }
 
 func checkLicense(licensePath string) (err error, expiredTime time.Time) {
@@ -134,7 +133,7 @@ func main() {
 		syncReplicaInterval, _ := config.getSyncReplicaInterval()
 		syncReplicaEnable := config.getSyncReplicaEnable()
 		pm := manager.New(eventMux, blockPool, grpcPeerMgr, cs, am, kec256Hash,
-			config.getNodeID(), syncReplicaInterval, syncReplicaEnable, exist, expiredTime, argv.IsReconnect)
+			config.getNodeID(), syncReplicaInterval, syncReplicaEnable, exist, expiredTime)
 
 		go jsonrpc.Start(config.getHTTPPort(), eventMux, pm, config.getRateLimitConfig())
 		<-exist

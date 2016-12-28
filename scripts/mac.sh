@@ -24,6 +24,7 @@ osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain/build 
 osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain/build && ./hyperchain -o 2 -l 8002 -t 8082"'
 osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain/build && ./hyperchain -o 3 -l 8003 -t 8083"'
 osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain/build && ./hyperchain -o 4 -l 8004 -t 8084"'
+osascript -e 'tell app "Terminal" to do script "cd $GOPATH/src/hyperchain/build && ./hyperchain -o 5 -l 8005 -t 8085"'
 
 
 python ./jsonrpc/Dashboard/simpleHttpServer.py

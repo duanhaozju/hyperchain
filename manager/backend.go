@@ -21,10 +21,10 @@ import (
 // init protocol manager params and start
 func New(eventMux *event.TypeMux, blockPool *blockpool.BlockPool, peerManager p2p.PeerManager, consenter consensus.Consenter,
 //encryption crypto.Encryption, commonHash crypto.CommonHash,path string, nodeId int) (error) {
-am *accounts.AccountManager, commonHash crypto.CommonHash, nodeId int, syncReplicaInterval time.Duration, syncReplica bool, expired chan bool, expiredTime time.Time, isReconnect bool) *ProtocolManager {
+am *accounts.AccountManager, commonHash crypto.CommonHash, nodeId int, syncReplicaInterval time.Duration, syncReplica bool, expired chan bool, expiredTime time.Time) *ProtocolManager {
 
 	aliveChan := make(chan bool)
-	go peerManager.Start(aliveChan, eventMux, isReconnect)
+	go peerManager.Start(aliveChan, eventMux)
 
 	//wait for all peer are connected
 	select {
