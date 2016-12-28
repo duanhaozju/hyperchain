@@ -1,6 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-//author:Zhangkejie
+//lastchange:Zhangkejie
 //changelog:modify the some cert's Messages.
 //date:2016-12-07
 package primitives
@@ -134,7 +134,7 @@ func NewSelfSignedCert() ([]byte, interface{}, error) {
 	block.Type="ECDSA PRIVATE KEY"
 	der,_ := PrivateKeyToDER(privKey)
 	block.Bytes = der
-	file,_ := os.Create("rcert.priv")
+	file,_ := os.Create("rca.priv")
 	pem.Encode(file,&block)
 	//--------------------------
 
@@ -145,7 +145,7 @@ func NewSelfSignedCert() ([]byte, interface{}, error) {
 	testExtKeyUsage := []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}
 	testUnknownExtKeyUsage := []asn1.ObjectIdentifier{[]int{1, 2, 3}, []int{2, 59, 1}}
 	extraExtensionData := []byte("extra extension")
-	commonName := "test.hyperchain.cn"
+	commonName := "hyperchain.cn"
 	template := x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
@@ -155,7 +155,7 @@ func NewSelfSignedCert() ([]byte, interface{}, error) {
 			ExtraNames: []pkix.AttributeTypeAndValue{
 				{
 					Type:  []int{2, 5, 4, 42},
-					Value: "Gopher",
+					Value: "Develop",
 				},
 				// This should override the Country, above.
 				{
@@ -165,7 +165,7 @@ func NewSelfSignedCert() ([]byte, interface{}, error) {
 			},
 		},
 		NotBefore: time.Now().Add(-1 * time.Hour),
-		NotAfter:  time.Now().Add(8760 * time.Hour),//暂定证书有效期为一年
+		NotAfter:  time.Now().Add(876000 * time.Hour),//暂定证书有效期为100年
 
 		SignatureAlgorithm: x509.ECDSAWithSHA384,
 
@@ -199,6 +199,76 @@ func NewSelfSignedCert() ([]byte, interface{}, error) {
 	}
 
 	cert, err := x509.CreateCertificate(rand.Reader, &template, &template, &privKey.PublicKey, privKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return cert, privKey, nil
+}
+
+func createCertByCa(ca *x509.Certificate,private interface{}) ([]byte, interface{}, error) {
+
+	caPri := private.(*ecdsa.PrivateKey)
+	privKey, err := NewECDSAKey()
+
+	//储存privateKey
+	var block pem.Block
+	block.Type="ECDSA PRIVATE KEY"
+	der,_ := PrivateKeyToDER(privKey)
+	block.Bytes = der
+	file,_ := os.Create("rcert.priv")
+	pem.Encode(file,&block)
+	//--------------------------
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	testExtKeyUsage := []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}
+	testUnknownExtKeyUsage := []asn1.ObjectIdentifier{[]int{1, 2, 3}, []int{2, 59, 1}}
+	extraExtensionData := []byte("extra extension")
+	commonName := "hyperchain.cn"
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName:   commonName,
+			Organization: []string{"Hyperchain"},
+			Country:      []string{"CHN"},
+			ExtraNames: []pkix.AttributeTypeAndValue{
+				{
+					Type:  []int{2, 5, 4, 42},
+					Value: "Develop",
+				},
+				// This should override the Country, above.
+				{
+					Type:  []int{2, 5, 4, 6},
+					Value: "ZH",
+				},
+			},
+		},
+		NotBefore: time.Now().Add(-1 * time.Hour),
+		NotAfter:  time.Now().Add(876000 * time.Hour),//暂定证书有效期为100年
+
+		SignatureAlgorithm: x509.ECDSAWithSHA384,
+
+		SubjectKeyId: []byte{1, 2, 3, 4},
+		KeyUsage:     x509.KeyUsageCertSign,
+
+		ExtKeyUsage:        testExtKeyUsage,
+		UnknownExtKeyUsage: testUnknownExtKeyUsage,
+
+		BasicConstraintsValid: true,
+		IsCA: true,
+
+		ExtraExtensions: []pkix.Extension{
+			{
+				Id:    []int{1, 2, 3, 4},
+				Value: extraExtensionData,
+			},
+		},
+	}
+
+	cert, err := x509.CreateCertificate(rand.Reader, &template,ca, &privKey.PublicKey, caPri)
 	if err != nil {
 		return nil, nil, err
 	}

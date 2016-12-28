@@ -21,6 +21,7 @@ import (
 	//"os"
 	//"encoding/json"
 	"os"
+	"crypto/ecdsa"
 )
 
 /*const  ECert  = `-----BEGIN CERTIFICATE-----
@@ -75,7 +76,7 @@ func TestECACert(t *testing.T) {
 	der,_,_ := NewSelfSignedCert()
 	//fmt.Println("PrivateKey:" + string(key));
 	pem := DERCertToPEM(der)
-	file,_ := os.Create("rcert.cert")
+	file,_ := os.Create("rca.ca")
 	file.WriteString(string(pem))
 	//fmt.Println(string(pem))
 }
@@ -148,7 +149,7 @@ func TestKey(t *testing.T){
 }
 
 func TestParseKey(t *testing.T){
-	content,_ := ioutil.ReadFile("../../../config/cert/server/eca.priv")
+	content,_ := ioutil.ReadFile("../../../config/cert/cleca.priv")
 
 	privateKey := string(content)
 
@@ -226,3 +227,82 @@ func TestGetCert(t *testing.T){
 	fmt.Println(bol)
 }
 
+func TestCreateCert(t *testing.T){
+	cert,err := GetConfig("./rca.ca")
+
+	if err != nil{
+		fmt.Println(err)
+		fmt.Println("1231231")
+		return
+	}
+	byteCert := []byte(cert)
+
+	//fmt.Println(byteCert)
+
+	ecrt := ParseCertificate(string(byteCert))
+
+	content,_ := ioutil.ReadFile("./rca.priv")
+
+	privateKey := string(content)
+
+	block,_ := pem.Decode([]byte(privateKey));
+
+	//var pri ecdsa.PrivateKey
+
+	pri,_ := DERToPrivateKey(block.Bytes)
+
+
+	ecertByCa,_,_ := createCertByCa(ecrt,pri)
+
+	pem := DERCertToPEM(ecertByCa)
+	file,_ := os.Create("rcert.cert")
+	file.WriteString(string(pem))
+
+	ecertByCa1,_:=DERToX509Certificate(ecertByCa)
+
+	//ecertByCa1 := ParseCertificate()
+pub1 := ecertByCa1.PublicKey.(*ecdsa.PublicKey)
+	fmt.Println(*pub1)
+
+	fmt.Println("---------------------")
+
+	//cPri1 := cPri.(*ecdsa.PrivateKey)
+
+	fmt.Println(ecertByCa1.NotAfter)
+	fmt.Println(ecrt.NotAfter)
+
+	fmt.Println("~~~~~~~~~~~~~~~~~~~~~")
+
+	err1 := ecertByCa1.CheckSignatureFrom(ecrt)
+	fmt.Println(err1)
+}
+
+func TestCheckCert(t *testing.T)  {
+	cert,err := GetConfig("./rca.ca")
+
+	if err != nil{
+		fmt.Println(err)
+		fmt.Println("1231231")
+		return
+	}
+	byteCert := []byte(cert)
+
+	ecrtParent := ParseCertificate(string(byteCert))
+
+	cert1,err1 := GetConfig("./eca.ca")
+
+	if err1 != nil{
+		fmt.Println(err)
+		fmt.Println("1231231")
+		return
+	}
+	byteCert1 := []byte(cert1)
+
+	ecrt := ParseCertificate(string(byteCert1))
+
+	err2 := ecrt.CheckSignatureFrom(ecrtParent)
+
+	fmt.Println(err2)
+
+
+}

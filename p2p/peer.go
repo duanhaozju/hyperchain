@@ -70,13 +70,13 @@ func NewPeer(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport.Transpor
 // handShake 用于与相应的远端peer进行通信，并进行密钥协商
 func (peer *Peer) handShake() (err error) {
 
-	eca,getErr1 := primitives.GetConfig("../config/cert/server/eca.cert")
+	eca,getErr1 := primitives.GetConfig("./config/cert/ecert.cert")
 	if getErr1 != nil{
 		log.Error("cannot read ecert.",err)
 	}
 	ecertBtye := []byte(eca)
 
-	rca,getErr2 := primitives.GetConfig("../config/cert/server/rca.cert")
+	rca,getErr2 := primitives.GetConfig("./config/cert/rcert.cert")
 	if getErr2 != nil{
 		log.Error("cannot read ecert.",err)
 	}

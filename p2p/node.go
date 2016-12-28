@@ -153,21 +153,39 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			//TODO
 			ecertByte := msg.Signature.Ecert
 			rcertByte := msg.Signature.Rcert
+			var verifyEcert bool
+			var verifyRcert bool
+
+			eca,getErr1 := primitives.GetConfig("./config/cert/eca.ca")
+			if getErr1 != nil{
+				log.Error("cannot read ecert.",getErr1)
+			}
+			ecaBtye := []byte(eca)
+
+			rca,getErr2 := primitives.GetConfig("./config/cert/rca.ca")
+			if getErr2 != nil{
+				log.Error("cannot read ecert.",getErr2)
+			}
+			rcaByte := []byte(rca)
+
+			ecaPem := primitives.ParseCertificate(string(ecaBtye))
+			rcaPem := primitives.ParseCertificate(string(rcaByte))
 
 			if len(ecertByte) == 0{
-				panic("cannot find ecert,please check the configuration.")
+				return &response,errors.New("ecert is miss.")
+			}else {
+				ecert := primitives.ParseCertificate(string(ecertByte))
+				verifyEcert = primitives.VerifySignature(ecert,ecaPem)
+
 			}
 
 			if len(rcertByte) == 0{
-				panic("cannot find ecert,please check the configuration.")
+				node.TEM.SetIsVerified(false,msg.From.Hash)
+			}else {
+				rcert := primitives.ParseCertificate(string(rcertByte))
+				verifyRcert = primitives.VerifySignature(rcert,rcaPem)
+				node.TEM.SetIsVerified(verifyRcert,msg.From.Hash)
 			}
-
-			ecert := primitives.ParseCertificate(string(ecertByte))
-			rcert := primitives.ParseCertificate(string(rcertByte))
-
-			verifyEcert := primitives.VerifySignature(ecert)
-			verifyRcert := primitives.VerifySignature(rcert)
-
 			remotePublicKey := msg.Payload
 			genErr := node.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
 
@@ -178,7 +196,6 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			e := ecdh.NewEllipticECDH(elliptic.P384())
 			pub,_ := e.Unmarshal(msg.Payload)
 			node.TEM.SetSignPublicKey(pub,msg.From.Hash)
-			node.TEM.SetIsVerified(verifyRcert,msg.From.Hash)
 			if genErr != nil {
 				log.Error("gen sec error", genErr)
 			}
