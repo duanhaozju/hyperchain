@@ -141,7 +141,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	//验签
 	signPub := node.TEM.GetSignPublicKey(msg.From.Hash)
 	ecdsaEncrypto := primitives.NewEcdsaEncrypto("ecdsa")
-	bol,_ := ecdsaEncrypto.VerifySign(signPub,msg.Payload,msg.Signature.Signature)
+	bol,_ := ecdsaEncrypto.VerifySign(&signPub,msg.Payload,msg.Signature.Signature)
 
 	if bol == false {
 		return &response,errors.New("signature is wrong!!")
