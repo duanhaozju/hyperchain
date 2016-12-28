@@ -199,9 +199,9 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			if genErr != nil {
 				log.Error("gen sec error", genErr)
 			}
-			log.Notice("remote addr hash：", msg.From.Hash)
-			log.Notice("negotiated key is ", node.TEM.GetSecret(msg.From.Hash))
-			log.Notice("remote publickey is:",remotePublicKey)
+			log.Debug("remote addr hash：", msg.From.Hash)
+			log.Debug("negotiated key is ", node.TEM.GetSecret(msg.From.Hash))
+			log.Debug("remote publickey is:",remotePublicKey)
 			//every times get the public key is same
 			transportPublicKey := node.TEM.GetLocalPublicKey()
 			//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
@@ -211,10 +211,10 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			//TODO reverse connect the current peer
 			//判断是否需要反向建立链接
 
-			 reconnectErr := node.reconnect(msg)
-			 if reconnectErr != nil{
-			 	log.Error("recverse connect to ",msg.From,"error:",reconnectErr)
-			 }
+			 //reconnectErr := node.reconnect(msg)
+			 //if reconnectErr != nil{
+			 //	log.Error("recverse connect to ",msg.From,"error:",reconnectErr)
+			 //}
 				return &response, nil
 		}
 	case pb.Message_HELLO_RESPONSE:
@@ -469,7 +469,7 @@ func (node *Node)reconnect(msg *pb.Message) error {
 		log.Criticalf("peer: %v",peer)
 		// if peer status equal 2 then delete the peer and rebuild the connection
 		if(peer.Status == 2 || peer.TEM.GetSecret(msg.From.Hash) != ""){
-			node.PeersPool.DeletePeer(peer)
+			//node.PeersPool.DeletePeer(peer)
 		} else {
 			return nil
 		}
@@ -478,7 +478,8 @@ func (node *Node)reconnect(msg *pb.Message) error {
 	_,err := node.PeersPool.GetPeerByHash(msg.From.Hash)
 	if  err != nil {
 		log.Warning("This remote Node hasn't existed, and try to reconnect...")
-		peer,err := NewPeer(pb.RecoverPeerAddr(msg.From),node.localAddr,node.TEM)
+
+		peer,err := NewPeerReconnect(pb.RecoverPeerAddr(msg.From),node.localAddr,node.TEM)
 		if err != nil{
 			log.Critical("new peer failed")
 		}else{

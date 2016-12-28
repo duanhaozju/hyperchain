@@ -116,7 +116,7 @@ if $REBUILD; then
     if [ -s "${DUMP_PATH}/hyperchain" ]; then
         rm ${DUMP_PATH}/hyperchain
     fi
-    govendor build -o ${DUMP_PATH}/hyperchain
+     govendor build -o ${DUMP_PATH}/hyperchain
 fi
 
 # cp the hyperchain files into nodes

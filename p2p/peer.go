@@ -41,9 +41,10 @@ type Peer struct {
 // NewPeer 用于返回一个新的NewPeer 用于与远端的peer建立连接，这个peer将会存储在peerPool中
 // 如果取得相应的连接返回值，将会将peer存储在单例的PeersPool中进行存储
 func NewPeer(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport.TransportEncryptManager) (*Peer, error){
+	//log.Critical(peerAddr,localAddr,TEM)
 	var peer Peer
 	peer.TEM = TEM
-	log.Critical("TEM",TEM)
+	//log.Critical("TEM",TEM)
 	peer.LocalAddr = localAddr
 	peer.PeerAddr = peerAddr
 	//peer.PeerPool = peerspool

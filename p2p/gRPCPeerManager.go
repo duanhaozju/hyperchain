@@ -39,12 +39,12 @@ type GrpcPeerManager struct {
 func NewGrpcManager(conf *common.Config) *GrpcPeerManager {
 	var newgRPCManager GrpcPeerManager
 	config := peerComm.NewConfigReader(conf.GetString("global.configs.peers"))
-	log.Critical(config.GetLocalJsonRPCPort())
+	//log.Critical(config.GetLocalJsonRPCPort())
 	// configs
 	newgRPCManager.configs = config
 
 	newgRPCManager.LocalAddr = pb.NewPeerAddr(config.GetLocalIP(),config.GetLocalGRPCPort(),config.GetLocalJsonRPCPort(),config.GetLocalID())
-	log.Critical("local ID",newgRPCManager.LocalAddr.ID)
+	//log.Critical("local ID",newgRPCManager.LocalAddr.ID)
 	//get the maxpeer from config
 	newgRPCManager.IsOriginal = config.IsOrigin()
 	newgRPCManager.Introducer = pb.NewPeerAddr(config.GetIntroducerIP(),config.GetIntroducerPort(),config.GetIntroducerJSONRPCPort(),config.GetIntroducerID())
