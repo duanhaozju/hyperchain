@@ -41,7 +41,7 @@ func NewHandShakeMangerNew() *HandShakeManagerNew {
 	hSMN.isVerified = make(map[string]bool)
 	hSMN.e = ecdh.NewEllipticECDH(elliptic.P384())
 	var err error
-	contentPri,getErr1 := primitives.GetConfig("../../config/cert/server/eca.priv")
+	contentPri,getErr1 := primitives.GetConfig("./config/cert/ecert.priv")
 	//contenrPub,getErr2 := primitives.GetConfig("../../config/cert/server/eca.cert")
 
 	//若无私钥，相当于无ecert,但为确保节点启动，自动生产公私钥对

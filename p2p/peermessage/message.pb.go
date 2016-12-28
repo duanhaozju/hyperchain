@@ -270,6 +270,7 @@ func NewChatClient(cc *grpc.ClientConn) ChatClient {
 }
 
 func (c *chatClient) Chat(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error) {
+
 	out := new(Message)
 	err := grpc.Invoke(ctx, "/peermessage.Chat/Chat", in, out, c.cc, opts...)
 	if err != nil {

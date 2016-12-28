@@ -48,8 +48,9 @@ func ParseCertificate(ECert string) (*x509.Certificate){
 }
 
 //验证证书中的签名
-func VerifySignature(cert *x509.Certificate) bool{
-	err:=cert.CheckSignature(cert.SignatureAlgorithm,cert.RawTBSCertificate,cert.Signature)
+func VerifySignature(cert *x509.Certificate,ca *x509.Certificate) bool{
+
+	err:=cert.CheckSignatureFrom(ca)
 	if err==nil{
 		return true
 	}else {
