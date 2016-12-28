@@ -110,7 +110,8 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	}
 	pbft.rcRspStore[from] = rsp
 
-	if len(pbft.rcRspStore) <= pbft.N-pbft.f {
+	if len(pbft.rcRspStore) <= 2 * pbft.f + 1 {
+		// Reason for not using '≤ pbft.N-pbft.f': if N==5, we are require more than we need
 		logger.Debugf("Replica %d recv recoveryRsp from replica %d, rsp count: %d, not " +
 			"beyond %d", pbft.id, rsp.ReplicaId, len(pbft.rcRspStore), pbft.N-pbft.f)
 		return nil
