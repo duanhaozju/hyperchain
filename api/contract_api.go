@@ -196,7 +196,7 @@ func (contract *PublicContractAPI) EncryptoMessage(args EncryptoArgs) (*HmResult
 	amount_hm_bigint := new(big.Int)
 
 	if !isValid {
-		return &HmResult{},errors.New("out of balance")
+		return &HmResult{},&outofBalanceError{"out of balance"}
 	}
 
 	return &HmResult{
@@ -212,7 +212,7 @@ type ValueArgs struct {
 
 func (contract *PublicContractAPI) CheckHmValue(args ValueArgs) ([]bool, error){
 	if len(args.RawValue) != len(args.EncryValue) {
-		return nil, errors.New("invalid params, two array length not equal")
+		return nil, &invalidParamsError{"invalid params, two array length not equal"}
 	}
 
 	result := make([]bool, len(args.RawValue))
