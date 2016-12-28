@@ -18,6 +18,7 @@ import (
 	"encoding/hex"
 	"hyperchain/crypto"
 	"hyperchain/common"
+	"math"
 )
 
 const MAX_PEER_NUM = 4
@@ -165,9 +166,19 @@ func (this *GrpcPeerManager) connectToPeers() {
 			peerStatus[i] = false
 		}
 	}
+	N := MAX_PEER_NUM
+	F := int(math.Floor((MAX_PEER_NUM - 1)/3))
+
+	MaxNum := 0
+	if this.configs.IsOrigin() {
+		MaxNum = N-1
+	}else{
+		MaxNum = N - F - 1
+	}
+
 	// connect other peers
 	//TODO RETRY CONNECT 重试连接(未实现)
-	for this.peersPool.GetAliveNodeNum() < MAX_PEER_NUM - 1 {
+	for this.peersPool.GetAliveNodeNum() < MaxNum{
 		log.Debug("node:", this.LocalAddr.ID, "连接节点...")
 		log.Debug("nodes number:", this.peersPool.GetAliveNodeNum())
 		nid := 1

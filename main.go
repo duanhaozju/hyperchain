@@ -27,10 +27,10 @@ import (
 type argT struct {
 	cli.Helper
 	NodeID     int    `cli:"o,id" usage:"node ID" dft:"1"`
-	ConfigPath string `cli:"c,conf" usage:"配置文件所在路径" dft:"./config/global.yaml"`
-	GRPCPort   int    `cli:"l,rpcport" usage:"远程连接端口" dft:"8001"`
-	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
-	RESTPort   int	  `cli:"f,restport" useage:"restful开放端口" dft:"9000"`
+	ConfigPath string `cli:"c,conf" usage:"config file path" dft:"./config/global.yaml"`
+	GRPCPort   int    `cli:"l,rpcport" usage:"inner grpc connect port" dft:"8001"`
+	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc open port" dft:"8081"`
+	RESTPort   int	  `cli:"f,restport" useage:"restful api port" dft:"9000"`
 	//IsReconnect bool  `cli:"e,isReconnect" usage:"是否重新链接" dft:"false"`
 }
 
