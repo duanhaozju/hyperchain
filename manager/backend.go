@@ -20,8 +20,7 @@ import (
 
 // init protocol manager params and start
 func New(eventMux *event.TypeMux, blockPool *blockpool.BlockPool, peerManager p2p.PeerManager, consenter consensus.Consenter,
-//encryption crypto.Encryption, commonHash crypto.CommonHash,path string, nodeId int) (error) {
-am *accounts.AccountManager, commonHash crypto.CommonHash, nodeId int, syncReplicaInterval time.Duration, syncReplica bool, expired chan bool, expiredTime time.Time) *ProtocolManager {
+am *accounts.AccountManager, commonHash crypto.CommonHash, nodeId int, syncReplicaInterval time.Duration, syncReplica bool, expired chan bool, licensePath string,) *ProtocolManager {
 
 	aliveChan := make(chan bool)
 	go peerManager.Start(aliveChan, eventMux)
@@ -32,7 +31,7 @@ am *accounts.AccountManager, commonHash crypto.CommonHash, nodeId int, syncRepli
 		{
 
 			//protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, fetcher, consenter, encryption, commonHash)
-			protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, consenter, am, commonHash, syncReplicaInterval, syncReplica, expired, expiredTime)
+			protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, consenter, am, commonHash, syncReplicaInterval, syncReplica, expired, licensePath)
 			protocolManager.Start()
 			// consensusEvent NegotiateView
 			negoView := &protos.Message{
