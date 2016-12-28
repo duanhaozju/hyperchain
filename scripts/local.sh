@@ -116,7 +116,7 @@ if $REBUILD; then
     if [ -s "${DUMP_PATH}/hyperchain" ]; then
         rm ${DUMP_PATH}/hyperchain
     fi
-    govendor build -o ${DUMP_PATH}/hyperchain
+     govendor build -o ${DUMP_PATH}/hyperchain
 fi
 
 # cp the hyperchain files into nodes
@@ -132,13 +132,13 @@ cd ${DUMP_PATH}
 runXinXinLinux(){
     for((j=1;j<=$MAXPEERNUM;j++))
     do
-        gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${j} -l 800${j} -t 808${j} -f 900${j} -i true"
+        gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${j}"
     done
 }
 runXinXinMac(){
     for((j=1;j<=$MAXPEERNUM;j++))
     do
-        osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${j}' && ./hyperchain  -o '${j}'"'
+        osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${j}' && ./hyperchain -o '${j}'"'
     done
 }
 runXin1(){

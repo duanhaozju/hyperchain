@@ -38,13 +38,14 @@ func (pa *PeerAddr) ToPeerAddress() *PeerAddress{
 }
 
 // recover the peerAddress into PeerAddr
-func RecoverPeerAddr(peerAddress *PeerAddress)(pa *PeerAddr){
+func RecoverPeerAddr(peerAddress *PeerAddress) *PeerAddr{
+	var pa PeerAddr
 	pa.Hash = peerAddress.Hash
 	pa.IP = peerAddress.IP
 	pa.ID = int(peerAddress.ID)
 	pa.RpcPort = int(peerAddress.RpcPort)
 	pa.Port = int(peerAddress.Port)
-	return
+	return &pa
 }
 
 func getHash(needHashString string) string {

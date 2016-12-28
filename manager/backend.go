@@ -36,18 +36,15 @@ func New(
 	consenter consensus.Consenter,
 	am *accounts.AccountManager,
 	commonHash crypto.CommonHash,
-	isReconnect bool,
 	syncReplicaInterval time.Duration,
 	syncReplica bool,
 	exist chan bool,
-	expiredTime time.Time,
-	//port
-	port int) *ProtocolManager {
+	expiredTime time.Time) *ProtocolManager {
 
 	aliveChan := make(chan int)
 	//add reconnect param
 
-	go peerManager.Start(aliveChan, eventMux, isReconnect)
+	go peerManager.Start(aliveChan, eventMux)
 	//wait for all peer are connected
 	initType := <-aliveChan
 	//select {

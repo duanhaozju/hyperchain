@@ -27,13 +27,11 @@ import (
 type argT struct {
 	cli.Helper
 	NodeID     int    `cli:"o,id" usage:"node ID" dft:"1"`
-	ConfigPath string `cli:"c,conf" usage:"配置文件所在路径" dft:"./config/global.yaml"`
-	GRPCPort   int    `cli:"l,rpcport" usage:"远程连接端口" dft:"8001"`
-	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
-	RESTPort   int	  `cli:"f,restport" useage:"restful开放端口" dft:"9000"`
-	IsInit     bool   `cli:"i,init" usage:"是否是创世节点" dft:"false"`
-	Introducer string `cli:"r,introducer" usage:"加入代理节点信息,格127.0.0.1:8001"dft:"127.0.0.1:8001:1"`
-	IsReconnect bool  `cli:"e,isReconnect" usage:"是否重新链接" dft:"false"`
+	ConfigPath string `cli:"c,conf" usage:"config file path" dft:"./config/global.yaml"`
+	GRPCPort   int    `cli:"l,rpcport" usage:"inner grpc connect port" dft:"8001"`
+	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc open port" dft:"8081"`
+	RESTPort   int	  `cli:"f,restport" useage:"restful api port" dft:"9000"`
+	//IsReconnect bool  `cli:"e,isReconnect" usage:"是否重新链接" dft:"false"`
 }
 
 
@@ -83,11 +81,24 @@ func checkLicense(licensePath string) (err error, expiredTime time.Time) {
 	return
 }
 
+func initConf(argv *argT) *common.Config {
+	conf := common.NewConfig(argv.ConfigPath)
+	conf.Set(common.HYPERCHAIN_ID, argv.NodeID)
+	conf.Set(common.HTTP_PORT, argv.HTTPPort)
+	conf.Set(common.REST_PORT, argv.RESTPort)
+	conf.Set(common.GRPC_PORT, argv.GRPCPort)
+	return conf
+}
+
 func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*argT)
 
+		//TODO:remove this config later
 		config := newconfigsImpl(argv.ConfigPath, argv.NodeID, argv.GRPCPort, argv.HTTPPort, argv.RESTPort)
+
+		conf := initConf(argv)
+		common.InitLog(conf)
 
 		err, expiredTime := checkLicense(config.getLicense())
 		if err != nil {
@@ -96,13 +107,11 @@ func main() {
 
 		membersrvc.Start(config.getMemberSRVCConfigPath(), config.getNodeID())
 
-		//init log
-		common.InitLog(config.getLogLevel(), config.getLogDumpFileDir(), config.getGRPCPort(), config.getLogDumpFileFlag())
-
 		eventMux := new(event.TypeMux)
 
 		//init peer manager to start grpc server and client
-		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath())
+		//grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath())
+		grpcPeerMgr := p2p.NewGrpcManager(conf)
 
 
 		//init db
@@ -145,12 +154,10 @@ func main() {
 				cs,
 				am,
 				kec256Hash,
-				argv.IsReconnect, //reconnect
 				syncReplicaInterval,
 				syncReplicaEnable,
 				exist,
-				expiredTime,
-				config.getGRPCPort())
+				expiredTime)
 		rateLimitCfg := config.getRateLimitConfig()
 		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(),config.getLogDumpFileDir(),eventMux, pm, rateLimitCfg)
 

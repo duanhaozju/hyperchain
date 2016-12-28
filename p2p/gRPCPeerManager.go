@@ -17,6 +17,8 @@ import (
 	"golang.org/x/net/context"
 	"encoding/hex"
 	"hyperchain/crypto"
+	"hyperchain/common"
+	"math"
 )
 
 const MAX_PEER_NUM = 4
@@ -35,27 +37,27 @@ type GrpcPeerManager struct {
 
 }
 
-func NewGrpcManager(configPath string) *GrpcPeerManager {
-	config := peerComm.NewConfigReader(configPath)
-	log.Critical(config.GetLocalJsonRPCPort())
-	// configs
+func NewGrpcManager(conf *common.Config) *GrpcPeerManager {
 	var newgRPCManager GrpcPeerManager
+	config := peerComm.NewConfigReader(conf.GetString("global.configs.peers"))
+	//log.Critical(config.GetLocalJsonRPCPort())
+	// configs
 	newgRPCManager.configs = config
 
 	newgRPCManager.LocalAddr = pb.NewPeerAddr(config.GetLocalIP(),config.GetLocalGRPCPort(),config.GetLocalJsonRPCPort(),config.GetLocalID())
-	log.Critical("local ID",newgRPCManager.LocalAddr.ID)
+	//log.Critical("local ID",newgRPCManager.LocalAddr.ID)
 	//get the maxpeer from config
 	newgRPCManager.IsOriginal = config.IsOrigin()
 	newgRPCManager.Introducer = pb.NewPeerAddr(config.GetIntroducerIP(),config.GetIntroducerPort(),config.GetIntroducerJSONRPCPort(),config.GetIntroducerID())
 	//HSM only instanced once, so peersPool and Node Hsm are same instance
 
-	//新的handshakemanager
+	//handshakemanager
 	newgRPCManager.TEM = transport.NewHandShakeMangerNew();
 	return &newgRPCManager
 }
 
 // Start start the Normal local listen server
-func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux, isReconnect bool) {
+func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux) {
 	if this.LocalAddr.ID == 0 || this.configs == nil {
 		panic("the PeerManager hasn't initlized")
 	}
@@ -66,7 +68,7 @@ func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 	// connect to peer
 	if this.IsOriginal {
 		// load the waiting connecting node information
-		this.connectToPeers(isReconnect)
+		this.connectToPeers()
 		//log.Critical("Routing table:", this.peersPool.peerAddr)
 
 		aliveChain <- 0
@@ -154,7 +156,7 @@ func (this *GrpcPeerManager) connectToIntroducer( introducerAddress pb.PeerAddr)
 	this.LocalNode.N = len(this.GetAllPeersWithTemp())
 }
 
-func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
+func (this *GrpcPeerManager) connectToPeers() {
 	var peerStatus  map[int]bool
 	peerStatus = make(map[int]bool)
 	for i := 1; i <= MAX_PEER_NUM; i++ {
@@ -164,9 +166,19 @@ func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 			peerStatus[i] = false
 		}
 	}
+	N := MAX_PEER_NUM
+	F := int(math.Floor((MAX_PEER_NUM - 1)/3))
+
+	MaxNum := 0
+	if this.configs.IsOrigin() {
+		MaxNum = N-1
+	}else{
+		MaxNum = N - F - 1
+	}
+
 	// connect other peers
 	//TODO RETRY CONNECT 重试连接(未实现)
-	for this.peersPool.GetAliveNodeNum() < MAX_PEER_NUM - 1 {
+	for this.peersPool.GetAliveNodeNum() < MaxNum{
 		log.Debug("node:", this.LocalAddr.ID, "连接节点...")
 		log.Debug("nodes number:", this.peersPool.GetAliveNodeNum())
 		nid := 1
@@ -188,7 +200,7 @@ func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 			//peerAddress := peerComm.ExtractAddress(peerIp, peerPort, _index)
 			//TODO fix the getJSONRPC PORT
 			peerAddress := pb.NewPeerAddr(peerIp, peerPort, this.configs.GetPort(_index)+80,_index)
-			peer, connectErr := this.connectToPeer(peerAddress, _index, isReconnect)
+			peer, connectErr := this.connectToPeer(peerAddress, _index)
 			if connectErr != nil {
 				// cannot connect to other peer
 				log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n", connectErr)
@@ -212,15 +224,15 @@ func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 }
 
 //connect to peer by ip address and port (why int32? because of protobuf limit)
-func (this *GrpcPeerManager) connectToPeer(peerAddress *pb.PeerAddr, nid int, isReconnect bool) (*Peer, error) {
+func (this *GrpcPeerManager) connectToPeer(peerAddress *pb.PeerAddr, nid int) (*Peer, error) {
 	//if this node is not online, connect it
 	var peer *Peer
 	var peerErr error
-	if isReconnect {
-		peer, peerErr = NewPeerReconnect(peerAddress,this.LocalAddr,this.TEM)
-	} else {
-		peer, peerErr = NewPeer(peerAddress,this.LocalAddr,this.TEM)
-	}
+	//if isReconnect {
+	//	peer, peerErr = NewPeerReconnect(peerAddress,this.LocalAddr,this.TEM)
+	//} else {
+	peer, peerErr = NewPeer(peerAddress,this.LocalAddr,this.TEM)
+	//}
 
 	if peerErr != nil {
 		// cannot connect to other peer

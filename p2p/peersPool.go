@@ -12,7 +12,7 @@ type PeersPool interface{
 	PutPeer(address pb.PeerAddr, client *Peer) error
 	PutPeerToTemp(address pb.PeerAddr, client *Peer) error
 	GetPeer(address pb.PeerAddr) *Peer
-	GetPeerByHash(hash string) *Peer
+	GetPeerByHash(hash string) (*Peer,error)
 	GetPeers() []*Peer
 	GetPeersWithTemp() []*Peer
 	GetAliveNodeNum() int

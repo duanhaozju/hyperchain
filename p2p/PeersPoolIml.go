@@ -78,16 +78,17 @@ func (this *PeersPoolIml) PutPeerToTemp(addr pb.PeerAddr, client *Peer) error {
 }
 
 // GetPeerByHash
-func (this *PeersPoolIml) GetPeerByHash(hash string) *Peer{
+func (this *PeersPoolIml) GetPeerByHash(hash string) (*Peer,error){
 	if _,ok := this.peerAddr[hash];ok{
 		peerAddr := this.peerAddr[hash]
-		return this.peers[peerAddr.Hash]
+		return this.peers[peerAddr.Hash],nil
 	}
-	return nil
+	return nil,errors.New("cannot find the peer")
 }
 
 // GetPeer get a peer point by the peer address
 func (this *PeersPoolIml) GetPeer(addr pb.PeerAddr) *Peer {
+	log.Critical("inner get peer")
 	if clientName, ok := this.peerKeys[addr]; ok {
 		client := this.peers[clientName]
 		return client
@@ -216,11 +217,25 @@ func (this *PeersPoolIml)DeletePeer(peer *Peer){
 
 func (this *PeersPoolIml) SetConnectionByHash(hash string,conn *grpc.ClientConn) error{
 	//TODO check error
+	if this.peers == nil{
+		this.peers = make(map[string]*Peer)
+		this.peerAddr = make(map[string]pb.PeerAddr)
+		this.peerKeys = make(map[pb.PeerAddr]string)
+	}
 	this.peers[hash].Connection = conn
 	return nil
 }
 func (this *PeersPoolIml) SetClientByHash(hash string, client pb.ChatClient) error{
 	//TODO check error
-	this.peers[hash].Client = client
-	return nil
+	if this.peers == nil{
+		this.peers = make(map[string]*Peer)
+	}
+	if _,ok := this.peers[hash];ok {
+		this.peers[hash].Client = client
+		return nil
+	}else{
+		panic("cannot set")
+	}
+	//this.peers[hash].Client = client
+
 }

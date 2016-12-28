@@ -210,18 +210,23 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			if genErr != nil {
 				log.Error("gen sec error", genErr)
 			}
-			log.Notice("remote addr hash：", msg.From.Hash)
-			log.Notice("negotiated key is ", node.TEM.GetSecret(msg.From.Hash))
-			log.Notice("remote publickey is:",remotePublicKey)
+			log.Debug("remote addr hash：", msg.From.Hash)
+			log.Debug("negotiated key is ", node.TEM.GetSecret(msg.From.Hash))
+			log.Debug("remote publickey is:",remotePublicKey)
 			//every times get the public key is same
 			transportPublicKey := node.TEM.GetLocalPublicKey()
 			//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
 			response.Payload = transportPublicKey
 			//REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
 			//REVIEW This no need to call hello event handler
+			//TODO reverse connect the current peer
 			//判断是否需要反向建立链接
 
-			return &response, nil
+			 //reconnectErr := node.reconnect(msg)
+			 //if reconnectErr != nil{
+			 //	log.Error("recverse connect to ",msg.From,"error:",reconnectErr)
+			 //}
+				return &response, nil
 		}
 	case pb.Message_HELLO_RESPONSE:
 		{
@@ -268,7 +273,10 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			//REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
 			//REVIEW This no need to call hello event handler
 			//判断是否需要反向建立链接
-
+			reconnectErr := node.reconnect(msg)
+			if reconnectErr != nil{
+				log.Error("recverse connect to ",msg.From,"error:",reconnectErr)
+			}
 			return &response, nil
 
 		}
@@ -461,50 +469,36 @@ func (node *Node) StopServer() {
 
 }
 
-func (node *Node)reconnect(msg *pb.Message) {
-	opts := membersrvc.GetGrpcClientOpts()
-	conn, err := grpc.Dial(msg.From.IP + ":" + strconv.Itoa(int(msg.From.Port)), opts...)
-	//conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
-	if err != nil {
-		errors.New("Cannot establish a connection!")
-		log.Error("err:", err)
+func (node *Node)reconnect(msg *pb.Message) error {
+	log.Criticalf("start reconnect.. %v",node.PeersPool.GetAliveNodeNum())
+	if node.PeersPool.GetAliveNodeNum() == 0{
+		return errors.New("the peerpool hasn't initial")
 	}
-	Client := pb.NewChatClient(conn)
-	peer := node.PeersPool.GetPeerByHash(msg.From.Hash)
-	if  peer == nil {
-		log.Warning("This remote Node already existed, and try to reconnect...")
-	}
-
-	node.PeersPool.SetClientByHash(msg.From.Hash,Client)
-	node.PeersPool.SetConnectionByHash(msg.From.Hash,conn)
-
-	//esatblish the connect and regenerate the secrate
-	helloMessage := pb.Message{
-		MessageType:  pb.Message_RECONNECT_RESPONSE,
-		Payload:      node.TEM.GetLocalPublicKey(),
-		From:         node.localAddr.ToPeerAddress(),
-		MsgTimeStamp: time.Now().UnixNano(),
-	}
-
-	retMessage, err := peer.Client.Chat(context.Background(), &helloMessage)
-
-	if err != nil {
-		log.Error("cannot establish a connection", err)
-	} else {
-		//review 取得对方的秘钥
-		if retMessage.MessageType == pb.Message_HELLO_RESPONSE {
-			remotePublicKey := retMessage.Payload
-			genErr := node.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
-			if genErr != nil {
-				log.Error("genErr", err)
-			}
-
-			if err != nil {
-				log.Error("cannot decrypt the nodeidinfo!")
-				errors.New("Decrypt ERROR")
-			}
-			log.Critical("reconnect to reverse ID :", msg.From.ID, node.TEM.GetSecret(msg.From.Hash))
-			log.Critical(node.TEM.GetSecret(msg.From.Hash))
+	p,e := node.PeersPool.GetPeerByHash(msg.From.Hash)
+	log.Criticalf("getPeerByHash,%v,%v",p,e)
+	if peer,err := node.PeersPool.GetPeerByHash(msg.From.Hash); err== nil{
+		log.Criticalf("peer: %v",peer)
+		// if peer status equal 2 then delete the peer and rebuild the connection
+		if(peer.Status == 2 || peer.TEM.GetSecret(msg.From.Hash) != ""){
+			//node.PeersPool.DeletePeer(peer)
+		} else {
+			return nil
 		}
 	}
+	log.Critical("judge finish")
+	_,err := node.PeersPool.GetPeerByHash(msg.From.Hash)
+	if  err != nil {
+		log.Warning("This remote Node hasn't existed, and try to reconnect...")
+
+		peer,err := NewPeerReconnect(pb.RecoverPeerAddr(msg.From),node.localAddr,node.TEM)
+		if err != nil{
+			log.Critical("new peer failed")
+		}else{
+		//TODO already exist handler
+			node.PeersPool.PutPeer(*pb.RecoverPeerAddr(msg.From),peer)
+
+		}
+	}
+	return nil
+
 }
