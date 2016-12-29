@@ -60,7 +60,7 @@ func NewGrpcManager(configPath string, nodeID int) *GrpcPeerManager {
 }
 
 // Start start the Normal local listen server
-func (this *GrpcPeerManager) Start(aliveChain chan bool, eventMux *event.TypeMux, isReconnect bool) {
+func (this *GrpcPeerManager) Start(aliveChain chan bool, eventMux *event.TypeMux) {
 	if this.NodeID == 0 || this.configs == nil {
 		log.Error("the gRPC Manager hasn't initlized")
 		os.Exit(1)
@@ -71,7 +71,7 @@ func (this *GrpcPeerManager) Start(aliveChain chan bool, eventMux *event.TypeMux
 	this.LocalNode.StartServer()
 	// connect to peer
 	// 读取待连接的节点信息
-	this.connectToPeers(isReconnect)
+	this.connectToPeers()
 
 	log.Notice("┌────────────────────────────┐")
 	log.Notice("│  All NODES WERE CONNECTED  │")
@@ -80,10 +80,12 @@ func (this *GrpcPeerManager) Start(aliveChain chan bool, eventMux *event.TypeMux
 	aliveChain <- true
 }
 
-func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
+func (this *GrpcPeerManager) connectToPeers() {
 	// connect other peers
+	N := this.MaxPeerNumber
+	F := (N-1)/3
 	//TODO RETRY CONNECT 重试连接(未实现)
-	for this.peersPool.GetAliveNodeNum() < this.MaxPeerNumber-1 {
+	for this.peersPool.GetAliveNodeNum() < 2 * F + 1 {
 		log.Debug("node:", this.NodeID, "process connecting task...")
 		log.Debug("nodes number:", this.peersPool.GetAliveNodeNum())
 		nid := 1
@@ -101,11 +103,11 @@ func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 			peerIp := this.configs.GetIP(_index)
 			peerPort := this.configs.GetPort(_index)
 			peerAddress := peerComm.ExtractAddress(peerIp, peerPort, _index)
-			peer, connectErr := this.connectToPeer(peerAddress, _index, isReconnect)
+			peer, connectErr := this.connectToPeer(peerAddress, _index)
 			if connectErr != nil {
 				// cannot connect to other peer
 				log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n", connectErr)
-
+				nid++
 				continue
 			} else {
 				// add  peer to peer pool
@@ -122,16 +124,11 @@ func (this *GrpcPeerManager) connectToPeers(isReconnect bool) {
 
 
 //connect to peer by ip address and port (why int32? because of protobuf limit)
-func (this *GrpcPeerManager) connectToPeer(peerAddress *pb.PeerAddress, nid uint64, isReconnect bool) (*Peer, error) {
+func (this *GrpcPeerManager) connectToPeer(peerAddress *pb.PeerAddress, nid uint64) (*Peer, error) {
 	//if this node is not online, connect it
 	var peer *Peer
 	var peerErr error
-	if isReconnect {
-		peer, peerErr = NewPeerByIpAndPortReconnect(peerAddress.IP, peerAddress.Port, nid, this.TEM, this.LocalNode.GetNodeAddr(), this.peersPool)
-
-	} else {
-		peer, peerErr = NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, nid, this.TEM, this.LocalNode.GetNodeAddr(), this.peersPool)
-	}
+	peer, peerErr = NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, nid, this.TEM, this.LocalNode.GetNodeAddr(), this.peersPool)
 	if peerErr != nil {
 		// cannot connect to other peer
 		log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n")

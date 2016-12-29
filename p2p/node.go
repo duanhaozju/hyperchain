@@ -18,7 +18,6 @@ import (
 
 	"hyperchain/membersrvc"
 	"sync"
-	"errors"
 )
 
 
@@ -98,7 +97,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			//REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
 			//REVIEW This no need to call hello event handler
 			//判断是否需要反向建立链接
-
+			go this.reconnect(msg)
 			return &response, nil
 		}
 	case pb.Message_HELLO_RESPONSE:
@@ -291,48 +290,14 @@ func (this *Node) StopServer() {
 }
 
 func (this *Node)reconnect(msg *pb.Message) {
-	opts := membersrvc.GetGrpcClientOpts()
-	conn, err := grpc.Dial(msg.From.IP + ":" + strconv.Itoa(int(msg.From.Port)), opts...)
-	//conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
-	if err != nil {
-		errors.New("Cannot establish a connection!")
-		log.Error("err:", err)
-	}
-
-	Client := pb.NewChatClient(conn)
-	if _, ok := this.PeerPool.peers[msg.From.Hash]; ok {
-		log.Warning("This remote Node already existed, and try to reconnect...")
-	} else {
+	if this.PeerPool.GetPeer(*msg.From) == nil{
+		//this situation needn't reconnect
 		return
 	}
-	this.PeerPool.peers[msg.From.Hash].Client = Client
-	this.PeerPool.peers[msg.From.Hash].Connection = conn
-	//esatblish the connect and regenerate the secrate
-	helloMessage := pb.Message{
-		MessageType:  pb.Message_RECONNECT_RESPONSE,
-		Payload:      this.PeerPool.TEM.GetLocalPublicKey(),
-		From:         this.address,
-		MsgTimeStamp: time.Now().UnixNano(),
-	}
+	peer,err :=NewPeerByIpAndPort(msg.From.IP,msg.From.Port,msg.From.ID,this.PeerPool.TEM,this.GetNodeAddr(),this.PeerPool)
 
-	retMessage, err2 := this.PeerPool.peers[msg.From.Hash].Client.Chat(context.Background(), &helloMessage)
-	if err2 != nil {
-		log.Error("cannot establish a connection", err2)
-	} else {
-		//review 取得对方的秘钥
-		if retMessage.MessageType == pb.Message_HELLO_RESPONSE {
-			remotePublicKey := retMessage.Payload
-			genErr := this.PeerPool.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
-			if genErr != nil {
-				log.Error("genErr", err)
-			}
-
-			if err != nil {
-				log.Error("cannot decrypt the nodeidinfo!")
-				errors.New("Decrypt ERROR")
-			}
-			log.Critical("reconnect to reverse ID :", msg.From.ID, this.PeerPool.TEM.GetSecret(msg.From.Hash))
-			log.Critical(this.PeerPool.TEM.GetSecret(msg.From.Hash))
-		}
+	if err != nil {
+		log.Warning("Cannot reverse connect to remote peer",msg.From)
 	}
+	this.PeerPool.PutPeer(*msg.From,peer)
 }

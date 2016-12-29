@@ -14,7 +14,7 @@
 pbft:
 
     # Number of replicas
-    nodes: 4
+    nodes: 5
 
     # How many transactions should the primary pack before sending pre-prepare
     batchsize: 500

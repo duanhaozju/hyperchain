@@ -2149,7 +2149,7 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Eve
 				pbft.activeView = true
 			}
 			return negoViewDoneEvent{}
-		} else {
+		} else if len(pbft.negoViewRspStore) >= 2*pbft.f + 2 {
 			pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
 			logger.Warningf("pbft recv at least N-f nego-view responses, but cannot find same view from 2f+1.")
 		}
