@@ -607,6 +607,21 @@ func putChain(batch hyperdb.Batch, t *types.Chain, flush bool, sync bool) error 
 	}
 	return nil
 }
+// IsGenesisFinish - check whether genesis block has been mined into blockchain
+func IsGenesisFinish() bool {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		logger.Error("get database handler failed.")
+		return false
+	}
+	_, err = GetBlockByNumber(db, 0)
+	if err != nil {
+		logger.Warning("missing genesis block")
+		return false
+	} else {
+		return true
+	}
+}
 
 // UpdateRequire updates requireBlockNum and requireBlockHash
 func UpdateRequire(num uint64, hash []byte, recoveryNum uint64) error {

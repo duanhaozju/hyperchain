@@ -25,7 +25,7 @@ import (
 func CreateInitBlock(filename string, stateType string, blockVersion string, bktConf bucket.Conf) {
 	log.Info("genesis start")
 
-	if GetHeightOfChain() > 0 {
+	if IsGenesisFinish() {
 		log.Info("already genesis")
 		return
 	}
