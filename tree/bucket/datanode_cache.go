@@ -93,19 +93,30 @@ func (datanodecache *DataNodeCache) fetchDataNodesFromCacheFor(bucketKey BucketK
 		return fetchDataNodesFromDBByBucketKey(datanodecache.TreePrefix,&bucketKey)
 	}
 
-	/*dataNodeMap := datanodecache.c[bucketKey]
+	dataNodeMap := datanodecache.c[bucketKey]
 	if(dataNodeMap == nil){
 		logger.Errorf("The bucket is nil, bucketLevel is [%d] bucketNumber [%d]",bucketKey.level,bucketKey.bucketNumber)
 		return dataNodes,nil
 	}
 
-	for _,dataNode := range dataNodeMap{
-		dataNodes = append(dataNodes, dataNode)
+	if len(dataNodeMap) == 0{
+		dataNodes,err = fetchDataNodesFromDBByBucketKey(datanodecache.TreePrefix,&bucketKey)
+		if err != nil{
+			logger.Errorf("fetchDataNodesFromDBByBucketKey Error")
+			return dataNodes,err
+		}
+		for _,dataNode := range dataNodes {
+			datanodecache.Put(dataNode)
+		}
+	}else {
+		for _,dataNode := range dataNodeMap{
+			dataNodes = append(dataNodes, dataNode)
+		}
 	}
-	logger.Criticalf("fetchDataNodesFromCacheFor the datanode to dataNodeCache [%v]",dataNodes)
-	return dataNodes,nil*/
+	logger.Debugf("FetchDataNodesFromCacheFor the datanode to dataNodeCache [%v]",dataNodes)
+	return dataNodes, nil
 
-	db,_ := hyperdb.GetLDBDatabase()
+	/*db,_ := hyperdb.GetLDBDatabase()
 	minimumDataKeyBytes := minimumPossibleDataKeyBytesFor(&bucketKey,datanodecache.TreePrefix)
 	minimumDataKeyBytes = append([]byte(DataNodeCachePrefix),minimumDataKeyBytes...)
 	// IMPORTANT return value obtained by iterator is sorted
@@ -137,7 +148,7 @@ func (datanodecache *DataNodeCache) fetchDataNodesFromCacheFor(bucketKey BucketK
 			datanodecache.Put(dataNode)
 		}
 	}
-	return dataNodes, nil
+	return dataNodes, nil*/
 
 }
 
@@ -148,7 +159,7 @@ func (datanodecache *DataNodeCache) clearDataNodeCache() {
 		keyBytes := iter.Key()
 		db.Delete(keyBytes)
 	}
-	datanodecache = &DataNodeCache{TreePrefix: datanodecache.TreePrefix,c: make(map[BucketKey] DataNodeMap), maxSize: uint64(datanodecache.maxSize * 1024 * 1024), isEnabled: datanodecache.isEnabled}
+	datanodecache.c = make(map[BucketKey] DataNodeMap)
 }
 
 func (dataNodeCache *DataNodeCache) revertDataNodeCacheFromDB() error{

@@ -264,7 +264,7 @@ func TestRevertToTargetBlock(t *testing.T) {
 	db,err := hyperdb.GetLDBDatabase()
 	writeBatch0 := db.NewBatch()
 
-	state := bucket_test.NewState("TestState")
+	state := bucket_test.NewState("-bucket-state")
 	// block 0
 	key_valueMap := bucket.K_VMap{}
 	key_valueMap["key2"] = []byte("value2")
