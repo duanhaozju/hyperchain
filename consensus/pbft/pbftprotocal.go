@@ -102,7 +102,7 @@ type pbftProtocal struct {
 	cacheValidatedBatch 	map[string]*cacheBatch       // track the cached validated batch
 	validateTimer			events.Timer
 	validateTimeout			time.Duration
-
+	preparedCert			map[msgID]string			// track the prepared cert to help validate
 								 // negotiate view
 	inNegoView			bool
 	negoViewRspStore 	map[uint64]uint64	// track replicaId, viewNo.
@@ -325,6 +325,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
 	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
 	pbft.cacheValidatedBatch = make(map[string]*cacheBatch)
+	pbft.preparedCert = make(map[msgID]string)
 	pbft.addNodeCertStore = make(map[string]*addNodeCert)
 	pbft.delNodeCertStore = make(map[delID]*delNodeCert)
 
@@ -399,7 +400,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	logger.Infof("PBFT Batch timeout = %v", pbft.batchTimeout)
 	pbft.reqStore = newRequestStore()
 
-	logger.Noticef("--------PBFT finish start, nodeID: %d--------", pbft.id)
+	logger.Noticef("======== PBFT finish start, nodeID: %d", pbft.id)
 
 	return pbft
 }
@@ -450,7 +451,7 @@ func (pbft *pbftProtocal) RemoveCachedBatch(vid uint64) {
 
 	logger.Debugf("Replica %d received local remove message", pbft.id)
 	event := removeCache{vid: vid}
-	go pbft.postRequestEvent(event)
+	go pbft.postPbftEvent(event)
 }
 
 func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
@@ -462,15 +463,14 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 		vid := e.vid
 		ok := pbft.recvRemoveCache(vid)
 		if !ok {
-			logger.Warningf("Replica %d received local remove cached batch msg, but can not find mapping batch", pbft.id)
+			logger.Warningf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
 		}
 		return nil
-	case clearDuplicator:
-		pbft.duplicator = make(map[uint64]*transactionStore)
 	case *types.Transaction:
 		tx := e
 		return pbft.processTxEvent(tx)
 	case viewChangedEvent:
+		pbft.activeView = true
 		primary := pbft.primary(pbft.view)
 		pbft.persistView(pbft.view)
 		pbft.helper.InformPrimary(primary)
@@ -481,7 +481,6 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 			return pbft.sendBatch()
 		}
 	default:
-		logger.Debugf("batch processEvent, default: %+v", e)
 		return pbft.processPbftEvent(e)
 	}
 	return nil
@@ -530,7 +529,6 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 			logger.Debugf("Replica %d try to process viewChangeQuorumEvent, but it's in nego-view", pbft.id)
 			return nil
 		}
-		go pbft.postRequestEvent(clearDuplicator{})
 		if pbft.primary(pbft.view) == pbft.id {
 			return pbft.sendNewView()
 		}
@@ -559,7 +557,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case protos.ValidatedTxs:
 		err = pbft.recvValidatedResult(et)
 	case negoViewDoneEvent:
-		logger.Noticef("######## Replica %d finished negotiating view: %d", pbft.id, pbft.view)
+		logger.Noticef("======== Replica %d finished negotiating view: %d", pbft.id, pbft.view)
 		primary := pbft.primary(pbft.view)
 		if primary == pbft.id {
 			pbft.sendNullRequest()
@@ -580,7 +578,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case *RecoveryReturnPQC:
 		return pbft.recvRecoveryReturnPQC(et)
 	case recoveryDoneEvent:
-		logger.Noticef("######## Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
+		logger.Noticef("======== Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
 		if pbft.recvNewViewInRecovery {
 			logger.Noticef("#  Replica %d find itself received NewView during Recovery" +
 				", will restart negotiate view", pbft.id)
@@ -758,18 +756,6 @@ func (pbft *pbftProtocal) leaderProcReq(tx *types.Transaction) error {
 
 	logger.Debugf("Batch primary %d queueing new request", pbft.id)
 
-	if pbft.checkDuplicate(tx) {
-		_, ok := pbft.duplicator[pbft.vid+1]
-		if !ok {
-			txStore := newTransactionStore()
-			pbft.duplicator[pbft.vid+1] = txStore
-		}
-		pbft.duplicator[pbft.vid+1].add(tx)
-	} else {
-		logger.Warningf("Replica %d receive duplicate transaction", pbft.id)
-		return nil
-	}
-
 	pbft.batchStore = append(pbft.batchStore, tx)
 
 	if !pbft.batchTimerActive {
@@ -781,21 +767,6 @@ func (pbft *pbftProtocal) leaderProcReq(tx *types.Transaction) error {
 	}
 
 	return nil
-}
-
-func (pbft *pbftProtocal) checkDuplicate(tx *types.Transaction) (ok bool) {
-
-	ok = true
-
-	for _, txStore := range pbft.duplicator {
-		key := string(tx.TransactionHash)
-		if txStore.has(key) {
-			ok = false
-			break
-		}
-	}
-
-	return
 }
 
 func (pbft *pbftProtocal) sendBatch() error {
@@ -1101,7 +1072,7 @@ func (pbft *pbftProtocal) recvRequestBatch(reqBatch *TransactionBatch) error {
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", digest))
 	}
 	if pbft.primary(pbft.view) == pbft.id && pbft.activeView {
-		pbft.validateBatch(reqBatch, 0, 0)
+		pbft.primaryValidateBatch(reqBatch)
 	} else {
 		logger.Debugf("Replica %d is backup, not sending pre-prepare for request batch %s", pbft.id, digest)
 	}
@@ -1116,26 +1087,78 @@ func (pbft *pbftProtocal) sendNullRequest() {
 	pbft.nullReqTimerReset()
 }
 
-func (pbft *pbftProtocal) validateBatch(txBatch *TransactionBatch, vid uint64, view uint64) {
+func (pbft *pbftProtocal) primaryValidateBatch(txBatch *TransactionBatch) {
 
-	primary := pbft.primary(pbft.view)
-	if primary == pbft.id {
-		logger.Debugf("Primary %d try to validate batch %s", pbft.id, hash(txBatch))
-
-		n := pbft.vid + 1
-
-		pbft.vid = n
-		pbft.helper.ValidateBatch(txBatch.Batch, txBatch.Timestamp, n, pbft.view, true)
-	} else {
-		logger.Debugf("Replica %d try to validate batch", pbft.id)
-
-		if !pbft.inWV(pbft.view, vid) {
-			logger.Debugf("Replica %d not validating for transaction batch because it is out of sequence numbers", pbft.id)
-			return
-		}
-		pbft.helper.ValidateBatch(txBatch.Batch, txBatch.Timestamp, vid, view, false)
+	newBatch, txStore := pbft.removeDuplicate(txBatch)
+	if txStore.Len() == 0 {
+		logger.Warningf("Primary %d get empty batch after check duplicate", pbft.id)
+		pbft.stopTimer()
+		return
 	}
 
+	n := pbft.vid + 1
+	pbft.vid = n
+
+	logger.Debugf("Primary %d try to validate batch for view=%d/vid=%d", pbft.id, pbft.view, pbft.vid)
+	pbft.helper.ValidateBatch(newBatch.Batch, newBatch.Timestamp, n, pbft.view, true)
+
+}
+
+func (pbft *pbftProtocal) validatePending() {
+
+	if pbft.currentVid != nil {
+		logger.Debugf("Backup %d not attempting to send validate because it is currently validate %d", pbft.id, pbft.currentVid)
+		return
+	}
+
+	for idx := range pbft.preparedCert {
+		if pbft.preValidate(idx) {
+			break
+		}
+	}
+}
+
+func (pbft *pbftProtocal) preValidate(idx msgID) bool {
+
+	cert := pbft.certStore[idx]
+
+	if cert == nil || cert.prePrepare == nil {
+		logger.Debugf("Backup %d already call validate for batch view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+		return false
+	}
+
+	if idx.n != pbft.lastVid + 1 {
+		logger.Debugf("Backup %d hasn't done with last validate %d", pbft.id, pbft.lastVid)
+		return false
+	}
+
+	currentVid := idx.n
+	pbft.currentVid = &currentVid
+
+	txStore, err := pbft.checkDuplicate(cert.prePrepare.TransactionBatch)
+	if err != nil {
+		logger.Warningf("Backup %d find duplicate transaction in the batch for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+		pbft.sendViewChange()
+		return true
+	}
+	logger.Debugf("Backup %d cache duplicator for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+	pbft.duplicator[idx.n] = txStore
+	pbft.execValidate(cert.prePrepare.TransactionBatch, idx)
+	cert.sentValidate = true
+
+	return true
+}
+
+func (pbft *pbftProtocal) execValidate(txBatch *TransactionBatch, idx msgID) {
+
+	logger.Debugf("Backup %d try to validate batch for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+
+	pbft.helper.ValidateBatch(txBatch.Batch, txBatch.Timestamp, idx.n, idx.v, false)
+	delete(pbft.preparedCert, idx)
+	pbft.lastVid = *pbft.currentVid
+	pbft.currentVid = nil
+
+	pbft.validatePending()
 }
 
 func (pbft *pbftProtocal) trySendPrePrepare() {
@@ -1351,8 +1374,6 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 			Payload: payload,
 		}
 		msg := consensusMsgHelper(consensusMsg, pbft.id)
-		logger.Debug("after pre-prepare seq is:",prep.SequenceNumber)
-		logger.Debug("after pre-prepare seq is:",prep.BatchDigest)
 
 		return pbft.helper.InnerBroadcast(msg)
 
@@ -1394,7 +1415,7 @@ func (pbft *pbftProtocal) recvPrepare(prep *Prepare) error {
 	ok := cert.prepare[*prep]
 
 	if ok {
-		logger.Warningf("Ignoring duplicate prepare from %d, --------view=%d/seqNo=%d--------",
+		logger.Warningf("Ignoring duplicate prepare from replica %d, view=%d/seqNo=%d",
 			prep.ReplicaId, prep.View, prep.SequenceNumber)
 		return nil
 	}
@@ -1429,8 +1450,9 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 		return pbft.sendCommit(digest, v, n)
 	} else {
 		if !cert.sentValidate {
-			pbft.validateBatch(cert.prePrepare.TransactionBatch, n, v)
-			cert.sentValidate = true
+			idx := msgID{v:v, n:n}
+			pbft.preparedCert[idx] = cert.digest
+			pbft.validatePending()
 		}
 
 		return nil
@@ -1501,7 +1523,7 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 	ok := cert.commit[*commit]
 
 	if ok {
-		logger.Warningf("Ignoring duplicate commit from %d, --------view=%d/seqNo=%d--------",
+		logger.Warningf("Ignoring duplicate commit from replica %d, view=%d/seqNo=%d",
 			commit.ReplicaId, commit.View, commit.SequenceNumber)
 		return nil
 	}
@@ -1536,8 +1558,8 @@ func (pbft *pbftProtocal) executeAfterStateUpdate() {
 	for idx, cert := range pbft.certStore {
 		if idx.n > pbft.seqNo && pbft.prepared(cert.digest, idx.v, idx.n) && !cert.validated {
 			logger.Debugf("Replica %d try to vaidate batch %s", pbft.id, cert.digest)
-			pbft.validateBatch(cert.prePrepare.TransactionBatch, idx.n, idx.v)
-			cert.sentValidate = true
+			pbft.preparedCert[idx] = cert.digest
+			pbft.validatePending()
 		}
 	}
 
@@ -1602,7 +1624,7 @@ func (pbft *pbftProtocal) executeOne(idx msgID) bool {
 		cert.sentExecute = true
 		pbft.execDoneSync(idx)
 	} else {
-		logger.Noticef("--------Replica %d Call execute, view=%d/seqNo=%d--------", pbft.id, idx.v, idx.n)
+		logger.Noticef("======== Replica %d Call execute, view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
 		var isPrimary bool
 		if pbft.primary(pbft.view) == pbft.id {
 			isPrimary = true
@@ -1729,7 +1751,7 @@ func (pbft *pbftProtocal) recvCheckpoint(chkpt *Checkpoint) events.Event {
 	ok := cert.chkpts[*chkpt]
 
 	if ok {
-		logger.Warningf("Ignoring duplicate checkpoint from %d, --------seqNo=%d--------", chkpt.ReplicaId, chkpt.SequenceNumber)
+		logger.Warningf("Ignoring duplicate checkpoint from replica %d, seqNo=%d", chkpt.ReplicaId, chkpt.SequenceNumber)
 		return nil
 	}
 
@@ -2347,9 +2369,15 @@ func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error 
 
 func (pbft *pbftProtocal) recvRemoveCache(vid uint64) bool {
 
-	_, ok := pbft.duplicator[vid]
+	if vid <= 10 {
+		logger.Debugf("Replica %d received remove cached batch %d <= 10, retain it until 11", pbft.id, vid)
+		return true
+	}
+	id := vid - 10
+	_, ok := pbft.duplicator[id]
 	if ok {
-		delete(pbft.duplicator, vid)
+		logger.Debugf("Replica %d received remove cached batch %d, and remove batch %d", )
+		delete(pbft.duplicator, id)
 	}
 
 	return ok

@@ -208,9 +208,7 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 	// record same vc from self times
 	if vc.ReplicaId == pbft.id {
 		pbft.vcResendCount++
-		logger.Warningf("=========================================")
-		logger.Warningf("Replica %d already recv view change from itself for %d times", pbft.id, pbft.vcResendCount)
-		logger.Warningf("=========================================")
+		logger.Warningf("======== Replica %d already recv view change from itself for %d times", pbft.id, pbft.vcResendCount)
 	}
 
 	if _, ok := pbft.viewChangeStore[vcidx{vc.View, vc.ReplicaId}]; ok {
@@ -578,7 +576,6 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	pbft.stopTimer()
 	pbft.nullRequestTimer.Stop()
 
-	pbft.activeView = true
 	delete(pbft.newViewStore, pbft.view-1)
 	// empty the outstandingReqBatch, it is useless since new primary will resend pre-prepare
 	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
@@ -606,7 +603,9 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 					logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
 				} else {
 					logger.Critical("send validate")
-					pbft.recvRequestBatch(batch)
+					digest := hash(batch)
+					pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", digest))
+					pbft.primaryValidateBatch(batch)
 				}
 			}
 		}
