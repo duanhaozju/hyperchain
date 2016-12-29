@@ -70,7 +70,7 @@ func TestAliveEvent(t *testing.T) {
 
 //func TestSignTx(t *testing.T) {
 //	core.InitDB(8083)
-//	db, _ := hyperdb.GetLDBDatabase()
+//	db, _ := hyperdb.GetDBDatabase()
 //	height := core.GetHeightOfChain()
 //	block,_:= core.GetBlockByNumber(db,height)
 //	tx := block.Transactions[0]

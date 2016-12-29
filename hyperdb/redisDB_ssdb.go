@@ -1,291 +1,188 @@
-//author:frank
-//data:2016/12/20
+
 package hyperdb
 
-////implement iterator
-////use
-//import (
-//	"github.com/garyburd/redigo/redis"
-//	"github.com/syndtr/goleveldb/leveldb/iterator"
-//	"github.com/syndtr/goleveldb/leveldb"
-//	"strconv"
-////	"sync"
-//	"fmt"
-//)
-//
-//type LDBDatabase struct {
-//	path string
-//	db   redis.Conn
-//}
-//
-//
-//func NewLDBDatabase(portLDBPath string) (*LDBDatabase, error) {
-//	//fmt.Println("portLDBPath:"+portLDBPath)
-//	port,err:=strconv.Atoi(portLDBPath)
-//	if err!=nil{
-//		return nil,err
-//	}
-//	port+=10
-//	db1,err:=redis.Dial("tcp", ":"+strconv.Itoa(port))
-//	return &LDBDatabase{path:portLDBPath,db:db1},err
-//}
-//
-//
-//func (self *LDBDatabase) Put(key []byte, value []byte) error {
-//	_,err:=self.db.Do("set",key, value)
-//	return err
-//}
-//
-//
-//func (self *LDBDatabase) Get(key []byte) ([]byte, error) {
-//	dat,err := redis.Bytes(self.db.Do("get",key))
-//	return dat, err
-//}
-//
-//
-//func (self *LDBDatabase) Delete(key []byte) error {
-//	_,err:=self.db.Do("DEL", key)
-//	return err;
-//}
-//
-//// just for implement interface
-////iterator should do in leveldb
-//func (self *LDBDatabase) NewIterator() iterator.Iterator {
-//	return nil
-//}
-//
-//func (self *LDBDatabase) Close() {
-//	self.db.Close()
-//}
-//
-//// just for implement interface
-//func (self *LDBDatabase) LDB() *leveldb.DB {
-//	return nil
-//}
-//
-////TODO specific the size of map
-//func (self *LDBDatabase) NewBatch() Batch {
-//	return &rd_Batch{ db : self.db,list:make([]string,0,1000)}
-//}
-//
-//
-//type rd_Batch struct {
-//	//mutex sync.Mutex
-//	db redis.Conn
-//	list []string
-//	num int
-//}
-//
-//// Put put the key-value to rd_Batch
-//func (batch *rd_Batch) Put(key, value []byte) error {
-//
-//	value1:=make([]byte,len(value))
-//	copy(value1,value)
-//	//fmt.Println("Put start:")
-//	//fmt.Println(key)
-//	//fmt.Println(string(value1))
-//	//batch.mutex.Lock()
-//	batch.list=append(batch.list,string(key),string(value1))
-//	//batch.mutex.Unlock()
-//	batch.num+=2;
-//	return nil
-//}
-//
-//// Write write batch-operation to databse
-////one transaction from MULTI TO EXEC
-//func (batch *rd_Batch) Write() error {
-//
-//
-//	_,err:=batch.db.Do("mset",batch.list)
-//
-//	batch.list=make([]string,0,1000)
-//	fmt.Println("batch write. the size of batch is :"+strconv.Itoa(batch.num))
-//	//fmt.Println("write end with:")
-//	//fmt.Println(err)
-//	return err
-//}
+import "errors"
+import "sync"
+import "github.com/garyburd/redigo/redis"
+import "os"
+import "fmt"
+import "time"
+import "strconv"
 
-/////////////////////////////////////////////////////////////////////
-
-
-import (
-	"github.com/garyburd/redigo/redis"
-	"github.com/syndtr/goleveldb/leveldb/iterator"
-	"github.com/syndtr/goleveldb/leveldb"
-	"strconv"
-	"sync"
-	"time"
-	"os"
-	"fmt"
-	"errors"
-)
-
-type LDBDatabase struct {
-	path string
-	rd_pool *redis.Pool
+type dbDatabaseImpl struct {
+	redis_db *RsDatabase
+	ssdb_db *SSDatabase
+	db_status bool
 }
 
+func NewRdSdDb(portDBPath string,ssdbnum int) (Database ,error){
+	var rsdb *RsDatabase
+	var ssdb *SSDatabase
 
-func NewLDBDatabase(portLDBPath string) (*LDBDatabase, error) {
-	//fmt.Println("portLDBPath:"+portLDBPath)
-	port,err:=strconv.Atoi(portLDBPath)
+	rsdb,err:=NewRsDatabase(portDBPath)
 	if err!=nil{
+		log.Noticef("NewRsDatabase(%v) fail. err is %v. \n",portDBPath,err.Error())
 		return nil,err
 	}
-	port+=14121 //8001 22122
-	//set max pool con 4
-	rdP:=redis.NewPool(func () (redis.Conn, error) { return redis.Dial("tcp", ":"+strconv.Itoa(port),redis.DialConnectTimeout(60*time.Second))},15)
 
-	return &LDBDatabase{path:portLDBPath,rd_pool:rdP},err
+
+	ssdb, err = NewSSDatabase(portDBPath,ssdbnum)
+	if err != nil {
+		log.Noticef("NewNewSSDatabase(%v) fail. err is %v. \n", portDBPath, err.Error())
+		return nil, err
+	}
+
+	return &dbDatabaseImpl{redis_db:rsdb,ssdb_db:ssdb,db_status:true},nil
+}
+
+func (db *dbDatabaseImpl)Put(key []byte, value []byte) error{
+
+	if err:=db.check(); err!=nil{
+		return err
+	}
+
+	err:=db.redis_db.Put(key,value)
+	if err!=nil{
+		return err
+	}
+	go db.ssdb_db.Put(key,value)
+	return nil
 }
 
 
-func (self *LDBDatabase) Put(key []byte, value []byte) error {
+func (db *dbDatabaseImpl)Get(key []byte) ([]byte, error){
+	if err:=db.check(); err!=nil{
+		return nil,err
+	}
 
-	num:=0
-	var err error
+	data,err:=db.redis_db.Get(key)
 
-	for {
-		con := self.rd_pool.Get()
-		_, err = con.Do("set", key, value)
-		con.Close()
+	if len(data)!=0&&err==nil{
+		return data,err
+	}
+	data,err=db.ssdb_db.Get(key)
+	if len(data)!=0&&err==nil{
+		return data,err
+	}
+	return nil,err
+}
 
-		if err != nil {
-			num++
-			f, err1 := os.OpenFile("/home/frank/1.txt", os.O_WRONLY|os.O_CREATE, 0644)
-			if err1 != nil {
-				fmt.Println("1.txt file create failed. err: " + err.Error())
-			} else {
-				// 查找文件末尾的偏移量
-				n, _ := f.Seek(0, os.SEEK_END)
-				// 从末尾的偏移量开始写入内容
-				currentTime := time.Now().Local()
-				newFormat := currentTime.Format("2006-01-02 15:04:05.000")
+func (db *dbDatabaseImpl)Delete(key []byte) error{
 
-				str := portLDBPath + newFormat + `con.Do("set",,key, value):` + err.Error() + "\n"
-				_, err1 = f.WriteAt([]byte(str), n)
+	if err:=db.check(); err!=nil{
+		return err
+	}
+	err:=db.redis_db.Delete(key)
 
-				f.Close()
-			}
-		}else{
-			break
-		}
-
-		if err.Error() !="ERR Connection timed out"||num>3{
-			break
-		}
+	if err==nil{
+		go db.ssdb_db.Delete(key)
 	}
 	return err
 }
 
-
-func (self *LDBDatabase) Get(key []byte) ([]byte, error) {
-
-	num:=0
-	var dat []byte
-	var err error
-
-	for {
-		con := self.rd_pool.Get()
-		dat, err = redis.Bytes(con.Do("get", key))
-		con.Close()
-
-		if err == nil {
-			if len(dat) == 0 {
-				err = errors.New("not found")
-			}
-			break
-		}else {
-			num++
-			f, err1 := os.OpenFile("/home/frank/1.txt", os.O_WRONLY | os.O_CREATE, 0644)
-			if err1 != nil {
-				fmt.Println("1.txt file create failed. err: " + err.Error())
-			} else if err.Error() != "redigo: nil returned" {
-				// 查找文件末尾的偏移量
-				n, _ := f.Seek(0, os.SEEK_END)
-				// 从末尾的偏移量开始写入内容
-				currentTime := time.Now().Local()
-				newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-				str := portLDBPath + newFormat + `con.Do("get",key):` + err.Error() + "  num:" + strconv.Itoa(num) + "\n"
-				_, err1 = f.WriteAt([]byte(str), n)
-				f.Close()
-			}
-		}
-		if err.Error() !="ERR Connection timed out"||num>3{
-			break
-		}
-
+func (db *dbDatabaseImpl)NewIterator(prefix []byte) (Iterator){
+	return db.ssdb_db.NewIterator(prefix)
+}
+//关闭数据库是不安全的，因为有可能有线程在写数据库，如果做到安全要加锁
+//此处仅设置状态关闭
+func(db *dbDatabaseImpl)Close(){
+	if err:=db.check(); err==nil{
+		db.db_status=false
 	}
-	return dat, err
+
 }
 
-
-func (self *LDBDatabase) Delete(key []byte) error {
-	con:=self.rd_pool.Get()
-	defer con.Close()
-	_,err:=con.Do("DEL", key)
-	return err;
-}
-
-// just for implement interface
-//iterator should do in leveldb
-func (self *LDBDatabase) NewIterator() iterator.Iterator {
+func (db *dbDatabaseImpl)check()error{
+	if db.db_status==false{
+		log.Notice("DB has been closed")
+		return errors.New("DB has been closed")
+	}
 	return nil
 }
 
-func (self *LDBDatabase) Close() {
-	self.rd_pool.Close()
-}
-
-// just for implement interface
-func (self *LDBDatabase) LDB() *leveldb.DB {
-	return nil
-}
-
-//TODO specific the size of map
-func (self *LDBDatabase) NewBatch() Batch {
-	return &rd_Batch{ rd_pool : self.rd_pool,map1:make(map[string][]byte)}
-}
-
-
-type rd_Batch struct {
+type DB_Batch struct {
 	mutex sync.Mutex
-	rd_pool *redis.Pool
-	map1 map[string] []byte
+	redis_db *RsDatabase
+	ssdb_db *SSDatabase
+	batch_status bool
+	batch_map map[string] []byte
 }
 
-// Put put the key-value to rd_Batch
-func (batch *rd_Batch) Put(key, value []byte) error {
+func (db *dbDatabaseImpl)NewBatch() Batch{
+	if err:=db.check(); err!=nil{
+		log.Notice("Bad operation:try to create a new batch with closed db")
+		return nil
+	}
+	return &DB_Batch{
+		redis_db:db.redis_db,
+		ssdb_db:db.ssdb_db,
+		batch_status:true,
+		batch_map:make(map[string][]byte),
+	}
+}
+
+func (batch *DB_Batch) Put(key, value []byte) error{
+	if batch.batch_status==false{
+		log.Notice("batch has been closed")
+		return errors.New("batch has been closed")
+	}
 
 	value1:=make([]byte,len(value))
 	copy(value1,value)
-	//fmt.Println("Put start:")
-	//fmt.Println(key)
-	//fmt.Println(string(value1))
 	batch.mutex.Lock()
-	batch.map1[string(key)]=value1
+	batch.batch_map[string(key)]=value1
 	batch.mutex.Unlock()
+
 	return nil
 }
 
-// Write write batch-operation to databse
-//one transaction from MULTI TO EXEC
-func (batch *rd_Batch) Write() error {
+func (batch *DB_Batch)Delete(key []byte) error{
+	if batch.batch_status==false{
+		log.Notice("batch has been closed")
+		return errors.New("batch has been closed")
+	}
+	batch.mutex.Lock()
+	delete(batch.batch_map,string(key))
+	batch.mutex.Unlock()
 
+	return nil
+}
+
+func (batch *DB_Batch)Write() error{
+	if batch.batch_status==false{
+		log.Notice("batch has been closed")
+		return errors.New("batch has been closed")
+	}
+
+	err:=batch.Rdwrite(batch.redis_db.rd_pool)
+
+	if err==nil{
+		msp2:=batch.batch_map
+		batch.batch_map = make(map[string][]byte)
+		go batch.Sdwrite(batch.ssdb_db.rd_pool,msp2)
+	}
+	return err
+}
+
+func (batch *DB_Batch)Rdwrite(db *redis.Pool) error{
+	batch.mutex.Lock()
+
+	if batch.batch_status==false{
+		log.Notice("batch has been closed")
+		return errors.New("batch has been closed")
+	}
 	num:=0;
 	var err error
-
- 	for {
+	for {
 		list := make([]string, 0, 20)
-		con := batch.rd_pool.Get()
 
-		for k, v := range batch.map1 {
+		for k, v := range batch.batch_map {
 			list = append(list, string(k), string(v))
 		}
+		con :=db.Get()
 		_, err:= con.Do("mset", list)
-		con.Close()
+		defer con.Close()
 		if err == nil {
-			batch.map1 = make(map[string][]byte)
 			break
 		} else {
 			num++
@@ -293,21 +190,67 @@ func (batch *rd_Batch) Write() error {
 			if err1 != nil {
 				fmt.Println("1.txt file create failed. err: " + err.Error())
 			} else {
-				// 查找文件末尾的偏移量
 				n, _ := f.Seek(0, os.SEEK_END)
-				// 从末尾的偏移量开始写入内容
 				currentTime := time.Now().Local()
 				newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-				str := portLDBPath + newFormat + `con.Do("mset",list) :` + err.Error() +" num:"+strconv.Itoa(num)+"\n"
+				str := portDBPath + newFormat + `con.Do("mset",list) :` + err.Error() +" num:"+strconv.Itoa(num)+"\n"
 				_, err1 = f.WriteAt([]byte(str), n)
-
 				f.Close()
 			}
 		}
-		if err.Error()!="ERR Connection timed out"||num>3{
+		if err.Error()!="ERR Connection timed out"||num>=3{
 			break
 		}
 	}
 
+
+
+	batch.mutex.Unlock()
+	return err
+}
+
+func (batch *DB_Batch)Sdwrite(db *redis.Pool,map2 map[string] []byte) error{
+	batch.mutex.Lock()
+	fmt.Println("go ssdb start ")
+
+
+
+	if batch.batch_status==false{
+		log.Notice("batch has been closed")
+		return errors.New("batch has been closed")
+	}
+	num:=0;
+	var err error
+	for {
+		list := make([]string, 0, 20)
+
+		for k, v := range map2 {
+			list = append(list, string(k), string(v))
+		}
+		con :=db.Get()
+		_, err:= con.Do("mset", list)
+		defer con.Close()
+		if err == nil {
+			break
+		} else {
+			num++
+			f, err1 := os.OpenFile("/home/frank/1.txt", os.O_WRONLY|os.O_CREATE, 0644)
+			if err1 != nil {
+				fmt.Println("1.txt file create failed. err: " + err.Error())
+			} else {
+				n, _ := f.Seek(0, os.SEEK_END)
+				currentTime := time.Now().Local()
+				newFormat := currentTime.Format("2006-01-02 15:04:05.000")
+				str := portDBPath + newFormat + `con.Do("mset",list) :` + err.Error() +" num:"+strconv.Itoa(num)+"\n"
+				_, err1 = f.WriteAt([]byte(str), n)
+				f.Close()
+			}
+		}
+		if err.Error()!="ERR Connection timed out"||num>=3{
+			break
+		}
+	}
+
+	batch.mutex.Unlock()
 	return err
 }

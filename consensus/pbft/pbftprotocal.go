@@ -814,7 +814,7 @@ func (pbft *pbftProtocal) sendBatch() error {
 	pbft.batchStore = nil
 	logger.Infof("Creating batch with %d requests", len(reqBatch.Batch))
 
-	go pbft.postPbftEvent(reqBatch)
+	go pbft.postRequestEvent(reqBatch)
 
 	return nil
 }

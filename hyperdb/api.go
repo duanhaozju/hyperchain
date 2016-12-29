@@ -6,34 +6,39 @@ import (
 	"path"
 	"strconv"
 	"sync"
-	//"github.com/syndtr/goleveldb/leveldb"
 	"github.com/op/go-logging"
-
+	"errors"
+	"fmt"
 )
 
-type stateldb int32
+type statedb int32
 
-type LDBInstance struct {
-	ldb    *LDBDatabase
-	state  stateldb
+type DBInstance struct {
+	db    Database
+	state  statedb
 	dbsync sync.Mutex
 }
 
+const (
+	closed statedb = iota
+	opened
+)
+
+
 var log *logging.Logger // package-level logger
+//dbInstance include the instance of Database interface
+var dbInstance = &DBInstance{
+	state: closed,
+}
+
+
 func init() {
 	log = logging.MustGetLogger("hyperdb")
 }
 
-const (
-	closed stateldb = iota
-	opened
-)
 
-var ldbInstance = &LDBInstance{
-	state: closed,
-}
 
-//-- --------------- about ldb -----------------------
+//-- --------------- about db -----------------------
 
 func getBaseDir() string {
 	//path := os.TempDir()
@@ -41,78 +46,69 @@ func getBaseDir() string {
 }
 
 var (
-	baseLDBPath = getBaseDir() + "/hyperchain/cache"
-	portLDBPath = "db" //different port has different db path, default "db"
+	baseDBPath = getBaseDir() + "/hyperchain/cache"
+	portDBPath = "db" //different port has different db path, default "db"
 )
 
-func SetLDBPath(dbpath string, port int) {
-	baseLDBPath = path.Join(dbpath, "hyperchain/cache/")
-	portLDBPath = strconv.Itoa(port)
+func SetDBPath(dbpath string, port int) {
+	baseDBPath = path.Join(dbpath, "hyperchain/cache/")
+	portDBPath = strconv.Itoa(port)
 }
 
 func getDBPath() string {
-	return baseLDBPath + portLDBPath
+	return baseDBPath + portDBPath
 }
 
-//-- ------------------ ldb end ----------------------
 
- //GetLDBDatabase get a single instance of LDBDatabase
- //if LDBDatabase state is open, return db directly
- //if LDBDatabase state id close,
-//func GetLDBDatabase() (*LDBDatabase, error) {
-//	ldbInstance.dbsync.Lock()
-//	defer ldbInstance.dbsync.Unlock()
-//	if ldbInstance.state == opened {
-//		return ldbInstance.ldb, nil
-//	}
-//	db, err := leveldb.OpenFile(getDBPath(), nil)
-//	if err != nil {
-//		return ldbInstance.ldb, err
-//	}
-//	ldbInstance.ldb = &LDBDatabase{
-//		db:   db,
-//		path: getDBPath(),
-//	}
-//	ldbInstance.state = opened
-//	return ldbInstance.ldb, nil
-//}
+//Db_type 应该是一个3位的二进制数比如111 101
+//第一个1表示 redis open
+//第二个1表示 ssdb  open
+//第三个1表示 leveldb open
+//现在仅支持 redis加 ssdb 或者仅leveldb 即 110 001
+func InitDatabase(Db_type int)(error){
 
+	dbInstance.dbsync.Lock()
+	defer dbInstance.dbsync.Unlock()
 
-/////////////////////////////////////////////////////redis/
-func GetLDBDatabase() (*LDBDatabase, error) {
-	ldbInstance.dbsync.Lock()
-	defer ldbInstance.dbsync.Unlock()
-	if ldbInstance.state == opened {
-		return ldbInstance.ldb, nil
+	if dbInstance.state!=closed{
+		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it has beend inited \n",Db_type))
+		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it has beend inited \n",Db_type))
 	}
+	db,err:=Newdatabase(getDBPath(),portDBPath,Db_type)
 
-	db,err:= NewLDBDatabase(portLDBPath)
 	if err!=nil{
-		return nil, err
+		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n",Db_type))
+		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n",Db_type))
 	}
-	ldbInstance.ldb=db
-	ldbInstance.state = opened
-	return db, nil
+
+	dbInstance.db=db;
+	dbInstance.state=opened
+	log.Notice("db has been init")
+	return err
 }
 
+func GetDBDatabase() (Database, error) {
+	dbInstance.dbsync.Lock()
+	defer dbInstance.dbsync.Unlock()
+	if dbInstance.db==nil{
+		log.Notice("GetDBDatabase() fail beacause it has not been inited \n")
+		return nil,errors.New("GetDBDatabase() fail beacause it has not been inited \n")
+	}
+	return dbInstance.db,nil
+}
 
-//func GetLDBDatabase() (*LDBDatabase, error) {
-//	return NewLDBDatabase(portLDBPath)
-//}
-
-//////////////////////////////////////////ssdb
-//func GetLDBDatabase() (*LDBDatabase, error) {
-//	ldbInstance.dbsync.Lock()
-//	defer ldbInstance.dbsync.Unlock()
-//	if ldbInstance.state == opened {
-//		return ldbInstance.ldb, nil
-//	}
-//
-//	db,err:= NewLDBDatabase(portLDBPath,"127.0.0.1")
-//	if err!=nil{
-//		return nil, err
-//	}
-//	ldbInstance.ldb=db
-//	ldbInstance.state = opened
-//	return db, nil
-//}
+func Newdatabase(DBPath string ,portDBPath string,Db_type int) (Database ,error){
+	if Db_type==001{
+		log.Notice("use level db only")
+		return NewLDBDataBase(DBPath)
+	}else if Db_type==010{
+		log.Notice("use ssdb only")
+		return NewSSDatabase(portDBPath,2)
+	}else if Db_type==110{
+		log.Notice("use ssdb and redis")
+		return NewRdSdDb(portDBPath,2)
+	}else {
+		fmt.Println("wrong Db_type:"+strconv.Itoa(Db_type))
+		return nil,errors.New("wrong Db_type:"+strconv.Itoa(Db_type))
+	}
+}

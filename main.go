@@ -90,6 +90,10 @@ func main() {
 
 		config := newconfigsImpl(argv.ConfigPath, argv.NodeID, argv.GRPCPort, argv.HTTPPort, argv.RESTPort)
 
+		//init db
+		fmt.Println("core InitDB")
+		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())
+
 		err, expiredTime := checkLicense(config.getLicense())
 		if err != nil {
 			return err
@@ -118,8 +122,6 @@ func main() {
 		//introducer port
 		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath(), config.getNodeID(), argv.IsInit, introducerIp, introducerPortint64,introducerIDUint64)
 
-		//init db
-		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())
 
 		//init genesis
 		core.CreateInitBlock(config.getGenesisConfigPath())

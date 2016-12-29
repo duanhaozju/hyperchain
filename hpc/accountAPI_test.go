@@ -34,7 +34,7 @@ func Test_NewAccount1(t *testing.T) {
 	}
 
 	//获取db句柄
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 
 	//初始化API
 	publicAccountAPI := NewPublicAccountAPI(pm, db)
@@ -65,7 +65,7 @@ func Test_UnlockAccount(t *testing.T) {
 	}
 
 	//获取db句柄
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 
 	//初始化API
 	publicAccountAPI := NewPublicAccountAPI(pm, db)
@@ -109,7 +109,7 @@ func Test_GetAccounts(t *testing.T) {
 	}
 
 	//获取db句柄
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 
 	//初始化API
 	publicAccountAPI := NewPublicAccountAPI(pm, db)
@@ -136,7 +136,7 @@ func Test_GetBalance1(t *testing.T) {
 	}
 
 	//获取db句柄
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 
 	//初始化API
 	publicAccountAPI := NewPublicAccountAPI(pm, db)

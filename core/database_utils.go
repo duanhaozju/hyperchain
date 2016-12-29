@@ -33,7 +33,8 @@ func init() {
 // should be called while programming start-up
 // port: the server port
 func InitDB(dbPath string, port int) {
-	hyperdb.SetLDBPath(dbPath, port)
+	hyperdb.SetDBPath(dbPath, port)
+	hyperdb.InitDatabase(110)
 	memChainMap = newMemChain()
 	memChainStatusMap = newMemChainStatus()
 }
@@ -43,7 +44,7 @@ func InitDB(dbPath string, port int) {
  */
 // GetReceipt returns a receipt by hash
 func GetReceipt(txHash common.Hash) *types.ReceiptTrans {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return nil
 	}
@@ -226,9 +227,9 @@ func DeleteTransaction(db hyperdb.Database, key []byte) error {
 	return db.Delete(keyFact)
 }
 
-func GetAllTransaction(db *hyperdb.LDBDatabase) ([]*types.Transaction, error) {
+func GetAllTransaction(db hyperdb.Database) ([]*types.Transaction, error) {
 	var ts []*types.Transaction = make([]*types.Transaction, 0)
-	iter := db.NewIteratorWithPrefix(TransactionPrefix)
+  	iter := db.NewIterator(TransactionPrefix)
 	for iter.Next() {
 		var wrapper types.TransactionWrapper
 		var transaction types.Transaction
@@ -242,9 +243,9 @@ func GetAllTransaction(db *hyperdb.LDBDatabase) ([]*types.Transaction, error) {
 	return ts, err
 }
 
-func GetAllDiscardTransaction(db *hyperdb.LDBDatabase) ([]*types.InvalidTransactionRecord, error) {
+func GetAllDiscardTransaction(db hyperdb.Database) ([]*types.InvalidTransactionRecord, error) {
 	var ts []*types.InvalidTransactionRecord = make([]*types.InvalidTransactionRecord, 0)
-	iter := db.NewIteratorWithPrefix(InvalidTransactionPrefix)
+	iter := db.NewIterator(InvalidTransactionPrefix)
 	for iter.Next() {
 		var t types.InvalidTransactionRecord
 		value := iter.Value()
@@ -440,7 +441,7 @@ type memChainStatus struct {
 // newMenChain new a memChain instance
 // it read from db firstly, if not exist, create a empty chain
 func newMemChain() *memChain {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return &memChain{
 			data: types.Chain{
@@ -499,11 +500,10 @@ func UpdateChain(block *types.Block, genesis bool) error {
 	}
 	if !genesis {
 		memChainMap.data.Height = block.Number
-		// todo
-	"errors"
+		// todo "errors"
 		memChainMap.data.CurrentTxSum += uint64(len(block.Transactions))
 	}
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err
 	}
@@ -577,7 +577,7 @@ func UpdateRequire(num uint64, hash []byte, recoveryNum uint64) error {
 	memChainMap.data.RequiredBlockNum = num
 	memChainMap.data.RecoveryNum = recoveryNum
 	memChainMap.data.RequireBlockHash = hash
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err
 	}
@@ -614,7 +614,7 @@ func UpdateChainByViewChange(height uint64, latestHash []byte) error {
 	memChainMap.data.Height = height
 	//memChainMap.data.ParentBlockHash = parentHash
 	memChainMap.data.LatestBlockHash = latestHash
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err
 	}

@@ -117,7 +117,7 @@ func RunVm(statedb *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *bi
 		testTransferNum = 0
 	)
 	log = logging.MustGetLogger("p2p")
-	db,_ := hyperdb.GetLDBDatabase()
+	db,_ := hyperdb.GetDBDatabase()
 	statedb,_ = state.New(common.Hash{},db)
 	env["currentNumber"] = "1"
 	env["currentGasLimit"] = "10000000"

@@ -88,7 +88,7 @@ func TestInitDB(t *testing.T) {
 	log.Info("test =============> > > TestInitDB")
 	InitDB("/tmp",8001)
 	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	hyperdb.GetLDBDatabase()
+	hyperdb.GetDBDatabase()
 }
 
 // TestPutTransaction tests for PutTransaction
@@ -96,7 +96,7 @@ func TestPutTransaction(t *testing.T) {
 	log.Info("test =============> > > TestPutTransaction")
 	InitDB("/tmp",8001)
 	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -115,7 +115,7 @@ func TestGetTransaction(t *testing.T) {
 	log.Info("test =============> > > TestGetTransaction")
 	InitDB("/tmp",8001)
 	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestGetTransaction(t *testing.T) {
 func TestGetTransactionBLk(t *testing.T) {
 	InitDB("/tmp",8001)
 	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -164,7 +164,7 @@ func TestGetAllTransaction(t *testing.T) {
 	log.Info("test =============> > > TestGetAllTransaction")
 	InitDB("/tmp",8001)
 	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -189,7 +189,7 @@ func TestDeleteTransaction(t *testing.T) {
 	log.Info("test =============> > > TestDeleteTransaction")
 	InitDB("/tmp",8001)
 	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -210,7 +210,7 @@ func TestPutTransactions(t *testing.T) {
 	log.Info("test =============> > > TestPutTransactions")
 	InitDB("/tmp",8001)
 	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -240,7 +240,7 @@ func TestPutBlock(t *testing.T) {
 	log.Info("test =============> > > TestPutBlock")
 	InitDB("/tmp",8001)
 	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -263,7 +263,7 @@ func TestGetBlock(t *testing.T) {
 	log.Info("test =============> > > TestGetBlock")
 	InitDB("/tmp",8001)
 	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -285,7 +285,7 @@ func TestDeleteBlock(t *testing.T) {
 	log.Info("test =============> > > TestDeleteBlock")
 	InitDB("/tmp",8001)
 	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -354,7 +354,7 @@ func TestGetInvaildTx(t *testing.T) {
 	}
 	data,_ := proto.Marshal(record)
 	// save to db
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 	db.Put(append(InvalidTransactionPrefix, tx.TransactionHash...), data)
 
 	result,_ := GetInvaildTxErrType(db,tx.TransactionHash)

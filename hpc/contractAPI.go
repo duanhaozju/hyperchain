@@ -20,12 +20,12 @@ import (
 type PublicContractAPI struct {
 	eventMux *event.TypeMux
 	pm *manager.ProtocolManager
-	db *hyperdb.LDBDatabase
+	db hyperdb.Database
 	tokenBucket *ratelimit.Bucket
 	ratelimitEnable bool
 }
 
-func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, ratelimitEnable bool, bmax int64, rate time.Duration) *PublicContractAPI {
+func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb hyperdb.Database, ratelimitEnable bool, bmax int64, rate time.Duration) *PublicContractAPI {
 	return &PublicContractAPI{
 		eventMux :eventMux,
 		pm:pm,

@@ -87,7 +87,7 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter, conf B
 	currentChain := core.GetChainCopy()
 	pool.demandNumber = currentChain.Height + 1
 	pool.demandSeqNo = currentChain.Height + 1
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {return nil}
 
 	blk, err := core.GetBlock(db, currentChain.LatestBlockHash)
@@ -291,7 +291,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	var (
 		env = make(map[string]string)
 	)
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err, nil, nil, nil, nil, nil, invalidTxs
 	}
@@ -496,7 +496,7 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, primary bool, consenter consensus.Consenter) {
 	core.UpdateChain(block, false)
 
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
 		return
@@ -550,7 +550,7 @@ func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
 	}
 	// save to db
 	log.Notice("invalidTx", common.BytesToHash(invalidTx.Tx.TransactionHash).Hex())
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
 		return
@@ -566,7 +566,7 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	atomic.StoreUint64(&pool.demandSeqNo, ev.SeqNo)
 	atomic.StoreUint64(&pool.maxSeqNo, ev.SeqNo-1)
 
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
 		return
@@ -613,7 +613,7 @@ func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 	fakeBlockNumber := core.GetHeightOfChain()
 	env["currentNumber"] = strconv.FormatUint(fakeBlockNumber, 10)
 	env["currentGasLimit"] = "10000000"
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err
 	}
@@ -669,7 +669,7 @@ func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 }
 
 func (pool *BlockPool) RemoveData(from, to uint64) {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
 		return
@@ -703,7 +703,7 @@ func (pool *BlockPool) RemoveData(from, to uint64) {
 
 func (pool *BlockPool) CutdownBlock(number uint64) {
 	pool.RemoveData(number, number + 1)
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
 		return
