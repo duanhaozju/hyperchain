@@ -373,6 +373,9 @@ func (bucketTree *BucketTree) updateDataNodeCache(){
 	if bucketTree.dataNodesDelta == nil {
 		return
 	}
+	bucketTree.dataNodeCache.lock.Lock()
+	defer bucketTree.dataNodeCache.lock.Unlock()
+	
 	affectedBuckets := bucketTree.dataNodesDelta.getAffectedBuckets()
 	for _, affectedBucket := range affectedBuckets {
 		dataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(affectedBucket)

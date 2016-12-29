@@ -25,7 +25,7 @@ func newDataNodeCache(treePrefix string,maxSizeMBs int) *DataNodeCache {
 	return &DataNodeCache{TreePrefix: treePrefix,c: make(map[BucketKey] DataNodeMap), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 }
 
-func (datanodecache *DataNodeCache) Remove(dataNode *DataNode) error{
+func (dataNodeCache *DataNodeCache) Remove(dataNode *DataNode) error{
 	bucketKey := *(dataNode.dataKey.bucketKey)
 	dataKey := dataNode.dataKey
 	dataKeyBytes,err := json.Marshal(*dataKey)
@@ -33,36 +33,36 @@ func (datanodecache *DataNodeCache) Remove(dataNode *DataNode) error{
 		logger.Error("Remove Error ",err)
 		return err
 	}
-	if  datanodecache.c == nil || len(datanodecache.c) == 0 || datanodecache.c[bucketKey] == nil {
+	if  dataNodeCache.c == nil || len(dataNodeCache.c) == 0 || dataNodeCache.c[bucketKey] == nil {
 		return errors.New("There is no data in cache")
 	}
 
-	delete(datanodecache.c[bucketKey],string(dataKeyBytes))
+	delete(dataNodeCache.c[bucketKey],string(dataKeyBytes))
 	return nil
 }
 
-func (datanodecache *DataNodeCache) Put(dataNode *DataNode){
+func (dataNodeCache *DataNodeCache) Put(dataNode *DataNode){
 	bucketKey := *(dataNode.dataKey.bucketKey)
 	dataKey := dataNode.dataKey
 	dataKeyBytes,err := json.Marshal(*dataKey)
 	if err != nil {
 		logger.Error("Remove Error ",err)
 	}
-	if(datanodecache.c[bucketKey] == nil){
-		datanodecache.c[bucketKey] = make(DataNodeMap)
-		datanodecache.c[bucketKey][string(dataKeyBytes)] = dataNode
+	if(dataNodeCache.c[bucketKey] == nil){
+		dataNodeCache.c[bucketKey] = make(DataNodeMap)
+		dataNodeCache.c[bucketKey][string(dataKeyBytes)] = dataNode
 	}else {
-		datanodecache.c[bucketKey][string(dataKeyBytes)] = dataNode
+		dataNodeCache.c[bucketKey][string(dataKeyBytes)] = dataNode
 	}
 }
 
-func (datanodecache *DataNodeCache) Get(bucket_key BucketKey,data_key *DataKey)  (*DataNode, error) {
-	if !datanodecache.isEnabled {
+func (dataNodeCache *DataNodeCache) Get(bucket_key BucketKey,data_key *DataKey)  (*DataNode, error) {
+	if !dataNodeCache.isEnabled {
 		return fetchDataNodeFromDB(data_key)
 	}
-	datanodecache.lock.RLock()
-	defer datanodecache.lock.RUnlock()
-	datanodeMap := datanodecache.c[bucket_key]
+	dataNodeCache.lock.RLock()
+	defer dataNodeCache.lock.RUnlock()
+	datanodeMap := dataNodeCache.c[bucket_key]
 	if datanodeMap == nil {
 		return fetchDataNodeFromDB(data_key)
 	}
@@ -74,23 +74,23 @@ func (datanodecache *DataNodeCache) Get(bucket_key BucketKey,data_key *DataKey) 
 	return datanodeMap[string(dataKeyBytes)], nil
 }
 
-func (datanodecache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey) (dataNodes DataNodes,err error) {
+func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey) (dataNodes DataNodes,err error) {
 
-	if(datanodecache.isEnabled == false){
-		return fetchDataNodesFromDBByBucketKey(datanodecache.TreePrefix,&bucketKey)
+	if(dataNodeCache.isEnabled == false){
+		return fetchDataNodesFromDBByBucketKey(dataNodeCache.TreePrefix,&bucketKey)
 	}
 
-	dataNodeMap := datanodecache.c[bucketKey]
+	dataNodeMap := dataNodeCache.c[bucketKey]
 
 	if dataNodeMap == nil || len(dataNodeMap) == 0 {
 		logger.Errorf("The bucket is nil, bucketLevel is [%d] bucketNumber [%d]",bucketKey.level,bucketKey.bucketNumber)
-		dataNodes,err = fetchDataNodesFromDBByBucketKey(datanodecache.TreePrefix,&bucketKey)
+		dataNodes,err = fetchDataNodesFromDBByBucketKey(dataNodeCache.TreePrefix,&bucketKey)
 		if err != nil{
 			logger.Errorf("fetchDataNodesFromDBByBucketKey Error")
 			return dataNodes,err
 		}
 		for _,dataNode := range dataNodes {
-			datanodecache.Put(dataNode)
+			dataNodeCache.Put(dataNode)
 		}
 	}else {
 		for _,dataNode := range dataNodeMap {
@@ -102,6 +102,6 @@ func (datanodecache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey)
 }
 
 
-func (datanodecache *DataNodeCache) ClearDataNodeCache() {
-	datanodecache.c = make(map[BucketKey] DataNodeMap)
+func (dataNodeCache *DataNodeCache) ClearDataNodeCache() {
+	dataNodeCache.c = make(map[BucketKey] DataNodeMap)
 }
