@@ -22,7 +22,7 @@ import (
 	//"encoding/json"
 	"os"
 	"crypto/ecdsa"
-	"crypto"
+	//"crypto"
 )
 
 /*const  ECert  = `-----BEGIN CERTIFICATE-----
@@ -309,7 +309,7 @@ func TestCheckCert(t *testing.T)  {
 }
 
 func TestESign(t *testing.T) {
-	payload := []byte{1,23}
+	payload := []byte{1,23,6,0,9,9,9,8,7,6,5,4,9,0}
 	var pri interface{}
 	var parErr error
 	var sign []byte
@@ -330,18 +330,19 @@ func TestESign(t *testing.T) {
 		}
 	}
 
-	var aaa crypto.PublicKey
-
-	aaa = nil
-	//
-	//fmt.Println("#############")
-	//fmt.Println(aaa)
-	//
-	//fmt.Println("#############")
-
+//	var aaa crypto.PublicKey
+//
+//	aaa = nil
+//	//
+//	//fmt.Println("#############")
+//	//fmt.Println(aaa)
+//	//
+//	//fmt.Println("#############")
+//
 	ecdPri := pri.(*ecdsa.PrivateKey)
 	pub := ecdPri.PublicKey
-fmt.Println(pub)
-	bol,_ := ecdsaEncrypto.VerifySign(&pub,payload,sign)
+//fmt.Println(pub)
+	bol,_ := ecdsaEncrypto.VerifySign(&pub,[]byte{1,2,3},sign)
+
 	fmt.Println(bol)
 }

@@ -26,6 +26,6 @@ func (c *chatClient) WrapperChat(ctx context.Context, in *Message, opts ...grpc.
 		}
 	}
 
-	message,err := c.Chat(ctx,in,opts)
-	return  message,err
+	//message,err := c.Chat(ctx,in,opts)
+	return  nil,nil
 }
