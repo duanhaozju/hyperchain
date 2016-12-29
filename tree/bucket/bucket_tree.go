@@ -144,7 +144,7 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 	for _, bucketKey := range afftectedBuckets {
 
 		updatedDataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(bucketKey)
-		existingDataNodes, err := bucketTree.dataNodeCache.fetchDataNodesFromCacheFor(*bucketKey)
+		existingDataNodes, err := bucketTree.dataNodeCache.FetchDataNodesFromCache(*bucketKey)
 		if err != nil {
 			return err
 		}
@@ -427,7 +427,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 	db,_ := hyperdb.GetLDBDatabase()
 	writeBatch := db.NewBatch()
 	keyValueMap := NewKVMap()
-	bucketTree.dataNodeCache.clearDataNodeCache()
+	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
 	bucketTree.bucketCache.isEnabled = false
 	bucketTree.dataNodeCache.isEnabled = false
