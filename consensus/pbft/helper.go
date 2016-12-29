@@ -132,6 +132,10 @@ func (pbft *pbftProtocal) allCorrectReplicasQuorum() int {
 	return (pbft.N - pbft.f)
 }
 
+func (pbft *pbftProtocal) minimumCorrectQuorum() int {
+	return pbft.f + 1
+}
+
 // =============================================================================
 // pre-prepare/prepare/commit check helper
 // =============================================================================
