@@ -82,7 +82,7 @@ func (node *Node)UpdateDelayTableThread(){
 //新节点需要监听相应的attend类型
 func (node *Node)attendNoticeProcess(N int) {
 	isPrimaryConnectFlag := false
-	f := int(math.Floor(float64((N - 1) / 3)))
+	f := (N - 1) / 3
 	num := 0
 	for {
 		select {

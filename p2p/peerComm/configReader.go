@@ -5,13 +5,16 @@ package peerComm
 import (
 	"io/ioutil"
 	"encoding/json"
+	pb "hyperchain/p2p/peermessage"
+	"sync"
 )
 
 type ConfigReader struct {
-	config PeerConfig
-	nodes   map[int]Address
-	maxNode int
-	path string
+	Config    PeerConfig
+	nodes     map[int]Address
+	maxNode   int
+	path      string
+	writeLock sync.Mutex
 }
 
 // TODO return a error next to the configReader or throw a panic
@@ -27,10 +30,10 @@ func NewConfigReader(configpath string) *ConfigReader {
 		log.Error(err);
 	}
 	var configReader ConfigReader
-	configReader.config  = config
+	configReader.Config = config
 	configReader.maxNode = config.Maxpeernode;
-	configReader.nodes   = make(map[int]Address)
-	configReader.path  = configpath
+	configReader.nodes = make(map[int]Address)
+	configReader.path = configpath
 
 	slice := config.PeerNodes
 	for _,node := range slice{
@@ -50,39 +53,39 @@ func NewConfigReader(configpath string) *ConfigReader {
 }
 
 func (conf *ConfigReader) GetLocalID() int{
-	return conf.config.SelfConfig.NodeID
+	return conf.Config.SelfConfig.NodeID
 }
 
 func (conf *ConfigReader) GetLocalIP() string {
-	return conf.config.SelfConfig.LocalIP
+	return conf.Config.SelfConfig.LocalIP
 }
 
 func (conf *ConfigReader) GetLocalGRPCPort() int{
-	return conf.config.SelfConfig.GrpcPort
+	return conf.Config.SelfConfig.GrpcPort
 }
 
 func (conf *ConfigReader) GetLocalJsonRPCPort() int{
-	return conf.config.SelfConfig.JsonrpcPort
+	return conf.Config.SelfConfig.JsonrpcPort
 }
 
 func (conf *ConfigReader) GetIntroducerIP() string{
-	return conf.config.SelfConfig.IntroducerIP
+	return conf.Config.SelfConfig.IntroducerIP
 }
 
 func (conf *ConfigReader) GetIntroducerID() int {
-	return conf.config.SelfConfig.IntroducerID
+	return conf.Config.SelfConfig.IntroducerID
 }
 
 func (conf *ConfigReader) GetIntroducerJSONRPCPort() int {
-	return conf.config.SelfConfig.IntroducerJSONRPCPort
+	return conf.Config.SelfConfig.IntroducerJSONRPCPort
 }
 
 func (conf *ConfigReader) GetIntroducerPort() int{
-	return conf.config.SelfConfig.IntroducerPort
+	return conf.Config.SelfConfig.IntroducerPort
 }
 
 func (conf *ConfigReader) IsOrigin() bool{
-	return conf.config.SelfConfig.IsOrigin
+	return conf.Config.SelfConfig.IsOrigin
 }
 
 func (conf *ConfigReader) GetPort(nodeID int) int {
@@ -95,4 +98,75 @@ func (conf *ConfigReader) GetIP(nodeID int)string{
 
 func (conf *ConfigReader) GetMaxPeerNumber()int{
 	return conf.maxNode
+}
+
+
+func (conf *ConfigReader) DeleteNode(addr pb.PeerAddr){
+	//TODO delete DeleteNode
+}
+
+func (conf *ConfigReader) persist() error{
+	conf.writeLock.Lock()
+	defer conf.writeLock.Unlock()
+	content,err := json.Marshal(conf.Config)
+	if err != nil{
+		log.Error("persist the peerconfig failed, json marshal failed!")
+		return err
+	}
+	err = ioutil.WriteFile(conf.path,content,655)
+	if err != nil{
+		log.Error("persist the peerconfig failed, write file failed!")
+		return err
+	}
+	return nil
+}
+
+
+func (conf *ConfigReader) addNode(addr pb.PeerAddr){
+	conf.maxNode +=1
+	newAddress := NewAddress(addr.ID,addr.Port,addr.RpcPort,addr.IP)
+	conf.nodes[addr.ID] = newAddress
+	conf.Config.Maxpeernode += 1
+	peerConfigNode := NewPeerConfigNodes(addr.IP,addr.RpcPort,addr.Port,addr.ID)
+	conf.Config.PeerNodes = append(conf.Config.PeerNodes,*peerConfigNode)
+
+}
+
+func (conf *ConfigReader) delNode(addr pb.PeerAddr){
+	conf.maxNode -=1
+	delete(conf.nodes,addr.ID)
+	conf.Config.Maxpeernode -= 1
+	conf.Config.PeerNodes = deleteElement(conf.Config.PeerNodes,addr)
+}
+
+func (conf *ConfigReader) AddNodesAndPersist(addrs map[string]pb.PeerAddr){
+	for _,value := range addrs{
+		if _,ok := conf.nodes[value.ID];!ok{
+			conf.addNode(value)
+		}
+	}
+	conf.persist()
+}
+func (conf *ConfigReader) DelNodesAndPersist(addrs map[string]pb.PeerAddr){
+	for _,value := range addrs{
+		if _,ok := conf.nodes[value.ID];ok{
+			conf.delNode(value)
+		}
+	}
+	conf.persist()
+}
+
+func deleteElement(nodes []PeerConfigNodes, addr pb.PeerAddr) []PeerConfigNodes{
+	index := 0
+	endIndex := len(nodes) - 1
+	result := make([]PeerConfigNodes,0)
+	for k,v := range nodes{
+		if v.ID == addr.ID{
+			result = append(result, nodes[index:k]...)
+			index = k + 1
+		}else if k == endIndex {
+			result = append(result, nodes[index:endIndex+1]...)
+		}
+	}
+	return result
 }

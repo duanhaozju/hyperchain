@@ -136,22 +136,22 @@ func (this *GrpcPeerManager) connectToIntroducer( introducerAddress pb.PeerAddr)
 		log.Error("routing table unmarshal err ", unmarshalError)
 	}
 	log.Warning("合并路由表并链接", routers)
-	this.peersPool.MergeFormRoutersToTemp(routers)
+	this.peersPool.MergeFromRoutersToTemp(routers)
 	for _, p := range this.peersPool.GetPeersWithTemp() {
 		log.Warning("路由表中的节点", p)
 		//review 		this.LocalNode.attendChan <- 1
-		//attend_message := pb.Message{
-		//	MessageType:pb.Message_ATTEND,
-		//	Payload:payload,
-		//	MsgTimeStamp:time.Now().UnixNano(),
-		//	From:this.LocalNode.address,
-		//}
-		//retMsg,err := p.Chat(attend_message)
-		//if err != nil{
-		//	log.Error(err)
-		//}else{
-		//	retMsg
-		//}
+		attend_message := pb.Message{
+			MessageType:pb.Message_ATTEND,
+			Payload:payload,
+			MsgTimeStamp:time.Now().UnixNano(),
+			From:this.LocalNode.localAddr.ToPeerAddress(),
+		}
+		retMsg,err := p.Chat(attend_message)
+		if err != nil{
+			log.Error(err)
+		}else{
+			retMsg
+		}
 	}
 	this.LocalNode.N = len(this.GetAllPeersWithTemp())
 }
@@ -457,6 +457,7 @@ func (this *GrpcPeerManager) UpdateRoutingTable(payload []byte) {
 		//通知新节点进行接洽
 		newPeer.Chat(attendResponseMsg)
 		this.LocalNode.N += 1
+		this.configs.AddNodesAndPersist(*this.peersPool.GetPeers())
 	} else {
 		//新节点
 		//新节点在一开始的时候就已经将介绍人的节点列表加入了所以这里不需要处理
@@ -464,6 +465,7 @@ func (this *GrpcPeerManager) UpdateRoutingTable(payload []byte) {
 		this.IsOnline = true
 		this.peersPool.MergeTempPeersForNewNode()
 		this.LocalNode.N = this.peersPool.GetAliveNodeNum()
+		this.configs.AddNodesAndPersist(*this.peersPool.GetPeers())
 	}
 }
 
@@ -518,7 +520,8 @@ func (this *GrpcPeerManager)  DeleteNode(hash string) error{
 
 		for _,per :=range this.peersPool.GetPeers(){
 			if per.PeerAddr.Hash == hash{
-				this.peersPool.DeletePeer(per)
+				deleteList := this.peersPool.DeletePeer(per)
+				this.configs.DelNodesAndPersist(deleteList)
 			}else{
 				for _,router := range routers.Routers{
 					if router.Hash == per.PeerAddr.Hash{
