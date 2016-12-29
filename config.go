@@ -6,7 +6,7 @@ import (
 	logging "github.com/op/go-logging"
 	"github.com/spf13/viper"
 	"time"
-	"hyperchain/jsonrpc"
+	"hyperchain/api/jsonrpc/core"
 )
 
 type configs interface {

@@ -10,6 +10,7 @@ import (
 	"hyperchain/core"
 	"hyperchain/core/types"
 	"hyperchain/common"
+	"bytes"
 )
 
 
@@ -20,11 +21,22 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 	blockChainInfo := &protos.BlockchainInfo{}
 	proto.Unmarshal(UpdateStateMessage.TargetId, blockChainInfo)
 	log.Noticef("send sync block request to fetch missing block, current height %d, target height %d", core.GetChainCopy().Height, blockChainInfo.Height)
-	if core.GetChainCopy().RecoveryNum >= blockChainInfo.Height || core.GetChainCopy().Height >= blockChainInfo.Height {
-		log.Info("receive invalid state update request, just ignore it")
+	if core.GetChainCopy().RecoveryNum >= blockChainInfo.Height || core.GetChainCopy().Height > blockChainInfo.Height {
+		log.Warning("receive invalid state update request, just ignore it")
 		return
 	}
-	// send block request message to remote peer
+
+	if core.GetChainCopy().Height == blockChainInfo.Height {
+		log.Warning("recv target height same with current chain height")
+		if self.isBlockHashEqual(blockChainInfo.CurrentBlockHash) == true {
+			log.Info("current chain latest block hash equal with target hash, send state updated event")
+			self.sendStateUpdatedEvent()
+		} else {
+			log.Warningf("current chain latest block hash not equal with target hash, cut down local block %d", core.GetChainCopy().Height)
+			self.blockPool.CutdownBlock(core.GetChainCopy().Height)
+		}
+	}
+	// send block request message to remot peer
 	required := &recovery.CheckPointMessage{
 		RequiredNumber: blockChainInfo.Height,
 		CurrentNumber:  core.GetChainCopy().Height,
@@ -128,7 +140,6 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 							} else {
 								// the highest block in local is invalid, request the block
 								self.blockPool.CutdownBlock(lastBlk.Number - 1)
-								core.UpdateChainByBlcokNum(db, lastBlk.Number - 2)
 								self.broadcastDemandBlock(lastBlk.Number - 1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
 							}
 						}
@@ -244,4 +255,20 @@ func (self *ProtocolManager) sendStateUpdatedEvent() {
 	self.blockPool.PurgeValidateQueue()
 	self.blockPool.PurgeBlockCache()
 	self.consenter.RecvMsg(msgPayload)
+}
+
+func (self *ProtocolManager) isBlockHashEqual(targetHash []byte) bool {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Error("get database handler failed in state update")
+		return false
+	}
+	// compare current latest block and peer's block hash
+	latestBlock, err := core.GetBlockByNumber(db, core.GetChainCopy().Height)
+	if err != nil || latestBlock == nil || bytes.Compare(targetHash, latestBlock.BlockHash) != 0 {
+		log.Warningf("missing match target blockhash and latest block's hash, target block hash %s, latest block hash %s",
+			common.Bytes2Hex(targetHash), common.Bytes2Hex(latestBlock.BlockHash))
+		return false
+	}
+	return true
 }

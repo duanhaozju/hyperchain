@@ -702,6 +702,11 @@ func (pool *BlockPool) RemoveData(from, to uint64) {
 }
 
 func (pool *BlockPool) CutdownBlock(number uint64) {
+	// 1. reset demand number and demand seqNo
+	atomic.StoreUint64(&pool.demandNumber, number)
+	atomic.StoreUint64(&pool.demandSeqNo, number)
+	atomic.StoreUint64(&pool.maxSeqNo, number - 1)
+	// 2. remove block releted data
 	pool.RemoveData(number, number + 1)
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
@@ -715,6 +720,7 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 	}
 	// clear all stuff in block cache and validation cache
 	pool.lastValidationState.Store(common.BytesToHash(block.MerkleRoot))
+	core.UpdateChainByBlcokNum(db, block.Number - 1)
 }
 func (pool *BlockPool) PurgeValidateQueue() {
 	pool.validationQueue.Purge()

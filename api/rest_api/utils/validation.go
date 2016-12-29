@@ -1,10 +1,9 @@
 package utils
 
 import (
-	"hyperchain/hpc"
+	"hyperchain/api"
 	"encoding/json"
 	"hyperchain/common"
-
 )
 
 // CheckIntervalArgs

@@ -156,7 +156,7 @@ func RunVm(statedb *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *bi
 		log.Debug("Call**********************************",i)
 		tx := types.NewTestCallTransaction()
 		tx.To = addr.Bytes()
-		//receipt,ret,_,_ = core.ExecTransaction(*tx,*vmenv)
+		//receipt,ret,_,_ =types.go.ExecTransaction(*tx,*vmenv)
 	}
 	log.Infof("the call contract time we used is ",time.Now().Sub(now_time))
 	log.Debug("receipt",receipt.Ret)

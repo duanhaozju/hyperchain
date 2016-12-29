@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"github.com/astaxie/beego"
-	"hyperchain/hpc"
+	"hyperchain/api"
 )
 
 type NodesController struct {

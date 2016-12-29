@@ -10,9 +10,9 @@ import (
 	"io"
 	"fmt"
 	"hyperchain/manager"
-	"hyperchain/hpc"
+	"hyperchain/api"
 	"time"
-	"hyperchain/rest_api/routers"
+	"hyperchain/api/rest_api/routers"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 )

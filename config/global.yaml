@@ -25,19 +25,6 @@ global:
         keystoredir: "./build/keystore"
         keynodesdir: "./build/keynodes"
 
-    logs:
-        # dump the log file or not
-        dumpfile: false
-        logsdir: "./build/logs"
-        # loglevel contains those levels:
-        #    High   CRITICAL
-        #           ERROR
-        #           WARNING
-        #           NOTICE
-        #           INFO
-        #    Low    DEBUG
-
-        loglevel: "NOTICE"
     database:
         dir: "./build/database/"
 
@@ -62,4 +49,25 @@ global:
             txFillRate: 0.5ms
             contractRatePeak : 100
             contractFillRate: 0.5ms
+
+######################################################
+# config log's level by module                       #
+#                                                    #
+# CRITICAL ERROR WARNING NOTICE INFO DEBUG           #
+# high <------------- log level -------> low         #
+#                                                    #
+######################################################
+    logs:
+        # dump the log file or not
+        dumpfile: false
+        logsdir: "./build/logs"
+        # default loglevel for all modules which can be override by module level log setting
+        loglevel: "NOTICE"
+
+        module:
+            #set log level by module
+            p2p: "INFO"
+            consensus: "NOTICE"
+            core: "NOTICE"
+            hyperdb: "WARNING"
 

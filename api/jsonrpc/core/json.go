@@ -46,6 +46,15 @@ type JSONErrResponse struct {
 	Error   JSONError   `json:"error"`
 }
 
+// Hyperchain Release1.2
+type JSONResponse struct {
+	Version string 		`json:"jsonrpc"`
+	Id 	interface{} 	`json:"id,omitempty"`
+	Code 	int 		`json:"code"`
+	Message string 		`json:"message"`
+	Result 	interface{} 	`json:"result"`
+}
+
 // JSON-RPC notification payload
 type jsonSubscription struct {
 	Subscription string      `json:"subscription"`
@@ -238,21 +247,25 @@ func parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type)
 // CreateResponse will create a JSON-RPC success response with the given id and reply as result.
 func (c *jsonCodec) CreateResponse(id interface{}, reply interface{}) interface{} {
 	if isHexNum(reflect.TypeOf(reply)) {
-		return &JSONSuccessResponse{Version: JSONRPCVersion, Id: id, Result: fmt.Sprintf(`%#x`, reply)}
+		//return &JSONSuccessResponse{Version: JSONRPCVersion, Id: id, Result: fmt.Sprintf(`%#x`, reply)}
+		return &JSONResponse{Version: JSONRPCVersion, Id: id, Code: 0, Message: "SUCCESS", Result: fmt.Sprintf(`%#x`, reply)}
 	}
-	return &JSONSuccessResponse{Version: JSONRPCVersion, Id: id, Result: reply}
+	//return &JSONSuccessResponse{Version: JSONRPCVersion, Id: id, Result: reply}
+	return &JSONResponse{Version: JSONRPCVersion, Id: id, Code: 0, Message: "SUCCESS", Result: reply}
 }
 
 // CreateErrorResponse will create a JSON-RPC error response with the given id and error.
 func (c *jsonCodec) CreateErrorResponse(id interface{}, err RPCError) interface{} {
-	return &JSONErrResponse{Version: JSONRPCVersion, Id: id, Error: JSONError{Code: err.Code(), Message: err.Error()}}
+	//return &JSONErrResponse{Version: JSONRPCVersion, Id: id, Error: JSONError{Code: err.Code(), Message: err.Error()}}
+	return &JSONResponse{Version: JSONRPCVersion, Id: id, Code: err.Code(), Message: err.Error() }
 }
 
 // CreateErrorResponseWithInfo will create a JSON-RPC error response with the given id and error.
 // info is optional and contains additional information about the error. When an empty string is passed it is ignored.
 func (c *jsonCodec) CreateErrorResponseWithInfo(id interface{}, err RPCError, info interface{}) interface{} {
-	return &JSONErrResponse{Version: JSONRPCVersion, Id: id,
-		Error: JSONError{Code: err.Code(), Message: err.Error(), Data: info}}
+	//return &JSONErrResponse{Version: JSONRPCVersion, Id: id,
+	//	Error: JSONError{Code: err.Code(), Message: err.Error(), Data: info}}
+	return &JSONResponse{Version: JSONRPCVersion, Id: id,Code: err.Code(), Message: err.Error(), Result: info}
 }
 
 // CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.
