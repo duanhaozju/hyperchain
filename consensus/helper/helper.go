@@ -9,15 +9,8 @@ import (
 	pb "hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/op/go-logging"
 	"hyperchain/core/types"
 )
-
-var logger *logging.Logger // package-level logger
-
-func init() {
-	logger = logging.MustGetLogger("consensus/help")
-}
 
 type helper struct {
 	msgQ *event.TypeMux

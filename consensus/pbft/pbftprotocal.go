@@ -24,7 +24,7 @@ import (
 var logger *logging.Logger // package-level logger
 
 func init() {
-	logger = logging.MustGetLogger("consensus/pbft")
+	logger = logging.MustGetLogger("consensus")
 }
 
 // batch is used to construct reqbatch, the middle layer between outer to pbft
@@ -95,10 +95,10 @@ type pbftProtocal struct {
 	viewChangeStore map[vcidx]*ViewChange                    // track view-change messages
 
 								 // implement the validate transaction batch process
-	vid                 	uint64                       // track the validate squence number
+	vid                 	uint64                       // track the validate sequence number
 	lastVid             	uint64                       // track the last validate batch seqNo
 	currentVid          	*uint64                      // track the current validate batch seqNo
-	validatedBatchStore 	map[string]*TransactionBatch // track the validated transaction rnnbatch
+	validatedBatchStore 	map[string]*TransactionBatch // track the validated transaction batch
 	cacheValidatedBatch 	map[string]*cacheBatch       // track the cached validated batch
 	validateTimer			events.Timer
 	validateTimeout			time.Duration

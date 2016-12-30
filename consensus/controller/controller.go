@@ -12,7 +12,7 @@ import (
 )
 var logger *logging.Logger // package-level logger
 func init() {
-	logger = logging.MustGetLogger("consensus/controller")
+	logger = logging.MustGetLogger("consensus")
 }
 
 

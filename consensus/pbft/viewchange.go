@@ -484,7 +484,7 @@ func (pbft *pbftProtocal) primaryProcessNewView(initialCp ViewChange_C, replicas
 
 
 func (pbft *pbftProtocal) processNewView() events.Event {
-	var newReqBatchMissing bool
+
 	nv, ok := pbft.newViewStore[pbft.view]
 	if !ok {
 		logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
@@ -559,15 +559,8 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 		pbft.stateTransfer(target)
 	}
 
-	//TODO: 从节点不需要拿batch,只要更新状态信息就行
-	newReqBatchMissing = pbft.feedMissingReqBatchIfNeeded(nv)
-	if len(pbft.missingReqBatches) == 0 {
-		return pbft.processReqInNewView(nv)
-	} else if newReqBatchMissing {
-		pbft.fetchRequestBatches()
-	}
+	return pbft.processReqInNewView(nv)
 
-	return nil
 }
 
 func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
