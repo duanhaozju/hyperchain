@@ -217,7 +217,7 @@ func (self *StateDB) ResetToTarget(oldest uint64, root common.Hash) {
 func (self *StateDB) FetchBatch(seqNo uint64) hyperdb.Batch {
 	if self.batchCache.Contains(seqNo) {
 		// already exist
-		log.Criticalf("fetch batch for #%d exist in batch cache", seqNo)
+		log.Debugf("fetch batch for #%d exist in batch cache", seqNo)
 		batch, _ := self.batchCache.Get(seqNo)
 		return batch.(hyperdb.Batch)
 	} else {
@@ -529,7 +529,6 @@ func (self *StateDB) deleteStateObject(batch hyperdb.Batch,stateObject *StateObj
 	addr := stateObject.Address()
 	batch.Delete(CompositeAccountKey(addr.Bytes()))
 	// delete related storage content
-	// TODO some storage entries can be leave if it has been flush to disk still in previous batch
 	db, _ := self.db.(*hyperdb.LDBDatabase)
 	iter := db.NewIteratorWithPrefix(GetStorageKeyPrefix(stateObject.address.Bytes()))
 	for iter.Next() {

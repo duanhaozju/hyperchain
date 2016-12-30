@@ -144,7 +144,7 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 	for _, bucketKey := range afftectedBuckets {
 
 		updatedDataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(bucketKey)
-		existingDataNodes, err := bucketTree.dataNodeCache.fetchDataNodesFromCacheFor(*bucketKey)
+		existingDataNodes, err := bucketTree.dataNodeCache.FetchDataNodesFromCache(*bucketKey)
 		if err != nil {
 			return err
 		}
@@ -223,9 +223,6 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 			if bytes.Compare(updatedNode.getValue(),existingNode.value) != 0{
 				compositeKey := string(updatedNode.getCompositeKey())
 				logger.Debugf("update updated value set, current value %s, origin value %s", common.Bytes2Hex(updatedNode.value), common.Bytes2Hex(existingNode.value))
-				if updatedNode.value == nil {
-					logger.Debugf("DEBUG computeDataNodesCryptoHash, empty value")
-				}
 				updatedValueSet.Set(compositeKey,updatedNode.value,existingNode.value)
 			}
 
@@ -236,7 +233,6 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 			j++
 		}
 		if !nextNode.isDelete() {
-			logger.Debugf("DEBUG addNextNode")
 			bucketHashCalculator.addNextNode(nextNode)
 		}
 	}
@@ -254,12 +250,10 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 
 	for _, remainingNode := range remainingNodes {
 		if !remainingNode.isDelete() {
-			logger.Debugf("DEBUG addNextNode")
 			bucketHashCalculator.addNextNode(remainingNode)
 		}
 	}
 	tmp :=  bucketHashCalculator.computeCryptoHash()
-	logger.Debugf("DEBUG computeCryptoHash computeCryptoHash %s", common.Bytes2Hex(tmp))
 	return tmp
 }
 
@@ -334,7 +328,7 @@ func (bucketTree *BucketTree) addUpdatedValueSetForPersistence(writeBatch hyperd
 }
 
 func (updatedValueSet *UpdatedValueSet) Print(treePrefix string){
-	logger.Debug("UpdatedValueSet block number #%d", updatedValueSet.BlockNum)
+	logger.Debugf("UpdatedValueSet block number #%d", updatedValueSet.BlockNum)
 	for k,v := range updatedValueSet.UpdatedKVs{
 		realTreePrefix ,realKey := DecodeCompositeKey([]byte(k))
 		if realTreePrefix != treePrefix {
@@ -373,6 +367,9 @@ func (bucketTree *BucketTree) updateDataNodeCache(){
 	if bucketTree.dataNodesDelta == nil {
 		return
 	}
+	bucketTree.dataNodeCache.lock.Lock()
+	defer bucketTree.dataNodeCache.lock.Unlock()
+	
 	affectedBuckets := bucketTree.dataNodesDelta.getAffectedBuckets()
 	for _, affectedBucket := range affectedBuckets {
 		dataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(affectedBucket)
@@ -427,7 +424,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 	db,_ := hyperdb.GetLDBDatabase()
 	writeBatch := db.NewBatch()
 	keyValueMap := NewKVMap()
-	bucketTree.dataNodeCache.clearDataNodeCache()
+	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
 	bucketTree.bucketCache.isEnabled = false
 	bucketTree.dataNodeCache.isEnabled = false
@@ -464,7 +461,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 			continue
 		}
 		if value == nil || len(value) == 0{
-			logger.Error("There is no value update")
+			logger.Debugf("There is no value update")
 			continue
 		}
 		updatedValueSet := newUpdatedValueSet(big.NewInt(i))
@@ -494,12 +491,14 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 }
 
 // TODO add verify about value and previousvalue
-func revertToTargetBlock(treePrefix string,blockNum *big.Int,updatedValueSet *UpdatedValueSet,keyValueMap *K_VMap)  {
+// TODO there should be some errors in the func
+func revertToTargetBlock(treePrefix string, blockNum *big.Int,updatedValueSet *UpdatedValueSet,keyValueMap *K_VMap)  {
 	for key, updatedValue := range updatedValueSet.UpdatedKVs {
 		realTreePrefix,realKey := DecodeCompositeKey([]byte(key))
 		(*keyValueMap)[realKey] = updatedValue.PreviousValue
 		if(treePrefix != realTreePrefix){
-			logger.Errorf("--------------------revertToTargetBlock error")
+			logger.Debugf("RevertToTargetBlock error realTreePrefix",realTreePrefix)
+			logger.Debugf("RevertToTargetBlock error treePrefix",treePrefix)
 		}
 	}
 }

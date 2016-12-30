@@ -4,7 +4,7 @@ import (
 	"testing"
 	"github.com/golang/protobuf/proto"
 	"math/big"
-	"github.com/hyperledger/fabric/core/ledger/testutil"
+	"hyperchain/tree/bucket/testutil"
 )
 
 func TestUpdatedValueSet_Marshal(t *testing.T) {
@@ -19,6 +19,6 @@ func TestUpdatedValueSet_Marshal(t *testing.T) {
 	updatevalueSet.Marshal(buffer)
 	updatevalueSet.Print("TestUpdatedValueSet_Marshal")
 	newUpdatevalueSet.UnMarshal(buffer)
-	newUpdatevalueSet.Print()
+	newUpdatevalueSet.Print("TestUpdatedValueSet_Marshal")
 	testutil.AssertEquals(t,newUpdatevalueSet,updatevalueSet)
 }

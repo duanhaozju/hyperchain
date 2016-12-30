@@ -1,12 +1,11 @@
 package bucket
 
 import (
-	"hyperchain/hyperdb"
 	"sync"
 	"encoding/json"
 	"github.com/pkg/errors"
+	"sort"
 )
-var DataNodeCachePrefix = "-dataNodecache"
 type DataNodeMap map[string] *DataNode
 
 type DataNodeCache struct {
@@ -27,7 +26,7 @@ func newDataNodeCache(treePrefix string,maxSizeMBs int) *DataNodeCache {
 	return &DataNodeCache{TreePrefix: treePrefix,c: make(map[BucketKey] DataNodeMap), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 }
 
-func (datanodecache *DataNodeCache) Remove(dataNode *DataNode) error{
+func (dataNodeCache *DataNodeCache) Remove(dataNode *DataNode) error{
 	bucketKey := *(dataNode.dataKey.bucketKey)
 	dataKey := dataNode.dataKey
 	dataKeyBytes,err := json.Marshal(*dataKey)
@@ -35,131 +34,75 @@ func (datanodecache *DataNodeCache) Remove(dataNode *DataNode) error{
 		logger.Error("Remove Error ",err)
 		return err
 	}
-	if  datanodecache.c == nil || len(datanodecache.c) == 0 || datanodecache.c[bucketKey] == nil {
+	if  dataNodeCache.c == nil || len(dataNodeCache.c) == 0 || dataNodeCache.c[bucketKey] == nil {
 		return errors.New("There is no data in cache")
 	}
 
-	delete(datanodecache.c[bucketKey],string(dataKeyBytes))
-
-	db,_ := hyperdb.GetLDBDatabase()
-	dbkey := append([]byte(DataNodePrefix), dataNode.dataKey.getEncodedBytes()...)
-	dbkey = append([]byte(DataNodeCachePrefix),dbkey...)
-	db.Delete(dbkey)
-
+	delete(dataNodeCache.c[bucketKey],string(dataKeyBytes))
 	return nil
 }
 
-func (datanodecache *DataNodeCache) Put(dataNode *DataNode){
+func (dataNodeCache *DataNodeCache) Put (dataNode *DataNode){
 	bucketKey := *(dataNode.dataKey.bucketKey)
 	dataKey := dataNode.dataKey
-	dataKeyBytes,err := json.Marshal(*dataKey)
-	if err != nil {
-		logger.Error("Remove Error ",err)
-	}
-	if(datanodecache.c[bucketKey] == nil){
-		datanodecache.c[bucketKey] = make(DataNodeMap)
-		datanodecache.c[bucketKey][string(dataKeyBytes)] = dataNode
+	if(dataNodeCache.c[bucketKey] == nil){
+		dataNodeCache.c[bucketKey] = make(DataNodeMap)
+		dataNodeCache.c[bucketKey][string(dataKey.compositeKey)] = dataNode
 	}else {
-		datanodecache.c[bucketKey][string(dataKeyBytes)] = dataNode
+		dataNodeCache.c[bucketKey][string(dataKey.compositeKey)] = dataNode
 	}
-
-	db,_ := hyperdb.GetLDBDatabase()
-	dbkey := append([]byte(DataNodePrefix), dataNode.dataKey.getEncodedBytes()...)
-	dbkey = append([]byte(DataNodeCachePrefix),dbkey...)
-	db.Put(dbkey, dataNode.getValue())
 }
 
-func (datanodecache *DataNodeCache) Get(bucket_key BucketKey,data_key *DataKey)  (*DataNode, error) {
-	//defer perfstat.UpdateTimeStat("timeSpent", time.Now())
-	/*if !datanodecache.isEnabled {
+func (dataNodeCache *DataNodeCache) Get(bucket_key BucketKey,data_key *DataKey)  (*DataNode, error) {
+	if !dataNodeCache.isEnabled {
 		return fetchDataNodeFromDB(data_key)
 	}
-	datanodecache.lock.RLock()
-	defer datanodecache.lock.RUnlock()
-	datanodeMap := datanodecache.c[bucket_key]
+	dataNodeCache.lock.RLock()
+	defer dataNodeCache.lock.RUnlock()
+	datanodeMap := dataNodeCache.c[bucket_key]
 	if datanodeMap == nil {
 		return fetchDataNodeFromDB(data_key)
 	}
-	return &((*datanodeMap)[data_key]), nil*/
-	return nil,nil
+	dataKeyBytes,err := json.Marshal(*data_key)
+	if err != nil {
+		logger.Errorf("json.Marshal Error",err)
+		return nil,err
+	}
+	return datanodeMap[string(dataKeyBytes)], nil
 }
 
+func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey) (dataNodes DataNodes,err error) {
 
-
-
-func (datanodecache *DataNodeCache) fetchDataNodesFromCacheFor(bucketKey BucketKey) (dataNodes DataNodes,err error) {
-
-	if(datanodecache.isEnabled == false){
-		return fetchDataNodesFromDBByBucketKey(datanodecache.TreePrefix,&bucketKey)
+	if(dataNodeCache.isEnabled == false){
+		return fetchDataNodesFromDBByBucketKey(dataNodeCache.TreePrefix,&bucketKey)
 	}
 
-	/*dataNodeMap := datanodecache.c[bucketKey]
-	if(dataNodeMap == nil){
-		logger.Errorf("The bucket is nil, bucketLevel is [%d] bucketNumber [%d]",bucketKey.level,bucketKey.bucketNumber)
-		return dataNodes,nil
-	}
+	dataNodeMap := dataNodeCache.c[bucketKey]
 
-	for _,dataNode := range dataNodeMap{
-		dataNodes = append(dataNodes, dataNode)
-	}
-	logger.Criticalf("fetchDataNodesFromCacheFor the datanode to dataNodeCache [%v]",dataNodes)
-	return dataNodes,nil*/
-
-	db,_ := hyperdb.GetLDBDatabase()
-	minimumDataKeyBytes := minimumPossibleDataKeyBytesFor(&bucketKey,datanodecache.TreePrefix)
-	minimumDataKeyBytes = append([]byte(DataNodeCachePrefix),minimumDataKeyBytes...)
-	// IMPORTANT return value obtained by iterator is sorted
-	iter := db.NewIteratorWithPrefix(minimumDataKeyBytes)
-	num := 0
-	for iter.Next() {
-		num ++
-		keyBytes := iter.Key()
-		valueBytes := iter.Value()
-		keyBytes = keyBytes[len(DataNodePrefix)+len(DataNodeCachePrefix):]
-
-		dataKey := newDataKeyFromEncodedBytes(keyBytes)
-		logger.Debugf("Retrieved data key [%s] from DB for bucket [%s]", dataKey, bucketKey)
-		if !dataKey.getBucketKey().equals(&bucketKey) {
-			logger.Errorf("Data key [%s] from DB does not belong to bucket = [%s]. Stopping further iteration and returning results [%v]", dataKey, bucketKey, dataNodes)
-			return dataNodes, nil
-		}
-		dataNode := unmarshalDataNode(dataKey, valueBytes)
-		logger.Debugf("Data node [%s] from DB belongs to bucket = [%s]. Including the key in results...", dataNode, bucketKey)
-		dataNodes = append(dataNodes, dataNode)
-	}
-	if num <= 0{
-		dataNodes,err = fetchDataNodesFromDBByBucketKey(datanodecache.TreePrefix,&bucketKey)
+	if dataNodeMap == nil || len(dataNodeMap) == 0 {
+		logger.Debugf("The bucket is nil, bucketLevel is [%d] bucketNumber [%d]",bucketKey.level,bucketKey.bucketNumber)
+		dataNodes,err = fetchDataNodesFromDBByBucketKey(dataNodeCache.TreePrefix,&bucketKey)
 		if err != nil{
-			logger.Errorf("fetchDataNodesFromDBByBucketKey Error")
+			logger.Error("fetchDataNodesFromDBByBucketKey Error")
 			return dataNodes,err
 		}
 		for _,dataNode := range dataNodes {
-			datanodecache.Put(dataNode)
+			logger.Debugf("FetchDataNodesFromCache put dataNode to dataNodeCache [%v]",dataNode)
+			dataNodeCache.Put(dataNode)
 		}
+	}else {
+		for _, dataNode := range dataNodeMap {
+			logger.Debugf("Get datanode from cache [%v]", dataNode)
+			dataNodes = append(dataNodes, dataNode)
+		}
+		//
+		sort.Sort(dataNodes)
 	}
+	logger.Debugf("FetchDataNodesFromCacheFor the datanode to dataNodeCache [%v]",dataNodes)
 	return dataNodes, nil
-
 }
 
-func (datanodecache *DataNodeCache) clearDataNodeCache() {
-	db, _ := hyperdb.GetLDBDatabase()
-	iter := db.NewIteratorWithPrefix([]byte(DataNodeCachePrefix))
-	for iter.Next() {
-		keyBytes := iter.Key()
-		db.Delete(keyBytes)
-	}
-	datanodecache = &DataNodeCache{TreePrefix: datanodecache.TreePrefix,c: make(map[BucketKey] DataNodeMap), maxSize: uint64(datanodecache.maxSize * 1024 * 1024), isEnabled: datanodecache.isEnabled}
-}
 
-func (dataNodeCache *DataNodeCache) revertDataNodeCacheFromDB() error{
-	/*dataNodeCache.c = make(map[BucketKey]DataNodeMap)
-	dataNodes,err := fetchDataNodesFromDB(dataNodeCache.TreePrefix)
-	if (err != nil){
-		return err
-	}
-	for _,dataNode := range dataNodes {
-		dataNodeCache.Put(dataNode)
-	}*/
-
-	return nil
+func (dataNodeCache *DataNodeCache) ClearDataNodeCache() {
+	dataNodeCache.c = make(map[BucketKey] DataNodeMap)
 }

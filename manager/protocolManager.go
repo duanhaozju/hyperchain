@@ -469,6 +469,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 										self.blockPool.ProcessBlockInVm(blk.Transactions, nil, blk.Number)
 										self.blockPool.SetDemandNumber(blk.Number + 1)
 										self.blockPool.SetDemandSeqNo(blk.Number + 1)
+										self.blockPool.IncreaseTempBlockNumber()
 									}
 								}
 								core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum, true, true)

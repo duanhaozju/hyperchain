@@ -167,7 +167,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			// remove persisted journals
 			db.Delete(hyperstate.CompositeJournalKey(uint64(i)))
 		}
-		log.Debugf("revert to #%d, %s", targetNumber, string(state.Dump()))
+		log.Errorf("revert to #%d, %s", targetNumber, string(state.Dump()))
 
 		// revert related stateObject storage bucket tree
 		for addr := range dirtyStateObjectSet.Iter() {

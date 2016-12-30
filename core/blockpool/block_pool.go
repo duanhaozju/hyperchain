@@ -121,6 +121,9 @@ func (pool *BlockPool) SetDemandNumber(number uint64) {
 func (pool *BlockPool) SetDemandSeqNo(seqNo uint64) {
 	atomic.StoreUint64(&pool.demandSeqNo, seqNo)
 }
+func (pool *BlockPool) IncreaseTempBlockNumber() {
+	pool.tempBlockNumber = pool.tempBlockNumber + 1
+}
 // obtain state handler via configuration in block.conf
 // two state: (1)raw state (2) hyper state are supported
 func (pool *BlockPool) GetStateInstance(root common.Hash, db hyperdb.Database) (vm.Database, error) {

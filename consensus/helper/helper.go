@@ -138,7 +138,8 @@ func (h *helper) VcReset(seqNo uint64) error {
 
 	// No need to "go h.msgQ.Post...", we'll wait for it to return
 	h.msgQ.Post(vcResetEvent)
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Second * 2)
+	logger.Error("DEBUG  VC RESET FINISH")
 
 	return nil
 }

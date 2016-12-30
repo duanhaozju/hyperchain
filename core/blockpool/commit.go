@@ -13,7 +13,6 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/core"
 	"hyperchain/common"
-	"hyperchain/core/hyperstate"
 )
 
 // When receive an CommitOrRollbackBlockEvent, if flag is true, generate a block and call AddBlock function
@@ -156,17 +155,17 @@ func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, 
 	}
 	// FOR TEST
 	// get journals
-	j, err := db.Get(hyperstate.CompositeJournalKey(block.Number))
-	if err != nil {
-		return
-	}
-	journals, err := hyperstate.UnmarshalJournal(j)
-	if err != nil {
-		return
-	}
-	for _, entry := range journals.JournalList {
-		log.Errorf("#%d journal %s", block.Number, entry)
-	}
+	//j, err := db.Get(hyperstate.CompositeJournalKey(block.Number))
+	//if err != nil {
+	//	return
+	//}
+	//journals, err := hyperstate.UnmarshalJournal(j)
+	//if err != nil {
+	//	return
+	//}
+	//for _, entry := range journals.JournalList {
+	//	log.Errorf("#%d journal %s", block.Number, entry)
+	//}
 }
 
 // save the invalid transaction into database for client query

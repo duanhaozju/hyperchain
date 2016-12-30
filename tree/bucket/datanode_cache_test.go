@@ -37,7 +37,7 @@ func TestDataNodeCache_Put(t *testing.T) {
 	dataNodeCache.Put(dataNode2)
 	//dataNodeCache.Remove(dataNode2)
 
-	dataNodes1,err := dataNodeCache.fetchDataNodesFromCacheFor(*dataNode1.dataKey.bucketKey)
+	dataNodes1,err := dataNodeCache.FetchDataNodesFromCache(*dataNode1.dataKey.bucketKey)
 	if err!= nil{
 		logger.Critical("******error is ",err)
 	}else {

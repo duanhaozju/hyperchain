@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"hyperchain/consensus/events"
 	"github.com/golang/protobuf/proto"
+	"time"
 )
 
 type viewChangeQuorumEvent struct{}
@@ -576,7 +577,7 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	pbft.stopTimer()
 	pbft.nullRequestTimer.Stop()
 
-	pbft.activeView = true
+
 	delete(pbft.newViewStore, pbft.view-1)
 	// empty the outstandingReqBatch, it is useless since new primary will resend pre-prepare
 	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
@@ -603,12 +604,15 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 				if !ok {
 					logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
 				} else {
-					pbft.recvRequestBatch(batch)
+					pbft.validateBatch(batch, 0, 0)
+					digest := hash(batch)
+					pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", digest))
+					time.Sleep(50 * time.Millisecond)
 				}
 			}
 		}
 	}
-
+	pbft.activeView = true
 	pbft.updateViewChangeSeqNo()
 	pbft.startTimerIfOutstandingRequests()
 	logger.Debugf("Replica %d done cleaning view change artifacts, calling into consumer", pbft.id)

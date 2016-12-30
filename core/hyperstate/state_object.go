@@ -227,6 +227,9 @@ func (self *StateObject) setState(key, value common.Hash) {
 		self.onDirty = nil
 	}
 }
+// remove storage entry from storage cache instead of setting empty value
+// otherwise an entry will been leave in database
+// only use in undo `add storage entry` vm operation
 func (self *StateObject) removeState(key common.Hash) {
 	delete(self.cachedStorage, key)
 	delete(self.dirtyStorage, key)
@@ -277,11 +280,12 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 		prev := self.Root()
 		workingSet := bucket.NewKVMap()
 		for k, v := range self.dirtyStorage {
-			log.Errorf("calculate state object %s storage hash, dirty entry key %s value %s", self.address.Hex(), k.Hex(), v.Hex())
+			log.Debugf("calculate state object %s storage hash, dirty entry key %s value %s", self.address.Hex(), k.Hex(), v.Hex())
 			if (v == common.Hash{}) {
 				workingSet[k.Hex()] = nil
 			} else {
 				workingSet[k.Hex()] = v.Bytes()
+				log.Debugf("working set key %s value %s", k.Hex(), common.Bytes2Hex(v.Bytes()))
 			}
 		}
 		log.Debugf("state object %s storage root hash %s before #%d", self.address.Hex(), prev.Hex(), self.db.curSeqNo)
@@ -294,7 +298,7 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 		}
 		// 3. assign to self.ROOT
 		self.SetRoot(common.BytesToHash(hash))
-		log.Errorf("state object %s storage root hash %s after #%d", self.address.Hex(), self.Root().Hex(), self.db.curSeqNo)
+		log.Debugf("state object %s storage root hash %s after #%d", self.address.Hex(), self.Root().Hex(), self.db.curSeqNo)
 		if (self.Root() != common.Hash{} || prev != common.Hash{}) {
 			// storage hash changed
 			self.db.journal.JournalList = append(self.db.journal.JournalList, &StorageHashChange{
