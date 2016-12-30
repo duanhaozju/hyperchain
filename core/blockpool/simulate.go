@@ -31,7 +31,7 @@ func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 	}
 	// initialize execution environment
 	fakeBlockNumber := core.GetHeightOfChain()
-	sandBox := initEnvironment(state, fakeBlockNumber)
+	sandBox := initEnvironment(state, fakeBlockNumber+1)
 	receipt, _, _, err := core.ExecTransaction(tx, sandBox)
 	if err != nil{
 		var errType types.InvalidTransactionRecord_ErrType

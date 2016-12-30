@@ -10,7 +10,6 @@ import (
 	statedb "hyperchain/core/state"
 	"hyperchain/core/hyperstate"
 	"hyperchain/core/types"
-	"hyperchain/event"
 	"hyperchain/hyperdb"
 	"sync"
 	"sync/atomic"
@@ -56,7 +55,6 @@ type BlockPool struct {
 	lastValidationState atomic.Value        // latest state root hash
 	// external stuff
 	consenter           consensus.Consenter // consensus module handler
-	eventMux            *event.TypeMux      // message queue
 	stateLock           sync.Mutex          // block pool lock
 	wg                  sync.WaitGroup      // for shutdown sync
 	// thread safe cache
@@ -75,7 +73,7 @@ type BlockPool struct {
 	tempBlockNumber         uint64            // temporarily block number
 }
 
-func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter, conf BlockPoolConf, bktConf bucket.Conf) *BlockPool {
+func NewBlockPool(consenter consensus.Consenter, conf BlockPoolConf, bktConf bucket.Conf) *BlockPool {
 	var err error
 	blockcache, err := common.NewCache()
 	if err != nil {return nil}
@@ -85,7 +83,6 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter, conf B
 	if err != nil {return nil}
 
 	pool := &BlockPool{
-		eventMux:        eventMux,
 		consenter:       consenter,
 		queue:           queue,
 		validationQueue: validationqueue,

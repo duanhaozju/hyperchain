@@ -485,7 +485,7 @@ func (pbft *pbftProtocal) primaryProcessNewView(initialCp ViewChange_C, replicas
 
 
 func (pbft *pbftProtocal) processNewView() events.Event {
-	var newReqBatchMissing bool
+
 	nv, ok := pbft.newViewStore[pbft.view]
 	if !ok {
 		logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
@@ -560,15 +560,7 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 		pbft.stateTransfer(target)
 	}
 
-	//TODO: 从节点不需要拿batch,只要更新状态信息就行
-	newReqBatchMissing = pbft.feedMissingReqBatchIfNeeded(nv)
-	if len(pbft.missingReqBatches) == 0 {
-		return pbft.processReqInNewView(nv)
-	} else if newReqBatchMissing {
-		pbft.fetchRequestBatches()
-	}
-
-	return nil
+	return pbft.processReqInNewView(nv)
 }
 
 func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
@@ -589,6 +581,7 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 		backendVid := uint64(pbft.vid+1)
 		pbft.helper.VcReset(backendVid)
 	}
+	pbft.activeView = true
 	xSetLen := len(nv.Xset)
 	upper := uint64(xSetLen) + pbft.h + uint64(1)
 	if pbft.primary(pbft.view) == pbft.id {
@@ -604,15 +597,12 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 				if !ok {
 					logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
 				} else {
-					pbft.validateBatch(batch, 0, 0)
-					digest := hash(batch)
-					pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", digest))
-					time.Sleep(50 * time.Millisecond)
+					go pbft.postRequestEvent(batch)
+					time.Sleep(10 * time.Millisecond)
 				}
 			}
 		}
 	}
-	pbft.activeView = true
 	pbft.updateViewChangeSeqNo()
 	pbft.startTimerIfOutstandingRequests()
 	logger.Debugf("Replica %d done cleaning view change artifacts, calling into consumer", pbft.id)

@@ -143,7 +143,7 @@ func main() {
 			TransactionVersion: config.getTransactionVersion(),
 			StateType: config.getStateType(),
 		}
-		blockPool := blockpool.NewBlockPool(eventMux, cs, blockPoolConf, config.getBucketTreeConf())
+		blockPool := blockpool.NewBlockPool(cs, blockPoolConf, config.getBucketTreeConf())
 		if blockPool == nil {
 			return errors.New("Initialize BlockPool failed")
 		}

@@ -23,7 +23,7 @@ import (
 )
 
 func CreateInitBlock(filename string, stateType string, blockVersion string, bktConf bucket.Conf) {
-	log.Info("genesis start")
+	log.Debug("genesis start")
 
 	if IsGenesisFinish() {
 		log.Info("already genesis")
