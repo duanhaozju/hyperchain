@@ -95,6 +95,9 @@ type Database interface {
 	Delete(common.Address) bool
 	Exist(common.Address) bool
 	IsDeleted(common.Address) bool
+
+	GetTree() interface{}
+
 	// Log
 	StartRecord(common.Hash, common.Hash, int)
 	AddLog(log *Log)

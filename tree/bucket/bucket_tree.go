@@ -142,7 +142,6 @@ func (bucketTree *BucketTree) ComputeCryptoHash() ([]byte, error) {
 func (bucketTree *BucketTree) processDataNodeDelta() error {
 	afftectedBuckets := bucketTree.dataNodesDelta.getAffectedBuckets()
 	for _, bucketKey := range afftectedBuckets {
-
 		updatedDataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(bucketKey)
 		existingDataNodes, err := bucketTree.dataNodeCache.FetchDataNodesFromCache(*bucketKey)
 		if err != nil {

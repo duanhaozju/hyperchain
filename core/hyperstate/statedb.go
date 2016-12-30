@@ -193,27 +193,25 @@ func (self *StateDB) MarkProcessFinish(seqNo uint64) {
 	// remove all content with related seqNo less than `seqNo`
 	self.contentCache.RemoveWithCond(seqNo, judge)
 }
-// set oldest when state been initialize
-// seqNo should be the chain's height
+// setLatest - set oldest when state been initialize
+// seqNo should be the chain's height.
 func (self *StateDB) setLatest(seqNo uint64) {
 	atomic.StoreUint64(&self.oldestSeqNo, seqNo)
 }
-
-// clear out all uncommitted data and revert to a target state
+// Purge - clear out all uncommitted data and revert to a target state.
 func (self *StateDB) Purge() {
 	self.batchCache.Purge()
 	self.contentCache.Purge()
 }
-
-// reset oldest seqNo and root to target
+// ResetToTarget - reset oldest seqNo and root to target.
 func (self *StateDB) ResetToTarget(oldest uint64, root common.Hash) {
 	atomic.StoreUint64(&self.oldestSeqNo, oldest)
 	self.root = root
 }
 
-// batch cache related
+// FetchBatch - batch cache related
 // fetch a batch from batch cache with correspondent seqNo
-// create a new batch if not exist in cache
+// create a new batch if not exist in cache.
 func (self *StateDB) FetchBatch(seqNo uint64) hyperdb.Batch {
 	if self.batchCache.Contains(seqNo) {
 		// already exist
@@ -228,13 +226,13 @@ func (self *StateDB) FetchBatch(seqNo uint64) hyperdb.Batch {
 		return batch
 	}
 }
-// delete a batch handler in cache with correspondent seqNo
-// avoid memory leak
+// DeleteBatch - delete a batch handler in cache with correspondent seqNo
+// avoid memory leak.
 func (self *StateDB) DeleteBatch(seqNo uint64) {
 	log.Criticalf("remove batch for #%d from batch cache", seqNo)
 	self.batchCache.Remove(seqNo)
 }
-// mark a transaction process's beginning
+// StartRecord - mark a transaction process's beginning.
 func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
 	self.thash = thash
 	self.bhash = bhash
@@ -444,6 +442,10 @@ func (self *StateDB) IsDeleted(addr common.Address) bool {
 		return stateObject.suicided
 	}
 	return false
+}
+// GetTree - implement database interface, get bucket tree instance
+func (self *StateDB) GetTree() interface{} {
+	return self.bucketTree
 }
 
 /*
@@ -836,9 +838,7 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 			return common.Hash{}, err
 		}
 		s.root = common.BytesToHash(hash)
-
 		s.bucketTree.AddChangesForPersistence(dbw, big.NewInt(int64(s.curSeqNo)))
-		hash, err = s.bucketTree.ComputeCryptoHash()
 	}
 	return s.root, err
 }

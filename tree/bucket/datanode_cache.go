@@ -72,7 +72,6 @@ func (dataNodeCache *DataNodeCache) Get(bucket_key BucketKey,data_key *DataKey) 
 }
 
 func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey) (dataNodes DataNodes,err error) {
-
 	if(dataNodeCache.isEnabled == false){
 		return fetchDataNodesFromDBByBucketKey(dataNodeCache.TreePrefix,&bucketKey)
 	}

@@ -557,3 +557,6 @@ func (self *StateDB) Purge() {
 func (self *StateDB) ResetToTarget(uint64, common.Hash) {
 
 }
+func (self *StateDB) GetTree() interface{} {
+	return self.trie
+}

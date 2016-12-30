@@ -167,7 +167,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			// remove persisted journals
 			db.Delete(hyperstate.CompositeJournalKey(uint64(i)))
 		}
-		log.Errorf("revert to #%d, %s", targetNumber, string(state.Dump()))
+		log.Noticef("revert to #%d, %s", targetNumber, string(state.Dump()))
 
 		// revert related stateObject storage bucket tree
 		for addr := range dirtyStateObjectSet.Iter() {
@@ -195,10 +195,8 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			}
 		}
 		// revert state bucket tree
-		prefix, _ := hyperstate.CompositeStateBucketPrefix()
-		bucketTree := bucket.NewBucketTree(string(prefix))
-		bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.bucketTreeConf.StateSize, pool.bucketTreeConf.StateLevelGroup))
-
+		tree := state.GetTree()
+		bucketTree := tree.(*bucket.BucketTree)
 		bucketTree.RevertToTargetBlock(big.NewInt(currentNumber), big.NewInt(targetNumber))
 		currentRootHash, err := bucketTree.ComputeCryptoHash()
 		if err != nil {
