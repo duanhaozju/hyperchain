@@ -2369,7 +2369,7 @@ func (pbft *pbftProtocal) recvRemoveCache(vid uint64) bool {
 	id := vid - 10
 	_, ok := pbft.duplicator[id]
 	if ok {
-		logger.Warningf("Replica %d received remove cached batch %d, and remove batch %d", pbft.id, vid, id)
+		logger.Debugf("Replica %d received remove cached batch %d, and remove batch %d", pbft.id, vid, id)
 		delete(pbft.duplicator, id)
 	}
 
