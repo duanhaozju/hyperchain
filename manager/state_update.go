@@ -258,7 +258,7 @@ func (self *ProtocolManager) sendStateUpdatedEvent() {
 }
 
 func (self *ProtocolManager) isBlockHashEqual(targetHash []byte) bool {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("get database handler failed in state update")
 		return false

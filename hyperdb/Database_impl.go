@@ -257,9 +257,9 @@ package hyperdb
 //			break
 //		} else {
 //			num++
-//			f, err1 := os.OpenFile("/home/frank/1.txt", os.O_WRONLY|os.O_CREATE, 0644)
+//			f, err1 := os.OpenFile("./build/db.log", os.O_WRONLY|os.O_CREATE, 0644)
 //			if err1 != nil {
-//				fmt.Println("1.txt file create failed. err: " + err.Error())
+//				fmt.Println("db.log file create failed. err: " + err.Error())
 //			} else {
 //				n, _ := f.Seek(0, os.SEEK_END)
 //				currentTime := time.Now().Local()

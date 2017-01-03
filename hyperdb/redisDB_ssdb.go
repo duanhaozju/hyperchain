@@ -165,8 +165,6 @@ func (batch *DB_Batch)Write() error{
 }
 
 func (batch *DB_Batch)Rdwrite(db *redis.Pool) error{
-	batch.mutex.Lock()
-
 	if batch.batch_status==false{
 		log.Notice("batch has been closed")
 		return errors.New("batch has been closed")
@@ -181,19 +179,19 @@ func (batch *DB_Batch)Rdwrite(db *redis.Pool) error{
 		}
 		con :=db.Get()
 		_, err:= con.Do("mset", list)
-		defer con.Close()
+		con.Close()
 		if err == nil {
 			break
 		} else {
 			num++
-			f, err1 := os.OpenFile("/home/frank/1.txt", os.O_WRONLY|os.O_CREATE, 0644)
+			f, err1 := os.OpenFile("./build/db.log", os.O_WRONLY|os.O_CREATE, 0644)
 			if err1 != nil {
-				fmt.Println("1.txt file create failed. err: " + err.Error())
+				fmt.Println("db.log file create failed. err: " + err.Error())
 			} else {
 				n, _ := f.Seek(0, os.SEEK_END)
 				currentTime := time.Now().Local()
 				newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-				str := portDBPath + newFormat + `con.Do("mset",list) :` + err.Error() +" num:"+strconv.Itoa(num)+"\n"
+				str := portDBPath + newFormat + `redis-con.Do("mset",list) :` + err.Error() +" num:"+strconv.Itoa(num)+"\n"
 				_, err1 = f.WriteAt([]byte(str), n)
 				f.Close()
 			}
@@ -203,17 +201,10 @@ func (batch *DB_Batch)Rdwrite(db *redis.Pool) error{
 		}
 	}
 
-
-
-	batch.mutex.Unlock()
 	return err
 }
 
 func (batch *DB_Batch)Sdwrite(db *redis.Pool,map2 map[string] []byte) error{
-	batch.mutex.Lock()
-	fmt.Println("go ssdb start ")
-
-
 
 	if batch.batch_status==false{
 		log.Notice("batch has been closed")
@@ -229,19 +220,19 @@ func (batch *DB_Batch)Sdwrite(db *redis.Pool,map2 map[string] []byte) error{
 		}
 		con :=db.Get()
 		_, err:= con.Do("mset", list)
-		defer con.Close()
+		con.Close()
 		if err == nil {
 			break
 		} else {
 			num++
-			f, err1 := os.OpenFile("/home/frank/1.txt", os.O_WRONLY|os.O_CREATE, 0644)
+			f, err1 := os.OpenFile("./build/db.log", os.O_WRONLY|os.O_CREATE, 0644)
 			if err1 != nil {
-				fmt.Println("1.txt file create failed. err: " + err.Error())
+				fmt.Println("db.log file create failed. err: " + err.Error())
 			} else {
 				n, _ := f.Seek(0, os.SEEK_END)
 				currentTime := time.Now().Local()
 				newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-				str := portDBPath + newFormat + `con.Do("mset",list) :` + err.Error() +" num:"+strconv.Itoa(num)+"\n"
+				str := portDBPath + newFormat + `ssdb-con.Do("mset",list) :` + err.Error() +" num:"+strconv.Itoa(num)+"\n"
 				_, err1 = f.WriteAt([]byte(str), n)
 				f.Close()
 			}
@@ -251,6 +242,5 @@ func (batch *DB_Batch)Sdwrite(db *redis.Pool,map2 map[string] []byte) error{
 		}
 	}
 
-	batch.mutex.Unlock()
 	return err
 }

@@ -307,13 +307,12 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	statedb, err := state.New(initStatus, db)
 
 	if err != nil {
-		f, err1 := os.OpenFile("/home/frank/1.txt", os.O_WRONLY|os.O_CREATE, 0644)
+		f, err1 := os.OpenFile("./build/db.log", os.O_WRONLY|os.O_CREATE, 0644)
 		if err1 != nil {
-			fmt.Println("1.txt file create failed. err: " + err.Error())
+			fmt.Println("db.log file create failed. err: " + err.Error())
 		} else {
-			// 查找文件末尾的偏移量
+
 			n, _ := f.Seek(0, os.SEEK_END)
-			// 从末尾的偏移量开始写入内容
 			currentTime := time.Now().Local()
 			newFormat := currentTime.Format("2006-01-02 15:04:05.000")
 			str:=newFormat+"block pool 302 the err of statebd :"+err.Error()+"\n"

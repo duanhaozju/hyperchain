@@ -33,6 +33,7 @@ global:
         transactionversion: "1.0"
 ###########################
 # configs
+#dbtype 110 means use redis cache and ssdb if you want use only leveldb put dbtypes as 001
 ############################
     configs:
         peers: "config/local_peerconfig.json"
@@ -49,6 +50,7 @@ global:
             txFillRate: 0.5ms
             contractRatePeak : 100
             contractFillRate: 0.5ms
+        dbtype: 110
 
 ######################################################
 # config log's level by module                       #
@@ -69,5 +71,4 @@ global:
             p2p: "INFO"
             consensus: "NOTICE"
             core: "NOTICE"
-            hyperdb: "WARNING"
 

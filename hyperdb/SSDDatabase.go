@@ -62,7 +62,7 @@ func (ssdb *SSDatabase) Put(key []byte, value []byte) error {
 			n, _ := f.Seek(0, os.SEEK_END)
 			currentTime := time.Now().Local()
 			newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-			str :=newFormat+portDBPath+ `con.Do("set",,key, value):` + err.Error() + "\n"
+			str :=newFormat+portDBPath+ `con.Do("set",,key, value):` + err.Error() +" num:"+strconv.Itoa(num)+"\n"
 			_, err1 = f.WriteAt([]byte(str), n)
 			if err1!=nil{
 				log.Noticef("Write Database put err to ./ssdblog%d.txt fail err: %v \n",portDBPath,err.Error())
@@ -102,7 +102,7 @@ func (ssdb *SSDatabase) Get(key []byte) ([]byte, error) {
 			n, _ := f.Seek(0, os.SEEK_END)
 			currentTime := time.Now().Local()
 			newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-			str :=newFormat+portDBPath+ `con.Do("set",,key, value):` + err.Error() + "\n"
+			str :=newFormat+portDBPath+ `con.Do("set",,key, value):` + err.Error()+ " num:"+strconv.Itoa(num)+ "\n"
 			_, err1 = f.WriteAt([]byte(str), n)
 			if err1!=nil{
 				log.Noticef("Write Database put err to ./ssdblog%d.txt fail err: %v \n",portDBPath,err.Error())
@@ -270,13 +270,12 @@ func (batch *sd_Batch) Write() error {
 			break
 		} else {
 			num++
-			f, err1 := os.OpenFile("/home/frank/1.txt", os.O_WRONLY|os.O_CREATE, 0644)
+			f, err1 := os.OpenFile("./build/db.log", os.O_WRONLY|os.O_CREATE, 0644)
 			if err1 != nil {
-				fmt.Println("1.txt file create failed. err: " + err.Error())
+				fmt.Println("db.log file create failed. err: " + err.Error())
 			} else {
-				// 查找文件末尾的偏移量
+
 				n, _ := f.Seek(0, os.SEEK_END)
-				// 从末尾的偏移量开始写入内容
 				currentTime := time.Now().Local()
 				newFormat := currentTime.Format("2006-01-02 15:04:05.000")
 				str := portDBPath + newFormat + `con.Do("mset",list) :` + err.Error() +" num:"+strconv.Itoa(num)+"\n"

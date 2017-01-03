@@ -11,6 +11,9 @@ import (
 	"strconv"
 	"sync"
 	"errors"
+	"os"
+	"fmt"
+	"time"
 )
 
 // the prefix of key, use to save to db
@@ -32,9 +35,9 @@ func init() {
 // InitDB initialization ldb and memdb
 // should be called while programming start-up
 // port: the server port
-func InitDB(dbPath string, port int) {
+func InitDB(dbPath string, port int,db_type int) {
 	hyperdb.SetDBPath(dbPath, port)
-	hyperdb.InitDatabase(110)
+	hyperdb.InitDatabase(db_type)
 	memChainMap = newMemChain()
 	memChainStatusMap = newMemChainStatus()
 }
@@ -329,10 +332,26 @@ func PersistInvalidTransactionRecord(batch hyperdb.Batch, invalidTx *types.Inval
 	return nil, data
 }
 
+func blocktime(block *types.Block){
+	time1:=block.WriteTime-block.Timestamp
+	f, err1 := os.OpenFile("./build/db.log", os.O_WRONLY|os.O_CREATE, 0644)
+	if err1 != nil {
+		fmt.Println("db.log file create failed. err: " + err1.Error())
+	} else {
+		n, _ := f.Seek(0, os.SEEK_END)
+		currentTime := time.Now().Local()
+		newFormat := currentTime.Format("2006-01-02 15:04:05.000")
+		str :=strconv.FormatUint(block.Number,10)+"#"+newFormat+"#"+strconv.FormatInt(time1,10)+"\n"
+		_, err1 = f.WriteAt([]byte(str), n)
+		f.Close()
+	}
+}
 /*
 	Block
  */
 func PersistBlock(batch hyperdb.Batch, block *types.Block, version string, flush bool, sync bool) (error, []byte) {
+
+	go blocktime(block)
 	// check pointer value
 	if block == nil || batch == nil {
 		return errors.New("empty block pointer"), nil

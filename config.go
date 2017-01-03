@@ -34,6 +34,7 @@ type configs interface {
 type configsImpl struct {
 	nodeID                  int
 	gRPCPort                int
+	dbtype			int
 	httpPort                int
 	restPort		int
 	keystoreDir             string
@@ -75,6 +76,7 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	cimpl.gRPCPort = GRPCPort
 	cimpl.httpPort = HTTPPort
 	cimpl.restPort = RESTPort
+	cimpl.dbtype=config.GetInt("global.configs.dbtype")
 	cimpl.keystoreDir = config.GetString("global.account.keystoredir")
 	cimpl.keyNodeDir = config.GetString("global.account.keynodesdir")
 	cimpl.logDumpFileFlag = config.GetBool("global.logs.dumpfile")
@@ -113,6 +115,7 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 
 func (cIml *configsImpl) getNodeID() int            { return cIml.nodeID }
 func (cIml *configsImpl) getGRPCPort() int          { return cIml.gRPCPort }
+func (cIml *configsImpl) getDbType() int            { return cIml.dbtype }
 func (cIml *configsImpl) getHTTPPort() int          { return cIml.httpPort }
 func (cIml *configsImpl) getRESTPort() int          { return cIml.restPort }
 func (cIml *configsImpl) getKeystoreDir() string    { return cIml.keystoreDir }
