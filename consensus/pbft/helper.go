@@ -497,3 +497,24 @@ func (pbft *pbftProtocal) removeDuplicate(txBatch *TransactionBatch) (newBatch *
 	}
 	return
 }
+
+// previous primary rebuild the duplicator after view change
+func (pbft *pbftProtocal) rebuildDuplicator() {
+	temp := make(map[uint64]*transactionStore)
+	dv := pbft.vid - pbft.h
+	for i, txStore := range pbft.duplicator {
+		temp[i-dv] = txStore
+	}
+	pbft.duplicator = temp
+	pbft.clearDuplicator()
+}
+
+// replica clear the duplicator after view change
+func (pbft *pbftProtocal) clearDuplicator() {
+	h := pbft.h
+	for i := range pbft.duplicator {
+		if i > h {
+			delete(pbft.duplicator, i)
+		}
+	}
+}

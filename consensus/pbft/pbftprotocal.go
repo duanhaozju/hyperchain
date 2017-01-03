@@ -8,12 +8,11 @@ import (
 	"sort"
 	"sync"
 	"time"
-	//"encoding/hex"
+	"sync/atomic"
 
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
 	"hyperchain/core/types"
-	//"hyperchain/event"
 	"hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"
@@ -43,7 +42,7 @@ type pbftProtocal struct {
 	duplicator			map[uint64]*transactionStore
 
 	// PBFT data
-	activeView     bool   	// view change happening
+	activeView     uint32	// view change happening
 	byzantine      bool   	// whether this node is intentionally acting as Byzantine; useful for debugging on the testnet
 	f              int		// max. number of faults we can tolerate
 	N              int		// max.number of validators in the network
@@ -120,7 +119,7 @@ type pbftProtocal struct {
 
 	vcResendLimit	       	int				// vcResendLimit indicates a replica's view change resending upbound.
 	vcResendCount	       	int				// vcResendCount represent times of same view change info resend
-
+	inVcReset				bool			// track if replica is during vc reset
 	// add and del node
 	isNewNode			bool						// track if replica is the new node
 	localKey			string						// track new node's local key (payload from local)
@@ -281,7 +280,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 		pbft.firstRequestTimeout = 30
 	}
 
-	pbft.activeView = true
+	atomic.StoreUint32(&pbft.activeView, 1)
 
 	logger.Infof("PBFT Max number of validating peers (N) = %v", pbft.N)
 	logger.Infof("PBFT Max number of failing peers (f) = %v", pbft.f)
@@ -447,20 +446,13 @@ func (pbft *pbftProtocal) RecvLocal(msg interface{}) error {
 	return nil
 }
 
-func (pbft *pbftProtocal) RemoveCachedBatch(vid uint64) {
-
-	logger.Debugf("Replica %d received local remove message", pbft.id)
-	event := removeCache{vid: vid}
-	go pbft.postPbftEvent(event)
-}
-
 func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 
 	logger.Debugf("Replica %d start solve event", pbft.id)
 
 	switch e := ee.(type) {
-	case removeCache:
-		vid := e.vid
+	case protos.RemoveCache:
+		vid := e.Vid
 		ok := pbft.recvRemoveCache(vid)
 		if !ok {
 			logger.Warningf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
@@ -470,14 +462,14 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 		tx := e
 		return pbft.processTxEvent(tx)
 	case viewChangedEvent:
-		pbft.activeView = true
+		atomic.StoreUint32(&pbft.activeView, 1)
 		primary := pbft.primary(pbft.view)
-		pbft.persistView(pbft.view)
 		pbft.helper.InformPrimary(primary)
+		pbft.persistView(pbft.view)
 		pbft.processRequestsDuringViewChange()
 	case batchTimerEvent:
 		logger.Debugf("Replica %d batch timer expired", pbft.id)
-		if pbft.activeView && (len(pbft.batchStore) > 0) {
+		if active := atomic.LoadUint32(&pbft.activeView); active == 1 && (len(pbft.batchStore) > 0) {
 			return pbft.sendBatch()
 		}
 	default:
@@ -536,7 +528,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case nullRequestEvent:
 		pbft.nullRequestHandler()
 	case viewChangeResendTimerEvent:
-		if pbft.activeView {
+		if active := atomic.LoadUint32(&pbft.activeView); active == 1 {
 			logger.Warningf("Replica %d had its view change resend timer expire but it's in an active view, this is benign but may indicate a bug", pbft.id)
 			return nil
 		}
@@ -705,7 +697,7 @@ func (pbft *pbftProtocal) processNullRequest(msg *protos.Message) error {
 func (pbft *pbftProtocal) processTxEvent(tx *types.Transaction) error {
 
 	primary := pbft.primary(pbft.view)
-	if !pbft.activeView || pbft.inNegoView || pbft.inRecovery {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 0 || pbft.inNegoView || pbft.inRecovery {
 		pbft.reqStore.storeOutstanding(tx)
 	} else if primary != pbft.id {
 		//Broadcast request to primary
@@ -728,7 +720,7 @@ func (pbft *pbftProtocal) processTxEvent(tx *types.Transaction) error {
 }
 
 func (pbft *pbftProtocal) processRequestsDuringViewChange() error {
-	if pbft.activeView {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 1 {
 		pbft.processCachedTransactions()
 	} else {
 		logger.Critical("peer try to processReqDuringViewChange but view change is not finished")
@@ -801,7 +793,7 @@ func (pbft *pbftProtocal) nullRequestHandler() {
 		return
 	}
 
-	if !pbft.activeView {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
 		return
 	}
 
@@ -1068,10 +1060,10 @@ func (pbft *pbftProtocal) recvRequestBatch(reqBatch *TransactionBatch) error {
 	digest := hash(reqBatch)
 	logger.Debugf("Replica %d received request batch %s", pbft.id, digest)
 
-	if pbft.activeView {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 1 {
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", digest))
 	}
-	if pbft.primary(pbft.view) == pbft.id && pbft.activeView {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 1 && pbft.primary(pbft.view) == pbft.id {
 		pbft.primaryValidateBatch(reqBatch)
 	} else {
 		logger.Debugf("Replica %d is backup, not sending pre-prepare for request batch %s", pbft.id, digest)
@@ -1098,6 +1090,7 @@ func (pbft *pbftProtocal) primaryValidateBatch(txBatch *TransactionBatch) {
 
 	n := pbft.vid + 1
 	pbft.vid = n
+	pbft.duplicator[n] = txStore
 
 	logger.Debugf("Primary %d try to validate batch for view=%d/vid=%d", pbft.id, pbft.view, pbft.vid)
 	pbft.helper.ValidateBatch(newBatch.Batch, newBatch.Timestamp, n, pbft.view, true)
@@ -1291,7 +1284,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest=%s ",
 		pbft.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
-	if !pbft.activeView {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
 		logger.Debugf("Replica %d ignoring pre-prepare as we sre in view change", pbft.id)
 		return nil
 	}
@@ -1679,7 +1672,7 @@ func (pbft *pbftProtocal) execDoneSync(idx msgID) {
 	pbft.currentExec = nil
 	// optimization: if we are in view changing waiting for executing to target seqNo,
 	// one-time processNewView() is enough. No need to processNewView() every time in execDoneSync()
-	if !pbft.activeView && pbft.lastExec == pbft.nvInitialSeqNo {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 0 && pbft.lastExec == pbft.nvInitialSeqNo {
 		pbft.processNewView()
 	}
 
@@ -1896,7 +1889,7 @@ func (pbft *pbftProtocal) recvReturnRequestBatch(reqBatch *TransactionBatch) eve
 			logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
 			return nil
 		}
-		if pbft.activeView {
+		if active := atomic.LoadUint32(&pbft.activeView); active == 1 {
 			logger.Infof("Replica %d ignoring new-view from %d, v:%d: we are active in view %d",
 				pbft.id, nv.ReplicaId, nv.View, pbft.view)
 			return nil
@@ -2222,7 +2215,7 @@ func (pbft *pbftProtocal) processNegotiateView() error {
 }
 
 func (pbft *pbftProtocal) recvNegoView(nv *NegotiateView) events.Event {
-	if !pbft.activeView {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
 		return nil
 	}
 
@@ -2285,8 +2278,8 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Eve
 			pbft.negoViewRspTimer.Stop()
 			pbft.view = theView
 			pbft.inNegoView = false
-			if !pbft.activeView {
-				pbft.activeView = true
+			if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
+				atomic.StoreUint32(&pbft.activeView, 1)
 			}
 			return negoViewDoneEvent{}
 		} else {
@@ -2376,7 +2369,7 @@ func (pbft *pbftProtocal) recvRemoveCache(vid uint64) bool {
 	id := vid - 10
 	_, ok := pbft.duplicator[id]
 	if ok {
-		logger.Debugf("Replica %d received remove cached batch %d, and remove batch %d", )
+		logger.Warningf("Replica %d received remove cached batch %d, and remove batch %d", pbft.id, vid, id)
 		delete(pbft.duplicator, id)
 	}
 

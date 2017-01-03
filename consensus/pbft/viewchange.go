@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"hyperchain/consensus/events"
 	"github.com/golang/protobuf/proto"
+	"sync/atomic"
 )
 
 type viewChangeQuorumEvent struct{}
@@ -109,7 +110,7 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 
 	delete(pbft.newViewStore, pbft.view)
 	pbft.view++
-	pbft.activeView = false
+	atomic.StoreUint32(&pbft.activeView, 0)
 
 	pbft.pset = pbft.calcPSet()
 	pbft.qset = pbft.calcQSet()
@@ -221,7 +222,7 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 			pbft.vcResendCount = 0
 			pbft.inNegoView = true
 			pbft.inRecovery = true
-			pbft.activeView = true
+			atomic.StoreUint32(&pbft.activeView, 1)
 			pbft.processNegotiateView()
 		}
 
@@ -266,7 +267,7 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 	}
 	logger.Debugf("Replica %d now has %d view change requests for view %d", pbft.id, quorum, pbft.view)
 
-	if !pbft.activeView && vc.View == pbft.view && quorum >= pbft.allCorrectReplicasQuorum() {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 0 && vc.View == pbft.view && quorum >= pbft.allCorrectReplicasQuorum() {
 		pbft.vcResendTimer.Stop()
 		// TODO first param
 		pbft.startTimer(pbft.lastNewViewTimeout, "new view change")
@@ -491,7 +492,7 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 		return nil
 	}
 
-	if pbft.activeView {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 1 {
 		logger.Infof("Replica %d ignoring new-view from %d, v:%d: we are active in view %d",
 			pbft.id, nv.ReplicaId, nv.View, pbft.view)
 		return nil
@@ -574,6 +575,12 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
 	pbft.lastExec = pbft.h
 	pbft.seqNo = pbft.h
+	prevPrimary := pbft.primary(pbft.view - 1)
+	if prevPrimary == pbft.id {
+		pbft.rebuildDuplicator()
+	} else {
+		pbft.clearDuplicator()
+	}
 	pbft.vid = pbft.h
 	pbft.lastVid = pbft.h
 	if !pbft.skipInProgress {
@@ -595,9 +602,7 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 				if !ok {
 					logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
 				} else {
-					logger.Critical("send validate")
-					digest := hash(batch)
-					pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", digest))
+					pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", hash(batch)))
 					pbft.primaryValidateBatch(batch)
 				}
 			}
