@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"hyperchain/consensus/events"
 	"github.com/golang/protobuf/proto"
+	"sync/atomic"
 )
 
 type viewChangeQuorumEvent struct{}
@@ -109,7 +110,7 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 
 	delete(pbft.newViewStore, pbft.view)
 	pbft.view++
-	pbft.activeView = false
+	atomic.StoreUint32(&pbft.activeView, 0)
 
 	pbft.pset = pbft.calcPSet()
 	pbft.qset = pbft.calcQSet()
@@ -208,9 +209,7 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 	// record same vc from self times
 	if vc.ReplicaId == pbft.id {
 		pbft.vcResendCount++
-		logger.Warningf("=========================================")
-		logger.Warningf("Replica %d already recv view change from itself for %d times", pbft.id, pbft.vcResendCount)
-		logger.Warningf("=========================================")
+		logger.Warningf("======== Replica %d already recv view change from itself for %d times", pbft.id, pbft.vcResendCount)
 	}
 
 	if _, ok := pbft.viewChangeStore[vcidx{vc.View, vc.ReplicaId}]; ok {
@@ -223,7 +222,7 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 			pbft.vcResendCount = 0
 			pbft.inNegoView = true
 			pbft.inRecovery = true
-			pbft.activeView = true
+			atomic.StoreUint32(&pbft.activeView, 1)
 			pbft.processNegotiateView()
 		}
 
@@ -268,7 +267,7 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 	}
 	logger.Debugf("Replica %d now has %d view change requests for view %d", pbft.id, quorum, pbft.view)
 
-	if !pbft.activeView && vc.View == pbft.view && quorum >= pbft.allCorrectReplicasQuorum() {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 0 && vc.View == pbft.view && quorum >= pbft.allCorrectReplicasQuorum() {
 		pbft.vcResendTimer.Stop()
 		// TODO first param
 		pbft.startTimer(pbft.lastNewViewTimeout, "new view change")
@@ -486,14 +485,14 @@ func (pbft *pbftProtocal) primaryProcessNewView(initialCp ViewChange_C, replicas
 
 
 func (pbft *pbftProtocal) processNewView() events.Event {
-	var newReqBatchMissing bool
+
 	nv, ok := pbft.newViewStore[pbft.view]
 	if !ok {
 		logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
 		return nil
 	}
 
-	if pbft.activeView {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 1 {
 		logger.Infof("Replica %d ignoring new-view from %d, v:%d: we are active in view %d",
 			pbft.id, nv.ReplicaId, nv.View, pbft.view)
 		return nil
@@ -561,15 +560,8 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 		pbft.stateTransfer(target)
 	}
 
-	//TODO: 从节点不需要拿batch,只要更新状态信息就行
-	newReqBatchMissing = pbft.feedMissingReqBatchIfNeeded(nv)
-	if len(pbft.missingReqBatches) == 0 {
-		return pbft.processReqInNewView(nv)
-	} else if newReqBatchMissing {
-		pbft.fetchRequestBatches()
-	}
+	return pbft.processReqInNewView(nv)
 
-	return nil
 }
 
 func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
@@ -578,12 +570,17 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	pbft.stopTimer()
 	pbft.nullRequestTimer.Stop()
 
-	pbft.activeView = true
 	delete(pbft.newViewStore, pbft.view-1)
 	// empty the outstandingReqBatch, it is useless since new primary will resend pre-prepare
 	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
 	pbft.lastExec = pbft.h
 	pbft.seqNo = pbft.h
+	prevPrimary := pbft.primary(pbft.view - 1)
+	if prevPrimary == pbft.id {
+		pbft.rebuildDuplicator()
+	} else {
+		pbft.clearDuplicator()
+	}
 	pbft.vid = pbft.h
 	pbft.lastVid = pbft.h
 	if !pbft.skipInProgress {
@@ -605,8 +602,8 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 				if !ok {
 					logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
 				} else {
-					logger.Critical("send validate")
-					pbft.recvRequestBatch(batch)
+					pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", hash(batch)))
+					pbft.primaryValidateBatch(batch)
 				}
 			}
 		}
