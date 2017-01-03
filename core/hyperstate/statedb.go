@@ -188,7 +188,7 @@ func (self *StateDB) MarkProcessFinish(seqNo uint64) {
 	}
 	self.batchCache.RemoveWithCond(seqNo, judge)
 	// remove content
-	log.Criticalf("finish seqNo #%d processing, move oldest from #%d to #%d", seqNo, atomic.LoadUint64(&self.oldestSeqNo), seqNo+1)
+	log.Debugf("finish seqNo #%d processing, move oldest from #%d to #%d", seqNo, atomic.LoadUint64(&self.oldestSeqNo), seqNo+1)
 	atomic.StoreUint64(&self.oldestSeqNo, seqNo + 1)
 	// remove all content with related seqNo less than `seqNo`
 	self.contentCache.RemoveWithCond(seqNo, judge)
@@ -526,7 +526,7 @@ func (self *StateDB) updateStateObject(batch hyperdb.Batch,stateObject *StateObj
 
 // deleteStateObject removes the given object from the database
 func (self *StateDB) deleteStateObject(batch hyperdb.Batch,stateObject *StateObject) {
-	log.Criticalf("delete state object %s during state commit, seqNo #%d", stateObject.address.Hex(), self.curSeqNo)
+	log.Debugf("delete state object %s during state commit, seqNo #%d", stateObject.address.Hex(), self.curSeqNo)
 	stateObject.deleted = true
 	addr := stateObject.Address()
 	batch.Delete(CompositeAccountKey(addr.Bytes()))
@@ -787,7 +787,7 @@ func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root commo
 		_, isDirty := s.stateObjectsDirty[addr]
 		switch {
 		case stateObject.suicided || (isDirty && deleteEmptyObjects && stateObject.empty()):
-			log.Errorf("seqNo #%d, state object %s been suicide or clearing out for empty", s.curSeqNo, stateObject.address.Hex())
+			log.Debugf("seqNo #%d, state object %s been suicide or clearing out for empty", s.curSeqNo, stateObject.address.Hex())
 			// If the object has been removed, don't bother syncing it
 			// and just mark it for deletion in the trie.
 			s.deleteStateObject(dbw, stateObject)

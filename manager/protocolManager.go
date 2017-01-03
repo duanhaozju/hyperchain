@@ -148,6 +148,7 @@ func (pm *ProtocolManager) Start() {
 		pm.Peermanager.ConnectToOthers()
 	}
 	pm.wg.Wait()
+	log.Debug("protocol manager started")
 
 }
 func (self *ProtocolManager) syncCheckpointLoop() {
@@ -691,6 +692,7 @@ func (self *ProtocolManager) NegotiateView() {
 	msg, err := proto.Marshal(negoView)
 	if err != nil {
 		log.Notice("nego view start")
+		return
 	}
 	self.eventMux.Post(event.ConsensusEvent{
 		Payload: msg,

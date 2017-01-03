@@ -49,7 +49,7 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, commonHa
 			tempBlockNumber, ev.SeqNo, vid, ev.SeqNo)
 		return
 	}
-	log.Criticalf("commit for block #%d, parent hash %s, merkle root %s, tx root %s, receipt root %s, vid #%d", newBlock.Number,
+	log.Debugf("commit for block #%d, parent hash %s, merkle root %s, tx root %s, receipt root %s, vid #%d", newBlock.Number,
 		common.Bytes2Hex(newBlock.ParentHash), common.Bytes2Hex(newBlock.MerkleRoot), common.Bytes2Hex(newBlock.TxRoot),
 		common.Bytes2Hex(newBlock.ReceiptRoot), vid)
 	// 2.save block and update chain
@@ -142,7 +142,7 @@ func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, 
 	// mark the block process finish, remove some stuff avoid of memory leak
 	// IMPORTANT this should be done after batch.Write been called
 	state.MarkProcessFinish(block.Number)
-	log.Criticalf("state #%d %s", vid, string(state.Dump()))
+	log.Debugf("state #%d %s", vid, string(state.Dump()))
 	// write checkpoint data
 	if block.Number % 10 == 0 && block.Number != 0 {
 		core.WriteChainChan()

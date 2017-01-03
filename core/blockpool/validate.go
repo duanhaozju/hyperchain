@@ -27,7 +27,7 @@ import (
 // IMPORTANT this function called in parallelly, Make sure all the variable are thread-safe
 func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption, peerManager p2p.PeerManager) {
 	// check whether this is necessary to update max seqNo
-	log.Noticef("begin to validate for vid #%d. current temp block number #%d", validationEvent.SeqNo, pool.tempBlockNumber)
+	log.Debugf("begin to validate for vid #%d. current temp block number #%d", validationEvent.SeqNo, pool.tempBlockNumber)
 	if validationEvent.SeqNo > atomic.LoadUint64(&pool.maxSeqNo) {
 		log.Debugf("validation seqNo #%d larger than max seqNo", validationEvent.SeqNo)
 		atomic.StoreUint64(&pool.maxSeqNo, validationEvent.SeqNo)
@@ -292,7 +292,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	}
 	// generate new state fingerprint
 	// IMPORTANT doesn't call batch.Write util recv commit event for atomic assurance
-	log.Criticalf("validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
+	log.Debugf("validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
 		pool.tempBlockNumber, seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	return nil, &BlockRecord{
 		TxRoot:      txRoot,
