@@ -221,7 +221,7 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 			nextNode = updatedNode
 			if bytes.Compare(updatedNode.getValue(),existingNode.value) != 0{
 				compositeKey := string(updatedNode.getCompositeKey())
-				logger.Debugf("update updated value set, current value %s, origin value %s", common.Bytes2Hex(updatedNode.value), common.Bytes2Hex(existingNode.value))
+				logger.Debugf("update updated value set, composite key %s, current value %s, origin value %s", compositeKey, common.Bytes2Hex(updatedNode.value), common.Bytes2Hex(existingNode.value))
 				updatedValueSet.Set(compositeKey,updatedNode.value,existingNode.value)
 			}
 
@@ -240,8 +240,8 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 	if i < len(updatedNodes) {
 		remainingNodes = updatedNodes[i:]
 		for k :=0 ; k<len(remainingNodes);k++ {
-			compositeKey := string(updatedNodes[k].getCompositeKey()[:])
-			updatedValueSet.Set(compositeKey,updatedNodes[k].value,nil)
+			compositeKey := string(remainingNodes[k].getCompositeKey()[:])
+			updatedValueSet.Set(compositeKey,remainingNodes[k].value,nil)
 		}
 	} else if j < len(existingNodes) {
 		remainingNodes = existingNodes[j:]
@@ -252,8 +252,7 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 			bucketHashCalculator.addNextNode(remainingNode)
 		}
 	}
-	tmp :=  bucketHashCalculator.computeCryptoHash()
-	return tmp
+	return bucketHashCalculator.computeCryptoHash()
 }
 
 // AddChangesForPersistence - method implementation for interface 'statemgmt.HashableState'
@@ -263,8 +262,7 @@ func (bucketTree *BucketTree) AddChangesForPersistence(writeBatch hyperdb.Batch,
 	}
 
 	if bucketTree.recomputeCryptoHash {
-		hash, err := bucketTree.ComputeCryptoHash()
-		logger.Debugf("DEBUG after revert  current hash %s", common.Bytes2Hex(hash))
+		_, err := bucketTree.ComputeCryptoHash()
 		if err != nil {
 			return nil
 		}
@@ -334,7 +332,6 @@ func (updatedValueSet *UpdatedValueSet) Print(treePrefix string){
 			logger.Errorf("-------------the updatedValueSet Print Error")
 		}
 		logger.Errorf("Print key is %v",realKey)
-		logger.Errorf("Print key is %v",common.Bytes2Hex([]byte(realKey)))
 		logger.Error("previous value is ",common.Bytes2Hex(v.PreviousValue))
 		logger.Error("value is ",common.Bytes2Hex(v.Value))
 		//logger.Debug("previous value is ",common.Bytes2Hex(v.PreviousValue))
@@ -484,6 +481,8 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 			logger.Error("test blockNum is ",i,"error is ",err.Error())
 		}
 	}*/
+	bucketTree.dataNodeCache.ClearDataNodeCache()
+	bucketTree.bucketCache.clearAllCache()
 	bucketTree.bucketCache.isEnabled = true
 	bucketTree.dataNodeCache.isEnabled = true
 	return nil

@@ -213,6 +213,7 @@ func (self *StateObject) SetState(db hyperdb.Database, key, value common.Hash) {
 		Prevalue: previous,
 		Exist:    exist,
 	})
+	log.Debugf("set state key %s value %s existed %v", key.Hex(), value.Hex(), exist)
 	self.setState(key, value)
 }
 

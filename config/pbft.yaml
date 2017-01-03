@@ -7,7 +7,7 @@ pbft:
     nodes: 4
 
     # How many transactions should the primary pack before sending pre-prepare
-    batchsize: 4
+    batchsize: 500
 
     # How many times of same vc from self before a replica start recovery
     vcresendlimit: 10
@@ -34,7 +34,7 @@ timeout:
     validate: 1s
 
     # Primary send it to inform aliveness, must be greater than request timeout
-    nullrequest: 10s
+    nullrequest: 4s
 
     # How long may a view change take
     viewchange: 8s

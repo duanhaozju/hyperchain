@@ -17,7 +17,7 @@ import (
 
 // reset blockchain to a stable checkpoint status when `viewchange` occur
 func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
-	log.Noticef("receive vc reset event, required revert to %d", ev.SeqNo - 1)
+	log.Debugf("receive vc reset event, required revert to %d", ev.SeqNo - 1)
 	tmpDemandNumber := atomic.LoadUint64(&pool.demandNumber)
 	// 1. Reset demandNumber , demandSeqNo and maxSeqNo
 	atomic.StoreUint64(&pool.demandNumber, ev.SeqNo)
@@ -49,7 +49,7 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	// 5. Reset chain
 	isGenesis := (block.Number == 0)
 	core.UpdateChain(db.NewBatch(), block, isGenesis, true, true)
-	log.Noticef("revert state from %d to target %d success", tmpDemandNumber - 1, ev.SeqNo - 1)
+	log.Debugf("revert state from %d to target %d success", tmpDemandNumber - 1, ev.SeqNo - 1)
 }
 
 // CutdownBlock remove a block and reset blockchain status to the last status.
@@ -167,7 +167,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			// remove persisted journals
 			db.Delete(hyperstate.CompositeJournalKey(uint64(i)))
 		}
-		log.Noticef("revert to #%d, %s", targetNumber, string(state.Dump()))
+		log.Debugf("revert to #%d, %s", targetNumber, string(state.Dump()))
 
 		// revert related stateObject storage bucket tree
 		for addr := range dirtyStateObjectSet.Iter() {
@@ -180,7 +180,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			log.Debugf("re-compute %s storage hash %s", address.Hex(), common.Bytes2Hex(hash))
 			obj, err := db.Get(hyperstate.CompositeAccountKey(address.Bytes()))
 			if err != nil {
-				log.Warningf("missing state object %s, it may be deleted", address.Hex())
+				log.Debugf("missing state object %s, it may be deleted", address.Hex())
 				continue
 			}
 			account := &hyperstate.Account{}

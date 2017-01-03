@@ -1117,14 +1117,14 @@ func (pbft *pbftProtocal) validateBatch(txBatch *TransactionBatch, vid uint64, v
 
 	primary := pbft.primary(pbft.view)
 	if primary == pbft.id {
-		logger.Debugf("Primary %d try to validate batch %s", pbft.id, hash(txBatch))
 
 		n := pbft.vid + 1
 
 		pbft.vid = n
+		logger.Debugf("Primary %d try to validate batch %d", pbft.id, n)
 		pbft.helper.ValidateBatch(txBatch.Batch, txBatch.Timestamp, n, pbft.view, true)
 	} else {
-		logger.Debugf("Replica %d try to validate batch", pbft.id)
+		logger.Debugf("Replica %d try to validate batch %d", pbft.id, vid)
 
 		if !pbft.inWV(pbft.view, vid) {
 			logger.Debugf("Replica %d not validating for transaction batch because it is out of sequence numbers", pbft.id)
