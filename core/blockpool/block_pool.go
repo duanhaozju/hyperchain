@@ -588,6 +588,9 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	// 4. Reset chain
 	isGenesis := (block.Number == 0)
 	core.UpdateChain(block, isGenesis)
+	// 5. Inform consenter that VcReset finished
+	msg := protos.VcResetDone{SeqNo: ev.SeqNo}
+	pool.consenter.RecvLocal(msg)
 }
 func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 	// TODO add block number to specify the initial status

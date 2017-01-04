@@ -34,6 +34,10 @@ message RemoveCache {
     uint64 vid = 1;
 }
 
+message VcResetDone {
+    uint64 seqNo = 1;
+}
+
 // BlockchainInfo
 message BlockchainInfo {
     uint64 height = 1;
