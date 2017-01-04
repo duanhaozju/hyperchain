@@ -119,7 +119,7 @@ type pbftProtocal struct {
 
 	vcResendLimit	       	int				// vcResendLimit indicates a replica's view change resending upbound.
 	vcResendCount	       	int				// vcResendCount represent times of same view change info resend
-	inVcReset				bool			// track if replica is during vc reset
+
 	// add and del node
 	isNewNode			bool						// track if replica is the new node
 	localKey			string						// track new node's local key (payload from local)
@@ -458,6 +458,17 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 			logger.Warningf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
 		}
 		return nil
+	case protos.VcResetDone:
+		if e.SeqNo != pbft.h + 1 {
+			logger.Warningf("Replica %d finds error in VcResetDone, expect=%d, but get=%d", pbft.id, pbft.h+1, e.SeqNo)
+			return nil
+		}
+		if pbft.inRecovery {
+			state := &stateUpdatedEvent{seqNo: e.SeqNo-1}
+			go pbft.postPbftEvent(state)
+			return nil
+		}
+		return pbft.handleTailInNewView()
 	case *types.Transaction:
 		tx := e
 		return pbft.processTxEvent(tx)

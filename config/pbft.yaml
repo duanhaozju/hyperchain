@@ -7,7 +7,7 @@ pbft:
     nodes: 4
 
     # How many transactions should the primary pack before sending pre-prepare
-    batchsize: 500
+    batchsize: 1600
 
     # How many times of same vc from self before a replica start recovery
     vcresendlimit: 10

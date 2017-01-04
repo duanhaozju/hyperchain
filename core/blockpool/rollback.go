@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"bytes"
 	"github.com/pkg/errors"
+	"hyperchain/protos"
 )
 
 
@@ -50,6 +51,9 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	isGenesis := (block.Number == 0)
 	core.UpdateChain(db.NewBatch(), block, isGenesis, true, true)
 	log.Debugf("revert state from %d to target %d success", tmpDemandNumber - 1, ev.SeqNo - 1)
+	// 6. Told consensus reset finish
+	msg := protos.VcResetDone{SeqNo: ev.SeqNo}
+	pool.consenter.RecvLocal(msg)
 }
 
 // CutdownBlock remove a block and reset blockchain status to the last status.
@@ -167,7 +171,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			// remove persisted journals
 			db.Delete(hyperstate.CompositeJournalKey(uint64(i)))
 		}
-		log.Debugf("revert to #%d, %s", targetNumber, string(state.Dump()))
+		log.Criticalf("revert to #%d, %s", targetNumber, string(state.Dump()))
 
 		// revert related stateObject storage bucket tree
 		for addr := range dirtyStateObjectSet.Iter() {
@@ -210,6 +214,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 		}
 		// revert state instance oldest and root
 		state.ResetToTarget(uint64(targetNumber+1), common.BytesToHash(targetRootHash))
+		log.Noticef("revert state from #%d to #%d success", currentNumber, targetNumber)
 	case "rawstate":
 		// there is no need to revert state, because PMT can assure the correction
 		pool.lastValidationState.Store(common.BytesToHash(targetRootHash))

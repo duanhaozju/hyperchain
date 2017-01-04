@@ -586,6 +586,17 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	if !pbft.skipInProgress {
 		backendVid := uint64(pbft.vid+1)
 		pbft.helper.VcReset(backendVid)
+		return nil
+	}
+
+	return pbft.handleTailInNewView()
+}
+
+func (pbft *pbftProtocal) handleTailInNewView() events.Event {
+	nv, ok := pbft.newViewStore[pbft.view]
+	if !ok {
+		logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
+		return nil
 	}
 	xSetLen := len(nv.Xset)
 	upper := uint64(xSetLen) + pbft.h + uint64(1)
