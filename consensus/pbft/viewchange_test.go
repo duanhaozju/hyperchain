@@ -516,7 +516,7 @@ func TestSendAndRecvNewView(t *testing.T){
 		ReplicaId: 3,
 	}
 	pbft2.view = 2
-	pbft2.activeView = false
+	pbft2.activeView = 0
 	pbft2.recvNewView(nv)
 
 	pbft.sendNewView()

@@ -7,6 +7,5 @@ package consensus
 type Consenter interface {
 	RecvMsg(msgPayload []byte) error // Called serially with incoming messages from gRPC
 	RecvLocal(msg interface{}) error //Called if local pass message to consensus module
-	RemoveCachedBatch(vid uint64) // Caller after BlockPool finishing write block and remove the cache in consensus
 	Close()
 }

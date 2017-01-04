@@ -17,7 +17,7 @@ type blkIdx struct {
 // procativeRecovery broadcast a procative recovery message to ask others for recent blocks info
 func (pbft *pbftProtocal) initRecovery() events.Event {
 
-	logger.Noticef("Replica %d now initRecovery", pbft.id)
+	logger.Debugf("Replica %d now initRecovery", pbft.id)
 
 	// update watermarks
 	height := persist.GetHeightofChain()
