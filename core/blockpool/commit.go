@@ -13,6 +13,7 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/core"
 	"hyperchain/common"
+	"hyperchain/protos"
 )
 
 // When receive an CommitOrRollbackBlockEvent, if flag is true, generate a block and call AddBlock function
@@ -150,9 +151,8 @@ func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, 
 	log.Notice("Block number", block.Number)
 	log.Notice("Block hash", hex.EncodeToString(block.BlockHash))
 	// remove Cached Transactions which used to check transaction duplication
-	if primary {
-		pool.consenter.RemoveCachedBatch(vid)
-	}
+    	msg := protos.RemoveCache{Vid: vid}
+    	pool.consenter.RecvLocal(msg)
 	// FOR TEST
 	// get journals
 	//j, err := db.Get(hyperstate.CompositeJournalKey(block.Number))

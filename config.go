@@ -5,7 +5,9 @@ import (
 	logging "github.com/op/go-logging"
 	"github.com/spf13/viper"
 	"time"
-	"hyperchain/jsonrpc"
+	"hyperchain/api/jsonrpc/core"
+	"hyperchain/crypto/hmEncryption"
+	"math/big"
 	"hyperchain/tree/bucket"
 )
 
@@ -30,6 +32,7 @@ type configs interface {
 	getStateType() string
 	getBlockVersion() string
 	getTransactionVersion() string
+	getPaillerPublickey() hmEncryption.PaillierPublickey
 	getBucketTreeConf() bucket.Conf
 }
 
@@ -69,6 +72,9 @@ type configsImpl struct {
 	stateLevelGroup         int       // state db bucket tree level group
 	storageSize             int       // storage bucket tree size
 	storageLevelGroup       int       // storage bucket tree level group
+	paillpublickeyN         string
+	paillpublickeynsquare   string
+	paillpublickeyG         string
 }
 
 //return a config instances
@@ -122,6 +128,11 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	 */
 	cimpl.blockVersion = config.GetString("global.version.blockversion")
 	cimpl.transactionVersion = config.GetString("global.version.transactionversion")
+
+	cimpl.paillpublickeyN = config.GetString("global.configs.hmpublickey.N")
+	cimpl.paillpublickeynsquare = config.GetString("global.configs.hmpublickey.Nsquare")
+	cimpl.paillpublickeyG = config.GetString("global.configs.hmpublickey.G")
+
 
 	/*
 		Bucket tree
@@ -197,4 +208,28 @@ func (cIml *configsImpl) getBucketTreeConf() bucket.Conf {
 		StorageSize: cIml.storageSize,
 		StorageLevelGroup: cIml.storageLevelGroup,
 	}
+}
+
+func (cIml *configsImpl) getPaillerPublickey() *hmEncryption.PaillierPublickey {
+	bigN := new(big.Int)
+	bigNsquare := new(big.Int)
+	bigG := new(big.Int)
+	n,_:= bigN.SetString(cIml.paillpublickeyN,10);
+	nsquare,_ := bigNsquare.SetString(cIml.paillpublickeynsquare,10)
+	g,_ := bigG.SetString(cIml.paillpublickeyG,10)
+
+
+	return &hmEncryption.PaillierPublickey{
+		N: n,
+		Nsquare: nsquare,
+		G: g,
+	}
+
+	//publickey := new(hmEncryption.PaillierPublickey)
+	//publickey.N = n
+	//publickey.Nsquare = nsquare
+	//publickey.G = g
+	//
+	//return publickey
+
 }

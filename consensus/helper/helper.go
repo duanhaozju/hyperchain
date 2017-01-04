@@ -9,15 +9,8 @@ import (
 	pb "hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/op/go-logging"
 	"hyperchain/core/types"
 )
-
-var logger *logging.Logger // package-level logger
-
-func init() {
-	logger = logging.MustGetLogger("consensus/help")
-}
 
 type helper struct {
 	msgQ *event.TypeMux
@@ -138,7 +131,7 @@ func (h *helper) VcReset(seqNo uint64) error {
 
 	// No need to "go h.msgQ.Post...", we'll wait for it to return
 	h.msgQ.Post(vcResetEvent)
-	time.Sleep(time.Second * 2)
+	time.Sleep(time.Millisecond * 50)
 
 	return nil
 }

@@ -4,8 +4,8 @@ package hyperdb
 
 import (
 	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/util"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
+	"github.com/syndtr/goleveldb/leveldb/util"
 	"bytes"
 	"github.com/pkg/errors"
 )
@@ -58,6 +58,7 @@ func (self *LDBDatabase) Delete(key []byte) error {
 func (self *LDBDatabase) NewIterator() iterator.Iterator {
 	return self.db.NewIterator(nil, nil)
 }
+
 func (self *LDBDatabase) NewIteratorWithPrefix(prefix []byte) iterator.Iterator {
 	return self.db.NewIterator(util.BytesPrefix(prefix), nil)
 }
@@ -113,13 +114,13 @@ func (b *ldbBatch) Put(key, value []byte) error {
 	return nil
 }
 
-// Write write batch-operation to databse
-func (b *ldbBatch) Write() error {
-	return b.db.Write(b.b, nil)
-}
-
-// Put put the key-value to ldbBatch
+// Delete delete the key-value to ldbBatch
 func (b *ldbBatch) Delete(key []byte) error {
 	b.b.Delete(key)
 	return nil
+}
+
+// Write write batch-operation to databse
+func (b *ldbBatch) Write() error {
+	return b.db.Write(b.b, nil)
 }

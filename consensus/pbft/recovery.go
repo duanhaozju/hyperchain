@@ -6,7 +6,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"hyperchain/consensus/events"
 	"encoding/base64"
-	"fmt"
 	"hyperchain/consensus/helper/persist"
 )
 
@@ -19,6 +18,10 @@ type blkIdx struct {
 func (pbft *pbftProtocal) initRecovery() events.Event {
 
 	logger.Debugf("Replica %d now initRecovery", pbft.id)
+
+	// update watermarks
+	height := persist.GetHeightofChain()
+	pbft.moveWatermarks(height)
 
 	pbft.rcRspStore = make(map[uint64]*RecoveryResponse)
 
@@ -114,7 +117,8 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	}
 
 	// find quorum chkpt
-	n, d, replicas, find, _ := pbft.findHighestChkptQuorum()
+	n, lastid, replicas, find, chkptBehind := pbft.findHighestChkptQuorum()
+	logger.Debug("n: ", n, "lastid: ", lastid, "replicas: ", replicas, "find: ", find, "chkptBehind: ", chkptBehind)
 	lastExec, curHash, execFind := pbft.findLastExecQuorum()
 
 	if !find {
@@ -127,8 +131,15 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		return nil
 	}
 
+	if pbft.recoveryToSeqNo != nil {
+		logger.Debugf("Replica %d in recovery receive rcRsp from replica %d" +
+			"but chkpt quorum and seqNo quorum already found. " +
+			"Ignore it", pbft.id, rsp.ReplicaId)
+		return nil
+	}
+
 	pbft.recoveryRestartTimer.Stop()
-	pbft.recoveryToSeqNo = lastExec
+	pbft.recoveryToSeqNo = &lastExec
 
 	//blockInfo := getBlockchainInfo()
 	//id, _ := proto.Marshal(blockInfo)
@@ -149,12 +160,19 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		return recoveryDoneEvent{}
 	}
 
-	pbft.moveWatermarks(n)
-	id, err := base64.StdEncoding.DecodeString(d)
-	if nil != err {
-		err = fmt.Errorf("Replica %d received a view change whose hash could not be decoded (%s)", pbft.id, d)
-		logger.Error(err.Error())
-		return nil
+	logger.Debugf("Replica %d in recovery self lastExec: %d, others: %d" +
+		"miss match self block hash: %s, other block hash %s", pbft.id, selfLastExec, lastExec, selfCurHash, curHash)
+
+	var id []byte
+	var err error
+	if n != 0 {
+		id, err = base64.StdEncoding.DecodeString(lastid)
+		if nil != err {
+			logger.Errorf("Replica %d cannot decode blockInfoId %s to %+v", pbft.id, lastid, id)
+			return nil
+		}
+	} else {
+		id = []byte("XXX GENESIS")
 	}
 
 	target := &stateUpdateTarget{
@@ -166,9 +184,19 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	}
 
 	pbft.updateHighStateTarget(target)
-	pbft.stateTransfer(target)
 
-	return nil
+	if chkptBehind {
+		pbft.moveWatermarks(n)
+		pbft.stateTransfer(target)
+
+		return nil
+	} else {
+		logger.Critical("send stateupdated")
+		pbft.helper.VcReset(n+1)
+		state := &stateUpdatedEvent{seqNo: n}
+		go pbft.postPbftEvent(state)
+		return nil
+	}
 }
 
 // findHighestChkptQuorum finds highest one of chkpts which achieve quorum
@@ -207,11 +235,13 @@ func (pbft *pbftProtocal) findHighestChkptQuorum() (n uint64, d string, replicas
 	for ci, peers := range chkpts {
 		if len(peers) >= 2*pbft.f+1 {
 			find = true
-			if ci.n > n {
-				chkptBehind = true
+			if ci.n >= n {
+				if ci.n > n {
+					chkptBehind = true
+				}
 				n = ci.n
 				d = ci.d
-				replicas = make([]uint64, len(peers))
+				replicas = make([]uint64, 0, len(peers))
 				for peer := range peers {
 					replicas = append(replicas, peer)
 				}
@@ -363,7 +393,7 @@ func (pbft *pbftProtocal) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) even
 		// recv preprepare
 		cert := pbft.getCert(preprep.View, preprep.SequenceNumber)
 		if cert.digest != preprep.BatchDigest {
-			pbft.recvPrePrepare(preprep)
+			go pbft.postPbftEvent(preprep)
 		}
 		// recv prepare
 		if preSent[i] {
@@ -373,7 +403,7 @@ func (pbft *pbftProtocal) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) even
 				BatchDigest:		preprep.BatchDigest,
 				ReplicaId:		sender,
 			}
-			pbft.recvPrepare(prep)
+			go pbft.postPbftEvent(prep)
 		}
 		// recv commit
 		if cmtSent[i] {
@@ -383,7 +413,7 @@ func (pbft *pbftProtocal) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) even
 				BatchDigest:		preprep.BatchDigest,
 				ReplicaId:		sender,
 			}
-			pbft.recvCommit(cmt)
+			go pbft.postPbftEvent(cmt)
 		}
 	}
 

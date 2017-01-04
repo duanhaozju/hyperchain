@@ -97,6 +97,13 @@ func (b *memBatch) Put(key, value []byte) error {
 	return nil
 }
 
+func (b *memBatch) Delete(key []byte) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	b.writes = append(b.writes, kv{CopyBytes(key), nil})
+	return nil
+}
+
 func (b *memBatch) Write() error {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
@@ -110,9 +117,3 @@ func (b *memBatch) Write() error {
 	return nil
 }
 
-func (b *memBatch) Delete(key []byte) error {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	return b.Delete(key)
-}

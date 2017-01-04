@@ -154,7 +154,8 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	// empty block generated, throw all invalid transactions back to original node directly
 	if validationEvent.IsPrimary && len(validateResult.ValidTxs) == 0 {
 		// 1. Remove all cached transaction in this block (which for transaction duplication check purpose), because empty block won't enter network
-		pool.consenter.RemoveCachedBatch(validationEvent.SeqNo)
+        msg := protos.RemoveCache{Vid: validationEvent.SeqNo}
+        pool.consenter.RecvLocal(msg)
 		// 2. Throw all invalid transaction back to the origin node
 		for _, t := range validateResult.InvalidTxs {
 			payload, err := proto.Marshal(t)

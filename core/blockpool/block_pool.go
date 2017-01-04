@@ -118,8 +118,17 @@ func (pool *BlockPool) SetDemandNumber(number uint64) {
 func (pool *BlockPool) SetDemandSeqNo(seqNo uint64) {
 	atomic.StoreUint64(&pool.demandSeqNo, seqNo)
 }
+// IncreaseTempBlockNumber - increase temporary block number.
 func (pool *BlockPool) IncreaseTempBlockNumber() {
 	pool.tempBlockNumber = pool.tempBlockNumber + 1
+}
+// PurgeValidateQueue - clear validation event queue cache.
+func (pool *BlockPool) PurgeValidateQueue() {
+	pool.validationQueue.Purge()
+}
+// PurgeBlockCache - clear validation result cache
+func (pool *BlockPool) PurgeBlockCache() {
+	pool.blockCache.Purge()
 }
 // obtain state handler via configuration in block.conf
 // two state: (1)raw state (2) hyper state are supported

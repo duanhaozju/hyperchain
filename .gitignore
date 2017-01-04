@@ -63,6 +63,7 @@ _testmain.go
 
 # mpeltonen/sbt-idea plugin
 .idea_modules/
+
 # JIRA plugin
 atlassian-ide-plugin.xml
 
@@ -107,4 +108,7 @@ build
 #mac.sh
 
 *.DS_Store
-TODO.md
+hyperchain.iml
+mac.sh
+
+api/jsonrpc/Dashboard/node_modules

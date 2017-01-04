@@ -119,10 +119,10 @@ func (peer *Peer) handShake() error {
 
 			log.Debug("secret", len(peer.TEM.GetSecret(peer.RemoteAddr.Hash)))
 			peer.ID = retMessage.From.ID
-			//log.Critical("节点:", peer.Addr.ID)
-			//log.Critical("hash:", peer.Addr.Hash)
-			//log.Critical("协商秘钥：")
-			//log.Critical(peer.TEM.GetSecret(peer.Addr.Hash))
+			log.Critical("Node ID:", peer.Addr.ID)
+			log.Critical("hash:", peer.Addr.Hash)
+			log.Critical("negotiate ID：")
+			log.Critical(peer.TEM.GetSecret(peer.Addr.Hash))
 			return  nil
 		}
 		return errors.New("ret message is not Hello Response!")
@@ -160,7 +160,7 @@ func NewPeerByIpAndPortReconnect(ip string, port int64, nid uint64, TEM transpor
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	retMessage, err2 := peer.Client.Chat(context.Background(), &helloMessage)
-	//log.Warning("重连返回值...", retMessage)
+	log.Warning("reconnect return :", retMessage)
 	if err2 != nil {
 		log.Error("cannot establish a connection", err2)
 		return nil, err2
@@ -179,10 +179,10 @@ func NewPeerByIpAndPortReconnect(ip string, port int64, nid uint64, TEM transpor
 				log.Error("cannot decrypt the nodeidinfo!")
 				errors.New("Decrypt ERROR")
 			}
-			//log.Critical("节点:", peer.Addr.ID)
-			//log.Critical("hash:", peer.Addr.Hash)
-			//log.Critical("协商秘钥：")
-			//log.Critical(peer.TEM.GetSecret(peer.Addr.Hash))
+			log.Critical("Node ID:", peer.Addr.ID)
+			log.Critical("hash:", peer.Addr.Hash)
+			log.Critical("negotiate key：")
+			log.Critical(peer.TEM.GetSecret(peer.Addr.Hash))
 			return &peer, nil
 		}
 	}
@@ -197,8 +197,11 @@ func (this *Peer) Chat(msg pb.Message) (*pb.Message, error) {
 	log.Debug("Invoke the broadcast method", msg.From.ID, ">>>", this.Addr.ID)
 	//this.chatMux.Lock()
 	//defer this.chatMux.Unlock()
-
-	msg.Payload = this.TEM.EncWithSecret(msg.Payload, this.Addr.Hash)
+	var err error;
+	msg.Payload,err = this.TEM.EncWithSecret(msg.Payload, this.Addr.Hash)
+	if err != nil{
+		return nil,err
+	}
 	r, err := this.Client.Chat(context.Background(), &msg)
 	if err != nil {
 		this.Status = 2;
@@ -213,7 +216,11 @@ func (this *Peer) Chat(msg pb.Message) (*pb.Message, error) {
 	if r != nil {
 		//log.Warning("返回信息",r)
 		if r.MessageType != pb.Message_HELLO && r.MessageType != pb.Message_HELLO_RESPONSE {
-			r.Payload = this.TEM.DecWithSecret(r.Payload, r.From.Hash)
+			r.Payload,err = this.TEM.DecWithSecret(r.Payload, r.From.Hash)
+			if err != nil{
+				return nil,err
+			}
+
 		}
 
 	}
