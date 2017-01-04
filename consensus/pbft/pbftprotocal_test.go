@@ -274,13 +274,13 @@ func TestProcessTxEvent(t *testing.T) {
 	h := helper.NewHelper(eventMux)
 	pbft := newPbft(uint64(id), config, h)
 
-	pbft.activeView = false
+	pbft.activeView = 0
 	err := pbft.processTxEvent(tx)
 	if err != nil {
 		t.Error("processTxEvent error, expect nil")
 	}
 
-	pbft.activeView = true
+	pbft.activeView = 1
 	pbft.inNegoView = false
 	pbft.inRecovery = false
 	pbft.id = uint64(2)
@@ -386,15 +386,15 @@ func TestNullRequestHandler(t *testing.T) {
 	pbft.id = 2
 	pbft.nullRequestHandler()
 	// pbft in negotiate view should not do anything
-	if pbft.activeView == false {
+	if pbft.activeView == 0 {
 		t.Error("test null request handler, pbft in nego view, should not send view change")
 	}
 
 	pbft.inNegoView = false
-	pbft.activeView = true
+	atomic.StoreUint32(pbft.activeView, 1)
 	pbft.inRecovery = false
 	pbft.nullRequestHandler()
-	if pbft.activeView == true {
+	if pbft.activeView == 1 {
 		t.Error("test null request handler, pbft not primary, should send view change")
 	}
 }
@@ -515,17 +515,17 @@ func TestValidateBatch(t *testing.T) {
 
 	// primary
 	batch := &TransactionBatch{}
-	pbft.validateBatch(batch, 0, 0)
+	pbft.primaryValidateBatch(batch)
 	if pbft.vid != uint64(1) {
 		t.Error("RecvReqBatch vid should add 1")
 	}
 
 	// not primary, not inWV
 	pbft.id = 2
-	pbft.validateBatch(batch, 1, 0)
+	pbft.validatePending()
 
 	// not primary, inWV
-	pbft.validateBatch(batch, 0, 0)
+	pbft.validatePending()
 }
 
 func TestCallSendPrePrepare(t *testing.T) {
@@ -696,12 +696,12 @@ func TestRecvPrePrepare(t *testing.T) {
 	pbft.inNegoView = false
 
 	// pbft in view change
-	pbft.activeView = false
+	pbft.activeView = 0
 	err = pbft.recvPrePrepare(pp)
 	if err != nil {
 		t.Error("recv preprepare, in view change, should not handle")
 	}
-	pbft.activeView = true
+	pbft.activeView = 1
 
 	// pp not from primary
 	pp2 := &PrePrepare{
@@ -1381,7 +1381,7 @@ func TestRecvReturnRequestBatch(t *testing.T) {
 	pbft := newPbft(uint64(id), config, h)
 	pbft.id = uint64(2)
 	pbft.inNegoView = false
-	pbft.activeView = true
+	pbft.activeView = 1
 	pbft.inRecovery = false
 
 	pbft.seqNo = uint64(0)
@@ -1413,7 +1413,7 @@ func TestMoveWatermarks(t *testing.T) {
 	pbft := newPbft(uint64(id), config, h)
 	pbft.id = uint64(2)
 	pbft.inNegoView = false
-	pbft.activeView = true
+	pbft.activeView = 1
 	pbft.seqNo = uint64(0)
 	// set current h to 50
 	pbft.h = uint64(50)
@@ -1498,7 +1498,7 @@ func TestUpdateHighStateTarget(t *testing.T) {
 	pbft := newPbft(uint64(id), config, h)
 	pbft.id = uint64(2)
 	pbft.inNegoView = false
-	pbft.activeView = true
+	pbft.activeView = 1
 	pbft.seqNo = uint64(0)
 
 	checkpoint := checkpointMessage{
@@ -1558,7 +1558,7 @@ func TestRetryStateTransfer(t *testing.T) {
 	pbft := newPbft(uint64(id), config, h)
 	pbft.id = uint64(2)
 	pbft.inNegoView = false
-	pbft.activeView = true
+	pbft.activeView = 1
 	pbft.seqNo = uint64(0)
 
 	pbft.stateTransferring = false
@@ -1621,7 +1621,7 @@ func TestRecvNegoViewRsp(t *testing.T) {
 	pbft := newPbft(uint64(id), config, h)
 	pbft.id = uint64(2)
 	pbft.inNegoView = true
-	pbft.activeView = true
+	pbft.activeView = 1
 	pbft.seqNo = uint64(0)
 
 	var ret events.Event
@@ -1681,7 +1681,7 @@ func TestRecvValidateResult(t *testing.T) {
 	h := helper.NewHelper(eventMux)
 	pbft := newPbft(uint64(id), config, h)
 	pbft.inNegoView = false
-	pbft.activeView = true
+	pbft.activeView = 1
 	pbft.seqNo = uint64(0)
 
 	// primary recv ValidateResult

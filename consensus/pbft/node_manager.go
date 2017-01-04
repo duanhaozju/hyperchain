@@ -3,6 +3,8 @@
 package pbft
 
 import (
+	"sync/atomic"
+
 	"hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"
@@ -287,7 +289,7 @@ func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) error {
 		return errors.New("Replica is not primary but received ready_for_n")
 	}
 
-	if !pbft.activeView {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
 		logger.Warningf("Primary %d is in view change, reject the ready_for_n message", pbft.id)
 		return errors.New("Primary is in view change, reject the ready_for_n message")
 	}
@@ -333,7 +335,7 @@ func (pbft *pbftProtocal) sendUpdateNforDel(key string, routerHash string) error
 
 	logger.Debugf("Replica %d try to send update_n after finish del node", pbft.id)
 
-	if !pbft.activeView {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
 		logger.Warningf("Primary %d is in view change, reject the ready_for_n message", pbft.id)
 		return errors.New("Primary is in view change, choose not send the ready_for_n message")
 	}
@@ -379,7 +381,7 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 
 	logger.Debugf("Replica %d received updateN message from %d", pbft.id, update.ReplicaId)
 
-	if !pbft.activeView {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
 		logger.Warningf("Replica %d is in view change, reject the update_n message", pbft.id)
 		return errors.New("Replica reject update_n msg as it's in viewchange")
 	}

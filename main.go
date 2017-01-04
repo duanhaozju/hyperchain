@@ -84,11 +84,24 @@ func checkLicense(licensePath string) (err error, expiredTime time.Time) {
 	return
 }
 
+func initConf(argv *argT) *common.Config {
+	conf := common.NewConfig(argv.ConfigPath)
+	conf.Set(common.HYPERCHAIN_ID, argv.NodeID)
+	conf.Set(common.HTTP_PORT, argv.HTTPPort)
+	conf.Set(common.REST_PORT, argv.RESTPort)
+	conf.Set(common.GRPC_PORT, argv.GRPCPort)
+	return conf
+}
+
 func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*argT)
 
+		//TODO:remove this config later
 		config := newconfigsImpl(argv.ConfigPath, argv.NodeID, argv.GRPCPort, argv.HTTPPort, argv.RESTPort)
+
+		conf := initConf(argv)
+		common.InitLog(conf)
 
 		err, expiredTime := checkLicense(config.getLicense())
 		if err != nil {
@@ -96,9 +109,6 @@ func main() {
 		}
 
 		membersrvc.Start(config.getMemberSRVCConfigPath(), config.getNodeID())
-
-		//init log
-		common.InitLog(config.getLogLevel(), config.getLogDumpFileDir(), config.getGRPCPort(), config.getLogDumpFileFlag())
 
 		eventMux := new(event.TypeMux)
 
@@ -165,7 +175,7 @@ func main() {
 				expiredTime,
 				config.getGRPCPort())
 		rateLimitCfg := config.getRateLimitConfig()
-		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(),config.getLogDumpFileDir(),eventMux, pm, rateLimitCfg)
+		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(),config.getLogDumpFileDir(),eventMux, pm, rateLimitCfg, config.getPaillerPublickey())
 
 		//go func() {
 		//	log.Println(http.ListenAndServe("localhost:6064", nil))
