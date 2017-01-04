@@ -202,7 +202,7 @@ func (bucketTree *BucketTree) GetTreeHash(blockNum *big.Int) ([]byte,error){
 }
 
 func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, existingNodes DataNodes,updatedValueSet *UpdatedValueSet) []byte {
-	logger.Criticalf("Computing crypto-hash for bucket [%s]. numUpdatedNodes=[%d], numExistingNodes=[%d]", bucketKey, len(updatedNodes), len(existingNodes))
+	logger.Debugf("Computing crypto-hash for bucket [%s]. numUpdatedNodes=[%d], numExistingNodes=[%d]", bucketKey, len(updatedNodes), len(existingNodes))
 	bucketHashCalculator := newBucketHashCalculator(bucketKey)
 	i := 0
 	j := 0
@@ -221,7 +221,7 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 			nextNode = updatedNode
 			if bytes.Compare(updatedNode.getValue(),existingNode.value) != 0{
 				compositeKey := string(updatedNode.getCompositeKey())
-				logger.Criticalf("update updated value set, composite key %s, current value %s, origin value %s", compositeKey, common.Bytes2Hex(updatedNode.value), common.Bytes2Hex(existingNode.value))
+				logger.Debugf("update updated value set, composite key %s, current value %s, origin value %s", compositeKey, common.Bytes2Hex(updatedNode.value), common.Bytes2Hex(existingNode.value))
 				updatedValueSet.Set(compositeKey,updatedNode.value,existingNode.value)
 			}
 
@@ -329,7 +329,7 @@ func (updatedValueSet *UpdatedValueSet) Print(treePrefix string){
 	for k,v := range updatedValueSet.UpdatedKVs{
 		realTreePrefix ,realKey := DecodeCompositeKey([]byte(k))
 		if realTreePrefix != treePrefix {
-			logger.Errorf("-------------the updatedValueSet Print Error")
+			logger.Errorf("Error the updatedValueSet Print Error")
 		}
 		logger.Errorf("Print key is %v",realKey)
 		logger.Error("previous value is ",common.Bytes2Hex(v.PreviousValue))
@@ -465,10 +465,6 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 		if err != nil {
 			logger.Errorf("unmarshal bucket updated values failed. for #%d", i)
 		}
-		logger.Errorf("update value set #%d begin", i)
-		updatedValueSet.Print("")
-		logger.Errorf("update value set #%d end", i)
-
 		revertToTargetBlock(bucketTree.treePrefix, big.NewInt(i), updatedValueSet, &keyValueMap)
 		bucketTree.PrepareWorkingSet(keyValueMap,big.NewInt(i))
 		bucketTree.AddChangesForPersistence(writeBatch,big.NewInt(i))

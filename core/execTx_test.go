@@ -95,8 +95,6 @@ func TestExec(t *testing.T) {
 	if expectRet!=common.ToHex(retdeploy){
 		t.Error("contract deploy error,ret doesn't match")
 	}
-
-	fmt.Println("------------invoke the contract issue method--------------------")
 	//invoke
 	payload := common.FromHex("0xeb8ac92100000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000006")
 	txValue = types.NewTransactionValue(GasPrice,Gas,0,payload)

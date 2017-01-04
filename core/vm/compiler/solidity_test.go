@@ -90,7 +90,6 @@ func TestCompiler(t *testing.T) {
 		return
 	}
 	t.Log("abis:",abis)
-	t.Log("--------")
 	t.Log("bins",bins)
 
 }

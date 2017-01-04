@@ -133,8 +133,6 @@ func RunVm(statedb *state.StateDB, exec map[string]string) ([]byte, vm.Logs, *bi
 	now_time := time.Now()
 	for i := 0;i<testCreateNum;i++{
 		receipt,ret,addr,err =core.ExecTransaction(*types.NewTestCreateTransaction(),vmenv)
-		log.Debug("Create**********************************",i)
-		log.Debug("----------addr",common.ToHex(addr.Bytes()))
 		log.Debug("receipt",receipt.Ret)
 	}
 	log.Infof("the create contract time we used is ",time.Now().Sub(now_time))
