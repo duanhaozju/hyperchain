@@ -15,6 +15,7 @@ import (
 	"hyperchain/api/rest_api/routers"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
+	"hyperchain/core/crypto/primitives"
 )
 
 const (
@@ -92,6 +93,28 @@ func newJSONHTTPHandler(srv *Server) http.HandlerFunc{
 			http.Error(w,
 				fmt.Sprintf("content length too large (%d>%d)", r.ContentLength, maxHTTPRequestContentLength),
 				http.StatusRequestEntityTooLarge)
+			return
+		}
+
+
+		tcert := r.Header.Get("tcert")
+		if tcert == ""{
+			return
+		}
+		tcertPem := primitives.ParseCertificate(tcert)
+
+		tca,getErr := primitives.GetConfig("./config/cert/tca.ca")
+		if getErr != nil{
+			log.Error("cannot read ecert.",getErr)
+		}
+		tcaByte := []byte(tca)
+		tcaPem := primitives.ParseCertificate(string(tcaByte))
+		if tcaPem == nil {
+			panic("tca is missing,please check it and restat the node!")
+		}
+
+		verifyTcert := primitives.VerifySignature(tcertPem,tcaPem)
+		if verifyTcert==false{
 			return
 		}
 
