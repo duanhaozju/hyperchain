@@ -6,6 +6,7 @@ import (
 	"errors"
 	"sort"
 	"google.golang.org/grpc"
+	"hyperchain/p2p/peerComm"
 )
 
 type PeersPoolIml struct {
@@ -164,7 +165,7 @@ func (this *PeersPoolIml)ToRoutingTableWithout(hash string)pb.Routers{
 
 
 // merge the route into the temp peer list
-func (this *PeersPoolIml)MergeFormRoutersToTemp(routers pb.Routers) {
+func (this *PeersPoolIml)MergeFromRoutersToTemp(routers pb.Routers) {
 	for _, peerAddress := range routers.Routers {
 		peerAddr := pb.RecoverPeerAddr(peerAddress)
 		newPeer, err := NewPeer(peerAddr,this.localAddr,this.TEM)
@@ -176,7 +177,7 @@ func (this *PeersPoolIml)MergeFormRoutersToTemp(routers pb.Routers) {
 }
 // Merge the temp peer into peers list
 func (this *PeersPoolIml) MergeTempPeers(peer *Peer) {
-	//log.Critical("old节点合并路由表!!!!!!!!!!!!!!!!!!!")
+	//log.Critical("old节点合并路由表!")
 	//使用共识结果进行更新
 	//for _, tempPeer := range this.tempPeers {
 	//	if tempPeer.RemoteAddr.Hash == address.Hash {
@@ -207,12 +208,15 @@ func (this *PeersPoolIml)RejectTempPeers() {
 	}
 }
 
-func (this *PeersPoolIml)DeletePeer(peer *Peer){
+func (this *PeersPoolIml)DeletePeer(peer *Peer) map[string]pb.PeerAddr{
 	this.alivePeers -= 1
 	peer.Connection.Close()
 	delete(this.peers, peer.PeerAddr.Hash)
 	delete(this.peerAddr, peer.PeerAddr.Hash)
 	delete(this.peerKeys, *peer.PeerAddr)
+	perlist := make(map[string]pb.PeerAddr,1)
+	perlist[peer.PeerAddr.ID] = *peer.PeerAddr
+	return perlist
 }
 
 func (this *PeersPoolIml) SetConnectionByHash(hash string,conn *grpc.ClientConn) error{
@@ -237,5 +241,8 @@ func (this *PeersPoolIml) SetClientByHash(hash string, client pb.ChatClient) err
 		panic("cannot set")
 	}
 	//this.peers[hash].Client = client
+}
 
+func (this *PeersPoolIml) Persisit(conf *peerComm.ConfigReader){
+	conf.AddNode()
 }

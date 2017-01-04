@@ -1,11 +1,12 @@
 // author: chenquan
 // date: 16-8-25
-// last modified: 16-12-18 22:50
+// last modified: 16-12-29 13:50
 // last Modified Author: zhangkejie
-// change log:
+// change log:fix the cert and signature
 //
 // message defination for network transaction
 //
+//NOTICE:请勿自动生成message.pb.go！！
 syntax="proto3";
 
 package peermessage;

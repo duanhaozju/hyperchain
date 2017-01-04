@@ -7,7 +7,13 @@ package primitives
 
 import (
 	//"encoding/pem"
+	"github.com/op/go-logging"
 )
+// Init the log setting
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("p2p")
+}
 
 type EcdsaEncryption struct {
 	name string
@@ -20,6 +26,8 @@ func NewEcdsaEncrypto(name string) *EcdsaEncryption {
 }
 
 func (ee *EcdsaEncryption) Sign(payload []byte,pri interface{})([]byte,error) {
+	//log.Notice("payload",payload,"pri",pri)
+
 	sign,err := ECDSASign(pri,payload)
 
 	if err!=nil {

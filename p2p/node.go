@@ -82,7 +82,7 @@ func (node *Node)UpdateDelayTableThread(){
 //新节点需要监听相应的attend类型
 func (node *Node)attendNoticeProcess(N int) {
 	isPrimaryConnectFlag := false
-	f := int(math.Floor(float64((N - 1) / 3)))
+	f := (N - 1) / 3
 	num := 0
 	for {
 		select {
@@ -137,6 +137,21 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	response.MessageType = pb.Message_RESPONSE
 	response.MsgTimeStamp = time.Now().UnixNano()
 	response.From = node.localAddr.ToPeerAddress()
+
+	if(msg.MessageType!=pb.Message_HELLO) {
+		//验签
+		signPub := node.TEM.GetSignPublicKey(msg.From.Hash)
+		ecdsaEncrypto := primitives.NewEcdsaEncrypto("ecdsa")
+		bol, _ := ecdsaEncrypto.VerifySign(signPub, msg.Payload, msg.Signature.Signature)
+
+		//log.Error("##########", bol, "##############")
+
+		if bol == false {
+			return &response, errors.New("signature is wrong!!")
+		}
+	}
+
+
 	//handle the message
 	log.Debug("MSG Type: ", msg.MessageType)
 	switch msg.MessageType {
@@ -195,7 +210,10 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 
 			e := ecdh.NewEllipticECDH(elliptic.P384())
 			pub,_ := e.Unmarshal(msg.Payload)
+
 			node.TEM.SetSignPublicKey(pub,msg.From.Hash)
+
+			//log.Error("#####",node.TEM.GetSignPublicKey(msg.From.Hash))
 			if genErr != nil {
 				log.Error("gen sec error", genErr)
 			}

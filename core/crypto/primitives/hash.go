@@ -29,7 +29,9 @@ func NewHash() hash.Hash {
 
 // Hash hashes the msh using the predefined hash function
 func Hash(msg []byte) []byte {
+	log.Notice("msgmsg:",msg)
 	hash := NewHash()
+	log.Notice("#########")
 	hash.Write(msg)
 	return hash.Sum(nil)
 }

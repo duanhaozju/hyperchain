@@ -83,6 +83,26 @@ func (hSMN *HandShakeManagerNew) SetSignPublicKey(pub crypto.PublicKey,peerHash 
 	hSMN.signPublickey[peerHash] = pub
 }
 
+func (hSMN *HandShakeManagerNew) GetSignPublicKey(peerHash string) crypto.PublicKey{
+	if pub, ok := hSMN.signPublickey[peerHash]; ok {
+		return pub
+	}else {
+		log.Error("无法取得相应公钥", peerHash)
+		return nil
+	}
+}
+
+func (hSMN *HandShakeManagerNew) GetIsVerified(peerHash string) bool  {
+	if bol, ok := hSMN.isVerified[peerHash]; ok {
+		return bol
+	}else {
+		log.Error("无法取得相应公钥", peerHash)
+		return false
+	}
+
+
+}
+
 func (hSMN *HandShakeManagerNew) SetIsVerified(is_verified bool,peerHash string){
 	hSMN.isVerified[peerHash] = is_verified
 }

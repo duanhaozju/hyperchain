@@ -8,3 +8,14 @@ type PeerConfigNodes struct {
 	Address string `json:"address"`
 }
 
+func NewPeerConfigNodes(ip string,rpc_port int, port int,id int) *PeerConfigNodes{
+	var peerConfigNode = PeerConfigNodes{
+		ExternalAddress: ip,
+		RPCPort:rpc_port,
+		Port:port,
+		ID:id,
+		Address:ip,
+	}
+	return &peerConfigNode
+}
+

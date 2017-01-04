@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	"github.com/spf13/viper"
+	"hyperchain/p2p/peermessage"
 )
 
 type Config interface {
@@ -22,6 +23,8 @@ type Config interface {
 	GetPort(nodeID int) int
 	GetIP(nodeID int) string
 	GetMaxPeerNumber() int
+	AddNodesAndPersist(addrs map[string]peermessage.PeerAddr)
+	DelNodesAndPersist(addrs map[string]peermessage.PeerAddr)
 }
 
 type ConfigWriter interface {
