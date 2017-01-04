@@ -15,7 +15,7 @@ const ConfigMaxGroupingAtEachLevel = "maxGroupingAtEachLevel"
 const ConfigHashFunction = "hashFunction"
 
 // DefaultNumBuckets - total buckets
-const DefaultNumBuckets = 10009
+const DefaultNumBuckets = 19
 
 // DefaultMaxGroupingAtEachLevel - Number of max buckets to group at each level.
 // Grouping is started from left. The last group may have less buckets
