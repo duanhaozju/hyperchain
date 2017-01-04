@@ -36,7 +36,7 @@ global:
 #dbtype 110 means use redis cache and ssdb if you want use only leveldb put dbtypes as 001
 ############################
     configs:
-        peers: "config/local_peerconfig.json"
+        peers: "config/peerconfig.json"
         genesis: "config/genesis.json"
         membersrvc: "config/membersrvc.yaml"
         pbft: "config/pbft.yaml"
