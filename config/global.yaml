@@ -63,7 +63,10 @@ global:
 ######################################################
     logs:
         # dump the log file or not
-        dumpfile: false
+        dumpfile: true
+        newLogFileInterval: 2s  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+                                # such as "300ms", "2h45m".
+
         logsdir: "./build/logs"
         # default loglevel for all modules which can be override by module level log setting
         loglevel: "NOTICE"
