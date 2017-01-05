@@ -150,7 +150,7 @@ func (this *GrpcPeerManager) connectToIntroducer( introducerAddress pb.PeerAddr)
 		if err != nil{
 			log.Error(err)
 		}else{
-			retMsg
+			log.Debug(retMsg.From)
 		}
 	}
 	this.LocalNode.N = len(this.GetAllPeersWithTemp())
@@ -457,7 +457,7 @@ func (this *GrpcPeerManager) UpdateRoutingTable(payload []byte) {
 		//通知新节点进行接洽
 		newPeer.Chat(attendResponseMsg)
 		this.LocalNode.N += 1
-		this.configs.AddNodesAndPersist(*this.peersPool.GetPeers())
+		this.configs.AddNodesAndPersist(this.peersPool.GetPeersAddrMap())
 	} else {
 		//新节点
 		//新节点在一开始的时候就已经将介绍人的节点列表加入了所以这里不需要处理
@@ -465,7 +465,7 @@ func (this *GrpcPeerManager) UpdateRoutingTable(payload []byte) {
 		this.IsOnline = true
 		this.peersPool.MergeTempPeersForNewNode()
 		this.LocalNode.N = this.peersPool.GetAliveNodeNum()
-		this.configs.AddNodesAndPersist(*this.peersPool.GetPeers())
+		this.configs.AddNodesAndPersist(this.peersPool.GetPeersAddrMap())
 	}
 }
 

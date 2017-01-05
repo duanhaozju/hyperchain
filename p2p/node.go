@@ -16,7 +16,6 @@ import (
 	"hyperchain/membersrvc"
 	"sync"
 	"errors"
-	"math"
 	"hyperchain/p2p/transport"
 	"hyperchain/core/crypto/primitives"
 	"hyperchain/p2p/transport/ecdh"
