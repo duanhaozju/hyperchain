@@ -123,7 +123,7 @@ func (updatedValueSet *UpdatedValueSet) GetSortedKeys() []string {
 		updatedKeys = append(updatedKeys, k)
 	}
 	sort.Strings(updatedKeys)
-	logger.Debugf("Sorted keys = %#v", updatedKeys)
+	log.Debugf("Sorted keys = %#v", updatedKeys)
 	return updatedKeys
 }
 

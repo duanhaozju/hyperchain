@@ -21,7 +21,7 @@ func newDataNodeCache(treePrefix string,maxSizeMBs int) *DataNodeCache {
 	if maxSizeMBs <= 0 {
 		isEnabled = false
 	} else {
-		logger.Infof("Constructing datanode-cache with max bucket cache size = [%d] MBs", maxSizeMBs)
+		log.Infof("Constructing datanode-cache with max bucket cache size = [%d] MBs", maxSizeMBs)
 	}
 	return &DataNodeCache{TreePrefix: treePrefix,c: make(map[BucketKey] DataNodeMap), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 }
@@ -59,7 +59,7 @@ func (dataNodeCache *DataNodeCache) Get(bucket_key BucketKey,data_key *DataKey) 
 	}
 	dataKeyBytes,err := json.Marshal(*data_key)
 	if err != nil {
-		logger.Errorf("json.Marshal Error",err)
+		log.Errorf("json.Marshal Error",err)
 		return nil,err
 	}
 	return datanodeMap[string(dataKeyBytes)], nil
@@ -73,25 +73,25 @@ func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey)
 	dataNodeMap := dataNodeCache.c[bucketKey]
 
 	if dataNodeMap == nil || len(dataNodeMap) == 0 {
-		logger.Debugf("The bucket is nil, bucketLevel is [%d] bucketNumber [%d]",bucketKey.level,bucketKey.bucketNumber)
+		log.Debugf("The bucket is nil, bucketLevel is [%d] bucketNumber [%d]",bucketKey.level,bucketKey.bucketNumber)
 		dataNodes,err = fetchDataNodesFromDBByBucketKey(dataNodeCache.TreePrefix,&bucketKey)
 		if err != nil{
-			logger.Error("fetchDataNodesFromDBByBucketKey Error")
+			log.Error("fetchDataNodesFromDBByBucketKey Error")
 			return dataNodes,err
 		}
 		for _,dataNode := range dataNodes {
-			logger.Debugf("FetchDataNodesFromCache put dataNode to dataNodeCache [%v]",dataNode)
+			log.Debugf("FetchDataNodesFromCache put dataNode to dataNodeCache [%v]",dataNode)
 			dataNodeCache.Put(dataNode)
 		}
 	}else {
 		for _, dataNode := range dataNodeMap {
-			logger.Debugf("Get datanode from cache [%v]", dataNode)
+			log.Debugf("Get datanode from cache [%v]", dataNode)
 			dataNodes = append(dataNodes, dataNode)
 		}
 		//
 		sort.Sort(dataNodes)
 	}
-	logger.Debugf("FetchDataNodesFromCacheFor the datanode to dataNodeCache [%v]",dataNodes)
+	log.Debugf("FetchDataNodesFromCacheFor the datanode to dataNodeCache [%v]",dataNodes)
 	return dataNodes, nil
 }
 

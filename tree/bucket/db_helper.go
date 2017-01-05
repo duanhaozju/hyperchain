@@ -14,9 +14,9 @@ func fetchDataNodeFromDB(dataKey *DataKey) (*DataNode, error) {
 		return nil, err
 	}
 	if nodeBytes == nil {
-		logger.Debug("nodeBytes from db is nil")
+		log.Debug("nodeBytes from db is nil")
 	} else if len(nodeBytes) == 0 {
-		logger.Debug("nodeBytes from db is an empty array")
+		log.Debug("nodeBytes from db is an empty array")
 	}
 	// key does not exist
 	if nodeBytes == nil {
@@ -61,10 +61,10 @@ func fetchDataNodesFromDB(treePrefix string) (DataNodes, error) {
 		keyBytes = keyBytes[len(DataNodePrefix):]
 		dataKey := newDataKeyFromEncodedBytes(keyBytes)
 		dataNode := unmarshalDataNode(dataKey, valueBytes)
-		logger.Debugf("Data node [%s] from DB belongs to bucket = [%s]. Including the key in results...", dataNode, dataNode.dataKey.bucketKey)
+		log.Debugf("Data node [%s] from DB belongs to bucket = [%s]. Including the key in results...", dataNode, dataNode.dataKey.bucketKey)
 		dataNodes = append(dataNodes, dataNode)
 	}
-	logger.Debugf("Returning results [%v]", dataNodes)
+	log.Debugf("Returning results [%v]", dataNodes)
 	return dataNodes, nil
 }
 
@@ -85,15 +85,15 @@ func fetchDataNodesFromDBByBucketKey(treePrefix string,bucketKey *BucketKey) (Da
 
 		keyBytes = keyBytes[len(DataNodePrefix):]
 		dataKey := newDataKeyFromEncodedBytes(keyBytes)
-		logger.Debugf("Retrieved data key [%s] from DB for bucket [%s]", dataKey, bucketKey)
+		log.Debugf("Retrieved data key [%s] from DB for bucket [%s]", dataKey, bucketKey)
 		if !dataKey.getBucketKey().equals(bucketKey) {
-			logger.Debugf("Data key [%s] from DB does not belong to bucket = [%s]. Stopping further iteration and returning results [%v]", dataKey, bucketKey, dataNodes)
+			log.Debugf("Data key [%s] from DB does not belong to bucket = [%s]. Stopping further iteration and returning results [%v]", dataKey, bucketKey, dataNodes)
 			return dataNodes, nil
 		}
 		dataNode := unmarshalDataNode(dataKey, valueBytes)
-		logger.Debugf("Data node [%s] from DB belongs to bucket = [%s]. Including the key in results...", dataNode, bucketKey)
+		log.Debugf("Data node [%s] from DB belongs to bucket = [%s]. Including the key in results...", dataNode, bucketKey)
 		dataNodes = append(dataNodes, dataNode)
 	}
-	logger.Debugf("Returning results [%v]", dataNodes)
+	log.Debugf("Returning results [%v]", dataNodes)
 	return dataNodes, nil
 }

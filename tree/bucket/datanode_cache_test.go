@@ -39,12 +39,12 @@ func TestDataNodeCache_Put(t *testing.T) {
 
 	dataNodes1,err := dataNodeCache.FetchDataNodesFromCache(*dataNode1.dataKey.bucketKey)
 	if err!= nil{
-		logger.Errorf("******error is ",err)
+		log.Errorf("******error is ",err)
 	}else {
-		logger.Critical("******len is",len(dataNodes1))
+		log.Critical("******len is",len(dataNodes1))
 		for _,v := range dataNodes1{
-			logger.Critical("******dataKey is",v.dataKey)
-			logger.Critical("******value is",string(v.value))
+			log.Critical("******dataKey is",v.dataKey)
+			log.Critical("******value is",string(v.value))
 		}
 	}
 

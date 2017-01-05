@@ -27,7 +27,7 @@ func newBucketCache(treePrefix string,maxSizeMBs int) *BucketCache {
 	if maxSizeMBs <= 0 {
 		isEnabled = false
 	} else {
-		logger.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", maxSizeMBs)
+		log.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", maxSizeMBs)
 	}
 	return &BucketCache{TreePrefix: treePrefix,c: make(map[BucketKey]*BucketNode), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 }
@@ -36,7 +36,7 @@ func (cache *BucketCache) clearAllCache(){
 	isEnabled := true
 	if cache.isEnabled{
 	} else {
-		logger.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", cache.maxSize)
+		log.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", cache.maxSize)
 	}
 	cache = &BucketCache{TreePrefix: cache.TreePrefix,c: make(map[BucketKey]*BucketNode), maxSize: uint64(cache.maxSize * 1024 * 1024), isEnabled: isEnabled}
 }
