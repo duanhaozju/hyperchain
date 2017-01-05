@@ -16,6 +16,8 @@ import (
 var loggingLogger = logging.MustGetLogger("logging")
 var logDefaultLevel logging.Level
 
+var closeLogFile chan struct{}
+
 //InitLog init the log by configuration from global.yaml
 func InitLog(conf *Config) {
 	timestamp := time.Now().Unix()
@@ -39,12 +41,32 @@ func InitLog(conf *Config) {
 	if !conf.GetBool(LOG_FUMP_FILE) {
 		logging.SetBackend(backendStderr)
 	} else {
+		closeLogFile = make(chan struct{})
 		fileName := path.Join(loggerDir, "hyperchain_" + strconv.Itoa(conf.GetInt(GRPC_PORT)) +
 			tm.Format("-2006-01-02-15:04:05 PM") + ".log")
 		setNewLogFile(fileName, backendStderr)
+		go newLogFileByInterval(loggerDir, conf, backendStderr)//split log by sencond
 	}
 
 	initLoggerLevelByConfiguration(conf)
+}
+
+//newLogFileByInterval set new log file for hyperchain
+func newLogFileByInterval(loggerDir string, conf *Config, backendStderr logging.LeveledBackend)  {
+	for   {
+		select {
+		case <-time.After(conf.GetDuration(LOG_NEW_FILE_INTERVAL)):
+			timestamp := time.Now().Unix()
+			tm := time.Unix(timestamp, 0)
+			fileName := path.Join(loggerDir, "hyperchain_" + strconv.Itoa(conf.GetInt(GRPC_PORT)) +
+				tm.Format("-2006-01-02-15:04:05 PM") + ".log")
+			setNewLogFile(fileName, backendStderr)
+			loggingLogger.Infof("Change log file, new log file name: %s", fileName)
+		case <- closeLogFile:
+			loggingLogger.Info("Close logger service")
+			loggingLogger.SetBackend(backendStderr)
+		}
+	}
 }
 
 //setNewLogFile set new file on disk to store logs.
@@ -56,7 +78,7 @@ func setNewLogFile(fileName string, backendStderr logging.LeveledBackend) {
 	}
 	logBackend := logging.NewLogBackend(logFile, "", 0)
 	var format = logging.MustStringFormatter(
-		`%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile}[%{module}] %{shortfunc} -> %{color:reset}%{message}`,
+		`[%{level:.5s}] %{time:15:04:05.000} %{shortfile}[%{module}] %{shortfunc} -> %{message}`,
 	)
 	backendFileFormatter := logging.NewBackendFormatter(logBackend, format)
 
@@ -107,7 +129,7 @@ func SetModuleLogLevel(module string, logLevel string) (string, error) {
 
 // init logger level by configuration
 func initLoggerLevelByConfiguration(conf *Config) {
-	mm := conf.GetStringMap(LOG_MODUKE_KEY) // module to level map
+	mm := conf.GetStringMap(LOG_MODULE_KEY) // module to level map
 	for m, l := range mm {
 		SetModuleLogLevel(m, cast.ToString(l))
 	}

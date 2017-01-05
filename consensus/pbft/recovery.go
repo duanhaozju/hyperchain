@@ -19,6 +19,7 @@ func (pbft *pbftProtocal) initRecovery() events.Event {
 
 	logger.Debugf("Replica %d now initRecovery", pbft.id)
 
+	pbft.recoveryToSeqNo = nil
 	// update watermarks
 	height := persist.GetHeightofChain()
 	pbft.moveWatermarks(height)
