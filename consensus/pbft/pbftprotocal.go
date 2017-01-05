@@ -1276,6 +1276,8 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	pbft.currentVid = nil
 
 	pbft.maybeSendCommit(digest, pbft.view, n)
+
+	pbft.trySendPrePrepare()
 }
 
 func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
