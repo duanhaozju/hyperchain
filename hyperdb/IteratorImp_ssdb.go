@@ -98,11 +98,12 @@ func (self *IteratorImp) seek(key []byte) bool {
 func (self *IteratorImp) Next() bool {
 	fmt.Println("nuM:")
 	fmt.Println(self.cu_num)
-	if self.cu_num < self.numlen - 1 {
+	fmt.Println(self.numlen)
+	if self.cu_num < self.numlen-1  {
 		self.cu_num++
 		return true
 	}
-	if self.cu_num > 8 {
+	if self.cu_num > Size-3 {
 		return self.seek([]byte(self.Key()))
 	}else{
 		return false

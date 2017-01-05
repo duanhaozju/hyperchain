@@ -32,7 +32,7 @@ func NewSSDatabase(portDBPath string,ssdbnum int) (*SSDatabase, error) {
 	//set max pool con 10
 	rdP:=redis.NewPool(func() (redis.Conn, error) { return redis.Dial("tcp", ":"+strconv.Itoa(port+14121),redis.DialConnectTimeout(60*time.Second))},10)
 
-	return &SSDatabase{rd_pool:rdP,ssdbnum:ssdbnum,port:port},nil
+	return &SSDatabase{rd_pool:rdP,ssdbnum:ssdbnum,port:port+10},nil
 }
 
 /*
@@ -172,6 +172,7 @@ func (it *Iteratorssdb)Seek(key []byte) bool{
 
 func (it *Iteratorssdb)Next() bool{
 	if !it.iterator.Next(){
+		fmt.Println("into !iterator")
 		if it.ssdbnow<it.ssdbnum{
 			it.ssdbnow++
 			it.port+=10
@@ -203,7 +204,7 @@ func (it *Iteratorssdb)Release(){
 func (ssdb *SSDatabase) NewIterator(prefix []byte) Iterator {
 	rdp:=redis.NewPool(func () (redis.Conn, error) { return redis.Dial("tcp", ":"+strconv.Itoa(ssdb.port),redis.DialConnectTimeout(60*time.Second))},10)
 	imp:=&IteratorImp{Pool:rdp,Listkey:make([]string,Size,Size),Listvalue:make([]string,Size,Size),}
-	return &Iteratorssdb{ssdbnum:ssdb.ssdbnum,ssdbnow:1,iterator:imp}
+	return &Iteratorssdb{ssdbnum:ssdb.ssdbnum,ssdbnow:1,iterator:imp,port:ssdb.port}
 }
 
 func (ssdb *SSDatabase) Close() {

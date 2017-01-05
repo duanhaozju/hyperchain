@@ -74,7 +74,7 @@ func InitDatabase(Db_type int)(error){
 		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it has beend inited \n",Db_type))
 		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it has beend inited \n",Db_type))
 	}
-	db,err:=Newdatabase(getDBPath(),portDBPath,Db_type)
+	db,err:=NewDatabase(getDBPath(),portDBPath,Db_type)
 
 	if err!=nil{
 		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n",Db_type))
@@ -97,18 +97,21 @@ func GetDBDatabase() (Database, error) {
 	return dbInstance.db,nil
 }
 
-func Newdatabase(DBPath string ,portDBPath string,Db_type int) (Database ,error){
+func NewDatabase(DBPath string ,portDBPath string,Db_type int) (Database ,error){
 	if Db_type==001{
-		log.Notice("use level db only")
+		log.Notice("Use level db only")
 		return NewLDBDataBase(DBPath)
 	}else if Db_type==010{
-		log.Notice("use ssdb only")
+		log.Notice("Use ssdb only")
 		return NewSSDatabase(portDBPath,2)
 	}else if Db_type==110{
-		log.Notice("use ssdb and redis")
+		log.Notice("Use ssdb and redis")
 		return NewRdSdDb(portDBPath,2)
+	}else if Db_type==100{
+		log.Notice("Use redis only")
+		return NewRsDatabase(portDBPath)
 	}else {
-		fmt.Println("wrong Db_type:"+strconv.Itoa(Db_type))
-		return nil,errors.New("wrong Db_type:"+strconv.Itoa(Db_type))
+		fmt.Println("Wrong Db_type:"+strconv.Itoa(Db_type))
+		return nil,errors.New("Wrong Db_type:"+strconv.Itoa(Db_type))
 	}
 }

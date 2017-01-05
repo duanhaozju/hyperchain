@@ -3,7 +3,6 @@ package hyperdb
 //////////////////////////////////////// use pool
 import (
 	"github.com/garyburd/redigo/redis"
-	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"strconv"
 	"sync"
 	"time"
@@ -48,7 +47,7 @@ func (self *RsDatabase) Delete(key []byte) error {
 
 // just for implement interface
 //iterator should do in leveldb
-func (self *RsDatabase) NewIterator() iterator.Iterator {
+func (self *RsDatabase) NewIterator([]byte) Iterator {
 	return nil
 }
 
