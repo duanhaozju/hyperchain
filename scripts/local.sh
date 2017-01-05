@@ -134,7 +134,7 @@ runXin1(){
 }
 
 echo "Run all the nodes..."
-if [ ! $MODE ]; then
+if [ !$MODE ]; then
     runXin1
 else
     if $ENV; then
