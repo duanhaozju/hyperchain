@@ -15,6 +15,7 @@ import (
 	"hyperchain/api/rest_api/routers"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
+	"hyperchain/core/crypto/primitives"
 )
 
 const (
@@ -88,10 +89,40 @@ func startHttp(httpPort int, restPort int, logsPath string, srv *Server) {
 
 func newJSONHTTPHandler(srv *Server) http.HandlerFunc{
 	return func(w http.ResponseWriter, r *http.Request) {
+		//log.Critical(r.Header.Get("tcert"))
+		tcert, _ := DecodeUriCompontent(r.Header.Get("tcert"))
+		//log.Critical("Decode:" + tcert)
+
+
+		//log.Critical("has request")
 		if r.ContentLength > maxHTTPRequestContentLength {
 			http.Error(w,
 				fmt.Sprintf("content length too large (%d>%d)", r.ContentLength, maxHTTPRequestContentLength),
 				http.StatusRequestEntityTooLarge)
+			return
+		}
+
+
+		//tcert := r.Header.Get("tcert")
+		if tcert == ""{
+			log.Critical("the tcert header is null")
+			return
+		}
+		tcertPem := primitives.ParseCertificate(tcert)
+
+		tca,getErr := primitives.GetConfig("./config/cert/tca.ca")
+		if getErr != nil{
+			log.Error("cannot read ecert.",getErr)
+		}
+		tcaByte := []byte(tca)
+		tcaPem := primitives.ParseCertificate(string(tcaByte))
+		if tcaPem == nil {
+			panic("tca is missing,please check it and restat the node!")
+		}
+
+		verifyTcert := primitives.VerifySignature(tcertPem,tcaPem)
+		if verifyTcert==false{
+			log.Error("验证不通过")
 			return
 		}
 

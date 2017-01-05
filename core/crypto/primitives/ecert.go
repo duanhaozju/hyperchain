@@ -12,11 +12,11 @@ import (
 	"encoding/pem"
 	//"fmt"
 	"fmt"
+	//"sync"
 )
 
 //读取config文件
 func GetConfig(path string) (string,error){
-
 	content,err := ioutil.ReadFile(path)
 
 	if err!=nil {

@@ -32,6 +32,8 @@ type TransportEncryptManager interface {
 	DecWithSecret(message []byte, peerHash string) ([]byte,error)
 	GetSecret(peerHash string) string
 	GetSceretPoolSize() int
+	GetSignPublicKey(peerHash string) crypto.PublicKey
+	GetIsVerified(peerHash string) bool
 	PrintAllSecHash()
 }
 

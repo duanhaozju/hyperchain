@@ -14,6 +14,7 @@ import (
 	"time"
 	"hyperchain/membersrvc"
 	"hyperchain/core/crypto/primitives"
+	//"fmt"
 )
 
 // init the package-level logger system,
@@ -89,6 +90,7 @@ func (peer *Peer) handShake() (err error) {
 		Rcert:rcertByte,
 	}
 
+
 	//review start exchange the secret
 	helloMessage := pb.Message{
 		MessageType:  pb.Message_HELLO,
@@ -97,6 +99,9 @@ func (peer *Peer) handShake() (err error) {
 		MsgTimeStamp: time.Now().UnixNano(),
 		Signature: &signature,
 	}
+
+	//log.Notice("publickey",peer.TEM.GetLocalPublicKey())
+
 	retMessage, err := peer.Client.Chat(context.Background(), &helloMessage)
 
 	//retMessage.Signature.Ecert

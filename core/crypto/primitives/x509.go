@@ -134,7 +134,7 @@ func NewSelfSignedCert() ([]byte, interface{}, error) {
 	block.Type="ECDSA PRIVATE KEY"
 	der,_ := PrivateKeyToDER(privKey)
 	block.Bytes = der
-	file,_ := os.Create("rca.priv")
+	file,_ := os.Create("tca.priv")
 	pem.Encode(file,&block)
 	//--------------------------
 
@@ -216,7 +216,7 @@ func createCertByCa(ca *x509.Certificate,private interface{}) ([]byte, interface
 	block.Type="ECDSA PRIVATE KEY"
 	der,_ := PrivateKeyToDER(privKey)
 	block.Bytes = der
-	file,_ := os.Create("rcert.priv")
+	file,_ := os.Create("tcert.priv")
 	pem.Encode(file,&block)
 	//--------------------------
 
