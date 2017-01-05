@@ -91,10 +91,10 @@ func newJSONHTTPHandler(srv *Server) http.HandlerFunc{
 	return func(w http.ResponseWriter, r *http.Request) {
 		//log.Critical(r.Header.Get("tcert"))
 		tcert, _ := DecodeUriCompontent(r.Header.Get("tcert"))
-		log.Critical("Decode:" + tcert)
+		//log.Critical("Decode:" + tcert)
 
 
-		log.Critical("has request")
+		//log.Critical("has request")
 		if r.ContentLength > maxHTTPRequestContentLength {
 			http.Error(w,
 				fmt.Sprintf("content length too large (%d>%d)", r.ContentLength, maxHTTPRequestContentLength),
