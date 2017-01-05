@@ -143,7 +143,7 @@ func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, 
 	// mark the block process finish, remove some stuff avoid of memory leak
 	// IMPORTANT this should be done after batch.Write been called
 	state.MarkProcessFinish(block.Number)
-	log.Debugf("state #%d %s", vid, string(state.Dump()))
+	log.Criticalf("state #%d %s", vid, string(state.Dump()))
 	// write checkpoint data
 	if block.Number % 10 == 0 && block.Number != 0 {
 		core.WriteChainChan()

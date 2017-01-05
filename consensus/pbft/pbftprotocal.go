@@ -1103,7 +1103,7 @@ func (pbft *pbftProtocal) primaryValidateBatch(txBatch *TransactionBatch) {
 	pbft.vid = n
 	pbft.duplicator[n] = txStore
 
-	logger.Debugf("Primary %d try to validate batch for view=%d/vid=%d", pbft.id, pbft.view, pbft.vid)
+	logger.Warningf("Primary %d try to validate batch for view=%d/vid=%d", pbft.id, pbft.view, pbft.vid)
 	pbft.helper.ValidateBatch(newBatch.Batch, newBatch.Timestamp, n, pbft.view, true)
 
 }
@@ -1155,7 +1155,7 @@ func (pbft *pbftProtocal) preValidate(idx msgID) bool {
 
 func (pbft *pbftProtocal) execValidate(txBatch *TransactionBatch, idx msgID) {
 
-	logger.Debugf("Backup %d try to validate batch for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+	logger.Warningf("Backup %d try to validate batch for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
 
 	pbft.helper.ValidateBatch(txBatch.Batch, txBatch.Timestamp, idx.n, idx.v, false)
 	delete(pbft.preparedCert, idx)
@@ -1244,7 +1244,7 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 		return
 	}
 
-	logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
+	logger.Warningf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
 	pbft.seqNo = n
 	preprep := &PrePrepare{
 		View:             pbft.view,
@@ -1277,6 +1277,8 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	pbft.currentVid = nil
 
 	pbft.maybeSendCommit(digest, pbft.view, n)
+
+	pbft.trySendPrePrepare()
 }
 
 func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
@@ -1292,7 +1294,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
 	//logger.Notice("receive  pre-prepare first seq is:",preprep.SequenceNumber)
 
-	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest=%s ",
+	logger.Warningf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest=%s ",
 		pbft.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
 	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
@@ -1388,7 +1390,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
 func (pbft *pbftProtocal) recvPrepare(prep *Prepare) error {
 
-	logger.Debugf("Replica %d received prepare from replica %d for view=%d/seqNo=%d",
+	logger.Warningf("Replica %d received prepare from replica %d for view=%d/seqNo=%d",
 		pbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber)
 
 	if pbft.inNegoView {
@@ -1504,7 +1506,7 @@ func (pbft *pbftProtocal) sendCommit(digest string, v uint64, n uint64) error {
 
 func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 
-	logger.Debugf("Replica %d received commit from replica %d for view=%d/seqNo=%d",
+	logger.Warningf("Replica %d received commit from replica %d for view=%d/seqNo=%d",
 		pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber)
 
 	if pbft.inNegoView {
@@ -2330,8 +2332,7 @@ func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error 
 
 	primary := pbft.primary(pbft.view)
 	if primary == pbft.id {
-		logger.Debugf("Primary %d received validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
-
+		logger.Warningf("Primary %d received validated batch for sqeNo=%d", pbft.id, result.SeqNo)
 		batch := &TransactionBatch{
 			Batch:     result.Transactions,
 			Timestamp: result.Timestamp,
@@ -2349,7 +2350,7 @@ func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error 
 		//}
 		pbft.trySendPrePrepare()
 	} else {
-		logger.Debugf("Replica %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
+		logger.Warningf("Replica %d recived validated batch for sqeNo=%d", pbft.id, result.SeqNo)
 
 		if !pbft.inWV(result.View, result.SeqNo) {
 			logger.Debugf("Replica %d receives validated result %s that is out of sequence numbers", pbft.id, result.Hash)

@@ -29,16 +29,10 @@ func newDataNodeCache(treePrefix string,maxSizeMBs int) *DataNodeCache {
 func (dataNodeCache *DataNodeCache) Remove(dataNode *DataNode) error{
 	bucketKey := *(dataNode.dataKey.bucketKey)
 	dataKey := dataNode.dataKey
-	dataKeyBytes,err := json.Marshal(*dataKey)
-	if err != nil {
-		logger.Error("Remove Error ",err)
-		return err
-	}
 	if  dataNodeCache.c == nil || len(dataNodeCache.c) == 0 || dataNodeCache.c[bucketKey] == nil {
 		return errors.New("There is no data in cache")
 	}
-
-	delete(dataNodeCache.c[bucketKey],string(dataKeyBytes))
+	delete(dataNodeCache.c[bucketKey],string(dataKey.compositeKey))
 	return nil
 }
 
