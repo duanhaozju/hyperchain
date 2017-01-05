@@ -463,6 +463,10 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 			logger.Warningf("Replica %d finds error in VcResetDone, expect=%d, but get=%d", pbft.id, pbft.h+1, e.SeqNo)
 			return nil
 		}
+		if pbft.inRecovery {
+			state := &stateUpdatedEvent{seqNo: e.SeqNo-1}
+			return pbft.recvStateUpdatedEvent(state)
+		}
 		return pbft.handleTailInNewView()
 	case *types.Transaction:
 		tx := e
