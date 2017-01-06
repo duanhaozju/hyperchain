@@ -16,6 +16,7 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 	"hyperchain/core/crypto/primitives"
+	"encoding/json"
 )
 
 const (
@@ -32,6 +33,13 @@ type RateLimitConfig struct {
 type httpReadWrite struct{
 	io.Reader
 	io.Writer
+}
+
+type requestBody struct {
+	jsonrpc string
+	method string
+	params []string
+	id int
 }
 
 func (hrw *httpReadWrite) Close() error{
@@ -93,7 +101,6 @@ func newJSONHTTPHandler(srv *Server) http.HandlerFunc{
 		tcert, _ := DecodeUriCompontent(r.Header.Get("tcert"))
 		//log.Critical("Decode:" + tcert)
 
-
 		//log.Critical("has request")
 		if r.ContentLength > maxHTTPRequestContentLength {
 			http.Error(w,
@@ -103,10 +110,20 @@ func newJSONHTTPHandler(srv *Server) http.HandlerFunc{
 		}
 
 
+		//TODO 2017.01.05
+		//var body requestBody
+		//json.Unmarshal(r.Body,&body)
+
+
+		//log.Critical("method:",body.method)
+
 		//tcert := r.Header.Get("tcert")
 		if tcert == ""{
-			log.Critical("the tcert header is null")
-			return
+
+			//if body.method != "node_getNodes" {
+			//	log.Critical("the tcert header is null")
+			//	return
+			//}
 		}
 		tcertPem := primitives.ParseCertificate(tcert)
 
@@ -130,8 +147,14 @@ func newJSONHTTPHandler(srv *Server) http.HandlerFunc{
 
 		// TODO NewJSONCodec
 		codec := NewJSONCodec(&httpReadWrite{r.Body, w})
+
+		//req,_,_ := srv.readRequest(codec)
+
+
+
 		defer codec.Close()
 		srv.ServeSingleRequest(codec, OptionMethodInvocation)
+
 	}
 }
 

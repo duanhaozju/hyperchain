@@ -276,6 +276,63 @@ func createCertByCa(ca *x509.Certificate,private interface{}) ([]byte, interface
 	return cert, privKey, nil
 }
 
+
+func generTcert(ca *x509.Certificate,private interface{},publicKey interface{}) ([]byte, error) {
+	caPri := private.(*ecdsa.PrivateKey)
+	//privKey, err := NewECDSAKey()
+
+	testExtKeyUsage := []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}
+	testUnknownExtKeyUsage := []asn1.ObjectIdentifier{[]int{1, 2, 3}, []int{2, 59, 1}}
+	extraExtensionData := []byte("extra extension")
+	commonName := "hyperchain.cn"
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName:   commonName,
+			Organization: []string{"Hyperchain"},
+			Country:      []string{"CHN"},
+			ExtraNames: []pkix.AttributeTypeAndValue{
+				{
+					Type:  []int{2, 5, 4, 42},
+					Value: "Develop",
+				},
+				// This should override the Country, above.
+				{
+					Type:  []int{2, 5, 4, 6},
+					Value: "ZH",
+				},
+			},
+		},
+		NotBefore: time.Now().Add(-1 * time.Hour),
+		NotAfter:  time.Now().Add(876000 * time.Hour),//暂定证书有效期为100年
+
+		SignatureAlgorithm: x509.ECDSAWithSHA384,
+
+		SubjectKeyId: []byte{1, 2, 3, 4},
+		KeyUsage:     x509.KeyUsageCertSign,
+
+		ExtKeyUsage:        testExtKeyUsage,
+		UnknownExtKeyUsage: testUnknownExtKeyUsage,
+
+		BasicConstraintsValid: true,
+		IsCA: true,
+
+		ExtraExtensions: []pkix.Extension{
+			{
+				Id:    []int{1, 2, 3, 4},
+				Value: extraExtensionData,
+			},
+		},
+	}
+
+	cert, err := x509.CreateCertificate(rand.Reader, &template,ca, &publicKey, caPri)
+	if err != nil {
+		return nil, err
+	}
+
+	return cert, nil
+}
+
 // CheckCertPKAgainstSK checks certificate's publickey against the passed secret key
 func CheckCertPKAgainstSK(x509Cert *x509.Certificate, privateKey interface{}) error {
 	switch pub := x509Cert.PublicKey.(type) {
