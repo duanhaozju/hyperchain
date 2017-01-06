@@ -1064,7 +1064,7 @@ func (pbft *pbftProtocal) recvRequestBatch(reqBatch *TransactionBatch) error {
 	}
 
 	digest := hash(reqBatch)
-	logger.Debugf("Replica %d received request batch", pbft.id, digest)
+	logger.Debugf("Replica %d received request batch %s", pbft.id, digest)
 
 	if active := atomic.LoadUint32(&pbft.activeView); active == 1 && pbft.primary(pbft.view) == pbft.id {
 		pbft.primaryValidateBatch(reqBatch)
