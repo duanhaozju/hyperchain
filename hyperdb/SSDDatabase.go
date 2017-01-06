@@ -62,7 +62,7 @@ func (ssdb *SSDatabase) Put(key []byte, value []byte) error {
 			n, _ := f.Seek(0, os.SEEK_END)
 			currentTime := time.Now().Local()
 			newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-			str :=newFormat+portDBPath+ `con.Do("set",,key, value):` + err.Error() +" num:"+strconv.Itoa(num)+"\n"
+			str :=newFormat+portDBPath+ `con.Do("set",key, value):` + err.Error() +" num:"+strconv.Itoa(num)+"\n"
 			_, err1 = f.WriteAt([]byte(str), n)
 			if err1!=nil{
 				log.Noticef("Write Database put err to ./ssdblog%d.txt fail err: %v \n",portDBPath,err.Error())
@@ -71,7 +71,7 @@ func (ssdb *SSDatabase) Put(key []byte, value []byte) error {
 		}
 
 
-		if err.Error() !="ERR Connection timed out"||num>3{
+		if err.Error() !="ERR Connection timed out"{
 			return err
 		}
 	}
@@ -102,15 +102,15 @@ func (ssdb *SSDatabase) Get(key []byte) ([]byte, error) {
 			n, _ := f.Seek(0, os.SEEK_END)
 			currentTime := time.Now().Local()
 			newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-			str :=newFormat+portDBPath+ `con.Do("set",,key, value):` + err.Error()+ " num:"+strconv.Itoa(num)+ "\n"
+			str :=newFormat+portDBPath+ `con.Do("get",key):` + err.Error()+ " num:"+strconv.Itoa(num)+ "\n"
 			_, err1 = f.WriteAt([]byte(str), n)
 			if err1!=nil{
-				log.Noticef("Write Database put err to ./ssdblog%d.txt fail err: %v \n",portDBPath,err.Error())
+				log.Noticef("Write Database  err to ./ssdblog%d.txt fail err: %v \n",portDBPath,err.Error())
 			}
 			f.Close()
 		}
 
-		if err.Error() !="ERR Connection timed out"||num>3{
+		if err.Error() !="ERR Connection timed out"{
 			return nil,err
 		}
 
@@ -119,10 +119,36 @@ func (ssdb *SSDatabase) Get(key []byte) ([]byte, error) {
 
 
 func (ssdb *SSDatabase) Delete(key []byte) error {
-	con:=ssdb.rd_pool.Get()
-	defer con.Close()
-	_,err:=con.Do("DEL", key)
-	return err;
+	num:=0
+	for {
+		num++
+		con := ssdb.rd_pool.Get()
+		_, err := con.Do("DEL", key)
+		con.Close()
+		if err == nil {
+			return nil
+		}
+		filepath:="./ssdblog"+portDBPath+"txt"
+		f, err1 := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE, 0644)
+
+		if err1 != nil {
+			fmt.Println(filepath+"file open failed " + err.Error())
+		}else {
+			n, _ := f.Seek(0, os.SEEK_END)
+			currentTime := time.Now().Local()
+			newFormat := currentTime.Format("2006-01-02 15:04:05.000")
+			str := newFormat + portDBPath + `con.Do(DEL,key):` + err.Error() + " num:" + strconv.Itoa(num) + "\n"
+			_, err1 = f.WriteAt([]byte(str), n)
+			if err1 != nil {
+				log.Noticef("Write Database  err to ./ssdblog%d.txt fail err: %v \n", portDBPath, err.Error())
+			}
+			f.Close()
+		}
+		if err.Error() !="ERR Connection timed out"{
+			return err
+		}
+
+	}
 }
 
 type Iteratorssdb struct {
@@ -172,7 +198,7 @@ func (it *Iteratorssdb)Seek(key []byte) bool{
 
 func (it *Iteratorssdb)Next() bool{
 	if !it.iterator.Next(){
-		fmt.Println("into !iterator")
+		fmt.Println("inyo ")
 		if it.ssdbnow<it.ssdbnum{
 			it.ssdbnow++
 			it.port+=10
@@ -285,7 +311,7 @@ func (batch *sd_Batch) Write() error {
 				f.Close()
 			}
 		}
-		if err.Error()!="ERR Connection timed out"||num>3{
+		if err.Error()!="ERR Connection timed out"{
 			break
 		}
 	}

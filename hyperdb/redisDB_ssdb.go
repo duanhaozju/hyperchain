@@ -196,7 +196,7 @@ func (batch *DB_Batch)Rdwrite(db *redis.Pool) error{
 				f.Close()
 			}
 		}
-		if err.Error()!="ERR Connection timed out"||num>=3{
+		if err.Error()!="ERR Connection timed out"{
 			break
 		}
 	}
@@ -237,7 +237,7 @@ func (batch *DB_Batch)Sdwrite(db *redis.Pool,map2 map[string] []byte) error{
 				f.Close()
 			}
 		}
-		if err.Error()!="ERR Connection timed out"||num>=3{
+		if err.Error()!="ERR Connection timed out"{
 			break
 		}
 	}
