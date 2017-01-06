@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"strconv"
+	"net/http"
+	"hyperchain/core/crypto/primitives"
 )
 
 const (
@@ -78,13 +80,14 @@ type jsonCodec struct {
 	encMu  sync.Mutex         // guards e
 	e      *json.Encoder      // encodes responses
 	rw     io.ReadWriteCloser // connection
+	httpHeader http.Header
 }
 
 // NewJSONCodec creates a new RPC server codec with support for JSON-RPC 2.0
-func NewJSONCodec(rwc io.ReadWriteCloser) ServerCodec {
+func NewJSONCodec(rwc io.ReadWriteCloser,header http.Header) ServerCodec {
 	d := json.NewDecoder(rwc)
 	d.UseNumber()
-	return &jsonCodec{closed: make(chan interface{}), d: d, e: json.NewEncoder(rwc), rw: rwc}
+	return &jsonCodec{closed: make(chan interface{}), d: d, e: json.NewEncoder(rwc), rw: rwc,httpHeader:header}
 }
 
 // isBatch returns true when the first non-whitespace characters is '['
@@ -97,6 +100,44 @@ func isBatch(msg json.RawMessage) bool {
 		return c == '['
 	}
 	return false
+}
+
+// CheckHttpHeaders will check http header, mainly
+func (c *jsonCodec) CheckHttpHeaders() RPCError{
+	c.decMu.Lock()
+	defer c.decMu.Unlock()
+	//log.Critical(r.Header.Get("tcert"))
+	tcert, err := DecodeUriCompontent(c.httpHeader.Get("tcert"))
+	//log.Critical("Decode:" + tcert)
+	if err != nil {
+		log.Warning("cannot decode the tcert header", err)
+		return UnauthorizedError{}
+	}
+
+	//tcert := r.Header.Get("tcert")
+	if tcert == ""{
+		log.Warning("the tcert header is null")
+		return UnauthorizedError{}
+	}
+
+	tcertPem := primitives.ParseCertificate(tcert)
+	//TODO 应该从节点启动就应该检查是否存在
+	tca,getErr := primitives.GetConfig("./config/cert/tca.ca")
+	if getErr != nil{
+		panic(getErr)
+	}
+	tcaByte := []byte(tca)
+	tcaPem := primitives.ParseCertificate(string(tcaByte))
+	if tcaPem == nil {
+		panic("tca is missing,please check it and restat the node!")
+	}
+
+	verifyTcert := primitives.VerifySignature(tcertPem,tcaPem)
+	if verifyTcert==false{
+		log.Warning("Verify failed")
+		return &UnauthorizedError{}
+	}
+	return nil
 }
 
 // ReadRequestHeaders will read new requests without parsing the arguments. It will

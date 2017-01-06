@@ -325,7 +325,9 @@ func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*s
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.
 func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, RPCError) {
-	//log.Info("============enter readRequest()=================")
+	log.Info("============start check the cert header=========")
+	codec.CheckHttpHeaders()
+	log.Info("============enter readRequest()=================")
 	reqs, batch, err := codec.ReadRequestHeaders()
 	if err != nil {
 		return nil, batch, err
