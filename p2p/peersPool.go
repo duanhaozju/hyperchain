@@ -14,6 +14,7 @@ type PeersPool interface{
 	GetPeer(address pb.PeerAddr) *Peer
 	GetPeerByHash(hash string) (*Peer,error)
 	GetPeers() []*Peer
+	GetPeersAddrMap() map[string]pb.PeerAddr
 	GetPeersWithTemp() []*Peer
 	GetAliveNodeNum() int
 	ToRoutingTable() pb.Routers

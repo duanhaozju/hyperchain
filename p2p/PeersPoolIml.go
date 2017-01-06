@@ -117,6 +117,15 @@ func (this *PeersPoolIml) GetPeers() []*Peer {
 	return clients
 }
 
+func (this *PeersPoolIml) GetPeersAddrMap()map[string]pb.PeerAddr{
+	var m = make(map[string]pb.PeerAddr)
+	for _, cl := range this.peers {
+		m[cl.PeerAddr.Hash] = *cl.PeerAddr
+		//log.Critical("取得路由表:", cl)
+	}
+	return m
+}
+
 // GetPeers  get peers from the peer pool
 func (this *PeersPoolIml) GetPeersWithTemp() []*Peer {
 	var clients []*Peer
@@ -215,7 +224,7 @@ func (this *PeersPoolIml)DeletePeer(peer *Peer) map[string]pb.PeerAddr{
 	delete(this.peerAddr, peer.PeerAddr.Hash)
 	delete(this.peerKeys, *peer.PeerAddr)
 	perlist := make(map[string]pb.PeerAddr,1)
-	perlist[peer.PeerAddr.ID] = *peer.PeerAddr
+	perlist[peer.PeerAddr.Hash] = *peer.PeerAddr
 	return perlist
 }
 
@@ -244,5 +253,5 @@ func (this *PeersPoolIml) SetClientByHash(hash string, client pb.ChatClient) err
 }
 
 func (this *PeersPoolIml) Persisit(conf *peerComm.ConfigReader){
-	conf.AddNode()
+	//conf.AddNode()
 }

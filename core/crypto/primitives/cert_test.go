@@ -77,7 +77,7 @@ func TestECACert(t *testing.T) {
 	der,_,_ := NewSelfSignedCert()
 	//fmt.Println("PrivateKey:" + string(key));
 	pem := DERCertToPEM(der)
-	file,_ := os.Create("rca.ca")
+	file,_ := os.Create("tca.ca")
 	file.WriteString(string(pem))
 	//fmt.Println(string(pem))
 }
@@ -208,13 +208,9 @@ func TestPayload(t *testing.T){
 }
 
 func TestGetCert(t *testing.T){
-	//cert,err := GetConfig("../../../config/cert/server/eca.cert1")
-	//
-	//if err != nil{
-	//	fmt.Println(err)
-	//	fmt.Println("1231231")
-	//	return
-	//}
+	//cert,_ := GetConfig("../../../config/cert/server/eca.cert1")
+
+
 	//byteCert := []byte(cert)
 	//
 	////fmt.Println(byteCert)
@@ -229,7 +225,7 @@ func TestGetCert(t *testing.T){
 }
 
 func TestCreateCert(t *testing.T){
-	cert,err := GetConfig("./rca.ca")
+	cert,err := GetConfig("./tca.ca")
 
 	if err != nil{
 		fmt.Println(err)
@@ -242,7 +238,7 @@ func TestCreateCert(t *testing.T){
 
 	ecrt := ParseCertificate(string(byteCert))
 
-	content,_ := ioutil.ReadFile("./rca.priv")
+	content,_ := ioutil.ReadFile("./tca.priv")
 
 	privateKey := string(content)
 
@@ -256,7 +252,7 @@ func TestCreateCert(t *testing.T){
 	ecertByCa,_,_ := createCertByCa(ecrt,pri)
 
 	pem := DERCertToPEM(ecertByCa)
-	file,_ := os.Create("rcert.cert")
+	file,_ := os.Create("tcert.cert")
 	file.WriteString(string(pem))
 
 	ecertByCa1,_:=DERToX509Certificate(ecertByCa)
