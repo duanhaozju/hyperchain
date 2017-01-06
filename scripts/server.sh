@@ -183,7 +183,7 @@ elif $DELETEDATA; then
 fi
 
 echo "Run all the nodes..."
-if [ ! $MODE ]; then
+if [ !$MODE ]; then
     runXin1
 else
     if $LOCAL_ENV; then
