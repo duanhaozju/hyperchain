@@ -9,6 +9,7 @@ import (
 	"hyperchain/consensus/events"
 	"github.com/golang/protobuf/proto"
 	"sync/atomic"
+	"time"
 )
 
 type viewChangeQuorumEvent struct{}
@@ -601,6 +602,7 @@ func (pbft *pbftProtocal) handleTailInNewView() events.Event {
 	xSetLen := len(nv.Xset)
 	upper := uint64(xSetLen) + pbft.h + uint64(1)
 	if pbft.primary(pbft.view) == pbft.id {
+		time.Sleep( 30 * time.Millisecond)
 		for i := pbft.h+uint64(1); i < upper; i++ {
 			d, ok := nv.Xset[i]
 			if !ok {
