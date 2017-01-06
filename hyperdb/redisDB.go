@@ -3,11 +3,12 @@ package hyperdb
 //////////////////////////////////////// use pool
 import (
 	"github.com/garyburd/redigo/redis"
-	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"strconv"
 	"sync"
 	"time"
 	"os"
+	"fmt"
+	"errors"
 )
 
 type RsDatabase struct {
@@ -60,10 +61,9 @@ func (self *RsDatabase) Put(key []byte, value []byte) error {
 func (self *RsDatabase) Get(key []byte) ([]byte, error) {
 
 	num:=0
-	var err error
 	for {
 		con := self.rd_pool.Get()
-		dat, err = redis.Bytes(con.Do("get", key))
+		dat, err := redis.Bytes(con.Do("get", key))
 		con.Close()
 
 
@@ -78,7 +78,7 @@ func (self *RsDatabase) Get(key []byte) ([]byte, error) {
 		f, err1 := os.OpenFile("./build/db.log", os.O_WRONLY|os.O_CREATE, 0644)
 		if err1 != nil {
 			fmt.Println("db.log file create failed. err: " + err.Error())
-		} else if errif err.Error() != "redigo: nil returned"{
+		} else if err.Error() != "redigo: nil returned" {
 			n, _ := f.Seek(0, os.SEEK_END)
 			currentTime := time.Now().Local()
 			newFormat := currentTime.Format("2006-01-02 15:04:05.000")
@@ -87,17 +87,17 @@ func (self *RsDatabase) Get(key []byte) ([]byte, error) {
 			f.Close()
 		}
 		if err.Error() !="ERR Connection timed out"{
-			return err
+			return nil,err
 		}
 	}
 }
 
 func (self *RsDatabase) Delete(key []byte) error {
 	num := 0
-	var err error
+
 	for {
 		con := self.rd_pool.Get()
-		_, err = con.Do("DEL", key)
+		_, err := con.Do("DEL", key)
 		con.Close()
 
 		if err == nil{
@@ -123,7 +123,7 @@ func (self *RsDatabase) Delete(key []byte) error {
 }
 // just for implement interface
 //iterator should do in leveldb
-func (self *RsDatabase) NewIterator() iterator.Iterator {
+func (self *RsDatabase) NewIterator(prefix []byte) Iterator {
 	return nil
 }
 
