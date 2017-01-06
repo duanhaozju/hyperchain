@@ -439,16 +439,12 @@ func (pbft *pbftProtocal) RecvMsg(e []byte) error {
 
 func (pbft *pbftProtocal) RecvLocal(msg interface{}) error {
 
-	logger.Debugf("Replica %d received local message", pbft.id)
-
 	go pbft.postPbftEvent(msg)
 
 	return nil
 }
 
 func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
-
-	logger.Debugf("Replica %d start solve event", pbft.id)
 
 	switch e := ee.(type) {
 	case protos.RemoveCache:
@@ -476,6 +472,7 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 		primary := pbft.primary(pbft.view)
 		pbft.helper.InformPrimary(primary)
 		pbft.persistView(pbft.view)
+		logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/h=%d", pbft.id, primary, pbft.view, pbft.h)
 		pbft.processRequestsDuringViewChange()
 	case batchTimerEvent:
 		logger.Debugf("Replica %d batch timer expired", pbft.id)
@@ -492,7 +489,6 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 
 	var err error
-	logger.Debugf("Replica %d processing event", pbft.id)
 
 	switch et := e.(type) {
 	case viewChangeTimerEvent:
@@ -559,7 +555,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case protos.ValidatedTxs:
 		err = pbft.recvValidatedResult(et)
 	case negoViewDoneEvent:
-		logger.Noticef("======== Replica %d finished negotiating view: %d", pbft.id, pbft.view)
+		logger.Criticalf("======== Replica %d finished negotiating view: %d", pbft.id, pbft.view)
 		primary := pbft.primary(pbft.view)
 		if primary == pbft.id {
 			pbft.sendNullRequest()
@@ -580,7 +576,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case *RecoveryReturnPQC:
 		return pbft.recvRecoveryReturnPQC(et)
 	case recoveryDoneEvent:
-		logger.Noticef("======== Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
+		logger.Criticalf("======== Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
 		if pbft.recvNewViewInRecovery {
 			logger.Noticef("#  Replica %d find itself received NewView during Recovery" +
 				", will restart negotiate view", pbft.id)
@@ -1068,11 +1064,8 @@ func (pbft *pbftProtocal) recvRequestBatch(reqBatch *TransactionBatch) error {
 	}
 
 	digest := hash(reqBatch)
-	logger.Debugf("Replica %d received request batch %s", pbft.id, digest)
+	logger.Debugf("Replica %d received request batch", pbft.id, digest)
 
-	if active := atomic.LoadUint32(&pbft.activeView); active == 1 {
-		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", digest))
-	}
 	if active := atomic.LoadUint32(&pbft.activeView); active == 1 && pbft.primary(pbft.view) == pbft.id {
 		pbft.primaryValidateBatch(reqBatch)
 	} else {
@@ -1094,7 +1087,6 @@ func (pbft *pbftProtocal) primaryValidateBatch(txBatch *TransactionBatch) {
 	newBatch, txStore := pbft.removeDuplicate(txBatch)
 	if txStore.Len() == 0 {
 		logger.Warningf("Primary %d get empty batch after check duplicate", pbft.id)
-		pbft.stopTimer()
 		return
 	}
 
@@ -1102,7 +1094,7 @@ func (pbft *pbftProtocal) primaryValidateBatch(txBatch *TransactionBatch) {
 	pbft.vid = n
 	pbft.duplicator[n] = txStore
 
-	logger.Debugf("Primary %d try to validate batch for view=%d/vid=%d", pbft.id, pbft.view, pbft.vid)
+	logger.Debugf("Primary %d try to validate batch for view=%d/vid=%d, batch size: %d", pbft.id, pbft.view, pbft.vid, txStore.Len())
 	pbft.helper.ValidateBatch(newBatch.Batch, newBatch.Timestamp, n, pbft.view, true)
 
 }
@@ -1154,7 +1146,7 @@ func (pbft *pbftProtocal) preValidate(idx msgID) bool {
 
 func (pbft *pbftProtocal) execValidate(txBatch *TransactionBatch, idx msgID) {
 
-	logger.Debugf("Backup %d try to validate batch for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+	logger.Debugf("Backup %d try to validate batch for view=%d/seqNo=%d, batch size: %d", pbft.id, idx.v, idx.n, len(txBatch.Batch))
 
 	pbft.helper.ValidateBatch(txBatch.Batch, txBatch.Timestamp, idx.n, idx.v, false)
 	delete(pbft.preparedCert, idx)
@@ -1205,11 +1197,9 @@ func (pbft *pbftProtocal) callSendPrePrepare(digest string) bool {
 		delete(pbft.cacheValidatedBatch, digest)
 		delete(pbft.validatedBatchStore, digest)
 		delete(pbft.outstandingReqBatches, digest)
-		pbft.stopTimer()
 		return true
 	}
 
-	pbft.nullRequestTimer.Stop()
 	pbft.sendPrePrepare(cache.batch, digest)
 
 	return true
@@ -1232,7 +1222,6 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 				delete(pbft.cacheValidatedBatch, digest)
 				delete(pbft.validatedBatchStore, digest)
 				delete(pbft.outstandingReqBatches, digest)
-				pbft.stopTimer()
 				return
 			}
 		}
@@ -1244,6 +1233,8 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	}
 
 	logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
+	pbft.nullRequestTimer.Stop()
+	pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", digest))
 	pbft.seqNo = n
 	preprep := &PrePrepare{
 		View:             pbft.view,
@@ -2331,7 +2322,7 @@ func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error 
 
 	primary := pbft.primary(pbft.view)
 	if primary == pbft.id {
-		logger.Debugf("Primary %d received validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
+		logger.Debugf("Primary %d received validated batch for sqeNo=%d, batch hash: %s", pbft.id, result.SeqNo, result.Hash)
 
 		batch := &TransactionBatch{
 			Batch:     result.Transactions,
@@ -2350,7 +2341,7 @@ func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error 
 		//}
 		pbft.trySendPrePrepare()
 	} else {
-		logger.Debugf("Replica %d recived validated batch for sqeNo=%d, batch is: %s", pbft.id, result.SeqNo, result.Hash)
+		logger.Debugf("Replica %d recived validated batch for sqeNo=%d, batch hash: %s", pbft.id, result.SeqNo, result.Hash)
 
 		if !pbft.inWV(result.View, result.SeqNo) {
 			logger.Debugf("Replica %d receives validated result %s that is out of sequence numbers", pbft.id, result.Hash)
