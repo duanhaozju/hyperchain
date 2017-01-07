@@ -16,7 +16,6 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 	"hyperchain/core/crypto/primitives"
-	"github.com/astaxie/beego/plugins/cors"
 )
 
 const (
@@ -140,7 +139,6 @@ func headerHandler(w http.ResponseWriter, r *http.Request){
 		log.Error("验证不通过")
 		return
 	}
-
 }
 
 
