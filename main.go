@@ -159,7 +159,13 @@ func main() {
 				exist,
 				expiredTime)
 		rateLimitCfg := config.getRateLimitConfig()
-		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(),config.getLogDumpFileDir(),eventMux, pm, rateLimitCfg)
+
+
+		cm,cmerr := membersrvc.NewCAManager("./config/cert/eca.ca","./config/cert/ecert.cert","./config/cert/rcert.cert","./config/cert/ecert.priv")
+		if cmerr != nil{
+			panic("cannot initliazied the camanager")
+		}
+		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(),config.getLogDumpFileDir(),eventMux, pm, rateLimitCfg,cm)
 
 		//go func() {
 		//	log.Println(http.ListenAndServe("localhost:6064", nil))

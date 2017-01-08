@@ -111,23 +111,23 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 	//log.Critical("Decode:" + tcert)
 	if err != nil {
 		log.Warning("cannot decode the tcert header", err)
-		return UnauthorizedError{}
+		return &UnauthorizedError{}
 	}
 
 	//tcert := r.Header.Get("tcert")
 	if tcert == ""{
 		log.Warning("the tcert header is null")
-		return UnauthorizedError{}
+		return &UnauthorizedError{}
 	}
 
-	tcertPem := primitives.ParseCertificate(tcert)
+	tcertPem,_ := primitives.ParseCertificate(tcert)
 	//TODO 应该从节点启动就应该检查是否存在
 	tca,getErr := primitives.GetConfig("./config/cert/tca.ca")
 	if getErr != nil{
 		panic(getErr)
 	}
 	tcaByte := []byte(tca)
-	tcaPem := primitives.ParseCertificate(string(tcaByte))
+	tcaPem,_ := primitives.ParseCertificate(string(tcaByte))
 	if tcaPem == nil {
 		panic("tca is missing,please check it and restat the node!")
 	}

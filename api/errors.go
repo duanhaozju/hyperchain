@@ -133,3 +133,16 @@ func (e *repeadedTxError) Error() string {
 //func (e *nullPointError) Error() string {
 //	return e.message
 //}
+
+
+type CertError struct {
+	message  string
+}
+
+func (e *CertError) Code() int {
+	return -32099
+}
+
+func (e *CertError) Error() string {
+	return e.message
+}
