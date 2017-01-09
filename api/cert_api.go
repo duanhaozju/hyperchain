@@ -31,7 +31,7 @@ func (node *PublicCertAPI) GetTCert(args CertArgs) (TcertReturn, error) {
 	if err != nil{
 		log.Error("sign tcert failed")
 		log.Error(err)
-		return "", &CertError{"signed tcert failed"}
+		return TcertReturn{TCert:""}, &CertError{"signed tcert failed"}
 	}
 
 	return TcertReturn{TCert:tcert},nil

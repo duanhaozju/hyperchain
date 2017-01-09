@@ -10,6 +10,7 @@ import (
 	"hyperchain/event"
 	"hyperchain/p2p"
 	"time"
+	"hyperchain/membersrvc"
 )
 
 /*
@@ -39,12 +40,12 @@ func New(
 	syncReplicaInterval time.Duration,
 	syncReplica bool,
 	exist chan bool,
-	expiredTime time.Time) *ProtocolManager {
+	expiredTime time.Time,cm *membersrvc.CAManager) *ProtocolManager {
 
 	aliveChan := make(chan int)
 	//add reconnect param
 
-	go peerManager.Start(aliveChan, eventMux)
+	go peerManager.Start(aliveChan, eventMux,cm)
 	//wait for all peer are connected
 	initType := <-aliveChan
 	//select {

@@ -38,6 +38,7 @@ type Node struct {
 	N                  int
 	DelayTableMutex    sync.Mutex
 	TEM                transport.TransportEncryptManager
+	CM 		   *membersrvc.CAManager
 
 }
 
@@ -47,10 +48,11 @@ type UpdateTable struct {
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
-func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TEM transport.TransportEncryptManager, peersPool PeersPool) *Node {
+func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TEM transport.TransportEncryptManager, peersPool PeersPool,cm *membersrvc.CAManager) *Node {
 	var newNode Node
 	newNode.localAddr = localAddr
 	newNode.TEM = TEM
+	newNode.CM = cm
 	newNode.higherEventManager = hEventManager
 	newNode.PeersPool = peersPool
 	newNode.attendChan = make(chan int)
@@ -141,13 +143,12 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		//验签
 		signPub := node.TEM.GetSignPublicKey(msg.From.Hash)
 		ecdsaEncrypto := primitives.NewEcdsaEncrypto("ecdsa")
-		bol, _ := ecdsaEncrypto.VerifySign(signPub, msg.Payload, msg.Signature.Signature)
-
-		//log.Error("##########", bol, "##############")
-
-		if bol == false {
+		bol, err := ecdsaEncrypto.VerifySign(signPub, msg.Payload, msg.Signature.Signature)
+		if !bol || err != nil {
+			log.Error("cannot verified the ecert signature",bol)
 			return &response, errors.New("signature is wrong!!")
 		}
+		log.Error("##########", bol, "##############")
 	}
 
 
@@ -167,49 +168,22 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			//TODO
 			ecertByte := msg.Signature.Ecert
 			rcertByte := msg.Signature.Rcert
-			var verifyEcert bool
-			var verifyRcert bool
+			verifyEcert,ecertErr := node.CM.VerifyECert(string(ecertByte))
+			verifyRcert,rcertErr := node.CM.VerifyRCert(string(rcertByte))
 
-			eca,getErr1 := primitives.GetConfig("./config/cert/eca.ca")
-			if getErr1 != nil{
-				log.Error("cannot read ecert.",getErr1)
-			}
-			ecaBtye := []byte(eca)
-
-			rca,getErr2 := primitives.GetConfig("./config/cert/rca.ca")
-			if getErr2 != nil{
-				log.Error("cannot read ecert.",getErr2)
-			}
-			rcaByte := []byte(rca)
-
-			// todo check err
-			ecaPem,_ := primitives.ParseCertificate(string(ecaBtye))
-			// todo check err
-			rcaPem,_ := primitives.ParseCertificate(string(rcaByte))
-
-			if len(ecertByte) == 0{
-				return &response,errors.New("ecert is miss.")
-			}else {
-				//todo error handle
-				ecert,_ := primitives.ParseCertificate(string(ecertByte))
-				verifyEcert = primitives.VerifySignature(ecert,ecaPem)
-
+			if !verifyEcert  || ecertErr != nil {
+				log.Error(ecertErr)
+				return &response,errors.New("ecert is missing.")
 			}
 
-			if len(rcertByte) == 0{
+			if !verifyRcert  || rcertErr != nil {
 				node.TEM.SetIsVerified(false,msg.From.Hash)
 			}else {
-				// todo check err
-				rcert,_ := primitives.ParseCertificate(string(rcertByte))
-				verifyRcert = primitives.VerifySignature(rcert,rcaPem)
-				node.TEM.SetIsVerified(verifyRcert,msg.From.Hash)
+				node.TEM.SetIsVerified(true,msg.From.Hash)
 			}
+
 			remotePublicKey := msg.Payload
 			genErr := node.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
-
-			if !verifyEcert {
-				return &response,errors.New("ecert is wrong.")
-			}
 
 			e := ecdh.NewEllipticECDH(elliptic.P384())
 			pub,_ := e.Unmarshal(msg.Payload)
@@ -229,13 +203,6 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			response.Payload = transportPublicKey
 			//REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
 			//REVIEW This no need to call hello event handler
-			//TODO reverse connect the current peer
-			//判断是否需要反向建立链接
-
-			 //reconnectErr := node.reconnect(msg)
-			 //if reconnectErr != nil{
-			 //	log.Error("recverse connect to ",msg.From,"error:",reconnectErr)
-			 //}
 				return &response, nil
 		}
 	case pb.Message_HELLO_RESPONSE:

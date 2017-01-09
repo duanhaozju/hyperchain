@@ -15,7 +15,6 @@ import (
 	"hyperchain/api/rest_api/routers"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
-	"hyperchain/core/crypto/primitives"
 	"hyperchain/membersrvc"
 )
 
@@ -55,13 +54,13 @@ func Start(httpPort int, restPort int, logsPath string,eventMux *event.TypeMux,p
 		}
 	}
 
-	startHttp(httpPort, restPort,logsPath, server)
+	startHttp(httpPort, restPort,logsPath, server,cm)
 
 	return nil
 }
 
 
-func startHttp(httpPort int, restPort int, logsPath string, srv *Server) {
+func startHttp(httpPort int, restPort int, logsPath string, srv *Server,cm *membersrvc.CAManager) {
 	// TODO AllowedOrigins should be a parameter
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
@@ -69,7 +68,7 @@ func startHttp(httpPort int, restPort int, logsPath string, srv *Server) {
 	})
 
 	// Insert the middleware
-	handler := c.Handler(newJSONHTTPHandler(srv))
+	handler := c.Handler(newJSONHTTPHandler(srv,cm))
 
 	go http.ListenAndServe(":"+strconv.Itoa(httpPort),handler)
 
@@ -88,7 +87,7 @@ func startHttp(httpPort int, restPort int, logsPath string, srv *Server) {
 	// ===================================== 2016.11.15 END  ================================ //
 }
 
-func newJSONHTTPHandler(srv *Server) http.HandlerFunc{
+func newJSONHTTPHandler(srv *Server,cm *membersrvc.CAManager) http.HandlerFunc{
 	return func(w http.ResponseWriter, r *http.Request) {
 		//log.Critical("has request")
 		if r.ContentLength > maxHTTPRequestContentLength {
@@ -103,43 +102,8 @@ func newJSONHTTPHandler(srv *Server) http.HandlerFunc{
 		w.Header().Set("content-type", "application/json")
 
 		// TODO NewJSONCodec
-		codec := NewJSONCodec(&httpReadWrite{r.Body, w},r.Header)
+		codec := NewJSONCodec(&httpReadWrite{r.Body, w},r.Header,cm)
 		defer codec.Close()
 		srv.ServeSingleRequest(codec, OptionMethodInvocation)
 	}
 }
-
-func headerHandler(w http.ResponseWriter, r *http.Request){
-	//log.Critical(r.Header.Get("tcert"))
-	tcert, err := DecodeUriCompontent(r.Header.Get("tcert"))
-	//log.Critical("Decode:" + tcert)
-	if err != nil {
-		log.Warning("cannot decode the tcert header", err)
-	}
-
-	//tcert := r.Header.Get("tcert")
-	if tcert == ""{
-		log.Critical("the tcert header is null")
-		return
-	}
-
-	tcertPem,_ := primitives.ParseCertificate(tcert)
-
-	tca,getErr := primitives.GetConfig("./config/cert/tca.ca")
-	if getErr != nil{
-		log.Error("cannot read ecert.",getErr)
-	}
-	tcaByte := []byte(tca)
-	tcaPem,_ := primitives.ParseCertificate(string(tcaByte))
-	if tcaPem == nil {
-		panic("tca is missing,please check it and restat the node!")
-	}
-
-	verifyTcert := primitives.VerifySignature(tcertPem,tcaPem)
-	if verifyTcert==false{
-		log.Error("验证不通过")
-		return
-	}
-}
-
-

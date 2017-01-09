@@ -11,7 +11,7 @@ import (
 	"sync"
 	"strconv"
 	"net/http"
-	"hyperchain/core/crypto/primitives"
+	"hyperchain/membersrvc"
 )
 
 const (
@@ -73,21 +73,22 @@ type jsonNotification struct {
 // jsonCodec reads and writes JSON-RPC messages to the underlying connection. It
 // also has support for parsing arguments and serializing (result) objects.
 type jsonCodec struct {
-	closer sync.Once          // close closed channel once
-	closed chan interface{}   // closed on Close
-	decMu  sync.Mutex         // guards d
-	d      *json.Decoder      // decodes incoming requests
-	encMu  sync.Mutex         // guards e
-	e      *json.Encoder      // encodes responses
-	rw     io.ReadWriteCloser // connection
+	closer     sync.Once             // close closed channel once
+	closed     chan interface{}      // closed on Close
+	decMu      sync.Mutex            // guards d
+	d          *json.Decoder         // decodes incoming requests
+	encMu      sync.Mutex            // guards e
+	e          *json.Encoder         // encodes responses
+	rw         io.ReadWriteCloser    // connection
 	httpHeader http.Header
+	CM         *membersrvc.CAManager //ca manager
 }
 
 // NewJSONCodec creates a new RPC server codec with support for JSON-RPC 2.0
-func NewJSONCodec(rwc io.ReadWriteCloser,header http.Header) ServerCodec {
+func NewJSONCodec(rwc io.ReadWriteCloser,header http.Header,cm *membersrvc.CAManager) ServerCodec {
 	d := json.NewDecoder(rwc)
 	d.UseNumber()
-	return &jsonCodec{closed: make(chan interface{}), d: d, e: json.NewEncoder(rwc), rw: rwc,httpHeader:header}
+	return &jsonCodec{closed: make(chan interface{}), d: d, e: json.NewEncoder(rwc), rw: rwc,httpHeader:header, CM:cm}
 }
 
 // isBatch returns true when the first non-whitespace characters is '['
@@ -106,35 +107,15 @@ func isBatch(msg json.RawMessage) bool {
 func (c *jsonCodec) CheckHttpHeaders() RPCError{
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
-	//log.Critical(r.Header.Get("tcert"))
-	tcert, err := DecodeUriCompontent(c.httpHeader.Get("tcert"))
-	//log.Critical("Decode:" + tcert)
-	if err != nil {
+	tcertPem, err := DecodeUriCompontent(c.httpHeader.Get("tcert"))
+	if err != nil  || tcertPem == ""{
 		log.Warning("cannot decode the tcert header", err)
 		return &UnauthorizedError{}
 	}
+	verifyTcert,err := c.CM.VerifySignature(tcertPem)
 
-	//tcert := r.Header.Get("tcert")
-	if tcert == ""{
-		log.Warning("the tcert header is null")
-		return &UnauthorizedError{}
-	}
-
-	tcertPem,_ := primitives.ParseCertificate(tcert)
-	//TODO 应该从节点启动就应该检查是否存在
-	tca,getErr := primitives.GetConfig("./config/cert/tca.ca")
-	if getErr != nil{
-		panic(getErr)
-	}
-	tcaByte := []byte(tca)
-	tcaPem,_ := primitives.ParseCertificate(string(tcaByte))
-	if tcaPem == nil {
-		panic("tca is missing,please check it and restat the node!")
-	}
-
-	verifyTcert := primitives.VerifySignature(tcertPem,tcaPem)
-	if verifyTcert==false{
-		log.Warning("Verify failed")
+	if verifyTcert==false || err != nil{
+		log.Warning("Verify failed",err)
 		return &UnauthorizedError{}
 	}
 	return nil

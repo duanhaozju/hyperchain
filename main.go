@@ -109,6 +109,13 @@ func main() {
 
 		eventMux := new(event.TypeMux)
 
+		//init memversrvc CAManager
+		// rca.ca 应该改为 eca.ca
+		cm,cmerr := membersrvc.NewCAManager("./config/cert/eca.ca","./config/cert/ecert.cert","./config/cert/rcert.cert","./config/cert/rca.ca","./config/cert/ecert.priv")
+		if cmerr != nil{
+			panic("cannot initliazied the camanager")
+		}
+
 		//init peer manager to start grpc server and client
 		//grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath())
 		grpcPeerMgr := p2p.NewGrpcManager(conf)
@@ -157,14 +164,11 @@ func main() {
 				syncReplicaInterval,
 				syncReplicaEnable,
 				exist,
-				expiredTime)
+				expiredTime,cm)
 		rateLimitCfg := config.getRateLimitConfig()
 
 
-		cm,cmerr := membersrvc.NewCAManager("./config/cert/eca.ca","./config/cert/ecert.cert","./config/cert/rcert.cert","./config/cert/ecert.priv")
-		if cmerr != nil{
-			panic("cannot initliazied the camanager")
-		}
+
 		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(),config.getLogDumpFileDir(),eventMux, pm, rateLimitCfg,cm)
 
 		//go func() {
