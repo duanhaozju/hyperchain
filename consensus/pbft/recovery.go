@@ -158,6 +158,7 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		logger.Debugf("Replica %d in recovery same lastExec: %d, " +
 			"same block hash: %s, fast catch up", pbft.id, selfLastExec, curHash)
 		pbft.inRecovery = false
+		pbft.recoveryToSeqNo = nil
 		return recoveryDoneEvent{}
 	}
 
