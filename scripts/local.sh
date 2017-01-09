@@ -20,7 +20,7 @@ fi
 DELETEDATA=true
 REBUILD=true
 ENV=true
-MODE=false
+MODE=true
 
 help(){
     echo "local.sh helper:"
@@ -72,7 +72,7 @@ do
     -e|--env)
         ENV=false; shift;;
     -m|--mode)
-        MODE=true; shift;;
+        MODE=false; shift;;
 	--) shift; break;;
 	-*) help; exit 1;;
 	*) break;;
@@ -95,7 +95,7 @@ if $DELETEDATA; then
 fi
 
 # Check all the config files
-echo "Copy config dir into build dir.."
+echo "copy config dir into build dir.."
 cp -rf "${CONF_PATH}" "${DUMP_PATH}/"
 cp -rf "${CONF_PATH}/keystore" "${DUMP_PATH}/build/"
 
@@ -132,7 +132,7 @@ cd ${DUMP_PATH}
 runXinXinLinux(){
     for((j=1;j<=$MAXPEERNUM;j++))
     do
-        gnome-terminal -x bash -c "cd ${DUMP_PATH}/node${j}/ && ./hyperchain -o ${j}"
+        gnome-terminal -x bash -c "cd ${DUMP_PATH} && ./hyperchain -o ${j}"
     done
 }
 runXinXinMac(){
@@ -149,7 +149,7 @@ runXin1(){
 }
 
 echo "Run all the nodes..."
-if $MODE; then
+if [ ! $MODE ]; then
     runXin1
 else
     if $ENV; then
