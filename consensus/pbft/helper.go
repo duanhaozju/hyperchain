@@ -10,6 +10,9 @@ import (
 	"hyperchain/consensus/helper/persist"
 
 	"github.com/golang/protobuf/proto"
+	"hyperchain/core/types"
+	"encoding/hex"
+	"github.com/pkg/errors"
 )
 
 // =============================================================================
@@ -440,4 +443,78 @@ func (pbft *pbftProtocal) invalidateState() {
 func (pbft *pbftProtocal) validateState() {
 	logger.Debug("Validating the current state")
 	pbft.valid = true
+}
+
+// =============================================================================
+// helper functions for duplicator
+// =============================================================================
+// check if a tx is duplicate in a block
+func (pbft *pbftProtocal) checkDuplicateInBlock(tx *types.Transaction, txStore *transactionStore) bool {
+	key := hex.EncodeToString(tx.TransactionHash)
+	return txStore.has(key)
+}
+
+// check if a tx is duplicate in cache
+func (pbft *pbftProtocal) checkDuplicateInCache(tx *types.Transaction) (exist bool) {
+	exist = false
+	for _, txStore := range pbft.duplicator {
+		if pbft.checkDuplicateInBlock(tx, txStore) {
+			exist = true
+			break
+		}
+	}
+	return
+}
+
+// backup put the packaged batch to transactionStore and check if primary's batch result is right
+func (pbft *pbftProtocal) checkDuplicate(txBatch *TransactionBatch) (txStore *transactionStore, err error) {
+	txStore = newTransactionStore()
+	err = nil
+	for _, tx := range txBatch.Batch {
+		key := hex.EncodeToString(tx.TransactionHash)
+		if txStore.has(key) || pbft.checkDuplicateInCache(tx) {
+			err = errors.New("Find duplicate transaction in the batch sent by primary")
+			break
+		} else {
+			txStore.add(tx)
+		}
+	}
+	return
+}
+
+// primary remove duplicate transaction for packaged batch
+func (pbft *pbftProtocal) removeDuplicate(txBatch *TransactionBatch) (newBatch *TransactionBatch, txStore *transactionStore) {
+	newBatch = &TransactionBatch{Timestamp: txBatch.Timestamp}
+	txStore = newTransactionStore()
+	for _, tx := range txBatch.Batch {
+		key := hex.EncodeToString(tx.TransactionHash)
+		if txStore.has(key) || pbft.checkDuplicateInCache(tx) {
+			logger.Warningf("Primary %d received duplicate transaction %v", pbft.id, tx)
+		} else {
+			txStore.add(tx)
+			newBatch.Batch = append(newBatch.Batch, tx)
+		}
+	}
+	return
+}
+
+// previous primary rebuild the duplicator after view change
+func (pbft *pbftProtocal) rebuildDuplicator() {
+	temp := make(map[uint64]*transactionStore)
+	dv := pbft.vid - pbft.h
+	for i, txStore := range pbft.duplicator {
+		temp[i-dv] = txStore
+	}
+	pbft.duplicator = temp
+	pbft.clearDuplicator()
+}
+
+// replica clear the duplicator after view change
+func (pbft *pbftProtocal) clearDuplicator() {
+	h := pbft.h
+	for i := range pbft.duplicator {
+		if i > h {
+			delete(pbft.duplicator, i)
+		}
+	}
 }

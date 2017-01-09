@@ -231,7 +231,8 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	// empty block generated, throw all invalid transactions back to original node directly
 	if validationEvent.IsPrimary && len(validTxSet) == 0 {
 		// 1. Remove all cached transaction in this block, because empty block won't enter network
-		pool.consenter.RemoveCachedBatch(validationEvent.SeqNo)
+		msg := protos.RemoveCache{Vid: validationEvent.SeqNo}
+		pool.consenter.RecvLocal(msg)
 		// 2. Throw all invalid transaction back to the origin node
 		for _, t := range invalidTxSet {
 			payload, err := proto.Marshal(t)
@@ -518,9 +519,8 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, pr
 	/*
 		Remove Cached Transactions which used to check transaction duplication
 	 */
-	if primary {
-		consenter.RemoveCachedBatch(vid)
-	}
+	msg := protos.RemoveCache{Vid: vid}
+	consenter.RecvLocal(msg)
 }
 
 // save the invalid transaction into database for client query
@@ -588,6 +588,9 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	// 4. Reset chain
 	isGenesis := (block.Number == 0)
 	core.UpdateChain(block, isGenesis)
+	// 5. Inform consenter that VcReset finished
+	msg := protos.VcResetDone{SeqNo: ev.SeqNo}
+	pool.consenter.RecvLocal(msg)
 }
 func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 	// TODO add block number to specify the initial status

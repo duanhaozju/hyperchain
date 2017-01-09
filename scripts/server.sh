@@ -5,7 +5,7 @@ DELETEDATA=true
 REBUILD=true
 LOCAL_ENV=true
 SERVER_ENV=true
-MODE=true
+MODE=false
 
 PASSWD="hyperchain"
 PRIMARY=`head -1 ./serverlist.txt`
@@ -59,7 +59,7 @@ do
     -s|--server)
         SERVER_ENV=false; shift;;
     -m|--mode)
-        MODE=false; shift;;
+        MODE=true; shift;;
 	--) shift; break;;
 	-*) help; exit 1;;
 	*) break;;
@@ -183,7 +183,7 @@ elif $DELETEDATA; then
 fi
 
 echo "Run all the nodes..."
-if [ ! $MODE ]; then
+if $MODE; then
     runXin1
 else
     if $LOCAL_ENV; then

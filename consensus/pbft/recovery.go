@@ -17,8 +17,9 @@ type blkIdx struct {
 // procativeRecovery broadcast a procative recovery message to ask others for recent blocks info
 func (pbft *pbftProtocal) initRecovery() events.Event {
 
-	logger.Noticef("Replica %d now initRecovery", pbft.id)
+	logger.Debugf("Replica %d now initRecovery", pbft.id)
 
+	pbft.recoveryToSeqNo = nil
 	// update watermarks
 	height := persist.GetHeightofChain()
 	pbft.moveWatermarks(height)
@@ -150,13 +151,14 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	logger.Debugf("Replica %d in recovery find quorum chkpt: %d, self: %d, " +
 		"others lastExec: %d, self: %d", pbft.id, n, pbft.h, lastExec, pbft.lastExec)
 	logger.Debugf("Replica %d in recovery, " +
-		"others lastBlockInfo: %s, self: %s", pbft.id, rsp.BlockHeight, selfCurHash)
+		"others lastBlockInfo: %s, self: %s", pbft.id, rsp.LastBlockHash, selfCurHash)
 
 	// Fast catch up
 	if lastExec == selfLastExec && curHash == selfCurHash {
 		logger.Debugf("Replica %d in recovery same lastExec: %d, " +
 			"same block hash: %s, fast catch up", pbft.id, selfLastExec, curHash)
 		pbft.inRecovery = false
+		pbft.recoveryToSeqNo = nil
 		return recoveryDoneEvent{}
 	}
 
@@ -188,15 +190,11 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	if chkptBehind {
 		pbft.moveWatermarks(n)
 		pbft.stateTransfer(target)
-
-		return nil
 	} else {
-		logger.Critical("send stateupdated")
 		pbft.helper.VcReset(n+1)
-		state := &stateUpdatedEvent{seqNo: n}
-		go pbft.postPbftEvent(state)
-		return nil
 	}
+
+	return nil
 }
 
 // findHighestChkptQuorum finds highest one of chkpts which achieve quorum
