@@ -21,6 +21,7 @@ type configs interface {
 	getLogDumpFileDir() string
 	getLogLevel() string
 	getDatabaseDir() string
+	getDbLogConfig() string
 	getPeerConfigPath() string
 	getGenesisConfigPath() string
 	getMemberSRVCConfigPath() string
@@ -32,6 +33,7 @@ type configs interface {
 	getBlockVersion() string
 	getTransactionVersion() string
 	getPaillerPublickey() hmEncryption.PaillierPublickey
+	getDbType() int
 }
 
 type configsImpl struct {
@@ -63,6 +65,7 @@ type configsImpl struct {
 	paillpublickeyN         string
 	paillpublickeynsquare   string
 	paillpublickeyG         string
+	dbLogConfig		string
 }
 
 //return a config instances
@@ -82,17 +85,23 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	cimpl.gRPCPort = GRPCPort
 	cimpl.httpPort = HTTPPort
 	cimpl.restPort = RESTPort
-	cimpl.dbtype=config.GetInt("global.configs.dbtype")
 	cimpl.keystoreDir = config.GetString("global.account.keystoredir")
 	cimpl.keyNodeDir = config.GetString("global.account.keynodesdir")
 	cimpl.logDumpFileFlag = config.GetBool("global.logs.dumpfile")
 	cimpl.logDumpFileDir = config.GetString("global.logs.logsdir")
 	cimpl.logLevel = config.GetString("global.logs.loglevel")
-	cimpl.databaseDir = config.GetString("global.database.dir")
 	cimpl.peerConfigPath = config.GetString("global.configs.peers")
 	cimpl.genesisConfigPath = config.GetString("global.configs.genesis")
 	cimpl.memberSRVCConfigPath = config.GetString("global.configs.membersrvc")
 	cimpl.pbftConfigPath = config.GetString("global.configs.pbft")
+
+	/*
+		db Config
+	*/
+	cimpl.dbLogConfig=config.GetString("global.configs.dbLogConfig")
+	cimpl.dbtype=config.GetInt("global.configs.dbtype")
+	cimpl.databaseDir = config.GetString("global.database.dir")
+
 	/*
 		statement synchronization
 	 */
@@ -129,6 +138,7 @@ func (cIml *configsImpl) getGRPCPort() int          { return cIml.gRPCPort }
 func (cIml *configsImpl) getDbType() int            { return cIml.dbtype }
 func (cIml *configsImpl) getHTTPPort() int          { return cIml.httpPort }
 func (cIml *configsImpl) getRESTPort() int          { return cIml.restPort }
+func (cIml *configsImpl) getDbLogConfig() string    { return cIml.dbLogConfig }
 func (cIml *configsImpl) getKeystoreDir() string    { return cIml.keystoreDir }
 func (cIml *configsImpl) getKeyNodeDir() string     { return cIml.keyNodeDir }
 func (cIml *configsImpl) getLogDumpFileFlag() bool  { return cIml.logDumpFileFlag }

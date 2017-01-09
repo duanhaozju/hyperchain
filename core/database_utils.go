@@ -35,8 +35,8 @@ func init() {
 // InitDB initialization ldb and memdb
 // should be called while programming start-up
 // port: the server port
-func InitDB(dbPath string, port int,db_type int) {
-	hyperdb.SetDBPath(dbPath, port)
+func InitDB(dbPath , logConfig string, port ,db_type int) {
+	hyperdb.SetDBPath(dbPath, port,logConfig)
 	hyperdb.InitDatabase(db_type)
 	memChainMap = newMemChain()
 	memChainStatusMap = newMemChainStatus()
@@ -332,9 +332,9 @@ func PersistInvalidTransactionRecord(batch hyperdb.Batch, invalidTx *types.Inval
 	return nil, data
 }
 
-func blocktime(block *types.Block){
+func blockTime(block *types.Block){
 	time1:=block.WriteTime-block.Timestamp
-	f, err1 := os.OpenFile("./build/db.log", os.O_WRONLY|os.O_CREATE, 0644)
+	f, err1 := os.OpenFile(hyperdb.GetLogPath(), os.O_WRONLY|os.O_CREATE, 0644)
 	if err1 != nil {
 		fmt.Println("db.log file create failed. err: " + err1.Error())
 	} else {
@@ -350,8 +350,10 @@ func blocktime(block *types.Block){
 	Block
  */
 func PersistBlock(batch hyperdb.Batch, block *types.Block, version string, flush bool, sync bool) (error, []byte) {
+	if hyperdb.IfLogStatus(){
+		go blockTime(block)
+	}
 
-	go blocktime(block)
 	// check pointer value
 	if block == nil || batch == nil {
 		return errors.New("empty block pointer"), nil

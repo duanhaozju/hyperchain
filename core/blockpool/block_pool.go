@@ -307,8 +307,8 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	}
 	statedb, err := state.New(initStatus, db)
 
-	if err != nil {
-		f, err1 := os.OpenFile("./build/db.log", os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil&&hyperdb.IfLogStatus() {
+		f, err1 := os.OpenFile(hyperdb.GetLogPath(), os.O_WRONLY|os.O_CREATE, 0644)
 		if err1 != nil {
 			fmt.Println("db.log file create failed. err: " + err.Error())
 		} else {

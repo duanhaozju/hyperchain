@@ -48,11 +48,25 @@ func getBaseDir() string {
 var (
 	baseDBPath = getBaseDir() + "/hyperchain/cache"
 	portDBPath = "db" //different port has different db path, default "db"
+	logPath =""
+	logStatus=false
 )
 
-func SetDBPath(dbpath string, port int) {
+func SetDBPath(dbpath string, port int,logConfig string) {
+	if logConfig!=""{
+		logStatus=true
+		logPath=logConfig
+	}
 	baseDBPath = path.Join(dbpath, "hyperchain/cache/")
 	portDBPath = strconv.Itoa(port)
+}
+
+func IfLogStatus() bool{
+	return logStatus
+}
+
+func GetLogPath() string{
+	return 	logPath
 }
 
 func getDBPath() string {

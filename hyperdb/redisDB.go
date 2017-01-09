@@ -6,10 +6,9 @@ import (
 	"strconv"
 	"sync"
 	"time"
-	"os"
-	"fmt"
 	"errors"
 )
+
 
 type RsDatabase struct {
 	path    string
@@ -30,10 +29,9 @@ func NewRsDatabase(portDBPath string) (*RsDatabase, error) {
 func (self *RsDatabase) Put(key []byte, value []byte) error {
 
 	num:=0
-	var err error
 	for {
 		con := self.rd_pool.Get()
-		_, err = con.Do("set", key, value)
+		_, err := con.Do("set", key, value)
 		con.Close()
 
 		if err == nil{
@@ -41,18 +39,15 @@ func (self *RsDatabase) Put(key []byte, value []byte) error {
 		}
 
 		num++
-		f, err1 := os.OpenFile("./build/db.log", os.O_WRONLY|os.O_CREATE, 0644)
-		if err1 != nil {
-			fmt.Println("db.log file create failed. err: " + err.Error())
-		} else {
-			n, _ := f.Seek(0, os.SEEK_END)
-			currentTime := time.Now().Local()
-			newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-			str := portDBPath + newFormat + `redis-con.Put("set",key,vale) :` + err.Error() +" num:"+strconv.Itoa(num)+"\n"
-			_, err1 = f.WriteAt([]byte(str), n)
-			f.Close()
+		if IfLogStatus(){
+			writeLog(`Redis con.Do("set", key, value)`,num,err)
 		}
+
 		if err.Error() !="ERR Connection timed out"{
+			return err
+		}
+		if num>=MaxConneecTimes{
+			log.Error("Redis Put key-value to DB failed and it may cause unexpected effects")
 			return err
 		}
 	}
@@ -67,7 +62,7 @@ func (self *RsDatabase) Get(key []byte) ([]byte, error) {
 		con.Close()
 
 
-		if err == nil {
+		if err == nil ||err.Error()=="redigo: nil returned"{
 			if len(dat) == 0 {
 				err = errors.New("not found")
 			}
@@ -75,18 +70,17 @@ func (self *RsDatabase) Get(key []byte) ([]byte, error) {
 		}
 
 		num++
-		f, err1 := os.OpenFile("./build/db.log", os.O_WRONLY|os.O_CREATE, 0644)
-		if err1 != nil {
-			fmt.Println("db.log file create failed. err: " + err.Error())
-		} else if err.Error() != "redigo: nil returned" {
-			n, _ := f.Seek(0, os.SEEK_END)
-			currentTime := time.Now().Local()
-			newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-			str := portDBPath + newFormat + `redis-con.DO("get",key) :` + err.Error() +" num:"+strconv.Itoa(num)+"\n"
-			_, err1 = f.WriteAt([]byte(str), n)
-			f.Close()
+
+		if IfLogStatus(){
+			writeLog(`Redis con.Do("get", key)`,num,err)
 		}
+
 		if err.Error() !="ERR Connection timed out"{
+			return nil,err
+		}
+
+		if num>=MaxConneecTimes{
+			log.Error("Redis Get key-value from  DB failed and it may cause unexpected effects")
 			return nil,err
 		}
 	}
@@ -105,18 +99,17 @@ func (self *RsDatabase) Delete(key []byte) error {
 		}
 
 		num++
-		f, err1 := os.OpenFile("./build/db.log", os.O_WRONLY|os.O_CREATE, 0644)
-		if err1 != nil {
-			fmt.Println("db.log file create failed. err: " + err.Error())
-		} else {
-			n, _ := f.Seek(0, os.SEEK_END)
-			currentTime := time.Now().Local()
-			newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-			str := portDBPath + newFormat + `redis-con.Delete("get",key) :` + err.Error() +" num:"+strconv.Itoa(num)+"\n"
-			_, err1 = f.WriteAt([]byte(str), n)
-			f.Close()
+
+		if IfLogStatus(){
+			writeLog(`Redis con.Do("DEL", key)`,num,err)
 		}
+
 		if err.Error() !="ERR Connection timed out"{
+			return err
+		}
+
+		if num>=MaxConneecTimes{
+			log.Error("Redis Delete key-value from  DB failed and it may cause unexpected effects")
 			return err
 		}
 	}
@@ -168,20 +161,37 @@ func (batch *rd_Batch) Delete(key []byte) error {
 // Write write batch-operation to databse
 //one transaction from MULTI TO EXEC
 func (batch *rd_Batch) Write() error {
+	num:=0
+	for {
+		con := batch.rd_pool.Get()
+		defer con.Close()
+		con.Send("MULTI")
+		batch.mutex.Lock()
+		for k, v := range batch.map1 {
+			con.Send("set", []byte(k), v)
+		}
+		batch.mutex.Unlock()
+		_, err := con.Do("EXEC")
 
-	con := batch.rd_pool.Get()
-	defer con.Close()
-	con.Send("MULTI")
-	batch.mutex.Lock()
-	for k, v := range batch.map1 {
-		con.Send("set", []byte(k), v)
+		if err == nil {
+			batch.map1 = make(map[string][]byte)
+			return err
+		}
+
+		num++
+
+		if IfLogStatus(){
+			writeLog(`Redis batch write `,num,err)
+		}
+
+		if err.Error() !="ERR Connection timed out"{
+			return err
+		}
+
+		if num>=MaxConneecTimes{
+			log.Error("Redis write batch to  DB failed and it may cause unexpected effects")
+			return err
+		}
 	}
-	batch.mutex.Unlock()
-	_, err := con.Do("EXEC")
 
-	if err == nil {
-		batch.map1 = make(map[string][]byte)
-	}
-
-	return err
 }

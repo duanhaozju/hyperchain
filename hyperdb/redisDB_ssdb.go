@@ -4,10 +4,8 @@ package hyperdb
 import "errors"
 import "sync"
 import "github.com/garyburd/redigo/redis"
-import "os"
-import "fmt"
-import "time"
-import "strconv"
+
+
 
 type dbDatabaseImpl struct {
 	redis_db *RsDatabase
@@ -154,24 +152,24 @@ func (batch *DB_Batch)Write() error{
 		return errors.New("batch has been closed")
 	}
 
-	err:=batch.Rdwrite(batch.redis_db.rd_pool)
+	err:=batch.RdWrite(batch.redis_db.rd_pool)
 
 	if err==nil{
 		msp2:=batch.batch_map
 		batch.batch_map = make(map[string][]byte)
-		go batch.Sdwrite(batch.ssdb_db.rd_pool,msp2)
+		go batch.SdWrite(batch.ssdb_db.rd_pool,msp2)
 	}
 	return err
 }
 
-func (batch *DB_Batch)Rdwrite(db *redis.Pool) error{
+func (batch *DB_Batch)RdWrite(db *redis.Pool) error{
 	if batch.batch_status==false{
 		log.Notice("batch has been closed")
 		return errors.New("batch has been closed")
 	}
 	num:=0;
-	var err error
 	for {
+
 		list := make([]string, 0, 20)
 
 		for k, v := range batch.batch_map {
@@ -181,37 +179,33 @@ func (batch *DB_Batch)Rdwrite(db *redis.Pool) error{
 		_, err:= con.Do("mset", list)
 		con.Close()
 		if err == nil {
-			break
-		} else {
-			num++
-			f, err1 := os.OpenFile("./build/db.log", os.O_WRONLY|os.O_CREATE, 0644)
-			if err1 != nil {
-				fmt.Println("db.log file create failed. err: " + err.Error())
-			} else {
-				n, _ := f.Seek(0, os.SEEK_END)
-				currentTime := time.Now().Local()
-				newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-				str := portDBPath + newFormat + `redis-con.Do("mset",list) :` + err.Error() +" num:"+strconv.Itoa(num)+"\n"
-				_, err1 = f.WriteAt([]byte(str), n)
-				f.Close()
-			}
+			return nil
 		}
+		num++
+		if IfLogStatus(){
+			writeLog(`Redis con.Do("mset", list)`,num,err)
+		}
+
+
 		if err.Error()!="ERR Connection timed out"{
-			break
+			return err
+		}
+
+		if num>=MaxConneecTimes{
+			log.Error("Redis Write Batch  to DB failed and it may cause unexpected effects")
+			return err
 		}
 	}
 
-	return err
 }
 
-func (batch *DB_Batch)Sdwrite(db *redis.Pool,map2 map[string] []byte) error{
+func (batch *DB_Batch)SdWrite(db *redis.Pool,map2 map[string] []byte) error{
 
 	if batch.batch_status==false{
 		log.Notice("batch has been closed")
 		return errors.New("batch has been closed")
 	}
 	num:=0;
-	var err error
 	for {
 		list := make([]string, 0, 20)
 
@@ -222,25 +216,23 @@ func (batch *DB_Batch)Sdwrite(db *redis.Pool,map2 map[string] []byte) error{
 		_, err:= con.Do("mset", list)
 		con.Close()
 		if err == nil {
-			break
-		} else {
-			num++
-			f, err1 := os.OpenFile("./build/db.log", os.O_WRONLY|os.O_CREATE, 0644)
-			if err1 != nil {
-				fmt.Println("db.log file create failed. err: " + err.Error())
-			} else {
-				n, _ := f.Seek(0, os.SEEK_END)
-				currentTime := time.Now().Local()
-				newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-				str := portDBPath + newFormat + `ssdb-con.Do("mset",list) :` + err.Error() +" num:"+strconv.Itoa(num)+"\n"
-				_, err1 = f.WriteAt([]byte(str), n)
-				f.Close()
-			}
+			return nil
 		}
+		num++
+		if IfLogStatus(){
+			writeLog(`SSDB con.Do("mset", list)`,num,err)
+		}
+
+
 		if err.Error()!="ERR Connection timed out"{
-			break
+			return err
 		}
+
+		if num>=MaxConneecTimes{
+			log.Error("SSDB Write Batch  to DB failed and it may cause unexpected effects")
+			return err
+		}
+
 	}
 
-	return err
 }

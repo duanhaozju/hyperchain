@@ -96,9 +96,9 @@ func (self *IteratorImp) seek(key []byte) bool {
 
 
 func (self *IteratorImp) Next() bool {
-	fmt.Println("nuM:")
-	fmt.Println(self.cu_num)
-	fmt.Println(self.numlen)
+	//fmt.Println("nuM:")
+	//fmt.Println(self.cu_num)
+	//fmt.Println(self.numlen)
 	if self.cu_num < self.numlen-1  {
 		self.cu_num++
 		return true
