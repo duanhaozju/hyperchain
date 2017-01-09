@@ -148,7 +148,10 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			log.Error("cannot verified the ecert signature",bol)
 			return &response, errors.New("signature is wrong!!")
 		}
-		log.Error("##########", bol, "##############")
+		log.Debug("##########", bol, "##############")
+		log.Debug(" MSG FROM:",msg.From.ID)
+		log.Debug(" MSG TYPE:",msg.MessageType)
+		log.Debug("#################################")
 	}
 
 
@@ -293,7 +296,11 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 	case pb.Message_CONSUS:
 		{
-			log.Debug("<<<< GOT A CONSUS MESSAGE >>>>")
+			log.Debug("<<<<<<<<<<<<<<<<<<<<<<<<<")
+			log.Debug("GOT A CONSENSUS MESSAGE")
+			log.Debug("CONSENSUS MSG FROM",msg.From.ID)
+			log.Debug("CONSENSUS MSG TYPE",msg.MessageType)
+			log.Debug(">>>>>>>>>>>>>>>>>>>>>>>>")
 
 			log.Debug("**** Node Decode MSG ****")
 			log.Debug("Node need to decode msg: ", hex.EncodeToString(msg.Payload))
