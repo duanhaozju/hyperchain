@@ -11,7 +11,7 @@ import (
 var logger *logging.Logger // package-level logger
 
 func init() {
-	logger = logging.MustGetLogger("consensus")
+	logger = logging.MustGetLogger("consensus/events")
 }
 
 // Event is a type meant to clearly convey that the return type or parameter to a function will be supplied to/from an events.Manager

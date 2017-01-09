@@ -151,13 +151,14 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	logger.Debugf("Replica %d in recovery find quorum chkpt: %d, self: %d, " +
 		"others lastExec: %d, self: %d", pbft.id, n, pbft.h, lastExec, pbft.lastExec)
 	logger.Debugf("Replica %d in recovery, " +
-		"others lastBlockInfo: %s, self: %s", pbft.id, rsp.BlockHeight, selfCurHash)
+		"others lastBlockInfo: %s, self: %s", pbft.id, rsp.LastBlockHash, selfCurHash)
 
 	// Fast catch up
 	if lastExec == selfLastExec && curHash == selfCurHash {
 		logger.Debugf("Replica %d in recovery same lastExec: %d, " +
 			"same block hash: %s, fast catch up", pbft.id, selfLastExec, curHash)
 		pbft.inRecovery = false
+		pbft.recoveryToSeqNo = nil
 		return recoveryDoneEvent{}
 	}
 
