@@ -24,7 +24,7 @@ var (
 )
 
 // baseCheck checks for any stack error underflows
-func baseCheck(op OpCode, stack *stack, gas *big.Int) error {
+func baseCheck(op OpCode, stack *stack) error {
 	// PUSH and DUP are a bit special. They all cost the same but we do want to have checking on stack push limit
 	// PUSH is also allowed to calculate the same price for all PUSHes
 	// DUP requirements are handled elsewhere (except for the stack limit check)
@@ -40,12 +40,9 @@ func baseCheck(op OpCode, stack *stack, gas *big.Int) error {
 		if err != nil {
 			return err
 		}
-
 		if r.stackPush > 0 && stack.len()-r.stackPop+r.stackPush > int(params.StackLimit.Int64()) {
 			return fmt.Errorf("stack limit reached %d (%d)", stack.len(), params.StackLimit.Int64())
 		}
-
-		gas.Add(gas, r.gas)
 	}
 	return nil
 }

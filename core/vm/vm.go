@@ -8,7 +8,6 @@ import (
 
 	"hyperchain/common"
 	"hyperchain/core/crypto"
-	"hyperchain/core/vm/params"
 )
 
 // Config are the configuration options for the EVM
@@ -231,10 +230,9 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 // the operation. This does not reduce gas or resizes the memory.
 func calculateGasAndSize(env Environment, contract *Contract, caller ContractRef, op OpCode, statedb Database, mem *Memory, stack *stack) (*big.Int, *big.Int, error) {
 	var (
-		gas                 = new(big.Int)
 		newMemSize *big.Int = new(big.Int)
 	)
-	err := baseCheck(op, stack, gas)
+	err := baseCheck(op, stack)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -247,14 +245,12 @@ func calculateGasAndSize(env Environment, contract *Contract, caller ContractRef
 		if err != nil {
 			return nil, nil, err
 		}
-		gas.Set(GasFastestStep)
 	case DUP1, DUP2, DUP3, DUP4, DUP5, DUP6, DUP7, DUP8, DUP9, DUP10, DUP11, DUP12, DUP13, DUP14, DUP15, DUP16:
 		n := int(op - DUP1 + 1)
 		err := stack.require(n)
 		if err != nil {
 			return nil, nil, err
 		}
-		gas.Set(GasFastestStep)
 	case LOG0, LOG1, LOG2, LOG3, LOG4:
 		n := int(op - LOG0)
 		err := stack.require(n + 2)
@@ -263,44 +259,15 @@ func calculateGasAndSize(env Environment, contract *Contract, caller ContractRef
 		}
 
 		mSize, mStart := stack.data[stack.len()-2], stack.data[stack.len()-1]
-
-		gas.Add(gas, params.LogGas)
-		gas.Add(gas, new(big.Int).Mul(big.NewInt(int64(n)), params.LogTopicGas))
-		gas.Add(gas, new(big.Int).Mul(mSize, params.LogDataGas))
-
 		newMemSize = calcMemSize(mStart, mSize)
 	case EXP:
-		gas.Add(gas, new(big.Int).Mul(big.NewInt(int64(len(stack.data[stack.len()-2].Bytes()))), params.ExpByteGas))
 	case SSTORE:
 		err := stack.require(2)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		var g *big.Int
-		y, x := stack.data[stack.len()-2], stack.data[stack.len()-1]
-		val := statedb.GetState(contract.Address(), common.BigToHash(x))
-
-		// This checks for 3 scenario's and calculates gas accordingly
-		// 1. From a zero-value address to a non-zero value         (NEW VALUE)
-		// 2. From a non-zero value address to a zero-value address (DELETE)
-		// 3. From a non-zero to a non-zero                         (CHANGE)
-		if common.EmptyHash(val) && !common.EmptyHash(common.BigToHash(y)) {
-			// 0 => non 0
-			g = params.SstoreSetGas
-		} else if !common.EmptyHash(val) && common.EmptyHash(common.BigToHash(y)) {
-			statedb.AddRefund(params.SstoreRefundGas)
-
-			g = params.SstoreClearGas
-		} else {
-			// non 0 => non 0 (or 0 => 0)
-			g = params.SstoreClearGas
-		}
-		gas.Set(g)
 	case SUICIDE:
-		if !statedb.IsDeleted(contract.Address()) {
-			statedb.AddRefund(params.SuicideRefundGas)
-		}
 	case MLOAD:
 		newMemSize = calcMemSize(stack.peek(), u256(32))
 	case MSTORE8:
@@ -311,55 +278,26 @@ func calculateGasAndSize(env Environment, contract *Contract, caller ContractRef
 		newMemSize = calcMemSize(stack.peek(), stack.data[stack.len()-2])
 	case SHA3:
 		newMemSize = calcMemSize(stack.peek(), stack.data[stack.len()-2])
-
-		words := toWordSize(stack.data[stack.len()-2])
-		gas.Add(gas, words.Mul(words, params.Sha3WordGas))
 	case CALLDATACOPY:
 		newMemSize = calcMemSize(stack.peek(), stack.data[stack.len()-3])
-
-		words := toWordSize(stack.data[stack.len()-3])
-		gas.Add(gas, words.Mul(words, params.CopyGas))
 	case CODECOPY:
 		newMemSize = calcMemSize(stack.peek(), stack.data[stack.len()-3])
-
-		words := toWordSize(stack.data[stack.len()-3])
-		gas.Add(gas, words.Mul(words, params.CopyGas))
 	case EXTCODECOPY:
 		newMemSize = calcMemSize(stack.data[stack.len()-2], stack.data[stack.len()-4])
-
-		words := toWordSize(stack.data[stack.len()-4])
-		gas.Add(gas, words.Mul(words, params.CopyGas))
-
 	case CREATE:
 		newMemSize = calcMemSize(stack.data[stack.len()-2], stack.data[stack.len()-3])
 	case CALL, CALLCODE:
-		gas.Add(gas, stack.data[stack.len()-1])
-
-		if op == CALL {
-			if !env.Db().Exist(common.BigToAddress(stack.data[stack.len()-2])) {
-				gas.Add(gas, params.CallNewAccountGas)
-			}
-		}
-
-		if len(stack.data[stack.len()-3].Bytes()) > 0 {
-			gas.Add(gas, params.CallValueTransferGas)
-		}
-
 		x := calcMemSize(stack.data[stack.len()-6], stack.data[stack.len()-7])
 		y := calcMemSize(stack.data[stack.len()-4], stack.data[stack.len()-5])
-
 		newMemSize = common.BigMax(x, y)
 	case DELEGATECALL:
-		gas.Add(gas, stack.data[stack.len()-1])
-
 		x := calcMemSize(stack.data[stack.len()-5], stack.data[stack.len()-6])
 		y := calcMemSize(stack.data[stack.len()-3], stack.data[stack.len()-4])
-
 		newMemSize = common.BigMax(x, y)
 	}
-	quadMemGas(mem, newMemSize, gas)
+	quadMemGas(mem, newMemSize)
 
-	return newMemSize, gas, nil
+	return newMemSize, big.NewInt(1000), nil
 }
 
 // RunPrecompile runs and evaluate the output of a precompiled contract defined in contracts.go
