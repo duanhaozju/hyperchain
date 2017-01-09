@@ -13,15 +13,20 @@ type CAManager struct {
 	rcert *x509.Certificate
 	rcacert *x509.Certificate
 	ecertPrivateKey interface{}
+	tcacert *x509.Certificate
+
 	// cert byte
 	ecacertByte []byte
 	ecertByte []byte
 	rcertByte []byte
 	rcacertByte []byte
 	ecertPrivateKeyByte []byte
+	tcacertByte []byte
+
+
 }
 
-func NewCAManager(ecacertPath string,ecertPath string,rcertPath string,rcacertPath string, ecertPrivateKeyPath string) (*CAManager,error){
+func NewCAManager(ecacertPath string,ecertPath string,rcertPath string,rcacertPath string, ecertPrivateKeyPath string,tcacertPath string) (*CAManager,error){
 	var caManager CAManager
 	var err error
 
@@ -56,6 +61,14 @@ func NewCAManager(ecacertPath string,ecertPath string,rcertPath string,rcacertPa
 	}
 	caManager.ecertPrivateKeyByte =ecertPrivateKey
 
+	//TODO delete this part
+	tcacert,tcaerr := ioutil.ReadFile(tcacertPath)
+	if tcaerr != nil{
+		log.Error("tcacert read failed")
+		return nil,rerr
+	}
+	caManager.tcacertByte = tcacert
+
 	// TODO check the private type private key is der
 
 	caManager.ecert,err = primitives.ParseCertificate(string(ecert))
@@ -84,6 +97,14 @@ func NewCAManager(ecacertPath string,ecertPath string,rcertPath string,rcacertPa
 		log.Error("cannot parse the caprivatekey")
 		return nil,errors.New("cannot parse the caprivatekey")
 	}
+
+	//TODO delete this part
+	caManager.tcacert,err = primitives.ParseCertificate(string(tcacert))
+	if err != nil{
+		log.Error("cannot parse the tcacert")
+		return nil,errors.New("cannot parse the tcacert")
+	}
+
 	return &caManager,nil
 }
 
@@ -107,11 +128,17 @@ func (caManager *CAManager)VerifySignature(tcertPEM string)(bool,error){
 		log.Error("cannot parse the tcert",err)
 		return false,err
 	}
-	verifyTcert,err := primitives.VerifySignature(tcertToVerify,caManager.ecert)
+	verifyTcert,err := primitives.VerifyCert(tcertToVerify,caManager.tcacert)
 	if verifyTcert==false{
 		log.Error("verified falied")
 		return false,err
 	}
+
+	//verifySign,err := primitives.VerifySignature(tcertToVerify,"hyperchain",signature)
+	//if verifySign==false{
+	//	log.Error("verified falied")
+	//	return false,err
+	//}
 	return true,nil
 }
 
@@ -121,7 +148,7 @@ func (caManager *CAManager) VerifyECert(ecertPEM string)(bool,error){
 		log.Error("cannot parse the ecert",err)
 		return false,err
 	}
-	verifyEcert,err := primitives.VerifySignature(ecertToVerify,caManager.ecacert)
+	verifyEcert,err := primitives.VerifyCert(ecertToVerify,caManager.ecacert)
 	if verifyEcert==false || err != nil{
 		log.Error("verified ecert falied")
 		return false,err
@@ -135,7 +162,7 @@ func (caManager *CAManager) VerifyRCert(rcertPEM string)(bool,error){
 		log.Error("cannot parse the rcert",err)
 		return false,err
 	}
-	verifyRcert,err := primitives.VerifySignature(rcertToVerify,caManager.rcacert)
+	verifyRcert,err := primitives.VerifyCert(rcertToVerify,caManager.rcacert)
 	if verifyRcert==false || err != nil{
 		log.Error("verified rcert falied")
 		return false,err

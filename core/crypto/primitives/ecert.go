@@ -49,7 +49,7 @@ func ParseCertificate(cert string) (*x509.Certificate,error){
 }
 
 //验证证书中的签名
-func VerifySignature(cert *x509.Certificate,ca *x509.Certificate) (bool,error){
+func VerifyCert(cert *x509.Certificate,ca *x509.Certificate) (bool,error){
 	err:=cert.CheckSignatureFrom(ca)
 
 	if err!=nil{
@@ -58,6 +58,15 @@ func VerifySignature(cert *x509.Certificate,ca *x509.Certificate) (bool,error){
 	}
 	return true,nil
 
+}
+//验证证书的来源
+func VerifySignature(cert *x509.Certificate,signed string, signature string)(bool,error){
+	err := cert.CheckSignature(x509.ECDSAWithSHA256,[]byte(signed),[]byte(signature))
+	if err!=nil{
+		log.Error("verified the cert failed",err)
+		return false,err
+	}
+	return true,nil
 }
 
 

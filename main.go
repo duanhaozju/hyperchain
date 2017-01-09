@@ -111,7 +111,7 @@ func main() {
 
 		//init memversrvc CAManager
 		// rca.ca 应该改为 eca.ca
-		cm,cmerr := membersrvc.NewCAManager("./config/cert/eca.ca","./config/cert/ecert.cert","./config/cert/rcert.cert","./config/cert/rca.ca","./config/cert/ecert.priv")
+		cm,cmerr := membersrvc.NewCAManager("./config/cert/eca.ca","./config/cert/ecert.cert","./config/cert/rcert.cert","./config/cert/rca.ca","./config/cert/ecert.priv","./config/cert/server/tca.ca")
 		if cmerr != nil{
 			panic("cannot initliazied the camanager")
 		}
