@@ -44,7 +44,7 @@ message consensus_message {
         READY_FOR_N = 18;
         UPDATE_N = 19;
         AGREE_UPDATE_N = 20;
-        VCRESETDONE = 21;
+        FINISH_VCRESET = 21;
     }
     Type type = 1;
     bytes payload = 2;
@@ -193,7 +193,8 @@ message agree_update_n {
     bool flag = 7;
 }
 
-message vcReset_done {
+message finish_vcReset {
     uint64 replica_id = 1;
-    uint64 low_watermark = 2;
+    uint64 view = 2;
+    uint64 low_h = 3;
 }
