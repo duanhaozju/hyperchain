@@ -182,13 +182,16 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			}
 			rcaByte := []byte(rca)
 
-			ecaPem := primitives.ParseCertificate(string(ecaBtye))
-			rcaPem := primitives.ParseCertificate(string(rcaByte))
+			// todo check err
+			ecaPem,_ := primitives.ParseCertificate(string(ecaBtye))
+			// todo check err
+			rcaPem,_ := primitives.ParseCertificate(string(rcaByte))
 
 			if len(ecertByte) == 0{
 				return &response,errors.New("ecert is miss.")
 			}else {
-				ecert := primitives.ParseCertificate(string(ecertByte))
+				//todo error handle
+				ecert,_ := primitives.ParseCertificate(string(ecertByte))
 				verifyEcert = primitives.VerifySignature(ecert,ecaPem)
 
 			}
@@ -196,7 +199,8 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			if len(rcertByte) == 0{
 				node.TEM.SetIsVerified(false,msg.From.Hash)
 			}else {
-				rcert := primitives.ParseCertificate(string(rcertByte))
+				// todo check err
+				rcert,_ := primitives.ParseCertificate(string(rcertByte))
 				verifyRcert = primitives.VerifySignature(rcert,rcaPem)
 				node.TEM.SetIsVerified(verifyRcert,msg.From.Hash)
 			}

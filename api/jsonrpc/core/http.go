@@ -16,7 +16,7 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 	"hyperchain/core/crypto/primitives"
-	"github.com/astaxie/beego/plugins/cors"
+	"hyperchain/membersrvc"
 )
 
 const (
@@ -39,13 +39,13 @@ func (hrw *httpReadWrite) Close() error{
 	return nil
 }
 
-func Start(httpPort int, restPort int, logsPath string,eventMux *event.TypeMux,pm *manager.ProtocolManager, cfg RateLimitConfig) error{
+func Start(httpPort int, restPort int, logsPath string,eventMux *event.TypeMux,pm *manager.ProtocolManager, cfg RateLimitConfig,cm *membersrvc.CAManager) error{
 	eventMux = eventMux
 
 	server := NewServer()
 
 	// 得到API，注册服务
-	apis := hpc.GetAPIs(eventMux, pm, cfg.Enable, cfg.TxRatePeak, cfg.TxFillRate, cfg.ContractRatePeak, cfg.ContractFillRate)
+	apis := hpc.GetAPIs(eventMux, pm, cfg.Enable, cfg.TxRatePeak, cfg.TxFillRate, cfg.ContractRatePeak, cfg.ContractFillRate,cm)
 
 	// api.Namespace 是API的命名空间，api.Service 是一个拥有命名空间对应对象的所有方法的对象
 	for _, api := range apis {
@@ -123,14 +123,14 @@ func headerHandler(w http.ResponseWriter, r *http.Request){
 		return
 	}
 
-	tcertPem := primitives.ParseCertificate(tcert)
+	tcertPem,_ := primitives.ParseCertificate(tcert)
 
 	tca,getErr := primitives.GetConfig("./config/cert/tca.ca")
 	if getErr != nil{
 		log.Error("cannot read ecert.",getErr)
 	}
 	tcaByte := []byte(tca)
-	tcaPem := primitives.ParseCertificate(string(tcaByte))
+	tcaPem,_ := primitives.ParseCertificate(string(tcaByte))
 	if tcaPem == nil {
 		panic("tca is missing,please check it and restat the node!")
 	}
@@ -140,7 +140,6 @@ func headerHandler(w http.ResponseWriter, r *http.Request){
 		log.Error("验证不通过")
 		return
 	}
-
 }
 
 

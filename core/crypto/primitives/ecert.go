@@ -13,6 +13,7 @@ import (
 	//"fmt"
 	"fmt"
 	//"sync"
+	"github.com/pkg/errors"
 )
 
 //读取config文件
@@ -29,22 +30,22 @@ func GetConfig(path string) (string,error){
 }
 
 //解析证书
-func ParseCertificate(ECert string) (*x509.Certificate){
+func ParseCertificate(ECert string) (*x509.Certificate,error){
 	block,_ := pem.Decode([]byte(ECert))
 
 	if block==nil {
 		fmt.Println("failed to parse certificate PEM")
-		return nil
+		return nil,errors.New("failed to parse certificate PEM")
 	}
 
 	cert,err := x509.ParseCertificate(block.Bytes)
 
 	if err!=nil{
 		fmt.Println("faile to parse certificate")
-		return nil
+		return nil,errors.New("faile to parse certificate")
 	}
 
-	return cert
+	return cert,nil
 }
 
 //验证证书中的签名
@@ -70,4 +71,10 @@ func ParseKey(derPri string)(interface{},error){
 	}
 
 	return pri,nil
+}
+
+func ParsePubKey(pubstr string)(interface{},error){
+	//todo finish the public key parse
+	return nil,nil
+
 }
