@@ -71,7 +71,7 @@ func (db *dbDatabaseImpl)Delete(key []byte) error{
 	err:=db.redisDb.Delete(key)
 
 	if err==nil{
-		go db.ssdbDb.Delete(key)
+		err=db.ssdbDb.Delete(key)
 	}
 	return err
 }
