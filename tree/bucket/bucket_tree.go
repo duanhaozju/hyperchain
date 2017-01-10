@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"errors"
 	"encoding/json"
+	"time"
 )
 
 var (
@@ -123,13 +124,21 @@ func (bucketTree *BucketTree) ComputeCryptoHash() ([]byte, error) {
 	// TODO there maybe have concurrent error
 	if bucketTree.recomputeCryptoHash {
 		log.Debug("Recomputing crypto-hash...")
+		start_time := time.Now()
 		err := bucketTree.processDataNodeDelta()
 		if err != nil {
 			return nil, err
 		}
+		if(bucketTree.treePrefix != "-bucket=state"){
+			log.Criticalf("bucketTree.processDataNodeDelta cost time is ",time.Since(start_time))
+		}
+		start_time = time.Now()
 		err = bucketTree.processBucketTreeDelta()
 		if err != nil {
 			return nil, err
+		}
+		if(bucketTree.treePrefix != "-bucket=state"){
+			log.Criticalf("bucketTree.processBucketTreeDelta cost time is ",time.Since(start_time))
 		}
 		bucketTree.lastComputedCryptoHash = bucketTree.computeRootNodeCryptoHash()
 		bucketTree.recomputeCryptoHash = false
@@ -141,16 +150,22 @@ func (bucketTree *BucketTree) ComputeCryptoHash() ([]byte, error) {
 
 func (bucketTree *BucketTree) processDataNodeDelta() error {
 	afftectedBuckets := bucketTree.dataNodesDelta.getAffectedBuckets()
+	var start_time_FetchDataNodesFromCache time.Duration
+	var start_time_computeDataNodesCryptoHash time.Duration
 
 	for _, bucketKey := range afftectedBuckets {
 		updatedDataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(bucketKey)
+		start_time := time.Now()
 		existingDataNodes, err := bucketTree.dataNodeCache.FetchDataNodesFromCache(*bucketKey)
-		log.Debugf("updatedDataNodes is [%v]",updatedDataNodes)
-		log.Debugf("existingDataNodes is [%v]",existingDataNodes)
 		if err != nil {
 			return err
 		}
+		start_time_FetchDataNodesFromCache += time.Since(start_time)
+
+		start_time = time.Now()
 		cryptoHashForBucket,newDataNodes := computeDataNodesCryptoHash(bucketKey, updatedDataNodes, existingDataNodes,bucketTree.updatedValueSet)
+		start_time_computeDataNodesCryptoHash += time.Since(start_time)
+
 		bucketTree.updateDataNodeCache(*bucketKey,newDataNodes)
 
 		log.Debugf("Crypto-hash for lowest-level bucket [%s] is [%x]", bucketKey, cryptoHashForBucket)
@@ -159,6 +174,11 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 		log.Debugf("bucket tree prefix %s bucket key %s, bucket hash %s",
 			bucketTree.treePrefix, bucketKey.String(), common.Bytes2Hex(cryptoHashForBucket))
 	}
+	if(bucketTree.treePrefix != "-bucket-state"){
+		log.Criticalf("start_time_FetchDataNodesFromCache cost time is",start_time_FetchDataNodesFromCache)
+		log.Criticalf("start_time_computeDataNodesCryptoHash cost time is",start_time_computeDataNodesCryptoHash)
+	}
+
 	return nil
 }
 

@@ -18,7 +18,7 @@ func newBucketHashCalculator(bucketKey *BucketKey) *bucketHashCalculator {
 
 // addNextNode - this method assumes that the datanodes are added in the increasing order of the keys
 func (c *bucketHashCalculator) addNextNode(dataNode *DataNode) {
-	c.hashingData = append(c.hashingData,append(dataNode.getCompositeKey(),dataNode.getValue()...))
+	c.hashingData = append(c.hashingData,append(dataNode.getCompositeKey(),dataNode.getValue()...)...)
 }
 
 func (c *bucketHashCalculator) computeCryptoHash() []byte {

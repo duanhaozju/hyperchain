@@ -4,7 +4,7 @@ import (
 	"sync"
 )
 var (
-	GLOBAL = false
+	GLOBAL = true
 	globalDataNodeCache = &GlobalDataNodeCache{cache:make(map[string] (map[BucketKey] DataNodes)),isEnable:true}
 )
 type GlobalDataNodeCache struct{
