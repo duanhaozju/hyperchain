@@ -122,23 +122,42 @@ func (caManager *CAManager)SignTCert(publicKey string) (string,error){
 	return string(tcert),nil
 }
 
-func (caManager *CAManager)VerifySignature(tcertPEM string)(bool,error){
+
+//TCERT 需要用为其签发的ECert来验证，但是在没有TCERT的时候只能够用
+//ECERT 进行充当TCERT 所以需要用ECA.CERT 即ECA.CA 作为根证书进行验证
+func (caManager *CAManager)VerifyTCert(tcertPEM string)(bool,error){
 	tcertToVerify,err := primitives.ParseCertificate(tcertPEM)
 	if err != nil {
 		log.Error("cannot parse the tcert",err)
 		return false,err
 	}
+	// TODO 应该将caManager.tcacert 转为caManager.ecacert
 	verifyTcert,err := primitives.VerifyCert(tcertToVerify,caManager.tcacert)
 	if verifyTcert==false{
 		log.Error("verified falied")
 		return false,err
 	}
+	return true,nil
+}
 
-	//verifySign,err := primitives.VerifySignature(tcertToVerify,"hyperchain",signature)
-	//if verifySign==false{
-	//	log.Error("verified falied")
-	//	return false,err
-	//}
+/**
+	验证签名，验证签名需要有三个参数：
+	第一个是携带的数字证书，即tcert,
+	第二个是签名，
+	第三个是原始数据
+	这个方法用来验证签名是否来自数字证书用户
+ */
+func (caManager *CAManager)VerifySignature(certPEM,signature,signed string) (bool,error) {
+	tcertToVerify,err := primitives.ParseCertificate(certPEM)
+	if err != nil {
+		log.Error("cannot parse the tcert",err)
+		return false,err
+	}
+	verifySign,err := primitives.VerifySignature(tcertToVerify,signed,signature)
+	if verifySign==false{
+		log.Error("verified falied")
+		return false,err
+	}
 	return true,nil
 }
 

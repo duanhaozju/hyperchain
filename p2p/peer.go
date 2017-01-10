@@ -73,6 +73,19 @@ func NewPeer(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport.Transpor
 // handShake connect to remote peer, and negotiate the secret
 // handShake 用于与相应的远端peer进行通信，并进行密钥协商
 func (peer *Peer) handShake() (err error) {
+	//TODO 首次协商的时候是否需要带上消息签名
+	/**
+		signature := pb.Signature{
+		Ecert:peer.CM.GetECertByte(),
+		Rcert:peer.CM.GetRCertByte(),
+		Signature: 这里需要对hyperchain这个字符串进行签名
+	}
+	传到node.go端后，
+	case hello:{
+		verifySignature(signature)
+	}
+	 */
+
 	signature := pb.Signature{
 		Ecert:peer.CM.GetECertByte(),
 		Rcert:peer.CM.GetRCertByte(),
@@ -87,11 +100,7 @@ func (peer *Peer) handShake() (err error) {
 		Signature: &signature,
 	}
 
-	//log.Notice("publickey",peer.TEM.GetLocalPublicKey())
-
 	retMessage, err := peer.Client.Chat(context.Background(), &helloMessage)
-
-	//retMessage.Signature.Ecert
 
 	if err != nil {
 		log.Error("cannot establish a connection",err)

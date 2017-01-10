@@ -140,6 +140,11 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	response.From = node.localAddr.ToPeerAddress()
 
 	if(msg.MessageType!=pb.Message_HELLO) {
+		/**
+		 * 这里的验证存在问题，首先是通过from取得公钥，这里的from是可以随意伪造的，存在风险
+		 * 在 != hello 的时候，没有对证书进行验证，是出于效率的考虑，但这存在安全隐患
+ 		 */
+
 		//验签
 		signPub := node.TEM.GetSignPublicKey(msg.From.Hash)
 		ecdsaEncrypto := primitives.NewEcdsaEncrypto("ecdsa")
@@ -148,6 +153,17 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			log.Error("cannot verified the ecert signature",bol)
 			return &response, errors.New("signature is wrong!!")
 		}
+
+		//TODO 用CM对验证进行管理(此处的必要性需要考虑)
+		// TODO 1. 验证ECERT 的合法性
+		//bol1,err := node.CM.VerifyECert()
+
+		// TODO 2. 验证传输消息签名的合法性
+		// 参数1. PEM 证书 string
+		// 参数2. signature
+		// 参数3. 原始数据
+		//bol2,err := node.CM.VerifySignature(certPEM,signature,signed)
+
 		log.Debug("##########", bol, "##############")
 		log.Debug(" MSG FROM:",msg.From.ID)
 		log.Debug(" MSG TYPE:",msg.MessageType)
@@ -168,7 +184,6 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			response.MessageType = pb.Message_HELLO_RESPONSE
 			//review 协商密钥
 
-			//TODO
 			ecertByte := msg.Signature.Ecert
 			rcertByte := msg.Signature.Rcert
 			verifyEcert,ecertErr := node.CM.VerifyECert(string(ecertByte))
@@ -184,6 +199,11 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			}else {
 				node.TEM.SetIsVerified(true,msg.From.Hash)
 			}
+
+			// TODO 这里没有验证消息来源，需要peer在sayhello 的时候对消息进行签名
+			// TODO 再在这里进行验证
+			// TODO
+
 
 			remotePublicKey := msg.Payload
 			genErr := node.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)

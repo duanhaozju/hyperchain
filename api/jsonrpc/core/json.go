@@ -112,10 +112,25 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 		log.Warning("cannot decode the tcert header", err)
 		return &UnauthorizedError{}
 	}
-	verifyTcert,err := c.CM.VerifySignature(tcertPem)
+	verifyTcert,err := c.CM.VerifyTCert(tcertPem)
 
 	if verifyTcert==false || err != nil{
 		log.Warning("Verify failed",err)
+		return &UnauthorizedError{}
+	}
+
+	signature,err := DecodeUriCompontent(c.httpHeader.Get("signature"))
+	/**
+	Review 如果客户端没有tcert 则会用ecert充当tcert，此时需要验证是否合法
+	由于tcert 应当是用ecert签出的，那么应该同时可以被根证书验证通过，但是
+	问题是ecert之间无法相互验证，所有的tcert 和ecert都应该用 eca.ca验证
+	这样可以确保所有的签名都可以验证通过
+	在sdk端需要生成相应的signature 需要用私钥对数据进行签名
+	签名算法为 ECDSAWithSHA256
+	这部分需要SDK端实现，hyperchain端已经实现了验证方法
+	 */
+	verifySignature,err := c.CM.VerifySignature(tcertPem,signature,"hyperchain")
+	if err!= nil || !verifySignature {
 		return &UnauthorizedError{}
 	}
 	return nil
