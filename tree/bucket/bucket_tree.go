@@ -145,8 +145,6 @@ func (bucketTree *BucketTree) ComputeCryptoHash() ([]byte, error) {
 	} else {
 		log.Debug("Returing existing crypto-hash as recomputation not required")
 	}
-	log.Criticalf("lastComputedCryptoHash is ",common.Bytes2Hex(bucketTree.lastComputedCryptoHash))
-	log.Criticalf("persistedStateHash is ",common.Bytes2Hex(bucketTree.persistedStateHash))
 	return bucketTree.lastComputedCryptoHash, nil
 }
 
