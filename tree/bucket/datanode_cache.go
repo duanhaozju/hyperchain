@@ -4,11 +4,14 @@ import (
 	"sync"
 )
 var (
-	globalDataNodeCache = GlobalDataNodeCache{cache:make(map[string] (map[BucketKey] DataNodes)),isEnable:false}
+	globalDataNodeCache = &GlobalDataNodeCache{cache:make(map[string] (map[BucketKey] DataNodes)),isEnable:false}
 )
 type GlobalDataNodeCache struct{
 	cache map[string] (map[BucketKey] DataNodes)
 	isEnable bool
+}
+func (g *GlobalDataNodeCache) ClearAllCache (){
+	g.cache = make(map[string] (map[BucketKey] DataNodes))
 }
 
 type DataNodeCache struct {
@@ -41,7 +44,7 @@ func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey)
 	}
 	dataNodes := dataNodeCache.c[bucketKey]
 	if(dataNodeCache.TreePrefix != "-bucket-state"){
-		log.Criticalf("FetchDataNodesFromCache bucketKey is",bucketKey," length is",len(dataNodes))
+		log.Debugf("FetchDataNodesFromCache bucketKey is",bucketKey," length is",len(dataNodes))
 	}
 
 	if dataNodes == nil || len(dataNodes) == 0 {
