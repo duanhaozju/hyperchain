@@ -151,7 +151,10 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 			return err
 		}
 		// TODO test, add the logic of record the UpdatedValueSet
-		cryptoHashForBucket := computeDataNodesCryptoHash(bucketKey, updatedDataNodes, existingDataNodes,bucketTree.updatedValueSet)
+		cryptoHashForBucket,newDataNodes := computeDataNodesCryptoHash(bucketKey, updatedDataNodes, existingDataNodes,bucketTree.updatedValueSet)
+		bucketTree.dataNodeCache.c[*bucketKey] = newDataNodes
+		globalDataNodeCache[bucketTree.treePrefix][*bucketKey] = newDataNodes
+
 		log.Debugf("Crypto-hash for lowest-level bucket [%s] is [%x]", bucketKey, cryptoHashForBucket)
 		parentBucket := bucketTree.bucketTreeDelta.getOrCreateBucketNode(bucketKey.getParentKey())
 		parentBucket.setChildCryptoHash(bucketKey, cryptoHashForBucket)
@@ -204,11 +207,12 @@ func (bucketTree *BucketTree) GetTreeHash(blockNum *big.Int) ([]byte,error){
 	}
 }
 
-func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, existingNodes DataNodes,updatedValueSet *UpdatedValueSet) []byte {
+func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, existingNodes DataNodes,updatedValueSet *UpdatedValueSet) ([]byte,DataNodes) {
 	log.Debugf("Computing crypto-hash for bucket [%s]. numUpdatedNodes=[%d], numExistingNodes=[%d]", bucketKey, len(updatedNodes), len(existingNodes))
 	bucketHashCalculator := newBucketHashCalculator(bucketKey)
 	i := 0
 	j := 0
+	var newDataNodes DataNodes
 	for i < len(updatedNodes) && j < len(existingNodes) {
 		updatedNode := updatedNodes[i]
 		existingNode := existingNodes[j]
@@ -236,6 +240,7 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 		}
 		if !nextNode.isDelete() {
 			bucketHashCalculator.addNextNode(nextNode)
+			newDataNodes = append(newDataNodes,nextNode)
 		}
 	}
 
@@ -253,9 +258,10 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 	for _, remainingNode := range remainingNodes {
 		if !remainingNode.isDelete() {
 			bucketHashCalculator.addNextNode(remainingNode)
+			newDataNodes = append(newDataNodes,remainingNode)
 		}
 	}
-	return bucketHashCalculator.computeCryptoHash()
+	return bucketHashCalculator.computeCryptoHash(),newDataNodes
 }
 
 // AddChangesForPersistence - method implementation for interface 'statemgmt.HashableState'
@@ -366,21 +372,12 @@ func (bucketTree *BucketTree) updateDataNodeCache(){
 	if bucketTree.dataNodesDelta == nil {
 		return
 	}
-	bucketTree.dataNodeCache.lock.Lock()
-	defer bucketTree.dataNodeCache.lock.Unlock()
-	
-	affectedBuckets := bucketTree.dataNodesDelta.getAffectedBuckets()
-	for _, affectedBucket := range affectedBuckets {
-		dataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(affectedBucket)
-		for _, dataNode := range dataNodes {
-			if dataNode.isDelete() {
-				bucketTree.dataNodeCache.Remove(dataNode)
-			} else {
-				bucketTree.dataNodeCache.Put(dataNode)
-			}
+	if(bucketTree.treePrefix != "-bucket-state"){
+		for k,v := range globalDataNodeCache[bucketTree.treePrefix]{
+			log.Criticalf("bucketKey is ",k)
+			log.Criticalf("DataNodes length is ",len(v))
 		}
 	}
-
 }
 
 // TODO to do test with cache
