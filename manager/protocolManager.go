@@ -178,7 +178,9 @@ func (self *ProtocolManager) commitLoop() {
 		switch ev := obj.Data.(type) {
 		case event.CommitOrRollbackBlockEvent:
 			// start commit block serially
+			start_time := time.Now()
 			self.blockPool.CommitBlock(ev, self.commonHash, self.Peermanager)
+			log.Criticalf("ProtocolManager.BlockPool.CommitBlock cost time is",time.Since(start_time))
 		}
 	}
 }

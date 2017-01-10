@@ -90,6 +90,7 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 
 // Process an ValidationEvent
 func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption, peerManager p2p.PeerManager) (error, bool) {
+	start_time := time.Now()
 	var validTxSet []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
 	var index []int
@@ -177,6 +178,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 			peerManager.SendMsgToPeers(payload, peers, recovery.Message_INVALIDRESP)
 		}
 	}
+	log.Criticalf("PreProcess block Number is ",validationEvent.SeqNo," cost time is",time.Since(start_time))
 	return nil, true
 }
 // check the sender's signature of the transaction
