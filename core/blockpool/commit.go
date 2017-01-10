@@ -117,6 +117,7 @@ func (pool *BlockPool) AddBlock(block *types.Block, receipts []*types.Receipt, c
 
 // WriteBlock: save block into database
 func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, commonHash crypto.CommonHash, vid uint64, primary bool) {
+	begin := time.Now()
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Error("get database instance failed! error msg,", err.Error())
@@ -125,7 +126,8 @@ func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, 
 	// for primary node, check whether vid equal to block's number
 	state, _ := pool.GetStateInstance(common.BytesToHash(block.MerkleRoot), db)
 	batch := state.FetchBatch(block.Number)
-
+	log.Error("[commit] before persist:", time.Since(begin))
+	begin = time.Now()
 	if err := pool.persistTransactions(batch, block.Transactions, block.Number); err != nil {
 		log.Errorf("persist transactions of #%d failed.", block.Number)
 		return
@@ -140,10 +142,14 @@ func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, 
 	}
 	core.UpdateChain(batch, block, false, false, false)
 	batch.Write()
+	log.Error("[commit] persist:", time.Since(begin))
 	// mark the block process finish, remove some stuff avoid of memory leak
 	// IMPORTANT this should be done after batch.Write been called
+	begin = time.Now()
 	state.MarkProcessFinish(block.Number)
-	log.Debugf("state #%d %s", vid, string(state.Dump()))
+	log.Error("[commit] mark finish:", time.Since(begin))
+	begin = time.Now()
+	// log.Debugf("state #%d %s", vid, string(state.Dump()))
 	// write checkpoint data
 	if block.Number % 10 == 0 && block.Number != 0 {
 		core.WriteChainChan()
@@ -153,6 +159,7 @@ func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, 
 	// remove Cached Transactions which used to check transaction duplication
     	msg := protos.RemoveCache{Vid: vid}
     	pool.consenter.RecvLocal(msg)
+	log.Error("[commit] after:", time.Since(begin))
 	// FOR TEST
 	// get journals
 	//j, err := db.Get(hyperstate.CompositeJournalKey(block.Number))
