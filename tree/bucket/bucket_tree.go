@@ -150,10 +150,8 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 		if err != nil {
 			return err
 		}
-		// TODO test, add the logic of record the UpdatedValueSet
 		cryptoHashForBucket,newDataNodes := computeDataNodesCryptoHash(bucketKey, updatedDataNodes, existingDataNodes,bucketTree.updatedValueSet)
-		bucketTree.dataNodeCache.c[*bucketKey] = newDataNodes
-		//globalDataNodeCache.cache[bucketTree.treePrefix][*bucketKey] = newDataNodes
+		bucketTree.updateDataNodeCache(*bucketKey,newDataNodes)
 
 		log.Debugf("Crypto-hash for lowest-level bucket [%s] is [%x]", bucketKey, cryptoHashForBucket)
 		parentBucket := bucketTree.bucketTreeDelta.getOrCreateBucketNode(bucketKey.getParentKey())
@@ -358,7 +356,6 @@ func (bucketTree *BucketTree) updateCacheWithoutPersist(currentBlockNum *big.Int
 		}
 	}
 	bucketTree.treeHashMap[currentBlockNum] = bucketTree.lastComputedCryptoHash
-	bucketTree.updateDataNodeCache()
 	bucketTree.updateBucketCache()
 	bucketTree.dataNodesDelta = nil
 	bucketTree.bucketTreeDelta = nil
@@ -368,16 +365,20 @@ func (bucketTree *BucketTree) updateCacheWithoutPersist(currentBlockNum *big.Int
 
 
 
-func (bucketTree *BucketTree) updateDataNodeCache(){
+func (bucketTree *BucketTree) updateDataNodeCache(bucketKey BucketKey,newDataNodes DataNodes){
 	if bucketTree.dataNodesDelta == nil {
 		return
 	}
-	if(bucketTree.treePrefix != "-bucket-state"){
-		for k,v := range globalDataNodeCache.cache[bucketTree.treePrefix]{
-			log.Debugf("bucketKey is ",k)
-			log.Debugf("DataNodes length is ",len(v))
-		}
+	if(bucketTree.dataNodeCache.isEnabled){
+		bucketTree.dataNodeCache.c[bucketKey] = newDataNodes
 	}
+	if(globalDataNodeCache.isEnable){
+		if(globalDataNodeCache.cache[bucketTree.treePrefix] == nil){
+			globalDataNodeCache.cache[bucketTree.treePrefix] = make(map[BucketKey] DataNodes)
+		}
+		globalDataNodeCache.cache[bucketTree.treePrefix][bucketKey] = newDataNodes
+	}
+
 }
 
 // TODO to do test with cache
@@ -422,6 +423,8 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 	keyValueMap := NewKVMap()
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
+	globalDataNodeCache.ClearAllCache()
+	globalDataNodeCache.isEnable = false
 	bucketTree.bucketCache.isEnabled = false
 	bucketTree.dataNodeCache.isEnabled = false
 
@@ -486,6 +489,8 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 	bucketTree.bucketCache.clearAllCache()
 	bucketTree.bucketCache.isEnabled = true
 	bucketTree.dataNodeCache.isEnabled = true
+	globalDataNodeCache.isEnable = GLOBAL
+	globalDataNodeCache.ClearAllCache()
 	return nil
 }
 

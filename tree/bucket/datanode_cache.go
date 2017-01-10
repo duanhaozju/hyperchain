@@ -4,7 +4,8 @@ import (
 	"sync"
 )
 var (
-	globalDataNodeCache = &GlobalDataNodeCache{cache:make(map[string] (map[BucketKey] DataNodes)),isEnable:false}
+	GLOBAL = false
+	globalDataNodeCache = &GlobalDataNodeCache{cache:make(map[string] (map[BucketKey] DataNodes)),isEnable:true}
 )
 type GlobalDataNodeCache struct{
 	cache map[string] (map[BucketKey] DataNodes)
@@ -39,23 +40,43 @@ func newDataNodeCache(treePrefix string,maxSizeMBs int) *DataNodeCache {
 }
 
 func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey) (DataNodes,error) {
+	// step 0.
 	if(dataNodeCache.isEnabled == false){
 		return fetchDataNodesFromDBByBucketKey(dataNodeCache.TreePrefix,&bucketKey)
 	}
+	// step 1.
 	dataNodes := dataNodeCache.c[bucketKey]
 	if(dataNodeCache.TreePrefix != "-bucket-state"){
 		log.Debugf("FetchDataNodesFromCache bucketKey is",bucketKey," length is",len(dataNodes))
 	}
-
-	if dataNodes == nil || len(dataNodes) == 0 {
-		log.Debugf("The bucket is nil, bucketLevel is [%d] bucketNumber [%d]",bucketKey.level,bucketKey.bucketNumber)
-		dbDataNodes,err := fetchDataNodesFromDBByBucketKey(dataNodeCache.TreePrefix,&bucketKey)
-		if err != nil{
-			log.Error("fetchDataNodesFromDBByBucketKey Error")
-			return dbDataNodes,err
+	if(dataNodes != nil && len(dataNodes) > 0){
+		return dataNodes,nil
+	}
+	// step 2.
+	if(globalDataNodeCache.isEnable){
+		dataNodes = globalDataNodeCache.cache[dataNodeCache.TreePrefix][bucketKey]
+		if(dataNodes != nil && len(dataNodes) > 0){
+			if(dataNodeCache.isEnabled){
+				dataNodeCache.c[bucketKey] = dataNodes
+			}
+			return dataNodes,nil
 		}
+	}
+
+	// step 3.
+	dataNodes,err := fetchDataNodesFromDBByBucketKey(dataNodeCache.TreePrefix,&bucketKey)
+	if err != nil{
+		log.Error("fetchDataNodesFromDBByBucketKey Error")
+		return dataNodes,err
+	}
+	if(dataNodeCache.isEnabled){
 		dataNodeCache.c[bucketKey] = dataNodes
-		return dbDataNodes,nil
+	}
+	if(globalDataNodeCache.isEnable){
+		if(globalDataNodeCache.cache[dataNodeCache.TreePrefix] == nil){
+			globalDataNodeCache.cache[dataNodeCache.TreePrefix] = make(map[BucketKey] DataNodes)
+		}
+		globalDataNodeCache.cache[dataNodeCache.TreePrefix][bucketKey] = dataNodes
 	}
 	return dataNodes,nil
 }
