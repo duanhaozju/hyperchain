@@ -153,7 +153,7 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 		// TODO test, add the logic of record the UpdatedValueSet
 		cryptoHashForBucket,newDataNodes := computeDataNodesCryptoHash(bucketKey, updatedDataNodes, existingDataNodes,bucketTree.updatedValueSet)
 		bucketTree.dataNodeCache.c[*bucketKey] = newDataNodes
-		globalDataNodeCache[bucketTree.treePrefix][*bucketKey] = newDataNodes
+		//globalDataNodeCache.cache[bucketTree.treePrefix][*bucketKey] = newDataNodes
 
 		log.Debugf("Crypto-hash for lowest-level bucket [%s] is [%x]", bucketKey, cryptoHashForBucket)
 		parentBucket := bucketTree.bucketTreeDelta.getOrCreateBucketNode(bucketKey.getParentKey())
@@ -373,9 +373,9 @@ func (bucketTree *BucketTree) updateDataNodeCache(){
 		return
 	}
 	if(bucketTree.treePrefix != "-bucket-state"){
-		for k,v := range globalDataNodeCache[bucketTree.treePrefix]{
-			log.Criticalf("bucketKey is ",k)
-			log.Criticalf("DataNodes length is ",len(v))
+		for k,v := range globalDataNodeCache.cache[bucketTree.treePrefix]{
+			log.Debugf("bucketKey is ",k)
+			log.Debugf("DataNodes length is ",len(v))
 		}
 	}
 }

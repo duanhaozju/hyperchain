@@ -7,7 +7,7 @@ pbft:
     nodes: 4
 
     # How many transactions should the primary pack before sending pre-prepare
-    batchsize: 1600
+    batchsize: 400
 
     # How many times of same vc from self before a replica start recovery
     vcresendlimit: 10
@@ -25,7 +25,7 @@ timeout:
     firstrequest: 30s
 
     # Primary send a pre-prepare if there are pending requests, although batchsize isn't reached yet,
-    batch: 50ms
+    batch: 1000ms
 
     # How long may a request(transaction batch) take between reception and execution, must be greater than the batch timeout
     request: 3s

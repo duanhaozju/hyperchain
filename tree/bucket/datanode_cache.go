@@ -4,8 +4,13 @@ import (
 	"sync"
 )
 var (
-	globalDataNodeCache = make(map[string] (map[BucketKey] DataNodes))
+	globalDataNodeCache = GlobalDataNodeCache{cache:make(map[string] (map[BucketKey] DataNodes)),isEnable:false}
 )
+type GlobalDataNodeCache struct{
+	cache map[string] (map[BucketKey] DataNodes)
+	isEnable bool
+}
+
 type DataNodeCache struct {
 	TreePrefix string
 	isEnabled  bool
@@ -21,10 +26,13 @@ func newDataNodeCache(treePrefix string,maxSizeMBs int) *DataNodeCache {
 	} else {
 		log.Infof("Constructing datanode-cache with max bucket cache size = [%d] MBs", maxSizeMBs)
 	}
-	if(globalDataNodeCache[treePrefix] == nil){
-		globalDataNodeCache[treePrefix] = make(map[BucketKey] DataNodes)
+	if(globalDataNodeCache.isEnable){
+		if(globalDataNodeCache.cache[treePrefix] == nil){
+			globalDataNodeCache.cache[treePrefix] = make(map[BucketKey] DataNodes)
+		}
+		return &DataNodeCache{TreePrefix: treePrefix,c: globalDataNodeCache.cache[treePrefix], maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 	}
-	return &DataNodeCache{TreePrefix: treePrefix,c: globalDataNodeCache[treePrefix], maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
+	return &DataNodeCache{TreePrefix: treePrefix,c: make(map[BucketKey] DataNodes), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 }
 
 func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey) (DataNodes,error) {
@@ -43,9 +51,10 @@ func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey)
 			log.Error("fetchDataNodesFromDBByBucketKey Error")
 			return dbDataNodes,err
 		}
+		dataNodeCache.c[bucketKey] = dataNodes
 		return dbDataNodes,nil
 	}
-	return dataNodeCache.c[bucketKey],nil
+	return dataNodes,nil
 }
 
 
