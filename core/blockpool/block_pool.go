@@ -106,21 +106,25 @@ func NewBlockPool(consenter consensus.Consenter, conf BlockPoolConf, bktConf buc
 	log.Noticef("Block pool Initialize demandNumber :%d, demandseqNo: %d\n", pool.demandNumber, pool.demandSeqNo)
 	return pool
 }
-// obtain block pool configuration
+// GetConfig - obtain block pool configuration.
 func (pool *BlockPool) GetConfig() BlockPoolConf {
 	return pool.conf
 }
-// set demand number
+// SetDemandNumber - set demand number.
 func (pool *BlockPool) SetDemandNumber(number uint64) {
 	atomic.StoreUint64(&pool.demandNumber, number)
 }
-// set demand seqNo
+// SetDemandSeqNo - set demand seqNo.
 func (pool *BlockPool) SetDemandSeqNo(seqNo uint64) {
 	atomic.StoreUint64(&pool.demandSeqNo, seqNo)
 }
 // IncreaseTempBlockNumber - increase temporary block number.
 func (pool *BlockPool) IncreaseTempBlockNumber() {
 	pool.tempBlockNumber = pool.tempBlockNumber + 1
+}
+// SetTempBlockNumber - set temporary block number
+func (pool *BlockPool) SetTempBlockNumber(seqNo uint64) {
+	pool.tempBlockNumber = seqNo
 }
 // PurgeValidateQueue - clear validation event queue cache.
 func (pool *BlockPool) PurgeValidateQueue() {
@@ -130,8 +134,8 @@ func (pool *BlockPool) PurgeValidateQueue() {
 func (pool *BlockPool) PurgeBlockCache() {
 	pool.blockCache.Purge()
 }
-// obtain state handler via configuration in block.conf
-// two state: (1)raw state (2) hyper state are supported
+// GetStateInstance - obtain state handler via configuration in block.conf
+// two state: (1)raw state (2) hyper state are supported.
 func (pool *BlockPool) GetStateInstance(root common.Hash, db hyperdb.Database) (vm.Database, error) {
 	switch pool.conf.StateType {
 	case "rawstate":
@@ -150,8 +154,8 @@ func (pool *BlockPool) GetStateInstance(root common.Hash, db hyperdb.Database) (
 		return nil, errors.New("no state type specified")
 	}
 }
-// create a latest state for simulate usage
-// different with function `GetStateInstance`, this function will create a new instance each time when got invocation
+// GetStateInstanceForSimulate - create a latest state for simulate usage
+// different with function `GetStateInstance`, this function will create a new instance each time when got invocation.
 func (pool *BlockPool) GetStateInstanceForSimulate(root common.Hash, db hyperdb.Database) (vm.Database, error) {
 	switch pool.conf.StateType {
 	case "rawstate":

@@ -70,7 +70,8 @@ func GetReceipt(txHash common.Hash) *types.ReceiptTrans {
 // Persist receipt content to a batch, KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false
 func PersistReceipt(batch hyperdb.Batch, receipt *types.Receipt, version string, flush bool, sync bool) (error, []byte) {
 	// check pointer value
-	if receipt == nil || batch == nil { return errors.New("empty pointer"), nil
+	if receipt == nil || batch == nil {
+		return errors.New("empty pointer"), nil
 	}
 	// process
 	err, data := WrapperReceipt(receipt, version)
