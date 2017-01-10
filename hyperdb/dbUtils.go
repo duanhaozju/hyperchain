@@ -4,7 +4,7 @@ import "os"
 import "time"
 import "strconv"
 
-var MaxConneecTimes =10
+
 
 func writeLog(funcName string,num int,err error)(){
 	f, err1 := os.OpenFile(GetLogPath(), os.O_WRONLY|os.O_CREATE, 0644)
@@ -14,7 +14,7 @@ func writeLog(funcName string,num int,err error)(){
 		n, _ := f.Seek(0, os.SEEK_END)
 		currentTime := time.Now().Local()
 		newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-		str := portDBPath + newFormat + funcName + err.Error() +" num:"+strconv.Itoa(num)+"\n"
+		str := strconv.Itoa(grpcPort) + newFormat + funcName + err.Error() +" num:"+strconv.Itoa(num)+"\n"
 		_, err1 = f.WriteAt([]byte(str), n)
 		f.Close()
 	}

@@ -13,17 +13,17 @@ var ReDb Database
 var SSDB Database
 func init(){
 	var err error
-	Db, err= NewRdSdDb("8001", 2)
+	Db, err= NewRdSdDb()
 	if err != nil {
 		fmt.Println("NewRdSdDb fail")
 	}
 
-	SSDB, err= NewSSDatabase("8001", 2)
+	SSDB, err= NewSSDatabase()
 	if err != nil {
 		fmt.Println("NewSSDatabase fail")
 	}
 
-	ReDb,err=NewRsDatabase("8001")
+	ReDb,err=NewRsDatabase()
 	if err != nil {
 		fmt.Println("NewRsDatabase fail")
 	}
@@ -151,6 +151,8 @@ func TestIterator(t *testing.T) {
 		t.Error("batch.Write fail with " + err.Error())
 	}
 
+	//Db.Put([]byte("test123"),[]byte("teatvalue"))
+
 	iterator:=Db.NewIterator([]byte("test"))
 
 	iterator.Seek([]byte("test"))
@@ -158,7 +160,7 @@ func TestIterator(t *testing.T) {
 		key:=iterator.Key()
 		value:=iterator.Value()
 		if ! bytes.Equal(map1[string(key)],value){
-			t.Errorf("failed with key %d value %d map1[%d] %d \n", key,value,key,map1[string(key)])
+			t.Errorf("failed with key %d value %d map1[%d] %d \n", string(key),string(value),string(key),string(map1[string(key)]))
 		}
 		delete(map1,string(key))
 	}

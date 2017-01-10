@@ -120,7 +120,7 @@ func (b *ldbBatch) Delete(key []byte) error {
 	return nil
 }
 
-// Write write batch-operation to databse
+// Write write batch-operation to database
 func (b *ldbBatch) Write() error {
 	return b.db.Write(b.b, nil)
 }

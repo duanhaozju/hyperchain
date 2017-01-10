@@ -7,30 +7,26 @@ import (
 	"sync"
 	"time"
 	"errors"
+	"fmt"
 )
 
 
 type RsDatabase struct {
-	path    string
-	rd_pool *redis.Pool
+	rdPool *redis.Pool
 }
 
-func NewRsDatabase(portDBPath string) (*RsDatabase, error) {
-	port, err := strconv.Atoi(portDBPath)
-	if err != nil {
-		return nil, err
-	}
-	port += 100
-	//set max pool con 10
-	rdP := redis.NewPool(func() (redis.Conn, error) {return redis.Dial("tcp", ":"+strconv.Itoa(port), redis.DialConnectTimeout(60*time.Second))},10)
-	return &RsDatabase{path: portDBPath, rd_pool: rdP}, err
+func NewRsDatabase() (*RsDatabase, error) {
+	fmt.Println("NewRsDatabase")
+	fmt.Println(redisPort)
+	rdP := redis.NewPool(func() (redis.Conn, error) {return redis.Dial("tcp", ":"+strconv.Itoa(redisPort), redis.DialConnectTimeout(time.Duration(redisTimeout)*time.Second))},redisPoolSize)
+	return &RsDatabase{rdPool: rdP}, nil
 }
 
 func (self *RsDatabase) Put(key []byte, value []byte) error {
 
 	num:=0
 	for {
-		con := self.rd_pool.Get()
+		con := self.rdPool.Get()
 		_, err := con.Do("set", key, value)
 		con.Close()
 
@@ -46,7 +42,7 @@ func (self *RsDatabase) Put(key []byte, value []byte) error {
 		if err.Error() !="ERR Connection timed out"{
 			return err
 		}
-		if num>=MaxConneecTimes{
+		if num>=redisMaxConnectTimes{
 			log.Error("Redis Put key-value to DB failed and it may cause unexpected effects")
 			return err
 		}
@@ -57,7 +53,7 @@ func (self *RsDatabase) Get(key []byte) ([]byte, error) {
 
 	num:=0
 	for {
-		con := self.rd_pool.Get()
+		con := self.rdPool.Get()
 		dat, err := redis.Bytes(con.Do("get", key))
 		con.Close()
 
@@ -79,7 +75,7 @@ func (self *RsDatabase) Get(key []byte) ([]byte, error) {
 			return nil,err
 		}
 
-		if num>=MaxConneecTimes{
+		if num>=redisMaxConnectTimes{
 			log.Error("Redis Get key-value from  DB failed and it may cause unexpected effects")
 			return nil,err
 		}
@@ -90,7 +86,7 @@ func (self *RsDatabase) Delete(key []byte) error {
 	num := 0
 
 	for {
-		con := self.rd_pool.Get()
+		con := self.rdPool.Get()
 		_, err := con.Do("DEL", key)
 		con.Close()
 
@@ -108,7 +104,7 @@ func (self *RsDatabase) Delete(key []byte) error {
 			return err
 		}
 
-		if num>=MaxConneecTimes{
+		if num>=redisMaxConnectTimes{
 			log.Error("Redis Delete key-value from  DB failed and it may cause unexpected effects")
 			return err
 		}
@@ -121,7 +117,7 @@ func (self *RsDatabase) NewIterator(prefix []byte) Iterator {
 }
 
 func (self *RsDatabase) Close() {
-	self.rd_pool.Close()
+	self.rdPool.Close()
 }
 
 //// just for implement interface
@@ -131,17 +127,17 @@ func (self *RsDatabase) Close() {
 
 //TODO specific the size of map
 func (self *RsDatabase) NewBatch() Batch {
-	return &rd_Batch{rd_pool: self.rd_pool, map1: make(map[string][]byte)}
+	return &rdBatch{rdPool: self.rdPool, map1: make(map[string][]byte)}
 }
 
-type rd_Batch struct {
+type rdBatch struct {
 	mutex   sync.Mutex
-	rd_pool *redis.Pool
+	rdPool *redis.Pool
 	map1    map[string][]byte
 }
 
-// Put put the key-value to rd_Batch
-func (batch *rd_Batch) Put(key, value []byte) error {
+// Put put the key-value to rdBatch
+func (batch *rdBatch) Put(key, value []byte) error {
 
 	value1 := make([]byte, len(value))
 	copy(value1, value)
@@ -151,7 +147,7 @@ func (batch *rd_Batch) Put(key, value []byte) error {
 	return nil
 }
 
-func (batch *rd_Batch) Delete(key []byte) error {
+func (batch *rdBatch) Delete(key []byte) error {
 	batch.mutex.Lock()
 	delete(batch.map1, string(key))
 	batch.mutex.Unlock()
@@ -160,10 +156,10 @@ func (batch *rd_Batch) Delete(key []byte) error {
 
 // Write write batch-operation to databse
 //one transaction from MULTI TO EXEC
-func (batch *rd_Batch) Write() error {
+func (batch *rdBatch) Write() error {
 	num:=0
 	for {
-		con := batch.rd_pool.Get()
+		con := batch.rdPool.Get()
 		defer con.Close()
 		con.Send("MULTI")
 		batch.mutex.Lock()
@@ -188,7 +184,7 @@ func (batch *rd_Batch) Write() error {
 			return err
 		}
 
-		if num>=MaxConneecTimes{
+		if num>=redisMaxConnectTimes{
 			log.Error("Redis write batch to  DB failed and it may cause unexpected effects")
 			return err
 		}

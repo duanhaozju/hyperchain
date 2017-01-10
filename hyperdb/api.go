@@ -3,24 +3,53 @@
 package hyperdb
 
 import (
-	"path"
 	"strconv"
 	"sync"
 	"github.com/op/go-logging"
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 )
 
-type statedb int32
+var (
+
+	logPath =""
+	logStatus=false
+
+	//dbType 应该是一个3位的二进制数比如111 101
+	//第一个1表示 redis open
+	//第二个1表示 ssdb  open
+	//第三个1表示 leveldb open
+	//现在仅支持 redis加 ssdb 或者仅leveldb 即 110 001
+	dbType=001
+
+	ssdbProxyPort=22122
+	ssdbFirstPort=8011
+	ssdbGap=10
+	ssdbServerNumber=2
+	ssdbPoolSize=10
+	ssdbTimeout=60
+	ssdbMaxConnectTimes=15
+	ssdbIteratorSize=40
+
+	redisPort=8101
+	redisPoolSize=10
+	redisTimeout=60
+	redisMaxConnectTimes=15
+	grpcPort=8001
+	leveldbPath="./build/leveldb"
+)
+
+type stateDb int32
 
 type DBInstance struct {
 	db    Database
-	state  statedb
-	dbsync sync.Mutex
+	state  stateDb
+	dbSync sync.Mutex
 }
 
 const (
-	closed statedb = iota
+	closed stateDb = iota
 	opened
 )
 
@@ -37,28 +66,38 @@ func init() {
 }
 
 
+func setDBConfig(dbConfig string,port string) {
 
-//-- --------------- about db -----------------------
-
-func getBaseDir() string {
-	//path := os.TempDir()
-	return "/tmp"
-}
-
-var (
-	baseDBPath = getBaseDir() + "/hyperchain/cache"
-	portDBPath = "db" //different port has different db path, default "db"
-	logPath =""
-	logStatus=false
-)
-
-func SetDBPath(dbpath string, port int,logConfig string) {
-	if logConfig!=""{
-		logStatus=true
-		logPath=logConfig
+	config := viper.New()
+	viper.SetEnvPrefix("DBCONFIG_ENV")
+	config.SetConfigFile(dbConfig)
+	err := config.ReadInConfig()
+	if err != nil {
+		panic(fmt.Errorf("Error envPre %s reading %s", "dbConfig", err))
 	}
-	baseDBPath = path.Join(dbpath, "hyperchain/cache/")
-	portDBPath = strconv.Itoa(port)
+
+	dbType=config.GetInt("dbConfig.dbType")
+
+	ssdbFirstPort=config.GetInt("dbConfig.ssdb.firstPort")
+	ssdbGap=config.GetInt("dbConfig.ssdb.gap")
+	ssdbIteratorSize=config.GetInt("dbConfig.ssdb.iteratorSize")
+	ssdbMaxConnectTimes=config.GetInt("dbConfig.ssdb.maxConnectTimes")
+	ssdbServerNumber=config.GetInt("dbConfig.ssdb.serverNumber")
+	ssdbPoolSize=config.GetInt("dbConfig.ssdb.poolSize")
+	ssdbTimeout=config.GetInt("dbConfig.ssdb.timeout")
+
+	redisMaxConnectTimes=config.GetInt("dbConfig.redis.maxConnectTimes")
+	redisPoolSize=config.GetInt("dbConfig.redis.poolSize")
+	redisPort=config.GetInt("dbConfig.redis.port")
+	redisTimeout=config.GetInt("dbConfig.redis.timeout")
+
+	logStatus=config.GetBool("dbConfig.logStatus")
+	logPath=config.GetString("dbConfig.logPath")
+
+	leveldbPath=config.GetString("dbConfig.leveldbPath")
+	grpcPort,_=strconv.Atoi(port)
+	leveldbPath+=port
+
 }
 
 func IfLogStatus() bool{
@@ -69,30 +108,24 @@ func GetLogPath() string{
 	return 	logPath
 }
 
-func getDBPath() string {
-	return baseDBPath + portDBPath
-}
 
 
-//Db_type 应该是一个3位的二进制数比如111 101
-//第一个1表示 redis open
-//第二个1表示 ssdb  open
-//第三个1表示 leveldb open
-//现在仅支持 redis加 ssdb 或者仅leveldb 即 110 001
-func InitDatabase(Db_type int)(error){
+func InitDatabase(dbConfig string,port string)(error){
 
-	dbInstance.dbsync.Lock()
-	defer dbInstance.dbsync.Unlock()
+	setDBConfig(dbConfig,port)
+
+	dbInstance.dbSync.Lock()
+	defer dbInstance.dbSync.Unlock()
 
 	if dbInstance.state!=closed{
-		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it has beend inited \n",Db_type))
-		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it has beend inited \n",Db_type))
+		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it has beend inited \n",dbType))
+		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it has beend inited \n",dbType))
 	}
-	db,err:=NewDatabase(getDBPath(),portDBPath,Db_type)
+	db,err:=NewDatabase()
 
 	if err!=nil{
-		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n",Db_type))
-		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n",Db_type))
+		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n",dbType))
+		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n",dbType))
 	}
 
 	dbInstance.db=db;
@@ -102,8 +135,8 @@ func InitDatabase(Db_type int)(error){
 }
 
 func GetDBDatabase() (Database, error) {
-	dbInstance.dbsync.Lock()
-	defer dbInstance.dbsync.Unlock()
+	dbInstance.dbSync.Lock()
+	defer dbInstance.dbSync.Unlock()
 	if dbInstance.db==nil{
 		log.Notice("GetDBDatabase() fail beacause it has not been inited \n")
 		return nil,errors.New("GetDBDatabase() fail beacause it has not been inited \n")
@@ -111,21 +144,24 @@ func GetDBDatabase() (Database, error) {
 	return dbInstance.db,nil
 }
 
-func NewDatabase(DBPath string ,portDBPath string,Db_type int) (Database ,error){
-	if Db_type==001{
+
+
+func NewDatabase() (Database ,error){
+
+	if dbType==001{
 		log.Notice("Use level db only")
-		return NewLDBDataBase(DBPath)
-	}else if Db_type==010{
+		return NewLDBDataBase(leveldbPath)
+	}else if dbType==010{
 		log.Notice("Use ssdb only")
-		return NewSSDatabase(portDBPath,2)
-	}else if Db_type==110{
+		return NewSSDatabase()
+	}else if dbType==110{
 		log.Notice("Use ssdb and redis")
-		return NewRdSdDb(portDBPath,2)
-	}else if Db_type==100{
+		return NewRdSdDb()
+	}else if dbType==100{
 		log.Notice("Use redis only")
-		return NewRsDatabase(portDBPath)
+		return NewRsDatabase()
 	}else {
-		fmt.Println("Wrong Db_type:"+strconv.Itoa(Db_type))
-		return nil,errors.New("Wrong Db_type:"+strconv.Itoa(Db_type))
+		log.Notice("Wrong dbType:"+strconv.Itoa(dbType))
+		return nil,errors.New("Wrong dbType:"+strconv.Itoa(dbType))
 	}
 }

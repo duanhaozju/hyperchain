@@ -32,12 +32,11 @@ func init() {
 	log = logging.MustGetLogger("")
 }
 
-// InitDB initialization ldb and memdb
+// InitDB initialization db
 // should be called while programming start-up
-// port: the server port
-func InitDB(dbPath , logConfig string, port ,db_type int) {
-	hyperdb.SetDBPath(dbPath, port,logConfig)
-	hyperdb.InitDatabase(db_type)
+
+func InitDB(dbConfig string,port int) {
+	hyperdb.InitDatabase(dbConfig,strconv.Itoa(port))
 	memChainMap = newMemChain()
 	memChainStatusMap = newMemChainStatus()
 }

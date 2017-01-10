@@ -103,7 +103,7 @@ func main() {
 		conf := initConf(argv)
 		common.InitLog(conf)
 
-		core.InitDB(config.getDatabaseDir(), config.getDbLogConfig(),config.getGRPCPort(),config.getDbType())
+		core.InitDB(config.getDbConfig(),config.gRPCPort)
 
 		err, expiredTime := checkLicense(config.getLicense())
 		if err != nil {

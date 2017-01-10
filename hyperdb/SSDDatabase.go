@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"sync"
 	"time"
-	"fmt"
 	"errors"
 )
 
@@ -13,25 +12,18 @@ import (
 
 //ssdb database use ssdb and twemproxy
 type SSDatabase struct {
-	rd_pool *redis.Pool
-	ssdbnum int //ssdb服务器数量 比如现在一个ssdb的twemproxy下面有两台ssdb 所以现在要遍历的台数为2
+	rdPool *redis.Pool
+	ssdbNum int //ssdb服务器数量 比如现在一个ssdb的twemproxy下面有两台ssdb 所以现在要遍历的台数为2
 	port int
 }
 
 
-func NewSSDatabase(portDBPath string,ssdbnum int) (*SSDatabase, error) {
-	
-	port,err:=strconv.Atoi(portDBPath)
-	if err!=nil{
-		return nil,errors.New(fmt.Sprintf("NewSSDatabase(%v) fail because portDBPath is not a number err:%v ",portDBPath,err.Error()))
-	}
+func NewSSDatabase() (*SSDatabase, error) {
 
-	
-	
-	//set max pool con 10
-	rdP:=redis.NewPool(func() (redis.Conn, error) { return redis.Dial("tcp", ":"+strconv.Itoa(port+14121),redis.DialConnectTimeout(60*time.Second))},10)
 
-	return &SSDatabase{rd_pool:rdP,ssdbnum:ssdbnum,port:port+10},nil
+	rdP:=redis.NewPool(func() (redis.Conn, error) { return redis.Dial("tcp", ":"+strconv.Itoa(ssdbProxyPort),redis.DialConnectTimeout(time.Duration(ssdbTimeout)*time.Second))},ssdbPoolSize)
+
+	return &SSDatabase{rdPool:rdP,ssdbNum:ssdbServerNumber,port:ssdbFirstPort},nil
 }
 
 /*
@@ -42,7 +34,7 @@ func (ssdb *SSDatabase) Put(key []byte, value []byte) error {
 	//count the times of connection time out
 	num:=0
 	for {
-		con := ssdb.rd_pool.Get()
+		con := ssdb.rdPool.Get()
 		_, err:= con.Do("set", key, value)
 		con.Close()
 
@@ -60,7 +52,7 @@ func (ssdb *SSDatabase) Put(key []byte, value []byte) error {
 			return err
 		}
 
-		if num>=MaxConneecTimes{
+		if num>=ssdbMaxConnectTimes{
 			log.Error("SSDB Set key-value to  DB failed and it may cause unexpected effects")
 			return err
 		}
@@ -73,7 +65,7 @@ func (ssdb *SSDatabase) Get(key []byte) ([]byte, error) {
 
 	num:=0
 	for {
-		con := ssdb.rd_pool.Get()
+		con := ssdb.rdPool.Get()
 		dat, err:= redis.Bytes(con.Do("get", key))
 		con.Close()
 
@@ -90,7 +82,7 @@ func (ssdb *SSDatabase) Get(key []byte) ([]byte, error) {
 		}
 
 		
-		if num>=MaxConneecTimes{
+		if num>=ssdbMaxConnectTimes{
 			log.Error("SSDB Get key-value from  DB failed and it may cause unexpected effects")
 			return nil,err
 		}
@@ -107,7 +99,7 @@ func (ssdb *SSDatabase) Delete(key []byte) error {
 	num:=0
 	for {
 		
-		con := ssdb.rd_pool.Get()
+		con := ssdb.rdPool.Get()
 		_, err := con.Do("DEL", key)
 		con.Close()
 		if err == nil {
@@ -123,7 +115,7 @@ func (ssdb *SSDatabase) Delete(key []byte) error {
 			return err
 		}
 
-		if num>=MaxConneecTimes{
+		if num>=ssdbMaxConnectTimes{
 			log.Error("SSDB Delete key-value from  DB failed and it may cause unexpected effects")
 			return err
 		}
@@ -132,24 +124,24 @@ func (ssdb *SSDatabase) Delete(key []byte) error {
 	}
 }
 
-type Iteratorssdb struct {
+type IteratorSsdb struct {
 	key []byte
-	ssdbnum int
-	ssdbnow int
+	ssdbNum int
+	ssdbNow int
 	port	int
 	err 	error
 	iterator *IteratorImp
 }
 
-func (it *Iteratorssdb)Key() []byte{
+func (it *IteratorSsdb)Key() []byte{
 	return it.iterator.Key()
 }
 
-func (it *Iteratorssdb)Value() []byte{
+func (it *IteratorSsdb)Value() []byte{
 	return it.iterator.Value()
 }
 
-func (it *Iteratorssdb)Seek(key []byte) bool{
+func (it *IteratorSsdb)Seek(key []byte) bool{
 	if it.key==nil{
 		it.key=make([]byte,len(key))
 		copy(it.key,key)
@@ -159,14 +151,14 @@ func (it *Iteratorssdb)Seek(key []byte) bool{
 			it.err=it.iterator.err
 			return false
 		}
-		if it.ssdbnow<it.ssdbnum{
-			it.ssdbnow++
-			it.port+=10
-			rdP:=redis.NewPool(func () (redis.Conn, error) { return redis.Dial("tcp", ":"+strconv.Itoa(it.port),redis.DialConnectTimeout(60*time.Second))},10)
+		if it.ssdbNow<it.ssdbNum{
+			it.ssdbNow++
+			it.port+=ssdbGap
+			rdP:=redis.NewPool(func () (redis.Conn, error) { return redis.Dial("tcp", ":"+strconv.Itoa(it.port),redis.DialConnectTimeout(time.Duration(ssdbTimeout)*time.Second))},ssdbPoolSize)
 			itertaor2:=&IteratorImp{
 				Pool:rdP,
-				Listkey:make([]string,Size,Size),
-				Listvalue:make([]string,Size,Size),
+				ListKey:make([]string,ssdbIteratorSize,ssdbIteratorSize),
+				ListValue:make([]string,ssdbIteratorSize,ssdbIteratorSize),
 			}
 			it.iterator.Release()
 			it.iterator=itertaor2
@@ -177,17 +169,17 @@ func (it *Iteratorssdb)Seek(key []byte) bool{
 	return true
 }
 
-func (it *Iteratorssdb)Next() bool{
+func (it *IteratorSsdb)Next() bool{
 	if !it.iterator.Next(){
 
-		if it.ssdbnow<it.ssdbnum{
-			it.ssdbnow++
+		if it.ssdbNow<it.ssdbNum{
+			it.ssdbNow++
 			it.port+=10
 			rdP:=redis.NewPool(func () (redis.Conn, error) { return redis.Dial("tcp", ":"+strconv.Itoa(it.port),redis.DialConnectTimeout(60*time.Second))},10)
 			itertaor2:=&IteratorImp{
 				Pool:rdP,
-				Listkey:make([]string,Size,Size),
-				Listvalue:make([]string,Size,Size),
+				ListKey:make([]string,ssdbIteratorSize,ssdbIteratorSize),
+				ListValue:make([]string,ssdbIteratorSize,ssdbIteratorSize),
 			}
 			it.iterator.Release()
 			it.iterator=itertaor2
@@ -200,22 +192,22 @@ func (it *Iteratorssdb)Next() bool{
 	return true
 }
 
-func (it *Iteratorssdb)Error() error{
+func (it *IteratorSsdb)Error() error{
 	return it.err
 }
 
-func (it *Iteratorssdb)Release(){
+func (it *IteratorSsdb)Release(){
 	it.iterator.Release()
 }
 
 func (ssdb *SSDatabase) NewIterator(prefix []byte) Iterator {
-	rdp:=redis.NewPool(func () (redis.Conn, error) { return redis.Dial("tcp", ":"+strconv.Itoa(ssdb.port),redis.DialConnectTimeout(60*time.Second))},10)
-	imp:=&IteratorImp{Pool:rdp,Listkey:make([]string,Size,Size),Listvalue:make([]string,Size,Size),}
-	return &Iteratorssdb{ssdbnum:ssdb.ssdbnum,ssdbnow:1,iterator:imp,port:ssdb.port}
+	rdp:=redis.NewPool(func () (redis.Conn, error) { return redis.Dial("tcp", ":"+strconv.Itoa(ssdb.port),redis.DialConnectTimeout(time.Duration(ssdbTimeout)*time.Second))},ssdbPoolSize)
+	imp:=&IteratorImp{Pool:rdp,ListKey:make([]string,ssdbIteratorSize,ssdbIteratorSize),ListValue:make([]string,ssdbIteratorSize,ssdbIteratorSize),}
+	return &IteratorSsdb{ssdbNum:ssdbServerNumber,ssdbNow:1,iterator:imp,port:ssdb.port}
 }
 
 func (ssdb *SSDatabase) Close() {
-	ssdb.rd_pool.Close()
+	ssdb.rdPool.Close()
 }
 
 //// just for implement interface
@@ -225,13 +217,13 @@ func (ssdb *SSDatabase) Close() {
 
 //TODO specific the size of map
 func (ssdb *SSDatabase) NewBatch() Batch {
-	return &sd_Batch{ rd_pool : ssdb.rd_pool,map1:make(map[string][]byte)}
+	return &sd_Batch{ rdPool : ssdb.rdPool,map1:make(map[string][]byte)}
 }
 
 
 type sd_Batch struct {
 	mutex sync.Mutex
-	rd_pool *redis.Pool
+	rdPool *redis.Pool
 	map1 map[string] []byte
 }
 
@@ -257,7 +249,7 @@ func(batch *sd_Batch) Delete(key []byte) error{
 	return nil
 }
 
-// Write write batch-operation to databse
+// Write write batch-operation to database
 //one transaction from MULTI TO EXEC
 func (batch *sd_Batch) Write() error {
 
@@ -266,7 +258,7 @@ func (batch *sd_Batch) Write() error {
 
 	for {
 		list := make([]string, 0, 20)
-		con := batch.rd_pool.Get()
+		con := batch.rdPool.Get()
 
 		for k, v := range batch.map1 {
 			list = append(list, string(k), string(v))
@@ -287,7 +279,7 @@ func (batch *sd_Batch) Write() error {
 			return err
 		}
 
-		if num>=MaxConneecTimes{
+		if num>=ssdbMaxConnectTimes{
 			log.Error("SSDB write batch to  DB failed and it may cause unexpected effects")
 			return err
 		}
