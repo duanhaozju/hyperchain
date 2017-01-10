@@ -11,6 +11,7 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/common"
 	"bytes"
+	"hyperchain/core/blockpool"
 )
 
 
@@ -96,18 +97,20 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 		proto.Unmarshal(ev.Payload, blocks)
 		db, err := hyperdb.GetLDBDatabase()
 		if err != nil {
-			log.Error("No Database Found")
+			log.Error("no database handler found")
+			self.reject()
 			return
 		}
 		for i := len(blocks.Batch) - 1; i >= 0; i -= 1 {
 			if blocks.Batch[i].Number <= core.GetChainCopy().RequiredBlockNum {
-				log.Debug("Receive Block: ", blocks.Batch[i].Number, common.BytesToHash(blocks.Batch[i].BlockHash).Hex())
+				log.Debugf("receive block #%d  hash %s", blocks.Batch[i].Number, common.BytesToHash(blocks.Batch[i].BlockHash).Hex())
 				if blocks.Batch[i].Number == core.GetChainCopy().RequiredBlockNum {
 					acceptHash := blocks.Batch[i].HashBlock(self.commonHash).Bytes()
 					if common.Bytes2Hex(acceptHash) == common.Bytes2Hex(core.GetChainCopy().RequireBlockHash) {
 						core.PersistBlock(db.NewBatch(),blocks.Batch[i], self.blockPool.GetConfig().BlockVersion, true, true)
 						if err := self.updateRequire(blocks.Batch[i]); err != nil {
 							log.Error("UpdateRequired failed!")
+							self.reject()
 							return
 						}
 
@@ -116,6 +119,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 							lastBlk, err := core.GetBlockByNumber(db, core.GetChainCopy().RequiredBlockNum + 1)
 							if err != nil {
 								log.Error("StateUpdate Failed!")
+								self.reject()
 								return
 							}
 							if common.Bytes2Hex(lastBlk.ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash) {
@@ -123,19 +127,34 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 								for i := core.GetChainCopy().RequiredBlockNum + 1; i <= core.GetChainCopy().RecoveryNum; i += 1 {
 									blk, err := core.GetBlockByNumber(db, i)
 									if err != nil {
-										log.Error("StateUpdate Failed")
+										log.Errorf("state update from #%d to #%d failed. current chain height #%d",
+											core.GetChainCopy().RequiredBlockNum + 1, core.GetChainCopy().RecoveryNum, core.GetChainCopy().Height)
+										self.reject()
 										return
 									} else {
-										self.blockPool.ProcessBlockInVm(blk.Transactions, nil, blk.Number)
-										self.blockPool.SetDemandNumber(blk.Number + 1)
-										self.blockPool.SetDemandSeqNo(blk.Number + 1)
-										self.blockPool.IncreaseTempBlockNumber()
+										// set temporary block number as block number since block number is already here
+										self.blockPool.SetTempBlockNumber(blk.Number)
+										self.blockPool.SetDemandNumber(blk.Number)
+										self.blockPool.SetDemandSeqNo(blk.Number)
+										err, result := self.blockPool.ApplyBlock(blk, blk.Number)
+										if err != nil || self.assertApplyResult(blk, result) == false {
+											log.Errorf("state update from #%d to #%d failed. current chain height #%d",
+												core.GetChainCopy().RequiredBlockNum + 1, core.GetChainCopy().RecoveryNum, core.GetChainCopy().Height)
+											self.reject()
+											return
+										} else {
+											self.accpet(blk.Number)
+										}
 									}
 								}
-								core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum, true, true)
+								self.blockPool.SetTempBlockNumber(core.GetChainCopy().RecoveryNum + 1)
+								self.blockPool.SetDemandSeqNo(core.GetChainCopy().RecoveryNum + 1)
+								self.blockPool.SetDemandNumber(core.GetChainCopy().RecoveryNum + 1)
+
 								core.UpdateRequire(uint64(0), []byte{}, uint64(0))
 								core.SetReplicas(nil)
 								core.SetId(0)
+
 								self.sendStateUpdatedEvent()
 								break
 							} else {
@@ -272,4 +291,56 @@ func (self *ProtocolManager) isBlockHashEqual(targetHash []byte) bool {
 		return false
 	}
 	return true
+}
+// assertApplyResult - check apply result whether equal with other's
+func (self *ProtocolManager) assertApplyResult(block *types.Block, result *blockpool.BlockRecord) bool {
+	if bytes.Compare(block.MerkleRoot, result.MerkleRoot) != 0 {
+		log.Warningf("mismatch in block merkle root  of #%d, required %s, got %s",
+			block.Number, common.Bytes2Hex(block.MerkleRoot), common.Bytes2Hex(result.MerkleRoot))
+		return false
+	}
+	if bytes.Compare(block.TxRoot, result.TxRoot) != 0 {
+		log.Warningf("mismatch in block transaction root  of #%d, required %s, got %s",
+			block.Number, common.Bytes2Hex(block.TxRoot), common.Bytes2Hex(result.TxRoot))
+		return false
+
+	}
+	if bytes.Compare(block.ReceiptRoot, result.ReceiptRoot) != 0 {
+		log.Warningf("mismatch in block receipt root  of #%d, required %s, got %s",
+			block.Number, common.Bytes2Hex(block.ReceiptRoot), common.Bytes2Hex(result.ReceiptRoot))
+		return false
+	}
+	return true
+}
+// reject - reject state update result
+func (self *ProtocolManager) reject() {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Error("get database handler failed.")
+		return
+	}
+	for i := core.GetChainCopy().Height + 1; i <= core.GetChainCopy().RecoveryNum; i += 1 {
+		// delete persisted blocks
+		core.DeleteBlockByNum(db, i)
+	}
+	self.blockPool.SetDemandNumber(core.GetChainCopy().Height + 1)
+	self.blockPool.SetDemandSeqNo(core.GetChainCopy().Height + 1)
+	self.blockPool.SetTempBlockNumber(core.GetChainCopy().Height + 1)
+	// reset state in block pool
+	self.blockPool.ClearStateUnCommitted()
+	// reset
+	core.UpdateRequire(uint64(0), []byte{}, uint64(0))
+	core.SetReplicas(nil)
+	core.SetId(0)
+	self.sendStateUpdatedEvent()
+}
+// accpet - accept state update result
+func (self *ProtocolManager) accpet(seqNo uint64) {
+	self.blockPool.SubmitForStateUpdate(seqNo)
+	// update block chain
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		log.Error("get database handler failed.")
+	}
+	core.UpdateChainByBlcokNum(db, seqNo, true, true)
 }

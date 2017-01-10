@@ -269,3 +269,18 @@ func (pool *BlockPool) removeUncommittedData() error {
 	}
 	return nil
 }
+
+func (pool *BlockPool) ClearStateUnCommitted() {
+	switch pool.conf.StateType {
+	case "hyperstate":
+		db, err := hyperdb.GetLDBDatabase()
+		if err != nil {
+			log.Error("get database handler failed.")
+			return
+		}
+		state, _ := pool.GetStateInstance(common.Hash{}, db)
+		state.Purge()
+	case "rawstate":
+
+	}
+}

@@ -208,8 +208,8 @@ func (pool *BlockPool) checkSign(txs []*types.Transaction, commonHash crypto.Com
 }
 
 
-// Put all transactions into the virtual machine and execute
-// Return the execution result, such as txs' merkle root, receipts' merkle root, accounts' merkle root and so on
+// ProcessBlockInVm - Put all transactions into the virtual machine and execute
+// Return the execution result, such as txs' merkle root, receipts' merkle root, accounts' merkle root and so on.
 func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, *BlockRecord) {
 	var validtxs []*types.Transaction
 	var receipts []*types.Receipt
@@ -302,6 +302,95 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		Receipts:    receipts,
 		ValidTxs:    validtxs,
 		InvalidTxs:  invalidTxs,
+	}
+}
+
+// ApplyBlock - apply all transactions in block into state during the `state update` process
+func (pool *BlockPool) ApplyBlock(block *types.Block, seqNo uint64) (error, *BlockRecord) {
+	if block.Transactions == nil {
+		return errors.New("empty block"), nil
+	}
+	return pool.applyBlock(block, seqNo)
+}
+
+func (pool *BlockPool) applyBlock(block *types.Block, seqNo uint64) (error, *BlockRecord) {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		return err, nil
+	}
+	// initialize calculator
+	// for calculate fingerprint of a batch of transactions and receipts
+	if err := pool.initializeTransactionCalculator(); err != nil {
+		log.Errorf("validate #%d initialize transaction calculator", pool.tempBlockNumber)
+		return err, nil
+	}
+	if err := pool.initializeReceiptCalculator(); err != nil {
+		log.Errorf("validate #%d initialize receipt calculator", pool.tempBlockNumber)
+		return err, nil
+	}
+	// load latest state fingerprint
+	// for compatibility, doesn't remove the statement below
+	v := pool.lastValidationState.Load()
+	initStatus, ok := v.(common.Hash)
+	if ok == false {
+		return errors.New("get state status failed!"), nil
+	}
+	// initialize state
+	state, err := pool.GetStateInstance(initStatus, db)
+	if err != nil {
+		return err, nil
+	}
+	batch := state.FetchBatch(seqNo)
+	state.MarkProcessStart(pool.tempBlockNumber)
+	// initialize execution environment rule set
+	env := initEnvironment(state, pool.tempBlockNumber)
+	// execute transaction one by one
+	for i, tx := range block.Transactions {
+		state.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
+		receipt, _, _, err := core.ExecTransaction(tx, env)
+		// just ignore invalid transactions
+		if err != nil {
+			log.Warning("invalid transaction found during the state update process in #%d", seqNo)
+			continue
+		}
+		pool.calculateTransactionsFingerprint(tx, false)
+		pool.calculateReceiptFingerprint(receipt, false)
+
+		// different with normal process, because during the state update, block number and seqNo are always same
+		// persist transaction here
+		if err, _ := core.PersistTransaction(batch, tx, pool.conf.TransactionVersion, false, false); err != nil {
+			log.Errorf("persist transaction for index %d in #%d failed.", i, seqNo)
+			continue
+		}
+		// persist transaction meta data
+		meta := &types.TransactionMeta{
+			BlockIndex: seqNo,
+			Index:      int64(i),
+		}
+		if err := core.PersistTransactionMeta(batch, meta, tx.GetTransactionHash(), false, false); err != nil {
+			log.Errorf("persist transaction meta for index %d in #%d failed.", i, seqNo)
+			continue
+		}
+		// persist receipt
+		if err, _ := core.PersistReceipt(batch, receipt, pool.conf.TransactionVersion, false, false); err != nil {
+			log.Errorf("persist receipt for index %d in #%d failed.", i, seqNo)
+			continue
+		}
+	}
+	// submit validation result
+	err, merkleRoot, txRoot, receiptRoot := pool.submitValidationResult(state, batch)
+	if err != nil {
+		log.Error("submit validation result failed.", err.Error())
+		return err, nil
+	}
+	// generate new state fingerprint
+	// IMPORTANT doesn't call batch.Write util recv commit event for atomic assurance
+	log.Criticalf("validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
+		pool.tempBlockNumber, seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
+	return nil, &BlockRecord{
+		TxRoot:      txRoot,
+		ReceiptRoot: receiptRoot,
+		MerkleRoot:  merkleRoot,
 	}
 }
 
@@ -478,14 +567,31 @@ func (pool *BlockPool) submitValidationResult(state vm.Database, batch hyperdb.B
 		res, _ = pool.calculateReceiptFingerprint(nil, true)
 		receiptRoot := res.Bytes()
 		// store latest state status
-		// actually it's useless
 		pool.lastValidationState.Store(root)
-		// flush content in batch to disk immediately
 		batch.Write()
 		return nil, merkleRoot, txRoot, receiptRoot
 	}
 	return errors.New("miss state type"), nil, nil, nil
 }
-func (pool *BlockPool) debug(tx *types.Transaction) {
-	log.Errorf("debug debug %p", tx)
+
+// SubmitForStateUpdate - submit all changes in `state update` process
+func (pool *BlockPool) SubmitForStateUpdate(seqNo uint64) error {
+	switch pool.conf.StateType {
+	case "rawstate":
+
+	case "hyperstate":
+		db, err := hyperdb.GetLDBDatabase()
+		if err != nil {
+			log.Error("get database handler failed.")
+			return err
+		}
+		state, _ := pool.GetStateInstance(common.Hash{}, db)
+		batch := state.FetchBatch(seqNo)
+		batch.Write()
+		state.MarkProcessFinish(seqNo)
+		return nil
+	default:
+		return nil
+	}
+	return nil
 }

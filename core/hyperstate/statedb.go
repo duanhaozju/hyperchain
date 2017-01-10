@@ -226,6 +226,8 @@ func (self *StateDB) FetchBatch(seqNo uint64) hyperdb.Batch {
 		return batch
 	}
 }
+
+
 // DeleteBatch - delete a batch handler in cache with correspondent seqNo
 // avoid memory leak.
 func (self *StateDB) DeleteBatch(seqNo uint64) {
