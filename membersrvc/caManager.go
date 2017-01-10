@@ -190,3 +190,6 @@ func (caManager *CAManager)  GetRCAcertByte() []byte{
 func (caManager *CAManager)  GetECAPrivateKeyByte() []byte{
 	return caManager.ecertPrivateKeyByte
 }
+func (caManager *CAManager) GetECertPrivateKey()(interface{}){
+	return caManager.ecertPrivateKey
+}

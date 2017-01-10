@@ -4,7 +4,7 @@ package main
 #cgo CFLAGS : -I./include
 #cgo LDFLAGS: -L./lib -lsydapi
 
-#include "sydapi.h"
+#include "./include/sydapi.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -17,6 +17,7 @@ import ("fmt"
 
 func main() {
 	//int SYD_Connect(char* sIp,int nPort,char* sPwdStr,int nTimeOut,int* pSocketFd);
+	const bufferLength = 140
 	cSsIP := C.CString("122.224.86.107")
 	defer C.free(unsafe.Pointer(cSsIP))
 	cInPort := C.int(8889)
@@ -31,7 +32,8 @@ func main() {
 		fmt.Println("连接失败")
 		return
 	}
-	fmt.Println("连接成功")
+
+	fmt.Println("连接成功,code",socket)
 	fmt.Println("链接句柄为",cIpSocketFd);
 
 	/*
@@ -51,21 +53,21 @@ func main() {
 	//     printf("%c",*(csPrikey+i))
 	// }
 
-	cSPriKey := (*C.uchar)(C.malloc(256))
+	cSPriKey := (*C.uchar)(C.malloc(bufferLength))
 	//defer C.free(unsafe.Pointer(&cSPriKey))
 
-	cIPriKeyLen := C.int(256)
+	cIPriKeyLen := C.int(bufferLength)
 
 	//var cSPubKey C.uchar
 	//defer C.free(unsafe.Pointer(&cSPubKey))
-	cSPubKey := (*C.uchar)(C.malloc(256))
-	cIPubKeyLen := C.int(256)
+	cSPubKey := (*C.uchar)(C.malloc(bufferLength))
+	cIPubKeyLen := C.int(bufferLength)
 
 
 	GenKeyPairResult := C.SYD_SM2_GenKeyPair(cIpSocketFd,cSPriKey,&cIPriKeyLen,cSPubKey,&cIPubKeyLen)
 
 	if GenKeyPairResult != 0{
-		fmt.Println("生成key pair 失败")
+		fmt.Println("生成key pair 失败,code",GenKeyPairResult)
 	}
 
 
@@ -110,10 +112,10 @@ func main() {
 	//私钥
 	//000100004935DA27518B6DF45ABC60C36D06C0021E8B3227538E419DCEB5A2995FC4E9CB0000000000000000000000000000000000000000000000000000000000000000
 	my_privkey := "000100004935DA27518B6DF45ABC60C36D06C0021E8B3227538E419DCEB5A2995FC4E9CB0000000000000000000000000000000000000000000000000000000000000000"
-	my_privkeyLen := 136
+	my_privkeyLen := bufferLength
 	my_orgDataType := 1 // 输入的数据类型,0:HASH 值,1:原始数据
 	my_pubkey := "03420004523DB72CD84691890F709AF5532DDAC9BC904E64561DD63A71C4DE19ABDE2B7A0A594BE43A4C43078BA7A7170AC71C2B0944A6766AB13E31F2C392CA425CAE11"
-	my_pubkeyLen := 136
+	my_pubkeyLen := bufferLength
 	my_orgData := "origindata"
 	my_orgDataSize := len(my_orgData)
 
@@ -135,7 +137,7 @@ func main() {
 	SignRet := C.SYD_SM2_Sign(cIpSocketFd,pMyPrivKey,*nMyPrivkeyLen2,nMyorgDataType,pMyPubKey,nMyPubkeyLen,pMyOrgData,nMyOrgDataSize,pSignData,&pSignDataSize)
 
 	if SignRet != 0{
-		fmt.Println("签名失败")
+		fmt.Println("签名失败,code: ", SignRet)
 	}
 
 	fmt.Println("签名：")
@@ -158,7 +160,7 @@ func main() {
 	pHash := (*C.uchar)(C.malloc(512))
 	hashRet := C.SYD_SM3_Hash(cIpSocketFd,pMyPubKey,nMyPubkeyLen,pMyOrgData,nMyOrgDataSize,pHash)
 	if hashRet != 0{
-		fmt.Println("hash失败")
+		fmt.Println("hash失败, code ",hashRet)
 	}
 	fmt.Println("hash：")
 	//IMPORTANT convert unsigned char* to  char*
@@ -191,7 +193,7 @@ func main() {
 	sessionRet := C.SYD_SM2_GenSessionKey(cIpSocketFd,pMyPubKey,nMyPubkeyLen,pCipherKey,&pCipherKeyLen,pSessionKey,&pSessionKeyLen,pKCV)
 
 	if sessionRet != 0{
-		fmt.Println("sessionKey gen失败")
+		fmt.Println("sessionKey gen失败,code ",sessionRet)
 	}
 	fmt.Println("session key：")
 
@@ -227,7 +229,7 @@ func main() {
 
 
 	if confirmSessionRet != 0{
-		fmt.Println("confirmSessionKey gen失败")
+		fmt.Println("confirmSessionKey gen失败,code: ",confirmSessionRet)
 	}
 	fmt.Println("confirmSession key：")
 
@@ -265,7 +267,7 @@ func main() {
 	encDataRet := C.SYD_SM4_Encrypt_Data(cIpSocketFd,pSessionKey,pInData,nInDataSize,pOutData,&pOutDataSize);
 
 	if encDataRet != 0{
-		fmt.Println("enc data 失败")
+		fmt.Println("enc data 失败,code: ",encDataRet)
 	}
 
 	encData := C.GoBytes(unsafe.Pointer(pOutData),pOutDataSize)
@@ -293,7 +295,7 @@ func main() {
 	decDataRet := C.SYD_SM4_Decrypt_Data(cIpSocketFd,pSessionKey,pOutData,nInDataSize,pOutDataAgain,&pOutDataSizeAgain);
 
 	if decDataRet != 0{
-		fmt.Println("dec data 失败")
+		fmt.Println("dec data 失败,code ", decDataRet)
 	}
 
 	decData := C.GoBytes(unsafe.Pointer(pOutDataAgain),pOutDataSizeAgain)
