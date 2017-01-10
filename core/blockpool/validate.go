@@ -450,7 +450,9 @@ func (pool *BlockPool) submitValidationResult(state vm.Database, batch hyperdb.B
 	switch  pool.conf.StateType {
 	case "hyperstate":
 		// flush all state change
+		start_time := time.Now()
 		root, err := state.Commit()
+		log.Criticalf("submitValidationResult state.Commit() cost time is",time.Since(start_time))
 		state.Reset()
 		if err != nil {
 			log.Error("Commit state db failed! error msg, ", err.Error())

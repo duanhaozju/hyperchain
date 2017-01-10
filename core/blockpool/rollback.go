@@ -201,6 +201,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 		// revert state bucket tree
 		tree := state.GetTree()
 		bucketTree := tree.(*bucket.BucketTree)
+		bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.bucketTreeConf.StorageSize, pool.bucketTreeConf.StorageLevelGroup))
 		bucketTree.RevertToTargetBlock(big.NewInt(currentNumber), big.NewInt(targetNumber))
 		currentRootHash, err := bucketTree.ComputeCryptoHash()
 		if err != nil {

@@ -513,9 +513,11 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 
 	// If we have not reached the sequence number, check to see if we can reach it without state transfer
 	// In general, executions are better than state transfer
+	logger.Noticef("Replica %d now enter canExecute", pbft.id)
 	if speculativeLastExec < cp.SequenceNumber {
 		if speculativeLastExec < cp.SequenceNumber {
 			if pbft.canExecuteToTarget(speculativeLastExec, cp) {
+				logger.Noticef("Replica %d find canExecute true", pbft.id)
 				return nil
 			}
 		}

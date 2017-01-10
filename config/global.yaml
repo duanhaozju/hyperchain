@@ -38,7 +38,7 @@ global:
 # configs
 ############################
     configs:
-        peers: "config/local_peerconfig.json"
+        peers: "config/peerconfig.json"
         genesis: "config/genesis.json"
         membersrvc: "config/membersrvc.yaml"
         pbft: "config/pbft.yaml"
@@ -54,11 +54,11 @@ global:
             contractFillRate: 0.5ms
         buckettree:
             state:
-                size: 19
+                size: 10009
                 levelGroup: 10
                 cacheSize: 10    # 10 MB
             storage:
-                size: 19
+                size: 10009
                 levelGroup: 10
                 cacheSize: 10   # 10 MB
         hmpublickey:

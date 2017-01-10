@@ -130,7 +130,7 @@ func (bucketTree *BucketTree) ComputeCryptoHash() ([]byte, error) {
 			return nil, err
 		}
 		if(bucketTree.treePrefix != "-bucket=state"){
-			log.Criticalf("bucketTree.processDataNodeDelta cost time is ",time.Since(start_time))
+			log.Debugf("bucketTree.processDataNodeDelta cost time is ",time.Since(start_time))
 		}
 		start_time = time.Now()
 		err = bucketTree.processBucketTreeDelta()
@@ -138,13 +138,15 @@ func (bucketTree *BucketTree) ComputeCryptoHash() ([]byte, error) {
 			return nil, err
 		}
 		if(bucketTree.treePrefix != "-bucket=state"){
-			log.Criticalf("bucketTree.processBucketTreeDelta cost time is ",time.Since(start_time))
+			log.Debugf("bucketTree.processBucketTreeDelta cost time is ",time.Since(start_time))
 		}
 		bucketTree.lastComputedCryptoHash = bucketTree.computeRootNodeCryptoHash()
 		bucketTree.recomputeCryptoHash = false
 	} else {
 		log.Debug("Returing existing crypto-hash as recomputation not required")
 	}
+	log.Criticalf("lastComputedCryptoHash is ",common.Bytes2Hex(bucketTree.lastComputedCryptoHash))
+	log.Criticalf("persistedStateHash is ",common.Bytes2Hex(bucketTree.persistedStateHash))
 	return bucketTree.lastComputedCryptoHash, nil
 }
 
@@ -505,6 +507,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 			logger.Error("test blockNum is ",i,"error is ",err.Error())
 		}
 	}*/
+
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
 	bucketTree.bucketCache.isEnabled = true
