@@ -11,12 +11,14 @@ import (
 	"math/big"
 	"hyperchain/common"
 	"strconv"
+	"fmt"
 )
 var (
 	log = logging.MustGetLogger("bucket_test")
 )
 func init(){
 }
+
 func TestState_GetHash(t *testing.T){
 	state := bucket_test.NewState("TestState_GetHash")
 	key_valueMap := make(bucket.K_VMap)

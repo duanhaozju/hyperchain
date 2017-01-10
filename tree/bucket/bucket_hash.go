@@ -2,6 +2,7 @@ package bucket
 
 import (
 	"github.com/golang/protobuf/proto"
+	"crypto/sha1"
 )
 
 type bucketHashCalculator struct {
@@ -17,26 +18,17 @@ func newBucketHashCalculator(bucketKey *BucketKey) *bucketHashCalculator {
 
 // addNextNode - this method assumes that the datanodes are added in the increasing order of the keys
 func (c *bucketHashCalculator) addNextNode(dataNode *DataNode) {
-	chaincodeID, _ := dataNode.getKeyElements()
-	if chaincodeID != c.currentChaincodeID {
-		c.appendCurrentChaincodeData()
-		c.currentChaincodeID = chaincodeID
-		c.dataNodes = nil
-	}
-	c.dataNodes = append(c.dataNodes, dataNode)
+	c.hashingData = append(c.hashingData,append(dataNode.getCompositeKey(),dataNode.getValue()...)...)
 }
 
 func (c *bucketHashCalculator) computeCryptoHash() []byte {
-	if c.currentChaincodeID != "" {
-		c.appendCurrentChaincodeData()
-		c.currentChaincodeID = ""
-		// TODO
-		c.dataNodes = nil
-	}
 	if c.hashingData == nil {
 		return nil
 	}
-	return ComputeCryptoHash(c.hashingData)
+	h := sha1.New()
+	h.Write([]byte(c.hashingData))
+	bs := h.Sum(nil)
+	return bs
 }
 
 func (c *bucketHashCalculator) appendCurrentChaincodeData() {

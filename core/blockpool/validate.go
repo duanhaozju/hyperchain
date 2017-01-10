@@ -19,6 +19,7 @@ import (
 	"hyperchain/common"
 	"errors"
 	"hyperchain/core/vm"
+	"time"
 )
 
 // Validate is an entry of `validate process`
@@ -255,6 +256,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	env := initEnvironment(state, pool.tempBlockNumber)
 	// execute transaction one by one
 	batch := state.FetchBatch(pool.tempBlockNumber)
+	start_time := time.Now()
 	for i, tx := range txs {
 		state.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(tx, env)
@@ -283,8 +285,11 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		receipts = append(receipts, receipt)
 		validtxs = append(validtxs, tx)
 	}
+	log.Criticalf("ProcessBlockInVm Exec txs ",len(txs),"cost time is",time.Since(start_time))
 	// submit validation result
+	start_time = time.Now()
 	err, merkleRoot, txRoot, receiptRoot := pool.submitValidationResult(state, batch)
+	log.Criticalf("ProcessBlockInVm submitValidationResult ",len(txs),"cost time is",time.Since(start_time))
 	if err != nil {
 		log.Error("Commit state db failed! error msg, ", err.Error())
 		return err, &BlockRecord{
@@ -534,7 +539,9 @@ func (pool *BlockPool) submitValidationResult(state vm.Database, batch hyperdb.B
 	switch  pool.conf.StateType {
 	case "hyperstate":
 		// flush all state change
+		start_time := time.Now()
 		root, err := state.Commit()
+		log.Criticalf("submitValidationResult state.Commit() cost time is",time.Since(start_time))
 		state.Reset()
 		if err != nil {
 			log.Error("Commit state db failed! error msg, ", err.Error())
