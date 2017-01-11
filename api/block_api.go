@@ -154,7 +154,7 @@ func getBlockByNumber(n BlockNumber, db hyperdb.Database) (*BlockResult, error) 
 }
 
 // GetBlockByNumber returns the bolck for the given block time duration.
-func getBlocksByTime(startTime,endTime int64, db hyperdb.Database)(sumOfBlocks uint64,startBlock,endBlock *BlockNumber){
+func getBlocksByTime(startTime,endTime int64, db *hyperdb.LDBDatabase)(sumOfBlocks uint64,startBlock,endBlock *BlockNumber){
 	currentChain := core.GetChainCopy()
 	height := currentChain.Height
 
