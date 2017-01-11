@@ -11,6 +11,7 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/event"
 	"hyperchain/recovery"
+	"hyperchain/membersrvc"
 )
 
 // Init the log setting
@@ -27,7 +28,7 @@ type PeerManager interface {
 	MsgSender
 	InfoGetter
 	// initialize the peerManager which is for init the local node
-	Start(aliveChain chan int, eventMux *event.TypeMux)
+	Start(aliveChain chan int, eventMux *event.TypeMux,cm *membersrvc.CAManager)
 }
 
 // MsgSender Send msg to others peer

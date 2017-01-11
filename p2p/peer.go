@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 	"hyperchain/membersrvc"
-	"hyperchain/core/crypto/primitives"
 	//"fmt"
 )
 
@@ -32,6 +31,7 @@ type Peer struct {
 	IsPrimary  bool
 	//PeerPool   PeersPool
 	Certificate string
+	CM *membersrvc.CAManager
 
 }
 
@@ -41,10 +41,11 @@ type Peer struct {
 // if get a response, save the peer into singleton peer pool instance
 // NewPeer 用于返回一个新的NewPeer 用于与远端的peer建立连接，这个peer将会存储在peerPool中
 // 如果取得相应的连接返回值，将会将peer存储在单例的PeersPool中进行存储
-func NewPeer(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport.TransportEncryptManager) (*Peer, error){
+func NewPeer(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport.TransportEncryptManager,cm *membersrvc.CAManager) (*Peer, error){
 	//log.Critical(peerAddr,localAddr,TEM)
 	var peer Peer
 	peer.TEM = TEM
+	peer.CM = cm
 	//log.Critical("TEM",TEM)
 	peer.LocalAddr = localAddr
 	peer.PeerAddr = peerAddr
@@ -72,24 +73,23 @@ func NewPeer(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport.Transpor
 // handShake connect to remote peer, and negotiate the secret
 // handShake 用于与相应的远端peer进行通信，并进行密钥协商
 func (peer *Peer) handShake() (err error) {
-
-	eca,getErr1 := primitives.GetConfig("./config/cert/ecert.cert")
-	if getErr1 != nil{
-		log.Error("cannot read ecert.",err)
+	//TODO 首次协商的时候是否需要带上消息签名
+	/**
+		signature := pb.Signature{
+		Ecert:peer.CM.GetECertByte(),
+		Rcert:peer.CM.GetRCertByte(),
+		Signature: 这里需要对hyperchain这个字符串进行签名
 	}
-	ecertBtye := []byte(eca)
-
-	rca,getErr2 := primitives.GetConfig("./config/cert/rcert.cert")
-	if getErr2 != nil{
-		log.Error("cannot read rcert.",err)
+	传到node.go端后，
+	case hello:{
+		verifySignature(signature)
 	}
-	rcertByte := []byte(rca)
+	 */
 
 	signature := pb.Signature{
-		Ecert:ecertBtye,
-		Rcert:rcertByte,
+		Ecert:peer.CM.GetECertByte(),
+		Rcert:peer.CM.GetRCertByte(),
 	}
-
 
 	//review start exchange the secret
 	helloMessage := pb.Message{
@@ -100,11 +100,7 @@ func (peer *Peer) handShake() (err error) {
 		Signature: &signature,
 	}
 
-	//log.Notice("publickey",peer.TEM.GetLocalPublicKey())
-
 	retMessage, err := peer.Client.Chat(context.Background(), &helloMessage)
-
-	//retMessage.Signature.Ecert
 
 	if err != nil {
 		log.Error("cannot establish a connection",err)

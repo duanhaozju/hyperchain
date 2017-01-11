@@ -276,7 +276,7 @@ func createCertByCa(ca *x509.Certificate,private interface{}) ([]byte, interface
 	return cert, privKey, nil
 }
 
-func GenTcert(ca *x509.Certificate,privatekey interface{},publicKey interface{})([]byte,error){
+func GenTCert(ca *x509.Certificate,privatekey interface{},publicKey interface{})([]byte,error){
 	return generTcert(ca,privatekey,publicKey)
 }
 

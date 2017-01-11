@@ -4,6 +4,7 @@ import (
 	"hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"
+	"sync/atomic"
 )
 
 // New replica receive local NewNode message
@@ -275,7 +276,7 @@ func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) error {
 		return nil
 	}
 
-	if !pbft.activeView {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
 		logger.Warningf("Primary %d is in view change, reject the ready_for_n message", pbft.id)
 		return nil
 	}
@@ -326,7 +327,7 @@ func (pbft *pbftProtocal) sendUpdateNforDel(key string, routerHash string) {
 
 	logger.Debugf("Replica %d try to send update_n after finish del node", pbft.id)
 
-	if !pbft.activeView {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
 		logger.Warningf("Primary %d is in view change, reject the ready_for_n message", pbft.id)
 		return
 	}
@@ -377,7 +378,7 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 
 	logger.Debugf("Replica %d received updateN message from %d", pbft.id, update.ReplicaId)
 
-	if !pbft.activeView {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
 		logger.Warningf("Replica %d is in view change, reject the update_n message", pbft.id)
 		return nil
 	}

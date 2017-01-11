@@ -19,6 +19,7 @@ import (
 	"hyperchain/crypto"
 	"hyperchain/common"
 	"math"
+	"hyperchain/membersrvc"
 )
 
 const MAX_PEER_NUM = 4
@@ -34,6 +35,7 @@ type GrpcPeerManager struct {
 	IsOnline   bool
 	//interducer information
 	Introducer *pb.PeerAddr
+	CM *membersrvc.CAManager
 
 }
 
@@ -49,20 +51,20 @@ func NewGrpcManager(conf *common.Config) *GrpcPeerManager {
 	//get the maxpeer from config
 	newgRPCManager.IsOriginal = config.IsOrigin()
 	newgRPCManager.Introducer = pb.NewPeerAddr(config.GetIntroducerIP(),config.GetIntroducerPort(),config.GetIntroducerJSONRPCPort(),config.GetIntroducerID())
-	//HSM only instanced once, so peersPool and Node Hsm are same instance
-
-	//handshakemanager
-	newgRPCManager.TEM = transport.NewHandShakeMangerNew();
 	return &newgRPCManager
 }
 
 // Start start the Normal local listen server
-func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux) {
+func (this *GrpcPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,cm *membersrvc.CAManager) {
 	if this.LocalAddr.ID == 0 || this.configs == nil {
 		panic("the PeerManager hasn't initlized")
 	}
-	this.peersPool = NewPeerPoolIml(this.TEM,this.LocalAddr)
-	this.LocalNode = NewNode(this.LocalAddr,eventMux,this.TEM, this.peersPool)
+	this.CM = cm
+	//handshakemanager
+	//HSM only instanced once, so peersPool and Node Hsm are same instance
+	this.TEM = transport.NewHandShakeMangerNew(this.CM);
+	this.peersPool = NewPeerPoolIml(this.TEM,this.LocalAddr,this.CM)
+	this.LocalNode = NewNode(this.LocalAddr,eventMux,this.TEM, this.peersPool,this.CM)
 	this.LocalNode.StartServer()
 	this.LocalNode.N = MAX_PEER_NUM
 	// connect to peer
@@ -107,7 +109,7 @@ func (this *GrpcPeerManager)ConnectToOthers() {
 
 func (this *GrpcPeerManager) connectToIntroducer( introducerAddress pb.PeerAddr) {
 	//连接介绍人,并且将其路由表取回,然后进行存储
-	peer, peerErr := NewPeer(&introducerAddress,this.LocalAddr,this.TEM)
+	peer, peerErr := NewPeer(&introducerAddress,this.LocalAddr,this.TEM,this.CM)
 	//将介绍人的信息放入路由表中
 	this.peersPool.PutPeer(*peer.PeerAddr,peer)
 	if peerErr != nil {
@@ -231,7 +233,7 @@ func (this *GrpcPeerManager) connectToPeer(peerAddress *pb.PeerAddr, nid int) (*
 	//if isReconnect {
 	//	peer, peerErr = NewPeerReconnect(peerAddress,this.LocalAddr,this.TEM)
 	//} else {
-	peer, peerErr = NewPeer(peerAddress,this.LocalAddr,this.TEM)
+	peer, peerErr = NewPeer(peerAddress,this.LocalAddr,this.TEM,this.CM)
 	//}
 
 	if peerErr != nil {
@@ -436,7 +438,7 @@ func (this *GrpcPeerManager) UpdateRoutingTable(payload []byte) {
 	//新节点peer
 	//newPeer := this.peersPool.tempPeers[this.peersPool.tempPeerKeys[toUpdateAddress]]
 	log.Debugf("hash: %v",toUpdateAddress )
-	newPeer, err := NewPeer(pb.RecoverPeerAddr(&toUpdateAddress),this.LocalAddr, this.TEM)
+	newPeer, err := NewPeer(pb.RecoverPeerAddr(&toUpdateAddress),this.LocalAddr, this.TEM,this.CM)
 	if err != nil {
 		log.Error(err)
 	}

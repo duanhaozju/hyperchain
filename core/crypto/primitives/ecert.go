@@ -30,33 +30,43 @@ func GetConfig(path string) (string,error){
 }
 
 //解析证书
-func ParseCertificate(ECert string) (*x509.Certificate,error){
-	block,_ := pem.Decode([]byte(ECert))
+func ParseCertificate(cert string) (*x509.Certificate,error){
+	block,_ := pem.Decode([]byte(cert))
 
 	if block==nil {
 		fmt.Println("failed to parse certificate PEM")
 		return nil,errors.New("failed to parse certificate PEM")
 	}
 
-	cert,err := x509.ParseCertificate(block.Bytes)
+	x509Cert,err := x509.ParseCertificate(block.Bytes)
 
 	if err!=nil{
 		fmt.Println("faile to parse certificate")
 		return nil,errors.New("faile to parse certificate")
 	}
 
-	return cert,nil
+	return x509Cert,nil
 }
 
 //验证证书中的签名
-func VerifySignature(cert *x509.Certificate,ca *x509.Certificate) bool{
-
+func VerifyCert(cert *x509.Certificate,ca *x509.Certificate) (bool,error){
 	err:=cert.CheckSignatureFrom(ca)
-	if err==nil{
-		return true
-	}else {
-		return false
+
+	if err!=nil{
+		log.Error("verified the cert failed",err)
+		return false,err
 	}
+	return true,nil
+
+}
+//验证证书的来源
+func VerifySignature(cert *x509.Certificate,signed string, signature string)(bool,error){
+	err := cert.CheckSignature(x509.ECDSAWithSHA256,[]byte(signed),[]byte(signature))
+	if err!=nil{
+		log.Error("verified the cert failed",err)
+		return false,err
+	}
+	return true,nil
 }
 
 
@@ -75,6 +85,14 @@ func ParseKey(derPri string)(interface{},error){
 
 func ParsePubKey(pubstr string)(interface{},error){
 	//todo finish the public key parse
-	return nil,nil
+
+	block,_ := pem.Decode([]byte(pubstr))
+
+	pub,err := DERToPublicKey(block.Bytes)
+
+	if err!=nil{
+		return nil,err
+	}
+	return pub,nil
 
 }

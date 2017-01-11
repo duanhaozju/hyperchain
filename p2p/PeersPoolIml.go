@@ -7,6 +7,7 @@ import (
 	"sort"
 	"google.golang.org/grpc"
 	"hyperchain/p2p/peerComm"
+	"hyperchain/membersrvc"
 )
 
 type PeersPoolIml struct {
@@ -19,13 +20,14 @@ type PeersPoolIml struct {
 	TEM          transport.TransportEncryptManager
 	alivePeers   int
 	localAddr    *pb.PeerAddr
+	CM *membersrvc.CAManager
 }
 
 // the peers pool instance
 //var prPoolIns PeersPool
 
 // NewPeerPool get a new peer pool instance
-func NewPeerPoolIml(TEM transport.TransportEncryptManager,localAddr *pb.PeerAddr) *PeersPoolIml {
+func NewPeerPoolIml(TEM transport.TransportEncryptManager,localAddr *pb.PeerAddr,cm *membersrvc.CAManager) *PeersPoolIml {
 	var newPrPoolIns PeersPoolIml
 	newPrPoolIns.peers = make(map[string]*Peer)
 	newPrPoolIns.peerAddr = make(map[string]pb.PeerAddr)
@@ -35,6 +37,7 @@ func NewPeerPoolIml(TEM transport.TransportEncryptManager,localAddr *pb.PeerAddr
 	newPrPoolIns.tempPeerAddr = make(map[string]pb.PeerAddr)
 	newPrPoolIns.tempPeerKeys = make(map[pb.PeerAddr]string)
 	newPrPoolIns.TEM = TEM
+	newPrPoolIns.CM = cm
 	newPrPoolIns.alivePeers = 0
 	return &newPrPoolIns
 }
@@ -177,7 +180,7 @@ func (this *PeersPoolIml)ToRoutingTableWithout(hash string)pb.Routers{
 func (this *PeersPoolIml)MergeFromRoutersToTemp(routers pb.Routers) {
 	for _, peerAddress := range routers.Routers {
 		peerAddr := pb.RecoverPeerAddr(peerAddress)
-		newPeer, err := NewPeer(peerAddr,this.localAddr,this.TEM)
+		newPeer, err := NewPeer(peerAddr,this.localAddr,this.TEM,this.CM)
 		if err != nil {
 			log.Error("merge from routers error ", err)
 		}

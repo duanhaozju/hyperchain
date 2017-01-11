@@ -21,6 +21,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"errors"
+	"hyperchain/membersrvc"
 )
 
 type HandShakeManagerNew struct {
@@ -34,7 +35,7 @@ type HandShakeManagerNew struct {
  }
 
 //---------------------------------ECDH-------------------------------------------
-func NewHandShakeMangerNew() *HandShakeManagerNew {
+func NewHandShakeMangerNew(cm *membersrvc.CAManager) *HandShakeManagerNew {
 	var hSMN HandShakeManagerNew
 	hSMN.secrets = make(map[string][]byte)
 	hSMN.signPublickey = make(map[string]crypto.PublicKey)

@@ -51,6 +51,10 @@ global:
             txFillRate: 0.5ms
             contractRatePeak : 100
             contractFillRate: 0.5ms
+        hmpublickey:
+            "N": "14315727801779002117"
+            Nsquare: "204940062494628260128356353732290481689"
+            G: "90976693534933209671098397317966944738726332459523400324197777885595356310417"
 
 ######################################################
 # config log's level by module                       #
@@ -61,7 +65,10 @@ global:
 ######################################################
     logs:
         # dump the log file or not
-        dumpfile: false
+        dumpfile: true
+        newLogFileInterval: 24h  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+                                # such as "300ms", "2h45m".
+
         logsdir: "./build/logs"
         # default loglevel for all modules which can be override by module level log setting
         loglevel: "NOTICE"
@@ -72,4 +79,3 @@ global:
             consensus: "NOTICE"
             core: "NOTICE"
             hyperdb: "WARNING"
-
