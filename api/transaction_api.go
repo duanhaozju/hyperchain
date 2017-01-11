@@ -100,14 +100,14 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs,error) {
 	if (txType == 0 || txType == 2) && args.To == nil {
 		return SendTxArgs{}, &invalidParamsError{"address 'to' is invalid"}
 	}
-	if args.Timestamp == 0 || (5*int64(time.Minute)+time.Now().UnixNano()) < args.Timestamp {
+	if args.Timestamp <= 0 || (5*int64(time.Minute)+time.Now().UnixNano()) < args.Timestamp {
 		return SendTxArgs{}, &invalidParamsError{"'timestamp' is invalid"}
 	}
 	if txType != 3 && args.Signature == "" {
 		return SendTxArgs{}, &invalidParamsError{"'signature' can't be empty"}
 	}
-	if args.Nonce == 0 {
-		return SendTxArgs{}, &invalidParamsError{"'nonce' can't be empty"}
+	if args.Nonce <= 0 {
+		return SendTxArgs{}, &invalidParamsError{"'nonce' is invalid"}
 	}
 	return args, nil
 }
