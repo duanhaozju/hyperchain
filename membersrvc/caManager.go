@@ -5,6 +5,7 @@ import (
 	"hyperchain/core/crypto/primitives"
 	"github.com/pkg/errors"
 	"io/ioutil"
+	"crypto/ecdsa"
 )
 
 type CAManager struct {
@@ -173,6 +174,26 @@ func (caManager *CAManager) VerifyECert(ecertPEM string)(bool,error){
 		return false,err
 	}
 	return true,nil
+}
+
+func (ca *CAManager) VerifyECertSignature(ecertPEM string,msg,sign []byte)(bool,error){
+	ecertToVerify,err := primitives.ParseCertificate(ecertPEM)
+	if err != nil {
+		log.Error("cannot parse the ecert",err)
+		return false,err
+	}
+	ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
+
+
+	key := ecertToVerify.PublicKey.(*(ecdsa.PublicKey))
+	result,err1 := ecdsaEncry.VerifySign(*key,msg,sign)
+	if(err1 != nil){
+		log.Error("fail to verify signture",err)
+		return false,err1
+	}
+
+	return  result,nil;
+
 }
 
 func (caManager *CAManager) VerifyRCert(rcertPEM string)(bool,error){

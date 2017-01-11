@@ -168,6 +168,13 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		log.Debug(" MSG FROM:",msg.From.ID)
 		log.Debug(" MSG TYPE:",msg.MessageType)
 		log.Debug("#################################")
+	}else {
+		ecertByte := msg.Signature.Ecert
+		bol,err := node.CM.VerifyECertSignature(string(ecertByte),msg.Payload,msg.Signature.Signature);
+		if err != nil{
+			log.Error("cannot verified the ecert signature",bol)
+			return &response, errors.New("signature is wrong!!")
+		}
 	}
 
 
@@ -186,6 +193,10 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 
 			ecertByte := msg.Signature.Ecert
 			rcertByte := msg.Signature.Rcert
+
+			//ecert,_ := primitives.ParseCertificate(string(ecertByte));
+
+
 			verifyEcert,ecertErr := node.CM.VerifyECert(string(ecertByte))
 			verifyRcert,rcertErr := node.CM.VerifyRCert(string(rcertByte))
 
