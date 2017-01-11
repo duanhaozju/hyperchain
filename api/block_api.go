@@ -154,7 +154,7 @@ func getBlockByNumber(n BlockNumber, db hyperdb.Database) (*BlockResult, error) 
 }
 
 // GetBlockByNumber returns the bolck for the given block time duration.
-func getBlocksByTime(startTime,endTime int64, db hyperdb.Database)(sumOfBlocks uint64,startBlock,endBlock *BlockNumber){
+func getBlocksByTime(startTime,endTime int64, db *hyperdb.LDBDatabase)(sumOfBlocks uint64,startBlock,endBlock *BlockNumber){
 	currentChain := core.GetChainCopy()
 	height := currentChain.Height
 
@@ -165,7 +165,9 @@ func getBlocksByTime(startTime,endTime int64, db hyperdb.Database)(sumOfBlocks u
 			continue
 		}
 		if block.WriteTime < startTime {
-			startBlock = NewUint64ToBlockNumber(i+1)
+			if (i != height) {
+				startBlock = NewUint64ToBlockNumber(i+1)
+			}
 			return sumOfBlocks, startBlock, endBlock
 		}
 		if block.WriteTime >= startTime && block.WriteTime <= endTime {
@@ -178,7 +180,6 @@ func getBlocksByTime(startTime,endTime int64, db hyperdb.Database)(sumOfBlocks u
 	if (i != height) {
 		startBlock = NewUint64ToBlockNumber(i+1)
 	}
-
 	return sumOfBlocks,startBlock,endBlock
 }
 
