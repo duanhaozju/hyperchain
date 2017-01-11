@@ -137,6 +137,10 @@ func latestBlock(db hyperdb.Database) (*BlockResult, error) {
 
 	lastestBlkHeight := currentChain.Height
 
+	if (lastestBlkHeight == 0) {
+		return nil, nil
+	}
+
 	return getBlockByNumber(*NewUint64ToBlockNumber(lastestBlkHeight), db)
 }
 
