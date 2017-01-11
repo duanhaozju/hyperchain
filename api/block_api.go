@@ -165,7 +165,9 @@ func getBlocksByTime(startTime,endTime int64, db hyperdb.Database)(sumOfBlocks u
 			continue
 		}
 		if block.WriteTime < startTime {
-			startBlock = NewUint64ToBlockNumber(i+1)
+			if (i != height) {
+				startBlock = NewUint64ToBlockNumber(i+1)
+			}
 			return sumOfBlocks, startBlock, endBlock
 		}
 		if block.WriteTime >= startTime && block.WriteTime <= endTime {
@@ -175,7 +177,9 @@ func getBlocksByTime(startTime,endTime int64, db hyperdb.Database)(sumOfBlocks u
 			}
 		}
 	}
-	startBlock = NewUint64ToBlockNumber(i+1)
+	if (i != height) {
+		startBlock = NewUint64ToBlockNumber(i+1)
+	}
 	return sumOfBlocks,startBlock,endBlock
 }
 
