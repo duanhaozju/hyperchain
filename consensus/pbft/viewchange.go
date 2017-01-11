@@ -34,10 +34,6 @@ func (pbft *pbftProtocal) correctViewChange(vc *ViewChange) bool {
 func (pbft *pbftProtocal) calcPSet() map[uint64]*ViewChange_PQ {
 	pset := make(map[uint64]*ViewChange_PQ)
 
-	for n, p := range pbft.pset {
-		pset[n] = p
-	}
-
 	for idx, cert := range pbft.certStore {
 		if cert.prePrepare == nil {
 			continue
@@ -64,10 +60,6 @@ func (pbft *pbftProtocal) calcPSet() map[uint64]*ViewChange_PQ {
 
 func (pbft *pbftProtocal) calcQSet() map[qidx]*ViewChange_PQ {
 	qset := make(map[qidx]*ViewChange_PQ)
-
-	for n, q := range pbft.qset {
-		qset[n] = q
-	}
 
 	for idx, cert := range pbft.certStore {
 		if cert.prePrepare == nil {
@@ -112,8 +104,8 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 	pbft.view++
 	atomic.StoreUint32(&pbft.activeView, 0)
 
-	pbft.pset = pbft.calcPSet()
-	pbft.qset = pbft.calcQSet()
+	pset := pbft.calcPSet()
+	qset := pbft.calcQSet()
 
 	// clear old messages
 	for idx := range pbft.certStore {
@@ -140,14 +132,14 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 		})
 	}
 
-	for _, p := range pbft.pset {
+	for _, p := range pset {
 		if p.SequenceNumber < pbft.h {
 			logger.Errorf("BUG! Replica %d should not have anything in our pset less than h, found %+v", pbft.id, p)
 		}
 		vc.Pset = append(vc.Pset, p)
 	}
 
-	for _, q := range pbft.qset {
+	for _, q := range qset {
 		if q.SequenceNumber < pbft.h {
 			logger.Errorf("BUG! Replica %d should not have anything in our qset less than h, found %+v", pbft.id, q)
 		}
@@ -666,8 +658,7 @@ func (pbft *pbftProtocal) handleTailInNewView() events.Event {
 			if !ok {
 				logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
 			} else {
-				pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", hash(batch)))
-				pbft.primaryValidateBatch(batch)
+				pbft.primaryValidateBatch(batch, i)
 			}
 		}
 	}

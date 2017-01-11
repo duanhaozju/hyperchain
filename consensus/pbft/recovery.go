@@ -192,6 +192,7 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.stateTransfer(target)
 	} else {
 		pbft.helper.VcReset(n+1)
+		logger.Debugf("Replica %d self StateUpdated, call VcReset", pbft.id)
 	}
 
 	return nil
