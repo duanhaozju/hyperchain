@@ -294,7 +294,7 @@ func TestResetStatus(t *testing.T) {
 	pool.ResetStatus(*ev1)
 	log.Notice("pool 's lastvalidationstate is",pool.lastValidationState)
 
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	statedb, err:= state.New(pool.lastValidationState, db)
 
 	if err != nil {

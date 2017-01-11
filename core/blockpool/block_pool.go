@@ -25,6 +25,8 @@ import (
 	"time"
 	"sort"
 	"errors"
+	"os"
+	"fmt"
 )
 
 var (
@@ -85,7 +87,7 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter, conf B
 	currentChain := core.GetChainCopy()
 	pool.demandNumber = currentChain.Height + 1
 	pool.demandSeqNo = currentChain.Height + 1
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {return nil}
 
 	blk, err := core.GetBlock(db, currentChain.LatestBlockHash)
@@ -290,7 +292,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	var (
 		env = make(map[string]string)
 	)
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err, nil, nil, nil, nil, nil, invalidTxs
 	}
@@ -305,7 +307,22 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	}
 	statedb, err := state.New(initStatus, db)
 
-	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
+	if err != nil&&hyperdb.IfLogStatus() {
+		f, err1 := os.OpenFile(hyperdb.GetLogPath(), os.O_WRONLY|os.O_CREATE, 0644)
+		if err1 != nil {
+			fmt.Println("db.log file create failed. err: " + err.Error())
+		} else {
+
+			n, _ := f.Seek(0, os.SEEK_END)
+			currentTime := time.Now().Local()
+			newFormat := currentTime.Format("2006-01-02 15:04:05.000")
+			str:=newFormat+"block pool 302 the err of statebd :"+err.Error()+"\n"
+			_, err = f.WriteAt([]byte(str), n)
+
+			f.Close()
+		}
+		return err, nil, nil, nil, nil, nil, invalidTxs
+	}
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
 	env["currentGasLimit"] = "10000000"
 	vmenv := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
@@ -479,7 +496,7 @@ func (pool *BlockPool) AddBlock(block *types.Block, commonHash crypto.CommonHash
 func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, primary bool, consenter consensus.Consenter) {
 	core.UpdateChain(block, false)
 
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
 		return
@@ -532,7 +549,7 @@ func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
 	}
 	// save to db
 	log.Notice("invalidTx", common.BytesToHash(invalidTx.Tx.TransactionHash).Hex())
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
 		return
@@ -548,7 +565,7 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	atomic.StoreUint64(&pool.demandSeqNo, ev.SeqNo)
 	atomic.StoreUint64(&pool.maxSeqNo, ev.SeqNo-1)
 
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
 		return
@@ -598,7 +615,7 @@ func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 	fakeBlockNumber := core.GetHeightOfChain()
 	env["currentNumber"] = strconv.FormatUint(fakeBlockNumber, 10)
 	env["currentGasLimit"] = "10000000"
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err
 	}
@@ -654,7 +671,7 @@ func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 }
 
 func (pool *BlockPool) RemoveData(from, to uint64) {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
 		return
@@ -693,7 +710,7 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 	atomic.StoreUint64(&pool.maxSeqNo, number - 1)
 	// 2. remove block releted data
 	pool.RemoveData(number, number + 1)
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
 		return
@@ -705,7 +722,7 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 	}
 	// clear all stuff in block cache and validation cache
 	pool.lastValidationState.Store(common.BytesToHash(block.MerkleRoot))
-	core.UpdateChainByBlcokNum(db, block.Number - 1)
+	core.UpdateChainByBlcokNum(db, block.Number)
 }
 func (pool *BlockPool) PurgeValidateQueue() {
 	pool.validationQueue.Purge()
