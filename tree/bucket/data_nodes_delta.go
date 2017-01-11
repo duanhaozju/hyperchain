@@ -41,7 +41,7 @@ func (dataNodesDelta *dataNodesDelta) add(treePrefix string, key string, value [
 	dataKey := newDataKey(treePrefix, key)
 	bucketKey := dataKey.getBucketKey()
 	dataNode := newDataNode(dataKey, value)
-	log.Debugf("Adding dataNode=[%s] against bucketKey=[%s]", dataNode, bucketKey)
+	//log.Debugf("Adding dataNode=[%s] against bucketKey=[%s]", dataNode, bucketKey)
 	dataNodesDelta.byBucket[*bucketKey] = append(dataNodesDelta.byBucket[*bucketKey], dataNode)
 }
 
@@ -49,10 +49,10 @@ func (dataNodesDelta *dataNodesDelta) getAffectedBuckets() []*BucketKey {
 	changedBuckets := []*BucketKey{}
 	for bucketKey := range dataNodesDelta.byBucket {
 		copyOfBucketKey := bucketKey.clone()
-		log.Debugf("Adding changed bucket [%s]", copyOfBucketKey)
+		//log.Debugf("Adding changed bucket [%s]", copyOfBucketKey)
 		changedBuckets = append(changedBuckets, copyOfBucketKey)
 	}
-	log.Debugf("Changed buckets are = [%s]", changedBuckets)
+	//log.Debugf("Changed buckets are = [%s]", changedBuckets)
 	return changedBuckets
 }
 

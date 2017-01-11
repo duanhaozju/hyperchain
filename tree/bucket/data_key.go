@@ -9,14 +9,12 @@ type DataKey struct {
 	compositeKey []byte
 }
 func newDataKey(treePrefix string, key string) *DataKey {
-	log.Debugf("Enter - newDataKey. accontID=[%s], key=[%s]", treePrefix, key)
 	compositeKey := ConstructCompositeKey(treePrefix, key)
 	// TODO hash can be replaced
 	bucketHash := conf.computeBucketHash(compositeKey)
 	// Adding one because - we start bucket-numbers 1 onwards
 	bucketNumber := int(bucketHash)%conf.getNumBucketsAtLowestLevel() + 1
 	dataKey := &DataKey{newBucketKeyAtLowestLevel(bucketNumber), compositeKey}
-	log.Debugf("Exit - newDataKey=[%s]", dataKey)
 	return dataKey
 }
 
