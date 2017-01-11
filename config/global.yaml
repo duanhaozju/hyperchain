@@ -54,13 +54,13 @@ global:
             contractFillRate: 0.5ms
         buckettree:
             state:
-                size: 10009
-                levelGroup: 10
-                cacheSize: 10    # 10 MB
+                size: 100009
+                levelGroup: 20
+                cacheSize: 100    # 10 MB
             storage:
-                size: 10009
-                levelGroup: 10
-                cacheSize: 10   # 10 MB
+                size: 100009
+                levelGroup: 20
+                cacheSize: 100   # 10 MB
         hmpublickey:
             "N": "14315727801779002117"
             Nsquare: "204940062494628260128356353732290481689"
