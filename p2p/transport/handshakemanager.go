@@ -9,13 +9,10 @@ package transport
 import (
 	"crypto/elliptic"
 	//"github.com/op/go-logging"
-
 	"crypto"
 	//"crypto/aes"
-	"crypto/rand"
 	"encoding/hex"
 	"hyperchain/p2p/transport/ecdh"
-	"hyperchain/core/crypto/primitives"
 	//"crypto/aes"
 	"crypto/ecdsa"
 	"crypto/aes"
