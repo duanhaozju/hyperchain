@@ -111,7 +111,8 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	}
 	pbft.rcRspStore[from] = rsp
 
-	if len(pbft.rcRspStore) <= pbft.N-pbft.f {
+	if len(pbft.rcRspStore) <= 2 * pbft.f + 1 {
+		// Reason for not using '≤ pbft.N-pbft.f': if N==5, we are require more than we need
 		logger.Debugf("Replica %d recv recoveryRsp from replica %d, rsp count: %d, not " +
 			"beyond %d", pbft.id, rsp.ReplicaId, len(pbft.rcRspStore), pbft.N-pbft.f)
 		return nil
@@ -231,7 +232,7 @@ func (pbft *pbftProtocal) findHighestChkptQuorum() (n uint64, d string, replicas
 	// In this case, others will move watermarks sooner or later.
 	// Hopefully, we find only one chkpt which reaches 2f+1 and this chkpt is their pbft.h
 	for ci, peers := range chkpts {
-		if len(peers) >= 2*pbft.f+1 {
+		if len(peers) >= pbft.minimumCorrectQuorum() {
 			find = true
 			if ci.n >= n {
 				if ci.n > n {
@@ -268,7 +269,7 @@ func (pbft *pbftProtocal) findLastExecQuorum() (lastExec uint64, hash string, fi
 			lastExecs[idx] = replicas
 		}
 
-		if len(lastExecs[idx]) >= 2*pbft.f+1 {
+		if len(lastExecs[idx]) >= pbft.minimumCorrectQuorum() {
 			lastExec = idx.height
 			hash = idx.hash
 			find = true

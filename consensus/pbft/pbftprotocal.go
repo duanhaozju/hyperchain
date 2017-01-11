@@ -2283,7 +2283,8 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Eve
 
 	pbft.negoViewRspStore[rspId] = rspView
 
-	if len(pbft.negoViewRspStore) > pbft.N-pbft.f {
+	if len(pbft.negoViewRspStore) > 2 * pbft.f + 1 {
+		// Reason for not using '> pbft.N-pbft.f': if N==5, we are require more than we need
 		// Reason for not using '≥ pbft.N-pbft.f': if self is wrong, then we are impossible to find 2f+1 same view
 		// can we find same view from 2f+1 peers?
 		viewCount := make(map[uint64]uint64)
@@ -2310,7 +2311,7 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Eve
 				atomic.StoreUint32(&pbft.activeView, 1)
 			}
 			return negoViewDoneEvent{}
-		} else {
+		} else if len(pbft.negoViewRspStore) >= 2*pbft.f + 2 {
 			pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
 			logger.Warningf("pbft recv at least N-f nego-view responses, but cannot find same view from 2f+1.")
 		}
