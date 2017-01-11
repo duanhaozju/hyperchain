@@ -12,7 +12,7 @@ import (
 )
 
 type PublicBlockAPI struct {
-	db *hyperdb.LDBDatabase
+	db hyperdb.Database
 }
 
 type BlockResult struct {
@@ -35,7 +35,7 @@ type StatisticResult struct {
 }
 
 
-func NewPublicBlockAPI(hyperDb *hyperdb.LDBDatabase) *PublicBlockAPI {
+func NewPublicBlockAPI(hyperDb hyperdb.Database) *PublicBlockAPI {
 	return &PublicBlockAPI{
 		db: hyperDb,
 	}
@@ -131,7 +131,7 @@ func (blk *PublicBlockAPI) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (N
 	}
 }
 
-func latestBlock(db *hyperdb.LDBDatabase) (*BlockResult, error) {
+func latestBlock(db hyperdb.Database) (*BlockResult, error) {
 
 	currentChain := core.GetChainCopy()
 
@@ -141,7 +141,7 @@ func latestBlock(db *hyperdb.LDBDatabase) (*BlockResult, error) {
 }
 
 // getBlockByNumber convert type Block to type BlockResult for the given block number.
-func getBlockByNumber(n BlockNumber, db *hyperdb.LDBDatabase) (*BlockResult, error) {
+func getBlockByNumber(n BlockNumber, db hyperdb.Database) (*BlockResult, error) {
 
 	m := n.ToUint64()
 	if blk, err := core.GetBlockByNumber(db, m); err != nil && err.Error() == leveldb_not_found_error {
@@ -154,7 +154,7 @@ func getBlockByNumber(n BlockNumber, db *hyperdb.LDBDatabase) (*BlockResult, err
 }
 
 // GetBlockByNumber returns the bolck for the given block time duration.
-func getBlocksByTime(startTime,endTime int64, db *hyperdb.LDBDatabase)(sumOfBlocks uint64,startBlock,endBlock *BlockNumber){
+func getBlocksByTime(startTime,endTime int64, db hyperdb.Database)(sumOfBlocks uint64,startBlock,endBlock *BlockNumber){
 	currentChain := core.GetChainCopy()
 	height := currentChain.Height
 
@@ -179,7 +179,7 @@ func getBlocksByTime(startTime,endTime int64, db *hyperdb.LDBDatabase)(sumOfBloc
 	return sumOfBlocks,startBlock,endBlock
 }
 
-func getBlockStateDb(n BlockNumber, db *hyperdb.LDBDatabase) (*state.StateDB, error) {
+func getBlockStateDb(n BlockNumber, db hyperdb.Database) (*state.StateDB, error) {
 
 	block, err := getBlockByNumber(n, db)
 	if err != nil {
@@ -195,7 +195,7 @@ func getBlockStateDb(n BlockNumber, db *hyperdb.LDBDatabase) (*state.StateDB, er
 	return stateDB, nil
 }
 
-func outputBlockResult(block *types.Block, db *hyperdb.LDBDatabase) (*BlockResult, error) {
+func outputBlockResult(block *types.Block, db hyperdb.Database) (*BlockResult, error) {
 
 	txCounts := int64(len(block.Transactions))
 	//count, percent :=types.go.CalcResponseCount(block.Number, int64(200))
@@ -224,7 +224,7 @@ func outputBlockResult(block *types.Block, db *hyperdb.LDBDatabase) (*BlockResul
 	}, nil
 }
 
-func getBlockByHash(hash common.Hash, db *hyperdb.LDBDatabase) (*BlockResult, error) {
+func getBlockByHash(hash common.Hash, db hyperdb.Database) (*BlockResult, error) {
 
 	if common.EmptyHash(hash) == true {
 		return nil, &invalidParamsError{"invalid hash"}
@@ -240,7 +240,7 @@ func getBlockByHash(hash common.Hash, db *hyperdb.LDBDatabase) (*BlockResult, er
 	return outputBlockResult(block, db)
 }
 
-func getBlocks(args IntervalArgs, hyperDb *hyperdb.LDBDatabase) ([]*BlockResult, error) {
+func getBlocks(args IntervalArgs, hyperDb hyperdb.Database) ([]*BlockResult, error) {
 	var blocks []*BlockResult
 
 	realArgs, err := prepareIntervalArgs(args)

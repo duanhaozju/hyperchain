@@ -35,7 +35,7 @@ func init() {
 type PublicTransactionAPI struct {
 	eventMux        *event.TypeMux
 	pm              *manager.ProtocolManager
-	db              *hyperdb.LDBDatabase
+	db              hyperdb.Database
 	tokenBucket     *ratelimit.Bucket
 	ratelimitEnable bool
 }
@@ -76,7 +76,7 @@ type TransactionResult struct {
 	InvalidMsg  string           `json:"invalidMsg"`
 }
 
-func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, ratelimitEnable bool , bmax int64, rate time.Duration) *PublicTransactionAPI {
+func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb hyperdb.Database, ratelimitEnable bool , bmax int64, rate time.Duration) *PublicTransactionAPI {
 	return &PublicTransactionAPI{
 		eventMux: eventMux,
 		pm:       pm,
@@ -472,7 +472,7 @@ func (tran *PublicTransactionAPI) GetTxAvgTimeByBlockNumber(args IntervalArgs) (
 	return *NewInt64ToNumber(exeTime), nil
 }
 
-func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*TransactionResult, error) {
+func outputTransaction(trans interface{}, db hyperdb.Database) (*TransactionResult, error) {
 
 	var txValue types.TransactionValue
 
