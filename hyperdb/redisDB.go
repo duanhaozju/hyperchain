@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 	"errors"
-	"fmt"
 )
 
 
@@ -16,8 +15,6 @@ type RsDatabase struct {
 }
 
 func NewRsDatabase() (*RsDatabase, error) {
-	fmt.Println("NewRsDatabase")
-	fmt.Println(redisPort)
 	rdP := redis.NewPool(func() (redis.Conn, error) {return redis.Dial("tcp", ":"+strconv.Itoa(redisPort), redis.DialConnectTimeout(time.Duration(redisTimeout)*time.Second))},redisPoolSize)
 	return &RsDatabase{rdPool: rdP}, nil
 }

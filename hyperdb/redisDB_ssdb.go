@@ -57,10 +57,9 @@ func (db *dbDatabaseImpl)Get(key []byte) ([]byte, error){
 		return data,err
 	}
 	data,err=db.ssdbDb.Get(key)
-	if len(data)!=0&&err==nil{
-		return data,err
-	}
-	return nil,err
+
+	return data,err
+
 }
 
 func (db *dbDatabaseImpl)Delete(key []byte) error{

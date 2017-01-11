@@ -175,3 +175,6 @@ func TestIterator(t *testing.T) {
 
 }
 
+func TestFinish(t *testing.T) {
+	Db.Close()
+}

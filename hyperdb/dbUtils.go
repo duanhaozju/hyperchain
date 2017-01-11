@@ -19,3 +19,16 @@ func writeLog(funcName string,num int,err error)(){
 		f.Close()
 	}
 }
+
+func Bytes(reply interface{}) ([]byte) {
+
+	switch reply := reply.(type) {
+	case []byte:
+		return reply
+	case string:
+		return []byte(reply)
+	case nil:
+		return nil
+	}
+	return nil
+}
