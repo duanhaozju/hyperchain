@@ -190,7 +190,7 @@ func TestPayload(t *testing.T){
 
 	//block1,_ := pem.Decode([]byte(ECert))
 
-	cert1 := ParseCertificate(ECert)
+	cert1,_ := ParseCertificate(ECert)
 
 	pub := cert1.PublicKey
 	//fmt.Println(pub)
@@ -236,7 +236,7 @@ func TestCreateCert(t *testing.T){
 
 	//fmt.Println(byteCert)
 
-	ecrt := ParseCertificate(string(byteCert))
+	ecrt,_ := ParseCertificate(string(byteCert))
 
 	content,_ := ioutil.ReadFile("./tca.priv")
 
@@ -284,7 +284,7 @@ func TestCheckCert(t *testing.T)  {
 	}
 	byteCert := []byte(cert)
 
-	ecrtParent := ParseCertificate(string(byteCert))
+	ecrtParent,_ := ParseCertificate(string(byteCert))
 
 	cert1,err1 := GetConfig("./eca.ca")
 
@@ -295,7 +295,7 @@ func TestCheckCert(t *testing.T)  {
 	}
 	byteCert1 := []byte(cert1)
 
-	ecrt := ParseCertificate(string(byteCert1))
+	ecrt,_ := ParseCertificate(string(byteCert1))
 
 	err2 := ecrt.CheckSignatureFrom(ecrtParent)
 
