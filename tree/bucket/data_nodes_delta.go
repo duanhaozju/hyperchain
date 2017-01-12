@@ -22,7 +22,7 @@ func (dataNodes DataNodes) Less(i, j int) bool {
 	return bytes.Compare(dataNodes[i].dataKey.compositeKey, dataNodes[j].dataKey.compositeKey) < 0
 }
 
-func (dataNodes DataNodes) Marshal() (marshalData []byte){
+func (dataNodes DataNodes) Marshal() ([]byte){
 	dataNodesKVDeltas := make([][]byte,len(dataNodes)*2)
 	for i,dataNode := range dataNodes{
 		dataNodesKVDeltas[2*i] = dataNode.getCompositeKey()

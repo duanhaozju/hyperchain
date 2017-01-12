@@ -229,7 +229,7 @@ func (bucketTree *BucketTree) GetTreeHash(blockNum *big.Int) ([]byte,error){
 
 func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, existingNodes DataNodes,updatedValueSet *UpdatedValueSet) ([]byte,DataNodes) {
 	//log.Debugf("Computing crypto-hash for bucket [%s]. numUpdatedNodes=[%d], numExistingNodes=[%d]", bucketKey, len(updatedNodes), len(existingNodes))
-	bucketHashCalculator := newBucketHashCalculator(bucketKey)
+	bucketHashCalculator := newBucketHashCalculator()
 	i := 0
 	j := 0
 	var newDataNodes DataNodes
@@ -259,7 +259,6 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 			j++
 		}
 		if !nextNode.isDelete() {
-			bucketHashCalculator.addNextNode(nextNode)
 			newDataNodes = append(newDataNodes,nextNode)
 		}
 	}
@@ -267,20 +266,19 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 	var remainingNodes DataNodes
 	if i < len(updatedNodes) {
 		remainingNodes = updatedNodes[i:]
-		for k :=0 ; k<len(remainingNodes);k++ {
-			compositeKey := string(remainingNodes[k].getCompositeKey()[:])
-			updatedValueSet.Set(compositeKey,remainingNodes[k].value,nil)
+		for _, remainingNode := range remainingNodes  {
+			compositeKey := string(remainingNode.getCompositeKey()[:])
+			updatedValueSet.Set(compositeKey,remainingNode.value,nil)
+			if(!remainingNode.isDelete()){
+				newDataNodes = append(newDataNodes,remainingNode)
+			}
 		}
 	} else if j < len(existingNodes) {
 		remainingNodes = existingNodes[j:]
+		newDataNodes = append(newDataNodes,remainingNodes...)
 	}
-
-	for _, remainingNode := range remainingNodes {
-		if !remainingNode.isDelete() {
-			bucketHashCalculator.addNextNode(remainingNode)
-			newDataNodes = append(newDataNodes,remainingNode)
-		}
-	}
+	hashingData := newDataNodes.Marshal()
+	bucketHashCalculator.setHashingData(hashingData)
 	return bucketHashCalculator.computeCryptoHash(),newDataNodes
 }
 
