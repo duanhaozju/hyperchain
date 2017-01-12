@@ -9,6 +9,7 @@ import (
 	"errors"
 	"encoding/json"
 	"time"
+	"github.com/hashicorp/golang-lru"
 )
 
 var (
@@ -390,13 +391,15 @@ func (bucketTree *BucketTree) updateDataNodeCache(bucketKey BucketKey,newDataNod
 		return
 	}
 	if(bucketTree.dataNodeCache.isEnabled){
-		bucketTree.dataNodeCache.c[bucketKey] = newDataNodes
+		bucketTree.dataNodeCache.c.Add(bucketKey,newDataNodes)
 	}
 	if(globalDataNodeCache.isEnable){
-		if(globalDataNodeCache.cache[bucketTree.treePrefix] == nil){
-			globalDataNodeCache.cache[bucketTree.treePrefix] = make(map[BucketKey] DataNodes)
+		cache := globalDataNodeCache.cacheMap[bucketTree.treePrefix]
+		if cache == nil{
+			cache,_ = lru.New(GlobalDataNodeCacheSize)
 		}
-		globalDataNodeCache.cache[bucketTree.treePrefix][bucketKey] = newDataNodes
+		cache.Add(bucketKey,newDataNodes)
+		globalDataNodeCache.cacheMap[bucketTree.treePrefix] = cache
 	}
 
 }
