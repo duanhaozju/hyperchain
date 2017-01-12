@@ -111,7 +111,11 @@ func main() {
 
 		//init memversrvc CAManager
 		// rca.ca 应该改为 eca.ca
-		cm,cmerr := membersrvc.NewCAManager("./config/cert/eca.ca","./config/cert/ecert.cert","./config/cert/rcert.cert","./config/cert/rca.ca","./config/cert/ecert.priv","./config/cert/server/tca.ca")
+		//TODO 此处加入读取文件，现在默认为true
+		/**
+		 *传入true则开启所有验证，false则为取消ca以及签名的所有验证
+		 */
+		cm,cmerr := membersrvc.GetCaManager("./config/cert/eca.ca","./config/cert/ecert.cert","./config/cert/rcert.cert","./config/cert/rca.ca","./config/cert/ecert.priv","./config/cert/server/tca.ca",false)
 		if cmerr != nil{
 			panic("cannot initliazied the camanager")
 		}
