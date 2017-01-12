@@ -14,12 +14,6 @@ type viewChangeResendTimerEvent struct{}
 // viewChangedEvent is sent when the view change timer expires
 type viewChangedEvent struct{}
 
-// returnRequestBatchEvent is sent by pbft when we are forwarded a request
-type returnRequestBatch *TransactionBatch
-
-// returnRequestBatchEvent is sent by pbft when we are forwarded a request
-type returnRequestBatchEvent *TransactionBatch
-
 // stateUpdatedEvent  when stateUpdate is executed and return the result
 type stateUpdatedEvent struct {
 	seqNo uint64

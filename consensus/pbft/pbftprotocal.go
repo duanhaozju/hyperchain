@@ -514,7 +514,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		return pbft.recvNewView(et)
 	case *FetchRequestBatch:
 		err = pbft.recvFetchRequestBatch(et)
-	case returnRequestBatchEvent:
+	case *ReturnRequestBatch:
 		return pbft.recvReturnRequestBatch(et)
 	case viewChangeQuorumEvent:
 		logger.Debugf("Replica %d received view change quorum, processing new view", pbft.id)
@@ -849,14 +849,6 @@ func (pbft *pbftProtocal) eventToMsg(msg *ConsensusMessage) (interface{}, error)
 		} else {
 			return nil, fmt.Errorf("Unresolved ConsensusMessage_Transaction: %+v", tx)
 		}
-	case ConsensusMessage_TRANSATION_BATCH:
-		txBatch := &TransactionBatch{}
-		err := proto.Unmarshal(msg.Payload, txBatch)
-		if err != nil {
-			logger.Error("Unmarshal error, can not unmarshal ConsensusMessage_TRANSATION_BATCH:", err)
-			return nil, err
-		}
-		return txBatch, nil
 	case ConsensusMessage_PRE_PREPARE:
 		preprep := &PrePrepare{}
 		err := proto.Unmarshal(msg.Payload, preprep)
@@ -922,13 +914,13 @@ func (pbft *pbftProtocal) eventToMsg(msg *ConsensusMessage) (interface{}, error)
 		}
 		return frb, nil
 	case ConsensusMessage_RETURN_REQUEST_BATCH:
-		rrb := &TransactionBatch{}
+		rrb := &ReturnRequestBatch{}
 		err := proto.Unmarshal(msg.Payload, rrb)
 		if err != nil {
 			logger.Error("Unmarshal stringerror, can not unmarshal ConsensusMessage_RETURN_REQUEST_BATCH:", err)
 			return nil, err
 		}
-		return returnRequestBatchEvent(rrb), nil
+		return rrb, nil
 	case ConsensusMessage_NEGOTIATE_VIEW:
 		nv := &NegotiateView{}
 		err := proto.Unmarshal(msg.Payload, nv)
@@ -1879,7 +1871,11 @@ func (pbft *pbftProtocal) recvFetchRequestBatch(fr *FetchRequestBatch) (err erro
 	}
 
 	reqBatch := pbft.validatedBatchStore[digest]
-	payload, err := proto.Marshal(reqBatch)
+	batch := &ReturnRequestBatch{
+		Batch: reqBatch,
+		Digest: digest,
+	}
+	payload, err := proto.Marshal(batch)
 	if err != nil {
 		logger.Errorf("ConsensusMessage_RETURN_REQUEST_BATCH Marshal Error", err)
 		return nil
@@ -1896,7 +1892,7 @@ func (pbft *pbftProtocal) recvFetchRequestBatch(fr *FetchRequestBatch) (err erro
 	return
 }
 
-func (pbft *pbftProtocal) recvReturnRequestBatch(reqBatch *TransactionBatch) events.Event {
+func (pbft *pbftProtocal) recvReturnRequestBatch(batch *ReturnRequestBatch) events.Event {
 
 	if pbft.inNegoView {
 		logger.Debugf("Replica %d try to recvReturnRequestBatch, but it's in nego-view", pbft.id)
@@ -1907,16 +1903,15 @@ func (pbft *pbftProtocal) recvReturnRequestBatch(reqBatch *TransactionBatch) eve
 		return nil
 	}
 
-	digest := hash(reqBatch)
+	digest := batch.Digest
 	if _, ok := pbft.missingReqBatches[digest]; !ok {
 		return nil // either the wrong digest, or we got it already from someone else
 	}
-	pbft.validatedBatchStore[digest] = reqBatch
+	pbft.validatedBatchStore[digest] = batch.Batch
 	delete(pbft.missingReqBatches, digest)
-	//pbft.persistRequestBatch(digest)
+	logger.Critical("Primary received missing request: ", digest)
 
 	if len(pbft.missingReqBatches) == 0 {
-		//return pbft.processNewView()
 		nv, ok := pbft.newViewStore[pbft.view]
 		if !ok {
 			logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
