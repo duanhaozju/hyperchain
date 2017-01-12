@@ -466,8 +466,8 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 		if primary == pbft.id {
 			pbft.vcResetStore = make(map[FinishVcReset]bool)
 		}
-		pbft.processRequestsDuringViewChange()
 		atomic.StoreUint32(&pbft.activeView, 1)
+		pbft.processRequestsDuringViewChange()
 		logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/h=%d", pbft.id, primary, pbft.view, pbft.h)
 	case batchTimerEvent:
 		logger.Debugf("Replica %d batch timer expired", pbft.id)
@@ -1965,7 +1965,6 @@ func (pbft *pbftProtocal) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 			if m := chkptSeqNumArray[len(chkptSeqNumArray)-(pbft.f+1)]; m > H {
 				logger.Warningf("Replica %d is out of date, f+1 nodes agree checkpoint with seqNo %d exists but our high water mark is %d", pbft.id, chkpt.SequenceNumber, H)
 				pbft.validatedBatchStore = make(map[string]*TransactionBatch) // Discard all our requests, as we will never know which were executed, to be addressed in #394
-				pbft.persistDelAllRequestBatches()
 				pbft.moveWatermarks(m)
 				pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
 				pbft.skipInProgress = true
