@@ -24,27 +24,26 @@ package pbft;
 message consensus_message {
     enum Type {
         TRANSACTION = 0;
-        TRANSATION_BATCH = 1;
-        PRE_PREPARE = 2;
-        PREPARE = 3;
-        COMMIT = 4;
-        CHECKPOINT = 5;
-        VIEW_CHANGE = 6;
-        NEW_VIEW = 7;
-        FRTCH_REQUEST_BATCH = 8;
-        RETURN_REQUEST_BATCH = 9;
-        NEGOTIATE_VIEW = 10;
-        NEGOTIATE_VIEW_RESPONSE = 11;
-        RECOVERY_INIT = 12;
-        RECOVERY_RESPONSE = 13;
-        RECOVERY_FETCH_QPC = 14;
-        RECOVERY_RETURN_QPC = 15;
-        ADD_NODE = 16;
-        DEL_NODE = 17;
-        READY_FOR_N = 18;
-        UPDATE_N = 19;
-        AGREE_UPDATE_N = 20;
-        FINISH_VCRESET = 21;
+        PRE_PREPARE = 1;
+        PREPARE = 2;
+        COMMIT = 3;
+        CHECKPOINT = 4;
+        VIEW_CHANGE = 5;
+        NEW_VIEW = 6;
+        FRTCH_REQUEST_BATCH = 7;
+        RETURN_REQUEST_BATCH = 8;
+        NEGOTIATE_VIEW = 9;
+        NEGOTIATE_VIEW_RESPONSE = 10;
+        RECOVERY_INIT = 11;
+        RECOVERY_RESPONSE = 12;
+        RECOVERY_FETCH_QPC = 13;
+        RECOVERY_RETURN_QPC = 14;
+        ADD_NODE = 15;
+        DEL_NODE = 16;
+        READY_FOR_N = 17;
+        UPDATE_N = 18;
+        AGREE_UPDATE_N = 19;
+        FINISH_VCRESET = 20;
     }
     Type type = 1;
     bytes payload = 2;
@@ -53,6 +52,11 @@ message consensus_message {
 message transaction_batch {
     repeated types.Transaction batch = 1;
     int64 timestamp = 2;
+}
+
+message return_request_batch {
+    transaction_batch batch = 1;
+    string digest = 2;
 }
 
 message pre_prepare {
