@@ -60,7 +60,7 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 func (self *ProtocolManager) ReceiveSyncRequest(ev event.StateUpdateEvent) {
 	checkpointMsg := &recovery.CheckPointMessage{}
 	proto.Unmarshal(ev.Payload, checkpointMsg)
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("No Database Found")
 		return
@@ -94,7 +94,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 	if core.GetChainCopy().RequiredBlockNum != 0 {
 		blocks := &types.Blocks{}
 		proto.Unmarshal(ev.Payload, blocks)
-		db, err := hyperdb.GetLDBDatabase()
+		db, err := hyperdb.GetDBDatabase()
 		if err != nil {
 			log.Error("No Database Found")
 			return
@@ -187,7 +187,7 @@ func (self *ProtocolManager) broadcastDemandBlock(number uint64, hash []byte, re
 }
 
 func (self *ProtocolManager) updateRequire(block *types.Block) error {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		// TODO
 		log.Error("updateRequire get database failed")
@@ -258,7 +258,7 @@ func (self *ProtocolManager) sendStateUpdatedEvent() {
 }
 
 func (self *ProtocolManager) isBlockHashEqual(targetHash []byte) bool {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("get database handler failed in state update")
 		return false

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-
 	logging "github.com/op/go-logging"
 	"github.com/spf13/viper"
 	"time"
@@ -20,7 +19,6 @@ type configs interface {
 	getLogDumpFileFlag() bool
 	getLogDumpFileDir() string
 	getLogLevel() string
-	getDatabaseDir() string
 	getPeerConfigPath() string
 	getGenesisConfigPath() string
 	getMemberSRVCConfigPath() string
@@ -32,6 +30,7 @@ type configs interface {
 	getBlockVersion() string
 	getTransactionVersion() string
 	getPaillerPublickey() hmEncryption.PaillierPublickey
+	getDbConfig() string
 }
 
 type configsImpl struct {
@@ -44,7 +43,7 @@ type configsImpl struct {
 	logDumpFileFlag         bool
 	logDumpFileDir          string
 	logLevel                string
-	databaseDir             string
+	dbConfig             	string
 	peerConfigPath          string
 	genesisConfigPath       string
 	memberSRVCConfigPath    string
@@ -86,11 +85,17 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	cimpl.logDumpFileFlag = config.GetBool("global.logs.dumpfile")
 	cimpl.logDumpFileDir = config.GetString("global.logs.logsdir")
 	cimpl.logLevel = config.GetString("global.logs.loglevel")
-	cimpl.databaseDir = config.GetString("global.database.dir")
 	cimpl.peerConfigPath = config.GetString("global.configs.peers")
 	cimpl.genesisConfigPath = config.GetString("global.configs.genesis")
 	cimpl.memberSRVCConfigPath = config.GetString("global.configs.membersrvc")
 	cimpl.pbftConfigPath = config.GetString("global.configs.pbft")
+
+	/*
+		db Config
+	*/
+	cimpl.dbConfig=config.GetString("global.dbConfig")
+
+
 	/*
 		statement synchronization
 	 */
@@ -126,6 +131,7 @@ func (cIml *configsImpl) getNodeID() int            { return cIml.nodeID }
 func (cIml *configsImpl) getGRPCPort() int          { return cIml.gRPCPort }
 func (cIml *configsImpl) getHTTPPort() int          { return cIml.httpPort }
 func (cIml *configsImpl) getRESTPort() int          { return cIml.restPort }
+func (cIml *configsImpl) getDbConfig() string  	    { return cIml.dbConfig }
 func (cIml *configsImpl) getKeystoreDir() string    { return cIml.keystoreDir }
 func (cIml *configsImpl) getKeyNodeDir() string     { return cIml.keyNodeDir }
 func (cIml *configsImpl) getLogDumpFileFlag() bool  { return cIml.logDumpFileFlag }
@@ -148,7 +154,7 @@ func (cIml *configsImpl) getLogLevel() logging.Level {
 		return logging.NOTICE
 	}
 }
-func (cIml *configsImpl) getDatabaseDir() string       { return cIml.databaseDir }
+
 func (cIml *configsImpl) getPeerConfigPath() string    { return cIml.peerConfigPath }
 func (cIml *configsImpl) getGenesisConfigPath() string { return cIml.genesisConfigPath }
 func (cIml *configsImpl) getMemberSRVCConfigPath() string {
