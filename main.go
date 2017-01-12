@@ -100,6 +100,8 @@ func main() {
 		conf := initConf(argv)
 		common.InitLog(conf)
 
+		core.InitDB(config.getDbConfig(),config.gRPCPort)
+
 		err, expiredTime := checkLicense(config.getLicense())
 		if err != nil {
 			return err
@@ -125,8 +127,6 @@ func main() {
 		grpcPeerMgr := p2p.NewGrpcManager(conf)
 
 
-		//init db
-		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())
 
 		//init genesis
 		core.CreateInitBlock(config.getGenesisConfigPath())

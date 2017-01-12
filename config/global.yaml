@@ -25,8 +25,7 @@ global:
         keystoredir: "./build/keystore"
         keynodesdir: "./build/keynodes"
 
-    database:
-        dir: "./build/database/"
+    dbConfig: "./config/db.yaml"
 
     version:
         blockversion: "1.0"
@@ -78,4 +77,4 @@ global:
             p2p: "INFO"
             consensus: "NOTICE"
             core: "NOTICE"
-            hyperdb: "WARNING"
+            hyperdb: "NOTICE"

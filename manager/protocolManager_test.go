@@ -70,9 +70,9 @@ func TestAliveEvent(t *testing.T) {
 
 //func TestSignTx(t *testing.T) {
 //	core.InitDB(8083)
-//	db, _ := hyperdb.GetLDBDatabase()
-//	height :=types.go.GetHeightOfChain()
-//	block,_:=types.go.GetBlockByNumber(db,height)
+//	db, _ := hyperdb.GetDBDatabase()
+//	height := core.GetHeightOfChain()
+//	block,_:= core.GetBlockByNumber(db,height)
 //	tx := block.Transactions[0]
 //	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 //	//init encryption object

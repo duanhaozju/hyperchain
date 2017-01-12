@@ -92,8 +92,9 @@ type pbftProtocal struct {
 	chkptCertStore  map[chkptID]*chkptCert                   // track quorum certificates for checkpoints
 	newViewStore    map[uint64]*NewView                      // track last new-view we received or sent
 	viewChangeStore map[vcidx]*ViewChange                    // track view-change messages
-
-								 // implement the validate transaction batch process
+	vcResetStore	map[FinishVcReset]bool					 // track vcReset message from others
+	inVcReset		bool									 // track if replica itself in vcReset
+											 // implement the validate transaction batch process
 	vid                 	uint64                       // track the validate sequence number
 	lastVid             	uint64                       // track the last validate batch seqNo
 	currentVid          	*uint64                      // track the current validate batch seqNo
@@ -314,6 +315,8 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.newViewStore = make(map[uint64]*NewView)
 	pbft.viewChangeStore = make(map[vcidx]*ViewChange)
 	pbft.missingReqBatches = make(map[string]bool)
+	pbft.vcResetStore = make(map[FinishVcReset]bool)
+	pbft.inVcReset = false
 
 	// initialize state transfer
 	pbft.hChkpts = make(map[uint64]uint64)
@@ -454,16 +457,6 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 			logger.Warningf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
 		}
 		return nil
-	case protos.VcResetDone:
-		if e.SeqNo != pbft.h + 1 {
-			logger.Warningf("Replica %d finds error in VcResetDone, expect=%d, but get=%d", pbft.id, pbft.h+1, e.SeqNo)
-			return nil
-		}
-		if pbft.inRecovery {
-			state := &stateUpdatedEvent{seqNo: e.SeqNo-1}
-			return pbft.recvStateUpdatedEvent(state)
-		}
-		return pbft.handleTailInNewView()
 	case *types.Transaction:
 		tx := e
 		return pbft.processTxEvent(tx)
@@ -472,6 +465,9 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 		primary := pbft.primary(pbft.view)
 		pbft.helper.InformPrimary(primary)
 		pbft.persistView(pbft.view)
+		if primary == pbft.id {
+			pbft.vcResetStore = make(map[FinishVcReset]bool)
+		}
 		logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/h=%d", pbft.id, primary, pbft.view, pbft.h)
 		pbft.processRequestsDuringViewChange()
 	case batchTimerEvent:
@@ -531,6 +527,26 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 			return pbft.sendNewView()
 		}
 		return pbft.processNewView()
+	case protos.VcResetDone:
+		if et.SeqNo != pbft.h + 1 {
+			logger.Warningf("Replica %d finds error in VcResetDone, expect=%d, but get=%d", pbft.id, pbft.h+1, et.SeqNo)
+			return nil
+		}
+		if pbft.inRecovery {
+			state := &stateUpdatedEvent{seqNo: et.SeqNo-1}
+			return pbft.recvStateUpdatedEvent(state)
+		}
+		if atomic.LoadUint32(&pbft.activeView) == 1 {
+			logger.Warningf("Replica %d is not in viewChange, but received local VcResetDone", pbft.id)
+			return nil
+		}
+		pbft.inVcReset = false
+		if pbft.primary(pbft.view) == pbft.id {
+			return pbft.handleTailInNewView()
+		}
+		return pbft.finishViewChange()
+	case *FinishVcReset:
+		return pbft.recvFinishVcReset(et)
 	case nullRequestEvent:
 		pbft.nullRequestHandler()
 	case viewChangeResendTimerEvent:
@@ -744,7 +760,8 @@ func (pbft *pbftProtocal) processCachedTransactions() {
 		}
 		req := reqc.req
 		if req != nil {
-			pbft.processTxEvent(req)
+			go pbft.postRequestEvent(req)
+			//pbft.processTxEvent(req)
 		}
 		pbft.reqStore.remove(req)
 	}
@@ -783,7 +800,7 @@ func (pbft *pbftProtocal) sendBatch() error {
 	pbft.batchStore = nil
 	logger.Infof("Creating batch with %d requests", len(reqBatch.Batch))
 
-	go pbft.postPbftEvent(reqBatch)
+	go pbft.postRequestEvent(reqBatch)
 
 	return nil
 }
@@ -889,6 +906,14 @@ func (pbft *pbftProtocal) eventToMsg(msg *ConsensusMessage) (interface{}, error)
 			return nil, err
 		}
 		return nv, nil
+	case ConsensusMessage_FINISH_VCRESET:
+		finish := &FinishVcReset{}
+		err := proto.Unmarshal(msg.Payload, finish)
+		if err != nil {
+			logger.Error("Unmarshal error, can not unmarshal ConsensusMessage_FINISH_VCRESET:", err)
+			return nil, err
+		}
+		return finish, nil
 	case ConsensusMessage_FRTCH_REQUEST_BATCH:
 		frb := &FetchRequestBatch{}
 		err := proto.Unmarshal(msg.Payload, frb)
@@ -2259,7 +2284,8 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Eve
 
 	pbft.negoViewRspStore[rspId] = rspView
 
-	if len(pbft.negoViewRspStore) > pbft.N-pbft.f {
+	if len(pbft.negoViewRspStore) > 2 * pbft.f + 1 {
+		// Reason for not using '> pbft.N-pbft.f': if N==5, we are require more than we need
 		// Reason for not using '≥ pbft.N-pbft.f': if self is wrong, then we are impossible to find 2f+1 same view
 		// can we find same view from 2f+1 peers?
 		viewCount := make(map[uint64]uint64)
@@ -2286,7 +2312,7 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Eve
 				atomic.StoreUint32(&pbft.activeView, 1)
 			}
 			return negoViewDoneEvent{}
-		} else {
+		} else if len(pbft.negoViewRspStore) >= 2*pbft.f + 2 {
 			pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
 			logger.Warningf("pbft recv at least N-f nego-view responses, but cannot find same view from 2f+1.")
 		}
