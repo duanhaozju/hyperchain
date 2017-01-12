@@ -14,7 +14,6 @@ import (
 
 var (
 	log = logging.MustGetLogger("buckettree")
-	DataNodePrefix = "DataNode"
 	DataNodesPrefix = "DataNodes"
 	BucketNodePrefix = "BucketNode"
 	UpdatedValueSetPrefix = "UpdatedValueSet"
@@ -77,18 +76,6 @@ func (bucketTree *BucketTree) Initialize(configs map[string]interface{}) error {
 	return nil
 }
 
-// Get - method implementation for interface 'statemgmt.HashableState'
-func (bucketTree *BucketTree) Get(key string) ([]byte, error) {
-	dataKey := newDataKey(bucketTree.treePrefix, key)
-	dataNode, err := fetchDataNodeFromDB(dataKey)
-	if err != nil {
-		return nil, err
-	}
-	if dataNode == nil {
-		return nil, nil
-	}
-	return dataNode.value, nil
-}
 
 // PrepareWorkingSet - method implementation for interface 'statemgmt.HashableState'
 // TODO test the stateImpl just accept the stateDelta which accountID equals

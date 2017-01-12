@@ -18,11 +18,6 @@ func newDataKey(treePrefix string, key string) *DataKey {
 	return dataKey
 }
 
-func minimumPossibleDataKeyBytesFor(bucketKey *BucketKey,treePrefix string) []byte {
-	min := append([]byte(DataNodePrefix),encodeBucketNumber(bucketKey.bucketNumber)...)
-	min = append(min, []byte(treePrefix)...)
-	return min
-}
 
 func (key *DataKey) getBucketKey() *BucketKey {
 	return key.bucketKey

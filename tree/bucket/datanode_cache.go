@@ -5,17 +5,18 @@ import (
 	"github.com/hashicorp/golang-lru"
 )
 var (
-	GLOBAL = true
-	GlobalDataNodeCacheSize = 100
+	GLOBAL = false
+	GlobalDataNodeCacheSize = 10
 	globalDataNodeCache *GlobalDataNodeCache
 )
 type GlobalDataNodeCache struct{
 	cacheMap map[string] *lru.Cache
+	marshacacheMap map[string] *lru.Cache
 	isEnable bool
 }
 
 func init(){
-	globalDataNodeCache = &GlobalDataNodeCache{cacheMap:make(map[string] *lru.Cache),isEnable:true}
+	globalDataNodeCache = &GlobalDataNodeCache{cacheMap:make(map[string] *lru.Cache),isEnable:false}
 }
 
 func (globalDataNodeCache *GlobalDataNodeCache) ClearAllCache (){
