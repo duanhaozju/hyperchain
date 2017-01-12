@@ -6,7 +6,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"reflect"
+
 	"hyperchain/consensus/events"
+
 	"github.com/golang/protobuf/proto"
 	"sync/atomic"
 )
