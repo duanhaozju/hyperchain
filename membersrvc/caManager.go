@@ -141,19 +141,19 @@ func NewCAManager(ecacertPath string,ecertPath string,rcertPath string,rcacertPa
 func (caManager *CAManager)SignTCert(publicKey string) (string,error){
 	if caManager.isUsed != true{
 		return "",nil
-	}else {
-		pubKey, err := primitives.ParsePubKey(publicKey)
-		if err != nil {
-			log.Error(err)
-			return "", err
-		}
-		tcert, err := primitives.GenTCert(caManager.ecert, caManager.ecertPrivateKey, pubKey)
-		if err != nil {
-			log.Error(err)
-			return "", err
-		}
-		return string(tcert), nil
 	}
+	pubKey, err := primitives.ParsePubKey(publicKey)
+	if err != nil {
+		log.Error(err)
+		return "", err
+	}
+	tcert, err := primitives.GenTCert(caManager.ecert, caManager.ecertPrivateKey, pubKey)
+	if err != nil {
+		log.Error(err)
+		return "", err
+	}
+	return string(tcert), nil
+
 }
 
 
@@ -162,20 +162,20 @@ func (caManager *CAManager)SignTCert(publicKey string) (string,error){
 func (caManager *CAManager)VerifyTCert(tcertPEM string)(bool,error){
 	if caManager.isUsed != true{
 		return true,nil
-	}else {
-		tcertToVerify, err := primitives.ParseCertificate(tcertPEM)
-		if err != nil {
-			log.Error("cannot parse the tcert", err)
-			return false, err
-		}
-		// TODO 应该将caManager.tcacert 转为caManager.ecacert
-		verifyTcert, err := primitives.VerifyCert(tcertToVerify, caManager.tcacert)
-		if verifyTcert == false {
-			log.Error("verified falied")
-			return false, err
-		}
-		return true, nil
 	}
+	tcertToVerify, err := primitives.ParseCertificate(tcertPEM)
+	if err != nil {
+		log.Error("cannot parse the tcert", err)
+		return false, err
+	}
+	// TODO 应该将caManager.tcacert 转为caManager.ecacert
+	verifyTcert, err := primitives.VerifyCert(tcertToVerify, caManager.tcacert)
+	if verifyTcert == false {
+		log.Error("verified falied")
+		return false, err
+	}
+	return true, nil
+
 }
 
 /**
@@ -188,19 +188,19 @@ func (caManager *CAManager)VerifyTCert(tcertPEM string)(bool,error){
 func (caManager *CAManager)VerifySignature(certPEM,signature,signed string) (bool,error) {
 	if caManager.isUsed != true{
 		return true,nil
-	}else {
-		tcertToVerify,err := primitives.ParseCertificate(certPEM)
-		if err != nil {
-			log.Error("cannot parse the tcert",err)
-			return false,err
-		}
-		verifySign,err := primitives.VerifySignature(tcertToVerify,signed,signature)
-		if verifySign==false{
-			log.Error("verified falied")
-			return false,err
-		}
-		return true,nil
 	}
+	tcertToVerify,err := primitives.ParseCertificate(certPEM)
+	if err != nil {
+		log.Error("cannot parse the tcert",err)
+		return false,err
+	}
+	verifySign,err := primitives.VerifySignature(tcertToVerify,signed,signature)
+	if verifySign==false{
+		log.Error("verified falied")
+		return false,err
+	}
+	return true,nil
+
 }
 
 func (caManager *CAManager) VerifyECert(ecertPEM string)(bool,error){
@@ -224,43 +224,44 @@ func (caManager *CAManager) VerifyECert(ecertPEM string)(bool,error){
 func (ca *CAManager) VerifyECertSignature(ecertPEM string,msg,sign []byte)(bool,error){
 	if CaManager.isUsed !=true {
 		return true,nil
-	}else {
-		ecertToVerify,err := primitives.ParseCertificate(ecertPEM)
-		if err != nil {
-			log.Error("cannot parse the ecert",err)
-			return false,err
-		}
-		ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
-
-
-		key := ecertToVerify.PublicKey.(*(ecdsa.PublicKey))
-		result,err1 := ecdsaEncry.VerifySign(*key,msg,sign)
-		if(err1 != nil){
-			log.Error("fail to verify signture",err)
-			return false,err1
-		}
-
-		return  result,nil;
-
 	}
+	ecertToVerify,err := primitives.ParseCertificate(ecertPEM)
+	if err != nil {
+		log.Error("cannot parse the ecert",err)
+		return false,err
+	}
+	ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
+
+
+	key := ecertToVerify.PublicKey.(*(ecdsa.PublicKey))
+	result,err1 := ecdsaEncry.VerifySign(*key,msg,sign)
+	if(err1 != nil){
+		log.Error("fail to verify signture",err)
+		return false,err1
+	}
+
+	return  result,nil;
+
+
 }
 
 func (caManager *CAManager) VerifyRCert(rcertPEM string)(bool,error){
 	if caManager.isUsed!=true{
 		return true,nil
-	}else {
-		rcertToVerify,err := primitives.ParseCertificate(rcertPEM)
-		if err != nil {
-			log.Error("cannot parse the rcert",err)
-			return false,err
-		}
-		verifyRcert,err := primitives.VerifyCert(rcertToVerify,caManager.rcacert)
-		if verifyRcert==false || err != nil{
-			log.Error("verified rcert falied")
-			return false,err
-		}
-		return true,nil
 	}
+
+	rcertToVerify,err := primitives.ParseCertificate(rcertPEM)
+	if err != nil {
+		log.Error("cannot parse the rcert",err)
+		return false,err
+	}
+	verifyRcert,err := primitives.VerifyCert(rcertToVerify,caManager.rcacert)
+	if verifyRcert==false || err != nil{
+		log.Error("verified rcert falied")
+		return false,err
+	}
+	return true,nil
+
 }
 
 /**
