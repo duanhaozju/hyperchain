@@ -75,9 +75,6 @@ func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey)
 		if(ok){
 			dataNodes = value.(DataNodes)
 		}
-		if(dataNodeCache.TreePrefix != "-bucket-state"){
-			log.Critical("FetchDataNodesFromCache2 bucketKey is",bucketKey," length is",len(dataNodes))
-		}
 		if(dataNodes != nil && len(dataNodes) > 0){
 			if(dataNodeCache.isEnabled){
 				dataNodeCache.c.Add(bucketKey,dataNodes)
