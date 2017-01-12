@@ -71,29 +71,20 @@ func fetchDataNodesFromDB(treePrefix string) (DataNodes, error) {
 
 
 // TODO it need to be tested
-func fetchDataNodesFromDBByBucketKey(treePrefix string,bucketKey *BucketKey) (DataNodes, error) {
+func fetchDataNodesFromDBByBucketKey(treePrefix string,bucketKey *BucketKey) (dataNodes DataNodes, err error) {
 	db,_ := hyperdb.GetLDBDatabase()
-
-	minimumDataKeyBytes := minimumPossibleDataKeyBytesFor(bucketKey,treePrefix)
-
-	var dataNodes DataNodes
-	// IMPORTANT return value obtained by iterator is sorted
-	iter := db.NewIteratorWithPrefix(minimumDataKeyBytes)
-	for iter.Next() {
-		keyBytes := iter.Key()
-		valueBytes := iter.Value()
-
-		keyBytes = keyBytes[len(DataNodePrefix):]
-		dataKey := newDataKeyFromEncodedBytes(keyBytes)
-		log.Debugf("Retrieved data key [%s] from DB for bucket [%s]", dataKey, bucketKey)
-		if !dataKey.getBucketKey().equals(bucketKey) {
-			log.Debugf("Data key [%s] from DB does not belong to bucket = [%s]. Stopping further iteration and returning results [%v]", dataKey, bucketKey, dataNodes)
-			return dataNodes, nil
+	dataNodesValue,err := db.Get(append([]byte(DataNodesPrefix),append([]byte(treePrefix),bucketKey.getEncodedBytes()...)...))
+	if err != nil{
+		if err.Error() == ErrNotFound.Error(){
+			return dataNodes,nil
 		}
-		dataNode := unmarshalDataNode(dataKey, valueBytes)
-		log.Debugf("Data node [%s] from DB belongs to bucket = [%s]. Including the key in results...", dataNode, bucketKey)
-		dataNodes = append(dataNodes, dataNode)
+		log.Errorf("DB get bucketKey ",bucketKey,"error is",err)
+		panic("Get bucketKey error from db error ")
 	}
-	log.Debugf("Returning results [%v]", dataNodes)
+	err = UnmarshalDataNodes(bucketKey,dataNodesValue,dataNodes)
+	if err != nil{
+		log.Errorf("Marshal dataNodesValue error",err)
+		panic("Get bucketKey error from db error ")
+	}
 	return dataNodes, nil
 }

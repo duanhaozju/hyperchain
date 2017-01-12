@@ -15,6 +15,7 @@ import (
 var (
 	log = logging.MustGetLogger("buckettree")
 	DataNodePrefix = "DataNode"
+	DataNodesPrefix = "DataNodes"
 	BucketNodePrefix = "BucketNode"
 	UpdatedValueSetPrefix = "UpdatedValueSet"
 )
@@ -310,14 +311,13 @@ func (bucketTree *BucketTree) AddChangesForPersistence(writeBatch hyperdb.Batch,
 func (bucketTree *BucketTree) addDataNodeChangesForPersistence(writeBatch hyperdb.Batch) {
 	affectedBuckets := bucketTree.dataNodesDelta.getAffectedBuckets()
 	for _, affectedBucket := range affectedBuckets {
-		dataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(affectedBucket)
-		for _, datanode := range dataNodes {
-			if datanode.isDelete() {
-				//log.Debugf("Deleting data node key = %#v", datanode.dataKey)
-				writeBatch.Delete(append([]byte(DataNodePrefix), datanode.dataKey.getEncodedBytes()...))
-			} else {
-				//log.Debugf("Adding data node with key = %s value = %s",datanode.dataKey,common.Bytes2Hex(datanode.value))
-				writeBatch.Put(append([]byte(DataNodePrefix), datanode.dataKey.getEncodedBytes()...), datanode.value)
+		value,ok := bucketTree.dataNodeCache.c.Get(*affectedBucket)
+		if ok {
+			dataNodes := value.(DataNodes)
+			if(dataNodes == nil || len(dataNodes) == 0){
+				writeBatch.Delete(append([]byte(bucketTree.treePrefix),append([]byte(DataNodesPrefix),affectedBucket.getEncodedBytes()...)...))
+			}else{
+				writeBatch.Put(append([]byte(bucketTree.treePrefix),append([]byte(DataNodesPrefix),affectedBucket.getEncodedBytes()...)...),dataNodes.Marshal())
 			}
 		}
 	}
