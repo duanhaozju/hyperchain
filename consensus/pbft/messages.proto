@@ -157,6 +157,18 @@ message recovery_returnPQC {
      repeated bool           cmt_sent   = 4;
 }
 
+message Qset {
+    repeated pre_prepare set = 1;
+}
+
+message Pset {
+    repeated prepare set = 1;
+}
+
+message Cset {
+    repeated commit set = 1;
+}
+
 message add_node {
     uint64 replica_id = 1;
     string key = 2;
