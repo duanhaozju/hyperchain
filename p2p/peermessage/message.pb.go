@@ -282,7 +282,7 @@ func NewChatClient(cc *grpc.ClientConn) ChatClient {
 
 func (c *chatClient) Chat(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error) {
 
-	cm,cmerr := membersrvc.GetCaManager("./config/cert/eca.ca","./config/cert/ecert.cert","./config/cert/rcert.cert","./config/cert/rca.ca","./config/cert/ecert.priv","./config/cert/server/tca.ca",true)
+	cm,cmerr := membersrvc.GetCaManager("./config/cert/eca.ca","./config/cert/ecert.cert","./config/cert/rcert.cert","./config/cert/rca.ca","./config/cert/ecert.priv","./config/cert/server/tca.ca",false,false)
 	if cmerr != nil{
 		panic("cannot initliazied the camanager")
 	}

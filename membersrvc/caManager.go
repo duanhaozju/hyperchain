@@ -24,15 +24,16 @@ type CAManager struct {
 	ecertPrivateKeyByte []byte
 	tcacertByte []byte
 	isUsed bool
+	checkTCert bool
 
 }
 
 var CaManager *CAManager
 
-func GetCaManager(ecacertPath string,ecertPath string,rcertPath string,rcacertPath string, ecertPrivateKeyPath string,tcacertPath string,isUsed bool) (*CAManager,error) {
+func GetCaManager(ecacertPath string,ecertPath string,rcertPath string,rcacertPath string, ecertPrivateKeyPath string,tcacertPath string,isUsed bool,checkTCert bool) (*CAManager,error) {
 	if CaManager == nil {
 		var err error
-		CaManager,err = NewCAManager(ecacertPath,ecertPath,rcertPath,rcacertPath,ecertPrivateKeyPath,tcacertPath,isUsed)
+		CaManager,err = NewCAManager(ecacertPath,ecertPath,rcertPath,rcacertPath,ecertPrivateKeyPath,tcacertPath,isUsed,checkTCert)
 		if err != nil {
 			return nil,err
 		}
@@ -42,9 +43,7 @@ func GetCaManager(ecacertPath string,ecertPath string,rcertPath string,rcacertPa
 	}
 }
 
-func NewCAManager(ecacertPath string,ecertPath string,rcertPath string,rcacertPath string, ecertPrivateKeyPath string,tcacertPath string,isUsed bool) (*CAManager,error){
-
-
+func NewCAManager(ecacertPath string,ecertPath string,rcertPath string,rcacertPath string, ecertPrivateKeyPath string,tcacertPath string,isUsed bool,checkTCert bool) (*CAManager,error){
 	var caManager CAManager
 	var err error
 	if isUsed != true{
@@ -55,6 +54,7 @@ func NewCAManager(ecacertPath string,ecertPath string,rcertPath string,rcacertPa
 		caManager.ecertPrivateKeyByte = []byte{}
 		caManager.tcacertByte = []byte{}
 		caManager.isUsed = isUsed
+		caManager.checkTCert = checkTCert
 		return &caManager,nil
 	}else {
 		ecacert, rerr := ioutil.ReadFile(ecacertPath)
@@ -134,6 +134,7 @@ func NewCAManager(ecacertPath string,ecertPath string,rcertPath string,rcacertPa
 
 		//TODO use ca or not
 		caManager.isUsed = isUsed
+		caManager.checkTCert = checkTCert
 		return &caManager, nil
 	}
 }
@@ -286,4 +287,8 @@ func (caManager *CAManager)  GetECAPrivateKeyByte() []byte{
 }
 func (caManager *CAManager) GetIsUsed() bool{
 	return caManager.isUsed
+}
+
+func (caManager *CAManager) GetIsCheckTCert() bool{
+	return caManager.checkTCert
 }
