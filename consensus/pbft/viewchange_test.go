@@ -1,17 +1,19 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package pbft
 
 import(
 	"testing"
+	"reflect"
+	"encoding/base64"
 
 	"hyperchain/event"
 	"hyperchain/consensus/helper"
 	"hyperchain/core"
-	"reflect"
+	"hyperchain/protos"
 	"hyperchain/core/types"
 
-	"encoding/base64"
 	"github.com/golang/protobuf/proto"
-	"hyperchain/protos"
 )
 
 
