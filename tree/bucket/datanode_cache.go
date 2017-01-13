@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	defaultDataNodeCacheMaxSize = 10000
-	GLOBAL                      = true
+	DefaultDataNodeCacheMaxSize = 10000
 	GlobalDataNodeCacheSize     = 10000
+	IsEnabledGlobal = true
 	globalDataNodeCache         *GlobalDataNodeCache
 )
 
@@ -18,7 +18,7 @@ type GlobalDataNodeCache struct {
 }
 
 func init() {
-	globalDataNodeCache = &GlobalDataNodeCache{cacheMap: make(map[string]*lru.Cache), isEnable: GLOBAL}
+	globalDataNodeCache = &GlobalDataNodeCache{cacheMap: make(map[string]*lru.Cache), isEnable: IsEnabledGlobal}
 }
 
 func (globalDataNodeCache *GlobalDataNodeCache) ClearAllCache() {
@@ -48,7 +48,7 @@ func newDataNodeCache(treePrefix string, maxSizeMBs int) *DataNodeCache {
 			return &DataNodeCache{TreePrefix: treePrefix, c: globalDataNodeCache.cacheMap[treePrefix], maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 		}
 	}
-	cache, _ := lru.New(defaultDataNodeCacheMaxSize)
+	cache, _ := lru.New(DefaultDataNodeCacheMaxSize)
 	return &DataNodeCache{TreePrefix: treePrefix, c: cache, maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 }
 
@@ -111,5 +111,5 @@ func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey)
 }
 
 func (dataNodeCache *DataNodeCache) ClearDataNodeCache() {
-	dataNodeCache.c, _ = lru.New(defaultDataNodeCacheMaxSize)
+	dataNodeCache.c, _ = lru.New(DefaultDataNodeCacheMaxSize)
 }

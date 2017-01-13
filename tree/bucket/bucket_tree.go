@@ -499,7 +499,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 	globalDataNodeCache.ClearAllCache()
 	bucketTree.bucketCache.isEnabled = true
 	bucketTree.dataNodeCache.isEnabled = true
-	globalDataNodeCache.isEnable = GLOBAL
+	globalDataNodeCache.isEnable = IsEnabledGlobal
 	return nil
 }
 
