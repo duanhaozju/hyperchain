@@ -10,7 +10,6 @@ import (
 	"hyperchain/core/vm/params"
 )
 
-
 // PrecompiledAccount represents a native ethereum contract
 type PrecompiledAccount struct {
 	Gas func(l int) *big.Int

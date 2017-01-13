@@ -1,19 +1,18 @@
 package manager
 
 import (
-	"github.com/golang/protobuf/proto"
-	"hyperchain/recovery"
-	"hyperchain/hyperdb"
-	"time"
-	"hyperchain/event"
-	"hyperchain/protos"
-	"hyperchain/core"
-	"hyperchain/core/types"
-	"hyperchain/common"
 	"bytes"
+	"github.com/golang/protobuf/proto"
+	"hyperchain/common"
+	"hyperchain/core"
 	"hyperchain/core/blockpool"
+	"hyperchain/core/types"
+	"hyperchain/event"
+	"hyperchain/hyperdb"
+	"hyperchain/protos"
+	"hyperchain/recovery"
+	"time"
 )
-
 
 // Entry of state update
 func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
@@ -107,7 +106,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 				if blocks.Batch[i].Number == core.GetChainCopy().RequiredBlockNum {
 					acceptHash := blocks.Batch[i].HashBlock(self.commonHash).Bytes()
 					if common.Bytes2Hex(acceptHash) == common.Bytes2Hex(core.GetChainCopy().RequireBlockHash) {
-						core.PersistBlock(db.NewBatch(),blocks.Batch[i], self.blockPool.GetConfig().BlockVersion, true, true)
+						core.PersistBlock(db.NewBatch(), blocks.Batch[i], self.blockPool.GetConfig().BlockVersion, true, true)
 						if err := self.updateRequire(blocks.Batch[i]); err != nil {
 							log.Error("UpdateRequired failed!")
 							self.reject()
@@ -116,7 +115,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 
 						// receive all block in chain
 						if core.GetChainCopy().RequiredBlockNum <= core.GetChainCopy().Height {
-							lastBlk, err := core.GetBlockByNumber(db, core.GetChainCopy().RequiredBlockNum + 1)
+							lastBlk, err := core.GetBlockByNumber(db, core.GetChainCopy().RequiredBlockNum+1)
 							if err != nil {
 								log.Error("StateUpdate Failed!")
 								self.reject()
@@ -128,7 +127,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 									blk, err := core.GetBlockByNumber(db, i)
 									if err != nil {
 										log.Errorf("state update from #%d to #%d failed. current chain height #%d",
-											core.GetChainCopy().RequiredBlockNum + 1, core.GetChainCopy().RecoveryNum, core.GetChainCopy().Height)
+											core.GetChainCopy().RequiredBlockNum+1, core.GetChainCopy().RecoveryNum, core.GetChainCopy().Height)
 										self.reject()
 										return
 									} else {
@@ -139,7 +138,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 										err, result := self.blockPool.ApplyBlock(blk, blk.Number)
 										if err != nil || self.assertApplyResult(blk, result) == false {
 											log.Errorf("state update from #%d to #%d failed. current chain height #%d",
-												core.GetChainCopy().RequiredBlockNum + 1, core.GetChainCopy().RecoveryNum, core.GetChainCopy().Height)
+												core.GetChainCopy().RequiredBlockNum+1, core.GetChainCopy().RecoveryNum, core.GetChainCopy().Height)
 											self.reject()
 											return
 										} else {
@@ -160,7 +159,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 							} else {
 								// the highest block in local is invalid, request the block
 								self.blockPool.CutdownBlock(lastBlk.Number - 1)
-								self.broadcastDemandBlock(lastBlk.Number - 1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
+								self.broadcastDemandBlock(lastBlk.Number-1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
 							}
 						}
 					}
@@ -292,6 +291,7 @@ func (self *ProtocolManager) isBlockHashEqual(targetHash []byte) bool {
 	}
 	return true
 }
+
 // assertApplyResult - check apply result whether equal with other's
 func (self *ProtocolManager) assertApplyResult(block *types.Block, result *blockpool.BlockRecord) bool {
 	if bytes.Compare(block.MerkleRoot, result.MerkleRoot) != 0 {
@@ -312,6 +312,7 @@ func (self *ProtocolManager) assertApplyResult(block *types.Block, result *block
 	}
 	return true
 }
+
 // reject - reject state update result
 func (self *ProtocolManager) reject() {
 	db, err := hyperdb.GetLDBDatabase()
@@ -334,6 +335,7 @@ func (self *ProtocolManager) reject() {
 	core.SetId(0)
 	self.sendStateUpdatedEvent()
 }
+
 // accpet - accept state update result
 func (self *ProtocolManager) accpet(seqNo uint64) {
 	self.blockPool.SubmitForStateUpdate(seqNo)

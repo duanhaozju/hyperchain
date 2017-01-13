@@ -1,24 +1,24 @@
 package blockpool
 
 import (
-	"sync/atomic"
-	"hyperchain/event"
-	"hyperchain/crypto"
-	"sort"
-	"hyperchain/core/types"
-	"hyperchain/recovery"
-	"github.com/golang/protobuf/proto"
-	"hyperchain/protos"
-	"hyperchain/p2p"
-	"sync"
-	"hyperchain/hyperdb"
-	"hyperchain/tree/pmt"
-	"hyperchain/core"
-	"hyperchain/core/vm/params"
-	"strconv"
-	"hyperchain/common"
 	"errors"
+	"github.com/golang/protobuf/proto"
+	"hyperchain/common"
+	"hyperchain/core"
+	"hyperchain/core/types"
 	"hyperchain/core/vm"
+	"hyperchain/core/vm/params"
+	"hyperchain/crypto"
+	"hyperchain/event"
+	"hyperchain/hyperdb"
+	"hyperchain/p2p"
+	"hyperchain/protos"
+	"hyperchain/recovery"
+	"hyperchain/tree/pmt"
+	"sort"
+	"strconv"
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -105,12 +105,12 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 		count := 0
 		set := validationEvent.Transactions
 		for _, idx := range index {
-			idx = idx-count
+			idx = idx - count
 			if idx == 0 {
 				set = set[1:]
 				count++
 			} else {
-				set = append(set[:idx - 1], set[idx + 1:]...)
+				set = append(set[:idx-1], set[idx+1:]...)
 				count++
 			}
 		}
@@ -156,8 +156,8 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 	// empty block generated, throw all invalid transactions back to original node directly
 	if validationEvent.IsPrimary && len(validateResult.ValidTxs) == 0 {
 		// 1. Remove all cached transaction in this block (which for transaction duplication check purpose), because empty block won't enter network
-        msg := protos.RemoveCache{Vid: validationEvent.SeqNo}
-        pool.consenter.RecvLocal(msg)
+		msg := protos.RemoveCache{Vid: validationEvent.SeqNo}
+		pool.consenter.RecvLocal(msg)
 		// 2. Throw all invalid transaction back to the origin node
 		for _, t := range validateResult.InvalidTxs {
 			payload, err := proto.Marshal(t)
@@ -178,9 +178,10 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 			peerManager.SendMsgToPeers(payload, peers, recovery.Message_INVALIDRESP)
 		}
 	}
-	log.Criticalf("PreProcess block Number is ",validationEvent.SeqNo," cost time is",time.Since(start_time))
+	log.Criticalf("PreProcess block Number is ", validationEvent.SeqNo, " cost time is", time.Since(start_time))
 	return nil, true
 }
+
 // check the sender's signature of the transaction
 func (pool *BlockPool) checkSign(txs []*types.Transaction, commonHash crypto.CommonHash, encryption crypto.Encryption) ([]*types.InvalidTransactionRecord, []int) {
 	var invalidTxSet []*types.InvalidTransactionRecord
@@ -190,7 +191,7 @@ func (pool *BlockPool) checkSign(txs []*types.Transaction, commonHash crypto.Com
 	var mu sync.Mutex
 	for i := range txs {
 		wg.Add(1)
-		go func(i int){
+		go func(i int) {
 			tx := txs[i]
 			if !tx.ValidateSign(encryption, commonHash) {
 				log.Notice("validation, found invalid signature, send from :", tx.Id)
@@ -209,7 +210,6 @@ func (pool *BlockPool) checkSign(txs []*types.Transaction, commonHash crypto.Com
 	wg.Wait()
 	return invalidTxSet, index
 }
-
 
 // ProcessBlockInVm - Put all transactions into the virtual machine and execute
 // Return the execution result, such as txs' merkle root, receipts' merkle root, accounts' merkle root and so on.
@@ -271,7 +271,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 				tmp := err.(*core.ExecContractError)
 				if tmp.GetType() == 0 {
 					errType = types.InvalidTransactionRecord_DEPLOY_CONTRACT_FAILED
-				} else if tmp.GetType() == 1{
+				} else if tmp.GetType() == 1 {
 					errType = types.InvalidTransactionRecord_INVOKE_CONTRACT_FAILED
 				}
 			}
@@ -287,11 +287,11 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		receipts = append(receipts, receipt)
 		validtxs = append(validtxs, tx)
 	}
-	log.Criticalf("ProcessBlockInVm Exec txs ",len(txs),"cost time is",time.Since(start_time))
+	log.Criticalf("ProcessBlockInVm Exec txs ", len(txs), "cost time is", time.Since(start_time))
 	// submit validation result
 	start_time = time.Now()
 	err, merkleRoot, txRoot, receiptRoot := pool.submitValidationResult(state, batch)
-	log.Criticalf("ProcessBlockInVm submitValidationResult ",len(txs),"cost time is",time.Since(start_time))
+	log.Criticalf("ProcessBlockInVm submitValidationResult ", len(txs), "cost time is", time.Since(start_time))
 	if err != nil {
 		log.Error("Commit state db failed! error msg, ", err.Error())
 		return err, &BlockRecord{
@@ -409,6 +409,7 @@ func initEnvironment(state vm.Database, seqNo uint64) vm.Environment {
 	vmenv := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, state, env)
 	return vmenv
 }
+
 // initialize transaction calculator
 func (pool *BlockPool) initializeTransactionCalculator() error {
 	db, err := hyperdb.GetLDBDatabase()
@@ -429,6 +430,7 @@ func (pool *BlockPool) initializeTransactionCalculator() error {
 	}
 	return nil
 }
+
 // initialize receipt calculator
 func (pool *BlockPool) initializeReceiptCalculator() error {
 	db, err := hyperdb.GetLDBDatabase()
@@ -449,6 +451,7 @@ func (pool *BlockPool) initializeReceiptCalculator() error {
 	}
 	return nil
 }
+
 // calculate a batch of transaction
 func (pool *BlockPool) calculateTransactionsFingerprint(transaction *types.Transaction, flush bool) (common.Hash, error) {
 	if transaction == nil && flush == false {
@@ -490,10 +493,11 @@ func (pool *BlockPool) calculateTransactionsFingerprint(transaction *types.Trans
 	}
 	return common.Hash{}, nil
 }
+
 // calculate a batch of receipt
-func (pool *BlockPool) calculateReceiptFingerprint(receipt *types.Receipt, flush bool)(common.Hash, error) {
+func (pool *BlockPool) calculateReceiptFingerprint(receipt *types.Receipt, flush bool) (common.Hash, error) {
 	// 1. marshal receipt to byte slice
-	if receipt == nil  && flush == false {
+	if receipt == nil && flush == false {
 		log.Error("empty recepit pointer")
 		return common.Hash{}, errors.New("empty pointer")
 	}
@@ -538,12 +542,12 @@ func (pool *BlockPool) calculateReceiptFingerprint(receipt *types.Receipt, flush
 }
 
 func (pool *BlockPool) submitValidationResult(state vm.Database, batch hyperdb.Batch) (error, []byte, []byte, []byte) {
-	switch  pool.conf.StateType {
+	switch pool.conf.StateType {
 	case "hyperstate":
 		// flush all state change
 		start_time := time.Now()
 		root, err := state.Commit()
-		log.Criticalf("submitValidationResult state.Commit() cost time is",time.Since(start_time))
+		log.Criticalf("submitValidationResult state.Commit() cost time is", time.Since(start_time))
 		state.Reset()
 		if err != nil {
 			log.Error("Commit state db failed! error msg, ", err.Error())

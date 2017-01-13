@@ -3,16 +3,16 @@
 package pbft
 
 import (
-	"time"
 	"fmt"
+	"time"
 
-	"hyperchain/protos"
 	"hyperchain/consensus/helper/persist"
+	"hyperchain/protos"
 
-	"github.com/golang/protobuf/proto"
-	"hyperchain/core/types"
 	"encoding/hex"
+	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
+	"hyperchain/core/types"
 )
 
 // =============================================================================
@@ -91,8 +91,8 @@ func (pbft *pbftProtocal) getCert(v uint64, n uint64) (cert *msgCert) {
 	prepare := make(map[Prepare]bool)
 	commit := make(map[Commit]bool)
 	cert = &msgCert{
-		prepare:	prepare,
-		commit:		commit,
+		prepare: prepare,
+		commit:  commit,
 	}
 	pbft.certStore[idx] = cert
 
@@ -111,7 +111,7 @@ func (pbft *pbftProtocal) getChkptCert(n uint64, id string) (cert *chkptCert) {
 
 	chkpts := make(map[Checkpoint]bool)
 	cert = &chkptCert{
-		chkpts:	chkpts,
+		chkpts: chkpts,
 	}
 	pbft.chkptCertStore[idx] = cert
 
@@ -130,8 +130,8 @@ func (pbft *pbftProtocal) getAddNodeCert(digest string) (cert *addNodeCert) {
 	adds := make(map[AddNode]bool)
 	agrees := make(map[AgreeUpdateN]bool)
 	cert = &addNodeCert{
-		addNodes:	adds,
-		agrees:		agrees,
+		addNodes: adds,
+		agrees:   agrees,
 	}
 	pbft.addNodeCertStore[digest] = cert
 
@@ -151,8 +151,8 @@ func (pbft *pbftProtocal) getDelNodeCert(delHash string, routerHash string) (cer
 	dels := make(map[DelNode]bool)
 	agrees := make(map[AgreeUpdateN]bool)
 	cert = &delNodeCert{
-		delNodes:	dels,
-		agrees:		agrees,
+		delNodes: dels,
+		agrees:   agrees,
 	}
 	pbft.delNodeCertStore[id] = cert
 
@@ -183,7 +183,6 @@ func (pbft *pbftProtocal) getDelNV() (n int64, v uint64) {
 	return
 }
 
-
 // =============================================================================
 // prepare/commit quorum checks helper
 // =============================================================================
@@ -198,9 +197,9 @@ func (pbft *pbftProtocal) preparedReplicasQuorum() int {
 
 func (pbft *pbftProtocal) committedReplicasQuorum() int {
 	if pbft.inUpdatingN {
-		return (2 * pbft.previousF + 1)
+		return (2*pbft.previousF + 1)
 	} else {
-		return (2 * pbft.f + 1)
+		return (2*pbft.f + 1)
 	}
 }
 
@@ -308,10 +307,10 @@ func consensusMsgHelper(msg *ConsensusMessage, id uint64) *protos.Message {
 	}
 
 	pbMsg := &protos.Message{
-		Type:		protos.Message_CONSENSUS,
-		Payload:	msgPayload,
-		Timestamp:	time.Now().UnixNano(),
-		Id:		id,
+		Type:      protos.Message_CONSENSUS,
+		Payload:   msgPayload,
+		Timestamp: time.Now().UnixNano(),
+		Id:        id,
 	}
 
 	return pbMsg
@@ -320,10 +319,10 @@ func consensusMsgHelper(msg *ConsensusMessage, id uint64) *protos.Message {
 // nullRequestMsgHelper help convert the nullRequestMessage to pb.Message
 func nullRequestMsgHelper(id uint64) *protos.Message {
 	pbMsg := &protos.Message{
-		Type:  		protos.Message_NULL_REQUEST,
-		Payload:        nil,
-		Timestamp:	time.Now().UnixNano(),
-		Id:		id,
+		Type:      protos.Message_NULL_REQUEST,
+		Payload:   nil,
+		Timestamp: time.Now().UnixNano(),
+		Id:        id,
 	}
 
 	return pbMsg
@@ -333,11 +332,10 @@ func nullRequestMsgHelper(id uint64) *protos.Message {
 func stateUpdateHelper(myId uint64, seqNo uint64, id []byte, replicaId []uint64) *protos.UpdateStateMessage {
 
 	stateUpdateMsg := &protos.UpdateStateMessage{
-		Id:		myId,
-		SeqNo:		seqNo,
-		TargetId:	id,
-		Replicas:	replicaId,
-
+		Id:       myId,
+		SeqNo:    seqNo,
+		TargetId: id,
+		Replicas: replicaId,
 	}
 	return stateUpdateMsg
 }
@@ -351,18 +349,18 @@ func getBlockchainInfo() *protos.BlockchainInfo {
 	preBlkHash := bcInfo.ParentBlockHash
 
 	return &protos.BlockchainInfo{
-		Height:			height,
-		CurrentBlockHash: 	curBlkHash,
-		PreviousBlockHash: 	preBlkHash,
+		Height:            height,
+		CurrentBlockHash:  curBlkHash,
+		PreviousBlockHash: preBlkHash,
 	}
 }
 
 func getCurrentBlockInfo() *protos.BlockchainInfo {
 	height, curHash, prevHash := persist.GetCurrentBlockInfo()
 	return &protos.BlockchainInfo{
-		Height:				height,
-		CurrentBlockHash:	curHash,
-		PreviousBlockHash:	prevHash,
+		Height:            height,
+		CurrentBlockHash:  curHash,
+		PreviousBlockHash: prevHash,
 	}
 }
 
@@ -402,7 +400,7 @@ func (pbft *pbftProtocal) startTimerIfOutstandingRequests() {
 	}
 }
 
-func (pbft *pbftProtocal) nullReqTimerReset(){
+func (pbft *pbftProtocal) nullReqTimerReset() {
 	timeout := pbft.nullRequestTimeout
 	if pbft.primary(pbft.view) != pbft.id {
 		// we're waiting for the primary to deliver a null request - give it a bit more time

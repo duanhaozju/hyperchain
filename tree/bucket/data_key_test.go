@@ -1,9 +1,10 @@
 package bucket
 
 import (
-	"testing"
 	"hyperchain/tree/bucket/testutil"
+	"testing"
 )
+
 func TestDataKey(t *testing.T) {
 	conf = newConfig(26, 3, fnvHash)
 	dataKey := newDataKey("chaincodeID", "key")
@@ -19,4 +20,3 @@ func TestDataKeyGetBucketKey(t *testing.T) {
 	newDataKey("chaincodeID2", "key1").getBucketKey()
 	newDataKey("chaincodeID2", "key2").getBucketKey()
 }
-

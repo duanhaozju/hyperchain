@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"hyperchain/common"
-
 )
 
 type Log struct {
@@ -22,6 +21,7 @@ type Log struct {
 	BlockHash   common.Hash `json:"BlockHash"`
 	Index       uint        `json:"Index"`
 }
+
 // assign block number as 0 temporarily
 // because the blcok number in env is a seqNo actually
 // primary's seqNo may not equal to other's

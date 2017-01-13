@@ -4,15 +4,15 @@
 package common
 
 import (
-	"testing"
 	"os"
-	"time"
 	"reflect"
+	"testing"
+	"time"
 )
 
 var conf = NewConfig(os.Getenv("GOPATH") + "/src/hyperchain/config/test/config_test.yaml")
 
-func TestGetString(t *testing.T)  {
+func TestGetString(t *testing.T) {
 	vk := "server.version"
 	expect := "0.1"
 
@@ -22,7 +22,7 @@ func TestGetString(t *testing.T)  {
 	}
 }
 
-func TestGetInt(t *testing.T)  {
+func TestGetInt(t *testing.T) {
 	key := "server.port"
 	expect := int64(50051)
 
@@ -32,7 +32,7 @@ func TestGetInt(t *testing.T)  {
 	}
 }
 
-func TestGetDuration(t *testing.T)  {
+func TestGetDuration(t *testing.T) {
 	key := "server.duration"
 	expect, _ := time.ParseDuration("3s")
 	rs := conf.GetDuration(key)
@@ -47,7 +47,7 @@ func TestGetFloat64(t *testing.T) {
 	expect := 12.34
 
 	rs := conf.GetFloat64(key)
-	if rs != expect{
+	if rs != expect {
 		t.Errorf("GetFloat64(%q) = %f, actual : %f", key, rs, expect)
 	}
 }
@@ -57,7 +57,7 @@ func TestGetBool(t *testing.T) {
 	expect := false
 
 	rs := conf.GetBool(key)
-	if rs != expect{
+	if rs != expect {
 		t.Errorf("GetBool(%q) = %t, actual: %t", key, rs, expect)
 	}
 }

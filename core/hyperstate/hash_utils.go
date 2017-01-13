@@ -1,8 +1,8 @@
 package hyperstate
 
 import (
-	"hyperchain/common"
 	"bytes"
+	"hyperchain/common"
 	"sort"
 )
 
@@ -24,4 +24,3 @@ func SimpleHashFn(root common.Hash, set ChangeSet) common.Hash {
 		set,
 	})
 }
-

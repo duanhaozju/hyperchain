@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	HashLength    = 32
+	HashLength = 32
 )
 
 type BlocksController struct {
@@ -47,7 +47,7 @@ func (b *BlocksController) GetBlockByHashOrNum() {
 
 	var counts_params int = 0
 
-	if p_blkNum != ""{
+	if p_blkNum != "" {
 		counts_params++
 	}
 	if p_blkHash != "" {
@@ -56,7 +56,7 @@ func (b *BlocksController) GetBlockByHashOrNum() {
 
 	if counts_params != 1 {
 		counts_params_str := strconv.Itoa(counts_params)
-		b.Data["json"] = NewJSONObject(nil, &invalidParamsError{"require 1 params, but get "+counts_params_str+" params"})
+		b.Data["json"] = NewJSONObject(nil, &invalidParamsError{"require 1 params, but get " + counts_params_str + " params"})
 		b.ServeJSON()
 		return
 	}

@@ -85,12 +85,12 @@ contract Accumulator{ uint32 sum = 0; string hello = "hello world"; function inc
 
 func TestCompiler(t *testing.T) {
 
-	abis,bins,_,err := CompileSourcefile(source3)
+	abis, bins, _, err := CompileSourcefile(source3)
 	if err != nil {
 		return
 	}
-	t.Log("abis:",abis)
-	t.Log("bins",bins)
+	t.Log("abis:", abis)
+	t.Log("bins", bins)
 
 }
 

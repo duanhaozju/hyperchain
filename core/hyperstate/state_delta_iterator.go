@@ -1,6 +1,5 @@
 package hyperstate
 
-
 // StateDeltaIterator - An iterator implementation over state-delta
 type StateDeltaIterator struct {
 	updates         map[string]*UpdatedValue

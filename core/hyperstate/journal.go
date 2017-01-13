@@ -1,26 +1,26 @@
 package hyperstate
 
 import (
-	"math/big"
-	"hyperchain/common"
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"github.com/pkg/errors"
+	"hyperchain/common"
+	"math/big"
 )
 
 // journal type name definition
 const (
 	CreateObjectChangeType = "CreateObjectChange"
-	ResetObjectChangeType = "ResetObjectChange"
-	SuicideChangeType = "SuicideChange"
-	BalanceChangeType = "BalanceChange"
-	NonceChangeType = "NonceChange"
-	StorageChangeType = "StorageChange"
-	CodeChangeType = "CodeChange"
-	RefundChangeType = "RefundChange"
-	AddLogChangeType = "AddLogChange"
-	TouchChangeType = "TouchChange"
-	StorageHashChangeType = "StorageHashChange"
+	ResetObjectChangeType  = "ResetObjectChange"
+	SuicideChangeType      = "SuicideChange"
+	BalanceChangeType      = "BalanceChange"
+	NonceChangeType        = "NonceChange"
+	StorageChangeType      = "StorageChange"
+	CodeChangeType         = "CodeChange"
+	RefundChangeType       = "RefundChange"
+	AddLogChangeType       = "AddLogChange"
+	TouchChangeType        = "TouchChange"
+	StorageHashChangeType  = "StorageHashChange"
 )
 
 type JournalEntry interface {
@@ -162,7 +162,6 @@ func UnmarshalJournal(data []byte) (*Journal, error) {
 	return ret, nil
 }
 
-
 type (
 	// Changes to the account database
 	CreateObjectChange struct {
@@ -170,50 +169,50 @@ type (
 		Type    string          `json:"type,omitempty"`
 	}
 	ResetObjectChange struct {
-		Prev *StateObject       `json:"prev,omitempty"`
-		Type string             `json:"type,omitempty"`
+		Prev *StateObject `json:"prev,omitempty"`
+		Type string       `json:"type,omitempty"`
 	}
 	SuicideChange struct {
-		Account     *common.Address  `json:"account,omitempty"`
-		Prev        bool             `json:"prev,omitempty"`           // whether account had already suicided
-		Prevbalance *big.Int         `json:"prevbalance,omitempty"`
-		PreObject   *StateObject     `json:"preObject,omitempty"`
-		Type        string           `json:"type,omitempty"`
+		Account     *common.Address `json:"account,omitempty"`
+		Prev        bool            `json:"prev,omitempty"` // whether account had already suicided
+		Prevbalance *big.Int        `json:"prevbalance,omitempty"`
+		PreObject   *StateObject    `json:"preObject,omitempty"`
+		Type        string          `json:"type,omitempty"`
 	}
 
 	// Changes to individual accounts.
 	BalanceChange struct {
-		Account *common.Address     `json:"account,omitempty"`
-		Prev    *big.Int            `json:"prev,omitempty"`
-		Type    string	            `json:"type,omitempty"`
+		Account *common.Address `json:"account,omitempty"`
+		Prev    *big.Int        `json:"prev,omitempty"`
+		Type    string          `json:"type,omitempty"`
 	}
 	NonceChange struct {
-		Account *common.Address    `json:"account,omitempty"`
-		Prev    uint64	           `json:"prev,omitempty"`
-		Type    string             `json:"type,omitempty"`
+		Account *common.Address `json:"account,omitempty"`
+		Prev    uint64          `json:"prev,omitempty"`
+		Type    string          `json:"type,omitempty"`
 	}
 	StorageChange struct {
-		Account       *common.Address `json:"account,omitempty"`
-		Key           common.Hash     `json:"key,omitempty"`
-		Prevalue      common.Hash     `json:"prevalue,omitempty"`
-		Exist         bool            `json:"exist,omitempty"`
-		Type          string          `json:"type,omitempty"`
+		Account  *common.Address `json:"account,omitempty"`
+		Key      common.Hash     `json:"key,omitempty"`
+		Prevalue common.Hash     `json:"prevalue,omitempty"`
+		Exist    bool            `json:"exist,omitempty"`
+		Type     string          `json:"type,omitempty"`
 	}
 	CodeChange struct {
-		Account            *common.Address `json:"account,omitempty"`
-		Prevcode           []byte          `json:"prevcode,omitempty"`
-		Prevhash           []byte          `json:"prevhash,omitempty"`
-		Type               string          `json:"type,omitempty"`
+		Account  *common.Address `json:"account,omitempty"`
+		Prevcode []byte          `json:"prevcode,omitempty"`
+		Prevhash []byte          `json:"prevhash,omitempty"`
+		Type     string          `json:"type,omitempty"`
 	}
 
 	// Changes to other state values.
 	RefundChange struct {
-		Prev *big.Int         `json:"prev,omitempty"`
-		Type string           `json:"type,omitempty"`
+		Prev *big.Int `json:"prev,omitempty"`
+		Type string   `json:"type,omitempty"`
 	}
 	AddLogChange struct {
-		Txhash common.Hash   `json:"txhash,omitempty"`
-		Type   string        `json:"type,omitempty"`
+		Txhash common.Hash `json:"txhash,omitempty"`
+		Type   string      `json:"type,omitempty"`
 	}
 	TouchChange struct {
 		Account *common.Address `json:"account,omitempty"`
@@ -226,6 +225,7 @@ type (
 		Type    string          `json:"type,omitempty"`
 	}
 )
+
 // createObjectChange
 func (ch *CreateObjectChange) Undo(s *StateDB, writeThrough bool) {
 	if !writeThrough {
@@ -240,7 +240,7 @@ func (ch *CreateObjectChange) String() string {
 	str = fmt.Sprintf("journal [createObjectChange] %s\n", ch.Account.Hex())
 	return str
 }
-func (ch *CreateObjectChange) Marshal()([]byte, error) {
+func (ch *CreateObjectChange) Marshal() ([]byte, error) {
 	return json.Marshal(ch)
 }
 func (ch *CreateObjectChange) SetType() {
@@ -249,6 +249,7 @@ func (ch *CreateObjectChange) SetType() {
 func (ch *CreateObjectChange) GetType() string {
 	return ch.Type
 }
+
 // resetObjectChange
 func (ch *ResetObjectChange) Undo(s *StateDB, writeThrough bool) {
 	if !writeThrough {
@@ -268,7 +269,7 @@ func (ch *ResetObjectChange) String() string {
 	return str
 }
 
-func (ch *ResetObjectChange) Marshal()([]byte, error) {
+func (ch *ResetObjectChange) Marshal() ([]byte, error) {
 	return json.Marshal(ch)
 }
 func (ch *ResetObjectChange) SetType() {
@@ -277,6 +278,7 @@ func (ch *ResetObjectChange) SetType() {
 func (ch *ResetObjectChange) GetType() string {
 	return ch.Type
 }
+
 // suicideChange
 func (ch *SuicideChange) Undo(s *StateDB, writeThrough bool) {
 	if !writeThrough {
@@ -303,7 +305,7 @@ func (ch *SuicideChange) String() string {
 	str = fmt.Sprintf("journal [suicideChange] %s  %#v  %d\n", ch.Account.Hex(), ch.Prev, ch.Prevbalance)
 	return str
 }
-func (ch *SuicideChange) Marshal()([]byte, error) {
+func (ch *SuicideChange) Marshal() ([]byte, error) {
 	return json.Marshal(ch)
 }
 func (ch *SuicideChange) SetType() {
@@ -312,6 +314,7 @@ func (ch *SuicideChange) SetType() {
 func (ch *SuicideChange) GetType() string {
 	return ch.Type
 }
+
 // touchChange
 var ripemd = common.HexToAddress("0000000000000000000000000000000000000003")
 
@@ -330,7 +333,7 @@ func (ch *TouchChange) String() string {
 	str = fmt.Sprintf("journal [touchChange] %s %#v\n", ch.Account.Hex(), ch.Prev)
 	return str
 }
-func (ch *TouchChange) Marshal()([]byte, error) {
+func (ch *TouchChange) Marshal() ([]byte, error) {
 	return json.Marshal(ch)
 }
 func (ch *TouchChange) SetType() {
@@ -339,6 +342,7 @@ func (ch *TouchChange) SetType() {
 func (ch *TouchChange) GetType() string {
 	return ch.Type
 }
+
 // balanceChange
 func (ch *BalanceChange) Undo(s *StateDB, writeThrough bool) {
 	if !writeThrough {
@@ -370,7 +374,7 @@ func (ch *BalanceChange) String() string {
 	str = fmt.Sprintf("journal [balanceChange] %s %#v\n", ch.Account.Hex(), ch.Prev)
 	return str
 }
-func (ch *BalanceChange) Marshal()([]byte, error) {
+func (ch *BalanceChange) Marshal() ([]byte, error) {
 	return json.Marshal(ch)
 }
 func (ch *BalanceChange) SetType() {
@@ -379,6 +383,7 @@ func (ch *BalanceChange) SetType() {
 func (ch *BalanceChange) GetType() string {
 	return ch.Type
 }
+
 // nonceChange
 func (ch *NonceChange) Undo(s *StateDB, writeThrough bool) {
 	if !writeThrough {
@@ -412,7 +417,7 @@ func (ch *NonceChange) String() string {
 	return str
 
 }
-func (ch *NonceChange) Marshal()([]byte, error) {
+func (ch *NonceChange) Marshal() ([]byte, error) {
 	return json.Marshal(ch)
 }
 func (ch *NonceChange) SetType() {
@@ -457,7 +462,7 @@ func (ch *CodeChange) String() string {
 	str = fmt.Sprintf("journal [codeChange] %s codeHash %s code %s\n", ch.Account.Hex(), common.BytesToHash(ch.Prevhash).Hex(), common.Bytes2Hex(ch.Prevcode))
 	return str
 }
-func (ch *CodeChange) Marshal()([]byte, error) {
+func (ch *CodeChange) Marshal() ([]byte, error) {
 	return json.Marshal(ch)
 }
 func (ch *CodeChange) SetType() {
@@ -488,7 +493,7 @@ func (ch *StorageChange) String() string {
 	str = fmt.Sprintf("journal [storageChange] %s previous key %s  previous value %s \n", ch.Account.Hex(), ch.Key.Hex(), ch.Prevalue.Hex())
 	return str
 }
-func (ch *StorageChange) Marshal()([]byte, error) {
+func (ch *StorageChange) Marshal() ([]byte, error) {
 	return json.Marshal(ch)
 }
 func (ch *StorageChange) SetType() {
@@ -507,7 +512,7 @@ func (ch *RefundChange) String() string {
 	str = fmt.Sprintf("journal [refundChange] previous value %s \n", ch.Prev.String())
 	return str
 }
-func (ch *RefundChange) Marshal()([]byte, error) {
+func (ch *RefundChange) Marshal() ([]byte, error) {
 	return json.Marshal(ch)
 }
 func (ch *RefundChange) SetType() {
@@ -531,7 +536,7 @@ func (ch *AddLogChange) String() string {
 	str = fmt.Sprintf("journal [addLogChange] tx hash %s \n", ch.Txhash.Hex())
 	return str
 }
-func (ch *AddLogChange) Marshal()([]byte, error) {
+func (ch *AddLogChange) Marshal() ([]byte, error) {
 	return json.Marshal(ch)
 }
 func (ch *AddLogChange) SetType() {
@@ -540,6 +545,7 @@ func (ch *AddLogChange) SetType() {
 func (ch *AddLogChange) GetType() string {
 	return ch.Type
 }
+
 // StorageHashChange
 func (ch *StorageHashChange) Undo(s *StateDB, writeThrough bool) {
 	if !writeThrough {

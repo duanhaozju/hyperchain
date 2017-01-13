@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
-	"strings"
 	"hyperchain/utils/builtin"
+	"strings"
 )
 
 var option = flag.String("o", "", "Two option:(1)account: create account  (2)transaction: create normal transaction or contract transaction")
@@ -21,6 +21,7 @@ var payload = flag.String("l", "", "use to specify transaction payload")
 var t = flag.Int("t", 0, "use to specify transaction type to generate, 0 represent normal transaction, 1 represent contract transaction")
 var ip = flag.String("ip", "localhost", "use to specify the ip address")
 var port = flag.Int("port", 8081, "use to specify the server port")
+
 // stress test related
 var nodeFile = flag.String("nodefile", "./nodes.json", "use to specify node address configuration file path")
 var duration = flag.Int("duration", 0, "use to specify the duration of the stress test")
@@ -45,13 +46,12 @@ func main() {
 	} else if strings.ToLower(*option) == "account" {
 		builtin.NewAccount(*password, *silense)
 	} else if strings.ToLower(*option) == "transaction" {
-		builtin.NewTransaction(*password, *from, *to, *timestamp,*amount, *payload, *t, *ip, *port, *silense, *simulate)
-	} else if strings.ToLower(*option) == "execute_transaction"{
+		builtin.NewTransaction(*password, *from, *to, *timestamp, *amount, *payload, *t, *ip, *port, *silense, *simulate)
+	} else if strings.ToLower(*option) == "execute_transaction" {
 		builtin.ExecuteTransaction(*password, *from, *to, *timestamp, *amount, *payload, *t, *ip, *port, *silense, *simulate)
-	}  else if strings.ToLower(*option) == "nh" {
+	} else if strings.ToLower(*option) == "nh" {
 		builtin.NHBANK(*tps, *instant, *duration, *estimation, *simulate)
 	} else if strings.ToLower(*option) == "accounts" {
 		builtin.NewAccounts(*accountNum, "123", false)
 	}
 }
-

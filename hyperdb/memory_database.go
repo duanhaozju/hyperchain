@@ -3,8 +3,8 @@
 package hyperdb
 
 import (
-	"sync"
 	"errors"
+	"sync"
 )
 
 //-- 拷贝并返回一个[]byte
@@ -13,7 +13,6 @@ func CopyBytes(b []byte) (copiedBytes []byte) {
 	copy(copiedBytes, b)
 	return
 }
-
 
 //-- 用内存模拟实现一个mem db
 //-- 实现了DataBase接口
@@ -64,7 +63,6 @@ func (db *MemDatabase) Keys() [][]byte {
 	return keys
 }
 
-
 func (db *MemDatabase) Delete(key []byte) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
@@ -72,13 +70,11 @@ func (db *MemDatabase) Delete(key []byte) error {
 	return nil
 }
 
-
 func (db *MemDatabase) Close() {}
 
 func (db *MemDatabase) NewBatch() Batch {
 	return &memBatch{db: db}
 }
-
 
 //-- mem db的batch操作
 type kv struct{ k, v []byte }
@@ -116,4 +112,3 @@ func (b *memBatch) Write() error {
 	}
 	return nil
 }
-

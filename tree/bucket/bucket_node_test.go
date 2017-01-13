@@ -1,8 +1,8 @@
 package bucket
 
-import 	(
-	"testing"
+import (
 	"hyperchain/tree/bucket/testutil"
+	"testing"
 )
 
 func TestBucketNodeComputeHash(t *testing.T) {

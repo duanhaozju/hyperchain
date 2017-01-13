@@ -1,11 +1,12 @@
 package bucket
 
 import (
-	"math/big"
-	"github.com/golang/protobuf/proto"
 	"fmt"
+	"github.com/golang/protobuf/proto"
+	"math/big"
 	"sort"
 )
+
 // the value which updated by datanode
 type UpdatedValue struct {
 	Value         []byte
@@ -15,11 +16,10 @@ type UpdatedValue struct {
 // the set of UpdatedValue
 type UpdatedValueSet struct {
 	BlockNum   *big.Int
-	UpdatedKVs map[string] *UpdatedValue
+	UpdatedKVs map[string]*UpdatedValue
 }
 
-
-func (updatedValueSet *UpdatedValueSet) Marshal(buffer *proto.Buffer){
+func (updatedValueSet *UpdatedValueSet) Marshal(buffer *proto.Buffer) {
 	err := buffer.EncodeVarint(uint64(len(updatedValueSet.UpdatedKVs)))
 	if err != nil {
 		panic(fmt.Errorf("This error should not occur: %s", err))
@@ -99,7 +99,6 @@ func (updatedValueSet *UpdatedValueSet) unmarshalValueWithMarker(buffer *proto.B
 	return value, nil
 }
 
-
 func (updatedValueSet *UpdatedValueSet) Get(key string) *UpdatedValue {
 	// TODO Cache?
 	return updatedValueSet.UpdatedKVs[key]
@@ -126,6 +125,6 @@ func (updatedValueSet *UpdatedValueSet) GetSortedKeys() []string {
 	return updatedKeys
 }
 
-func (updatedValueSet *UpdatedValueSet) UpdatedValueKVs(updatedDataNodes , existingDataNodes DataNodes){
+func (updatedValueSet *UpdatedValueSet) UpdatedValueKVs(updatedDataNodes, existingDataNodes DataNodes) {
 
 }

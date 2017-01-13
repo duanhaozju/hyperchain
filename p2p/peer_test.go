@@ -4,24 +4,22 @@
 package p2p
 
 import (
-	"testing"
-	node "hyperchain/p2p/node"
-	"hyperchain/event"
-	"hyperchain/p2p/transport"
-	"hyperchain/p2p/peerComm"
-	"time"
-	pb "hyperchain/p2p/peermessage"
-	hypermessage "hyperchain/protos"
-	"github.com/golang/protobuf/proto"
 	"encoding/hex"
+	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
+	"hyperchain/event"
 	"hyperchain/membersrvc"
-
+	node "hyperchain/p2p/node"
+	"hyperchain/p2p/peerComm"
+	pb "hyperchain/p2p/peermessage"
+	"hyperchain/p2p/transport"
+	hypermessage "hyperchain/protos"
+	"testing"
+	"time"
 )
 
-
 var fakeNodeTEM *transport.HandShakeManager
-var fakeNode  *Node
+var fakeNode *Node
 var fakeNodeAddr *pb.PeerAddress
 var localAddr *pb.PeerAddress
 var localTEM *transport.HandShakeManager
@@ -47,16 +45,16 @@ func TestNewPeerByIpAndPort(t *testing.T) {
 }
 
 func TestPeer_Chat(t *testing.T) {
-	peer,err :=NewPeerByIpAndPort(fakeNodeAddr.IP,fakeNodeAddr.Port,fakeNodeAddr.ID,localTEM,localAddr)
-	if err != nil{
+	peer, err := NewPeerByIpAndPort(fakeNodeAddr.IP, fakeNodeAddr.Port, fakeNodeAddr.ID, localTEM, localAddr)
+	if err != nil {
 		t.Error(err)
 	}
 	//t.Log(peer.Addr)
 
 	var broadCastMessage = pb.Message{
 		MessageType:  pb.Message_CONSUS,
-		From:        localAddr,
-		Payload:     []byte("TEST"),
+		From:         localAddr,
+		Payload:      []byte("TEST"),
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	ret, err := peer.Chat(broadCastMessage)
@@ -74,8 +72,8 @@ func TestPeer_Chat2(t *testing.T) {
 
 	var broadCastMessage = pb.Message{
 		MessageType:  pb.Message_CONSUS,
-		From:        localAddr,
-		Payload:     []byte("TEST"),
+		From:         localAddr,
+		Payload:      []byte("TEST"),
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	ret, err := peer.Chat(broadCastMessage)
@@ -93,17 +91,17 @@ func TestPeer_Chat3(t *testing.T) {
 
 	var broadCastMessage = pb.Message{
 		MessageType:  pb.Message_CONSUS,
-		From:        localAddr,
-		Payload:     []byte("TEST"),
+		From:         localAddr,
+		Payload:      []byte("TEST"),
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 
 	//fake consensus message
 	consensusMsg := &hypermessage.Message{
-		Timestamp:time.Now().UnixNano(),
-		Type:hypermessage.Message_CONSENSUS,
-		Payload:[]byte("TEST"),
-		Id:uint64(2),
+		Timestamp: time.Now().UnixNano(),
+		Type:      hypermessage.Message_CONSENSUS,
+		Payload:   []byte("TEST"),
+		Id:        uint64(2),
 	}
 
 	tranferData, err := proto.Marshal(consensusMsg)

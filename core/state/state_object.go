@@ -126,8 +126,8 @@ func (self *StateObject) Update() {
 }
 
 // setError remembers the first non-nil error it is called with
-func (self *StateObject) setError(err error){
-	if self.dbErr == nil{
+func (self *StateObject) setError(err error) {
+	if self.dbErr == nil {
 		self.dbErr = err
 	}
 }
@@ -196,20 +196,19 @@ func (self *StateObject) SetABI(abi []byte) {
 // Code returns the contract code associated with this object,if any
 // TODO the code could be stored in cache
 func (self *StateObject) Code(db pmt.Database) []byte {
-	if self.code != nil{
+	if self.code != nil {
 		return self.code
 	}
-	if bytes.Equal(self.CodeHash(),emptyCodeHash){
+	if bytes.Equal(self.CodeHash(), emptyCodeHash) {
 		return nil
 	}
-	code,err := db.Get(self.CodeHash())
-	if err != nil{
-		self.setError(fmt.Errorf("can't load code hash %x: %v",self.CodeHash(),err))
+	code, err := db.Get(self.CodeHash())
+	if err != nil {
+		self.setError(fmt.Errorf("can't load code hash %x: %v", self.CodeHash(), err))
 	}
 	self.code = code
 	return code
 }
-
 
 func (self *StateObject) SetCode(hash common.Hash, code []byte) {
 	self.code = code
@@ -260,7 +259,7 @@ func (self *StateObject) PrintStorages() {
 	}
 }
 
-func (self *StateObject) CodeHash() []byte{
+func (self *StateObject) CodeHash() []byte {
 	return self.codeHash
 }
 

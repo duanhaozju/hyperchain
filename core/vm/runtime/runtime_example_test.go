@@ -3,8 +3,8 @@ package runtime_test
 import (
 	"fmt"
 
-	"hyperchain/core/vm/runtime"
 	"hyperchain/common"
+	"hyperchain/core/vm/runtime"
 )
 
 func ExampleExecute() {

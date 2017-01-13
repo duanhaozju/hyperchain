@@ -1,8 +1,8 @@
 package bucket
 
 import (
-	"testing"
 	"hyperchain/tree/bucket/testutil"
+	"testing"
 )
 
 func TestBucketKeyGetParentKey(t *testing.T) {
@@ -77,4 +77,3 @@ func TestBucketKeyGetChildIndex(t *testing.T) {
 	bucketKey = newBucketKey(3, 24)
 	testutil.AssertEquals(t, bucketKey.getParentKey().getChildIndex(bucketKey), 2)
 }
-

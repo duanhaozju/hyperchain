@@ -5,13 +5,12 @@ package common
 
 //constants for logger key
 const (
-	LOG_FILE_DIR  = "global.logs.logsdir"
-	LOG_FUMP_FILE  = "global.logs.dumpfile"
+	LOG_FILE_DIR       = "global.logs.logsdir"
+	LOG_FUMP_FILE      = "global.logs.dumpfile"
 	LOG_BASE_LOG_LEVEL = "global.logs.loglevel"
 
 	LOG_MODUKE_KEY = "global.logs.module"
 )
-
 
 //constants for input args
 const (
@@ -21,4 +20,3 @@ const (
 
 	HYPERCHAIN_ID = "hyperchain.id"
 )
-

@@ -1,19 +1,19 @@
 package blockpool
 
 import (
-	"time"
+	"encoding/hex"
 	"github.com/golang/protobuf/proto"
+	"hyperchain/common"
+	"hyperchain/core"
+	"hyperchain/core/types"
+	"hyperchain/crypto"
+	"hyperchain/event"
+	"hyperchain/hyperdb"
+	"hyperchain/p2p"
+	"hyperchain/protos"
 	"hyperchain/recovery"
 	"sync/atomic"
-	"hyperchain/hyperdb"
-	"encoding/hex"
-	"hyperchain/event"
-	"hyperchain/crypto"
-	"hyperchain/p2p"
-	"hyperchain/core/types"
-	"hyperchain/core"
-	"hyperchain/common"
-	"hyperchain/protos"
+	"time"
 )
 
 // When receive an CommitOrRollbackBlockEvent, if flag is true, generate a block and call AddBlock function
@@ -116,7 +116,7 @@ func (pool *BlockPool) AddBlock(block *types.Block, receipts []*types.Receipt, c
 }
 
 // WriteBlock: save block into database
-func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, commonHash crypto.CommonHash, vid uint64, primary bool) {
+func (pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, commonHash crypto.CommonHash, vid uint64, primary bool) {
 	begin := time.Now()
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
@@ -151,14 +151,14 @@ func(pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, 
 	begin = time.Now()
 	// log.Debugf("state #%d %s", vid, string(state.Dump()))
 	// write checkpoint data
-	if block.Number % 10 == 0 && block.Number != 0 {
+	if block.Number%10 == 0 && block.Number != 0 {
 		core.WriteChainChan()
 	}
 	log.Notice("Block number", block.Number)
 	log.Notice("Block hash", hex.EncodeToString(block.BlockHash))
 	// remove Cached Transactions which used to check transaction duplication
-    	msg := protos.RemoveCache{Vid: vid}
-    	pool.consenter.RecvLocal(msg)
+	msg := protos.RemoveCache{Vid: vid}
+	pool.consenter.RecvLocal(msg)
 	log.Error("[commit] after:", time.Since(begin))
 	// FOR TEST
 	// get journals
@@ -214,6 +214,7 @@ func (pool *BlockPool) persistTransactions(batch hyperdb.Batch, transactions []*
 	}
 	return nil
 }
+
 // re assign block hash and block number to transaction logs
 // during the validation, block number and block hash can be incorrect
 func (pool *BlockPool) persistReceipts(batch hyperdb.Batch, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) error {
@@ -235,4 +236,3 @@ func (pool *BlockPool) persistReceipts(batch hyperdb.Batch, receipts []*types.Re
 	}
 	return nil
 }
-

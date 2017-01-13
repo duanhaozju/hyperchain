@@ -1,24 +1,23 @@
 package blockpool
 
 import (
-	"sync/atomic"
-	"hyperchain/hyperdb"
-	"hyperchain/event"
+	"bytes"
+	"github.com/deckarep/golang-set"
+	"github.com/pkg/errors"
 	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/hyperstate"
-	"github.com/deckarep/golang-set"
+	"hyperchain/event"
+	"hyperchain/hyperdb"
+	"hyperchain/protos"
 	"hyperchain/tree/bucket"
 	"math/big"
-	"bytes"
-	"github.com/pkg/errors"
-	"hyperchain/protos"
+	"sync/atomic"
 )
-
 
 // reset blockchain to a stable checkpoint status when `viewchange` occur
 func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
-	log.Debugf("receive vc reset event, required revert to %d", ev.SeqNo - 1)
+	log.Debugf("receive vc reset event, required revert to %d", ev.SeqNo-1)
 	tmpDemandNumber := atomic.LoadUint64(&pool.demandNumber)
 	// 1. Reset demandNumber , demandSeqNo and maxSeqNo
 	atomic.StoreUint64(&pool.demandNumber, ev.SeqNo)
@@ -30,13 +29,13 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
 		return
 	}
-	block, err := core.GetBlockByNumber(db, ev.SeqNo - 1)
+	block, err := core.GetBlockByNumber(db, ev.SeqNo-1)
 	if err != nil {
 		return
 	}
 	// 2 revert state
-	if err := pool.revertState(int64(tmpDemandNumber - 1), int64(ev.SeqNo - 1), block.MerkleRoot); err != nil {
-		log.Errorf("revert state from %d to %d failed", tmpDemandNumber - 1, ev.SeqNo - 1)
+	if err := pool.revertState(int64(tmpDemandNumber-1), int64(ev.SeqNo-1), block.MerkleRoot); err != nil {
+		log.Errorf("revert state from %d to %d failed", tmpDemandNumber-1, ev.SeqNo-1)
 		return
 	}
 	// 3. Delete related transaction, receipt, txmeta, and block itself in a specific range
@@ -44,13 +43,13 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	// 4. remove uncommitted data
 	if err := pool.removeUncommittedData(); err != nil {
 		log.Errorf("remove uncommitted during the state reset failed, revert state from %d to %d failed",
-			tmpDemandNumber - 1, ev.SeqNo - 1)
+			tmpDemandNumber-1, ev.SeqNo-1)
 		return
 	}
 	// 5. Reset chain
 	isGenesis := (block.Number == 0)
 	core.UpdateChain(db.NewBatch(), block, isGenesis, true, true)
-	log.Debugf("revert state from %d to target %d success", tmpDemandNumber - 1, ev.SeqNo - 1)
+	log.Debugf("revert state from %d to target %d success", tmpDemandNumber-1, ev.SeqNo-1)
 	// 6. Told consensus reset finish
 	msg := protos.VcResetDone{SeqNo: ev.SeqNo}
 	pool.consenter.RecvLocal(msg)
@@ -61,7 +60,7 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 	// 1. reset demand number  demand seqNo and maxSeqNo
 	atomic.StoreUint64(&pool.demandNumber, number)
 	atomic.StoreUint64(&pool.demandSeqNo, number)
-	atomic.StoreUint64(&pool.maxSeqNo, number - 1)
+	atomic.StoreUint64(&pool.maxSeqNo, number-1)
 	pool.tempBlockNumber = number
 	// 2. revert state
 	db, err := hyperdb.GetLDBDatabase()
@@ -69,13 +68,13 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
 		return
 	}
-	block, err := core.GetBlockByNumber(db, number - 1)
+	block, err := core.GetBlockByNumber(db, number-1)
 	if err != nil {
 		return
 	}
-	pool.revertState(int64(number), int64(number - 1), block.MerkleRoot)
+	pool.revertState(int64(number), int64(number-1), block.MerkleRoot)
 	// 3. remove block releted data
-	pool.removeDataInRange(number, number + 1)
+	pool.removeDataInRange(number, number+1)
 	// 4. remove uncommitted data
 	if err := pool.removeUncommittedData(); err != nil {
 		log.Errorf("remove uncommitted of %d failed", number)
@@ -119,7 +118,6 @@ func (pool *BlockPool) removeDataInRange(from, to uint64) {
 	}
 }
 
-
 // revertState revert state from currentNumber related status to a target
 // different process logic of different state implement
 // undo from currentNumber -> targetNumber + 1.
@@ -145,7 +143,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 		}
 		// revert state change with changeset [targetNumber+1, currentNumber]
 		// IMPORTANT undo changes in reverse
-		for i := currentNumber; i >= targetNumber + 1; i -= 1 {
+		for i := currentNumber; i >= targetNumber+1; i -= 1 {
 			log.Debugf("undo changes for #%d", i)
 			j, err := db.Get(hyperstate.CompositeJournalKey(uint64(i)))
 			if err != nil {

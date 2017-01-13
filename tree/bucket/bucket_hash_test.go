@@ -3,6 +3,7 @@ package bucket
 import (
 	"testing"
 )
+
 func TestBucketHashCalculator(t *testing.T) {
 	//initConfig(nil)
 	//c := newBucketHashCalculator(newBucketKey(1, 1))
@@ -27,4 +28,3 @@ func TestBucketHashCalculator(t *testing.T) {
 	//t.Logf("Actual HashContent = %#v\n Expected HashContent = %#v", c.hashingData, expectedHashContent)
 	//testutil.AssertEquals(t, hash, testutil.ComputeCryptoHash(expectedHashContent))
 }
-

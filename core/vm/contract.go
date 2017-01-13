@@ -30,7 +30,7 @@ type Contract struct {
 	jumpdests destinations // result of JUMPDEST analysis.
 
 	Code     []byte
-	ABI     []byte
+	ABI      []byte
 	Input    []byte
 	CodeAddr *common.Address
 
@@ -133,10 +133,12 @@ func (c *Contract) Value() *big.Int {
 func (self *Contract) SetCode(hash common.Hash, code []byte) {
 	self.Code = code
 }
+
 // SetABI sets the ABI to the contract
 func (self *Contract) SetABI(abi []byte) {
 	self.ABI = abi
 }
+
 // SetCallCode sets the code of the contract and address of the backing data
 // object
 func (self *Contract) SetCallCode(addr *common.Address, code []byte) {

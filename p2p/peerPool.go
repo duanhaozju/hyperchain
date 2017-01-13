@@ -3,13 +3,13 @@
 package p2p
 
 import (
+	"errors"
+	"hyperchain/p2p/peerComm"
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/transport"
+	"sort"
 	"strconv"
 	"strings"
-	"errors"
-	"sort"
-	"hyperchain/p2p/peerComm"
 )
 
 type PeersPool struct {
@@ -28,12 +28,12 @@ type PeersPool struct {
 var prPoolIns PeersPool
 
 // NewPeerPool get a new peer pool instance
-func NewPeerPool(TEM transport.TransportEncryptManager,port int64,id uint64) *PeersPool {
+func NewPeerPool(TEM transport.TransportEncryptManager, port int64, id uint64) *PeersPool {
 	var newPrPoolIns PeersPool
 	newPrPoolIns.peers = make(map[string]*Peer)
 	newPrPoolIns.peerAddr = make(map[string]pb.PeerAddress)
 	newPrPoolIns.peerKeys = make(map[pb.PeerAddress]string)
-	newPrPoolIns.localNode = peerComm.ExtractAddress(peerComm.GetLocalIp(),port,id)
+	newPrPoolIns.localNode = peerComm.ExtractAddress(peerComm.GetLocalIp(), port, id)
 	newPrPoolIns.tempPeers = make(map[string]*Peer)
 	newPrPoolIns.tempPeerAddr = make(map[string]pb.PeerAddress)
 	newPrPoolIns.tempPeerKeys = make(map[pb.PeerAddress]string)
@@ -82,9 +82,6 @@ func (this *PeersPool) PutPeerToTemp(addr pb.PeerAddress, client *Peer) (*Peer, 
 
 }
 
-
-
-
 // GetPeer get a peer point by the peer address
 func (this *PeersPool) GetPeer(addr pb.PeerAddress) *Peer {
 	if clientName, ok := this.peerKeys[addr]; ok {
@@ -94,8 +91,6 @@ func (this *PeersPool) GetPeer(addr pb.PeerAddress) *Peer {
 		return nil
 	}
 }
-
-
 
 // GetAliveNodeNum get all alive node num
 func (this *PeersPool) GetAliveNodeNum() int {
@@ -150,7 +145,7 @@ func DelPeer(addr pb.PeerAddress) {
 }
 
 //将peerspool转换成能够传输的列表
-func (this *PeersPool)ToRoutingTable() pb.Routers {
+func (this *PeersPool) ToRoutingTable() pb.Routers {
 	peers := this.GetPeers()
 	var routers pb.Routers
 
@@ -161,38 +156,39 @@ func (this *PeersPool)ToRoutingTable() pb.Routers {
 	//sort.Sort(routers)
 	return routers
 }
+
 // get routing table without specificToRoutingTableWithout hash
-func (this *PeersPool)ToRoutingTableWithout(hash string)pb.Routers{
+func (this *PeersPool) ToRoutingTableWithout(hash string) pb.Routers {
 	peers := this.GetPeers()
 	var routers pb.Routers
 
 	for _, pers := range peers {
-		if pers.Addr.Hash == hash{
+		if pers.Addr.Hash == hash {
 			continue
 		}
 		routers.Routers = append(routers.Routers, pers.RemoteAddr)
 	}
 	//加入自己
-	routers.Routers = append(routers.Routers,this.localNode)
+	routers.Routers = append(routers.Routers, this.localNode)
 	//需要进行排序
 	sort.Sort(routers)
-	for idx,_ := range routers.Routers{
-		routers.Routers[idx].ID = uint64(idx+1)
+	for idx, _ := range routers.Routers {
+		routers.Routers[idx].ID = uint64(idx + 1)
 	}
 	return routers
 }
 
-
 // merge the route into the temp peer list
-func (this *PeersPool)MergeFormRoutersToTemp(routers pb.Routers) {
+func (this *PeersPool) MergeFormRoutersToTemp(routers pb.Routers) {
 	for _, peerAddress := range routers.Routers {
-		newPeer, err := NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, uint64(this.alivePeers + 1), this.TEM, this.localNode,this)
+		newPeer, err := NewPeerByIpAndPort(peerAddress.IP, peerAddress.Port, uint64(this.alivePeers+1), this.TEM, this.localNode, this)
 		if err != nil {
 			log.Error("merge from routers error ", err)
 		}
 		this.PutPeerToTemp(*newPeer.RemoteAddr, newPeer)
 	}
 }
+
 // Merge the temp peer into peers list
 func (this *PeersPool) MergeTempPeers(peer *Peer) {
 	//log.Critical("old节点合并路由表!!!!!!!!!!!!!!!!!!!")
@@ -219,14 +215,14 @@ func (this *PeersPool) MergeTempPeersForNewNode() {
 }
 
 //reject the temp peer list
-func (this *PeersPool)RejectTempPeers() {
+func (this *PeersPool) RejectTempPeers() {
 	for _, tempPeer := range this.tempPeers {
 		delete(this.tempPeers, tempPeer.RemoteAddr.Hash)
 		this.alivePeers -= 1
 	}
 }
 
-func (this *PeersPool)DeletePeer(p *Peer){
+func (this *PeersPool) DeletePeer(p *Peer) {
 	this.alivePeers -= 1
 	p.Connection.Close()
 	delete(this.peers, p.RemoteAddr.Hash)

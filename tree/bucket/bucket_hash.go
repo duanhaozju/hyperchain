@@ -5,19 +5,18 @@ import (
 )
 
 type bucketHashCalculator struct {
-	hashingData        []byte
+	hashingData []byte
 }
 
 func newBucketHashCalculator() *bucketHashCalculator {
 	return &bucketHashCalculator{nil}
 }
-func (c *bucketHashCalculator) setHashingData(hashingData []byte){
+func (c *bucketHashCalculator) setHashingData(hashingData []byte) {
 	c.hashingData = hashingData
 }
 
-
 func (c *bucketHashCalculator) computeCryptoHash() []byte {
-	if c.hashingData == nil || len(c.hashingData)==0{
+	if c.hashingData == nil || len(c.hashingData) == 0 {
 		return nil
 	}
 	h := sha1.New()

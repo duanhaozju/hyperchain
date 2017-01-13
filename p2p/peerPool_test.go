@@ -3,12 +3,12 @@
 package p2p
 
 import (
-	"testing"
-	"hyperchain/p2p/transport"
-	"hyperchain/p2p/peerComm"
 	"github.com/stretchr/testify/assert"
-	pb "hyperchain/p2p/peermessage"
 	"hyperchain/membersrvc"
+	"hyperchain/p2p/peerComm"
+	pb "hyperchain/p2p/peermessage"
+	"hyperchain/p2p/transport"
+	"testing"
 )
 
 var fakePeerPool *PeersPool
@@ -17,12 +17,12 @@ var fakePeer *Peer
 
 var fakeAddr *pb.PeerAddress
 
-func init(){
-	membersrvc.Start("../../config/test/local_membersrvc.yaml",1)
+func init() {
+	membersrvc.Start("../../config/test/local_membersrvc.yaml", 1)
 	fakePeerPool = NewPeerPool(transport.NewHandShakeManger())
-	fakeAddr = peerComm.ExtractAddress("127.0.0.1",int64(8001),uint64(1))
+	fakeAddr = peerComm.ExtractAddress("127.0.0.1", int64(8001), uint64(1))
 	TEM := transport.NewHandShakeManger()
-	fakePeer, _ = NewPeerByIpAndPort("127.0.0.1", int64(8001), uint64(1), TEM, fakeAddr,NewPeerPool(TEM))
+	fakePeer, _ = NewPeerByIpAndPort("127.0.0.1", int64(8001), uint64(1), TEM, fakeAddr, NewPeerPool(TEM))
 
 }
 

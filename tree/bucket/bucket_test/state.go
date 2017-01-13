@@ -2,21 +2,23 @@ package bucket_test
 
 import (
 	"fmt"
-	"hyperchain/hyperdb"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
+	"hyperchain/hyperdb"
 	"hyperchain/tree/bucket"
 	"math/big"
 )
 
 var (
 	testStateImplName = "testStateImpl"
-	logger = logging.MustGetLogger("bucket_test")
-	configs map[string]interface{}
+	logger            = logging.MustGetLogger("bucket_test")
+	configs           map[string]interface{}
 )
-func init(){
+
+func init() {
 	configs = viper.GetStringMap("ledger.state.dataStructure.configs")
 }
+
 // State structure for maintaining world state.
 // This encapsulates a particular implementation for managing the state persistence
 // This is not thread safe
@@ -35,13 +37,13 @@ func NewState(treePrefix string) *State {
 	if err != nil {
 		panic(fmt.Errorf("Error during initialization of state implementation: %s", err))
 	}
-	return &State{big.NewInt(0),*stateImpl, make(map[string][]byte),false}
+	return &State{big.NewInt(0), *stateImpl, make(map[string][]byte), false}
 }
 
 // TODO test
 // set the Key_value map to the state
-func (state *State) SetK_VMap(key_valueMap bucket.K_VMap,blockNum *big.Int){
-	if(state.key_valueMap != nil){
+func (state *State) SetK_VMap(key_valueMap bucket.K_VMap, blockNum *big.Int) {
+	if state.key_valueMap != nil {
 		logger.Debugf("the state has key_valueMap,overwrite it")
 	}
 	state.key_valueMap = key_valueMap
@@ -50,30 +52,30 @@ func (state *State) SetK_VMap(key_valueMap bucket.K_VMap,blockNum *big.Int){
 }
 
 // TODO test
-func (state *State) GetHash() ([]byte,error){
+func (state *State) GetHash() ([]byte, error) {
 	logger.Debug("Enter - GetHash()")
 	if state.updateStateImpl {
 		logger.Debug("udpateing stateImpl with working-set")
-		state.Bucket_tree.PrepareWorkingSet(state.key_valueMap,state.currentBlockNum)
+		state.Bucket_tree.PrepareWorkingSet(state.key_valueMap, state.currentBlockNum)
 		state.updateStateImpl = false
 	}
-	hash,err := state.Bucket_tree.ComputeCryptoHash()
+	hash, err := state.Bucket_tree.ComputeCryptoHash()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	logger.Debug("Exit GetHash()")
-	return hash,nil
+	return hash, nil
 }
 
 // TODO test
 // AddChangesForPersistence adds key-value pairs to writeBatch
-func (state *State) AddChangesForPersistence(writeBatch hyperdb.Batch,blockNum *big.Int) {
+func (state *State) AddChangesForPersistence(writeBatch hyperdb.Batch, blockNum *big.Int) {
 	logger.Debug("state.addChangesForPersistence()...start")
 	if state.updateStateImpl {
-		state.Bucket_tree.PrepareWorkingSet(state.key_valueMap,state.currentBlockNum)
+		state.Bucket_tree.PrepareWorkingSet(state.key_valueMap, state.currentBlockNum)
 		state.updateStateImpl = false
 	}
-	state.Bucket_tree.AddChangesForPersistence(writeBatch,blockNum)
+	state.Bucket_tree.AddChangesForPersistence(writeBatch, blockNum)
 	// TODO should add the metadata to the writeBatch?
 	logger.Debug("state.addChangesForPersistence()...finished")
 }
@@ -81,21 +83,21 @@ func (state *State) AddChangesForPersistence(writeBatch hyperdb.Batch,blockNum *
 // TODO test
 // CommitStateDelta commits the changes from state.ApplyStateDelta to the
 // DB.
-func (state *State) CommitStateDelta(writeBatch hyperdb.Batch,blockNum *big.Int) error {
+func (state *State) CommitStateDelta(writeBatch hyperdb.Batch, blockNum *big.Int) error {
 	if state.updateStateImpl {
-		state.Bucket_tree.PrepareWorkingSet(state.key_valueMap,state.currentBlockNum)
+		state.Bucket_tree.PrepareWorkingSet(state.key_valueMap, state.currentBlockNum)
 		state.updateStateImpl = false
 	}
-	state.Bucket_tree.AddChangesForPersistence(writeBatch,blockNum)
+	state.Bucket_tree.AddChangesForPersistence(writeBatch, blockNum)
 	return writeBatch.Write()
 }
 
-func (state *State) RevertToTargetBlock(currentBlockNum, toBlockNum *big.Int) (error){
+func (state *State) RevertToTargetBlock(currentBlockNum, toBlockNum *big.Int) error {
 	logger.Debug("start to revert to target block")
 	defer logger.Debug("end to revert to target block")
-	return state.Bucket_tree.RevertToTargetBlock(currentBlockNum,toBlockNum)
+	return state.Bucket_tree.RevertToTargetBlock(currentBlockNum, toBlockNum)
 }
 
-func (state *State) Reset(changePersists bool){
+func (state *State) Reset(changePersists bool) {
 	state.Bucket_tree.Reset()
 }

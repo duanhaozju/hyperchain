@@ -1,26 +1,28 @@
 package bucket
 
 import (
-	"sync"
 	"github.com/hashicorp/golang-lru"
+	"sync"
 )
+
 var (
 	defaultDataNodeCacheMaxSize = 1000000
-	GLOBAL = true
-	GlobalDataNodeCacheSize = 1000000
-	globalDataNodeCache *GlobalDataNodeCache
+	GLOBAL                      = true
+	GlobalDataNodeCacheSize     = 1000000
+	globalDataNodeCache         *GlobalDataNodeCache
 )
-type GlobalDataNodeCache struct{
-	cacheMap map[string] *lru.Cache
+
+type GlobalDataNodeCache struct {
+	cacheMap map[string]*lru.Cache
 	isEnable bool
 }
 
-func init(){
-	globalDataNodeCache = &GlobalDataNodeCache{cacheMap:make(map[string] *lru.Cache),isEnable:GLOBAL}
+func init() {
+	globalDataNodeCache = &GlobalDataNodeCache{cacheMap: make(map[string]*lru.Cache), isEnable: GLOBAL}
 }
 
-func (globalDataNodeCache *GlobalDataNodeCache) ClearAllCache (){
-	globalDataNodeCache.cacheMap = make(map[string] *lru.Cache)
+func (globalDataNodeCache *GlobalDataNodeCache) ClearAllCache() {
+	globalDataNodeCache.cacheMap = make(map[string]*lru.Cache)
 }
 
 type DataNodeCache struct {
@@ -31,85 +33,83 @@ type DataNodeCache struct {
 	size       uint64
 	maxSize    uint64
 }
-func newDataNodeCache(treePrefix string,maxSizeMBs int) *DataNodeCache {
+
+func newDataNodeCache(treePrefix string, maxSizeMBs int) *DataNodeCache {
 	isEnabled := true
 	if maxSizeMBs <= 0 {
 		isEnabled = false
 	} else {
 		log.Infof("Constructing datanode-cache with max bucket cache size = [%d] MBs", maxSizeMBs)
 	}
-	if(globalDataNodeCache.isEnable){
-		if(globalDataNodeCache.cacheMap[treePrefix] == nil){
-			globalDataNodeCache.cacheMap[treePrefix],_ = lru.New(GlobalDataNodeCacheSize)
-		}else{
-			return &DataNodeCache{TreePrefix: treePrefix,c:globalDataNodeCache.cacheMap[treePrefix] , maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
+	if globalDataNodeCache.isEnable {
+		if globalDataNodeCache.cacheMap[treePrefix] == nil {
+			globalDataNodeCache.cacheMap[treePrefix], _ = lru.New(GlobalDataNodeCacheSize)
+		} else {
+			return &DataNodeCache{TreePrefix: treePrefix, c: globalDataNodeCache.cacheMap[treePrefix], maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 		}
 	}
-	cache,_ := lru.New(defaultDataNodeCacheMaxSize)
-	return &DataNodeCache{TreePrefix: treePrefix, c:cache, maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
+	cache, _ := lru.New(defaultDataNodeCacheMaxSize)
+	return &DataNodeCache{TreePrefix: treePrefix, c: cache, maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 }
 
-func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey) (dataNodes DataNodes,err error) {
+func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey) (dataNodes DataNodes, err error) {
 	// step 0.
-	if(dataNodeCache.isEnabled == false){
-		return fetchDataNodesFromDBByBucketKey(dataNodeCache.TreePrefix,&bucketKey)
+	if dataNodeCache.isEnabled == false {
+		return fetchDataNodesFromDBByBucketKey(dataNodeCache.TreePrefix, &bucketKey)
 	}
 
 	// step 1.
-	value,ok := dataNodeCache.c.Get(bucketKey)
-	if(ok){
+	value, ok := dataNodeCache.c.Get(bucketKey)
+	if ok {
 		dataNodes = value.(DataNodes)
 	}
 
-	if(dataNodes != nil && len(dataNodes) > 0){
-		return dataNodes,nil
+	if dataNodes != nil && len(dataNodes) > 0 {
+		return dataNodes, nil
 	}
 
 	// step 2.
-	if(globalDataNodeCache.isEnable){
+	if globalDataNodeCache.isEnable {
 		cache := globalDataNodeCache.cacheMap[dataNodeCache.TreePrefix]
-		if cache == nil{
-			cache,_ = lru.New(GlobalDataNodeCacheSize)
+		if cache == nil {
+			cache, _ = lru.New(GlobalDataNodeCacheSize)
 			globalDataNodeCache.cacheMap[dataNodeCache.TreePrefix] = cache
 		}
-		value,ok = cache.Get(bucketKey)
-		if(ok){
+		value, ok = cache.Get(bucketKey)
+		if ok {
 			dataNodes = value.(DataNodes)
 		}
-		if(dataNodes != nil && len(dataNodes) > 0){
-			if(dataNodeCache.isEnabled){
-				dataNodeCache.c.Add(bucketKey,dataNodes)
+		if dataNodes != nil && len(dataNodes) > 0 {
+			if dataNodeCache.isEnabled {
+				dataNodeCache.c.Add(bucketKey, dataNodes)
 			}
-			log.Critical("globalDataNodeCache is not empty",len(dataNodes))
-			return dataNodes,nil
+			return dataNodes, nil
 		}
 	}
 
 	// step 3.
-	dataNodes,err = fetchDataNodesFromDBByBucketKey(dataNodeCache.TreePrefix,&bucketKey)
-	if err != nil{
+	dataNodes, err = fetchDataNodesFromDBByBucketKey(dataNodeCache.TreePrefix, &bucketKey)
+	if err != nil {
 		log.Error("fetchDataNodesFromDBByBucketKey Error")
-		return dataNodes,err
+		return dataNodes, err
 	}
 	if dataNodes == nil || len(dataNodes) == 0 {
-		return dataNodes,nil
-	}else {
-		if(dataNodeCache.isEnabled){
-			dataNodeCache.c.Add(bucketKey,dataNodes)
+		return dataNodes, nil
+	} else {
+		if dataNodeCache.isEnabled {
+			dataNodeCache.c.Add(bucketKey, dataNodes)
 		}
-		if(globalDataNodeCache.isEnable){
-			if(globalDataNodeCache.cacheMap[dataNodeCache.TreePrefix] == nil){
-				cache,_ := lru.New(GlobalDataNodeCacheSize)
+		if globalDataNodeCache.isEnable {
+			if globalDataNodeCache.cacheMap[dataNodeCache.TreePrefix] == nil {
+				cache, _ := lru.New(GlobalDataNodeCacheSize)
 				globalDataNodeCache.cacheMap[dataNodeCache.TreePrefix] = cache
 			}
-			globalDataNodeCache.cacheMap[dataNodeCache.TreePrefix].Add(bucketKey,dataNodes)
+			globalDataNodeCache.cacheMap[dataNodeCache.TreePrefix].Add(bucketKey, dataNodes)
 		}
-		log.Critical("DBDataNodes is not empty",len(dataNodes))
-		return dataNodes,nil
+		return dataNodes, nil
 	}
 }
 
-
 func (dataNodeCache *DataNodeCache) ClearDataNodeCache() {
-	dataNodeCache.c,_ = lru.New(defaultDataNodeCacheMaxSize)
+	dataNodeCache.c, _ = lru.New(defaultDataNodeCacheMaxSize)
 }

@@ -6,12 +6,12 @@ import (
 	"hyperchain/hyperdb"
 	"time"
 
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strconv"
-	"errors"
-	"fmt"
 )
 
 // CalcResponseCount calculate response count of a block for given blockNumber
@@ -25,7 +25,7 @@ func CalcResponseCount(blockNumber uint64, millTime int64) (int64, float64) {
 	block, err := GetBlock(db, blockHash)
 	if err != nil {
 		log.Error("Block not existed in database, err msg:", err.Error())
-		return 0,0
+		return 0, 0
 	}
 	var count int64 = 0
 	for _, trans := range block.Transactions {
@@ -208,15 +208,15 @@ func CalcEvmAVGTime(from, to uint64) int64 {
 
 }
 
-func CalBlockGenerateAvgTime(from, to uint64) (int64,error){
+func CalBlockGenerateAvgTime(from, to uint64) (int64, error) {
 	if from > to && to != 0 {
 		log.Error("from less than to")
-		return -1,errors.New("from less than to")
+		return -1, errors.New("from less than to")
 	}
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Error(err)
-		return -1,err
+		return -1, err
 	}
 	var sum int64 = 0
 	var length int64 = 0
@@ -224,7 +224,7 @@ func CalBlockGenerateAvgTime(from, to uint64) (int64,error){
 		block, err := GetBlockByNumber(db, i)
 		if err != nil {
 			log.Error(err)
-			return -1,err
+			return -1, err
 		}
 		sum += (block.WriteTime - block.Timestamp) / int64(time.Millisecond)
 		length++
@@ -247,7 +247,7 @@ func CalBlockGPS(begin, end int64) (error, string) {
 	// calculate tps
 	var blockCounter float64 = 0
 	var txCounter float64 = 0
-	var blockNum  uint64 = 0
+	var blockNum uint64 = 0
 	for i := uint64(1); i <= height; i++ {
 		block, err := GetBlockByNumber(db, i)
 		if err != nil {
@@ -264,8 +264,8 @@ func CalBlockGPS(begin, end int64) (error, string) {
 		}
 	}
 	s = s + "total block:" + strconv.FormatUint(blockNum, 16) + ";"
-	blockCounter = blockCounter / (float64(end - begin) * 1.0 / float64(time.Second.Nanoseconds()))
-	txCounter = txCounter / (float64(end - begin) * 1.0 / float64(time.Second.Nanoseconds()))
+	blockCounter = blockCounter / (float64(end-begin) * 1.0 / float64(time.Second.Nanoseconds()))
+	txCounter = txCounter / (float64(end-begin) * 1.0 / float64(time.Second.Nanoseconds()))
 	s = s + "blocks per second:" + strconv.FormatFloat(blockCounter, 'f', 2, 32) + ";"
 	s = s + "tps:" + strconv.FormatFloat(txCounter, 'f', 2, 32)
 	return nil, s

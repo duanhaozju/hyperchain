@@ -30,7 +30,7 @@ type config struct {
 	hashFunc               hashFunc
 }
 
-func  initConfig(configs map[string]interface{}) {
+func initConfig(configs map[string]interface{}) {
 	log.Infof("configs passed during initialization = %#v", configs)
 
 	numBuckets, ok := configs[ConfigNumBuckets].(int)

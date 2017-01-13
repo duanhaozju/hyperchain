@@ -3,6 +3,7 @@
 package core
 
 import (
+	"errors"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"hyperchain/common"
@@ -10,7 +11,6 @@ import (
 	"hyperchain/hyperdb"
 	"strconv"
 	"sync"
-	"errors"
 )
 
 // the prefix of key, use to save to db
@@ -40,7 +40,7 @@ func InitDB(dbPath string, port int) {
 
 /*
 	Receipt
- */
+*/
 // GetReceipt returns a receipt by hash
 func GetReceipt(txHash common.Hash) *types.ReceiptTrans {
 	db, err := hyperdb.GetLDBDatabase()
@@ -84,7 +84,7 @@ func PersistReceipt(batch hyperdb.Batch, receipt *types.Receipt, version string,
 		return err, nil
 	}
 	// flush to disk immediately
-	if flush  {
+	if flush {
 		if sync {
 			batch.Write()
 		} else {
@@ -93,8 +93,8 @@ func PersistReceipt(batch hyperdb.Batch, receipt *types.Receipt, version string,
 	}
 	return nil, data
 }
-func WrapperReceipt(receipt *types.Receipt, version string) (error, []byte){
-	if receipt == nil  {
+func WrapperReceipt(receipt *types.Receipt, version string) (error, []byte) {
+	if receipt == nil {
 		return errors.New("empty pointer"), nil
 	}
 	receipt.Version = []byte(version)
@@ -122,13 +122,13 @@ func DeleteReceipt(db hyperdb.Database, key []byte) error {
 
 /*
 	Transaction
- */
+*/
 // Query Transaction
 func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error) {
 	if db == nil || key == nil {
 		return nil, errors.New("empty pointer")
 	}
-	var wrapper     types.TransactionWrapper
+	var wrapper types.TransactionWrapper
 	var transaction types.Transaction
 	keyFact := append(TransactionPrefix, key...)
 	data, err := db.Get(keyFact)
@@ -145,6 +145,7 @@ func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error)
 	err = proto.Unmarshal(wrapper.Transaction, &transaction)
 	return &transaction, err
 }
+
 // Persist transaction content to a batch, KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false
 func PersistTransaction(batch hyperdb.Batch, transaction *types.Transaction, version string, flush bool, sync bool) (error, []byte) {
 	// check pointer value
@@ -161,7 +162,7 @@ func PersistTransaction(batch hyperdb.Batch, transaction *types.Transaction, ver
 		return err, nil
 	}
 	// flush to disk immediately
-	if flush  {
+	if flush {
 		if sync {
 			batch.Write()
 		} else {
@@ -213,7 +214,7 @@ func PersistTransactions(batch hyperdb.Batch, transactions []*types.Transaction,
 		}
 	}
 	// flush to disk immediately
-	if flush  {
+	if flush {
 		if sync {
 			batch.Write()
 		} else {
@@ -229,7 +230,7 @@ func JudgeTransactionExist(db hyperdb.Database, key []byte) (bool, error) {
 	keyFact := append(TransactionPrefix, key...)
 	data, err := db.Get(keyFact)
 	if len(data) == 0 {
-			return false, err
+		return false, err
 	}
 	err = proto.Unmarshal(data, &wrapper)
 	return true, err
@@ -297,7 +298,7 @@ func GetDiscardTransaction(db hyperdb.Database, key []byte) (*types.InvalidTrans
 
 /*
 	Transaction Meta
- */
+*/
 
 // Persist tx meta content to a batch, KEEP IN MIND call batch.Write to flush all data to disk
 func PersistTransactionMeta(batch hyperdb.Batch, transactionMeta *types.TransactionMeta, txHash common.Hash, flush bool, sync bool) error {
@@ -314,7 +315,7 @@ func PersistTransactionMeta(batch hyperdb.Batch, transactionMeta *types.Transact
 		return err
 	}
 	// flush to disk immediately
-	if flush  {
+	if flush {
 		if sync {
 			batch.Write()
 		} else {
@@ -328,9 +329,10 @@ func DeleteTransactionMeta(db hyperdb.Database, key []byte) error {
 	keyFact := append(key, TxMetaSuffix...)
 	return db.Delete(keyFact)
 }
+
 /*
 	Invalid Transaction
- */
+*/
 
 func PersistInvalidTransactionRecord(batch hyperdb.Batch, invalidTx *types.InvalidTransactionRecord, flush bool, sync bool) (error, []byte) {
 	// save to db
@@ -346,7 +348,7 @@ func PersistInvalidTransactionRecord(batch hyperdb.Batch, invalidTx *types.Inval
 		return err, nil
 	}
 	// flush to disk immediately
-	if flush  {
+	if flush {
 		if sync {
 			batch.Write()
 		} else {
@@ -358,7 +360,7 @@ func PersistInvalidTransactionRecord(batch hyperdb.Batch, invalidTx *types.Inval
 
 /*
 	Block
- */
+*/
 func PersistBlock(batch hyperdb.Batch, block *types.Block, version string, flush bool, sync bool) (error, []byte) {
 	// check pointer value
 	if block == nil || batch == nil {
@@ -374,7 +376,7 @@ func PersistBlock(batch hyperdb.Batch, block *types.Block, version string, flush
 		BlockVersion: []byte(version),
 		Block:        data,
 	}
-	data, err =  proto.Marshal(wrapper)
+	data, err = proto.Marshal(wrapper)
 	if err := batch.Put(append(BlockPrefix, block.BlockHash...), data); err != nil {
 		log.Error("Put block data into database failed! error msg, ", err.Error())
 		return err, nil
@@ -396,7 +398,6 @@ func PersistBlock(batch hyperdb.Batch, block *types.Block, version string, flush
 	return nil, data
 }
 
-
 func GetBlockHash(db hyperdb.Database, blockNumber uint64) ([]byte, error) {
 	keyNum := strconv.FormatInt(int64(blockNumber), 10)
 	return db.Get(append(BlockNumPrefix, keyNum...))
@@ -404,7 +405,7 @@ func GetBlockHash(db hyperdb.Database, blockNumber uint64) ([]byte, error) {
 
 func GetBlock(db hyperdb.Database, key []byte) (*types.Block, error) {
 	var wrapper types.BlockWrapper
-	var block   types.Block
+	var block types.Block
 	key = append(BlockPrefix, key...)
 	data, err := db.Get(key)
 	if len(data) == 0 {
@@ -450,8 +451,6 @@ func DeleteBlockByNum(db hyperdb.Database, blockNum uint64) error {
 	keyNum := strconv.FormatInt(int64(blockNum), 10)
 	return db.Delete(append(BlockNumPrefix, keyNum...))
 }
-
-
 
 //-- ------------------- Chain ----------------------------------------
 
@@ -601,6 +600,7 @@ func putChain(batch hyperdb.Batch, t *types.Chain, flush bool, sync bool) error 
 	}
 	return nil
 }
+
 // IsGenesisFinish - check whether genesis block has been mined into blockchain
 func IsGenesisFinish() bool {
 	db, err := hyperdb.GetLDBDatabase()
@@ -654,6 +654,7 @@ func GetId() uint64 {
 	defer memChainStatusMap.lock.Unlock()
 	return memChainStatusMap.data.Id
 }
+
 // Deprecated
 func UpdateChainByViewChange(height uint64, latestHash []byte) error {
 	memChainMap.lock.Lock()

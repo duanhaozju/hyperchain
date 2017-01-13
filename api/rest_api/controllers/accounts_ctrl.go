@@ -6,5 +6,4 @@ import (
 
 type AccountsController struct {
 	beego.Controller
-
 }

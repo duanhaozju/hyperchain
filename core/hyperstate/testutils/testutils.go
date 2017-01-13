@@ -1,12 +1,13 @@
 package testutils
 
 import (
-	"testing"
 	"fmt"
-	"runtime"
-	"reflect"
 	"hyperchain/crypto"
+	"reflect"
+	"runtime"
+	"testing"
 )
+
 var (
 	kec256Hash = crypto.NewKeccak256Hash("keccak256")
 )

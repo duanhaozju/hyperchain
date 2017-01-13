@@ -2,14 +2,14 @@ package hyperstate
 
 import (
 	"bytes"
-	"fmt"
-	"math/big"
-	"hyperchain/crypto"
-	"hyperchain/common"
 	"encoding/json"
-	"hyperchain/hyperdb"
+	"fmt"
 	"github.com/pkg/errors"
+	"hyperchain/common"
+	"hyperchain/crypto"
+	"hyperchain/hyperdb"
 	"hyperchain/tree/bucket"
+	"math/big"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -56,12 +56,12 @@ type StateObject struct {
 	// by StateDB.Commit.
 	dbErr error
 
-	code Code             // contract bytecode, which gets set when code is loaded
+	code          Code    // contract bytecode, which gets set when code is loaded
 	cachedStorage Storage // Storage entry cache to avoid duplicate reads
 	dirtyStorage  Storage // Storage entries that need to be flushed to disk
 
-	bucketTree    *bucket.BucketTree      // a bucket tree use to calculate fingerprint of storage efficiency
-	bucketConf    map[string]interface{}  // bucket tree config
+	bucketTree *bucket.BucketTree     // a bucket tree use to calculate fingerprint of storage efficiency
+	bucketConf map[string]interface{} // bucket tree config
 	// Cache flags.
 	// When an object is marked suicided it will be delete from the db
 	// during the "update" phase of the state transition.
@@ -110,15 +110,15 @@ func newObject(db *StateDB, address common.Address, data Account, onDirty func(a
 	return obj
 }
 
-
 // marshal whole state object with address for journal usage
 func (c *StateObject) MarshalJSON() ([]byte, error) {
 	account := MemAccount{
-		Address:  c.address,
-		Account:  c.data,
+		Address: c.address,
+		Account: c.data,
 	}
 	return json.Marshal(account)
 }
+
 // marshal for state object persist
 func (c *StateObject) Marshal() ([]byte, error) {
 	account := &Account{
@@ -129,6 +129,7 @@ func (c *StateObject) Marshal() ([]byte, error) {
 	}
 	return json.Marshal(account)
 }
+
 // unmarshal state object for journal usage
 func (c *StateObject) UnmarshalJSON(data []byte) error {
 	account := &MemAccount{}
@@ -137,6 +138,7 @@ func (c *StateObject) UnmarshalJSON(data []byte) error {
 	c.address = account.Address
 	return err
 }
+
 // Unmarshal stateObject in disk
 func Unmarshal(data []byte, v interface{}) error {
 	account, ok := v.(*Account)
@@ -153,7 +155,6 @@ func (c *StateObject) String() string {
 	str = fmt.Sprintf("stateObject: %x nonce [%d], balance [%d], root [%s], codeHash [%s]\n", c.address, c.Nonce(), c.Balance(), c.Root().Hex(), common.BytesToHash(c.CodeHash()).Hex())
 	return str
 }
-
 
 // setError remembers the first non-nil error it is called with.
 func (self *StateObject) setError(err error) {
@@ -192,8 +193,9 @@ func (self *StateObject) GetState(key common.Hash) (bool, common.Hash) {
 		return false, common.Hash{}
 	}
 }
+
 // GetState from database return a storage entry's value if existed
-func GetStateFromDB(db hyperdb.Database,address common.Address, key common.Hash) (bool, common.Hash) {
+func GetStateFromDB(db hyperdb.Database, address common.Address, key common.Hash) (bool, common.Hash) {
 	var value common.Hash
 	// Load from DB in case it is missing.
 	val, err := db.Get(CompositeStorageKey(address.Bytes(), key.Bytes()))
@@ -228,6 +230,7 @@ func (self *StateObject) setState(key, value common.Hash) {
 		self.onDirty = nil
 	}
 }
+
 // remove storage entry from storage cache instead of setting empty value
 // otherwise an entry will been leave in database
 // only use in undo `add storage entry` vm operation
@@ -447,6 +450,7 @@ func (self *StateObject) Root() common.Hash {
 func (self *StateObject) SetRoot(root common.Hash) {
 	self.data.Root = root
 }
+
 // Never called, but must be present to allow StateObject to be used
 // as a vm.Account interface that also satisfies the vm.ContractRef
 // interface. Interfaces are awesome.

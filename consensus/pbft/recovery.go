@@ -3,9 +3,9 @@
 package pbft
 
 import (
+	"encoding/base64"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/consensus/events"
-	"encoding/base64"
 	"hyperchain/consensus/helper/persist"
 )
 
@@ -33,8 +33,8 @@ func (pbft *pbftProtocal) initRecovery() events.Event {
 		logger.Errorf("Marshal recovery init Error!")
 		return nil
 	}
-	consensusMsg := &ConsensusMessage {
-		Type: ConsensusMessage_RECOVERY_INIT,
+	consensusMsg := &ConsensusMessage{
+		Type:    ConsensusMessage_RECOVERY_INIT,
 		Payload: payload,
 	}
 	msg := consensusMsgHelper(consensusMsg, pbft.id)
@@ -46,8 +46,8 @@ func (pbft *pbftProtocal) initRecovery() events.Event {
 		chkpts[n] = d
 	}
 	rc := &RecoveryResponse{
-		ReplicaId:	pbft.id,
-		Chkpts: 	chkpts,
+		ReplicaId: pbft.id,
+		Chkpts:    chkpts,
 	}
 	pbft.recvRecoveryRsp(rc)
 	return nil
@@ -67,14 +67,13 @@ func (pbft *pbftProtocal) recvRecovery(recoveryInit *RecoveryInit) events.Event 
 		chkpts[n] = d
 	}
 
-
 	height, curHash := persist.GetBlockHeightAndHash()
 
 	rc := &RecoveryResponse{
-		ReplicaId:	 pbft.id,
-		Chkpts:		 chkpts,
-		BlockHeight:     height,
-		LastBlockHash:   curHash,
+		ReplicaId:     pbft.id,
+		Chkpts:        chkpts,
+		BlockHeight:   height,
+		LastBlockHash: curHash,
 	}
 
 	rcMsg, err := proto.Marshal(rc)
@@ -84,8 +83,8 @@ func (pbft *pbftProtocal) recvRecovery(recoveryInit *RecoveryInit) events.Event 
 	}
 
 	consensusMsg := &ConsensusMessage{
-		Type: 		ConsensusMessage_RECOVERY_RESPONSE,
-		Payload: 	rcMsg,
+		Type:    ConsensusMessage_RECOVERY_RESPONSE,
+		Payload: rcMsg,
 	}
 	dest := recoveryInit.ReplicaId
 	msg := consensusMsgHelper(consensusMsg, dest)
@@ -111,7 +110,7 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	pbft.rcRspStore[from] = rsp
 
 	if len(pbft.rcRspStore) <= pbft.N-pbft.f {
-		logger.Debugf("Replica %d recv recoveryRsp from replica %d, rsp count: %d, not " +
+		logger.Debugf("Replica %d recv recoveryRsp from replica %d, rsp count: %d, not "+
 			"beyond %d", pbft.id, rsp.ReplicaId, len(pbft.rcRspStore), pbft.N-pbft.f)
 		return nil
 	}
@@ -132,8 +131,8 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	}
 
 	if pbft.recoveryToSeqNo != nil {
-		logger.Debugf("Replica %d in recovery receive rcRsp from replica %d" +
-			"but chkpt quorum and seqNo quorum already found. " +
+		logger.Debugf("Replica %d in recovery receive rcRsp from replica %d"+
+			"but chkpt quorum and seqNo quorum already found. "+
 			"Ignore it", pbft.id, rsp.ReplicaId)
 		return nil
 	}
@@ -146,21 +145,20 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	//idAsString := byteToString(id)
 	selfLastExec, selfCurHash := persist.GetBlockHeightAndHash()
 
-
-	logger.Debugf("Replica %d in recovery find quorum chkpt: %d, self: %d, " +
+	logger.Debugf("Replica %d in recovery find quorum chkpt: %d, self: %d, "+
 		"others lastExec: %d, self: %d", pbft.id, n, pbft.h, lastExec, pbft.lastExec)
-	logger.Debugf("Replica %d in recovery, " +
+	logger.Debugf("Replica %d in recovery, "+
 		"others lastBlockInfo: %s, self: %s", pbft.id, rsp.BlockHeight, selfCurHash)
 
 	// Fast catch up
 	if lastExec == selfLastExec && curHash == selfCurHash {
-		logger.Debugf("Replica %d in recovery same lastExec: %d, " +
+		logger.Debugf("Replica %d in recovery same lastExec: %d, "+
 			"same block hash: %s, fast catch up", pbft.id, selfLastExec, curHash)
 		pbft.inRecovery = false
 		return recoveryDoneEvent{}
 	}
 
-	logger.Debugf("Replica %d in recovery self lastExec: %d, others: %d" +
+	logger.Debugf("Replica %d in recovery self lastExec: %d, others: %d"+
 		"miss match self block hash: %s, other block hash %s", pbft.id, selfLastExec, lastExec, selfCurHash, curHash)
 
 	var id []byte
@@ -190,7 +188,7 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.stateTransfer(target)
 	} else {
 		logger.Critical("send stateupdated")
-		pbft.helper.VcReset(n+1)
+		pbft.helper.VcReset(n + 1)
 	}
 
 	return nil
@@ -255,8 +253,8 @@ func (pbft *pbftProtocal) findLastExecQuorum() (lastExec uint64, hash string, fi
 	find = false
 	for _, rsp := range pbft.rcRspStore {
 		idx := blkIdx{
-			height:rsp.BlockHeight,
-			hash:rsp.LastBlockHash,
+			height: rsp.BlockHeight,
+			hash:   rsp.LastBlockHash,
 		}
 		replicas, ok := lastExecs[idx]
 		if ok {
@@ -283,7 +281,7 @@ func (pbft *pbftProtocal) fetchRecoveryPQC(peers []uint64) events.Event {
 
 	logger.Debugf("Replica %d now fetchRecoveryPQC", pbft.id)
 
-	if peers==nil {
+	if peers == nil {
 		logger.Errorf("Replica %d try to fetchRecoveryPQC, but target peers are nil")
 		return nil
 	}
@@ -292,7 +290,7 @@ func (pbft *pbftProtocal) fetchRecoveryPQC(peers []uint64) events.Event {
 
 	fetch := &RecoveryFetchPQC{
 		ReplicaId: pbft.id,
-		H:	   pbft.h,
+		H:         pbft.h,
 	}
 
 	payload, err := proto.Marshal(fetch)
@@ -301,7 +299,7 @@ func (pbft *pbftProtocal) fetchRecoveryPQC(peers []uint64) events.Event {
 		return nil
 	}
 	conMsg := &ConsensusMessage{
-		Type:	 ConsensusMessage_RECOVERY_FETCH_QPC,
+		Type:    ConsensusMessage_RECOVERY_FETCH_QPC,
 		Payload: payload,
 	}
 
@@ -326,11 +324,11 @@ func (pbft *pbftProtocal) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Even
 	}
 
 	prepres := make([]*PrePrepare, len(pbft.certStore))
-	pres    := make([]bool, len(pbft.certStore))
-	cmts    := make([]bool, len(pbft.certStore))
+	pres := make([]bool, len(pbft.certStore))
+	cmts := make([]bool, len(pbft.certStore))
 	i := 0
 	for msgId, msgCert := range pbft.certStore {
-		if msgId.n > h && msgId.n <= pbft.h + pbft.L {
+		if msgId.n > h && msgId.n <= pbft.h+pbft.L {
 			prepres[i] = msgCert.prePrepare
 			pres[i] = msgCert.sentPrepare
 			cmts[i] = msgCert.sentCommit
@@ -338,10 +336,10 @@ func (pbft *pbftProtocal) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Even
 		}
 	}
 	rcReturn := &RecoveryReturnPQC{
-		ReplicaId:	pbft.id,
-		PrepreSet:	prepres,
-		PreSent:	pres,
-		CmtSent:	cmts,
+		ReplicaId: pbft.id,
+		PrepreSet: prepres,
+		PreSent:   pres,
+		CmtSent:   cmts,
 	}
 
 	payload, err := proto.Marshal(rcReturn)
@@ -350,8 +348,8 @@ func (pbft *pbftProtocal) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Even
 		return nil
 	}
 	msg := &ConsensusMessage{
-		Type:		ConsensusMessage_RECOVERY_RETURN_QPC,
-		Payload:	payload,
+		Type:    ConsensusMessage_RECOVERY_RETURN_QPC,
+		Payload: payload,
 	}
 	conMsg := consensusMsgHelper(msg, dest)
 	pbft.helper.InnerUnicast(conMsg, dest)
@@ -382,10 +380,10 @@ func (pbft *pbftProtocal) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) even
 	}
 
 	prepreSet := PQCInfo.GetPrepreSet()
-	preSent   := PQCInfo.PreSent
-	cmtSent   := PQCInfo.CmtSent
+	preSent := PQCInfo.PreSent
+	cmtSent := PQCInfo.CmtSent
 
-	for i:=0; i<len(PQCInfo.PrepreSet); i++ {
+	for i := 0; i < len(PQCInfo.PrepreSet); i++ {
 		preprep := prepreSet[i]
 		// recv preprepare
 		cert := pbft.getCert(preprep.View, preprep.SequenceNumber)
@@ -395,20 +393,20 @@ func (pbft *pbftProtocal) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) even
 		// recv prepare
 		if preSent[i] {
 			prep := &Prepare{
-				View:			preprep.View,
-				SequenceNumber: 	preprep.SequenceNumber,
-				BatchDigest:		preprep.BatchDigest,
-				ReplicaId:		sender,
+				View:           preprep.View,
+				SequenceNumber: preprep.SequenceNumber,
+				BatchDigest:    preprep.BatchDigest,
+				ReplicaId:      sender,
 			}
 			go pbft.postPbftEvent(prep)
 		}
 		// recv commit
 		if cmtSent[i] {
 			cmt := &Commit{
-				View:			preprep.View,
-				SequenceNumber:		preprep.SequenceNumber,
-				BatchDigest:		preprep.BatchDigest,
-				ReplicaId:		sender,
+				View:           preprep.View,
+				SequenceNumber: preprep.SequenceNumber,
+				BatchDigest:    preprep.BatchDigest,
+				ReplicaId:      sender,
 			}
 			go pbft.postPbftEvent(cmt)
 		}
@@ -424,4 +422,3 @@ func (pbft *pbftProtocal) restartRecovery() {
 
 	pbft.initRecovery()
 }
-

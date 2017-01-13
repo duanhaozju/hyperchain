@@ -50,8 +50,8 @@ type PeerManager interface {
 }
 
 // delete node interface
-type DeleteNode interface{
+type DeleteNode interface {
 	GetLocalNodeHash() string
-	GetRouterHashifDelete(hash string) (string,uint64)
-	DeleteNode(hash string) error// if self {...} else{...}
+	GetRouterHashifDelete(hash string) (string, uint64)
+	DeleteNode(hash string) error // if self {...} else{...}
 }

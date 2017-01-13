@@ -1,10 +1,10 @@
 package testutil
 
 import (
-	"testing"
-	"hyperchain/hyperdb"
 	"github.com/spf13/viper"
+	"hyperchain/hyperdb"
 	"os"
+	"testing"
 )
 
 // TestDBWrapper wraps the db. Can be used by other modules for testing
@@ -35,10 +35,9 @@ func (testDB *TestDBWrapper) CleanDB(t testing.TB) {
 	testDB.performCleanup = true
 }
 
-
 func (testDB *TestDBWrapper) cleanup() {
 	if testDB.performCleanup {
-		db,_ := hyperdb.GetLDBDatabase()
+		db, _ := hyperdb.GetLDBDatabase()
 		db.Close()
 		testDB.performCleanup = false
 	}
@@ -46,7 +45,7 @@ func (testDB *TestDBWrapper) cleanup() {
 
 func (testDB *TestDBWrapper) removeDBPath() {
 	dbPath := viper.GetString("peer.fileSystemPath")
-	if dbPath == "" || len(dbPath) == 0{
+	if dbPath == "" || len(dbPath) == 0 {
 		dbPath = "/tmp/hyperchain/cachedb"
 	}
 	os.RemoveAll(dbPath)

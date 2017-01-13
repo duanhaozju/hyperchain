@@ -1,13 +1,13 @@
 package blockpool
 
 import (
-	"hyperchain/hyperdb"
-	"github.com/golang/protobuf/proto"
-	"hyperchain/core/types"
-	"hyperchain/core"
-	"hyperchain/common"
 	"errors"
+	"github.com/golang/protobuf/proto"
+	"hyperchain/common"
+	"hyperchain/core"
+	"hyperchain/core/types"
 	"hyperchain/event"
+	"hyperchain/hyperdb"
 )
 
 // run transaction in a sandbox
@@ -33,7 +33,7 @@ func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 	fakeBlockNumber := core.GetHeightOfChain()
 	sandBox := initEnvironment(state, fakeBlockNumber+1)
 	receipt, _, _, err := core.ExecTransaction(tx, sandBox)
-	if err != nil{
+	if err != nil {
 		var errType types.InvalidTransactionRecord_ErrType
 		if core.IsValueTransferErr(err) {
 			errType = types.InvalidTransactionRecord_OUTOFBALANCE
@@ -41,11 +41,11 @@ func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 			tmp := err.(*core.ExecContractError)
 			if tmp.GetType() == 0 {
 				errType = types.InvalidTransactionRecord_DEPLOY_CONTRACT_FAILED
-			} else if tmp.GetType() == 1{
+			} else if tmp.GetType() == 1 {
 				errType = types.InvalidTransactionRecord_INVOKE_CONTRACT_FAILED
 			}
 		}
-		t :=  &types.InvalidTransactionRecord{
+		t := &types.InvalidTransactionRecord{
 			Tx:      tx,
 			ErrType: errType,
 			ErrMsg:  []byte(err.Error()),
