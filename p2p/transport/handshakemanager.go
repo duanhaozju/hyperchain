@@ -42,18 +42,18 @@ func NewHandShakeMangerNew(cm *membersrvc.CAManager) *HandShakeManagerNew {
 	hSMN.isVerified = make(map[string]bool)
 	hSMN.e = ecdh.NewEllipticECDH(elliptic.P384())
 	var err error
-	contentPri,getErr1 := primitives.GetConfig("./config/cert/ecert.priv")
 	//contenrPub,getErr2 := primitives.GetConfig("../../config/cert/server/eca.cert")
 
 	//若无私钥，相当于无ecert,但为确保节点启动，自动生产公私钥对
-	if(getErr1!=nil){
+	if(cm.GetIsUsed()==false){
 		hSMN.privateKey, hSMN.publicKey, err = hSMN.e.GenerateKey(rand.Reader)
 		if err!=nil {
 			panic("GenerateKey failed,please restart the node.")
 		}
 	}else {
 		//var pri *ecdsa.PrivateKey
-		pri,err1 := primitives.ParseKey(contentPri)
+		contentPri := cm.GetECertPrivateKeyByte()
+		pri,err1 := primitives.ParseKey(string(contentPri))
 		privateKey := pri.(*ecdsa.PrivateKey)
 		//cert := primitives.ParseCertificate(contenrPub)
 		if err1!=nil {

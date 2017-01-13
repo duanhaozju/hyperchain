@@ -219,6 +219,8 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 
 
 			remotePublicKey := msg.Payload
+
+			//log.Error("RemotePublicKey: ",remotePublicKey )
 			genErr := node.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
 
 			e := ecdh.NewEllipticECDH(elliptic.P384())

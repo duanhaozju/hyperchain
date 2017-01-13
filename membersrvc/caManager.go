@@ -30,10 +30,10 @@ type CAManager struct {
 
 var CaManager *CAManager
 
-func GetCaManager(ecacertPath string,ecertPath string,rcertPath string,rcacertPath string, ecertPrivateKeyPath string,tcacertPath string,isUsed bool,checkTCert bool) (*CAManager,error) {
+func GetCaManager(ecacertPath string,ecertPath string,rcacertPath string,rcertPath string, ecertPrivateKeyPath string,isUsed bool,checkTCert bool) (*CAManager,error) {
 	if CaManager == nil {
 		var err error
-		CaManager,err = NewCAManager(ecacertPath,ecertPath,rcertPath,rcacertPath,ecertPrivateKeyPath,tcacertPath,isUsed,checkTCert)
+		CaManager,err = NewCAManager(ecacertPath,ecertPath,rcertPath,rcacertPath,ecertPrivateKeyPath,ecertPath,isUsed,checkTCert)
 		if err != nil {
 			return nil,err
 		}
@@ -271,10 +271,10 @@ func (caManager *CAManager) VerifyRCert(rcertPEM string)(bool,error){
 
 
 func (caManager *CAManager)  GetECACertByte() []byte{
-	return caManager.ecertPrivateKeyByte
+	return caManager.ecacertByte
 }
 func (caManager *CAManager)  GetECertByte() []byte{
-	return caManager.ecacertByte
+	return caManager.ecertByte
 }
 func (caManager *CAManager)  GetRCertByte() []byte{
 	return caManager.rcertByte
@@ -282,8 +282,11 @@ func (caManager *CAManager)  GetRCertByte() []byte{
 func (caManager *CAManager)  GetRCAcertByte() []byte{
 	return caManager.rcacertByte
 }
-func (caManager *CAManager)  GetECAPrivateKeyByte() []byte{
+func (caManager *CAManager)  GetECertPrivateKeyByte() []byte{
 	return caManager.ecertPrivateKeyByte
+}
+func (caManager *CAManager) GetECertPrivKey() interface{}{
+	return caManager.ecertPrivateKey
 }
 func (caManager *CAManager) GetIsUsed() bool{
 	return caManager.isUsed

@@ -11,7 +11,6 @@ import (
 )
 
 type ellipticECDH struct {
-	ECDH
 	curve elliptic.Curve
 }
 
@@ -19,7 +18,7 @@ type ellipticECDH struct {
 // to use as the elliptical curve for elliptical curve diffie-hellman.
 func NewEllipticECDH(curve elliptic.Curve) ECDH {
 	return &ellipticECDH{
-		curve: curve,
+		curve: elliptic.P256(),
 	}
 }
 
@@ -65,7 +64,6 @@ func (e *ellipticECDH) Unmarshal(data []byte) (crypto.PublicKey, bool) {
 func (e *ellipticECDH) GenerateSharedSecret(privKey crypto.PrivateKey, pubKey crypto.PublicKey) ([]byte, error) {
 	priv := privKey.(*ecdsa.PrivateKey)
 	pub := pubKey.(ecdsa.PublicKey)
-
 	x, _ := e.curve.ScalarMult(pub.X, pub.Y, priv.D.Bytes())
 	return x.Bytes(), nil
 }
