@@ -49,9 +49,12 @@ func UnmarshalDataNodes(bucketKey *BucketKey, data []byte, v interface{}) error 
 	length := (int)(data[len(DataNodesPrefix)])
 	var dataNodesKVDeltas [][]byte
 	err := json.Unmarshal(data[len(DataNodesPrefix)+1:], &dataNodesKVDeltas)
+	if err != nil {
+		log.Error("UnmarshalDataNodes error", err)
+	}
 	for i := 0; i < length; i++ {
 		dataKey := &DataKey{bucketKey, dataNodesKVDeltas[2*i]}
-		*dataNodes = append(*dataNodes, &DataNode{dataKey, dataNodesKVDeltas[2*i+1]})
+		*dataNodes = append(*dataNodes, newDataNode(dataKey, dataNodesKVDeltas[2*i+1]))
 	}
 	return err
 }
