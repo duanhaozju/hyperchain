@@ -39,16 +39,19 @@ func (dataNodes DataNodes) Marshal() ([]byte){
 }
 
 func UnmarshalDataNodes(bucketKey *BucketKey,data []byte, v interface{}) error {
-	dataNodes, ok := v.(DataNodes)
+	dataNodes, ok := v.(*DataNodes)
 	if ok == false {
 		return errors.New("invalid type")
 	}
+	if(data == nil || len(data) <= len(DataNodesPrefix)+1){
+		return errors.New("Data is nil")
+	}
 	length := (int)(data[len(DataNodesPrefix)])
-	dataNodesKVDeltas := make([][]byte,length*2)
-	err := json.Unmarshal(data[len(DataNodesPrefix):], dataNodesKVDeltas)
+	var dataNodesKVDeltas [][]byte
+	err := json.Unmarshal(data[len(DataNodesPrefix)+1:], &dataNodesKVDeltas)
 	for i := 0;i < length;i++ {
 		dataKey := &DataKey{bucketKey,dataNodesKVDeltas[2*i]}
-		dataNodes = append(dataNodes,&DataNode{dataKey, dataNodesKVDeltas[2*i+1]})
+		*dataNodes = append(*dataNodes,&DataNode{dataKey, dataNodesKVDeltas[2*i+1]})
 	}
 	return err
 }

@@ -36,7 +36,7 @@ func fetchDataNodesFromDBByBucketKey(treePrefix string,bucketKey *BucketKey) (da
 		log.Errorf("DB get bucketKey ",bucketKey,"error is",err)
 		panic("Get bucketKey error from db error ")
 	}
-	err = UnmarshalDataNodes(bucketKey,dataNodesValue,dataNodes)
+	err = UnmarshalDataNodes(bucketKey,dataNodesValue,&dataNodes)
 	if err != nil{
 		log.Errorf("Marshal dataNodesValue error",err)
 		panic("Get bucketKey error from db error ")

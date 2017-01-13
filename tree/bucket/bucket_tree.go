@@ -264,7 +264,10 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 		remainingNodes = existingNodes[j:]
 		newDataNodes = append(newDataNodes,remainingNodes...)
 	}
-	hashingData := newDataNodes.Marshal()
+	var hashingData []byte
+	for _,dataNode := range newDataNodes{
+		hashingData = append(hashingData,dataNode.getCompositeKey()...)
+	}
 	bucketHashCalculator.setHashingData(hashingData)
 	return bucketHashCalculator.computeCryptoHash(),newDataNodes
 }

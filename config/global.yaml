@@ -54,11 +54,11 @@ global:
             contractFillRate: 0.5ms
         buckettree:
             state:
-                size: 100009
+                size: 19
                 levelGroup: 10
                 cacheSize: 100    # 10 MB
             storage:
-                size: 100009
+                size: 19
                 levelGroup: 10
                 cacheSize: 100   # 10 MB
         hmpublickey:

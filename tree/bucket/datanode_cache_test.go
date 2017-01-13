@@ -27,14 +27,6 @@ func TestDataNodeCache_Put(t *testing.T) {
 	value1 := []byte("value1")
 	dataNode1 := newDataNode(dataKey1,value1)
 
-	key2 := string("key1")
-	dataKey2 := newDataKey(dataNodeCache.TreePrefix,key2)
-	value2 := []byte("value1")
-	dataNode2 := newDataNode(dataKey2,value2)
-
-
-	dataNodeCache.Put(dataNode1)
-	dataNodeCache.Put(dataNode2)
 	//dataNodeCache.Remove(dataNode2)
 
 	dataNodes1,err := dataNodeCache.FetchDataNodesFromCache(*dataNode1.dataKey.bucketKey)
