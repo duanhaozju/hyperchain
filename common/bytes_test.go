@@ -179,17 +179,17 @@ func TestFromHexOddLength(t *testing.T) {
 	}
 }
 func TestToHex(t *testing.T) {
-	a:=[]byte{}
-	h1:=ToHex(a)
-	exp1:="0x0"
-	if h1!=exp1{
-		t.Errorf ("Expected %s got %s",exp1,h1)
+	a := []byte{}
+	h1 := ToHex(a)
+	exp1 := "0x0"
+	if h1 != exp1 {
+		t.Errorf("Expected %s got %s", exp1, h1)
 	}
 
-	b:=[]byte{1,2,3}
+	b := []byte{1, 2, 3}
 	h := ToHex(b)
 	exp := "0x010203"
-	if h!=exp{
-		t.Errorf ("Expected %s got %s",exp,h)
+	if h != exp {
+		t.Errorf("Expected %s got %s", exp, h)
 	}
 }

@@ -1,14 +1,14 @@
 package hpc
 
 import (
-	"hyperchain/core/vm"
+	"errors"
+	"hyperchain/common"
+	"hyperchain/core"
 	"hyperchain/core/hyperstate"
 	"hyperchain/core/state"
+	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
-	"hyperchain/common"
-	"errors"
 	"hyperchain/tree/bucket"
-	"hyperchain/core"
 )
 
 func GetStateInstance(root common.Hash, db hyperdb.Database, stateType string, bucketConf bucket.Conf) (vm.Database, error) {
@@ -22,4 +22,3 @@ func GetStateInstance(root common.Hash, db hyperdb.Database, stateType string, b
 		return nil, errors.New("no state type specified")
 	}
 }
-

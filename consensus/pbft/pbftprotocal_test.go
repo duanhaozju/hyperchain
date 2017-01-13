@@ -5,28 +5,27 @@
 // last Modified Author: zhenlongzhao
 // change log:
 
-
 package pbft
 
 import (
-	"time"
-	"testing"
 	"hyperchain/protos"
+	"testing"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 
-	"hyperchain/core"
-	"hyperchain/event"
-	"hyperchain/core/types"
-	"hyperchain/consensus/helper"
 	"hyperchain/consensus/events"
+	"hyperchain/consensus/helper"
+	"hyperchain/core"
+	"hyperchain/core/types"
+	"hyperchain/event"
 	"os"
 	"sync/atomic"
 )
 
 func getPbftConfigPath() string {
 	gopath := os.Getenv("GOPATH")
-	return gopath  + "/src/hyperchain/config/pbft.yaml"
+	return gopath + "/src/hyperchain/config/pbft.yaml"
 }
 
 func TestRecvMsgMaliciousEvent(t *testing.T) {
@@ -55,21 +54,21 @@ func TestRecvMsgProcessTransaction(t *testing.T) {
 
 	// first generate a Transaction
 	tx := &types.Transaction{
-		From: 		[]byte{1},
-		To:   		[]byte{2},
-		Value:		[]byte{1},
-		Timestamp:	time.Now().UnixNano(),
-		Signature: 	[]byte("test"),
-		Id:		uint64(1),
-		TransactionHash:[]byte("hash"),
+		From:            []byte{1},
+		To:              []byte{2},
+		Value:           []byte{1},
+		Timestamp:       time.Now().UnixNano(),
+		Signature:       []byte("test"),
+		Id:              uint64(1),
+		TransactionHash: []byte("hash"),
 	}
 	txPayload, _ := proto.Marshal(tx)
 
 	message := &protos.Message{
-		Type: protos.Message_TRANSACTION,
+		Type:      protos.Message_TRANSACTION,
 		Timestamp: time.Now().UnixNano(),
-		Payload: txPayload,
-		Id: uint64(1),
+		Payload:   txPayload,
+		Id:        uint64(1),
 	}
 
 	msg, err := proto.Marshal(message)
@@ -96,19 +95,19 @@ func TestRecvMsgProcessConsensus(t *testing.T) {
 	//  Messsage(Message_CONSENSUS) contains
 	// ConsensusMessage(ConsenssusMessage_TRANSACTION)
 	tx := &types.Transaction{
-		From: 		[]byte{1},
-		To:   		[]byte{2},
-		Value:		[]byte{1},
-		Timestamp:	time.Now().UnixNano(),
-		Signature: 	[]byte("test"),
-		Id:		uint64(1),
-		TransactionHash:[]byte("hash"),
+		From:            []byte{1},
+		To:              []byte{2},
+		Value:           []byte{1},
+		Timestamp:       time.Now().UnixNano(),
+		Signature:       []byte("test"),
+		Id:              uint64(1),
+		TransactionHash: []byte("hash"),
 	}
 	txPayload, _ := proto.Marshal(tx)
 
-	cs := &ConsensusMessage {
-		Type:		ConsensusMessage_TRANSACTION,
-		Payload:	txPayload,
+	cs := &ConsensusMessage{
+		Type:    ConsensusMessage_TRANSACTION,
+		Payload: txPayload,
 	}
 	csPayload, err := proto.Marshal(cs)
 	if err != nil {
@@ -116,10 +115,10 @@ func TestRecvMsgProcessConsensus(t *testing.T) {
 	}
 
 	message := &protos.Message{
-		Type: protos.Message_CONSENSUS,
+		Type:      protos.Message_CONSENSUS,
 		Timestamp: time.Now().UnixNano(),
-		Payload: csPayload,
-		Id: uint64(1),
+		Payload:   csPayload,
+		Id:        uint64(1),
 	}
 	msg, err := proto.Marshal(message)
 	if err != nil {
@@ -141,17 +140,17 @@ func TestRecvMsgProcessConsensus(t *testing.T) {
 		ReplicaId:        1,
 	}
 	preprePayload, err := proto.Marshal(preprep)
-	nonTxConsensus := &ConsensusMessage {
-		Type:		ConsensusMessage_PRE_PREPARE,
-		Payload:	preprePayload,
+	nonTxConsensus := &ConsensusMessage{
+		Type:    ConsensusMessage_PRE_PREPARE,
+		Payload: preprePayload,
 	}
 	nonTxConsensusPayload, _ := proto.Marshal(nonTxConsensus)
 
-	nonTxCsWrapper := &protos.Message {
-		Type:		 protos.Message_CONSENSUS,
-		Timestamp:	 time.Now().UnixNano(),
-		Payload:	 nonTxConsensusPayload,
-		Id: 		 uint64(1),
+	nonTxCsWrapper := &protos.Message{
+		Type:      protos.Message_CONSENSUS,
+		Timestamp: time.Now().UnixNano(),
+		Payload:   nonTxConsensusPayload,
+		Id:        uint64(1),
 	}
 	msg, _ = proto.Marshal(nonTxCsWrapper)
 
@@ -164,11 +163,11 @@ func TestRecvMsgProcessConsensus(t *testing.T) {
 	// ConsensusMessage(malicious)
 
 	maliciousPayload := []byte("maliciousPayload")
-	maliciousCsWrapper := &protos.Message {
-		Type:		 protos.Message_CONSENSUS,
-		Timestamp:	 time.Now().UnixNano(),
-		Payload:	 maliciousPayload,
-		Id: 		 uint64(1),
+	maliciousCsWrapper := &protos.Message{
+		Type:      protos.Message_CONSENSUS,
+		Timestamp: time.Now().UnixNano(),
+		Payload:   maliciousPayload,
+		Id:        uint64(1),
 	}
 	msg, _ = proto.Marshal(maliciousCsWrapper)
 	err = pbft.RecvMsg(msg)
@@ -196,10 +195,10 @@ func TestProcessStateUpdated(t *testing.T) {
 	}
 	msg, _ := proto.Marshal(payload)
 	maliciousMsg := &protos.Message{
-		Type:		protos.Message_STATE_UPDATED,
-		Timestamp: 	time.Now().UnixNano(),
-		Payload:	msg,
-		Id:		uint64(1),
+		Type:      protos.Message_STATE_UPDATED,
+		Timestamp: time.Now().UnixNano(),
+		Payload:   msg,
+		Id:        uint64(1),
 	}
 	msg, _ = proto.Marshal(maliciousMsg)
 
@@ -221,10 +220,10 @@ func TestProcessNullRequest(t *testing.T) {
 	pbft.nullRequestTimer = pbftTimerFactory.CreateTimer()
 
 	message := &protos.Message{
-		Type:		protos.Message_NULL_REQUEST,
-		Timestamp:	time.Now().UnixNano(),
-		Payload:	nil,
-		Id:		uint64(1),
+		Type:      protos.Message_NULL_REQUEST,
+		Timestamp: time.Now().UnixNano(),
+		Payload:   nil,
+		Id:        uint64(1),
 	}
 	msg, _ := proto.Marshal(message)
 
@@ -253,10 +252,10 @@ func TestRecvProcessNegotiateView(t *testing.T) {
 	pbft := newPbft(uint64(id), config, h)
 
 	message := &protos.Message{
-		Type: 		protos.Message_NEGOTIATE_VIEW,
-		Timestamp:	time.Now().UnixNano(),
-		Payload:	nil,
-		Id:		uint64(1),
+		Type:      protos.Message_NEGOTIATE_VIEW,
+		Timestamp: time.Now().UnixNano(),
+		Payload:   nil,
+		Id:        uint64(1),
 	}
 	msg, _ := proto.Marshal(message)
 
@@ -386,7 +385,6 @@ func TestNullRequestHandler(t *testing.T) {
 	h := helper.NewHelper(eventMux)
 	pbft := newPbft(uint64(id), config, h)
 
-
 	pbft.id = 2
 	pbft.nullRequestHandler()
 	// pbft in negotiate view should not do anything
@@ -426,7 +424,7 @@ func TestRecvStateUpdatedEvent(t *testing.T) {
 	pbft.inNegoView = false
 	// et.seqNo < pbft.h  hightStateTarget == nil
 	e := &stateUpdatedEvent{
-		seqNo:	uint64(40),
+		seqNo: uint64(40),
 	}
 	pbft.h = uint64(50)
 	pbft.highStateTarget = nil
@@ -441,11 +439,11 @@ func TestRecvStateUpdatedEvent(t *testing.T) {
 		t.Error("recvStateUpdateEvent, pbft should end state transfer")
 	}
 	pbft.highStateTarget = &stateUpdateTarget{
-		checkpointMessage:	checkpointMessage{
-			seqNo:		80,
-			id:		[]byte("checkpointMessage"),
+		checkpointMessage: checkpointMessage{
+			seqNo: 80,
+			id:    []byte("checkpointMessage"),
 		},
-		replicas:		[]uint64{1, 2},
+		replicas: []uint64{1, 2},
 	}
 	pbft.recvStateUpdatedEvent(e)
 	if pbft.stateTransferring == false {
@@ -455,7 +453,7 @@ func TestRecvStateUpdatedEvent(t *testing.T) {
 
 	// et.seqNo >= pbft.h
 	e = &stateUpdatedEvent{
-		seqNo: 	uint64(80),
+		seqNo: uint64(80),
 	}
 	err = pbft.recvStateUpdatedEvent(e)
 	if pbft.lastExec != e.seqNo {
@@ -467,14 +465,12 @@ func TestRecvStateUpdatedEvent(t *testing.T) {
 
 	// pbft in recovery
 	e = &stateUpdatedEvent{
-		seqNo: 	uint64(90),
+		seqNo: uint64(90),
 	}
 	err = pbft.recvStateUpdatedEvent(e)
 	if err != nil {
 		t.Error("recvStateUpdatedEvent, pbft in recovery, expect error nil")
 	}
-
-
 
 }
 
@@ -489,7 +485,6 @@ func TestRecvRequestBatch(t *testing.T) {
 	eventMux := new(event.TypeMux)
 	h := helper.NewHelper(eventMux)
 	pbft := newPbft(uint64(id), config, h)
-
 
 	reqBatch := &TransactionBatch{}
 	err := pbft.recvRequestBatch(reqBatch)
@@ -550,8 +545,8 @@ func TestCallSendPrePrepare(t *testing.T) {
 
 	// cache.vid != pbft.lastVid + 1
 	batch := &cacheBatch{
-		batch:	nil,
-		vid:	uint64(2),
+		batch: nil,
+		vid:   uint64(2),
 	}
 	pbft.cacheValidatedBatch["a"] = batch
 	ret = pbft.callSendPrePrepare("a")
@@ -564,11 +559,11 @@ func TestCallSendPrePrepare(t *testing.T) {
 	pbft.currentVid = &uint2
 	pbft.lastVid = uint64(1)
 	batch2 := &cacheBatch{
-		batch:	&TransactionBatch{
-			Batch:	[]*types.Transaction{},
+		batch: &TransactionBatch{
+			Batch:     []*types.Transaction{},
 			Timestamp: int64(1),
 		},
-		vid:	uint64(2),
+		vid: uint64(2),
 	}
 	pbft.cacheValidatedBatch["a"] = batch2
 	ret = pbft.callSendPrePrepare("a")
@@ -595,7 +590,6 @@ func TestCallSendPrePrepare(t *testing.T) {
 	//	t.Errorf("callSendPrePrepare should return true")
 	//}
 
-
 }
 
 func TestSendPrePrepare(t *testing.T) {
@@ -611,11 +605,11 @@ func TestSendPrePrepare(t *testing.T) {
 	pbft := newPbft(uint64(id), config, h)
 
 	preprep2 := &PrePrepare{
-		View:			uint64(0),
-		SequenceNumber:		uint64(2),
-		BatchDigest:		"digest",
-		TransactionBatch: 	nil,
-		ReplicaId:		pbft.id,
+		View:             uint64(0),
+		SequenceNumber:   uint64(2),
+		BatchDigest:      "digest",
+		TransactionBatch: nil,
+		ReplicaId:        pbft.id,
 	}
 
 	curVid := uint64(0)
@@ -672,14 +666,14 @@ func TestRecvPrePrepare(t *testing.T) {
 
 	// normal self replica 1, recv from replica 0
 	txBatch := &TransactionBatch{
-		Batch:		[]*types.Transaction{},
-		Timestamp:	int64(1),
+		Batch:     []*types.Transaction{},
+		Timestamp: int64(1),
 	}
 	pp := &PrePrepare{
-		View:		uint64(0),
-		SequenceNumber: uint64(1),
-		BatchDigest:    "normal",
-		ReplicaId:	uint64(1),
+		View:             uint64(0),
+		SequenceNumber:   uint64(1),
+		BatchDigest:      "normal",
+		ReplicaId:        uint64(1),
 		TransactionBatch: txBatch,
 	}
 	pbft.recvPrePrepare(pp)
@@ -707,10 +701,10 @@ func TestRecvPrePrepare(t *testing.T) {
 
 	// pp not from primary
 	pp2 := &PrePrepare{
-		View:		uint64(0),
-		SequenceNumber: uint64(1),
-		BatchDigest:    "normal",
-		ReplicaId:	uint64(2),
+		View:             uint64(0),
+		SequenceNumber:   uint64(1),
+		BatchDigest:      "normal",
+		ReplicaId:        uint64(2),
 		TransactionBatch: txBatch,
 	}
 	err = pbft.recvPrePrepare(pp2)
@@ -721,10 +715,10 @@ func TestRecvPrePrepare(t *testing.T) {
 	// pp not in WV
 	pbft.view = uint64(0)
 	pp3 := &PrePrepare{
-		View:		uint64(1),
-		SequenceNumber: uint64(1),
-		BatchDigest:    "normall",
-		ReplicaId:	uint64(1),
+		View:             uint64(1),
+		SequenceNumber:   uint64(1),
+		BatchDigest:      "normall",
+		ReplicaId:        uint64(1),
 		TransactionBatch: txBatch,
 	}
 	pbft.recvPrePrepare(pp3)
@@ -732,7 +726,6 @@ func TestRecvPrePrepare(t *testing.T) {
 	if cert.digest == pp3.BatchDigest {
 		t.Error("recv preprepare, not in WV, expect not receipt")
 	}
-
 
 }
 
@@ -764,10 +757,10 @@ func TestRecvPrepare(t *testing.T) {
 	// recv prepare from primary
 	pbft.inRecovery = false
 	prep := &Prepare{
-		View:		uint64(0),
+		View:           uint64(0),
 		SequenceNumber: uint64(1),
-		BatchDigest:	"digest",
-		ReplicaId:	uint64(1),
+		BatchDigest:    "digest",
+		ReplicaId:      uint64(1),
 	}
 	err = pbft.recvPrepare(prep)
 	if err != nil {
@@ -775,19 +768,17 @@ func TestRecvPrepare(t *testing.T) {
 	}
 
 	// recv prepare not in WV
-	outofH := pbft.K * pbft.L + 1
+	outofH := pbft.K*pbft.L + 1
 	prep2 := &Prepare{
-		View:		uint64(0),
+		View:           uint64(0),
 		SequenceNumber: outofH,
-		BatchDigest:	"digest",
-		ReplicaId:	uint64(2),
+		BatchDigest:    "digest",
+		ReplicaId:      uint64(2),
 	}
 	err = pbft.recvPrepare(prep2)
 	if err != nil {
 		t.Error("recvPrepare not in WV")
 	}
-
-
 
 }
 
@@ -814,13 +805,13 @@ func TestMaybeSendCommit(t *testing.T) {
 	pbft.validatedBatchStore["a"] = txBatch
 	cert := pbft.getCert(uint64(0), uint64(1))
 	pp := &PrePrepare{
-		View:		uint64(0),
-		SequenceNumber: uint64(1),
-		BatchDigest:    "a",
-		ReplicaId:	uint64(1),
+		View:             uint64(0),
+		SequenceNumber:   uint64(1),
+		BatchDigest:      "a",
+		ReplicaId:        uint64(1),
 		TransactionBatch: txBatch,
 	}
-	cert.prePrepare = pp // now preprepared
+	cert.prePrepare = pp                              // now preprepared
 	cert.prepareCount = pbft.preparedReplicasQuorum() // now prepared
 
 	err := pbft.maybeSendCommit(pp.BatchDigest, pp.View, pp.SequenceNumber)
@@ -832,10 +823,10 @@ func TestMaybeSendCommit(t *testing.T) {
 	pbft.skipInProgress = false
 	txBatch2 := &TransactionBatch{}
 	pp2 := &PrePrepare{
-		View:		uint64(0),
-		SequenceNumber: uint64(1),
-		BatchDigest:    "a",
-		ReplicaId:	uint64(1),
+		View:             uint64(0),
+		SequenceNumber:   uint64(1),
+		BatchDigest:      "a",
+		ReplicaId:        uint64(1),
 		TransactionBatch: txBatch2,
 	}
 	pbft.maybeSendCommit(pp2.BatchDigest, pp2.View, pp2.SequenceNumber)
@@ -896,25 +887,25 @@ func TestRecvCommit(t *testing.T) {
 	d := "digest"
 	replicaId := uint64(1)
 	cmt := &Commit{
-		View:		v,
-		SequenceNumber:	n,
-		BatchDigest:	d,
-		ReplicaId:	replicaId,
+		View:           v,
+		SequenceNumber: n,
+		BatchDigest:    d,
+		ReplicaId:      replicaId,
 	}
 
 	pbft.validatedBatchStore[d] = &TransactionBatch{}
 	txBatch := &TransactionBatch{
-		Timestamp:	int64(1),
+		Timestamp: int64(1),
 	}
 	preprep := &PrePrepare{
-		View: 		v,
-		SequenceNumber:	n,
-		BatchDigest:	d,
+		View:             v,
+		SequenceNumber:   n,
+		BatchDigest:      d,
 		TransactionBatch: txBatch,
 	}
 	cert := pbft.getCert(v, n)
 	cert.digest = d
-	cert.prePrepare = preprep // now preprepared
+	cert.prePrepare = preprep                         // now preprepared
 	cert.prepareCount = pbft.preparedReplicasQuorum() // now prepared
 	cert.commitCount = pbft.committedReplicasQuorum() // now committed
 	cert.sentExecute = false
@@ -942,25 +933,25 @@ func TestRecvCommit(t *testing.T) {
 	d2 := "digest2"
 	replicaId = uint64(1)
 	cmt2 := &Commit{
-		View:		v2,
-		SequenceNumber:	n2,
-		BatchDigest:	d2,
-		ReplicaId:	replicaId,
+		View:           v2,
+		SequenceNumber: n2,
+		BatchDigest:    d2,
+		ReplicaId:      replicaId,
 	}
 
 	pbft.validatedBatchStore[d] = &TransactionBatch{}
 	txBatch2 := &TransactionBatch{
-		Timestamp:	int64(1),
+		Timestamp: int64(1),
 	}
 	preprep2 := &PrePrepare{
-		View: 		v2,
-		SequenceNumber:	n2,
-		BatchDigest:	d2,
+		View:             v2,
+		SequenceNumber:   n2,
+		BatchDigest:      d2,
 		TransactionBatch: txBatch2,
 	}
 	cert = pbft.getCert(v2, n2)
 	cert.digest = d
-	cert.prePrepare = preprep2// now preprepared
+	cert.prePrepare = preprep2                        // now preprepared
 	cert.prepareCount = pbft.preparedReplicasQuorum() // now prepared
 
 	pbft.recvCommit(cmt2)
@@ -983,7 +974,6 @@ func TestExecuteAfterStateUpdate(t *testing.T) {
 	pbft.inNegoView = false
 	pbft.seqNo = uint64(5)
 
-
 	// certs in certstore
 	// cert1: idx.n <= pbft.seqNo
 	v1, n1, _ := uint64(0), uint64(1), "d1"
@@ -1000,10 +990,10 @@ func TestExecuteAfterStateUpdate(t *testing.T) {
 	pbft.validatedBatchStore[d2] = txBatch
 
 	pp := &PrePrepare{
-		View:		v2,
-		SequenceNumber: n2,
-		BatchDigest:    d2,
-		ReplicaId:	uint64(1),
+		View:             v2,
+		SequenceNumber:   n2,
+		BatchDigest:      d2,
+		ReplicaId:        uint64(1),
 		TransactionBatch: txBatch,
 	}
 	cert2.prePrepare = pp // now preprepared
@@ -1019,10 +1009,10 @@ func TestExecuteAfterStateUpdate(t *testing.T) {
 	cert3 := pbft.getCert(v3, n3)
 	pbft.validatedBatchStore[d3] = txBatch
 	pp3 := &PrePrepare{
-		View:		v3,
-		SequenceNumber:	n3,
-		BatchDigest: 	d3,
-		ReplicaId: 	uint64(1),
+		View:             v3,
+		SequenceNumber:   n3,
+		BatchDigest:      d3,
+		ReplicaId:        uint64(1),
 		TransactionBatch: txBatch,
 	}
 	cert3.prePrepare = pp3
@@ -1038,10 +1028,10 @@ func TestExecuteAfterStateUpdate(t *testing.T) {
 	cert4 := pbft.getCert(v4, n4)
 	pbft.validatedBatchStore[d4] = txBatch
 	pp4 := &PrePrepare{
-		View: 		v4,
-		SequenceNumber: n4,
-		BatchDigest:    d4,
-		ReplicaId: 	uint64(1),
+		View:             v4,
+		SequenceNumber:   n4,
+		BatchDigest:      d4,
+		ReplicaId:        uint64(1),
 		TransactionBatch: txBatch,
 	}
 	cert4.prePrepare = pp4
@@ -1090,11 +1080,11 @@ func TestExecuteOne(t *testing.T) {
 	idx3 := msgID{0, 1}
 	cert3 := pbft.getCert(0, 1)
 	pp3 := &PrePrepare{
-		View: 	0,
-		SequenceNumber:	1,
-		BatchDigest:    "digest",
+		View:             0,
+		SequenceNumber:   1,
+		BatchDigest:      "digest",
 		TransactionBatch: nil,
-		ReplicaId:	1,
+		ReplicaId:        1,
 	}
 	cert3.prePrepare = pp3
 	cert3.sentExecute = true
@@ -1107,11 +1097,11 @@ func TestExecuteOne(t *testing.T) {
 	idx4 := msgID{0, 2}
 	cert4 := pbft.getCert(0, 2)
 	pp4 := &PrePrepare{
-		View:		0,
-		SequenceNumber:	2,
-		BatchDigest:	"digest",
-		TransactionBatch:	nil,
-		ReplicaId:	1,
+		View:             0,
+		SequenceNumber:   2,
+		BatchDigest:      "digest",
+		TransactionBatch: nil,
+		ReplicaId:        1,
 	}
 	cert4.prePrepare = pp4
 	cert4.sentExecute = false
@@ -1125,11 +1115,11 @@ func TestExecuteOne(t *testing.T) {
 	idx5 := msgID{0, 3}
 	cert5 := pbft.getCert(0, 3)
 	pp5 := &PrePrepare{
-		View:		0,
-		SequenceNumber:	3,
-		BatchDigest:	"digest",
+		View:             0,
+		SequenceNumber:   3,
+		BatchDigest:      "digest",
 		TransactionBatch: nil,
-		ReplicaId:	1,
+		ReplicaId:        1,
 	}
 	cert5.prePrepare = pp5
 	cert5.sentExecute = false
@@ -1144,11 +1134,11 @@ func TestExecuteOne(t *testing.T) {
 	idx6 := msgID{0, 4}
 	cert6 := pbft.getCert(0, 4)
 	pp6 := &PrePrepare{
-		View:		0,
-		SequenceNumber: 3,
-		BatchDigest:	"digest",
+		View:             0,
+		SequenceNumber:   3,
+		BatchDigest:      "digest",
 		TransactionBatch: nil,
-		ReplicaId:	1,
+		ReplicaId:        1,
 	}
 	cert6.prePrepare = pp6
 	cert6.sentExecute = false
@@ -1159,19 +1149,18 @@ func TestExecuteOne(t *testing.T) {
 		t.Error("not committed, expect false")
 	}
 
-
 	// normal
 	idx7 := msgID{0, 5}
 	cert7 := pbft.getCert(0, 5)
 	txBatch := &TransactionBatch{
-		Timestamp:	1,
+		Timestamp: 1,
 	}
 	pp7 := &PrePrepare{
-		View:		0,
-		SequenceNumber: 5,
-		BatchDigest:	"digest",
+		View:             0,
+		SequenceNumber:   5,
+		BatchDigest:      "digest",
 		TransactionBatch: txBatch,
-		ReplicaId:	1,
+		ReplicaId:        1,
 	}
 
 	cert7.prePrepare = pp7
@@ -1226,9 +1215,9 @@ func TestCheckpoint(t *testing.T) {
 	pbft.seqNo = uint64(0)
 
 	bcInfo := &protos.BlockchainInfo{
-		Height:		10,
-		PreviousBlockHash:	[]byte("previous"),
-		CurrentBlockHash:	[]byte("current"),
+		Height:            10,
+		PreviousBlockHash: []byte("previous"),
+		CurrentBlockHash:  []byte("current"),
 	}
 	identity, _ := proto.Marshal(bcInfo)
 	idAsString := byteToString(identity)
@@ -1256,20 +1245,20 @@ func TestRecvCheckpoint(t *testing.T) {
 	pbft.seqNo = uint64(0)
 
 	bcInfo := &protos.BlockchainInfo{
-		Height:		10,
-		PreviousBlockHash:	[]byte("previous"),
-		CurrentBlockHash:	[]byte("current"),
+		Height:            10,
+		PreviousBlockHash: []byte("previous"),
+		CurrentBlockHash:  []byte("current"),
 	}
 	identity, _ := proto.Marshal(bcInfo)
 	idAsString := byteToString(identity)
 	seqNo := uint64(10)
 	chkpt := &Checkpoint{
-		SequenceNumber:		seqNo,
-		ReplicaId:		uint64(3),
-		Id:			idAsString,
+		SequenceNumber: seqNo,
+		ReplicaId:      uint64(3),
+		Id:             idAsString,
 	}
 	cert := pbft.getChkptCert(seqNo, chkpt.Id)
-	cert.chkptCount = pbft.intersectionQuorum()-1
+	cert.chkptCount = pbft.intersectionQuorum() - 1
 	pbft.chkpts[seqNo] = idAsString
 	pbft.recvCheckpoint(chkpt)
 	if pbft.h != 10 {
@@ -1293,17 +1282,17 @@ func TestWeakCheckpointSetOutOfRange(t *testing.T) {
 	pbft.seqNo = uint64(0)
 
 	bcInfo := &protos.BlockchainInfo{
-		Height:		50,
-		PreviousBlockHash:	[]byte("previous"),
-		CurrentBlockHash:	[]byte("current"),
+		Height:            50,
+		PreviousBlockHash: []byte("previous"),
+		CurrentBlockHash:  []byte("current"),
 	}
 	identity, _ := proto.Marshal(bcInfo)
 	idAsString := byteToString(identity)
 	seqNo := uint64(50)
 	chkpt := &Checkpoint{
-		SequenceNumber:		seqNo,
-		ReplicaId:		uint64(3),
-		Id:			idAsString,
+		SequenceNumber: seqNo,
+		ReplicaId:      uint64(3),
+		Id:             idAsString,
 	}
 	pbft.hChkpts[1] = uint64(50)
 
@@ -1329,23 +1318,23 @@ func TestWitnessCheckpointWeakCert(t *testing.T) {
 	pbft.seqNo = uint64(0)
 
 	bcInfo := &protos.BlockchainInfo{
-		Height:		10,
-		PreviousBlockHash:	[]byte("previous"),
-		CurrentBlockHash:	[]byte("current"),
+		Height:            10,
+		PreviousBlockHash: []byte("previous"),
+		CurrentBlockHash:  []byte("current"),
 	}
 	identity, _ := proto.Marshal(bcInfo)
 	idAsString := byteToString(identity)
 	seqNo := uint64(10)
 	chkpt := &Checkpoint{
-		SequenceNumber:		seqNo,
-		ReplicaId:		uint64(3),
-		Id:			idAsString,
+		SequenceNumber: seqNo,
+		ReplicaId:      uint64(3),
+		Id:             idAsString,
 	}
 	pbft.checkpointStore[*chkpt] = true
 	chkpt2 := &Checkpoint{
-		SequenceNumber:  	seqNo,
-		ReplicaId:		uint64(2),
-		Id:			idAsString,
+		SequenceNumber: seqNo,
+		ReplicaId:      uint64(2),
+		Id:             idAsString,
 	}
 	pbft.checkpointStore[*chkpt2] = true
 
@@ -1385,8 +1374,8 @@ func TestRecvReturnRequestBatch(t *testing.T) {
 	pbft.seqNo = uint64(0)
 
 	txBatch := &TransactionBatch{
-		Batch:		nil,
-		Timestamp:	1,
+		Batch:     nil,
+		Timestamp: 1,
 	}
 
 	digest := hash(txBatch)
@@ -1424,7 +1413,7 @@ func TestMoveWatermarks(t *testing.T) {
 	pbft.outstandingReqBatches[cert.digest] = &TransactionBatch{}
 
 	testChkpt := &Checkpoint{
-		SequenceNumber:		10,
+		SequenceNumber: 10,
 	}
 	// checkpointstore
 	pbft.checkpointStore[*testChkpt] = true
@@ -1466,7 +1455,7 @@ func TestMoveWatermarks(t *testing.T) {
 		t.Error("should not move watermark, expect checkpoint store record not exist")
 	}
 	// checkpoint cert store
-	if _, ok := pbft.chkptCertStore[chkptID{n:10, id:"chkptId"}]; ok {
+	if _, ok := pbft.chkptCertStore[chkptID{n: 10, id: "chkptId"}]; ok {
 		t.Error("should not move watermark, expect chkptCertStore record not exist")
 	}
 	if _, ok := pbft.pset[10]; ok {
@@ -1500,24 +1489,24 @@ func TestUpdateHighStateTarget(t *testing.T) {
 	pbft.seqNo = uint64(0)
 
 	checkpoint := checkpointMessage{
-		seqNo:		20,
-		id:		[]byte("checkpoint"),
+		seqNo: 20,
+		id:    []byte("checkpoint"),
 	}
 	peers := []uint64{1, 2}
-	curTarget := &stateUpdateTarget {
-		checkpointMessage:	checkpoint,
-		replicas:		peers,
+	curTarget := &stateUpdateTarget{
+		checkpointMessage: checkpoint,
+		replicas:          peers,
 	}
 	pbft.highStateTarget = curTarget
 
 	// new target seqNo <= cur target seqNo
 	newCheckpoint1 := checkpointMessage{
-		seqNo:		10,
-		id:		[]byte("checkpoint"),
+		seqNo: 10,
+		id:    []byte("checkpoint"),
 	}
 	newTargetSmaller := &stateUpdateTarget{
-		checkpointMessage:	newCheckpoint1,
-		replicas:		peers,
+		checkpointMessage: newCheckpoint1,
+		replicas:          peers,
 	}
 	pbft.updateHighStateTarget(newTargetSmaller)
 	if pbft.highStateTarget.checkpointMessage.seqNo > curTarget.checkpointMessage.seqNo {
@@ -1526,12 +1515,12 @@ func TestUpdateHighStateTarget(t *testing.T) {
 
 	// new target seqNo > cur target seqNo
 	newCheckpoint2 := checkpointMessage{
-		seqNo:		30,
-		id:		[]byte("checkpoint"),
+		seqNo: 30,
+		id:    []byte("checkpoint"),
 	}
-	newTargetLarger := &stateUpdateTarget {
-		checkpointMessage:	newCheckpoint2,
-		replicas:		peers,
+	newTargetLarger := &stateUpdateTarget{
+		checkpointMessage: newCheckpoint2,
+		replicas:          peers,
 	}
 	pbft.updateHighStateTarget(newTargetLarger)
 	if pbft.highStateTarget.checkpointMessage.seqNo <= curTarget.checkpointMessage.seqNo {
@@ -1561,13 +1550,13 @@ func TestRetryStateTransfer(t *testing.T) {
 
 	pbft.stateTransferring = false
 	newCheckpoint := checkpointMessage{
-		seqNo:		10,
-		id:		[]byte("checkpoint"),
+		seqNo: 10,
+		id:    []byte("checkpoint"),
 	}
-	peers := []uint64{1,2}
+	peers := []uint64{1, 2}
 	target := &stateUpdateTarget{
-		checkpointMessage:	newCheckpoint,
-		replicas:		peers,
+		checkpointMessage: newCheckpoint,
+		replicas:          peers,
 	}
 	pbft.retryStateTransfer(target)
 	if pbft.stateTransferring == false {
@@ -1627,8 +1616,8 @@ func TestRecvNegoViewRsp(t *testing.T) {
 
 	// duplicate negoViewRsp
 	nvr1 := &NegotiateViewResponse{
-		ReplicaId:	1,
-		View:		0,
+		ReplicaId: 1,
+		View:      0,
 	}
 	pbft.negoViewRspStore[nvr1.ReplicaId] = nvr1.View
 	ret = pbft.recvNegoViewRsp(nvr1)
@@ -1638,8 +1627,8 @@ func TestRecvNegoViewRsp(t *testing.T) {
 
 	// recv negoViewRsp doesn't above N-f
 	nvr2 := &NegotiateViewResponse{
-		ReplicaId:	2,
-		View:		0,
+		ReplicaId: 2,
+		View:      0,
 	}
 	ret = pbft.recvNegoViewRsp(nvr2)
 	if ret != nil {
@@ -1648,8 +1637,8 @@ func TestRecvNegoViewRsp(t *testing.T) {
 
 	// recv negoViewRsp above N-f but cannot find quorum
 	nvr3 := &NegotiateViewResponse{
-		ReplicaId:	3,
-		View:		1,
+		ReplicaId: 3,
+		View:      1,
 	}
 	ret = pbft.recvNegoViewRsp(nvr3)
 	if ret != nil {
@@ -1658,8 +1647,8 @@ func TestRecvNegoViewRsp(t *testing.T) {
 
 	// recv negoViewRsp above N-f and find quorum
 	nvr4 := &NegotiateViewResponse{
-		ReplicaId:	4,
-		View:		0,
+		ReplicaId: 4,
+		View:      0,
 	}
 	ret = pbft.recvNegoViewRsp(nvr4)
 	if _, ok := ret.(negoViewDoneEvent); !ok {
@@ -1688,11 +1677,11 @@ func TestRecvValidateResult(t *testing.T) {
 
 	txes := make([]*types.Transaction, 1)
 	vali := protos.ValidatedTxs{
-		Transactions: 	txes,
-		Hash:		"hash",
-		SeqNo:		1,
-		View: 		0,
-		Timestamp:	1,
+		Transactions: txes,
+		Hash:         "hash",
+		SeqNo:        1,
+		View:         0,
+		Timestamp:    1,
 	}
 	pbft.recvValidatedResult(vali)
 	if _, ok := pbft.validatedBatchStore["hash"]; !ok {

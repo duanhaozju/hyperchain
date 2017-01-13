@@ -1,10 +1,10 @@
 package controllers
 
 import (
+	"encoding/json"
 	"github.com/astaxie/beego"
 	"hyperchain/api"
 	"hyperchain/api/rest_api/utils"
-	"encoding/json"
 	"strconv"
 )
 
@@ -15,7 +15,7 @@ type TransactionsController struct {
 
 type requestInterval struct {
 	From *hpc.BlockNumber `form:"from"`
-	To *hpc.BlockNumber `form:"to"`
+	To   *hpc.BlockNumber `form:"to"`
 }
 
 func (t *TransactionsController) Prepare() {
@@ -90,7 +90,7 @@ func (t *TransactionsController) GetTransactionByBlockNumberOrBlockHash() {
 
 	var counts_params int = 0
 
-	if p_blkNum != ""{
+	if p_blkNum != "" {
 		counts_params++
 	}
 	if p_blkHash != "" {
@@ -102,7 +102,7 @@ func (t *TransactionsController) GetTransactionByBlockNumberOrBlockHash() {
 
 	if counts_params != 2 {
 		counts_params_str := strconv.Itoa(counts_params)
-		t.Data["json"] = NewJSONObject(nil, &invalidParamsError{"require 2 params, but get "+counts_params_str+" params"})
+		t.Data["json"] = NewJSONObject(nil, &invalidParamsError{"require 2 params, but get " + counts_params_str + " params"})
 		t.ServeJSON()
 		return
 	}
@@ -148,7 +148,7 @@ func (t *TransactionsController) GetTransactionReceipt() {
 		t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
 	} else {
 		if rep != nil && rep.Ret == "0x0" {
-			if tx, err := t.PublicTxAPI.GetTransactionByHash(hash);err != nil {
+			if tx, err := t.PublicTxAPI.GetTransactionByHash(hash); err != nil {
 				t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
 			} else if tx.Invalid == true {
 				// 交易非法

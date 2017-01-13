@@ -1,9 +1,10 @@
 package bucket
 
 import (
-	"testing"
 	"hyperchain/tree/bucket/testutil"
+	"testing"
 )
+
 func TestBucketTreeDeltaBasic(t *testing.T) {
 	conf = newConfig(26, 3, fnvHash)
 	bucketTreeDelta := newBucketTreeDelta()

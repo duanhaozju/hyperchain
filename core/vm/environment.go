@@ -121,7 +121,6 @@ type Database interface {
 
 	FetchBatch(seqNo uint64) hyperdb.Batch
 	DeleteBatch(seqNo uint64)
-
 }
 
 // Account represents a contract or basic ethereum account.
@@ -134,7 +133,6 @@ type Account interface {
 	Address() common.Address
 	ReturnGas(*big.Int, *big.Int)
 	SetCode(common.Hash, []byte)
-	ForEachStorage(cb func(key, value common.Hash) (bool)) map[common.Hash]common.Hash
+	ForEachStorage(cb func(key, value common.Hash) bool) map[common.Hash]common.Hash
 	Value() *big.Int
 }
-

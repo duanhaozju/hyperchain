@@ -4,6 +4,7 @@ package pmt
 
 import (
 	"bytes"
+	crand "crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"github.com/davecgh/go-spew/spew"
@@ -11,11 +12,10 @@ import (
 	"hyperchain/common"
 	"hyperchain/hyperdb"
 	"io/ioutil"
-	"os"
-	"testing"
-	crand "crypto/rand"
 	"math/rand"
+	"os"
 	"reflect"
+	"testing"
 	"testing/quick"
 )
 
@@ -142,8 +142,6 @@ func TestMissingNode(t *testing.T) {
 	}
 }
 
-
-
 func TestGet(t *testing.T) {
 	trie := newEmpty()
 	updateString(trie, "doe", "reindeer")
@@ -167,7 +165,6 @@ func TestGet(t *testing.T) {
 		trie.Commit()
 	}
 }
-
 
 func TestReplication(t *testing.T) {
 	trie := newEmpty()
@@ -317,7 +314,6 @@ func (s *TrieSuite) TestDeleteAfterLoad(c *checker.C) {
 	}
 
 }
-
 
 func TestLargeValue(t *testing.T) {
 	trie := newEmpty()
@@ -539,7 +535,7 @@ func runRandTest(rt randTest) bool {
 			}
 			tr = newtr
 		case opItercheckhash:
-			checktr, _:= New(common.Hash{}, nil)
+			checktr, _ := New(common.Hash{}, nil)
 			it := tr.Iterator()
 			for it.Next() {
 				checktr.Update(it.Key, it.Value)
@@ -558,4 +554,3 @@ func TestRandom(t *testing.T) {
 		t.Fatal(err)
 	}
 }
-

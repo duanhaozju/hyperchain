@@ -11,15 +11,15 @@ import (
 	"hyperchain/hyperdb"
 
 	//"fmt"
+	"errors"
 	"github.com/buger/jsonparser"
+	"hyperchain/core/hyperstate"
 	"hyperchain/core/state"
+	"hyperchain/core/vm"
+	"hyperchain/tree/bucket"
 	"math/big"
 	"strconv"
 	"time"
-	"hyperchain/core/hyperstate"
-	"hyperchain/core/vm"
-	"errors"
-	"hyperchain/tree/bucket"
 )
 
 func CreateInitBlock(filename string, stateType string, blockVersion string, bktConf bucket.Conf) {
@@ -37,7 +37,6 @@ func CreateInitBlock(filename string, stateType string, blockVersion string, bkt
 		Number     uint64
 		Alloc      map[string]int64
 	}
-
 
 	bytes, err := ioutil.ReadFile(filename)
 

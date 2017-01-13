@@ -1,12 +1,13 @@
 package hyperstate
 
 import (
+	"fmt"
 	checker "gopkg.in/check.v1"
-	"testing"
 	"hyperchain/common"
 	"math/big"
-	"fmt"
+	"testing"
 )
+
 type JournalSuite struct {
 }
 
@@ -30,25 +31,25 @@ func (s *JournalSuite) TestMarshal(c *checker.C) {
 		Account: &addr1,
 	})
 	jourList = append(jourList, &SuicideChange{
-		Account: &addr2,
-		Prev: true,
+		Account:     &addr2,
+		Prev:        true,
 		Prevbalance: big.NewInt(2),
 	})
 	jourList = append(jourList, &BalanceChange{
 		Account: &addr3,
-		Prev:  big.NewInt(3),
+		Prev:    big.NewInt(3),
 	})
 	jourList = append(jourList, &NonceChange{
 		Account: &addr4,
-		Prev: uint64(4),
+		Prev:    uint64(4),
 	})
 	jourList = append(jourList, &StorageChange{
-		Account: &addr5,
-		Key: common.BytesToHash([]byte("key5")),
+		Account:  &addr5,
+		Key:      common.BytesToHash([]byte("key5")),
 		Prevalue: common.BytesToHash([]byte("value5")),
 	})
 	jourList = append(jourList, &CodeChange{
-		Account: &addr6,
+		Account:  &addr6,
 		Prevcode: []byte("code6"),
 		Prevhash: []byte("hash6"),
 	})
@@ -56,18 +57,18 @@ func (s *JournalSuite) TestMarshal(c *checker.C) {
 		Prev: big.NewInt(7),
 	})
 	jourList = append(jourList, &AddLogChange{
-		Txhash:  common.BytesToHash([]byte("txhash8")),
+		Txhash: common.BytesToHash([]byte("txhash8")),
 	})
 	jourList = append(jourList, &TouchChange{
 		Account: &addr9,
-		Prev: true,
+		Prev:    true,
 	})
 	so := &StateObject{
 		address: addr10,
 		data: Account{
-			Nonce: 10,
-			Balance: big.NewInt(10),
-			Root: common.BytesToHash([]byte("hash10")),
+			Nonce:    10,
+			Balance:  big.NewInt(10),
+			Root:     common.BytesToHash([]byte("hash10")),
 			CodeHash: []byte("codehash10"),
 		},
 	}
@@ -84,4 +85,3 @@ func (s *JournalSuite) TestMarshal(c *checker.C) {
 	jo, err := UnmarshalJournal(res)
 	fmt.Println("err: ", err, "jo: ", jo)
 }
-

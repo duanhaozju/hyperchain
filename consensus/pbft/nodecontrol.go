@@ -70,8 +70,8 @@ func (pbft *pbftProtocal) sendAgreeAddNode(key string) {
 	}
 
 	add := &AddNode{
-		ReplicaId:	pbft.id,
-		Key:		key,
+		ReplicaId: pbft.id,
+		Key:       key,
 	}
 
 	payload, err := proto.Marshal(add)
@@ -80,7 +80,7 @@ func (pbft *pbftProtocal) sendAgreeAddNode(key string) {
 		return
 	}
 	msg := &ConsensusMessage{
-		Type: ConsensusMessage_ADD_NODE,
+		Type:    ConsensusMessage_ADD_NODE,
 		Payload: payload,
 	}
 
@@ -99,9 +99,9 @@ func (pbft *pbftProtocal) sendAgreeDelNode(key string, routerHash string, newId 
 	cert.newId = newId
 
 	del := &DelNode{
-		ReplicaId:	pbft.id,
-		Key:		key,
-		RouterHash:	routerHash,
+		ReplicaId:  pbft.id,
+		Key:        key,
+		RouterHash: routerHash,
 	}
 
 	payload, err := proto.Marshal(del)
@@ -110,7 +110,7 @@ func (pbft *pbftProtocal) sendAgreeDelNode(key string, routerHash string, newId 
 		return
 	}
 	msg := &ConsensusMessage{
-		Type: ConsensusMessage_DEL_NODE,
+		Type:    ConsensusMessage_DEL_NODE,
 		Payload: payload,
 	}
 
@@ -247,8 +247,8 @@ func (pbft *pbftProtocal) sendReadyForN() {
 	}
 
 	ready := &ReadyForN{
-		ReplicaId:	pbft.id,
-		Key:		pbft.localKey,
+		ReplicaId: pbft.id,
+		Key:       pbft.localKey,
 	}
 
 	payload, err := proto.Marshal(ready)
@@ -257,7 +257,7 @@ func (pbft *pbftProtocal) sendReadyForN() {
 		return
 	}
 	msg := &ConsensusMessage{
-		Type: ConsensusMessage_READY_FOR_N,
+		Type:    ConsensusMessage_READY_FOR_N,
 		Payload: payload,
 	}
 
@@ -298,12 +298,12 @@ func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) error {
 
 	// broadcast the updateN message
 	updateN := &UpdateN{
-		ReplicaId:	pbft.id,
-		Key:		ready.Key,
-		N:			n,
-		View: 		view,
-		SeqNo:		pbft.seqNo + 1,
-		Flag:		true,
+		ReplicaId: pbft.id,
+		Key:       ready.Key,
+		N:         n,
+		View:      view,
+		SeqNo:     pbft.seqNo + 1,
+		Flag:      true,
 	}
 
 	payload, err := proto.Marshal(updateN)
@@ -312,7 +312,7 @@ func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) error {
 		return nil
 	}
 	msg := &ConsensusMessage{
-		Type: ConsensusMessage_UPDATE_N,
+		Type:    ConsensusMessage_UPDATE_N,
 		Payload: payload,
 	}
 
@@ -349,12 +349,12 @@ func (pbft *pbftProtocal) sendUpdateNforDel(key string, routerHash string) {
 
 	// broadcast the updateN message
 	updateN := &UpdateN{
-		ReplicaId:	pbft.id,
-		Key:		key,
-		RouterHash:	routerHash,
-		N:			n,
-		View: 		view,
-		Flag:		false,
+		ReplicaId:  pbft.id,
+		Key:        key,
+		RouterHash: routerHash,
+		N:          n,
+		View:       view,
+		Flag:       false,
 	}
 
 	payload, err := proto.Marshal(updateN)
@@ -363,7 +363,7 @@ func (pbft *pbftProtocal) sendUpdateNforDel(key string, routerHash string) {
 		return
 	}
 	msg := &ConsensusMessage{
-		Type: ConsensusMessage_UPDATE_N,
+		Type:    ConsensusMessage_UPDATE_N,
 		Payload: payload,
 	}
 
@@ -385,7 +385,7 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 
 	if pbft.primary(pbft.view) != update.ReplicaId {
 		logger.Errorf("Replica %d received updateN from other than primary: got %d, should be %d",
-		pbft.id, update.ReplicaId, pbft.primary(pbft.view))
+			pbft.id, update.ReplicaId, pbft.primary(pbft.view))
 		return nil
 	}
 
@@ -411,11 +411,11 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 		cert.update = update
 
 		agree := &AgreeUpdateN{
-			ReplicaId:	pbft.id,
-			Key:		update.Key,
-			N:			n,
-			View:		view,
-			Flag:		true,
+			ReplicaId: pbft.id,
+			Key:       update.Key,
+			N:         n,
+			View:      view,
+			Flag:      true,
 		}
 
 		payload, err := proto.Marshal(agree)
@@ -424,7 +424,7 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 			return nil
 		}
 		msg := &ConsensusMessage{
-			Type: ConsensusMessage_AGREE_UPDATE_N,
+			Type:    ConsensusMessage_AGREE_UPDATE_N,
 			Payload: payload,
 		}
 
@@ -448,12 +448,12 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 		cert.update = update
 
 		agree := &AgreeUpdateN{
-			ReplicaId:	pbft.id,
-			Key:		update.Key,
-			RouterHash:	update.RouterHash,
-			N:			n,
-			View:		view,
-			Flag:		false,
+			ReplicaId:  pbft.id,
+			Key:        update.Key,
+			RouterHash: update.RouterHash,
+			N:          n,
+			View:       view,
+			Flag:       false,
 		}
 
 		payload, err := proto.Marshal(agree)
@@ -462,7 +462,7 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) error {
 			return nil
 		}
 		msg := &ConsensusMessage{
-			Type: ConsensusMessage_AGREE_UPDATE_N,
+			Type:    ConsensusMessage_AGREE_UPDATE_N,
 			Payload: payload,
 		}
 
@@ -531,7 +531,7 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, routerHash string, flag bo
 		}
 
 		if cert.finishUpdate {
-			if cert.updateCount <= pbft.N + 1 {
+			if cert.updateCount <= pbft.N+1 {
 				logger.Debugf("Replica %d already finish update for digest %s", pbft.id, digest)
 				return nil
 			} else {
@@ -551,7 +551,7 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, routerHash string, flag bo
 		pbft.keypoint = cert.update.SeqNo
 		pbft.N = int(cert.update.N)
 		pbft.view = cert.update.View
-		pbft.f = (pbft.N-1) / 3
+		pbft.f = (pbft.N - 1) / 3
 		logger.Noticef("Replica %d update after adding, N=%d/f=%d/view=%d/keypoint=%d",
 			pbft.id, pbft.N, pbft.f, pbft.view, pbft.keypoint)
 
@@ -588,7 +588,7 @@ func (pbft *pbftProtocal) maybeUpdateN(digest string, routerHash string, flag bo
 		cert.finishUpdate = true
 		pbft.N = int(cert.update.N)
 		pbft.view = cert.update.View
-		pbft.f = (pbft.N-1) / 3
+		pbft.f = (pbft.N - 1) / 3
 		oldId := pbft.id
 		pbft.id = cert.newId
 		logger.Noticef("Replica %d update after deleting, N=%d/f=%d/view=%d, new local id is %d",

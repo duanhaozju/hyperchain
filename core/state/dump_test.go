@@ -3,15 +3,15 @@
 package state
 
 import (
+	"hyperchain/common"
+	"hyperchain/hyperdb"
 	"math/big"
 	"testing"
-	"hyperchain/hyperdb"
-	"hyperchain/common"
 )
 
 var toAddr = common.BytesToAddress
 
-func setup()  *StateDB{
+func setup() *StateDB {
 	db, _ := hyperdb.NewMemDatabase()
 	state, _ := New(common.Hash{}, db)
 	// generate a few entries
@@ -30,7 +30,7 @@ func setup()  *StateDB{
 }
 func TestStateDB_Dump(t *testing.T) {
 
-	state:=setup()
+	state := setup()
 	// check that dump contains the state objects that are in trie
 	got := string(state.Dump())
 	t.Log(got)

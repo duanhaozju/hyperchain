@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"github.com/astaxie/beego"
 	"encoding/json"
+	"github.com/astaxie/beego"
 	"hyperchain/api"
 	"hyperchain/api/rest_api/utils"
 )
@@ -84,7 +84,7 @@ func (c *ContractsController) GetCode() {
 	p_address := c.Input().Get("address") // contract address
 
 	// check the number of params
-	if p_blkNum == ""{
+	if p_blkNum == "" {
 		c.Data["json"] = NewJSONObject(nil, &invalidParamsError{"the param 'blockNumber' can't be empty"})
 		c.ServeJSON()
 		return
@@ -98,7 +98,7 @@ func (c *ContractsController) GetCode() {
 	// check params type
 	if blkNum, err := utils.CheckBlockNumber(p_blkNum); err != nil {
 		c.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
-	} else if address, err := utils.CheckAddress(p_address); err != nil{
+	} else if address, err := utils.CheckAddress(p_address); err != nil {
 		c.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
 	} else {
 		if block, err := c.PublicContractAPI.GetCode(address, blkNum); err != nil {
@@ -115,7 +115,7 @@ func (c *ContractsController) GetContractCountByAddr() {
 	p_address := c.Ctx.Input.Param(":address") // account address
 
 	// check the number of params
-	if p_blkNum == ""{
+	if p_blkNum == "" {
 		c.Data["json"] = NewJSONObject(nil, &invalidParamsError{"the param 'blockNumber' can't be empty"})
 		c.ServeJSON()
 		return
@@ -129,7 +129,7 @@ func (c *ContractsController) GetContractCountByAddr() {
 	// check params type
 	if blkNum, err := utils.CheckBlockNumber(p_blkNum); err != nil {
 		c.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
-	} else if address, err := utils.CheckAddress(p_address); err != nil{
+	} else if address, err := utils.CheckAddress(p_address); err != nil {
 		c.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
 	} else {
 		if count, err := c.PublicContractAPI.GetContractCountByAddr(address, blkNum); err != nil {

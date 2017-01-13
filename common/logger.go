@@ -5,11 +5,11 @@ package common
 import (
 	"github.com/op/go-logging"
 
+	"github.com/spf13/cast"
 	"os"
 	"path"
 	"strconv"
 	"time"
-	"github.com/spf13/cast"
 )
 
 // A logger for this file.
@@ -39,8 +39,8 @@ func InitLog(conf *Config) {
 	if !conf.GetBool(LOG_FUMP_FILE) {
 		logging.SetBackend(backendStderr)
 	} else {
-		fileName := path.Join(loggerDir, "hyperchain_" + strconv.Itoa(conf.GetInt(GRPC_PORT)) +
-			tm.Format("-2006-01-02-15:04:05 PM") + ".log")
+		fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(GRPC_PORT))+
+			tm.Format("-2006-01-02-15:04:05 PM")+".log")
 		setNewLogFile(fileName, backendStderr)
 	}
 

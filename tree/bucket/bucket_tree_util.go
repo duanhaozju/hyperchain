@@ -1,20 +1,20 @@
 package bucket
-import 	(
+
+import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"bytes"
 	"hyperchain/crypto"
 )
+
 var stateKeyDelimiter = []byte{0x00}
 
-
 // ComputeCryptoHash should be used in openchain code so that we can change the actual algo used for crypto-hash at one place
-func ComputeCryptoHash(data []byte) ([]byte) {
+func ComputeCryptoHash(data []byte) []byte {
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	return kec256Hash.Hash(data).Bytes()
 }
-
 
 // EncodeOrderPreservingVarUint64 returns a byte-representation for a uint64 number such that
 // all zero-bits starting bytes are trimmed in order to reduce the length of the array
@@ -53,7 +53,6 @@ func DecodeOrderPreservingVarUint64(bytes []byte) (uint64, int) {
 	numBytesConsumed := size + 1
 	return binary.BigEndian.Uint64(decodedBytes), numBytesConsumed
 }
-
 
 // ConstructCompositeKey returns a []byte that uniquely represents a given chaincodeID and key.
 // This assumes that chaincodeID does not contain a 0x00 byte, but the key may

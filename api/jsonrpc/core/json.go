@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
-	"strconv"
 )
 
 const (
@@ -48,11 +48,11 @@ type JSONErrResponse struct {
 
 // Hyperchain Release1.2
 type JSONResponse struct {
-	Version string 		`json:"jsonrpc"`
-	Id 	interface{} 	`json:"id,omitempty"`
-	Code 	int 		`json:"code"`
-	Message string 		`json:"message"`
-	Result 	interface{} 	`json:"result"`
+	Version string      `json:"jsonrpc"`
+	Id      interface{} `json:"id,omitempty"`
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Result  interface{} `json:"result"`
 }
 
 // JSON-RPC notification payload
@@ -257,7 +257,7 @@ func (c *jsonCodec) CreateResponse(id interface{}, reply interface{}) interface{
 // CreateErrorResponse will create a JSON-RPC error response with the given id and error.
 func (c *jsonCodec) CreateErrorResponse(id interface{}, err RPCError) interface{} {
 	//return &JSONErrResponse{Version: JSONRPCVersion, Id: id, Error: JSONError{Code: err.Code(), Message: err.Error()}}
-	return &JSONResponse{Version: JSONRPCVersion, Id: id, Code: err.Code(), Message: err.Error() }
+	return &JSONResponse{Version: JSONRPCVersion, Id: id, Code: err.Code(), Message: err.Error()}
 }
 
 // CreateErrorResponseWithInfo will create a JSON-RPC error response with the given id and error.
@@ -265,7 +265,7 @@ func (c *jsonCodec) CreateErrorResponse(id interface{}, err RPCError) interface{
 func (c *jsonCodec) CreateErrorResponseWithInfo(id interface{}, err RPCError, info interface{}) interface{} {
 	//return &JSONErrResponse{Version: JSONRPCVersion, Id: id,
 	//	Error: JSONError{Code: err.Code(), Message: err.Error(), Data: info}}
-	return &JSONResponse{Version: JSONRPCVersion, Id: id,Code: err.Code(), Message: err.Error(), Result: info}
+	return &JSONResponse{Version: JSONRPCVersion, Id: id, Code: err.Code(), Message: err.Error(), Result: info}
 }
 
 // CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.

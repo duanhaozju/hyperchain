@@ -4,17 +4,17 @@
 package p2p
 
 import (
-	"testing"
 	pb "hyperchain/p2p/peermessage"
+	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"hyperchain/p2p/peerComm"
-	"golang.org/x/net/context"
-	"time"
-	"hyperchain/event"
-	"hyperchain/p2p/transport"
 	"encoding/hex"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
+	"hyperchain/event"
 	"hyperchain/membersrvc"
+	"hyperchain/p2p/peerComm"
+	"hyperchain/p2p/transport"
+	"time"
 )
 
 var testNode *Node
@@ -22,10 +22,10 @@ var expectAddr = peerComm.ExtractAddress(peerComm.GetLocalIp(), 8001, 1)
 var fakerRemoteAddr = peerComm.ExtractAddress(peerComm.GetLocalIp(), 8002, 2)
 
 var FakeRemoteMsg = pb.Message{
-	MsgTimeStamp:time.Now().UnixNano(),
-	From         : fakerRemoteAddr,
-	MessageType  : pb.Message_HELLO,
-	Payload      :[]byte("hello"),
+	MsgTimeStamp: time.Now().UnixNano(),
+	From:         fakerRemoteAddr,
+	MessageType:  pb.Message_HELLO,
+	Payload:      []byte("hello"),
 }
 var fakeRemoteTem *transport.HandShakeManager
 var fakeRemotePublicKey []byte
@@ -40,8 +40,8 @@ func init() {
 
 	tem := transport.NewHandShakeManger()
 	peerPool = NewPeerPool(tem)
-	testNode = NewNode(8001,&mux,1,peerPool)
-	membersrvc.Start("../config/test/local_membersrvc.yaml",1)
+	testNode = NewNode(8001, &mux, 1, peerPool)
+	membersrvc.Start("../config/test/local_membersrvc.yaml", 1)
 }
 
 func TestNode_GetNodeAddr(t *testing.T) {
@@ -111,6 +111,3 @@ func TestNode_Chat2(t *testing.T) {
 	assert.Exactly(t, "474f545f415f544553545f434f4e53454e5355535f4d455353414745", retMsg)
 	//testNode.StopServer()
 }
-
-
-

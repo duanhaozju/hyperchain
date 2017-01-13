@@ -3,28 +3,30 @@
 package vm
 
 import (
-	"math/big"
-	"sync"
-	"hyperchain/hyperdb"
-	"fmt"
-	"hyperchain/trie"
-	"hyperchain/common"
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"hyperchain/common"
 	"hyperchain/crypto"
+	"hyperchain/hyperdb"
+	"hyperchain/trie"
+	"math/big"
+	"sync"
 )
+
 type Code []byte
 type ABI []byte
-var (
 
+var (
 	StartingNonce uint64
 	emptyCodeHash = crypto.Keccak256(nil)
 	//stateObjectCache        map[common.Address] *StateObject	// TODO is it should be used as the lru.Cache
-	stateObjectCache = make(map[common.Address] *StateObject)
+	stateObjectCache = make(map[common.Address]*StateObject)
 )
+
 type StateDB struct {
-	db               hyperdb.Database
-	trie             *trie.SecureTrie
+	db   hyperdb.Database
+	trie *trie.SecureTrie
 
 	//this map holds 'live' objects, which will get modified while processing a state transition
 	stateObjects     map[string]*StateObject
@@ -36,7 +38,7 @@ type StateDB struct {
 	logs             map[common.Hash]Logs
 	logSize          uint
 	leastStateObject *StateObject
-	lock 		sync.Mutex
+	lock             sync.Mutex
 }
 
 // Create a new state from a given trie
@@ -46,28 +48,28 @@ func NewStateDB(root common.Hash, db hyperdb.Database) (*StateDB, error) {
 		return nil, err
 	}
 	return &StateDB{
-		db:           		db,
-		trie:         		tr,
-		stateObjects: 		make(map[string]*StateObject),
-		stateObjectDirty:	make(map[common.Address]struct{}),
-		refund:       		new(big.Int),
-		logs:         		make(map[common.Hash]Logs),
+		db:               db,
+		trie:             tr,
+		stateObjects:     make(map[string]*StateObject),
+		stateObjectDirty: make(map[common.Address]struct{}),
+		refund:           new(big.Int),
+		logs:             make(map[common.Hash]Logs),
 	}, nil
 
 }
 
-func (self *StateDB) New(root common.Hash)(*StateDB,error){
+func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 	// todo is needed?
 	//self.lock.Lock()
 	//defer self.lock.Unlock()
 
 	return &StateDB{
-		db:			self.db,
-		stateObjects:		make(map[string]*StateObject),
-		stateObjectDirty:	make(map[common.Address]struct{}),
-		refund:			new(big.Int),
-		logs:			make(map[common.Hash]Logs),
-	},nil
+		db:               self.db,
+		stateObjects:     make(map[string]*StateObject),
+		stateObjectDirty: make(map[common.Address]struct{}),
+		refund:           new(big.Int),
+		logs:             make(map[common.Hash]Logs),
+	}, nil
 }
 
 // Reset clears out all emphemeral state objects from the state db, but keeps
@@ -91,7 +93,7 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.logSize = 0
 	self.refund = new(big.Int)
 	// if reset we will clear all stateObjectSizeCache
-	stateObjectCache =  make(map[common.Address] *StateObject)
+	stateObjectCache = make(map[common.Address]*StateObject)
 	return nil
 }
 
@@ -298,10 +300,10 @@ func (self *StateDB) GetStateObject(addr common.Address) (stateObject *StateObje
 
 	// 2.we will find the stateObject from stateObjectSizeCache
 	stateObject = stateObjectCache[addr]
-	if stateObject != nil{
-		if stateObject.deleted{
+	if stateObject != nil {
+		if stateObject.deleted {
 			stateObject = nil
-		}else {
+		} else {
 			self.SetStateObject(stateObject)
 			return stateObject
 		}
@@ -454,7 +456,7 @@ func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
 			// and just mark it for deletion in the trie.
 			s.DeleteStateObject(stateObject)
 			stateObject.dirty = false
-			delete(stateObjectCache,stateObject.Address())
+			delete(stateObjectCache, stateObject.Address())
 		} else {
 			if len(stateObject.code) > 0 {
 				if err := db.Put(stateObject.codeHash, stateObject.code); err != nil {
@@ -481,28 +483,28 @@ func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
 }
 
 type StateObject struct {
-						  // Address belonging to this account
+	// Address belonging to this account
 	address common.Address
 	db      trie.Database // State database for storing state changes
 
-						  // DB error
-						  // the error which StateObject cannot be deal with will eventually be returned by StateDB.Commit
+	// DB error
+	// the error which StateObject cannot be deal with will eventually be returned by StateDB.Commit
 	dbErr error
 
-						  // Used to store account Storage
+	// Used to store account Storage
 	trie *trie.SecureTrie
-						  // The BalanceData of the account
+	// The BalanceData of the account
 	BalanceData *big.Int
-						  // The nonce of the account
+	// The nonce of the account
 	nonce uint64
-						  // The code hash if code is present (i.e. a contract)
+	// The code hash if code is present (i.e. a contract)
 	codeHash []byte
-						  // The code for this account
+	// The code for this account
 	storage Storage
 
 	code Code
-						  // The ABI for this account
-	abi ABI
+	// The ABI for this account
+	abi     ABI
 	remove  bool
 	deleted bool
 	dirty   bool
@@ -567,8 +569,8 @@ func (self *StateObject) Update() {
 }
 
 // setError remembers the first non-nil error it is called with
-func (self *StateObject) setError(err error){
-	if self.dbErr == nil{
+func (self *StateObject) setError(err error) {
+	if self.dbErr == nil {
 		self.dbErr = err
 	}
 }
@@ -637,20 +639,19 @@ func (self *StateObject) SetABI(abi []byte) {
 // Code returns the contract code associated with this object,if any
 // TODO the code could be stored in cache
 func (self *StateObject) Code(db trie.Database) []byte {
-	if self.code != nil{
+	if self.code != nil {
 		return self.code
 	}
-	if bytes.Equal(self.CodeHash(),emptyCodeHash){
+	if bytes.Equal(self.CodeHash(), emptyCodeHash) {
 		return nil
 	}
-	code,err := db.Get(self.CodeHash())
-	if err != nil{
-		self.setError(fmt.Errorf("can't load code hash %x: %v",self.CodeHash(),err))
+	code, err := db.Get(self.CodeHash())
+	if err != nil {
+		self.setError(fmt.Errorf("can't load code hash %x: %v", self.CodeHash(), err))
 	}
 	self.code = code
 	return code
 }
-
 
 func (self *StateObject) SetCode(code []byte) {
 	self.code = code
@@ -691,7 +692,7 @@ func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) {
 // just for test
 func (self *StateObject) PrintStorages() {}
 
-func (self *StateObject) CodeHash() []byte{
+func (self *StateObject) CodeHash() []byte {
 	return self.codeHash
 }
 

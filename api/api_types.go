@@ -3,12 +3,12 @@
 package hpc
 
 import (
-	"hyperchain/event"
-	"hyperchain/manager"
-	"hyperchain/hyperdb"
-	"time"
-	"hyperchain/tree/bucket"
 	"hyperchain/crypto/hmEncryption"
+	"hyperchain/event"
+	"hyperchain/hyperdb"
+	"hyperchain/manager"
+	"hyperchain/tree/bucket"
+	"time"
 )
 
 // API describes the set of methods offered over the RPC interface
@@ -21,7 +21,7 @@ type API struct {
 
 var Apis []API
 
-func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnable bool, txPeak int64 , txRate time.Duration, contractPeak int64, contractRate time.Duration, stateType string, bucketConf bucket.Conf, publicKey *hmEncryption.PaillierPublickey) []API{
+func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnable bool, txPeak int64, txRate time.Duration, contractPeak int64, contractRate time.Duration, stateType string, bucketConf bucket.Conf, publicKey *hmEncryption.PaillierPublickey) []API {
 
 	db, err := hyperdb.GetLDBDatabase()
 
@@ -32,41 +32,41 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnab
 	Apis = []API{
 		{
 			Namespace: "tx",
-			Version: "0.4",
-			Service: NewPublicTransactionAPI(eventMux, pm, db, ratelimitEnable, txPeak, txRate),
-			Public: true,
+			Version:   "0.4",
+			Service:   NewPublicTransactionAPI(eventMux, pm, db, ratelimitEnable, txPeak, txRate),
+			Public:    true,
 		},
 		{
 			Namespace: "node",
-			Version: "0.4",
-			Service: NewPublicNodeAPI(pm),
-			Public: true,
+			Version:   "0.4",
+			Service:   NewPublicNodeAPI(pm),
+			Public:    true,
 		},
 		{
 			Namespace: "block",
-			Version: "0.4",
-			Service: NewPublicBlockAPI(db),
-			Public: true,
+			Version:   "0.4",
+			Service:   NewPublicBlockAPI(db),
+			Public:    true,
 		},
 		{
 			Namespace: "account",
-			Version: "0.4",
-			Service: NewPublicAccountAPI(pm, db, stateType, bucketConf),
-			Public: true,
+			Version:   "0.4",
+			Service:   NewPublicAccountAPI(pm, db, stateType, bucketConf),
+			Public:    true,
 		},
 		{
 			Namespace: "contract",
-			Version: "0.4",
-			Service: NewPublicContractAPI(eventMux, pm, db, ratelimitEnable, contractPeak, contractRate, stateType, bucketConf, publicKey),
-			Public: true,
+			Version:   "0.4",
+			Service:   NewPublicContractAPI(eventMux, pm, db, ratelimitEnable, contractPeak, contractRate, stateType, bucketConf, publicKey),
+			Public:    true,
 		},
 	}
 
 	return Apis
 }
 
-func GetApiObjectByNamespace(name string) API{
-	for _,api := range Apis {
+func GetApiObjectByNamespace(name string) API {
+	for _, api := range Apis {
 		if api.Namespace == name {
 			return api
 		}

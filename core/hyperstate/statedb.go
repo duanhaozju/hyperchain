@@ -6,16 +6,15 @@ import (
 	"sort"
 	"sync"
 
+	"encoding/json"
 	lru "github.com/hashicorp/golang-lru"
-	"hyperchain/hyperdb"
+	"github.com/pkg/errors"
 	"hyperchain/common"
 	"hyperchain/core/vm"
-	"encoding/json"
+	"hyperchain/hyperdb"
 	"hyperchain/tree/bucket"
-	"github.com/pkg/errors"
 	"sync/atomic"
 )
-
 
 const (
 	// Number of codehash->size associations to keep.
@@ -57,15 +56,15 @@ type StateDB struct {
 	nextRevisionId int
 
 	// bucket tree related
-	bktConf        bucket.Conf
-	bucketTree     *bucket.BucketTree
-	lock           sync.Mutex
+	bktConf    bucket.Conf
+	bucketTree *bucket.BucketTree
+	lock       sync.Mutex
 	// current block pool status
-	curSeqNo       uint64        // current seqNo in process
-	oldestSeqNo    uint64        // oldest seqNo in content cache cache
+	curSeqNo    uint64 // current seqNo in process
+	oldestSeqNo uint64 // oldest seqNo in content cache cache
 	// atomic related
-	batchCache     *common.Cache // use to store batch handler for different block process
-	contentCache   *common.Cache // use to store modification set for different block process
+	batchCache   *common.Cache // use to store batch handler for different block process
+	contentCache *common.Cache // use to store modification set for different block process
 }
 
 // Create a new state from a given root
@@ -103,7 +102,7 @@ func New(root common.Hash, db hyperdb.Database, bktConf bucket.Conf, height uint
 		contentCache:      contentCache,
 	}
 	// set oldest seqNo
-	log.Debugf("oldest height when initialize %d", height + 1)
+	log.Debugf("oldest height when initialize %d", height+1)
 	state.setLatest(height + 1)
 	return state, nil
 }
@@ -164,7 +163,6 @@ func (self *StateDB) Reset() error {
 	return nil
 }
 
-
 // mark a block's process is begin
 // initialize some stuff
 func (self *StateDB) MarkProcessStart(seqNo uint64) {
@@ -172,6 +170,7 @@ func (self *StateDB) MarkProcessStart(seqNo uint64) {
 	log.Debugf("current process seqNo #%d", seqNo)
 	atomic.StoreUint64(&self.curSeqNo, seqNo)
 }
+
 // mark a block's process has finished
 // remove some stuff in cache to avoid of memory leak
 func (self *StateDB) MarkProcessFinish(seqNo uint64) {
@@ -189,20 +188,23 @@ func (self *StateDB) MarkProcessFinish(seqNo uint64) {
 	self.batchCache.RemoveWithCond(seqNo, judge)
 	// remove content
 	log.Debugf("finish seqNo #%d processing, move oldest from #%d to #%d", seqNo, atomic.LoadUint64(&self.oldestSeqNo), seqNo+1)
-	atomic.StoreUint64(&self.oldestSeqNo, seqNo + 1)
+	atomic.StoreUint64(&self.oldestSeqNo, seqNo+1)
 	// remove all content with related seqNo less than `seqNo`
 	self.contentCache.RemoveWithCond(seqNo, judge)
 }
+
 // setLatest - set oldest when state been initialize
 // seqNo should be the chain's height.
 func (self *StateDB) setLatest(seqNo uint64) {
 	atomic.StoreUint64(&self.oldestSeqNo, seqNo)
 }
+
 // Purge - clear out all uncommitted data and revert to a target state.
 func (self *StateDB) Purge() {
 	self.batchCache.Purge()
 	self.contentCache.Purge()
 }
+
 // ResetToTarget - reset oldest seqNo and root to target.
 func (self *StateDB) ResetToTarget(oldest uint64, root common.Hash) {
 	atomic.StoreUint64(&self.oldestSeqNo, oldest)
@@ -227,19 +229,20 @@ func (self *StateDB) FetchBatch(seqNo uint64) hyperdb.Batch {
 	}
 }
 
-
 // DeleteBatch - delete a batch handler in cache with correspondent seqNo
 // avoid memory leak.
 func (self *StateDB) DeleteBatch(seqNo uint64) {
 	log.Criticalf("remove batch for #%d from batch cache", seqNo)
 	self.batchCache.Remove(seqNo)
 }
+
 // StartRecord - mark a transaction process's beginning.
 func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
 	self.thash = thash
 	self.bhash = bhash
 	self.txIndex = ti
 }
+
 // add logs generated in vm to state
 // doesn't assign block hash now
 // because the blcok hash hasn't been calculated
@@ -252,10 +255,12 @@ func (self *StateDB) AddLog(log *vm.Log) {
 	self.logs[self.thash] = append(self.logs[self.thash], log)
 	self.logSize++
 }
+
 // obtain logs by transaction hash
 func (self *StateDB) GetLogs(hash common.Hash) vm.Logs {
 	return self.logs[hash]
 }
+
 // get all logs in state
 func (self *StateDB) Logs() vm.Logs {
 	var logs vm.Logs
@@ -264,6 +269,7 @@ func (self *StateDB) Logs() vm.Logs {
 	}
 	return logs
 }
+
 // add refund to state temporarily
 // Deprecated
 func (self *StateDB) AddRefund(gas *big.Int) {
@@ -283,10 +289,12 @@ func (self *StateDB) Empty(addr common.Address) bool {
 	so := self.GetStateObject(addr)
 	return so == nil || so.empty()
 }
+
 // Get account by address
 func (self *StateDB) GetAccount(addr common.Address) vm.Account {
 	return self.GetStateObject(addr)
 }
+
 // Get all account in database
 func (self *StateDB) GetAccounts() map[string]vm.Account {
 	ret := make(map[string]vm.Account)
@@ -309,6 +317,7 @@ func (self *StateDB) GetAccounts() map[string]vm.Account {
 	}
 	return ret
 }
+
 // Retrieve the balance from the given address or 0 if object not found
 func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 	stateObject := self.GetStateObject(addr)
@@ -317,6 +326,7 @@ func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 	}
 	return common.Big0
 }
+
 // Nonce is the contract number state object has deployed
 func (self *StateDB) GetNonce(addr common.Address) uint64 {
 	stateObject := self.GetStateObject(addr)
@@ -326,6 +336,7 @@ func (self *StateDB) GetNonce(addr common.Address) uint64 {
 
 	return 0
 }
+
 // code is the contract's code
 func (self *StateDB) GetCode(addr common.Address) []byte {
 	stateObject := self.GetStateObject(addr)
@@ -337,6 +348,7 @@ func (self *StateDB) GetCode(addr common.Address) []byte {
 	}
 	return nil
 }
+
 // Get code len
 func (self *StateDB) GetCodeSize(addr common.Address) int {
 	stateObject := self.GetStateObject(addr)
@@ -353,6 +365,7 @@ func (self *StateDB) GetCodeSize(addr common.Address) int {
 	}
 	return size
 }
+
 // Get code hash
 func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 	stateObject := self.GetStateObject(addr)
@@ -361,6 +374,7 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 	}
 	return common.BytesToHash(stateObject.CodeHash())
 }
+
 // get a storage entry in stateObject
 func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Hash) {
 	// Prefer `live` object
@@ -391,7 +405,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Has
 				if obj.deleted {
 					return false, common.Hash{}
 				} else {
-					existed, value:= obj.GetState(b)
+					existed, value := obj.GetState(b)
 					if existed {
 						log.Debugf("get state for %x in content cache, key %x, value %x", a.Hex(), b.Hex(), value.Hex())
 						if liveObj == nil {
@@ -437,6 +451,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Has
 	log.Debugf("find state for %x %x failed", a.Hex(), b.Hex())
 	return false, common.Hash{}
 }
+
 // check whether an account has been suicide
 func (self *StateDB) IsDeleted(addr common.Address) bool {
 	stateObject := self.GetStateObject(addr)
@@ -445,6 +460,7 @@ func (self *StateDB) IsDeleted(addr common.Address) bool {
 	}
 	return false
 }
+
 // GetTree - implement database interface, get bucket tree instance
 func (self *StateDB) GetTree() interface{} {
 	return self.bucketTree
@@ -460,6 +476,7 @@ func (self *StateDB) AddBalance(addr common.Address, amount *big.Int) {
 		stateObject.AddBalance(amount)
 	}
 }
+
 // set balance
 func (self *StateDB) SetBalance(addr common.Address, amount *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
@@ -467,6 +484,7 @@ func (self *StateDB) SetBalance(addr common.Address, amount *big.Int) {
 		stateObject.SetBalance(amount)
 	}
 }
+
 // set nonce
 func (self *StateDB) SetNonce(addr common.Address, nonce uint64) {
 	stateObject := self.GetOrNewStateObject(addr)
@@ -474,6 +492,7 @@ func (self *StateDB) SetNonce(addr common.Address, nonce uint64) {
 		stateObject.SetNonce(nonce)
 	}
 }
+
 // set code
 func (self *StateDB) SetCode(addr common.Address, code []byte) {
 	stateObject := self.GetOrNewStateObject(addr)
@@ -481,6 +500,7 @@ func (self *StateDB) SetCode(addr common.Address, code []byte) {
 		stateObject.SetCode(kec256Hash.Hash(stateObject.code), code)
 	}
 }
+
 // set a storage entry to a state object
 func (self *StateDB) SetState(addr common.Address, key common.Hash, value common.Hash) {
 	stateObject := self.GetOrNewStateObject(addr)
@@ -516,7 +536,7 @@ func (self *StateDB) Delete(addr common.Address) bool {
 //
 
 // updateStateObject writes the given object to the trie.
-func (self *StateDB) updateStateObject(batch hyperdb.Batch,stateObject *StateObject) []byte {
+func (self *StateDB) updateStateObject(batch hyperdb.Batch, stateObject *StateObject) []byte {
 	addr := stateObject.Address()
 	data, err := stateObject.Marshal()
 	if err != nil {
@@ -527,7 +547,7 @@ func (self *StateDB) updateStateObject(batch hyperdb.Batch,stateObject *StateObj
 }
 
 // deleteStateObject removes the given object from the database
-func (self *StateDB) deleteStateObject(batch hyperdb.Batch,stateObject *StateObject) {
+func (self *StateDB) deleteStateObject(batch hyperdb.Batch, stateObject *StateObject) {
 	log.Debugf("delete state object %s during state commit, seqNo #%d", stateObject.address.Hex(), self.curSeqNo)
 	stateObject.deleted = true
 	addr := stateObject.Address()

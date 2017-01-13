@@ -8,6 +8,7 @@ type DataKey struct {
 	bucketKey    *BucketKey
 	compositeKey []byte
 }
+
 func newDataKey(treePrefix string, key string) *DataKey {
 	compositeKey := ConstructCompositeKey(treePrefix, key)
 	// TODO hash can be replaced
@@ -17,7 +18,6 @@ func newDataKey(treePrefix string, key string) *DataKey {
 	dataKey := &DataKey{newBucketKeyAtLowestLevel(bucketNumber), compositeKey}
 	return dataKey
 }
-
 
 func (key *DataKey) getBucketKey() *BucketKey {
 	return key.bucketKey
@@ -41,7 +41,7 @@ func (key *DataKey) getEncodedBytes() []byte {
 
 func newDataKeyFromEncodedBytes(encodedBytes []byte) *DataKey {
 	bucketNum, l := decodeBucketNumber(encodedBytes)
-	compositeKey := make([]byte, len(encodedBytes) - l)
+	compositeKey := make([]byte, len(encodedBytes)-l)
 	copy(compositeKey, encodedBytes[l:])
 	return &DataKey{newBucketKeyAtLowestLevel(bucketNum), compositeKey}
 }

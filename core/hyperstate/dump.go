@@ -19,13 +19,13 @@ type User struct {
 }
 
 type World struct {
-	Root     string             `json:"root"`
-	Users map[string]User 	    `json:"accounts"`
+	Root  string          `json:"root"`
+	Users map[string]User `json:"accounts"`
 }
 
 func (self *StateDB) RawDump() World {
 	world := World{
-		Users:    make(map[string]User),
+		Users: make(map[string]User),
 	}
 
 	leveldb, ok := self.db.(*hyperdb.LDBDatabase)
@@ -71,4 +71,3 @@ func (self *StateDB) Dump() []byte {
 	}
 	return json
 }
-

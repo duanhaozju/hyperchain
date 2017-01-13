@@ -3,9 +3,9 @@
 package vm
 
 import (
-	"testing"
-	"math/big"
 	"fmt"
+	"math/big"
+	"testing"
 )
 
 func TestLogger(t *testing.T) {
@@ -14,16 +14,15 @@ func TestLogger(t *testing.T) {
 		EnableJit: true,
 		ForceJit:  false,
 	})
-	cfg :=LogConfig{
-		DisableMemory:	true,
-		DisableStack:	true,
-		DisableStorage:	true,
-		FullStorage:		true,
+	cfg := LogConfig{
+		DisableMemory:  true,
+		DisableStack:   true,
+		DisableStorage: true,
+		FullStorage:    true,
 	}
-	logger := newLogger(cfg,env)
+	logger := newLogger(cfg, env)
 
 	fmt.Println(logger)
-
 
 	//pc := uint64(2)
 	//op := SSTORE
@@ -47,6 +46,5 @@ func TestLogger(t *testing.T) {
 	//
 	//contract := NewContract(sender, to, value, gas, gasPrice)
 	//logger.captureState(pc,op,big.NewInt(100),cost,mem,stack,contract,1,nil)
-
 
 }

@@ -5,7 +5,7 @@ package tests
 import (
 	"testing"
 )
-func Test_FormatTx(t *testing.T){
+
+func Test_FormatTx(t *testing.T) {
 
 }
-

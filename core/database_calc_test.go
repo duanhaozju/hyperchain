@@ -35,7 +35,7 @@ import (
 //}
 
 func TestChainHeight(t *testing.T) {
-	InitDB("../build/build/database",8082)
+	InitDB("../build/build/database", 8082)
 	fmt.Println(GetHeightOfChain())
 
 }

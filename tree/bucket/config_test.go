@@ -1,8 +1,8 @@
 package bucket
 
 import (
-	"testing"
 	"hyperchain/tree/bucket/testutil"
+	"testing"
 )
 
 func TestConfigInit(t *testing.T) {

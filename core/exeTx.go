@@ -21,13 +21,13 @@ var (
 // 这一块相当于ethereum里的TransitionDB
 func ExecTransaction(tx *types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
 	var (
-		from = common.BytesToAddress(tx.From)
-		to = common.BytesToAddress(tx.To)
-		tv         = tx.GetTransactionValue()
-		data       = tv.GetPayload()
-		gas        = big.NewInt(100000000)
-		gasPrice   = tv.GetGasPrice()
-		amount     = tv.GetAmount()
+		from     = common.BytesToAddress(tx.From)
+		to       = common.BytesToAddress(tx.To)
+		tv       = tx.GetTransactionValue()
+		data     = tv.GetPayload()
+		gas      = big.NewInt(100000000)
+		gasPrice = tv.GetGasPrice()
+		amount   = tv.GetAmount()
 	)
 	//ZHZ_TEST the time of above will cost 10us
 

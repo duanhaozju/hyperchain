@@ -1,7 +1,8 @@
 package hyperstate
+
 import (
-	"testing"
 	"hyperchain/core/hyperstate/testutils"
+	"testing"
 )
 
 func TestStateDeltaMarshalling(t *testing.T) {

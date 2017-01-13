@@ -1,14 +1,15 @@
 package hyperstate
 
 import (
-	"sort"
-	"github.com/golang/protobuf/proto"
-	"fmt"
 	"bytes"
+	"fmt"
+	"github.com/golang/protobuf/proto"
+	"sort"
 )
+
 /*
 	StateDelta
- */
+*/
 // StateDelta holds the changes to existing state. This struct is used for holding the uncommitted changes during execution of a tx-batch
 // Also, to be used for transferring the state to another peer in chunks
 type StateDelta struct {
@@ -150,13 +151,14 @@ func (stateDelta *StateDelta) ComputeCryptoHash() []byte {
 	hashingContent := buffer.Bytes()
 	return kec256Hash.Hash(hashingContent).Bytes()
 }
+
 /*
 	AccountDelta
- */
+*/
 //AccountDelta maintains state for a chaincode
 type AccountDelta struct {
-	AccountID string
-	UpdatedKVs  map[string]*UpdatedValue
+	AccountID  string
+	UpdatedKVs map[string]*UpdatedValue
 }
 
 func newAccountDelta(accountID string) *AccountDelta {
@@ -202,9 +204,10 @@ func (accountStateDelta *AccountDelta) getSortedKeys() []string {
 	sort.Strings(updatedKeys)
 	return updatedKeys
 }
+
 /*
 	UpdatedValue
- */
+*/
 // UpdatedValue holds the value for a key
 type UpdatedValue struct {
 	Value         []byte
@@ -228,7 +231,7 @@ func (updatedValue *UpdatedValue) GetPreviousValue() []byte {
 
 /*
 	Marshal
- */
+*/
 // marshalling / Unmarshalling code
 // We need to revisit the following when we define proto messages
 // for state related structures for transporting. May be we can
@@ -286,9 +289,10 @@ func (accountStateDelta *AccountDelta) marshalValueWithMarker(buffer *proto.Buff
 		panic(fmt.Errorf("This error should not occur: %s", err))
 	}
 }
+
 /*
 	Unmarshal
- */
+*/
 // Unmarshal deserializes StateDelta
 func (stateDelta *StateDelta) Unmarshal(bytes []byte) error {
 	buffer := proto.NewBuffer(bytes)

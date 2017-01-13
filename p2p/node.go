@@ -4,41 +4,39 @@ package p2p
 
 import (
 	"encoding/hex"
+	"errors"
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"hyperchain/event"
+	"hyperchain/membersrvc"
 	"hyperchain/p2p/peerComm"
 	pb "hyperchain/p2p/peermessage"
+	"hyperchain/p2p/transport"
 	"hyperchain/recovery"
+	"math"
 	"net"
 	"strconv"
-	"time"
-	"hyperchain/membersrvc"
 	"sync"
-	"errors"
-	"math"
-	"hyperchain/p2p/transport"
+	"time"
 )
-
 
 type Node struct {
 	address            *pb.PeerAddress
 	gRPCServer         *grpc.Server
 	higherEventManager *event.TypeMux
 	//common information
-	IsPrimary          bool
-	delayTable         map[uint64]int64
-	delayTableMutex    sync.RWMutex
-	DelayChan          chan UpdateTable
-	sentEvent			bool
-	attendChan         chan int
-	PeerPool           *PeersPool
-	N                  int
-	DelayTable         map[uint64]int64
-	DelayTableMutex    sync.Mutex
-	TEM                transport.TransportEncryptManager
-
+	IsPrimary       bool
+	delayTable      map[uint64]int64
+	delayTableMutex sync.RWMutex
+	DelayChan       chan UpdateTable
+	sentEvent       bool
+	attendChan      chan int
+	PeerPool        *PeersPool
+	N               int
+	DelayTable      map[uint64]int64
+	DelayTableMutex sync.Mutex
+	TEM             transport.TransportEncryptManager
 }
 
 type UpdateTable struct {
@@ -59,7 +57,7 @@ func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, TEM transp
 	newNode.delayTable = make(map[uint64]int64)
 	newNode.DelayChan = make(chan UpdateTable)
 	//listen the update
-	go newNode.UpdateDelayTableThread();
+	go newNode.UpdateDelayTableThread()
 
 	log.Debug("节点启动")
 	log.Debug("本地节点hash", newNode.address.Hash)
@@ -69,21 +67,19 @@ func NewNode(port int64, hEventManager *event.TypeMux, nodeID uint64, TEM transp
 
 }
 
-func (this *Node)UpdateDelayTableThread(){
-	for v := range this.DelayChan{
-		if v.updateID > 0{
-		this.delayTableMutex.Lock()
-		this.delayTable[v.updateID] = v.updateTime
-		this.delayTableMutex.Unlock();
+func (this *Node) UpdateDelayTableThread() {
+	for v := range this.DelayChan {
+		if v.updateID > 0 {
+			this.delayTableMutex.Lock()
+			this.delayTable[v.updateID] = v.updateTime
+			this.delayTableMutex.Unlock()
 		}
 
 	}
 }
 
-
-
 //新节点需要监听相应的attend类型
-func (this *Node)attendNoticeProcess(N int) {
+func (this *Node) attendNoticeProcess(N int) {
 	f := int(math.Floor(float64((N - 1) / 3)))
 	num := 0
 	for {
@@ -93,7 +89,7 @@ func (this *Node)attendNoticeProcess(N int) {
 				log.Debug("连接到一个节点...!!!!!! N:", N, "f", f, "num", num)
 				if attendFlag == 1 {
 					num += 1
-					if num >= (N - f) && !this.sentEvent {
+					if num >= (N-f) && !this.sentEvent {
 						//TODO 修改向上post的消息类型
 						log.Debug("新节点已经连接到chain上>>>>><<<<<<<<<<")
 						this.higherEventManager.Post(event.AlreadyInChainEvent{})
@@ -103,12 +99,11 @@ func (this *Node)attendNoticeProcess(N int) {
 					}
 				} else {
 					log.Warning("非法链接...!!!!!! N:", N, "f", f, "num", num)
+				}
 			}
-		}
 		}
 	}
 }
-
 
 func (this *Node) GetNodeAddr() *pb.PeerAddress {
 	return this.address
@@ -240,10 +235,10 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 
 			log.Debug("×××××× Node Decode MSG ××××××")
 			log.Debug("Node need to decode msg: ", hex.EncodeToString(msg.Payload))
-			transferData,err := this.PeerPool.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
-			if err != nil{
-				log.Error("cannot decode the message",err)
-				return nil,err
+			transferData, err := this.PeerPool.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
+			if err != nil {
+				log.Error("cannot decode the message", err)
+				return nil, err
 			}
 			//log.Debug("Node解密后信息", hex.EncodeToString(transferData))
 			//log.Debug("Node解密后信息2", string(transferData))
@@ -263,10 +258,10 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		{
 			// package the response msg
 			response.MessageType = pb.Message_RESPONSE
-			transferData,err := this.PeerPool.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
-			if err != nil{
-				log.Error("cannot decode the message",err);
-				return nil,err
+			transferData, err := this.PeerPool.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
+			if err != nil {
+				log.Error("cannot decode the message", err)
+				return nil, err
 			}
 			response.Payload = []byte("got a sync msg")
 			log.Debug("<<<< GOT A Unicast MESSAGE >>>>")
@@ -321,14 +316,14 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 				{
 					log.Debug("receive Message_BROADCAST_NEWPEER")
 					go this.higherEventManager.Post(event.RecvNewPeerEvent{
-						Payload:SyncMsg.Payload,
+						Payload: SyncMsg.Payload,
 					})
 				}
 			case recovery.Message_BROADCAST_DELPEER:
 				{
 					log.Debug("receive Message_BROADCAST_DELPEER")
 					go this.higherEventManager.Post(event.RecvDelPeerEvent{
-						Payload:SyncMsg.Payload,
+						Payload: SyncMsg.Payload,
 					})
 				}
 			}
@@ -357,9 +352,9 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	if msg.MessageType != pb.Message_HELLO && msg.MessageType != pb.Message_HELLO_RESPONSE && msg.MessageType != pb.Message_RECONNECT_RESPONSE && msg.MessageType != pb.Message_RECONNECT {
 		var err error
 
-		response.Payload,err = this.PeerPool.TEM.EncWithSecret(response.Payload, msg.From.Hash)
+		response.Payload, err = this.PeerPool.TEM.EncWithSecret(response.Payload, msg.From.Hash)
 		if err != nil {
-			log.Error("encode error",err)
+			log.Error("encode error", err)
 		}
 
 	}
@@ -369,7 +364,7 @@ func (this *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 // StartServer start the gRPC server
 func (this *Node) StartServer() {
 	log.Info("Starting the grpc listening server...")
-	lis, err := net.Listen("tcp", ":" + strconv.Itoa(int(this.address.Port)))
+	lis, err := net.Listen("tcp", ":"+strconv.Itoa(int(this.address.Port)))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 		log.Fatal("PLEASE RESTART THE SERVER NODE!")
@@ -389,9 +384,9 @@ func (this *Node) StopServer() {
 
 }
 
-func (this *Node)reconnect(msg *pb.Message) {
+func (this *Node) reconnect(msg *pb.Message) {
 	opts := membersrvc.GetGrpcClientOpts()
-	conn, err := grpc.Dial(msg.From.IP + ":" + strconv.Itoa(int(msg.From.Port)), opts...)
+	conn, err := grpc.Dial(msg.From.IP+":"+strconv.Itoa(int(msg.From.Port)), opts...)
 	//conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
 	if err != nil {
 		errors.New("Cannot establish a connection!")

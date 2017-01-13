@@ -1,12 +1,12 @@
 package hyperstate
 
 import (
-	"hyperchain/crypto"
 	"github.com/op/go-logging"
+	"hyperchain/crypto"
 )
 
 var (
-	log *logging.Logger // package-level logger
+	log        *logging.Logger // package-level logger
 	kec256Hash = crypto.NewKeccak256Hash("keccak256")
 )
 

@@ -3,6 +3,7 @@ package bucket
 import (
 	"testing"
 )
+
 // TODO test
 // 1.addDataNodeChangesForPersistence
 // 2.addBucketNodeChangesForPersistence
@@ -15,9 +16,8 @@ var (
 	TestAccountID = "testStateImplName"
 )
 
+func TestBucketTree_RevertToTargetBlock(t *testing.T) {
 
-func TestBucketTree_RevertToTargetBlock(t *testing.T){
-	
 }
 
 func TestStateImpl_ComputeHash_AllInMemory_NoContents(t *testing.T) {
@@ -53,6 +53,7 @@ func TestStateImpl_ComputeHash_AllInMemory_1(t *testing.T) {
 	expectedHash := testutil.ComputeCryptoHash(expectedHashBucket3_1, expectedHashBucket3_4)
 	testutil.AssertEquals(t, rootHash, expectedHash)*/
 }
+
 //
 //func TestStateImpl_ComputeHash_AllInMemory_2(t *testing.T) {
 //	// number of buckets at each level 26,13,7,4,2,1

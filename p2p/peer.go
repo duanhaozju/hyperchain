@@ -32,8 +32,7 @@ type Peer struct {
 	chatMux    sync.Mutex
 	IsPrimary  bool
 	PeerPool   *PeersPool
-	Addr pb.PeerAddress
-
+	Addr       pb.PeerAddress
 }
 
 // NewPeerByIpAndPort to create a Peer which with a connection,
@@ -48,7 +47,7 @@ func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.Transpo
 	peer.PeerPool = peerPool
 	peerAddr := peerComm.ExtractAddress(ip, port, nid)
 	peer.Addr = *peerAddr
-	opts:=membersrvc.GetGrpcClientOpts()
+	opts := membersrvc.GetGrpcClientOpts()
 	conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), opts...)
 	peer.localAddr = localAddr
 	peer.RemoteAddr = peerComm.ExtractAddress(ip, port, nid)
@@ -63,7 +62,7 @@ func NewPeerByIpAndPort(ip string, port int64, nid uint64, TEM transport.Transpo
 	peer.IsPrimary = false
 	//TODO handshake operation
 	handShakeErr := peer.handShake()
-	if handShakeErr != nil{
+	if handShakeErr != nil {
 		return nil, handShakeErr
 	}
 	return &peer, nil
@@ -76,7 +75,7 @@ func NewPeerByAddress(address *pb.PeerAddress, nid uint64, TEM transport.Transpo
 	peer.localAddr = localAddr
 	peer.RemoteAddr = address
 	opts := membersrvc.GetGrpcClientOpts()
-	conn, err := grpc.Dial(address.IP + ":" + strconv.Itoa(int(address.Port)), opts...)
+	conn, err := grpc.Dial(address.IP+":"+strconv.Itoa(int(address.Port)), opts...)
 	//conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
 	if err != nil {
 		errors.New("Cannot establish a connection!")
@@ -89,7 +88,7 @@ func NewPeerByAddress(address *pb.PeerAddress, nid uint64, TEM transport.Transpo
 	//log.Warning("newpeer :", peer)
 	//TODO handshake operation
 	handShakeErr := peer.handShake()
-	if handShakeErr != nil{
+	if handShakeErr != nil {
 		return nil, handShakeErr
 	}
 	return &peer, nil
@@ -105,7 +104,7 @@ func (peer *Peer) handShake() error {
 	}
 	retMessage, err2 := peer.Client.Chat(context.Background(), &helloMessage)
 	if err2 != nil {
-		log.Error("cannot establish a connection",err2)
+		log.Error("cannot establish a connection", err2)
 		return err2
 	} else {
 		//review 取得对方的秘钥
@@ -123,7 +122,7 @@ func (peer *Peer) handShake() error {
 			log.Critical("hash:", peer.Addr.Hash)
 			log.Critical("negotiate ID：")
 			log.Critical(peer.TEM.GetSecret(peer.Addr.Hash))
-			return  nil
+			return nil
 		}
 		return errors.New("ret message is not Hello Response!")
 	}
@@ -138,7 +137,7 @@ func NewPeerByIpAndPortReconnect(ip string, port int64, nid uint64, TEM transpor
 	peerAddr := peerComm.ExtractAddress(ip, port, nid)
 
 	opts := membersrvc.GetGrpcClientOpts()
-	conn, err := grpc.Dial(ip + ":" + strconv.Itoa(int(port)), opts...)
+	conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), opts...)
 	//conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
 	if err != nil {
 		errors.New("Cannot establish a connection!")
@@ -197,28 +196,28 @@ func (this *Peer) Chat(msg pb.Message) (*pb.Message, error) {
 	log.Debug("Invoke the broadcast method", msg.From.ID, ">>>", this.Addr.ID)
 	//this.chatMux.Lock()
 	//defer this.chatMux.Unlock()
-	var err error;
-	msg.Payload,err = this.TEM.EncWithSecret(msg.Payload, this.Addr.Hash)
-	if err != nil{
-		return nil,err
+	var err error
+	msg.Payload, err = this.TEM.EncWithSecret(msg.Payload, this.Addr.Hash)
+	if err != nil {
+		return nil, err
 	}
 	r, err := this.Client.Chat(context.Background(), &msg)
 	if err != nil {
-		this.Status = 2;
+		this.Status = 2
 		log.Error("err:", err)
 		//log.Error("retry to connect again")
 		//log.Warning("watting for updating")
-		return nil,err
+		return nil, err
 	} else {
-		this.Status = 1;
+		this.Status = 1
 	}
 	// 返回信息解密
 	if r != nil {
 		//log.Warning("返回信息",r)
 		if r.MessageType != pb.Message_HELLO && r.MessageType != pb.Message_HELLO_RESPONSE {
-			r.Payload,err = this.TEM.DecWithSecret(r.Payload, r.From.Hash)
-			if err != nil{
-				return nil,err
+			r.Payload, err = this.TEM.DecWithSecret(r.Payload, r.From.Hash)
+			if err != nil {
+				return nil, err
 			}
 
 		}

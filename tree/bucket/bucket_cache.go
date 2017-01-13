@@ -22,23 +22,23 @@ type BucketCache struct {
 	maxSize    uint64
 }
 
-func newBucketCache(treePrefix string,maxSizeMBs int) *BucketCache {
+func newBucketCache(treePrefix string, maxSizeMBs int) *BucketCache {
 	isEnabled := true
 	if maxSizeMBs <= 0 {
 		isEnabled = false
 	} else {
 		log.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", maxSizeMBs)
 	}
-	return &BucketCache{TreePrefix: treePrefix,c: make(map[BucketKey]*BucketNode), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
+	return &BucketCache{TreePrefix: treePrefix, c: make(map[BucketKey]*BucketNode), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 }
 
-func (cache *BucketCache) clearAllCache(){
+func (cache *BucketCache) clearAllCache() {
 	isEnabled := true
-	if cache.isEnabled{
+	if cache.isEnabled {
 	} else {
 		log.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", cache.maxSize)
 	}
-	cache = &BucketCache{TreePrefix: cache.TreePrefix,c: make(map[BucketKey]*BucketNode), maxSize: uint64(cache.maxSize * 1024 * 1024), isEnabled: isEnabled}
+	cache = &BucketCache{TreePrefix: cache.TreePrefix, c: make(map[BucketKey]*BucketNode), maxSize: uint64(cache.maxSize * 1024 * 1024), isEnabled: isEnabled}
 }
 
 // TODO cache will be done later
@@ -74,17 +74,18 @@ func (cache *BucketCache) putWithoutLock(key BucketKey, node *BucketNode) {
 		cache.c[key] = node
 	}
 }
+
 // TODO performance status should be done
 func (cache *BucketCache) get(key BucketKey) (*BucketNode, error) {
 	//defer perfstat.UpdateTimeStat("timeSpent", time.Now())
 	if !cache.isEnabled {
-		return fetchBucketNodeFromDB(cache.TreePrefix,&key)
+		return fetchBucketNodeFromDB(cache.TreePrefix, &key)
 	}
 	cache.lock.RLock()
 	defer cache.lock.RUnlock()
 	bucketNode := cache.c[key]
 	if bucketNode == nil {
-		return fetchBucketNodeFromDB(cache.TreePrefix,&key)
+		return fetchBucketNodeFromDB(cache.TreePrefix, &key)
 	}
 	return bucketNode, nil
 }

@@ -3,13 +3,13 @@
 package accounts
 
 import (
-	"testing"
-	"hyperchain/crypto"
 	"hyperchain/common"
-	"sync/atomic"
-	"math/big"
+	"hyperchain/crypto"
 	"io/ioutil"
+	"math/big"
 	"os"
+	"sync/atomic"
+	"testing"
 	"time"
 )
 
@@ -18,26 +18,26 @@ type Transaction struct {
 	// caches
 	from atomic.Value
 }
-type txdata struct  {
+type txdata struct {
 	Recipient *common.Address
-	Amount *big.Int
+	Amount    *big.Int
 	signature []byte
 }
 
 var testSigData = make([]byte, 32)
 
-func tmpManager(t *testing.T) (string,*AccountManager) {
+func tmpManager(t *testing.T) (string, *AccountManager) {
 
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 
-	dir, err := ioutil.TempDir("/tmp","keystore-test")
+	dir, err := ioutil.TempDir("/tmp", "keystore-test")
 	if err != nil {
 		t.Fatal(
 			err)
 	}
 	//fmt.Println(dir)
-	am:= NewAccountManager(dir,encryption)
-	return dir,am
+	am := NewAccountManager(dir, encryption)
+	return dir, am
 }
 
 func TestSign(t *testing.T) {
@@ -71,7 +71,7 @@ func TestSignWithPassphrase(t *testing.T) {
 		t.Fatal("expected account to be locked")
 	}
 
-	_, err = am.SignWithPassphrase(acc.Address,testSigData,pass)
+	_, err = am.SignWithPassphrase(acc.Address, testSigData, pass)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestSignWithPassphrase(t *testing.T) {
 		t.Fatal("expected account to be locked")
 	}
 
-	if _, err = am.SignWithPassphrase(acc.Address,testSigData, "invalid passwd"); err == nil {
+	if _, err = am.SignWithPassphrase(acc.Address, testSigData, "invalid passwd"); err == nil {
 		t.Fatal("expected SignHash to fail with invalid password")
 	}
 }
@@ -140,7 +140,7 @@ func TestAccountManager_Lock(t *testing.T) {
 	if err != nil {
 		t.Fatal("Signing shouldn't return an error after unlocking, got ", err)
 	}
-	if err =am.Lock(a1.Address); err!=nil{
+	if err = am.Lock(a1.Address); err != nil {
 		t.Fatal(err)
 	}
 	_, err = am.Sign(a1.Address, testSigData)
@@ -150,7 +150,7 @@ func TestAccountManager_Lock(t *testing.T) {
 }
 func TestAccountManager_UnlockAllAccount(t *testing.T) {
 	keydir := "./config/keystore"
-	_,am := tmpManager(t)
+	_, am := tmpManager(t)
 	am.UnlockAllAccount(keydir)
 
 }

@@ -16,7 +16,7 @@ var (
 	EnableJit bool
 )
 
-func init(){
+func init() {
 	EnableJit = false
 	ForceJit = false
 }

@@ -13,10 +13,10 @@ import (
 )
 
 type PublicAccountAPI struct {
-	pm             *manager.ProtocolManager
-	db             *hyperdb.LDBDatabase
-	stateType      string
-	bucketConf     bucket.Conf
+	pm         *manager.ProtocolManager
+	db         *hyperdb.LDBDatabase
+	stateType  string
+	bucketConf bucket.Conf
 }
 
 type AccountResult struct {
@@ -25,14 +25,14 @@ type AccountResult struct {
 }
 type UnlockParas struct {
 	Address  common.Address `json:"address"`
-	Password string `json:"password"`
+	Password string         `json:"password"`
 }
 
 func NewPublicAccountAPI(pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, stateType string, bucketConf bucket.Conf) *PublicAccountAPI {
 	return &PublicAccountAPI{
-		pm: pm,
-		db: hyperDb,
-		stateType: stateType,
+		pm:         pm,
+		db:         hyperDb,
+		stateType:  stateType,
 		bucketConf: bucketConf,
 	}
 }
@@ -107,7 +107,7 @@ func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 // GetBalance returns account balance for given account address.
 func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
 
-	if headBlock, err := core.GetBlock(acc.db, core.GetChainCopy().LatestBlockHash);err != nil && err.Error() == leveldb_not_found_error{
+	if headBlock, err := core.GetBlock(acc.db, core.GetChainCopy().LatestBlockHash); err != nil && err.Error() == leveldb_not_found_error {
 		return "", &leveldbNotFoundError{"latest block"}
 	} else if err != nil {
 		log.Errorf("Get Block error, %v", err)
@@ -115,7 +115,7 @@ func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
 	} else if headBlock != nil {
 
 		if stateDB, err := GetStateInstance(common.BytesToHash(headBlock.MerkleRoot), acc.db, acc.stateType, acc.bucketConf); err == nil && stateDB != nil {
-			if stateobject := stateDB.GetAccount(addr);stateobject != nil {
+			if stateobject := stateDB.GetAccount(addr); stateobject != nil {
 				return fmt.Sprintf(`0x%x`, stateobject.Balance()), nil
 			} else {
 				return "", &leveldbNotFoundError{"stateobject, the account may not exist"}
@@ -129,4 +129,3 @@ func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
 		return "", nil
 	}
 }
-

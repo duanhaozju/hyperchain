@@ -4,41 +4,42 @@ package state
 
 import (
 	"fmt"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
 	"hyperchain/tree/pmt"
 	"math/big"
-	lru "github.com/hashicorp/golang-lru"
 	"sync"
 )
 
 var (
-	log *logging.Logger // package-level logger
-	codeCache        *lru.Cache 	// TODO is it could be faster?  it can be put outside of the StateDB
-	abiCache        *lru.Cache 	// TODO is it could be faster?  it can be put outside of the StateDB
-	stateObjectCache        map[common.Address] *StateObject	// TODO is it should be used as the lru.Cache
+	log              *logging.Logger                 // package-level logger
+	codeCache        *lru.Cache                      // TODO is it could be faster?  it can be put outside of the StateDB
+	abiCache         *lru.Cache                      // TODO is it could be faster?  it can be put outside of the StateDB
+	stateObjectCache map[common.Address]*StateObject // TODO is it should be used as the lru.Cache
 )
 
 const (
 	// Number of codehash->size associations to keep
 	codeSizeCacheSize = 10000
-	abiSizeCacheSize = 10000
+	abiSizeCacheSize  = 10000
 )
+
 func init() {
 	log = logging.MustGetLogger("state")
 	// 1.init the codeSizeCache
-	csc,err := lru.New(codeSizeCacheSize)
-	if err != nil{
+	csc, err := lru.New(codeSizeCacheSize)
+	if err != nil {
 		codeCache = csc
-	}else {
+	} else {
 	}
 	// 2.init the abiSizeCache
-	asc,err := lru.New(abiSizeCacheSize)
-	if err != nil{
+	asc, err := lru.New(abiSizeCacheSize)
+	if err != nil {
 		abiCache = asc
-	}else {
+	} else {
 	}
 	// 2.init the stateObjectSizeCache
 	// stateObjectCache = make(map[common.Address] *StateObject)
@@ -54,8 +55,8 @@ var StartingNonce uint64
 // * Contracts
 // * Accounts
 type StateDB struct {
-	db               hyperdb.Database
-	trie             *pmt.SecureTrie
+	db   hyperdb.Database
+	trie *pmt.SecureTrie
 
 	//this map holds 'live' objects, which will get modified while processing a state transition
 	stateObjects     map[string]*StateObject
@@ -67,7 +68,7 @@ type StateDB struct {
 	logs             map[common.Hash]vm.Logs
 	logSize          uint
 	leastStateObject *StateObject
-	lock 		sync.Mutex
+	lock             sync.Mutex
 }
 
 // Create a new state from a given trie
@@ -77,28 +78,28 @@ func New(root common.Hash, db hyperdb.Database) (*StateDB, error) {
 		return nil, err
 	}
 	return &StateDB{
-		db:           		db,
-		trie:         		tr,
-		stateObjects: 		make(map[string]*StateObject),
-		stateObjectDirty:	make(map[common.Address]struct{}),
-		refund:       		new(big.Int),
-		logs:         		make(map[common.Hash]vm.Logs),
+		db:               db,
+		trie:             tr,
+		stateObjects:     make(map[string]*StateObject),
+		stateObjectDirty: make(map[common.Address]struct{}),
+		refund:           new(big.Int),
+		logs:             make(map[common.Hash]vm.Logs),
 	}, nil
 
 }
 
-func (self *StateDB) New(root common.Hash)(*StateDB,error){
+func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 	// todo is needed?
 	//self.lock.Lock()
 	//defer self.lock.Unlock()
 
 	return &StateDB{
-		db:			self.db,
-		stateObjects:		make(map[string]*StateObject),
-		stateObjectDirty:	make(map[common.Address]struct{}),
-		refund:			new(big.Int),
-		logs:			make(map[common.Hash]vm.Logs),
-	},nil
+		db:               self.db,
+		stateObjects:     make(map[string]*StateObject),
+		stateObjectDirty: make(map[common.Address]struct{}),
+		refund:           new(big.Int),
+		logs:             make(map[common.Hash]vm.Logs),
+	}, nil
 }
 
 // Reset clears out all emphemeral state objects from the state db, but keeps
@@ -131,6 +132,7 @@ func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
 	self.bhash = bhash
 	self.txIndex = ti
 }
+
 // doesn't assign block hash now
 // because the blcok hash hasn't been calculated
 // correctly block  and block hash will be assigned in the commit phase

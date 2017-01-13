@@ -7,7 +7,6 @@ import (
 	"crypto/cipher"
 )
 
-
 func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
 	// AES-128 is selected due to size of encryptKey.
 	aesBlock, err := aes.NewCipher(key)

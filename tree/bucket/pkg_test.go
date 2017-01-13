@@ -1,13 +1,14 @@
 package bucket
 
 import (
-	"testing"
-	"os"
-	"hyperchain/tree/bucket/testutil"
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	"hyperchain/tree/bucket/testutil"
 	"math/big"
+	"os"
+	"testing"
 )
+
 type stateImplTestWrapper struct {
 	configMap map[string]interface{}
 	stateImpl *BucketTree
@@ -23,8 +24,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-
-func newStateImplTestWrapper(t testing.TB,accountID string) *stateImplTestWrapper {
+func newStateImplTestWrapper(t testing.TB, accountID string) *stateImplTestWrapper {
 	var configMap map[string]interface{}
 	stateImpl := NewBucketTree(accountID)
 	err := stateImpl.Initialize(configMap)
@@ -62,9 +62,8 @@ func (testWrapper *stateImplTestWrapper) prepareWorkingSetAndComputeCryptoHash(k
 	return testWrapper.computeCryptoHash()
 }
 
-
 func (testWrapper *stateImplTestWrapper) prepareWorkingSet(key_valueMap K_VMap) {
-	err := testWrapper.stateImpl.PrepareWorkingSet(key_valueMap,big.NewInt(1))
+	err := testWrapper.stateImpl.PrepareWorkingSet(key_valueMap, big.NewInt(1))
 	testutil.AssertNoError(testWrapper.t, err, "Error while PrepareWorkingSet")
 }
 
@@ -74,8 +73,7 @@ func (testWrapper *stateImplTestWrapper) computeCryptoHash() []byte {
 	return cryptoHash
 }
 
-
-func createFreshDBAndInitTestStateImplWithCustomHasher(t testing.TB, numBuckets int, maxGroupingAtEachLevel int,testAccontID string) (*testHasher, *stateImplTestWrapper,K_VMap) {
+func createFreshDBAndInitTestStateImplWithCustomHasher(t testing.TB, numBuckets int, maxGroupingAtEachLevel int, testAccontID string) (*testHasher, *stateImplTestWrapper, K_VMap) {
 	testHasher := newTestHasher()
 	configMap := map[string]interface{}{
 		ConfigNumBuckets:             numBuckets,
@@ -108,7 +106,6 @@ func expectedBucketHashContentForTest(data ...[]string) []byte {
 	}
 	return expectedContent
 }
-
 
 func encodeNumberForTest(i int) []byte {
 	return proto.EncodeVarint(uint64(i))

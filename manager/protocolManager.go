@@ -25,30 +25,29 @@ func init() {
 	log = logging.MustGetLogger("manager")
 }
 
-
 type ProtocolManager struct {
-	serverPort        int
-	blockPool         *blockpool.BlockPool            // block executor
-	Peermanager       p2p.PeerManager                 // p2p manager
-	nodeInfo          p2p.PeerInfos                   // node info ,store node status,ip,port
-	consenter         consensus.Consenter             // consensus instance
-	AccountManager    *accounts.AccountManager        // account manager
-	commonHash        crypto.CommonHash               // hash utils
-	eventMux          *event.TypeMux                  // message hub
+	serverPort     int
+	blockPool      *blockpool.BlockPool     // block executor
+	Peermanager    p2p.PeerManager          // p2p manager
+	nodeInfo       p2p.PeerInfos            // node info ,store node status,ip,port
+	consenter      consensus.Consenter      // consensus instance
+	AccountManager *accounts.AccountManager // account manager
+	commonHash     crypto.CommonHash        // hash utils
+	eventMux       *event.TypeMux           // message hub
 
-	validateSub       event.Subscription              // subscription for block validation
-	commitSub         event.Subscription              // subscription for commit event
-	consensusSub      event.Subscription              // subscription for consensus message
-	viewChangeSub     event.Subscription              // subscription for viewchange message
-	respSub           event.Subscription              // subscription for invalid response message
-	syncCheckpointSub event.Subscription              //
-	syncBlockSub      event.Subscription              // subscription for block sync message
-	syncStatusSub     event.Subscription              // subscription for status sync message between replicas
-	peerMaintainSub   event.Subscription              // subscription for peer maintain message
-	quitSync          chan struct{}
-	wg                sync.WaitGroup
-	syncBlockCache      *common.Cache                 // sync block cache
-	replicaStatus       *common.Cache                 // replica status cache
+	validateSub         event.Subscription // subscription for block validation
+	commitSub           event.Subscription // subscription for commit event
+	consensusSub        event.Subscription // subscription for consensus message
+	viewChangeSub       event.Subscription // subscription for viewchange message
+	respSub             event.Subscription // subscription for invalid response message
+	syncCheckpointSub   event.Subscription //
+	syncBlockSub        event.Subscription // subscription for block sync message
+	syncStatusSub       event.Subscription // subscription for status sync message between replicas
+	peerMaintainSub     event.Subscription // subscription for peer maintain message
+	quitSync            chan struct{}
+	wg                  sync.WaitGroup
+	syncBlockCache      *common.Cache // sync block cache
+	replicaStatus       *common.Cache // replica status cache
 	syncReplicaInterval time.Duration
 	syncReplica         bool
 	expired             chan bool
@@ -62,7 +61,7 @@ type NodeManager struct {
 var eventMuxAll *event.TypeMux
 
 func NewProtocolManager(blockPool *blockpool.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
-am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, initType int,  expired chan bool, expiredTime time.Time) *ProtocolManager {
+	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, initType int, expired chan bool, expiredTime time.Time) *ProtocolManager {
 	synccache, _ := common.NewCache()
 	replicacache, _ := common.NewCache()
 	manager := &ProtocolManager{
@@ -172,6 +171,7 @@ func (self *ProtocolManager) validateLoop() {
 		}
 	}
 }
+
 // listen commit msg
 func (self *ProtocolManager) commitLoop() {
 	for obj := range self.commitSub.Chan() {
@@ -180,7 +180,7 @@ func (self *ProtocolManager) commitLoop() {
 			// start commit block serially
 			start_time := time.Now()
 			self.blockPool.CommitBlock(ev, self.commonHash, self.Peermanager)
-			log.Criticalf("ProtocolManager.BlockPool.CommitBlock cost time is",time.Since(start_time))
+			log.Criticalf("ProtocolManager.BlockPool.CommitBlock cost time is", time.Since(start_time))
 		}
 	}
 }
@@ -281,7 +281,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			msg := &protos.DelNodeMessage{
 				DelPayload: payload,
 				RouterHash: routerHash,
-				Id: id,
+				Id:         id,
 			}
 			self.consenter.RecvLocal(msg)
 		case event.BroadcastDelPeerEvent:
