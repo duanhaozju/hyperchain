@@ -80,6 +80,7 @@ func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey)
 			if(dataNodeCache.isEnabled){
 				dataNodeCache.c.Add(bucketKey,dataNodes)
 			}
+			log.Critical("globalDataNodeCache is not empty",len(dataNodes))
 			return dataNodes,nil
 		}
 	}
@@ -103,6 +104,7 @@ func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey)
 			}
 			globalDataNodeCache.cacheMap[dataNodeCache.TreePrefix].Add(bucketKey,dataNodes)
 		}
+		log.Critical("DBDataNodes is not empty",len(dataNodes))
 		return dataNodes,nil
 	}
 }

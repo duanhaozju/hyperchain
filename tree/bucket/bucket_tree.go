@@ -265,9 +265,21 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 		newDataNodes = append(newDataNodes,remainingNodes...)
 	}
 	var hashingData []byte
+	//bucketHashCalculator.setHashingData(newDataNodes.Marshal())
+	//log.Critical("newDataNodes marshal bucketKey is",bucketKey,"hash is ",common.Bytes2Hex(bucketHashCalculator.computeCryptoHash()))
+
 	for _,dataNode := range newDataNodes{
+		if(dataNode.getCompositeKey() == nil || len(dataNode.getCompositeKey())==0){
+			log.Error("dataNode.getCompositeKey() is empty")
+		}
 		hashingData = append(hashingData,dataNode.getCompositeKey()...)
+		if(dataNode.getValue() == nil || len(dataNode.getValue())==0){
+			log.Error("dataNode.getValue() is empty")
+		}
+		hashingData = append(hashingData,dataNode.getValue()...)
 	}
+	log.Critical("newDataNodes",bucketKey," length ",newDataNodes.Len())
+	//hashingData = append(newDataNodes.Marshal(),hashingData...)
 	bucketHashCalculator.setHashingData(hashingData)
 	return bucketHashCalculator.computeCryptoHash(),newDataNodes
 }
@@ -305,6 +317,7 @@ func (bucketTree *BucketTree) addDataNodeChangesForPersistence(writeBatch hyperd
 			if(dataNodes == nil || len(dataNodes) == 0){
 				writeBatch.Delete(append([]byte(bucketTree.treePrefix),append([]byte(DataNodesPrefix),affectedBucket.getEncodedBytes()...)...))
 			}else{
+				log.Critical("save bucketKey",affectedBucket,"size is",len(dataNodes))
 				writeBatch.Put(append([]byte(bucketTree.treePrefix),append([]byte(DataNodesPrefix),affectedBucket.getEncodedBytes()...)...),dataNodes.Marshal())
 			}
 		}
@@ -436,8 +449,8 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 	bucketTree.bucketCache.clearAllCache()
 	globalDataNodeCache.ClearAllCache()
 	globalDataNodeCache.isEnable = false
-	bucketTree.bucketCache.isEnabled = false
-	bucketTree.dataNodeCache.isEnabled = false
+	bucketTree.bucketCache.isEnabled = true
+	bucketTree.dataNodeCache.isEnabled = true
 
 	for i:= currentBlockNum.Int64() + 1;;i++{
 		dbKey := append([]byte(UpdatedValueSetPrefix), big.NewInt(i).Bytes()...)
@@ -488,21 +501,12 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 		writeBatch.Write()
 	}
 	writeBatch.Write()
-	/*for i := currentBlockNum.Int64();i > toBlockNum.Int64(); i -- {
-		dbKey := append([]byte(UpdatedValueSetPrefix), big.NewInt(i).Bytes()...)
-		dbKey = append(dbKey, []byte(bucketTree.treePrefix)...)
-		_, err := db.Get(dbKey)
-		if err != nil {
-			logger.Error("test blockNum is ",i,"error is ",err.Error())
-		}
-	}*/
-
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
+	globalDataNodeCache.ClearAllCache()
 	bucketTree.bucketCache.isEnabled = true
 	bucketTree.dataNodeCache.isEnabled = true
 	globalDataNodeCache.isEnable = GLOBAL
-	globalDataNodeCache.ClearAllCache()
 	return nil
 }
 
