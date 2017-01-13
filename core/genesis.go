@@ -3,28 +3,28 @@
 package core
 
 import (
-	"hyperchain/core/types"
-	"io/ioutil"
-
-	"hyperchain/common"
-
-	"hyperchain/hyperdb"
-
-	//"fmt"
 	"errors"
 	"github.com/buger/jsonparser"
+	"hyperchain/common"
 	"hyperchain/core/hyperstate"
 	"hyperchain/core/state"
+	"hyperchain/core/types"
 	"hyperchain/core/vm"
-	"hyperchain/tree/bucket"
+	"hyperchain/hyperdb"
+	"io/ioutil"
 	"math/big"
 	"strconv"
 	"time"
 )
 
-func CreateInitBlock(filename string, stateType string, blockVersion string, bktConf bucket.Conf) {
-	log.Debug("genesis start")
+const (
+	genesisPath  = "global.configs.genesis"
+	stateType    = "global.structure.state"
+	blockVersion = "global.version.blockversion"
+)
 
+func CreateInitBlock(config *common.Config) {
+	log.Debug("genesis start")
 	if IsGenesisFinish() {
 		log.Info("already genesis")
 		return
@@ -38,13 +38,11 @@ func CreateInitBlock(filename string, stateType string, blockVersion string, bkt
 		Alloc      map[string]int64
 	}
 
-	bytes, err := ioutil.ReadFile(filename)
-
+	bytes, err := ioutil.ReadFile(getGenesisPath(config))
 	if err != nil {
 		log.Error("ReadFile: ", err.Error())
 		return
 	}
-
 	// start the parse genesis content
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
@@ -52,7 +50,7 @@ func CreateInitBlock(filename string, stateType string, blockVersion string, bkt
 		return
 	}
 	// create state instance with empty root hash
-	stateDB, err := GetStateInstance(common.Hash{}, db, stateType, bktConf)
+	stateDB, err := GetStateInstance(common.Hash{}, db, config)
 	stateDB.MarkProcessStart(0)
 	if err != nil {
 		log.Error("genesis create statedb failed!")
@@ -87,24 +85,36 @@ func CreateInitBlock(filename string, stateType string, blockVersion string, bkt
 
 	log.Debug("construct genesis block")
 	// flush block content to disk immediately
-	if err, _ := PersistBlock(db.NewBatch(), &block, blockVersion, true, true); err != nil {
+	if err, _ := PersistBlock(batch, &block, getBlockVersion(config), true, true); err != nil {
 		log.Fatal(err)
 		return
 	}
 	// flush change of chain to disk immediately
-	UpdateChain(db.NewBatch(), &block, true, true, true)
+	UpdateChain(batch, &block, true, false, false)
+	batch.Write()
 	stateDB.MarkProcessFinish(0)
-	log.Debugf("Genesis state %s", string(stateDB.Dump()))
 	log.Info("current chain block number is", GetChainCopy().Height)
 
 }
-func GetStateInstance(root common.Hash, db hyperdb.Database, stateType string, bktConf bucket.Conf) (vm.Database, error) {
-	switch stateType {
+func GetStateInstance(root common.Hash, db hyperdb.Database, conf *common.Config) (vm.Database, error) {
+	switch getStateType(conf) {
 	case "rawstate":
 		return state.New(root, db)
 	case "hyperstate":
-		return hyperstate.New(root, db, bktConf, 0)
+		return hyperstate.New(root, db, conf, 0)
 	default:
 		return nil, errors.New("no state type specified")
 	}
+}
+
+func getGenesisPath(conf *common.Config) string {
+	return conf.GetString(genesisPath)
+}
+
+func getStateType(conf *common.Config) string {
+	return conf.GetString(stateType)
+}
+
+func getBlockVersion(conf *common.Config) string {
+	return conf.GetString(blockVersion)
 }

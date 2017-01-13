@@ -365,7 +365,7 @@ func (pool *BlockPool) applyBlock(block *types.Block, seqNo uint64) (error, *Blo
 
 		// different with normal process, because during the state update, block number and seqNo are always same
 		// persist transaction here
-		if err, _ := core.PersistTransaction(batch, tx, pool.conf.TransactionVersion, false, false); err != nil {
+		if err, _ := core.PersistTransaction(batch, tx, pool.GetTransactionVersion(), false, false); err != nil {
 			log.Errorf("persist transaction for index %d in #%d failed.", i, seqNo)
 			continue
 		}
@@ -379,7 +379,7 @@ func (pool *BlockPool) applyBlock(block *types.Block, seqNo uint64) (error, *Blo
 			continue
 		}
 		// persist receipt
-		if err, _ := core.PersistReceipt(batch, receipt, pool.conf.TransactionVersion, false, false); err != nil {
+		if err, _ := core.PersistReceipt(batch, receipt, pool.GetTransactionVersion(), false, false); err != nil {
 			log.Errorf("persist receipt for index %d in #%d failed.", i, seqNo)
 			continue
 		}
@@ -417,7 +417,7 @@ func (pool *BlockPool) initializeTransactionCalculator() error {
 		log.Error("get database handler failed in initializeTransactionCalculator")
 		return err
 	}
-	switch pool.conf.StateType {
+	switch pool.GetStateType() {
 	case "rawstate":
 		tree, err := pmt.New(common.Hash{}, db)
 		if err != nil {
@@ -438,7 +438,7 @@ func (pool *BlockPool) initializeReceiptCalculator() error {
 		log.Error("get database handler failed in initializeTransactionCalculator")
 		return err
 	}
-	switch pool.conf.StateType {
+	switch pool.GetStateType() {
 	case "rawstate":
 		tree, err := pmt.New(common.Hash{}, db)
 		if err != nil {
@@ -457,11 +457,11 @@ func (pool *BlockPool) calculateTransactionsFingerprint(transaction *types.Trans
 	if transaction == nil && flush == false {
 		return common.Hash{}, errors.New("empty pointer")
 	}
-	switch pool.conf.StateType {
+	switch pool.GetStateType() {
 	case "rawstate":
 		calculator := pool.transactionCalculator.(*pmt.Trie)
 		if flush == false {
-			err, data := core.WrapperTransaction(transaction, pool.conf.TransactionVersion)
+			err, data := core.WrapperTransaction(transaction, pool.GetTransactionVersion())
 			if err != nil {
 				log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
 				return common.Hash{}, err
@@ -475,7 +475,7 @@ func (pool *BlockPool) calculateTransactionsFingerprint(transaction *types.Trans
 		}
 	case "hyperstate":
 		if flush == false {
-			err, data := core.WrapperTransaction(transaction, pool.conf.TransactionVersion)
+			err, data := core.WrapperTransaction(transaction, pool.GetTransactionVersion())
 			if err != nil {
 				log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
 				return common.Hash{}, err
@@ -501,12 +501,12 @@ func (pool *BlockPool) calculateReceiptFingerprint(receipt *types.Receipt, flush
 		log.Error("empty recepit pointer")
 		return common.Hash{}, errors.New("empty pointer")
 	}
-	switch pool.conf.StateType {
+	switch pool.GetStateType() {
 	case "rawstate":
 		calculator := pool.receiptCalculator.(*pmt.Trie)
 		if flush == false {
 			// process
-			err, data := core.WrapperReceipt(receipt, pool.conf.TransactionVersion)
+			err, data := core.WrapperReceipt(receipt, pool.GetTransactionVersion())
 			if err != nil {
 				log.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
 				return common.Hash{}, err
@@ -522,7 +522,7 @@ func (pool *BlockPool) calculateReceiptFingerprint(receipt *types.Receipt, flush
 	case "hyperstate":
 		if flush == false {
 			// process
-			err, data := core.WrapperReceipt(receipt, pool.conf.TransactionVersion)
+			err, data := core.WrapperReceipt(receipt, pool.GetTransactionVersion())
 			if err != nil {
 				log.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
 				return common.Hash{}, err
@@ -542,7 +542,7 @@ func (pool *BlockPool) calculateReceiptFingerprint(receipt *types.Receipt, flush
 }
 
 func (pool *BlockPool) submitValidationResult(state vm.Database, batch hyperdb.Batch) (error, []byte, []byte, []byte) {
-	switch pool.conf.StateType {
+	switch pool.GetStateType() {
 	case "hyperstate":
 		// flush all state change
 		start_time := time.Now()
@@ -589,7 +589,7 @@ func (pool *BlockPool) submitValidationResult(state vm.Database, batch hyperdb.B
 
 // SubmitForStateUpdate - submit all changes in `state update` process
 func (pool *BlockPool) SubmitForStateUpdate(seqNo uint64) error {
-	switch pool.conf.StateType {
+	switch pool.GetStateType() {
 	case "rawstate":
 
 	case "hyperstate":
