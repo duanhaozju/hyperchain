@@ -7,7 +7,6 @@ import (
 )
 
 var defaultBucketCacheMaxSize = 100 // MBs
-var defaultDataNodeCacheMaxSize = 1000000
 
 // We can create a cache and keep all the bucket nodes pre-loaded.
 // Since, the bucket nodes do not contain actual data and max possible

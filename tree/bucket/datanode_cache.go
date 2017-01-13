@@ -5,7 +5,8 @@ import (
 	"github.com/hashicorp/golang-lru"
 )
 var (
-	GLOBAL = false
+	defaultDataNodeCacheMaxSize = 1000000
+	GLOBAL = true
 	GlobalDataNodeCacheSize = 10
 	globalDataNodeCache *GlobalDataNodeCache
 )
@@ -16,7 +17,7 @@ type GlobalDataNodeCache struct{
 }
 
 func init(){
-	globalDataNodeCache = &GlobalDataNodeCache{cacheMap:make(map[string] *lru.Cache),isEnable:false}
+	globalDataNodeCache = &GlobalDataNodeCache{cacheMap:make(map[string] *lru.Cache),isEnable:true}
 }
 
 func (globalDataNodeCache *GlobalDataNodeCache) ClearAllCache (){
@@ -64,6 +65,7 @@ func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey)
 	if(dataNodes != nil && len(dataNodes) > 0){
 		return dataNodes,nil
 	}
+	log.Critical("dataNode cache is empty")
 
 	// step 2.
 	if(globalDataNodeCache.isEnable){
@@ -83,6 +85,7 @@ func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey)
 			return dataNodes,nil
 		}
 	}
+	log.Critical("globalDataNodeCache is empty")
 
 	// step 3.
 	dataNodes,err = fetchDataNodesFromDBByBucketKey(dataNodeCache.TreePrefix,&bucketKey)

@@ -388,6 +388,7 @@ func (bucketTree *BucketTree) updateDataNodeCache(bucketKey BucketKey,newDataNod
 		}
 		cache.Add(bucketKey,newDataNodes)
 		globalDataNodeCache.cacheMap[bucketTree.treePrefix] = cache
+		log.Critical("globalDataNodeCache.cacheMap bucketKey is",bucketKey,"size is",globalDataNodeCache.cacheMap[bucketTree.treePrefix].Len())
 	}
 
 }
