@@ -434,10 +434,9 @@ func (bucket *BucketTree) Reset() {
 
 // TODO test important
 // the func can make the buckettree revert to target block
-func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *big.Int) error {
+func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch hyperdb.Batch, currentBlockNum, toBlockNum *big.Int, flush, sync bool) error {
 	log.Debug("Start RevertToTargetBlock, from ", currentBlockNum)
 	db, _ := hyperdb.GetLDBDatabase()
-	writeBatch := db.NewBatch()
 	keyValueMap := NewKVMap()
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
@@ -493,13 +492,19 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 		keyValueMap = NewKVMap()
 		writeBatch.Delete(dbKey)
 	}
-	writeBatch.Write()
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
 	globalDataNodeCache.ClearAllCache()
 	bucketTree.bucketCache.isEnabled = true
 	bucketTree.dataNodeCache.isEnabled = true
 	globalDataNodeCache.isEnable = IsEnabledGlobal
+	if flush {
+		if sync {
+			writeBatch.Write()
+		} else {
+			go writeBatch.Write()
+		}
+	}
 	return nil
 }
 

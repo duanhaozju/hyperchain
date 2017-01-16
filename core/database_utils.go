@@ -115,9 +115,9 @@ func WrapperReceipt(receipt *types.Receipt, version string) (error, []byte) {
 	return nil, data
 }
 
-func DeleteReceipt(db hyperdb.Database, key []byte) error {
+func DeleteReceipt(batch hyperdb.Batch, key []byte) error {
 	keyFact := append(ReceiptsPrefix, key...)
-	return db.Delete(keyFact)
+	return batch.Delete(keyFact)
 }
 
 /*
@@ -250,9 +250,9 @@ func GetTxWithBlock(db hyperdb.Database, key []byte) (uint64, int64) {
 	return meta.BlockIndex, meta.Index
 }
 
-func DeleteTransaction(db hyperdb.Database, key []byte) error {
+func DeleteTransaction(batch hyperdb.Batch, key []byte) error {
 	keyFact := append(TransactionPrefix, key...)
-	return db.Delete(keyFact)
+	return batch.Delete(keyFact)
 }
 
 func GetAllTransaction(db *hyperdb.LDBDatabase) ([]*types.Transaction, error) {
@@ -325,9 +325,9 @@ func PersistTransactionMeta(batch hyperdb.Batch, transactionMeta *types.Transact
 	return nil
 }
 
-func DeleteTransactionMeta(db hyperdb.Database, key []byte) error {
+func DeleteTransactionMeta(batch hyperdb.Batch, key []byte) error {
 	keyFact := append(key, TxMetaSuffix...)
-	return db.Delete(keyFact)
+	return batch.Delete(keyFact)
 }
 
 /*
@@ -439,17 +439,21 @@ func DeleteBlock(db hyperdb.Database, key []byte) error {
 }
 
 //delete block data and block.num<--->block.hash
-func DeleteBlockByNum(db hyperdb.Database, blockNum uint64) error {
+func DeleteBlockByNum(batch hyperdb.Batch, blockNum uint64) error {
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		return err
+	}
 	hash, err := GetBlockHash(db, blockNum)
 	if err != nil {
 		return err
 	}
 	keyFact := append(BlockPrefix, hash...)
-	if err := db.Delete(keyFact); err != nil {
+	if err := batch.Delete(keyFact); err != nil {
 		return err
 	}
 	keyNum := strconv.FormatInt(int64(blockNum), 10)
-	return db.Delete(append(BlockNumPrefix, keyNum...))
+	return batch.Delete(append(BlockNumPrefix, keyNum...))
 }
 
 //-- ------------------- Chain ----------------------------------------
@@ -535,9 +539,13 @@ func UpdateChain(batch hyperdb.Batch, block *types.Block, genesis bool, flush bo
 
 // update chain according block number, set chain current height to the block number
 // return error if correspondent block missing
-func UpdateChainByBlcokNum(db hyperdb.Database, blockNumber uint64, flush bool, sync bool) error {
+func UpdateChainByBlcokNum(batch hyperdb.Batch, blockNumber uint64, flush bool, sync bool) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
+	db, err := hyperdb.GetLDBDatabase()
+	if err != nil {
+		return err
+	}
 	block, err := GetBlockByNumber(db, blockNumber)
 	if err != nil {
 		log.Warning("no required block number")
@@ -546,7 +554,7 @@ func UpdateChainByBlcokNum(db hyperdb.Database, blockNumber uint64, flush bool, 
 	memChainMap.data.LatestBlockHash = block.BlockHash
 	memChainMap.data.ParentBlockHash = block.ParentHash
 	memChainMap.data.Height = block.Number
-	return putChain(db.NewBatch(), &memChainMap.data, flush, sync)
+	return putChain(batch, &memChainMap.data, flush, sync)
 }
 
 // GetHeightOfChain get height of chain

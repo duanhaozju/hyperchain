@@ -34,21 +34,27 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 		return
 	}
 	// 2 revert state
-	if err := pool.revertState(int64(tmpDemandNumber-1), int64(ev.SeqNo-1), block.MerkleRoot); err != nil {
+	batch := db.NewBatch()
+	if err := pool.revertState(batch, int64(tmpDemandNumber-1), int64(ev.SeqNo-1), block.MerkleRoot); err != nil {
 		log.Errorf("revert state from %d to %d failed", tmpDemandNumber-1, ev.SeqNo-1)
 		return
 	}
 	// 3. Delete related transaction, receipt, txmeta, and block itself in a specific range
-	pool.removeDataInRange(ev.SeqNo, tmpDemandNumber)
+	pool.removeDataInRange(batch, ev.SeqNo, tmpDemandNumber)
 	// 4. remove uncommitted data
-	if err := pool.removeUncommittedData(); err != nil {
+	if err := pool.removeUncommittedData(batch); err != nil {
 		log.Errorf("remove uncommitted during the state reset failed, revert state from %d to %d failed",
 			tmpDemandNumber-1, ev.SeqNo-1)
 		return
 	}
 	// 5. Reset chain
 	isGenesis := (block.Number == 0)
-	core.UpdateChain(db.NewBatch(), block, isGenesis, true, true)
+	core.UpdateChain(batch, block, isGenesis, false, false)
+	// flush all modified into disk.
+	// represent this reset operation finish
+	// any error occur during this process
+	// batch.Write will never be called to guarantee atomic
+	batch.Write()
 	log.Debugf("revert state from %d to target %d success", tmpDemandNumber-1, ev.SeqNo-1)
 	// 6. Told consensus reset finish
 	msg := protos.VcResetDone{SeqNo: ev.SeqNo}
@@ -72,21 +78,25 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 	if err != nil {
 		return
 	}
-	pool.revertState(int64(number), int64(number-1), block.MerkleRoot)
+	batch := db.NewBatch()
+	pool.revertState(batch, int64(number), int64(number-1), block.MerkleRoot)
 	// 3. remove block releted data
-	pool.removeDataInRange(number, number+1)
+	pool.removeDataInRange(batch, number, number+1)
 	// 4. remove uncommitted data
-	if err := pool.removeUncommittedData(); err != nil {
+	if err := pool.removeUncommittedData(batch); err != nil {
 		log.Errorf("remove uncommitted of %d failed", number)
 		return
 	}
 	// 5. reset chain data
-	core.UpdateChainByBlcokNum(db, block.Number, true, true)
+	core.UpdateChainByBlcokNum(batch, block.Number, false, false)
+	// flush all modified to disk
+	batch.Write()
+	log.Debugf("cut down block #%d success. remove all related transactions, receipts, state changes and block together.", number)
 }
 
 // removeDataInRange remove transaction receipt txmeta and block itself in a specific range
 // range is [from, to).
-func (pool *BlockPool) removeDataInRange(from, to uint64) {
+func (pool *BlockPool) removeDataInRange(batch hyperdb.Batch,from, to uint64) {
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
@@ -101,18 +111,18 @@ func (pool *BlockPool) removeDataInRange(from, to uint64) {
 		}
 
 		for _, tx := range block.Transactions {
-			if err := core.DeleteTransaction(db, tx.GetTransactionHash().Bytes()); err != nil {
+			if err := core.DeleteTransaction(batch, tx.GetTransactionHash().Bytes()); err != nil {
 				log.Errorf("delete useless tx in block %d failed, error msg %s", i, err.Error())
 			}
-			if err := core.DeleteReceipt(db, tx.GetTransactionHash().Bytes()); err != nil {
+			if err := core.DeleteReceipt(batch, tx.GetTransactionHash().Bytes()); err != nil {
 				log.Errorf("delete useless receipt in block %d failed, error msg %s", i, err.Error())
 			}
-			if err := core.DeleteTransactionMeta(db, tx.GetTransactionHash().Bytes()); err != nil {
+			if err := core.DeleteTransactionMeta(batch, tx.GetTransactionHash().Bytes()); err != nil {
 				log.Errorf("delete useless txmeta in block %d failed, error msg %s", i, err.Error())
 			}
 		}
 		// delete block
-		if err := core.DeleteBlockByNum(db, i); err != nil {
+		if err := core.DeleteBlockByNum(batch, i); err != nil {
 			log.Errorf("ViewChange, delete useless block %d failed, error msg %s", i, err.Error())
 		}
 	}
@@ -121,7 +131,7 @@ func (pool *BlockPool) removeDataInRange(from, to uint64) {
 // revertState revert state from currentNumber related status to a target
 // different process logic of different state implement
 // undo from currentNumber -> targetNumber + 1.
-func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targetRootHash []byte) error {
+func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, targetNumber int64, targetRootHash []byte) error {
 	switch pool.GetStateType() {
 	case "hyperstate":
 		db, err := hyperdb.GetLDBDatabase()
@@ -130,6 +140,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			return err
 		}
 		dirtyStateObjectSet := mapset.NewSet()
+		stateObjectStorageHashs := make(map[common.Address]common.Hash)
 		// get latest state instance
 		latestBlock, err := core.GetBlockByNumber(db, uint64(currentNumber))
 		if err != nil {
@@ -142,7 +153,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			return err
 		}
 		// revert state change with changeset [targetNumber+1, currentNumber]
-		// IMPORTANT undo changes in reverse
+		// undo changes in reverse
 		for i := currentNumber; i >= targetNumber+1; i -= 1 {
 			log.Debugf("undo changes for #%d", i)
 			j, err := db.Get(hyperstate.CompositeJournalKey(uint64(i)))
@@ -155,21 +166,24 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 				log.Errorf("unmarshal journal for #%d failed", i)
 				continue
 			}
-			// IMPORTANT undo journal in reverse
+			// undo journal in reverse
+			tmpState := state.(*hyperstate.StateDB)
 			for j := len(journal.JournalList) - 1; j >= 0; j -= 1 {
 				log.Debugf("journal %s", journal.JournalList[j].String())
-				tmpState := state.(*hyperstate.StateDB)
-				journal.JournalList[j].Undo(tmpState, true)
+				// parameters *stateDB, batch, writeThrough, flush, sync
+				// don't flush into disk util all operations finish
+				journal.JournalList[j].Undo(tmpState, batch, true, false, false)
 				if journal.JournalList[j].GetType() == hyperstate.StorageHashChangeType {
 					tmp := journal.JournalList[j].(*hyperstate.StorageHashChange)
-					// use struct instead of pointer
+					// use struct instead of pointer since different pointers may represent same stateObject
 					dirtyStateObjectSet.Add(*tmp.Account)
+					stateObjectStorageHashs[*tmp.Account] = common.BytesToHash(tmp.Prev)
 				}
+
 			}
 			// remove persisted journals
-			db.Delete(hyperstate.CompositeJournalKey(uint64(i)))
+			batch.Delete(hyperstate.CompositeJournalKey(uint64(i)))
 		}
-		log.Debugf("revert to #%d, %s", targetNumber, string(state.Dump()))
 
 		// revert related stateObject storage bucket tree
 		for addr := range dirtyStateObjectSet.Iter() {
@@ -177,30 +191,22 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			prefix, _ := hyperstate.CompositeStorageBucketPrefix(address.Bytes())
 			bucketTree := bucket.NewBucketTree(string(prefix))
 			bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.GetBucketSize(STATEOBJECT), pool.GetBucketLevelGroup(STATEOBJECT)))
-			bucketTree.RevertToTargetBlock(big.NewInt(currentNumber), big.NewInt(targetNumber))
+			// don't flush into disk util all operations finish
+			bucketTree.RevertToTargetBlock(batch, big.NewInt(currentNumber), big.NewInt(targetNumber), false, false)
 			hash, _ := bucketTree.ComputeCryptoHash()
 			log.Debugf("re-compute %s storage hash %s", address.Hex(), common.Bytes2Hex(hash))
-			obj, err := db.Get(hyperstate.CompositeAccountKey(address.Bytes()))
-			if err != nil {
-				log.Debugf("missing state object %s, it may be deleted", address.Hex())
-				continue
-			}
-			account := &hyperstate.Account{}
-			err = hyperstate.Unmarshal(obj, account)
-			if err != nil {
-				log.Errorf("unmarshal state object %s failed", address.Hex())
-				continue
-			}
-			if bytes.Compare(account.Root.Bytes(), hash) != 0 {
+			stateObjectHash := stateObjectStorageHashs[address]
+			if bytes.Compare(hash, stateObjectHash.Bytes()) != 0 {
 				log.Errorf("after revert to #%d, state object %s revert failed, required storage hash %s, got %s",
-					targetNumber, address.Hex(), account.Root.Hex(), common.Bytes2Hex(hash))
+					targetNumber, address.Hex(), stateObjectHash.Hex(), common.Bytes2Hex(hash))
 			}
 		}
 		// revert state bucket tree
 		tree := state.GetTree()
 		bucketTree := tree.(*bucket.BucketTree)
 		bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.GetBucketSize(STATEDB), pool.GetBucketLevelGroup(STATEDB)))
-		bucketTree.RevertToTargetBlock(big.NewInt(currentNumber), big.NewInt(targetNumber))
+		// don't flush into disk util all operations finish
+		bucketTree.RevertToTargetBlock(batch, big.NewInt(currentNumber), big.NewInt(targetNumber), false, false)
 		currentRootHash, err := bucketTree.ComputeCryptoHash()
 		if err != nil {
 			log.Errorf("re-compute state bucket tree hash failed, error :%s", err.Error())
@@ -222,7 +228,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 }
 
 // removeUncommittedData remove uncommitted validation result avoid of memory leak.
-func (pool *BlockPool) removeUncommittedData() error {
+func (pool *BlockPool) removeUncommittedData(batch hyperdb.Batch) error {
 	switch pool.GetStateType() {
 	case "hyperstate":
 		db, err := hyperdb.GetLDBDatabase()
@@ -233,11 +239,6 @@ func (pool *BlockPool) removeUncommittedData() error {
 		state, _ := pool.GetStateInstance(common.Hash{}, db)
 		state.Purge()
 	case "rawstate":
-		db, err := hyperdb.GetLDBDatabase()
-		if err != nil {
-			log.Error("get database failed")
-			return err
-		}
 		keys := pool.blockCache.Keys()
 		for _, key := range keys {
 			ret, _ := pool.blockCache.Get(key)
@@ -246,14 +247,14 @@ func (pool *BlockPool) removeUncommittedData() error {
 			}
 			record := ret.(BlockRecord)
 			for i, tx := range record.ValidTxs {
-				if err := core.DeleteTransaction(db, tx.GetTransactionHash().Bytes()); err != nil {
+				if err := core.DeleteTransaction(batch, tx.GetTransactionHash().Bytes()); err != nil {
 					log.Errorf("ViewChange, delete useless tx in cache %d failed, error msg %s", i, err.Error())
 				}
 
-				if err := core.DeleteReceipt(db, tx.GetTransactionHash().Bytes()); err != nil {
+				if err := core.DeleteReceipt(batch, tx.GetTransactionHash().Bytes()); err != nil {
 					log.Errorf("ViewChange, delete useless receipt in cache %d failed, error msg %s", i, err.Error())
 				}
-				if err := core.DeleteTransactionMeta(db, tx.GetTransactionHash().Bytes()); err != nil {
+				if err := core.DeleteTransactionMeta(batch, tx.GetTransactionHash().Bytes()); err != nil {
 					log.Errorf("ViewChange, delete useless txmeta in cache %d failed, error msg %s", i, err.Error())
 				}
 			}
@@ -269,17 +270,3 @@ func (pool *BlockPool) removeUncommittedData() error {
 	return nil
 }
 
-func (pool *BlockPool) ClearStateUnCommitted() {
-	switch pool.GetStateType() {
-	case "hyperstate":
-		db, err := hyperdb.GetLDBDatabase()
-		if err != nil {
-			log.Error("get database handler failed.")
-			return
-		}
-		state, _ := pool.GetStateInstance(common.Hash{}, db)
-		state.Purge()
-	case "rawstate":
-
-	}
-}
