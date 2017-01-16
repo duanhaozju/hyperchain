@@ -84,9 +84,8 @@ func ParseKey(derPri string) (interface{}, error) {
 func ParsePubKey(pubstr string) (interface{}, error) {
 	//todo finish the public key parse
 
-	block, _ := pem.Decode([]byte(pubstr))
-
-	pub, err := DERToPublicKey(block.Bytes)
+	block,_ := pem.Decode([]byte(pubstr))
+	pub,err := DERToPublicKey(block.Bytes)
 
 	if err != nil {
 		return nil, err
