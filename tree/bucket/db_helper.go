@@ -2,6 +2,7 @@ package bucket
 
 import (
 	"hyperchain/hyperdb"
+	"github.com/btcsuite/goleveldb/leveldb/errors"
 )
 
 type rawKey []byte
@@ -37,6 +38,10 @@ func fetchDataNodesFromDBByBucketKey(treePrefix string, bucketKey *BucketKey) (d
 		log.Errorf("DB get bucketKey ", bucketKey, "error is", err)
 		panic("Get bucketKey error from db error ")
 	}
+	if dataNodesValue == nil || len(dataNodesValue) <= len(DataNodesPrefix)+1 {
+		return nil,errors.New("Data is nil")
+	}
+
 	err = UnmarshalDataNodes(bucketKey, dataNodesValue, &dataNodes)
 	if err != nil {
 		log.Errorf("Marshal dataNodesValue error", err)

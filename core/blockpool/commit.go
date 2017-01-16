@@ -149,7 +149,7 @@ func (pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt,
 	state.MarkProcessFinish(block.Number)
 	log.Error("[commit] mark finish:", time.Since(begin))
 	begin = time.Now()
-	// log.Debugf("state #%d %s", vid, string(state.Dump()))
+	 //log.Critical("state #%d %s", vid, string(state.Dump()))
 	// write checkpoint data
 	if block.Number%10 == 0 && block.Number != 0 {
 		core.WriteChainChan()
