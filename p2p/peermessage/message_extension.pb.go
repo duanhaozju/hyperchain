@@ -1,7 +1,8 @@
 package peermessage
 
 import (
-	"context"
+	//"context"
+	context "golang.org/x/net/context"
 	"google.golang.org/grpc"
 	//"hyperchain/crypto"
 	"hyperchain/core/crypto/primitives"

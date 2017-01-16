@@ -591,7 +591,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case *RecoveryReturnPQC:
 		return pbft.recvRecoveryReturnPQC(et)
 	case recoveryDoneEvent:
-		logger.Critical("======== Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
+		logger.Criticalf("======== Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
 		if pbft.recvNewViewInRecovery {
 			logger.Noticef("#  Replica %d find itself received NewView during Recovery" +
 				", will restart negotiate view", pbft.id)

@@ -22,7 +22,7 @@ import (
 	"crypto/cipher"
 	"errors"
 	"hyperchain/membersrvc"
-	"hyperchain/p2p/transport/SMCrypto"
+	//"hyperchain/p2p/transport/SMCrypto"
 )
 
 type HandShakeManagerNew struct {
@@ -33,7 +33,7 @@ type HandShakeManagerNew struct {
 	secrets      map[string][]byte
 	signPublickey map[string][]byte
 	isVerified map[string]bool
-	smc *SMCrypto.SMCrypto
+	//smc *SMCrypto.SMCrypto
 
  }
 
