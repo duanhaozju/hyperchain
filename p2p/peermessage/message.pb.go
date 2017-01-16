@@ -26,6 +26,7 @@ import (
 	//"hyperchain/core/crypto/primitives"
 	"hyperchain/core/crypto/primitives"
 	"github.com/op/go-logging"
+	"hyperchain/membersrvc"
 )
 
 // Init the log setting
@@ -281,33 +282,50 @@ func NewChatClient(cc *grpc.ClientConn) ChatClient {
 
 func (c *chatClient) Chat(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error) {
 
-
-	var pri interface{}
-	var parErr error
-	priStr,getErr := primitives.GetConfig("./config/cert/ecert.priv")
-	if getErr == nil{
-		//var parErr error
-		pri,parErr = primitives.ParseKey(priStr)
-
-		//fmt.Println(pri)
+	cm,cmerr := membersrvc.GetCaManager("./config/cert/eca.ca","./config/cert/ecert.cert","./config/cert/rca.ca","./config/cert/rcert.cert","./config/cert/ecert.priv",true,true)
+	if cmerr != nil{
+		panic("cannot initliazied the camanager")
 	}
-
-	ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
-
-	if parErr == nil{
-
-		//log.Notice("###########",in.Payload,pri)
-		sign,err := ecdsaEncry.Sign(in.Payload,pri)
-		if err == nil{
-			if in.Signature==nil {
-				payloadSign := Signature{
-					Signature:sign,
-				}
-
-				in.Signature = &payloadSign
+	isUsed := cm.GetIsUsed()
+	if isUsed!= true {
+		if in.Signature==nil {
+			payloadSign := Signature{
+				Signature:[]byte{},
 			}
-			in.Signature.Signature = sign
+
+			in.Signature = &payloadSign
 		}
+		in.Signature.Signature = []byte{}
+	}else {
+		var pri interface{}
+		//var parErr error
+		//cm.GetECertPrivateKeyByte()
+		//priStr,getErr := primitives.GetConfig("./config/cert/ecert.priv")
+		//if getErr == nil{
+		//	//var parErr error
+		//	pri,parErr = primitives.ParseKey(priStr)
+		//
+		//	//fmt.Println(pri)
+		//}
+		pri = cm.GetECertPrivKey()
+		ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
+
+		//if parErr == nil{
+
+			//log.Notice("###########",in.Payload,pri)
+			sign,err := ecdsaEncry.Sign(in.Payload,pri)
+			if err == nil{
+				if in.Signature==nil {
+					payloadSign := Signature{
+						Signature:sign,
+					}
+
+					in.Signature = &payloadSign
+				}
+				in.Signature.Signature = sign
+			}
+		//}
+
 	}
 
 	out := new(Message)

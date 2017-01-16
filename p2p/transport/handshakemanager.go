@@ -9,10 +9,13 @@ package transport
 import (
 	"crypto/elliptic"
 	//"github.com/op/go-logging"
+
 	"crypto"
 	//"crypto/aes"
+	"crypto/rand"
 	"encoding/hex"
 	"hyperchain/p2p/transport/ecdh"
+	"hyperchain/core/crypto/primitives"
 	//"crypto/aes"
 	"crypto/ecdsa"
 	"crypto/aes"
@@ -38,10 +41,28 @@ func NewHandShakeMangerNew(cm *membersrvc.CAManager) *HandShakeManagerNew {
 	hSMN.signPublickey = make(map[string]crypto.PublicKey)
 	hSMN.isVerified = make(map[string]bool)
 	hSMN.e = ecdh.NewEllipticECDH(elliptic.P384())
-	eCertPrivateKey := cm.GetECertPrivateKey()
-	privateKey := eCertPrivateKey.(*ecdsa.PrivateKey)
-	hSMN.privateKey = privateKey
-	hSMN.publicKey = (*privateKey).PublicKey
+	var err error
+	//contenrPub,getErr2 := primitives.GetConfig("../../config/cert/server/eca.cert")
+
+	//若无私钥，相当于无ecert,但为确保节点启动，自动生产公私钥对
+	if(cm.GetIsUsed()==false){
+		hSMN.privateKey, hSMN.publicKey, err = hSMN.e.GenerateKey(rand.Reader)
+		if err!=nil {
+			panic("GenerateKey failed,please restart the node.")
+		}
+	}else {
+		//var pri *ecdsa.PrivateKey
+		contentPri := cm.GetECertPrivateKeyByte()
+		pri,err1 := primitives.ParseKey(string(contentPri))
+		privateKey := pri.(*ecdsa.PrivateKey)
+		//cert := primitives.ParseCertificate(contenrPub)
+		if err1!=nil {
+			panic("Parse PrivateKey or Ecert failed,please check the privateKey or Ecert and restart the node!")
+		}else {
+			hSMN.privateKey = privateKey
+			hSMN.publicKey = (*privateKey).PublicKey
+		}
+	}
 	return &hSMN
 }
 func (hSMN *HandShakeManagerNew) GetLocalPublicKey() []byte {

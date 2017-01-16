@@ -17,7 +17,7 @@ func Test_GetBlocks(t *testing.T) {
 	core.InitDB("./build/keystore", 8001)
 
 	//获取db句柄
-	db1, _ := hyperdb.GetLDBDatabase()
+	db1, _ := hyperdb.GetDBDatabase()
 
 	//单例数据库状态设置为close
 	hyperdb.Setclose()
@@ -25,7 +25,7 @@ func Test_GetBlocks(t *testing.T) {
 	core.InitDB("./build/keystore1", 8002)
 
 	//获取db句柄
-	db3, _ := hyperdb.GetLDBDatabase()
+	db3, _ := hyperdb.GetDBDatabase()
 
 	publicBlockAPI1 := NewPublicBlockAPI(db1)
 
@@ -104,9 +104,9 @@ func Test_LatestBlock(t *testing.T) {
 	core.InitDB("./build/keystore", 8002)
 
 	//获取db句柄
-	db1, err := hyperdb.GetLDBDatabase()
+	db1, err := hyperdb.GetDBDatabase()
 	if err != nil {
-		fmt.Println("GetLDBDatabase err ：" + err.Error())
+		fmt.Println("GetDBDatabase err ：" + err.Error())
 	}
 
 	publicBlockAPI1 := NewPublicBlockAPI(db1)
@@ -121,10 +121,10 @@ func Test_LatestBlock(t *testing.T) {
 func Test_GetBlockByHash(t *testing.T) {
 
 	//获取db句柄
-	db1, err := hyperdb.GetLDBDatabase()
+	db1, err := hyperdb.GetDBDatabase()
 
 	if err != nil {
-		fmt.Println("GetLDBDatabase err ：" + err.Error())
+		fmt.Println("GetDBDatabase err ：" + err.Error())
 	}
 
 	publicBlockAPI1 := NewPublicBlockAPI(db1)
@@ -147,10 +147,10 @@ func Test_GetBlockByHash(t *testing.T) {
 
 func Test_GetBlockByNumber(t *testing.T) {
 	//获取db句柄
-	db1, err := hyperdb.GetLDBDatabase()
+	db1, err := hyperdb.GetDBDatabase()
 
 	if err != nil {
-		fmt.Println("GetLDBDatabase err ：" + err.Error())
+		fmt.Println("GetDBDatabase err ：" + err.Error())
 	}
 
 	publicBlockAPI1 := NewPublicBlockAPI(db1)
@@ -173,10 +173,10 @@ func Test_GetBlockByNumber(t *testing.T) {
 //提高覆盖率
 func Test_QueryCommitAndBatchTime(t *testing.T) {
 	//获取db句柄
-	db1, err := hyperdb.GetLDBDatabase()
+	db1, err := hyperdb.GetDBDatabase()
 
 	if err != nil {
-		fmt.Println("GetLDBDatabase err ：" + err.Error())
+		fmt.Println("GetDBDatabase err ：" + err.Error())
 	}
 
 	publicBlockAPI1 := NewPublicBlockAPI(db1)

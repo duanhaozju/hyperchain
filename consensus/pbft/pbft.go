@@ -4,14 +4,12 @@ package pbft
 
 import (
 	"fmt"
-	//"os"
-	//"path/filepath"
 	"strings"
 
-	"github.com/spf13/viper"
 	"hyperchain/consensus"
 	"hyperchain/consensus/helper"
-	//"path"
+
+	"github.com/spf13/viper"
 )
 
 const configPrefix = "CORE_PBFT"

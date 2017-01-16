@@ -252,7 +252,7 @@ func yaml_parser_update_buffer(parser *yaml_parser_t, length int) bool {
 
 				// The UTF-16 encoding is not as simple as one might
 				// naively think.  Check RFC 2781
-				// (http://www.ietf.org/rfc/rfc2781.txt).
+				// (http://www.ietf.org/rfc/rfc278db.log).
 				//
 				// Normally, two subsequent bytes describe a Unicode
 				// character.  However a special technique (called a

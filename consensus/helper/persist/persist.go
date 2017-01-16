@@ -16,7 +16,7 @@ import (
 
 // StoreState stores a key,value pair
 func StoreState(key string, value []byte) error {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err
 	}
@@ -24,17 +24,17 @@ func StoreState(key string, value []byte) error {
 }
 
 //DelAllState: remove all state
-func DelAllState() error {
-	db, err := hyperdb.GetLDBDatabase()
-	if err == nil {
-		db.Destroy()
-	}
-	return err
-}
+//func DelAllState() error {
+//	db, err := hyperdb.GetDBDatabase()
+//	if err == nil {
+//		db.Destroy()
+//	}
+//	return err
+//}
 
 // DelState removes a key,value pair
 func DelState(key string) error {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err
 	}
@@ -43,7 +43,7 @@ func DelState(key string) error {
 
 // ReadState retrieves a value to a key
 func ReadState(key string) ([]byte, error) {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return nil, err
 	}
@@ -52,14 +52,18 @@ func ReadState(key string) ([]byte, error) {
 
 // ReadStateSet retrieves all key-value pairs where the key starts with prefix
 func ReadStateSet(prefix string) (map[string][]byte, error) {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return nil, err
 	}
 	prefixRaw := []byte("consensus." + prefix)
 
 	ret := make(map[string][]byte)
-	it := db.NewIterator()
+	it := db.NewIterator(prefixRaw)
+	if it==nil{
+		err := errors.New(fmt.Sprintf("Can't get Iterator"))
+		return nil, err
+	}
 	if !it.Seek(prefixRaw) {
 		err := errors.New(fmt.Sprintf("Cannot find key with %s in database", prefixRaw))
 		return nil, err

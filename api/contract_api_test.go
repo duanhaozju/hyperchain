@@ -76,7 +76,7 @@ func Test_DeployContract(t *testing.T) {
 	pm := manager.NewProtocolManager(nil, Peermanager1, eventMux1, nil, am, nil, 0, true,nil,expiredTime)
 
 	//获取db句柄
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 
 	cAPI := NewPublicContractAPI(eventMux1, pm, db, true, 1, 3000)
 
@@ -175,7 +175,7 @@ func Test_InvokeContract(t *testing.T) {
 	pm := manager.NewProtocolManager(nil, Peermanager1, eventMux1, nil, am, nil, 0, true,nil,expiredTime)
 
 	//获取db句柄
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 
 	cAPI := NewPublicContractAPI(eventMux1, pm, db, true, 1, 3000)
 
@@ -224,7 +224,7 @@ func Test_GetCode(t *testing.T) {
 	pm := manager.NewProtocolManager(nil, Peermanager1, eventMux1, nil, am, nil, 0, true,nil,expiredTime)
 
 	//获取db句柄
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 
 	cAPI := NewPublicContractAPI(eventMux1, pm, db, false, 1, 3000)
 
@@ -257,7 +257,7 @@ func Test_GetContractCountByAddr(t *testing.T) {
 	pm := manager.NewProtocolManager(nil, Peermanager1, eventMux1, nil, am, nil, 0, true,nil,expiredTime)
 
 	//获取db句柄
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 
 	cAPI := NewPublicContractAPI(eventMux1, pm, db, false, 1, 3000)
 

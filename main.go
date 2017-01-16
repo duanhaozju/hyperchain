@@ -100,6 +100,8 @@ func main() {
 		conf := initConf(argv)
 		common.InitLog(conf)
 
+		core.InitDB(config.getDbConfig(),config.gRPCPort)
+
 		err, expiredTime := checkLicense(config.getLicense())
 		if err != nil {
 			return err
@@ -111,7 +113,11 @@ func main() {
 
 		//init memversrvc CAManager
 		// rca.ca 应该改为 eca.ca
-		cm,cmerr := membersrvc.NewCAManager("./config/cert/eca.ca","./config/cert/ecert.cert","./config/cert/rcert.cert","./config/cert/rca.ca","./config/cert/ecert.priv","./config/cert/server/tca.ca")
+		//TODO 此处加入读取文件，现在默认为true
+		/**
+		 *传入true则开启所有验证，false则为取消ca以及签名的所有验证
+		 */
+		cm,cmerr := membersrvc.GetCaManager("./config/cert/eca.ca","./config/cert/ecert.cert","./config/cert/rca.ca","./config/cert/rcert.cert","./config/cert/ecert.priv",false,false)
 		if cmerr != nil{
 			panic("cannot initliazied the camanager")
 		}
@@ -121,8 +127,6 @@ func main() {
 		grpcPeerMgr := p2p.NewGrpcManager(conf)
 
 
-		//init db
-		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())
 
 		//init genesis
 		core.CreateInitBlock(config.getGenesisConfigPath())

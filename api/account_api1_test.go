@@ -31,7 +31,7 @@ func Test_GetAccounts1(t *testing.T) {
 	}
 
 	//获取db句柄
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 
 	//初始化API
 	publicAccountAPI := NewPublicAccountAPI(pm, db)
@@ -61,7 +61,7 @@ func Test_GetBalance(t *testing.T) {
 	}
 
 	//获取db句柄
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 
 	//初始化API
 	publicAccountAPI := NewPublicAccountAPI(pm, db)

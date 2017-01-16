@@ -51,7 +51,6 @@ func ParseCertificate(cert string) (*x509.Certificate,error){
 //验证证书中的签名
 func VerifyCert(cert *x509.Certificate,ca *x509.Certificate) (bool,error){
 	err:=cert.CheckSignatureFrom(ca)
-
 	if err!=nil{
 		log.Error("verified the cert failed",err)
 		return false,err
