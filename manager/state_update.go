@@ -106,7 +106,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 				if blocks.Batch[i].Number == core.GetChainCopy().RequiredBlockNum {
 					acceptHash := blocks.Batch[i].HashBlock(self.commonHash).Bytes()
 					if common.Bytes2Hex(acceptHash) == common.Bytes2Hex(core.GetChainCopy().RequireBlockHash) {
-						core.PersistBlock(db.NewBatch(), blocks.Batch[i], self.blockPool.GetConfig().BlockVersion, true, true)
+						core.PersistBlock(db.NewBatch(), blocks.Batch[i], self.blockPool.GetBlockVersion(), true, true)
 						if err := self.updateRequire(blocks.Batch[i]); err != nil {
 							log.Error("UpdateRequired failed!")
 							self.reject()
@@ -221,7 +221,7 @@ func (self *ProtocolManager) updateRequire(block *types.Block) error {
 			blks := ret.(map[string]types.Block)
 			for hash, blk := range blks {
 				if hash == common.BytesToHash(tmpHash).Hex() {
-					core.PersistBlock(db.NewBatch(), &blk, self.blockPool.GetConfig().BlockVersion, true, true)
+					core.PersistBlock(db.NewBatch(), &blk, self.blockPool.GetBlockVersion(), true, true)
 					self.syncBlockCache.Remove(tmp)
 					tmp = tmp - 1
 					tmpHash = blk.ParentHash

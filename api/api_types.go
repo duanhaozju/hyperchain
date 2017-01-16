@@ -3,12 +3,10 @@
 package hpc
 
 import (
-	"hyperchain/crypto/hmEncryption"
+	"hyperchain/common"
 	"hyperchain/event"
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
-	"hyperchain/tree/bucket"
-	"time"
 )
 
 // API describes the set of methods offered over the RPC interface
@@ -21,7 +19,7 @@ type API struct {
 
 var Apis []API
 
-func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnable bool, txPeak int64, txRate time.Duration, contractPeak int64, contractRate time.Duration, stateType string, bucketConf bucket.Conf, publicKey *hmEncryption.PaillierPublickey) []API {
+func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, config *common.Config) []API {
 
 	db, err := hyperdb.GetLDBDatabase()
 
@@ -33,7 +31,7 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnab
 		{
 			Namespace: "tx",
 			Version:   "0.4",
-			Service:   NewPublicTransactionAPI(eventMux, pm, db, ratelimitEnable, txPeak, txRate),
+			Service:   NewPublicTransactionAPI(eventMux, pm, db, config),
 			Public:    true,
 		},
 		{
@@ -51,13 +49,13 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnab
 		{
 			Namespace: "account",
 			Version:   "0.4",
-			Service:   NewPublicAccountAPI(pm, db, stateType, bucketConf),
+			Service:   NewPublicAccountAPI(pm, db, config),
 			Public:    true,
 		},
 		{
 			Namespace: "contract",
 			Version:   "0.4",
-			Service:   NewPublicContractAPI(eventMux, pm, db, ratelimitEnable, contractPeak, contractRate, stateType, bucketConf, publicKey),
+			Service:   NewPublicContractAPI(eventMux, pm, db, config),
 			Public:    true,
 		},
 	}

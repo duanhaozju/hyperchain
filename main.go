@@ -130,7 +130,7 @@ func main() {
 		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())
 
 		//init genesis
-		core.CreateInitBlock(config.getGenesisConfigPath(), config.getStateType(), config.blockVersion, config.getBucketTreeConf())
+		core.CreateInitBlock(conf)
 
 		//init pbft consensus
 		cs := controller.NewConsenter(uint64(config.getNodeID()), eventMux, config.getPBFTConfigPath())
@@ -147,12 +147,7 @@ func main() {
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
 
 		//init block pool to save block
-		blockPoolConf := blockpool.BlockPoolConf{
-			BlockVersion:       config.getBlockVersion(),
-			TransactionVersion: config.getTransactionVersion(),
-			StateType:          config.getStateType(),
-		}
-		blockPool := blockpool.NewBlockPool(cs, blockPoolConf, config.getBucketTreeConf())
+		blockPool := blockpool.NewBlockPool(cs, conf)
 		if blockPool == nil {
 			return errors.New("Initialize BlockPool failed")
 		}
@@ -173,8 +168,7 @@ func main() {
 			exist,
 			expiredTime,
 			config.getGRPCPort())
-		rateLimitCfg := config.getRateLimitConfig()
-		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(), config.getLogDumpFileDir(), eventMux, pm, rateLimitCfg, config.getStateType(), config.getBucketTreeConf(), config.getPaillerPublickey())
+		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(), config.getLogDumpFileDir(), eventMux, pm, conf)
 
 		//go func() {
 		//	log.Println(http.ListenAndServe("localhost:6064", nil))

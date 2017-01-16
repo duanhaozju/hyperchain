@@ -122,7 +122,7 @@ func (pool *BlockPool) removeDataInRange(from, to uint64) {
 // different process logic of different state implement
 // undo from currentNumber -> targetNumber + 1.
 func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targetRootHash []byte) error {
-	switch pool.conf.StateType {
+	switch pool.GetStateType() {
 	case "hyperstate":
 		db, err := hyperdb.GetLDBDatabase()
 		if err != nil {
@@ -176,7 +176,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 			address := addr.(common.Address)
 			prefix, _ := hyperstate.CompositeStorageBucketPrefix(address.Bytes())
 			bucketTree := bucket.NewBucketTree(string(prefix))
-			bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.bucketTreeConf.StorageSize, pool.bucketTreeConf.StorageLevelGroup))
+			bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.GetBucketSize(STATEOBJECT), pool.GetBucketLevelGroup(STATEOBJECT)))
 			bucketTree.RevertToTargetBlock(big.NewInt(currentNumber), big.NewInt(targetNumber))
 			hash, _ := bucketTree.ComputeCryptoHash()
 			log.Debugf("re-compute %s storage hash %s", address.Hex(), common.Bytes2Hex(hash))
@@ -199,7 +199,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 		// revert state bucket tree
 		tree := state.GetTree()
 		bucketTree := tree.(*bucket.BucketTree)
-		bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.bucketTreeConf.StorageSize, pool.bucketTreeConf.StorageLevelGroup))
+		bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.GetBucketSize(STATEDB), pool.GetBucketLevelGroup(STATEDB)))
 		bucketTree.RevertToTargetBlock(big.NewInt(currentNumber), big.NewInt(targetNumber))
 		currentRootHash, err := bucketTree.ComputeCryptoHash()
 		if err != nil {
@@ -223,7 +223,7 @@ func (pool *BlockPool) revertState(currentNumber int64, targetNumber int64, targ
 
 // removeUncommittedData remove uncommitted validation result avoid of memory leak.
 func (pool *BlockPool) removeUncommittedData() error {
-	switch pool.conf.StateType {
+	switch pool.GetStateType() {
 	case "hyperstate":
 		db, err := hyperdb.GetLDBDatabase()
 		if err != nil {
@@ -270,7 +270,7 @@ func (pool *BlockPool) removeUncommittedData() error {
 }
 
 func (pool *BlockPool) ClearStateUnCommitted() {
-	switch pool.conf.StateType {
+	switch pool.GetStateType() {
 	case "hyperstate":
 		db, err := hyperdb.GetLDBDatabase()
 		if err != nil {

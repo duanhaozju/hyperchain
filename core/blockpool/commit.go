@@ -136,7 +136,7 @@ func (pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt,
 		log.Errorf("persist receipts of #%d failed.", block.Number)
 		return
 	}
-	if err, _ := core.PersistBlock(batch, block, pool.conf.BlockVersion, false, false); err != nil {
+	if err, _ := core.PersistBlock(batch, block, pool.GetBlockVersion(), false, false); err != nil {
 		log.Errorf("persist block #%d into database failed! error msg, ", block.Number, err.Error())
 		return
 	}
@@ -198,7 +198,7 @@ func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
 
 func (pool *BlockPool) persistTransactions(batch hyperdb.Batch, transactions []*types.Transaction, blockNumber uint64) error {
 	for i, transaction := range transactions {
-		if err, _ := core.PersistTransaction(batch, transaction, pool.conf.TransactionVersion, false, false); err != nil {
+		if err, _ := core.PersistTransaction(batch, transaction, pool.GetTransactionVersion(), false, false); err != nil {
 			log.Error("put tx data into database failed! error msg, ", err.Error())
 			return err
 		}
@@ -229,7 +229,7 @@ func (pool *BlockPool) persistReceipts(batch hyperdb.Batch, receipts []*types.Re
 			log.BlockNumber = blockNumber
 		}
 		receipt.SetLogs(logs)
-		if err, _ := core.PersistReceipt(batch, receipt, pool.conf.TransactionVersion, false, false); err != nil {
+		if err, _ := core.PersistReceipt(batch, receipt, pool.GetTransactionVersion(), false, false); err != nil {
 			log.Error("Put receipt into database failed! error msg, ", err.Error())
 			return err
 		}

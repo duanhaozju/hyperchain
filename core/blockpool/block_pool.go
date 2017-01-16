@@ -13,8 +13,6 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
-	"hyperchain/tree/bucket"
-	"sync"
 	"sync/atomic"
 )
 
@@ -39,43 +37,31 @@ type BlockRecord struct {
 	VID         uint64                            // validation ID. may larger than SeqNo
 }
 
-// block pool configuration
-type BlockPoolConf struct {
-	BlockVersion       string // block structure version
-	TransactionVersion string // transaction structure version
-	StateType          string // state type identifier, "rawstate"  or "hyperstate"
-}
-
 type BlockPool struct {
-	// IMPORTANT atomic variable. make sure use atomic operation to use those variable
 	demandNumber        uint64       // current demand number for commit
 	demandSeqNo         uint64       // current demand seqNo for validation
 	maxNum              uint64       // max block number in queue cache for commit
 	maxSeqNo            uint64       // max validation event number in validation queue
+	tempBlockNumber     uint64       // temporarily block number
 	lastValidationState atomic.Value // latest state root hash
 	// external stuff
 	consenter consensus.Consenter // consensus module handler
-	stateLock sync.Mutex          // block pool lock
-	wg        sync.WaitGroup      // for shutdown sync
 	// thread safe cache
 	blockCache      *common.Cache // cache for validation result
 	validationQueue *common.Cache // cache for storing validation event
 	queue           *common.Cache // cache for storing commit event
 	// config
-	conf           BlockPoolConf // block configuration
-	bucketTreeConf bucket.Conf   // bucket tree configuration for hyperstate use only
-	// buffer
+	conf *common.Config // block configuration
+	// hash utils
 	transactionCalculator interface{} // a batch of transactions calculator
 	receiptCalculator     interface{} // a batch of receipts calculator
 	transactionBuffer     [][]byte    // transaction buffer
 	receiptBuffer         [][]byte    // receipt buffer
-	// status variant
-	tempBlockNumber uint64 // temporarily block number
 }
 
-func NewBlockPool(consenter consensus.Consenter, conf BlockPoolConf, bktConf bucket.Conf) *BlockPool {
+func NewBlockPool(consenter consensus.Consenter, conf *common.Config) *BlockPool {
 	var err error
-	blockcache, err := common.NewCache()
+	blockCache, err := common.NewCache()
 	if err != nil {
 		return nil
 	}
@@ -83,7 +69,7 @@ func NewBlockPool(consenter consensus.Consenter, conf BlockPoolConf, bktConf buc
 	if err != nil {
 		return nil
 	}
-	validationqueue, err := common.NewCache()
+	validationQueue, err := common.NewCache()
 	if err != nil {
 		return nil
 	}
@@ -91,16 +77,14 @@ func NewBlockPool(consenter consensus.Consenter, conf BlockPoolConf, bktConf buc
 	pool := &BlockPool{
 		consenter:       consenter,
 		queue:           queue,
-		validationQueue: validationqueue,
-		blockCache:      blockcache,
+		validationQueue: validationQueue,
+		blockCache:      blockCache,
 		conf:            conf,
-		bucketTreeConf:  bktConf,
 	}
 	// 1. set demand number and demand seqNo
 	currentChain := core.GetChainCopy()
-	atomic.StoreUint64(&pool.demandNumber, currentChain.Height+1)
-	atomic.AddUint64(&pool.demandSeqNo, currentChain.Height+1)
-	// initialize temp block number as current height plus 1
+	pool.demandNumber = currentChain.Height + 1
+	pool.demandSeqNo = currentChain.Height + 1
 	pool.tempBlockNumber = currentChain.Height + 1
 	db, err := hyperdb.GetLDBDatabase()
 	if err != nil {
@@ -113,13 +97,9 @@ func NewBlockPool(consenter consensus.Consenter, conf BlockPoolConf, bktConf buc
 	}
 	// 2. set current state root hash
 	pool.lastValidationState.Store(common.BytesToHash(blk.MerkleRoot))
-	log.Noticef("Block pool Initialize demandNumber :%d, demandseqNo: %d\n", pool.demandNumber, pool.demandSeqNo)
+	log.Noticef("block pool Initialize. current chain height #%d, latest block hash %s, demandNumber #%d, demandseqNo #%d, temp block number #%d\n",
+		currentChain.Height, common.Bytes2Hex(currentChain.LatestBlockHash), pool.demandNumber, pool.demandSeqNo, pool.tempBlockNumber)
 	return pool
-}
-
-// GetConfig - obtain block pool configuration.
-func (pool *BlockPool) GetConfig() BlockPoolConf {
-	return pool.conf
 }
 
 // SetDemandNumber - set demand number.
@@ -155,7 +135,7 @@ func (pool *BlockPool) PurgeBlockCache() {
 // GetStateInstance - obtain state handler via configuration in block.conf
 // two state: (1)raw state (2) hyper state are supported.
 func (pool *BlockPool) GetStateInstance(root common.Hash, db hyperdb.Database) (vm.Database, error) {
-	switch pool.conf.StateType {
+	switch pool.GetStateType() {
 	case "rawstate":
 		return statedb.New(root, db)
 	case "hyperstate":
@@ -163,7 +143,7 @@ func (pool *BlockPool) GetStateInstance(root common.Hash, db hyperdb.Database) (
 		if globalState == nil {
 			var err error
 			height := core.GetHeightOfChain()
-			globalState, err = hyperstate.New(root, db, pool.bucketTreeConf, height)
+			globalState, err = hyperstate.New(root, db, pool.conf, height)
 			return globalState, err
 		} else {
 			return globalState, nil
@@ -176,12 +156,12 @@ func (pool *BlockPool) GetStateInstance(root common.Hash, db hyperdb.Database) (
 // GetStateInstanceForSimulate - create a latest state for simulate usage
 // different with function `GetStateInstance`, this function will create a new instance each time when got invocation.
 func (pool *BlockPool) GetStateInstanceForSimulate(root common.Hash, db hyperdb.Database) (vm.Database, error) {
-	switch pool.conf.StateType {
+	switch pool.GetStateType() {
 	case "rawstate":
 		return statedb.New(root, db)
 	case "hyperstate":
 		height := core.GetHeightOfChain()
-		return hyperstate.New(root, db, pool.bucketTreeConf, height)
+		return hyperstate.New(root, db, pool.conf, height)
 	default:
 		return nil, errors.New("no state type specified")
 	}

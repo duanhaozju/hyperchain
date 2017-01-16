@@ -33,11 +33,11 @@ func init() {
 }
 
 type PublicTransactionAPI struct {
-	eventMux        *event.TypeMux
-	pm              *manager.ProtocolManager
-	db              *hyperdb.LDBDatabase
-	tokenBucket     *ratelimit.Bucket
-	ratelimitEnable bool
+	eventMux    *event.TypeMux
+	pm          *manager.ProtocolManager
+	db          *hyperdb.LDBDatabase
+	tokenBucket *ratelimit.Bucket
+	config      *common.Config
 }
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
@@ -76,13 +76,22 @@ type TransactionResult struct {
 	InvalidMsg  string  `json:"invalidMsg"`
 }
 
-func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, ratelimitEnable bool, bmax int64, rate time.Duration) *PublicTransactionAPI {
+func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, config *common.Config) *PublicTransactionAPI {
+	fillrate, err := getFillRate(config, TRANSACTION)
+	if err != nil {
+		log.Errorf("invalid ratelimit fill rate parameters.")
+	}
+	peak := getRateLimitPeak(config, TRANSACTION)
+	if peak == 0 {
+		log.Errorf("got invalid ratelimit peak parameters as 0. use default peak parameters 500")
+		peak = 500
+	}
 	return &PublicTransactionAPI{
-		eventMux:        eventMux,
-		pm:              pm,
-		db:              hyperDb,
-		tokenBucket:     ratelimit.NewBucket(rate, bmax),
-		ratelimitEnable: ratelimitEnable,
+		eventMux:    eventMux,
+		pm:          pm,
+		db:          hyperDb,
+		config:      config,
+		tokenBucket: ratelimit.NewBucket(fillrate, peak),
 	}
 }
 
@@ -115,7 +124,7 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 // SendTransaction is to build a transaction object,and then post event NewTxEvent,
 // if the sender's balance is enough, return tx hash
 func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error) {
-	if tran.ratelimitEnable && tran.tokenBucket.TakeAvailable(1) <= 0 {
+	if getRateLimitEnable(tran.config) && tran.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, &systemTooBusyError{"system is too busy to response "}
 	}
 	var tx *types.Transaction

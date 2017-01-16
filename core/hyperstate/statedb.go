@@ -56,7 +56,7 @@ type StateDB struct {
 	nextRevisionId int
 
 	// bucket tree related
-	bktConf    bucket.Conf
+	bktConf    *common.Config
 	bucketTree *bucket.BucketTree
 	lock       sync.Mutex
 	// current block pool status
@@ -67,27 +67,15 @@ type StateDB struct {
 	contentCache *common.Cache // use to store modification set for different block process
 }
 
-// Create a new state from a given root
-func New(root common.Hash, db hyperdb.Database, bktConf bucket.Conf, height uint64) (*StateDB, error) {
+// New - Create a new state from a given root
+func New(root common.Hash, db hyperdb.Database, bktConf *common.Config, height uint64) (*StateDB, error) {
 	csc, _ := lru.New(codeSizeCacheSize)
 	// initialize bucket tree
 	bucketPrefix, _ := CompositeStateBucketPrefix()
 	bucketTree := bucket.NewBucketTree(string(bucketPrefix))
-	bucketTree.Initialize(SetupBucketConfig(bktConf.StateSize, bktConf.StateLevelGroup))
-	// check root hash validation
 	// initialize cache
 	batchCache, _ := common.NewCache()
 	contentCache, _ := common.NewCache()
-	curHash, err := bucketTree.ComputeCryptoHash()
-	log.Debugf("latest state root %x", curHash)
-	if err != nil {
-		log.Errorf("new state db failed, error message %s", err.Error())
-		return nil, err
-	}
-	if !validateRoot(root, common.BytesToHash(curHash)) {
-		log.Errorf("invalid root, correct root hash of state bucket tree is %s", common.Bytes2Hex(curHash))
-		return nil, errors.New("invalid state bucket tree root")
-	}
 	state := &StateDB{
 		db:                db,
 		root:              root,
@@ -101,13 +89,24 @@ func New(root common.Hash, db hyperdb.Database, bktConf bucket.Conf, height uint
 		batchCache:        batchCache,
 		contentCache:      contentCache,
 	}
+	bucketTree.Initialize(SetupBucketConfig(state.GetBucketSize(STATEDB), state.GetBucketLevelGroup(STATEDB)))
+	curHash, err := bucketTree.ComputeCryptoHash()
+	log.Debugf("latest state root %s", common.Bytes2Hex(curHash))
+	if err != nil {
+		log.Errorf("new state db failed, error message %s", err.Error())
+		return nil, err
+	}
+	if !validateRoot(root, common.BytesToHash(curHash)) {
+		log.Errorf("invalid root, correct root hash of state bucket tree is %s", common.Bytes2Hex(curHash))
+		return nil, errors.New("invalid state bucket tree root")
+	}
 	// set oldest seqNo
 	log.Debugf("oldest height when initialize %d", height+1)
 	state.setLatest(height + 1)
 	return state, nil
 }
 
-// New creates a new statedb by reusing journalled data to avoid costly
+// New - New creates a new statedb by reusing journalled data to avoid costly
 // disk io.
 // Deprecated
 func (self *StateDB) New(root common.Hash) (*StateDB, error) {
@@ -115,9 +114,7 @@ func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 	defer self.lock.Unlock()
 	bucketPrefix, _ := CompositeStateBucketPrefix()
 	bucketTree := bucket.NewBucketTree(string(bucketPrefix))
-	bucketTree.Initialize(SetupBucketConfig(self.bktConf.StateSize, self.bktConf.StateLevelGroup))
-
-	return &StateDB{
+	state := &StateDB{
 		db:                self.db,
 		codeSizeCache:     self.codeSizeCache,
 		root:              root,
@@ -127,13 +124,14 @@ func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 		logs:              make(map[common.Hash]vm.Logs),
 		bktConf:           self.bktConf,
 		bucketTree:        bucketTree,
-	}, nil
+	}
+	bucketTree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEDB), self.GetBucketLevelGroup(STATEDB)))
+	return state, nil
 }
 
-// Reset clears out all emphemeral state objects from the state db, but keeps
+// Reset - clears out all emphemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
 func (self *StateDB) Reset() error {
-	log.Debug("reset state db")
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	// save modification set to content cache
@@ -163,19 +161,19 @@ func (self *StateDB) Reset() error {
 	return nil
 }
 
-// mark a block's process is begin
-// initialize some stuff
+// MarkProcessStart - mark a block's process is begin
+// initialize some stuff.
 func (self *StateDB) MarkProcessStart(seqNo uint64) {
 	// set current seqNo
 	log.Debugf("current process seqNo #%d", seqNo)
 	atomic.StoreUint64(&self.curSeqNo, seqNo)
 }
 
-// mark a block's process has finished
-// remove some stuff in cache to avoid of memory leak
+// MarkProcessFinish - mark a block's process has finished
+// remove some stuff in cache to avoid of memory leak.
 func (self *StateDB) MarkProcessFinish(seqNo uint64) {
 	// remove all batch handler with related seqNo less than `seqNo`
-	// cause if empty valiation event happen(no validate transaction in a batch), this type of validation event
+	// because if empty valiation event happen(no validate transaction in a batch), this type of validation event
 	// doesn't have commit event. Which can lead to memory leak if just remove seqNo related batch and content
 	judge := func(key interface{}, iterKey interface{}) bool {
 		id := key.(uint64)
@@ -199,7 +197,7 @@ func (self *StateDB) setLatest(seqNo uint64) {
 	atomic.StoreUint64(&self.oldestSeqNo, seqNo)
 }
 
-// Purge - clear out all uncommitted data and revert to a target state.
+// Purge - clear out all uncommitted data
 func (self *StateDB) Purge() {
 	self.batchCache.Purge()
 	self.contentCache.Purge()
@@ -438,7 +436,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Has
 				return false, common.Hash{}
 			}
 			// Insert into the live set.
-			obj := newObject(self, a, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.bktConf.StorageSize, self.bktConf.StorageLevelGroup))
+			obj := newObject(self, a, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT)))
 			obj.cachedStorage[b] = value
 			self.setStateObject(obj)
 		} else {
@@ -604,7 +602,7 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 	}
 	// Insert into the live set.
 	log.Debugf("find state object %x in database, add it to live objects", addr)
-	obj := newObject(self, addr, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.bktConf.StorageSize, self.bktConf.StorageLevelGroup))
+	obj := newObject(self, addr, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT)))
 	self.setStateObject(obj)
 	return obj
 }
@@ -632,7 +630,7 @@ func (self *StateDB) MarkStateObjectDirty(addr common.Address) {
 // the given address, it is overwritten and returned as the second return value.
 func (self *StateDB) createObject(addr common.Address) (newobj, prev *StateObject) {
 	prev = self.GetStateObject(addr)
-	newobj = newObject(self, addr, Account{}, self.MarkStateObjectDirty, true, SetupBucketConfig(self.bktConf.StorageSize, self.bktConf.StorageLevelGroup))
+	newobj = newObject(self, addr, Account{}, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT)))
 	newobj.setNonce(0) // sets the object to dirty
 	if prev == nil {
 		log.Infof("(+) %x\n", addr)

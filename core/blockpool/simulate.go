@@ -62,7 +62,7 @@ func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 		return nil
 	} else {
 		// persist execution result to local
-		err, _ := core.PersistReceipt(db.NewBatch(), receipt, pool.conf.TransactionVersion, true, true)
+		err, _ := core.PersistReceipt(db.NewBatch(), receipt, pool.GetTransactionVersion(), true, true)
 		if err != nil {
 			log.Error("Put receipt data into database failed! error msg, ", err.Error())
 			return err
