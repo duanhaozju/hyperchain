@@ -20,7 +20,7 @@ import (
 	"hyperchain/core/crypto/primitives"
 	"hyperchain/p2p/transport/ecdh"
 	"crypto/elliptic"
-	"crypto"
+	"crypto/ecdsa"
 )
 
 
@@ -178,9 +178,9 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		// 先验证证书签名
 		bol,err := node.CM.VerifyECertSignature(string(ecertByte),msg.Payload,msg.Signature.Signature);
 		ecert,err :=  primitives.ParseCertificate(string(ecertByte))
-		signpub := ecert.PublicKey.(crypto.PublicKey)
+		signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
 		ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
-		signpuByte := ecdh256.Marshal(signpub)
+		signpuByte := ecdh256.Marshal(*signpub)
 		node.TEM.SetSignPublicKey(signpuByte,msg.From.Hash)
 
 		if err != nil{

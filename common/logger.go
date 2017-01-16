@@ -91,7 +91,7 @@ func setNewLogFile(fileName string, backendStderr logging.LeveledBackend) {
 func initLogBackend() logging.LeveledBackend {
 	backend_stderr := logging.NewLogBackend(os.Stderr, "", 0)
 	var format_stderr = logging.MustStringFormatter(
-		`%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile}[%{module}] %{shortfunc} -> %{color:reset}%{message}`,
+		`%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}`,
 	)
 	backendFormatter := logging.NewBackendFormatter(backend_stderr, format_stderr)
 	backendStderr := logging.AddModuleLevel(backendFormatter)
