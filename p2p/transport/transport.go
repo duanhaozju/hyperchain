@@ -14,7 +14,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"hyperchain/p2p/transport/ecdh"
-	//"crypto/aes"
 	"crypto/aes"
 	"github.com/pkg/errors"
 )
@@ -27,10 +26,14 @@ func init() {
 type TransportEncryptManager interface {
 	GetLocalPublicKey() []byte
 	GenerateSecret(remotePublicKey []byte, peerHash string) error
+	SetSignPublicKey(pub []byte,peerHash string)
+	SetIsVerified(is_verified bool,peerHash string)
 	EncWithSecret(message []byte, peerHash string) ([]byte,error)
 	DecWithSecret(message []byte, peerHash string) ([]byte,error)
 	GetSecret(peerHash string) string
 	GetSceretPoolSize() int
+	GetSignPublicKey(peerHash string) []byte
+	GetIsVerified(peerHash string) bool
 	PrintAllSecHash()
 }
 
@@ -46,7 +49,7 @@ type HandShakeManager struct {
 func NewHandShakeManger() *HandShakeManager {
 	var hSM HandShakeManager
 	hSM.secrets = make(map[string][]byte)
-	hSM.e = ecdh.NewEllipticECDH(elliptic.P384())
+	hSM.e = ecdh.NewEllipticECDH(elliptic.P256())
 	var err error
 	hSM.privateKey, hSM.publicKey, err = hSM.e.GenerateKey(rand.Reader)
 	if err != nil{

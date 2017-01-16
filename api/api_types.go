@@ -7,6 +7,7 @@ import (
 	"hyperchain/manager"
 	"hyperchain/hyperdb"
 	"time"
+	"hyperchain/membersrvc"
 	"hyperchain/crypto/hmEncryption"
 )
 
@@ -20,7 +21,7 @@ type API struct {
 
 var Apis []API
 
-func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnable bool, txPeak int64 , txRate time.Duration, contractPeak int64, contractRate time.Duration, publicKey *hmEncryption.PaillierPublickey) []API{
+func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnable bool, txPeak int64 , txRate time.Duration, contractPeak int64, contractRate time.Duration,cm *membersrvc.CAManager, publicKey *hmEncryption.PaillierPublickey) []API{
 
 	db, err := hyperdb.GetDBDatabase()
 
@@ -58,6 +59,12 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnab
 			Version: "0.4",
 			Service: NewPublicContractAPI(eventMux, pm, db, ratelimitEnable, contractPeak, contractRate, publicKey),
 			Public: true,
+		},
+		{
+			Namespace:"cert",
+			Version:"0.4",
+			Service:NewPublicCertAPI(cm),
+			Public:true,
 		},
 	}
 

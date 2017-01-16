@@ -254,7 +254,10 @@ func (self *ProtocolManager) ConsensusLoop() {
 
 		case event.ConsensusEvent:
 			//call consensus module
-			log.Debug("###### enter ConsensusEvent")
+			//log.Debug("###### enter ConsensusEvent")
+			//msg := &protos.Message{}
+			//proto.Unmarshal(ev.Payload, msg)
+			//log.Debug("***consensus, from: , type: ", msg.Id, msg.Type)
 			self.consenter.RecvMsg(ev.Payload)
 		}
 	}
@@ -279,7 +282,8 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			peers := self.Peermanager.GetAllPeers()
 			var peerIds []uint64
 			for _, peer := range peers {
-				peerIds = append(peerIds, peer.ID)
+				//TODO change to int
+				peerIds = append(peerIds, uint64(peer.PeerAddr.ID))
 			}
 			self.Peermanager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_BROADCAST_NEWPEER)
 		case event.RecvNewPeerEvent:
@@ -306,7 +310,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			peers := self.Peermanager.GetAllPeers()
 			var peerIds []uint64
 			for _, peer := range peers {
-				peerIds = append(peerIds, peer.ID)
+				peerIds = append(peerIds, uint64(peer.PeerAddr.ID))
 			}
 			self.Peermanager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_BROADCAST_DELPEER)
 		case event.RecvDelPeerEvent:

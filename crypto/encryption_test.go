@@ -26,12 +26,6 @@ var encryption = NewEcdsaEncrypto("ecdsa")
 // These tests are sanity checks.
 // They should ensure that we don't e.g. use Sha3-224 instead of Sha3-256
 // and that the sha3 library uses keccak-f permutation.
-func TestSha3(t *testing.T) {
-	msg := []byte("abc")
-	exp, _ := hex.DecodeString("4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45")
-	checkhash(t, "Sha3-256", func(in []byte) []byte { return Keccak256(in) }, msg, exp)
-}
-
 
 func BenchmarkSha3(b *testing.B) {
 	a := []byte("hello world")

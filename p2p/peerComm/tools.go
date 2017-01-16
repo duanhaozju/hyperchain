@@ -34,13 +34,13 @@ func GetLocalIp() string {
 	return ""
 }
 
-func ExtractAddress(peerIp string, peerPort int64, ID uint64) *pb.PeerAddress {
-	peerAddrString := strconv.FormatUint(ID, 10) + ":" + strconv.FormatInt(peerPort, 10)
+func ExtractAddress(peerIp string, peerPort int, ID int) *pb.PeerAddress {
+	peerAddrString := strconv.Itoa(ID) + ":" + strconv.Itoa(peerPort)
 	peerAddress := pb.PeerAddress{
 		IP:   peerIp,
-		Port: peerPort,
+		Port: int32(peerPort),
 		Hash: GetHash(peerAddrString),
-		ID:   ID,
+		ID:   int32(ID),
 	}
 	return &peerAddress
 }

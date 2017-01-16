@@ -15,6 +15,7 @@ import (
 	"hyperchain/api/rest_api/routers"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
+	"hyperchain/membersrvc"
 	"hyperchain/crypto/hmEncryption"
 )
 
@@ -38,13 +39,13 @@ func (hrw *httpReadWrite) Close() error{
 	return nil
 }
 
-func Start(httpPort int, restPort int, logsPath string,eventMux *event.TypeMux,pm *manager.ProtocolManager, cfg RateLimitConfig, publicKey *hmEncryption.PaillierPublickey) error{
+func Start(httpPort int, restPort int, logsPath string,eventMux *event.TypeMux,pm *manager.ProtocolManager, cfg RateLimitConfig,cm *membersrvc.CAManager, publicKey *hmEncryption.PaillierPublickey) error{
 	eventMux = eventMux
 
 	server := NewServer()
 
 	// 得到API，注册服务
-	apis := hpc.GetAPIs(eventMux, pm, cfg.Enable, cfg.TxRatePeak, cfg.TxFillRate, cfg.ContractRatePeak, cfg.ContractFillRate, publicKey)
+	apis := hpc.GetAPIs(eventMux, pm, cfg.Enable, cfg.TxRatePeak, cfg.TxFillRate, cfg.ContractRatePeak, cfg.ContractFillRate,cm, publicKey)
 
 	// api.Namespace 是API的命名空间，api.Service 是一个拥有命名空间对应对象的所有方法的对象
 	for _, api := range apis {
@@ -54,13 +55,13 @@ func Start(httpPort int, restPort int, logsPath string,eventMux *event.TypeMux,p
 		}
 	}
 
-	startHttp(httpPort, restPort,logsPath, server)
+	startHttp(httpPort, restPort,logsPath, server,cm)
 
 	return nil
 }
 
 
-func startHttp(httpPort int, restPort int, logsPath string, srv *Server) {
+func startHttp(httpPort int, restPort int, logsPath string, srv *Server,cm *membersrvc.CAManager) {
 	// TODO AllowedOrigins should be a parameter
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
@@ -68,7 +69,7 @@ func startHttp(httpPort int, restPort int, logsPath string, srv *Server) {
 	})
 
 	// Insert the middleware
-	handler := c.Handler(newJSONHTTPHandler(srv))
+	handler := c.Handler(newJSONHTTPHandler(srv,cm))
 
 	go http.ListenAndServe(":"+strconv.Itoa(httpPort),handler)
 
@@ -87,22 +88,23 @@ func startHttp(httpPort int, restPort int, logsPath string, srv *Server) {
 	// ===================================== 2016.11.15 END  ================================ //
 }
 
-func newJSONHTTPHandler(srv *Server) http.HandlerFunc{
+func newJSONHTTPHandler(srv *Server,cm *membersrvc.CAManager) http.HandlerFunc{
 	return func(w http.ResponseWriter, r *http.Request) {
+		//log.Critical("has request")
 		if r.ContentLength > maxHTTPRequestContentLength {
 			http.Error(w,
 				fmt.Sprintf("content length too large (%d>%d)", r.ContentLength, maxHTTPRequestContentLength),
 				http.StatusRequestEntityTooLarge)
 			return
 		}
+		//header interceptor
+		//headerHandler(w,r)
 
 		w.Header().Set("content-type", "application/json")
 
 		// TODO NewJSONCodec
-		codec := NewJSONCodec(&httpReadWrite{r.Body, w})
+		codec := NewJSONCodec(&httpReadWrite{r.Body, w},r.Header,cm)
 		defer codec.Close()
 		srv.ServeSingleRequest(codec, OptionMethodInvocation)
 	}
 }
-
-

@@ -6,7 +6,7 @@ package transport
 import (
 	"testing"
 
-	"encoding/hex"
+	//"encoding/hex"
 	"fmt"
 	"hyperchain/common"
 	"io/ioutil"
@@ -72,17 +72,17 @@ func init() {
 	HSM1.GenerateSecret(pbk2, "2")
 	HSM2.GenerateSecret(pbk1, "1")
 }
-
-func TestHandShakeManager_DecWithSecret(t *testing.T) {
-	enctrypted := HSM1.EncWithSecret([]byte("HELLO"), "2")
-	t.Log("加密之后信息", hex.EncodeToString(enctrypted))
-	decrypted := HSM2.DecWithSecret(enctrypted, "1")
-	fmt.Println(string(decrypted))
-}
-
-func BenchmarkHandShakeManager_DecWithSecret(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		enctrypted := HSM1.EncWithSecret([]byte("HELLO"), "2")
-		HSM2.DecWithSecret(enctrypted, "1")
-	}
-}
+//
+//func TestHandShakeManager_DecWithSecret(t *testing.T) {
+//	enctrypted := HSM1.EncWithSecret([]byte("HELLO"), "2")
+//	t.Log("加密之后信息", hex.EncodeToString(enctrypted))
+//	decrypted := HSM2.DecWithSecret(enctrypted, "1")
+//	fmt.Println(string(decrypted))
+//}
+//
+//func BenchmarkHandShakeManager_DecWithSecret(b *testing.B) {
+//	for i := 0; i < b.N; i++ {
+//		enctrypted := HSM1.EncWithSecret([]byte("HELLO"), "2")
+//		HSM2.DecWithSecret(enctrypted, "1")
+//	}
+//}

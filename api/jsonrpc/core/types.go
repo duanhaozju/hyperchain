@@ -76,6 +76,8 @@ type RPCError interface {
 // a RPC session. Implementations must be go-routine safe since the codec can be called in
 // multiple go-routines concurrently.
 type ServerCodec interface {
+	// Check http header
+	CheckHttpHeaders() RPCError
 	// Read next request
 	ReadRequestHeaders() ([]rpcRequest, bool, RPCError)
 	// Parse request argument to the given types

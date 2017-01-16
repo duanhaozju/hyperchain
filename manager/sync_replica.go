@@ -43,7 +43,8 @@ func (self *ProtocolManager) SyncReplicaStatus() {
 			peers := self.Peermanager.GetAllPeers()
 			var peerIds = make([]uint64, len(peers))
 			for idx, peer := range peers {
-				peerIds[idx] = peer.ID
+				//TODO change id into int type
+				peerIds[idx] = uint64(peer.PeerAddr.ID)
 			}
 			self.Peermanager.SendMsgToPeers(payload, peerIds, recovery.Message_SYNCREPLICA)
 		// post to self
@@ -63,9 +64,11 @@ func (self *ProtocolManager) RecordReplicaStatus(ev event.ReplicaStatusEvent) {
 	proto.Unmarshal(status.Chain, chain)
 	replicaInfo := ReplicaInfo{
 		IP:              addr.IP,
-		Port:            addr.Port,
+		//TODO change into int type
+		Port:            int64(addr.Port),
 		Hash:            addr.Hash,
-		ID:              addr.ID,
+		//TODO change into int type
+		ID:              uint64(addr.ID),
 		LatestBlockHash: chain.LatestBlockHash,
 		ParentBlockHash: chain.ParentBlockHash,
 		Height:          chain.Height,
@@ -82,7 +85,7 @@ func (self *ProtocolManager) packReplicaStatus() ([]byte, []byte) {
 	currentChain.RecoveryNum = 0
 	currentChain.CurrentTxSum = 0
 	// marshal
-	addrData, err := proto.Marshal(peerAddress)
+	addrData, err := proto.Marshal(peerAddress.ToPeerAddress())
 	if err != nil {
 		log.Error("packReplicaStatus failed!")
 		return nil, nil

@@ -3,10 +3,13 @@
 package primitives
 
 import (
+	//"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/asn1"
 	"math/big"
+	//"github.com/op/go-logging"
+	hcrypto"hyperchain/crypto"
 )
 
 // ECDSASignature represents an ECDSA signature
@@ -34,7 +37,14 @@ func ECDSASignDirect(signKey interface{}, msg []byte) (*big.Int, *big.Int, error
 // ECDSASign signs
 func ECDSASign(signKey interface{}, msg []byte) ([]byte, error) {
 	temp := signKey.(*ecdsa.PrivateKey)
-	h := Hash(msg)
+
+	//修改hash方法
+	hasher := hcrypto.NewKeccak256Hash("keccak256Hanser")
+	h := hasher.Hash(msg).Bytes()
+	//h := Hash(msg)
+
+	//log.Error("Hash:",h)
+
 	r, s, err := ecdsa.Sign(rand.Reader, temp, h)
 	if err != nil {
 		return nil, err
@@ -65,37 +75,10 @@ func ECDSAVerify(verKey interface{}, msg, signature []byte) (bool, error) {
 	//	S, _ := ecdsaSignature.S.MarshalText()
 	//	fmt.Printf("r [%s], s [%s]\n", R, S)
 
-	temp := verKey.(*ecdsa.PublicKey)
-	h := Hash(msg)
-	return ecdsa.Verify(temp, h, ecdsaSignature.R, ecdsaSignature.S), nil
+	temp := verKey.(ecdsa.PublicKey)
+	hasher := hcrypto.NewKeccak256Hash("keccak256Hanse")
+	h := hasher.Hash(msg).Bytes()
+	//h := Hash(msg)
+	return ecdsa.Verify(&temp, h, ecdsaSignature.R, ecdsaSignature.S), nil
 }
 
-// VerifySignCapability tests signing capabilities
-func VerifySignCapability(tempSK interface{}, certPK interface{}) error {
-	/* TODO: reactive or remove
-	msg := []byte("This is a message to be signed and verified by ECDSA!")
-
-	sigma, err := ECDSASign(tempSK, msg)
-	if err != nil {
-		//		log.Errorf("Error signing [%s].", err.Error())
-
-		return err
-	}
-
-	ok, err := ECDSAVerify(certPK, msg, sigma)
-	if err != nil {
-		//		log.Errorf("Error verifying [%s].", err.Error())
-
-		return err
-	}
-
-	if !ok {
-		//		log.Errorf("Signature not valid.")
-
-		return errors.New("Signature not valid.")
-	}
-
-	//	log.Infof("Verifing signature capability...done")
-	*/
-	return nil
-}

@@ -7,17 +7,33 @@ import (
 	"reflect"
 
 	"github.com/spf13/viper"
+	"hyperchain/p2p/peermessage"
 )
 
 type Config interface {
-	GetPort(nodeID uint64) int64
-	GetIP(nodeID uint64) string
+	GetLocalID() int
+	GetLocalIP() string
+	GetLocalGRPCPort() int
+	GetLocalJsonRPCPort() int
+	GetIntroducerIP() string
+	GetIntroducerID() int
+	GetIntroducerJSONRPCPort() int
+	GetIntroducerPort() int
+	IsOrigin() bool
+	GetPort(nodeID int) int
+	GetIP(nodeID int) string
 	GetMaxPeerNumber() int
+	AddNodesAndPersist(addrs map[string]peermessage.PeerAddr)
+	DelNodesAndPersist(addrs map[string]peermessage.PeerAddr)
+}
+
+type ConfigWriter interface {
+	SaveAddress(addr Address) error
 }
 
 type ConfigUtil struct {
 	configs *viper.Viper
-	nodes   map[uint64]Address
+	nodes   map[int]Address
 	maxNode int
 }
 
@@ -26,7 +42,7 @@ func NewConfigUtil(configDir string) *ConfigUtil {
 	newConfigUtil.configs = getConfig(configDir)
 	newConfigUtil.maxNode = newConfigUtil.configs.GetInt("maxpeernode")
 	log.Info(newConfigUtil.maxNode)
-	newConfigUtil.nodes = make(map[uint64]Address)
+	newConfigUtil.nodes = make(map[int]Address)
 	slice := newConfigUtil.configs.Get("nodes")
 	s := reflect.ValueOf(slice)
 	if s.Kind() != reflect.Slice {
@@ -37,12 +53,12 @@ func NewConfigUtil(configDir string) *ConfigUtil {
 		_tmp_var := s.Index(i).Interface()
 		if _tmp_map, ok := _tmp_var.(map[string]interface{}); ok {
 			log.Info(_tmp_map, reflect.TypeOf(_tmp_map))
-			_node_id := (int64)(_tmp_map["id"].(float64))
-			_node_port := (int64)(_tmp_map["port"].(float64))
+			_node_id := (int)(_tmp_map["id"].(float64))
+			_node_port := (int)(_tmp_map["port"].(float64))
 			_node_address := _tmp_map["address"].(string)
-			_rpc_rpcport := (int64)(_tmp_map["rpc_port"].(float64))
+			_rpc_rpcport := (int)(_tmp_map["rpc_port"].(float64))
 			temp_addr := NewAddress(_node_id, _node_port, _rpc_rpcport, _node_address)
-			newConfigUtil.nodes[uint64(_node_id)] = temp_addr
+			newConfigUtil.nodes[int(_node_id)] = temp_addr
 		}
 
 	}
@@ -52,12 +68,12 @@ func NewConfigUtil(configDir string) *ConfigUtil {
 	return &newConfigUtil
 }
 
-//
-func (confutil *ConfigUtil) GetPort(nodeID uint64) int64 {
+
+func (confutil *ConfigUtil) GetPort(nodeID int) int {
 	return confutil.nodes[nodeID].Port
 }
 
-func (confutil *ConfigUtil) GetIP(nodeID uint64) string {
+func (confutil *ConfigUtil) GetIP(nodeID int) string {
 	return confutil.nodes[nodeID].IP
 }
 
