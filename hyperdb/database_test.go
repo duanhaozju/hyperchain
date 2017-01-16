@@ -3,15 +3,15 @@
 package hyperdb
 
 import (
-	"testing"
 	"os"
+	"testing"
 )
 
 var testMap = map[string]string{
-	"key1":"value1",
-	"key2":"value2",
-	"key3":"value3",
-	"key4":"value4",
+	"key1": "value1",
+	"key2": "value2",
+	"key3": "value3",
+	"key4": "value4",
 }
 
 var db *LDBDatabase
@@ -20,8 +20,8 @@ var db *LDBDatabase
 func TestNewLDBDataBase(t *testing.T) {
 	dir, _ := os.Getwd()
 	db, _ = NewLDBDataBase(dir + "/db")
-	defer os.RemoveAll(dir+"/db")
-	if db.path != dir + "/db" && db.db == nil {
+	defer os.RemoveAll(dir + "/db")
+	if db.path != dir+"/db" && db.db == nil {
 		t.Error("new ldbdatabase is wrong")
 	} else {
 		t.Log("TestNewLDBDataBase is pass")
@@ -40,8 +40,8 @@ func TestLDBDatabase(t *testing.T) {
 		}
 	}
 	// get data
-	for key, value := range testMap{
-		data , err := db.Get([]byte(key))
+	for key, value := range testMap {
+		data, err := db.Get([]byte(key))
 		if err != nil {
 			t.Error(err)
 			return
@@ -51,7 +51,7 @@ func TestLDBDatabase(t *testing.T) {
 		}
 	}
 	// delete datas
-	for key, _ := range testMap  {
+	for key, _ := range testMap {
 		err := db.Delete([]byte(key))
 		if err != nil {
 			t.Error(err)

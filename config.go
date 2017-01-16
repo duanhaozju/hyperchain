@@ -4,10 +4,10 @@ import (
 	"fmt"
 	logging "github.com/op/go-logging"
 	"github.com/spf13/viper"
-	"time"
 	"hyperchain/api/jsonrpc/core"
 	"hyperchain/crypto/hmEncryption"
 	"math/big"
+	"time"
 )
 
 type configs interface {
@@ -37,13 +37,13 @@ type configsImpl struct {
 	nodeID                  int
 	gRPCPort                int
 	httpPort                int
-	restPort		int
+	restPort                int
 	keystoreDir             string
 	keyNodeDir              string
 	logDumpFileFlag         bool
 	logDumpFileDir          string
 	logLevel                string
-	dbConfig             	string
+	dbConfig                string
 	peerConfigPath          string
 	genesisConfigPath       string
 	memberSRVCConfigPath    string
@@ -75,7 +75,7 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	}
 	/*
 		system config
-	 */
+	*/
 	cimpl.nodeID = NodeID
 	cimpl.gRPCPort = GRPCPort
 	cimpl.httpPort = HTTPPort
@@ -93,21 +93,20 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	/*
 		db Config
 	*/
-	cimpl.dbConfig=config.GetString("global.dbConfig")
-
+	cimpl.dbConfig = config.GetString("global.dbConfig")
 
 	/*
 		statement synchronization
-	 */
+	*/
 	cimpl.syncReplicaInfoInterval = config.GetString("global.configs.replicainfo.interval")
 	cimpl.syncReplica = config.GetBool("global.configs.replicainfo.enable")
 	/*
 		license
-	 */
+	*/
 	cimpl.license = config.GetString("global.configs.license")
 	/*
 		rate limit
-	 */
+	*/
 	cimpl.rateLimitEnable = config.GetBool("global.configs.ratelimit.enable")
 	cimpl.txRatePeak = config.GetInt64("global.configs.ratelimit.txRatePeak")
 	cimpl.txFillRate = config.GetString("global.configs.ratelimit.txFillRate")
@@ -116,7 +115,7 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 
 	/*
 		Version
-	 */
+	*/
 	cimpl.blockVersion = config.GetString("global.version.blockversion")
 	cimpl.transactionVersion = config.GetString("global.version.transactionversion")
 
@@ -131,7 +130,7 @@ func (cIml *configsImpl) getNodeID() int            { return cIml.nodeID }
 func (cIml *configsImpl) getGRPCPort() int          { return cIml.gRPCPort }
 func (cIml *configsImpl) getHTTPPort() int          { return cIml.httpPort }
 func (cIml *configsImpl) getRESTPort() int          { return cIml.restPort }
-func (cIml *configsImpl) getDbConfig() string  	    { return cIml.dbConfig }
+func (cIml *configsImpl) getDbConfig() string       { return cIml.dbConfig }
 func (cIml *configsImpl) getKeystoreDir() string    { return cIml.keystoreDir }
 func (cIml *configsImpl) getKeyNodeDir() string     { return cIml.keyNodeDir }
 func (cIml *configsImpl) getLogDumpFileFlag() bool  { return cIml.logDumpFileFlag }
@@ -166,13 +165,13 @@ func (cIml *configsImpl) getSyncReplicaInterval() (time.Duration, error) {
 }
 func (cIml *configsImpl) getSyncReplicaEnable() bool { return cIml.syncReplica }
 func (cIml *configsImpl) getLicense() string         { return cIml.license }
-func (cIml *configsImpl) getRateLimitConfig () jsonrpc.RateLimitConfig {
+func (cIml *configsImpl) getRateLimitConfig() jsonrpc.RateLimitConfig {
 	txFillRate, _ := time.ParseDuration(cIml.txFillRate)
 	contractFillRate, _ := time.ParseDuration(cIml.contractFillRate)
 	return jsonrpc.RateLimitConfig{
-		Enable: cIml.rateLimitEnable,
-		TxRatePeak: cIml.txRatePeak,
-		TxFillRate: txFillRate,
+		Enable:           cIml.rateLimitEnable,
+		TxRatePeak:       cIml.txRatePeak,
+		TxFillRate:       txFillRate,
 		ContractRatePeak: cIml.contractRatePeak,
 		ContractFillRate: contractFillRate,
 	}
@@ -188,15 +187,14 @@ func (cIml *configsImpl) getPaillerPublickey() *hmEncryption.PaillierPublickey {
 	bigN := new(big.Int)
 	bigNsquare := new(big.Int)
 	bigG := new(big.Int)
-	n,_:= bigN.SetString(cIml.paillpublickeyN,10);
-	nsquare,_ := bigNsquare.SetString(cIml.paillpublickeynsquare,10)
-	g,_ := bigG.SetString(cIml.paillpublickeyG,10)
-
+	n, _ := bigN.SetString(cIml.paillpublickeyN, 10)
+	nsquare, _ := bigNsquare.SetString(cIml.paillpublickeynsquare, 10)
+	g, _ := bigG.SetString(cIml.paillpublickeyG, 10)
 
 	return &hmEncryption.PaillierPublickey{
-		N: n,
+		N:       n,
 		Nsquare: nsquare,
-		G: g,
+		G:       g,
 	}
 
 	//publickey := new(hmEncryption.PaillierPublickey)

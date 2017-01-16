@@ -1,52 +1,51 @@
 package membersrvc
 
 import (
-	"crypto/x509"
-	"hyperchain/core/crypto/primitives"
-	"github.com/pkg/errors"
-	"io/ioutil"
 	"crypto/ecdsa"
+	"crypto/x509"
+	"github.com/pkg/errors"
+	"hyperchain/core/crypto/primitives"
+	"io/ioutil"
 )
 
 type CAManager struct {
-	ecacert *x509.Certificate
-	ecert *x509.Certificate
-	rcert *x509.Certificate
-	rcacert *x509.Certificate
+	ecacert         *x509.Certificate
+	ecert           *x509.Certificate
+	rcert           *x509.Certificate
+	rcacert         *x509.Certificate
 	ecertPrivateKey interface{}
-	tcacert *x509.Certificate
+	tcacert         *x509.Certificate
 
 	// cert byte
-	ecacertByte []byte
-	ecertByte []byte
-	rcertByte []byte
-	rcacertByte []byte
+	ecacertByte         []byte
+	ecertByte           []byte
+	rcertByte           []byte
+	rcacertByte         []byte
 	ecertPrivateKeyByte []byte
-	tcacertByte []byte
-	isUsed bool
-	checkTCert bool
-
+	tcacertByte         []byte
+	isUsed              bool
+	checkTCert          bool
 }
 
 var CaManager *CAManager
 
-func GetCaManager(ecacertPath string,ecertPath string,rcacertPath string,rcertPath string, ecertPrivateKeyPath string,isUsed bool,checkTCert bool) (*CAManager,error) {
+func GetCaManager(ecacertPath string, ecertPath string, rcacertPath string, rcertPath string, ecertPrivateKeyPath string, isUsed bool, checkTCert bool) (*CAManager, error) {
 	if CaManager == nil {
 		var err error
-		CaManager,err = NewCAManager(ecacertPath,ecertPath,rcertPath,rcacertPath,ecertPrivateKeyPath,ecertPath,isUsed,checkTCert)
+		CaManager, err = NewCAManager(ecacertPath, ecertPath, rcertPath, rcacertPath, ecertPrivateKeyPath, ecertPath, isUsed, checkTCert)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
-		return CaManager,nil
+		return CaManager, nil
 	} else {
-		return CaManager,nil
+		return CaManager, nil
 	}
 }
 
-func NewCAManager(ecacertPath string,ecertPath string,rcertPath string,rcacertPath string, ecertPrivateKeyPath string,tcacertPath string,isUsed bool,checkTCert bool) (*CAManager,error){
+func NewCAManager(ecacertPath string, ecertPath string, rcertPath string, rcacertPath string, ecertPrivateKeyPath string, tcacertPath string, isUsed bool, checkTCert bool) (*CAManager, error) {
 	var caManager CAManager
 	var err error
-	if isUsed != true{
+	if isUsed != true {
 		caManager.ecacertByte = []byte{}
 		caManager.ecertByte = []byte{}
 		caManager.rcertByte = []byte{}
@@ -55,8 +54,8 @@ func NewCAManager(ecacertPath string,ecertPath string,rcertPath string,rcacertPa
 		caManager.tcacertByte = []byte{}
 		caManager.isUsed = isUsed
 		caManager.checkTCert = checkTCert
-		return &caManager,nil
-	}else {
+		return &caManager, nil
+	} else {
 		ecacert, rerr := ioutil.ReadFile(ecacertPath)
 		if rerr != nil {
 			log.Error("ecacert read failed")
@@ -139,9 +138,9 @@ func NewCAManager(ecacertPath string,ecertPath string,rcertPath string,rcacertPa
 	}
 }
 
-func (caManager *CAManager)SignTCert(publicKey string) (string,error){
-	if caManager.isUsed != true{
-		return "",nil
+func (caManager *CAManager) SignTCert(publicKey string) (string, error) {
+	if caManager.isUsed != true {
+		return "", nil
 	}
 	pubKey, err := primitives.ParsePubKey(publicKey)
 	if err != nil {
@@ -157,12 +156,11 @@ func (caManager *CAManager)SignTCert(publicKey string) (string,error){
 
 }
 
-
 //TCERT 需要用为其签发的ECert来验证，但是在没有TCERT的时候只能够用
 //ECERT 进行充当TCERT 所以需要用ECA.CERT 即ECA.CA 作为根证书进行验证
-func (caManager *CAManager)VerifyTCert(tcertPEM string)(bool,error){
-	if caManager.isUsed != true{
-		return true,nil
+func (caManager *CAManager) VerifyTCert(tcertPEM string) (bool, error) {
+	if caManager.isUsed != true {
+		return true, nil
 	}
 	tcertToVerify, err := primitives.ParseCertificate(tcertPEM)
 	if err != nil {
@@ -172,9 +170,9 @@ func (caManager *CAManager)VerifyTCert(tcertPEM string)(bool,error){
 	// TODO 应该将caManager.tcacert 转为caManager.ecacert
 	isCa := tcertToVerify.IsCA
 	var verifyTcert bool
-	if isCa == true{
-		verifyTcert,err = primitives.VerifyCert(tcertToVerify,caManager.ecacert)
-	}else {
+	if isCa == true {
+		verifyTcert, err = primitives.VerifyCert(tcertToVerify, caManager.ecacert)
+	} else {
 		verifyTcert, err = primitives.VerifyCert(tcertToVerify, caManager.tcacert)
 
 	}
@@ -187,118 +185,115 @@ func (caManager *CAManager)VerifyTCert(tcertPEM string)(bool,error){
 }
 
 /**
-	验证签名，验证签名需要有三个参数：
-	第一个是携带的数字证书，即tcert,
-	第二个是签名，
-	第三个是原始数据
-	这个方法用来验证签名是否来自数字证书用户
- */
-func (caManager *CAManager)VerifySignature(certPEM,signature,signed string) (bool,error) {
-	if caManager.isUsed != true{
-		return true,nil
+验证签名，验证签名需要有三个参数：
+第一个是携带的数字证书，即tcert,
+第二个是签名，
+第三个是原始数据
+这个方法用来验证签名是否来自数字证书用户
+*/
+func (caManager *CAManager) VerifySignature(certPEM, signature, signed string) (bool, error) {
+	if caManager.isUsed != true {
+		return true, nil
 	}
-	tcertToVerify,err := primitives.ParseCertificate(certPEM)
+	tcertToVerify, err := primitives.ParseCertificate(certPEM)
 	if err != nil {
-		log.Error("cannot parse the tcert",err)
-		return false,err
+		log.Error("cannot parse the tcert", err)
+		return false, err
 	}
-	verifySign,err := primitives.VerifySignature(tcertToVerify,signed,signature)
-	if verifySign==false{
+	verifySign, err := primitives.VerifySignature(tcertToVerify, signed, signature)
+	if verifySign == false {
 		log.Error("verified falied")
-		return false,err
+		return false, err
 	}
-	return true,nil
+	return true, nil
 
 }
 
-func (caManager *CAManager) VerifyECert(ecertPEM string)(bool,error){
-	if caManager.isUsed != true{
-		return true,nil
-	}else {
-		ecertToVerify,err := primitives.ParseCertificate(ecertPEM)
+func (caManager *CAManager) VerifyECert(ecertPEM string) (bool, error) {
+	if caManager.isUsed != true {
+		return true, nil
+	} else {
+		ecertToVerify, err := primitives.ParseCertificate(ecertPEM)
 		if err != nil {
-			log.Error("cannot parse the ecert",err)
-			return false,err
+			log.Error("cannot parse the ecert", err)
+			return false, err
 		}
-		verifyEcert,err := primitives.VerifyCert(ecertToVerify,caManager.ecacert)
-		if verifyEcert==false || err != nil{
+		verifyEcert, err := primitives.VerifyCert(ecertToVerify, caManager.ecacert)
+		if verifyEcert == false || err != nil {
 			log.Error("verified ecert falied")
-			return false,err
+			return false, err
 		}
-		return true,nil
+		return true, nil
 	}
 }
 
-func (ca *CAManager) VerifyECertSignature(ecertPEM string,msg,sign []byte)(bool,error){
-	if CaManager.isUsed !=true {
-		return true,nil
+func (ca *CAManager) VerifyECertSignature(ecertPEM string, msg, sign []byte) (bool, error) {
+	if CaManager.isUsed != true {
+		return true, nil
 	}
-	ecertToVerify,err := primitives.ParseCertificate(ecertPEM)
+	ecertToVerify, err := primitives.ParseCertificate(ecertPEM)
 	if err != nil {
-		log.Error("cannot parse the ecert",err)
-		return false,err
+		log.Error("cannot parse the ecert", err)
+		return false, err
 	}
 	ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
 
-
 	key := ecertToVerify.PublicKey.(*(ecdsa.PublicKey))
-	result,err1 := ecdsaEncry.VerifySign(*key,msg,sign)
-	if(err1 != nil){
-		log.Error("fail to verify signture",err)
-		return false,err1
+	result, err1 := ecdsaEncry.VerifySign(*key, msg, sign)
+	if err1 != nil {
+		log.Error("fail to verify signture", err)
+		return false, err1
 	}
 
-	return  result,nil;
-
+	return result, nil
 
 }
 
-func (caManager *CAManager) VerifyRCert(rcertPEM string)(bool,error){
-	if caManager.isUsed!=true{
-		return true,nil
+func (caManager *CAManager) VerifyRCert(rcertPEM string) (bool, error) {
+	if caManager.isUsed != true {
+		return true, nil
 	}
 
-	rcertToVerify,err := primitives.ParseCertificate(rcertPEM)
+	rcertToVerify, err := primitives.ParseCertificate(rcertPEM)
 	if err != nil {
-		log.Error("cannot parse the rcert",err)
-		return false,err
+		log.Error("cannot parse the rcert", err)
+		return false, err
 	}
-	verifyRcert,err := primitives.VerifyCert(rcertToVerify,caManager.rcacert)
-	if verifyRcert==false || err != nil{
+	verifyRcert, err := primitives.VerifyCert(rcertToVerify, caManager.rcacert)
+	if verifyRcert == false || err != nil {
 		log.Error("verified rcert falied")
-		return false,err
+		return false, err
 	}
-	return true,nil
+	return true, nil
 
 }
 
 /**
-	getMethods
- */
+getMethods
+*/
 
-
-func (caManager *CAManager)  GetECACertByte() []byte{
+func (caManager *CAManager) GetECACertByte() []byte {
 	return caManager.ecacertByte
 }
-func (caManager *CAManager)  GetECertByte() []byte{
+func (caManager *CAManager) GetECertByte() []byte {
 	return caManager.ecertByte
 }
-func (caManager *CAManager)  GetRCertByte() []byte{
+func (caManager *CAManager) GetRCertByte() []byte {
 	return caManager.rcertByte
 }
-func (caManager *CAManager)  GetRCAcertByte() []byte{
+func (caManager *CAManager) GetRCAcertByte() []byte {
 	return caManager.rcacertByte
 }
-func (caManager *CAManager)  GetECertPrivateKeyByte() []byte{
+func (caManager *CAManager) GetECertPrivateKeyByte() []byte {
 	return caManager.ecertPrivateKeyByte
 }
-func (caManager *CAManager) GetECertPrivKey() interface{}{
+func (caManager *CAManager) GetECertPrivKey() interface{} {
 	return caManager.ecertPrivateKey
 }
-func (caManager *CAManager) GetIsUsed() bool{
+func (caManager *CAManager) GetIsUsed() bool {
 	return caManager.isUsed
 }
 
-func (caManager *CAManager) GetIsCheckTCert() bool{
+func (caManager *CAManager) GetIsCheckTCert() bool {
 	return caManager.checkTCert
 }

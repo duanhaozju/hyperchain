@@ -1,8 +1,8 @@
 package builtin
 
 import (
-	"regexp"
 	"fmt"
+	"regexp"
 	"time"
 )
 
@@ -15,7 +15,7 @@ func ExecuteTransaction(password string, from string, to string, timestamp int64
 	} else {
 		pattern, _ := regexp.Compile(".*'(.*?)'")
 		ret := pattern.FindStringSubmatch(command)
-		if ret == nil || len(ret) < 2{
+		if ret == nil || len(ret) < 2 {
 			logger.Error("create transaction failed")
 			return "", false
 		}
@@ -61,12 +61,12 @@ func ExecuteTransaction(password string, from string, to string, timestamp int64
 								logger.Error("execute transaction failed")
 								return "", false
 							} else {
-								output(silense,"Log:",ret[0])
+								output(silense, "Log:", ret[0])
 								execRes = ret[0]
 							}
 						}
 					} else {
-						output(silense,"Receipt:",ret[0])
+						output(silense, "Receipt:", ret[0])
 						execRes = ret[0]
 					}
 				}

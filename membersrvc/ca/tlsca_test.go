@@ -76,7 +76,7 @@ func startTLSCA(t *testing.T) {
 		t.Logf("Failed to start TLS-CA service: %s", err)
 		t.Fail()
 	}
-	if srv == nil{
+	if srv == nil {
 		t.Logf("srv is nil", err)
 		t.Fail()
 	}

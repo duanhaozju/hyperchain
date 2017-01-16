@@ -3,14 +3,13 @@
 package pbft
 
 import (
+	"strconv"
 	"testing"
 	"time"
-	"strconv"
 
 	"hyperchain/core/types"
 	//"bytes"
 	"container/list"
-
 )
 
 func TestOrderedRequests(t *testing.T) {
@@ -56,9 +55,9 @@ func createPbftReq(tag int, replica uint64) (tx *types.Transaction) {
 	copy(payload[:], temp)
 
 	tx = &types.Transaction{
-		Timestamp:	time.Now().UnixNano(),
-		Id:		replica,
-		Value:		payload,
+		Timestamp: time.Now().UnixNano(),
+		Id:        replica,
+		Value:     payload,
 	}
 
 	return
@@ -92,14 +91,14 @@ func BenchmarkOrderedRequests(b *testing.B) {
 	}
 }
 
-func TestLen(t *testing.T)  {
-	oq := &orderedRequests{presence:make(map[string]*list.Element), order:list.List{}}
+func TestLen(t *testing.T) {
+	oq := &orderedRequests{presence: make(map[string]*list.Element), order: list.List{}}
 	if oq.Len() != 0 {
 		t.Error("error orderedRequests len() error!")
 	}
 	//oq = nil
-	t1 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("100")}
-	t2 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("200")}
+	t1 := &types.Transaction{From: []byte("from addr"), To: []byte("to addr"), Value: []byte("100")}
+	t2 := &types.Transaction{From: []byte("from addr"), To: []byte("to addr"), Value: []byte("200")}
 	oq.add(t1)
 	oq.add(t2)
 	if oq.Len() != 2 {
@@ -107,10 +106,10 @@ func TestLen(t *testing.T)  {
 	}
 }
 
-func TestRemoves(t *testing.T)  {
-	oq := &orderedRequests{presence:make(map[string]*list.Element)}
-	t1 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("100")}
-	t2 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("200")}
+func TestRemoves(t *testing.T) {
+	oq := &orderedRequests{presence: make(map[string]*list.Element)}
+	t1 := &types.Transaction{From: []byte("from addr"), To: []byte("to addr"), Value: []byte("100")}
+	t2 := &types.Transaction{From: []byte("from addr"), To: []byte("to addr"), Value: []byte("200")}
 	oq.add(t1)
 	oq.add(t2)
 	tr := []*types.Transaction{t1, t2}
@@ -118,7 +117,7 @@ func TestRemoves(t *testing.T)  {
 	if oq.Len() != 0 {
 		t.Error("error removes not worked!")
 	}
-	t3 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("400")}
+	t3 := &types.Transaction{From: []byte("from addr"), To: []byte("to addr"), Value: []byte("400")}
 	tr = []*types.Transaction{t3}
 	rs := oq.removes(tr)
 	if rs != false {
@@ -126,35 +125,35 @@ func TestRemoves(t *testing.T)  {
 	}
 }
 
-func TestNewRequestStore(t *testing.T)  {
+func TestNewRequestStore(t *testing.T) {
 	rs := newRequestStore()
 	if rs.outstandingRequests == nil || rs.pendingRequests == nil {
 		t.Error("error newRequestStore not worked!")
 	}
 }
 
-func TestStoreOutstanding(t *testing.T)  {
+func TestStoreOutstanding(t *testing.T) {
 	rs := newRequestStore()
-	t1 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("100")}
+	t1 := &types.Transaction{From: []byte("from addr"), To: []byte("to addr"), Value: []byte("100")}
 	rs.storeOutstanding(t1)
 	if rs.outstandingRequests.has(hash(t1)) == false {
 		t.Errorf("error storeOutstanding(%v) failed", t1)
 	}
 }
 
-func TestStorePending(t *testing.T)  {
+func TestStorePending(t *testing.T) {
 	rs := newRequestStore()
-	t1 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("100")}
+	t1 := &types.Transaction{From: []byte("from addr"), To: []byte("to addr"), Value: []byte("100")}
 	rs.storePending(t1)
 	if rs.pendingRequests.has(hash(t1)) == false {
 		t.Errorf("error storePending(%v) failed", t1)
 	}
 }
 
-func TestStorePendingsAndRemove(t *testing.T)  {
+func TestStorePendingsAndRemove(t *testing.T) {
 	rs := newRequestStore()
-	t1 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("100")}
-	t2 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("200")}
+	t1 := &types.Transaction{From: []byte("from addr"), To: []byte("to addr"), Value: []byte("100")}
+	t2 := &types.Transaction{From: []byte("from addr"), To: []byte("to addr"), Value: []byte("200")}
 	tr := []*types.Transaction{t1, t2}
 
 	rs.storePendings(tr)
@@ -171,9 +170,9 @@ func TestStorePendingsAndRemove(t *testing.T)  {
 
 }
 
-func TestHasNonPending(t *testing.T)  {
+func TestHasNonPending(t *testing.T) {
 	rs := newRequestStore()
-	t1 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("100")}
+	t1 := &types.Transaction{From: []byte("from addr"), To: []byte("to addr"), Value: []byte("100")}
 	hnp := rs.hasNonPending()
 	if hnp == true {
 		t.Error("error hasNonPending() = true, expected false")
@@ -185,12 +184,12 @@ func TestHasNonPending(t *testing.T)  {
 	}
 }
 
-func TestGetNextNonPending(t *testing.T)  {
+func TestGetNextNonPending(t *testing.T) {
 	rs := newRequestStore()
-	t1 := &types.Transaction{From:[]byte("from addr1"), To:[]byte("to addr"), Value:[]byte("100")}
-	t2 := &types.Transaction{From:[]byte("from addr2"), To:[]byte("to addr"), Value:[]byte("200")}
-	t3 := &types.Transaction{From:[]byte("from addr3"), To:[]byte("to addr"), Value:[]byte("100")}
-	t4 := &types.Transaction{From:[]byte("from addr4"), To:[]byte("to addr"), Value:[]byte("200")}
+	t1 := &types.Transaction{From: []byte("from addr1"), To: []byte("to addr"), Value: []byte("100")}
+	t2 := &types.Transaction{From: []byte("from addr2"), To: []byte("to addr"), Value: []byte("200")}
+	t3 := &types.Transaction{From: []byte("from addr3"), To: []byte("to addr"), Value: []byte("100")}
+	t4 := &types.Transaction{From: []byte("from addr4"), To: []byte("to addr"), Value: []byte("200")}
 
 	rs.storeOutstanding(t1)
 	rs.storeOutstanding(t2)

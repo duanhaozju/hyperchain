@@ -4,6 +4,8 @@ package blockpool
 
 import (
 	"encoding/hex"
+	"errors"
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"hyperchain/common"
@@ -16,21 +18,19 @@ import (
 	"hyperchain/event"
 	"hyperchain/hyperdb"
 	"hyperchain/p2p"
+	"hyperchain/protos"
 	"hyperchain/recovery"
 	"hyperchain/trie"
-	"hyperchain/protos"
+	"os"
+	"sort"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
-	"sort"
-	"errors"
-	"os"
-	"fmt"
 )
 
 var (
-	log          *logging.Logger // package-level logger
+	log *logging.Logger // package-level logger
 )
 
 func init() {
@@ -70,11 +70,17 @@ type BlockPool struct {
 func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter, conf BlockPoolConf) *BlockPool {
 	var err error
 	blockcache, err := common.NewCache()
-	if err != nil {return nil}
+	if err != nil {
+		return nil
+	}
 	queue, err := common.NewCache()
-	if err != nil {return nil}
+	if err != nil {
+		return nil
+	}
 	validationqueue, err := common.NewCache()
-	if err != nil {return nil}
+	if err != nil {
+		return nil
+	}
 
 	pool := &BlockPool{
 		eventMux:        eventMux,
@@ -88,10 +94,14 @@ func NewBlockPool(eventMux *event.TypeMux, consenter consensus.Consenter, conf B
 	pool.demandNumber = currentChain.Height + 1
 	pool.demandSeqNo = currentChain.Height + 1
 	db, err := hyperdb.GetDBDatabase()
-	if err != nil {return nil}
+	if err != nil {
+		return nil
+	}
 
 	blk, err := core.GetBlock(db, currentChain.LatestBlockHash)
-	if err != nil {return nil}
+	if err != nil {
+		return nil
+	}
 	pool.lastValidationState.Store(common.BytesToHash(blk.MerkleRoot))
 
 	log.Noticef("Block pool Initialize demandNumber :%d, demandseqNo: %d\n", pool.demandNumber, pool.demandSeqNo)
@@ -123,11 +133,11 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 	}
 
 	// (1) Check SeqNo
-	if validationEvent.SeqNo < atomic.LoadUint64(&pool.demandSeqNo)  {
+	if validationEvent.SeqNo < atomic.LoadUint64(&pool.demandSeqNo) {
 		// Receive repeat ValidationEvent
 		log.Error("Receive Repeat ValidationEvent, seqno less than demandseqNo, ", validationEvent.SeqNo)
 		return
-	} else if validationEvent.SeqNo == atomic.LoadUint64(&pool.demandSeqNo)  {
+	} else if validationEvent.SeqNo == atomic.LoadUint64(&pool.demandSeqNo) {
 		// Process
 		if _, success := pool.PreProcess(validationEvent, commonHash, encryption, peerManager); success {
 			atomic.AddUint64(&pool.demandSeqNo, 1)
@@ -185,12 +195,12 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 		count := 0
 		set := validationEvent.Transactions
 		for _, idx := range index {
-			idx = idx-count
+			idx = idx - count
 			if idx == 0 {
 				set = set[1:]
 				count++
 			} else {
-				set = append(set[:idx - 1], set[idx + 1:]...)
+				set = append(set[:idx-1], set[idx+1:]...)
 				count++
 			}
 		}
@@ -264,7 +274,7 @@ func (pool *BlockPool) CheckSign(txs []*types.Transaction, commonHash crypto.Com
 	var mu sync.Mutex
 	for i := range txs {
 		wg.Add(1)
-		go func(i int){
+		go func(i int) {
 			tx := txs[i]
 			if !tx.ValidateSign(encryption, commonHash) {
 				log.Notice("Validation, found invalid signature, send from :", tx.Id)
@@ -297,9 +307,13 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		return err, nil, nil, nil, nil, nil, invalidTxs
 	}
 	txTrie, err := trie.New(common.Hash{}, db)
-	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
+	if err != nil {
+		return err, nil, nil, nil, nil, nil, invalidTxs
+	}
 	receiptTrie, err := trie.New(common.Hash{}, db)
-	if err != nil {return err, nil, nil, nil, nil, nil, invalidTxs}
+	if err != nil {
+		return err, nil, nil, nil, nil, nil, invalidTxs
+	}
 	v := pool.lastValidationState.Load()
 	initStatus, ok := v.(common.Hash)
 	if ok == false {
@@ -307,7 +321,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	}
 	statedb, err := state.New(initStatus, db)
 
-	if err != nil&&hyperdb.IfLogStatus() {
+	if err != nil && hyperdb.IfLogStatus() {
 		f, err1 := os.OpenFile(hyperdb.GetLogPath(), os.O_WRONLY|os.O_CREATE, 0644)
 		if err1 != nil {
 			fmt.Println("db.log file create failed. err: " + err.Error())
@@ -316,7 +330,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 			n, _ := f.Seek(0, os.SEEK_END)
 			currentTime := time.Now().Local()
 			newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-			str:=newFormat+"block pool 302 the err of statebd :"+err.Error()+"\n"
+			str := newFormat + "block pool 302 the err of statebd :" + err.Error() + "\n"
 			_, err = f.WriteAt([]byte(str), n)
 
 			f.Close()
@@ -333,7 +347,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		var data []byte
 		statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(*tx, vmenv)
-		if err != nil{
+		if err != nil {
 			var errType types.InvalidTransactionRecord_ErrType
 			if core.IsValueTransferErr(err) {
 				errType = types.InvalidTransactionRecord_OUTOFBALANCE
@@ -341,7 +355,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 				tmp := err.(*core.ExecContractError)
 				if tmp.GetType() == 0 {
 					errType = types.InvalidTransactionRecord_DEPLOY_CONTRACT_FAILED
-				} else if tmp.GetType() == 1{
+				} else if tmp.GetType() == 1 {
 					errType = types.InvalidTransactionRecord_INVOKE_CONTRACT_FAILED
 				} else {
 					// For extension
@@ -358,7 +372,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		}
 		// Persist transaction
 		tx.Version = []byte(pool.conf.TransactionVersion)
-		err, data = core.PersistTransaction(public_batch, tx, pool.conf.TransactionVersion, false, false);
+		err, data = core.PersistTransaction(public_batch, tx, pool.conf.TransactionVersion, false, false)
 		if err != nil {
 			log.Error("Put tx data into database failed! error msg, ", err.Error())
 			return err, nil, nil, nil, nil, nil, invalidTxs
@@ -368,7 +382,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		// Persist receipt
 		receipt.Version = []byte(pool.conf.TransactionVersion)
 		err, data = core.PersistReceipt(public_batch, receipt, pool.conf.TransactionVersion, false, false)
-		if  err != nil {
+		if err != nil {
 			log.Error("Put receipt data into database failed! error msg, ", err.Error())
 			return err, nil, nil, nil, nil, nil, invalidTxs
 		}
@@ -518,7 +532,6 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, pr
 		}
 	}
 
-
 	err, _ = core.PersistBlock(batch, block, string(block.Version), false, false)
 	if err != nil {
 		log.Error("Put block into database failed! error msg, ", err.Error())
@@ -535,7 +548,7 @@ func WriteBlock(block *types.Block, commonHash crypto.CommonHash, vid uint64, pr
 	log.Notice("Block hash", hex.EncodeToString(newChain.LatestBlockHash))
 	/*
 		Remove Cached Transactions which used to check transaction duplication
-	 */
+	*/
 	msg := protos.RemoveCache{Vid: vid}
 	consenter.RecvLocal(msg)
 }
@@ -571,7 +584,7 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 		return
 	}
 
-	block, err := core.GetBlockByNumber(db, ev.SeqNo - 1)
+	block, err := core.GetBlockByNumber(db, ev.SeqNo-1)
 	if err != nil {
 		return
 	}
@@ -630,7 +643,7 @@ func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 	}
 	sandBox := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, statedb, env)
 	receipt, _, _, err := core.ExecTransaction(*tx, sandBox)
-	if err != nil{
+	if err != nil {
 		var errType types.InvalidTransactionRecord_ErrType
 		if core.IsValueTransferErr(err) {
 			errType = types.InvalidTransactionRecord_OUTOFBALANCE
@@ -638,7 +651,7 @@ func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 			tmp := err.(*core.ExecContractError)
 			if tmp.GetType() == 0 {
 				errType = types.InvalidTransactionRecord_DEPLOY_CONTRACT_FAILED
-			} else if tmp.GetType() == 1{
+			} else if tmp.GetType() == 1 {
 				errType = types.InvalidTransactionRecord_INVOKE_CONTRACT_FAILED
 			} else {
 				// For extension
@@ -646,7 +659,7 @@ func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 		} else {
 			// For extension
 		}
-		t :=  &types.InvalidTransactionRecord{
+		t := &types.InvalidTransactionRecord{
 			Tx:      tx,
 			ErrType: errType,
 			ErrMsg:  []byte(err.Error()),
@@ -707,17 +720,17 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 	// 1. reset demand number and demand seqNo
 	atomic.StoreUint64(&pool.demandNumber, number)
 	atomic.StoreUint64(&pool.demandSeqNo, number)
-	atomic.StoreUint64(&pool.maxSeqNo, number - 1)
+	atomic.StoreUint64(&pool.maxSeqNo, number-1)
 	// 2. remove block releted data
-	pool.RemoveData(number, number + 1)
+	pool.RemoveData(number, number+1)
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
 		return
 	}
-	block, err := core.GetBlockByNumber(db, number - 1)
+	block, err := core.GetBlockByNumber(db, number-1)
 	if err != nil {
-		log.Errorf("miss block %d ,error msg %s", number - 1, err.Error())
+		log.Errorf("miss block %d ,error msg %s", number-1, err.Error())
 		return
 	}
 	// clear all stuff in block cache and validation cache
@@ -730,4 +743,3 @@ func (pool *BlockPool) PurgeValidateQueue() {
 func (pool *BlockPool) PurgeBlockCache() {
 	pool.blockCache.Purge()
 }
-

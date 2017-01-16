@@ -3,21 +3,21 @@
 package pbft
 
 import (
-	"testing"
-	"os"
-	"fmt"
-	"reflect"
 	"encoding/binary"
+	"fmt"
+	"os"
+	"reflect"
+	"testing"
 
+	"hyperchain/consensus/helper/persist"
 	"hyperchain/core"
 	"hyperchain/core/types"
-	"hyperchain/consensus/helper/persist"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-func TestPersistPSet(t *testing.T)  {
+func TestPersistPSet(t *testing.T) {
 
 	initDB()
 	defer clearDB()
@@ -51,7 +51,7 @@ func TestPersistPSet(t *testing.T)  {
 	}
 }
 
-func TestPersistQSet(t *testing.T)  {
+func TestPersistQSet(t *testing.T) {
 
 	initDB()
 	defer clearDB()
@@ -85,7 +85,7 @@ func TestPersistQSet(t *testing.T)  {
 
 }
 
-func TestRestorePQSet(t *testing.T)  {
+func TestRestorePQSet(t *testing.T) {
 
 	clearDB()
 	initDB()
@@ -137,27 +137,27 @@ func TestRestorePQSet(t *testing.T)  {
 	}
 }
 
-func TestBatchRelatedPersistFunctions(t *testing.T)  {
+func TestBatchRelatedPersistFunctions(t *testing.T) {
 
 	initDB()
 	defer clearDB()
 
 	pbft := new(pbftProtocal)
 	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
-	pbft.validatedBatchStore["t1"] = &TransactionBatch{Timestamp:111}
+	pbft.validatedBatchStore["t1"] = &TransactionBatch{Timestamp: 111}
 	pbft.validatedBatchStore["t2"] =
 		&TransactionBatch{
-			Timestamp:int64(222),
-			Batch:[]*types.Transaction{
+			Timestamp: int64(222),
+			Batch: []*types.Transaction{
 				{
-					From:[]byte("A"),
-					To:[]byte("B"),
-					Value:[]byte("123"),
+					From:  []byte("A"),
+					To:    []byte("B"),
+					Value: []byte("123"),
 				},
 				{
-					From:[]byte("B}"),
-					To:[]byte("A"),
-					Value:[]byte("321"),
+					From:  []byte("B}"),
+					To:    []byte("A"),
+					Value: []byte("321"),
 				},
 			},
 		}
@@ -197,7 +197,7 @@ func TestBatchRelatedPersistFunctions(t *testing.T)  {
 	}
 }
 
-func TestCheckpointPersist(t *testing.T)  {
+func TestCheckpointPersist(t *testing.T) {
 
 	initDB()
 	defer clearDB()
@@ -220,8 +220,7 @@ func TestCheckpointPersist(t *testing.T)  {
 	}
 }
 
-
-func TestViewPersist(t *testing.T)  {
+func TestViewPersist(t *testing.T) {
 
 	initDB()
 	defer clearDB()
@@ -244,7 +243,7 @@ func TestViewPersist(t *testing.T)  {
 	}
 }
 
-func TestSeqnoFunctions(t *testing.T)  {
+func TestSeqnoFunctions(t *testing.T) {
 
 	initDB()
 	defer clearDB()
@@ -253,23 +252,23 @@ func TestSeqnoFunctions(t *testing.T)  {
 	lseqno, err := pbft.getLastSeqNo()
 
 	if lseqno != 0 || err == nil {
-		t.Errorf(`error getLastSeqNo() = (%v, %v), actual: %v, %v`, lseqno, err, 0,  "Height of chain is 0")
+		t.Errorf(`error getLastSeqNo() = (%v, %v), actual: %v, %v`, lseqno, err, 0, "Height of chain is 0")
 	}
 
 	clearDB()
 
 	core.UpdateChain(&types.Block{
-		Timestamp:12,
-		Number:1222,
+		Timestamp: 12,
+		Number:    1222,
 	}, false)
 
 	lseqno, err = pbft.getLastSeqNo()
 	if err != nil || lseqno != 1222 {
-		t.Errorf(`error getLastSeqNo() = (%v, %v), actual: %v, %v`, lseqno, err, 1222,  nil)
+		t.Errorf(`error getLastSeqNo() = (%v, %v), actual: %v, %v`, lseqno, err, 1222, nil)
 	}
 }
 
-func TestRestoreLastSeqNo(t *testing.T)  {
+func TestRestoreLastSeqNo(t *testing.T) {
 
 	initDB()
 	defer clearDB()
@@ -279,7 +278,7 @@ func TestRestoreLastSeqNo(t *testing.T)  {
 
 }
 
-func TestRestoreState(t *testing.T)  {
+func TestRestoreState(t *testing.T) {
 
 	initDB()
 	defer clearDB()
@@ -323,20 +322,20 @@ func TestRestoreState(t *testing.T)  {
 	}
 
 	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
-	pbft.validatedBatchStore["t1"] = &TransactionBatch{Timestamp:111}
+	pbft.validatedBatchStore["t1"] = &TransactionBatch{Timestamp: 111}
 	pbft.validatedBatchStore["t2"] =
 		&TransactionBatch{
-			Timestamp:int64(222),
-			Batch:[]*types.Transaction{
+			Timestamp: int64(222),
+			Batch: []*types.Transaction{
 				{
-					From:[]byte("A"),
-					To:[]byte("B"),
-					Value:[]byte("123"),
+					From:  []byte("A"),
+					To:    []byte("B"),
+					Value: []byte("123"),
 				},
 				{
-					From:[]byte("B}"),
-					To:[]byte("A"),
-					Value:[]byte("321"),
+					From:  []byte("B}"),
+					To:    []byte("A"),
+					Value: []byte("321"),
 				},
 			},
 		}
@@ -346,7 +345,7 @@ func TestRestoreState(t *testing.T)  {
 	pbft.restoreState()
 	rs := pbft.validatedBatchStore[hash(pbft.validatedBatchStore["t1"])]
 
-	if !reflect.DeepEqual(pbft.validatedBatchStore["t1"], rs){
+	if !reflect.DeepEqual(pbft.validatedBatchStore["t1"], rs) {
 		t.Error("error restoreState reqBatchesPacked")
 	}
 
@@ -354,7 +353,7 @@ func TestRestoreState(t *testing.T)  {
 	persist.StoreState("view", view)
 	pbft.restoreState()
 
-	if !(pbft.view == binary.LittleEndian.Uint64(view)){
+	if !(pbft.view == binary.LittleEndian.Uint64(view)) {
 		t.Error("error restoreState restore view")
 	}
 
@@ -379,7 +378,7 @@ func Int64ToBytes(i int64) []byte {
 func initDB() {
 	core.InitDB("tmp/leveldb", 8088)
 }
-func clearDB()  {
+func clearDB() {
 	persist.DelAllState()
 	os.RemoveAll("tmp")
 }

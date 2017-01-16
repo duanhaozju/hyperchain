@@ -9,7 +9,7 @@ type callbackError struct {
 	message string
 }
 
-func (e *callbackError) Code() int{
+func (e *callbackError) Code() int {
 	return -32000
 }
 

@@ -29,4 +29,3 @@ func newHashCalculator() *hashCalculator {
 func returnHasherToPool(h *hashCalculator) {
 	hasherPool.Put(h)
 }
-

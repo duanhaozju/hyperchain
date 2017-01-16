@@ -3,7 +3,9 @@
 package hpc
 
 import (
+	"fmt"
 	"github.com/golang/protobuf/proto"
+	"github.com/juju/ratelimit"
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/core"
@@ -13,14 +15,12 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
 	"time"
-	"github.com/juju/ratelimit"
-	"fmt"
 )
 
 const (
-	defaultGas int64 = 10000
-	defaustGasPrice int64 = 10000
-	leveldb_not_found_error = "leveldb: not found"
+	defaultGas              int64 = 10000
+	defaustGasPrice         int64 = 10000
+	leveldb_not_found_error       = "leveldb: not found"
 )
 
 var (
@@ -49,52 +49,52 @@ type SendTxArgs struct {
 	GasPrice  *Number         `json:"gasPrice"`
 	Value     *Number         `json:"value"`
 	Payload   string          `json:"payload"`
-	Signature string                `json:"signature"`
-	Timestamp int64                 `json:"timestamp"`
+	Signature string          `json:"signature"`
+	Timestamp int64           `json:"timestamp"`
 	// --- test -----
-	Request   *Number `json:"request"`
-	Simulate  bool        `json:"simulate"`
-	Nonce     int64       `json:"nonce"`
+	Request  *Number `json:"request"`
+	Simulate bool    `json:"simulate"`
+	Nonce    int64   `json:"nonce"`
 }
 
 type TransactionResult struct {
 	Version     string         `json:"version"`
 	Hash        common.Hash    `json:"hash"`
 	BlockNumber *BlockNumber   `json:"blockNumber"`
-	BlockHash   *common.Hash    `json:"blockHash"`
+	BlockHash   *common.Hash   `json:"blockHash"`
 	TxIndex     *Number        `json:"txIndex"`
 	From        common.Address `json:"from"`
 	To          common.Address `json:"to"`
 	Amount      *Number        `json:"amount"`
 	//Gas         *Number        `json:"gas"`
 	//GasPrice    *Number        `json:"gasPrice"`
-	Timestamp   int64         `json:"timestamp"`
-	Nonce       int64         `json:"nonce"`
-	ExecuteTime *Number        `json:"executeTime"`
-	Payload     string	  `json:"payload"`
-	Invalid     bool           `json:"invalid"`
-	InvalidMsg  string           `json:"invalidMsg"`
+	Timestamp   int64   `json:"timestamp"`
+	Nonce       int64   `json:"nonce"`
+	ExecuteTime *Number `json:"executeTime"`
+	Payload     string  `json:"payload"`
+	Invalid     bool    `json:"invalid"`
+	InvalidMsg  string  `json:"invalidMsg"`
 }
 
-func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb hyperdb.Database, ratelimitEnable bool , bmax int64, rate time.Duration) *PublicTransactionAPI {
+func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb hyperdb.Database, ratelimitEnable bool, bmax int64, rate time.Duration) *PublicTransactionAPI {
 	return &PublicTransactionAPI{
-		eventMux: eventMux,
-		pm:       pm,
-		db:          hyperDb,
-		tokenBucket: ratelimit.NewBucket(rate, bmax),
+		eventMux:        eventMux,
+		pm:              pm,
+		db:              hyperDb,
+		tokenBucket:     ratelimit.NewBucket(rate, bmax),
 		ratelimitEnable: ratelimitEnable,
 	}
 }
 
 // txType 0 represents send normal tx, txType 1 represents deploy contract, txType 2 represents invoke contract, txType 3 represents signHash.
-func prepareExcute(args SendTxArgs, txType int) (SendTxArgs,error) {
+func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 	if args.Gas == nil {
 		args.Gas = NewInt64ToNumber(defaultGas)
 	}
 	if args.GasPrice == nil {
 		args.GasPrice = NewInt64ToNumber(defaustGasPrice)
 	}
-	if(args.From.Hex()==(common.Address{}).Hex()){
+	if args.From.Hex() == (common.Address{}).Hex() {
 		return SendTxArgs{}, &invalidParamsError{"address 'from' is invalid"}
 	}
 	if (txType == 0 || txType == 2) && args.To == nil {
@@ -140,10 +140,9 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	tx.TransactionHash = tx.BuildHash().Bytes()
 
 	//delete repeated tx
-	var exist, _= core.JudgeTransactionExist(tran.db, tx.TransactionHash)
+	var exist, _ = core.JudgeTransactionExist(tran.db, tx.TransactionHash)
 
-
-	if exist{
+	if exist {
 		return common.Hash{}, &repeadedTxError{"repeated tx"}
 	}
 
@@ -190,10 +189,10 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 }
 
 type ReceiptResult struct {
-	TxHash            string		`json:"txHash"`
-	PostState         string		`json:"postState"`
-	ContractAddress   string		`json:"contractAddress"`
-	Ret               string		`json:"ret"`
+	TxHash          string `json:"txHash"`
+	PostState       string `json:"postState"`
+	ContractAddress string `json:"contractAddress"`
+	Ret             string `json:"ret"`
 }
 
 // GetTransactionReceipt returns transaction's receipt for given transaction hash.
@@ -206,10 +205,10 @@ func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*Rece
 		}
 
 		return &ReceiptResult{
-			TxHash: 	 receipt.TxHash,
-			PostState: 	 receipt.PostState,
+			TxHash:          receipt.TxHash,
+			PostState:       receipt.PostState,
 			ContractAddress: receipt.ContractAddress,
-			Ret: 		 receipt.Ret,
+			Ret:             receipt.Ret,
 		}, nil
 	} else if err != nil {
 		return nil, err
@@ -234,7 +233,7 @@ func (tran *PublicTransactionAPI) GetTransactions(args IntervalArgs) ([]*Transac
 
 	var transactions []*TransactionResult
 
-	if blocks, err := getBlocks(args, tran.db);err != nil {
+	if blocks, err := getBlocks(args, tran.db); err != nil {
 		return nil, err
 	} else {
 		for _, block := range blocks {
@@ -333,7 +332,7 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockNumberAndIndex(n BlockNum
 
 	block, err := core.GetBlockByNumber(tran.db, n.ToUint64())
 	if err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &leveldbNotFoundError{fmt.Sprintf("block by %d",n)}
+		return nil, &leveldbNotFoundError{fmt.Sprintf("block by %d", n)}
 	} else if err != nil {
 		log.Errorf("%v", err)
 		return nil, &callbackError{err.Error()}
@@ -361,7 +360,7 @@ func (tran *PublicTransactionAPI) GetTransactionsByTime(args IntervalTime) ([]*T
 	currentChain := core.GetChainCopy()
 	height := currentChain.Height
 
-	var txs = make([]*TransactionResult,0)
+	var txs = make([]*TransactionResult, 0)
 
 	for i := height; i >= uint64(1); i-- {
 		block, _ := core.GetBlockByNumber(tran.db, i)
@@ -369,7 +368,7 @@ func (tran *PublicTransactionAPI) GetTransactionsByTime(args IntervalTime) ([]*T
 			continue
 		}
 		if block.WriteTime < args.StartTime {
-			return txs,nil
+			return txs, nil
 		}
 		if block.WriteTime >= args.StartTime && block.WriteTime <= args.Endtime {
 			trans := block.GetTransactions()
@@ -383,7 +382,7 @@ func (tran *PublicTransactionAPI) GetTransactionsByTime(args IntervalTime) ([]*T
 			}
 		}
 	}
-	return txs,nil
+	return txs, nil
 }
 
 // GetBlockTransactionCountByHash returns the number of block transactions for given block hash.
@@ -411,7 +410,7 @@ func (tran *PublicTransactionAPI) GetSignHash(args SendTxArgs) (common.Hash, err
 
 	var tx *types.Transaction
 
-	realArgs,err := prepareExcute(args, 3) // Allow the param "to" and "signature" is empty
+	realArgs, err := prepareExcute(args, 3) // Allow the param "to" and "signature" is empty
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -445,9 +444,9 @@ func (tran *PublicTransactionAPI) GetTransactionsCount() (interface{}, error) {
 
 	return struct {
 		Count     *Number `json:"count,"`
-		Timestamp int64        `json:"timestamp"`
+		Timestamp int64   `json:"timestamp"`
 	}{
-		Count: NewUint64ToNumber(chain.CurrentTxSum),
+		Count:     NewUint64ToNumber(chain.CurrentTxSum),
 		Timestamp: time.Now().UnixNano(),
 	}, nil
 }
@@ -491,24 +490,24 @@ func outputTransaction(trans interface{}, db hyperdb.Database) (*TransactionResu
 		if blk, err := core.GetBlockByNumber(db, bn); err == nil {
 			bHash := common.BytesToHash(blk.BlockHash)
 			txRes = &TransactionResult{
-				Version:       string(t.Version),
-				Hash:          txHash,
-				BlockNumber:   NewUint64ToBlockNumber(bn),
-				BlockHash:     &bHash,
-				TxIndex:       NewInt64ToNumber(txIndex),
-				From:          common.BytesToAddress(t.From),
-				To:            common.BytesToAddress(t.To),
-				Amount:        NewInt64ToNumber(txValue.Amount),
-				Nonce:         t.Nonce,
+				Version:     string(t.Version),
+				Hash:        txHash,
+				BlockNumber: NewUint64ToBlockNumber(bn),
+				BlockHash:   &bHash,
+				TxIndex:     NewInt64ToNumber(txIndex),
+				From:        common.BytesToAddress(t.From),
+				To:          common.BytesToAddress(t.To),
+				Amount:      NewInt64ToNumber(txValue.Amount),
+				Nonce:       t.Nonce,
 				//Gas: 		NewInt64ToNumber(txValue.GasLimit),
 				//GasPrice: 	NewInt64ToNumber(txValue.Price),
-				Timestamp:     t.Timestamp,
-				ExecuteTime:   NewInt64ToNumber((blk.WriteTime - blk.Timestamp) / int64(time.Millisecond)),
-				Payload:	common.ToHex(txValue.Payload),
-				Invalid:       false,
+				Timestamp:   t.Timestamp,
+				ExecuteTime: NewInt64ToNumber((blk.WriteTime - blk.Timestamp) / int64(time.Millisecond)),
+				Payload:     common.ToHex(txValue.Payload),
+				Invalid:     false,
 			}
-		} else if err != nil && err.Error() == leveldb_not_found_error{
-			return nil, &leveldbNotFoundError{fmt.Sprintf("block by %d",bn)}
+		} else if err != nil && err.Error() == leveldb_not_found_error {
+			return nil, &leveldbNotFoundError{fmt.Sprintf("block by %d", bn)}
 		} else if err != nil {
 			return nil, &callbackError{err.Error()}
 		}
@@ -520,22 +519,22 @@ func outputTransaction(trans interface{}, db hyperdb.Database) (*TransactionResu
 		}
 		txHash := t.Tx.GetTransactionHash()
 		txRes = &TransactionResult{
-			Version:       string(t.Tx.Version),
-			Hash:          txHash,
-			BlockNumber:   nil,
-			BlockHash:     nil,
-			TxIndex:       nil,
-			From:          common.BytesToAddress(t.Tx.From),
-			To:            common.BytesToAddress(t.Tx.To),
-			Amount:        NewInt64ToNumber(txValue.Amount),
-			Nonce:         t.Tx.Nonce,
+			Version:     string(t.Tx.Version),
+			Hash:        txHash,
+			BlockNumber: nil,
+			BlockHash:   nil,
+			TxIndex:     nil,
+			From:        common.BytesToAddress(t.Tx.From),
+			To:          common.BytesToAddress(t.Tx.To),
+			Amount:      NewInt64ToNumber(txValue.Amount),
+			Nonce:       t.Tx.Nonce,
 			//Gas: 		NewInt64ToNumber(txValue.GasLimit),
 			//GasPrice: 	NewInt64ToNumber(txValue.Price),
-			Timestamp:      t.Tx.Timestamp,
-			ExecuteTime:    nil,
-			Payload:	common.ToHex(txValue.Payload),
-			Invalid:        true,
-			InvalidMsg: 	t.ErrType.String(),
+			Timestamp:   t.Tx.Timestamp,
+			ExecuteTime: nil,
+			Payload:     common.ToHex(txValue.Payload),
+			Invalid:     true,
+			InvalidMsg:  t.ErrType.String(),
 		}
 	}
 

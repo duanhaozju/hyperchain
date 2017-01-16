@@ -83,7 +83,6 @@ func (e *shutdownError) Error() string {
 }
 
 type UnauthorizedError struct {
-
 }
 
 func (e *UnauthorizedError) Code() int {

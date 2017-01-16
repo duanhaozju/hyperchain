@@ -24,8 +24,8 @@ import (
 	context "golang.org/x/net/context"
 	grpc "google.golang.org/grpc"
 	//"hyperchain/core/crypto/primitives"
-	"hyperchain/core/crypto/primitives"
 	"github.com/op/go-logging"
+	"hyperchain/core/crypto/primitives"
 	"hyperchain/membersrvc"
 )
 
@@ -34,7 +34,6 @@ var log *logging.Logger // package-level logger
 func init() {
 	log = logging.MustGetLogger("p2p")
 }
-
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -282,21 +281,21 @@ func NewChatClient(cc *grpc.ClientConn) ChatClient {
 
 func (c *chatClient) Chat(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error) {
 
-	cm,cmerr := membersrvc.GetCaManager("./config/cert/eca.ca","./config/cert/ecert.cert","./config/cert/rca.ca","./config/cert/rcert.cert","./config/cert/ecert.priv",true,true)
-	if cmerr != nil{
+	cm, cmerr := membersrvc.GetCaManager("./config/cert/eca.ca", "./config/cert/ecert.cert", "./config/cert/rca.ca", "./config/cert/rcert.cert", "./config/cert/ecert.priv", true, true)
+	if cmerr != nil {
 		panic("cannot initliazied the camanager")
 	}
 	isUsed := cm.GetIsUsed()
-	if isUsed!= true {
-		if in.Signature==nil {
+	if isUsed != true {
+		if in.Signature == nil {
 			payloadSign := Signature{
-				Signature:[]byte{},
+				Signature: []byte{},
 			}
 
 			in.Signature = &payloadSign
 		}
 		in.Signature.Signature = []byte{}
-	}else {
+	} else {
 		var pri interface{}
 		//var parErr error
 		//cm.GetECertPrivateKeyByte()
@@ -312,18 +311,18 @@ func (c *chatClient) Chat(ctx context.Context, in *Message, opts ...grpc.CallOpt
 
 		//if parErr == nil{
 
-			//log.Notice("###########",in.Payload,pri)
-			sign,err := ecdsaEncry.Sign(in.Payload,pri)
-			if err == nil{
-				if in.Signature==nil {
-					payloadSign := Signature{
-						Signature:sign,
-					}
-
-					in.Signature = &payloadSign
+		//log.Notice("###########",in.Payload,pri)
+		sign, err := ecdsaEncry.Sign(in.Payload, pri)
+		if err == nil {
+			if in.Signature == nil {
+				payloadSign := Signature{
+					Signature: sign,
 				}
-				in.Signature.Signature = sign
+
+				in.Signature = &payloadSign
 			}
+			in.Signature.Signature = sign
+		}
 		//}
 
 	}

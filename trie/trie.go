@@ -7,10 +7,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/op/go-logging"
+	"github.com/pkg/errors"
 	"hyperchain/common"
 	"hyperchain/crypto"
 	"sync"
-	"github.com/pkg/errors"
 )
 
 var log *logging.Logger
@@ -472,7 +472,7 @@ func (t *Trie) hashRoot(db DatabaseWriter) (node, node, error) {
 }
 
 type hasher struct {
-	mux	sync.Mutex
+	mux sync.Mutex
 }
 
 func newHasher() *hasher {

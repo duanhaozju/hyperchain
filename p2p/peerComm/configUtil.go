@@ -68,7 +68,6 @@ func NewConfigUtil(configDir string) *ConfigUtil {
 	return &newConfigUtil
 }
 
-
 func (confutil *ConfigUtil) GetPort(nodeID int) int {
 	return confutil.nodes[nodeID].Port
 }

@@ -16,12 +16,12 @@ import (
 	"encoding/hex"
 	"errors"
 
+	"golang.org/x/crypto/ripemd160"
 	"hyperchain/common"
 	"hyperchain/crypto/ecies"
+	"hyperchain/crypto/rlp"
 	"hyperchain/crypto/secp256k1"
 	"hyperchain/crypto/sha3"
-	"hyperchain/crypto/rlp"
-	"golang.org/x/crypto/ripemd160"
 )
 
 func Keccak256(data ...[]byte) []byte {

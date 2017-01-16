@@ -1,5 +1,3 @@
-
-
 /*
 Package protos is a generated protocol buffer package.
 
@@ -57,6 +55,7 @@ import fmt "fmt"
 import math "math"
 
 import google_protobuf "google/protobuf"
+
 //import google_protobuf "github.com/golang/protobuf/ptypes/timestamp"
 
 import (

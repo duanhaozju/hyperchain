@@ -5,10 +5,10 @@ import (
 )
 
 type CertArgs struct {
-	 pubkey string `json:"pubkey"`
+	pubkey string `json:"pubkey"`
 }
 
-type PublicCertAPI struct{
+type PublicCertAPI struct {
 	cm *membersrvc.CAManager
 }
 
@@ -16,7 +16,7 @@ type TcertReturn struct {
 	TCert string `json:"tcert"`
 }
 
-func NewPublicCertAPI( cm *membersrvc.CAManager) *PublicCertAPI{
+func NewPublicCertAPI(cm *membersrvc.CAManager) *PublicCertAPI {
 	return &PublicCertAPI{
 		cm: cm,
 	}
@@ -25,16 +25,15 @@ func NewPublicCertAPI( cm *membersrvc.CAManager) *PublicCertAPI{
 // GetNodes returns status of all the nodes
 func (node *PublicCertAPI) GetTCert(args CertArgs) (TcertReturn, error) {
 	if node.cm == nil {
-		return TcertReturn{TCert:"invalid tcert"}, &CertError{"CAManager is nil"}
+		return TcertReturn{TCert: "invalid tcert"}, &CertError{"CAManager is nil"}
 	}
-	tcert,err :=  node.cm.SignTCert(args.pubkey)
-	if err != nil{
+	tcert, err := node.cm.SignTCert(args.pubkey)
+	if err != nil {
 		log.Error("sign tcert failed")
 		log.Error(err)
-		return TcertReturn{TCert:""}, &CertError{"signed tcert failed"}
+		return TcertReturn{TCert: ""}, &CertError{"signed tcert failed"}
 	}
 
-	return TcertReturn{TCert:tcert},nil
+	return TcertReturn{TCert: tcert}, nil
 
 }
-

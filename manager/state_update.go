@@ -1,18 +1,17 @@
 package manager
 
 import (
+	"bytes"
 	"github.com/golang/protobuf/proto"
-	"hyperchain/recovery"
-	"hyperchain/hyperdb"
-	"time"
-	"hyperchain/event"
-	"hyperchain/protos"
+	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/types"
-	"hyperchain/common"
-	"bytes"
+	"hyperchain/event"
+	"hyperchain/hyperdb"
+	"hyperchain/protos"
+	"hyperchain/recovery"
+	"time"
 )
-
 
 // Entry of state update
 func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
@@ -105,7 +104,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 				if blocks.Batch[i].Number == core.GetChainCopy().RequiredBlockNum {
 					acceptHash := blocks.Batch[i].HashBlock(self.commonHash).Bytes()
 					if common.Bytes2Hex(acceptHash) == common.Bytes2Hex(core.GetChainCopy().RequireBlockHash) {
-						core.PersistBlock(db.NewBatch(),blocks.Batch[i], self.blockPool.GetConfig().BlockVersion, true, true)
+						core.PersistBlock(db.NewBatch(), blocks.Batch[i], self.blockPool.GetConfig().BlockVersion, true, true)
 						if err := self.updateRequire(blocks.Batch[i]); err != nil {
 							log.Error("UpdateRequired failed!")
 							return
@@ -113,7 +112,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 
 						// receive all block in chain
 						if core.GetChainCopy().RequiredBlockNum <= core.GetChainCopy().Height {
-							lastBlk, err := core.GetBlockByNumber(db, core.GetChainCopy().RequiredBlockNum + 1)
+							lastBlk, err := core.GetBlockByNumber(db, core.GetChainCopy().RequiredBlockNum+1)
 							if err != nil {
 								log.Error("StateUpdate Failed!")
 								return
@@ -140,7 +139,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 							} else {
 								// the highest block in local is invalid, request the block
 								self.blockPool.CutdownBlock(lastBlk.Number - 1)
-								self.broadcastDemandBlock(lastBlk.Number - 1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
+								self.broadcastDemandBlock(lastBlk.Number-1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
 							}
 						}
 					}

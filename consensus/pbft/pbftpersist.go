@@ -3,9 +3,9 @@
 package pbft
 
 import (
-	"fmt"
 	"encoding/base64"
 	"encoding/binary"
+	"fmt"
 
 	"hyperchain/consensus/helper/persist"
 
@@ -188,7 +188,7 @@ func (pbft *pbftProtocal) persistRequestBatch(digest string) {
 }
 
 func (pbft *pbftProtocal) persistDelRequestBatch(digest string) {
-	persist.DelState("reqBatch."+digest)
+	persist.DelState("reqBatch." + digest)
 }
 
 func (pbft *pbftProtocal) persistDelAllRequestBatches() {

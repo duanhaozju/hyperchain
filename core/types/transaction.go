@@ -79,7 +79,7 @@ func NewTransaction(from []byte, to []byte, value []byte, timestamp int64, nonce
 		Value: value,
 		//Timestamp: time.Now().UnixNano(),
 		Timestamp: timestamp,
-		Nonce: nonce,
+		Nonce:     nonce,
 	}
 
 	return transaction

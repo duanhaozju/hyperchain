@@ -3,9 +3,9 @@
 package pbft
 
 import (
+	"container/list"
 	"testing"
 	"time"
-	"container/list"
 
 	"hyperchain/core/types"
 )
@@ -43,8 +43,8 @@ func TestTransactionStore_Len(t *testing.T) {
 func createTx(replica uint64, payload string) (tx *types.Transaction) {
 
 	tx = &types.Transaction{
-		Timestamp:	time.Now().UnixNano(),
-		Id:		replica,
+		Timestamp:       time.Now().UnixNano(),
+		Id:              replica,
 		TransactionHash: []byte(payload),
 	}
 
@@ -79,14 +79,14 @@ func BenchmarkTransactionStore(b *testing.B) {
 	}
 }
 
-func TestTransactionStoreLen(t *testing.T)  {
-	oq := &transactionStore{presence:make(map[string]*list.Element), order:list.List{}}
+func TestTransactionStoreLen(t *testing.T) {
+	oq := &transactionStore{presence: make(map[string]*list.Element), order: list.List{}}
 	if oq.Len() != 0 {
 		t.Error("error orderedRequests len() error!")
 	}
 	//oq = nil
-	t1 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("100"), TransactionHash:[]byte("t1")}
-	t2 := &types.Transaction{From:[]byte("from addr"), To:[]byte("to addr"), Value:[]byte("200"), TransactionHash:[]byte("t2")}
+	t1 := &types.Transaction{From: []byte("from addr"), To: []byte("to addr"), Value: []byte("100"), TransactionHash: []byte("t1")}
+	t2 := &types.Transaction{From: []byte("from addr"), To: []byte("to addr"), Value: []byte("200"), TransactionHash: []byte("t2")}
 	oq.add(t1)
 	oq.add(t2)
 	if oq.Len() != 2 {
@@ -94,7 +94,7 @@ func TestTransactionStoreLen(t *testing.T)  {
 	}
 }
 
-func TestNewTransactionStore(t *testing.T)  {
+func TestNewTransactionStore(t *testing.T) {
 	rs := newTransactionStore()
 	if rs.order.Len() != 0 || len(rs.presence) != 0 {
 		t.Error("error newTransactionStore not worked!")
