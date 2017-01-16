@@ -18,7 +18,8 @@ import (
 )
 const (
 	//缓冲区长度
-	bufferLength = 136
+	bufferLength = 138
+	sessionKeyLength = 266
 )
 // Init the log setting
 var log *logging.Logger // package-level logger
@@ -111,7 +112,7 @@ func (smc *SMCrypto)GenKeyPair()(prikey string,pubkey string,err error){
 	log.Debugf("私钥：%v,长度%v\n",prikey,cIPriKeyLen)
 
 	pubkey = C.GoString((*C.char)(unsafe.Pointer(cSPubKey)))
-	log.Debug("公钥：%v,长度%v\n",pubkey,cIPubKeyLen)
+	log.Debugf("公钥：%v,长度%v\n",pubkey,cIPubKeyLen)
 
 	return prikey,pubkey,nil
 
@@ -208,18 +209,18 @@ func (smc *SMCrypto)GenSessionKey(publicKey string)(sessionKey []byte,KCV []byte
 	pMyPubKey := (*C.uchar)(unsafe.Pointer(C.CString(publicKey)))
 	nMyPubkeyLen :=C.int(len(publicKey))
 
-	pCipherKey := (*C.uchar)(C.malloc(256))
-	pCipherKeyLen := C.int(256)
+	pCipherKey := (*C.uchar)(C.malloc(sessionKeyLength))
+	pCipherKeyLen := C.int(sessionKeyLength)
 
-	pSessionKey := (*C.uchar)(C.malloc(256))
-	pSessionKeyLen := C.int(256)
+	pSessionKey := (*C.uchar)(C.malloc(sessionKeyLength))
+	pSessionKeyLen := C.int(sessionKeyLength)
 
-	pKCV := (*C.uchar)(C.malloc(256))
+	pKCV := (*C.uchar)(C.malloc(sessionKeyLength))
 
 	sessionRet := C.SYD_SM2_GenSessionKey(cIpSocketFd,pMyPubKey,nMyPubkeyLen,pCipherKey,&pCipherKeyLen,pSessionKey,&pSessionKeyLen,pKCV)
 
 	if sessionRet != 0{
-		log.Debugf("sessionKey gen failed,code ",sessionRet)
+		log.Debugf("sessionKey gen failed,code %d",sessionRet)
 		return nil,nil,errors.New("sessionKey gen failed")
 	}
 	fmt.Println("session key：")
@@ -255,13 +256,13 @@ func (smc *SMCrypto)ConfirmSessionKey(privateKey string)(comfirmSessionKey []byt
 	pMyPrivKey := (*C.uchar)(unsafe.Pointer(C.CString(privateKey)))
 	nMyPrivkeyLen := C.int(len(privateKey))
 
-	pCipherKey := (*C.uchar)(C.malloc(256))
-	pCipherKeyLen := C.int(256)
+	pCipherKey := (*C.uchar)(C.malloc(sessionKeyLength))
+	pCipherKeyLen := C.int(sessionKeyLength)
 
-	pSessionKey := (*C.uchar)(C.malloc(256))
-	pSessionKeyLen := C.int(256)
+	pSessionKey := (*C.uchar)(C.malloc(sessionKeyLength))
+	pSessionKeyLen := C.int(sessionKeyLength)
 
-	pKCV := (*C.uchar)(C.malloc(256))
+	pKCV := (*C.uchar)(C.malloc(sessionKeyLength))
 
 	confirmSessionRet:= C.SYD_SM2_ConfirmSessionKey(cIpSocketFd,pMyPrivKey,nMyPrivkeyLen,pCipherKey,pCipherKeyLen,pSessionKey,&pSessionKeyLen,pKCV)
 
@@ -271,12 +272,12 @@ func (smc *SMCrypto)ConfirmSessionKey(privateKey string)(comfirmSessionKey []byt
 		return nil,nil,errors.New("confirmSessionKey gen failed")
 	}
 
-	confirmSession := C.GoBytes(unsafe.Pointer(pSessionKey),C.int(33))
+	confirmSession := C.GoBytes(unsafe.Pointer(pSessionKey),C.int(33*8))
 	hexConfirmSession := hex.EncodeToString(confirmSession)
 	if hexConfirmSession[0:1] =="S"{
-		KCV = C.GoBytes(unsafe.Pointer(pKCV),C.int(32))
+		KCV = C.GoBytes(unsafe.Pointer(pKCV),C.int(32*8))
 	}else{
-		KCV = C.GoBytes(unsafe.Pointer(pKCV),C.int(16))
+		KCV = C.GoBytes(unsafe.Pointer(pKCV),C.int(16*8))
 	}
 
 	log.Errorf("confirmSession：%v,%v\n",confirmSession,hex.EncodeToString(confirmSession))

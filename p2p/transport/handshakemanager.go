@@ -22,25 +22,28 @@ import (
 	"crypto/cipher"
 	"errors"
 	"hyperchain/membersrvc"
+	"hyperchain/p2p/transport/SMCrypto"
 )
 
 type HandShakeManagerNew struct {
 	e            ecdh.ECDH
 	privateKey   crypto.PrivateKey
 	publicKey    crypto.PublicKey
-	remotePubKey crypto.PublicKey
+	//remotePubKey crypto.PublicKey
 	secrets      map[string][]byte
-	signPublickey map[string]crypto.PublicKey
+	signPublickey map[string][]byte
 	isVerified map[string]bool
+	smc *SMCrypto.SMCrypto
+
  }
 
 //---------------------------------ECDH-------------------------------------------
 func NewHandShakeMangerNew(cm *membersrvc.CAManager) *HandShakeManagerNew {
 	var hSMN HandShakeManagerNew
 	hSMN.secrets = make(map[string][]byte)
-	hSMN.signPublickey = make(map[string]crypto.PublicKey)
+	hSMN.signPublickey = make(map[string][]byte)
 	hSMN.isVerified = make(map[string]bool)
-	hSMN.e = ecdh.NewEllipticECDH(elliptic.P384())
+	hSMN.e = ecdh.NewEllipticECDH(elliptic.P256())
 	var err error
 	//contenrPub,getErr2 := primitives.GetConfig("../../config/cert/server/eca.cert")
 
@@ -80,11 +83,11 @@ func (hSMN *HandShakeManagerNew) GenerateSecret(remotePublicKey []byte, peerHash
 	}
 }
 
-func (hSMN *HandShakeManagerNew) SetSignPublicKey(pub crypto.PublicKey,peerHash string){
-	hSMN.signPublickey[peerHash] = pub
+func (hSMN *HandShakeManagerNew) SetSignPublicKey(payload []byte,peerHash string){
+	hSMN.signPublickey[peerHash] = payload
 }
 
-func (hSMN *HandShakeManagerNew) GetSignPublicKey(peerHash string) crypto.PublicKey{
+func (hSMN *HandShakeManagerNew) GetSignPublicKey(peerHash string) []byte{
 	if pub, ok := hSMN.signPublickey[peerHash]; ok {
 		return pub
 	}else {

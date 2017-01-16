@@ -20,6 +20,7 @@ import (
 	"hyperchain/core/crypto/primitives"
 	"hyperchain/p2p/transport/ecdh"
 	"crypto/elliptic"
+	"crypto"
 )
 
 
@@ -139,44 +140,69 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	response.MsgTimeStamp = time.Now().UnixNano()
 	response.From = node.localAddr.ToPeerAddress()
 
-	if(msg.MessageType!=pb.Message_HELLO) {
+	if(msg.MessageType!=pb.Message_HELLO) && node.CM.GetIsUsed() == true{
 		/**
 		 * 这里的验证存在问题，首先是通过from取得公钥，这里的from是可以随意伪造的，存在风险
 		 * 在 != hello 的时候，没有对证书进行验证，是出于效率的考虑，但这存在安全隐患
  		 */
-
 		//验签
-		if node.CM.GetIsUsed() == true {
-			signPub := node.TEM.GetSignPublicKey(msg.From.Hash)
-			ecdsaEncrypto := primitives.NewEcdsaEncrypto("ecdsa")
-			bol, err := ecdsaEncrypto.VerifySign(signPub, msg.Payload, msg.Signature.Signature)
-			if !bol || err != nil {
-				log.Error("cannot verified the ecert signature", bol)
-				return &response, errors.New("signature is wrong!!")
-			}
-
-			//TODO 用CM对验证进行管理(此处的必要性需要考虑)
-			// TODO 1. 验证ECERT 的合法性
-			//bol1,err := node.CM.VerifyECert()
-
-			// TODO 2. 验证传输消息签名的合法性
-			// 参数1. PEM 证书 string
-			// 参数2. signature
-			// 参数3. 原始数据
-			//bol2,err := node.CM.VerifySignature(certPEM,signature,signed)
-
-			log.Debug("##########", bol, "##############")
-			log.Debug(" MSG FROM:", msg.From.ID)
-			log.Debug(" MSG TYPE:", msg.MessageType)
-			log.Debug("#################################")
+		signPubByte := node.TEM.GetSignPublicKey(msg.From.Hash)
+		ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
+		signPub,_ := ecdh256.Unmarshal(signPubByte)
+		ecdsaEncrypto := primitives.NewEcdsaEncrypto("ecdsa")
+		bol, err := ecdsaEncrypto.VerifySign(signPub, msg.Payload, msg.Signature.Signature)
+		if !bol || err != nil {
+			log.Error("cannot verified the ecert signature", bol)
+			return &response, errors.New("signature is wrong!!")
 		}
-	}else {
+
+		//TODO 用CM对验证进行管理(此处的必要性需要考虑)
+		// TODO 1. 验证ECERT 的合法性
+		//bol1,err := node.CM.VerifyECert()
+
+		// TODO 2. 验证传输消息签名的合法性
+		// 参数1. PEM 证书 string
+		// 参数2. signature
+		// 参数3. 原始数据
+		//bol2,err := node.CM.VerifySignature(certPEM,signature,signed)
+
+		log.Debug("##########", bol, "##############")
+		log.Debug(" MSG FROM:", msg.From.ID)
+		log.Debug(" MSG TYPE:", msg.MessageType)
+		log.Debug("#################################")
+
+	}else if (msg.MessageType==pb.Message_HELLO) && node.CM.GetIsUsed() == true {
+
 		ecertByte := msg.Signature.Ecert
+		rcertByte := msg.Signature.Rcert
+		// 先验证证书签名
 		bol,err := node.CM.VerifyECertSignature(string(ecertByte),msg.Payload,msg.Signature.Signature);
+		ecert,err :=  primitives.ParseCertificate(string(ecertByte))
+		signpub := ecert.PublicKey.(crypto.PublicKey)
+		ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
+		signpuByte := ecdh256.Marshal(signpub)
+		node.TEM.SetSignPublicKey(signpuByte,msg.From.Hash)
+
 		if err != nil{
 			log.Error("cannot verified the ecert signature",bol)
 			return &response, errors.New("signature is wrong!!")
 		}
+
+		//再验证证书合法性
+		verifyEcert,ecertErr := node.CM.VerifyECert(string(ecertByte))
+		verifyRcert,rcertErr := node.CM.VerifyRCert(string(rcertByte))
+
+		if !verifyEcert  || ecertErr != nil {
+			log.Error(ecertErr)
+			return &response,ecertErr
+		}
+
+		if !verifyRcert  || rcertErr != nil {
+			node.TEM.SetIsVerified(false,msg.From.Hash)
+		}else {
+			node.TEM.SetIsVerified(true,msg.From.Hash)
+		}
+
 	}
 
 
@@ -192,42 +218,9 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			log.Debug("=================================")
 			response.MessageType = pb.Message_HELLO_RESPONSE
 			//review 协商密钥
-
-			ecertByte := msg.Signature.Ecert
-			rcertByte := msg.Signature.Rcert
-
-			//ecert,_ := primitives.ParseCertificate(string(ecertByte));
-
-
-			verifyEcert,ecertErr := node.CM.VerifyECert(string(ecertByte))
-			verifyRcert,rcertErr := node.CM.VerifyRCert(string(rcertByte))
-
-			if !verifyEcert  || ecertErr != nil {
-				log.Error(ecertErr)
-				return &response,errors.New("ecert is missing.")
-			}
-
-			if !verifyRcert  || rcertErr != nil {
-				node.TEM.SetIsVerified(false,msg.From.Hash)
-			}else {
-				node.TEM.SetIsVerified(true,msg.From.Hash)
-			}
-
-			// TODO 这里没有验证消息来源，需要peer在sayhello 的时候对消息进行签名
-			// TODO 再在这里进行验证
-			// TODO
-
-
 			remotePublicKey := msg.Payload
-
 			//log.Error("RemotePublicKey: ",remotePublicKey )
 			genErr := node.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
-
-			e := ecdh.NewEllipticECDH(elliptic.P384())
-			pub,_ := e.Unmarshal(msg.Payload)
-
-			node.TEM.SetSignPublicKey(pub,msg.From.Hash)
-
 			//log.Error("#####",node.TEM.GetSignPublicKey(msg.From.Hash))
 			if genErr != nil {
 				log.Error("gen sec error", genErr)

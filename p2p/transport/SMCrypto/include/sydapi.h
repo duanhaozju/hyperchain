@@ -9,6 +9,7 @@
  *History:			null
  *==================================================================
  */
+
 #ifndef __SYDAPI_FILE__
 #define __SYDAPI_FILE__
 

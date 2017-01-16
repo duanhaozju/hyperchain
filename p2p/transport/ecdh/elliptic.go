@@ -18,7 +18,7 @@ type ellipticECDH struct {
 // to use as the elliptical curve for elliptical curve diffie-hellman.
 func NewEllipticECDH(curve elliptic.Curve) ECDH {
 	return &ellipticECDH{
-		curve: elliptic.P256(),
+		curve: curve,
 	}
 }
 

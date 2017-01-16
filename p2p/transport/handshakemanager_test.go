@@ -43,7 +43,7 @@ func TestSetKey(t *testing.T)  {
 	key := nHSM.GetLocalPublicKey()
 
 	//pub,_ := nHSM.e.Unmarshal(key)
-	e := ecdh.NewEllipticECDH(elliptic.P384())
+	e := ecdh.NewEllipticECDH(elliptic.P256())
 	pub,_ := e.Unmarshal(key)
 	//cert,_ := primitives.GetConfig("../../config/cert/server/eca.cert")
 	//ecert := primitives.ParseCertificate(cert)
