@@ -5,12 +5,11 @@ package vm
 import (
 	"math/big"
 
+	"fmt"
 	"hyperchain/common"
 	"hyperchain/core/crypto"
 	"hyperchain/core/vm/params"
-	"fmt"
 )
-
 
 // PrecompiledAccount represents a native ethereum contract
 type PrecompiledAccount struct {

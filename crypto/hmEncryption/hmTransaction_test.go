@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"math/big"
 	"testing"
-
 	//"hyperchain/crypto"
 	//"github.com/astaxie/beego/toolbox"
 )
@@ -95,8 +94,8 @@ func Test_getput(t *testing.T) {
 // whole_networkpublickey PaillierPublickey, ecdsa_publickey *ecdsa.PublicKey) (bool, []byte, []byte, []byte)
 //newBalance_hm, transferAmount_hm, transferAmount_ecc
 //NodeVerify(whole_networkpublickey PaillierPublickey, oldBalance_hm []byte, transferAmount_hm []byte, newBalance_hm []byte) bool
-func Test_hmTransaction(t *testing.T){
-	paillerkey,_:= Generate_paillierKey()
+func Test_hmTransaction(t *testing.T) {
+	paillerkey, _ := Generate_paillierKey()
 	wholepublickey := paillerkey.PaillierPublickey
 	wholeprivate := paillerkey.PaillierPrivatekey
 
@@ -111,10 +110,9 @@ func Test_hmTransaction(t *testing.T){
 	fmt.Println()
 
 	bign := new(big.Int)
-	bign.SetString(wholepublickey.N.String(),10)
+	bign.SetString(wholepublickey.N.String(), 10)
 	fmt.Println(*wholepublickey.N)
 	fmt.Println(*bign)
-
 
 	//paillerprivate := paillerkey.PaillierPrivatekey
 
@@ -125,8 +123,8 @@ func Test_hmTransaction(t *testing.T){
 	trans_byte := trans.Bytes()
 
 	phm := New_Paillier_Hmencryption()
-	hmoldBalance,_:= phm.Encrypto_message(&wholepublickey,old_byte)
-	realold := phm.Decrypto_Ciphertext(paillerkey,hmoldBalance)
+	hmoldBalance, _ := phm.Encrypto_message(&wholepublickey, old_byte)
+	realold := phm.Decrypto_Ciphertext(paillerkey, hmoldBalance)
 	fmt.Println(hmoldBalance)
 	fmt.Println(old_byte)
 	fmt.Println(realold)
@@ -136,7 +134,7 @@ func Test_hmTransaction(t *testing.T){
 
 	//HmillegalBanlance := make([]byte,32)
 
-	index,hmnewbalance,hmTransferAmount:= PreHmTransaction(old_byte,trans_byte,nil,wholepublickey)
+	index, hmnewbalance, hmTransferAmount := PreHmTransaction(old_byte, trans_byte, nil, wholepublickey)
 	fmt.Println(index)
 	fmt.Println(hmnewbalance)
 	fmt.Println(hmTransferAmount)
@@ -148,33 +146,29 @@ func Test_hmTransaction(t *testing.T){
 	fmt.Println(testbig)
 	fmt.Println(testbig.BitLen())
 
-
-
-	sum,_ :=phm.Calculator(&wholepublickey,"paillier",hmnewbalance,hmTransferAmount)
-	desum := phm.Decrypto_Ciphertext(paillerkey,sum)
+	sum, _ := phm.Calculator(&wholepublickey, "paillier", hmnewbalance, hmTransferAmount)
+	desum := phm.Decrypto_Ciphertext(paillerkey, sum)
 
 	fmt.Println(len(sum))
 	fmt.Println(desum)
 
-
-	flag := EqualTwoBytes(hmoldBalance,sum)
+	flag := EqualTwoBytes(hmoldBalance, sum)
 
 	fmt.Println(flag)
 
 }
 
-
-func Test_hmencryption(t *testing.T){
+func Test_hmencryption(t *testing.T) {
 	//keypair := new(PaillierKey)
-	private :=new(PaillierPrivatekey)
-	public :=new(PaillierPublickey)
-	private.P,_= new(big.Int).SetString("4168938673",10)
-	private.Q,_=new(big.Int).SetString("3433902229",10)
-	private.Lambda,_=new(big.Int).SetString("132553035131260752",10)
+	private := new(PaillierPrivatekey)
+	public := new(PaillierPublickey)
+	private.P, _ = new(big.Int).SetString("4168938673", 10)
+	private.Q, _ = new(big.Int).SetString("3433902229", 10)
+	private.Lambda, _ = new(big.Int).SetString("132553035131260752", 10)
 
-	public.N,_=new(big.Int).SetString("14315727801779002117",10)
-	public.G,_=new(big.Int).SetString("90976693534933209671098397317966944738726332459523400324197777885595356310417",10)
-	public.Nsquare,_=new(big.Int).SetString("204940062494628260128356353732290481689",10)
+	public.N, _ = new(big.Int).SetString("14315727801779002117", 10)
+	public.G, _ = new(big.Int).SetString("90976693534933209671098397317966944738726332459523400324197777885595356310417", 10)
+	public.Nsquare, _ = new(big.Int).SetString("204940062494628260128356353732290481689", 10)
 	fmt.Println(len("204940062494628260128356353732290481689"))
 	old := big.NewInt(100)
 	old_byte := old.Bytes()
@@ -183,23 +177,18 @@ func Test_hmencryption(t *testing.T){
 	trans_byte := trans.Bytes()
 
 	phm := New_Paillier_Hmencryption()
-	hmoldBalance,_:= phm.Encrypto_message(public,old_byte)
+	hmoldBalance, _ := phm.Encrypto_message(public, old_byte)
 	hmoldbig := new(big.Int).SetBytes(hmoldBalance)
 	fmt.Println(hmoldbig)
 
+	index, hmnewbalance, hmTransferAmount := PreHmTransaction(old_byte, trans_byte, nil, *public)
 
+	sum, _ := phm.Calculator(public, "paillier", hmnewbalance, hmTransferAmount)
 
+	hmsum := new(big.Int).SetBytes(sum)
 
-
-
-	index,hmnewbalance,hmTransferAmount:= PreHmTransaction(old_byte,trans_byte,nil,*public)
-
-	sum,_:= phm.Calculator(public,"paillier",hmnewbalance,hmTransferAmount)
-
-	hmsum :=new(big.Int).SetBytes(sum)
-
-	hmnew :=new(big.Int).SetBytes(hmnewbalance)
-	hmtrf :=new(big.Int).SetBytes(hmTransferAmount)
+	hmnew := new(big.Int).SetBytes(hmnewbalance)
+	hmtrf := new(big.Int).SetBytes(hmTransferAmount)
 
 	fmt.Println(index)
 	fmt.Println(hmnew)
@@ -208,7 +197,7 @@ func Test_hmencryption(t *testing.T){
 
 }
 
-func Test_Big(t *testing.T){
+func Test_Big(t *testing.T) {
 	//old := big.NewInt(500)
 	//fmt.Println(old)
 	//
@@ -228,32 +217,25 @@ func Test_Big(t *testing.T){
 
 	transfer := new(big.Int)
 
-	transfer.SetString("183003357837956770250501280563466144409",10)
+	transfer.SetString("183003357837956770250501280563466144409", 10)
 	fmt.Println(transfer)
 	fmt.Println(len(transfer.String()))
-	remain,_:=new(big.Int).SetString("104421979747789724691932366515971813173",10)
+	remain, _ := new(big.Int).SetString("104421979747789724691932366515971813173", 10)
 	fmt.Println(remain)
 	fmt.Println(len(remain.String()))
-	mul:=new(big.Int)
-	mul = mul.Mul(transfer,remain)
+	mul := new(big.Int)
+	mul = mul.Mul(transfer, remain)
 
+	nsquare, _ := new(big.Int).SetString("204940062494628260128356353732290481689", 10)
 
-	nsquare,_:=new(big.Int).SetString("204940062494628260128356353732290481689",10)
-
-
-
-
-	mod:=new(big.Int)
-	mod = mod.Mod(mul,nsquare)
+	mod := new(big.Int)
+	mod = mod.Mod(mul, nsquare)
 	fmt.Println("201210379221173114992221939430310283117")
 	fmt.Println(len("201210379221173114992221939430310283117"))
 	fmt.Println(mul)
 	fmt.Println(len(mul.String()))
 	fmt.Println(mod)
 }
-
-
-
 
 //func Test_createccpub(t *testing.T){
 //	x := new(big.Int)
@@ -262,4 +244,3 @@ func Test_Big(t *testing.T){
 //
 //
 //}
-

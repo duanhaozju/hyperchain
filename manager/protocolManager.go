@@ -25,31 +25,30 @@ func init() {
 	log = logging.MustGetLogger("manager")
 }
 
-
 type ProtocolManager struct {
-	serverPort        int
-	blockPool         *blockpool.BlockPool
-	Peermanager       p2p.PeerManager
+	serverPort  int
+	blockPool   *blockpool.BlockPool
+	Peermanager p2p.PeerManager
 
-	nodeInfo          p2p.PeerInfos // node info ,store node status,ip,port
-	consenter         consensus.Consenter
+	nodeInfo  p2p.PeerInfos // node info ,store node status,ip,port
+	consenter consensus.Consenter
 
-	AccountManager    *accounts.AccountManager
-	commonHash        crypto.CommonHash
+	AccountManager *accounts.AccountManager
+	commonHash     crypto.CommonHash
 
-	eventMux          *event.TypeMux
+	eventMux *event.TypeMux
 
-	validateSub       event.Subscription
-	commitSub         event.Subscription
-	consensusSub      event.Subscription
-	viewChangeSub     event.Subscription
-	respSub           event.Subscription
-	syncCheckpointSub event.Subscription
-	syncBlockSub      event.Subscription
-	syncStatusSub     event.Subscription
-	peerMaintainSub   event.Subscription
-	quitSync          chan struct{}
-	wg                sync.WaitGroup
+	validateSub         event.Subscription
+	commitSub           event.Subscription
+	consensusSub        event.Subscription
+	viewChangeSub       event.Subscription
+	respSub             event.Subscription
+	syncCheckpointSub   event.Subscription
+	syncBlockSub        event.Subscription
+	syncStatusSub       event.Subscription
+	peerMaintainSub     event.Subscription
+	quitSync            chan struct{}
+	wg                  sync.WaitGroup
 	syncBlockCache      *common.Cache
 	replicaStatus       *common.Cache
 	syncReplicaInterval time.Duration
@@ -65,8 +64,8 @@ type NodeManager struct {
 var eventMuxAll *event.TypeMux
 
 func NewProtocolManager(blockPool *blockpool.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
-//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
-am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, initType int,  expired chan bool, expiredTime time.Time) *ProtocolManager {
+	//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
+	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, initType int, expired chan bool, expiredTime time.Time) *ProtocolManager {
 	synccache, _ := common.NewCache()
 	replicacache, _ := common.NewCache()
 	manager := &ProtocolManager{
@@ -180,6 +179,7 @@ func (self *ProtocolManager) validateLoop() {
 		}
 	}
 }
+
 // listen commit msg
 func (self *ProtocolManager) commitLoop() {
 	for obj := range self.commitSub.Chan() {
@@ -192,7 +192,6 @@ func (self *ProtocolManager) commitLoop() {
 		}
 	}
 }
-
 
 func (self *ProtocolManager) respHandlerLoop() {
 
@@ -299,7 +298,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			msg := &protos.DelNodeMessage{
 				DelPayload: payload,
 				RouterHash: routerHash,
-				Id: id,
+				Id:         id,
 			}
 			self.consenter.RecvLocal(msg)
 		case event.BroadcastDelPeerEvent:
@@ -369,8 +368,6 @@ func (self *ProtocolManager) GetNodeInfo() p2p.PeerInfos {
 	log.Info("nodeInfo is ", self.nodeInfo)
 	return self.nodeInfo
 }
-
-
 
 func (self *ProtocolManager) NegotiateView() {
 	negoView := &protos.Message{

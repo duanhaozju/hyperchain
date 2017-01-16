@@ -345,27 +345,27 @@ func (c *conn) writeFloat64(n float64) error {
 }
 
 func (c *conn) writeCommand(cmd string, args []interface{}) (err error) {
-	num:=1
+	num := 1
 	for _, arg := range args {
 		switch arg := arg.(type) {
 		case []string:
 			num += len(arg)
 		default:
-			num+=1
+			num += 1
 		}
 	}
 	c.writeLen('*', num)
 	err = c.writeString(cmd)
-	Lang:
+Lang:
 	for _, arg := range args {
 		if err != nil {
 			break
 		}
 		switch arg := arg.(type) {
 		case []string:
-			for i:=0;i<len(arg);i++{
-				err=c.writeBytes([]byte(arg[i]))
-				if err!=nil{
+			for i := 0; i < len(arg); i++ {
+				err = c.writeBytes([]byte(arg[i]))
+				if err != nil {
 					break Lang
 				}
 			}

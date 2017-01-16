@@ -9,7 +9,7 @@ import (
 	"encoding/asn1"
 	"math/big"
 	//"github.com/op/go-logging"
-	hcrypto"hyperchain/crypto"
+	hcrypto "hyperchain/crypto"
 )
 
 // ECDSASignature represents an ECDSA signature
@@ -81,4 +81,3 @@ func ECDSAVerify(verKey interface{}, msg, signature []byte) (bool, error) {
 	//h := Hash(msg)
 	return ecdsa.Verify(&temp, h, ecdsaSignature.R, ecdsaSignature.S), nil
 }
-

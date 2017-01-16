@@ -3,7 +3,7 @@
 /**
 author:zhangkejie
 log:重新实现新的HandShakeManager
- */
+*/
 package transport
 
 import (
@@ -14,28 +14,28 @@ import (
 	//"crypto/aes"
 	"crypto/rand"
 	"encoding/hex"
-	"hyperchain/p2p/transport/ecdh"
 	"hyperchain/core/crypto/primitives"
+	"hyperchain/p2p/transport/ecdh"
 	//"crypto/aes"
-	"crypto/ecdsa"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/ecdsa"
 	"errors"
 	"hyperchain/membersrvc"
 	//"hyperchain/p2p/transport/SMCrypto"
 )
 
 type HandShakeManagerNew struct {
-	e            ecdh.ECDH
-	privateKey   crypto.PrivateKey
-	publicKey    crypto.PublicKey
+	e          ecdh.ECDH
+	privateKey crypto.PrivateKey
+	publicKey  crypto.PublicKey
 	//remotePubKey crypto.PublicKey
-	secrets      map[string][]byte
+	secrets       map[string][]byte
 	signPublickey map[string][]byte
-	isVerified map[string]bool
+	isVerified    map[string]bool
 	//smc *SMCrypto.SMCrypto
 
- }
+}
 
 //---------------------------------ECDH-------------------------------------------
 func NewHandShakeMangerNew(cm *membersrvc.CAManager) *HandShakeManagerNew {
@@ -48,20 +48,20 @@ func NewHandShakeMangerNew(cm *membersrvc.CAManager) *HandShakeManagerNew {
 	//contenrPub,getErr2 := primitives.GetConfig("../../config/cert/server/eca.cert")
 
 	//若无私钥，相当于无ecert,但为确保节点启动，自动生产公私钥对
-	if(cm.GetIsUsed()==false){
+	if cm.GetIsUsed() == false {
 		hSMN.privateKey, hSMN.publicKey, err = hSMN.e.GenerateKey(rand.Reader)
-		if err!=nil {
+		if err != nil {
 			panic("GenerateKey failed,please restart the node.")
 		}
-	}else {
+	} else {
 		//var pri *ecdsa.PrivateKey
 		contentPri := cm.GetECertPrivateKeyByte()
-		pri,err1 := primitives.ParseKey(string(contentPri))
+		pri, err1 := primitives.ParseKey(string(contentPri))
 		privateKey := pri.(*ecdsa.PrivateKey)
 		//cert := primitives.ParseCertificate(contenrPub)
-		if err1!=nil {
+		if err1 != nil {
 			panic("Parse PrivateKey or Ecert failed,please check the privateKey or Ecert and restart the node!")
-		}else {
+		} else {
 			hSMN.privateKey = privateKey
 			hSMN.publicKey = (*privateKey).PublicKey
 		}
@@ -83,35 +83,34 @@ func (hSMN *HandShakeManagerNew) GenerateSecret(remotePublicKey []byte, peerHash
 	}
 }
 
-func (hSMN *HandShakeManagerNew) SetSignPublicKey(payload []byte,peerHash string){
+func (hSMN *HandShakeManagerNew) SetSignPublicKey(payload []byte, peerHash string) {
 	hSMN.signPublickey[peerHash] = payload
 }
 
-func (hSMN *HandShakeManagerNew) GetSignPublicKey(peerHash string) []byte{
+func (hSMN *HandShakeManagerNew) GetSignPublicKey(peerHash string) []byte {
 	if pub, ok := hSMN.signPublickey[peerHash]; ok {
 		return pub
-	}else {
+	} else {
 		log.Error("无法取得相应公钥", peerHash)
 		return nil
 	}
 }
 
-func (hSMN *HandShakeManagerNew) GetIsVerified(peerHash string) bool  {
+func (hSMN *HandShakeManagerNew) GetIsVerified(peerHash string) bool {
 	if bol, ok := hSMN.isVerified[peerHash]; ok {
 		return bol
-	}else {
+	} else {
 		log.Error("无法取得相应公钥", peerHash)
 		return false
 	}
 
-
 }
 
-func (hSMN *HandShakeManagerNew) SetIsVerified(is_verified bool,peerHash string){
+func (hSMN *HandShakeManagerNew) SetIsVerified(is_verified bool, peerHash string) {
 	hSMN.isVerified[peerHash] = is_verified
 }
 
-func (hSMN *HandShakeManagerNew) EncWithSecret(message []byte, peerHash string)  ([]byte,error) {
+func (hSMN *HandShakeManagerNew) EncWithSecret(message []byte, peerHash string) ([]byte, error) {
 
 	// 3DES
 	//key := []byte("sfe023f_sefiel#fi32lf3e!")
@@ -125,12 +124,11 @@ func (hSMN *HandShakeManagerNew) EncWithSecret(message []byte, peerHash string) 
 	//}
 	//return encrypted
 
-
 	//aes
-	if _,ok := hSMN.secrets[peerHash];!ok{
+	if _, ok := hSMN.secrets[peerHash]; !ok {
 		//panic("the peer hasn't negotiate the share secret, and please restart this node")
 
-		return []byte(""),errors.New("the peer hasn't negotiate the share secret, and please restart this node")
+		return []byte(""), errors.New("the peer hasn't negotiate the share secret, and please restart this node")
 	}
 	key := hSMN.secrets[peerHash][:16]
 	var iv = []byte(key)[:aes.BlockSize]
@@ -138,12 +136,12 @@ func (hSMN *HandShakeManagerNew) EncWithSecret(message []byte, peerHash string) 
 	aesBlockEncrypter, _ := aes.NewCipher(key)
 	aesEncrypter := cipher.NewCFBEncrypter(aesBlockEncrypter, iv)
 	aesEncrypter.XORKeyStream(encrypted, []byte(message))
-	return encrypted,nil
+	return encrypted, nil
 	//return message
 
 }
 
-func (hSMN *HandShakeManagerNew) DecWithSecret(message []byte, peerHash string)  ([]byte,error){
+func (hSMN *HandShakeManagerNew) DecWithSecret(message []byte, peerHash string) ([]byte, error) {
 
 	//3DES
 	//key := []byte("sfe023f_sefiel#fi32lf3e!")
@@ -157,9 +155,9 @@ func (hSMN *HandShakeManagerNew) DecWithSecret(message []byte, peerHash string) 
 
 	//aes
 	//
-	if _,ok := hSMN.secrets[peerHash];!ok{
+	if _, ok := hSMN.secrets[peerHash]; !ok {
 		//panic("the peer hasn't negotiate the share secret, and please restart this node")
-		return []byte(""),errors.New("the peer hasn't negotiate the share secret, and please restart this node")
+		return []byte(""), errors.New("the peer hasn't negotiate the share secret, and please restart this node")
 	}
 	key := hSMN.secrets[peerHash][:16]
 	var iv = []byte(key)[:aes.BlockSize]
@@ -167,7 +165,7 @@ func (hSMN *HandShakeManagerNew) DecWithSecret(message []byte, peerHash string) 
 	aesBlockDecrypter, _ := aes.NewCipher([]byte(key))
 	aesDecrypter := cipher.NewCFBDecrypter(aesBlockDecrypter, iv)
 	aesDecrypter.XORKeyStream(decrypted, message)
-	return decrypted,nil
+	return decrypted, nil
 	//return message
 
 }
@@ -192,5 +190,3 @@ func (this *HandShakeManagerNew) PrintAllSecHash() {
 	}
 
 }
-
-

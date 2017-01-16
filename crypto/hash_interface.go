@@ -6,6 +6,6 @@ import "hyperchain/common"
 
 // hash interface
 type CommonHash interface {
-     Hash(x interface{}) (h common.Hash)
-     ByteHash(data ...[]byte) (h common.Hash)
+	Hash(x interface{}) (h common.Hash)
+	ByteHash(data ...[]byte) (h common.Hash)
 }

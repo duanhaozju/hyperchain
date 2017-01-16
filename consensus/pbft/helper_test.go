@@ -3,10 +3,10 @@
 package pbft
 
 import (
-	"testing"
-	"time"
 	"hyperchain/consensus/events"
 	"strings"
+	"testing"
+	"time"
 
 	//"hyperchain/core/types"
 	//"reflect"
@@ -16,19 +16,18 @@ import (
 
 func TestSortableUint64SliceFunctions(t *testing.T) {
 	slice := sortableUint64Slice{1, 2, 3, 4, 5}
-	if slice.Len() != 5{
+	if slice.Len() != 5 {
 		t.Error("error slice.len != 5")
 	}
-	if slice.Less(2, 3) != true{
+	if slice.Less(2, 3) != true {
 		t.Error("error slice[2] >= slice[3]")
 	}
-	if slice.Swap(2, 3); !(slice[2] == 4 && slice[3] ==3){
+	if slice.Swap(2, 3); !(slice[2] == 4 && slice[3] == 3) {
 		t.Error("error exchange slice[2], slice[3]")
 	}
 }
 
-
-func TestPbftStateFunctions(t *testing.T)  {
+func TestPbftStateFunctions(t *testing.T) {
 	pp := new(pbftProtocal)
 	pp.valid = false
 
@@ -37,7 +36,7 @@ func TestPbftStateFunctions(t *testing.T)  {
 		t.Errorf("pbftProtocal %s function not worked!", "validateState")
 	}
 
-	pp.valid = true;
+	pp.valid = true
 	pp.invalidateState()
 
 	if pp.valid == true {
@@ -45,14 +44,14 @@ func TestPbftStateFunctions(t *testing.T)  {
 	}
 }
 
-func TestPbftTimeFunctions(t *testing.T)  {
-	pp := new (pbftProtocal)
+func TestPbftTimeFunctions(t *testing.T) {
+	pp := new(pbftProtocal)
 	pp.batchTimeout = 1 * time.Second
-	pp.batchTimerActive = false;
+	pp.batchTimerActive = false
 	pp.batchTimer = events.NewTimerFactoryImpl(events.NewManagerImpl()).CreateTimer()
 
 	pp.startBatchTimer()
-	if(pp.batchTimeout != 1 * time.Second || pp.batchTimerActive == false){
+	if pp.batchTimeout != 1*time.Second || pp.batchTimerActive == false {
 		t.Errorf("pbftProtocal %s not work!", "startBatchTimer")
 	}
 
@@ -61,8 +60,8 @@ func TestPbftTimeFunctions(t *testing.T)  {
 		t.Errorf("pbftProtocal %s not work!", "stopBatchTimer")
 	}
 
-	pp.newViewTimer =  events.NewTimerFactoryImpl(events.NewManagerImpl()).CreateTimer()
-	pp.startTimer(2 * time.Second, "test pbftProtocol viewTimer")
+	pp.newViewTimer = events.NewTimerFactoryImpl(events.NewManagerImpl()).CreateTimer()
+	pp.startTimer(2*time.Second, "test pbftProtocol viewTimer")
 	if pp.timerActive == false {
 		t.Errorf("pbftProtocal %s not work!", "startTimer")
 	}
@@ -72,7 +71,7 @@ func TestPbftTimeFunctions(t *testing.T)  {
 		t.Errorf("pbftProtocal %s not work!", "stopTimer")
 	}
 	rs := "test pbftProtocol softSDtartTimer"
-	pp.softStartTimer(1 * time.Second, rs)
+	pp.softStartTimer(1*time.Second, rs)
 	if pp.timerActive == false || strings.Compare(pp.newViewTimerReason, rs) != 0 {
 		t.Errorf(`pbftProtocal %s not work!`, "softStartTimer")
 	}
@@ -88,8 +87,8 @@ func TestPbftTimeFunctions(t *testing.T)  {
 	pp.nullRequestTimer*/
 }
 
-func TestPrimary(t *testing.T)  {
-	pp := new (pbftProtocal)
+func TestPrimary(t *testing.T) {
+	pp := new(pbftProtocal)
 	pp.N = 100
 	x := pp.primary(3)
 	if x != 4 {
@@ -126,8 +125,8 @@ func TestPrimary(t *testing.T)  {
 	}
 }
 
-func TestGetSert(t *testing.T)  {
-	pp := new (pbftProtocal)
+func TestGetSert(t *testing.T) {
+	pp := new(pbftProtocal)
 	pp.certStore = make(map[msgID]*msgCert)
 	pp.getCert(1, 2)
 
@@ -147,7 +146,7 @@ func TestGetSert(t *testing.T)  {
 	}
 }
 
-func TestPrePrepared(t *testing.T)  {
+func TestPrePrepared(t *testing.T) {
 	pbft := new(pbftProtocal)
 	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
 	pbft.view = 2
@@ -168,18 +167,17 @@ func TestPrePrepared(t *testing.T)  {
 	pbft.certStore = make(map[msgID]*msgCert)
 	prepare := make(map[Prepare]bool)
 	prePrepare0 := &PrePrepare{
-				View:v,
-				SequenceNumber:seqNo,
-				BatchDigest: digest,
+		View:           v,
+		SequenceNumber: seqNo,
+		BatchDigest:    digest,
 	}
 
 	commit := make(map[Commit]bool)
 	cert0 := &msgCert{
-		prepare:	prepare,
-		commit:		commit,
+		prepare:    prepare,
+		commit:     commit,
 		digest:     digest,
 		prePrepare: prePrepare0,
-
 	}
 
 	idx := msgID{v, seqNo}
@@ -192,26 +190,26 @@ func TestPrePrepared(t *testing.T)  {
 	}
 }
 
-func TestPreparedReplicasQuorum(t *testing.T)  {
-	pbft := new (pbftProtocal)
+func TestPreparedReplicasQuorum(t *testing.T) {
+	pbft := new(pbftProtocal)
 	pbft.f = 1
 	k := pbft.preparedReplicasQuorum()
-	if  k != 2 {
+	if k != 2 {
 		t.Errorf("error preparedReplicasQuorum() = %d, expected: 2", k)
 	}
 }
 
-func TestCommittedReplicasQuorum(t *testing.T)  {
-	pbft := new (pbftProtocal)
+func TestCommittedReplicasQuorum(t *testing.T) {
+	pbft := new(pbftProtocal)
 	pbft.f = 1
 	k := pbft.committedReplicasQuorum()
-	if  k != 3 {
+	if k != 3 {
 		t.Errorf("error committedReplicasQuorum() = %d, expected: 3", k)
 	}
 }
 
-func TestIntersectionQuorum(t *testing.T)  {
-	pbft := new (pbftProtocal)
+func TestIntersectionQuorum(t *testing.T) {
+	pbft := new(pbftProtocal)
 	pbft.N = 1
 	pbft.f = 1
 	k := pbft.intersectionQuorum()
@@ -226,8 +224,8 @@ func TestIntersectionQuorum(t *testing.T)  {
 	}
 }
 
-func TestAllCorrectReplicasQuorum(t *testing.T)  {
-	pbft := new (pbftProtocal)
+func TestAllCorrectReplicasQuorum(t *testing.T) {
+	pbft := new(pbftProtocal)
 	pbft.N = 100
 	pbft.f = 33
 	k := pbft.allCorrectReplicasQuorum()
@@ -235,7 +233,6 @@ func TestAllCorrectReplicasQuorum(t *testing.T)  {
 		t.Errorf("error allCorrectReplicasQuorum() = %d, expected: %d", k, 67)
 	}
 }
-
 
 type mockEvent struct {
 	info string
@@ -252,15 +249,15 @@ func (mr *mockReceiver) ProcessEvent(event events.Event) events.Event {
 	return nil
 }
 
-func TestPostRequestEvent(t *testing.T)  {
+func TestPostRequestEvent(t *testing.T) {
 	pbft := new(pbftProtocal)
 
-	tx := &types.Transaction{Id:123}
+	tx := &types.Transaction{Id: 123}
 	evts := make(chan events.Event)
 
 	pbft.batchManager = events.NewManagerImpl()
 	pbft.batchManager.SetReceiver(&mockReceiver{
-		processEventImpl : func(event events.Event) events.Event{
+		processEventImpl: func(event events.Event) events.Event {
 			evts <- event
 			return nil
 		},
@@ -270,24 +267,24 @@ func TestPostRequestEvent(t *testing.T)  {
 
 	go func() {
 		select {
-		case e := <- evts:
+		case e := <-evts:
 			if !reflect.DeepEqual(e, tx) {
 				t.Error("error postRequestEvent ")
 			}
-		case <- time.After(3*time.Second) :
+		case <-time.After(3 * time.Second):
 			t.Error("error postRequestEvent event not received")
 		}
 	}()
 }
 
-func TestPostPbftEvent(t *testing.T)  {
+func TestPostPbftEvent(t *testing.T) {
 	pbft := new(pbftProtocal)
-	mEvent := &mockEvent{info:"pbftEvent"}
+	mEvent := &mockEvent{info: "pbftEvent"}
 
 	evts := make(chan events.Event)
 	pbft.pbftManager = events.NewManagerImpl()
 	pbft.pbftManager.SetReceiver(&mockReceiver{
-		processEventImpl : func(event events.Event) events.Event{
+		processEventImpl: func(event events.Event) events.Event {
 			evts <- event
 			return nil
 		},
@@ -298,17 +295,17 @@ func TestPostPbftEvent(t *testing.T)  {
 
 	go func() {
 		select {
-		case e := <- evts:
+		case e := <-evts:
 			if !reflect.DeepEqual(e, mEvent) {
 				t.Error("error postPbftEvent ")
 			}
-		case <- time.After(3*time.Second) :
+		case <-time.After(3 * time.Second):
 			t.Error("error postPbftEvent event not received")
 		}
 	}()
 }
 
-func TestPrepared(t *testing.T)  {
+func TestPrepared(t *testing.T) {
 	pbft := new(pbftProtocal)
 
 	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
@@ -332,18 +329,17 @@ func TestPrepared(t *testing.T)  {
 	pbft.certStore = make(map[msgID]*msgCert)
 	prepare := make(map[Prepare]bool)
 	prePrepare0 := &PrePrepare{
-		View:v,
-		SequenceNumber:seqNo,
-		BatchDigest: digest,
+		View:           v,
+		SequenceNumber: seqNo,
+		BatchDigest:    digest,
 	}
 
 	commit := make(map[Commit]bool)
 	cert0 := &msgCert{
-		prepare:	prepare,
-		commit:		commit,
+		prepare:    prepare,
+		commit:     commit,
 		digest:     digest,
 		prePrepare: prePrepare0,
-
 	}
 
 	idx := msgID{v, seqNo}
@@ -356,9 +352,9 @@ func TestPrepared(t *testing.T)  {
 
 }
 
-func TestConsensusMsgHelper(t *testing.T)  {
+func TestConsensusMsgHelper(t *testing.T) {
 	msg := &ConsensusMessage{
-		Type:ConsensusMessage_CHECKPOINT,
+		Type: ConsensusMessage_CHECKPOINT,
 	}
 	rs := consensusMsgHelper(msg, 1211)
 	if rs.Id != 1211 {
@@ -366,25 +362,25 @@ func TestConsensusMsgHelper(t *testing.T)  {
 	}
 }
 
-func TestNullRequestMsgHelper(t *testing.T)  {
+func TestNullRequestMsgHelper(t *testing.T) {
 	msg := nullRequestMsgHelper(1211)
 	if msg.Id != 1211 {
 		t.Errorf("error nullRequestMsgHelper(%d) failed!", 1211)
 	}
 }
 
-func TestStateUpdateHelper(t *testing.T)  {
-	r := []uint64 {121111}
+func TestStateUpdateHelper(t *testing.T) {
+	r := []uint64{121111}
 	msg := stateUpdateHelper(1, 2, []byte("121111"), r)
 
 	if msg.Id != 1 || msg.SeqNo != 2 ||
-		!reflect.DeepEqual(msg.Replicas, r)||
+		!reflect.DeepEqual(msg.Replicas, r) ||
 		!reflect.DeepEqual(msg.TargetId, []byte("121111")) {
 		t.Error("error stateUpdateHelper failed!")
 	}
 }
 
-func TestCommitted(t *testing.T)  {
+func TestCommitted(t *testing.T) {
 	pbft := new(pbftProtocal)
 
 	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
@@ -408,18 +404,17 @@ func TestCommitted(t *testing.T)  {
 	pbft.certStore = make(map[msgID]*msgCert)
 	prepare := make(map[Prepare]bool)
 	prePrepare0 := &PrePrepare{
-		View:v,
-		SequenceNumber:seqNo,
-		BatchDigest: digest,
+		View:           v,
+		SequenceNumber: seqNo,
+		BatchDigest:    digest,
 	}
 
 	commit := make(map[Commit]bool)
 	cert0 := &msgCert{
-		prepare:	prepare,
-		commit:		commit,
+		prepare:    prepare,
+		commit:     commit,
 		digest:     digest,
 		prePrepare: prePrepare0,
-
 	}
 	cert0.commitCount = 100
 
@@ -433,7 +428,7 @@ func TestCommitted(t *testing.T)  {
 	}
 }
 
-func TestNullReqTimerReset(t *testing.T)  {
+func TestNullReqTimerReset(t *testing.T) {
 	pbft := new(pbftProtocal)
 	pbft.nullRequestTimeout = 5 * time.Second
 	pbft.view = 3
@@ -450,7 +445,7 @@ func TestNullReqTimerReset(t *testing.T)  {
 	pbft.nullReqTimerReset()
 }
 
-func TestStartTimerIfOutstandingRequests(t *testing.T)  {
+func TestStartTimerIfOutstandingRequests(t *testing.T) {
 	pbft := new(pbftProtocal)
 	pbft.skipInProgress = true
 
@@ -458,7 +453,7 @@ func TestStartTimerIfOutstandingRequests(t *testing.T)  {
 	pbft.skipInProgress = false
 
 	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
-	pbft.outstandingReqBatches["t1"] = &TransactionBatch{Timestamp:121}
+	pbft.outstandingReqBatches["t1"] = &TransactionBatch{Timestamp: 121}
 	pbft.pbftManager = events.NewManagerImpl()
 	pbftTimerFactory := events.NewTimerFactoryImpl(pbft.pbftManager)
 	pbft.newViewTimer = pbftTimerFactory.CreateTimer()

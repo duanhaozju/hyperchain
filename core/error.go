@@ -37,13 +37,13 @@ func IsSignatureErr(e error) bool {
 
 type ExecContractError struct {
 	message string
-	errType   int
+	errType int
 }
 
-func ExecContractErr(t int , str string, v ...interface{}) *ExecContractError {
+func ExecContractErr(t int, str string, v ...interface{}) *ExecContractError {
 	return &ExecContractError{
-		message:fmt.Sprintf(str, v...),
-		errType:  t,
+		message: fmt.Sprintf(str, v...),
+		errType: t,
 	}
 }
 func (self *ExecContractError) Error() string {
@@ -58,4 +58,3 @@ func IsExecContractErr(e error) bool {
 	_, ok := e.(*ExecContractError)
 	return ok
 }
-

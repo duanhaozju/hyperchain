@@ -3,11 +3,11 @@
 package event
 
 import (
-	"time"
-	"reflect"
-	"fmt"
-	"sync"
 	"errors"
+	"fmt"
+	"reflect"
+	"sync"
+	"time"
 )
 
 // Event is a time-tagged notification pushed to subscribers.
@@ -35,7 +35,6 @@ type Subscription interface {
 //
 // The zero value is ready to use.
 type TypeMux struct {
-
 	mutex   sync.RWMutex
 	subm    map[reflect.Type][]*muxsub
 	stopped bool

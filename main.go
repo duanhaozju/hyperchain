@@ -6,13 +6,13 @@ import (
 	"errors"
 	"github.com/mkideal/cli"
 	"hyperchain/accounts"
+	"hyperchain/api/jsonrpc/core"
 	"hyperchain/common"
 	"hyperchain/consensus/controller"
 	"hyperchain/core"
 	"hyperchain/core/blockpool"
 	"hyperchain/crypto"
 	"hyperchain/event"
-	"hyperchain/api/jsonrpc/core"
 	"hyperchain/manager"
 	"hyperchain/membersrvc"
 	"hyperchain/p2p"
@@ -30,11 +30,9 @@ type argT struct {
 	ConfigPath string `cli:"c,conf" usage:"config file path" dft:"./config/global.yaml"`
 	GRPCPort   int    `cli:"l,rpcport" usage:"inner grpc connect port" dft:"8001"`
 	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc open port" dft:"8081"`
-	RESTPort   int	  `cli:"f,restport" useage:"restful api port" dft:"9000"`
+	RESTPort   int    `cli:"f,restport" useage:"restful api port" dft:"9000"`
 	//IsReconnect bool  `cli:"e,isReconnect" usage:"是否重新链接" dft:"false"`
 }
-
-
 
 func checkLicense(licensePath string) (err error, expiredTime time.Time) {
 	defer func() {
@@ -100,7 +98,7 @@ func main() {
 		conf := initConf(argv)
 		common.InitLog(conf)
 
-		core.InitDB(config.getDbConfig(),config.gRPCPort)
+		core.InitDB(config.getDbConfig(), config.gRPCPort)
 
 		err, expiredTime := checkLicense(config.getLicense())
 		if err != nil {
@@ -117,16 +115,14 @@ func main() {
 		/**
 		 *传入true则开启所有验证，false则为取消ca以及签名的所有验证
 		 */
-		cm,cmerr := membersrvc.GetCaManager("./config/cert/eca.ca","./config/cert/ecert.cert","./config/cert/rca.ca","./config/cert/rcert.cert","./config/cert/ecert.priv",true,true)
-		if cmerr != nil{
+		cm, cmerr := membersrvc.GetCaManager("./config/cert/eca.ca", "./config/cert/ecert.cert", "./config/cert/rca.ca", "./config/cert/rcert.cert", "./config/cert/ecert.priv", true, true)
+		if cmerr != nil {
 			panic("cannot initliazied the camanager")
 		}
 
 		//init peer manager to start grpc server and client
 		//grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath())
 		grpcPeerMgr := p2p.NewGrpcManager(conf)
-
-
 
 		//init genesis
 		core.CreateInitBlock(config.getGenesisConfigPath())
@@ -147,7 +143,7 @@ func main() {
 
 		//init block pool to save block
 		blockPoolConf := blockpool.BlockPoolConf{
-			BlockVersion: config.getBlockVersion(),
+			BlockVersion:       config.getBlockVersion(),
 			TransactionVersion: config.getTransactionVersion(),
 		}
 		blockPool := blockpool.NewBlockPool(eventMux, cs, blockPoolConf)
@@ -160,17 +156,17 @@ func main() {
 		syncReplicaInterval, _ := config.getSyncReplicaInterval()
 		syncReplicaEnable := config.getSyncReplicaEnable()
 		pm := manager.New(eventMux,
-				blockPool,
-				grpcPeerMgr,
-				cs,
-				am,
-				kec256Hash,
-				syncReplicaInterval,
-				syncReplicaEnable,
-				exist,
-				expiredTime,cm)
+			blockPool,
+			grpcPeerMgr,
+			cs,
+			am,
+			kec256Hash,
+			syncReplicaInterval,
+			syncReplicaEnable,
+			exist,
+			expiredTime, cm)
 		rateLimitCfg := config.getRateLimitConfig()
-		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(),config.getLogDumpFileDir(),eventMux, pm, rateLimitCfg,cm, config.getPaillerPublickey())
+		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(), config.getLogDumpFileDir(), eventMux, pm, rateLimitCfg, cm, config.getPaillerPublickey())
 
 		//go func() {
 		//	log.Println(http.ListenAndServe("localhost:6064", nil))

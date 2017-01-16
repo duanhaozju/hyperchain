@@ -3,16 +3,15 @@
 package persist
 
 import (
-	"fmt"
-	"errors"
 	"bytes"
+	"errors"
+	"fmt"
 
-	"hyperchain/hyperdb"
+	"encoding/base64"
 	"hyperchain/core"
 	"hyperchain/core/types"
-	"encoding/base64"
+	"hyperchain/hyperdb"
 )
-
 
 // StoreState stores a key,value pair
 func StoreState(key string, value []byte) error {
@@ -38,7 +37,7 @@ func DelState(key string) error {
 	if err != nil {
 		return err
 	}
-	return db.Delete([]byte("consensus."+key))
+	return db.Delete([]byte("consensus." + key))
 }
 
 // ReadState retrieves a value to a key
@@ -47,7 +46,7 @@ func ReadState(key string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return db.Get([]byte("consensus."+key))
+	return db.Get([]byte("consensus." + key))
 }
 
 // ReadStateSet retrieves all key-value pairs where the key starts with prefix
@@ -60,7 +59,7 @@ func ReadStateSet(prefix string) (map[string][]byte, error) {
 
 	ret := make(map[string][]byte)
 	it := db.NewIterator(prefixRaw)
-	if it==nil{
+	if it == nil {
 		err := errors.New(fmt.Sprintf("Can't get Iterator"))
 		return nil, err
 	}

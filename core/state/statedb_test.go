@@ -3,14 +3,14 @@
 package state
 
 import (
-	"testing"
-	"math/big"
-	"hyperchain/hyperdb"
-	"hyperchain/common"
 	"bytes"
 	"fmt"
-	"reflect"
+	"hyperchain/common"
 	"hyperchain/core/vm"
+	"hyperchain/hyperdb"
+	"math/big"
+	"reflect"
+	"testing"
 )
 
 func TestStateDB_GetAccounts(t *testing.T) {
@@ -28,8 +28,8 @@ func TestStateDB_GetAccounts(t *testing.T) {
 	state.UpdateStateObject(obj2)
 	state.Commit()
 
-	res :=state.GetAccounts()
-	if len(res)!=3{
+	res := state.GetAccounts()
+	if len(res) != 3 {
 		t.Fatal("getaccounts error,num not match")
 	}
 }
@@ -128,13 +128,13 @@ func TestReplication(t *testing.T) {
 	for it.Next() {
 		key := state1.trie.GetKey(it.Key)
 		val2 := state2.trie.Get(key)
-		if !reflect.DeepEqual(it.Value,val2){
-			t.Errorf("mismatch: have %v, want %v",it.Value,val2)
+		if !reflect.DeepEqual(it.Value, val2) {
+			t.Errorf("mismatch: have %v, want %v", it.Value, val2)
 		}
 	}
 
-	if !reflect.DeepEqual(state1.Dump(),state2.Dump()){
-		t.Errorf("dump mismatch: have %v, want %v",state1.Dump(),state2.Dump())
+	if !reflect.DeepEqual(state1.Dump(), state2.Dump()) {
+		t.Errorf("dump mismatch: have %v, want %v", state1.Dump(), state2.Dump())
 	}
 	//c.Assert(state1.Dump(), checker.DeepEquals, state2.Dump())
 
@@ -184,68 +184,68 @@ func compareStateObjects(so0, so1 *StateObject, t *testing.T) {
 }
 
 func TestLog(t *testing.T) {
-	thash := common.BytesToHash([]byte{1,2,3})
-	bhash := common.BytesToHash([]byte{4,5,6})
-	ti :=1
-	state:= setup()
-	state.StartRecord(thash,bhash,ti)
+	thash := common.BytesToHash([]byte{1, 2, 3})
+	bhash := common.BytesToHash([]byte{4, 5, 6})
+	ti := 1
+	state := setup()
+	state.StartRecord(thash, bhash, ti)
 	var log *vm.Log
 	var topic []common.Hash
-	topic=append(topic,common.Hash{})
-	topic=append(topic,common.Hash{})
-	log = vm.NewLog(toAddr([]byte{0x01}),topic,[]byte{1},uint64(1))
+	topic = append(topic, common.Hash{})
+	topic = append(topic, common.Hash{})
+	log = vm.NewLog(toAddr([]byte{0x01}), topic, []byte{1}, uint64(1))
 	state.AddLog(log)
-	if len(state.Logs())!=1{
+	if len(state.Logs()) != 1 {
 		t.Error("state addlog error")
 	}
 
-	getlog:= state.GetLogs(thash)[0]
-	if getlog.BlockHash!=bhash{
+	getlog := state.GetLogs(thash)[0]
+	if getlog.BlockHash != bhash {
 		t.Error("getlogs error")
 	}
-	if getlog.TxHash !=thash{
+	if getlog.TxHash != thash {
 		t.Error("getlogs error")
 	}
-	if getlog.TxIndex!=uint(ti){
+	if getlog.TxIndex != uint(ti) {
 		t.Error("getlogs error")
 	}
 }
 func TestStateDB_AddRefund(t *testing.T) {
 	state := setup()
 	state.AddRefund(common.Big("5"))
-	if state.GetRefund().Cmp(common.Big("5"))!=0{
+	if state.GetRefund().Cmp(common.Big("5")) != 0 {
 		t.Error("state addrefund error")
 	}
 }
 func TestStateDB_SetGet(t *testing.T) {
-	state:=setup()
+	state := setup()
 	addr := toAddr([]byte{0x01})
-	code := []byte{2,2,2,2,2}
-	abi:= []byte{3, 3, 3, 3, 3, 3, 3}
-	state.SetABI(addr,abi)
-	state.SetCode(addr,code)
-	state.SetNonce(addr,uint64(8))
+	code := []byte{2, 2, 2, 2, 2}
+	abi := []byte{3, 3, 3, 3, 3, 3, 3}
+	state.SetABI(addr, abi)
+	state.SetCode(addr, code)
+	state.SetNonce(addr, uint64(8))
 
-	if x:=state.GetABI(addr);bytes.Compare(x,abi)!=0{
+	if x := state.GetABI(addr); bytes.Compare(x, abi) != 0 {
 		t.Error("state set get abi error")
 	}
-	if x:=state.GetCode(addr);bytes.Compare(x,code)!=0{
+	if x := state.GetCode(addr); bytes.Compare(x, code) != 0 {
 		t.Error("state set get code error")
 	}
-	if state.GetNonce(addr)!=uint64(8){
+	if state.GetNonce(addr) != uint64(8) {
 		t.Error("state set get nonce error")
 	}
-	balance0:= state.GetBalance(addr)
-	state.AddBalance(addr,common.Big("5"))
-	if x:=state.GetBalance(addr);x.Cmp(balance0.Add(balance0,common.Big("5")))!=0{
+	balance0 := state.GetBalance(addr)
+	state.AddBalance(addr, common.Big("5"))
+	if x := state.GetBalance(addr); x.Cmp(balance0.Add(balance0, common.Big("5"))) != 0 {
 		t.Error("state add&get banlance error")
 	}
 }
 
 func TestStateDB_IntermediateRoot(t *testing.T) {
-	state:=setup()
-	root:=state.IntermediateRoot()
-	if len(root)==0{
+	state := setup()
+	root := state.IntermediateRoot()
+	if len(root) == 0 {
 		t.Error("root should not be nil")
 	}
 }

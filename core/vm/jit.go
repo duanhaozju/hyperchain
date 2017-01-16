@@ -7,10 +7,10 @@ import (
 	"math/big"
 	"sync/atomic"
 
+	"github.com/hashicorp/golang-lru"
 	"hyperchain/common"
 	"hyperchain/core/crypto"
 	"hyperchain/core/vm/params"
-	"github.com/hashicorp/golang-lru"
 )
 
 // progStatus is the type for the JIT program status.
@@ -286,7 +286,6 @@ func runProgram(program *Program, pcstart uint64, mem *Memory, stack *stack, env
 		pc         uint64 = program.mapping[pcstart]
 		instrCount        = 0
 	)
-
 
 	homestead := env.RuleSet().IsHomestead(env.BlockNumber())
 	for pc < uint64(len(program.instructions)) {

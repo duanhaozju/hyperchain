@@ -3,14 +3,15 @@
 package jsonrpc
 
 import (
-	"reflect"
-	"math/big"
-	"unicode/utf8"
-	"unicode"
 	"golang.org/x/net/context"
+	"math/big"
+	"reflect"
+	"unicode"
+	"unicode/utf8"
 	//"fmt"
 	"strconv"
 )
+
 const (
 	encodePath encoding = 1 + iota
 	encodeHost
@@ -18,8 +19,6 @@ const (
 	encodeQueryComponent
 	encodeFragment
 )
-
-
 
 // Is this an exported - upper case - name?
 func isExported(name string) bool {
@@ -88,7 +87,7 @@ func suitableCallbacks(rcvr reflect.Value, typ reflect.Type) (callbacks, subscri
 	callbacks := make(callbacks)
 	subscriptions := make(subscriptions)
 
-	METHODS:
+METHODS:
 	for m := 0; m < typ.NumMethod(); m++ {
 		method := typ.Method(m)
 		mtype := method.Type
@@ -158,14 +157,12 @@ func suitableCallbacks(rcvr reflect.Value, typ reflect.Type) (callbacks, subscri
 	return callbacks, subscriptions
 }
 
-
 type encoding int
 type EscapeError string
 
 func (e EscapeError) Error() string {
 	return "invalid URL escape " + strconv.Quote(string(e))
 }
-
 
 func ishex(c byte) bool {
 	switch {
@@ -190,8 +187,6 @@ func unhex(c byte) byte {
 	}
 	return 0
 }
-
-
 
 // Return true if the specified character should be escaped when
 // appearing in a URL string, according to RFC 3986.
@@ -253,9 +248,6 @@ func shouldEscape(c byte, mode encoding) bool {
 	return true
 }
 
-
-
-
 func escape(s string, mode encoding) string {
 	spaceCount, hexCount := 0, 0
 	for i := 0; i < len(s); i++ {
@@ -292,7 +284,6 @@ func escape(s string, mode encoding) string {
 	}
 	return string(t)
 }
-
 
 // unescape unescapes a string; the mode specifies
 // which section of the URL string is being unescaped.
@@ -349,15 +340,13 @@ func unescape(s string, mode encoding) (string, error) {
 	return string(t), nil
 }
 
-
-func EncodeUriComponent(rawString string) string{
+func EncodeUriComponent(rawString string) string {
 	return escape(rawString, encodeFragment)
 }
 
-func DecodeUriCompontent(encoded string) (string, error){
+func DecodeUriCompontent(encoded string) (string, error) {
 	return unescape(encoded, encodeQueryComponent)
 }
-
 
 // https://golang.org/src/net/url/url.go
 // http://remove-line-numbers.ruurtjan.com/

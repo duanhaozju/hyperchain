@@ -1,12 +1,12 @@
 package hyperdb
 
 import (
-	"testing"
 	"fmt"
+	"testing"
 )
 
-func TestInitDatabase(t *testing.T){
-	InitDatabase("../config/db.yaml","8001")
+func TestInitDatabase(t *testing.T) {
+	InitDatabase("../config/db.yaml", "8001")
 	fmt.Println(logPath)
 	fmt.Println(logStatus)
 	fmt.Println(dbType)

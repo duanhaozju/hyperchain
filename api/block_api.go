@@ -3,12 +3,12 @@
 package hpc
 
 import (
+	"fmt"
 	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/state"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
-	"fmt"
 )
 
 type PublicBlockAPI struct {
@@ -16,13 +16,13 @@ type PublicBlockAPI struct {
 }
 
 type BlockResult struct {
-	Version      string             `json:"version"`
-	Number       *BlockNumber       `json:"number"`
-	Hash         common.Hash   `json:"hash"`
-	ParentHash   common.Hash   `json:"parentHash"`
-	WriteTime    int64        `json:"writeTime"`
-	AvgTime      *Number       `json:"avgTime"`
-	TxCounts     *Number       `json:"txcounts"`
+	Version    string       `json:"version"`
+	Number     *BlockNumber `json:"number"`
+	Hash       common.Hash  `json:"hash"`
+	ParentHash common.Hash  `json:"parentHash"`
+	WriteTime  int64        `json:"writeTime"`
+	AvgTime    *Number      `json:"avgTime"`
+	TxCounts   *Number      `json:"txcounts"`
 	//Counts       *Number       `json:"counts"`
 	//Percents     string        `json:"percents"`
 	MerkleRoot   common.Hash   `json:"merkleRoot"`
@@ -30,10 +30,9 @@ type BlockResult struct {
 }
 
 type StatisticResult struct {
-	BPS string `json:"BPS"`
-	TimeList    []string `json:"TimeList"`
+	BPS      string   `json:"BPS"`
+	TimeList []string `json:"TimeList"`
 }
-
 
 func NewPublicBlockAPI(hyperDb hyperdb.Database) *PublicBlockAPI {
 	return &PublicBlockAPI{
@@ -48,7 +47,7 @@ type IntervalArgs struct {
 
 type IntervalTime struct {
 	StartTime int64 `json:"startTime"`
-	Endtime int64 `json:"endTime"`
+	Endtime   int64 `json:"endTime"`
 }
 
 // If the client send BlockNumber "",it will convert to 0.If client send BlockNumber 0,it will return error
@@ -68,7 +67,7 @@ func prepareIntervalArgs(args IntervalArgs) (IntervalArgs, error) {
 
 	return IntervalArgs{
 		From: from,
-		To: to,
+		To:   to,
 	}, nil
 }
 
@@ -93,25 +92,25 @@ func (blk *PublicBlockAPI) GetBlockByNumber(number BlockNumber) (*BlockResult, e
 	return block, err
 }
 
-type BlocksIntervalResult struct{
-	SumOfBlocks *Number `json:"sumOfBlocks"`
-	StartBlock *BlockNumber `json:"startBlock"`
-	EndBlock *BlockNumber `json:"endBlock"`
+type BlocksIntervalResult struct {
+	SumOfBlocks *Number      `json:"sumOfBlocks"`
+	StartBlock  *BlockNumber `json:"startBlock"`
+	EndBlock    *BlockNumber `json:"endBlock"`
 }
 
 // GetBlocksByTime returns the block for the given block time duration.
-func (blk *PublicBlockAPI) GetBlocksByTime(args IntervalTime) (*BlocksIntervalResult, error){
+func (blk *PublicBlockAPI) GetBlocksByTime(args IntervalTime) (*BlocksIntervalResult, error) {
 
 	if args.StartTime > args.Endtime {
 		return nil, &invalidParamsError{"invalid params"}
 	}
 
-	sumOfBlocks, startBlock, endBlock := getBlocksByTime(args.StartTime,args.Endtime,blk.db)
+	sumOfBlocks, startBlock, endBlock := getBlocksByTime(args.StartTime, args.Endtime, blk.db)
 
 	return &BlocksIntervalResult{
 		SumOfBlocks: NewUint64ToNumber(sumOfBlocks),
-		StartBlock: startBlock,
-		EndBlock: endBlock,
+		StartBlock:  startBlock,
+		EndBlock:    endBlock,
 	}, nil
 }
 
@@ -122,7 +121,7 @@ func (blk *PublicBlockAPI) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (N
 		return 0, err
 	}
 
-	if t,err := core.CalBlockGenerateAvgTime(realArgs.From.ToUint64(), realArgs.To.ToUint64()); err != nil && err.Error() == leveldb_not_found_error {
+	if t, err := core.CalBlockGenerateAvgTime(realArgs.From.ToUint64(), realArgs.To.ToUint64()); err != nil && err.Error() == leveldb_not_found_error {
 		return 0, &leveldbNotFoundError{"block"}
 	} else if err != nil {
 		return 0, &callbackError{err.Error()}
@@ -137,7 +136,7 @@ func latestBlock(db hyperdb.Database) (*BlockResult, error) {
 
 	lastestBlkHeight := currentChain.Height
 
-	if (lastestBlkHeight == 0) {
+	if lastestBlkHeight == 0 {
 		return nil, nil
 	}
 
@@ -149,7 +148,7 @@ func getBlockByNumber(n BlockNumber, db hyperdb.Database) (*BlockResult, error) 
 
 	m := n.ToUint64()
 	if blk, err := core.GetBlockByNumber(db, m); err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &leveldbNotFoundError{fmt.Sprintf("block by %d",n)}
+		return nil, &leveldbNotFoundError{fmt.Sprintf("block by %d", n)}
 	} else if err != nil {
 		return nil, &callbackError{err.Error()}
 	} else {
@@ -158,33 +157,33 @@ func getBlockByNumber(n BlockNumber, db hyperdb.Database) (*BlockResult, error) 
 }
 
 // GetBlockByNumber returns the bolck for the given block time duration.
-func getBlocksByTime(startTime,endTime int64, db hyperdb.Database)(sumOfBlocks uint64,startBlock,endBlock *BlockNumber){
+func getBlocksByTime(startTime, endTime int64, db hyperdb.Database) (sumOfBlocks uint64, startBlock, endBlock *BlockNumber) {
 	currentChain := core.GetChainCopy()
 	height := currentChain.Height
 
 	var i uint64
 	for i := height; i >= uint64(1); i-- {
-		block, _ := getBlockByNumber(*NewUint64ToBlockNumber(i),db)
-		if block.WriteTime > endTime  {
+		block, _ := getBlockByNumber(*NewUint64ToBlockNumber(i), db)
+		if block.WriteTime > endTime {
 			continue
 		}
 		if block.WriteTime < startTime {
-			if (i != height) {
-				startBlock = NewUint64ToBlockNumber(i+1)
+			if i != height {
+				startBlock = NewUint64ToBlockNumber(i + 1)
 			}
 			return sumOfBlocks, startBlock, endBlock
 		}
 		if block.WriteTime >= startTime && block.WriteTime <= endTime {
 			sumOfBlocks += 1
-			if(sumOfBlocks==1){
+			if sumOfBlocks == 1 {
 				endBlock = NewUint64ToBlockNumber(i)
 			}
 		}
 	}
-	if (i != height) {
-		startBlock = NewUint64ToBlockNumber(i+1)
+	if i != height {
+		startBlock = NewUint64ToBlockNumber(i + 1)
 	}
-	return sumOfBlocks,startBlock,endBlock
+	return sumOfBlocks, startBlock, endBlock
 }
 
 func getBlockStateDb(n BlockNumber, db hyperdb.Database) (*state.StateDB, error) {
@@ -217,14 +216,14 @@ func outputBlockResult(block *types.Block, db hyperdb.Database) (*BlockResult, e
 	}
 
 	return &BlockResult{
-		Version:      string(block.Version),
-		Number:       NewUint64ToBlockNumber(block.Number),
-		Hash:         common.BytesToHash(block.BlockHash),
-		ParentHash:   common.BytesToHash(block.ParentHash),
+		Version:    string(block.Version),
+		Number:     NewUint64ToBlockNumber(block.Number),
+		Hash:       common.BytesToHash(block.BlockHash),
+		ParentHash: common.BytesToHash(block.ParentHash),
 		//WriteTime:    time.Unix(block.WriteTime/int64(time.Second), 0).Format("2006-01-02 15:04:05"),
-		WriteTime:    block.WriteTime,
-		AvgTime:      NewInt64ToNumber(core.CalcResponseAVGTime(block.Number, block.Number)),
-		TxCounts:     NewInt64ToNumber(txCounts),
+		WriteTime: block.WriteTime,
+		AvgTime:   NewInt64ToNumber(core.CalcResponseAVGTime(block.Number, block.Number)),
+		TxCounts:  NewInt64ToNumber(txCounts),
 		//Counts:       NewInt64ToNumber(count),
 		//Percents:     strconv.FormatFloat(percent*100, 'f', 2, 32) + "%",
 		MerkleRoot:   common.BytesToHash(block.MerkleRoot),
@@ -310,10 +309,10 @@ func (blk *PublicBlockAPI) QueryTPS(args SendQueryArgs) (string, error) {
 	if err != nil {
 		return "", &callbackError{err.Error()}
 	}
-	return  ret, nil
+	return ret, nil
 }
 
-func (blk *PublicBlockAPI) QueryWriteTime(args SendQueryArgs) (*StatisticResult, error){
+func (blk *PublicBlockAPI) QueryWriteTime(args SendQueryArgs) (*StatisticResult, error) {
 	err, ret := core.GetBlockWriteTime(args.From.ToInt64(), args.To.ToInt64())
 	if err != nil {
 		return nil, &callbackError{err.Error()}
@@ -322,4 +321,3 @@ func (blk *PublicBlockAPI) QueryWriteTime(args SendQueryArgs) (*StatisticResult,
 		TimeList: ret,
 	}, nil
 }
-

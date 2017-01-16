@@ -23,7 +23,7 @@ type AccountResult struct {
 }
 type UnlockParas struct {
 	Address  common.Address `json:"address"`
-	Password string `json:"password"`
+	Password string         `json:"password"`
 }
 
 func NewPublicAccountAPI(pm *manager.ProtocolManager, hyperDb hyperdb.Database) *PublicAccountAPI {
@@ -106,15 +106,15 @@ func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 // GetBalance returns account balance for given account address.
 func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
 
-	if headBlock, err := core.GetBlock(acc.db, core.GetChainCopy().LatestBlockHash);err != nil && err.Error() == leveldb_not_found_error{
+	if headBlock, err := core.GetBlock(acc.db, core.GetChainCopy().LatestBlockHash); err != nil && err.Error() == leveldb_not_found_error {
 		return "", &leveldbNotFoundError{"latest block"}
 	} else if err != nil {
 		log.Errorf("Get Block error, %v", err)
 		return "", &callbackError{err.Error()}
-	}else if headBlock != nil {
+	} else if headBlock != nil {
 
-		if stateDB, err := state.New(common.BytesToHash(headBlock.MerkleRoot), acc.db);err == nil && stateDB != nil {
-			if stateobject := stateDB.GetStateObject(addr);stateobject != nil {
+		if stateDB, err := state.New(common.BytesToHash(headBlock.MerkleRoot), acc.db); err == nil && stateDB != nil {
+			if stateobject := stateDB.GetStateObject(addr); stateobject != nil {
 				return fmt.Sprintf(`0x%x`, stateobject.BalanceData), nil
 			} else {
 				return "", &leveldbNotFoundError{"stateobject, the account may not exist"}

@@ -3,11 +3,11 @@
 package hyperdb
 
 import (
+	"bytes"
+	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"bytes"
-	"github.com/pkg/errors"
 )
 
 // the Database for LevelDB
@@ -30,11 +30,9 @@ func NewLDBDataBase(filepath string) (*LDBDatabase, error) {
 	db, err := leveldb.OpenFile(filepath, nil)
 	return &LDBDatabase{
 		path: filepath,
-		db: db,
+		db:   db,
 	}, err
 }
-
-
 
 // Put sets value for the given key, if the key exists, it will overwrite
 // the value
@@ -65,16 +63,16 @@ func (self *LDBDatabase) NewIteratorWithPrefix(prefix []byte) iterator.Iterator 
 
 //Destroy, clean the whole database,
 //warning: bad performance if to many data in the db
-func (self *LDBDatabase) Destroy() error{
+func (self *LDBDatabase) Destroy() error {
 	return self.DestroyByRange(nil, nil)
 }
 
 //DestroyByRange, clean data which key in range [start, end)
-func (self *LDBDatabase) DestroyByRange(start , end []byte) error {
+func (self *LDBDatabase) DestroyByRange(start, end []byte) error {
 	if bytes.Compare(start, end) > 0 {
 		return errors.Errorf("start key: %v, is bigger than end key: %v", start, end)
 	}
-	it := self.db.NewIterator(&util.Range{Start:start, Limit:end}, nil)
+	it := self.db.NewIterator(&util.Range{Start: start, Limit: end}, nil)
 	for it.Next() {
 		err := self.Delete(it.Key())
 		if err != nil {
@@ -99,7 +97,6 @@ func (self *LDBDatabase) LDB() *leveldb.DB {
 func (db *LDBDatabase) NewBatch() Batch {
 	return &ldbBatch{db: db.db, b: new(leveldb.Batch)}
 }
-
 
 // The Batch for LevelDB
 // ldbBatch implements the Batch interface

@@ -10,8 +10,8 @@ package p2p
 import (
 	"github.com/op/go-logging"
 	"hyperchain/event"
-	"hyperchain/recovery"
 	"hyperchain/membersrvc"
+	"hyperchain/recovery"
 )
 
 // Init the log setting
@@ -28,7 +28,7 @@ type PeerManager interface {
 	MsgSender
 	InfoGetter
 	// initialize the peerManager which is for init the local node
-	Start(aliveChain chan int, eventMux *event.TypeMux,cm *membersrvc.CAManager)
+	Start(aliveChain chan int, eventMux *event.TypeMux, cm *membersrvc.CAManager)
 }
 
 // MsgSender Send msg to others peer
@@ -39,9 +39,8 @@ type MsgSender interface {
 	SendMsgToPeers(payLoad []byte, peerList []uint64, MessageType recovery.Message_MsgType)
 }
 
-
 // AddNode
-type AddNode interface{
+type AddNode interface {
 	// update routing table when new peer's join request is accepted
 	UpdateRoutingTable(payLoad []byte)
 	ConnectToOthers()
@@ -52,10 +51,10 @@ type AddNode interface{
 }
 
 // DeleteNode interface
-type DeleteNode interface{
+type DeleteNode interface {
 	GetLocalNodeHash() string
-	GetRouterHashifDelete(hash string) (string,uint64)
-	DeleteNode(hash string) error// if self {...} else{...}
+	GetRouterHashifDelete(hash string) (string, uint64)
+	DeleteNode(hash string) error // if self {...} else{...}
 }
 
 // InfoGetter get the peer info to manager
