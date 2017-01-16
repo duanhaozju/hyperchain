@@ -170,7 +170,14 @@ func (caManager *CAManager)VerifyTCert(tcertPEM string)(bool,error){
 		return false, err
 	}
 	// TODO 应该将caManager.tcacert 转为caManager.ecacert
-	verifyTcert, err := primitives.VerifyCert(tcertToVerify, caManager.tcacert)
+	isCa := tcertToVerify.IsCA
+	var verifyTcert bool
+	if isCa == true{
+		verifyTcert,err = primitives.VerifyCert(tcertToVerify,caManager.ecacert)
+	}else {
+		verifyTcert, err = primitives.VerifyCert(tcertToVerify, caManager.tcacert)
+
+	}
 	if verifyTcert == false {
 		log.Error("verified falied")
 		return false, err
