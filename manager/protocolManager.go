@@ -180,7 +180,7 @@ func (self *ProtocolManager) commitLoop() {
 			// start commit block serially
 			start_time := time.Now()
 			self.blockPool.CommitBlock(ev, self.commonHash, self.Peermanager)
-			log.Criticalf("ProtocolManager.BlockPool.CommitBlock cost time is", time.Since(start_time))
+			log.Critical("ProtocolManager.BlockPool.CommitBlock cost time is", time.Since(start_time))
 		}
 	}
 }

@@ -117,7 +117,7 @@ func (bucketTree *BucketTree) ComputeCryptoHash() ([]byte, error) {
 			return nil, err
 		}
 		if bucketTree.treePrefix != "-bucket=state" {
-			log.Criticalf("bucketTree.processDataNodeDelta cost time is ", time.Since(start_time))
+			log.Debug("bucketTree.processDataNodeDelta cost time is ", time.Since(start_time))
 		}
 		start_time = time.Now()
 		err = bucketTree.processBucketTreeDelta()
@@ -125,7 +125,7 @@ func (bucketTree *BucketTree) ComputeCryptoHash() ([]byte, error) {
 			return nil, err
 		}
 		if bucketTree.treePrefix != "-bucket=state" {
-			log.Criticalf("bucketTree.processBucketTreeDelta cost time is ", time.Since(start_time))
+			log.Debug("bucketTree.processBucketTreeDelta cost time is ", time.Since(start_time))
 		}
 		bucketTree.lastComputedCryptoHash = bucketTree.computeRootNodeCryptoHash()
 		bucketTree.recomputeCryptoHash = false
@@ -162,8 +162,8 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 		//	bucketTree.treePrefix, bucketKey.String(), common.Bytes2Hex(cryptoHashForBucket))
 	}
 	if bucketTree.treePrefix != "-bucket-state" {
-		log.Criticalf("start_time_FetchDataNodesFromCache cost time is", start_time_FetchDataNodesFromCache)
-		log.Criticalf("start_time_computeDataNodesCryptoHash cost time is", start_time_computeDataNodesCryptoHash)
+		log.Debug("start_time_FetchDataNodesFromCache cost time is", start_time_FetchDataNodesFromCache)
+		log.Debug("start_time_computeDataNodesCryptoHash cost time is", start_time_computeDataNodesCryptoHash)
 	}
 
 	return nil
@@ -434,10 +434,9 @@ func (bucket *BucketTree) Reset() {
 
 // TODO test important
 // the func can make the buckettree revert to target block
-func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *big.Int) error {
+func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch hyperdb.Batch, currentBlockNum, toBlockNum *big.Int, flush, sync bool) error {
 	log.Debug("Start RevertToTargetBlock, from ", currentBlockNum)
 	db, _ := hyperdb.GetLDBDatabase()
-	writeBatch := db.NewBatch()
 	keyValueMap := NewKVMap()
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
@@ -493,13 +492,19 @@ func (bucketTree *BucketTree) RevertToTargetBlock(currentBlockNum, toBlockNum *b
 		keyValueMap = NewKVMap()
 		writeBatch.Delete(dbKey)
 	}
-	writeBatch.Write()
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
 	globalDataNodeCache.ClearAllCache()
 	bucketTree.bucketCache.isEnabled = true
 	bucketTree.dataNodeCache.isEnabled = true
 	globalDataNodeCache.isEnable = IsEnabledGlobal
+	if flush {
+		if sync {
+			writeBatch.Write()
+		} else {
+			go writeBatch.Write()
+		}
+	}
 	return nil
 }
 
