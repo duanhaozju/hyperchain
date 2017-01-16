@@ -45,7 +45,8 @@ func GetCaManager(ecacertPath string, ecertPath string, rcacertPath string, rcer
 func NewCAManager(ecacertPath string, ecertPath string, rcertPath string, rcacertPath string, ecertPrivateKeyPath string, tcacertPath string, isUsed bool, checkTCert bool) (*CAManager, error) {
 	var caManager CAManager
 	var err error
-	if isUsed != true {
+	caManager.checkTCert = checkTCert
+	if isUsed != true{
 		caManager.ecacertByte = []byte{}
 		caManager.ecertByte = []byte{}
 		caManager.rcertByte = []byte{}
@@ -53,9 +54,8 @@ func NewCAManager(ecacertPath string, ecertPath string, rcertPath string, rcacer
 		caManager.ecertPrivateKeyByte = []byte{}
 		caManager.tcacertByte = []byte{}
 		caManager.isUsed = isUsed
-		caManager.checkTCert = checkTCert
-		return &caManager, nil
-	} else {
+		return &caManager,nil
+	}else {
 		ecacert, rerr := ioutil.ReadFile(ecacertPath)
 		if rerr != nil {
 			log.Error("ecacert read failed")
@@ -133,7 +133,6 @@ func NewCAManager(ecacertPath string, ecertPath string, rcertPath string, rcacer
 
 		//TODO use ca or not
 		caManager.isUsed = isUsed
-		caManager.checkTCert = checkTCert
 		return &caManager, nil
 	}
 }
@@ -158,9 +157,9 @@ func (caManager *CAManager) SignTCert(publicKey string) (string, error) {
 
 //TCERT 需要用为其签发的ECert来验证，但是在没有TCERT的时候只能够用
 //ECERT 进行充当TCERT 所以需要用ECA.CERT 即ECA.CA 作为根证书进行验证
-func (caManager *CAManager) VerifyTCert(tcertPEM string) (bool, error) {
-	if caManager.isUsed != true {
-		return true, nil
+func (caManager *CAManager)VerifyTCert(tcertPEM string)(bool,error){
+	if caManager.checkTCert != true{
+		return true,nil
 	}
 	tcertToVerify, err := primitives.ParseCertificate(tcertPEM)
 	if err != nil {

@@ -104,10 +104,12 @@ func isBatch(msg json.RawMessage) bool {
 }
 
 // CheckHttpHeaders will check http header, mainly
-func (c *jsonCodec) CheckHttpHeaders() RPCError {
-	if c.CM.GetIsCheckTCert() {
-		return nil
-	}
+
+func (c *jsonCodec) CheckHttpHeaders() RPCError{
+	//可能影响性能
+	//if !c.CM.GetIsCheckTCert() {
+	//	return nil
+	//}
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
 	tcertPem, err := DecodeUriCompontent(c.httpHeader.Get("tcert"))
