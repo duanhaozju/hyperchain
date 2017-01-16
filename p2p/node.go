@@ -155,7 +155,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			log.Error("cannot verified the ecert signature", bol)
 			return &response, errors.New("signature is wrong!!")
 		}
-
+		log.Debug("The cert signature PASS")
 		//TODO 用CM对验证进行管理(此处的必要性需要考虑)
 		// TODO 1. 验证ECERT 的合法性
 		//bol1,err := node.CM.VerifyECert()
@@ -177,6 +177,11 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		rcertByte := msg.Signature.Rcert
 		// 先验证证书签名
 		bol,err := node.CM.VerifyECertSignature(string(ecertByte),msg.Payload,msg.Signature.Signature);
+		if !bol || err != nil {
+			log.Error("Verify the cert signature failed!")
+			return &response, errors.New("Verify the cert signature failed!")
+		}
+		log.Debug("The cert signature PASS")
 		ecert,err :=  primitives.ParseCertificate(string(ecertByte))
 		signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
 		ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
@@ -196,13 +201,14 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			log.Error(ecertErr)
 			return &response,ecertErr
 		}
-
+		log.Debug("ECERT PASS")
 		if !verifyRcert  || rcertErr != nil {
 			node.TEM.SetIsVerified(false,msg.From.Hash)
 		}else {
 			node.TEM.SetIsVerified(true,msg.From.Hash)
 		}
 
+		log.Debug("RCERT PASS")
 	}
 
 
