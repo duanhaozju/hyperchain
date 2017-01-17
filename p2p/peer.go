@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 	//"fmt"
+	"hyperchain/core/crypto/primitives"
 )
 
 // init the package-level logger system,
@@ -176,6 +177,29 @@ func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
 	if err != nil {
 		log.Error("enc with secret ", err)
 		return nil, err
+	}
+	if this.CM.GetIsUsed() != true {
+		if msg.Signature == nil {
+			payloadSign := pb.Signature{
+				Signature: []byte{},
+			}
+			msg.Signature = &payloadSign
+		}
+		msg.Signature.Signature = []byte{}
+	} else {
+		var pri interface{}
+		pri = this.CM.GetECertPrivKey()
+		ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
+		sign, err := ecdsaEncry.Sign(msg.Payload, pri)
+		if err == nil {
+			if msg.Signature == nil {
+				payloadSign := pb.Signature{
+					Signature: sign,
+				}
+				msg.Signature = &payloadSign
+			}
+			msg.Signature.Signature = sign
+		}
 	}
 	response, err = this.Client.Chat(context.Background(), &msg)
 	if err != nil {

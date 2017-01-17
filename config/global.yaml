@@ -10,11 +10,6 @@
 ## Data storage path config
 # Note: please DONOT add a slash `/` in the end of directory path.
 # this relative path is relative to the hyperchain binary execute file path
-# e.g: the file tree stauct like:
-#
-
-
-# node config
 
 global:
 
@@ -34,8 +29,7 @@ global:
 # configs
 ############################
     configs:
-        ecert: "config/cert/server/eca.cert"
-        priv: "config/cert/server/eca.priv"
+        caconfig: "config/caconfig.toml"
         peers: "config/local_peerconfig.json"
         genesis: "config/genesis.json"
         membersrvc: "config/membersrvc.yaml"

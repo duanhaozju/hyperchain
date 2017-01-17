@@ -23,17 +23,7 @@ import math "math"
 import (
 	context "golang.org/x/net/context"
 	grpc "google.golang.org/grpc"
-	//"hyperchain/core/crypto/primitives"
-	"github.com/op/go-logging"
-	"hyperchain/core/crypto/primitives"
-	"hyperchain/membersrvc"
 )
-
-// Init the log setting
-var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("p2p")
-}
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -280,53 +270,6 @@ func NewChatClient(cc *grpc.ClientConn) ChatClient {
 }
 
 func (c *chatClient) Chat(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error) {
-
-	cm, cmerr := membersrvc.GetCaManager("./config/cert/eca.ca", "./config/cert/ecert.cert", "./config/cert/rca.ca", "./config/cert/rcert.cert", "./config/cert/ecert.priv", true, true)
-	if cmerr != nil {
-		panic("cannot initliazied the camanager")
-	}
-	isUsed := cm.GetIsUsed()
-	if isUsed != true {
-		if in.Signature == nil {
-			payloadSign := Signature{
-				Signature: []byte{},
-			}
-
-			in.Signature = &payloadSign
-		}
-		in.Signature.Signature = []byte{}
-	} else {
-		var pri interface{}
-		//var parErr error
-		//cm.GetECertPrivateKeyByte()
-		//priStr,getErr := primitives.GetConfig("./config/cert/ecert.priv")
-		//if getErr == nil{
-		//	//var parErr error
-		//	pri,parErr = primitives.ParseKey(priStr)
-		//
-		//	//fmt.Println(pri)
-		//}
-		pri = cm.GetECertPrivKey()
-		ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
-
-		//if parErr == nil{
-
-		//log.Notice("###########",in.Payload,pri)
-		sign, err := ecdsaEncry.Sign(in.Payload, pri)
-		if err == nil {
-			if in.Signature == nil {
-				payloadSign := Signature{
-					Signature: sign,
-				}
-
-				in.Signature = &payloadSign
-			}
-			in.Signature.Signature = sign
-		}
-		//}
-
-	}
-
 	out := new(Message)
 	err := grpc.Invoke(ctx, "/peermessage.Chat/Chat", in, out, c.cc, opts...)
 	if err != nil {

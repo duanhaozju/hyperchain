@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/terasum/viper"
 )
 
 type argT struct {
@@ -115,7 +116,13 @@ func main() {
 		/**
 		 *传入true则开启所有验证，false则为取消ca以及签名的所有验证
 		 */
-		cm, cmerr := membersrvc.GetCaManager("./config/cert/eca.ca", "./config/cert/ecert.cert", "./config/cert/rca.ca", "./config/cert/rcert.cert", "./config/cert/ecert.priv", true, true)
+		global_config := viper.New();
+		global_config.SetConfigFile(argv.ConfigPath)
+		err = global_config.ReadInConfig()
+		if err != nil{
+			panic(err)
+		}
+		cm, cmerr := membersrvc.GetCaManager(global_config)
 		if cmerr != nil {
 			panic("cannot initliazied the camanager")
 		}

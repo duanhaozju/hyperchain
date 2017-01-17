@@ -6,6 +6,10 @@ import (
 	"github.com/pkg/errors"
 	"hyperchain/core/crypto/primitives"
 	"io/ioutil"
+	"time"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc"
+	"github.com/terasum/viper"
 )
 
 type CAManager struct {
@@ -29,10 +33,25 @@ type CAManager struct {
 
 var CaManager *CAManager
 
-func GetCaManager(ecacertPath string, ecertPath string, rcacertPath string, rcertPath string, ecertPrivateKeyPath string, isUsed bool, checkTCert bool) (*CAManager, error) {
+func GetCaManager(global_config *viper.Viper) (*CAManager, error) {
+	config := viper.New()
+	config.SetConfigFile(global_config.GetString("global.configs.caconfig"))
+	err := config.ReadInConfig()
+	if err != nil {
+		log.Error("cannot read the ca config file!")
+		panic(err)
+	}
+	ecacertPath := config.GetString("ecert.ca")
+	ecertPath := config.GetString("ecert.cert")
+	ecertPrivateKeyPath :=config.GetString("ecert.priv")
+	rcacertPath:=config.GetString("rcert.ca")
+	rcertPath:=config.GetString("rcert.ca")
+	checkERCert := config.GetBool("checkercert")
+	checkTCert := config.GetBool("checktcert")
+
 	if CaManager == nil {
 		var err error
-		CaManager, err = NewCAManager(ecacertPath, ecertPath, rcertPath, rcacertPath, ecertPrivateKeyPath, ecertPath, isUsed, checkTCert)
+		CaManager, err = NewCAManager(ecacertPath, ecertPath, rcertPath, rcacertPath, ecertPrivateKeyPath, ecertPath, checkERCert, checkTCert)
 		if err != nil {
 			return nil, err
 		}
@@ -227,6 +246,7 @@ func (caManager *CAManager) VerifyECert(ecertPEM string) (bool, error) {
 	}
 }
 
+//VerifyECertSignature Verify the Signature of ECert
 func (ca *CAManager) VerifyECertSignature(ecertPEM string, msg, sign []byte) (bool, error) {
 	if CaManager.isUsed != true {
 		return true, nil
@@ -269,6 +289,59 @@ func (caManager *CAManager) VerifyRCert(rcertPEM string) (bool, error) {
 }
 
 /**
+  tls ca get dial opts and server opts part
+ */
+
+//获取客户端ca配置opt
+//TODO 重写读取配置函数
+func (caManager *CAManager) GetGrpcClientOpts() []grpc.DialOption {
+
+	var opts []grpc.DialOption
+
+	creds, err := credentials.NewClientTLSFromFile(caPath+caConfig.GetString("node.tls.cap.file"), caConfig.GetString("node.serverhostoverride"))
+
+	if err != nil {
+		log.Notice("enter 222")
+		log.Info("Failed creating credentials for TLS-CA client: %s", err)
+		time.Sleep(time.Second * 10)
+		requestTLSCertificate()
+		creds, err = credentials.NewClientTLSFromFile(caPath+caConfig.GetString("node.tls.cap.file"), caConfig.GetString("node.serverhostoverride"))
+
+		if err != nil {
+			log.Fatalf("can not  create credentials for TLS-CA client: %s\n", err)
+		}
+
+	}
+	opts = append(opts, grpc.WithTransportCredentials(creds))
+	return opts
+}
+
+//获取服务器端ca配置opts
+// TODO 重写读取配置函数
+func (caManager *CAManager) GetGrpcServerOpts() []grpc.ServerOption {
+
+	var opts []grpc.ServerOption
+
+	creds, err := credentials.NewServerTLSFromFile(caPath+caConfig.GetString("node.tls.cert.file"), caPath+caConfig.GetString("node.tls.key.file"))
+
+	if err != nil {
+		log.Info("Failed creating credentials for TLS-CA server: %s", err)
+		time.Sleep(time.Second * 10)
+		requestTLSCertificate()
+		creds, err = credentials.NewServerTLSFromFile(caPath+caConfig.GetString("node.tls.cert.file"), caPath+caConfig.GetString("node.tls.key.file"))
+
+		if err != nil {
+			log.Fatal("can not  create credentials for TLS-CA server: %s", err)
+		}
+
+		//panic(err)
+	}
+	opts = []grpc.ServerOption{grpc.Creds(creds)}
+	return opts
+
+}
+
+/**
 getMethods
 */
 
@@ -293,7 +366,6 @@ func (caManager *CAManager) GetECertPrivKey() interface{} {
 func (caManager *CAManager) GetIsUsed() bool {
 	return caManager.isUsed
 }
-
 func (caManager *CAManager) GetIsCheckTCert() bool {
 	return caManager.checkTCert
 }
