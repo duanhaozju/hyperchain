@@ -22,8 +22,8 @@ var (
 // 这一块相当于ethereum里的TransitionDB
 func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
 	var (
-		from = common.BytesToAddress(tx.From)
-		to = common.BytesToAddress(tx.To)
+		from       = common.BytesToAddress(tx.From)
+		to         = common.BytesToAddress(tx.To)
 		tv         = tx.GetTransactionValue()
 		data       = tv.GetPayload()
 		gas        = big.NewInt(100000000)

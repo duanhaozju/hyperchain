@@ -8,9 +8,9 @@ import (
 	"hyperchain/core/blockpool"
 	"hyperchain/crypto"
 	"hyperchain/event"
+	"hyperchain/admittance"
 	"hyperchain/p2p"
 	"time"
-	"hyperchain/membersrvc"
 )
 
 /*
@@ -27,7 +27,7 @@ import (
 				expiredTime,
 				argv.IsReconnect,
 				config.getGRPCPort())
- */
+*/
 
 // init protocol manager params and start
 func New(
@@ -40,12 +40,12 @@ func New(
 	syncReplicaInterval time.Duration,
 	syncReplica bool,
 	exist chan bool,
-	expiredTime time.Time,cm *membersrvc.CAManager) *ProtocolManager {
+	expiredTime time.Time, cm *admittance.CAManager) *ProtocolManager {
 
 	aliveChan := make(chan int)
 	//add reconnect param
 
-	go peerManager.Start(aliveChan, eventMux,cm)
+	go peerManager.Start(aliveChan, eventMux, cm)
 	//wait for all peer are connected
 	initType := <-aliveChan
 	//select {

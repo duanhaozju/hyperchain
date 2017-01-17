@@ -1,6 +1,7 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
 package state
+
 import (
 	"math/big"
 	"testing"
@@ -100,4 +101,3 @@ func TestIntermediateLeaks(t *testing.T) {
 		}
 	}
 }
-

@@ -6,7 +6,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"reflect"
+
 	"hyperchain/consensus/events"
+
 	"github.com/golang/protobuf/proto"
 	"sync/atomic"
 )
@@ -34,10 +36,6 @@ func (pbft *pbftProtocal) correctViewChange(vc *ViewChange) bool {
 func (pbft *pbftProtocal) calcPSet() map[uint64]*ViewChange_PQ {
 	pset := make(map[uint64]*ViewChange_PQ)
 
-	for n, p := range pbft.pset {
-		pset[n] = p
-	}
-
 	for idx, cert := range pbft.certStore {
 		if cert.prePrepare == nil {
 			continue
@@ -64,10 +62,6 @@ func (pbft *pbftProtocal) calcPSet() map[uint64]*ViewChange_PQ {
 
 func (pbft *pbftProtocal) calcQSet() map[qidx]*ViewChange_PQ {
 	qset := make(map[qidx]*ViewChange_PQ)
-
-	for n, q := range pbft.qset {
-		qset[n] = q
-	}
 
 	for idx, cert := range pbft.certStore {
 		if cert.prePrepare == nil {
@@ -112,8 +106,8 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 	pbft.view++
 	atomic.StoreUint32(&pbft.activeView, 0)
 
-	pbft.pset = pbft.calcPSet()
-	pbft.qset = pbft.calcQSet()
+	pset := pbft.calcPSet()
+	qset := pbft.calcQSet()
 
 	// clear old messages
 	for idx := range pbft.certStore {
@@ -127,27 +121,27 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 		}
 	}
 
-	vc := &ViewChange {
-		View:	pbft.view,
-		H:	pbft.h,
+	vc := &ViewChange{
+		View:      pbft.view,
+		H:         pbft.h,
 		ReplicaId: pbft.id,
 	}
 
 	for n, id := range pbft.chkpts {
-		vc.Cset = append(vc.Cset, &ViewChange_C {
+		vc.Cset = append(vc.Cset, &ViewChange_C{
 			SequenceNumber: n,
-			Id:		id,
+			Id:             id,
 		})
 	}
 
-	for _, p := range pbft.pset {
+	for _, p := range pset {
 		if p.SequenceNumber < pbft.h {
 			logger.Errorf("BUG! Replica %d should not have anything in our pset less than h, found %+v", pbft.id, p)
 		}
 		vc.Pset = append(vc.Pset, p)
 	}
 
-	for _, q := range pbft.qset {
+	for _, q := range qset {
 		if q.SequenceNumber < pbft.h {
 			logger.Errorf("BUG! Replica %d should not have anything in our qset less than h, found %+v", pbft.id, q)
 		}
@@ -167,8 +161,8 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 		return nil
 	}
 	consensusMsg := &ConsensusMessage{
-		Type:		ConsensusMessage_VIEW_CHANGE,
-		Payload:	payload,
+		Type:    ConsensusMessage_VIEW_CHANGE,
+		Payload: payload,
 	}
 	msg := consensusMsgHelper(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
@@ -213,7 +207,7 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 	}
 
 	if _, ok := pbft.viewChangeStore[vcidx{vc.View, vc.ReplicaId}]; ok {
-		logger.Warningf("Replica %d already has a view change message" +
+		logger.Warningf("Replica %d already has a view change message"+
 			" for view %d from replica %d", pbft.id, vc.View, vc.ReplicaId)
 
 		if pbft.vcResendCount >= pbft.vcResendLimit {
@@ -320,8 +314,8 @@ func (pbft *pbftProtocal) sendNewView() events.Event {
 		return nil
 	}
 	consensusMsg := &ConsensusMessage{
-		Type:		ConsensusMessage_NEW_VIEW,
-		Payload:	payload,
+		Type:    ConsensusMessage_NEW_VIEW,
+		Payload: payload,
 	}
 	msg := consensusMsgHelper(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
@@ -352,13 +346,25 @@ func (pbft *pbftProtocal) recvNewView(nv *NewView) events.Event {
 	}
 
 	pbft.newViewStore[nv.View] = nv
+
+	quorum := 0
+	for idx := range pbft.viewChangeStore {
+		if idx.v == pbft.view {
+			quorum++
+		}
+	}
+	if quorum < pbft.allCorrectReplicasQuorum() {
+		logger.Warningf("Replica %d has not meet ViewChangedQuorum", pbft.id)
+		return nil
+	}
+
 	return pbft.processNewView()
 }
 
 func (pbft *pbftProtocal) canExecuteToTarget(specLastExec uint64, initialCp ViewChange_C) bool {
 
 	canExecuteToTarget := true
-	outer:
+outer:
 	for seqNo := specLastExec + 1; seqNo <= initialCp.SequenceNumber; seqNo++ {
 		found := false
 		for idx, cert := range pbft.certStore {
@@ -398,7 +404,7 @@ func (pbft *pbftProtocal) canExecuteToTarget(specLastExec uint64, initialCp View
 		pbft.nvInitialSeqNo = 0
 		logger.Infof("Replica %d cannot execute to the view change checkpoint with seqNo %d", pbft.id, initialCp.SequenceNumber)
 	}
-	return  canExecuteToTarget
+	return canExecuteToTarget
 }
 
 func (pbft *pbftProtocal) feedMissingReqBatchIfNeeded(nv *NewView) (newReqBatchMissing bool) {
@@ -413,7 +419,6 @@ func (pbft *pbftProtocal) feedMissingReqBatchIfNeeded(nv *NewView) (newReqBatchM
 				// NULL request; skip
 				continue
 			}
-
 
 			if _, ok := pbft.validatedBatchStore[d]; !ok {
 				logger.Warningf("Replica %d missing assigned, non-checkpointed request batch %s",
@@ -483,7 +488,6 @@ func (pbft *pbftProtocal) primaryProcessNewView(initialCp ViewChange_C, replicas
 	return nil
 }
 
-
 func (pbft *pbftProtocal) processNewView() events.Event {
 
 	nv, ok := pbft.newViewStore[pbft.view]
@@ -504,7 +508,7 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 			pbft.id, pbft.viewChangeStore)
 		return pbft.sendViewChange()
 	}
-// 以上 primary 不必做
+	// 以上 primary 不必做
 	speculativeLastExec := pbft.lastExec
 	if pbft.currentExec != nil {
 		speculativeLastExec = *pbft.currentExec
@@ -519,7 +523,7 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 			}
 		}
 	}
-// --
+	// --
 	msgList := pbft.assignSequenceNumbers(nv.Vset, cp.SequenceNumber)
 
 	if msgList == nil {
@@ -533,7 +537,7 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 			pbft.id, msgList, nv.Xset)
 		return pbft.sendViewChange()
 	}
-// -- primary 不必做
+	// -- primary 不必做
 	if pbft.h < cp.SequenceNumber {
 		pbft.moveWatermarks(cp.SequenceNumber)
 	}
@@ -584,15 +588,60 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	pbft.vid = pbft.h
 	pbft.lastVid = pbft.h
 	if !pbft.skipInProgress {
-		backendVid := uint64(pbft.vid+1)
+		backendVid := uint64(pbft.vid + 1)
 		pbft.helper.VcReset(backendVid)
+		pbft.inVcReset = true
 		return nil
 	}
+
+	pbft.updateViewChangeSeqNo()
+	pbft.startTimerIfOutstandingRequests()
+
+	pbft.vcResendCount = 0
+
+	return viewChangedEvent{}
+}
+
+func (pbft *pbftProtocal) recvFinishVcReset(finish *FinishVcReset) events.Event {
+
+	if pbft.primary(pbft.view) != pbft.id {
+		logger.Warningf("Replica %d is not primary, but received others FinishVcReset", pbft.id)
+	}
+
+	if atomic.LoadUint32(&pbft.activeView) == 1 {
+		logger.Warningf("Replica %d is not in viewChange, but received others FinishVcReset", pbft.id)
+		return nil
+	}
+
+	if finish.View != pbft.view || finish.LowH != pbft.h {
+		logger.Warningf("Replica %d received finishVcReset from replica %d, expect view=%d/h=%d, but get view=%d/h=%d",
+			pbft.id, finish.ReplicaId, pbft.view, pbft.h, finish.View, finish.LowH)
+		return nil
+	}
+
+	logger.Debugf("Primary %d received FinishVcReset from replica %d, view=%d/h=%d",
+		pbft.id, finish.ReplicaId, finish.View, finish.LowH)
+	ok := pbft.vcResetStore[*finish]
+	if ok {
+		logger.Warningf("Replica %d ignored duplicate agree FinishVcReset from %d", pbft.id, finish.ReplicaId)
+		return nil
+	}
+	pbft.vcResetStore[*finish] = true
 
 	return pbft.handleTailInNewView()
 }
 
 func (pbft *pbftProtocal) handleTailInNewView() events.Event {
+
+	if len(pbft.vcResetStore) < pbft.allCorrectReplicasQuorum()-1 {
+		return nil
+	}
+
+	if pbft.inVcReset {
+		logger.Debugf("Primary %d itself has not done with vcReset", pbft.id)
+		return nil
+	}
+
 	nv, ok := pbft.newViewStore[pbft.view]
 	if !ok {
 		logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
@@ -600,30 +649,49 @@ func (pbft *pbftProtocal) handleTailInNewView() events.Event {
 	}
 	xSetLen := len(nv.Xset)
 	upper := uint64(xSetLen) + pbft.h + uint64(1)
-	if pbft.primary(pbft.view) == pbft.id {
-		for i := pbft.h+uint64(1); i < upper; i++ {
-			d, ok := nv.Xset[i]
+	for i := pbft.h + uint64(1); i < upper; i++ {
+		d, ok := nv.Xset[i]
+		if !ok {
+			logger.Critical("view change Xset miss batch number %d", i)
+		} else if d == "" {
+			// This should not happen
+			logger.Critical("view change Xset has null batch, kick it out")
+		} else {
+			batch, ok := pbft.validatedBatchStore[d]
 			if !ok {
-				logger.Critical("view change Xset miss batch number %d", i)
-			} else if d == "" {
-				// This should not happen
-				logger.Critical("view change Xset has null batch, kick it out")
+				logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
 			} else {
-				batch, ok := pbft.validatedBatchStore[d]
-				if !ok {
-					logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
-				} else {
-					pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch %s", hash(batch)))
-					pbft.primaryValidateBatch(batch)
-				}
+				pbft.primaryValidateBatch(batch, i)
 			}
 		}
 	}
 
 	pbft.updateViewChangeSeqNo()
-	pbft.startTimerIfOutstandingRequests()
-	logger.Debugf("Replica %d done cleaning view change artifacts, calling into consumer", pbft.id)
+	return viewChangedEvent{}
+}
 
+func (pbft *pbftProtocal) finishViewChange() events.Event {
+
+	finish := &FinishVcReset{
+		ReplicaId: pbft.id,
+		View:      pbft.view,
+		LowH:      pbft.h,
+	}
+	payload, err := proto.Marshal(finish)
+	if err != nil {
+		logger.Errorf("Marshal FinishVcReset Error!")
+		return nil
+	}
+	msg := &ConsensusMessage{
+		Type:    ConsensusMessage_FINISH_VCRESET,
+		Payload: payload,
+	}
+
+	broadcast := consensusMsgHelper(msg, pbft.id)
+	primary := pbft.primary(pbft.view)
+	pbft.helper.InnerUnicast(broadcast, primary)
+	logger.Error("send finish vcReset: ", primary)
+	pbft.updateViewChangeSeqNo()
 	return viewChangedEvent{}
 }
 
@@ -692,7 +760,7 @@ func (pbft *pbftProtocal) assignSequenceNumbers(vset []*ViewChange, h uint64) (m
 	maxN := h + 1
 
 	// "for all n such that h < n <= h + L"
-	nLoop:
+nLoop:
 	for n := h + 1; n <= h+pbft.L; n++ {
 		// "∃m ∈ S..."
 		for _, m := range vset {
@@ -700,7 +768,7 @@ func (pbft *pbftProtocal) assignSequenceNumbers(vset []*ViewChange, h uint64) (m
 			for _, em := range m.Pset {
 				quorum := 0
 				// "A1. ∃2f+1 messages m' ∈ S"
-				mpLoop:
+			mpLoop:
 				for _, mp := range vset {
 					if mp.H >= n {
 						continue
@@ -743,7 +811,7 @@ func (pbft *pbftProtocal) assignSequenceNumbers(vset []*ViewChange, h uint64) (m
 
 		quorum := 0
 		// "else if ∃2f+1 messages m ∈ S"
-		nullLoop:
+	nullLoop:
 		for _, m := range vset {
 			// "m.P has no entry"
 			for _, em := range m.Pset {

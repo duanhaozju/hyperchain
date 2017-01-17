@@ -131,11 +131,11 @@ func NewSelfSignedCert() ([]byte, interface{}, error) {
 
 	//储存privateKey
 	var block pem.Block
-	block.Type="ECDSA PRIVATE KEY"
-	der,_ := PrivateKeyToDER(privKey)
+	block.Type = "ECDSA PRIVATE KEY"
+	der, _ := PrivateKeyToDER(privKey)
 	block.Bytes = der
-	file,_ := os.Create("tca.priv")
-	pem.Encode(file,&block)
+	file, _ := os.Create("tca.priv")
+	pem.Encode(file, &block)
 	//--------------------------
 
 	if err != nil {
@@ -165,7 +165,7 @@ func NewSelfSignedCert() ([]byte, interface{}, error) {
 			},
 		},
 		NotBefore: time.Now().Add(-1 * time.Hour),
-		NotAfter:  time.Now().Add(876000 * time.Hour),//暂定证书有效期为100年
+		NotAfter:  time.Now().Add(876000 * time.Hour), //暂定证书有效期为100年
 
 		SignatureAlgorithm: x509.ECDSAWithSHA384,
 
@@ -206,18 +206,18 @@ func NewSelfSignedCert() ([]byte, interface{}, error) {
 	return cert, privKey, nil
 }
 
-func createCertByCa(ca *x509.Certificate,private interface{}) ([]byte, interface{}, error) {
+func createCertByCa(ca *x509.Certificate, private interface{}) ([]byte, interface{}, error) {
 
 	caPri := private.(*ecdsa.PrivateKey)
 	privKey, err := NewECDSAKey()
 
 	//储存privateKey
 	var block pem.Block
-	block.Type="ECDSA PRIVATE KEY"
-	der,_ := PrivateKeyToDER(privKey)
+	block.Type = "ECDSA PRIVATE KEY"
+	der, _ := PrivateKeyToDER(privKey)
 	block.Bytes = der
-	file,_ := os.Create("tcert.priv")
-	pem.Encode(file,&block)
+	file, _ := os.Create("tcert.priv")
+	pem.Encode(file, &block)
 	//--------------------------
 
 	if err != nil {
@@ -247,7 +247,7 @@ func createCertByCa(ca *x509.Certificate,private interface{}) ([]byte, interface
 			},
 		},
 		NotBefore: time.Now().Add(-1 * time.Hour),
-		NotAfter:  time.Now().Add(876000 * time.Hour),//暂定证书有效期为100年
+		NotAfter:  time.Now().Add(876000 * time.Hour), //暂定证书有效期为100年
 
 		SignatureAlgorithm: x509.ECDSAWithSHA384,
 
@@ -268,7 +268,7 @@ func createCertByCa(ca *x509.Certificate,private interface{}) ([]byte, interface
 		},
 	}
 
-	cert, err := x509.CreateCertificate(rand.Reader, &template,ca, &privKey.PublicKey, caPri)
+	cert, err := x509.CreateCertificate(rand.Reader, &template, ca, &privKey.PublicKey, caPri)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -276,11 +276,11 @@ func createCertByCa(ca *x509.Certificate,private interface{}) ([]byte, interface
 	return cert, privKey, nil
 }
 
-func GenTCert(ca *x509.Certificate,privatekey interface{},publicKey interface{})([]byte,error){
-	return generTcert(ca,privatekey,publicKey)
+func GenTCert(ca *x509.Certificate, privatekey interface{}, publicKey interface{}) ([]byte, error) {
+	return generTcert(ca, privatekey, publicKey)
 }
 
-func generTcert(ca *x509.Certificate,private interface{},publicKey interface{}) ([]byte, error) {
+func generTcert(ca *x509.Certificate, private interface{}, publicKey interface{}) ([]byte, error) {
 	caPri := private.(*ecdsa.PrivateKey)
 	//privKey, err := NewECDSAKey()
 
@@ -307,7 +307,7 @@ func generTcert(ca *x509.Certificate,private interface{},publicKey interface{}) 
 			},
 		},
 		NotBefore: time.Now().Add(-1 * time.Hour),
-		NotAfter:  time.Now().Add(876000 * time.Hour),//暂定证书有效期为100年
+		NotAfter:  time.Now().Add(876000 * time.Hour), //暂定证书有效期为100年
 
 		SignatureAlgorithm: x509.ECDSAWithSHA384,
 
@@ -318,7 +318,7 @@ func generTcert(ca *x509.Certificate,private interface{},publicKey interface{}) 
 		UnknownExtKeyUsage: testUnknownExtKeyUsage,
 
 		BasicConstraintsValid: true,
-		IsCA: true,
+		IsCA: false,
 
 		ExtraExtensions: []pkix.Extension{
 			{
@@ -328,7 +328,8 @@ func generTcert(ca *x509.Certificate,private interface{},publicKey interface{}) 
 		},
 	}
 
-	cert, err := x509.CreateCertificate(rand.Reader, &template,ca, &publicKey, caPri)
+
+	cert, err := x509.CreateCertificate(rand.Reader, &template,ca, publicKey, caPri)
 	if err != nil {
 		return nil, err
 	}

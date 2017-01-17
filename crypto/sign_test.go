@@ -3,26 +3,28 @@
 package crypto
 
 import (
-	"testing"
-	"math/big"
-	"fmt"
 	"crypto/elliptic"
+	"fmt"
 	"hyperchain/crypto/secp256k1"
+	"math/big"
 	"sync/atomic"
+	"testing"
 
 	"crypto/ecdsa"
 	"hyperchain/common"
 )
+
 type Transaction struct {
 	data txdata
 	// caches
 	from atomic.Value
 }
-type txdata struct  {
+type txdata struct {
 	Recipient *common.Address
-	Amount *big.Int
+	Amount    *big.Int
 	signature []byte
 }
+
 //func NewTransaction(to common.Address,amount *big.Int) *Transaction {
 //	d:=txdata{
 //		Recipient:	&to,

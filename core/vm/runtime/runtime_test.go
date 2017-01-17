@@ -4,9 +4,9 @@ import (
 	"math/big"
 	"testing"
 
-	"hyperchain/core/vm"
 	"hyperchain/common"
 	"hyperchain/core/state"
+	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
 )
 

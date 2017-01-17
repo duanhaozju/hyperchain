@@ -19,16 +19,16 @@ func TestStorageTree(t *testing.T) {
 	obj.SetState(common.StringToHash("key2"), common.StringToHash("value2"))
 	obj.Update()
 
-	val1:= obj.GetState(common.StringToHash("key1"))
-	val2:= obj.GetState(common.StringToHash("key2"))
-	if val1!=common.StringToHash("value1")||val2!=common.StringToHash("value2"){
+	val1 := obj.GetState(common.StringToHash("key1"))
+	val2 := obj.GetState(common.StringToHash("key2"))
+	if val1 != common.StringToHash("value1") || val2 != common.StringToHash("value2") {
 		t.Error("setstate fail")
 	}
 
 	obj.SetState(common.StringToHash("key1"), common.StringToHash(""))
 	obj.Update()
-	val1= obj.GetState(common.StringToHash("key1"))
-	if val1!=common.StringToHash(""){
+	val1 = obj.GetState(common.StringToHash("key1"))
+	if val1 != common.StringToHash("") {
 		t.Error("setstate fail")
 	}
 }
@@ -73,11 +73,11 @@ func TestEncode(t *testing.T) {
 func TestGetNull(t *testing.T) {
 	db, _ := hyperdb.NewMemDatabase()
 	obj := NewStateObject(common.HexToAddress("01234567890"), db)
-	if (obj.GetState(common.StringToHash("key1"))!=common.Hash{}){
+	if (obj.GetState(common.StringToHash("key1")) != common.Hash{}) {
 		t.Error("expected null,but got something return")
 	}
 
-	if(obj.getAddr(common.StringToHash("key1"))!=common.Hash{}){
+	if (obj.getAddr(common.StringToHash("key1")) != common.Hash{}) {
 		t.Error("expected null,but got somthing return")
 	}
 }

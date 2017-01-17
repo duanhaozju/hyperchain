@@ -1,27 +1,27 @@
 /**
 author:Zhang Kejie
 log:Test Create Cert.
- */
+*/
 
 package primitives
 
 import (
-	"testing"
-	"fmt"
-	"encoding/asn1"
-	"math/big"
 	"crypto/x509/pkix"
+	"encoding/asn1"
+	"fmt"
+	"math/big"
+	"testing"
 	"time"
 	//"encoding/pem"
 	//"crypto/x509"
 	"io/ioutil"
 	//"crypto/ecdsa"
-	"encoding/pem"
 	"crypto/x509"
+	"encoding/pem"
 	//"os"
 	//"encoding/json"
-	"os"
 	"crypto/ecdsa"
+	"os"
 	//"crypto"
 )
 
@@ -41,7 +41,6 @@ AjEA9Zib3NJ0uIRIE5oylQAqPUuQA0eNMnf2qWuQwxc7hAHBtw9lNkK0/mj2SJbH
 YNjt
 -----END CERTIFICATE-----`*/
 
-
 type dsaSignature struct {
 	R, S *big.Int
 }
@@ -51,7 +50,6 @@ type ecdsaSignature dsaSignature
 type validity struct {
 	NotBefore, NotAfter time.Time
 }
-
 
 type publicKeyInfo struct {
 	Raw       asn1.RawContent
@@ -74,30 +72,29 @@ type tbsCertificate struct {
 }
 
 func TestECACert(t *testing.T) {
-	der,_,_ := NewSelfSignedCert()
+	der, _, _ := NewSelfSignedCert()
 	//fmt.Println("PrivateKey:" + string(key));
 	pem := DERCertToPEM(der)
-	file,_ := os.Create("tca.ca")
+	file, _ := os.Create("tca.ca")
 	file.WriteString(string(pem))
 	//fmt.Println(string(pem))
 }
 
-func TestDecode(t *testing.T){
+func TestDecode(t *testing.T) {
 
-	fileContent,err := ioutil.ReadFile("../../../config/cert/server/eca.cert")
+	fileContent, err := ioutil.ReadFile("../../../config/cert/server/eca.cert")
 
-	if(err!=nil){
+	if err != nil {
 		panic(err)
 	}
-
 
 	//fmt.Println([]byte(fileContent))
 
 	ECert := string(fileContent)
 
-	block,_ := pem.Decode([]byte(ECert))
+	block, _ := pem.Decode([]byte(ECert))
 
-	cert1,_ := x509.ParseCertificate(block.Bytes)
+	cert1, _ := x509.ParseCertificate(block.Bytes)
 
 	/*if err==nil {
 		fmt.Println(cert1.NotAfter.String())
@@ -105,11 +102,11 @@ func TestDecode(t *testing.T){
 	//ecd := new(ECDSASignature)
 	//pub,ok := cert1.PublicKey.(*(ecdsa.PublicKey))
 	//if ok {
-		//fmt.Printf("!!!!!!!!!!")
+	//fmt.Printf("!!!!!!!!!!")
 	//}
 	//check := ecdsa.Verify(pub,cert1.RawTBSCertificate,ecd.R,ecd.S)
 	//fmt.Println(check)
-	err1 := cert1.CheckSignature(cert1.SignatureAlgorithm,cert1.RawTBSCertificate,cert1.Signature)
+	err1 := cert1.CheckSignature(cert1.SignatureAlgorithm, cert1.RawTBSCertificate, cert1.Signature)
 	fmt.Println(err1)
 	//der,_,_ := NewSelfSignedCert()
 
@@ -129,87 +126,83 @@ func TestDecode(t *testing.T){
 	//fmt.Println(cert.RawSubjectPublicKeyInfo)
 }
 
-func TestTime(t *testing.T)  {
-	time1 := time.Now().Add(8760*time.Hour).String()
+func TestTime(t *testing.T) {
+	time1 := time.Now().Add(8760 * time.Hour).String()
 	fmt.Printf(time1)
 }
 
-func TestKey(t *testing.T){
-	pri,_ := NewECDSAKey()
+func TestKey(t *testing.T) {
+	pri, _ := NewECDSAKey()
 
 	fmt.Println(pri)
 
 	//fmt.Println(json)
 	var block pem.Block
-	block.Type="ECDSA PRIVATE KEY"
-	der,_ := PrivateKeyToDER(pri)
+	block.Type = "ECDSA PRIVATE KEY"
+	der, _ := PrivateKeyToDER(pri)
 	block.Bytes = der
-	file,_ := os.Create("a.priv")
-	pem.Encode(file,&block)
+	file, _ := os.Create("a.priv")
+	pem.Encode(file, &block)
 	//fmt.Println(*pri)
 }
 
-func TestParseKey(t *testing.T){
-	content,_ := ioutil.ReadFile("../../../config/cert/cleca.priv")
+func TestParseKey(t *testing.T) {
+	content, _ := ioutil.ReadFile("../../../config/cert/cleca.priv")
 
 	privateKey := string(content)
 
-	block,_ := pem.Decode([]byte(privateKey));
+	block, _ := pem.Decode([]byte(privateKey))
 
 	//var pri ecdsa.PrivateKey
 
-	pri,err := DERToPrivateKey(block.Bytes)
+	pri, err := DERToPrivateKey(block.Bytes)
 
 	if err != nil {
 		fmt.Println(err)
-	}else {
+	} else {
 		fmt.Println(pri)
 	}
 
 }
 
-
 //测试签名
-func TestPayload(t *testing.T){
+func TestPayload(t *testing.T) {
 
 	ee := NewEcdsaEncrypto("ecdsa")
-	payload := []byte{1,2,3}
+	payload := []byte{1, 2, 3}
 
-	content,_ := GetConfig("../../../config/cert/server/eca.priv")
+	content, _ := GetConfig("../../../config/cert/server/eca.priv")
 
-
-	pri,_ := ParseKey(content)
-
+	pri, _ := ParseKey(content)
 
 	//fmt.Println(pri)
-	sign,_ := ee.Sign(payload,pri)
+	sign, _ := ee.Sign(payload, pri)
 
 	//fmt.Println(sign)
 
-	ECert,_ := GetConfig("../../../config/cert/server/eca.cert")
+	ECert, _ := GetConfig("../../../config/cert/server/eca.cert")
 
 	//block1,_ := pem.Decode([]byte(ECert))
 
-	cert1 := ParseCertificate(ECert)
+	cert1, _ := ParseCertificate(ECert)
 
 	pub := cert1.PublicKey
 	//fmt.Println(pub)
-//s256:= crypto.NewKeccak256Hash("Keccak256")
-//	hash2 := s256.Hash(payload)
+	//s256:= crypto.NewKeccak256Hash("Keccak256")
+	//	hash2 := s256.Hash(payload)
 	//result,err:=ee.VerifySign(pub,payload,sign)
-	result,err := ECDSAVerify(pub,payload,sign)
+	result, err := ECDSAVerify(pub, payload, sign)
 
-	if err!=nil {
+	if err != nil {
 		fmt.Println(err)
-	}else {
+	} else {
 		fmt.Println(result)
 	}
 
 }
 
-func TestGetCert(t *testing.T){
+func TestGetCert(t *testing.T) {
 	//cert,_ := GetConfig("../../../config/cert/server/eca.cert1")
-
 
 	//byteCert := []byte(cert)
 	//
@@ -224,10 +217,10 @@ func TestGetCert(t *testing.T){
 	//fmt.Println(bol)
 }
 
-func TestCreateCert(t *testing.T){
-	cert,err := GetConfig("./tca.ca")
+func TestCreateCert(t *testing.T) {
+	cert, err := GetConfig("./tca.ca")
 
-	if err != nil{
+	if err != nil {
 		fmt.Println(err)
 		fmt.Println("1231231")
 		return
@@ -236,29 +229,28 @@ func TestCreateCert(t *testing.T){
 
 	//fmt.Println(byteCert)
 
-	ecrt := ParseCertificate(string(byteCert))
+	ecrt, _ := ParseCertificate(string(byteCert))
 
-	content,_ := ioutil.ReadFile("./tca.priv")
+	content, _ := ioutil.ReadFile("./tca.priv")
 
 	privateKey := string(content)
 
-	block,_ := pem.Decode([]byte(privateKey));
+	block, _ := pem.Decode([]byte(privateKey))
 
 	//var pri ecdsa.PrivateKey
 
-	pri,_ := DERToPrivateKey(block.Bytes)
+	pri, _ := DERToPrivateKey(block.Bytes)
 
-
-	ecertByCa,_,_ := createCertByCa(ecrt,pri)
+	ecertByCa, _, _ := createCertByCa(ecrt, pri)
 
 	pem := DERCertToPEM(ecertByCa)
-	file,_ := os.Create("tcert.cert")
+	file, _ := os.Create("tcert.cert")
 	file.WriteString(string(pem))
 
-	ecertByCa1,_:=DERToX509Certificate(ecertByCa)
+	ecertByCa1, _ := DERToX509Certificate(ecertByCa)
 
 	//ecertByCa1 := ParseCertificate()
-pub1 := ecertByCa1.PublicKey.(*ecdsa.PublicKey)
+	pub1 := ecertByCa1.PublicKey.(*ecdsa.PublicKey)
 	fmt.Println(*pub1)
 
 	fmt.Println("---------------------")
@@ -274,71 +266,76 @@ pub1 := ecertByCa1.PublicKey.(*ecdsa.PublicKey)
 	fmt.Println(err1)
 }
 
-func TestCheckCert(t *testing.T)  {
-	cert,err := GetConfig("./rca.ca")
+func TestCheckCert(t *testing.T) {
+	cert, err := GetConfig("./rca.ca")
 
-	if err != nil{
+	if err != nil {
 		fmt.Println(err)
 		fmt.Println("1231231")
 		return
 	}
 	byteCert := []byte(cert)
 
-	ecrtParent := ParseCertificate(string(byteCert))
+	ecrtParent, _ := ParseCertificate(string(byteCert))
 
-	cert1,err1 := GetConfig("./eca.ca")
+	cert1, err1 := GetConfig("./eca.ca")
 
-	if err1 != nil{
+	if err1 != nil {
 		fmt.Println(err)
 		fmt.Println("1231231")
 		return
 	}
 	byteCert1 := []byte(cert1)
 
-	ecrt := ParseCertificate(string(byteCert1))
+	ecrt, _ := ParseCertificate(string(byteCert1))
 
 	err2 := ecrt.CheckSignatureFrom(ecrtParent)
 
 	fmt.Println(err2)
 
-
 }
 
 func TestESign(t *testing.T) {
-	payload := []byte{1,23,6,0,9,9,9,8,7,6,5,4,9,0}
+	payload := []byte{1, 23, 6, 0, 9, 9, 9, 8, 7, 6, 5, 4, 9, 0}
 	var pri interface{}
 	var parErr error
 	var sign []byte
 	var err error
-	priStr,getErr := GetConfig("../../../config/cert/ecert.priv")
-	if getErr == nil{
+	priStr, getErr := GetConfig("../../../config/cert/ecert.priv")
+	if getErr == nil {
 		//var parErr error
-		pri,parErr = ParseKey(priStr)
+		pri, parErr = ParseKey(priStr)
 	}
 
 	ecdsaEncrypto := NewEcdsaEncrypto("ecdsa")
 
-	if parErr == nil{
-		sign,err = ecdsaEncrypto.Sign(payload,pri)
+	if parErr == nil {
+		sign, err = ecdsaEncrypto.Sign(payload, pri)
 
-		if err == nil{
+		if err == nil {
 			fmt.Println(sign)
 		}
 	}
 
-//	var aaa crypto.PublicKey
-//
-//	aaa = nil
-//	//
-//	//fmt.Println("#############")
-//	//fmt.Println(aaa)
-//	//
-//	//fmt.Println("#############")
-//
+	//	var aaa crypto.PublicKey
+	//
+	//	aaa = nil
+	//	//
+	//	//fmt.Println("#############")
+	//	//fmt.Println(aaa)
+	//	//
+	//	//fmt.Println("#############")
+	//
 	ecdPri := pri.(*ecdsa.PrivateKey)
 	pub := ecdPri.PublicKey
-//fmt.Println(pub)
-	bol,_ := ecdsaEncrypto.VerifySign(&pub,[]byte{1,2,3},sign)
+	//fmt.Println(pub)
+	bol, _ := ecdsaEncrypto.VerifySign(&pub, []byte{1, 2, 3}, sign)
 
 	fmt.Println(bol)
+}
+func TestParsePubKey(t *testing.T) {
+	pub,_ := GetConfig("./test.pub")
+	pubkey,_ := ParsePubKey(pub)
+
+	t.Log(pubkey)
 }

@@ -11,15 +11,15 @@ import (
 //
 //// ReceiptTrans are used to show in web.
 type ReceiptTrans struct {
-	PostState         string		`json:"postState"`
-	CumulativeGasUsed int64			`json:"cumulativeGasUsed"`
-	TxHash            string		`json:"txHash"`
-	ContractAddress   string		`json:"contractAddress"`
-	GasUsed           int64			`json:"gasUsed"`
-	Ret               string		`json:"ret"`
-	Status            Receipt_STATUS	`json:"status"`
-	Message           string		`json:"message"`
-	Logs              []vm.LogTrans		`json:"logs"`
+	PostState         string         `json:"postState"`
+	CumulativeGasUsed int64          `json:"cumulativeGasUsed"`
+	TxHash            string         `json:"txHash"`
+	ContractAddress   string         `json:"contractAddress"`
+	GasUsed           int64          `json:"gasUsed"`
+	Ret               string         `json:"ret"`
+	Status            Receipt_STATUS `json:"status"`
+	Message           string         `json:"message"`
+	Logs              []vm.LogTrans  `json:"logs"`
 }
 
 func (receipt Receipt) ToReceiptTrans() (receiptTrans *ReceiptTrans) {

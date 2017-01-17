@@ -7,13 +7,14 @@ import (
 	"errors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"hyperchain/admittance"
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/transport"
 	"strconv"
 	"sync"
 	"time"
-	"hyperchain/membersrvc"
 	//"fmt"
+	"hyperchain/core/crypto/primitives"
 )
 
 // init the package-level logger system,
@@ -21,7 +22,7 @@ import (
 // you can use the `log` whole the package scope
 
 type Peer struct {
-	PeerAddr *pb.PeerAddr
+	PeerAddr   *pb.PeerAddr
 	Connection *grpc.ClientConn
 	LocalAddr  *pb.PeerAddr
 	Client     pb.ChatClient
@@ -31,8 +32,7 @@ type Peer struct {
 	IsPrimary  bool
 	//PeerPool   PeersPool
 	Certificate string
-	CM *membersrvc.CAManager
-
+	CM          *admittance.CAManager
 }
 
 // NewPeer to create a Peer which with a connection
@@ -41,7 +41,7 @@ type Peer struct {
 // if get a response, save the peer into singleton peer pool instance
 // NewPeer 用于返回一个新的NewPeer 用于与远端的peer建立连接，这个peer将会存储在peerPool中
 // 如果取得相应的连接返回值，将会将peer存储在单例的PeersPool中进行存储
-func NewPeer(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport.TransportEncryptManager,cm *membersrvc.CAManager) (*Peer, error){
+func NewPeer(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager, cm *admittance.CAManager) (*Peer, error) {
 	//log.Critical(peerAddr,localAddr,TEM)
 	var peer Peer
 	peer.TEM = TEM
@@ -51,12 +51,14 @@ func NewPeer(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport.Transpor
 	peer.PeerAddr = peerAddr
 	//peer.PeerPool = peerspool
 	//TODO rewrite the tls options get method
-	opts := membersrvc.GetGrpcClientOpts()
+	//opts := membersrvc.GetGrpcClientOpts()
+	opts := peer.CM.GetGrpcClientOpts()
+
 	// dial to remote
-	conn, err := grpc.Dial(peerAddr.IP + ":" + strconv.Itoa(peerAddr.Port), opts...)
+	conn, err := grpc.Dial(peerAddr.IP+":"+strconv.Itoa(peerAddr.Port), opts...)
 	if err != nil {
 		log.Error("err:", errors.New("Cannot establish a connection!"))
-		return nil,err
+		return nil, err
 	}
 	peer.Connection = conn
 	peer.Client = pb.NewChatClient(conn)
@@ -64,7 +66,7 @@ func NewPeer(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport.Transpor
 	peer.IsPrimary = false
 	//review handshake operation
 	err = peer.handShake()
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	return &peer, nil
@@ -73,9 +75,22 @@ func NewPeer(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport.Transpor
 // handShake connect to remote peer, and negotiate the secret
 // handShake 用于与相应的远端peer进行通信，并进行密钥协商
 func (peer *Peer) handShake() (err error) {
-	signature := pb.Signature{
+	//TODO 首次协商的时候是否需要带上消息签名
+	/**
+		signature := pb.Signature{
 		Ecert:peer.CM.GetECertByte(),
 		Rcert:peer.CM.GetRCertByte(),
+		Signature: 这里需要对hyperchain这个字符串进行签名
+	}
+	传到node.go端后，
+	case hello:{
+		verifySignature(signature)
+	}
+	*/
+
+	signature := pb.Signature{
+		Ecert: peer.CM.GetECertByte(),
+		Rcert: peer.CM.GetRCertByte(),
 	}
 
 	//review start exchange the secret
@@ -84,17 +99,13 @@ func (peer *Peer) handShake() (err error) {
 		Payload:      peer.TEM.GetLocalPublicKey(),
 		From:         peer.LocalAddr.ToPeerAddress(),
 		MsgTimeStamp: time.Now().UnixNano(),
-		Signature: &signature,
+		Signature:    &signature,
 	}
-
-	//log.Notice("publickey",peer.TEM.GetLocalPublicKey())
 
 	retMessage, err := peer.Client.Chat(context.Background(), &helloMessage)
 
-	//retMessage.Signature.Ecert
-
 	if err != nil {
-		log.Error("cannot establish a connection",err)
+		log.Error("cannot establish a connection", err)
 		return
 	}
 	//review get the remote peer secret
@@ -102,23 +113,25 @@ func (peer *Peer) handShake() (err error) {
 		remotePublicKey := retMessage.Payload
 		err = peer.TEM.GenerateSecret(remotePublicKey, peer.PeerAddr.Hash)
 		if err != nil {
-			log.Error("Local Generate Secret Failed, localAddr:",peer.LocalAddr,err)
+			log.Error("Local Generate Secret Failed, localAddr:", peer.LocalAddr, err)
 			return
 		}
-		return  nil
+		return nil
 	}
 	return errors.New("ret message is not Hello Response!")
 }
 
-func NewPeerReconnect(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport.TransportEncryptManager) (peer *Peer, err error) {
+func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager,cm *admittance.CAManager) (peer *Peer, err error) {
 	peer.TEM = TEM
 	peer.PeerAddr = peerAddr
 	peer.LocalAddr = localAddr
+	peer.CM = cm
 	//peer.PeerPool = peerPool
 
-	opts := membersrvc.GetGrpcClientOpts()
+	//opts :=  membersrvc.GetGrpcClientOpts()
+	opts :=  peer.CM.GetGrpcClientOpts()
 	// dial to remote
-	conn, err := grpc.Dial(peerAddr.IP + ":" + strconv.Itoa(peerAddr.Port), opts...)
+	conn, err := grpc.Dial(peerAddr.IP+":"+strconv.Itoa(peerAddr.Port), opts...)
 	if err != nil {
 		log.Error("err:", errors.New("Cannot establish a connection!"))
 		return nil, err
@@ -149,7 +162,7 @@ func NewPeerReconnect(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport
 		err = peer.TEM.GenerateSecret(remotePublicKey, peer.PeerAddr.Hash)
 		if err != nil {
 			log.Error("genErr", err)
-			return nil,err
+			return nil, err
 		}
 		log.Debug("remote Peer address:", peer.PeerAddr)
 		log.Debug(peer.TEM.GetSecret(peer.PeerAddr.Hash))
@@ -164,29 +177,52 @@ func NewPeerReconnect(peerAddr *pb.PeerAddr,localAddr *pb.PeerAddr,TEM transport
 //
 func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
 	log.Debug("BROADCAST:", msg.From.ID, ">>>", this.PeerAddr.ID)
-	msg.Payload,err = this.TEM.EncWithSecret(msg.Payload, this.PeerAddr.Hash)
-	if err != nil{
-		log.Error("enc with secret ",err)
-		return nil,err
+	msg.Payload, err = this.TEM.EncWithSecret(msg.Payload, this.PeerAddr.Hash)
+	if err != nil {
+		log.Error("enc with secret ", err)
+		return nil, err
+	}
+	if this.CM.GetIsUsed() != true {
+		if msg.Signature == nil {
+			payloadSign := pb.Signature{
+				Signature: []byte{},
+			}
+			msg.Signature = &payloadSign
+		}
+		msg.Signature.Signature = []byte{}
+	} else {
+		var pri interface{}
+		pri = this.CM.GetECertPrivKey()
+		ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
+		sign, err := ecdsaEncry.Sign(msg.Payload, pri)
+		if err == nil {
+			if msg.Signature == nil {
+				payloadSign := pb.Signature{
+					Signature: sign,
+				}
+				msg.Signature = &payloadSign
+			}
+			msg.Signature.Signature = sign
+		}
 	}
 	response, err = this.Client.Chat(context.Background(), &msg)
 	if err != nil {
-		this.Status = 2;
+		this.Status = 2
 		log.Error("response err:", err)
 		//TODO
 		//panic(err)
-		return nil,err
+		return nil, err
 	}
-	this.Status = 1;
+	this.Status = 1
 	// decode the return message
-	if response != nil && response.MessageType != pb.Message_HELLO && response.MessageType != pb.Message_HELLO_RESPONSE{
-		response.Payload,err = this.TEM.DecWithSecret(response.Payload, response.From.Hash)
-		if err != nil{
+	if response != nil && response.MessageType != pb.Message_HELLO && response.MessageType != pb.Message_HELLO_RESPONSE {
+		response.Payload, err = this.TEM.DecWithSecret(response.Payload, response.From.Hash)
+		if err != nil {
 			log.Error("decwithSec err:", err)
-			return nil,err
+			return nil, err
 		}
 	}
-	log.Debug("response",response.MessageType)
+	log.Debug("response", response.MessageType)
 	return response, err
 }
 

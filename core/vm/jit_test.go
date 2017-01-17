@@ -150,12 +150,12 @@ type Env struct {
 	gasLimit *big.Int
 	depth    int
 	evm      *EVM
-	Gas        *big.Int
-	number     *big.Int
-	time       *big.Int
-	state		*StateDB
+	Gas      *big.Int
+	number   *big.Int
+	time     *big.Int
+	state    *StateDB
 
-	ruleSet    RuleSet
+	ruleSet RuleSet
 }
 
 func NewEnv(noJit, forceJit bool) *Env {
@@ -166,7 +166,6 @@ func NewEnv(noJit, forceJit bool) *Env {
 	})
 	return env
 }
-
 
 func (self *Env) RuleSet() RuleSet       { return ruleSet{new(big.Int)} }
 func (self *Env) Vm() Vm                 { return self.evm }

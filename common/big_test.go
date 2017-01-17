@@ -1,10 +1,9 @@
-
 package common
 
 import (
 	"bytes"
-	"testing"
 	"fmt"
+	"testing"
 )
 
 func TestMisc(t *testing.T) {
@@ -75,15 +74,15 @@ func TestBigCopy(t *testing.T) {
 }
 
 func TestFirstBitSet(t *testing.T) {
-	a:=Big("8")
+	a := Big("8")
 	res := FirstBitSet(a)
-	if res!=3{
-		t.Error("Got",res)
+	if res != 3 {
+		t.Error("Got", res)
 	}
-	b:=Big("0")
+	b := Big("0")
 	res = FirstBitSet(b)
 	fmt.Println(res)
-	if res!=0{
-		t.Error("Got",res)
+	if res != 0 {
+		t.Error("Got", res)
 	}
 }

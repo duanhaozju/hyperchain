@@ -1,7 +1,7 @@
 /**
 author:Zhangkejie
 date:16-12-22
- */
+*/
 
 package primitives
 
@@ -9,6 +9,7 @@ import (
 	//"encoding/pem"
 	"github.com/op/go-logging"
 )
+
 // Init the log setting
 var log *logging.Logger // package-level logger
 func init() {
@@ -17,7 +18,7 @@ func init() {
 
 type EcdsaEncryption struct {
 	name string
-	id string
+	id   string
 }
 
 func NewEcdsaEncrypto(name string) *EcdsaEncryption {
@@ -25,25 +26,25 @@ func NewEcdsaEncrypto(name string) *EcdsaEncryption {
 	return ee
 }
 
-func (ee *EcdsaEncryption) Sign(payload []byte,pri interface{})([]byte,error) {
+func (ee *EcdsaEncryption) Sign(payload []byte, pri interface{}) ([]byte, error) {
 	//log.Notice("payload",payload,"pri",pri)
 
-	sign,err := ECDSASign(pri,payload)
+	sign, err := ECDSASign(pri, payload)
 
-	if err!=nil {
-		return nil,err
+	if err != nil {
+		return nil, err
 	}
 
-	return sign,err
+	return sign, err
 
 }
 
-func (ee *EcdsaEncryption) VerifySign(verKey interface{}, msg, signature []byte) (bool, error){
+func (ee *EcdsaEncryption) VerifySign(verKey interface{}, msg, signature []byte) (bool, error) {
 
-	result,err := ECDSAVerify(verKey,msg,signature);
+	result, err := ECDSAVerify(verKey, msg, signature)
 
-	if err!=nil{
-		return false,err
+	if err != nil {
+		return false, err
 	}
-	return result,nil
+	return result, nil
 }

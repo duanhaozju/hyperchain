@@ -11,7 +11,6 @@ import (
 )
 
 type ellipticECDH struct {
-	ECDH
 	curve elliptic.Curve
 }
 
@@ -65,7 +64,6 @@ func (e *ellipticECDH) Unmarshal(data []byte) (crypto.PublicKey, bool) {
 func (e *ellipticECDH) GenerateSharedSecret(privKey crypto.PrivateKey, pubKey crypto.PublicKey) ([]byte, error) {
 	priv := privKey.(*ecdsa.PrivateKey)
 	pub := pubKey.(ecdsa.PublicKey)
-
 	x, _ := e.curve.ScalarMult(pub.X, pub.Y, priv.D.Bytes())
 	return x.Bytes(), nil
 }

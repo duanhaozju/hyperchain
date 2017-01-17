@@ -23,17 +23,7 @@ import math "math"
 import (
 	context "golang.org/x/net/context"
 	grpc "google.golang.org/grpc"
-	//"hyperchain/core/crypto/primitives"
-	"hyperchain/core/crypto/primitives"
-	"github.com/op/go-logging"
 )
-
-// Init the log setting
-var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("p2p")
-}
-
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -262,7 +252,7 @@ var _ grpc.ClientConn
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion3
+const _ = grpc.SupportPackageIsVersion4
 
 // Client API for Chat service
 
@@ -280,36 +270,6 @@ func NewChatClient(cc *grpc.ClientConn) ChatClient {
 }
 
 func (c *chatClient) Chat(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error) {
-
-
-	var pri interface{}
-	var parErr error
-	priStr,getErr := primitives.GetConfig("./config/cert/ecert.priv")
-	if getErr == nil{
-		//var parErr error
-		pri,parErr = primitives.ParseKey(priStr)
-
-		//fmt.Println(pri)
-	}
-
-	ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
-
-	if parErr == nil{
-
-		//log.Notice("###########",in.Payload,pri)
-		sign,err := ecdsaEncry.Sign(in.Payload,pri)
-		if err == nil{
-			if in.Signature==nil {
-				payloadSign := Signature{
-					Signature:sign,
-				}
-
-				in.Signature = &payloadSign
-			}
-			in.Signature.Signature = sign
-		}
-	}
-
 	out := new(Message)
 	err := grpc.Invoke(ctx, "/peermessage.Chat/Chat", in, out, c.cc, opts...)
 	if err != nil {

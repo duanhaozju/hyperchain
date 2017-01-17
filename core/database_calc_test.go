@@ -35,7 +35,7 @@ import (
 //}
 
 func TestChainHeight(t *testing.T) {
-	InitDB("../build/build/database",8082)
+	InitDB("../build/build/database", 8082)
 	fmt.Println(GetHeightOfChain())
 
 }
@@ -52,7 +52,7 @@ func TestCalcCommitBatchAVGTime(t *testing.T) {
 /*func TestGetBlockHash(t *testing.T) {
 	log.Info("test =============> > > TestInitDB")
 	InitDB(8082)
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 	hash, _ := GetBlockHash(db, 1)
 	fmt.Println("1: ", hash)
 
@@ -79,7 +79,7 @@ func TestCalBlockGPS(t *testing.T) {
 */
 //func TestCall(t *testing.T) {
 //	InitDB(8084)
-//	db,_ := hyperdb.GetLDBDatabase()
+//	db,_ := hyperdb.GetDBDatabase()
 //	block,_ := GetBlockByNumber(db,GetHeightOfChain())
 //	tx := block.Transactions[0]
 //	fmt.Printf("tx %v\n",tx)

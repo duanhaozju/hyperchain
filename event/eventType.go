@@ -19,8 +19,8 @@ type NewBlockEvent struct {
 }
 
 //general tx local
-type NewTxEvent struct{
-	Payload []byte
+type NewTxEvent struct {
+	Payload  []byte
 	Simulate bool
 }
 
@@ -122,6 +122,3 @@ type BroadcastDelPeerEvent struct {
 type RecvDelPeerEvent struct {
 	Payload []byte
 }
-
-
-

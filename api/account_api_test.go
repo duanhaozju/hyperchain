@@ -34,13 +34,13 @@ func Test_NewAccount1(t *testing.T) {
 	}
 
 	//获取db句柄
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 
 	//初始化API
 	publicAccountAPI := NewPublicAccountAPI(pm, db)
 
-	ad ,err:= publicAccountAPI.NewAccount("123456")
-	if err !=nil{
+	ad, err := publicAccountAPI.NewAccount("123456")
+	if err != nil {
 		t.Errorf("NewAccount(123456) fail")
 	}
 
@@ -65,12 +65,12 @@ func Test_UnlockAccount(t *testing.T) {
 	}
 
 	//获取db句柄
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 
 	//初始化API
 	publicAccountAPI := NewPublicAccountAPI(pm, db)
 
-	ad ,_:= publicAccountAPI.NewAccount("123456")
+	ad, _ := publicAccountAPI.NewAccount("123456")
 
 	unlockParas := &UnlockParas{
 		Address:  ad,
@@ -109,7 +109,7 @@ func Test_GetAccounts(t *testing.T) {
 	}
 
 	//获取db句柄
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 
 	//初始化API
 	publicAccountAPI := NewPublicAccountAPI(pm, db)
@@ -136,7 +136,7 @@ func Test_GetBalance1(t *testing.T) {
 	}
 
 	//获取db句柄
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 
 	//初始化API
 	publicAccountAPI := NewPublicAccountAPI(pm, db)
@@ -160,7 +160,7 @@ func Test_GetBalance1(t *testing.T) {
 	ref, err = publicAccountAPI.GetBalance(add1)
 
 	fmt.Printf(err.Error())
-	if err==nil {
+	if err == nil {
 		t.Errorf("publicAccountAPI.GetBalance1 fail 空账户返回错误不对")
 	}
 }

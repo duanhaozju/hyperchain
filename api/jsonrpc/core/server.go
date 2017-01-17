@@ -9,14 +9,16 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
-	"github.com/op/go-logging"
 )
+
 var log *logging.Logger // package-level logger
 func init() {
 	log = logging.MustGetLogger("jsonrpc")
 }
+
 const (
 	stopPendingRequestTimeout = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
 
@@ -326,6 +328,7 @@ func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*s
 // error when the request could not be read/parsed.
 func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, RPCError) {
 	log.Info("============start check the cert header=========")
+	//TODO 如果检查失败则进行相应处理，是否需要忽略数据
 	codec.CheckHttpHeaders()
 	log.Info("============enter readRequest()=================")
 	reqs, batch, err := codec.ReadRequestHeaders()

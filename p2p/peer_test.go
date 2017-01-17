@@ -1,29 +1,28 @@
 package p2p
 
 import (
-	"testing"
+	"fmt"
 	"hyperchain/core/crypto/primitives"
 	pb "hyperchain/p2p/peermessage"
-	"fmt"
+	"testing"
 )
 
 func TestHandShake(t *testing.T) {
-	eca,getErr1 := primitives.GetConfig("../config/cert/server/eca.cert")
-	if getErr1 != nil{
-		log.Error("cannot read ecert.",getErr1)
+	eca, getErr1 := primitives.GetConfig("../config/cert/server/eca.cert")
+	if getErr1 != nil {
+		log.Error("cannot read ecert.", getErr1)
 	}
 	ecertBtye := []byte(eca)
 
-	rca,getErr2 := primitives.GetConfig("../config/cert/server/rca.cert")
-	if getErr2 != nil{
-		log.Error("cannot read ecert.",getErr2)
+	rca, getErr2 := primitives.GetConfig("../config/cert/server/rca.cert")
+	if getErr2 != nil {
+		log.Error("cannot read ecert.", getErr2)
 	}
 	rcertByte := []byte(rca)
 
-
 	signature := pb.Signature{
-		Ecert:ecertBtye,
-		Rcert:rcertByte,
+		Ecert: ecertBtye,
+		Rcert: rcertByte,
 	}
 
 	var test map[string]int
@@ -47,7 +46,6 @@ func TestHandShake(t *testing.T) {
 	fmt.Println(signature.Signature)
 }
 
-func TestSetPublikey(t *testing.T)  {
-
+func TestSetPublikey(t *testing.T) {
 
 }

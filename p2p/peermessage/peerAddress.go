@@ -1,9 +1,9 @@
 package peermessage
 
 import (
-	"strconv"
 	"encoding/hex"
 	"hyperchain/crypto"
+	"strconv"
 )
 
 // PeerAddress the peer address
@@ -15,19 +15,19 @@ type PeerAddr struct {
 	ID      int
 }
 
-
 //NewPeerAddr return a PeerAddr which can be used inner
-func NewPeerAddr(IP string, Port int, JSONRPCPort int,ID int) *PeerAddr{
+func NewPeerAddr(IP string, Port int, JSONRPCPort int, ID int) *PeerAddr {
 	var peerAddr PeerAddr
 	peerAddr.IP = IP
 	peerAddr.Port = Port
 	peerAddr.RpcPort = JSONRPCPort
 	peerAddr.ID = ID
-	peerAddr.Hash = getHash(IP+":"+strconv.Itoa(Port)+":"+strconv.Itoa(ID))
+	peerAddr.Hash = getHash(IP + ":" + strconv.Itoa(Port) + ":" + strconv.Itoa(ID))
 	return &peerAddr
 }
+
 //ToPeerAddress convert the PeerAddr into PeerAddress which can transfer on the internet
-func (pa *PeerAddr) ToPeerAddress() *PeerAddress{
+func (pa *PeerAddr) ToPeerAddress() *PeerAddress {
 	var peerAddress PeerAddress
 	peerAddress.IP = pa.IP
 	peerAddress.ID = int32(pa.ID)
@@ -38,7 +38,7 @@ func (pa *PeerAddr) ToPeerAddress() *PeerAddress{
 }
 
 // recover the peerAddress into PeerAddr
-func RecoverPeerAddr(peerAddress *PeerAddress) *PeerAddr{
+func RecoverPeerAddr(peerAddress *PeerAddress) *PeerAddr {
 	var pa PeerAddr
 	pa.Hash = peerAddress.Hash
 	pa.IP = peerAddress.IP

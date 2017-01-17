@@ -1,29 +1,27 @@
-// author: Xiaoyi Wang
-// email: wangxiaoyi@hyperchain.cn
-// date: 16/11/4
-// last modified: 16/11/4
-// last Modified Author: Xiaoyi Wang
-// change log: 1. new test for pbftpersist
-
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package pbft
 
 import (
-	"testing"
-	"hyperchain/consensus/helper/persist"
+	"encoding/binary"
+	"fmt"
+	"os"
 	"reflect"
+	"testing"
+
+	"hyperchain/consensus/helper/persist"
+	"hyperchain/core"
+	"hyperchain/core/types"
 
 	"github.com/golang/protobuf/proto"
-	"hyperchain/core/types"
 	"github.com/syndtr/goleveldb/leveldb"
-	"fmt"
-	"encoding/binary"
-	//"github.com/pkg/errors"
-	"hyperchain/core"
-
 )
 
-func TestPersistPSet(t *testing.T)  {
+func TestPersistPSet(t *testing.T) {
+
+	initDB()
 	defer clearDB()
+
 	pbft := new(pbftProtocal)
 
 	var pset []*ViewChange_PQ
@@ -53,8 +51,11 @@ func TestPersistPSet(t *testing.T)  {
 	}
 }
 
-func TestPersistQSet(t *testing.T)  {
+func TestPersistQSet(t *testing.T) {
+
+	initDB()
 	defer clearDB()
+
 	pbft := new(pbftProtocal)
 	var qset []*ViewChange_PQ
 
@@ -84,29 +85,32 @@ func TestPersistQSet(t *testing.T)  {
 
 }
 
-func TestRestorePQSet(t *testing.T)  {
+func TestRestorePQSet(t *testing.T) {
+
+	clearDB()
+	initDB()
 	defer clearDB()
+
 	pbft := new(pbftProtocal)
 	var pset []*ViewChange_PQ
 	var qset []*ViewChange_PQ
 	pbft.pset = make(map[uint64]*ViewChange_PQ)
 	p := ViewChange_PQ{
-		1,
+		3,
 		"digest",
-		2,
+		4,
 	}
 	pbft.pset[1234] = &p
 	pset = append(pset, &p)
 
 	pbft.qset = make(map[qidx]*ViewChange_PQ)
 	q := ViewChange_PQ{
-		1,
+		6,
 		"digest",
-		2,
+		7,
 	}
 	pbft.qset[qidx{"112", uint64(112)}] = &q
 	qset = append(qset, &q)
-
 	rs := pbft.restorePQSet("pset")
 	if reflect.DeepEqual(rs, pset) {
 		t.Errorf("error restorePQSet(%q) = %v, actual: %v", "pset", rs, pset)
@@ -133,24 +137,27 @@ func TestRestorePQSet(t *testing.T)  {
 	}
 }
 
-func TestBatchRelatedPersistFunctions(t *testing.T)  {
+func TestBatchRelatedPersistFunctions(t *testing.T) {
+
+	initDB()
 	defer clearDB()
+
 	pbft := new(pbftProtocal)
 	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
-	pbft.validatedBatchStore["t1"] = &TransactionBatch{Timestamp:111}
+	pbft.validatedBatchStore["t1"] = &TransactionBatch{Timestamp: 111}
 	pbft.validatedBatchStore["t2"] =
 		&TransactionBatch{
-			Timestamp:int64(222),
-			Batch:[]*types.Transaction{
+			Timestamp: int64(222),
+			Batch: []*types.Transaction{
 				{
-					From:[]byte("A"),
-					To:[]byte("B"),
-					Value:[]byte("123"),
+					From:  []byte("A"),
+					To:    []byte("B"),
+					Value: []byte("123"),
 				},
 				{
-					From:[]byte("B}"),
-					To:[]byte("A"),
-					Value:[]byte("321"),
+					From:  []byte("B}"),
+					To:    []byte("A"),
+					Value: []byte("321"),
 				},
 			},
 		}
@@ -190,7 +197,11 @@ func TestBatchRelatedPersistFunctions(t *testing.T)  {
 	}
 }
 
-func TestCheckpointPersist(t *testing.T)  {
+func TestCheckpointPersist(t *testing.T) {
+
+	initDB()
+	defer clearDB()
+
 	pbft := new(pbftProtocal)
 	seqNo := uint64(1)
 	id := []byte("checkpoint00000000001")
@@ -209,8 +220,11 @@ func TestCheckpointPersist(t *testing.T)  {
 	}
 }
 
+func TestViewPersist(t *testing.T) {
 
-func TestViewPersist(t *testing.T)  {
+	initDB()
+	defer clearDB()
+
 	pbft := new(pbftProtocal)
 	view := uint64(128)
 	key := fmt.Sprint("view")
@@ -229,46 +243,53 @@ func TestViewPersist(t *testing.T)  {
 	}
 }
 
-func TestSeqnoFunctions(t *testing.T)  {
+func TestSeqnoFunctions(t *testing.T) {
+
+	initDB()
 	defer clearDB()
+
 	pbft := new(pbftProtocal)
+	lseqno, err := pbft.getLastSeqNo()
 
-	core.InitDB("/temp/leveldb", 8088)
-	lseqno, error := pbft.getLastSeqNo()
-
-	if lseqno != 0 || error == nil {
-		t.Errorf(`error getLastSeqNo() = (%v, %v), actual: %v, %v`, lseqno, error, 0,  "Height of chain is 0")
+	if lseqno != 0 || err == nil {
+		t.Errorf(`error getLastSeqNo() = (%v, %v), actual: %v, %v`, lseqno, err, 0, "Height of chain is 0")
 	}
 
 	clearDB()
 
 	core.UpdateChain(&types.Block{
-		Timestamp:12,
-		Number:1222,
+		Timestamp: 12,
+		Number:    1222,
 	}, false)
 
-	lseqno, error = pbft.getLastSeqNo()
-	if error != nil || lseqno != 1222 {
-		t.Errorf(`error getLastSeqNo() = (%v, %v), actual: %v, %v`, lseqno, error, 1222,  nil)
+	lseqno, err = pbft.getLastSeqNo()
+	if err != nil || lseqno != 1222 {
+		t.Errorf(`error getLastSeqNo() = (%v, %v), actual: %v, %v`, lseqno, err, 1222, nil)
 	}
 }
 
-func TestRestoreLastSeqNo(t *testing.T)  {
+func TestRestoreLastSeqNo(t *testing.T) {
+
+	initDB()
 	defer clearDB()
+
 	pbft := new(pbftProtocal)
-	core.InitDB("/temp/leveldb", 8088)
 	pbft.restoreLastSeqNo()
+
 }
 
-func TestRestoreState(t *testing.T)  {
+func TestRestoreState(t *testing.T) {
+
+	initDB()
 	defer clearDB()
+
 	pbft := new(pbftProtocal)
 	pbft.K = 1
 	pbft.N = 3
-	core.InitDB("./temp/leveldb", 8088)
 
 	var pset []*ViewChange_PQ
 	pbft.pset = make(map[uint64]*ViewChange_PQ)
+	pbft.qset = make(map[qidx]*ViewChange_PQ)
 	vcpq := ViewChange_PQ{
 		1,
 		"digest",
@@ -279,13 +300,13 @@ func TestRestoreState(t *testing.T)  {
 	pbft.persistPSet()
 
 	pbft.restoreState()
+	t.Log(pbft.view, pbft.seqNo)
 	if pbft.view != 2 || pbft.seqNo != 1 {
 		t.Error("restoreState.updateSeqView error")
 	}
 
 	var qset []*ViewChange_PQ
 
-	pbft.qset = make(map[qidx]*ViewChange_PQ)
 	vcpq = ViewChange_PQ{
 		4,
 		"digest",
@@ -301,20 +322,20 @@ func TestRestoreState(t *testing.T)  {
 	}
 
 	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
-	pbft.validatedBatchStore["t1"] = &TransactionBatch{Timestamp:111}
+	pbft.validatedBatchStore["t1"] = &TransactionBatch{Timestamp: 111}
 	pbft.validatedBatchStore["t2"] =
 		&TransactionBatch{
-			Timestamp:int64(222),
-			Batch:[]*types.Transaction{
+			Timestamp: int64(222),
+			Batch: []*types.Transaction{
 				{
-					From:[]byte("A"),
-					To:[]byte("B"),
-					Value:[]byte("123"),
+					From:  []byte("A"),
+					To:    []byte("B"),
+					Value: []byte("123"),
 				},
 				{
-					From:[]byte("B}"),
-					To:[]byte("A"),
-					Value:[]byte("321"),
+					From:  []byte("B}"),
+					To:    []byte("A"),
+					Value: []byte("321"),
 				},
 			},
 		}
@@ -324,7 +345,7 @@ func TestRestoreState(t *testing.T)  {
 	pbft.restoreState()
 	rs := pbft.validatedBatchStore[hash(pbft.validatedBatchStore["t1"])]
 
-	if !reflect.DeepEqual(pbft.validatedBatchStore["t1"], rs){
+	if !reflect.DeepEqual(pbft.validatedBatchStore["t1"], rs) {
 		t.Error("error restoreState reqBatchesPacked")
 	}
 
@@ -332,7 +353,7 @@ func TestRestoreState(t *testing.T)  {
 	persist.StoreState("view", view)
 	pbft.restoreState()
 
-	if !(pbft.view == binary.LittleEndian.Uint64(view)){
+	if !(pbft.view == binary.LittleEndian.Uint64(view)) {
 		t.Error("error restoreState restore view")
 	}
 
@@ -354,6 +375,10 @@ func Int64ToBytes(i int64) []byte {
 	return buf
 }
 
-func clearDB()  {
+func initDB() {
+	core.InitDB("tmp/leveldb", 8088)
+}
+func clearDB() {
 	persist.DelAllState()
+	os.RemoveAll("tmp")
 }

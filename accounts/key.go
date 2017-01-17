@@ -1,5 +1,3 @@
-
-
 package accounts
 
 import (
@@ -11,21 +9,22 @@ import (
 	"os"
 	"path/filepath"
 
-	"hyperchain/crypto"
-	"hyperchain/common"
 	"github.com/op/go-logging"
+	"hyperchain/common"
+	"hyperchain/crypto"
 )
 
 const (
 	version = 3
 )
+
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
 type Key struct {
-	Address		common.Address
+	Address common.Address
 	// we only store privkey as pubkey/address can be derived from it
 	// privkey in this struct is always in plaintext
-	PrivateKey	interface{}
+	PrivateKey interface{}
 }
 
 type keyStore interface {
@@ -76,11 +75,12 @@ type scryptParamsJSON struct {
 	DkLen int    `json:"dklen"`
 	Salt  string `json:"salt"`
 }
+
 var log *logging.Logger // package-level logger
 func init() {
 	log = logging.MustGetLogger("key")
 }
-func newKey(am *AccountManager,rand io.Reader) (*Key, error) {
+func newKey(am *AccountManager, rand io.Reader) (*Key, error) {
 	privKey, err := am.Encryption.GeneralKey()
 	if err != nil {
 		return nil, err
@@ -92,19 +92,19 @@ func newKey(am *AccountManager,rand io.Reader) (*Key, error) {
 			Address:    crypto.PubkeyToAddress(actualKey.PublicKey),
 			PrivateKey: actualKey,
 		}
-		return key,nil
+		return key, nil
 	}
-	return nil,nil
+	return nil, nil
 }
 func storeNewAddrToFile(a Account) error {
-	addr := hex.EncodeToString(a.Address[:])+"\n"
+	addr := hex.EncodeToString(a.Address[:]) + "\n"
 	dir := filepath.Dir(a.File)
-	file := dir+"/addresses/address"
+	file := dir + "/addresses/address"
 	const dirPerm = 0777
 	if err := os.MkdirAll(filepath.Dir(file), dirPerm); err != nil {
 		return err
 	}
-	f, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_RDWR,0600)
+	f, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
 	if err != nil {
 		return err
 	}
@@ -118,20 +118,20 @@ func storeNewAddrToFile(a Account) error {
 	return err
 }
 func storeNewKey(am *AccountManager, rand io.Reader, auth string) (*Key, Account, error) {
-	key, err := newKey(am,rand)
+	key, err := newKey(am, rand)
 	if err != nil {
 		return nil, Account{}, err
 	}
 	switch key.PrivateKey.(type) {
 	case *ecdsa.PrivateKey:
-		a := Account{Address: key.Address, File:am.KeyStore.JoinPath(KeyFileName(key.Address[:]))}
+		a := Account{Address: key.Address, File: am.KeyStore.JoinPath(KeyFileName(key.Address[:]))}
 		if err := am.KeyStore.StoreKey(a.File, key, auth); err != nil {
 			zeroKey(key.PrivateKey.(*ecdsa.PrivateKey))
 			return nil, a, err
 		}
 		return key, a, err
 	}
-	return nil,Account{},nil
+	return nil, Account{}, nil
 }
 
 func writeKeyFile(file string, content []byte) error {

@@ -1,0 +1,33 @@
+# CA & CERT configs
+#
+# this config prepare  for ca & cert module
+# *.toml config file is batter than *.yaml
+# this config will never change by hyperchain
+# please ensure the file not end with the `/` (slash)
+
+[ecert]
+ca = "config/cert/ecert.ca"
+cert = "config/cert/ecert.cert"
+priv = "config/cert/ecert.priv"
+
+[rcert]
+# if you do not have rcert, leave this item blank
+ca = "config/cert/rcert.ca"
+cert = "config/cert/rcert.cert"
+priv = "config/cert/rcert.priv"
+
+# the tls cert supply the transport layer security
+[tlscert]
+#ca = "config/cert/tls_peer.ca"
+#cert = "config/cert/tls_peer.cert"
+#priv = "config/cert/tls_peer.priv"
+ca = "config/cert/tlscert/tlsca.ca"
+cert = "config/cert/tlscert/tls_peer1.cert"
+priv = "config/cert/tlscert/tls_peer1.priv"
+serverhostoverride = "hyperchain.cn"
+
+# check the ecert and rcert during the connect progress
+checkercert = true
+
+# check the tcert during the request process
+checktcert  = true

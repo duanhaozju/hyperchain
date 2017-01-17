@@ -8,11 +8,9 @@ import (
 
 	"hyperchain/common"
 
-	"hyperchain/hyperdb"
-
-	//"fmt"
 	"github.com/buger/jsonparser"
 	"hyperchain/core/state"
+	"hyperchain/hyperdb"
 	"math/big"
 	"strconv"
 	"time"
@@ -45,7 +43,7 @@ func CreateInitBlock(filename string) {
 
 	// start  the parse genesis content
 
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 		return

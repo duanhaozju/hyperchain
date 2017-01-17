@@ -5,8 +5,8 @@ package common
 import (
 	"github.com/spf13/viper"
 
-	"time"
 	"fmt"
+	"time"
 )
 
 type Config struct {
@@ -14,7 +14,7 @@ type Config struct {
 }
 
 //NewConfig return a new instance of Config by configPath
-func NewConfig(configPath string) *Config  {
+func NewConfig(configPath string) *Config {
 	vp := viper.New()
 	vp.SetConfigFile(configPath)
 	err := vp.ReadInConfig()
@@ -22,27 +22,27 @@ func NewConfig(configPath string) *Config  {
 		panic(fmt.Sprintf("Reading config file: %s error, %s !", configPath, err.Error()))
 	}
 	return &Config{
-		conf:vp,
+		conf: vp,
 	}
 }
 
-func (cf *Config) Get(key string) interface{}  {
+func (cf *Config) Get(key string) interface{} {
 	return cf.conf.Get(key)
 }
 
-func (cf *Config) GetString(key string) string  {
+func (cf *Config) GetString(key string) string {
 	return cf.conf.GetString(key)
 }
 
-func (cf *Config) GetInt(key string) int  {
+func (cf *Config) GetInt(key string) int {
 	return cf.conf.GetInt(key)
 }
 
-func (cf *Config) GetInt64(key string) int64  {
+func (cf *Config) GetInt64(key string) int64 {
 	return cf.conf.GetInt64(key)
 }
 
-func (cf *Config) GetFloat64(key string) float64  {
+func (cf *Config) GetFloat64(key string) float64 {
 	return cf.conf.GetFloat64(key)
 }
 
@@ -54,11 +54,10 @@ func (cf *Config) GetDuration(key string) time.Duration {
 	return cf.conf.GetDuration(key)
 }
 
-func (cf *Config) GetStringMap(key string) map[string]interface{}  {
+func (cf *Config) GetStringMap(key string) map[string]interface{} {
 	return cf.conf.GetStringMap(key)
 }
 
-func (cf *Config) Set(key string, value interface{})  {
+func (cf *Config) Set(key string, value interface{}) {
 	cf.conf.Set(key, value)
 }
-

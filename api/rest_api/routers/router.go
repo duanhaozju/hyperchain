@@ -41,7 +41,6 @@ func NewRouter() {
 		beego.NSNamespace("/nodes",
 			beego.NSRouter("/list", &controllers.NodesController{}, "get:GetNodes"),
 		),
-
 	)
 	beego.AddNamespace(ns)
 }

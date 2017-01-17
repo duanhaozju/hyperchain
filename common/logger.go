@@ -5,11 +5,11 @@ package common
 import (
 	"github.com/op/go-logging"
 
+	"github.com/spf13/cast"
 	"os"
 	"path"
 	"strconv"
 	"time"
-	"github.com/spf13/cast"
 )
 
 // A logger for this file.
@@ -42,27 +42,27 @@ func InitLog(conf *Config) {
 		logging.SetBackend(backendStderr)
 	} else {
 		closeLogFile = make(chan struct{})
-		fileName := path.Join(loggerDir, "hyperchain_" + strconv.Itoa(conf.GetInt(GRPC_PORT)) +
-			tm.Format("-2006-01-02-15:04:05 PM") + ".log")
+		fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(GRPC_PORT))+
+			tm.Format("-2006-01-02-15:04:05 PM")+".log")
 		setNewLogFile(fileName, backendStderr)
-		go newLogFileByInterval(loggerDir, conf, backendStderr)//split log by sencond
+		go newLogFileByInterval(loggerDir, conf, backendStderr) //split log by sencond
 	}
 
 	initLoggerLevelByConfiguration(conf)
 }
 
 //newLogFileByInterval set new log file for hyperchain
-func newLogFileByInterval(loggerDir string, conf *Config, backendStderr logging.LeveledBackend)  {
-	for   {
+func newLogFileByInterval(loggerDir string, conf *Config, backendStderr logging.LeveledBackend) {
+	for {
 		select {
 		case <-time.After(conf.GetDuration(LOG_NEW_FILE_INTERVAL)):
 			timestamp := time.Now().Unix()
 			tm := time.Unix(timestamp, 0)
-			fileName := path.Join(loggerDir, "hyperchain_" + strconv.Itoa(conf.GetInt(GRPC_PORT)) +
-				tm.Format("-2006-01-02-15:04:05 PM") + ".log")
+			fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(GRPC_PORT))+
+				tm.Format("-2006-01-02-15:04:05 PM")+".log")
 			setNewLogFile(fileName, backendStderr)
 			loggingLogger.Infof("Change log file, new log file name: %s", fileName)
-		case <- closeLogFile:
+		case <-closeLogFile:
 			loggingLogger.Info("Close logger service")
 			loggingLogger.SetBackend(backendStderr)
 		}
@@ -91,7 +91,7 @@ func setNewLogFile(fileName string, backendStderr logging.LeveledBackend) {
 func initLogBackend() logging.LeveledBackend {
 	backend_stderr := logging.NewLogBackend(os.Stderr, "", 0)
 	var format_stderr = logging.MustStringFormatter(
-		`%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile}[%{module}] %{shortfunc} -> %{color:reset}%{message}`,
+		`%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}`,
 	)
 	backendFormatter := logging.NewBackendFormatter(backend_stderr, format_stderr)
 	backendStderr := logging.AddModuleLevel(backendFormatter)

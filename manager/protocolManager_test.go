@@ -6,23 +6,17 @@ package manager
 import (
 	"testing"
 
-
 	"hyperchain/event"
-
-
-
 
 	"fmt"
 
 	"time"
-
 	//"hyperchain/core"
 	//"hyperchain/hyperdb"
 	//"hyperchain/crypto"
 	//"hyperchain/accounts"
 	//"hyperchain/common"
 )
-
 
 //var eventMuxAll *event.TypeMux
 func newEvent(manager *ProtocolManager) {
@@ -31,12 +25,11 @@ func newEvent(manager *ProtocolManager) {
 		go GetEventObject().Post(event.AliveEvent{true})
 		//manager.eventMux.Post(event.AliveEvent{true})
 
-
 	}
 
 }
 
-func receive(manager *ProtocolManager){
+func receive(manager *ProtocolManager) {
 
 	manager.aLiveSub = manager.eventMux.Subscribe(event.AliveEvent{})
 	for obj := range manager.aLiveSub.Chan() {
@@ -50,15 +43,14 @@ func receive(manager *ProtocolManager){
 }
 func TestAliveEvent(t *testing.T) {
 	manager := &ProtocolManager{
-		eventMux:    new(event.TypeMux),
-		quitSync:    make(chan struct{}),
-
+		eventMux: new(event.TypeMux),
+		quitSync: make(chan struct{}),
 	}
 	eventMuxAll = manager.eventMux
 	go receive(manager)
 	for i := 0; i < 1000; i += 1 {
-		if i==0{
-			time.Sleep(4000*time.Microsecond)
+		if i == 0 {
+			time.Sleep(4000 * time.Microsecond)
 		}
 		go newEvent(manager)
 		go newEvent(manager)
@@ -70,9 +62,9 @@ func TestAliveEvent(t *testing.T) {
 
 //func TestSignTx(t *testing.T) {
 //	core.InitDB(8083)
-//	db, _ := hyperdb.GetLDBDatabase()
-//	height :=types.go.GetHeightOfChain()
-//	block,_:=types.go.GetBlockByNumber(db,height)
+//	db, _ := hyperdb.GetDBDatabase()
+//	height := core.GetHeightOfChain()
+//	block,_:= core.GetBlockByNumber(db,height)
 //	tx := block.Transactions[0]
 //	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 //	//init encryption object
@@ -130,10 +122,6 @@ func TestAliveEvent(t *testing.T) {
 	}
 	//manager.commitNewBlock(payload)
 }*/
-
-
-
-
 
 /*func TestDecodeTx(t *testing.T){
 	kec256Hash:=crypto.NewKeccak256Hash("keccak256")

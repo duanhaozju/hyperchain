@@ -72,6 +72,7 @@ func init() {
 	HSM1.GenerateSecret(pbk2, "2")
 	HSM2.GenerateSecret(pbk1, "1")
 }
+
 //
 //func TestHandShakeManager_DecWithSecret(t *testing.T) {
 //	enctrypted := HSM1.EncWithSecret([]byte("HELLO"), "2")

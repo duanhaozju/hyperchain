@@ -3,29 +3,29 @@
 package hpc
 
 import (
+	"hyperchain/event"
 	"hyperchain/manager"
 	"hyperchain/p2p"
-	"hyperchain/event"
 )
 
 type NodeArgs struct {
 	NodeHash string `json:"nodehash"`
 }
 
-type PublicNodeAPI struct{
+type PublicNodeAPI struct {
 	pm *manager.ProtocolManager
 }
 
-type NodeResult struct{
-	Status 		int		`json:"status"`
-	CName 		string		`json:"cName"`
-	IP 		string		`json:"ip"`
-	Port 		int		`json:"port"`
-	delayTime	string		`json:"delayTime"`	// 节点与节点的延迟时间
-	LatestBlock 	interface{}	`json:"latestBlock"`  //当前节点最新的区块
+type NodeResult struct {
+	Status      int         `json:"status"`
+	CName       string      `json:"cName"`
+	IP          string      `json:"ip"`
+	Port        int         `json:"port"`
+	delayTime   string      `json:"delayTime"`   // 节点与节点的延迟时间
+	LatestBlock interface{} `json:"latestBlock"` //当前节点最新的区块
 }
 
-func NewPublicNodeAPI( pm *manager.ProtocolManager) *PublicNodeAPI{
+func NewPublicNodeAPI(pm *manager.ProtocolManager) *PublicNodeAPI {
 	return &PublicNodeAPI{
 		pm: pm,
 	}
@@ -40,7 +40,7 @@ func (node *PublicNodeAPI) GetNodes() (p2p.PeerInfos, error) {
 	return node.pm.GetNodeInfo(), nil
 }
 
-func (node *PublicNodeAPI) GetNodeHash() (string, error){
+func (node *PublicNodeAPI) GetNodeHash() (string, error) {
 	if node.pm == nil {
 		return "", &callbackError{"protocolManager is nil"}
 	}
@@ -67,4 +67,3 @@ func (node *PublicNodeAPI) DelNode(args NodeArgs) error {
 	}
 
 }*/
-
