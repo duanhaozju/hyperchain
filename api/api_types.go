@@ -7,6 +7,7 @@ import (
 	"hyperchain/event"
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
+	"hyperchain/membersrvc"
 )
 
 // API describes the set of methods offered over the RPC interface
@@ -19,9 +20,9 @@ type API struct {
 
 var Apis []API
 
-func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, config *common.Config) []API {
+func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, cm *membersrvc.CAManager, config *common.Config) []API {
 
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 
 	if err != nil {
 		log.Errorf("Open database error: %v", err)
@@ -56,6 +57,12 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, config *commo
 			Namespace: "contract",
 			Version:   "0.4",
 			Service:   NewPublicContractAPI(eventMux, pm, db, config),
+			Public:    true,
+		},
+		{
+			Namespace: "cert",
+			Version:   "0.4",
+			Service:   NewPublicCertAPI(cm),
 			Public:    true,
 		},
 	}

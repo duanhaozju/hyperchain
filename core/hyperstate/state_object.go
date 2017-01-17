@@ -465,11 +465,7 @@ func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) ma
 		cb(h, value)
 		ret[h] = value
 	}
-	leveldb, ok := self.db.db.(*hyperdb.LDBDatabase)
-	if ok == false {
-		return ret
-	}
-	iter := leveldb.NewIteratorWithPrefix(GetStorageKeyPrefix(self.address.Bytes()))
+	iter := self.db.db.NewIterator(GetStorageKeyPrefix(self.address.Bytes()))
 	for iter.Next() {
 		k, ok := SplitCompositeStorageKey(self.address.Bytes(), iter.Key())
 		if ok == false {

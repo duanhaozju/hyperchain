@@ -9,7 +9,7 @@ type rawKey []byte
 
 // TODO test
 func fetchBucketNodeFromDB(treePrefix string, bucketKey *BucketKey) (*BucketNode, error) {
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 	//nodeKey := bucketKey.getEncodedBytes(treePrefix)
 	nodeKey := append([]byte(BucketNodePrefix), []byte(treePrefix)...)
 	nodeKey = append(nodeKey, bucketKey.getEncodedBytes()...)
@@ -29,7 +29,7 @@ func fetchBucketNodeFromDB(treePrefix string, bucketKey *BucketKey) (*BucketNode
 
 // TODO it need to be tested
 func fetchDataNodesFromDBByBucketKey(treePrefix string, bucketKey *BucketKey) (dataNodes DataNodes, err error) {
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 	dataNodesValue, err := db.Get(append([]byte(treePrefix), append([]byte(DataNodesPrefix), bucketKey.getEncodedBytes()...)...))
 	if err != nil {
 		if err.Error() == ErrNotFound.Error() {

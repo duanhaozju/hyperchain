@@ -5,7 +5,9 @@ package jsonrpc
 import (
 	"encoding/json"
 	"fmt"
+	"hyperchain/membersrvc"
 	"io"
+	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
@@ -71,20 +73,22 @@ type jsonNotification struct {
 // jsonCodec reads and writes JSON-RPC messages to the underlying connection. It
 // also has support for parsing arguments and serializing (result) objects.
 type jsonCodec struct {
-	closer sync.Once          // close closed channel once
-	closed chan interface{}   // closed on Close
-	decMu  sync.Mutex         // guards d
-	d      *json.Decoder      // decodes incoming requests
-	encMu  sync.Mutex         // guards e
-	e      *json.Encoder      // encodes responses
-	rw     io.ReadWriteCloser // connection
+	closer     sync.Once          // close closed channel once
+	closed     chan interface{}   // closed on Close
+	decMu      sync.Mutex         // guards d
+	d          *json.Decoder      // decodes incoming requests
+	encMu      sync.Mutex         // guards e
+	e          *json.Encoder      // encodes responses
+	rw         io.ReadWriteCloser // connection
+	httpHeader http.Header
+	CM         *membersrvc.CAManager //ca manager
 }
 
 // NewJSONCodec creates a new RPC server codec with support for JSON-RPC 2.0
-func NewJSONCodec(rwc io.ReadWriteCloser) ServerCodec {
+func NewJSONCodec(rwc io.ReadWriteCloser, header http.Header, cm *membersrvc.CAManager) ServerCodec {
 	d := json.NewDecoder(rwc)
 	d.UseNumber()
-	return &jsonCodec{closed: make(chan interface{}), d: d, e: json.NewEncoder(rwc), rw: rwc}
+	return &jsonCodec{closed: make(chan interface{}), d: d, e: json.NewEncoder(rwc), rw: rwc, httpHeader: header, CM: cm}
 }
 
 // isBatch returns true when the first non-whitespace characters is '['
@@ -97,6 +101,42 @@ func isBatch(msg json.RawMessage) bool {
 		return c == '['
 	}
 	return false
+}
+
+// CheckHttpHeaders will check http header, mainly
+func (c *jsonCodec) CheckHttpHeaders() RPCError {
+	if c.CM.GetIsCheckTCert() {
+		return nil
+	}
+	c.decMu.Lock()
+	defer c.decMu.Unlock()
+	tcertPem, err := DecodeUriCompontent(c.httpHeader.Get("tcert"))
+	if err != nil || tcertPem == "" {
+		log.Debug("cannot decode the tcert header", err)
+		return &UnauthorizedError{}
+	}
+	verifyTcert, err := c.CM.VerifyTCert(tcertPem)
+
+	if verifyTcert == false || err != nil {
+		log.Warning("Verify failed", err)
+		return &UnauthorizedError{}
+	}
+
+	signature, err := DecodeUriCompontent(c.httpHeader.Get("signature"))
+	/**
+	Review 如果客户端没有tcert 则会用ecert充当tcert，此时需要验证是否合法
+	由于tcert 应当是用ecert签出的，那么应该同时可以被根证书验证通过，但是
+	问题是ecert之间无法相互验证，所有的tcert 和ecert都应该用 eca.ca验证
+	这样可以确保所有的签名都可以验证通过
+	在sdk端需要生成相应的signature 需要用私钥对数据进行签名
+	签名算法为 ECDSAWithSHA256
+	这部分需要SDK端实现，hyperchain端已经实现了验证方法
+	*/
+	verifySignature, err := c.CM.VerifySignature(tcertPem, signature, "hyperchain")
+	if err != nil || !verifySignature {
+		return &UnauthorizedError{}
+	}
+	return nil
 }
 
 // ReadRequestHeaders will read new requests without parsing the arguments. It will

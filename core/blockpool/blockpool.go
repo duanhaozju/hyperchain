@@ -86,7 +86,7 @@ func NewBlockPool(consenter consensus.Consenter, conf *common.Config) *BlockPool
 	pool.demandNumber = currentChain.Height + 1
 	pool.demandSeqNo = currentChain.Height + 1
 	pool.tempBlockNumber = currentChain.Height + 1
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return nil
 	}

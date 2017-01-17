@@ -17,7 +17,7 @@ var (
 )
 
 func init() {
-	EnableJit = false
+	EnableJit = true
 	ForceJit = false
 }
 

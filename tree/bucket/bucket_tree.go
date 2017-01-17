@@ -436,7 +436,7 @@ func (bucket *BucketTree) Reset() {
 // the func can make the buckettree revert to target block
 func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch hyperdb.Batch, currentBlockNum, toBlockNum *big.Int, flush, sync bool) error {
 	log.Debug("Start RevertToTargetBlock, from ", currentBlockNum)
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 	keyValueMap := NewKVMap()
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()

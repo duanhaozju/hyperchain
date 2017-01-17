@@ -4,9 +4,11 @@ package pbft
 
 import (
 	"encoding/base64"
-	"github.com/golang/protobuf/proto"
+
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper/persist"
+
+	"github.com/golang/protobuf/proto"
 )
 
 type blkIdx struct {
@@ -19,6 +21,7 @@ func (pbft *pbftProtocal) initRecovery() events.Event {
 
 	logger.Debugf("Replica %d now initRecovery", pbft.id)
 
+	pbft.recoveryToSeqNo = nil
 	// update watermarks
 	height := persist.GetHeightofChain()
 	pbft.moveWatermarks(height)
@@ -109,7 +112,8 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	}
 	pbft.rcRspStore[from] = rsp
 
-	if len(pbft.rcRspStore) <= pbft.N-pbft.f {
+	if len(pbft.rcRspStore) <= 2*pbft.f+1 {
+		// Reason for not using '≤ pbft.N-pbft.f': if N==5, we are require more than we need
 		logger.Debugf("Replica %d recv recoveryRsp from replica %d, rsp count: %d, not "+
 			"beyond %d", pbft.id, rsp.ReplicaId, len(pbft.rcRspStore), pbft.N-pbft.f)
 		return nil
@@ -148,13 +152,14 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	logger.Debugf("Replica %d in recovery find quorum chkpt: %d, self: %d, "+
 		"others lastExec: %d, self: %d", pbft.id, n, pbft.h, lastExec, pbft.lastExec)
 	logger.Debugf("Replica %d in recovery, "+
-		"others lastBlockInfo: %s, self: %s", pbft.id, rsp.BlockHeight, selfCurHash)
+		"others lastBlockInfo: %s, self: %s", pbft.id, rsp.LastBlockHash, selfCurHash)
 
 	// Fast catch up
 	if lastExec == selfLastExec && curHash == selfCurHash {
 		logger.Debugf("Replica %d in recovery same lastExec: %d, "+
 			"same block hash: %s, fast catch up", pbft.id, selfLastExec, curHash)
 		pbft.inRecovery = false
+		pbft.recoveryToSeqNo = nil
 		return recoveryDoneEvent{}
 	}
 
@@ -187,8 +192,8 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.moveWatermarks(n)
 		pbft.stateTransfer(target)
 	} else {
-		logger.Critical("send stateupdated")
 		pbft.helper.VcReset(n + 1)
+		logger.Debugf("Replica %d self StateUpdated, call VcReset", pbft.id)
 	}
 
 	return nil
@@ -228,7 +233,7 @@ func (pbft *pbftProtocal) findHighestChkptQuorum() (n uint64, d string, replicas
 	// In this case, others will move watermarks sooner or later.
 	// Hopefully, we find only one chkpt which reaches 2f+1 and this chkpt is their pbft.h
 	for ci, peers := range chkpts {
-		if len(peers) >= 2*pbft.f+1 {
+		if len(peers) >= pbft.minimumCorrectQuorum() {
 			find = true
 			if ci.n >= n {
 				if ci.n > n {
@@ -265,7 +270,7 @@ func (pbft *pbftProtocal) findLastExecQuorum() (lastExec uint64, hash string, fi
 			lastExecs[idx] = replicas
 		}
 
-		if len(lastExecs[idx]) >= 2*pbft.f+1 {
+		if len(lastExecs[idx]) >= pbft.minimumCorrectQuorum() {
 			lastExec = idx.height
 			hash = idx.hash
 			find = true

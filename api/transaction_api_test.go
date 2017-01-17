@@ -25,7 +25,7 @@ func Test_SendTransaction(t *testing.T) {
 	peermanager := &p2p.GrpcPeerManager{
 		NodeID: 1,
 	}
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 	keydir := "./build/keystore/"
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	encryption.GenerateNodeKey(strconv.Itoa(1), "./build/keynodes")
@@ -107,7 +107,7 @@ func Test_GetTransactionReceipt(t *testing.T) {
 	peermanager := &p2p.GrpcPeerManager{
 		NodeID: 1,
 	}
-	db, _ := hyperdb.GetLDBDatabase()
+	db, _ := hyperdb.GetDBDatabase()
 	keydir := "./build/keystore/"
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	encryption.GenerateNodeKey(strconv.Itoa(1), "./build/keynodes")
@@ -324,7 +324,7 @@ func Test_GetTransactionReceipt(t *testing.T) {
 	hyperdb.Setclose()
 	//初始化数据
 	core.InitDB("./build/keystore1", 8004)
-	db1, _ := hyperdb.GetLDBDatabase()
+	db1, _ := hyperdb.GetDBDatabase()
 	publicTransactionAPI2 := NewPublicTransactionAPI(eventMux1, pm, db1, false, 1, 10000)
 	ref, err = publicTransactionAPI2.GetTransactionReceipt(hash2)
 	if err == nil {

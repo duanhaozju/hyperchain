@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"hyperchain/common"
-	"hyperchain/hyperdb"
 )
 
 type User struct {
@@ -28,11 +27,7 @@ func (self *StateDB) RawDump() World {
 		Users: make(map[string]User),
 	}
 
-	leveldb, ok := self.db.(*hyperdb.LDBDatabase)
-	if ok == false {
-		return world
-	}
-	it := leveldb.NewIteratorWithPrefix([]byte(accountIdentifier))
+	it := self.db.NewIterator([]byte(accountIdentifier))
 	for it.Next() {
 		address, ok := SplitCompositeAccountKey(it.Key())
 		if ok == false {
@@ -53,7 +48,7 @@ func (self *StateDB) RawDump() World {
 			Code:     common.Bytes2Hex(code),
 			Storage:  make(map[string]string),
 		}
-		storageIt := leveldb.NewIteratorWithPrefix(GetStorageKeyPrefix(address))
+		storageIt := self.db.NewIterator(GetStorageKeyPrefix(address))
 		for storageIt.Next() {
 			storageKey, _ := SplitCompositeStorageKey(address, storageIt.Key())
 			log.Debugf("dump key %s value %s", common.Bytes2Hex(storageKey), common.Bytes2Hex(storageIt.Value()))

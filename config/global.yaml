@@ -25,8 +25,7 @@ global:
         keystoredir: "./build/keystore"
         keynodesdir: "./build/keynodes"
 
-    database:
-        dir: "./build/database/"
+    dbConfig: "./config/db.yaml"
 
     structure:
         state: "hyperstate" # two available options: rawstate or hyperstate
@@ -38,6 +37,8 @@ global:
 # configs
 ############################
     configs:
+        ecert: "config/cert/server/eca.cert"
+        priv: "config/cert/server/eca.priv"
         peers: "config/local_peerconfig.json"
         genesis: "config/genesis.json"
         membersrvc: "config/membersrvc.yaml"
@@ -75,7 +76,10 @@ global:
 ######################################################
     logs:
         # dump the log file or not
-        dumpfile: false
+        dumpfile: true
+        newLogFileInterval: 24h  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+                                # such as "300ms", "2h45m".
+
         logsdir: "./build/logs"
         # default loglevel for all modules which can be override by module level log setting
         loglevel: "NOTICE"
@@ -85,4 +89,4 @@ global:
             p2p: "INFO"
             consensus: "NOTICE"
             core: "NOTICE"
-            hyperdb: "WARNING"
+            hyperdb: "NOTICE"

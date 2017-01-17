@@ -13,7 +13,7 @@ import (
 
 type PublicAccountAPI struct {
 	pm     *manager.ProtocolManager
-	db     *hyperdb.LDBDatabase
+	db     hyperdb.Database
 	config *common.Config
 }
 
@@ -26,7 +26,7 @@ type UnlockParas struct {
 	Password string         `json:"password"`
 }
 
-func NewPublicAccountAPI(pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, config *common.Config) *PublicAccountAPI {
+func NewPublicAccountAPI(pm *manager.ProtocolManager, hyperDb hyperdb.Database, config *common.Config) *PublicAccountAPI {
 	return &PublicAccountAPI{
 		pm:     pm,
 		db:     hyperDb,

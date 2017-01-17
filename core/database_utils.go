@@ -4,13 +4,16 @@ package core
 
 import (
 	"errors"
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
+	"os"
 	"strconv"
 	"sync"
+	"time"
 )
 
 // the prefix of key, use to save to db
@@ -29,11 +32,11 @@ func init() {
 	log = logging.MustGetLogger("")
 }
 
-// InitDB initialization ldb and memdb
+// InitDB initialization db
 // should be called while programming start-up
-// port: the server port
-func InitDB(dbPath string, port int) {
-	hyperdb.SetLDBPath(dbPath, port)
+
+func InitDB(dbConfig string, port int) {
+	hyperdb.InitDatabase(dbConfig, strconv.Itoa(port))
 	memChainMap = newMemChain()
 	memChainStatusMap = newMemChainStatus()
 }
@@ -43,7 +46,7 @@ func InitDB(dbPath string, port int) {
 */
 // GetReceipt returns a receipt by hash
 func GetReceipt(txHash common.Hash) *types.ReceiptTrans {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return nil
 	}
@@ -255,9 +258,9 @@ func DeleteTransaction(batch hyperdb.Batch, key []byte) error {
 	return batch.Delete(keyFact)
 }
 
-func GetAllTransaction(db *hyperdb.LDBDatabase) ([]*types.Transaction, error) {
+func GetAllTransaction(db hyperdb.Database) ([]*types.Transaction, error) {
 	var ts []*types.Transaction = make([]*types.Transaction, 0)
-	iter := db.NewIteratorWithPrefix(TransactionPrefix)
+	iter := db.NewIterator(TransactionPrefix)
 	for iter.Next() {
 		var wrapper types.TransactionWrapper
 		var transaction types.Transaction
@@ -271,9 +274,9 @@ func GetAllTransaction(db *hyperdb.LDBDatabase) ([]*types.Transaction, error) {
 	return ts, err
 }
 
-func GetAllDiscardTransaction(db *hyperdb.LDBDatabase) ([]*types.InvalidTransactionRecord, error) {
+func GetAllDiscardTransaction(db hyperdb.Database) ([]*types.InvalidTransactionRecord, error) {
 	var ts []*types.InvalidTransactionRecord = make([]*types.InvalidTransactionRecord, 0)
-	iter := db.NewIteratorWithPrefix(InvalidTransactionPrefix)
+	iter := db.NewIterator(InvalidTransactionPrefix)
 	for iter.Next() {
 		var t types.InvalidTransactionRecord
 		value := iter.Value()
@@ -358,10 +361,29 @@ func PersistInvalidTransactionRecord(batch hyperdb.Batch, invalidTx *types.Inval
 	return nil, data
 }
 
+func blockTime(block *types.Block) {
+	time1 := block.WriteTime - block.Timestamp
+	f, err1 := os.OpenFile(hyperdb.GetLogPath(), os.O_WRONLY|os.O_CREATE, 0644)
+	if err1 != nil {
+		fmt.Println("db.log file create failed. err: " + err1.Error())
+	} else {
+		n, _ := f.Seek(0, os.SEEK_END)
+		currentTime := time.Now().Local()
+		newFormat := currentTime.Format("2006-01-02 15:04:05.000")
+		str := strconv.FormatUint(block.Number, 10) + "#" + newFormat + "#" + strconv.FormatInt(time1, 10) + "\n"
+		_, err1 = f.WriteAt([]byte(str), n)
+		f.Close()
+	}
+}
+
 /*
 	Block
 */
 func PersistBlock(batch hyperdb.Batch, block *types.Block, version string, flush bool, sync bool) (error, []byte) {
+	if hyperdb.IfLogStatus() {
+		go blockTime(block)
+	}
+
 	// check pointer value
 	if block == nil || batch == nil {
 		return errors.New("empty block pointer"), nil
@@ -440,7 +462,7 @@ func DeleteBlock(db hyperdb.Database, key []byte) error {
 
 //delete block data and block.num<--->block.hash
 func DeleteBlockByNum(batch hyperdb.Batch, blockNum uint64) error {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err
 	}
@@ -473,7 +495,7 @@ type memChainStatus struct {
 // newMenChain new a memChain instance
 // it read from db firstly, if not exist, create a empty chain
 func newMemChain() *memChain {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return &memChain{
 			data: types.Chain{
@@ -542,7 +564,7 @@ func UpdateChain(batch hyperdb.Batch, block *types.Block, genesis bool, flush bo
 func UpdateChainByBlcokNum(batch hyperdb.Batch, blockNumber uint64, flush bool, sync bool) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err
 	}
@@ -611,7 +633,7 @@ func putChain(batch hyperdb.Batch, t *types.Chain, flush bool, sync bool) error 
 
 // IsGenesisFinish - check whether genesis block has been mined into blockchain
 func IsGenesisFinish() bool {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		logger.Error("get database handler failed.")
 		return false
@@ -632,7 +654,7 @@ func UpdateRequire(num uint64, hash []byte, recoveryNum uint64) error {
 	memChainMap.data.RequiredBlockNum = num
 	memChainMap.data.RecoveryNum = recoveryNum
 	memChainMap.data.RequireBlockHash = hash
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err
 	}
@@ -670,7 +692,7 @@ func UpdateChainByViewChange(height uint64, latestHash []byte) error {
 	memChainMap.data.Height = height
 	//memChainMap.data.ParentBlockHash = parentHash
 	memChainMap.data.LatestBlockHash = latestHash
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err
 	}

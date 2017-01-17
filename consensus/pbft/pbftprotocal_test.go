@@ -1,26 +1,19 @@
-// author: Zhenlong Zhao
-// email: zhenlongzhao@hyperchain.cn
-// date: 16/11/15
-// last modified: 16/11/15
-// last Modified Author: zhenlongzhao
-// change log:
-
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package pbft
 
 import (
-	"hyperchain/protos"
+	"os"
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/proto"
-
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
-	"hyperchain/core"
 	"hyperchain/core/types"
 	"hyperchain/event"
-	"os"
-	"sync/atomic"
+	"hyperchain/protos"
+
+	"github.com/golang/protobuf/proto"
 )
 
 func getPbftConfigPath() string {
@@ -42,8 +35,9 @@ func TestRecvMsgMaliciousEvent(t *testing.T) {
 
 func TestRecvMsgProcessTransaction(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
+
 	id := 1
 	pbftConfigPath := getPbftConfigPath()
 	config := loadConfig(pbftConfigPath)
@@ -81,7 +75,7 @@ func TestRecvMsgProcessTransaction(t *testing.T) {
 
 func TestRecvMsgProcessConsensus(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -178,7 +172,7 @@ func TestRecvMsgProcessConsensus(t *testing.T) {
 
 func TestProcessStateUpdated(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -241,7 +235,7 @@ func TestProcessNullRequest(t *testing.T) {
 
 func TestRecvProcessNegotiateView(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -270,8 +264,9 @@ func TestProcessTxEvent(t *testing.T) {
 
 	tx := &types.Transaction{}
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
+
 	id := 1
 	pbftConfigPath := getPbftConfigPath()
 	config := loadConfig(pbftConfigPath)
@@ -303,7 +298,8 @@ func TestProcessTxEvent(t *testing.T) {
 }
 
 func TestProcessCachedTxs(t *testing.T) {
-	core.InitDB("/temp/leveldb", 8088)
+
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -328,7 +324,7 @@ func TestProcessCachedTxs(t *testing.T) {
 
 func TestLeaderProcReq(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -352,7 +348,7 @@ func TestLeaderProcReq(t *testing.T) {
 
 func TestSendBatch(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -375,7 +371,8 @@ func TestSendBatch(t *testing.T) {
 }
 
 func TestNullRequestHandler(t *testing.T) {
-	core.InitDB("/temp/leveldb", 8088)
+
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -402,7 +399,8 @@ func TestNullRequestHandler(t *testing.T) {
 }
 
 func TestRecvStateUpdatedEvent(t *testing.T) {
-	core.InitDB("/temp/leveldb", 8088)
+
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -476,7 +474,7 @@ func TestRecvStateUpdatedEvent(t *testing.T) {
 
 func TestRecvRequestBatch(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -500,7 +498,8 @@ func TestRecvRequestBatch(t *testing.T) {
 }
 
 func TestValidateBatch(t *testing.T) {
-	core.InitDB("/temp/leveldb", 8088)
+
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -527,7 +526,7 @@ func TestValidateBatch(t *testing.T) {
 
 func TestCallSendPrePrepare(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -594,7 +593,7 @@ func TestCallSendPrePrepare(t *testing.T) {
 
 func TestSendPrePrepare(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -652,7 +651,7 @@ func TestSendPrePrepare(t *testing.T) {
 
 func TestRecvPrePrepare(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -735,7 +734,7 @@ func TestRecvPrepare(t *testing.T) {
 	// test in maybeSendCommit
 
 	// in negotiate view
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -784,7 +783,7 @@ func TestRecvPrepare(t *testing.T) {
 
 func TestMaybeSendCommit(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -840,7 +839,7 @@ func TestMaybeSendCommit(t *testing.T) {
 
 func TestSendCommit(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -869,7 +868,7 @@ func TestSendCommit(t *testing.T) {
 
 func TestRecvCommit(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -961,7 +960,8 @@ func TestRecvCommit(t *testing.T) {
 }
 
 func TestExecuteAfterStateUpdate(t *testing.T) {
-	core.InitDB("/temp/leveldb", 8088)
+
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -1047,7 +1047,7 @@ func TestExecuteAfterStateUpdate(t *testing.T) {
 
 func TestExecuteOne(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -1179,7 +1179,8 @@ func TestExecuteOne(t *testing.T) {
 }
 
 func TestExecDoneSync(t *testing.T) {
-	core.InitDB("/temp/leveldb", 8088)
+
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -1201,7 +1202,8 @@ func TestExecDoneSync(t *testing.T) {
 }
 
 func TestCheckpoint(t *testing.T) {
-	core.InitDB("/temp/leveldb", 8088)
+
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -1231,7 +1233,7 @@ func TestCheckpoint(t *testing.T) {
 
 func TestRecvCheckpoint(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -1268,7 +1270,7 @@ func TestRecvCheckpoint(t *testing.T) {
 
 func TestWeakCheckpointSetOutOfRange(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -1304,7 +1306,8 @@ func TestWeakCheckpointSetOutOfRange(t *testing.T) {
 }
 
 func TestWitnessCheckpointWeakCert(t *testing.T) {
-	core.InitDB("/temp/leveldb", 8088)
+
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -1357,7 +1360,7 @@ func TestRecvFetchRequestBatch(t *testing.T) {
 
 func TestRecvReturnRequestBatch(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -1389,7 +1392,7 @@ func TestRecvReturnRequestBatch(t *testing.T) {
 
 func TestMoveWatermarks(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -1474,7 +1477,7 @@ func TestMoveWatermarks(t *testing.T) {
 
 func TestUpdateHighStateTarget(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -1534,7 +1537,7 @@ func TestStateTransfer(t *testing.T) {
 
 func TestRetryStateTransfer(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -1597,7 +1600,7 @@ func TestRecvNegoView(t *testing.T) {
 
 func TestRecvNegoViewRsp(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1
@@ -1658,7 +1661,7 @@ func TestRecvNegoViewRsp(t *testing.T) {
 
 func TestRecvValidateResult(t *testing.T) {
 
-	core.InitDB("/temp/leveldb", 8088)
+	initDB()
 	defer clearDB()
 
 	id := 1

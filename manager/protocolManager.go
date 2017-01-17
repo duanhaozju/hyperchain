@@ -26,28 +26,31 @@ func init() {
 }
 
 type ProtocolManager struct {
-	serverPort     int
-	blockPool      *blockpool.BlockPool     // block executor
-	Peermanager    p2p.PeerManager          // p2p manager
-	nodeInfo       p2p.PeerInfos            // node info ,store node status,ip,port
-	consenter      consensus.Consenter      // consensus instance
-	AccountManager *accounts.AccountManager // account manager
-	commonHash     crypto.CommonHash        // hash utils
-	eventMux       *event.TypeMux           // message hub
+	serverPort  int
+	blockPool   *blockpool.BlockPool
+	Peermanager p2p.PeerManager
 
-	validateSub         event.Subscription // subscription for block validation
-	commitSub           event.Subscription // subscription for commit event
-	consensusSub        event.Subscription // subscription for consensus message
-	viewChangeSub       event.Subscription // subscription for viewchange message
-	respSub             event.Subscription // subscription for invalid response message
-	syncCheckpointSub   event.Subscription //
-	syncBlockSub        event.Subscription // subscription for block sync message
-	syncStatusSub       event.Subscription // subscription for status sync message between replicas
-	peerMaintainSub     event.Subscription // subscription for peer maintain message
+	nodeInfo  p2p.PeerInfos // node info ,store node status,ip,port
+	consenter consensus.Consenter
+
+	AccountManager *accounts.AccountManager
+	commonHash     crypto.CommonHash
+
+	eventMux *event.TypeMux
+
+	validateSub         event.Subscription
+	commitSub           event.Subscription
+	consensusSub        event.Subscription
+	viewChangeSub       event.Subscription
+	respSub             event.Subscription
+	syncCheckpointSub   event.Subscription
+	syncBlockSub        event.Subscription
+	syncStatusSub       event.Subscription
+	peerMaintainSub     event.Subscription
 	quitSync            chan struct{}
 	wg                  sync.WaitGroup
-	syncBlockCache      *common.Cache // sync block cache
-	replicaStatus       *common.Cache // replica status cache
+	syncBlockCache      *common.Cache
+	replicaStatus       *common.Cache
 	syncReplicaInterval time.Duration
 	syncReplica         bool
 	expired             chan bool
@@ -61,6 +64,7 @@ type NodeManager struct {
 var eventMuxAll *event.TypeMux
 
 func NewProtocolManager(blockPool *blockpool.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
+	//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, initType int, expired chan bool, expiredTime time.Time) *ProtocolManager {
 	synccache, _ := common.NewCache()
 	replicacache, _ := common.NewCache()
@@ -101,6 +105,8 @@ func (pm *ProtocolManager) Start() {
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
 	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{}, event.InformPrimaryEvent{})
+	go pm.validateLoop()
+	go pm.commitLoop()
 	pm.peerMaintainSub = pm.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{},
 		event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{}, event.RecvNewPeerEvent{},
 		event.DelPeerEvent{}, event.BroadcastDelPeerEvent{}, event.RecvDelPeerEvent{})
@@ -110,8 +116,7 @@ func (pm *ProtocolManager) Start() {
 	go pm.respHandlerLoop()
 	go pm.viewChangeLoop()
 	go pm.peerMaintainLoop()
-	go pm.validateLoop()
-	go pm.commitLoop()
+
 	go pm.checkExpired()
 	if pm.syncReplica {
 		pm.syncStatusSub = pm.eventMux.Subscribe(event.ReplicaStatusEvent{})
@@ -134,10 +139,10 @@ func (pm *ProtocolManager) Start() {
 	pm.wg.Wait()
 
 }
-
 func (self *ProtocolManager) syncCheckpointLoop() {
 	self.wg.Add(-1)
 	for obj := range self.syncCheckpointSub.Chan() {
+
 		switch ev := obj.Data.(type) {
 		case event.SendCheckpointSyncEvent:
 			// receive request from the consensus module, which containes required block
@@ -153,6 +158,7 @@ func (self *ProtocolManager) syncCheckpointLoop() {
 
 func (self *ProtocolManager) syncBlockLoop() {
 	for obj := range self.syncBlockSub.Chan() {
+
 		switch ev := obj.Data.(type) {
 		case event.ReceiveSyncBlockEvent:
 			// receive block from outer peers
@@ -163,7 +169,9 @@ func (self *ProtocolManager) syncBlockLoop() {
 
 // listen validate msg
 func (self *ProtocolManager) validateLoop() {
+
 	for obj := range self.validateSub.Chan() {
+
 		switch ev := obj.Data.(type) {
 		case event.ExeTxsEvent:
 			// start validation serially
@@ -175,17 +183,18 @@ func (self *ProtocolManager) validateLoop() {
 // listen commit msg
 func (self *ProtocolManager) commitLoop() {
 	for obj := range self.commitSub.Chan() {
+
 		switch ev := obj.Data.(type) {
+
 		case event.CommitOrRollbackBlockEvent:
 			// start commit block serially
-			start_time := time.Now()
 			self.blockPool.CommitBlock(ev, self.commonHash, self.Peermanager)
-			log.Critical("ProtocolManager.BlockPool.CommitBlock cost time is", time.Since(start_time))
 		}
 	}
 }
 
 func (self *ProtocolManager) respHandlerLoop() {
+
 	for obj := range self.respSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.RespInvalidTxsEvent:
@@ -194,8 +203,8 @@ func (self *ProtocolManager) respHandlerLoop() {
 		}
 	}
 }
-
 func (self *ProtocolManager) viewChangeLoop() {
+
 	for obj := range self.viewChangeSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.VCResetEvent:
@@ -220,6 +229,7 @@ func (self *ProtocolManager) syncReplicaStatusLoop() {
 
 //listen consensus msg
 func (self *ProtocolManager) ConsensusLoop() {
+
 	// automatically stops if unsubscribe
 	for obj := range self.consensusSub.Chan() {
 		switch ev := obj.Data.(type) {
@@ -230,6 +240,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			var peers []uint64
 			peers = append(peers, ev.PeerId)
 			go self.Peermanager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
+
 		case event.NewTxEvent:
 			if ev.Simulate == true {
 				tx := &types.Transaction{}
@@ -239,15 +250,20 @@ func (self *ProtocolManager) ConsensusLoop() {
 				log.Debug("###### enter NewTxEvent")
 				go self.sendMsg(ev.Payload)
 			}
+
 		case event.ConsensusEvent:
 			//call consensus module
-			log.Debug("###### enter ConsensusEvent")
+			//log.Debug("###### enter ConsensusEvent")
+			//msg := &protos.Message{}
+			//proto.Unmarshal(ev.Payload, msg)
+			//log.Debug("***consensus, from: , type: ", msg.Id, msg.Type)
 			self.consenter.RecvMsg(ev.Payload)
 		}
 	}
 }
 
 func (self *ProtocolManager) peerMaintainLoop() {
+
 	for obj := range self.peerMaintainSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.NewPeerEvent:
@@ -265,7 +281,8 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			peers := self.Peermanager.GetAllPeers()
 			var peerIds []uint64
 			for _, peer := range peers {
-				peerIds = append(peerIds, peer.ID)
+				//TODO change to int
+				peerIds = append(peerIds, uint64(peer.PeerAddr.ID))
 			}
 			self.Peermanager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_BROADCAST_NEWPEER)
 		case event.RecvNewPeerEvent:
@@ -292,7 +309,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			peers := self.Peermanager.GetAllPeers()
 			var peerIds []uint64
 			for _, peer := range peers {
-				peerIds = append(peerIds, peer.ID)
+				peerIds = append(peerIds, uint64(peer.PeerAddr.ID))
 			}
 			self.Peermanager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_BROADCAST_DELPEER)
 		case event.RecvDelPeerEvent:

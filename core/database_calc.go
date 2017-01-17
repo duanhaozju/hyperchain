@@ -17,7 +17,7 @@ import (
 // CalcResponseCount calculate response count of a block for given blockNumber
 // millTime is Millisecond
 func CalcResponseCount(blockNumber uint64, millTime int64) (int64, float64) {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func CalcCommitBatchAVGTime(from, to uint64) (int64, int64) {
 		log.Error("from less than to")
 		return -1, -1
 	}
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func CalcCommitBatchAVGTime(from, to uint64) (int64, int64) {
 
 }
 func CalTransactionSum() uint64 {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -115,7 +115,7 @@ func CalcResponseAVGTime(from, to uint64) int64 {
 		log.Error("from less than to")
 		return -1
 	}
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -148,7 +148,7 @@ func CalcBlockAVGTime(from, to uint64) int64 {
 		log.Error("from less than to")
 		return -1
 	}
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -180,7 +180,7 @@ func CalcEvmAVGTime(from, to uint64) int64 {
 		log.Error("from less than to")
 		return -1
 	}
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -213,7 +213,7 @@ func CalBlockGenerateAvgTime(from, to uint64) (int64, error) {
 		log.Error("from less than to")
 		return -1, errors.New("from less than to")
 	}
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error(err)
 		return -1, err
@@ -234,7 +234,7 @@ func CalBlockGenerateAvgTime(from, to uint64) (int64, error) {
 }
 
 func CalBlockGPS(begin, end int64) (error, string) {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -309,7 +309,7 @@ func CalBlockGPS(begin, end int64) (error, string) {
 
 func GetBlockWriteTime(begin, end int64) (error, []string) {
 	var ctx []string
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err, nil
 	}

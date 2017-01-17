@@ -53,8 +53,8 @@ func (self *LDBDatabase) Delete(key []byte) error {
 }
 
 // NewIterator returns a Iterator for traversing the database
-func (self *LDBDatabase) NewIterator() iterator.Iterator {
-	return self.db.NewIterator(nil, nil)
+func (self *LDBDatabase) NewIterator(prefix []byte) Iterator {
+	return self.db.NewIterator(util.BytesPrefix(prefix), nil)
 }
 
 func (self *LDBDatabase) NewIteratorWithPrefix(prefix []byte) iterator.Iterator {
@@ -117,7 +117,7 @@ func (b *ldbBatch) Delete(key []byte) error {
 	return nil
 }
 
-// Write write batch-operation to databse
+// Write write batch-operation to database
 func (b *ldbBatch) Write() error {
 	return b.db.Write(b.b, nil)
 }

@@ -13,7 +13,7 @@ import (
 // run transaction in a sandbox
 // execution result will not been add to database
 func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err
 	}

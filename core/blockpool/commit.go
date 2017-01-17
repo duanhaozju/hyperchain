@@ -118,7 +118,7 @@ func (pool *BlockPool) AddBlock(block *types.Block, receipts []*types.Receipt, c
 // WriteBlock: save block into database
 func (pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, commonHash crypto.CommonHash, vid uint64, primary bool) {
 	begin := time.Now()
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("get database instance failed! error msg,", err.Error())
 		return
@@ -184,7 +184,7 @@ func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
 	}
 	// save to db
 	log.Notice("invalid transaction", common.BytesToHash(invalidTx.Tx.TransactionHash).Hex())
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("get database instance failed! error msg,", err.Error())
 		return

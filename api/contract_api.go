@@ -21,12 +21,12 @@ import (
 type PublicContractAPI struct {
 	eventMux    *event.TypeMux
 	pm          *manager.ProtocolManager
-	db          *hyperdb.LDBDatabase
+	db          hyperdb.Database
 	tokenBucket *ratelimit.Bucket
 	config      *common.Config
 }
 
-func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, config *common.Config) *PublicContractAPI {
+func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb hyperdb.Database, config *common.Config) *PublicContractAPI {
 	fillrate, err := getFillRate(config, CONTRACT)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
@@ -263,7 +263,7 @@ func (contract *PublicContractAPI) GetStorageByAddr(addr common.Address, n Block
 	return mp, nil
 }
 
-func getBlockStateDb(n BlockNumber, db *hyperdb.LDBDatabase, config *common.Config) (vm.Database, error) {
+func getBlockStateDb(n BlockNumber, db hyperdb.Database, config *common.Config) (vm.Database, error) {
 	block, err := getBlockByNumber(n, db)
 	if err != nil {
 		return nil, err

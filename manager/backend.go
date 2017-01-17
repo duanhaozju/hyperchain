@@ -8,6 +8,7 @@ import (
 	"hyperchain/core/blockpool"
 	"hyperchain/crypto"
 	"hyperchain/event"
+	"hyperchain/membersrvc"
 	"hyperchain/p2p"
 	"time"
 )
@@ -36,18 +37,15 @@ func New(
 	consenter consensus.Consenter,
 	am *accounts.AccountManager,
 	commonHash crypto.CommonHash,
-	isReconnect bool,
 	syncReplicaInterval time.Duration,
 	syncReplica bool,
 	exist chan bool,
-	expiredTime time.Time,
-	//port
-	port int) *ProtocolManager {
+	expiredTime time.Time, cm *membersrvc.CAManager) *ProtocolManager {
 
 	aliveChan := make(chan int)
 	//add reconnect param
 
-	go peerManager.Start(aliveChan, eventMux, isReconnect, int64(port))
+	go peerManager.Start(aliveChan, eventMux, cm)
 	//wait for all peer are connected
 	initType := <-aliveChan
 	//select {

@@ -4,7 +4,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"github.com/mkideal/cli"
 	"hyperchain/accounts"
 	"hyperchain/api/jsonrpc/core"
@@ -27,14 +26,12 @@ import (
 
 type argT struct {
 	cli.Helper
-	NodeID      int    `cli:"o,id" usage:"node ID" dft:"1"`
-	ConfigPath  string `cli:"c,conf" usage:"配置文件所在路径" dft:"./config/global.yaml"`
-	GRPCPort    int    `cli:"l,rpcport" usage:"远程连接端口" dft:"8001"`
-	HTTPPort    int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
-	RESTPort    int    `cli:"f,restport" useage:"restful开放端口" dft:"9000"`
-	IsInit      bool   `cli:"i,init" usage:"是否是创世节点" dft:"false"`
-	Introducer  string `cli:"r,introducer" usage:"加入代理节点信息,格127.0.0.1:8001"dft:"127.0.0.1:8001:1"`
-	IsReconnect bool   `cli:"e,isReconnect" usage:"是否重新链接" dft:"false"`
+	NodeID     int    `cli:"o,id" usage:"node ID" dft:"1"`
+	ConfigPath string `cli:"c,conf" usage:"config file path" dft:"./config/global.yaml"`
+	GRPCPort   int    `cli:"l,rpcport" usage:"inner grpc connect port" dft:"8001"`
+	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc open port" dft:"8081"`
+	RESTPort   int    `cli:"f,restport" useage:"restful api port" dft:"9000"`
+	//IsReconnect bool  `cli:"e,isReconnect" usage:"是否重新链接" dft:"false"`
 }
 
 func checkLicense(licensePath string) (err error, expiredTime time.Time) {
@@ -101,6 +98,8 @@ func main() {
 		conf := initConf(argv)
 		common.InitLog(conf)
 
+		core.InitDB(config.getDbConfig(), config.gRPCPort)
+
 		err, expiredTime := checkLicense(config.getLicense())
 		if err != nil {
 			return err
@@ -110,24 +109,20 @@ func main() {
 
 		eventMux := new(event.TypeMux)
 
-		//init peer manager to start grpc server and client
-		//introducer ip
-		introducerIp := strings.Split(argv.Introducer, ":")[0]
-		introducerPort, atoi_err := strconv.Atoi(strings.Split(argv.Introducer, ":")[1])
-		if atoi_err != nil {
-			fmt.Errorf("错误,代理节点信息格式错误%v", atoi_err)
+		//init memversrvc CAManager
+		// rca.ca 应该改为 eca.ca
+		//TODO 此处加入读取文件，现在默认为true
+		/**
+		 *传入true则开启所有验证，false则为取消ca以及签名的所有验证
+		 */
+		cm, cmerr := membersrvc.GetCaManager("./config/cert/eca.ca", "./config/cert/ecert.cert", "./config/cert/rca.ca", "./config/cert/rcert.cert", "./config/cert/ecert.priv", false, false)
+		if cmerr != nil {
+			panic("cannot initliazied the camanager")
 		}
-		introducerID, atoi_err := strconv.Atoi(strings.Split(argv.Introducer, ":")[2])
-		if atoi_err != nil {
-			fmt.Errorf("错误,代理节点信息格式错误%v", atoi_err)
-		}
-		introducerPortint64 := int64(introducerPort)
-		introducerIDUint64 := uint64(introducerID)
-		//introducer port
-		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath(), config.getNodeID(), argv.IsInit, introducerIp, introducerPortint64, introducerIDUint64)
 
-		//init db
-		core.InitDB(config.getDatabaseDir(), config.getGRPCPort())
+		//init peer manager to start grpc server and client
+		//grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath())
+		grpcPeerMgr := p2p.NewGrpcManager(conf)
 
 		//init genesis
 		core.CreateInitBlock(conf)
@@ -162,13 +157,11 @@ func main() {
 			cs,
 			am,
 			kec256Hash,
-			argv.IsReconnect, //reconnect
 			syncReplicaInterval,
 			syncReplicaEnable,
 			exist,
-			expiredTime,
-			config.getGRPCPort())
-		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(), config.getLogDumpFileDir(), eventMux, pm, conf)
+			expiredTime, cm)
+		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(), config.getLogDumpFileDir(), eventMux, pm, cm, conf)
 
 		//go func() {
 		//	log.Println(http.ListenAndServe("localhost:6064", nil))

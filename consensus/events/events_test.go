@@ -47,10 +47,10 @@ func TestEventTimerStart(t *testing.T) {
 	select {
 	case e := <-events:
 		if e != me {
-			t.Fatalf("Received wrong output from event timer")
+			t.Fatal("Received wrong output from event timer")
 		}
 	case <-time.After(time.Second):
-		t.Fatalf("Timed out waiting for event to fire")
+		t.Fatal("Timed out waiting for event to fire")
 	}
 }
 
@@ -77,7 +77,7 @@ func TestEventTimerHardReset(t *testing.T) {
 			t.Fatalf("Received wrong output (%v) from event timer", e)
 		}
 	case <-time.After(time.Second):
-		t.Fatalf("Timed out waiting for event to fire")
+		t.Fatal("Timed out waiting for event to fire")
 	}
 }
 
@@ -104,7 +104,7 @@ func TestEventTimerSoftReset(t *testing.T) {
 			t.Fatalf("Received wrong output (%v) from event timer", e)
 		}
 	case <-time.After(time.Second):
-		t.Fatalf("Timed out waiting for event to fire")
+		t.Fatal("Timed out waiting for event to fire")
 	}
 }
 
@@ -127,7 +127,7 @@ func TestEventTimerStop(t *testing.T) {
 
 	select {
 	case <-events:
-		t.Fatalf("Received event output from event timer")
+		t.Fatal("Received event output from event timer")
 	case <-time.After(100 * time.Millisecond):
 		// All good
 	}
@@ -153,6 +153,6 @@ func TestEventManagerLoop(t *testing.T) {
 	case <-success:
 		// All good
 	case <-time.After(2 * time.Second):
-		t.Fatalf("Did not succeed processing second event")
+		t.Fatal("Did not succeed processing second event")
 	}
 }

@@ -1,17 +1,19 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package pbft
 
 import (
+	"encoding/base64"
+	"reflect"
 	"testing"
 
 	"hyperchain/consensus/helper"
 	"hyperchain/core"
 	"hyperchain/core/types"
 	"hyperchain/event"
-	"reflect"
-
-	"encoding/base64"
-	"github.com/golang/protobuf/proto"
 	"hyperchain/protos"
+
+	"github.com/golang/protobuf/proto"
 )
 
 func getTestViewChange() (vc *ViewChange) {

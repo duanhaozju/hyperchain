@@ -24,7 +24,7 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	atomic.StoreUint64(&pool.demandSeqNo, ev.SeqNo)
 	atomic.StoreUint64(&pool.maxSeqNo, ev.SeqNo-1)
 	pool.tempBlockNumber = ev.SeqNo
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
 		return
@@ -69,7 +69,7 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 	atomic.StoreUint64(&pool.maxSeqNo, number-1)
 	pool.tempBlockNumber = number
 	// 2. revert state
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
 		return
@@ -97,7 +97,7 @@ func (pool *BlockPool) CutdownBlock(number uint64) {
 // removeDataInRange remove transaction receipt txmeta and block itself in a specific range
 // range is [from, to).
 func (pool *BlockPool) removeDataInRange(batch hyperdb.Batch,from, to uint64) {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
 		return
@@ -134,7 +134,7 @@ func (pool *BlockPool) removeDataInRange(batch hyperdb.Batch,from, to uint64) {
 func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, targetNumber int64, targetRootHash []byte) error {
 	switch pool.GetStateType() {
 	case "hyperstate":
-		db, err := hyperdb.GetLDBDatabase()
+		db, err := hyperdb.GetDBDatabase()
 		if err != nil {
 			log.Error("get database handler failed")
 			return err
@@ -231,7 +231,7 @@ func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, tar
 func (pool *BlockPool) removeUncommittedData(batch hyperdb.Batch) error {
 	switch pool.GetStateType() {
 	case "hyperstate":
-		db, err := hyperdb.GetLDBDatabase()
+		db, err := hyperdb.GetDBDatabase()
 		if err != nil {
 			log.Error("get database failed")
 			return err

@@ -39,7 +39,7 @@ var (
 func TestTLS(t *testing.T) {
 
 	// Skipping test for now, this is just to try tls connections
-	t.Skip()
+	//t.Skip()
 
 	go startTLSCA(t)
 
@@ -74,6 +74,10 @@ func startTLSCA(t *testing.T) {
 	sock, err := net.Listen("tcp", viper.GetString("server.port"))
 	if err != nil {
 		t.Logf("Failed to start TLS-CA service: %s", err)
+		t.Fail()
+	}
+	if srv == nil {
+		t.Logf("srv is nil", err)
 		t.Fail()
 	}
 

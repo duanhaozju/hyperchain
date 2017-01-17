@@ -29,7 +29,7 @@ func TestNewLDBDataBase(t *testing.T) {
 }
 
 // TestLDBDatabase is unit test for LDBDatabase method
-// such as Put Get Detele
+// such as Put Get Delete
 func TestLDBDatabase(t *testing.T) {
 	// put data
 	for key, value := range testMap {

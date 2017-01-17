@@ -216,7 +216,7 @@ func (pool *BlockPool) checkSign(txs []*types.Transaction, commonHash crypto.Com
 func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, *BlockRecord) {
 	var validtxs []*types.Transaction
 	var receipts []*types.Receipt
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err, &BlockRecord{
 			InvalidTxs: invalidTxs,
@@ -324,7 +324,7 @@ func initEnvironment(state vm.Database, seqNo uint64) vm.Environment {
 
 // initialize transaction calculator
 func (pool *BlockPool) initializeTransactionCalculator() error {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("get database handler failed in initializeTransactionCalculator")
 		return err
@@ -345,7 +345,7 @@ func (pool *BlockPool) initializeTransactionCalculator() error {
 
 // initialize receipt calculator
 func (pool *BlockPool) initializeReceiptCalculator() error {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("get database handler failed in initializeTransactionCalculator")
 		return err

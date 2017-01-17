@@ -17,7 +17,7 @@ func (pool *BlockPool) ApplyBlock(block *types.Block, seqNo uint64) (error, *Blo
 }
 
 func (pool *BlockPool) applyBlock(block *types.Block, seqNo uint64) (error, *BlockRecord) {
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err, nil
 	}
@@ -101,7 +101,7 @@ func (pool *BlockPool) applyBlock(block *types.Block, seqNo uint64) (error, *Blo
 func (pool *BlockPool) ClearStateUnCommitted() {
 	switch pool.GetStateType() {
 	case "hyperstate":
-		db, err := hyperdb.GetLDBDatabase()
+		db, err := hyperdb.GetDBDatabase()
 		if err != nil {
 			log.Error("get database handler failed.")
 			return
@@ -119,7 +119,7 @@ func (pool *BlockPool) SubmitForStateUpdate(seqNo uint64) error {
 	case "rawstate":
 
 	case "hyperstate":
-		db, err := hyperdb.GetLDBDatabase()
+		db, err := hyperdb.GetDBDatabase()
 		if err != nil {
 			log.Error("get database handler failed.")
 			return err

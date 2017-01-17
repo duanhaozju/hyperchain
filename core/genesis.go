@@ -44,7 +44,7 @@ func CreateInitBlock(config *common.Config) {
 		return
 	}
 	// start the parse genesis content
-	db, err := hyperdb.GetLDBDatabase()
+	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Fatal(err)
 		return

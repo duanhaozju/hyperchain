@@ -35,7 +35,7 @@ func init() {
 type PublicTransactionAPI struct {
 	eventMux    *event.TypeMux
 	pm          *manager.ProtocolManager
-	db          *hyperdb.LDBDatabase
+	db          hyperdb.Database
 	tokenBucket *ratelimit.Bucket
 	config      *common.Config
 }
@@ -76,7 +76,7 @@ type TransactionResult struct {
 	InvalidMsg  string  `json:"invalidMsg"`
 }
 
-func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb *hyperdb.LDBDatabase, config *common.Config) *PublicTransactionAPI {
+func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb hyperdb.Database, config *common.Config) *PublicTransactionAPI {
 	fillrate, err := getFillRate(config, TRANSACTION)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
@@ -109,14 +109,14 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 	if (txType == 0 || txType == 2) && args.To == nil {
 		return SendTxArgs{}, &invalidParamsError{"address 'to' is invalid"}
 	}
-	if args.Timestamp == 0 || (5*int64(time.Minute)+time.Now().UnixNano()) < args.Timestamp {
+	if args.Timestamp <= 0 || (5*int64(time.Minute)+time.Now().UnixNano()) < args.Timestamp {
 		return SendTxArgs{}, &invalidParamsError{"'timestamp' is invalid"}
 	}
 	if txType != 3 && args.Signature == "" {
 		return SendTxArgs{}, &invalidParamsError{"'signature' can't be empty"}
 	}
-	if args.Nonce == 0 {
-		return SendTxArgs{}, &invalidParamsError{"'nonce' can't be empty"}
+	if args.Nonce <= 0 {
+		return SendTxArgs{}, &invalidParamsError{"'nonce' is invalid"}
 	}
 	return args, nil
 }
@@ -485,7 +485,7 @@ func (tran *PublicTransactionAPI) GetTxAvgTimeByBlockNumber(args IntervalArgs) (
 	return *NewInt64ToNumber(exeTime), nil
 }
 
-func outputTransaction(trans interface{}, db *hyperdb.LDBDatabase) (*TransactionResult, error) {
+func outputTransaction(trans interface{}, db hyperdb.Database) (*TransactionResult, error) {
 
 	var txValue types.TransactionValue
 
