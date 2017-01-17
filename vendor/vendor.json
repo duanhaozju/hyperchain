@@ -118,6 +118,12 @@
 			"revisionTime": "2016-08-22T21:41:45Z"
 		},
 		{
+			"checksumSHA1": "K1gXmpTINkcQEh4tBjzq9UeKy/U=",
+			"path": "github.com/hashicorp/hcl/hcl/printer",
+			"revision": "eb6f65b2d77ed5078887f960ff570fbddbbeb49d",
+			"revisionTime": "2017-01-09T00:25:15Z"
+		},
+		{
 			"checksumSHA1": "vjhDQVlgHhdxml1V8/cj0vOe+j8=",
 			"path": "github.com/hashicorp/hcl/hcl/scanner",
 			"revision": "baeb59c710717b06aac1dbe2270e8192ec593244",
@@ -286,6 +292,12 @@
 			"revisionTime": "2016-06-15T09:26:46Z"
 		},
 		{
+			"checksumSHA1": "KdBuwgYJsHXDpLkEMLnAld7ZNOg=",
+			"path": "github.com/terasum/viper",
+			"revision": "b2c24a2d7d38f86b6dd417daf5286abe0b09a626",
+			"revisionTime": "2016-12-19T21:29:08Z"
+		},
+		{
 			"checksumSHA1": "h+pFYiRHBogczS8/F1NoN3Ata44=",
 			"path": "golang.org/x/crypto/curve25519",
 			"revision": "351dc6a5bf92a5f2ae22fadeee08eb6a45aa2d93",
@@ -360,6 +372,354 @@
 			"path": "gopkg.in/yaml.v2",
 			"revision": "e4d366fc3c7938e2958e662b4258c7a89e1f0e3e",
 			"revisionTime": "2016-07-15T03:37:55Z"
+		},
+		{
+			"checksumSHA1": "4l8yQAbx2FO26jebLO3QdSRQJxw=",
+			"path": "hyperchain",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "EtxTjq7lfMEw+2whnyjpYmkDVLA=",
+			"path": "hyperchain/accounts",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "4SSKx5jV8YX845TyBXjKDnKMaIw=",
+			"path": "hyperchain/admittance",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "dVT36upjqgL0ZubmFtrLg+JzrKU=",
+			"path": "hyperchain/api",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "KbcO1zyyohcYQzWChf4+Nzb0U9g=",
+			"path": "hyperchain/api/jsonrpc/core",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "JCSUPcMu/uMMpnV9kzzD2jJTZZc=",
+			"path": "hyperchain/api/rest_api/controllers",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "QnCV0NOzpXnfm8uNOU7tbOkAPnQ=",
+			"path": "hyperchain/api/rest_api/routers",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "o2FcmnjCX2VGh7guS5FIvZtQVKY=",
+			"path": "hyperchain/api/rest_api/utils",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "99KjjcS04KKt8lLBiSqI6nRnXJM=",
+			"path": "hyperchain/build/config",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "uWxlMmSbITdgkjQmLtMHukps86Y=",
+			"path": "hyperchain/build/node1/config",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "boQMw2Mge0we0siU+Ctg5UtTeKw=",
+			"path": "hyperchain/build/node2/config",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "lPisLBoYBDPfHSjNWozfRuWDF2A=",
+			"path": "hyperchain/build/node3/config",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "k3UTSdymEn1o3QyBOIsjuV4nr2Q=",
+			"path": "hyperchain/build/node4/config",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "4htk0v+wstbfDjImJiZUiIY63Jg=",
+			"path": "hyperchain/common",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "QaAP0ZSMHbadJZwZ4YT2Qb4eOsU=",
+			"path": "hyperchain/config",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "+57cW0rzFjWw0z+vMT3AAmy0aWo=",
+			"path": "hyperchain/consensus",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "BYgVWFjaBWsAbAyqTZQEICH0psU=",
+			"path": "hyperchain/consensus/controller",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "am3X+QSfQZOd8uRVayn8VI2RsZw=",
+			"path": "hyperchain/consensus/events",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "3dayJKHKg66dAPq1BYFercz3MDs=",
+			"path": "hyperchain/consensus/helper",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "sGLxWxvzi1R33NbLBvAla5SFW98=",
+			"path": "hyperchain/consensus/helper/persist",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "tEejm73YJsQFZ5i2PPBsVJVv/P4=",
+			"path": "hyperchain/consensus/pbft",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "d7aNqhnqL5ElH5I6elnot3wmqOE=",
+			"path": "hyperchain/core",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "c0KgQSInc3OwQrDGOtqyvUcBwt4=",
+			"path": "hyperchain/core/blockpool",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "ey05dJPZ4rEWNl0oXdQ7qd7dv3I=",
+			"path": "hyperchain/core/crypto",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "yOSmedkvPrG+l4Nfp1mXsIS+biw=",
+			"path": "hyperchain/core/crypto/attributes",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "wkbCgHy8BwZU4TWi26tOwX0Cf98=",
+			"path": "hyperchain/core/crypto/attributes/proto",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "BvZkxWWaiGPLJd9GRKCeAiRMkQI=",
+			"path": "hyperchain/core/crypto/primitives",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "H8esBmZiWxi7VpKjoMhKcjplBfw=",
+			"path": "hyperchain/core/crypto/primitives/ecies",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "SaJdNdY9vPU7HWEeEd3esTzSAXo=",
+			"path": "hyperchain/core/crypto/utils",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "BZ+IdhIPOIjbMQdLeEwqEQKd9U8=",
+			"path": "hyperchain/core/state",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "dmfOVJ2TktcU7A6kM1X1UlHRhb4=",
+			"path": "hyperchain/core/types",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "D0PGvgTJRe+tJamQaajdcVSC5j8=",
+			"path": "hyperchain/core/util",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "Y1JQlhqxcA0wtoYBW+eqvY5V6Qo=",
+			"path": "hyperchain/core/vm",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "hoaTfLuiTB3FMHukEa+DXgAtv7A=",
+			"path": "hyperchain/core/vm/compiler",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "koCt6mZJrqJotSvzp2VAZpZg2+w=",
+			"path": "hyperchain/core/vm/params",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "YrXcYzl4RoLCYxTuaa1W6P+vFSg=",
+			"path": "hyperchain/core/vm/runtime",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "J0XVIcMKW31joECcA1pHQsdWK3c=",
+			"path": "hyperchain/core/vm/tests",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "iADEtvqoEr+xHImpJzZqhlHy7tE=",
+			"path": "hyperchain/crypto",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "cMUVmbXpnrVHgS94ZsmVzhqQpkw=",
+			"path": "hyperchain/crypto/ecies",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "8GTLpembfaU7u46jxGcRIZOXdkE=",
+			"path": "hyperchain/crypto/hmEncryption",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "hdUTtGB1qP/gmzUeF7+yaa9GxZk=",
+			"path": "hyperchain/crypto/randentropy",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "9JMAKB7VzuVj362dzBsI2B83PIM=",
+			"path": "hyperchain/crypto/rlp",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "cLRKd8ew3lWSiA31jo6YXgYT3pE=",
+			"path": "hyperchain/crypto/secp256k1",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "rfG2KGIKNgtlduxLyYg11fF/eUQ=",
+			"path": "hyperchain/crypto/sha3",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "3kMP1AkC9kLwVqHKHPbDvrrpWiI=",
+			"path": "hyperchain/event",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "8mUXzDnDl9SN4pbsFM+tGTF1pRo=",
+			"path": "hyperchain/hyperdb",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "uWNFjEVTYiZ1pH7AnCtJKppZkEg=",
+			"path": "hyperchain/manager",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "fpz81OUEfX5l2yJoXvCVCY+uQQY=",
+			"path": "hyperchain/p2p",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "T/LxmbL7HJWSdcx3DLRb3NQBfwE=",
+			"path": "hyperchain/p2p/peerComm",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "YpNP4bBncQex1XpLL0Lz2ZaH33w=",
+			"path": "hyperchain/p2p/peermessage",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "jwdKCskjyyEz4ES+Sds7GkIw/AU=",
+			"path": "hyperchain/p2p/transport",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "qFiSpYV5kw3LIplb9db424QF0/M=",
+			"path": "hyperchain/p2p/transport/ecdh",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "1t/ORsy0YrURAplGqi6ZI4LLw3g=",
+			"path": "hyperchain/protos",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "H5nUg2nrd8W3CqH3EQu/XxtYlHk=",
+			"path": "hyperchain/recovery",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "V4LgxDneYBvzjw9gqCCivIf1MlI=",
+			"path": "hyperchain/scripts",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "GyhknAWhoYzrvXYr0MxhREwOnAs=",
+			"path": "hyperchain/trie",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "ojgdih/uyi3qZ4tnrMhwBFIuwSA=",
+			"path": "hyperchain/utils",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
+		},
+		{
+			"checksumSHA1": "+VRn2u00MLBR2WSrZciTgSphGcY=",
+			"path": "hyperchain/utils/builtin",
+			"revision": "a40200fdb0f92d3b29f00da7ffbaf90ee07da8b7",
+			"revisionTime": "2017-01-17T08:25:30Z"
 		}
 	],
 	"rootPath": "hyperchain"

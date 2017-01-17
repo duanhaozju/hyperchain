@@ -86,7 +86,6 @@ type ManagerConfig struct {
 	EnableSetCookie         bool   `json:"enableSetCookie,omitempty"`
 	Gclifetime              int64  `json:"gclifetime"`
 	Maxlifetime             int64  `json:"maxLifetime"`
-	DisableHTTPOnly         bool   `json:"disableHTTPOnly"`
 	Secure                  bool   `json:"secure"`
 	CookieLifeTime          int    `json:"cookieLifeTime"`
 	ProviderConfig          string `json:"providerConfig"`
@@ -207,13 +206,13 @@ func (manager *Manager) SessionStart(w http.ResponseWriter, r *http.Request) (se
 
 	session, err = manager.provider.SessionRead(sid)
 	if err != nil {
-		return nil, err
+		return nil, errs
 	}
 	cookie := &http.Cookie{
 		Name:     manager.config.CookieName,
 		Value:    url.QueryEscape(sid),
 		Path:     "/",
-		HttpOnly: !manager.config.DisableHTTPOnly,
+		HttpOnly: true,
 		Secure:   manager.isSecure(r),
 		Domain:   manager.config.Domain,
 	}
@@ -252,7 +251,7 @@ func (manager *Manager) SessionDestroy(w http.ResponseWriter, r *http.Request) {
 		expiration := time.Now()
 		cookie = &http.Cookie{Name: manager.config.CookieName,
 			Path:     "/",
-			HttpOnly: !manager.config.DisableHTTPOnly,
+			HttpOnly: true,
 			Expires:  expiration,
 			MaxAge:   -1}
 
@@ -286,7 +285,7 @@ func (manager *Manager) SessionRegenerateID(w http.ResponseWriter, r *http.Reque
 		cookie = &http.Cookie{Name: manager.config.CookieName,
 			Value:    url.QueryEscape(sid),
 			Path:     "/",
-			HttpOnly: !manager.config.DisableHTTPOnly,
+			HttpOnly: true,
 			Secure:   manager.isSecure(r),
 			Domain:   manager.config.Domain,
 		}

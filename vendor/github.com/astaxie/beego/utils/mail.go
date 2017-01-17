@@ -232,16 +232,14 @@ func (e *Email) Send() error {
 		return errors.New("Must specify at least one To address")
 	}
 
-	// Use the username if no From is provided
-	if len(e.From) == 0 {
-		e.From = e.Username
-	}
-
-	from, err := mail.ParseAddress(e.From)
+	from, err := mail.ParseAddress(e.Username)
 	if err != nil {
 		return err
 	}
 
+	if len(e.From) == 0 {
+		e.From = e.Username
+	}
 	// use mail's RFC 2047 to encode any string
 	e.Subject = qEncode("utf-8", e.Subject)
 
