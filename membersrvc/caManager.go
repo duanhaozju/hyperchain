@@ -238,10 +238,10 @@ func (ca *CAManager) VerifyECertSignature(ecertPEM string, msg, sign []byte) (bo
 	ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
 
 	key := ecertToVerify.PublicKey.(*(ecdsa.PublicKey))
-	result, err1 := ecdsaEncry.VerifySign(*key, msg, sign)
-	if err1 != nil {
+	result, err := ecdsaEncry.VerifySign(*key, msg, sign)
+	if err != nil {
 		log.Error("fail to verify signture", err)
-		return false, err1
+		return false, err
 	}
 
 	return result, nil

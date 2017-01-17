@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"hyperchain/common"
 )
 
 const (
@@ -112,7 +113,7 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 	//}
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
-	tcertPem, err := DecodeUriCompontent(c.httpHeader.Get("tcert"))
+	tcertPem, err := common.DecodeUriCompontent(c.httpHeader.Get("tcert"))
 	if err != nil || tcertPem == "" {
 		log.Warning("cannot decode the tcert header", err)
 		return &UnauthorizedError{}
@@ -124,7 +125,7 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 		return &UnauthorizedError{}
 	}
 
-	signature, err := DecodeUriCompontent(c.httpHeader.Get("signature"))
+	signature, err := common.DecodeUriCompontent(c.httpHeader.Get("signature"))
 	/**
 	Review 如果客户端没有tcert 则会用ecert充当tcert，此时需要验证是否合法
 	由于tcert 应当是用ecert签出的，那么应该同时可以被根证书验证通过，但是
@@ -134,10 +135,14 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 	签名算法为 ECDSAWithSHA256
 	这部分需要SDK端实现，hyperchain端已经实现了验证方法
 	*/
-	verifySignature, err := c.CM.VerifySignature(tcertPem, signature, "hyperchain")
+	verifySignature, err := c.CM.VerifyECertSignature(tcertPem, []byte("hyperchain"), []byte(signature))
+
 	if err != nil || !verifySignature {
+		log.Critical("tcert 验证不通过")
+		log.Critical(err)
 		return &UnauthorizedError{}
 	}
+	log.Critical("tcert 验证通过")
 	return nil
 }
 

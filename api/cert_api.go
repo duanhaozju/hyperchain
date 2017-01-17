@@ -2,6 +2,7 @@ package hpc
 
 import (
 	"hyperchain/membersrvc"
+	"hyperchain/common"
 )
 
 type CertArgs struct {
@@ -12,7 +13,7 @@ type PublicCertAPI struct {
 	cm *membersrvc.CAManager
 }
 
-type TcertReturn struct {
+type TCertReturn struct {
 	TCert string `json:"tcert"`
 }
 
@@ -23,17 +24,17 @@ func NewPublicCertAPI(cm *membersrvc.CAManager) *PublicCertAPI {
 }
 
 // GetNodes returns status of all the nodes
-func (node *PublicCertAPI) GetTCert(args CertArgs) (TcertReturn, error) {
+func (node *PublicCertAPI) GetTCert(args CertArgs) (TCertReturn, error) {
 	if node.cm == nil {
-		return TcertReturn{TCert: "invalid tcert"}, &CertError{"CAManager is nil"}
+		return TCertReturn{TCert: "invalid tcert"}, &CertError{"CAManager is nil"}
 	}
 	tcert, err := node.cm.SignTCert(args.pubkey)
 	if err != nil {
 		log.Error("sign tcert failed")
 		log.Error(err)
-		return TcertReturn{TCert: ""}, &CertError{"signed tcert failed"}
+		return TCertReturn{TCert: ""}, &CertError{"signed tcert failed"}
 	}
 
-	return TcertReturn{TCert: tcert}, nil
+	return TCertReturn{TCert: common.EncodeUriComponent(tcert)}, nil
 
 }
