@@ -6,7 +6,7 @@ import (
 )
 
 type CertArgs struct {
-	pubkey string `json:"pubkey"`
+	Pubkey string `json:"pubkey"`
 }
 
 type PublicCertAPI struct {
@@ -28,13 +28,14 @@ func (node *PublicCertAPI) GetTCert(args CertArgs) (TCertReturn, error) {
 	if node.cm == nil {
 		return TCertReturn{TCert: "invalid tcert"}, &CertError{"CAManager is nil"}
 	}
-	tcert, err := node.cm.SignTCert(args.pubkey)
+	tcert, err := node.cm.SignTCert(args.Pubkey)
+
 	if err != nil {
 		log.Error("sign tcert failed")
 		log.Error(err)
 		return TCertReturn{TCert: ""}, &CertError{"signed tcert failed"}
 	}
-
-	return TCertReturn{TCert: common.EncodeUriComponent(tcert)}, nil
+	tcert = common.EncodeUriComponent(tcert)
+	return TCertReturn{TCert:tcert }, nil
 
 }

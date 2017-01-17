@@ -147,11 +147,12 @@ func (caManager *CAManager) SignTCert(publicKey string) (string, error) {
 		return "", err
 	}
 	tcert, err := primitives.GenTCert(caManager.ecert, caManager.ecertPrivateKey, pubKey)
+	tcertPem := primitives.DERCertToPEM(tcert)
 	if err != nil {
 		log.Error(err)
 		return "", err
 	}
-	return string(tcert), nil
+	return string(tcertPem), nil
 
 }
 

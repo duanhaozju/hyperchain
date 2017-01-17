@@ -318,7 +318,7 @@ func generTcert(ca *x509.Certificate, private interface{}, publicKey interface{}
 		UnknownExtKeyUsage: testUnknownExtKeyUsage,
 
 		BasicConstraintsValid: true,
-		IsCA: true,
+		IsCA: false,
 
 		ExtraExtensions: []pkix.Extension{
 			{

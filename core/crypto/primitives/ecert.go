@@ -14,6 +14,7 @@ import (
 	"fmt"
 	//"sync"
 	"github.com/pkg/errors"
+	"hyperchain/common"
 )
 
 //读取config文件
@@ -83,11 +84,16 @@ func ParseKey(derPri string) (interface{}, error) {
 
 func ParsePubKey(pubstr string) (interface{}, error) {
 	//todo finish the public key parse
-
-	block,_ := pem.Decode([]byte(pubstr))
+	pubPem,err := common.DecodeUriCompontent(pubstr)
+	if err != nil {
+		return nil, err
+	}
+PEMtoPublicKey([]byte(pubPem),[]byte{})
+	block,_ := pem.Decode([]byte(pubPem))
 	pub,err := DERToPublicKey(block.Bytes)
 
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
 	return pub, nil

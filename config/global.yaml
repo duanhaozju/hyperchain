@@ -70,7 +70,7 @@ global:
 
         logsdir: "./build/logs"
         # default loglevel for all modules which can be override by module level log setting
-        loglevel: "DEBUG"
+        loglevel: "NOTICE"
 
         module:
             #set log level by module

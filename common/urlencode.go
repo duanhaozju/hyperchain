@@ -198,6 +198,9 @@ func EncodeUriComponent(rawString string) string {
 func DecodeUriCompontent(encoded string) (string, error) {
 	return unescape(encoded, encodeQueryComponent)
 }
+func DecodeEscapeCompontent(encoded string) (string, error) {
+	return unescape(encoded, encodeFragment)
+}
 
 // https://golang.org/src/net/url/url.go
 // http://remove-line-numbers.ruurtjan.com/
