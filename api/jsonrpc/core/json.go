@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"hyperchain/common"
+	"encoding/hex"
 )
 
 const (
@@ -135,8 +136,9 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 	签名算法为 ECDSAWithSHA256
 	这部分需要SDK端实现，hyperchain端已经实现了验证方法
 	*/
-	//verifySignature, err := c.CM.VerifyECertSignature(tcertPem, []byte("hyperchain"), []byte(signature))
-	verifySignature := strings.EqualFold("hyperchain",signature)
+	sign,_ := hex.DecodeString(signature)
+	verifySignature, err := c.CM.VerifyECertSignature(tcertPem, []byte("hyperchain"), sign)
+	//verifySignature := strings.EqualFold("hyperchain",signature)
 	if err != nil || !verifySignature {
 		log.Critical("tcert 验证不通过")
 		log.Critical(err)
