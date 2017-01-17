@@ -7,7 +7,7 @@ import (
 	"errors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"hyperchain/membersrvc"
+	"hyperchain/admittance"
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/transport"
 	"strconv"
@@ -32,7 +32,7 @@ type Peer struct {
 	IsPrimary  bool
 	//PeerPool   PeersPool
 	Certificate string
-	CM          *membersrvc.CAManager
+	CM          *admittance.CAManager
 }
 
 // NewPeer to create a Peer which with a connection
@@ -41,7 +41,7 @@ type Peer struct {
 // if get a response, save the peer into singleton peer pool instance
 // NewPeer 用于返回一个新的NewPeer 用于与远端的peer建立连接，这个peer将会存储在peerPool中
 // 如果取得相应的连接返回值，将会将peer存储在单例的PeersPool中进行存储
-func NewPeer(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager, cm *membersrvc.CAManager) (*Peer, error) {
+func NewPeer(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager, cm *admittance.CAManager) (*Peer, error) {
 	//log.Critical(peerAddr,localAddr,TEM)
 	var peer Peer
 	peer.TEM = TEM
@@ -51,7 +51,9 @@ func NewPeer(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.Transp
 	peer.PeerAddr = peerAddr
 	//peer.PeerPool = peerspool
 	//TODO rewrite the tls options get method
-	opts := membersrvc.GetGrpcClientOpts()
+	//opts := membersrvc.GetGrpcClientOpts()
+	opts := peer.CM.GetGrpcClientOpts()
+
 	// dial to remote
 	conn, err := grpc.Dial(peerAddr.IP+":"+strconv.Itoa(peerAddr.Port), opts...)
 	if err != nil {
@@ -119,13 +121,15 @@ func (peer *Peer) handShake() (err error) {
 	return errors.New("ret message is not Hello Response!")
 }
 
-func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager) (peer *Peer, err error) {
+func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager,cm *admittance.CAManager) (peer *Peer, err error) {
 	peer.TEM = TEM
 	peer.PeerAddr = peerAddr
 	peer.LocalAddr = localAddr
+	peer.CM = cm
 	//peer.PeerPool = peerPool
 
-	opts := membersrvc.GetGrpcClientOpts()
+	//opts :=  membersrvc.GetGrpcClientOpts()
+	opts :=  peer.CM.GetGrpcClientOpts()
 	// dial to remote
 	conn, err := grpc.Dial(peerAddr.IP+":"+strconv.Itoa(peerAddr.Port), opts...)
 	if err != nil {

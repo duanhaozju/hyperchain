@@ -10,7 +10,7 @@ package p2p
 import (
 	"github.com/op/go-logging"
 	"hyperchain/event"
-	"hyperchain/membersrvc"
+	"hyperchain/admittance"
 	"hyperchain/recovery"
 )
 
@@ -28,7 +28,7 @@ type PeerManager interface {
 	MsgSender
 	InfoGetter
 	// initialize the peerManager which is for init the local node
-	Start(aliveChain chan int, eventMux *event.TypeMux, cm *membersrvc.CAManager)
+	Start(aliveChain chan int, eventMux *event.TypeMux, cm *admittance.CAManager)
 }
 
 // MsgSender Send msg to others peer

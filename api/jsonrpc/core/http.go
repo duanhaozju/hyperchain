@@ -12,7 +12,7 @@ import (
 	"hyperchain/crypto/hmEncryption"
 	"hyperchain/event"
 	"hyperchain/manager"
-	"hyperchain/membersrvc"
+	"hyperchain/admittance"
 	"io"
 	"net/http"
 	"strconv"
@@ -39,7 +39,7 @@ func (hrw *httpReadWrite) Close() error {
 	return nil
 }
 
-func Start(httpPort int, restPort int, logsPath string, eventMux *event.TypeMux, pm *manager.ProtocolManager, cfg RateLimitConfig, cm *membersrvc.CAManager, publicKey *hmEncryption.PaillierPublickey) error {
+func Start(httpPort int, restPort int, logsPath string, eventMux *event.TypeMux, pm *manager.ProtocolManager, cfg RateLimitConfig, cm *admittance.CAManager, publicKey *hmEncryption.PaillierPublickey) error {
 	eventMux = eventMux
 
 	server := NewServer()
@@ -60,7 +60,7 @@ func Start(httpPort int, restPort int, logsPath string, eventMux *event.TypeMux,
 	return nil
 }
 
-func startHttp(httpPort int, restPort int, logsPath string, srv *Server, cm *membersrvc.CAManager) {
+func startHttp(httpPort int, restPort int, logsPath string, srv *Server, cm *admittance.CAManager) {
 	// TODO AllowedOrigins should be a parameter
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
@@ -87,7 +87,7 @@ func startHttp(httpPort int, restPort int, logsPath string, srv *Server, cm *mem
 	// ===================================== 2016.11.15 END  ================================ //
 }
 
-func newJSONHTTPHandler(srv *Server, cm *membersrvc.CAManager) http.HandlerFunc {
+func newJSONHTTPHandler(srv *Server, cm *admittance.CAManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		//log.Critical("has request")
 		if r.ContentLength > maxHTTPRequestContentLength {

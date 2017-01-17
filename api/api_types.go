@@ -7,7 +7,7 @@ import (
 	"hyperchain/event"
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
-	"hyperchain/membersrvc"
+	"hyperchain/admittance"
 	"time"
 )
 
@@ -21,7 +21,7 @@ type API struct {
 
 var Apis []API
 
-func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnable bool, txPeak int64, txRate time.Duration, contractPeak int64, contractRate time.Duration, cm *membersrvc.CAManager, publicKey *hmEncryption.PaillierPublickey) []API {
+func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnable bool, txPeak int64, txRate time.Duration, contractPeak int64, contractRate time.Duration, cm *admittance.CAManager, publicKey *hmEncryption.PaillierPublickey) []API {
 
 	db, err := hyperdb.GetDBDatabase()
 

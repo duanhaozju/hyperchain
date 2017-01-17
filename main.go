@@ -14,7 +14,7 @@ import (
 	"hyperchain/crypto"
 	"hyperchain/event"
 	"hyperchain/manager"
-	"hyperchain/membersrvc"
+	"hyperchain/admittance"
 	"hyperchain/p2p"
 	"hyperchain/p2p/transport"
 	"io/ioutil"
@@ -32,7 +32,6 @@ type argT struct {
 	GRPCPort   int    `cli:"l,rpcport" usage:"inner grpc connect port" dft:"8001"`
 	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc open port" dft:"8081"`
 	RESTPort   int    `cli:"f,restport" useage:"restful api port" dft:"9000"`
-	//IsReconnect bool  `cli:"e,isReconnect" usage:"是否重新链接" dft:"false"`
 }
 
 func checkLicense(licensePath string) (err error, expiredTime time.Time) {
@@ -106,13 +105,8 @@ func main() {
 			return err
 		}
 
-		membersrvc.Start(config.getMemberSRVCConfigPath(), config.getNodeID())
-
 		eventMux := new(event.TypeMux)
 
-		//init memversrvc CAManager
-		// rca.ca 应该改为 eca.ca
-		//TODO 此处加入读取文件，现在默认为true
 		/**
 		 *传入true则开启所有验证，false则为取消ca以及签名的所有验证
 		 */
@@ -122,7 +116,7 @@ func main() {
 		if err != nil{
 			panic(err)
 		}
-		cm, cmerr := membersrvc.GetCaManager(global_config)
+		cm, cmerr := admittance.GetCaManager(global_config)
 		if cmerr != nil {
 			panic("cannot initliazied the camanager")
 		}

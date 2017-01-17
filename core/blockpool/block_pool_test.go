@@ -14,7 +14,7 @@ import (
 	"hyperchain/crypto"
 	"hyperchain/event"
 	"hyperchain/hyperdb"
-	"hyperchain/membersrvc"
+	"hyperchain/admittance"
 	"hyperchain/p2p"
 	"testing"
 	"time"
@@ -90,7 +90,7 @@ func init() {
 
 	encryption = crypto.NewEcdsaEncrypto("ecdsa")
 	kec256Hash = crypto.NewKeccak256Hash("keccak256")
-	membersrvc.Start("../../config/test/local_membersrvc.yaml", 1)
+	admittance.Start("../../config/test/local_membersrvc.yaml", 1)
 
 	//up 4 peers
 	path := "../../config/local_peerconfig.json"

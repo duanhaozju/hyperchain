@@ -1,7 +1,7 @@
 package hpc
 
 import (
-	"hyperchain/membersrvc"
+	"hyperchain/admittance"
 	"hyperchain/common"
 )
 
@@ -10,14 +10,14 @@ type CertArgs struct {
 }
 
 type PublicCertAPI struct {
-	cm *membersrvc.CAManager
+	cm *admittance.CAManager
 }
 
 type TCertReturn struct {
 	TCert string `json:"tcert"`
 }
 
-func NewPublicCertAPI(cm *membersrvc.CAManager) *PublicCertAPI {
+func NewPublicCertAPI(cm *admittance.CAManager) *PublicCertAPI {
 	return &PublicCertAPI{
 		cm: cm,
 	}

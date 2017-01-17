@@ -3,7 +3,7 @@ package p2p
 import (
 	"errors"
 	"google.golang.org/grpc"
-	"hyperchain/membersrvc"
+	"hyperchain/admittance"
 	"hyperchain/p2p/peerComm"
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/transport"
@@ -20,14 +20,14 @@ type PeersPoolIml struct {
 	TEM          transport.TransportEncryptManager
 	alivePeers   int
 	localAddr    *pb.PeerAddr
-	CM           *membersrvc.CAManager
+	CM           *admittance.CAManager
 }
 
 // the peers pool instance
 //var prPoolIns PeersPool
 
 // NewPeerPool get a new peer pool instance
-func NewPeerPoolIml(TEM transport.TransportEncryptManager, localAddr *pb.PeerAddr, cm *membersrvc.CAManager) *PeersPoolIml {
+func NewPeerPoolIml(TEM transport.TransportEncryptManager, localAddr *pb.PeerAddr, cm *admittance.CAManager) *PeersPoolIml {
 	var newPrPoolIns PeersPoolIml
 	newPrPoolIns.peers = make(map[string]*Peer)
 	newPrPoolIns.peerAddr = make(map[string]pb.PeerAddr)

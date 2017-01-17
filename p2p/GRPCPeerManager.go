@@ -12,7 +12,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/crypto"
 	"hyperchain/event"
-	"hyperchain/membersrvc"
+	"hyperchain/admittance"
 	"hyperchain/p2p/peerComm"
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/transport"
@@ -36,7 +36,7 @@ type GRPCPeerManager struct {
 	//interducer information
 	Introducer *pb.PeerAddr
 	//CERT Manager
-	CM         *membersrvc.CAManager
+	CM         *admittance.CAManager
 }
 
 func NewGrpcManager(conf *common.Config) *GRPCPeerManager {
@@ -54,7 +54,7 @@ func NewGrpcManager(conf *common.Config) *GRPCPeerManager {
 }
 
 // Start start the Normal local listen server
-func (this *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux, cm *membersrvc.CAManager) {
+func (this *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux, cm *admittance.CAManager) {
 	if this.LocalAddr.ID == 0 || this.configs == nil {
 		panic("the PeerManager hasn't initlized")
 	}

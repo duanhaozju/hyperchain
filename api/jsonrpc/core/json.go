@@ -5,7 +5,7 @@ package jsonrpc
 import (
 	"encoding/json"
 	"fmt"
-	"hyperchain/membersrvc"
+	"hyperchain/admittance"
 	"io"
 	"net/http"
 	"reflect"
@@ -74,19 +74,19 @@ type jsonNotification struct {
 // jsonCodec reads and writes JSON-RPC messages to the underlying connection. It
 // also has support for parsing arguments and serializing (result) objects.
 type jsonCodec struct {
-	closer     sync.Once          // close closed channel once
-	closed     chan interface{}   // closed on Close
-	decMu      sync.Mutex         // guards d
-	d          *json.Decoder      // decodes incoming requests
-	encMu      sync.Mutex         // guards e
-	e          *json.Encoder      // encodes responses
-	rw         io.ReadWriteCloser // connection
+	closer     sync.Once             // close closed channel once
+	closed     chan interface{}      // closed on Close
+	decMu      sync.Mutex            // guards d
+	d          *json.Decoder         // decodes incoming requests
+	encMu      sync.Mutex            // guards e
+	e          *json.Encoder         // encodes responses
+	rw         io.ReadWriteCloser    // connection
 	httpHeader http.Header
-	CM         *membersrvc.CAManager //ca manager
+	CM         *admittance.CAManager //ca manager
 }
 
 // NewJSONCodec creates a new RPC server codec with support for JSON-RPC 2.0
-func NewJSONCodec(rwc io.ReadWriteCloser, header http.Header, cm *membersrvc.CAManager) ServerCodec {
+func NewJSONCodec(rwc io.ReadWriteCloser, header http.Header, cm *admittance.CAManager) ServerCodec {
 	d := json.NewDecoder(rwc)
 	d.UseNumber()
 	return &jsonCodec{closed: make(chan interface{}), d: d, e: json.NewEncoder(rwc), rw: rwc, httpHeader: header, CM: cm}
