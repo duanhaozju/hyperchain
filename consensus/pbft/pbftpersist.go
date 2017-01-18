@@ -37,7 +37,8 @@ func (pbft *pbftProtocal) persistPSet(v uint64, n uint64) {
 		pbft.pset = &Pset{Set: pset}
 	}
 	for p := range cert.prepare {
-		pbft.pset.Set = append(pbft.pset.Set, &p)
+		tmp := p
+		pbft.pset.Set = append(pbft.pset.Set, &tmp)
 	}
 
 	raw, err := proto.Marshal(pbft.pset)
@@ -56,7 +57,8 @@ func (pbft *pbftProtocal) persistCSet(v uint64, n uint64) {
 		pbft.cset = &Cset{Set: cset}
 	}
 	for c := range cert.commit {
-		pbft.cset.Set = append(pbft.cset.Set, &c)
+		tmp := c
+		pbft.cset.Set = append(pbft.cset.Set, &tmp)
 	}
 
 	raw, err := proto.Marshal(pbft.cset)
@@ -98,7 +100,7 @@ func (pbft *pbftProtocal) restorePSet() *Pset {
 }
 
 func (pbft *pbftProtocal) restoreCSet() *Cset {
-	raw, err := persist.ReadState("pset")
+	raw, err := persist.ReadState("cset")
 	if err != nil {
 		logger.Debugf("Replica %d could not restore state cset: %s", pbft.id, err)
 		return nil
@@ -179,7 +181,6 @@ func (pbft *pbftProtocal) restoreCert() {
 		}
 		cert.commitCount = ccount
 		cset = ctmp
-
 	}
 
 }
