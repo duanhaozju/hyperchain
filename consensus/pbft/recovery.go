@@ -425,5 +425,7 @@ func (pbft *pbftProtocal) restartRecovery() {
 
 	logger.Noticef("Replica %d now restartRecovery", pbft.id)
 	// recovery redo requires update new if need
+	pbft.inNegoView = true
+	pbft.inRecovery = true
 	pbft.processNegotiateView()
 }
