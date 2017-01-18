@@ -149,6 +149,9 @@ func (pbft *pbftProtocal) restoreCert() {
 			if q.View == p.View && q.SequenceNumber == p.SequenceNumber {
 				cert.prepare[*p] = true
 				pcount++
+				if p.ReplicaId == pbft.id {
+					cert.sentPrepare = true
+				}
 			} else {
 				ptmp = append(ptmp, p)
 			}
@@ -166,6 +169,10 @@ func (pbft *pbftProtocal) restoreCert() {
 			if q.View == c.View && q.SequenceNumber == c.SequenceNumber {
 				cert.commit[*c] = true
 				ccount++
+				if c.ReplicaId == pbft.id {
+					cert.sentCommit = true
+					cert.sentValidate = true
+				}
 			} else {
 				ctmp = append(ctmp, c)
 			}
