@@ -151,7 +151,7 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 	// TODO signature
 	//pbft.sign(vc)
 
-	logger.Infof("Replica %d sending view-change, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
+	logger.Debugf("Replica %d sending view-change, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		pbft.id, vc.View, vc.H, len(vc.Cset), len(vc.Pset), len(vc.Qset))
 
 	//todo
@@ -595,6 +595,14 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 		pbft.inVcReset = true
 		return nil
 	}
+
+	// clear the PQC sets before handle the tail
+	qset := []*PrePrepare{}
+	pset := []*Prepare{}
+	cset := []*Commit{}
+	pbft.qset = &Qset{Set: qset}
+	pbft.pset = &Pset{Set: pset}
+	pbft.cset = &Cset{Set: cset}
 
 	pbft.updateViewChangeSeqNo()
 	pbft.startTimerIfOutstandingRequests()

@@ -129,17 +129,16 @@ type pbftProtocal struct {
 	addNodeTimeout		time.Duration           	// time limit for new node responses
 	inAddingNode		bool						// track if replica is in adding node
 	addNodeCertStore	map[string]*addNodeCert		// track the received add node agree message
-	inUpdatingN			bool						// track if there exist previous N and new N
-	previousN			int							// track the previous N
-	previousF			int							// track the previous F
-	previousView		uint64						// track the previous View
-	mux					sync.Mutex
-	keypoint			uint64						// track the key seqNo decided by primary
-	newid				uint64						// track the local new id after delete
 	delNodeTimer 		events.Timer				// track timeout for del node responses
 	delNodeTimeout		time.Duration           	// time limit for del node responses
 	inDeletingNode		bool						// track if replica is in adding node
-	delNodeCertStore	map[delID]*delNodeCert		// track the received add node agree message
+	delNodeCertStore	map[string]*delNodeCert		// track the received add node agree message
+
+	inUpdatingN			uint32						// track if there are updating
+	updateTimer 		events.Timer				// track timeout for N-f agree on update n
+	updateTimeout		time.Duration				// time limit for N-f agree on update n
+	agreeUpdateStore	map[aidx]*AgreeUpdateN		// track agree-update-n message
+	updateStore			map[uidx]*UpdateN			// track last update-n we received or sent
 }
 
 type qidx struct {
@@ -195,26 +194,25 @@ type addNodeCert struct {
 	addNodes		map[AddNode]bool
 	addCount		int
 	finishAdd		bool
-	update			*UpdateN
-	agrees			map[AgreeUpdateN]bool
-	updateCount		int
-	finishUpdate	bool
-}
-
-type delID struct{
-	delHash		string
-	routerHash	string
 }
 
 type delNodeCert struct {
 	newId			uint64
+	routerHash		string
 	delNodes		map[DelNode]bool
 	delCount		int
 	finishDel		bool
-	update			*UpdateN
-	agrees			map[AgreeUpdateN]bool
-	updateCount		int
-	finishUpdate	bool
+}
+
+type aidx struct {
+	v	uint64
+	n	int64
+	id	uint64
+}
+
+type uidx struct {
+	v	uint64
+	n	int64
 }
 
 // newBatch initializes a batch
@@ -328,7 +326,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.cacheValidatedBatch = make(map[string]*cacheBatch)
 	pbft.preparedCert = make(map[msgID]string)
 	pbft.addNodeCertStore = make(map[string]*addNodeCert)
-	pbft.delNodeCertStore = make(map[delID]*delNodeCert)
+	pbft.delNodeCertStore = make(map[string]*delNodeCert)
 
 	pbft.isNewNode = false
 	pbft.inAddingNode = false
@@ -391,10 +389,10 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 		logger.Warningf("Configured null request timeout must be greater than request timeout, setting to %v", pbft.nullRequestTimeout)
 	}
 
-	pbft.validateTimer = etf.CreateTimer()
-	pbft.validateTimeout, err = time.ParseDuration(config.GetString("timeout.validate"))
+	pbft.updateTimer = etf.CreateTimer()
+	pbft.updateTimeout, err = time.ParseDuration(config.GetString("timeout.update"))
 	if err != nil {
-		panic(fmt.Errorf("Cannot parse validate timeout: %s", err))
+		panic(fmt.Errorf("Cannot parse update timeout: %s", err))
 	}
 
 	logger.Infof("PBFT Batch size = %d", pbft.batchSize)
@@ -2021,11 +2019,6 @@ func (pbft *pbftProtocal) moveWatermarks(n uint64) {
 	if pbft.h > n {
 		logger.Critical("Replica %d movewatermark but pbft.h>n", pbft.id)
 		return
-	}
-
-	if pbft.inUpdatingN && pbft.keypoint <= h {
-		pbft.inUpdatingN = false
-		logger.Noticef("Replica %d finish updating N after adding", pbft.id)
 	}
 
 	for idx, cert := range pbft.certStore {
