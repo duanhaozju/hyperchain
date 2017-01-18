@@ -125,7 +125,7 @@ func main() {
 		grpcPeerMgr := p2p.NewGrpcManager(conf)
 
 		//init genesis
-		core.CreateInitBlock(config.getGenesisConfigPath())
+		core.CreateInitBlock(conf)
 
 		//init pbft consensus
 		cs := controller.NewConsenter(uint64(config.getNodeID()), eventMux, config.getPBFTConfigPath())
@@ -142,11 +142,7 @@ func main() {
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
 
 		//init block pool to save block
-		blockPoolConf := blockpool.BlockPoolConf{
-			BlockVersion:       config.getBlockVersion(),
-			TransactionVersion: config.getTransactionVersion(),
-		}
-		blockPool := blockpool.NewBlockPool(eventMux, cs, blockPoolConf)
+		blockPool := blockpool.NewBlockPool(cs, conf)
 		if blockPool == nil {
 			return errors.New("Initialize BlockPool failed")
 		}
@@ -165,8 +161,7 @@ func main() {
 			syncReplicaEnable,
 			exist,
 			expiredTime, cm)
-		rateLimitCfg := config.getRateLimitConfig()
-		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(), config.getLogDumpFileDir(), eventMux, pm, rateLimitCfg, cm, config.getPaillerPublickey())
+		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(), config.getLogDumpFileDir(), eventMux, pm, cm, conf)
 
 		//go func() {
 		//	log.Println(http.ListenAndServe("localhost:6064", nil))

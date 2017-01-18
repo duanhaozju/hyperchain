@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"hyperchain/common"
 	"hyperchain/hyperdb"
-	"hyperchain/trie"
+	"hyperchain/tree/pmt"
 	"math/big"
 	"testing"
 )
@@ -112,7 +112,7 @@ func SOCompare(so1 *StateObject, so2 *StateObject) bool {
 	}
 	return true
 }
-func StCompare(trie1 *trie.SecureTrie, trie2 *trie.SecureTrie) bool {
+func StCompare(trie1 *pmt.SecureTrie, trie2 *pmt.SecureTrie) bool {
 	it := trie1.Iterator()
 	for it.Next() {
 		key := trie1.GetKey(it.Key)

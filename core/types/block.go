@@ -5,7 +5,7 @@ import (
 	"hyperchain/crypto"
 )
 
-func (self Block) Hash(ch crypto.CommonHash) common.Hash {
+func (self *Block) Hash(ch crypto.CommonHash) common.Hash {
 	return ch.Hash([]interface{}{
 		self.ParentHash,
 		self.Number,

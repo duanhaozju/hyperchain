@@ -112,7 +112,7 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError {
 	defer c.decMu.Unlock()
 	tcertPem, err := DecodeUriCompontent(c.httpHeader.Get("tcert"))
 	if err != nil || tcertPem == "" {
-		log.Warning("cannot decode the tcert header", err)
+		log.Debug("cannot decode the tcert header", err)
 		return &UnauthorizedError{}
 	}
 	verifyTcert, err := c.CM.VerifyTCert(tcertPem)

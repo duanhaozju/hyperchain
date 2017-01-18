@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"hyperchain/common"
 	"hyperchain/core"
-	"hyperchain/core/state"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
 )
@@ -115,7 +114,6 @@ func (blk *PublicBlockAPI) GetBlocksByTime(args IntervalTime) (*BlocksIntervalRe
 }
 
 func (blk *PublicBlockAPI) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (Number, error) {
-
 	realArgs, err := prepareIntervalArgs(args)
 	if err != nil {
 		return 0, err
@@ -184,22 +182,6 @@ func getBlocksByTime(startTime, endTime int64, db hyperdb.Database) (sumOfBlocks
 		startBlock = NewUint64ToBlockNumber(i + 1)
 	}
 	return sumOfBlocks, startBlock, endBlock
-}
-
-func getBlockStateDb(n BlockNumber, db hyperdb.Database) (*state.StateDB, error) {
-
-	block, err := getBlockByNumber(n, db)
-	if err != nil {
-		return nil, err
-	}
-
-	stateDB, err := state.New(block.MerkleRoot, db)
-	if err != nil {
-		log.Errorf("Get stateDB error, %v", err)
-		return nil, &callbackError{err.Error()}
-	}
-
-	return stateDB, nil
 }
 
 func outputBlockResult(block *types.Block, db hyperdb.Database) (*BlockResult, error) {

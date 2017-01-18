@@ -7,14 +7,14 @@ import (
 	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/core"
-	"hyperchain/core/state"
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
 )
 
 type PublicAccountAPI struct {
-	pm *manager.ProtocolManager
-	db hyperdb.Database
+	pm     *manager.ProtocolManager
+	db     hyperdb.Database
+	config *common.Config
 }
 
 type AccountResult struct {
@@ -26,10 +26,11 @@ type UnlockParas struct {
 	Password string         `json:"password"`
 }
 
-func NewPublicAccountAPI(pm *manager.ProtocolManager, hyperDb hyperdb.Database) *PublicAccountAPI {
+func NewPublicAccountAPI(pm *manager.ProtocolManager, hyperDb hyperdb.Database, config *common.Config) *PublicAccountAPI {
 	return &PublicAccountAPI{
-		pm: pm,
-		db: hyperDb,
+		pm:     pm,
+		db:     hyperDb,
+		config: config,
 	}
 }
 
@@ -77,14 +78,13 @@ func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 	var acts []*AccountResult
 	chain := core.GetChainCopy()
 
-	log.Notice("Current LatestBlockHash:", common.BytesToHash(chain.LatestBlockHash).Hex())
+	log.Debug("Current LatestBlockHash:", common.BytesToHash(chain.LatestBlockHash).Hex())
 	headBlock, err := getBlockByHash(common.BytesToHash(chain.LatestBlockHash), acc.db)
 	if err != nil {
 		log.Errorf("%v", err)
 		return nil
 	}
-
-	stateDB, err := state.New(headBlock.MerkleRoot, acc.db)
+	stateDB, err := GetStateInstance(headBlock.MerkleRoot, acc.db, acc.config)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
 		return nil
@@ -92,10 +92,8 @@ func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 	ctx := stateDB.GetAccounts()
 
 	for k, v := range ctx {
-		log.Notice("balance is", v.Balance())
 		var act = &AccountResult{
 			Account: k,
-			//Balance: fmt.Sprintf(`0x%x`, v.Balance()),
 			Balance: v.Balance().String(),
 		}
 		acts = append(acts, act)
@@ -113,9 +111,9 @@ func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
 		return "", &callbackError{err.Error()}
 	} else if headBlock != nil {
 
-		if stateDB, err := state.New(common.BytesToHash(headBlock.MerkleRoot), acc.db); err == nil && stateDB != nil {
-			if stateobject := stateDB.GetStateObject(addr); stateobject != nil {
-				return fmt.Sprintf(`0x%x`, stateobject.BalanceData), nil
+		if stateDB, err := GetStateInstance(common.BytesToHash(headBlock.MerkleRoot), acc.db, acc.config); err == nil && stateDB != nil {
+			if stateobject := stateDB.GetAccount(addr); stateobject != nil {
+				return fmt.Sprintf(`0x%x`, stateobject.Balance()), nil
 			} else {
 				return "", &leveldbNotFoundError{"stateobject, the account may not exist"}
 			}

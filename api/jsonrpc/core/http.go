@@ -9,7 +9,6 @@ import (
 	"github.com/rs/cors"
 	"hyperchain/api"
 	"hyperchain/api/rest_api/routers"
-	"hyperchain/crypto/hmEncryption"
 	"hyperchain/event"
 	"hyperchain/manager"
 	"hyperchain/membersrvc"
@@ -17,6 +16,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"hyperchain/common"
 )
 
 const (
@@ -39,13 +39,13 @@ func (hrw *httpReadWrite) Close() error {
 	return nil
 }
 
-func Start(httpPort int, restPort int, logsPath string, eventMux *event.TypeMux, pm *manager.ProtocolManager, cfg RateLimitConfig, cm *membersrvc.CAManager, publicKey *hmEncryption.PaillierPublickey) error {
+func Start(httpPort int, restPort int, logsPath string, eventMux *event.TypeMux, pm *manager.ProtocolManager, cm *membersrvc.CAManager, config *common.Config) error {
 	eventMux = eventMux
 
 	server := NewServer()
 
 	// 得到API，注册服务
-	apis := hpc.GetAPIs(eventMux, pm, cfg.Enable, cfg.TxRatePeak, cfg.TxFillRate, cfg.ContractRatePeak, cfg.ContractFillRate, cm, publicKey)
+	apis := hpc.GetAPIs(eventMux, pm, cm, config)
 
 	// api.Namespace 是API的命名空间，api.Service 是一个拥有命名空间对应对象的所有方法的对象
 	for _, api := range apis {

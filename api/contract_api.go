@@ -9,6 +9,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/types"
+	"hyperchain/core/vm"
 	"hyperchain/core/vm/compiler"
 	"hyperchain/crypto/hmEncryption"
 	"hyperchain/event"
@@ -19,22 +20,30 @@ import (
 )
 
 type PublicContractAPI struct {
-	eventMux        *event.TypeMux
-	pm              *manager.ProtocolManager
-	db              hyperdb.Database
-	tokenBucket     *ratelimit.Bucket
-	ratelimitEnable bool
-	publicKey       *hmEncryption.PaillierPublickey
+	eventMux    *event.TypeMux
+	pm          *manager.ProtocolManager
+	db          hyperdb.Database
+	tokenBucket *ratelimit.Bucket
+	config      *common.Config
 }
 
-func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb hyperdb.Database, ratelimitEnable bool, bmax int64, rate time.Duration, publicKey *hmEncryption.PaillierPublickey) *PublicContractAPI {
+func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb hyperdb.Database, config *common.Config) *PublicContractAPI {
+	fillrate, err := getFillRate(config, CONTRACT)
+	if err != nil {
+		log.Errorf("invalid ratelimit fill rate parameters.")
+		fillrate = 10 * time.Millisecond
+	}
+	peak := getRateLimitPeak(config, CONTRACT)
+	if peak == 0 {
+		log.Errorf("got invalid ratelimit peak parameters as 0. use default peak parameters 500")
+		peak = 500
+	}
 	return &PublicContractAPI{
-		eventMux:        eventMux,
-		pm:              pm,
-		db:              hyperDb,
-		tokenBucket:     ratelimit.NewBucket(rate, bmax),
-		ratelimitEnable: ratelimitEnable,
-		publicKey:       publicKey,
+		eventMux:    eventMux,
+		pm:          pm,
+		db:          hyperDb,
+		tokenBucket: ratelimit.NewBucket(fillrate, peak),
+		config:      config,
 	}
 }
 
@@ -120,7 +129,7 @@ func (contract *PublicContractAPI) CompileContract(ct string) (*CompileCode, err
 
 // DeployContract deploys contract.
 func (contract *PublicContractAPI) DeployContract(args SendTxArgs) (common.Hash, error) {
-	if contract.ratelimitEnable && contract.tokenBucket.TakeAvailable(1) <= 0 {
+	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, &systemTooBusyError{"system is too busy to response "}
 	}
 	return deployOrInvoke(contract, args, 1)
@@ -128,7 +137,7 @@ func (contract *PublicContractAPI) DeployContract(args SendTxArgs) (common.Hash,
 
 // InvokeContract invokes contract.
 func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash, error) {
-	if contract.ratelimitEnable && contract.tokenBucket.TakeAvailable(1) <= 0 {
+	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, &systemTooBusyError{"system is too busy to response "}
 	}
 	return deployOrInvoke(contract, args, 2)
@@ -137,7 +146,7 @@ func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash,
 // GetCode returns the code from the given contract address and block number.
 func (contract *PublicContractAPI) GetCode(addr common.Address, n BlockNumber) (string, error) {
 
-	stateDb, err := getBlockStateDb(n, contract.db)
+	stateDb, err := getBlockStateDb(n, contract.db, contract.config)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
 		return "", err
@@ -150,7 +159,8 @@ func (contract *PublicContractAPI) GetCode(addr common.Address, n BlockNumber) (
 // if addr is nil, returns the number of all the contract that has been deployed.
 func (contract *PublicContractAPI) GetContractCountByAddr(addr common.Address, n BlockNumber) (*Number, error) {
 
-	stateDb, err := getBlockStateDb(n, contract.db)
+	stateDb, err := getBlockStateDb(n, contract.db, contract.config)
+
 	if err != nil {
 		return nil, err
 	}
@@ -182,11 +192,11 @@ func (contract *PublicContractAPI) EncryptoMessage(args EncryptoArgs) (*HmResult
 	var amount_hm []byte
 
 	if args.HmBalance == "" {
-		isValid, newBalance_hm, amount_hm = hmEncryption.PreHmTransaction(balance_bigint.Bytes(), amount_bigint.Bytes(), nil, *contract.publicKey)
+		isValid, newBalance_hm, amount_hm = hmEncryption.PreHmTransaction(balance_bigint.Bytes(), amount_bigint.Bytes(), nil, getPaillierPublickey(contract.config))
 	} else {
 		hmBalance_bigint := new(big.Int)
 		hmBalance_bigint.SetString(args.HmBalance, 10)
-		isValid, newBalance_hm, amount_hm = hmEncryption.PreHmTransaction(balance_bigint.Bytes(), amount_bigint.Bytes(), hmBalance_bigint.Bytes(), *contract.publicKey)
+		isValid, newBalance_hm, amount_hm = hmEncryption.PreHmTransaction(balance_bigint.Bytes(), amount_bigint.Bytes(), hmBalance_bigint.Bytes(), getPaillierPublickey(contract.config))
 	}
 
 	newBalance_hm_bigint := new(big.Int)
@@ -220,7 +230,7 @@ func (contract *PublicContractAPI) CheckHmValue(args ValueArgs) ([]bool, error) 
 		rawValue_bigint := new(big.Int)
 		rawValue_bigint.SetInt64(v)
 
-		isvalid := hmEncryption.DestinationVerify(encryVlue_bigint.Bytes(), rawValue_bigint.Bytes(), *contract.publicKey)
+		isvalid := hmEncryption.DestinationVerify(encryVlue_bigint.Bytes(), rawValue_bigint.Bytes(), getPaillierPublickey(contract.config))
 		result[i] = isvalid
 	}
 
@@ -230,16 +240,20 @@ func (contract *PublicContractAPI) CheckHmValue(args ValueArgs) ([]bool, error) 
 // GetStorageByAddr returns the storage by given contract address and bock number.
 // The method is offered for hyperchain internal test.
 func (contract *PublicContractAPI) GetStorageByAddr(addr common.Address, n BlockNumber) (map[string]string, error) {
-	stateDb, err := getBlockStateDb(n, contract.db)
+	stateDb, err := getBlockStateDb(n, contract.db, contract.config)
+
 	if err != nil {
 		return nil, err
 	}
 	mp := make(map[string]string)
 
-	if obj := stateDb.GetStateObject(addr); obj == nil {
+	if obj := stateDb.GetAccount(addr); obj == nil {
 		return nil, nil
 	} else {
-		storages := obj.Storage()
+		cb := func(key, value common.Hash) bool {
+			return true
+		}
+		storages := obj.ForEachStorage(cb)
 		if len(storages) == 0 {
 			return nil, nil
 		}
@@ -249,4 +263,17 @@ func (contract *PublicContractAPI) GetStorageByAddr(addr common.Address, n Block
 		}
 	}
 	return mp, nil
+}
+
+func getBlockStateDb(n BlockNumber, db hyperdb.Database, config *common.Config) (vm.Database, error) {
+	block, err := getBlockByNumber(n, db)
+	if err != nil {
+		return nil, err
+	}
+	stateDB, err := GetStateInstance(block.MerkleRoot, db, config)
+	if err != nil {
+		log.Errorf("Get stateDB error, %v", err)
+		return nil, &callbackError{err.Error()}
+	}
+	return stateDB, nil
 }
