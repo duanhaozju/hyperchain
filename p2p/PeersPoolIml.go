@@ -117,6 +117,30 @@ func (this *PeersPoolIml) GetPeers() []*Peer {
 	return clients
 }
 
+func (this *PeersPoolIml) GetVPPeers()[]*Peer{
+	var clients []*Peer
+	for _, cl := range this.peers {
+		if cl.TEM.GetIsVerified(cl.PeerAddr.Hash){
+			clients = append(clients, cl)
+		}
+		//log.Critical("取得路由表:", cl)
+	}
+
+	return clients
+}
+
+func (this *PeersPoolIml) GetNVPPeers()[]*Peer{
+	var clients []*Peer
+	for _, cl := range this.peers {
+		if !cl.TEM.GetIsVerified(cl.PeerAddr.Hash){
+			clients = append(clients, cl)
+		}
+		//log.Critical("取得路由表:", cl)
+	}
+
+	return clients
+}
+
 func (this *PeersPoolIml) GetPeersAddrMap() map[string]pb.PeerAddr {
 	var m = make(map[string]pb.PeerAddr)
 	for _, cl := range this.peers {

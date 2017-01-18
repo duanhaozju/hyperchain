@@ -248,12 +248,18 @@ func (this *GRPCPeerManager) GetAllPeers() []*Peer {
 func (this *GRPCPeerManager) GetAllPeersWithTemp() []*Peer {
 	return this.peersPool.GetPeersWithTemp()
 }
+func (this *GRPCPeerManager) GetVPPeers() []*Peer{
+	return this.peersPool.GetVPPeers()
+}
+func (this *GRPCPeerManager) GetNVPPeers() []*Peer{
+	return this.peersPool.GetNVPPeers()
 
+}
 // BroadcastPeers Broadcast Massage to connected peers
 func (this *GRPCPeerManager) BroadcastPeers(payLoad []byte) {
 	//log.Warning("P2P broadcast")
 	if !this.IsOnline {
-		log.Warning("IsOnline")
+		log.Warning("IS NOT Online")
 		return
 	}
 	var broadCastMessage = pb.Message{
@@ -263,12 +269,44 @@ func (this *GRPCPeerManager) BroadcastPeers(payLoad []byte) {
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
 	//log.Warning("call broadcast")
-	go broadcast(this, broadCastMessage, this.peersPool)
+	go broadcast(this, broadCastMessage, this.peersPool.GetPeers())
+}
+// BroadcastPeers Broadcast Massage to connected VP peers
+func (this *GRPCPeerManager) BroadcastVPPeers(payLoad []byte) {
+	//log.Warning("P2P broadcast")
+	if !this.IsOnline {
+		log.Warning("IS NOT Online")
+		return
+	}
+	var broadCastMessage = pb.Message{
+		MessageType:  pb.Message_CONSUS,
+		From:         this.LocalNode.GetNodeAddr().ToPeerAddress(),
+		Payload:      payLoad,
+		MsgTimeStamp: time.Now().UnixNano(),
+	}
+	//log.Warning("call broadcast")
+	go broadcast(this, broadCastMessage, this.peersPool.GetVPPeers())
+}
+// BroadcastPeers Broadcast Massage to connected NVP peers
+func (this *GRPCPeerManager) BroadcastNVPPeers(payLoad []byte) {
+	//log.Warning("P2P broadcast")
+	if !this.IsOnline {
+		log.Warning("IS NOT Online")
+		return
+	}
+	var broadCastMessage = pb.Message{
+		MessageType:  pb.Message_CONSUS,
+		From:         this.LocalNode.GetNodeAddr().ToPeerAddress(),
+		Payload:      payLoad,
+		MsgTimeStamp: time.Now().UnixNano(),
+	}
+	//log.Warning("call broadcast")
+	go broadcast(this, broadCastMessage, this.peersPool.GetNVPPeers())
 }
 
 // inner the broadcast method which serve BroadcastPeers function
-func broadcast(grpcPeerManager *GRPCPeerManager, broadCastMessage pb.Message, pPool PeersPool) {
-	for _, peer := range pPool.GetPeers() {
+func broadcast(grpcPeerManager *GRPCPeerManager, broadCastMessage pb.Message, peers []*Peer) {
+	for _, peer := range peers {
 		//REVIEW 这里没有返回值,不知道本次通信是否成功
 		//log.Notice(string(broadCastMessage.Payload))
 		//TODO 其实这里不需要处理返回值，需要将其go起来

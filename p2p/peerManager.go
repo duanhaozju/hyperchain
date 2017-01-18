@@ -35,6 +35,8 @@ type PeerManager interface {
 type MsgSender interface {
 	// broadcast information to peers
 	BroadcastPeers(payLoad []byte)
+	BroadcastNVPPeers(payLoad []byte)
+	BroadcastVPPeers(payLoad []byte)
 	// send a message to specific peer  UNICAST
 	SendMsgToPeers(payLoad []byte, peerList []uint64, MessageType recovery.Message_MsgType)
 }
@@ -62,6 +64,8 @@ type InfoGetter interface {
 	// get the all peer list to broadcast
 	GetAllPeers() []*Peer
 	GetAllPeersWithTemp() []*Peer
+	GetVPPeers() []*Peer
+	GetNVPPeers() []*Peer
 	// get local node instance
 	GetLocalNode() *Node
 	// Get local node id
