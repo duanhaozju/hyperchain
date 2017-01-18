@@ -579,7 +579,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		}
 		pbft.persistView(pbft.view)
 		pbft.helper.InformPrimary(primary)
-		pbft.processRequestsDuringNegoView()
+		//pbft.processRequestsDuringNegoView()
 		pbft.initRecovery()
 		return nil
 	case *RecoveryInit:
@@ -2337,13 +2337,13 @@ func (pbft *pbftProtocal) restartNegoView() {
 	pbft.processNegotiateView()
 }
 
-func (pbft *pbftProtocal) processRequestsDuringNegoView() {
-	if !pbft.inNegoView {
-		pbft.processCachedTransactions()
-	} else {
-		logger.Critical("Replica %d try to processRequestsDuringNegoView but nego-view is not finished", pbft.id)
-	}
-}
+//func (pbft *pbftProtocal) processRequestsDuringNegoView() {
+//	if !pbft.inNegoView {
+//		pbft.processCachedTransactions()
+//	} else {
+//		logger.Critical("Replica %d try to processRequestsDuringNegoView but nego-view is not finished", pbft.id)
+//	}
+//}
 
 func (pbft *pbftProtocal) processRequestsDuringRecovery() {
 	if !pbft.inRecovery {
