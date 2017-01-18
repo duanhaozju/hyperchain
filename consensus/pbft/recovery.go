@@ -424,6 +424,6 @@ func (pbft *pbftProtocal) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) even
 func (pbft *pbftProtocal) restartRecovery() {
 
 	logger.Noticef("Replica %d now restartRecovery", pbft.id)
-
-	pbft.initRecovery()
+	// recovery redo requires update new if need
+	pbft.processNegotiateView()
 }
