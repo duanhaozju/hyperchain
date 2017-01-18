@@ -90,7 +90,7 @@ func New(root common.Hash, db hyperdb.Database, bktConf *common.Config, height u
 		batchCache:        batchCache,
 		contentCache:      contentCache,
 	}
-	bucketTree.Initialize(SetupBucketConfig(state.GetBucketSize(STATEDB), state.GetBucketLevelGroup(STATEDB)))
+	bucketTree.Initialize(SetupBucketConfig(state.GetBucketSize(STATEDB), state.GetBucketLevelGroup(STATEDB), state.GetBucketCacheSize(STATEDB)))
 	curHash, err := bucketTree.ComputeCryptoHash()
 	log.Debugf("latest state root %s", common.Bytes2Hex(curHash))
 	if err != nil {
@@ -126,7 +126,7 @@ func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 		bktConf:           self.bktConf,
 		bucketTree:        bucketTree,
 	}
-	bucketTree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEDB), self.GetBucketLevelGroup(STATEDB)))
+	bucketTree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEDB), self.GetBucketLevelGroup(STATEDB), self.GetBucketCacheSize(STATEDB)))
 	return state, nil
 }
 
@@ -442,7 +442,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Has
 				return false, common.Hash{}
 			}
 			// Insert into the live set.
-			obj := newObject(self, a, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT)))
+			obj := newObject(self, a, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT)))
 			obj.cachedStorage[b] = value
 			self.setStateObject(obj)
 		} else {
@@ -608,7 +608,7 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 	}
 	// Insert into the live set.
 	log.Debugf("find state object %x in database, add it to live objects", addr)
-	obj := newObject(self, addr, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT)))
+	obj := newObject(self, addr, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT)))
 	self.setStateObject(obj)
 	return obj
 }
@@ -636,7 +636,7 @@ func (self *StateDB) MarkStateObjectDirty(addr common.Address) {
 // the given address, it is overwritten and returned as the second return value.
 func (self *StateDB) createObject(addr common.Address) (newobj, prev *StateObject) {
 	prev = self.GetStateObject(addr)
-	newobj = newObject(self, addr, Account{}, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT)))
+	newobj = newObject(self, addr, Account{}, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT)))
 	newobj.setNonce(0) // sets the object to dirty
 	if prev == nil {
 		log.Infof("(+) %x\n", addr)

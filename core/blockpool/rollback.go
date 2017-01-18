@@ -184,7 +184,7 @@ func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, tar
 			address := addr.(common.Address)
 			prefix, _ := hyperstate.CompositeStorageBucketPrefix(address.Bytes())
 			bucketTree := bucket.NewBucketTree(string(prefix))
-			bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.GetBucketSize(STATEOBJECT), pool.GetBucketLevelGroup(STATEOBJECT)))
+			bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.GetBucketSize(STATEOBJECT), pool.GetBucketLevelGroup(STATEOBJECT), pool.GetBucketCacheSize(STATEOBJECT)))
 			// don't flush into disk util all operations finish
 			bucketTree.RevertToTargetBlock(batch, big.NewInt(currentNumber), big.NewInt(targetNumber), false, false)
 			hash, _ := bucketTree.ComputeCryptoHash()
@@ -198,7 +198,7 @@ func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, tar
 		// revert state bucket tree
 		tree := state.GetTree()
 		bucketTree := tree.(*bucket.BucketTree)
-		bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.GetBucketSize(STATEDB), pool.GetBucketLevelGroup(STATEDB)))
+		bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.GetBucketSize(STATEDB), pool.GetBucketLevelGroup(STATEDB), pool.GetBucketCacheSize(STATEDB)))
 		// don't flush into disk util all operations finish
 		bucketTree.RevertToTargetBlock(batch, big.NewInt(currentNumber), big.NewInt(targetNumber), false, false)
 		currentRootHash, err := bucketTree.ComputeCryptoHash()
