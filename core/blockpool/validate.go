@@ -19,7 +19,6 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
-	"time"
 )
 
 // Validate is an entry of `validate process`
@@ -90,7 +89,6 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash cr
 
 // Process an ValidationEvent
 func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption, peerManager p2p.PeerManager) (error, bool) {
-	start_time := time.Now()
 	var validTxSet []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
 	var index []int
@@ -178,7 +176,6 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 			peerManager.SendMsgToPeers(payload, peers, recovery.Message_INVALIDRESP)
 		}
 	}
-	log.Critical("PreProcess block Number is ", validationEvent.SeqNo, " cost time is", time.Since(start_time))
 	return nil, true
 }
 
@@ -245,7 +242,6 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	env := initEnvironment(state, pool.tempBlockNumber)
 	// execute transaction one by one
 	batch := state.FetchBatch(pool.tempBlockNumber)
-	start_time := time.Now()
 	for i, tx := range txs {
 		state.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(tx, env)
@@ -274,11 +270,8 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 		receipts = append(receipts, receipt)
 		validtxs = append(validtxs, tx)
 	}
-	log.Critical("ProcessBlockInVm Exec txs ", len(txs), "cost time is", time.Since(start_time))
 	// submit validation result
-	start_time = time.Now()
 	err, merkleRoot, txRoot, receiptRoot := pool.submitValidationResult(state, batch)
-	log.Critical("ProcessBlockInVm submitValidationResult ", len(txs), "cost time is", time.Since(start_time))
 	if err != nil {
 		log.Error("Commit state db failed! error msg, ", err.Error())
 		return err, &BlockRecord{
@@ -287,7 +280,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	}
 	// generate new state fingerprint
 	// IMPORTANT doesn't call batch.Write util recv commit event for atomic assurance
-	log.Noticef("validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
+	log.Debugf("validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
 		pool.tempBlockNumber, seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	return nil, &BlockRecord{
 		TxRoot:      txRoot,
@@ -444,9 +437,7 @@ func (pool *BlockPool) submitValidationResult(state vm.Database, batch hyperdb.B
 	switch pool.GetStateType() {
 	case "hyperstate":
 		// flush all state change
-		start_time := time.Now()
 		root, err := state.Commit()
-		log.Critical("submitValidationResult state.Commit() cost time is", time.Since(start_time))
 		state.Reset()
 		if err != nil {
 			log.Error("Commit state db failed! error msg, ", err.Error())
