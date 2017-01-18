@@ -141,13 +141,7 @@ func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, tar
 		}
 		dirtyStateObjectSet := mapset.NewSet()
 		stateObjectStorageHashs := make(map[common.Address][]byte)
-		// get latest state instance
-		latestBlock, err := core.GetBlockByNumber(db, uint64(currentNumber))
-		if err != nil {
-			log.Errorf("get latest block = #%d failed.", currentNumber)
-			return err
-		}
-		state, err := pool.GetStateInstance(common.BytesToHash(latestBlock.MerkleRoot), db)
+		state, err := pool.GetStateInstance()
 		if err != nil {
 			log.Errorf("get latest state = #%d failed.", currentNumber)
 			return err
@@ -219,6 +213,7 @@ func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, tar
 		}
 		// revert state instance oldest and root
 		state.ResetToTarget(uint64(targetNumber+1), common.BytesToHash(targetRootHash))
+		pool.lastValidationState.Store(common.BytesToHash(targetRootHash))
 		log.Noticef("revert state from #%d to #%d success", currentNumber, targetNumber)
 	case "rawstate":
 		// there is no need to revert state, because PMT can assure the correction
@@ -231,12 +226,11 @@ func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, tar
 func (pool *BlockPool) removeUncommittedData(batch hyperdb.Batch) error {
 	switch pool.GetStateType() {
 	case "hyperstate":
-		db, err := hyperdb.GetDBDatabase()
+		state, err := pool.GetStateInstance()
 		if err != nil {
-			log.Error("get database failed")
+			log.Errorf("remove uncommitted data failed because can not get state instance")
 			return err
 		}
-		state, _ := pool.GetStateInstance(common.Hash{}, db)
 		state.Purge()
 	case "rawstate":
 		keys := pool.blockCache.Keys()

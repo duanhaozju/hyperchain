@@ -16,6 +16,7 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
 	"math/big"
+	"time"
 )
 
 type PublicContractAPI struct {
@@ -30,6 +31,7 @@ func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, 
 	fillrate, err := getFillRate(config, CONTRACT)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
+		fillrate = 10 * time.Millisecond
 	}
 	peak := getRateLimitPeak(config, CONTRACT)
 	if peak == 0 {
@@ -271,7 +273,7 @@ func getBlockStateDb(n BlockNumber, db hyperdb.Database, config *common.Config) 
 	stateDB, err := GetStateInstance(block.MerkleRoot, db, config)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
-		return nil, err
+		return nil, &callbackError{err.Error()}
 	}
 	return stateDB, nil
 }

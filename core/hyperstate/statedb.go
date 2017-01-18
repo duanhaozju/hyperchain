@@ -14,6 +14,7 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/tree/bucket"
 	"sync/atomic"
+	"bytes"
 )
 
 const (
@@ -232,6 +233,11 @@ func (self *StateDB) FetchBatch(seqNo uint64) hyperdb.Batch {
 func (self *StateDB) DeleteBatch(seqNo uint64) {
 	log.Criticalf("remove batch for #%d from batch cache", seqNo)
 	self.batchCache.Remove(seqNo)
+}
+
+// CompareRoot - compare the current state root value with the input
+func (self *StateDB) CompareRoot(root common.Hash) bool {
+	return bytes.Compare(root.Bytes(), self.root.Bytes()) == 0
 }
 
 // StartRecord - mark a transaction process's beginning.

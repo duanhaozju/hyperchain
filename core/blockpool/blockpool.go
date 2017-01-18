@@ -93,10 +93,15 @@ func NewBlockPool(consenter consensus.Consenter, conf *common.Config) *BlockPool
 	// get latest block
 	blk, err := core.GetBlock(db, currentChain.LatestBlockHash)
 	if err != nil {
-		return nil
+		log.Errorf("get block #%d failed.", blk.Number)
+		pool.lastValidationState.Store(common.Hash{})
+		return pool
+	} else {
+		log.Noticef("Block pool Initialize demandNumber :%d, demandseqNo: %d\n", pool.demandNumber, pool.demandSeqNo)
+		pool.lastValidationState.Store(common.BytesToHash(blk.MerkleRoot))
+		return pool
 	}
 	// 2. set current state root hash
-	pool.lastValidationState.Store(common.BytesToHash(blk.MerkleRoot))
 	log.Noticef("block pool Initialize. current chain height #%d, latest block hash %s, demandNumber #%d, demandseqNo #%d, temp block number #%d\n",
 		currentChain.Height, common.Bytes2Hex(currentChain.LatestBlockHash), pool.demandNumber, pool.demandSeqNo, pool.tempBlockNumber)
 	return pool
@@ -134,16 +139,26 @@ func (pool *BlockPool) PurgeBlockCache() {
 
 // GetStateInstance - obtain state handler via configuration in block.conf
 // two state: (1)raw state (2) hyper state are supported.
-func (pool *BlockPool) GetStateInstance(root common.Hash, db hyperdb.Database) (vm.Database, error) {
+func (pool *BlockPool) GetStateInstance() (vm.Database, error) {
+	// obtain latest root
+	db, err := hyperdb.GetDBDatabase()
+	if err != nil {
+		return nil, err
+	}
+	v := pool.lastValidationState.Load()
+	latestRoot, ok := v.(common.Hash)
+	if ok == false {
+		return nil, err
+	}
 	switch pool.GetStateType() {
 	case "rawstate":
-		return statedb.New(root, db)
+		return statedb.New(latestRoot, db)
 	case "hyperstate":
-		// IMPORTANT initialize hyperstate only once
+		// initialize hyperstate only once
 		if globalState == nil {
 			var err error
 			height := core.GetHeightOfChain()
-			globalState, err = hyperstate.New(root, db, pool.conf, height)
+			globalState, err = hyperstate.New(latestRoot, db, pool.conf, height)
 			return globalState, err
 		} else {
 			return globalState, nil

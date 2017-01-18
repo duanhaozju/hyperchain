@@ -80,6 +80,7 @@ func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManage
 	fillrate, err := getFillRate(config, TRANSACTION)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
+		fillrate = 10 * time.Millisecond
 	}
 	peak := getRateLimitPeak(config, TRANSACTION)
 	if peak == 0 {

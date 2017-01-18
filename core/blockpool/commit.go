@@ -118,13 +118,12 @@ func (pool *BlockPool) AddBlock(block *types.Block, receipts []*types.Receipt, c
 // WriteBlock: save block into database
 func (pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt, commonHash crypto.CommonHash, vid uint64, primary bool) {
 	begin := time.Now()
-	db, err := hyperdb.GetDBDatabase()
+	// for primary node, check whether vid equal to block's number
+	state, err := pool.GetStateInstance()
 	if err != nil {
-		log.Error("get database instance failed! error msg,", err.Error())
+		log.Errorf("get state instance failed when write #%d", block.Number)
 		return
 	}
-	// for primary node, check whether vid equal to block's number
-	state, _ := pool.GetStateInstance(common.BytesToHash(block.MerkleRoot), db)
 	batch := state.FetchBatch(block.Number)
 	log.Error("[commit] before persist:", time.Since(begin))
 	begin = time.Now()

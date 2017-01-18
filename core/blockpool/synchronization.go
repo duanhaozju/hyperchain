@@ -1,7 +1,6 @@
 package blockpool
 
 import (
-	"hyperchain/hyperdb"
 	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/types"
@@ -17,10 +16,6 @@ func (pool *BlockPool) ApplyBlock(block *types.Block, seqNo uint64) (error, *Blo
 }
 
 func (pool *BlockPool) applyBlock(block *types.Block, seqNo uint64) (error, *BlockRecord) {
-	db, err := hyperdb.GetDBDatabase()
-	if err != nil {
-		return err, nil
-	}
 	// initialize calculator
 	// for calculate fingerprint of a batch of transactions and receipts
 	if err := pool.initializeTransactionCalculator(); err != nil {
@@ -33,13 +28,8 @@ func (pool *BlockPool) applyBlock(block *types.Block, seqNo uint64) (error, *Blo
 	}
 	// load latest state fingerprint
 	// for compatibility, doesn't remove the statement below
-	v := pool.lastValidationState.Load()
-	initStatus, ok := v.(common.Hash)
-	if ok == false {
-		return errors.New("get state status failed!"), nil
-	}
 	// initialize state
-	state, err := pool.GetStateInstance(initStatus, db)
+	state, err := pool.GetStateInstance()
 	if err != nil {
 		return err, nil
 	}
@@ -101,12 +91,10 @@ func (pool *BlockPool) applyBlock(block *types.Block, seqNo uint64) (error, *Blo
 func (pool *BlockPool) ClearStateUnCommitted() {
 	switch pool.GetStateType() {
 	case "hyperstate":
-		db, err := hyperdb.GetDBDatabase()
+		state, err := pool.GetStateInstance()
 		if err != nil {
-			log.Error("get database handler failed.")
 			return
 		}
-		state, _ := pool.GetStateInstance(common.Hash{}, db)
 		state.Purge()
 	case "rawstate":
 
@@ -119,12 +107,11 @@ func (pool *BlockPool) SubmitForStateUpdate(seqNo uint64) error {
 	case "rawstate":
 
 	case "hyperstate":
-		db, err := hyperdb.GetDBDatabase()
+		state, err := pool.GetStateInstance()
 		if err != nil {
-			log.Error("get database handler failed.")
+			log.Errorf("submit for state update #%d failed", seqNo)
 			return err
 		}
-		state, _ := pool.GetStateInstance(common.Hash{}, db)
 		batch := state.FetchBatch(seqNo)
 		core.UpdateChainByBlcokNum(batch, seqNo, false, false)
 		batch.Write()

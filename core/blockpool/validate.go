@@ -216,12 +216,6 @@ func (pool *BlockPool) checkSign(txs []*types.Transaction, commonHash crypto.Com
 func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, *BlockRecord) {
 	var validtxs []*types.Transaction
 	var receipts []*types.Receipt
-	db, err := hyperdb.GetDBDatabase()
-	if err != nil {
-		return err, &BlockRecord{
-			InvalidTxs: invalidTxs,
-		}
-	}
 	// initialize calculator
 	// for calculate fingerprint of a batch of transactions and receipts
 	if err := pool.initializeTransactionCalculator(); err != nil {
@@ -238,15 +232,8 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	}
 	// load latest state fingerprint
 	// for compatibility, doesn't remove the statement below
-	v := pool.lastValidationState.Load()
-	initStatus, ok := v.(common.Hash)
-	if ok == false {
-		return errors.New("get state status failed!"), &BlockRecord{
-			InvalidTxs: invalidTxs,
-		}
-	}
 	// initialize state
-	state, err := pool.GetStateInstance(initStatus, db)
+	state, err := pool.GetStateInstance()
 	if err != nil {
 		return err, &BlockRecord{
 			InvalidTxs: invalidTxs,
