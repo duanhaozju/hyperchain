@@ -66,6 +66,30 @@ do
     esac
 done
 
+# check the env
+checkenv(){
+	if ! type go > /dev/null; then
+	    echo -e "Please install the go env correctly!"
+	    exit 1
+	fi
+
+	if ! type govendor > /dev/null; then
+	    # install foobar here
+	    echo -e "Please install the `govendor`, just type:\ngo get -u github.com/kardianos/govendor"
+	    exit 1
+	fi
+
+	if ! type jq > /dev/null; then
+	    echo -e "Please install the `jq` to parse the json file \n just type: \n sudo apt-get install jq / sudo yum -y install jq / brew install jq "
+	    exit 1
+	fi
+	if ! type confer > /dev/null; then
+	    echo -e "Please install the `confer` to generate the hyperchain peerconfigs \n just type: \n go get git.hyperchain.cn/chenquan/confer"
+	    exit 1
+	fi
+}
+
+# add ssh-key for CentOS
 addkeyForCentOS(){
     expect <<EOF
         set timeout 60
@@ -78,6 +102,7 @@ addkeyForCentOS(){
 EOF
 }
 
+# add ssh-key for OpenSuse
 addkeyForSuse(){
     expect <<EOF
         set timeout 60
@@ -90,6 +115,7 @@ addkeyForSuse(){
 EOF
 }
 
+# add ssh-key into primary
 add_ssh_key_into_primary(){
     echo "Add your local ssh public key into primary node"
     if $SERVER_ENV; then
@@ -104,6 +130,7 @@ add_ssh_key_into_primary(){
 	wait
 }
 
+# distribute the  Primary ssh-key into others
 add_ssh_key_form_primary_to_others(){
     echo "Primary add its ssh key into others nodes"
 	scp ./sub_scripts/server_addkey.sh hyperchain@$PRIMARY:/home/hyperchain/
@@ -111,6 +138,7 @@ add_ssh_key_form_primary_to_others(){
 	ssh  hyperchain@$PRIMARY "cd /home/hyperchain && chmod a+x server_addkey.sh && bash server_addkey.sh $SERVER_ENV"
 }
 
+#分发二进制包
 distribute_the_binary(){
     echo "Send the project to primary:"
     cd $GOPATH/src/
@@ -136,7 +164,13 @@ distribute_the_binary(){
 	ssh hyperchain@$PRIMARY "chmod a+x server_deploy.sh && bash server_deploy.sh ${MAXNODE}"
 }
 
+generate_node_peer_config(){
+	id=$1
+
+}
+
 # Run all the nodes
+# Open 4 Terminals in linux
 runXinXinLinux(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
@@ -144,6 +178,7 @@ runXinXinLinux(){
         ni=`expr $ni + 1`
     done
 }
+# Open 4 Terminals in mac
 runXinXinMac(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
@@ -151,6 +186,8 @@ runXinXinMac(){
         ni=`expr $ni + 1`
     done
 }
+
+# run hyperchain X node in one Terminal
 runXin1(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
@@ -159,6 +196,7 @@ runXin1(){
     done
 }
 
+# clean the data
 deleteData(){
     echo "Delete all the old data"
     for server_address in ${SERVER_ADDR[@]}; do
