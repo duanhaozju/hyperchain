@@ -21,21 +21,22 @@ var (
 // 这一块相当于ethereum里的TransitionDB
 func ExecTransaction(tx *types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
 	var (
-		from     = common.BytesToAddress(tx.From)
-		to       = common.BytesToAddress(tx.To)
-		tv       = tx.GetTransactionValue()
-		data     = tv.GetPayload()
-		gas      = big.NewInt(100000000)
-		gasPrice = tv.GetGasPrice()
-		amount   = tv.GetAmount()
+		from = common.BytesToAddress(tx.From)
+		to = common.BytesToAddress(tx.To)
+		tv         = tx.GetTransactionValue()
+		data       = tv.GetPayload()
+		gas        = big.NewInt(100000000)
+		gasPrice   = tv.GetGasPrice()
+		amount     = tv.GetAmount()
+		update     = tv.GetUpdate()
 	)
 	//ZHZ_TEST the time of above will cost 10us
 
 	//ZHZ_TEST this will cost 200us
 	if tx.To == nil {
-		ret, addr, err = Exec(env, &from, nil, data, gas, gasPrice, amount)
+		ret, addr, err = Exec(env, &from, nil, data, gas, gasPrice, amount, update)
 	} else {
-		ret, _, err = Exec(env, &from, &to, data, gas, gasPrice, amount)
+		ret, _, err = Exec(env, &from, &to, data, gas, gasPrice, amount, update)
 	}
 
 	//ZHZ_TEST the time of below will cost 10us
@@ -59,7 +60,7 @@ func ExecTransaction(tx *types.Transaction, env vm.Environment) (receipt *types.
 }
 
 func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
-	gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
+	gasPrice, value *big.Int, update bool) (ret []byte, addr common.Address, err error) {
 	var sender vm.Account
 
 	if !(vmenv.Db().Exist(*from)) {
@@ -78,7 +79,8 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 			log.Error("VM create err:", err)
 		}
 	} else {
-		ret, err = vmenv.Call(sender, *to, data, gas, gasPrice, value)
+		log.Debug("------call contract")
+		ret, err = vmenv.Call(sender, *to, data, gas, gasPrice, value, update)
 		if err != nil {
 			log.Error("VM call err:", err)
 		}
