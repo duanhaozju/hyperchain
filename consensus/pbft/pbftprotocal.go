@@ -597,6 +597,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 				", will restart negotiate view", pbft.id)
 			pbft.inRecovery = true
 			pbft.inNegoView = true
+			pbft.recvNewViewInRecovery = false
 			pbft.restartNegoView()
 		}
 		if pbft.isNewNode {
