@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # debug flag
-set -e
+#set -evx
 ################
 # pwd vars
 ################
@@ -49,6 +49,7 @@ env_check_serverlist_length(){
     if [ serverlistlen -ne innerserverlistlen ]; then
         echo "serverlist length not equal inner server list"
     fi
+    exit 1
 }
 
 env_check_local_go_env(){
@@ -110,7 +111,6 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
 	SERVER_ADDR+=" ${line}"
 done < serverlist.txt
 
-echo $SERVER_ADDR
 
 #################################
 # functional support function 
@@ -134,13 +134,13 @@ fs_help(){
 }
 # kill all the process
 fs_kill_process(){
-    echo "kill $server_address"
     for server_address in ${SERVER_ADDR[@]}; do
-        ssh hyperchain@$server_address <<EOF
-        ps aux | grep 'hyperchain -o' | awk '/^grep/{print \$2}' | xargs kill -9 
-EOF
+        ssh hyperchain@$server_address " ps aux | grep 'hyperchain -o' | awk '{print \$2}' | xargs kill -9"
+        #ssh -T hyperchain@$server_address "if [ x\"`ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'`\" != \"x\" ]; then echo \"kill process \" && ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'| xargs kill -9 ; else echo no hyperchain process runing ;fi"
+        # ssh -T hyperchain@$server_address "ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'| xargs kill -9 >& /dev/null"
+    
     done
-}
+   }
 
 
 # check the env
@@ -196,7 +196,7 @@ fs_add_ssh_key_form_primary_to_others(){
     echo "Primary add its ssh key into others nodes"
 	scp ./sub_scripts/server_addkey.sh hyperchain@$PRIMARY:/home/hyperchain/
 	scp innerserverlist.txt hyperchain@$PRIMARY:/home/hyperchain/
-	ssh  hyperchain@$PRIMARY "cd /home/hyperchain && chmod a+x server_addkey.sh && bash server_addkey.sh $SERVER_ENV"
+	ssh  -T hyperchain@$PRIMARY "cd /home/hyperchain && chmod a+x server_addkey.sh && bash server_addkey.sh $SERVER_ENV"
 }
 
 # distribute the binary into primary
@@ -219,15 +219,14 @@ fs_distribute_the_binary(){
     ssh hyperchain@$PRIMARY "rm -rf $HPC_PRI_HYPERCHAIN_DIR"
     ssh hyperchain@$PRIMARY "tar -C $HPC_PRI_HYPERCHAIN_GO_SRC -xzf hyperchain.tar.gz"
     echo "Primary build the project:"
-	ssh hyperchain@$PRIMARY <<EOF
+	ssh -T hyperchain@$PRIMARY <<EOF
     if ! type go > /dev/null; then
         echo -e "Please install the go env correctly!"
         exit 1
     fi
 
-    if ! type govendor > /dev/null; then
-        # install foobar here
-        echo -e "Please install the `govendor`, just type:\ngo get -u github.com/kardianos/govendor"
+    if [ `which govendor`x == "x" ]; then
+        echo -e "Please install the govendor, just type:\ngo get -u github.com/kardianos/govendor"
         exit 1
     fi
     if [ ! -d "/home/hyperchain" ]; then
@@ -257,6 +256,9 @@ fs__generate_node_peer_configs(){
         confer hpc serverlist.txt innerserverlist.txt $PEER_CONFIGS_DIR/peerconfig_$id.json $id -e
     done
 }
+fs_delete_temp_data(){
+    rm -rf $PEER_CONFIGS_DIR
+}
 
 # distribute the peerconfigs
 # 1. please ensure the peerconfig generate is currectly
@@ -264,7 +266,7 @@ fs__generate_node_peer_configs(){
 fs__distribute_peerconfigs(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-    	ssh hyperchain@$server_address <<EOF
+    	ssh -T hyperchain@$server_address <<EOF
     if [ ! -d $HPC_OTHER_HYPERCHAIN_DIR/config/ ]; then
         mkdir $HPC_OTHER_HYPERCHAIN_DIR/config/
     fi
@@ -310,7 +312,7 @@ fs_run_N_terminals_mac(){
 fs_run_one_terminal(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        ssh hyperchain@$server_address "./hyperchain -o ${ni} -l 8001 -t 8081" &
+        ssh -T hyperchain@$server_address "./hyperchain -o ${ni} -l 8001 -t 8081" &
         ni=`expr $ni + 1`
     done
 }
@@ -319,7 +321,7 @@ fs_run_one_terminal(){
 fs_delete_data(){
     echo "Delete all the old data"
     for server_address in ${SERVER_ADDR[@]}; do
-        ssh hyperchain@$server_address "rm -rf build"
+        ssh -T hyperchain@$server_address "rm -rf build"
     done
 }
 
@@ -352,11 +354,10 @@ do
     esac
 done
 
-echo "run this script first time? $FIRST" 
-echo "delete the data? $DELETEDATA"
-echo "rebuild and redistribute binary? $REBUILD"
-echo "server env,true: suse,false: centos: $SERVER_ENV"
-# exit -1;
+#echo "run this script first time? $FIRST" 
+#echo "delete the data? $DELETEDATA"
+#echo "rebuild and redistribute binary? $REBUILD"
+#echo "server env,true: suse,false: centos: $SERVER_ENV"
 
 if $FIRST; then
     fs_add_ssh_key_into_primary
@@ -385,3 +386,4 @@ else
         fs_run_N_terminals_linux
     fi
 fi
+fs_delete_temp_data
