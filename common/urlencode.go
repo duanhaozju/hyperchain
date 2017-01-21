@@ -194,7 +194,6 @@ func unescape(s string, mode encoding) (string, error) {
 func EncodeUriComponent(rawString string) string {
 	return escape(rawString, encodeFragment)
 }
-
 func DecodeUriCompontent(encoded string) (string, error) {
 	return unescape(encoded, encodeQueryComponent)
 }
@@ -202,14 +201,12 @@ func DecodeEscapeCompontent(encoded string) (string, error) {
 	return unescape(encoded, encodeFragment)
 }
 
-// https://golang.org/src/net/url/url.go
-// http://remove-line-numbers.ruurtjan.com/
-//func main() {
-//	// http://www.url-encode-decode.com/
-//	origin := "äöüHel/lo world"
-//	encoded := EncodeUriComponent(origin)
-//	fmt.Println(encoded)
-//
-//	s, _ := DecodeUriCompontent(encoded)
-//	fmt.Println(s)
-//}
+func TransportEncode(str string) string{
+	b := []byte(str)
+	return ToHex(b)
+}
+
+func TransportDecode(str string) string{
+	b := Hex2Bytes(str)
+	return string(b)
+}

@@ -35,7 +35,7 @@ func (node *PublicCertAPI) GetTCert(args CertArgs) (TCertReturn, error) {
 		log.Error(err)
 		return TCertReturn{TCert: ""}, &CertError{"signed tcert failed"}
 	}
-	tcert = common.EncodeUriComponent(tcert)
+	tcert = common.TransportEncode(tcert)
 	return TCertReturn{TCert:tcert }, nil
 
 }
