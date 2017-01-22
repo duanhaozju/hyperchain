@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"github.com/terasum/viper"
 	"github.com/op/go-logging"
+	"hyperchain/crypto"
 )
 // Init the log setting
 var log *logging.Logger // package-level logger
@@ -168,7 +169,7 @@ func (caManager *CAManager) SignTCert(publicKey string) (string, error) {
 	if caManager.isUsed != true {
 		return "", nil
 	}
-	pubKey, err := primitives.ParsePubKey(publicKey)
+	pubKey,err := crypto.GetPublickFromHex(publicKey)
 	if err != nil {
 		log.Error(err)
 		return "", err

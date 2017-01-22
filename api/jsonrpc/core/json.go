@@ -13,7 +13,9 @@ import (
 	"strings"
 	"sync"
 	"hyperchain/common"
-	"encoding/hex"
+	//"encoding/hex"
+	hcrypto"hyperchain/crypto"
+	"hyperchain/core/crypto/primitives"
 )
 
 const (
@@ -84,10 +86,11 @@ type jsonCodec struct {
 	rw         io.ReadWriteCloser    // connection
 	httpHeader http.Header
 	CM         *admittance.CAManager //ca manager
+	//httpBody   string                //httpBody 信息
 }
 
 // NewJSONCodec creates a new RPC server codec with support for JSON-RPC 2.0
-func NewJSONCodec(rwc io.ReadWriteCloser, header http.Header, cm *admittance.CAManager) ServerCodec {
+func NewJSONCodec(rwc io.ReadWriteCloser, header http.Header, cm *admittance.CAManager,body string) ServerCodec {
 	d := json.NewDecoder(rwc)
 	d.UseNumber()
 	return &jsonCodec{closed: make(chan interface{}), d: d, e: json.NewEncoder(rwc), rw: rwc, httpHeader: header, CM: cm}
@@ -114,19 +117,17 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 	//}
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
-	tcertPem, err := common.DecodeEscapeCompontent(c.httpHeader.Get("tcert"))
-	if err != nil || tcertPem == "" {
-		log.Warning("cannot decode the tcert header", err)
-		return &UnauthorizedError{}
-	}
-	verifyTcert, err := c.CM.VerifyTCert(tcertPem)
 
-	if verifyTcert == false || err != nil {
-		log.Warning("Verify failed", err)
-		return &UnauthorizedError{}
-	}
+	signature := c.httpHeader.Get("signature")
+	msg := common.TransportDecode(c.httpHeader.Get("msg"))
+	tcertPem := common.TransportDecode(c.httpHeader.Get("tcert"))
+	tcert,err := primitives.ParseCertificate(tcertPem)
+	if err != nil {
 
-	signature, err := common.DecodeEscapeCompontent(c.httpHeader.Get("signature"))
+	}
+	tcertPublicKey := tcert.PublicKey
+
+
 	/**
 	Review 如果客户端没有tcert 则会用ecert充当tcert，此时需要验证是否合法
 	由于tcert 应当是用ecert签出的，那么应该同时可以被根证书验证通过，但是
@@ -136,15 +137,24 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 	签名算法为 ECDSAWithSHA256
 	这部分需要SDK端实现，hyperchain端已经实现了验证方法
 	*/
-	sign,_ := hex.DecodeString(signature)
-	verifySignature, err := c.CM.VerifyECertSignature(tcertPem, []byte("hyperchain"), sign)
+
+	verifySignature,err := hcrypto.VerifyTransportSign(tcertPublicKey,msg,signature)
+	//sign,_ := hex.DecodeString(signature)
+	//verifySignature, err := c.CM.VerifyECertSignature(tcertPem, []byte("hyperchain"), sign)
 	//verifySignature := strings.EqualFold("hyperchain",signature)
 	if err != nil || !verifySignature {
 		log.Critical("tcert 验证不通过")
 		log.Critical(err)
 		return &UnauthorizedError{}
 	}
-	//log.Critical("tcert 验证通过")
+	log.Critical("TransportSignture 验证通过")
+	verifyTcert, err := c.CM.VerifyTCert(tcertPem)
+
+	if verifyTcert == false || err != nil {
+		log.Warning("Verify failed", err)
+		return &UnauthorizedError{}
+	}
+	log.Critical("TransportSignture 验证通过")
 	return nil
 }
 
