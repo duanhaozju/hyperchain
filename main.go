@@ -121,6 +121,7 @@ func main() {
 			panic("cannot initliazied the camanager")
 		}
 
+
 		//init peer manager to start grpc server and client
 		//grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath())
 		grpcPeerMgr := p2p.NewGrpcManager(conf)

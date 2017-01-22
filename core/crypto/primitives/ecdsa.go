@@ -10,7 +10,7 @@ import (
 	"math/big"
 	//"github.com/op/go-logging"
 	hcrypto "hyperchain/crypto"
-	"fmt"
+	//"fmt"
 	"crypto/sha256"
 )
 
@@ -97,8 +97,8 @@ func ECDSAVerifyTransport(verKey *ecdsa.PublicKey, msg, signature []byte) (bool,
 	h.Write(msg)
 	h.Sum(digest[:0])
 
-	fmt.Println("R",ecdsaSignature.R.BitLen())
-	fmt.Println("S",ecdsaSignature.S.BitLen())
+	//fmt.Println("R",ecdsaSignature.R.BitLen())
+	//fmt.Println("S",ecdsaSignature.S.BitLen())
 
 
 

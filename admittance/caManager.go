@@ -10,7 +10,8 @@ import (
 	"google.golang.org/grpc"
 	"github.com/terasum/viper"
 	"github.com/op/go-logging"
-	"hyperchain/crypto"
+	//"hyperchain/crypto"
+	"hyperchain/common"
 )
 // Init the log setting
 var log *logging.Logger // package-level logger
@@ -39,7 +40,7 @@ type CAManager struct {
 	config *viper.Viper
 }
 
-var CaManager *CAManager
+var caManager *CAManager
 
 func GetCaManager(global_config *viper.Viper) (*CAManager, error) {
 	config := viper.New()
@@ -53,20 +54,20 @@ func GetCaManager(global_config *viper.Viper) (*CAManager, error) {
 	ecertPath := config.GetString("ecert.cert")
 	ecertPrivateKeyPath :=config.GetString("ecert.priv")
 	rcacertPath:=config.GetString("rcert.ca")
-	rcertPath:=config.GetString("rcert.ca")
-	checkERCert := config.GetBool("checkercert")
-	checkTCert := config.GetBool("checktcert")
+	rcertPath:=config.GetString("rcert.cert")
+	checkERCert := config.GetBool("check.checkercert")
+	checkTCert := config.GetBool("check.checktcert")
 
-	if CaManager == nil {
+	if caManager == nil {
 		var err error
-		CaManager, err = NewCAManager(ecacertPath, ecertPath, rcertPath, rcacertPath, ecertPrivateKeyPath, ecertPath, checkERCert, checkTCert)
+		caManager, err = NewCAManager(ecacertPath, ecertPath, rcertPath, rcacertPath, ecertPrivateKeyPath, ecertPath, checkERCert, checkTCert)
 		if err != nil {
 			return nil, err
 		}
-		CaManager.config = config
-		return CaManager, nil
+		caManager.config = config
+		return caManager, nil
 	} else {
-		return CaManager, nil
+		return caManager, nil
 	}
 }
 
@@ -166,10 +167,14 @@ func NewCAManager(ecacertPath string, ecertPath string, rcertPath string, rcacer
 }
 
 func (caManager *CAManager) SignTCert(publicKey string) (string, error) {
-	if caManager.isUsed != true {
-		return "", nil
-	}
-	pubKey,err := crypto.GetPublickFromHex(publicKey)
+	//if caManager.isUsed != true {
+	//	log.Critical("NOT USE TCERT")
+	//	return "", nil
+	//}
+	caManager.GetIsCheckTCert()
+	pubPem := common.TransportDecode(publicKey)
+
+	pubKey,err := primitives.ParsePubKey(pubPem)
 	if err != nil {
 		log.Error(err)
 		return "", err
@@ -257,7 +262,7 @@ func (caManager *CAManager) VerifyECert(ecertPEM string) (bool, error) {
 
 //VerifyECertSignature Verify the Signature of ECert
 func (ca *CAManager) VerifyECertSignature(ecertPEM string, msg, sign []byte) (bool, error) {
-	if CaManager.isUsed != true {
+	if caManager.isUsed != true {
 		return true, nil
 	}
 	ecertToVerify, err := primitives.ParseCertificate(ecertPEM)

@@ -102,6 +102,23 @@ func (peer *Peer) handShake() (err error) {
 		Signature:    &signature,
 	}
 
+	if peer.CM.GetIsUsed() {
+		var pri interface{}
+		pri = peer.CM.GetECertPrivKey()
+		ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
+		sign, err := ecdsaEncry.Sign(helloMessage.Payload, pri)
+		if err == nil {
+			if helloMessage.Signature == nil {
+				payloadSign := pb.Signature{
+					Signature: sign,
+				}
+				helloMessage.Signature = &payloadSign
+			}
+			helloMessage.Signature.Signature = sign
+		}
+	}
+
+
 	retMessage, err := peer.Client.Chat(context.Background(), &helloMessage)
 
 	if err != nil {
@@ -143,11 +160,34 @@ func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transpo
 	peer.IsPrimary = false
 	// review handshake operation
 	// review start exchange the secret
+	signature := pb.Signature{
+		Ecert: peer.CM.GetECertByte(),
+		Rcert: peer.CM.GetRCertByte(),
+	}
+
+	//review start exchange the secret
 	helloMessage := pb.Message{
-		MessageType:  pb.Message_RECONNECT,
+		MessageType:  pb.Message_HELLO,
 		Payload:      peer.TEM.GetLocalPublicKey(),
 		From:         peer.LocalAddr.ToPeerAddress(),
 		MsgTimeStamp: time.Now().UnixNano(),
+		Signature:    &signature,
+	}
+
+	if peer.CM.GetIsUsed() {
+		var pri interface{}
+		pri = peer.CM.GetECertPrivKey()
+		ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
+		sign, err := ecdsaEncry.Sign(helloMessage.Payload, pri)
+		if err == nil {
+			if helloMessage.Signature == nil {
+				payloadSign := pb.Signature{
+					Signature: sign,
+				}
+				helloMessage.Signature = &payloadSign
+			}
+			helloMessage.Signature.Signature = sign
+		}
 	}
 
 	retMessage, err := peer.Client.Chat(context.Background(), &helloMessage)
@@ -182,15 +222,9 @@ func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
 		log.Error("enc with secret ", err)
 		return nil, err
 	}
-	if this.CM.GetIsUsed() != true {
-		if msg.Signature == nil {
-			payloadSign := pb.Signature{
-				Signature: []byte{},
-			}
-			msg.Signature = &payloadSign
-		}
-		msg.Signature.Signature = []byte{}
-	} else {
+
+
+	if this.CM.GetIsUsed(){
 		var pri interface{}
 		pri = this.CM.GetECertPrivKey()
 		ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")

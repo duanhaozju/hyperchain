@@ -20,6 +20,7 @@ import (
 	"math"
 	"strconv"
 	"time"
+	"hyperchain/core/crypto/primitives"
 )
 
 const MAX_PEER_NUM = 4
@@ -391,6 +392,21 @@ func (this *GRPCPeerManager) GetPeerInfo() PeerInfos {
 		Payload:      []byte("Query Status"),
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
+	if this.CM.GetIsUsed(){
+		var pri interface{}
+		pri = this.CM.GetECertPrivKey()
+		ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
+		sign, err := ecdsaEncry.Sign(keepAliveMessage.Payload, pri)
+		if err == nil {
+			if keepAliveMessage.Signature == nil {
+				payloadSign := pb.Signature{
+					Signature: sign,
+				}
+				keepAliveMessage.Signature = &payloadSign
+			}
+			keepAliveMessage.Signature.Signature = sign
+		}
+	}
 	var perinfos PeerInfos
 	for _, per := range peers {
 		var perinfo PeerInfo
@@ -398,6 +414,7 @@ func (this *GRPCPeerManager) GetPeerInfo() PeerInfos {
 		perinfo.IP = per.PeerAddr.IP
 		perinfo.Port = per.PeerAddr.Port
 		perinfo.RPCPort = per.PeerAddr.RpcPort
+
 		retMsg, err := per.Client.Chat(context.Background(), &keepAliveMessage)
 		if err != nil {
 			perinfo.Status = STOP

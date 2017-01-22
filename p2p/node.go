@@ -146,6 +146,15 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
 		signPub, _ := ecdh256.Unmarshal(signPubByte)
 		ecdsaEncrypto := primitives.NewEcdsaEncrypto("ecdsa")
+		if signPub == nil {
+			log.Warning("signPub")
+		}
+		if msg.Payload == nil {
+			log.Warning("msg.payload")
+		}
+		if msg.Signature == nil {
+			return &response, errors.New("signature is nil!!")
+		}
 		bol, err := ecdsaEncrypto.VerifySign(signPub, msg.Payload, msg.Signature.Signature)
 		if !bol || err != nil {
 			log.Error("cannot verified the ecert signature", bol)
@@ -174,7 +183,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		// 先验证证书签名
 		bol, err := node.CM.VerifyECertSignature(string(ecertByte), msg.Payload, msg.Signature.Signature)
 		if !bol || err != nil {
-			log.Error("Verify the cert signature failed!")
+			log.Error("Verify the cert signature failed!",err)
 			return &response, errors.New("Verify the cert signature failed!")
 		}
 		log.Debug("The cert signature PASS")

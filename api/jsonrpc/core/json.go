@@ -14,8 +14,9 @@ import (
 	"sync"
 	"hyperchain/common"
 	//"encoding/hex"
-	hcrypto"hyperchain/crypto"
+	//hcrypto"hyperchain/crypto"
 	"hyperchain/core/crypto/primitives"
+	"crypto/ecdsa"
 )
 
 const (
@@ -90,7 +91,7 @@ type jsonCodec struct {
 }
 
 // NewJSONCodec creates a new RPC server codec with support for JSON-RPC 2.0
-func NewJSONCodec(rwc io.ReadWriteCloser, header http.Header, cm *admittance.CAManager,body string) ServerCodec {
+func NewJSONCodec(rwc io.ReadWriteCloser, header http.Header, cm *admittance.CAManager) ServerCodec {
 	d := json.NewDecoder(rwc)
 	d.UseNumber()
 	return &jsonCodec{closed: make(chan interface{}), d: d, e: json.NewEncoder(rwc), rw: rwc, httpHeader: header, CM: cm}
@@ -119,13 +120,19 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 	defer c.decMu.Unlock()
 
 	signature := c.httpHeader.Get("signature")
+	//log.Warning("json sign",signature)
 	msg := common.TransportDecode(c.httpHeader.Get("msg"))
+	//log.Warning("json msg",msg)
 	tcertPem := common.TransportDecode(c.httpHeader.Get("tcert"))
+	//log.Warning("jsont tcert1:",c.httpHeader.Get("tcert"))
+	//log.Warning("json tcert2",tcertPem)
 	tcert,err := primitives.ParseCertificate(tcertPem)
 	if err != nil {
 
+		log.Error("fail to parse tcert.",err)
 	}
 	tcertPublicKey := tcert.PublicKey
+	pubKey := tcertPublicKey.(*(ecdsa.PublicKey))
 
 
 	/**
@@ -138,23 +145,23 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 	这部分需要SDK端实现，hyperchain端已经实现了验证方法
 	*/
 
-	verifySignature,err := hcrypto.VerifyTransportSign(tcertPublicKey,msg,signature)
+	signB := common.Hex2Bytes(signature)
+	verifySignature,err := primitives.ECDSAVerifyTransport(pubKey,[]byte(msg),signB)
 	//sign,_ := hex.DecodeString(signature)
 	//verifySignature, err := c.CM.VerifyECertSignature(tcertPem, []byte("hyperchain"), sign)
 	//verifySignature := strings.EqualFold("hyperchain",signature)
 	if err != nil || !verifySignature {
-		log.Critical("tcert 验证不通过")
-		log.Critical(err)
+		log.Error("Fail to verify TransportSignture!",err)
 		return &UnauthorizedError{}
 	}
-	log.Critical("TransportSignture 验证通过")
+	//log.Critical("TransportSignture 验证通过")
 	verifyTcert, err := c.CM.VerifyTCert(tcertPem)
 
 	if verifyTcert == false || err != nil {
-		log.Warning("Verify failed", err)
+		log.Error("Fail to verify tcert!",err)
 		return &UnauthorizedError{}
 	}
-	log.Critical("TransportSignture 验证通过")
+	//log.Critical("TCert 验证通过")
 	return nil
 }
 

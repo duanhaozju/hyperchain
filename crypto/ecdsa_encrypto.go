@@ -215,7 +215,7 @@ func VerifyTransportSign(publicKey interface{},msg,sign string) (bool,error)  {
 
 	pubBytes, err := secp256k1.RecoverPubkey(hashB, signB)
 	if err != nil {
-		return common.Address{}, err
+		return false, err
 	}
 	recoveredPubkey := new(ecdsa.PublicKey)
 	recoveredPubkey.Curve = secp256k1.S256()
