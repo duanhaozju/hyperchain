@@ -14,7 +14,7 @@ import (
 	"fmt"
 	//"sync"
 	"github.com/pkg/errors"
-	"hyperchain/common"
+	"crypto/ecdsa"
 )
 
 //读取config文件
@@ -82,13 +82,7 @@ func ParseKey(derPri string) (interface{}, error) {
 	return pri, nil
 }
 
-func ParsePubKey(pubstr string) (interface{}, error) {
-	//todo finish the public key parse
-	pubPem,err := common.DecodeUriCompontent(pubstr)
-	if err != nil {
-		return nil, err
-	}
-PEMtoPublicKey([]byte(pubPem),[]byte{})
+func ParsePubKey(pubPem string) (*ecdsa.PublicKey, error) {
 	block,_ := pem.Decode([]byte(pubPem))
 	pub,err := DERToPublicKey(block.Bytes)
 
@@ -96,6 +90,9 @@ PEMtoPublicKey([]byte(pubPem),[]byte{})
 		log.Error(err)
 		return nil, err
 	}
-	return pub, nil
+
+	pubkey := pub.(*(ecdsa.PublicKey))
+
+	return pubkey, nil
 
 }
