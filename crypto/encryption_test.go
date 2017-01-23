@@ -12,26 +12,19 @@ import (
 	"testing"
 	"time"
 
+	"crypto/rand"
 	"errors"
 	"hyperchain/common"
 	"math/big"
-	"crypto/rand"
 )
 
 var testAddrHex = "970e8128ab834e8eac17ab8e3812f010678cf791"
 var testPrivHex = "289c2857d4598e37fb9647507e47a309d6133539bf21a8b9cb6df88fd5232032"
 var encryption = NewEcdsaEncrypto("ecdsa")
 
-
 // These tests are sanity checks.
 // They should ensure that we don't e.g. use Sha3-224 instead of Sha3-256
 // and that the sha3 library uses keccak-f permutation.
-func TestSha3(t *testing.T) {
-	msg := []byte("abc")
-	exp, _ := hex.DecodeString("4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45")
-	checkhash(t, "Sha3-256", func(in []byte) []byte { return Keccak256(in) }, msg, exp)
-}
-
 
 func BenchmarkSha3(b *testing.B) {
 	a := []byte("hello world")
@@ -73,7 +66,6 @@ func TestSign(t *testing.T) {
 		t.Errorf("Address mismatch: want: %x have: %x", addr, recoveredAddr)
 	}
 
-
 	pri2Addr := encryption.PrivKeyToAddress(*key)
 	if addr != pri2Addr {
 		t.Errorf("Address mismatch: want: %x have: %x", addr, pri2Addr)
@@ -93,10 +85,10 @@ func TestInvalidSign(t *testing.T) {
 	}
 }
 func TestEcdsaEncrypto_GenerateNodeKey(t *testing.T) {
-	id:="id1"
+	id := "id1"
 	nodeDir := "/tmp/hyperchain/nodedir"
 	defer os.Remove(nodeDir)
-	err:= encryption.GenerateNodeKey(id,nodeDir)
+	err := encryption.GenerateNodeKey(id, nodeDir)
 	if err != nil {
 		t.Error("generate node key error")
 	}
@@ -137,7 +129,6 @@ func TestLoadECDSAFile(t *testing.T) {
 	checkKey(key1)
 }
 
-
 func checkhash(t *testing.T, name string, f func([]byte) []byte, msg, exp []byte) {
 	sum := f(msg)
 	if bytes.Compare(exp, sum) != 0 {
@@ -152,12 +143,12 @@ func checkAddr(t *testing.T, addr0, addr1 common.Address) {
 }
 
 func TestSignTimeWithCryptoEcdsa(t *testing.T) {
-	key,_ := GenerateKey()
+	key, _ := GenerateKey()
 
 	ee := NewEcdsaEncrypto("ecsda")
 	var s256 = NewKeccak256Hash("Keccak256")
 
-	for i:=1;i<8;i++{
+	for i := 1; i < 8; i++ {
 		length, err := rand.Int(rand.Reader, big.NewInt(1024))
 		if err != nil {
 			t.Fatalf("Failed generating AES key [%s]", err)
@@ -171,31 +162,31 @@ func TestSignTimeWithCryptoEcdsa(t *testing.T) {
 		msg = hash[:]
 
 		start := time.Now()
-		sigma, err := ee.Sign(msg,key)
-		if err!=nil{
+		sigma, err := ee.Sign(msg, key)
+		if err != nil {
 			t.Error("sign error")
 		}
-		fmt.Println("---sign with time---:",time.Since(start))
+		fmt.Println("---sign with time---:", time.Since(start))
 		address := ee.PrivKeyToAddress(*key)
 		start = time.Now()
-		check,err := ee.UnSign(msg,sigma)
-		if(err!=nil){
+		check, err := ee.UnSign(msg, sigma)
+		if err != nil {
 			t.Error("unsign error")
 		}
-		if(check==address){
-			fmt.Println("---unsign with time---:",time.Since(start))
+		if check == address {
+			fmt.Println("---unsign with time---:", time.Since(start))
 		}
 		start = time.Now()
-		r,s,err1:=ecdsa.Sign(rand.Reader,key,msg)
-		if err1!=nil{
+		r, s, err1 := ecdsa.Sign(rand.Reader, key, msg)
+		if err1 != nil {
 			t.Error("ecdsa sign error")
 		}
-		fmt.Println("***ecdsa sign time***:",time.Since(start))
+		fmt.Println("***ecdsa sign time***:", time.Since(start))
 		pubkey := key.PublicKey
 		start = time.Now()
-		check1:= ecdsa.Verify(&pubkey,msg,r,s)
-		if check1{
-			fmt.Println("***ecdsa unsign time***:",time.Since(start))
+		check1 := ecdsa.Verify(&pubkey, msg, r, s)
+		if check1 {
+			fmt.Println("***ecdsa unsign time***:", time.Since(start))
 		}
 	}
 

@@ -5,9 +5,9 @@ package pbft
 import (
 	"testing"
 
-	"hyperchain/protos"
-	"hyperchain/event"
 	"hyperchain/consensus/helper"
+	"hyperchain/event"
+	"hyperchain/protos"
 )
 
 func TestRecvLocalNewNode(t *testing.T) {
@@ -95,7 +95,7 @@ func TestRecvLocalDelNode(t *testing.T) {
 	msg = &protos.DelNodeMessage{
 		DelPayload: []byte("del"),
 		RouterHash: "routerhash",
-		Id: uint64(2),
+		Id:         uint64(2),
 	}
 	err = pbft.recvLocalDelNode(msg)
 	if err != nil {
@@ -120,8 +120,8 @@ func TestSendAgreeAddNode(t *testing.T) {
 
 	pbft.sendAgreeAddNode(key)
 	add := &AddNode{
-		ReplicaId:	pbft.id,
-		Key:		key,
+		ReplicaId: pbft.id,
+		Key:       key,
 	}
 	cert := pbft.getAddNodeCert(key)
 	ok := cert.addNodes[*add]
@@ -146,7 +146,7 @@ func TestRecvAgreeAddOrDelNode(t *testing.T) {
 
 	add := &AddNode{
 		ReplicaId: uint64(1),
-		Key: "key",
+		Key:       "key",
 	}
 	addCert := pbft.getAddNodeCert("key")
 	addCert.addNodes[*add] = true
@@ -156,8 +156,8 @@ func TestRecvAgreeAddOrDelNode(t *testing.T) {
 	}
 
 	del := &DelNode{
-		ReplicaId: uint64(1),
-		Key: "key",
+		ReplicaId:  uint64(1),
+		Key:        "key",
 		RouterHash: "routerhash",
 	}
 	delCert := pbft.getDelNodeCert("key", "routerhash")
@@ -297,8 +297,8 @@ func TestRecvReadyforNforAdd(t *testing.T) {
 	defer pbft.Close()
 
 	ready := &ReadyForN{
-		ReplicaId:	pbft.id,
-		Key:		"key",
+		ReplicaId: pbft.id,
+		Key:       "key",
 	}
 
 	pbft.id = 2
@@ -369,12 +369,12 @@ func TestRecvUpdateN(t *testing.T) {
 	defer pbft.Close()
 
 	update := &UpdateN{
-		ReplicaId:	2,
-		Key:		"key",
-		N:			5,
-		View: 		1,
-		Flag:		true,
-		SeqNo:		60,
+		ReplicaId: 2,
+		Key:       "key",
+		N:         5,
+		View:      1,
+		Flag:      true,
+		SeqNo:     60,
 	}
 
 	pbft.activeView = false
@@ -439,11 +439,11 @@ func TestRecvAgreeUpdateN(t *testing.T) {
 	defer pbft.Close()
 
 	agree := &AgreeUpdateN{
-		ReplicaId:	2,
-		Key:		"key",
-		N:			5,
-		View:		0,
-		Flag:		true,
+		ReplicaId: 2,
+		Key:       "key",
+		N:         5,
+		View:      0,
+		Flag:      true,
 	}
 
 	pbft.recvAgreeUpdateN(agree)
@@ -490,12 +490,12 @@ func TestMaybeUpdateN(t *testing.T) {
 		t.Error("Fail to reject updating n when it hasn't locally prepared")
 	}
 	update := &UpdateN{
-		ReplicaId:	1,
-		Key:		"key",
-		N:			5,
-		View: 		1,
-		Flag:		true,
-		SeqNo:		60,
+		ReplicaId: 1,
+		Key:       "key",
+		N:         5,
+		View:      1,
+		Flag:      true,
+		SeqNo:     60,
 	}
 	addCert.update = update
 	addCert.finishUpdate = true

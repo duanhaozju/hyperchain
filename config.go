@@ -4,10 +4,11 @@ import (
 	"fmt"
 	logging "github.com/op/go-logging"
 	"github.com/spf13/viper"
-	"time"
 	"hyperchain/api/jsonrpc/core"
 	"hyperchain/crypto/hmEncryption"
+	"hyperchain/tree/bucket"
 	"math/big"
+	"time"
 )
 
 type configs interface {
@@ -19,6 +20,7 @@ type configs interface {
 	getLogDumpFileFlag() bool
 	getLogDumpFileDir() string
 	getLogLevel() string
+	getDatabaseDir() string
 	getPeerConfigPath() string
 	getGenesisConfigPath() string
 	getMemberSRVCConfigPath() string
@@ -27,40 +29,54 @@ type configs interface {
 	getSyncReplicaEnable() bool
 	getLicense() string
 	getRateLimitConfig() jsonrpc.RateLimitConfig
+	getStateType() string
 	getBlockVersion() string
 	getTransactionVersion() string
 	getPaillerPublickey() hmEncryption.PaillierPublickey
+	getBucketTreeConf() bucket.Conf
 	getDbConfig() string
 }
 
 type configsImpl struct {
-	nodeID                  int
-	gRPCPort                int
-	httpPort                int
-	restPort		int
-	keystoreDir             string
-	keyNodeDir              string
-	logDumpFileFlag         bool
-	logDumpFileDir          string
-	logLevel                string
-	dbConfig             	string
-	peerConfigPath          string
-	genesisConfigPath       string
-	memberSRVCConfigPath    string
-	pbftConfigPath          string
+	nodeID               int
+	gRPCPort             int
+	httpPort             int
+	restPort             int
+	keystoreDir          string
+	keyNodeDir           string
+	logDumpFileFlag      bool
+	logDumpFileDir       string
+	logLevel             string
+	dbConfig                string
+	databaseDir          string
+	peerConfigPath       string
+	genesisConfigPath    string
+	memberSRVCConfigPath string
+	pbftConfigPath       string
+	// sync replica info
 	syncReplicaInfoInterval string
 	syncReplica             bool
-	license                 string
-	rateLimitEnable         bool
-	txRatePeak              int64
-	txFillRate              string
-	contractRatePeak        int64
-	contractFillRate        string
-	blockVersion            string
-	transactionVersion      string
-	paillpublickeyN         string
-	paillpublickeynsquare   string
-	paillpublickeyG         string
+	// license
+	license string
+	// rate limit related
+	rateLimitEnable  bool
+	txRatePeak       int64
+	txFillRate       string
+	contractRatePeak int64
+	contractFillRate string
+	// data structure version related
+	blockVersion       string
+	transactionVersion string
+	// state type
+	stateType string
+	// bucket tree related
+	stateSize             int // state db bucket tree size
+	stateLevelGroup       int // state db bucket tree level group
+	storageSize           int // storage bucket tree size
+	storageLevelGroup     int // storage bucket tree level group
+	paillpublickeyN       string
+	paillpublickeynsquare string
+	paillpublickeyG       string
 }
 
 //return a config instances
@@ -75,7 +91,7 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	}
 	/*
 		system config
-	 */
+	*/
 	cimpl.nodeID = NodeID
 	cimpl.gRPCPort = GRPCPort
 	cimpl.httpPort = HTTPPort
@@ -85,38 +101,37 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	cimpl.logDumpFileFlag = config.GetBool("global.logs.dumpfile")
 	cimpl.logDumpFileDir = config.GetString("global.logs.logsdir")
 	cimpl.logLevel = config.GetString("global.logs.loglevel")
+	cimpl.databaseDir = config.GetString("global.database.dir")
 	cimpl.peerConfigPath = config.GetString("global.configs.peers")
 	cimpl.genesisConfigPath = config.GetString("global.configs.genesis")
 	cimpl.memberSRVCConfigPath = config.GetString("global.configs.membersrvc")
 	cimpl.pbftConfigPath = config.GetString("global.configs.pbft")
-
 	/*
 		db Config
 	*/
-	cimpl.dbConfig=config.GetString("global.dbConfig")
-
-
+	cimpl.dbConfig = config.GetString("global.dbConfig")
 	/*
 		statement synchronization
-	 */
+	*/
 	cimpl.syncReplicaInfoInterval = config.GetString("global.configs.replicainfo.interval")
 	cimpl.syncReplica = config.GetBool("global.configs.replicainfo.enable")
 	/*
 		license
-	 */
+	*/
 	cimpl.license = config.GetString("global.configs.license")
 	/*
 		rate limit
-	 */
+	*/
 	cimpl.rateLimitEnable = config.GetBool("global.configs.ratelimit.enable")
 	cimpl.txRatePeak = config.GetInt64("global.configs.ratelimit.txRatePeak")
 	cimpl.txFillRate = config.GetString("global.configs.ratelimit.txFillRate")
 	cimpl.contractRatePeak = config.GetInt64("global.configs.ratelimit.contractRatePeak")
 	cimpl.contractFillRate = config.GetString("global.configs.ratelimit.contractFillRate")
+	cimpl.stateType = config.GetString("global.structure.state")
 
 	/*
 		Version
-	 */
+	*/
 	cimpl.blockVersion = config.GetString("global.version.blockversion")
 	cimpl.transactionVersion = config.GetString("global.version.transactionversion")
 
@@ -124,6 +139,13 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	cimpl.paillpublickeynsquare = config.GetString("global.configs.hmpublickey.Nsquare")
 	cimpl.paillpublickeyG = config.GetString("global.configs.hmpublickey.G")
 
+	/*
+		Bucket tree
+	*/
+	cimpl.stateSize = config.GetInt("global.configs.buckettree.state.size")
+	cimpl.stateLevelGroup = config.GetInt("global.configs.buckettree.state.levelGroup")
+	cimpl.storageSize = config.GetInt("global.configs.buckettree.storage.size")
+	cimpl.storageLevelGroup = config.GetInt("global.configs.buckettree.storage.levelGroup")
 	return &cimpl
 }
 
@@ -131,7 +153,7 @@ func (cIml *configsImpl) getNodeID() int            { return cIml.nodeID }
 func (cIml *configsImpl) getGRPCPort() int          { return cIml.gRPCPort }
 func (cIml *configsImpl) getHTTPPort() int          { return cIml.httpPort }
 func (cIml *configsImpl) getRESTPort() int          { return cIml.restPort }
-func (cIml *configsImpl) getDbConfig() string  	    { return cIml.dbConfig }
+func (cIml *configsImpl) getDbConfig() string       { return cIml.dbConfig }
 func (cIml *configsImpl) getKeystoreDir() string    { return cIml.keystoreDir }
 func (cIml *configsImpl) getKeyNodeDir() string     { return cIml.keyNodeDir }
 func (cIml *configsImpl) getLogDumpFileFlag() bool  { return cIml.logDumpFileFlag }
@@ -154,7 +176,7 @@ func (cIml *configsImpl) getLogLevel() logging.Level {
 		return logging.NOTICE
 	}
 }
-
+func (cIml *configsImpl) getDatabaseDir() string       { return cIml.databaseDir }
 func (cIml *configsImpl) getPeerConfigPath() string    { return cIml.peerConfigPath }
 func (cIml *configsImpl) getGenesisConfigPath() string { return cIml.genesisConfigPath }
 func (cIml *configsImpl) getMemberSRVCConfigPath() string {
@@ -166,17 +188,18 @@ func (cIml *configsImpl) getSyncReplicaInterval() (time.Duration, error) {
 }
 func (cIml *configsImpl) getSyncReplicaEnable() bool { return cIml.syncReplica }
 func (cIml *configsImpl) getLicense() string         { return cIml.license }
-func (cIml *configsImpl) getRateLimitConfig () jsonrpc.RateLimitConfig {
+func (cIml *configsImpl) getRateLimitConfig() jsonrpc.RateLimitConfig {
 	txFillRate, _ := time.ParseDuration(cIml.txFillRate)
 	contractFillRate, _ := time.ParseDuration(cIml.contractFillRate)
 	return jsonrpc.RateLimitConfig{
-		Enable: cIml.rateLimitEnable,
-		TxRatePeak: cIml.txRatePeak,
-		TxFillRate: txFillRate,
+		Enable:           cIml.rateLimitEnable,
+		TxRatePeak:       cIml.txRatePeak,
+		TxFillRate:       txFillRate,
 		ContractRatePeak: cIml.contractRatePeak,
 		ContractFillRate: contractFillRate,
 	}
 }
+func (cIml *configsImpl) getStateType() string { return cIml.stateType }
 func (cIml *configsImpl) getBlockVersion() string {
 	return cIml.blockVersion
 }
@@ -184,19 +207,27 @@ func (cIml *configsImpl) getTransactionVersion() string {
 	return cIml.transactionVersion
 }
 
+func (cIml *configsImpl) getBucketTreeConf() bucket.Conf {
+	return bucket.Conf{
+		StateSize:         cIml.stateSize,
+		StateLevelGroup:   cIml.stateLevelGroup,
+		StorageSize:       cIml.storageSize,
+		StorageLevelGroup: cIml.storageLevelGroup,
+	}
+}
+
 func (cIml *configsImpl) getPaillerPublickey() *hmEncryption.PaillierPublickey {
 	bigN := new(big.Int)
 	bigNsquare := new(big.Int)
 	bigG := new(big.Int)
-	n,_:= bigN.SetString(cIml.paillpublickeyN,10);
-	nsquare,_ := bigNsquare.SetString(cIml.paillpublickeynsquare,10)
-	g,_ := bigG.SetString(cIml.paillpublickeyG,10)
-
+	n, _ := bigN.SetString(cIml.paillpublickeyN, 10)
+	nsquare, _ := bigNsquare.SetString(cIml.paillpublickeynsquare, 10)
+	g, _ := bigG.SetString(cIml.paillpublickeyG, 10)
 
 	return &hmEncryption.PaillierPublickey{
-		N: n,
+		N:       n,
 		Nsquare: nsquare,
-		G: g,
+		G:       g,
 	}
 
 	//publickey := new(hmEncryption.PaillierPublickey)

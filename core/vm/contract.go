@@ -13,8 +13,8 @@ type ContractRef interface {
 	ReturnGas(*big.Int, *big.Int)
 	Address() common.Address
 	Value() *big.Int
-	SetCode([]byte)
-	ForEachStorage(callback func(key, value common.Hash) bool)
+	SetCode(common.Hash, []byte)
+	ForEachStorage(callback func(key, value common.Hash) bool) map[common.Hash]common.Hash
 }
 
 // Contract represents an ethereum contract in the state database. It contains
@@ -30,7 +30,7 @@ type Contract struct {
 	jumpdests destinations // result of JUMPDEST analysis.
 
 	Code     []byte
-	ABI     []byte
+	ABI      []byte
 	Input    []byte
 	CodeAddr *common.Address
 
@@ -130,13 +130,15 @@ func (c *Contract) Value() *big.Int {
 }
 
 // SetCode sets the code to the contract
-func (self *Contract) SetCode(code []byte) {
+func (self *Contract) SetCode(hash common.Hash, code []byte) {
 	self.Code = code
 }
+
 // SetABI sets the ABI to the contract
 func (self *Contract) SetABI(abi []byte) {
 	self.ABI = abi
 }
+
 // SetCallCode sets the code of the contract and address of the backing data
 // object
 func (self *Contract) SetCallCode(addr *common.Address, code []byte) {
@@ -146,6 +148,6 @@ func (self *Contract) SetCallCode(addr *common.Address, code []byte) {
 
 // EachStorage iterates the contract's storage and calls a method for every key
 // value pair.
-func (self *Contract) ForEachStorage(cb func(key, value common.Hash) bool) {
-	self.caller.ForEachStorage(cb)
+func (self *Contract) ForEachStorage(cb func(key, value common.Hash) bool) map[common.Hash]common.Hash {
+	return self.caller.ForEachStorage(cb)
 }

@@ -1,34 +1,35 @@
 package manager
 
 import (
-	"github.com/golang/protobuf/proto"
-	"hyperchain/recovery"
-	"hyperchain/hyperdb"
-	"time"
-	"hyperchain/event"
-	"hyperchain/protos"
-	"hyperchain/core"
-	"hyperchain/core/types"
-	"hyperchain/common"
 	"bytes"
+	"github.com/golang/protobuf/proto"
+	"hyperchain/common"
+	"hyperchain/core"
+	"hyperchain/core/blockpool"
+	"hyperchain/core/types"
+	"hyperchain/event"
+	"hyperchain/hyperdb"
+	"hyperchain/protos"
+	"hyperchain/recovery"
+	"time"
 )
 
-
-// Entry of state update
+// SendSyncRequest - send synchronization request to other nodes.
 func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
-	UpdateStateMessage := &protos.UpdateStateMessage{}
-	proto.Unmarshal(ev.Payload, UpdateStateMessage)
-	blockChainInfo := &protos.BlockchainInfo{}
-	proto.Unmarshal(UpdateStateMessage.TargetId, blockChainInfo)
-	log.Noticef("send sync block request to fetch missing block, current height %d, target height %d", core.GetChainCopy().Height, blockChainInfo.Height)
-	if core.GetChainCopy().RecoveryNum >= blockChainInfo.Height || core.GetChainCopy().Height > blockChainInfo.Height {
-		log.Warning("receive invalid state update request, just ignore it")
+	err, stateUpdateMsg, target := self.unmarshalStateUpdateMessage(ev)
+	if err != nil {
+		log.Errorf("invalid state update message.")
+		return
+	}
+	log.Noticef("send sync block request to fetch missing block, current height %d, target height %d", core.GetChainCopy().Height, target.Height)
+	if core.GetChainCopy().RecoveryNum >= target.Height || core.GetChainCopy().Height > target.Height {
+		log.Criticalf("receive invalid state update request, just ignore it")
 		return
 	}
 
-	if core.GetChainCopy().Height == blockChainInfo.Height {
-		log.Warning("recv target height same with current chain height")
-		if self.isBlockHashEqual(blockChainInfo.CurrentBlockHash) == true {
+	if core.GetChainCopy().Height == target.Height {
+		log.Debug("recv target height same with current chain height")
+		if self.isBlockHashEqual(target.CurrentBlockHash) == true {
 			log.Info("current chain latest block hash equal with target hash, send state updated event")
 			self.sendStateUpdatedEvent()
 		} else {
@@ -38,25 +39,26 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 	}
 	// send block request message to remot peer
 	required := &recovery.CheckPointMessage{
-		RequiredNumber: blockChainInfo.Height,
+		RequiredNumber: target.Height,
 		CurrentNumber:  core.GetChainCopy().Height,
-		PeerId:         UpdateStateMessage.Id,
+		PeerId:         stateUpdateMsg.Id,
 	}
 
-	core.UpdateRequire(blockChainInfo.Height, blockChainInfo.CurrentBlockHash, blockChainInfo.Height)
-	log.Noticef("state update, current height %d, target height %d", core.GetChainCopy().Height, blockChainInfo.Height)
+	core.UpdateRequire(target.Height, target.CurrentBlockHash, target.Height)
+	log.Noticef("state update, current height %d, target height %d", core.GetChainCopy().Height, target.Height)
 	// save context
-	core.SetReplicas(UpdateStateMessage.Replicas)
-	core.SetId(UpdateStateMessage.Id)
+	core.SetReplicas(stateUpdateMsg.Replicas)
+	core.SetId(stateUpdateMsg.Id)
 
 	payload, err := proto.Marshal(required)
 	if err != nil {
 		log.Error("SendSyncRequest marshal message failed")
 		return
 	}
-	self.Peermanager.SendMsgToPeers(payload, UpdateStateMessage.Replicas, recovery.Message_SYNCCHECKPOINT)
+	self.Peermanager.SendMsgToPeers(payload, stateUpdateMsg.Replicas, recovery.Message_SYNCCHECKPOINT)
 }
 
+// ReceiveSyncRequest - receive synchronization request from some node, send back request blocks.
 func (self *ProtocolManager) ReceiveSyncRequest(ev event.StateUpdateEvent) {
 	checkpointMsg := &recovery.CheckPointMessage{}
 	proto.Unmarshal(ev.Payload, checkpointMsg)
@@ -90,57 +92,84 @@ func (self *ProtocolManager) ReceiveSyncRequest(ev event.StateUpdateEvent) {
 	}
 }
 
+// ReceiveSyncBlocks - receive request blocks from others.
 func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 	if core.GetChainCopy().RequiredBlockNum != 0 {
 		blocks := &types.Blocks{}
 		proto.Unmarshal(ev.Payload, blocks)
 		db, err := hyperdb.GetDBDatabase()
 		if err != nil {
-			log.Error("No Database Found")
+			log.Error("no database handler found")
+			self.reject()
 			return
 		}
 		for i := len(blocks.Batch) - 1; i >= 0; i -= 1 {
 			if blocks.Batch[i].Number <= core.GetChainCopy().RequiredBlockNum {
-				log.Debug("Receive Block: ", blocks.Batch[i].Number, common.BytesToHash(blocks.Batch[i].BlockHash).Hex())
+
+				log.Debugf("receive block #%d  hash %s", blocks.Batch[i].Number, common.BytesToHash(blocks.Batch[i].BlockHash).Hex())
+
 				if blocks.Batch[i].Number == core.GetChainCopy().RequiredBlockNum {
+					// receive demand block
 					acceptHash := blocks.Batch[i].HashBlock(self.commonHash).Bytes()
+					// compare received block's hash with target hash for guarantee block's integrity
 					if common.Bytes2Hex(acceptHash) == common.Bytes2Hex(core.GetChainCopy().RequireBlockHash) {
-						core.PersistBlock(db.NewBatch(),blocks.Batch[i], self.blockPool.GetConfig().BlockVersion, true, true)
+						// put into db instead of memory for avoiding memory boom when sync huge number blocks
+						core.PersistBlock(db.NewBatch(), blocks.Batch[i], self.blockPool.GetBlockVersion(), true, true)
 						if err := self.updateRequire(blocks.Batch[i]); err != nil {
 							log.Error("UpdateRequired failed!")
+							self.reject()
 							return
 						}
 
 						// receive all block in chain
 						if core.GetChainCopy().RequiredBlockNum <= core.GetChainCopy().Height {
-							lastBlk, err := core.GetBlockByNumber(db, core.GetChainCopy().RequiredBlockNum + 1)
+							lastBlk, err := core.GetBlockByNumber(db, core.GetChainCopy().RequiredBlockNum+1)
 							if err != nil {
 								log.Error("StateUpdate Failed!")
+								self.reject()
 								return
 							}
+							// check the latest block in local's correctness
 							if common.Bytes2Hex(lastBlk.ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash) {
 								// execute all received block at one time
 								for i := core.GetChainCopy().RequiredBlockNum + 1; i <= core.GetChainCopy().RecoveryNum; i += 1 {
 									blk, err := core.GetBlockByNumber(db, i)
 									if err != nil {
-										log.Error("StateUpdate Failed")
+										log.Errorf("state update from #%d to #%d failed. current chain height #%d",
+											core.GetChainCopy().RequiredBlockNum+1, core.GetChainCopy().RecoveryNum, core.GetChainCopy().Height)
+										self.reject()
 										return
 									} else {
-										self.blockPool.ProcessBlockInVm(blk.Transactions, nil, blk.Number)
-										self.blockPool.SetDemandNumber(blk.Number + 1)
-										self.blockPool.SetDemandSeqNo(blk.Number + 1)
+										// set temporary block number as block number since block number is already here
+										self.blockPool.SetTempBlockNumber(blk.Number)
+										self.blockPool.SetDemandNumber(blk.Number)
+										self.blockPool.SetDemandSeqNo(blk.Number)
+										err, result := self.blockPool.ApplyBlock(blk, blk.Number)
+										if err != nil || self.assertApplyResult(blk, result) == false {
+											log.Errorf("state update from #%d to #%d failed. current chain height #%d",
+												core.GetChainCopy().RequiredBlockNum+1, core.GetChainCopy().RecoveryNum, core.GetChainCopy().Height)
+											self.reject()
+											return
+										} else {
+											// commit modified changes in this block and update chain.
+											self.accpet(blk.Number)
+										}
 									}
 								}
-								core.UpdateChainByBlcokNum(db, core.GetChainCopy().RecoveryNum)
+								self.blockPool.SetTempBlockNumber(core.GetChainCopy().RecoveryNum + 1)
+								self.blockPool.SetDemandSeqNo(core.GetChainCopy().RecoveryNum + 1)
+								self.blockPool.SetDemandNumber(core.GetChainCopy().RecoveryNum + 1)
+
 								core.UpdateRequire(uint64(0), []byte{}, uint64(0))
 								core.SetReplicas(nil)
 								core.SetId(0)
+
 								self.sendStateUpdatedEvent()
 								break
 							} else {
 								// the highest block in local is invalid, request the block
 								self.blockPool.CutdownBlock(lastBlk.Number - 1)
-								self.broadcastDemandBlock(lastBlk.Number - 1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
+								self.broadcastDemandBlock(lastBlk.Number-1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
 							}
 						}
 					}
@@ -172,6 +201,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 
 }
 
+// broadcastDemandBlock - send block request message to others for demand block.
 func (self *ProtocolManager) broadcastDemandBlock(number uint64, hash []byte, replicas []uint64, peerId uint64) {
 	required := &recovery.CheckPointMessage{
 		RequiredNumber: number,
@@ -186,6 +216,7 @@ func (self *ProtocolManager) broadcastDemandBlock(number uint64, hash []byte, re
 	self.Peermanager.SendMsgToPeers(payload, replicas, recovery.Message_SYNCSINGLE)
 }
 
+// updateRequire - update next required block number and block hash.
 func (self *ProtocolManager) updateRequire(block *types.Block) error {
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
@@ -202,7 +233,7 @@ func (self *ProtocolManager) updateRequire(block *types.Block) error {
 			blks := ret.(map[string]types.Block)
 			for hash, blk := range blks {
 				if hash == common.BytesToHash(tmpHash).Hex() {
-					core.PersistBlock(db.NewBatch(), &blk, self.blockPool.GetConfig().BlockVersion, true, true)
+					core.PersistBlock(db.NewBatch(), &blk, self.blockPool.GetBlockVersion(), true, true)
 					self.syncBlockCache.Remove(tmp)
 					tmp = tmp - 1
 					tmpHash = blk.ParentHash
@@ -228,6 +259,7 @@ func (self *ProtocolManager) updateRequire(block *types.Block) error {
 	return nil
 }
 
+// sendStateUpdatedEvent - communicate with consensus, told him state update has finish.
 func (self *ProtocolManager) sendStateUpdatedEvent() {
 	// state update success
 	payload := &protos.StateUpdatedMessage{
@@ -257,6 +289,7 @@ func (self *ProtocolManager) sendStateUpdatedEvent() {
 	self.consenter.RecvMsg(msgPayload)
 }
 
+// isBlockHashEqual - compare block hash.
 func (self *ProtocolManager) isBlockHashEqual(targetHash []byte) bool {
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
@@ -271,4 +304,72 @@ func (self *ProtocolManager) isBlockHashEqual(targetHash []byte) bool {
 		return false
 	}
 	return true
+}
+
+// assertApplyResult - check apply result whether equal with other's.
+func (self *ProtocolManager) assertApplyResult(block *types.Block, result *blockpool.BlockRecord) bool {
+	if bytes.Compare(block.MerkleRoot, result.MerkleRoot) != 0 {
+		log.Warningf("mismatch in block merkle root  of #%d, required %s, got %s",
+			block.Number, common.Bytes2Hex(block.MerkleRoot), common.Bytes2Hex(result.MerkleRoot))
+		return false
+	}
+	if bytes.Compare(block.TxRoot, result.TxRoot) != 0 {
+		log.Warningf("mismatch in block transaction root  of #%d, required %s, got %s",
+			block.Number, common.Bytes2Hex(block.TxRoot), common.Bytes2Hex(result.TxRoot))
+		return false
+
+	}
+	if bytes.Compare(block.ReceiptRoot, result.ReceiptRoot) != 0 {
+		log.Warningf("mismatch in block receipt root  of #%d, required %s, got %s",
+			block.Number, common.Bytes2Hex(block.ReceiptRoot), common.Bytes2Hex(result.ReceiptRoot))
+		return false
+	}
+	return true
+}
+
+// reject - reject state update result.
+func (self *ProtocolManager) reject() {
+	db, err := hyperdb.GetDBDatabase()
+	if err != nil {
+		log.Error("get database handler failed.")
+		return
+	}
+	batch := db.NewBatch()
+	for i := core.GetChainCopy().Height + 1; i <= core.GetChainCopy().RecoveryNum; i += 1 {
+		// delete persisted blocks number larger than chain height
+		core.DeleteBlockByNum(batch, i)
+	}
+	batch.Write()
+	self.blockPool.SetDemandNumber(core.GetChainCopy().Height + 1)
+	self.blockPool.SetDemandSeqNo(core.GetChainCopy().Height + 1)
+	self.blockPool.SetTempBlockNumber(core.GetChainCopy().Height + 1)
+	// reset state in block pool
+	self.blockPool.ClearStateUnCommitted()
+	// reset
+	core.UpdateRequire(uint64(0), []byte{}, uint64(0))
+	core.SetReplicas(nil)
+	core.SetId(0)
+	self.sendStateUpdatedEvent()
+}
+
+// accpet - accept state update result.
+func (self *ProtocolManager) accpet(seqNo uint64) {
+	self.blockPool.SubmitForStateUpdate(seqNo)
+}
+
+// unmarshalStateUpdateMessage - unmarshal state update message sent from consensus module and return a state update target.
+func (self *ProtocolManager) unmarshalStateUpdateMessage(ev event.SendCheckpointSyncEvent) (error, *protos.UpdateStateMessage, *protos.BlockchainInfo) {
+	updateStateMessage := &protos.UpdateStateMessage{}
+	err := proto.Unmarshal(ev.Payload, updateStateMessage)
+	if err != nil {
+		log.Errorf("unmarshal state update message failed. %s", err)
+		return err, nil, nil
+	}
+	blockChainInfo := &protos.BlockchainInfo{}
+	err = proto.Unmarshal(updateStateMessage.TargetId, blockChainInfo)
+	if err != nil {
+		log.Errorf("unmarshal block chain info failed. %s", err)
+		return err, nil, nil
+	}
+	return nil, updateStateMessage, blockChainInfo
 }

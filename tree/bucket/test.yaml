@@ -1,0 +1,15 @@
+###############################################################################
+#
+#    Peer section
+#
+###############################################################################
+peer:
+    # Path on the file system where peer will store data
+    fileSystemPath: /tmp/hyperchain/cachedb
+ledger:
+  state:
+    dataStructure:
+      name: buckettree
+      configs:
+        numBuckets: 19
+        maxGroupingAtEachLevel: 3

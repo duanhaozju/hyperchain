@@ -6,15 +6,15 @@ import (
 	"errors"
 	"github.com/mkideal/cli"
 	"hyperchain/accounts"
+	"hyperchain/api/jsonrpc/core"
 	"hyperchain/common"
 	"hyperchain/consensus/controller"
 	"hyperchain/core"
 	"hyperchain/core/blockpool"
 	"hyperchain/crypto"
 	"hyperchain/event"
-	"hyperchain/api/jsonrpc/core"
 	"hyperchain/manager"
-	"hyperchain/membersrvc"
+	"hyperchain/admittance"
 	"hyperchain/p2p"
 	"hyperchain/p2p/transport"
 	"io/ioutil"
@@ -22,22 +22,17 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"fmt"
+	"github.com/terasum/viper"
 )
 
 type argT struct {
 	cli.Helper
 	NodeID     int    `cli:"o,id" usage:"node ID" dft:"1"`
-	ConfigPath string `cli:"c,conf" usage:"配置文件所在路径" dft:"./config/global.yaml"`
-	GRPCPort   int    `cli:"l,rpcport" usage:"远程连接端口" dft:"8001"`
-	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc开放端口" dft:"8081"`
-	RESTPort   int	  `cli:"f,restport" useage:"restful开放端口" dft:"9000"`
-	IsInit     bool   `cli:"i,init" usage:"是否是创世节点" dft:"false"`
-	Introducer string `cli:"r,introducer" usage:"加入代理节点信息,格127.0.0.1:8001"dft:"127.0.0.1:8001:1"`
-	IsReconnect bool  `cli:"e,isReconnect" usage:"是否重新链接" dft:"false"`
+	ConfigPath string `cli:"c,conf" usage:"config file path" dft:"./config/global.yaml"`
+	GRPCPort   int    `cli:"l,rpcport" usage:"inner grpc connect port" dft:"8001"`
+	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc open port" dft:"8081"`
+	RESTPort   int    `cli:"f,restport" useage:"restful api port" dft:"9000"`
 }
-
-
 
 func checkLicense(licensePath string) (err error, expiredTime time.Time) {
 	defer func() {
@@ -103,36 +98,36 @@ func main() {
 		conf := initConf(argv)
 		common.InitLog(conf)
 
-		core.InitDB(config.getDbConfig(),config.gRPCPort)
+		core.InitDB(config.getDbConfig(), config.gRPCPort)
 
 		err, expiredTime := checkLicense(config.getLicense())
 		if err != nil {
 			return err
 		}
 
-		membersrvc.Start(config.getMemberSRVCConfigPath(), config.getNodeID())
-
 		eventMux := new(event.TypeMux)
 
-		//init peer manager to start grpc server and client
-		//introducer ip
-		introducerIp := strings.Split(argv.Introducer, ":")[0]
-		introducerPort, atoi_err := strconv.Atoi(strings.Split(argv.Introducer, ":")[1])
-		if atoi_err != nil {
-			fmt.Errorf("错误,代理节点信息格式错误%v", atoi_err)
+		/**
+		 *传入true则开启所有验证，false则为取消ca以及签名的所有验证
+		 */
+		global_config := viper.New();
+		global_config.SetConfigFile(argv.ConfigPath)
+		err = global_config.ReadInConfig()
+		if err != nil{
+			panic(err)
 		}
-		introducerID, atoi_err := strconv.Atoi(strings.Split(argv.Introducer, ":")[2])
-		if atoi_err != nil {
-			fmt.Errorf("错误,代理节点信息格式错误%v", atoi_err)
+		cm, cmerr := admittance.GetCaManager(global_config)
+		if cmerr != nil {
+			panic("cannot initliazied the camanager")
 		}
-		introducerPortint64 := int64(introducerPort)
-		introducerIDUint64 := uint64(introducerID)
-		//introducer port
-		grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath(), config.getNodeID(), argv.IsInit, introducerIp, introducerPortint64,introducerIDUint64)
 
+
+		//init peer manager to start grpc server and client
+		//grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath())
+		grpcPeerMgr := p2p.NewGrpcManager(conf)
 
 		//init genesis
-		core.CreateInitBlock(config.getGenesisConfigPath())
+		core.CreateInitBlock(conf)
 
 		//init pbft consensus
 		cs := controller.NewConsenter(uint64(config.getNodeID()), eventMux, config.getPBFTConfigPath())
@@ -149,11 +144,7 @@ func main() {
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
 
 		//init block pool to save block
-		blockPoolConf := blockpool.BlockPoolConf{
-			BlockVersion: config.getBlockVersion(),
-			TransactionVersion: config.getTransactionVersion(),
-		}
-		blockPool := blockpool.NewBlockPool(eventMux, cs, blockPoolConf)
+		blockPool := blockpool.NewBlockPool(cs, conf)
 		if blockPool == nil {
 			return errors.New("Initialize BlockPool failed")
 		}
@@ -163,19 +154,16 @@ func main() {
 		syncReplicaInterval, _ := config.getSyncReplicaInterval()
 		syncReplicaEnable := config.getSyncReplicaEnable()
 		pm := manager.New(eventMux,
-				blockPool,
-				grpcPeerMgr,
-				cs,
-				am,
-				kec256Hash,
-				argv.IsReconnect, //reconnect
-				syncReplicaInterval,
-				syncReplicaEnable,
-				exist,
-				expiredTime,
-				config.getGRPCPort())
-		rateLimitCfg := config.getRateLimitConfig()
-		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(),config.getLogDumpFileDir(),eventMux, pm, rateLimitCfg, config.getPaillerPublickey())
+			blockPool,
+			grpcPeerMgr,
+			cs,
+			am,
+			kec256Hash,
+			syncReplicaInterval,
+			syncReplicaEnable,
+			exist,
+			expiredTime, cm)
+		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(), config.getLogDumpFileDir(), eventMux, pm, cm, conf)
 
 		//go func() {
 		//	log.Println(http.ListenAndServe("localhost:6064", nil))

@@ -5,10 +5,10 @@ package hpc
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
 	"hyperchain/core"
 	"math/big"
+	"strconv"
+	"strings"
 )
 
 type Number int64
@@ -51,9 +51,9 @@ func (n *Number) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf(`invalid number %s`, data)
 	}
 
-	if v, err := strconv.ParseUint(input, 0, 0);err != nil {
-		return fmt.Errorf("number %v may be out of range",input)
-	} else if (v < 0) {
+	if v, err := strconv.ParseUint(input, 0, 0); err != nil {
+		return fmt.Errorf("number %v may be out of range", input)
+	} else if v < 0 {
 		return fmt.Errorf("number can't be negative or zero, but get %v", input)
 	} else {
 		*n = *NewUint64ToNumber(v)
@@ -86,7 +86,7 @@ type BlockNumber uint64
 
 const (
 	//latestBlockNumber  = 0
-	pendingBlockNumber = 1
+	pendingBlockNumber  = 1
 	earliestBlockNumber = 2
 	//maxBlockNumber
 )
@@ -140,11 +140,11 @@ func (n *BlockNumber) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf(`invalid block number %s`, data)
 	}
 
-	if v, err := strconv.ParseUint(input, 0, 0);err != nil {
-		return fmt.Errorf("block number %v may be out of range",input)
-	} else if (v <= 0) {
+	if v, err := strconv.ParseUint(input, 0, 0); err != nil {
+		return fmt.Errorf("block number %v may be out of range", input)
+	} else if v <= 0 {
 		return fmt.Errorf("block number can't be negative or zero, but get %v", input)
-	} else if v > latest_number{
+	} else if v > latest_number {
 		return fmt.Errorf("block number is out of range, and now latest block number is %d", latest_number)
 	} else {
 		*n = *NewUint64ToBlockNumber(v)

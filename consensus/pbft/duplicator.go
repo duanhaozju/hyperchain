@@ -10,7 +10,7 @@ import (
 
 type transactionContainer struct {
 	key string
-	tx *types.Transaction
+	tx  *types.Transaction
 }
 
 type transactionStore struct {
@@ -25,7 +25,7 @@ func (a *transactionStore) Len() int {
 func (a *transactionStore) wrapTransaction(tx *types.Transaction) transactionContainer {
 	return transactionContainer{
 		key: string(tx.TransactionHash),
-		tx: tx,
+		tx:  tx,
 	}
 }
 
@@ -66,4 +66,3 @@ func newTransactionStore() *transactionStore {
 
 	return rs
 }
-

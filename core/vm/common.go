@@ -3,10 +3,10 @@
 package vm
 
 import (
-	"math"
-	"math/big"
 	"hyperchain/common"
 	"hyperchain/core/vm/params"
+	"math"
+	"math/big"
 )
 
 // Type is the VM type accepted by **NewVm**

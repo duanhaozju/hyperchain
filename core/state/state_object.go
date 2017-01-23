@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"hyperchain/common"
 	"hyperchain/core/crypto"
-	"hyperchain/trie"
+	"hyperchain/tree/pmt"
 	"math/big"
 )
 
@@ -41,14 +41,14 @@ func (self Storage) Copy() Storage {
 type StateObject struct {
 	// Address belonging to this account
 	address common.Address
-	db      trie.Database // State database for storing state changes
+	db      pmt.Database // State database for storing state changes
 
 	// DB error
 	// the error which StateObject cannot be deal with will eventually be returned by StateDB.Commit
 	dbErr error
 
 	// Used to store account Storage
-	trie *trie.SecureTrie
+	trie *pmt.SecureTrie
 	// The BalanceData of the account
 	BalanceData *big.Int
 	// The nonce of the account
@@ -67,7 +67,7 @@ type StateObject struct {
 	dirty   bool
 }
 
-func NewStateObject(address common.Address, db trie.Database) *StateObject {
+func NewStateObject(address common.Address, db pmt.Database) *StateObject {
 	object := &StateObject{
 		db:          db,
 		address:     address,
@@ -76,7 +76,7 @@ func NewStateObject(address common.Address, db trie.Database) *StateObject {
 		codeHash:    emptyCodeHash,
 		storage:     make(Storage),
 	}
-	object.trie, _ = trie.NewSecure(common.Hash{}, db)
+	object.trie, _ = pmt.NewSecure(common.Hash{}, db)
 	return object
 }
 
@@ -98,7 +98,7 @@ func (self *StateObject) Storage() Storage {
 	return self.storage
 }
 
-func (self *StateObject) GetState(key common.Hash) common.Hash {
+func (self *StateObject) GetState(key common.Hash) (bool, common.Hash) {
 	value, exists := self.storage[key]
 	if !exists {
 		value = self.getAddr(key)
@@ -106,7 +106,7 @@ func (self *StateObject) GetState(key common.Hash) common.Hash {
 			self.storage[key] = value
 		}
 	}
-	return value
+	return true, value
 }
 
 func (self *StateObject) SetState(key, value common.Hash) {
@@ -126,8 +126,8 @@ func (self *StateObject) Update() {
 }
 
 // setError remembers the first non-nil error it is called with
-func (self *StateObject) setError(err error){
-	if self.dbErr == nil{
+func (self *StateObject) setError(err error) {
+	if self.dbErr == nil {
 		self.dbErr = err
 	}
 }
@@ -176,7 +176,7 @@ func (c *StateObject) Address() common.Address {
 	return c.address
 }
 
-func (self *StateObject) Trie() *trie.SecureTrie {
+func (self *StateObject) Trie() *pmt.SecureTrie {
 	return self.trie
 }
 
@@ -195,23 +195,22 @@ func (self *StateObject) SetABI(abi []byte) {
 
 // Code returns the contract code associated with this object,if any
 // TODO the code could be stored in cache
-func (self *StateObject) Code(db trie.Database) []byte {
-	if self.code != nil{
+func (self *StateObject) Code(db pmt.Database) []byte {
+	if self.code != nil {
 		return self.code
 	}
-	if bytes.Equal(self.CodeHash(),emptyCodeHash){
+	if bytes.Equal(self.CodeHash(), emptyCodeHash) {
 		return nil
 	}
-	code,err := db.Get(self.CodeHash())
-	if err != nil{
-		self.setError(fmt.Errorf("can't load code hash %x: %v",self.CodeHash(),err))
+	code, err := db.Get(self.CodeHash())
+	if err != nil {
+		self.setError(fmt.Errorf("can't load code hash %x: %v", self.CodeHash(), err))
 	}
 	self.code = code
 	return code
 }
 
-
-func (self *StateObject) SetCode(code []byte) {
+func (self *StateObject) SetCode(hash common.Hash, code []byte) {
 	self.code = code
 	self.codeHash = crypto.Keccak256(code)
 	self.dirty = true
@@ -233,18 +232,22 @@ func (self *StateObject) Value() *big.Int {
 	panic("Value on StateObject should never be called")
 }
 
-func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) {
+func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) map[common.Hash]common.Hash {
 	// When iterating over the storage check the cache first
+	var ret map[common.Hash]common.Hash
 	for h, value := range self.storage {
 		cb(h, value)
+		ret[h] = value
 	}
 	it := self.trie.Iterator()
 	for it.Next() {
 		key := common.BytesToHash(self.trie.GetKey(it.Key))
 		if _, ok := self.storage[key]; !ok {
 			cb(key, common.BytesToHash(it.Value))
+			ret[key] = common.BytesToHash(it.Value)
 		}
 	}
+	return ret
 }
 
 // just for test
@@ -256,7 +259,7 @@ func (self *StateObject) PrintStorages() {
 	}
 }
 
-func (self *StateObject) CodeHash() []byte{
+func (self *StateObject) CodeHash() []byte {
 	return self.codeHash
 }
 
@@ -279,7 +282,7 @@ func (self *StateObject) EncodeObject() ([]byte, error) {
 	return json.Marshal(ext)
 }
 
-func DecodeObject(address common.Address, db trie.Database, data []byte) (*StateObject, error) {
+func DecodeObject(address common.Address, db pmt.Database, data []byte) (*StateObject, error) {
 	var (
 		obj = &StateObject{
 			address: address,
@@ -293,7 +296,7 @@ func DecodeObject(address common.Address, db trie.Database, data []byte) (*State
 	if err != nil {
 		return nil, err
 	}
-	if obj.trie, err = trie.NewSecure(ext.Root, db); err != nil {
+	if obj.trie, err = pmt.NewSecure(ext.Root, db); err != nil {
 		return nil, err
 	}
 	if !bytes.Equal(ext.CodeHash, emptyCodeHash) {

@@ -22,7 +22,7 @@ func Test_SendTransaction(t *testing.T) {
 	hyperdb.Setclose()
 	//初始化数据
 	core.InitDB("./build/keystore", 8004)
-	peermanager := &p2p.GrpcPeerManager{
+	peermanager := &p2p.GRPCPeerManager{
 		NodeID: 1,
 	}
 	db, _ := hyperdb.GetDBDatabase()
@@ -31,8 +31,8 @@ func Test_SendTransaction(t *testing.T) {
 	encryption.GenerateNodeKey(strconv.Itoa(1), "./build/keynodes")
 	am := accounts.NewAccountManager(keydir, encryption)
 	eventMux1 := new(event.TypeMux)
-	expiredTime:=time.Time{}
-	pm := manager.NewProtocolManager(nil, peermanager, eventMux1, nil, am, nil, 0, true,nil,expiredTime)
+	expiredTime := time.Time{}
+	pm := manager.NewProtocolManager(nil, peermanager, eventMux1, nil, am, nil, 0, true, nil, expiredTime)
 	publicTransactionAPI := NewPublicTransactionAPI(eventMux1, pm, db, false, 1, 10000)
 	from := common.HexToAddress("0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd")
 	to := common.HexToAddress("0x0000000000000000000000000000000000000003")
@@ -85,7 +85,7 @@ func Test_SendTransaction(t *testing.T) {
 	if err != nil {
 		t.Errorf("SendTransaction fail 交易应该成功")
 	}
-	pm2 := manager.NewProtocolManager(nil, peermanager, nil, nil, am, nil, 0, true,nil,expiredTime)
+	pm2 := manager.NewProtocolManager(nil, peermanager, nil, nil, am, nil, 0, true, nil, expiredTime)
 	publicTransactionAPI2 := NewPublicTransactionAPI(eventMux1, pm2, db, true, 1, 10000)
 	fmt.Println("11111111111111111111111111111111")
 	ref, err = publicTransactionAPI2.SendTransaction(args)
@@ -104,7 +104,7 @@ func Test_SendTransaction(t *testing.T) {
 
 func Test_GetTransactionReceipt(t *testing.T) {
 
-	peermanager := &p2p.GrpcPeerManager{
+	peermanager := &p2p.GRPCPeerManager{
 		NodeID: 1,
 	}
 	db, _ := hyperdb.GetDBDatabase()
@@ -113,8 +113,8 @@ func Test_GetTransactionReceipt(t *testing.T) {
 	encryption.GenerateNodeKey(strconv.Itoa(1), "./build/keynodes")
 	am := accounts.NewAccountManager(keydir, encryption)
 	eventMux1 := new(event.TypeMux)
-	expiredTime:=time.Time{}
-	pm := manager.NewProtocolManager(nil, peermanager, eventMux1, nil, am, nil, 0, true,nil,expiredTime)
+	expiredTime := time.Time{}
+	pm := manager.NewProtocolManager(nil, peermanager, eventMux1, nil, am, nil, 0, true, nil, expiredTime)
 	publicTransactionAPI := NewPublicTransactionAPI(eventMux1, pm, db, false, 1, 10000)
 
 	from := common.HexToAddress("0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd")
@@ -290,22 +290,21 @@ func Test_GetTransactionReceipt(t *testing.T) {
 		fmt.Println(err)
 	}
 
-	ref9 ,_:= publicTransactionAPI.GetTxAvgTimeByBlockNumber(args4)
+	ref9, _ := publicTransactionAPI.GetTxAvgTimeByBlockNumber(args4)
 	fmt.Println("arg4")
 	fmt.Println(ref9)
 
-	ref9 ,_= publicTransactionAPI.GetTxAvgTimeByBlockNumber(args5)
+	ref9, _ = publicTransactionAPI.GetTxAvgTimeByBlockNumber(args5)
 	fmt.Println("arg5")
 	fmt.Println(ref9)
 
-	ref9 ,_= publicTransactionAPI.GetTxAvgTimeByBlockNumber(args6)
+	ref9, _ = publicTransactionAPI.GetTxAvgTimeByBlockNumber(args6)
 	fmt.Println("arg6")
 	fmt.Println(ref9)
 
-	ref9 ,_= publicTransactionAPI.GetTxAvgTimeByBlockNumber(args7)
+	ref9, _ = publicTransactionAPI.GetTxAvgTimeByBlockNumber(args7)
 	fmt.Println("arg7")
 	fmt.Println(ref9)
-
 
 	ref10, err := publicTransactionAPI.GetTransactionByHash(hash3)
 	if err != nil {

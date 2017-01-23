@@ -3,12 +3,14 @@
 package jsonrpc
 
 import (
-	"reflect"
-	"math/big"
-	"unicode/utf8"
-	"unicode"
 	"golang.org/x/net/context"
+	"math/big"
+	"reflect"
+	"unicode"
+	"unicode/utf8"
 )
+
+
 
 // Is this an exported - upper case - name?
 func isExported(name string) bool {
@@ -77,7 +79,7 @@ func suitableCallbacks(rcvr reflect.Value, typ reflect.Type) (callbacks, subscri
 	callbacks := make(callbacks)
 	subscriptions := make(subscriptions)
 
-	METHODS:
+METHODS:
 	for m := 0; m < typ.NumMethod(); m++ {
 		method := typ.Method(m)
 		mtype := method.Type

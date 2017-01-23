@@ -3,9 +3,9 @@
 package pbft
 
 import (
-	"fmt"
 	"encoding/base64"
 	"encoding/binary"
+	"fmt"
 
 	"hyperchain/consensus/helper/persist"
 
@@ -37,7 +37,8 @@ func (pbft *pbftProtocal) persistPSet(v uint64, n uint64) {
 		pbft.pset = &Pset{Set: pset}
 	}
 	for p := range cert.prepare {
-		pbft.pset.Set = append(pbft.pset.Set, &p)
+		tmp := p
+		pbft.pset.Set = append(pbft.pset.Set, &tmp)
 	}
 
 	raw, err := proto.Marshal(pbft.pset)
@@ -56,7 +57,8 @@ func (pbft *pbftProtocal) persistCSet(v uint64, n uint64) {
 		pbft.cset = &Cset{Set: cset}
 	}
 	for c := range cert.commit {
-		pbft.cset.Set = append(pbft.cset.Set, &c)
+		tmp := c
+		pbft.cset.Set = append(pbft.cset.Set, &tmp)
 	}
 
 	raw, err := proto.Marshal(pbft.cset)
@@ -98,7 +100,7 @@ func (pbft *pbftProtocal) restorePSet() *Pset {
 }
 
 func (pbft *pbftProtocal) restoreCSet() *Cset {
-	raw, err := persist.ReadState("pset")
+	raw, err := persist.ReadState("cset")
 	if err != nil {
 		logger.Debugf("Replica %d could not restore state cset: %s", pbft.id, err)
 		return nil
@@ -149,6 +151,9 @@ func (pbft *pbftProtocal) restoreCert() {
 			if q.View == p.View && q.SequenceNumber == p.SequenceNumber {
 				cert.prepare[*p] = true
 				pcount++
+				if p.ReplicaId == pbft.id {
+					cert.sentPrepare = true
+				}
 			} else {
 				ptmp = append(ptmp, p)
 			}
@@ -166,13 +171,16 @@ func (pbft *pbftProtocal) restoreCert() {
 			if q.View == c.View && q.SequenceNumber == c.SequenceNumber {
 				cert.commit[*c] = true
 				ccount++
+				if c.ReplicaId == pbft.id {
+					cert.sentCommit = true
+					cert.sentValidate = true
+				}
 			} else {
 				ctmp = append(ctmp, c)
 			}
 		}
 		cert.commitCount = ccount
 		cset = ctmp
-
 	}
 
 }
@@ -188,7 +196,7 @@ func (pbft *pbftProtocal) persistRequestBatch(digest string) {
 }
 
 func (pbft *pbftProtocal) persistDelRequestBatch(digest string) {
-	persist.DelState("reqBatch."+digest)
+	persist.DelState("reqBatch." + digest)
 }
 
 func (pbft *pbftProtocal) persistDelAllRequestBatches() {

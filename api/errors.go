@@ -1,7 +1,7 @@
 package hpc
 
 type leveldbNotFoundError struct {
-	message  string
+	message string
 }
 
 // unable to decode supplied params, or an invalid number of parameters
@@ -39,7 +39,7 @@ func (e *leveldbNotFoundError) Error() string {
 }
 
 type outofBalanceError struct {
-	message  string
+	message string
 }
 
 func (e *outofBalanceError) Code() int {
@@ -51,7 +51,7 @@ func (e *outofBalanceError) Error() string {
 }
 
 type signatureInvalidError struct {
-	message  string
+	message string
 }
 
 func (e *signatureInvalidError) Code() int {
@@ -63,7 +63,7 @@ func (e *signatureInvalidError) Error() string {
 }
 
 type contractDeployError struct {
-	message  string
+	message string
 }
 
 func (e *contractDeployError) Code() int {
@@ -75,7 +75,7 @@ func (e *contractDeployError) Error() string {
 }
 
 type contractInvokeError struct {
-	message  string
+	message string
 }
 
 func (e *contractInvokeError) Code() int {
@@ -87,7 +87,7 @@ func (e *contractInvokeError) Error() string {
 }
 
 type systemTooBusyError struct {
-	message  string
+	message string
 }
 
 func (e *systemTooBusyError) Code() int {
@@ -99,7 +99,7 @@ func (e *systemTooBusyError) Error() string {
 }
 
 type repeadedTxError struct {
-	message  string
+	message string
 }
 
 func (e *repeadedTxError) Code() int {
@@ -133,3 +133,15 @@ func (e *repeadedTxError) Error() string {
 //func (e *nullPointError) Error() string {
 //	return e.message
 //}
+
+type CertError struct {
+	message string
+}
+
+func (e *CertError) Code() int {
+	return -32099
+}
+
+func (e *CertError) Error() string {
+	return e.message
+}

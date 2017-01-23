@@ -4,12 +4,9 @@ package core
 
 import (
 	"testing"
-
-
 )
 
-
-func TestGenesis(t *testing.T){
-	InitDB("/tmp",123)
+func TestGenesis(t *testing.T) {
+	InitDB("/tmp", 123)
 	CreateInitBlock("genesis.json")
 }

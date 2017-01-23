@@ -10,11 +10,6 @@
 ## Data storage path config
 # Note: please DONOT add a slash `/` in the end of directory path.
 # this relative path is relative to the hyperchain binary execute file path
-# e.g: the file tree stauct like:
-#
-
-
-# node config
 
 global:
 
@@ -27,6 +22,9 @@ global:
 
     dbConfig: "./config/db.yaml"
 
+    structure:
+        state: "hyperstate" # two available options: rawstate or hyperstate
+
     version:
         blockversion: "1.0"
         transactionversion: "1.0"
@@ -34,9 +32,9 @@ global:
 # configs
 ############################
     configs:
+        caconfig: "config/caconfig.toml"
         peers: "config/local_peerconfig.json"
         genesis: "config/genesis.json"
-        membersrvc: "config/membersrvc.yaml"
         pbft: "config/pbft.yaml"
         license: "config/LICENSE"
         replicainfo:
@@ -48,6 +46,15 @@ global:
             txFillRate: 0.5ms
             contractRatePeak : 100
             contractFillRate: 0.5ms
+        buckettree:
+            state:
+                size: 19
+                levelGroup: 10
+                cacheSize: 100    # 10 MB
+            storage:
+                size: 19
+                levelGroup: 10
+                cacheSize: 100   # 10 MB
         hmpublickey:
             "N": "14315727801779002117"
             Nsquare: "204940062494628260128356353732290481689"

@@ -5,11 +5,18 @@ package jsonrpc
 import (
 	"encoding/json"
 	"fmt"
+	"hyperchain/admittance"
 	"io"
+	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
-	"strconv"
+	"hyperchain/common"
+	//"encoding/hex"
+	//hcrypto"hyperchain/crypto"
+	"hyperchain/core/crypto/primitives"
+	"crypto/ecdsa"
 )
 
 const (
@@ -48,11 +55,11 @@ type JSONErrResponse struct {
 
 // Hyperchain Release1.2
 type JSONResponse struct {
-	Version string 		`json:"jsonrpc"`
-	Id 	interface{} 	`json:"id,omitempty"`
-	Code 	int 		`json:"code"`
-	Message string 		`json:"message"`
-	Result 	interface{} 	`json:"result"`
+	Version string      `json:"jsonrpc"`
+	Id      interface{} `json:"id,omitempty"`
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Result  interface{} `json:"result"`
 }
 
 // JSON-RPC notification payload
@@ -71,20 +78,23 @@ type jsonNotification struct {
 // jsonCodec reads and writes JSON-RPC messages to the underlying connection. It
 // also has support for parsing arguments and serializing (result) objects.
 type jsonCodec struct {
-	closer sync.Once          // close closed channel once
-	closed chan interface{}   // closed on Close
-	decMu  sync.Mutex         // guards d
-	d      *json.Decoder      // decodes incoming requests
-	encMu  sync.Mutex         // guards e
-	e      *json.Encoder      // encodes responses
-	rw     io.ReadWriteCloser // connection
+	closer     sync.Once             // close closed channel once
+	closed     chan interface{}      // closed on Close
+	decMu      sync.Mutex            // guards d
+	d          *json.Decoder         // decodes incoming requests
+	encMu      sync.Mutex            // guards e
+	e          *json.Encoder         // encodes responses
+	rw         io.ReadWriteCloser    // connection
+	httpHeader http.Header
+	CM         *admittance.CAManager //ca manager
+	//httpBody   string                //httpBody 信息
 }
 
 // NewJSONCodec creates a new RPC server codec with support for JSON-RPC 2.0
-func NewJSONCodec(rwc io.ReadWriteCloser) ServerCodec {
+func NewJSONCodec(rwc io.ReadWriteCloser, header http.Header, cm *admittance.CAManager) ServerCodec {
 	d := json.NewDecoder(rwc)
 	d.UseNumber()
-	return &jsonCodec{closed: make(chan interface{}), d: d, e: json.NewEncoder(rwc), rw: rwc}
+	return &jsonCodec{closed: make(chan interface{}), d: d, e: json.NewEncoder(rwc), rw: rwc, httpHeader: header, CM: cm}
 }
 
 // isBatch returns true when the first non-whitespace characters is '['
@@ -97,6 +107,62 @@ func isBatch(msg json.RawMessage) bool {
 		return c == '['
 	}
 	return false
+}
+
+// CheckHttpHeaders will check http header, mainly
+
+func (c *jsonCodec) CheckHttpHeaders() RPCError{
+	//可能影响性能
+	if !c.CM.GetIsCheckTCert() {
+		return nil
+	}
+	c.decMu.Lock()
+	defer c.decMu.Unlock()
+
+	signature := c.httpHeader.Get("signature")
+	//log.Warning("json sign",signature)
+	msg := common.TransportDecode(c.httpHeader.Get("msg"))
+	//log.Warning("json msg",msg)
+	tcertPem := common.TransportDecode(c.httpHeader.Get("tcert"))
+	//log.Warning("jsont tcert1:",c.httpHeader.Get("tcert"))
+	//log.Warning("json tcert2",tcertPem)
+	tcert,err := primitives.ParseCertificate(tcertPem)
+	if err != nil {
+
+		log.Error("fail to parse tcert.",err)
+	}
+	tcertPublicKey := tcert.PublicKey
+	pubKey := tcertPublicKey.(*(ecdsa.PublicKey))
+
+
+	/**
+	Review 如果客户端没有tcert 则会用ecert充当tcert，此时需要验证是否合法
+	由于tcert 应当是用ecert签出的，那么应该同时可以被根证书验证通过，但是
+	问题是ecert之间无法相互验证，所有的tcert 和ecert都应该用 eca.ca验证
+	这样可以确保所有的签名都可以验证通过
+	在sdk端需要生成相应的signature 需要用私钥对数据进行签名
+	签名算法为 ECDSAWithSHA256
+	这部分需要SDK端实现，hyperchain端已经实现了验证方法
+	*/
+
+	signB := common.Hex2Bytes(signature)
+	verifySignature,err := primitives.ECDSAVerifyTransport(pubKey,[]byte(msg),signB)
+	//sign,_ := hex.DecodeString(signature)
+	//verifySignature, err := c.CM.VerifyECertSignature(tcertPem, []byte("hyperchain"), sign)
+	//verifySignature := strings.EqualFold("hyperchain",signature)
+	if err != nil || !verifySignature {
+		log.Error("Fail to verify TransportSignture!",err)
+		return &UnauthorizedError{}
+	}
+	//log.Critical("TransportSignture 验证通过")
+	verifyTcert, err := c.CM.VerifyTCert(tcertPem)
+
+	if verifyTcert == false || err != nil {
+		log.Error("Fail to verify tcert!",err)
+		return &UnauthorizedError{}
+	}
+	//log.Critical("TCert 验证通过")
+	return nil
 }
 
 // ReadRequestHeaders will read new requests without parsing the arguments. It will
@@ -257,7 +323,7 @@ func (c *jsonCodec) CreateResponse(id interface{}, reply interface{}) interface{
 // CreateErrorResponse will create a JSON-RPC error response with the given id and error.
 func (c *jsonCodec) CreateErrorResponse(id interface{}, err RPCError) interface{} {
 	//return &JSONErrResponse{Version: JSONRPCVersion, Id: id, Error: JSONError{Code: err.Code(), Message: err.Error()}}
-	return &JSONResponse{Version: JSONRPCVersion, Id: id, Code: err.Code(), Message: err.Error() }
+	return &JSONResponse{Version: JSONRPCVersion, Id: id, Code: err.Code(), Message: err.Error()}
 }
 
 // CreateErrorResponseWithInfo will create a JSON-RPC error response with the given id and error.
@@ -265,7 +331,7 @@ func (c *jsonCodec) CreateErrorResponse(id interface{}, err RPCError) interface{
 func (c *jsonCodec) CreateErrorResponseWithInfo(id interface{}, err RPCError, info interface{}) interface{} {
 	//return &JSONErrResponse{Version: JSONRPCVersion, Id: id,
 	//	Error: JSONError{Code: err.Code(), Message: err.Error(), Data: info}}
-	return &JSONResponse{Version: JSONRPCVersion, Id: id,Code: err.Code(), Message: err.Error(), Result: info}
+	return &JSONResponse{Version: JSONRPCVersion, Id: id, Code: err.Code(), Message: err.Error(), Result: info}
 }
 
 // CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.

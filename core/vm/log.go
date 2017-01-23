@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"hyperchain/common"
-
 )
 
 type Log struct {
@@ -23,8 +22,12 @@ type Log struct {
 	Index       uint        `json:"Index"`
 }
 
+// assign block number as 0 temporarily
+// because the blcok number in env is a seqNo actually
+// primary's seqNo may not equal to other's
+// correctly block number and block hash will be assigned in the commit phase
 func NewLog(address common.Address, topics []common.Hash, data []byte, number uint64) *Log {
-	return &Log{Address: address, Topics: topics, Data: data, BlockNumber: number}
+	return &Log{Address: address, Topics: topics, Data: data, BlockNumber: 0}
 }
 
 func (l *Log) String() string {
@@ -58,9 +61,9 @@ type LogTrans struct {
 	Topics      []string
 	Data        string
 	BlockNumber uint64
+	BlockHash   string
 	TxHash      string
 	TxIndex     uint
-	BlockHash   string
 	Index       uint
 }
 
@@ -75,8 +78,8 @@ func (ls Logs) ToLogsTrans() []LogTrans {
 			Address:     log.Address.Hex(),
 			Data:        common.BytesToHash(log.Data).Hex(),
 			BlockNumber: log.BlockNumber,
-			Topics:      topics,
 			BlockHash:   log.BlockHash.Hex(),
+			Topics:      topics,
 			TxHash:      log.TxHash.Hex(),
 			Index:       log.Index,
 			TxIndex:     log.TxIndex,

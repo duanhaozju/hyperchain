@@ -57,7 +57,6 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		return nil, common.Address{}, ExecContractErr(1, "Max call depth exceeded 1024")
 	}
 
-	// TODO
 	if !env.CanTransfer(caller.Address(), value) {
 		//caller.ReturnGas(gas, gasPrice)
 		return nil, common.Address{}, ValueTransferErr("insufficient funds to transfer value. Req %v, has %v", value, env.Db().GetBalance(caller.Address()))
@@ -81,11 +80,12 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	} else {
 		if !env.Db().Exist(*address) {
 			// IMPORTANT
-			// There is no necessary to judge whether the code is nil
-			// During the contract deploy the code is empty too!
+			// Never skip the virtual machine's execution by judge whether account's code field is empty
 			to = env.Db().CreateAccount(*address)
 			env.Transfer(from, to, value)
 		} else {
+			// IMPORTANT
+			// Never skip the virtual machine's execution by judge whether account's code field is empty
 			to = env.Db().GetAccount(*address)
 			env.Transfer(from, to, value)
 		}
@@ -98,17 +98,6 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	defer contract.Finalise()
 
 	ret, err = evm.Run(contract, input)
-	/*
-		fmt.Println("---------------------------------------")
-		fmt.Println("caller.address",caller.Address())
-		fmt.Println("address",address)
-		fmt.Println("codeaddress",codeAddr)
-		fmt.Println("input",input)
-		fmt.Println("code",code)
-		fmt.Println("---------------------------------------")
-		fmt.Println("ret",ret)
-	*/
-
 	// if the contract creation ran successfully and no errors were returned
 	// calculate the gas required to store the code. If the code could not
 	// be stored due to not enough gas set an error and let it be handled
@@ -164,6 +153,7 @@ func execDelegateCall(env vm.Environment, caller vm.ContractRef, originAddr, toA
 
 	ret, err = evm.Run(contract, input)
 	if err != nil {
+		// use all gas left in caller
 		contract.UseGas(contract.Gas)
 
 		env.SetSnapshot(snapshot)

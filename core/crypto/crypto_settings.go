@@ -3,9 +3,9 @@
 package crypto
 
 import (
-	"hyperchain/core/crypto/primitives"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
+	"hyperchain/core/crypto/primitives"
 )
 
 var (

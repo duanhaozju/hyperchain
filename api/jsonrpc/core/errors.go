@@ -81,3 +81,14 @@ func (e *shutdownError) Code() int {
 func (e *shutdownError) Error() string {
 	return "server is shutting down"
 }
+
+type UnauthorizedError struct {
+}
+
+func (e *UnauthorizedError) Code() int {
+	return -32099
+}
+
+func (e *UnauthorizedError) Error() string {
+	return "Unauthorized, Please check your cert"
+}

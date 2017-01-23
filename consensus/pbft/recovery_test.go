@@ -3,11 +3,11 @@
 package pbft
 
 import (
-	"testing"
-	"hyperchain/event"
-	"hyperchain/core"
 	"hyperchain/consensus/helper"
+	"hyperchain/core"
+	"hyperchain/event"
 	"reflect"
+	"testing"
 )
 
 func TestInitRecovery(t *testing.T) {
@@ -46,8 +46,8 @@ func TestRecvRecoveryRsp(t *testing.T) {
 	}
 	fromId := uint64(2)
 	rc := &RecoveryResponse{
-		ReplicaId:	fromId,
-		Chkpts: 	chkpts,
+		ReplicaId: fromId,
+		Chkpts:    chkpts,
 	}
 	pbft.recvRecoveryRsp(rc)
 	if _, ok := pbft.rcRspStore[fromId]; ok {

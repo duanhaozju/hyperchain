@@ -3,21 +3,20 @@
 package jsonrpc
 
 import (
+	"gopkg.in/fatih/set.v0"
 	"reflect"
 	"sync"
-	"gopkg.in/fatih/set.v0"
 )
 
 // callback is a method callback which was registered in the server
 type callback struct {
-	rcvr        reflect.Value  // receiver of method
-	method      reflect.Method // callback
-	argTypes    []reflect.Type // input argument types
-	hasCtx      bool           // method's first argument is a context (not included in argTypes)
-	errPos      int            // err return idx, of -1 when method cannot return error
+	rcvr     reflect.Value  // receiver of method
+	method   reflect.Method // callback
+	argTypes []reflect.Type // input argument types
+	hasCtx   bool           // method's first argument is a context (not included in argTypes)
+	errPos   int            // err return idx, of -1 when method cannot return error
 	//isSubscribe bool           // indication if the callback is a subscription
 }
-
 
 // service represents a registered object
 type service struct {
@@ -30,13 +29,13 @@ type service struct {
 
 // serverRequest is an incoming request
 type serverRequest struct {
-	id            interface{}
-	svcname       string
-	rcvr          reflect.Value
-	callb         *callback
-	args          []reflect.Value
+	id      interface{}
+	svcname string
+	rcvr    reflect.Value
+	callb   *callback
+	args    []reflect.Value
 	//isUnsubscribe bool
-	err           RPCError
+	err RPCError
 }
 
 type serviceRegistry map[string]*service       // collection of services
@@ -47,7 +46,7 @@ type subscriptionRegistry map[string]*callback // collection of subscription cal
 // Server represents a RPC server
 type Server struct {
 	services       serviceRegistry // 这是一个map，key为hpc，value为hpc的所有方法
-	muSubcriptions sync.Mutex // protects subscriptions
+	muSubcriptions sync.Mutex      // protects subscriptions
 	subscriptions  subscriptionRegistry
 
 	run      int32
@@ -76,6 +75,8 @@ type RPCError interface {
 // a RPC session. Implementations must be go-routine safe since the codec can be called in
 // multiple go-routines concurrently.
 type ServerCodec interface {
+	// Check http header
+	CheckHttpHeaders() RPCError
 	// Read next request
 	ReadRequestHeaders() ([]rpcRequest, bool, RPCError)
 	// Parse request argument to the given types

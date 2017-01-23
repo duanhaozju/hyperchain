@@ -27,9 +27,9 @@ func PreHmTransaction(oldBalance []byte, transferAmount []byte, illegal_balance_
 	//newBalance_local := make([]byte, 16)
 	//transferAmount_ecc := make([]byte, 129)
 
-	oldBalanceFillbyte := make([]byte,8)
-	transferAmountFillbyte := make([]byte,8)
-	newBalanceFillByte := make([]byte,8)
+	oldBalanceFillbyte := make([]byte, 8)
+	transferAmountFillbyte := make([]byte, 8)
+	newBalanceFillByte := make([]byte, 8)
 
 	//suffix := make([]byte, 8)
 	//transferAmount = append(transferAmount, suffix...)
@@ -54,31 +54,28 @@ func PreHmTransaction(oldBalance []byte, transferAmount []byte, illegal_balance_
 
 	//将oldbalance 和　transferamount 填充成８个字节
 
-	if len(oldBalance)<=8  {
-		oldBalanceFillbyte = append(oldBalanceFillbyte[:(8-len(oldBalance))],oldBalance...)
+	if len(oldBalance) <= 8 {
+		oldBalanceFillbyte = append(oldBalanceFillbyte[:(8-len(oldBalance))], oldBalance...)
 	}
-	if len(transferAmount)<=8 {
-		transferAmountFillbyte = append(transferAmountFillbyte[:(8-len(transferAmount))],transferAmount...)
+	if len(transferAmount) <= 8 {
+		transferAmountFillbyte = append(transferAmountFillbyte[:(8-len(transferAmount))], transferAmount...)
 	}
-
 
 	oldBalance_bigint := new(big.Int)
 	oldBalance_bigint = oldBalance_bigint.SetBytes(oldBalanceFillbyte)
 	transferAmount_bigint := new(big.Int)
 	transferAmount_bigint = transferAmount_bigint.SetBytes(transferAmountFillbyte)
 
-	if oldBalance_bigint.Cmp(transferAmount_bigint) ==-1 {
-		return false,nil,nil;
+	if oldBalance_bigint.Cmp(transferAmount_bigint) == -1 {
+		return false, nil, nil
 	}
-
-
 
 	newBalance_bigint := new(big.Int)
 	newBalance_bigint = newBalance_bigint.Sub(oldBalance_bigint, transferAmount_bigint)
 	newBalance_byte := newBalance_bigint.Bytes()
 
-	if len(newBalance_byte)<=8 {
-		newBalanceFillByte = append(newBalanceFillByte[:(8-len(newBalance_byte))],newBalance_byte...)
+	if len(newBalance_byte) <= 8 {
+		newBalanceFillByte = append(newBalanceFillByte[:(8-len(newBalance_byte))], newBalance_byte...)
 	}
 
 	//fmt.Println(len(newBalanceFillByte))
@@ -104,7 +101,6 @@ func PreHmTransaction(oldBalance []byte, transferAmount []byte, illegal_balance_
 	//transferAmount_ecc, _ = ecies.Encrypt(rand.Reader, ecies_publickey, transferAmountFillbyte, nil, nil)
 	//fmt.Println(len(transferAmount_ecc))
 
-
 	return true, newBalance_hm, transferAmount_hm
 
 }
@@ -123,7 +119,7 @@ func NodeVerify(whole_networkpublickey PaillierPublickey, oldBalance_hm []byte, 
 }
 
 //destination verify whether the amount is right or not
-func DestinationVerify(hmtransferAmount []byte, transferAmount []byte,  whole_networkpublickey PaillierPublickey) bool {
+func DestinationVerify(hmtransferAmount []byte, transferAmount []byte, whole_networkpublickey PaillierPublickey) bool {
 
 	//ecies_privatekey := ecies.ImportECDSA(ecdsa_privatekey)
 	//transferAmount, _ := ecies_privatekey.Decrypt(rand.Reader, transferAmount_ecc, nil, nil)

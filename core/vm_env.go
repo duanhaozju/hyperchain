@@ -16,7 +16,7 @@ var (
 	EnableJit bool
 )
 
-func init(){
+func init() {
 	EnableJit = true
 	ForceJit = false
 }
@@ -53,7 +53,7 @@ func StateObjectFromAccount(db hyperdb.Database, addr string, account Account) *
 	if common.IsHex(account.Code) {
 		account.Code = account.Code[2:]
 	}
-	obj.SetCode(common.Hex2Bytes(account.Code))
+	obj.SetCode(common.Hash{}, common.Hex2Bytes(account.Code))
 	obj.SetNonce(common.Big(account.Nonce).Uint64())
 
 	return obj
@@ -96,7 +96,7 @@ func (r RuleSet) IsHomestead(n *big.Int) bool {
 type Env struct {
 	ruleSet    RuleSet
 	depth      int
-	state      *state.StateDB
+	state      vm.Database
 	Gas        *big.Int
 	origin     common.Address
 	coinbase   common.Address
@@ -112,7 +112,7 @@ type Env struct {
 	evm *vm.EVM
 }
 
-func NewEnv(ruleSet RuleSet, state *state.StateDB) *Env {
+func NewEnv(ruleSet RuleSet, state vm.Database) *Env {
 	env := &Env{
 		ruleSet: ruleSet,
 		state:   state,
@@ -120,7 +120,7 @@ func NewEnv(ruleSet RuleSet, state *state.StateDB) *Env {
 	return env
 }
 
-func NewEnvFromMap(ruleSet RuleSet, state *state.StateDB, envValues map[string]string) *Env {
+func NewEnvFromMap(ruleSet RuleSet, state vm.Database, envValues map[string]string) *Env {
 	env := NewEnv(ruleSet, state)
 	env.time = common.Big(envValues["currentTimestamp"])
 	env.gasLimit = common.Big(envValues["currentGasLimit"])
@@ -136,7 +136,6 @@ func NewEnvFromMap(ruleSet RuleSet, state *state.StateDB, envValues map[string]s
 
 func (self *Env) RuleSet() vm.RuleSet      { return self.ruleSet }
 func (self *Env) Vm() vm.Vm                { return self.evm }
-func (self *Env) State() *state.StateDB    { return self.state }
 func (self *Env) Origin() common.Address   { return self.origin }
 func (self *Env) BlockNumber() *big.Int    { return self.number }
 func (self *Env) Coinbase() common.Address { return self.coinbase }
@@ -156,11 +155,11 @@ func (self *Env) SetDepth(i int) { self.depth = i }
 func (self *Env) CanTransfer(from common.Address, balance *big.Int) bool {
 	return self.state.GetBalance(from).Cmp(balance) >= 0
 }
-func (self *Env) MakeSnapshot() vm.Database {
-	return self.state.Copy()
+func (self *Env) MakeSnapshot() interface{} {
+	return self.state.Snapshot()
 }
-func (self *Env) SetSnapshot(copy vm.Database) {
-	self.state.Set(copy.(*state.StateDB))
+func (self *Env) SetSnapshot(copy interface{}) {
+	self.state.RevertToSnapshot(copy)
 }
 
 func (self *Env) Transfer(from, to vm.Account, amount *big.Int) {

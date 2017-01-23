@@ -12,12 +12,12 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"crypto/ecdsa"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
-	"hyperchain/crypto/randentropy"
-	"hyperchain/crypto"
-	"crypto/ecdsa"
 	"hyperchain/common"
+	"hyperchain/crypto"
+	"hyperchain/crypto/randentropy"
 )
 
 const (
@@ -52,7 +52,7 @@ func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) 
 		return nil, err
 	}
 	// Make sure we're really operating on the requested key (no swap attacks)
-	if key.Address!=addr {
+	if key.Address != addr {
 		return nil, fmt.Errorf("key content mismatch: have account %x, want %x", key.Address, addr)
 	}
 	return key, nil
@@ -143,7 +143,7 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 	// Depending on the version try to parse one way or another
 	var (
 		keyBytes []byte
-		err             error
+		err      error
 	)
 	if version, ok := m["version"].(string); ok && version == "1" {
 		k := new(encryptedKeyJSONV1)

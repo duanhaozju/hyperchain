@@ -4,41 +4,42 @@ package state
 
 import (
 	"fmt"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
-	"hyperchain/trie"
+	"hyperchain/tree/pmt"
 	"math/big"
-	lru "github.com/hashicorp/golang-lru"
 	"sync"
 )
 
 var (
-	log *logging.Logger // package-level logger
-	codeCache        *lru.Cache 	// TODO is it could be faster?  it can be put outside of the StateDB
-	abiCache        *lru.Cache 	// TODO is it could be faster?  it can be put outside of the StateDB
-	stateObjectCache        map[common.Address] *StateObject	// TODO is it should be used as the lru.Cache
+	log              *logging.Logger                 // package-level logger
+	codeCache        *lru.Cache                      // TODO is it could be faster?  it can be put outside of the StateDB
+	abiCache         *lru.Cache                      // TODO is it could be faster?  it can be put outside of the StateDB
+	stateObjectCache map[common.Address]*StateObject // TODO is it should be used as the lru.Cache
 )
 
 const (
 	// Number of codehash->size associations to keep
 	codeSizeCacheSize = 10000
-	abiSizeCacheSize = 10000
+	abiSizeCacheSize  = 10000
 )
+
 func init() {
 	log = logging.MustGetLogger("state")
 	// 1.init the codeSizeCache
-	csc,err := lru.New(codeSizeCacheSize)
-	if err != nil{
+	csc, err := lru.New(codeSizeCacheSize)
+	if err != nil {
 		codeCache = csc
-	}else {
+	} else {
 	}
 	// 2.init the abiSizeCache
-	asc,err := lru.New(abiSizeCacheSize)
-	if err != nil{
+	asc, err := lru.New(abiSizeCacheSize)
+	if err != nil {
 		abiCache = asc
-	}else {
+	} else {
 	}
 	// 2.init the stateObjectSizeCache
 	// stateObjectCache = make(map[common.Address] *StateObject)
@@ -54,8 +55,8 @@ var StartingNonce uint64
 // * Contracts
 // * Accounts
 type StateDB struct {
-	db               hyperdb.Database
-	trie             *trie.SecureTrie
+	db   hyperdb.Database
+	trie *pmt.SecureTrie
 
 	//this map holds 'live' objects, which will get modified while processing a state transition
 	stateObjects     map[string]*StateObject
@@ -67,49 +68,49 @@ type StateDB struct {
 	logs             map[common.Hash]vm.Logs
 	logSize          uint
 	leastStateObject *StateObject
-	lock 		sync.Mutex
+	lock             sync.Mutex
 }
 
 // Create a new state from a given trie
 func New(root common.Hash, db hyperdb.Database) (*StateDB, error) {
-	tr, err := trie.NewSecure(root, db)
+	tr, err := pmt.NewSecure(root, db)
 	if err != nil {
 		return nil, err
 	}
 	return &StateDB{
-		db:           		db,
-		trie:         		tr,
-		stateObjects: 		make(map[string]*StateObject),
-		stateObjectDirty:	make(map[common.Address]struct{}),
-		refund:       		new(big.Int),
-		logs:         		make(map[common.Hash]vm.Logs),
+		db:               db,
+		trie:             tr,
+		stateObjects:     make(map[string]*StateObject),
+		stateObjectDirty: make(map[common.Address]struct{}),
+		refund:           new(big.Int),
+		logs:             make(map[common.Hash]vm.Logs),
 	}, nil
 
 }
 
-func (self *StateDB) New(root common.Hash)(*StateDB,error){
+func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 	// todo is needed?
 	//self.lock.Lock()
 	//defer self.lock.Unlock()
 
 	return &StateDB{
-		db:			self.db,
-		stateObjects:		make(map[string]*StateObject),
-		stateObjectDirty:	make(map[common.Address]struct{}),
-		refund:			new(big.Int),
-		logs:			make(map[common.Hash]vm.Logs),
-	},nil
+		db:               self.db,
+		stateObjects:     make(map[string]*StateObject),
+		stateObjectDirty: make(map[common.Address]struct{}),
+		refund:           new(big.Int),
+		logs:             make(map[common.Hash]vm.Logs),
+	}, nil
 }
 
 // Reset clears out all emphemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
-func (self *StateDB) Reset(root common.Hash) error {
+func (self *StateDB) ResetTo(root common.Hash) error {
 	var (
 		err error
 		tr  = self.trie
 	)
 	if self.trie.Hash() != root {
-		if tr, err = trie.NewSecure(root, self.db); err != nil {
+		if tr, err = pmt.NewSecure(root, self.db); err != nil {
 			return err
 		}
 	}
@@ -132,9 +133,11 @@ func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
 	self.txIndex = ti
 }
 
+// doesn't assign block hash now
+// because the blcok hash hasn't been calculated
+// correctly block  and block hash will be assigned in the commit phase
 func (self *StateDB) AddLog(log *vm.Log) {
 	log.TxHash = self.thash
-	log.BlockHash = self.bhash
 	log.TxIndex = uint(self.txIndex)
 	log.Index = self.logSize
 	self.logs[self.thash] = append(self.logs[self.thash], log)
@@ -180,9 +183,9 @@ func (self *StateDB) SetLeastAccount(account *vm.Account) {
 }
 
 // return all StateObject saved in the trie instead of in CACHE
-func (self *StateDB) GetAccounts() map[string]*StateObject {
+func (self *StateDB) GetAccounts() map[string]vm.Account {
 	// return self.stateObjects
-	ret := make(map[string]*StateObject)
+	ret := make(map[string]vm.Account)
 	it := self.trie.Iterator()
 	for it.Next() {
 		addr := self.trie.GetKey(it.Key)
@@ -196,13 +199,6 @@ func (self *StateDB) GetAccounts() map[string]*StateObject {
 }
 
 func (self *StateDB) ForEachAccounts() {
-	var n = 0
-	for _, v := range self.GetAccounts() {
-		log.Info("+++++++++++++++++++++the ", n, " account+++++++++++++++++++++++")
-		log.Info("Account key:", common.ToHex(v.address.Bytes()), "----------value:", v)
-		n = n + 1
-	}
-
 }
 
 // Retrieve the BalanceData from the given address or 0 if object not found
@@ -231,12 +227,12 @@ func (self *StateDB) GetCode(addr common.Address) []byte {
 	return nil
 }
 
-func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
+func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Hash) {
 	stateObject := self.GetStateObject(a)
 	if stateObject != nil {
 		return stateObject.GetState(b)
 	}
-	return common.Hash{}
+	return false, common.Hash{}
 }
 
 func (self *StateDB) GetABI(addr common.Address) []byte {
@@ -277,7 +273,7 @@ func (self *StateDB) SetNonce(addr common.Address, nonce uint64) {
 func (self *StateDB) SetCode(addr common.Address, code []byte) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.SetCode(code)
+		stateObject.SetCode(common.Hash{}, code)
 	}
 	self.leastStateObject = stateObject
 }
@@ -408,7 +404,7 @@ func (self *StateDB) CreateAccount(addr common.Address) vm.Account {
 
 // TODO it could be better
 // 1.from the stateObjectCacheSize
-func (self *StateDB) Copy() *StateDB {
+func (self *StateDB) Copy() vm.Database {
 	state, _ := New(common.Hash{}, self.db)
 	state.trie = self.trie
 	for k, stateObject := range self.stateObjects {
@@ -424,7 +420,12 @@ func (self *StateDB) Copy() *StateDB {
 	return state
 }
 
-func (self *StateDB) Set(state *StateDB) {
+func (self *StateDB) Set(db vm.Database) {
+	state, ok := db.(*StateDB)
+	if ok == false {
+		log.Error("Set statedb failed!")
+		return
+	}
 	self.trie = state.trie
 	self.stateObjects = state.stateObjects
 
@@ -485,7 +486,7 @@ func (s *StateDB) Commit() (common.Hash, error) {
 }
 
 // TODO the logic could be optimized
-func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
+func (s *StateDB) commit(db pmt.DatabaseWriter) (common.Hash, error) {
 	s.refund = new(big.Int)
 
 	for _, stateObject := range s.stateObjects {
@@ -518,4 +519,46 @@ func (s *StateDB) commit(db trie.DatabaseWriter) (common.Hash, error) {
 		}
 	}
 	return s.trie.CommitTo(db)
+}
+
+func (self *StateDB) Snapshot() interface{} {
+	return self.Copy()
+}
+
+func (self *StateDB) RevertToSnapshot(copy interface{}) {
+	statedb, ok := copy.(vm.Database)
+	if ok == false {
+		return
+	}
+	self.Set(statedb)
+}
+
+// For Compatibility
+func (self *StateDB) MarkProcessStart(seqNo uint64) {
+
+}
+func (self *StateDB) MarkProcessFinish(seqNo uint64) {
+
+}
+
+func (self *StateDB) FetchBatch(seqNo uint64) hyperdb.Batch {
+	return self.db.NewBatch()
+}
+
+func (self *StateDB) DeleteBatch(seqNo uint64) {
+
+}
+
+func (self *StateDB) Reset() error {
+	return nil
+}
+
+func (self *StateDB) Purge() {
+}
+
+func (self *StateDB) ResetToTarget(uint64, common.Hash) {
+
+}
+func (self *StateDB) GetTree() interface{} {
+	return self.trie
 }

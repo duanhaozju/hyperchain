@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"sort"
 	"sync"
-	"time"
 	"sync/atomic"
+	"time"
 
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
@@ -28,99 +28,99 @@ func init() {
 
 // batch is used to construct reqbatch, the middle layer between outer to pbft
 type pbftProtocal struct {
-	batchTimer       	events.Timer
-	batchTimerActive 	bool
-	batchTimeout     	time.Duration
-	batchSize        	int
-	batchStore       	[]*types.Transaction            //ordered message batch
-	helper           	helper.Stack
-	batchManager     	events.Manager
-	pbftManager      	events.Manager
-	muxBatch			sync.Mutex
-	muxPbft				sync.Mutex
-	reqStore         	*requestStore                   //received messages
-	duplicator			map[uint64]*transactionStore
+	batchTimer       events.Timer
+	batchTimerActive bool
+	batchTimeout     time.Duration
+	batchSize        int
+	batchStore       []*types.Transaction //ordered message batch
+	helper           helper.Stack
+	batchManager     events.Manager
+	pbftManager      events.Manager
+	muxBatch         sync.Mutex
+	muxPbft          sync.Mutex
+	reqStore         *requestStore //received messages
+	duplicator       map[uint64]*transactionStore
 
 	// PBFT data
-	activeView     uint32	// view change happening
-	byzantine      bool   	// whether this node is intentionally acting as Byzantine; useful for debugging on the testnet
-	f              int		// max. number of faults we can tolerate
-	N              int		// max.number of validators in the network
-	h              uint64 	// low watermark
-	id             uint64 	// replica ID; PBFT `i`
-	K              uint64 	// checkpoint period
-	logMultiplier  uint64 	// use this value to calculate log size : k*logMultiplier
-	L              uint64 	// log size
-	lastExec       uint64 	// last request we executed
-	seqNo          uint64 	// PBFT "n", strictly monotonic increasing sequence number
-	view           uint64 	// current view
-	nvInitialSeqNo uint64 	// initial seqNo in a new view
-	valid          bool   	// whether we believe the state is up to date
+	activeView     uint32 // view change happening
+	byzantine      bool   // whether this node is intentionally acting as Byzantine; useful for debugging on the testnet
+	f              int    // max. number of faults we can tolerate
+	N              int    // max.number of validators in the network
+	h              uint64 // low watermark
+	id             uint64 // replica ID; PBFT `i`
+	K              uint64 // checkpoint period
+	logMultiplier  uint64 // use this value to calculate log size : k*logMultiplier
+	L              uint64 // log size
+	lastExec       uint64 // last request we executed
+	seqNo          uint64 // PBFT "n", strictly monotonic increasing sequence number
+	view           uint64 // current view
+	nvInitialSeqNo uint64 // initial seqNo in a new view
+	valid          bool   // whether we believe the state is up to date
 
-	chkpts map[uint64]string                                 // state checkpoints; map lastExec to global hash
+	chkpts map[uint64]string // state checkpoints; map lastExec to global hash
 
-	skipInProgress    bool                                   // Set when we have detected a fall behind scenario until we pick a new starting point
-	stateTransferring bool                                   // Set when state transfer is executing
-	highStateTarget   *stateUpdateTarget                     // Set to the highest weak checkpoint cert we have observed
-	hChkpts           map[uint64]uint64                      // highest checkpoint sequence number observed for each replica
+	skipInProgress    bool               // Set when we have detected a fall behind scenario until we pick a new starting point
+	stateTransferring bool               // Set when state transfer is executing
+	highStateTarget   *stateUpdateTarget // Set to the highest weak checkpoint cert we have observed
+	hChkpts           map[uint64]uint64  // highest checkpoint sequence number observed for each replica
 
-	currentExec           *uint64                            // currently executing request
-	timerActive           bool                               // is the timer running?
-	vcResendTimer         events.Timer                       // timer triggering resend of a view change
-	vcResendTimeout       time.Duration                      // timeout before resending view change
-	requestTimeout        time.Duration                      // progress timeout for requests
-	lastNewViewTimeout    time.Duration                      // last timeout we used during this view change
-	outstandingReqBatches map[string]*TransactionBatch       // track whether we are waiting for request batches to execute
-	newViewTimeout        time.Duration                      // progress timeout for new views
-	newViewTimer          events.Timer                       // track the timeout for each requestBatch
-	newViewTimerReason    string                             // what triggered the timer
-	nullRequestTimer      events.Timer                       // timeout triggering a null request
-	nullRequestTimeout    time.Duration                      // duration for this timeout
-	firstRequestTimer     events.Timer		         // firstRequestTimer is set for replicas in case of primary start and shut down immediately
-	firstRequestTimeout   time.Duration			 // duration for this timeout
+	currentExec           *uint64                      // currently executing request
+	timerActive           bool                         // is the timer running?
+	vcResendTimer         events.Timer                 // timer triggering resend of a view change
+	vcResendTimeout       time.Duration                // timeout before resending view change
+	requestTimeout        time.Duration                // progress timeout for requests
+	lastNewViewTimeout    time.Duration                // last timeout we used during this view change
+	outstandingReqBatches map[string]*TransactionBatch // track whether we are waiting for request batches to execute
+	newViewTimeout        time.Duration                // progress timeout for new views
+	newViewTimer          events.Timer                 // track the timeout for each requestBatch
+	newViewTimerReason    string                       // what triggered the timer
+	nullRequestTimer      events.Timer                 // timeout triggering a null request
+	nullRequestTimeout    time.Duration                // duration for this timeout
+	firstRequestTimer     events.Timer                 // firstRequestTimer is set for replicas in case of primary start and shut down immediately
+	firstRequestTimeout   time.Duration                // duration for this timeout
 
-	viewChangePeriod  uint64                                 // period between automatic view changes
-	viewChangeSeqNo   uint64                                 // next seqNo to perform view change
-	missingReqBatches map[string]bool                        // for all the assigned, non-checkpointed request batches we might be missing during view-change
+	viewChangePeriod  uint64          // period between automatic view changes
+	viewChangeSeqNo   uint64          // next seqNo to perform view change
+	missingReqBatches map[string]bool // for all the assigned, non-checkpointed request batches we might be missing during view-change
 
-								 // implementation of PBFT `in`
-	certStore       map[msgID]*msgCert                       // track quorum certificates for requests
-	qset			*Qset
-	pset			*Pset
-	cset			*Cset
-	checkpointStore map[Checkpoint]bool                      // track checkpoints as set
-	committedCert   map[msgID]string                         // track the committed cert to help excute
-	chkptCertStore  map[chkptID]*chkptCert                   // track quorum certificates for checkpoints
-	newViewStore    map[uint64]*NewView                      // track last new-view we received or sent
-	viewChangeStore map[vcidx]*ViewChange                    // track view-change messages
-	vcResetStore	map[FinishVcReset]bool					 // track vcReset message from others
-	inVcReset		bool									 // track if replica itself in vcReset
-											 // implement the validate transaction batch process
-	vid                 	uint64                       // track the validate sequence number
-	lastVid             	uint64                       // track the last validate batch seqNo
-	currentVid          	*uint64                      // track the current validate batch seqNo
-	validatedBatchStore 	map[string]*TransactionBatch // track the validated transaction batch
-	cacheValidatedBatch 	map[string]*cacheBatch       // track the cached validated batch
-	validateTimer			events.Timer
-	validateTimeout			time.Duration
-	preparedCert			map[msgID]string			// track the prepared cert to help validate
-								 // negotiate view
-	inNegoView			bool
-	negoViewRspStore 	map[uint64]uint64	// track replicaId, viewNo.
-	negoViewRspTimer 	events.Timer		// track timeout for N-f nego-view responses
-	negoViewRspTimeout	time.Duration		// time limit for N-f nego-view responses
+	// implementation of PBFT `in`
+	certStore       map[msgID]*msgCert // track quorum certificates for requests
+	qset            *Qset
+	pset            *Pset
+	cset            *Cset
+	checkpointStore map[Checkpoint]bool    // track checkpoints as set
+	committedCert   map[msgID]string       // track the committed cert to help excute
+	chkptCertStore  map[chkptID]*chkptCert // track quorum certificates for checkpoints
+	newViewStore    map[uint64]*NewView    // track last new-view we received or sent
+	viewChangeStore map[vcidx]*ViewChange  // track view-change messages
+	vcResetStore    map[FinishVcReset]bool // track vcReset message from others
+	inVcReset       bool                   // track if replica itself in vcReset
+	// implement the validate transaction batch process
+	vid                 uint64                       // track the validate sequence number
+	lastVid             uint64                       // track the last validate batch seqNo
+	currentVid          *uint64                      // track the current validate batch seqNo
+	validatedBatchStore map[string]*TransactionBatch // track the validated transaction batch
+	cacheValidatedBatch map[string]*cacheBatch       // track the cached validated batch
+	validateTimer       events.Timer
+	validateTimeout     time.Duration
+	preparedCert        map[msgID]string // track the prepared cert to help validate
+	// negotiate view
+	inNegoView         bool
+	negoViewRspStore   map[uint64]uint64 // track replicaId, viewNo.
+	negoViewRspTimer   events.Timer      // track timeout for N-f nego-view responses
+	negoViewRspTimeout time.Duration     // time limit for N-f nego-view responses
 
-								 // recovery
-	inRecovery             bool                              // inRecovery indicate if replica is in proactive recovery process
-	recoveryToSeqNo	       *uint64				 // recoveryToSeqNo is the target seqNo expected to recover to
-	recoveryRestartTimer   events.Timer                      // recoveryRestartTimer track how long a recovery is finished and fires if needed
-	recoveryRestartTimeout time.Duration                     // time limit for recovery process
-	rcRspStore             map[uint64]*RecoveryResponse      // rcRspStore store recovery responses from replicas
-	rcPQCSenderStore       map[uint64]bool			 // rcPQCSenderStore store those who sent PQC info to self
-	recvNewViewInRecovery  bool				 // recvNewViewInRecovery record whether receive new view during recovery
+	// recovery
+	inRecovery             bool                         // inRecovery indicate if replica is in proactive recovery process
+	recoveryToSeqNo        *uint64                      // recoveryToSeqNo is the target seqNo expected to recover to
+	recoveryRestartTimer   events.Timer                 // recoveryRestartTimer track how long a recovery is finished and fires if needed
+	recoveryRestartTimeout time.Duration                // time limit for recovery process
+	rcRspStore             map[uint64]*RecoveryResponse // rcRspStore store recovery responses from replicas
+	rcPQCSenderStore       map[uint64]bool              // rcPQCSenderStore store those who sent PQC info to self
+	recvNewViewInRecovery  bool                         // recvNewViewInRecovery record whether receive new view during recovery
 
-	vcResendLimit	       	int				// vcResendLimit indicates a replica's view change resending upbound.
-	vcResendCount	       	int				// vcResendCount represent times of same view change info resend
+	vcResendLimit int // vcResendLimit indicates a replica's view change resending upbound.
+	vcResendCount int // vcResendCount represent times of same view change info resend
 
 	// add and del node
 	isNewNode			bool						// track if replica is the new node
@@ -157,17 +157,17 @@ type msgID struct { // our index through certStore
 }
 
 type msgCert struct {
-	digest       	string
-	prePrepare   	*PrePrepare
-	sentPrepare  	bool
-	prepare      	map[Prepare]bool
-	prepareCount 	int
-	sentValidate	bool
-	validated		bool
-	sentCommit   	bool
-	commit       	map[Commit]bool
-	commitCount  	int
-	sentExecute  	bool
+	digest       string
+	prePrepare   *PrePrepare
+	sentPrepare  bool
+	prepare      map[Prepare]bool
+	prepareCount int
+	sentValidate bool
+	validated    bool
+	sentCommit   bool
+	commit       map[Commit]bool
+	commitCount  int
+	sentExecute  bool
 }
 
 type chkptID struct {
@@ -186,8 +186,8 @@ type vcidx struct {
 }
 
 type cacheBatch struct {
-	batch     *TransactionBatch
-	vid       uint64
+	batch *TransactionBatch
+	vid   uint64
 }
 
 type addNodeCert struct {
@@ -234,7 +234,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.firstRequestTimer = pbftTimerFactory.CreateTimer()
 	pbft.N = config.GetInt("pbft.nodes")
 	//pbft.f = config.GetInt("general.f")
-	pbft.f = (pbft.N-1) / 3
+	pbft.f = (pbft.N - 1) / 3
 
 	//if pbft.f*3+1 > pbft.N {
 	//	panic(fmt.Sprintf("need at least %d enough replicas to tolerate %d byzantine faults, but only %d replicas configured", pbft.f*3+1, pbft.f, pbft.N))
@@ -432,7 +432,7 @@ func (pbft *pbftProtocal) RecvMsg(e []byte) error {
 	} else if msg.Type == protos.Message_NEGOTIATE_VIEW {
 		return pbft.processNegotiateView()
 	}
-		logger.Errorf("Unknown recvMsg: %+v", msg)
+	logger.Errorf("Unknown recvMsg: %+v", msg)
 
 	return nil
 }
@@ -525,12 +525,12 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		}
 		return pbft.processNewView()
 	case protos.VcResetDone:
-		if et.SeqNo != pbft.h + 1 {
+		if et.SeqNo != pbft.h+1 {
 			logger.Warningf("Replica %d finds error in VcResetDone, expect=%d, but get=%d", pbft.id, pbft.h+1, et.SeqNo)
 			return nil
 		}
 		if pbft.inRecovery {
-			state := &stateUpdatedEvent{seqNo: et.SeqNo-1}
+			state := &stateUpdatedEvent{seqNo: et.SeqNo - 1}
 			return pbft.recvStateUpdatedEvent(state)
 		}
 		if atomic.LoadUint32(&pbft.activeView) == 1 {
@@ -577,7 +577,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		}
 		pbft.persistView(pbft.view)
 		pbft.helper.InformPrimary(primary)
-		pbft.processRequestsDuringNegoView()
+		//pbft.processRequestsDuringNegoView()
 		pbft.initRecovery()
 		return nil
 	case *RecoveryInit:
@@ -591,10 +591,11 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case recoveryDoneEvent:
 		logger.Criticalf("======== Replica %d finished recovery, height: %d", pbft.id, pbft.lastExec)
 		if pbft.recvNewViewInRecovery {
-			logger.Noticef("#  Replica %d find itself received NewView during Recovery" +
+			logger.Noticef("#  Replica %d find itself received NewView during Recovery"+
 				", will restart negotiate view", pbft.id)
 			pbft.inRecovery = true
 			pbft.inNegoView = true
+			pbft.recvNewViewInRecovery = false
 			pbft.restartNegoView()
 		}
 		if pbft.isNewNode {
@@ -1143,7 +1144,7 @@ func (pbft *pbftProtocal) preValidate(idx msgID) bool {
 		return false
 	}
 
-	if idx.n != pbft.lastVid + 1 {
+	if idx.n != pbft.lastVid+1 {
 		logger.Debugf("Backup %d hasn't done with last validate %d", pbft.id, pbft.lastVid)
 		return false
 	}
@@ -1178,7 +1179,6 @@ func (pbft *pbftProtocal) execValidate(txBatch *TransactionBatch, idx msgID) {
 }
 
 func (pbft *pbftProtocal) trySendPrePrepare() {
-
 
 	if pbft.currentVid != nil {
 		logger.Debugf("Replica %d not attempting to send pre-prepare bacause it is currently send %d, retry.", pbft.id, pbft.currentVid)
@@ -1367,7 +1367,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new pre-prepare for request batch view=%d/seqNo=%d, hash=%s", preprep.View, preprep.SequenceNumber, preprep.BatchDigest))
 	}
 
-	logger.Debug("receive  pre-prepare first seq is:",preprep.SequenceNumber)
+	logger.Debug("receive  pre-prepare first seq is:", preprep.SequenceNumber)
 	if pbft.primary(pbft.view) != pbft.id && pbft.prePrepared(preprep.BatchDigest, preprep.View, preprep.SequenceNumber) && !cert.sentPrepare {
 		logger.Debugf("Backup %d broadcasting prepare for view=%d/seqNo=%d", pbft.id, preprep.View, preprep.SequenceNumber)
 		prep := &Prepare{
@@ -1407,7 +1407,7 @@ func (pbft *pbftProtocal) recvPrepare(prep *Prepare) error {
 		return nil
 	}
 
-	if pbft.primary(prep.View) == prep.ReplicaId && !pbft.inRecovery{
+	if pbft.primary(prep.View) == prep.ReplicaId && !pbft.inRecovery {
 		logger.Warningf("Replica %d received prepare from primary, ignoring", pbft.id)
 		return nil
 	}
@@ -1465,7 +1465,7 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 		return pbft.sendCommit(digest, v, n)
 	} else {
 		if !cert.sentValidate {
-			idx := msgID{v:v, n:n}
+			idx := msgID{v: v, n: n}
 			pbft.preparedCert[idx] = cert.digest
 			pbft.validatePending()
 		}
@@ -1476,7 +1476,6 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 }
 
 func (pbft *pbftProtocal) sendCommit(digest string, v uint64, n uint64) error {
-
 
 	cert := pbft.getCert(v, n)
 
@@ -1559,7 +1558,7 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 				pbft.sendViewChange()
 			}
 		} else {
-			logger.Debugf("Replica %d committed for seqNo: %d, but sentExecute: %v, validated: %v", pbft.id, commit.SequenceNumber,cert.sentExecute, cert.validated)
+			logger.Debugf("Replica %d committed for seqNo: %d, but sentExecute: %v, validated: %v", pbft.id, commit.SequenceNumber, cert.sentExecute, cert.validated)
 		}
 	}
 
@@ -1870,7 +1869,7 @@ func (pbft *pbftProtocal) recvFetchRequestBatch(fr *FetchRequestBatch) (err erro
 
 	reqBatch := pbft.validatedBatchStore[digest]
 	batch := &ReturnRequestBatch{
-		Batch: reqBatch,
+		Batch:  reqBatch,
 		Digest: digest,
 	}
 	payload, err := proto.Marshal(batch)
@@ -2215,16 +2214,16 @@ func (pbft *pbftProtocal) processNegotiateView() error {
 
 	// broadcast the negotiate message to other replica
 	negoViewMsg := &NegotiateView{
-		ReplicaId:pbft.id,
+		ReplicaId: pbft.id,
 	}
 	payload, err := proto.Marshal(negoViewMsg)
-	if err!=nil {
+	if err != nil {
 		logger.Errorf("Marshal NegotiateView Error!")
 		return nil
 	}
 	consensusMsg := &ConsensusMessage{
-		Type:		ConsensusMessage_NEGOTIATE_VIEW,
-		Payload:	payload,
+		Type:    ConsensusMessage_NEGOTIATE_VIEW,
+		Payload: payload,
 	}
 	msg := consensusMsgHelper(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
@@ -2232,17 +2231,17 @@ func (pbft *pbftProtocal) processNegotiateView() error {
 
 	// post the negotiate message event to myself
 	nvr := &NegotiateViewResponse{
-		ReplicaId:	pbft.id,
-		View:		pbft.view,
+		ReplicaId: pbft.id,
+		View:      pbft.view,
 	}
 	consensusPayload, err := proto.Marshal(nvr)
-	if err!=nil {
+	if err != nil {
 		logger.Errorf("Marshal NegotiateViewResponse Error!")
 		return nil
 	}
 	responseMsg := &ConsensusMessage{
-		Type:		ConsensusMessage_NEGOTIATE_VIEW_RESPONSE,
-		Payload:	consensusPayload,
+		Type:    ConsensusMessage_NEGOTIATE_VIEW_RESPONSE,
+		Payload: consensusPayload,
 	}
 	go pbft.postPbftEvent(responseMsg)
 
@@ -2257,16 +2256,16 @@ func (pbft *pbftProtocal) recvNegoView(nv *NegotiateView) events.Event {
 	sender := nv.ReplicaId
 	logger.Debugf("Replica %d receive negotiate view from %d", pbft.id, sender)
 	negoViewRsp := &NegotiateViewResponse{
-		ReplicaId:pbft.id,
-		View:pbft.view,
+		ReplicaId: pbft.id,
+		View:      pbft.view,
 	}
 	payload, err := proto.Marshal(negoViewRsp)
-	if err!=nil {
+	if err != nil {
 		logger.Errorf("Marshal NegotiateViewResponse Error!")
 		return nil
 	}
 	consensusMsg := &ConsensusMessage{
-		Type: ConsensusMessage_NEGOTIATE_VIEW_RESPONSE,
+		Type:    ConsensusMessage_NEGOTIATE_VIEW_RESPONSE,
 		Payload: payload,
 	}
 	msg := consensusMsgHelper(consensusMsg, pbft.id)
@@ -2290,7 +2289,7 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Eve
 
 	pbft.negoViewRspStore[rspId] = rspView
 
-	if len(pbft.negoViewRspStore) > 2 * pbft.f + 1 {
+	if len(pbft.negoViewRspStore) > 2*pbft.f+1 {
 		// Reason for not using '> pbft.N-pbft.f': if N==5, we are require more than we need
 		// Reason for not using '≥ pbft.N-pbft.f': if self is wrong, then we are impossible to find 2f+1 same view
 		// can we find same view from 2f+1 peers?
@@ -2318,7 +2317,7 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Eve
 				atomic.StoreUint32(&pbft.activeView, 1)
 			}
 			return negoViewDoneEvent{}
-		} else if len(pbft.negoViewRspStore) >= 2*pbft.f + 2 {
+		} else if len(pbft.negoViewRspStore) >= 2*pbft.f+2 {
 			pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
 			logger.Warningf("pbft recv at least N-f nego-view responses, but cannot find same view from 2f+1.")
 		}
@@ -2331,13 +2330,13 @@ func (pbft *pbftProtocal) restartNegoView() {
 	pbft.processNegotiateView()
 }
 
-func (pbft *pbftProtocal) processRequestsDuringNegoView() {
-	if !pbft.inNegoView {
-		pbft.processCachedTransactions()
-	} else {
-		logger.Critical("Replica %d try to processRequestsDuringNegoView but nego-view is not finished", pbft.id)
-	}
-}
+//func (pbft *pbftProtocal) processRequestsDuringNegoView() {
+//	if !pbft.inNegoView {
+//		pbft.processCachedTransactions()
+//	} else {
+//		logger.Critical("Replica %d try to processRequestsDuringNegoView but nego-view is not finished", pbft.id)
+//	}
+//}
 
 func (pbft *pbftProtocal) processRequestsDuringRecovery() {
 	if !pbft.inRecovery {
@@ -2346,7 +2345,6 @@ func (pbft *pbftProtocal) processRequestsDuringRecovery() {
 		logger.Critical("Replica %d try to processRequestsDuringRecovery but recovery is not finished", pbft.id)
 	}
 }
-
 
 // =============================================================================
 // receive local message methods
@@ -2365,8 +2363,8 @@ func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error 
 		pbft.validatedBatchStore[digest] = batch
 		pbft.outstandingReqBatches[digest] = batch
 		cache := &cacheBatch{
-			batch:     batch,
-			vid:       result.SeqNo,
+			batch: batch,
+			vid:   result.SeqNo,
 		}
 		pbft.cacheValidatedBatch[digest] = cache
 		pbft.trySendPrePrepare()

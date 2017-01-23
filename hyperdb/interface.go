@@ -8,17 +8,16 @@ type Database interface {
 	Delete(key []byte) error
 	Close()
 	NewBatch() Batch
-	NewIterator(prefix []byte) (Iterator)
-
+	NewIterator(prefix []byte) Iterator
 }
 
 type Batch interface {
 	Put(key, value []byte) error
-	Delete(key []byte)error
+	Delete(key []byte) error
 	Write() error
 }
 
-type Iterator interface{
+type Iterator interface {
 	Key() []byte
 	Value() []byte
 	Seek(key []byte) bool

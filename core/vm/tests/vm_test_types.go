@@ -3,13 +3,12 @@
 package tests
 
 import (
-	"math/big"
 	"hyperchain/common"
 	"hyperchain/core/state"
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
+	"math/big"
 )
-
 
 type Account struct {
 	Balance string
@@ -17,7 +16,6 @@ type Account struct {
 	Nonce   string
 	Storage map[string]string
 }
-
 
 type VmTest struct {
 	Callcreates interface{}
@@ -32,16 +30,14 @@ type VmTest struct {
 	PostStateRoot string
 }
 
-
-
 func StateObjectFromAccount(db hyperdb.Database, addr string, account Account) *state.StateObject {
-	obj := state.NewStateObject(common.HexToAddress(addr),db)
+	obj := state.NewStateObject(common.HexToAddress(addr), db)
 	obj.SetBalance(common.Big(account.Balance))
 
 	if common.IsHex(account.Code) {
 		account.Code = account.Code[2:]
 	}
-	obj.SetCode(common.Hex2Bytes(account.Code))
+	obj.SetCode(common.Hash{}, common.Hex2Bytes(account.Code))
 	obj.SetNonce(common.Big(account.Nonce).Uint64())
 
 	return obj
@@ -56,7 +52,6 @@ type VmEnv struct {
 	PreviousHash      string
 }
 
-
 type RuleSet struct {
 	HomesteadBlock *big.Int
 	DAOForkBlock   *big.Int
@@ -69,12 +64,12 @@ func (r RuleSet) IsHomestead(n *big.Int) bool {
 }
 
 type Env struct {
-	ruleSet      RuleSet
-	depth        int
-	state        *state.StateDB
-	Gas          *big.Int
-	origin   common.Address
-	coinbase common.Address
+	ruleSet    RuleSet
+	depth      int
+	state      *state.StateDB
+	Gas        *big.Int
+	origin     common.Address
+	coinbase   common.Address
 	number     *big.Int
 	time       *big.Int
 	difficulty *big.Int
@@ -86,4 +81,3 @@ type Env struct {
 
 	evm *vm.EVM
 }
-

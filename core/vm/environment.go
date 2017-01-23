@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	"hyperchain/common"
+	"hyperchain/hyperdb"
 )
 
 // RuleSet is an interface that defines the current rule set during the
@@ -22,9 +23,9 @@ type Environment interface {
 	// The state database
 	Db() Database
 	// Creates a restorable snapshot
-	 MakeSnapshot() Database
+	MakeSnapshot() interface{}
 	// Set database to previous snapshot
-	SetSnapshot(Database)
+	SetSnapshot(interface{})
 	// Address of the original invoker (first occurrence of the VM invoker)
 	Origin() common.Address
 	// The block number this VM is invoked on
@@ -39,8 +40,9 @@ type Environment interface {
 	Difficulty() *big.Int
 	// The gas limit of the block
 	GasLimit() *big.Int
-	// Determines whether it's possible to transact
+	// Determines vm type
 	VmType() Type
+	// Determines whether it's possible to transact
 	CanTransfer(from common.Address, balance *big.Int) bool
 	// Transfers amount from one account to the other
 	Transfer(from, to Account, amount *big.Int)
@@ -87,12 +89,38 @@ type Database interface {
 	AddRefund(*big.Int)
 	GetRefund() *big.Int
 
-	GetState(common.Address, common.Hash) common.Hash
+	GetState(common.Address, common.Hash) (bool, common.Hash)
 	SetState(common.Address, common.Hash, common.Hash)
 
 	Delete(common.Address) bool
 	Exist(common.Address) bool
 	IsDeleted(common.Address) bool
+
+	GetTree() interface{}
+
+	// Log
+	StartRecord(common.Hash, common.Hash, int)
+	AddLog(log *Log)
+	GetLogs(hash common.Hash) Logs
+	// Dump and Load
+	Snapshot() interface{}
+	RevertToSnapshot(interface{})
+	// Reset status
+	Purge()
+	ResetToTarget(uint64, common.Hash)
+
+	Commit() (common.Hash, error)
+	Reset() error
+	// Query
+	GetAccounts() map[string]Account
+	Dump() []byte
+
+	// Atomic Related
+	MarkProcessStart(uint64)
+	MarkProcessFinish(uint64)
+
+	FetchBatch(seqNo uint64) hyperdb.Batch
+	DeleteBatch(seqNo uint64)
 }
 
 // Account represents a contract or basic ethereum account.
@@ -104,8 +132,7 @@ type Account interface {
 	Balance() *big.Int
 	Address() common.Address
 	ReturnGas(*big.Int, *big.Int)
-	SetCode([]byte)
-	ForEachStorage(cb func(key, value common.Hash) bool)
-	PrintStorages()
+	SetCode(common.Hash, []byte)
+	ForEachStorage(cb func(key, value common.Hash) bool) map[common.Hash]common.Hash
 	Value() *big.Int
 }

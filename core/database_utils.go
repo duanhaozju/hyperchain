@@ -3,16 +3,16 @@
 package core
 
 import (
+	"errors"
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
+	"os"
 	"strconv"
 	"sync"
-	"errors"
-	"os"
-	"fmt"
 	"time"
 )
 
@@ -22,7 +22,7 @@ var (
 	ReceiptsPrefix           = []byte("receipts-")
 	InvalidTransactionPrefix = []byte("invalidtransaction-")
 	BlockPrefix              = []byte("block-")
-	ChainKey                 = []byte("chain-key")
+	ChainKey                 = []byte("chain-key-")
 	BlockNumPrefix           = []byte("blockNum-")
 	TxMetaSuffix             = []byte{0x01}
 	log                      *logging.Logger // package-level logger
@@ -35,15 +35,15 @@ func init() {
 // InitDB initialization db
 // should be called while programming start-up
 
-func InitDB(dbConfig string,port int) {
-	hyperdb.InitDatabase(dbConfig,strconv.Itoa(port))
+func InitDB(dbConfig string, port int) {
+	hyperdb.InitDatabase(dbConfig, strconv.Itoa(port))
 	memChainMap = newMemChain()
 	memChainStatusMap = newMemChainStatus()
 }
 
 /*
 	Receipt
- */
+*/
 // GetReceipt returns a receipt by hash
 func GetReceipt(txHash common.Hash) *types.ReceiptTrans {
 	db, err := hyperdb.GetDBDatabase()
@@ -77,6 +77,30 @@ func PersistReceipt(batch hyperdb.Batch, receipt *types.Receipt, version string,
 		return errors.New("empty pointer"), nil
 	}
 	// process
+	err, data := WrapperReceipt(receipt, version)
+	if err != nil {
+		log.Error("wrapper receipt failed.")
+		return err, nil
+	}
+	if err := batch.Put(append(ReceiptsPrefix, receipt.TxHash...), data); err != nil {
+		log.Error("Put receipt data into database failed! error msg, ", err.Error())
+		return err, nil
+	}
+	// flush to disk immediately
+	if flush {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
+	}
+	return nil, data
+}
+func WrapperReceipt(receipt *types.Receipt, version string) (error, []byte) {
+	if receipt == nil {
+		return errors.New("empty pointer"), nil
+	}
+	receipt.Version = []byte(version)
 	data, err := proto.Marshal(receipt)
 	if err != nil {
 		log.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
@@ -87,35 +111,27 @@ func PersistReceipt(batch hyperdb.Batch, receipt *types.Receipt, version string,
 		Receipt:        data,
 	}
 	data, err = proto.Marshal(wrapper)
-	if err := batch.Put(append(ReceiptsPrefix, receipt.TxHash...), data); err != nil {
-		log.Error("Put receipt data into database failed! error msg, ", err.Error())
+	if err != nil {
+		log.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
 		return err, nil
-	}
-	// flush to disk immediately
-	if flush  {
-		if sync {
-			batch.Write()
-		} else {
-			go batch.Write()
-		}
 	}
 	return nil, data
 }
 
-func DeleteReceipt(db hyperdb.Database, key []byte) error {
+func DeleteReceipt(batch hyperdb.Batch, key []byte) error {
 	keyFact := append(ReceiptsPrefix, key...)
-	return db.Delete(keyFact)
+	return batch.Delete(keyFact)
 }
 
 /*
 	Transaction
- */
+*/
 // Query Transaction
 func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error) {
 	if db == nil || key == nil {
 		return nil, errors.New("empty pointer")
 	}
-	var wrapper     types.TransactionWrapper
+	var wrapper types.TransactionWrapper
 	var transaction types.Transaction
 	keyFact := append(TransactionPrefix, key...)
 	data, err := db.Get(keyFact)
@@ -132,13 +148,39 @@ func GetTransaction(db hyperdb.Database, key []byte) (*types.Transaction, error)
 	err = proto.Unmarshal(wrapper.Transaction, &transaction)
 	return &transaction, err
 }
+
 // Persist transaction content to a batch, KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false
 func PersistTransaction(batch hyperdb.Batch, transaction *types.Transaction, version string, flush bool, sync bool) (error, []byte) {
 	// check pointer value
 	if transaction == nil || batch == nil {
 		return errors.New("empty pointer"), nil
 	}
+	err, data := WrapperTransaction(transaction, version)
+	if err != nil {
+		logger.Errorf("wrapper transaction failed.")
+		return err, nil
+	}
+	if err := batch.Put(append(TransactionPrefix, transaction.GetTransactionHash().Bytes()...), data); err != nil {
+		log.Error("Put tx data into database failed! error msg, ", err.Error())
+		return err, nil
+	}
+	// flush to disk immediately
+	if flush {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
+	}
+	return nil, data
+}
+
+func WrapperTransaction(transaction *types.Transaction, version string) (error, []byte) {
+	if transaction == nil {
+		return errors.New("empty pointer"), nil
+	}
 	// process
+	transaction.Version = []byte(version)
 	data, err := proto.Marshal(transaction)
 	if err != nil {
 		log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
@@ -149,17 +191,9 @@ func PersistTransaction(batch hyperdb.Batch, transaction *types.Transaction, ver
 		Transaction:        data,
 	}
 	data, err = proto.Marshal(wrapper)
-	if err := batch.Put(append(TransactionPrefix, transaction.GetTransactionHash().Bytes()...), data); err != nil {
-		log.Error("Put tx data into database failed! error msg, ", err.Error())
+	if err != nil {
+		log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
 		return err, nil
-	}
-	// flush to disk immediately
-	if flush  {
-		if sync {
-			batch.Write()
-		} else {
-			go batch.Write()
-		}
 	}
 	return nil, data
 }
@@ -172,23 +206,18 @@ func PersistTransactions(batch hyperdb.Batch, transactions []*types.Transaction,
 	}
 	// process
 	for _, transaction := range transactions {
-		data, err := proto.Marshal(transaction)
+		err, data := WrapperTransaction(transaction, version)
 		if err != nil {
-			log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
+			logger.Errorf("wrapper transaction failed.")
 			return err
 		}
-		wrapper := &types.TransactionWrapper{
-			TransactionVersion: []byte(version),
-			Transaction:        data,
-		}
-		data, err =  proto.Marshal(wrapper)
 		if err := batch.Put(append(TransactionPrefix, transaction.GetTransactionHash().Bytes()...), data); err != nil {
 			log.Error("Put tx data into database failed! error msg, ", err.Error())
 			return err
 		}
 	}
 	// flush to disk immediately
-	if flush  {
+	if flush {
 		if sync {
 			batch.Write()
 		} else {
@@ -224,14 +253,14 @@ func GetTxWithBlock(db hyperdb.Database, key []byte) (uint64, int64) {
 	return meta.BlockIndex, meta.Index
 }
 
-func DeleteTransaction(db hyperdb.Database, key []byte) error {
+func DeleteTransaction(batch hyperdb.Batch, key []byte) error {
 	keyFact := append(TransactionPrefix, key...)
-	return db.Delete(keyFact)
+	return batch.Delete(keyFact)
 }
 
 func GetAllTransaction(db hyperdb.Database) ([]*types.Transaction, error) {
 	var ts []*types.Transaction = make([]*types.Transaction, 0)
-  	iter := db.NewIterator(TransactionPrefix)
+	iter := db.NewIterator(TransactionPrefix)
 	for iter.Next() {
 		var wrapper types.TransactionWrapper
 		var transaction types.Transaction
@@ -272,7 +301,7 @@ func GetDiscardTransaction(db hyperdb.Database, key []byte) (*types.InvalidTrans
 
 /*
 	Transaction Meta
- */
+*/
 
 // Persist tx meta content to a batch, KEEP IN MIND call batch.Write to flush all data to disk
 func PersistTransactionMeta(batch hyperdb.Batch, transactionMeta *types.TransactionMeta, txHash common.Hash, flush bool, sync bool) error {
@@ -289,7 +318,7 @@ func PersistTransactionMeta(batch hyperdb.Batch, transactionMeta *types.Transact
 		return err
 	}
 	// flush to disk immediately
-	if flush  {
+	if flush {
 		if sync {
 			batch.Write()
 		} else {
@@ -299,13 +328,14 @@ func PersistTransactionMeta(batch hyperdb.Batch, transactionMeta *types.Transact
 	return nil
 }
 
-func DeleteTransactionMeta(db hyperdb.Database, key []byte) error {
+func DeleteTransactionMeta(batch hyperdb.Batch, key []byte) error {
 	keyFact := append(key, TxMetaSuffix...)
-	return db.Delete(keyFact)
+	return batch.Delete(keyFact)
 }
+
 /*
 	Invalid Transaction
- */
+*/
 
 func PersistInvalidTransactionRecord(batch hyperdb.Batch, invalidTx *types.InvalidTransactionRecord, flush bool, sync bool) (error, []byte) {
 	// save to db
@@ -321,7 +351,7 @@ func PersistInvalidTransactionRecord(batch hyperdb.Batch, invalidTx *types.Inval
 		return err, nil
 	}
 	// flush to disk immediately
-	if flush  {
+	if flush {
 		if sync {
 			batch.Write()
 		} else {
@@ -331,8 +361,8 @@ func PersistInvalidTransactionRecord(batch hyperdb.Batch, invalidTx *types.Inval
 	return nil, data
 }
 
-func blockTime(block *types.Block){
-	time1:=block.WriteTime-block.Timestamp
+func blockTime(block *types.Block) {
+	time1 := block.WriteTime - block.Timestamp
 	f, err1 := os.OpenFile(hyperdb.GetLogPath(), os.O_WRONLY|os.O_CREATE, 0644)
 	if err1 != nil {
 		fmt.Println("db.log file create failed. err: " + err1.Error())
@@ -340,16 +370,17 @@ func blockTime(block *types.Block){
 		n, _ := f.Seek(0, os.SEEK_END)
 		currentTime := time.Now().Local()
 		newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-		str :=strconv.FormatUint(block.Number,10)+"#"+newFormat+"#"+strconv.FormatInt(time1,10)+"\n"
+		str := strconv.FormatUint(block.Number, 10) + "#" + newFormat + "#" + strconv.FormatInt(time1, 10) + "\n"
 		_, err1 = f.WriteAt([]byte(str), n)
 		f.Close()
 	}
 }
+
 /*
 	Block
- */
+*/
 func PersistBlock(batch hyperdb.Batch, block *types.Block, version string, flush bool, sync bool) (error, []byte) {
-	if hyperdb.IfLogStatus(){
+	if hyperdb.IfLogStatus() {
 		go blockTime(block)
 	}
 
@@ -367,7 +398,7 @@ func PersistBlock(batch hyperdb.Batch, block *types.Block, version string, flush
 		BlockVersion: []byte(version),
 		Block:        data,
 	}
-	data, err =  proto.Marshal(wrapper)
+	data, err = proto.Marshal(wrapper)
 	if err := batch.Put(append(BlockPrefix, block.BlockHash...), data); err != nil {
 		log.Error("Put block data into database failed! error msg, ", err.Error())
 		return err, nil
@@ -396,7 +427,7 @@ func GetBlockHash(db hyperdb.Database, blockNumber uint64) ([]byte, error) {
 
 func GetBlock(db hyperdb.Database, key []byte) (*types.Block, error) {
 	var wrapper types.BlockWrapper
-	var block   types.Block
+	var block types.Block
 	key = append(BlockPrefix, key...)
 	data, err := db.Get(key)
 	if len(data) == 0 {
@@ -425,24 +456,27 @@ func GetBlockByNumber(db hyperdb.Database, blockNumber uint64) (*types.Block, er
 
 func DeleteBlock(db hyperdb.Database, key []byte) error {
 	keyFact := append(BlockPrefix, key...)
+	// todo remove block.num<--->block.hash assosiation
 	return db.Delete(keyFact)
 }
 
 //delete block data and block.num<--->block.hash
-func DeleteBlockByNum(db hyperdb.Database, blockNum uint64) error {
+func DeleteBlockByNum(batch hyperdb.Batch, blockNum uint64) error {
+	db, err := hyperdb.GetDBDatabase()
+	if err != nil {
+		return err
+	}
 	hash, err := GetBlockHash(db, blockNum)
 	if err != nil {
 		return err
 	}
 	keyFact := append(BlockPrefix, hash...)
-	if err := db.Delete(keyFact); err != nil {
+	if err := batch.Delete(keyFact); err != nil {
 		return err
 	}
 	keyNum := strconv.FormatInt(int64(blockNum), 10)
-	return db.Delete(append(BlockNumPrefix, keyNum...))
+	return batch.Delete(append(BlockNumPrefix, keyNum...))
 }
-
-
 
 //-- ------------------- Chain ----------------------------------------
 
@@ -509,7 +543,7 @@ func GetParentBlockHash() []byte {
 
 // UpdateChain update latest blockHash as given blockHash
 // and the height of chain add 1
-func UpdateChain(block *types.Block, genesis bool) error {
+func UpdateChain(batch hyperdb.Batch, block *types.Block, genesis bool, flush bool, sync bool) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
 	memChainMap.data.LatestBlockHash = block.BlockHash
@@ -517,23 +551,23 @@ func UpdateChain(block *types.Block, genesis bool) error {
 	if genesis {
 		memChainMap.data.Height = 0
 		memChainMap.data.CurrentTxSum = 0
-	}
-	if !genesis {
+	} else {
 		memChainMap.data.Height = block.Number
-		// todo "errors"
+		// TODO a bug will occur during the block reset
 		memChainMap.data.CurrentTxSum += uint64(len(block.Transactions))
 	}
+	return putChain(batch, &memChainMap.data, flush, sync)
+}
+
+// update chain according block number, set chain current height to the block number
+// return error if correspondent block missing
+func UpdateChainByBlcokNum(batch hyperdb.Batch, blockNumber uint64, flush bool, sync bool) error {
+	memChainMap.lock.Lock()
+	defer memChainMap.lock.Unlock()
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err
 	}
-	return putChain(db, &memChainMap.data)
-}
-
-//　根据blockNumber更新chain,chain的height直接赋值为block.Number
-func UpdateChainByBlcokNum(db hyperdb.Database, blockNumber uint64) error {
-	memChainMap.lock.Lock()
-	defer memChainMap.lock.Unlock()
 	block, err := GetBlockByNumber(db, blockNumber)
 	if err != nil {
 		log.Warning("no required block number")
@@ -542,7 +576,7 @@ func UpdateChainByBlcokNum(db hyperdb.Database, blockNumber uint64) error {
 	memChainMap.data.LatestBlockHash = block.BlockHash
 	memChainMap.data.ParentBlockHash = block.ParentHash
 	memChainMap.data.Height = block.Number
-	return putChain(db, &memChainMap.data)
+	return putChain(batch, &memChainMap.data, flush, sync)
 }
 
 // GetHeightOfChain get height of chain
@@ -579,15 +613,38 @@ func WriteChainChan() {
 }
 
 // putChain put chain database
-func putChain(db hyperdb.Database, t *types.Chain) error {
+func putChain(batch hyperdb.Batch, t *types.Chain, flush bool, sync bool) error {
 	data, err := proto.Marshal(t)
 	if err != nil {
 		return err
 	}
-	if err := db.Put(ChainKey, data); err != nil {
+	if err := batch.Put(ChainKey, data); err != nil {
 		return err
 	}
+	if flush {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
+	}
 	return nil
+}
+
+// IsGenesisFinish - check whether genesis block has been mined into blockchain
+func IsGenesisFinish() bool {
+	db, err := hyperdb.GetDBDatabase()
+	if err != nil {
+		logger.Error("get database handler failed.")
+		return false
+	}
+	_, err = GetBlockByNumber(db, 0)
+	if err != nil {
+		logger.Warning("missing genesis block")
+		return false
+	} else {
+		return true
+	}
 }
 
 // UpdateRequire updates requireBlockNum and requireBlockHash
@@ -601,7 +658,7 @@ func UpdateRequire(num uint64, hash []byte, recoveryNum uint64) error {
 	if err != nil {
 		return err
 	}
-	return putChain(db, &memChainMap.data)
+	return putChain(db.NewBatch(), &memChainMap.data, true, true)
 }
 
 func SetReplicas(replicas []uint64) {
@@ -628,6 +685,7 @@ func GetId() uint64 {
 	return memChainStatusMap.data.Id
 }
 
+// Deprecated
 func UpdateChainByViewChange(height uint64, latestHash []byte) error {
 	memChainMap.lock.Lock()
 	defer memChainMap.lock.Unlock()
@@ -638,7 +696,7 @@ func UpdateChainByViewChange(height uint64, latestHash []byte) error {
 	if err != nil {
 		return err
 	}
-	return putChain(db, &memChainMap.data)
+	return putChain(db.NewBatch(), &memChainMap.data, true, true)
 }
 
 //GetInvaildTxErrType gets ErrType of invalid tx

@@ -56,7 +56,6 @@ func readJson(reader io.Reader, value interface{}) error {
 	return nil
 }
 
-
 func readJsonFile(fn string, value interface{}) error {
 	file, err := os.Open(fn)
 	if err != nil {
