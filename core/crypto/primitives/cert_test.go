@@ -333,3 +333,9 @@ func TestESign(t *testing.T) {
 
 	fmt.Println(bol)
 }
+func TestParsePubKey(t *testing.T) {
+	pub,_ := GetConfig("./test.pub")
+	pubkey,_ := ParsePubKey(pub)
+
+	t.Log(pubkey)
+}

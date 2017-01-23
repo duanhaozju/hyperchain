@@ -59,7 +59,7 @@ type BlockPool struct {
 	transactionBuffer     [][]byte    // transaction buffer
 	receiptBuffer         [][]byte    // receipt buffer
 	// event hub
-	helper                Helper
+	helper                *Helper
 
 }
 

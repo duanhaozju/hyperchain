@@ -15,7 +15,6 @@ import (
 	"hyperchain/p2p"
 	"hyperchain/protos"
 	"hyperchain/recovery"
-	"sync"
 	"time"
 )
 
@@ -252,11 +251,6 @@ func (self *ProtocolManager) ConsensusLoop() {
 			}
 
 		case event.ConsensusEvent:
-			//call consensus module
-			//log.Debug("###### enter ConsensusEvent")
-			//msg := &protos.Message{}
-			//proto.Unmarshal(ev.Payload, msg)
-			//log.Debug("***consensus, from: , type: ", msg.Id, msg.Type)
 			self.consenter.RecvMsg(ev.Payload)
 		}
 	}
@@ -278,10 +272,9 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			log.Debug("BroadcastNewPeerEvent")
 			// receive this event from consensus module
 			// broadcast the local CA validition result to other replica
-			peers := self.Peermanager.GetAllPeers()
+			peers := self.Peermanager.GetVPPeers()
 			var peerIds []uint64
 			for _, peer := range peers {
-				//TODO change to int
 				peerIds = append(peerIds, uint64(peer.PeerAddr.ID))
 			}
 			self.Peermanager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_BROADCAST_NEWPEER)
@@ -305,8 +298,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			log.Debug("BroadcastDelPeerEvent")
 			// receive this event from consensus module
 			// broadcast to other replica
-			// TODO Don't send to the exit peer itself
-			peers := self.Peermanager.GetAllPeers()
+			peers := self.Peermanager.GetVPPeers()
 			var peerIds []uint64
 			for _, peer := range peers {
 				peerIds = append(peerIds, uint64(peer.PeerAddr.ID))
@@ -344,8 +336,15 @@ func (self *ProtocolManager) nonVerifiedPeerSynchronizationLoop() {
 	for obj := range self.nonVerifiedPeerSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.VerifiedBlock:
-
-
+			peers := self.Peermanager.GetNVPPeers()
+			var peerIds []uint64
+			for _, peer := range peers {
+				peerIds = append(peerIds, uint64(peer.PeerAddr.ID))
+			}
+			self.Peermanager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_VERIFIED_BLOCK)
+		case event.ReceiveVerifiedBlock:
+			// not change to parallel invocation
+			self.blockPool.ReceiveVerifiedBlock(ev)
 		}
 	}
 }
@@ -369,7 +368,7 @@ func (self *ProtocolManager) sendMsg(payload []byte) {
 
 // Broadcast consensus msg to a batch of peers not knowing about it
 func (self *ProtocolManager) BroadcastConsensus(payload []byte) {
-	self.Peermanager.BroadcastPeers(payload)
+	self.Peermanager.BroadcastVPPeers(payload)
 
 }
 

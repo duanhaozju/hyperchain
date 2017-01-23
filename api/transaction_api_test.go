@@ -22,7 +22,7 @@ func Test_SendTransaction(t *testing.T) {
 	hyperdb.Setclose()
 	//初始化数据
 	core.InitDB("./build/keystore", 8004)
-	peermanager := &p2p.GrpcPeerManager{
+	peermanager := &p2p.GRPCPeerManager{
 		NodeID: 1,
 	}
 	db, _ := hyperdb.GetDBDatabase()
@@ -104,7 +104,7 @@ func Test_SendTransaction(t *testing.T) {
 
 func Test_GetTransactionReceipt(t *testing.T) {
 
-	peermanager := &p2p.GrpcPeerManager{
+	peermanager := &p2p.GRPCPeerManager{
 		NodeID: 1,
 	}
 	db, _ := hyperdb.GetDBDatabase()

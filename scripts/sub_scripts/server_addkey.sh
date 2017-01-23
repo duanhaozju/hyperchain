@@ -17,7 +17,7 @@ done < innerserverlist.txt
 # authorization         #
 #########################
 
-addkeyForCentOS(){
+add_key_for_centos(){
   expect <<EOF
       set timeout 60
       spawn ssh-copy-id hyperchain@$1
@@ -29,7 +29,7 @@ addkeyForCentOS(){
 EOF
 }
 
-addkeyForSuse(){
+add_key_for_suse(){
   expect <<EOF
       set timeout 60
       spawn ssh-copy-id hyperchain@$1
@@ -45,11 +45,11 @@ echo $1
 
 if $1; then
     for server_address in ${SERVER_ADDR[@]}; do
-      addkeyForCentOS $server_address &
+      add_key_for_centos $server_address &
     done
 else
     for server_address in ${SERVER_ADDR[@]}; do
-      addkeyForSuse $server_address &
+      add_key_for_suse $server_address &
     done
 fi
 wait

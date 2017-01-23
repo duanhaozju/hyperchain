@@ -7,7 +7,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/core"
 	"bytes"
-	"github.com/pkg/errors"
+	"errors"
 )
 
 // TransitVerifiedBlock - transit a verified block to non-verified peers.
@@ -24,7 +24,7 @@ func (pool *BlockPool) TransitVerifiedBlock(block *types.Block) {
 
 // ReceiveVerifiedBlock - receive verified block for vp.
 // process in serial but may out of order.
-func (pool *BlockPool) ReceiveVerifiedBlock(ev event.VerifiedBlock) {
+func (pool *BlockPool) ReceiveVerifiedBlock(ev event.ReceiveVerifiedBlock) {
 	block := &types.Block{}
 	err := proto.Unmarshal(ev.Payload, block)
 	if err != nil {
@@ -33,7 +33,7 @@ func (pool *BlockPool) ReceiveVerifiedBlock(ev event.VerifiedBlock) {
 	}
 	log.Debugf("receive verified block #%d", block.Number)
 	if block.Number < pool.demandNumber {
-		log.Debugf("receive verified block #%d just ignore.", block.Number)
+		log.Debugf("receive verified block #%d less than demand number, just ignore.", block.Number)
 		return
 	} else if block.Number == pool.demandNumber {
 		if err := pool.applyVerifiedBlock(block); err != nil {
@@ -75,8 +75,8 @@ func (pool *BlockPool) applyRemainVerifiedBlock(number uint64) error {
 	for {
 		if ret, existed := pool.queue.Get(remain); existed == true {
 			block := ret.(*types.Block)
-			if pool.applyVerifiedBlock(block) {
-				return nil
+			if err := pool.applyVerifiedBlock(block); err != nil {
+				return err
 			}
 			remain = remain + 1
 		} else {
@@ -154,7 +154,7 @@ func (pool *BlockPool) processVerifiedBlock(block *types.Block) error {
 	// persist block
 	if err, _ := core.PersistBlock(batch, block, pool.GetBlockVersion(), false, false); err != nil {
 		log.Errorf("persist block #%d into database failed! error msg, ", block.Number, err.Error())
-		return
+		return err
 	}
 	// persist chain
 	core.UpdateChain(batch, block, false, false, false)

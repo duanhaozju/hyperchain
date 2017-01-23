@@ -8,7 +8,7 @@ import (
 	"hyperchain/core/blockpool"
 	"hyperchain/crypto"
 	"hyperchain/event"
-	"hyperchain/membersrvc"
+	"hyperchain/admittance"
 	"hyperchain/p2p"
 	"time"
 )
@@ -40,7 +40,7 @@ func New(
 	syncReplicaInterval time.Duration,
 	syncReplica bool,
 	exist chan bool,
-	expiredTime time.Time, cm *membersrvc.CAManager) *ProtocolManager {
+	expiredTime time.Time, cm *admittance.CAManager) *ProtocolManager {
 
 	aliveChan := make(chan int)
 	//add reconnect param

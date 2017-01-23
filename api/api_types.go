@@ -3,11 +3,11 @@
 package hpc
 
 import (
-	"hyperchain/common"
 	"hyperchain/event"
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
-	"hyperchain/membersrvc"
+	"hyperchain/admittance"
+	"hyperchain/common"
 )
 
 // API describes the set of methods offered over the RPC interface
@@ -20,7 +20,7 @@ type API struct {
 
 var Apis []API
 
-func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, cm *membersrvc.CAManager, config *common.Config) []API {
+func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, cm *admittance.CAManager,config *common.Config) []API {
 
 	db, err := hyperdb.GetDBDatabase()
 

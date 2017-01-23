@@ -87,14 +87,9 @@ tags
 #project specfic
 db/*
 
-# cache
-cache/*
 
 # keystore
-#keystore.txt
 hyperchain
-cache/
-crypto/addressInfo
 
 *.tar
 

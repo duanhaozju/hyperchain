@@ -88,6 +88,9 @@ type pbftProtocal struct {
 	qset            *Qset
 	pset            *Pset
 	cset            *Cset
+	// pqset for viewchange
+	qlist			map[qidx]*ViewChange_PQ
+	plist			map[uint64]*ViewChange_PQ
 	checkpointStore map[Checkpoint]bool    // track checkpoints as set
 	committedCert   map[msgID]string       // track the committed cert to help excute
 	chkptCertStore  map[chkptID]*chkptCert // track quorum certificates for checkpoints
@@ -314,8 +317,9 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.newViewStore = make(map[uint64]*NewView)
 	pbft.viewChangeStore = make(map[vcidx]*ViewChange)
 	pbft.missingReqBatches = make(map[string]bool)
-	pbft.vcResetStore = make(map[FinishVcReset]bool)
-	pbft.inVcReset = false
+
+	pbft.qlist = make(map[qidx]*ViewChange_PQ)
+	pbft.plist = make(map[uint64]*ViewChange_PQ)
 
 	// initialize state transfer
 	pbft.hChkpts = make(map[uint64]uint64)
@@ -2088,6 +2092,18 @@ func (pbft *pbftProtocal) moveWatermarks(n uint64) {
 			}
 		}
 		pbft.cset.Set = cset
+	}
+
+	for idx := range pbft.qlist {
+		if idx.n <= h {
+			delete(pbft.qlist, idx)
+		}
+	}
+
+	for n := range pbft.plist {
+		if n <= h {
+			delete(pbft.plist, n)
+		}
 	}
 
 	pbft.h = h

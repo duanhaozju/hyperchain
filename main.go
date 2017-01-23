@@ -14,7 +14,7 @@ import (
 	"hyperchain/crypto"
 	"hyperchain/event"
 	"hyperchain/manager"
-	"hyperchain/membersrvc"
+	"hyperchain/admittance"
 	"hyperchain/p2p"
 	"hyperchain/p2p/transport"
 	"io/ioutil"
@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/terasum/viper"
 )
 
 type argT struct {
@@ -31,7 +32,6 @@ type argT struct {
 	GRPCPort   int    `cli:"l,rpcport" usage:"inner grpc connect port" dft:"8001"`
 	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc open port" dft:"8081"`
 	RESTPort   int    `cli:"f,restport" useage:"restful api port" dft:"9000"`
-	//IsReconnect bool  `cli:"e,isReconnect" usage:"是否重新链接" dft:"false"`
 }
 
 func checkLicense(licensePath string) (err error, expiredTime time.Time) {
@@ -105,20 +105,22 @@ func main() {
 			return err
 		}
 
-		membersrvc.Start(config.getMemberSRVCConfigPath(), config.getNodeID())
-
 		eventMux := new(event.TypeMux)
 
-		//init memversrvc CAManager
-		// rca.ca 应该改为 eca.ca
-		//TODO 此处加入读取文件，现在默认为true
 		/**
 		 *传入true则开启所有验证，false则为取消ca以及签名的所有验证
 		 */
-		cm, cmerr := membersrvc.GetCaManager("./config/cert/eca.ca", "./config/cert/ecert.cert", "./config/cert/rca.ca", "./config/cert/rcert.cert", "./config/cert/ecert.priv", true, true)
+		global_config := viper.New();
+		global_config.SetConfigFile(argv.ConfigPath)
+		err = global_config.ReadInConfig()
+		if err != nil{
+			panic(err)
+		}
+		cm, cmerr := admittance.GetCaManager(global_config)
 		if cmerr != nil {
 			panic("cannot initliazied the camanager")
 		}
+
 
 		//init peer manager to start grpc server and client
 		//grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath())
