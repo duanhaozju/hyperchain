@@ -4,6 +4,7 @@
 # *.toml config file is batter than *.yaml
 # this config will never change by hyperchain
 # please ensure the file not end with the `/` (slash)
+#
 
 [ecert]
 ca = "config/cert/eca.ca"
