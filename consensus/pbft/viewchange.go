@@ -36,6 +36,10 @@ func (pbft *pbftProtocal) correctViewChange(vc *ViewChange) bool {
 func (pbft *pbftProtocal) calcPSet() map[uint64]*ViewChange_PQ {
 	pset := make(map[uint64]*ViewChange_PQ)
 
+	for n, p := range pbft.plist {
+		pset[n] = p
+	}
+
 	for idx, cert := range pbft.certStore {
 		if cert.prePrepare == nil {
 			continue
@@ -62,6 +66,10 @@ func (pbft *pbftProtocal) calcPSet() map[uint64]*ViewChange_PQ {
 
 func (pbft *pbftProtocal) calcQSet() map[qidx]*ViewChange_PQ {
 	qset := make(map[qidx]*ViewChange_PQ)
+
+	for n, q := range pbft.qlist {
+		qset[n] = q
+	}
 
 	for idx, cert := range pbft.certStore {
 		if cert.prePrepare == nil {
@@ -108,6 +116,9 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 
 	pset := pbft.calcPSet()
 	qset := pbft.calcQSet()
+
+	pbft.plist = pset
+	pbft.qlist = qset
 
 	// clear old messages
 	for idx := range pbft.certStore {
