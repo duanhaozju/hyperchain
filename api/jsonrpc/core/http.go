@@ -39,7 +39,7 @@ func (hrw *httpReadWrite) Close() error {
 	return nil
 }
 
-func Start(httpPort int, restPort int, logsPath string, eventMux *event.TypeMux, pm *manager.ProtocolManager, cfg RateLimitConfig, cm *admittance.CAManager, publicKey *hmEncryption.PaillierPublickey) error {
+func Start(httpPort int, restPort int, logsPath string, eventMux *event.TypeMux, pm *manager.ProtocolManager, cm *admittance.CAManager, config *common.Config) error {
 	eventMux = eventMux
 
 	server := NewServer()

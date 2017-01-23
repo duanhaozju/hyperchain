@@ -3,12 +3,11 @@
 package hpc
 
 import (
-	"hyperchain/common"
 	"hyperchain/event"
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
 	"hyperchain/admittance"
-	"time"
+	"hyperchain/common"
 )
 
 // API describes the set of methods offered over the RPC interface
@@ -21,7 +20,7 @@ type API struct {
 
 var Apis []API
 
-func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, ratelimitEnable bool, txPeak int64, txRate time.Duration, contractPeak int64, contractRate time.Duration, cm *admittance.CAManager, publicKey *hmEncryption.PaillierPublickey) []API {
+func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, cm *admittance.CAManager,config *common.Config) []API {
 
 	db, err := hyperdb.GetDBDatabase()
 

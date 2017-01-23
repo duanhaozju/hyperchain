@@ -113,9 +113,9 @@ func isBatch(msg json.RawMessage) bool {
 
 func (c *jsonCodec) CheckHttpHeaders() RPCError{
 	//可能影响性能
-	//if !c.CM.GetIsCheckTCert() {
-	//	return nil
-	//}
+	if !c.CM.GetIsCheckTCert() {
+		return nil
+	}
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
 
