@@ -47,8 +47,8 @@ type ProtocolManager struct {
 	syncBlockSub        event.Subscription
 	syncStatusSub       event.Subscription
 	peerMaintainSub     event.Subscription
+	nonVerifiedPeerSub  event.Subscription
 	quitSync            chan struct{}
-	wg                  sync.WaitGroup
 	syncBlockCache      *common.Cache
 	replicaStatus       *common.Cache
 	syncReplicaInterval time.Duration
@@ -97,7 +97,6 @@ func GetEventObject() *event.TypeMux {
 
 // start listen new block msg and consensus msg
 func (pm *ProtocolManager) Start() {
-	pm.wg.Add(1)
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
 	pm.validateSub = pm.eventMux.Subscribe(event.ExeTxsEvent{})
 	pm.commitSub = pm.eventMux.Subscribe(event.CommitOrRollbackBlockEvent{})
@@ -105,18 +104,19 @@ func (pm *ProtocolManager) Start() {
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
 	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{}, event.InformPrimaryEvent{})
-	go pm.validateLoop()
-	go pm.commitLoop()
 	pm.peerMaintainSub = pm.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{},
 		event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{}, event.RecvNewPeerEvent{},
 		event.DelPeerEvent{}, event.BroadcastDelPeerEvent{}, event.RecvDelPeerEvent{})
+	pm.nonVerifiedPeerSub = pm.eventMux.Subscribe(event.VerifiedBlock{})
+	go pm.validateLoop()
+	go pm.commitLoop()
 	go pm.ConsensusLoop()
 	go pm.syncBlockLoop()
 	go pm.syncCheckpointLoop()
 	go pm.respHandlerLoop()
 	go pm.viewChangeLoop()
 	go pm.peerMaintainLoop()
-
+	go pm.nonVerifiedPeerSynchronizationLoop()
 	go pm.checkExpired()
 	if pm.syncReplica {
 		pm.syncStatusSub = pm.eventMux.Subscribe(event.ReplicaStatusEvent{})
@@ -136,11 +136,9 @@ func (pm *ProtocolManager) Start() {
 		pm.consenter.RecvLocal(msg)
 		pm.Peermanager.ConnectToOthers()
 	}
-	pm.wg.Wait()
-
 }
+
 func (self *ProtocolManager) syncCheckpointLoop() {
-	self.wg.Add(-1)
 	for obj := range self.syncCheckpointSub.Chan() {
 
 		switch ev := obj.Data.(type) {
@@ -203,6 +201,7 @@ func (self *ProtocolManager) respHandlerLoop() {
 		}
 	}
 }
+
 func (self *ProtocolManager) viewChangeLoop() {
 
 	for obj := range self.viewChangeSub.Chan() {
@@ -216,6 +215,7 @@ func (self *ProtocolManager) viewChangeLoop() {
 		}
 	}
 }
+
 func (self *ProtocolManager) syncReplicaStatusLoop() {
 
 	for obj := range self.syncStatusSub.Chan() {
@@ -336,6 +336,16 @@ func (self *ProtocolManager) peerMaintainLoop() {
 				self.Peermanager.SetOnline()
 				self.NegotiateView()
 			}
+		}
+	}
+}
+
+func (self *ProtocolManager) nonVerifiedPeerSynchronizationLoop() {
+	for obj := range self.nonVerifiedPeerSub.Chan() {
+		switch ev := obj.Data.(type) {
+		case event.VerifiedBlock:
+
+
 		}
 	}
 }

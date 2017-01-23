@@ -122,3 +122,11 @@ type BroadcastDelPeerEvent struct {
 type RecvDelPeerEvent struct {
 	Payload []byte
 }
+
+/*
+	Non verified peer events definition
+ */
+
+type VerifiedBlock struct {
+	Payload  []byte
+}
