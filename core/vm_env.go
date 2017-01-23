@@ -166,8 +166,8 @@ func (self *Env) Transfer(from, to vm.Account, amount *big.Int) {
 	Transfer(from, to, amount)
 }
 
-func (self *Env) Call(caller vm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int) ([]byte, error) {
-	ret, err := Call(self, caller, addr, data, gas, price, value)
+func (self *Env) Call(caller vm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int, update bool) ([]byte, error) {
+	ret, err := Call(self, caller, addr, data, gas, price, value, update)
 	self.Gas = gas
 	return ret, err
 

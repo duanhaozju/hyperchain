@@ -56,7 +56,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 
 	payload := common.FromHex(realArgs.Payload)
 
-	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), payload)
+	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), payload, args.Update)
 
 	value, err := proto.Marshal(txValue)
 	if err != nil {
