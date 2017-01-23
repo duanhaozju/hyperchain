@@ -12,9 +12,9 @@ import (
 )
 
 // Call executes within the given contract
-func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int) (ret []byte, err error) {
+func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int, update bool) (ret []byte, err error) {
 	//fmt.Println("call")
-	ret, _, err = exec(env, caller, &addr, &addr, input, env.Db().GetCode(addr), gas, gasPrice, value)
+	ret, _, err = exec(env, caller, &addr, &addr, input, env.Db().GetCode(addr), gas, gasPrice, value, update)
 	return ret, err
 }
 
@@ -23,7 +23,7 @@ func CallCode(env vm.Environment, caller vm.ContractRef, addr common.Address, in
 	//fmt.Println("callcode")
 
 	callerAddr := caller.Address()
-	ret, _, err = exec(env, caller, &callerAddr, &addr, input, env.Db().GetCode(addr), gas, gasPrice, value)
+	ret, _, err = exec(env, caller, &callerAddr, &addr, input, env.Db().GetCode(addr), gas, gasPrice, value, false)
 	return ret, err
 }
 
@@ -40,14 +40,14 @@ func DelegateCall(env vm.Environment, caller vm.ContractRef, addr common.Address
 
 // Create creates a new contract with the given code
 func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPrice, value *big.Int) (ret []byte, address common.Address, err error) {
-	ret, address, err = exec(env, caller, nil, nil, nil, code, gas, gasPrice, value)
+	ret, address, err = exec(env, caller, nil, nil, nil, code, gas, gasPrice, value, false)
 	if err != nil {
 		return nil, address, err
 	}
 	return ret, address, err
 }
 
-func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
+func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int, update bool) (ret []byte, addr common.Address, err error) {
 	evm := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
@@ -94,7 +94,14 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
 	contract := vm.NewContract(caller, to, value, gas, gasPrice)
-	contract.SetCallCode(codeAddr, code)
+	if update {
+		// using the new code to execute
+		// otherwise errors could occur
+		contract.SetCallCode(codeAddr, input)
+	} else {
+		// using the origin code to execute
+		contract.SetCallCode(codeAddr, code)
+	}
 	defer contract.Finalise()
 
 	ret, err = evm.Run(contract, input)
@@ -115,13 +122,30 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// When an error was returned by the EVM or when setting the creation code
 	// above we revert to the snapshot and consume any gas remaining. Additionally
 	// when we're in homestead this also counts for code storage gas errors.
-	if err != nil && (env.RuleSet().IsHomestead(env.BlockNumber()) || err != vm.CodeStoreOutOfGasError) {
+	if (err != nil && (env.RuleSet().IsHomestead(env.BlockNumber()) || err != vm.CodeStoreOutOfGasError)) {
 		contract.UseGas(contract.Gas)
 		env.SetSnapshot(snapshotPreTransfer)
 		if createAccount {
 			err = ExecContractErr(0, "contract creation failed, error msg", err.Error())
 		} else {
 			err = ExecContractErr(1, "contract invocation failed, error msg:", err.Error())
+		}
+	}
+	// undo all changes during the contract code update
+	if update {
+		env.SetSnapshot(snapshotPreTransfer)
+		// if code ran successfully and no errors were returned
+		// and this transaction is a update code operation
+		// replace contract code with given one
+		// undo all changes during the vm execution(construct function)
+		if err == nil || err != vm.CodeStoreOutOfGasError {
+			dataGas := big.NewInt(int64(len(ret)))
+			dataGas.Mul(dataGas, params.CreateDataGas)
+			if contract.UseGas(dataGas) {
+				env.Db().SetCode(*address, ret)
+			} else {
+				err = vm.CodeStoreOutOfGasError
+			}
 		}
 	}
 	return ret, addr, err

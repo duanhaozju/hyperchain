@@ -534,8 +534,8 @@ func opCall(instr instruction, pc *uint64, env Environment, contract *Contract, 
 	if len(value.Bytes()) > 0 {
 		gas.Add(gas, params.CallStipend)
 	}
-
-	ret, err := env.Call(contract, address, args, gas, contract.Price, value)
+	// normal contract call, update operation could happen only in entry contract
+	ret, err := env.Call(contract, address, args, gas, contract.Price, value, false)
 
 	if err != nil {
 		stack.push(new(big.Int))

@@ -52,9 +52,10 @@ type SendTxArgs struct {
 	Signature string          `json:"signature"`
 	Timestamp int64           `json:"timestamp"`
 	// --- test -----
-	Request  *Number `json:"request"`
-	Simulate bool    `json:"simulate"`
-	Nonce    int64   `json:"nonce"`
+	Request   *Number     `json:"request"`
+	Simulate  bool        `json:"simulate"`
+	Update    bool        `json:"update"`
+	Nonce     int64       `json:"nonce"`
 }
 
 type TransactionResult struct {
@@ -135,7 +136,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		return common.Hash{}, err
 	}
 
-	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), nil)
+	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), nil, false)
 
 	value, err := proto.Marshal(txValue)
 
@@ -432,7 +433,7 @@ func (tran *PublicTransactionAPI) GetSignHash(args SendTxArgs) (common.Hash, err
 
 	payload := common.FromHex(realArgs.Payload)
 
-	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), payload)
+	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), payload, args.Update)
 
 	value, err := proto.Marshal(txValue)
 	if err != nil {
