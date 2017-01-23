@@ -66,7 +66,7 @@ func Test_DeployContract(t *testing.T) {
 	encryption.GenerateNodeKey(strconv.Itoa(1), "./build/keynodes")
 	am := accounts.NewAccountManager(keydir, encryption)
 
-	Peermanager1 := &p2p.GrpcPeerManager{
+	Peermanager1 := &p2p.GRPCPeerManager{
 		NodeID: uint64(1),
 	}
 	eventMux1 := new(event.TypeMux)
@@ -164,7 +164,7 @@ func Test_InvokeContract(t *testing.T) {
 	encryption.GenerateNodeKey(strconv.Itoa(1), "./build/keynodes")
 	am := accounts.NewAccountManager(keydir, encryption)
 
-	Peermanager1 := &p2p.GrpcPeerManager{
+	Peermanager1 := &p2p.GRPCPeerManager{
 		NodeID: uint64(1),
 	}
 	eventMux1 := new(event.TypeMux)
@@ -213,7 +213,7 @@ func Test_GetCode(t *testing.T) {
 	encryption.GenerateNodeKey(strconv.Itoa(1), "./build/keynodes")
 	am := accounts.NewAccountManager(keydir, encryption)
 
-	Peermanager1 := &p2p.GrpcPeerManager{
+	Peermanager1 := &p2p.GRPCPeerManager{
 		NodeID: uint64(1),
 	}
 	eventMux1 := new(event.TypeMux)
@@ -246,7 +246,7 @@ func Test_GetContractCountByAddr(t *testing.T) {
 	encryption.GenerateNodeKey(strconv.Itoa(1), "./build/keynodes")
 	am := accounts.NewAccountManager(keydir, encryption)
 
-	Peermanager1 := &p2p.GrpcPeerManager{
+	Peermanager1 := &p2p.GRPCPeerManager{
 		NodeID: uint64(1),
 	}
 

@@ -14,6 +14,7 @@ import (
 	"fmt"
 	//"sync"
 	"github.com/pkg/errors"
+	"crypto/ecdsa"
 )
 
 //读取config文件
@@ -81,16 +82,17 @@ func ParseKey(derPri string) (interface{}, error) {
 	return pri, nil
 }
 
-func ParsePubKey(pubstr string) (interface{}, error) {
-	//todo finish the public key parse
-
-	block, _ := pem.Decode([]byte(pubstr))
-
-	pub, err := DERToPublicKey(block.Bytes)
+func ParsePubKey(pubPem string) (*ecdsa.PublicKey, error) {
+	block,_ := pem.Decode([]byte(pubPem))
+	pub,err := DERToPublicKey(block.Bytes)
 
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
-	return pub, nil
+
+	pubkey := pub.(*(ecdsa.PublicKey))
+
+	return pubkey, nil
 
 }

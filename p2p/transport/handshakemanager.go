@@ -21,8 +21,7 @@ import (
 	"crypto/cipher"
 	"crypto/ecdsa"
 	"errors"
-	"hyperchain/membersrvc"
-	//"hyperchain/p2p/transport/SMCrypto"
+	"hyperchain/admittance"
 )
 
 type HandShakeManagerNew struct {
@@ -33,12 +32,11 @@ type HandShakeManagerNew struct {
 	secrets       map[string][]byte
 	signPublickey map[string][]byte
 	isVerified    map[string]bool
-	//smc *SMCrypto.SMCrypto
 
-}
+ }
 
 //---------------------------------ECDH-------------------------------------------
-func NewHandShakeMangerNew(cm *membersrvc.CAManager) *HandShakeManagerNew {
+func NewHandShakeMangerNew(cm *admittance.CAManager) *HandShakeManagerNew {
 	var hSMN HandShakeManagerNew
 	hSMN.secrets = make(map[string][]byte)
 	hSMN.signPublickey = make(map[string][]byte)

@@ -5,13 +5,18 @@ package jsonrpc
 import (
 	"encoding/json"
 	"fmt"
-	"hyperchain/membersrvc"
+	"hyperchain/admittance"
 	"io"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
+	"hyperchain/common"
+	//"encoding/hex"
+	//hcrypto"hyperchain/crypto"
+	"hyperchain/core/crypto/primitives"
+	"crypto/ecdsa"
 )
 
 const (
@@ -73,19 +78,20 @@ type jsonNotification struct {
 // jsonCodec reads and writes JSON-RPC messages to the underlying connection. It
 // also has support for parsing arguments and serializing (result) objects.
 type jsonCodec struct {
-	closer     sync.Once          // close closed channel once
-	closed     chan interface{}   // closed on Close
-	decMu      sync.Mutex         // guards d
-	d          *json.Decoder      // decodes incoming requests
-	encMu      sync.Mutex         // guards e
-	e          *json.Encoder      // encodes responses
-	rw         io.ReadWriteCloser // connection
+	closer     sync.Once             // close closed channel once
+	closed     chan interface{}      // closed on Close
+	decMu      sync.Mutex            // guards d
+	d          *json.Decoder         // decodes incoming requests
+	encMu      sync.Mutex            // guards e
+	e          *json.Encoder         // encodes responses
+	rw         io.ReadWriteCloser    // connection
 	httpHeader http.Header
-	CM         *membersrvc.CAManager //ca manager
+	CM         *admittance.CAManager //ca manager
+	//httpBody   string                //httpBody 信息
 }
 
 // NewJSONCodec creates a new RPC server codec with support for JSON-RPC 2.0
-func NewJSONCodec(rwc io.ReadWriteCloser, header http.Header, cm *membersrvc.CAManager) ServerCodec {
+func NewJSONCodec(rwc io.ReadWriteCloser, header http.Header, cm *admittance.CAManager) ServerCodec {
 	d := json.NewDecoder(rwc)
 	d.UseNumber()
 	return &jsonCodec{closed: make(chan interface{}), d: d, e: json.NewEncoder(rwc), rw: rwc, httpHeader: header, CM: cm}
@@ -104,25 +110,31 @@ func isBatch(msg json.RawMessage) bool {
 }
 
 // CheckHttpHeaders will check http header, mainly
-func (c *jsonCodec) CheckHttpHeaders() RPCError {
-	if c.CM.GetIsCheckTCert() {
-		return nil
-	}
+
+func (c *jsonCodec) CheckHttpHeaders() RPCError{
+	//可能影响性能
+	//if !c.CM.GetIsCheckTCert() {
+	//	return nil
+	//}
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
-	tcertPem, err := DecodeUriCompontent(c.httpHeader.Get("tcert"))
-	if err != nil || tcertPem == "" {
-		log.Debug("cannot decode the tcert header", err)
-		return &UnauthorizedError{}
-	}
-	verifyTcert, err := c.CM.VerifyTCert(tcertPem)
 
-	if verifyTcert == false || err != nil {
-		log.Warning("Verify failed", err)
-		return &UnauthorizedError{}
-	}
+	signature := c.httpHeader.Get("signature")
+	//log.Warning("json sign",signature)
+	msg := common.TransportDecode(c.httpHeader.Get("msg"))
+	//log.Warning("json msg",msg)
+	tcertPem := common.TransportDecode(c.httpHeader.Get("tcert"))
+	//log.Warning("jsont tcert1:",c.httpHeader.Get("tcert"))
+	//log.Warning("json tcert2",tcertPem)
+	tcert,err := primitives.ParseCertificate(tcertPem)
+	if err != nil {
 
-	signature, err := DecodeUriCompontent(c.httpHeader.Get("signature"))
+		log.Error("fail to parse tcert.",err)
+	}
+	tcertPublicKey := tcert.PublicKey
+	pubKey := tcertPublicKey.(*(ecdsa.PublicKey))
+
+
 	/**
 	Review 如果客户端没有tcert 则会用ecert充当tcert，此时需要验证是否合法
 	由于tcert 应当是用ecert签出的，那么应该同时可以被根证书验证通过，但是
@@ -132,10 +144,24 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError {
 	签名算法为 ECDSAWithSHA256
 	这部分需要SDK端实现，hyperchain端已经实现了验证方法
 	*/
-	verifySignature, err := c.CM.VerifySignature(tcertPem, signature, "hyperchain")
+
+	signB := common.Hex2Bytes(signature)
+	verifySignature,err := primitives.ECDSAVerifyTransport(pubKey,[]byte(msg),signB)
+	//sign,_ := hex.DecodeString(signature)
+	//verifySignature, err := c.CM.VerifyECertSignature(tcertPem, []byte("hyperchain"), sign)
+	//verifySignature := strings.EqualFold("hyperchain",signature)
 	if err != nil || !verifySignature {
+		log.Error("Fail to verify TransportSignture!",err)
 		return &UnauthorizedError{}
 	}
+	//log.Critical("TransportSignture 验证通过")
+	verifyTcert, err := c.CM.VerifyTCert(tcertPem)
+
+	if verifyTcert == false || err != nil {
+		log.Error("Fail to verify tcert!",err)
+		return &UnauthorizedError{}
+	}
+	//log.Critical("TCert 验证通过")
 	return nil
 }
 

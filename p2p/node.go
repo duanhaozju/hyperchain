@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc"
 	"hyperchain/core/crypto/primitives"
 	"hyperchain/event"
-	"hyperchain/membersrvc"
+	"hyperchain/admittance"
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/transport"
 	"hyperchain/p2p/transport/ecdh"
@@ -38,7 +38,7 @@ type Node struct {
 	N               int
 	DelayTableMutex sync.Mutex
 	TEM             transport.TransportEncryptManager
-	CM              *membersrvc.CAManager
+	CM              *admittance.CAManager
 }
 
 type UpdateTable struct {
@@ -47,7 +47,7 @@ type UpdateTable struct {
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
-func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TEM transport.TransportEncryptManager, peersPool PeersPool, cm *membersrvc.CAManager) *Node {
+func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TEM transport.TransportEncryptManager, peersPool PeersPool, cm *admittance.CAManager) *Node {
 	var newNode Node
 	newNode.localAddr = localAddr
 	newNode.TEM = TEM
@@ -146,6 +146,15 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
 		signPub, _ := ecdh256.Unmarshal(signPubByte)
 		ecdsaEncrypto := primitives.NewEcdsaEncrypto("ecdsa")
+		if signPub == nil {
+			log.Warning("signPub")
+		}
+		if msg.Payload == nil {
+			log.Warning("msg.payload")
+		}
+		if msg.Signature == nil {
+			return &response, errors.New("signature is nil!!")
+		}
 		bol, err := ecdsaEncrypto.VerifySign(signPub, msg.Payload, msg.Signature.Signature)
 		if !bol || err != nil {
 			log.Error("cannot verified the ecert signature", bol)
@@ -174,7 +183,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		// 先验证证书签名
 		bol, err := node.CM.VerifyECertSignature(string(ecertByte), msg.Payload, msg.Signature.Signature)
 		if !bol || err != nil {
-			log.Error("Verify the cert signature failed!")
+			log.Error("Verify the cert signature failed!",err)
 			return &response, errors.New("Verify the cert signature failed!")
 		}
 		log.Debug("The cert signature PASS")
@@ -467,7 +476,8 @@ func (node *Node) StartServer() {
 		log.Fatalf("Failed to listen: %v", err)
 		log.Fatal("PLEASE RESTART THE SERVER NODE!")
 	}
-	opts := membersrvc.GetGrpcServerOpts()
+	//opts := membersrvc.GetGrpcServerOpts()
+	opts := node.CM.GetGrpcServerOpts()
 	node.gRPCServer = grpc.NewServer(opts...)
 	//this.gRPCServer = grpc.NewServer()
 	pb.RegisterChatServer(node.gRPCServer, node)
@@ -503,7 +513,7 @@ func (node *Node) reconnect(msg *pb.Message) error {
 	if err != nil {
 		log.Warning("This remote Node hasn't existed, and try to reconnect...")
 
-		peer, err := NewPeerReconnect(pb.RecoverPeerAddr(msg.From), node.localAddr, node.TEM)
+		peer, err := NewPeerReconnect(pb.RecoverPeerAddr(msg.From), node.localAddr, node.TEM,node.CM)
 		if err != nil {
 			log.Critical("new peer failed")
 		} else {

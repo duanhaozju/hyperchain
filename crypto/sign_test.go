@@ -3,18 +3,12 @@
 package crypto
 
 import (
-	"crypto/elliptic"
-	"fmt"
-	"hyperchain/crypto/secp256k1"
-	"math/big"
-	"sync/atomic"
-	"testing"
-
-	"crypto/ecdsa"
 	"hyperchain/common"
+	"sync/atomic"
+	"math/big"
 )
 
-type Transaction struct {
+type TransactionAgain struct {
 	data txdata
 	// caches
 	from atomic.Value

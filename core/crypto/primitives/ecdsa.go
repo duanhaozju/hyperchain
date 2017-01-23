@@ -10,6 +10,8 @@ import (
 	"math/big"
 	//"github.com/op/go-logging"
 	hcrypto "hyperchain/crypto"
+	//"fmt"
+	"crypto/sha256"
 )
 
 // ECDSASignature represents an ECDSA signature
@@ -64,11 +66,12 @@ func ECDSASign(signKey interface{}, msg []byte) ([]byte, error) {
 }
 
 // ECDSAVerify verifies
+
 func ECDSAVerify(verKey interface{}, msg, signature []byte) (bool, error) {
 	ecdsaSignature := new(ECDSASignature)
 	_, err := asn1.Unmarshal(signature, ecdsaSignature)
 	if err != nil {
-		return false, nil
+		return false, err
 	}
 
 	//	R, _ := ecdsaSignature.R.MarshalText()
@@ -80,4 +83,25 @@ func ECDSAVerify(verKey interface{}, msg, signature []byte) (bool, error) {
 	h := hasher.Hash(msg).Bytes()
 	//h := Hash(msg)
 	return ecdsa.Verify(&temp, h, ecdsaSignature.R, ecdsaSignature.S), nil
+}
+
+func ECDSAVerifyTransport(verKey *ecdsa.PublicKey, msg, signature []byte) (bool, error) {
+	ecdsaSignature := new(ECDSASignature)
+	_, err := asn1.Unmarshal(signature, ecdsaSignature)
+	if err != nil {
+		return false, err
+	}
+
+	h:=sha256.New()
+	digest := make([]byte,32)
+	h.Write(msg)
+	h.Sum(digest[:0])
+
+	//fmt.Println("R",ecdsaSignature.R.BitLen())
+	//fmt.Println("S",ecdsaSignature.S.BitLen())
+
+
+
+	//h := Hash(msg)
+	return ecdsa.Verify(verKey, digest, ecdsaSignature.R, ecdsaSignature.S), nil
 }
