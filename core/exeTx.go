@@ -5,7 +5,6 @@ package core
 import (
 	glog "github.com/op/go-logging"
 	"hyperchain/common"
-	"hyperchain/core/state"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 
@@ -20,24 +19,24 @@ var (
 )
 
 // 这一块相当于ethereum里的TransitionDB
-func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
+func ExecTransaction(tx *types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
 	var (
-		from       = common.BytesToAddress(tx.From)
-		to         = common.BytesToAddress(tx.To)
+		from = common.BytesToAddress(tx.From)
+		to = common.BytesToAddress(tx.To)
 		tv         = tx.GetTransactionValue()
 		data       = tv.GetPayload()
 		gas        = big.NewInt(100000000)
 		gasPrice   = tv.GetGasPrice()
 		amount     = tv.GetAmount()
-		statedb, _ = env.Db().(*state.StateDB)
+		update     = tv.GetUpdate()
 	)
 	//ZHZ_TEST the time of above will cost 10us
 
 	//ZHZ_TEST this will cost 200us
 	if tx.To == nil {
-		ret, addr, err = Exec(env, &from, nil, data, gas, gasPrice, amount)
+		ret, addr, err = Exec(env, &from, nil, data, gas, gasPrice, amount, update)
 	} else {
-		ret, _, err = Exec(env, &from, &to, data, gas, gasPrice, amount)
+		ret, _, err = Exec(env, &from, &to, data, gas, gasPrice, amount, update)
 	}
 
 	//ZHZ_TEST the time of below will cost 10us
@@ -46,7 +45,7 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 	receipt.TxHash = tx.GetTransactionHash().Bytes()
 	receipt.GasUsed = 100000
 	receipt.Ret = ret
-	receipt.SetLogs(statedb.GetLogs(common.BytesToHash(receipt.TxHash)))
+	receipt.SetLogs(env.Db().GetLogs(common.BytesToHash(receipt.TxHash)))
 
 	if err != nil {
 		if !IsValueTransferErr(err) && !IsExecContractErr(err) {
@@ -61,7 +60,7 @@ func ExecTransaction(tx types.Transaction, env vm.Environment) (receipt *types.R
 }
 
 func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
-	gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
+	gasPrice, value *big.Int, update bool) (ret []byte, addr common.Address, err error) {
 	var sender vm.Account
 
 	if !(vmenv.Db().Exist(*from)) {
@@ -74,7 +73,6 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 	//ret,err = env.Call(sender,*to,data,gas,gasPrice,value)
 	// 判断是否能够交易,转移,这一步可以考虑在外部执行
 	if contractCreation {
-		log.Debug("------create contract")
 		ret, addr, err = vmenv.Create(sender, data, gas, gasPrice, value)
 		if err != nil {
 			ret = nil
@@ -82,13 +80,10 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 		}
 	} else {
 		log.Debug("------call contract")
-		ret, err = vmenv.Call(sender, *to, data, gas, gasPrice, value)
+		ret, err = vmenv.Call(sender, *to, data, gas, gasPrice, value, update)
 		if err != nil {
 			log.Error("VM call err:", err)
 		}
 	}
-	// todo replace the gasused
-	// todo just for test
-
 	return ret, addr, err
 }

@@ -460,7 +460,7 @@ func (pbft *pbftProtocal) checkDuplicateInBlock(tx *types.Transaction, txStore *
 func (pbft *pbftProtocal) checkDuplicateInCache(tx *types.Transaction) (exist bool) {
 	exist = false
 	for _, txStore := range pbft.duplicator {
-		if pbft.checkDuplicateInBlock(tx, txStore) {
+		if txStore != nil && pbft.checkDuplicateInBlock(tx, txStore) {
 			exist = true
 			break
 		}

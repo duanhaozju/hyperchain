@@ -348,6 +348,7 @@ func opCalldataCopy(instr instruction, pc *uint64, env Environment, contract *Co
 }
 
 func opExtCodeSize(instr instruction, pc *uint64, env Environment, contract *Contract, memory *Memory, stack *stack) {
+	// TODO use cache to optimize
 	addr := common.BigToAddress(stack.pop())
 	l := big.NewInt(int64(len(env.Db().GetCode(addr))))
 	stack.push(l)
@@ -464,8 +465,8 @@ func opMstore8(instr instruction, pc *uint64, env Environment, contract *Contrac
 
 func opSload(instr instruction, pc *uint64, env Environment, contract *Contract, memory *Memory, stack *stack) {
 	loc := common.BigToHash(stack.pop())
-	val := env.Db().GetState(contract.Address(), loc).Big()
-	stack.push(val)
+	_, val := env.Db().GetState(contract.Address(), loc)
+	stack.push(val.Big())
 }
 
 func opSstore(instr instruction, pc *uint64, env Environment, contract *Contract, memory *Memory, stack *stack) {
@@ -533,8 +534,8 @@ func opCall(instr instruction, pc *uint64, env Environment, contract *Contract, 
 	if len(value.Bytes()) > 0 {
 		gas.Add(gas, params.CallStipend)
 	}
-
-	ret, err := env.Call(contract, address, args, gas, contract.Price, value)
+	// normal contract call, update operation could happen only in entry contract
+	ret, err := env.Call(contract, address, args, gas, contract.Price, value, false)
 
 	if err != nil {
 		stack.push(new(big.Int))

@@ -22,6 +22,9 @@ global:
 
     dbConfig: "./config/db.yaml"
 
+    structure:
+        state: "hyperstate" # two available options: rawstate or hyperstate
+
     version:
         blockversion: "1.0"
         transactionversion: "1.0"
@@ -43,6 +46,15 @@ global:
             txFillRate: 0.5ms
             contractRatePeak : 100
             contractFillRate: 0.5ms
+        buckettree:
+            state:
+                size: 19
+                levelGroup: 10
+                cacheSize: 100    # 10 MB
+            storage:
+                size: 19
+                levelGroup: 10
+                cacheSize: 100   # 10 MB
         hmpublickey:
             "N": "14315727801779002117"
             Nsquare: "204940062494628260128356353732290481689"

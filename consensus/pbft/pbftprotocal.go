@@ -88,6 +88,9 @@ type pbftProtocal struct {
 	qset            *Qset
 	pset            *Pset
 	cset            *Cset
+	// pqset for viewchange
+	qlist			map[qidx]*ViewChange_PQ
+	plist			map[uint64]*ViewChange_PQ
 	checkpointStore map[Checkpoint]bool    // track checkpoints as set
 	committedCert   map[msgID]string       // track the committed cert to help excute
 	chkptCertStore  map[chkptID]*chkptCert // track quorum certificates for checkpoints
@@ -314,8 +317,9 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.newViewStore = make(map[uint64]*NewView)
 	pbft.viewChangeStore = make(map[vcidx]*ViewChange)
 	pbft.missingReqBatches = make(map[string]bool)
-	pbft.vcResetStore = make(map[FinishVcReset]bool)
-	pbft.inVcReset = false
+
+	pbft.qlist = make(map[qidx]*ViewChange_PQ)
+	pbft.plist = make(map[uint64]*ViewChange_PQ)
 
 	// initialize state transfer
 	pbft.hChkpts = make(map[uint64]uint64)
@@ -579,7 +583,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		}
 		pbft.persistView(pbft.view)
 		pbft.helper.InformPrimary(primary)
-		pbft.processRequestsDuringNegoView()
+		//pbft.processRequestsDuringNegoView()
 		pbft.initRecovery()
 		return nil
 	case *RecoveryInit:
@@ -597,6 +601,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 				", will restart negotiate view", pbft.id)
 			pbft.inRecovery = true
 			pbft.inNegoView = true
+			pbft.recvNewViewInRecovery = false
 			pbft.restartNegoView()
 		}
 		if pbft.isNewNode {
@@ -2089,6 +2094,18 @@ func (pbft *pbftProtocal) moveWatermarks(n uint64) {
 		pbft.cset.Set = cset
 	}
 
+	for idx := range pbft.qlist {
+		if idx.n <= h {
+			delete(pbft.qlist, idx)
+		}
+	}
+
+	for n := range pbft.plist {
+		if n <= h {
+			delete(pbft.plist, n)
+		}
+	}
+
 	pbft.h = h
 
 	logger.Infof("Replica %d updated low watermark to %d",
@@ -2337,13 +2354,13 @@ func (pbft *pbftProtocal) restartNegoView() {
 	pbft.processNegotiateView()
 }
 
-func (pbft *pbftProtocal) processRequestsDuringNegoView() {
-	if !pbft.inNegoView {
-		pbft.processCachedTransactions()
-	} else {
-		logger.Critical("Replica %d try to processRequestsDuringNegoView but nego-view is not finished", pbft.id)
-	}
-}
+//func (pbft *pbftProtocal) processRequestsDuringNegoView() {
+//	if !pbft.inNegoView {
+//		pbft.processCachedTransactions()
+//	} else {
+//		logger.Critical("Replica %d try to processRequestsDuringNegoView but nego-view is not finished", pbft.id)
+//	}
+//}
 
 func (pbft *pbftProtocal) processRequestsDuringRecovery() {
 	if !pbft.inRecovery {
