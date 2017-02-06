@@ -120,7 +120,7 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 	defer c.decMu.Unlock()
 
 	signature := c.httpHeader.Get("signature")
-	//log.Warning("json sign",signature)
+
 	msg := common.TransportDecode(c.httpHeader.Get("msg"))
 	//log.Warning("json msg",msg)
 	tcertPem := common.TransportDecode(c.httpHeader.Get("tcert"))
