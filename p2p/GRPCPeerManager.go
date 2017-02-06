@@ -50,7 +50,9 @@ func NewGrpcManager(conf *common.Config) *GRPCPeerManager {
 	//log.Critical("local ID",newgRPCManager.LocalAddr.ID)
 	//get the maxpeer from config
 	newgRPCManager.IsOriginal = config.IsOrigin()
+
 	newgRPCManager.Introducer = pb.NewPeerAddr(config.GetIntroducerIP(), config.GetIntroducerPort(), config.GetIntroducerJSONRPCPort(), config.GetIntroducerID())
+	log.Warningf("introducer, %v\n",newgRPCManager.Introducer)
 	return &newgRPCManager
 }
 
@@ -129,7 +131,7 @@ func (this *GRPCPeerManager) connectToIntroducer(introducerAddress pb.PeerAddr) 
 	}
 	retMsg, sendErr := peer.Chat(introduce_message)
 	if sendErr != nil {
-		log.Error("get routing table error")
+		log.Errorf("get routing table error, %v",sendErr)
 	}
 
 	var routers pb.Routers

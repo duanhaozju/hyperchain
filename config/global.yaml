@@ -79,7 +79,7 @@ global:
 
         module:
             #set log level by module
-            p2p: "INFO"
+            p2p: "DEBUG"
             consensus: "NOTICE"
             core: "NOTICE"
             hyperdb: "NOTICE"

@@ -130,6 +130,7 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 	if err != nil {
 
 		log.Error("fail to parse tcert.",err)
+		return &UnauthorizedError{}
 	}
 	tcertPublicKey := tcert.PublicKey
 	pubKey := tcertPublicKey.(*(ecdsa.PublicKey))
