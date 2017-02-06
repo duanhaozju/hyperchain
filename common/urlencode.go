@@ -207,6 +207,9 @@ func TransportEncode(str string) string{
 }
 
 func TransportDecode(str string) string{
+	if str[0:2] == "0x" {
+		str = str[2:]
+	}
 	b := Hex2Bytes(str)
 	return string(b)
 }

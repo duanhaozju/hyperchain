@@ -128,7 +128,6 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 	//log.Warning("json tcert2",tcertPem)
 	tcert,err := primitives.ParseCertificate(tcertPem)
 	if err != nil {
-
 		log.Error("fail to parse tcert.",err)
 		return &UnauthorizedError{}
 	}
@@ -145,7 +144,6 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 	签名算法为 ECDSAWithSHA256
 	这部分需要SDK端实现，hyperchain端已经实现了验证方法
 	*/
-
 	signB := common.Hex2Bytes(signature)
 	verifySignature,err := primitives.ECDSAVerifyTransport(pubKey,[]byte(msg),signB)
 	//sign,_ := hex.DecodeString(signature)
