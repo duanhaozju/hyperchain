@@ -331,7 +331,7 @@ func (pbft *pbftProtocal) sendNewView() events.Event {
 	msg := consensusMsgHelper(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
 	pbft.newViewStore[pbft.view] = nv
-	//return pbft.processNewView()
+	pbft.vcResetStore = make(map[FinishVcReset]bool)
 	return pbft.primaryProcessNewView(cp, replicas, nv)
 }
 
