@@ -44,7 +44,6 @@ func NewPeerPoolIml(TEM transport.TransportEncryptManager, localAddr *pb.PeerAdd
 
 // PutPeer put a peer into the peer pool and get a peer point
 func (this *PeersPoolIml) PutPeer(addr pb.PeerAddr, client *Peer) error {
-	addrString := addr.Hash
 	//log.Println("Add a peer:",addrString)
 	if _, ok := this.peerKeys[addr]; ok {
 		// the pool already has this client
@@ -54,9 +53,9 @@ func (this *PeersPoolIml) PutPeer(addr pb.PeerAddr, client *Peer) error {
 	} else {
 		log.Debug("alive peers number is:", this.alivePeers)
 		this.alivePeers += 1
-		this.peerKeys[addr] = addrString
-		this.peerAddr[addrString] = addr
-		this.peers[addrString] = client
+		this.peerKeys[addr] = addr.Hash
+		this.peerAddr[addr.Hash] = addr
+		this.peers[addr.Hash] = client
 		return nil
 	}
 
@@ -165,6 +164,7 @@ func (this *PeersPoolIml) GetPeersWithTemp() []*Peer {
 //将peerspool转换成能够传输的列表
 func (this *PeersPoolIml) ToRoutingTable() pb.Routers {
 	peers := this.GetPeers()
+	log.Warning("peers %v",peers)
 	var routers pb.Routers
 
 	for _, pers := range peers {
@@ -214,6 +214,10 @@ func (this *PeersPoolIml) MergeTempPeers(peer *Peer) {
 	//使用共识结果进行更新
 	//for _, tempPeer := range this.tempPeers {
 	//	if tempPeer.RemoteAddr.Hash == address.Hash {
+	if peer == nil {
+		log.Error("the peer to merge is nil");
+		return
+	}
 	this.peers[peer.PeerAddr.Hash] = peer
 	this.peerAddr[peer.PeerAddr.Hash] = *peer.PeerAddr
 	this.peerKeys[*peer.PeerAddr] = peer.PeerAddr.Hash

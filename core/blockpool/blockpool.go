@@ -14,6 +14,7 @@ import (
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
 	"sync/atomic"
+	"hyperchain/event"
 )
 
 var (
@@ -57,9 +58,12 @@ type BlockPool struct {
 	receiptCalculator     interface{} // a batch of receipts calculator
 	transactionBuffer     [][]byte    // transaction buffer
 	receiptBuffer         [][]byte    // receipt buffer
+	// event hub
+	helper                *Helper
+
 }
 
-func NewBlockPool(consenter consensus.Consenter, conf *common.Config) *BlockPool {
+func NewBlockPool(consenter consensus.Consenter, conf *common.Config, eventMux *event.TypeMux) *BlockPool {
 	var err error
 	blockCache, err := common.NewCache()
 	if err != nil {
@@ -73,13 +77,14 @@ func NewBlockPool(consenter consensus.Consenter, conf *common.Config) *BlockPool
 	if err != nil {
 		return nil
 	}
-
+	helper := NewHelper(eventMux)
 	pool := &BlockPool{
 		consenter:       consenter,
 		queue:           queue,
 		validationQueue: validationQueue,
 		blockCache:      blockCache,
 		conf:            conf,
+		helper:          helper,
 	}
 	// 1. set demand number and demand seqNo
 	currentChain := core.GetChainCopy()

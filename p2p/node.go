@@ -5,7 +5,6 @@ package p2p
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"encoding/hex"
 	"errors"
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
@@ -61,8 +60,8 @@ func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TEM transport
 	//listen the update
 	go newNode.UpdateDelayTableThread()
 
-	log.Debug("node start ...")
-	log.Debug("local node addr", localAddr)
+	log.Debug("NODE START...")
+	log.Debugf("LOCAL NODE INFO:\nID: %d\nIP: %s\nPORT: %d\nHASH: %s", localAddr.ID,localAddr.IP,localAddr.Port,localAddr.Hash)
 	return &newNode
 }
 
@@ -87,30 +86,19 @@ func (node *Node) attendNoticeProcess(N int) {
 		select {
 		case attendFlag := <-node.attendChan:
 			{
-				log.Debug("Connect to a new peer ... N:", N, "f", f, "num", num)
+				log.Debug("Already connect a old peer... N:", N, "f", f, "num", num,"flag",attendFlag)
 				if attendFlag == 1 {
 					num += 1
-					if num >= (N-f) && !node.sentEvent && isPrimaryConnectFlag {
-						//TODO 修改向上post的消息类型
-						log.Debug("new node has online ")
-						node.higherEventManager.Post(event.AlreadyInChainEvent{})
-						node.sentEvent = true
-						num = 0
-
-					}
 				} else if attendFlag == 2 {
 					isPrimaryConnectFlag = true
-					if num >= (N-f) && !node.sentEvent && isPrimaryConnectFlag {
-						//TODO 修改向上post的消息类型
-						log.Debug("new node has online ")
-						node.higherEventManager.Post(event.AlreadyInChainEvent{})
-						node.sentEvent = true
-						num = 0
+				}
+				if num >= (N-f) && !node.sentEvent && isPrimaryConnectFlag {
+					//TODO 修改向上post的消息类型
+					log.Debug("new node has online ")
+					node.higherEventManager.Post(event.AlreadyInChainEvent{})
+					node.sentEvent = true
+					num = 0
 
-					}
-
-				} else {
-					log.Warning("invalid connection ... N:", N, "f", f, "num", num)
 				}
 			}
 		}
@@ -131,6 +119,12 @@ func (node *Node) GetNodeID() int {
 
 // Chat Implements the ServerSide Function
 func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error) {
+	log.Debugf("\n###########################\nSTART OF NEW MESSAGE")
+	log.Debugf("LOCAL=> ID:%d IP:%s PORT:%d",node.localAddr.ID,node.localAddr.IP,node.localAddr.Port)
+	log.Debugf("MSG FORM=> ID: %d IP: %s PORT: %d",msg.From.ID,msg.From.IP,msg.From.Port)
+	log.Debugf("MSG TYPE: %v",msg.MessageType)
+	defer log.Debugf("END OF NEW MESSAGE\n###########################\n")
+
 	var response pb.Message
 	response.MessageType = pb.Message_RESPONSE
 	response.MsgTimeStamp = time.Now().UnixNano()
@@ -160,7 +154,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			log.Error("cannot verified the ecert signature", bol)
 			return &response, errors.New("signature is wrong!!")
 		}
-		log.Debug("The cert signature PASS")
+		log.Debug("CERT SIGNATURE VERIFY PASS")
 		//TODO 用CM对验证进行管理(此处的必要性需要考虑)
 		// TODO 1. 验证ECERT 的合法性
 		//bol1,err := node.CM.VerifyECert()
@@ -171,22 +165,17 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		// 参数3. 原始数据
 		//bol2,err := node.CM.VerifySignature(certPEM,signature,signed)
 
-		log.Debug("##########", bol, "##############")
-		log.Debug(" MSG FROM:", msg.From.ID)
-		log.Debug(" MSG TYPE:", msg.MessageType)
-		log.Debug("#################################")
-
 	} else if (msg.MessageType == pb.Message_HELLO) && node.CM.GetIsUsed() == true {
 
-		ecertByte := msg.Signature.Ecert
-		rcertByte := msg.Signature.Rcert
+		ecertByte := msg.Signature.ECert
+		rcertByte := msg.Signature.RCert
 		// 先验证证书签名
 		bol, err := node.CM.VerifyECertSignature(string(ecertByte), msg.Payload, msg.Signature.Signature)
 		if !bol || err != nil {
 			log.Error("Verify the cert signature failed!",err)
 			return &response, errors.New("Verify the cert signature failed!")
 		}
-		log.Debug("The cert signature PASS")
+		log.Debug("CERT SIGNATURE VERIFY PASS")
 		ecert, err := primitives.ParseCertificate(string(ecertByte))
 		signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
 		ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
@@ -206,26 +195,20 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			log.Error(ecertErr)
 			return &response, ecertErr
 		}
-		log.Debug("ECERT PASS")
+		log.Debug("ECERT VERIFY PASS")
 		if !verifyRcert || rcertErr != nil {
 			node.TEM.SetIsVerified(false, msg.From.Hash)
 		} else {
 			node.TEM.SetIsVerified(true, msg.From.Hash)
 		}
 
-		log.Debug("RCERT PASS")
+		log.Debug("RCERT VERIFY PASS")
 	}
 
 	//handle the message
-	log.Debug("MSG Type: ", msg.MessageType)
 	switch msg.MessageType {
 	case pb.Message_HELLO:
 		{
-			log.Debug("=================================")
-			log.Debug("negotiating key")
-			log.Debug("local addr is ", node.localAddr)
-			log.Debug("remote addr is", msg.From.ID, msg.From.IP, msg.From.Port)
-			log.Debug("=================================")
 			response.MessageType = pb.Message_HELLO_RESPONSE
 			//review 协商密钥
 			remotePublicKey := msg.Payload
@@ -235,9 +218,6 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			if genErr != nil {
 				log.Error("gen sec error", genErr)
 			}
-			log.Debug("remote addr hash：", msg.From.Hash)
-			log.Debug("negotiated key is ", node.TEM.GetSecret(msg.From.Hash))
-			log.Debug("remote publickey is:", remotePublicKey)
 			//every times get the public key is same
 			transportPublicKey := node.TEM.GetLocalPublicKey()
 			//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
@@ -272,11 +252,6 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 	case pb.Message_RECONNECT_RESPONSE:
 		{
-			log.Debug("=================================")
-			log.Debug("exchange the secret")
-			log.Debug("local node is ", node.localAddr)
-			log.Debug("remote node is", msg.From.ID, msg.From.IP, msg.From.Port)
-			log.Debug("=================================")
 			response.MessageType = pb.Message_HELLO_RESPONSE
 			remotePublicKey := msg.Payload
 			genErr := node.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
@@ -303,6 +278,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			//返回路由表信息
 			response.MessageType = pb.Message_INTRODUCE_RESPONSE
 			routers := node.PeersPool.ToRoutingTable()
+			log.Warningf("routers: %v",routers)
 			response.Payload, _ = proto.Marshal(&routers)
 		}
 	case pb.Message_INTRODUCE_RESPONSE:
@@ -313,19 +289,28 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 	case pb.Message_ATTEND:
 		{
-			log.Debug("Message_ATTEND############")
 			//新节点全部连接上之后通知
+			transferData, err := node.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
+			if err != nil {
+				log.Error("cannot decode the message", err)
+				return nil, err
+			}
 			node.higherEventManager.Post(event.NewPeerEvent{
-				Payload: msg.Payload,
+				Payload: transferData,
 			})
 			//response
 			//response.MessageType = pb.Message_ATTEND_RESPNSE
 		}
-	case pb.Message_ATTEND_RESPNSE:
+	case pb.Message_ATTEND_RESPONSE:
 		{
 			// here need to judge if update
 			//if primary
-			if node.IsPrimary {
+			transferData, err := node.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
+			if err != nil {
+				log.Error("cannot decode the message", err)
+				return nil, err
+			}
+			if string(transferData) == "true" {
 				node.attendChan <- 2
 			} else {
 				node.attendChan <- 1
@@ -334,27 +319,15 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 	case pb.Message_CONSUS:
 		{
-			log.Debug("<<<<<<<<<<<<<<<<<<<<<<<<<")
-			log.Debug("GOT A CONSENSUS MESSAGE")
-			log.Debug("CONSENSUS MSG FROM", msg.From.ID)
-			log.Debug("CONSENSUS MSG TYPE", msg.MessageType)
-			log.Debug(">>>>>>>>>>>>>>>>>>>>>>>>")
-
-			log.Debug("**** Node Decode MSG ****")
-			log.Debug("Node need to decode msg: ", hex.EncodeToString(msg.Payload))
 			transferData, err := node.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
 			if err != nil {
 				log.Error("cannot decode the message", err)
 				return nil, err
 			}
-			//log.Debug("Node解密后信息", hex.EncodeToString(transferData))
-			//log.Debug("Node解密后信息2", string(transferData))
 			response.Payload = []byte("GOT_A_CONSENSUS_MESSAGE")
 			if string(transferData) == "TEST" {
 				response.Payload = []byte("GOT_A_TEST_CONSENSUS_MESSAGE")
 			}
-			log.Debug("from Node", msg.From.ID)
-			log.Debug(hex.EncodeToString(transferData))
 
 			go node.higherEventManager.Post(
 				event.ConsensusEvent{
@@ -430,6 +403,13 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 				{
 					log.Debug("receive Message_BROADCAST_DELPEER")
 					go node.higherEventManager.Post(event.RecvDelPeerEvent{
+						Payload: SyncMsg.Payload,
+					})
+				}
+			case recovery.Message_VERIFIED_BLOCK:
+				{
+					log.Debug("receive Message_BROADCAST_DELPEER")
+					go node.higherEventManager.Post(event.ReceiveVerifiedBlock{
 						Payload: SyncMsg.Payload,
 					})
 				}
@@ -518,6 +498,9 @@ func (node *Node) reconnect(msg *pb.Message) error {
 			log.Critical("new peer failed")
 		} else {
 			//TODO already exist handler
+			if peer == nil{
+				return nil
+			}
 			node.PeersPool.PutPeer(*pb.RecoverPeerAddr(msg.From), peer)
 
 		}

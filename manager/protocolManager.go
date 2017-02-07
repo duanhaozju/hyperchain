@@ -15,7 +15,6 @@ import (
 	"hyperchain/p2p"
 	"hyperchain/protos"
 	"hyperchain/recovery"
-	"sync"
 	"time"
 )
 
@@ -47,8 +46,8 @@ type ProtocolManager struct {
 	syncBlockSub        event.Subscription
 	syncStatusSub       event.Subscription
 	peerMaintainSub     event.Subscription
+	nonVerifiedPeerSub  event.Subscription
 	quitSync            chan struct{}
-	wg                  sync.WaitGroup
 	syncBlockCache      *common.Cache
 	replicaStatus       *common.Cache
 	syncReplicaInterval time.Duration
@@ -97,7 +96,6 @@ func GetEventObject() *event.TypeMux {
 
 // start listen new block msg and consensus msg
 func (pm *ProtocolManager) Start() {
-	pm.wg.Add(1)
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
 	pm.validateSub = pm.eventMux.Subscribe(event.ExeTxsEvent{})
 	pm.commitSub = pm.eventMux.Subscribe(event.CommitOrRollbackBlockEvent{})
@@ -105,18 +103,19 @@ func (pm *ProtocolManager) Start() {
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
 	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{}, event.InformPrimaryEvent{})
-	go pm.validateLoop()
-	go pm.commitLoop()
 	pm.peerMaintainSub = pm.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{},
 		event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{}, event.RecvNewPeerEvent{},
 		event.DelPeerEvent{}, event.BroadcastDelPeerEvent{}, event.RecvDelPeerEvent{})
+	pm.nonVerifiedPeerSub = pm.eventMux.Subscribe(event.VerifiedBlock{})
+	go pm.validateLoop()
+	go pm.commitLoop()
 	go pm.ConsensusLoop()
 	go pm.syncBlockLoop()
 	go pm.syncCheckpointLoop()
 	go pm.respHandlerLoop()
 	go pm.viewChangeLoop()
 	go pm.peerMaintainLoop()
-
+	go pm.nonVerifiedPeerSynchronizationLoop()
 	go pm.checkExpired()
 	if pm.syncReplica {
 		pm.syncStatusSub = pm.eventMux.Subscribe(event.ReplicaStatusEvent{})
@@ -136,11 +135,9 @@ func (pm *ProtocolManager) Start() {
 		pm.consenter.RecvLocal(msg)
 		pm.Peermanager.ConnectToOthers()
 	}
-	pm.wg.Wait()
-
 }
+
 func (self *ProtocolManager) syncCheckpointLoop() {
-	self.wg.Add(-1)
 	for obj := range self.syncCheckpointSub.Chan() {
 
 		switch ev := obj.Data.(type) {
@@ -203,6 +200,7 @@ func (self *ProtocolManager) respHandlerLoop() {
 		}
 	}
 }
+
 func (self *ProtocolManager) viewChangeLoop() {
 
 	for obj := range self.viewChangeSub.Chan() {
@@ -216,6 +214,7 @@ func (self *ProtocolManager) viewChangeLoop() {
 		}
 	}
 }
+
 func (self *ProtocolManager) syncReplicaStatusLoop() {
 
 	for obj := range self.syncStatusSub.Chan() {
@@ -234,7 +233,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 	for obj := range self.consensusSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.BroadcastConsensusEvent:
-			log.Info("######enter broadcast")
+			log.Debug("######enter broadcast")
 			go self.BroadcastConsensus(ev.Payload)
 		case event.TxUniqueCastEvent:
 			var peers []uint64
@@ -252,11 +251,6 @@ func (self *ProtocolManager) ConsensusLoop() {
 			}
 
 		case event.ConsensusEvent:
-			//call consensus module
-			//log.Debug("###### enter ConsensusEvent")
-			//msg := &protos.Message{}
-			//proto.Unmarshal(ev.Payload, msg)
-			//log.Debug("***consensus, from: , type: ", msg.Id, msg.Type)
 			self.consenter.RecvMsg(ev.Payload)
 		}
 	}
@@ -273,15 +267,15 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			msg := &protos.AddNodeMessage{
 				Payload: ev.Payload,
 			}
+			log.Critical("newPeerEvent",ev.Payload)
 			self.consenter.RecvLocal(msg)
 		case event.BroadcastNewPeerEvent:
 			log.Debug("BroadcastNewPeerEvent")
 			// receive this event from consensus module
 			// broadcast the local CA validition result to other replica
-			peers := self.Peermanager.GetAllPeers()
+			peers := self.Peermanager.GetVPPeers()
 			var peerIds []uint64
 			for _, peer := range peers {
-				//TODO change to int
 				peerIds = append(peerIds, uint64(peer.PeerAddr.ID))
 			}
 			self.Peermanager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_BROADCAST_NEWPEER)
@@ -305,8 +299,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			log.Debug("BroadcastDelPeerEvent")
 			// receive this event from consensus module
 			// broadcast to other replica
-			// TODO Don't send to the exit peer itself
-			peers := self.Peermanager.GetAllPeers()
+			peers := self.Peermanager.GetVPPeers()
 			var peerIds []uint64
 			for _, peer := range peers {
 				peerIds = append(peerIds, uint64(peer.PeerAddr.ID))
@@ -333,9 +326,26 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			log.Debug("AlreadyInChainEvent")
 			// send negotiate event
 			if self.initType == 1 {
-				self.Peermanager.SetOnline()
+				//self.Peermanager.SetOnline()
 				self.NegotiateView()
 			}
+		}
+	}
+}
+
+func (self *ProtocolManager) nonVerifiedPeerSynchronizationLoop() {
+	for obj := range self.nonVerifiedPeerSub.Chan() {
+		switch ev := obj.Data.(type) {
+		case event.VerifiedBlock:
+			peers := self.Peermanager.GetNVPPeers()
+			var peerIds []uint64
+			for _, peer := range peers {
+				peerIds = append(peerIds, uint64(peer.PeerAddr.ID))
+			}
+			self.Peermanager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_VERIFIED_BLOCK)
+		case event.ReceiveVerifiedBlock:
+			// not change to parallel invocation
+			self.blockPool.ReceiveVerifiedBlock(ev)
 		}
 	}
 }
@@ -359,7 +369,7 @@ func (self *ProtocolManager) sendMsg(payload []byte) {
 
 // Broadcast consensus msg to a batch of peers not knowing about it
 func (self *ProtocolManager) BroadcastConsensus(payload []byte) {
-	self.Peermanager.BroadcastPeers(payload)
+	self.Peermanager.BroadcastVPPeers(payload)
 
 }
 

@@ -297,7 +297,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 func initEnvironment(state vm.Database, seqNo uint64) vm.Environment {
 	env := make(map[string]string)
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
-	env["currentGasLimit"] = "10000000"
+	env["currentGasLimit"] = "200000000"
 	vmenv := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, state, env)
 	return vmenv
 }

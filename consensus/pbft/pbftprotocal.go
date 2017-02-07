@@ -317,6 +317,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.newViewStore = make(map[uint64]*NewView)
 	pbft.viewChangeStore = make(map[vcidx]*ViewChange)
 	pbft.missingReqBatches = make(map[string]bool)
+	pbft.vcResetStore = make(map[FinishVcReset]bool)
 
 	pbft.qlist = make(map[qidx]*ViewChange_PQ)
 	pbft.plist = make(map[uint64]*ViewChange_PQ)
@@ -467,9 +468,6 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 		primary := pbft.primary(pbft.view)
 		pbft.helper.InformPrimary(primary)
 		pbft.persistView(pbft.view)
-		if primary == pbft.id {
-			pbft.vcResetStore = make(map[FinishVcReset]bool)
-		}
 		atomic.StoreUint32(&pbft.activeView, 1)
 		pbft.processRequestsDuringViewChange()
 		logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/h=%d", pbft.id, primary, pbft.view, pbft.h)

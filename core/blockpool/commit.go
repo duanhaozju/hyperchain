@@ -151,6 +151,9 @@ func (pool *BlockPool) WriteBlock(block *types.Block, receipts []*types.Receipt,
 	// remove Cached Transactions which used to check transaction duplication
 	msg := protos.RemoveCache{Vid: vid}
 	pool.consenter.RecvLocal(msg)
+
+	// send block to non-verified peer
+	pool.TransitVerifiedBlock(block)
 }
 
 // save the invalid transaction into database for client query
@@ -214,3 +217,4 @@ func (pool *BlockPool) persistReceipts(batch hyperdb.Batch, receipts []*types.Re
 	}
 	return nil
 }
+

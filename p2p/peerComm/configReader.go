@@ -123,10 +123,10 @@ func (conf *ConfigReader) persist() error {
 
 func (conf *ConfigReader) addNode(addr pb.PeerAddr) {
 	conf.maxNode += 1
-	newAddress := NewAddress(addr.ID, addr.Port, addr.RpcPort, addr.IP)
+	newAddress := NewAddress(addr.ID, addr.Port, addr.RPCPort, addr.IP)
 	conf.nodes[addr.ID] = newAddress
 	conf.Config.Maxpeernode += 1
-	peerConfigNode := NewPeerConfigNodes(addr.IP, addr.RpcPort, addr.Port, addr.ID)
+	peerConfigNode := NewPeerConfigNodes(addr.IP, addr.RPCPort, addr.Port, addr.ID)
 	conf.Config.PeerNodes = append(conf.Config.PeerNodes, *peerConfigNode)
 
 }

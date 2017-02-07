@@ -20,6 +20,7 @@ message Message{
         SYNCREPLICA = 5;
         BROADCAST_NEWPEER = 6;
         BROADCAST_DELPEER = 7;
+        VERIFIED_BLOCK    = 8;
     }
 }
 

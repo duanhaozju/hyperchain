@@ -89,8 +89,8 @@ func (peer *Peer) handShake() (err error) {
 	*/
 
 	signature := pb.Signature{
-		Ecert: peer.CM.GetECertByte(),
-		Rcert: peer.CM.GetRCertByte(),
+		ECert: peer.CM.GetECertByte(),
+		RCert: peer.CM.GetRCertByte(),
 	}
 
 	//review start exchange the secret
@@ -161,8 +161,8 @@ func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transpo
 	// review handshake operation
 	// review start exchange the secret
 	signature := pb.Signature{
-		Ecert: peer.CM.GetECertByte(),
-		Rcert: peer.CM.GetRCertByte(),
+		ECert: peer.CM.GetECertByte(),
+		RCert: peer.CM.GetRCertByte(),
 	}
 
 	//review start exchange the secret
@@ -216,10 +216,11 @@ func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transpo
 // which implements the service that prototype file declares
 //
 func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
-	log.Debug("BROADCAST:", msg.From.ID, ">>>", this.PeerAddr.ID)
+	log.Debug("CHAT:", msg.From.ID, ">>>", this.PeerAddr.ID)
 	msg.Payload, err = this.TEM.EncWithSecret(msg.Payload, this.PeerAddr.Hash)
+	//log.Critical("after enc secret",msg.Payload)
 	if err != nil {
-		log.Error("enc with secret ", err)
+		log.Error("enc with secret failed", err)
 		return nil, err
 	}
 
@@ -256,7 +257,7 @@ func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
 			return nil, err
 		}
 	}
-	log.Debug("response", response.MessageType)
+	log.Debugf("RESP(%v)-FROM: %d ORIGIN:(%d  >> %d)", response.MessageType,response.From.ID,msg.From.ID,this.PeerAddr.ID)
 	return response, err
 }
 

@@ -81,7 +81,7 @@ fi
 echo "check `confer` again:"
 if ! type confer > /dev/null; then
     echo -e "please manully install `confer`,just follow those steps:"
-    echo "mkdir $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/"
+    echo "mkdir -p $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/"
     echo "git clone git@git.hyperchain.cn:chenquan/confer.git"
     echo "cd $GOPATH/src/git.hyperchain.cn/chenquan/confer"
     echo "go install"

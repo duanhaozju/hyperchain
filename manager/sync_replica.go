@@ -39,7 +39,7 @@ func (self *ProtocolManager) SyncReplicaStatus() {
 				log.Error("marshal syncReplicaStatus message failed")
 				continue
 			}
-			peers := self.Peermanager.GetAllPeers()
+			peers := self.Peermanager.GetVPPeers()
 			var peerIds = make([]uint64, len(peers))
 			for idx, peer := range peers {
 				//TODO change id into int type
@@ -63,16 +63,14 @@ func (self *ProtocolManager) RecordReplicaStatus(ev event.ReplicaStatusEvent) {
 	proto.Unmarshal(status.Chain, chain)
 	replicaInfo := ReplicaInfo{
 		IP: addr.IP,
-		//TODO change into int type
 		Port: int64(addr.Port),
 		Hash: addr.Hash,
-		//TODO change into int type
 		ID:              uint64(addr.ID),
 		LatestBlockHash: chain.LatestBlockHash,
 		ParentBlockHash: chain.ParentBlockHash,
 		Height:          chain.Height,
 	}
-	log.Critical("recv Replica Status", replicaInfo)
+	log.Debug("recv Replica Status", replicaInfo)
 	self.replicaStatus.Add(addr.ID, replicaInfo)
 }
 func (self *ProtocolManager) packReplicaStatus() ([]byte, []byte) {

@@ -10,7 +10,7 @@ import (
 type PeerAddr struct {
 	IP      string
 	Port    int
-	RpcPort int
+	RPCPort int
 	Hash    string
 	ID      int
 }
@@ -20,7 +20,7 @@ func NewPeerAddr(IP string, Port int, JSONRPCPort int, ID int) *PeerAddr {
 	var peerAddr PeerAddr
 	peerAddr.IP = IP
 	peerAddr.Port = Port
-	peerAddr.RpcPort = JSONRPCPort
+	peerAddr.RPCPort = JSONRPCPort
 	peerAddr.ID = ID
 	peerAddr.Hash = getHash(IP + ":" + strconv.Itoa(Port) + ":" + strconv.Itoa(ID))
 	return &peerAddr
@@ -32,7 +32,7 @@ func (pa *PeerAddr) ToPeerAddress() *PeerAddress {
 	peerAddress.IP = pa.IP
 	peerAddress.ID = int32(pa.ID)
 	peerAddress.Port = int32(pa.Port)
-	peerAddress.RpcPort = int32(pa.RpcPort)
+	peerAddress.RPCPort = int32(pa.RPCPort)
 	peerAddress.Hash = pa.Hash
 	return &peerAddress
 }
@@ -43,7 +43,7 @@ func RecoverPeerAddr(peerAddress *PeerAddress) *PeerAddr {
 	pa.Hash = peerAddress.Hash
 	pa.IP = peerAddress.IP
 	pa.ID = int(peerAddress.ID)
-	pa.RpcPort = int(peerAddress.RpcPort)
+	pa.RPCPort = int(peerAddress.RPCPort)
 	pa.Port = int(peerAddress.Port)
 	return &pa
 }

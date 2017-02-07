@@ -46,8 +46,6 @@ type AddNode interface {
 	// update routing table when new peer's join request is accepted
 	UpdateRoutingTable(payLoad []byte)
 	ConnectToOthers()
-	// set the new node online
-	SetOnline()
 	// get local address payload
 	GetLocalAddressPayload() []byte
 }
