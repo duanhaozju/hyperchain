@@ -110,66 +110,6 @@ func (pbft *pbftProtocal) getChkptCert(n uint64, id string) (cert *chkptCert) {
 	return
 }
 
-// Given a ip/digest get the addnode Cert
-func (pbft *pbftProtocal) getAddNodeCert(addHash string) (cert *addNodeCert) {
-
-	cert, ok := pbft.addNodeCertStore[addHash]
-
-	if ok {
-		return
-	}
-
-	adds := make(map[AddNode]bool)
-	cert = &addNodeCert{
-		addNodes:	adds,
-	}
-	pbft.addNodeCertStore[addHash] = cert
-
-	return
-}
-
-// Given a ip/digest get the addnode Cert
-func (pbft *pbftProtocal) getDelNodeCert(delHash string) (cert *delNodeCert) {
-
-	cert, ok := pbft.delNodeCertStore[delHash]
-
-	if ok {
-		return
-	}
-
-	dels := make(map[DelNode]bool)
-	cert = &delNodeCert{
-		delNodes:	dels,
-	}
-	pbft.delNodeCertStore[delHash] = cert
-
-	return
-}
-
-func (pbft *pbftProtocal) getAddNV() (n int64, v uint64) {
-
-	n = int64(pbft.N) + 1
-	if pbft.view < uint64(pbft.N) {
-		v = pbft.view
-	} else {
-		v = pbft.view + 1
-	}
-
-	return
-}
-
-func (pbft *pbftProtocal) getDelNV() (n int64, v uint64) {
-
-	n = int64(pbft.N) - 1
-	if pbft.view < uint64(pbft.N) {
-		v = pbft.view
-	} else {
-		v = pbft.view - 1
-	}
-
-	return
-}
-
 // =============================================================================
 // prepare/commit quorum checks helper
 // =============================================================================
@@ -490,4 +430,67 @@ func (pbft *pbftProtocal) clearDuplicator() {
 			delete(pbft.duplicator, i)
 		}
 	}
+}
+
+// =============================================================================
+// helper functions for node manager
+// =============================================================================
+// Given a ip/digest get the addnode Cert
+func (pbft *pbftProtocal) getAddNodeCert(addHash string) (cert *addNodeCert) {
+
+	cert, ok := pbft.addNodeCertStore[addHash]
+
+	if ok {
+		return
+	}
+
+	adds := make(map[AddNode]bool)
+	cert = &addNodeCert{
+		addNodes:	adds,
+	}
+	pbft.addNodeCertStore[addHash] = cert
+
+	return
+}
+
+// Given a ip/digest get the addnode Cert
+func (pbft *pbftProtocal) getDelNodeCert(delHash string) (cert *delNodeCert) {
+
+	cert, ok := pbft.delNodeCertStore[delHash]
+
+	if ok {
+		return
+	}
+
+	dels := make(map[DelNode]bool)
+	cert = &delNodeCert{
+		delNodes:	dels,
+	}
+	pbft.delNodeCertStore[delHash] = cert
+
+	return
+}
+
+func (pbft *pbftProtocal) getAddNV() (n int64, v uint64) {
+
+	n = int64(pbft.N) + 1
+	if pbft.view < uint64(pbft.N) {
+		v = pbft.view
+	} else {
+		v = pbft.view + 1
+	}
+
+	return
+}
+
+func (pbft *pbftProtocal) getDelNV() (n int64, v uint64) {
+
+	n = int64(pbft.N) - 1
+	if pbft.view < uint64(pbft.N) {
+		v = pbft.view
+	} else {
+		v = pbft.view - 1
+	}
+
+	return
 }

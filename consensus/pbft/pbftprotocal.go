@@ -142,6 +142,7 @@ type pbftProtocal struct {
 	updateTimeout		time.Duration				// time limit for N-f agree on update n
 	agreeUpdateStore	map[aidx]*AgreeUpdateN		// track agree-update-n message
 	updateStore			map[uidx]*UpdateN			// track last update-n we received or sent
+	updateTarget		uidx						// track the new view after update
 }
 
 type qidx struct {
@@ -208,14 +209,18 @@ type delNodeCert struct {
 }
 
 type aidx struct {
-	v	uint64
-	n	int64
-	id	uint64
+	v		uint64
+	n		int64
+	id		uint64
+	flag	bool
+
 }
 
 type uidx struct {
-	v	uint64
-	n	int64
+	v		uint64
+	n		int64
+	flag	bool
+	key	string
 }
 
 // newBatch initializes a batch
@@ -624,10 +629,18 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		err = pbft.recvAgreeDelNode(et)
 	case *ReadyForN:
 		err = pbft.recvReadyforNforAdd(et)
-	case *UpdateN:
-		err = pbft.recvUpdateN(et)
 	case *AgreeUpdateN:
 		err = pbft.recvAgreeUpdateN(et)
+	case agreeUpdateNQuorumEvent:
+		logger.Debugf("Replica %d received agree-update-n quorum, processing update-n", pbft.id)
+		if pbft.inNegoView {
+			logger.Debugf("Replica %d try to process agreeUpdateNQuorumEvent, but it's in nego-view", pbft.id)
+			return nil
+		}
+		if pbft.primary(pbft.view) == pbft.id {
+			return pbft.sendUpdateN()
+		}
+		return pbft.processUpdateN()
 	case firstRequestTimerEvent:
 		logger.Noticef("Replica %d first request timer expires", pbft.id)
 		return pbft.sendViewChange()

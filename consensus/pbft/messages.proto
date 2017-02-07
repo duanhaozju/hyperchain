@@ -210,9 +210,8 @@ message update_n {
     bool flag = 1;
     uint64 replica_id = 2;
     string key = 3;
-    string routerHash = 4;
-    int64 n = 5;
-    uint64 view = 6;
-    repeated view_change vset = 7;
-    map<uint64, string> xset = 8;
+    int64 n = 4;
+    uint64 view = 5;
+    repeated agree_update_n aset = 6;
+    map<uint64, string> xset = 7;
 }

@@ -9,6 +9,9 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"hyperchain/consensus/events"
+	"fmt"
+	"encoding/base64"
+	"reflect"
 )
 
 // New replica receive local NewNode message
@@ -306,6 +309,10 @@ func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) error {
 		H:			pbft.h,
 	}
 
+	pbft.stopTimer()
+	atomic.StoreUint32(&pbft.inUpdatingN, 1)
+	pbft.updateTarget = uidx{n:n, v:view, flag:true, key:agree.Key}
+
 	pbft.agreeUpdateHelper(agree)
 	logger.Infof("Replica %d sending update-N-View, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		pbft.id, agree.View, agree.H, len(agree.Cset), len(agree.Pset), len(agree.Qset))
@@ -375,6 +382,348 @@ func (pbft *pbftProtocal) sendAgreeUpdateNforDel(key string, routerHash string) 
 	return pbft.recvAgreeUpdateN(agree)
 }
 
+func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
+
+	logger.Debugf("Replica %d received view-change from replica %d, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
+		pbft.id, agree.ReplicaId, agree.View, agree.H, len(agree.Cset), len(agree.Pset), len(agree.Qset))
+
+	if atomic.LoadUint32(&pbft.activeView) == 0 {
+		logger.Warningf("Replica %d try to recvAgreeUpdateN, but it's in view-change", pbft.id)
+		return nil
+	}
+
+	if pbft.inNegoView {
+		logger.Warningf("Replica %d try to recvAgreeUpdateN, but it's in nego-view", pbft.id)
+		return nil
+	}
+
+	if pbft.inRecovery {
+		logger.Warningf("Replica %d try to recvAgreeUpdateN, but it's in recovery", pbft.id)
+		return nil
+	}
+
+	if !pbft.checkAgreeUpdateN(agree) {
+		logger.Warningf("Replica %d found agree-update-n message incorrect", pbft.id)
+		return nil
+	}
+
+	key := aidx{
+		v:	agree.View,
+		n:	agree.N,
+		id:	agree.ReplicaId,
+		flag: agree.Flag,
+	}
+	if _, ok := pbft.agreeUpdateStore[key]; ok {
+		logger.Warningf("Replica %d already has a agree-update-n message" +
+			" for view=%d/n=%d from replica %d", pbft.id, agree.View, agree.N, agree.ReplicaId)
+		return nil
+	}
+
+	pbft.agreeUpdateStore[key] = agree
+
+	replicas := make(map[uint64]bool)
+	for idx := range pbft.agreeUpdateStore {
+		if idx.v != agree.View {
+			continue
+		}
+		replicas[idx.id] = true
+	}
+
+	// We only enter this if there are enough agree-update-n messages but locally not inUpdateN
+	if len(replicas) >= pbft.f+1 && atomic.LoadUint32(&pbft.inUpdatingN) == 0 {
+		logger.Warningf("Replica %d received f+1 agree-update-n messages, triggering recovery",
+			pbft.id)
+		pbft.inNegoView = true
+		pbft.inRecovery = true
+		pbft.processNegotiateView()
+	}
+
+	quorum := 0
+	for idx := range pbft.agreeUpdateStore {
+		if idx.v == agree.View {
+			quorum++
+		}
+	}
+	logger.Debugf("Replica %d now has %d agree-update requests for view=%d/n=%d", pbft.id, quorum, agree.View, agree.N)
+
+	if atomic.LoadUint32(&pbft.activeView) == 0 && quorum >= pbft.allCorrectReplicasQuorum() {
+		return agreeUpdateNQuorumEvent{}
+	}
+
+	return nil
+}
+
+func (pbft *pbftProtocal) sendUpdateN() events.Event {
+
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try to sendUpdateN, but it's in nego-view", pbft.id)
+		return nil
+	}
+
+	if _, ok := pbft.updateStore[pbft.updateTarget]; ok {
+		logger.Debugf("Replica %d already has update in store for n=%d/view=%d, skipping", pbft.id, pbft.updateTarget.n, pbft.updateTarget.v)
+		return nil
+	}
+
+	aset := pbft.getAgreeUpdates()
+
+	cp, ok, replicas := pbft.selectInitialCheckpointForUpdate(aset)
+
+	if !ok {
+		logger.Infof("Replica %d could not find consistent checkpoint: %+v", pbft.id, pbft.viewChangeStore)
+		return nil
+	}
+
+	msgList := pbft.assignSequenceNumbersForUpdate(aset, cp.SequenceNumber)
+	if msgList == nil {
+		logger.Infof("Replica %d could not assign sequence numbers for new view", pbft.id)
+		return nil
+	}
+
+	update := &UpdateN{
+		Flag: pbft.updateTarget.flag,
+		N: pbft.updateTarget.n,
+		View:      pbft.updateTarget.v,
+		Key: pbft.updateTarget.key,
+		Aset:      aset,
+		Xset:      msgList,
+		ReplicaId: pbft.id,
+	}
+
+	logger.Infof("Replica %d is new primary, sending update-n, v:%d, X:%+v",
+		pbft.id, update.View, update.Xset)
+	payload, err := proto.Marshal(update)
+	if err != nil {
+		logger.Errorf("ConsensusMessage_UPDATE_N Marshal Error", err)
+		return nil
+	}
+	consensusMsg := &ConsensusMessage{
+		Type:    ConsensusMessage_UPDATE_N,
+		Payload: payload,
+	}
+	msg := consensusMsgHelper(consensusMsg, pbft.id)
+	pbft.helper.InnerBroadcast(msg)
+	pbft.updateStore[pbft.updateTarget] = update
+	return pbft.primaryProcessUpdateN(cp, replicas, update)
+}
+
+func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) events.Event {
+	logger.Infof("Replica %d received update-n %d",
+		pbft.id, update.View)
+
+	if atomic.LoadUint32(&pbft.activeView) == 0 {
+		logger.Warningf("Replica %d try to recvUpdateN, but it's in view-change", pbft.id)
+		return nil
+	}
+
+	if pbft.inNegoView {
+		logger.Debugf("Replica %d try to recvUpdateN, but it's in nego-view", pbft.id)
+		return nil
+	}
+
+	if pbft.inRecovery {
+		logger.Noticef("Replica %d try to recvUpdateN, but it's in recovery", pbft.id)
+		pbft.recvNewViewInRecovery = true
+		return nil
+	}
+
+	if !(update.View > 0 && update.View == pbft.updateTarget.v && pbft.primary(pbft.view) == update.ReplicaId && pbft.newViewStore[pbft.updateTarget] == nil) {
+		logger.Infof("Replica %d rejecting invalid new-view from %d, v:%d",
+			pbft.id, update.ReplicaId, update.View)
+		return nil
+	}
+
+	pbft.updateStore[pbft.updateTarget] = update
+
+	quorum := 0
+	for idx := range pbft.agreeUpdateStore {
+		if idx.v == pbft.view {
+			quorum++
+		}
+	}
+	if quorum < pbft.allCorrectReplicasQuorum() {
+		logger.Warningf("Replica %d has not meet ViewChangedQuorum", pbft.id)
+		return nil
+	}
+
+	return pbft.processUpdateN()
+}
+
+func (pbft *pbftProtocal) primaryProcessUpdateN(initialCp ViewChange_C, replicas []uint64, update *UpdateN) events.Event {
+	var newReqBatchMissing bool
+
+	speculativeLastExec := pbft.lastExec
+	if pbft.currentExec != nil {
+		speculativeLastExec = *pbft.currentExec
+	}
+	// If we have not reached the sequence number, check to see if we can reach it without state transfer
+	// In general, executions are better than state transfer
+	if speculativeLastExec < initialCp.SequenceNumber {
+		if pbft.canExecuteToTarget(speculativeLastExec, initialCp) {
+			return nil
+		}
+	}
+
+	if pbft.h < initialCp.SequenceNumber {
+		pbft.moveWatermarks(initialCp.SequenceNumber)
+	}
+
+	// true means we can not execToTarget need state transfer
+	if speculativeLastExec < initialCp.SequenceNumber {
+		logger.Warningf("Replica %d missing base checkpoint %d (%s), our most recent execution %d", pbft.id, initialCp.SequenceNumber, initialCp.Id, speculativeLastExec)
+
+		snapshotID, err := base64.StdEncoding.DecodeString(initialCp.Id)
+		if nil != err {
+			err = fmt.Errorf("Replica %d received a agree-update-n whose hash could not be decoded (%s)", pbft.id, initialCp.Id)
+			logger.Error(err.Error())
+			return nil
+		}
+
+		target := &stateUpdateTarget{
+			checkpointMessage: checkpointMessage{
+				seqNo: initialCp.SequenceNumber,
+				id:    snapshotID,
+			},
+			replicas: replicas,
+		}
+
+		pbft.updateHighStateTarget(target)
+		pbft.stateTransfer(target)
+	}
+
+	newReqBatchMissing = pbft.feedMissingReqBatchIfNeeded(update.Xset)
+
+	if len(pbft.missingReqBatches) == 0 {
+		return pbft.processReqInUpdate(update)
+	} else if newReqBatchMissing {
+		pbft.fetchRequestBatches()
+	}
+
+	return nil
+}
+
+func (pbft *pbftProtocal) processUpdateN() events.Event {
+
+	update, ok := pbft.updateStore[pbft.updateTarget]
+	if !ok {
+		logger.Debugf("Replica %d ignoring processUpdateN as it could not find n=%d/view=%d in its updateStore", pbft.id, pbft.updateTarget.n, pbft.updateTarget.v)
+		return nil
+	}
+
+	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
+		logger.Infof("Replica %d ignoring update-n from %d, v:%d: we are in view change to view=%d",
+			pbft.id, update.ReplicaId, update.View, pbft.view)
+		return nil
+	}
+
+	cp, ok, replicas := pbft.selectInitialCheckpointForUpdate(update.Aset)
+	if !ok {
+		logger.Warningf("Replica %d could not determine initial checkpoint: %+v",
+			pbft.id, pbft.viewChangeStore)
+		return pbft.sendViewChange()
+	}
+	// 以上 primary 不必做
+	speculativeLastExec := pbft.lastExec
+	if pbft.currentExec != nil {
+		speculativeLastExec = *pbft.currentExec
+	}
+
+	// If we have not reached the sequence number, check to see if we can reach it without state transfer
+	// In general, executions are better than state transfer
+	if speculativeLastExec < cp.SequenceNumber {
+		if speculativeLastExec < cp.SequenceNumber {
+			if pbft.canExecuteToTarget(speculativeLastExec, cp) {
+				return nil
+			}
+		}
+	}
+	// --
+	msgList := pbft.assignSequenceNumbers(update.Aset, cp.SequenceNumber)
+
+	if msgList == nil {
+		logger.Warningf("Replica %d could not assign sequence numbers: %+v",
+			pbft.id, pbft.viewChangeStore)
+		return pbft.sendViewChange()
+	}
+
+	if !(len(msgList) == 0 && len(update.Xset) == 0) && !reflect.DeepEqual(msgList, update.Xset) {
+		logger.Warningf("Replica %d failed to verify new-view Xset: computed %+v, received %+v",
+			pbft.id, msgList, update.Xset)
+		return pbft.sendViewChange()
+	}
+	// -- primary 不必做
+	if pbft.h < cp.SequenceNumber {
+		pbft.moveWatermarks(cp.SequenceNumber)
+	}
+
+	if speculativeLastExec < cp.SequenceNumber {
+		logger.Warningf("Replica %d missing base checkpoint %d (%s), our most recent execution %d", pbft.id, cp.SequenceNumber, cp.Id, speculativeLastExec)
+
+		snapshotID, err := base64.StdEncoding.DecodeString(cp.Id)
+		if nil != err {
+			err = fmt.Errorf("Replica %d received a view change whose hash could not be decoded (%s)", pbft.id, cp.Id)
+			logger.Error(err.Error())
+			return nil
+		}
+
+		target := &stateUpdateTarget{
+			checkpointMessage: checkpointMessage{
+				seqNo: cp.SequenceNumber,
+				id:    snapshotID,
+			},
+			replicas: replicas,
+		}
+
+		pbft.updateHighStateTarget(target)
+		pbft.stateTransfer(target)
+	}
+
+	return pbft.processReqInUpdate(update)
+
+}
+
+func (pbft *pbftProtocal) processReqInUpdate(nv *NewView) events.Event {
+	logger.Debugf("Replica %d accepting new-view to view %d", pbft.id, pbft.view)
+
+	pbft.stopTimer()
+	pbft.nullRequestTimer.Stop()
+
+	delete(pbft.updateStore, pbft.updateTarget)
+	// empty the outstandingReqBatch, it is useless since new primary will resend pre-prepare
+	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
+	pbft.lastExec = pbft.h
+	pbft.seqNo = pbft.h
+	prevPrimary := pbft.primary(pbft.view - 1)
+	if prevPrimary == pbft.id {
+		pbft.rebuildDuplicator()
+	} else {
+		pbft.clearDuplicator()
+	}
+	pbft.vid = pbft.h
+	pbft.lastVid = pbft.h
+	if !pbft.skipInProgress {
+		backendVid := uint64(pbft.vid + 1)
+		pbft.helper.VcReset(backendVid)
+		pbft.inVcReset = true
+		return nil
+	}
+
+	// clear the PQC sets before handle the tail
+	qset := []*PrePrepare{}
+	pset := []*Prepare{}
+	cset := []*Commit{}
+	pbft.qset = &Qset{Set: qset}
+	pbft.pset = &Pset{Set: pset}
+	pbft.cset = &Cset{Set: cset}
+
+	pbft.updateViewChangeSeqNo()
+	pbft.startTimerIfOutstandingRequests()
+
+	pbft.vcResendCount = 0
+
+	return viewChangedEvent{}
+}
+
 func (pbft *pbftProtocal) agreeUpdateHelper(agree *AgreeUpdateN) {
 
 	// clear old messages
@@ -414,83 +763,7 @@ func (pbft *pbftProtocal) agreeUpdateHelper(agree *AgreeUpdateN) {
 	}
 }
 
-func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
-
-	logger.Debugf("Replica %d received view-change from replica %d, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
-		pbft.id, agree.ReplicaId, agree.View, agree.H, len(agree.Cset), len(agree.Pset), len(agree.Qset))
-
-	if pbft.activeView {
-		logger.Warningf("Replica %d try to recvAgreeUpdateN, but it's in view-change", pbft.id)
-		return nil
-	}
-
-	if pbft.inNegoView {
-		logger.Warningf("Replica %d try to recvAgreeUpdateN, but it's in nego-view", pbft.id)
-		return nil
-	}
-
-	if pbft.inRecovery {
-		logger.Warningf("Replica %d try to recvAgreeUpdateN, but it's in recovery", pbft.id)
-		return nil
-	}
-
-	if !pbft.correctViewChange(agree) {
-		logger.Warningf("Replica %d found view-change message incorrect", pbft.id)
-		return nil
-	}
-
-	key := aidx{
-		v:agree.View,
-		n:agree.N,
-		id:agree.ReplicaId,
-	}
-	if _, ok := pbft.agreeUpdateStore[key]; ok {
-		logger.Warningf("Replica %d already has a view change message" +
-			" for view=%d/n=%d from replica %d", pbft.id, agree.View, agree.N, agree.ReplicaId)
-		return nil
-	}
-
-	pbft.agreeUpdateStore[key] = agree
-
-	replicas := make(map[uint64]bool)
-	minView := uint64(0)
-	for idx := range pbft.agreeUpdateStore {
-		if idx.v < pbft.view {
-			continue
-		}
-
-		replicas[idx.id] = true
-		if minView == 0 || idx.v < minView {
-			minView = idx.v
-		}
-	}
-
-	// We only enter this if there are enough view change messages _greater_ than our current view
-	if len(replicas) >= pbft.f+1 {
-		logger.Warningf("Replica %d received f+1 view-change messages, triggering view-change to view %d",
-			pbft.id, minView)
-		pbft.firstRequestTimer.Stop()
-		// subtract one, because sendViewChange() increments
-		pbft.view = minView - 1
-		return pbft.sendViewChange()
-	}
-
-	quorum := 0
-	for idx := range pbft.viewChangeStore {
-		if idx.v == pbft.view {
-			quorum++
-		}
-	}
-	logger.Debugf("Replica %d now has %d agree-update requests for view=%d/n=%d", pbft.id, quorum, pbft.view, agree.N)
-
-	if atomic.LoadUint32(&pbft.activeView) == 0 && quorum >= pbft.allCorrectReplicasQuorum() {
-		return viewChangeQuorumEvent{}
-	}
-
-	return nil
-}
-
-func (pbft *pbftProtocal) checkAgreement(agree *AgreeUpdateN) bool {
+func (pbft *pbftProtocal) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 
 	if agree.Flag {
 		cert := pbft.getAddNodeCert(agree.Key)
@@ -531,4 +804,152 @@ func (pbft *pbftProtocal) checkAgreement(agree *AgreeUpdateN) bool {
 	}
 
 	return true
+}
+
+func (pbft *pbftProtocal) getAgreeUpdates() (agrees []*AgreeUpdateN) {
+	for _, agree := range pbft.agreeUpdateStore {
+		agrees = append(agrees, agree)
+	}
+	return
+}
+
+func (pbft *pbftProtocal) selectInitialCheckpointForUpdate(aset []*AgreeUpdateN) (checkpoint ViewChange_C, ok bool, replicas []uint64) {
+	checkpoints := make(map[ViewChange_C][]*ViewChange)
+	for _, vc := range aset {
+		for _, c := range vc.Cset { // TODO, verify that we strip duplicate checkpoints from this set
+			checkpoints[*c] = append(checkpoints[*c], vc)
+			logger.Debugf("Replica %d appending checkpoint from replica %d with seqNo=%d, h=%d, and checkpoint digest %s", pbft.id, vc.ReplicaId, vc.H, c.SequenceNumber, c.Id)
+		}
+	}
+
+	if len(checkpoints) == 0 {
+		logger.Debugf("Replica %d has no checkpoints to select from: %d %s",
+			pbft.id, len(pbft.viewChangeStore), checkpoints)
+		return
+	}
+
+	for idx, vcList := range checkpoints {
+		// need weak certificate for the checkpoint
+		if len(vcList) <= pbft.f { // type casting necessary to match types
+			logger.Debugf("Replica %d has no weak certificate for n:%d, vcList was %d long",
+				pbft.id, idx.SequenceNumber, len(vcList))
+			continue
+		}
+
+		quorum := 0
+		// Note, this is the whole vset (S) in the paper, not just this checkpoint set (S') (vcList)
+		// We need 2f+1 low watermarks from S below this seqNo from all replicas
+		// We need f+1 matching checkpoints at this seqNo (S')
+		for _, vc := range aset {
+			if vc.H <= idx.SequenceNumber {
+				quorum++
+			}
+		}
+
+		if quorum < pbft.intersectionQuorum() {
+			logger.Debugf("Replica %d has no quorum for n:%d", pbft.id, idx.SequenceNumber)
+			continue
+		}
+
+		if checkpoint.SequenceNumber <= idx.SequenceNumber {
+			replicas = make([]uint64, len(vcList))
+			for i, vc := range vcList {
+				replicas[i] = vc.ReplicaId
+			}
+
+			checkpoint = idx
+			ok = true
+		}
+	}
+
+	return
+}
+
+func (pbft *pbftProtocal) assignSequenceNumbersForUpdate(aset []*AgreeUpdateN, h uint64) (msgList map[uint64]string) {
+	msgList = make(map[uint64]string)
+
+	maxN := h + 1
+
+	// "for all n such that h < n <= h + L"
+	nLoop:
+	for n := h + 1; n <= h+pbft.L; n++ {
+		// "∃m ∈ S..."
+		for _, m := range aset {
+			// "...with <n,d,v> ∈ m.P"
+			for _, em := range m.Pset {
+				quorum := 0
+				// "A1. ∃2f+1 messages m' ∈ S"
+				mpLoop:
+				for _, mp := range aset {
+					if mp.H >= n {
+						continue
+					}
+					// "∀<n,d',v'> ∈ m'.P"
+					for _, emp := range mp.Pset {
+						if n == emp.SequenceNumber && !(emp.View < em.View || (emp.View == em.View && emp.BatchDigest == em.BatchDigest)) {
+							continue mpLoop
+						}
+					}
+					quorum++
+				}
+
+				if quorum < pbft.intersectionQuorum() {
+					continue
+				}
+
+				quorum = 0
+				// "A2. ∃f+1 messages m' ∈ S"
+				for _, mp := range aset {
+					// "∃<n,d',v'> ∈ m'.Q"
+					for _, emp := range mp.Qset {
+						if n == emp.SequenceNumber && emp.View >= em.View && emp.BatchDigest == em.BatchDigest {
+							quorum++
+						}
+					}
+				}
+
+				if quorum < pbft.f+1 {
+					continue
+				}
+
+				// "then select the request with digest d for number n"
+				msgList[n] = em.BatchDigest
+				maxN = n
+
+				continue nLoop
+			}
+		}
+
+		quorum := 0
+		// "else if ∃2f+1 messages m ∈ S"
+		nullLoop:
+		for _, m := range aset {
+			// "m.P has no entry"
+			for _, em := range m.Pset {
+				if em.SequenceNumber == n {
+					continue nullLoop
+				}
+			}
+			quorum++
+		}
+
+		if quorum >= pbft.intersectionQuorum() {
+			// "then select the null request for number n"
+			msgList[n] = ""
+
+			continue nLoop
+		}
+
+		logger.Warningf("Replica %d could not assign value to contents of seqNo %d, found only %d missing P entries", pbft.id, n, quorum)
+		return nil
+	}
+
+	// prune top null requests
+	for n, msg := range msgList {
+		if n > maxN && msg == "" {
+			delete(msgList, n)
+		}
+	}
+
+	return
 }

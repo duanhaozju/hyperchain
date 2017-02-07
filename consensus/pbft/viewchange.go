@@ -13,8 +13,6 @@ import (
 	"sync/atomic"
 )
 
-type viewChangeQuorumEvent struct{}
-
 func (pbft *pbftProtocal) correctViewChange(vc *ViewChange) bool {
 	for _, p := range append(vc.Pset, vc.Qset...) {
 		if !(p.View < vc.View && p.SequenceNumber > vc.H && p.SequenceNumber <= vc.H+pbft.L) {
@@ -418,9 +416,9 @@ outer:
 	return canExecuteToTarget
 }
 
-func (pbft *pbftProtocal) feedMissingReqBatchIfNeeded(nv *NewView) (newReqBatchMissing bool) {
+func (pbft *pbftProtocal) feedMissingReqBatchIfNeeded(xset Xset) (newReqBatchMissing bool) {
 	newReqBatchMissing = false
-	for n, d := range nv.Xset {
+	for n, d := range xset {
 		// PBFT: why should we use "h ≥ min{n | ∃d : (<n,d> ∈ X)}"?
 		// "h ≥ min{n | ∃d : (<n,d> ∈ X)} ∧ ∀<n,d> ∈ X : (n ≤ h ∨ ∃m ∈ in : (D(m) = d))"
 		if n <= pbft.h {
@@ -488,7 +486,7 @@ func (pbft *pbftProtocal) primaryProcessNewView(initialCp ViewChange_C, replicas
 		pbft.stateTransfer(target)
 	}
 
-	newReqBatchMissing = pbft.feedMissingReqBatchIfNeeded(nv)
+	newReqBatchMissing = pbft.feedMissingReqBatchIfNeeded(nv.Xset)
 
 	if len(pbft.missingReqBatches) == 0 {
 		return pbft.processReqInNewView(nv)

@@ -11,8 +11,14 @@ type viewChangeTimerEvent struct{}
 // viewChangeResendTimerEvent is sent when the view change resend timer expires
 type viewChangeResendTimerEvent struct{}
 
+// viewChangeQuorumEvent is sent when view change quorum reached f+1
+type viewChangeQuorumEvent struct{}
+
 // viewChangedEvent is sent when the view change timer expires
 type viewChangedEvent struct{}
+
+// agreeUpdateNQuorumEvent is sent when agree-update-n quorum reached f+1
+type agreeUpdateNQuorumEvent struct{}
 
 // stateUpdatedEvent  when stateUpdate is executed and return the result
 type stateUpdatedEvent struct {
@@ -45,3 +51,5 @@ type firstRequestTimerEvent struct{}
 type removeCache struct {
 	vid uint64
 }
+
+type Xset map[uint64]string
