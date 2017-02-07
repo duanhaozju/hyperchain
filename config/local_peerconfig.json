@@ -6,9 +6,10 @@
   "local_ip":"127.0.0.1",
   "jsonrpc_port":8081,
   "introducer_ip":"127.0.0.1",
-  "introducer_port":8001
+  "introducer_port":8001,
+  "introducer_id":1
  },
-  "maxpeernode":5,
+  "maxpeernode":4,
   "nodes":[
     {
     "id":1,
@@ -37,13 +38,7 @@
     "external_address":"127.0.0.1",
     "port":8004,
     "rpc_port":8084
-  },
-    {
-      "id":5,
-      "address":"127.0.0.1",
-      "external_address":"127.0.0.1",
-      "port":8005,
-      "rpc_port":8085
-    }
+  }
+    
 ]
 }

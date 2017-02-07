@@ -15,7 +15,7 @@ case "$OSTYPE" in
   ;; 
   linux*) 
     echo "RUN SCRIPTS ON LINUX"
-    _SYSTYPE="MAC"
+    _SYSTYPE="LINUX"
   ;;
   *) 
     echo "unknown: $OSTYPE"
@@ -67,20 +67,20 @@ fi
 
 env_check_local_linux_env(){
 if ! type jq > /dev/null; then
-    echo -e "Please install the `jq` to parse the json file \n just type: \n sudo apt-get install jq / sudo yum -y install jq / brew install jq "
+    echo -e "Please install the jq to parse the json file \n just type: \n sudo apt-get install jq / sudo yum -y install jq / brew install jq "
     exit 1
 fi
 if ! type confer > /dev/null; then
-    echo -e "Please install the `confer` to generate the peer config json file"
-    echo "now auto install the `confer`:"
-    mkdir $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/
+    echo -e "Please install the confer to generate the peer config json file"
+    echo "now auto install the confer:"
+    mkdir -p $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/
     git clone git@git.hyperchain.cn:chenquan/confer.git
     cd $GOPATH/src/git.hyperchain.cn/chenquan/confer
     go install
 fi
-echo "check `confer` again:"
+echo "check confer again:"
 if ! type confer > /dev/null; then
-    echo -e "please manully install `confer`,just follow those steps:"
+    echo -e "please manully install confer,just follow those steps:"
     echo "mkdir -p $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/"
     echo "git clone git@git.hyperchain.cn:chenquan/confer.git"
     echo "cd $GOPATH/src/git.hyperchain.cn/chenquan/confer"
