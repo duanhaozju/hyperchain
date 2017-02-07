@@ -6,7 +6,6 @@
 //
 // message defination for network transaction
 //
-//NOTICE:请勿自动生成message.pb.go！！
 syntax="proto3";
 
 package peermessage;
@@ -17,23 +16,23 @@ message Message{
     PeerAddress From     = 1;
     MsgType MessageType  = 2;
     bytes  Payload       = 3;
-    Signature Signature      = 4;
-    int64 MsgTimeStamp   = 15;
+    Signature Signature  = 4;
+    int64 MsgTimeStamp   = 5;
 
     //MsgType message type during data transfer 
     enum MsgType {
         HELLO           = 0;
         HELLO_RESPONSE  = 1;
-        INTRODUCE = 2;
+        INTRODUCE       = 2;
         INTRODUCE_RESPONSE = 3;
-        ATTEND = 4;
-        ATTEND_RESPNSE = 5;
-        RESPONSE = 6;
-        CONSUS = 7;
-        KEEPALIVE = 8;
-        SYNCMSG = 9;
-        PENDING = 10;
-        RECONNECT = 11;
+        ATTEND          = 4;
+        ATTEND_RESPONSE  = 5;
+        RESPONSE        = 6;
+        CONSUS          = 7;
+        KEEPALIVE       = 8;
+        SYNCMSG         = 9;
+        PENDING         = 10;
+        RECONNECT       = 11;
         RECONNECT_RESPONSE = 12;
     }
 }
@@ -49,15 +48,16 @@ message Routers {
 message PeerAddress {
         string IP      =   1;
         int32  Port    =   2;
-        int32  rpcPort =   3;
-        string hash    =   4;
+        int32  RPCPort =   3;
+        string Hash    =   4;
         int32 ID       =   5;
+        bool IsPrimary =   6;
 }
 
 message Signature{
-    bytes ecert = 1;
-    bytes rcert = 2;
-    bytes signature = 3;
+    bytes ECert = 1;
+    bytes RCert = 2;
+    bytes Signature = 3;
 }
 
 
