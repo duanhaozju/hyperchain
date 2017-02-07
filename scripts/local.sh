@@ -153,8 +153,7 @@ if [ ! $MODE ]; then
     runXin1
 else
     if $ENV; then
-#        runXinXinLinux
-    echo "run"
+        runXinXinLinux
     else
         runXinXinMac
     fi
