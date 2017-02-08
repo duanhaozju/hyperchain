@@ -87,6 +87,9 @@ func (peer *Peer) handShake() (err error) {
 		verifySignature(signature)
 	}
 	*/
+	/*
+	handshake 的时候需要对ecert 和rcert的签名进行校验,这样才能标识是否是NVP所以HELLO消息,HELLO RESPONSE都需要带上证书以及签名
+	 */
 
 	signature := pb.Signature{
 		ECert: peer.CM.GetECertByte(),
@@ -102,20 +105,18 @@ func (peer *Peer) handShake() (err error) {
 		Signature:    &signature,
 	}
 
-	if peer.CM.GetIsUsed() {
-		var pri interface{}
-		pri = peer.CM.GetECertPrivKey()
-		ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
-		sign, err := ecdsaEncry.Sign(helloMessage.Payload, pri)
-		if err == nil {
-			if helloMessage.Signature == nil {
-				payloadSign := pb.Signature{
-					Signature: sign,
-				}
-				helloMessage.Signature = &payloadSign
+	var pri interface{}
+	pri = peer.CM.GetECertPrivKey()
+	ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
+	sign, err := ecdsaEncry.Sign(helloMessage.Payload, pri)
+	if err == nil {
+		if helloMessage.Signature == nil {
+			payloadSign := pb.Signature{
+				Signature: sign,
 			}
-			helloMessage.Signature.Signature = sign
+			helloMessage.Signature = &payloadSign
 		}
+		helloMessage.Signature.Signature = sign
 	}
 
 
@@ -174,20 +175,18 @@ func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transpo
 		Signature:    &signature,
 	}
 
-	if peer.CM.GetIsUsed() {
-		var pri interface{}
-		pri = peer.CM.GetECertPrivKey()
-		ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
-		sign, err := ecdsaEncry.Sign(helloMessage.Payload, pri)
-		if err == nil {
-			if helloMessage.Signature == nil {
-				payloadSign := pb.Signature{
-					Signature: sign,
-				}
-				helloMessage.Signature = &payloadSign
+	var pri interface{}
+	pri = peer.CM.GetECertPrivKey()
+	ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
+	sign, err := ecdsaEncry.Sign(helloMessage.Payload, pri)
+	if err == nil {
+		if helloMessage.Signature == nil {
+			payloadSign := pb.Signature{
+				Signature: sign,
 			}
-			helloMessage.Signature.Signature = sign
+			helloMessage.Signature = &payloadSign
 		}
+		helloMessage.Signature.Signature = sign
 	}
 
 	retMessage, err := peer.Client.Chat(context.Background(), &helloMessage)

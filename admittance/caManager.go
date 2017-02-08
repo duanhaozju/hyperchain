@@ -71,106 +71,99 @@ func GetCaManager(global_config *viper.Viper) (*CAManager, error) {
 	}
 }
 
+
 func NewCAManager(ecacertPath string, ecertPath string, rcertPath string, rcacertPath string, ecertPrivateKeyPath string, tcacertPath string, isUsed bool, checkTCert bool) (*CAManager, error) {
+	/*
+	在现有设计当中,无论是否验证ecert和rcert的合法性以及归属性
+	都需要带上ecert rcert,这两个证书都需要在连接初进行认证,
+	需要标识节点的NVP和VP节点之间用证书进行区别
+	 */
 	var caManager CAManager
 	var err error
 	caManager.checkTCert = checkTCert
-	if isUsed != true{
-		caManager.ecacertByte = []byte{}
-		caManager.ecertByte = []byte{}
-		caManager.rcertByte = []byte{}
-		caManager.rcacertByte = []byte{}
-		caManager.ecertPrivateKeyByte = []byte{}
-		caManager.tcacertByte = []byte{}
-		caManager.isUsed = isUsed
-		return &caManager,nil
-	}else {
-		ecacert, rerr := ioutil.ReadFile(ecacertPath)
-		if rerr != nil {
-			log.Error("ecacert read failed")
-			return nil, rerr
-		}
-		caManager.ecacertByte = ecacert
-		ecert, rerr := ioutil.ReadFile(ecertPath)
-		if rerr != nil {
-			log.Error("ecert read failed")
-			return nil, rerr
-		}
-		caManager.ecertByte = ecert
-		rcert, rerr := ioutil.ReadFile(rcertPath)
-		if rerr != nil {
-			log.Error("rcert read failed")
-			return nil, rerr
-		}
-		caManager.rcertByte = rcert
-		rcacert, rerr := ioutil.ReadFile(rcacertPath)
-		if rerr != nil {
-			log.Error("rcacert read failed")
-			return nil, rerr
-		}
-		caManager.rcacertByte = rcacert
-		ecertPrivateKey, rerr := ioutil.ReadFile(ecertPrivateKeyPath)
-		if rerr != nil {
-			log.Error("ecaPrivateKey read failed")
-			return nil, rerr
-		}
-		caManager.ecertPrivateKeyByte = ecertPrivateKey
+	ecacert, rerr := ioutil.ReadFile(ecacertPath)
 
-		//TODO delete this part
-		tcacert, tcaerr := ioutil.ReadFile(tcacertPath)
-		if tcaerr != nil {
-			log.Error("tcacert read failed")
-			return nil, rerr
-		}
-		caManager.tcacertByte = tcacert
-
-		// TODO check the private type private key is der
-
-		caManager.ecert, err = primitives.ParseCertificate(string(ecert))
-		if err != nil {
-			log.Error("cannot parse the ecert")
-			return nil, errors.New("cannot parse the ecert")
-		}
-		caManager.ecacert, err = primitives.ParseCertificate(string(ecacert))
-		if err != nil {
-			log.Error("cannot parse the ecacert")
-			return nil, errors.New("cannot parse the ecacert")
-		}
-		caManager.rcert, err = primitives.ParseCertificate(string(rcert))
-		if err != nil {
-			log.Error("cannot parse the rcert")
-			return nil, errors.New("cannot parse the rcert")
-		}
-		caManager.rcacert, err = primitives.ParseCertificate(string(rcacert))
-		if err != nil {
-			log.Error("cannot parse the rcert")
-			return nil, errors.New("cannot parse the rcacert")
-		}
-		//the caManager
-		caManager.ecertPrivateKey, err = primitives.ParseKey(string(ecertPrivateKey))
-		if err != nil {
-			log.Error("cannot parse the caprivatekey")
-			return nil, errors.New("cannot parse the caprivatekey")
-		}
-
-		//TODO delete this part
-		caManager.tcacert, err = primitives.ParseCertificate(string(tcacert))
-		if err != nil {
-			log.Error("cannot parse the tcacert")
-			return nil, errors.New("cannot parse the tcacert")
-		}
-
-		//TODO use ca or not
-		caManager.isUsed = isUsed
-		return &caManager, nil
+	if rerr != nil {
+		log.Error("ecacert read failed")
+		return nil, rerr
 	}
+	caManager.ecacertByte = ecacert
+	ecert, rerr := ioutil.ReadFile(ecertPath)
+	if rerr != nil {
+		log.Error("ecert read failed")
+		return nil, rerr
+	}
+	caManager.ecertByte = ecert
+	rcert, rerr := ioutil.ReadFile(rcertPath)
+	if rerr != nil {
+		log.Error("rcert read failed")
+		return nil, rerr
+	}
+	caManager.rcertByte = rcert
+	rcacert, rerr := ioutil.ReadFile(rcacertPath)
+	if rerr != nil {
+		log.Error("rcacert read failed")
+		return nil, rerr
+	}
+	caManager.rcacertByte = rcacert
+	ecertPrivateKey, rerr := ioutil.ReadFile(ecertPrivateKeyPath)
+	if rerr != nil {
+		log.Error("ecaPrivateKey read failed")
+		return nil, rerr
+	}
+	caManager.ecertPrivateKeyByte = ecertPrivateKey
+
+	//TODO delete this part
+	tcacert, tcaerr := ioutil.ReadFile(tcacertPath)
+	if tcaerr != nil {
+		log.Error("tcacert read failed")
+		return nil, rerr
+	}
+	caManager.tcacertByte = tcacert
+
+	// TODO check the private type private key is der
+
+	caManager.ecert, err = primitives.ParseCertificate(string(ecert))
+	if err != nil {
+		log.Error("cannot parse the ecert")
+		return nil, errors.New("cannot parse the ecert")
+	}
+	caManager.ecacert, err = primitives.ParseCertificate(string(ecacert))
+	if err != nil {
+		log.Error("cannot parse the ecacert")
+		return nil, errors.New("cannot parse the ecacert")
+	}
+	caManager.rcert, err = primitives.ParseCertificate(string(rcert))
+	if err != nil {
+		log.Error("cannot parse the rcert")
+		return nil, errors.New("cannot parse the rcert")
+	}
+	caManager.rcacert, err = primitives.ParseCertificate(string(rcacert))
+	if err != nil {
+		log.Error("cannot parse the rcert")
+		return nil, errors.New("cannot parse the rcacert")
+	}
+	//the caManager
+	caManager.ecertPrivateKey, err = primitives.ParseKey(string(ecertPrivateKey))
+	if err != nil {
+		log.Error("cannot parse the caprivatekey")
+		return nil, errors.New("cannot parse the caprivatekey")
+	}
+
+	//TODO delete this part
+	caManager.tcacert, err = primitives.ParseCertificate(string(tcacert))
+	if err != nil {
+		log.Error("cannot parse the tcacert")
+		return nil, errors.New("cannot parse the tcacert")
+	}
+
+	//TODO use ca or not
+	caManager.isUsed = isUsed
+	return &caManager, nil
+
 }
 
 func (caManager *CAManager) SignTCert(publicKey string) (string, error) {
-	//if caManager.isUsed != true {
-	//	log.Critical("NOT USE TCERT")
-	//	return "", nil
-	//}
 	caManager.GetIsCheckTCert()
 	pubPem := common.TransportDecode(publicKey)
 
