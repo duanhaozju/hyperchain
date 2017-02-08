@@ -722,7 +722,7 @@ func (self *StateDB) RevertToSnapshot(copy interface{}) {
 	for i := len(self.journal.JournalList) - 1; i >= snapshot; i-- {
 		// undo in memory
 		// parameters *stateDB, batch, writeThrough, flush, sync
-		self.journal.JournalList[i].Undo(self, nil, false, false, false)
+		self.journal.JournalList[i].Undo(self, nil, nil, false)
 		log.Info("undo operation: %s", self.journal.JournalList[i])
 	}
 	self.journal.JournalList = self.journal.JournalList[:snapshot]
