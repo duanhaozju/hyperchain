@@ -73,7 +73,7 @@ fi
 if ! type confer > /dev/null; then
     echo -e "Please install the `confer` to generate the peer config json file"
     echo "now auto install the `confer`:"
-    mkdir $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/
+    mkdir -p $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/
     git clone git@git.hyperchain.cn:chenquan/confer.git
     cd $GOPATH/src/git.hyperchain.cn/chenquan/confer
     go install
