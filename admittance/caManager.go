@@ -96,10 +96,11 @@ func NewCAManager(ecacertPath string, ecertPath string, rcertPath string, rcacer
 	caManager.ecertByte = ecert
 	rcert, rerr := ioutil.ReadFile(rcertPath)
 	if rerr != nil {
-		log.Error("rcert read failed")
-		return nil, rerr
+		log.Warning("rcert read failed, initlize as a nvp")
+	}else{
+		caManager.rcertByte = rcert
 	}
-	caManager.rcertByte = rcert
+
 	rcacert, rerr := ioutil.ReadFile(rcacertPath)
 	if rerr != nil {
 		log.Error("rcacert read failed")
@@ -133,11 +134,16 @@ func NewCAManager(ecacertPath string, ecertPath string, rcertPath string, rcacer
 		log.Error("cannot parse the ecacert")
 		return nil, errors.New("cannot parse the ecacert")
 	}
-	caManager.rcert, err = primitives.ParseCertificate(string(rcert))
-	if err != nil {
-		log.Error("cannot parse the rcert")
-		return nil, errors.New("cannot parse the rcert")
+	if rcert !=nil{
+		caManager.rcert, err = primitives.ParseCertificate(string(rcert))
+		if err != nil {
+			log.Error("cannot parse the rcert")
+			return nil, errors.New("cannot parse the rcert")
+		}
+	}else{
+		caManager.rcert = nil;
 	}
+
 	caManager.rcacert, err = primitives.ParseCertificate(string(rcacert))
 	if err != nil {
 		log.Error("cannot parse the rcert")
