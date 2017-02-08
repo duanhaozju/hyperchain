@@ -263,20 +263,9 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 		newDataNodes = append(newDataNodes, remainingNodes...)
 	}
 	var hashingData []byte
-	//bucketHashCalculator.setHashingData(newDataNodes.Marshal())
-	//log.Critical("newDataNodes marshal bucketKey is",bucketKey,"hash is ",common.Bytes2Hex(bucketHashCalculator.computeCryptoHash()))
-
 	for _, dataNode := range newDataNodes {
-		if dataNode.getCompositeKey() == nil || len(dataNode.getCompositeKey()) == 0 {
-			log.Error("dataNode.getCompositeKey() is empty")
-		}
-		hashingData = append(hashingData, dataNode.getCompositeKey()...)
-		if dataNode.getValue() == nil || len(dataNode.getValue()) == 0 {
-			log.Error("dataNode.getValue() is empty")
-		}
 		hashingData = append(hashingData, dataNode.getValue()...)
 	}
-	//hashingData = append(newDataNodes.Marshal(),hashingData...)
 	bucketHashCalculator.setHashingData(hashingData)
 	return bucketHashCalculator.computeCryptoHash(), newDataNodes
 }
@@ -491,6 +480,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch hyperdb.Batch, curr
 		bucketTree.AddChangesForPersistence(writeBatch, big.NewInt(i))
 		keyValueMap = NewKVMap()
 		writeBatch.Delete(dbKey)
+		writeBatch.Write()
 	}
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
