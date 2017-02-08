@@ -605,11 +605,6 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 		return nil
 	}
 
-	pbft.updateViewChangeSeqNo()
-	pbft.startTimerIfOutstandingRequests()
-
-	pbft.vcResendCount = 0
-
 	return viewChangedEvent{}
 }
 
