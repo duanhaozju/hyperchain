@@ -311,7 +311,6 @@ func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) error {
 
 	pbft.stopTimer()
 	atomic.StoreUint32(&pbft.inUpdatingN, 1)
-	pbft.updateTarget = uidx{n:n, v:view, flag:true, key:agree.Key}
 
 	pbft.agreeUpdateHelper(agree)
 	logger.Infof("Replica %d sending update-N-View, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
@@ -446,7 +445,8 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 	}
 	logger.Debugf("Replica %d now has %d agree-update requests for view=%d/n=%d", pbft.id, quorum, agree.View, agree.N)
 
-	if atomic.LoadUint32(&pbft.activeView) == 0 && quorum >= pbft.allCorrectReplicasQuorum() {
+	if quorum >= pbft.allCorrectReplicasQuorum() {
+		pbft.updateTarget = uidx{v:agree.View, n:agree.N, flag:agree.Flag, key:agree.Key}
 		return agreeUpdateNQuorumEvent{}
 	}
 
@@ -527,7 +527,7 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) events.Event {
 		return nil
 	}
 
-	if !(update.View > 0 && update.View == pbft.updateTarget.v && pbft.primary(pbft.view) == update.ReplicaId && pbft.newViewStore[pbft.updateTarget] == nil) {
+	if !(update.View > 0 && update.View == pbft.updateTarget.v && pbft.primary(pbft.view) == update.ReplicaId && pbft.updateStore[pbft.updateTarget] == nil) {
 		logger.Infof("Replica %d rejecting invalid new-view from %d, v:%d",
 			pbft.id, update.ReplicaId, update.View)
 		return nil
@@ -542,7 +542,7 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) events.Event {
 		}
 	}
 	if quorum < pbft.allCorrectReplicasQuorum() {
-		logger.Warningf("Replica %d has not meet ViewChangedQuorum", pbft.id)
+		logger.Warningf("Replica %d has not meet agreeUpdateNQuorum", pbft.id)
 		return nil
 	}
 
@@ -638,7 +638,7 @@ func (pbft *pbftProtocal) processUpdateN() events.Event {
 		}
 	}
 	// --
-	msgList := pbft.assignSequenceNumbers(update.Aset, cp.SequenceNumber)
+	msgList := pbft.assignSequenceNumbersForUpdate(update.Aset, cp.SequenceNumber)
 
 	if msgList == nil {
 		logger.Warningf("Replica %d could not assign sequence numbers: %+v",
@@ -682,64 +682,73 @@ func (pbft *pbftProtocal) processUpdateN() events.Event {
 
 }
 
-func (pbft *pbftProtocal) processReqInUpdate(nv *NewView) events.Event {
-	logger.Debugf("Replica %d accepting new-view to view %d", pbft.id, pbft.view)
+func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
+	logger.Debugf("Replica %d accepting update-n to target %v", pbft.id, pbft.updateTarget)
 
 	pbft.stopTimer()
 	pbft.nullRequestTimer.Stop()
-
 	delete(pbft.updateStore, pbft.updateTarget)
-	// empty the outstandingReqBatch, it is useless since new primary will resend pre-prepare
-	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
-	pbft.lastExec = pbft.h
-	pbft.seqNo = pbft.h
-	prevPrimary := pbft.primary(pbft.view - 1)
-	if prevPrimary == pbft.id {
-		pbft.rebuildDuplicator()
-	} else {
-		pbft.clearDuplicator()
-	}
-	pbft.vid = pbft.h
-	pbft.lastVid = pbft.h
-	if !pbft.skipInProgress {
-		backendVid := uint64(pbft.vid + 1)
-		pbft.helper.VcReset(backendVid)
-		pbft.inVcReset = true
-		return nil
+
+	xSetLen := len(update.Xset)
+	upper := uint64(xSetLen) + pbft.h + uint64(1)
+	if pbft.primary(pbft.view) == pbft.id {
+		for i := pbft.h + uint64(1); i < upper; i++ {
+			d, ok := update.Xset[i]
+			if !ok {
+				logger.Critical("view change Xset miss batch number %d", i)
+			} else if d == "" {
+				// This should not happen
+				logger.Critical("view change Xset has null batch, kick it out")
+			} else {
+				batch, ok := pbft.validatedBatchStore[d]
+				if !ok {
+					logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
+				} else {
+					pbft.sendPrePrepareForUpdate(batch, d)
+				}
+			}
+		}
 	}
 
-	// clear the PQC sets before handle the tail
-	qset := []*PrePrepare{}
-	pset := []*Prepare{}
-	cset := []*Commit{}
-	pbft.qset = &Qset{Set: qset}
-	pbft.pset = &Pset{Set: pset}
-	pbft.cset = &Cset{Set: cset}
-
-	pbft.updateViewChangeSeqNo()
 	pbft.startTimerIfOutstandingRequests()
 
-	pbft.vcResendCount = 0
-
-	return viewChangedEvent{}
+	return updatedNEvent{}
 }
 
 func (pbft *pbftProtocal) agreeUpdateHelper(agree *AgreeUpdateN) {
 
-	// clear old messages
-	for idx := range pbft.certStore {
-		if idx.v < pbft.view {
+	pset := pbft.calcPSet()
+	qset := pbft.calcQSet()
+
+	pbft.plist = pset
+	pbft.qlist = qset
+
+	pbft.updateCertStore = make(map[msgID]updateCert)
+	for idx, cert := range pbft.certStore {
+		if idx.v == pbft.view {
+			tmpId := msgID{n:idx.n, v:agree.View}
+			tmpCert := updateCert{
+				digest: cert.digest,
+				sentPrepare: cert.sentPrepare,
+				validated: cert.validated,
+				sentCommit: cert.sentCommit,
+				sentExecute: cert.sentExecute,
+			}
+			pbft.updateCertStore[tmpId] = tmpCert
+		}
+		if agree.Flag && idx.v <= pbft.view {
+			delete(pbft.certStore, idx)
+		}
+		if !agree.Flag && idx.v <= pbft.view+1 {
 			delete(pbft.certStore, idx)
 		}
 	}
+
 	for idx := range pbft.agreeUpdateStore {
-		if idx.v < pbft.view {
+		if !(idx.v == agree.View && idx.n == agree.N && idx.flag == agree.Flag) {
 			delete(pbft.agreeUpdateStore, idx)
 		}
 	}
-
-	pset := pbft.calcPSet()
-	qset := pbft.calcQSet()
 
 	for n, id := range pbft.chkpts {
 		agree.Cset = append(agree.Cset, &ViewChange_C {
@@ -776,6 +785,14 @@ func (pbft *pbftProtocal) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 			logger.Warningf("Replica %d invalid p entry in agree-update: expected n=%d/view=%d, get n=%d/view=%d", pbft.id, n, view, agree.N, agree.View)
 			return false
 		}
+
+		for _, p := range append(agree.Pset, agree.Qset...) {
+			if !(p.View <= agree.View && p.SequenceNumber > agree.H && p.SequenceNumber <= agree.H+pbft.L) {
+				logger.Warningf("Replica %d invalid p entry in agree-update: vc(v:%d h:%d) p(v:%d n:%d)", pbft.id, agree.View, agree.H, p.View, p.SequenceNumber)
+				return false
+			}
+		}
+
 	} else {
 		cert := pbft.getDelNodeCert(agree.Key)
 		if !cert.finishDel {
@@ -787,13 +804,14 @@ func (pbft *pbftProtocal) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 			logger.Warningf("Replica %d invalid p entry in agree-update: expected n=%d/view=%d, get n=%d/view=%d", pbft.id, n, view, agree.N, agree.View)
 			return false
 		}
-	}
 
-	for _, p := range append(agree.Pset, agree.Qset...) {
-		if !(p.View <= agree.View && p.SequenceNumber > agree.H && p.SequenceNumber <= agree.H+pbft.L) {
-			logger.Warningf("Replica %d invalid p entry in agree-update: vc(v:%d h:%d) p(v:%d n:%d)", pbft.id, agree.View, agree.H, p.View, p.SequenceNumber)
-			return false
+		for _, p := range append(agree.Pset, agree.Qset...) {
+			if !(p.View <= agree.View+1 && p.SequenceNumber > agree.H && p.SequenceNumber <= agree.H+pbft.L) {
+				logger.Warningf("Replica %d invalid p entry in agree-update: vc(v:%d h:%d) p(v:%d n:%d)", pbft.id, agree.View, agree.H, p.View, p.SequenceNumber)
+				return false
+			}
 		}
+
 	}
 
 	for _, c := range agree.Cset {
@@ -814,11 +832,11 @@ func (pbft *pbftProtocal) getAgreeUpdates() (agrees []*AgreeUpdateN) {
 }
 
 func (pbft *pbftProtocal) selectInitialCheckpointForUpdate(aset []*AgreeUpdateN) (checkpoint ViewChange_C, ok bool, replicas []uint64) {
-	checkpoints := make(map[ViewChange_C][]*ViewChange)
-	for _, vc := range aset {
-		for _, c := range vc.Cset { // TODO, verify that we strip duplicate checkpoints from this set
-			checkpoints[*c] = append(checkpoints[*c], vc)
-			logger.Debugf("Replica %d appending checkpoint from replica %d with seqNo=%d, h=%d, and checkpoint digest %s", pbft.id, vc.ReplicaId, vc.H, c.SequenceNumber, c.Id)
+	checkpoints := make(map[ViewChange_C][]*AgreeUpdateN)
+	for _, agree := range aset {
+		for _, c := range agree.Cset { // TODO, verify that we strip duplicate checkpoints from this set
+			checkpoints[*c] = append(checkpoints[*c], agree)
+			logger.Debugf("Replica %d appending checkpoint from replica %d with seqNo=%d, h=%d, and checkpoint digest %s", pbft.id, agree.ReplicaId, agree.H, c.SequenceNumber, c.Id)
 		}
 	}
 

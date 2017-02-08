@@ -143,6 +143,7 @@ type pbftProtocal struct {
 	agreeUpdateStore	map[aidx]*AgreeUpdateN		// track agree-update-n message
 	updateStore			map[uidx]*UpdateN			// track last update-n we received or sent
 	updateTarget		uidx						// track the new view after update
+	updateCertStore		map[msgID]updateCert		// track the local certStore that needed during update
 }
 
 type qidx struct {
@@ -221,6 +222,14 @@ type uidx struct {
 	n		int64
 	flag	bool
 	key	string
+}
+
+type updateCert struct {
+	digest string
+	sentPrepare bool
+	validated bool
+	sentCommit bool
+	sentExecute bool
 }
 
 // newBatch initializes a batch
@@ -342,6 +351,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.inDeletingNode = false
 	pbft.inUpdatingN = false
 	pbft.duplicator = make(map[uint64]*transactionStore)
+	pbft.updateCertStore = make(map[msgID]updateCert)
 
 	pbft.restoreState()
 
@@ -1309,6 +1319,55 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	return true
 }
 
+func (pbft *pbftProtocal) sendPrePrepareForUpdate(reqBatch *TransactionBatch, digest string) {
+	logger.Debugf("Replica %d is primary, issuing pre-prepare for request batch %s", pbft.id, digest)
+	n := pbft.seqNo + 1
+
+	for _, cert := range pbft.certStore { // check for other PRE-PREPARE for same digest, but different seqNo
+		if p := cert.prePrepare; p != nil {
+			if p.View == pbft.view && p.SequenceNumber != n && p.BatchDigest == digest && digest != "" {
+				// This will happen if primary receive same digest result of txs
+				// It may result in DDos attack
+				logger.Warningf("Other pre-prepare found with same digest but different seqNo: %d instead of %d", p.SequenceNumber, n)
+				delete(pbft.validatedBatchStore, digest)
+				return
+			}
+		}
+	}
+
+	logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
+	pbft.nullRequestTimer.Stop()
+	pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
+	pbft.seqNo = n
+	preprep := &PrePrepare{
+		View:             pbft.view,
+		SequenceNumber:   n,
+		BatchDigest:      digest,
+		TransactionBatch: reqBatch,
+		ReplicaId:        pbft.id,
+	}
+	cert := pbft.getCert(pbft.view, n)
+	cert.prePrepare = preprep
+	cert.digest = digest
+	cert.sentValidate = true
+	cert.validated = true
+	pbft.persistQSet(preprep.View, preprep.SequenceNumber)
+	payload, err := proto.Marshal(preprep)
+	if err != nil {
+		logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
+		return false
+	}
+
+	consensusMsg := &ConsensusMessage{
+		Type:    ConsensusMessage_PRE_PREPARE,
+		Payload: payload,
+	}
+	msg := consensusMsgHelper(consensusMsg, pbft.id)
+	pbft.helper.InnerBroadcast(msg)
+
+	pbft.maybeSendCommit(digest, pbft.view, n)
+}
+
 func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
 	if pbft.inNegoView {
@@ -1923,20 +1982,25 @@ func (pbft *pbftProtocal) recvReturnRequestBatch(batch *ReturnRequestBatch) even
 	}
 	pbft.validatedBatchStore[digest] = batch.Batch
 	delete(pbft.missingReqBatches, digest)
-	logger.Critical("Primary received missing request: ", digest)
+	logger.Debug("Primary received missing request: ", digest)
 
 	if len(pbft.missingReqBatches) == 0 {
-		nv, ok := pbft.newViewStore[pbft.view]
-		if !ok {
-			logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
-			return nil
+		if atomic.LoadUint32(&pbft.activeView) == 0 {
+			nv, ok := pbft.newViewStore[pbft.view]
+			if !ok {
+				logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
+				return nil
+			}
+			return pbft.processReqInNewView(nv)
 		}
-		if active := atomic.LoadUint32(&pbft.activeView); active == 1 {
-			logger.Infof("Replica %d ignoring new-view from %d, v:%d: we are active in view %d",
-				pbft.id, nv.ReplicaId, nv.View, pbft.view)
-			return nil
+		if atomic.LoadUint32(&pbft.inUpdatingN) == 1 {
+			update, ok := pbft.updateStore[pbft.updateTarget]
+			if !ok {
+				logger.Debugf("Replica %d ignoring processUpdateN as it could not find target %v in its updateStore", pbft.id, pbft.updateTarget)
+				return nil
+			}
+			return pbft.processReqInUpdate(update)
 		}
-		return pbft.processReqInNewView(nv)
 	}
 	return nil
 
@@ -2406,10 +2470,10 @@ func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error 
 		}
 
 		cert := pbft.getCert(result.View, result.SeqNo)
-		cert.validated = true
 
 		digest := result.Hash
 		if digest == cert.digest {
+			cert.validated = true
 			pbft.sendCommit(digest, result.View, result.SeqNo)
 		} else {
 			logger.Warningf("Relica %d cannot agree with the validate result for view=%d/seqNo=%d sent from primary", pbft.id, result.View, result.SeqNo)

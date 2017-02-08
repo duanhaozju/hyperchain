@@ -20,6 +20,9 @@ type viewChangedEvent struct{}
 // agreeUpdateNQuorumEvent is sent when agree-update-n quorum reached f+1
 type agreeUpdateNQuorumEvent struct{}
 
+// agreeUpdateNQuorumEvent is sent when agree-update-n quorum reached f+1
+type updatedNEvent struct{}
+
 // stateUpdatedEvent  when stateUpdate is executed and return the result
 type stateUpdatedEvent struct {
 	seqNo uint64
