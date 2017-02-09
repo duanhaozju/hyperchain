@@ -33,8 +33,8 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	if err != nil {
 		return
 	}
-	// 2 revert state
 	batch := db.NewBatch()
+	// 2. revert state
 	if err := pool.revertState(batch, int64(tmpDemandNumber-1), int64(ev.SeqNo-1), block.MerkleRoot); err != nil {
 		log.Errorf("revert state from %d to %d failed", tmpDemandNumber-1, ev.SeqNo-1)
 		return
@@ -141,13 +141,16 @@ func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, tar
 		}
 		dirtyStateObjectSet := mapset.NewSet()
 		stateObjectStorageHashs := make(map[common.Address][]byte)
-		state, err := pool.GetStateInstance()
-		if err != nil {
-			log.Errorf("get latest state = #%d failed.", currentNumber)
-			return err
-		}
 		// revert state change with changeset [targetNumber+1, currentNumber]
 		// undo changes in reverse
+		state, err := pool.GetStateInstance()
+		if err != nil {
+			log.Error("get state failed.")
+			return err
+		}
+
+		tmpState := state.(*hyperstate.StateDB)
+		journalCache := hyperstate.NewJournalCache(db)
 		for i := currentNumber; i >= targetNumber+1; i -= 1 {
 			log.Debugf("undo changes for #%d", i)
 			j, err := db.Get(hyperstate.CompositeJournalKey(uint64(i)))
@@ -161,19 +164,20 @@ func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, tar
 				continue
 			}
 			// undo journal in reverse
-			tmpState := state.(*hyperstate.StateDB)
 			for j := len(journal.JournalList) - 1; j >= 0; j -= 1 {
 				log.Debugf("journal %s", journal.JournalList[j].String())
-				// parameters *stateDB, batch, writeThrough, flush, sync
-				// don't flush into disk util all operations finish
-				journal.JournalList[j].Undo(tmpState, batch, true, false, false)
+				// parameters *stateDB, batch, writeThrough
+				journal.JournalList[j].Undo(tmpState, journalCache, batch, true)
 				if journal.JournalList[j].GetType() == hyperstate.StorageHashChangeType {
 					tmp := journal.JournalList[j].(*hyperstate.StorageHashChange)
 					// use struct instead of pointer since different pointers may represent same stateObject
 					dirtyStateObjectSet.Add(*tmp.Account)
 					stateObjectStorageHashs[*tmp.Account] = tmp.Prev
 				}
-
+			}
+			if err := journalCache.Flush(batch); err != nil {
+				log.Errorf("flush modified content failed. %s", err.Error())
+				return err
 			}
 			// remove persisted journals
 			batch.Delete(hyperstate.CompositeJournalKey(uint64(i)))
@@ -190,7 +194,7 @@ func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, tar
 			hash, _ := bucketTree.ComputeCryptoHash()
 			log.Debugf("re-compute %s storage hash %s", address.Hex(), common.Bytes2Hex(hash))
 			stateObjectHash := stateObjectStorageHashs[address]
-			if bytes.Compare(hash, stateObjectHash) != 0 {
+			if common.BytesToHash(hash).Hex() != common.BytesToHash(stateObjectHash).Hex() {
 				log.Errorf("after revert to #%d, state object %s revert failed, required storage hash %s, got %s",
 					targetNumber, address.Hex(), common.Bytes2Hex(stateObjectHash), common.Bytes2Hex(hash))
 			}
