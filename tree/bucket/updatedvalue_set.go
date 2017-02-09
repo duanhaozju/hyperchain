@@ -5,6 +5,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"math/big"
 	"sort"
+	"sync"
 )
 
 // the value which updated by datanode
@@ -17,9 +18,12 @@ type UpdatedValue struct {
 type UpdatedValueSet struct {
 	BlockNum   *big.Int
 	UpdatedKVs map[string]*UpdatedValue
+	lock       sync.RWMutex
 }
 
 func (updatedValueSet *UpdatedValueSet) Marshal(buffer *proto.Buffer) {
+	updatedValueSet.lock.RLock()
+	defer updatedValueSet.lock.RUnlock()
 	err := buffer.EncodeVarint(uint64(len(updatedValueSet.UpdatedKVs)))
 	if err != nil {
 		panic(fmt.Errorf("This error should not occur: %s", err))
@@ -57,6 +61,8 @@ func (updatedValueSet *UpdatedValueSet) marshalValueWithMarker(buffer *proto.Buf
 }
 
 func (updatedValueSet *UpdatedValueSet) UnMarshal(buffer *proto.Buffer) error {
+	updatedValueSet.lock.Lock()
+	defer updatedValueSet.lock.Unlock()
 	size, err := buffer.DecodeVarint()
 	if err != nil {
 		return fmt.Errorf("Error unmarshaling state delta: %s", err)
@@ -101,22 +107,32 @@ func (updatedValueSet *UpdatedValueSet) unmarshalValueWithMarker(buffer *proto.B
 
 func (updatedValueSet *UpdatedValueSet) Get(key string) *UpdatedValue {
 	// TODO Cache?
+	updatedValueSet.lock.RLock()
+	defer updatedValueSet.lock.RUnlock()
 	return updatedValueSet.UpdatedKVs[key]
 }
 
 func (updatedValueSet *UpdatedValueSet) Set(key string, updatedValue, previousValue []byte) {
+	updatedValueSet.lock.Lock()
+	defer updatedValueSet.lock.Unlock()
 	updatedValueSet.UpdatedKVs[key] = &UpdatedValue{updatedValue, previousValue}
 }
 
 func (updatedValueSet *UpdatedValueSet) Remove(key string, previousValue []byte) {
+	updatedValueSet.lock.Lock()
+	defer updatedValueSet.lock.Unlock()
 	updatedValueSet.UpdatedKVs[key] = &UpdatedValue{nil, nil}
 }
 
 func (updatedValueSet *UpdatedValueSet) HasChanges() bool {
+	updatedValueSet.lock.RLock()
+	defer updatedValueSet.lock.RUnlock()
 	return len(updatedValueSet.UpdatedKVs) > 0
 }
 
 func (updatedValueSet *UpdatedValueSet) GetSortedKeys() []string {
+	updatedValueSet.lock.RLock()
+	defer updatedValueSet.lock.RUnlock()
 	updatedKeys := []string{}
 	for k := range updatedValueSet.UpdatedKVs {
 		updatedKeys = append(updatedKeys, k)
