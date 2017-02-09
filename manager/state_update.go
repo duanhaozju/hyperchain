@@ -34,7 +34,10 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 			self.sendStateUpdatedEvent()
 		} else {
 			log.Warningf("current chain latest block hash not equal with target hash, cut down local block %d", core.GetChainCopy().Height)
-			self.blockPool.CutdownBlock(core.GetChainCopy().Height)
+			if err := self.blockPool.CutdownBlock(core.GetChainCopy().Height); err != nil {
+				log.Errorf("cut down block %d failed.", core.GetChainCopy().Height)
+				return
+			}
 		}
 	}
 	// send block request message to remot peer
@@ -168,7 +171,10 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 								break
 							} else {
 								// the highest block in local is invalid, request the block
-								self.blockPool.CutdownBlock(lastBlk.Number - 1)
+								if err := self.blockPool.CutdownBlock(lastBlk.Number - 1); err != nil {
+									log.Errorf("cut down block %d failed.", lastBlk.Number - 1)
+									return
+								}
 								self.broadcastDemandBlock(lastBlk.Number-1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
 							}
 						}
