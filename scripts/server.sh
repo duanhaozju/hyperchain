@@ -79,21 +79,14 @@ if ! type confer > /dev/null; then
     cd $GOPATH/src/git.hyperchain.cn/chenquan/confer
     go install
 fi
+
 echo "check 'confer' again:"
 if ! type confer > /dev/null; then
-<<<<<<< .merge_file_DKVWOT
-    echo -e "please manully install `confer`,just follow those steps:"
-    echo "mkdir -p $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/"
-    echo "git clone git@git.hyperchain.cn:chenquan/confer.git"
-    echo "cd $GOPATH/src/git.hyperchain.cn/chenquan/confer"
-    echo "go install"
-=======
     echo -e "please manully install 'confer',just follow those steps:"
     echo -e "mkdir -p $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/"
     echo -e "git clone git@git.hyperchain.cn:chenquan/confer.git"
     echo -e "cd $GOPATH/src/git.hyperchain.cn/chenquan/confer"
     echo -e "go install"
->>>>>>> .merge_file_1Y6Ja6
     exit 1
 fi
 
