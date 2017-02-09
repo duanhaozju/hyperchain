@@ -97,6 +97,7 @@ if [ -d $GOPATH/src/git.hyperchain.cn/chenquan/confer ]; then
     go install
 fi
 
+cd $CURRENT_DIR
 }
 
 #################
