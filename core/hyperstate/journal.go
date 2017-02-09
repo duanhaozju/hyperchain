@@ -25,7 +25,7 @@ const (
 )
 
 type JournalEntry interface {
-	Undo(*StateDB, hyperdb.Batch, bool, bool, bool)
+	Undo(*StateDB, *JournalCache, hyperdb.Batch, bool)
 	String() string
 	Marshal() ([]byte, error)
 	SetType()
@@ -228,19 +228,17 @@ type (
 )
 
 // createObjectChange
-func (ch *CreateObjectChange) Undo(s *StateDB, batch hyperdb.Batch, writeThrough bool, flush bool, sync bool) {
+func (ch *CreateObjectChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
 	if !writeThrough {
 		delete(s.stateObjects, *ch.Account)
 		delete(s.stateObjectsDirty, *ch.Account)
 	} else {
-		batch.Delete(CompositeAccountKey(ch.Account.Bytes()))
-		if flush {
-			if sync {
-				batch.Write()
-			} else {
-				go batch.Write()
-			}
+		obj := cache.Fetch(*ch.Account)
+		if obj == nil {
+			log.Warningf("missing state object %s, it may be a empty account or lost in database", ch.Account.Hex())
+			return
 		}
+		obj.suicided = true
 	}
 }
 func (ch *CreateObjectChange) String() string {
@@ -259,23 +257,11 @@ func (ch *CreateObjectChange) GetType() string {
 }
 
 // resetObjectChange
-func (ch *ResetObjectChange) Undo(s *StateDB, batch hyperdb.Batch, writeThrough bool, flush bool, sync bool) {
+func (ch *ResetObjectChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
 	if !writeThrough {
 		s.setStateObject(ch.Prev)
 	} else {
-		data, err := ch.Prev.Marshal()
-		if err != nil {
-			log.Errorf("marshal stateObject %s when undo reset object change failed", ch.Prev.address.Hex())
-			return
-		}
-		batch.Put(CompositeAccountKey(ch.Prev.address.Bytes()), data)
-		if flush {
-			if sync {
-				batch.Write()
-			} else {
-				go batch.Write()
-			}
-		}
+		cache.Add(ch.Prev)
 	}
 }
 func (ch *ResetObjectChange) String() string {
@@ -295,8 +281,9 @@ func (ch *ResetObjectChange) GetType() string {
 }
 
 // suicideChange
-func (ch *SuicideChange) Undo(s *StateDB, batch hyperdb.Batch, writeThrough bool, flush bool, sync bool) {
+func (ch *SuicideChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
 	if !writeThrough {
+		// undo contract account
 		obj := s.GetStateObject(*ch.Account)
 		if obj != nil {
 			obj.suicided = ch.Prev
@@ -307,18 +294,7 @@ func (ch *SuicideChange) Undo(s *StateDB, batch hyperdb.Batch, writeThrough bool
 			return
 		} else {
 			obj := ch.PreObject
-			d, err := obj.Marshal()
-			if err != nil {
-				log.Errorf("marshal object %s when undo suicide change failed", obj.address.Hex())
-			}
-			batch.Put(CompositeAccountKey(ch.PreObject.address.Bytes()), d)
-			if flush {
-				if sync {
-					batch.Write()
-				} else {
-					go batch.Write()
-				}
-			}
+			cache.Add(obj)
 		}
 	}
 }
@@ -341,7 +317,7 @@ func (ch *SuicideChange) GetType() string {
 var ripemd = common.HexToAddress("0000000000000000000000000000000000000003")
 
 // Deprecated
-func (ch *TouchChange) Undo(s *StateDB, batch hyperdb.Batch, writeThrough bool, flush bool, sync bool) {
+func (ch *TouchChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
 	if !writeThrough {
 		if !ch.Prev && *ch.Account != ripemd {
 			delete(s.stateObjects, *ch.Account)
@@ -367,36 +343,12 @@ func (ch *TouchChange) GetType() string {
 }
 
 // balanceChange
-func (ch *BalanceChange) Undo(s *StateDB, batch hyperdb.Batch, writeThrough bool, flush bool, sync bool) {
+func (ch *BalanceChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
 	if !writeThrough {
 		s.GetStateObject(*ch.Account).setBalance(ch.Prev)
 	} else {
-		d, err := s.db.Get(CompositeAccountKey(ch.Account.Bytes()))
-		if err != nil {
-			log.Errorf("miss state object %s when undo balance change", ch.Account.Hex())
-			return
-		}
-		obj := &Account{}
-		err = Unmarshal(d, obj)
-		if err != nil {
-			log.Errorf("unmarshal state object %s when undo balance change, error message %s", ch.Account.Hex(), err.Error())
-			return
-		}
-		// undo modification
-		obj.Balance = ch.Prev
-		d, err = json.Marshal(obj)
-		if err != nil {
-			log.Errorf("marshal state object %s when undo balance change", ch.Account.Hex())
-			return
-		}
-		batch.Put(CompositeAccountKey(ch.Account.Bytes()), d)
-		if flush {
-			if sync {
-				batch.Write()
-			} else {
-				go batch.Write()
-			}
-		}
+		obj := cache.Fetch(*ch.Account)
+		obj.data.Balance = ch.Prev
 	}
 }
 func (ch *BalanceChange) String() string {
@@ -415,36 +367,12 @@ func (ch *BalanceChange) GetType() string {
 }
 
 // nonceChange
-func (ch *NonceChange) Undo(s *StateDB, batch hyperdb.Batch, writeThrough bool, flush bool, sync bool) {
+func (ch *NonceChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
 	if !writeThrough {
 		s.GetStateObject(*ch.Account).setNonce(ch.Prev)
 	} else {
-		d, err := s.db.Get(CompositeAccountKey(ch.Account.Bytes()))
-		if err != nil {
-			log.Errorf("miss state object %s when undo nonce change", ch.Account.Hex())
-			return
-		}
-		obj := &Account{}
-		err = Unmarshal(d, obj)
-		if err != nil {
-			log.Errorf("unmarshal state object %s when undo nonce change, error message %s", ch.Account.Hex(), err.Error())
-			return
-		}
-		// undo modification
-		obj.Nonce = ch.Prev
-		d, err = json.Marshal(obj)
-		if err != nil {
-			log.Errorf("marshal state object %s when undo nonce change", ch.Account.Hex())
-			return
-		}
-		batch.Put(CompositeAccountKey(ch.Account.Bytes()), d)
-		if flush {
-			if sync {
-				batch.Write()
-			} else {
-				go batch.Write()
-			}
-		}
+		obj := cache.Fetch(*ch.Account)
+		obj.data.Nonce = ch.Prev
 	}
 }
 
@@ -465,40 +393,14 @@ func (ch *NonceChange) GetType() string {
 }
 
 // codeChange
-func (ch *CodeChange) Undo(s *StateDB, batch hyperdb.Batch, writeThrough bool, flush bool, sync bool) {
+func (ch *CodeChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
 	if !writeThrough {
 		s.GetStateObject(*ch.Account).setCode(common.BytesToHash(ch.Prevhash), ch.Prevcode)
 	} else {
-		d, err := s.db.Get(CompositeAccountKey(ch.Account.Bytes()))
-		if err != nil {
-			log.Errorf("miss state object %s when undo code change", ch.Account.Hex())
-			return
-		}
-		obj := &Account{}
-		err = Unmarshal(d, obj)
-		if err != nil {
-			log.Errorf("unmarshal state object %s when undo code change, error message: %s", ch.Account.Hex(), err.Error())
-			return
-		}
-		// remove previous code
-		batch.Delete(CompositeCodeHash(ch.Account.Bytes(), obj.CodeHash))
-		// undo code hash
-		obj.CodeHash = ch.Prevhash
-		d, err = json.Marshal(obj)
-		if err != nil {
-			log.Errorf("marshal state object %s when undo code change", ch.Account.Hex())
-			return
-		}
-		batch.Put(CompositeAccountKey(ch.Account.Bytes()), d)
-		// undo code
+		obj := cache.Fetch(*ch.Account)
+		batch.Delete(CompositeCodeHash(ch.Account.Bytes(), obj.data.CodeHash))
+		obj.data.CodeHash = ch.Prevhash
 		batch.Put(CompositeCodeHash(ch.Account.Bytes(), ch.Prevhash), ch.Prevcode)
-		if flush {
-			if sync {
-				batch.Write()
-			} else {
-				go batch.Write()
-			}
-		}
 	}
 }
 func (ch *CodeChange) String() string {
@@ -517,7 +419,7 @@ func (ch *CodeChange) GetType() string {
 }
 
 // storageChange
-func (ch *StorageChange) Undo(s *StateDB, batch hyperdb.Batch, writeThrough bool, flush bool, sync bool){
+func (ch *StorageChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool){
 	if !writeThrough {
 		if ch.Exist {
 			s.GetStateObject(*ch.Account).setState(ch.Key, ch.Prevalue)
@@ -525,18 +427,9 @@ func (ch *StorageChange) Undo(s *StateDB, batch hyperdb.Batch, writeThrough bool
 			s.GetStateObject(*ch.Account).removeState(ch.Key)
 		}
 	} else {
-		if ch.Exist {
-			batch.Put(CompositeStorageKey(ch.Account.Bytes(), ch.Key.Bytes()), ch.Prevalue.Bytes())
-		} else {
-			batch.Delete(CompositeStorageKey(ch.Account.Bytes(), ch.Key.Bytes()))
-		}
-		if flush {
-			if sync {
-				batch.Write()
-			} else {
-				go batch.Write()
-			}
-		}
+		obj := cache.Fetch(*ch.Account)
+		obj.cachedStorage[ch.Key] = ch.Prevalue
+		obj.dirtyStorage[ch.Key] = ch.Prevalue
 	}
 }
 func (ch *StorageChange) String() string {
@@ -555,7 +448,7 @@ func (ch *StorageChange) GetType() string {
 }
 
 // refundChange
-func (ch *RefundChange) Undo(s *StateDB, batch hyperdb.Batch, writeThrough bool, flush bool, sync bool) {
+func (ch *RefundChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
 	if !writeThrough {
 		s.refund = ch.Prev
 	} else {
@@ -578,7 +471,7 @@ func (ch *RefundChange) GetType() string {
 }
 
 // addLogChange
-func (ch *AddLogChange) Undo(s *StateDB, batch hyperdb.Batch, writeThrough, flush, sync bool) {
+func (ch *AddLogChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
 	logs := s.logs[ch.Txhash]
 	if len(logs) == 1 {
 		delete(s.logs, ch.Txhash)
@@ -602,38 +495,14 @@ func (ch *AddLogChange) GetType() string {
 }
 
 // StorageHashChange
-func (ch *StorageHashChange) Undo(s *StateDB, batch hyperdb.Batch, writeThrough, flush, sync bool) {
+func (ch *StorageHashChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
 	if !writeThrough {
 
 	} else {
-		d, err := s.db.Get(CompositeAccountKey(ch.Account.Bytes()))
-		if err != nil {
-			log.Errorf("miss state object %s when undo code change", ch.Account.Hex())
-			return
-		}
-		obj := &Account{}
-		err = Unmarshal(d, obj)
-		if err != nil {
-			log.Errorf("unmarshal state object %s when undo code change, error message: %s", ch.Account.Hex(), err.Error())
-			return
-		}
-		obj.Root = common.BytesToHash(ch.Prev)
-		d, err = json.Marshal(obj)
-		if err != nil {
-			log.Errorf("marshal state object %s when undo code change", ch.Account.Hex())
-			return
-		}
-		batch.Put(CompositeAccountKey(ch.Account.Bytes()), d)
-		if flush  {
-			if sync {
-				batch.Write()
-			} else {
-				go batch.Write()
-			}
-		}
+		obj := cache.Fetch(*ch.Account)
+		obj.data.Root = common.BytesToHash(ch.Prev)
 	}
 }
-
 func (ch *StorageHashChange) String() string {
 	var str string
 	str = fmt.Sprintf("journal [storagehashChange] address %s prev %s\n", ch.Account.Hex(), common.Bytes2Hex(ch.Prev))

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # debug flag
 #set -evx
+set -e
 ################
 # pwd vars
 ################
@@ -9,17 +10,17 @@ HYPERCHAIN_DIR="$GOPATH/src/hyperchain"
 # judge system type varible may `MAC` or `LINUX`
 _SYSTYPE="MAC"
 case "$OSTYPE" in
-  darwin*)  
+  darwin*)
     echo "RUN SCRIPTS ON OSX"
     _SYSTYPE="MAC"
-  ;; 
-  linux*) 
-    echo "RUN SCRIPTS ON LINUX"
-    _SYSTYPE="MAC"
   ;;
-  *) 
+  linux*)
+    echo "RUN SCRIPTS ON LINUX"
+    _SYSTYPE="LINUX"
+  ;;
+  *)
     echo "unknown: $OSTYPE"
-    exit -1 
+    exit -1
   ;;
 esac
 
@@ -45,7 +46,7 @@ f_trim_tail(){
 
 env_check_serverlist_length(){
     serverlistlen=`cat serverlist.txt | wc -l`
-    innerserverlistlen=`cat innerserverlist.txt | wc -l`    
+    innerserverlistlen=`cat innerserverlist.txt | wc -l`
     if [ serverlistlen -ne innerserverlistlen ]; then
         echo "serverlist length not equal inner server list"
     fi
@@ -60,33 +61,51 @@ fi
 
 if ! type govendor > /dev/null; then
     # install foobar here
-    echo -e "Please install the `govendor`, just type:\ngo get -u github.com/kardianos/govendor"
+    echo -e "Please install the 'govendor', just type:\ngo get -u github.com/kardianos/govendor"
     exit 1
 fi
 }
 
 env_check_local_linux_env(){
 if ! type jq > /dev/null; then
-    echo -e "Please install the `jq` to parse the json file \n just type: \n sudo apt-get install jq / sudo yum -y install jq / brew install jq "
+    echo -e "Please install the 'jq' to parse the json file \n just type: \n sudo apt-get install jq / sudo yum -y install jq / brew install jq "
     exit 1
 fi
 if ! type confer > /dev/null; then
-    echo -e "Please install the `confer` to generate the peer config json file"
-    echo "now auto install the `confer`:"
-    mkdir $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/
+    echo -e "Please install the 'confer' to generate the peer config json file"
+    echo -e "now auto install the 'confer':"
+    mkdir -p $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/
     git clone git@git.hyperchain.cn:chenquan/confer.git
     cd $GOPATH/src/git.hyperchain.cn/chenquan/confer
     go install
 fi
-echo "check `confer` again:"
+echo "check 'confer' again:"
 if ! type confer > /dev/null; then
+<<<<<<< .merge_file_DKVWOT
     echo -e "please manully install `confer`,just follow those steps:"
     echo "mkdir -p $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/"
     echo "git clone git@git.hyperchain.cn:chenquan/confer.git"
     echo "cd $GOPATH/src/git.hyperchain.cn/chenquan/confer"
     echo "go install"
+=======
+    echo -e "please manully install 'confer',just follow those steps:"
+    echo -e "mkdir -p $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/"
+    echo -e "git clone git@git.hyperchain.cn:chenquan/confer.git"
+    echo -e "cd $GOPATH/src/git.hyperchain.cn/chenquan/confer"
+    echo -e "go install"
+>>>>>>> .merge_file_1Y6Ja6
     exit 1
 fi
+
+if [ -d $GOPATH/src/git.hyperchain.cn/chenquan/confer ]; then
+    echo "update the 'confer' "
+    cd $GOPATH/src/git.hyperchain.cn/chenquan/confer
+    git clean -df && git checkout -- .
+    git pull origin master
+    go install
+fi
+
+cd $CURRENT_DIR
 }
 
 #################
@@ -113,7 +132,7 @@ done < serverlist.txt
 
 
 #################################
-# functional support function 
+# functional support function
 #################################
 # those function will start with `fs_`
 
@@ -138,7 +157,7 @@ fs_kill_process(){
         ssh hyperchain@$server_address " ps aux | grep 'hyperchain -o' | awk '{print \$2}' | xargs kill -9"
         #ssh -T hyperchain@$server_address "if [ x\"`ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'`\" != \"x\" ]; then echo \"kill process \" && ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'| xargs kill -9 ; else echo no hyperchain process runing ;fi"
         # ssh -T hyperchain@$server_address "ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'| xargs kill -9 >& /dev/null"
-    
+
     done
    }
 
@@ -256,9 +275,6 @@ fs__generate_node_peer_configs(){
         confer hpc serverlist.txt innerserverlist.txt $PEER_CONFIGS_DIR/peerconfig_$id.json $id -e
     done
 }
-fs_delete_temp_data(){
-    rm -rf $PEER_CONFIGS_DIR
-}
 
 # distribute the peerconfigs
 # 1. please ensure the peerconfig generate is currectly
@@ -354,7 +370,7 @@ do
     esac
 done
 
-#echo "run this script first time? $FIRST" 
+#echo "run this script first time? $FIRST"
 #echo "delete the data? $DELETEDATA"
 #echo "rebuild and redistribute binary? $REBUILD"
 #echo "server env,true: suse,false: centos: $SERVER_ENV"
@@ -386,4 +402,3 @@ else
         fs_run_N_terminals_linux
     fi
 fi
-fs_delete_temp_data

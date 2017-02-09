@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"time"
+	"strconv"
 )
 
 func (self *Transaction) BuildHash() common.Hash {
@@ -34,7 +35,7 @@ func (self *Transaction) Hash(ch crypto.CommonHash) common.Hash {
 }
 
 func (self *Transaction) SighHash(ch crypto.CommonHash) common.Hash {
-	needHash := common.ToHex(self.Value) + string(self.Timestamp) + common.ToHex(self.From) + common.ToHex(self.To) + string(self.Nonce)
+	needHash := common.ToHex(self.Value) + strconv.FormatInt(self.Timestamp,10) + common.ToHex(self.From) + common.ToHex(self.To) + string(self.Nonce)
 	return ch.Hash(needHash)
 	//return ch.Hash([]interface{}{
 	//	self.Value,

@@ -465,6 +465,9 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 		tx := e
 		return pbft.processTxEvent(tx)
 	case viewChangedEvent:
+		pbft.updateViewChangeSeqNo()
+		pbft.startTimerIfOutstandingRequests()
+		pbft.vcResendCount = 0
 		primary := pbft.primary(pbft.view)
 		pbft.helper.InformPrimary(primary)
 		pbft.persistView(pbft.view)
