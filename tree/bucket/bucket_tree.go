@@ -2,7 +2,6 @@ package bucket
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"github.com/hashicorp/golang-lru"
 	"github.com/op/go-logging"
@@ -11,6 +10,7 @@ import (
 	"math/big"
 	"time"
 	"sync"
+	"github.com/golang/protobuf/proto"
 )
 
 var (
@@ -240,8 +240,10 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 		switch c {
 		case -1:
 			nextNode = updatedNode
-			compositeKey := string(updatedNode.getCompositeKey())
-			updatedValueSet.Set(compositeKey, updatedNode.value, nil)
+			if !nextNode.isDelete(){
+				compositeKey := string(nextNode.getCompositeKey())
+				updatedValueSet.Set(compositeKey, nextNode.value, nil)
+			}
 			i++
 		case 0:
 			nextNode = updatedNode
@@ -266,9 +268,9 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 	if i < len(updatedNodes) {
 		remainingNodes = updatedNodes[i:]
 		for _, remainingNode := range remainingNodes {
-			compositeKey := string(remainingNode.getCompositeKey()[:])
-			updatedValueSet.Set(compositeKey, remainingNode.value, nil)
 			if !remainingNode.isDelete() {
+				compositeKey := string(remainingNode.getCompositeKey()[:])
+				updatedValueSet.Set(compositeKey, remainingNode.value, nil)
 				newDataNodes = append(newDataNodes, remainingNode)
 			}
 		}
@@ -342,14 +344,11 @@ func (bucketTree *BucketTree) addBucketNodeChangesForPersistence(writeBatch hype
 // TODO it should be test later
 func (bucketTree *BucketTree) addUpdatedValueSetForPersistence(writeBatch hyperdb.Batch) {
 	updatedValueSet := bucketTree.updatedValueSet
-	data, err := json.Marshal(updatedValueSet)
-	if err != nil {
-		log.Errorf("marshal updated value set failed")
-		return
-	}
+	buf := &proto.Buffer{}
+	updatedValueSet.Marshal(buf)
 	dbKey := append([]byte(UpdatedValueSetPrefix), updatedValueSet.BlockNum.Bytes()...)
 	dbKey = append(dbKey, []byte(bucketTree.treePrefix)...)
-	writeBatch.Put(dbKey, data)
+	writeBatch.Put(dbKey, buf.Bytes())
 }
 
 func (updatedValueSet *UpdatedValueSet) Print(treePrefix string) {
@@ -483,18 +482,15 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch hyperdb.Batch, curr
 			log.Debugf("There is no value update")
 			continue
 		}
-		updatedValueSet := newUpdatedValueSet(big.NewInt(i))
-		err = json.Unmarshal(value, updatedValueSet)
-		if err != nil {
-			log.Errorf("unmarshal bucket updated values failed. for #%d", i)
-		}
 
+		buf := proto.NewBuffer(value)
+		updatedValueSet := &UpdatedValueSet{}
+		updatedValueSet.UnMarshal(buf)
 		revertToTargetBlock(bucketTree.treePrefix, big.NewInt(i), updatedValueSet, &keyValueMap)
 		bucketTree.PrepareWorkingSet(keyValueMap, big.NewInt(i))
 		bucketTree.AddChangesForPersistence(writeBatch, big.NewInt(i))
 		keyValueMap = NewKVMap()
 		writeBatch.Delete(dbKey)
-		writeBatch.Write()
 	}
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
