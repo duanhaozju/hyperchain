@@ -274,7 +274,7 @@ func (pool *BlockPool) removeUncommittedData(batch hyperdb.Batch) error {
 		// will never be execute!
 		pool.blockCache.Purge()
 		// 4. Purge validationQueue
-		pool.validationQueue.Purge()
+		pool.validateEventQueue.Purge()
 	}
 	return nil
 }

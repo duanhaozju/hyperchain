@@ -175,7 +175,8 @@ func (self *ProtocolManager) validateLoop() {
 		switch ev := obj.Data.(type) {
 		case event.ExeTxsEvent:
 			// start validation serially
-			self.blockPool.Validate(ev, self.commonHash, self.AccountManager.Encryption, self.Peermanager)
+			//self.blockPool.Validate(ev, self.commonHash, self.AccountManager.Encryption, self.Peermanager)
+			self.blockPool.Validate(ev, self.Peermanager)
 		}
 	}
 }
@@ -188,7 +189,7 @@ func (self *ProtocolManager) commitLoop() {
 
 		case event.CommitOrRollbackBlockEvent:
 			// start commit block serially
-			self.blockPool.CommitBlock3(ev, self.Peermanager)
+			self.blockPool.CommitBlock(ev, self.Peermanager)
 		}
 	}
 }
