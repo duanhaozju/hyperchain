@@ -22,15 +22,12 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerMana
 }
 
 func (pool *BlockPool) commitBackendLoop() {
-	for {
-		select {
-		case ev := <- pool.commitQueue:
-			success := pool.consumeCommitEvent(ev)
-			if !success {
-				log.Errorf("commit block #%d failed, system crush down.", ev.SeqNo)
-				// TODO close the channel
-				break
-			}
+	for ev := range pool.commitQueue {
+		success := pool.consumeCommitEvent(ev)
+		if !success {
+			log.Errorf("commit block #%d failed, system crush down.", ev.SeqNo)
+			// TODO close the channel
+			break
 		}
 	}
 }
