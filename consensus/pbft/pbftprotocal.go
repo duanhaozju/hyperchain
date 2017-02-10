@@ -1071,6 +1071,7 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 			return nil
 		}
 		peers := pbft.highStateTarget.replicas
+		pbft.certStore = make(map[msgID]*msgCert)
 		pbft.fetchRecoveryPQC(peers)
 		return nil
 	}
