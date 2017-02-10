@@ -597,6 +597,7 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 			for tx := range pbft.batchStore {
 				go pbft.postRequestEvent(tx)
 			}
+			pbft.batchStore = nil
 		}
 	} else {
 		pbft.clearDuplicator()
