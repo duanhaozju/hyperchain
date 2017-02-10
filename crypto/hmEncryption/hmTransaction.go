@@ -119,15 +119,26 @@ func NodeVerify(whole_networkpublickey PaillierPublickey, oldBalance_hm []byte, 
 }
 
 //destination verify whether the amount is right or not
-func DestinationVerify(hmtransferAmount []byte, transferAmount []byte, whole_networkpublickey PaillierPublickey) bool {
+func DestinationVerify(illegal_balance_hm []byte,hmtransferAmount []byte, transferAmount []byte, whole_networkpublickey PaillierPublickey) (bool,[]byte){
 
 	//ecies_privatekey := ecies.ImportECDSA(ecdsa_privatekey)
 	//transferAmount, _ := ecies_privatekey.Decrypt(rand.Reader, transferAmount_ecc, nil, nil)
+	sumIllegalHmAmount:=make([]byte,16)
+	sumIllegalHmAmount = illegal_balance_hm
 	phm := New_Paillier_Hmencryption()
 	hmtransferAmount_verify, _ := phm.Encrypto_message(&whole_networkpublickey, transferAmount)
 	flag := EqualTwoBytes(hmtransferAmount, hmtransferAmount_verify)
 
-	return flag
+	if flag==false {
+		//transaction is illegal ,change the illegal_balance_hm value
+		if(illegal_balance_hm==nil){
+			sumIllegalHmAmount = hmtransferAmount
+		}else{
+			sumIllegalHmAmount, _ = phm.Calculator(&whole_networkpublickey, "paillier", hmtransferAmount, illegal_balance_hm)
+		}
+	}
+
+	return flag,sumIllegalHmAmount
 }
 
 //put whole_networkpublickey to a file
