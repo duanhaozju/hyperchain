@@ -86,10 +86,6 @@ func (bucketTree *BucketTree) PrepareWorkingSet(key_valueMap K_VMap, blockNum *b
 		//log.Debug("Ignoring working-set as it is empty")
 		return nil
 	}
-	if(bucketTree.treePrefix != "-bucket-state"){
-		log.Critical("workingset is",key_valueMap)
-		log.Critical("workingset length is",len(key_valueMap))
-	}
 	bucketTree.dataNodesDelta = newDataNodesDelta(bucketTree.treePrefix, key_valueMap)
 	bucketTree.bucketTreeDelta = newBucketTreeDelta()
 	bucketTree.recomputeCryptoHash = true
@@ -162,16 +158,22 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 
 			// thread safe
 			cryptoHashForBucket, newDataNodes := computeDataNodesCryptoHash(bucketKey, updatedDataNodes, existingDataNodes, bucketTree.updatedValueSet)
+			sort.Sort(newDataNodes)
 
+			if bucketTree.treePrefix != "-bucket-state" && bucketKey.level == 2 && bucketKey.bucketNumber == 13{
+				if (len(existingDataNodes) + len(updatedDataNodes)) == len(newDataNodes) ||
+					(len(existingDataNodes) - len(updatedDataNodes) == len(newDataNodes)){
 
-				log.Critical(bucketTree.treePrefix,"Start------------------------------")
-				log.Critical("existingDataNodes",len(existingDataNodes))
-				log.Critical("existingDataNodes",existingDataNodes)
-				log.Critical("updatedDataNodes",len(updatedDataNodes))
-				log.Critical("updatedDataNodes",updatedDataNodes)
-				log.Critical("newDataNodes",len(newDataNodes))
-				log.Critical("newDataNodes",newDataNodes)
-				log.Critical(bucketTree.treePrefix,"End------------------------------")
+				}else {
+					//log.Critical("existingDataNodes",len(existingDataNodes))
+					//log.Critical("existingDataNodes",existingDataNodes)
+					//log.Critical("updatedDataNodes",len(updatedDataNodes))
+					//log.Critical("updatedDataNodes",updatedDataNodes)
+					//log.Critical("newDataNodes",len(newDataNodes))
+					//log.Critical("newDataNodes",newDataNodes)
+					//log.Critical(bucketTree.treePrefix,"End------------------------------")
+				}
+			}
 
 			// thread safe
 			bucketTree.updateDataNodeCache(*bucketKey, newDataNodes)
@@ -281,6 +283,9 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 			newDataNodes = append(newDataNodes, nextNode)
 		}
 	}
+	//if bucketKey.level == 2 && bucketKey.bucketNumber == 13{
+	//	log.Critical("i is",i,"j is",j)
+	//}
 
 	var remainingNodes DataNodes
 	if i < len(updatedNodes) {
@@ -337,6 +342,10 @@ func (bucketTree *BucketTree) addDataNodeChangesForPersistence(writeBatch hyperd
 			if dataNodes == nil || len(dataNodes) == 0 {
 				writeBatch.Delete(append([]byte(bucketTree.treePrefix), append([]byte(DataNodesPrefix), affectedBucket.getEncodedBytes()...)...))
 			} else {
+				//if(affectedBucket.level == 2 && affectedBucket.bucketNumber == 13){
+				//	log.Critical("writeBatch.Put size is",dataNodes.Len())
+				//	log.Critical("dataNodes marshal is",common.ToHex(dataNodes.Marshal()))
+				//}
 				writeBatch.Put(append([]byte(bucketTree.treePrefix), append([]byte(DataNodesPrefix), affectedBucket.getEncodedBytes()...)...), dataNodes.Marshal())
 			}
 		}
@@ -362,8 +371,9 @@ func (bucketTree *BucketTree) addBucketNodeChangesForPersistence(writeBatch hype
 // TODO it should be test later
 func (bucketTree *BucketTree) addUpdatedValueSetForPersistence(writeBatch hyperdb.Batch) {
 	updatedValueSet := bucketTree.updatedValueSet
-	buf := &proto.Buffer{}
+	buf := proto.NewBuffer([]byte{})
 	updatedValueSet.Marshal(buf)
+	//var length int64
 	dbKey := append([]byte(UpdatedValueSetPrefix), updatedValueSet.BlockNum.Bytes()...)
 	dbKey = append(dbKey, []byte(bucketTree.treePrefix)...)
 	writeBatch.Put(dbKey, buf.Bytes())
@@ -481,13 +491,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch hyperdb.Batch, curr
 			continue
 		}
 	}
-	hash,err := bucketTree.ComputeCryptoHash()
-	if err != nil{
-		log.Error("error")
-	}
-	if(bucketTree.treePrefix != "-bucket-state"){
-		log.Critical("CurrentBlock hash is",common.ToHex(hash))
-	}
+
 	for i := currentBlockNum.Int64(); i > toBlockNum.Int64(); i-- {
 		dbKey := append([]byte(UpdatedValueSetPrefix), big.NewInt(i).Bytes()...)
 		dbKey = append(dbKey, []byte(bucketTree.treePrefix)...)
@@ -513,10 +517,10 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch hyperdb.Batch, curr
 		updatedValueSet.UnMarshal(buf)
 
 		if(bucketTree.treePrefix != "-bucket-state"){
-			for k,v:= range updatedValueSet.UpdatedKVs {
-				log.Critical("key is",k)
-				log.Critical("value is",v)
-			}
+			//for k,v:= range updatedValueSet.UpdatedKVs {
+				//log.Critical("key is",k)
+				//log.Critical("value is",v)
+			//}
 		}
 
 		revertToTargetBlock(bucketTree.treePrefix, big.NewInt(i), updatedValueSet, &keyValueMap)
@@ -526,16 +530,6 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch hyperdb.Batch, curr
 		keyValueMap = NewKVMap()
 		writeBatch.Delete(dbKey)
 		writeBatch.Write()
-
-		if(bucketTree.treePrefix != "-bucket-state"){
-			hash,err := bucketTree.ComputeCryptoHash()
-			if err != nil{
-				log.Error("error")
-			}
-			log.Critical("-------------------------------------")
-			log.Critical("revert to block ",i,"the hash is",common.ToHex(hash))
-			log.Critical("-------------------------------------")
-		}
 	}
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
@@ -550,6 +544,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch hyperdb.Batch, curr
 			go writeBatch.Write()
 		}
 	}
+	writeBatch.Write()
 	return nil
 }
 
