@@ -188,7 +188,7 @@ func (self *ProtocolManager) commitLoop() {
 
 		case event.CommitOrRollbackBlockEvent:
 			// start commit block serially
-			self.blockPool.CommitBlock(ev, self.commonHash, self.Peermanager)
+			self.blockPool.CommitBlock3(ev, self.Peermanager)
 		}
 	}
 }

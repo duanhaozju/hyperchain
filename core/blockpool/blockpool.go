@@ -14,11 +14,17 @@ import (
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
 	"sync/atomic"
+	"hyperchain/event"
+	"hyperchain/p2p"
 )
 
 var (
 	log         *logging.Logger // package-level logger
 	globalState vm.Database
+)
+
+const (
+	COMMITQUEUESIZE = 10
 )
 
 func init() {
@@ -45,7 +51,8 @@ type BlockPool struct {
 	tempBlockNumber     uint64       // temporarily block number
 	lastValidationState atomic.Value // latest state root hash
 	// external stuff
-	consenter consensus.Consenter // consensus module handler
+	consenter           consensus.Consenter // consensus module handler
+	peerManager         p2p.PeerManager
 	// thread safe cache
 	blockCache      *common.Cache // cache for validation result
 	validationQueue *common.Cache // cache for storing validation event
@@ -57,6 +64,8 @@ type BlockPool struct {
 	receiptCalculator     interface{} // a batch of receipts calculator
 	transactionBuffer     [][]byte    // transaction buffer
 	receiptBuffer         [][]byte    // receipt buffer
+	// commit queue
+	commitQueue           chan event.CommitOrRollbackBlockEvent
 }
 
 func NewBlockPool(consenter consensus.Consenter, conf *common.Config) *BlockPool {
@@ -86,6 +95,7 @@ func NewBlockPool(consenter consensus.Consenter, conf *common.Config) *BlockPool
 	pool.demandNumber = currentChain.Height + 1
 	pool.demandSeqNo = currentChain.Height + 1
 	pool.tempBlockNumber = currentChain.Height + 1
+	pool.commitQueue = make(chan event.CommitOrRollbackBlockEvent, COMMITQUEUESIZE)
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return nil
@@ -101,10 +111,15 @@ func NewBlockPool(consenter consensus.Consenter, conf *common.Config) *BlockPool
 		pool.lastValidationState.Store(common.BytesToHash(blk.MerkleRoot))
 		return pool
 	}
+
 	// 2. set current state root hash
 	log.Noticef("block pool Initialize. current chain height #%d, latest block hash %s, demandNumber #%d, demandseqNo #%d, temp block number #%d\n",
 		currentChain.Height, common.Bytes2Hex(currentChain.LatestBlockHash), pool.demandNumber, pool.demandSeqNo, pool.tempBlockNumber)
 	return pool
+}
+
+func (pool *BlockPool) Initialize() {
+	go pool.commitBackendLoop()
 }
 
 // SetDemandNumber - set demand number.
