@@ -143,7 +143,7 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 	var wg sync.WaitGroup
 	for _, bucketKey := range afftectedBuckets {
 		wg.Add(1)
-		func(bucketKey *BucketKey) {
+		go func(bucketKey *BucketKey) {
 			updatedDataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(bucketKey)
 			sort.Sort(updatedDataNodes)
 
