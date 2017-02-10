@@ -12,17 +12,32 @@ var (
 	globalDataNodeCache         *GlobalDataNodeCache
 )
 
-type GlobalDataNodeCache struct {
-	cacheMap map[string]*lru.Cache
-	isEnable bool
-}
 
 func init() {
 	globalDataNodeCache = &GlobalDataNodeCache{cacheMap: make(map[string]*lru.Cache), isEnable: IsEnabledGlobal}
 }
 
+type GlobalDataNodeCache struct {
+	cacheMap map[string]*lru.Cache
+	isEnable bool
+	lock     sync.RWMutex
+}
 func (globalDataNodeCache *GlobalDataNodeCache) ClearAllCache() {
 	globalDataNodeCache.cacheMap = make(map[string]*lru.Cache)
+}
+
+// Get - get a cache from global cache thread safely.
+func (globalDataNodeCache *GlobalDataNodeCache) Get(prefix string) *lru.Cache {
+	globalDataNodeCache.lock.RLock()
+	defer globalDataNodeCache.lock.RUnlock()
+	return globalDataNodeCache.cacheMap[prefix]
+}
+
+// Add - add a new cache into global cache thread safely.
+func (globalDataNodeCache *GlobalDataNodeCache) Add(prefix string, cache *lru.Cache) {
+	globalDataNodeCache.lock.Lock()
+	defer globalDataNodeCache.lock.Unlock()
+	globalDataNodeCache.cacheMap[prefix] = cache
 }
 
 type DataNodeCache struct {
@@ -70,10 +85,10 @@ func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey)
 
 	// step 2.
 	if globalDataNodeCache.isEnable {
-		cache := globalDataNodeCache.cacheMap[dataNodeCache.TreePrefix]
+		cache := globalDataNodeCache.Get(dataNodeCache.TreePrefix)
 		if cache == nil {
 			cache, _ = lru.New(GlobalDataNodeCacheSize)
-			globalDataNodeCache.cacheMap[dataNodeCache.TreePrefix] = cache
+			globalDataNodeCache.Add(dataNodeCache.TreePrefix, cache)
 		}
 		value, ok = cache.Get(bucketKey)
 		if ok {
@@ -100,11 +115,12 @@ func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey)
 			dataNodeCache.c.Add(bucketKey, dataNodes)
 		}
 		if globalDataNodeCache.isEnable {
-			if globalDataNodeCache.cacheMap[dataNodeCache.TreePrefix] == nil {
+			if globalDataNodeCache.Get(dataNodeCache.TreePrefix) == nil {
 				cache, _ := lru.New(GlobalDataNodeCacheSize)
-				globalDataNodeCache.cacheMap[dataNodeCache.TreePrefix] = cache
+				globalDataNodeCache.Add(dataNodeCache.TreePrefix, cache)
 			}
-			globalDataNodeCache.cacheMap[dataNodeCache.TreePrefix].Add(bucketKey, dataNodes)
+			cache := globalDataNodeCache.Get(dataNodeCache.TreePrefix)
+			cache.Add(bucketKey, dataNodes)
 		}
 		return dataNodes, nil
 	}
