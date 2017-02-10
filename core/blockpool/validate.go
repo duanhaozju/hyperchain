@@ -26,25 +26,26 @@ func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, peerManager p
 	if pool.peerManager == nil {
 		pool.peerManager = peerManager
 	}
+	atomic.AddInt32(&pool.validateQueueLen, 1)
 }
 func (pool *BlockPool) validateBackendLoop() {
-	for {
-		select {
-		case ev := <- pool.validateQueue:
-			if atomic.LoadInt32(&pool.validateBehaveFlag) == VALIDATEBEHAVETYPE_NORMAL {
-				if success := pool.consumeValidateEvent(ev); success == false {
-					log.Errorf("commit block #%d failed, system crush down.")
-					// TODO close the channel
-					break
-				}
-			} else {
-				pool.dropValdiateEvent(ev)
+	for ev := range pool.validateQueue {
+		if atomic.LoadInt32(&pool.validateBehaveFlag) == VALIDATEBEHAVETYPE_NORMAL {
+			if success := pool.consumeValidateEvent(ev); success == false {
+				log.Errorf("commit block #%d failed, system crush down.")
+				// TODO close the channel
+				break
 			}
+			atomic.AddInt32(&pool.validateQueueLen, -1)
+		} else {
+			pool.dropValdiateEvent(ev)
+			atomic.AddInt32(&pool.validateQueueLen, -1)
 		}
 	}
 }
 
 func (pool *BlockPool) consumeValidateEvent(validationEvent event.ExeTxsEvent) bool {
+	atomic.StoreInt32(&pool.inProgress, PROGRESS_TRUE)
 	if pool.validateEventCheck(validationEvent) == false {
 		return false
 	}
@@ -52,12 +53,14 @@ func (pool *BlockPool) consumeValidateEvent(validationEvent event.ExeTxsEvent) b
 		return false
 	}
 	pool.increaseDemandSeqNo()
+	atomic.StoreInt32(&pool.inProgress, PROGRESS_FALSE)
 	return true
 }
 
 // dropValdiateEvent - this function do nothing but consume a validation event.
 func (pool *BlockPool) dropValdiateEvent(validationEvent event.ExeTxsEvent) {
-
+	atomic.StoreInt32(&pool.inProgress, PROGRESS_TRUE)
+	atomic.StoreInt32(&pool.inProgress, PROGRESS_FALSE)
 }
 
 // Process an ValidationEvent

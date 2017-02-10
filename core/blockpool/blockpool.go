@@ -26,10 +26,13 @@ var (
 
 const (
 	COMMITQUEUESIZE = 10
-	VALIDATEQUEUESIZE = 40
+	VALIDATEQUEUESIZE = 32
 
 	VALIDATEBEHAVETYPE_NORMAL = 0
 	VALIDATEBEHAVETYPE_DROP = 1
+
+	PROGRESS_TRUE = 1
+	PROGRESS_FALSE = 0
 )
 
 func init() {
@@ -51,8 +54,6 @@ type BlockRecord struct {
 type BlockPool struct {
 	demandNumber        uint64                // current demand number for commit
 	demandSeqNo         uint64                // current demand seqNo for validation
-	maxNum              uint64                // max block number in queue cache for commit
-	maxSeqNo              uint64              // max validation event number in validation queue
 	tempBlockNumber       uint64              // temporarily block number
 	lastValidationState   atomic.Value        // latest state root hash
 						  // external stuff
@@ -76,6 +77,8 @@ type BlockPool struct {
 	commitQueue           chan event.CommitOrRollbackBlockEvent
 
 	validateBehaveFlag    int32
+	inProgress            int32
+	validateQueueLen      int32
 
 }
 
