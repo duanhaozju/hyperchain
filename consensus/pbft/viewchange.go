@@ -593,6 +593,11 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	prevPrimary := pbft.primary(pbft.view - 1)
 	if prevPrimary == pbft.id {
 		pbft.rebuildDuplicator()
+		if len(pbft.batchStore) > 0 {
+			for tx := range pbft.batchStore {
+				go pbft.postRequestEvent(tx)
+			}
+		}
 	} else {
 		pbft.clearDuplicator()
 	}

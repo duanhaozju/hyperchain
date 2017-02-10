@@ -774,8 +774,6 @@ func (pbft *pbftProtocal) processCachedTransactions() {
 
 func (pbft *pbftProtocal) leaderProcReq(tx *types.Transaction) error {
 
-	logger.Debugf("Batch primary %d queueing new request", pbft.id)
-
 	pbft.batchStore = append(pbft.batchStore, tx)
 
 	if !pbft.batchTimerActive {
