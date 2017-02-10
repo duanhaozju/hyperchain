@@ -11,7 +11,6 @@ import (
 	"time"
 	"sync"
 	"github.com/golang/protobuf/proto"
-	"sort"
 )
 
 var (
@@ -145,11 +144,9 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 		wg.Add(1)
 		go func(bucketKey *BucketKey) {
 			updatedDataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(bucketKey)
-			sort.Sort(updatedDataNodes)
 
 			// thread safe
 			existingDataNodes, err := bucketTree.dataNodeCache.FetchDataNodesFromCache(*bucketKey)
-			sort.Sort(existingDataNodes)
 			if err != nil {
 				log.Errorf("fetch datanodes failed. %s", err.Error())
 				wg.Done()
@@ -158,7 +155,6 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 
 			// thread safe
 			cryptoHashForBucket, newDataNodes := computeDataNodesCryptoHash(bucketKey, updatedDataNodes, existingDataNodes, bucketTree.updatedValueSet)
-			sort.Sort(newDataNodes)
 
 			if bucketTree.treePrefix != "-bucket-state" && bucketKey.level == 2 && bucketKey.bucketNumber == 13{
 				if (len(existingDataNodes) + len(updatedDataNodes)) == len(newDataNodes) ||
