@@ -77,8 +77,10 @@ type BlockPool struct {
 	commitQueue           chan event.CommitOrRollbackBlockEvent
 
 	validateBehaveFlag    int32
-	inProgress            int32
+	validateInProgress    int32
+	commitInProgress      int32
 	validateQueueLen      int32
+	commitQueueLen        int
 
 }
 

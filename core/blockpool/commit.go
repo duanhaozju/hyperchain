@@ -12,6 +12,7 @@ import (
 	"hyperchain/protos"
 	"hyperchain/recovery"
 	"time"
+	"sync/atomic"
 )
 
 func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerManager p2p.PeerManager) {
@@ -19,6 +20,7 @@ func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerMana
 	if pool.peerManager == nil {
 		pool.peerManager = peerManager
 	}
+	atomic.AddInt32(&pool.commitQueueLen, 1)
 }
 
 func (pool *BlockPool) commitBackendLoop() {
@@ -26,14 +28,14 @@ func (pool *BlockPool) commitBackendLoop() {
 		success := pool.consumeCommitEvent(ev)
 		if !success {
 			log.Errorf("commit block #%d failed, system crush down.", ev.SeqNo)
-			// TODO close the channel
-			break
 		}
+		atomic.AddInt32(&pool.commitQueueLen, -1)
 	}
 }
 
 // consumeCommitEvent - consume commit event from channel.
 func (pool *BlockPool) consumeCommitEvent(ev event.CommitOrRollbackBlockEvent) bool {
+	atomic.StoreInt32(&pool.commitInProgress, PROGRESS_TRUE)
 	if pool.commitValidationCheck(ev) == false {
 		log.Errorf("commit event %d not satisfied demand", ev.SeqNo)
 		return false
@@ -56,6 +58,7 @@ func (pool *BlockPool) consumeCommitEvent(ev event.CommitOrRollbackBlockEvent) b
 	pool.notifyInvalidTransactions(record.InvalidTxs, ev.IsPrimary, pool.peerManager)
 	pool.increaseDemandBlockNumber()
 	pool.blockCache.Remove(ev.Hash)
+	atomic.StoreInt32(&pool.commitInProgress, PROGRESS_FALSE)
 	return true
 }
 

@@ -297,7 +297,7 @@ func (pool *BlockPool) waitResetAvailable() {
 	for {
 		select {
 		case <-ticker.C:
-			if atomic.LoadInt32(&pool.validateQueueLen) == 0 && atomic.LoadInt32(&pool.inProgress) == PROGRESS_FALSE	 {
+			if atomic.LoadInt32(&pool.validateQueueLen) == 0 && atomic.LoadInt32(&pool.validateInProgress) == PROGRESS_FALSE && atomic.LoadInt32(&pool.commitQueueLen) == 0 && atomic.LoadInt32(&pool.commitInProgress) == PROGRESS_FALSE{
 				return
 			} else {
 				continue

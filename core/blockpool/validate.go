@@ -33,8 +33,6 @@ func (pool *BlockPool) validateBackendLoop() {
 		if atomic.LoadInt32(&pool.validateBehaveFlag) == VALIDATEBEHAVETYPE_NORMAL {
 			if success := pool.consumeValidateEvent(ev); success == false {
 				log.Errorf("commit block #%d failed, system crush down.")
-				// TODO close the channel
-				break
 			}
 			atomic.AddInt32(&pool.validateQueueLen, -1)
 		} else {
@@ -45,7 +43,7 @@ func (pool *BlockPool) validateBackendLoop() {
 }
 
 func (pool *BlockPool) consumeValidateEvent(validationEvent event.ExeTxsEvent) bool {
-	atomic.StoreInt32(&pool.inProgress, PROGRESS_TRUE)
+	atomic.StoreInt32(&pool.validateInProgress, PROGRESS_TRUE)
 	if pool.validateEventCheck(validationEvent) == false {
 		return false
 	}
@@ -53,14 +51,14 @@ func (pool *BlockPool) consumeValidateEvent(validationEvent event.ExeTxsEvent) b
 		return false
 	}
 	pool.increaseDemandSeqNo()
-	atomic.StoreInt32(&pool.inProgress, PROGRESS_FALSE)
+	atomic.StoreInt32(&pool.validateInProgress, PROGRESS_FALSE)
 	return true
 }
 
 // dropValdiateEvent - this function do nothing but consume a validation event.
 func (pool *BlockPool) dropValdiateEvent(validationEvent event.ExeTxsEvent) {
-	atomic.StoreInt32(&pool.inProgress, PROGRESS_TRUE)
-	atomic.StoreInt32(&pool.inProgress, PROGRESS_FALSE)
+	atomic.StoreInt32(&pool.validateInProgress, PROGRESS_TRUE)
+	atomic.StoreInt32(&pool.validateInProgress, PROGRESS_FALSE)
 }
 
 // Process an ValidationEvent
