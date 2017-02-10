@@ -11,6 +11,7 @@ import (
 	"time"
 	"sync"
 	"github.com/golang/protobuf/proto"
+	"sort"
 )
 
 var (
@@ -85,6 +86,10 @@ func (bucketTree *BucketTree) PrepareWorkingSet(key_valueMap K_VMap, blockNum *b
 		//log.Debug("Ignoring working-set as it is empty")
 		return nil
 	}
+	if(bucketTree.treePrefix != "-bucket-state"){
+		log.Critical("workingset is",key_valueMap)
+		log.Critical("workingset length is",len(key_valueMap))
+	}
 	bucketTree.dataNodesDelta = newDataNodesDelta(bucketTree.treePrefix, key_valueMap)
 	bucketTree.bucketTreeDelta = newBucketTreeDelta()
 	bucketTree.recomputeCryptoHash = true
@@ -144,8 +149,11 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 		wg.Add(1)
 		go func(bucketKey *BucketKey) {
 			updatedDataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(bucketKey)
+			sort.Sort(updatedDataNodes)
+
 			// thread safe
 			existingDataNodes, err := bucketTree.dataNodeCache.FetchDataNodesFromCache(*bucketKey)
+			sort.Sort(existingDataNodes)
 			if err != nil {
 				log.Errorf("fetch datanodes failed. %s", err.Error())
 				wg.Done()
@@ -155,6 +163,11 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 			// thread safe
 			cryptoHashForBucket, newDataNodes := computeDataNodesCryptoHash(bucketKey, updatedDataNodes, existingDataNodes, bucketTree.updatedValueSet)
 
+			//log.Critical("------------------------------")
+			//log.Critical("existingDataNodes",existingDataNodes)
+			//log.Critical("updatedDataNodes",updatedDataNodes)
+			//log.Critical("newDataNodes",newDataNodes)
+			//log.Critical("------------------------------")
 			// thread safe
 			bucketTree.updateDataNodeCache(*bucketKey, newDataNodes)
 
@@ -489,8 +502,15 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch hyperdb.Batch, curr
 		revertToTargetBlock(bucketTree.treePrefix, big.NewInt(i), updatedValueSet, &keyValueMap)
 		bucketTree.PrepareWorkingSet(keyValueMap, big.NewInt(i))
 		bucketTree.AddChangesForPersistence(writeBatch, big.NewInt(i))
+
+		hash,_ := bucketTree.ComputeCryptoHash()
+		log.Critical("-------------------------------------")
+		log.Critical("revert to block ",i,"the hash is",common.ToHex(hash))
+		log.Critical("-------------------------------------")
+
 		keyValueMap = NewKVMap()
 		writeBatch.Delete(dbKey)
+		writeBatch.Write()
 	}
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()

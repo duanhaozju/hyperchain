@@ -295,6 +295,7 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 		log.Debugf("state object %s storage root hash %s before #%d", self.address.Hex(), prev.Hex(), self.db.curSeqNo)
 		self.bucketTree.PrepareWorkingSet(workingSet, big.NewInt(int64(self.db.curSeqNo)))
 		// 2. calculate hash
+		log.Critical("workingSet is ",len(workingSet))
 		hash, err := self.bucketTree.ComputeCryptoHash()
 		if err != nil {
 			log.Errorf("calculate storage hash for stateObject [%s] failed", self.address.Hex())
