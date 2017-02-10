@@ -26,7 +26,7 @@ var (
 
 const (
 	COMMITQUEUESIZE = 10
-	VALIDATEQUEUESIZE = 32
+	VALIDATEQUEUESIZE = 10
 
 	VALIDATEBEHAVETYPE_NORMAL = 0
 	VALIDATEBEHAVETYPE_DROP = 1
@@ -80,7 +80,7 @@ type BlockPool struct {
 	validateInProgress    int32
 	commitInProgress      int32
 	validateQueueLen      int32
-	commitQueueLen        int
+	commitQueueLen        int32
 
 }
 

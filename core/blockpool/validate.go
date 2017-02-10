@@ -32,7 +32,7 @@ func (pool *BlockPool) validateBackendLoop() {
 	for ev := range pool.validateQueue {
 		if atomic.LoadInt32(&pool.validateBehaveFlag) == VALIDATEBEHAVETYPE_NORMAL {
 			if success := pool.consumeValidateEvent(ev); success == false {
-				log.Errorf("commit block #%d failed, system crush down.")
+				log.Errorf("validate #%d failed, system crush down.", ev.SeqNo)
 			}
 			atomic.AddInt32(&pool.validateQueueLen, -1)
 		} else {
