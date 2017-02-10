@@ -1,15 +1,21 @@
 package bucket
 
-import "math/big"
+import (
+	"math/big"
+	"sync"
+)
 
 type byBucketNumber map[int]*BucketNode
 
 type bucketTreeDelta struct {
 	byLevel map[int]byBucketNumber
+	lock    sync.RWMutex
 }
 
 func newBucketTreeDelta() *bucketTreeDelta {
-	return &bucketTreeDelta{make(map[int]byBucketNumber)}
+	return &bucketTreeDelta{
+		byLevel:make(map[int]byBucketNumber),
+	}
 }
 
 func newUpdatedValueSet(blockNumber *big.Int) *UpdatedValueSet {
@@ -17,6 +23,8 @@ func newUpdatedValueSet(blockNumber *big.Int) *UpdatedValueSet {
 }
 
 func (bucketTreeDelta *bucketTreeDelta) getOrCreateBucketNode(bucketKey *BucketKey) *BucketNode {
+	bucketTreeDelta.lock.Lock()
+	defer bucketTreeDelta.lock.Unlock()
 	byBucketNumber := bucketTreeDelta.byLevel[bucketKey.level]
 	if byBucketNumber == nil {
 		byBucketNumber = make(map[int]*BucketNode)
@@ -31,10 +39,14 @@ func (bucketTreeDelta *bucketTreeDelta) getOrCreateBucketNode(bucketKey *BucketK
 }
 
 func (bucketTreeDelta *bucketTreeDelta) isEmpty() bool {
+	bucketTreeDelta.lock.RLock()
+	defer bucketTreeDelta.lock.RUnlock()
 	return bucketTreeDelta.byLevel == nil || len(bucketTreeDelta.byLevel) == 0
 }
 
 func (bucketTreeDelta *bucketTreeDelta) getBucketNodesAt(level int) []*BucketNode {
+	bucketTreeDelta.lock.RLock()
+	defer bucketTreeDelta.lock.RUnlock()
 	bucketNodes := []*BucketNode{}
 	byBucketNumber := bucketTreeDelta.byLevel[level]
 	if byBucketNumber == nil {
