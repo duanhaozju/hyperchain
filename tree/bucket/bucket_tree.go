@@ -81,7 +81,7 @@ func (bucketTree *BucketTree) Initialize(configs map[string]interface{}) error {
 func (bucketTree *BucketTree) PrepareWorkingSet(key_valueMap K_VMap, blockNum *big.Int) error {
 	//sort.Sort(key_valueMap)
 	//log.Debug("Enter - PrepareWorkingSet()")
-	log.Criticalf("working set for #%d, %s", blockNum, key_valueMap)
+	//log.Criticalf("working set for #%d, %s", blockNum, key_valueMap)
 	if key_valueMap == nil || len(key_valueMap) == 0 {
 		//log.Debug("Ignoring working-set as it is empty")
 		return nil
@@ -258,16 +258,13 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 		case -1:
 			nextNode = updatedNode
 			if !nextNode.isDelete(){
-				_,key := DecodeCompositeKey(nextNode.getCompositeKey())
-				updatedValueSet.Set(key, nextNode.value, nil)
+				updatedValueSet.Set(string(nextNode.getCompositeKey()), nextNode.value, nil)
 			}
 			i++
 		case 0:
 			nextNode = updatedNode
 			if bytes.Compare(updatedNode.getValue(), existingNode.value) != 0 {
-				_,key := DecodeCompositeKey(nextNode.getCompositeKey())
-				//log.Debugf("update updated value set, composite key %s, current value %s, origin value %s", compositeKey, common.Bytes2Hex(updatedNode.value), common.Bytes2Hex(existingNode.value))
-				updatedValueSet.Set(key, updatedNode.value, existingNode.value)
+				updatedValueSet.Set(string(nextNode.getCompositeKey()), updatedNode.value, existingNode.value)
 			}
 
 			i++
@@ -289,8 +286,7 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 		remainingNodes = updatedNodes[i:]
 		for _, remainingNode := range remainingNodes {
 			if !remainingNode.isDelete() {
-				_,key := DecodeCompositeKey(remainingNode.getCompositeKey())
-				updatedValueSet.Set(key, remainingNode.value, nil)
+				updatedValueSet.Set(string(remainingNode.getCompositeKey()), remainingNode.value, nil)
 				newDataNodes = append(newDataNodes, remainingNode)
 			}
 		}
@@ -543,16 +539,18 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch hyperdb.Batch, curr
 	return nil
 }
 
-// TODO add verify about value and previousvalue
-// TODO there should be some errors in the func
-func revertToTargetBlock(treePrefix string, blockNum *big.Int, updatedValueSet *UpdatedValueSet, keyValueMap *K_VMap) {
-	for key, updatedValue := range updatedValueSet.UpdatedKVs {
-		(*keyValueMap)[key] = updatedValue.PreviousValue
-	}
-}
-
 func (bucketTree *BucketTree) ClearAllCache(){
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
 	globalDataNodeCache.ClearAllCache()
+}
+
+
+// TODO add verify about value and previousvalue
+// TODO there should be some errors in the func
+func revertToTargetBlock(treePrefix string, blockNum *big.Int, updatedValueSet *UpdatedValueSet, keyValueMap *K_VMap) {
+	for compositeKey, updatedValue := range updatedValueSet.UpdatedKVs {
+		_,key := DecodeCompositeKey([]byte(compositeKey))
+		(*keyValueMap)[key] = updatedValue.PreviousValue
+	}
 }
