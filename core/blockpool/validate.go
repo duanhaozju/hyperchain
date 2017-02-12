@@ -44,14 +44,41 @@ func (pool *BlockPool) validateBackendLoop() {
 
 func (pool *BlockPool) consumeValidateEvent(validationEvent event.ExeTxsEvent) bool {
 	atomic.StoreInt32(&pool.validateInProgress, PROGRESS_TRUE)
+	defer atomic.StoreInt32(&pool.validateInProgress, PROGRESS_FALSE)
 	if pool.validateEventCheck(validationEvent) == false {
-		return false
+		log.Errorf("receive validation event %d while %d is required, save into cache temporarily.", validationEvent.SeqNo, pool.demandSeqNo)
+		pool.validateEventQueue.Add(validationEvent.SeqNo, validationEvent)
+		return true
 	}
 	if _, success := pool.PreProcess(validationEvent); success == false {
 		return false
 	}
 	pool.increaseDemandSeqNo()
-	atomic.StoreInt32(&pool.validateInProgress, PROGRESS_FALSE)
+	if pool.validateEventQueue.Len() > 0 {
+		// there is still some events remain.
+		for  {
+			if pool.validateEventQueue.Contains(pool.demandSeqNo) {
+				res, _ := pool.validateEventQueue.Get(pool.demandSeqNo)
+				validationEvent = res.(event.ExeTxsEvent)
+				if _, success := pool.PreProcess(validationEvent); success == false {
+					return false
+				} else {
+					pool.increaseDemandSeqNo()
+					judge := func(key interface{}, iterKey interface{}) bool {
+						id := key.(uint64)
+						iterId := iterKey.(uint64)
+						if id >= iterId {
+							return true
+						}
+						return false
+					}
+					pool.validateEventQueue.RemoveWithCond(validationEvent.SeqNo, judge)
+				}
+			} else {
+				break
+			}
+		}
+	}
 	return true
 }
 
