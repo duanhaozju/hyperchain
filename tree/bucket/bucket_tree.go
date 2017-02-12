@@ -549,3 +549,9 @@ func revertToTargetBlock(treePrefix string, blockNum *big.Int, updatedValueSet *
 		(*keyValueMap)[key] = updatedValue.PreviousValue
 	}
 }
+
+func (bucketTree *BucketTree) ClearAllCache(){
+	bucketTree.dataNodeCache.ClearDataNodeCache()
+	bucketTree.bucketCache.clearAllCache()
+	globalDataNodeCache.ClearAllCache()
+}
