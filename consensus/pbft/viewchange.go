@@ -639,6 +639,11 @@ func (pbft *pbftProtocal) recvFinishVcReset(finish *FinishVcReset) events.Event 
 
 func (pbft *pbftProtocal) handleTailInNewView() events.Event {
 
+	if atomic.LoadUint32(&pbft.activeView) == 1 {
+		logger.Debugf("Replica %d in active view, ignore handleTail request", pbft.id)
+		return nil
+	}
+
 	if len(pbft.vcResetStore) < pbft.allCorrectReplicasQuorum()-1 {
 		return nil
 	}
@@ -672,7 +677,6 @@ func (pbft *pbftProtocal) handleTailInNewView() events.Event {
 		}
 	}
 
-	pbft.updateViewChangeSeqNo()
 	return viewChangedEvent{}
 }
 
@@ -697,7 +701,6 @@ func (pbft *pbftProtocal) finishViewChange() events.Event {
 	primary := pbft.primary(pbft.view)
 	pbft.helper.InnerUnicast(broadcast, primary)
 	logger.Error("send finish vcReset: ", primary)
-	pbft.updateViewChangeSeqNo()
 	return viewChangedEvent{}
 }
 
