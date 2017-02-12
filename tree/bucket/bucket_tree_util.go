@@ -8,7 +8,7 @@ import (
 	"hyperchain/crypto"
 )
 
-var stateKeyDelimiter = []byte("stateKeyDelimiter")
+var stateKeyDelimiter = []byte{0x00}
 
 // ComputeCryptoHash should be used in openchain code so that we can change the actual algo used for crypto-hash at one place
 func ComputeCryptoHash(data []byte) []byte {
