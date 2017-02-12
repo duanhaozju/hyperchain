@@ -18,9 +18,9 @@ import (
 
 // reset blockchain to a stable checkpoint status when `viewchange` occur
 func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
-	pool.notifyValidateToStop()
-	pool.waitResetAvailable()
-	log.Debugf("receive vc reset event, required revert to %d", ev.SeqNo-1)
+	pool.NotifyValidateToStop()
+	pool.WaitResetAvailable()
+	log.Noticef("receive vc reset event, required revert to %d", ev.SeqNo-1)
 	tmpDemandNumber := atomic.LoadUint64(&pool.demandNumber)
 	// 1. Reset demandNumber , demandSeqNo and maxSeqNo
 	atomic.StoreUint64(&pool.demandNumber, ev.SeqNo)
@@ -60,18 +60,19 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	// any error occur during this process
 	// batch.Write will never be called to guarantee atomic
 	batch.Write()
-	log.Debugf("revert state from %d to target %d success", tmpDemandNumber-1, ev.SeqNo-1)
+	log.Noticef("revert state from %d to target %d success", tmpDemandNumber-1, ev.SeqNo-1)
 	// 6. Told consensus reset finish
 	msg := protos.VcResetDone{SeqNo: ev.SeqNo}
 	pool.consenter.RecvLocal(msg)
-	pool.notifyValidateToBegin()
+	pool.NotifyValidateToBegin()
 }
 
 // CutdownBlock remove a block and reset blockchain status to the last status.
 func (pool *BlockPool) CutdownBlock(number uint64) error {
 	// 1. reset demand number  demand seqNo and maxSeqNo
-	pool.notifyValidateToStop()
-	pool.waitResetAvailable()
+	pool.NotifyValidateToStop()
+	pool.WaitResetAvailable()
+	log.Noticef("cut down block %d", number)
 	atomic.StoreUint64(&pool.demandNumber, number)
 	atomic.StoreUint64(&pool.demandSeqNo, number)
 	pool.tempBlockNumber = number
@@ -103,8 +104,8 @@ func (pool *BlockPool) CutdownBlock(number uint64) error {
 	core.UpdateChainByBlcokNum(batch, block.Number, false, false)
 	// flush all modified to disk
 	batch.Write()
-	log.Debugf("cut down block #%d success. remove all related transactions, receipts, state changes and block together.", number)
-	pool.notifyValidateToBegin()
+	log.Noticef("cut down block #%d success. remove all related transactions, receipts, state changes and block together.", number)
+	pool.NotifyValidateToBegin()
 	return nil
 }
 
@@ -284,15 +285,15 @@ func (pool *BlockPool) removeUncommittedData(batch hyperdb.Batch) error {
 	return nil
 }
 
-func (pool *BlockPool) notifyValidateToStop() {
+func (pool *BlockPool) NotifyValidateToStop() {
 	atomic.StoreInt32(&pool.validateBehaveFlag, VALIDATEBEHAVETYPE_DROP)
 }
 
-func (pool *BlockPool) notifyValidateToBegin() {
+func (pool *BlockPool) NotifyValidateToBegin() {
 	atomic.StoreInt32(&pool.validateBehaveFlag, VALIDATEBEHAVETYPE_NORMAL)
 }
 
-func (pool *BlockPool) waitResetAvailable() {
+func (pool *BlockPool) WaitResetAvailable() {
 	ticker := time.NewTicker(10 * time.Millisecond)
 	for {
 		select {

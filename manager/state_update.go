@@ -135,6 +135,10 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 							// check the latest block in local's correctness
 							if common.Bytes2Hex(lastBlk.ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash) {
 								// execute all received block at one time
+								self.blockPool.NotifyValidateToStop()
+								self.blockPool.WaitResetAvailable()
+								self.blockPool.NotifyValidateToBegin()
+
 								for i := core.GetChainCopy().RequiredBlockNum + 1; i <= core.GetChainCopy().RecoveryNum; i += 1 {
 									blk, err := core.GetBlockByNumber(db, i)
 									if err != nil {
