@@ -1036,7 +1036,9 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 
 	logger.Infof("Replica %d application caught up via state transfer, lastExec now %d", pbft.id, et.seqNo)
 	// XXX create checkpoint
+	pbft.currentExec = nil
 	pbft.lastExec = et.seqNo
+	pbft.currentVid = nil
 	pbft.vid = et.seqNo
 	pbft.lastVid = et.seqNo
 	bcInfo := getCurrentBlockInfo()
