@@ -36,6 +36,7 @@ func (pool *BlockPool) validateBackendLoop() {
 			}
 			atomic.AddInt32(&pool.validateQueueLen, -1)
 		} else {
+			log.Noticef("drop validation event %d", ev.SeqNo)
 			pool.dropValdiateEvent(ev)
 			atomic.AddInt32(&pool.validateQueueLen, -1)
 		}

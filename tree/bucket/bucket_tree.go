@@ -81,7 +81,6 @@ func (bucketTree *BucketTree) Initialize(configs map[string]interface{}) error {
 func (bucketTree *BucketTree) PrepareWorkingSet(key_valueMap K_VMap, blockNum *big.Int) error {
 	//sort.Sort(key_valueMap)
 	//log.Debug("Enter - PrepareWorkingSet()")
-	log.Criticalf("working set for #%d, %s", blockNum, key_valueMap)
 	if key_valueMap == nil || len(key_valueMap) == 0 {
 		//log.Debug("Ignoring working-set as it is empty")
 		return nil

@@ -672,7 +672,6 @@ func (pbft *pbftProtocal) handleTailInNewView() events.Event {
 		}
 	}
 
-	pbft.updateViewChangeSeqNo()
 	return viewChangedEvent{}
 }
 
@@ -697,7 +696,6 @@ func (pbft *pbftProtocal) finishViewChange() events.Event {
 	primary := pbft.primary(pbft.view)
 	pbft.helper.InnerUnicast(broadcast, primary)
 	logger.Error("send finish vcReset: ", primary)
-	pbft.updateViewChangeSeqNo()
 	return viewChangedEvent{}
 }
 
