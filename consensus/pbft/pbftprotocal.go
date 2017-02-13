@@ -1036,7 +1036,9 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 
 	logger.Infof("Replica %d application caught up via state transfer, lastExec now %d", pbft.id, et.seqNo)
 	// XXX create checkpoint
+	pbft.currentExec = nil
 	pbft.lastExec = et.seqNo
+	pbft.currentVid = nil
 	pbft.vid = et.seqNo
 	pbft.lastVid = et.seqNo
 	bcInfo := getCurrentBlockInfo()
@@ -1045,7 +1047,6 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 	pbft.moveWatermarks(pbft.lastExec) // The watermark movement handles moving this to a checkpoint boundary
 	pbft.skipInProgress = false
 	pbft.validateState()
-	pbft.executeAfterStateUpdate()
 
 	if pbft.inRecovery {
 		if pbft.recoveryToSeqNo == nil {
@@ -1072,6 +1073,8 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 		pbft.certStore = make(map[msgID]*msgCert)
 		pbft.fetchRecoveryPQC(peers)
 		return nil
+	} else {
+		pbft.executeAfterStateUpdate()
 	}
 
 	return nil
@@ -2407,7 +2410,7 @@ func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error 
 		if digest == cert.digest {
 			pbft.sendCommit(digest, result.View, result.SeqNo)
 		} else {
-			logger.Warningf("Relica %d cannot agree with the validate result for view=%d/seqNo=%d sent from primary", pbft.id, result.View, result.SeqNo)
+			logger.Warningf("Relica %d cannot agree with the validate result for view=%d/seqNo=%d sent from primary, self: %s, primary: %s", pbft.id, result.View, result.SeqNo, result.Hash, cert.digest)
 			pbft.sendViewChange()
 		}
 	}
