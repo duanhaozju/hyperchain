@@ -2409,7 +2409,7 @@ func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error 
 		if digest == cert.digest {
 			pbft.sendCommit(digest, result.View, result.SeqNo)
 		} else {
-			logger.Warningf("Relica %d cannot agree with the validate result for view=%d/seqNo=%d sent from primary", pbft.id, result.View, result.SeqNo)
+			logger.Warningf("Relica %d cannot agree with the validate result for view=%d/seqNo=%d sent from primary, self: %s, primary: %s", pbft.id, result.View, result.SeqNo, result.Hash, cert.digest)
 			pbft.sendViewChange()
 		}
 	}
