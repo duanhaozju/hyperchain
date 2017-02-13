@@ -191,14 +191,15 @@ func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, tar
 					stateObjectStorageHashs[*tmp.Account] = tmp.Prev
 				}
 			}
-			if err := journalCache.Flush(batch); err != nil {
-				log.Errorf("flush modified content failed. %s", err.Error())
-				return err
-			}
 			// remove persisted journals
 			batch.Delete(hyperstate.CompositeJournalKey(uint64(i)))
 		}
-
+		if err := journalCache.Flush(batch); err != nil {
+			log.Errorf("flush modified content failed. %s", err.Error())
+			return err
+		}
+		batch.Write()
+		log.Criticalf("%s", string(tmpState.Dump()))
 		// revert related stateObject storage bucket tree
 		for addr := range dirtyStateObjectSet.Iter() {
 			address := addr.(common.Address)
@@ -206,8 +207,10 @@ func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, tar
 			bucketTree := bucket.NewBucketTree(string(prefix))
 			bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.GetBucketSize(STATEOBJECT), pool.GetBucketLevelGroup(STATEOBJECT), pool.GetBucketCacheSize(STATEOBJECT)))
 			// don't flush into disk util all operations finish
-			bucketTree.RevertToTargetBlock(batch, big.NewInt(currentNumber), big.NewInt(targetNumber), false, false)
+			bucketTree.PrepareWorkingSet(journalCache.GetWorkingSet(hyperstate.WORKINGSET_TYPE_STATEOBJECT, address), big.NewInt(0))
+			//bucketTree.RevertToTargetBlock(batch, big.NewInt(currentNumber), big.NewInt(targetNumber), false, false)
 			hash, _ := bucketTree.ComputeCryptoHash()
+			bucketTree.AddChangesForPersistence(batch, big.NewInt(targetNumber))
 			log.Debugf("re-compute %s storage hash %s", address.Hex(), common.Bytes2Hex(hash))
 			stateObjectHash := stateObjectStorageHashs[address]
 			if common.BytesToHash(hash).Hex() != common.BytesToHash(stateObjectHash).Hex() {
@@ -221,12 +224,15 @@ func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, tar
 		bucketTree := tree.(*bucket.BucketTree)
 		bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.GetBucketSize(STATEDB), pool.GetBucketLevelGroup(STATEDB), pool.GetBucketCacheSize(STATEDB)))
 		// don't flush into disk util all operations finish
-		bucketTree.RevertToTargetBlock(batch, big.NewInt(currentNumber), big.NewInt(targetNumber), false, false)
+		bucketTree.PrepareWorkingSet(journalCache.GetWorkingSet(hyperstate.WORKINGSET_TYPE_STATE, common.Address{}), big.NewInt(0))
+		//bucketTree.RevertToTargetBlock(batch, big.NewInt(currentNumber), big.NewInt(targetNumber), false, false)
 		currentRootHash, err := bucketTree.ComputeCryptoHash()
 		if err != nil {
 			log.Errorf("re-compute state bucket tree hash failed, error :%s", err.Error())
 			return err
 		}
+		bucketTree.AddChangesForPersistence(batch, big.NewInt(targetNumber))
+		log.Debugf("re-compute state hash %s", common.Bytes2Hex(currentRootHash))
 		if bytes.Compare(currentRootHash, targetRootHash) != 0 {
 			log.Errorf("revert to a different state, required %s, but current state %s",
 				common.Bytes2Hex(targetRootHash), common.Bytes2Hex(currentRootHash))

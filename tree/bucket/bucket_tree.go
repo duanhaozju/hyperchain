@@ -118,7 +118,7 @@ func (bucketTree *BucketTree) ComputeCryptoHash() ([]byte, error) {
 			return nil, err
 		}
 		if bucketTree.treePrefix != "-bucket=state" {
-			log.Debug("bucketTree.processDataNodeDelta cost time is ", time.Since(start_time))
+			log.Debugf("bucketTree.processDataNodeDelta cost time is %v", time.Since(start_time))
 		}
 		start_time = time.Now()
 		err = bucketTree.processBucketTreeDelta()
@@ -126,7 +126,7 @@ func (bucketTree *BucketTree) ComputeCryptoHash() ([]byte, error) {
 			return nil, err
 		}
 		if bucketTree.treePrefix != "-bucket=state" {
-			log.Debug("bucketTree.processBucketTreeDelta cost time is ", time.Since(start_time))
+			log.Debugf("bucketTree.processBucketTreeDelta cost time is %v", time.Since(start_time))
 		}
 		bucketTree.lastComputedCryptoHash = bucketTree.computeRootNodeCryptoHash()
 		bucketTree.recomputeCryptoHash = false
