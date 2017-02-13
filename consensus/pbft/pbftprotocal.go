@@ -747,10 +747,10 @@ func (pbft *pbftProtocal) processTxEvent(tx *types.Transaction) error {
 }
 
 func (pbft *pbftProtocal) processRequestsDuringViewChange() error {
-	if active := atomic.LoadUint32(&pbft.activeView); active == 1 {
+	if atomic.LoadUint32(&pbft.activeView) == 1 && !pbft.inRecovery {
 		pbft.processCachedTransactions()
 	} else {
-		logger.Critical("peer try to processReqDuringViewChange but view change is not finished")
+		logger.Critical("peer try to processReqDuringViewChange but view change is not finished or inRecovery")
 	}
 	return nil
 }
@@ -2366,10 +2366,10 @@ func (pbft *pbftProtocal) restartNegoView() {
 //}
 
 func (pbft *pbftProtocal) processRequestsDuringRecovery() {
-	if !pbft.inRecovery {
+	if !pbft.inRecovery && atomic.LoadUint32(&pbft.activeView) == 1 {
 		pbft.processCachedTransactions()
 	} else {
-		logger.Critical("Replica %d try to processRequestsDuringRecovery but recovery is not finished", pbft.id)
+		logger.Critical("Replica %d try to processRequestsDuringRecovery but recovery is not finished or in viewChange", pbft.id)
 	}
 }
 
