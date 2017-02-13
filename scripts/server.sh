@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # debug flag
 #set -evx
-set -e
 ################
 # pwd vars
 ################
@@ -16,7 +15,7 @@ case "$OSTYPE" in
   ;;
   linux*)
     echo "RUN SCRIPTS ON LINUX"
-    _SYSTYPE="LINUX"
+    _SYSTYPE="MAC"
   ;;
   *)
     echo "unknown: $OSTYPE"
@@ -61,43 +60,33 @@ fi
 
 if ! type govendor > /dev/null; then
     # install foobar here
-    echo -e "Please install the 'govendor', just type:\ngo get -u github.com/kardianos/govendor"
+    echo -e "Please install the `govendor`, just type:\ngo get -u github.com/kardianos/govendor"
     exit 1
 fi
 }
 
 env_check_local_linux_env(){
 if ! type jq > /dev/null; then
-    echo -e "Please install the 'jq' to parse the json file \n just type: \n sudo apt-get install jq / sudo yum -y install jq / brew install jq "
+    echo -e "Please install the `jq` to parse the json file \n just type: \n sudo apt-get install jq / sudo yum -y install jq / brew install jq "
     exit 1
 fi
 if ! type confer > /dev/null; then
-    echo -e "Please install the 'confer' to generate the peer config json file"
-    echo -e "now auto install the 'confer':"
+    echo -e "Please install the `confer` to generate the peer config json file"
+    echo "now auto install the `confer`:"
     mkdir -p $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/
     git clone git@git.hyperchain.cn:chenquan/confer.git
     cd $GOPATH/src/git.hyperchain.cn/chenquan/confer
     go install
 fi
-echo "check 'confer' again:"
+echo "check `confer` again:"
 if ! type confer > /dev/null; then
-    echo -e "please manully install 'confer',just follow those steps:"
-    echo -e "mkdir -p $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/"
-    echo -e "git clone git@git.hyperchain.cn:chenquan/confer.git"
-    echo -e "cd $GOPATH/src/git.hyperchain.cn/chenquan/confer"
-    echo -e "go install"
+    echo -e "please manully install `confer`,just follow those steps:"
+    echo "mkdir $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/"
+    echo "git clone git@git.hyperchain.cn:chenquan/confer.git"
+    echo "cd $GOPATH/src/git.hyperchain.cn/chenquan/confer"
+    echo "go install"
     exit 1
 fi
-
-if [ -d $GOPATH/src/git.hyperchain.cn/chenquan/confer ]; then
-    echo "update the 'confer' "
-    cd $GOPATH/src/git.hyperchain.cn/chenquan/confer
-    git clean -df && git checkout -- .
-    git pull origin master
-    go install
-fi
-
-cd $CURRENT_DIR
 }
 
 #################
@@ -267,6 +256,9 @@ fs__generate_node_peer_configs(){
         confer hpc serverlist.txt innerserverlist.txt $PEER_CONFIGS_DIR/peerconfig_$id.json $id -e
     done
 }
+fs_delete_temp_data(){
+    rm -rf $PEER_CONFIGS_DIR
+}
 
 # distribute the peerconfigs
 # 1. please ensure the peerconfig generate is currectly
@@ -394,3 +386,4 @@ else
         fs_run_N_terminals_linux
     fi
 fi
+fs_delete_temp_data

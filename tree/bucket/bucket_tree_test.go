@@ -2,6 +2,7 @@ package bucket
 
 import (
 	"testing"
+	"math/big"
 )
 
 // TODO test
@@ -52,6 +53,21 @@ func TestStateImpl_ComputeHash_AllInMemory_1(t *testing.T) {
 	)
 	expectedHash := testutil.ComputeCryptoHash(expectedHashBucket3_1, expectedHashBucket3_4)
 	testutil.AssertEquals(t, rootHash, expectedHash)*/
+}
+
+func TestRevertToTargetBlock(t *testing.T){
+	keyValueMap := NewKVMap()
+	updatedValueSet := newUpdatedValueSet(big.NewInt(1))
+	updatedValueSet.Set("key1",[]byte("value1"),[]byte("previousValue1"))
+	updatedValueSet.Set("key2",[]byte("value2"),[]byte("previousValue2"))
+	updatedValueSet.Set("key3",[]byte("value3"),[]byte("previousValue3"))
+	updatedValueSet.Set("key4",[]byte("value4"),[]byte("previousValue4"))
+	updatedValueSet.Set("key5",[]byte("value5"),[]byte("previousValue5"))
+	revertToTargetBlock("", big.NewInt(1), updatedValueSet, &keyValueMap)
+	for k,v := range keyValueMap{
+		log.Critical("key is",k)
+		log.Critical("value is",string(v))
+	}
 }
 
 //

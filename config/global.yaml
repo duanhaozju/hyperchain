@@ -33,7 +33,7 @@ global:
 ############################
     configs:
         caconfig: "config/caconfig.toml"
-        peers: "config/local_peerconfig.json"
+        peers: "config/peerconfig.json"
         genesis: "config/genesis.json"
         pbft: "config/pbft.yaml"
         license: "config/LICENSE"
@@ -48,13 +48,13 @@ global:
             contractFillRate: 0.5ms
         buckettree:
             state:
-                size: 19
-                levelGroup: 10
-                cacheSize: 100    # 10 MB
+                size: 1000003
+                levelGroup: 5
+                cacheSize: 100    # 100 MB
             storage:
-                size: 19
-                levelGroup: 10
-                cacheSize: 100   # 10 MB
+                size: 1000003
+                levelGroup: 5
+                cacheSize: 100    # 100 MB
         hmpublickey:
             "N": "14315727801779002117"
             Nsquare: "204940062494628260128356353732290481689"
