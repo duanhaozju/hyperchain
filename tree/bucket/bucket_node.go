@@ -3,6 +3,7 @@ package bucket
 import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	"sync"
 )
 
 type BucketNode struct {
@@ -10,11 +11,17 @@ type BucketNode struct {
 	childrenCryptoHash [][]byte
 	childrenUpdated    []bool
 	markedForDeletion  bool
+	lock               sync.RWMutex
 }
 
 func newBucketNode(bucketKey *BucketKey) *BucketNode {
 	maxChildren := conf.getMaxGroupingAtEachLevel()
-	return &BucketNode{bucketKey, make([][]byte, maxChildren), make([]bool, maxChildren), false}
+	return &BucketNode{
+		bucketKey: bucketKey,
+		childrenCryptoHash:make([][]byte, maxChildren),
+		childrenUpdated:make([]bool, maxChildren),
+		markedForDeletion:false,
+	}
 }
 
 func unmarshalBucketNode(bucketKey *BucketKey, serializedBytes []byte) *BucketNode {
@@ -34,6 +41,8 @@ func unmarshalBucketNode(bucketKey *BucketKey, serializedBytes []byte) *BucketNo
 }
 
 func (bucketNode *BucketNode) marshal() []byte {
+	bucketNode.lock.RLock()
+	defer bucketNode.lock.RUnlock()
 	buffer := proto.NewBuffer([]byte{})
 	for i := 0; i < conf.getMaxGroupingAtEachLevel(); i++ {
 		buffer.EncodeRawBytes(bucketNode.childrenCryptoHash[i])
@@ -42,12 +51,16 @@ func (bucketNode *BucketNode) marshal() []byte {
 }
 
 func (bucketNode *BucketNode) setChildCryptoHash(childKey *BucketKey, cryptoHash []byte) {
+	bucketNode.lock.Lock()
+	defer bucketNode.lock.Unlock()
 	i := bucketNode.bucketKey.getChildIndex(childKey)
 	bucketNode.childrenCryptoHash[i] = cryptoHash
 	bucketNode.childrenUpdated[i] = true
 }
 
 func (bucketNode *BucketNode) mergeBucketNode(anotherBucketNode *BucketNode) {
+	bucketNode.lock.Lock()
+	defer bucketNode.lock.Unlock()
 	if !bucketNode.bucketKey.equals(anotherBucketNode.bucketKey) {
 		panic(fmt.Errorf("Nodes with different keys can not be merged. BaseKey=[%#v], MergeKey=[%#v]", bucketNode.bucketKey, anotherBucketNode.bucketKey))
 	}
@@ -59,6 +72,8 @@ func (bucketNode *BucketNode) mergeBucketNode(anotherBucketNode *BucketNode) {
 }
 
 func (bucketNode *BucketNode) computeCryptoHash() []byte {
+	bucketNode.lock.RLock()
+	defer bucketNode.lock.RUnlock()
 	cryptoHashContent := []byte{}
 	numChildren := 0
 	for i, childCryptoHash := range bucketNode.childrenCryptoHash {
@@ -82,6 +97,8 @@ func (bucketNode *BucketNode) computeCryptoHash() []byte {
 }
 
 func (bucketNode *BucketNode) String() string {
+	bucketNode.lock.RLock()
+	defer bucketNode.lock.RUnlock()
 	numChildren := 0
 	for i := range bucketNode.childrenCryptoHash {
 		if bucketNode.childrenCryptoHash[i] != nil {

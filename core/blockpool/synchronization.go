@@ -5,6 +5,7 @@ import (
 	"hyperchain/core"
 	"hyperchain/core/types"
 	"errors"
+	"hyperchain/tree/bucket"
 )
 
 // ApplyBlock - apply all transactions in block into state during the `state update` process.
@@ -33,6 +34,12 @@ func (pool *BlockPool) applyBlock(block *types.Block, seqNo uint64) (error, *Blo
 	if err != nil {
 		return err, nil
 	}
+	state.Purge()
+
+	tree := state.GetTree()
+	bucketTree := tree.(*bucket.BucketTree)
+	bucketTree.ClearAllCache()
+
 	batch := state.FetchBatch(seqNo)
 	state.MarkProcessStart(pool.tempBlockNumber)
 	// initialize execution environment rule set

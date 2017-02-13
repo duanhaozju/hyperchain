@@ -9,17 +9,17 @@ HYPERCHAIN_DIR="$GOPATH/src/hyperchain"
 # judge system type varible may `MAC` or `LINUX`
 _SYSTYPE="MAC"
 case "$OSTYPE" in
-  darwin*)  
+  darwin*)
     echo "RUN SCRIPTS ON OSX"
     _SYSTYPE="MAC"
-  ;; 
-  linux*) 
+  ;;
+  linux*)
     echo "RUN SCRIPTS ON LINUX"
     _SYSTYPE="MAC"
   ;;
-  *) 
+  *)
     echo "unknown: $OSTYPE"
-    exit -1 
+    exit -1
   ;;
 esac
 
@@ -45,7 +45,7 @@ f_trim_tail(){
 
 env_check_serverlist_length(){
     serverlistlen=`cat serverlist.txt | wc -l`
-    innerserverlistlen=`cat innerserverlist.txt | wc -l`    
+    innerserverlistlen=`cat innerserverlist.txt | wc -l`
     if [ serverlistlen -ne innerserverlistlen ]; then
         echo "serverlist length not equal inner server list"
     fi
@@ -113,7 +113,7 @@ done < serverlist.txt
 
 
 #################################
-# functional support function 
+# functional support function
 #################################
 # those function will start with `fs_`
 
@@ -138,7 +138,7 @@ fs_kill_process(){
         ssh hyperchain@$server_address " ps aux | grep 'hyperchain -o' | awk '{print \$2}' | xargs kill -9"
         #ssh -T hyperchain@$server_address "if [ x\"`ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'`\" != \"x\" ]; then echo \"kill process \" && ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'| xargs kill -9 ; else echo no hyperchain process runing ;fi"
         # ssh -T hyperchain@$server_address "ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'| xargs kill -9 >& /dev/null"
-    
+
     done
    }
 
@@ -354,7 +354,7 @@ do
     esac
 done
 
-#echo "run this script first time? $FIRST" 
+#echo "run this script first time? $FIRST"
 #echo "delete the data? $DELETEDATA"
 #echo "rebuild and redistribute binary? $REBUILD"
 #echo "server env,true: suse,false: centos: $SERVER_ENV"

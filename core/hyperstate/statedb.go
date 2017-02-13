@@ -202,6 +202,14 @@ func (self *StateDB) setLatest(seqNo uint64) {
 func (self *StateDB) Purge() {
 	self.batchCache.Purge()
 	self.contentCache.Purge()
+
+	self.stateObjects = make(map[common.Address]*StateObject)
+	self.stateObjectsDirty = make(map[common.Address]struct{})
+	self.thash = common.Hash{}
+	self.bhash = common.Hash{}
+	self.txIndex = 0
+	self.logs = make(map[common.Hash]vm.Logs)
+	self.logSize = 0
 }
 
 // ResetToTarget - reset oldest seqNo and root to target.
@@ -606,7 +614,7 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 		return nil
 	}
 	// Insert into the live set.
-	log.Debugf("find state object %x in database, add it to live objects", addr)
+	log.Errorf("find state object %x in database, add it to live objects", addr)
 	obj := newObject(self, addr, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT)))
 	self.setStateObject(obj)
 	return obj

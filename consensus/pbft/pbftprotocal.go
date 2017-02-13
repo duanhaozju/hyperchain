@@ -774,8 +774,6 @@ func (pbft *pbftProtocal) processCachedTransactions() {
 
 func (pbft *pbftProtocal) leaderProcReq(tx *types.Transaction) error {
 
-	logger.Debugf("Batch primary %d queueing new request", pbft.id)
-
 	pbft.batchStore = append(pbft.batchStore, tx)
 
 	if !pbft.batchTimerActive {
@@ -1070,6 +1068,7 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 			return nil
 		}
 		peers := pbft.highStateTarget.replicas
+		pbft.certStore = make(map[msgID]*msgCert)
 		pbft.fetchRecoveryPQC(peers)
 		return nil
 	} else {

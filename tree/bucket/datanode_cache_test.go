@@ -11,7 +11,7 @@ var (
 	configs map[string]interface{}
 )
 
-func init() {
+func Init() {
 	configs = viper.GetStringMap("ledger.state.dataStructure.configs")
 	stateImpl := NewBucketTree("-bucket-state")
 	err := stateImpl.Initialize(configs)
