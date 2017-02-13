@@ -1,8 +1,6 @@
 package peermessage
 
 import (
-	"encoding/hex"
-	"hyperchain/crypto"
 	"strconv"
 )
 
@@ -22,7 +20,7 @@ func NewPeerAddr(IP string, Port int, JSONRPCPort int, ID int) *PeerAddr {
 	peerAddr.Port = Port
 	peerAddr.RPCPort = JSONRPCPort
 	peerAddr.ID = ID
-	peerAddr.Hash = getHash(IP + ":" + strconv.Itoa(Port) + ":" + strconv.Itoa(ID))
+	peerAddr.Hash = GetHash(IP + ":" + strconv.Itoa(Port) + ":" + strconv.Itoa(ID))
 	return &peerAddr
 }
 
@@ -48,7 +46,3 @@ func RecoverPeerAddr(peerAddress *PeerAddress) *PeerAddr {
 	return &pa
 }
 
-func getHash(needHashString string) string {
-	hasher := crypto.NewKeccak256Hash("keccak256Hanser")
-	return hex.EncodeToString(hasher.Hash(needHashString).Bytes())
-}

@@ -170,7 +170,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		ecertByte := msg.Signature.ECert
 		rcertByte := msg.Signature.RCert
 		// 先验证证书签名
-		bol, err := node.CM.VerifyECertSignature(string(ecertByte), msg.Payload, msg.Signature.Signature)
+		bol, err := node.CM.VerifyCertSignature(string(ecertByte), msg.Payload, msg.Signature.Signature)
 		if !bol || err != nil {
 			log.Error("Verify the cert signature failed!",err)
 			return &response, errors.New("Verify the cert signature failed!")

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # debug flag
 #set -evx
-set -e
 ################
 # pwd vars
 ################
@@ -78,8 +77,8 @@ if ! type confer > /dev/null; then
     git clone git@git.hyperchain.cn:chenquan/confer.git
     cd $GOPATH/src/git.hyperchain.cn/chenquan/confer
     go install
+    confer -h
 fi
-
 echo "check 'confer' again:"
 if ! type confer > /dev/null; then
     echo -e "please manully install 'confer',just follow those steps:"

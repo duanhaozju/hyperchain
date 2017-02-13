@@ -1,13 +1,14 @@
 {
   "self":{
   "is_origin":false,
+  "is_vp":true,
   "node_id":5,
   "grpc_port":8005,
   "local_ip":"127.0.0.1",
   "jsonrpc_port":8085,
   "introducer_ip":"127.0.0.1",
+  "introducer_port":8001,
     "introducer_id":1,
-  "introducer_port":8001
  },
   "maxpeernode":5,
   "nodes":[

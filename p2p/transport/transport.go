@@ -34,7 +34,6 @@ type TransportEncryptManager interface {
 	GetSceretPoolSize() int
 	GetSignPublicKey(peerHash string) []byte
 	GetIsVerified(peerHash string) bool
-	PrintAllSecHash()
 }
 
 type HandShakeManager struct {

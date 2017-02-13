@@ -1,5 +1,22 @@
 #!/usr/bin/env bash
 #set -xev
+# judge system type varible may `MAC` or `LINUX`
+_SYSTYPE="MAC"
+case "$OSTYPE" in
+  darwin*)
+    echo "RUN SCRIPTS ON OSX"
+    ENV=false
+  ;;
+  linux*)
+    echo "RUN SCRIPTS ON LINUX"
+    ENV=true
+  ;;
+  *)
+    echo "unknown: $OSTYPE"
+    exit -1
+  ;;
+esac
+
 # test the env
 if ! type go > /dev/null; then
     echo -e "Please install the go env correctly!"
@@ -28,7 +45,6 @@ help(){
     echo "  -k, --kill:     just kill all the processes"
     echo "  -d, --delete:   clear the old data or not; default: clear. add for not clear"
     echo "  -r, --rebuild:  rebuild the project or not; default: rebuild, add for not rebuild"
-    echo "  -e, --env:      run in which kink of system; default: linux, add for mac"
     echo "  -m, --mode:     choose the run mode; default: run many in many, add for many in one"
     echo "---------------------------------------------------"
     echo "Example for run many in one in mac without rebuild:"
@@ -69,8 +85,6 @@ do
 	    DELETEDATA=false; shift;;
 	-r|--rebuild)
 	    REBUILD=false; shift;;
-    -e|--env)
-        ENV=false; shift;;
     -m|--mode)
         MODE=false; shift;;
 	--) shift; break;;
@@ -149,12 +163,13 @@ runXin1(){
 }
 
 echo "Run all the nodes..."
+echo $ENV
 if [ ! $MODE ]; then
     runXin1
 else
-    if $ENV; then
-        runXinXinLinux
-    else
+    if [[ "$_SYSTYPE"x == 'MACx' ]]; then
         runXinXinMac
+    else
+        runXinXinLinux
     fi
 fi

@@ -8,6 +8,7 @@ type PeerConfig struct {
 
 type Self struct {
 	IsOrigin              bool   `json:"is_origin"`
+	IsVP              bool   `json:"is_vp"`
 	NodeID                int    `json:"node_id"`
 	GrpcPort              int    `json:"grpc_port"`
 	LocalIP               string `json:"local_ip"`

@@ -21,8 +21,8 @@ func TestHandShake(t *testing.T) {
 	rcertByte := []byte(rca)
 
 	signature := pb.Signature{
-		Ecert: ecertBtye,
-		Rcert: rcertByte,
+		ECert: ecertBtye,
+		RCert: rcertByte,
 	}
 
 	var test map[string]int
@@ -35,11 +35,11 @@ func TestHandShake(t *testing.T) {
 	fmt.Println("```````````````")
 	//var b []byte
 
-	fmt.Println(signature.Ecert)
+	fmt.Println(signature.ECert)
 
 	fmt.Println("------------------")
 
-	fmt.Println(signature.Rcert)
+	fmt.Println(signature.RCert)
 
 	fmt.Println("------------------")
 

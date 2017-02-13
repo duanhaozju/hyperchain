@@ -38,7 +38,6 @@ func NewConfigReader(configpath string) *ConfigReader {
 
 	slice := config.PeerNodes
 	for _, node := range slice {
-		log.Info(node.Address)
 		temp_addr := Address{
 			ID:      node.ID,
 			Port:    node.Port,
@@ -89,8 +88,20 @@ func (conf *ConfigReader) IsOrigin() bool {
 	return conf.Config.SelfConfig.IsOrigin
 }
 
+func (conf *ConfigReader)IsVP()bool{
+	return conf.Config.SelfConfig.IsVP
+}
+
 func (conf *ConfigReader) GetPort(nodeID int) int {
 	return conf.nodes[nodeID].Port
+}
+
+func (conf *ConfigReader) GetID(nodeID int) int{
+	return conf.nodes[nodeID].ID
+}
+
+func (conf *ConfigReader) GetRPCPort(nodeID int) int{
+	return conf.nodes[nodeID].RPCPort
 }
 
 func (conf *ConfigReader) GetIP(nodeID int) string {
@@ -101,9 +112,6 @@ func (conf *ConfigReader) GetMaxPeerNumber() int {
 	return conf.maxNode
 }
 
-func (conf *ConfigReader) DeleteNode(addr pb.PeerAddr) {
-	//TODO delete DeleteNode
-}
 
 func (conf *ConfigReader) persist() error {
 	conf.writeLock.Lock()

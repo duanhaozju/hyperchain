@@ -8,15 +8,11 @@ package transport
 
 import (
 	"crypto/elliptic"
-	//"github.com/op/go-logging"
-
 	"crypto"
-	//"crypto/aes"
 	"crypto/rand"
 	"encoding/hex"
 	"hyperchain/core/crypto/primitives"
 	"hyperchain/p2p/transport/ecdh"
-	//"crypto/aes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/ecdsa"
@@ -28,7 +24,6 @@ type HandShakeManagerNew struct {
 	e          ecdh.ECDH
 	privateKey crypto.PrivateKey
 	publicKey  crypto.PublicKey
-	//remotePubKey crypto.PublicKey
 	secrets       map[string][]byte
 	signPublickey map[string][]byte
 	isVerified    map[string]bool
@@ -43,7 +38,6 @@ func NewHandShakeMangerNew(cm *admittance.CAManager) *HandShakeManagerNew {
 	hSMN.isVerified = make(map[string]bool)
 	hSMN.e = ecdh.NewEllipticECDH(elliptic.P256())
 	var err error
-	//contenrPub,getErr2 := primitives.GetConfig("../../config/cert/server/eca.cert")
 
 	//若无私钥，相当于无ecert,但为确保节点启动，自动生产公私钥对
 	if cm.GetIsUsed() == false {
@@ -70,7 +64,11 @@ func (hSMN *HandShakeManagerNew) GetLocalPublicKey() []byte {
 	return hSMN.e.Marshal(hSMN.publicKey)
 }
 func (hSMN *HandShakeManagerNew) GenerateSecret(remotePublicKey []byte, peerHash string) error {
-	remotePubKey, _ := hSMN.e.Unmarshal(remotePublicKey)
+	remotePubKey, success := hSMN.e.Unmarshal(remotePublicKey)
+	if !success {
+		log.Error("unmarshal the share public key failed")
+		return errors.New("unmarshal remote share publc fey failed")
+	}
 	var err error
 	hSMN.secrets[peerHash], err = hSMN.e.GenerateSharedSecret(hSMN.privateKey, remotePubKey)
 	if err != nil {
@@ -98,7 +96,7 @@ func (hSMN *HandShakeManagerNew) GetIsVerified(peerHash string) bool {
 	if bol, ok := hSMN.isVerified[peerHash]; ok {
 		return bol
 	} else {
-		log.Error("无法取得相应公钥", peerHash)
+		log.Error("this node has not verified!", peerHash)
 		return false
 	}
 
@@ -172,7 +170,7 @@ func (this *HandShakeManagerNew) GetSecret(peerHash string) string {
 	if sc, ok := this.secrets[peerHash]; ok {
 		return hex.EncodeToString(sc)
 	} else {
-		log.Error("无法取得相应秘钥", peerHash)
+		log.Error("cannot get the share secret", peerHash)
 		return ""
 	}
 
@@ -182,9 +180,3 @@ func (this *HandShakeManagerNew) GetSceretPoolSize() int {
 	return len(this.secrets)
 }
 
-func (this *HandShakeManagerNew) PrintAllSecHash() {
-	for hash, _ := range this.secrets {
-		log.Notice(hash)
-	}
-
-}

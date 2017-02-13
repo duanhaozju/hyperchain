@@ -1,8 +1,5 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-//changelog:修改新的handshankemanager的实现。
-//last Modified Author: zhangkejie
-//date:2016-12-23
 package p2p
 
 import (
@@ -38,20 +35,19 @@ type GRPCPeerManager struct {
 	Introducer *pb.PeerAddr
 	//CERT Manager
 	CM         *admittance.CAManager
+	//isValidate peer
+	IsVP bool
 }
 
 func NewGrpcManager(conf *common.Config) *GRPCPeerManager {
 	var newgRPCManager GRPCPeerManager
 	config := peerComm.NewConfigReader(conf.GetString("global.configs.peers"))
-	//log.Critical(config.GetLocalJsonRPCPort())
 	// configs
 	newgRPCManager.configs = config
 	newgRPCManager.LocalAddr = pb.NewPeerAddr(config.GetLocalIP(), config.GetLocalGRPCPort(), config.GetLocalJsonRPCPort(), config.GetLocalID())
-	//log.Critical("local ID",newgRPCManager.LocalAddr.ID)
 	//get the maxpeer from config
-	log.Critical("is origin ",config.IsOrigin())
 	newgRPCManager.IsOriginal = config.IsOrigin()
-
+	newgRPCManager.IsVP =config.IsVP()
 	newgRPCManager.Introducer = pb.NewPeerAddr(config.GetIntroducerIP(), config.GetIntroducerPort(), config.GetIntroducerJSONRPCPort(), config.GetIntroducerID())
 	return &newgRPCManager
 }
@@ -69,20 +65,22 @@ func (this *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 	this.peersPool = NewPeerPoolIml(this.TEM, this.LocalAddr, this.CM)
 	this.LocalNode = NewNode(this.LocalAddr, eventMux, this.TEM, this.peersPool, this.CM)
 	this.LocalNode.StartServer()
-	this.LocalNode.N = MAX_PEER_NUM
+	this.LocalNode.N = this.configs.GetMaxPeerNumber()
 	// connect to peer
-	if this.IsOriginal {
+	if this.IsVP && this.IsOriginal {
 		// load the waiting connecting node information
-		this.connectToPeers()
-		//log.Critical("Routing table:", this.peersPool.peerAddr)
-		aliveChain <- 0
+		log.Debug("start node as oirgin mode")
+		this.connectToPeers(aliveChain)
 		this.IsOnline = true
-	} else {
+	} else if this.IsVP && !this.IsOriginal{
 		// start attend routine
 		go this.LocalNode.attendNoticeProcess(this.LocalNode.N)
 		//review connect to introducer
 		this.connectToIntroducer(*this.Introducer)
 		aliveChain <- 1
+	}else if !this.IsOriginal{
+		this.vpConnect()
+		aliveChain <-2
 	}
 	log.Notice("┌────────────────────────────┐")
 	log.Notice("│  All NODES WERE CONNECTED  |")
@@ -157,25 +155,65 @@ func (this *GRPCPeerManager) connectToIntroducer(introducerAddress pb.PeerAddr) 
 	this.LocalNode.N = len(this.GetAllPeersWithTemp())
 }
 
-func (this *GRPCPeerManager) connectToPeers() {
+// passed
+func (this *GRPCPeerManager) connectToPeers(alive chan int) {
+	peerStatus := make(map[int]bool)
+	for i := 1; i <= MAX_PEER_NUM; i++ {peerStatus[i] = false}
+	if this.LocalAddr.ID>MAX_PEER_NUM {panic("LocalAddr.ID large than the max peer num")}
+	peerStatus[this.LocalAddr.ID] = true
+	N := MAX_PEER_NUM
+	F := int(math.Floor((MAX_PEER_NUM - 1) / 3))
+	MaxNum :=  N - F - 1
+	if this.configs.IsOrigin() {MaxNum = N - 1}
+	// connect other peers
+	_index := 1
+	for range time.Tick(200 * time.Millisecond) {
+		log.Debugf("current alive node num is %d, at least connect to %d",this.peersPool.GetAliveNodeNum(),MaxNum)
+		log.Debugf("current alive num %d",this.peersPool.GetAliveNodeNum())
+		if this.peersPool.GetAliveNodeNum() >= MaxNum{
+			alive <- 0
+		}
+		if this.peersPool.GetAliveNodeNum() >= MAX_PEER_NUM - 1{
+			break
+		}
+		if peerStatus[_index] {
+			_index++
+			continue
+		}
+		if _index > MAX_PEER_NUM {
+			_index = 1
+		}
+
+		log.Debug("status map", _index, peerStatus[_index])
+		//if this node is not online, connect it
+		peerAddress := pb.NewPeerAddr(this.configs.GetIP(_index), this.configs.GetPort(_index), this.configs.GetRPCPort(_index), this.configs.GetID(_index))
+		log.Debugf("peeraddress to connect %v", peerAddress)
+		if peer, connectErr := this.connectToPeer(peerAddress, this.configs.GetID(_index)); connectErr != nil {
+			// cannot connect to other peer
+			log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n", connectErr)
+			continue
+		} else {
+			// add  peer to peer pool
+			this.peersPool.PutPeer(*peerAddress, peer)
+			peerStatus[_index] = true
+			log.Debug("Peer Node ID:", peerAddress.ID, "has connected!")
+		}
+	}
+}
+
+
+func (this *GRPCPeerManager) vpConnect(){
 	var peerStatus map[int]bool
 	peerStatus = make(map[int]bool)
-	for i := 1; i <= MAX_PEER_NUM; i++ {
+	//这里需要进行
+	for i := 1; i <= this.configs.GetMaxPeerNumber(); i++ {
 		if i == this.LocalAddr.ID {
 			peerStatus[i] = true
 		} else {
 			peerStatus[i] = false
 		}
 	}
-	N := MAX_PEER_NUM
-	F := int(math.Floor((MAX_PEER_NUM - 1) / 3))
-
-	MaxNum := 0
-	if this.configs.IsOrigin() {
-		MaxNum = N - 1
-	} else {
-		MaxNum = N - F - 1
-	}
+	MaxNum := this.configs.GetMaxPeerNumber()
 
 	// connect other peers
 	//TODO RETRY CONNECT 重试连接(未实现)
@@ -200,7 +238,8 @@ func (this *GRPCPeerManager) connectToPeers() {
 			peerPort := this.configs.GetPort(_index)
 			//peerAddress := peerComm.ExtractAddress(peerIp, peerPort, _index)
 			//TODO fix the getJSONRPC PORT
-			peerAddress := pb.NewPeerAddr(peerIp, peerPort, this.configs.GetPort(_index)+80, _index)
+			peerAddress := pb.NewPeerAddr(peerIp, peerPort, this.configs.GetLocalGRPCPort(), _index)
+			log.Info(peerAddress)
 			peer, connectErr := this.connectToPeer(peerAddress, _index)
 			if connectErr != nil {
 				// cannot connect to other peer
@@ -218,13 +257,8 @@ func (this *GRPCPeerManager) connectToPeers() {
 
 		}
 	}
-	////todo 生成路由表
-	//this.Routers = pb.Routers{
-	//	Routers:this.peersPool.GetPeers(),
-	//}
 
 }
-
 //connect to peer by ip address and port (why int32? because of protobuf limit)
 func (this *GRPCPeerManager) connectToPeer(peerAddress *pb.PeerAddr, nid int) (*Peer, error) {
 	//if this node is not online, connect it
@@ -310,8 +344,7 @@ func (this *GRPCPeerManager) BroadcastNVPPeers(payLoad []byte) {
 func broadcast(grpcPeerManager *GRPCPeerManager, broadCastMessage pb.Message, peers []*Peer) {
 	for _, peer := range peers {
 		//REVIEW 这里没有返回值,不知道本次通信是否成功
-		//log.Notice(string(broadCastMessage.Payload))
-		//TODO 其实这里不需要处理返回值，需要将其go起来
+		//REVIEW 其实这里不需要处理返回值，需要将其go起来
 		//REVIEW Chat 方法必须要传实例，否则将会重复加密，请一定要注意！！
 		//REVIEW Chat Function must give a message instance, not a point, if not the encrypt will break the payload!
 		go func(p2 *Peer) {
