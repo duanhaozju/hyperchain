@@ -1047,7 +1047,6 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 	pbft.moveWatermarks(pbft.lastExec) // The watermark movement handles moving this to a checkpoint boundary
 	pbft.skipInProgress = false
 	pbft.validateState()
-	pbft.executeAfterStateUpdate()
 
 	if pbft.inRecovery {
 		if pbft.recoveryToSeqNo == nil {
@@ -1073,6 +1072,8 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 		peers := pbft.highStateTarget.replicas
 		pbft.fetchRecoveryPQC(peers)
 		return nil
+	} else {
+		pbft.executeAfterStateUpdate()
 	}
 
 	return nil
