@@ -51,7 +51,7 @@ func UnmarshalDataNodes(bucketKey *BucketKey, data []byte, v interface{}) error 
 	if ok == false {
 		return errors.New("invalid type")
 	}
-	if data == nil || len(data) <= len(DataNodesPrefix)+1 {
+	if data == nil || len(data) <= len(DataNodesPrefix)+MAXDATANODESSIZE {
 		return errors.New("Data is nil")
 	}
 
