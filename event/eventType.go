@@ -122,3 +122,7 @@ type BroadcastDelPeerEvent struct {
 type RecvDelPeerEvent struct {
 	Payload []byte
 }
+
+type RemoveCacheEvent struct {}
+
+type CacheRemovedEvent struct {}

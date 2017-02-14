@@ -241,7 +241,7 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string) error {
 	pbft.helper.UpdateTable(payload, false)
 	pbft.inDeletingNode = false
 
-	pbft.inUpdatingN = true
+	atomic.StoreUint32(&pbft.inUpdatingN, 1)
 	pbft.sendAgreeUpdateNforDel(key, cert.routerHash)
 
 	return nil
@@ -282,7 +282,7 @@ func (pbft *pbftProtocal) sendReadyForN() error {
 }
 
 // Primary receive ready_for_n from new replica
-func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) error {
+func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) events.Event {
 
 	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
 		logger.Warningf("Primary %d is in view change, reject the ready_for_n message", pbft.id)
@@ -378,7 +378,8 @@ func (pbft *pbftProtocal) sendAgreeUpdateNforDel(key string, routerHash string) 
 	}
 	msg := consensusMsgHelper(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
-	return pbft.recvAgreeUpdateN(agree)
+	pbft.recvAgreeUpdateN(agree)
+	return nil
 }
 
 func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
@@ -688,6 +689,15 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 	pbft.stopTimer()
 	pbft.nullRequestTimer.Stop()
 	delete(pbft.updateStore, pbft.updateTarget)
+
+	pbft.seqNo = pbft.h
+	if pbft.primary(pbft.view) != pbft.id {
+		pbft.clearDuplicator()
+	}
+
+	if !pbft.skipInProgress {
+		pbft.helper.ClearValidateCache()
+	}
 
 	xSetLen := len(update.Xset)
 	upper := uint64(xSetLen) + pbft.h + uint64(1)

@@ -20,7 +20,7 @@ fi
 DELETEDATA=true
 REBUILD=true
 ENV=true
-MODE=true
+MODE=false
 
 help(){
     echo "local.sh helper:"
@@ -72,7 +72,7 @@ do
     -e|--env)
         ENV=false; shift;;
     -m|--mode)
-        MODE=false; shift;;
+        MODE=true; shift;;
 	--) shift; break;;
 	-*) help; exit 1;;
 	*) break;;
@@ -149,7 +149,7 @@ runXin1(){
 }
 
 echo "Run all the nodes..."
-if [ ! $MODE ]; then
+if $MODE; then
     runXin1
 else
     if $ENV; then

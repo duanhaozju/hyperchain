@@ -137,6 +137,7 @@ type pbftProtocal struct {
 	inDeletingNode		bool						// track if replica is in adding node
 	delNodeCertStore	map[string]*delNodeCert		// track the received add node agree message
 
+	routers				[]byte						// track the vp replicas' routers
 	inUpdatingN			uint32						// track if there are updating
 	updateTimer 		events.Timer				// track timeout for N-f agree on update n
 	updateTimeout		time.Duration				// time limit for N-f agree on update n
@@ -349,7 +350,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.isNewNode = false
 	pbft.inAddingNode = false
 	pbft.inDeletingNode = false
-	pbft.inUpdatingN = false
+	atomic.StoreUint32(&pbft.inUpdatingN, 0)
 	pbft.duplicator = make(map[uint64]*transactionStore)
 	pbft.updateCertStore = make(map[msgID]updateCert)
 
@@ -470,7 +471,7 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 		vid := e.Vid
 		ok := pbft.recvRemoveCache(vid)
 		if !ok {
-			logger.Warningf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
+			logger.Debugf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
 		}
 		return nil
 	case *types.Transaction:
@@ -638,9 +639,9 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case *DelNode:
 		err = pbft.recvAgreeDelNode(et)
 	case *ReadyForN:
-		err = pbft.recvReadyforNforAdd(et)
+		return pbft.recvReadyforNforAdd(et)
 	case *AgreeUpdateN:
-		err = pbft.recvAgreeUpdateN(et)
+		return pbft.recvAgreeUpdateN(et)
 	case agreeUpdateNQuorumEvent:
 		logger.Debugf("Replica %d received agree-update-n quorum, processing update-n", pbft.id)
 		if pbft.inNegoView {
@@ -744,7 +745,7 @@ func (pbft *pbftProtocal) processNullRequest(msg *protos.Message) error {
 func (pbft *pbftProtocal) processTxEvent(tx *types.Transaction) error {
 
 	primary := pbft.primary(pbft.view)
-	if active := atomic.LoadUint32(&pbft.activeView); active == 0 || pbft.inNegoView || pbft.inRecovery {
+	if atomic.LoadUint32(&pbft.activeView) == 0 || atomic.LoadUint32(&pbft.inUpdatingN) || pbft.inNegoView || pbft.inRecovery {
 		pbft.reqStore.storeOutstanding(tx)
 	} else if primary != pbft.id {
 		//Broadcast request to primary
@@ -766,35 +767,7 @@ func (pbft *pbftProtocal) processTxEvent(tx *types.Transaction) error {
 	return nil
 }
 
-func (pbft *pbftProtocal) processRequestsDuringViewChange() error {
-	if active := atomic.LoadUint32(&pbft.activeView); active == 1 {
-		pbft.processCachedTransactions()
-	} else {
-		logger.Critical("peer try to processReqDuringViewChange but view change is not finished")
-	}
-	return nil
-}
-
-func (pbft *pbftProtocal) processCachedTransactions() {
-	for pbft.reqStore.outstandingRequests.Len() != 0 {
-		temp := pbft.reqStore.outstandingRequests.order.Front().Value
-		reqc, ok := interface{}(temp).(requestContainer)
-		if !ok {
-			logger.Error("type assert error:", temp)
-			return
-		}
-		req := reqc.req
-		if req != nil {
-			go pbft.postRequestEvent(req)
-			//pbft.processTxEvent(req)
-		}
-		pbft.reqStore.remove(req)
-	}
-}
-
 func (pbft *pbftProtocal) leaderProcReq(tx *types.Transaction) error {
-
-	logger.Debugf("Batch primary %d queueing new request", pbft.id)
 
 	pbft.batchStore = append(pbft.batchStore, tx)
 
@@ -1126,7 +1099,9 @@ func (pbft *pbftProtocal) sendNullRequest() {
 
 func (pbft *pbftProtocal) primaryValidateBatch(txBatch *TransactionBatch, vid uint64) {
 
+	start := time.Now()
 	newBatch, txStore := pbft.removeDuplicate(txBatch)
+	logger.Critical("primary remove duplicate time elapse: ", time.Since(start))
 	if txStore.Len() == 0 {
 		logger.Warningf("Primary %d get empty batch after check duplicate", pbft.id)
 		return
@@ -1179,7 +1154,9 @@ func (pbft *pbftProtocal) preValidate(idx msgID) bool {
 	currentVid := idx.n
 	pbft.currentVid = &currentVid
 
+	start := time.Now()
 	txStore, err := pbft.checkDuplicate(cert.prePrepare.TransactionBatch)
+	logger.Critical("backup check duplicate time elapse: ", time.Since(start))
 	if err != nil {
 		logger.Warningf("Backup %d find duplicate transaction in the batch for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
 		pbft.sendViewChange()
@@ -1355,7 +1332,7 @@ func (pbft *pbftProtocal) sendPrePrepareForUpdate(reqBatch *TransactionBatch, di
 	payload, err := proto.Marshal(preprep)
 	if err != nil {
 		logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
-		return false
+		return
 	}
 
 	consensusMsg := &ConsensusMessage{
@@ -2423,19 +2400,48 @@ func (pbft *pbftProtocal) restartNegoView() {
 	pbft.processNegotiateView()
 }
 
-//func (pbft *pbftProtocal) processRequestsDuringNegoView() {
-//	if !pbft.inNegoView {
-//		pbft.processCachedTransactions()
-//	} else {
-//		logger.Critical("Replica %d try to processRequestsDuringNegoView but nego-view is not finished", pbft.id)
-//	}
-//}
-
-func (pbft *pbftProtocal) processRequestsDuringRecovery() {
-	if !pbft.inRecovery {
+// =============================================================================
+// process cached txs methods
+// =============================================================================
+func (pbft *pbftProtocal) processRequestsDuringViewChange() error {
+	if atomic.LoadUint32(&pbft.activeView) && !atomic.LoadUint32(&pbft.inUpdatingN) && !pbft.inRecovery {
 		pbft.processCachedTransactions()
 	} else {
-		logger.Critical("Replica %d try to processRequestsDuringRecovery but recovery is not finished", pbft.id)
+		logger.Critical("Replica %d try to processReqDuringViewChange but view change is not finished or it's in recovery / updaingN", pbft.id)
+	}
+	return nil
+}
+
+func (pbft *pbftProtocal) processRequestsDuringRecovery() {
+	if !pbft.inRecovery && atomic.LoadUint32(&pbft.activeView) && !atomic.LoadUint32(&pbft.inUpdatingN) {
+		pbft.processCachedTransactions()
+	} else {
+		logger.Critical("Replica %d try to processRequestsDuringRecovery but recovery is not finished or it's in viewChange / updatingN", pbft.id)
+	}
+}
+
+func (pbft *pbftProtocal) processRequestsDuringUpdatingN() {
+	if atomic.LoadUint32(&pbft.activeView) && !atomic.LoadUint32(&pbft.inUpdatingN) && !pbft.inRecovery {
+		pbft.processCachedTransactions()
+	} else {
+		logger.Critical("Replica %d try to processRequestsDuringUpdatingN but updatingN is not finished or it's in recovery / viewChange", pbft.id)
+	}
+}
+
+func (pbft *pbftProtocal) processCachedTransactions() {
+	for pbft.reqStore.outstandingRequests.Len() != 0 {
+		temp := pbft.reqStore.outstandingRequests.order.Front().Value
+		reqc, ok := interface{}(temp).(requestContainer)
+		if !ok {
+			logger.Error("type assert error:", temp)
+			return
+		}
+		req := reqc.req
+		if req != nil {
+			go pbft.postRequestEvent(req)
+			//pbft.processTxEvent(req)
+		}
+		pbft.reqStore.remove(req)
 	}
 }
 

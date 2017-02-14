@@ -309,7 +309,7 @@ func (pbft *pbftProtocal) startTimerIfOutstandingRequests() {
 			return digests
 		}()
 		//logger.Debug(getOutstandingDigests)
-		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("outstanding request batches %v", getOutstandingDigests))
+		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("outstanding request batches num=%v", len(getOutstandingDigests)))
 	} else if pbft.nullRequestTimeout > 0 {
 		pbft.nullReqTimerReset()
 	}

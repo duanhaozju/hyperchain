@@ -222,15 +222,22 @@ func (pbft *pbftProtocal) persistDelCheckpoint(seqNo uint64) {
 }
 
 func (pbft *pbftProtocal) persistView(view uint64) {
-	key := fmt.Sprintf("view")
+	key := fmt.Sprint("view")
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, view)
 	persist.StoreState(key, b)
 }
 
 func (pbft *pbftProtocal) persistDelView() {
-	key := fmt.Sprintf("view")
+	key := fmt.Sprint("view")
 	persist.DelState(key)
+}
+
+func (pbft *pbftProtocal) persistN(n int) {
+	key := fmt.Sprint("nodes")
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, n)
+	persist.StoreState(key, n)
 }
 
 func (pbft *pbftProtocal) restoreState() {
@@ -270,6 +277,13 @@ func (pbft *pbftProtocal) restoreState() {
 	} else {
 		logger.Noticef("Replica %d could not restore view: %s", pbft.id, err)
 	}
+
+	n, err := persist.ReadState("nodes")
+	if err == nil {
+		nodes := binary.LittleEndian.Uint64(n)
+		pbft.N = int(nodes)
+	}
+	logger.Noticef("=========restore N %d=======", pbft.N)
 
 	pbft.restoreLastSeqNo() // assign value to lastExec
 	if pbft.seqNo < pbft.lastExec {
