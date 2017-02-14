@@ -146,9 +146,6 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 	*/
 	signB := common.Hex2Bytes(signature)
 	verifySignature,err := primitives.ECDSAVerifyTransport(pubKey,[]byte(msg),signB)
-	//sign,_ := hex.DecodeString(signature)
-	//verifySignature, err := c.CM.VerifyECertSignature(tcertPem, []byte("hyperchain"), sign)
-	//verifySignature := strings.EqualFold("hyperchain",signature)
 	if err != nil || !verifySignature {
 		log.Error("Fail to verify TransportSignture!",err)
 		return &UnauthorizedError{}

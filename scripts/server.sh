@@ -9,17 +9,17 @@ HYPERCHAIN_DIR="$GOPATH/src/hyperchain"
 # judge system type varible may `MAC` or `LINUX`
 _SYSTYPE="MAC"
 case "$OSTYPE" in
-  darwin*)
+  darwin*)  
     echo "RUN SCRIPTS ON OSX"
     _SYSTYPE="MAC"
-  ;;
-  linux*)
+  ;; 
+  linux*) 
     echo "RUN SCRIPTS ON LINUX"
     _SYSTYPE="LINUX"
   ;;
-  *)
+  *) 
     echo "unknown: $OSTYPE"
-    exit -1
+    exit -1 
   ;;
 esac
 
@@ -67,25 +67,25 @@ fi
 
 env_check_local_linux_env(){
 if ! type jq > /dev/null; then
-    echo -e "Please install the 'jq' to parse the json file \n just type: \n sudo apt-get install jq / sudo yum -y install jq / brew install jq "
+    echo -e "Please install the jq to parse the json file \n just type: \n sudo apt-get install jq / sudo yum -y install jq / brew install jq "
     exit 1
 fi
 if ! type confer > /dev/null; then
-    echo -e "Please install the 'confer' to generate the peer config json file"
-    echo -e "now auto install the 'confer':"
+    echo -e "Please install the confer to generate the peer config json file"
+    echo "now auto install the confer:"
     mkdir -p $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/
     git clone git@git.hyperchain.cn:chenquan/confer.git
     cd $GOPATH/src/git.hyperchain.cn/chenquan/confer
     go install
     confer -h
 fi
-echo "check 'confer' again:"
+echo "check confer again:"
 if ! type confer > /dev/null; then
-    echo -e "please manully install 'confer',just follow those steps:"
-    echo -e "mkdir -p $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/"
-    echo -e "git clone git@git.hyperchain.cn:chenquan/confer.git"
-    echo -e "cd $GOPATH/src/git.hyperchain.cn/chenquan/confer"
-    echo -e "go install"
+    echo -e "please manully install confer,just follow those steps:"
+    echo "mkdir -p $GOPATH/src/git.hyperchain.cn/chenquan/ && cd $GOPATH/src/git.hyperchain.cn/chenquan/"
+    echo "git clone git@git.hyperchain.cn:chenquan/confer.git"
+    echo "cd $GOPATH/src/git.hyperchain.cn/chenquan/confer"
+    echo "go install"
     exit 1
 fi
 

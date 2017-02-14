@@ -155,21 +155,20 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			return &response, errors.New("signature is wrong!!")
 		}
 		log.Debug("CERT SIGNATURE VERIFY PASS")
-		//TODO 用CM对验证进行管理(此处的必要性需要考虑)
+		// review 用CM对验证进行管理(此处的必要性需要考虑)
 		// TODO 1. 验证ECERT 的合法性
 		//bol1,err := node.CM.VerifyECert()
 
-		// TODO 2. 验证传输消息签名的合法性
+		// review 2. 验证传输消息签名的合法性
 		// 参数1. PEM 证书 string
 		// 参数2. signature
 		// 参数3. 原始数据
 		//bol2,err := node.CM.VerifySignature(certPEM,signature,signed)
 
-	} else if (msg.MessageType == pb.Message_HELLO) && node.CM.GetIsUsed() == true {
+	} else if (msg.MessageType == pb.Message_HELLO){
 
 		ecertByte := msg.Signature.ECert
 		rcertByte := msg.Signature.RCert
-		// 先验证证书签名
 		bol, err := node.CM.VerifyCertSignature(string(ecertByte), msg.Payload, msg.Signature.Signature)
 		if !bol || err != nil {
 			log.Error("Verify the cert signature failed!",err)
@@ -224,6 +223,19 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			response.Payload = transportPublicKey
 			//REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
 			//REVIEW This no need to call hello event handler
+			pri := node.CM.GetECertPrivKey()
+			ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
+			sign, err := ecdsaEncry.Sign(response.Payload, pri)
+			if err == nil {
+				if response.Signature == nil {
+					payloadSign := pb.Signature{
+						Signature: sign,
+					}
+					response.Signature = &payloadSign
+				}
+				response.Signature.Signature = sign
+			}
+
 			return &response, nil
 		}
 	case pb.Message_HELLO_RESPONSE:
@@ -246,6 +258,20 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			//REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
 			//REVIEW This no need to call hello event handler
 			//判断是否需要反向建立链接需要重新建立新链接
+			//reconnect need to sign by ecert and rcert
+			pri := node.CM.GetECertPrivKey()
+			ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
+			sign, err := ecdsaEncry.Sign(response.Payload, pri)
+			if err == nil {
+				if response.Signature == nil {
+					payloadSign := pb.Signature{
+						Signature: sign,
+					}
+					response.Signature = &payloadSign
+				}
+				response.Signature.Signature = sign
+			}
+
 			go node.reconnect(msg)
 			response.Payload = transportPublicKey
 
