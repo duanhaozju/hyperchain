@@ -198,8 +198,6 @@ func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, tar
 			log.Errorf("flush modified content failed. %s", err.Error())
 			return err
 		}
-		batch.Write()
-		log.Criticalf("%s", string(tmpState.Dump()))
 		// revert related stateObject storage bucket tree
 		for addr := range dirtyStateObjectSet.Iter() {
 			address := addr.(common.Address)
