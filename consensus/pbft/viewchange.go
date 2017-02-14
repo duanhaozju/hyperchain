@@ -594,7 +594,7 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	if prevPrimary == pbft.id {
 		pbft.rebuildDuplicator()
 		if len(pbft.batchStore) > 0 {
-			for tx := range pbft.batchStore {
+			for _, tx := range pbft.batchStore {
 				go pbft.postRequestEvent(tx)
 			}
 			pbft.batchStore = nil
@@ -604,7 +604,7 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	}
 	pbft.vid = pbft.h
 	pbft.lastVid = pbft.h
-	if !pbft.skipInProgress {
+	if !pbft.skipInProgress && !pbft.inVcReset {
 		backendVid := uint64(pbft.vid + 1)
 		pbft.helper.VcReset(backendVid)
 		pbft.inVcReset = true
