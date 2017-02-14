@@ -204,6 +204,7 @@ func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, tar
 			prefix, _ := hyperstate.CompositeStorageBucketPrefix(address.Bytes())
 			bucketTree := bucket.NewBucketTree(string(prefix))
 			bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.GetBucketSize(STATEOBJECT), pool.GetBucketLevelGroup(STATEOBJECT), pool.GetBucketCacheSize(STATEOBJECT)))
+			bucketTree.ClearAllCache()
 			// don't flush into disk util all operations finish
 			bucketTree.PrepareWorkingSet(journalCache.GetWorkingSet(hyperstate.WORKINGSET_TYPE_STATEOBJECT, address), big.NewInt(0))
 			//bucketTree.RevertToTargetBlock(batch, big.NewInt(currentNumber), big.NewInt(targetNumber), false, false)
@@ -221,6 +222,7 @@ func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, tar
 		tree := state.GetTree()
 		bucketTree := tree.(*bucket.BucketTree)
 		bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.GetBucketSize(STATEDB), pool.GetBucketLevelGroup(STATEDB), pool.GetBucketCacheSize(STATEDB)))
+		bucketTree.ClearAllCache()
 		// don't flush into disk util all operations finish
 		bucketTree.PrepareWorkingSet(journalCache.GetWorkingSet(hyperstate.WORKINGSET_TYPE_STATE, common.Address{}), big.NewInt(0))
 		//bucketTree.RevertToTargetBlock(batch, big.NewInt(currentNumber), big.NewInt(targetNumber), false, false)
