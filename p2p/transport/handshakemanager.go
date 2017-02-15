@@ -18,6 +18,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"hyperchain/admittance"
+	"sync"
 )
 
 type HandShakeManagerNew struct {
@@ -27,6 +28,8 @@ type HandShakeManagerNew struct {
 	secrets       map[string][]byte
 	signPublickey map[string][]byte
 	isVerified    map[string]bool
+	verifiedLock sync.RWMutex
+
 
  }
 
@@ -103,6 +106,8 @@ func (hSMN *HandShakeManagerNew) GetIsVerified(peerHash string) bool {
 }
 
 func (hSMN *HandShakeManagerNew) SetIsVerified(is_verified bool, peerHash string) {
+	hSMN.verifiedLock.Lock()
+	defer hSMN.verifiedLock.Unlock()
 	hSMN.isVerified[peerHash] = is_verified
 }
 

@@ -50,10 +50,7 @@ func NewPeer(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.Transp
 	peer.LocalAddr = localAddr
 	peer.PeerAddr = peerAddr
 	//peer.PeerPool = peerspool
-	//TODO rewrite the tls options get method
-	//opts := membersrvc.GetGrpcClientOpts()
 	opts := peer.CM.GetGrpcClientOpts()
-
 	// dial to remote
 	conn, err := grpc.Dial(peerAddr.IP+":"+strconv.Itoa(peerAddr.Port), opts...)
 	if err != nil {
@@ -75,7 +72,7 @@ func NewPeer(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.Transp
 // handShake connect to remote peer, and negotiate the secret
 // handShake 用于与相应的远端peer进行通信，并进行密钥协商
 func (peer *Peer) handShake() (err error) {
-	//TODO 首次协商的时候是否需要带上消息签名
+	//REVIEW 首次协商的时候需要带上消息签名
 	/**
 		signature := pb.Signature{
 		Ecert:peer.CM.GetECertByte(),
@@ -106,7 +103,9 @@ func (peer *Peer) handShake() (err error) {
 	}
 
 	var pri interface{}
+
 	pri = peer.CM.GetECertPrivKey()
+
 	ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
 	sign, err := ecdsaEncry.Sign(helloMessage.Payload, pri)
 	if err == nil {
@@ -129,8 +128,16 @@ func (peer *Peer) handShake() (err error) {
 	//review get the remote peer secret
 	if retMessage.MessageType == pb.Message_HELLO_RESPONSE {
 		remotePublicKey := retMessage.Payload
+		remoteECert := retMessage.Signature.ECert
+		if remoteECert == nil{
+			log.Errorf("Remote ECert is nil %v",retMessage.From)
+		}
+		remoteRCert := retMessage.Signature.RCert
+		if remoteRCert == nil{
+			log.Errorf("Remote ECert is nil %v",retMessage.From)
+		}
 		err = peer.TEM.GenerateSecret(remotePublicKey, peer.PeerAddr.Hash)
-		if err != nil {
+		if er != nil {
 			log.Error("Local Generate Secret Failed, localAddr:", peer.LocalAddr, err)
 			return
 		}

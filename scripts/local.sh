@@ -17,7 +17,20 @@ case "$OSTYPE" in
   ;;
 esac
 
-# test the env
+f_help(){
+    echo "local.sh helper:"
+    echo "  -h, --help:     show the help for this bash script"
+    echo "  -k, --kill:     just kill all the processes"
+    echo "  -d, --delete:   clear the old data or not; default: clear. add for not clear"
+    echo "  -r, --rebuild:  rebuild the project or not; default: rebuild, add for not rebuild"
+    echo "  -m, --mode:     choose the run mode; default: run many in many, add for many in one"
+    echo "---------------------------------------------------"
+    echo "Example for run many in one in mac without rebuild:"
+    echo "./local -m -r"
+}
+
+# check the local running env
+f_check_local_env(){
 if ! type go > /dev/null; then
     echo -e "Please install the go env correctly!"
     exit 1
@@ -33,37 +46,15 @@ if ! type jq > /dev/null; then
     echo -e "Please install the `jq` to parse the json file \n just type: \n sudo apt-get install jq / sudo yum -y install jq / brew install jq "
     exit 1
 fi
+# confer
+if ! type confer > /dev/null; then
+    echo -e "Please install `confer` to read global.yaml config"
+    exit 1
+fi
 
-DELETEDATA=true
-REBUILD=true
-ENV=true
-MODE=true
-
-help(){
-    echo "local.sh helper:"
-    echo "  -h, --help:     show the help for this bash script"
-    echo "  -k, --kill:     just kill all the processes"
-    echo "  -d, --delete:   clear the old data or not; default: clear. add for not clear"
-    echo "  -r, --rebuild:  rebuild the project or not; default: rebuild, add for not rebuild"
-    echo "  -m, --mode:     choose the run mode; default: run many in many, add for many in one"
-    echo "---------------------------------------------------"
-    echo "Example for run many in one in mac without rebuild:"
-    echo "./local -e -m -r"
 }
-
-cd ../
-# Build the project
-PROJECT_PATH=`pwd`
-DUMP_PATH="${PROJECT_PATH}/build"
-CONF_PATH="${PROJECT_PATH}/config"
-
-# Load the config files
-PEER_CONFIG="${CONF_PATH}/local_peerconfig.json"
-MAXPEERNUM=`cat ${PEER_CONFIG} | jq ".maxpeernode"`
-echo "Node number is: ${MAXPEERNUM}"
-
 #kill the progress
-killProcess(){
+f_kill_process(){
     echo "Kill the bind port process"
     for((i=1;i<=$MAXPEERNUM;i++))
     do
@@ -73,6 +64,29 @@ killProcess(){
         fi
     done
 }
+
+
+
+
+cd ../
+# Build the project
+PROJECT_PATH="${GOPATH}/src/hyperchain"
+CURRENT_PATH=`pwd`
+DUMP_PATH="${CURRENT_PATH}/build"
+CONF_PATH="${CURRENT_PATH}/config"
+
+# Load the config files
+GLOBAL_CONFIG="${CONF_PATH}/global.yaml"
+PEER_CONFIGS_FILE=`confer read global.yaml global.configs.peers`
+
+
+PEER_CONFIG="${CONF_PATH}/local_peerconfig.json"
+MAXPEERNUM=`cat ${PEER_CONFIG} | jq ".maxpeernode"`
+echo "Node number is: ${MAXPEERNUM}"
+
+DELETEDATA=true
+REBUILD=true
+MODE=true
 
 while [ $# -gt 0 ]
 do

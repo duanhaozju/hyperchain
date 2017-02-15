@@ -234,6 +234,8 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 					response.Signature = &payloadSign
 				}
 				response.Signature.Signature = sign
+				response.Signature.ECert = node.CM.GetECertByte()
+				response.Signature.RCert = node.CM.GetRCertByte()
 			}
 
 			return &response, nil
