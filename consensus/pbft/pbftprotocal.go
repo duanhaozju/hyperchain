@@ -98,6 +98,7 @@ type pbftProtocal struct {
 	viewChangeStore map[vcidx]*ViewChange  // track view-change messages
 	vcResetStore    map[FinishVcReset]bool // track vcReset message from others
 	inVcReset       bool                   // track if replica itself in vcReset
+	vcHandled		bool					// track if replica handled the vc after receive newview
 	// implement the validate transaction batch process
 	vid                 uint64                       // track the validate sequence number
 	lastVid             uint64                       // track the last validate batch seqNo
@@ -475,7 +476,9 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 		pbft.helper.InformPrimary(primary)
 		pbft.persistView(pbft.view)
 		atomic.StoreUint32(&pbft.activeView, 1)
+		pbft.vcHandled = false
 		pbft.processRequestsDuringViewChange()
+		logger.Error("inVcReset: ", pbft.inVcReset)
 		logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/h=%d", pbft.id, primary, pbft.view, pbft.h)
 	case batchTimerEvent:
 		logger.Debugf("Replica %d batch timer expired", pbft.id)
@@ -535,6 +538,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		}
 		return pbft.processNewView()
 	case protos.VcResetDone:
+		logger.Error("recv VcResetDone: ", et.SeqNo)
 		if et.SeqNo != pbft.h+1 {
 			logger.Warningf("Replica %d finds error in VcResetDone, expect=%d, but get=%d", pbft.id, pbft.h+1, et.SeqNo)
 			return nil
@@ -1264,7 +1268,7 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 		return false
 	}
 
-	logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
+	logger.Criticalf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
 	pbft.nullRequestTimer.Stop()
 	pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
 	pbft.seqNo = n
@@ -1317,7 +1321,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
 	//logger.Notice("receive  pre-prepare first seq is:",preprep.SequenceNumber)
 
-	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest=%s ",
+	logger.Warningf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest=%s ",
 		pbft.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
 	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
@@ -1381,7 +1385,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
 	logger.Debug("receive  pre-prepare first seq is:", preprep.SequenceNumber)
 	if pbft.primary(pbft.view) != pbft.id && pbft.prePrepared(preprep.BatchDigest, preprep.View, preprep.SequenceNumber) && !cert.sentPrepare {
-		logger.Debugf("Backup %d broadcasting prepare for view=%d/seqNo=%d", pbft.id, preprep.View, preprep.SequenceNumber)
+		logger.Criticalf("Backup %d broadcasting prepare for view=%d/seqNo=%d", pbft.id, preprep.View, preprep.SequenceNumber)
 		prep := &Prepare{
 			View:           preprep.View,
 			SequenceNumber: preprep.SequenceNumber,
@@ -1411,7 +1415,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 
 func (pbft *pbftProtocal) recvPrepare(prep *Prepare) error {
 
-	logger.Debugf("Replica %d received prepare from replica %d for view=%d/seqNo=%d",
+	logger.Warningf("Replica %d received prepare from replica %d for view=%d/seqNo=%d",
 		pbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber)
 
 	if pbft.inNegoView {
@@ -1497,7 +1501,7 @@ func (pbft *pbftProtocal) sendCommit(digest string, v uint64, n uint64) error {
 	}
 
 	if !cert.sentCommit {
-		logger.Debugf("Replica %d broadcasting commit for view=%d/seqNo=%d",
+		logger.Criticalf("Replica %d broadcasting commit for view=%d/seqNo=%d",
 			pbft.id, v, n)
 		commit := &Commit{
 			View:           v,
@@ -1526,7 +1530,7 @@ func (pbft *pbftProtocal) sendCommit(digest string, v uint64, n uint64) error {
 
 func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 
-	logger.Debugf("Replica %d received commit from replica %d for view=%d/seqNo=%d",
+	logger.Warningf("Replica %d received commit from replica %d for view=%d/seqNo=%d",
 		pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber)
 
 	if pbft.inNegoView {
@@ -1686,7 +1690,9 @@ func (pbft *pbftProtocal) execDoneSync(idx msgID) {
 			}
 		}
 		if pbft.lastExec%pbft.K == 0 {
+			logger.Error("call checkpoint: ", pbft.lastExec)
 			bcInfo := getBlockchainInfo()
+			logger.Error("get the returned value of checkpoint: ", bcInfo.Height)
 			height := bcInfo.Height
 			if height == pbft.lastExec {
 				logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", pbft.lastExec, height)

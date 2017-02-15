@@ -16,6 +16,7 @@ import (
 )
 
 func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerManager p2p.PeerManager) {
+	log.Noticef("receive commit event %d", ev.SeqNo)
 	pool.commitQueue <- ev
 	if pool.peerManager == nil {
 		pool.peerManager = peerManager
@@ -35,6 +36,7 @@ func (pool *BlockPool) commitBackendLoop() {
 
 // consumeCommitEvent - consume commit event from channel.
 func (pool *BlockPool) consumeCommitEvent(ev event.CommitOrRollbackBlockEvent) bool {
+	log.Noticef("consume commit event %d", ev.SeqNo)
 	atomic.StoreInt32(&pool.commitInProgress, PROGRESS_TRUE)
 	defer atomic.StoreInt32(&pool.commitInProgress, PROGRESS_FALSE)
 	if pool.commitValidationCheck(ev) == false {
