@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	DefaultDataNodeCacheMaxSize = 10000
+	DefaultDataNodeCacheMaxSize = 400000
 	GlobalDataNodeCacheSize     = 10000
 	IsEnabledGlobal = true
 	globalDataNodeCache         *GlobalDataNodeCache
