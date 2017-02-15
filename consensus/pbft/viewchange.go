@@ -582,6 +582,12 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	logger.Debugf("Replica %d accepting new-view to view %d", pbft.id, pbft.view)
 
+	if pbft.vcHandled {
+		logger.Debugf("Replica %d repeated enter processReqInNewView, ignore it")
+		return nil
+	}
+	pbft.vcHandled = true
+
 	pbft.stopTimer()
 	pbft.nullRequestTimer.Stop()
 
@@ -706,7 +712,6 @@ func (pbft *pbftProtocal) finishViewChange() events.Event {
 	broadcast := consensusMsgHelper(msg, pbft.id)
 	primary := pbft.primary(pbft.view)
 	pbft.helper.InnerUnicast(broadcast, primary)
-	logger.Error("send finish vcReset: ", primary)
 	return viewChangedEvent{}
 }
 
