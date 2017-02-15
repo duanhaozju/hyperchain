@@ -614,7 +614,7 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 		return nil
 	}
 	// Insert into the live set.
-	log.Errorf("find state object %x in database, add it to live objects", addr)
+	log.Debugf("find state object %x in database, add it to live objects", addr)
 	obj := newObject(self, addr, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT)))
 	self.setStateObject(obj)
 	return obj
