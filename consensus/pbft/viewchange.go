@@ -614,7 +614,6 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 		backendVid := uint64(pbft.vid + 1)
 		pbft.helper.VcReset(backendVid)
 		pbft.inVcReset = true
-		logger.Error("call vcReset")
 		return nil
 	}
 
