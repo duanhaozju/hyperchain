@@ -207,6 +207,12 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 					log.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID,genErr)
 				}
 			}
+			// judge if reconnect TODO judge the idenfication
+			if p,_ := node.PeersPool.GetPeerByHash(msg.From.Hash);p != nil{
+				log.Warning("Reverse connect to peer: %d",msg.From.ID)
+				//reconnect
+				go node.reverseConnect(msg)
+			}
 
 			//every times get the public key is same
 			response.Payload = node.TEM.GetLocalPublicKey()
@@ -217,61 +223,59 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		{
 			log.Warning("Invalidate HELLO_RESPONSE message")
 		}
+
+	case pb.Message_HELLOREVERSE:
+		{
+			ecertByte := msg.Signature.ECert
+			bol, err := node.CM.VerifyCertSignature(string(ecertByte), msg.Payload, msg.Signature.Signature)
+			if !bol || err != nil {
+				log.Error("Verify the cert signature failed!",err)
+				return response, errors.New("Verify the cert signature failed!")
+			}
+			log.Debug("CERT SIGNATURE VERIFY PASS")
+			// TODO 这里不需要parse,修改VErycERTSignature方法
+			ecert, err := primitives.ParseCertificate(string(ecertByte))
+			if err != nil {
+				log.Error("cannot parse certificate", bol)
+				return response, errors.New("signature is wrong!!")
+			}
+			//再验证证书合法性
+			verifyEcert, ecertErr := node.CM.VerifyECert(string(ecertByte))
+			if !verifyEcert || ecertErr != nil {
+				log.Error(ecertErr)
+				return response, ecertErr
+			}
+			log.Debug("ECERT VERIFY PASS")
+
+			response.MessageType = pb.Message_HELLOREVERSE_RESPONSE
+			//review 协商密钥
+			signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
+			ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
+			signpubbyte := ecdh256.Marshal(*signpub)
+			if node.TEM.GetSecret(msg.From.Hash) == ""{
+				genErr := node.TEM.GenerateSecret(signpubbyte, msg.From.Hash)
+				if genErr != nil {
+					log.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID,genErr)
+				}
+			}
+			//every times get the public key is same
+			response.Payload = node.TEM.GetLocalPublicKey()
+			SignCert(response,node.CM)
+			return response, nil
+		}
+	case pb.Message_HELLOREVERSE_RESPONSE:
+		{
+
+		}
 	case pb.Message_RECONNECT:
 		{
-			log.Warning("node is reconnecting.")
-			response.MessageType = pb.Message_RECONNECT_RESPONSE
-			remotePublicKey := msg.Payload
-			genErr := node.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
-			if genErr != nil {
-				log.Error("gen sec error", genErr)
-			}
-			log.Warning("reconnect the remote node id:", msg.From.ID, node.TEM.GetSecret(msg.From.Hash))
-			//every times get the public key is same
-			transportPublicKey := node.TEM.GetLocalPublicKey()
-			//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
-			//REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
-			//REVIEW This no need to call hello event handler
-			//判断是否需要反向建立链接需要重新建立新链接
-			//reconnect need to sign by ecert and rcert
-			pri := node.CM.GetECertPrivKey()
-			ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
-			sign, err := ecdsaEncry.Sign(response.Payload, pri)
-			if err == nil {
-				if response.Signature == nil {
-					payloadSign := pb.Signature{
-						Signature: sign,
-					}
-					response.Signature = &payloadSign
-				}
-				response.Signature.Signature = sign
-			}
-
-			go node.reconnect(msg)
-			response.Payload = transportPublicKey
+			log.Warning(" Message RECONNECT")
 
 		}
 	case pb.Message_RECONNECT_RESPONSE:
 		{
-			response.MessageType = pb.Message_HELLO_RESPONSE
-			remotePublicKey := msg.Payload
-			genErr := node.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
-			if genErr != nil {
-				log.Error("gen sec error", genErr)
-			}
-			log.Warning("Message_HELLO_RESPONSE remote id:", msg.From.ID, node.TEM.GetSecret(msg.From.Hash))
-			//every times get the public key is same
-			transportPublicKey := node.TEM.GetLocalPublicKey()
-			//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
-			response.Payload = transportPublicKey
-			//REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
-			//REVIEW This no need to call hello event handler
-			//判断是否需要反向建立链接
-			reconnectErr := node.reconnect(msg)
-			if reconnectErr != nil {
-				log.Error("recverse connect to ", msg.From, "error:", reconnectErr)
-			}
-			return response, nil
+
+			log.Warning(" Message RECONNECT")
 
 		}
 	case pb.Message_INTRODUCE:
@@ -475,39 +479,13 @@ func (node *Node) StopServer() {
 
 }
 
-func (node *Node) reconnect(msg *pb.Message) error {
-	log.Criticalf("start reconnect.. %v", node.PeersPool.GetAliveNodeNum())
-	if node.PeersPool.GetAliveNodeNum() == 0 {
-		return errors.New("the peerpool hasn't initial")
-	}
-	p, e := node.PeersPool.GetPeerByHash(msg.From.Hash)
-	log.Criticalf("getPeerByHash,%v,%v", p, e)
-	if peer, err := node.PeersPool.GetPeerByHash(msg.From.Hash); err == nil {
-		log.Criticalf("peer: %v", peer)
-		// if peer status equal 2 then delete the peer and rebuild the connection
-		if peer.Status == 2 || peer.TEM.GetSecret(msg.From.Hash) != "" {
-			//node.PeersPool.DeletePeer(peer)
-		} else {
-			return nil
-		}
-	}
-	log.Critical("judge finish")
-	_, err := node.PeersPool.GetPeerByHash(msg.From.Hash)
+func (node *Node) reverseConnect(msg *pb.Message) error {
+	peer, err := NewPeerReverse(pb.RecoverPeerAddr(msg.From), node.localAddr, node.TEM,node.CM)
 	if err != nil {
-		log.Warning("This remote Node hasn't existed, and try to reconnect...")
-
-		peer, err := NewPeerReconnect(pb.RecoverPeerAddr(msg.From), node.localAddr, node.TEM,node.CM)
-		if err != nil {
-			log.Critical("new peer failed")
-		} else {
-			//TODO already exist handler
-			if peer == nil{
-				return nil
-			}
-			node.PeersPool.PutPeer(*pb.RecoverPeerAddr(msg.From), peer)
-
-		}
+		log.Critical("new peer failed")
+		return err
+	} else {
+		node.PeersPool.PutPeer(*pb.RecoverPeerAddr(msg.From), peer)
+		return nil
 	}
-	return nil
-
 }

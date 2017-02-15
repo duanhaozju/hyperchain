@@ -143,16 +143,14 @@ func (peer *Peer) handShake() (err error) {
 	return errors.New("ret message is not Hello Response!")
 }
 
-func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager,cm *admittance.CAManager) (peer *Peer, err error) {
+func NewPeerReverse(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager,cm *admittance.CAManager) (*Peer, error) {
+	peer := new(Peer)
 	peer.TEM = TEM
 	peer.PeerAddr = peerAddr
 	peer.LocalAddr = localAddr
 	peer.CM = cm
-	//peer.PeerPool = peerPool
 
-	//opts :=  membersrvc.GetGrpcClientOpts()
 	opts :=  peer.CM.GetGrpcClientOpts()
-	// dial to remote
 	conn, err := grpc.Dial(peerAddr.IP+":"+strconv.Itoa(peerAddr.Port), opts...)
 	if err != nil {
 		log.Error("err:", errors.New("Cannot establish a connection!"))
@@ -163,53 +161,60 @@ func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transpo
 	peer.Client = pb.NewChatClient(conn)
 	// set the primary flag
 	peer.IsPrimary = false
-	// review handshake operation
-	// review start exchange the secret
-	signature := pb.Signature{
-		ECert: peer.CM.GetECertByte(),
-		RCert: peer.CM.GetRCertByte(),
-	}
 
-	//review start exchange the secret
-	helloMessage := pb.Message{
-		MessageType:  pb.Message_HELLO,
+	reverseMessage := &pb.Message{
+		MessageType:  pb.Message_HELLOREVERSE,
 		Payload:      peer.TEM.GetLocalPublicKey(),
 		From:         peer.LocalAddr.ToPeerAddress(),
 		MsgTimeStamp: time.Now().UnixNano(),
-		Signature:    &signature,
 	}
+	SignCert(reverseMessage,peer.CM)
 
-	var pri interface{}
-	pri = peer.CM.GetECertPrivKey()
-	ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
-	sign, err := ecdsaEncry.Sign(helloMessage.Payload, pri)
-	if err == nil {
-		if helloMessage.Signature == nil {
-			payloadSign := pb.Signature{
-				Signature: sign,
-			}
-			helloMessage.Signature = &payloadSign
-		}
-		helloMessage.Signature.Signature = sign
-	}
-
-	retMessage, err := peer.Client.Chat(context.Background(), &helloMessage)
+	retMessage, err := peer.Client.Chat(context.Background(), reverseMessage)
 	log.Debug("reconnect return :", retMessage)
 	if err != nil {
 		log.Error("cannot establish a connection", err)
 		return nil, err
 	}
 	//review get the remote peer secrets
-	if retMessage.MessageType == pb.Message_RECONNECT_RESPONSE {
-		remotePublicKey := retMessage.Payload
-		err = peer.TEM.GenerateSecret(remotePublicKey, peer.PeerAddr.Hash)
-		if err != nil {
-			log.Error("genErr", err)
-			return nil, err
+	if retMessage.MessageType == pb.Message_HELLOREVERSE_RESPONSE {
+		remoteECert := retMessage.Signature.ECert
+		if remoteECert == nil{
+			log.Errorf("Remote ECert is nil %v",retMessage.From)
+			return nil,errors.New("remote ecert is nil")
 		}
-		log.Debug("remote Peer address:", peer.PeerAddr)
-		log.Debug(peer.TEM.GetSecret(peer.PeerAddr.Hash))
-		return peer, nil
+		ecert, err := primitives.ParseCertificate(string(remoteECert))
+		if err != nil {
+				log.Error("cannot parse certificate")
+			return nil,err
+		}
+		signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
+		ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
+		signpuByte := ecdh256.Marshal(*signpub)
+		//verify the rcert and set the status
+
+		remoteRCert := retMessage.Signature.RCert
+		if remoteRCert == nil{
+			log.Errorf("Remote ECert is nil %v",retMessage.From)
+			return nil,errors.New("Remote ECert is nil %v")
+		}
+
+		verifyRcert, rcertErr := peer.CM.VerifyRCert(string(remoteRCert))
+		if !verifyRcert || rcertErr != nil {
+			peer.TEM.SetIsVerified(false, retMessage.From.Hash)
+		} else {
+			peer.TEM.SetIsVerified(true, retMessage.From.Hash)
+		}
+
+		peer.TEM.SetSignPublicKey(signpuByte, retMessage.From.Hash)
+		if peer.TEM.GetSecret(retMessage.From.Hash) == ""{
+			genErr := peer.TEM.GenerateSecret(signpuByte, retMessage.From.Hash)
+			if genErr != nil {
+				log.Errorf("generate the share secret key, from node id: %d, error info %s ", retMessage.From.ID,genErr)
+				return nil,genErr
+			}
+		}
+		return peer,nil
 	}
 	return nil, errors.New("cannot establish a connection")
 }
