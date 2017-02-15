@@ -447,14 +447,9 @@ func (pbft *pbftProtocal) RecvMsg(e []byte) error {
 
 func (pbft *pbftProtocal) RecvLocal(msg interface{}) error {
 
-	switch e := msg.(type) {
+	switch msg.(type) {
 	case protos.RemoveCache:
-		vid := e.Vid
-		ok := pbft.recvRemoveCache(vid)
-		if !ok {
-			logger.Debugf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
-		}
-		return nil
+		go pbft.postRequestEvent(msg)
 	default:
 		go pbft.postPbftEvent(msg)
 	}
@@ -468,17 +463,18 @@ func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 	case *types.Transaction:
 		tx := e
 		return pbft.processTxEvent(tx)
-	case viewChangedEvent:
-		pbft.updateViewChangeSeqNo()
-		pbft.startTimerIfOutstandingRequests()
-		pbft.vcResendCount = 0
-		primary := pbft.primary(pbft.view)
-		pbft.helper.InformPrimary(primary)
-		pbft.persistView(pbft.view)
-		atomic.StoreUint32(&pbft.activeView, 1)
-		pbft.vcHandled = false
-		pbft.processRequestsDuringViewChange()
-		logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/h=%d", pbft.id, primary, pbft.view, pbft.h)
+	case *TransactionBatch:
+		err := pbft.recvRequestBatch(e)
+		if err != nil {
+			logger.Warning(err.Error())
+		}
+	case protos.RemoveCache:
+		vid := e.Vid
+		ok := pbft.recvRemoveCache(vid)
+		if !ok {
+			logger.Debugf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
+		}
+		return nil
 	case batchTimerEvent:
 		logger.Debugf("Replica %d batch timer expired", pbft.id)
 		if active := atomic.LoadUint32(&pbft.activeView); active == 1 && (len(pbft.batchStore) > 0) {
@@ -506,8 +502,17 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 			break
 		}
 		return next
-	case *TransactionBatch:
-		err = pbft.recvRequestBatch(et)
+	case viewChangedEvent:
+		pbft.updateViewChangeSeqNo()
+		pbft.startTimerIfOutstandingRequests()
+		pbft.vcResendCount = 0
+		primary := pbft.primary(pbft.view)
+		pbft.helper.InformPrimary(primary)
+		pbft.persistView(pbft.view)
+		atomic.StoreUint32(&pbft.activeView, 1)
+		pbft.vcHandled = false
+		pbft.processRequestsDuringViewChange()
+		logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/h=%d", pbft.id, primary, pbft.view, pbft.h)
 	case *PrePrepare:
 		err = pbft.recvPrePrepare(et)
 	case *Prepare:
