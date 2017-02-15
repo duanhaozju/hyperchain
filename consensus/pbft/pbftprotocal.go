@@ -446,7 +446,17 @@ func (pbft *pbftProtocal) RecvMsg(e []byte) error {
 
 func (pbft *pbftProtocal) RecvLocal(msg interface{}) error {
 
-	go pbft.postPbftEvent(msg)
+	switch e := msg.(type) {
+	case protos.RemoveCache:
+		vid := e.Vid
+		ok := pbft.recvRemoveCache(vid)
+		if !ok {
+			logger.Debugf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
+		}
+		return nil
+	default:
+		go pbft.postPbftEvent(msg)
+	}
 
 	return nil
 }
@@ -454,13 +464,6 @@ func (pbft *pbftProtocal) RecvLocal(msg interface{}) error {
 func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 
 	switch e := ee.(type) {
-	case protos.RemoveCache:
-		vid := e.Vid
-		ok := pbft.recvRemoveCache(vid)
-		if !ok {
-			logger.Warningf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
-		}
-		return nil
 	case *types.Transaction:
 		tx := e
 		return pbft.processTxEvent(tx)
