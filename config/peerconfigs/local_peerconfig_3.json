@@ -8,7 +8,7 @@
   "jsonrpc_port":8083,
   "introducer_ip":"127.0.0.1",
   "introducer_port":8001,
-    "introducer_id":1
+  "introducer_id":1
  },
   "maxpeernode":4,
   "nodes":[
