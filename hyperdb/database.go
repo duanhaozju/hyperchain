@@ -8,6 +8,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
+	"willf/bloom"
 )
 
 // the Database for LevelDB
@@ -16,6 +17,7 @@ import (
 type LDBDatabase struct {
 	path string
 	db   *leveldb.DB
+	bf   *bloom.BloomFilter //TODO: we may need index for keys stored in the db
 }
 
 // NewLDBDataBase new a LDBDatabase instance
@@ -28,22 +30,35 @@ type LDBDatabase struct {
 // the LDBDataBase instance must be close after use, by calling Close method
 func NewLDBDataBase(filepath string) (*LDBDatabase, error) {
 	db, err := leveldb.OpenFile(filepath, nil)
+	filter := bloom.New(1000 * 10000, 5) //TODO: make this configurable
 	return &LDBDatabase{
 		path: filepath,
 		db:   db,
+		bf:   filter,
 	}, err
 }
 
 // Put sets value for the given key, if the key exists, it will overwrite
 // the value
 func (self *LDBDatabase) Put(key []byte, value []byte) error {
-	return self.db.Put(key, value, nil)
+	err := self.db.Put(key, value, nil)
+	if err == nil {
+		self.bf.Add(key)
+	}
+	return err
 }
 
 // Get gets value for the given key, it returns ErrNotFound if
 // the Database does not contains the key
 func (self *LDBDatabase) Get(key []byte) ([]byte, error) {
-	dat, err := self.db.Get(key, nil)
+	var dat []byte
+	var err error
+
+	if self.bf.Test(key) {
+		dat, err = self.db.Get(key, nil)
+	}else {
+		err = leveldb.ErrNotFound
+	}
 	return dat, err
 }
 
@@ -95,7 +110,7 @@ func (self *LDBDatabase) LDB() *leveldb.DB {
 // NewBatch returns a Batch instance
 // it allows batch-operation
 func (db *LDBDatabase) NewBatch() Batch {
-	return &ldbBatch{db: db.db, b: new(leveldb.Batch)}
+	return &ldbBatch{db: db.db, b: new(leveldb.Batch), ldb:db}
 }
 
 // The Batch for LevelDB
@@ -103,11 +118,13 @@ func (db *LDBDatabase) NewBatch() Batch {
 type ldbBatch struct {
 	db *leveldb.DB
 	b  *leveldb.Batch
+	ldb *LDBDatabase
 }
 
 // Put put the key-value to ldbBatch
 func (b *ldbBatch) Put(key, value []byte) error {
 	b.b.Put(key, value)
+	b.ldb.bf.Add(key)
 	return nil
 }
 
