@@ -21,19 +21,21 @@ message Message{
 
     //MsgType message type during data transfer 
     enum MsgType {
-        HELLO           = 0;
-        HELLO_RESPONSE  = 1;
-        INTRODUCE       = 2;
-        INTRODUCE_RESPONSE = 3;
-        ATTEND          = 4;
-        ATTEND_RESPONSE  = 5;
-        RESPONSE        = 6;
-        CONSUS          = 7;
-        KEEPALIVE       = 8;
-        SYNCMSG         = 9;
-        PENDING         = 10;
-        RECONNECT       = 11;
-        RECONNECT_RESPONSE = 12;
+        HELLO               = 0;
+        HELLO_RESPONSE      = 1;
+        HELLOREVERSE        = 2;
+        HELLOREVERSE_RESPONSE = 3;
+        INTRODUCE           = 4;
+        INTRODUCE_RESPONSE  = 5;
+        ATTEND              = 6;
+        ATTEND_RESPONSE     = 7;
+        RESPONSE            = 8;
+        CONSUS              = 9;
+        KEEPALIVE           = 10;
+        SYNCMSG             = 11;
+        PENDING             = 12;
+        RECONNECT           = 13;
+        RECONNECT_RESPONSE  = 14;
     }
 }
 
