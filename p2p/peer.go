@@ -15,6 +15,9 @@ import (
 	"time"
 	//"fmt"
 	"hyperchain/core/crypto/primitives"
+	"hyperchain/p2p/transport/ecdh"
+	"crypto/elliptic"
+	"crypto/ecdsa"
 )
 
 // init the package-level logger system,
@@ -87,39 +90,15 @@ func (peer *Peer) handShake() (err error) {
 	/*
 	handshake 的时候需要对ecert 和rcert的签名进行校验,这样才能标识是否是NVP所以HELLO消息,HELLO RESPONSE都需要带上证书以及签名
 	 */
-
-	signature := pb.Signature{
-		ECert: peer.CM.GetECertByte(),
-		RCert: peer.CM.GetRCertByte(),
-	}
-
-	//review start exchange the secret
-	helloMessage := pb.Message{
+	helloMessage := &pb.Message{
 		MessageType:  pb.Message_HELLO,
 		Payload:      peer.TEM.GetLocalPublicKey(),
 		From:         peer.LocalAddr.ToPeerAddress(),
 		MsgTimeStamp: time.Now().UnixNano(),
-		Signature:    &signature,
 	}
+	SignCert(helloMessage,peer.CM)
 
-	var pri interface{}
-
-	pri = peer.CM.GetECertPrivKey()
-
-	ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
-	sign, err := ecdsaEncry.Sign(helloMessage.Payload, pri)
-	if err == nil {
-		if helloMessage.Signature == nil {
-			payloadSign := pb.Signature{
-				Signature: sign,
-			}
-			helloMessage.Signature = &payloadSign
-		}
-		helloMessage.Signature.Signature = sign
-	}
-
-
-	retMessage, err := peer.Client.Chat(context.Background(), &helloMessage)
+	retMessage, err := peer.Client.Chat(context.Background(), helloMessage)
 
 	if err != nil {
 		log.Error("cannot establish a connection", err)
@@ -127,19 +106,37 @@ func (peer *Peer) handShake() (err error) {
 	}
 	//review get the remote peer secret
 	if retMessage.MessageType == pb.Message_HELLO_RESPONSE {
-		remotePublicKey := retMessage.Payload
 		remoteECert := retMessage.Signature.ECert
 		if remoteECert == nil{
 			log.Errorf("Remote ECert is nil %v",retMessage.From)
 		}
+		ecert, err := primitives.ParseCertificate(string(remoteECert))
+		if err != nil {
+				log.Error("cannot parse certificate")
+		}
+		signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
+		ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
+		signpuByte := ecdh256.Marshal(*signpub)
+		//verify the rcert and set the status
+
 		remoteRCert := retMessage.Signature.RCert
 		if remoteRCert == nil{
 			log.Errorf("Remote ECert is nil %v",retMessage.From)
 		}
-		err = peer.TEM.GenerateSecret(remotePublicKey, peer.PeerAddr.Hash)
-		if er != nil {
-			log.Error("Local Generate Secret Failed, localAddr:", peer.LocalAddr, err)
-			return
+
+		verifyRcert, rcertErr := peer.CM.VerifyRCert(string(remoteRCert))
+		if !verifyRcert || rcertErr != nil {
+			peer.TEM.SetIsVerified(false, retMessage.From.Hash)
+		} else {
+			peer.TEM.SetIsVerified(true, retMessage.From.Hash)
+		}
+
+		peer.TEM.SetSignPublicKey(signpuByte, retMessage.From.Hash)
+		if peer.TEM.GetSecret(retMessage.From.Hash) == ""{
+			genErr := peer.TEM.GenerateSecret(signpuByte, retMessage.From.Hash)
+			if genErr != nil {
+				log.Errorf("generate the share secret key, from node id: %d, error info %s ", retMessage.From.ID,genErr)
+			}
 		}
 		return nil
 	}
@@ -224,6 +221,7 @@ func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transpo
 func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
 	log.Debug("CHAT:", msg.From.ID, ">>>", this.PeerAddr.ID)
 	msg.Payload, err = this.TEM.EncWithSecret(msg.Payload, this.PeerAddr.Hash)
+
 	//log.Critical("after enc secret",msg.Payload)
 	if err != nil {
 		log.Error("enc with secret failed", err)

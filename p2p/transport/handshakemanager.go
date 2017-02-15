@@ -9,7 +9,6 @@ package transport
 import (
 	"crypto/elliptic"
 	"crypto"
-	"crypto/rand"
 	"encoding/hex"
 	"hyperchain/core/crypto/primitives"
 	"hyperchain/p2p/transport/ecdh"
@@ -40,26 +39,17 @@ func NewHandShakeMangerNew(cm *admittance.CAManager) *HandShakeManagerNew {
 	hSMN.signPublickey = make(map[string][]byte)
 	hSMN.isVerified = make(map[string]bool)
 	hSMN.e = ecdh.NewEllipticECDH(elliptic.P256())
-	var err error
-
 	//若无私钥，相当于无ecert,但为确保节点启动，自动生产公私钥对
-	if cm.GetIsUsed() == false {
-		hSMN.privateKey, hSMN.publicKey, err = hSMN.e.GenerateKey(rand.Reader)
-		if err != nil {
-			panic("GenerateKey failed,please restart the node.")
-		}
-	} else {
 		//var pri *ecdsa.PrivateKey
-		contentPri := cm.GetECertPrivateKeyByte()
-		pri, err1 := primitives.ParseKey(string(contentPri))
-		privateKey := pri.(*ecdsa.PrivateKey)
-		//cert := primitives.ParseCertificate(contenrPub)
-		if err1 != nil {
-			panic("Parse PrivateKey or Ecert failed,please check the privateKey or Ecert and restart the node!")
-		} else {
-			hSMN.privateKey = privateKey
-			hSMN.publicKey = (*privateKey).PublicKey
-		}
+	contentPri := cm.GetECertPrivateKeyByte()
+	pri, err1 := primitives.ParseKey(string(contentPri))
+	privateKey := pri.(*ecdsa.PrivateKey)
+	//cert := primitives.ParseCertificate(contenrPub)
+	if err1 != nil {
+		panic("Parse PrivateKey or Ecert failed,please check the privateKey or Ecert and restart the node!")
+	} else {
+		hSMN.privateKey = privateKey
+		hSMN.publicKey = (*privateKey).PublicKey
 	}
 	return &hSMN
 }
@@ -175,7 +165,7 @@ func (this *HandShakeManagerNew) GetSecret(peerHash string) string {
 	if sc, ok := this.secrets[peerHash]; ok {
 		return hex.EncodeToString(sc)
 	} else {
-		log.Error("cannot get the share secret", peerHash)
+		log.Warning("cannot get the share secret,ignore.", peerHash)
 		return ""
 	}
 

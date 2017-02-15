@@ -125,7 +125,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	log.Debugf("MSG TYPE: %v",msg.MessageType)
 	defer log.Debugf("END OF NEW MESSAGE\n###########################\n")
 
-	var response pb.Message
+	response := new(pb.Message)
 	response.MessageType = pb.Message_RESPONSE
 	response.MsgTimeStamp = time.Now().UnixNano()
 	response.From = node.localAddr.ToPeerAddress()
@@ -137,22 +137,26 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		 */
 		//验签
 		signPubByte := node.TEM.GetSignPublicKey(msg.From.Hash)
+		if signPubByte == nil {
+			log.Error("cannot get signPublicKey")
+			return response, errors.New("SignPublickey is missing!!")
+		}
 		ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
 		signPub, _ := ecdh256.Unmarshal(signPubByte)
 		ecdsaEncrypto := primitives.NewEcdsaEncrypto("ecdsa")
 		if signPub == nil {
-			log.Warning("signPub")
+			log.Warning("signPub is nil")
 		}
 		if msg.Payload == nil {
-			log.Warning("msg.payload")
+			log.Warning("msg.payload is nil")
 		}
 		if msg.Signature == nil {
-			return &response, errors.New("signature is nil!!")
+			return response, errors.New("signature is nil!!")
 		}
 		bol, err := ecdsaEncrypto.VerifySign(signPub, msg.Payload, msg.Signature.Signature)
 		if !bol || err != nil {
 			log.Error("cannot verified the ecert signature", bol)
-			return &response, errors.New("signature is wrong!!")
+			return response, errors.New("signature is wrong!!")
 		}
 		log.Debug("CERT SIGNATURE VERIFY PASS")
 		// review 用CM对验证进行管理(此处的必要性需要考虑)
@@ -165,80 +169,49 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		// 参数3. 原始数据
 		//bol2,err := node.CM.VerifySignature(certPEM,signature,signed)
 
-	} else if (msg.MessageType == pb.Message_HELLO){
-
-		ecertByte := msg.Signature.ECert
-		rcertByte := msg.Signature.RCert
-		bol, err := node.CM.VerifyCertSignature(string(ecertByte), msg.Payload, msg.Signature.Signature)
-		if !bol || err != nil {
-			log.Error("Verify the cert signature failed!",err)
-			return &response, errors.New("Verify the cert signature failed!")
-		}
-		log.Debug("CERT SIGNATURE VERIFY PASS")
-		ecert, err := primitives.ParseCertificate(string(ecertByte))
-		signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
-		ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
-		signpuByte := ecdh256.Marshal(*signpub)
-		node.TEM.SetSignPublicKey(signpuByte, msg.From.Hash)
-
-		if err != nil {
-			log.Error("cannot verified the ecert signature", bol)
-			return &response, errors.New("signature is wrong!!")
-		}
-
-		//再验证证书合法性
-		verifyEcert, ecertErr := node.CM.VerifyECert(string(ecertByte))
-		verifyRcert, rcertErr := node.CM.VerifyRCert(string(rcertByte))
-
-		if !verifyEcert || ecertErr != nil {
-			log.Error(ecertErr)
-			return &response, ecertErr
-		}
-		log.Debug("ECERT VERIFY PASS")
-		if !verifyRcert || rcertErr != nil {
-			node.TEM.SetIsVerified(false, msg.From.Hash)
-		} else {
-			node.TEM.SetIsVerified(true, msg.From.Hash)
-		}
-
-		log.Debug("RCERT VERIFY PASS")
 	}
 
 	//handle the message
 	switch msg.MessageType {
 	case pb.Message_HELLO:
 		{
+			ecertByte := msg.Signature.ECert
+			bol, err := node.CM.VerifyCertSignature(string(ecertByte), msg.Payload, msg.Signature.Signature)
+			if !bol || err != nil {
+				log.Error("Verify the cert signature failed!",err)
+				return response, errors.New("Verify the cert signature failed!")
+			}
+			log.Debug("CERT SIGNATURE VERIFY PASS")
+			// TODO 这里不需要parse,修改VErycERTSignature方法
+			ecert, err := primitives.ParseCertificate(string(ecertByte))
+			if err != nil {
+				log.Error("cannot parse certificate", bol)
+				return response, errors.New("signature is wrong!!")
+			}
+			//再验证证书合法性
+			verifyEcert, ecertErr := node.CM.VerifyECert(string(ecertByte))
+			if !verifyEcert || ecertErr != nil {
+				log.Error(ecertErr)
+				return response, ecertErr
+			}
+			log.Debug("ECERT VERIFY PASS")
+
 			response.MessageType = pb.Message_HELLO_RESPONSE
 			//review 协商密钥
-			remotePublicKey := msg.Payload
-			//log.Error("RemotePublicKey: ",remotePublicKey )
-			genErr := node.TEM.GenerateSecret(remotePublicKey, msg.From.Hash)
-			//log.Error("#####",node.TEM.GetSignPublicKey(msg.From.Hash))
-			if genErr != nil {
-				log.Error("gen sec error", genErr)
-			}
-			//every times get the public key is same
-			transportPublicKey := node.TEM.GetLocalPublicKey()
-			//REVIEW NODEID IS Encrypted, in peer handler function must decrypt it !!
-			response.Payload = transportPublicKey
-			//REVIEW No Need to add the peer to pool because during the init, this local node will dial the peer automatically
-			//REVIEW This no need to call hello event handler
-			pri := node.CM.GetECertPrivKey()
-			ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
-			sign, err := ecdsaEncry.Sign(response.Payload, pri)
-			if err == nil {
-				if response.Signature == nil {
-					payloadSign := pb.Signature{
-						Signature: sign,
-					}
-					response.Signature = &payloadSign
+			signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
+			ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
+			signpubbyte := ecdh256.Marshal(*signpub)
+			if node.TEM.GetSecret(msg.From.Hash) == ""{
+				genErr := node.TEM.GenerateSecret(signpubbyte, msg.From.Hash)
+				if genErr != nil {
+					log.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID,genErr)
 				}
-				response.Signature.Signature = sign
-				response.Signature.ECert = node.CM.GetECertByte()
-				response.Signature.RCert = node.CM.GetRCertByte()
 			}
 
-			return &response, nil
+			//every times get the public key is same
+			response.Payload = node.TEM.GetLocalPublicKey()
+			SignCert(response,node.CM)
+			return response, nil
 		}
 	case pb.Message_HELLO_RESPONSE:
 		{
@@ -298,7 +271,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			if reconnectErr != nil {
 				log.Error("recverse connect to ", msg.From, "error:", reconnectErr)
 			}
-			return &response, nil
+			return response, nil
 
 		}
 	case pb.Message_INTRODUCE:
@@ -347,7 +320,9 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 	case pb.Message_CONSUS:
 		{
+
 			transferData, err := node.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
+
 			if err != nil {
 				log.Error("cannot decode the message", err)
 				return nil, err
@@ -473,7 +448,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 
 	}
-	return &response, nil
+	return response, nil
 }
 
 // StartServer start the gRPC server
