@@ -143,7 +143,7 @@ func (peer *Peer) handShake() (err error) {
 	return errors.New("ret message is not Hello Response!")
 }
 
-func newPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager,cm *admittance.CAManager) (*Peer, error){
+func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager,cm *admittance.CAManager) (*Peer, error){
 	peer := new(Peer)
 	peer.TEM = TEM
 	peer.PeerAddr = peerAddr

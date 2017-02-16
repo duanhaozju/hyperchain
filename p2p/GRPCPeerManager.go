@@ -72,21 +72,24 @@ func (this *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 	if bol {
 		log.Debug("restart this node")
 		//TODO func reconnect
-	}
-	if this.IsVP && this.IsOriginal {
-		// load the waiting connecting node information
-		log.Debug("start node as oirgin mode")
-		this.connectToPeers(aliveChain)
+		this.reconnectToPeers(aliveChain)
 		this.IsOnline = true
-	} else if this.IsVP && !this.IsOriginal{
-		// start attend routine
-		go this.LocalNode.attendNoticeProcess(this.LocalNode.N)
-		//review connect to introducer
-		this.connectToIntroducer(*this.Introducer)
-		aliveChain <- 1
-	}else if !this.IsOriginal{
-		this.vpConnect()
-		aliveChain <-2
+	}else {
+		if this.IsVP && this.IsOriginal {
+			// load the waiting connecting node information
+			log.Debug("start node as oirgin mode")
+			this.connectToPeers(aliveChain)
+			this.IsOnline = true
+		} else if this.IsVP && !this.IsOriginal {
+			// start attend routine
+			go this.LocalNode.attendNoticeProcess(this.LocalNode.N)
+			//review connect to introducer
+			this.connectToIntroducer(*this.Introducer)
+			aliveChain <- 1
+		} else if !this.IsOriginal {
+			this.vpConnect()
+			aliveChain <- 2
+		}
 	}
 	log.Notice("┌────────────────────────────┐")
 	log.Notice("│  All NODES WERE CONNECTED  |")
@@ -207,6 +210,50 @@ func (this *GRPCPeerManager) connectToPeers(alive chan int) {
 	}
 }
 
+func (this *GRPCPeerManager) reconnectToPeers(alive chan int) {
+	peerStatus := make(map[int]bool)
+	for i := 1; i <= MAX_PEER_NUM; i++ {peerStatus[i] = false}
+	if this.LocalAddr.ID>MAX_PEER_NUM {panic("LocalAddr.ID large than the max peer num")}
+	peerStatus[this.LocalAddr.ID] = true
+	N := MAX_PEER_NUM
+	F := int(math.Floor((MAX_PEER_NUM - 1) / 3))
+	MaxNum :=  N - F - 1
+	if this.configs.IsOrigin() {MaxNum = N - 1}
+	// connect other peers
+	_index := 1
+	for range time.Tick(200 * time.Millisecond) {
+		log.Debugf("current alive node num is %d, at least connect to %d",this.peersPool.GetAliveNodeNum(),MaxNum)
+		log.Debugf("current alive num %d",this.peersPool.GetAliveNodeNum())
+		if this.peersPool.GetAliveNodeNum() >= MaxNum{
+			alive <- 0
+		}
+		if this.peersPool.GetAliveNodeNum() >= MAX_PEER_NUM - 1{
+			break
+		}
+		if peerStatus[_index] {
+			_index++
+			continue
+		}
+		if _index > MAX_PEER_NUM {
+			_index = 1
+		}
+
+		log.Debug("status map", _index, peerStatus[_index])
+		//if this node is not online, connect it
+		peerAddress := pb.NewPeerAddr(this.configs.GetIP(_index), this.configs.GetPort(_index), this.configs.GetRPCPort(_index), this.configs.GetID(_index))
+		log.Debugf("peeraddress to connect %v", peerAddress)
+		if peer, connectErr := this.reconnectToPeer(peerAddress, this.configs.GetID(_index)); connectErr != nil {
+			// cannot connect to other peer
+			log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n", connectErr)
+			continue
+		} else {
+			// add  peer to peer pool
+			this.peersPool.PutPeer(*peerAddress, peer)
+			peerStatus[_index] = true
+			log.Debug("Peer Node ID:", peerAddress.ID, "has connected!")
+		}
+	}
+}
 
 func (this *GRPCPeerManager) vpConnect(){
 	var peerStatus map[int]bool
@@ -271,6 +318,23 @@ func (this *GRPCPeerManager) connectToPeer(peerAddress *pb.PeerAddr, nid int) (*
 	var peer *Peer
 	var peerErr error
 	peer, peerErr = NewPeer(peerAddress, this.LocalAddr, this.TEM, this.CM)
+	if peerErr != nil {
+		// cannot connect to other peer
+		log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n")
+		return nil, peerErr
+	} else {
+		//log.Critical("连接到节点", nid,isReconnect)
+		return peer, nil
+	}
+
+}
+
+//connect to peer by ip address and port (why int32? because of protobuf limit)
+func (this *GRPCPeerManager) reconnectToPeer(peerAddress *pb.PeerAddr, nid int) (*Peer, error) {
+	//if this node is not online, connect it
+	var peer *Peer
+	var peerErr error
+	peer, peerErr = NewPeerReconnect(peerAddress, this.LocalAddr, this.TEM, this.CM)
 	if peerErr != nil {
 		// cannot connect to other peer
 		log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n")
