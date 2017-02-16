@@ -107,7 +107,7 @@ func (this *GRPCPeerManager) ConnectToOthers() {
 	allPeersWithTemp := this.peersPool.GetPeersWithTemp()
 	payload, _ := proto.Marshal(this.LocalAddr.ToPeerAddress())
 	newNodeMessage := pb.Message{
-		MessageType:  pb.Message_HELLOREVERSE,
+		MessageType:  pb.Message_ATTEND_NOTIFY,
 		Payload:      payload,
 		MsgTimeStamp: time.Now().UnixNano(),
 		From:         this.LocalAddr.ToPeerAddress(),
@@ -119,7 +119,7 @@ func (this *GRPCPeerManager) ConnectToOthers() {
 		if err != nil {
 			log.Error("notice other node Attend Failed", err)
 		}
-		if retMessage.MessageType == pb.Message_HELLOREVERSE_RESPONSE{
+		if retMessage.MessageType == pb.Message_ATTEND_NOTIFY_RESPONSE{
 			remoteECert := retMessage.Signature.ECert
 			if remoteECert == nil{
 				log.Errorf("Remote ECert is nil %v",retMessage.From)
