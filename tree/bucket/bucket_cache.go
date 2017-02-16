@@ -107,9 +107,8 @@ func (bk BucketKey) size() uint64 {
 
 func (bNode *BucketNode) size() uint64 {
 	size := uint64(unsafe.Sizeof(*bNode))
-	numChildHashes := len(bNode.childrenCryptoHash)
-	if numChildHashes > 0 {
-		size += uint64(numChildHashes * len(bNode.childrenCryptoHash[0]))
+	if bNode.length > 0 {
+		size += uint64(int(bNode.length) * len(bNode.childrenCryptoHash[0]))
 	}
 	return size
 }

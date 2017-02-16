@@ -7,7 +7,7 @@ import (
 
 var (
 	DefaultDataNodeCacheMaxSize = 400000
-	GlobalDataNodeCacheSize     = 10000
+	GlobalDataNodeCacheSize     = 400000
 	IsEnabledGlobal = true
 	globalDataNodeCache         *GlobalDataNodeCache
 )
@@ -60,7 +60,9 @@ func newDataNodeCache(treePrefix string, maxSizeMBs int) *DataNodeCache {
 		if globalDataNodeCache.cacheMap[treePrefix] == nil {
 			globalDataNodeCache.cacheMap[treePrefix], _ = lru.New(GlobalDataNodeCacheSize)
 		} else {
-			return &DataNodeCache{TreePrefix: treePrefix, c: globalDataNodeCache.cacheMap[treePrefix], maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
+			dataNodeCache := &DataNodeCache{TreePrefix: treePrefix, c: globalDataNodeCache.cacheMap[treePrefix], maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
+			globalDataNodeCache.cacheMap[treePrefix] = nil
+			return dataNodeCache
 		}
 	}
 	cache, _ := lru.New(DefaultDataNodeCacheMaxSize)

@@ -408,7 +408,10 @@ func (bucketTree *BucketTree) updateDataNodeCache(bucketKey BucketKey, newDataNo
 		return
 	}
 	if bucketTree.dataNodeCache.isEnabled {
-		bucketTree.dataNodeCache.c.Add(bucketKey, newDataNodes)
+		res := bucketTree.dataNodeCache.c.Add(bucketKey, newDataNodes)
+		if res == true && bucketTree.treePrefix != "-bucket-state"{
+			log.Errorf("%s evict happen size %d", bucketTree.treePrefix, bucketTree.dataNodeCache.c.Len())
+		}
 	}
 	if globalDataNodeCache.isEnable {
 		cache := globalDataNodeCache.Get(bucketTree.treePrefix)
