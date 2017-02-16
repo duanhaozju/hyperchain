@@ -376,7 +376,10 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 	case pb.Message_ATTEND_RESPONSE:
 		{
-			// here need to judge if update
+		}
+	case pb.Message_ATTEND_NOTIFY:
+		{
+		// here need to judge if update
 			//if primary
 			transferData, err := node.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
 			if err != nil {
@@ -388,6 +391,9 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			} else {
 				node.attendChan <- 1
 			}
+		}
+	case pb.Message_ATTEND_NOTIFY_RESPONSE:
+		{
 
 		}
 	case pb.Message_CONSUS:
