@@ -31,7 +31,6 @@ type Node struct {
 	delayTable      map[int]int64
 	delayTableMutex sync.RWMutex
 	DelayChan       chan UpdateTable
-	sentEvent       bool
 	attendChan      chan int
 	PeersPool       PeersPool
 	N               int
@@ -54,7 +53,6 @@ func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TEM transport
 	newNode.higherEventManager = hEventManager
 	newNode.PeersPool = peersPool
 	newNode.attendChan = make(chan int)
-	newNode.sentEvent = false
 	newNode.delayTable = make(map[int]int64)
 	newNode.DelayChan = make(chan UpdateTable)
 	//listen the update
@@ -78,31 +76,29 @@ func (node *Node) UpdateDelayTableThread() {
 }
 
 //新节点需要监听相应的attend类型
-func (node *Node) attendNoticeProcess(N int) {
+func (n *Node) attendNoticeProcess(N int) {
 	isPrimaryConnectFlag := false
 	f := (N - 1) / 3
 	num := 0
 	for {
-		select {
-		case attendFlag := <-node.attendChan:
-			{
-				log.Debug("Already connect a old peer... N:", N, "f", f, "num", num,"flag",attendFlag)
-				if attendFlag == 1 {
-					num += 1
-				} else if attendFlag == 2 {
-					isPrimaryConnectFlag = true
-				}
-				if num >= (N-f) && !node.sentEvent && isPrimaryConnectFlag {
-					//TODO 修改向上post的消息类型
-					log.Debug("new node has online ")
-					node.higherEventManager.Post(event.AlreadyInChainEvent{})
-					node.sentEvent = true
-					num = 0
-
-				}
+		flag := <-n.attendChan
+		switch flag {
+		case 1: {
+			num++
+			}
+		case 2:{
+			isPrimaryConnectFlag =true
+			num++
 			}
 		}
+		if num >= (N-f) && isPrimaryConnectFlag{
+			log.Critical("new node has online ,post already in chain event")
+			n.higherEventManager.Post(event.AlreadyInChainEvent{})
+			break
+		}
+
 	}
+
 }
 
 func (node *Node) GetNodeAddr() *pb.PeerAddr {
@@ -130,7 +126,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	response.MsgTimeStamp = time.Now().UnixNano()
 	response.From = node.localAddr.ToPeerAddress()
 
-	if (msg.MessageType != pb.Message_HELLO) && node.CM.GetIsUsed() == true {
+	if (msg.MessageType != pb.Message_HELLO && msg.MessageType != pb.Message_INTRODUCE && msg.MessageType != pb.Message_ATTEND && msg.MessageType != pb.Message_ATTEND_NOTIFY && msg.MessageType == pb.Message_RECONNECT && msg.MessageType == pb.Message_RECONNECT_RESPONSE) && node.CM.GetIsUsed() == true {
 		/**
 		 * 这里的验证存在问题，首先是通过from取得公钥，这里的from是可以随意伪造的，存在风险
 		 * 在 != hello 的时候，没有对证书进行验证，是出于效率的考虑，但这存在安全隐患
@@ -138,8 +134,9 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		//验签
 		signPubByte := node.TEM.GetSignPublicKey(msg.From.Hash)
 		if signPubByte == nil {
-			log.Error("cannot get signPublicKey")
-			return response, errors.New("SignPublickey is missing!!")
+
+			log.Error("cannot get signPublicKey message type is ",msg.MessageType,msg.From.ID)
+			return response, errors.New("SignPublickey is missing")
 		}
 		ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
 		signPub, _ := ecdh256.Unmarshal(signPubByte)
@@ -327,13 +324,8 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	case pb.Message_ATTEND:
 		{
 			//新节点全部连接上之后通知
-			transferData, err := node.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
-			if err != nil {
-				log.Error("cannot decode the message", err)
-				return nil, err
-			}
 			node.higherEventManager.Post(event.NewPeerEvent{
-				Payload: transferData,
+				Payload: msg.Payload,
 			})
 
 			ecertByte := msg.Signature.ECert
@@ -380,12 +372,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		{
 		// here need to judge if update
 			//if primary
-			transferData, err := node.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
-			if err != nil {
-				log.Error("cannot decode the message", err)
-				return nil, err
-			}
-			if string(transferData) == "true" {
+			if string(msg.Payload) == "true" {
 				node.attendChan <- 2
 			} else {
 				node.attendChan <- 1
@@ -429,7 +416,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 	case pb.Message_ATTEND_NOTIFY_RESPONSE:
 		{
-
+			log.Warning("get a message ATTEND NOTIFI RESPONSE MESSAGE")
 		}
 	case pb.Message_CONSUS:
 		{
@@ -552,7 +539,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		log.Warning(msg.MessageType)
 		log.Warning("Unkown Message type!")
 	}
-	if msg.MessageType != pb.Message_HELLO && msg.MessageType != pb.Message_HELLO_RESPONSE && msg.MessageType != pb.Message_RECONNECT_RESPONSE && msg.MessageType != pb.Message_RECONNECT {
+	if msg.MessageType != pb.Message_HELLO && msg.MessageType != pb.Message_HELLO_RESPONSE && msg.MessageType != pb.Message_RECONNECT_RESPONSE && msg.MessageType != pb.Message_RECONNECT && msg.MessageType != pb.Message_ATTEND && msg.MessageType != pb.Message_ATTEND_NOTIFY && msg.MessageType != pb.Message_INTRODUCE {
 		var err error
 
 		response.Payload, err = node.TEM.EncWithSecret(response.Payload, msg.From.Hash)

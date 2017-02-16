@@ -133,7 +133,7 @@ func (pm *ProtocolManager) Start() {
 			Payload: payload,
 		}
 		pm.consenter.RecvLocal(msg)
-		pm.Peermanager.ConnectToOthers()
+		//pm.Peermanager.ConnectToOthers()
 	}
 }
 
@@ -326,7 +326,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			log.Debug("AlreadyInChainEvent")
 			// send negotiate event
 			if self.initType == 1 {
-				//self.Peermanager.SetOnline()
+				self.Peermanager.SetOnline()
 				self.NegotiateView()
 			}
 		}

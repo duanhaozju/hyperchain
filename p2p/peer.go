@@ -18,6 +18,7 @@ import (
 	"hyperchain/p2p/transport/ecdh"
 	"crypto/elliptic"
 	"crypto/ecdsa"
+	"github.com/golang/protobuf/proto"
 )
 
 // init the package-level logger system,
@@ -142,6 +143,94 @@ func (peer *Peer) handShake() (err error) {
 	}
 	return errors.New("ret message is not Hello Response!")
 }
+func NewPeerIntroducer(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager,cm *admittance.CAManager) (*Peer,[]byte ,error){
+	peer := new(Peer)
+	peer.TEM = TEM
+	peer.PeerAddr = peerAddr
+	peer.LocalAddr = localAddr
+	peer.CM = cm
+
+	opts :=  peer.CM.GetGrpcClientOpts()
+	conn, err := grpc.Dial(peerAddr.IP+":"+strconv.Itoa(peerAddr.Port), opts...)
+	if err != nil {
+		log.Error("err:", errors.New("Cannot establish a connection!"))
+		return nil,nil, err
+	}
+
+	peer.Connection = conn
+	peer.Client = pb.NewChatClient(conn)
+	// set the primary flag
+	peer.IsPrimary = false
+	//发送introduce 信息,取得路由表
+	payload, _ := proto.Marshal(localAddr.ToPeerAddress())
+	introduce_message := pb.Message{
+		MessageType:  pb.Message_INTRODUCE,
+		Payload:      payload,
+		MsgTimeStamp: time.Now().UnixNano(),
+		From:         localAddr.ToPeerAddress(),
+	}
+	SignCert(&introduce_message,cm)
+
+	retMessage, err := peer.Client.Chat(context.Background(), &introduce_message)
+	log.Critical("introducer chat finished")
+	log.Debug("reconnect return :", retMessage)
+	if err != nil {
+		log.Error("cannot establish a connection", err)
+		return nil, nil,err
+	}
+
+	//review get the remote peer secrets
+	if retMessage.MessageType == pb.Message_INTRODUCE_RESPONSE {
+
+		return peer,retMessage.Payload,nil
+	}
+	return nil,nil,errors.New("cannot establish a connection")
+}
+
+func NewPeerAttendNotify(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager,cm *admittance.CAManager ,isPrimary bool) (*Peer,*pb.Message,error) {
+	peer := new(Peer)
+	peer.TEM = TEM
+	peer.PeerAddr = peerAddr
+	peer.LocalAddr = localAddr
+	peer.CM = cm
+
+	opts := peer.CM.GetGrpcClientOpts()
+	conn, err := grpc.Dial(peerAddr.IP + ":" + strconv.Itoa(peerAddr.Port), opts...)
+	if err != nil {
+		log.Error("err:", errors.New("Cannot establish a connection!"))
+		return nil, nil, err
+	}
+
+	peer.Connection = conn
+	peer.Client = pb.NewChatClient(conn)
+	// set the primary flag
+	peer.IsPrimary = false
+	//发送introduce 信息,取得路由表
+	var payload []byte
+	if isPrimary {
+		payload = []byte("true")
+	}else{
+
+		payload = []byte("false")
+	}
+	introduce_message := pb.Message{
+		MessageType:  pb.Message_ATTEND_NOTIFY,
+		Payload:      payload,
+		MsgTimeStamp: time.Now().UnixNano(),
+		From:         localAddr.ToPeerAddress(),
+	}
+	SignCert(&introduce_message,cm)
+
+	retMessage, err := peer.Client.Chat(context.Background(), &introduce_message)
+	log.Critical("attendNotify chat finished")
+	log.Debug("reconnect return :", retMessage)
+	if err != nil {
+		log.Error("cannot establish a connection", err)
+		return nil, nil,err
+	}
+	return peer,retMessage,nil
+}
+
 
 func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager,cm *admittance.CAManager) (*Peer, error){
 	peer := new(Peer)
@@ -300,7 +389,7 @@ func NewPeerReverse(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport
 // which implements the service that prototype file declares
 //
 func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
-	log.Debug("CHAT:", msg.From.ID, ">>>", this.PeerAddr.ID)
+	log.Critical("CHAT:", msg.From.ID, ">>>", this.PeerAddr.ID)
 	msg.Payload, err = this.TEM.EncWithSecret(msg.Payload, this.PeerAddr.Hash)
 
 	//log.Critical("after enc secret",msg.Payload)

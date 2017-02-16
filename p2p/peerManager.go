@@ -48,6 +48,7 @@ type AddNode interface {
 	ConnectToOthers()
 	// get local address payload
 	GetLocalAddressPayload() []byte
+	SetOnline()
 }
 
 // DeleteNode interface
