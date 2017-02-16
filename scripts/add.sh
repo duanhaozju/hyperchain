@@ -56,17 +56,8 @@ fi
 #kill the progress
 f_kill_process(){
     echo "Kill the bind port process"
-    for((i=1;i<=$MAXPEERNUM;i++))
-    do
-        temp_port=`lsof -i :800$i | awk 'NR>=2{print $2}'`
-        if [ x"$temp_port" != x"" ];then
-            kill -9 $temp_port
-        fi
-    done
+    ps -au | grep hyperchain -v grep | xargs | kill -9
 }
-
-
-
 
 cd ../
 # Build the project
@@ -190,3 +181,4 @@ else
         runXinXinLinux
     fi
 fi
+#!/usr/bin/env bash

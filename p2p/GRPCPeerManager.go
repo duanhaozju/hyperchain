@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-const MAX_PEER_NUM = 4
+var MAX_PEER_NUM = 4
 
 // gRPC peer manager struct, which to manage the gRPC peers
 type GRPCPeerManager struct {
@@ -49,6 +49,7 @@ func NewGrpcManager(conf *common.Config) *GRPCPeerManager {
 	// configs
 	newgRPCManager.configs = config
 	newgRPCManager.LocalAddr = pb.NewPeerAddr(config.GetLocalIP(), config.GetLocalGRPCPort(), config.GetLocalJsonRPCPort(), config.GetLocalID())
+	MAX_PEER_NUM = newgRPCManager.configs.GetMaxPeerNumber()
 	//get the maxpeer from config
 	newgRPCManager.IsOriginal = config.IsOrigin()
 	newgRPCManager.IsVP = config.IsVP()
@@ -267,7 +268,7 @@ func (this *GRPCPeerManager) connectToPeers(alive chan int) {
 	}
 	peerStatus[this.LocalAddr.ID] = true
 	N := MAX_PEER_NUM
-	F := int(math.Floor((MAX_PEER_NUM - 1) / 3))
+	F := int(math.Floor(float64(MAX_PEER_NUM - 1) / 3.0))
 	MaxNum := N - F - 1
 	if this.configs.IsOrigin() {
 		MaxNum = N - 1
@@ -318,7 +319,7 @@ func (this *GRPCPeerManager) reconnectToPeers(alive chan int) {
 	}
 	peerStatus[this.LocalAddr.ID] = true
 	N := MAX_PEER_NUM
-	F := int(math.Floor((MAX_PEER_NUM - 1) / 3))
+	F := int(math.Floor(float64(MAX_PEER_NUM - 1) / 3.0))
 	MaxNum := N - F - 1
 	if this.configs.IsOrigin() {
 		MaxNum = N - 1

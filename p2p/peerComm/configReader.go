@@ -130,11 +130,8 @@ func (conf *ConfigReader) persist() error {
 }
 
 func (conf *ConfigReader) addNode(addr pb.PeerAddr) {
-	conf.maxNode += 1
 	newAddress := NewAddress(addr.ID, addr.Port, addr.RPCPort, addr.IP)
 	conf.nodes[addr.ID] = newAddress
-	log.Error("add node",addr.ID,"current maxpeernumber ",conf.Config.Maxpeernode)
-	conf.Config.Maxpeernode += 1
 	peerConfigNode := NewPeerConfigNodes(addr.IP, addr.RPCPort, addr.Port, addr.ID)
 	conf.Config.PeerNodes = append(conf.Config.PeerNodes, *peerConfigNode)
 
@@ -148,14 +145,22 @@ func (conf *ConfigReader) delNode(addr pb.PeerAddr) {
 }
 
 func (conf *ConfigReader) AddNodesAndPersist(addrs map[string]pb.PeerAddr) {
-	log.Critical("persist map",addrs)
-	log.Critical("persist map nuimber is ",len(addrs))
+	idx := 0
 	for _, value := range addrs {
 		if _, ok := conf.nodes[value.ID]; !ok {
 			log.Notice("add a node",value.ID)
 			conf.addNode(value)
 		}
+		idx++
+		if idx == 1{
+			conf.Config.SelfConfig.IntroducerID = value.ID
+			conf.Config.SelfConfig.IntroducerIP = value.IP
+			conf.Config.SelfConfig.IntroducerPort = value.Port
+			conf.Config.SelfConfig.IntroducerJSONRPCPort = value.RPCPort
+		}
 	}
+	conf.maxNode = len(addrs) + 1
+	conf.Config.Maxpeernode = len(addrs) + 1
 	conf.persist()
 }
 func (conf *ConfigReader) DelNodesAndPersist(addrs map[string]pb.PeerAddr) {
