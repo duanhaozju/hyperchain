@@ -371,7 +371,6 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			response.Payload = node.TEM.GetLocalPublicKey()
 			SignCert(response,node.CM)
 			return response, nil
-			log.Warning(" Message RECONNECT")
 
 		}
 	case pb.Message_ATTEND_RESPONSE:
@@ -391,6 +390,42 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			} else {
 				node.attendChan <- 1
 			}
+			ecertByte := msg.Signature.ECert
+			bol, err := node.CM.VerifyCertSignature(string(ecertByte), msg.Payload, msg.Signature.Signature)
+			if !bol || err != nil {
+				log.Error("Verify the cert signature failed!",err)
+				return response, errors.New("Verify the cert signature failed!")
+			}
+			log.Debug("CERT SIGNATURE VERIFY PASS")
+			// TODO 这里不需要parse,修改VErycERTSignature方法
+			ecert, err := primitives.ParseCertificate(string(ecertByte))
+			if err != nil {
+				log.Error("cannot parse certificate", bol)
+				return response, errors.New("signature is wrong!!")
+			}
+			//再验证证书合法性
+			verifyEcert, ecertErr := node.CM.VerifyECert(string(ecertByte))
+			if !verifyEcert || ecertErr != nil {
+				log.Error(ecertErr)
+				return response, ecertErr
+			}
+			log.Debug("ECERT VERIFY PASS")
+			response.MessageType = pb.Message_ATTEND_NOTIFY_RESPONSE
+			//review 协商密钥
+			signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
+			ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
+			signpubbyte := ecdh256.Marshal(*signpub)
+			if node.TEM.GetSecret(msg.From.Hash) == ""{
+				genErr := node.TEM.GenerateSecret(signpubbyte, msg.From.Hash)
+				if genErr != nil {
+					log.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID,genErr)
+				}
+			}
+			// judge if reconnect TODO judge the idenfication
+			response.Payload = node.TEM.GetLocalPublicKey()
+			SignCert(response,node.CM)
+			return response, nil
+
 		}
 	case pb.Message_ATTEND_NOTIFY_RESPONSE:
 		{

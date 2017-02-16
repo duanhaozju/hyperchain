@@ -681,7 +681,7 @@ func (this *GRPCPeerManager) UpdateRoutingTable(payload []byte) {
 	log.Critical("updateRoutingTable")
 	newPeer, err := NewPeer(pb.RecoverPeerAddr(toUpdateAddress), this.LocalAddr, this.TEM, this.CM)
 	if err != nil {
-		log.Error(err)
+		log.Error("recover address failed",err)
 		return
 
 	}
