@@ -79,15 +79,8 @@ func (bucketNode *BucketNode) setChildCryptoHash(childKey *BucketKey, cryptoHash
 	bucketNode.lock.Lock()
 	defer bucketNode.lock.Unlock()
 	i := bucketNode.bucketKey.getChildIndex(childKey)
-	var existed bool
-	if bucketNode.childrenCryptoHash[i] != nil {
-		existed = true
-	}
 	bucketNode.childrenCryptoHash[i] = cryptoHash
 	bucketNode.childrenUpdated[i] = true
-	if !existed {
-		bucketNode.length += 1
-	}
 }
 
 func (bucketNode *BucketNode) mergeBucketNode(anotherBucketNode *BucketNode) {
@@ -97,9 +90,6 @@ func (bucketNode *BucketNode) mergeBucketNode(anotherBucketNode *BucketNode) {
 		panic(fmt.Errorf("Nodes with different keys can not be merged. BaseKey=[%#v], MergeKey=[%#v]", bucketNode.bucketKey, anotherBucketNode.bucketKey))
 	}
 	for i, childCryptoHash := range anotherBucketNode.childrenCryptoHash {
-		if bucketNode.childrenCryptoHash[i] == nil {
-			bucketNode.length += 1
-		}
 		if !bucketNode.childrenUpdated[i] {
 			bucketNode.childrenCryptoHash[i] = childCryptoHash
 		}
