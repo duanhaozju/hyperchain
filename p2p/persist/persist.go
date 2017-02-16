@@ -18,6 +18,33 @@ func PutData(key string, value []byte) error {
 	return db.Put([]byte("p2p."+key), value)
 }
 
+func PutBool(key string,value bool){
+	db, err := hyperdb.GetDBDatabase()
+	if err != nil {
+		return err
+	}
+	var persistValue bool
+
+	if value {
+		persistValue = []byte("true")
+	}else{
+		persistValue = []byte("false")
+	}
+
+	return db.Put([]byte("p2p."+key), persistValue)
+}
+
+func GetBool(key string) (bool,error){
+	db, err := hyperdb.GetDBDatabase()
+	if err != nil {
+		return nil, err
+	}
+	persistKey,err := db.Get([]byte("p2p." + key))
+	if persistKey == []byte("true"){
+		return true,err
+	}
+	return false,err
+}
 //DelAllState: remove all state
 //func DelAllState() error {
 //	db, err := hyperdb.GetDBDatabase()

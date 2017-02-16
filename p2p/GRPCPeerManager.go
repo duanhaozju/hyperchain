@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"time"
 	"hyperchain/core/crypto/primitives"
+	"hyperchain/p2p/persist"
 )
 
 const MAX_PEER_NUM = 4
