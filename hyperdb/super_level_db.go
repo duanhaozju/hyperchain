@@ -11,10 +11,14 @@ import (
 	"github.com/willf/bloom"
 
 	//"time"
-	"github.com/go-cache"
-	////"github.com/syndtr/goleveldb/leveldb/cache"
-	//"github.com/syndtr/goleveldb/leveldb/cache"
-	"time"
+	//LRU "github.com/hashicorp/golang-lru"
+
+	//"sync"
+	//"sync"
+	//"github.com/go-cache"
+	//"time"
+	//"time"
+	//"time"
 )
 
 type SuperLevelDB struct {
@@ -28,7 +32,9 @@ type SuperLevelDB struct {
 func NewSLDB(filepath string) (*SuperLevelDB, error) {
 	db, err := leveldb.OpenFile(filepath, nil)
 	filter := bloom.New(1000 * 10000, 5) //TODO: make this configurable
-	c := cache.New(5 * time.Minute, 30 * time.Second)
+
+	//c := cache.New(5*time.Minute, 30 * time.Second)
+
 	return &SuperLevelDB{
 		path: filepath,
 		db:   db,
@@ -36,19 +42,24 @@ func NewSLDB(filepath string) (*SuperLevelDB, error) {
 		//cache:c,
 	}, err
 }
-
+//var y int = 0
 func (sldb  *SuperLevelDB) Put(key []byte, value []byte) error {
+	//t1 := time.Now()
 	err := sldb.db.Put(key, value, nil)
 	if err == nil {
 		sldb.bf.Add(key)
 		//sldb.cache.Add(string(key), value, 5 * time.Minute)
 	}
+	//y ++
+	//log.Warningf("%d put used %v", y, time.Now().Sub(t1))
 	return err
 }
 
+var getCount int = 0
 func (sldb *SuperLevelDB) Get(key []byte) ([]byte, error) {
 	var data []byte
 	var err error
+	//t1 := time.Now()
 	if sldb.bf.Test(key) {
 		//if val, ok := sldb.cache.Get(string(key)); ok {
 		//	if dat, ok := (val).([]byte); ok {
@@ -59,6 +70,8 @@ func (sldb *SuperLevelDB) Get(key []byte) ([]byte, error) {
 	}else {
 		err = leveldb.ErrNotFound
 	}
+	//getCount ++
+	//log.Warningf("%d get used %v", getCount, time.Now().Sub(t1))
 	return data, err
 }
 
@@ -106,43 +119,49 @@ func (sldb *SuperLevelDB) LDB() *leveldb.DB {
 	return sldb.db
 }
 
-
-//////////////////////////////////////////////////////////////
-/////// ba batch operation////////////////////////////////////
-
 func (db *SuperLevelDB) NewBatch() Batch {
-	log.Warning("new super level db batch")
+	log.Debugf("new super level db batch")
 
 	return &superLdbBatch{
 		batch: new(leveldb.Batch),
 		sldb:db,
-		data:make(map[string][]byte, 20000),//todo: fix 2000
-	}
+		//batchMap:make(map[string]interface{}),
+		}
 }
 
 type superLdbBatch struct {
 	batch *leveldb.Batch
 	sldb  *SuperLevelDB
-	data  map[string][]byte
+	//batchMap    map[string]interface{}
+	//bl sync.Mutex
 }
 
 func (b *superLdbBatch) Put(key, value []byte) error {
 	b.batch.Put(key, value)
 	b.sldb.bf.Add(key)
-	//b.data[string(key)] = value
+	//b.bl.Lock()
+	//defer b.bl.Unlock()
+	//value1 := make([]byte, len(value))
+	//copy(value1, value)
+	//b.batchMap[string(key)]=value1
 	return nil
 }
 
 func (b *superLdbBatch) Delete(key []byte) error {
 	b.batch.Delete(key)
-	//delete(b.data, string(key))
+	//b.sldb.cache.Delete(string(key))
 	return nil
 }
-
+//var x int = 0
 func (b *superLdbBatch) Write() error {
-	//for k, v := range b.data {
-	//	//log.Warningf("k: %v, v: %v", k, len(v))
-	//	b.sldb.cache.Add(k, v, 5 * time.Minute) //TODO: fix this
+	//b.bl.Lock()
+	//for k, v := range b.batchMap{
+	//	b.sldb.cache.Add(k, v, 5 * time.Minute)
 	//}
-	return b.sldb.db.Write(b.batch, nil)
+	//b.bl.Unlock()
+	//x ++
+	//t1 := time.Now()
+	err := b.sldb.db.Write(b.batch, nil)
+	//log.Warningf("%d batch write time used: %v", x,  time.Now().Sub(t1))
+	return err
 }

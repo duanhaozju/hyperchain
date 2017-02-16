@@ -452,7 +452,7 @@ func jitCalculateGasAndSize(env Environment, contract *Contract, instr instructi
 
 		newMemSize = common.BigMax(x, y)
 	}
-	quadMemGas(mem, newMemSize, gas)
+	quadMemGas(mem, newMemSize)
 
 	return newMemSize, gas, nil
 }

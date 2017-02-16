@@ -28,13 +28,13 @@ timeout:
     batch: 1000ms
 
     # How long may a request(transaction batch) take between reception and execution, must be greater than the batch timeout
-    request: 10s
+    request: 25s
 
     # How long may a validate (transaction batch) process will take by local Validation
     validate: 1s
 
     # Primary send it to inform aliveness, must be greater than request timeout
-    nullrequest: 15s
+    nullrequest: 30s
 
     # How long may a view change take
     viewchange: 4s

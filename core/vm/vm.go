@@ -231,10 +231,10 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 // the operation. This does not reduce gas or resizes the memory.
 func calculateGasAndSize(env Environment, contract *Contract, caller ContractRef, op OpCode, statedb Database, mem *Memory, stack *stack) (*big.Int, *big.Int, error) {
 	var (
-		gas                 = new(big.Int)
+		//gas                 = new(big.Int)
 		newMemSize *big.Int = new(big.Int)
 	)
-	err := baseCheck(op, stack, gas)
+	err := baseCheck(op, stack)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -350,9 +350,9 @@ func calculateGasAndSize(env Environment, contract *Contract, caller ContractRef
 
 		newMemSize = common.BigMax(x, y)
 	}
-	quadMemGas(mem, newMemSize, gas)
+	quadMemGas(mem, newMemSize)
 
-	return newMemSize, gas, nil
+	return newMemSize, big.NewInt(1000), nil
 }
 
 // RunPrecompile runs and evaluate the output of a precompiled contract defined in contracts.go

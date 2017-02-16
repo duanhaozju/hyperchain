@@ -50,11 +50,11 @@ global:
             state:
                 size: 1000000
                 levelGroup: 1000
-                cacheSize: 10000    # 100 MB
+                cacheSize: 500    # 100 MB
             storage:
                 size: 1000000
                 levelGroup: 1000
-                cacheSize: 10000    # 100 MB
+                cacheSize: 500    # 100 MB
         hmpublickey:
             "N": "14315727801779002117"
             Nsquare: "204940062494628260128356353732290481689"
