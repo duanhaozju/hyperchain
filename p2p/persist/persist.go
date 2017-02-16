@@ -18,7 +18,7 @@ func PutData(key string, value []byte) error {
 	return db.Put([]byte("p2p."+key), value)
 }
 
-func PutBool(key string,value bool){
+func PutBool(key string,value bool) error {
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err
