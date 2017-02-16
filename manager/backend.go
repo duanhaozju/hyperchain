@@ -42,17 +42,16 @@ func New(
 	exist chan bool,
 	expiredTime time.Time, cm *admittance.CAManager) *ProtocolManager {
 
-	aliveChan := make(chan int)
 	//add reconnect param
 
-	go peerManager.Start(aliveChan, eventMux, cm)
+	protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, consenter, am, commonHash, syncReplicaInterval, syncReplica, exist, expiredTime)
+	aliveChan := make(chan int)
+	protocolManager.Start(aliveChan, cm)
+
 	//wait for all peer are connected
-	initType := <-aliveChan
 	//select {
 	//case initType := <-aliveChan:
 	//	{
-	protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, consenter, am, commonHash, syncReplicaInterval, syncReplica, initType, exist, expiredTime)
-	protocolManager.Start()
 	//start server
 	return protocolManager
 	//}
