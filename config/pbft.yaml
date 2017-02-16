@@ -34,7 +34,7 @@ timeout:
     validate: 1s
 
     # Primary send it to inform aliveness, must be greater than request timeout
-    nullrequest: 10s
+    nullrequest: 15s
 
     # How long may a view change take
     viewchange: 4s
