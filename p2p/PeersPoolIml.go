@@ -8,6 +8,8 @@ import (
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/transport"
 	"sort"
+	"hyperchain/p2p/persist"
+	"github.com/golang/protobuf/proto"
 )
 
 type PeersPoolIml struct {
@@ -56,6 +58,12 @@ func (this *PeersPoolIml) PutPeer(addr pb.PeerAddr, client *Peer) error {
 		this.peerKeys[addr] = addr.Hash
 		this.peerAddr[addr.Hash] = addr
 		this.peers[addr.Hash] = client
+		//persist the peer hash into data base
+		persistAddr,err := proto.Marshal(peer.PeerAddr.ToPeerAddress())
+		if err != nil{
+			log.Errorf("cannot marshal the marshal Addreass for %v",peer.PeerAddr)
+		}
+		persist.PutData(peer.PeerAddr.Hash,persistAddr)
 		return nil
 	}
 
@@ -221,6 +229,11 @@ func (this *PeersPoolIml) MergeTempPeers(peer *Peer) {
 	this.peers[peer.PeerAddr.Hash] = peer
 	this.peerAddr[peer.PeerAddr.Hash] = *peer.PeerAddr
 	this.peerKeys[*peer.PeerAddr] = peer.PeerAddr.Hash
+	persistAddr,err := proto.Marshal(peer.PeerAddr.ToPeerAddress())
+	if err != nil{
+		log.Errorf("cannot marshal the marshal Addreass for %v",peer.PeerAddr)
+	}
+	persist.PutData(peer.PeerAddr.Hash,persistAddr)
 	delete(this.tempPeers, peer.PeerAddr.Hash)
 	//}
 	//}
@@ -251,6 +264,7 @@ func (this *PeersPoolIml) DeletePeer(peer *Peer) map[string]pb.PeerAddr {
 	delete(this.peers, peer.PeerAddr.Hash)
 	delete(this.peerAddr, peer.PeerAddr.Hash)
 	delete(this.peerKeys, *peer.PeerAddr)
+	persist.DelData(peer.PeerAddr.Hash)
 	perlist := make(map[string]pb.PeerAddr, 1)
 	perlist[peer.PeerAddr.Hash] = *peer.PeerAddr
 	return perlist
