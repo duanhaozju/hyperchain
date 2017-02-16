@@ -612,18 +612,19 @@ func (this *GRPCPeerManager) UpdateRoutingTable(payload []byte) {
 		payload = []byte("true")
 	}
 
-	attendResponseMsg := pb.Message{
-		MessageType:  pb.Message_ATTEND_RESPONSE,
+	attendNotifyMsg := &pb.Message{
+		MessageType:  pb.Message_ATTEND_NOTIFY,
 		Payload:      payload,
 		MsgTimeStamp: time.Now().UnixNano(),
 		From:         this.LocalAddr.ToPeerAddress(),
 	}
+	SignCert(attendNotifyMsg,this.CM)
 
 	if this.IsOnline {
 		log.Debug("Notify the new attend node, this node is aleady merge the node info!")
 		this.peersPool.MergeTempPeers(newPeer)
 		//通知新节点进行接洽
-		_,err :=newPeer.Chat(attendResponseMsg)
+		_,err :=newPeer.Chat(*attendNotifyMsg)
 		if err != nil {
 			log.Errorf("Cannot notify the new attend node, id: %d",newPeer.PeerAddr.ID)
 		}
