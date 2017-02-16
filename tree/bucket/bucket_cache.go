@@ -5,7 +5,9 @@ import (
 	//"time"
 	"unsafe"
 )
-
+const (
+	HASHLEN = 20
+)
 var defaultBucketCacheMaxSize = 100 // MBs
 
 // We can create a cache and keep all the bucket nodes pre-loaded.
@@ -108,7 +110,7 @@ func (bk BucketKey) size() uint64 {
 func (bNode *BucketNode) size() uint64 {
 	size := uint64(unsafe.Sizeof(*bNode))
 	if bNode.length > 0 {
-		size += uint64(int(bNode.length) * len(bNode.childrenCryptoHash[0]))
+		size += uint64(int(bNode.length) * HASHLEN)
 	}
 	return size
 }

@@ -36,6 +36,7 @@ func unmarshalBucketNode(bucketKey *BucketKey, serializedBytes []byte) *BucketNo
 	memNode := &MemBucketNode{}
 	err := json.Unmarshal(serializedBytes, memNode)
 	if err != nil {
+		log.Error("unmarshal bucket node failed.")
 		return nil
 	}
 	bucketNode.length = memNode.Length
@@ -68,6 +69,7 @@ func (bucketNode *BucketNode) marshal() []byte {
 	//}
 	data, err := json.Marshal(memNode)
 	if err != nil {
+		log.Error("marshal bucket node failed.")
 		return nil
 	}
 	return data
