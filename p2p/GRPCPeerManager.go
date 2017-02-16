@@ -19,6 +19,10 @@ import (
 	"time"
 	"hyperchain/core/crypto/primitives"
 	"hyperchain/p2p/persist"
+	"crypto/ecdsa"
+	"hyperchain/p2p/transport/ecdh"
+	"crypto/elliptic"
+	"errors"
 )
 
 const MAX_PEER_NUM = 4
@@ -103,7 +107,7 @@ func (this *GRPCPeerManager) ConnectToOthers() {
 	allPeersWithTemp := this.peersPool.GetPeersWithTemp()
 	payload, _ := proto.Marshal(this.LocalAddr.ToPeerAddress())
 	newNodeMessage := pb.Message{
-		MessageType:  pb.Message_ATTEND,
+		MessageType:  pb.Message_HELLOREVERSE,
 		Payload:      payload,
 		MsgTimeStamp: time.Now().UnixNano(),
 		From:         this.LocalAddr.ToPeerAddress(),
@@ -111,9 +115,48 @@ func (this *GRPCPeerManager) ConnectToOthers() {
 	log.Critical("Connect to Others",payload)
 	for _, peer := range allPeersWithTemp {
 		//review 返回值不做处理
-		_, err := peer.Chat(newNodeMessage)
+		retMessage, err := peer.Chat(newNodeMessage)
 		if err != nil {
 			log.Error("notice other node Attend Failed", err)
+		}
+		if retMessage.MessageType == pb.Message_HELLOREVERSE_RESPONSE{
+			remoteECert := retMessage.Signature.ECert
+			if remoteECert == nil{
+				log.Errorf("Remote ECert is nil %v",retMessage.From)
+				return nil,errors.New("remote ecert is nil")
+			}
+			ecert, err := primitives.ParseCertificate(string(remoteECert))
+			if err != nil {
+				log.Error("cannot parse certificate")
+				return nil,err
+			}
+			signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
+			ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
+			signpuByte := ecdh256.Marshal(*signpub)
+			//verify the rcert and set the status
+
+			remoteRCert := retMessage.Signature.RCert
+			if remoteRCert == nil{
+				log.Errorf("Remote ECert is nil %v",retMessage.From)
+				return nil,errors.New("Remote ECert is nil %v")
+			}
+
+			verifyRcert, rcertErr := peer.CM.VerifyRCert(string(remoteRCert))
+			if !verifyRcert || rcertErr != nil {
+				peer.TEM.SetIsVerified(false, retMessage.From.Hash)
+			} else {
+				peer.TEM.SetIsVerified(true, retMessage.From.Hash)
+			}
+
+			peer.TEM.SetSignPublicKey(signpuByte, retMessage.From.Hash)
+			if peer.TEM.GetSecret(retMessage.From.Hash) == ""{
+				genErr := peer.TEM.GenerateSecret(signpuByte, retMessage.From.Hash)
+				if genErr != nil {
+					log.Errorf("generate the share secret key, from node id: %d, error info %s ", retMessage.From.ID,genErr)
+				}else {
+					this.peersPool.PutPeerToTemp(pb.Message.From,peer)
+				}
+			}
 		}
 	}
 }
@@ -163,7 +206,46 @@ func (this *GRPCPeerManager) connectToIntroducer(introducerAddress pb.PeerAddr) 
 			MsgTimeStamp: time.Now().UnixNano(),
 			From:         this.LocalNode.localAddr.ToPeerAddress(),
 		}
-		_, err := p.Chat(attend_message)
+		retMessage, err := p.Chat(attend_message)
+		if retMessage.MessageType == pb.Message_ATTEND_RESPONSE{
+			remoteECert := retMessage.Signature.ECert
+			if remoteECert == nil{
+				log.Errorf("Remote ECert is nil %v",retMessage.From)
+				return nil,errors.New("remote ecert is nil")
+			}
+			ecert, err := primitives.ParseCertificate(string(remoteECert))
+			if err != nil {
+				log.Error("cannot parse certificate")
+				return nil,err
+			}
+			signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
+			ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
+			signpuByte := ecdh256.Marshal(*signpub)
+			//verify the rcert and set the status
+
+			remoteRCert := retMessage.Signature.RCert
+			if remoteRCert == nil{
+				log.Errorf("Remote ECert is nil %v",retMessage.From)
+				return nil,errors.New("Remote ECert is nil %v")
+			}
+
+			verifyRcert, rcertErr := peer.CM.VerifyRCert(string(remoteRCert))
+			if !verifyRcert || rcertErr != nil {
+				peer.TEM.SetIsVerified(false, retMessage.From.Hash)
+			} else {
+				peer.TEM.SetIsVerified(true, retMessage.From.Hash)
+			}
+
+			peer.TEM.SetSignPublicKey(signpuByte, retMessage.From.Hash)
+			if peer.TEM.GetSecret(retMessage.From.Hash) == ""{
+				genErr := peer.TEM.GenerateSecret(signpuByte, retMessage.From.Hash)
+				if genErr != nil {
+					log.Errorf("generate the share secret key, from node id: %d, error info %s ", retMessage.From.ID,genErr)
+				}else {
+					this.peersPool.PutPeerToTemp(pb.Message.From,peer)
+				}
+			}
+		}
 		if err != nil {
 			log.Error(err)
 		}
