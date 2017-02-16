@@ -70,11 +70,12 @@ func (this *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 	// connect to peer
 	bol,_ := persist.GetBool("onceOnline")
 	if bol {
-		log.Debug("restart this node")
+		log.Critical("reconnect")
 		//TODO func reconnect
 		this.reconnectToPeers(aliveChain)
 		this.IsOnline = true
 	}else {
+		log.Critical("connect")
 		if this.IsVP && this.IsOriginal {
 			// load the waiting connecting node information
 			log.Debug("start node as oirgin mode")
@@ -119,15 +120,11 @@ func (this *GRPCPeerManager) ConnectToOthers() {
 
 func (this *GRPCPeerManager) connectToIntroducer(introducerAddress pb.PeerAddr) {
 	//连接介绍人,并且将其路由表取回,然后进行存储
-	peer, peerErr := NewPeer(&introducerAddress, this.LocalAddr, this.TEM, this.CM)
-	if peerErr != nil {
-		// cannot connect to other peer
-		log.Error("Node: ", introducerAddress.IP, ":", introducerAddress.Port, " can not connect!\n")
+	peer, err := NewPeer(&introducerAddress, this.LocalAddr, this.TEM, this.CM)
+	if err != nil {
+		log.Error("Node: ", introducerAddress.IP, ":", introducerAddress.Port, " can not connect to introducer!\n")
 		return
 	}
-	//将介绍人的信息放入路由表中
-	this.peersPool.PutPeer(*peer.PeerAddr, peer)
-
 	//发送introduce 信息,取得路由表
 	payload, _ := proto.Marshal(this.LocalAddr.ToPeerAddress())
 	introduce_message := pb.Message{
@@ -136,18 +133,28 @@ func (this *GRPCPeerManager) connectToIntroducer(introducerAddress pb.PeerAddr) 
 		MsgTimeStamp: time.Now().UnixNano(),
 		From:         this.LocalAddr.ToPeerAddress(),
 	}
+	SignCert(introduce_message,this.CM)
+
 	retMsg, sendErr := peer.Chat(introduce_message)
+
 	if sendErr != nil {
 		log.Errorf("get routing table error, %v",sendErr)
+		return
 	}
 
 	var routers pb.Routers
-	unmarshalError := proto.Unmarshal(retMsg.Payload, &routers)
-	if unmarshalError != nil {
-		log.Error("routing table unmarshal err ", unmarshalError)
+	unmarErr := proto.Unmarshal(retMsg.Payload, &routers)
+	if unmarErr != nil {
+		log.Error("routing table unmarshal err ", unmarErr)
 	}
+
+	//将介绍人的信息放入路由表中
+	this.peersPool.PutPeer(*peer.PeerAddr, peer)
+
 	log.Warning("merge the routing table and connect to :", routers)
+
 	this.peersPool.MergeFromRoutersToTemp(routers)
+
 	for _, p := range this.peersPool.GetPeersWithTemp() {
 		//review this.LocalNode.attendChan <- 1
 		attend_message := pb.Message{

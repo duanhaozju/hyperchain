@@ -207,12 +207,6 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 					log.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID,genErr)
 				}
 			}
-			// judge if reconnect TODO judge the idenfication
-			if p,_ := node.PeersPool.GetPeerByHash(msg.From.Hash);p != nil{
-				log.Warning("Reverse connect to peer: %d",msg.From.ID)
-				//reconnect
-				go node.reverseConnect(msg)
-			}
 
 			//every times get the public key is same
 			response.Payload = node.TEM.GetLocalPublicKey()
@@ -265,21 +259,59 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 	case pb.Message_HELLOREVERSE_RESPONSE:
 		{
+			log.Warning(" Message REVERSE")
 
 		}
 	case pb.Message_RECONNECT:
 		{
+			ecertByte := msg.Signature.ECert
+			bol, err := node.CM.VerifyCertSignature(string(ecertByte), msg.Payload, msg.Signature.Signature)
+			if !bol || err != nil {
+				log.Error("Verify the cert signature failed!",err)
+				return response, errors.New("Verify the cert signature failed!")
+			}
+			log.Debug("CERT SIGNATURE VERIFY PASS")
+			// TODO 这里不需要parse,修改VErycERTSignature方法
+			ecert, err := primitives.ParseCertificate(string(ecertByte))
+			if err != nil {
+				log.Error("cannot parse certificate", bol)
+				return response, errors.New("signature is wrong!!")
+			}
+			//再验证证书合法性
+			verifyEcert, ecertErr := node.CM.VerifyECert(string(ecertByte))
+			if !verifyEcert || ecertErr != nil {
+				log.Error(ecertErr)
+				return response, ecertErr
+			}
+			log.Debug("ECERT VERIFY PASS")
+
+			response.MessageType = pb.Message_RECONNECT_RESPONSE
+			//review 协商密钥
+			signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
+			ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
+			signpubbyte := ecdh256.Marshal(*signpub)
+			if node.TEM.GetSecret(msg.From.Hash) == ""{
+				genErr := node.TEM.GenerateSecret(signpubbyte, msg.From.Hash)
+				if genErr != nil {
+					log.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID,genErr)
+				}
+			}
+			// judge if reconnect TODO judge the idenfication
+			go node.reverseConnect(msg)
+			//every times get the public key is same
+			response.Payload = node.TEM.GetLocalPublicKey()
+			SignCert(response,node.CM)
+			return response, nil
 			log.Warning(" Message RECONNECT")
 
 		}
 	case pb.Message_RECONNECT_RESPONSE:
 		{
-
 			log.Warning(" Message RECONNECT")
-
 		}
 	case pb.Message_INTRODUCE:
 		{
+			//TODO 验证签名
 			//返回路由表信息
 			response.MessageType = pb.Message_INTRODUCE_RESPONSE
 			routers := node.PeersPool.ToRoutingTable()
@@ -303,8 +335,44 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			node.higherEventManager.Post(event.NewPeerEvent{
 				Payload: transferData,
 			})
-			//response
-			//response.MessageType = pb.Message_ATTEND_RESPNSE
+
+			ecertByte := msg.Signature.ECert
+			bol, err := node.CM.VerifyCertSignature(string(ecertByte), msg.Payload, msg.Signature.Signature)
+			if !bol || err != nil {
+				log.Error("Verify the cert signature failed!",err)
+				return response, errors.New("Verify the cert signature failed!")
+			}
+			log.Debug("CERT SIGNATURE VERIFY PASS")
+			// TODO 这里不需要parse,修改VErycERTSignature方法
+			ecert, err := primitives.ParseCertificate(string(ecertByte))
+			if err != nil {
+				log.Error("cannot parse certificate", bol)
+				return response, errors.New("signature is wrong!!")
+			}
+			//再验证证书合法性
+			verifyEcert, ecertErr := node.CM.VerifyECert(string(ecertByte))
+			if !verifyEcert || ecertErr != nil {
+				log.Error(ecertErr)
+				return response, ecertErr
+			}
+			log.Debug("ECERT VERIFY PASS")
+			response.MessageType = pb.Message_ATTEND_RESPONSE
+			//review 协商密钥
+			signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
+			ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
+			signpubbyte := ecdh256.Marshal(*signpub)
+			if node.TEM.GetSecret(msg.From.Hash) == ""{
+				genErr := node.TEM.GenerateSecret(signpubbyte, msg.From.Hash)
+				if genErr != nil {
+					log.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID,genErr)
+				}
+			}
+			// judge if reconnect TODO judge the idenfication
+			response.Payload = node.TEM.GetLocalPublicKey()
+			SignCert(response,node.CM)
+			return response, nil
+			log.Warning(" Message RECONNECT")
+
 		}
 	case pb.Message_ATTEND_RESPONSE:
 		{

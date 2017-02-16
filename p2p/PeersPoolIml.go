@@ -49,7 +49,7 @@ func (this *PeersPoolIml) PutPeer(addr pb.PeerAddr, client *Peer) error {
 	//log.Println("Add a peer:",addrString)
 	if _, ok := this.peerKeys[addr]; ok {
 		// the pool already has this client
-		log.Error(addr.IP, addr.Port, "The client already in")
+		log.Warning(addr.IP, addr.Port, "The client already in")
 		return errors.New("The client already in")
 
 	} else {
@@ -59,11 +59,11 @@ func (this *PeersPoolIml) PutPeer(addr pb.PeerAddr, client *Peer) error {
 		this.peerAddr[addr.Hash] = addr
 		this.peers[addr.Hash] = client
 		//persist the peer hash into data base
-		persistAddr,err := proto.Marshal(peer.PeerAddr.ToPeerAddress())
+		persistAddr,err := proto.Marshal(addr.ToPeerAddress())
 		if err != nil{
-			log.Errorf("cannot marshal the marshal Addreass for %v",peer.PeerAddr)
+			log.Errorf("cannot marshal the marshal Addreass for %v",addr)
 		}
-		persist.PutData(peer.PeerAddr.Hash,persistAddr)
+		persist.PutData(addr.Hash,persistAddr)
 		return nil
 	}
 

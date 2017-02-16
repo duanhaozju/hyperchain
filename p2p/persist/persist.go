@@ -23,7 +23,7 @@ func PutBool(key string,value bool) error {
 	if err != nil {
 		return err
 	}
-	var persistValue bool
+	var persistValue []byte
 
 	if value {
 		persistValue = []byte("true")
@@ -37,10 +37,10 @@ func PutBool(key string,value bool) error {
 func GetBool(key string) (bool,error){
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 	persistKey,err := db.Get([]byte("p2p." + key))
-	if persistKey == []byte("true"){
+	if string(persistKey) == "true"{
 		return true,err
 	}
 	return false,err

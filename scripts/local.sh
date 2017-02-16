@@ -134,6 +134,8 @@ do
     cp -rf  ${CONF_PATH} ${DUMP_PATH}/node${j}/
     cp -rf  ${CONF_PATH}/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/config/local_peerconfig.json
     cp -rf  ${CONF_PATH}/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/config/cert/
+    rm -rf  ${DUMP_PATH}/node${j}/build/
+    rm -rf  ${DUMP_PATH}/node${j}/db.log
 done
 
 f_check_local_env
