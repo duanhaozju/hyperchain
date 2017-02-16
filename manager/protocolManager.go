@@ -251,6 +251,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			}
 
 		case event.ConsensusEvent:
+			log.Error("enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 		}
 	}
@@ -323,7 +324,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 				self.Peermanager.DeleteNode(string(ev.Payload))
 			}
 		case event.AlreadyInChainEvent:
-			log.Debug("AlreadyInChainEvent")
+			log.Error("AlreadyInChainEvent")
 			// send negotiate event
 			if self.initType == 1 {
 				self.Peermanager.SetOnline()
@@ -380,6 +381,7 @@ func (self *ProtocolManager) GetNodeInfo() p2p.PeerInfos {
 }
 
 func (self *ProtocolManager) NegotiateView() {
+
 	negoView := &protos.Message{
 		Type:      protos.Message_NEGOTIATE_VIEW,
 		Timestamp: time.Now().UnixNano(),

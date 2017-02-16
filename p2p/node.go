@@ -118,7 +118,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	log.Debugf("\n###########################\nSTART OF NEW MESSAGE")
 	log.Debugf("LOCAL=> ID:%d IP:%s PORT:%d",node.localAddr.ID,node.localAddr.IP,node.localAddr.Port)
 	log.Debugf("MSG FORM=> ID: %d IP: %s PORT: %d",msg.From.ID,msg.From.IP,msg.From.Port)
-	log.Criticalf("MSG TYPE: %v",msg.MessageType)
+	log.Criticalf("MSG TYPE: %v, form: %d", msg.MessageType, msg.From.ID)
 	defer log.Debugf("END OF NEW MESSAGE\n###########################\n")
 
 	response := new(pb.Message)

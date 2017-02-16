@@ -319,11 +319,11 @@ func (this *GRPCPeerManager) reconnectToPeers(alive chan int) {
 	}
 	peerStatus[this.LocalAddr.ID] = true
 	N := MAX_PEER_NUM
-	F := int(math.Floor(float64(MAX_PEER_NUM - 1) / 3.0))
-	MaxNum := N - F - 1
-	if this.configs.IsOrigin() {
-		MaxNum = N - 1
-	}
+	//F := int(math.Floor(float64(MAX_PEER_NUM - 1) / 3.0))
+	MaxNum := N - 1
+	//if this.configs.IsOrigin() {
+	//	MaxNum = N - 1
+	//}
 	// connect other peers
 	_index := 1
 	for range time.Tick(200 * time.Millisecond) {

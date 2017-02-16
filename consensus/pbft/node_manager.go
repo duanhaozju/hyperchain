@@ -14,7 +14,7 @@ import (
 // New replica receive local NewNode message
 func (pbft *pbftProtocal) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 
-	logger.Debugf("New replica %d received local newNode message", pbft.id)
+	logger.Errorf("New replica %d received local newNode message", pbft.id)
 
 	if pbft.isNewNode {
 		logger.Warningf("New replica %d received duplicate local newNode message", pbft.id)
