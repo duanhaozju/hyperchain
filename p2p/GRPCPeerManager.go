@@ -68,6 +68,11 @@ func (this *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 	this.LocalNode.StartServer()
 	this.LocalNode.N = this.configs.GetMaxPeerNumber()
 	// connect to peer
+	bol,_ := persist.GetBool("onceOnline")
+	if bol {
+		log.Debug("restart this node")
+		//TODO func reconnect
+	}
 	if this.IsVP && this.IsOriginal {
 		// load the waiting connecting node information
 		log.Debug("start node as oirgin mode")
@@ -86,7 +91,7 @@ func (this *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 	log.Notice("┌────────────────────────────┐")
 	log.Notice("│  All NODES WERE CONNECTED  |")
 	log.Notice("└────────────────────────────┘")
-
+	persist.PutBool("onceOnline",true)
 }
 
 func (this *GRPCPeerManager) ConnectToOthers() {
