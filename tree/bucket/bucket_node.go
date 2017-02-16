@@ -2,8 +2,8 @@ package bucket
 
 import (
 	"fmt"
-	"github.com/golang/protobuf/proto"
 	"sync"
+	"encoding/json"
 )
 
 type BucketNode struct {
@@ -12,6 +12,12 @@ type BucketNode struct {
 	childrenUpdated    []bool
 	markedForDeletion  bool
 	lock               sync.RWMutex
+	length             int32
+}
+
+type MemBucketNode struct {
+	ChildrenCryptoHash [][]byte
+	Length             int32
 }
 
 func newBucketNode(bucketKey *BucketKey) *BucketNode {
@@ -26,28 +32,47 @@ func newBucketNode(bucketKey *BucketKey) *BucketNode {
 
 func unmarshalBucketNode(bucketKey *BucketKey, serializedBytes []byte) *BucketNode {
 	bucketNode := newBucketNode(bucketKey)
-	buffer := proto.NewBuffer(serializedBytes)
-	for i := 0; i < conf.getMaxGroupingAtEachLevel(); i++ {
-		childCryptoHash, err := buffer.DecodeRawBytes(false)
-		if err != nil {
-			panic(fmt.Errorf("this error should not occur: %s", err))
-		}
-		//protobuf's buffer.EncodeRawBytes/buffer.DecodeRawBytes convert a nil into a zero length byte-array, so nil check would not work
-		if len(childCryptoHash) != 0 {
-			bucketNode.childrenCryptoHash[i] = childCryptoHash
-		}
+
+	memNode := &MemBucketNode{}
+	err := json.Unmarshal(serializedBytes, memNode)
+	if err != nil {
+		log.Error("unmarshal bucket node failed.")
+		return nil
 	}
+	bucketNode.length = memNode.Length
+	bucketNode.childrenCryptoHash = memNode.ChildrenCryptoHash
+	//buffer := proto.NewBuffer(serializedBytes)
+	//for i := 0; i < conf.getMaxGroupingAtEachLevel(); i++ {
+	//	childCryptoHash, err := buffer.DecodeRawBytes(false)
+	//	if err != nil {
+	//		panic(fmt.Errorf("this error should not occur: %s", err))
+	//	}
+	//	//protobuf's buffer.EncodeRawBytes/buffer.DecodeRawBytes convert a nil into a zero length byte-array, so nil check would not work
+	//	if len(childCryptoHash) != 0 {
+	//		bucketNode.childrenCryptoHash[i] = childCryptoHash
+	//	}
+	//}
 	return bucketNode
 }
 
 func (bucketNode *BucketNode) marshal() []byte {
 	bucketNode.lock.RLock()
 	defer bucketNode.lock.RUnlock()
-	buffer := proto.NewBuffer([]byte{})
-	for i := 0; i < conf.getMaxGroupingAtEachLevel(); i++ {
-		buffer.EncodeRawBytes(bucketNode.childrenCryptoHash[i])
+
+	memNode := &MemBucketNode{
+		ChildrenCryptoHash : bucketNode.childrenCryptoHash,
+		Length: bucketNode.length,
 	}
-	return buffer.Bytes()
+	//buffer := proto.NewBuffer([]byte{})
+	//for i := 0; i < conf.getMaxGroupingAtEachLevel(); i++ {
+	//	buffer.EncodeRawBytes(bucketNode.childrenCryptoHash[i])
+	//}
+	data, err := json.Marshal(memNode)
+	if err != nil {
+		log.Error("marshal bucket node failed.")
+		return nil
+	}
+	return data
 }
 
 func (bucketNode *BucketNode) setChildCryptoHash(childKey *BucketKey, cryptoHash []byte) {
