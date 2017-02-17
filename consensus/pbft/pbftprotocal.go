@@ -98,6 +98,7 @@ type pbftProtocal struct {
 	viewChangeStore map[vcidx]*ViewChange  // track view-change messages
 	vcResetStore    map[FinishVcReset]bool // track vcReset message from others
 	inVcReset       bool                   // track if replica itself in vcReset
+	vcHandled		bool					// track if replica handled the vc after receive newview
 	// implement the validate transaction batch process
 	vid                 uint64                       // track the validate sequence number
 	lastVid             uint64                       // track the last validate batch seqNo
@@ -424,7 +425,7 @@ func (pbft *pbftProtocal) RecvMsg(e []byte) error {
 	msg := &protos.Message{}
 	err := proto.Unmarshal(e, msg)
 	if err != nil {
-		logger.Error("Inner RecvMsg Unmarshal error: can not unmarshal pb.Message: ", err, "msg: ", e)
+		logger.Errorf("Inner RecvMsg Unmarshal error: can not unmarshal pb.Message", err)
 		return err
 	}
 
@@ -446,7 +447,12 @@ func (pbft *pbftProtocal) RecvMsg(e []byte) error {
 
 func (pbft *pbftProtocal) RecvLocal(msg interface{}) error {
 
-	go pbft.postPbftEvent(msg)
+	switch msg.(type) {
+	case protos.RemoveCache:
+		go pbft.postRequestEvent(msg)
+	default:
+		go pbft.postPbftEvent(msg)
+	}
 
 	return nil
 }
@@ -454,26 +460,21 @@ func (pbft *pbftProtocal) RecvLocal(msg interface{}) error {
 func (pbft *pbftProtocal) ProcessEvent(ee events.Event) events.Event {
 
 	switch e := ee.(type) {
+	case *types.Transaction:
+		tx := e
+		return pbft.processTxEvent(tx)
+	case *TransactionBatch:
+		err := pbft.recvRequestBatch(e)
+		if err != nil {
+			logger.Warning(err.Error())
+		}
 	case protos.RemoveCache:
 		vid := e.Vid
 		ok := pbft.recvRemoveCache(vid)
 		if !ok {
-			logger.Warningf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
+			logger.Debugf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
 		}
 		return nil
-	case *types.Transaction:
-		tx := e
-		return pbft.processTxEvent(tx)
-	case viewChangedEvent:
-		pbft.updateViewChangeSeqNo()
-		pbft.startTimerIfOutstandingRequests()
-		pbft.vcResendCount = 0
-		primary := pbft.primary(pbft.view)
-		pbft.helper.InformPrimary(primary)
-		pbft.persistView(pbft.view)
-		atomic.StoreUint32(&pbft.activeView, 1)
-		pbft.processRequestsDuringViewChange()
-		logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/h=%d", pbft.id, primary, pbft.view, pbft.h)
 	case batchTimerEvent:
 		logger.Debugf("Replica %d batch timer expired", pbft.id)
 		if active := atomic.LoadUint32(&pbft.activeView); active == 1 && (len(pbft.batchStore) > 0) {
@@ -501,8 +502,17 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 			break
 		}
 		return next
-	case *TransactionBatch:
-		err = pbft.recvRequestBatch(et)
+	case viewChangedEvent:
+		pbft.updateViewChangeSeqNo()
+		pbft.startTimerIfOutstandingRequests()
+		pbft.vcResendCount = 0
+		primary := pbft.primary(pbft.view)
+		pbft.helper.InformPrimary(primary)
+		pbft.persistView(pbft.view)
+		atomic.StoreUint32(&pbft.activeView, 1)
+		pbft.vcHandled = false
+		pbft.processRequestsDuringViewChange()
+		logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/h=%d", pbft.id, primary, pbft.view, pbft.h)
 	case *PrePrepare:
 		err = pbft.recvPrePrepare(et)
 	case *Prepare:
@@ -717,6 +727,8 @@ func (pbft *pbftProtocal) processNullRequest(msg *protos.Message) error {
 	if pbft.primary(pbft.view) != pbft.id {
 		pbft.firstRequestTimer.Stop()
 	}
+
+	logger.Infof("Replica %d received null request from primary %d", pbft.id, pbft.primary(pbft.view))
 	pbft.nullReqTimerReset()
 	return nil
 }
@@ -747,10 +759,10 @@ func (pbft *pbftProtocal) processTxEvent(tx *types.Transaction) error {
 }
 
 func (pbft *pbftProtocal) processRequestsDuringViewChange() error {
-	if active := atomic.LoadUint32(&pbft.activeView); active == 1 {
+	if atomic.LoadUint32(&pbft.activeView) == 1 && !pbft.inRecovery {
 		pbft.processCachedTransactions()
 	} else {
-		logger.Critical("peer try to processReqDuringViewChange but view change is not finished")
+		logger.Critical("peer try to processReqDuringViewChange but view change is not finished or inRecovery")
 	}
 	return nil
 }
@@ -773,8 +785,6 @@ func (pbft *pbftProtocal) processCachedTransactions() {
 }
 
 func (pbft *pbftProtocal) leaderProcReq(tx *types.Transaction) error {
-
-	logger.Debugf("Batch primary %d queueing new request", pbft.id)
 
 	pbft.batchStore = append(pbft.batchStore, tx)
 
@@ -1038,7 +1048,9 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 
 	logger.Infof("Replica %d application caught up via state transfer, lastExec now %d", pbft.id, et.seqNo)
 	// XXX create checkpoint
+	pbft.currentExec = nil
 	pbft.lastExec = et.seqNo
+	pbft.currentVid = nil
 	pbft.vid = et.seqNo
 	pbft.lastVid = et.seqNo
 	bcInfo := getCurrentBlockInfo()
@@ -1047,7 +1059,6 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 	pbft.moveWatermarks(pbft.lastExec) // The watermark movement handles moving this to a checkpoint boundary
 	pbft.skipInProgress = false
 	pbft.validateState()
-	pbft.executeAfterStateUpdate()
 
 	if pbft.inRecovery {
 		if pbft.recoveryToSeqNo == nil {
@@ -1071,8 +1082,11 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 			return nil
 		}
 		peers := pbft.highStateTarget.replicas
+		pbft.certStore = make(map[msgID]*msgCert)
 		pbft.fetchRecoveryPQC(peers)
 		return nil
+	} else {
+		pbft.executeAfterStateUpdate()
 	}
 
 	return nil
@@ -1374,7 +1388,6 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new pre-prepare for request batch view=%d/seqNo=%d, hash=%s", preprep.View, preprep.SequenceNumber, preprep.BatchDigest))
 	}
 
-	logger.Debug("receive  pre-prepare first seq is:", preprep.SequenceNumber)
 	if pbft.primary(pbft.view) != pbft.id && pbft.prePrepared(preprep.BatchDigest, preprep.View, preprep.SequenceNumber) && !cert.sentPrepare {
 		logger.Debugf("Backup %d broadcasting prepare for view=%d/seqNo=%d", pbft.id, preprep.View, preprep.SequenceNumber)
 		prep := &Prepare{
@@ -2231,7 +2244,7 @@ func (pbft *pbftProtocal) processNegotiateView() error {
 		return nil
 	}
 
-	logger.Errorf("Replica %d now negotiate view...", pbft.id)
+	logger.Debugf("Replica %d now negotiate view...", pbft.id)
 
 	pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
 	pbft.negoViewRspStore = make(map[uint64]uint64)
@@ -2364,10 +2377,10 @@ func (pbft *pbftProtocal) restartNegoView() {
 //}
 
 func (pbft *pbftProtocal) processRequestsDuringRecovery() {
-	if !pbft.inRecovery {
+	if !pbft.inRecovery && atomic.LoadUint32(&pbft.activeView) == 1 {
 		pbft.processCachedTransactions()
 	} else {
-		logger.Critical("Replica %d try to processRequestsDuringRecovery but recovery is not finished", pbft.id)
+		logger.Critical("Replica %d try to processRequestsDuringRecovery but recovery is not finished or in viewChange", pbft.id)
 	}
 }
 
@@ -2408,7 +2421,7 @@ func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error 
 		if digest == cert.digest {
 			pbft.sendCommit(digest, result.View, result.SeqNo)
 		} else {
-			logger.Warningf("Relica %d cannot agree with the validate result for view=%d/seqNo=%d sent from primary", pbft.id, result.View, result.SeqNo)
+			logger.Warningf("Relica %d cannot agree with the validate result for view=%d/seqNo=%d sent from primary, self: %s, primary: %s", pbft.id, result.View, result.SeqNo, result.Hash, cert.digest)
 			pbft.sendViewChange()
 		}
 	}

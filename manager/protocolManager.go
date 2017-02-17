@@ -16,6 +16,7 @@ import (
 	"hyperchain/protos"
 	"hyperchain/recovery"
 	"time"
+	"hyperchain/admittance"
 )
 
 var log *logging.Logger // package-level logger
@@ -64,7 +65,7 @@ var eventMuxAll *event.TypeMux
 
 func NewProtocolManager(blockPool *blockpool.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
 	//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
-	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, initType int, expired chan bool, expiredTime time.Time) *ProtocolManager {
+	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, expired chan bool, expiredTime time.Time) *ProtocolManager {
 	synccache, _ := common.NewCache()
 	replicacache, _ := common.NewCache()
 	manager := &ProtocolManager{
@@ -81,7 +82,6 @@ func NewProtocolManager(blockPool *blockpool.BlockPool, peerManager p2p.PeerMana
 		syncReplica:         syncReplica,
 		expired:             expired,
 		expiredTime:         expiredTime,
-		initType:            initType,
 	}
 	manager.nodeInfo = make(p2p.PeerInfos, 0, 1000)
 	eventMuxAll = eventMux
@@ -95,7 +95,7 @@ func GetEventObject() *event.TypeMux {
 }
 
 // start listen new block msg and consensus msg
-func (pm *ProtocolManager) Start() {
+func (pm *ProtocolManager) Start(c chan int, cm *admittance.CAManager) {
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
 	pm.validateSub = pm.eventMux.Subscribe(event.ExeTxsEvent{})
 	pm.commitSub = pm.eventMux.Subscribe(event.CommitOrRollbackBlockEvent{})
@@ -103,12 +103,12 @@ func (pm *ProtocolManager) Start() {
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
 	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{}, event.InformPrimaryEvent{})
+	go pm.validateLoop()
+	go pm.commitLoop()
 	pm.peerMaintainSub = pm.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{},
 		event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{}, event.RecvNewPeerEvent{},
 		event.DelPeerEvent{}, event.BroadcastDelPeerEvent{}, event.RecvDelPeerEvent{})
 	pm.nonVerifiedPeerSub = pm.eventMux.Subscribe(event.VerifiedBlock{})
-	go pm.validateLoop()
-	go pm.commitLoop()
 	go pm.ConsensusLoop()
 	go pm.syncBlockLoop()
 	go pm.syncCheckpointLoop()
@@ -122,6 +122,9 @@ func (pm *ProtocolManager) Start() {
 		go pm.syncReplicaStatusLoop()
 		go pm.SyncReplicaStatus()
 	}
+
+	go pm.Peermanager.Start(c, pm.eventMux, cm)
+	pm.initType = <- c
 	if pm.initType == 0 {
 		// start in normal mode
 		pm.NegotiateView()
@@ -172,7 +175,8 @@ func (self *ProtocolManager) validateLoop() {
 		switch ev := obj.Data.(type) {
 		case event.ExeTxsEvent:
 			// start validation serially
-			self.blockPool.Validate(ev, self.commonHash, self.AccountManager.Encryption, self.Peermanager)
+			//self.blockPool.Validate(ev, self.commonHash, self.AccountManager.Encryption, self.Peermanager)
+			self.blockPool.Validate(ev, self.Peermanager)
 		}
 	}
 }
@@ -185,7 +189,7 @@ func (self *ProtocolManager) commitLoop() {
 
 		case event.CommitOrRollbackBlockEvent:
 			// start commit block serially
-			self.blockPool.CommitBlock(ev, self.commonHash, self.Peermanager)
+			self.blockPool.CommitBlock(ev, self.Peermanager)
 		}
 	}
 }

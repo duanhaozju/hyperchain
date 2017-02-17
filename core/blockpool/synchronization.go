@@ -5,6 +5,7 @@ import (
 	"hyperchain/core"
 	"hyperchain/core/types"
 	"errors"
+	"hyperchain/tree/bucket"
 )
 
 // ApplyBlock - apply all transactions in block into state during the `state update` process.
@@ -33,6 +34,12 @@ func (pool *BlockPool) applyBlock(block *types.Block, seqNo uint64) (error, *Blo
 	if err != nil {
 		return err, nil
 	}
+	state.Purge()
+
+	tree := state.GetTree()
+	bucketTree := tree.(*bucket.BucketTree)
+	bucketTree.ClearAllCache()
+
 	batch := state.FetchBatch(seqNo)
 	state.MarkProcessStart(pool.tempBlockNumber)
 	// initialize execution environment rule set
@@ -78,7 +85,7 @@ func (pool *BlockPool) applyBlock(block *types.Block, seqNo uint64) (error, *Blo
 	}
 	// generate new state fingerprint
 	// IMPORTANT doesn't call batch.Write util recv commit event for atomic assurance
-	log.Criticalf("validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
+	log.Noticef("validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
 		pool.tempBlockNumber, seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	return nil, &BlockRecord{
 		TxRoot:      txRoot,

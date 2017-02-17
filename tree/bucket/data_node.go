@@ -29,7 +29,7 @@ func (dataNode *DataNode) getCompositeKey() []byte {
 }
 
 func (dataNode *DataNode) isDelete() bool {
-	return dataNode.value == nil
+	return dataNode.value == nil || len(dataNode.value) == 0 || common.EmptyHash(common.BytesToHash(dataNode.value))
 }
 
 func (dataNode *DataNode) getKeyElements() (string, string) {

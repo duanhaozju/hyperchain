@@ -582,6 +582,12 @@ func (pbft *pbftProtocal) processNewView() events.Event {
 func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	logger.Debugf("Replica %d accepting new-view to view %d", pbft.id, pbft.view)
 
+	if pbft.vcHandled {
+		logger.Debugf("Replica %d repeated enter processReqInNewView, ignore it")
+		return nil
+	}
+	pbft.vcHandled = true
+
 	pbft.stopTimer()
 	pbft.nullRequestTimer.Stop()
 
@@ -593,12 +599,18 @@ func (pbft *pbftProtocal) processReqInNewView(nv *NewView) events.Event {
 	prevPrimary := pbft.primary(pbft.view - 1)
 	if prevPrimary == pbft.id {
 		pbft.rebuildDuplicator()
+		if len(pbft.batchStore) > 0 {
+			for _, tx := range pbft.batchStore {
+				go pbft.postRequestEvent(tx)
+			}
+			pbft.batchStore = nil
+		}
 	} else {
 		pbft.clearDuplicator()
 	}
 	pbft.vid = pbft.h
 	pbft.lastVid = pbft.h
-	if !pbft.skipInProgress {
+	if !pbft.skipInProgress && !pbft.inVcReset {
 		backendVid := uint64(pbft.vid + 1)
 		pbft.helper.VcReset(backendVid)
 		pbft.inVcReset = true
@@ -639,6 +651,11 @@ func (pbft *pbftProtocal) recvFinishVcReset(finish *FinishVcReset) events.Event 
 
 func (pbft *pbftProtocal) handleTailInNewView() events.Event {
 
+	if atomic.LoadUint32(&pbft.activeView) == 1 {
+		logger.Debugf("Replica %d in active view, ignore handleTail request", pbft.id)
+		return nil
+	}
+
 	if len(pbft.vcResetStore) < pbft.allCorrectReplicasQuorum()-1 {
 		return nil
 	}
@@ -672,7 +689,6 @@ func (pbft *pbftProtocal) handleTailInNewView() events.Event {
 		}
 	}
 
-	pbft.updateViewChangeSeqNo()
 	return viewChangedEvent{}
 }
 
@@ -696,8 +712,6 @@ func (pbft *pbftProtocal) finishViewChange() events.Event {
 	broadcast := consensusMsgHelper(msg, pbft.id)
 	primary := pbft.primary(pbft.view)
 	pbft.helper.InnerUnicast(broadcast, primary)
-	logger.Error("send finish vcReset: ", primary)
-	pbft.updateViewChangeSeqNo()
 	return viewChangedEvent{}
 }
 

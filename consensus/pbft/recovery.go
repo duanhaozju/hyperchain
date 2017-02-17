@@ -192,11 +192,12 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.moveWatermarks(n)
 		pbft.stateTransfer(target)
 		return nil
-	} else {
-		logger.Critical("self send stateUpdated")
+	} else if !pbft.skipInProgress && !pbft.inVcReset {
 		pbft.helper.VcReset(n+1)
-		state := &stateUpdatedEvent{seqNo: n}
-		go pbft.postPbftEvent(state)
+		pbft.inVcReset = true
+		return nil
+	} else {
+		logger.Debugf("Replica %d try to recovery but find itself in state update", pbft.id)
 		return nil
 	}
 }

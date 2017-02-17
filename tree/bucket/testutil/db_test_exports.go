@@ -2,7 +2,6 @@ package testutil
 
 import (
 	"github.com/spf13/viper"
-	"hyperchain/hyperdb"
 	"os"
 	"testing"
 )
@@ -36,11 +35,7 @@ func (testDB *TestDBWrapper) CleanDB(t testing.TB) {
 }
 
 func (testDB *TestDBWrapper) cleanup() {
-	if testDB.performCleanup {
-		db, _ := hyperdb.GetLDBDatabase()
-		db.Close()
-		testDB.performCleanup = false
-	}
+
 }
 
 func (testDB *TestDBWrapper) removeDBPath() {
