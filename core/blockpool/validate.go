@@ -19,7 +19,6 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
-	"time"
 )
 
 func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, peerManager p2p.PeerManager) {
@@ -240,7 +239,6 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	env := initEnvironment(state, pool.tempBlockNumber)
 	// execute transaction one by one
 	batch := state.FetchBatch(pool.tempBlockNumber)
-	t1 := time.Now()
 	for i, tx := range txs {
 		state.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(tx, env)

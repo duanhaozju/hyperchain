@@ -9,16 +9,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"github.com/willf/bloom"
-
-	//"time"
-	//LRU "github.com/hashicorp/golang-lru"
-
-	//"sync"
-	//"sync"
-	//"github.com/go-cache"
-	//"time"
-	//"time"
-	//"time"
 )
 
 type SuperLevelDB struct {
