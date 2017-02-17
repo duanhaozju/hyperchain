@@ -293,11 +293,9 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
 			ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
 			signpubbyte := ecdh256.Marshal(*signpub)
-			if node.TEM.GetSecret(msg.From.Hash) == ""{
-				genErr := node.TEM.GenerateSecret(signpubbyte, msg.From.Hash)
-				if genErr != nil {
-					log.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID,genErr)
-				}
+			genErr := node.TEM.GenerateSecret(signpubbyte, msg.From.Hash)
+			if genErr != nil {
+				log.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID,genErr)
 			}
 			// judge if reconnect TODO judge the idenfication
 			go node.reverseConnect(msg)
@@ -329,7 +327,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	case pb.Message_ATTEND:
 		{
 			//新节点全部连接上之后通知
-			node.higherEventManager.Post(event.NewPeerEvent{
+			go node.higherEventManager.Post(event.NewPeerEvent{
 				Payload: msg.Payload,
 			})
 

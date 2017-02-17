@@ -151,6 +151,7 @@ func (this *GRPCPeerManager) ConnectToOthers() {
 
 			//peer.TEM.SetSignPublicKey(signpuByte, retMessage.From.Hash)
 
+			log.Critical("put peer into temp invoke: CONNECT TO OTHERS",peer.PeerAddr.ID)
 			this.peersPool.PutPeerToTemp(*peer.PeerAddr, peer)
 			}
 	}
@@ -197,6 +198,7 @@ func (this *GRPCPeerManager) connectToIntroducer(introducerAddress pb.PeerAddr) 
 			return
 		}
 		if retMessage.MessageType == pb.Message_ATTEND_RESPONSE {
+			log.Critical("get a new ATTTEND RESPNSE from ID",retMessage.From.ID)
 			remoteECert := retMessage.Signature.ECert
 			if remoteECert == nil {
 				log.Errorf("Remote ECert is nil %v", retMessage.From)
@@ -229,9 +231,11 @@ func (this *GRPCPeerManager) connectToIntroducer(introducerAddress pb.PeerAddr) 
 			genErr := this.TEM.GenerateSecret(signpuByte, retMessage.From.Hash)
 			if genErr != nil {
 				log.Errorf("generate the share secret key, from node id: %d, error info %s ", retMessage.From.ID, genErr)
-			} else {
-				this.peersPool.PutPeerToTemp(*p.PeerAddr, p)
 			}
+			//else {
+			//	log.Critical("put peer into temp invoke: ATTENDRESPONSE",p.PeerAddr.ID)
+			//	this.peersPool.PutPeerToTemp(*p.PeerAddr, p)
+			//}
 		}else{
 			log.Error("ATTEND FAILED! TO NODE ID:",p.PeerAddr.ID)
 		}
