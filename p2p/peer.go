@@ -196,7 +196,7 @@ func NewPeerIntroducer(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transp
 	SignCert(&introduce_message,cm)
 
 	retMessage, err := peer.Client.Chat(context.Background(), &introduce_message)
-	log.Critical("introducer chat finished")
+	log.Debug("introducer chat finished")
 	log.Debug("reconnect return :", retMessage)
 	if err != nil {
 		log.Error("cannot establish a connection", err)
@@ -244,10 +244,10 @@ func NewPeerAttendNotify(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM tran
 		From:         localAddr.ToPeerAddress(),
 	}
 	SignCert(&introduce_message,cm)
-	log.Critical("SEND ATTEND_NOTIFY TO",peer.PeerAddr.ID)
+	log.Debugf("SEND ATTEND_NOTIFY TO",peer.PeerAddr.ID)
 
 	retMessage, err := peer.Client.Chat(context.Background(), &introduce_message)
-	log.Critical("attendNotify chat finished")
+	log.Debug("attendNotify chat finished")
 	log.Debug("reconnect return :", retMessage)
 	if err != nil {
 		log.Error("cannot establish a connection", err)
