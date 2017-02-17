@@ -27,14 +27,14 @@ func (b *BlocksController) GetBlocks() {
 	to := b.Input().Get("to")
 	args, err := utils.CheckIntervalArgs(from, to)
 	if err != nil {
-		b.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
+		b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 		b.ServeJSON()
 		return
 	}
 
 	blks, err := b.PublicBlockAPI.GetBlocks(args)
 	if err != nil {
-		b.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+		b.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
 	} else {
 		b.Data["json"] = NewJSONObject(blks, nil)
 	}
@@ -56,33 +56,33 @@ func (b *BlocksController) GetBlockByHashOrNum() {
 
 	if counts_params != 1 {
 		counts_params_str := strconv.Itoa(counts_params)
-		b.Data["json"] = NewJSONObject(nil, &invalidParamsError{"require 1 params, but get " + counts_params_str + " params"})
+		b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{"require 1 params, but get " + counts_params_str + " params"})
 		b.ServeJSON()
 		return
 	}
 
 	if p_blkNum != "" {
 		if blkNum, err := utils.CheckBlockNumber(p_blkNum); err != nil {
-			b.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
+			b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 		} else {
 			if block, err := b.PublicBlockAPI.GetBlockByNumber(blkNum); err != nil {
-				b.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+				b.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
 			} else {
 				b.Data["json"] = NewJSONObject(block, nil)
 			}
 		}
 	} else if p_blkHash != "" {
 		if blkHash, err := utils.CheckHash(p_blkHash); err != nil {
-			b.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
+			b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 		} else {
 			if block, err := b.PublicBlockAPI.GetBlockByHash(blkHash); err != nil {
-				b.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+				b.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
 			} else {
 				b.Data["json"] = NewJSONObject(block, nil)
 			}
 		}
 	} else {
-		b.Data["json"] = NewJSONObject(nil, &invalidParamsError{"invalid params"})
+		b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{"invalid params"})
 	}
 
 	b.ServeJSON()
@@ -113,7 +113,7 @@ func (b *BlocksController) GetLatestBlock() {
 
 	block, err := b.PublicBlockAPI.LatestBlock()
 	if err != nil {
-		b.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+		b.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
 	} else {
 		b.Data["json"] = NewJSONObject(block, nil)
 	}

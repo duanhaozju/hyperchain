@@ -54,14 +54,14 @@ func prepareIntervalArgs(args IntervalArgs) (IntervalArgs, error) {
 	var from, to *BlockNumber
 
 	if args.From == nil || args.To == nil {
-		return IntervalArgs{}, &invalidParamsError{"missing params 'from' or 'to'"}
+		return IntervalArgs{}, &InvalidParamsError{"missing params 'from' or 'to'"}
 	} else {
 		from = args.From
 		to = args.To
 	}
 
 	if *from > *to || *from < 1 || *to < 1 {
-		return IntervalArgs{}, &invalidParamsError{"invalid params"}
+		return IntervalArgs{}, &InvalidParamsError{"invalid params"}
 	}
 
 	return IntervalArgs{
@@ -101,7 +101,7 @@ type BlocksIntervalResult struct {
 func (blk *PublicBlockAPI) GetBlocksByTime(args IntervalTime) (*BlocksIntervalResult, error) {
 
 	if args.StartTime > args.Endtime {
-		return nil, &invalidParamsError{"invalid params"}
+		return nil, &InvalidParamsError{"invalid params"}
 	}
 
 	sumOfBlocks, startBlock, endBlock := getBlocksByTime(args.StartTime, args.Endtime, blk.db)
@@ -120,9 +120,9 @@ func (blk *PublicBlockAPI) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (N
 	}
 
 	if t, err := core.CalBlockGenerateAvgTime(realArgs.From.ToUint64(), realArgs.To.ToUint64()); err != nil && err.Error() == leveldb_not_found_error {
-		return 0, &leveldbNotFoundError{"block"}
+		return 0, &LeveldbNotFoundError{"block"}
 	} else if err != nil {
-		return 0, &callbackError{err.Error()}
+		return 0, &CallbackError{err.Error()}
 	} else {
 		return *NewInt64ToNumber(t), nil
 	}
@@ -146,9 +146,9 @@ func getBlockByNumber(n BlockNumber, db hyperdb.Database) (*BlockResult, error) 
 
 	m := n.ToUint64()
 	if blk, err := core.GetBlockByNumber(db, m); err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &leveldbNotFoundError{fmt.Sprintf("block by %d", n)}
+		return nil, &LeveldbNotFoundError{fmt.Sprintf("block by %d", n)}
 	} else if err != nil {
-		return nil, &callbackError{err.Error()}
+		return nil, &CallbackError{err.Error()}
 	} else {
 		return outputBlockResult(blk, db)
 	}
@@ -216,14 +216,14 @@ func outputBlockResult(block *types.Block, db hyperdb.Database) (*BlockResult, e
 func getBlockByHash(hash common.Hash, db hyperdb.Database) (*BlockResult, error) {
 
 	if common.EmptyHash(hash) == true {
-		return nil, &invalidParamsError{"invalid hash"}
+		return nil, &InvalidParamsError{"invalid hash"}
 	}
 
 	block, err := core.GetBlock(db, hash[:])
 	if err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &leveldbNotFoundError{fmt.Sprintf("block by %#x", hash)}
+		return nil, &LeveldbNotFoundError{fmt.Sprintf("block by %#x", hash)}
 	} else if err != nil {
-		return nil, &callbackError{err.Error()}
+		return nil, &CallbackError{err.Error()}
 	}
 
 	return outputBlockResult(block, db)
@@ -289,7 +289,7 @@ func (blk *PublicBlockAPI) QueryEvmAvgTime(args SendQueryArgs) (int64, error) {
 func (blk *PublicBlockAPI) QueryTPS(args SendQueryArgs) (string, error) {
 	err, ret := core.CalBlockGPS(args.From.ToInt64(), args.To.ToInt64())
 	if err != nil {
-		return "", &callbackError{err.Error()}
+		return "", &CallbackError{err.Error()}
 	}
 	return ret, nil
 }
@@ -297,7 +297,7 @@ func (blk *PublicBlockAPI) QueryTPS(args SendQueryArgs) (string, error) {
 func (blk *PublicBlockAPI) QueryWriteTime(args SendQueryArgs) (*StatisticResult, error) {
 	err, ret := core.GetBlockWriteTime(args.From.ToInt64(), args.To.ToInt64())
 	if err != nil {
-		return nil, &callbackError{err.Error()}
+		return nil, &CallbackError{err.Error()}
 	}
 	return &StatisticResult{
 		TimeList: ret,

@@ -28,14 +28,14 @@ func (t *TransactionsController) SendTransaction() {
 	var args hpc.SendTxArgs
 
 	if err := json.Unmarshal(t.Ctx.Input.RequestBody, &args); err != nil {
-		t.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 		t.ServeJSON()
 		return
 	}
 
 	hash, err := t.PublicTxAPI.SendTransaction(args)
 	if err != nil {
-		t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
 	} else {
 		t.Data["json"] = NewJSONObject(hash, nil)
 	}
@@ -49,14 +49,14 @@ func (t *TransactionsController) GetTransactions() {
 
 	args, err := utils.CheckIntervalArgs(from, to)
 	if err != nil {
-		t.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 		t.ServeJSON()
 		return
 	}
 
 	txs, err := t.PublicTxAPI.GetTransactions(args)
 	if err != nil {
-		t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
 	} else {
 		t.Data["json"] = NewJSONObject(txs, nil)
 	}
@@ -69,14 +69,14 @@ func (t *TransactionsController) GetTransactionByHash() {
 	hash, err := utils.CheckHash(t.Ctx.Input.Param(":transactionHash"))
 	//log.Error(hash.Hex())
 	if err != nil {
-		t.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 		t.ServeJSON()
 		return
 	}
 
 	tx, err := t.PublicTxAPI.GetTransactionByHash(hash)
 	if err != nil {
-		t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
 	} else {
 		t.Data["json"] = NewJSONObject(tx, nil)
 	}
@@ -102,33 +102,33 @@ func (t *TransactionsController) GetTransactionByBlockNumberOrBlockHash() {
 
 	if counts_params != 2 {
 		counts_params_str := strconv.Itoa(counts_params)
-		t.Data["json"] = NewJSONObject(nil, &invalidParamsError{"require 2 params, but get " + counts_params_str + " params"})
+		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{"require 2 params, but get " + counts_params_str + " params"})
 		t.ServeJSON()
 		return
 	}
 
 	if p_blkNum != "" {
 		if blkNum, index, err := utils.CheckBlkNumAndIndexParams(p_blkNum, p_index); err != nil {
-			t.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
+			t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 		} else {
 			if tx, err := t.PublicTxAPI.GetTransactionByBlockNumberAndIndex(blkNum, index); err != nil {
-				t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+				t.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
 			} else {
 				t.Data["json"] = NewJSONObject(tx, nil)
 			}
 		}
 	} else if p_blkHash != "" {
 		if blkHash, index, err := utils.CheckBlkHashAndIndexParams(p_blkHash, p_index); err != nil {
-			t.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
+			t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 		} else {
 			if tx, err := t.PublicTxAPI.GetTransactionByBlockHashAndIndex(blkHash, index); err != nil {
-				t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+				t.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
 			} else {
 				t.Data["json"] = NewJSONObject(tx, nil)
 			}
 		}
 	} else {
-		t.Data["json"] = NewJSONObject(nil, &invalidParamsError{"invalid params"})
+		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{"invalid params"})
 	}
 
 	t.ServeJSON()
@@ -138,21 +138,21 @@ func (t *TransactionsController) GetTransactionByBlockNumberOrBlockHash() {
 func (t *TransactionsController) GetTransactionReceipt() {
 	hash, err := utils.CheckHash(t.Ctx.Input.Param(":transactionHash"))
 	if err != nil {
-		t.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 		t.ServeJSON()
 		return
 	}
 
 	rep, err := t.PublicTxAPI.GetTransactionReceipt(hash)
 	if err != nil {
-		t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
 	} else {
 		if rep != nil && rep.Ret == "0x0" {
 			if tx, err := t.PublicTxAPI.GetTransactionByHash(hash); err != nil {
-				t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+				t.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
 			} else if tx.Invalid == true {
 				// 交易非法
-				t.Data["json"] = NewJSONObject(nil, &callbackError{tx.InvalidMsg})
+				t.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{tx.InvalidMsg})
 			} else {
 				// 交易合法
 				t.Data["json"] = NewJSONObject(rep, nil)
@@ -169,14 +169,14 @@ func (t *TransactionsController) GetSignHash() {
 	var args hpc.SendTxArgs
 
 	if err := json.Unmarshal(t.Ctx.Input.RequestBody, &args); err != nil {
-		t.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 		t.ServeJSON()
 		return
 	}
 
 	hash, err := t.PublicTxAPI.GetSignHash(args)
 	if err != nil {
-		t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
 	} else {
 		t.Data["json"] = NewJSONObject(hash, nil)
 	}
@@ -188,7 +188,7 @@ func (t *TransactionsController) GetTxAvgTimeByBlockNumber() {
 	to := t.Input().Get("to")
 	args, err := utils.CheckIntervalArgs(from, to)
 	if err != nil {
-		t.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 		t.ServeJSON()
 		return
 	}
@@ -196,7 +196,7 @@ func (t *TransactionsController) GetTxAvgTimeByBlockNumber() {
 	num, err := t.PublicTxAPI.GetTxAvgTimeByBlockNumber(args)
 
 	if err != nil {
-		t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
 	} else {
 		t.Data["json"] = NewJSONObject(num, nil)
 	}
@@ -207,7 +207,7 @@ func (t *TransactionsController) GetTransactionsCount() {
 
 	count, err := t.PublicTxAPI.GetTransactionsCount()
 	if err != nil {
-		t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
 	} else {
 		t.Data["json"] = NewJSONObject(count, nil)
 	}
@@ -218,12 +218,12 @@ func (t *TransactionsController) GetBlockTransactionCountByHash() {
 
 	hash, err := utils.CheckHash(t.Ctx.Input.Param(":blockHash"))
 	if err != nil {
-		t.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 	} else {
 
 		num, err := t.PublicTxAPI.GetBlockTransactionCountByHash(hash)
 		if err != nil {
-			t.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+			t.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
 		} else {
 			t.Data["json"] = NewJSONObject(num, nil)
 		}
