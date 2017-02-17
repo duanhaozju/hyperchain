@@ -9,7 +9,6 @@ import (
 	"hyperchain/hyperdb"
 	"math/big"
 	"time"
-	"sync"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -139,18 +138,18 @@ func (bucketTree *BucketTree) ComputeCryptoHash() ([]byte, error) {
 func (bucketTree *BucketTree) processDataNodeDelta() error {
 	afftectedBuckets := bucketTree.dataNodesDelta.getAffectedBuckets()
 
-	var wg sync.WaitGroup
+
 	for _, bucketKey := range afftectedBuckets {
-		wg.Add(1)
-		go func(bucketKey *BucketKey) {
+
+
 			updatedDataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(bucketKey)
 
 			// thread safe
 			existingDataNodes, err := bucketTree.dataNodeCache.FetchDataNodesFromCache(*bucketKey)
 			if err != nil {
 				log.Errorf("fetch datanodes failed. %s", err.Error())
-				wg.Done()
-				return
+
+				return err
 			}
 
 			// thread safe
@@ -181,10 +180,10 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 			parentBucket.setChildCryptoHash(bucketKey, cryptoHashForBucket)
 			//log.Debugf("bucket tree prefix %s bucket key %s, bucket hash %s",
 			//	bucketTree.treePrefix, bucketKey.String(), common.Bytes2Hex(cryptoHashForBucket))
-			wg.Done()
-		}(bucketKey)
+
+
 	}
-	wg.Wait()
+
 
 	return nil
 }
@@ -195,35 +194,35 @@ func (bucketTree *BucketTree) processBucketTreeDelta() error {
 		// thread safe
 		bucketNodes := bucketTree.bucketTreeDelta.getBucketNodesAt(level)
 		//log.Debugf("Bucket tree delta. Number of buckets at level [%d] are [%d]", level, len(bucketNodes))
-		var wg sync.WaitGroup
+
 		for _, bucketNode := range bucketNodes {
-			wg.Add(1)
-			go func(bucketNode *BucketNode) {
+
+
 				//log.Debugf("bucketNode in tree-delta [%s]", bucketNode)
 				dbBucketNode, err := bucketTree.bucketCache.get(*bucketNode.bucketKey)
 				//log.Debugf("bucket node from db [%s]", dbBucketNode)
 				if err != nil {
 					log.Errorf("get bucketnode from cache failed. %s", err.Error())
-					wg.Done()
-					return
+
+					return err
 				}
 				if dbBucketNode != nil {
 					bucketNode.mergeBucketNode(dbBucketNode)
 					//log.Debugf("After merge... bucketNode in tree-delta [%s]", bucketNode)
 				}
 				if level == 0 {
-					wg.Done()
-					return
+
+					return nil
 				}
 				//log.Debugf("Computing cryptoHash for bucket [%s]", bucketNode)
 				cryptoHash := bucketNode.computeCryptoHash()
 				//log.Debugf("cryptoHash for bucket [%s] is [%x]", bucketNode, cryptoHash)
 				parentBucket := bucketTree.bucketTreeDelta.getOrCreateBucketNode(bucketNode.bucketKey.getParentKey())
 				parentBucket.setChildCryptoHash(bucketNode.bucketKey, cryptoHash)
-				wg.Done()
-			}(bucketNode)
+
+
 		}
-		wg.Wait()
+
 	}
 	return nil
 }

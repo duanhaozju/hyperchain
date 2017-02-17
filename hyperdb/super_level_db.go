@@ -21,7 +21,7 @@ type SuperLevelDB struct {
 //New new super LevelDB
 func NewSLDB(filepath string) (*SuperLevelDB, error) {
 	db, err := leveldb.OpenFile(filepath, nil)
-	filter := bloom.New(1000 * 10000, 5) //TODO: make this configurable
+	filter := bloom.New(10000 * 10000, 3) //TODO: make this configurable
 
 	//c := cache.New(5*time.Minute, 30 * time.Second)
 
