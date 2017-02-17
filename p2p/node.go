@@ -77,6 +77,9 @@ func (node *Node) UpdateDelayTableThread() {
 
 //新节点需要监听相应的attend类型
 func (n *Node) attendNoticeProcess(N int) {
+	// fix the N as N-1
+	// temp
+	N = N - 1
 	isPrimaryConnectFlag := false
 	f := (N - 1) / 3
 	num := 0
@@ -119,7 +122,9 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	log.Debugf("\n###########################\nSTART OF NEW MESSAGE")
 	log.Debugf("LOCAL=> ID:%d IP:%s PORT:%d",node.localAddr.ID,node.localAddr.IP,node.localAddr.Port)
 	log.Debugf("MSG FORM=> ID: %d IP: %s PORT: %d",msg.From.ID,msg.From.IP,msg.From.Port)
-	log.Criticalf("MSG TYPE: %v, form: %d", msg.MessageType, msg.From.ID)
+	if msg.MessageType != pb.Message_CONSUS{
+		log.Criticalf("MSG TYPE: %v, form: %d", msg.MessageType, msg.From.ID)
+	}
 	defer log.Debugf("END OF NEW MESSAGE\n###########################\n")
 
 	response := new(pb.Message)
@@ -313,7 +318,6 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			//返回路由表信息
 			response.MessageType = pb.Message_INTRODUCE_RESPONSE
 			routers := node.PeersPool.ToRoutingTable()
-			log.Warningf("routers: %v",routers)
 			response.Payload, _ = proto.Marshal(&routers)
 		}
 	case pb.Message_INTRODUCE_RESPONSE:
@@ -354,11 +358,9 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
 			ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
 			signpubbyte := ecdh256.Marshal(*signpub)
-			if node.TEM.GetSecret(msg.From.Hash) == ""{
-				genErr := node.TEM.GenerateSecret(signpubbyte, msg.From.Hash)
-				if genErr != nil {
-					log.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID,genErr)
-				}
+			genErr := node.TEM.GenerateSecret(signpubbyte, msg.From.Hash)
+			if genErr != nil {
+				log.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID,genErr)
 			}
 			// judge if reconnect TODO judge the idenfication
 			response.Payload = node.TEM.GetLocalPublicKey()
@@ -386,11 +388,6 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			}
 			log.Debug("CERT SIGNATURE VERIFY PASS")
 			// TODO 这里不需要parse,修改VErycERTSignature方法
-			ecert, err := primitives.ParseCertificate(string(ecertByte))
-			if err != nil {
-				log.Error("cannot parse certificate", bol)
-				return response, errors.New("signature is wrong!!")
-			}
 			//再验证证书合法性
 			verifyEcert, ecertErr := node.CM.VerifyECert(string(ecertByte))
 			if !verifyEcert || ecertErr != nil {
@@ -400,15 +397,6 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			log.Debug("ECERT VERIFY PASS")
 			response.MessageType = pb.Message_ATTEND_NOTIFY_RESPONSE
 			//review 协商密钥
-			signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
-			ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
-			signpubbyte := ecdh256.Marshal(*signpub)
-			if node.TEM.GetSecret(msg.From.Hash) == ""{
-				genErr := node.TEM.GenerateSecret(signpubbyte, msg.From.Hash)
-				if genErr != nil {
-					log.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID,genErr)
-				}
-			}
 			// judge if reconnect TODO judge the idenfication
 			response.Payload = node.TEM.GetLocalPublicKey()
 			SignCert(response,node.CM)

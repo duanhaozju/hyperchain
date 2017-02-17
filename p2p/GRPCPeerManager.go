@@ -136,16 +136,6 @@ func (this *GRPCPeerManager) ConnectToOthers() {
 				log.Errorf("Remote ECert is nil %v", retMessage.From)
 				//return nil,errors.New("remote ecert is nil")
 			}
-			ecert, err := primitives.ParseCertificate(string(remoteECert))
-			if err != nil {
-				log.Error("cannot parse certificate")
-				//return nil,err
-			}
-			signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
-			ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
-			signpuByte := ecdh256.Marshal(*signpub)
-			//verify the rcert and set the status
-
 			remoteRCert := retMessage.Signature.RCert
 			if remoteRCert == nil {
 				log.Errorf("Remote ECert is nil %v", retMessage.From)
@@ -159,22 +149,16 @@ func (this *GRPCPeerManager) ConnectToOthers() {
 				peer.TEM.SetIsVerified(true, retMessage.From.Hash)
 			}
 
-			peer.TEM.SetSignPublicKey(signpuByte, retMessage.From.Hash)
-			if peer.TEM.GetSecret(retMessage.From.Hash) == "" {
-				genErr := peer.TEM.GenerateSecret(signpuByte, retMessage.From.Hash)
-				if genErr != nil {
-					log.Errorf("generate the share secret key, from node id: %d, error info %s ", retMessage.From.ID, genErr)
-				} else {
-					this.peersPool.PutPeerToTemp(*peer.PeerAddr, peer)
-				}
+			//peer.TEM.SetSignPublicKey(signpuByte, retMessage.From.Hash)
+
+			this.peersPool.PutPeerToTemp(*peer.PeerAddr, peer)
 			}
-		}
 	}
 }
 
 func (this *GRPCPeerManager) connectToIntroducer(introducerAddress pb.PeerAddr) {
 	//连接介绍人,并且将其路由表取回,然后进行存储
-	peer, payload, err := NewPeerIntroducer(&introducerAddress, this.LocalAddr, this.TEM, this.CM)
+	introducerPeer, payload, err := NewPeerIntroducer(&introducerAddress, this.LocalAddr, this.TEM, this.CM)
 	if err != nil {
 		log.Error("Node: ", introducerAddress.IP, ":", introducerAddress.Port, " can not connect to introducer!\n")
 		return
@@ -186,9 +170,7 @@ func (this *GRPCPeerManager) connectToIntroducer(introducerAddress pb.PeerAddr) 
 	}
 
 	//将介绍人的信息放入路由表中
-	this.peersPool.PutPeer(*peer.PeerAddr, peer)
-
-	log.Warning("merge the routing table and connect to :", routers)
+	this.peersPool.PutPeer(*introducerPeer.PeerAddr, introducerPeer)
 
 	this.peersPool.MergeFromRoutersToTemp(routers)
 
@@ -206,6 +188,7 @@ func (this *GRPCPeerManager) connectToIntroducer(introducerAddress pb.PeerAddr) 
 			From:         this.LocalNode.localAddr.ToPeerAddress(),
 		}
 		SignCert(attend_message, this.CM)
+		log.Critical("SEND ATTEND TO",p.PeerAddr.ID)
 		//retMessage, err := p.Chat(attend_message)
 		retMessage, err := p.Client.Chat(context.Background(), attend_message)
 		log.Debug("reconnect return :", retMessage)
@@ -235,22 +218,22 @@ func (this *GRPCPeerManager) connectToIntroducer(introducerAddress pb.PeerAddr) 
 				return
 			}
 
-			verifyRcert, rcertErr := peer.CM.VerifyRCert(string(remoteRCert))
+			verifyRcert, rcertErr := this.CM.VerifyRCert(string(remoteRCert))
 			if !verifyRcert || rcertErr != nil {
-				peer.TEM.SetIsVerified(false, retMessage.From.Hash)
+				this.TEM.SetIsVerified(false, retMessage.From.Hash)
 			} else {
-				peer.TEM.SetIsVerified(true, retMessage.From.Hash)
+				this.TEM.SetIsVerified(true, retMessage.From.Hash)
 			}
 
-			peer.TEM.SetSignPublicKey(signpuByte, retMessage.From.Hash)
-			if peer.TEM.GetSecret(retMessage.From.Hash) == "" {
-				genErr := peer.TEM.GenerateSecret(signpuByte, retMessage.From.Hash)
-				if genErr != nil {
-					log.Errorf("generate the share secret key, from node id: %d, error info %s ", retMessage.From.ID, genErr)
-				} else {
-					this.peersPool.PutPeerToTemp(*peer.PeerAddr, peer)
-				}
+			this.TEM.SetSignPublicKey(signpuByte, retMessage.From.Hash)
+			genErr := this.TEM.GenerateSecret(signpuByte, retMessage.From.Hash)
+			if genErr != nil {
+				log.Errorf("generate the share secret key, from node id: %d, error info %s ", retMessage.From.ID, genErr)
+			} else {
+				this.peersPool.PutPeerToTemp(*p.PeerAddr, p)
 			}
+		}else{
+			log.Error("ATTEND FAILED! TO NODE ID:",p.PeerAddr.ID)
 		}
 		if err != nil {
 			log.Error(err)
@@ -746,8 +729,7 @@ func (this *GRPCPeerManager) UpdateRoutingTable(payload []byte) {
 				log.Errorf("generate the share secret key, from node id: %d, error info %s ", retMessage.From.ID, genErr)
 			} else {
 				this.peersPool.MergeTempPeers(newPeer)
-				log.Critical("add new peer into peerspool",newPeer)
-				log.Critical("after add new peer",this.peersPool.GetPeers())
+				log.Critical("add new peer into peerspool, new peer id",newPeer.PeerAddr.ID)
 				this.LocalNode.N += 1
 				this.configs.AddNodesAndPersist(this.peersPool.GetPeersAddrMap())
 			}
@@ -768,7 +750,7 @@ func (this *GRPCPeerManager) SetOnline(){
 	//the new attend node
 	this.IsOnline = true
 	this.peersPool.MergeTempPeersForNewNode()
-	log.Criticalf("new node peers : %v ,temp: %v", this.peersPool.GetPeers(), this.peersPool.GetPeersWithTemp())
+	log.Criticalf(" NEW PEER SET ONLINE",this.LocalNode.localAddr.ID)
 	this.LocalNode.N = this.peersPool.GetAliveNodeNum()
 	this.configs.AddNodesAndPersist(this.peersPool.GetPeersAddrMap())
 }

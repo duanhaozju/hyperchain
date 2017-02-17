@@ -73,6 +73,30 @@ func NewPeer(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.Transp
 	return &peer, nil
 }
 
+func NewPeerPure(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager, cm *admittance.CAManager) (*Peer, error) {
+	//log.Critical(peerAddr,localAddr,TEM)
+	var peer Peer
+	peer.TEM = TEM
+	peer.CM = cm
+	//log.Critical("TEM",TEM)
+	peer.LocalAddr = localAddr
+	peer.PeerAddr = peerAddr
+	//peer.PeerPool = peerspool
+	opts := peer.CM.GetGrpcClientOpts()
+	// dial to remote
+	conn, err := grpc.Dial(peerAddr.IP+":"+strconv.Itoa(peerAddr.Port), opts...)
+	if err != nil {
+		log.Error("err:", errors.New("Cannot establish a connection!"))
+		return nil, err
+	}
+	peer.Connection = conn
+	peer.Client = pb.NewChatClient(conn)
+	// set primary flag false
+	peer.IsPrimary = false
+	//review handshake operation
+	return &peer, nil
+}
+
 // handShake connect to remote peer, and negotiate the secret
 // handShake 用于与相应的远端peer进行通信，并进行密钥协商
 func (peer *Peer) handShake() (err error) {
@@ -220,6 +244,7 @@ func NewPeerAttendNotify(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM tran
 		From:         localAddr.ToPeerAddress(),
 	}
 	SignCert(&introduce_message,cm)
+	log.Critical("SEND ATTEND_NOTIFY TO",peer.PeerAddr.ID)
 
 	retMessage, err := peer.Client.Chat(context.Background(), &introduce_message)
 	log.Critical("attendNotify chat finished")
@@ -389,7 +414,7 @@ func NewPeerReverse(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport
 // which implements the service that prototype file declares
 //
 func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
-	log.Critical("CHAT:", msg.From.ID, ">>>", this.PeerAddr.ID)
+	log.Debug("CHAT:", msg.From.ID, ">>>", this.PeerAddr.ID)
 	msg.Payload, err = this.TEM.EncWithSecret(msg.Payload, this.PeerAddr.Hash)
 
 	//log.Critical("after enc secret",msg.Payload)

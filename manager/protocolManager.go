@@ -247,7 +247,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			}
 
 		case event.ConsensusEvent:
-			log.Error("enter ConsensusEvent")
+			//log.Error("enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 		}
 	}
@@ -264,7 +264,6 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			msg := &protos.AddNodeMessage{
 				Payload: ev.Payload,
 			}
-			log.Critical("newPeerEvent",ev.Payload)
 			self.consenter.RecvLocal(msg)
 		case event.BroadcastNewPeerEvent:
 			log.Debug("BroadcastNewPeerEvent")

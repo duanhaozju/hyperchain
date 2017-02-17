@@ -172,7 +172,6 @@ func (this *PeersPoolIml) GetPeersWithTemp() []*Peer {
 //将peerspool转换成能够传输的列表
 func (this *PeersPoolIml) ToRoutingTable() pb.Routers {
 	peers := this.GetPeers()
-	log.Warning("peers %v",peers)
 	var routers pb.Routers
 
 	for _, pers := range peers {
@@ -208,7 +207,7 @@ func (this *PeersPoolIml) ToRoutingTableWithout(hash string) pb.Routers {
 func (this *PeersPoolIml) MergeFromRoutersToTemp(routers pb.Routers) {
 	for _, peerAddress := range routers.Routers {
 		peerAddr := pb.RecoverPeerAddr(peerAddress)
-		newPeer, err := NewPeer(peerAddr, this.localAddr, this.TEM, this.CM)
+		newPeer, err := NewPeerPure(peerAddr, this.localAddr, this.TEM, this.CM)
 		if err != nil {
 			log.Error("merge from routers error ", err)
 		}
