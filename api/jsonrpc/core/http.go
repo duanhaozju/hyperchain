@@ -83,7 +83,7 @@ func startHttp(httpPort int, restPort int, logsPath string, srv *Server, cm *adm
 	// todo 读取　app.conf　配置文件
 	// the first param adapterName is ini/json/xml/yaml.
 	//beego.LoadAppConfig("ini", "jsonrpc/RESTful_api/conf/app.conf")
-	beego.Run("127.0.0.1:" + strconv.Itoa(restPort))
+	beego.Run("0.0.0.0:" + strconv.Itoa(restPort))
 	// ===================================== 2016.11.15 END  ================================ //
 }
 
