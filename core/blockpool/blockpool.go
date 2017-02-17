@@ -64,6 +64,7 @@ type BlockPool struct {
 						  // thread safe cache
 	blockCache            *common.Cache       // cache for validation result
 	validateEventQueue    *common.Cache       // cache for storing validation event
+	queue           *common.Cache
 						  // config
 	conf                  *common.Config      // block configuration
 						  // hash utils
@@ -80,12 +81,17 @@ type BlockPool struct {
 	commitInProgress      int32
 	validateQueueLen      int32
 	commitQueueLen        int32
+	helper                *Helper
 
 }
 
-func NewBlockPool(consenter consensus.Consenter, conf *common.Config, commonHash crypto.CommonHash, encryption crypto.Encryption) *BlockPool {
+func NewBlockPool(consenter consensus.Consenter, conf *common.Config, commonHash crypto.CommonHash, encryption crypto.Encryption, eventMux *event.TypeMux) *BlockPool {
 	var err error
 	blockCache, err := common.NewCache()
+	if err != nil {
+		return nil
+	}
+	queue, err := common.NewCache()
 	if err != nil {
 		return nil
 	}
@@ -93,12 +99,14 @@ func NewBlockPool(consenter consensus.Consenter, conf *common.Config, commonHash
 	if err != nil {
 		return nil
 	}
-
+	helper := NewHelper(eventMux)
 	pool := &BlockPool{
 		consenter:       consenter,
+		queue:           queue,
 		validateEventQueue: validationQueue,
 		blockCache:      blockCache,
 		conf:            conf,
+		helper:          helper,
 	}
 	// 1. set demand number and demand seqNo
 	currentChain := core.GetChainCopy()

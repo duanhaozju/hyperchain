@@ -33,7 +33,7 @@ global:
 ############################
     configs:
         caconfig: "config/caconfig.toml"
-        peers: "config/peerconfig.json"
+        peers: "config/local_peerconfig.json"
         genesis: "config/genesis.json"
         pbft: "config/pbft.yaml"
         license: "config/LICENSE"

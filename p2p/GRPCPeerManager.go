@@ -60,6 +60,7 @@ func NewGrpcManager(conf *common.Config) *GRPCPeerManager {
 // Start start the Normal local listen server
 func (this *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux, cm *admittance.CAManager) {
 	if this.LocalAddr.ID == 0 || this.configs == nil {
+		log.Errorf("ID %d", this.LocalAddr.ID)
 		panic("the PeerManager hasn't initlized")
 	}
 	//cert manager
@@ -86,13 +87,14 @@ func (this *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 			log.Critical("start node as oirgin mode")
 			this.connectToPeers(aliveChain)
 			this.IsOnline = true
+			//aliveChain <- 0
 		} else if this.IsVP && !this.IsOriginal {
 			// start attend routinei
 			log.Critical("connect to introducer")
-			go this.LocalNode.attendNoticeProcess(this.LocalNode.N)
-			//review connect to introducer
-			this.connectToIntroducer(*this.Introducer)
+			// IMPORT should aliveChain <- 1 frist
 			aliveChain <- 1
+			go this.LocalNode.attendNoticeProcess(this.LocalNode.N)
+			this.connectToIntroducer(*this.Introducer)
 		} else if !this.IsVP {
 			log.Critical("connect to vp")
 			this.vpConnect()

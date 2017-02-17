@@ -125,18 +125,10 @@ func (pm *ProtocolManager) Start(c chan int, cm *admittance.CAManager) {
 
 	go pm.Peermanager.Start(c, pm.eventMux, cm)
 	pm.initType = <- c
+	log.Critical("#@#@#@#@###########@#@#@#@#@#@")
 	if pm.initType == 0 {
 		// start in normal mode
 		pm.NegotiateView()
-	}
-	if pm.initType == 1 {
-		// join the chain dynamically
-		payload := pm.Peermanager.GetLocalAddressPayload()
-		msg := &protos.NewNodeMessage{
-			Payload: payload,
-		}
-		pm.consenter.RecvLocal(msg)
-		//pm.Peermanager.ConnectToOthers()
 	}
 }
 
@@ -332,6 +324,11 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			// send negotiate event
 			if self.initType == 1 {
 				self.Peermanager.SetOnline()
+				payload :=self.Peermanager.GetLocalAddressPayload()
+				msg := &protos.NewNodeMessage{
+					Payload: payload,
+				}
+				self.consenter.RecvLocal(msg)
 				self.NegotiateView()
 			}
 		}
