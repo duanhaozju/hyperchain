@@ -10,13 +10,15 @@ type JSONObject struct {
 	Result  interface{} `json:"result"`
 }
 
-func NewJSONObject(data interface{}, err hpc.JSONRPCError) *JSONObject {
+func NewJSONObject(data interface{}, err error) *JSONObject {
 
 	if err != nil {
 
+		jsonrpcError := err.(hpc.JSONRPCError)
+
 		return &JSONObject{
-			Code:    err.Code(),
-			Message: err.Error(),
+			Code:    jsonrpcError.Code(),
+			Message: jsonrpcError.Error(),
 			Result:  nil,
 		}
 	}

@@ -19,7 +19,7 @@ func (n *NodesController) Prepare() {
 func (n *NodesController) GetNodes() {
 
 	if nodes, err := n.PublicNodeAPI.GetNodes(); err != nil {
-		n.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
+		n.Data["json"] = NewJSONObject(nil, err)
 	} else {
 		n.Data["json"] = NewJSONObject(nodes, nil)
 	}

@@ -24,18 +24,18 @@ func NewPublicCertAPI(cm *admittance.CAManager) *PublicCertAPI {
 }
 
 // GetNodes returns status of all the nodes
-func (node *PublicCertAPI) GetTCert(args CertArgs) (TCertReturn, error) {
+func (node *PublicCertAPI) GetTCert(args CertArgs) (*TCertReturn, error) {
 	if node.cm == nil {
-		return TCertReturn{TCert: "invalid tcert"}, &CertError{"CAManager is nil"}
+		return nil, &CertError{"CAManager is nil"}
 	}
 	tcert, err := node.cm.SignTCert(args.Pubkey)
 
 	if err != nil {
 		log.Error("sign tcert failed")
 		log.Error(err)
-		return TCertReturn{TCert: ""}, &CertError{"signed tcert failed"}
+		return nil, &CertError{"signed tcert failed"}
 	}
 	tcert = common.TransportEncode(tcert)
-	return TCertReturn{TCert:tcert }, nil
+	return &TCertReturn{TCert:tcert }, nil
 
 }

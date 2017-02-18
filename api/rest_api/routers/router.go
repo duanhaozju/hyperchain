@@ -13,7 +13,7 @@ func NewRouter() {
 			beego.NSRouter("/send", &controllers.TransactionsController{}, "post:SendTransaction"),
 			beego.NSRouter("/list", &controllers.TransactionsController{}, "get:GetTransactions"),
 			beego.NSRouter("/:transactionHash", &controllers.TransactionsController{}, "get:GetTransactionByHash"),
-			beego.NSRouter("/query", &controllers.TransactionsController{}, "get:GetTransactionByBlockNumberOrBlockHash"),
+			beego.NSRouter("/query", &controllers.TransactionsController{}, "get:GetTransactionByBlockNumberOrBlockHashOrTime"),
 			beego.NSRouter("/:transactionHash/receipt", &controllers.TransactionsController{}, "get:GetTransactionReceipt"),
 			beego.NSRouter("/signature-hash", &controllers.TransactionsController{}, "post:GetSignHash"),
 			//beego.NSRouter("/get-hash-for-sign", &controllers.TransactionsController{}, "post:GetSignHash"),

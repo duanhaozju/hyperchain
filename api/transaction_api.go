@@ -227,7 +227,7 @@ func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*Rece
 			Log:             logs,
 		}, nil
 	} else if err != nil {
-		return nil, err
+		return nil, &CallbackError{err.Error()}
 	} else {
 		if errType == types.InvalidTransactionRecord_SIGFAILED {
 			return nil, &SignatureInvalidError{errType.String()}
@@ -318,7 +318,7 @@ func (tran *PublicTransactionAPI) GetTransactionByHash(hash common.Hash) (*Trans
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
 func (tran *PublicTransactionAPI) GetTransactionByBlockHashAndIndex(hash common.Hash, index Number) (*TransactionResult, error) {
-
+	//return nil, errors.New("hahaha")
 	if common.EmptyHash(hash) == true {
 		return nil, &InvalidParamsError{"Invalid hash"}
 	}
@@ -332,6 +332,10 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockHashAndIndex(hash common.
 	}
 
 	txCount := len(block.Transactions)
+
+	if index.ToInt() >= txCount {
+		return nil, &LeveldbNotFoundError{fmt.Sprintf("transaction, this block contains %v transactions, but the index %v is out of range", txCount, index)}
+	}
 
 	if index.ToInt() >= 0 && index.ToInt() < txCount {
 
@@ -356,6 +360,10 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockNumberAndIndex(n BlockNum
 
 	txCount := len(block.Transactions)
 
+	if index.ToInt() >= txCount {
+		return nil, &LeveldbNotFoundError{fmt.Sprintf("transaction, this block contains %v transactions, but the index %v is out of range", txCount, index)}
+	}
+
 	if index.ToInt() >= 0 && index.ToInt() < txCount {
 
 		tx := block.Transactions[index]
@@ -369,8 +377,8 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockNumberAndIndex(n BlockNum
 // GetTransactionsByTime returns the transactions for the given time duration.
 func (tran *PublicTransactionAPI) GetTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
 
-	if args.StartTime > args.Endtime {
-		return nil, &InvalidParamsError{"invalid params"}
+	if args.StartTime > args.Endtime || args.StartTime < 0 || args.Endtime < 0{
+		return nil, &InvalidParamsError{"Invalid params, both startTime and endTime must be positive, startTime is less than endTime"}
 	}
 
 	currentChain := core.GetChainCopy()
@@ -388,7 +396,7 @@ func (tran *PublicTransactionAPI) GetTransactionsByTime(args IntervalTime) ([]*T
 		}
 		if block.WriteTime >= args.StartTime && block.WriteTime <= args.Endtime {
 			trans := block.GetTransactions()
-			log.Error(len(trans))
+
 			for _, t := range trans {
 				tx, err := outputTransaction(t, tran.db)
 				if err != nil {

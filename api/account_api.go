@@ -118,7 +118,7 @@ func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
 				return "", &LeveldbNotFoundError{"stateobject, the account may not exist"}
 			}
 		} else if err != nil {
-			return "", err
+			return "", &CallbackError{err.Error()}
 		} else {
 			return "", &LeveldbNotFoundError{"statedb"}
 		}

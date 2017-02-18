@@ -34,7 +34,7 @@ func (b *BlocksController) GetBlocks() {
 
 	blks, err := b.PublicBlockAPI.GetBlocks(args)
 	if err != nil {
-		b.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
+		b.Data["json"] = NewJSONObject(nil, err)
 	} else {
 		b.Data["json"] = NewJSONObject(blks, nil)
 	}
@@ -66,7 +66,7 @@ func (b *BlocksController) GetBlockByHashOrNum() {
 			b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 		} else {
 			if block, err := b.PublicBlockAPI.GetBlockByNumber(blkNum); err != nil {
-				b.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
+				b.Data["json"] = NewJSONObject(nil, err)
 			} else {
 				b.Data["json"] = NewJSONObject(block, nil)
 			}
@@ -76,7 +76,7 @@ func (b *BlocksController) GetBlockByHashOrNum() {
 			b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 		} else {
 			if block, err := b.PublicBlockAPI.GetBlockByHash(blkHash); err != nil {
-				b.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
+				b.Data["json"] = NewJSONObject(nil, err)
 			} else {
 				b.Data["json"] = NewJSONObject(block, nil)
 			}
@@ -113,7 +113,7 @@ func (b *BlocksController) GetLatestBlock() {
 
 	block, err := b.PublicBlockAPI.LatestBlock()
 	if err != nil {
-		b.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
+		b.Data["json"] = NewJSONObject(nil, err)
 	} else {
 		b.Data["json"] = NewJSONObject(block, nil)
 	}

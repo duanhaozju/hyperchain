@@ -32,7 +32,7 @@ func (c *ContractsController) CompileContract() {
 
 	compiled_res, err := c.PublicContractAPI.CompileContract(jsonObj.Source)
 	if err != nil {
-		c.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
+		c.Data["json"] = NewJSONObject(nil, err)
 	} else {
 		c.Data["json"] = NewJSONObject(compiled_res, nil)
 	}
@@ -51,7 +51,7 @@ func (c *ContractsController) DeployContract() {
 
 	hash, err := c.PublicContractAPI.DeployContract(args)
 	if err != nil {
-		c.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
+		c.Data["json"] = NewJSONObject(nil, err)
 	} else {
 		c.Data["json"] = NewJSONObject(hash, nil)
 	}
@@ -70,7 +70,7 @@ func (c *ContractsController) InvokeContract() {
 
 	hash, err := c.PublicContractAPI.InvokeContract(args)
 	if err != nil {
-		c.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
+		c.Data["json"] = NewJSONObject(nil, err)
 	} else {
 		c.Data["json"] = NewJSONObject(hash, nil)
 	}
@@ -94,7 +94,7 @@ func (c *ContractsController) GetCode() {
 		c.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 	} else {
 		if block, err := c.PublicContractAPI.GetCode(address); err != nil {
-			c.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
+			c.Data["json"] = NewJSONObject(nil, err)
 		} else {
 			c.Data["json"] = NewJSONObject(block, nil)
 		}
@@ -117,7 +117,7 @@ func (c *ContractsController) GetContractCountByAddr() {
 		c.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 	} else {
 		if count, err := c.PublicContractAPI.GetContractCountByAddr(address); err != nil {
-			c.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{err.Error()})
+			c.Data["json"] = NewJSONObject(nil, err)
 		} else {
 			c.Data["json"] = NewJSONObject(count, nil)
 		}

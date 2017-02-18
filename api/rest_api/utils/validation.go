@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"hyperchain/api"
 	"hyperchain/common"
+	"strconv"
 )
 
 // CheckIntervalArgs
@@ -22,6 +23,23 @@ func CheckIntervalArgs(from, to string) (hpc.IntervalArgs, error) {
 	return intervalArgs, nil
 }
 
+func CheckIntervalTimeArgs(start, end string) (hpc.IntervalTime, error) {
+	startTime, err := strconv.ParseInt(start, 10, 64)
+	if err != nil {
+		return hpc.IntervalTime{}, err
+	}
+
+	endTime, err := strconv.ParseInt(end, 10, 64)
+	if err != nil {
+		return hpc.IntervalTime{}, err
+	}
+
+	return hpc.IntervalTime{
+		StartTime: startTime,
+		Endtime: endTime,
+	}, nil
+}
+
 func CheckHash(hash string) (common.Hash, error) {
 
 	jsonObj := struct {
@@ -29,7 +47,7 @@ func CheckHash(hash string) (common.Hash, error) {
 	}{}
 
 	jsonStr := "{\"hash\":\"" + hash + "\"}"
-	//fmt.Println(jsonStr)
+
 	err := json.Unmarshal([]byte(jsonStr), &jsonObj)
 	if err != nil {
 		return common.Hash{}, err
@@ -46,7 +64,7 @@ func CheckAddress(address string) (common.Address, error) {
 	}{}
 
 	jsonStr := "{\"address\":\"" + address + "\"}"
-	//fmt.Println(jsonStr)
+
 	err := json.Unmarshal([]byte(jsonStr), &jsonObj)
 	if err != nil {
 		return common.Address{}, err
@@ -61,7 +79,7 @@ func CheckBlockNumber(number string) (hpc.BlockNumber, error) {
 	}{}
 
 	jsonStr := "{\"blkNum\":\"" + number + "\"}"
-	//fmt.Println(jsonStr)
+
 	err := json.Unmarshal([]byte(jsonStr), &jsonObj)
 	if err != nil {
 		return hpc.BlockNumber(0), err
@@ -76,7 +94,7 @@ func CheckNumber(number string) (hpc.Number, error) {
 	}{}
 
 	jsonStr := "{\"num\":\"" + number + "\"}"
-	//fmt.Println(jsonStr)
+
 	err := json.Unmarshal([]byte(jsonStr), &jsonObj)
 	if err != nil {
 		return hpc.Number(0), err
@@ -92,7 +110,7 @@ func CheckBlkNumAndIndexParams(blkNum, index string) (hpc.BlockNumber, hpc.Numbe
 	}{}
 
 	jsonStr := "{\"blkNum\":\"" + blkNum + "\",\"index\":\"" + index + "\"}"
-	//fmt.Println(jsonStr)
+
 	err := json.Unmarshal([]byte(jsonStr), &jsonObj)
 	if err != nil {
 		return hpc.BlockNumber(0), hpc.Number(0), err
@@ -108,7 +126,7 @@ func CheckBlkHashAndIndexParams(blkHash, index string) (common.Hash, hpc.Number,
 	}{}
 
 	jsonStr := "{\"blkHash\":\"" + blkHash + "\",\"index\":\"" + index + "\"}"
-	//fmt.Println(jsonStr)
+
 	err := json.Unmarshal([]byte(jsonStr), &jsonObj)
 	if err != nil {
 		return common.Hash{}, hpc.Number(0), err

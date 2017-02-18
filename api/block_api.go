@@ -87,8 +87,7 @@ func (blk *PublicBlockAPI) GetBlockByHash(hash common.Hash) (*BlockResult, error
 
 // GetBlockByNumber returns the block for the given block number.
 func (blk *PublicBlockAPI) GetBlockByNumber(number BlockNumber) (*BlockResult, error) {
-	block, err := getBlockByNumber(number, blk.db)
-	return block, err
+	return getBlockByNumber(number, blk.db)
 }
 
 type BlocksIntervalResult struct {
