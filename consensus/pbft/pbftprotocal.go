@@ -449,7 +449,11 @@ func (pbft *pbftProtocal) RecvLocal(msg interface{}) error {
 
 	switch msg.(type) {
 	case protos.RemoveCache:
-		go pbft.postRequestEvent(msg)
+		if atomic.LoadUint32(&pbft.activeView) == 1 && pbft.primary(pbft.view) == pbft.id {
+			go pbft.postRequestEvent(msg)
+		} else {
+			go pbft.postPbftEvent(msg)
+		}
 	default:
 		go pbft.postPbftEvent(msg)
 	}
