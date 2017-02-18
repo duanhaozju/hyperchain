@@ -163,7 +163,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 		log.Debug("CERT SIGNATURE VERIFY PASS")
 		// review 用CM对验证进行管理(此处的必要性需要考虑)
-		// TODO 1. 验证ECERT 的合法性
+		// TODO 1. 验证ECERT的合法性
 		//bol1,err := node.CM.VerifyECert()
 
 		// review 2. 验证传输消息签名的合法性
