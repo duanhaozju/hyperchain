@@ -8,7 +8,9 @@ import (
 	"time"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"os"
-	//"bytes"
+	"fmt"
+	"strconv"
+	"strings"
 )
 
 //IndexManager manage indexes by the namespace.
@@ -16,7 +18,7 @@ type IndexManager struct {
 	indexs map[string] Index
 }
 
-var bloomPath = "bloom.dat"
+var bloomPath = "./build/index/index.bloom.dat" //TODO: fix me
 
 //GetIndex get index by the namespace.
 func (im IndexManager) GetIndex(ns string) Index {
@@ -43,6 +45,7 @@ type Index interface {
 	AddIndexForKey(key []byte) error
 	Init() error
 	Rebuild() error
+	Persist() error
 }
 
 //KeyIndex index implement for key-value store based on BloomFilter.
@@ -56,108 +59,174 @@ type KeyIndex struct {
 }
 
 //Namespace get namespace of this keyindex instance
-func (ki KeyIndex) Namespace() string  {
+func (ki *KeyIndex) Namespace() string  {
 	return ki.namespace
 }
 
 //Contains judge whether the key is stored in the underlying database
-func (ki KeyIndex) Contains(key []byte) bool {
+func (ki *KeyIndex) Contains(key []byte) bool {
 	//TODO: Contains(key []byte)
 	return true
 }
 
 //MayContains if return true then the key may stored in the underlying database
 //of return false, the key must not stored in the underlying database
-func (ki KeyIndex) MayContains(key []byte) bool {
+func (ki *KeyIndex) MayContains(key []byte) bool {
 	return ki.bf.Test(key)
 }
 
 //GetIndex get the index of the specify key
-func (ki KeyIndex) GetIndex(key []byte) interface {} {
+func (ki *KeyIndex) GetIndex(key []byte) interface {} {
 	log.Debugf("Get index for key: %v", key)
 	return nil
 }
 
-func (ki KeyIndex) lastStartKey() []byte  {
-	return []byte(ki.namespace + "_start_key")
+//AddIndexForKey add index for a specify key
+func (ki *KeyIndex) AddIndexForKey(key []byte) error {
+	ki.bf.Add(key)
+	ki.persistKey(key)
+	return nil
 }
 
 //Init the index
-func (ki KeyIndex) Init() error  {
+func (ki *KeyIndex) Init() error  {
 	log.Debug("Init KeyIndex")
 	var err error
 	ki.lastStartKeyPrefix, err =  ki.db.Get(ki.lastStartKey(), nil)
-	if err != nil {
+	if err != nil && err != leveldb.ErrNotFound {
+		log.Noticef("fetch lastStartKey error, %v", err)
 		return err
 	}
-	log.Debugf("Last start key index: %v", ki.lastStartKeyPrefix)
-	ki.currStartKeyPrefix = []byte(string(ki.keyPrefix) + string(time.Now().UnixNano()) + ".")
+	log.Debugf("Last start key index: %v", string(ki.lastStartKeyPrefix))
+	ki.currStartKeyPrefix = ki.checkPointKey()
 	ki.keyPrefix = ki.currStartKeyPrefix
-	log.Debugf("Current start key index: %v", ki.currStartKeyPrefix)
+	log.Debugf("Current start key index: %v", string(ki.currStartKeyPrefix))
 	if ok, err := ki.db.Has(ki.lastStartKeyPrefix, nil); ok && err == nil {
 		ki.Rebuild()
 	}
-
 	ki.db.Put(ki.lastStartKey(), ki.currStartKeyPrefix, nil)
 	return err
 }
 
 //Rebuild rebuild the index
-func (ki KeyIndex) Rebuild() error {
-	it := ki.db.NewIterator(util.BytesPrefix(ki.lastStartKeyPrefix), nil)
-	for ;it.Next(); {
-		key := it.Key()
-		ki.bf.Add(key)
+func (ki *KeyIndex) Rebuild() error {
+	//1.load bloom from local file
+	log.Noticef("load bloom from local file, file name: %s", bloomPath)
+	bfile, err := os.Open(bloomPath)
+	if err != nil {
+		log.Errorf("load bloom filter with file %s error %v ", bloomPath, err)
+		return err
+	}
+	size, err := ki.bf.ReadFrom(bfile)
+	if err != nil {
+		log.Errorf("read data from bloom file error %v", err)
+		return err
+	}
+	log.Noticef("read %d bytes data from bloom file %s", size, bloomPath)
+
+	//2.add the recent un_persist keys into the bloom
+	if ki.lastStartKeyPrefix != nil{
+		it := ki.db.NewIterator(util.BytesPrefix(ki.lastStartKeyPrefix), nil)
+		log.Noticef("start load recent un_persist keys into bloom")
+		for ;it.Next(); {
+			k := it.Key()
+			v := it.Value()
+			if !strings.HasPrefix(string(k), "chk.") {
+				break
+			}
+			log.Debugf("add key %s", string(v))
+			ki.bf.Add(v)
+		}
 	}
 	return nil
 }
 
 //NewKeyIndex new KeyIndex instance
-func NewKeyIndex(ns string, db *leveldb.DB) Index {
-	filter := bloom.New(10000 * 10000, 3)
-	return &KeyIndex{
+func NewKeyIndex(ns string, db *leveldb.DB) *KeyIndex {
+	filter := bloom.New(1 * 10000 * 10000, 3)
+	index := &KeyIndex{
 		namespace:ns,
 		bf:filter,
 		db:db,
 		keyPrefix:[]byte(ns + "_bloom_key."),
 	}
-}
-
-//AddIndexForKey add index for a specify key
-func (ki KeyIndex) AddIndexForKey(key []byte) error {
-	ki.bf.Add(key)
-	//ki.persistKey(key)
-	return nil
+	index.Init()
+	return index
 }
 
 //persist the key into the database
-func (ki KeyIndex) persistKey(key []byte) error {
-	//key = append(ki.keyPrefix, key)
-
-	key = []byte(string(ki.keyPrefix) + string(key))
-	return ki.db.Put(key, []byte(time.Now().String()), nil)
+func (ki *KeyIndex) persistKey(key []byte) error {
+	nkey := []byte(string(ki.keyPrefix) + string(key))
+	return ki.db.Put(nkey, key, nil)
 }
 
-func (ki KeyIndex) dropPreviousKey() error  {
-	it := ki.db.NewIterator(util.BytesPrefix(ki.lastStartKeyPrefix), nil)
-	for ;it.Next(); {
-		key := it.Key()
-		ki.db.Delete(key, nil)
+func (ki *KeyIndex) dropPreviousKey() error  {
+	if ki.lastStartKeyPrefix != nil {
+		it := ki.db.NewIterator(util.BytesPrefix(ki.lastStartKeyPrefix), nil)
+		for ; it.Next(); {
+			key := it.Key()
+			log.Debugf("delete key %s", string(key))
+			ki.db.Delete(key, nil)
+		}
 	}
 	return nil
 }
 
 //persistBloom persist bloom filter
-func (ki KeyIndex) persistBloom () error {
-	inputFile, err := os.Open(bloomPath)
+//1.persist current bloom into a tmp file
+//2.rename tmp file
+func (ki *KeyIndex) persistBloom () error {
+	tmpName := bloomPath+".tmp." + strconv.FormatInt(time.Now().UnixNano(), 10)
+	inputFile, err := os.Open(tmpName)
 	if err == nil {
-		ki.bf.WriteTo(inputFile)
-	}else {
-		inputFile, err = os.Create(bloomPath)
+		size, err := ki.bf.WriteTo(inputFile)
+		fmt.Printf("persist bloom filter for namespace: %s size: %d\n", ki.Namespace(), size)
+		return err
+	}else {//no such file
+		err = os.MkdirAll("./build/index", 0777) //TODO: fix it
 		if err != nil {
-			ki.bf.WriteTo(inputFile)
+			log.Errorf("persist bloom error %v", err)
+			return err
 		}
-
+		inputFile, err = os.Create(tmpName)
+		if err == nil {
+			size, err := ki.bf.WriteTo(inputFile)
+			log.Debugf("persist bloom filter for namespace: %s size: %d", ki.Namespace(), size)
+			if err == nil {
+				err = os.Rename(tmpName, bloomPath)
+			}
+			return err
+		}
 	}
 	return err
+}
+
+//BloomFilter just for test now
+func (ki *KeyIndex) Equals(otherKeyIndex *KeyIndex) bool {
+	return ki.bf.Equal(otherKeyIndex.bf)
+}
+
+//Persist persist the key index
+func (ki *KeyIndex) Persist() error {
+	log.Noticef("Persist bloom filter")
+	var err = ki.persistBloom()
+	if err != nil {
+		log.Errorf("Persist error %v", err)
+		return err
+	}
+	log.Noticef("drop previous keys")
+	if err != nil{
+		log.Error(err.Error())
+		return err
+	}
+	err = ki.dropPreviousKey()
+	return err
+}
+
+func (ki *KeyIndex) lastStartKey() []byte  {
+	return []byte(ki.namespace + "_start_key")
+}
+
+func (ki *KeyIndex) checkPointKey() []byte {
+	return []byte("chk." + string(ki.keyPrefix) + strconv.FormatInt(time.Now().UnixNano(), 10) + ".")
 }

@@ -88,6 +88,14 @@ func (sldb *SuperLevelDB) Close() {
 	sldb.db.Close()
 }
 
+func (sldb *SuperLevelDB) LevelDB() *leveldb.DB  {
+	return sldb.db
+}
+
+func (sldb *SuperLevelDB) Index() Index {
+	return sldb.index
+}
+
 func (db *SuperLevelDB) NewBatch() Batch {
 	log.Debugf("new super leveldb batch")
 	return &superLdbBatch{

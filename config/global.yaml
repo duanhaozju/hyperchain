@@ -82,4 +82,4 @@ global:
             p2p: "INFO"
             consensus: "NOTICE"
             core: "NOTICE"
-            hyperdb: "NOTICE"
+            hyperdb: "DEBUG"
