@@ -1077,6 +1077,7 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 			pbft.recoveryToSeqNo = nil
 			pbft.recoveryRestartTimer.Stop()
 			go pbft.postPbftEvent(recoveryDoneEvent{})
+			pbft.executeAfterStateUpdate()
 			return nil
 		}
 
@@ -1170,7 +1171,7 @@ func (pbft *pbftProtocal) preValidate(idx msgID) bool {
 	}
 
 	if idx.n != pbft.lastVid+1 {
-		logger.Debugf("Backup %d hasn't done with last validate %d", pbft.id, pbft.lastVid)
+		logger.Debugf("Backup %d gets validateBatch seqNo=%d, but expect seqNo=%d", pbft.id, idx.n, pbft.lastVid+1)
 		return false
 	}
 
