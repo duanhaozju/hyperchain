@@ -170,7 +170,10 @@ func newCAManager(ecacertPath string, ecertPath string, rcertPath string, rcacer
 func (caManager *CAManager) SignTCert(publicKey string) (string, error) {
 	caManager.GetIsCheckTCert()
 	pubPem := common.TransportDecode(publicKey)
-
+	if pubPem=="" {
+		log.Error("illegal hex string.")
+		return "",errors.New("invaild param,please use right hex string.")
+	}
 	pubKey,err := primitives.ParsePubKey(pubPem)
 	if err != nil {
 		log.Error(err)

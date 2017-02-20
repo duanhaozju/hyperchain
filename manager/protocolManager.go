@@ -125,7 +125,6 @@ func (pm *ProtocolManager) Start(c chan int, cm *admittance.CAManager) {
 
 	go pm.Peermanager.Start(c, pm.eventMux, cm)
 	pm.initType = <- c
-	log.Critical("#@#@#@#@###########@#@#@#@#@#@")
 	if pm.initType == 0 {
 		// start in normal mode
 		pm.NegotiateView()
@@ -319,7 +318,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 				self.Peermanager.DeleteNode(string(ev.Payload))
 			}
 		case event.AlreadyInChainEvent:
-			log.Error("AlreadyInChainEvent")
+			log.Debug("AlreadyInChainEvent")
 			// send negotiate event
 			if self.initType == 1 {
 				self.Peermanager.SetOnline()

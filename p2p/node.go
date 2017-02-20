@@ -85,7 +85,7 @@ func (n *Node) attendNoticeProcess(N int) {
 	num := 0
 	for {
 		flag := <-n.attendChan
-		log.Critical("attend N",N)
+		log.Debugf("attend N",N)
 		switch flag {
 		case 1: {
 			num++
@@ -96,7 +96,7 @@ func (n *Node) attendNoticeProcess(N int) {
 			}
 		}
 		if num >= (N-f) && isPrimaryConnectFlag{
-			log.Critical("new node has online ,post already in chain event")
+			log.Debug("new node has online ,post already in chain event")
 			n.higherEventManager.Post(event.AlreadyInChainEvent{})
 			break
 		}
@@ -123,7 +123,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	log.Debugf("LOCAL=> ID:%d IP:%s PORT:%d",node.localAddr.ID,node.localAddr.IP,node.localAddr.Port)
 	log.Debugf("MSG FORM=> ID: %d IP: %s PORT: %d",msg.From.ID,msg.From.IP,msg.From.Port)
 	if msg.MessageType != pb.Message_CONSUS{
-		log.Criticalf("MSG TYPE: %v, form: %d", msg.MessageType, msg.From.ID)
+		log.Debugf("MSG TYPE: %v, form: %d", msg.MessageType, msg.From.ID)
 	}
 	defer log.Debugf("END OF NEW MESSAGE\n###########################\n")
 
@@ -163,7 +163,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		}
 		log.Debug("CERT SIGNATURE VERIFY PASS")
 		// review 用CM对验证进行管理(此处的必要性需要考虑)
-		// TODO 1. 验证ECERT 的合法性
+		// TODO 1. 验证ECERT的合法性
 		//bol1,err := node.CM.VerifyECert()
 
 		// review 2. 验证传输消息签名的合法性

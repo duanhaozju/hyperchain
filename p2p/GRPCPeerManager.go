@@ -75,28 +75,28 @@ func (this *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 	// connect to peer
 	bol, _ := persist.GetBool("onceOnline")
 	if bol {
-		log.Critical("reconnect")
+		//log.Critical("reconnect")
 		//TODO func reconnect
 		this.reconnectToPeers(aliveChain)
 		this.IsOnline = true
 	} else {
-		log.Critical("connect")
-		log.Critical("isvp", this.IsVP, "isorigin", this.IsOriginal)
+		//log.Critical("connect")
+		//log.Critical("isvp", this.IsVP, "isorigin", this.IsOriginal)
 		if this.IsVP && this.IsOriginal {
 			// load the waiting connecting node information
-			log.Critical("start node as oirgin mode")
+			log.Debug("start node as oirgin mode")
 			this.connectToPeers(aliveChain)
 			this.IsOnline = true
 			//aliveChain <- 0
 		} else if this.IsVP && !this.IsOriginal {
 			// start attend routinei
-			log.Critical("connect to introducer")
+			log.Debug("connect to introducer")
 			// IMPORT should aliveChain <- 1 frist
 			aliveChain <- 1
 			go this.LocalNode.attendNoticeProcess(this.LocalNode.N)
 			this.connectToIntroducer(*this.Introducer)
 		} else if !this.IsVP {
-			log.Critical("connect to vp")
+			log.Debug("connect to vp")
 			this.vpConnect()
 			aliveChain <- 2
 		}
@@ -189,7 +189,7 @@ func (this *GRPCPeerManager) connectToIntroducer(introducerAddress pb.PeerAddr) 
 			From:         this.LocalNode.localAddr.ToPeerAddress(),
 		}
 		SignCert(attend_message, this.CM)
-		log.Critical("SEND ATTEND TO",p.PeerAddr.ID)
+		log.Debug("SEND ATTEND TO",p.PeerAddr.ID)
 		//retMessage, err := p.Chat(attend_message)
 		retMessage, err := p.Client.Chat(context.Background(), attend_message)
 		log.Debug("reconnect return :", retMessage)
@@ -198,7 +198,7 @@ func (this *GRPCPeerManager) connectToIntroducer(introducerAddress pb.PeerAddr) 
 			return
 		}
 		if retMessage.MessageType == pb.Message_ATTEND_RESPONSE {
-			log.Critical("get a new ATTTEND RESPNSE from ID",retMessage.From.ID)
+			log.Debug("get a new ATTTEND RESPNSE from ID",retMessage.From.ID)
 			remoteECert := retMessage.Signature.ECert
 			if remoteECert == nil {
 				log.Errorf("Remote ECert is nil %v", retMessage.From)
@@ -687,8 +687,8 @@ func (this *GRPCPeerManager) UpdateRoutingTable(payload []byte) {
 			log.Error(err)
 			return
 		}
-		log.Critical("Attend Notify address",toUpdateAddress.ID,toUpdateAddress.IP,toUpdateAddress.Port)
-		log.Critical("updateRoutingTable")
+		log.Debugf("Attend Notify address",toUpdateAddress.ID,toUpdateAddress.IP,toUpdateAddress.Port)
+		log.Debug("updateRoutingTable")
 		newPeer, retMessage, err := NewPeerAttendNotify(pb.RecoverPeerAddr(toUpdateAddress), this.LocalAddr, this.TEM, this.CM, this.LocalNode.IsPrimary)
 		if err != nil {
 			log.Error("recover address failed", err)
@@ -733,7 +733,7 @@ func (this *GRPCPeerManager) UpdateRoutingTable(payload []byte) {
 				log.Errorf("generate the share secret key, from node id: %d, error info %s ", retMessage.From.ID, genErr)
 			} else {
 				this.peersPool.MergeTempPeers(newPeer)
-				log.Critical("add new peer into peerspool, new peer id",newPeer.PeerAddr.ID)
+				log.Debug("add new peer into peerspool, new peer id",newPeer.PeerAddr.ID)
 				this.LocalNode.N += 1
 				this.configs.AddNodesAndPersist(this.peersPool.GetPeersAddrMap())
 			}
@@ -748,13 +748,13 @@ func (this *GRPCPeerManager) UpdateRoutingTable(payload []byte) {
 
 
 func (this *GRPCPeerManager) SetOnline(){
-	log.Critical("As a new attend node, save the introducer info into peer addr")
+	log.Debug("As a new attend node, save the introducer info into peer addr")
 	//新节点
 	//新节点在一开始的时候就已经将介绍人的节点列表加入了所以这里不需要处理
 	//the new attend node
 	this.IsOnline = true
 	this.peersPool.MergeTempPeersForNewNode()
-	log.Criticalf(" NEW PEER SET ONLINE",this.LocalNode.localAddr.ID)
+	log.Debugf(" NEW PEER SET ONLINE",this.LocalNode.localAddr.ID)
 	this.LocalNode.N = this.peersPool.GetAliveNodeNum()
 	this.configs.AddNodesAndPersist(this.peersPool.GetPeersAddrMap())
 }
