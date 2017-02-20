@@ -126,3 +126,7 @@ type RecvDelPeerEvent struct {
 type RemoveCacheEvent struct {}
 
 type CacheRemovedEvent struct {}
+
+type NegoRoutersEvent struct {
+	Payload []byte
+}

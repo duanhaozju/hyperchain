@@ -28,6 +28,7 @@ type Stack interface {
 	BroadcastDelNode(msg *pb.Message) error
 	UpdateTable(payload []byte, flag bool) error
 	ClearValidateCache() error
+	NegoRouters(routers []byte) error
 }
 
 // InnerBroadcast broadcast the consensus message between vp nodes
@@ -205,6 +206,17 @@ func (h *helper) ClearValidateCache() error {
 
 	remove := event.RemoveCacheEvent{}
 	h.msgQ.Post(remove)
+
+	return nil
+}
+
+// Inform to update routing table
+func (h *helper) NegoRouters(routers []byte) error {
+
+	msg := event.NegoRoutersEvent{
+		Payload: routers,
+	}
+	h.msgQ.Post(msg)
 
 	return nil
 }

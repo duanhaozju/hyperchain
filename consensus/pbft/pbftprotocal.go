@@ -109,7 +109,7 @@ type pbftProtocal struct {
 	preparedCert        map[msgID]string // track the prepared cert to help validate
 	// negotiate view
 	inNegoView         bool
-	negoViewRspStore   map[uint64]uint64 // track replicaId, viewNo.
+	negoViewRspStore   map[uint64]*NegotiateViewResponse // track replicaId, viewNo.
 	negoViewRspTimer   events.Timer      // track timeout for N-f nego-view responses
 	negoViewRspTimeout time.Duration     // time limit for N-f nego-view responses
 
@@ -145,6 +145,7 @@ type pbftProtocal struct {
 	updateStore			map[uidx]*UpdateN			// track last update-n we received or sent
 	updateTarget		uidx						// track the new view after update
 	updateCertStore		map[msgID]updateCert		// track the local certStore that needed during update
+	inClearCache		bool
 }
 
 type qidx struct {
@@ -652,6 +653,11 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 			return pbft.sendUpdateN()
 		}
 		return pbft.processUpdateN()
+	case updatedNEvent:
+		pbft.persistView(pbft.view)
+		atomic.StoreUint32(&pbft.inUpdatingN, 0)
+		pbft.processRequestsDuringUpdatingN()
+		logger.Criticalf("======== Replica %d finished UpdatingN, primary=%d, n=%d/view=%d/h=%d", pbft.id, pbft.primary(pbft.view), pbft.N, pbft.view, pbft.h)
 	case firstRequestTimerEvent:
 		logger.Noticef("Replica %d first request timer expires", pbft.id)
 		return pbft.sendViewChange()
@@ -1329,6 +1335,10 @@ func (pbft *pbftProtocal) sendPrePrepareForUpdate(reqBatch *TransactionBatch, di
 	cert.sentValidate = true
 	cert.validated = true
 	pbft.persistQSet(preprep.View, preprep.SequenceNumber)
+
+	pbft.vid++
+	pbft.lastVid = pbft.vid
+
 	payload, err := proto.Marshal(preprep)
 	if err != nil {
 		logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
@@ -1420,7 +1430,6 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new pre-prepare for request batch view=%d/seqNo=%d, hash=%s", preprep.View, preprep.SequenceNumber, preprep.BatchDigest))
 	}
 
-	logger.Debug("receive  pre-prepare first seq is:", preprep.SequenceNumber)
 	if pbft.primary(pbft.view) != pbft.id && pbft.prePrepared(preprep.BatchDigest, preprep.View, preprep.SequenceNumber) && !cert.sentPrepare {
 		logger.Debugf("Backup %d broadcasting prepare for view=%d/seqNo=%d", pbft.id, preprep.View, preprep.SequenceNumber)
 		prep := &Prepare{
@@ -1517,8 +1526,15 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 
 		return pbft.sendCommit(digest, v, n)
 	} else {
+		idx := msgID{v: v, n: n}
+		update, ok := pbft.updateCertStore[idx]
+		if ok && update.validated {
+			pbft.vid++
+			pbft.lastVid = pbft.vid
+			return pbft.sendCommit(digest, v, n)
+		}
+
 		if !cert.sentValidate {
-			idx := msgID{v: v, n: n}
 			pbft.preparedCert[idx] = cert.digest
 			pbft.validatePending()
 		}
@@ -1604,6 +1620,11 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 			pbft.lastNewViewTimeout = pbft.newViewTimeout
 			delete(pbft.outstandingReqBatches, commit.BatchDigest)
 			idx := msgID{v: commit.View, n: commit.SequenceNumber}
+			update, ok := pbft.updateCertStore[idx]
+			if ok && update.sentExecute {
+				pbft.lastExec++
+				return nil
+			}
 			pbft.committedCert[idx] = cert.digest
 			pbft.executeOutstanding()
 			if commit.SequenceNumber == pbft.viewChangeSeqNo {
@@ -2280,7 +2301,7 @@ func (pbft *pbftProtocal) processNegotiateView() error {
 	logger.Debugf("Replica %d now negotiate view...", pbft.id)
 
 	pbft.negoViewRspTimer.Reset(pbft.negoViewRspTimeout, negoViewRspTimerEvent{})
-	pbft.negoViewRspStore = make(map[uint64]uint64)
+	pbft.negoViewRspStore = make(map[uint64]*NegotiateViewResponse)
 
 	// broadcast the negotiate message to other replica
 	negoViewMsg := &NegotiateView{
@@ -2303,6 +2324,8 @@ func (pbft *pbftProtocal) processNegotiateView() error {
 	nvr := &NegotiateViewResponse{
 		ReplicaId: pbft.id,
 		View:      pbft.view,
+		N: uint64(pbft.N),
+		Routers: pbft.routers,
 	}
 	consensusPayload, err := proto.Marshal(nvr)
 	if err != nil {
@@ -2328,6 +2351,8 @@ func (pbft *pbftProtocal) recvNegoView(nv *NegotiateView) events.Event {
 	negoViewRsp := &NegotiateViewResponse{
 		ReplicaId: pbft.id,
 		View:      pbft.view,
+		N: uint64(pbft.N),
+		Routers: pbft.routers,
 	}
 	payload, err := proto.Marshal(negoViewRsp)
 	if err != nil {
@@ -2349,39 +2374,47 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Eve
 		return nil
 	}
 
-	rspId, rspView := nvr.ReplicaId, nvr.View
-	if _, ok := pbft.negoViewRspStore[rspId]; ok {
-		logger.Warningf("Already recv view number from %d, ignore it", rspId)
+	//rspId, rspView := nvr.ReplicaId, nvr.View
+	if _, ok := pbft.negoViewRspStore[nvr.ReplicaId]; ok {
+		logger.Warningf("Already recv view number from %d, ignore it", nvr.ReplicaId)
 		return nil
 	}
 
-	logger.Debugf("Replica %d receive nego-view response from %d, view: %d", pbft.id, rspId, rspView)
+	logger.Debugf("Replica %d receive nego-view response from %d, view: %d, N: %d", pbft.id, nvr.ReplicaId, nvr.View, nvr.N)
 
-	pbft.negoViewRspStore[rspId] = rspView
+	pbft.negoViewRspStore[nvr.ReplicaId] = nvr
 
 	if len(pbft.negoViewRspStore) > 2*pbft.f+1 {
 		// Reason for not using '> pbft.N-pbft.f': if N==5, we are require more than we need
 		// Reason for not using '≥ pbft.N-pbft.f': if self is wrong, then we are impossible to find 2f+1 same view
 		// can we find same view from 2f+1 peers?
-		viewCount := make(map[uint64]uint64)
-		var theView uint64
+		type resp struct {
+			n int
+			view uint64
+			routers []byte
+		}
+		viewCount := make(map[resp]uint64)
+		var result resp
 		canFind := false
-		for _, view := range pbft.negoViewRspStore {
-			if _, ok := viewCount[view]; ok {
-				viewCount[view]++
+		for _, rs := range pbft.negoViewRspStore {
+			ret := resp{rs.N, rs.View, rs.Routers}
+			if _, ok := viewCount[ret]; ok {
+				viewCount[ret]++
 			} else {
-				viewCount[view] = uint64(1)
+				viewCount[ret] = uint64(1)
 			}
-			if viewCount[view] >= uint64(2*pbft.f+1) {
+			if viewCount[ret] >= uint64(2*pbft.f+1) {
 				// yes we find the view
-				theView = view
+				result = ret
 				canFind = true
 				break
 			}
 		}
 		if canFind {
 			pbft.negoViewRspTimer.Stop()
-			pbft.view = theView
+			pbft.view = result.view
+			pbft.N = result.n
+			pbft.routers = result.routers
 			pbft.inNegoView = false
 			if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
 				atomic.StoreUint32(&pbft.activeView, 1)

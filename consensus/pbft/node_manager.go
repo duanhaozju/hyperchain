@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"encoding/base64"
 	"reflect"
+	"time"
 )
 
 // New replica receive local NewNode message
@@ -30,6 +31,7 @@ func (pbft *pbftProtocal) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 	}
 
 	pbft.isNewNode = true
+	pbft.persistNewNode(uint64(1))
 	pbft.inAddingNode = true
 	key := string(msg.Payload)
 	pbft.localKey = key
@@ -79,6 +81,13 @@ func (pbft *pbftProtocal) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 	pbft.sendAgreeDelNode(key, msg.RouterHash, msg.Id)
 
 	return nil
+}
+
+func (pbft *pbftProtocal) recvLocalRouters(routers []byte) {
+
+	logger.Debugf("Replica %d received local routers: %v", pbft.id, routers)
+	pbft.routers = routers
+
 }
 
 // Repica broadcast addnode message for new node
@@ -695,8 +704,9 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 		pbft.clearDuplicator()
 	}
 
-	if !pbft.skipInProgress {
+	if !pbft.skipInProgress && !pbft.inVcReset && !pbft.inClearCache {
 		pbft.helper.ClearValidateCache()
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	xSetLen := len(update.Xset)
@@ -705,10 +715,10 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 		for i := pbft.h + uint64(1); i < upper; i++ {
 			d, ok := update.Xset[i]
 			if !ok {
-				logger.Critical("view change Xset miss batch number %d", i)
+				logger.Critical("update_n Xset miss batch number %d", i)
 			} else if d == "" {
 				// This should not happen
-				logger.Critical("view change Xset has null batch, kick it out")
+				logger.Critical("update_n Xset has null batch, kick it out")
 			} else {
 				batch, ok := pbft.validatedBatchStore[d]
 				if !ok {

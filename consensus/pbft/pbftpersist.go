@@ -235,9 +235,16 @@ func (pbft *pbftProtocal) persistDelView() {
 
 func (pbft *pbftProtocal) persistN(n int) {
 	key := fmt.Sprint("nodes")
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, n)
-	persist.StoreState(key, n)
+	res := make([]byte, 8)
+	binary.LittleEndian.PutUint64(res, n)
+	persist.StoreState(key, res)
+}
+
+func (pbft *pbftProtocal) persistNewNode(new uint64) {
+	key := fmt.Sprint("new")
+	res := make([]byte, 8)
+	binary.LittleEndian.PutUint64(res, new)
+	persist.StoreState(key, res)
 }
 
 func (pbft *pbftProtocal) restoreState() {
@@ -284,6 +291,14 @@ func (pbft *pbftProtocal) restoreState() {
 		pbft.N = int(nodes)
 	}
 	logger.Noticef("=========restore N %d=======", pbft.N)
+
+	new, err := persist.ReadState("new")
+	if err == nil {
+		newNode := binary.LittleEndian.Uint64(new)
+		if newNode {
+			pbft.isNewNode = true
+		}
+	}
 
 	pbft.restoreLastSeqNo() // assign value to lastExec
 	if pbft.seqNo < pbft.lastExec {

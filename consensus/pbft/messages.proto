@@ -139,7 +139,7 @@ message negotiate_view_response {
     uint64 replica_id = 1;
     uint64 view = 2;
     uint64 n = 3;
-    string routers = 4;
+    bytes routers = 4;
 }
 
 message recovery_init {
