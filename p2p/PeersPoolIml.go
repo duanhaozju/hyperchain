@@ -50,7 +50,16 @@ func (this *PeersPoolIml) PutPeer(addr pb.PeerAddr, client *Peer) error {
 	if _, ok := this.peerKeys[addr]; ok {
 		// the pool already has this client
 		log.Warning(addr.IP, addr.Port, "The client already in")
-		return errors.New("The client already in")
+		this.peerKeys[addr] = addr.Hash
+		this.peerAddr[addr.Hash] = addr
+		this.peers[addr.Hash] = client
+
+		persistAddr,err := proto.Marshal(addr.ToPeerAddress())
+		if err != nil{
+			log.Errorf("cannot marshal the marshal Addreass for %v",addr)
+		}
+		persist.PutData(addr.Hash,persistAddr)
+		return errors.New("The client already in, updated the peer info")
 
 	} else {
 		log.Debug("alive peers number is:", this.alivePeers)
