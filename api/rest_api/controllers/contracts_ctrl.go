@@ -124,3 +124,41 @@ func (c *ContractsController) GetContractCountByAddr() {
 	}
 	c.ServeJSON()
 }
+
+func (c *ContractsController) CheckHmValue() {
+	var args hpc.ValueArgs
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &args); err != nil {
+		c.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+		c.ServeJSON()
+		return
+	}
+
+	hash, err := c.PublicContractAPI.CheckHmValue(args)
+	if err != nil {
+		c.Data["json"] = NewJSONObject(nil, err)
+	} else {
+		c.Data["json"] = NewJSONObject(hash, nil)
+	}
+
+	c.ServeJSON()
+}
+
+func (c *ContractsController) EncryptoMessage() {
+	var args hpc.EncryptoArgs
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &args); err != nil {
+		c.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+		c.ServeJSON()
+		return
+	}
+
+	hash, err := c.PublicContractAPI.EncryptoMessage(args)
+	if err != nil {
+		c.Data["json"] = NewJSONObject(nil, err)
+	} else {
+		c.Data["json"] = NewJSONObject(hash, nil)
+	}
+
+	c.ServeJSON()
+}

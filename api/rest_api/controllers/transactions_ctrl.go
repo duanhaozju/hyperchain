@@ -92,11 +92,11 @@ func (t *TransactionsController) GetTransactionByBlockNumberOrBlockHashOrTime() 
 
 	flag := 0	// "1" means query by blockNumber and index, "2" means query by blockHash and index, "3" means query by startTime and endTime.
 
-	if p_blkNum != "" && p_index != "" {
+	if p_blkNum != "" && p_index != "" && p_blkHash == "" {
 		flag = 1
-	}else if p_blkHash != "" && p_index != "" {
+	}else if p_blkHash != "" && p_index != "" && p_blkNum == "" {
 		flag = 2
-	} else if p_startTime != "" && p_endTime != "" {
+	} else if p_startTime != "" && p_endTime != "" && p_blkNum == "" && p_blkHash == "" && p_index == ""{
 		flag = 3
 	} else {
 		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{"The number of params or the name of params is invalid"})
