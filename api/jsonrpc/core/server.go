@@ -329,7 +329,11 @@ func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*s
 func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, RPCError) {
 	log.Info("============start check the cert header=========")
 	//TODO 如果检查失败则进行相应处理，是否需要忽略数据
-	codec.CheckHttpHeaders()
+	
+	if rpcErr := codec.CheckHttpHeaders();rpcErr !=nil{
+		return nil, false, rpcErr
+	}
+	
 	log.Info("============enter readRequest()=================")
 	reqs, batch, err := codec.ReadRequestHeaders()
 	if err != nil {

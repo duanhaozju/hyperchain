@@ -1,6 +1,36 @@
 #!/usr/bin/env bash
 #set -xev
-# test the env
+# judge system type varible may `MAC` or `LINUX`
+_SYSTYPE="MAC"
+case "$OSTYPE" in
+  darwin*)
+    echo "RUN SCRIPTS ON OSX"
+    ENV=false
+  ;;
+  linux*)
+    echo "RUN SCRIPTS ON LINUX"
+    ENV=true
+  ;;
+  *)
+    echo "unknown: $OSTYPE"
+    exit -1
+  ;;
+esac
+
+f_help(){
+    echo "local.sh helper:"
+    echo "  -h, --help:     show the help for this bash script"
+    echo "  -k, --kill:     just kill all the processes"
+    echo "  -d, --delete:   clear the old data or not; default: clear. add for not clear"
+    echo "  -r, --rebuild:  rebuild the project or not; default: rebuild, add for not rebuild"
+    echo "  -m, --mode:     choose the run mode; default: run many in many, add for many in one"
+    echo "---------------------------------------------------"
+    echo "Example for run many in one in mac without rebuild:"
+    echo "./local -m -r"
+}
+
+# check the local running env
+f_check_local_env(){
 if ! type go > /dev/null; then
     echo -e "Please install the go env correctly!"
     exit 1
@@ -16,38 +46,15 @@ if ! type jq > /dev/null; then
     echo -e "Please install the `jq` to parse the json file \n just type: \n sudo apt-get install jq / sudo yum -y install jq / brew install jq "
     exit 1
 fi
+# confer
+if ! type confer > /dev/null; then
+    echo -e "Please install `confer` to read global.yaml config"
+    exit 1
+fi
 
-DELETEDATA=true
-REBUILD=true
-ENV=true
-MODE=true
-
-help(){
-    echo "local.sh helper:"
-    echo "  -h, --help:     show the help for this bash script"
-    echo "  -k, --kill:     just kill all the processes"
-    echo "  -d, --delete:   clear the old data or not; default: clear. add for not clear"
-    echo "  -r, --rebuild:  rebuild the project or not; default: rebuild, add for not rebuild"
-    echo "  -e, --env:      run in which kink of system; default: linux, add for mac"
-    echo "  -m, --mode:     choose the run mode; default: run many in many, add for many in one"
-    echo "---------------------------------------------------"
-    echo "Example for run many in one in mac without rebuild:"
-    echo "./local -e -m -r"
 }
-
-cd ../
-# Build the project
-PROJECT_PATH=`pwd`
-DUMP_PATH="${PROJECT_PATH}/build"
-CONF_PATH="${PROJECT_PATH}/config"
-
-# Load the config files
-PEER_CONFIG="${CONF_PATH}/local_peerconfig.json"
-MAXPEERNUM=`cat ${PEER_CONFIG} | jq ".maxpeernode"`
-echo "Node number is: ${MAXPEERNUM}"
-
 #kill the progress
-killProcess(){
+f_kill_process(){
     echo "Kill the bind port process"
     for((i=1;i<=$MAXPEERNUM;i++))
     do
@@ -58,19 +65,40 @@ killProcess(){
     done
 }
 
+
+
+
+cd ../
+# Build the project
+PROJECT_PATH="${GOPATH}/src/hyperchain"
+CURRENT_PATH=`pwd`
+DUMP_PATH="${CURRENT_PATH}/build"
+CONF_PATH="${CURRENT_PATH}/config"
+
+# Load the config files
+GLOBAL_CONFIG="${CONF_PATH}/global.yaml"
+PEER_CONFIGS_FILE=`confer read global.yaml global.configs.peers`
+
+
+PEER_CONFIG="${CONF_PATH}/local_peerconfig.json"
+MAXPEERNUM=`cat ${PEER_CONFIG} | jq ".maxpeernode"`
+echo "Node number is: ${MAXPEERNUM}"
+
+DELETEDATA=true
+REBUILD=true
+MODE=true
+
 while [ $# -gt 0 ]
 do
     case "$1" in
     -h|--help)
         help; exit 1;;
     -k|--kill)
-        killProcess; exit 1;;
+        f_kill_process; exit 1;;
 	-d|--delete)
 	    DELETEDATA=false; shift;;
 	-r|--rebuild)
 	    REBUILD=false; shift;;
-    -e|--env)
-        ENV=false; shift;;
     -m|--mode)
         MODE=false; shift;;
 	--) shift; break;;
@@ -105,10 +133,13 @@ do
     mkdir -p ${DUMP_PATH}/node${j}/
     cp -rf  ${CONF_PATH} ${DUMP_PATH}/node${j}/
     cp -rf  ${CONF_PATH}/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/config/local_peerconfig.json
-
+    cp -rf  ${CONF_PATH}/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/config/cert/
+    rm -rf  ${DUMP_PATH}/node${j}/build/
+    rm -rf  ${DUMP_PATH}/node${j}/db.log
 done
 
-killProcess
+f_check_local_env
+f_kill_process
 
 if $REBUILD; then
     # Build the project
@@ -149,12 +180,13 @@ runXin1(){
 }
 
 echo "Run all the nodes..."
+echo $ENV
 if [ ! $MODE ]; then
     runXin1
 else
-    if $ENV; then
-        runXinXinLinux
-    else
+    if [[ "$_SYSTYPE"x == 'MACx' ]]; then
         runXinXinMac
+    else
+        runXinXinLinux
     fi
 fi

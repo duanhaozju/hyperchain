@@ -1,0 +1,14 @@
+pbft:
+  batchsize: 500
+  nodes: 6
+  vcresendlimit: 10
+timeout:
+  batch: 50ms
+  firstrequest: 30s
+  negoview: 6s
+  nullrequest: 4s
+  recovery: 15s
+  request: 3s
+  resendviewchange: 10s
+  validate: 1s
+  viewchange: 4s

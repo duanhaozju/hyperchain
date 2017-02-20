@@ -15,6 +15,10 @@ import (
 	"time"
 	//"fmt"
 	"hyperchain/core/crypto/primitives"
+	"hyperchain/p2p/transport/ecdh"
+	"crypto/elliptic"
+	"crypto/ecdsa"
+	"github.com/golang/protobuf/proto"
 )
 
 // init the package-level logger system,
@@ -50,10 +54,7 @@ func NewPeer(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.Transp
 	peer.LocalAddr = localAddr
 	peer.PeerAddr = peerAddr
 	//peer.PeerPool = peerspool
-	//TODO rewrite the tls options get method
-	//opts := membersrvc.GetGrpcClientOpts()
 	opts := peer.CM.GetGrpcClientOpts()
-
 	// dial to remote
 	conn, err := grpc.Dial(peerAddr.IP+":"+strconv.Itoa(peerAddr.Port), opts...)
 	if err != nil {
@@ -72,10 +73,34 @@ func NewPeer(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.Transp
 	return &peer, nil
 }
 
+func NewPeerPure(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager, cm *admittance.CAManager) (*Peer, error) {
+	//log.Critical(peerAddr,localAddr,TEM)
+	var peer Peer
+	peer.TEM = TEM
+	peer.CM = cm
+	//log.Critical("TEM",TEM)
+	peer.LocalAddr = localAddr
+	peer.PeerAddr = peerAddr
+	//peer.PeerPool = peerspool
+	opts := peer.CM.GetGrpcClientOpts()
+	// dial to remote
+	conn, err := grpc.Dial(peerAddr.IP+":"+strconv.Itoa(peerAddr.Port), opts...)
+	if err != nil {
+		log.Error("err:", errors.New("Cannot establish a connection!"))
+		return nil, err
+	}
+	peer.Connection = conn
+	peer.Client = pb.NewChatClient(conn)
+	// set primary flag false
+	peer.IsPrimary = false
+	//review handshake operation
+	return &peer, nil
+}
+
 // handShake connect to remote peer, and negotiate the secret
 // handShake 用于与相应的远端peer进行通信，并进行密钥协商
 func (peer *Peer) handShake() (err error) {
-	//TODO 首次协商的时候是否需要带上消息签名
+	//REVIEW 首次协商的时候需要带上消息签名
 	/**
 		signature := pb.Signature{
 		Ecert:peer.CM.GetECertByte(),
@@ -87,39 +112,18 @@ func (peer *Peer) handShake() (err error) {
 		verifySignature(signature)
 	}
 	*/
-
-	signature := pb.Signature{
-		Ecert: peer.CM.GetECertByte(),
-		Rcert: peer.CM.GetRCertByte(),
-	}
-
-	//review start exchange the secret
-	helloMessage := pb.Message{
+	/*
+	handshake 的时候需要对ecert 和rcert的签名进行校验,这样才能标识是否是NVP所以HELLO消息,HELLO RESPONSE都需要带上证书以及签名
+	 */
+	helloMessage := &pb.Message{
 		MessageType:  pb.Message_HELLO,
 		Payload:      peer.TEM.GetLocalPublicKey(),
 		From:         peer.LocalAddr.ToPeerAddress(),
 		MsgTimeStamp: time.Now().UnixNano(),
-		Signature:    &signature,
 	}
+	SignCert(helloMessage,peer.CM)
 
-	if peer.CM.GetIsUsed() {
-		var pri interface{}
-		pri = peer.CM.GetECertPrivKey()
-		ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
-		sign, err := ecdsaEncry.Sign(helloMessage.Payload, pri)
-		if err == nil {
-			if helloMessage.Signature == nil {
-				payloadSign := pb.Signature{
-					Signature: sign,
-				}
-				helloMessage.Signature = &payloadSign
-			}
-			helloMessage.Signature.Signature = sign
-		}
-	}
-
-
-	retMessage, err := peer.Client.Chat(context.Background(), &helloMessage)
+	retMessage, err := peer.Client.Chat(context.Background(), helloMessage)
 
 	if err != nil {
 		log.Error("cannot establish a connection", err)
@@ -127,27 +131,140 @@ func (peer *Peer) handShake() (err error) {
 	}
 	//review get the remote peer secret
 	if retMessage.MessageType == pb.Message_HELLO_RESPONSE {
-		remotePublicKey := retMessage.Payload
-		err = peer.TEM.GenerateSecret(remotePublicKey, peer.PeerAddr.Hash)
+		remoteECert := retMessage.Signature.ECert
+		if remoteECert == nil{
+			log.Errorf("Remote ECert is nil %v",retMessage.From)
+		}
+		ecert, err := primitives.ParseCertificate(string(remoteECert))
 		if err != nil {
-			log.Error("Local Generate Secret Failed, localAddr:", peer.LocalAddr, err)
-			return
+				log.Error("cannot parse certificate")
+		}
+		signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
+		ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
+		signpuByte := ecdh256.Marshal(*signpub)
+		//verify the rcert and set the status
+
+		remoteRCert := retMessage.Signature.RCert
+		if remoteRCert == nil{
+			log.Errorf("Remote ECert is nil %v",retMessage.From)
+		}
+
+		verifyRcert, rcertErr := peer.CM.VerifyRCert(string(remoteRCert))
+		if !verifyRcert || rcertErr != nil {
+			peer.TEM.SetIsVerified(false, retMessage.From.Hash)
+		} else {
+			peer.TEM.SetIsVerified(true, retMessage.From.Hash)
+		}
+
+		peer.TEM.SetSignPublicKey(signpuByte, retMessage.From.Hash)
+		if peer.TEM.GetSecret(retMessage.From.Hash) == ""{
+			genErr := peer.TEM.GenerateSecret(signpuByte, retMessage.From.Hash)
+			if genErr != nil {
+				log.Errorf("generate the share secret key, from node id: %d, error info %s ", retMessage.From.ID,genErr)
+			}
 		}
 		return nil
 	}
 	return errors.New("ret message is not Hello Response!")
 }
-
-func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager,cm *admittance.CAManager) (peer *Peer, err error) {
+func NewPeerIntroducer(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager,cm *admittance.CAManager) (*Peer,[]byte ,error){
+	peer := new(Peer)
 	peer.TEM = TEM
 	peer.PeerAddr = peerAddr
 	peer.LocalAddr = localAddr
 	peer.CM = cm
-	//peer.PeerPool = peerPool
 
-	//opts :=  membersrvc.GetGrpcClientOpts()
 	opts :=  peer.CM.GetGrpcClientOpts()
-	// dial to remote
+	conn, err := grpc.Dial(peerAddr.IP+":"+strconv.Itoa(peerAddr.Port), opts...)
+	if err != nil {
+		log.Error("err:", errors.New("Cannot establish a connection!"))
+		return nil,nil, err
+	}
+
+	peer.Connection = conn
+	peer.Client = pb.NewChatClient(conn)
+	// set the primary flag
+	peer.IsPrimary = false
+	//发送introduce 信息,取得路由表
+	payload, _ := proto.Marshal(localAddr.ToPeerAddress())
+	introduce_message := pb.Message{
+		MessageType:  pb.Message_INTRODUCE,
+		Payload:      payload,
+		MsgTimeStamp: time.Now().UnixNano(),
+		From:         localAddr.ToPeerAddress(),
+	}
+	SignCert(&introduce_message,cm)
+
+	retMessage, err := peer.Client.Chat(context.Background(), &introduce_message)
+	log.Debug("introducer chat finished")
+	log.Debug("reconnect return :", retMessage)
+	if err != nil {
+		log.Error("cannot establish a connection", err)
+		return nil, nil,err
+	}
+
+	//review get the remote peer secrets
+	if retMessage.MessageType == pb.Message_INTRODUCE_RESPONSE {
+
+		return peer,retMessage.Payload,nil
+	}
+	return nil,nil,errors.New("cannot establish a connection")
+}
+
+func NewPeerAttendNotify(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager,cm *admittance.CAManager ,isPrimary bool) (*Peer,*pb.Message,error) {
+	peer := new(Peer)
+	peer.TEM = TEM
+	peer.PeerAddr = peerAddr
+	peer.LocalAddr = localAddr
+	peer.CM = cm
+
+	opts := peer.CM.GetGrpcClientOpts()
+	conn, err := grpc.Dial(peerAddr.IP + ":" + strconv.Itoa(peerAddr.Port), opts...)
+	if err != nil {
+		log.Error("err:", errors.New("Cannot establish a connection!"))
+		return nil, nil, err
+	}
+
+	peer.Connection = conn
+	peer.Client = pb.NewChatClient(conn)
+	// set the primary flag
+	peer.IsPrimary = false
+	//发送introduce 信息,取得路由表
+	var payload []byte
+	if isPrimary {
+		payload = []byte("true")
+	}else{
+
+		payload = []byte("false")
+	}
+	introduce_message := pb.Message{
+		MessageType:  pb.Message_ATTEND_NOTIFY,
+		Payload:      payload,
+		MsgTimeStamp: time.Now().UnixNano(),
+		From:         localAddr.ToPeerAddress(),
+	}
+	SignCert(&introduce_message,cm)
+	log.Debugf("SEND ATTEND_NOTIFY TO",peer.PeerAddr.ID)
+
+	retMessage, err := peer.Client.Chat(context.Background(), &introduce_message)
+	log.Debug("attendNotify chat finished")
+	log.Debug("reconnect return :", retMessage)
+	if err != nil {
+		log.Error("cannot establish a connection", err)
+		return nil, nil,err
+	}
+	return peer,retMessage,nil
+}
+
+
+func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager,cm *admittance.CAManager) (*Peer, error){
+	peer := new(Peer)
+	peer.TEM = TEM
+	peer.PeerAddr = peerAddr
+	peer.LocalAddr = localAddr
+	peer.CM = cm
+
+	opts :=  peer.CM.GetGrpcClientOpts()
 	conn, err := grpc.Dial(peerAddr.IP+":"+strconv.Itoa(peerAddr.Port), opts...)
 	if err != nil {
 		log.Error("err:", errors.New("Cannot establish a connection!"))
@@ -158,39 +275,16 @@ func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transpo
 	peer.Client = pb.NewChatClient(conn)
 	// set the primary flag
 	peer.IsPrimary = false
-	// review handshake operation
-	// review start exchange the secret
-	signature := pb.Signature{
-		Ecert: peer.CM.GetECertByte(),
-		Rcert: peer.CM.GetRCertByte(),
-	}
 
-	//review start exchange the secret
-	helloMessage := pb.Message{
-		MessageType:  pb.Message_HELLO,
+	reverseMessage := &pb.Message{
+		MessageType:  pb.Message_RECONNECT,
 		Payload:      peer.TEM.GetLocalPublicKey(),
 		From:         peer.LocalAddr.ToPeerAddress(),
 		MsgTimeStamp: time.Now().UnixNano(),
-		Signature:    &signature,
 	}
+	SignCert(reverseMessage,peer.CM)
 
-	if peer.CM.GetIsUsed() {
-		var pri interface{}
-		pri = peer.CM.GetECertPrivKey()
-		ecdsaEncry := primitives.NewEcdsaEncrypto("ecdsa")
-		sign, err := ecdsaEncry.Sign(helloMessage.Payload, pri)
-		if err == nil {
-			if helloMessage.Signature == nil {
-				payloadSign := pb.Signature{
-					Signature: sign,
-				}
-				helloMessage.Signature = &payloadSign
-			}
-			helloMessage.Signature.Signature = sign
-		}
-	}
-
-	retMessage, err := peer.Client.Chat(context.Background(), &helloMessage)
+	retMessage, err := peer.Client.Chat(context.Background(), reverseMessage)
 	log.Debug("reconnect return :", retMessage)
 	if err != nil {
 		log.Error("cannot establish a connection", err)
@@ -198,15 +292,119 @@ func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transpo
 	}
 	//review get the remote peer secrets
 	if retMessage.MessageType == pb.Message_RECONNECT_RESPONSE {
-		remotePublicKey := retMessage.Payload
-		err = peer.TEM.GenerateSecret(remotePublicKey, peer.PeerAddr.Hash)
-		if err != nil {
-			log.Error("genErr", err)
-			return nil, err
+		remoteECert := retMessage.Signature.ECert
+		if remoteECert == nil{
+			log.Errorf("Remote ECert is nil %v",retMessage.From)
+			return nil,errors.New("remote ecert is nil")
 		}
-		log.Debug("remote Peer address:", peer.PeerAddr)
-		log.Debug(peer.TEM.GetSecret(peer.PeerAddr.Hash))
-		return peer, nil
+		ecert, err := primitives.ParseCertificate(string(remoteECert))
+		if err != nil {
+			log.Error("cannot parse certificate")
+			return nil,err
+		}
+		signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
+		ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
+		signpuByte := ecdh256.Marshal(*signpub)
+		//verify the rcert and set the status
+
+		remoteRCert := retMessage.Signature.RCert
+		if remoteRCert == nil{
+			log.Errorf("Remote ECert is nil %v",retMessage.From)
+			return nil,errors.New("Remote ECert is nil %v")
+		}
+
+		verifyRcert, rcertErr := peer.CM.VerifyRCert(string(remoteRCert))
+		if !verifyRcert || rcertErr != nil {
+			peer.TEM.SetIsVerified(false, retMessage.From.Hash)
+		} else {
+			peer.TEM.SetIsVerified(true, retMessage.From.Hash)
+		}
+
+		peer.TEM.SetSignPublicKey(signpuByte, retMessage.From.Hash)
+		if peer.TEM.GetSecret(retMessage.From.Hash) == ""{
+			genErr := peer.TEM.GenerateSecret(signpuByte, retMessage.From.Hash)
+			if genErr != nil {
+				log.Errorf("generate the share secret key, from node id: %d, error info %s ", retMessage.From.ID,genErr)
+				return nil,genErr
+			}
+		}
+		return peer,nil
+	}
+	return nil, errors.New("cannot establish a connection")
+}
+
+func NewPeerReverse(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.TransportEncryptManager,cm *admittance.CAManager) (*Peer, error) {
+	peer := new(Peer)
+	peer.TEM = TEM
+	peer.PeerAddr = peerAddr
+	peer.LocalAddr = localAddr
+	peer.CM = cm
+
+	opts :=  peer.CM.GetGrpcClientOpts()
+	conn, err := grpc.Dial(peerAddr.IP+":"+strconv.Itoa(peerAddr.Port), opts...)
+	if err != nil {
+		log.Error("err:", errors.New("Cannot establish a connection!"))
+		return nil, err
+	}
+
+	peer.Connection = conn
+	peer.Client = pb.NewChatClient(conn)
+	// set the primary flag
+	peer.IsPrimary = false
+
+	reverseMessage := &pb.Message{
+		MessageType:  pb.Message_HELLOREVERSE,
+		Payload:      peer.TEM.GetLocalPublicKey(),
+		From:         peer.LocalAddr.ToPeerAddress(),
+		MsgTimeStamp: time.Now().UnixNano(),
+	}
+	SignCert(reverseMessage,peer.CM)
+
+	retMessage, err := peer.Client.Chat(context.Background(), reverseMessage)
+	log.Debug("reconnect return :", retMessage)
+	if err != nil {
+		log.Error("cannot establish a connection", err)
+		return nil, err
+	}
+	//review get the remote peer secrets
+	if retMessage.MessageType == pb.Message_HELLOREVERSE_RESPONSE {
+		remoteECert := retMessage.Signature.ECert
+		if remoteECert == nil{
+			log.Errorf("Remote ECert is nil %v",retMessage.From)
+			return nil,errors.New("remote ecert is nil")
+		}
+		ecert, err := primitives.ParseCertificate(string(remoteECert))
+		if err != nil {
+				log.Error("cannot parse certificate")
+			return nil,err
+		}
+		signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
+		ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
+		signpuByte := ecdh256.Marshal(*signpub)
+		//verify the rcert and set the status
+
+		remoteRCert := retMessage.Signature.RCert
+		if remoteRCert == nil{
+			log.Errorf("Remote ECert is nil %v",retMessage.From)
+			return nil,errors.New("Remote ECert is nil %v")
+		}
+
+		verifyRcert, rcertErr := peer.CM.VerifyRCert(string(remoteRCert))
+		if !verifyRcert || rcertErr != nil {
+			peer.TEM.SetIsVerified(false, retMessage.From.Hash)
+		} else {
+			peer.TEM.SetIsVerified(true, retMessage.From.Hash)
+		}
+
+		peer.TEM.SetSignPublicKey(signpuByte, retMessage.From.Hash)
+		if peer.TEM.GetSecret(retMessage.From.Hash) == ""{
+			genErr := peer.TEM.GenerateSecret(signpuByte, retMessage.From.Hash)
+			if genErr != nil {
+				log.Errorf("generate the share secret key, from node id: %d, error info %s ", retMessage.From.ID,genErr)
+				return nil,genErr
+			}
+		}
+		return peer,nil
 	}
 	return nil, errors.New("cannot establish a connection")
 }
@@ -216,10 +414,12 @@ func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transpo
 // which implements the service that prototype file declares
 //
 func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
-	log.Debug("BROADCAST:", msg.From.ID, ">>>", this.PeerAddr.ID)
+	log.Debug("CHAT:", msg.From.ID, ">>>", this.PeerAddr.ID)
 	msg.Payload, err = this.TEM.EncWithSecret(msg.Payload, this.PeerAddr.Hash)
+
+	//log.Critical("after enc secret",msg.Payload)
 	if err != nil {
-		log.Error("enc with secret ", err)
+		log.Error("enc with secret failed", err)
 		return nil, err
 	}
 
@@ -256,7 +456,7 @@ func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
 			return nil, err
 		}
 	}
-	log.Debug("response", response.MessageType)
+	log.Debugf("RESP(%v)-FROM: %d ORIGIN:(%d  >> %d)", response.MessageType,response.From.ID,msg.From.ID,this.PeerAddr.ID)
 	return response, err
 }
 
