@@ -82,24 +82,25 @@ func (this *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux,
 	} else {
 		//log.Critical("connect")
 		//log.Critical("isvp", this.IsVP, "isorigin", this.IsOriginal)
-		if this.IsVP && this.IsOriginal {
+		if this.IsOriginal {
 			// load the waiting connecting node information
 			log.Debug("start node as oirgin mode")
 			this.connectToPeers(aliveChain)
 			this.IsOnline = true
 			//aliveChain <- 0
-		} else if this.IsVP && !this.IsOriginal {
+		} else if !this.IsOriginal {
 			// start attend routinei
 			log.Debug("connect to introducer")
 			// IMPORT should aliveChain <- 1 frist
 			aliveChain <- 1
 			go this.LocalNode.attendNoticeProcess(this.LocalNode.N)
 			this.connectToIntroducer(*this.Introducer)
-		} else if !this.IsVP {
-			log.Debug("connect to vp")
-			this.vpConnect()
-			aliveChain <- 2
 		}
+		//else if !this.IsVP {
+		//	log.Debug("connect to vp")
+		//	this.vpConnect()
+		//	aliveChain <- 2
+		//}
 	}
 	log.Notice("┌────────────────────────────┐")
 	log.Notice("│  All NODES WERE CONNECTED  |")

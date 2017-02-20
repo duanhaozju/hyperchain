@@ -39,7 +39,7 @@ func (self *ProtocolManager) SyncReplicaStatus() {
 				log.Error("marshal syncReplicaStatus message failed")
 				continue
 			}
-			peers := self.Peermanager.GetVPPeers()
+			peers := self.Peermanager.GetAllPeers()
 			var peerIds = make([]uint64, len(peers))
 			for idx, peer := range peers {
 				//TODO change id into int type

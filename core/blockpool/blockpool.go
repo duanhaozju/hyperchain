@@ -64,7 +64,6 @@ type BlockPool struct {
 						  // thread safe cache
 	blockCache            *common.Cache       // cache for validation result
 	validateEventQueue    *common.Cache       // cache for storing validation event
-	queue           *common.Cache
 						  // config
 	conf                  *common.Config      // block configuration
 						  // hash utils
@@ -91,10 +90,6 @@ func NewBlockPool(consenter consensus.Consenter, conf *common.Config, commonHash
 	if err != nil {
 		return nil
 	}
-	queue, err := common.NewCache()
-	if err != nil {
-		return nil
-	}
 	validationQueue, err := common.NewCache()
 	if err != nil {
 		return nil
@@ -102,7 +97,6 @@ func NewBlockPool(consenter consensus.Consenter, conf *common.Config, commonHash
 	helper := NewHelper(eventMux)
 	pool := &BlockPool{
 		consenter:       consenter,
-		queue:           queue,
 		validateEventQueue: validationQueue,
 		blockCache:      blockCache,
 		conf:            conf,
