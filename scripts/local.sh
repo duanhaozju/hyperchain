@@ -28,7 +28,7 @@ help(){
     echo "  -k, --kill:     just kill all the processes"
     echo "  -d, --delete:   clear the old data or not; default: clear. add for not clear"
     echo "  -r, --rebuild:  rebuild the project or not; default: rebuild, add for not rebuild"
-    echo "  -e, --env:      run in which kink of system; default: linux, add for mac"
+    echo "  -e, --env:      run in which kind of system; default: linux, add for mac"
     echo "  -m, --mode:     choose the run mode; default: run many in many, add for many in one"
     echo "---------------------------------------------------"
     echo "Example for run many in one in mac without rebuild:"

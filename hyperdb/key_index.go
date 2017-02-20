@@ -109,6 +109,7 @@ func (ki *KeyIndex) Init() error  {
 	log.Debug("Init KeyIndex")
 	var err error
 	ki.lastStartKeyPrefix, err =  ki.db.Get(ki.lastStartKey(), nil)
+	firstStart := (err == leveldb.ErrNotFound)
 	if err != nil && err != leveldb.ErrNotFound {
 		log.Noticef("fetch lastStartKey error, %v", err)
 		return err
@@ -117,10 +118,13 @@ func (ki *KeyIndex) Init() error  {
 	ki.currStartKeyPrefix = ki.checkPointKey()
 	ki.keyPrefix = ki.currStartKeyPrefix
 	log.Debugf("Current start key index: %v", string(ki.currStartKeyPrefix))
-	if ok, err := ki.db.Has(ki.lastStartKeyPrefix, nil); ok && err == nil {
-		ki.Rebuild()
+	err = ki.Rebuild()
+	if err != nil{
+		return err
 	}
-	ki.db.Put(ki.lastStartKey(), ki.currStartKeyPrefix, nil)
+	if firstStart {
+		ki.db.Put(ki.lastStartKey(), ki.currStartKeyPrefix, nil)
+	}
 	return err
 }
 
@@ -130,19 +134,25 @@ func (ki *KeyIndex) Rebuild() error {
 	log.Noticef("load bloom from local file, file name: %s", bloomPath)
 	bfile, err := os.Open(bloomPath)
 	if err != nil {
-		log.Errorf("load bloom filter with file %s error %v ", bloomPath, err)
-		return err
+		log.Warningf("load bloom filter with file %s error %v ", bloomPath, err)
+		err = nil
+		//return err
+	}else {
+		size, err := ki.bf.ReadFrom(bfile)
+		if err != nil {
+			log.Errorf("read data from bloom file error %v", err)
+			return err
+		}
+		log.Noticef("read %d bytes data from bloom file %s", size, bloomPath)
 	}
-	size, err := ki.bf.ReadFrom(bfile)
-	if err != nil {
-		log.Errorf("read data from bloom file error %v", err)
-		return err
-	}
-	log.Noticef("read %d bytes data from bloom file %s", size, bloomPath)
 
 	//2.add the recent un_persist keys into the bloom
 	if ki.lastStartKeyPrefix != nil{
-		it := ki.db.NewIterator(util.BytesPrefix(ki.lastStartKeyPrefix), nil)
+		r := &util.Range{
+			Start:ki.lastStartKeyPrefix,
+			Limit:ki.currStartKeyPrefix,
+		}
+		it := ki.db.NewIterator(r, nil)
 		log.Noticef("start load recent un_persist keys into bloom")
 		for ;it.Next(); {
 			k := it.Key()
@@ -150,8 +160,9 @@ func (ki *KeyIndex) Rebuild() error {
 			if !strings.HasPrefix(string(k), "chk.") {
 				break
 			}
-			log.Debugf("add key %s", string(v))
+			log.Debugf("add key %s, value: %s", string(k), string(v))
 			ki.bf.Add(v)
+
 		}
 	}
 	return nil
@@ -203,6 +214,8 @@ func (ki *KeyIndex) persistBloom () error {
 			return err
 		}
 	}
+	//warn: should reset lastStartKey only after the bloom filter has been persisted
+	err = ki.db.Put(ki.lastStartKey(), ki.currStartKeyPrefix, nil)
 	return err
 }
 

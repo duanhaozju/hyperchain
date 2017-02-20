@@ -34,11 +34,9 @@ func NewSLDB(filepath string) (*SuperLevelDB, error) {
 
 //Put put key value data into the database.
 func (sldb  *SuperLevelDB) Put(key []byte, value []byte) error {
-	err := sldb.db.Put(key, value, nil)
-	if err == nil {
-		sldb.index.AddIndexForKey(key)
-	}
-	return err
+	sldb.index.AddIndexForKey(key)
+	sldb.index.PersistKeyBatch()
+	return sldb.db.Put(key, value, nil)
 }
 
 //Get fetch data for specify key from db.
