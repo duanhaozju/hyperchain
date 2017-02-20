@@ -46,6 +46,7 @@ type Index interface {
 	Init() error
 	Rebuild() error
 	Persist() error
+	PersistKeyBatch() error
 }
 
 //KeyIndex index implement for key-value store based on BloomFilter.
@@ -56,6 +57,21 @@ type KeyIndex struct {
 	keyPrefix          []byte
 	lastStartKeyPrefix []byte
 	currStartKeyPrefix []byte
+	keyBatch           *leveldb.Batch
+}
+
+//NewKeyIndex new KeyIndex instance
+func NewKeyIndex(ns string, db *leveldb.DB) *KeyIndex {
+	filter := bloom.New(1 * 10000 * 10000, 3)
+	index := &KeyIndex{
+		namespace:ns,
+		bf:filter,
+		db:db,
+		keyPrefix:[]byte(ns + "_bloom_key."),
+	}
+	index.keyBatch = new(leveldb.Batch)
+	index.Init()
+	return index
 }
 
 //Namespace get namespace of this keyindex instance
@@ -141,25 +157,14 @@ func (ki *KeyIndex) Rebuild() error {
 	return nil
 }
 
-//NewKeyIndex new KeyIndex instance
-func NewKeyIndex(ns string, db *leveldb.DB) *KeyIndex {
-	filter := bloom.New(1 * 10000 * 10000, 3)
-	index := &KeyIndex{
-		namespace:ns,
-		bf:filter,
-		db:db,
-		keyPrefix:[]byte(ns + "_bloom_key."),
-	}
-	index.Init()
-	return index
-}
-
-//persist the key into the database
+//persistKey add key into the batch
 func (ki *KeyIndex) persistKey(key []byte) error {
 	nkey := []byte(string(ki.keyPrefix) + string(key))
-	return ki.db.Put(nkey, key, nil)
+	ki.keyBatch.Put(nkey, key)
+	return nil
 }
 
+//dropPreviousKey drop keys which have been added into bloom and persisted
 func (ki *KeyIndex) dropPreviousKey() error  {
 	if ki.lastStartKeyPrefix != nil {
 		it := ki.db.NewIterator(util.BytesPrefix(ki.lastStartKeyPrefix), nil)
@@ -220,6 +225,15 @@ func (ki *KeyIndex) Persist() error {
 		return err
 	}
 	err = ki.dropPreviousKey()
+	return err
+}
+
+//PersistKeyBatch persist keys at level of batch
+func (ki *KeyIndex) PersistKeyBatch() error {
+	err := ki.db.Write(ki.keyBatch, nil)
+	if err == nil {// keyBatch write success
+		ki.keyBatch.Reset()
+	}
 	return err
 }
 

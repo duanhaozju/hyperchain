@@ -8,24 +8,28 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
+	"time"
 )
 
 type SuperLevelDB struct {
 	path  string
 	db    *leveldb.DB
 	index Index
+	closed chan bool
 }
 
 //New new super LevelDB
 func NewSLDB(filepath string) (*SuperLevelDB, error) {
 	db, err := leveldb.OpenFile(filepath, nil)
 	index := NewKeyIndex("defaultNS", db)
-
-	return &SuperLevelDB{
+	sldb := &SuperLevelDB{
 		path: filepath,
 		db:   db,
 		index:   index,
-	}, err
+		closed: make(chan bool),
+	}
+	sldb.dumpIndexByInterval(24 * time.Hour)
+	return sldb, err
 }
 
 //Put put key value data into the database.
@@ -85,6 +89,7 @@ func (sldb *SuperLevelDB) DestroyByRange(start, end []byte) error {
 }
 
 func (sldb *SuperLevelDB) Close() {
+	sldb.closed <- true
 	sldb.db.Close()
 }
 
@@ -104,6 +109,22 @@ func (db *SuperLevelDB) NewBatch() Batch {
 		}
 }
 
+//dumpIndexByInterval dump indexes by interval and after close.
+func (db *SuperLevelDB) dumpIndexByInterval(du time.Duration) {
+	go func() {
+		for {
+			select {
+			case <- time.After(du):
+				db.index.Persist()
+			case <- db.closed:
+				db.index.Persist()
+				return
+			}
+		}
+	}()
+}
+
+//batch related functions
 type superLdbBatch struct {
 	batch *leveldb.Batch
 	sldb  *SuperLevelDB
@@ -115,12 +136,20 @@ func (sb *superLdbBatch) Put(key, value []byte) error {
 	return nil
 }
 
-func (b *superLdbBatch) Delete(key []byte) error {
-	b.batch.Delete(key)
+func (sb *superLdbBatch) Delete(key []byte) error {
+	sb.batch.Delete(key)
 	return nil
 }
 
-func (b *superLdbBatch) Write() error {
-	err := b.sldb.db.Write(b.batch, nil)
+func (sb *superLdbBatch) Write() error {
+	err := sb.sldb.index.PersistKeyBatch()
+	if err != nil {
+		log.Errorf("PersistKeyBatch error, %v", err)
+	}
+	err = sb.sldb.db.Write(sb.batch, nil)
 	return err
+}
+
+func (b *superLdbBatch) Reset() {
+	b.batch.Reset()
 }
