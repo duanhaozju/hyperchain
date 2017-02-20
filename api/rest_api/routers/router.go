@@ -43,6 +43,7 @@ func NewRouter() {
 
 		beego.NSNamespace("/nodes",
 			beego.NSRouter("/list", &controllers.NodesController{}, "get:GetNodes"),
+			beego.NSRouter("/tcert", &controllers.CertController{}, "get:GetTCert"),
 		),
 	)
 	beego.AddNamespace(ns)

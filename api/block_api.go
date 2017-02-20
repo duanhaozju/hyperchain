@@ -256,17 +256,13 @@ func getBlocks(args IntervalArgs, hyperDb hyperdb.Database) ([]*BlockResult, err
 }
 
 // 测试用
-type SendQueryArgs struct {
-	From Number
-	To   Number
-}
 type BatchTimeResult struct {
 	CommitTime int64
 	BatchTime  int64
 }
 
 // QueryCommitAndBatchTime returns commit time and batch time between from block and to block
-func (blk *PublicBlockAPI) QueryCommitAndBatchTime(args SendQueryArgs) (*BatchTimeResult, error) {
+func (blk *PublicBlockAPI) QueryCommitAndBatchTime(args IntervalArgs) (*BatchTimeResult, error) {
 
 	commitTime, batchTime := core.CalcCommitBatchAVGTime(args.From.ToUint64(), args.To.ToUint64())
 
@@ -277,7 +273,7 @@ func (blk *PublicBlockAPI) QueryCommitAndBatchTime(args SendQueryArgs) (*BatchTi
 }
 
 // QueryEvmAvgTime returns EVM average time between from block and to block
-func (blk *PublicBlockAPI) QueryEvmAvgTime(args SendQueryArgs) (int64, error) {
+func (blk *PublicBlockAPI) QueryEvmAvgTime(args IntervalArgs) (int64, error) {
 
 	evmTime := core.CalcEvmAVGTime(args.From.ToUint64(), args.To.ToUint64())
 	log.Info("-----evmTime----", evmTime)
@@ -285,16 +281,16 @@ func (blk *PublicBlockAPI) QueryEvmAvgTime(args SendQueryArgs) (int64, error) {
 	return evmTime, nil
 }
 
-func (blk *PublicBlockAPI) QueryTPS(args SendQueryArgs) (string, error) {
-	err, ret := core.CalBlockGPS(args.From.ToInt64(), args.To.ToInt64())
+func (blk *PublicBlockAPI) QueryTPS(args IntervalArgs) (string, error) {
+	err, ret := core.CalBlockGPS(int64(args.From.ToUint64()), int64(args.To.ToUint64()))
 	if err != nil {
 		return "", &CallbackError{err.Error()}
 	}
 	return ret, nil
 }
 
-func (blk *PublicBlockAPI) QueryWriteTime(args SendQueryArgs) (*StatisticResult, error) {
-	err, ret := core.GetBlockWriteTime(args.From.ToInt64(), args.To.ToInt64())
+func (blk *PublicBlockAPI) QueryWriteTime(args IntervalArgs) (*StatisticResult, error) {
+	err, ret := core.GetBlockWriteTime(int64(args.From.ToUint64()), int64(args.To.ToUint64()))
 	if err != nil {
 		return nil, &CallbackError{err.Error()}
 	}
