@@ -62,7 +62,7 @@ type KeyIndex struct {
 
 //NewKeyIndex new KeyIndex instance
 func NewKeyIndex(ns string, db *leveldb.DB) *KeyIndex {
-	filter := bloom.New(1 * 10000 * 10000, 3)
+	filter := bloom.New(1 * 10000 * 10000, 3) //todo: fix it
 	index := &KeyIndex{
 		namespace:ns,
 		bf:filter,
@@ -154,7 +154,7 @@ func (ki *KeyIndex) Rebuild() error {
 		}
 		it := ki.db.NewIterator(r, nil)
 		log.Noticef("start load recent un_persist keys into bloom")
-		for ;it.Next(); {
+		for ; it.Next(); {
 			k := it.Key()
 			v := it.Value()
 			if !strings.HasPrefix(string(k), "chk.") {
@@ -162,7 +162,6 @@ func (ki *KeyIndex) Rebuild() error {
 			}
 			log.Debugf("add key %s, value: %s", string(k), string(v))
 			ki.bf.Add(v)
-
 		}
 	}
 	return nil
@@ -176,14 +175,21 @@ func (ki *KeyIndex) persistKey(key []byte) error {
 }
 
 //dropPreviousKey drop keys which have been added into bloom and persisted
+//drop keys which is generated a day ago
+//invoked after persistBloom
 func (ki *KeyIndex) dropPreviousKey() error  {
-	if ki.lastStartKeyPrefix != nil {
-		it := ki.db.NewIterator(util.BytesPrefix(ki.lastStartKeyPrefix), nil)
-		for ; it.Next(); {
-			key := it.Key()
-			log.Debugf("delete key %s", string(key))
-			ki.db.Delete(key, nil)
-		}
+
+	start := ki.newCheckPointKey((time.Now().UnixNano() - 24 * time.Hour.Nanoseconds()))
+
+	r := &util.Range{
+		Start:start,
+		Limit:ki.checkPointKey(),
+	}
+	it := ki.db.NewIterator(r, nil)
+	for ; it.Next(); {
+		key := it.Key()
+		log.Debugf("delete key %s", string(key))
+		ki.db.Delete(key, nil)
 	}
 	return nil
 }
@@ -216,6 +222,9 @@ func (ki *KeyIndex) persistBloom () error {
 	}
 	//warn: should reset lastStartKey only after the bloom filter has been persisted
 	err = ki.db.Put(ki.lastStartKey(), ki.currStartKeyPrefix, nil)
+	ki.lastStartKeyPrefix = ki.currStartKeyPrefix
+	ki.currStartKeyPrefix = ki.checkPointKey()
+	ki.keyPrefix = ki.currStartKeyPrefix
 	return err
 }
 
@@ -250,10 +259,15 @@ func (ki *KeyIndex) PersistKeyBatch() error {
 	return err
 }
 
+//lastStartKey key the fetch last Start key
 func (ki *KeyIndex) lastStartKey() []byte  {
 	return []byte(ki.namespace + "_start_key")
 }
 
 func (ki *KeyIndex) checkPointKey() []byte {
-	return []byte("chk." + string(ki.keyPrefix) + strconv.FormatInt(time.Now().UnixNano(), 10) + ".")
+	return []byte("chk." + ki.namespace + "_bloom_key." + strconv.FormatInt(time.Now().UnixNano(), 10) + ".")
+}
+
+func (ki *KeyIndex) newCheckPointKey(seq int64) []byte {
+	return []byte("chk." + ki.namespace + "_bloom_key." + strconv.FormatInt(seq, 10) + ".")
 }

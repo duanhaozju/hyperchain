@@ -9,12 +9,13 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"time"
+	"fmt"
 )
 
 type SuperLevelDB struct {
-	path  string
-	db    *leveldb.DB
-	index Index
+	path   string
+	db     *leveldb.DB
+	index  Index
 	closed chan bool
 }
 
@@ -28,7 +29,7 @@ func NewSLDB(filepath string) (*SuperLevelDB, error) {
 		index:   index,
 		closed: make(chan bool),
 	}
-	sldb.dumpIndexByInterval(24 * time.Hour)
+	go sldb.dumpIndexByInterval(24 * time.Hour)
 	return sldb, err
 }
 
@@ -45,7 +46,7 @@ func (sldb *SuperLevelDB) Get(key []byte) ([]byte, error) {
 	var err error
 	if sldb.index.MayContains(key) {
 		data, err = sldb.db.Get(key, nil)
-	}else {
+	} else {
 		err = leveldb.ErrNotFound
 	}
 	return data, err
@@ -91,7 +92,7 @@ func (sldb *SuperLevelDB) Close() {
 	sldb.db.Close()
 }
 
-func (sldb *SuperLevelDB) LevelDB() *leveldb.DB  {
+func (sldb *SuperLevelDB) LevelDB() *leveldb.DB {
 	return sldb.db
 }
 
@@ -104,22 +105,26 @@ func (db *SuperLevelDB) NewBatch() Batch {
 	return &superLdbBatch{
 		batch: new(leveldb.Batch),
 		sldb:db,
-		}
+	}
 }
 
 //dumpIndexByInterval dump indexes by interval and after close.
 func (db *SuperLevelDB) dumpIndexByInterval(du time.Duration) {
-	go func() {
-		for {
-			select {
-			case <- time.After(du):
-				db.index.Persist()
-			case <- db.closed:
-				db.index.Persist()
-				return
-			}
+	tm := time.Now()
+	sec := (24 + 4 - tm.Hour()) * 3600 - tm.Minute() * 60 - tm.Second()// bloom persist at 4:00 AM
+	d, _ := time.ParseDuration(fmt.Sprintf("%ds", sec))
+	time.Sleep(d)
+	db.index.Persist()// first time persist
+
+	for {
+		select {
+		case <-time.After(du):
+			db.index.Persist()
+		case <-db.closed:
+			db.index.Persist()
+			return
 		}
-	}()
+	}
 }
 
 //batch related functions
