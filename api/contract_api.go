@@ -215,26 +215,47 @@ func (contract *PublicContractAPI) EncryptoMessage(args EncryptoArgs) (*HmResult
 type ValueArgs struct {
 	RawValue   []int64  `json:"rawValue"`
 	EncryValue []string `json:"encryValue"`
+	Illegalhm  string   `json:"illegalhm"`
 }
 
-func (contract *PublicContractAPI) CheckHmValue(args ValueArgs) ([]bool, error) {
+type HmCheckResult struct {
+	CheckResult []bool  `json:"checkResult"`
+	SumIllegalHmAmount string `json:"illegalHmAmount"`
+}
+
+func (contract *PublicContractAPI) CheckHmValue(args ValueArgs) (*HmCheckResult, error) {
 	if len(args.RawValue) != len(args.EncryValue) {
 		return nil, &invalidParamsError{"invalid params, two array length not equal"}
 	}
 
 	result := make([]bool, len(args.RawValue))
+
+	illegalHmAmount_bigint := new(big.Int)
+	illegalHmAmount:=make([]byte,16)
+	sumIllegal := make([]byte,16)
+
+	if(args.Illegalhm!=""){
+		illegalHmAmount_bigint.SetString(args.Illegalhm, 10)
+		illegalHmAmount = illegalHmAmount_bigint.Bytes()
+	}
+	var isvalid bool
 	for i, v := range args.RawValue {
 		encryVlue_bigint := new(big.Int)
 		encryVlue_bigint.SetString(args.EncryValue[i], 10)
 
 		rawValue_bigint := new(big.Int)
 		rawValue_bigint.SetInt64(v)
-
-		isvalid := hmEncryption.DestinationVerify(encryVlue_bigint.Bytes(), rawValue_bigint.Bytes(), getPaillierPublickey(contract.config))
+		isvalid,sumIllegal = hmEncryption.DestinationVerify(illegalHmAmount,encryVlue_bigint.Bytes(), rawValue_bigint.Bytes(), getPaillierPublickey(contract.config))
+		illegalHmAmount = sumIllegal
 		result[i] = isvalid
 	}
 
-	return result, nil
+	//todo
+
+	return &HmCheckResult{
+		CheckResult: result,
+		SumIllegalHmAmount: new(big.Int).SetBytes(sumIllegal).String(),
+	}, nil
 }
 
 // GetStorageByAddr returns the storage by given contract address and bock number.
