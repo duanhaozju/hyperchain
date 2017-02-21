@@ -1,0 +1,21 @@
+###########################################################
+#  _   _                        ____ _           _        #
+# | | | |_   _ _ __   ___ _ __ / ___| |__   __ _(_)_ __   #
+# | |_| | | | | '_ \ / _ \ '__| |   | '_ \ / _\` | | '_ \ #
+# |  _  | |_| | |_) |  __/ |  | |___| | | | (_| | | | | | #
+# |_| |_|\__, | .__/ \___|_|   \____|_| |_|\__,_|_|_| |_| #
+#        |___/|_|                                         #
+###########################################################
+
+## Data storage path config
+# Note: please DONOT add a slash `/` in the end of directory path.
+# this relative path is relative to the hyperchain binary execute file path
+
+global:
+    version:
+        blockversion: "1.0"
+        transactionversion: "1.0"
+    configs:
+        caconfig: "test/caconfig.toml"
+        peers: "test/local_peerconfig.json"
+

@@ -520,6 +520,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch hyperdb.Batch, curr
 
 		keyValueMap = NewKVMap()
 		writeBatch.Delete(dbKey)
+		writeBatch.Write()
 	}
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()

@@ -120,7 +120,7 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 	defer c.decMu.Unlock()
 
 	signature := c.httpHeader.Get("signature")
-	//log.Warning("json sign",signature)
+
 	msg := common.TransportDecode(c.httpHeader.Get("msg"))
 	//log.Warning("json msg",msg)
 	tcertPem := common.TransportDecode(c.httpHeader.Get("tcert"))
@@ -128,7 +128,6 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 	//log.Warning("json tcert2",tcertPem)
 	tcert,err := primitives.ParseCertificate(tcertPem)
 	if err != nil {
-
 		log.Error("fail to parse tcert.",err)
 		return &UnauthorizedError{}
 	}
@@ -145,12 +144,8 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 	签名算法为 ECDSAWithSHA256
 	这部分需要SDK端实现，hyperchain端已经实现了验证方法
 	*/
-
 	signB := common.Hex2Bytes(signature)
 	verifySignature,err := primitives.ECDSAVerifyTransport(pubKey,[]byte(msg),signB)
-	//sign,_ := hex.DecodeString(signature)
-	//verifySignature, err := c.CM.VerifyECertSignature(tcertPem, []byte("hyperchain"), sign)
-	//verifySignature := strings.EqualFold("hyperchain",signature)
 	if err != nil || !verifySignature {
 		log.Error("Fail to verify TransportSignture!",err)
 		return &UnauthorizedError{}

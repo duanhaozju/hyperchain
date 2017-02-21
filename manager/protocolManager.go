@@ -15,8 +15,8 @@ import (
 	"hyperchain/p2p"
 	"hyperchain/protos"
 	"hyperchain/recovery"
-	"sync"
 	"time"
+	"hyperchain/admittance"
 )
 
 var log *logging.Logger // package-level logger
@@ -48,7 +48,6 @@ type ProtocolManager struct {
 	syncStatusSub       event.Subscription
 	peerMaintainSub     event.Subscription
 	quitSync            chan struct{}
-	wg                  sync.WaitGroup
 	syncBlockCache      *common.Cache
 	replicaStatus       *common.Cache
 	syncReplicaInterval time.Duration
@@ -65,7 +64,7 @@ var eventMuxAll *event.TypeMux
 
 func NewProtocolManager(blockPool *blockpool.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
 	//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
-	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, initType int, expired chan bool, expiredTime time.Time) *ProtocolManager {
+	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, expired chan bool, expiredTime time.Time) *ProtocolManager {
 	synccache, _ := common.NewCache()
 	replicacache, _ := common.NewCache()
 	manager := &ProtocolManager{
@@ -82,7 +81,6 @@ func NewProtocolManager(blockPool *blockpool.BlockPool, peerManager p2p.PeerMana
 		syncReplica:         syncReplica,
 		expired:             expired,
 		expiredTime:         expiredTime,
-		initType:            initType,
 	}
 	manager.nodeInfo = make(p2p.PeerInfos, 0, 1000)
 	eventMuxAll = eventMux
@@ -96,8 +94,7 @@ func GetEventObject() *event.TypeMux {
 }
 
 // start listen new block msg and consensus msg
-func (pm *ProtocolManager) Start() {
-	pm.wg.Add(1)
+func (pm *ProtocolManager) Start(c chan int, cm *admittance.CAManager) {
 	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
 	pm.validateSub = pm.eventMux.Subscribe(event.ExeTxsEvent{})
 	pm.commitSub = pm.eventMux.Subscribe(event.CommitOrRollbackBlockEvent{})
@@ -116,31 +113,22 @@ func (pm *ProtocolManager) Start() {
 	go pm.respHandlerLoop()
 	go pm.viewChangeLoop()
 	go pm.peerMaintainLoop()
-
 	go pm.checkExpired()
 	if pm.syncReplica {
 		pm.syncStatusSub = pm.eventMux.Subscribe(event.ReplicaStatusEvent{})
 		go pm.syncReplicaStatusLoop()
 		go pm.SyncReplicaStatus()
 	}
+
+	go pm.Peermanager.Start(c, pm.eventMux, cm)
+	pm.initType = <- c
 	if pm.initType == 0 {
 		// start in normal mode
 		pm.NegotiateView()
 	}
-	if pm.initType == 1 {
-		// join the chain dynamically
-		payload := pm.Peermanager.GetLocalAddressPayload()
-		msg := &protos.NewNodeMessage{
-			Payload: payload,
-		}
-		pm.consenter.RecvLocal(msg)
-		pm.Peermanager.ConnectToOthers()
-	}
-	pm.wg.Wait()
-
 }
+
 func (self *ProtocolManager) syncCheckpointLoop() {
-	self.wg.Add(-1)
 	for obj := range self.syncCheckpointSub.Chan() {
 
 		switch ev := obj.Data.(type) {
@@ -204,6 +192,7 @@ func (self *ProtocolManager) respHandlerLoop() {
 		}
 	}
 }
+
 func (self *ProtocolManager) viewChangeLoop() {
 
 	for obj := range self.viewChangeSub.Chan() {
@@ -217,6 +206,7 @@ func (self *ProtocolManager) viewChangeLoop() {
 		}
 	}
 }
+
 func (self *ProtocolManager) syncReplicaStatusLoop() {
 
 	for obj := range self.syncStatusSub.Chan() {
@@ -235,7 +225,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 	for obj := range self.consensusSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.BroadcastConsensusEvent:
-			log.Info("######enter broadcast")
+			log.Debug("######enter broadcast")
 			go self.BroadcastConsensus(ev.Payload)
 		case event.TxUniqueCastEvent:
 			var peers []uint64
@@ -253,11 +243,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			}
 
 		case event.ConsensusEvent:
-			//call consensus module
-			//log.Debug("###### enter ConsensusEvent")
-			//msg := &protos.Message{}
-			//proto.Unmarshal(ev.Payload, msg)
-			//log.Debug("***consensus, from: , type: ", msg.Id, msg.Type)
+			//log.Error("enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
 		}
 	}
@@ -282,7 +268,6 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			peers := self.Peermanager.GetAllPeers()
 			var peerIds []uint64
 			for _, peer := range peers {
-				//TODO change to int
 				peerIds = append(peerIds, uint64(peer.PeerAddr.ID))
 			}
 			self.Peermanager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_BROADCAST_NEWPEER)
@@ -306,7 +291,6 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			log.Debug("BroadcastDelPeerEvent")
 			// receive this event from consensus module
 			// broadcast to other replica
-			// TODO Don't send to the exit peer itself
 			peers := self.Peermanager.GetAllPeers()
 			var peerIds []uint64
 			for _, peer := range peers {
@@ -335,11 +319,17 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			// send negotiate event
 			if self.initType == 1 {
 				self.Peermanager.SetOnline()
+				payload :=self.Peermanager.GetLocalAddressPayload()
+				msg := &protos.NewNodeMessage{
+					Payload: payload,
+				}
+				self.consenter.RecvLocal(msg)
 				self.NegotiateView()
 			}
 		}
 	}
 }
+
 
 func (self *ProtocolManager) sendMsg(payload []byte) {
 	msg := &protos.Message{
@@ -371,6 +361,7 @@ func (self *ProtocolManager) GetNodeInfo() p2p.PeerInfos {
 }
 
 func (self *ProtocolManager) NegotiateView() {
+
 	negoView := &protos.Message{
 		Type:      protos.Message_NEGOTIATE_VIEW,
 		Timestamp: time.Now().UnixNano(),

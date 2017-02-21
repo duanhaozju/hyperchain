@@ -96,12 +96,5 @@ func ECDSAVerifyTransport(verKey *ecdsa.PublicKey, msg, signature []byte) (bool,
 	digest := make([]byte,32)
 	h.Write(msg)
 	h.Sum(digest[:0])
-
-	//fmt.Println("R",ecdsaSignature.R.BitLen())
-	//fmt.Println("S",ecdsaSignature.S.BitLen())
-
-
-
-	//h := Hash(msg)
 	return ecdsa.Verify(verKey, digest, ecdsaSignature.R, ecdsaSignature.S), nil
 }

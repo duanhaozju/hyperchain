@@ -374,6 +374,10 @@
 			"revisionTime": "2016-08-15T22:39:46Z"
 		},
 		{
+			"path": "google.golang.org/genproto/protobuf",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "NGg7/qIJVUfXi7xnEyyDLocdi6Y=",
 			"path": "gopkg.in/fatih/set.v0",
 			"revision": "27c40922c40b43fe04554d8223a402af3ea333f3",

@@ -80,10 +80,11 @@ type BlockPool struct {
 	commitInProgress      int32
 	validateQueueLen      int32
 	commitQueueLen        int32
+	helper                *Helper
 
 }
 
-func NewBlockPool(consenter consensus.Consenter, conf *common.Config, commonHash crypto.CommonHash, encryption crypto.Encryption) *BlockPool {
+func NewBlockPool(consenter consensus.Consenter, conf *common.Config, commonHash crypto.CommonHash, encryption crypto.Encryption, eventMux *event.TypeMux) *BlockPool {
 	var err error
 	blockCache, err := common.NewCache()
 	if err != nil {
@@ -93,12 +94,13 @@ func NewBlockPool(consenter consensus.Consenter, conf *common.Config, commonHash
 	if err != nil {
 		return nil
 	}
-
+	helper := NewHelper(eventMux)
 	pool := &BlockPool{
 		consenter:       consenter,
 		validateEventQueue: validationQueue,
 		blockCache:      blockCache,
 		conf:            conf,
+		helper:          helper,
 	}
 	// 1. set demand number and demand seqNo
 	currentChain := core.GetChainCopy()

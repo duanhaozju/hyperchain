@@ -10,7 +10,6 @@ import (
 	"google.golang.org/grpc"
 	"github.com/terasum/viper"
 	"github.com/op/go-logging"
-	//"hyperchain/crypto"
 	"hyperchain/common"
 )
 // Init the log setting
@@ -43,24 +42,23 @@ type CAManager struct {
 var caManager *CAManager
 
 func GetCaManager(global_config *viper.Viper) (*CAManager, error) {
-	config := viper.New()
-	config.SetConfigFile(global_config.GetString("global.configs.caconfig"))
-	err := config.ReadInConfig()
-	if err != nil {
-		log.Error("cannot read the ca config file!")
-		panic(err)
-	}
-	ecacertPath := config.GetString("ecert.ca")
-	ecertPath := config.GetString("ecert.cert")
-	ecertPrivateKeyPath :=config.GetString("ecert.priv")
-	rcacertPath:=config.GetString("rcert.ca")
-	rcertPath:=config.GetString("rcert.cert")
-	checkERCert := config.GetBool("check.checkercert")
-	checkTCert := config.GetBool("check.checktcert")
-
 	if caManager == nil {
-		var err error
-		caManager, err = NewCAManager(ecacertPath, ecertPath, rcertPath, rcacertPath, ecertPrivateKeyPath, ecertPath, checkERCert, checkTCert)
+		config := viper.New()
+		config.SetConfigFile(global_config.GetString("global.configs.caconfig"))
+		err := config.ReadInConfig()
+		if err != nil {
+			log.Error("cannot read the ca config file!")
+			panic(err)
+		}
+		ecacertPath := config.GetString("ecert.ca")
+		ecertPath := config.GetString("ecert.cert")
+		ecertPrivateKeyPath :=config.GetString("ecert.priv")
+		rcacertPath:=config.GetString("rcert.ca")
+		rcertPath:=config.GetString("rcert.cert")
+		checkERCert := config.GetBool("check.checkercert")
+		checkTCert := config.GetBool("check.checktcert")
+
+		caManager, err = newCAManager(ecacertPath, ecertPath, rcertPath, rcacertPath, ecertPrivateKeyPath, ecertPath, checkERCert, checkTCert)
 		if err != nil {
 			return nil, err
 		}
@@ -71,109 +69,111 @@ func GetCaManager(global_config *viper.Viper) (*CAManager, error) {
 	}
 }
 
-func NewCAManager(ecacertPath string, ecertPath string, rcertPath string, rcacertPath string, ecertPrivateKeyPath string, tcacertPath string, isUsed bool, checkTCert bool) (*CAManager, error) {
+
+func newCAManager(ecacertPath string, ecertPath string, rcertPath string, rcacertPath string, ecertPrivateKeyPath string, tcacertPath string, isUsed bool, checkTCert bool) (*CAManager, error) {
+	/*
+	在现有设计当中,无论是否验证ecert和rcert的合法性以及归属性
+	都需要带上ecert rcert,这两个证书都需要在连接初进行认证,
+	需要标识节点的NVP和VP节点之间用证书进行区别
+	 */
 	var caManager CAManager
 	var err error
 	caManager.checkTCert = checkTCert
-	if isUsed != true{
-		caManager.ecacertByte = []byte{}
-		caManager.ecertByte = []byte{}
-		caManager.rcertByte = []byte{}
-		caManager.rcacertByte = []byte{}
-		caManager.ecertPrivateKeyByte = []byte{}
-		caManager.tcacertByte = []byte{}
-		caManager.isUsed = isUsed
-		return &caManager,nil
-	}else {
-		ecacert, rerr := ioutil.ReadFile(ecacertPath)
-		if rerr != nil {
-			log.Error("ecacert read failed")
-			return nil, rerr
-		}
-		caManager.ecacertByte = ecacert
-		ecert, rerr := ioutil.ReadFile(ecertPath)
-		if rerr != nil {
-			log.Error("ecert read failed")
-			return nil, rerr
-		}
-		caManager.ecertByte = ecert
-		rcert, rerr := ioutil.ReadFile(rcertPath)
-		if rerr != nil {
-			log.Error("rcert read failed")
-			return nil, rerr
-		}
+	ecacert, rerr := ioutil.ReadFile(ecacertPath)
+
+	if rerr != nil {
+		log.Error("ecacert read failed")
+		return nil, rerr
+	}
+	caManager.ecacertByte = ecacert
+	ecert, rerr := ioutil.ReadFile(ecertPath)
+	if rerr != nil {
+		log.Error("ecert read failed")
+		return nil, rerr
+	}
+	caManager.ecertByte = ecert
+	rcert, rerr := ioutil.ReadFile(rcertPath)
+	if rerr != nil {
+		log.Warning("rcert read failed, initlize as a nvp")
+	}else{
 		caManager.rcertByte = rcert
-		rcacert, rerr := ioutil.ReadFile(rcacertPath)
-		if rerr != nil {
-			log.Error("rcacert read failed")
-			return nil, rerr
-		}
-		caManager.rcacertByte = rcacert
-		ecertPrivateKey, rerr := ioutil.ReadFile(ecertPrivateKeyPath)
-		if rerr != nil {
-			log.Error("ecaPrivateKey read failed")
-			return nil, rerr
-		}
-		caManager.ecertPrivateKeyByte = ecertPrivateKey
+	}
 
-		//TODO delete this part
-		tcacert, tcaerr := ioutil.ReadFile(tcacertPath)
-		if tcaerr != nil {
-			log.Error("tcacert read failed")
-			return nil, rerr
-		}
-		caManager.tcacertByte = tcacert
+	rcacert, rerr := ioutil.ReadFile(rcacertPath)
+	if rerr != nil {
+		log.Error("rcacert read failed")
+		return nil, rerr
+	}
+	caManager.rcacertByte = rcacert
+	ecertPrivateKey, rerr := ioutil.ReadFile(ecertPrivateKeyPath)
+	if rerr != nil {
+		log.Error("ecaPrivateKey read failed")
+		return nil, rerr
+	}
+	caManager.ecertPrivateKeyByte = ecertPrivateKey
 
-		// TODO check the private type private key is der
+	//TODO delete this part
+	tcacert, tcaerr := ioutil.ReadFile(tcacertPath)
+	if tcaerr != nil {
+		log.Error("tcacert read failed")
+		return nil, rerr
+	}
+	caManager.tcacertByte = tcacert
 
-		caManager.ecert, err = primitives.ParseCertificate(string(ecert))
-		if err != nil {
-			log.Error("cannot parse the ecert")
-			return nil, errors.New("cannot parse the ecert")
-		}
-		caManager.ecacert, err = primitives.ParseCertificate(string(ecacert))
-		if err != nil {
-			log.Error("cannot parse the ecacert")
-			return nil, errors.New("cannot parse the ecacert")
-		}
+	// TODO check the private type private key is der
+
+	caManager.ecert, err = primitives.ParseCertificate(string(ecert))
+	if err != nil {
+		log.Error("cannot parse the ecert")
+		return nil, errors.New("cannot parse the ecert")
+	}
+	caManager.ecacert, err = primitives.ParseCertificate(string(ecacert))
+	if err != nil {
+		log.Error("cannot parse the ecacert")
+		return nil, errors.New("cannot parse the ecacert")
+	}
+	if rcert !=nil{
 		caManager.rcert, err = primitives.ParseCertificate(string(rcert))
 		if err != nil {
 			log.Error("cannot parse the rcert")
 			return nil, errors.New("cannot parse the rcert")
 		}
-		caManager.rcacert, err = primitives.ParseCertificate(string(rcacert))
-		if err != nil {
-			log.Error("cannot parse the rcert")
-			return nil, errors.New("cannot parse the rcacert")
-		}
-		//the caManager
-		caManager.ecertPrivateKey, err = primitives.ParseKey(string(ecertPrivateKey))
-		if err != nil {
-			log.Error("cannot parse the caprivatekey")
-			return nil, errors.New("cannot parse the caprivatekey")
-		}
-
-		//TODO delete this part
-		caManager.tcacert, err = primitives.ParseCertificate(string(tcacert))
-		if err != nil {
-			log.Error("cannot parse the tcacert")
-			return nil, errors.New("cannot parse the tcacert")
-		}
-
-		//TODO use ca or not
-		caManager.isUsed = isUsed
-		return &caManager, nil
+	}else{
+		caManager.rcert = nil;
 	}
+
+	caManager.rcacert, err = primitives.ParseCertificate(string(rcacert))
+	if err != nil {
+		log.Error("cannot parse the rcert")
+		return nil, errors.New("cannot parse the rcacert")
+	}
+	//the caManager
+	caManager.ecertPrivateKey, err = primitives.ParseKey(string(ecertPrivateKey))
+	if err != nil {
+		log.Error("cannot parse the caprivatekey")
+		return nil, errors.New("cannot parse the caprivatekey")
+	}
+
+	//TODO delete this part
+	caManager.tcacert, err = primitives.ParseCertificate(string(tcacert))
+	if err != nil {
+		log.Error("cannot parse the tcacert")
+		return nil, errors.New("cannot parse the tcacert")
+	}
+
+	//TODO use ca or not
+	caManager.isUsed = isUsed
+	return &caManager, nil
+
 }
 
 func (caManager *CAManager) SignTCert(publicKey string) (string, error) {
-	//if caManager.isUsed != true {
-	//	log.Critical("NOT USE TCERT")
-	//	return "", nil
-	//}
 	caManager.GetIsCheckTCert()
 	pubPem := common.TransportDecode(publicKey)
-
+	if pubPem=="" {
+		log.Error("illegal hex string.")
+		return "",errors.New("invaild param,please use right hex string.")
+	}
 	pubKey,err := primitives.ParsePubKey(pubPem)
 	if err != nil {
 		log.Error(err)
@@ -217,6 +217,25 @@ func (caManager *CAManager)VerifyTCert(tcertPEM string)(bool,error){
 
 }
 
+
+func (caManager *CAManager) VerifyECert(ecertPEM string) (bool, error) {
+	if caManager.isUsed != true {
+		return true, nil
+	}
+	ecertToVerify, err := primitives.ParseCertificate(ecertPEM)
+	if err != nil {
+		log.Error("cannot parse the ecert", err)
+		return false, err
+	}
+	verifyEcert, err := primitives.VerifyCert(ecertToVerify, caManager.ecacert)
+	if verifyEcert == false || err != nil {
+		log.Error("verified ecert falied")
+		return false, err
+	}
+	return true, nil
+
+}
+
 /**
 验证签名，验证签名需要有三个参数：
 第一个是携带的数字证书，即tcert,
@@ -224,48 +243,12 @@ func (caManager *CAManager)VerifyTCert(tcertPEM string)(bool,error){
 第三个是原始数据
 这个方法用来验证签名是否来自数字证书用户
 */
-func (caManager *CAManager) VerifySignature(certPEM, signature, signed string) (bool, error) {
+//VerifyCertSignature Verify the Signature of Cert
+func (ca *CAManager) VerifyCertSignature(certPEM string, msg, sign []byte) (bool, error) {
 	if caManager.isUsed != true {
 		return true, nil
 	}
-	tcertToVerify, err := primitives.ParseCertificate(certPEM)
-	if err != nil {
-		log.Error("cannot parse the tcert", err)
-		return false, err
-	}
-	verifySign, err := primitives.VerifySignature(tcertToVerify, signed, signature)
-	if verifySign == false {
-		log.Error("verified falied")
-		return false, err
-	}
-	return true, nil
-
-}
-
-func (caManager *CAManager) VerifyECert(ecertPEM string) (bool, error) {
-	if caManager.isUsed != true {
-		return true, nil
-	} else {
-		ecertToVerify, err := primitives.ParseCertificate(ecertPEM)
-		if err != nil {
-			log.Error("cannot parse the ecert", err)
-			return false, err
-		}
-		verifyEcert, err := primitives.VerifyCert(ecertToVerify, caManager.ecacert)
-		if verifyEcert == false || err != nil {
-			log.Error("verified ecert falied")
-			return false, err
-		}
-		return true, nil
-	}
-}
-
-//VerifyECertSignature Verify the Signature of ECert
-func (ca *CAManager) VerifyECertSignature(ecertPEM string, msg, sign []byte) (bool, error) {
-	if caManager.isUsed != true {
-		return true, nil
-	}
-	ecertToVerify, err := primitives.ParseCertificate(ecertPEM)
+	ecertToVerify, err := primitives.ParseCertificate(certPEM)
 	if err != nil {
 		log.Error("cannot parse the ecert", err)
 		return false, err
@@ -307,7 +290,6 @@ func (caManager *CAManager) VerifyRCert(rcertPEM string) (bool, error) {
  */
 
 //获取客户端ca配置opt
-//TODO 重写读取配置函数
 func (caManager *CAManager) GetGrpcClientOpts() []grpc.DialOption {
 	var opts []grpc.DialOption
 	creds, err := credentials.NewClientTLSFromFile(caManager.config.GetString("tlscert.ca"), caManager.config.GetString("tlscert.serverhostoverride"))
@@ -319,7 +301,6 @@ func (caManager *CAManager) GetGrpcClientOpts() []grpc.DialOption {
 }
 
 //获取服务器端ca配置opts
-// TODO 重写读取配置函数
 func (caManager *CAManager) GetGrpcServerOpts() []grpc.ServerOption {
 	var opts []grpc.ServerOption
 	creds, err := credentials.NewServerTLSFromFile(caManager.config.GetString("tlscert.cert"), caManager.config.GetString("tlscert.priv"))

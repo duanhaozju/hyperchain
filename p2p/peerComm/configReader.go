@@ -38,7 +38,6 @@ func NewConfigReader(configpath string) *ConfigReader {
 
 	slice := config.PeerNodes
 	for _, node := range slice {
-		log.Info(node.Address)
 		temp_addr := Address{
 			ID:      node.ID,
 			Port:    node.Port,
@@ -89,8 +88,20 @@ func (conf *ConfigReader) IsOrigin() bool {
 	return conf.Config.SelfConfig.IsOrigin
 }
 
+func (conf *ConfigReader)IsVP()bool{
+	return conf.Config.SelfConfig.IsVP
+}
+
 func (conf *ConfigReader) GetPort(nodeID int) int {
 	return conf.nodes[nodeID].Port
+}
+
+func (conf *ConfigReader) GetID(nodeID int) int{
+	return conf.nodes[nodeID].ID
+}
+
+func (conf *ConfigReader) GetRPCPort(nodeID int) int{
+	return conf.nodes[nodeID].RPCPort
 }
 
 func (conf *ConfigReader) GetIP(nodeID int) string {
@@ -101,9 +112,6 @@ func (conf *ConfigReader) GetMaxPeerNumber() int {
 	return conf.maxNode
 }
 
-func (conf *ConfigReader) DeleteNode(addr pb.PeerAddr) {
-	//TODO delete DeleteNode
-}
 
 func (conf *ConfigReader) persist() error {
 	conf.writeLock.Lock()
@@ -122,11 +130,9 @@ func (conf *ConfigReader) persist() error {
 }
 
 func (conf *ConfigReader) addNode(addr pb.PeerAddr) {
-	conf.maxNode += 1
-	newAddress := NewAddress(addr.ID, addr.Port, addr.RpcPort, addr.IP)
+	newAddress := NewAddress(addr.ID, addr.Port, addr.RPCPort, addr.IP)
 	conf.nodes[addr.ID] = newAddress
-	conf.Config.Maxpeernode += 1
-	peerConfigNode := NewPeerConfigNodes(addr.IP, addr.RpcPort, addr.Port, addr.ID)
+	peerConfigNode := NewPeerConfigNodes(addr.IP, addr.RPCPort, addr.Port, addr.ID)
 	conf.Config.PeerNodes = append(conf.Config.PeerNodes, *peerConfigNode)
 
 }
@@ -139,11 +145,22 @@ func (conf *ConfigReader) delNode(addr pb.PeerAddr) {
 }
 
 func (conf *ConfigReader) AddNodesAndPersist(addrs map[string]pb.PeerAddr) {
+	idx := 0
 	for _, value := range addrs {
 		if _, ok := conf.nodes[value.ID]; !ok {
+			log.Notice("add a node",value.ID)
 			conf.addNode(value)
 		}
+		idx++
+		if idx == 1{
+			conf.Config.SelfConfig.IntroducerID = value.ID
+			conf.Config.SelfConfig.IntroducerIP = value.IP
+			conf.Config.SelfConfig.IntroducerPort = value.Port
+			conf.Config.SelfConfig.IntroducerJSONRPCPort = value.RPCPort
+		}
 	}
+	conf.maxNode = len(addrs) + 1
+	conf.Config.Maxpeernode = len(addrs) + 1
 	conf.persist()
 }
 func (conf *ConfigReader) DelNodesAndPersist(addrs map[string]pb.PeerAddr) {

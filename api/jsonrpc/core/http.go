@@ -96,17 +96,10 @@ func newJSONHTTPHandler(srv *Server, cm *admittance.CAManager) http.HandlerFunc 
 				http.StatusRequestEntityTooLarge)
 			return
 		}
-		//header interceptor
-		//headerHandler(w,r)
+
 
 		w.Header().Set("content-type", "application/json")
 
-		//log.Critical("http tcert:",r.Header.Get("tcert"))
-		//log.Critical("http signture:",r.Header.Get("signature"))
-		//log.Critical("http msg:",r.Header.Get("msg"))
-
-
-		// TODO NewJSONCodec
 		codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r.Header, cm)
 		defer codec.Close()
 		srv.ServeSingleRequest(codec, OptionMethodInvocation)
