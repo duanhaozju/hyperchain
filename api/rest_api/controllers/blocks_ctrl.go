@@ -4,11 +4,6 @@ import (
 	"github.com/astaxie/beego"
 	"hyperchain/api"
 	"hyperchain/api/rest_api/utils"
-	"strconv"
-)
-
-const (
-	HashLength = 32
 )
 
 type BlocksController struct {
@@ -27,95 +22,106 @@ func (b *BlocksController) GetBlocks() {
 	to := b.Input().Get("to")
 	args, err := utils.CheckIntervalArgs(from, to)
 	if err != nil {
-		b.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
+		b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 		b.ServeJSON()
 		return
 	}
 
 	blks, err := b.PublicBlockAPI.GetBlocks(args)
 	if err != nil {
-		b.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+		b.Data["json"] = NewJSONObject(nil, err)
 	} else {
 		b.Data["json"] = NewJSONObject(blks, nil)
 	}
 	b.ServeJSON()
 }
 
-func (b *BlocksController) GetBlockByHashOrNum() {
+func (b *BlocksController) GetBlockByHashOrNumOrTime() {
 	p_blkNum := b.Input().Get("blockNumber")
 	p_blkHash := b.Input().Get("blockHash")
 
-	var counts_params int = 0
+	p_startTime := b.Input().Get("startTime")
+	p_endTime := b.Input().Get("endTime")
 
-	if p_blkNum != "" {
-		counts_params++
-	}
-	if p_blkHash != "" {
-		counts_params++
-	}
+	flag := 0	// "1" means query by blockNumber, "2" means query by blockHash, "3" means query by startTime and endTime.
 
-	if counts_params != 1 {
-		counts_params_str := strconv.Itoa(counts_params)
-		b.Data["json"] = NewJSONObject(nil, &invalidParamsError{"require 1 params, but get " + counts_params_str + " params"})
+	if p_blkNum != "" && p_blkHash == "" && p_startTime == "" && p_endTime == "" {
+		flag = 1
+	}else if p_blkHash != "" && p_blkNum == "" && p_startTime == "" && p_endTime == "" {
+		flag = 2
+	} else if p_startTime != "" && p_endTime != "" && p_blkNum == "" && p_blkHash == ""{
+		flag = 3
+	} else {
+		b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{"The number of params or the name of params is invalid"})
 		b.ServeJSON()
 		return
 	}
 
-	if p_blkNum != "" {
+	if flag == 1 {
 		if blkNum, err := utils.CheckBlockNumber(p_blkNum); err != nil {
-			b.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
+			b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 		} else {
 			if block, err := b.PublicBlockAPI.GetBlockByNumber(blkNum); err != nil {
-				b.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+				b.Data["json"] = NewJSONObject(nil, err)
 			} else {
 				b.Data["json"] = NewJSONObject(block, nil)
 			}
 		}
-	} else if p_blkHash != "" {
+	} else if flag == 2 {
 		if blkHash, err := utils.CheckHash(p_blkHash); err != nil {
-			b.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
+			b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 		} else {
 			if block, err := b.PublicBlockAPI.GetBlockByHash(blkHash); err != nil {
-				b.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+				b.Data["json"] = NewJSONObject(nil, err)
 			} else {
 				b.Data["json"] = NewJSONObject(block, nil)
 			}
 		}
+	} else if flag == 3 {
+		if args, err := utils.CheckIntervalTimeArgs(p_startTime, p_endTime); err != nil {
+			b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{"Invalid params, value may be out of range"})
+		} else {
+			if blks, err := b.PublicBlockAPI.GetBlocksByTime(args); err != nil {
+				b.Data["json"] = NewJSONObject(nil, err)
+			} else {
+				b.Data["json"] = NewJSONObject(blks, nil)
+			}
+		}
+
 	} else {
-		b.Data["json"] = NewJSONObject(nil, &invalidParamsError{"invalid params"})
+		b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{"invalid params"})
 	}
 
 	b.ServeJSON()
-	return
 }
-
-//func (b *BlocksController) GetBlockTransactionCountByHash() {
-//
-//	hash, err := utils.CheckHash(b.Ctx.Input.Param(":blockHash"))
-//	if err != nil {
-//		b.Data["json"] = NewJSONObject(nil, &invalidParamsError{err.Error()})
-//	} else {
-//		PublicTxAPIInterface := api.GetApiObjectByNamespace("tx").Service
-//		PublicTxAPI := PublicTxAPIInterface.(*api.PublicTransactionAPI)
-//
-//		num, err := PublicTxAPI.GetBlockTransactionCountByHash(hash)
-//		if err != nil {
-//			b.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
-//		} else {
-//			b.Data["json"] = NewJSONObject(num, nil)
-//		}
-//	}
-//
-//	b.ServeJSON()
-//}
 
 func (b *BlocksController) GetLatestBlock() {
 
 	block, err := b.PublicBlockAPI.LatestBlock()
 	if err != nil {
-		b.Data["json"] = NewJSONObject(nil, &callbackError{err.Error()})
+		b.Data["json"] = NewJSONObject(nil, err)
 	} else {
 		b.Data["json"] = NewJSONObject(block, nil)
+	}
+	b.ServeJSON()
+}
+
+func (b *BlocksController) GetAvgGenerateTimeByBlockNumber() {
+
+	from := b.Input().Get("from")
+	to := b.Input().Get("to")
+	args, err := utils.CheckIntervalArgs(from, to)
+	if err != nil {
+		b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+		b.ServeJSON()
+		return
+	}
+
+	time, err := b.PublicBlockAPI.GetAvgGenerateTimeByBlockNumber(args)
+	if err != nil {
+		b.Data["json"] = NewJSONObject(nil, err)
+	} else {
+		b.Data["json"] = NewJSONObject(time, nil)
 	}
 	b.ServeJSON()
 }

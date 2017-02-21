@@ -5,10 +5,12 @@ _SYSTYPE="MAC"
 case "$OSTYPE" in
   darwin*)
     echo "RUN SCRIPTS ON OSX"
+    _SYSTYPE="MAC"
     ENV=false
   ;;
   linux*)
     echo "RUN SCRIPTS ON LINUX"
+    _SYSTYPE="LINUX"
     ENV=true
   ;;
   *)

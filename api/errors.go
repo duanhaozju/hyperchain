@@ -1,117 +1,123 @@
 package hpc
 
-type leveldbNotFoundError struct {
-	message string
+
+type JSONRPCError interface{
+	Code() int
+	Error() string
 }
 
 // unable to decode supplied params, or an invalid number of parameters
-type invalidParamsError struct {
-	message string
+type InvalidParamsError struct {
+	Message string
 }
 
-func (e *invalidParamsError) Code() int {
+func (e *InvalidParamsError) Code() int {
 	return -32602
 }
 
-func (e *invalidParamsError) Error() string {
-	return e.message
+func (e *InvalidParamsError) Error() string {
+	return e.Message
 }
 
 // logic error, callback returned an error
-type callbackError struct {
-	message string
+type CallbackError struct {
+	Message string
 }
 
-func (e *callbackError) Code() int {
+func (e *CallbackError) Code() int {
 	return -32000
 }
 
-func (e *callbackError) Error() string {
-	return e.message
+func (e *CallbackError) Error() string {
+	return e.Message
 }
 
-func (e *leveldbNotFoundError) Code() int {
+type LeveldbNotFoundError struct {
+	Message string
+}
+
+func (e *LeveldbNotFoundError) Code() int {
 	return -32001
 }
 
-func (e *leveldbNotFoundError) Error() string {
-	return "Not found " + e.message
+func (e *LeveldbNotFoundError) Error() string {
+	return "Not found " + e.Message
 }
 
-type outofBalanceError struct {
-	message string
+type OutofBalanceError struct {
+	Message string
 }
 
-func (e *outofBalanceError) Code() int {
+func (e *OutofBalanceError) Code() int {
 	return -32002
 }
 
-func (e *outofBalanceError) Error() string {
-	return e.message
+func (e *OutofBalanceError) Error() string {
+	return e.Message
 }
 
-type signatureInvalidError struct {
-	message string
+type SignatureInvalidError struct {
+	Message string
 }
 
-func (e *signatureInvalidError) Code() int {
+func (e *SignatureInvalidError) Code() int {
 	return -32003
 }
 
-func (e *signatureInvalidError) Error() string {
-	return e.message
+func (e *SignatureInvalidError) Error() string {
+	return e.Message
 }
 
-type contractDeployError struct {
-	message string
+type ContractDeployError struct {
+	Message string
 }
 
-func (e *contractDeployError) Code() int {
+func (e *ContractDeployError) Code() int {
 	return -32004
 }
 
-func (e *contractDeployError) Error() string {
-	return e.message
+func (e *ContractDeployError) Error() string {
+	return e.Message
 }
 
-type contractInvokeError struct {
-	message string
+type ContractInvokeError struct {
+	Message string
 }
 
-func (e *contractInvokeError) Code() int {
+func (e *ContractInvokeError) Code() int {
 	return -32005
 }
 
-func (e *contractInvokeError) Error() string {
-	return e.message
+func (e *ContractInvokeError) Error() string {
+	return e.Message
 }
 
-type systemTooBusyError struct {
-	message string
+type SystemTooBusyError struct {
+	Message string
 }
 
-func (e *systemTooBusyError) Code() int {
+func (e *SystemTooBusyError) Code() int {
 	return -32006
 }
 
-func (e *systemTooBusyError) Error() string {
-	return e.message
+func (e *SystemTooBusyError) Error() string {
+	return e.Message
 }
 
-type repeadedTxError struct {
-	message string
+type RepeadedTxError struct {
+	Message string
 }
 
-func (e *repeadedTxError) Code() int {
+func (e *RepeadedTxError) Code() int {
 	return -32007
 }
 
-func (e *repeadedTxError) Error() string {
-	return e.message
+func (e *RepeadedTxError) Error() string {
+	return e.Message
 }
 
 //type marshalError struct {
-//	message  string
+//	Message  string
 //}
 //
 //func (e *marshalError) Code() int {
@@ -119,11 +125,11 @@ func (e *repeadedTxError) Error() string {
 //}
 //
 //func (e *marshalError) Error() string {
-//	return e.message
+//	return e.Message
 //}
 //
 //type nullPointError struct {
-//	message  string
+//	Message  string
 //}
 //
 //func (e *nullPointError) Code() int {
@@ -131,11 +137,11 @@ func (e *repeadedTxError) Error() string {
 //}
 //
 //func (e *nullPointError) Error() string {
-//	return e.message
+//	return e.Message
 //}
 
 type CertError struct {
-	message string
+	Message string
 }
 
 func (e *CertError) Code() int {
@@ -143,5 +149,5 @@ func (e *CertError) Code() int {
 }
 
 func (e *CertError) Error() string {
-	return e.message
+	return e.Message
 }

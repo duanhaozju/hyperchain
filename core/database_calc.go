@@ -263,7 +263,7 @@ func CalBlockGPS(begin, end int64) (error, string) {
 			blockNum += 1
 		}
 	}
-	s = s + "total block:" + strconv.FormatUint(blockNum, 16) + ";"
+	s = s + "total block:" + strconv.FormatUint(blockNum, 10) + ";"
 	blockCounter = blockCounter / (float64(end-begin) * 1.0 / float64(time.Second.Nanoseconds()))
 	txCounter = txCounter / (float64(end-begin) * 1.0 / float64(time.Second.Nanoseconds()))
 	s = s + "blocks per second:" + strconv.FormatFloat(blockCounter, 'f', 2, 32) + ";"
