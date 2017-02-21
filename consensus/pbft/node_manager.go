@@ -270,11 +270,25 @@ func (pbft *pbftProtocal) sendReadyForN() error {
 	}
 
 	logger.Noticef("Replica %d send ready_for_n as it already finished recovery", pbft.id)
+	atomic.StoreUint32(&pbft.inUpdatingN, 1)
+
 
 	ready := &ReadyForN{
 		ReplicaId:	pbft.id,
 		Key:		pbft.localKey,
 	}
+
+	n, view := pbft.getAddNV()
+	// broadcast the updateN message
+	agree := &AgreeUpdateN{
+		Flag:		true,
+		ReplicaId:	pbft.id,
+		Key:		ready.Key,
+		N:			n,
+		View:		view,
+		H:			pbft.h,
+	}
+	pbft.agreeUpdateHelper(agree)
 
 	payload, err := proto.Marshal(ready)
 	if err != nil {
@@ -732,8 +746,16 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 	}
 
 	pbft.seqNo = pbft.h
+	pbft.lastExec = pbft.h
+	pbft.seqNo = pbft.h
+	if pbft.primary(pbft.view) != pbft.id {
+		pbft.vid = pbft.h
+		pbft.lastVid = pbft.h
+	}
+
 	pbft.view = update.View
 	pbft.N = int(update.N)
+
 	if pbft.primary(pbft.view) != pbft.id {
 		pbft.clearDuplicator()
 	}

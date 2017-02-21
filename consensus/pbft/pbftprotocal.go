@@ -607,7 +607,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case protos.ValidatedTxs:
 		err = pbft.recvValidatedResult(et)
 	case negoViewDoneEvent:
-		logger.Criticalf("======== Replica %d finished negotiating view: %d", pbft.id, pbft.view)
+		logger.Criticalf("======== Replica %d finished negotiating view=%d / N=%d", pbft.id, pbft.view, pbft.N)
 		primary := pbft.primary(pbft.view)
 		if primary == pbft.id {
 			pbft.sendNullRequest()
@@ -673,6 +673,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case *UpdateN:
 		return pbft.recvUpdateN(et)
 	case updatedNEvent:
+		pbft.startTimerIfOutstandingRequests()
 		pbft.persistView(pbft.view)
 		pbft.persistNewNode(uint64(0))
 		pbft.persistN(pbft.N)
@@ -1359,9 +1360,6 @@ func (pbft *pbftProtocal) sendPrePrepareForUpdate(reqBatch *TransactionBatch, di
 	cert.validated = true
 	pbft.persistQSet(preprep.View, preprep.SequenceNumber)
 
-	pbft.vid++
-	pbft.lastVid = pbft.vid
-
 	payload, err := proto.Marshal(preprep)
 	if err != nil {
 		logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
@@ -1550,14 +1548,15 @@ func (pbft *pbftProtocal) maybeSendCommit(digest string, v uint64, n uint64) err
 		return pbft.sendCommit(digest, v, n)
 	} else {
 		idx := msgID{v: v, n: n}
-		update, ok := pbft.updateCertStore[idx]
-		if ok && update.validated {
-			pbft.vid++
-			pbft.lastVid = pbft.vid
-			return pbft.sendCommit(digest, v, n)
-		}
-
 		if !cert.sentValidate {
+			update, ok := pbft.updateCertStore[idx]
+			if ok && update.validated {
+				pbft.vid++
+				pbft.lastVid = pbft.vid
+				cert.sentValidate = true
+				cert.validated = true
+				return pbft.sendCommit(digest, v, n)
+			}
 			pbft.preparedCert[idx] = cert.digest
 			pbft.validatePending()
 		}
@@ -1639,13 +1638,14 @@ func (pbft *pbftProtocal) recvCommit(commit *Commit) error {
 
 	if pbft.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
 		pbft.stopTimer()
+		idx := msgID{v: commit.View, n: commit.SequenceNumber}
 		if !cert.sentExecute && cert.validated {
 			pbft.lastNewViewTimeout = pbft.newViewTimeout
 			delete(pbft.outstandingReqBatches, commit.BatchDigest)
-			idx := msgID{v: commit.View, n: commit.SequenceNumber}
 			update, ok := pbft.updateCertStore[idx]
 			if ok && update.sentExecute {
 				pbft.lastExec++
+				cert.sentExecute = true
 				return nil
 			}
 			pbft.committedCert[idx] = cert.digest
