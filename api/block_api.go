@@ -281,8 +281,8 @@ func (blk *PublicBlockAPI) QueryEvmAvgTime(args IntervalArgs) (int64, error) {
 	return evmTime, nil
 }
 
-func (blk *PublicBlockAPI) QueryTPS(args IntervalArgs) (string, error) {
-	err, ret := core.CalBlockGPS(int64(args.From.ToUint64()), int64(args.To.ToUint64()))
+func (blk *PublicBlockAPI) QueryTPS(args IntervalTime) (string, error) {
+	err, ret := core.CalBlockGPS(int64(args.StartTime), int64(args.Endtime))
 	if err != nil {
 		return "", &CallbackError{err.Error()}
 	}
