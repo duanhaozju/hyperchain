@@ -853,7 +853,7 @@ nLoop:
 
 	// prune top null requests
 	for n, msg := range msgList {
-		if n > maxN && msg == "" {
+		if n > maxN || msg == "" {
 			delete(msgList, n)
 		}
 	}

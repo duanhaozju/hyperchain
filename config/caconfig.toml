@@ -29,4 +29,4 @@ serverhostoverride = "hyperchain.cn"
 checkercert = true
 
 # check the tcert during the request process
-checktcert  = true
+checktcert  = false

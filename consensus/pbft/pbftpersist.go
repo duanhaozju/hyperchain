@@ -236,7 +236,7 @@ func (pbft *pbftProtocal) persistDelView() {
 func (pbft *pbftProtocal) persistN(n int) {
 	key := fmt.Sprint("nodes")
 	res := make([]byte, 8)
-	binary.LittleEndian.PutUint64(res, n)
+	binary.LittleEndian.PutUint64(res, uint64(n))
 	persist.StoreState(key, res)
 }
 
@@ -295,7 +295,7 @@ func (pbft *pbftProtocal) restoreState() {
 	new, err := persist.ReadState("new")
 	if err == nil {
 		newNode := binary.LittleEndian.Uint64(new)
-		if newNode {
+		if newNode == 1 {
 			pbft.isNewNode = true
 		}
 	}

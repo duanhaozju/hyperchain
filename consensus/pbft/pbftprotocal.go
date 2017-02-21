@@ -147,6 +147,7 @@ type pbftProtocal struct {
 	updateTarget		uidx						// track the new view after update
 	updateCertStore		map[msgID]updateCert		// track the local certStore that needed during update
 	inClearCache		bool
+	updateHandled		bool
 }
 
 type qidx struct {
@@ -356,6 +357,8 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	atomic.StoreUint32(&pbft.inUpdatingN, 0)
 	pbft.duplicator = make(map[uint64]*transactionStore)
 	pbft.updateCertStore = make(map[msgID]updateCert)
+	pbft.agreeUpdateStore = make(map[aidx]*AgreeUpdateN)
+	pbft.updateStore = make(map[uidx]*UpdateN)
 
 	pbft.restoreState()
 
@@ -635,7 +638,6 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 			pbft.restartNegoView()
 		}
 		if pbft.isNewNode {
-			logger.Debug("new node")
 			pbft.sendReadyForN()
 		}
 		pbft.processRequestsDuringRecovery()
@@ -668,8 +670,13 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 			return pbft.sendUpdateN()
 		}
 		return pbft.processUpdateN()
+	case *UpdateN:
+		return pbft.recvUpdateN(et)
 	case updatedNEvent:
 		pbft.persistView(pbft.view)
+		pbft.persistNewNode(uint64(0))
+		pbft.persistN(pbft.N)
+		pbft.updateHandled = false
 		atomic.StoreUint32(&pbft.inUpdatingN, 0)
 		pbft.processRequestsDuringUpdatingN()
 		logger.Criticalf("======== Replica %d finished UpdatingN, primary=%d, n=%d/view=%d/h=%d", pbft.id, pbft.primary(pbft.view), pbft.N, pbft.view, pbft.h)
@@ -768,7 +775,7 @@ func (pbft *pbftProtocal) processNullRequest(msg *protos.Message) error {
 func (pbft *pbftProtocal) processTxEvent(tx *types.Transaction) error {
 
 	primary := pbft.primary(pbft.view)
-	if atomic.LoadUint32(&pbft.activeView) == 0 || atomic.LoadUint32(&pbft.inUpdatingN) || pbft.inNegoView || pbft.inRecovery {
+	if atomic.LoadUint32(&pbft.activeView) == 0 || atomic.LoadUint32(&pbft.inUpdatingN) == 1 || pbft.inNegoView || pbft.inRecovery {
 		pbft.reqStore.storeOutstanding(tx)
 	} else if primary != pbft.id {
 		//Broadcast request to primary
@@ -788,32 +795,6 @@ func (pbft *pbftProtocal) processTxEvent(tx *types.Transaction) error {
 	}
 
 	return nil
-}
-
-func (pbft *pbftProtocal) processRequestsDuringViewChange() error {
-	if atomic.LoadUint32(&pbft.activeView) == 1 && !pbft.inRecovery {
-		pbft.processCachedTransactions()
-	} else {
-		logger.Critical("peer try to processReqDuringViewChange but view change is not finished or inRecovery")
-	}
-	return nil
-}
-
-func (pbft *pbftProtocal) processCachedTransactions() {
-	for pbft.reqStore.outstandingRequests.Len() != 0 {
-		temp := pbft.reqStore.outstandingRequests.order.Front().Value
-		reqc, ok := interface{}(temp).(requestContainer)
-		if !ok {
-			logger.Error("type assert error:", temp)
-			return
-		}
-		req := reqc.req
-		if req != nil {
-			go pbft.postRequestEvent(req)
-			//pbft.processTxEvent(req)
-		}
-		pbft.reqStore.remove(req)
-	}
 }
 
 func (pbft *pbftProtocal) leaderProcReq(tx *types.Transaction) error {
@@ -2336,7 +2317,7 @@ func (pbft *pbftProtocal) updateViewChangeSeqNo() {
 
 func (pbft *pbftProtocal) processNegotiateView() error {
 	if !pbft.inNegoView {
-		logger.Critical("Replica %d try to negotiateView, but it's not inNegoView. This indicates a bug")
+		logger.Critical("Replica %d try to negotiateView, but it's not inNegoView. This indicates a bug", pbft.id)
 		return nil
 	}
 
@@ -2431,15 +2412,16 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Eve
 		// Reason for not using '≥ pbft.N-pbft.f': if self is wrong, then we are impossible to find 2f+1 same view
 		// can we find same view from 2f+1 peers?
 		type resp struct {
-			n int
+			n uint64
 			view uint64
-			routers []byte
+			routers string
 		}
 		viewCount := make(map[resp]uint64)
 		var result resp
 		canFind := false
 		for _, rs := range pbft.negoViewRspStore {
-			ret := resp{rs.N, rs.View, rs.Routers}
+			r := byteToString(rs.Routers)
+			ret := resp{rs.N, rs.View, r}
 			if _, ok := viewCount[ret]; ok {
 				viewCount[ret]++
 			} else {
@@ -2455,8 +2437,8 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Eve
 		if canFind {
 			pbft.negoViewRspTimer.Stop()
 			pbft.view = result.view
-			pbft.N = result.n
-			pbft.routers = result.routers
+			pbft.N = int(result.n)
+			pbft.routers, _ = stringToByte(result.routers)
 			pbft.inNegoView = false
 			if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
 				atomic.StoreUint32(&pbft.activeView, 1)
@@ -2479,27 +2461,27 @@ func (pbft *pbftProtocal) restartNegoView() {
 // process cached txs methods
 // =============================================================================
 func (pbft *pbftProtocal) processRequestsDuringViewChange() error {
-	if atomic.LoadUint32(&pbft.activeView) && !atomic.LoadUint32(&pbft.inUpdatingN) && !pbft.inRecovery {
+	if atomic.LoadUint32(&pbft.activeView) == 1 && atomic.LoadUint32(&pbft.inUpdatingN) == 0 && !pbft.inRecovery {
 		pbft.processCachedTransactions()
 	} else {
-		logger.Critical("Replica %d try to processReqDuringViewChange but view change is not finished or it's in recovery / updaingN", pbft.id)
+		logger.Warningf("Replica %d try to processReqDuringViewChange but view change is not finished or it's in recovery / updaingN", pbft.id)
 	}
 	return nil
 }
 
 func (pbft *pbftProtocal) processRequestsDuringRecovery() {
-	if !pbft.inRecovery && atomic.LoadUint32(&pbft.activeView) && !atomic.LoadUint32(&pbft.inUpdatingN) {
+	if !pbft.inRecovery && atomic.LoadUint32(&pbft.activeView) == 1 && atomic.LoadUint32(&pbft.inUpdatingN) == 0 {
 		pbft.processCachedTransactions()
 	} else {
-		logger.Critical("Replica %d try to processRequestsDuringRecovery but recovery is not finished or it's in viewChange / updatingN", pbft.id)
+		logger.Warningf("Replica %d try to processRequestsDuringRecovery but recovery is not finished or it's in viewChange / updatingN", pbft.id)
 	}
 }
 
 func (pbft *pbftProtocal) processRequestsDuringUpdatingN() {
-	if atomic.LoadUint32(&pbft.activeView) && !atomic.LoadUint32(&pbft.inUpdatingN) && !pbft.inRecovery {
+	if atomic.LoadUint32(&pbft.activeView) == 1 && atomic.LoadUint32(&pbft.inUpdatingN) == 0 && !pbft.inRecovery {
 		pbft.processCachedTransactions()
 	} else {
-		logger.Critical("Replica %d try to processRequestsDuringUpdatingN but updatingN is not finished or it's in recovery / viewChange", pbft.id)
+		logger.Warningf("Replica %d try to processRequestsDuringUpdatingN but updatingN is not finished or it's in recovery / viewChange", pbft.id)
 	}
 }
 

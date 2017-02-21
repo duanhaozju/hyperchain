@@ -86,7 +86,7 @@ echo "Node number is: ${MAXPEERNUM}"
 
 DELETEDATA=true
 REBUILD=true
-MODE=true
+MODE=false
 
 while [ $# -gt 0 ]
 do
@@ -100,7 +100,7 @@ do
 	-r|--rebuild)
 	    REBUILD=false; shift;;
     -m|--mode)
-        MODE=false; shift;;
+        MODE=true; shift;;
 	--) shift; break;;
 	-*) help; exit 1;;
 	*) break;;
@@ -175,13 +175,13 @@ runXinXinMac(){
 runXin1(){
     for((j=1;j<=$MAXPEERNUM;j++))
     do
-        ./hyperchain -o ${j} -l 800${j} -t 808${j} -f 900${j} -i true &
+        cd $DUMP_PATH/node${j} && ./hyperchain -o ${j} -l 800${j} -t 808${j} -f 900${j} &
     done
 }
 
 echo "Run all the nodes..."
 echo $ENV
-if [ ! $MODE ]; then
+if $MODE ; then
     runXin1
 else
     if [[ "$_SYSTYPE"x == 'MACx' ]]; then

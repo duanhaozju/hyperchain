@@ -97,10 +97,11 @@ func (n *Node) attendNoticeProcess(N int) {
 		}
 		if num >= (N-f) && isPrimaryConnectFlag{
 			log.Debug("new node has online ,post already in chain event")
-			n.higherEventManager.Post(event.AlreadyInChainEvent{})
-			break
+			go n.higherEventManager.Post(event.AlreadyInChainEvent{})
 		}
-
+		if (num == N-1){
+			break;
+		}
 	}
 
 }

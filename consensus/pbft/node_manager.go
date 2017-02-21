@@ -155,8 +155,8 @@ func (pbft *pbftProtocal) sendAgreeDelNode(key string, routerHash string, newId 
 // Replica received addnode for new node
 func (pbft *pbftProtocal) recvAgreeAddNode(add *AddNode) error {
 
-	logger.Debugf("Replica %d received addnode from replica %d for %v",
-		pbft.id, add.ReplicaId, add.Key)
+	logger.Debugf("Replica %d received addnode from replica %d",
+		pbft.id, add.ReplicaId)
 
 	cert := pbft.getAddNodeCert(add.Key)
 
@@ -175,8 +175,8 @@ func (pbft *pbftProtocal) recvAgreeAddNode(add *AddNode) error {
 // Replica received delnode for quit node
 func (pbft *pbftProtocal) recvAgreeDelNode(del *DelNode) error {
 
-	logger.Debugf("Replica %d received agree delnode from replica %d for %v",
-		pbft.id, del.ReplicaId, del.Key)
+	logger.Debugf("Replica %d received agree delnode from replica %d",
+		pbft.id, del.ReplicaId)
 
 	cert := pbft.getDelNodeCert(del.Key)
 
@@ -215,7 +215,7 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 
 	cert.finishAdd = true
 	payload := []byte(key)
-
+	logger.Debugf("Replica %d update routingTable for %v", pbft.id, key)
 	pbft.helper.UpdateTable(payload, true)
 	pbft.inAddingNode = false
 
@@ -269,6 +269,8 @@ func (pbft *pbftProtocal) sendReadyForN() error {
 		return nil
 	}
 
+	logger.Noticef("Replica %d send ready_for_n as it already finished recovery", pbft.id)
+
 	ready := &ReadyForN{
 		ReplicaId:	pbft.id,
 		Key:		pbft.localKey,
@@ -292,6 +294,8 @@ func (pbft *pbftProtocal) sendReadyForN() error {
 
 // Primary receive ready_for_n from new replica
 func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) events.Event {
+
+	logger.Debugf("Replica %d received ready_for_n from replica %d", pbft.id, ready.ReplicaId)
 
 	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
 		logger.Warningf("Primary %d is in view change, reject the ready_for_n message", pbft.id)
@@ -318,11 +322,21 @@ func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) events.Event {
 		H:			pbft.h,
 	}
 
+	return pbft.sendAgreeUpdateNForAdd(agree)
+}
+
+func (pbft *pbftProtocal) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) events.Event {
+
 	pbft.stopTimer()
 	atomic.StoreUint32(&pbft.inUpdatingN, 1)
 
+	if pbft.isNewNode {
+		logger.Debugf("Replica %d does not need to send agree-update-n", pbft.id)
+		return nil
+	}
+
 	pbft.agreeUpdateHelper(agree)
-	logger.Infof("Replica %d sending update-N-View, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
+	logger.Infof("Replica %d sending agree-update-N, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		pbft.id, agree.View, agree.H, len(agree.Cset), len(agree.Pset), len(agree.Qset))
 
 	payload, err := proto.Marshal(agree)
@@ -393,7 +407,7 @@ func (pbft *pbftProtocal) sendAgreeUpdateNforDel(key string, routerHash string) 
 
 func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 
-	logger.Debugf("Replica %d received view-change from replica %d, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
+	logger.Debugf("Replica %d received agree-update-n from replica %d, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		pbft.id, agree.ReplicaId, agree.View, agree.H, len(agree.Cset), len(agree.Pset), len(agree.Qset))
 
 	if atomic.LoadUint32(&pbft.activeView) == 0 {
@@ -432,7 +446,7 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 
 	replicas := make(map[uint64]bool)
 	for idx := range pbft.agreeUpdateStore {
-		if idx.v != agree.View {
+		if !(idx.v == agree.View && idx.n == agree.N) {
 			continue
 		}
 		replicas[idx.id] = true
@@ -440,11 +454,11 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 
 	// We only enter this if there are enough agree-update-n messages but locally not inUpdateN
 	if len(replicas) >= pbft.f+1 && atomic.LoadUint32(&pbft.inUpdatingN) == 0 {
-		logger.Warningf("Replica %d received f+1 agree-update-n messages, triggering recovery",
+		logger.Warningf("Replica %d received f+1 agree-update-n messages, triggering sendAgreeUpdateNForAdd",
 			pbft.id)
-		pbft.inNegoView = true
-		pbft.inRecovery = true
-		pbft.processNegotiateView()
+		pbft.firstRequestTimer.Stop()
+		agree.ReplicaId = pbft.id
+		return pbft.sendAgreeUpdateNForAdd(agree)
 	}
 
 	quorum := 0
@@ -518,8 +532,8 @@ func (pbft *pbftProtocal) sendUpdateN() events.Event {
 }
 
 func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) events.Event {
-	logger.Infof("Replica %d received update-n %d",
-		pbft.id, update.View)
+	logger.Infof("Replica %d received update-n %v",
+		pbft.id, update)
 
 	if atomic.LoadUint32(&pbft.activeView) == 0 {
 		logger.Warningf("Replica %d try to recvUpdateN, but it's in view-change", pbft.id)
@@ -537,7 +551,7 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) events.Event {
 		return nil
 	}
 
-	if !(update.View > 0 && update.View == pbft.updateTarget.v && pbft.primary(pbft.view) == update.ReplicaId && pbft.updateStore[pbft.updateTarget] == nil) {
+	if !(update.View >= 0 && update.View == pbft.updateTarget.v && pbft.primary(pbft.view) == update.ReplicaId && pbft.updateStore[pbft.updateTarget] == nil) {
 		logger.Infof("Replica %d rejecting invalid new-view from %d, v:%d",
 			pbft.id, update.ReplicaId, update.View)
 		return nil
@@ -620,9 +634,15 @@ func (pbft *pbftProtocal) processUpdateN() events.Event {
 		return nil
 	}
 
-	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
+	if atomic.LoadUint32(&pbft.activeView) == 0 {
 		logger.Infof("Replica %d ignoring update-n from %d, v:%d: we are in view change to view=%d",
 			pbft.id, update.ReplicaId, update.View, pbft.view)
+		return nil
+	}
+
+	if atomic.LoadUint32(&pbft.inUpdatingN) == 0 {
+		logger.Infof("Replica %d ignoring update-n from %d, v:%d: we are not in updatingN",
+			pbft.id, update.ReplicaId, update.View)
 		return nil
 	}
 
@@ -695,11 +715,25 @@ func (pbft *pbftProtocal) processUpdateN() events.Event {
 func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 	logger.Debugf("Replica %d accepting update-n to target %v", pbft.id, pbft.updateTarget)
 
+	if pbft.updateHandled {
+		logger.Debugf("Replica %d repeated enter processReqInUpdate, ignore it")
+		return nil
+	}
+	pbft.updateHandled = true
+
 	pbft.stopTimer()
 	pbft.nullRequestTimer.Stop()
 	delete(pbft.updateStore, pbft.updateTarget)
 
+	for idx := range pbft.agreeUpdateStore {
+		if (idx.v == update.View && idx.n == update.N && idx.flag == update.Flag) {
+			delete(pbft.agreeUpdateStore, idx)
+		}
+	}
+
 	pbft.seqNo = pbft.h
+	pbft.view = update.View
+	pbft.N = int(update.N)
 	if pbft.primary(pbft.view) != pbft.id {
 		pbft.clearDuplicator()
 	}
@@ -796,8 +830,8 @@ func (pbft *pbftProtocal) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 
 	if agree.Flag {
 		cert := pbft.getAddNodeCert(agree.Key)
-		if !cert.finishAdd {
-			logger.Warningf("Replica %d has not complete add node")
+		if !pbft.isNewNode && !cert.finishAdd {
+			logger.Warningf("Replica %d has not complete add node", pbft.id)
 			return false
 		}
 		n, view := pbft.getAddNV()
@@ -984,7 +1018,7 @@ func (pbft *pbftProtocal) assignSequenceNumbersForUpdate(aset []*AgreeUpdateN, h
 
 	// prune top null requests
 	for n, msg := range msgList {
-		if n > maxN && msg == "" {
+		if n > maxN || msg == "" {
 			delete(msgList, n)
 		}
 	}

@@ -688,7 +688,7 @@ func (this *GRPCPeerManager) UpdateRoutingTable(payload []byte) {
 			log.Error(err)
 			return
 		}
-		log.Debugf("Attend Notify address",toUpdateAddress.ID,toUpdateAddress.IP,toUpdateAddress.Port)
+		log.Debugf("Attend Notify address %v",toUpdateAddress.ID,toUpdateAddress.IP,toUpdateAddress.Port)
 		log.Debug("updateRoutingTable")
 		newPeer, retMessage, err := NewPeerAttendNotify(pb.RecoverPeerAddr(toUpdateAddress), this.LocalAddr, this.TEM, this.CM, this.LocalNode.IsPrimary)
 		if err != nil {
@@ -740,6 +740,8 @@ func (this *GRPCPeerManager) UpdateRoutingTable(payload []byte) {
 			}
 
 
+		}else{
+			log.Error("RESPONSE is not Message_ATTEND_NOTIFY_RESPONSE")
 		}
 
 	} else {
