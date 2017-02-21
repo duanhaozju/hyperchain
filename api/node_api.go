@@ -34,7 +34,7 @@ func NewPublicNodeAPI(pm *manager.ProtocolManager) *PublicNodeAPI {
 // GetNodes returns status of all the nodes
 func (node *PublicNodeAPI) GetNodes() (p2p.PeerInfos, error) {
 	if node.pm == nil {
-		return nil, &callbackError{"protocolManager is nil"}
+		return nil, &CallbackError{"protocolManager is nil"}
 	}
 
 	return node.pm.GetNodeInfo(), nil
@@ -42,14 +42,14 @@ func (node *PublicNodeAPI) GetNodes() (p2p.PeerInfos, error) {
 
 func (node *PublicNodeAPI) GetNodeHash() (string, error) {
 	if node.pm == nil {
-		return "", &callbackError{"protocolManager is nil"}
+		return "", &CallbackError{"protocolManager is nil"}
 	}
 	return node.pm.Peermanager.GetLocalNodeHash(), nil
 }
 
 func (node *PublicNodeAPI) DelNode(args NodeArgs) error {
 	if node.pm == nil {
-		return &callbackError{"protocolManager is nil"}
+		return &CallbackError{"protocolManager is nil"}
 	}
 	go node.pm.GetEventObject().Post(event.DelPeerEvent{
 		Payload: []byte(args.NodeHash),
