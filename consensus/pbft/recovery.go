@@ -191,12 +191,15 @@ func (pbft *pbftProtocal) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	if chkptBehind {
 		pbft.moveWatermarks(n)
 		pbft.stateTransfer(target)
+		return nil
+	} else if !pbft.skipInProgress && !pbft.inVcReset {
+		pbft.helper.VcReset(n+1)
+		pbft.inVcReset = true
+		return nil
 	} else {
-		pbft.helper.VcReset(n + 1)
-		logger.Debugf("Replica %d self StateUpdated, call VcReset", pbft.id)
+		logger.Debugf("Replica %d try to recovery but find itself in state update", pbft.id)
+		return nil
 	}
-
-	return nil
 }
 
 // findHighestChkptQuorum finds highest one of chkpts which achieve quorum

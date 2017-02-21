@@ -18,7 +18,7 @@ var (
 
 func init() {
 	EnableJit = true
-	ForceJit = false
+	ForceJit = true
 }
 
 type Account struct {

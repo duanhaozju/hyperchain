@@ -141,8 +141,10 @@ func GetDBDatabase() (Database, error) {
 func NewDatabase() (Database, error) {
 
 	if dbType == 001 {
-		log.Notice("Use level db only")
-		return NewLDBDataBase(leveldbPath)
+		//log.Notice("Use level db only")
+		//return NewLDBDataBase(leveldbPath)
+		log.Notice("Use SuperLevelDB")
+		return NewSLDB(leveldbPath)
 	} else if dbType == 010 {
 		log.Notice("Use ssdb only")
 		return NewSSDatabase()

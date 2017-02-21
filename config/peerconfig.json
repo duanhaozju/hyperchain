@@ -1,51 +1,45 @@
 {
   "self":{
     "is_origin":true,
+    "is_vp":true,
     "node_id":1,
     "grpc_port":8001,
     "local_ip":"127.0.0.1",
     "jsonrpc_port":8081,
     "introducer_ip":"127.0.0.1",
     "introducer_port":8001,
-    "introducer_id":1,
-    "introducer_jsonrpcport":8081
+    "introducer_id":1
   },
-  "nodes": [
+  "maxpeernode":4,
+  "nodes":[
     {
-      "external_address": "115.159.37.99",
-      "rpc_port": 8081,
-      "port": 8001,
-      "id": 1,
-      "address": "10.105.45.253"
+      "id":1,
+      "address":"127.0.0.1",
+      "external_address":"127.0.0.1",
+      "port":8001,
+      "rpc_port":8081
     },
     {
-      "external_address": "115.159.154.158",
-      "rpc_port": 8081,
-      "port": 8001,
-      "id": 2,
-      "address": "10.105.28.35"
+      "id":2,
+      "address":"127.0.0.2",
+      "external_address":"127.0.0.1",
+      "port":8002,
+      "rpc_port":8082
     },
     {
-      "external_address": "115.159.148.237",
-      "rpc_port": 8081,
-      "port": 8001,
-      "id": 3,
-      "address": "10.105.58.205"
+      "id":3,
+      "address":"127.0.0.1",
+      "external_address":"127.0.0.1",
+      "port":8003,
+      "rpc_port":8083
     },
     {
-      "external_address": "115.159.120.65",
-      "rpc_port": 8081,
-      "port": 8001,
-      "id": 4,
-      "address": "10.105.16.131"
-    },
-    {
-      "external_address": "127.0.0.1",
-      "rpc_port": 8081,
-      "port": 8001,
-      "id": 5,
-      "address": "127.0.0.1"
+      "id":4,
+      "address":"127.0.0.1",
+      "external_address":"127.0.0.1",
+      "port":8004,
+      "rpc_port":8084
     }
-  ],
-  "maxpeernode": 5
+
+  ]
 }

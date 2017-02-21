@@ -142,7 +142,7 @@ func (self *StateDB) Reset() error {
 	// IMPORTANT reset obj.onDirty callback function and bucket tree
 	dirtyCopy := make(map[common.Address]*StateObject)
 	for _, obj := range self.stateObjects {
-		if _, dirty := self.stateObjectsDirty[obj.address]; dirty == true {
+		if _, dirty := self.stateObjectsDirty[obj.address]; dirty == true && !isPrecompiledAccount(obj.address) {
 			obj.onDirty = self.MarkStateObjectDirty
 			dirtyCopy[obj.address] = obj
 		}
@@ -202,6 +202,14 @@ func (self *StateDB) setLatest(seqNo uint64) {
 func (self *StateDB) Purge() {
 	self.batchCache.Purge()
 	self.contentCache.Purge()
+
+	self.stateObjects = make(map[common.Address]*StateObject)
+	self.stateObjectsDirty = make(map[common.Address]struct{})
+	self.thash = common.Hash{}
+	self.bhash = common.Hash{}
+	self.txIndex = 0
+	self.logs = make(map[common.Hash]vm.Logs)
+	self.logSize = 0
 }
 
 // ResetToTarget - reset oldest seqNo and root to target.
@@ -296,18 +304,18 @@ func (self *StateDB) Empty(addr common.Address) bool {
 
 // Get account by address
 func (self *StateDB) GetAccount(addr common.Address) vm.Account {
-	return self.GetStateObject(addr)
+	ret := self.GetStateObject(addr)
+	if ret != nil {
+		return ret
+	} else {
+		return nil
+	}
 }
 
 // Get all account in database
 func (self *StateDB) GetAccounts() map[string]vm.Account {
 	ret := make(map[string]vm.Account)
-	leveldb, ok := self.db.(*hyperdb.LDBDatabase)
-	if ok == false {
-		return ret
-	}
-
-	iter := leveldb.NewIteratorWithPrefix([]byte(accountIdentifier))
+	iter := self.db.NewIterator([]byte(accountIdentifier))
 	for iter.Next() {
 		addr, ok := SplitCompositeAccountKey(iter.Key())
 		if ok == false {
@@ -385,7 +393,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Has
 	var liveObj *StateObject
 	if obj := self.stateObjects[a]; obj != nil {
 		liveObj = obj
-		if obj.deleted {
+		if obj.suicided {
 			return false, common.Hash{}
 		} else {
 			existed, value := obj.GetState(b)
@@ -406,7 +414,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Has
 			}
 			content := res.(map[common.Address]*StateObject)
 			if obj := content[a]; obj != nil {
-				if obj.deleted {
+				if obj.suicided {
 					return false, common.Hash{}
 				} else {
 					existed, value := obj.GetState(b)
@@ -557,10 +565,9 @@ func (self *StateDB) deleteStateObject(batch hyperdb.Batch, stateObject *StateOb
 	addr := stateObject.Address()
 	batch.Delete(CompositeAccountKey(addr.Bytes()))
 	// delete related storage content
-	db, _ := self.db.(*hyperdb.LDBDatabase)
-	iter := db.NewIteratorWithPrefix(GetStorageKeyPrefix(stateObject.address.Bytes()))
+	iter := self.db.NewIterator(GetStorageKeyPrefix(stateObject.address.Bytes()))
 	for iter.Next() {
-		db.Delete(iter.Key())
+		batch.Delete(iter.Key())
 	}
 }
 
@@ -568,7 +575,7 @@ func (self *StateDB) deleteStateObject(batch hyperdb.Batch, stateObject *StateOb
 func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 	// Prefer 'live' objects.
 	if obj := self.stateObjects[addr]; obj != nil {
-		if obj.deleted {
+		if obj.suicided {
 			log.Debugf("search state object %x in the live objects, but it has been suicide", addr)
 			return nil
 		}
@@ -585,7 +592,7 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 			}
 			content := res.(map[common.Address]*StateObject)
 			if obj := content[addr]; obj != nil {
-				if obj.deleted {
+				if obj.suicided {
 					log.Debugf("search state object %x in the content cache, but it has been suicide", addr)
 					return nil
 				}
@@ -620,7 +627,7 @@ func (self *StateDB) setStateObject(object *StateObject) {
 // Retrieve a state object or create a new state object if nil
 func (self *StateDB) GetOrNewStateObject(addr common.Address) *StateObject {
 	stateObject := self.GetStateObject(addr)
-	if stateObject == nil || stateObject.deleted {
+	if stateObject == nil || stateObject.suicided {
 		stateObject, _ = self.createObject(addr)
 	}
 	return stateObject
@@ -723,7 +730,7 @@ func (self *StateDB) RevertToSnapshot(copy interface{}) {
 	for i := len(self.journal.JournalList) - 1; i >= snapshot; i-- {
 		// undo in memory
 		// parameters *stateDB, batch, writeThrough, flush, sync
-		self.journal.JournalList[i].Undo(self, nil, false, false, false)
+		self.journal.JournalList[i].Undo(self, nil, nil, false)
 		log.Info("undo operation: %s", self.journal.JournalList[i])
 	}
 	self.journal.JournalList = self.journal.JournalList[:snapshot]
@@ -877,5 +884,14 @@ func validateRoot(root common.Hash, curRoot common.Hash) bool {
 		return false
 	} else {
 		return true
+	}
+}
+
+func isPrecompiledAccount(address common.Address) bool {
+	if address.Hex() == common.BytesToAddress(common.LeftPadBytes([]byte{1}, 20)).Hex() || address.Hex() == common.BytesToAddress(common.LeftPadBytes([]byte{2}, 20)).Hex() ||
+		address.Hex() == common.BytesToAddress(common.LeftPadBytes([]byte{3}, 20)).Hex() || address.Hex() == common.BytesToAddress(common.LeftPadBytes([]byte{4}, 20)).Hex() {
+		return true
+	} else {
+		return false
 	}
 }

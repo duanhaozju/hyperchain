@@ -51,7 +51,7 @@ func (node *PublicNodeAPI) DelNode(args NodeArgs) error {
 	if node.pm == nil {
 		return &callbackError{"protocolManager is nil"}
 	}
-	node.pm.GetEventObject().Post(event.DelPeerEvent{
+	go node.pm.GetEventObject().Post(event.DelPeerEvent{
 		Payload: []byte(args.NodeHash),
 	})
 	return nil

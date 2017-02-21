@@ -11,10 +11,6 @@ import (
 	"io"
 	"math/big"
 	"strings"
-	"time"
-
-	gp "google/protobuf"
-
 	"golang.org/x/crypto/sha3"
 )
 
@@ -64,13 +60,7 @@ func GenerateUUID() string {
 	return uuidBytesToStr(uuid)
 }
 
-// CreateUtcTimestamp returns a google/protobuf/Timestamp in UTC
-func CreateUtcTimestamp() *gp.Timestamp {
-	now := time.Now().UTC()
-	secs := now.Unix()
-	nanos := int32(now.UnixNano() - (secs * 1000000000))
-	return &(gp.Timestamp{Seconds: secs, Nanos: nanos})
-}
+
 
 //GenerateHashFromSignature returns a hash of the combined parameters
 func GenerateHashFromSignature(path string, ctor string, args []string) []byte {

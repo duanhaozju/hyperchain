@@ -8,6 +8,8 @@ import (
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/transport"
 	"sort"
+	"hyperchain/p2p/persist"
+	"github.com/golang/protobuf/proto"
 )
 
 type PeersPoolIml struct {
@@ -44,19 +46,33 @@ func NewPeerPoolIml(TEM transport.TransportEncryptManager, localAddr *pb.PeerAdd
 
 // PutPeer put a peer into the peer pool and get a peer point
 func (this *PeersPoolIml) PutPeer(addr pb.PeerAddr, client *Peer) error {
-	addrString := addr.Hash
 	//log.Println("Add a peer:",addrString)
 	if _, ok := this.peerKeys[addr]; ok {
 		// the pool already has this client
-		log.Error(addr.IP, addr.Port, "The client already in")
-		return errors.New("The client already in")
+		log.Warning(addr.IP, addr.Port, "The client already in")
+		this.peerKeys[addr] = addr.Hash
+		this.peerAddr[addr.Hash] = addr
+		this.peers[addr.Hash] = client
+
+		persistAddr,err := proto.Marshal(addr.ToPeerAddress())
+		if err != nil{
+			log.Errorf("cannot marshal the marshal Addreass for %v",addr)
+		}
+		persist.PutData(addr.Hash,persistAddr)
+		return errors.New("The client already in, updated the peer info")
 
 	} else {
 		log.Debug("alive peers number is:", this.alivePeers)
 		this.alivePeers += 1
-		this.peerKeys[addr] = addrString
-		this.peerAddr[addrString] = addr
-		this.peers[addrString] = client
+		this.peerKeys[addr] = addr.Hash
+		this.peerAddr[addr.Hash] = addr
+		this.peers[addr.Hash] = client
+		//persist the peer hash into data base
+		persistAddr,err := proto.Marshal(addr.ToPeerAddress())
+		if err != nil{
+			log.Errorf("cannot marshal the marshal Addreass for %v",addr)
+		}
+		persist.PutData(addr.Hash,persistAddr)
 		return nil
 	}
 
@@ -200,7 +216,7 @@ func (this *PeersPoolIml) ToRoutingTableWithout(hash string) pb.Routers {
 func (this *PeersPoolIml) MergeFromRoutersToTemp(routers pb.Routers) {
 	for _, peerAddress := range routers.Routers {
 		peerAddr := pb.RecoverPeerAddr(peerAddress)
-		newPeer, err := NewPeer(peerAddr, this.localAddr, this.TEM, this.CM)
+		newPeer, err := NewPeerPure(peerAddr, this.localAddr, this.TEM, this.CM)
 		if err != nil {
 			log.Error("merge from routers error ", err)
 		}
@@ -214,9 +230,18 @@ func (this *PeersPoolIml) MergeTempPeers(peer *Peer) {
 	//使用共识结果进行更新
 	//for _, tempPeer := range this.tempPeers {
 	//	if tempPeer.RemoteAddr.Hash == address.Hash {
+	if peer == nil {
+		log.Error("the peer to merge is nil");
+		return
+	}
 	this.peers[peer.PeerAddr.Hash] = peer
 	this.peerAddr[peer.PeerAddr.Hash] = *peer.PeerAddr
 	this.peerKeys[*peer.PeerAddr] = peer.PeerAddr.Hash
+	persistAddr,err := proto.Marshal(peer.PeerAddr.ToPeerAddress())
+	if err != nil{
+		log.Errorf("cannot marshal the marshal Addreass for %v",peer.PeerAddr)
+	}
+	persist.PutData(peer.PeerAddr.Hash,persistAddr)
 	delete(this.tempPeers, peer.PeerAddr.Hash)
 	//}
 	//}
@@ -247,6 +272,7 @@ func (this *PeersPoolIml) DeletePeer(peer *Peer) map[string]pb.PeerAddr {
 	delete(this.peers, peer.PeerAddr.Hash)
 	delete(this.peerAddr, peer.PeerAddr.Hash)
 	delete(this.peerKeys, *peer.PeerAddr)
+	persist.DelData(peer.PeerAddr.Hash)
 	perlist := make(map[string]pb.PeerAddr, 1)
 	perlist[peer.PeerAddr.Hash] = *peer.PeerAddr
 	return perlist

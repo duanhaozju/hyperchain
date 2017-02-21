@@ -123,6 +123,19 @@ type RecvDelPeerEvent struct {
 	Payload []byte
 }
 
+/*
+	Non verified peer events definition
+ */
+
+type VerifiedBlock struct {
+	Payload  []byte
+}
+
+type ReceiveVerifiedBlock struct {
+	Payload  []byte
+}
+
+
 type RemoveCacheEvent struct {}
 
 type CacheRemovedEvent struct {}

@@ -43,6 +43,12 @@ func fetchDataNodesFromDBByBucketKey(treePrefix string, bucketKey *BucketKey) (d
 	}
 
 	err = UnmarshalDataNodes(bucketKey, dataNodesValue, &dataNodes)
+
+	//if(bucketKey.level == 2 && bucketKey.bucketNumber == 13){
+	//	log.Critical("writeBatch.get size is",dataNodes.Len())
+	//	log.Critical("dataNodes marshal is",common.ToHex(dataNodes.Marshal()))
+	//}
+
 	if err != nil {
 		log.Errorf("Marshal dataNodesValue error", err)
 		panic("Get bucketKey error from db error ")

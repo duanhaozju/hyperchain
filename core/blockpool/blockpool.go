@@ -14,11 +14,25 @@ import (
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
 	"sync/atomic"
+	"hyperchain/event"
+	"hyperchain/p2p"
+	"hyperchain/crypto"
 )
 
 var (
 	log         *logging.Logger // package-level logger
 	globalState vm.Database
+)
+
+const (
+	COMMITQUEUESIZE = 1024
+	VALIDATEQUEUESIZE = 1024
+
+	VALIDATEBEHAVETYPE_NORMAL = 0
+	VALIDATEBEHAVETYPE_DROP = 1
+
+	PROGRESS_TRUE = 1
+	PROGRESS_FALSE = 0
 )
 
 func init() {
@@ -38,34 +52,41 @@ type BlockRecord struct {
 }
 
 type BlockPool struct {
-	demandNumber        uint64       // current demand number for commit
-	demandSeqNo         uint64       // current demand seqNo for validation
-	maxNum              uint64       // max block number in queue cache for commit
-	maxSeqNo            uint64       // max validation event number in validation queue
-	tempBlockNumber     uint64       // temporarily block number
-	lastValidationState atomic.Value // latest state root hash
-	// external stuff
-	consenter consensus.Consenter // consensus module handler
-	// thread safe cache
-	blockCache      *common.Cache // cache for validation result
-	validationQueue *common.Cache // cache for storing validation event
-	queue           *common.Cache // cache for storing commit event
-	// config
-	conf *common.Config // block configuration
-	// hash utils
-	transactionCalculator interface{} // a batch of transactions calculator
-	receiptCalculator     interface{} // a batch of receipts calculator
-	transactionBuffer     [][]byte    // transaction buffer
-	receiptBuffer         [][]byte    // receipt buffer
+	demandNumber        uint64                // current demand number for commit
+	demandSeqNo         uint64                // current demand seqNo for validation
+	tempBlockNumber       uint64              // temporarily block number
+	lastValidationState   atomic.Value        // latest state root hash
+						  // external stuff
+	consenter             consensus.Consenter // consensus module handler
+	peerManager           p2p.PeerManager
+	commonHash            crypto.CommonHash
+	encryption            crypto.Encryption
+						  // thread safe cache
+	blockCache            *common.Cache       // cache for validation result
+	validateEventQueue    *common.Cache       // cache for storing validation event
+						  // config
+	conf                  *common.Config      // block configuration
+						  // hash utils
+	transactionCalculator interface{}         // a batch of transactions calculator
+	receiptCalculator     interface{}         // a batch of receipts calculator
+	transactionBuffer     [][]byte            // transaction buffer
+	receiptBuffer         [][]byte            // receipt buffer
+						  // commit queue
+	validateQueue         chan event.ExeTxsEvent
+	commitQueue           chan event.CommitOrRollbackBlockEvent
+
+	validateBehaveFlag    int32
+	validateInProgress    int32
+	commitInProgress      int32
+	validateQueueLen      int32
+	commitQueueLen        int32
+	helper                *Helper
+
 }
 
-func NewBlockPool(consenter consensus.Consenter, conf *common.Config) *BlockPool {
+func NewBlockPool(consenter consensus.Consenter, conf *common.Config, commonHash crypto.CommonHash, encryption crypto.Encryption, eventMux *event.TypeMux) *BlockPool {
 	var err error
 	blockCache, err := common.NewCache()
-	if err != nil {
-		return nil
-	}
-	queue, err := common.NewCache()
 	if err != nil {
 		return nil
 	}
@@ -73,19 +94,24 @@ func NewBlockPool(consenter consensus.Consenter, conf *common.Config) *BlockPool
 	if err != nil {
 		return nil
 	}
-
+	helper := NewHelper(eventMux)
 	pool := &BlockPool{
 		consenter:       consenter,
-		queue:           queue,
-		validationQueue: validationQueue,
+		validateEventQueue: validationQueue,
 		blockCache:      blockCache,
 		conf:            conf,
+		helper:          helper,
 	}
 	// 1. set demand number and demand seqNo
 	currentChain := core.GetChainCopy()
 	pool.demandNumber = currentChain.Height + 1
 	pool.demandSeqNo = currentChain.Height + 1
 	pool.tempBlockNumber = currentChain.Height + 1
+
+	pool.commonHash = commonHash
+	pool.encryption = encryption
+	pool.validateQueue = make(chan event.ExeTxsEvent, VALIDATEQUEUESIZE)
+	pool.commitQueue = make(chan event.CommitOrRollbackBlockEvent, COMMITQUEUESIZE)
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return nil
@@ -101,10 +127,16 @@ func NewBlockPool(consenter consensus.Consenter, conf *common.Config) *BlockPool
 		pool.lastValidationState.Store(common.BytesToHash(blk.MerkleRoot))
 		return pool
 	}
+
 	// 2. set current state root hash
 	log.Noticef("block pool Initialize. current chain height #%d, latest block hash %s, demandNumber #%d, demandseqNo #%d, temp block number #%d\n",
 		currentChain.Height, common.Bytes2Hex(currentChain.LatestBlockHash), pool.demandNumber, pool.demandSeqNo, pool.tempBlockNumber)
 	return pool
+}
+
+func (pool *BlockPool) Initialize() {
+	go pool.commitBackendLoop()
+	go pool.validateBackendLoop()
 }
 
 // SetDemandNumber - set demand number.
@@ -129,7 +161,7 @@ func (pool *BlockPool) SetTempBlockNumber(seqNo uint64) {
 
 // PurgeValidateQueue - clear validation event queue cache.
 func (pool *BlockPool) PurgeValidateQueue() {
-	pool.validationQueue.Purge()
+	pool.validateEventQueue.Purge()
 }
 
 // PurgeBlockCache - clear validation result cache

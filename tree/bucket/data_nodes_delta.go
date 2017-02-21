@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"github.com/pkg/errors"
 	"sort"
+	"encoding/binary"
 )
+
+const MAXDATANODESSIZE  = 8
 
 // Code for managing changes in data nodes
 type DataNodes []*DataNode
@@ -33,26 +36,32 @@ func (dataNodes DataNodes) Marshal() []byte {
 		log.Error("DataNodes Marshal error ", err)
 		return nil
 	}
-	dataPrefix := append([]byte(DataNodesPrefix), byte(len(dataNodes)))
+	bytes := make([]byte, MAXDATANODESSIZE)
+	binary.LittleEndian.PutUint64(bytes, uint64(len(dataNodes)))
+
+	dataPrefix := append([]byte(DataNodesPrefix), bytes...)
 	data = append(dataPrefix, data...)
 	return data
 }
 
 func UnmarshalDataNodes(bucketKey *BucketKey, data []byte, v interface{}) error {
 	dataNodes, ok := v.(*DataNodes)
+	var dataNodesKVDeltas [][]byte
+
 	if ok == false {
 		return errors.New("invalid type")
 	}
-	if data == nil || len(data) <= len(DataNodesPrefix)+1 {
+	if data == nil || len(data) <= len(DataNodesPrefix)+MAXDATANODESSIZE {
 		return errors.New("Data is nil")
 	}
-	length := (int)(data[len(DataNodesPrefix)])
-	var dataNodesKVDeltas [][]byte
-	err := json.Unmarshal(data[len(DataNodesPrefix)+1:], &dataNodesKVDeltas)
+
+	length := binary.LittleEndian.Uint64(data[len(DataNodesPrefix):len(DataNodesPrefix)+MAXDATANODESSIZE])
+
+	err := json.Unmarshal(data[len(DataNodesPrefix)+MAXDATANODESSIZE:], &dataNodesKVDeltas)
 	if err != nil {
 		log.Error("UnmarshalDataNodes error", err)
 	}
-	for i := 0; i < length; i++ {
+	for i := 0; i < int(length); i++ {
 		dataKey := &DataKey{bucketKey, dataNodesKVDeltas[2*i]}
 		*dataNodes = append(*dataNodes, newDataNode(dataKey, dataNodesKVDeltas[2*i+1]))
 	}

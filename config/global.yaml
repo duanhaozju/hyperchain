@@ -48,13 +48,13 @@ global:
             contractFillRate: 0.5ms
         buckettree:
             state:
-                size: 19
-                levelGroup: 10
-                cacheSize: 100    # 10 MB
+                size: 1000000
+                levelGroup: 1000
+                cacheSize: 500    # 100 MB
             storage:
-                size: 19
-                levelGroup: 10
-                cacheSize: 100   # 10 MB
+                size: 1000000
+                levelGroup: 1000
+                cacheSize: 500    # 100 MB
         hmpublickey:
             "N": "14315727801779002117"
             Nsquare: "204940062494628260128356353732290481689"
@@ -79,7 +79,7 @@ global:
 
         module:
             #set log level by module
-            p2p: "INFO"
+            p2p: "NOTICE"
             consensus: "NOTICE"
             core: "NOTICE"
             hyperdb: "NOTICE"

@@ -21,79 +21,81 @@ import (
 	"sync/atomic"
 )
 
-// Validate is an entry of `validate process`
-// When a validationEvent received, put it into the validationQueue
-// If the demand ValidationEvent arrived, call `PreProcess` function
-// IMPORTANT this function called in parallelly, Make sure all the variable are thread-safe
-func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption, peerManager p2p.PeerManager) {
-	// check whether this is necessary to update max seqNo
-	log.Debugf("begin to validate for vid #%d. current temp block number #%d", validationEvent.SeqNo, pool.tempBlockNumber)
-	if validationEvent.SeqNo > atomic.LoadUint64(&pool.maxSeqNo) {
-		log.Debugf("validation seqNo #%d larger than max seqNo", validationEvent.SeqNo)
-		atomic.StoreUint64(&pool.maxSeqNo, validationEvent.SeqNo)
+func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, peerManager p2p.PeerManager) {
+	pool.validateQueue <- validationEvent
+	if pool.peerManager == nil {
+		pool.peerManager = peerManager
 	}
-	// check validation event duplication
-	if _, existed := pool.validationQueue.Get(validationEvent.SeqNo); existed {
-		log.Error("receive repeat validation event, ", validationEvent.SeqNo)
-		return
-	}
-
-	// check SeqNo
-	if validationEvent.SeqNo < atomic.LoadUint64(&pool.demandSeqNo) {
-		// receive invalid validation event
-		log.Error("receive invalid validation event, seqno less than demandseqNo, ", validationEvent.SeqNo)
-		return
-	} else if validationEvent.SeqNo == atomic.LoadUint64(&pool.demandSeqNo) {
-		// process
-		if _, success := pool.PreProcess(validationEvent, commonHash, encryption, peerManager); success {
-			atomic.AddUint64(&pool.demandSeqNo, 1)
-			currentDemandSeqNo := atomic.LoadUint64(&pool.demandSeqNo)
-			log.Noticef("current demandSeqNo is %d", currentDemandSeqNo)
-		} else {
-			log.Error("pre process failed")
-			return
-		}
-		judge := func(key interface{}, iterKey interface{}) bool {
-			id := key.(uint64)
-			iterId := iterKey.(uint64)
-			if id >= iterId {
-				return true
+	atomic.AddInt32(&pool.validateQueueLen, 1)
+}
+func (pool *BlockPool) validateBackendLoop() {
+	for ev := range pool.validateQueue {
+		if atomic.LoadInt32(&pool.validateBehaveFlag) == VALIDATEBEHAVETYPE_NORMAL {
+			if success := pool.consumeValidateEvent(ev); success == false {
+				log.Errorf("validate #%d failed, system crush down.", ev.SeqNo)
 			}
-			return false
+			atomic.AddInt32(&pool.validateQueueLen, -1)
+		} else {
+			log.Noticef("drop validation event %d", ev.SeqNo)
+			pool.dropValdiateEvent(ev)
+			atomic.AddInt32(&pool.validateQueueLen, -1)
 		}
-		pool.validationQueue.RemoveWithCond(validationEvent.SeqNo, judge)
+	}
+}
 
-		// process remain event
-		for i := validationEvent.SeqNo + 1; i <= atomic.LoadUint64(&pool.maxSeqNo); i += 1 {
-			if ret, existed := pool.validationQueue.Get(i); existed {
-				ev := ret.(event.ExeTxsEvent)
-				if _, success := pool.PreProcess(ev, commonHash, encryption, peerManager); success {
-					pool.validationQueue.Remove(i)
-					atomic.AddUint64(&pool.demandSeqNo, 1)
-					currentDemandSeqNo := atomic.LoadUint64(&pool.demandSeqNo)
-					log.Noticef("current demandSeqNo is %d", currentDemandSeqNo)
+func (pool *BlockPool) consumeValidateEvent(validationEvent event.ExeTxsEvent) bool {
+	atomic.StoreInt32(&pool.validateInProgress, PROGRESS_TRUE)
+	defer atomic.StoreInt32(&pool.validateInProgress, PROGRESS_FALSE)
+	if pool.validateEventCheck(validationEvent) == false {
+		log.Errorf("receive validation event %d while %d is required, save into cache temporarily.", validationEvent.SeqNo, pool.demandSeqNo)
+		pool.validateEventQueue.Add(validationEvent.SeqNo, validationEvent)
+		return true
+	}
+	if _, success := pool.PreProcess(validationEvent); success == false {
+		return false
+	}
+	pool.increaseDemandSeqNo()
+	if pool.validateEventQueue.Len() > 0 {
+		// there is still some events remain.
+		for  {
+			if pool.validateEventQueue.Contains(pool.demandSeqNo) {
+				res, _ := pool.validateEventQueue.Get(pool.demandSeqNo)
+				validationEvent = res.(event.ExeTxsEvent)
+				if _, success := pool.PreProcess(validationEvent); success == false {
+					return false
 				} else {
-					log.Error("pre process failed")
-					return
+					pool.increaseDemandSeqNo()
+					judge := func(key interface{}, iterKey interface{}) bool {
+						id := key.(uint64)
+						iterId := iterKey.(uint64)
+						if id >= iterId {
+							return true
+						}
+						return false
+					}
+					pool.validateEventQueue.RemoveWithCond(validationEvent.SeqNo, judge)
 				}
 			} else {
 				break
 			}
 		}
-		return
-	} else {
-		log.Noticef("receive validation event  %d which is not demand, save into cache temporarily", validationEvent.SeqNo)
-		pool.validationQueue.Add(validationEvent.SeqNo, validationEvent)
 	}
+	return true
+}
+
+// dropValdiateEvent - this function do nothing but consume a validation event.
+func (pool *BlockPool) dropValdiateEvent(validationEvent event.ExeTxsEvent) {
+	atomic.StoreInt32(&pool.validateInProgress, PROGRESS_TRUE)
+	atomic.StoreInt32(&pool.validateInProgress, PROGRESS_FALSE)
 }
 
 // Process an ValidationEvent
-func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash crypto.CommonHash, encryption crypto.Encryption, peerManager p2p.PeerManager) (error, bool) {
+func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, bool) {
 	var validTxSet []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
 	var index []int
 	if validationEvent.IsPrimary {
-		invalidTxSet, index = pool.checkSign(validationEvent.Transactions, commonHash, encryption)
+		invalidTxSet, index = pool.checkSign(validationEvent.Transactions, pool.commonHash, pool.encryption)
 	} else {
 		validTxSet = validationEvent.Transactions
 	}
@@ -104,13 +106,8 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 		set := validationEvent.Transactions
 		for _, idx := range index {
 			idx = idx - count
-			if idx == 0 {
-				set = set[1:]
-				count++
-			} else {
-				set = append(set[:idx-1], set[idx+1:]...)
-				count++
-			}
+			set = append(set[:idx], set[idx+1:]...)
+			count++
 		}
 		validTxSet = set
 	} else {
@@ -123,7 +120,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 		return err, false
 	}
 	// calculate validation result hash for comparison with others
-	hash := commonHash.Hash([]interface{}{
+	hash := pool.commonHash.Hash([]interface{}{
 		validateResult.MerkleRoot,
 		validateResult.TxRoot,
 		validateResult.ReceiptRoot,
@@ -164,7 +161,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 			}
 			// original node is local
 			// store invalid transaction directly
-			if t.Tx.Id == uint64(peerManager.GetNodeId()) {
+			if t.Tx.Id == uint64(pool.peerManager.GetNodeId()) {
 				pool.StoreInvalidResp(event.RespInvalidTxsEvent{
 					Payload: payload,
 				})
@@ -173,7 +170,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent, commonHash 
 			var peers []uint64
 			peers = append(peers, t.Tx.Id)
 			// send back to original node
-			peerManager.SendMsgToPeers(payload, peers, recovery.Message_INVALIDRESP)
+			pool.peerManager.SendMsgToPeers(payload, peers, recovery.Message_INVALIDRESP)
 		}
 	}
 	return nil, true
@@ -280,7 +277,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	}
 	// generate new state fingerprint
 	// IMPORTANT doesn't call batch.Write util recv commit event for atomic assurance
-	log.Debugf("validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
+	log.Noticef("validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
 		pool.tempBlockNumber, seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	return nil, &BlockRecord{
 		TxRoot:      txRoot,
@@ -297,7 +294,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 func initEnvironment(state vm.Database, seqNo uint64) vm.Environment {
 	env := make(map[string]string)
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
-	env["currentGasLimit"] = "10000000"
+	env["currentGasLimit"] = "200000000"
 	vmenv := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, state, env)
 	return vmenv
 }
@@ -477,3 +474,15 @@ func (pool *BlockPool) submitValidationResult(state vm.Database, batch hyperdb.B
 	return errors.New("miss state type"), nil, nil, nil
 }
 
+func (pool *BlockPool) validateEventCheck(ev event.ExeTxsEvent) bool {
+	if ev.SeqNo != pool.demandSeqNo {
+		log.Errorf("got a validation event is not required. required %d but got %d", pool.demandSeqNo, ev.SeqNo)
+		return false
+	}
+	return true
+}
+
+func (pool *BlockPool) increaseDemandSeqNo() {
+	pool.demandSeqNo += 1
+	log.Noticef("demand seqNo %d", pool.demandSeqNo)
+}

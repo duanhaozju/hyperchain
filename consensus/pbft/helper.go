@@ -157,7 +157,7 @@ func (pbft *pbftProtocal) prePrepared(digest string, v uint64, n uint64) bool {
 
 	if cert != nil {
 		p := cert.prePrepare
-		if p != nil && p.View == v && p.SequenceNumber == n && p.BatchDigest == digest {
+		if p != nil && p.View == v && p.SequenceNumber == n && p.BatchDigest == digest && cert.digest == digest {
 			return true
 		}
 	}

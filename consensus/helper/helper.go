@@ -119,7 +119,7 @@ func (h *helper) ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo 
 	}
 
 	// Post the event to outer
-	go h.msgQ.Post(validateEvent)
+	h.msgQ.Post(validateEvent)
 
 	return nil
 }

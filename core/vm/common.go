@@ -4,7 +4,7 @@ package vm
 
 import (
 	"hyperchain/common"
-	"hyperchain/core/vm/params"
+	//"hyperchain/core/vm/params"
 	"math"
 	"math/big"
 )
@@ -40,28 +40,10 @@ func calcMemSize(off, l *big.Int) *big.Int {
 }
 
 // calculates the quadratic gas
-func quadMemGas(mem *Memory, newMemSize, gas *big.Int) {
+func quadMemGas(mem *Memory, newMemSize *big.Int) {
 	if newMemSize.Cmp(common.Big0) > 0 {
 		newMemSizeWords := toWordSize(newMemSize)
 		newMemSize.Mul(newMemSizeWords, u256(32))
-
-		if newMemSize.Cmp(u256(int64(mem.Len()))) > 0 {
-			// be careful reusing variables here when changing.
-			// The order has been optimised to reduce allocation
-			oldSize := toWordSize(big.NewInt(int64(mem.Len())))
-			pow := new(big.Int).Exp(oldSize, common.Big2, Zero)
-			linCoef := oldSize.Mul(oldSize, params.MemoryGas)
-			quadCoef := new(big.Int).Div(pow, params.QuadCoeffDiv)
-			oldTotalFee := new(big.Int).Add(linCoef, quadCoef)
-
-			pow.Exp(newMemSizeWords, common.Big2, Zero)
-			linCoef = linCoef.Mul(newMemSizeWords, params.MemoryGas)
-			quadCoef = quadCoef.Div(pow, params.QuadCoeffDiv)
-			newTotalFee := linCoef.Add(linCoef, quadCoef)
-
-			fee := newTotalFee.Sub(newTotalFee, oldTotalFee)
-			gas.Add(gas, fee)
-		}
 	}
 }
 
