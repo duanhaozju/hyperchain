@@ -694,7 +694,6 @@ func (this *GRPCPeerManager) UpdateRoutingTable(payload []byte) {
 		if err != nil {
 			log.Error("recover address failed", err)
 			return
-
 		}
 
 		log.Debugf("NEWPEER id: %d", newPeer.PeerAddr.ID)
@@ -740,6 +739,8 @@ func (this *GRPCPeerManager) UpdateRoutingTable(payload []byte) {
 			}
 
 
+		}else{
+			log.Error("response message is not Message_ATTEND_NOTIFY_RESPONSE")
 		}
 
 	} else {
