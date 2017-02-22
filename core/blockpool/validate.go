@@ -486,4 +486,3 @@ func (pool *BlockPool) increaseDemandSeqNo() {
 	pool.demandSeqNo += 1
 	log.Noticef("demand seqNo %d", pool.demandSeqNo)
 }
-

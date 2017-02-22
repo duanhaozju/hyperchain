@@ -13,18 +13,19 @@ func NewRouter() {
 			beego.NSRouter("/send", &controllers.TransactionsController{}, "post:SendTransaction"),
 			beego.NSRouter("/list", &controllers.TransactionsController{}, "get:GetTransactions"),
 			beego.NSRouter("/:transactionHash", &controllers.TransactionsController{}, "get:GetTransactionByHash"),
-			beego.NSRouter("/query", &controllers.TransactionsController{}, "get:GetTransactionByBlockNumberOrBlockHash"),
+			beego.NSRouter("/query", &controllers.TransactionsController{}, "get:GetTransactionByBlockNumberOrBlockHashOrTime"),
 			beego.NSRouter("/:transactionHash/receipt", &controllers.TransactionsController{}, "get:GetTransactionReceipt"),
-			beego.NSRouter("/get-hash-for-sign", &controllers.TransactionsController{}, "post:GetSignHash"),
-			beego.NSRouter("/average-time", &controllers.TransactionsController{}, "get:GetTxAvgTimeByBlockNumber"),
+			beego.NSRouter("/signature-hash", &controllers.TransactionsController{}, "post:GetSignHash"),
 			beego.NSRouter("/count", &controllers.TransactionsController{}, "get:GetTransactionsCount"),
 		),
 
 		beego.NSNamespace("/blocks",
 			beego.NSRouter("/list", &controllers.BlocksController{}, "get:GetBlocks"),
-			beego.NSRouter("/query", &controllers.BlocksController{}, "get:GetBlockByHashOrNum"),
+			beego.NSRouter("/query", &controllers.BlocksController{}, "get:GetBlockByHashOrNumOrTime"),
 			beego.NSRouter("/:blockHash/transactions/count", &controllers.TransactionsController{}, "get:GetBlockTransactionCountByHash"),
 			beego.NSRouter("/latest", &controllers.BlocksController{}, "get:GetLatestBlock"),
+			beego.NSRouter("/transactions/average-time", &controllers.TransactionsController{}, "get:GetTxAvgTimeByBlockNumber"),
+			beego.NSRouter("/average-time", &controllers.BlocksController{}, "get:GetAvgGenerateTimeByBlockNumber"),
 		),
 
 		beego.NSNamespace("/contracts",
@@ -32,6 +33,8 @@ func NewRouter() {
 			beego.NSRouter("/deploy", &controllers.ContractsController{}, "post:DeployContract"),
 			beego.NSRouter("/invoke", &controllers.ContractsController{}, "post:InvokeContract"),
 			beego.NSRouter("/query", &controllers.ContractsController{}, "get:GetCode"),
+			beego.NSRouter("/homomorphic/check", &controllers.ContractsController{}, "post:CheckHmValue"),
+			beego.NSRouter("/homomorphic/encry", &controllers.ContractsController{}, "post:EncryptoMessage"),
 		),
 
 		beego.NSNamespace("/accounts",
@@ -40,6 +43,7 @@ func NewRouter() {
 
 		beego.NSNamespace("/nodes",
 			beego.NSRouter("/list", &controllers.NodesController{}, "get:GetNodes"),
+			beego.NSRouter("/tcert", &controllers.CertController{}, "get:GetTCert"),
 		),
 	)
 	beego.AddNamespace(ns)

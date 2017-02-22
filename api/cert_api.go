@@ -2,6 +2,7 @@ package hpc
 
 import (
 	"hyperchain/admittance"
+	"regexp"
 	"hyperchain/common"
 )
 
@@ -24,18 +25,23 @@ func NewPublicCertAPI(cm *admittance.CAManager) *PublicCertAPI {
 }
 
 // GetNodes returns status of all the nodes
-func (node *PublicCertAPI) GetTCert(args CertArgs) (TCertReturn, error) {
+func (node *PublicCertAPI) GetTCert(args CertArgs) (*TCertReturn, error) {
 	if node.cm == nil {
-		return TCertReturn{TCert: "invalid tcert"}, &CertError{"CAManager is nil"}
+		return nil, &CallbackError{"CAManager is nil"}
 	}
+
+	reg := regexp.MustCompile(`^[0-9a-fA-F]+$`)
+	if !reg.MatchString(args.Pubkey) {
+		return nil, &InvalidParamsError{"Invalid params, please use hex string"}
+	}
+
 	tcert, err := node.cm.SignTCert(args.Pubkey)
 
 	if err != nil {
-		log.Error("sign tcert failed")
 		log.Error(err)
-		return TCertReturn{TCert: ""}, &CertError{"signed tcert failed"}
+		return nil, &CertError{"Signed tcert failed"}
 	}
 	tcert = common.TransportEncode(tcert)
-	return TCertReturn{TCert:tcert }, nil
+	return &TCertReturn{TCert:tcert }, nil
 
 }

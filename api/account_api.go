@@ -42,7 +42,7 @@ func (acc *PublicAccountAPI) NewAccount(password string) (common.Address, error)
 	ac, err := am.NewAccount(password)
 	if err != nil {
 		log.Errorf("New Account error,%v", err)
-		return common.Address{}, &callbackError{err.Error()}
+		return common.Address{}, &CallbackError{err.Error()}
 	}
 
 	/*	balanceIns, err :=types.go.GetBalanceIns()
@@ -68,7 +68,7 @@ func (acc *PublicAccountAPI) UnlockAccount(args UnlockParas) (bool, error) {
 	ac := accounts.Account{Address: args.Address, File: am.KeyStore.JoinPath(s)}
 	err := am.Unlock(ac, args.Password)
 	if err != nil {
-		return false, &invalidParamsError{"incorrect address or password!"}
+		return false, &InvalidParamsError{"incorrect address or password!"}
 	}
 	return true, nil
 }
@@ -105,22 +105,22 @@ func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
 
 	if headBlock, err := core.GetBlock(acc.db, core.GetChainCopy().LatestBlockHash); err != nil && err.Error() == leveldb_not_found_error {
-		return "", &leveldbNotFoundError{"latest block"}
+		return "", &LeveldbNotFoundError{"latest block"}
 	} else if err != nil {
 		log.Errorf("Get Block error, %v", err)
-		return "", &callbackError{err.Error()}
+		return "", &CallbackError{err.Error()}
 	} else if headBlock != nil {
 
 		if stateDB, err := GetStateInstance(common.BytesToHash(headBlock.MerkleRoot), acc.db, acc.config); err == nil && stateDB != nil {
 			if stateobject := stateDB.GetAccount(addr); stateobject != nil {
 				return fmt.Sprintf(`0x%x`, stateobject.Balance()), nil
 			} else {
-				return "", &leveldbNotFoundError{"stateobject, the account may not exist"}
+				return "", &LeveldbNotFoundError{"stateobject, the account may not exist"}
 			}
 		} else if err != nil {
-			return "", err
+			return "", &CallbackError{err.Error()}
 		} else {
-			return "", &leveldbNotFoundError{"statedb"}
+			return "", &LeveldbNotFoundError{"statedb"}
 		}
 	} else {
 		return "", nil
