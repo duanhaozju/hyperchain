@@ -267,6 +267,7 @@ func (this *PeersPoolIml) RejectTempPeers() {
 
 func (this *PeersPoolIml) DeletePeer(peer *Peer) map[string]pb.PeerAddr {
 	this.alivePeers -= 1
+	peer.Close()
 	delete(this.peers, peer.PeerAddr.Hash)
 	delete(this.peerAddr, peer.PeerAddr.Hash)
 	delete(this.peerKeys, *peer.PeerAddr)
