@@ -325,7 +325,7 @@ func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) events.Event {
 	cert := pbft.getAddNodeCert(ready.Key)
 
 	if !cert.finishAdd {
-		logger.Errorf("Replica %d has not done with addnode for key=%s", pbft.id, ready.Key)
+		logger.Debugf("Replica %d has not done with addnode for key=%s", pbft.id, ready.Key)
 		return nil
 	}
 
