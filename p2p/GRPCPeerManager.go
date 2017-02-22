@@ -821,9 +821,10 @@ func (this *GRPCPeerManager) DeleteNode(hash string) error {
 			if per.PeerAddr.ID > deleteID{
 				per.PeerAddr.ID--
 			}
-			if this.LocalAddr.ID > deleteID{
+
+		}
+		if this.LocalAddr.ID > deleteID{
 				this.LocalAddr.ID--
-			}
 		}
 		return nil
 
