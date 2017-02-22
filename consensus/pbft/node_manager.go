@@ -65,20 +65,20 @@ func (pbft *pbftProtocal) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 func (pbft *pbftProtocal) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 
 	key := string(msg.DelPayload)
-	logger.Debugf("Replica %d received local delnode message for newId: %d, del node: %s", pbft.id, msg.Id, key)
+	logger.Debugf("Replica %d received local delnode message for newId: %d, del node: %d", pbft.id, msg.Id, msg.Del)
 
 	if pbft.N == 4 {
 		logger.Criticalf("Replica %d receive del msg, but we don't support delete as there're only 4 nodes", pbft.id)
 		return nil
 	}
 
-	if len(msg.DelPayload) == 0 || len(msg.RouterHash) == 0 || msg.Id == 0 {
+	if len(msg.DelPayload) == 0 || len(msg.RouterHash) == 0 || msg.Id == 0 || msg.Del == 0 {
 		logger.Warningf("New replica %d received invalid local delNode message", pbft.id)
 		return nil
 	}
 
 	pbft.inDeletingNode = true
-	pbft.sendAgreeDelNode(key, msg.RouterHash, msg.Id)
+	pbft.sendAgreeDelNode(key, msg.RouterHash, msg.Id, msg.Del)
 
 	return nil
 }
@@ -122,12 +122,13 @@ func (pbft *pbftProtocal) sendAgreeAddNode(key string) {
 }
 
 // Repica broadcast delnode message for quit node
-func (pbft *pbftProtocal) sendAgreeDelNode(key string, routerHash string, newId uint64) {
+func (pbft *pbftProtocal) sendAgreeDelNode(key string, routerHash string, newId uint64, delId uint64) {
 
 	logger.Debugf("Replica %d try to send delnode message for quit node", pbft.id)
 
 	cert := pbft.getDelNodeCert(key)
 	cert.newId = newId
+	cert.delId = delId
 	cert.routerHash = routerHash
 
 	del := &DelNode{
@@ -196,7 +197,7 @@ func (pbft *pbftProtocal) recvAgreeDelNode(del *DelNode) error {
 func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 
 	if pbft.isNewNode {
-		logger.Debugf("Replica %d reject update routingTable")
+		logger.Debugf("Replica %d is new node, reject update routingTable", pbft.id)
 		return nil
 	}
 
@@ -398,7 +399,7 @@ func (pbft *pbftProtocal) sendAgreeUpdateNforDel(key string, routerHash string) 
 	atomic.StoreUint32(&pbft.inUpdatingN, 1)
 
 	// calculate the new N and view
-	n, view := pbft.getDelNV()
+	n, view := pbft.getDelNV(cert.delId)
 
 	agree := &AgreeUpdateN{
 		Flag:		false,
@@ -902,7 +903,7 @@ func (pbft *pbftProtocal) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 			logger.Debugf("Replica %d has not complete del node", pbft.id)
 			return false
 		}
-		n, view := pbft.getDelNV()
+		n, view := pbft.getDelNV(cert.delId)
 		if n != agree.N || view != agree.View {
 			logger.Debugf("Replica %d invalid p entry in agree-update: expected n=%d/view=%d, get n=%d/view=%d", pbft.id, n, view, agree.N, agree.View)
 			return false

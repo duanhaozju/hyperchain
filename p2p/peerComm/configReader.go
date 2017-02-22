@@ -156,11 +156,11 @@ func (conf *ConfigReader) AddNodesAndPersist(addrs map[string]pb.PeerAddr) {
 	idx := 0
 	for _, value := range addrs {
 		if _, ok := conf.nodes[value.ID]; !ok {
-			log.Notice("add a node",value.ID)
+			log.Notice("add a node", value.ID)
 			conf.addNode(value)
-		}else {
-			conf.updateNode(value)
-		}
+		}//}else {
+		//	conf.updateNode(value)
+		//}
 		idx++
 		if idx == 1{
 			conf.Config.SelfConfig.IntroducerID = value.ID

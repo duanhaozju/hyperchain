@@ -207,6 +207,7 @@ type addNodeCert struct {
 
 type delNodeCert struct {
 	newId			uint64
+	delId			uint64
 	routerHash		string
 	delNodes		map[DelNode]bool
 	delCount		int
