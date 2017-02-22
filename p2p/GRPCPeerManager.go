@@ -51,6 +51,9 @@ func NewGrpcManager(conf *common.Config) *GRPCPeerManager {
 	newgRPCManager.configs = config
 	newgRPCManager.LocalAddr = pb.NewPeerAddr(config.GetLocalIP(), config.GetLocalGRPCPort(), config.GetLocalJsonRPCPort(), config.GetLocalID())
 	MAX_PEER_NUM = newgRPCManager.configs.GetMaxPeerNumber()
+	if (newgRPCManager.configs.GetLocalID()-1) > MAX_PEER_NUM{
+		panic("the node id should not large than max peer number")
+	}
 	//get the maxpeer from config
 	newgRPCManager.IsOriginal = config.IsOrigin()
 	newgRPCManager.IsVP = config.IsVP()
