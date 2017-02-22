@@ -52,7 +52,7 @@ func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TEM transport
 	newNode.CM = cm
 	newNode.higherEventManager = hEventManager
 	newNode.PeersPool = peersPool
-	newNode.attendChan = make(chan int, 10)
+	newNode.attendChan = make(chan int,1000)
 	newNode.delayTable = make(map[int]int64)
 	newNode.DelayChan = make(chan UpdateTable)
 	//listen the update
@@ -77,6 +77,7 @@ func (node *Node) UpdateDelayTableThread() {
 
 //新节点需要监听相应的attend类型
 func (n *Node) attendNoticeProcess(N int) {
+	log.Critical("AttendProcess N:",N)
 	// fix the N as N-1
 	// temp
 	isPrimaryConnectFlag := false
@@ -121,14 +122,13 @@ func (node *Node) GetNodeID() int {
 
 // Chat Implements the ServerSide Function
 func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error) {
-	log.Debugf("\n###########################\nSTART OF NEW MESSAGE")
-	log.Debugf("LOCAL=> ID:%d IP:%s PORT:%d",node.localAddr.ID,node.localAddr.IP,node.localAddr.Port)
-	log.Debugf("MSG FORM=> ID: %d IP: %s PORT: %d",msg.From.ID,msg.From.IP,msg.From.Port)
-	if msg.MessageType != pb.Message_CONSUS{
+	if msg.MessageType != pb.Message_CONSUS {
+		log.Debugf("\n###########################\nSTART OF NEW MESSAGE")
+		log.Debugf("LOCAL=> ID:%d IP:%s PORT:%d", node.localAddr.ID, node.localAddr.IP, node.localAddr.Port)
+		log.Debugf("MSG FORM=> ID: %d IP: %s PORT: %d", msg.From.ID, msg.From.IP, msg.From.Port)
 		log.Debugf("MSG TYPE: %v, from: %d", msg.MessageType, msg.From.ID)
+		defer log.Debugf("END OF NEW MESSAGE\n###########################\n")
 	}
-	defer log.Debugf("END OF NEW MESSAGE\n###########################\n")
-
 	response := new(pb.Message)
 	response.MessageType = pb.Message_RESPONSE
 	response.MsgTimeStamp = time.Now().UnixNano()
