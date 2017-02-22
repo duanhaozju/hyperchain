@@ -195,8 +195,12 @@ func (pbft *pbftProtocal) recvAgreeDelNode(del *DelNode) error {
 // Check if replica prepared for update routing table after add node
 func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 
-	cert := pbft.getAddNodeCert(key)
+	if pbft.isNewNode {
+		logger.Debugf("Replica %d reject update routingTable")
+		return nil
+	}
 
+	cert := pbft.getAddNodeCert(key)
 	if cert.addCount < pbft.committedReplicasQuorum() {
 		return nil
 	}
