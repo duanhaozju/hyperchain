@@ -778,26 +778,20 @@ func (this *GRPCPeerManager) GetRouterHashifDelete(hash string) (string, uint64,
 
 
 	routers := this.peersPool.ToRoutingTableWithout(hash)
-
-	var ID uint64
 	var DeleteID uint64
-	localHash := this.LocalAddr.Hash
-	for _, rs := range routers.Routers {
-		log.Debug("RS hash: ", rs.Hash)
-		if rs.Hash == hash{
-			DeleteID = uint64(rs.ID)
-		}
-		if rs.Hash == localHash {
-			log.Notice("rs hash: ", rs.Hash)
-			log.Notice("id: ", rs.ID)
-			ID = uint64(rs.ID)
-			if ID > DeleteID{
-				ID--
-			}
+	for _, peer := range this.peersPool.GetPeers(){
+		log.Warning("range HASH, ",peer.PeerAddr.Hash," wanted hash",hash)
+		if peer.PeerAddr.Hash == hash{
+			log.Debug("RS hash: ", peer.PeerAddr.Hash)
+			DeleteID = uint64(peer.PeerAddr.ID)
 		}
 	}
+	if uint64(DeleteID) < uint64(this.LocalAddr.ID){
+		return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(this.LocalAddr.ID -1) ,uint64(DeleteID)
+	}
 	log.Critical("DELETE ID",DeleteID)
-	return hex.EncodeToString(hasher.Hash(routers).Bytes()), ID,DeleteID
+
+	return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(this.LocalAddr.ID) ,uint64(DeleteID)
 
 }
 
