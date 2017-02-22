@@ -195,8 +195,12 @@ func (pbft *pbftProtocal) recvAgreeDelNode(del *DelNode) error {
 // Check if replica prepared for update routing table after add node
 func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 
-	cert := pbft.getAddNodeCert(key)
+	if pbft.isNewNode {
+		logger.Debugf("Replica %d reject update routingTable")
+		return nil
+	}
 
+	cert := pbft.getAddNodeCert(key)
 	if cert.addCount < pbft.committedReplicasQuorum() {
 		return nil
 	}
@@ -314,14 +318,14 @@ func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) events.Event {
 	logger.Debugf("Replica %d received ready_for_n from replica %d", pbft.id, ready.ReplicaId)
 
 	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
-		logger.Warningf("Primary %d is in view change, reject the ready_for_n message", pbft.id)
+		logger.Warningf("Replica %d is in view change, reject the ready_for_n message", pbft.id)
 		return nil
 	}
 
 	cert := pbft.getAddNodeCert(ready.Key)
 
 	if !cert.finishAdd {
-		logger.Errorf("Primary %d has not done with addnode for key=%s", pbft.id, ready.Key)
+		logger.Errorf("Replica %d has not done with addnode for key=%s", pbft.id, ready.Key)
 		return nil
 	}
 
@@ -760,6 +764,24 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 
 	pbft.stopTimer()
 	pbft.nullRequestTimer.Stop()
+
+	pbft.seqNo = pbft.h
+	pbft.lastExec = pbft.h
+	pbft.seqNo = pbft.h
+	if pbft.primary(pbft.view) != pbft.id {
+		pbft.vid = pbft.h
+		pbft.lastVid = pbft.h
+	}
+
+	pbft.view = update.View
+	pbft.N = int(update.N)
+	pbft.f = (pbft.N - 1) / 3
+
+	if !update.Flag {
+		cert := pbft.getDelNodeCert(update.Key)
+		pbft.id = cert.newId
+	}
+
 	delete(pbft.updateStore, pbft.updateTarget)
 
 	for idx := range pbft.agreeUpdateStore {
@@ -785,18 +807,6 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 
 	pbft.addNodeCertStore = make(map[string]*addNodeCert)
 	pbft.delNodeCertStore = make(map[string]*delNodeCert)
-
-	pbft.seqNo = pbft.h
-	pbft.lastExec = pbft.h
-	pbft.seqNo = pbft.h
-	if pbft.primary(pbft.view) != pbft.id {
-		pbft.vid = pbft.h
-		pbft.lastVid = pbft.h
-	}
-
-	pbft.view = update.View
-	pbft.N = int(update.N)
-	pbft.f = (pbft.N - 1) / 3
 
 	if !pbft.skipInProgress && !pbft.inVcReset && !pbft.inClearCache {
 		pbft.helper.ClearValidateCache()
