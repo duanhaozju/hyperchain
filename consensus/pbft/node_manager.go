@@ -288,7 +288,8 @@ func (pbft *pbftProtocal) sendReadyForN() error {
 		View:		view,
 		H:			pbft.h,
 	}
-	pbft.agreeUpdateHelper(agree)
+
+	pbft.updateCertStore = pbft.agreeUpdateHelper(agree)
 
 	payload, err := proto.Marshal(ready)
 	if err != nil {
@@ -341,6 +342,10 @@ func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) events.Event {
 
 func (pbft *pbftProtocal) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) events.Event {
 
+	if int(agree.N) == pbft.N && agree.View == pbft.view {
+		logger.Debugf("Replica %d alreay finish update for N=%d/view=%d", pbft.id, pbft.N, pbft.view)
+	}
+
 	pbft.stopTimer()
 	atomic.StoreUint32(&pbft.inUpdatingN, 1)
 
@@ -349,7 +354,7 @@ func (pbft *pbftProtocal) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) events.Eve
 		return nil
 	}
 
-	pbft.agreeUpdateHelper(agree)
+	pbft.updateCertStore = pbft.agreeUpdateHelper(agree)
 	logger.Infof("Replica %d sending agree-update-N, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		pbft.id, agree.View, agree.H, len(agree.Cset), len(agree.Pset), len(agree.Qset))
 
@@ -400,7 +405,7 @@ func (pbft *pbftProtocal) sendAgreeUpdateNforDel(key string, routerHash string) 
 		H:			pbft.h,
 	}
 
-	pbft.agreeUpdateHelper(agree)
+	pbft.updateCertStore = pbft.agreeUpdateHelper(agree)
 	logger.Infof("Replica %d sending update-N-View, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		pbft.id, agree.View, agree.H, len(agree.Cset), len(agree.Pset), len(agree.Qset))
 
@@ -571,7 +576,13 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) events.Event {
 		return nil
 	}
 
-	pbft.updateStore[pbft.updateTarget] = update
+	key := uidx{
+		flag: update.Flag,
+		key: update.Key,
+		n: update.N,
+		v: update.View,
+	}
+	pbft.updateStore[key] = update
 
 	quorum := 0
 	for idx := range pbft.agreeUpdateStore {
@@ -745,6 +756,12 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 		}
 	}
 
+	for idx := range pbft.certStore {
+		if idx.v == pbft.view {
+			delete(pbft.certStore, idx)
+		}
+	}
+
 	pbft.seqNo = pbft.h
 	pbft.lastExec = pbft.h
 	pbft.seqNo = pbft.h
@@ -756,10 +773,6 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 	pbft.view = update.View
 	pbft.N = int(update.N)
 	pbft.f = (pbft.N - 1) / 3
-
-	if pbft.primary(pbft.view) != pbft.id {
-		pbft.clearDuplicator()
-	}
 
 	if !pbft.skipInProgress && !pbft.inVcReset && !pbft.inClearCache {
 		pbft.helper.ClearValidateCache()
@@ -792,7 +805,7 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 	return updatedNEvent{}
 }
 
-func (pbft *pbftProtocal) agreeUpdateHelper(agree *AgreeUpdateN) {
+func (pbft *pbftProtocal) agreeUpdateHelper(agree *AgreeUpdateN) map[msgID]updateCert {
 
 	pset := pbft.calcPSet()
 	qset := pbft.calcQSet()
@@ -800,7 +813,7 @@ func (pbft *pbftProtocal) agreeUpdateHelper(agree *AgreeUpdateN) {
 	pbft.plist = pset
 	pbft.qlist = qset
 
-	pbft.updateCertStore = make(map[msgID]updateCert)
+	updateCertStore := make(map[msgID]updateCert)
 	for idx, cert := range pbft.certStore {
 		if idx.v == pbft.view {
 			tmpId := msgID{n:idx.n, v:agree.View}
@@ -811,13 +824,7 @@ func (pbft *pbftProtocal) agreeUpdateHelper(agree *AgreeUpdateN) {
 				sentCommit: cert.sentCommit,
 				sentExecute: cert.sentExecute,
 			}
-			pbft.updateCertStore[tmpId] = tmpCert
-		}
-		if agree.Flag && idx.v <= pbft.view {
-			delete(pbft.certStore, idx)
-		}
-		if !agree.Flag && idx.v <= pbft.view+1 {
-			delete(pbft.certStore, idx)
+			updateCertStore[tmpId] = tmpCert
 		}
 	}
 
@@ -847,6 +854,8 @@ func (pbft *pbftProtocal) agreeUpdateHelper(agree *AgreeUpdateN) {
 		}
 		agree.Qset = append(agree.Qset, q)
 	}
+
+	return updateCertStore
 }
 
 func (pbft *pbftProtocal) checkAgreeUpdateN(agree *AgreeUpdateN) bool {

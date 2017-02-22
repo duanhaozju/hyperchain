@@ -710,6 +710,7 @@ func (pbft *pbftProtocal) finishViewChange() events.Event {
 	broadcast := consensusMsgHelper(msg, pbft.id)
 	primary := pbft.primary(pbft.view)
 	pbft.helper.InnerUnicast(broadcast, primary)
+	logger.Debugf("Replica %d send FinishVcReset to primary %d", pbft.id, primary)
 	return viewChangedEvent{}
 }
 

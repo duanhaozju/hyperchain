@@ -564,6 +564,8 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		}
 		return pbft.processNewView()
 	case protos.VcResetDone:
+		pbft.inVcReset = false
+		logger.Debugf("Replica %d received local VcResetDone", pbft.id)
 		if et.SeqNo != pbft.h+1 {
 			logger.Warningf("Replica %d finds error in VcResetDone, expect=%d, but get=%d", pbft.id, pbft.h+1, et.SeqNo)
 			return nil
@@ -576,7 +578,6 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 			logger.Warningf("Replica %d is not in viewChange, but received local VcResetDone", pbft.id)
 			return nil
 		}
-		pbft.inVcReset = false
 		if pbft.primary(pbft.view) == pbft.id {
 			return pbft.handleTailInNewView()
 		}
