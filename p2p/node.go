@@ -85,7 +85,7 @@ func (n *Node) attendNoticeProcess(N int) {
 	num := 0
 	for {
 		flag := <-n.attendChan
-		log.Critical("receive flag: ", flag)
+		log.Critical("attend flag",flag,num)
 		switch flag {
 		case 1: {
 			num++
