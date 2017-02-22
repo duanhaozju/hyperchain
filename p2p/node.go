@@ -100,7 +100,7 @@ func (n *Node) attendNoticeProcess(N int) {
 			go n.higherEventManager.Post(event.AlreadyInChainEvent{})
 		}
 
-		if num == N-1 {
+		if num == N {
 			break
 		}
 

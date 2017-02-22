@@ -65,7 +65,7 @@ func (pbft *pbftProtocal) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 func (pbft *pbftProtocal) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 
 	key := string(msg.DelPayload)
-	logger.Debugf("Replica %d received local delnode message for newId: %d, del node: %s", pbft.id, msg.Id, key)
+	logger.Debugf("Replica %d received local delnode message for newId: %d, del node: %d", pbft.id, msg.Id, msg.Del)
 
 	if pbft.N == 4 {
 		logger.Criticalf("Replica %d receive del msg, but we don't support delete as there're only 4 nodes", pbft.id)

@@ -487,9 +487,9 @@ func (pbft *pbftProtocal) getDelNV(del uint64) (n int64, v uint64) {
 
 	n = int64(pbft.N) - 1
 	if pbft.primary(pbft.view) < del {
-		v = pbft.view % uint64(pbft.N) - 1 + n * (pbft.view / uint64(pbft.N) + 1)
+		v = pbft.view % uint64(pbft.N) - 1 + (uint64(pbft.N) - 1) * (pbft.view / uint64(pbft.N) + 1)
 	} else {
-		v = pbft.view % uint64(pbft.N) + n * (pbft.view / uint64(pbft.N) + 1)
+		v = pbft.view % uint64(pbft.N) + (uint64(pbft.N) - 1) * (pbft.view / uint64(pbft.N) + 1)
 	}
 
 	return
