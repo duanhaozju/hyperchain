@@ -483,13 +483,14 @@ func (pbft *pbftProtocal) getAddNV() (n int64, v uint64) {
 	return
 }
 
-func (pbft *pbftProtocal) getDelNV() (n int64, v uint64) {
+func (pbft *pbftProtocal) getDelNV(del uint64) (n int64, v uint64) {
 
 	n = int64(pbft.N) - 1
-	if pbft.view < uint64(pbft.N) {
-		v = pbft.view
+	if pbft.primary(pbft.view) > del {
+		v = pbft.view % uint64(pbft.N) - 1 + (uint64(pbft.N) - 1) * (pbft.view / uint64(pbft.N) + 1)
 	} else {
-		v = pbft.view - 1
+		logger.Debug("N: ", pbft.N, " view: ", pbft.view, " del: ", del)
+		v = pbft.view % uint64(pbft.N) + (uint64(pbft.N) - 1) * (pbft.view / uint64(pbft.N) + 1)
 	}
 
 	return
