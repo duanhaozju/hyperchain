@@ -70,3 +70,7 @@ message DelNodeMessage {
     string routerHash = 2;
     uint64 id = 3;
 }
+
+message RoutersMessage {
+    bytes routers = 1;
+}

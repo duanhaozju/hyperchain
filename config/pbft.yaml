@@ -25,7 +25,7 @@ timeout:
     firstrequest: 30s
 
     # Primary send a pre-prepare if there are pending requests, although batchsize isn't reached yet,
-    batch: 1000ms
+    batch: 1s
 
     # How long may a request(transaction batch) take between reception and execution, must be greater than the batch timeout
     request: 3s
@@ -41,3 +41,6 @@ timeout:
 
     # How long to wait for a view change quorum before resending (the same) view change
     resendviewchange: 10s
+
+    # How long may a update-n take
+    update: 4s

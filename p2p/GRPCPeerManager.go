@@ -731,8 +731,6 @@ func (this *GRPCPeerManager) UpdateRoutingTable(payload []byte) {
 			}
 
 
-		}else{
-			log.Error("response message is not Message_ATTEND_NOTIFY_RESPONSE")
 		}
 
 	} else {
@@ -763,7 +761,6 @@ func (this *GRPCPeerManager) GetLocalNodeHash() string {
 func (this *GRPCPeerManager) GetRouterHashifDelete(hash string) (string, uint64) {
 	hasher := crypto.NewKeccak256Hash("keccak256Hanser")
 	routers := this.peersPool.ToRoutingTableWithout(hash)
-	hash = hex.EncodeToString(hasher.Hash(routers).Bytes())
 
 	var ID uint64
 	var DeleteID uint64
@@ -789,34 +786,23 @@ func (this *GRPCPeerManager) DeleteNode(hash string) error {
 
 	if this.LocalAddr.Hash == hash {
 		// delete local node and stop all server
+		log.Critical("Stop Server")
 		this.LocalNode.StopServer()
 		this.peersPool.Clear()
 	} else {
 		// delete the specific node
-		for _, pers := range this.peersPool.GetPeers() {
-			if pers.PeerAddr.Hash == hash {
-				this.peersPool.DeletePeer(pers)
-			}
-		}
 		//TODO update node id
-		hasher := crypto.NewKeccak256Hash("keccak256Hanser")
 		routers := this.peersPool.ToRoutingTableWithout(hash)
-		hash = hex.EncodeToString(hasher.Hash(routers).Bytes())
-
-		if hash == this.LocalAddr.Hash {
-			log.Critical("THIS NODE WAS BEEN CLOSED...")
-			return nil
-		}
-
 		for _, per := range this.peersPool.GetPeers() {
 			if per.PeerAddr.Hash == hash {
 				deleteList := this.peersPool.DeletePeer(per)
+				log.Critical("Delete node and persist")
 				this.configs.DelNodesAndPersist(deleteList)
 			} else {
 				for _, router := range routers.Routers {
 					if router.Hash == per.PeerAddr.Hash {
 						//TODO CHECK here the jsonrpc port
-						per.PeerAddr = pb.NewPeerAddr(router.IP, int(router.Port), 0, int(router.ID))
+						per.PeerAddr = pb.NewPeerAddr(router.IP, int(router.Port), int(router.RPCPort), int(router.ID))
 					}
 				}
 			}

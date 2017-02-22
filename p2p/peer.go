@@ -244,7 +244,7 @@ func NewPeerAttendNotify(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM tran
 		From:         localAddr.ToPeerAddress(),
 	}
 	SignCert(&introduce_message,cm)
-	log.Debugf("SEND ATTEND_NOTIFY TO",peer.PeerAddr.ID)
+	log.Debugf("SEND ATTEND_NOTIFY TO %d",peer.PeerAddr.ID)
 
 	retMessage, err := peer.Client.Chat(context.Background(), &introduce_message)
 	log.Debug("attendNotify chat finished")
