@@ -267,6 +267,7 @@ func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transpo
 	opts :=  peer.CM.GetGrpcClientOpts()
 	conn, err := grpc.Dial(peerAddr.IP+":"+strconv.Itoa(peerAddr.Port), opts...)
 	if err != nil {
+		conn.Close()
 		log.Error("err:", errors.New("Cannot establish a connection!"))
 		return nil, err
 	}
@@ -415,6 +416,10 @@ func NewPeerReverse(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport
 //
 func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
 	log.Debug("CHAT:", msg.From.ID, ">>>", this.PeerAddr.ID)
+	if this.Status ==2 {
+		log.Error("this connection was closed.")
+		return nil,errors.New("this connection was closed.")
+	}
 	msg.Payload, err = this.TEM.EncWithSecret(msg.Payload, this.PeerAddr.Hash)
 
 	//log.Critical("after enc secret",msg.Payload)
@@ -443,8 +448,7 @@ func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
 	if err != nil {
 		this.Status = 2
 		log.Error("response err:", err)
-		//TODO
-		//panic(err)
+		this.Close()
 		return nil, err
 	}
 	this.Status = 1
