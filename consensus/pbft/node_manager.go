@@ -764,6 +764,24 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 
 	pbft.stopTimer()
 	pbft.nullRequestTimer.Stop()
+
+	pbft.seqNo = pbft.h
+	pbft.lastExec = pbft.h
+	pbft.seqNo = pbft.h
+	if pbft.primary(pbft.view) != pbft.id {
+		pbft.vid = pbft.h
+		pbft.lastVid = pbft.h
+	}
+
+	pbft.view = update.View
+	pbft.N = int(update.N)
+	pbft.f = (pbft.N - 1) / 3
+
+	if !update.Flag {
+		cert := pbft.getDelNodeCert(update.Key)
+		pbft.id = cert.newId
+	}
+
 	delete(pbft.updateStore, pbft.updateTarget)
 
 	for idx := range pbft.agreeUpdateStore {
@@ -789,18 +807,6 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 
 	pbft.addNodeCertStore = make(map[string]*addNodeCert)
 	pbft.delNodeCertStore = make(map[string]*delNodeCert)
-
-	pbft.seqNo = pbft.h
-	pbft.lastExec = pbft.h
-	pbft.seqNo = pbft.h
-	if pbft.primary(pbft.view) != pbft.id {
-		pbft.vid = pbft.h
-		pbft.lastVid = pbft.h
-	}
-
-	pbft.view = update.View
-	pbft.N = int(update.N)
-	pbft.f = (pbft.N - 1) / 3
 
 	if !pbft.skipInProgress && !pbft.inVcReset && !pbft.inClearCache {
 		pbft.helper.ClearValidateCache()
