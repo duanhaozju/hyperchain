@@ -575,7 +575,7 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) events.Event {
 
 	quorum := 0
 	for idx := range pbft.agreeUpdateStore {
-		if idx.v == pbft.view {
+		if idx.v == update.View {
 			quorum++
 		}
 	}
