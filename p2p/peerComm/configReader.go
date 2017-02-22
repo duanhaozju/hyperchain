@@ -137,10 +137,12 @@ func (conf *ConfigReader) addNode(addr pb.PeerAddr) {
 
 }
 func (conf *ConfigReader) updateNode(addr pb.PeerAddr) {
-	conf.Config.PeerNodes[addr.ID].ID = addr.ID
-	conf.Config.PeerNodes[addr.ID].Address = addr.IP
-	conf.Config.PeerNodes[addr.ID].Port = addr.Port
-	conf.Config.PeerNodes[addr.ID].RPCPort = addr.RPCPort
+	if addr.ID < len(conf.Config.PeerNodes){
+		conf.Config.PeerNodes[addr.ID].ID = addr.ID
+		conf.Config.PeerNodes[addr.ID].Address = addr.IP
+		conf.Config.PeerNodes[addr.ID].Port = addr.Port
+		conf.Config.PeerNodes[addr.ID].RPCPort = addr.RPCPort
+	}
 }
 
 func (conf *ConfigReader) delNode(addr pb.PeerAddr) {

@@ -761,14 +761,20 @@ func (this *GRPCPeerManager) GetLocalNodeHash() string {
 	return this.LocalAddr.Hash
 }
 
-func (this *GRPCPeerManager) GetRouterHashifDelete(hash string) (string, uint64) {
+func (this *GRPCPeerManager) GetRouterHashifDelete(hash string) (string, uint64,uint64) {
 	hasher := crypto.NewKeccak256Hash("keccak256Hanser")
 	routers := this.peersPool.ToRoutingTableWithout(hash)
-	wantPeer,_ :=  this.peersPool.GetPeerByHash(hash)
-	if wantPeer.PeerAddr.ID < this.LocalAddr.ID{
-		return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(this.LocalNode.GetNodeID() - 1)
+	var WantDeleteID uint64
+	for _, rs := range routers.Routers {
+		if rs.Hash == hash{
+			WantDeleteID = uint64(rs.ID)
+		}
 	}
-	return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(this.LocalNode.GetNodeID())
+	log.Critical("WantDeleteID: ",WantDeleteID)
+	if uint64(WantDeleteID) < uint64(this.LocalAddr.ID){
+		return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(this.LocalNode.GetNodeID() - 1),uint64(WantDeleteID)
+	}
+	return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(this.LocalNode.GetNodeID()),uint64(WantDeleteID)
 }
 
 func (this *GRPCPeerManager) DeleteNode(hash string) error {
