@@ -205,9 +205,9 @@ func (this *PeersPoolIml) ToRoutingTableWithout(hash string) pb.Routers {
 	routers.Routers = append(routers.Routers, this.localAddr.ToPeerAddress())
 	//需要进行排序
 	sort.Sort(routers)
-	//for idx, _ := range routers.Routers {
-	//	routers.Routers[idx].ID = int32(idx + 1)
-	//}
+	for idx, _ := range routers.Routers {
+		routers.Routers[idx].ID = int32(idx + 1)
+	}
 	return routers
 }
 

@@ -763,18 +763,42 @@ func (this *GRPCPeerManager) GetLocalNodeHash() string {
 
 func (this *GRPCPeerManager) GetRouterHashifDelete(hash string) (string, uint64,uint64) {
 	hasher := crypto.NewKeccak256Hash("keccak256Hanser")
+	//routers := this.peersPool.ToRoutingTableWithout(hash)
+	//var WantDeleteID uint64
+	//for _, peer := range this.peersPool.GetPeers() {
+	//	if peer.PeerAddr.Hash == hash{
+	//		WantDeleteID = uint64(peer.PeerAddr.ID)
+	//	}
+	//}
+	//log.Critical("WantDeleteID: ",WantDeleteID)
+	//if uint64(WantDeleteID) < uint64(this.LocalAddr.ID){
+	//	return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(this.LocalNode.GetNodeID() - 1),uint64(WantDeleteID)
+	//}
+	//return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(this.LocalNode.GetNodeID()),uint64(WantDeleteID)
+
+
 	routers := this.peersPool.ToRoutingTableWithout(hash)
-	var WantDeleteID uint64
+
+	var ID uint64
+	var DeleteID uint64
+	localHash := this.LocalAddr.Hash
 	for _, rs := range routers.Routers {
+		log.Debug("RS hash: ", rs.Hash)
 		if rs.Hash == hash{
-			WantDeleteID = uint64(rs.ID)
+			DeleteID = uint64(rs.ID)
+		}
+		if rs.Hash == localHash {
+			log.Notice("rs hash: ", rs.Hash)
+			log.Notice("id: ", rs.ID)
+			ID = uint64(rs.ID)
+			if ID > DeleteID{
+				ID--
+			}
 		}
 	}
-	log.Critical("WantDeleteID: ",WantDeleteID)
-	if uint64(WantDeleteID) < uint64(this.LocalAddr.ID){
-		return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(this.LocalNode.GetNodeID() - 1),uint64(WantDeleteID)
-	}
-	return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(this.LocalNode.GetNodeID()),uint64(WantDeleteID)
+	log.Critical("DELETE ID",DeleteID)
+	return hex.EncodeToString(hasher.Hash(routers).Bytes()), ID,DeleteID
+
 }
 
 func (this *GRPCPeerManager) DeleteNode(hash string) error {
