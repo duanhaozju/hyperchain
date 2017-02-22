@@ -763,6 +763,7 @@ func (this *GRPCPeerManager) GetLocalNodeHash() string {
 
 func (this *GRPCPeerManager) GetRouterHashifDelete(hash string) (string, uint64,uint64) {
 	hasher := crypto.NewKeccak256Hash("keccak256Hanser")
+	log.Critical("GetRouterHashifDelete")
 	//routers := this.peersPool.ToRoutingTableWithout(hash)
 	//var WantDeleteID uint64
 	//for _, peer := range this.peersPool.GetPeers() {
@@ -800,29 +801,30 @@ func (this *GRPCPeerManager) DeleteNode(hash string) error {
 	if this.LocalAddr.Hash == hash {
 		// delete local node and stop all server
 		log.Critical("Stop Server")
-
-
 		this.LocalNode.StopServer()
 		this.peersPool.Clear()
 		panic("THIS NODE HAS BEEN QUITTED")
 	} else {
 		// delete the specific node
 		//TODO update node id
-		routers := this.peersPool.ToRoutingTableWithout(hash)
+		var deleteID int
 		for _, per := range this.peersPool.GetPeers() {
 			if per.PeerAddr.Hash == hash {
+				deleteID = per.PeerAddr.ID
 				deleteList := this.peersPool.DeletePeer(per)
 				log.Critical("Delete node and persist")
 				this.configs.DelNodesAndPersist(deleteList)
-			} else {
-				for _, router := range routers.Routers {
-					if router.Hash == per.PeerAddr.Hash {
-						//TODO CHECK here the jsonrpc port
-						per.PeerAddr = pb.NewPeerAddr(router.IP, int(router.Port), int(router.RPCPort), int(router.ID))
-					}
-				}
-			}
 
+			}
+		}
+		for _, per := range this.peersPool.GetPeers() {
+			if per.PeerAddr.ID > deleteID{
+				per.PeerAddr.ID--
+			}
+			if this.LocalAddr.ID > deleteID{
+				this.LocalAddr.ID--
+				this.LocalNode.localAddr.ID--
+			}
 		}
 		return nil
 
