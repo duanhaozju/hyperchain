@@ -586,7 +586,7 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) events.Event {
 		return nil
 	}
 
-	if !(update.View >= 0 && update.View == pbft.updateTarget.v && pbft.primary(pbft.view) == update.ReplicaId && pbft.updateStore[pbft.updateTarget] == nil) {
+	if !(update.View >= 0 && pbft.primary(pbft.view) == update.ReplicaId) {
 		logger.Infof("Replica %d rejecting invalid new-view from %d, v:%d",
 			pbft.id, update.ReplicaId, update.View)
 		return nil
