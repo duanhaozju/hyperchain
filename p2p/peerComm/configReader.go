@@ -192,7 +192,7 @@ func deleteElement(nodes []PeerConfigNodes, addr pb.PeerAddr) []PeerConfigNodes 
 		if v.ID == addr.ID {
 			result = append(result, nodes[index:k]...)
 			index = k + 1
-		} else if v.ID > addr.ID {
+		} else if v.ID < addr.ID {
 			nodes[k].ID = nodes[k].ID - 1
 			result = append(result, nodes[k])
 		}
