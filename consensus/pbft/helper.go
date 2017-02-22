@@ -56,11 +56,7 @@ func (pbft *pbftProtocal) postPbftEvent(event interface{}) {
 
 // Given a certain view v and replicaCount n, what is the expected primary?
 func (pbft *pbftProtocal) primary(v uint64) uint64 {
-	if pbft.inUpdatingN {
-		return (v % uint64(pbft.previousN)) + 1
-	} else {
-		return (v % uint64(pbft.N)) + 1
-	}
+	return (v % uint64(pbft.N)) + 1
 }
 
 // Is the sequence number between watermarks?
@@ -70,11 +66,7 @@ func (pbft *pbftProtocal) inW(n uint64) bool {
 
 // Is the view right? And is the sequence number between watermarks?
 func (pbft *pbftProtocal) inWV(v uint64, n uint64) bool {
-	if pbft.inUpdatingN {
-		return pbft.previousView == v && pbft.inW(n)
-	} else {
-		return pbft.view == v && pbft.inW(n)
-	}
+	return pbft.view == v && pbft.inW(n)
 }
 
 // Given a digest/view/seq, is there an entry in the certLog?
@@ -118,108 +110,27 @@ func (pbft *pbftProtocal) getChkptCert(n uint64, id string) (cert *chkptCert) {
 	return
 }
 
-// Given a ip/digest get the addnode Cert
-func (pbft *pbftProtocal) getAddNodeCert(digest string) (cert *addNodeCert) {
-
-	cert, ok := pbft.addNodeCertStore[digest]
-
-	if ok {
-		return
-	}
-
-	adds := make(map[AddNode]bool)
-	agrees := make(map[AgreeUpdateN]bool)
-	cert = &addNodeCert{
-		addNodes: adds,
-		agrees:   agrees,
-	}
-	pbft.addNodeCertStore[digest] = cert
-
-	return
-}
-
-// Given a ip/digest get the addnode Cert
-func (pbft *pbftProtocal) getDelNodeCert(delHash string, routerHash string) (cert *delNodeCert) {
-
-	id := delID{delHash: delHash, routerHash: routerHash}
-	cert, ok := pbft.delNodeCertStore[id]
-
-	if ok {
-		return
-	}
-
-	dels := make(map[DelNode]bool)
-	agrees := make(map[AgreeUpdateN]bool)
-	cert = &delNodeCert{
-		delNodes: dels,
-		agrees:   agrees,
-	}
-	pbft.delNodeCertStore[id] = cert
-
-	return
-}
-
-func (pbft *pbftProtocal) getAddNV() (n int64, v uint64) {
-
-	n = int64(pbft.N) + 1
-	if pbft.view < uint64(pbft.N) {
-		v = pbft.view
-	} else {
-		v = pbft.view + 1
-	}
-
-	return
-}
-
-func (pbft *pbftProtocal) getDelNV() (n int64, v uint64) {
-
-	n = int64(pbft.N) - 1
-	if pbft.view < uint64(pbft.N) {
-		v = pbft.view
-	} else {
-		v = pbft.view - 1
-	}
-
-	return
-}
-
 // =============================================================================
 // prepare/commit quorum checks helper
 // =============================================================================
 
 func (pbft *pbftProtocal) preparedReplicasQuorum() int {
-	if pbft.inUpdatingN {
-		return (2 * pbft.previousF)
-	} else {
-		return (2 * pbft.f)
-	}
+	return (2 * pbft.f)
 }
 
 func (pbft *pbftProtocal) committedReplicasQuorum() int {
-	if pbft.inUpdatingN {
-		return (2*pbft.previousF + 1)
-	} else {
-		return (2*pbft.f + 1)
-	}
+	return (2 * pbft.f + 1)
 }
 
 // intersectionQuorum returns the number of replicas that have to
 // agree to guarantee that at least one correct replica is shared by
 // two intersection quora
 func (pbft *pbftProtocal) intersectionQuorum() int {
-	if pbft.inUpdatingN {
-		return (pbft.previousN + pbft.previousF + 2) / 2
-	} else {
-		return (pbft.N + pbft.f + 2) / 2
-	}
+	return (pbft.N + pbft.f + 2) / 2
 }
 
 func (pbft *pbftProtocal) allCorrectReplicasQuorum() int {
-	if pbft.inUpdatingN {
-		return (pbft.previousN - pbft.previousF)
-	} else {
-		return (pbft.N - pbft.f)
-	}
+	return (pbft.N - pbft.f)
 }
 
 func (pbft *pbftProtocal) minimumCorrectQuorum() int {
@@ -398,7 +309,7 @@ func (pbft *pbftProtocal) startTimerIfOutstandingRequests() {
 			return digests
 		}()
 		//logger.Debug(getOutstandingDigests)
-		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("outstanding request batches %v", getOutstandingDigests))
+		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("outstanding request batches num=%v", len(getOutstandingDigests)))
 	} else if pbft.nullRequestTimeout > 0 {
 		pbft.nullReqTimerReset()
 	}
@@ -519,4 +430,67 @@ func (pbft *pbftProtocal) clearDuplicator() {
 			delete(pbft.duplicator, i)
 		}
 	}
+}
+
+// =============================================================================
+// helper functions for node manager
+// =============================================================================
+// Given a ip/digest get the addnode Cert
+func (pbft *pbftProtocal) getAddNodeCert(addHash string) (cert *addNodeCert) {
+
+	cert, ok := pbft.addNodeCertStore[addHash]
+
+	if ok {
+		return
+	}
+
+	adds := make(map[AddNode]bool)
+	cert = &addNodeCert{
+		addNodes:	adds,
+	}
+	pbft.addNodeCertStore[addHash] = cert
+
+	return
+}
+
+// Given a ip/digest get the addnode Cert
+func (pbft *pbftProtocal) getDelNodeCert(delHash string) (cert *delNodeCert) {
+
+	cert, ok := pbft.delNodeCertStore[delHash]
+
+	if ok {
+		return
+	}
+
+	dels := make(map[DelNode]bool)
+	cert = &delNodeCert{
+		delNodes:	dels,
+	}
+	pbft.delNodeCertStore[delHash] = cert
+
+	return
+}
+
+func (pbft *pbftProtocal) getAddNV() (n int64, v uint64) {
+
+	n = int64(pbft.N) + 1
+	if pbft.view < uint64(pbft.N) {
+		v = pbft.view
+	} else {
+		v = pbft.view + 1
+	}
+
+	return
+}
+
+func (pbft *pbftProtocal) getDelNV() (n int64, v uint64) {
+
+	n = int64(pbft.N) - 1
+	if pbft.view < uint64(pbft.N) {
+		v = pbft.view
+	} else {
+		v = pbft.view - 1
+	}
+
+	return
 }

@@ -22,6 +22,7 @@ import (
 	"math"
 	"strconv"
 	"time"
+	"sync"
 )
 
 var MAX_PEER_NUM = 4
@@ -300,54 +301,45 @@ func (this *GRPCPeerManager) connectToPeers(alive chan int) {
 }
 
 func (this *GRPCPeerManager) reconnectToPeers(alive chan int) {
-	peerStatus := make(map[int]bool)
-	for i := 1; i <= MAX_PEER_NUM; i++ {
-		peerStatus[i] = false
-	}
 	if this.LocalAddr.ID > MAX_PEER_NUM {
 		panic("LocalAddr.ID large than the max peer num")
 	}
-	peerStatus[this.LocalAddr.ID] = true
 	N := MAX_PEER_NUM
-	//F := int(math.Floor(float64(MAX_PEER_NUM - 1) / 3.0))
-	MaxNum := N - 1
-	//if this.configs.IsOrigin() {
-	//	MaxNum = N - 1
-	//}
-	// connect other peers
-	_index := 1
-	for range time.Tick(200 * time.Millisecond) {
-		log.Debugf("current alive node num is %d, at least connect to %d", this.peersPool.GetAliveNodeNum(), MaxNum)
-		log.Debugf("current alive num %d", this.peersPool.GetAliveNodeNum())
-		if this.peersPool.GetAliveNodeNum() >= MaxNum {
-			alive <- 0
-		}
-		if this.peersPool.GetAliveNodeNum() >= MAX_PEER_NUM-1 {
-			break
-		}
-		if peerStatus[_index] {
-			_index++
-			continue
-		}
-		if _index > MAX_PEER_NUM {
-			_index = 1
-		}
-
-		log.Debug("status map", _index, peerStatus[_index])
-		//if this node is not online, connect it
-		peerAddress := pb.NewPeerAddr(this.configs.GetIP(_index), this.configs.GetPort(_index), this.configs.GetRPCPort(_index), this.configs.GetID(_index))
-		log.Debugf("peeraddress to connect %v", peerAddress)
-		if peer, connectErr := this.reconnectToPeer(peerAddress, this.configs.GetID(_index)); connectErr != nil {
-			// cannot connect to other peer
-			log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n", connectErr)
-			continue
-		} else {
-			// add  peer to peer pool
-			this.peersPool.PutPeer(*peerAddress, peer)
-			peerStatus[_index] = true
-			log.Debug("Peer Node ID:", peerAddress.ID, "has connected!")
-		}
+	F := int(math.Floor(float64(MAX_PEER_NUM - 1) / 3.0))
+	MaxNum := N - F
+	var connected Stack
+	var unconnected Stack
+	for i := 1; i <= MAX_PEER_NUM; i++ {
+		unconnected.Push(i)
 	}
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	go func(wgp *sync.WaitGroup ){
+		flag := false
+		for range time.Tick(200*time.Millisecond){
+			_index := unconnected.Pop().(int)
+			peerAddress := pb.NewPeerAddr(this.configs.GetIP(_index), this.configs.GetPort(_index), this.configs.GetRPCPort(_index), this.configs.GetID(_index))
+			log.Debugf("peeraddress to connect %v", peerAddress)
+			if peer, connectErr := this.reconnectToPeer(peerAddress, this.configs.GetID(_index)); connectErr != nil {
+				// cannot connect to other peer
+				log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n", connectErr)
+			} else {
+				connected.Push(_index)
+				this.peersPool.PutPeer(*peerAddress, peer)
+				log.Debug("Peer Node ID:", peerAddress.ID, "has connected!")
+			}
+			if this.peersPool.GetAliveNodeNum() >= MaxNum && !flag {
+				flag = true
+				wgp.Done()
+				alive <- 0
+			}
+			if unconnected.Length() == 0 {
+				break;
+			}
+		}
+	}(wg)
+	wg.Wait()
+
 }
 
 func (this *GRPCPeerManager) vpConnect() {
@@ -739,8 +731,6 @@ func (this *GRPCPeerManager) UpdateRoutingTable(payload []byte) {
 			}
 
 
-		}else{
-			log.Error("response message is not Message_ATTEND_NOTIFY_RESPONSE")
 		}
 
 	} else {
@@ -771,16 +761,22 @@ func (this *GRPCPeerManager) GetLocalNodeHash() string {
 func (this *GRPCPeerManager) GetRouterHashifDelete(hash string) (string, uint64) {
 	hasher := crypto.NewKeccak256Hash("keccak256Hanser")
 	routers := this.peersPool.ToRoutingTableWithout(hash)
-	hash = hex.EncodeToString(hasher.Hash(routers).Bytes())
 
 	var ID uint64
+	var DeleteID uint64
 	localHash := this.LocalAddr.Hash
 	for _, rs := range routers.Routers {
 		log.Debug("RS hash: ", rs.Hash)
+		if rs.Hash == hash{
+			DeleteID = uint64(rs.ID)
+		}
 		if rs.Hash == localHash {
 			log.Notice("rs hash: ", rs.Hash)
 			log.Notice("id: ", rs.ID)
 			ID = uint64(rs.ID)
+			if ID > DeleteID{
+				ID--
+			}
 		}
 	}
 	return hex.EncodeToString(hasher.Hash(routers).Bytes()), ID
@@ -790,34 +786,23 @@ func (this *GRPCPeerManager) DeleteNode(hash string) error {
 
 	if this.LocalAddr.Hash == hash {
 		// delete local node and stop all server
+		log.Critical("Stop Server")
 		this.LocalNode.StopServer()
-
+		this.peersPool.Clear()
 	} else {
 		// delete the specific node
-		for _, pers := range this.peersPool.GetPeers() {
-			if pers.PeerAddr.Hash == hash {
-				this.peersPool.DeletePeer(pers)
-			}
-		}
 		//TODO update node id
-		hasher := crypto.NewKeccak256Hash("keccak256Hanser")
 		routers := this.peersPool.ToRoutingTableWithout(hash)
-		hash = hex.EncodeToString(hasher.Hash(routers).Bytes())
-
-		if hash == this.LocalAddr.Hash {
-			log.Critical("THIS NODE WAS BEEN CLOSED...")
-			return nil
-		}
-
 		for _, per := range this.peersPool.GetPeers() {
 			if per.PeerAddr.Hash == hash {
 				deleteList := this.peersPool.DeletePeer(per)
+				log.Critical("Delete node and persist")
 				this.configs.DelNodesAndPersist(deleteList)
 			} else {
 				for _, router := range routers.Routers {
 					if router.Hash == per.PeerAddr.Hash {
 						//TODO CHECK here the jsonrpc port
-						per.PeerAddr = pb.NewPeerAddr(router.IP, int(router.Port), 0, int(router.ID))
+						per.PeerAddr = pb.NewPeerAddr(router.IP, int(router.Port), int(router.RPCPort), int(router.ID))
 					}
 				}
 			}

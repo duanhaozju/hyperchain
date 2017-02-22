@@ -302,6 +302,7 @@ func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*s
 	responses := make([]interface{}, len(requests))
 	var callbacks []func()
 	for i, req := range requests {
+		fmt.Println("got a request",req.svcname)
 		if req.err != nil {
 			responses[i] = codec.CreateErrorResponse(&req.id, req.err)
 		} else {
