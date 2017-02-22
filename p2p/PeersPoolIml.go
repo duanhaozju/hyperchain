@@ -196,7 +196,7 @@ func (this *PeersPoolIml) ToRoutingTableWithout(hash string) pb.Routers {
 	var routers pb.Routers
 
 	for _, pers := range peers {
-		if pers.LocalAddr.Hash == hash {
+		if pers.PeerAddr.Hash == hash {
 			continue
 		}
 		routers.Routers = append(routers.Routers, pers.PeerAddr.ToPeerAddress())
@@ -205,9 +205,9 @@ func (this *PeersPoolIml) ToRoutingTableWithout(hash string) pb.Routers {
 	routers.Routers = append(routers.Routers, this.localAddr.ToPeerAddress())
 	//需要进行排序
 	sort.Sort(routers)
-	for idx, _ := range routers.Routers {
-		routers.Routers[idx].ID = int32(idx + 1)
-	}
+	//for idx, _ := range routers.Routers {
+	//	routers.Routers[idx].ID = int32(idx + 1)
+	//}
 	return routers
 }
 
@@ -267,11 +267,10 @@ func (this *PeersPoolIml) RejectTempPeers() {
 
 func (this *PeersPoolIml) DeletePeer(peer *Peer) map[string]pb.PeerAddr {
 	this.alivePeers -= 1
-	peer.Close()
 	delete(this.peers, peer.PeerAddr.Hash)
 	delete(this.peerAddr, peer.PeerAddr.Hash)
 	delete(this.peerKeys, *peer.PeerAddr)
-	persist.DelData(peer.PeerAddr.Hash)
+	go persist.DelData(peer.PeerAddr.Hash)
 	perlist := make(map[string]pb.PeerAddr, 1)
 	perlist[peer.PeerAddr.Hash] = *peer.PeerAddr
 	return perlist
