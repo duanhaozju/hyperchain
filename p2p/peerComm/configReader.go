@@ -176,7 +176,7 @@ func (conf *ConfigReader) AddNodesAndPersist(addrs map[string]pb.PeerAddr) {
 func (conf *ConfigReader) DelNodesAndPersist(addrs map[string]pb.PeerAddr) {
 	for _, value := range addrs {
 		if _, ok := conf.nodes[value.ID]; ok {
-			if value.ID > conf.Config.SelfConfig.NodeID{
+			if value.ID < conf.Config.SelfConfig.NodeID{
 				conf.Config.SelfConfig.NodeID--
 			}
 			conf.delNode(value)
@@ -192,7 +192,7 @@ func deleteElement(nodes []PeerConfigNodes, addr pb.PeerAddr) []PeerConfigNodes 
 		if v.ID == addr.ID {
 			result = append(result, nodes[index:k]...)
 			index = k + 1
-		} else if v.ID < addr.ID {
+		} else if v.ID > addr.ID {
 			nodes[k].ID = nodes[k].ID - 1
 			result = append(result, nodes[k])
 		}
