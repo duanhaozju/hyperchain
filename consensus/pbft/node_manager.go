@@ -561,8 +561,9 @@ func (pbft *pbftProtocal) sendUpdateN() events.Event {
 }
 
 func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) events.Event {
-	logger.Infof("Replica %d received update-n %v",
-		pbft.id, update)
+
+	logger.Infof("Replica %d received update-n from replica %d",
+		pbft.id, update.ReplicaId)
 
 	if atomic.LoadUint32(&pbft.activeView) == 0 {
 		logger.Warningf("Replica %d try to recvUpdateN, but it's in view-change", pbft.id)
@@ -601,7 +602,6 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) events.Event {
 		}
 	}
 
-	logger.Debug("quorum: ", quorum, " agreeUpdateStore: ", pbft.agreeUpdateStore)
 	if quorum < pbft.allCorrectReplicasQuorum() {
 		logger.Warningf("Replica %d has not meet agreeUpdateNQuorum", pbft.id)
 		return nil
