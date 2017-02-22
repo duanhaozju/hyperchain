@@ -2,9 +2,7 @@
 //Copyright (C) 2016 The Hyperchain Authors.
 package event
 
-import (
-	"hyperchain/core/types"
-)
+import "hyperchain/core/types"
 
 //consensus event incoming from outer,peers post
 type ConsensusEvent struct{ Payload []byte }
@@ -135,4 +133,13 @@ type VerifiedBlock struct {
 
 type ReceiveVerifiedBlock struct {
 	Payload  []byte
+}
+
+
+type RemoveCacheEvent struct {}
+
+type CacheRemovedEvent struct {}
+
+type NegoRoutersEvent struct {
+	Payload []byte
 }

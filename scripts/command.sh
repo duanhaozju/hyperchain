@@ -103,6 +103,11 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"account_getBalance","para
 # 得到节点信息
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "node_getNodes","id": 1}'
 
+# 得到所删节点信息
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "node_getNodeHash","id": 1}'
+
+# 请求删除某节点
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "node_delNode","params":[{"nodehash":"<the node hash of the deleting node>"}],"id": 1}'
 
 ################################# 批量调用例子 ###################################
 curl localhost:8081 --data '[{"jsonrpc":"2.0","method":"block_lastestBlock","params":[],"id":1}, {"jsonrpc":"2.0","method": "node_getNodes","id": 2}]'
