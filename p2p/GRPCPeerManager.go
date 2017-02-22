@@ -764,25 +764,15 @@ func (this *GRPCPeerManager) GetLocalNodeHash() string {
 func (this *GRPCPeerManager) GetRouterHashifDelete(hash string) (string, uint64) {
 	hasher := crypto.NewKeccak256Hash("keccak256Hanser")
 	routers := this.peersPool.ToRoutingTableWithout(hash)
-
-	var ID uint64
-	var DeleteID uint64
-	localHash := this.LocalAddr.Hash
-	for _, rs := range routers.Routers {
-		log.Debug("RS hash: ", rs.Hash)
-		if rs.Hash == hash{
-			DeleteID = uint64(rs.ID)
-		}
-		if rs.Hash == localHash {
-			log.Notice("rs hash: ", rs.Hash)
-			log.Notice("id: ", rs.ID)
-			ID = uint64(rs.ID)
-			if ID > DeleteID{
-				ID--
+	for _, peer := range this.peersPool.GetPeers() {
+		if peer.PeerAddr.Hash == hash{
+			wantdelID := peer.PeerAddr.ID
+			if wantdelID > this.LocalNode.GetNodeID(){
+				this.LocalNode.localAddr.ID--
 			}
 		}
 	}
-	return hex.EncodeToString(hasher.Hash(routers).Bytes()), ID
+	return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(this.LocalNode.GetNodeID())
 }
 
 func (this *GRPCPeerManager) DeleteNode(hash string) error {
@@ -790,8 +780,11 @@ func (this *GRPCPeerManager) DeleteNode(hash string) error {
 	if this.LocalAddr.Hash == hash {
 		// delete local node and stop all server
 		log.Critical("Stop Server")
+
+
 		this.LocalNode.StopServer()
 		this.peersPool.Clear()
+		panic("THIS NODE HAS BEEN QUITTED")
 	} else {
 		// delete the specific node
 		//TODO update node id

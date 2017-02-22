@@ -448,7 +448,6 @@ func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
 	if err != nil {
 		this.Status = 2
 		log.Error("response err:", err)
-		this.Close()
 		return nil, err
 	}
 	this.Status = 1
