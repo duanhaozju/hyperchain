@@ -4,7 +4,6 @@ import (
 	"errors"
 	"google.golang.org/grpc"
 	"hyperchain/admittance"
-	"hyperchain/p2p/peerComm"
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/transport"
 	"sort"
@@ -268,7 +267,7 @@ func (this *PeersPoolIml) RejectTempPeers() {
 
 func (this *PeersPoolIml) DeletePeer(peer *Peer) map[string]pb.PeerAddr {
 	this.alivePeers -= 1
-	peer.Connection.Close()
+	peer.Close()
 	delete(this.peers, peer.PeerAddr.Hash)
 	delete(this.peerAddr, peer.PeerAddr.Hash)
 	delete(this.peerKeys, *peer.PeerAddr)
@@ -302,6 +301,9 @@ func (this *PeersPoolIml) SetClientByHash(hash string, client pb.ChatClient) err
 	//this.peers[hash].Client = client
 }
 
-func (this *PeersPoolIml) Persisit(conf *peerComm.ConfigReader) {
-	//conf.AddNode()
+func (this *PeersPoolIml) Clear() {
+	this.peers = make(map[string]*Peer)
+	this.peerAddr = make(map[string]pb.PeerAddr)
+	this.peerKeys = make(map[pb.PeerAddr]string)
+	this.alivePeers = 0
 }
