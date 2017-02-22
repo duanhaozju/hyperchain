@@ -68,7 +68,7 @@ func (pbft *pbftProtocal) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 	logger.Debugf("Replica %d received local delnode message for del node %s", pbft.id, key)
 
 	if pbft.N == 4 {
-		logger.Criticalf("Replica %d receive del msg, but we don't support delete as there're only 4 nodes")
+		logger.Criticalf("Replica %d receive del msg, but we don't support delete as there're only 4 nodes", pbft.id)
 		return nil
 	}
 
@@ -246,7 +246,7 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string) error {
 	cert.finishDel = true
 	payload := []byte(key)
 
-	logger.Debugf("Replica %d try to update routing table", pbft.id)
+	logger.Debugf("Replica %d update routingTable for %v", pbft.id, key)
 	pbft.helper.UpdateTable(payload, false)
 	pbft.inDeletingNode = false
 
@@ -406,7 +406,7 @@ func (pbft *pbftProtocal) sendAgreeUpdateNforDel(key string, routerHash string) 
 	}
 
 	pbft.agreeUpdateHelper(agree)
-	logger.Infof("Replica %d sending update-N-View, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
+	logger.Infof("Replica %d sending agree-update-n, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		pbft.id, agree.View, agree.H, len(agree.Cset), len(agree.Pset), len(agree.Qset))
 
 	payload, err := proto.Marshal(agree)
@@ -472,12 +472,21 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 	}
 
 	// We only enter this if there are enough agree-update-n messages but locally not inUpdateN
-	if len(replicas) > pbft.f+1 && atomic.LoadUint32(&pbft.inUpdatingN) == 0 {
+	if agree.Flag && len(replicas) > pbft.f+1 && atomic.LoadUint32(&pbft.inUpdatingN) == 0 {
 		logger.Warningf("Replica %d received f+1 agree-update-n messages, triggering sendAgreeUpdateNForAdd",
 			pbft.id)
 		pbft.firstRequestTimer.Stop()
 		agree.ReplicaId = pbft.id
 		return pbft.sendAgreeUpdateNForAdd(agree)
+	}
+
+	// We only enter this if there are enough agree-update-n messages but locally not inUpdateN
+	if !agree.Flag && len(replicas) >= pbft.f+1 && atomic.LoadUint32(&pbft.inUpdatingN) == 0 {
+		logger.Warningf("Replica %d received f+1 agree-update-n messages, triggering sendAgreeUpdateNForDel",
+			pbft.id)
+		pbft.firstRequestTimer.Stop()
+		agree.ReplicaId = pbft.id
+		return pbft.sendAgreeUpdateNforDel(agree.Key, agree.RouterHash)
 	}
 
 	quorum := 0
@@ -489,6 +498,7 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 	logger.Debugf("Replica %d now has %d agree-update requests for view=%d/n=%d", pbft.id, quorum, agree.View, agree.N)
 
 	if quorum >= pbft.allCorrectReplicasQuorum() {
+		logger.Debug("111111")
 		pbft.updateTarget = uidx{v:agree.View, n:agree.N, flag:agree.Flag, key:agree.Key}
 		return agreeUpdateNQuorumEvent{}
 	}
