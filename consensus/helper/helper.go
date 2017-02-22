@@ -196,7 +196,7 @@ func (h *helper) UpdateTable(payload []byte, flag bool) error {
 		Type:    flag,
 	}
 
-	h.msgQ.Post(updateTable)
+	go h.msgQ.Post(updateTable)
 
 	return nil
 }
