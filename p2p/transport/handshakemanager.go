@@ -28,6 +28,7 @@ type HandShakeManagerNew struct {
 	signPublickey map[string][]byte
 	isVerified    map[string]bool
 	verifiedLock sync.RWMutex
+	sharedSecretLock sync.RWMutex
 
 
  }
@@ -63,7 +64,9 @@ func (hSMN *HandShakeManagerNew) GenerateSecret(remotePublicKey []byte, peerHash
 		return errors.New("unmarshal remote share publc fey failed")
 	}
 	var err error
+	hSMN.sharedSecretLock.Lock()
 	hSMN.secrets[peerHash], err = hSMN.e.GenerateSharedSecret(hSMN.privateKey, remotePubKey)
+	hSMN.sharedSecretLock.Unlock()
 	if err != nil {
 		log.Error("Generate share secret failed!", err)
 		return err
