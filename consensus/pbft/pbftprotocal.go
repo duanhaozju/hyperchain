@@ -637,6 +637,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 			pbft.inNegoView = true
 			pbft.recvNewViewInRecovery = false
 			pbft.restartNegoView()
+			return nil
 		}
 		if pbft.isNewNode {
 			pbft.sendReadyForN()
