@@ -197,7 +197,7 @@ func (this *GRPCPeerManager) connectToIntroducer(introducerAddress pb.PeerAddr) 
 		log.Debug("SEND ATTEND TO",p.PeerAddr.ID)
 		//retMessage, err := p.Chat(attend_message)
 		retMessage, err := p.Client.Chat(context.Background(), attend_message)
-		log.Debug("reconnect return :", retMessage)
+		//log.Debug("reconnect return :", retMessage)
 		if err != nil {
 			log.Error("cannot establish a connection", err)
 			return
