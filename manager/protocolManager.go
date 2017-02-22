@@ -254,7 +254,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 	for obj := range self.peerMaintainSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.NewPeerEvent:
-			log.Critical("NewPeerEvent")
+			log.Debug("NewPeerEvent")
 			// a new peer required to join the network and past the local CA validation
 			// payload is the new peer's address information
 			msg := &protos.AddNodeMessage{

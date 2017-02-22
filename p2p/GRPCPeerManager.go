@@ -763,7 +763,7 @@ func (this *GRPCPeerManager) GetLocalNodeHash() string {
 
 func (this *GRPCPeerManager) GetRouterHashifDelete(hash string) (string, uint64,uint64) {
 	hasher := crypto.NewKeccak256Hash("keccak256Hanser")
-	log.Critical("GetRouterHashifDelete")
+	log.Debug("GetRouterHashifDelete")
 	//routers := this.peersPool.ToRoutingTableWithout(hash)
 	//var WantDeleteID uint64
 	//for _, peer := range this.peersPool.GetPeers() {
@@ -790,7 +790,7 @@ func (this *GRPCPeerManager) GetRouterHashifDelete(hash string) (string, uint64,
 	if uint64(DeleteID) < uint64(this.LocalAddr.ID){
 		return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(this.LocalAddr.ID -1) ,uint64(DeleteID)
 	}
-	log.Critical("DELETE ID",DeleteID)
+	log.Debug("DELETE ID",DeleteID)
 
 	return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(this.LocalAddr.ID) ,uint64(DeleteID)
 
@@ -812,7 +812,7 @@ func (this *GRPCPeerManager) DeleteNode(hash string) error {
 			if per.PeerAddr.Hash == hash {
 				deleteID = per.PeerAddr.ID
 				deleteList := this.peersPool.DeletePeer(per)
-				log.Critical("Delete node and persist")
+				log.Debug("Delete node and persist")
 				this.configs.DelNodesAndPersist(deleteList)
 
 			}

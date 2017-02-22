@@ -220,7 +220,7 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 
 	cert.finishAdd = true
 	payload := []byte(key)
-	logger.Criticalf("Replica %d update routingTable for %v", pbft.id, key)
+	logger.Debugf("Replica %d update routingTable for %v", pbft.id, key)
 	pbft.helper.UpdateTable(payload, true)
 	pbft.inAddingNode = false
 

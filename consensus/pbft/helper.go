@@ -489,7 +489,7 @@ func (pbft *pbftProtocal) getDelNV(del uint64) (n int64, v uint64) {
 	if pbft.primary(pbft.view) > del {
 		v = pbft.view % uint64(pbft.N) - 1 + (uint64(pbft.N) - 1) * (pbft.view / uint64(pbft.N) + 1)
 	} else {
-		logger.Critical("N: ", pbft.N, " view: ", pbft.view, " del: ", del)
+		logger.Debug("N: ", pbft.N, " view: ", pbft.view, " del: ", del)
 		v = pbft.view % uint64(pbft.N) + (uint64(pbft.N) - 1) * (pbft.view / uint64(pbft.N) + 1)
 	}
 
