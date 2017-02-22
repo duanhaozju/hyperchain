@@ -639,6 +639,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		}
 		if pbft.isNewNode {
 			pbft.sendReadyForN()
+			return nil
 		}
 		pbft.processRequestsDuringRecovery()
 		return nil
@@ -678,6 +679,9 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		pbft.persistNewNode(uint64(0))
 		pbft.persistN(pbft.N)
 		pbft.updateHandled = false
+		if pbft.isNewNode {
+			pbft.isNewNode = false
+		}
 		atomic.StoreUint32(&pbft.inUpdatingN, 0)
 		pbft.processRequestsDuringUpdatingN()
 		logger.Criticalf("======== Replica %d finished UpdatingN, primary=%d, n=%d/f=%d/view=%d/h=%d", pbft.id, pbft.primary(pbft.view), pbft.N, pbft.f, pbft.view, pbft.h)
@@ -2317,7 +2321,7 @@ func (pbft *pbftProtocal) updateViewChangeSeqNo() {
 
 func (pbft *pbftProtocal) processNegotiateView() error {
 	if !pbft.inNegoView {
-		logger.Critical("Replica %d try to negotiateView, but it's not inNegoView. This indicates a bug", pbft.id)
+		logger.Criticalf("Replica %d try to negotiateView, but it's not inNegoView. This indicates a bug", pbft.id)
 		return nil
 	}
 

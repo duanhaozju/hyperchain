@@ -854,18 +854,18 @@ func (pbft *pbftProtocal) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 	if agree.Flag {
 		cert := pbft.getAddNodeCert(agree.Key)
 		if !pbft.isNewNode && !cert.finishAdd {
-			logger.Warningf("Replica %d has not complete add node", pbft.id)
+			logger.Debugf("Replica %d has not complete add node", pbft.id)
 			return false
 		}
 		n, view := pbft.getAddNV()
 		if n != agree.N || view != agree.View {
-			logger.Warningf("Replica %d invalid p entry in agree-update: expected n=%d/view=%d, get n=%d/view=%d", pbft.id, n, view, agree.N, agree.View)
+			logger.Debugf("Replica %d invalid p entry in agree-update: expected n=%d/view=%d, get n=%d/view=%d", pbft.id, n, view, agree.N, agree.View)
 			return false
 		}
 
 		for _, p := range append(agree.Pset, agree.Qset...) {
 			if !(p.View <= agree.View && p.SequenceNumber > agree.H && p.SequenceNumber <= agree.H+pbft.L) {
-				logger.Warningf("Replica %d invalid p entry in agree-update: vc(v:%d h:%d) p(v:%d n:%d)", pbft.id, agree.View, agree.H, p.View, p.SequenceNumber)
+				logger.Debugf("Replica %d invalid p entry in agree-update: vc(v:%d h:%d) p(v:%d n:%d)", pbft.id, agree.View, agree.H, p.View, p.SequenceNumber)
 				return false
 			}
 		}
@@ -873,18 +873,18 @@ func (pbft *pbftProtocal) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 	} else {
 		cert := pbft.getDelNodeCert(agree.Key)
 		if !cert.finishDel {
-			logger.Warningf("Replica %d has not complete del node")
+			logger.Debugf("Replica %d has not complete del node")
 			return false
 		}
 		n, view := pbft.getDelNV()
 		if n != agree.N || view != agree.View {
-			logger.Warningf("Replica %d invalid p entry in agree-update: expected n=%d/view=%d, get n=%d/view=%d", pbft.id, n, view, agree.N, agree.View)
+			logger.Debugf("Replica %d invalid p entry in agree-update: expected n=%d/view=%d, get n=%d/view=%d", pbft.id, n, view, agree.N, agree.View)
 			return false
 		}
 
 		for _, p := range append(agree.Pset, agree.Qset...) {
 			if !(p.View <= agree.View+1 && p.SequenceNumber > agree.H && p.SequenceNumber <= agree.H+pbft.L) {
-				logger.Warningf("Replica %d invalid p entry in agree-update: vc(v:%d h:%d) p(v:%d n:%d)", pbft.id, agree.View, agree.H, p.View, p.SequenceNumber)
+				logger.Debugf("Replica %d invalid p entry in agree-update: vc(v:%d h:%d) p(v:%d n:%d)", pbft.id, agree.View, agree.H, p.View, p.SequenceNumber)
 				return false
 			}
 		}
