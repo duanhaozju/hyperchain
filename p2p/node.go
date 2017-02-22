@@ -52,7 +52,7 @@ func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TEM transport
 	newNode.CM = cm
 	newNode.higherEventManager = hEventManager
 	newNode.PeersPool = peersPool
-	newNode.attendChan = make(chan int)
+	newNode.attendChan = make(chan int, 10)
 	newNode.delayTable = make(map[int]int64)
 	newNode.DelayChan = make(chan UpdateTable)
 	//listen the update
@@ -84,7 +84,7 @@ func (n *Node) attendNoticeProcess(N int) {
 	num := 0
 	for {
 		flag := <-n.attendChan
-		log.Debugf("attend N",N)
+		log.Critical("receive flag: ", flag)
 		switch flag {
 		case 1: {
 			num++

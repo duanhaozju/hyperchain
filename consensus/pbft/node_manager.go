@@ -314,14 +314,14 @@ func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) events.Event {
 	logger.Debugf("Replica %d received ready_for_n from replica %d", pbft.id, ready.ReplicaId)
 
 	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
-		logger.Warningf("Primary %d is in view change, reject the ready_for_n message", pbft.id)
+		logger.Warningf("Replica %d is in view change, reject the ready_for_n message", pbft.id)
 		return nil
 	}
 
 	cert := pbft.getAddNodeCert(ready.Key)
 
 	if !cert.finishAdd {
-		logger.Errorf("Primary %d has not done with addnode for key=%s", pbft.id, ready.Key)
+		logger.Errorf("Replica %d has not done with addnode for key=%s", pbft.id, ready.Key)
 		return nil
 	}
 
