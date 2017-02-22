@@ -280,7 +280,7 @@ func (pbft *pbftProtocal) restoreState() {
 	if err == nil {
 		view := binary.LittleEndian.Uint64(b)
 		pbft.view = view
-		logger.Noticef("=========restore view %d=======", view)
+		logger.Noticef("========= restore view %d =======", view)
 	} else {
 		logger.Noticef("Replica %d could not restore view: %s", pbft.id, err)
 	}
@@ -289,8 +289,9 @@ func (pbft *pbftProtocal) restoreState() {
 	if err == nil {
 		nodes := binary.LittleEndian.Uint64(n)
 		pbft.N = int(nodes)
+		pbft.f = (pbft.N - 1) / 3
 	}
-	logger.Noticef("=========restore N %d=======", pbft.N)
+	logger.Noticef("========= restore N=%d, f=%d =======", pbft.N, pbft.f)
 
 	new, err := persist.ReadState("new")
 	if err == nil {

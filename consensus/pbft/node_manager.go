@@ -755,6 +755,7 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 
 	pbft.view = update.View
 	pbft.N = int(update.N)
+	pbft.f = (pbft.N - 1) / 3
 
 	if pbft.primary(pbft.view) != pbft.id {
 		pbft.clearDuplicator()

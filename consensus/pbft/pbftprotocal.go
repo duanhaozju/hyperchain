@@ -680,7 +680,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		pbft.updateHandled = false
 		atomic.StoreUint32(&pbft.inUpdatingN, 0)
 		pbft.processRequestsDuringUpdatingN()
-		logger.Criticalf("======== Replica %d finished UpdatingN, primary=%d, n=%d/view=%d/h=%d", pbft.id, pbft.primary(pbft.view), pbft.N, pbft.view, pbft.h)
+		logger.Criticalf("======== Replica %d finished UpdatingN, primary=%d, n=%d/f=%d/view=%d/h=%d", pbft.id, pbft.primary(pbft.view), pbft.N, pbft.f, pbft.view, pbft.h)
 	case firstRequestTimerEvent:
 		logger.Noticef("Replica %d first request timer expires", pbft.id)
 		return pbft.sendViewChange()
