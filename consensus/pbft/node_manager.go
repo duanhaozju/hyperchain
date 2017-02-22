@@ -65,7 +65,7 @@ func (pbft *pbftProtocal) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 func (pbft *pbftProtocal) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 
 	key := string(msg.DelPayload)
-	logger.Debugf("Replica %d received local delnode message for del node %s", pbft.id, key)
+	logger.Debugf("Replica %d received local delnode message for newId: %d, del node: %s", pbft.id, msg.Id, key)
 
 	if pbft.N == 4 {
 		logger.Criticalf("Replica %d receive del msg, but we don't support delete as there're only 4 nodes", pbft.id)
@@ -248,6 +248,7 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string) error {
 
 	logger.Debugf("Replica %d update routingTable for %v", pbft.id, key)
 	pbft.helper.UpdateTable(payload, false)
+	time.Sleep(20 * time.Millisecond)
 	pbft.inDeletingNode = false
 
 	atomic.StoreUint32(&pbft.inUpdatingN, 1)
@@ -390,7 +391,7 @@ func (pbft *pbftProtocal) sendAgreeUpdateNforDel(key string, routerHash string) 
 	}
 
 	pbft.stopTimer()
-	atomic.StoreUint32(&pbft.inUpdatingN, 0)
+	atomic.StoreUint32(&pbft.inUpdatingN, 1)
 
 	// calculate the new N and view
 	n, view := pbft.getDelNV()
@@ -498,7 +499,6 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 	logger.Debugf("Replica %d now has %d agree-update requests for view=%d/n=%d", pbft.id, quorum, agree.View, agree.N)
 
 	if quorum >= pbft.allCorrectReplicasQuorum() {
-		logger.Debug("111111")
 		pbft.updateTarget = uidx{v:agree.View, n:agree.N, flag:agree.Flag, key:agree.Key}
 		return agreeUpdateNQuorumEvent{}
 	}
@@ -600,6 +600,8 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) events.Event {
 			quorum++
 		}
 	}
+
+	logger.Debug("quorum: ", quorum, " agreeUpdateStore: ", pbft.agreeUpdateStore)
 	if quorum < pbft.allCorrectReplicasQuorum() {
 		logger.Warningf("Replica %d has not meet agreeUpdateNQuorum", pbft.id)
 		return nil
@@ -781,6 +783,9 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 		}
 	}
 
+	pbft.addNodeCertStore = make(map[string]*addNodeCert)
+	pbft.delNodeCertStore = make(map[string]*delNodeCert)
+
 	pbft.seqNo = pbft.h
 	pbft.lastExec = pbft.h
 	pbft.seqNo = pbft.h
@@ -884,7 +889,7 @@ func (pbft *pbftProtocal) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 	} else {
 		cert := pbft.getDelNodeCert(agree.Key)
 		if !cert.finishDel {
-			logger.Debugf("Replica %d has not complete del node")
+			logger.Debugf("Replica %d has not complete del node", pbft.id)
 			return false
 		}
 		n, view := pbft.getDelNV()
