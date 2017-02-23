@@ -73,7 +73,7 @@ func (pbft *pbftProtocal) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 	}
 
 	if len(msg.DelPayload) == 0 || len(msg.RouterHash) == 0 || msg.Id == 0 || msg.Del == 0 {
-		logger.Warningf("New replica %d received invalid local delNode message", pbft.id)
+		logger.Warningf("Replica %d received invalid local delNode message", pbft.id)
 		return nil
 	}
 
@@ -803,6 +803,7 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 			}
 			pbft.updateCertStore[tmpId] = tmpCert
 			delete(pbft.certStore, idx)
+			pbft.persistDelQPCSet(idx.v, idx.n)
 		}
 	}
 
