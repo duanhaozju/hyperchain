@@ -12,8 +12,8 @@ import (
 	"encoding/hex"
 	"hyperchain/core/crypto/primitives"
 	"hyperchain/p2p/transport/ecdh"
-	"crypto/aes"
-	"crypto/cipher"
+	//"crypto/aes"
+	//"crypto/cipher"
 	"crypto/ecdsa"
 	"errors"
 	"hyperchain/admittance"
@@ -119,19 +119,20 @@ func (hSMN *HandShakeManagerNew) EncWithSecret(message []byte, peerHash string) 
 	//return encrypted
 
 	//aes
-	if _, ok := hSMN.secrets[peerHash]; !ok {
-		//panic("the peer hasn't negotiate the share secret, and please restart this node")
-
-		return []byte(""), errors.New("the peer hasn't negotiate the share secret, and please restart this node")
-	}
-	key := hSMN.secrets[peerHash][:16]
-	var iv = []byte(key)[:aes.BlockSize]
-	encrypted := make([]byte, len(message))
-	aesBlockEncrypter, _ := aes.NewCipher(key)
-	aesEncrypter := cipher.NewCFBEncrypter(aesBlockEncrypter, iv)
-	aesEncrypter.XORKeyStream(encrypted, []byte(message))
-	return encrypted, nil
+	//if _, ok := hSMN.secrets[peerHash]; !ok {
+	//	//panic("the peer hasn't negotiate the share secret, and please restart this node")
+	//
+	//	return []byte(""), errors.New("the peer hasn't negotiate the share secret, and please restart this node")
+	//}
+	//key := hSMN.secrets[peerHash][:16]
+	//var iv = []byte(key)[:aes.BlockSize]
+	//encrypted := make([]byte, len(message))
+	//aesBlockEncrypter, _ := aes.NewCipher(key)
+	//aesEncrypter := cipher.NewCFBEncrypter(aesBlockEncrypter, iv)
+	//aesEncrypter.XORKeyStream(encrypted, []byte(message))
+	//return encrypted, nil
 	//return message
+	return message, nil
 
 }
 
@@ -149,19 +150,19 @@ func (hSMN *HandShakeManagerNew) DecWithSecret(message []byte, peerHash string) 
 
 	//aes
 	//
-	if _, ok := hSMN.secrets[peerHash]; !ok {
-		//panic("the peer hasn't negotiate the share secret, and please restart this node")
-		return []byte(""), errors.New("the peer hasn't negotiate the share secret, and please restart this node")
-	}
-	key := hSMN.secrets[peerHash][:16]
-	var iv = []byte(key)[:aes.BlockSize]
-	decrypted := make([]byte, len(message))
-	aesBlockDecrypter, _ := aes.NewCipher([]byte(key))
-	aesDecrypter := cipher.NewCFBDecrypter(aesBlockDecrypter, iv)
-	aesDecrypter.XORKeyStream(decrypted, message)
-	return decrypted, nil
+	//if _, ok := hSMN.secrets[peerHash]; !ok {
+	//	//panic("the peer hasn't negotiate the share secret, and please restart this node")
+	//	return []byte(""), errors.New("the peer hasn't negotiate the share secret, and please restart this node")
+	//}
+	//key := hSMN.secrets[peerHash][:16]
+	//var iv = []byte(key)[:aes.BlockSize]
+	//decrypted := make([]byte, len(message))
+	//aesBlockDecrypter, _ := aes.NewCipher([]byte(key))
+	//aesDecrypter := cipher.NewCFBDecrypter(aesBlockDecrypter, iv)
+	//aesDecrypter.XORKeyStream(decrypted, message)
+	//return decrypted, nil
 	//return message
-
+	return message, nil
 }
 
 func (this *HandShakeManagerNew) GetSecret(peerHash string) string {

@@ -207,6 +207,7 @@ type addNodeCert struct {
 
 type delNodeCert struct {
 	newId			uint64
+	delId			uint64
 	routerHash		string
 	delNodes		map[DelNode]bool
 	delCount		int
@@ -637,6 +638,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 			pbft.inNegoView = true
 			pbft.recvNewViewInRecovery = false
 			pbft.restartNegoView()
+			return nil
 		}
 		if pbft.isNewNode {
 			pbft.sendReadyForN()

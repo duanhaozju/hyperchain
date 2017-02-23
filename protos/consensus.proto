@@ -69,6 +69,7 @@ message DelNodeMessage {
     bytes delPayload = 1;
     string routerHash = 2;
     uint64 id = 3;
+    uint64 del = 4;
 }
 
 message RoutersMessage {
