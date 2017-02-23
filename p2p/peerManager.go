@@ -54,7 +54,7 @@ type AddNode interface {
 // DeleteNode interface
 type DeleteNode interface {
 	GetLocalNodeHash() string
-	GetRouterHashifDelete(hash string) (string, uint64)
+	GetRouterHashifDelete(hash string) (string, uint64,uint64)
 	DeleteNode(hash string) error // if self {...} else{...}
 }
 

@@ -280,11 +280,12 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			// a peer submit a request to exit the alliance
 			log.Debug("DelPeerEvent")
 			payload := ev.Payload
-			routerHash, id := self.Peermanager.GetRouterHashifDelete(string(payload))
+			routerHash, id, del := self.Peermanager.GetRouterHashifDelete(string(payload))
 			msg := &protos.DelNodeMessage{
 				DelPayload: payload,
 				RouterHash: routerHash,
 				Id:         id,
+				Del:		del,
 			}
 			self.consenter.RecvLocal(msg)
 		case event.BroadcastDelPeerEvent:

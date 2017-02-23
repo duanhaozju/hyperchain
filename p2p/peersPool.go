@@ -26,6 +26,7 @@ type PeersPool interface {
 	MergeTempPeersForNewNode()
 	RejectTempPeers()
 	DeletePeer(peer *Peer) map[string]pb.PeerAddr
+	Clear()
 	PeerSetter
 }
 

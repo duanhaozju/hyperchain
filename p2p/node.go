@@ -52,7 +52,7 @@ func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TEM transport
 	newNode.CM = cm
 	newNode.higherEventManager = hEventManager
 	newNode.PeersPool = peersPool
-	newNode.attendChan = make(chan int)
+	newNode.attendChan = make(chan int,1000)
 	newNode.delayTable = make(map[int]int64)
 	newNode.DelayChan = make(chan UpdateTable)
 	//listen the update
@@ -77,15 +77,15 @@ func (node *Node) UpdateDelayTableThread() {
 
 //新节点需要监听相应的attend类型
 func (n *Node) attendNoticeProcess(N int) {
+	log.Critical("AttendProcess N:",N)
 	// fix the N as N-1
 	// temp
-	N = N - 1
 	isPrimaryConnectFlag := false
 	f := (N - 1) / 3
 	num := 0
 	for {
 		flag := <-n.attendChan
-		log.Debugf("attend N",N)
+		log.Critical("attend flag",flag,num)
 		switch flag {
 		case 1: {
 			num++
@@ -100,7 +100,7 @@ func (n *Node) attendNoticeProcess(N int) {
 			go n.higherEventManager.Post(event.AlreadyInChainEvent{})
 		}
 
-		if num == N-1 {
+		if num == N {
 			break
 		}
 
@@ -122,14 +122,13 @@ func (node *Node) GetNodeID() int {
 
 // Chat Implements the ServerSide Function
 func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error) {
-	log.Debugf("\n###########################\nSTART OF NEW MESSAGE")
-	log.Debugf("LOCAL=> ID:%d IP:%s PORT:%d",node.localAddr.ID,node.localAddr.IP,node.localAddr.Port)
-	log.Debugf("MSG FORM=> ID: %d IP: %s PORT: %d",msg.From.ID,msg.From.IP,msg.From.Port)
-	if msg.MessageType != pb.Message_CONSUS{
-		log.Debugf("MSG TYPE: %v, form: %d", msg.MessageType, msg.From.ID)
+	if msg.MessageType != pb.Message_CONSUS {
+		log.Debugf("\n###########################\nSTART OF NEW MESSAGE")
+		log.Debugf("LOCAL=> ID:%d IP:%s PORT:%d", node.localAddr.ID, node.localAddr.IP, node.localAddr.Port)
+		log.Debugf("MSG FORM=> ID: %d IP: %s PORT: %d", msg.From.ID, msg.From.IP, msg.From.Port)
+		log.Debugf("MSG TYPE: %v, from: %d", msg.MessageType, msg.From.ID)
+		defer log.Debugf("END OF NEW MESSAGE\n###########################\n")
 	}
-	defer log.Debugf("END OF NEW MESSAGE\n###########################\n")
-
 	response := new(pb.Message)
 	response.MessageType = pb.Message_RESPONSE
 	response.MsgTimeStamp = time.Now().UnixNano()
