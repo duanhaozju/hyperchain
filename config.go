@@ -9,6 +9,7 @@ import (
 	"hyperchain/tree/bucket"
 	"math/big"
 	"time"
+	"hyperchain/common"
 )
 
 type configs interface {
@@ -80,11 +81,14 @@ type configsImpl struct {
 }
 
 //return a config instances
-func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort int, RESTPort int) *configsImpl {
+func newconfigsImpl(conf *common.Config) *configsImpl {
+//func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort int, RESTPort int) *configsImpl {
 	var cimpl configsImpl
 	config := viper.New()
-	viper.SetEnvPrefix("GLOBAL_ENV")
-	config.SetConfigFile(globalConfigPath)
+	//viper.SetEnvPrefix("GLOBAL_ENV")
+	peerConfigPath := conf.GetString(common.C_GLOBAL_CONFIG_PATH)
+	fmt.Println(peerConfigPath)
+	config.SetConfigFile(peerConfigPath)
 	err := config.ReadInConfig()
 	if err != nil {
 		panic(fmt.Errorf("Error envPre %s reading %s", "GLOBAL", err))
@@ -92,10 +96,10 @@ func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort 
 	/*
 		system config
 	*/
-	cimpl.nodeID = NodeID
-	cimpl.gRPCPort = GRPCPort
-	cimpl.httpPort = HTTPPort
-	cimpl.restPort = RESTPort
+	cimpl.nodeID = conf.GetInt(common.C_NODE_ID)
+	cimpl.gRPCPort = conf.GetInt(common.C_GRPC_PORT)
+	cimpl.httpPort = conf.GetInt(common.C_HTTP_PORT)
+	cimpl.restPort = conf.GetInt(common.C_REST_PORT)
 	cimpl.keystoreDir = config.GetString("global.account.keystoredir")
 	cimpl.keyNodeDir = config.GetString("global.account.keynodesdir")
 	cimpl.logDumpFileFlag = config.GetBool("global.logs.dumpfile")

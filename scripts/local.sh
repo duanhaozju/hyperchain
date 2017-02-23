@@ -171,7 +171,7 @@ runXinXinLinux(){
 runXinXinMac(){
     for((j=1;j<=$MAXPEERNUM;j++))
     do
-        osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${j}' && ./hyperchain -o '${j}' -l 800'${j}' -t 808'${j}'"'
+        osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${j}' && ./hyperchain "'
     done
 }
 runXin1(){
