@@ -417,7 +417,7 @@ func NewPeerReverse(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport
 func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
 	log.Debug("CHAT:", msg.From.ID, ">>>", this.PeerAddr.ID)
 	if this.Status ==2 {
-		log.Error("this connection was closed.")
+		log.Debug("this connection was closed.")
 		return nil,errors.New("this connection was closed.")
 	}
 	msg.Payload, err = this.TEM.EncWithSecret(msg.Payload, this.PeerAddr.Hash)

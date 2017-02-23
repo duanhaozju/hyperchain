@@ -568,7 +568,7 @@ func (this *GRPCPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, M
 				start := time.Now().UnixNano()
 				_, err := p.Chat(syncMessage)
 				if err != nil {
-					log.Error("Broadcast failed,Node", p.LocalAddr.ID)
+					log.Debug("Broadcast failed,Node", p.LocalAddr.ID)
 				} else {
 					this.LocalNode.DelayChan <- UpdateTable{updateID: p.LocalAddr.ID, updateTime: time.Now().UnixNano() - start}
 
