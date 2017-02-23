@@ -215,6 +215,9 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 				logger.Warningf("Replica %d has already finished adding node, but still recevice add msg from someone else", pbft.id)
 				return nil
 			}
+		} else {
+			logger.Warningf("Replica %d has not locally ready for add node", pbft.id)
+			return nil
 		}
 	}
 
@@ -245,6 +248,9 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string) error {
 				logger.Warningf("Replica %d has already finished deleting node, but still recevice del msg from someone else", pbft.id)
 				return nil
 			}
+		} else {
+			logger.Warningf("Replica %d has not locally ready for del node", pbft.id)
+			return nil
 		}
 	}
 
@@ -766,6 +772,22 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 	pbft.stopTimer()
 	pbft.nullRequestTimer.Stop()
 
+	for idx, cert := range pbft.certStore {
+		if idx.v == pbft.view {
+			tmpId := msgID{n:idx.n, v:update.View}
+			tmpCert := updateCert{
+				digest: cert.digest,
+				sentPrepare: cert.sentPrepare,
+				validated: cert.validated,
+				sentCommit: cert.sentCommit,
+				sentExecute: cert.sentExecute,
+			}
+			pbft.updateCertStore[tmpId] = tmpCert
+			delete(pbft.certStore, idx)
+			pbft.persistDelQPCSet(idx.v, idx.n)
+		}
+	}
+
 	pbft.seqNo = pbft.h
 	pbft.lastExec = pbft.h
 	pbft.seqNo = pbft.h
@@ -788,22 +810,6 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 	for idx := range pbft.agreeUpdateStore {
 		if (idx.v == update.View && idx.n == update.N && idx.flag == update.Flag) {
 			delete(pbft.agreeUpdateStore, idx)
-		}
-	}
-
-	for idx, cert := range pbft.certStore {
-		if idx.v == pbft.view {
-			tmpId := msgID{n:idx.n, v:update.View}
-			tmpCert := updateCert{
-				digest: cert.digest,
-				sentPrepare: cert.sentPrepare,
-				validated: cert.validated,
-				sentCommit: cert.sentCommit,
-				sentExecute: cert.sentExecute,
-			}
-			pbft.updateCertStore[tmpId] = tmpCert
-			delete(pbft.certStore, idx)
-			pbft.persistDelQPCSet(idx.v, idx.n)
 		}
 	}
 
