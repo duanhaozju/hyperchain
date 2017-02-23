@@ -1295,7 +1295,6 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 
 	logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
 	pbft.nullRequestTimer.Stop()
-	pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
 	pbft.seqNo = n
 	preprep := &PrePrepare{
 		View:             pbft.view,
@@ -1327,6 +1326,7 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	pbft.lastVid = *pbft.currentVid
 	pbft.currentVid = nil
 
+	pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
 	pbft.maybeSendCommit(digest, pbft.view, n)
 	pbft.trySendPrePrepare()
 
