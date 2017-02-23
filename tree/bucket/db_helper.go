@@ -42,7 +42,7 @@ func fetchDataNodesFromDBByBucketKey(treePrefix string, bucketKey *BucketKey) (d
 		return nil, errors.New("Data is nil")
 	}
 
-	err = UnmarshalDataNodes(bucketKey, dataNodesValue, &dataNodes)
+	err = UnmarshalDataNodes(treePrefix, bucketKey, dataNodesValue, &dataNodes)
 
 	//if(bucketKey.level == 2 && bucketKey.bucketNumber == 13){
 	//	log.Critical("writeBatch.get size is",dataNodes.Len())

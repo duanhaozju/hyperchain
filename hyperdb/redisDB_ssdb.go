@@ -227,3 +227,6 @@ func (batch *DB_Batch) SdWrite(db *redis.Pool, map2 map[string][]byte) error {
 	}
 
 }
+func (batch *DB_Batch) Len() int {
+	return 0
+}

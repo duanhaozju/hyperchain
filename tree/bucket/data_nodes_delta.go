@@ -2,10 +2,10 @@ package bucket
 
 import (
 	"bytes"
-	"encoding/json"
 	"github.com/pkg/errors"
 	"sort"
-	"encoding/binary"
+	"github.com/golang/protobuf/proto"
+	"fmt"
 )
 
 const MAXDATANODESSIZE  = 8
@@ -26,44 +26,38 @@ func (dataNodes DataNodes) Less(i, j int) bool {
 }
 
 func (dataNodes DataNodes) Marshal() []byte {
-	dataNodesKVDeltas := make([][]byte, len(dataNodes)*2)
-	for i, dataNode := range dataNodes {
-		dataNodesKVDeltas[2*i] = dataNode.getCompositeKey()
-		dataNodesKVDeltas[2*i+1] = dataNode.getValue()
+	buffer := proto.NewBuffer([]byte{})
+	buffer.EncodeFixed64(uint64(len(dataNodes)))
+	for _, dataNode := range dataNodes {
+		buffer.EncodeRawBytes(dataNode.getActuallyKey())
+		buffer.EncodeRawBytes(dataNode.getValue())
 	}
-	data, err := json.Marshal(dataNodesKVDeltas)
-	if err != nil {
-		log.Error("DataNodes Marshal error ", err)
-		return nil
-	}
-	bytes := make([]byte, MAXDATANODESSIZE)
-	binary.LittleEndian.PutUint64(bytes, uint64(len(dataNodes)))
-
-	dataPrefix := append([]byte(DataNodesPrefix), bytes...)
-	data = append(dataPrefix, data...)
-	return data
+	return buffer.Bytes()
 }
 
-func UnmarshalDataNodes(bucketKey *BucketKey, data []byte, v interface{}) error {
+func UnmarshalDataNodes(prefix string, bucketKey *BucketKey, data []byte, v interface{}) error {
 	dataNodes, ok := v.(*DataNodes)
-	var dataNodesKVDeltas [][]byte
-
 	if ok == false {
 		return errors.New("invalid type")
 	}
-	if data == nil || len(data) <= len(DataNodesPrefix)+MAXDATANODESSIZE {
-		return errors.New("Data is nil")
-	}
 
-	length := binary.LittleEndian.Uint64(data[len(DataNodesPrefix):len(DataNodesPrefix)+MAXDATANODESSIZE])
-
-	err := json.Unmarshal(data[len(DataNodesPrefix)+MAXDATANODESSIZE:], &dataNodesKVDeltas)
+	buffer := proto.NewBuffer(data)
+	length, err := buffer.DecodeFixed64()
 	if err != nil {
-		log.Error("UnmarshalDataNodes error", err)
+		log.Errorf("decode datanodes failed")
+		return err
 	}
 	for i := 0; i < int(length); i++ {
-		dataKey := &DataKey{bucketKey, dataNodesKVDeltas[2*i]}
-		*dataNodes = append(*dataNodes, newDataNode(dataKey, dataNodesKVDeltas[2*i+1]))
+		key, err := buffer.DecodeRawBytes(false)
+		if err != nil {
+			panic(fmt.Errorf("this error should not occur: %s", err))
+		}
+		value, err := buffer.DecodeRawBytes(false)
+		if err != nil {
+			panic(fmt.Errorf("this error should not occur: %s", err))
+		}
+		dataKey := &DataKey{bucketKey, ConstructCompositeKey(prefix, string(key))}
+		*dataNodes = append(*dataNodes, newDataNode(dataKey, value))
 	}
 	return err
 }
