@@ -122,6 +122,7 @@ func (pbft *pbftProtocal) sendViewChange() events.Event {
 	for idx := range pbft.certStore {
 		if idx.v < pbft.view {
 			delete(pbft.certStore, idx)
+			pbft.persistDelQPCSet(idx.v, idx.n)
 		}
 	}
 	for idx := range pbft.viewChangeStore {
@@ -200,7 +201,7 @@ func (pbft *pbftProtocal) recvViewChange(vc *ViewChange) events.Event {
 	//}
 
 	if vc.View < pbft.view {
-		logger.Warningf("Replica %d found view-change message for old view", pbft.id)
+		logger.Warningf("Replica %d found view-change message for old view from replica %d", pbft.id, vc.ReplicaId)
 		return nil
 	}
 

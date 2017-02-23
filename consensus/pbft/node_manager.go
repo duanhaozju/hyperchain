@@ -803,6 +803,7 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 			}
 			pbft.updateCertStore[tmpId] = tmpCert
 			delete(pbft.certStore, idx)
+			pbft.persistDelQPCSet(idx.v, idx.n)
 		}
 	}
 

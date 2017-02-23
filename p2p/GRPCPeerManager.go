@@ -737,7 +737,7 @@ func (this *GRPCPeerManager) UpdateRoutingTable(payload []byte) {
 		}
 
 	} else {
-		log.Error(" new node shouldn't call update routing table")
+		log.Warning(" new node shouldn't call update routing table")
 	}
 }
 
@@ -781,16 +781,13 @@ func (this *GRPCPeerManager) GetRouterHashifDelete(hash string) (string, uint64,
 	routers := this.peersPool.ToRoutingTableWithout(hash)
 	var DeleteID uint64
 	for _, peer := range this.peersPool.GetPeers(){
-		log.Warning("range HASH, ",peer.PeerAddr.Hash," wanted hash",hash)
 		if peer.PeerAddr.Hash == hash{
-			log.Debug("RS hash: ", peer.PeerAddr.Hash)
 			DeleteID = uint64(peer.PeerAddr.ID)
 		}
 	}
 	if uint64(DeleteID) < uint64(this.LocalAddr.ID){
 		return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(this.LocalAddr.ID -1) ,uint64(DeleteID)
 	}
-	log.Debug("DELETE ID",DeleteID)
 
 	return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(this.LocalAddr.ID) ,uint64(DeleteID)
 

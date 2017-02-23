@@ -85,9 +85,6 @@ type pbftProtocal struct {
 
 	// implementation of PBFT `in`
 	certStore       map[msgID]*msgCert // track quorum certificates for requests
-	qset            *Qset
-	pset            *Pset
-	cset            *Cset
 	// pqset for viewchange
 	qlist			map[qidx]*ViewChange_PQ
 	plist			map[uint64]*ViewChange_PQ
@@ -1102,6 +1099,9 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 			return nil
 		}
 		peers := pbft.highStateTarget.replicas
+		for idx := range pbft.certStore {
+			pbft.persistDelQPCSet(idx.v, idx.n)
+		}
 		pbft.certStore = make(map[msgID]*msgCert)
 		pbft.fetchRecoveryPQC(peers)
 		return nil
@@ -1310,7 +1310,7 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	cert.sentValidate = true
 	cert.validated = true
 	delete(pbft.cacheValidatedBatch, digest)
-	pbft.persistQSet(preprep.View, preprep.SequenceNumber)
+	pbft.persistQSet(preprep)
 	payload, err := proto.Marshal(preprep)
 	if err != nil {
 		logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
@@ -1365,7 +1365,7 @@ func (pbft *pbftProtocal) sendPrePrepareForUpdate(reqBatch *TransactionBatch, di
 	cert.digest = digest
 	cert.sentValidate = true
 	cert.validated = true
-	pbft.persistQSet(preprep.View, preprep.SequenceNumber)
+	pbft.persistQSet(preprep)
 
 	payload, err := proto.Marshal(preprep)
 	if err != nil {
@@ -1467,7 +1467,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 			ReplicaId:      pbft.id,
 		}
 		cert.sentPrepare = true
-		pbft.persistQSet(preprep.View, preprep.SequenceNumber)
+		pbft.persistQSet(preprep)
 		pbft.recvPrepare(prep)
 		payload, err := proto.Marshal(prep)
 		if err != nil {
@@ -2136,6 +2136,8 @@ func (pbft *pbftProtocal) moveWatermarks(n uint64) {
 			delete(pbft.validatedBatchStore, cert.digest)
 			delete(pbft.outstandingReqBatches, cert.digest)
 			delete(pbft.certStore, idx)
+			pbft.persistDelQPCSet(idx.v, idx.n)
+			delete(pbft.updateCertStore, idx)
 		}
 	}
 
@@ -2160,36 +2162,6 @@ func (pbft *pbftProtocal) moveWatermarks(n uint64) {
 			delete(pbft.chkpts, n)
 			pbft.persistDelCheckpoint(n)
 		}
-	}
-
-	if pbft.qset != nil {
-		qset := []*PrePrepare{}
-		for _, q := range pbft.qset.Set {
-			if q.SequenceNumber > h {
-				qset = append(qset, q)
-			}
-		}
-		pbft.qset.Set = qset
-	}
-
-	if pbft.pset != nil {
-		pset := []*Prepare{}
-		for _, p := range pbft.pset.Set {
-			if p.SequenceNumber > h {
-				pset = append(pset, p)
-			}
-		}
-		pbft.pset.Set = pset
-	}
-
-	if pbft.cset != nil {
-		cset := []*Commit{}
-		for _, c := range pbft.cset.Set {
-			if c.SequenceNumber > h {
-				cset = append(cset, c)
-			}
-		}
-		pbft.cset.Set = cset
 	}
 
 	for idx := range pbft.qlist {

@@ -13,176 +13,182 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (pbft *pbftProtocal) persistQSet(v uint64, n uint64) {
+func (pbft *pbftProtocal) persistQSet(preprep *PrePrepare) {
 
-	cert := pbft.getCert(v, n)
-	if pbft.qset == nil {
-		qset := []*PrePrepare{}
-		pbft.qset = &Qset{Set: qset}
-	}
-	pbft.qset.Set = append(pbft.qset.Set, cert.prePrepare)
-	raw, err := proto.Marshal(pbft.qset)
+	raw, err := proto.Marshal(preprep)
 	if err != nil {
 		logger.Warningf("Replica %d could not persist qset: %s", pbft.id, err)
 		return
 	}
-	persist.StoreState("qset", raw)
+	key := fmt.Sprintf("qset.%d.%d", preprep.View, preprep.SequenceNumber)
+	persist.StoreState(key, raw)
 }
 
 func (pbft *pbftProtocal) persistPSet(v uint64, n uint64) {
 
 	cert := pbft.getCert(v, n)
-	if pbft.pset == nil {
-		pset := []*Prepare{}
-		pbft.pset = &Pset{Set: pset}
-	}
+	set := []*Prepare{}
+	pset := &Pset{Set: set}
 	for p := range cert.prepare {
 		tmp := p
-		pbft.pset.Set = append(pbft.pset.Set, &tmp)
+		pset.Set = append(pset.Set, &tmp)
 	}
 
-	raw, err := proto.Marshal(pbft.pset)
+	raw, err := proto.Marshal(pset)
 	if err != nil {
 		logger.Warningf("Replica %d could not persist pset: %s", pbft.id, err)
 		return
 	}
-	persist.StoreState("pset", raw)
+	key := fmt.Sprintf("pset.%d.%d", v, n)
+	persist.StoreState(key, raw)
 }
 
 func (pbft *pbftProtocal) persistCSet(v uint64, n uint64) {
 
 	cert := pbft.getCert(v, n)
-	if pbft.cset == nil {
-		cset := []*Commit{}
-		pbft.cset = &Cset{Set: cset}
-	}
+	set := []*Commit{}
+	cset := &Cset{Set: set}
 	for c := range cert.commit {
 		tmp := c
-		pbft.cset.Set = append(pbft.cset.Set, &tmp)
+		cset.Set = append(cset.Set, &tmp)
 	}
 
-	raw, err := proto.Marshal(pbft.cset)
+	raw, err := proto.Marshal(cset)
 	if err != nil {
 		logger.Warningf("Replica %d could not persist cset: %s", pbft.id, err)
 		return
 	}
-	persist.StoreState("cset", raw)
+	key := fmt.Sprintf("cset.%d.%d", v, n)
+	persist.StoreState(key, raw)
 }
 
-func (pbft *pbftProtocal) restoreQSet() *Qset {
-	raw, err := persist.ReadState("qset")
-	if err != nil {
-		logger.Debugf("Replica %d could not restore state qset: %s", pbft.id, err)
-		return nil
-	}
-	qset := &Qset{}
-	err = proto.Unmarshal(raw, qset)
-	if err != nil {
-		logger.Errorf("Replica %d could not unmarshal qset - local state is damaged: %s", pbft.id, err)
-		return nil
-	}
-	return qset
+func (pbft *pbftProtocal) persistDelQPCSet(v uint64, n uint64) {
+	qset := fmt.Sprintf("qset.%d.%d", v, n)
+	persist.DelState(qset)
+	pset := fmt.Sprintf("pset.%d.%d", v, n)
+	persist.DelState(pset)
+	cset := fmt.Sprintf("cset.%d.%d", v, n)
+	persist.DelState(cset)
 }
 
-func (pbft *pbftProtocal) restorePSet() *Pset {
-	raw, err := persist.ReadState("pset")
-	if err != nil {
-		logger.Debugf("Replica %d could not restore state pset: %s", pbft.id, err)
-		return nil
+func (pbft *pbftProtocal) restoreQSet() (map[msgID]*PrePrepare, error) {
+
+	qset := make(map[msgID]*PrePrepare)
+
+	payload, err := persist.ReadStateSet("qset.")
+	if err == nil {
+		for key, set := range payload {
+			var v, n uint64
+			if _, err = fmt.Sscanf(key, "qset.%d.%d", &v, &n); err != nil {
+				logger.Warningf("Replica %d could not restore qset key %s", pbft.id, key)
+			} else {
+				preprep := &PrePrepare{}
+				err := proto.Unmarshal(set, preprep)
+				if err == nil {
+					idx := msgID{v, n}
+					qset[idx] = preprep
+				} else {
+					logger.Warningf("Replica %d could not restore pre-prepare key %v, err: %v", pbft.id, set, err)
+				}
+			}
+		}
+	} else {
+		logger.Warningf("Replica %d could not restore qset: %s", pbft.id, err)
 	}
-	pset := &Pset{}
-	err = proto.Unmarshal(raw, pset)
-	if err != nil {
-		logger.Errorf("Replica %d could not unmarshal pset - local state is damaged: %s", pbft.id, err)
-		return nil
-	}
-	return pset
+
+	return qset, err
 }
 
-func (pbft *pbftProtocal) restoreCSet() *Cset {
-	raw, err := persist.ReadState("cset")
-	if err != nil {
-		logger.Debugf("Replica %d could not restore state cset: %s", pbft.id, err)
-		return nil
+func (pbft *pbftProtocal) restorePSet() (map[msgID]*Pset, error) {
+
+	pset := make(map[msgID]*Pset)
+
+	payload, err := persist.ReadStateSet("pset.")
+	if err == nil {
+		for key, set := range payload {
+			var v, n uint64
+			if _, err = fmt.Sscanf(key, "pset.%d.%d", &v, &n); err != nil {
+				logger.Warningf("Replica %d could not restore pset key %s", pbft.id, key)
+			} else {
+				prepares := &Pset{}
+				err := proto.Unmarshal(set, prepares)
+				if err == nil {
+					idx := msgID{v, n}
+					pset[idx] = prepares
+				} else {
+					logger.Warningf("Replica %d could not restore prepares key %v", pbft.id, set)
+				}
+			}
+		}
+	} else {
+		logger.Warningf("Replica %d could not restore pset: %s", pbft.id, err)
 	}
-	cset := &Cset{}
-	err = proto.Unmarshal(raw, cset)
-	if err != nil {
-		logger.Errorf("Replica %d could not unmarshal cset - local state is damaged: %s", pbft.id, err)
-		return nil
+
+	return pset, err
+}
+
+func (pbft *pbftProtocal) restoreCSet() (map[msgID]*Cset, error) {
+
+	cset := make(map[msgID]*Cset)
+
+	payload, err := persist.ReadStateSet("cset.")
+	if err == nil {
+		for key, set := range payload {
+			var v, n uint64
+			if _, err = fmt.Sscanf(key, "cset.%d.%d", &v, &n); err != nil {
+				logger.Warningf("Replica %d could not restore pset key %s", pbft.id, key)
+			} else {
+				commits := &Cset{}
+				err := proto.Unmarshal(set, commits)
+				if err == nil {
+					idx := msgID{v, n}
+					cset[idx] = commits
+				} else {
+					logger.Warningf("Replica %d could not restore commits key %v", pbft.id, set)
+				}
+			}
+		}
+	} else {
+		logger.Warningf("Replica %d could not restore cset: %s", pbft.id, err)
 	}
-	return cset
+
+	return cset, err
 }
 
 func (pbft *pbftProtocal) restoreCert() {
 
-	qset := []*PrePrepare{}
-	pset := []*Prepare{}
-	cset := []*Commit{}
-
-	if pbft.qset != nil {
-		qset = pbft.qset.Set
-	}
-	if pbft.pset != nil {
-		pset = pbft.pset.Set
-	}
-	if pbft.cset != nil {
-		cset = pbft.cset.Set
-	}
-
-	if len(qset) == 0 {
-		return
-	}
-
-	for _, q := range qset {
-		cert := pbft.getCert(q.View, q.SequenceNumber)
+	qset, _ := pbft.restoreQSet()
+	for idx, q := range qset {
+		cert := pbft.getCert(idx.v, idx.n)
 		cert.prePrepare = q
 		cert.digest = q.BatchDigest
 
 		pbft.validatedBatchStore[cert.digest] = q.GetTransactionBatch()
-
-		if len(pset) == 0 {
-			continue
-		}
-
-		pcount := 0
-		ptmp := []*Prepare{}
-		for _, p := range pset {
-			if q.View == p.View && q.SequenceNumber == p.SequenceNumber {
-				cert.prepare[*p] = true
-				pcount++
-				if p.ReplicaId == pbft.id {
-					cert.sentPrepare = true
-				}
-			} else {
-				ptmp = append(ptmp, p)
-			}
-		}
-		cert.prepareCount = pcount
-		pset = ptmp
-
-		if len(cset) == 0 {
-			continue
-		}
-
-		ccount := 0
-		ctmp := []*Commit{}
-		for _, c := range cset {
-			if q.View == c.View && q.SequenceNumber == c.SequenceNumber {
-				cert.commit[*c] = true
-				ccount++
-				if c.ReplicaId == pbft.id {
-					cert.sentCommit = true
-					cert.sentValidate = true
-				}
-			} else {
-				ctmp = append(ctmp, c)
-			}
-		}
-		cert.commitCount = ccount
-		cset = ctmp
 	}
 
+	pset, _ := pbft.restorePSet()
+	for idx, prepares := range pset {
+		cert := pbft.getCert(idx.v, idx.n)
+		for _, p := range prepares.Set {
+			cert.prepare[*p] = true
+			if p.ReplicaId == pbft.id {
+				cert.sentPrepare = true
+			}
+		}
+	}
+
+	cset, _ := pbft.restoreCSet()
+	for idx, commits := range cset {
+		cert := pbft.getCert(idx.v, idx.n)
+		for _, c := range commits.Set {
+			cert.commit[*c] = true
+			if c.ReplicaId == pbft.id {
+				cert.sentValidate = true
+				cert.validated = true
+				cert.sentCommit = true
+			}
+		}
+	}
 }
 
 func (pbft *pbftProtocal) persistRequestBatch(digest string) {
@@ -248,10 +254,6 @@ func (pbft *pbftProtocal) persistNewNode(new uint64) {
 }
 
 func (pbft *pbftProtocal) restoreState() {
-
-	pbft.qset = pbft.restoreQSet()
-	pbft.pset = pbft.restorePSet()
-	pbft.cset = pbft.restoreCSet()
 
 	pbft.restoreCert()
 
