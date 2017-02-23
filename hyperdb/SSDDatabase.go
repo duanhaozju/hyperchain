@@ -285,3 +285,7 @@ func (batch *sd_Batch) Write() error {
 
 	return err
 }
+
+func (batch *sd_Batch) Len() int {
+	return 0
+}

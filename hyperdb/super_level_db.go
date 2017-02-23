@@ -156,3 +156,7 @@ func (sb *superLdbBatch) Write() error {
 func (b *superLdbBatch) Reset() {
 	b.batch.Reset()
 }
+
+func (b *superLdbBatch) Len() int {
+	return b.batch.Len()
+}

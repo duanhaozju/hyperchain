@@ -198,3 +198,7 @@ func (batch levelLruBatch) Write() error {
 
 	return nil
 }
+
+func (batch levelLruBatch) Len() int {
+	return 0
+}

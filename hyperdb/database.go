@@ -121,3 +121,7 @@ func (b *ldbBatch) Delete(key []byte) error {
 func (b *ldbBatch) Write() error {
 	return b.db.Write(b.b, nil)
 }
+
+func (b *ldbBatch) Len() int {
+	return b.b.Len()
+}

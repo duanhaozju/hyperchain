@@ -189,3 +189,6 @@ func (batch *rdBatch) Write() error {
 	}
 
 }
+func (batch *rdBatch) Len() int {
+	return 0
+}
