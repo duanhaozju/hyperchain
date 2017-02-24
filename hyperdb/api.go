@@ -92,7 +92,7 @@ func setDBConfig(dbConfig string, port string) {
 
 	leveldbPath = config.GetString("dbConfig.leveldbPath")
 	grpcPort, _ = strconv.Atoi(port)
-	leveldbPath += port
+	//leveldbPath += port
 
 }
 
@@ -141,10 +141,8 @@ func GetDBDatabase() (Database, error) {
 func NewDatabase() (Database, error) {
 
 	if dbType == 001 {
-		//log.Notice("Use level db only")
-		//return NewLDBDataBase(leveldbPath)
-		log.Notice("Use SuperLevelDB")
-		return NewSLDB(leveldbPath)
+		log.Notice("Use level db only")
+		return NewLDBDataBase(leveldbPath)
 	} else if dbType == 010 {
 		log.Notice("Use ssdb only")
 		return NewSSDatabase()
@@ -154,7 +152,10 @@ func NewDatabase() (Database, error) {
 	} else if dbType == 100 {
 		log.Notice("Use redis only")
 		return NewRsDatabase()
-	} else {
+	} else if dbType == 1234{
+		log.Notice("Use SuperLevelDB")
+		return NewSLDB(leveldbPath)
+	}else {
 		log.Notice("Wrong dbType:" + strconv.Itoa(dbType))
 		return nil, errors.New("Wrong dbType:" + strconv.Itoa(dbType))
 	}
