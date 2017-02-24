@@ -303,7 +303,7 @@ fs_modifi_global(){
 fs_run_N_terminals_linux(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        gnome-terminal -x bash -c "ssh hyperchain@$server_address \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o $ni -l 8001 -t 8081 -f 9001\""
+        gnome-terminal -x bash -c "ssh hyperchain@$server_address \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain \""
         ni=`expr $ni + 1`
     done
 }
@@ -311,7 +311,7 @@ fs_run_N_terminals_linux(){
 fs_run_N_terminals_mac(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        osascript -e 'tell app "Terminal" to do script "ssh hyperchain@'$server_address' \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o '$ni' -l 8001 -t 8081 -f 9001\""'
+        osascript -e 'tell app "Terminal" to do script "ssh hyperchain@'$server_address' \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain \""'
         ni=`expr $ni + 1`
     done
 }
@@ -320,7 +320,7 @@ fs_run_N_terminals_mac(){
 fs_run_one_terminal(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        ssh -T hyperchain@$server_address "./hyperchain -o ${ni} -l 8001 -t 8081" &
+        ssh -T hyperchain@$server_address "./hyperchain" &
         ni=`expr $ni + 1`
     done
 }
