@@ -11,7 +11,8 @@ dbConfig:
 ########################
 # For example 110 means use Redis and SSDB
 #
-  dbType: 001
+# 1234 means use leveldb with Bloom Filter
+  dbType: 1234
 
 
 #ssdb config
