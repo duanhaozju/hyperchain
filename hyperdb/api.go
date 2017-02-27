@@ -37,6 +37,7 @@ var (
 	redisMaxConnectTimes = 15
 	grpcPort             = 8001
 	leveldbPath          = "./build/leveldb"
+	leveldbPath2          = "./build/leveldb_Consensus"
 )
 
 type stateDb int32
@@ -54,7 +55,14 @@ const (
 
 var log *logging.Logger // package-level logger
 //dbInstance include the instance of Database interface
-var dbInstance = &DBInstance{
+
+//dbInstance_B for Blockchain
+var dbInstance_B = &DBInstance{
+	state: closed,
+}
+
+//dbInstance_B for Consensus
+var dbInstance_C = &DBInstance{
 	state: closed,
 }
 
@@ -91,6 +99,7 @@ func setDBConfig(dbConfig string, port string) {
 	logPath = config.GetString("dbConfig.logPath")
 
 	leveldbPath = config.GetString("dbConfig.leveldbPath")
+	leveldbPath2=config.GetString("dbConfig.leveldbPath2")
 	grpcPort, _ = strconv.Atoi(port)
 	//leveldbPath += port
 
@@ -108,41 +117,64 @@ func InitDatabase(dbConfig string, port string) error {
 
 	setDBConfig(dbConfig, port)
 
-	dbInstance.dbSync.Lock()
-	defer dbInstance.dbSync.Unlock()
+	dbInstance_B.dbSync.Lock()
+	defer dbInstance_B.dbSync.Unlock()
 
-	if dbInstance.state != closed {
+	if dbInstance_B.state != closed {
 		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it has beend inited \n", dbType))
 		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it has beend inited \n", dbType))
 	}
-	db, err := NewDatabase()
+	db, err := NewDatabase(leveldbPath,dbType)
 
 	if err != nil {
 		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", dbType))
 		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", dbType))
 	}
 
-	dbInstance.db = db
-	dbInstance.state = opened
-	log.Notice("db has been init")
+	dbInstance_B.db = db
+	dbInstance_B.state = opened
+	log.Notice("db for Blockchain has been init")
+
+	db1, err1 := NewDatabase(leveldbPath2,dbType)
+
+	if err1 != nil {
+		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", dbType))
+		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", dbType))
+	}
+
+	dbInstance_C.db = db1
+	dbInstance_C.state = opened
+	log.Notice("db for Blockchain has been init")
+
 	return err
 }
 
 func GetDBDatabase() (Database, error) {
-	dbInstance.dbSync.Lock()
-	defer dbInstance.dbSync.Unlock()
-	if dbInstance.db == nil {
+	dbInstance_B.dbSync.Lock()
+	defer dbInstance_B.dbSync.Unlock()
+	if dbInstance_B.db == nil {
 		log.Notice("GetDBDatabase() fail beacause it has not been inited \n")
 		return nil, errors.New("GetDBDatabase() fail beacause it has not been inited \n")
 	}
-	return dbInstance.db, nil
+	return dbInstance_B.db, nil
 }
 
-func NewDatabase() (Database, error) {
+
+func GetDBDatabaseConsensus() (Database, error) {
+	dbInstance_C.dbSync.Lock()
+	defer dbInstance_C.dbSync.Unlock()
+	if dbInstance_C.db == nil {
+		log.Notice("GetDBDatabaseConsensus()  fail beacause it has not been inited \n")
+		return nil, errors.New("GetDBDatabaseConsensus()  fail beacause it has not been inited \n")
+	}
+	return dbInstance_C.db, nil
+}
+
+func NewDatabase( path string,dbType int) (Database, error) {
 
 	if dbType == 001 {
 		log.Notice("Use level db only")
-		return NewLDBDataBase(leveldbPath)
+		return NewLDBDataBase(path)
 	} else if dbType == 010 {
 		log.Notice("Use ssdb only")
 		return NewSSDatabase()
@@ -154,7 +186,7 @@ func NewDatabase() (Database, error) {
 		return NewRsDatabase()
 	} else if dbType == 1234{
 		log.Notice("Use SuperLevelDB")
-		return NewSLDB(leveldbPath)
+		return NewSLDB(path)
 	}else {
 		log.Notice("Wrong dbType:" + strconv.Itoa(dbType))
 		return nil, errors.New("Wrong dbType:" + strconv.Itoa(dbType))

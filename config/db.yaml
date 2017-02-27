@@ -56,8 +56,10 @@ dbConfig:
   #Max retry times for a timeout operation
     maxConnectTimes: 15
 
-
+#db for BlockChain
   leveldbPath: "./build/leveldb"
+#db for Consensus
+  leveldbPath2: "./build/leveldb_Consensus"
 
   logStatus: true
 
