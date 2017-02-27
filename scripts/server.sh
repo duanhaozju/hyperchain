@@ -146,7 +146,7 @@ fs_help(){
 # kill all the process
 fs_kill_process(){
     for server_address in ${SERVER_ADDR[@]}; do
-        ssh hyperchain@$server_address " ps aux | grep 'hyperchain -o' | awk '{print \$2}' | xargs kill -9"
+        ssh hyperchain@$server_address " ps ax | grep hyperchain | awk '{print \$1}' | xargs kill -9"
         #ssh -T hyperchain@$server_address "if [ x\"`ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'`\" != \"x\" ]; then echo \"kill process \" && ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'| xargs kill -9 ; else echo no hyperchain process runing ;fi"
         # ssh -T hyperchain@$server_address "ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'| xargs kill -9 >& /dev/null"
 
