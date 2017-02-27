@@ -58,6 +58,7 @@ func NewPeer(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.Transp
 	// dial to remote
 	conn, err := grpc.Dial(peerAddr.IP+":"+strconv.Itoa(peerAddr.Port), opts...)
 	if err != nil {
+		conn.Close()
 		log.Error("err:", errors.New("Cannot establish a connection!"))
 		return nil, err
 	}
@@ -86,6 +87,7 @@ func NewPeerPure(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport.Tr
 	// dial to remote
 	conn, err := grpc.Dial(peerAddr.IP+":"+strconv.Itoa(peerAddr.Port), opts...)
 	if err != nil {
+		conn.Close()
 		log.Error("err:", errors.New("Cannot establish a connection!"))
 		return nil, err
 	}
@@ -177,6 +179,7 @@ func NewPeerIntroducer(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transp
 	opts :=  peer.CM.GetGrpcClientOpts()
 	conn, err := grpc.Dial(peerAddr.IP+":"+strconv.Itoa(peerAddr.Port), opts...)
 	if err != nil {
+		conn.Close()
 		log.Error("err:", errors.New("Cannot establish a connection!"))
 		return nil,nil, err
 	}
@@ -221,6 +224,7 @@ func NewPeerAttendNotify(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM tran
 	opts := peer.CM.GetGrpcClientOpts()
 	conn, err := grpc.Dial(peerAddr.IP + ":" + strconv.Itoa(peerAddr.Port), opts...)
 	if err != nil {
+		conn.Close()
 		log.Error("err:", errors.New("Cannot establish a connection!"))
 		return nil, nil, err
 	}
@@ -247,6 +251,7 @@ func NewPeerAttendNotify(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM tran
 	log.Debugf("SEND ATTEND_NOTIFY TO %d",peer.PeerAddr.ID)
 
 	retMessage, err := peer.Client.Chat(context.Background(), &introduce_message)
+	log.Debugf("\n>>>>>>>>>>>>>>>>>>>>>>>>>>\nSEND MSG\nTYPE: %v %d => %d",introduce_message.MessageType,introduce_message.From.ID,peer.PeerAddr.ID)
 	log.Debug("attendNotify chat finished")
 	//log.Debug("reconnect return :", retMessage)
 	if err != nil {
@@ -286,7 +291,7 @@ func NewPeerReconnect(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transpo
 	SignCert(reverseMessage,peer.CM)
 
 	retMessage, err := peer.Client.Chat(context.Background(), reverseMessage)
-	log.Debug("reconnect return :", retMessage)
+	log.Debugf("\n>>>>>>>>>>>>>>>>>>>>>>>>>>\nSEND MSG\nTYPE: %v %d => %d",reverseMessage.MessageType,reverseMessage.From.ID,peer.PeerAddr.ID)
 	if err != nil {
 		log.Error("cannot establish a connection", err)
 		return nil, err
@@ -344,6 +349,7 @@ func NewPeerReverse(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport
 	opts :=  peer.CM.GetGrpcClientOpts()
 	conn, err := grpc.Dial(peerAddr.IP+":"+strconv.Itoa(peerAddr.Port), opts...)
 	if err != nil {
+		conn.Close()
 		log.Error("err:", errors.New("Cannot establish a connection!"))
 		return nil, err
 	}
@@ -362,7 +368,7 @@ func NewPeerReverse(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TEM transport
 	SignCert(reverseMessage,peer.CM)
 
 	retMessage, err := peer.Client.Chat(context.Background(), reverseMessage)
-	log.Debug("reconnect return :", retMessage)
+	log.Debugf("\n>>>>>>>>>>>>>>>>>>>>>>>>>>\nSEND MSG\nTYPE: %v %d => %d",reverseMessage.MessageType,reverseMessage.From.ID,peer.PeerAddr.ID)
 	if err != nil {
 		log.Error("cannot establish a connection", err)
 		return nil, err
@@ -446,6 +452,7 @@ func (this *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
 	}
 	response, err = this.Client.Chat(context.Background(), &msg)
 	if err != nil {
+
 		this.Status = 2
 		log.Error("response err:", err)
 		return nil, err
