@@ -313,7 +313,9 @@ func (this *GRPCPeerManager) reconnectToPeers(alive chan int) {
 	var connected Stack
 	var unconnected Stack
 	for i := 1; i <= MAX_PEER_NUM; i++ {
-		unconnected.Push(i)
+		if i!=this.LocalAddr.ID{
+			unconnected.Push(i)
+		}
 	}
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
@@ -322,9 +324,11 @@ func (this *GRPCPeerManager) reconnectToPeers(alive chan int) {
 		for range time.Tick(200*time.Millisecond){
 			_index := unconnected.Pop().(int)
 			peerAddress := pb.NewPeerAddr(this.configs.GetIP(_index), this.configs.GetPort(_index), this.configs.GetRPCPort(_index), this.configs.GetID(_index))
-			log.Debugf("peeraddress to connect %v", peerAddress)
+			//log.Debugf("peeraddress to connect %v", peerAddress)
 			if peer, connectErr := this.reconnectToPeer(peerAddress, this.configs.GetID(_index)); connectErr != nil {
 				// cannot connect to other peer
+
+				unconnected.Push(_index)
 				log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n", connectErr)
 			} else {
 				connected.Push(_index)
