@@ -37,7 +37,7 @@ func init() {
 
 func InitDB(dbConfig string, port int) {
 //func InitDB(conf *common.Config) {
-	hyperdb.InitDatabase(dbConfig, strconv.Itoa(port))
+	hyperdb.InitDatabase(dbConfig, strconv.Itoa(port),"Global")
 	memChainMap = newMemChain()
 	memChainStatusMap = newMemChainStatus()
 }
