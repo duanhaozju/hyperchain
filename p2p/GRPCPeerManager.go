@@ -441,6 +441,16 @@ func (this *GRPCPeerManager) reconnectToPeer(peerAddress *pb.PeerAddr, nid int) 
 
 }
 
+func (this *GRPCPeerManager) GetRouters() []byte{
+	routers := this.peersPool.ToRoutingTable()
+	payload, err := proto.Marshal(&routers)
+	if err != nil{
+		log.Error("marshal router info failed");
+	}
+	return payload
+
+}
+
 // GetAllPeers get all connected peer in the peer pool
 func (this *GRPCPeerManager) GetAllPeers() []*Peer {
 	return this.peersPool.GetPeers()

@@ -74,4 +74,5 @@ type InfoGetter interface {
 	// set
 	SetPrimary(id uint64) error
 	// use by new peer when join the chain dynamically only
+	GetRouters() []byte
 }
