@@ -175,6 +175,7 @@ func (pbft *pbftProtocal) restoreCert() {
 				cert.sentPrepare = true
 			}
 		}
+		cert.prepareCount = len(cert.prepare)
 	}
 
 	cset, _ := pbft.restoreCSet()
@@ -188,6 +189,7 @@ func (pbft *pbftProtocal) restoreCert() {
 				cert.sentCommit = true
 			}
 		}
+		cert.commitCount = len(cert.commit)
 	}
 }
 
