@@ -1309,9 +1309,7 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	cert.sentValidate = true
 	cert.validated = true
 	delete(pbft.cacheValidatedBatch, digest)
-	start := time.Now()
 	pbft.persistQSet(preprep)
-	logger.Critical("persistQSet elapse: ", time.Since(start))
 	payload, err := proto.Marshal(preprep)
 	if err != nil {
 		logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
