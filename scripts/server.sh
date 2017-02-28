@@ -264,7 +264,7 @@ fs__generate_node_peer_configs(){
         mkdir $PEER_CONFIGS_DIR
     fi
 	for (( id = 1; id <= $MAXNODE; id++)); do
-        confer hpc serverlist.txt innerserverlist.txt $PEER_CONFIGS_DIR/peerconfig_$id.json $id -e
+        confer hpc serverlist.txt innerserverlist.txt $PEER_CONFIGS_DIR/peerconfig_$id.json $id
     done
 }
 
