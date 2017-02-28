@@ -255,6 +255,16 @@ func (pbft *pbftProtocal) persistNewNode(new uint64) {
 	persist.StoreState(key, res)
 }
 
+func (pbft *pbftProtocal) persistLocalKey(hash []byte) {
+	key := fmt.Sprint("localkey")
+	persist.StoreState(key, hash)
+}
+
+func (pbft *pbftProtocal) persistDellLocalKey() {
+	key := fmt.Sprint("localkey")
+	persist.DelState(key)
+}
+
 func (pbft *pbftProtocal) restoreState() {
 
 	pbft.restoreCert()
@@ -303,6 +313,11 @@ func (pbft *pbftProtocal) restoreState() {
 		if newNode == 1 {
 			pbft.isNewNode = true
 		}
+	}
+
+	localKey, err := persist.ReadState("localkey")
+	if err != nil {
+		pbft.localKey = string(localKey)
 	}
 
 	pbft.restoreLastSeqNo() // assign value to lastExec
