@@ -37,13 +37,13 @@ f_check_local_env(){
         echo -e "Please install the go env correctly!"
         exit 1
     fi
-
+    
     if ! type govendor > /dev/null; then
         # install foobar here
         echo -e "Please install the `govendor`, just type:\ngo get -u github.com/kardianos/govendor"
         exit 1
     fi
-
+    
     if ! type jq > /dev/null; then
         echo -e "Please install the `jq` to parse the json file \n just type: \n sudo apt-get install jq / sudo yum -y install jq / brew install jq "
         exit 1
@@ -146,7 +146,7 @@ f_run_process(){
     do
         case "$_SYSTYPE" in
           MAC*)
-             f_x_in_mac_cmd $j
+             f_x_in_mac_cmd $j 
           ;;
           LINUX*)
              f_x_in_linux_cmd $j
@@ -194,7 +194,7 @@ GLOBAL_CONFIG="${CONF_PATH}/global.yaml"
 # peerconfig 配置文件路径
 PEER_CONFIG_FILE_NAME=`confer read ${GLOBAL_CONFIG} global.configs.peers |sed 's/"//g'`
 
-PEER_CONFIG_FILE=${PROJECT_PATH}/${PEER_CONFIG_FILE_NAME}
+PEER_CONFIG_FILE=${PROJECT_PATH}/${PEER_CONFIG_FILE_NAME} 
 
 # 节点数目
 MAXPEERNUM=`cat ${PEER_CONFIG_FILE} | jq ".maxpeernode"`
@@ -232,6 +232,16 @@ fi
 f_distribute $MAXPEERNUM
 
 # 运行hyperchain 进程
+f_run_process
+
+# TEST MODE
+# sleep 20s
+f_sleep 15
+
+# kill all process
+f_kill_process
+
+# restart all node
 f_run_process
 
 

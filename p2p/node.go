@@ -123,11 +123,11 @@ func (node *Node) GetNodeID() int {
 // Chat Implements the ServerSide Function
 func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error) {
 	if msg.MessageType != pb.Message_CONSUS {
-		log.Debugf("\n###########################\nSTART OF NEW MESSAGE")
-		log.Debugf("LOCAL=> ID:%d IP:%s PORT:%d", node.localAddr.ID, node.localAddr.IP, node.localAddr.Port)
-		log.Debugf("MSG FORM=> ID: %d IP: %s PORT: %d", msg.From.ID, msg.From.IP, msg.From.Port)
-		log.Debugf("MSG TYPE: %v, from: %d", msg.MessageType, msg.From.ID)
-		defer log.Debugf("END OF NEW MESSAGE\n###########################\n")
+		log.Debugf("\n--------------------------\nSTART OF NEW MESSAGE")
+		//log.Debugf("LOCAL=> ID:%d IP:%s PORT:%d", node.localAddr.ID, node.localAddr.IP, node.localAddr.Port)
+		//log.Debugf("MSG FORM=> ID: %d IP: %s PORT: %d", msg.From.ID, msg.From.IP, msg.From.Port)
+		log.Debugf("MSG TYPE: %v, %d => %d,", msg.MessageType,msg.From.ID,node.localAddr.ID)
+		defer log.Debugf("END OF NEW MESSAGE\n----------------------------\n")
 	}
 	response := new(pb.Message)
 	response.MessageType = pb.Message_RESPONSE
@@ -206,11 +206,9 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
 			ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
 			signpubbyte := ecdh256.Marshal(*signpub)
-			if node.TEM.GetSecret(msg.From.Hash) == ""{
-				genErr := node.TEM.GenerateSecret(signpubbyte, msg.From.Hash)
-				if genErr != nil {
-					log.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID,genErr)
-				}
+			genErr := node.TEM.GenerateSecret(signpubbyte, msg.From.Hash)
+			if genErr != nil {
+				log.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID,genErr)
 			}
 
 			//every times get the public key is same
@@ -231,7 +229,6 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 				log.Error("Verify the cert signature failed!",err)
 				return response, errors.New("Verify the cert signature failed!")
 			}
-			log.Debug("CERT SIGNATURE VERIFY PASS")
 			// TODO 这里不需要parse,修改VErycERTSignature方法
 			ecert, err := primitives.ParseCertificate(string(ecertByte))
 			if err != nil {
@@ -244,7 +241,6 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 				log.Error(ecertErr)
 				return response, ecertErr
 			}
-			log.Debug("ECERT VERIFY PASS")
 
 			response.MessageType = pb.Message_HELLOREVERSE_RESPONSE
 			//review 协商密钥
@@ -275,8 +271,6 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 				log.Error("Verify the cert signature failed!",err)
 				return response, errors.New("Verify the cert signature failed!")
 			}
-			log.Debug("CERT SIGNATURE VERIFY PASS")
-			// TODO 这里不需要parse,修改VErycERTSignature方法
 			ecert, err := primitives.ParseCertificate(string(ecertByte))
 			if err != nil {
 				log.Error("cannot parse certificate", bol)
@@ -288,7 +282,6 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 				log.Error(ecertErr)
 				return response, ecertErr
 			}
-			log.Debug("ECERT VERIFY PASS")
 
 			response.MessageType = pb.Message_RECONNECT_RESPONSE
 			//review 协商密钥
