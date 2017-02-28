@@ -372,14 +372,8 @@ if $FIRST; then
     fs_add_ssh_key_form_primary_to_others
     exit 0
 fi
-
-for (( id = 1; id <= $MAXNODE; id++)); do
-        confer hpc serverlist.txt innerserverlist.txt $PEER_CONFIGS_DIR/peerconfig_$id.json $id
-    done
-    exit
 # kill all processes
 fs_kill_process
-
 
 if $DELETEDATA; then
     fs_delete_data
