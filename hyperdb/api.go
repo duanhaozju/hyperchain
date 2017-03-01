@@ -45,7 +45,6 @@ type stateDb int32
 type DBInstance struct {
 	db     Database
 	state  stateDb
-	dbSync sync.Mutex
 }
 
 const (
@@ -53,18 +52,33 @@ const (
 	opened
 )
 
+const (
+	DefautNameSpace="Global"
+	Blockchain="Blockchain"
+	Consensus="Consensus"
+)
+
+
 var log *logging.Logger // package-level logger
 //dbInstance include the instance of Database interface
 
 
-var dbMap map[string] *DBInstance
+
+type DbMap struct{
+	dbMap map[string] *DBInstance
+	dbSync  sync.Mutex
+}
+
+var  dbMap *DbMap
 
 func init() {
 	log = logging.MustGetLogger("hyperdb")
-	dbMap=make(map[string] *DBInstance)
+	dbMap=&DbMap{
+		dbMap:make(map[string] *DBInstance),
+	}
 }
 
-func setDBConfig(dbConfig string, port string) {
+func SetDBConfig(dbConfig string, port string) {
 
 	config := viper.New()
 	viper.SetEnvPrefix("DBCONFIG_ENV")
@@ -106,11 +120,11 @@ func GetLogPath() string {
 	return logPath
 }
 
-func InitDatabase(dbConfig string, port string,nameSpace string) error {
+func InitDatabase(nameSpace string) error {
 
-	setDBConfig(dbConfig, port)
-
-	_,ok:=dbMap[nameSpace+"Blockchain"]
+	dbMap.dbSync.Lock()
+	defer dbMap.dbSync.Unlock()
+	_,ok:=dbMap.dbMap[nameSpace+Blockchain]
 
 	if ok{
 		log.Notice("Try to init inited db "+nameSpace)
@@ -124,19 +138,22 @@ func InitDatabase(dbConfig string, port string,nameSpace string) error {
 		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
 		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
 	}
-	dbMap[nameSpace+"Blockchain"]=&DBInstance{
-		state: opened,
-		db:db,
-	}
+
 
 	db1, err1 := NewDatabase(filepath.Join(leveldbPath,nameSpace,"Consensus" ),dbType)
 
 	if err1 != nil {
+
 		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
 		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
 	}
 
-	dbMap[nameSpace+"Consensus"]=&DBInstance{
+	dbMap.dbMap[nameSpace+Blockchain]=&DBInstance{
+		state: opened,
+		db:db,
+	}
+
+	dbMap.dbMap[nameSpace+Consensus]=&DBInstance{
 		state: opened,
 		db:db1,
 	}
@@ -145,39 +162,41 @@ func InitDatabase(dbConfig string, port string,nameSpace string) error {
 }
 
 func GetDBDatabase() (Database, error) {
-	dbMap["GlobalBlockchain"].dbSync.Lock()
-	defer dbMap["GlobalBlockchain"].dbSync.Unlock()
-	if dbMap["GlobalBlockchain"].db == nil {
+	dbMap.dbSync.Lock()
+	defer dbMap.dbSync.Unlock()
+	if dbMap.dbMap[DefautNameSpace+Blockchain].db == nil {
 		log.Notice("GetDBDatabase() fail beacause dbMap[GlobalBlockchain] has not been inited \n")
 		return nil, errors.New("GetDBDatabase() fail beacause dbMap[GlobalBlockchain] has not been inited \n")
 	}
-	return dbMap["GlobalBlockchain"].db, nil
+	return dbMap.dbMap[DefautNameSpace+Blockchain].db, nil
 }
 
 func GetDBDatabaseByNamespcae(namespace string)(Database, error){
-	if _,ok:=dbMap[namespace];!ok{
+	dbMap.dbSync.Lock()
+	defer dbMap.dbSync.Unlock()
+
+	if _,ok:=dbMap.dbMap[namespace];!ok{
 		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
 		return nil, errors.New(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
 	}
-	dbMap[namespace].dbSync.Lock()
-	defer dbMap[namespace].dbSync.Unlock()
-	if dbMap[namespace].db == nil {
+
+	if dbMap.dbMap[namespace].db == nil {
 		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
 		return nil, errors.New(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
 	}
-	return dbMap[namespace].db, nil
+	return dbMap.dbMap[namespace].db, nil
 }
 
 
 
 func GetDBDatabaseConsensus() (Database, error) {
-	dbMap["GlobalConsensus"].dbSync.Lock()
-	defer dbMap["GlobalConsensus"].dbSync.Unlock()
-	if dbMap["GlobalConsensus"].db == nil {
+	dbMap.dbSync.Lock()
+	defer dbMap.dbSync.Unlock()
+	if dbMap.dbMap[DefautNameSpace+Consensus].db == nil {
 		log.Notice("GetDBDatabaseConsensus()  fail beacause dbMap[GlobalConsensus] has not been inited \n")
 		return nil, errors.New("GetDBDatabaseConsensus()  fail beacause dbMap[GlobalConsensus] has not been inited \n")
 	}
-	return dbMap["GlobalConsensus"].db, nil
+	return dbMap.dbMap[DefautNameSpace+Consensus].db, nil
 }
 
 func NewDatabase( path string,dbType int) (Database, error) {

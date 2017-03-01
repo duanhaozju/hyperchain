@@ -10,6 +10,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"time"
 	"fmt"
+	"path/filepath"
 )
 
 type SuperLevelDB struct {
@@ -20,11 +21,11 @@ type SuperLevelDB struct {
 }
 
 //New new super LevelDB
-func NewSLDB(filepath string) (*SuperLevelDB, error) {
-	db, err := leveldb.OpenFile(filepath, nil)
-	index := NewKeyIndex("defaultNS", db)
+func NewSLDB(filepath1 string) (*SuperLevelDB, error) {
+	db, err := leveldb.OpenFile(filepath1, nil)
+	index := NewKeyIndex("defaultNS", db,filepath.Join(filepath1,"index","index.bloom.dat"))
 	sldb := &SuperLevelDB{
-		path: filepath,
+		path: filepath1,
 		db:   db,
 		index:   index,
 		closed: make(chan bool),
