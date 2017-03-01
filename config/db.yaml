@@ -11,7 +11,8 @@ dbConfig:
 ########################
 # For example 110 means use Redis and SSDB
 #
-  dbType: 001
+# 1234 means use leveldb with Bloom Filter
+  dbType: 1234
 
 
 #ssdb config
@@ -55,7 +56,7 @@ dbConfig:
   #Max retry times for a timeout operation
     maxConnectTimes: 15
 
-
+#db path of hyperchain. it's the parent dir of namespace dir
   leveldbPath: "./build/leveldb"
 
   logStatus: true

@@ -10,8 +10,22 @@ import (
 	"math/big"
 	"time"
 	"hyperchain/common"
+	"os/exec"
 )
 
+const HyperchainVersion ="Hyperchain Version:\nRelease1.2\n"
+
+func GetOperationSystem()(string,error){
+	f, err := exec.Command("lsb_release", "-a").Output()
+	if err != nil {
+		return "",err
+	}
+	return string(f),nil
+}
+
+func GetHyperchainVersion()string{
+	return HyperchainVersion
+}
 type configs interface {
 	initConfig(NodeID int, GRPCPort int, HTTPPort int)
 	getNodeID() int
@@ -87,7 +101,7 @@ func newconfigsImpl(conf *common.Config) *configsImpl {
 	config := viper.New()
 	//viper.SetEnvPrefix("GLOBAL_ENV")
 	peerConfigPath := conf.GetString(common.C_GLOBAL_CONFIG_PATH)
-	fmt.Println(peerConfigPath)
+	//fmt.Println(peerConfigPath)
 	config.SetConfigFile(peerConfigPath)
 	err := config.ReadInConfig()
 	if err != nil {

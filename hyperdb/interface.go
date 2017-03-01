@@ -15,6 +15,7 @@ type Batch interface {
 	Put(key, value []byte) error
 	Delete(key []byte) error
 	Write() error
+	Len() int
 }
 
 type Iterator interface {

@@ -58,16 +58,18 @@ type KeyIndex struct {
 	lastStartKeyPrefix []byte
 	currStartKeyPrefix []byte
 	keyBatch           *leveldb.Batch
+	bloomPath          string
 }
 
 //NewKeyIndex new KeyIndex instance
-func NewKeyIndex(ns string, db *leveldb.DB) *KeyIndex {
+func NewKeyIndex(ns string, db *leveldb.DB,path string) *KeyIndex {
 	filter := bloom.New(1 * 10000 * 10000, 3) //todo: fix it
 	index := &KeyIndex{
 		namespace:ns,
 		bf:filter,
 		db:db,
 		keyPrefix:[]byte(ns + "_bloom_key."),
+		bloomPath:path,
 	}
 	index.keyBatch = new(leveldb.Batch)
 	index.Init()
@@ -131,10 +133,10 @@ func (ki *KeyIndex) Init() error  {
 //Rebuild rebuild the index
 func (ki *KeyIndex) Rebuild() error {
 	//1.load bloom from local file
-	log.Noticef("load bloom from local file, file name: %s", bloomPath)
-	bfile, err := os.Open(bloomPath)
+	log.Noticef("load bloom from local file, file name: %s", ki.bloomPath)
+	bfile, err := os.Open( ki.bloomPath)
 	if err != nil {
-		log.Warningf("load bloom filter with file %s error %v ", bloomPath, err)
+		log.Warningf("load bloom filter with file %s error %v ",  ki.bloomPath, err)
 		err = nil
 		//return err
 	}else {
@@ -143,7 +145,7 @@ func (ki *KeyIndex) Rebuild() error {
 			log.Errorf("read data from bloom file error %v", err)
 			return err
 		}
-		log.Noticef("read %d bytes data from bloom file %s", size, bloomPath)
+		log.Noticef("read %d bytes data from bloom file %s", size,  ki.bloomPath)
 	}
 
 	//2.add the recent un_persist keys into the bloom
@@ -198,7 +200,7 @@ func (ki *KeyIndex) dropPreviousKey() error  {
 //1.persist current bloom into a tmp file
 //2.rename tmp file
 func (ki *KeyIndex) persistBloom () error {
-	tmpName := bloomPath+".tmp." + strconv.FormatInt(time.Now().UnixNano(), 10)
+	tmpName :=  ki.bloomPath+".tmp." + strconv.FormatInt(time.Now().UnixNano(), 10)
 	inputFile, err := os.Open(tmpName)
 	if err == nil {
 		size, err := ki.bf.WriteTo(inputFile)
@@ -215,7 +217,7 @@ func (ki *KeyIndex) persistBloom () error {
 			size, err := ki.bf.WriteTo(inputFile)
 			log.Debugf("persist bloom filter for namespace: %s size: %d", ki.Namespace(), size)
 			if err == nil {
-				err = os.Rename(tmpName, bloomPath)
+				err = os.Rename(tmpName,  ki.bloomPath)
 			}
 			return err
 		}

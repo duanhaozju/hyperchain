@@ -15,7 +15,7 @@ import (
 
 // StoreState stores a key,value pair
 func StoreState(key string, value []byte) error {
-	db, err := hyperdb.GetDBDatabase()
+	db, err := hyperdb.GetDBDatabaseConsensus()
 	if err != nil {
 		return err
 	}
@@ -33,7 +33,7 @@ func StoreState(key string, value []byte) error {
 
 // DelState removes a key,value pair
 func DelState(key string) error {
-	db, err := hyperdb.GetDBDatabase()
+	db, err := hyperdb.GetDBDatabaseConsensus()
 	if err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func DelState(key string) error {
 
 // ReadState retrieves a value to a key
 func ReadState(key string) ([]byte, error) {
-	db, err := hyperdb.GetDBDatabase()
+	db, err := hyperdb.GetDBDatabaseConsensus()
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func ReadState(key string) ([]byte, error) {
 
 // ReadStateSet retrieves all key-value pairs where the key starts with prefix
 func ReadStateSet(prefix string) (map[string][]byte, error) {
-	db, err := hyperdb.GetDBDatabase()
+	db, err := hyperdb.GetDBDatabaseConsensus()
 	if err != nil {
 		return nil, err
 	}

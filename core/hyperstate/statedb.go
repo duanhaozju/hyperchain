@@ -793,8 +793,9 @@ func (s *StateDB) CommitBatch(deleteEmptyObjects bool) (root common.Hash, batch 
 	return root, batch
 }
 
-func (s *StateDB) clearJournalAndRefund(batch hyperdb.Batch) {
+func (s *StateDB) clearJournalAndRefund() {
 	// 1. persist current journal to disk
+	batch := s.db.NewBatch()
 	curSeqNo := atomic.LoadUint64(&s.curSeqNo)
 	if len(s.journal.JournalList) != 0 {
 		if curSeqNo == 0 {
@@ -811,10 +812,11 @@ func (s *StateDB) clearJournalAndRefund(batch hyperdb.Batch) {
 	s.validRevisions = s.validRevisions[:0]
 	// 3. clear refund
 	s.refund = new(big.Int)
+	go batch.Write()
 }
 
 func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root common.Hash, err error) {
-	defer s.clearJournalAndRefund(dbw)
+	defer s.clearJournalAndRefund()
 	var set ChangeSet
 	workingSet := bucket.NewKVMap()
 	// Commit objects to the trie.

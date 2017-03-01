@@ -23,24 +23,24 @@ const (
 
 var (
 	DefaultBlockCacher                   = LRUCacher
-	DefaultBlockCacheCapacity            = 8 * MiB
+	DefaultBlockCacheCapacity            = 64 * MiB
 	DefaultBlockRestartInterval          = 16
 	DefaultBlockSize                     = 4 * KiB
 	DefaultCompactionExpandLimitFactor   = 25
 	DefaultCompactionGPOverlapsFactor    = 10
 	DefaultCompactionL0Trigger           = 4
 	DefaultCompactionSourceLimitFactor   = 1
-	DefaultCompactionTableSize           = 2 * MiB
+	DefaultCompactionTableSize           = 8 * MiB
 	DefaultCompactionTableSizeMultiplier = 1.0
-	DefaultCompactionTotalSize           = 10 * MiB
+	DefaultCompactionTotalSize           = 64 * MiB
 	DefaultCompactionTotalSizeMultiplier = 10.0
 	DefaultCompressionType               = SnappyCompression
 	DefaultIteratorSamplingRate          = 1 * MiB
 	DefaultOpenFilesCacher               = LRUCacher
-	DefaultOpenFilesCacheCapacity        = 500
-	DefaultWriteBuffer                   = 4 * MiB
-	DefaultWriteL0PauseTrigger           = 12
-	DefaultWriteL0SlowdownTrigger        = 8
+	DefaultOpenFilesCacheCapacity        = 3000
+	DefaultWriteBuffer                   = 24 * MiB
+	DefaultWriteL0PauseTrigger           = 72
+	DefaultWriteL0SlowdownTrigger        = 48
 )
 
 // Cacher is a caching algorithm.

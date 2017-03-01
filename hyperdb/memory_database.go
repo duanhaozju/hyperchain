@@ -112,3 +112,6 @@ func (b *memBatch) Write() error {
 	}
 	return nil
 }
+func (b *memBatch) Len() int {
+	return 0
+}

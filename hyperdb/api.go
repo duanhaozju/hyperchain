@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/viper"
 	"strconv"
 	"sync"
+	"path/filepath"
 )
 
 var (
@@ -44,7 +45,6 @@ type stateDb int32
 type DBInstance struct {
 	db     Database
 	state  stateDb
-	dbSync sync.Mutex
 }
 
 const (
@@ -52,17 +52,33 @@ const (
 	opened
 )
 
+const (
+	DefautNameSpace="Global"
+	Blockchain="Blockchain"
+	Consensus="Consensus"
+)
+
+
 var log *logging.Logger // package-level logger
 //dbInstance include the instance of Database interface
-var dbInstance = &DBInstance{
-	state: closed,
+
+
+
+type DbMap struct{
+	dbMap map[string] *DBInstance
+	dbSync  sync.Mutex
 }
+
+var  dbMap *DbMap
 
 func init() {
 	log = logging.MustGetLogger("hyperdb")
+	dbMap=&DbMap{
+		dbMap:make(map[string] *DBInstance),
+	}
 }
 
-func setDBConfig(dbConfig string, port string) {
+func SetDBConfig(dbConfig string, port string) {
 
 	config := viper.New()
 	viper.SetEnvPrefix("DBCONFIG_ENV")
@@ -92,7 +108,7 @@ func setDBConfig(dbConfig string, port string) {
 
 	leveldbPath = config.GetString("dbConfig.leveldbPath")
 	grpcPort, _ = strconv.Atoi(port)
-	leveldbPath += port
+	//leveldbPath += port
 
 }
 
@@ -104,47 +120,90 @@ func GetLogPath() string {
 	return logPath
 }
 
-func InitDatabase(dbConfig string, port string) error {
+func InitDatabase(nameSpace string) error {
 
-	setDBConfig(dbConfig, port)
+	dbMap.dbSync.Lock()
+	defer dbMap.dbSync.Unlock()
+	_,ok:=dbMap.dbMap[nameSpace+Blockchain]
 
-	dbInstance.dbSync.Lock()
-	defer dbInstance.dbSync.Unlock()
-
-	if dbInstance.state != closed {
-		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it has beend inited \n", dbType))
-		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it has beend inited \n", dbType))
-	}
-	db, err := NewDatabase()
-
-	if err != nil {
-		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", dbType))
-		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", dbType))
+	if ok{
+		log.Notice("Try to init inited db "+nameSpace)
+		return errors.New("Try to init inited db "+nameSpace)
 	}
 
-	dbInstance.db = db
-	dbInstance.state = opened
-	log.Notice("db has been init")
+	db, err := NewDatabase(filepath.Join(leveldbPath,nameSpace,"Blockchain"),dbType)
+
+
+	if err!=nil{
+		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
+		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
+	}
+
+
+	db1, err1 := NewDatabase(filepath.Join(leveldbPath,nameSpace,"Consensus" ),dbType)
+
+	if err1 != nil {
+
+		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
+		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
+	}
+
+	dbMap.dbMap[nameSpace+Blockchain]=&DBInstance{
+		state: opened,
+		db:db,
+	}
+
+	dbMap.dbMap[nameSpace+Consensus]=&DBInstance{
+		state: opened,
+		db:db1,
+	}
+
 	return err
 }
 
 func GetDBDatabase() (Database, error) {
-	dbInstance.dbSync.Lock()
-	defer dbInstance.dbSync.Unlock()
-	if dbInstance.db == nil {
-		log.Notice("GetDBDatabase() fail beacause it has not been inited \n")
-		return nil, errors.New("GetDBDatabase() fail beacause it has not been inited \n")
+	dbMap.dbSync.Lock()
+	defer dbMap.dbSync.Unlock()
+	if dbMap.dbMap[DefautNameSpace+Blockchain].db == nil {
+		log.Notice("GetDBDatabase() fail beacause dbMap[GlobalBlockchain] has not been inited \n")
+		return nil, errors.New("GetDBDatabase() fail beacause dbMap[GlobalBlockchain] has not been inited \n")
 	}
-	return dbInstance.db, nil
+	return dbMap.dbMap[DefautNameSpace+Blockchain].db, nil
 }
 
-func NewDatabase() (Database, error) {
+func GetDBDatabaseByNamespcae(namespace string)(Database, error){
+	dbMap.dbSync.Lock()
+	defer dbMap.dbSync.Unlock()
+
+	if _,ok:=dbMap.dbMap[namespace];!ok{
+		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
+	}
+
+	if dbMap.dbMap[namespace].db == nil {
+		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
+	}
+	return dbMap.dbMap[namespace].db, nil
+}
+
+
+
+func GetDBDatabaseConsensus() (Database, error) {
+	dbMap.dbSync.Lock()
+	defer dbMap.dbSync.Unlock()
+	if dbMap.dbMap[DefautNameSpace+Consensus].db == nil {
+		log.Notice("GetDBDatabaseConsensus()  fail beacause dbMap[GlobalConsensus] has not been inited \n")
+		return nil, errors.New("GetDBDatabaseConsensus()  fail beacause dbMap[GlobalConsensus] has not been inited \n")
+	}
+	return dbMap.dbMap[DefautNameSpace+Consensus].db, nil
+}
+
+func NewDatabase( path string,dbType int) (Database, error) {
 
 	if dbType == 001 {
-		//log.Notice("Use level db only")
-		//return NewLDBDataBase(leveldbPath)
-		log.Notice("Use SuperLevelDB")
-		return NewSLDB(leveldbPath)
+		log.Notice("Use level db only")
+		return NewLDBDataBase(path)
 	} else if dbType == 010 {
 		log.Notice("Use ssdb only")
 		return NewSSDatabase()
@@ -154,7 +213,10 @@ func NewDatabase() (Database, error) {
 	} else if dbType == 100 {
 		log.Notice("Use redis only")
 		return NewRsDatabase()
-	} else {
+	} else if dbType == 1234{
+		log.Notice("Use SuperLevelDB")
+		return NewSLDB(path)
+	}else {
 		log.Notice("Wrong dbType:" + strconv.Itoa(dbType))
 		return nil, errors.New("Wrong dbType:" + strconv.Itoa(dbType))
 	}

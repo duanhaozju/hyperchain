@@ -20,7 +20,7 @@ import (
 func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	pool.NotifyValidateToStop()
 	pool.WaitResetAvailable()
-	log.Noticef("receive vc reset event, required revert to %d", ev.SeqNo-1)
+	log.Debugf("receive vc reset event, required revert to %d", ev.SeqNo-1)
 	tmpDemandNumber := atomic.LoadUint64(&pool.demandNumber)
 	// 1. Reset demandNumber , demandSeqNo and maxSeqNo
 	atomic.StoreUint64(&pool.demandNumber, ev.SeqNo)
@@ -60,7 +60,7 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	// any error occur during this process
 	// batch.Write will never be called to guarantee atomic
 	batch.Write()
-	log.Noticef("revert state from %d to target %d success", tmpDemandNumber-1, ev.SeqNo-1)
+	log.Debugf("revert state from %d to target %d success", tmpDemandNumber-1, ev.SeqNo-1)
 	// 6. Told consensus reset finish
 	msg := protos.VcResetDone{SeqNo: ev.SeqNo}
 	pool.consenter.RecvLocal(msg)
@@ -241,7 +241,7 @@ func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, tar
 		// revert state instance oldest and root
 		state.ResetToTarget(uint64(targetNumber+1), common.BytesToHash(targetRootHash))
 		pool.lastValidationState.Store(common.BytesToHash(targetRootHash))
-		log.Noticef("revert state from #%d to #%d success", currentNumber, targetNumber)
+		log.Debugf("revert state from #%d to #%d success", currentNumber, targetNumber)
 	case "rawstate":
 		// there is no need to revert state, because PMT can assure the correction
 		pool.lastValidationState.Store(common.BytesToHash(targetRootHash))

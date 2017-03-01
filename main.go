@@ -23,7 +23,13 @@ import (
 	"strings"
 	"time"
 	"github.com/terasum/viper"
+	"fmt"
 )
+
+
+
+
+
 
 type argT struct {
 	cli.Helper
@@ -54,6 +60,10 @@ func checkLicense(licensePath string) (err error, expiredTime time.Time) {
 	pattern, _ := regexp.Compile("Identification: (.*)")
 	identification := pattern.FindString(string(license))[16:]
 
+	str1:=GetHyperchainVersion()
+	str2,_:=GetOperationSystem()
+	fmt.Println(str1)
+	fmt.Println(str2)
 	ctx, err := transport.TripleDesDecrypt(common.Hex2Bytes(identification), []byte(privateKey))
 	if err != nil {
 		err = errors.New("Invalid License")

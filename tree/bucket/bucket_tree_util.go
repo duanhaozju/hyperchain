@@ -5,15 +5,27 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	"crypto/sha1"
 	"hyperchain/crypto"
 )
 
 var stateKeyDelimiter = []byte{0x00}
 
 // ComputeCryptoHash should be used in openchain code so that we can change the actual algo used for crypto-hash at one place
+func ComputeCryptoHashWithTrim(data []byte) []byte {
+	if data == nil || len(data) == 0 {
+		return nil
+	}
+	h := sha1.New()
+	h.Write([]byte(data))
+	bs := h.Sum(nil)[:5]
+	return bs
+}
+// ComputeCryptoHash should be used in openchain code so that we can change the actual algo used for crypto-hash at one place
 func ComputeCryptoHash(data []byte) []byte {
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
-	return kec256Hash.Hash(data).Bytes()
+	hash := kec256Hash.Hash(data)
+	return hash.Bytes()
 }
 
 // EncodeOrderPreservingVarUint64 returns a byte-representation for a uint64 number such that
