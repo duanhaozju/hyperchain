@@ -27,6 +27,7 @@ var (
 	BlockNumPrefix           = []byte("blockNum-")
 	TxMetaSuffix             = []byte{0x01}
 	log                      *logging.Logger // package-level logger
+	RequireKey               = []byte("require-")
 )
 
 // using to count the number of rollback transactions
@@ -44,7 +45,6 @@ func InitDB(conf *common.Config, dbConfig string, port int) {
 	hyperdb.SetDBConfig(dbConfig, strconv.Itoa(port))
 	hyperdb.InitDatabase(conf, "Global")
 	memChainMap = newMemChain()
-	memChainStatusMap = newMemChainStatus()
 }
 
 /*
@@ -369,6 +369,7 @@ func PersistInvalidTransactionRecord(batch db.Batch, invalidTx *types.InvalidTra
 
 func blockTime(block *types.Block) {
 	time1 := block.WriteTime - block.Timestamp
+
 	f, err1 := os.OpenFile(hyperdb.GetLogPath(), os.O_WRONLY|os.O_CREATE, 0644)
 	if err1 != nil {
 		fmt.Println("db.log file create failed. err: " + err1.Error())
@@ -510,11 +511,6 @@ type memChain struct {
 	cpChan chan types.Chain // when data.Height reach check point, will be writed
 }
 
-type memChainStatus struct {
-	data types.ChainStatus
-	lock sync.RWMutex
-}
-
 // newMenChain new a memChain instance
 // it read from db firstly, if not exist, create a empty chain
 func newMemChain() *memChain {
@@ -541,14 +537,8 @@ func newMemChain() *memChain {
 		cpChan: make(chan types.Chain),
 	}
 }
-func newMemChainStatus() *memChainStatus {
-	return &memChainStatus{
-		data: types.ChainStatus{},
-	}
-}
 
 var memChainMap *memChain
-var memChainStatusMap *memChainStatus
 
 // GetLatestBlockHash get latest blockHash
 func GetLatestBlockHash() []byte {
@@ -618,9 +608,6 @@ func GetChainCopy() *types.Chain {
 		LatestBlockHash:  memChainMap.data.LatestBlockHash,
 		ParentBlockHash:  memChainMap.data.ParentBlockHash,
 		Height:           memChainMap.data.Height,
-		RequiredBlockNum: memChainMap.data.RequiredBlockNum,
-		RequireBlockHash: memChainMap.data.RequireBlockHash,
-		RecoveryNum:      memChainMap.data.RecoveryNum,
 		CurrentTxSum:     memChainMap.data.CurrentTxSum,
 	}
 }
@@ -669,44 +656,6 @@ func IsGenesisFinish() bool {
 	} else {
 		return true
 	}
-}
-
-// UpdateRequire updates requireBlockNum and requireBlockHash
-func UpdateRequire(num uint64, hash []byte, recoveryNum uint64) error {
-	memChainMap.lock.Lock()
-	defer memChainMap.lock.Unlock()
-	memChainMap.data.RequiredBlockNum = num
-	memChainMap.data.RecoveryNum = recoveryNum
-	memChainMap.data.RequireBlockHash = hash
-	db, err := hyperdb.GetDBDatabase()
-	if err != nil {
-		return err
-	}
-	return putChain(db.NewBatch(), &memChainMap.data, true, true)
-}
-
-func SetReplicas(replicas []uint64) {
-	memChainStatusMap.lock.Lock()
-	defer memChainStatusMap.lock.Unlock()
-	memChainStatusMap.data.Replicas = replicas
-}
-
-func GetReplicas() []uint64 {
-	memChainStatusMap.lock.Lock()
-	defer memChainStatusMap.lock.Unlock()
-	return memChainStatusMap.data.Replicas
-}
-
-func SetId(id uint64) {
-	memChainStatusMap.lock.Lock()
-	defer memChainStatusMap.lock.Unlock()
-	memChainStatusMap.data.Id = id
-}
-
-func GetId() uint64 {
-	memChainStatusMap.lock.Lock()
-	defer memChainStatusMap.lock.Unlock()
-	return memChainStatusMap.data.Id
 }
 
 // Deprecated

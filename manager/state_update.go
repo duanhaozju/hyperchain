@@ -14,6 +14,14 @@ import (
 	"time"
 )
 
+type State struct {
+	 RequiredBlockNum uint64
+	 RequireBlockHash []byte
+	 RecoveryNum      uint64
+	 Replicas   []uint64
+	 Id       uint64
+}
+
 // SendSyncRequest - send synchronization request to other nodes.
 func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 	err, stateUpdateMsg, target := self.unmarshalStateUpdateMessage(ev)
@@ -22,7 +30,7 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 		return
 	}
 	log.Noticef("send sync block request to fetch missing block, current height %d, target height %d", core.GetChainCopy().Height, target.Height)
-	if core.GetChainCopy().RecoveryNum >= target.Height || core.GetChainCopy().Height > target.Height {
+	if self.state.RecoveryNum >= target.Height || core.GetChainCopy().Height > target.Height {
 		log.Criticalf("receive invalid state update request, just ignore it")
 		return
 	}
@@ -47,11 +55,11 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 		PeerId:         stateUpdateMsg.Id,
 	}
 
-	core.UpdateRequire(target.Height, target.CurrentBlockHash, target.Height)
+	self.UpdateRequire(target.Height, target.CurrentBlockHash, target.Height)
 	log.Noticef("state update, current height %d, target height %d", core.GetChainCopy().Height, target.Height)
 	// save context
-	core.SetReplicas(stateUpdateMsg.Replicas)
-	core.SetId(stateUpdateMsg.Id)
+	self.state.Replicas = stateUpdateMsg.Replicas
+	self.state.Id = stateUpdateMsg.Id
 
 	payload, err := proto.Marshal(required)
 	if err != nil {
@@ -97,7 +105,7 @@ func (self *ProtocolManager) ReceiveSyncRequest(ev event.StateUpdateEvent) {
 
 // ReceiveSyncBlocks - receive request blocks from others.
 func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
-	if core.GetChainCopy().RequiredBlockNum != 0 {
+	if self.state.RequiredBlockNum != 0 {
 		blocks := &types.Blocks{}
 		proto.Unmarshal(ev.Payload, blocks)
 		db, err := hyperdb.GetDBDatabase()
@@ -107,15 +115,15 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 			return
 		}
 		for i := len(blocks.Batch) - 1; i >= 0; i -= 1 {
-			if blocks.Batch[i].Number <= core.GetChainCopy().RequiredBlockNum {
+			if blocks.Batch[i].Number <= self.state.RequiredBlockNum {
 
 				log.Debugf("receive block #%d  hash %s", blocks.Batch[i].Number, common.BytesToHash(blocks.Batch[i].BlockHash).Hex())
 
-				if blocks.Batch[i].Number == core.GetChainCopy().RequiredBlockNum {
+				if blocks.Batch[i].Number == self.state.RequiredBlockNum {
 					// receive demand block
 					acceptHash := blocks.Batch[i].HashBlock(self.commonHash).Bytes()
 					// compare received block's hash with target hash for guarantee block's integrity
-					if common.Bytes2Hex(acceptHash) == common.Bytes2Hex(core.GetChainCopy().RequireBlockHash) {
+					if common.Bytes2Hex(acceptHash) == common.Bytes2Hex(self.state.RequireBlockHash) {
 						// put into db instead of memory for avoiding memory boom when sync huge number blocks
 						core.PersistBlock(db.NewBatch(), blocks.Batch[i], self.blockPool.GetBlockVersion(), true, true)
 						if err := self.updateRequire(blocks.Batch[i]); err != nil {
@@ -125,8 +133,8 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 						}
 
 						// receive all block in chain
-						if core.GetChainCopy().RequiredBlockNum <= core.GetChainCopy().Height {
-							lastBlk, err := core.GetBlockByNumber(db, core.GetChainCopy().RequiredBlockNum+1)
+						if self.state.RequiredBlockNum <= core.GetChainCopy().Height {
+							lastBlk, err := core.GetBlockByNumber(db, self.state.RequiredBlockNum+1)
 							if err != nil {
 								log.Error("StateUpdate Failed!")
 								self.reject()
@@ -139,11 +147,11 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 								self.blockPool.WaitResetAvailable()
 								self.blockPool.NotifyValidateToBegin()
 
-								for i := core.GetChainCopy().RequiredBlockNum + 1; i <= core.GetChainCopy().RecoveryNum; i += 1 {
+								for i := self.state.RequiredBlockNum + 1; i <= self.state.RecoveryNum; i += 1 {
 									blk, err := core.GetBlockByNumber(db, i)
 									if err != nil {
 										log.Errorf("state update from #%d to #%d failed. current chain height #%d",
-											core.GetChainCopy().RequiredBlockNum+1, core.GetChainCopy().RecoveryNum, core.GetChainCopy().Height)
+											self.state.RequiredBlockNum+1, self.state.RecoveryNum, core.GetChainCopy().Height)
 										self.reject()
 										return
 									} else {
@@ -154,7 +162,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 										err, result := self.blockPool.ApplyBlock(blk, blk.Number)
 										if err != nil || self.assertApplyResult(blk, result) == false {
 											log.Errorf("state update from #%d to #%d failed. current chain height #%d",
-												core.GetChainCopy().RequiredBlockNum+1, core.GetChainCopy().RecoveryNum, core.GetChainCopy().Height)
+												self.state.RequiredBlockNum+1, self.state.RecoveryNum, core.GetChainCopy().Height)
 											self.reject()
 											return
 										} else {
@@ -163,13 +171,13 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 										}
 									}
 								}
-								self.blockPool.SetTempBlockNumber(core.GetChainCopy().RecoveryNum + 1)
-								self.blockPool.SetDemandSeqNo(core.GetChainCopy().RecoveryNum + 1)
-								self.blockPool.SetDemandNumber(core.GetChainCopy().RecoveryNum + 1)
+								self.blockPool.SetTempBlockNumber(self.state.RecoveryNum + 1)
+								self.blockPool.SetDemandSeqNo(self.state.RecoveryNum + 1)
+								self.blockPool.SetDemandNumber(self.state.RecoveryNum + 1)
 
-								core.UpdateRequire(uint64(0), []byte{}, uint64(0))
-								core.SetReplicas(nil)
-								core.SetId(0)
+								self.UpdateRequire(uint64(0), []byte{}, uint64(0))
+								self.state.Replicas = nil
+								self.state.Id = 0
 
 								self.sendStateUpdatedEvent()
 								break
@@ -179,7 +187,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 									log.Errorf("cut down block %d failed.", lastBlk.Number - 1)
 									return
 								}
-								self.broadcastDemandBlock(lastBlk.Number-1, lastBlk.ParentHash, core.GetReplicas(), core.GetId())
+								self.broadcastDemandBlock(lastBlk.Number-1, lastBlk.ParentHash, self.state.Replicas, self.state.Id)
 							}
 						}
 					}
@@ -264,8 +272,16 @@ func (self *ProtocolManager) updateRequire(block *types.Block) error {
 			break
 		}
 	}
-	core.UpdateRequire(tmp, tmpHash, core.GetChainCopy().RecoveryNum)
-	log.Debug("Next Required", core.GetChainCopy().RequiredBlockNum, common.BytesToHash(core.GetChainCopy().RequireBlockHash).Hex())
+	self.UpdateRequire(tmp, tmpHash, self.state.RecoveryNum)
+	log.Debug("Next Required", self.state.RequiredBlockNum, common.BytesToHash(self.state.RequireBlockHash).Hex())
+	return nil
+}
+
+
+func (self *ProtocolManager) UpdateRequire(num uint64, hash []byte, recoveryNum uint64) error {
+	self.state.RequiredBlockNum = num
+	self.state.RequireBlockHash = hash
+	self.state.RecoveryNum = recoveryNum
 	return nil
 }
 
@@ -345,7 +361,7 @@ func (self *ProtocolManager) reject() {
 		return
 	}
 	batch := db.NewBatch()
-	for i := core.GetChainCopy().Height + 1; i <= core.GetChainCopy().RecoveryNum; i += 1 {
+	for i := core.GetChainCopy().Height + 1; i <= self.state.RecoveryNum; i += 1 {
 		// delete persisted blocks number larger than chain height
 		core.DeleteBlockByNum(batch, i)
 	}
@@ -356,9 +372,9 @@ func (self *ProtocolManager) reject() {
 	// reset state in block pool
 	self.blockPool.ClearStateUnCommitted()
 	// reset
-	core.UpdateRequire(uint64(0), []byte{}, uint64(0))
-	core.SetReplicas(nil)
-	core.SetId(0)
+	self.UpdateRequire(uint64(0), []byte{}, uint64(0))
+	self.state.Replicas = nil
+	self.state.Id = 0
 	self.sendStateUpdatedEvent()
 }
 

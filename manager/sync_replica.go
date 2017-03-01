@@ -77,9 +77,6 @@ func (self *ProtocolManager) packReplicaStatus() ([]byte, []byte) {
 	peerAddress := self.Peermanager.GetLocalNode().GetNodeAddr()
 	currentChain := core.GetChainCopy()
 	// remove useless fields
-	currentChain.RequiredBlockNum = 0
-	currentChain.RequireBlockHash = nil
-	currentChain.RecoveryNum = 0
 	currentChain.CurrentTxSum = 0
 	// marshal
 	addrData, err := proto.Marshal(peerAddress.ToPeerAddress())
