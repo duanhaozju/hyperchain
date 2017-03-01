@@ -2491,6 +2491,11 @@ func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error 
 	if primary == pbft.id {
 		logger.Debugf("Primary %d received validated batch for sqeNo=%d, batch hash: %s", pbft.id, result.SeqNo, result.Hash)
 
+		if !pbft.inWV(result.View, result.SeqNo) {
+			logger.Debugf("Replica %d receives validated result %s that is out of sequence numbers", pbft.id, result.Hash)
+			return nil
+		}
+
 		batch := &TransactionBatch{
 			Batch:     result.Transactions,
 			Timestamp: result.Timestamp,
