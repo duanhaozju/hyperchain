@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"sync"
 	"path/filepath"
+	"hyperchain/hyperdb/sldb"
 )
 
 var (
@@ -215,7 +216,7 @@ func NewDatabase( path string,dbType int) (Database, error) {
 		return NewRsDatabase()
 	} else if dbType == 1234{
 		log.Notice("Use SuperLevelDB")
-		return NewSLDB(path)
+		return sldb.NewSLDB(path)
 	}else {
 		log.Notice("Wrong dbType:" + strconv.Itoa(dbType))
 		return nil, errors.New("Wrong dbType:" + strconv.Itoa(dbType))

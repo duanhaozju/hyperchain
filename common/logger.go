@@ -10,6 +10,7 @@ import (
 	"path"
 	"strconv"
 	"time"
+	"fmt"
 )
 
 // A logger for this file.
@@ -53,6 +54,18 @@ func InitLog(conf *Config) {
 
 //newLogFileByInterval set new log file for hyperchain
 func newLogFileByInterval(loggerDir string, conf *Config, backendStderr logging.LeveledBackend) {
+	tm := time.Now()
+	sec := (24 + 3 - tm.Hour()) * 3600 - tm.Minute() * 60 - tm.Second()
+	// first log split at 3:00 AM
+	// then split byte the interval
+	d, _ := time.ParseDuration(fmt.Sprintf("%ds", sec))
+	time.Sleep(d)
+	timestamp := time.Now().Unix()
+	tm = time.Unix(timestamp, 0)
+	fileName := path.Join(loggerDir, "hyperchain_" + strconv.Itoa(conf.GetInt(C_GRPC_PORT)) +
+		tm.Format("-2006-01-02-15:04:05PM") + ".log")
+	setNewLogFile(fileName, backendStderr)
+
 	for {
 		select {
 		case <-time.After(conf.GetDuration(LOG_NEW_FILE_INTERVAL)):
@@ -97,17 +110,6 @@ func initLogBackend() logging.LeveledBackend {
 	backendStderr := logging.AddModuleLevel(backendFormatter)
 	backendStderr.SetLevel(logDefaultLevel, "")
 	return backendStderr
-}
-
-// GetModuleLogLevel gets the current logging level for the specified module
-func GetModuleLogLevel(module string) (string, error) {
-	// logging.GetLevel() returns the logging level for the module, if defined.
-	// otherwise, it returns the default logging level
-	level := logging.GetLevel(module).String()
-
-	loggingLogger.Debugf("Module '%s' logger enabled for log level: %s", module, level)
-
-	return level, nil
 }
 
 // SetModuleLogLevel sets the logging level for the specified module
