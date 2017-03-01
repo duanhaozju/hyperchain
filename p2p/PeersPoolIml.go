@@ -59,11 +59,11 @@ func(this *PeersPoolIml)delHashID(){
 }
 
 func(this *PeersPoolIml)getIDByHash(hash string)(int,error){
-	return 0
+	return 0,nil
 }
 
 func(this *PeersPoolIml)getHashByID(id int)(string,error){
-	return ""
+	return "",nil
 }
 
 // PutPeer put a peer into the peer pool and get a peer point

@@ -325,7 +325,7 @@ func (this *GRPCPeerManager) reconnectToPeers(alive chan int) {
 			_index := unconnected.Pop().(int)
 			peerAddress := pb.NewPeerAddr(this.configs.GetIP(_index), this.configs.GetPort(_index), this.configs.GetRPCPort(_index), this.configs.GetID(_index))
 			//log.Debugf("peeraddress to connect %v", peerAddress)
-			if peer, connectErr := this.reconnectToPeer(peerAddress, this.configs.GetID(_index)); connectErr != nil {
+			if peer, connectErr := this.reconnectToPeer(peerAddress); connectErr != nil {
 				// cannot connect to other peer
 
 				unconnected.Push(_index)
@@ -425,7 +425,7 @@ func (this *GRPCPeerManager) connectToPeer(peerAddress *pb.PeerAddr) (*Peer, err
 }
 
 //connect to peer by ip address and port (why int32? because of protobuf limit)
-func (this *GRPCPeerManager) reconnectToPeer(peerAddress *pb.PeerAddr, nid int) (*Peer, error) {
+func (this *GRPCPeerManager) reconnectToPeer(peerAddress *pb.PeerAddr) (*Peer, error) {
 	//if this node is not online, connect it
 	var peer *Peer
 	var peerErr error
@@ -702,9 +702,9 @@ func (this *GRPCPeerManager)UpdateAllRoutingTable(routerPayload []byte){
 		if _,ok := this.peersPool.GetPeerByHash(hash);ok!=nil{
 			//update hash table
 			// add node handler
-			peerAddress := pb.NewPeerAddr(r.IP, r.Port, r.RPCPort, r.ID)
+			peerAddress := pb.NewPeerAddr(r.IP, int(r.Port), int(r.RPCPort), int(r.ID))
 			log.Debugf("peeraddress to connect %v", peerAddress)
-			if peer, connectErr := this.connectToPeer(peerAddress) ; connectErr != nil {
+			if peer, connectErr := this.reconnectToPeer(peerAddress) ; connectErr != nil {
 				// cannot connect to other peer
 				log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n", connectErr)
 				//TODO retry
@@ -724,17 +724,17 @@ func (this *GRPCPeerManager)UpdateAllRoutingTable(routerPayload []byte){
 
 	//delete node handler
 
-	for _,r := range toUpdateRouter.Routers(){
+	for _,r := range toUpdateRouter.Routers{
 		flag := false
 		for _,p := range this.peersPool.GetPeers(){
 			if p.PeerAddr.Hash == r.Hash{
-				flag == true
+				flag = true
 			}
 		}
 
 		if !flag{
 			log.Warningf("delete node (%d)\n",r.ID)
-			this.peersPool.DeletePeer(r.Hash)
+			this.peersPool.DeletePeerByHash(r.Hash)
 		}
 	}
 

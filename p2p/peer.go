@@ -133,6 +133,10 @@ func (peer *Peer) handShake() (err error) {
 	}
 	//review get the remote peer secret
 	if retMessage.MessageType == pb.Message_HELLO_RESPONSE {
+		if retMessage.Signature == nil{
+			log.Error("signature is nil!")
+			return nil
+		}
 		remoteECert := retMessage.Signature.ECert
 		if remoteECert == nil{
 			log.Errorf("Remote ECert is nil %v",retMessage.From)
