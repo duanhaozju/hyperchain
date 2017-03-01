@@ -316,7 +316,7 @@ func (pbft *pbftProtocal) restoreState() {
 	}
 
 	localKey, err := persist.ReadState("localkey")
-	if err != nil {
+	if err == nil {
 		pbft.localKey = string(localKey)
 	}
 
