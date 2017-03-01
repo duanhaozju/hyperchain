@@ -56,10 +56,8 @@ dbConfig:
   #Max retry times for a timeout operation
     maxConnectTimes: 15
 
-#db for BlockChain
+#db path of hyperchain. it's the parent dir of namespace dir
   leveldbPath: "./build/leveldb"
-#db for Consensus
-  leveldbPath2: "./build/leveldb_Consensus"
 
   logStatus: true
 

@@ -101,7 +101,7 @@ func newconfigsImpl(conf *common.Config) *configsImpl {
 	config := viper.New()
 	//viper.SetEnvPrefix("GLOBAL_ENV")
 	peerConfigPath := conf.GetString(common.C_GLOBAL_CONFIG_PATH)
-	fmt.Println(peerConfigPath)
+	//fmt.Println(peerConfigPath)
 	config.SetConfigFile(peerConfigPath)
 	err := config.ReadInConfig()
 	if err != nil {

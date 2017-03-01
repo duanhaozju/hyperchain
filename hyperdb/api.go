@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/viper"
 	"strconv"
 	"sync"
+	"path/filepath"
 )
 
 var (
@@ -37,7 +38,6 @@ var (
 	redisMaxConnectTimes = 15
 	grpcPort             = 8001
 	leveldbPath          = "./build/leveldb"
-	leveldbPath2          = "./build/leveldb_Consensus"
 )
 
 type stateDb int32
@@ -45,7 +45,6 @@ type stateDb int32
 type DBInstance struct {
 	db     Database
 	state  stateDb
-	dbSync sync.Mutex
 }
 
 const (
@@ -53,24 +52,33 @@ const (
 	opened
 )
 
+const (
+	DefautNameSpace="Global"
+	Blockchain="Blockchain"
+	Consensus="Consensus"
+)
+
+
 var log *logging.Logger // package-level logger
 //dbInstance include the instance of Database interface
 
-//dbInstance_B for Blockchain
-var dbInstance_B = &DBInstance{
-	state: closed,
+
+
+type DbMap struct{
+	dbMap map[string] *DBInstance
+	dbSync  sync.Mutex
 }
 
-//dbInstance_B for Consensus
-var dbInstance_C = &DBInstance{
-	state: closed,
-}
+var  dbMap *DbMap
 
 func init() {
 	log = logging.MustGetLogger("hyperdb")
+	dbMap=&DbMap{
+		dbMap:make(map[string] *DBInstance),
+	}
 }
 
-func setDBConfig(dbConfig string, port string) {
+func SetDBConfig(dbConfig string, port string) {
 
 	config := viper.New()
 	viper.SetEnvPrefix("DBCONFIG_ENV")
@@ -99,7 +107,6 @@ func setDBConfig(dbConfig string, port string) {
 	logPath = config.GetString("dbConfig.logPath")
 
 	leveldbPath = config.GetString("dbConfig.leveldbPath")
-	leveldbPath2=config.GetString("dbConfig.leveldbPath2")
 	grpcPort, _ = strconv.Atoi(port)
 	//leveldbPath += port
 
@@ -113,61 +120,83 @@ func GetLogPath() string {
 	return logPath
 }
 
-func InitDatabase(dbConfig string, port string) error {
+func InitDatabase(nameSpace string) error {
 
-	setDBConfig(dbConfig, port)
+	dbMap.dbSync.Lock()
+	defer dbMap.dbSync.Unlock()
+	_,ok:=dbMap.dbMap[nameSpace+Blockchain]
 
-	dbInstance_B.dbSync.Lock()
-	defer dbInstance_B.dbSync.Unlock()
-
-	if dbInstance_B.state != closed {
-		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it has beend inited \n", dbType))
-		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it has beend inited \n", dbType))
-	}
-	db, err := NewDatabase(leveldbPath,dbType)
-
-	if err != nil {
-		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", dbType))
-		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", dbType))
+	if ok{
+		log.Notice("Try to init inited db "+nameSpace)
+		return errors.New("Try to init inited db "+nameSpace)
 	}
 
-	dbInstance_B.db = db
-	dbInstance_B.state = opened
-	log.Notice("db for Blockchain has been init")
+	db, err := NewDatabase(filepath.Join(leveldbPath,nameSpace,"Blockchain"),dbType)
 
-	db1, err1 := NewDatabase(leveldbPath2,dbType)
+
+	if err!=nil{
+		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
+		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
+	}
+
+
+	db1, err1 := NewDatabase(filepath.Join(leveldbPath,nameSpace,"Consensus" ),dbType)
 
 	if err1 != nil {
-		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", dbType))
-		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", dbType))
+
+		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
+		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
 	}
 
-	dbInstance_C.db = db1
-	dbInstance_C.state = opened
-	log.Notice("db for Blockchain has been init")
+	dbMap.dbMap[nameSpace+Blockchain]=&DBInstance{
+		state: opened,
+		db:db,
+	}
+
+	dbMap.dbMap[nameSpace+Consensus]=&DBInstance{
+		state: opened,
+		db:db1,
+	}
 
 	return err
 }
 
 func GetDBDatabase() (Database, error) {
-	dbInstance_B.dbSync.Lock()
-	defer dbInstance_B.dbSync.Unlock()
-	if dbInstance_B.db == nil {
-		log.Notice("GetDBDatabase() fail beacause it has not been inited \n")
-		return nil, errors.New("GetDBDatabase() fail beacause it has not been inited \n")
+	dbMap.dbSync.Lock()
+	defer dbMap.dbSync.Unlock()
+	if dbMap.dbMap[DefautNameSpace+Blockchain].db == nil {
+		log.Notice("GetDBDatabase() fail beacause dbMap[GlobalBlockchain] has not been inited \n")
+		return nil, errors.New("GetDBDatabase() fail beacause dbMap[GlobalBlockchain] has not been inited \n")
 	}
-	return dbInstance_B.db, nil
+	return dbMap.dbMap[DefautNameSpace+Blockchain].db, nil
+}
+
+func GetDBDatabaseByNamespcae(namespace string)(Database, error){
+	dbMap.dbSync.Lock()
+	defer dbMap.dbSync.Unlock()
+
+	if _,ok:=dbMap.dbMap[namespace];!ok{
+		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
+	}
+
+	if dbMap.dbMap[namespace].db == nil {
+		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
+	}
+	return dbMap.dbMap[namespace].db, nil
 }
 
 
+
 func GetDBDatabaseConsensus() (Database, error) {
-	dbInstance_C.dbSync.Lock()
-	defer dbInstance_C.dbSync.Unlock()
-	if dbInstance_C.db == nil {
-		log.Notice("GetDBDatabaseConsensus()  fail beacause it has not been inited \n")
-		return nil, errors.New("GetDBDatabaseConsensus()  fail beacause it has not been inited \n")
+	dbMap.dbSync.Lock()
+	defer dbMap.dbSync.Unlock()
+	if dbMap.dbMap[DefautNameSpace+Consensus].db == nil {
+		log.Notice("GetDBDatabaseConsensus()  fail beacause dbMap[GlobalConsensus] has not been inited \n")
+		return nil, errors.New("GetDBDatabaseConsensus()  fail beacause dbMap[GlobalConsensus] has not been inited \n")
 	}
-	return dbInstance_C.db, nil
+	return dbMap.dbMap[DefautNameSpace+Consensus].db, nil
 }
 
 func NewDatabase( path string,dbType int) (Database, error) {
