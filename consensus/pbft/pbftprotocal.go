@@ -677,6 +677,7 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		pbft.startTimerIfOutstandingRequests()
 		pbft.persistView(pbft.view)
 		pbft.persistNewNode(uint64(0))
+		pbft.persistDellLocalKey()
 		pbft.persistN(pbft.N)
 		pbft.updateHandled = false
 		if pbft.isNewNode {

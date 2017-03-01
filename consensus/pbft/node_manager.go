@@ -35,6 +35,7 @@ func (pbft *pbftProtocal) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 	pbft.inAddingNode = true
 	key := string(msg.Payload)
 	pbft.localKey = key
+	pbft.persistLocalKey(msg.Payload)
 
 	return nil
 }

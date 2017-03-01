@@ -62,55 +62,30 @@ f_kill_process(){
     ps -ax | grep hyperchain | grep -v grep | awk '{print $1}' |  xargs  kill -9
 }
 
-# 解析参数函数
-f_parse_args(){
-    while [ $# -gt 0 ]
-    do
-        case "$1" in
-        -h|--help)
-            help; exit 0;;
-        -k|--kill)
-            f_kill_process; exit 1;;
-    	-d|--delete)
-    	    DELETEDATA=false; shift;;
-    	-r|--rebuild)
-    	    REBUILD=false; shift;;
-        -m|--mode)
-            MODE=true; shift;;
-    	--) shift; break;;
-    	-*) help; exit 1;;
-    	*) break;;
-        esac
-    done
-}
-
 # 删除数据函数
 f_delete_data(){
-if $DELETEDATA; then
+for (( j=1; j<=$MAXPEERNUM; j++ ))
+do
     # Clear the old data
-    if [ -d "${DUMP_PATH}" ];then
-        echo "Clear the old data..."
-        rm -rf "${DUMP_PATH}"
+    if [ -d "${DUMP_PATH}/node${j}/build" ];then
+        rm -rf "${DUMP_PATH}/node${j}/build"
     fi
 
     # Creat the build dir
-    if [ ! -d "${DUMP_PATH}" ];then
-        echo "Auto recreat the build dir..."
-        mkdir -p "${DUMP_PATH}"
+    if [ ! -d "${DUMP_PATH}/node${j}/build" ];then
+        mkdir -p "${DUMP_PATH}/node${j}/build"
     fi
-fi
+done
 }
 
 # 重新编译函数
 f_rebuild(){
-if $REBUILD; then
-    # Build the project
-    echo "Rebuild the project..."
-    if [ -s "${DUMP_PATH}/hyperchain" ]; then
-        rm ${DUMP_PATH}/hyperchain
-    fi
-     cd ${PROJECT_PATH} && govendor build -o ${DUMP_PATH}/hyperchain
+# Build the project
+echo "Rebuild the project..."
+if [ -s "${DUMP_PATH}/hyperchain" ]; then
+    rm ${DUMP_PATH}/hyperchain
 fi
+cd ${PROJECT_PATH} && govendor build -o ${DUMP_PATH}/hyperchain
 }
 
 # 数据分发函数
@@ -118,7 +93,12 @@ f_distribute(){
 # cp the config files into nodes
 for (( j=1; j<=$1; j++ ))
 do
-    mkdir -p ${DUMP_PATH}/node${j}/
+    if [ ! -d "${DUMP_PATH}/node${j}" ];then
+        mkdir -p ${DUMP_PATH}/node${j}
+    fi
+    if [ -d "${DUMP_PATH}/node${j}/config" ];then
+        rm -rf ${DUMP_PATH}/node${j}/config
+    fi
     cp -rf  ${CONF_PATH} ${DUMP_PATH}/node${j}/
     cp -rf  ${CONF_PATH}/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/config/local_peerconfig.json
     cp -rf  ${CONF_PATH}/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/config/cert/
@@ -212,7 +192,24 @@ f_check_local_env
 f_set_env
 
 # 解析输出参数
-f_parse_args
+while [ $# -gt 0 ]
+do
+    case "$1" in
+    -h|--help)
+        help; exit 0;;
+    -k|--kill)
+        f_kill_process; exit 1;;
+    -d|--delete)
+        DELETEDATA=false; shift;;
+    -r|--rebuild)
+        REBUILD=false; shift;;
+    -m|--mode)
+        MODE=true; shift;;
+    --) shift; break;;
+    -*) help; exit 1;;
+    *) break;;
+    esac
+done
 
 # 杀进程
 f_kill_process
