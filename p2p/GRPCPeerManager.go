@@ -200,19 +200,19 @@ func (this *GRPCPeerManager) connectToIntroducer(introducerAddress pb.PeerAddr) 
 		//log.Debug("reconnect return :", retMessage)
 		if err != nil {
 			log.Error("cannot establish a connection", err)
-			return
+			continue
 		}
 		if retMessage.MessageType == pb.Message_ATTEND_RESPONSE {
 			log.Debug("get a new ATTTEND RESPNSE from ID",retMessage.From.ID)
 			remoteECert := retMessage.Signature.ECert
 			if remoteECert == nil {
 				log.Errorf("Remote ECert is nil %v", retMessage.From)
-				return
+				continue
 			}
 			ecert, err := primitives.ParseCertificate(string(remoteECert))
 			if err != nil {
 				log.Error("cannot parse certificate")
-				return
+				continue
 			}
 			signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
 			ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
@@ -222,7 +222,7 @@ func (this *GRPCPeerManager) connectToIntroducer(introducerAddress pb.PeerAddr) 
 			remoteRCert := retMessage.Signature.RCert
 			if remoteRCert == nil {
 				log.Errorf("Remote ECert is nil %v", retMessage.From)
-				return
+				continue
 			}
 
 			verifyRcert, rcertErr := this.CM.VerifyRCert(string(remoteRCert))
