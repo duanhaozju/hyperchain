@@ -109,3 +109,4 @@ mac.sh
 api/jsonrpc/Dashboard/node_modules
 
 scripts/mac_local.sh
+config/peerconfigs

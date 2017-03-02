@@ -13,6 +13,7 @@ import (
 	"hyperchain/recovery"
 	"time"
 	"sync/atomic"
+	"hyperchain/hyperdb/db"
 )
 
 func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerManager p2p.PeerManager) {
@@ -188,7 +189,7 @@ func (pool *BlockPool) increaseDemandBlockNumber() {
 	log.Noticef("demand block number %d", pool.demandNumber)
 }
 
-func (pool *BlockPool) persistTransactions(batch hyperdb.Batch, transactions []*types.Transaction, blockNumber uint64) error {
+func (pool *BlockPool) persistTransactions(batch db.Batch, transactions []*types.Transaction, blockNumber uint64) error {
 	for i, transaction := range transactions {
 		if err, _ := core.PersistTransaction(batch, transaction, pool.GetTransactionVersion(), false, false); err != nil {
 			log.Error("put tx data into database failed! error msg, ", err.Error())
@@ -209,7 +210,7 @@ func (pool *BlockPool) persistTransactions(batch hyperdb.Batch, transactions []*
 
 // re assign block hash and block number to transaction logs
 // during the validation, block number and block hash can be incorrect
-func (pool *BlockPool) persistReceipts(batch hyperdb.Batch, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) error {
+func (pool *BlockPool) persistReceipts(batch db.Batch, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) error {
 	for _, receipt := range receipts {
 		logs, err := receipt.GetLogs()
 		if err != nil {

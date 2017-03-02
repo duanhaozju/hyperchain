@@ -13,9 +13,9 @@
 
 global:
 
-##########################
-# data storage config #
-##########################
+    ##########################
+    # data storage config #
+    ##########################
     account:
         keystoredir: "./build/keystore"
         keynodesdir: "./build/keynodes"
@@ -28,9 +28,10 @@ global:
     version:
         blockversion: "1.0"
         transactionversion: "1.0"
-###########################
-# configs
-############################
+
+    ###########################
+    # configs
+    ############################
     configs:
         caconfig: "config/caconfig.toml"
         peers: "config/local_peerconfig.json"
@@ -60,13 +61,13 @@ global:
             Nsquare: "204940062494628260128356353732290481689"
             G: "90976693534933209671098397317966944738726332459523400324197777885595356310417"
 
-######################################################
-# config log's level by module                       #
-#                                                    #
-# CRITICAL ERROR WARNING NOTICE INFO DEBUG           #
-# high <------------- log level -------> low         #
-#                                                    #
-######################################################
+    ######################################################
+    # config log's level by module                       #
+    #                                                    #
+    # CRITICAL ERROR WARNING NOTICE INFO DEBUG           #
+    # high <------------- log level -------> low         #
+    #                                                    #
+    ######################################################
     logs:
         # dump the log file or not
         dumpfile: true
@@ -76,6 +77,8 @@ global:
         logsdir: "./build/logs"
         # default loglevel for all modules which can be override by module level log setting
         loglevel: "NOTICE"
+        file_format: "%[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
+        console_format: "%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
 
         module:
             #set log level by module

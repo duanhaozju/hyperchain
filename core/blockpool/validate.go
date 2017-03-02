@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"hyperchain/hyperdb/db"
 )
 
 func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, peerManager p2p.PeerManager) {
@@ -430,7 +431,7 @@ func (pool *BlockPool) calculateReceiptFingerprint(receipt *types.Receipt, flush
 	return common.Hash{}, nil
 }
 
-func (pool *BlockPool) submitValidationResult(state vm.Database, batch hyperdb.Batch) (error, []byte, []byte, []byte) {
+func (pool *BlockPool) submitValidationResult(state vm.Database, batch db.Batch) (error, []byte, []byte, []byte) {
 	switch pool.GetStateType() {
 	case "hyperstate":
 		// flush all state change

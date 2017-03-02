@@ -10,16 +10,21 @@ import (
 	"path"
 	"strconv"
 	"time"
+	"fmt"
 )
 
 // A logger for this file.
-var loggingLogger = logging.MustGetLogger("logging")
+var commonLogger = logging.MustGetLogger("commmon")
 var logDefaultLevel logging.Level
+var consoleFormat = `%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}`
+var fileFormat = `%[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}`
 
 var closeLogFile chan struct{}
 
 //InitLog init the log by configuration from global.yaml
 func InitLog(conf *Config) {
+	consoleFormat = conf.GetString(LOG_CONSOLE_FORMAT)
+	fileFormat = conf.GetString(LOG_FILE_FORMAT)
 	timestamp := time.Now().Unix()
 	tm := time.Unix(timestamp, 0)
 
@@ -30,7 +35,7 @@ func InitLog(conf *Config) {
 	}
 	lv, err := logging.LogLevel(conf.GetString(LOG_BASE_LOG_LEVEL))
 	if err != nil {
-		loggingLogger.Warningf("Invalid logging level: %s, using INFO as default!", conf.GetString(LOG_BASE_LOG_LEVEL))
+		commonLogger.Warningf("Invalid logging level: %s, using INFO as default!", conf.GetString(LOG_BASE_LOG_LEVEL))
 		logDefaultLevel = logging.INFO
 	} else {
 		logDefaultLevel = lv
@@ -53,6 +58,18 @@ func InitLog(conf *Config) {
 
 //newLogFileByInterval set new log file for hyperchain
 func newLogFileByInterval(loggerDir string, conf *Config, backendStderr logging.LeveledBackend) {
+	tm := time.Now()
+	sec := (24 + 3 - tm.Hour()) * 3600 - tm.Minute() * 60 - tm.Second()
+	// first log split at 3:00 AM
+	// then split byte the interval
+	d, _ := time.ParseDuration(fmt.Sprintf("%ds", sec))
+	time.Sleep(d)
+	timestamp := time.Now().Unix()
+	tm = time.Unix(timestamp, 0)
+	fileName := path.Join(loggerDir, "hyperchain_" + strconv.Itoa(conf.GetInt(C_GRPC_PORT)) +
+		tm.Format("-2006-01-02-15:04:05PM") + ".log")
+	setNewLogFile(fileName, backendStderr)
+
 	for {
 		select {
 		case <-time.After(conf.GetDuration(LOG_NEW_FILE_INTERVAL)):
@@ -61,10 +78,10 @@ func newLogFileByInterval(loggerDir string, conf *Config, backendStderr logging.
 			fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
 				tm.Format("-2006-01-02-15:04:05 PM")+".log")
 			setNewLogFile(fileName, backendStderr)
-			loggingLogger.Infof("Change log file, new log file name: %s", fileName)
+			commonLogger.Infof("Change log file, new log file name: %s", fileName)
 		case <-closeLogFile:
-			loggingLogger.Info("Close logger service")
-			loggingLogger.SetBackend(backendStderr)
+			commonLogger.Info("Close logger service")
+			commonLogger.SetBackend(backendStderr)
 		}
 	}
 }
@@ -74,12 +91,10 @@ func setNewLogFile(fileName string, backendStderr logging.LeveledBackend) {
 	logFile, err := os.Create(fileName)
 
 	if err != nil {
-		loggingLogger.Fatalf("open file: %s error !", fileName)
+		commonLogger.Fatalf("open file: %s error !", fileName)
 	}
 	logBackend := logging.NewLogBackend(logFile, "", 0)
-	var format = logging.MustStringFormatter(
-		`[%{level:.5s}] %{time:15:04:05.000} %{shortfile}[%{module}] %{shortfunc} -> %{message}`,
-	)
+	var format = logging.MustStringFormatter(fileFormat)
 	backendFileFormatter := logging.NewBackendFormatter(logBackend, format)
 
 	lb := logging.AddModuleLevel(backendFileFormatter)
@@ -90,24 +105,11 @@ func setNewLogFile(fileName string, backendStderr logging.LeveledBackend) {
 //initLogBackend init the backend info for logging.
 func initLogBackend() logging.LeveledBackend {
 	backend_stderr := logging.NewLogBackend(os.Stderr, "", 0)
-	var format_stderr = logging.MustStringFormatter(
-		`%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}`,
-	)
+	var format_stderr = logging.MustStringFormatter(consoleFormat)
 	backendFormatter := logging.NewBackendFormatter(backend_stderr, format_stderr)
 	backendStderr := logging.AddModuleLevel(backendFormatter)
 	backendStderr.SetLevel(logDefaultLevel, "")
 	return backendStderr
-}
-
-// GetModuleLogLevel gets the current logging level for the specified module
-func GetModuleLogLevel(module string) (string, error) {
-	// logging.GetLevel() returns the logging level for the module, if defined.
-	// otherwise, it returns the default logging level
-	level := logging.GetLevel(module).String()
-
-	loggingLogger.Debugf("Module '%s' logger enabled for log level: %s", module, level)
-
-	return level, nil
 }
 
 // SetModuleLogLevel sets the logging level for the specified module
@@ -118,12 +120,12 @@ func SetModuleLogLevel(module string, logLevel string) (string, error) {
 	logLevelString := level.String()
 
 	if err != nil {
-		loggingLogger.Warningf("Invalid logging level: %s - ignored", logLevel)
+		commonLogger.Warningf("Invalid logging level: %s - ignored", logLevel)
 		return logLevelString, err
 	}
 
 	logging.SetLevel(logging.Level(level), module)
-	loggingLogger.Infof("Module '%s' logger enabled for log level: %s", module, level)
+	commonLogger.Infof("Module '%s' logger enabled for log level: %s", module, level)
 	return logLevelString, err
 }
 

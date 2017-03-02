@@ -15,6 +15,7 @@ import (
 	"math/big"
 	"strconv"
 	"time"
+	"hyperchain/hyperdb/db"
 )
 
 const (
@@ -96,7 +97,7 @@ func CreateInitBlock(config *common.Config) {
 	log.Info("current chain block number is", GetChainCopy().Height)
 
 }
-func GetStateInstance(root common.Hash, db hyperdb.Database, conf *common.Config) (vm.Database, error) {
+func GetStateInstance(root common.Hash, db db.Database, conf *common.Config) (vm.Database, error) {
 	switch getStateType(conf) {
 	case "rawstate":
 		return state.New(root, db)

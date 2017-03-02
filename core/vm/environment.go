@@ -6,7 +6,7 @@ import (
 	"math/big"
 
 	"hyperchain/common"
-	"hyperchain/hyperdb"
+	"hyperchain/hyperdb/db"
 )
 
 // RuleSet is an interface that defines the current rule set during the
@@ -119,7 +119,7 @@ type Database interface {
 	MarkProcessStart(uint64)
 	MarkProcessFinish(uint64)
 
-	FetchBatch(seqNo uint64) hyperdb.Batch
+	FetchBatch(seqNo uint64) db.Batch
 	DeleteBatch(seqNo uint64)
 }
 
