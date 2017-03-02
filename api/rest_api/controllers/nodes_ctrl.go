@@ -25,3 +25,26 @@ func (n *NodesController) GetNodes() {
 	}
 	n.ServeJSON()
 }
+
+func (n *NodesController) GetNodeHash() {
+	if hash, err := n.PublicNodeAPI.GetNodeHash(); err != nil {
+		n.Data["json"] = NewJSONObject(nil, err)
+	} else {
+		n.Data["json"] = NewJSONObject(hash, nil)
+	}
+	n.ServeJSON()
+}
+
+func (n *NodesController) DelNode() {
+	var args hpc.NodeArgs
+	args.NodeHash = n.Input().Get("hash")
+
+	err := n.PublicNodeAPI.DelNode(args)
+	if err != nil {
+		n.Data["json"] = NewJSONObject(nil, err)
+	} else {
+		n.Data["json"] = NewJSONObject(true, nil)
+	}
+
+	n.ServeJSON()
+}
