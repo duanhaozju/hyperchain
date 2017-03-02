@@ -21,6 +21,7 @@ import (
 	"crypto/elliptic"
 	"sync"
 	"hyperchain/recovery"
+	"hyperchain/core"
 )
 
 type fakeNode struct{
@@ -36,6 +37,7 @@ func newFakeNode(id int) *fakeNode{
 	fnode.ip = "127.0.0.1"
 	fnode.id = id
 
+	core.InitDB("test/db.yaml",8001)
 	fnode.port = 20000+id
 
 	fakeviper := viper.New()
@@ -94,6 +96,7 @@ func (node *fakeNode) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, e
 			e := ecdh.NewEllipticECDH(elliptic.P256())
 			pubkey := e.Marshal((*privateKey).PublicKey)
 			response.MessageType = pb.Message_HELLO_RESPONSE
+			SignCert(&response,node.cm)
 			response.Payload = pubkey
 		}
 	case pb.Message_HELLO_RESPONSE:
@@ -360,7 +363,7 @@ func TestGRPCPeerManager_GetRouterHashifDelete(t *testing.T) {
 	grpcm = NewGrpcManager(config)
 	grpcm.LocalAddr.Port = 8817
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
-	hash,id := grpcm.GetRouterHashifDelete("d4a4e3ad24ce52eac10497846f8d97e86f7bd2fc8119631b6cde09fa75a2dd3c")
+	hash,id,_ := grpcm.GetRouterHashifDelete("d4a4e3ad24ce52eac10497846f8d97e86f7bd2fc8119631b6cde09fa75a2dd3c")
 	assert.NotEmpty(t,hash)
 	//if delete the node should be id
 	assert.Equal(t,uint64(0x1),id)
