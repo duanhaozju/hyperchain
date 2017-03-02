@@ -21,7 +21,7 @@ type PeersPool interface {
 	GetAliveNodeNum() int
 	ToRoutingTable() pb.Routers
 	ToRoutingTableWithout(hash string) pb.Routers
-	MergeFromRoutersToTemp(routers pb.Routers)
+	MergeFromRoutersToTemp(routers pb.Routers, introducer *pb.PeerAddr)
 	MergeTempPeers(peer *Peer)
 	MergeTempPeersForNewNode()
 	RejectTempPeers()

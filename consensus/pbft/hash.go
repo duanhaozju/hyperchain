@@ -34,6 +34,10 @@ func computeCryptoHash(data []byte) (hash []byte) {
 	return
 }
 
+func hashByte(data []byte) (string) {
+	return base64.StdEncoding.EncodeToString(computeCryptoHash(data))
+}
+
 func byteToString(data []byte) (re string) {
 
 	re = base64.StdEncoding.EncodeToString(data)

@@ -95,7 +95,8 @@ func GetEventObject() *event.TypeMux {
 
 // start listen new block msg and consensus msg
 func (pm *ProtocolManager) Start(c chan int, cm *admittance.CAManager) {
-	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{})
+	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{},
+		event.NegoRoutersEvent{})
 	pm.validateSub = pm.eventMux.Subscribe(event.ExeTxsEvent{})
 	pm.commitSub = pm.eventMux.Subscribe(event.CommitOrRollbackBlockEvent{})
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
@@ -124,6 +125,7 @@ func (pm *ProtocolManager) Start(c chan int, cm *admittance.CAManager) {
 	pm.initType = <- c
 	if pm.initType == 0 {
 		// start in normal mode
+		pm.PassRouters()
 		pm.NegotiateView()
 	}
 }
@@ -245,6 +247,9 @@ func (self *ProtocolManager) ConsensusLoop() {
 		case event.ConsensusEvent:
 			//log.Error("enter ConsensusEvent")
 			self.consenter.RecvMsg(ev.Payload)
+
+		case event.NegoRoutersEvent:
+			self.Peermanager.UpdateAllRoutingTable(ev.Payload)
 		}
 	}
 }
@@ -311,9 +316,11 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			if ev.Type == true {
 				// add a peer
 				self.Peermanager.UpdateRoutingTable(ev.Payload)
+				self.PassRouters()
 			} else {
 				// remove a peer
 				self.Peermanager.DeleteNode(string(ev.Payload))
+				self.PassRouters()
 			}
 		case event.AlreadyInChainEvent:
 			log.Debug("AlreadyInChainEvent")
@@ -325,6 +332,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 					Payload: payload,
 				}
 				self.consenter.RecvLocal(msg)
+				self.PassRouters()
 				self.NegotiateView()
 			}
 		}
@@ -359,6 +367,14 @@ func (self *ProtocolManager) GetNodeInfo() p2p.PeerInfos {
 	self.nodeInfo = self.Peermanager.GetPeerInfo()
 	log.Info("nodeInfo is ", self.nodeInfo)
 	return self.nodeInfo
+}
+
+func (self *ProtocolManager) PassRouters() {
+
+	router := self.Peermanager.GetRouters()
+	msg := protos.RoutersMessage{Routers: router}
+	self.consenter.RecvLocal(msg)
+
 }
 
 func (self *ProtocolManager) NegotiateView() {

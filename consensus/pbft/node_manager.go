@@ -218,7 +218,7 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 				return nil
 			}
 		} else {
-			logger.Warningf("Replica %d has not locally ready for add node", pbft.id)
+			logger.Debugf("Replica %d has not locally ready but still accept adding", pbft.id)
 			return nil
 		}
 	}
@@ -251,7 +251,7 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string) error {
 				return nil
 			}
 		} else {
-			logger.Warningf("Replica %d has not locally ready for del node", pbft.id)
+			logger.Debugf("Replica %d has not locally ready but still accept adding", pbft.id)
 			return nil
 		}
 	}
@@ -861,15 +861,12 @@ func (pbft *pbftProtocal) recvFinishUpdate(finish *FinishVcReset) events.Event {
 		return nil
 	}
 
-	if pbft.inVcReset {
-		logger.Warningf("Primary %d itself has not finished update", pbft.id)
-		return nil
-	}
-
 	if finish.ReplicaId != uint64(pbft.N) {
 		logger.Warningf("Primary %d received finishUpdate from replica %d, but expect replica %d", pbft.id, finish.ReplicaId, pbft.N)
 		return nil
 	}
+
+	logger.Debugf("Primary %d received finish update from new replica %d", pbft.id, finish.ReplicaId)
 
 	pbft.newNodeReady = true
 
@@ -883,10 +880,13 @@ func (pbft *pbftProtocal) handleTailAfterUpdate() events.Event {
 		return nil
 	}
 
-
+	if pbft.inVcReset {
+		logger.Warningf("Primary %d itself has not finished update", pbft.id)
+		return nil
+	}
 
 	if !pbft.newNodeReady {
-		logger.Warningf("Primary %d is haven't received new node's FinishUpdate", pbft.id)
+		logger.Warningf("Primary %d has not received new node's FinishUpdate", pbft.id)
 		return nil
 	}
 

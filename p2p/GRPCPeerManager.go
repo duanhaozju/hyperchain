@@ -178,7 +178,7 @@ func (this *GRPCPeerManager) connectToIntroducer(introducerAddress pb.PeerAddr) 
 	//将介绍人的信息放入路由表中
 	this.peersPool.PutPeer(*introducerPeer.PeerAddr, introducerPeer)
 
-	this.peersPool.MergeFromRoutersToTemp(routers)
+	this.peersPool.MergeFromRoutersToTemp(routers, introducerPeer.PeerAddr)
 
 	localAddressPayload, err := proto.Marshal(this.LocalNode.localAddr.ToPeerAddress())
 	if err != nil {
@@ -186,6 +186,7 @@ func (this *GRPCPeerManager) connectToIntroducer(introducerAddress pb.PeerAddr) 
 	}
 
 	for _, p := range this.peersPool.GetPeersWithTemp() {
+
 		//review this.LocalNode.attendChan <- 1
 		attend_message := &pb.Message{
 			MessageType:  pb.Message_ATTEND,
@@ -695,9 +696,14 @@ func (this *GRPCPeerManager)UpdateAllRoutingTable(routerPayload []byte){
 		log.Error(err)
 		return
 	}
-	log.Critical("Update ALL Router Table")
+	log.Info("Update ALL Router Table")
 
 	for _,r := range toUpdateRouter.Routers{
+
+		if r.Hash == this.LocalAddr.Hash {
+			continue
+		}
+
 		hash := r.Hash
 		if _,ok := this.peersPool.GetPeerByHash(hash);ok!=nil{
 			//update hash table
@@ -716,7 +722,7 @@ func (this *GRPCPeerManager)UpdateAllRoutingTable(routerPayload []byte){
 			}
 
 		}else{
-			log.Critical("this node already in , skip this ,node id:",r.ID)
+			log.Debug("this node already in , skip this ,node id:",r.ID)
 			//skip this router item
 		}
 
@@ -733,7 +739,7 @@ func (this *GRPCPeerManager)UpdateAllRoutingTable(routerPayload []byte){
 		}
 
 		if !flag{
-			log.Warningf("delete node (%d)\n",r.ID)
+			log.Debugf("delete node (%d)\n",r.ID)
 			this.peersPool.DeletePeerByHash(r.Hash)
 		}
 	}
