@@ -23,15 +23,21 @@ import (
 	"strings"
 	"time"
 	"github.com/terasum/viper"
+	"fmt"
 )
+
+
+
+
+
 
 type argT struct {
 	cli.Helper
-	NodeID     int    `cli:"o,id" usage:"node ID" dft:"1"`
+	//NodeID     int    `cli:"o,id" usage:"node ID" dft:"1"`
 	ConfigPath string `cli:"c,conf" usage:"config file path" dft:"./config/global.yaml"`
-	GRPCPort   int    `cli:"l,rpcport" usage:"inner grpc connect port" dft:"8001"`
-	HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc open port" dft:"8081"`
-	RESTPort   int    `cli:"f,restport" useage:"restful api port" dft:"9000"`
+	//GRPCPort   int    `cli:"l,rpcport" usage:"inner grpc connect port" dft:"8001"`
+	//HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc open port" dft:"8081"`
+	//RESTPort   int    `cli:"f,restport" useage:"restful api port" dft:"9000"`
 }
 
 func checkLicense(licensePath string) (err error, expiredTime time.Time) {
@@ -54,6 +60,10 @@ func checkLicense(licensePath string) (err error, expiredTime time.Time) {
 	pattern, _ := regexp.Compile("Identification: (.*)")
 	identification := pattern.FindString(string(license))[16:]
 
+	str1:=GetHyperchainVersion()
+	str2,_:=GetOperationSystem()
+	fmt.Println(str1)
+	fmt.Println(str2)
 	ctx, err := transport.TripleDesDecrypt(common.Hex2Bytes(identification), []byte(privateKey))
 	if err != nil {
 		err = errors.New("Invalid License")
@@ -81,24 +91,44 @@ func checkLicense(licensePath string) (err error, expiredTime time.Time) {
 
 func initConf(argv *argT) *common.Config {
 	conf := common.NewConfig(argv.ConfigPath)
-	conf.Set(common.HYPERCHAIN_ID, argv.NodeID)
-	conf.Set(common.HTTP_PORT, argv.HTTPPort)
-	conf.Set(common.REST_PORT, argv.RESTPort)
-	conf.Set(common.GRPC_PORT, argv.GRPCPort)
+	//conf.Set(common.HYPERCHAIN_ID, argv.NodeID)
+	//conf.Set(common.HTTP_PORT, argv.HTTPPort)
+	//conf.Set(common.REST_PORT, argv.RESTPort)
+	//conf.Set(common.GRPC_PORT, argv.GRPCPort)
+	// read the global peers path
+	peerConfigPath := conf.GetString("global.configs.peers")
+	peerViper := viper.New()
+	peerViper.SetConfigFile(peerConfigPath)
+	err := peerViper.ReadInConfig()
+	if err != nil{
+		panic("read in the peer config failed")
+	}
+	nodeID   := peerViper.GetInt("self.node_id")
+	grpcPort := peerViper.GetInt("self.grpc_port")
+	jsonrpcPort := peerViper.GetInt("self.jsonrpc_port")
+	restfulPort := peerViper.GetInt("self.restful_port")
+
+	conf.Set(common.C_NODE_ID,nodeID)
+	conf.Set(common.C_HTTP_PORT,jsonrpcPort)
+	conf.Set(common.C_REST_PORT,restfulPort)
+	conf.Set(common.C_GRPC_PORT,grpcPort)
+	conf.Set(common.C_PEER_CONFIG_PATH,peerConfigPath)
+	conf.Set(common.C_GLOBAL_CONFIG_PATH,argv.ConfigPath)
+
 	return conf
 }
 
 func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*argT)
+		conf := initConf(argv)
 
 		//TODO:remove this config later
-		config := newconfigsImpl(argv.ConfigPath, argv.NodeID, argv.GRPCPort, argv.HTTPPort, argv.RESTPort)
-
-		conf := initConf(argv)
+		config := newconfigsImpl(conf)
+		//LOG
 		common.InitLog(conf)
-
-		core.InitDB(config.getDbConfig(), config.gRPCPort)
+		//DB
+		core.InitDB(config.getDbConfig(),conf.GetInt(common.C_NODE_ID))
 
 		err, expiredTime := checkLicense(config.getLicense())
 		if err != nil {
@@ -110,13 +140,13 @@ func main() {
 		/**
 		 *传入true则开启所有验证，false则为取消ca以及签名的所有验证
 		 */
-		global_config := viper.New();
-		global_config.SetConfigFile(argv.ConfigPath)
-		err = global_config.ReadInConfig()
+		globalConfig := viper.New();
+		globalConfig.SetConfigFile(conf.GetString(common.C_GLOBAL_CONFIG_PATH))
+		err = globalConfig.ReadInConfig()
 		if err != nil{
 			panic(err)
 		}
-		cm, cmerr := admittance.GetCaManager(global_config)
+		cm, cmerr := admittance.GetCaManager(globalConfig)
 		if cmerr != nil {
 			panic("cannot initliazied the camanager")
 		}

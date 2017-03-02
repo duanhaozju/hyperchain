@@ -15,9 +15,11 @@ const (
 
 //constants for input args
 const (
-	GRPC_PORT = "grpc.port"
-	HTTP_PORT = "http.port"
-	REST_PORT = "rest.port"
-
-	HYPERCHAIN_ID = "hyperchain.id"
+	C_NODE_ID   = "global.id"
+	C_NODE_IP   = "global.ip"
+	C_GRPC_PORT = "global.grpc_port"
+	C_HTTP_PORT = "global.http_port"
+	C_REST_PORT = "global.rest_port"
+	C_PEER_CONFIG_PATH= "global.peerconfigs.path"
+	C_GLOBAL_CONFIG_PATH="global.globalconfig.path"
 )

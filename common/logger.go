@@ -42,7 +42,7 @@ func InitLog(conf *Config) {
 		logging.SetBackend(backendStderr)
 	} else {
 		closeLogFile = make(chan struct{})
-		fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(GRPC_PORT))+
+		fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
 			tm.Format("-2006-01-02-15:04:05 PM")+".log")
 		setNewLogFile(fileName, backendStderr)
 		go newLogFileByInterval(loggerDir, conf, backendStderr) //split log by sencond
@@ -58,7 +58,7 @@ func newLogFileByInterval(loggerDir string, conf *Config, backendStderr logging.
 		case <-time.After(conf.GetDuration(LOG_NEW_FILE_INTERVAL)):
 			timestamp := time.Now().Unix()
 			tm := time.Unix(timestamp, 0)
-			fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(GRPC_PORT))+
+			fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
 				tm.Format("-2006-01-02-15:04:05 PM")+".log")
 			setNewLogFile(fileName, backendStderr)
 			loggingLogger.Infof("Change log file, new log file name: %s", fileName)

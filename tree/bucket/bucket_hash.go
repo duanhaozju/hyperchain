@@ -21,6 +21,6 @@ func (c *bucketHashCalculator) computeCryptoHash() []byte {
 	}
 	h := sha1.New()
 	h.Write([]byte(c.hashingData))
-	bs := h.Sum(nil)
+	bs := h.Sum(nil)[:5]
 	return bs
 }

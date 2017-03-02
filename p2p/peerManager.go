@@ -45,6 +45,7 @@ type MsgSender interface {
 type AddNode interface {
 	// update routing table when new peer's join request is accepted
 	UpdateRoutingTable(payLoad []byte)
+	UpdateAllRoutingTable(routerPayload []byte)
 	ConnectToOthers()
 	// get local address payload
 	GetLocalAddressPayload() []byte
@@ -74,4 +75,5 @@ type InfoGetter interface {
 	// set
 	SetPrimary(id uint64) error
 	// use by new peer when join the chain dynamically only
+	GetRouters() []byte
 }

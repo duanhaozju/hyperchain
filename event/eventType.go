@@ -135,11 +135,6 @@ type ReceiveVerifiedBlock struct {
 	Payload  []byte
 }
 
-
-type RemoveCacheEvent struct {}
-
-type CacheRemovedEvent struct {}
-
 type NegoRoutersEvent struct {
 	Payload []byte
 }

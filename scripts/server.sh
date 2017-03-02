@@ -146,7 +146,7 @@ fs_help(){
 # kill all the process
 fs_kill_process(){
     for server_address in ${SERVER_ADDR[@]}; do
-        ssh hyperchain@$server_address " ps aux | grep 'hyperchain -o' | awk '{print \$2}' | xargs kill -9"
+        ssh hyperchain@$server_address " ps ax | grep hyperchain | awk '{print \$1}' | xargs kill -9"
         #ssh -T hyperchain@$server_address "if [ x\"`ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'`\" != \"x\" ]; then echo \"kill process \" && ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'| xargs kill -9 ; else echo no hyperchain process runing ;fi"
         # ssh -T hyperchain@$server_address "ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'| xargs kill -9 >& /dev/null"
 
@@ -264,7 +264,7 @@ fs__generate_node_peer_configs(){
         mkdir $PEER_CONFIGS_DIR
     fi
 	for (( id = 1; id <= $MAXNODE; id++)); do
-        confer hpc serverlist.txt innerserverlist.txt $PEER_CONFIGS_DIR/peerconfig_$id.json $id -e
+        confer hpc serverlist.txt innerserverlist.txt $PEER_CONFIGS_DIR/peerconfig_$id.json $id
     done
 }
 
@@ -303,7 +303,7 @@ fs_modifi_global(){
 fs_run_N_terminals_linux(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        gnome-terminal -x bash -c "ssh hyperchain@$server_address \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o $ni -l 8001 -t 8081 -f 9001\""
+        gnome-terminal -x bash -c "ssh hyperchain@$server_address \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain \""
         ni=`expr $ni + 1`
     done
 }
@@ -311,7 +311,7 @@ fs_run_N_terminals_linux(){
 fs_run_N_terminals_mac(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        osascript -e 'tell app "Terminal" to do script "ssh hyperchain@'$server_address' \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain -o '$ni' -l 8001 -t 8081 -f 9001\""'
+        osascript -e 'tell app "Terminal" to do script "ssh hyperchain@'$server_address' \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain \""'
         ni=`expr $ni + 1`
     done
 }
@@ -320,7 +320,7 @@ fs_run_N_terminals_mac(){
 fs_run_one_terminal(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        ssh -T hyperchain@$server_address "./hyperchain -o ${ni} -l 8001 -t 8081" &
+        ssh -T hyperchain@$server_address "./hyperchain" &
         ni=`expr $ni + 1`
     done
 }

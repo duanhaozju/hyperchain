@@ -85,9 +85,6 @@ type pbftProtocal struct {
 
 	// implementation of PBFT `in`
 	certStore       map[msgID]*msgCert // track quorum certificates for requests
-	qset            *Qset
-	pset            *Pset
-	cset            *Cset
 	// pqset for viewchange
 	qlist			map[qidx]*ViewChange_PQ
 	plist			map[uint64]*ViewChange_PQ
@@ -146,7 +143,7 @@ type pbftProtocal struct {
 	updateStore			map[uidx]*UpdateN			// track last update-n we received or sent
 	updateTarget		uidx						// track the new view after update
 	updateCertStore		map[msgID]updateCert		// track the local certStore that needed during update
-	inClearCache		bool
+	newNodeReady		bool
 	updateHandled		bool
 }
 
@@ -356,6 +353,7 @@ func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	pbft.inAddingNode = false
 	pbft.inDeletingNode = false
 	atomic.StoreUint32(&pbft.inUpdatingN, 0)
+	pbft.newNodeReady = false
 	pbft.duplicator = make(map[uint64]*transactionStore)
 	pbft.updateCertStore = make(map[msgID]updateCert)
 	pbft.agreeUpdateStore = make(map[aidx]*AgreeUpdateN)
@@ -534,8 +532,12 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		pbft.persistView(pbft.view)
 		atomic.StoreUint32(&pbft.activeView, 1)
 		pbft.vcHandled = false
-		pbft.processRequestsDuringViewChange()
 		logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/h=%d", pbft.id, primary, pbft.view, pbft.h)
+		if pbft.isNewNode {
+			err =  pbft.sendReadyForN()
+			return nil
+		}
+		pbft.processRequestsDuringViewChange()
 	case *PrePrepare:
 		err = pbft.recvPrePrepare(et)
 	case *Prepare:
@@ -567,6 +569,15 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case protos.VcResetDone:
 		pbft.inVcReset = false
 		logger.Debugf("Replica %d received local VcResetDone", pbft.id)
+		if atomic.LoadUint32(&pbft.inUpdatingN) == 1 {
+			if pbft.primary(pbft.view) == pbft.id {
+				return pbft.handleTailAfterUpdate()
+			} else if pbft.id == uint64(pbft.N) {
+				return pbft.sendFinishUpdate()
+			} else {
+				return updatedNEvent{}
+			}
+		}
 		if et.SeqNo != pbft.h+1 {
 			logger.Warningf("Replica %d finds error in VcResetDone, expect=%d, but get=%d", pbft.id, pbft.h+1, et.SeqNo)
 			return nil
@@ -584,7 +595,13 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		}
 		return pbft.finishViewChange()
 	case *FinishVcReset:
-		return pbft.recvFinishVcReset(et)
+		if atomic.LoadUint32(&pbft.activeView) == 0 {
+			return pbft.recvFinishVcReset(et)
+		}
+		if atomic.LoadUint32(&pbft.inUpdatingN) == 1  {
+			return pbft.recvFinishUpdate(et)
+		}
+		return nil
 	case nullRequestEvent:
 		pbft.nullRequestHandler()
 	case viewChangeResendTimerEvent:
@@ -677,9 +694,11 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 	case *UpdateN:
 		return pbft.recvUpdateN(et)
 	case updatedNEvent:
+		delete(pbft.updateStore, pbft.updateTarget)
 		pbft.startTimerIfOutstandingRequests()
 		pbft.persistView(pbft.view)
 		pbft.persistNewNode(uint64(0))
+		pbft.persistDellLocalKey()
 		pbft.persistN(pbft.N)
 		pbft.updateHandled = false
 		if pbft.isNewNode {
@@ -1102,6 +1121,9 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 			return nil
 		}
 		peers := pbft.highStateTarget.replicas
+		for idx := range pbft.certStore {
+			pbft.persistDelQPCSet(idx.v, idx.n)
+		}
 		pbft.certStore = make(map[msgID]*msgCert)
 		pbft.fetchRecoveryPQC(peers)
 		return nil
@@ -1295,7 +1317,6 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 
 	logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
 	pbft.nullRequestTimer.Stop()
-	pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
 	pbft.seqNo = n
 	preprep := &PrePrepare{
 		View:             pbft.view,
@@ -1310,7 +1331,7 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	cert.sentValidate = true
 	cert.validated = true
 	delete(pbft.cacheValidatedBatch, digest)
-	pbft.persistQSet(preprep.View, preprep.SequenceNumber)
+	pbft.persistQSet(preprep)
 	payload, err := proto.Marshal(preprep)
 	if err != nil {
 		logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
@@ -1327,6 +1348,7 @@ func (pbft *pbftProtocal) sendPrePrepare(reqBatch *TransactionBatch, digest stri
 	pbft.lastVid = *pbft.currentVid
 	pbft.currentVid = nil
 
+	pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
 	pbft.maybeSendCommit(digest, pbft.view, n)
 	pbft.trySendPrePrepare()
 
@@ -1365,7 +1387,7 @@ func (pbft *pbftProtocal) sendPrePrepareForUpdate(reqBatch *TransactionBatch, di
 	cert.digest = digest
 	cert.sentValidate = true
 	cert.validated = true
-	pbft.persistQSet(preprep.View, preprep.SequenceNumber)
+	pbft.persistQSet(preprep)
 
 	payload, err := proto.Marshal(preprep)
 	if err != nil {
@@ -1399,7 +1421,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest=%s ",
 		pbft.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
-	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
+	if atomic.LoadUint32(&pbft.activeView) == 0 {
 		logger.Debugf("Replica %d ignoring pre-prepare as we sre in view change", pbft.id)
 		return nil
 	}
@@ -1467,7 +1489,7 @@ func (pbft *pbftProtocal) recvPrePrepare(preprep *PrePrepare) error {
 			ReplicaId:      pbft.id,
 		}
 		cert.sentPrepare = true
-		pbft.persistQSet(preprep.View, preprep.SequenceNumber)
+		pbft.persistQSet(preprep)
 		pbft.recvPrepare(prep)
 		payload, err := proto.Marshal(prep)
 		if err != nil {
@@ -2136,6 +2158,8 @@ func (pbft *pbftProtocal) moveWatermarks(n uint64) {
 			delete(pbft.validatedBatchStore, cert.digest)
 			delete(pbft.outstandingReqBatches, cert.digest)
 			delete(pbft.certStore, idx)
+			pbft.persistDelQPCSet(idx.v, idx.n)
+			delete(pbft.updateCertStore, idx)
 		}
 	}
 
@@ -2160,36 +2184,6 @@ func (pbft *pbftProtocal) moveWatermarks(n uint64) {
 			delete(pbft.chkpts, n)
 			pbft.persistDelCheckpoint(n)
 		}
-	}
-
-	if pbft.qset != nil {
-		qset := []*PrePrepare{}
-		for _, q := range pbft.qset.Set {
-			if q.SequenceNumber > h {
-				qset = append(qset, q)
-			}
-		}
-		pbft.qset.Set = qset
-	}
-
-	if pbft.pset != nil {
-		pset := []*Prepare{}
-		for _, p := range pbft.pset.Set {
-			if p.SequenceNumber > h {
-				pset = append(pset, p)
-			}
-		}
-		pbft.pset.Set = pset
-	}
-
-	if pbft.cset != nil {
-		cset := []*Commit{}
-		for _, c := range pbft.cset.Set {
-			if c.SequenceNumber > h {
-				cset = append(cset, c)
-			}
-		}
-		pbft.cset.Set = cset
 	}
 
 	for idx := range pbft.qlist {
@@ -2516,7 +2510,22 @@ func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error 
 
 	primary := pbft.primary(pbft.view)
 	if primary == pbft.id {
-		logger.Debugf("Primary %d received validated batch for sqeNo=%d, batch hash: %s", pbft.id, result.SeqNo, result.Hash)
+		logger.Debugf("Primary %d received validated batch for view=%d/vid=%d, batch hash: %s", pbft.id, result.View, result.SeqNo, result.Hash)
+
+		if atomic.LoadUint32(&pbft.activeView) == 0 {
+			logger.Debugf("Replica %d ignoring ValidatedResult as we sre in view change", pbft.id)
+			return nil
+		}
+
+		if atomic.LoadUint32(&pbft.inUpdatingN) == 1 {
+			logger.Debugf("Replica %d ignoring ValidatedResult as we sre in updating N", pbft.id)
+			return nil
+		}
+
+		if !pbft.inWV(result.View, result.SeqNo) {
+			logger.Debugf("Replica %d receives validated result %s that is out of sequence numbers", pbft.id, result.Hash)
+			return nil
+		}
 
 		batch := &TransactionBatch{
 			Batch:     result.Transactions,
@@ -2532,7 +2541,7 @@ func (pbft *pbftProtocal) recvValidatedResult(result protos.ValidatedTxs) error 
 		pbft.cacheValidatedBatch[digest] = cache
 		pbft.trySendPrePrepare()
 	} else {
-		logger.Debugf("Replica %d recived validated batch for sqeNo=%d, batch hash: %s", pbft.id, result.SeqNo, result.Hash)
+		logger.Debugf("Replica %d recived validated batch for view=%d/sqeNo=%d, batch hash: %s", pbft.id, result.View, result.SeqNo, result.Hash)
 
 		if !pbft.inWV(result.View, result.SeqNo) {
 			logger.Debugf("Replica %d receives validated result %s that is out of sequence numbers", pbft.id, result.Hash)

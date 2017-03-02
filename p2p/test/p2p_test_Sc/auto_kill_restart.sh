@@ -37,13 +37,13 @@ f_check_local_env(){
         echo -e "Please install the go env correctly!"
         exit 1
     fi
-
+    
     if ! type govendor > /dev/null; then
         # install foobar here
         echo -e "Please install the `govendor`, just type:\ngo get -u github.com/kardianos/govendor"
         exit 1
     fi
-
+    
     if ! type jq > /dev/null; then
         echo -e "Please install the `jq` to parse the json file \n just type: \n sudo apt-get install jq / sudo yum -y install jq / brew install jq "
         exit 1
@@ -62,30 +62,55 @@ f_kill_process(){
     ps -ax | grep hyperchain | grep -v grep | awk '{print $1}' |  xargs  kill -9
 }
 
+# 解析参数函数
+f_parse_args(){
+    while [ $# -gt 0 ]
+    do
+        case "$1" in
+        -h|--help)
+            help; exit 0;;
+        -k|--kill)
+            f_kill_process; exit 1;;
+    	-d|--delete)
+    	    DELETEDATA=false; shift;;
+    	-r|--rebuild)
+    	    REBUILD=false; shift;;
+        -m|--mode)
+            MODE=true; shift;;
+    	--) shift; break;;
+    	-*) help; exit 1;;
+    	*) break;;
+        esac
+    done
+}
+
 # 删除数据函数
 f_delete_data(){
-for (( j=1; j<=$MAXPEERNUM; j++ ))
-do
+if $DELETEDATA; then
     # Clear the old data
-    if [ -d "${DUMP_PATH}/node${j}/build" ];then
-        rm -rf "${DUMP_PATH}/node${j}/build"
+    if [ -d "${DUMP_PATH}" ];then
+        echo "Clear the old data..."
+        rm -rf "${DUMP_PATH}"
     fi
 
     # Creat the build dir
-    if [ ! -d "${DUMP_PATH}/node${j}/build" ];then
-        mkdir -p "${DUMP_PATH}/node${j}/build"
+    if [ ! -d "${DUMP_PATH}" ];then
+        echo "Auto recreat the build dir..."
+        mkdir -p "${DUMP_PATH}"
     fi
-done
+fi
 }
 
 # 重新编译函数
 f_rebuild(){
-# Build the project
-echo "Rebuild the project..."
-if [ -s "${DUMP_PATH}/hyperchain" ]; then
-    rm ${DUMP_PATH}/hyperchain
+if $REBUILD; then
+    # Build the project
+    echo "Rebuild the project..."
+    if [ -s "${DUMP_PATH}/hyperchain" ]; then
+        rm ${DUMP_PATH}/hyperchain
+    fi
+     cd ${PROJECT_PATH} && govendor build -o ${DUMP_PATH}/hyperchain
 fi
-cd ${PROJECT_PATH} && govendor build -o ${DUMP_PATH}/hyperchain
 }
 
 # 数据分发函数
@@ -93,12 +118,7 @@ f_distribute(){
 # cp the config files into nodes
 for (( j=1; j<=$1; j++ ))
 do
-    if [ ! -d "${DUMP_PATH}/node${j}" ];then
-        mkdir -p ${DUMP_PATH}/node${j}
-    fi
-    if [ -d "${DUMP_PATH}/node${j}/config" ];then
-        rm -rf ${DUMP_PATH}/node${j}/config
-    fi
+    mkdir -p ${DUMP_PATH}/node${j}/
     cp -rf  ${CONF_PATH} ${DUMP_PATH}/node${j}/
     cp -rf  ${CONF_PATH}/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/config/local_peerconfig.json
     cp -rf  ${CONF_PATH}/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/config/cert/
@@ -126,7 +146,7 @@ f_run_process(){
     do
         case "$_SYSTYPE" in
           MAC*)
-             f_x_in_mac_cmd $j
+             f_x_in_mac_cmd $j 
           ;;
           LINUX*)
              f_x_in_linux_cmd $j
@@ -174,7 +194,7 @@ GLOBAL_CONFIG="${CONF_PATH}/global.yaml"
 # peerconfig 配置文件路径
 PEER_CONFIG_FILE_NAME=`confer read ${GLOBAL_CONFIG} global.configs.peers |sed 's/"//g'`
 
-PEER_CONFIG_FILE=${PROJECT_PATH}/${PEER_CONFIG_FILE_NAME}
+PEER_CONFIG_FILE=${PROJECT_PATH}/${PEER_CONFIG_FILE_NAME} 
 
 # 节点数目
 MAXPEERNUM=`cat ${PEER_CONFIG_FILE} | jq ".maxpeernode"`
@@ -192,24 +212,7 @@ f_check_local_env
 f_set_env
 
 # 解析输出参数
-while [ $# -gt 0 ]
-do
-    case "$1" in
-    -h|--help)
-        help; exit 0;;
-    -k|--kill)
-        f_kill_process; exit 1;;
-    -d|--delete)
-        DELETEDATA=false; shift;;
-    -r|--rebuild)
-        REBUILD=false; shift;;
-    -m|--mode)
-        MODE=true; shift;;
-    --) shift; break;;
-    -*) help; exit 1;;
-    *) break;;
-    esac
-done
+f_parse_args
 
 # 杀进程
 f_kill_process
@@ -229,6 +232,16 @@ fi
 f_distribute $MAXPEERNUM
 
 # 运行hyperchain 进程
+f_run_process
+
+# TEST MODE
+# sleep 20s
+f_sleep 15
+
+# kill all process
+f_kill_process
+
+# restart all node
 f_run_process
 
 

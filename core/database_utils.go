@@ -36,7 +36,9 @@ func init() {
 // should be called while programming start-up
 
 func InitDB(dbConfig string, port int) {
-	hyperdb.InitDatabase(dbConfig, strconv.Itoa(port))
+//func InitDB(conf *common.Config)
+	hyperdb.SetDBConfig(dbConfig, strconv.Itoa(port))
+	hyperdb.InitDatabase("Global")
 	memChainMap = newMemChain()
 	memChainStatusMap = newMemChainStatus()
 }
