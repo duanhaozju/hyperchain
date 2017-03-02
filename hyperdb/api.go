@@ -35,8 +35,8 @@ const (
 	DB_TYPE = "dbConfig.dbType"
 
 	// database type
-	LDB_DB = 001
-	SUPER_LEVEL_DB = 1234
+	LDB_DB = 0001
+	SUPER_LEVEL_DB = 0010
 
 	// namespace
 	DefautNameSpace="Global"
@@ -78,7 +78,6 @@ func SetDBConfig(dbConfig string, port string) {
 
 	leveldbPath = config.GetString("dbConfig.leveldbPath")
 	grpcPort, _ = strconv.Atoi(port)
-	//leveldbPath += port
 
 }
 

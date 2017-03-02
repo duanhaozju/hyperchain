@@ -16,11 +16,15 @@ import (
 // A logger for this file.
 var commonLogger = logging.MustGetLogger("commmon")
 var logDefaultLevel logging.Level
+var consoleFormat = `%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}`
+var fileFormat = `%[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}`
 
 var closeLogFile chan struct{}
 
 //InitLog init the log by configuration from global.yaml
 func InitLog(conf *Config) {
+	consoleFormat = conf.GetString(LOG_CONSOLE_FORMAT)
+	fileFormat = conf.GetString(LOG_FILE_FORMAT)
 	timestamp := time.Now().Unix()
 	tm := time.Unix(timestamp, 0)
 
@@ -90,9 +94,7 @@ func setNewLogFile(fileName string, backendStderr logging.LeveledBackend) {
 		commonLogger.Fatalf("open file: %s error !", fileName)
 	}
 	logBackend := logging.NewLogBackend(logFile, "", 0)
-	var format = logging.MustStringFormatter(
-		`[%{level:.5s}] %{time:15:04:05.000} %{shortfile}[%{module}] %{shortfunc} -> %{message}`,
-	)
+	var format = logging.MustStringFormatter(fileFormat)
 	backendFileFormatter := logging.NewBackendFormatter(logBackend, format)
 
 	lb := logging.AddModuleLevel(backendFileFormatter)
@@ -103,9 +105,7 @@ func setNewLogFile(fileName string, backendStderr logging.LeveledBackend) {
 //initLogBackend init the backend info for logging.
 func initLogBackend() logging.LeveledBackend {
 	backend_stderr := logging.NewLogBackend(os.Stderr, "", 0)
-	var format_stderr = logging.MustStringFormatter(
-		`%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}`,
-	)
+	var format_stderr = logging.MustStringFormatter(consoleFormat)
 	backendFormatter := logging.NewBackendFormatter(backend_stderr, format_stderr)
 	backendStderr := logging.AddModuleLevel(backendFormatter)
 	backendStderr.SetLevel(logDefaultLevel, "")
