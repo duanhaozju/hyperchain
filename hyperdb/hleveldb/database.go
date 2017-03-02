@@ -1,6 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package hyperdb
+package hleveldb
 
 import (
 	"bytes"
@@ -8,6 +8,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
+	"hyperchain/hyperdb/db"
 )
 
 // the Database for LevelDB
@@ -53,7 +54,7 @@ func (self *LDBDatabase) Delete(key []byte) error {
 }
 
 // NewIterator returns a Iterator for traversing the database
-func (self *LDBDatabase) NewIterator(prefix []byte) Iterator {
+func (self *LDBDatabase) NewIterator(prefix []byte) db.Iterator {
 	return self.db.NewIterator(util.BytesPrefix(prefix), nil)
 }
 
@@ -94,7 +95,7 @@ func (self *LDBDatabase) LDB() *leveldb.DB {
 
 // NewBatch returns a Batch instance
 // it allows batch-operation
-func (db *LDBDatabase) NewBatch() Batch {
+func (db *LDBDatabase) NewBatch() db.Batch {
 	return &ldbBatch{db: db.db, b: new(leveldb.Batch)}
 }
 

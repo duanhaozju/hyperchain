@@ -11,32 +11,15 @@ import (
 	"sync"
 	"path/filepath"
 	"hyperchain/hyperdb/sldb"
+	"hyperchain/common"
+	"hyperchain/hyperdb/db"
+	"hyperchain/hyperdb/hleveldb"
 )
-
+//TODO: refactor this file as soon as possible
 var (
 	logPath   = ""
 	logStatus = false
-
-	//dbType 应该是一个3位的二进制数比如111 101
-	//第一个1表示 redis open
-	//第二个1表示 ssdb  open
-	//第三个1表示 leveldb open
-	//现在仅支持 redis加 ssdb 或者仅leveldb 即 110 001
 	dbType = 001
-
-	ssdbProxyPort       = 22122
-	ssdbFirstPort       = 8011
-	ssdbGap             = 10
-	ssdbServerNumber    = 2
-	ssdbPoolSize        = 10
-	ssdbTimeout         = 60
-	ssdbMaxConnectTimes = 15
-	ssdbIteratorSize    = 40
-
-	redisPort            = 8101
-	redisPoolSize        = 10
-	redisTimeout         = 60
-	redisMaxConnectTimes = 15
 	grpcPort             = 8001
 	leveldbPath          = "./build/leveldb"
 )
@@ -44,27 +27,28 @@ var (
 type stateDb int32
 
 type DBInstance struct {
-	db     Database
+	db     db.Database
 	state  stateDb
 }
 
 const (
+	DB_TYPE = "dbConfig.dbType"
+
+	// database type
+	LDB_DB = 001
+	SUPER_LEVEL_DB = 1234
+
+	// namespace
+	DefautNameSpace="Global"
+	Blockchain="Blockchain"
+	Consensus="Consensus"
+
+	// state
 	closed stateDb = iota
 	opened
 )
 
-const (
-	DefautNameSpace="Global"
-	Blockchain="Blockchain"
-	Consensus="Consensus"
-)
-
-
 var log *logging.Logger // package-level logger
-//dbInstance include the instance of Database interface
-
-
-
 type DbMap struct{
 	dbMap map[string] *DBInstance
 	dbSync  sync.Mutex
@@ -80,7 +64,6 @@ func init() {
 }
 
 func SetDBConfig(dbConfig string, port string) {
-
 	config := viper.New()
 	viper.SetEnvPrefix("DBCONFIG_ENV")
 	config.SetConfigFile(dbConfig)
@@ -88,21 +71,7 @@ func SetDBConfig(dbConfig string, port string) {
 	if err != nil {
 		panic(fmt.Errorf("Error envPre %s reading %s", "dbConfig", err))
 	}
-
-	dbType = config.GetInt("dbConfig.dbType")
-
-	ssdbFirstPort = config.GetInt("dbConfig.ssdb.firstPort")
-	ssdbGap = config.GetInt("dbConfig.ssdb.gap")
-	ssdbIteratorSize = config.GetInt("dbConfig.ssdb.iteratorSize")
-	ssdbMaxConnectTimes = config.GetInt("dbConfig.ssdb.maxConnectTimes")
-	ssdbServerNumber = config.GetInt("dbConfig.ssdb.serverNumber")
-	ssdbPoolSize = config.GetInt("dbConfig.ssdb.poolSize")
-	ssdbTimeout = config.GetInt("dbConfig.ssdb.timeout")
-
-	redisMaxConnectTimes = config.GetInt("dbConfig.redis.maxConnectTimes")
-	redisPoolSize = config.GetInt("dbConfig.redis.poolSize")
-	redisPort = config.GetInt("dbConfig.redis.port")
-	redisTimeout = config.GetInt("dbConfig.redis.timeout")
+	dbType = config.GetInt(DB_TYPE)
 
 	logStatus = config.GetBool("dbConfig.logStatus")
 	logPath = config.GetString("dbConfig.logPath")
@@ -121,7 +90,7 @@ func GetLogPath() string {
 	return logPath
 }
 
-func InitDatabase(nameSpace string) error {
+func InitDatabase(conf *common.Config, nameSpace string) error {
 
 	dbMap.dbSync.Lock()
 	defer dbMap.dbSync.Unlock()
@@ -132,7 +101,7 @@ func InitDatabase(nameSpace string) error {
 		return errors.New("Try to init inited db "+nameSpace)
 	}
 
-	db, err := NewDatabase(filepath.Join(leveldbPath,nameSpace,"Blockchain"),dbType)
+	db, err := NewDatabase(conf, filepath.Join(leveldbPath,nameSpace,"Blockchain"), dbType)
 
 
 	if err!=nil{
@@ -140,8 +109,7 @@ func InitDatabase(nameSpace string) error {
 		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
 	}
 
-
-	db1, err1 := NewDatabase(filepath.Join(leveldbPath,nameSpace,"Consensus" ),dbType)
+	db1, err1 := NewDatabase(conf, filepath.Join(leveldbPath,nameSpace,"Consensus" ), 001)
 
 	if err1 != nil {
 
@@ -162,7 +130,7 @@ func InitDatabase(nameSpace string) error {
 	return err
 }
 
-func GetDBDatabase() (Database, error) {
+func GetDBDatabase() (db.Database, error) {
 	dbMap.dbSync.Lock()
 	defer dbMap.dbSync.Unlock()
 	if dbMap.dbMap[DefautNameSpace+Blockchain].db == nil {
@@ -172,7 +140,7 @@ func GetDBDatabase() (Database, error) {
 	return dbMap.dbMap[DefautNameSpace+Blockchain].db, nil
 }
 
-func GetDBDatabaseByNamespcae(namespace string)(Database, error){
+func GetDBDatabaseByNamespcae(namespace string)(db.Database, error){
 	dbMap.dbSync.Lock()
 	defer dbMap.dbSync.Unlock()
 
@@ -188,9 +156,7 @@ func GetDBDatabaseByNamespcae(namespace string)(Database, error){
 	return dbMap.dbMap[namespace].db, nil
 }
 
-
-
-func GetDBDatabaseConsensus() (Database, error) {
+func GetDBDatabaseConsensus() (db.Database, error) {
 	dbMap.dbSync.Lock()
 	defer dbMap.dbSync.Unlock()
 	if dbMap.dbMap[DefautNameSpace+Consensus].db == nil {
@@ -200,25 +166,16 @@ func GetDBDatabaseConsensus() (Database, error) {
 	return dbMap.dbMap[DefautNameSpace+Consensus].db, nil
 }
 
-func NewDatabase( path string,dbType int) (Database, error) {
-
-	if dbType == 001 {
+func NewDatabase(conf *common.Config, path string, dbType int) (db.Database, error) {
+	switch dbType {
+	case LDB_DB:
 		log.Notice("Use level db only")
-		return NewLDBDataBase(path)
-	} else if dbType == 010 {
-		log.Notice("Use ssdb only")
-		return NewSSDatabase()
-	} else if dbType == 110 {
-		log.Notice("Use ssdb and redis")
-		return NewRdSdDb()
-	} else if dbType == 100 {
-		log.Notice("Use redis only")
-		return NewRsDatabase()
-	} else if dbType == 1234{
+		return hleveldb.NewLDBDataBase(path)
+	case SUPER_LEVEL_DB:
 		log.Notice("Use SuperLevelDB")
-		return sldb.NewSLDB(path)
-	}else {
-		log.Notice("Wrong dbType:" + strconv.Itoa(dbType))
+		return sldb.NewSLDB(conf)
+	default:
+		log.Errorf("Wrong dbType:" + strconv.Itoa(dbType))
 		return nil, errors.New("Wrong dbType:" + strconv.Itoa(dbType))
 	}
 }

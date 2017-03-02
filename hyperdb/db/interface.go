@@ -1,6 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package hyperdb
+package db
 
 type Database interface {
 	Put(key []byte, value []byte) error

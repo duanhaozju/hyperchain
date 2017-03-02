@@ -1,10 +1,11 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package hyperdb
+package mdb
 
 import (
 	"errors"
 	"sync"
+	"hyperchain/hyperdb/db"
 )
 
 //-- 拷贝并返回一个[]byte
@@ -72,7 +73,7 @@ func (db *MemDatabase) Delete(key []byte) error {
 
 func (db *MemDatabase) Close() {}
 
-func (db *MemDatabase) NewBatch() Batch {
+func (db *MemDatabase) NewBatch() db.Batch {
 	return &memBatch{db: db}
 }
 

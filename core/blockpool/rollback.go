@@ -14,6 +14,7 @@ import (
 	"math/big"
 	"sync/atomic"
 	"time"
+	"hyperchain/hyperdb/db"
 )
 
 // reset blockchain to a stable checkpoint status when `viewchange` occur
@@ -111,7 +112,7 @@ func (pool *BlockPool) CutdownBlock(number uint64) error {
 
 // removeDataInRange remove transaction receipt txmeta and block itself in a specific range
 // range is [from, to).
-func (pool *BlockPool) removeDataInRange(batch hyperdb.Batch,from, to uint64) error  {
+func (pool *BlockPool) removeDataInRange(batch db.Batch,from, to uint64) error  {
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
@@ -147,7 +148,7 @@ func (pool *BlockPool) removeDataInRange(batch hyperdb.Batch,from, to uint64) er
 // revertState revert state from currentNumber related status to a target
 // different process logic of different state implement
 // undo from currentNumber -> targetNumber + 1.
-func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, targetNumber int64, targetRootHash []byte) error {
+func (pool *BlockPool) revertState(batch db.Batch, currentNumber int64, targetNumber int64, targetRootHash []byte) error {
 	switch pool.GetStateType() {
 	case "hyperstate":
 		db, err := hyperdb.GetDBDatabase()
@@ -250,7 +251,7 @@ func (pool *BlockPool) revertState(batch hyperdb.Batch, currentNumber int64, tar
 }
 
 // removeUncommittedData remove uncommitted validation result avoid of memory leak.
-func (pool *BlockPool) removeUncommittedData(batch hyperdb.Batch) error {
+func (pool *BlockPool) removeUncommittedData(batch db.Batch) error {
 	switch pool.GetStateType() {
 	case "hyperstate":
 		state, err := pool.GetStateInstance()

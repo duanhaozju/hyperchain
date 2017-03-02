@@ -1,4 +1,4 @@
-package hyperdb
+package hleveldb
 
 import (
 	"bytes"

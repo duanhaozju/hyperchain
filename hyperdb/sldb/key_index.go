@@ -11,6 +11,14 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"hyperchain/common"
+)
+
+const (
+	SLDB_INDEX_BLOOM_BIT_NUM = "dbConfig.sldb.index.bloombit"
+	SLDB_INDEX_HASH_NUM = "dbConfig.sldb.index.hashnum"
+	SLDB_INDEX_DUMP_INTERVAL = "dbConfig.sldb.index.dumpinterval"
+	SLDB_INDEX_DIR = "dbConfig.sldb.index.dir"
 )
 
 //Index interface of the data index.
@@ -19,11 +27,11 @@ type Index interface {
 	Contains(key []byte) bool
 	MayContains(key []byte) bool
 	GetIndex(key []byte) interface{}
-	AddIndexForKey(key []byte) error
+	AddIndexForKey(key []byte, indexBatch *leveldb.Batch) error
+	AddAndPersistIndexForKey(key []byte) error
 	Init() error
 	Rebuild() error
 	Persist() error
-	PersistKeyBatch() error
 }
 
 //KeyIndex index implement for key-value store based on BloomFilter.
@@ -34,13 +42,15 @@ type KeyIndex struct {
 	keyPrefix          []byte
 	lastStartKeyPrefix []byte
 	currStartKeyPrefix []byte
-	keyBatch           *leveldb.Batch
 	bloomPath          string
+	conf               *common.Config
 }
 
 //NewKeyIndex new KeyIndex instance
-func NewKeyIndex(ns string, db *leveldb.DB,path string) *KeyIndex {
-	filter := bloom.New(1 * 10000 * 10000, 3) //todo: fix it
+func NewKeyIndex(conf *common.Config, ns string, db *leveldb.DB, path string) *KeyIndex {
+	filter := bloom.New(uint(conf.GetInt(SLDB_INDEX_BLOOM_BIT_NUM)),
+		uint(conf.GetInt(SLDB_INDEX_HASH_NUM)))
+
 	index := &KeyIndex{
 		namespace:ns,
 		bf:filter,
@@ -48,7 +58,6 @@ func NewKeyIndex(ns string, db *leveldb.DB,path string) *KeyIndex {
 		keyPrefix:[]byte(ns + "_bloom_key."),
 		bloomPath:path,
 	}
-	index.keyBatch = new(leveldb.Batch)
 	index.Init()
 	return index
 }
@@ -56,6 +65,10 @@ func NewKeyIndex(ns string, db *leveldb.DB,path string) *KeyIndex {
 //Namespace get namespace of this keyindex instance
 func (ki *KeyIndex) Namespace() string  {
 	return ki.namespace
+}
+
+func (ki *KeyIndex) SetNamespace(ns string) {
+	ki.namespace = ns
 }
 
 //Contains judge whether the key is stored in the underlying database
@@ -77,7 +90,14 @@ func (ki *KeyIndex) GetIndex(key []byte) interface {} {
 }
 
 //AddIndexForKey add index for a specify key
-func (ki *KeyIndex) AddIndexForKey(key []byte) error {
+func (ki *KeyIndex) AddIndexForKey(key []byte, indexBatch *leveldb.Batch) error {
+	ki.bf.Add(key)
+	ki.addKeyIndexIntoBatch(key, indexBatch)
+	return nil
+}
+
+//AddAndPersistIndexForKey add index for key and persist the key
+func (ki *KeyIndex) AddAndPersistIndexForKey(key []byte) error {
 	ki.bf.Add(key)
 	ki.persistKey(key)
 	return nil
@@ -147,10 +167,16 @@ func (ki *KeyIndex) Rebuild() error {
 }
 
 //persistKey add key into the batch
+func (ki *KeyIndex) addKeyIndexIntoBatch(key []byte, keyBatch *leveldb.Batch) error {
+	nkey := []byte(string(ki.keyPrefix) + string(key))
+	keyBatch.Put(nkey, key)
+	return nil
+}
+
+//persistKey add key into the db
 func (ki *KeyIndex) persistKey(key []byte) error {
 	nkey := []byte(string(ki.keyPrefix) + string(key))
-	ki.keyBatch.Put(nkey, key)
-	return nil
+	return ki.db.Put(nkey, key, nil)
 }
 
 //dropPreviousKey drop keys which have been added into bloom and persisted
@@ -177,14 +203,15 @@ func (ki *KeyIndex) dropPreviousKey() error  {
 //1.persist current bloom into a tmp file
 //2.rename tmp file
 func (ki *KeyIndex) persistBloom () error {
-	tmpName :=  ki.bloomPath+".tmp." + strconv.FormatInt(time.Now().UnixNano(), 10)
+	tmpName :=  ki.bloomPath + ".tmp." + strconv.FormatInt(time.Now().UnixNano(), 10)
 	inputFile, err := os.Open(tmpName)
 	if err == nil {
 		size, err := ki.bf.WriteTo(inputFile)
 		fmt.Printf("persist bloom filter for namespace: %s size: %d\n", ki.Namespace(), size)
 		return err
-	}else {//no such file
-		err = os.MkdirAll("./build/index", 0777) //TODO: fix it
+	}else {
+		// no such file
+		err = os.MkdirAll(ki.conf.GetString(SLDB_INDEX_DIR), 0777)
 		if err != nil {
 			log.Errorf("persist bloom error %v", err)
 			return err
@@ -221,19 +248,10 @@ func (ki *KeyIndex) Persist() error {
 		return err
 	}
 	log.Noticef("drop previous keys")
+	err = ki.dropPreviousKey()
 	if err != nil{
 		log.Error(err.Error())
 		return err
-	}
-	err = ki.dropPreviousKey()
-	return err
-}
-
-//PersistKeyBatch persist keys at level of batch
-func (ki *KeyIndex) PersistKeyBatch() error {
-	err := ki.db.Write(ki.keyBatch, nil)
-	if err == nil {// keyBatch write success
-		ki.keyBatch.Reset()
 	}
 	return err
 }

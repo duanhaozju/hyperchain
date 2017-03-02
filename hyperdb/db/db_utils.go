@@ -1,8 +1,27 @@
-package hyperdb
+package db
 
-import "os"
-import "time"
-import "strconv"
+import (
+	"strconv"
+	"time"
+	"os"
+	"github.com/op/go-logging"
+)
+
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("hyperdb")
+}
+var (
+	logPath   = ""
+	logStatus = false
+	dbType = 001
+	grpcPort             = 8001
+	leveldbPath          = "./build/leveldb"
+)
+
+func GetLogPath() string {
+	return logPath
+}
 
 func writeLog(funcName string, num int, err error) {
 	f, err1 := os.OpenFile(GetLogPath(), os.O_WRONLY|os.O_CREATE, 0644)

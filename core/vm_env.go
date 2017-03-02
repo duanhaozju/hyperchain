@@ -7,8 +7,8 @@ import (
 	"hyperchain/core/crypto"
 	"hyperchain/core/state"
 	"hyperchain/core/vm"
-	"hyperchain/hyperdb"
 	"math/big"
+	"hyperchain/hyperdb/db"
 )
 
 var (
@@ -46,7 +46,7 @@ func (self Log) Topics() [][]byte {
 	return t
 }
 
-func StateObjectFromAccount(db hyperdb.Database, addr string, account Account) *state.StateObject {
+func StateObjectFromAccount(db db.Database, addr string, account Account) *state.StateObject {
 	obj := state.NewStateObject(common.HexToAddress(addr), nil)
 	obj.SetBalance(common.Big(account.Balance))
 

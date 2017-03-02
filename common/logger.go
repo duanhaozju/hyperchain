@@ -14,7 +14,7 @@ import (
 )
 
 // A logger for this file.
-var loggingLogger = logging.MustGetLogger("logging")
+var commonLogger = logging.MustGetLogger("commmon")
 var logDefaultLevel logging.Level
 
 var closeLogFile chan struct{}
@@ -31,7 +31,7 @@ func InitLog(conf *Config) {
 	}
 	lv, err := logging.LogLevel(conf.GetString(LOG_BASE_LOG_LEVEL))
 	if err != nil {
-		loggingLogger.Warningf("Invalid logging level: %s, using INFO as default!", conf.GetString(LOG_BASE_LOG_LEVEL))
+		commonLogger.Warningf("Invalid logging level: %s, using INFO as default!", conf.GetString(LOG_BASE_LOG_LEVEL))
 		logDefaultLevel = logging.INFO
 	} else {
 		logDefaultLevel = lv
@@ -74,10 +74,10 @@ func newLogFileByInterval(loggerDir string, conf *Config, backendStderr logging.
 			fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
 				tm.Format("-2006-01-02-15:04:05 PM")+".log")
 			setNewLogFile(fileName, backendStderr)
-			loggingLogger.Infof("Change log file, new log file name: %s", fileName)
+			commonLogger.Infof("Change log file, new log file name: %s", fileName)
 		case <-closeLogFile:
-			loggingLogger.Info("Close logger service")
-			loggingLogger.SetBackend(backendStderr)
+			commonLogger.Info("Close logger service")
+			commonLogger.SetBackend(backendStderr)
 		}
 	}
 }
@@ -87,7 +87,7 @@ func setNewLogFile(fileName string, backendStderr logging.LeveledBackend) {
 	logFile, err := os.Create(fileName)
 
 	if err != nil {
-		loggingLogger.Fatalf("open file: %s error !", fileName)
+		commonLogger.Fatalf("open file: %s error !", fileName)
 	}
 	logBackend := logging.NewLogBackend(logFile, "", 0)
 	var format = logging.MustStringFormatter(
@@ -120,12 +120,12 @@ func SetModuleLogLevel(module string, logLevel string) (string, error) {
 	logLevelString := level.String()
 
 	if err != nil {
-		loggingLogger.Warningf("Invalid logging level: %s - ignored", logLevel)
+		commonLogger.Warningf("Invalid logging level: %s - ignored", logLevel)
 		return logLevelString, err
 	}
 
 	logging.SetLevel(logging.Level(level), module)
-	loggingLogger.Infof("Module '%s' logger enabled for log level: %s", module, level)
+	commonLogger.Infof("Module '%s' logger enabled for log level: %s", module, level)
 	return logLevelString, err
 }
 

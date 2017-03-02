@@ -1,11 +1,17 @@
-package hyperdb
+package hleveldb
 
 import (
 	"errors"
 	Lru "github.com/hashicorp/golang-lru"
 	"github.com/syndtr/goleveldb/leveldb"
 	"sync"
+	"github.com/op/go-logging"
+	"hyperchain/hyperdb/db"
 )
+var log *logging.Logger // package-level logger
+func init() {
+	log = logging.MustGetLogger("hyperdb/leveldb_lru")
+}
 
 //if key-value value is 1kb lruSize is 1GB
 var lruSize = 1024 * 1024
@@ -15,6 +21,10 @@ type levelLruDatabase struct {
 	cache    *Lru.Cache
 	dbStatus bool
 }
+
+var (
+	leveldbPath          = "./build/leveldb"
+)
 
 func NewLevelLruDB() (*levelLruDatabase, error) {
 
@@ -50,7 +60,7 @@ func NewLevelLruDBWithP(path string, size int) (*levelLruDatabase, error) {
 	return &levelLruDatabase{leveldb: leveldb, cache: cache, dbStatus: true}, nil
 }
 
-func NewLevelLruDBInf() (Database, error) {
+func NewLevelLruDBInf() (db.Database, error) {
 
 	leveldb, err := NewLDBDataBase(leveldbPath)
 	if err != nil {
@@ -67,68 +77,68 @@ func NewLevelLruDBInf() (Database, error) {
 	return &levelLruDatabase{leveldb: leveldb, cache: cache}, nil
 }
 
-func (db *levelLruDatabase) Put(key []byte, value []byte) error {
+func (lldb *levelLruDatabase) Put(key []byte, value []byte) error {
 
-	if err := db.check(); err != nil {
+	if err := lldb.check(); err != nil {
 		return err
 	}
 
-	db.cache.Add(string(key), value)
+	lldb.cache.Add(string(key), value)
 
-	go db.leveldb.Put(key, value)
+	go lldb.leveldb.Put(key, value)
 
 	return nil
 }
 
-func (db *levelLruDatabase) Get(key []byte) ([]byte, error) {
+func (lldb *levelLruDatabase) Get(key []byte) ([]byte, error) {
 
-	if err := db.check(); err != nil {
+	if err := lldb.check(); err != nil {
 		return nil, err
 	}
 
-	data1, status := db.cache.Get(string(key))
+	data1, status := lldb.cache.Get(string(key))
 
 	if status {
-		return Bytes(data1), nil
+		return db.Bytes(data1), nil
 	}
 
-	data, err := db.leveldb.Get(key)
+	data, err := lldb.leveldb.Get(key)
 
 	if data != nil {
-		db.cache.Add(string(key), data)
+		lldb.cache.Add(string(key), data)
 	}
 
 	return data, err
 
 }
 
-func (db *levelLruDatabase) Delete(key []byte) error {
+func (lldb *levelLruDatabase) Delete(key []byte) error {
 
-	if err := db.check(); err != nil {
+	if err := lldb.check(); err != nil {
 		return err
 	}
 
-	db.cache.Remove(string(key))
+	lldb.cache.Remove(string(key))
 
-	err := db.leveldb.Delete(key)
+	err := lldb.leveldb.Delete(key)
 
 	return err
 }
 
-func (db *levelLruDatabase) NewIterator(prefix []byte) Iterator {
-	return db.leveldb.NewIterator(prefix)
+func (lldb *levelLruDatabase) NewIterator(prefix []byte) db.Iterator {
+	return lldb.leveldb.NewIterator(prefix)
 }
 
 //关闭数据库是不安全的，因为有可能有线程在写数据库，如果做到安全要加锁
 //此处仅设置状态关闭
-func (db *levelLruDatabase) Close() {
-	if err := db.check(); err == nil {
-		db.dbStatus = false
+func (lldb *levelLruDatabase) Close() {
+	if err := lldb.check(); err == nil {
+		lldb.dbStatus = false
 	}
 }
 
-func (db *levelLruDatabase) check() error {
-	if db.dbStatus == false {
+func (lldb *levelLruDatabase) check() error {
+	if lldb.dbStatus == false {
 		log.Notice("levelLruDB has been closed")
 		return errors.New("levelLruDB has been closed")
 	}
@@ -143,14 +153,14 @@ type levelLruBatch struct {
 	batchMap    map[string][]byte
 }
 
-func (db *levelLruDatabase) NewBatch() Batch {
-	if err := db.check(); err != nil {
+func (lldb *levelLruDatabase) NewBatch() db.Batch {
+	if err := lldb.check(); err != nil {
 		log.Notice("Bad operation:try to create a new batch with closed db")
 		return nil
 	}
 	return &levelLruBatch{
-		b:           &ldbBatch{db: db.leveldb.db, b: new(leveldb.Batch)},
-		cache:       db.cache,
+		b:           &ldbBatch{db: lldb.leveldb.db, b: new(leveldb.Batch)},
+		cache:       lldb.cache,
 		batchStatus: true,
 		batchMap:    make(map[string][]byte),
 	}
