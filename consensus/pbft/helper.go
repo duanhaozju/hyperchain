@@ -475,9 +475,9 @@ func (pbft *pbftProtocal) getAddNV() (n int64, v uint64) {
 
 	n = int64(pbft.N) + 1
 	if pbft.view < uint64(pbft.N) {
-		v = pbft.view
+		v = pbft.view + uint64(n)
 	} else {
-		v = pbft.view + 1
+		v = pbft.view + uint64(n) + 1
 	}
 
 	return

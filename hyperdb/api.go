@@ -140,7 +140,7 @@ func InitDatabase(nameSpace string) error {
 	}
 
 
-	db1, err1 := NewDatabase(filepath.Join(leveldbPath,nameSpace,"Consensus" ),dbType)
+	db1, err1 := NewDatabase(filepath.Join(leveldbPath,nameSpace,"Consensus" ),001)
 
 	if err1 != nil {
 

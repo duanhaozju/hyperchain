@@ -13,6 +13,7 @@ import (
 	"encoding/base64"
 	"reflect"
 	"time"
+	"hyperchain/core"
 )
 
 // New replica receive local NewNode message
@@ -278,31 +279,31 @@ func (pbft *pbftProtocal) sendReadyForN() error {
 	}
 
 	if pbft.localKey == "" {
-		logger.Errorf("Replica %d doesn't have local key for ready_for_n", pbft.id)
+		logger.Errorf("New replica %d doesn't have local key for ready_for_n", pbft.id)
 		return nil
+	}
+
+	if atomic.LoadUint32(&pbft.activeView) == 0 {
+		logger.Errorf("New replica %d finds itself in viewchange, not sending ready_for_n", pbft.id)
+		return nil
+	}
+
+	for true {
+		if pbft.lastExec == core.GetHeightOfChain() {
+			break
+		} else {
+			time.Sleep(5 * time.Millisecond)
+			continue
+		}
 	}
 
 	logger.Noticef("Replica %d send ready_for_n as it already finished recovery", pbft.id)
 	atomic.StoreUint32(&pbft.inUpdatingN, 1)
 
-
 	ready := &ReadyForN{
 		ReplicaId:	pbft.id,
 		Key:		pbft.localKey,
 	}
-
-	n, view := pbft.getAddNV()
-	// broadcast the updateN message
-	agree := &AgreeUpdateN{
-		Flag:		true,
-		ReplicaId:	pbft.id,
-		Key:		ready.Key,
-		N:			n,
-		View:		view,
-		H:			pbft.h,
-	}
-
-	pbft.agreeUpdateHelper(agree)
 
 	payload, err := proto.Marshal(ready)
 	if err != nil {
@@ -348,6 +349,10 @@ func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) events.Event {
 		N:			n,
 		View:		view,
 		H:			pbft.h,
+	}
+
+	if pbft.primary(pbft.view) == pbft.id {
+		pbft.newNodeReady = false
 	}
 
 	return pbft.sendAgreeUpdateNForAdd(agree)
@@ -789,6 +794,7 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 		}
 	}
 
+	backenVid := pbft.lastExec + 1
 	pbft.seqNo = pbft.h
 	pbft.lastExec = pbft.h
 	pbft.seqNo = pbft.h
@@ -806,8 +812,6 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 		pbft.id = cert.newId
 	}
 
-	delete(pbft.updateStore, pbft.updateTarget)
-
 	for idx := range pbft.agreeUpdateStore {
 		if (idx.v == update.View && idx.n == update.N && idx.flag == update.Flag) {
 			delete(pbft.agreeUpdateStore, idx)
@@ -817,33 +821,101 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 	pbft.addNodeCertStore = make(map[string]*addNodeCert)
 	pbft.delNodeCertStore = make(map[string]*delNodeCert)
 
-	if !pbft.skipInProgress && !pbft.inVcReset && !pbft.inClearCache {
-		pbft.helper.ClearValidateCache()
-		time.Sleep(10 * time.Millisecond)
+	if !pbft.skipInProgress && !pbft.inVcReset {
+		pbft.helper.VcReset(backenVid)
+		pbft.inVcReset = true
+		return nil
 	}
+
+	return updatedNEvent{}
+}
+
+func (pbft *pbftProtocal) sendFinishUpdate() events.Event {
+
+	finish := &FinishVcReset{
+		ReplicaId: pbft.id,
+		View: pbft.view,
+		LowH: pbft.h,
+	}
+
+	payload, err := proto.Marshal(finish)
+	if err != nil {
+		logger.Errorf("Marshal FinishVcReset Error!")
+		return nil
+	}
+	msg := &ConsensusMessage{
+		Type:    ConsensusMessage_FINISH_VCRESET,
+		Payload: payload,
+	}
+
+	broadcast := consensusMsgHelper(msg, pbft.id)
+	primary := pbft.primary(pbft.view)
+	pbft.helper.InnerUnicast(broadcast, primary)
+	logger.Debugf("Replica %d send FinishUpdate to primary %d", pbft.id, primary)
+	return updatedNEvent{}
+}
+
+func (pbft *pbftProtocal) recvFinishUpdate(finish *FinishVcReset) events.Event {
+	if pbft.primary(pbft.view) != pbft.id {
+		logger.Warningf("Replica %d is not primary, but received others FinishUpdate", pbft.id)
+		return nil
+	}
+
+	if pbft.inVcReset {
+		logger.Warningf("Primary %d itself has not finished update", pbft.id)
+		return nil
+	}
+
+	if finish.ReplicaId != uint64(pbft.N) {
+		logger.Warningf("Primary %d received finishUpdate from replica %d, but expect replica %d", pbft.id, finish.ReplicaId, pbft.N)
+		return nil
+	}
+
+	pbft.newNodeReady = true
+
+	return pbft.handleTailAfterUpdate()
+}
+
+func (pbft *pbftProtocal) handleTailAfterUpdate() events.Event {
+
+	if pbft.primary(pbft.view) != pbft.id {
+		logger.Warningf("Replica %d is not primary, but received others FinishUpdate", pbft.id)
+		return nil
+	}
+
+
+
+	if !pbft.newNodeReady {
+		logger.Warningf("Primary %d is haven't received new node's FinishUpdate", pbft.id)
+		return nil
+	}
+
+	update, ok := pbft.updateStore[pbft.updateTarget]
+	if !ok {
+		logger.Debugf("Primary %d ignoring handleTailAfterUpdate as it could not find target %v in its updateStore", pbft.id, pbft.updateTarget)
+		return nil
+	}
+
+	atomic.StoreUint32(&pbft.inUpdatingN, 0)
 
 	xSetLen := len(update.Xset)
 	upper := uint64(xSetLen) + pbft.h + uint64(1)
-	if pbft.primary(pbft.view) == pbft.id {
-		for i := pbft.h + uint64(1); i < upper; i++ {
-			d, ok := update.Xset[i]
+	for i := pbft.h + uint64(1); i < upper; i++ {
+		d, ok := update.Xset[i]
+		if !ok {
+			logger.Critical("update_n Xset miss batch number %d", i)
+		} else if d == "" {
+			// This should not happen
+			logger.Critical("update_n Xset has null batch, kick it out")
+		} else {
+			batch, ok := pbft.validatedBatchStore[d]
 			if !ok {
-				logger.Critical("update_n Xset miss batch number %d", i)
-			} else if d == "" {
-				// This should not happen
-				logger.Critical("update_n Xset has null batch, kick it out")
+				logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
 			} else {
-				batch, ok := pbft.validatedBatchStore[d]
-				if !ok {
-					logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
-				} else {
-					pbft.sendPrePrepareForUpdate(batch, d)
-				}
+				pbft.sendPrePrepareForUpdate(batch, d)
 			}
 		}
 	}
-
-	pbft.startTimerIfOutstandingRequests()
 
 	return updatedNEvent{}
 }
