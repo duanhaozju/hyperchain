@@ -9,7 +9,8 @@ const (
 	LOG_FUMP_FILE         = "global.logs.dumpfile"
 	LOG_BASE_LOG_LEVEL    = "global.logs.loglevel"
 	LOG_NEW_FILE_INTERVAL = "global.logs.newLogFileInterval"
-
+	LOG_FILE_FORMAT = "global.logs.file_format"
+	LOG_CONSOLE_FORMAT = "global.logs.console_format"
 	LOG_MODULE_KEY = "global.logs.module"
 )
 

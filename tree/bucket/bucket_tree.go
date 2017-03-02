@@ -8,6 +8,7 @@ import (
 	"hyperchain/hyperdb"
 	"math/big"
 	"sync"
+	"hyperchain/hyperdb/db"
 )
 
 var (
@@ -263,7 +264,7 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 }
 
 // AddChangesForPersistence - method implementation for interface 'statemgmt.HashableState'
-func (bucketTree *BucketTree) AddChangesForPersistence(writeBatch hyperdb.Batch, currentBlockNum *big.Int) error {
+func (bucketTree *BucketTree) AddChangesForPersistence(writeBatch db.Batch, currentBlockNum *big.Int) error {
 	if bucketTree.dataNodesDelta == nil {
 		return nil
 	}
@@ -281,7 +282,7 @@ func (bucketTree *BucketTree) AddChangesForPersistence(writeBatch hyperdb.Batch,
 }
 
 // TODO it should be test later
-func (bucketTree *BucketTree) addDataNodeChangesForPersistence(writeBatch hyperdb.Batch) {
+func (bucketTree *BucketTree) addDataNodeChangesForPersistence(writeBatch db.Batch) {
 	affectedBuckets := bucketTree.dataNodesDelta.getAffectedBuckets()
 	for _, affectedBucket := range affectedBuckets {
 		value, ok := bucketTree.dataNodeCache.c.Get(*affectedBucket)
@@ -297,7 +298,7 @@ func (bucketTree *BucketTree) addDataNodeChangesForPersistence(writeBatch hyperd
 }
 
 // TODO it should be test later
-func (bucketTree *BucketTree) addBucketNodeChangesForPersistence(writeBatch hyperdb.Batch) {
+func (bucketTree *BucketTree) addBucketNodeChangesForPersistence(writeBatch db.Batch) {
 	secondLastLevel := conf.getLowestLevel() - 1
 	for level := secondLastLevel; level >= 0; level-- {
 		bucketNodes := bucketTree.bucketTreeDelta.getBucketNodesAt(level)
@@ -382,7 +383,7 @@ func (bucket *BucketTree) Reset() {
 
 // TODO test important
 // the func can make the buckettree revert to target block
-func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch hyperdb.Batch, currentBlockNum, toBlockNum *big.Int, flush, sync bool) error {
+func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch db.Batch, currentBlockNum, toBlockNum *big.Int, flush, sync bool) error {
 	log.Debug("Start RevertToTargetBlock, from ", currentBlockNum)
 	db, _ := hyperdb.GetDBDatabase()
 	keyValueMap := NewKVMap()

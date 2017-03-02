@@ -7,11 +7,11 @@ import (
 	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/types"
-	"hyperchain/hyperdb"
+	"hyperchain/hyperdb/db"
 )
 
 type PublicBlockAPI struct {
-	db hyperdb.Database
+	db db.Database
 }
 
 type BlockResult struct {
@@ -33,7 +33,7 @@ type StatisticResult struct {
 	TimeList []string `json:"TimeList"`
 }
 
-func NewPublicBlockAPI(hyperDb hyperdb.Database) *PublicBlockAPI {
+func NewPublicBlockAPI(hyperDb db.Database) *PublicBlockAPI {
 	return &PublicBlockAPI{
 		db: hyperDb,
 	}
@@ -127,7 +127,7 @@ func (blk *PublicBlockAPI) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (N
 	}
 }
 
-func latestBlock(db hyperdb.Database) (*BlockResult, error) {
+func latestBlock(db db.Database) (*BlockResult, error) {
 
 	currentChain := core.GetChainCopy()
 
@@ -141,7 +141,7 @@ func latestBlock(db hyperdb.Database) (*BlockResult, error) {
 }
 
 // getBlockByNumber convert type Block to type BlockResult for the given block number.
-func getBlockByNumber(n BlockNumber, db hyperdb.Database) (*BlockResult, error) {
+func getBlockByNumber(n BlockNumber, db db.Database) (*BlockResult, error) {
 
 	m := n.ToUint64()
 	if blk, err := core.GetBlockByNumber(db, m); err != nil && err.Error() == leveldb_not_found_error {
@@ -154,7 +154,7 @@ func getBlockByNumber(n BlockNumber, db hyperdb.Database) (*BlockResult, error) 
 }
 
 // GetBlockByNumber returns the bolck for the given block time duration.
-func getBlocksByTime(startTime, endTime int64, db hyperdb.Database) (sumOfBlocks uint64, startBlock, endBlock *BlockNumber) {
+func getBlocksByTime(startTime, endTime int64, db db.Database) (sumOfBlocks uint64, startBlock, endBlock *BlockNumber) {
 	currentChain := core.GetChainCopy()
 	height := currentChain.Height
 
@@ -183,7 +183,7 @@ func getBlocksByTime(startTime, endTime int64, db hyperdb.Database) (sumOfBlocks
 	return sumOfBlocks, startBlock, endBlock
 }
 
-func outputBlockResult(block *types.Block, db hyperdb.Database) (*BlockResult, error) {
+func outputBlockResult(block *types.Block, db db.Database) (*BlockResult, error) {
 
 	txCounts := int64(len(block.Transactions))
 	//count, percent :=types.go.CalcResponseCount(block.Number, int64(200))
@@ -212,7 +212,7 @@ func outputBlockResult(block *types.Block, db hyperdb.Database) (*BlockResult, e
 	}, nil
 }
 
-func getBlockByHash(hash common.Hash, db hyperdb.Database) (*BlockResult, error) {
+func getBlockByHash(hash common.Hash, db db.Database) (*BlockResult, error) {
 
 	if common.EmptyHash(hash) == true {
 		return nil, &InvalidParamsError{"invalid hash"}
@@ -228,7 +228,7 @@ func getBlockByHash(hash common.Hash, db hyperdb.Database) (*BlockResult, error)
 	return outputBlockResult(block, db)
 }
 
-func getBlocks(args IntervalArgs, hyperDb hyperdb.Database) ([]*BlockResult, error) {
+func getBlocks(args IntervalArgs, hyperDb db.Database) ([]*BlockResult, error) {
 	var blocks []*BlockResult
 
 	realArgs, err := prepareIntervalArgs(args)

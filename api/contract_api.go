@@ -13,22 +13,22 @@ import (
 	"hyperchain/core/vm/compiler"
 	"hyperchain/crypto/hmEncryption"
 	"hyperchain/event"
-	"hyperchain/hyperdb"
 	"hyperchain/manager"
 	"math/big"
 	"time"
 	"strconv"
+	"hyperchain/hyperdb/db"
 )
 
 type PublicContractAPI struct {
 	eventMux    *event.TypeMux
 	pm          *manager.ProtocolManager
-	db          hyperdb.Database
+	db          db.Database
 	tokenBucket *ratelimit.Bucket
 	config      *common.Config
 }
 
-func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb hyperdb.Database, config *common.Config) *PublicContractAPI {
+func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb db.Database, config *common.Config) *PublicContractAPI {
 	fillrate, err := getFillRate(config, CONTRACT)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
@@ -287,7 +287,7 @@ func (contract *PublicContractAPI) GetStorageByAddr(addr common.Address) (map[st
 	return mp, nil
 }
 
-func getBlockStateDb(db hyperdb.Database, config *common.Config) (vm.Database, error) {
+func getBlockStateDb(db db.Database, config *common.Config) (vm.Database, error) {
 	//block, err := getBlockByNumber(n, db)
 	block, err := latestBlock(db)
 	if err != nil {

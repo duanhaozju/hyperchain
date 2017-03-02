@@ -7,6 +7,7 @@ import (
 
 	"fmt"
 	"time"
+	"os"
 )
 
 type Config struct {
@@ -61,3 +62,15 @@ func (cf *Config) GetStringMap(key string) map[string]interface{} {
 func (cf *Config) Set(key string, value interface{}) {
 	cf.conf.Set(key, value)
 }
+
+// MergeConfig merge config by the config file path
+func (cf *Config) MergeConfig(configPath string) (*Config, error) {
+	f, err := os.Open(configPath)
+	if(err != nil){
+		commonLogger.Errorf("open file: %s error, %v", configPath, err.Error())
+		return cf, err
+	}
+	cf.conf.MergeConfig(f)
+	return cf, nil
+}
+

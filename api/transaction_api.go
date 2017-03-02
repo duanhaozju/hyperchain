@@ -12,9 +12,9 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/crypto"
 	"hyperchain/event"
-	"hyperchain/hyperdb"
 	"hyperchain/manager"
 	"time"
+	"hyperchain/hyperdb/db"
 )
 
 const (
@@ -35,7 +35,7 @@ func init() {
 type PublicTransactionAPI struct {
 	eventMux    *event.TypeMux
 	pm          *manager.ProtocolManager
-	db          hyperdb.Database
+	db          db.Database
 	tokenBucket *ratelimit.Bucket
 	config      *common.Config
 }
@@ -77,7 +77,7 @@ type TransactionResult struct {
 	InvalidMsg  string  `json:"invalidMsg"`
 }
 
-func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb hyperdb.Database, config *common.Config) *PublicTransactionAPI {
+func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb db.Database, config *common.Config) *PublicTransactionAPI {
 	fillrate, err := getFillRate(config, TRANSACTION)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
@@ -495,7 +495,7 @@ func (tran *PublicTransactionAPI) GetTxAvgTimeByBlockNumber(args IntervalArgs) (
 	return *NewInt64ToNumber(exeTime), nil
 }
 
-func outputTransaction(trans interface{}, db hyperdb.Database) (*TransactionResult, error) {
+func outputTransaction(trans interface{}, db db.Database) (*TransactionResult, error) {
 
 	var txValue types.TransactionValue
 

@@ -7,13 +7,13 @@ import (
 	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/core"
-	"hyperchain/hyperdb"
 	"hyperchain/manager"
+	"hyperchain/hyperdb/db"
 )
 
 type PublicAccountAPI struct {
 	pm     *manager.ProtocolManager
-	db     hyperdb.Database
+	db     db.Database
 	config *common.Config
 }
 
@@ -26,7 +26,7 @@ type UnlockParas struct {
 	Password string         `json:"password"`
 }
 
-func NewPublicAccountAPI(pm *manager.ProtocolManager, hyperDb hyperdb.Database, config *common.Config) *PublicAccountAPI {
+func NewPublicAccountAPI(pm *manager.ProtocolManager, hyperDb db.Database, config *common.Config) *PublicAccountAPI {
 	return &PublicAccountAPI{
 		pm:     pm,
 		db:     hyperDb,
