@@ -36,6 +36,25 @@ func (b *BlocksController) GetBlocks() {
 	b.ServeJSON()
 }
 
+func (b *BlocksController) GetPlainBlocks() {
+	from := b.Input().Get("from")
+	to := b.Input().Get("to")
+	args, err := utils.CheckIntervalArgs(from, to)
+	if err != nil {
+		b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+		b.ServeJSON()
+		return
+	}
+
+	blks, err := b.PublicBlockAPI.GetPlainBlocks(args)
+	if err != nil {
+		b.Data["json"] = NewJSONObject(nil, err)
+	} else {
+		b.Data["json"] = NewJSONObject(blks, nil)
+	}
+	b.ServeJSON()
+}
+
 func (b *BlocksController) GetBlockByHashOrNumOrTime() {
 	p_blkNum := b.Input().Get("blockNumber")
 	p_blkHash := b.Input().Get("blockHash")

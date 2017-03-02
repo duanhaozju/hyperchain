@@ -249,11 +249,11 @@ func (tran *PublicTransactionAPI) GetTransactions(args IntervalArgs) ([]*Transac
 
 	var transactions []*TransactionResult
 
-	if blocks, err := getBlocks(args, tran.db); err != nil {
+	if blocks, err := getBlocks(args, tran.db, false); err != nil {
 		return nil, err
 	} else {
 		for _, block := range blocks {
-			txs := block.Transactions
+			txs := block.(*BlockResult).Transactions
 
 			for _, t := range txs {
 				tx, _ := t.(*TransactionResult)
@@ -419,6 +419,23 @@ func (tran *PublicTransactionAPI) GetBlockTransactionCountByHash(hash common.Has
 	block, err := core.GetBlock(tran.db, hash[:])
 	if err != nil && err.Error() == leveldb_not_found_error {
 		return nil, &LeveldbNotFoundError{fmt.Sprintf("block by %#x", hash)}
+	} else if err != nil {
+		log.Errorf("%v", err)
+		return nil, &CallbackError{err.Error()}
+	}
+
+	txCount := len(block.Transactions)
+
+	return NewIntToNumber(txCount), nil
+}
+
+// GetBlockTransactionCountByNumber returns the number of block transactions for given block number.
+func (tran *PublicTransactionAPI) GetBlockTransactionCountByNumber(n BlockNumber) (*Number, error) {
+
+
+	block, err := core.GetBlockByNumber(tran.db, n.ToUint64())
+	if err != nil && err.Error() == leveldb_not_found_error {
+		return nil, &LeveldbNotFoundError{fmt.Sprintf("block by number %#x", n)}
 	} else if err != nil {
 		log.Errorf("%v", err)
 		return nil, &CallbackError{err.Error()}
