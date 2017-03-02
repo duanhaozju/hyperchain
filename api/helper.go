@@ -8,9 +8,9 @@ import (
 	"hyperchain/core/state"
 	"hyperchain/core/vm"
 	"hyperchain/crypto/hmEncryption"
-	"hyperchain/hyperdb"
 	"math/big"
 	"time"
+	"hyperchain/hyperdb/db"
 )
 
 const (
@@ -81,7 +81,7 @@ func getPaillierPublickey(config *common.Config) hmEncryption.PaillierPublickey 
 	}
 }
 
-func GetStateInstance(root common.Hash, db hyperdb.Database, conf *common.Config) (vm.Database, error) {
+func GetStateInstance(root common.Hash, db db.Database, conf *common.Config) (vm.Database, error) {
 	switch getStateType(conf) {
 	case "rawstate":
 		return state.New(root, db)

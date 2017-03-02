@@ -7,11 +7,11 @@ import (
 	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/types"
-	"hyperchain/hyperdb"
+	"hyperchain/hyperdb/db"
 )
 
 type PublicBlockAPI struct {
-	db hyperdb.Database
+	db db.Database
 }
 
 type BlockResult struct {
@@ -28,12 +28,23 @@ type BlockResult struct {
 	Transactions []interface{} `json:"transactions"`
 }
 
+type SimpleBlockResult struct {
+	Version    string       `json:"version"`
+	Number     *BlockNumber `json:"number"`
+	Hash       common.Hash  `json:"hash"`
+	ParentHash common.Hash  `json:"parentHash"`
+	WriteTime  int64        `json:"writeTime"`
+	AvgTime    *Number      `json:"avgTime"`
+	TxCounts   *Number      `json:"txcounts"`
+	MerkleRoot   common.Hash   `json:"merkleRoot"`
+}
+
 type StatisticResult struct {
 	BPS      string   `json:"BPS"`
 	TimeList []string `json:"TimeList"`
 }
 
-func NewPublicBlockAPI(hyperDb hyperdb.Database) *PublicBlockAPI {
+func NewPublicBlockAPI(hyperDb db.Database) *PublicBlockAPI {
 	return &PublicBlockAPI{
 		db: hyperDb,
 	}
@@ -70,9 +81,14 @@ func prepareIntervalArgs(args IntervalArgs) (IntervalArgs, error) {
 	}, nil
 }
 
-// GetBlocks returns all the block.
-func (blk *PublicBlockAPI) GetBlocks(args IntervalArgs) ([]*BlockResult, error) {
-	return getBlocks(args, blk.db)
+// GetBlocks returns all the block for given block number.
+func (blk *PublicBlockAPI) GetBlocks(args IntervalArgs) ([]interface{}, error) {
+	return getBlocks(args, blk.db, false)
+}
+
+// GetPlainBlocks returns all the block for given block number.
+func (blk *PublicBlockAPI) GetPlainBlocks(args IntervalArgs) ([]interface{}, error){
+	return getBlocks(args, blk.db, true)
 }
 
 // LastestBlock returns the number and hash of the lastest block.
@@ -86,8 +102,8 @@ func (blk *PublicBlockAPI) GetBlockByHash(hash common.Hash) (*BlockResult, error
 }
 
 // GetBlockByNumber returns the block for the given block number.
-func (blk *PublicBlockAPI) GetBlockByNumber(number BlockNumber) (*BlockResult, error) {
-	return getBlockByNumber(number, blk.db)
+func (blk *PublicBlockAPI) GetBlockByNumber(number BlockNumber) (interface{}, error) {
+	return getBlockByNumber(number, blk.db, false)
 }
 
 type BlocksIntervalResult struct {
@@ -127,7 +143,7 @@ func (blk *PublicBlockAPI) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (N
 	}
 }
 
-func latestBlock(db hyperdb.Database) (*BlockResult, error) {
+func latestBlock(db db.Database) (*BlockResult, error) {
 
 	currentChain := core.GetChainCopy()
 
@@ -137,11 +153,12 @@ func latestBlock(db hyperdb.Database) (*BlockResult, error) {
 		return nil, nil
 	}
 
-	return getBlockByNumber(*NewUint64ToBlockNumber(lastestBlkHeight), db)
+	blks_interface, err := getBlockByNumber(*NewUint64ToBlockNumber(lastestBlkHeight), db, false);
+	return blks_interface.(*BlockResult), err
 }
 
 // getBlockByNumber convert type Block to type BlockResult for the given block number.
-func getBlockByNumber(n BlockNumber, db hyperdb.Database) (*BlockResult, error) {
+func getBlockByNumber(n BlockNumber, db db.Database, isPlain bool) (interface{}, error) {
 
 	m := n.ToUint64()
 	if blk, err := core.GetBlockByNumber(db, m); err != nil && err.Error() == leveldb_not_found_error {
@@ -149,18 +166,24 @@ func getBlockByNumber(n BlockNumber, db hyperdb.Database) (*BlockResult, error) 
 	} else if err != nil {
 		return nil, &CallbackError{err.Error()}
 	} else {
-		return outputBlockResult(blk, db)
+		if isPlain {
+			return outputPlainBlockResult(blk);
+		} else {
+			return outputBlockResult(blk, db)
+		}
+
 	}
 }
 
 // GetBlockByNumber returns the bolck for the given block time duration.
-func getBlocksByTime(startTime, endTime int64, db hyperdb.Database) (sumOfBlocks uint64, startBlock, endBlock *BlockNumber) {
+func getBlocksByTime(startTime, endTime int64, db db.Database) (sumOfBlocks uint64, startBlock, endBlock *BlockNumber) {
 	currentChain := core.GetChainCopy()
 	height := currentChain.Height
 
 	var i uint64
 	for i := height; i >= uint64(1); i-- {
-		block, _ := getBlockByNumber(*NewUint64ToBlockNumber(i), db)
+		block_interface, _ := getBlockByNumber(*NewUint64ToBlockNumber(i), db, false)
+		block := block_interface.(*BlockResult)
 		if block.WriteTime > endTime {
 			continue
 		}
@@ -183,7 +206,7 @@ func getBlocksByTime(startTime, endTime int64, db hyperdb.Database) (sumOfBlocks
 	return sumOfBlocks, startBlock, endBlock
 }
 
-func outputBlockResult(block *types.Block, db hyperdb.Database) (*BlockResult, error) {
+func outputBlockResult(block *types.Block, db db.Database) (*BlockResult, error) {
 
 	txCounts := int64(len(block.Transactions))
 	//count, percent :=types.go.CalcResponseCount(block.Number, int64(200))
@@ -212,7 +235,21 @@ func outputBlockResult(block *types.Block, db hyperdb.Database) (*BlockResult, e
 	}, nil
 }
 
-func getBlockByHash(hash common.Hash, db hyperdb.Database) (*BlockResult, error) {
+func outputPlainBlockResult(block *types.Block) (*SimpleBlockResult, error) {
+	txCounts := int64(len(block.Transactions))
+	return &SimpleBlockResult{
+		Version:    string(block.Version),
+		Number:     NewUint64ToBlockNumber(block.Number),
+		Hash:       common.BytesToHash(block.BlockHash),
+		ParentHash: common.BytesToHash(block.ParentHash),
+		WriteTime: block.WriteTime,
+		AvgTime:   NewInt64ToNumber(core.CalcResponseAVGTime(block.Number, block.Number)),
+		TxCounts:  NewInt64ToNumber(txCounts),
+		MerkleRoot:   common.BytesToHash(block.MerkleRoot),
+	}, nil
+}
+
+func getBlockByHash(hash common.Hash, db db.Database) (*BlockResult, error) {
 
 	if common.EmptyHash(hash) == true {
 		return nil, &InvalidParamsError{"invalid hash"}
@@ -228,8 +265,9 @@ func getBlockByHash(hash common.Hash, db hyperdb.Database) (*BlockResult, error)
 	return outputBlockResult(block, db)
 }
 
-func getBlocks(args IntervalArgs, hyperDb hyperdb.Database) ([]*BlockResult, error) {
-	var blocks []*BlockResult
+func getBlocks(args IntervalArgs, hyperDb db.Database, isPlain bool) ([]interface{}, error) {
+	//var blocks []*BlockResult
+	var blocks []interface{}
 
 	realArgs, err := prepareIntervalArgs(args)
 	if err != nil {
@@ -240,7 +278,7 @@ func getBlocks(args IntervalArgs, hyperDb hyperdb.Database) ([]*BlockResult, err
 	to := *realArgs.To
 
 	for from <= to {
-		b, err := getBlockByNumber(to, hyperDb)
+		b, err := getBlockByNumber(to, hyperDb, isPlain)
 		if err != nil {
 			log.Errorf("%v", err)
 			return nil, err

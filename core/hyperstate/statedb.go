@@ -11,10 +11,10 @@ import (
 	"github.com/pkg/errors"
 	"hyperchain/common"
 	"hyperchain/core/vm"
-	"hyperchain/hyperdb"
 	"hyperchain/tree/bucket"
 	"sync/atomic"
 	"bytes"
+	"hyperchain/hyperdb/db"
 )
 
 const (
@@ -35,7 +35,7 @@ type revision struct {
 // * Contracts
 // * Accounts
 type StateDB struct {
-	db            hyperdb.Database
+	db            db.Database
 	root          common.Hash
 	codeSizeCache *lru.Cache
 
@@ -69,7 +69,7 @@ type StateDB struct {
 }
 
 // New - Create a new state from a given root
-func New(root common.Hash, db hyperdb.Database, bktConf *common.Config, height uint64) (*StateDB, error) {
+func New(root common.Hash, db db.Database, bktConf *common.Config, height uint64) (*StateDB, error) {
 	csc, _ := lru.New(codeSizeCacheSize)
 	// initialize bucket tree
 	bucketPrefix, _ := CompositeStateBucketPrefix()
@@ -221,12 +221,12 @@ func (self *StateDB) ResetToTarget(oldest uint64, root common.Hash) {
 // FetchBatch - batch cache related
 // fetch a batch from batch cache with correspondent seqNo
 // create a new batch if not exist in cache.
-func (self *StateDB) FetchBatch(seqNo uint64) hyperdb.Batch {
+func (self *StateDB) FetchBatch(seqNo uint64) db.Batch {
 	if self.batchCache.Contains(seqNo) {
 		// already exist
 		log.Debugf("fetch batch for #%d exist in batch cache", seqNo)
 		batch, _ := self.batchCache.Get(seqNo)
-		return batch.(hyperdb.Batch)
+		return batch.(db.Batch)
 	} else {
 		// not exist right now
 		log.Debugf("create one batch for #%d", seqNo)
@@ -548,7 +548,7 @@ func (self *StateDB) Delete(addr common.Address) bool {
 //
 
 // updateStateObject writes the given object to the trie.
-func (self *StateDB) updateStateObject(batch hyperdb.Batch, stateObject *StateObject) []byte {
+func (self *StateDB) updateStateObject(batch db.Batch, stateObject *StateObject) []byte {
 	addr := stateObject.Address()
 	data, err := stateObject.Marshal()
 	if err != nil {
@@ -559,7 +559,7 @@ func (self *StateDB) updateStateObject(batch hyperdb.Batch, stateObject *StateOb
 }
 
 // deleteStateObject removes the given object from the database
-func (self *StateDB) deleteStateObject(batch hyperdb.Batch, stateObject *StateObject) {
+func (self *StateDB) deleteStateObject(batch db.Batch, stateObject *StateObject) {
 	log.Debugf("delete state object %s during state commit, seqNo #%d", stateObject.address.Hex(), self.curSeqNo)
 	stateObject.deleted = true
 	addr := stateObject.Address()
@@ -786,7 +786,7 @@ func (s *StateDB) Commit() (common.Hash, error) {
 // CommitBatch commits all state changes to a write batch but does not
 // execute the batch. It is used to validate state changes against
 // the root hash stored in a block.
-func (s *StateDB) CommitBatch(deleteEmptyObjects bool) (root common.Hash, batch hyperdb.Batch) {
+func (s *StateDB) CommitBatch(deleteEmptyObjects bool) (root common.Hash, batch db.Batch) {
 	curSeqNo := atomic.LoadUint64(&s.curSeqNo)
 	batch = s.FetchBatch(curSeqNo)
 	root, _ = s.commit(batch, deleteEmptyObjects)
@@ -815,7 +815,7 @@ func (s *StateDB) clearJournalAndRefund() {
 	go batch.Write()
 }
 
-func (s *StateDB) commit(dbw hyperdb.Batch, deleteEmptyObjects bool) (root common.Hash, err error) {
+func (s *StateDB) commit(dbw db.Batch, deleteEmptyObjects bool) (root common.Hash, err error) {
 	defer s.clearJournalAndRefund()
 	var set ChangeSet
 	workingSet := bucket.NewKVMap()

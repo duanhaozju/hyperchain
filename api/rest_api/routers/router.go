@@ -21,8 +21,9 @@ func NewRouter() {
 
 		beego.NSNamespace("/blocks",
 			beego.NSRouter("/list", &controllers.BlocksController{}, "get:GetBlocks"),
+			beego.NSRouter("/list-no-transactions", &controllers.BlocksController{}, "get:GetPlainBlocks"),
 			beego.NSRouter("/query", &controllers.BlocksController{}, "get:GetBlockByHashOrNumOrTime"),
-			beego.NSRouter("/:blockHash/transactions/count", &controllers.TransactionsController{}, "get:GetBlockTransactionCountByHash"),
+			beego.NSRouter("/transactions/count", &controllers.TransactionsController{}, "get:GetBlockTransactionCountByHashOrNumber"),
 			beego.NSRouter("/latest", &controllers.BlocksController{}, "get:GetLatestBlock"),
 			beego.NSRouter("/transactions/average-time", &controllers.TransactionsController{}, "get:GetTxAvgTimeByBlockNumber"),
 			beego.NSRouter("/average-time", &controllers.BlocksController{}, "get:GetAvgGenerateTimeByBlockNumber"),
@@ -44,6 +45,8 @@ func NewRouter() {
 		beego.NSNamespace("/nodes",
 			beego.NSRouter("/list", &controllers.NodesController{}, "get:GetNodes"),
 			beego.NSRouter("/tcert", &controllers.CertController{}, "get:GetTCert"),
+			beego.NSRouter("/hash", &controllers.NodesController{}, "get:GetNodeHash"),
+			beego.NSRouter("/delete", &controllers.NodesController{}, "delete:DelNode"),
 		),
 	)
 	beego.AddNamespace(ns)

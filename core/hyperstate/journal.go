@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"hyperchain/common"
 	"math/big"
-	"hyperchain/hyperdb"
+	"hyperchain/hyperdb/db"
 )
 
 // journal type name definition
@@ -25,7 +25,7 @@ const (
 )
 
 type JournalEntry interface {
-	Undo(*StateDB, *JournalCache, hyperdb.Batch, bool)
+	Undo(*StateDB, *JournalCache, db.Batch, bool)
 	String() string
 	Marshal() ([]byte, error)
 	SetType()
@@ -228,7 +228,7 @@ type (
 )
 
 // createObjectChange
-func (ch *CreateObjectChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
+func (ch *CreateObjectChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
 	if !writeThrough {
 		delete(s.stateObjects, *ch.Account)
 		delete(s.stateObjectsDirty, *ch.Account)
@@ -257,7 +257,7 @@ func (ch *CreateObjectChange) GetType() string {
 }
 
 // resetObjectChange
-func (ch *ResetObjectChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
+func (ch *ResetObjectChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
 	if !writeThrough {
 		s.setStateObject(ch.Prev)
 	} else {
@@ -281,7 +281,7 @@ func (ch *ResetObjectChange) GetType() string {
 }
 
 // suicideChange
-func (ch *SuicideChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
+func (ch *SuicideChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
 	if !writeThrough {
 		// undo contract account
 		obj := s.GetStateObject(*ch.Account)
@@ -317,7 +317,7 @@ func (ch *SuicideChange) GetType() string {
 var ripemd = common.HexToAddress("0000000000000000000000000000000000000003")
 
 // Deprecated
-func (ch *TouchChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
+func (ch *TouchChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
 	if !writeThrough {
 		if !ch.Prev && *ch.Account != ripemd {
 			delete(s.stateObjects, *ch.Account)
@@ -343,7 +343,7 @@ func (ch *TouchChange) GetType() string {
 }
 
 // balanceChange
-func (ch *BalanceChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
+func (ch *BalanceChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
 	if !writeThrough {
 		s.GetStateObject(*ch.Account).setBalance(ch.Prev)
 	} else {
@@ -367,7 +367,7 @@ func (ch *BalanceChange) GetType() string {
 }
 
 // nonceChange
-func (ch *NonceChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
+func (ch *NonceChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
 	if !writeThrough {
 		s.GetStateObject(*ch.Account).setNonce(ch.Prev)
 	} else {
@@ -393,7 +393,7 @@ func (ch *NonceChange) GetType() string {
 }
 
 // codeChange
-func (ch *CodeChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
+func (ch *CodeChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
 	if !writeThrough {
 		s.GetStateObject(*ch.Account).setCode(common.BytesToHash(ch.Prevhash), ch.Prevcode)
 	} else {
@@ -419,7 +419,7 @@ func (ch *CodeChange) GetType() string {
 }
 
 // storageChange
-func (ch *StorageChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool){
+func (ch *StorageChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool){
 	if !writeThrough {
 		if ch.Exist {
 			s.GetStateObject(*ch.Account).setState(ch.Key, ch.Prevalue)
@@ -448,7 +448,7 @@ func (ch *StorageChange) GetType() string {
 }
 
 // refundChange
-func (ch *RefundChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
+func (ch *RefundChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
 	if !writeThrough {
 		s.refund = ch.Prev
 	} else {
@@ -471,7 +471,7 @@ func (ch *RefundChange) GetType() string {
 }
 
 // addLogChange
-func (ch *AddLogChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
+func (ch *AddLogChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
 	logs := s.logs[ch.Txhash]
 	if len(logs) == 1 {
 		delete(s.logs, ch.Txhash)
@@ -495,7 +495,7 @@ func (ch *AddLogChange) GetType() string {
 }
 
 // StorageHashChange
-func (ch *StorageHashChange) Undo(s *StateDB, cache *JournalCache, batch hyperdb.Batch, writeThrough bool) {
+func (ch *StorageHashChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
 	if !writeThrough {
 
 	} else {

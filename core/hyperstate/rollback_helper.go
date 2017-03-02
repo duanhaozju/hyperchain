@@ -2,8 +2,8 @@ package hyperstate
 
 import (
 	"hyperchain/common"
-	"hyperchain/hyperdb"
 	"hyperchain/tree/bucket"
+	"hyperchain/hyperdb/db"
 )
 
 const (
@@ -13,13 +13,13 @@ const (
 
 type JournalCache struct {
 	stateObjects      map[common.Address]*StateObject
-	db                hyperdb.Database
+	db                db.Database
 	stateWorkingSet   bucket.K_VMap
 	stateObjectsWorkingSet map[common.Address]bucket.K_VMap
 }
 
 
-func NewJournalCache(db hyperdb.Database) *JournalCache {
+func NewJournalCache(db db.Database) *JournalCache {
 	return &JournalCache{
 		db: db,
 		stateObjects: make(map[common.Address]*StateObject),
@@ -63,7 +63,7 @@ func (cache *JournalCache) Fetch (address common.Address) *StateObject {
 }
 
 // Flush - flush all modification to batch.
-func (cache *JournalCache) Flush(batch hyperdb.Batch) error {
+func (cache *JournalCache) Flush(batch db.Batch) error {
 	for _, stateObject := range cache.stateObjects {
 		if stateObject.suicided || (deleteEmptyObjects && stateObject.empty()) {
 			log.Debugf("state object %s been suicide or clearing out for empty", stateObject.address.Hex())
@@ -123,7 +123,7 @@ func (cache *JournalCache) GetWorkingSet(workingSetType int, address common.Addr
 }
 
 // deleteStateObject - removes the given object from the database.
-func (cache *JournalCache) deleteStateObject(batch hyperdb.Batch, stateObject *StateObject) {
+func (cache *JournalCache) deleteStateObject(batch db.Batch, stateObject *StateObject) {
 	stateObject.deleted = true
 	addr := stateObject.Address()
 	batch.Delete(CompositeAccountKey(addr.Bytes()))
@@ -135,7 +135,7 @@ func (cache *JournalCache) deleteStateObject(batch hyperdb.Batch, stateObject *S
 }
 
 // updateStateObject - writes the given object to the database
-func (cache *JournalCache) updateStateObject(batch hyperdb.Batch, stateObject *StateObject) []byte {
+func (cache *JournalCache) updateStateObject(batch db.Batch, stateObject *StateObject) []byte {
 	addr := stateObject.Address()
 	data, err := stateObject.Marshal()
 	if err != nil {

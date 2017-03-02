@@ -128,7 +128,10 @@ func main() {
 		//LOG
 		common.InitLog(conf)
 		//DB
-		core.InitDB(config.getDbConfig(),conf.GetInt(common.C_NODE_ID))
+
+		conf.MergeConfig(config.getDbConfig())//todo:refactor it
+
+		core.InitDB(conf, config.getDbConfig(),conf.GetInt(common.C_NODE_ID))
 
 		err, expiredTime := checkLicense(config.getLicense())
 		if err != nil {

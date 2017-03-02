@@ -6,9 +6,10 @@
   "grpc_port":8002,
   "local_ip":"127.0.0.1",
   "jsonrpc_port":8082,
+    "restful_port":9002,
   "introducer_ip":"127.0.0.1",
   "introducer_port":8001,
-  "introducer_id":2
+  "introducer_id":1
  },
   "maxpeernode":4,
   "nodes":[

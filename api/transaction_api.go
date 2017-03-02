@@ -12,9 +12,9 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/crypto"
 	"hyperchain/event"
-	"hyperchain/hyperdb"
 	"hyperchain/manager"
 	"time"
+	"hyperchain/hyperdb/db"
 )
 
 const (
@@ -35,7 +35,7 @@ func init() {
 type PublicTransactionAPI struct {
 	eventMux    *event.TypeMux
 	pm          *manager.ProtocolManager
-	db          hyperdb.Database
+	db          db.Database
 	tokenBucket *ratelimit.Bucket
 	config      *common.Config
 }
@@ -77,7 +77,7 @@ type TransactionResult struct {
 	InvalidMsg  string  `json:"invalidMsg"`
 }
 
-func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb hyperdb.Database, config *common.Config) *PublicTransactionAPI {
+func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb db.Database, config *common.Config) *PublicTransactionAPI {
 	fillrate, err := getFillRate(config, TRANSACTION)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
@@ -249,11 +249,11 @@ func (tran *PublicTransactionAPI) GetTransactions(args IntervalArgs) ([]*Transac
 
 	var transactions []*TransactionResult
 
-	if blocks, err := getBlocks(args, tran.db); err != nil {
+	if blocks, err := getBlocks(args, tran.db, false); err != nil {
 		return nil, err
 	} else {
 		for _, block := range blocks {
-			txs := block.Transactions
+			txs := block.(*BlockResult).Transactions
 
 			for _, t := range txs {
 				tx, _ := t.(*TransactionResult)
@@ -429,6 +429,23 @@ func (tran *PublicTransactionAPI) GetBlockTransactionCountByHash(hash common.Has
 	return NewIntToNumber(txCount), nil
 }
 
+// GetBlockTransactionCountByNumber returns the number of block transactions for given block number.
+func (tran *PublicTransactionAPI) GetBlockTransactionCountByNumber(n BlockNumber) (*Number, error) {
+
+
+	block, err := core.GetBlockByNumber(tran.db, n.ToUint64())
+	if err != nil && err.Error() == leveldb_not_found_error {
+		return nil, &LeveldbNotFoundError{fmt.Sprintf("block by number %#x", n)}
+	} else if err != nil {
+		log.Errorf("%v", err)
+		return nil, &CallbackError{err.Error()}
+	}
+
+	txCount := len(block.Transactions)
+
+	return NewIntToNumber(txCount), nil
+}
+
 // GetSignHash returns the hash for client signature.
 func (tran *PublicTransactionAPI) GetSignHash(args SendTxArgs) (common.Hash, error) {
 
@@ -495,7 +512,7 @@ func (tran *PublicTransactionAPI) GetTxAvgTimeByBlockNumber(args IntervalArgs) (
 	return *NewInt64ToNumber(exeTime), nil
 }
 
-func outputTransaction(trans interface{}, db hyperdb.Database) (*TransactionResult, error) {
+func outputTransaction(trans interface{}, db db.Database) (*TransactionResult, error) {
 
 	var txValue types.TransactionValue
 

@@ -8,7 +8,7 @@ import (
 
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"hyperchain/common"
-	"hyperchain/hyperdb"
+	"hyperchain/hyperdb/db"
 )
 
 // ErrNotRequested is returned by the trie sync when it's requested to process a
@@ -44,13 +44,13 @@ type TrieSyncLeafCallback func(leaf []byte, parent common.Hash) error
 // unknown trie hashes to retrieve, accepts node data associated with said hashes
 // and reconstructs the trie step by step until all is done.
 type TrieSync struct {
-	database hyperdb.Database         // State database for storing all the assembled node data
+	database db.Database         // State database for storing all the assembled node data
 	requests map[common.Hash]*request // Pending requests pertaining to a key hash
 	queue    *prque.Prque             // Priority queue with the pending requests
 }
 
 // NewTrieSync creates a new trie data download scheduler.
-func NewTrieSync(root common.Hash, database hyperdb.Database, callback TrieSyncLeafCallback) *TrieSync {
+func NewTrieSync(root common.Hash, database db.Database, callback TrieSyncLeafCallback) *TrieSync {
 	ts := &TrieSync{
 		database: database,
 		requests: make(map[common.Hash]*request),
@@ -250,7 +250,7 @@ func (s *TrieSync) children(req *request) ([]*request, error) {
 // commit finalizes a retrieval request and stores it into the database. If any
 // of the referencing parent requests complete due to this commit, they are also
 // committed themselves.
-func (s *TrieSync) commit(req *request, batch hyperdb.Batch) (err error) {
+func (s *TrieSync) commit(req *request, batch db.Batch) (err error) {
 	// Create a new batch if none was specified
 	if batch == nil {
 		batch = s.database.NewBatch()

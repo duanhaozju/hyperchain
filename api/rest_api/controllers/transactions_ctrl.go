@@ -222,20 +222,47 @@ func (t *TransactionsController) GetTransactionsCount() {
 	t.ServeJSON()
 }
 
-func (t *TransactionsController) GetBlockTransactionCountByHash() {
+func (t *TransactionsController) GetBlockTransactionCountByHashOrNumber() {
 
-	hash, err := utils.CheckHash(t.Ctx.Input.Param(":blockHash"))
-	if err != nil {
-		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+	p_blkNum := t.Input().Get("blockNumber")
+	p_blkHash := t.Input().Get("blockHash")
+
+	flag := 0	// "1" means query by blockNumber, "2" means query by blockHash
+
+	if p_blkNum != "" && p_blkHash == "" {
+		flag = 1
+	}else if p_blkHash != "" && p_blkNum == "" {
+		flag = 2
 	} else {
+		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{"The number of params or the name of params is invalid"})
+		t.ServeJSON()
+		return
+	}
 
-		num, err := t.PublicTxAPI.GetBlockTransactionCountByHash(hash)
-		if err != nil {
-			t.Data["json"] = NewJSONObject(nil, err)
+	if flag == 1 {
+		if blkNum, err := utils.CheckBlockNumber(p_blkNum); err != nil {
+			t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
 		} else {
-			t.Data["json"] = NewJSONObject(num, nil)
+			if count, err := t.PublicTxAPI.GetBlockTransactionCountByNumber(blkNum); err != nil {
+				t.Data["json"] = NewJSONObject(nil, err)
+			} else {
+				t.Data["json"] = NewJSONObject(count, nil)
+			}
 		}
+	} else if flag == 2 {
+		if blkHash, err := utils.CheckHash(p_blkHash); err != nil {
+			t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+		} else {
+			if count, err := t.PublicTxAPI.GetBlockTransactionCountByHash(blkHash); err != nil {
+				t.Data["json"] = NewJSONObject(nil, err)
+			} else {
+				t.Data["json"] = NewJSONObject(count, nil)
+			}
+		}
+	} else {
+		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{"invalid params"})
 	}
 
 	t.ServeJSON()
+	return
 }

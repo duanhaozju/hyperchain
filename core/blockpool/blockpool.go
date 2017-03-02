@@ -17,6 +17,7 @@ import (
 	"hyperchain/event"
 	"hyperchain/p2p"
 	"hyperchain/crypto"
+	"hyperchain/hyperdb/db"
 )
 
 var (
@@ -202,7 +203,7 @@ func (pool *BlockPool) GetStateInstance() (vm.Database, error) {
 
 // GetStateInstanceForSimulate - create a latest state for simulate usage
 // different with function `GetStateInstance`, this function will create a new instance each time when got invocation.
-func (pool *BlockPool) GetStateInstanceForSimulate(root common.Hash, db hyperdb.Database) (vm.Database, error) {
+func (pool *BlockPool) GetStateInstanceForSimulate(root common.Hash, db db.Database) (vm.Database, error) {
 
 	switch pool.GetStateType() {
 	case "rawstate":

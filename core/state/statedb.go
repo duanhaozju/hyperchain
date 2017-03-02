@@ -8,10 +8,10 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/core/vm"
-	"hyperchain/hyperdb"
 	"hyperchain/tree/pmt"
 	"math/big"
 	"sync"
+	"hyperchain/hyperdb/db"
 )
 
 var (
@@ -55,7 +55,7 @@ var StartingNonce uint64
 // * Contracts
 // * Accounts
 type StateDB struct {
-	db   hyperdb.Database
+	db   db.Database
 	trie *pmt.SecureTrie
 
 	//this map holds 'live' objects, which will get modified while processing a state transition
@@ -72,7 +72,7 @@ type StateDB struct {
 }
 
 // Create a new state from a given trie
-func New(root common.Hash, db hyperdb.Database) (*StateDB, error) {
+func New(root common.Hash, db db.Database) (*StateDB, error) {
 	tr, err := pmt.NewSecure(root, db)
 	if err != nil {
 		return nil, err
@@ -541,7 +541,7 @@ func (self *StateDB) MarkProcessFinish(seqNo uint64) {
 
 }
 
-func (self *StateDB) FetchBatch(seqNo uint64) hyperdb.Batch {
+func (self *StateDB) FetchBatch(seqNo uint64) db.Batch {
 	return self.db.NewBatch()
 }
 

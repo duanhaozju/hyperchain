@@ -7,9 +7,9 @@ import (
 	"github.com/pkg/errors"
 	"hyperchain/common"
 	"hyperchain/crypto"
-	"hyperchain/hyperdb"
 	"hyperchain/tree/bucket"
 	"math/big"
+	"hyperchain/hyperdb/db"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -195,7 +195,7 @@ func (self *StateObject) GetState(key common.Hash) (bool, common.Hash) {
 }
 
 // GetState from database return a storage entry's value if existed
-func GetStateFromDB(db hyperdb.Database, address common.Address, key common.Hash) (bool, common.Hash) {
+func GetStateFromDB(db db.Database, address common.Address, key common.Hash) (bool, common.Hash) {
 	var value common.Hash
 	// Load from DB in case it is missing.
 	val, err := db.Get(CompositeStorageKey(address.Bytes(), key.Bytes()))
@@ -207,7 +207,7 @@ func GetStateFromDB(db hyperdb.Database, address common.Address, key common.Hash
 }
 
 // SetState updates a value in account storage.
-func (self *StateObject) SetState(db hyperdb.Database, key, value common.Hash) {
+func (self *StateObject) SetState(db db.Database, key, value common.Hash) {
 	exist, previous := self.db.GetState(self.address, key)
 	self.db.journal.JournalList = append(self.db.journal.JournalList, &StorageChange{
 		Account:  &self.address,
@@ -239,7 +239,7 @@ func (self *StateObject) removeState(key common.Hash) {
 	delete(self.dirtyStorage, key)
 }
 
-func (self *StateObject) Flush(db hyperdb.Batch) error {
+func (self *StateObject) Flush(db db.Batch) error {
 	// IMPORTANT root should calculate first
 	// otherwise dirty storage will be removed in persist phase
 	self.GenerateFingerPrintOfStorage()
@@ -379,7 +379,7 @@ func (c *StateObject) Address() common.Address {
 }
 
 // Code returns the contract code associated with this object, if any.
-func (self *StateObject) Code(db hyperdb.Database) []byte {
+func (self *StateObject) Code(db db.Database) []byte {
 	if self.code != nil {
 		return self.code
 	}
