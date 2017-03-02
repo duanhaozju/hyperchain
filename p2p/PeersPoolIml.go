@@ -22,6 +22,8 @@ type PeersPoolIml struct {
 	alivePeers   int
 	localAddr    *pb.PeerAddr
 	CM           *admittance.CAManager
+	idHashMap    map[int]string
+	hashIDMap    map[string]int
 }
 
 // the peers pool instance
@@ -41,6 +43,27 @@ func NewPeerPoolIml(TEM transport.TransportEncryptManager, localAddr *pb.PeerAdd
 	newPrPoolIns.CM = cm
 	newPrPoolIns.alivePeers = 0
 	return &newPrPoolIns
+}
+
+func(this *PeersPoolIml)setIDHash(id int,hash string){
+	this.idHashMap[id] = hash
+	this.hashIDMap[hash]=id
+}
+
+func(this *PeersPoolIml)delIDHash(id int){
+
+}
+
+func(this *PeersPoolIml)delHashID(){
+
+}
+
+func(this *PeersPoolIml)getIDByHash(hash string)(int,error){
+	return 0,nil
+}
+
+func(this *PeersPoolIml)getHashByID(id int)(string,error){
+	return "",nil
 }
 
 // PutPeer put a peer into the peer pool and get a peer point
@@ -277,6 +300,23 @@ func (this *PeersPoolIml) DeletePeer(peer *Peer) map[string]pb.PeerAddr {
 	return perlist
 }
 
+func (this *PeersPoolIml) DeletePeerByHash(hash string) map[string]pb.PeerAddr {
+	perlist := make(map[string]pb.PeerAddr, 1)
+	for _,peer := range  this.GetPeers(){
+		if peer.PeerAddr.Hash == hash{
+			this.alivePeers -= 1
+			peer.Close()
+			delete(this.peers, peer.PeerAddr.Hash)
+			delete(this.peerAddr, peer.PeerAddr.Hash)
+			delete(this.peerKeys, *peer.PeerAddr)
+			go persist.DelData(peer.PeerAddr.Hash)
+			perlist := make(map[string]pb.PeerAddr, 1)
+			perlist[peer.PeerAddr.Hash] = *peer.PeerAddr
+			break;
+		}
+	}
+	return perlist
+}
 func (this *PeersPoolIml) SetConnectionByHash(hash string, conn *grpc.ClientConn) error {
 	//TODO check error
 	if this.peers == nil {

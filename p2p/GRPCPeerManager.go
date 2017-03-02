@@ -290,7 +290,7 @@ func (this *GRPCPeerManager) connectToPeers(alive chan int) {
 		//if this node is not online, connect it
 		peerAddress := pb.NewPeerAddr(this.configs.GetIP(_index), this.configs.GetPort(_index), this.configs.GetRPCPort(_index), this.configs.GetID(_index))
 		log.Debugf("peeraddress to connect %v", peerAddress)
-		if peer, connectErr := this.connectToPeer(peerAddress, this.configs.GetID(_index)); connectErr != nil {
+		if peer, connectErr := this.connectToPeer(peerAddress); connectErr != nil {
 			// cannot connect to other peer
 			log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n", connectErr)
 			continue
@@ -325,7 +325,7 @@ func (this *GRPCPeerManager) reconnectToPeers(alive chan int) {
 			_index := unconnected.Pop().(int)
 			peerAddress := pb.NewPeerAddr(this.configs.GetIP(_index), this.configs.GetPort(_index), this.configs.GetRPCPort(_index), this.configs.GetID(_index))
 			//log.Debugf("peeraddress to connect %v", peerAddress)
-			if peer, connectErr := this.reconnectToPeer(peerAddress, this.configs.GetID(_index)); connectErr != nil {
+			if peer, connectErr := this.reconnectToPeer(peerAddress); connectErr != nil {
 				// cannot connect to other peer
 
 				unconnected.Push(_index)
@@ -387,7 +387,7 @@ func (this *GRPCPeerManager) vpConnect() {
 			//TODO fix the getJSONRPC PORT
 			peerAddress := pb.NewPeerAddr(peerIp, peerPort, this.configs.GetLocalGRPCPort(), _index)
 			log.Info(peerAddress)
-			peer, connectErr := this.connectToPeer(peerAddress, _index)
+			peer, connectErr := this.connectToPeer(peerAddress)
 			if connectErr != nil {
 				// cannot connect to other peer
 				log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n", connectErr)
@@ -408,7 +408,7 @@ func (this *GRPCPeerManager) vpConnect() {
 }
 
 //connect to peer by ip address and port (why int32? because of protobuf limit)
-func (this *GRPCPeerManager) connectToPeer(peerAddress *pb.PeerAddr, nid int) (*Peer, error) {
+func (this *GRPCPeerManager) connectToPeer(peerAddress *pb.PeerAddr) (*Peer, error) {
 	//if this node is not online, connect it
 	var peer *Peer
 	var peerErr error
@@ -425,7 +425,7 @@ func (this *GRPCPeerManager) connectToPeer(peerAddress *pb.PeerAddr, nid int) (*
 }
 
 //connect to peer by ip address and port (why int32? because of protobuf limit)
-func (this *GRPCPeerManager) reconnectToPeer(peerAddress *pb.PeerAddr, nid int) (*Peer, error) {
+func (this *GRPCPeerManager) reconnectToPeer(peerAddress *pb.PeerAddr) (*Peer, error) {
 	//if this node is not online, connect it
 	var peer *Peer
 	var peerErr error
@@ -438,6 +438,16 @@ func (this *GRPCPeerManager) reconnectToPeer(peerAddress *pb.PeerAddr, nid int) 
 		//log.Critical("连接到节点", nid,isReconnect)
 		return peer, nil
 	}
+
+}
+
+func (this *GRPCPeerManager) GetRouters() []byte{
+	routers := this.peersPool.ToRoutingTable()
+	payload, err := proto.Marshal(&routers)
+	if err != nil{
+		log.Error("marshal router info failed");
+	}
+	return payload
 
 }
 
@@ -678,6 +688,57 @@ func (this *GRPCPeerManager) GetLocalNode() *Node {
 	return this.LocalNode
 }
 
+func (this *GRPCPeerManager)UpdateAllRoutingTable(routerPayload []byte){
+	toUpdateRouter := new (pb.Routers)
+	err := proto.Unmarshal(routerPayload,toUpdateRouter)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	log.Critical("Update ALL Router Table")
+
+	for _,r := range toUpdateRouter.Routers{
+		hash := r.Hash
+		if _,ok := this.peersPool.GetPeerByHash(hash);ok!=nil{
+			//update hash table
+			// add node handler
+			peerAddress := pb.NewPeerAddr(r.IP, int(r.Port), int(r.RPCPort), int(r.ID))
+			log.Debugf("peeraddress to connect %v", peerAddress)
+			if peer, connectErr := this.reconnectToPeer(peerAddress) ; connectErr != nil {
+				// cannot connect to other peer
+				log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n", connectErr)
+				//TODO retry
+				continue
+			} else {
+				// add  peer to peer pool
+				this.peersPool.PutPeer(*peerAddress, peer)
+				log.Debug("Peer Node ID:", peerAddress.ID, "has connected!")
+			}
+
+		}else{
+			log.Critical("this node already in , skip this ,node id:",r.ID)
+			//skip this router item
+		}
+
+	}
+
+	//delete node handler
+
+	for _,r := range toUpdateRouter.Routers{
+		flag := false
+		for _,p := range this.peersPool.GetPeers(){
+			if p.PeerAddr.Hash == r.Hash{
+				flag = true
+			}
+		}
+
+		if !flag{
+			log.Warningf("delete node (%d)\n",r.ID)
+			this.peersPool.DeletePeerByHash(r.Hash)
+		}
+	}
+
+}
 func (this *GRPCPeerManager) UpdateRoutingTable(payload []byte) {
 
 	if this.IsOnline {
