@@ -3,6 +3,7 @@ package controllers
 import (
 	"github.com/astaxie/beego"
 	"hyperchain/api"
+	"encoding/json"
 )
 
 type NodesController struct {
@@ -37,9 +38,14 @@ func (n *NodesController) GetNodeHash() {
 
 func (n *NodesController) DelNode() {
 	var args hpc.NodeArgs
-	args.NodeHash = n.Input().Get("hash")
 
-	err := n.PublicNodeAPI.DelNode(args)
+	if err := json.Unmarshal(n.Ctx.Input.RequestBody, &args); err != nil {
+		n.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+		n.ServeJSON()
+		return
+	}
+
+	err :=  n.PublicNodeAPI.DelNode(args)
 	if err != nil {
 		n.Data["json"] = NewJSONObject(nil, err)
 	} else {
