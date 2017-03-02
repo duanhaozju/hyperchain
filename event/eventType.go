@@ -135,9 +135,6 @@ type ReceiveVerifiedBlock struct {
 	Payload  []byte
 }
 
-type ResetValidateQ struct {}
-type ResetValidateQDone struct {}
-
 type NegoRoutersEvent struct {
 	Payload []byte
 }

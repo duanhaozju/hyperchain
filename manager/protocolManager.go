@@ -101,7 +101,7 @@ func (pm *ProtocolManager) Start(c chan int, cm *admittance.CAManager) {
 	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
 	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
 	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
-	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{}, event.InformPrimaryEvent{}, event.ResetValidateQ{})
+	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{}, event.InformPrimaryEvent{})
 	go pm.validateLoop()
 	go pm.commitLoop()
 	pm.peerMaintainSub = pm.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{},
@@ -203,8 +203,6 @@ func (self *ProtocolManager) viewChangeLoop() {
 		case event.InformPrimaryEvent:
 			//log.Notice("InformPrimaryEvent")
 			self.Peermanager.SetPrimary(ev.Primary)
-		case event.ResetValidateQ:
-
 		}
 	}
 }

@@ -623,6 +623,7 @@ func (pbft *pbftProtocal) recvFinishVcReset(finish *FinishVcReset) events.Event 
 
 	if pbft.primary(pbft.view) != pbft.id {
 		logger.Warningf("Replica %d is not primary, but received others FinishVcReset", pbft.id)
+		return nil
 	}
 
 	if atomic.LoadUint32(&pbft.activeView) == 1 {
@@ -669,6 +670,9 @@ func (pbft *pbftProtocal) handleTailInNewView() events.Event {
 		logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
 		return nil
 	}
+
+	atomic.StoreUint32(&pbft.activeView, 1)
+
 	xSetLen := len(nv.Xset)
 	upper := uint64(xSetLen) + pbft.h + uint64(1)
 	for i := pbft.h + uint64(1); i < upper; i++ {
