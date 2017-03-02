@@ -208,8 +208,9 @@ func (this *PeersPoolIml) ToRoutingTable() pb.Routers {
 	for _, pers := range peers {
 		routers.Routers = append(routers.Routers, pers.PeerAddr.ToPeerAddress())
 	}
+	routers.Routers = append(routers.Routers, this.localAddr.ToPeerAddress())
 	//需要进行排序
-	//sort.Sort(routers)
+	sort.Sort(routers)
 	return routers
 }
 
@@ -235,8 +236,11 @@ func (this *PeersPoolIml) ToRoutingTableWithout(hash string) pb.Routers {
 }
 
 // merge the route into the temp peer list
-func (this *PeersPoolIml) MergeFromRoutersToTemp(routers pb.Routers) {
+func (this *PeersPoolIml) MergeFromRoutersToTemp(routers pb.Routers, introducer *pb.PeerAddr) {
 	for _, peerAddress := range routers.Routers {
+		if peerAddress.Hash == introducer.Hash {
+			continue
+		}
 		peerAddr := pb.RecoverPeerAddr(peerAddress)
 		newPeer, err := NewPeerPure(peerAddr, this.localAddr, this.TEM, this.CM)
 		if err != nil {

@@ -18,6 +18,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
+	"bytes"
 )
 
 var logger *logging.Logger // package-level logger
@@ -612,6 +613,13 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		logger.Warningf("Replica %d view change resend timer expired before view change quorum was reached, resending", pbft.id)
 		pbft.view-- // sending the view change increments this
 		return pbft.sendViewChange()
+	case protos.RoutersMessage:
+		if len(et.Routers) == 0 {
+			logger.Warningf("Replica %d received nil local routers", pbft.id)
+			return nil
+		}
+		logger.Debugf("Replica %d received local routers %s", pbft.id, hashByte(et.Routers))
+		pbft.routers = et.Routers
 	case *NegotiateView:
 		return pbft.recvNegoView(et)
 	case *NegotiateViewResponse:
@@ -635,7 +643,6 @@ func (pbft *pbftProtocal) processPbftEvent(e events.Event) events.Event {
 		}
 		pbft.persistView(pbft.view)
 		pbft.helper.InformPrimary(primary)
-		//pbft.processRequestsDuringNegoView()
 		pbft.initRecovery()
 		return nil
 	case *RecoveryInit:
@@ -2318,7 +2325,7 @@ func (pbft *pbftProtocal) updateViewChangeSeqNo() {
 
 func (pbft *pbftProtocal) processNegotiateView() error {
 	if !pbft.inNegoView {
-		logger.Criticalf("Replica %d try to negotiateView, but it's not inNegoView. This indicates a bug", pbft.id)
+		logger.Debugf("Replica %d try to negotiateView, but it's not inNegoView. This indicates a bug", pbft.id)
 		return nil
 	}
 
@@ -2372,6 +2379,12 @@ func (pbft *pbftProtocal) recvNegoView(nv *NegotiateView) events.Event {
 
 	sender := nv.ReplicaId
 	logger.Debugf("Replica %d receive negotiate view from %d", pbft.id, sender)
+
+	if pbft.routers == nil {
+		logger.Debugf("Replica %d ignore negotiate view from %d since has not received local msg", pbft.id, sender)
+		return nil
+	}
+
 	negoViewRsp := &NegotiateViewResponse{
 		ReplicaId: pbft.id,
 		View:      pbft.view,
@@ -2439,7 +2452,12 @@ func (pbft *pbftProtocal) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Eve
 			pbft.negoViewRspTimer.Stop()
 			pbft.view = result.view
 			pbft.N = int(result.n)
-			pbft.routers, _ = stringToByte(result.routers)
+			routers, _ := stringToByte(result.routers)
+			if !bytes.Equal(routers, pbft.routers) && !pbft.isNewNode {
+				pbft.routers = routers
+				logger.Debugf("Replica %d update routing table according to nego result", pbft.id)
+				pbft.helper.NegoRouters(routers)
+			}
 			pbft.inNegoView = false
 			if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
 				atomic.StoreUint32(&pbft.activeView, 1)

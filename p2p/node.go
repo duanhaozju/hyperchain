@@ -80,7 +80,7 @@ func (n *Node) attendNoticeProcess(N int) {
 	log.Critical("AttendProcess N:",N)
 	// fix the N as N-1
 	// temp
-	isPrimaryConnectFlag := false
+	//isPrimaryConnectFlag := false
 	f := (N - 1) / 3
 	num := 0
 	for {
@@ -91,11 +91,11 @@ func (n *Node) attendNoticeProcess(N int) {
 			num++
 			}
 		case 2:{
-			isPrimaryConnectFlag =true
+			//isPrimaryConnectFlag =true
 			num++
 			}
 		}
-		if num >= (N-f) && isPrimaryConnectFlag{
+		if num >= (N-f) {
 			log.Debug("new node has online ,post already in chain event")
 			go n.higherEventManager.Post(event.AlreadyInChainEvent{})
 		}
