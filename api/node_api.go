@@ -47,14 +47,14 @@ func (node *PublicNodeAPI) GetNodeHash() (string, error) {
 	return node.pm.Peermanager.GetLocalNodeHash(), nil
 }
 
-func (node *PublicNodeAPI) DelNode(args NodeArgs) error {
+func (node *PublicNodeAPI) DelNode(args NodeArgs) (string, error) {
 	if node.pm == nil {
-		return &CallbackError{"protocolManager is nil"}
+		return "",&CallbackError{"protocolManager is nil"}
 	}
 	go node.pm.GetEventObject().Post(event.DelPeerEvent{
 		Payload: []byte(args.NodeHash),
 	})
-	return nil
+	return "successful request", nil
 }
 
 /*func outputNodeResult(node *client.PeerInfo) *NodeResult {

@@ -79,7 +79,7 @@ func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 	chain := core.GetChainCopy()
 
 	log.Debug("Current LatestBlockHash:", common.BytesToHash(chain.LatestBlockHash).Hex())
-	headBlock, err := getBlockByHash(common.BytesToHash(chain.LatestBlockHash), acc.db)
+	headBlock, err := getBlockByHash(common.BytesToHash(chain.LatestBlockHash), acc.db, false)
 	if err != nil {
 		log.Errorf("%v", err)
 		return nil
