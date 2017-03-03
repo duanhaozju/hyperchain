@@ -27,7 +27,6 @@ var (
 	BlockNumPrefix           = []byte("blockNum-")
 	TxMetaSuffix             = []byte{0x01}
 	log                      *logging.Logger // package-level logger
-	RequireKey               = []byte("require-")
 )
 
 // using to count the number of rollback transactions
@@ -102,6 +101,8 @@ func PersistReceipt(batch db.Batch, receipt *types.Receipt, version string, flus
 	}
 	return nil, data
 }
+
+// wrap receipt
 func WrapperReceipt(receipt *types.Receipt, version string) (error, []byte) {
 	if receipt == nil {
 		return errors.New("empty pointer"), nil
@@ -181,6 +182,7 @@ func PersistTransaction(batch db.Batch, transaction *types.Transaction, version 
 	return nil, data
 }
 
+// wrap transaction
 func WrapperTransaction(transaction *types.Transaction, version string) (error, []byte) {
 	if transaction == nil {
 		return errors.New("empty pointer"), nil
@@ -203,6 +205,7 @@ func WrapperTransaction(transaction *types.Transaction, version string) (error, 
 	}
 	return nil, data
 }
+
 
 // Persist transactions content to a batch, KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false
 func PersistTransactions(batch db.Batch, transactions []*types.Transaction, version string, flush bool, sync bool) error {
@@ -605,10 +608,10 @@ func GetChainCopy() *types.Chain {
 	memChainMap.lock.RLock()
 	defer memChainMap.lock.RUnlock()
 	return &types.Chain{
-		LatestBlockHash:  memChainMap.data.LatestBlockHash,
-		ParentBlockHash:  memChainMap.data.ParentBlockHash,
-		Height:           memChainMap.data.Height,
-		CurrentTxSum:     memChainMap.data.CurrentTxSum,
+		LatestBlockHash: memChainMap.data.LatestBlockHash,
+		ParentBlockHash: memChainMap.data.ParentBlockHash,
+		Height:          memChainMap.data.Height,
+		CurrentTxSum:    memChainMap.data.CurrentTxSum,
 	}
 }
 
