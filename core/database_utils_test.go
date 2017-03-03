@@ -3,37 +3,43 @@ package core
 import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"github.com/syndtr/goleveldb/leveldb"
 	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/core/types"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
-	"os"
+	"reflect"
 	"testing"
 	"time"
 )
 
 var transactionCases = []*types.Transaction{
 	&types.Transaction{
+		Version:   []byte("1.2"),
 		From:      []byte("6201cb0448964ac597faf6fdf1f472edf2a22b89"),
 		To:        []byte("0000000000000000000000000000000000000003"),
 		Value:     []byte("100"),
 		Timestamp: time.Now().UnixNano() - int64(time.Second),
 		Signature: []byte("signature1"),
+		Id:        1,
 	},
 	&types.Transaction{
-		From:  []byte("0000000000000000000000000000000000000001"),
-		To:    []byte("0000000000000000000000000000000000000002"),
-		Value: []byte("100"), Timestamp: time.Now().UnixNano(),
+		Version:   []byte("1.2"),
+		From:      []byte("0000000000000000000000000000000000000001"),
+		To:        []byte("0000000000000000000000000000000000000002"),
+		Value:     []byte("100"),
+		Timestamp: time.Now().UnixNano(),
 		Signature: []byte("signature2"),
+		Id:        2,
 	},
 	&types.Transaction{
+		Version:   []byte("1.2"),
 		From:      []byte("0000000000000000000000000000000000000002"),
 		To:        []byte("0000000000000000000000000000000000000003"),
 		Value:     []byte("700"),
 		Timestamp: time.Now().UnixNano(),
 		Signature: []byte("signature3"),
+		Id:        3,
 	},
 }
 
@@ -83,27 +89,18 @@ func TestSignTime(t *testing.T) {
 	transactionCases[0].Signature = []byte("signature1")
 }
 
-// TestInitDB tests for InitDB
-func TestInitDB(t *testing.T) {
-	log.Info("test =============> > > TestInitDB")
-	InitDB("/tmp", 8001)
-	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	hyperdb.GetDBDatabase()
-}
-
 // TestPutTransaction tests for PutTransaction
 func TestPutTransaction(t *testing.T) {
 	log.Info("test =============> > > TestPutTransaction")
-	InitDB("/tmp", 8001)
-	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	db, err := hyperdb.GetDBDatabase()
+	db, err := hyperdb.NewMemDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
 	commonHash := crypto.NewKeccak256Hash("keccak256")
 	for _, trans := range transactionCases {
 		key := trans.Hash(commonHash).Bytes()
-		err = PutTransaction(db, key, trans)
+		trans.TransactionHash = key
+		err, _ = PersistTransaction(db.NewBatch(), trans, "1.2", false, false)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -113,16 +110,19 @@ func TestPutTransaction(t *testing.T) {
 // TestGetTransaction tests for GetTransaction
 func TestGetTransaction(t *testing.T) {
 	log.Info("test =============> > > TestGetTransaction")
-	InitDB("/tmp", 8001)
-	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	db, err := hyperdb.GetDBDatabase()
+	db, err := hyperdb.NewMemDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
 	commonHash := crypto.NewKeccak256Hash("keccak256")
-	PutTransactions(db, commonHash, transactionCases)
-	for _, trans := range transactionCases {
-		key := trans.Hash(commonHash).Bytes()
+	key := transactionCases[0].Hash(commonHash).Bytes()
+	transactionCases[0].TransactionHash = key
+	err, _ = PersistTransaction(db.NewBatch(), transactionCases[0], "1.2", true, true)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, trans := range transactionCases[:1] {
+		key := trans.GetTransactionHash().Bytes()
 		tr, err := GetTransaction(db, key)
 		if err != nil {
 			log.Fatal(err)
@@ -133,16 +133,18 @@ func TestGetTransaction(t *testing.T) {
 	}
 }
 
+var transactionMeta = types.TransactionMeta{
+	BlockIndex: 1,
+	Index:      1,
+}
+
 func TestGetTransactionBLk(t *testing.T) {
-	InitDB("/tmp", 8001)
-	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	db, err := hyperdb.GetDBDatabase()
+	db, err := hyperdb.NewMemDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
-	commonHash := crypto.NewKeccak256Hash("keccak256")
-	PutTransactions(db, commonHash, transactionCases)
+	err, _ = PersistBlock(db.NewBatch(), &blockUtilsCase, "1.2", true, true)
+	err, _ = PersistTransaction(db.NewBatch(), transactionCases[0], "1.2", true, true)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -150,10 +152,11 @@ func TestGetTransactionBLk(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	PersistTransactionMeta(db.NewBatch(), &transactionMeta, transactionCases[0].GetTransactionHash(), true, true)
 	if len(block.Transactions) > 0 {
-		fmt.Println("tx hash", block.Transactions[0].BuildHash())
+		fmt.Println("tx hash", block.Transactions[0].GetTransactionHash().Bytes())
 		tx := block.Transactions[0]
-		bn, i := GetTxWithBlock(db, tx.BuildHash().Bytes())
+		bn, i := GetTxWithBlock(db, tx.GetTransactionHash().Bytes())
 		fmt.Println("block num :", bn, "tx index:", i)
 	}
 
@@ -162,24 +165,30 @@ func TestGetTransactionBLk(t *testing.T) {
 // TestGetAllTransaction tests for GetAllTransaction
 func TestGetAllTransaction(t *testing.T) {
 	log.Info("test =============> > > TestGetAllTransaction")
-	InitDB("/tmp", 8001)
-	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	db, err := hyperdb.GetDBDatabase()
+	db, err := hyperdb.NewMemDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
 	commonHash := crypto.NewKeccak256Hash("keccak256")
-	PutTransactions(db, commonHash, transactionCases)
+	key := transactionCases[0].Hash(commonHash).Bytes()
+	transactionCases[0].TransactionHash = key
+	err, _ = PersistTransaction(db.NewBatch(), transactionCases[0], "1.2", true, true)
+	if err != nil {
+		log.Fatal(err)
+	}
 	trs, err := GetAllTransaction(db)
+	var zero = types.Transaction{}
 	for _, trans := range trs {
-		isPass := false
-		if string(trans.Signature) == "signature1" ||
-			string(trans.Signature) == "signature2" ||
-			string(trans.Signature) == "signature3" {
-			isPass = true
-		}
-		if !isPass {
-			t.Errorf("%s not exist", string(trans.Signature))
+		if !reflect.DeepEqual(*trans, zero) {
+			isPass := false
+			if string(trans.Signature) == "signature1" ||
+				string(trans.Signature) == "signature2" ||
+				string(trans.Signature) == "signature3" {
+				isPass = true
+			}
+			if !isPass {
+				t.Errorf("%s not exist", string(trans.Signature))
+			}
 		}
 	}
 }
@@ -187,20 +196,21 @@ func TestGetAllTransaction(t *testing.T) {
 // TestDeleteTransaction tests for DeleteTransaction
 func TestDeleteTransaction(t *testing.T) {
 	log.Info("test =============> > > TestDeleteTransaction")
-	InitDB("/tmp", 8001)
-	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	db, err := hyperdb.GetDBDatabase()
+	db, err := hyperdb.NewMemDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, trans := range transactionCases {
-		commonHash := crypto.NewKeccak256Hash("keccak256")
-		key := trans.Hash(commonHash).Bytes()
-		PutTransaction(db, key, trans)
-		DeleteTransaction(db, key)
-		_, err := GetTransaction(db, key)
-		if err != leveldb.ErrNotFound {
-			t.Errorf("the transaction key [%s] delete fail, TestDeleteTransaction fail", string(key))
+	for _, trans := range transactionCases[:1] {
+		err, _ = PersistTransaction(db.NewBatch(), trans, "1.2", true, true)
+		if err != nil {
+			log.Fatal(err)
+		}
+		batch := db.NewBatch()
+		DeleteTransaction(batch, trans.GetTransactionHash().Bytes())
+		batch.Write()
+		_, err := GetTransaction(db, trans.GetTransactionHash().Bytes())
+		if err.Error() != "not found" {
+			t.Errorf("the transaction key [%s] delete fail, TestDeleteTransaction fail", trans.GetTransactionHash().Bytes())
 		}
 	}
 }
@@ -208,14 +218,14 @@ func TestDeleteTransaction(t *testing.T) {
 // TestPutTransactions tests for PutTransactions
 func TestPutTransactions(t *testing.T) {
 	log.Info("test =============> > > TestPutTransactions")
-	InitDB("/tmp", 8001)
-	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	db, err := hyperdb.GetDBDatabase()
+	db, err := hyperdb.NewMemDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
-	commonHash := crypto.NewKeccak256Hash("keccak256")
-	PutTransactions(db, commonHash, transactionCases)
+	err = PersistTransactions(db.NewBatch(), transactionCases, "1.2", true, true)
+	if err != nil {
+		log.Fatal(err)
+	}
 	trs, err := GetAllTransaction(db)
 	if err != nil {
 		log.Fatal(err)
@@ -238,36 +248,26 @@ var blockUtilsCase = types.Block{
 // TestPutBlock tests for PutBlock
 func TestPutBlock(t *testing.T) {
 	log.Info("test =============> > > TestPutBlock")
-	InitDB("/tmp", 8001)
-	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	db, err := hyperdb.GetDBDatabase()
+	db, err := hyperdb.NewMemDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
+	err, _ = PersistBlock(db.NewBatch(), &blockUtilsCase, "1.2", true, true)
 	if err != nil {
 		log.Fatal(err)
 	}
 	block, err := GetBlock(db, blockUtilsCase.BlockHash)
 	fmt.Println(block.Number)
-	//height := GetHeightOfChain()
-	//for i:=uint64(1);i<=height;i++{
-	//	block ,_:= GetBlockByNumber(db,i)
-	//	PutBlock(db,block.BlockHash,block)
-	//}
-
 }
 
 // TestGetBlock tests for GetBlock
 func TestGetBlock(t *testing.T) {
 	log.Info("test =============> > > TestGetBlock")
-	InitDB("/tmp", 8001)
-	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	db, err := hyperdb.GetDBDatabase()
+	db, err := hyperdb.NewMemDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
+	err, _ = PersistBlock(db.NewBatch(), &blockUtilsCase, "1.2", true, true)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -283,22 +283,19 @@ func TestGetBlock(t *testing.T) {
 // TestDeleteBlock tests for DeleteBlock
 func TestDeleteBlock(t *testing.T) {
 	log.Info("test =============> > > TestDeleteBlock")
-	InitDB("/tmp", 8001)
-	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	db, err := hyperdb.GetDBDatabase()
+	db, err := hyperdb.NewMemDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = PutBlock(db, blockUtilsCase.BlockHash, &blockUtilsCase)
+	err, _ = PersistBlock(db.NewBatch(), &blockUtilsCase, "1.2", true, true)
 	if err != nil {
 		log.Fatal(err)
 	}
 	block, err := GetBlock(db, blockUtilsCase.BlockHash)
 	fmt.Println(block.Number)
 	err = DeleteBlock(db, blockUtilsCase.BlockHash)
-	//err = DeleteBlockByNum(db, 1)
 	block, err = GetBlock(db, blockUtilsCase.BlockHash)
-	if err != leveldb.ErrNotFound {
+	if err.Error() != "not found" {
 		t.Errorf("block delete fail, TestDeleteBlock fail")
 	}
 }
@@ -313,9 +310,11 @@ var blockHashcases = [][]byte{
 // TestUpdateChain tests for UpdateChain
 func TestUpdateChain(t *testing.T) {
 	log.Info("test =============> > > TestUpdateChain")
-	InitDB("/tmp", 8001)
-	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	UpdateChain(&blockUtilsCase, false)
+	db, err := hyperdb.NewMemDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+	UpdateChain(db.NewBatch(), &blockUtilsCase, true, true, true)
 	lasthash := GetLatestBlockHash()
 	parentHash := GetParentBlockHash()
 	if string(lasthash) != string(blockUtilsCase.BlockHash) {
@@ -326,27 +325,7 @@ func TestUpdateChain(t *testing.T) {
 	}
 }
 
-func TestGetReplicas(t *testing.T) {
-	InitDB("/tmp", 8001)
-	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	replicas := make([]uint64, 10)
-	for i := 0; i < 10; i += 1 {
-		replicas[i] = uint64(i)
-	}
-	SetReplicas(replicas)
-	t.Log(GetReplicas())
-}
-
-func TestGetId(t *testing.T) {
-	InitDB("/tmp", 8001)
-	defer os.RemoveAll("/tmp/hyperchain/cache8001")
-	SetId(uint64(100))
-	t.Log(GetId())
-}
-
 func TestGetInvaildTx(t *testing.T) {
-	InitDB("/tmp", 8001)
-	defer os.RemoveAll("/tmp/hyperchain/cache8001")
 	tx := transactionCases[0]
 	record := &types.InvalidTransactionRecord{
 		Tx:      tx,
@@ -354,7 +333,7 @@ func TestGetInvaildTx(t *testing.T) {
 	}
 	data, _ := proto.Marshal(record)
 	// save to db
-	db, _ := hyperdb.GetDBDatabase()
+	db, _ := hyperdb.NewMemDatabase()
 	db.Put(append(InvalidTransactionPrefix, tx.TransactionHash...), data)
 
 	result, _ := GetInvaildTxErrType(db, tx.TransactionHash)
