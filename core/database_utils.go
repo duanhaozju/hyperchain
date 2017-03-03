@@ -391,17 +391,11 @@ func PersistBlock(batch db.Batch, block *types.Block, version string, flush bool
 	if block == nil || batch == nil {
 		return errors.New("empty block pointer"), nil
 	}
-	// process
-	data, err := proto.Marshal(block)
+	err, data := WrapperBlock(block, version)
 	if err != nil {
-		log.Error("Invalid block struct to marshal! error msg, ", err.Error())
+		logger.Errorf("wrapper transaction failed.")
 		return err, nil
 	}
-	wrapper := &types.BlockWrapper{
-		BlockVersion: []byte(version),
-		Block:        data,
-	}
-	data, err = proto.Marshal(wrapper)
 	if err := batch.Put(append(BlockPrefix, block.BlockHash...), data); err != nil {
 		log.Error("Put block data into database failed! error msg, ", err.Error())
 		return err, nil
@@ -419,6 +413,29 @@ func PersistBlock(batch db.Batch, block *types.Block, version string, flush bool
 		} else {
 			go batch.Write()
 		}
+	}
+	return nil, data
+}
+
+func WrapperBlock(block *types.Block, version string) (error, []byte) {
+	if block == nil {
+		return errors.New("empty pointer"), nil
+	}
+	// process
+	block.Version = []byte(version)
+	data, err := proto.Marshal(block)
+	if err != nil {
+		log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
+		return err, nil
+	}
+	wrapper := &types.BlockWrapper{
+		BlockVersion: []byte(version),
+		Block:        data,
+	}
+	data, err = proto.Marshal(wrapper)
+	if err != nil {
+		log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
+		return err, nil
 	}
 	return nil, data
 }
