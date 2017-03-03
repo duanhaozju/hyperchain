@@ -4,8 +4,11 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"github.com/mkideal/cli"
+	"github.com/terasum/viper"
 	"hyperchain/accounts"
+	"hyperchain/admittance"
 	"hyperchain/api/jsonrpc/core"
 	"hyperchain/common"
 	"hyperchain/consensus/controller"
@@ -14,7 +17,6 @@ import (
 	"hyperchain/crypto"
 	"hyperchain/event"
 	"hyperchain/manager"
-	"hyperchain/admittance"
 	"hyperchain/p2p"
 	"hyperchain/p2p/transport"
 	"io/ioutil"
@@ -22,14 +24,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/terasum/viper"
-	"fmt"
 )
-
-
-
-
-
 
 type argT struct {
 	cli.Helper
@@ -60,8 +55,8 @@ func checkLicense(licensePath string) (err error, expiredTime time.Time) {
 	pattern, _ := regexp.Compile("Identification: (.*)")
 	identification := pattern.FindString(string(license))[16:]
 
-	str1:=GetHyperchainVersion()
-	str2,_:=GetOperationSystem()
+	str1 := GetHyperchainVersion()
+	str2, _ := GetOperationSystem()
 	fmt.Println(str1)
 	fmt.Println(str2)
 	ctx, err := transport.TripleDesDecrypt(common.Hex2Bytes(identification), []byte(privateKey))
@@ -100,20 +95,20 @@ func initConf(argv *argT) *common.Config {
 	peerViper := viper.New()
 	peerViper.SetConfigFile(peerConfigPath)
 	err := peerViper.ReadInConfig()
-	if err != nil{
+	if err != nil {
 		panic("read in the peer config failed")
 	}
-	nodeID   := peerViper.GetInt("self.node_id")
+	nodeID := peerViper.GetInt("self.node_id")
 	grpcPort := peerViper.GetInt("self.grpc_port")
 	jsonrpcPort := peerViper.GetInt("self.jsonrpc_port")
 	restfulPort := peerViper.GetInt("self.restful_port")
 
-	conf.Set(common.C_NODE_ID,nodeID)
-	conf.Set(common.C_HTTP_PORT,jsonrpcPort)
-	conf.Set(common.C_REST_PORT,restfulPort)
-	conf.Set(common.C_GRPC_PORT,grpcPort)
-	conf.Set(common.C_PEER_CONFIG_PATH,peerConfigPath)
-	conf.Set(common.C_GLOBAL_CONFIG_PATH,argv.ConfigPath)
+	conf.Set(common.C_NODE_ID, nodeID)
+	conf.Set(common.C_HTTP_PORT, jsonrpcPort)
+	conf.Set(common.C_REST_PORT, restfulPort)
+	conf.Set(common.C_GRPC_PORT, grpcPort)
+	conf.Set(common.C_PEER_CONFIG_PATH, peerConfigPath)
+	conf.Set(common.C_GLOBAL_CONFIG_PATH, argv.ConfigPath)
 
 	return conf
 }
@@ -143,17 +138,16 @@ func main() {
 		/**
 		 *传入true则开启所有验证，false则为取消ca以及签名的所有验证
 		 */
-		globalConfig := viper.New();
+		globalConfig := viper.New()
 		globalConfig.SetConfigFile(conf.GetString(common.C_GLOBAL_CONFIG_PATH))
 		err = globalConfig.ReadInConfig()
-		if err != nil{
+		if err != nil {
 			panic(err)
 		}
 		cm, cmerr := admittance.GetCaManager(globalConfig)
 		if cmerr != nil {
 			panic("cannot initliazied the camanager")
 		}
-
 
 		//init peer manager to start grpc server and client
 		//grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath())

@@ -5,27 +5,28 @@ import (
 	logging "github.com/op/go-logging"
 	"github.com/spf13/viper"
 	"hyperchain/api/jsonrpc/core"
+	"hyperchain/common"
 	"hyperchain/crypto/hmEncryption"
 	"hyperchain/tree/bucket"
 	"math/big"
-	"time"
-	"hyperchain/common"
 	"os/exec"
+	"time"
 )
 
-const HyperchainVersion ="Hyperchain Version:\nRelease1.2\n"
+const HyperchainVersion = "Hyperchain Version:\nRelease1.2\n"
 
-func GetOperationSystem()(string,error){
+func GetOperationSystem() (string, error) {
 	f, err := exec.Command("lsb_release", "-a").Output()
 	if err != nil {
-		return "",err
+		return "", err
 	}
-	return string(f),nil
+	return string(f), nil
 }
 
-func GetHyperchainVersion()string{
+func GetHyperchainVersion() string {
 	return HyperchainVersion
 }
+
 type configs interface {
 	initConfig(NodeID int, GRPCPort int, HTTPPort int)
 	getNodeID() int
@@ -62,7 +63,7 @@ type configsImpl struct {
 	logDumpFileFlag      bool
 	logDumpFileDir       string
 	logLevel             string
-	dbConfig                string
+	dbConfig             string
 	databaseDir          string
 	peerConfigPath       string
 	genesisConfigPath    string
@@ -96,7 +97,7 @@ type configsImpl struct {
 
 //return a config instances
 func newconfigsImpl(conf *common.Config) *configsImpl {
-//func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort int, RESTPort int) *configsImpl {
+	//func newconfigsImpl(globalConfigPath string, NodeID int, GRPCPort int, HTTPPort int, RESTPort int) *configsImpl {
 	var cimpl configsImpl
 	config := viper.New()
 	//viper.SetEnvPrefix("GLOBAL_ENV")
