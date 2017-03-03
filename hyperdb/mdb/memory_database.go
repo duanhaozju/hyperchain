@@ -18,13 +18,15 @@ func CopyBytes(b []byte) (copiedBytes []byte) {
 //-- 用内存模拟实现一个mem db
 //-- 实现了DataBase接口
 type MemDatabase struct {
-	db   map[string][]byte
+	key []string
+	value [][]byte
 	lock sync.RWMutex
 }
 
 func NewMemDatabase() (*MemDatabase, error) {
 	return &MemDatabase{
-		db: make(map[string][]byte),
+		key: nil,
+		value: nil,
 	}, nil
 }
 
@@ -32,7 +34,8 @@ func (db *MemDatabase) Put(key []byte, value []byte) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 
-	db.db[string(key)] = CopyBytes(value)
+	db.key = append(db.key, string(key))
+	db.value = append(db.value, value)
 	return nil
 }
 
@@ -47,8 +50,10 @@ func (db *MemDatabase) Get(key []byte) ([]byte, error) {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
-	if entry, ok := db.db[string(key)]; ok {
-		return entry, nil
+	for k, v := range db.key {
+		if v == string(key) {
+			return db.value[k], nil
+		}
 	}
 	return nil, errors.New("not found")
 }
@@ -58,7 +63,7 @@ func (db *MemDatabase) Keys() [][]byte {
 	defer db.lock.RUnlock()
 
 	keys := [][]byte{}
-	for key, _ := range db.db {
+	for _, key := range db.key {
 		keys = append(keys, []byte(key))
 	}
 	return keys
@@ -67,14 +72,65 @@ func (db *MemDatabase) Keys() [][]byte {
 func (db *MemDatabase) Delete(key []byte) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
-	delete(db.db, string(key))
+
+	for k, v := range db.key {
+		if v == string(key) {
+			db.key = append(db.key[0:k], db.key[k+1: len(db.key)]...)
+			db.value = append(db.value[0:k], db.value[k+1: len(db.value)]...)
+		}
+	}
 	return nil
 }
 
 func (db *MemDatabase) Close() {}
 
-func (db *MemDatabase) NewBatch() db.Batch {
-	return &memBatch{db: db}
+type Iter struct {
+	index int
+	ptr *MemDatabase
+	str string
+}
+
+func (db *MemDatabase) NewIterator(str []byte) db.Iterator {
+	var iter Iter
+	iter.index = -1
+	iter.ptr = db
+	iter.str = string(str)
+	return &iter
+}
+
+func (iter *Iter) Next() bool{
+	for {
+		iter.index += 1
+		if iter.index >= len(iter.ptr.key) {
+			iter.index -= 1
+			return false
+		}
+		if iter.str == iter.ptr.key[iter.index][:len(iter.str)] {
+			break;
+		}
+	}
+	return true
+}
+
+func (iter *Iter) Key() []byte {
+	return []byte(iter.ptr.key[iter.index])
+}
+
+func (iter *Iter) Value() []byte {
+	return iter.ptr.value[iter.index]
+}
+
+func (iter *Iter) Release() {
+	iter.index = -1
+	iter.ptr = nil
+}
+
+func (iter *Iter) Error() error {
+	return nil
+}
+
+func (iter *Iter) Seek(key []byte) bool {
+	return true
 }
 
 //-- mem db的batch操作
@@ -84,6 +140,12 @@ type memBatch struct {
 	db     *MemDatabase
 	writes []kv
 	lock   sync.RWMutex
+}
+
+func (db *MemDatabase) NewBatch() db.Batch {
+	return &memBatch{
+		db: db,
+	}
 }
 
 func (b *memBatch) Put(key, value []byte) error {
@@ -109,8 +171,19 @@ func (b *memBatch) Write() error {
 	defer b.db.lock.Unlock()
 
 	for _, kv := range b.writes {
-		b.db.db[string(kv.k)] = kv.v
+		if kv.v != nil {
+			b.db.key = append(b.db.key, string(kv.k))
+			b.db.value = append(b.db.value, kv.v)
+		} else {
+			for k, v := range b.db.key {
+				if v == string(kv.k) {
+					b.db.key = append(b.db.key[0:k], b.db.key[k+1: len(b.db.key)]...)
+					b.db.value = append(b.db.value[0:k], b.db.value[k+1: len(b.db.value)]...)
+				}
+			}
+		}
 	}
+	b.writes = nil
 	return nil
 }
 func (b *memBatch) Len() int {
