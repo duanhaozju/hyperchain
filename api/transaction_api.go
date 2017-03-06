@@ -61,20 +61,20 @@ type SendTxArgs struct {
 type TransactionResult struct {
 	Version     string         `json:"version"`
 	Hash        common.Hash    `json:"hash"`
-	BlockNumber *BlockNumber   `json:"blockNumber"`
-	BlockHash   *common.Hash   `json:"blockHash"`
-	TxIndex     *Number        `json:"txIndex"`
+	BlockNumber *BlockNumber   `json:"blockNumber,omitempty"`
+	BlockHash   *common.Hash   `json:"blockHash,omitempty"`
+	TxIndex     *Number        `json:"txIndex,omitempty"`
 	From        common.Address `json:"from"`
 	To          common.Address `json:"to"`
-	Amount      *Number        `json:"amount"`
+	Amount      *Number        `json:"amount,omitempty"`
 	//Gas         *Number        `json:"gas"`
 	//GasPrice    *Number        `json:"gasPrice"`
 	Timestamp   int64   `json:"timestamp"`
 	Nonce       int64   `json:"nonce"`
-	ExecuteTime *Number `json:"executeTime"`
-	Payload     string  `json:"payload"`
-	Invalid     bool    `json:"invalid"`
-	InvalidMsg  string  `json:"invalidMsg"`
+	ExecuteTime *Number `json:"executeTime,omitempty"`
+	Payload     string  `json:"payload,omitempty"`
+	Invalid     bool    `json:"invalid,omitempty"`
+	InvalidMsg  string  `json:"invalidMsg,omitempty"`
 }
 
 func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb db.Database, config *common.Config) *PublicTransactionAPI {
@@ -253,7 +253,7 @@ func (tran *PublicTransactionAPI) GetTransactions(args IntervalArgs) ([]*Transac
 		return nil, err
 	} else {
 		for _, block := range blocks {
-			txs := block.(*BlockResult).Transactions
+			txs := block.Transactions
 
 			for _, t := range txs {
 				tx, _ := t.(*TransactionResult)
@@ -545,7 +545,6 @@ func outputTransaction(trans interface{}, db db.Database) (*TransactionResult, e
 				Timestamp:   t.Timestamp,
 				ExecuteTime: NewInt64ToNumber((blk.WriteTime - blk.Timestamp) / int64(time.Millisecond)),
 				Payload:     common.ToHex(txValue.Payload),
-				Invalid:     false,
 			}
 		} else if err != nil && err.Error() == leveldb_not_found_error {
 			return nil, &LeveldbNotFoundError{fmt.Sprintf("block by %d", bn)}
@@ -562,9 +561,6 @@ func outputTransaction(trans interface{}, db db.Database) (*TransactionResult, e
 		txRes = &TransactionResult{
 			Version:     string(t.Tx.Version),
 			Hash:        txHash,
-			BlockNumber: nil,
-			BlockHash:   nil,
-			TxIndex:     nil,
 			From:        common.BytesToAddress(t.Tx.From),
 			To:          common.BytesToAddress(t.Tx.To),
 			Amount:      NewInt64ToNumber(txValue.Amount),
@@ -572,7 +568,6 @@ func outputTransaction(trans interface{}, db db.Database) (*TransactionResult, e
 			//Gas: 		NewInt64ToNumber(txValue.GasLimit),
 			//GasPrice: 	NewInt64ToNumber(txValue.Price),
 			Timestamp:   t.Tx.Timestamp,
-			ExecuteTime: nil,
 			Payload:     common.ToHex(txValue.Payload),
 			Invalid:     true,
 			InvalidMsg:  t.ErrType.String(),
