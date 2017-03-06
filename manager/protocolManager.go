@@ -8,7 +8,7 @@ import (
 	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/consensus"
-	"hyperchain/core/blockpool"
+	"hyperchain/core/executor"
 	"hyperchain/core/types"
 	"hyperchain/crypto"
 	"hyperchain/event"
@@ -27,7 +27,7 @@ func init() {
 
 type ProtocolManager struct {
 	serverPort  int
-	blockPool   *blockpool.BlockPool
+	executor   *executor.Executor
 	Peermanager p2p.PeerManager
 
 	nodeInfo  p2p.PeerInfos // node info ,store node status,ip,port
@@ -62,13 +62,13 @@ type NodeManager struct {
 
 var eventMuxAll *event.TypeMux
 
-func NewProtocolManager(blockPool *blockpool.BlockPool, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
+func NewProtocolManager(executor *executor.Executor, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
 	//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, expired chan bool, expiredTime time.Time) *ProtocolManager {
 	synccache, _ := common.NewCache()
 	replicacache, _ := common.NewCache()
 	manager := &ProtocolManager{
-		blockPool:           blockPool,
+		executor:           executor,
 		eventMux:            eventMux,
 		quitSync:            make(chan struct{}),
 		consenter:           consenter,
@@ -165,8 +165,8 @@ func (self *ProtocolManager) validateLoop() {
 		switch ev := obj.Data.(type) {
 		case event.ExeTxsEvent:
 			// start validation serially
-			//self.blockPool.Validate(ev, self.commonHash, self.AccountManager.Encryption, self.Peermanager)
-			self.blockPool.Validate(ev, self.Peermanager)
+			//self.executor.Validate(ev, self.commonHash, self.AccountManager.Encryption, self.Peermanager)
+			self.executor.Validate(ev, self.Peermanager)
 		}
 	}
 }
@@ -179,7 +179,7 @@ func (self *ProtocolManager) commitLoop() {
 
 		case event.CommitOrRollbackBlockEvent:
 			// start commit block serially
-			self.blockPool.CommitBlock(ev, self.Peermanager)
+			self.executor.CommitBlock(ev, self.Peermanager)
 		}
 	}
 }
@@ -190,7 +190,7 @@ func (self *ProtocolManager) respHandlerLoop() {
 		switch ev := obj.Data.(type) {
 		case event.RespInvalidTxsEvent:
 			// receive invalid tx message, save to db
-			self.blockPool.StoreInvalidResp(ev)
+			self.executor.StoreInvalidResp(ev)
 		}
 	}
 }
@@ -201,7 +201,7 @@ func (self *ProtocolManager) viewChangeLoop() {
 		switch ev := obj.Data.(type) {
 		case event.VCResetEvent:
 			// receive invalid tx message, save to db
-			self.blockPool.ResetStatus(ev)
+			self.executor.ResetStatus(ev)
 		case event.InformPrimaryEvent:
 			//log.Notice("InformPrimaryEvent")
 			self.Peermanager.SetPrimary(ev.Primary)
@@ -238,7 +238,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 			if ev.Simulate == true {
 				tx := &types.Transaction{}
 				proto.Unmarshal(ev.Payload, tx)
-				self.blockPool.RunInSandBox(tx)
+				self.executor.RunInSandBox(tx)
 			} else {
 				log.Debug("###### enter NewTxEvent")
 				go self.sendMsg(ev.Payload)

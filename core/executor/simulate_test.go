@@ -1,4 +1,4 @@
-package blockpool
+package executor
 
 import (
 	"github.com/davecgh/go-spew/spew"
@@ -20,8 +20,8 @@ const (
 )
 
 type SimulateSuite struct {
-	rawPool   *BlockPool
-	hyperPool *BlockPool
+	rawPool   *Executor
+	hyperPool *Executor
 }
 
 func Test(t *testing.T) {
@@ -55,8 +55,8 @@ func (suite *SimulateSuite) SetUpSuite(c *checker.C) {
 		StorageSize:       19,
 		StorageLevelGroup: 10,
 	}
-	suite.rawPool = NewBlockPool(nil, rawBlockPoolConf, bucketConf)
-	suite.hyperPool = NewBlockPool(nil, hyperBlockPoolConf, bucketConf)
+	suite.rawPool = NewBlockExecutor(nil, rawBlockPoolConf, bucketConf)
+	suite.hyperPool = NewBlockExecutor(nil, hyperBlockPoolConf, bucketConf)
 }
 
 // Run before each test or benchmark starts running.
@@ -76,7 +76,7 @@ func (suite *SimulateSuite) TearDownSuite(c *checker.C) {
 	Functional test
 */
 func (suite *SimulateSuite) TestSimulate(c *checker.C) {
-	var blockPool *BlockPool
+	var blockPool *Executor
 	stateType := []string{"rawstate", "hyperstate"}
 	for _, state := range stateType {
 		switch state {
@@ -96,7 +96,7 @@ func (suite *SimulateSuite) TestSimulate(c *checker.C) {
 	}
 }
 
-func (suite *SimulateSuite) simulateForTransafer(blockPool *BlockPool) error {
+func (suite *SimulateSuite) simulateForTransafer(blockPool *Executor) error {
 	value := types.NewTransactionValue(defaustGasPrice, defaultGas, 4, nil)
 	data, err := proto.Marshal(value)
 	if err != nil {

@@ -1,4 +1,4 @@
-package blockpool
+package executor
 import (
 	"hyperchain/event"
 )

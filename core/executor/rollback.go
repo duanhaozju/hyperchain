@@ -1,4 +1,4 @@
-package blockpool
+package executor
 
 import (
 	"bytes"
@@ -18,15 +18,15 @@ import (
 )
 
 // reset blockchain to a stable checkpoint status when `viewchange` occur
-func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
-	pool.NotifyValidateToStop()
-	pool.WaitResetAvailable()
+func (executor *Executor) ResetStatus(ev event.VCResetEvent) {
+	executor.NotifyValidateToStop()
+	executor.WaitResetAvailable()
 	log.Debugf("receive vc reset event, required revert to %d", ev.SeqNo-1)
-	tmpDemandNumber := atomic.LoadUint64(&pool.demandNumber)
+	tmpDemandNumber := atomic.LoadUint64(&executor.demandNumber)
 	// 1. Reset demandNumber , demandSeqNo and maxSeqNo
-	atomic.StoreUint64(&pool.demandNumber, ev.SeqNo)
-	atomic.StoreUint64(&pool.demandSeqNo, ev.SeqNo)
-	pool.tempBlockNumber = ev.SeqNo
+	atomic.StoreUint64(&executor.demandNumber, ev.SeqNo)
+	atomic.StoreUint64(&executor.demandSeqNo, ev.SeqNo)
+	executor.tempBlockNumber = ev.SeqNo
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
@@ -38,17 +38,17 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	}
 	batch := db.NewBatch()
 	// 2. revert state
-	if err := pool.revertState(batch, int64(tmpDemandNumber-1), int64(ev.SeqNo-1), block.MerkleRoot); err != nil {
+	if err := executor.revertState(batch, int64(tmpDemandNumber-1), int64(ev.SeqNo-1), block.MerkleRoot); err != nil {
 		log.Errorf("revert state from %d to %d failed", tmpDemandNumber-1, ev.SeqNo-1)
 		return
 	}
 	// 3. Delete related transaction, receipt, txmeta, and block itself in a specific range
-	if err := pool.removeDataInRange(batch, ev.SeqNo, tmpDemandNumber); err != nil {
+	if err := executor.removeDataInRange(batch, ev.SeqNo, tmpDemandNumber); err != nil {
 		log.Errorf("remove block && transaction in range %s to %s failed.", ev.SeqNo, tmpDemandNumber - 1)
 		return
 	}
 	// 4. remove uncommitted data
-	if err := pool.removeUncommittedData(batch); err != nil {
+	if err := executor.removeUncommittedData(batch); err != nil {
 		log.Errorf("remove uncommitted during the state reset failed, revert state from %d to %d failed",
 			tmpDemandNumber-1, ev.SeqNo-1)
 		return
@@ -64,19 +64,19 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	log.Debugf("revert state from %d to target %d success", tmpDemandNumber-1, ev.SeqNo-1)
 	// 6. Told consensus reset finish
 	msg := protos.VcResetDone{SeqNo: ev.SeqNo}
-	pool.consenter.RecvLocal(msg)
-	pool.NotifyValidateToBegin()
+	executor.consenter.RecvLocal(msg)
+	executor.NotifyValidateToBegin()
 }
 
 // CutdownBlock remove a block and reset blockchain status to the last status.
-func (pool *BlockPool) CutdownBlock(number uint64) error {
+func (executor *Executor) CutdownBlock(number uint64) error {
 	// 1. reset demand number  demand seqNo and maxSeqNo
-	pool.NotifyValidateToStop()
-	pool.WaitResetAvailable()
+	executor.NotifyValidateToStop()
+	executor.WaitResetAvailable()
 	log.Noticef("cut down block %d", number)
-	atomic.StoreUint64(&pool.demandNumber, number)
-	atomic.StoreUint64(&pool.demandSeqNo, number)
-	pool.tempBlockNumber = number
+	atomic.StoreUint64(&executor.demandNumber, number)
+	atomic.StoreUint64(&executor.demandSeqNo, number)
+	executor.tempBlockNumber = number
 	// 2. revert state
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
@@ -88,16 +88,16 @@ func (pool *BlockPool) CutdownBlock(number uint64) error {
 		return err
 	}
 	batch := db.NewBatch()
-	if err := pool.revertState(batch, int64(number), int64(number-1), block.MerkleRoot); err != nil {
+	if err := executor.revertState(batch, int64(number), int64(number-1), block.MerkleRoot); err != nil {
 		return err
 	}
 	// 3. remove block releted data
-	if err := pool.removeDataInRange(batch, number, number+1); err != nil {
+	if err := executor.removeDataInRange(batch, number, number+1); err != nil {
 		log.Errorf("remove block && transaction %d", number)
 		return err
 	}
 	// 4. remove uncommitted data
-	if err := pool.removeUncommittedData(batch); err != nil {
+	if err := executor.removeUncommittedData(batch); err != nil {
 		log.Errorf("remove uncommitted of %d failed", number)
 		return err
 	}
@@ -106,13 +106,13 @@ func (pool *BlockPool) CutdownBlock(number uint64) error {
 	// flush all modified to disk
 	batch.Write()
 	log.Noticef("cut down block #%d success. remove all related transactions, receipts, state changes and block together.", number)
-	pool.NotifyValidateToBegin()
+	executor.NotifyValidateToBegin()
 	return nil
 }
 
 // removeDataInRange remove transaction receipt txmeta and block itself in a specific range
 // range is [from, to).
-func (pool *BlockPool) removeDataInRange(batch db.Batch,from, to uint64) error  {
+func (executor *Executor) removeDataInRange(batch db.Batch,from, to uint64) error  {
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
@@ -149,8 +149,8 @@ func (pool *BlockPool) removeDataInRange(batch db.Batch,from, to uint64) error  
 // revertState revert state from currentNumber related status to a target
 // different process logic of different state implement
 // undo from currentNumber -> targetNumber + 1.
-func (pool *BlockPool) revertState(batch db.Batch, currentNumber int64, targetNumber int64, targetRootHash []byte) error {
-	switch pool.GetStateType() {
+func (executor *Executor) revertState(batch db.Batch, currentNumber int64, targetNumber int64, targetRootHash []byte) error {
+	switch executor.GetStateType() {
 	case "hyperstate":
 		db, err := hyperdb.GetDBDatabase()
 		if err != nil {
@@ -161,7 +161,7 @@ func (pool *BlockPool) revertState(batch db.Batch, currentNumber int64, targetNu
 		stateObjectStorageHashs := make(map[common.Address][]byte)
 		// revert state change with changeset [targetNumber+1, currentNumber]
 		// undo changes in reverse
-		state, err := pool.GetStateInstance()
+		state, err := executor.GetStateInstance()
 		if err != nil {
 			log.Error("get state failed.")
 			return err
@@ -205,7 +205,7 @@ func (pool *BlockPool) revertState(batch db.Batch, currentNumber int64, targetNu
 			address := addr.(common.Address)
 			prefix, _ := hyperstate.CompositeStorageBucketPrefix(address.Bytes())
 			bucketTree := bucket.NewBucketTree(string(prefix))
-			bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.GetBucketSize(STATEOBJECT), pool.GetBucketLevelGroup(STATEOBJECT), pool.GetBucketCacheSize(STATEOBJECT)))
+			bucketTree.Initialize(hyperstate.SetupBucketConfig(executor.GetBucketSize(STATEOBJECT), executor.GetBucketLevelGroup(STATEOBJECT), executor.GetBucketCacheSize(STATEOBJECT)))
 			bucketTree.ClearAllCache()
 			// don't flush into disk util all operations finish
 			bucketTree.PrepareWorkingSet(journalCache.GetWorkingSet(hyperstate.WORKINGSET_TYPE_STATEOBJECT, address), big.NewInt(0))
@@ -223,7 +223,7 @@ func (pool *BlockPool) revertState(batch db.Batch, currentNumber int64, targetNu
 		// revert state bucket tree
 		tree := state.GetTree()
 		bucketTree := tree.(*bucket.BucketTree)
-		bucketTree.Initialize(hyperstate.SetupBucketConfig(pool.GetBucketSize(STATEDB), pool.GetBucketLevelGroup(STATEDB), pool.GetBucketCacheSize(STATEDB)))
+		bucketTree.Initialize(hyperstate.SetupBucketConfig(executor.GetBucketSize(STATEDB), executor.GetBucketLevelGroup(STATEDB), executor.GetBucketCacheSize(STATEDB)))
 		bucketTree.ClearAllCache()
 		// don't flush into disk util all operations finish
 		bucketTree.PrepareWorkingSet(journalCache.GetWorkingSet(hyperstate.WORKINGSET_TYPE_STATE, common.Address{}), big.NewInt(0))
@@ -242,29 +242,29 @@ func (pool *BlockPool) revertState(batch db.Batch, currentNumber int64, targetNu
 		}
 		// revert state instance oldest and root
 		state.ResetToTarget(uint64(targetNumber+1), common.BytesToHash(targetRootHash))
-		pool.lastValidationState.Store(common.BytesToHash(targetRootHash))
+		executor.lastValidationState.Store(common.BytesToHash(targetRootHash))
 		log.Debugf("revert state from #%d to #%d success", currentNumber, targetNumber)
 	case "rawstate":
 		// there is no need to revert state, because PMT can assure the correction
-		pool.lastValidationState.Store(common.BytesToHash(targetRootHash))
+		executor.lastValidationState.Store(common.BytesToHash(targetRootHash))
 	}
 	return nil
 }
 
 // removeUncommittedData remove uncommitted validation result avoid of memory leak.
-func (pool *BlockPool) removeUncommittedData(batch db.Batch) error {
-	switch pool.GetStateType() {
+func (executor *Executor) removeUncommittedData(batch db.Batch) error {
+	switch executor.GetStateType() {
 	case "hyperstate":
-		state, err := pool.GetStateInstance()
+		state, err := executor.GetStateInstance()
 		if err != nil {
 			log.Errorf("remove uncommitted data failed because can not get state instance")
 			return err
 		}
 		state.Purge()
 	case "rawstate":
-		keys := pool.blockCache.Keys()
+		keys := executor.blockCache.Keys()
 		for _, key := range keys {
-			ret, _ := pool.blockCache.Get(key)
+			ret, _ := executor.blockCache.Get(key)
 			if ret == nil {
 				continue
 			}
@@ -286,27 +286,27 @@ func (pool *BlockPool) removeUncommittedData(batch db.Batch) error {
 		// IMPORTANT
 		// if validation cache is not clear, new validation event could be ignored, which leads to some event
 		// will never be execute!
-		pool.blockCache.Purge()
+		executor.blockCache.Purge()
 		// 4. Purge validationQueue
-		pool.validateEventQueue.Purge()
+		executor.validateEventQueue.Purge()
 	}
 	return nil
 }
 
-func (pool *BlockPool) NotifyValidateToStop() {
-	atomic.StoreInt32(&pool.validateBehaveFlag, VALIDATEBEHAVETYPE_DROP)
+func (executor *Executor) NotifyValidateToStop() {
+	atomic.StoreInt32(&executor.validateBehaveFlag, VALIDATEBEHAVETYPE_DROP)
 }
 
-func (pool *BlockPool) NotifyValidateToBegin() {
-	atomic.StoreInt32(&pool.validateBehaveFlag, VALIDATEBEHAVETYPE_NORMAL)
+func (executor *Executor) NotifyValidateToBegin() {
+	atomic.StoreInt32(&executor.validateBehaveFlag, VALIDATEBEHAVETYPE_NORMAL)
 }
 
-func (pool *BlockPool) WaitResetAvailable() {
+func (executor *Executor) WaitResetAvailable() {
 	ticker := time.NewTicker(10 * time.Millisecond)
 	for {
 		select {
 		case <-ticker.C:
-			if atomic.LoadInt32(&pool.validateQueueLen) == 0 && atomic.LoadInt32(&pool.validateInProgress) == PROGRESS_FALSE && atomic.LoadInt32(&pool.commitQueueLen) == 0 && atomic.LoadInt32(&pool.commitInProgress) == PROGRESS_FALSE{
+			if atomic.LoadInt32(&executor.validateQueueLen) == 0 && atomic.LoadInt32(&executor.validateInProgress) == PROGRESS_FALSE && atomic.LoadInt32(&executor.commitQueueLen) == 0 && atomic.LoadInt32(&executor.commitInProgress) == PROGRESS_FALSE{
 				return
 			} else {
 				continue

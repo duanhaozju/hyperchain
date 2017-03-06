@@ -10,7 +10,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/consensus/controller"
 	"hyperchain/core"
-	"hyperchain/core/blockpool"
+	"hyperchain/core/executor"
 	"hyperchain/crypto"
 	"hyperchain/event"
 	"hyperchain/manager"
@@ -177,17 +177,17 @@ func main() {
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
 
 		//init block pool to save block
-		blockPool := blockpool.NewBlockPool(cs, conf, kec256Hash, encryption, eventMux)
-		if blockPool == nil {
+		executor := executor.NewBlockExecutor(cs, conf, kec256Hash, encryption, eventMux)
+		if executor == nil {
 			return errors.New("Initialize BlockPool failed")
 		}
-		blockPool.Initialize()
+		executor.Initialize()
 		//init manager
 		exist := make(chan bool)
 		syncReplicaInterval, _ := config.getSyncReplicaInterval()
 		syncReplicaEnable := config.getSyncReplicaEnable()
 		pm := manager.New(eventMux,
-			blockPool,
+			executor,
 			grpcPeerMgr,
 			cs,
 			am,

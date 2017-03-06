@@ -5,7 +5,7 @@ package manager
 import (
 	"hyperchain/accounts"
 	"hyperchain/consensus"
-	"hyperchain/core/blockpool"
+	"hyperchain/core/executor"
 	"hyperchain/crypto"
 	"hyperchain/event"
 	"hyperchain/admittance"
@@ -32,7 +32,7 @@ import (
 // init protocol manager params and start
 func New(
 	eventMux *event.TypeMux,
-	blockPool *blockpool.BlockPool,
+	executor *executor.Executor,
 	peerManager p2p.PeerManager,
 	consenter consensus.Consenter,
 	am *accounts.AccountManager,
@@ -44,7 +44,7 @@ func New(
 
 	//add reconnect param
 
-	protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, consenter, am, commonHash, syncReplicaInterval, syncReplica, exist, expiredTime)
+	protocolManager := NewProtocolManager(executor, peerManager, eventMux, consenter, am, commonHash, syncReplicaInterval, syncReplica, exist, expiredTime)
 	aliveChan := make(chan int)
 	protocolManager.Start(aliveChan, cm)
 
