@@ -10,8 +10,3 @@ message Chain {
 	uint64 recoveryNum = 6;
 	uint64 currentTxSum = 7;
 }
-
-message ChainStatus {
-	repeated uint64 replicas = 1;
-	uint64 id = 2;
-}

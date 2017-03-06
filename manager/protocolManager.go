@@ -55,6 +55,8 @@ type ProtocolManager struct {
 	expired             chan bool
 	expiredTime         time.Time
 	initType            int
+	state		    *State
+
 }
 type NodeManager struct {
 	peerManager p2p.PeerManager
@@ -67,6 +69,7 @@ func NewProtocolManager(executor *executor.Executor, peerManager p2p.PeerManager
 	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, expired chan bool, expiredTime time.Time) *ProtocolManager {
 	synccache, _ := common.NewCache()
 	replicacache, _ := common.NewCache()
+	state := new(State)
 	manager := &ProtocolManager{
 		executor:           executor,
 		eventMux:            eventMux,
@@ -81,6 +84,7 @@ func NewProtocolManager(executor *executor.Executor, peerManager p2p.PeerManager
 		syncReplica:         syncReplica,
 		expired:             expired,
 		expiredTime:         expiredTime,
+		state:               state,
 	}
 	manager.nodeInfo = make(p2p.PeerInfos, 0, 1000)
 	eventMuxAll = eventMux

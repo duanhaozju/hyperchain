@@ -44,7 +44,6 @@ func InitDB(conf *common.Config, dbConfig string, port int) {
 	hyperdb.SetDBConfig(dbConfig, strconv.Itoa(port))
 	hyperdb.InitDatabase(conf, "Global")
 	memChainMap = newMemChain()
-	memChainStatusMap = newMemChainStatus()
 }
 
 /*
@@ -102,6 +101,8 @@ func PersistReceipt(batch db.Batch, receipt *types.Receipt, version string, flus
 	}
 	return nil, data
 }
+
+// wrap receipt
 func WrapperReceipt(receipt *types.Receipt, version string) (error, []byte) {
 	if receipt == nil {
 		return errors.New("empty pointer"), nil
@@ -181,6 +182,7 @@ func PersistTransaction(batch db.Batch, transaction *types.Transaction, version 
 	return nil, data
 }
 
+// wrap transaction
 func WrapperTransaction(transaction *types.Transaction, version string) (error, []byte) {
 	if transaction == nil {
 		return errors.New("empty pointer"), nil
@@ -203,6 +205,7 @@ func WrapperTransaction(transaction *types.Transaction, version string) (error, 
 	}
 	return nil, data
 }
+
 
 // Persist transactions content to a batch, KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false
 func PersistTransactions(batch db.Batch, transactions []*types.Transaction, version string, flush bool, sync bool) error {
@@ -369,6 +372,7 @@ func PersistInvalidTransactionRecord(batch db.Batch, invalidTx *types.InvalidTra
 
 func blockTime(block *types.Block) {
 	time1 := block.WriteTime - block.Timestamp
+
 	f, err1 := os.OpenFile(hyperdb.GetLogPath(), os.O_WRONLY|os.O_CREATE, 0644)
 	if err1 != nil {
 		fmt.Println("db.log file create failed. err: " + err1.Error())
@@ -510,11 +514,6 @@ type memChain struct {
 	cpChan chan types.Chain // when data.Height reach check point, will be writed
 }
 
-type memChainStatus struct {
-	data types.ChainStatus
-	lock sync.RWMutex
-}
-
 // newMenChain new a memChain instance
 // it read from db firstly, if not exist, create a empty chain
 func newMemChain() *memChain {
@@ -541,14 +540,8 @@ func newMemChain() *memChain {
 		cpChan: make(chan types.Chain),
 	}
 }
-func newMemChainStatus() *memChainStatus {
-	return &memChainStatus{
-		data: types.ChainStatus{},
-	}
-}
 
 var memChainMap *memChain
-var memChainStatusMap *memChainStatus
 
 // GetLatestBlockHash get latest blockHash
 func GetLatestBlockHash() []byte {
@@ -615,13 +608,10 @@ func GetChainCopy() *types.Chain {
 	memChainMap.lock.RLock()
 	defer memChainMap.lock.RUnlock()
 	return &types.Chain{
-		LatestBlockHash:  memChainMap.data.LatestBlockHash,
-		ParentBlockHash:  memChainMap.data.ParentBlockHash,
-		Height:           memChainMap.data.Height,
-		RequiredBlockNum: memChainMap.data.RequiredBlockNum,
-		RequireBlockHash: memChainMap.data.RequireBlockHash,
-		RecoveryNum:      memChainMap.data.RecoveryNum,
-		CurrentTxSum:     memChainMap.data.CurrentTxSum,
+		LatestBlockHash: memChainMap.data.LatestBlockHash,
+		ParentBlockHash: memChainMap.data.ParentBlockHash,
+		Height:          memChainMap.data.Height,
+		CurrentTxSum:    memChainMap.data.CurrentTxSum,
 	}
 }
 
@@ -669,44 +659,6 @@ func IsGenesisFinish() bool {
 	} else {
 		return true
 	}
-}
-
-// UpdateRequire updates requireBlockNum and requireBlockHash
-func UpdateRequire(num uint64, hash []byte, recoveryNum uint64) error {
-	memChainMap.lock.Lock()
-	defer memChainMap.lock.Unlock()
-	memChainMap.data.RequiredBlockNum = num
-	memChainMap.data.RecoveryNum = recoveryNum
-	memChainMap.data.RequireBlockHash = hash
-	db, err := hyperdb.GetDBDatabase()
-	if err != nil {
-		return err
-	}
-	return putChain(db.NewBatch(), &memChainMap.data, true, true)
-}
-
-func SetReplicas(replicas []uint64) {
-	memChainStatusMap.lock.Lock()
-	defer memChainStatusMap.lock.Unlock()
-	memChainStatusMap.data.Replicas = replicas
-}
-
-func GetReplicas() []uint64 {
-	memChainStatusMap.lock.Lock()
-	defer memChainStatusMap.lock.Unlock()
-	return memChainStatusMap.data.Replicas
-}
-
-func SetId(id uint64) {
-	memChainStatusMap.lock.Lock()
-	defer memChainStatusMap.lock.Unlock()
-	memChainStatusMap.data.Id = id
-}
-
-func GetId() uint64 {
-	memChainStatusMap.lock.Lock()
-	defer memChainStatusMap.lock.Unlock()
-	return memChainStatusMap.data.Id
 }
 
 // Deprecated
