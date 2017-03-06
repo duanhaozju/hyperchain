@@ -1,6 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package blockpool
+package executor
 
 import (
 	"errors"
@@ -52,7 +52,7 @@ type BlockRecord struct {
 	VID         uint64                            // validation ID. may larger than SeqNo
 }
 
-type BlockPool struct {
+type Executor struct {
 	demandNumber        uint64                // current demand number for commit
 	demandSeqNo         uint64                // current demand seqNo for validation
 	tempBlockNumber       uint64              // temporarily block number
@@ -85,7 +85,7 @@ type BlockPool struct {
 
 }
 
-func NewBlockPool(consenter consensus.Consenter, conf *common.Config, commonHash crypto.CommonHash, encryption crypto.Encryption, eventMux *event.TypeMux) *BlockPool {
+func NewBlockExecutor(consenter consensus.Consenter, conf *common.Config, commonHash crypto.CommonHash, encryption crypto.Encryption, eventMux *event.TypeMux) *Executor {
 	var err error
 	blockCache, err := common.NewCache()
 	if err != nil {
@@ -96,7 +96,7 @@ func NewBlockPool(consenter consensus.Consenter, conf *common.Config, commonHash
 		return nil
 	}
 	helper := NewHelper(eventMux)
-	pool := &BlockPool{
+	executor := &Executor{
 		consenter:       consenter,
 		validateEventQueue: validationQueue,
 		blockCache:      blockCache,
@@ -105,14 +105,14 @@ func NewBlockPool(consenter consensus.Consenter, conf *common.Config, commonHash
 	}
 	// 1. set demand number and demand seqNo
 	currentChain := core.GetChainCopy()
-	pool.demandNumber = currentChain.Height + 1
-	pool.demandSeqNo = currentChain.Height + 1
-	pool.tempBlockNumber = currentChain.Height + 1
+	executor.demandNumber = currentChain.Height + 1
+	executor.demandSeqNo = currentChain.Height + 1
+	executor.tempBlockNumber = currentChain.Height + 1
 
-	pool.commonHash = commonHash
-	pool.encryption = encryption
-	pool.validateQueue = make(chan event.ExeTxsEvent, VALIDATEQUEUESIZE)
-	pool.commitQueue = make(chan event.CommitOrRollbackBlockEvent, COMMITQUEUESIZE)
+	executor.commonHash = commonHash
+	executor.encryption = encryption
+	executor.validateQueue = make(chan event.ExeTxsEvent, VALIDATEQUEUESIZE)
+	executor.commitQueue = make(chan event.CommitOrRollbackBlockEvent, COMMITQUEUESIZE)
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return nil
@@ -121,69 +121,69 @@ func NewBlockPool(consenter consensus.Consenter, conf *common.Config, commonHash
 	blk, err := core.GetBlock(db, currentChain.LatestBlockHash)
 	if err != nil {
 		log.Errorf("get block #%d failed.", blk.Number)
-		pool.lastValidationState.Store(common.Hash{})
-		return pool
+		executor.lastValidationState.Store(common.Hash{})
+		return executor
 	} else {
-		log.Noticef("Block pool Initialize demandNumber :%d, demandseqNo: %d\n", pool.demandNumber, pool.demandSeqNo)
-		pool.lastValidationState.Store(common.BytesToHash(blk.MerkleRoot))
-		return pool
+		log.Noticef("Block pool Initialize demandNumber :%d, demandseqNo: %d\n", executor.demandNumber, executor.demandSeqNo)
+		executor.lastValidationState.Store(common.BytesToHash(blk.MerkleRoot))
+		return executor
 	}
 
 	// 2. set current state root hash
 	log.Noticef("block pool Initialize. current chain height #%d, latest block hash %s, demandNumber #%d, demandseqNo #%d, temp block number #%d\n",
-		currentChain.Height, common.Bytes2Hex(currentChain.LatestBlockHash), pool.demandNumber, pool.demandSeqNo, pool.tempBlockNumber)
-	return pool
+		currentChain.Height, common.Bytes2Hex(currentChain.LatestBlockHash), executor.demandNumber, executor.demandSeqNo, executor.tempBlockNumber)
+	return executor
 }
 
-func (pool *BlockPool) Initialize() {
-	go pool.commitBackendLoop()
-	go pool.validateBackendLoop()
+func (excutor *Executor) Initialize() {
+	go excutor.commitBackendLoop()
+	go excutor.validateBackendLoop()
 }
 
 // SetDemandNumber - set demand number.
-func (pool *BlockPool) SetDemandNumber(number uint64) {
-	atomic.StoreUint64(&pool.demandNumber, number)
+func (excutor *Executor) SetDemandNumber(number uint64) {
+	atomic.StoreUint64(&excutor.demandNumber, number)
 }
 
 // SetDemandSeqNo - set demand seqNo.
-func (pool *BlockPool) SetDemandSeqNo(seqNo uint64) {
-	atomic.StoreUint64(&pool.demandSeqNo, seqNo)
+func (excutor *Executor) SetDemandSeqNo(seqNo uint64) {
+	atomic.StoreUint64(&excutor.demandSeqNo, seqNo)
 }
 
 // IncreaseTempBlockNumber - increase temporary block number.
-func (pool *BlockPool) IncreaseTempBlockNumber() {
-	pool.tempBlockNumber = pool.tempBlockNumber + 1
+func (excutor *Executor) IncreaseTempBlockNumber() {
+	excutor.tempBlockNumber = excutor.tempBlockNumber + 1
 }
 
 // SetTempBlockNumber - set temporary block number
-func (pool *BlockPool) SetTempBlockNumber(seqNo uint64) {
-	pool.tempBlockNumber = seqNo
+func (excutor *Executor) SetTempBlockNumber(seqNo uint64) {
+	excutor.tempBlockNumber = seqNo
 }
 
 // PurgeValidateQueue - clear validation event queue cache.
-func (pool *BlockPool) PurgeValidateQueue() {
-	pool.validateEventQueue.Purge()
+func (excutor *Executor) PurgeValidateQueue() {
+	excutor.validateEventQueue.Purge()
 }
 
 // PurgeBlockCache - clear validation result cache
-func (pool *BlockPool) PurgeBlockCache() {
-	pool.blockCache.Purge()
+func (excutor *Executor) PurgeBlockCache() {
+	excutor.blockCache.Purge()
 }
 
 // GetStateInstance - obtain state handler via configuration in block.conf
 // two state: (1)raw state (2) hyper state are supported.
-func (pool *BlockPool) GetStateInstance() (vm.Database, error) {
+func (excutor *Executor) GetStateInstance() (vm.Database, error) {
 	// obtain latest root
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return nil, err
 	}
-	v := pool.lastValidationState.Load()
+	v := excutor.lastValidationState.Load()
 	latestRoot, ok := v.(common.Hash)
 	if ok == false {
 		return nil, err
 	}
-	switch pool.GetStateType() {
+	switch excutor.GetStateType() {
 	case "rawstate":
 		return statedb.New(latestRoot, db)
 	case "hyperstate":
@@ -191,7 +191,7 @@ func (pool *BlockPool) GetStateInstance() (vm.Database, error) {
 		if globalState == nil {
 			var err error
 			height := core.GetHeightOfChain()
-			globalState, err = hyperstate.New(latestRoot, db, pool.conf, height)
+			globalState, err = hyperstate.New(latestRoot, db, excutor.conf, height)
 			return globalState, err
 		} else {
 			return globalState, nil
@@ -203,14 +203,14 @@ func (pool *BlockPool) GetStateInstance() (vm.Database, error) {
 
 // GetStateInstanceForSimulate - create a latest state for simulate usage
 // different with function `GetStateInstance`, this function will create a new instance each time when got invocation.
-func (pool *BlockPool) GetStateInstanceForSimulate(root common.Hash, db db.Database) (vm.Database, error) {
+func (excutor *Executor) GetStateInstanceForSimulate(root common.Hash, db db.Database) (vm.Database, error) {
 
-	switch pool.GetStateType() {
+	switch excutor.GetStateType() {
 	case "rawstate":
 		return statedb.New(root, db)
 	case "hyperstate":
 		height := core.GetHeightOfChain()
-		return hyperstate.New(root, db, pool.conf, height)
+		return hyperstate.New(root, db, excutor.conf, height)
 	default:
 		return nil, errors.New("no state type specified")
 	}

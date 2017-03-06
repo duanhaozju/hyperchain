@@ -1,4 +1,4 @@
-package blockpool
+package executor
 
 import (
 	"hyperchain/common"
@@ -9,28 +9,28 @@ import (
 )
 
 // ApplyBlock - apply all transactions in block into state during the `state update` process.
-func (pool *BlockPool) ApplyBlock(block *types.Block, seqNo uint64) (error, *BlockRecord) {
+func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *BlockRecord) {
 	if block.Transactions == nil {
 		return errors.New("empty block"), nil
 	}
-	return pool.applyBlock(block, seqNo)
+	return executor.applyBlock(block, seqNo)
 }
 
-func (pool *BlockPool) applyBlock(block *types.Block, seqNo uint64) (error, *BlockRecord) {
+func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *BlockRecord) {
 	// initialize calculator
 	// for calculate fingerprint of a batch of transactions and receipts
-	if err := pool.initializeTransactionCalculator(); err != nil {
-		log.Errorf("validate #%d initialize transaction calculator", pool.tempBlockNumber)
+	if err := executor.initializeTransactionCalculator(); err != nil {
+		log.Errorf("validate #%d initialize transaction calculator", executor.tempBlockNumber)
 		return err, nil
 	}
-	if err := pool.initializeReceiptCalculator(); err != nil {
-		log.Errorf("validate #%d initialize receipt calculator", pool.tempBlockNumber)
+	if err := executor.initializeReceiptCalculator(); err != nil {
+		log.Errorf("validate #%d initialize receipt calculator", executor.tempBlockNumber)
 		return err, nil
 	}
 	// load latest state fingerprint
 	// for compatibility, doesn't remove the statement below
 	// initialize state
-	state, err := pool.GetStateInstance()
+	state, err := executor.GetStateInstance()
 	if err != nil {
 		return err, nil
 	}
@@ -41,9 +41,9 @@ func (pool *BlockPool) applyBlock(block *types.Block, seqNo uint64) (error, *Blo
 	bucketTree.ClearAllCache()
 
 	batch := state.FetchBatch(seqNo)
-	state.MarkProcessStart(pool.tempBlockNumber)
+	state.MarkProcessStart(executor.tempBlockNumber)
 	// initialize execution environment rule set
-	env := initEnvironment(state, pool.tempBlockNumber)
+	env := initEnvironment(state, executor.tempBlockNumber)
 	// execute transaction one by one
 	for i, tx := range block.Transactions {
 		state.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
@@ -53,12 +53,12 @@ func (pool *BlockPool) applyBlock(block *types.Block, seqNo uint64) (error, *Blo
 			log.Warning("invalid transaction found during the state update process in #%d", seqNo)
 			continue
 		}
-		pool.calculateTransactionsFingerprint(tx, false)
-		pool.calculateReceiptFingerprint(receipt, false)
+		executor.calculateTransactionsFingerprint(tx, false)
+		executor.calculateReceiptFingerprint(receipt, false)
 
 		// different with normal process, because during the state update, block number and seqNo are always same
 		// persist transaction here
-		if err, _ := core.PersistTransaction(batch, tx, pool.GetTransactionVersion(), false, false); err != nil {
+		if err, _ := core.PersistTransaction(batch, tx, executor.GetTransactionVersion(), false, false); err != nil {
 			log.Errorf("persist transaction for index %d in #%d failed.", i, seqNo)
 			continue
 		}
@@ -72,13 +72,13 @@ func (pool *BlockPool) applyBlock(block *types.Block, seqNo uint64) (error, *Blo
 			continue
 		}
 		// persist receipt
-		if err, _ := core.PersistReceipt(batch, receipt, pool.GetTransactionVersion(), false, false); err != nil {
+		if err, _ := core.PersistReceipt(batch, receipt, executor.GetTransactionVersion(), false, false); err != nil {
 			log.Errorf("persist receipt for index %d in #%d failed.", i, seqNo)
 			continue
 		}
 	}
 	// submit validation result
-	err, merkleRoot, txRoot, receiptRoot := pool.submitValidationResult(state, batch)
+	err, merkleRoot, txRoot, receiptRoot := executor.submitValidationResult(state, batch)
 	if err != nil {
 		log.Error("submit validation result failed.", err.Error())
 		return err, nil
@@ -86,7 +86,7 @@ func (pool *BlockPool) applyBlock(block *types.Block, seqNo uint64) (error, *Blo
 	// generate new state fingerprint
 	// IMPORTANT doesn't call batch.Write util recv commit event for atomic assurance
 	log.Debugf("validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
-		pool.tempBlockNumber, seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
+		executor.tempBlockNumber, seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	return nil, &BlockRecord{
 		TxRoot:      txRoot,
 		ReceiptRoot: receiptRoot,
@@ -95,10 +95,10 @@ func (pool *BlockPool) applyBlock(block *types.Block, seqNo uint64) (error, *Blo
 }
 
 // ClearStateUnCommitted - remove all cached stuff
-func (pool *BlockPool) ClearStateUnCommitted() {
-	switch pool.GetStateType() {
+func (executor *Executor) ClearStateUnCommitted() {
+	switch executor.GetStateType() {
 	case "hyperstate":
-		state, err := pool.GetStateInstance()
+		state, err := executor.GetStateInstance()
 		if err != nil {
 			return
 		}
@@ -109,12 +109,12 @@ func (pool *BlockPool) ClearStateUnCommitted() {
 }
 
 // SubmitForStateUpdate - submit all changes in `state update` process
-func (pool *BlockPool) SubmitForStateUpdate(seqNo uint64) error {
-	switch pool.GetStateType() {
+func (executor *Executor) SubmitForStateUpdate(seqNo uint64) error {
+	switch executor.GetStateType() {
 	case "rawstate":
 
 	case "hyperstate":
-		state, err := pool.GetStateInstance()
+		state, err := executor.GetStateInstance()
 		if err != nil {
 			log.Errorf("submit for state update #%d failed", seqNo)
 			return err
