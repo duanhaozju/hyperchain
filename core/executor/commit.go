@@ -1,4 +1,4 @@
-package blockpool
+package executor
 
 import (
 	"encoding/hex"
@@ -16,70 +16,70 @@ import (
 	"hyperchain/hyperdb/db"
 )
 
-func (pool *BlockPool) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerManager p2p.PeerManager) {
-	pool.commitQueue <- ev
-	if pool.peerManager == nil {
-		pool.peerManager = peerManager
+func (executor *Executor) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerManager p2p.PeerManager) {
+	executor.commitQueue <- ev
+	if executor.peerManager == nil {
+		executor.peerManager = peerManager
 	}
-	atomic.AddInt32(&pool.commitQueueLen, 1)
+	atomic.AddInt32(&executor.commitQueueLen, 1)
 }
 
-func (pool *BlockPool) commitBackendLoop() {
-	for ev := range pool.commitQueue {
-		success := pool.consumeCommitEvent(ev)
+func (executor *Executor) commitBackendLoop() {
+	for ev := range executor.commitQueue {
+		success := executor.consumeCommitEvent(ev)
 		if !success {
 			log.Errorf("commit block #%d failed, system crush down.", ev.SeqNo)
 		}
-		atomic.AddInt32(&pool.commitQueueLen, -1)
+		atomic.AddInt32(&executor.commitQueueLen, -1)
 	}
 }
 
 // consumeCommitEvent - consume commit event from channel.
-func (pool *BlockPool) consumeCommitEvent(ev event.CommitOrRollbackBlockEvent) bool {
-	atomic.StoreInt32(&pool.commitInProgress, PROGRESS_TRUE)
-	defer atomic.StoreInt32(&pool.commitInProgress, PROGRESS_FALSE)
-	if pool.commitValidationCheck(ev) == false {
+func (executor *Executor) consumeCommitEvent(ev event.CommitOrRollbackBlockEvent) bool {
+	atomic.StoreInt32(&executor.commitInProgress, PROGRESS_TRUE)
+	defer atomic.StoreInt32(&executor.commitInProgress, PROGRESS_FALSE)
+	if executor.commitValidationCheck(ev) == false {
 		log.Errorf("commit event %d not satisfied demand", ev.SeqNo)
 		return false
 	}
-	block := pool.generateBlock(ev)
+	block := executor.generateBlock(ev)
 	if block == nil {
 		log.Errorf("generate new block for %d commit event failed.")
 		return false
 	}
-	record := pool.getValidateRecord(ev.Hash)
+	record := executor.getValidateRecord(ev.Hash)
 	if record == nil {
 		log.Errorf("no validation record for #%d found", ev.SeqNo)
 		return false
 	}
-	if err := pool.writeBlock(block, record); err != nil {
+	if err := executor.writeBlock(block, record); err != nil {
 		log.Errorf("write block for #%d failed. err %s", ev.SeqNo, err.Error())
 		return false
 	}
 	// throw all invalid transactions back.
-	pool.notifyInvalidTransactions(record.InvalidTxs, ev.IsPrimary, pool.peerManager)
-	pool.increaseDemandBlockNumber()
-	pool.blockCache.Remove(ev.Hash)
+	executor.notifyInvalidTransactions(record.InvalidTxs, ev.IsPrimary, executor.peerManager)
+	executor.increaseDemandBlockNumber()
+	executor.blockCache.Remove(ev.Hash)
 	return true
 }
 
 // writeBlock - flush a block into disk.
-func (pool *BlockPool) writeBlock(block *types.Block, record *BlockRecord) error {
-	state, err := pool.GetStateInstance()
+func (executor *Executor) writeBlock(block *types.Block, record *BlockRecord) error {
+	state, err := executor.GetStateInstance()
 	if err != nil {
 		log.Errorf("get state instance failed when write #%d", block.Number)
 		return err
 	}
 	batch := state.FetchBatch(block.Number)
-	if err := pool.persistTransactions(batch, block.Transactions, block.Number); err != nil {
+	if err := executor.persistTransactions(batch, block.Transactions, block.Number); err != nil {
 		log.Errorf("persist transactions of #%d failed.", block.Number)
 		return err
 	}
-	if err := pool.persistReceipts(batch, record.Receipts, block.Number, common.BytesToHash(block.BlockHash)); err != nil {
+	if err := executor.persistReceipts(batch, record.Receipts, block.Number, common.BytesToHash(block.BlockHash)); err != nil {
 		log.Errorf("persist receipts of #%d failed.", block.Number)
 		return err
 	}
-	if err, _ := core.PersistBlock(batch, block, pool.GetBlockVersion(), false, false); err != nil {
+	if err, _ := core.PersistBlock(batch, block, executor.GetBlockVersion(), false, false); err != nil {
 		log.Errorf("persist block #%d into database failed! error msg, ", block.Number, err.Error())
 		return err
 	}
@@ -97,14 +97,14 @@ func (pool *BlockPool) writeBlock(block *types.Block, record *BlockRecord) error
 	log.Notice("Block hash", hex.EncodeToString(block.BlockHash))
 	// remove Cached Transactions which used to check transaction duplication
 	msg := protos.RemoveCache{Vid: record.VID}
-	pool.consenter.RecvLocal(msg)
+	executor.consenter.RecvLocal(msg)
 	return nil
 }
 
 // getValidateRecord - get validate record with given hash identification.
 // nil will be return if no record been found.
-func (pool *BlockPool) getValidateRecord(hash string) *BlockRecord {
-	ret, existed := pool.blockCache.Get(hash)
+func (executor *Executor) getValidateRecord(hash string) *BlockRecord {
+	ret, existed := executor.blockCache.Get(hash)
 	if !existed {
 		log.Notice("No record found when commit block, record hash:", hash)
 		return nil
@@ -114,8 +114,8 @@ func (pool *BlockPool) getValidateRecord(hash string) *BlockRecord {
 }
 
 // generateBlock - generate a block with given data.
-func (pool *BlockPool) generateBlock(ev event.CommitOrRollbackBlockEvent) *types.Block {
-	record := pool.getValidateRecord(ev.Hash)
+func (executor *Executor) generateBlock(ev event.CommitOrRollbackBlockEvent) *types.Block {
+	record := executor.getValidateRecord(ev.Hash)
 	if record == nil {
 		return nil
 	}
@@ -133,19 +133,19 @@ func (pool *BlockPool) generateBlock(ev event.CommitOrRollbackBlockEvent) *types
 	}
 	newBlock.Transactions = make([]*types.Transaction, len(record.ValidTxs))
 	copy(newBlock.Transactions, record.ValidTxs)
-	newBlock.BlockHash = newBlock.Hash(pool.commonHash).Bytes()
+	newBlock.BlockHash = newBlock.Hash(executor.commonHash).Bytes()
 	return newBlock
 }
 
 // commitValidationCheck - check whether this commit event satisfy demand.
-func (pool *BlockPool) commitValidationCheck(ev event.CommitOrRollbackBlockEvent) bool {
+func (executor *Executor) commitValidationCheck(ev event.CommitOrRollbackBlockEvent) bool {
 	// 1. check whether this ev is the demand one
-	if ev.SeqNo != pool.demandNumber {
+	if ev.SeqNo != executor.demandNumber {
 		log.Errorf("receive a commit event %d which is not demand, drop it.", ev.SeqNo)
 		return false
 	}
 	// 2. check whether validation result exist
-	ret, existed := pool.blockCache.Get(ev.Hash)
+	ret, existed := executor.blockCache.Get(ev.Hash)
 	if !existed {
 		log.Notice("No record found when commit block, record hash:", ev.Hash)
 		return false
@@ -163,7 +163,7 @@ func (pool *BlockPool) commitValidationCheck(ev event.CommitOrRollbackBlockEvent
 }
 
 // notifyInvalidTransactions - notify sender peer for invalid transactions.
-func (pool *BlockPool) notifyInvalidTransactions(invalidTransactions []*types.InvalidTransactionRecord, primary bool, peerManager p2p.PeerManager) {
+func (executor *Executor) notifyInvalidTransactions(invalidTransactions []*types.InvalidTransactionRecord, primary bool, peerManager p2p.PeerManager) {
 	if primary {
 		for _, t := range invalidTransactions {
 			payload, err := proto.Marshal(t)
@@ -171,7 +171,7 @@ func (pool *BlockPool) notifyInvalidTransactions(invalidTransactions []*types.In
 				log.Error("Marshal tx error")
 			}
 			if t.Tx.Id == uint64(peerManager.GetNodeId()) {
-				pool.StoreInvalidResp(event.RespInvalidTxsEvent{
+				executor.StoreInvalidResp(event.RespInvalidTxsEvent{
 					Payload: payload,
 				})
 				continue
@@ -184,14 +184,14 @@ func (pool *BlockPool) notifyInvalidTransactions(invalidTransactions []*types.In
 }
 
 // increaseDemandBlockNumber - increase current demand block number for commit.
-func (pool *BlockPool) increaseDemandBlockNumber() {
-	pool.demandNumber += 1
-	log.Noticef("demand block number %d", pool.demandNumber)
+func (executor *Executor) increaseDemandBlockNumber() {
+	executor.demandNumber += 1
+	log.Noticef("demand block number %d", executor.demandNumber)
 }
 
-func (pool *BlockPool) persistTransactions(batch db.Batch, transactions []*types.Transaction, blockNumber uint64) error {
+func (executor *Executor) persistTransactions(batch db.Batch, transactions []*types.Transaction, blockNumber uint64) error {
 	for i, transaction := range transactions {
-		if err, _ := core.PersistTransaction(batch, transaction, pool.GetTransactionVersion(), false, false); err != nil {
+		if err, _ := core.PersistTransaction(batch, transaction, executor.GetTransactionVersion(), false, false); err != nil {
 			log.Error("put tx data into database failed! error msg, ", err.Error())
 			return err
 		}
@@ -210,7 +210,7 @@ func (pool *BlockPool) persistTransactions(batch db.Batch, transactions []*types
 
 // re assign block hash and block number to transaction logs
 // during the validation, block number and block hash can be incorrect
-func (pool *BlockPool) persistReceipts(batch db.Batch, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) error {
+func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) error {
 	for _, receipt := range receipts {
 		logs, err := receipt.GetLogs()
 		if err != nil {
@@ -222,7 +222,7 @@ func (pool *BlockPool) persistReceipts(batch db.Batch, receipts []*types.Receipt
 			log.BlockNumber = blockNumber
 		}
 		receipt.SetLogs(logs)
-		if err, _ := core.PersistReceipt(batch, receipt, pool.GetTransactionVersion(), false, false); err != nil {
+		if err, _ := core.PersistReceipt(batch, receipt, executor.GetTransactionVersion(), false, false); err != nil {
 			log.Error("Put receipt into database failed! error msg, ", err.Error())
 			return err
 		}
@@ -232,7 +232,7 @@ func (pool *BlockPool) persistReceipts(batch db.Batch, receipts []*types.Receipt
 
 
 // save the invalid transaction into database for client query
-func (pool *BlockPool) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
+func (executor *Executor) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
 	invalidTx := &types.InvalidTransactionRecord{}
 	err := proto.Unmarshal(ev.Payload, invalidTx)
 	if err != nil {

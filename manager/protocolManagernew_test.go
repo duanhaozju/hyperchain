@@ -7,7 +7,7 @@ import (
 	"hyperchain/accounts"
 	"hyperchain/consensus"
 	"hyperchain/core"
-	"hyperchain/core/blockpool"
+	"hyperchain/core/executor"
 	"hyperchain/core/types"
 	"hyperchain/crypto"
 	"hyperchain/event"
@@ -61,7 +61,7 @@ func initmanager() *ProtocolManager {
 	core.InitDB("G:/hyperchainDB", 8030)
 	eventMux := new(event.TypeMux)
 	consenter := new(consensus.Consenter)
-	pool := blockpool.NewBlockPool(eventMux, *consenter)
+	pool := executor.NewBlockExecutor(eventMux, *consenter)
 
 	path := "../config/local_peerconfig.json"
 	grpcPeerMgr := p2p.NewGrpcManager(path, 1)

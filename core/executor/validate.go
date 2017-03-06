@@ -1,4 +1,4 @@
-package blockpool
+package executor
 
 import (
 	"errors"
@@ -22,50 +22,50 @@ import (
 	"hyperchain/hyperdb/db"
 )
 
-func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, peerManager p2p.PeerManager) {
-	pool.validateQueue <- validationEvent
-	if pool.peerManager == nil {
-		pool.peerManager = peerManager
+func (executor *Executor) Validate(validationEvent event.ExeTxsEvent, peerManager p2p.PeerManager) {
+	executor.validateQueue <- validationEvent
+	if executor.peerManager == nil {
+		executor.peerManager = peerManager
 	}
-	atomic.AddInt32(&pool.validateQueueLen, 1)
+	atomic.AddInt32(&executor.validateQueueLen, 1)
 }
-func (pool *BlockPool) validateBackendLoop() {
-	for ev := range pool.validateQueue {
-		if atomic.LoadInt32(&pool.validateBehaveFlag) == VALIDATEBEHAVETYPE_NORMAL {
-			if success := pool.consumeValidateEvent(ev); success == false {
+func (executor *Executor) validateBackendLoop() {
+	for ev := range executor.validateQueue {
+		if atomic.LoadInt32(&executor.validateBehaveFlag) == VALIDATEBEHAVETYPE_NORMAL {
+			if success := executor.consumeValidateEvent(ev); success == false {
 				log.Errorf("validate #%d failed, system crush down.", ev.SeqNo)
 			}
-			atomic.AddInt32(&pool.validateQueueLen, -1)
+			atomic.AddInt32(&executor.validateQueueLen, -1)
 		} else {
 			log.Noticef("drop validation event %d", ev.SeqNo)
-			pool.dropValdiateEvent(ev)
-			atomic.AddInt32(&pool.validateQueueLen, -1)
+			executor.dropValdiateEvent(ev)
+			atomic.AddInt32(&executor.validateQueueLen, -1)
 		}
 	}
 }
 
-func (pool *BlockPool) consumeValidateEvent(validationEvent event.ExeTxsEvent) bool {
-	atomic.StoreInt32(&pool.validateInProgress, PROGRESS_TRUE)
-	defer atomic.StoreInt32(&pool.validateInProgress, PROGRESS_FALSE)
-	if pool.validateEventCheck(validationEvent) == false {
-		log.Errorf("receive validation event %d while %d is required, save into cache temporarily.", validationEvent.SeqNo, pool.demandSeqNo)
-		pool.validateEventQueue.Add(validationEvent.SeqNo, validationEvent)
+func (executor *Executor) consumeValidateEvent(validationEvent event.ExeTxsEvent) bool {
+	atomic.StoreInt32(&executor.validateInProgress, PROGRESS_TRUE)
+	defer atomic.StoreInt32(&executor.validateInProgress, PROGRESS_FALSE)
+	if executor.validateEventCheck(validationEvent) == false {
+		log.Errorf("receive validation event %d while %d is required, save into cache temporarily.", validationEvent.SeqNo, executor.demandSeqNo)
+		executor.validateEventQueue.Add(validationEvent.SeqNo, validationEvent)
 		return true
 	}
-	if _, success := pool.PreProcess(validationEvent); success == false {
+	if _, success := executor.PreProcess(validationEvent); success == false {
 		return false
 	}
-	pool.increaseDemandSeqNo()
-	if pool.validateEventQueue.Len() > 0 {
+	executor.increaseDemandSeqNo()
+	if executor.validateEventQueue.Len() > 0 {
 		// there is still some events remain.
 		for  {
-			if pool.validateEventQueue.Contains(pool.demandSeqNo) {
-				res, _ := pool.validateEventQueue.Get(pool.demandSeqNo)
+			if executor.validateEventQueue.Contains(executor.demandSeqNo) {
+				res, _ := executor.validateEventQueue.Get(executor.demandSeqNo)
 				validationEvent = res.(event.ExeTxsEvent)
-				if _, success := pool.PreProcess(validationEvent); success == false {
+				if _, success := executor.PreProcess(validationEvent); success == false {
 					return false
 				} else {
-					pool.increaseDemandSeqNo()
+					executor.increaseDemandSeqNo()
 					judge := func(key interface{}, iterKey interface{}) bool {
 						id := key.(uint64)
 						iterId := iterKey.(uint64)
@@ -74,7 +74,7 @@ func (pool *BlockPool) consumeValidateEvent(validationEvent event.ExeTxsEvent) b
 						}
 						return false
 					}
-					pool.validateEventQueue.RemoveWithCond(validationEvent.SeqNo, judge)
+					executor.validateEventQueue.RemoveWithCond(validationEvent.SeqNo, judge)
 				}
 			} else {
 				break
@@ -85,18 +85,18 @@ func (pool *BlockPool) consumeValidateEvent(validationEvent event.ExeTxsEvent) b
 }
 
 // dropValdiateEvent - this function do nothing but consume a validation event.
-func (pool *BlockPool) dropValdiateEvent(validationEvent event.ExeTxsEvent) {
-	atomic.StoreInt32(&pool.validateInProgress, PROGRESS_TRUE)
-	atomic.StoreInt32(&pool.validateInProgress, PROGRESS_FALSE)
+func (executor *Executor) dropValdiateEvent(validationEvent event.ExeTxsEvent) {
+	atomic.StoreInt32(&executor.validateInProgress, PROGRESS_TRUE)
+	atomic.StoreInt32(&executor.validateInProgress, PROGRESS_FALSE)
 }
 
 // Process an ValidationEvent
-func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, bool) {
+func (executor *Executor) PreProcess(validationEvent event.ExeTxsEvent) (error, bool) {
 	var validTxSet []*types.Transaction
 	var invalidTxSet []*types.InvalidTransactionRecord
 	var index []int
 	if validationEvent.IsPrimary {
-		invalidTxSet, index = pool.checkSign(validationEvent.Transactions, pool.commonHash, pool.encryption)
+		invalidTxSet, index = executor.checkSign(validationEvent.Transactions, executor.commonHash, executor.encryption)
 	} else {
 		validTxSet = validationEvent.Transactions
 	}
@@ -115,13 +115,13 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, boo
 		validTxSet = validationEvent.Transactions
 	}
 	// process block in virtual machine
-	err, validateResult := pool.ProcessBlockInVm(validTxSet, invalidTxSet, validationEvent.SeqNo)
+	err, validateResult := executor.ProcessBlockInVm(validTxSet, invalidTxSet, validationEvent.SeqNo)
 	if err != nil {
 		log.Error("process block failed!, block number: ", validationEvent.SeqNo)
 		return err, false
 	}
 	// calculate validation result hash for comparison with others
-	hash := pool.commonHash.Hash([]interface{}{
+	hash := executor.commonHash.Hash([]interface{}{
 		validateResult.MerkleRoot,
 		validateResult.TxRoot,
 		validateResult.ReceiptRoot,
@@ -131,17 +131,17 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, boo
 	// update some variant
 	if len(validateResult.ValidTxs) != 0 {
 		validateResult.VID = validationEvent.SeqNo
-		validateResult.SeqNo = pool.tempBlockNumber
+		validateResult.SeqNo = executor.tempBlockNumber
 		// regard the batch as a valid block
 		// increase tempBlockNumber for next validation
 		// tempBlockNumber doesn't has concurrency dangerous
-		pool.tempBlockNumber += 1
-		pool.blockCache.Add(hash.Hex(), *validateResult)
+		executor.tempBlockNumber += 1
+		executor.blockCache.Add(hash.Hex(), *validateResult)
 	}
 	log.Debug("invalid transaction number: ", len(validateResult.InvalidTxs))
 	log.Debug("valid transaction number: ", len(validateResult.ValidTxs))
 	// communicate with PBFT
-	pool.consenter.RecvLocal(protos.ValidatedTxs{
+	executor.consenter.RecvLocal(protos.ValidatedTxs{
 		Transactions: validateResult.ValidTxs,
 		SeqNo:        validationEvent.SeqNo,
 		View:         validationEvent.View,
@@ -153,7 +153,7 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, boo
 	if validationEvent.IsPrimary && len(validateResult.ValidTxs) == 0 {
 		// 1. Remove all cached transaction in this block (which for transaction duplication check purpose), because empty block won't enter network
 		msg := protos.RemoveCache{Vid: validationEvent.SeqNo}
-		pool.consenter.RecvLocal(msg)
+		executor.consenter.RecvLocal(msg)
 		// 2. Throw all invalid transaction back to the origin node
 		for _, t := range validateResult.InvalidTxs {
 			payload, err := proto.Marshal(t)
@@ -162,8 +162,8 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, boo
 			}
 			// original node is local
 			// store invalid transaction directly
-			if t.Tx.Id == uint64(pool.peerManager.GetNodeId()) {
-				pool.StoreInvalidResp(event.RespInvalidTxsEvent{
+			if t.Tx.Id == uint64(executor.peerManager.GetNodeId()) {
+				executor.StoreInvalidResp(event.RespInvalidTxsEvent{
 					Payload: payload,
 				})
 				continue
@@ -171,14 +171,14 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, boo
 			var peers []uint64
 			peers = append(peers, t.Tx.Id)
 			// send back to original node
-			pool.peerManager.SendMsgToPeers(payload, peers, recovery.Message_INVALIDRESP)
+			executor.peerManager.SendMsgToPeers(payload, peers, recovery.Message_INVALIDRESP)
 		}
 	}
 	return nil, true
 }
 
 // check the sender's signature of the transaction
-func (pool *BlockPool) checkSign(txs []*types.Transaction, commonHash crypto.CommonHash, encryption crypto.Encryption) ([]*types.InvalidTransactionRecord, []int) {
+func (executor *Executor) checkSign(txs []*types.Transaction, commonHash crypto.CommonHash, encryption crypto.Encryption) ([]*types.InvalidTransactionRecord, []int) {
 	var invalidTxSet []*types.InvalidTransactionRecord
 	// (1) check signature for each transaction
 	var wg sync.WaitGroup
@@ -208,19 +208,19 @@ func (pool *BlockPool) checkSign(txs []*types.Transaction, commonHash crypto.Com
 
 // ProcessBlockInVm - Put all transactions into the virtual machine and execute
 // Return the execution result, such as txs' merkle root, receipts' merkle root, accounts' merkle root and so on.
-func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, *BlockRecord) {
+func (executor *Executor) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, *BlockRecord) {
 	var validtxs []*types.Transaction
 	var receipts []*types.Receipt
 	// initialize calculator
 	// for calculate fingerprint of a batch of transactions and receipts
-	if err := pool.initializeTransactionCalculator(); err != nil {
-		log.Errorf("validate #%d initialize transaction calculator", pool.tempBlockNumber)
+	if err := executor.initializeTransactionCalculator(); err != nil {
+		log.Errorf("validate #%d initialize transaction calculator", executor.tempBlockNumber)
 		return err, &BlockRecord{
 			InvalidTxs: invalidTxs,
 		}
 	}
-	if err := pool.initializeReceiptCalculator(); err != nil {
-		log.Errorf("validate #%d initialize receipt calculator", pool.tempBlockNumber)
+	if err := executor.initializeReceiptCalculator(); err != nil {
+		log.Errorf("validate #%d initialize receipt calculator", executor.tempBlockNumber)
 		return err, &BlockRecord{
 			InvalidTxs: invalidTxs,
 		}
@@ -228,18 +228,18 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	// load latest state fingerprint
 	// for compatibility, doesn't remove the statement below
 	// initialize state
-	state, err := pool.GetStateInstance()
+	state, err := executor.GetStateInstance()
 	if err != nil {
 		return err, &BlockRecord{
 			InvalidTxs: invalidTxs,
 		}
 	}
 
-	state.MarkProcessStart(pool.tempBlockNumber)
+	state.MarkProcessStart(executor.tempBlockNumber)
 	// initialize execution environment rule set
-	env := initEnvironment(state, pool.tempBlockNumber)
+	env := initEnvironment(state, executor.tempBlockNumber)
 	// execute transaction one by one
-	batch := state.FetchBatch(pool.tempBlockNumber)
+	batch := state.FetchBatch(executor.tempBlockNumber)
 	for i, tx := range txs {
 		state.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(tx, env)
@@ -263,13 +263,13 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 			})
 			continue
 		}
-		pool.calculateTransactionsFingerprint(tx, false)
-		pool.calculateReceiptFingerprint(receipt, false)
+		executor.calculateTransactionsFingerprint(tx, false)
+		executor.calculateReceiptFingerprint(receipt, false)
 		receipts = append(receipts, receipt)
 		validtxs = append(validtxs, tx)
 	}
 	// submit validation result
-	err, merkleRoot, txRoot, receiptRoot := pool.submitValidationResult(state, batch)
+	err, merkleRoot, txRoot, receiptRoot := executor.submitValidationResult(state, batch)
 	if err != nil {
 		log.Error("Commit state db failed! error msg, ", err.Error())
 		return err, &BlockRecord{
@@ -279,7 +279,7 @@ func (pool *BlockPool) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*
 	// generate new state fingerprint
 	// IMPORTANT doesn't call batch.Write util recv commit event for atomic assurance
 	log.Debugf("validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
-		pool.tempBlockNumber, seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
+		executor.tempBlockNumber, seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	return nil, &BlockRecord{
 		TxRoot:      txRoot,
 		ReceiptRoot: receiptRoot,
@@ -301,57 +301,57 @@ func initEnvironment(state vm.Database, seqNo uint64) vm.Environment {
 }
 
 // initialize transaction calculator
-func (pool *BlockPool) initializeTransactionCalculator() error {
+func (executor *Executor) initializeTransactionCalculator() error {
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("get database handler failed in initializeTransactionCalculator")
 		return err
 	}
-	switch pool.GetStateType() {
+	switch executor.GetStateType() {
 	case "rawstate":
 		tree, err := pmt.New(common.Hash{}, db)
 		if err != nil {
 			log.Error("initialize pmt failed in initializeTransactionCalculator")
 			return err
 		}
-		pool.transactionCalculator = tree
+		executor.transactionCalculator = tree
 	case "hyperstate":
-		pool.transactionBuffer = nil
+		executor.transactionBuffer = nil
 	}
 	return nil
 }
 
 // initialize receipt calculator
-func (pool *BlockPool) initializeReceiptCalculator() error {
+func (executor *Executor) initializeReceiptCalculator() error {
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("get database handler failed in initializeTransactionCalculator")
 		return err
 	}
-	switch pool.GetStateType() {
+	switch executor.GetStateType() {
 	case "rawstate":
 		tree, err := pmt.New(common.Hash{}, db)
 		if err != nil {
 			log.Error("initialize pmt failed in initializeTransactionCalculator")
 			return err
 		}
-		pool.receiptCalculator = tree
+		executor.receiptCalculator = tree
 	case "hyperstate":
-		pool.receiptBuffer = nil
+		executor.receiptBuffer = nil
 	}
 	return nil
 }
 
 // calculate a batch of transaction
-func (pool *BlockPool) calculateTransactionsFingerprint(transaction *types.Transaction, flush bool) (common.Hash, error) {
+func (executor *Executor) calculateTransactionsFingerprint(transaction *types.Transaction, flush bool) (common.Hash, error) {
 	if transaction == nil && flush == false {
 		return common.Hash{}, errors.New("empty pointer")
 	}
-	switch pool.GetStateType() {
+	switch executor.GetStateType() {
 	case "rawstate":
-		calculator := pool.transactionCalculator.(*pmt.Trie)
+		calculator := executor.transactionCalculator.(*pmt.Trie)
 		if flush == false {
-			err, data := core.WrapperTransaction(transaction, pool.GetTransactionVersion())
+			err, data := core.WrapperTransaction(transaction, executor.GetTransactionVersion())
 			if err != nil {
 				log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
 				return common.Hash{}, err
@@ -365,19 +365,19 @@ func (pool *BlockPool) calculateTransactionsFingerprint(transaction *types.Trans
 		}
 	case "hyperstate":
 		if flush == false {
-			err, data := core.WrapperTransaction(transaction, pool.GetTransactionVersion())
+			err, data := core.WrapperTransaction(transaction, executor.GetTransactionVersion())
 			if err != nil {
 				log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
 				return common.Hash{}, err
 			}
 			// put transaction to buffer temporarily
-			pool.transactionBuffer = append(pool.transactionBuffer, data)
+			executor.transactionBuffer = append(executor.transactionBuffer, data)
 			return common.Hash{}, nil
 		} else {
 			// calculate hash together
 			kec256Hash := crypto.NewKeccak256Hash("keccak256")
-			hash := kec256Hash.Hash(pool.transactionBuffer)
-			pool.transactionBuffer = nil
+			hash := kec256Hash.Hash(executor.transactionBuffer)
+			executor.transactionBuffer = nil
 			return hash, nil
 		}
 	}
@@ -385,18 +385,18 @@ func (pool *BlockPool) calculateTransactionsFingerprint(transaction *types.Trans
 }
 
 // calculate a batch of receipt
-func (pool *BlockPool) calculateReceiptFingerprint(receipt *types.Receipt, flush bool) (common.Hash, error) {
+func (executor *Executor) calculateReceiptFingerprint(receipt *types.Receipt, flush bool) (common.Hash, error) {
 	// 1. marshal receipt to byte slice
 	if receipt == nil && flush == false {
 		log.Error("empty recepit pointer")
 		return common.Hash{}, errors.New("empty pointer")
 	}
-	switch pool.GetStateType() {
+	switch executor.GetStateType() {
 	case "rawstate":
-		calculator := pool.receiptCalculator.(*pmt.Trie)
+		calculator := executor.receiptCalculator.(*pmt.Trie)
 		if flush == false {
 			// process
-			err, data := core.WrapperReceipt(receipt, pool.GetTransactionVersion())
+			err, data := core.WrapperReceipt(receipt, executor.GetTransactionVersion())
 			if err != nil {
 				log.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
 				return common.Hash{}, err
@@ -412,27 +412,27 @@ func (pool *BlockPool) calculateReceiptFingerprint(receipt *types.Receipt, flush
 	case "hyperstate":
 		if flush == false {
 			// process
-			err, data := core.WrapperReceipt(receipt, pool.GetTransactionVersion())
+			err, data := core.WrapperReceipt(receipt, executor.GetTransactionVersion())
 			if err != nil {
 				log.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
 				return common.Hash{}, err
 			}
 			// put transaction to buffer temporarily
-			pool.receiptBuffer = append(pool.receiptBuffer, data)
+			executor.receiptBuffer = append(executor.receiptBuffer, data)
 			return common.Hash{}, nil
 		} else {
 			// calculate hash together
 			kec256Hash := crypto.NewKeccak256Hash("keccak256")
-			hash := kec256Hash.Hash(pool.receiptBuffer)
-			pool.receiptBuffer = nil
+			hash := kec256Hash.Hash(executor.receiptBuffer)
+			executor.receiptBuffer = nil
 			return hash, nil
 		}
 	}
 	return common.Hash{}, nil
 }
 
-func (pool *BlockPool) submitValidationResult(state vm.Database, batch db.Batch) (error, []byte, []byte, []byte) {
-	switch pool.GetStateType() {
+func (executor *Executor) submitValidationResult(state vm.Database, batch db.Batch) (error, []byte, []byte, []byte) {
+	switch executor.GetStateType() {
 	case "hyperstate":
 		// flush all state change
 		root, err := state.Commit()
@@ -444,13 +444,13 @@ func (pool *BlockPool) submitValidationResult(state vm.Database, batch db.Batch)
 		// generate new state fingerprint
 		merkleRoot := root.Bytes()
 		// generate transactions and receipts fingerprint
-		res, _ := pool.calculateTransactionsFingerprint(nil, true)
+		res, _ := executor.calculateTransactionsFingerprint(nil, true)
 		txRoot := res.Bytes()
-		res, _ = pool.calculateReceiptFingerprint(nil, true)
+		res, _ = executor.calculateReceiptFingerprint(nil, true)
 		receiptRoot := res.Bytes()
 		// store latest state status
 		// actually it's useless
-		pool.lastValidationState.Store(root)
+		executor.lastValidationState.Store(root)
 		return nil, merkleRoot, txRoot, receiptRoot
 		// IMPORTANT doesn't call batch.Write util recv commit event for atomic assurance
 	case "rawstate":
@@ -463,27 +463,27 @@ func (pool *BlockPool) submitValidationResult(state vm.Database, batch db.Batch)
 		// generate new state fingerprint
 		merkleRoot := root.Bytes()
 		// generate transactions and receipts fingerprint
-		res, _ := pool.calculateTransactionsFingerprint(nil, true)
+		res, _ := executor.calculateTransactionsFingerprint(nil, true)
 		txRoot := res.Bytes()
-		res, _ = pool.calculateReceiptFingerprint(nil, true)
+		res, _ = executor.calculateReceiptFingerprint(nil, true)
 		receiptRoot := res.Bytes()
 		// store latest state status
-		pool.lastValidationState.Store(root)
+		executor.lastValidationState.Store(root)
 		batch.Write()
 		return nil, merkleRoot, txRoot, receiptRoot
 	}
 	return errors.New("miss state type"), nil, nil, nil
 }
 
-func (pool *BlockPool) validateEventCheck(ev event.ExeTxsEvent) bool {
-	if ev.SeqNo != pool.demandSeqNo {
-		log.Errorf("got a validation event is not required. required %d but got %d", pool.demandSeqNo, ev.SeqNo)
+func (executor *Executor) validateEventCheck(ev event.ExeTxsEvent) bool {
+	if ev.SeqNo != executor.demandSeqNo {
+		log.Errorf("got a validation event is not required. required %d but got %d", executor.demandSeqNo, ev.SeqNo)
 		return false
 	}
 	return true
 }
 
-func (pool *BlockPool) increaseDemandSeqNo() {
-	pool.demandSeqNo += 1
-	log.Noticef("demand seqNo %d", pool.demandSeqNo)
+func (executor *Executor) increaseDemandSeqNo() {
+	executor.demandSeqNo += 1
+	log.Noticef("demand seqNo %d", executor.demandSeqNo)
 }

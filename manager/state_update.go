@@ -5,7 +5,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
 	"hyperchain/core"
-	"hyperchain/core/blockpool"
+	"hyperchain/core/executor"
 	"hyperchain/core/types"
 	"hyperchain/event"
 	"hyperchain/hyperdb"
@@ -42,7 +42,7 @@ func (self *ProtocolManager) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 			self.sendStateUpdatedEvent()
 		} else {
 			log.Warningf("current chain latest block hash not equal with target hash, cut down local block %d", core.GetChainCopy().Height)
-			if err := self.blockPool.CutdownBlock(core.GetChainCopy().Height); err != nil {
+			if err := self.executor.CutdownBlock(core.GetChainCopy().Height); err != nil {
 				log.Errorf("cut down block %d failed.", core.GetChainCopy().Height)
 				return
 			}
@@ -125,7 +125,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 					// compare received block's hash with target hash for guarantee block's integrity
 					if common.Bytes2Hex(acceptHash) == common.Bytes2Hex(self.state.RequireBlockHash) {
 						// put into db instead of memory for avoiding memory boom when sync huge number blocks
-						core.PersistBlock(db.NewBatch(), blocks.Batch[i], self.blockPool.GetBlockVersion(), true, true)
+						core.PersistBlock(db.NewBatch(), blocks.Batch[i], self.executor.GetBlockVersion(), true, true)
 						if err := self.updateRequire(blocks.Batch[i]); err != nil {
 							log.Error("UpdateRequired failed!")
 							self.reject()
@@ -143,9 +143,9 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 							// check the latest block in local's correctness
 							if common.Bytes2Hex(lastBlk.ParentHash) == common.Bytes2Hex(core.GetChainCopy().LatestBlockHash) {
 								// execute all received block at one time
-								self.blockPool.NotifyValidateToStop()
-								self.blockPool.WaitResetAvailable()
-								self.blockPool.NotifyValidateToBegin()
+								self.executor.NotifyValidateToStop()
+								self.executor.WaitResetAvailable()
+								self.executor.NotifyValidateToBegin()
 
 								for i := self.state.RequiredBlockNum + 1; i <= self.state.RecoveryNum; i += 1 {
 									blk, err := core.GetBlockByNumber(db, i)
@@ -156,10 +156,10 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 										return
 									} else {
 										// set temporary block number as block number since block number is already here
-										self.blockPool.SetTempBlockNumber(blk.Number)
-										self.blockPool.SetDemandNumber(blk.Number)
-										self.blockPool.SetDemandSeqNo(blk.Number)
-										err, result := self.blockPool.ApplyBlock(blk, blk.Number)
+										self.executor.SetTempBlockNumber(blk.Number)
+										self.executor.SetDemandNumber(blk.Number)
+										self.executor.SetDemandSeqNo(blk.Number)
+										err, result := self.executor.ApplyBlock(blk, blk.Number)
 										if err != nil || self.assertApplyResult(blk, result) == false {
 											log.Errorf("state update from #%d to #%d failed. current chain height #%d",
 												self.state.RequiredBlockNum+1, self.state.RecoveryNum, core.GetChainCopy().Height)
@@ -171,9 +171,9 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 										}
 									}
 								}
-								self.blockPool.SetTempBlockNumber(self.state.RecoveryNum + 1)
-								self.blockPool.SetDemandSeqNo(self.state.RecoveryNum + 1)
-								self.blockPool.SetDemandNumber(self.state.RecoveryNum + 1)
+								self.executor.SetTempBlockNumber(self.state.RecoveryNum + 1)
+								self.executor.SetDemandSeqNo(self.state.RecoveryNum + 1)
+								self.executor.SetDemandNumber(self.state.RecoveryNum + 1)
 
 								self.UpdateRequire(uint64(0), []byte{}, uint64(0))
 								self.state.Replicas = nil
@@ -183,7 +183,7 @@ func (self *ProtocolManager) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 								break
 							} else {
 								// the highest block in local is invalid, request the block
-								if err := self.blockPool.CutdownBlock(lastBlk.Number - 1); err != nil {
+								if err := self.executor.CutdownBlock(lastBlk.Number - 1); err != nil {
 									log.Errorf("cut down block %d failed.", lastBlk.Number - 1)
 									return
 								}
@@ -251,7 +251,7 @@ func (self *ProtocolManager) updateRequire(block *types.Block) error {
 			blks := ret.(map[string]types.Block)
 			for hash, blk := range blks {
 				if hash == common.BytesToHash(tmpHash).Hex() {
-					core.PersistBlock(db.NewBatch(), &blk, self.blockPool.GetBlockVersion(), true, true)
+					core.PersistBlock(db.NewBatch(), &blk, self.executor.GetBlockVersion(), true, true)
 					self.syncBlockCache.Remove(tmp)
 					tmp = tmp - 1
 					tmpHash = blk.ParentHash
@@ -310,8 +310,8 @@ func (self *ProtocolManager) sendStateUpdatedEvent() {
 	log.Debug("send state updated message")
 	time.Sleep(2 * time.Second)
 	// IMPORTANT clear block cache of blockpool
-	self.blockPool.PurgeValidateQueue()
-	self.blockPool.PurgeBlockCache()
+	self.executor.PurgeValidateQueue()
+	self.executor.PurgeBlockCache()
 	self.consenter.RecvMsg(msgPayload)
 }
 
@@ -333,7 +333,7 @@ func (self *ProtocolManager) isBlockHashEqual(targetHash []byte) bool {
 }
 
 // assertApplyResult - check apply result whether equal with other's.
-func (self *ProtocolManager) assertApplyResult(block *types.Block, result *blockpool.BlockRecord) bool {
+func (self *ProtocolManager) assertApplyResult(block *types.Block, result *executor.BlockRecord) bool {
 	if bytes.Compare(block.MerkleRoot, result.MerkleRoot) != 0 {
 		log.Warningf("mismatch in block merkle root  of #%d, required %s, got %s",
 			block.Number, common.Bytes2Hex(block.MerkleRoot), common.Bytes2Hex(result.MerkleRoot))
@@ -366,11 +366,11 @@ func (self *ProtocolManager) reject() {
 		core.DeleteBlockByNum(batch, i)
 	}
 	batch.Write()
-	self.blockPool.SetDemandNumber(core.GetChainCopy().Height + 1)
-	self.blockPool.SetDemandSeqNo(core.GetChainCopy().Height + 1)
-	self.blockPool.SetTempBlockNumber(core.GetChainCopy().Height + 1)
+	self.executor.SetDemandNumber(core.GetChainCopy().Height + 1)
+	self.executor.SetDemandSeqNo(core.GetChainCopy().Height + 1)
+	self.executor.SetTempBlockNumber(core.GetChainCopy().Height + 1)
 	// reset state in block pool
-	self.blockPool.ClearStateUnCommitted()
+	self.executor.ClearStateUnCommitted()
 	// reset
 	self.UpdateRequire(uint64(0), []byte{}, uint64(0))
 	self.state.Replicas = nil
@@ -380,7 +380,7 @@ func (self *ProtocolManager) reject() {
 
 // accpet - accept state update result.
 func (self *ProtocolManager) accpet(seqNo uint64) {
-	self.blockPool.SubmitForStateUpdate(seqNo)
+	self.executor.SubmitForStateUpdate(seqNo)
 }
 
 // unmarshalStateUpdateMessage - unmarshal state update message sent from consensus module and return a state update target.

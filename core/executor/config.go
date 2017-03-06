@@ -1,4 +1,4 @@
-package blockpool
+package executor
 
 const (
 	stateType          = "global.structure.state"
@@ -19,32 +19,32 @@ const (
 // GetStateType - get state type, "rawstate" or "hyperstate"
 // "rawstate" is the old version which use patricia merkle tree to manage data structure
 // "hyperstate" is the latest version which use direct k-v set and bucket tree to manage.
-func (pool *BlockPool) GetStateType() string {
-	return pool.conf.GetString(stateType)
+func (executor *Executor) GetStateType() string {
+	return executor.conf.GetString(stateType)
 }
 
 // GetBlockVersion - get block data structure version tag.
-func (pool *BlockPool) GetBlockVersion() string {
-	return pool.conf.GetString(blockVersion)
+func (executor *Executor) GetBlockVersion() string {
+	return executor.conf.GetString(blockVersion)
 }
 
 // GetTransactionVersion - get transaction data structure version tag.
-func (pool *BlockPool) GetTransactionVersion() string {
-	return pool.conf.GetString(transactionVersion)
+func (executor *Executor) GetTransactionVersion() string {
+	return executor.conf.GetString(transactionVersion)
 }
 
 // GetReceiptVersion - get receipt data structure version tag, which is same with transaction.
-func (pool *BlockPool) GetReceiptVersion() string {
-	return pool.GetTransactionVersion()
+func (executor *Executor) GetReceiptVersion() string {
+	return executor.GetTransactionVersion()
 }
 
 // GetBucketSize - get bucket size.
-func (pool *BlockPool) GetBucketSize(choice string) int {
+func (executor *Executor) GetBucketSize(choice string) int {
 	switch choice {
 	case STATEDB:
-		return pool.conf.GetInt(stateBucketSize)
+		return executor.conf.GetInt(stateBucketSize)
 	case STATEOBJECT:
-		return pool.conf.GetInt(stateObjectBucketSize)
+		return executor.conf.GetInt(stateObjectBucketSize)
 	default:
 		log.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
 		return 0
@@ -52,12 +52,12 @@ func (pool *BlockPool) GetBucketSize(choice string) int {
 }
 
 // GetBucketLevelGroup - get bucket level group
-func (pool *BlockPool) GetBucketLevelGroup(choice string) int {
+func (executor *Executor) GetBucketLevelGroup(choice string) int {
 	switch choice {
 	case STATEDB:
-		return pool.conf.GetInt(stateBucketLevelGroup)
+		return executor.conf.GetInt(stateBucketLevelGroup)
 	case STATEOBJECT:
-		return pool.conf.GetInt(stateObjectBucketLevelGroup)
+		return executor.conf.GetInt(stateObjectBucketLevelGroup)
 	default:
 		log.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
 		return 0
@@ -65,12 +65,12 @@ func (pool *BlockPool) GetBucketLevelGroup(choice string) int {
 }
 
 // GetBucketCacheSize - get bucket cache size
-func (pool *BlockPool) GetBucketCacheSize(choice string) int {
+func (executor *Executor) GetBucketCacheSize(choice string) int {
 	switch choice {
 	case STATEDB:
-		return pool.conf.GetInt(stateBucketCacheSize)
+		return executor.conf.GetInt(stateBucketCacheSize)
 	case STATEOBJECT:
-		return pool.conf.GetInt(stateObjectBucketCacheSize)
+		return executor.conf.GetInt(stateObjectBucketCacheSize)
 	default:
 		log.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
 		return 0

@@ -1,4 +1,4 @@
-package blockpool
+package executor
 
 import (
 	"errors"
@@ -12,20 +12,20 @@ import (
 
 // run transaction in a sandbox
 // execution result will not been add to database
-func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
+func (executor *Executor) RunInSandBox(tx *types.Transaction) error {
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err
 	}
 	// load latest state status
-	v := pool.lastValidationState.Load()
+	v := executor.lastValidationState.Load()
 	initStatus, ok := v.(common.Hash)
 	if ok == false {
 		return errors.New("Get StateDB Status Failed!")
 	}
 	// initialize state
 	// IMPORTANT all change to state will not been persist cause never commit will been invoked
-	state, err := pool.GetStateInstanceForSimulate(initStatus, db)
+	state, err := executor.GetStateInstanceForSimulate(initStatus, db)
 	if err != nil {
 		return err
 	}
@@ -56,13 +56,13 @@ func (pool *BlockPool) RunInSandBox(tx *types.Transaction) error {
 			return nil
 		}
 		// persist execution result to local
-		pool.StoreInvalidResp(event.RespInvalidTxsEvent{
+		executor.StoreInvalidResp(event.RespInvalidTxsEvent{
 			Payload: payload,
 		})
 		return nil
 	} else {
 		// persist execution result to local
-		err, _ := core.PersistReceipt(db.NewBatch(), receipt, pool.GetTransactionVersion(), true, true)
+		err, _ := core.PersistReceipt(db.NewBatch(), receipt, executor.GetTransactionVersion(), true, true)
 		if err != nil {
 			log.Error("Put receipt data into database failed! error msg, ", err.Error())
 			return err
