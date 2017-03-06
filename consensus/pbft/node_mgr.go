@@ -1,27 +1,74 @@
-//Hyperchain License
-//Copyright (C) 2016 The Hyperchain Authors.
 package pbft
 
 import (
-	"sync/atomic"
-
 	"hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"
 	"hyperchain/consensus/events"
+	"time"
+	"sync/atomic"
 	"fmt"
 	"encoding/base64"
 	"reflect"
-	"time"
 	"hyperchain/core"
 )
 
+/**
+	Node control issues
+ */
+
+// nodeManager add node or delete node.
+type nodeManager struct {
+	localKey	 string				// track new node's local key (payload from local)
+	addNodeCertStore map[string]*addNodeCert	// track the received add node agree message
+	delNodeCertStore map[string]*delNodeCert	// track the received add node agree message
+
+	routers		 []byte				// track the vp replicas' routers
+	inUpdatingN	 uint32				// track if there are updating
+	updateTimer 	 events.Timer
+	updateTimeout	 time.Duration			// time limit for N-f agree on update n
+	agreeUpdateStore map[aidx]*AgreeUpdateN		// track agree-update-n message
+	updateStore	 map[uidx]*UpdateN		// track last update-n we received or sent
+	updateTarget	 uidx				// track the new view after update
+	updateCertStore	 map[msgID]updateCert		// track the local certStore that needed during update
+}
+
+func newNodeMgr() *nodeManager {
+	nm := &nodeManager{}
+	nm.addNodeCertStore = make(map[string]*addNodeCert)
+	nm.delNodeCertStore = make(map[string]*delNodeCert)
+	nm.updateCertStore = make(map[msgID]updateCert)
+	nm.agreeUpdateStore = make(map[aidx]*AgreeUpdateN)
+	nm.updateStore = make(map[uidx]*UpdateN)
+
+	atomic.StoreUint32(&nm.inUpdatingN, 0)
+
+	return nm
+}
+
+//dispatchNodeMgrMsg dispatch node manager service messages from other peers.
+func (pbft *pbftImpl) dispatchNodeMgrMsg(e events.Event) events.Event {
+	switch et := e.(type) {
+	case *AddNode:
+		return pbft.recvAgreeAddNode(et)
+	case *DelNode:
+		return pbft.recvAgreeDelNode(et)
+	case *ReadyForN:
+		return pbft.recvReadyforNforAdd(et)
+	case *UpdateN:
+		return pbft.recvUpdateN(et)
+	case *AgreeUpdateN:
+		return pbft.recvAgreeUpdateN(et)
+	}
+	return nil
+}
+
 // New replica receive local NewNode message
-func (pbft *pbftProtocal) recvLocalNewNode(msg *protos.NewNodeMessage) error {
+func (pbft *pbftImpl) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 
 	logger.Debugf("New replica %d received local newNode message", pbft.id)
 
-	if pbft.isNewNode {
+	if pbft.status[IS_NEW_NODE] {
 		logger.Warningf("New replica %d received duplicate local newNode message", pbft.id)
 		return nil
 	}
@@ -31,20 +78,19 @@ func (pbft *pbftProtocal) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 		return nil
 	}
 
-	pbft.isNewNode = true
+	pbft.status.activeState(IS_NEW_NODE,IN_ADDING_NODE)
 	pbft.persistNewNode(uint64(1))
-	pbft.inAddingNode = true
 	key := string(msg.Payload)
-	pbft.localKey = key
+	pbft.nodeMgr.localKey = key
 	pbft.persistLocalKey(msg.Payload)
 
 	return nil
 }
 
 // Replica receive local message about new node and routing table
-func (pbft *pbftProtocal) recvLocalAddNode(msg *protos.AddNodeMessage) error {
+func (pbft *pbftImpl) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 
-	if pbft.isNewNode {
+	if pbft.status[IS_NEW_NODE] {
 		logger.Warningf("New replica received local addNode message, there may be something wrong")
 		return nil
 	}
@@ -57,14 +103,14 @@ func (pbft *pbftProtocal) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 	key := string(msg.Payload)
 	logger.Debugf("Replica %d received local addNode message for new node %v", pbft.id, key)
 
-	pbft.inAddingNode = true
+	pbft.status.activeState(IN_ADDING_NODE)
 	pbft.sendAgreeAddNode(key)
 
 	return nil
 }
 
 // Replica receive local message about new node and routing table
-func (pbft *pbftProtocal) recvLocalDelNode(msg *protos.DelNodeMessage) error {
+func (pbft *pbftImpl) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 
 	key := string(msg.DelPayload)
 	logger.Debugf("Replica %d received local delnode message for newId: %d, del node: %d", pbft.id, msg.Id, msg.Del)
@@ -79,32 +125,33 @@ func (pbft *pbftProtocal) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 		return nil
 	}
 
-	pbft.inDeletingNode = true
+	pbft.status.activeState(IN_DELETING_NODE)
 	pbft.sendAgreeDelNode(key, msg.RouterHash, msg.Id, msg.Del)
 
 	return nil
 }
 
-func (pbft *pbftProtocal) recvLocalRouters(routers []byte) {
+func (pbft *pbftImpl) recvLocalRouters(routers []byte) {
 
 	logger.Debugf("Replica %d received local routers: %v", pbft.id, routers)
-	pbft.routers = routers
+	pbft.nodeMgr.routers = routers
 
 }
 
+
 // Repica broadcast addnode message for new node
-func (pbft *pbftProtocal) sendAgreeAddNode(key string) {
+func (pbft *pbftImpl) sendAgreeAddNode(key string) {
 
 	logger.Debugf("Replica %d try to send addnode message for new node", pbft.id)
 
-	if pbft.isNewNode {
+	if pbft.status[IS_NEW_NODE] {
 		logger.Warningf("New replica try to send addnode message, there may be something wrong")
 		return
 	}
 
 	add := &AddNode{
-		ReplicaId:	pbft.id,
-		Key:		key,
+		ReplicaId: pbft.id,
+		Key:       key,
 	}
 
 	payload, err := proto.Marshal(add)
@@ -113,18 +160,18 @@ func (pbft *pbftProtocal) sendAgreeAddNode(key string) {
 		return
 	}
 	msg := &ConsensusMessage{
-		Type: ConsensusMessage_ADD_NODE,
+		Type:    ConsensusMessage_ADD_NODE,
 		Payload: payload,
 	}
 
-	broadcast := consensusMsgHelper(msg, pbft.id)
+	broadcast := cMsgToPbMsg(msg, pbft.id)
 	pbft.helper.BroadcastAddNode(broadcast)
 	pbft.recvAgreeAddNode(add)
 
 }
 
 // Repica broadcast delnode message for quit node
-func (pbft *pbftProtocal) sendAgreeDelNode(key string, routerHash string, newId uint64, delId uint64) {
+func (pbft *pbftImpl) sendAgreeDelNode(key string, routerHash string, newId uint64, delId uint64) {
 
 	logger.Debugf("Replica %d try to send delnode message for quit node", pbft.id)
 
@@ -134,9 +181,9 @@ func (pbft *pbftProtocal) sendAgreeDelNode(key string, routerHash string, newId 
 	cert.routerHash = routerHash
 
 	del := &DelNode{
-		ReplicaId:	pbft.id,
-		Key:		key,
-		RouterHash:	routerHash,
+		ReplicaId:  pbft.id,
+		Key:        key,
+		RouterHash: routerHash,
 	}
 
 	payload, err := proto.Marshal(del)
@@ -145,21 +192,20 @@ func (pbft *pbftProtocal) sendAgreeDelNode(key string, routerHash string, newId 
 		return
 	}
 	msg := &ConsensusMessage{
-		Type: ConsensusMessage_DEL_NODE,
+		Type:    ConsensusMessage_DEL_NODE,
 		Payload: payload,
 	}
 
-	broadcast := consensusMsgHelper(msg, pbft.id)
+	broadcast := cMsgToPbMsg(msg, pbft.id)
 	pbft.helper.BroadcastDelNode(broadcast)
 	pbft.recvAgreeDelNode(del)
 
 }
 
 // Replica received addnode for new node
-func (pbft *pbftProtocal) recvAgreeAddNode(add *AddNode) error {
+func (pbft *pbftImpl) recvAgreeAddNode(add *AddNode) error {
 
-	logger.Debugf("Replica %d received addnode from replica %d",
-		pbft.id, add.ReplicaId)
+	logger.Debugf("Replica %d received addnode from replica %d", pbft.id, add.ReplicaId)
 
 	cert := pbft.getAddNodeCert(add.Key)
 
@@ -176,7 +222,7 @@ func (pbft *pbftProtocal) recvAgreeAddNode(add *AddNode) error {
 }
 
 // Replica received delnode for quit node
-func (pbft *pbftProtocal) recvAgreeDelNode(del *DelNode) error {
+func (pbft *pbftImpl) recvAgreeDelNode(del *DelNode) error {
 
 	logger.Debugf("Replica %d received agree delnode from replica %d",
 		pbft.id, del.ReplicaId)
@@ -196,9 +242,9 @@ func (pbft *pbftProtocal) recvAgreeDelNode(del *DelNode) error {
 }
 
 // Check if replica prepared for update routing table after add node
-func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
+func (pbft *pbftImpl) maybeUpdateTableForAdd(key string) error {
 
-	if pbft.isNewNode {
+	if pbft.status[IS_NEW_NODE] {
 		logger.Debugf("Replica %d is new node, reject update routingTable", pbft.id)
 		return nil
 	}
@@ -208,7 +254,7 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 		return nil
 	}
 
-	if !pbft.inAddingNode {
+	if !pbft.status[IN_ADDING_NODE] {
 		if cert.finishAdd {
 			if cert.addCount <= pbft.N {
 				logger.Debugf("Replica %d has already finished adding node", pbft.id)
@@ -227,13 +273,13 @@ func (pbft *pbftProtocal) maybeUpdateTableForAdd(key string) error {
 	payload := []byte(key)
 	logger.Debugf("Replica %d update routingTable for %v", pbft.id, key)
 	pbft.helper.UpdateTable(payload, true)
-	pbft.inAddingNode = false
+	pbft.status.inActiveState(IN_ADDING_NODE)
 
 	return nil
 }
 
 // Check if replica prepared for update routing table after del node
-func (pbft *pbftProtocal) maybeUpdateTableForDel(key string) error {
+func (pbft *pbftImpl) maybeUpdateTableForDel(key string) error {
 
 	cert := pbft.getDelNodeCert(key)
 
@@ -241,7 +287,7 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string) error {
 		return nil
 	}
 
-	if !pbft.inDeletingNode {
+	if !pbft.status[IN_DELETING_NODE] {
 		if cert.finishDel {
 			if cert.delCount < pbft.N {
 				logger.Debugf("Replica %d have already finished deleting node", pbft.id)
@@ -262,23 +308,23 @@ func (pbft *pbftProtocal) maybeUpdateTableForDel(key string) error {
 	logger.Debugf("Replica %d update routingTable for %v", pbft.id, key)
 	pbft.helper.UpdateTable(payload, false)
 	time.Sleep(20 * time.Millisecond)
-	pbft.inDeletingNode = false
+	pbft.status[IN_DELETING_NODE] = false
 
-	atomic.StoreUint32(&pbft.inUpdatingN, 1)
+	atomic.StoreUint32(&pbft.nodeMgr.inUpdatingN, 1)
 	pbft.sendAgreeUpdateNforDel(key, cert.routerHash)
 
 	return nil
 }
 
 // New replica send ready_for_n to all replicas after recovery
-func (pbft *pbftProtocal) sendReadyForN() error {
+func (pbft *pbftImpl) sendReadyForN() error {
 
-	if !pbft.isNewNode {
+	if !pbft.status[IS_NEW_NODE] {
 		logger.Errorf("Replica %d is not new one, but try to send ready_for_n", pbft.id)
 		return nil
 	}
 
-	if pbft.localKey == "" {
+	if pbft.nodeMgr.localKey == "" {
 		logger.Errorf("New replica %d doesn't have local key for ready_for_n", pbft.id)
 		return nil
 	}
@@ -289,7 +335,7 @@ func (pbft *pbftProtocal) sendReadyForN() error {
 	}
 
 	for true {
-		if pbft.lastExec == core.GetHeightOfChain() {
+		if pbft.exec.lastExec == core.GetHeightOfChain() {
 			break
 		} else {
 			time.Sleep(5 * time.Millisecond)
@@ -298,11 +344,11 @@ func (pbft *pbftProtocal) sendReadyForN() error {
 	}
 
 	logger.Noticef("Replica %d send ready_for_n as it already finished recovery", pbft.id)
-	atomic.StoreUint32(&pbft.inUpdatingN, 1)
+	atomic.StoreUint32(&pbft.nodeMgr.inUpdatingN, 1)
 
 	ready := &ReadyForN{
-		ReplicaId:	pbft.id,
-		Key:		pbft.localKey,
+		ReplicaId: pbft.id,
+		Key:       pbft.nodeMgr.localKey,
 	}
 
 	payload, err := proto.Marshal(ready)
@@ -311,22 +357,22 @@ func (pbft *pbftProtocal) sendReadyForN() error {
 		return nil
 	}
 	msg := &ConsensusMessage{
-		Type: ConsensusMessage_READY_FOR_N,
+		Type:    ConsensusMessage_READY_FOR_N,
 		Payload: payload,
 	}
 
-	broadcast := consensusMsgHelper(msg, pbft.id)
+	broadcast := cMsgToPbMsg(msg, pbft.id)
 	pbft.helper.InnerBroadcast(broadcast)
 
 	return nil
 }
 
 // Primary receive ready_for_n from new replica
-func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) events.Event {
+func (pbft *pbftImpl) recvReadyforNforAdd(ready *ReadyForN) events.Event {
 
 	logger.Debugf("Replica %d received ready_for_n from replica %d", pbft.id, ready.ReplicaId)
 
-	if active := atomic.LoadUint32(&pbft.activeView); active == 0 {
+	if atomic.LoadUint32(&pbft.activeView) == 0 {
 		logger.Warningf("Replica %d is in view change, reject the ready_for_n message", pbft.id)
 		return nil
 	}
@@ -352,22 +398,22 @@ func (pbft *pbftProtocal) recvReadyforNforAdd(ready *ReadyForN) events.Event {
 	}
 
 	if pbft.primary(pbft.view) == pbft.id {
-		pbft.newNodeReady = false
+		pbft.status.inActiveState(NEW_NODE_READY)
 	}
 
 	return pbft.sendAgreeUpdateNForAdd(agree)
 }
 
-func (pbft *pbftProtocal) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) events.Event {
+func (pbft *pbftImpl) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) events.Event {
 
 	if int(agree.N) == pbft.N && agree.View == pbft.view {
 		logger.Debugf("Replica %d alreay finish update for N=%d/view=%d", pbft.id, pbft.N, pbft.view)
 	}
 
-	pbft.stopTimer()
-	atomic.StoreUint32(&pbft.inUpdatingN, 1)
+	pbft.stopNewViewTimer()
+	atomic.StoreUint32(&pbft.nodeMgr.inUpdatingN, 1)
 
-	if pbft.isNewNode {
+	if pbft.status[IS_NEW_NODE] {
 		logger.Debugf("Replica %d does not need to send agree-update-n", pbft.id)
 		return nil
 	}
@@ -385,13 +431,13 @@ func (pbft *pbftProtocal) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) events.Eve
 		Type:		ConsensusMessage_AGREE_UPDATE_N,
 		Payload:	payload,
 	}
-	msg := consensusMsgHelper(consensusMsg, pbft.id)
+	msg := cMsgToPbMsg(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
 	return pbft.recvAgreeUpdateN(agree)
 }
 
 // Primary send update_n after finish del node
-func (pbft *pbftProtocal) sendAgreeUpdateNforDel(key string, routerHash string) error {
+func (pbft *pbftImpl) sendAgreeUpdateNforDel(key string, routerHash string) error {
 
 	logger.Debugf("Replica %d try to send update_n after finish del node", pbft.id)
 
@@ -407,8 +453,8 @@ func (pbft *pbftProtocal) sendAgreeUpdateNforDel(key string, routerHash string) 
 		return nil
 	}
 
-	pbft.stopTimer()
-	atomic.StoreUint32(&pbft.inUpdatingN, 1)
+	pbft.stopNewViewTimer()
+	atomic.StoreUint32(&pbft.nodeMgr.inUpdatingN, 1)
 
 	// calculate the new N and view
 	n, view := pbft.getDelNV(cert.delId)
@@ -436,13 +482,13 @@ func (pbft *pbftProtocal) sendAgreeUpdateNforDel(key string, routerHash string) 
 		Type:		ConsensusMessage_AGREE_UPDATE_N,
 		Payload:	payload,
 	}
-	msg := consensusMsgHelper(consensusMsg, pbft.id)
+	msg := cMsgToPbMsg(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
 	pbft.recvAgreeUpdateN(agree)
 	return nil
 }
 
-func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
+func (pbft *pbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 
 	logger.Debugf("Replica %d received agree-update-n from replica %d, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		pbft.id, agree.ReplicaId, agree.View, agree.H, len(agree.Cset), len(agree.Pset), len(agree.Qset))
@@ -452,12 +498,12 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 		return nil
 	}
 
-	if pbft.inNegoView {
+	if pbft.status[IN_NEGO_VIEW] {
 		logger.Warningf("Replica %d try to recvAgreeUpdateN, but it's in nego-view", pbft.id)
 		return nil
 	}
 
-	if pbft.inRecovery {
+	if pbft.status[IN_RECOVERY] {
 		logger.Warningf("Replica %d try to recvAgreeUpdateN, but it's in recovery", pbft.id)
 		return nil
 	}
@@ -473,16 +519,16 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 		id:	agree.ReplicaId,
 		flag: agree.Flag,
 	}
-	if _, ok := pbft.agreeUpdateStore[key]; ok {
+	if _, ok := pbft.nodeMgr.agreeUpdateStore[key]; ok {
 		logger.Warningf("Replica %d already has a agree-update-n message" +
 			" for view=%d/n=%d from replica %d", pbft.id, agree.View, agree.N, agree.ReplicaId)
 		return nil
 	}
 
-	pbft.agreeUpdateStore[key] = agree
+	pbft.nodeMgr.agreeUpdateStore[key] = agree
 
 	replicas := make(map[uint64]bool)
-	for idx := range pbft.agreeUpdateStore {
+	for idx := range pbft.nodeMgr.agreeUpdateStore {
 		if !(idx.v == agree.View && idx.n == agree.N) {
 			continue
 		}
@@ -490,25 +536,25 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 	}
 
 	// We only enter this if there are enough agree-update-n messages but locally not inUpdateN
-	if agree.Flag && len(replicas) > pbft.f+1 && atomic.LoadUint32(&pbft.inUpdatingN) == 0 {
+	if agree.Flag && len(replicas) > pbft.f+1 && atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 {
 		logger.Warningf("Replica %d received f+1 agree-update-n messages, triggering sendAgreeUpdateNForAdd",
 			pbft.id)
-		pbft.firstRequestTimer.Stop()
+		pbft.pbftTimerMgr.stopTimer(FIRST_REQUEST_TIMER)
 		agree.ReplicaId = pbft.id
 		return pbft.sendAgreeUpdateNForAdd(agree)
 	}
 
 	// We only enter this if there are enough agree-update-n messages but locally not inUpdateN
-	if !agree.Flag && len(replicas) >= pbft.f+1 && atomic.LoadUint32(&pbft.inUpdatingN) == 0 {
+	if !agree.Flag && len(replicas) >= pbft.f+1 && atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 {
 		logger.Warningf("Replica %d received f+1 agree-update-n messages, triggering sendAgreeUpdateNForDel",
 			pbft.id)
-		pbft.firstRequestTimer.Stop()
+		pbft.pbftTimerMgr.stopTimer(FIRST_REQUEST_TIMER)
 		agree.ReplicaId = pbft.id
 		return pbft.sendAgreeUpdateNforDel(agree.Key, agree.RouterHash)
 	}
 
 	quorum := 0
-	for idx := range pbft.agreeUpdateStore {
+	for idx := range pbft.nodeMgr.agreeUpdateStore {
 		if idx.v == agree.View {
 			quorum++
 		}
@@ -516,22 +562,25 @@ func (pbft *pbftProtocal) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 	logger.Debugf("Replica %d now has %d agree-update requests for view=%d/n=%d", pbft.id, quorum, agree.View, agree.N)
 
 	if quorum >= pbft.allCorrectReplicasQuorum() {
-		pbft.updateTarget = uidx{v:agree.View, n:agree.N, flag:agree.Flag, key:agree.Key}
-		return agreeUpdateNQuorumEvent{}
+		pbft.nodeMgr.updateTarget = uidx{v:agree.View, n:agree.N, flag:agree.Flag, key:agree.Key}
+		return &LocalEvent{
+			Service:NODE_MGR_SERVICE,
+			EventType:NODE_MGR_AGREE_UPDATEN_QUORUM_EVENT,
+		}
 	}
 
 	return nil
 }
 
-func (pbft *pbftProtocal) sendUpdateN() events.Event {
+func (pbft *pbftImpl) sendUpdateN() events.Event {
 
-	if pbft.inNegoView {
+	if pbft.status[IN_NEGO_VIEW] {
 		logger.Debugf("Replica %d try to sendUpdateN, but it's in nego-view", pbft.id)
 		return nil
 	}
 
-	if _, ok := pbft.updateStore[pbft.updateTarget]; ok {
-		logger.Debugf("Replica %d already has update in store for n=%d/view=%d, skipping", pbft.id, pbft.updateTarget.n, pbft.updateTarget.v)
+	if _, ok := pbft.nodeMgr.updateStore[pbft.nodeMgr.updateTarget]; ok {
+		logger.Debugf("Replica %d already has update in store for n=%d/view=%d, skipping", pbft.id, pbft.nodeMgr.updateTarget.n, pbft.nodeMgr.updateTarget.v)
 		return nil
 	}
 
@@ -540,7 +589,7 @@ func (pbft *pbftProtocal) sendUpdateN() events.Event {
 	cp, ok, replicas := pbft.selectInitialCheckpointForUpdate(aset)
 
 	if !ok {
-		logger.Infof("Replica %d could not find consistent checkpoint: %+v", pbft.id, pbft.viewChangeStore)
+		logger.Infof("Replica %d could not find consistent checkpoint: %+v", pbft.id, pbft.vcMgr.viewChangeStore)
 		return nil
 	}
 
@@ -551,10 +600,10 @@ func (pbft *pbftProtocal) sendUpdateN() events.Event {
 	}
 
 	update := &UpdateN{
-		Flag: pbft.updateTarget.flag,
-		N: pbft.updateTarget.n,
-		View:      pbft.updateTarget.v,
-		Key: pbft.updateTarget.key,
+		Flag:      pbft.nodeMgr.updateTarget.flag,
+		N:         pbft.nodeMgr.updateTarget.n,
+		View:      pbft.nodeMgr.updateTarget.v,
+		Key:       pbft.nodeMgr.updateTarget.key,
 		Aset:      aset,
 		Xset:      msgList,
 		ReplicaId: pbft.id,
@@ -571,13 +620,13 @@ func (pbft *pbftProtocal) sendUpdateN() events.Event {
 		Type:    ConsensusMessage_UPDATE_N,
 		Payload: payload,
 	}
-	msg := consensusMsgHelper(consensusMsg, pbft.id)
+	msg := cMsgToPbMsg(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
-	pbft.updateStore[pbft.updateTarget] = update
+	pbft.nodeMgr.updateStore[pbft.nodeMgr.updateTarget] = update
 	return pbft.primaryProcessUpdateN(cp, replicas, update)
 }
 
-func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) events.Event {
+func (pbft *pbftImpl) recvUpdateN(update *UpdateN) events.Event {
 
 	logger.Infof("Replica %d received update-n from replica %d",
 		pbft.id, update.ReplicaId)
@@ -587,14 +636,14 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) events.Event {
 		return nil
 	}
 
-	if pbft.inNegoView {
+	if pbft.status[IN_NEGO_VIEW] {
 		logger.Debugf("Replica %d try to recvUpdateN, but it's in nego-view", pbft.id)
 		return nil
 	}
 
-	if pbft.inRecovery {
+	if pbft.status[IN_RECOVERY] {
 		logger.Noticef("Replica %d try to recvUpdateN, but it's in recovery", pbft.id)
-		pbft.recvNewViewInRecovery = true
+		pbft.recoveryMgr.recvNewViewInRecovery = true
 		return nil
 	}
 
@@ -610,10 +659,10 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) events.Event {
 		n: update.N,
 		v: update.View,
 	}
-	pbft.updateStore[key] = update
+	pbft.nodeMgr.updateStore[key] = update
 
 	quorum := 0
-	for idx := range pbft.agreeUpdateStore {
+	for idx := range pbft.nodeMgr.agreeUpdateStore {
 		if idx.v == update.View {
 			quorum++
 		}
@@ -627,12 +676,12 @@ func (pbft *pbftProtocal) recvUpdateN(update *UpdateN) events.Event {
 	return pbft.processUpdateN()
 }
 
-func (pbft *pbftProtocal) primaryProcessUpdateN(initialCp ViewChange_C, replicas []uint64, update *UpdateN) events.Event {
+func (pbft *pbftImpl) primaryProcessUpdateN(initialCp ViewChange_C, replicas []uint64, update *UpdateN) events.Event {
 	var newReqBatchMissing bool
 
-	speculativeLastExec := pbft.lastExec
-	if pbft.currentExec != nil {
-		speculativeLastExec = *pbft.currentExec
+	speculativeLastExec := pbft.exec.lastExec
+	if pbft.exec.currentExec != nil {
+		speculativeLastExec = *pbft.exec.currentExec
 	}
 	// If we have not reached the sequence number, check to see if we can reach it without state transfer
 	// In general, executions are better than state transfer
@@ -671,7 +720,7 @@ func (pbft *pbftProtocal) primaryProcessUpdateN(initialCp ViewChange_C, replicas
 
 	newReqBatchMissing = pbft.feedMissingReqBatchIfNeeded(update.Xset)
 
-	if len(pbft.missingReqBatches) == 0 {
+	if len(pbft.storeMgr.missingReqBatches) == 0 {
 		return pbft.processReqInUpdate(update)
 	} else if newReqBatchMissing {
 		pbft.fetchRequestBatches()
@@ -680,11 +729,11 @@ func (pbft *pbftProtocal) primaryProcessUpdateN(initialCp ViewChange_C, replicas
 	return nil
 }
 
-func (pbft *pbftProtocal) processUpdateN() events.Event {
+func (pbft *pbftImpl) processUpdateN() events.Event {
 
-	update, ok := pbft.updateStore[pbft.updateTarget]
+	update, ok := pbft.nodeMgr.updateStore[pbft.nodeMgr.updateTarget]
 	if !ok {
-		logger.Debugf("Replica %d ignoring processUpdateN as it could not find n=%d/view=%d in its updateStore", pbft.id, pbft.updateTarget.n, pbft.updateTarget.v)
+		logger.Debugf("Replica %d ignoring processUpdateN as it could not find n=%d/view=%d in its updateStore", pbft.id, pbft.nodeMgr.updateTarget.n, pbft.nodeMgr.updateTarget.v)
 		return nil
 	}
 
@@ -694,7 +743,7 @@ func (pbft *pbftProtocal) processUpdateN() events.Event {
 		return nil
 	}
 
-	if atomic.LoadUint32(&pbft.inUpdatingN) == 0 {
+	if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 {
 		logger.Infof("Replica %d ignoring update-n from %d, v:%d: we are not in updatingN",
 			pbft.id, update.ReplicaId, update.View)
 		return nil
@@ -703,13 +752,13 @@ func (pbft *pbftProtocal) processUpdateN() events.Event {
 	cp, ok, replicas := pbft.selectInitialCheckpointForUpdate(update.Aset)
 	if !ok {
 		logger.Warningf("Replica %d could not determine initial checkpoint: %+v",
-			pbft.id, pbft.viewChangeStore)
+			pbft.id, pbft.vcMgr.viewChangeStore)
 		return pbft.sendViewChange()
 	}
 	// 以上 primary 不必做
-	speculativeLastExec := pbft.lastExec
-	if pbft.currentExec != nil {
-		speculativeLastExec = *pbft.currentExec
+	speculativeLastExec := pbft.exec.lastExec
+	if pbft.exec.currentExec != nil {
+		speculativeLastExec = *pbft.exec.currentExec
 	}
 
 	// If we have not reached the sequence number, check to see if we can reach it without state transfer
@@ -726,7 +775,7 @@ func (pbft *pbftProtocal) processUpdateN() events.Event {
 
 	if msgList == nil {
 		logger.Warningf("Replica %d could not assign sequence numbers: %+v",
-			pbft.id, pbft.viewChangeStore)
+			pbft.id, pbft.vcMgr.viewChangeStore)
 		return pbft.sendViewChange()
 	}
 
@@ -766,19 +815,19 @@ func (pbft *pbftProtocal) processUpdateN() events.Event {
 
 }
 
-func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
-	logger.Debugf("Replica %d accepting update-n to target %v", pbft.id, pbft.updateTarget)
+func (pbft *pbftImpl) processReqInUpdate(update *UpdateN) events.Event {
+	logger.Debugf("Replica %d accepting update-n to target %v", pbft.id, pbft.nodeMgr.updateTarget)
 
-	if pbft.updateHandled {
+	if pbft.status[UPDATE_HANDLED] {
 		logger.Debugf("Replica %d repeated enter processReqInUpdate, ignore it")
 		return nil
 	}
-	pbft.updateHandled = true
+	pbft.status.activeState(UPDATE_HANDLED)
 
-	pbft.stopTimer()
-	pbft.nullRequestTimer.Stop()
+	pbft.stopNewViewTimer()
+	pbft.pbftTimerMgr.stopTimer(NULL_REQUEST_TIMER)
 
-	for idx, cert := range pbft.certStore {
+	for idx, cert := range pbft.storeMgr.certStore {
 		if idx.v == pbft.view {
 			tmpId := msgID{n:idx.n, v:update.View}
 			tmpCert := updateCert{
@@ -788,19 +837,19 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 				sentCommit: cert.sentCommit,
 				sentExecute: cert.sentExecute,
 			}
-			pbft.updateCertStore[tmpId] = tmpCert
-			delete(pbft.certStore, idx)
+			pbft.nodeMgr.updateCertStore[tmpId] = tmpCert
+			delete(pbft.storeMgr.certStore, idx)
 			pbft.persistDelQPCSet(idx.v, idx.n)
 		}
 	}
 
-	backenVid := pbft.lastExec + 1
+	backenVid := pbft.exec.lastExec + 1
 	pbft.seqNo = pbft.h
-	pbft.lastExec = pbft.h
+	pbft.exec.lastExec = pbft.h
 	pbft.seqNo = pbft.h
 	if pbft.primary(pbft.view) != pbft.id {
-		pbft.vid = pbft.h
-		pbft.lastVid = pbft.h
+		pbft.batchVdr.vid = pbft.h
+		pbft.batchVdr.lastVid = pbft.h
 	}
 
 	pbft.view = update.View
@@ -812,25 +861,28 @@ func (pbft *pbftProtocal) processReqInUpdate(update *UpdateN) events.Event {
 		pbft.id = cert.newId
 	}
 
-	for idx := range pbft.agreeUpdateStore {
+	for idx := range pbft.nodeMgr.agreeUpdateStore {
 		if (idx.v == update.View && idx.n == update.N && idx.flag == update.Flag) {
-			delete(pbft.agreeUpdateStore, idx)
+			delete(pbft.nodeMgr.agreeUpdateStore, idx)
 		}
 	}
 
-	pbft.addNodeCertStore = make(map[string]*addNodeCert)
-	pbft.delNodeCertStore = make(map[string]*delNodeCert)
+	pbft.nodeMgr.addNodeCertStore = make(map[string]*addNodeCert)
+	pbft.nodeMgr.delNodeCertStore = make(map[string]*delNodeCert)
 
-	if !pbft.skipInProgress && !pbft.inVcReset {
+	if !pbft.status[SKIP_IN_PROGRESS] && !pbft.status[IN_VC_RESET] {
 		pbft.helper.VcReset(backenVid)
-		pbft.inVcReset = true
+		pbft.status.activeState(IN_VC_RESET)
 		return nil
 	}
 
-	return updatedNEvent{}
+	return &LocalEvent{
+		Service:   NODE_MGR_SERVICE,
+		EventType: NODE_MGR_UPDATEDN_EVENT,
+	}
 }
 
-func (pbft *pbftProtocal) sendFinishUpdate() events.Event {
+func (pbft *pbftImpl) sendFinishUpdate() events.Event {
 
 	finish := &FinishVcReset{
 		ReplicaId: pbft.id,
@@ -848,14 +900,17 @@ func (pbft *pbftProtocal) sendFinishUpdate() events.Event {
 		Payload: payload,
 	}
 
-	broadcast := consensusMsgHelper(msg, pbft.id)
+	broadcast := cMsgToPbMsg(msg, pbft.id)
 	primary := pbft.primary(pbft.view)
 	pbft.helper.InnerUnicast(broadcast, primary)
 	logger.Debugf("Replica %d send FinishUpdate to primary %d", pbft.id, primary)
-	return updatedNEvent{}
+	return &LocalEvent{
+		Service:   NODE_MGR_SERVICE,
+		EventType: NODE_MGR_UPDATEDN_EVENT,
+	}
 }
 
-func (pbft *pbftProtocal) recvFinishUpdate(finish *FinishVcReset) events.Event {
+func (pbft *pbftImpl) recvFinishUpdate(finish *FinishVcReset) events.Event {
 	if pbft.primary(pbft.view) != pbft.id {
 		logger.Warningf("Replica %d is not primary, but received others FinishUpdate", pbft.id)
 		return nil
@@ -868,35 +923,35 @@ func (pbft *pbftProtocal) recvFinishUpdate(finish *FinishVcReset) events.Event {
 
 	logger.Debugf("Primary %d received finish update from new replica %d", pbft.id, finish.ReplicaId)
 
-	pbft.newNodeReady = true
+	pbft.status.activeState(NEW_NODE_READY)
 
 	return pbft.handleTailAfterUpdate()
 }
 
-func (pbft *pbftProtocal) handleTailAfterUpdate() events.Event {
+func (pbft *pbftImpl) handleTailAfterUpdate() events.Event {
 
 	if pbft.primary(pbft.view) != pbft.id {
 		logger.Warningf("Replica %d is not primary, but received others FinishUpdate", pbft.id)
 		return nil
 	}
 
-	if pbft.inVcReset {
+	if pbft.status[IN_VC_RESET] {
 		logger.Warningf("Primary %d itself has not finished update", pbft.id)
 		return nil
 	}
 
-	if !pbft.newNodeReady {
+	if !pbft.status[NEW_NODE_READY] {
 		logger.Warningf("Primary %d has not received new node's FinishUpdate", pbft.id)
 		return nil
 	}
 
-	update, ok := pbft.updateStore[pbft.updateTarget]
+	update, ok := pbft.nodeMgr.updateStore[pbft.nodeMgr.updateTarget]
 	if !ok {
-		logger.Debugf("Primary %d ignoring handleTailAfterUpdate as it could not find target %v in its updateStore", pbft.id, pbft.updateTarget)
+		logger.Debugf("Primary %d ignoring handleTailAfterUpdate as it could not find target %v in its updateStore", pbft.id, pbft.nodeMgr.updateTarget)
 		return nil
 	}
 
-	atomic.StoreUint32(&pbft.inUpdatingN, 0)
+	atomic.StoreUint32(&pbft.nodeMgr.inUpdatingN, 0)
 
 	xSetLen := len(update.Xset)
 	upper := uint64(xSetLen) + pbft.h + uint64(1)
@@ -908,7 +963,7 @@ func (pbft *pbftProtocal) handleTailAfterUpdate() events.Event {
 			// This should not happen
 			logger.Critical("update_n Xset has null batch, kick it out")
 		} else {
-			batch, ok := pbft.validatedBatchStore[d]
+			batch, ok := pbft.batchVdr.validatedBatchStore[d]
 			if !ok {
 				logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
 			} else {
@@ -917,24 +972,27 @@ func (pbft *pbftProtocal) handleTailAfterUpdate() events.Event {
 		}
 	}
 
-	return updatedNEvent{}
+	return &LocalEvent{
+		Service:   NODE_MGR_SERVICE,
+		EventType: NODE_MGR_UPDATEDN_EVENT,
+	}
 }
 
-func (pbft *pbftProtocal) agreeUpdateHelper(agree *AgreeUpdateN) {
+func (pbft *pbftImpl) agreeUpdateHelper(agree *AgreeUpdateN) {
 
 	pset := pbft.calcPSet()
 	qset := pbft.calcQSet()
 
-	pbft.plist = pset
-	pbft.qlist = qset
+	pbft.vcMgr.plist = pset
+	pbft.vcMgr.qlist = qset
 
-	for idx := range pbft.agreeUpdateStore {
+	for idx := range pbft.nodeMgr.agreeUpdateStore {
 		if !(idx.v == agree.View && idx.n == agree.N && idx.flag == agree.Flag) {
-			delete(pbft.agreeUpdateStore, idx)
+			delete(pbft.nodeMgr.agreeUpdateStore, idx)
 		}
 	}
 
-	for n, id := range pbft.chkpts {
+	for n, id := range pbft.storeMgr.chkpts {
 		agree.Cset = append(agree.Cset, &ViewChange_C {
 			SequenceNumber: n,
 			Id:		id,
@@ -956,11 +1014,11 @@ func (pbft *pbftProtocal) agreeUpdateHelper(agree *AgreeUpdateN) {
 	}
 }
 
-func (pbft *pbftProtocal) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
+func (pbft *pbftImpl) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 
 	if agree.Flag {
 		cert := pbft.getAddNodeCert(agree.Key)
-		if !pbft.isNewNode && !cert.finishAdd {
+		if !pbft.status[IS_NEW_NODE] && !cert.finishAdd {
 			logger.Debugf("Replica %d has not complete add node", pbft.id)
 			return false
 		}
@@ -1008,14 +1066,14 @@ func (pbft *pbftProtocal) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 	return true
 }
 
-func (pbft *pbftProtocal) getAgreeUpdates() (agrees []*AgreeUpdateN) {
-	for _, agree := range pbft.agreeUpdateStore {
+func (pbft *pbftImpl) getAgreeUpdates() (agrees []*AgreeUpdateN) {
+	for _, agree := range pbft.nodeMgr.agreeUpdateStore {
 		agrees = append(agrees, agree)
 	}
 	return
 }
 
-func (pbft *pbftProtocal) selectInitialCheckpointForUpdate(aset []*AgreeUpdateN) (checkpoint ViewChange_C, ok bool, replicas []uint64) {
+func (pbft *pbftImpl) selectInitialCheckpointForUpdate(aset []*AgreeUpdateN) (checkpoint ViewChange_C, ok bool, replicas []uint64) {
 	checkpoints := make(map[ViewChange_C][]*AgreeUpdateN)
 	for _, agree := range aset {
 		for _, c := range agree.Cset { // TODO, verify that we strip duplicate checkpoints from this set
@@ -1026,7 +1084,7 @@ func (pbft *pbftProtocal) selectInitialCheckpointForUpdate(aset []*AgreeUpdateN)
 
 	if len(checkpoints) == 0 {
 		logger.Debugf("Replica %d has no checkpoints to select from: %d %s",
-			pbft.id, len(pbft.viewChangeStore), checkpoints)
+			pbft.id, len(pbft.vcMgr.viewChangeStore), checkpoints)
 		return
 	}
 
@@ -1067,7 +1125,7 @@ func (pbft *pbftProtocal) selectInitialCheckpointForUpdate(aset []*AgreeUpdateN)
 	return
 }
 
-func (pbft *pbftProtocal) assignSequenceNumbersForUpdate(aset []*AgreeUpdateN, h uint64) (msgList map[uint64]string) {
+func (pbft *pbftImpl) assignSequenceNumbersForUpdate(aset []*AgreeUpdateN, h uint64) (msgList map[uint64]string) {
 	msgList = make(map[uint64]string)
 
 	maxN := h + 1
@@ -1154,4 +1212,62 @@ func (pbft *pbftProtocal) assignSequenceNumbersForUpdate(aset []*AgreeUpdateN, h
 	}
 
 	return
+}
+
+func (pbft *pbftImpl) sendPrePrepareForUpdate(reqBatch *TransactionBatch, digest string) {
+	logger.Debugf("Replica %d is primary, issuing pre-prepare for request batch %s", pbft.id, digest)
+	n := pbft.seqNo + 1
+
+	for _, cert := range pbft.storeMgr.certStore { // check for other PRE-PREPARE for same digest, but different seqNo
+		if p := cert.prePrepare; p != nil {
+			if p.View == pbft.view && p.SequenceNumber != n && p.BatchDigest == digest && digest != "" {
+				// This will happen if primary receive same digest result of txs
+				// It may result in DDos attack
+				logger.Warningf("Other pre-prepare found with same digest but different seqNo: %d instead of %d", p.SequenceNumber, n)
+				delete(pbft.batchVdr.validatedBatchStore, digest)
+				return
+			}
+		}
+	}
+
+	logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
+	pbft.pbftTimerMgr.stopTimer(NULL_REQUEST_TIMER)
+	pbft.softStartTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
+	pbft.seqNo = n
+	preprep := &PrePrepare{
+		View:             pbft.view,
+		SequenceNumber:   n,
+		BatchDigest:      digest,
+		TransactionBatch: reqBatch,
+		ReplicaId:        pbft.id,
+	}
+	cert := pbft.storeMgr.getCert(pbft.view, n)
+	cert.prePrepare = preprep
+	cert.digest = digest
+	cert.sentValidate = true
+	cert.validated = true
+	pbft.persistQSet(preprep)
+
+	payload, err := proto.Marshal(preprep)
+	if err != nil {
+		logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
+		return
+	}
+
+	consensusMsg := &ConsensusMessage{
+		Type:    ConsensusMessage_PRE_PREPARE,
+		Payload: payload,
+	}
+	msg := cMsgToPbMsg(consensusMsg, pbft.id)
+	pbft.helper.InnerBroadcast(msg)
+
+	pbft.maybeSendCommit(digest, pbft.view, n)
+}
+
+func (pbft *pbftImpl) processRequestsDuringUpdatingN() {
+	if atomic.LoadUint32(&pbft.activeView) == 1 && atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 && !pbft.status[IN_RECOVERY] {
+		pbft.processCachedTransactions()
+	} else {
+		logger.Warningf("Replica %d try to processRequestsDuringUpdatingN but updatingN is not finished or it's in recovery / viewChange", pbft.id)
+	}
 }

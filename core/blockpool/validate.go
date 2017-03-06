@@ -20,6 +20,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"hyperchain/hyperdb/db"
+	"hyperchain/consensus/pbft"
 )
 
 func (pool *BlockPool) Validate(validationEvent event.ExeTxsEvent, peerManager p2p.PeerManager) {
@@ -141,13 +142,19 @@ func (pool *BlockPool) PreProcess(validationEvent event.ExeTxsEvent) (error, boo
 	log.Debug("invalid transaction number: ", len(validateResult.InvalidTxs))
 	log.Debug("valid transaction number: ", len(validateResult.ValidTxs))
 	// communicate with PBFT
-	pool.consenter.RecvLocal(protos.ValidatedTxs{
+	msg := protos.ValidatedTxs{
 		Transactions: validateResult.ValidTxs,
 		SeqNo:        validationEvent.SeqNo,
 		View:         validationEvent.View,
 		Hash:         hash.Hex(),
 		Timestamp:    validationEvent.Timestamp,
-	})
+	}
+	e := &pbft.LocalEvent{
+		Service:   pbft.CORE_PBFT_SERVICE,
+		EventType: pbft.CORE_VALIDATED_TXS_EVENT,
+		Event:     msg,
+	}
+	pool.consenter.RecvLocal(e)
 
 	// empty block generated, throw all invalid transactions back to original node directly
 	if validationEvent.IsPrimary && len(validateResult.ValidTxs) == 0 {

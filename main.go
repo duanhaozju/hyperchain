@@ -8,7 +8,7 @@ import (
 	"hyperchain/accounts"
 	"hyperchain/api/jsonrpc/core"
 	"hyperchain/common"
-	"hyperchain/consensus/controller"
+	"hyperchain/consensus/csmgr"
 	"hyperchain/core"
 	"hyperchain/core/blockpool"
 	"hyperchain/crypto"
@@ -163,7 +163,8 @@ func main() {
 		core.CreateInitBlock(conf)
 
 		//init pbft consensus
-		cs := controller.NewConsenter(uint64(config.getNodeID()), eventMux, config.getPBFTConfigPath())
+		consenter := csmgr.Consenter(conf, eventMux)
+		consenter.Start()
 
 		//init encryption object
 
@@ -177,7 +178,7 @@ func main() {
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
 
 		//init block pool to save block
-		blockPool := blockpool.NewBlockPool(cs, conf, kec256Hash, encryption, eventMux)
+		blockPool := blockpool.NewBlockPool(consenter, conf, kec256Hash, encryption, eventMux)
 		if blockPool == nil {
 			return errors.New("Initialize BlockPool failed")
 		}
@@ -189,7 +190,7 @@ func main() {
 		pm := manager.New(eventMux,
 			blockPool,
 			grpcPeerMgr,
-			cs,
+			consenter,
 			am,
 			kec256Hash,
 			syncReplicaInterval,

@@ -132,6 +132,5 @@ func (rs *requestStore) getNextNonPending(n int) (result []*types.Transaction) {
 			break
 		}
 	}
-
 	return result
 }

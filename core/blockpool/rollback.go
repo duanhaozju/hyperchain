@@ -15,6 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 	"hyperchain/hyperdb/db"
+	"hyperchain/consensus/pbft"
 )
 
 // reset blockchain to a stable checkpoint status when `viewchange` occur
@@ -64,7 +65,12 @@ func (pool *BlockPool) ResetStatus(ev event.VCResetEvent) {
 	log.Debugf("revert state from %d to target %d success", tmpDemandNumber-1, ev.SeqNo-1)
 	// 6. Told consensus reset finish
 	msg := protos.VcResetDone{SeqNo: ev.SeqNo}
-	pool.consenter.RecvLocal(msg)
+	e := &pbft.LocalEvent{
+		Service:   pbft.VIEW_CHANGE_SERVICE,
+		EventType: pbft.VIEW_CHANGE_VC_RESET_DONE_EVENT,
+		Event:     msg,
+	}
+	pool.consenter.RecvLocal(e)
 	pool.NotifyValidateToBegin()
 }
 

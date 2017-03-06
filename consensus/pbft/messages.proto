@@ -154,15 +154,15 @@ message recovery_response {
 }
 
 message recovery_fetchPQC {
-     uint64 replica_id = 1;
-     uint64 h          = 2;
+    uint64 replica_id = 1;
+    uint64 h          = 2;
 }
 
 message recovery_returnPQC {
-     uint64                  replica_id = 1;
-     repeated pre_prepare    prepre_set = 2;
-     repeated bool           pre_sent   = 3;
-     repeated bool           cmt_sent   = 4;
+    uint64                  replica_id = 1;
+    repeated pre_prepare    prepre_set = 2;
+    repeated bool           pre_sent   = 3;
+    repeated bool           cmt_sent   = 4;
 }
 
 message Pset {

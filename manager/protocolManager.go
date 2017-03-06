@@ -17,6 +17,7 @@ import (
 	"hyperchain/recovery"
 	"time"
 	"hyperchain/admittance"
+	"hyperchain/consensus/pbft"
 )
 
 var log *logging.Logger // package-level logger
@@ -265,7 +266,12 @@ func (self *ProtocolManager) peerMaintainLoop() {
 			msg := &protos.AddNodeMessage{
 				Payload: ev.Payload,
 			}
-			self.consenter.RecvLocal(msg)
+			e := &pbft.LocalEvent{
+				Service:   pbft.NODE_MGR_SERVICE,
+				EventType: pbft.NODE_MGR_ADD_NODE_EVENT,
+				Event:     msg,
+			}
+			self.consenter.RecvLocal(e)
 		case event.BroadcastNewPeerEvent:
 			log.Debug("BroadcastNewPeerEvent")
 			// receive this event from consensus module
@@ -292,7 +298,12 @@ func (self *ProtocolManager) peerMaintainLoop() {
 				Id:         id,
 				Del:		del,
 			}
-			self.consenter.RecvLocal(msg)
+			e := &pbft.LocalEvent{
+				Service:   pbft.NODE_MGR_SERVICE,
+				EventType: pbft.NODE_MGR_DEL_NODE_EVENT,
+				Event:     msg,
+			}
+			self.consenter.RecvLocal(e)
 		case event.BroadcastDelPeerEvent:
 			log.Debug("BroadcastDelPeerEvent")
 			// receive this event from consensus module
@@ -331,7 +342,12 @@ func (self *ProtocolManager) peerMaintainLoop() {
 				msg := &protos.NewNodeMessage{
 					Payload: payload,
 				}
-				self.consenter.RecvLocal(msg)
+				e := &pbft.LocalEvent{
+					Service:   pbft.NODE_MGR_SERVICE,
+					EventType: pbft.NODE_MGR_NEW_NODE_EVENT,
+					Event:     msg,
+				}
+				self.consenter.RecvLocal(e)
 				self.PassRouters()
 				self.NegotiateView()
 			}

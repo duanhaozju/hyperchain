@@ -13,18 +13,19 @@ import (
 	"hyperchain/hyperdb"
 )
 
+
 // StoreState stores a key,value pair
 func StoreState(key string, value []byte) error {
 	db, err := hyperdb.GetDBDatabaseConsensus()
 	if err != nil {
 		return err
 	}
-	return db.Put([]byte("consensus."+key), value)
+	return db.Put([]byte("consensus." + key), value)
 }
 
 //DelAllState: remove all state
 //func DelAllState() error {
-//	db, err := hyperdb.GetDBDatabase()
+//	db, err := hyperdb.GetLDBDatabase()
 //	if err == nil {
 //		db.Destroy()
 //	}
@@ -60,7 +61,7 @@ func ReadStateSet(prefix string) (map[string][]byte, error) {
 	ret := make(map[string][]byte)
 	it := db.NewIterator(prefixRaw)
 	if it == nil {
-		err := errors.New(fmt.Sprintf("Can't get Iterator"))
+		err := errors.New(fmt.Sprint("Can't get Iterator"))
 		return nil, err
 	}
 	if !it.Seek(prefixRaw) {
