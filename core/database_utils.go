@@ -29,6 +29,9 @@ var (
 	log                      *logging.Logger // package-level logger
 )
 
+// using to count the number of rollback transactions
+var RollbackDataSum int = 0
+
 func init() {
 	log = logging.MustGetLogger("")
 }
@@ -572,9 +575,14 @@ func UpdateChain(batch db.Batch, block *types.Block, genesis bool, flush bool, s
 		memChainMap.data.Height = 0
 		memChainMap.data.CurrentTxSum = 0
 	} else {
-		memChainMap.data.Height = block.Number
-		// TODO a bug will occur during the block reset
-		memChainMap.data.CurrentTxSum += uint64(len(block.Transactions))
+		if memChainMap.data.Height <= block.Number {
+			memChainMap.data.Height = block.Number
+			memChainMap.data.CurrentTxSum += uint64(len(block.Transactions))
+		} else {
+			memChainMap.data.Height = block.Number
+			memChainMap.data.CurrentTxSum -= uint64(RollbackDataSum)
+			RollbackDataSum = 0
+		}
 	}
 	return putChain(batch, &memChainMap.data, flush, sync)
 }
@@ -582,8 +590,7 @@ func UpdateChain(batch db.Batch, block *types.Block, genesis bool, flush bool, s
 // update chain according block number, set chain current height to the block number
 // return error if correspondent block missing
 func UpdateChainByBlcokNum(batch db.Batch, blockNumber uint64, flush bool, sync bool) error {
-	memChainMap.lock.Lock()
-	defer memChainMap.lock.Unlock()
+
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err
@@ -593,10 +600,7 @@ func UpdateChainByBlcokNum(batch db.Batch, blockNumber uint64, flush bool, sync 
 		log.Warning("no required block number")
 		return err
 	}
-	memChainMap.data.LatestBlockHash = block.BlockHash
-	memChainMap.data.ParentBlockHash = block.ParentHash
-	memChainMap.data.Height = block.Number
-	return putChain(batch, &memChainMap.data, flush, sync)
+	return UpdateChain(batch, block, block.Number == 0, flush, sync)
 }
 
 // GetHeightOfChain get height of chain

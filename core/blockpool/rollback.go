@@ -136,6 +136,7 @@ func (pool *BlockPool) removeDataInRange(batch db.Batch,from, to uint64) error  
 			if err := core.DeleteTransactionMeta(batch, tx.GetTransactionHash().Bytes()); err != nil {
 				log.Errorf("delete useless txmeta in block %d failed, error msg %s", i, err.Error())
 			}
+			core.RollbackDataSum += 1;
 		}
 		// delete block
 		if err := core.DeleteBlockByNum(batch, i); err != nil {
