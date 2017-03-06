@@ -135,55 +135,55 @@ func NewBlockExecutor(consenter consensus.Consenter, conf *common.Config, common
 	return executor
 }
 
-func (excutor *Executor) Initialize() {
-	go excutor.commitBackendLoop()
-	go excutor.validateBackendLoop()
+func (executor *Executor) Initialize() {
+	go executor.commitBackendLoop()
+	go executor.validateBackendLoop()
 }
 
 // SetDemandNumber - set demand number.
-func (excutor *Executor) SetDemandNumber(number uint64) {
-	atomic.StoreUint64(&excutor.demandNumber, number)
+func (executor *Executor) SetDemandNumber(number uint64) {
+	atomic.StoreUint64(&executor.demandNumber, number)
 }
 
 // SetDemandSeqNo - set demand seqNo.
-func (excutor *Executor) SetDemandSeqNo(seqNo uint64) {
-	atomic.StoreUint64(&excutor.demandSeqNo, seqNo)
+func (executor *Executor) SetDemandSeqNo(seqNo uint64) {
+	atomic.StoreUint64(&executor.demandSeqNo, seqNo)
 }
 
 // IncreaseTempBlockNumber - increase temporary block number.
-func (excutor *Executor) IncreaseTempBlockNumber() {
-	excutor.tempBlockNumber = excutor.tempBlockNumber + 1
+func (executor *Executor) IncreaseTempBlockNumber() {
+	executor.tempBlockNumber = executor.tempBlockNumber + 1
 }
 
 // SetTempBlockNumber - set temporary block number
-func (excutor *Executor) SetTempBlockNumber(seqNo uint64) {
-	excutor.tempBlockNumber = seqNo
+func (executor *Executor) SetTempBlockNumber(seqNo uint64) {
+	executor.tempBlockNumber = seqNo
 }
 
 // PurgeValidateQueue - clear validation event queue cache.
-func (excutor *Executor) PurgeValidateQueue() {
-	excutor.validateEventQueue.Purge()
+func (executor *Executor) PurgeValidateQueue() {
+	executor.validateEventQueue.Purge()
 }
 
 // PurgeBlockCache - clear validation result cache
-func (excutor *Executor) PurgeBlockCache() {
-	excutor.blockCache.Purge()
+func (executor *Executor) PurgeBlockCache() {
+	executor.blockCache.Purge()
 }
 
 // GetStateInstance - obtain state handler via configuration in block.conf
 // two state: (1)raw state (2) hyper state are supported.
-func (excutor *Executor) GetStateInstance() (vm.Database, error) {
+func (executor *Executor) GetStateInstance() (vm.Database, error) {
 	// obtain latest root
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return nil, err
 	}
-	v := excutor.lastValidationState.Load()
+	v := executor.lastValidationState.Load()
 	latestRoot, ok := v.(common.Hash)
 	if ok == false {
 		return nil, err
 	}
-	switch excutor.GetStateType() {
+	switch executor.GetStateType() {
 	case "rawstate":
 		return statedb.New(latestRoot, db)
 	case "hyperstate":
@@ -191,7 +191,7 @@ func (excutor *Executor) GetStateInstance() (vm.Database, error) {
 		if globalState == nil {
 			var err error
 			height := core.GetHeightOfChain()
-			globalState, err = hyperstate.New(latestRoot, db, excutor.conf, height)
+			globalState, err = hyperstate.New(latestRoot, db, executor.conf, height)
 			return globalState, err
 		} else {
 			return globalState, nil
@@ -203,14 +203,14 @@ func (excutor *Executor) GetStateInstance() (vm.Database, error) {
 
 // GetStateInstanceForSimulate - create a latest state for simulate usage
 // different with function `GetStateInstance`, this function will create a new instance each time when got invocation.
-func (excutor *Executor) GetStateInstanceForSimulate(root common.Hash, db db.Database) (vm.Database, error) {
+func (executor *Executor) GetStateInstanceForSimulate(root common.Hash, db db.Database) (vm.Database, error) {
 
-	switch excutor.GetStateType() {
+	switch executor.GetStateType() {
 	case "rawstate":
 		return statedb.New(root, db)
 	case "hyperstate":
 		height := core.GetHeightOfChain()
-		return hyperstate.New(root, db, excutor.conf, height)
+		return hyperstate.New(root, db, executor.conf, height)
 	default:
 		return nil, errors.New("no state type specified")
 	}
