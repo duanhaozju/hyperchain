@@ -40,7 +40,7 @@ func PersistReceipt(batch db.Batch, receipt *types.Receipt, flush bool, sync boo
 		return EmptyPointerErr, nil
 	}
 
-	err, data := encapsulateReceipt(receipt, ReceiptVersion)
+	err, data := encapsulateReceipt(receipt)
 	if err != nil {
 		logger.Error("wrapper receipt failed.")
 		return err, nil
@@ -61,18 +61,18 @@ func PersistReceipt(batch db.Batch, receipt *types.Receipt, flush bool, sync boo
 }
 
 // encapsulateReceipt - encapsulate receipt with a wrapper for specify receipt structure version.
-func encapsulateReceipt(receipt *types.Receipt, version string) (error, []byte) {
+func encapsulateReceipt(receipt *types.Receipt) (error, []byte) {
 	if receipt == nil {
 		return EmptyPointerErr, nil
 	}
-	receipt.Version = []byte(version)
+	receipt.Version = []byte(ReceiptVersion)
 	data, err := proto.Marshal(receipt)
 	if err != nil {
 		logger.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
 		return err, nil
 	}
 	wrapper := &types.ReceiptWrapper{
-		ReceiptVersion: []byte(version),
+		ReceiptVersion: []byte(ReceiptVersion),
 		Receipt:        data,
 	}
 	data, err = proto.Marshal(wrapper)
@@ -98,4 +98,18 @@ func DeleteReceipt(batch db.Batch, key []byte, flush, sync bool) error {
 		}
 	}
 	return nil
+}
+
+// GetMarshalReceipt - marshal receipt with a specify receipt structure version.
+func GetMarshalReceipt(receipt *types.Receipt) (error, []byte) {
+	if receipt == nil {
+		return EmptyPointerErr, nil
+	}
+	receipt.Version = []byte(ReceiptVersion)
+	data, err := proto.Marshal(receipt)
+	if err != nil {
+		logger.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
+		return err, nil
+	}
+	return nil, data
 }
