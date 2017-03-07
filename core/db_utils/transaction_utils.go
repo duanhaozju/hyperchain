@@ -304,7 +304,7 @@ func GetDiscardTransaction(key []byte) (*types.InvalidTransactionRecord, error) 
 	keyFact := append(InvalidTransactionPrefix, key...)
 	data, err := db.Get(keyFact)
 	if len(data) == 0 {
-		return &invalidTransaction, err
+		return nil, err
 	}
 	err = proto.Unmarshal(data, &invalidTransaction)
 	return &invalidTransaction, err

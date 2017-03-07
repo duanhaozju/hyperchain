@@ -268,5 +268,8 @@ func getChain(namespace string) (*types.Chain, error) {
 		return nil, err
 	}
 	err = proto.Unmarshal(data, &chain)
-	return &chain, err
+	if err != nil {
+		return nil, err
+	}
+	return &chain, nil
 }
