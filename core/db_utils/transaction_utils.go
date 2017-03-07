@@ -13,7 +13,7 @@ import (
 func GetInvaildTxErrType(key []byte) (types.InvalidTransactionRecord_ErrType, error) {
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
-		return types.InvalidTransactionRecord_ErrType{}, err
+		return -1, err
 	}
 	var invalidTx types.InvalidTransactionRecord
 	keyFact := append(InvalidTransactionPrefix, key...)
@@ -56,7 +56,7 @@ func PersistTransaction(batch db.Batch, transaction *types.Transaction, flush bo
 	if transaction == nil || batch == nil {
 		return EmptyPointerErr, nil
 	}
-	err, data := encapsulateTransaction(transaction, TransactionVersion)
+	err, data := encapsulateTransaction(transaction)
 	if err != nil {
 		logger.Errorf("wrapper transaction failed.")
 		return err, nil
@@ -77,18 +77,18 @@ func PersistTransaction(batch db.Batch, transaction *types.Transaction, flush bo
 }
 
 // wrap transaction
-func encapsulateTransaction(transaction *types.Transaction, version string) (error, []byte) {
+func encapsulateTransaction(transaction *types.Transaction) (error, []byte) {
 	if transaction == nil {
 		return EmptyPointerErr, nil
 	}
-	transaction.Version = []byte(version)
+	transaction.Version = []byte(TransactionVersion)
 	data, err := proto.Marshal(transaction)
 	if err != nil {
 		logger.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
 		return err, nil
 	}
 	wrapper := &types.TransactionWrapper{
-		TransactionVersion: []byte(version),
+		TransactionVersion: []byte(TransactionVersion),
 		Transaction:        data,
 	}
 	data, err = proto.Marshal(wrapper)
@@ -107,7 +107,7 @@ func PersistTransactions(batch db.Batch, transactions []*types.Transaction, vers
 	}
 	// process
 	for _, transaction := range transactions {
-		err, data := encapsulateTransaction(transaction, version)
+		err, data := encapsulateTransaction(transaction)
 		if err != nil {
 			logger.Errorf("wrapper transaction failed.")
 			return err
@@ -308,4 +308,18 @@ func GetDiscardTransaction(key []byte) (*types.InvalidTransactionRecord, error) 
 	}
 	err = proto.Unmarshal(data, &invalidTransaction)
 	return &invalidTransaction, err
+}
+
+// GetMarshalTransaction - return marshal transaction with a specify transaction structure version.
+func GetMarshalTransaction(transaction *types.Transaction) (error, []byte) {
+	if transaction == nil {
+		return EmptyPointerErr, nil
+	}
+	transaction.Version = []byte(TransactionVersion)
+	data, err := proto.Marshal(transaction)
+	if err != nil {
+		logger.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
+		return err, nil
+	}
+	return nil, data
 }

@@ -74,7 +74,7 @@ func InitializeChain(namespace string) *memChain {
 func GetHeightOfChain(namespace string) uint64 {
 	chain := chains.GetChain(namespace)
 	if chain == nil {
-		return nil
+		return 0
 	} else {
 		chain.lock.RLock()
 		defer chain.lock.RUnlock()
@@ -83,14 +83,15 @@ func GetHeightOfChain(namespace string) uint64 {
 }
 
 // SetHeightOfChain set height of chain.
-func SetHeightOfChain(namespace string, height uint64) {
+func SetHeightOfChain(namespace string, height uint64) error {
 	chain := chains.GetChain(namespace)
 	if chain == nil {
-		return nil
+		return EmptyPointerErr
 	} else {
 		chain.lock.Lock()
 		defer chain.lock.Unlock()
 		chain.data.Height = height
+		return nil
 	}
 }
 
@@ -98,7 +99,7 @@ func SetHeightOfChain(namespace string, height uint64) {
 func GetTxSumOfChain(namespace string) uint64 {
 	chain := chains.GetChain(namespace)
 	if chain == nil {
-		return nil
+		return 0
 	} else {
 		chain.lock.RLock()
 		defer chain.lock.RUnlock()
@@ -107,28 +108,42 @@ func GetTxSumOfChain(namespace string) uint64 {
 }
 
 // SetHeightOfChain set transaction sum of chain.
-func SetTxSumOfChain(namespace string, txNum uint64) {
+func SetTxSumOfChain(namespace string, txNum uint64) error {
 	chain := chains.GetChain(namespace)
 	if chain == nil {
-		return nil
+		return EmptyPointerErr
 	} else {
 		chain.lock.Lock()
 		defer chain.lock.Unlock()
 		chain.data.CurrentTxSum = txNum
+		return nil
 	}
 }
 
 // IncreaseTxSumOfChain - increase transaction sum with specify delta.
-func IncreaseTxSumOfChain(namespace string, delta int64) {
+func IncreaseTxSumOfChain(namespace string, delta uint64) error {
 	chain := chains.GetChain(namespace)
 	if chain == nil {
-		return nil
+		return EmptyPointerErr
 	} else {
 		chain.lock.Lock()
 		defer chain.lock.Unlock()
-		tmp := int64(chain.data.CurrentTxSum)
-		tmp += delta
-		chain.data.CurrentTxSum = uint64(tmp)
+		chain.data.CurrentTxSum += delta
+		return nil
+	}
+}
+
+// decreaseTxSumOfChain - decrease transaction sum with specify delta.
+func DecreaseTxSumOfChain(namespace string) error {
+	chain := chains.GetChain(namespace)
+	if chain == nil {
+		return EmptyPointerErr
+	} else {
+		chain.lock.Lock()
+		defer chain.lock.Unlock()
+		chain.data.CurrentTxSum -= uint64(chain.txDelta)
+		chain.txDelta = 0
+		return nil
 	}
 }
 
@@ -145,14 +160,15 @@ func GetLatestBlockHash(namespace string) []byte {
 }
 
 // SetLatestBlockHash set latest blockHash
-func SetLatestBlockHash(namespace string, hash []byte) {
+func SetLatestBlockHash(namespace string, hash []byte) error {
 	chain := chains.GetChain(namespace)
 	if chain == nil {
-		return nil
+		return EmptyPointerErr
 	} else {
 		chain.lock.Lock()
 		defer chain.lock.Unlock()
 		chain.data.LatestBlockHash = hash
+		return nil
 	}
 }
 
@@ -169,25 +185,30 @@ func GetParentBlockHash(namespace string) []byte {
 }
 
 // SetParentBlockHash set the latest block's parentHash
-func SetParentBlockHash(namespace string, hash []byte) {
+func SetParentBlockHash(namespace string, hash []byte) error {
 	chain := chains.GetChain(namespace)
 	if chain == nil {
-		return nil
+		return EmptyPointerErr
 	} else {
 		chain.lock.Lock()
 		defer chain.lock.Unlock()
 		chain.data.ParentBlockHash = hash
+		return nil
 	}
 }
 
 // GetChainCopy get copy of chain
 func GetChainCopy(namespace string) *types.Chain {
 	chain := chains.GetChain(namespace)
-	return &types.Chain{
-		LatestBlockHash: chain.data.LatestBlockHash,
-		ParentBlockHash: chain.data.ParentBlockHash,
-		Height:          chain.data.Height,
-		CurrentTxSum:    chain.data.CurrentTxSum,
+	if chain == nil {
+		return nil
+	} else {
+		return &types.Chain{
+			LatestBlockHash: chain.data.LatestBlockHash,
+			ParentBlockHash: chain.data.ParentBlockHash,
+			Height:          chain.data.Height,
+			CurrentTxSum:    chain.data.CurrentTxSum,
+		}
 	}
 }
 
@@ -200,13 +221,18 @@ func UpdateChain(namespace string, batch db.Batch, block *types.Block, genesis b
 		SetHeightOfChain(namespace, 0)
 		SetTxSumOfChain(namespace, 0)
 	} else {
-		if GetHeightOfChain(namespace) <= block.Number {
+		if GetHeightOfChain(namespace) < block.Number {
 			SetHeightOfChain(namespace, block.Number)
-			IncreaseTxSumOfChain(namespace, int64(len(block.Transactions)))
+			err := IncreaseTxSumOfChain(namespace, uint64(len(block.Transactions)))
+			if err != nil {
+				logger.Error("Increase the number of tx of chain failed")
+			}
 		} else {
 			SetHeightOfChain(namespace, block.Number)
-			// TODO
-			IncreaseTxSumOfChain(namespace, -1)
+			err := DecreaseTxSumOfChain(namespace)
+			if err != nil {
+				logger.Error("Decrease the number of tx of chain failed")
+			}
 		}
 	}
 	chain := chains.GetChain(namespace)

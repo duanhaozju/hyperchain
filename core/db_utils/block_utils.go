@@ -53,7 +53,7 @@ func encapsulateBlock(block *types.Block) (error, []byte) {
 	block.Version = []byte(BlockVersion)
 	data, err := proto.Marshal(block)
 	if err != nil {
-		logger.Errorf("marshal block failed, %s", err.Error())
+		logger.Error("Invalid block struct to marshal! error msg, ", err.Error())
 		return err, nil
 	}
 	wrapper := &types.BlockWrapper{
@@ -62,7 +62,7 @@ func encapsulateBlock(block *types.Block) (error, []byte) {
 	}
 	data, err = proto.Marshal(wrapper)
 	if err != nil {
-		logger.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
+		logger.Error("Invalid block struct to marshal! error msg, ", err.Error())
 		return err, nil
 	}
 	return nil, data
@@ -170,4 +170,18 @@ func blockTime(block *types.Block) {
 		_, err1 = f.WriteAt([]byte(str), n)
 		f.Close()
 	}
+}
+
+// GetMarshalBlock - return marshal block with a specify block structure version.
+func GetMarshalBlock(block *types.Block) (error, []byte) {
+	if block == nil {
+		return EmptyPointerErr, nil
+	}
+	block.Version = []byte(BlockVersion)
+	data, err := proto.Marshal(block)
+	if err != nil {
+		logger.Error("Invalid block struct to marshal! error msg, ", err.Error())
+		return err, nil
+	}
+	return nil, data
 }
