@@ -31,9 +31,6 @@ var (
 	TxMetaSuffix             = []byte{0x01}
 )
 
-// using to count the number of rollback transactions
-var RollbackDataSum int = 0
-
 func init() {
 	logger = logging.MustGetLogger("db_utils")
 }
