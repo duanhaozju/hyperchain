@@ -15,17 +15,17 @@ import (
 
 //timer wrapper for events timer.
 type timer struct {
-	timerName string
-	eventTimer events.Timer //event timer
-	timeout time.Duration    //timer timeout
-	isActive bool
+	timerName  string
+	eventTimer events.Timer 	//event timer
+	timeout    time.Duration    	//timer timeout
+	isActive   bool
 } 
 
 //timerManager manage common used timer.
 type timerManager struct {
-	timers       map[string]*timer
-	timerFactory events.TimerFactory //timer factory
-	eventManager events.Manager      //manage pbft event
+	timers         map[string]*timer
+	timerFactory   events.TimerFactory //timer factory
+	eventManager   events.Manager      //manage pbft event
 	requestTimeout time.Duration
 }
 
@@ -53,10 +53,10 @@ func (tm *timerManager) newTimer(tname string, timerOut time.Duration) {
 		return
 	}
 	tm.timers[tname] = &timer{
-		timerName:tname,
-		eventTimer:tm.timerFactory.CreateTimer(),
-		timeout:timerOut,
-		isActive:false,
+		timerName:  tname,
+		eventTimer: tm.timerFactory.CreateTimer(),
+		timeout:    timerOut,
+		isActive:   false,
 	}
 }
 

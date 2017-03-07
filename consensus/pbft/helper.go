@@ -344,7 +344,7 @@ func (pbft *pbftImpl) deleteExistedTx(digest string) {
 	pbft.batchVdr.deleteCacheFromCVB(digest)
 	pbft.batchVdr.deleteTxFromVBS(digest)
 	delete(pbft.storeMgr.outstandingReqBatches, digest)
-	pbft.stopNewViewTimer()
+	//pbft.stopNewViewTimer()
 }
 
 //isPrePrepareLegal both PBFT state PrePrepare message are legal.

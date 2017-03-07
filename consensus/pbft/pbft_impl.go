@@ -619,8 +619,12 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 				return nil
 			}
 			pbft.storeMgr.committedCert[idx] = cert.digest
-			pbft.commitTransactions()
-
+			//pbft.commitTransactions()
+			pbft.executeOutstanding()
+			if commit.SequenceNumber == pbft.vcMgr.viewChangeSeqNo {
+				logger.Warningf("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
+				pbft.sendViewChange()
+			}
 		} else {
 			logger.Debugf("Replica %d committed for seqNo: %d, but sentExecute: %v, validated: %v", pbft.id, commit.SequenceNumber, cert.sentExecute, cert.validated)
 		}
@@ -633,85 +637,83 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 // execute transactions
 //=============================================================================
 
-//commitTransactions commit all available transactions
-func (pbft *pbftImpl) commitTransactions() {
+//executeOutstanding executes outstanding requests
+func (pbft *pbftImpl) executeOutstanding() {
 	if pbft.exec.currentExec != nil {
 		logger.Debugf("Replica %d not attempting to commitTransactions bacause it is currently executing %d",
 			pbft.id, pbft.exec.currentExec)
 	}
-	logger.Debugf("Replica %d attempting to commitTransactions", pbft.id)
-
-	for hasTxToExec := true; hasTxToExec; {
-		if find, idx, cert := pbft.findNextCommitTx(); find{
-			digest := cert.digest
-			if digest == "" {
-				logger.Infof("Replica %d executing null request for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
-			} else {
-				logger.Noticef("======== Replica %d Call execute, view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
-				isPrimary, _ := pbft.isPrimary()
-				pbft.helper.Execute(idx.n, digest, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
-			}
-			cert.sentExecute = true
-			pbft.persistCSet(idx.v, idx.n)
-			pbft.afterCommitTx(idx)
-		}else {
-			hasTxToExec = false
-		}
-	}
-	pbft.startTimerIfOutstandingRequests()
-}
-
-//findNextCommitTx find next msgID which is able to commit.
-func (pbft *pbftImpl) findNextCommitTx() (bool, msgID, *msgCert) {
-	var find bool = false
-	var nextExecuteMsgId msgID
-	var cert *msgCert
+	logger.Debugf("Replica %d attempting to executeOutstanding", pbft.id)
 
 	for idx := range pbft.storeMgr.committedCert {
-		cert = pbft.storeMgr.certStore[idx]
-
-		if cert == nil || cert.prePrepare == nil {
-			logger.Debugf("Replica %d already checkpoint for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+		if pbft.executeOne(idx) {
 			break
 		}
-
-		// check if already executed
-		if cert.sentExecute == true {
-			logger.Debugf("Replica %d already execute for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
-			break
-		}
-
-		if idx.n != pbft.exec.lastExec + 1 {
-			logger.Debugf("Replica %d hasn't done with last execute %d, seq=%d", pbft.id, pbft.exec.lastExec, idx.n)
-			break
-		}
-
-		// skipInProgress == true, then this replica is in viewchange, not reply or execute
-		if pbft.status[SKIP_IN_PROGRESS] {
-			logger.Warningf("Replica %d currently picking a starting point to resume, will not execute", pbft.id)
-			break
-		}
-
-		digest := cert.digest
-
-		// check if committed
-		if !pbft.committed(digest, idx.v, idx.n) {
-			break
-		}
-
-		currentExec := idx.n
-		pbft.exec.currentExec = &currentExec
-
-		find = true
-		nextExecuteMsgId = idx
-		break
 	}
 
-	return find, nextExecuteMsgId, cert
+	pbft.startTimerIfOutstandingRequests()
+
 }
 
-//afterCommitTx after commit transaction.
-func (pbft *pbftImpl) afterCommitTx(idx msgID) {
+//executeOne executes one request
+func (pbft *pbftImpl) executeOne(idx msgID) bool {
+
+	cert := pbft.storeMgr.certStore[idx]
+
+	if cert == nil || cert.prePrepare == nil {
+		logger.Debugf("Replica %d already checkpoint for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+		return false
+	}
+
+	// check if already executed
+	if cert.sentExecute == true {
+		logger.Debugf("Replica %d already execute for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+		return false
+	}
+
+	if idx.n != pbft.exec.lastExec+1 {
+		logger.Debugf("Replica %d hasn't done with last execute %d, seq=%d", pbft.id, pbft.exec.lastExec, idx.n)
+		return false
+	}
+
+	// skipInProgress == true, then this replica is in viewchange, not reply or execute
+	if pbft.status[SKIP_IN_PROGRESS] {
+		logger.Warningf("Replica %d currently picking a starting point to resume, will not execute", pbft.id)
+		return false
+	}
+
+	digest := cert.digest
+
+	// check if committed
+	if !pbft.committed(digest, idx.v, idx.n) {
+		return false
+	}
+
+	currentExec := idx.n
+	pbft.exec.currentExec = &currentExec
+
+	if digest == "" {
+		logger.Infof("Replica %d executing null request for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+		cert.sentExecute = true
+		pbft.execDoneSync(idx)
+	} else {
+		logger.Noticef("======== Replica %d Call execute, view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+		var isPrimary bool
+		if pbft.primary(pbft.view) == pbft.id {
+			isPrimary = true
+		} else {
+			isPrimary = false
+		}
+		pbft.helper.Execute(idx.n, digest, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
+		cert.sentExecute = true
+		pbft.persistCSet(idx.v, idx.n)
+		pbft.execDoneSync(idx)
+	}
+
+	return true
+}
+
+func (pbft *pbftImpl) execDoneSync(idx msgID) {
 
 	if pbft.exec.currentExec != nil {
 		logger.Debugf("Replica %d finish execution %d, trying next", pbft.id, *pbft.exec.currentExec)
@@ -733,7 +735,7 @@ func (pbft *pbftImpl) afterCommitTx(idx msgID) {
 				})
 			}
 		}
-		if pbft.exec.lastExec % pbft.K == 0 {
+		if pbft.exec.lastExec%pbft.K == 0 {
 			bcInfo := getBlockchainInfo()
 			height := bcInfo.Height
 			if height == pbft.exec.lastExec {
@@ -754,9 +756,12 @@ func (pbft *pbftImpl) afterCommitTx(idx msgID) {
 	pbft.exec.currentExec = nil
 	// optimization: if we are in view changing waiting for executing to target seqNo,
 	// one-time processNewView() is enough. No need to processNewView() every time in execDoneSync()
-	if atomic.LoadUint32(&pbft.activeView) == 0 && pbft.exec.lastExec == pbft.nvInitialSeqNo {
+	if active := atomic.LoadUint32(&pbft.activeView); active == 0 && pbft.exec.lastExec == pbft.nvInitialSeqNo {
 		pbft.processNewView()
 	}
+
+	pbft.executeOutstanding()
+
 }
 
 //=============================================================================
