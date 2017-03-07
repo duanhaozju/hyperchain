@@ -139,7 +139,7 @@ func GetDBDatabase() (db.Database, error) {
 	return dbMap.dbMap[DefautNameSpace+Blockchain].db, nil
 }
 
-func GetDBDatabaseByNamespcae(namespace string)(db.Database, error){
+func GetDBDatabaseByNamespace(namespace string)(db.Database, error){
 	dbMap.dbSync.Lock()
 	defer dbMap.dbSync.Unlock()
 
