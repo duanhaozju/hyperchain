@@ -13,7 +13,7 @@ import (
 )
 
 // SendSyncRequest - send synchronization request to other nodes.
-func (executor *Executor) sendSyncRequest(ev event.SendCheckpointSyncEvent) {
+func (executor *Executor) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 	err, stateUpdateMsg, target := executor.unmarshalStateUpdateMessage(ev)
 	if err != nil {
 		log.Errorf("[Namespace = %s] invalid state update message.", executor.namespace)
@@ -61,7 +61,7 @@ func (executor *Executor) sendSyncRequest(ev event.SendCheckpointSyncEvent) {
 }
 
 // ReceiveSyncRequest - receive synchronization request from some node, send back request blocks.
-func (executor *Executor) receiveSyncRequest(ev event.StateUpdateEvent) {
+func (executor *Executor) ReceiveSyncRequest(ev event.StateUpdateEvent) {
 	checkpointMsg := &recovery.CheckPointMessage{}
 	proto.Unmarshal(ev.Payload, checkpointMsg)
 	blocks := &types.Blocks{}
@@ -90,7 +90,7 @@ func (executor *Executor) receiveSyncRequest(ev event.StateUpdateEvent) {
 }
 
 // ReceiveSyncBlocks - receive request synchronization blocks from others.
-func (executor *Executor) receiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
+func (executor *Executor) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 	if executor.status.syncFlag.SyncRequireBlockNum != 0 {
 		blocks := &types.Blocks{}
 		proto.Unmarshal(ev.Payload, blocks)
