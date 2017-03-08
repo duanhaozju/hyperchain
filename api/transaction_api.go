@@ -15,6 +15,7 @@ import (
 	"hyperchain/manager"
 	"time"
 	"hyperchain/hyperdb/db"
+	edb "hyperchain/core/db_utils"
 )
 
 const (
@@ -151,7 +152,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	tx.TransactionHash = tx.BuildHash().Bytes()
 
 	//delete repeated tx
-	var exist, _ = core.JudgeTransactionExist(tran.db, tx.TransactionHash)
+	var exist, _ = edb.JudgeTransactionExist(tran.db, tx.TransactionHash)
 
 	if exist {
 		return common.Hash{}, &RepeadedTxError{"repeated tx"}
@@ -526,7 +527,7 @@ func outputTransaction(trans interface{}, db db.Database) (*TransactionResult, e
 		}
 
 		txHash := t.GetTransactionHash()
-		bn, txIndex := core.GetTxWithBlock(db, txHash[:])
+		bn, txIndex := edb.GetTxWithBlock(db, txHash[:])
 
 		if blk, err := core.GetBlockByNumber(db, bn); err == nil {
 			bHash := common.BytesToHash(blk.BlockHash)

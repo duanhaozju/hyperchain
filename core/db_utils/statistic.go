@@ -3,29 +3,9 @@ package db_utils
 import (
 	"time"
 	"fmt"
-	"path/filepath"
-	"os"
-	"io"
 	"errors"
 	"strconv"
 )
-// CalcResponseCount calculate response count of a block for given blockNumber
-// millTime is Millisecond
-func CalcResponseCount(namespace string, blockNumber uint64, millTime int64) (int64, float64) {
-	block, err := GetBlockByNumber(namespace, blockNumber)
-	if err != nil {
-		logger.Errorf("[Namespace = %s] block not existed in database, err msg : ", namespace, err.Error())
-		return 0, 0
-	}
-	var count int64 = 0
-	for _, trans := range block.Transactions {
-		if block.WriteTime-trans.Timestamp <= millTime*int64(time.Millisecond) {
-			count++
-		}
-	}
-	percent := float64(count) / 100
-	return count, percent
-}
 
 //CalcCommitAVGTime calculates block average commit time
 // whose blockNumber from 'from' to 'to', include 'from' and 'to'
@@ -52,20 +32,6 @@ func CalcCommitBatchAVGTime(namespace string, from, to uint64) (int64, int64) {
 	num := int64(to - from + 1)
 	return commit / (num) / int64(time.Millisecond), batch / (num) / int64(time.Millisecond)
 
-}
-func CalTransactionSum(namespace string) uint64 {
-	var sum uint64 = 0
-	height := GetHeightOfChain(namespace)
-	for i := uint64(1); i <= height; i++ {
-		block, err := GetBlockByNumber(namespace, i)
-		if err != nil {
-			logger.Error(err)
-			return uint64(0)
-		}
-		tmp := uint64(len(block.Transactions))
-		sum += tmp
-	}
-	return sum
 }
 
 // CalcResponseAVGTime calculate response avg time of blocks
@@ -95,28 +61,6 @@ func CalcResponseAVGTime(namespace string, from, to uint64) int64 {
 	}
 }
 
-func CalcBlockAVGTime(namespace string, from, to uint64) int64 {
-	if from > to {
-		logger.Error("from less than to")
-		return -1
-	}
-	var sum int64 = 0
-	for i := from; i <= to; i++ {
-		block, err := GetBlockByNumber(namespace, i)
-		if err != nil {
-			logger.Error(err)
-			return -1
-		}
-		sum += (block.WriteTime - block.Timestamp) / int64(time.Millisecond)
-	}
-	num := int64(to - from + 1)
-	if num == 0 {
-		return 0
-	} else {
-		return sum / (num)
-	}
-
-}
 
 func CalcEvmAVGTime(namespace string, from, to uint64) int64 {
 	if from > to {
@@ -209,29 +153,4 @@ func GetBlockWriteTime(namespace string, begin, end int64) (error, []string) {
 	}
 	return nil, ctx
 
-}
-func storeData(file string, content []string) error {
-	dir := filepath.Dir(file)
-	_, err := os.Stat(dir)
-	if !(err == nil || os.IsExist(err)) { //file exists
-		err = os.MkdirAll(dir, 0700)
-		if err != nil {
-			return err
-		}
-	}
-	f, err := os.OpenFile(file, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return err
-	}
-	for _, d := range content {
-		n, err := f.Write([]byte(d))
-		if err == nil && n < len([]byte(d)) {
-			err = io.ErrShortWrite
-		}
-
-	}
-	if err1 := f.Close(); err == nil {
-		err = err1
-	}
-	return err
 }
