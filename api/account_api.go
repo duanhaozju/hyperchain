@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"hyperchain/accounts"
 	"hyperchain/common"
-	"hyperchain/core"
 	"hyperchain/manager"
 	"hyperchain/hyperdb/db"
-	edb "hyperchain/core/db_utils"
 )
 
 type PublicAccountAPI struct {

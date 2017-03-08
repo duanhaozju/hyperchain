@@ -10,8 +10,8 @@ import (
 
 // GetInvaildTxErrType - gets ErrType of invalid tx
 // Return -1 if not existed in db.
-func GetInvaildTxErrType(key []byte) (types.InvalidTransactionRecord_ErrType, error) {
-	db, err := hyperdb.GetDBDatabase()
+func GetInvaildTxErrType(namespace string, key []byte) (types.InvalidTransactionRecord_ErrType, error) {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return -1, err
 	}
@@ -26,8 +26,8 @@ func GetInvaildTxErrType(key []byte) (types.InvalidTransactionRecord_ErrType, er
 }
 
 // GetTransaction - retrieve transaction by hash.
-func GetTransaction(key []byte) (*types.Transaction, error) {
-	db, err := hyperdb.GetDBDatabase()
+func GetTransaction(namespace string, key []byte) (*types.Transaction, error) {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -149,8 +149,8 @@ func DeleteTransaction(batch db.Batch, key []byte, flush, sync bool) error {
 	return nil
 }
 
-func GetAllTransaction() ([]*types.Transaction, error) {
-	db, err := hyperdb.GetDBDatabase()
+func GetAllTransaction(namespace string) ([]*types.Transaction, error) {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -170,8 +170,8 @@ func GetAllTransaction() ([]*types.Transaction, error) {
 }
 
 // Judge whether a transaction has been saved in database
-func JudgeTransactionExist(key []byte) (bool, error) {
-	db, err := hyperdb.GetDBDatabase()
+func JudgeTransactionExist(namespace string, key []byte) (bool, error) {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return false, err
 	}
@@ -231,8 +231,8 @@ func DeleteTransactionMeta(batch db.Batch, key []byte, flush, sync bool) error {
 }
 
 //get tx<-->block num,hash,index
-func GetTxWithBlock(key []byte) (uint64, int64) {
-	db, err := hyperdb.GetDBDatabase()
+func GetTxWithBlock(namespace string, key []byte) (uint64, int64) {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return 0, 0
 	}
@@ -277,8 +277,8 @@ func PersistInvalidTransactionRecord(batch db.Batch, invalidTx *types.InvalidTra
 	return nil, data
 }
 
-func GetAllDiscardTransaction() ([]*types.InvalidTransactionRecord, error) {
-	db, err := hyperdb.GetDBDatabase()
+func GetAllDiscardTransaction(namespace string) ([]*types.InvalidTransactionRecord, error) {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -295,8 +295,8 @@ func GetAllDiscardTransaction() ([]*types.InvalidTransactionRecord, error) {
 	return ts, err
 }
 
-func GetDiscardTransaction(key []byte) (*types.InvalidTransactionRecord, error) {
-	db, err := hyperdb.GetDBDatabase()
+func GetDiscardTransaction(namespace string, key []byte) (*types.InvalidTransactionRecord, error) {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return nil, err
 	}

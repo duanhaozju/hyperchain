@@ -72,12 +72,12 @@ func prepareIntervalArgs(args IntervalArgs) (IntervalArgs, error) {
 
 // GetBlocks returns all the block for given block number.
 func (blk *PublicBlockAPI) GetBlocks(args IntervalArgs) ([]*BlockResult, error) {
-	return getBlocks(args, blk.db, false)
+	return getBlocks(args, blk.namespace, false)
 }
 
 // GetPlainBlocks returns all the block for given block number.
 func (blk *PublicBlockAPI) GetPlainBlocks(args IntervalArgs) ([]*BlockResult, error){
-	return getBlocks(args, blk.db, true)
+	return getBlocks(args, blk.namespace, true)
 }
 
 // LastestBlock returns the number and hash of the lastest block.
@@ -97,12 +97,12 @@ func (blk *PublicBlockAPI) GetPlainBlockByHash(hash common.Hash) (*BlockResult, 
 
 // GetBlockByNumber returns the block for the given block number.
 func (blk *PublicBlockAPI) GetBlockByNumber(number BlockNumber) (*BlockResult, error) {
-	return getBlockByNumber(number, blk.db, false)
+	return getBlockByNumber(blk.namespace, number, false)
 }
 
 // GetPlainBlockByNumber returns the block for the given block number.
 func (blk *PublicBlockAPI) GetPlainBlockByNumber(number BlockNumber) (*BlockResult, error) {
-	return getBlockByNumber(number, blk.db, true)
+	return getBlockByNumber(blk.namespace, number, true)
 }
 
 type BlocksIntervalResult struct {
@@ -208,7 +208,7 @@ func outputBlockResult(namespace string, block *types.Block, db db.Database, isP
 	transactions := make([]interface{}, txCounts)
 	var err error
 	for i, tx := range block.Transactions {
-		if transactions[i], err = outputTransaction(tx, db); err != nil {
+		if transactions[i], err = outputTransaction(tx, namespace); err != nil {
 			return nil, err
 		}
 	}
@@ -258,7 +258,7 @@ func getBlockByHash(namespace string, hash common.Hash, db db.Database, isPlain 
 	return outputBlockResult(namespace, block, db, isPlain)
 }
 
-func getBlocks(args IntervalArgs, hyperDb db.Database, isPlain bool) ([]*BlockResult, error) {
+func getBlocks(args IntervalArgs, namespace string, isPlain bool) ([]*BlockResult, error) {
 	var blocks []*BlockResult
 
 	realArgs, err := prepareIntervalArgs(args)
@@ -270,7 +270,7 @@ func getBlocks(args IntervalArgs, hyperDb db.Database, isPlain bool) ([]*BlockRe
 	to := *realArgs.To
 
 	for from <= to {
-		b, err := getBlockByNumber(to, hyperDb, isPlain)
+		b, err := getBlockByNumber(namespace, to, isPlain)
 		if err != nil {
 			log.Errorf("%v", err)
 			return nil, err
