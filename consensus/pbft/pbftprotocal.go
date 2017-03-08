@@ -29,6 +29,8 @@ func init() {
 
 // batch is used to construct reqbatch, the middle layer between outer to pbft
 type pbftProtocal struct {
+	namespace		string
+
 	batchTimer       events.Timer
 	batchTimerActive bool
 	batchTimeout     time.Duration
@@ -236,10 +238,11 @@ type updateCert struct {
 }
 
 // newBatch initializes a batch
-func newPbft(id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
+func newPbft(namespace string, id uint64, config *viper.Viper, h helper.Stack) *pbftProtocal {
 	var err error
 	pbft := &pbftProtocal{}
 
+	pbft.namespace = namespace
 	pbft.helper = h
 	pbft.id = id
 
@@ -1098,7 +1101,7 @@ func (pbft *pbftProtocal) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 	pbft.lastExec = et.seqNo
 	pbft.vid = et.seqNo
 	pbft.lastVid = et.seqNo
-	bcInfo := getCurrentBlockInfo()
+	bcInfo := pbft.getCurrentBlockInfo()
 	id, _ := proto.Marshal(bcInfo)
 	pbft.persistCheckpoint(et.seqNo, id)
 	pbft.moveWatermarks(pbft.lastExec) // The watermark movement handles moving this to a checkpoint boundary
@@ -1807,7 +1810,7 @@ func (pbft *pbftProtocal) execDoneSync(idx msgID) {
 			}
 		}
 		if pbft.lastExec%pbft.K == 0 {
-			bcInfo := getBlockchainInfo()
+			bcInfo := pbft.getBlockchainInfo()
 			height := bcInfo.Height
 			if height == pbft.lastExec {
 				logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", pbft.lastExec, height)

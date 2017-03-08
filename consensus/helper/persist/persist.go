@@ -8,9 +8,9 @@ import (
 	"fmt"
 
 	"encoding/base64"
-	"hyperchain/core"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
+	edb "hyperchain/core/db_utils"
 )
 
 // StoreState stores a key,value pair
@@ -76,22 +76,22 @@ func ReadStateSet(prefix string) (map[string][]byte, error) {
 	return ret, nil
 }
 
-func GetBlockchainInfo() *types.Chain {
-	bcInfo := core.GetChainUntil()
+func GetBlockchainInfo(namespace string) *types.Chain {
+	bcInfo := edb.GetChainUntil(namespace)
 	return bcInfo
 }
 
-func GetCurrentBlockInfo() (uint64, []byte, []byte) {
-	info := core.GetChainCopy()
+func GetCurrentBlockInfo(namespace string) (uint64, []byte, []byte) {
+	info := edb.GetChainCopy(namespace)
 	return info.Height, info.LatestBlockHash, info.ParentBlockHash
 }
 
-func GetBlockHeightAndHash() (uint64, string) {
-	bcInfo := core.GetChainCopy()
+func GetBlockHeightAndHash(namespace string) (uint64, string) {
+	bcInfo := edb.GetChainCopy(namespace)
 	hash := base64.StdEncoding.EncodeToString(bcInfo.LatestBlockHash)
 	return bcInfo.Height, hash
 }
 
-func GetHeightofChain() uint64 {
-	return core.GetHeightOfChain()
+func GetHeightofChain(namespace string) uint64 {
+	return edb.GetHeightOfChain(namespace)
 }
