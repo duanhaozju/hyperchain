@@ -11,6 +11,8 @@ import (
 	"math/big"
 	"time"
 	"hyperchain/hyperdb/db"
+	edb "hyperchain/core/db_utils"
+	"hyperchain/hyperdb"
 )
 
 const (
@@ -81,14 +83,16 @@ func getPaillierPublickey(config *common.Config) hmEncryption.PaillierPublickey 
 	}
 }
 
-func GetStateInstance(root common.Hash, db db.Database, conf *common.Config) (vm.Database, error) {
-	switch getStateType(conf) {
-	case "rawstate":
-		return state.New(root, db)
-	case "hyperstate":
-		height := core.GetHeightOfChain()
-		return hyperstate.New(root, db, conf, height)
-	default:
-		return nil, errors.New("no state type specified")
+
+func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
+	height := edb.GetHeightOfChain(namespace)
+	latestBlk, err := edb.GetBlockByNumber(namespace, height)
+	if err != nil {
+		return nil, err
 	}
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	if err != nil {
+		return nil, err
+	}
+	return hyperstate.New(common.BytesToHash(latestBlk.MerkleRoot), db, conf, height)
 }

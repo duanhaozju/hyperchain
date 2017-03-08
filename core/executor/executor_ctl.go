@@ -17,6 +17,16 @@ type ExecutorStatus struct {
 	demandSeqNo           uint64              // current demand seqNo for validation
 	tempBlockNumber       uint64              // temporarily block number
 	lastValidationState   atomic.Value        // latest state root hash
+
+	syncFlag SyncFlag
+}
+
+type SyncFlag struct {
+	SyncRequireBlockNum  uint64   // the block num in sync process
+	SyncRequireBlockHash []byte   // the block hash in sync process
+	SyncRecoveryNum      uint64   // the max block num in sync process
+	SendReplicas         []uint64 // get block data from replicas
+	LocalId              uint64   // local node id
 }
 
 func initializeExecutorStatus(executor *Executor) error {
@@ -192,4 +202,15 @@ func (executor *Executor) rollbackDone() {
 	executor.turnOnValidationSwitch()
 }
 
+// waitUtilSyncAvailable - wait validation processor and commit processor become idle.
+func (executor *Executor) waitUtilSyncAvailable() {
+	executor.turnOffValidationSwitch()
+	executor.waitUtilValidationIdle()
+	executor.wailUtilCommitIdle()
+}
+
+// syncDone - sync callback function to notify sync finish.
+func (executor *Executor) syncDone() {
+	executor.turnOnValidationSwitch()
+}
 

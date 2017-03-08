@@ -7,7 +7,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/juju/ratelimit"
 	"hyperchain/common"
-	"hyperchain/core"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/compiler"
@@ -18,9 +17,11 @@ import (
 	"time"
 	"strconv"
 	"hyperchain/hyperdb/db"
+	edb "hyperchain/core/db_utils"
 )
 
 type PublicContractAPI struct {
+	namespace   string
 	eventMux    *event.TypeMux
 	pm          *manager.ProtocolManager
 	db          db.Database
@@ -81,7 +82,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.BuildHash().Bytes()
 	//delete repeated tx
-	var exist, _ = core.JudgeTransactionExist(contract.db, tx.TransactionHash)
+	var exist, _ = edb.JudgeTransactionExist(contract.namespace, tx.TransactionHash)
 
 	if exist {
 		return common.Hash{}, &RepeadedTxError{"repeated tx"}
@@ -147,7 +148,7 @@ func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash,
 // GetCode returns the code from the given contract address.
 func (contract *PublicContractAPI) GetCode(addr common.Address) (string, error) {
 
-	stateDb, err := getBlockStateDb(contract.db, contract.config)
+	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
 		return "", err
@@ -160,7 +161,7 @@ func (contract *PublicContractAPI) GetCode(addr common.Address) (string, error) 
 // if addr is nil, returns the number of all the contract that has been deployed.
 func (contract *PublicContractAPI) GetContractCountByAddr(addr common.Address) (*Number, error) {
 
-	stateDb, err := getBlockStateDb(contract.db, contract.config)
+	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 
 	if err != nil {
 		return nil, err
@@ -262,7 +263,7 @@ func (contract *PublicContractAPI) CheckHmValue(args ValueArgs) (*HmCheckResult,
 // GetStorageByAddr returns the storage by given contract address and bock number.
 // The method is offered for hyperchain internal test.
 func (contract *PublicContractAPI) GetStorageByAddr(addr common.Address) (map[string]string, error) {
-	stateDb, err := getBlockStateDb(contract.db, contract.config)
+	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 
 	if err != nil {
 		return nil, err
@@ -287,16 +288,9 @@ func (contract *PublicContractAPI) GetStorageByAddr(addr common.Address) (map[st
 	return mp, nil
 }
 
-func getBlockStateDb(db db.Database, config *common.Config) (vm.Database, error) {
+func getBlockStateDb(namespace string, config *common.Config) (vm.Database, error) {
 	//block, err := getBlockByNumber(n, db)
-	block, err := latestBlock(db)
-	if err != nil {
-		return nil, err
-	} else if (block == nil) {
-		return nil, &LeveldbNotFoundError{"block on chain"}
-	}
-
-	stateDB, err := GetStateInstance(block.MerkleRoot, db, config)
+	stateDB, err := NewStateDb(config, namespace)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
 		return nil, &CallbackError{err.Error()}
