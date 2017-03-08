@@ -102,7 +102,7 @@ func (pbft *pbftImpl) Start()  {
 	pbft.vcMgr.viewChangeSeqNo = ^uint64(0) // infinity
 	pbft.vcMgr.updateViewChangeSeqNo(pbft.seqNo, pbft.K, pbft.id)
 	pbft.batchMgr.start()
-	pbft.pbftTimerMgr.Start();
+	pbft.pbftTimerMgr.Start()
 
 	//2. negotiate view.
 	pbft.status[IN_NEGO_VIEW] = true

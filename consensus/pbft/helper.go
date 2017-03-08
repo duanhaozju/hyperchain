@@ -338,13 +338,10 @@ func (pbft *pbftImpl) validateState() {
 
 //deleteExistedTx delete existed transaction.
 func (pbft *pbftImpl) deleteExistedTx(digest string) {
-	//pbft.batchVdr.setLastVid(*pbft.batchVdr.currentVid)
-	//pbft.batchVdr.setCurrentVid(nil)
 	pbft.batchVdr.updateLCVid()
 	pbft.batchVdr.deleteCacheFromCVB(digest)
 	pbft.batchVdr.deleteTxFromVBS(digest)
 	delete(pbft.storeMgr.outstandingReqBatches, digest)
-	//pbft.stopNewViewTimer()
 }
 
 //isPrePrepareLegal both PBFT state PrePrepare message are legal.

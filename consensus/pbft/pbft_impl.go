@@ -279,33 +279,6 @@ func (pbft *pbftImpl) sendNullRequest() {
 // Preprepare prepare commit methods
 //=============================================================================
 
-//// trySendPrePrepares send all available PrePrepare messages.
-//func (pbft *pbftImpl) trySendPrePrepares() {
-//
-//	if pbft.batchVdr.currentVid != nil {
-//		logger.Debugf("Replica %d not attempting to send pre-prepare bacause it is currently send %d, retry.", pbft.id, pbft.batchVdr.currentVid)
-//		return
-//	}
-//
-//	logger.Debugf("Replica %d attempting to call sendPrePrepare", pbft.id)
-//
-//	for stopTry := false; !stopTry;  {
-//		if find, txBatch, digest := pbft.batchVdr.findNextPrePrepareBatch(); find {
-//			if len(txBatch.Batch) == 0 {
-//				logger.Warningf("Replica %d is primary, receives validated result %s that is empty",
-//					pbft.id, digest)
-//				pbft.deleteExistedTx(digest)
-//				continue
-//			}
-//			pbft.pbftTimerMgr.stopTimer(NULL_REQUEST_TIMER)
-//			pbft.sendPrePrepare(txBatch, digest)
-//			pbft.maybeSendCommit(digest, pbft.view, pbft.seqNo)
-//		}else {
-//			stopTry = true
-//		}
-//	}
-//}
-
 // trySendPrePrepares send all available PrePrepare messages.
 func (pbft *pbftImpl) trySendPrePrepares() {
 
@@ -316,57 +289,71 @@ func (pbft *pbftImpl) trySendPrePrepares() {
 
 	logger.Debugf("Replica %d attempting to call sendPrePrepare", pbft.id)
 
-	for digest := range pbft.batchVdr.cacheValidatedBatch {
-		if pbft.callSendPrePrepare(digest) {
-			break
+	for stopTry := false; !stopTry;  {
+		if find, txBatch, digest := pbft.findNextPrePrepareBatch(); find {
+			pbft.sendPrePrepare(txBatch, digest)
+			pbft.maybeSendCommit(digest, pbft.view, pbft.seqNo)
+		}else {
+			stopTry = true
 		}
 	}
 }
 
-func (pbft *pbftImpl) callSendPrePrepare(digest string) bool {
+//findNextPrePrepareBatch find next validated batch to send preprepare msg.
+func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string) {
+	var find bool
+	var nextPreprepareBatch *TransactionBatch
+	var digest string
+	for digest = range pbft.batchVdr.cacheValidatedBatch {
+		cache := pbft.batchVdr.getCacheBatchFromCVB(digest)
+		if cache == nil {
+			logger.Debugf("Primary %d already call sendPrePrepare for batch: %d",
+				pbft.batchVdr.pbftId, digest)
+			continue
+		}
 
-	cache := pbft.batchVdr.cacheValidatedBatch[digest]
+		if cache.vid != pbft.batchVdr.lastVid + 1 {
+			logger.Debugf("Primary %d hasn't done with last send pre-prepare, vid=%d",
+				pbft.batchVdr.pbftId, pbft.batchVdr.lastVid)
+			continue
+		}
 
-	if cache == nil {
-		logger.Debugf("Primary %d already call sendPrePrepare for batch: %d", pbft.id, digest)
-		return false
+		currentVid := cache.vid
+		pbft.batchVdr.setCurrentVid(&currentVid)
+
+		if len(cache.batch.Batch) == 0 {
+			logger.Warningf("Replica %d is primary, receives validated result %s that is empty",
+				pbft.id, digest)
+			pbft.deleteExistedTx(digest)
+			continue
+		}
+
+		n := pbft.seqNo + 1
+
+		// check for other PRE-PREPARE for same digest, but different seqNo
+		if pbft.storeMgr.existedDigest(n, pbft.view, digest) {
+			pbft.deleteExistedTx(digest)
+			continue
+		}
+
+		if !pbft.inWV(pbft.view, n) {
+			logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because " +
+				"it is out of sequence numbers", pbft.id, digest)
+			continue
+		}
+
+		find = true
+		nextPreprepareBatch = cache.batch
 	}
-
-	if cache.vid != pbft.batchVdr.lastVid+1 {
-		logger.Debugf("Primary %d hasn't done with last send pre-prepare, vid=%d", pbft.id, pbft.batchVdr.lastVid)
-		return false
-	}
-
-	pbft.batchVdr.setCurrentVid(&cache.vid)
-
-	if len(cache.batch.Batch) == 0 {
-		logger.Warningf("Replica %d is primary, receives validated result %s that is empty", pbft.id, digest)
-		//pbft.batchVdr.updateLCVid()
-		pbft.deleteExistedTx(digest)
-		return false
-	}
-
-	return pbft.sendPrePrepare(cache.batch, digest)
-
+	return find, nextPreprepareBatch, digest
 }
 
 //sendPrePrepare send prepare message.
-func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) bool {
+func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) {
 
 	logger.Debugf("Replica %d is primary, issuing pre-prepare for request batch %s", pbft.id, digest)
 
 	n := pbft.seqNo + 1
-	if pbft.storeMgr.existedDigest(n, pbft.view, digest) {
-		//pbft.batchVdr.updateLCVid()
-		pbft.deleteExistedTx(digest)
-		return false
-	}
-
-	if !pbft.inWV(pbft.view, n) {
-		logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because " +
-			"it is out of sequence numbers", pbft.id, digest)
-		return false
-	}
 
 	logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
 	pbft.pbftTimerMgr.stopTimer(NULL_REQUEST_TIMER)
@@ -390,7 +377,7 @@ func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) 
 	payload, err := proto.Marshal(preprepare)
 	if err != nil {
 		logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
-		return false
+		return
 	}
 
 	consensusMsg := &ConsensusMessage{
@@ -402,10 +389,7 @@ func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) 
 	pbft.batchVdr.updateLCVid()
 
 	pbft.softStartTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
-	pbft.maybeSendCommit(digest, pbft.view, n)
-	pbft.trySendPrePrepares()
 
-	return true
 }
 
 //recvPrePrepare process logic for PrePrepare msg.
@@ -619,8 +603,7 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 				return nil
 			}
 			pbft.storeMgr.committedCert[idx] = cert.digest
-			//pbft.commitTransactions()
-			pbft.executeOutstanding()
+			pbft.commitTransactions()
 			if commit.SequenceNumber == pbft.vcMgr.viewChangeSeqNo {
 				logger.Warningf("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
 				pbft.sendViewChange()
@@ -637,83 +620,90 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 // execute transactions
 //=============================================================================
 
-//executeOutstanding executes outstanding requests
-func (pbft *pbftImpl) executeOutstanding() {
+//commitTransactions commit all available transactions
+func (pbft *pbftImpl) commitTransactions() {
 	if pbft.exec.currentExec != nil {
 		logger.Debugf("Replica %d not attempting to commitTransactions bacause it is currently executing %d",
 			pbft.id, pbft.exec.currentExec)
 	}
-	logger.Debugf("Replica %d attempting to executeOutstanding", pbft.id)
+	logger.Debugf("Replica %d attempting to commitTransactions", pbft.id)
+
+	for hasTxToExec := true; hasTxToExec; {
+		if find, idx, cert := pbft.findNextCommitTx(); find{
+			digest := cert.digest
+			if digest == "" {
+				logger.Infof("Replica %d executing null request for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+			} else {
+				logger.Noticef("======== Replica %d Call execute, view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+				isPrimary, _ := pbft.isPrimary()
+				pbft.helper.Execute(idx.n, digest, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
+				pbft.persistCSet(idx.v, idx.n)
+			}
+			cert.sentExecute = true
+			pbft.afterCommitTx(idx)
+		}else {
+			hasTxToExec = false
+		}
+	}
+	pbft.startTimerIfOutstandingRequests()
+}
+
+//findNextCommitTx find next msgID which is able to commit.
+func (pbft *pbftImpl) findNextCommitTx() (bool, msgID, *msgCert) {
+	var find bool = false
+	var nextExecuteMsgId msgID
+	var cert *msgCert
 
 	for idx := range pbft.storeMgr.committedCert {
-		if pbft.executeOne(idx) {
-			break
+		cert = pbft.storeMgr.certStore[idx]
+
+		if cert == nil || cert.prePrepare == nil {
+			logger.Debugf("Replica %d already checkpoint for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+			//break
+			continue
 		}
+
+		// check if already executed
+		if cert.sentExecute == true {
+			logger.Debugf("Replica %d already execute for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+			//break
+			continue
+		}
+
+		if idx.n != pbft.exec.lastExec + 1 {
+			logger.Debugf("Replica %d hasn't done with last execute %d, seq=%d", pbft.id, pbft.exec.lastExec, idx.n)
+			//break
+			continue
+		}
+
+		// skipInProgress == true, then this replica is in viewchange, not reply or execute
+		if pbft.status[SKIP_IN_PROGRESS] {
+			logger.Warningf("Replica %d currently picking a starting point to resume, will not execute", pbft.id)
+			//break
+			continue
+		}
+
+		digest := cert.digest
+
+		// check if committed
+		if !pbft.committed(digest, idx.v, idx.n) {
+			//break
+			continue
+		}
+
+		currentExec := idx.n
+		pbft.exec.currentExec = &currentExec
+
+		find = true
+		nextExecuteMsgId = idx
+		break
 	}
 
-	pbft.startTimerIfOutstandingRequests()
-
+	return find, nextExecuteMsgId, cert
 }
 
-//executeOne executes one request
-func (pbft *pbftImpl) executeOne(idx msgID) bool {
-
-	cert := pbft.storeMgr.certStore[idx]
-
-	if cert == nil || cert.prePrepare == nil {
-		logger.Debugf("Replica %d already checkpoint for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
-		return false
-	}
-
-	// check if already executed
-	if cert.sentExecute == true {
-		logger.Debugf("Replica %d already execute for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
-		return false
-	}
-
-	if idx.n != pbft.exec.lastExec+1 {
-		logger.Debugf("Replica %d hasn't done with last execute %d, seq=%d", pbft.id, pbft.exec.lastExec, idx.n)
-		return false
-	}
-
-	// skipInProgress == true, then this replica is in viewchange, not reply or execute
-	if pbft.status[SKIP_IN_PROGRESS] {
-		logger.Warningf("Replica %d currently picking a starting point to resume, will not execute", pbft.id)
-		return false
-	}
-
-	digest := cert.digest
-
-	// check if committed
-	if !pbft.committed(digest, idx.v, idx.n) {
-		return false
-	}
-
-	currentExec := idx.n
-	pbft.exec.currentExec = &currentExec
-
-	if digest == "" {
-		logger.Infof("Replica %d executing null request for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
-		cert.sentExecute = true
-		pbft.execDoneSync(idx)
-	} else {
-		logger.Noticef("======== Replica %d Call execute, view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
-		var isPrimary bool
-		if pbft.primary(pbft.view) == pbft.id {
-			isPrimary = true
-		} else {
-			isPrimary = false
-		}
-		pbft.helper.Execute(idx.n, digest, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
-		cert.sentExecute = true
-		pbft.persistCSet(idx.v, idx.n)
-		pbft.execDoneSync(idx)
-	}
-
-	return true
-}
-
-func (pbft *pbftImpl) execDoneSync(idx msgID) {
+//afterCommitTx after commit transaction.
+func (pbft *pbftImpl) afterCommitTx(idx msgID) {
 
 	if pbft.exec.currentExec != nil {
 		logger.Debugf("Replica %d finish execution %d, trying next", pbft.id, *pbft.exec.currentExec)
@@ -721,8 +711,7 @@ func (pbft *pbftImpl) execDoneSync(idx msgID) {
 		delete(pbft.storeMgr.committedCert, idx)
 		if pbft.status[IN_RECOVERY] {
 			if pbft.recoveryMgr.recoveryToSeqNo == nil {
-				logger.Errorf("Replica %d in recovery execDoneSync but " +
-					"its recoveryToSeqNo is nil")
+				logger.Errorf("Replica %d in recovery execDoneSync but its recoveryToSeqNo is nil", pbft.id)
 				return
 			}
 			if pbft.exec.lastExec == *pbft.recoveryMgr.recoveryToSeqNo {
@@ -735,7 +724,7 @@ func (pbft *pbftImpl) execDoneSync(idx msgID) {
 				})
 			}
 		}
-		if pbft.exec.lastExec%pbft.K == 0 {
+		if pbft.exec.lastExec % pbft.K == 0 {
 			bcInfo := getBlockchainInfo()
 			height := bcInfo.Height
 			if height == pbft.exec.lastExec {
@@ -756,12 +745,9 @@ func (pbft *pbftImpl) execDoneSync(idx msgID) {
 	pbft.exec.currentExec = nil
 	// optimization: if we are in view changing waiting for executing to target seqNo,
 	// one-time processNewView() is enough. No need to processNewView() every time in execDoneSync()
-	if active := atomic.LoadUint32(&pbft.activeView); active == 0 && pbft.exec.lastExec == pbft.nvInitialSeqNo {
+	if atomic.LoadUint32(&pbft.activeView) == 0 && pbft.exec.lastExec == pbft.nvInitialSeqNo {
 		pbft.processNewView()
 	}
-
-	pbft.executeOutstanding()
-
 }
 
 //=============================================================================
@@ -829,15 +815,6 @@ func (pbft *pbftImpl) processCachedTransactions() {
 	}
 }
 
-//processRequestsDuringNegoView process requests received during nego view.
-//func (pbft *pbftImpl) processRequestsDuringNegoView() {
-//	if !pbft.status[IN_NEGO_VIEW] {
-//		pbft.processCachedTransactions()
-//	} else {
-//		logger.Critical("Replica %d try to processRequestsDuringNegoView but nego-view is not finished", pbft.id)
-//	}
-//}
-
 //processRequestsDuringRecovery process requests
 func (pbft *pbftImpl) processRequestsDuringRecovery() {
 	if !pbft.status[IN_RECOVERY] && atomic.LoadUint32(&pbft.activeView) == 1 && atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 {
@@ -846,22 +823,6 @@ func (pbft *pbftImpl) processRequestsDuringRecovery() {
 		logger.Warningf("Replica %d try to processRequestsDuringRecovery but recovery is not finished or it's in viewChange / updatingN", pbft.id)
 	}
 }
-
-
-//func (pbft *pbftImpl) checkDuplicate(tx *types.Transaction) (ok bool) {
-//
-//	ok = true
-//
-//	for _, txStore := range pbft.duplicator {
-//		key := string(tx.TransactionHash)
-//		if txStore.has(key) {
-//			ok = false
-//			break
-//		}
-//	}
-//
-//	return
-//}
 
 func (pbft *pbftImpl) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 

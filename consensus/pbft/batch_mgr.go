@@ -20,7 +20,7 @@ import (
 type batchManager struct{
 	batchSize        	int
 	batchStore       	[]*types.Transaction            //ordered message batch
-	batchEventsManager  events.Manager //pbft.batchManager => batchManager
+	batchEventsManager  	events.Manager //pbft.batchManager => batchManager
 	batchTimer       	events.Timer
 	batchTimerActive 	bool
 	batchTimeout     	time.Duration
@@ -47,32 +47,6 @@ type batchValidator struct {
 
 	pbftId                  uint64
 }
-
-//findNextPrePrepareBatch find next validated batch to send preprepare msg.
-//func (bv *batchValidator) findNextPrePrepareBatch() (bool, *TransactionBatch, string) {
-//	var find bool
-//	var nextPreprepareBatch *TransactionBatch
-//	var digest string
-//	for digest = range bv.cacheValidatedBatch {
-//		cache := bv.getCacheBatchFromCVB(digest)
-//		if cache == nil {
-//			logger.Debugf("Primary %d already call sendPrePrepare for batch: %d", bv.pbftId, digest)
-//			return false, nil, digest
-//		}
-//
-//		if cache.vid != bv.lastVid + 1 {
-//			logger.Debugf("Primary %d hasn't done with last send pre-prepare, vid=%d", bv.pbftId, bv.lastVid)
-//			return false, nil, digest
-//		}
-//
-//		currentVid := cache.vid
-//		bv.setCurrentVid(&currentVid)
-//
-//		find = true
-//		nextPreprepareBatch = cache.batch
-//	}
-//	return find, nextPreprepareBatch, digest
-//}
 
 func (bv *batchValidator) setVid(vid uint64)  {
 	bv.vid = vid
