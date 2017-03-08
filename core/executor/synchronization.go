@@ -6,6 +6,10 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/tree/bucket"
 	edb "hyperchain/core/db_utils"
+	"github.com/golang/protobuf/proto"
+	"hyperchain/event"
+	"hyperchain/protos"
+	"bytes"
 )
 
 // ApplyBlock - apply all transactions in block into state during the `state update` process.
@@ -96,4 +100,59 @@ func (executor *Executor) SubmitForStateUpdate(seqNo uint64) error {
 	batch.Write()
 	executor.statedb.MarkProcessFinish(seqNo)
 	return nil
+}
+
+// unmarshalStateUpdateMessage - unmarshal block synchronization message sent from consensus module and return a block synchronization target.
+func (executor *Executor) unmarshalStateUpdateMessage(ev event.SendCheckpointSyncEvent) (error, *protos.UpdateStateMessage, *protos.BlockchainInfo) {
+	updateStateMessage := &protos.UpdateStateMessage{}
+	err := proto.Unmarshal(ev.Payload, updateStateMessage)
+	if err != nil {
+		log.Errorf("[Namespace = %s] unmarshal state update message failed. %s", executor.namespace, err)
+		return err, nil, nil
+	}
+	blockChainInfo := &protos.BlockchainInfo{}
+	err = proto.Unmarshal(updateStateMessage.TargetId, blockChainInfo)
+	if err != nil {
+		log.Errorf("[Namespace = %s] unmarshal block chain info failed. %s", executor.namespace, err)
+		return err, nil, nil
+	}
+	return nil, updateStateMessage, blockChainInfo
+}
+
+// accpet - accept block synchronization result.
+func (executor *Executor) accpet(seqNo uint64) {
+	executor.SubmitForStateUpdate(seqNo)
+}
+
+// assertApplyResult - check apply result whether equal with other's.
+func (executor *Executor) assertApplyResult(block *types.Block, result *ValidationResultRecord) bool {
+	if bytes.Compare(block.MerkleRoot, result.MerkleRoot) != 0 {
+		log.Warningf("[Namespace = %s] mismatch in block merkle root  of #%d, required %s, got %s",
+			executor.namespace, block.Number, common.Bytes2Hex(block.MerkleRoot), common.Bytes2Hex(result.MerkleRoot))
+		return false
+	}
+	if bytes.Compare(block.TxRoot, result.TxRoot) != 0 {
+		log.Warningf("[Namespace = %s] mismatch in block transaction root  of #%d, required %s, got %s",
+			block.Number, common.Bytes2Hex(block.TxRoot), common.Bytes2Hex(result.TxRoot))
+		return false
+
+	}
+	if bytes.Compare(block.ReceiptRoot, result.ReceiptRoot) != 0 {
+		log.Warningf("[Namespace = %s] mismatch in block receipt root  of #%d, required %s, got %s",
+			executor.namespace, block.Number, common.Bytes2Hex(block.ReceiptRoot), common.Bytes2Hex(result.ReceiptRoot))
+		return false
+	}
+	return true
+}
+
+// isBlockHashEqual - compare block hash.
+func (executor *Executor) isBlockHashEqual(targetHash []byte) bool {
+	// compare current latest block and peer's block hash
+	latestBlock, err := edb.GetBlockByNumber(executor.namespace, edb.GetHeightOfChain(executor.namespace))
+	if err != nil || latestBlock == nil || bytes.Compare(targetHash, latestBlock.BlockHash) != 0 {
+		log.Warningf("[Namespace = %s] missing match target blockhash and latest block's hash, target block hash %s, latest block hash %s",
+			executor.namespace, common.Bytes2Hex(targetHash), common.Bytes2Hex(latestBlock.BlockHash))
+		return false
+	}
+	return true
 }

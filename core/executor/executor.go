@@ -38,7 +38,7 @@ type Executor struct {
 	cache       ExecutorCache
 	helper      *Helper
 	statedb     vm.Database
-
+	syncBlockCache      *common.Cache
 }
 
 func NewExecutor(namespace string, consenter consensus.Consenter, conf *common.Config, commonHash crypto.CommonHash, encryption crypto.Encryption, eventMux *event.TypeMux) *Executor {
