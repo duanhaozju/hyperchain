@@ -15,7 +15,6 @@ import (
 	"strconv"
 	"sync"
 	"hyperchain/hyperdb/db"
-	"hyperchain/core/state"
 )
 
 // represent a validation result
@@ -91,7 +90,7 @@ func (executor *Executor) dropValdiateEvent(validationEvent event.ExeTxsEvent, d
 	executor.markValidationBusy()
 	defer executor.markValidationIdle()
 	defer done()
-	log.Noticef("drop validation event %d", validationEvent.SeqNo)
+	log.Noticef("[Namespace = %s] drop validation event %d", executor.namespace, validationEvent.SeqNo)
 }
 
 // Process an ValidationEvent
@@ -108,30 +107,12 @@ func (executor *Executor) process(validationEvent event.ExeTxsEvent, done func()
 	}
 	// calculate validation result hash for comparison
 	hash := executor.calculateValidationResultHash(validateResult.MerkleRoot, validateResult.TxRoot, validateResult.ReceiptRoot)
-	if len(validateResult.ValidTxs) != 0 {
-		validateResult.VID = validationEvent.SeqNo
-		validateResult.SeqNo = executor.getTempBlockNumber()
-		// regard the batch as a valid block
-		executor.incTempBlockNumber()
-		executor.addValidationResult(hash.Hex(), *validationEvent)
-	}
-	log.Debug("invalid transaction number: ", len(validateResult.InvalidTxs))
-	log.Debug("valid transaction number: ", len(validateResult.ValidTxs))
-	// communicate with PBFT
-	executor.consenter.RecvLocal(protos.ValidatedTxs{
-		Transactions: validateResult.ValidTxs,
-		SeqNo:        validationEvent.SeqNo,
-		View:         validationEvent.View,
-		Hash:         hash.Hex(),
-		Timestamp:    validationEvent.Timestamp,
-	})
-
-	// empty block generated, throw all invalid transactions back to original node directly
-	if validationEvent.IsPrimary && len(validateResult.ValidTxs) == 0 {
-		// 1. Remove all cached transaction in this block (which for transaction duplication check purpose), because empty block won't enter network
-		msg := protos.RemoveCache{Vid: validationEvent.SeqNo}
-		executor.consenter.RecvLocal(msg)
-		executor.throwInvalidTransactionBack(validateResult.InvalidTxs)
+	log.Debugf("[Namespace = %s] invalid transaction number %d", executor.namespace, len(validateResult.InvalidTxs))
+	log.Debugf("[Namespace = %s] valid transaction number %d", executor.namespace, len(validateResult.ValidTxs))
+	executor.saveValidationResult(validateResult, validationEvent, hash)
+	executor.sendValidationResult(validateResult, validationEvent, hash)
+	if len(validateResult.ValidTxs) == 0 {
+		executor.dealEmptyBlock(validateResult, validationEvent)
 	}
 	return nil, true
 }
@@ -175,8 +156,7 @@ func (executor *Executor) checkSign(txs []*types.Transaction) ([]*types.InvalidT
 	return invalidtxs, txs
 }
 
-// ProcessBlockInVm - Put all transactions into the virtual machine and execute
-// Return the execution result, such as txs' merkle root, receipts' merkle root, accounts' merkle root and so on.
+// applyTransactions - execute transactions one by one.
 func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, *ValidationResultRecord) {
 	var validtxs []*types.Transaction
 	var receipts []*types.Receipt
@@ -199,18 +179,13 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 		receipts = append(receipts, receipt)
 		validtxs = append(validtxs, tx)
 	}
-	// submit validation result
 	err, merkleRoot, txRoot, receiptRoot := executor.submitValidationResult(batch)
 	if err != nil {
-		log.Error("Commit state db failed! error msg, ", err.Error())
-		return err, &ValidationResultRecord{
-			InvalidTxs: invalidTxs,
-		}
+		log.Errorf("[Namespace = %s] submit validation result failed.", executor.namespace, err.Error())
+		return err, nil
 	}
-	// generate new state fingerprint
-	// IMPORTANT doesn't call batch.Write util recv commit event for atomic assurance
-	log.Debugf("validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
-		executor.getTempBlockNumber(), seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
+	log.Noticef("[Namespace = %s] validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
+		executor.namespace, executor.getTempBlockNumber(), seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	return nil, &ValidationResultRecord{
 		TxRoot:      txRoot,
 		ReceiptRoot: receiptRoot,
@@ -220,7 +195,6 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 		InvalidTxs:  invalidTxs,
 	}
 }
-
 
 // initialize transaction execution environment
 func initEnvironment(state vm.Database, seqNo uint64) vm.Environment {
@@ -251,7 +225,7 @@ func (executor *Executor) classifyInvalid(err error, tx *types.Transaction, inva
 	})
 }
 
-// TODO
+// submitValidationResult - submit state changes to batch.
 func (executor *Executor) submitValidationResult(batch db.Batch) (error, []byte, []byte, []byte) {
 	// flush all state change
 	root, err := executor.statedb.Commit()
@@ -267,10 +241,6 @@ func (executor *Executor) submitValidationResult(batch db.Batch) (error, []byte,
 	receiptRoot := res.Bytes()
 	executor.recordStateHash(root)
 	return nil, merkleRoot, txRoot, receiptRoot
-}
-
-func (executor *Executor) dealEmptyBlock() {
-
 }
 
 // throwInvalidTransactionBack - send all invalid transaction to its birth place.
@@ -295,4 +265,35 @@ func (executor *Executor) throwInvalidTransactionBack(invalidtxs []*types.Invali
 		executor.peerManager.SendMsgToPeers(payload, peers, recovery.Message_INVALIDRESP)
 	}
 }
+
+// saveValidationResult - save validation result to cache.
+func (executor *Executor) saveValidationResult(res *ValidationResultRecord, ev event.ExeTxsEvent, hash common.Hash) {
+	if len(res.ValidTxs) != 0 {
+		res.VID = ev.SeqNo
+		res.SeqNo = executor.getTempBlockNumber()
+		// regard the batch as a valid block
+		executor.incTempBlockNumber()
+		executor.addValidationResult(hash.Hex(), res)
+	}
+}
+
+// sendValidationResult - send validation result to consensus module.
+func (executor *Executor) sendValidationResult(res *ValidationResultRecord, ev event.ExeTxsEvent, hash common.Hash) {
+	executor.informConsensus(CONSENSUS_LOCAL, protos.ValidatedTxs{
+		Transactions: res.ValidTxs,
+		SeqNo:        ev.SeqNo,
+		View:         ev.View,
+		Hash:         hash.Hex(),
+		Timestamp:    ev.Timestamp,
+	})
+}
+
+// dealEmptyBlock - deal with empty block.
+func (executor *Executor) dealEmptyBlock(res *ValidationResultRecord, ev event.ExeTxsEvent) {
+	if ev.IsPrimary {
+		executor.informConsensus(CONSENSUS_LOCAL, protos.RemoveCache{Vid: ev.SeqNo})
+		executor.throwInvalidTransactionBack(res.InvalidTxs)
+	}
+}
+
 

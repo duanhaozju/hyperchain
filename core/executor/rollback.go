@@ -19,59 +19,42 @@ import (
 func (executor *Executor) Rollback(ev event.VCResetEvent) {
 	executor.waitUtilRollbackAvailable()
 	defer executor.rollbackDone()
+	defer executor.initDemand(ev.SeqNo)
 
 	log.Noticef("[Namespace = %s] receive vc reset event, required revert to %d", executor.namespace, ev.SeqNo-1)
-	executor.setDemandNumber(ev.SeqNo)
-	executor.setDemandSeqNo(ev.SeqNo)
-	executor.setTempBlockNumber(ev.SeqNo)
-
 	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
 	if err != nil {
 		log.Errorf("[Namespace = %s] get database handler failed. error : ", executor.namespace, err.Error())
 		return
 	}
 	batch := db.NewBatch()
-	// 2. revert state
+	// revert state
 	if err := executor.revertState(batch, ev.SeqNo - 1); err != nil {
 		return
 	}
-	// 3. Delete related transaction, receipt, txmeta, and block itself in a specific range
+	// Delete related transaction, receipt, txmeta, and block itself in a specific range
 	if err := executor.cutdownChain(batch, ev.SeqNo - 1); err != nil {
 		log.Errorf("[Namespace = %s] remove block && transaction in range %d to %d failed.", ev.SeqNo, edb.GetHeightOfChain(executor.namespace))
 		return
 	}
-	// 4. remove uncommitted data
+	// remove uncommitted data
 	if err := executor.clearUncommittedData(batch); err != nil {
 		log.Errorf("[Namespace = %s] remove uncommitted data failed", executor.namespace)
 		return
 	}
-	// 5. Reset chain
+	// Reset chain
 	edb.UpdateChainByBlcokNum(executor.namespace, batch, ev.SeqNo - 1, false, false)
-	// flush all modified into disk.
-	// represent this reset operation finish
-	// any error occur during this process
-	// batch.Write will never be called to guarantee atomic
 	batch.Write()
-	// 6. Told consensus reset finish
-	msg := protos.VcResetDone{SeqNo: ev.SeqNo}
-	executor.consenter.RecvLocal(msg)
+	executor.informConsensus(CONSENSUS_LOCAL, protos.VcResetDone{SeqNo: ev.SeqNo})
 }
 
 // CutdownBlock remove a block and reset blockchain status to the last status.
 func (executor *Executor) CutdownBlock(number uint64) error {
-	// 1. reset demand number  demand seqNo and maxSeqNo
-	if number != edb.GetHeightOfChain(executor.namespace) {
-		log.Errorf("try to cutdown a block which is not the latest block. ignore the request")
-		return errors.New("")
-	}
 	executor.waitUtilRollbackAvailable()
 	defer executor.rollbackDone()
 
 	log.Noticef("[Namespace = %s] cutdown block, required revert to %d", executor.namespace, number)
-	executor.setDemandNumber(number)
-	executor.setDemandSeqNo(number)
-	executor.setTempBlockNumber(number)
-
+	executor.initDemand(edb.GetHeightOfChain(executor.namespace))
 	// 2. revert state
 	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
 	if err != nil {
@@ -96,7 +79,7 @@ func (executor *Executor) CutdownBlock(number uint64) error {
 	edb.UpdateChainByBlcokNum(executor.namespace, batch, number - 1, false, false)
 	// flush all modified to disk
 	batch.Write()
-	log.Noticef("cut down block #%d success. remove all related transactions, receipts, state changes and block together.", number)
+	log.Noticef("[Namespace = %s] cut down block #%d success. remove all related transactions, receipts, state changes and block together.", executor.namespace, number)
 	return nil
 }
 
@@ -106,14 +89,8 @@ func (executor *Executor) cutdownChain(batch db.Batch, targetHeight uint64) erro
 
 // cutdownChainByRange - remove block, tx, receipt in range.
 func (executor *Executor) cutdownChainByRange(batch db.Batch, from, to uint64) error  {
-	db, err := hyperdb.GetDBDatabase()
-	if err != nil {
-		log.Error("Get Database Instance Failed! error msg,", err.Error())
-		return  err
-	}
-	// delete tx, txmeta and receipt
 	for i := from; i <= to; i += 1 {
-		block, err := edb.GetBlockByNumber(db, i)
+		block, err := edb.GetBlockByNumber(executor.namespace, i)
 		if err != nil {
 			log.Errorf("miss block %d ,error msg %s", i, err.Error())
 			continue
@@ -140,8 +117,6 @@ func (executor *Executor) cutdownChainByRange(batch db.Batch, from, to uint64) e
 }
 
 // revertState revert state from currentNumber related status to a target
-// different process logic of different state implement
-// undo from currentNumber -> targetNumber + 1.
 func (executor *Executor) revertState(batch db.Batch, targetHeight uint64) error {
 	currentHeight := edb.GetHeightOfChain(executor.namespace)
 	targetBlk, err := edb.GetBlockByNumber(executor.namespace, targetHeight)
@@ -175,7 +150,8 @@ func (executor *Executor) revertState(batch db.Batch, targetHeight uint64) error
 		// undo journal in reverse
 		for j := len(journal.JournalList) - 1; j >= 0; j -= 1 {
 			log.Debugf("[Namespace = %s] journal %s", executor.namespace, journal.JournalList[j].String())
-			journal.JournalList[j].Undo(executor.statedb, journalCache, batch, true)
+			t := executor.statedb.(*hyperstate.StateDB)
+			journal.JournalList[j].Undo(t, journalCache, batch, true)
 			if journal.JournalList[j].GetType() == hyperstate.StorageHashChangeType {
 				tmp := journal.JournalList[j].(*hyperstate.StorageHashChange)
 				// use struct instead of pointer since different pointers may represent same stateObject
@@ -201,7 +177,7 @@ func (executor *Executor) revertState(batch db.Batch, targetHeight uint64) error
 		bucketTree.PrepareWorkingSet(journalCache.GetWorkingSet(hyperstate.WORKINGSET_TYPE_STATEOBJECT, address), big.NewInt(0))
 		//bucketTree.RevertToTargetBlock(batch, big.NewInt(currentNumber), big.NewInt(targetNumber), false, false)
 		hash, _ := bucketTree.ComputeCryptoHash()
-		bucketTree.AddChangesForPersistence(batch, big.NewInt(targetHeight))
+		bucketTree.AddChangesForPersistence(batch, big.NewInt(int64(targetHeight)))
 		log.Debugf("[Namespace = %s] re-compute %s storage hash %s", executor.namespace, address.Hex(), common.Bytes2Hex(hash))
 		stateObjectHash := stateObjectStorageHashs[address]
 		if common.BytesToHash(hash).Hex() != common.BytesToHash(stateObjectHash).Hex() {
@@ -223,7 +199,7 @@ func (executor *Executor) revertState(batch db.Batch, targetHeight uint64) error
 		log.Errorf("[Namespace = %s] re-compute state bucket tree hash failed, error :%s", executor.namespace, err.Error())
 		return err
 	}
-	bucketTree.AddChangesForPersistence(batch, big.NewInt(targetHeight))
+	bucketTree.AddChangesForPersistence(batch, big.NewInt(int64(targetHeight)))
 	log.Debugf("re-compute state hash %s", common.Bytes2Hex(currentRootHash))
 	if bytes.Compare(currentRootHash, targetBlk.MerkleRoot) != 0 {
 		log.Errorf("[Namespace = %s] revert to a different state, required %s, but current state %s",
@@ -231,7 +207,6 @@ func (executor *Executor) revertState(batch db.Batch, targetHeight uint64) error
 		return errors.New("revert state failed")
 	}
 	// revert state instance oldest and root
-	// TODO
 	executor.statedb.ResetToTarget(uint64(targetHeight +1), common.BytesToHash(targetBlk.MerkleRoot))
 	executor.recordStateHash(common.BytesToHash(targetBlk.MerkleRoot))
 	log.Debugf("[Namespace = %s] revert state from #%d to #%d success", executor.namespace, currentHeight, targetHeight)

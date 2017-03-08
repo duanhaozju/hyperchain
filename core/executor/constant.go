@@ -9,4 +9,6 @@ const (
 
 	BUSY = 1
 	IDLE = 0
+
+	CONSENSUS_LOCAL = "local"
 )

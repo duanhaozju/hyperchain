@@ -32,7 +32,7 @@ func initializeExecutorCache(executor *Executor) error {
 // PurgeCache - purge executor cache.
 func (executor *Executor) PurgeCache() {
 	executor.cache.validationResultCache.Purge()
-	executor.cache.pendingValidationEventQ.Purge()
+	executor.clearpendingValidationEventQ()
 	log.Noticef("[Namespace = %s] purge validation result cache and validation event cache success", executor.namespace)
 }
 
@@ -52,18 +52,29 @@ func (executor *Executor) fetchPendingValidationEvent(seqNo uint64) (event.ExeTx
 	return ev, true
 }
 
+// pendingValidationEventQLen - retrieve pending validation event queue length.
+func (executor *Executor) pendingValidationEventQLen() int {
+	return executor.cache.pendingValidationEventQ.Len()
+}
+
+func (executor *Executor) clearpendingValidationEventQ() {
+	length := executor.pendingValidationEventQLen()
+	executor.cache.pendingValidationEventQ.Purge()
+	atomic.AddInt32(&executor.status.validateQueueLen, -1 * int32(length))
+}
+
 // addValidationResult - save a validation result to cache.
-func (executor *Executor) addValidationResult(hash string, res ValidationResultRecord) {
+func (executor *Executor) addValidationResult(hash string, res *ValidationResultRecord) {
 	executor.cache.validationResultCache.Add(hash, res)
 }
 
 // fetchValidationResult - fetch a validation result via hash.
-func (executor *Executor) fetchValidationResult(hash string) (ValidationResultRecord, bool) {
+func (executor *Executor) fetchValidationResult(hash string) (*ValidationResultRecord, bool) {
 	v, existed := executor.cache.validationResultCache.Get(hash)
 	if existed == false {
-		return ValidationResultRecord{}, false
+		return nil, false
 	}
-	return v.(ValidationResultRecord), true
+	return v.(*ValidationResultRecord), true
 }
 
 // addValidationEvent - push a validation event to channel buffer.

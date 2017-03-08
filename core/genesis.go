@@ -3,11 +3,9 @@
 package core
 
 import (
-	"errors"
 	"github.com/buger/jsonparser"
 	"hyperchain/common"
 	"hyperchain/core/hyperstate"
-	"hyperchain/core/state"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
@@ -15,20 +13,18 @@ import (
 	"math/big"
 	"strconv"
 	"time"
-	"hyperchain/hyperdb/db"
+	edb "hyperchain/core/db_utils"
 )
 
 const (
 	genesisPath  = "global.configs.genesis"
-	stateType    = "global.structure.state"
-	blockVersion = "global.version.blockversion"
 )
 
-func CreateInitBlock(config *common.Config) {
-	log.Debug("genesis start")
-	if IsGenesisFinish() {
-		log.Info("already genesis")
-		return
+// CreateInitBlock - create genesis for a specific namespace.
+func CreateInitBlock(namespace string, config *common.Config) error {
+	if edb.IsGenesisFinish(namespace) {
+		log.Infof("[Namespace = %s] already genesis", namespace)
+		return nil
 	}
 	type Genesis struct {
 		Timestamp  int64
@@ -41,41 +37,25 @@ func CreateInitBlock(config *common.Config) {
 
 	bytes, err := ioutil.ReadFile(getGenesisPath(config))
 	if err != nil {
-		log.Error("ReadFile: ", err.Error())
-		return
-	}
-	// start the parse genesis content
-	db, err := hyperdb.GetDBDatabase()
-	if err != nil {
-		log.Fatal(err)
-		return
+		return err
 	}
 	// create state instance with empty root hash
-	stateDB, err := GetStateInstance(common.Hash{}, db, config)
-	stateDB.MarkProcessStart(0)
+	stateDb, err := NewStateDb(namespace, config)
 	if err != nil {
-		log.Error("genesis create statedb failed!")
-		return
+		return err
 	}
-
+	stateDb.MarkProcessStart(0)
 	jsonparser.ObjectEach(bytes, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
-		object := stateDB.CreateAccount(common.HexToAddress(string(key)))
+		object := stateDb.CreateAccount(common.HexToAddress(string(key)))
 		account, _ := strconv.ParseInt(string(value), 10, 64)
 		object.AddBalance(big.NewInt(account))
 		return nil
 	}, "genesis", "alloc")
-	root, err := stateDB.Commit()
-
+	root, err := stateDb.Commit()
 	if err != nil {
-		log.Error("Genesis.go file statedb commit failed!")
-		return
+		return err
 	}
 	// flush state change to disk immediately
-	batch := stateDB.FetchBatch(0)
-	if batch != nil {
-		batch.Write()
-	}
-
 	block := types.Block{
 		ParentHash: common.FromHex("0x0000000000000000000000000000000000000000000000000000000000000000"),
 		Timestamp:  time.Now().Unix(),
@@ -83,39 +63,35 @@ func CreateInitBlock(config *common.Config) {
 		Number:     uint64(0),
 		MerkleRoot: root.Bytes(),
 	}
-
-	log.Debug("construct genesis block")
 	// flush block content to disk immediately
-	if err, _ := PersistBlock(batch, &block, getBlockVersion(config), true, true); err != nil {
-		log.Fatal(err)
-		return
+	batch := stateDb.FetchBatch(0)
+	if err, _ := edb.PersistBlock(batch, &block, true, true); err != nil {
+		return err
 	}
 	// flush change of chain to disk immediately
-	UpdateChain(batch, &block, true, false, false)
+	edb.UpdateChain(namespace, batch, &block, true, false, false)
 	batch.Write()
-	stateDB.MarkProcessFinish(0)
-	log.Info("current chain block number is", GetChainCopy().Height)
-
+	stateDb.MarkProcessFinish(0)
+	return nil
 }
-func GetStateInstance(root common.Hash, db db.Database, conf *common.Config) (vm.Database, error) {
-	switch getStateType(conf) {
-	case "rawstate":
-		return state.New(root, db)
-	case "hyperstate":
-		return hyperstate.New(root, db, conf, 0)
-	default:
-		return nil, errors.New("no state type specified")
+
+// NewStateDb - create a empty stateDb handler.
+func NewStateDb(namespace string, conf *common.Config) (vm.Database, error) {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	if err != nil {
+		log.Errorf("[Namespace = %s] get database failed", namespace)
+		return nil, err
 	}
+	stateDb, err := hyperstate.New(common.Hash{}, db, conf, 0)
+	if err != nil {
+		log.Errorf("[Namespace = %s] new stateDb failed, err : %s", namespace, err.Error())
+		return nil, err
+	}
+	return stateDb, nil
 }
 
+// getGenesisPath - load genesis file path from config.
 func getGenesisPath(conf *common.Config) string {
 	return conf.GetString(genesisPath)
 }
 
-func getStateType(conf *common.Config) string {
-	return conf.GetString(stateType)
-}
-
-func getBlockVersion(conf *common.Config) string {
-	return conf.GetString(blockVersion)
-}

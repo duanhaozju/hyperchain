@@ -12,7 +12,7 @@ import (
 // run transaction in a sandbox
 // execution result will not been add to database
 func (executor *Executor) RunInSandBox(tx *types.Transaction) error {
-	db, err := hyperdb.GetDBDatabase()
+	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
 	if err != nil {
 		return err
 	}

@@ -25,20 +25,19 @@ func (executor *Executor) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerM
 func (executor *Executor) ListenCommitEvent() {
 	for {
 		ev := executor.fetchCommitEvent()
-		success := executor.processCommitEvent(ev, executor.processCommitDone)
-		if !success {
-			log.Errorf("commit block #%d failed, system crush down.", ev.SeqNo)
+		if success := executor.processCommitEvent(ev, executor.processCommitDone); success == false {
+			log.Errorf("[Namespace = %s] commit block #%d failed, system crush down.", executor.namespace, ev.SeqNo)
 		}
 	}
 }
 
-// consumeCommitEvent - consume commit event from channel.
+// processCommitEvent - consume commit event from channel.
 func (executor *Executor) processCommitEvent(ev event.CommitOrRollbackBlockEvent, done func()) bool {
 	executor.markCommitBusy()
 	defer executor.markCommitIdle()
 	defer done()
 	if !executor.commitValidationCheck(ev) {
-		log.Errorf("[Namespace = %s] commit event %d not satisfied demand", executor.namespace, ev.SeqNo)
+		log.Errorf("[Namespace = %s] commit event %d not satisfy the demand", executor.namespace, ev.SeqNo)
 		return false
 	}
 	block := executor.constructBlock(ev)
@@ -83,14 +82,13 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	batch.Write()
 	executor.statedb.MarkProcessFinish(record.SeqNo)
 
-	if block.Number %10 == 0 && block.Number != 0 {
+	if block.Number % 10 == 0 && block.Number != 0 {
 		edb.WriteChainChan(executor.namespace)
 	}
 	log.Noticef("[Namespace = %s] Block number", executor.namespace, block.Number)
 	log.Noticef("[Namespace = %s] Block hash", executor.namespace, hex.EncodeToString(block.BlockHash))
 	// remove Cached Transactions which used to check transaction duplication
-	msg := protos.RemoveCache{Vid: record.VID}
-	executor.consenter.RecvLocal(msg)
+	executor.informConsensus(CONSENSUS_LOCAL, protos.RemoveCache{Vid: record.VID})
 	return nil
 }
 
@@ -102,7 +100,7 @@ func (executor *Executor) getValidateRecord(hash string) *ValidationResultRecord
 		log.Noticef("[Namespace = %s] no validation result found when commit block, hash %s", executor.namespace, hash)
 		return nil
 	}
-	return &ret
+	return ret
 }
 
 // generateBlock - generate a block with given data.

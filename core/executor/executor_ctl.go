@@ -21,10 +21,7 @@ type ExecutorStatus struct {
 
 func initializeExecutorStatus(executor *Executor) error {
 	currentChain := edb.GetChainCopy(executor.namespace)
-	executor.status.demandNumber = currentChain.Height + 1
-	executor.status.demandSeqNo = currentChain.Height + 1
-	executor.status.tempBlockNumber = currentChain.Height + 1
-
+	executor.initDemand(currentChain.Height + 1)
 	blk, err := edb.GetBlockByNumber(executor.namespace, currentChain.Height)
 	if err != nil {
 		log.Errorf("[Namespace = %s] get block #%d failed.", executor.namespace, currentChain.Height)
@@ -36,6 +33,12 @@ func initializeExecutorStatus(executor *Executor) error {
 			executor.namespace, executor.status.demandNumber, executor.status.demandSeqNo)
 		return nil
 	}
+}
+
+func (executor *Executor) initDemand(num uint64) {
+	executor.status.demandNumber = num
+	executor.status.demandSeqNo = num
+	executor.status.tempBlockNumber = num
 }
 
 // Demand block number
@@ -178,6 +181,7 @@ func (executor *Executor) wailUtilCommitIdle() {
 
 // waitUtilRollbackAvailable - wait validation processor and commit processor become idle.
 func (executor *Executor) waitUtilRollbackAvailable() {
+	executor.clearpendingValidationEventQ()
 	executor.turnOffValidationSwitch()
 	executor.waitUtilValidationIdle()
 	executor.wailUtilCommitIdle()

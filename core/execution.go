@@ -13,15 +13,12 @@ import (
 
 // Call executes within the given contract
 func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int, update bool) (ret []byte, err error) {
-	//fmt.Println("call")
 	ret, _, err = exec(env, caller, &addr, &addr, input, env.Db().GetCode(addr), gas, gasPrice, value, update)
 	return ret, err
 }
 
 // CallCode executes the given address' code as the given contract address
 func CallCode(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int) (ret []byte, err error) {
-	//fmt.Println("callcode")
-
 	callerAddr := caller.Address()
 	ret, _, err = exec(env, caller, &callerAddr, &addr, input, env.Db().GetCode(addr), gas, gasPrice, value, false)
 	return ret, err
@@ -29,8 +26,6 @@ func CallCode(env vm.Environment, caller vm.ContractRef, addr common.Address, in
 
 // DelegateCall is equivalent to CallCode except that sender and value propagates from parent scope to child scope
 func DelegateCall(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice *big.Int) (ret []byte, err error) {
-	//fmt.Println("DelegateCall")
-
 	callerAddr := caller.Address()
 	originAddr := env.Origin()
 	callerValue := caller.Value()
@@ -58,7 +53,6 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	}
 
 	if !env.CanTransfer(caller.Address(), value) {
-		//caller.ReturnGas(gas, gasPrice)
 		return nil, common.Address{}, ValueTransferErr("insufficient funds to transfer value. Req %v, has %v", value, env.Db().GetBalance(caller.Address()))
 	}
 
@@ -79,13 +73,9 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		to = env.Db().CreateAccount(*address)
 	} else {
 		if !env.Db().Exist(*address) {
-			// IMPORTANT
-			// Never skip the virtual machine's execution by judge whether account's code field is empty
 			to = env.Db().CreateAccount(*address)
 			env.Transfer(from, to, value)
 		} else {
-			// IMPORTANT
-			// Never skip the virtual machine's execution by judge whether account's code field is empty
 			to = env.Db().GetAccount(*address)
 			env.Transfer(from, to, value)
 		}

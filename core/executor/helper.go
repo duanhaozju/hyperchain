@@ -12,6 +12,12 @@ func NewHelper(msgQ *event.TypeMux) *Helper {
 	}
 }
 
-func communicateWithConsenus() {
+func (executor *Executor) informConsensus(informType string, message interface{}) {
+	switch informType {
+	case CONSENSUS_LOCAL:
+		executor.consenter.RecvLocal(message)
+	default:
 
+	}
 }
+
