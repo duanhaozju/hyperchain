@@ -18,10 +18,10 @@ var pluginInstance consensus.Consenter // singleton service
 var config *viper.Viper
 
 // GetPlugin returns the handle to the Consenter singleton
-func GetPlugin(id uint64, h helper.Stack, pbftConfigPath string) consensus.Consenter {
+func GetPlugin(namespace string, id uint64, h helper.Stack, pbftConfigPath string) consensus.Consenter {
 
 	if pluginInstance == nil {
-		pluginInstance = New(id, h, pbftConfigPath)
+		pluginInstance = New(namespace, id, h, pbftConfigPath)
 	}
 
 	return pluginInstance
@@ -29,10 +29,10 @@ func GetPlugin(id uint64, h helper.Stack, pbftConfigPath string) consensus.Conse
 
 // New creates a new *batch instance that provides the Consenter interface.
 // Internally, it uses an opaque pbft-core instance.
-func New(id uint64, h helper.Stack, pbftConfigPath string) consensus.Consenter {
+func New(namespace string, id uint64, h helper.Stack, pbftConfigPath string) consensus.Consenter {
 
 	config = loadConfig(pbftConfigPath)
-	return newPbft(id, config, h)
+	return newPbft(namespace, id, config, h)
 
 }
 

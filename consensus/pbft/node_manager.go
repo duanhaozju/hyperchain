@@ -13,7 +13,7 @@ import (
 	"encoding/base64"
 	"reflect"
 	"time"
-	"hyperchain/core"
+	edb "hyperchain/core/db_utils"
 )
 
 // New replica receive local NewNode message
@@ -289,7 +289,7 @@ func (pbft *pbftProtocal) sendReadyForN() error {
 	}
 
 	for true {
-		if pbft.lastExec == core.GetHeightOfChain() {
+		if pbft.lastExec == edb.GetHeightOfChain(pbft.namespace) {
 			break
 		} else {
 			time.Sleep(5 * time.Millisecond)
