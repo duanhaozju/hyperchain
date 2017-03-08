@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"hyperchain/core/db_utils"
 )
 
 type argT struct {
@@ -126,7 +127,7 @@ func main() {
 
 		conf.MergeConfig(config.getDbConfig())//todo:refactor it
 
-		core.InitDB(conf, config.getDbConfig(),conf.GetInt(common.C_NODE_ID))
+		db_utils.InitDB(conf, "Global", config.getDbConfig(),conf.GetInt(common.C_NODE_ID))
 
 		err, expiredTime := checkLicense(config.getLicense())
 		if err != nil {
@@ -171,7 +172,7 @@ func main() {
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
 
 		//init block pool to save block
-		executor := executor.NewBlockExecutor(cs, conf, kec256Hash, encryption, eventMux)
+		executor := executor.NewExecutor(cs, conf, kec256Hash, encryption, eventMux)
 		if executor == nil {
 			return errors.New("Initialize BlockPool failed")
 		}

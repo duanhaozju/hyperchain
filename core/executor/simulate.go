@@ -1,13 +1,12 @@
 package executor
 
 import (
-	"errors"
 	"github.com/golang/protobuf/proto"
-	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/types"
 	"hyperchain/event"
 	"hyperchain/hyperdb"
+	edb "hyperchain/core/db_utils"
 )
 
 // run transaction in a sandbox
@@ -17,21 +16,13 @@ func (executor *Executor) RunInSandBox(tx *types.Transaction) error {
 	if err != nil {
 		return err
 	}
-	// load latest state status
-	v := executor.lastValidationState.Load()
-	initStatus, ok := v.(common.Hash)
-	if ok == false {
-		return errors.New("Get StateDB Status Failed!")
-	}
-	// initialize state
-	// IMPORTANT all change to state will not been persist cause never commit will been invoked
-	state, err := executor.GetStateInstanceForSimulate(initStatus, db)
+	statedb, err := executor.NewStateDb()
 	if err != nil {
 		return err
 	}
 	// initialize execution environment
-	fakeBlockNumber := core.GetHeightOfChain()
-	sandBox := initEnvironment(state, fakeBlockNumber+1)
+	fakeBlockNumber := edb.GetHeightOfChain(executor.namespace) + 1
+	sandBox := initEnvironment(statedb, fakeBlockNumber)
 	receipt, _, _, err := core.ExecTransaction(tx, sandBox)
 	if err != nil {
 		var errType types.InvalidTransactionRecord_ErrType
@@ -56,13 +47,13 @@ func (executor *Executor) RunInSandBox(tx *types.Transaction) error {
 			return nil
 		}
 		// persist execution result to local
-		executor.StoreInvalidResp(event.RespInvalidTxsEvent{
+		executor.StoreInvalidTransaction(event.RespInvalidTxsEvent{
 			Payload: payload,
 		})
 		return nil
 	} else {
 		// persist execution result to local
-		err, _ := core.PersistReceipt(db.NewBatch(), receipt, executor.GetTransactionVersion(), true, true)
+		err, _ := edb.PersistReceipt(db.NewBatch(), receipt, true, true)
 		if err != nil {
 			log.Error("Put receipt data into database failed! error msg, ", err.Error())
 			return err

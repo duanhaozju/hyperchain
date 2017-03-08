@@ -12,3 +12,6 @@ func NewHelper(msgQ *event.TypeMux) *Helper {
 	}
 }
 
+func communicateWithConsenus() {
+
+}

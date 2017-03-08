@@ -333,7 +333,7 @@ func (self *ProtocolManager) isBlockHashEqual(targetHash []byte) bool {
 }
 
 // assertApplyResult - check apply result whether equal with other's.
-func (self *ProtocolManager) assertApplyResult(block *types.Block, result *executor.BlockRecord) bool {
+func (self *ProtocolManager) assertApplyResult(block *types.Block, result *executor.ValidationResultRecord) bool {
 	if bytes.Compare(block.MerkleRoot, result.MerkleRoot) != 0 {
 		log.Warningf("mismatch in block merkle root  of #%d, required %s, got %s",
 			block.Number, common.Bytes2Hex(block.MerkleRoot), common.Bytes2Hex(result.MerkleRoot))

@@ -1,80 +1,82 @@
 package executor
 
 import (
-	"errors"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/params"
-	"hyperchain/crypto"
 	"hyperchain/event"
-	"hyperchain/hyperdb"
 	"hyperchain/p2p"
 	"hyperchain/protos"
 	"hyperchain/recovery"
-	"hyperchain/tree/pmt"
 	"sort"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"hyperchain/hyperdb/db"
+	"hyperchain/core/state"
 )
 
+// represent a validation result
+type ValidationResultRecord struct {
+	TxRoot      []byte                            // hash of a batch of transactions
+	ReceiptRoot []byte                            // hash of a batch of receipts
+	MerkleRoot  []byte                            // hash of state
+	InvalidTxs  []*types.InvalidTransactionRecord // invalid transaction list
+	ValidTxs    []*types.Transaction              // valid transaction list
+	Receipts    []*types.Receipt                  // receipt list
+	SeqNo       uint64                            // temp block number for this batch
+	VID         uint64                            // validation ID. may larger than SeqNo
+}
+
 func (executor *Executor) Validate(validationEvent event.ExeTxsEvent, peerManager p2p.PeerManager) {
-	executor.validateQueue <- validationEvent
+	executor.addValidationEvent(validationEvent)
 	if executor.peerManager == nil {
 		executor.peerManager = peerManager
 	}
-	atomic.AddInt32(&executor.validateQueueLen, 1)
 }
-func (executor *Executor) validateBackendLoop() {
-	for ev := range executor.validateQueue {
-		if atomic.LoadInt32(&executor.validateBehaveFlag) == VALIDATEBEHAVETYPE_NORMAL {
-			if success := executor.consumeValidateEvent(ev); success == false {
+
+// listenValidationEvent - validation backend process, use to listen new validation event and dispatch it to a processor.
+func (executor *Executor) listenValidationEvent() {
+	for {
+		ev := executor.fetchValidationEvent()
+		if executor.isReadyToValidation() {
+			if success := executor.processValidationEvent(ev, executor.processValidationDone); success == false {
 				log.Errorf("validate #%d failed, system crush down.", ev.SeqNo)
 			}
-			atomic.AddInt32(&executor.validateQueueLen, -1)
 		} else {
-			log.Noticef("drop validation event %d", ev.SeqNo)
-			executor.dropValdiateEvent(ev)
-			atomic.AddInt32(&executor.validateQueueLen, -1)
+			executor.dropValdiateEvent(ev, executor.processValidationDone)
 		}
 	}
 }
 
-func (executor *Executor) consumeValidateEvent(validationEvent event.ExeTxsEvent) bool {
-	atomic.StoreInt32(&executor.validateInProgress, PROGRESS_TRUE)
-	defer atomic.StoreInt32(&executor.validateInProgress, PROGRESS_FALSE)
-	if executor.validateEventCheck(validationEvent) == false {
-		log.Errorf("receive validation event %d while %d is required, save into cache temporarily.", validationEvent.SeqNo, executor.demandSeqNo)
-		executor.validateEventQueue.Add(validationEvent.SeqNo, validationEvent)
+// processValidationEvent - process validation event, return true if process success, otherwise false will be return.
+func (executor *Executor) processValidationEvent(validationEvent event.ExeTxsEvent, done func()) bool {
+	executor.markValidationBusy()
+	defer executor.markValidationIdle()
+	if !executor.isDemandSeqNo(validationEvent.SeqNo) {
+		executor.addPendingValidationEvent(validationEvent)
 		return true
 	}
-	if _, success := executor.PreProcess(validationEvent); success == false {
+	if _, success := executor.process(validationEvent, done); success == false {
 		return false
 	}
-	executor.increaseDemandSeqNo()
-	if executor.validateEventQueue.Len() > 0 {
+	executor.incDemandSeqNo()
+	return executor.processPendingValidationEvent(done)
+}
+
+func (executor *Executor) processPendingValidationEvent(done func()) bool {
+	if executor.cache.pendingValidationEventQ.Len() > 0 {
 		// there is still some events remain.
 		for  {
-			if executor.validateEventQueue.Contains(executor.demandSeqNo) {
-				res, _ := executor.validateEventQueue.Get(executor.demandSeqNo)
-				validationEvent = res.(event.ExeTxsEvent)
-				if _, success := executor.PreProcess(validationEvent); success == false {
+			if executor.cache.pendingValidationEventQ.Contains(executor.getDemandSeqNo()) {
+				ev, _ := executor.fetchPendingValidationEvent(executor.getDemandSeqNo())
+				if _, success := executor.process(ev, done); success == false {
 					return false
 				} else {
-					executor.increaseDemandSeqNo()
-					judge := func(key interface{}, iterKey interface{}) bool {
-						id := key.(uint64)
-						iterId := iterKey.(uint64)
-						if id >= iterId {
-							return true
-						}
-						return false
-					}
-					executor.validateEventQueue.RemoveWithCond(validationEvent.SeqNo, judge)
+					executor.incDemandSeqNo()
+					executor.cache.pendingValidationEventQ.RemoveWithCond(ev.SeqNo, RemoveLessThan)
 				}
 			} else {
 				break
@@ -85,58 +87,33 @@ func (executor *Executor) consumeValidateEvent(validationEvent event.ExeTxsEvent
 }
 
 // dropValdiateEvent - this function do nothing but consume a validation event.
-func (executor *Executor) dropValdiateEvent(validationEvent event.ExeTxsEvent) {
-	atomic.StoreInt32(&executor.validateInProgress, PROGRESS_TRUE)
-	atomic.StoreInt32(&executor.validateInProgress, PROGRESS_FALSE)
+func (executor *Executor) dropValdiateEvent(validationEvent event.ExeTxsEvent, done func()) {
+	executor.markValidationBusy()
+	defer executor.markValidationIdle()
+	defer done()
+	log.Noticef("drop validation event %d", validationEvent.SeqNo)
 }
 
 // Process an ValidationEvent
-func (executor *Executor) PreProcess(validationEvent event.ExeTxsEvent) (error, bool) {
-	var validTxSet []*types.Transaction
-	var invalidTxSet []*types.InvalidTransactionRecord
-	var index []int
-	if validationEvent.IsPrimary {
-		invalidTxSet, index = executor.checkSign(validationEvent.Transactions, executor.commonHash, executor.encryption)
-	} else {
-		validTxSet = validationEvent.Transactions
-	}
-	// remove invalid transaction from transaction list
-	if len(index) > 0 {
-		sort.Ints(index)
-		count := 0
-		set := validationEvent.Transactions
-		for _, idx := range index {
-			idx = idx - count
-			set = append(set[:idx], set[idx+1:]...)
-			count++
-		}
-		validTxSet = set
-	} else {
-		validTxSet = validationEvent.Transactions
-	}
-	// process block in virtual machine
-	err, validateResult := executor.ProcessBlockInVm(validTxSet, invalidTxSet, validationEvent.SeqNo)
+func (executor *Executor) process(validationEvent event.ExeTxsEvent, done func()) (error, bool) {
+	defer done()
+	var validtxs []*types.Transaction
+	var invalidtxs []*types.InvalidTransactionRecord
+
+	invalidtxs, validtxs = executor.checkSign(validationEvent.Transactions)
+	err, validateResult := executor.applyTransactions(validtxs, invalidtxs, validationEvent.SeqNo)
 	if err != nil {
-		log.Error("process block failed!, block number: ", validationEvent.SeqNo)
+		log.Errorf("[Namespace = %s] process transaction batch #%d failed.", executor.namespace, validationEvent.SeqNo)
 		return err, false
 	}
-	// calculate validation result hash for comparison with others
-	hash := executor.commonHash.Hash([]interface{}{
-		validateResult.MerkleRoot,
-		validateResult.TxRoot,
-		validateResult.ReceiptRoot,
-	})
-	// save validation result into cache
-	// load them in commit phase
-	// update some variant
+	// calculate validation result hash for comparison
+	hash := executor.calculateValidationResultHash(validateResult.MerkleRoot, validateResult.TxRoot, validateResult.ReceiptRoot)
 	if len(validateResult.ValidTxs) != 0 {
 		validateResult.VID = validationEvent.SeqNo
-		validateResult.SeqNo = executor.tempBlockNumber
+		validateResult.SeqNo = executor.getTempBlockNumber()
 		// regard the batch as a valid block
-		// increase tempBlockNumber for next validation
-		// tempBlockNumber doesn't has concurrency dangerous
-		executor.tempBlockNumber += 1
-		executor.blockCache.Add(hash.Hex(), *validateResult)
+		executor.incTempBlockNumber()
+		executor.addValidationResult(hash.Hex(), *validationEvent)
 	}
 	log.Debug("invalid transaction number: ", len(validateResult.InvalidTxs))
 	log.Debug("valid transaction number: ", len(validateResult.ValidTxs))
@@ -154,32 +131,14 @@ func (executor *Executor) PreProcess(validationEvent event.ExeTxsEvent) (error, 
 		// 1. Remove all cached transaction in this block (which for transaction duplication check purpose), because empty block won't enter network
 		msg := protos.RemoveCache{Vid: validationEvent.SeqNo}
 		executor.consenter.RecvLocal(msg)
-		// 2. Throw all invalid transaction back to the origin node
-		for _, t := range validateResult.InvalidTxs {
-			payload, err := proto.Marshal(t)
-			if err != nil {
-				log.Error("Marshal tx error")
-			}
-			// original node is local
-			// store invalid transaction directly
-			if t.Tx.Id == uint64(executor.peerManager.GetNodeId()) {
-				executor.StoreInvalidResp(event.RespInvalidTxsEvent{
-					Payload: payload,
-				})
-				continue
-			}
-			var peers []uint64
-			peers = append(peers, t.Tx.Id)
-			// send back to original node
-			executor.peerManager.SendMsgToPeers(payload, peers, recovery.Message_INVALIDRESP)
-		}
+		executor.throwInvalidTransactionBack(validateResult.InvalidTxs)
 	}
 	return nil, true
 }
 
-// check the sender's signature of the transaction
-func (executor *Executor) checkSign(txs []*types.Transaction, commonHash crypto.CommonHash, encryption crypto.Encryption) ([]*types.InvalidTransactionRecord, []int) {
-	var invalidTxSet []*types.InvalidTransactionRecord
+// checkSign - check the sender's signature of the transaction.
+func (executor *Executor) checkSign(txs []*types.Transaction) ([]*types.InvalidTransactionRecord, []*types.Transaction) {
+	var invalidtxs []*types.InvalidTransactionRecord
 	// (1) check signature for each transaction
 	var wg sync.WaitGroup
 	var index []int
@@ -188,14 +147,14 @@ func (executor *Executor) checkSign(txs []*types.Transaction, commonHash crypto.
 		wg.Add(1)
 		go func(i int) {
 			tx := txs[i]
-			if !tx.ValidateSign(encryption, commonHash) {
-				log.Notice("validation, found invalid signature, send from :", tx.Id)
-				invalidTxSet = append(invalidTxSet, &types.InvalidTransactionRecord{
+			if !tx.ValidateSign(executor.encryption, executor.commonHash) {
+				log.Warningf("[Namespace = %s] found invalid signature, send from : %d", executor.namespace, tx.Id)
+				mu.Lock()
+				invalidtxs = append(invalidtxs, &types.InvalidTransactionRecord{
 					Tx:      tx,
 					ErrType: types.InvalidTransactionRecord_SIGFAILED,
 					ErrMsg:  []byte("Invalid signature"),
 				})
-				mu.Lock()
 				index = append(index, i)
 				mu.Unlock()
 			}
@@ -203,64 +162,36 @@ func (executor *Executor) checkSign(txs []*types.Transaction, commonHash crypto.
 		}(i)
 	}
 	wg.Wait()
-	return invalidTxSet, index
+	// remove invalid transaction from transaction list
+	if len(index) > 0 {
+		sort.Ints(index)
+		count := 0
+		for _, idx := range index {
+			idx = idx - count
+			txs = append(txs[:idx], txs[idx+1:]...)
+			count++
+		}
+	}
+	return invalidtxs, txs
 }
 
 // ProcessBlockInVm - Put all transactions into the virtual machine and execute
 // Return the execution result, such as txs' merkle root, receipts' merkle root, accounts' merkle root and so on.
-func (executor *Executor) ProcessBlockInVm(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, *BlockRecord) {
+func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, *ValidationResultRecord) {
 	var validtxs []*types.Transaction
 	var receipts []*types.Receipt
-	// initialize calculator
-	// for calculate fingerprint of a batch of transactions and receipts
-	if err := executor.initializeTransactionCalculator(); err != nil {
-		log.Errorf("validate #%d initialize transaction calculator", executor.tempBlockNumber)
-		return err, &BlockRecord{
-			InvalidTxs: invalidTxs,
-		}
-	}
-	if err := executor.initializeReceiptCalculator(); err != nil {
-		log.Errorf("validate #%d initialize receipt calculator", executor.tempBlockNumber)
-		return err, &BlockRecord{
-			InvalidTxs: invalidTxs,
-		}
-	}
-	// load latest state fingerprint
-	// for compatibility, doesn't remove the statement below
-	// initialize state
-	state, err := executor.GetStateInstance()
-	if err != nil {
-		return err, &BlockRecord{
-			InvalidTxs: invalidTxs,
-		}
-	}
 
-	state.MarkProcessStart(executor.tempBlockNumber)
-	// initialize execution environment rule set
-	env := initEnvironment(state, executor.tempBlockNumber)
-	// execute transaction one by one
-	batch := state.FetchBatch(executor.tempBlockNumber)
+	executor.initTransactionHashCalculator()
+	executor.initReceiptHashCalculator()
+	executor.statedb.MarkProcessStart(executor.getTempBlockNumber())
+	env := initEnvironment(executor.statedb, executor.getTempBlockNumber())
+	batch := executor.statedb.FetchBatch(executor.getTempBlockNumber())
+	// execute transactions one by one
 	for i, tx := range txs {
-		state.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
+		executor.statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(tx, env)
-		// invalid transaction, check invalid type
 		if err != nil {
-			var errType types.InvalidTransactionRecord_ErrType
-			if core.IsValueTransferErr(err) {
-				errType = types.InvalidTransactionRecord_OUTOFBALANCE
-			} else if core.IsExecContractErr(err) {
-				tmp := err.(*core.ExecContractError)
-				if tmp.GetType() == 0 {
-					errType = types.InvalidTransactionRecord_DEPLOY_CONTRACT_FAILED
-				} else if tmp.GetType() == 1 {
-					errType = types.InvalidTransactionRecord_INVOKE_CONTRACT_FAILED
-				}
-			}
-			invalidTxs = append(invalidTxs, &types.InvalidTransactionRecord{
-				Tx:      tx,
-				ErrType: errType,
-				ErrMsg:  []byte(err.Error()),
-			})
+			executor.classifyInvalid(err, tx, invalidTxs)
 			continue
 		}
 		executor.calculateTransactionsFingerprint(tx, false)
@@ -269,18 +200,18 @@ func (executor *Executor) ProcessBlockInVm(txs []*types.Transaction, invalidTxs 
 		validtxs = append(validtxs, tx)
 	}
 	// submit validation result
-	err, merkleRoot, txRoot, receiptRoot := executor.submitValidationResult(state, batch)
+	err, merkleRoot, txRoot, receiptRoot := executor.submitValidationResult(batch)
 	if err != nil {
 		log.Error("Commit state db failed! error msg, ", err.Error())
-		return err, &BlockRecord{
+		return err, &ValidationResultRecord{
 			InvalidTxs: invalidTxs,
 		}
 	}
 	// generate new state fingerprint
 	// IMPORTANT doesn't call batch.Write util recv commit event for atomic assurance
 	log.Debugf("validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
-		executor.tempBlockNumber, seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
-	return nil, &BlockRecord{
+		executor.getTempBlockNumber(), seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
+	return nil, &ValidationResultRecord{
 		TxRoot:      txRoot,
 		ReceiptRoot: receiptRoot,
 		MerkleRoot:  merkleRoot,
@@ -300,190 +231,68 @@ func initEnvironment(state vm.Database, seqNo uint64) vm.Environment {
 	return vmenv
 }
 
-// initialize transaction calculator
-func (executor *Executor) initializeTransactionCalculator() error {
-	db, err := hyperdb.GetDBDatabase()
+// classifyInvalid - classify invalid transaction via error type.
+func (executor *Executor) classifyInvalid(err error, tx *types.Transaction, invalidTxs []*types.InvalidTransactionRecord) {
+	var errType types.InvalidTransactionRecord_ErrType
+	if core.IsValueTransferErr(err) {
+		errType = types.InvalidTransactionRecord_OUTOFBALANCE
+	} else if core.IsExecContractErr(err) {
+		tmp := err.(*core.ExecContractError)
+		if tmp.GetType() == 0 {
+			errType = types.InvalidTransactionRecord_DEPLOY_CONTRACT_FAILED
+		} else if tmp.GetType() == 1 {
+			errType = types.InvalidTransactionRecord_INVOKE_CONTRACT_FAILED
+		}
+	}
+	invalidTxs = append(invalidTxs, &types.InvalidTransactionRecord{
+		Tx:      tx,
+		ErrType: errType,
+		ErrMsg:  []byte(err.Error()),
+	})
+}
+
+// TODO
+func (executor *Executor) submitValidationResult(batch db.Batch) (error, []byte, []byte, []byte) {
+	// flush all state change
+	root, err := executor.statedb.Commit()
 	if err != nil {
-		log.Error("get database handler failed in initializeTransactionCalculator")
-		return err
+		log.Errorf("[Namespace = %s] commit state db failed! error msg, ", executor.namespace, err.Error())
+		return err, nil, nil, nil
 	}
-	switch executor.GetStateType() {
-	case "rawstate":
-		tree, err := pmt.New(common.Hash{}, db)
+	executor.statedb.Reset()
+	merkleRoot := root.Bytes()
+	res, _ := executor.calculateTransactionsFingerprint(nil, true)
+	txRoot := res.Bytes()
+	res, _ = executor.calculateReceiptFingerprint(nil, true)
+	receiptRoot := res.Bytes()
+	executor.recordStateHash(root)
+	return nil, merkleRoot, txRoot, receiptRoot
+}
+
+func (executor *Executor) dealEmptyBlock() {
+
+}
+
+// throwInvalidTransactionBack - send all invalid transaction to its birth place.
+func (executor *Executor) throwInvalidTransactionBack(invalidtxs []*types.InvalidTransactionRecord) {
+	for _, t := range invalidtxs {
+		payload, err := proto.Marshal(t)
 		if err != nil {
-			log.Error("initialize pmt failed in initializeTransactionCalculator")
-			return err
+			log.Errorf("[Namespace = %s] marshal tx error", executor.namespace)
+			continue
 		}
-		executor.transactionCalculator = tree
-	case "hyperstate":
-		executor.transactionBuffer = nil
+		// original node is local
+		// store invalid transaction directly
+		if t.Tx.Id == uint64(executor.peerManager.GetNodeId()) {
+			executor.StoreInvalidTransaction(event.RespInvalidTxsEvent{
+				Payload: payload,
+			})
+			continue
+		}
+		var peers []uint64
+		peers = append(peers, t.Tx.Id)
+		// send back to original node
+		executor.peerManager.SendMsgToPeers(payload, peers, recovery.Message_INVALIDRESP)
 	}
-	return nil
 }
 
-// initialize receipt calculator
-func (executor *Executor) initializeReceiptCalculator() error {
-	db, err := hyperdb.GetDBDatabase()
-	if err != nil {
-		log.Error("get database handler failed in initializeTransactionCalculator")
-		return err
-	}
-	switch executor.GetStateType() {
-	case "rawstate":
-		tree, err := pmt.New(common.Hash{}, db)
-		if err != nil {
-			log.Error("initialize pmt failed in initializeTransactionCalculator")
-			return err
-		}
-		executor.receiptCalculator = tree
-	case "hyperstate":
-		executor.receiptBuffer = nil
-	}
-	return nil
-}
-
-// calculate a batch of transaction
-func (executor *Executor) calculateTransactionsFingerprint(transaction *types.Transaction, flush bool) (common.Hash, error) {
-	if transaction == nil && flush == false {
-		return common.Hash{}, errors.New("empty pointer")
-	}
-	switch executor.GetStateType() {
-	case "rawstate":
-		calculator := executor.transactionCalculator.(*pmt.Trie)
-		if flush == false {
-			err, data := core.WrapperTransaction(transaction, executor.GetTransactionVersion())
-			if err != nil {
-				log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
-				return common.Hash{}, err
-			}
-			// put transaction to buffer temporarily
-			calculator.Update(append(core.TransactionPrefix, transaction.GetTransactionHash().Bytes()...), data)
-			return common.Hash{}, nil
-		} else {
-			// calculate hash together
-			return calculator.Commit()
-		}
-	case "hyperstate":
-		if flush == false {
-			err, data := core.WrapperTransaction(transaction, executor.GetTransactionVersion())
-			if err != nil {
-				log.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
-				return common.Hash{}, err
-			}
-			// put transaction to buffer temporarily
-			executor.transactionBuffer = append(executor.transactionBuffer, data)
-			return common.Hash{}, nil
-		} else {
-			// calculate hash together
-			kec256Hash := crypto.NewKeccak256Hash("keccak256")
-			hash := kec256Hash.Hash(executor.transactionBuffer)
-			executor.transactionBuffer = nil
-			return hash, nil
-		}
-	}
-	return common.Hash{}, nil
-}
-
-// calculate a batch of receipt
-func (executor *Executor) calculateReceiptFingerprint(receipt *types.Receipt, flush bool) (common.Hash, error) {
-	// 1. marshal receipt to byte slice
-	if receipt == nil && flush == false {
-		log.Error("empty recepit pointer")
-		return common.Hash{}, errors.New("empty pointer")
-	}
-	switch executor.GetStateType() {
-	case "rawstate":
-		calculator := executor.receiptCalculator.(*pmt.Trie)
-		if flush == false {
-			// process
-			err, data := core.WrapperReceipt(receipt, executor.GetTransactionVersion())
-			if err != nil {
-				log.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
-				return common.Hash{}, err
-			}
-
-			// put transaction to buffer temporarily
-			calculator.Update(append(core.ReceiptsPrefix, receipt.TxHash...), data)
-			return common.Hash{}, nil
-		} else {
-			// calculate hash together
-			return calculator.Commit()
-		}
-	case "hyperstate":
-		if flush == false {
-			// process
-			err, data := core.WrapperReceipt(receipt, executor.GetTransactionVersion())
-			if err != nil {
-				log.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
-				return common.Hash{}, err
-			}
-			// put transaction to buffer temporarily
-			executor.receiptBuffer = append(executor.receiptBuffer, data)
-			return common.Hash{}, nil
-		} else {
-			// calculate hash together
-			kec256Hash := crypto.NewKeccak256Hash("keccak256")
-			hash := kec256Hash.Hash(executor.receiptBuffer)
-			executor.receiptBuffer = nil
-			return hash, nil
-		}
-	}
-	return common.Hash{}, nil
-}
-
-func (executor *Executor) submitValidationResult(state vm.Database, batch db.Batch) (error, []byte, []byte, []byte) {
-	switch executor.GetStateType() {
-	case "hyperstate":
-		// flush all state change
-		root, err := state.Commit()
-		state.Reset()
-		if err != nil {
-			log.Error("Commit state db failed! error msg, ", err.Error())
-			return err, nil, nil, nil
-		}
-		// generate new state fingerprint
-		merkleRoot := root.Bytes()
-		// generate transactions and receipts fingerprint
-		res, _ := executor.calculateTransactionsFingerprint(nil, true)
-		txRoot := res.Bytes()
-		res, _ = executor.calculateReceiptFingerprint(nil, true)
-		receiptRoot := res.Bytes()
-		// store latest state status
-		// actually it's useless
-		executor.lastValidationState.Store(root)
-		return nil, merkleRoot, txRoot, receiptRoot
-		// IMPORTANT doesn't call batch.Write util recv commit event for atomic assurance
-	case "rawstate":
-		// flush all state change
-		root, err := state.Commit()
-		if err != nil {
-			log.Error("Commit state db failed! error msg, ", err.Error())
-			return err, nil, nil, nil
-		}
-		// generate new state fingerprint
-		merkleRoot := root.Bytes()
-		// generate transactions and receipts fingerprint
-		res, _ := executor.calculateTransactionsFingerprint(nil, true)
-		txRoot := res.Bytes()
-		res, _ = executor.calculateReceiptFingerprint(nil, true)
-		receiptRoot := res.Bytes()
-		// store latest state status
-		executor.lastValidationState.Store(root)
-		batch.Write()
-		return nil, merkleRoot, txRoot, receiptRoot
-	}
-	return errors.New("miss state type"), nil, nil, nil
-}
-
-func (executor *Executor) validateEventCheck(ev event.ExeTxsEvent) bool {
-	if ev.SeqNo != executor.demandSeqNo {
-		log.Errorf("got a validation event is not required. required %d but got %d", executor.demandSeqNo, ev.SeqNo)
-		return false
-	}
-	return true
-}
-
-func (executor *Executor) increaseDemandSeqNo() {
-	executor.demandSeqNo += 1
-	log.Noticef("demand seqNo %d", executor.demandSeqNo)
-}

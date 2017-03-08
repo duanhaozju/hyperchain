@@ -5,142 +5,135 @@ import (
 	"github.com/deckarep/golang-set"
 	"github.com/pkg/errors"
 	"hyperchain/common"
-	"hyperchain/core"
 	"hyperchain/core/hyperstate"
 	"hyperchain/event"
 	"hyperchain/hyperdb"
 	"hyperchain/protos"
 	"hyperchain/tree/bucket"
 	"math/big"
-	"sync/atomic"
-	"time"
 	"hyperchain/hyperdb/db"
+	edb "hyperchain/core/db_utils"
 )
 
 // reset blockchain to a stable checkpoint status when `viewchange` occur
-func (executor *Executor) ResetStatus(ev event.VCResetEvent) {
-	executor.NotifyValidateToStop()
-	executor.WaitResetAvailable()
-	log.Debugf("receive vc reset event, required revert to %d", ev.SeqNo-1)
-	tmpDemandNumber := atomic.LoadUint64(&executor.demandNumber)
-	// 1. Reset demandNumber , demandSeqNo and maxSeqNo
-	atomic.StoreUint64(&executor.demandNumber, ev.SeqNo)
-	atomic.StoreUint64(&executor.demandSeqNo, ev.SeqNo)
-	executor.tempBlockNumber = ev.SeqNo
-	db, err := hyperdb.GetDBDatabase()
+func (executor *Executor) Rollback(ev event.VCResetEvent) {
+	executor.waitUtilRollbackAvailable()
+	defer executor.rollbackDone()
+
+	log.Noticef("[Namespace = %s] receive vc reset event, required revert to %d", executor.namespace, ev.SeqNo-1)
+	executor.setDemandNumber(ev.SeqNo)
+	executor.setDemandSeqNo(ev.SeqNo)
+	executor.setTempBlockNumber(ev.SeqNo)
+
+	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
 	if err != nil {
-		log.Error("Get Database Instance Failed! error msg,", err.Error())
-		return
-	}
-	block, err := core.GetBlockByNumber(db, ev.SeqNo-1)
-	if err != nil {
+		log.Errorf("[Namespace = %s] get database handler failed. error : ", executor.namespace, err.Error())
 		return
 	}
 	batch := db.NewBatch()
 	// 2. revert state
-	if err := executor.revertState(batch, int64(tmpDemandNumber-1), int64(ev.SeqNo-1), block.MerkleRoot); err != nil {
-		log.Errorf("revert state from %d to %d failed", tmpDemandNumber-1, ev.SeqNo-1)
+	if err := executor.revertState(batch, ev.SeqNo - 1); err != nil {
 		return
 	}
 	// 3. Delete related transaction, receipt, txmeta, and block itself in a specific range
-	if err := executor.removeDataInRange(batch, ev.SeqNo, tmpDemandNumber); err != nil {
-		log.Errorf("remove block && transaction in range %s to %s failed.", ev.SeqNo, tmpDemandNumber - 1)
+	if err := executor.cutdownChain(batch, ev.SeqNo - 1); err != nil {
+		log.Errorf("[Namespace = %s] remove block && transaction in range %d to %d failed.", ev.SeqNo, edb.GetHeightOfChain(executor.namespace))
 		return
 	}
 	// 4. remove uncommitted data
-	if err := executor.removeUncommittedData(batch); err != nil {
-		log.Errorf("remove uncommitted during the state reset failed, revert state from %d to %d failed",
-			tmpDemandNumber-1, ev.SeqNo-1)
+	if err := executor.clearUncommittedData(batch); err != nil {
+		log.Errorf("[Namespace = %s] remove uncommitted data failed", executor.namespace)
 		return
 	}
 	// 5. Reset chain
-	isGenesis := (block.Number == 0)
-	core.UpdateChain(batch, block, isGenesis, false, false)
+	edb.UpdateChainByBlcokNum(executor.namespace, batch, ev.SeqNo - 1, false, false)
 	// flush all modified into disk.
 	// represent this reset operation finish
 	// any error occur during this process
 	// batch.Write will never be called to guarantee atomic
 	batch.Write()
-	log.Debugf("revert state from %d to target %d success", tmpDemandNumber-1, ev.SeqNo-1)
 	// 6. Told consensus reset finish
 	msg := protos.VcResetDone{SeqNo: ev.SeqNo}
 	executor.consenter.RecvLocal(msg)
-	executor.NotifyValidateToBegin()
 }
 
 // CutdownBlock remove a block and reset blockchain status to the last status.
 func (executor *Executor) CutdownBlock(number uint64) error {
 	// 1. reset demand number  demand seqNo and maxSeqNo
-	executor.NotifyValidateToStop()
-	executor.WaitResetAvailable()
-	log.Noticef("cut down block %d", number)
-	atomic.StoreUint64(&executor.demandNumber, number)
-	atomic.StoreUint64(&executor.demandSeqNo, number)
-	executor.tempBlockNumber = number
+	if number != edb.GetHeightOfChain(executor.namespace) {
+		log.Errorf("try to cutdown a block which is not the latest block. ignore the request")
+		return errors.New("")
+	}
+	executor.waitUtilRollbackAvailable()
+	defer executor.rollbackDone()
+
+	log.Noticef("[Namespace = %s] cutdown block, required revert to %d", executor.namespace, number)
+	executor.setDemandNumber(number)
+	executor.setDemandSeqNo(number)
+	executor.setTempBlockNumber(number)
+
 	// 2. revert state
-	db, err := hyperdb.GetDBDatabase()
+	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
 		return err
 	}
-	block, err := core.GetBlockByNumber(db, number-1)
-	if err != nil {
-		return err
-	}
 	batch := db.NewBatch()
-	if err := executor.revertState(batch, int64(number), int64(number-1), block.MerkleRoot); err != nil {
+	if err := executor.revertState(batch, number - 1); err != nil {
 		return err
 	}
 	// 3. remove block releted data
-	if err := executor.removeDataInRange(batch, number, number+1); err != nil {
+	if err := executor.cutdownChainByRange(batch, number, number); err != nil {
 		log.Errorf("remove block && transaction %d", number)
 		return err
 	}
 	// 4. remove uncommitted data
-	if err := executor.removeUncommittedData(batch); err != nil {
+	if err := executor.clearUncommittedData(batch); err != nil {
 		log.Errorf("remove uncommitted of %d failed", number)
 		return err
 	}
 	// 5. reset chain data
-	core.UpdateChainByBlcokNum(batch, block.Number, false, false)
+	edb.UpdateChainByBlcokNum(executor.namespace, batch, number - 1, false, false)
 	// flush all modified to disk
 	batch.Write()
 	log.Noticef("cut down block #%d success. remove all related transactions, receipts, state changes and block together.", number)
-	executor.NotifyValidateToBegin()
 	return nil
 }
 
-// removeDataInRange remove transaction receipt txmeta and block itself in a specific range
-// range is [from, to).
-func (executor *Executor) removeDataInRange(batch db.Batch,from, to uint64) error  {
+func (executor *Executor) cutdownChain(batch db.Batch, targetHeight uint64) error {
+	return executor.cutdownChainByRange(batch, targetHeight + 1, edb.GetHeightOfChain(executor.namespace))
+}
+
+// cutdownChainByRange - remove block, tx, receipt in range.
+func (executor *Executor) cutdownChainByRange(batch db.Batch, from, to uint64) error  {
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		log.Error("Get Database Instance Failed! error msg,", err.Error())
 		return  err
 	}
 	// delete tx, txmeta and receipt
-	for i := from; i < to; i += 1 {
-		block, err := core.GetBlockByNumber(db, i)
+	for i := from; i <= to; i += 1 {
+		block, err := edb.GetBlockByNumber(db, i)
 		if err != nil {
 			log.Errorf("miss block %d ,error msg %s", i, err.Error())
 			continue
 		}
 
 		for _, tx := range block.Transactions {
-			if err := core.DeleteTransaction(batch, tx.GetTransactionHash().Bytes()); err != nil {
-				log.Errorf("delete useless tx in block %d failed, error msg %s", i, err.Error())
+			if err := edb.DeleteTransaction(batch, tx.GetTransactionHash().Bytes(), false, false); err != nil {
+				log.Errorf("[Namespace = %s] delete useless tx in block %d failed, error msg %s", executor.namespace, i, err.Error())
 			}
-			if err := core.DeleteReceipt(batch, tx.GetTransactionHash().Bytes()); err != nil {
-				log.Errorf("delete useless receipt in block %d failed, error msg %s", i, err.Error())
+			if err := edb.DeleteReceipt(batch, tx.GetTransactionHash().Bytes(), false, false); err != nil {
+				log.Errorf("[Namespace = %s] delete useless receipt in block %d failed, error msg %s", executor.namespace, i, err.Error())
 			}
-			if err := core.DeleteTransactionMeta(batch, tx.GetTransactionHash().Bytes()); err != nil {
-				log.Errorf("delete useless txmeta in block %d failed, error msg %s", i, err.Error())
+			if err := edb.DeleteTransactionMeta(batch, tx.GetTransactionHash().Bytes(), false, false); err != nil {
+				log.Errorf("[Namespace = %s] delete useless txmeta in block %d failed, error msg %s", executor.namespace, i, err.Error())
 			}
-			core.RollbackDataSum += 1;
 		}
+		edb.SetTxDeltaOfMemChain(executor.namespace, uint64(len(block.Transactions)))
 		// delete block
-		if err := core.DeleteBlockByNum(batch, i); err != nil {
-			log.Errorf("ViewChange, delete useless block %d failed, error msg %s", i, err.Error())
+		if err := edb.DeleteBlockByNum(executor.namespace, batch, i, false, false); err != nil {
+			log.Errorf("[Namespace = %s] delete useless block %d failed, error msg %s", executor.namespace, i, err.Error())
 		}
 	}
 	return nil
@@ -149,170 +142,105 @@ func (executor *Executor) removeDataInRange(batch db.Batch,from, to uint64) erro
 // revertState revert state from currentNumber related status to a target
 // different process logic of different state implement
 // undo from currentNumber -> targetNumber + 1.
-func (executor *Executor) revertState(batch db.Batch, currentNumber int64, targetNumber int64, targetRootHash []byte) error {
-	switch executor.GetStateType() {
-	case "hyperstate":
-		db, err := hyperdb.GetDBDatabase()
+func (executor *Executor) revertState(batch db.Batch, targetHeight uint64) error {
+	currentHeight := edb.GetHeightOfChain(executor.namespace)
+	targetBlk, err := edb.GetBlockByNumber(executor.namespace, targetHeight)
+	if err != nil {
+		log.Errorf("[Namespace = %s] get block #%d failed", executor.namespace, targetHeight)
+		return err
+	}
+	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
+	if err != nil {
+		log.Errorf("[Namespace = %s] get database handler failed.", executor.namespace)
+		return err
+	}
+	dirtyStateObjectSet := mapset.NewSet()
+	stateObjectStorageHashs := make(map[common.Address][]byte)
+	// revert state change with changeset [targetNumber+1, currentNumber]
+	// undo changes in reverse
+	journalCache := hyperstate.NewJournalCache(db)
+	for i := currentHeight; i >= targetHeight + 1; i -= 1 {
+		log.Debugf("[Namespace = %s] undo changes for #%d", executor.namespace, i)
+		j, err := db.Get(hyperstate.CompositeJournalKey(uint64(i)))
 		if err != nil {
-			log.Error("get database handler failed")
-			return err
+			log.Warningf("[Namespace = %s] get journal in database for #%d failed. make sure #%d doesn't have state change",
+				executor.namespace, i, i)
+			continue
 		}
-		dirtyStateObjectSet := mapset.NewSet()
-		stateObjectStorageHashs := make(map[common.Address][]byte)
-		// revert state change with changeset [targetNumber+1, currentNumber]
-		// undo changes in reverse
-		state, err := executor.GetStateInstance()
+		journal, err := hyperstate.UnmarshalJournal(j)
 		if err != nil {
-			log.Error("get state failed.")
-			return err
+			log.Errorf("[Namespace = %s] unmarshal journal for #%d failed", executor.namespace, i)
+			continue
 		}
-
-		tmpState := state.(*hyperstate.StateDB)
-		journalCache := hyperstate.NewJournalCache(db)
-		for i := currentNumber; i >= targetNumber+1; i -= 1 {
-			log.Debugf("undo changes for #%d", i)
-			j, err := db.Get(hyperstate.CompositeJournalKey(uint64(i)))
-			if err != nil {
-				log.Warningf("get journal in database for #%d failed. make sure #%d doesn't have state change", i, i)
-				continue
-			}
-			journal, err := hyperstate.UnmarshalJournal(j)
-			if err != nil {
-				log.Errorf("unmarshal journal for #%d failed", i)
-				continue
-			}
-			// undo journal in reverse
-			for j := len(journal.JournalList) - 1; j >= 0; j -= 1 {
-				log.Debugf("journal %s", journal.JournalList[j].String())
-				// parameters *stateDB, batch, writeThrough
-				journal.JournalList[j].Undo(tmpState, journalCache, batch, true)
-				if journal.JournalList[j].GetType() == hyperstate.StorageHashChangeType {
-					tmp := journal.JournalList[j].(*hyperstate.StorageHashChange)
-					// use struct instead of pointer since different pointers may represent same stateObject
-					dirtyStateObjectSet.Add(*tmp.Account)
-					stateObjectStorageHashs[*tmp.Account] = tmp.Prev
-				}
-			}
-			// remove persisted journals
-			batch.Delete(hyperstate.CompositeJournalKey(uint64(i)))
-		}
-		if err := journalCache.Flush(batch); err != nil {
-			log.Errorf("flush modified content failed. %s", err.Error())
-			return err
-		}
-		// revert related stateObject storage bucket tree
-		for addr := range dirtyStateObjectSet.Iter() {
-			address := addr.(common.Address)
-			prefix, _ := hyperstate.CompositeStorageBucketPrefix(address.Bytes())
-			bucketTree := bucket.NewBucketTree(string(prefix))
-			bucketTree.Initialize(hyperstate.SetupBucketConfig(executor.GetBucketSize(STATEOBJECT), executor.GetBucketLevelGroup(STATEOBJECT), executor.GetBucketCacheSize(STATEOBJECT)))
-			bucketTree.ClearAllCache()
-			// don't flush into disk util all operations finish
-			bucketTree.PrepareWorkingSet(journalCache.GetWorkingSet(hyperstate.WORKINGSET_TYPE_STATEOBJECT, address), big.NewInt(0))
-			//bucketTree.RevertToTargetBlock(batch, big.NewInt(currentNumber), big.NewInt(targetNumber), false, false)
-			hash, _ := bucketTree.ComputeCryptoHash()
-			bucketTree.AddChangesForPersistence(batch, big.NewInt(targetNumber))
-			log.Debugf("re-compute %s storage hash %s", address.Hex(), common.Bytes2Hex(hash))
-			stateObjectHash := stateObjectStorageHashs[address]
-			if common.BytesToHash(hash).Hex() != common.BytesToHash(stateObjectHash).Hex() {
-				log.Errorf("after revert to #%d, state object %s revert failed, required storage hash %s, got %s",
-					targetNumber, address.Hex(), common.Bytes2Hex(stateObjectHash), common.Bytes2Hex(hash))
-				return errors.New("revert state failed.")
+		// undo journal in reverse
+		for j := len(journal.JournalList) - 1; j >= 0; j -= 1 {
+			log.Debugf("[Namespace = %s] journal %s", executor.namespace, journal.JournalList[j].String())
+			journal.JournalList[j].Undo(executor.statedb, journalCache, batch, true)
+			if journal.JournalList[j].GetType() == hyperstate.StorageHashChangeType {
+				tmp := journal.JournalList[j].(*hyperstate.StorageHashChange)
+				// use struct instead of pointer since different pointers may represent same stateObject
+				dirtyStateObjectSet.Add(*tmp.Account)
+				stateObjectStorageHashs[*tmp.Account] = tmp.Prev
 			}
 		}
-		// revert state bucket tree
-		tree := state.GetTree()
-		bucketTree := tree.(*bucket.BucketTree)
-		bucketTree.Initialize(hyperstate.SetupBucketConfig(executor.GetBucketSize(STATEDB), executor.GetBucketLevelGroup(STATEDB), executor.GetBucketCacheSize(STATEDB)))
+		// remove persisted journals
+		batch.Delete(hyperstate.CompositeJournalKey(uint64(i)))
+	}
+	if err := journalCache.Flush(batch); err != nil {
+		log.Errorf("flush modified content failed. %s", err.Error())
+		return err
+	}
+	// revert related stateObject storage bucket tree
+	for addr := range dirtyStateObjectSet.Iter() {
+		address := addr.(common.Address)
+		prefix, _ := hyperstate.CompositeStorageBucketPrefix(address.Bytes())
+		bucketTree := bucket.NewBucketTree(string(prefix))
+		bucketTree.Initialize(hyperstate.SetupBucketConfig(executor.GetBucketSize(STATEOBJECT), executor.GetBucketLevelGroup(STATEOBJECT), executor.GetBucketCacheSize(STATEOBJECT)))
 		bucketTree.ClearAllCache()
 		// don't flush into disk util all operations finish
-		bucketTree.PrepareWorkingSet(journalCache.GetWorkingSet(hyperstate.WORKINGSET_TYPE_STATE, common.Address{}), big.NewInt(0))
+		bucketTree.PrepareWorkingSet(journalCache.GetWorkingSet(hyperstate.WORKINGSET_TYPE_STATEOBJECT, address), big.NewInt(0))
 		//bucketTree.RevertToTargetBlock(batch, big.NewInt(currentNumber), big.NewInt(targetNumber), false, false)
-		currentRootHash, err := bucketTree.ComputeCryptoHash()
-		if err != nil {
-			log.Errorf("re-compute state bucket tree hash failed, error :%s", err.Error())
-			return err
+		hash, _ := bucketTree.ComputeCryptoHash()
+		bucketTree.AddChangesForPersistence(batch, big.NewInt(targetHeight))
+		log.Debugf("[Namespace = %s] re-compute %s storage hash %s", executor.namespace, address.Hex(), common.Bytes2Hex(hash))
+		stateObjectHash := stateObjectStorageHashs[address]
+		if common.BytesToHash(hash).Hex() != common.BytesToHash(stateObjectHash).Hex() {
+			log.Errorf("[Namespace = %s] after revert to #%d, state object %s revert failed, required storage hash %s, got %s",
+				executor.namespace, targetHeight, address.Hex(), common.Bytes2Hex(stateObjectHash), common.Bytes2Hex(hash))
+			return errors.New("revert state failed.")
 		}
-		bucketTree.AddChangesForPersistence(batch, big.NewInt(targetNumber))
-		log.Debugf("re-compute state hash %s", common.Bytes2Hex(currentRootHash))
-		if bytes.Compare(currentRootHash, targetRootHash) != 0 {
-			log.Errorf("revert to a different state, required %s, but current state %s",
-				common.Bytes2Hex(targetRootHash), common.Bytes2Hex(currentRootHash))
-			return errors.New("revert state failed")
-		}
-		// revert state instance oldest and root
-		state.ResetToTarget(uint64(targetNumber+1), common.BytesToHash(targetRootHash))
-		executor.lastValidationState.Store(common.BytesToHash(targetRootHash))
-		log.Debugf("revert state from #%d to #%d success", currentNumber, targetNumber)
-	case "rawstate":
-		// there is no need to revert state, because PMT can assure the correction
-		executor.lastValidationState.Store(common.BytesToHash(targetRootHash))
 	}
+	// revert state bucket tree
+	tree := executor.statedb.GetTree()
+	bucketTree := tree.(*bucket.BucketTree)
+	bucketTree.Initialize(hyperstate.SetupBucketConfig(executor.GetBucketSize(STATEDB), executor.GetBucketLevelGroup(STATEDB), executor.GetBucketCacheSize(STATEDB)))
+	bucketTree.ClearAllCache()
+	// don't flush into disk util all operations finish
+	bucketTree.PrepareWorkingSet(journalCache.GetWorkingSet(hyperstate.WORKINGSET_TYPE_STATE, common.Address{}), big.NewInt(0))
+	//bucketTree.RevertToTargetBlock(batch, big.NewInt(currentNumber), big.NewInt(targetNumber), false, false)
+	currentRootHash, err := bucketTree.ComputeCryptoHash()
+	if err != nil {
+		log.Errorf("[Namespace = %s] re-compute state bucket tree hash failed, error :%s", executor.namespace, err.Error())
+		return err
+	}
+	bucketTree.AddChangesForPersistence(batch, big.NewInt(targetHeight))
+	log.Debugf("re-compute state hash %s", common.Bytes2Hex(currentRootHash))
+	if bytes.Compare(currentRootHash, targetBlk.MerkleRoot) != 0 {
+		log.Errorf("[Namespace = %s] revert to a different state, required %s, but current state %s",
+			executor.namespace, common.Bytes2Hex(targetBlk.MerkleRoot), common.Bytes2Hex(currentRootHash))
+		return errors.New("revert state failed")
+	}
+	// revert state instance oldest and root
+	// TODO
+	executor.statedb.ResetToTarget(uint64(targetHeight +1), common.BytesToHash(targetBlk.MerkleRoot))
+	executor.recordStateHash(common.BytesToHash(targetBlk.MerkleRoot))
+	log.Debugf("[Namespace = %s] revert state from #%d to #%d success", executor.namespace, currentHeight, targetHeight)
 	return nil
 }
 
 // removeUncommittedData remove uncommitted validation result avoid of memory leak.
-func (executor *Executor) removeUncommittedData(batch db.Batch) error {
-	switch executor.GetStateType() {
-	case "hyperstate":
-		state, err := executor.GetStateInstance()
-		if err != nil {
-			log.Errorf("remove uncommitted data failed because can not get state instance")
-			return err
-		}
-		state.Purge()
-	case "rawstate":
-		keys := executor.blockCache.Keys()
-		for _, key := range keys {
-			ret, _ := executor.blockCache.Get(key)
-			if ret == nil {
-				continue
-			}
-			record := ret.(BlockRecord)
-			for i, tx := range record.ValidTxs {
-				if err := core.DeleteTransaction(batch, tx.GetTransactionHash().Bytes()); err != nil {
-					log.Errorf("ViewChange, delete useless tx in cache %d failed, error msg %s", i, err.Error())
-				}
-
-				if err := core.DeleteReceipt(batch, tx.GetTransactionHash().Bytes()); err != nil {
-					log.Errorf("ViewChange, delete useless receipt in cache %d failed, error msg %s", i, err.Error())
-				}
-				if err := core.DeleteTransactionMeta(batch, tx.GetTransactionHash().Bytes()); err != nil {
-					log.Errorf("ViewChange, delete useless txmeta in cache %d failed, error msg %s", i, err.Error())
-				}
-			}
-		}
-		// clear cache, all data in cache is useless because consensus module will resend those validation event
-		// IMPORTANT
-		// if validation cache is not clear, new validation event could be ignored, which leads to some event
-		// will never be execute!
-		executor.blockCache.Purge()
-		// 4. Purge validationQueue
-		executor.validateEventQueue.Purge()
-	}
+func (executor *Executor) clearUncommittedData(batch db.Batch) error {
+	executor.statedb.Purge()
 	return nil
 }
-
-func (executor *Executor) NotifyValidateToStop() {
-	atomic.StoreInt32(&executor.validateBehaveFlag, VALIDATEBEHAVETYPE_DROP)
-}
-
-func (executor *Executor) NotifyValidateToBegin() {
-	atomic.StoreInt32(&executor.validateBehaveFlag, VALIDATEBEHAVETYPE_NORMAL)
-}
-
-func (executor *Executor) WaitResetAvailable() {
-	ticker := time.NewTicker(10 * time.Millisecond)
-	for {
-		select {
-		case <-ticker.C:
-			if atomic.LoadInt32(&executor.validateQueueLen) == 0 && atomic.LoadInt32(&executor.validateInProgress) == PROGRESS_FALSE && atomic.LoadInt32(&executor.commitQueueLen) == 0 && atomic.LoadInt32(&executor.commitInProgress) == PROGRESS_FALSE{
-				return
-			} else {
-				continue
-			}
-		}
-	}
-}
-
 

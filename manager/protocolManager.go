@@ -194,7 +194,7 @@ func (self *ProtocolManager) respHandlerLoop() {
 		switch ev := obj.Data.(type) {
 		case event.RespInvalidTxsEvent:
 			// receive invalid tx message, save to db
-			self.executor.StoreInvalidResp(ev)
+			self.executor.StoreInvalidTransaction(ev)
 		}
 	}
 }
@@ -205,7 +205,7 @@ func (self *ProtocolManager) viewChangeLoop() {
 		switch ev := obj.Data.(type) {
 		case event.VCResetEvent:
 			// receive invalid tx message, save to db
-			self.executor.ResetStatus(ev)
+			self.executor.Rollback(ev)
 		case event.InformPrimaryEvent:
 			//log.Notice("InformPrimaryEvent")
 			self.Peermanager.SetPrimary(ev.Primary)

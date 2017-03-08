@@ -4,52 +4,51 @@ import (
 	"encoding/hex"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
-	"hyperchain/core"
 	"hyperchain/core/types"
 	"hyperchain/event"
 	"hyperchain/hyperdb"
 	"hyperchain/p2p"
 	"hyperchain/protos"
-	"hyperchain/recovery"
 	"time"
-	"sync/atomic"
 	"hyperchain/hyperdb/db"
+	edb "hyperchain/core/db_utils"
+
 )
 
 func (executor *Executor) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerManager p2p.PeerManager) {
-	executor.commitQueue <- ev
+	executor.addCommitEvent(ev)
 	if executor.peerManager == nil {
 		executor.peerManager = peerManager
 	}
-	atomic.AddInt32(&executor.commitQueueLen, 1)
 }
 
-func (executor *Executor) commitBackendLoop() {
-	for ev := range executor.commitQueue {
-		success := executor.consumeCommitEvent(ev)
+func (executor *Executor) ListenCommitEvent() {
+	for {
+		ev := executor.fetchCommitEvent()
+		success := executor.processCommitEvent(ev, executor.processCommitDone)
 		if !success {
 			log.Errorf("commit block #%d failed, system crush down.", ev.SeqNo)
 		}
-		atomic.AddInt32(&executor.commitQueueLen, -1)
 	}
 }
 
 // consumeCommitEvent - consume commit event from channel.
-func (executor *Executor) consumeCommitEvent(ev event.CommitOrRollbackBlockEvent) bool {
-	atomic.StoreInt32(&executor.commitInProgress, PROGRESS_TRUE)
-	defer atomic.StoreInt32(&executor.commitInProgress, PROGRESS_FALSE)
-	if executor.commitValidationCheck(ev) == false {
-		log.Errorf("commit event %d not satisfied demand", ev.SeqNo)
+func (executor *Executor) processCommitEvent(ev event.CommitOrRollbackBlockEvent, done func()) bool {
+	executor.markCommitBusy()
+	defer executor.markCommitIdle()
+	defer done()
+	if !executor.commitValidationCheck(ev) {
+		log.Errorf("[Namespace = %s] commit event %d not satisfied demand", executor.namespace, ev.SeqNo)
 		return false
 	}
-	block := executor.generateBlock(ev)
+	block := executor.constructBlock(ev)
 	if block == nil {
-		log.Errorf("generate new block for %d commit event failed.")
+		log.Errorf("[Namespace = %s] construct new block for %d commit event failed.", executor.namespace, ev.SeqNo)
 		return false
 	}
 	record := executor.getValidateRecord(ev.Hash)
 	if record == nil {
-		log.Errorf("no validation record for #%d found", ev.SeqNo)
+		log.Errorf("[Namespace = %s] no validation record for #%d found", executor.namespace, ev.SeqNo)
 		return false
 	}
 	if err := executor.writeBlock(block, record); err != nil {
@@ -57,44 +56,38 @@ func (executor *Executor) consumeCommitEvent(ev event.CommitOrRollbackBlockEvent
 		return false
 	}
 	// throw all invalid transactions back.
-	executor.notifyInvalidTransactions(record.InvalidTxs, ev.IsPrimary, executor.peerManager)
-	executor.increaseDemandBlockNumber()
-	executor.blockCache.Remove(ev.Hash)
+	if ev.IsPrimary {
+		executor.throwInvalidTransactionBack(record.InvalidTxs)
+	}
+	executor.incDemandNumber()
+	executor.cache.validationResultCache.Remove(ev.Hash)
 	return true
 }
 
 // writeBlock - flush a block into disk.
-func (executor *Executor) writeBlock(block *types.Block, record *BlockRecord) error {
-	state, err := executor.GetStateInstance()
-	if err != nil {
-		log.Errorf("get state instance failed when write #%d", block.Number)
-		return err
-	}
-	batch := state.FetchBatch(block.Number)
+func (executor *Executor) writeBlock(block *types.Block, record *ValidationResultRecord) error {
+	batch := executor.statedb.FetchBatch(record.SeqNo)
 	if err := executor.persistTransactions(batch, block.Transactions, block.Number); err != nil {
-		log.Errorf("persist transactions of #%d failed.", block.Number)
+		log.Errorf("[Namespace = %s] persist transactions of #%d failed.", executor.namespace, block.Number)
 		return err
 	}
 	if err := executor.persistReceipts(batch, record.Receipts, block.Number, common.BytesToHash(block.BlockHash)); err != nil {
-		log.Errorf("persist receipts of #%d failed.", block.Number)
+		log.Errorf("[Namespace = %s] persist receipts of #%d failed.", executor.namespace, block.Number)
 		return err
 	}
-	if err, _ := core.PersistBlock(batch, block, executor.GetBlockVersion(), false, false); err != nil {
-		log.Errorf("persist block #%d into database failed! error msg, ", block.Number, err.Error())
+	if err, _ := edb.PersistBlock(batch, block, false, false); err != nil {
+		log.Errorf("[Namespace = %s] persist block #%d into database failed.", executor.namespace, block.Number, err.Error())
 		return err
 	}
-	core.UpdateChain(batch, block, false, false, false)
+	edb.UpdateChain(executor.namespace, batch, block, false, false, false)
 	batch.Write()
-	// mark the block process finish, remove some stuff avoid of memory leak
-	// IMPORTANT this should be done after batch.Write been called
-	state.MarkProcessFinish(block.Number)
-	//log.Critical("state #%d %s", vid, string(state.Dump()))
-	// write checkpoint data
-	if block.Number%10 == 0 && block.Number != 0 {
-		core.WriteChainChan()
+	executor.statedb.MarkProcessFinish(record.SeqNo)
+
+	if block.Number %10 == 0 && block.Number != 0 {
+		edb.WriteChainChan(executor.namespace)
 	}
-	log.Notice("Block number", block.Number)
-	log.Notice("Block hash", hex.EncodeToString(block.BlockHash))
+	log.Noticef("[Namespace = %s] Block number", executor.namespace, block.Number)
+	log.Noticef("[Namespace = %s] Block hash", executor.namespace, hex.EncodeToString(block.BlockHash))
 	// remove Cached Transactions which used to check transaction duplication
 	msg := protos.RemoveCache{Vid: record.VID}
 	executor.consenter.RecvLocal(msg)
@@ -103,25 +96,24 @@ func (executor *Executor) writeBlock(block *types.Block, record *BlockRecord) er
 
 // getValidateRecord - get validate record with given hash identification.
 // nil will be return if no record been found.
-func (executor *Executor) getValidateRecord(hash string) *BlockRecord {
-	ret, existed := executor.blockCache.Get(hash)
+func (executor *Executor) getValidateRecord(hash string) *ValidationResultRecord {
+	ret, existed := executor.fetchValidationResult(hash)
 	if !existed {
-		log.Notice("No record found when commit block, record hash:", hash)
+		log.Noticef("[Namespace = %s] no validation result found when commit block, hash %s", executor.namespace, hash)
 		return nil
 	}
-	record := ret.(BlockRecord)
-	return &record
+	return &ret
 }
 
 // generateBlock - generate a block with given data.
-func (executor *Executor) generateBlock(ev event.CommitOrRollbackBlockEvent) *types.Block {
+func (executor *Executor) constructBlock(ev event.CommitOrRollbackBlockEvent) *types.Block {
 	record := executor.getValidateRecord(ev.Hash)
 	if record == nil {
 		return nil
 	}
 	// 1.generate a new block with the argument in cache
 	newBlock := &types.Block{
-		ParentHash:  core.GetChainCopy().LatestBlockHash,
+		ParentHash:  edb.GetParentBlockHash(executor.namespace),
 		MerkleRoot:  record.MerkleRoot,
 		TxRoot:      record.TxRoot,
 		ReceiptRoot: record.ReceiptRoot,
@@ -140,59 +132,30 @@ func (executor *Executor) generateBlock(ev event.CommitOrRollbackBlockEvent) *ty
 // commitValidationCheck - check whether this commit event satisfy demand.
 func (executor *Executor) commitValidationCheck(ev event.CommitOrRollbackBlockEvent) bool {
 	// 1. check whether this ev is the demand one
-	if ev.SeqNo != executor.demandNumber {
-		log.Errorf("receive a commit event %d which is not demand, drop it.", ev.SeqNo)
+	if !executor.isDemandNumber(ev.SeqNo){
+		log.Errorf("[Namespace = %s] receive a commit event %d which is not demand, drop it.", executor.namespace, ev.SeqNo)
 		return false
 	}
 	// 2. check whether validation result exist
-	ret, existed := executor.blockCache.Get(ev.Hash)
+	ret, existed := executor.cache.validationResultCache.Get(ev.Hash)
 	if !existed {
-		log.Notice("No record found when commit block, record hash:", ev.Hash)
 		return false
 	}
-	record := ret.(BlockRecord)
+	record := ret.(ValidationResultRecord)
 	// 3. check whether ev's seqNo equal to record seqNo which act as block number
 	vid := record.VID
 	tempBlockNumber := record.SeqNo
 	if tempBlockNumber != ev.SeqNo {
-		log.Errorf("miss match temp block number<#%d>and actually block number<#%d> for vid #%d validation. commit for block #%d failed",
-			tempBlockNumber, ev.SeqNo, vid, ev.SeqNo)
+		log.Errorf("[Namespace = %s] miss match temp block number<#%d>and actually block number<#%d> for vid #%d validation. commit for block #%d failed",
+			executor.namespace, tempBlockNumber, ev.SeqNo, vid, ev.SeqNo)
 		return false
 	}
 	return true
 }
 
-// notifyInvalidTransactions - notify sender peer for invalid transactions.
-func (executor *Executor) notifyInvalidTransactions(invalidTransactions []*types.InvalidTransactionRecord, primary bool, peerManager p2p.PeerManager) {
-	if primary {
-		for _, t := range invalidTransactions {
-			payload, err := proto.Marshal(t)
-			if err != nil {
-				log.Error("Marshal tx error")
-			}
-			if t.Tx.Id == uint64(peerManager.GetNodeId()) {
-				executor.StoreInvalidResp(event.RespInvalidTxsEvent{
-					Payload: payload,
-				})
-				continue
-			}
-			var peers []uint64
-			peers = append(peers, t.Tx.Id)
-			peerManager.SendMsgToPeers(payload, peers, recovery.Message_INVALIDRESP)
-		}
-	}
-}
-
-// increaseDemandBlockNumber - increase current demand block number for commit.
-func (executor *Executor) increaseDemandBlockNumber() {
-	executor.demandNumber += 1
-	log.Noticef("demand block number %d", executor.demandNumber)
-}
-
 func (executor *Executor) persistTransactions(batch db.Batch, transactions []*types.Transaction, blockNumber uint64) error {
 	for i, transaction := range transactions {
-		if err, _ := core.PersistTransaction(batch, transaction, executor.GetTransactionVersion(), false, false); err != nil {
-			log.Error("put tx data into database failed! error msg, ", err.Error())
+		if err, _ := edb.PersistTransaction(batch, transaction, false, false); err != nil {
 			return err
 		}
 		// persist transaction meta data
@@ -200,8 +163,7 @@ func (executor *Executor) persistTransactions(batch db.Batch, transactions []*ty
 			BlockIndex: blockNumber,
 			Index:      int64(i),
 		}
-		if err := core.PersistTransactionMeta(batch, meta, transaction.GetTransactionHash(), false, false); err != nil {
-			log.Error("Put txmeta into database failed! error msg, ", err.Error())
+		if err := edb.PersistTransactionMeta(batch, meta, transaction.GetTransactionHash(), false, false); err != nil {
 			return err
 		}
 	}
@@ -214,7 +176,6 @@ func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Rece
 	for _, receipt := range receipts {
 		logs, err := receipt.GetLogs()
 		if err != nil {
-			log.Error("re assign transaction log, unmarshal receipt failed")
 			return err
 		}
 		for _, log := range logs {
@@ -222,30 +183,27 @@ func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Rece
 			log.BlockNumber = blockNumber
 		}
 		receipt.SetLogs(logs)
-		if err, _ := core.PersistReceipt(batch, receipt, executor.GetTransactionVersion(), false, false); err != nil {
-			log.Error("Put receipt into database failed! error msg, ", err.Error())
+		if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-
 // save the invalid transaction into database for client query
-func (executor *Executor) StoreInvalidResp(ev event.RespInvalidTxsEvent) {
+func (executor *Executor) StoreInvalidTransaction(ev event.RespInvalidTxsEvent) {
 	invalidTx := &types.InvalidTransactionRecord{}
 	err := proto.Unmarshal(ev.Payload, invalidTx)
 	if err != nil {
 		log.Error("unmarshal invalid transaction record payload failed")
 	}
 	// save to db
-	log.Notice("invalid transaction", common.BytesToHash(invalidTx.Tx.TransactionHash).Hex())
-	db, err := hyperdb.GetDBDatabase()
+	log.Noticef("[Namespace = %s]invalid transaction", common.BytesToHash(invalidTx.Tx.TransactionHash).Hex())
+	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
 	if err != nil {
-		log.Error("get database instance failed! error msg,", err.Error())
 		return
 	}
-	err, _ = core.PersistInvalidTransactionRecord(db.NewBatch(), invalidTx, true, true)
+	err, _ = edb.PersistInvalidTransactionRecord(db.NewBatch(), invalidTx, true, true)
 	if err != nil {
 		log.Error("save invalid transaction record failed,", err.Error())
 		return
