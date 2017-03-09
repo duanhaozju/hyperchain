@@ -41,11 +41,12 @@ type Executor struct {
 	statedb     vm.Database
 }
 
-func NewExecutor(namespace string, consenter consensus.Consenter, conf *common.Config, commonHash crypto.CommonHash, encryption crypto.Encryption, eventMux *event.TypeMux) *Executor {
+func NewExecutor(namespace string, consenter consensus.Consenter, peerManager p2p.PeerManager, conf *common.Config, commonHash crypto.CommonHash, encryption crypto.Encryption, eventMux *event.TypeMux) *Executor {
 	helper := NewHelper(eventMux)
 	executor := &Executor{
 		namespace:       namespace,
 		consenter:       consenter,
+		peerManager:     peerManager,
 		conf:            conf,
 		commonHash:      commonHash,
 		encryption:      encryption,

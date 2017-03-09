@@ -111,7 +111,7 @@ func (executor *Executor) constructBlock(ev event.CommitOrRollbackBlockEvent) *t
 	}
 	// 1.generate a new block with the argument in cache
 	newBlock := &types.Block{
-		ParentHash:  edb.GetParentBlockHash(executor.namespace),
+		ParentHash:  edb.GetLatestBlockHash(executor.namespace),
 		MerkleRoot:  record.MerkleRoot,
 		TxRoot:      record.TxRoot,
 		ReceiptRoot: record.ReceiptRoot,
