@@ -1,0 +1,37 @@
+###########################################################
+#  _   _                        ____ _           _        #
+# | | | |_   _ _ __   ___ _ __ / ___| |__   __ _(_)_ __   #
+# | |_| | | | | '_ \ / _ \ '__| |   | '_ \ / _\` | | '_ \ #
+# |  _  | |_| | |_) |  __/ |  | |___| | | | (_| | | | | | #
+# |_| |_|\__, | .__/ \___|_|   \____|_| |_|\__,_|_|_| |_| #
+#        |___/|_|                                         #
+###########################################################
+
+global:
+
+
+    ######################################################
+    # config log's level by module                       #
+    #                                                    #
+    # CRITICAL ERROR WARNING NOTICE INFO DEBUG           #
+    # high <------------- log level -------> low         #
+    #                                                    #
+    ######################################################
+    logs:
+        # dump the log file or not
+        dumpfile: true
+        newLogFileInterval: 24h  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+                                # such as "300ms", "2h45m".
+
+        logsdir: "./build/logs"
+        # default loglevel for all modules which can be override by module level log setting
+        loglevel: "NOTICE"
+        file_format: "%[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
+        console_format: "%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
+
+        module:
+            #set log level by module
+            p2p: "NOTICE"
+            consensus: "NOTICE"
+            core: "NOTICE"
+            hyperdb: "NOTICE"

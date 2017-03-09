@@ -26,18 +26,9 @@ import (
 	"fmt"
 )
 
-
-
-
-
-
 type argT struct {
 	cli.Helper
-	//NodeID     int    `cli:"o,id" usage:"node ID" dft:"1"`
 	ConfigPath string `cli:"c,conf" usage:"config file path" dft:"./config/global.yaml"`
-	//GRPCPort   int    `cli:"l,rpcport" usage:"inner grpc connect port" dft:"8001"`
-	//HTTPPort   int    `cli:"t,httpport" useage:"jsonrpc open port" dft:"8081"`
-	//RESTPort   int    `cli:"f,restport" useage:"restful api port" dft:"9000"`
 }
 
 func checkLicense(licensePath string) (err error, expiredTime time.Time) {
@@ -91,10 +82,6 @@ func checkLicense(licensePath string) (err error, expiredTime time.Time) {
 
 func initConf(argv *argT) *common.Config {
 	conf := common.NewConfig(argv.ConfigPath)
-	//conf.Set(common.HYPERCHAIN_ID, argv.NodeID)
-	//conf.Set(common.HTTP_PORT, argv.HTTPPort)
-	//conf.Set(common.REST_PORT, argv.RESTPort)
-	//conf.Set(common.GRPC_PORT, argv.GRPCPort)
 	// read the global peers path
 	peerConfigPath := conf.GetString("global.configs.peers")
 	peerViper := viper.New()
@@ -143,7 +130,7 @@ func main() {
 		/**
 		 *传入true则开启所有验证，false则为取消ca以及签名的所有验证
 		 */
-		globalConfig := viper.New();
+		globalConfig := viper.New()
 		globalConfig.SetConfigFile(conf.GetString(common.C_GLOBAL_CONFIG_PATH))
 		err = globalConfig.ReadInConfig()
 		if err != nil{
@@ -156,7 +143,6 @@ func main() {
 
 
 		//init peer manager to start grpc server and client
-		//grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath())
 		grpcPeerMgr := p2p.NewGrpcManager(conf)
 
 		//init genesis
@@ -166,10 +152,9 @@ func main() {
 		cs := controller.NewConsenter(uint64(config.getNodeID()), eventMux, config.getPBFTConfigPath())
 
 		//init encryption object
-
 		encryption := crypto.NewEcdsaEncrypto("ecdsa")
 		encryption.GenerateNodeKey(strconv.Itoa(config.getNodeID()), config.getKeyNodeDir())
-		//
+
 		am := accounts.NewAccountManager(config.getKeystoreDir(), encryption)
 		am.UnlockAllAccount(config.getKeystoreDir())
 
@@ -197,10 +182,6 @@ func main() {
 			exist,
 			expiredTime, cm)
 		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(), config.getLogDumpFileDir(), eventMux, pm, cm, conf)
-
-		//go func() {
-		//	log.Println(http.ListenAndServe("localhost:6064", nil))
-		//}()
 
 		<-exist
 		return nil
