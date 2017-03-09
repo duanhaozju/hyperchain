@@ -289,7 +289,7 @@ func (pbft *pbftImpl) startTimerIfOutstandingRequests() {
 			}
 			return digests
 		}()
-		pbft.startNewViewTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("outstanding request batches num=%v", len(getOutstandingDigests)))
+		pbft.softStartNewViewTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("outstanding request batches num=%v", len(getOutstandingDigests)))
 	} else if pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
 		pbft.nullReqTimerReset()
 	}

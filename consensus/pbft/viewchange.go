@@ -1010,9 +1010,27 @@ func (pbft *pbftImpl) stopNewViewTimer() {
 	pbft.pbftTimerMgr.stopTimer(NEW_VIEW_TIMER)
 }
 
-//startViewChangeTimer
+//startNewViewTimer stop all running new view timers and  start a new view timer
 func (pbft *pbftImpl) startNewViewTimer(timeout time.Duration, reason string) {
 	logger.Debugf("Replica %d starting new view timer for %s: %s", pbft.id, timeout, reason)
+	pbft.status.activeState(NEW_VIEW_TIMER_ACTIVE)
+
+	event := &LocalEvent{
+		Service:   VIEW_CHANGE_SERVICE,
+		EventType: VIEW_CHANGE_TIMER_EVENT,
+	}
+
+	af := func(){
+		pbft.pbftEventQueue.Push(event)
+	}
+
+	pbft.pbftTimerMgr.startTimerWithNewTT(NEW_VIEW_TIMER, timeout, af)
+}
+
+//softstartNewViewTimer start a new view timer no matter how many existed new view timer
+func (pbft *pbftImpl) softStartNewViewTimer(timeout time.Duration, reason string) {
+	logger.Debugf("Replica %d soft starting new view timer for %s: %s", pbft.id, timeout, reason)
+	pbft.vcMgr.newViewTimerReason = reason
 	pbft.status.activeState(NEW_VIEW_TIMER_ACTIVE)
 
 	event := &LocalEvent{

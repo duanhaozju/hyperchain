@@ -396,7 +396,7 @@ func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) 
 	pbft.helper.InnerBroadcast(msg)
 	pbft.batchVdr.updateLCVid()
 
-	pbft.startNewViewTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
+	pbft.softStartNewViewTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
 
 }
 
@@ -445,7 +445,7 @@ func (pbft *pbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 	}
 
 	if pbft.status.checkStatesAnd(!pbft.status[SKIP_IN_PROGRESS], !pbft.status[IN_RECOVERY]) {
-		pbft.startNewViewTimer(pbft.pbftTimerMgr.requestTimeout,
+		pbft.softStartNewViewTimer(pbft.pbftTimerMgr.requestTimeout,
 			fmt.Sprintf("new pre-prepare for request batch view=%d/seqNo=%d, hash=%s", preprep.View, preprep.SequenceNumber, preprep.BatchDigest))
 	}
 
