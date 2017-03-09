@@ -72,12 +72,12 @@ func (executor *Executor) isDemandNumber(num uint64) bool {
 // Demand seqNo
 func (executor *Executor) incDemandSeqNo() {
 	executor.status.demandSeqNo += 1
-	log.Noticef("[Namespace = %s] increase demand seqNo to %d", executor.namespace, executor.status.demandSeqNo)
+	log.Debugf("[Namespace = %s] increase demand seqNo to %d", executor.namespace, executor.status.demandSeqNo)
 }
 
 func (executor *Executor) setDemandSeqNo(num uint64) {
 	executor.status.demandSeqNo = num
-	log.Noticef("[Namespace = %s] set demand seqNo to %d", executor.namespace, executor.status.demandSeqNo)
+	log.Debugf("[Namespace = %s] set demand seqNo to %d", executor.namespace, executor.status.demandSeqNo)
 }
 
 func (executor *Executor) getDemandSeqNo() uint64 {
@@ -91,12 +91,12 @@ func (executor *Executor) isDemandSeqNo(num uint64) bool {
 // Temp block number
 func (executor *Executor) incTempBlockNumber() {
 	executor.status.tempBlockNumber += 1
-	log.Noticef("[Namespace = %s] increase temp block number to %d", executor.namespace, executor.status.tempBlockNumber)
+	log.Debugf("[Namespace = %s] increase temp block number to %d", executor.namespace, executor.status.tempBlockNumber)
 }
 
 func (executor *Executor) setTempBlockNumber(num uint64) {
 	executor.status.tempBlockNumber = num
-	log.Noticef("[Namespace = %s] set temp block number to %d", executor.namespace, executor.status.tempBlockNumber)
+	log.Debugf("[Namespace = %s] set temp block number to %d", executor.namespace, executor.status.tempBlockNumber)
 }
 
 func (executor *Executor) getTempBlockNumber() uint64 {

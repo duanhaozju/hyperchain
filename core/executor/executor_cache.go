@@ -103,13 +103,13 @@ func (executor *Executor) processValidationDone() {
 func (executor *Executor) addCommitEvent(ev event.CommitOrRollbackBlockEvent) {
 	executor.cache.commitEventC <- ev
 	atomic.AddInt32(&executor.status.commitQueueLen, 1)
-	log.Noticef("[Namespace = %s] receive a commit event #%d", executor.namespace, ev.SeqNo)
+	log.Debugf("[Namespace = %s] receive a commit event #%d", executor.namespace, ev.SeqNo)
 }
 
 // fetchCommitEvent - got a commit event from channel buffer.
 func (executor *Executor) fetchCommitEvent() event.CommitOrRollbackBlockEvent {
 	ev := <- executor.cache.commitEventC
-	log.Noticef("[Namespace = %s] fetch a commit event #%d", executor.namespace, ev.SeqNo)
+	log.Debugf("[Namespace = %s] fetch a commit event #%d", executor.namespace, ev.SeqNo)
 	return ev
 }
 
@@ -123,7 +123,7 @@ func (executor *Executor) addToSyncCache(block *types.Block) {
 	blks, existed := executor.fetchFromSyncCache(block.Number)
 	if existed {
 		if _, ok := blks[common.Bytes2Hex(block.BlockHash)]; ok {
-			log.Noticef("[Namespace = %s] receive duplicate block: %d %s", executor.namespace, block.Number, common.Bytes2Hex(block.BlockHash))
+			log.Debugf("[Namespace = %s] receive duplicate block: %d %s", executor.namespace, block.Number, common.Bytes2Hex(block.BlockHash))
 		} else {
 			log.Debugf("[Namespace = %s] receive  block with different hash: %d %s", executor.namespace, block.Number, common.Bytes2Hex(block.BlockHash))
 			blks[common.Bytes2Hex(block.BlockHash)] = *block

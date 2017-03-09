@@ -875,7 +875,6 @@ func (s *StateDB) commit(dbw db.Batch, deleteEmptyObjects bool) (root common.Has
 			return common.Hash{}, err
 		}
 		s.root = common.BytesToHash(hash)
-		log.Noticef("state hash %s", s.root.Hex())
 		s.bucketTree.AddChangesForPersistence(dbw, big.NewInt(int64(s.curSeqNo)))
 	}
 	return s.root, err

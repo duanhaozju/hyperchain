@@ -85,8 +85,8 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	if block.Number % 10 == 0 && block.Number != 0 {
 		edb.WriteChainChan(executor.namespace)
 	}
-	log.Noticef("[Namespace = %s] Block number", executor.namespace, block.Number)
-	log.Noticef("[Namespace = %s] Block hash", executor.namespace, hex.EncodeToString(block.BlockHash))
+	log.Noticef("[Namespace = %s] Block number %d", executor.namespace, block.Number)
+	log.Noticef("[Namespace = %s] Block hash %s", executor.namespace, hex.EncodeToString(block.BlockHash))
 	// remove Cached Transactions which used to check transaction duplication
 	executor.informConsensus(CONSENSUS_LOCAL, protos.RemoveCache{Vid: record.VID})
 	return nil
@@ -135,11 +135,10 @@ func (executor *Executor) commitValidationCheck(ev event.CommitOrRollbackBlockEv
 		return false
 	}
 	// 2. check whether validation result exist
-	ret, existed := executor.cache.validationResultCache.Get(ev.Hash)
-	if !existed {
+	record := executor.getValidateRecord(ev.Hash)
+	if record == nil {
 		return false
 	}
-	record := ret.(ValidationResultRecord)
 	// 3. check whether ev's seqNo equal to record seqNo which act as block number
 	vid := record.VID
 	tempBlockNumber := record.SeqNo
