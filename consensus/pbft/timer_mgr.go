@@ -83,7 +83,7 @@ func (tm *timerManager) softStartTimer(tname string, afterfunc func()) int {
 		time.AfterFunc(tm.ttimers[tname].timeout, send)
 		return counts - 1
 	} else {
-		return nil
+		return -1
 	}
 }
 
@@ -126,7 +126,7 @@ func (tm *timerManager) softStartTimerWithNewTT(tname string, d time.Duration, a
 		time.AfterFunc(d, send)
 		return counts - 1
 	} else {
-		return nil
+		return -1
 	}
 
 }
