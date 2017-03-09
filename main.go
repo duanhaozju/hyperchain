@@ -36,6 +36,10 @@ type argT struct {
 	//RESTPort   int    `cli:"f,restport" useage:"restful api port" dft:"9000"`
 }
 
+const (
+	DefaultNamespace = "Global"
+)
+
 func checkLicense(licensePath string) (err error, expiredTime time.Time) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -127,7 +131,7 @@ func main() {
 
 		conf.MergeConfig(config.getDbConfig())//todo:refactor it
 
-		db_utils.InitDB(conf, "Global", config.getDbConfig(),conf.GetInt(common.C_NODE_ID))
+		db_utils.InitDBForNamespace(conf, DefaultNamespace, config.getDbConfig(),conf.GetInt(common.C_NODE_ID))
 
 		err, expiredTime := checkLicense(config.getLicense())
 		if err != nil {
@@ -155,10 +159,10 @@ func main() {
 		grpcPeerMgr := p2p.NewGrpcManager(conf)
 
 		//init genesis
-		core.CreateInitBlock(conf)
+		core.CreateInitBlock(DefaultNamespace, conf)
 
 		//init pbft consensus
-		cs := controller.NewConsenter(uint64(config.getNodeID()), eventMux, config.getPBFTConfigPath())
+		cs := controller.NewConsenter(DefaultNamespace, uint64(config.getNodeID()), eventMux, config.getPBFTConfigPath())
 
 		//init encryption object
 
@@ -172,7 +176,7 @@ func main() {
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
 
 		//init block pool to save block
-		executor := executor.NewExecutor(cs, conf, kec256Hash, encryption, eventMux)
+		executor := executor.NewExecutor(DefaultNamespace, cs, conf, kec256Hash, encryption, eventMux)
 		if executor == nil {
 			return errors.New("Initialize BlockPool failed")
 		}
@@ -181,7 +185,9 @@ func main() {
 		exist := make(chan bool)
 		syncReplicaInterval, _ := config.getSyncReplicaInterval()
 		syncReplicaEnable := config.getSyncReplicaEnable()
-		pm := manager.New(eventMux,
+		pm := manager.New(
+			DefaultNamespace,
+			eventMux,
 			executor,
 			grpcPeerMgr,
 			cs,

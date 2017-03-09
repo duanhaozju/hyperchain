@@ -5,7 +5,6 @@ package hpc
 import (
 	"encoding/json"
 	"fmt"
-	"hyperchain/core"
 	"math/big"
 	"strconv"
 	"strings"
@@ -116,7 +115,7 @@ func (n *BlockNumber) UnmarshalJSON(data []byte) error {
 	in := new(big.Int)
 	_, ok := in.SetString(input, 0)
 
-	latest_number := core.GetChainCopy().Height
+	latest_number := uint64(10)
 
 	if !ok { // test if user supplied string tag
 

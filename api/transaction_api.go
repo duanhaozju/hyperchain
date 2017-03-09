@@ -78,7 +78,7 @@ type TransactionResult struct {
 	InvalidMsg  string  `json:"invalidMsg,omitempty"`
 }
 
-func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb db.Database, config *common.Config) *PublicTransactionAPI {
+func NewPublicTransactionAPI(namespace string, eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb db.Database, config *common.Config) *PublicTransactionAPI {
 	fillrate, err := getFillRate(config, TRANSACTION)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
@@ -90,6 +90,7 @@ func NewPublicTransactionAPI(eventMux *event.TypeMux, pm *manager.ProtocolManage
 		peak = 500
 	}
 	return &PublicTransactionAPI{
+		namespace:   namespace,
 		eventMux:    eventMux,
 		pm:          pm,
 		db:          hyperDb,

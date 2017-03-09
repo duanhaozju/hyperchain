@@ -40,8 +40,10 @@ func (executor *Executor) informP2P(msgType string, message interface{}) error {
 			return err
 		}
 		executor.peerManager.SendMsgToPeers(payload, executor.status.syncFlag.SyncPeers, recovery.Message_SYNCCHECKPOINT)
+		return nil
 	default:
 		return NoDefinedCaseErr
 	}
+	return nil
 }
 

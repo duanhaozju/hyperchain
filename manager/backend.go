@@ -31,6 +31,7 @@ import (
 
 // init protocol manager params and start
 func New(
+	namespace string,
 	eventMux *event.TypeMux,
 	executor *executor.Executor,
 	peerManager p2p.PeerManager,
@@ -44,7 +45,7 @@ func New(
 
 	//add reconnect param
 
-	protocolManager := NewProtocolManager(executor, peerManager, eventMux, consenter, am, commonHash, syncReplicaInterval, syncReplica, exist, expiredTime)
+	protocolManager := NewProtocolManager(namespace, executor, peerManager, eventMux, consenter, am, commonHash, syncReplicaInterval, syncReplica, exist, expiredTime)
 	aliveChan := make(chan int)
 	protocolManager.Start(aliveChan, cm)
 

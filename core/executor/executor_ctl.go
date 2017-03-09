@@ -38,8 +38,8 @@ func initializeExecutorStatus(executor *Executor) error {
 		return err
 	} else {
 		executor.status.lastValidationState.Store(common.BytesToHash(blk.MerkleRoot))
-		log.Noticef("[Namespace = %s] initialize executor status success. demand block number %d, demand seqNo %d",
-			executor.namespace, executor.status.demandNumber, executor.status.demandSeqNo)
+		log.Noticef("[Namespace = %s] initialize executor status success. demand block number %d, demand seqNo %d, latest state hash %s",
+			executor.namespace, executor.status.demandNumber, executor.status.demandSeqNo, common.Bytes2Hex(blk.MerkleRoot))
 		return nil
 	}
 }

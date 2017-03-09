@@ -26,8 +26,9 @@ type UnlockParas struct {
 	Password string         `json:"password"`
 }
 
-func NewPublicAccountAPI(pm *manager.ProtocolManager, hyperDb db.Database, config *common.Config) *PublicAccountAPI {
+func NewPublicAccountAPI(namespace string, pm *manager.ProtocolManager, hyperDb db.Database, config *common.Config) *PublicAccountAPI {
 	return &PublicAccountAPI{
+		namespace: namespace,
 		pm:     pm,
 		db:     hyperDb,
 		config: config,

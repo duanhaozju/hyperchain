@@ -29,7 +29,7 @@ type PublicContractAPI struct {
 	config      *common.Config
 }
 
-func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb db.Database, config *common.Config) *PublicContractAPI {
+func NewPublicContractAPI(namespace string, eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb db.Database, config *common.Config) *PublicContractAPI {
 	fillrate, err := getFillRate(config, CONTRACT)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
@@ -41,6 +41,7 @@ func NewPublicContractAPI(eventMux *event.TypeMux, pm *manager.ProtocolManager, 
 		peak = 500
 	}
 	return &PublicContractAPI{
+		namespace:   namespace,
 		eventMux:    eventMux,
 		pm:          pm,
 		db:          hyperDb,

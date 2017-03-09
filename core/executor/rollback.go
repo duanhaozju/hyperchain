@@ -170,7 +170,7 @@ func (executor *Executor) revertState(batch db.Batch, targetHeight uint64) error
 	for addr := range dirtyStateObjectSet.Iter() {
 		address := addr.(common.Address)
 		prefix, _ := hyperstate.CompositeStorageBucketPrefix(address.Bytes())
-		bucketTree := bucket.NewBucketTree(string(prefix))
+		bucketTree := bucket.NewBucketTree(db, string(prefix))
 		bucketTree.Initialize(hyperstate.SetupBucketConfig(executor.GetBucketSize(STATEOBJECT), executor.GetBucketLevelGroup(STATEOBJECT), executor.GetBucketCacheSize(STATEOBJECT)))
 		bucketTree.ClearAllCache()
 		// don't flush into disk util all operations finish

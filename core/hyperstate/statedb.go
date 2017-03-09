@@ -73,7 +73,7 @@ func New(root common.Hash, db db.Database, bktConf *common.Config, height uint64
 	csc, _ := lru.New(codeSizeCacheSize)
 	// initialize bucket tree
 	bucketPrefix, _ := CompositeStateBucketPrefix()
-	bucketTree := bucket.NewBucketTree(string(bucketPrefix))
+	bucketTree := bucket.NewBucketTree(db, string(bucketPrefix))
 	// initialize cache
 	batchCache, _ := common.NewCache()
 	contentCache, _ := common.NewCache()
@@ -114,7 +114,7 @@ func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	bucketPrefix, _ := CompositeStateBucketPrefix()
-	bucketTree := bucket.NewBucketTree(string(bucketPrefix))
+	bucketTree := bucket.NewBucketTree(self.db, string(bucketPrefix))
 	state := &StateDB{
 		db:                self.db,
 		codeSizeCache:     self.codeSizeCache,
@@ -875,6 +875,7 @@ func (s *StateDB) commit(dbw db.Batch, deleteEmptyObjects bool) (root common.Has
 			return common.Hash{}, err
 		}
 		s.root = common.BytesToHash(hash)
+		log.Noticef("state hash %s", s.root.Hex())
 		s.bucketTree.AddChangesForPersistence(dbw, big.NewInt(int64(s.curSeqNo)))
 	}
 	return s.root, err

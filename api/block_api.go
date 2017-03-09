@@ -33,9 +33,10 @@ type StatisticResult struct {
 	TimeList []string `json:"TimeList"`
 }
 
-func NewPublicBlockAPI(hyperDb db.Database) *PublicBlockAPI {
+func NewPublicBlockAPI(namespace string, hyperDb db.Database) *PublicBlockAPI {
 	return &PublicBlockAPI{
 		db: hyperDb,
+		namespace: namespace,
 	}
 }
 

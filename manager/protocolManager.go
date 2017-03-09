@@ -63,12 +63,13 @@ type NodeManager struct {
 
 var eventMuxAll *event.TypeMux
 
-func NewProtocolManager(executor *executor.Executor, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
+func NewProtocolManager(namespace string, executor *executor.Executor, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
 	//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
 	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, expired chan bool, expiredTime time.Time) *ProtocolManager {
 	synccache, _ := common.NewCache()
 	replicacache, _ := common.NewCache()
 	manager := &ProtocolManager{
+		namespace:          namespace,
 		executor:           executor,
 		eventMux:            eventMux,
 		quitSync:            make(chan struct{}),

@@ -35,8 +35,8 @@ func init() {
 	logger = logging.MustGetLogger("db_utils")
 }
 
-func InitDB(conf *common.Config, namespace string, dbConfig string, port int) {
+func InitDBForNamespace(conf *common.Config, namespace string, dbConfig string, port int) {
 	hyperdb.SetDBConfig(dbConfig, strconv.Itoa(port))
 	hyperdb.InitDatabase(conf, namespace)
-	InitializeChain(DefaultNamespace)
+	InitializeChain(namespace)
 }
