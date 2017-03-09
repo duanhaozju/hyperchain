@@ -207,7 +207,11 @@ func (pbft *pbftImpl) sendViewChange() events.Event {
 		EventType: VIEW_CHANGE_RESEND_TIMER_EVENT,
 	}
 
-	pbft.pbftTimerMgr.resetTimer(VC_RESEND_TIMER, vcrte)
+	af := func(){
+		pbft.pbftEventQueue.Push(vcrte)
+	}
+
+	pbft.pbftTimerMgr.startTimer(VC_RESEND_TIMER, af)
 	return pbft.recvViewChange(vc)
 }
 
@@ -1010,11 +1014,17 @@ func (pbft *pbftImpl) stopNewViewTimer() {
 func (pbft *pbftImpl) startNewViewTimer(timeout time.Duration, reason string) {
 	logger.Debugf("Replica %d starting new view timer for %s: %s", pbft.id, timeout, reason)
 	pbft.status.activeState(NEW_VIEW_TIMER_ACTIVE)
-	vcte := &LocalEvent{
-		Service:VIEW_CHANGE_SERVICE,
-		EventType:VIEW_CHANGE_TIMER_EVENT,
+
+	event := &LocalEvent{
+		Service:   VIEW_CHANGE_SERVICE,
+		EventType: VIEW_CHANGE_TIMER_EVENT,
 	}
-	pbft.pbftTimerMgr.resetTimerWithNewTT(NEW_VIEW_TIMER, timeout, vcte)
+
+	af := func(){
+		pbft.pbftEventQueue.Push(event)
+	}
+
+	pbft.pbftTimerMgr.startTimerWithNewTT(NEW_VIEW_TIMER, timeout, af)
 }
 
 //correctViewChange

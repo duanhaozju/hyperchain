@@ -4,8 +4,6 @@
 package pbft
 
 import (
-	"hyperchain/consensus/events"
-	"hyperchain/common"
 	"time"
 )
 
@@ -13,105 +11,95 @@ import (
 	this file provide a mechanism to manage different timers.
  */
 
-//timer wrapper for events timer.
-type timer struct {
-	timerName  string
-	eventTimer events.Timer 	//event timer
-	timeout    time.Duration    	//timer timeout
-	isActive   bool
-} 
+//titletimers manage timer with the same timer name
+type titletimers struct {
+	timerName string
+	timeout   time.Duration
+	counts    int
+	isActive  []bool
+}
 
 //timerManager manage common used timer.
 type timerManager struct {
-	timers         map[string]*timer
-	timerFactory   events.TimerFactory //timer factory
-	eventManager   events.Manager      //manage pbft event
+	ttimers        map[string]*titletimers
 	requestTimeout time.Duration
 }
 
 //newTimerMgr init a instance of timerManager.
-func newTimerMgr(conf *common.Config, pbft *pbftImpl, mt int) *timerManager {
-	tm := &timerManager{}
-	switch mt {
-	case PBFT:
-		tm.timers = make(map[string]*timer)
-		tm.eventManager = events.NewManagerImpl()
-		tm.eventManager.SetReceiver(pbft)
-		tm.timerFactory = events.NewTimerFactoryImpl(tm.eventManager)
-	case BATCH: //TODO: add timer
-	default:
-		logger.Errorf("Invalid timer manager type: %s", mt)
+func newTimerMgr(pbft *pbftImpl) *timerManager {
+	tm := &timerManager{
+		ttimers: make(map[string]*titletimers),
+		requestTimeout: pbft.config.GetDuration(PBFT_REQUEST_TIMEOUT),
 	}
-	tm.requestTimeout = conf.GetDuration(PBFT_REQUEST_TIMEOUT)
+
 	return tm
 }
 
-//newTimer new a pbft timer by timer name.
-func (tm *timerManager) newTimer(tname string, timerOut time.Duration) {
-	if tm.containsTimer(tname) {
-		logger.Warningf("Timer %s has been created!!!", tname)
-		return
-	}
-	tm.timers[tname] = &timer{
-		timerName:  tname,
-		eventTimer: tm.timerFactory.CreateTimer(),
-		timeout:    timerOut,
-		isActive:   false,
+//newTimer new a pbft timer by timer name and append into correspond map
+func (tm *timerManager) newTimer(tname string, d time.Duration) {
+	tm.ttimers[tname] = &titletimers{
+		timerName: tname,
+		timeout:   d,
+		counts:    0,
 	}
 }
 
-//startTimer start timer by timerName.
-func (tm *timerManager) startTimer(timerName string, event events.Event) {
-	tm.resetTimer(timerName, event)
+//startTimer init and start a timer by name
+func (tm *timerManager) startTimer(tname string, afterfunc func()) {
+	logger.Errorf("Starting a new timer---%s", tname)
+
+	tm.ttimers[tname].isActive = append(tm.ttimers[tname].isActive, true)
+
+	counts := len(tm.ttimers[tname].isActive)
+	logger.Errorf("Now exsits %d timer---%s", counts, tname)
+
+	send := func() {
+		if tm.ttimers[tname].isActive[counts - 1] {
+			afterfunc()
+		}
+	}
+	time.AfterFunc(tm.ttimers[tname].timeout, send)
 }
 
-//stopTimer stop timer by timerName.
-func (tm *timerManager) stopTimer(timerName string) {
-	if !tm.containsTimer(timerName) {
-		logger.Errorf("Stop timer failed!, timer %s not created yet!", timerName)
-	}
-	tm.timers[timerName].eventTimer.Stop()
-	tm.timers[timerName].isActive = false
+//startTimerWithNewTT init and start a timer by name with new timeout
+func (tm *timerManager) startTimerWithNewTT(tname string, d time.Duration, afterfunc func()) {
+	logger.Errorf("Starting a new timer---%s with new duration %d", tname, d)
 
+	tm.ttimers[tname].isActive = append(tm.ttimers[tname].isActive, true)
+	tm.ttimers[tname].counts ++
+
+	counts := len(tm.ttimers[tname].isActive)
+	logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].counts, tname)
+
+	send := func() {
+		if tm.ttimers[tname].isActive[counts - 1] {
+			afterfunc()
+		}
+	}
+	time.AfterFunc(d, send)
 }
 
-func (tm *timerManager) softResetTimer(timerName string, event events.Event)  {
-	if !tm.containsTimer(timerName) {
-		logger.Errorf("SoftReset timer failed!, timer %s not created yet!", timerName)
+//stopTimer stop all timers by the same timerName.
+func (tm *timerManager) stopTimer(tname string) {
+	if !tm.containsTimer(tname) {
+		logger.Errorf("Stop timer failed!, timer %s not created yet!", tname)
 	}
-	timer := tm.timers[timerName]
-	timer.eventTimer.SoftReset(timer.timeout, event)
-	timer.isActive = true
-}
+	logger.Errorf("Stoping timer---%s", tname)
 
-//resetTimer reset timer by timerName.
-func (tm *timerManager) resetTimer(timerName string, event events.Event) {
-	if !tm.containsTimer(timerName) {
-		logger.Errorf("Reset timer failed!, timer %s not created yet!", timerName)
-	}
-	timer := tm.timers[timerName]
-	timer.eventTimer.Reset(timer.timeout, event)
-	timer.isActive = true
-}
+	counts := len(tm.ttimers[tname].isActive)
+	logger.Errorf("Now exsits %d timer---%s", counts, tname)
 
-//resetTimerWithNewTT reset timer with new timeout
-func (tm *timerManager) resetTimerWithNewTT(timerName string, timeout time.Duration, event events.Event)  {
-	if !tm.containsTimer(timerName) {
-		logger.Errorf("Reset timer failed!, timer %s not created yet!", timerName)
+	for i := range tm.ttimers[tname].isActive {
+		tm.ttimers[tname].isActive[i] = false
 	}
-	timer := tm.timers[timerName]
-	//timer.timeout = timeout
-	timer.eventTimer.Reset(timeout, event)
+
+	tm.ttimers[tname].counts = 0
+
 }
 
 func (tm *timerManager) containsTimer(timerName string) bool {
-	_, ok := tm.timers[timerName]
+	_, ok := tm.ttimers[timerName]
 	return ok
-}
-
-//Start start the event manager
-func (tm *timerManager) Start()  {
-	tm.eventManager.Start()
 }
 
 // getTimeoutValue get event timer timeout
@@ -120,14 +108,24 @@ func (tm *timerManager) getTimeoutValue(timerName string) time.Duration {
 		logger.Warningf("Get tiemout failed!, timer %s not created yet! no time out", timerName)
 		return 0 * time.Second
 	}
-	return tm.timers[timerName].timeout
+	return tm.ttimers[timerName].timeout
+}
+
+func (tm *timerManager) setTimeoutValue(timerName string, d time.Duration) {
+	if !tm.containsTimer(timerName) {
+		logger.Warningf("Set tiemout failed!, timer %s not created yet! no time out", timerName)
+		return
+	}
+	tm.ttimers[timerName].timeout = d
 }
 
 //makeRequestTimeoutLegal if requestTimeout is not legal, make it legal
 func (tm *timerManager) makeRequestTimeoutLegal() {
 	nullRequestTimeout := tm.getTimeoutValue(NULL_REQUEST_TIMER)
-	if tm.requestTimeout >= nullRequestTimeout && nullRequestTimeout != 0{
-		tm.timers[NULL_REQUEST_TIMER].timeout = 3 * tm.requestTimeout / 2
+	requestTimeout := tm.getTimeoutValue(PBFT_REQUEST_TIMEOUT)
+
+	if requestTimeout >= nullRequestTimeout && nullRequestTimeout != 0{
+		tm.ttimers[NULL_REQUEST_TIMER].timeout = 3 * tm.ttimers[PBFT_REQUEST_TIMEOUT].timeout / 2
 		logger.Warningf("Configured null request timeout must be greater " +
 			"than request timeout, setting to %v", tm.getTimeoutValue(NULL_REQUEST_TIMER))
 	}

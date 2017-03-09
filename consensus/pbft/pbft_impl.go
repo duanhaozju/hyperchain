@@ -47,8 +47,10 @@ type pbftImpl struct {
 	reqStore       *requestStore                // received messages
 	duplicator     map[uint64]*transactionStore // currently executing request
 
-	reqEventQueue  events.Queue                 // store request transactions
-	pbftEventQueue events.Queue                 // store PBFT related event
+	pbftManager    events.Manager               // manage pbft event
+
+	reqEventQueue  events.Queue                 // transfer request transactions
+	pbftEventQueue events.Queue                 // transfer PBFT related event
 
 	config         *common.Config
 }
@@ -67,11 +69,17 @@ func newPBFT(config *common.Config, h helper.Stack) *pbftImpl {
 	pbft.K = uint64(10)
 	pbft.logMultiplier = uint64(4)
 	pbft.L = pbft.logMultiplier * pbft.K // log size
+
+	//pbftManage manage consensus events
+	pbft.pbftManager = events.NewManagerImpl()
+	pbft.pbftManager.SetReceiver(pbft)
+	pbft.pbftManager.Start()
+	pbft.pbftEventQueue = events.GetQueue(pbft.pbftManager.Queue())// init pbftEventQueue
+
 	pbft.initMsgEventMap()
 
 	pbft.exec = newExecutor()
-	pbft.pbftTimerMgr = newTimerMgr(config, pbft, PBFT)
-	pbft.pbftEventQueue = events.GetQueue(pbft.pbftTimerMgr.eventManager.Queue())// init pbftEventQueue
+	pbft.pbftTimerMgr = newTimerMgr(pbft)
 
 	pbft.initTimers()
 	pbft.initStatus()
@@ -388,7 +396,7 @@ func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) 
 	pbft.helper.InnerBroadcast(msg)
 	pbft.batchVdr.updateLCVid()
 
-	pbft.softStartTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
+	pbft.startNewViewTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
 
 }
 
@@ -437,7 +445,7 @@ func (pbft *pbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 	}
 
 	if pbft.status.checkStatesAnd(!pbft.status[SKIP_IN_PROGRESS], !pbft.status[IN_RECOVERY]) {
-		pbft.softStartTimer(pbft.pbftTimerMgr.requestTimeout,
+		pbft.startNewViewTimer(pbft.pbftTimerMgr.requestTimeout,
 			fmt.Sprintf("new pre-prepare for request batch view=%d/seqNo=%d, hash=%s", preprep.View, preprep.SequenceNumber, preprep.BatchDigest))
 	}
 
@@ -877,10 +885,16 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 			return nil
 		}
 
-		pbft.pbftTimerMgr.resetTimer(RECOVERY_RESTART_TIMER, &LocalEvent{
-			Service:RECOVERY_SERVICE,
-			EventType:RECOVERY_RESTART_TIMER_EVENT,
-		})
+		event := &LocalEvent{
+			Service:   RECOVERY_SERVICE,
+			EventType: RECOVERY_RESTART_TIMER_EVENT,
+		}
+
+		af := func(){
+			pbft.pbftEventQueue.Push(event)
+		}
+
+		pbft.pbftTimerMgr.startTimer(RECOVERY_RESTART_TIMER, af)
 
 		if pbft.storeMgr.highStateTarget == nil {
 			logger.Errorf("Try to fetch QPC, but highStateTarget is nil")
@@ -1324,10 +1338,17 @@ func (pbft *pbftImpl) processNegotiateView() error {
 
 	logger.Debugf("Replica %d now negotiate view...", pbft.id)
 
-	pbft.pbftTimerMgr.resetTimer(NEGO_VIEW_RSP_TIMER, &LocalEvent{
-		Service:RECOVERY_SERVICE,
-		EventType:RECOVERY_NEGO_VIEW_RSP_TIMER_EVENT,
-	})
+	event := &LocalEvent{
+		Service:   RECOVERY_SERVICE,
+		EventType: RECOVERY_NEGO_VIEW_RSP_TIMER_EVENT,
+	}
+
+	af := func(){
+		pbft.pbftEventQueue.Push(event)
+	}
+
+	pbft.pbftTimerMgr.startTimer(NEGO_VIEW_RSP_TIMER, af)
+
 	pbft.recoveryMgr.negoViewRspStore = make(map[uint64]*NegotiateViewResponse)
 
 	// broadcast the negotiate message to other replica
@@ -1463,10 +1484,16 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 				EventType:RECOVERY_NEGO_VIEW_DONE_EVENT,
 			}
 		} else if len(pbft.recoveryMgr.negoViewRspStore) >= 2*pbft.f+2 {
-			pbft.pbftTimerMgr.resetTimer(NEGO_VIEW_RSP_TIMER, &LocalEvent{
-				Service:RECOVERY_SERVICE,
-				EventType:RECOVERY_NEGO_VIEW_RSP_TIMER_EVENT,
-			})
+			event := &LocalEvent{
+				Service:   RECOVERY_SERVICE,
+				EventType: RECOVERY_NEGO_VIEW_RSP_TIMER_EVENT,
+			}
+
+			af := func(){
+				pbft.pbftEventQueue.Push(event)
+			}
+
+			pbft.pbftTimerMgr.startTimer(NEGO_VIEW_RSP_TIMER, af)
 
 			logger.Warningf("pbft recv at least N-f nego-view responses, but cannot find same view from 2f+1.")
 		}

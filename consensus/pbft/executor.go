@@ -318,8 +318,16 @@ func (pbft *pbftImpl) handleRecoveryEvent(e *LocalEvent) events.Event {
 		if primary == pbft.id {
 			pbft.sendNullRequest()
 		} else {
-			pbft.pbftTimerMgr.resetTimer(FIRST_REQUEST_TIMER,
-				&LocalEvent{Service:CORE_PBFT_SERVICE, EventType:CORE_FIRST_REQUEST_TIMER_EVENT})
+			event := &LocalEvent{
+				Service:   CORE_PBFT_SERVICE,
+				EventType: CORE_FIRST_REQUEST_TIMER_EVENT,
+			}
+
+			af := func(){
+				pbft.pbftEventQueue.Push(event)
+			}
+
+			pbft.pbftTimerMgr.startTimer(FIRST_REQUEST_TIMER, af)
 		}
 		pbft.persistView(pbft.view)
 		pbft.helper.InformPrimary(primary)

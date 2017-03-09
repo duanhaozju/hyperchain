@@ -19,7 +19,6 @@ import (
 	"hyperchain/common"
 	"hyperchain/consensus/helper"
 	"hyperchain/consensus"
-	"time"
 	"sync/atomic"
 )
 
@@ -102,25 +101,9 @@ func (pbft *pbftImpl) Start()  {
 	pbft.vcMgr.viewChangeSeqNo = ^uint64(0) // infinity
 	pbft.vcMgr.updateViewChangeSeqNo(pbft.seqNo, pbft.K, pbft.id)
 	pbft.batchMgr.start()
-	pbft.pbftTimerMgr.Start()
 
-	//2. negotiate view.
-	pbft.status[IN_NEGO_VIEW] = true
-	negoViewRspTimeout, err := time.ParseDuration(pbft.config.GetString(PBFT_NEGOVIEW_TIMEOUT))
-	if err != nil {
-		panic(fmt.Errorf("Cannot parse negotiate view timeout: %s", err))
-	}
-	pbft.pbftTimerMgr.newTimer(NEGO_VIEW_RSP_TIMER, negoViewRspTimeout)
-
-	//3. recovery
-	pbft.status[IN_RECOVERY] = true
-	recoveryRestartTimeout, err := time.ParseDuration(pbft.config.GetString(PBFT_RECOVERY_TIMEOUT))
-	if err != nil {
-		panic(fmt.Errorf("Cannot parse recovery timeout: %s", err))
-	}
 	pbft.recoveryMgr = newRecoveryMgr()
 
-	pbft.pbftTimerMgr.newTimer(RECOVERY_RESTART_TIMER, recoveryRestartTimeout)
 	pbft.pbftTimerMgr.makeRequestTimeoutLegal()
 
 	logger.Noticef("======== PBFT finish start, nodeID: %d", pbft.id)

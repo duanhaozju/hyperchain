@@ -9,6 +9,8 @@ func (pbft *pbftImpl) initTimers() {
 	pbft.pbftTimerMgr.newTimer(NULL_REQUEST_TIMER, pbft.config.GetDuration(PBFT_NULLREQUEST_TIMEOUT))
 	pbft.pbftTimerMgr.newTimer(NEW_VIEW_TIMER, pbft.config.GetDuration(PBFT_VIEWCHANGE_TIMEOUT))
 	pbft.pbftTimerMgr.newTimer(FIRST_REQUEST_TIMER, pbft.config.GetDuration(PBFT_FIRST_REQUEST_TIMEOUT))
+	pbft.pbftTimerMgr.newTimer(NEGO_VIEW_RSP_TIMER, pbft.config.GetDuration(PBFT_NEGOVIEW_TIMEOUT))
+	pbft.pbftTimerMgr.newTimer(RECOVERY_RESTART_TIMER, pbft.config.GetDuration(PBFT_RECOVERY_TIMEOUT))
 	//pbft.pbftTimerMgr.newTimer(ADD_NODE_TIMER, pbft.config.GetDuration(PBFT_ADD_NODE_TIMEOUT))
 	//pbft.pbftTimerMgr.newTimer(DEL_NODE_TIMER, pbft.config.GetDuration(PBFT_DEL_NODE_TIMEOUT))
 	//pbft.pbftTimerMgr.newTimer(UPDATE_TIMER, pbft.config.GetDuration(PBFT_UPDATE_TIMEOUT))
@@ -60,5 +62,6 @@ func (pbft *pbftImpl) initStatus(){
 	pbft.status[VC_HANDLED] = false
 	pbft.status[NEW_NODE_READY] = false
 	pbft.status[UPDATE_HANDLED] = false
-
+	pbft.status[IN_NEGO_VIEW] = true
+	pbft.status[IN_RECOVERY] = true
 }

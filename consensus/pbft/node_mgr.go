@@ -1232,7 +1232,7 @@ func (pbft *pbftImpl) sendPrePrepareForUpdate(reqBatch *TransactionBatch, digest
 
 	logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
 	pbft.pbftTimerMgr.stopTimer(NULL_REQUEST_TIMER)
-	pbft.softStartTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
+	pbft.startNewViewTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
 	pbft.seqNo = n
 	preprep := &PrePrepare{
 		View:             pbft.view,

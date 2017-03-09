@@ -289,8 +289,7 @@ func (pbft *pbftImpl) startTimerIfOutstandingRequests() {
 			}
 			return digests
 		}()
-		//logger.Debug(getOutstandingDigests)
-		pbft.softStartTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("outstanding request batches num=%v", len(getOutstandingDigests)))
+		pbft.startNewViewTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("outstanding request batches num=%v", len(getOutstandingDigests)))
 	} else if pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
 		pbft.nullReqTimerReset()
 	}
@@ -302,16 +301,21 @@ func (pbft *pbftImpl) nullReqTimerReset() {
 		// we're waiting for the primary to deliver a null request - give it a bit more time
 		timeout += pbft.pbftTimerMgr.requestTimeout
 	}
-	pbft.pbftTimerMgr.resetTimerWithNewTT(NULL_REQUEST_TIMER, timeout,
-		&LocalEvent{Service:CORE_PBFT_SERVICE, EventType:CORE_NULL_REQUEST_TIMER_EVENT})
-}
 
-func (pbft *pbftImpl) softStartTimer(timeout time.Duration, reason string) {
-	logger.Debugf("Replica %d soft starting new view timer for %s: %s", pbft.id, timeout, reason)
-	pbft.vcMgr.newViewTimerReason = reason
-	pbft.status.activeState(NEW_VIEW_TIMER_ACTIVE)
-	pbft.pbftTimerMgr.softResetTimer(NEW_VIEW_TIMER,
-		&LocalEvent{Service:VIEW_CHANGE_SERVICE, EventType:VIEW_CHANGE_TIMER_EVENT})
+	event := &LocalEvent{
+		Service:   CORE_PBFT_SERVICE,
+		EventType: CORE_NULL_REQUEST_TIMER_EVENT,
+	}
+
+	af := func(){
+		pbft.pbftEventQueue.Push(event)
+	}
+
+	logger.Errorf("null request time out is %v", pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER))
+	logger.Errorf("request time out is %v", pbft.pbftTimerMgr.requestTimeout)
+	logger.Errorf("reset null request timeout to %v", timeout)
+
+	pbft.pbftTimerMgr.startTimerWithNewTT(NULL_REQUEST_TIMER, timeout, af)
 }
 
 //stopFirstRequestTimer
