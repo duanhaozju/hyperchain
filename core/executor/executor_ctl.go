@@ -17,15 +17,14 @@ type ExecutorStatus struct {
 	demandSeqNo           uint64              // current demand seqNo for validation
 	tempBlockNumber       uint64              // temporarily block number
 	lastValidationState   atomic.Value        // latest state root hash
-
-	syncFlag SyncFlag
+	syncFlag              SyncFlag
 }
 
 type SyncFlag struct {
 	SyncRequireBlockNum  uint64   // the block num in sync process
 	SyncRequireBlockHash []byte   // the block hash in sync process
-	SyncRecoveryNum      uint64   // the max block num in sync process
-	SendReplicas         []uint64 // get block data from replicas
+	SyncTarget           uint64   // the target block number of this synchronization
+	SyncPeers            []uint64 // peers to fetch sync blocks
 	LocalId              uint64   // local node id
 }
 
@@ -191,7 +190,7 @@ func (executor *Executor) wailUtilCommitIdle() {
 
 // waitUtilRollbackAvailable - wait validation processor and commit processor become idle.
 func (executor *Executor) waitUtilRollbackAvailable() {
-	executor.clearpendingValidationEventQ()
+	executor.clearPendingValidationEventQ()
 	executor.turnOffValidationSwitch()
 	executor.waitUtilValidationIdle()
 	executor.wailUtilCommitIdle()
@@ -212,5 +211,28 @@ func (executor *Executor) waitUtilSyncAvailable() {
 // syncDone - sync callback function to notify sync finish.
 func (executor *Executor) syncDone() {
 	executor.turnOnValidationSwitch()
+}
+
+// updateSyncRequired - update required block number and related hash during the sync.
+func (executor *Executor) updateSyncRequired(num uint64, hash []byte, target uint64) error {
+	executor.status.syncFlag.SyncRequireBlockNum = num
+	executor.status.syncFlag.SyncRequireBlockHash = hash
+	executor.status.syncFlag.SyncTarget = target
+	return nil
+}
+
+// clearSyncFlag - clear all sync flag fields.
+func (executor *Executor) clearSyncFlag() {
+	executor.status.syncFlag.SyncRequireBlockNum = 0
+	executor.status.syncFlag.SyncRequireBlockHash = nil
+	executor.status.syncFlag.SyncTarget = 0
+	executor.status.syncFlag.LocalId = 0
+	executor.status.syncFlag.SyncPeers = nil
+}
+
+// recordSyncPeers - record peers id and self during the sync.
+func (executor *Executor) recordSyncPeers(peers []uint64, localId uint64) {
+	executor.status.syncFlag.SyncPeers = peers
+	executor.status.syncFlag.LocalId = localId
 }
 

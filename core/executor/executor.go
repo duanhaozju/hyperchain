@@ -19,6 +19,7 @@ import (
 var (
 	log   *logging.Logger // package-level logger
 	EmptyPointerErr = errors.New("nil pointer")
+	NoDefinedCaseErr= errors.New("no defined case")
 )
 
 func init() {
@@ -38,7 +39,6 @@ type Executor struct {
 	cache       ExecutorCache
 	helper      *Helper
 	statedb     vm.Database
-	syncBlockCache      *common.Cache
 }
 
 func NewExecutor(namespace string, consenter consensus.Consenter, conf *common.Config, commonHash crypto.CommonHash, encryption crypto.Encryption, eventMux *event.TypeMux) *Executor {

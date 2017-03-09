@@ -19,7 +19,6 @@ import (
 func (executor *Executor) Rollback(ev event.VCResetEvent) {
 	executor.waitUtilRollbackAvailable()
 	defer executor.rollbackDone()
-	defer executor.initDemand(ev.SeqNo)
 
 	log.Noticef("[Namespace = %s] receive vc reset event, required revert to %d", executor.namespace, ev.SeqNo-1)
 	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
@@ -45,6 +44,7 @@ func (executor *Executor) Rollback(ev event.VCResetEvent) {
 	// Reset chain
 	edb.UpdateChainByBlcokNum(executor.namespace, batch, ev.SeqNo - 1, false, false)
 	batch.Write()
+	executor.initDemand(ev.SeqNo)
 	executor.informConsensus(CONSENSUS_LOCAL, protos.VcResetDone{SeqNo: ev.SeqNo})
 }
 
@@ -54,7 +54,6 @@ func (executor *Executor) CutdownBlock(number uint64) error {
 	defer executor.rollbackDone()
 
 	log.Noticef("[Namespace = %s] cutdown block, required revert to %d", executor.namespace, number)
-	executor.initDemand(edb.GetHeightOfChain(executor.namespace))
 	// 2. revert state
 	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
 	if err != nil {
@@ -80,6 +79,7 @@ func (executor *Executor) CutdownBlock(number uint64) error {
 	// flush all modified to disk
 	batch.Write()
 	log.Noticef("[Namespace = %s] cut down block #%d success. remove all related transactions, receipts, state changes and block together.", executor.namespace, number)
+	executor.initDemand(edb.GetHeightOfChain(executor.namespace))
 	return nil
 }
 

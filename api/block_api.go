@@ -200,7 +200,7 @@ func getBlocksByTime(namespace string, startTime, endTime int64, db db.Database)
 	return sumOfBlocks, startBlock, endBlock
 }
 
-func outputBlockResult(namespace string, block *types.Block, db db.Database, isPlain bool) (*BlockResult, error) {
+func outputBlockResult(namespace string, block *types.Block, isPlain bool) (*BlockResult, error) {
 
 	txCounts := int64(len(block.Transactions))
 	//count, percent :=types.go.CalcResponseCount(block.Number, int64(200))
@@ -255,7 +255,7 @@ func getBlockByHash(namespace string, hash common.Hash, db db.Database, isPlain 
 		return nil, &CallbackError{err.Error()}
 	}
 
-	return outputBlockResult(namespace, block, db, isPlain)
+	return outputBlockResult(namespace, block, isPlain)
 }
 
 func getBlocks(args IntervalArgs, namespace string, isPlain bool) ([]*BlockResult, error) {

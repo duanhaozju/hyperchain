@@ -11,4 +11,5 @@ const (
 	IDLE = 0
 
 	CONSENSUS_LOCAL = "local"
+	P2P_SEND_SYNC_REQ = "send_sync_req"
 )

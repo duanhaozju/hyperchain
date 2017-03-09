@@ -26,25 +26,26 @@ func init() {
 }
 
 type ProtocolManager struct {
-	serverPort        int
-	executor          *executor.Executor
-	Peermanager       p2p.PeerManager
+	namespace         string
+	serverPort          int
+	executor            *executor.Executor
+	Peermanager         p2p.PeerManager
 
-	nodeInfo          p2p.PeerInfos // node info ,store node status,ip,port
-	consenter         consensus.Consenter
+	nodeInfo            p2p.PeerInfos // node info ,store node status,ip,port
+	consenter           consensus.Consenter
 
-	AccountManager    *accounts.AccountManager
-	commonHash        crypto.CommonHash
+	AccountManager      *accounts.AccountManager
+	commonHash          crypto.CommonHash
 
-	eventMux          *event.TypeMux
+	eventMux            *event.TypeMux
 
-	validateSub       event.Subscription
-	commitSub         event.Subscription
-	consensusSub      event.Subscription
-	viewChangeSub     event.Subscription
-	respSub           event.Subscription
-	syncCheckpointSub event.Subscription
-	syncBlockSub      event.Subscription
+	validateSub         event.Subscription
+	commitSub           event.Subscription
+	consensusSub        event.Subscription
+	viewChangeSub       event.Subscription
+	respSub             event.Subscription
+	chainSyncSub        event.Subscription
+	syncBlockSub        event.Subscription
 	syncStatusSub       event.Subscription
 	peerMaintainSub     event.Subscription
 	quitSync            chan struct{}
@@ -55,8 +56,6 @@ type ProtocolManager struct {
 	expired             chan bool
 	expiredTime         time.Time
 	initType            int
-	state		    *State
-
 }
 type NodeManager struct {
 	peerManager p2p.PeerManager
@@ -69,7 +68,6 @@ func NewProtocolManager(executor *executor.Executor, peerManager p2p.PeerManager
 	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, expired chan bool, expiredTime time.Time) *ProtocolManager {
 	synccache, _ := common.NewCache()
 	replicacache, _ := common.NewCache()
-	state := new(State)
 	manager := &ProtocolManager{
 		executor:           executor,
 		eventMux:            eventMux,
@@ -84,7 +82,6 @@ func NewProtocolManager(executor *executor.Executor, peerManager p2p.PeerManager
 		syncReplica:         syncReplica,
 		expired:             expired,
 		expiredTime:         expiredTime,
-		state:               state,
 	}
 	manager.nodeInfo = make(p2p.PeerInfos, 0, 1000)
 	eventMuxAll = eventMux
@@ -103,8 +100,7 @@ func (pm *ProtocolManager) Start(c chan int, cm *admittance.CAManager) {
 		event.NegoRoutersEvent{})
 	pm.validateSub = pm.eventMux.Subscribe(event.ExeTxsEvent{})
 	pm.commitSub = pm.eventMux.Subscribe(event.CommitOrRollbackBlockEvent{})
-	pm.syncCheckpointSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{})
-	pm.syncBlockSub = pm.eventMux.Subscribe(event.ReceiveSyncBlockEvent{})
+	pm.chainSyncSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{}, event.ReceiveSyncBlockEvent{})
 	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
 	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{}, event.InformPrimaryEvent{})
 	go pm.validateLoop()
@@ -113,8 +109,7 @@ func (pm *ProtocolManager) Start(c chan int, cm *admittance.CAManager) {
 		event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{}, event.RecvNewPeerEvent{},
 		event.DelPeerEvent{}, event.BroadcastDelPeerEvent{}, event.RecvDelPeerEvent{})
 	go pm.ConsensusLoop()
-	go pm.syncBlockLoop()
-	go pm.syncCheckpointLoop()
+	go pm.ListenSynchronizationEvent()
 	go pm.respHandlerLoop()
 	go pm.viewChangeLoop()
 	go pm.peerMaintainLoop()
@@ -134,29 +129,17 @@ func (pm *ProtocolManager) Start(c chan int, cm *admittance.CAManager) {
 	}
 }
 
-func (self *ProtocolManager) syncCheckpointLoop() {
-	for obj := range self.syncCheckpointSub.Chan() {
-
+func (self *ProtocolManager) ListenSynchronizationEvent() {
+	for obj := range self.chainSyncSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.SendCheckpointSyncEvent:
-			// receive request from the consensus module, which containes required block
-			// send this request to the peers
-			self.SendSyncRequest(ev)
+			self.executor.SendSyncRequest(ev)
 
 		case event.StateUpdateEvent:
-			// receive synchronzation request from peers
-			self.ReceiveSyncRequest(ev)
-		}
-	}
-}
+			self.executor.ReceiveSyncRequest(ev)
 
-func (self *ProtocolManager) syncBlockLoop() {
-	for obj := range self.syncBlockSub.Chan() {
-
-		switch ev := obj.Data.(type) {
 		case event.ReceiveSyncBlockEvent:
-			// receive block from outer peers
-			self.ReceiveSyncBlocks(ev)
+			self.executor.ReceiveSyncBlocks(ev)
 		}
 	}
 }

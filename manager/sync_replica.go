@@ -2,12 +2,12 @@ package manager
 
 import (
 	"github.com/golang/protobuf/proto"
-	"hyperchain/core"
 	"hyperchain/core/types"
 	"hyperchain/event"
 	"hyperchain/p2p/peermessage"
 	"hyperchain/recovery"
 	"time"
+	edb "hyperchain/core/db_utils"
 )
 
 type ReplicaInfo struct {
@@ -75,7 +75,7 @@ func (self *ProtocolManager) RecordReplicaStatus(ev event.ReplicaStatusEvent) {
 }
 func (self *ProtocolManager) packReplicaStatus() ([]byte, []byte) {
 	peerAddress := self.Peermanager.GetLocalNode().GetNodeAddr()
-	currentChain := core.GetChainCopy()
+	currentChain := edb.GetChainCopy(self.namespace)
 	// remove useless fields
 	currentChain.CurrentTxSum = 0
 	// marshal

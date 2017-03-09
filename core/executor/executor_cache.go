@@ -4,6 +4,7 @@ import (
 	"hyperchain/event"
 	"hyperchain/common"
 	"sync/atomic"
+	"hyperchain/core/types"
 )
 
 type ExecutorCache struct {
@@ -11,6 +12,7 @@ type ExecutorCache struct {
 	commitEventC            chan event.CommitOrRollbackBlockEvent // commit event buffer
 	validationResultCache   *common.Cache                         // cache for validation result
 	pendingValidationEventQ *common.Cache                         // cache for storing validation event
+	syncCache               *common.Cache                         // cache for storing stuff in sync
 }
 
 func initializeExecutorCache(executor *Executor) error {
@@ -32,7 +34,7 @@ func initializeExecutorCache(executor *Executor) error {
 // PurgeCache - purge executor cache.
 func (executor *Executor) PurgeCache() {
 	executor.cache.validationResultCache.Purge()
-	executor.clearpendingValidationEventQ()
+	executor.clearPendingValidationEventQ()
 	log.Noticef("[Namespace = %s] purge validation result cache and validation event cache success", executor.namespace)
 }
 
@@ -57,7 +59,8 @@ func (executor *Executor) pendingValidationEventQLen() int {
 	return executor.cache.pendingValidationEventQ.Len()
 }
 
-func (executor *Executor) clearpendingValidationEventQ() {
+// clearPendingValidationEventQ - purge validation event q.
+func (executor *Executor) clearPendingValidationEventQ() {
 	length := executor.pendingValidationEventQLen()
 	executor.cache.pendingValidationEventQ.Purge()
 	atomic.AddInt32(&executor.status.validateQueueLen, -1 * int32(length))
@@ -91,6 +94,7 @@ func (executor *Executor) fetchValidationEvent() event.ExeTxsEvent {
 	return ev
 }
 
+// processValidationDone - validation finish callback.
 func (executor *Executor) processValidationDone() {
 	atomic.AddInt32(&executor.status.validateQueueLen, -1)
 }
@@ -112,6 +116,34 @@ func (executor *Executor) fetchCommitEvent() event.CommitOrRollbackBlockEvent {
 // processCommitDone - commit process finish callback.
 func (executor *Executor) processCommitDone() {
 	atomic.AddInt32(&executor.status.commitQueueLen, -1)
+}
+
+// addToSyncCache - add a block to cache which arrives earlier than expect.
+func (executor *Executor) addToSyncCache(block *types.Block) {
+	blks, existed := executor.fetchFromSyncCache(block.Number)
+	if existed {
+		if _, ok := blks[common.Bytes2Hex(block.BlockHash)]; ok {
+			log.Noticef("[Namespace = %s] receive duplicate block: %d %s", executor.namespace, block.Number, common.Bytes2Hex(block.BlockHash))
+		} else {
+			log.Debugf("[Namespace = %s] receive  block with different hash: %d %s", executor.namespace, block.Number, common.Bytes2Hex(block.BlockHash))
+			blks[common.Bytes2Hex(block.BlockHash)] = *block
+			executor.cache.syncCache.Add(block.Number, blks)
+		}
+	} else {
+		blks := make(map[string]types.Block)
+		blks[common.Bytes2Hex(block.BlockHash)] = *block
+		executor.cache.syncCache.Add(block.Number, blks)
+	}
+}
+
+// fetchFromSyncCache - fetch blocks from sync cache.
+func (executor *Executor) fetchFromSyncCache(number uint64) (map[string]types.Block, bool) {
+	ret, existed := executor.cache.syncCache.Get(number)
+	if !existed {
+		return nil, false
+	}
+	blks := ret.(map[string]types.Block)
+	return blks, true
 }
 
 

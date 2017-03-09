@@ -8,7 +8,6 @@ import (
 	"github.com/juju/ratelimit"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"hyperchain/core"
 	"hyperchain/core/types"
 	"hyperchain/crypto"
 	"hyperchain/event"
@@ -153,7 +152,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	tx.TransactionHash = tx.BuildHash().Bytes()
 
 	//delete repeated tx
-	var exist, _ = edb.JudgeTransactionExist(tran.db, tx.TransactionHash)
+	var exist, _ = edb.JudgeTransactionExist(tran.namespace, tx.TransactionHash)
 
 	if exist {
 		return common.Hash{}, &RepeadedTxError{"repeated tx"}
@@ -315,7 +314,7 @@ func (tran *PublicTransactionAPI) GetTransactionByHash(hash common.Hash) (*Trans
 		return nil, &CallbackError{err.Error()}
 	}
 
-	return outputTransaction(tx, tran.db)
+	return outputTransaction(tx, tran.namespace)
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
@@ -343,7 +342,7 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockHashAndIndex(hash common.
 
 		tx := block.Transactions[index]
 
-		return outputTransaction(tx, tran.db)
+		return outputTransaction(tx, tran.namespace)
 	}
 
 	return nil, nil
@@ -370,7 +369,7 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockNumberAndIndex(n BlockNum
 
 		tx := block.Transactions[index]
 
-		return outputTransaction(tx, tran.db)
+		return outputTransaction(tx, tran.namespace)
 	}
 
 	return nil, nil

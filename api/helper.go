@@ -3,14 +3,11 @@ package hpc
 import (
 	"errors"
 	"hyperchain/common"
-	"hyperchain/core"
 	"hyperchain/core/hyperstate"
-	"hyperchain/core/state"
 	"hyperchain/core/vm"
 	"hyperchain/crypto/hmEncryption"
 	"math/big"
 	"time"
-	"hyperchain/hyperdb/db"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/hyperdb"
 )
