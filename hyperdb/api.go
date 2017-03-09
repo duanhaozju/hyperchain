@@ -139,9 +139,21 @@ func GetDBDatabase() (db.Database, error) {
 	return dbMap.dbMap[DefautNameSpace+Blockchain].db, nil
 }
 
+func GetDBDatabaseConsensus() (db.Database, error) {
+	dbMap.dbSync.Lock()
+	defer dbMap.dbSync.Unlock()
+	if dbMap.dbMap[DefautNameSpace+Consensus].db == nil {
+		log.Notice("GetDBDatabaseConsensus()  fail beacause dbMap[GlobalConsensus] has not been inited \n")
+		return nil, errors.New("GetDBDatabaseConsensus()  fail beacause dbMap[GlobalConsensus] has not been inited \n")
+	}
+	return dbMap.dbMap[DefautNameSpace+Consensus].db, nil
+}
+
 func GetDBDatabaseByNamespace(namespace string)(db.Database, error){
 	dbMap.dbSync.Lock()
 	defer dbMap.dbSync.Unlock()
+
+	namespace += Consensus
 
 	if _,ok:=dbMap.dbMap[namespace];!ok{
 		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
@@ -155,14 +167,22 @@ func GetDBDatabaseByNamespace(namespace string)(db.Database, error){
 	return dbMap.dbMap[namespace].db, nil
 }
 
-func GetDBDatabaseConsensus() (db.Database, error) {
+func GetDBConsensusByNamespcae(namespace string)(db.Database, error){
 	dbMap.dbSync.Lock()
 	defer dbMap.dbSync.Unlock()
-	if dbMap.dbMap[DefautNameSpace+Consensus].db == nil {
-		log.Notice("GetDBDatabaseConsensus()  fail beacause dbMap[GlobalConsensus] has not been inited \n")
-		return nil, errors.New("GetDBDatabaseConsensus()  fail beacause dbMap[GlobalConsensus] has not been inited \n")
+
+	namespace+=Consensus
+
+	if _,ok:=dbMap.dbMap[namespace];!ok{
+		log.Notice(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
 	}
-	return dbMap.dbMap[DefautNameSpace+Consensus].db, nil
+
+	if dbMap.dbMap[namespace].db == nil {
+		log.Notice(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
+	}
+	return dbMap.dbMap[namespace].db, nil
 }
 
 func NewDatabase(conf *common.Config, path string, dbType int) (db.Database, error) {

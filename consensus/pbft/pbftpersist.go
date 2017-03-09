@@ -21,7 +21,7 @@ func (pbft *pbftProtocal) persistQSet(preprep *PrePrepare) {
 		return
 	}
 	key := fmt.Sprintf("qset.%d.%d", preprep.View, preprep.SequenceNumber)
-	persist.StoreState(key, raw)
+	persist.StoreState(pbft.namespace, key, raw)
 }
 
 func (pbft *pbftProtocal) persistPSet(v uint64, n uint64) {
@@ -40,7 +40,7 @@ func (pbft *pbftProtocal) persistPSet(v uint64, n uint64) {
 		return
 	}
 	key := fmt.Sprintf("pset.%d.%d", v, n)
-	persist.StoreState(key, raw)
+	persist.StoreState(pbft.namespace, key, raw)
 }
 
 func (pbft *pbftProtocal) persistCSet(v uint64, n uint64) {
@@ -59,23 +59,23 @@ func (pbft *pbftProtocal) persistCSet(v uint64, n uint64) {
 		return
 	}
 	key := fmt.Sprintf("cset.%d.%d", v, n)
-	persist.StoreState(key, raw)
+	persist.StoreState(pbft.namespace, key, raw)
 }
 
 func (pbft *pbftProtocal) persistDelQPCSet(v uint64, n uint64) {
 	qset := fmt.Sprintf("qset.%d.%d", v, n)
-	persist.DelState(qset)
+	persist.DelState(pbft.namespace, qset)
 	pset := fmt.Sprintf("pset.%d.%d", v, n)
-	persist.DelState(pset)
+	persist.DelState(pbft.namespace, pset)
 	cset := fmt.Sprintf("cset.%d.%d", v, n)
-	persist.DelState(cset)
+	persist.DelState(pbft.namespace, cset)
 }
 
 func (pbft *pbftProtocal) restoreQSet() (map[msgID]*PrePrepare, error) {
 
 	qset := make(map[msgID]*PrePrepare)
 
-	payload, err := persist.ReadStateSet("qset.")
+	payload, err := persist.ReadStateSet(pbft.namespace, "qset.")
 	if err == nil {
 		for key, set := range payload {
 			var v, n uint64
@@ -103,7 +103,7 @@ func (pbft *pbftProtocal) restorePSet() (map[msgID]*Pset, error) {
 
 	pset := make(map[msgID]*Pset)
 
-	payload, err := persist.ReadStateSet("pset.")
+	payload, err := persist.ReadStateSet(pbft.namespace, "pset.")
 	if err == nil {
 		for key, set := range payload {
 			var v, n uint64
@@ -131,7 +131,7 @@ func (pbft *pbftProtocal) restoreCSet() (map[msgID]*Cset, error) {
 
 	cset := make(map[msgID]*Cset)
 
-	payload, err := persist.ReadStateSet("cset.")
+	payload, err := persist.ReadStateSet(pbft.namespace, "cset.")
 	if err == nil {
 		for key, set := range payload {
 			var v, n uint64
@@ -200,76 +200,76 @@ func (pbft *pbftProtocal) persistRequestBatch(digest string) {
 		logger.Warningf("Replica %d could not persist request batch %s: %s", pbft.id, digest, err)
 		return
 	}
-	persist.StoreState("reqBatch."+digest, reqBatchPacked)
+	persist.StoreState(pbft.namespace, "reqBatch."+digest, reqBatchPacked)
 }
 
 func (pbft *pbftProtocal) persistDelRequestBatch(digest string) {
-	persist.DelState("reqBatch." + digest)
+	persist.DelState(pbft.namespace, "reqBatch." + digest)
 }
 
 func (pbft *pbftProtocal) persistDelAllRequestBatches() {
-	reqBatches, err := persist.ReadStateSet("reqBatch.")
+	reqBatches, err := persist.ReadStateSet(pbft.namespace, "reqBatch.")
 	if err != nil {
 		logger.Errorf("Read State Set Error %s", err)
 		return
 	} else {
 		for k := range reqBatches {
-			persist.DelState(k)
+			persist.DelState(pbft.namespace, k)
 		}
 	}
 }
 
 func (pbft *pbftProtocal) persistCheckpoint(seqNo uint64, id []byte) {
 	key := fmt.Sprintf("chkpt.%d", seqNo)
-	persist.StoreState(key, id)
+	persist.StoreState(pbft.namespace, key, id)
 }
 
 func (pbft *pbftProtocal) persistDelCheckpoint(seqNo uint64) {
 	key := fmt.Sprintf("chkpt.%d", seqNo)
-	persist.DelState(key)
+	persist.DelState(pbft.namespace, key)
 }
 
 func (pbft *pbftProtocal) persistView(view uint64) {
 	key := fmt.Sprint("view")
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, view)
-	persist.StoreState(key, b)
+	persist.StoreState(pbft.namespace, key, b)
 }
 
 func (pbft *pbftProtocal) persistDelView() {
 	key := fmt.Sprint("view")
-	persist.DelState(key)
+	persist.DelState(pbft.namespace, key)
 }
 
 func (pbft *pbftProtocal) persistN(n int) {
 	key := fmt.Sprint("nodes")
 	res := make([]byte, 8)
 	binary.LittleEndian.PutUint64(res, uint64(n))
-	persist.StoreState(key, res)
+	persist.StoreState(pbft.namespace, key, res)
 }
 
 func (pbft *pbftProtocal) persistNewNode(new uint64) {
 	key := fmt.Sprint("new")
 	res := make([]byte, 8)
 	binary.LittleEndian.PutUint64(res, new)
-	persist.StoreState(key, res)
+	persist.StoreState(pbft.namespace, key, res)
 }
 
 func (pbft *pbftProtocal) persistLocalKey(hash []byte) {
 	key := fmt.Sprint("localkey")
-	persist.StoreState(key, hash)
+	persist.StoreState(pbft.namespace, key, hash)
 }
 
 func (pbft *pbftProtocal) persistDellLocalKey() {
 	key := fmt.Sprint("localkey")
-	persist.DelState(key)
+	persist.DelState(pbft.namespace, key)
 }
 
 func (pbft *pbftProtocal) restoreState() {
 
 	pbft.restoreCert()
 
-	chkpts, err := persist.ReadStateSet("chkpt.")
+	chkpts, err := persist.ReadStateSet(pbft.namespace, "chkpt.")
 	if err == nil {
 		highSeq := uint64(0)
 		for key, id := range chkpts {
@@ -290,7 +290,7 @@ func (pbft *pbftProtocal) restoreState() {
 		logger.Warningf("Replica %d could not restore checkpoints: %s", pbft.id, err)
 	}
 
-	b, err := persist.ReadState("view")
+	b, err := persist.ReadState(pbft.namespace, "view")
 	if err == nil {
 		view := binary.LittleEndian.Uint64(b)
 		pbft.view = view
@@ -299,7 +299,7 @@ func (pbft *pbftProtocal) restoreState() {
 		logger.Noticef("Replica %d could not restore view: %s", pbft.id, err)
 	}
 
-	n, err := persist.ReadState("nodes")
+	n, err := persist.ReadState(pbft.namespace, "nodes")
 	if err == nil {
 		nodes := binary.LittleEndian.Uint64(n)
 		pbft.N = int(nodes)
@@ -307,7 +307,7 @@ func (pbft *pbftProtocal) restoreState() {
 	}
 	logger.Noticef("========= restore N=%d, f=%d =======", pbft.N, pbft.f)
 
-	new, err := persist.ReadState("new")
+	new, err := persist.ReadState(pbft.namespace, "new")
 	if err == nil {
 		newNode := binary.LittleEndian.Uint64(new)
 		if newNode == 1 {
@@ -315,7 +315,7 @@ func (pbft *pbftProtocal) restoreState() {
 		}
 	}
 
-	localKey, err := persist.ReadState("localkey")
+	localKey, err := persist.ReadState(pbft.namespace, "localkey")
 	if err == nil {
 		pbft.localKey = string(localKey)
 	}
