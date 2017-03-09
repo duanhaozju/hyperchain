@@ -9,8 +9,13 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"hyperchain/hyperdb/db"
+	"hyperchain/common"
+	pa "path/filepath"
 )
 
+const (
+	LEVEL_DB_PATH = "dbConfig.leveldbPath"
+)
 // the Database for LevelDB
 // LDBDatabase implements the DataBase interface
 
@@ -27,7 +32,10 @@ type LDBDatabase struct {
 // DB can be recovered with Recover function.
 // the return *LDBDatabase is goruntine-safe
 // the LDBDataBase instance must be close after use, by calling Close method
-func NewLDBDataBase(filepath string) (*LDBDatabase, error) {
+func NewLDBDataBase(conf *common.Config,filepath string) (*LDBDatabase, error) {
+	if conf!=nil {
+		filepath= pa.Join(conf.GetString(LEVEL_DB_PATH), filepath)
+	}
 	db, err := leveldb.OpenFile(filepath, nil)
 	return &LDBDatabase{
 		path: filepath,

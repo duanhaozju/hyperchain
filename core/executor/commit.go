@@ -22,7 +22,7 @@ func (executor *Executor) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerM
 	}
 }
 
-func (executor *Executor) ListenCommitEvent() {
+func (executor *Executor) listenCommitEvent() {
 	for {
 		ev := executor.fetchCommitEvent()
 		if success := executor.processCommitEvent(ev, executor.processCommitDone); success == false {

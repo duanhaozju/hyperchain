@@ -57,7 +57,7 @@ func NewExecutor(namespace string, consenter consensus.Consenter, conf *common.C
 
 // initializeExecutorStateDb - initialize statedb.
 func initializeExecutorStateDb(executor *Executor) error {
-	stateDb, err := executor.NewStateDb()
+	stateDb, err := executor.newStateDb()
 	if err != nil {
 		log.Errorf("[Namespace = %s] executor init stateDb failed, err : %s", executor.namespace, err.Error())
 		return err
@@ -78,12 +78,12 @@ func (executor *Executor) Initialize() {
 
 	}
 	// start to listen for process commit event or validation event
-	go executor.ListenCommitEvent()
+	go executor.listenCommitEvent()
 	go executor.listenValidationEvent()
 }
 
 // NewStateDb - create a latest state.
-func (executor *Executor) NewStateDb() (vm.Database, error) {
+func (executor *Executor) newStateDb() (vm.Database, error) {
 	blk, err := edb.GetBlockByNumber(executor.namespace, edb.GetHeightOfChain(executor.namespace))
 	if err != nil {
 		log.Errorf("[Namespace = %s] can not find block #%d", executor.namespace, edb.GetHeightOfChain(executor.namespace))

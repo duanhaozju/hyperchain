@@ -16,7 +16,7 @@ func (executor *Executor) RunInSandBox(tx *types.Transaction) error {
 	if err != nil {
 		return err
 	}
-	statedb, err := executor.NewStateDb()
+	statedb, err := executor.newStateDb()
 	if err != nil {
 		return err
 	}
@@ -24,6 +24,7 @@ func (executor *Executor) RunInSandBox(tx *types.Transaction) error {
 	fakeBlockNumber := edb.GetHeightOfChain(executor.namespace) + 1
 	sandBox := initEnvironment(statedb, fakeBlockNumber)
 	receipt, _, _, err := core.ExecTransaction(tx, sandBox)
+	log.Notice("DEBUG")
 	if err != nil {
 		var errType types.InvalidTransactionRecord_ErrType
 		if core.IsValueTransferErr(err) {

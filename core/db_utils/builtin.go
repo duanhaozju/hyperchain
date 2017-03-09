@@ -18,7 +18,6 @@ const (
 	BlockVersion       = "1.0"
 	ReceiptVersion     = "1.0"
 	TransactionVersion = "1.0"
-	DefaultNamespace   = "Global"
 )
 
 var (

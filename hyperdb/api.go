@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/viper"
 	"strconv"
 	"sync"
-	"path/filepath"
 	"hyperchain/hyperdb/sldb"
 	"hyperchain/common"
 	"hyperchain/hyperdb/db"
@@ -100,15 +99,16 @@ func InitDatabase(conf *common.Config, nameSpace string) error {
 		return errors.New("Try to init inited db "+nameSpace)
 	}
 
-	db, err := NewDatabase(conf, filepath.Join(leveldbPath,nameSpace,"Blockchain"), dbType)
+	db, err := NewDatabase(conf, "Blockchain", dbType)
 
 
 	if err!=nil{
-		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
+		log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
+		log.Error(err.Error())
 		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
 	}
 
-	db1, err1 := NewDatabase(conf, filepath.Join(leveldbPath,nameSpace,"Consensus" ), 001)
+	db1, err1 := NewDatabase(conf, "Consensus" , 001)
 
 	if err1 != nil {
 
@@ -153,7 +153,7 @@ func GetDBDatabaseByNamespace(namespace string)(db.Database, error){
 	dbMap.dbSync.Lock()
 	defer dbMap.dbSync.Unlock()
 
-	namespace += Consensus
+	namespace += Blockchain
 
 	if _,ok:=dbMap.dbMap[namespace];!ok{
 		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
@@ -189,10 +189,10 @@ func NewDatabase(conf *common.Config, path string, dbType int) (db.Database, err
 	switch dbType {
 	case LDB_DB:
 		log.Notice("Use level db only")
-		return hleveldb.NewLDBDataBase(path)
+		return hleveldb.NewLDBDataBase(conf,path)
 	case SUPER_LEVEL_DB:
 		log.Notice("Use SuperLevelDB")
-		return sldb.NewSLDB(conf)
+		return sldb.NewSLDB(conf,path)
 	default:
 		log.Errorf("Wrong dbType:" + strconv.Itoa(dbType))
 		return nil, errors.New("Wrong dbType:" + strconv.Itoa(dbType))

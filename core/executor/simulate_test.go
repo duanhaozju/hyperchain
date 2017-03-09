@@ -7,21 +7,26 @@ import (
 	checker "gopkg.in/check.v1"
 	"hyperchain/core"
 	"hyperchain/core/types"
-	"hyperchain/tree/bucket"
 	"testing"
+	edb "hyperchain/core/db_utils"
+	"hyperchain/crypto"
+	"hyperchain/common"
 )
 
 const (
-	testPort              = 8888
-	testDir               = "~/tmp/hyperchain-test"
 	defaultGas      int64 = 10000
 	defaustGasPrice int64 = 10000
-	genesisPath           = "../../config/genesis.json"
+	namespace             = "testing"
+	configPath            = "../../config/global.yaml"
+	dbConfigPath          = "../../config/db.yaml"
+)
+
+var (
+	conf *common.Config = common.NewConfig(configPath)
 )
 
 type SimulateSuite struct {
-	rawPool   *Executor
-	hyperPool *Executor
+	executor *Executor
 }
 
 func Test(t *testing.T) {
@@ -38,25 +43,11 @@ func init() {
 // Run once when the suite starts running.
 func (suite *SimulateSuite) SetUpSuite(c *checker.C) {
 	// initialize block pool
-	core.InitDB(testDir, testPort)
-	rawBlockPoolConf := BlockPoolConf{
-		BlockVersion:       "1.0",
-		TransactionVersion: "1.0",
-		StateType:          "rawstate",
-	}
-	hyperBlockPoolConf := BlockPoolConf{
-		BlockVersion:       "1.0",
-		TransactionVersion: "1.0",
-		StateType:          "hyperstate",
-	}
-	bucketConf := bucket.Conf{
-		StateSize:         19,
-		StateLevelGroup:   10,
-		StorageSize:       19,
-		StorageLevelGroup: 10,
-	}
-	suite.rawPool = NewBlockExecutor(nil, rawBlockPoolConf, bucketConf)
-	suite.hyperPool = NewBlockExecutor(nil, hyperBlockPoolConf, bucketConf)
+	conf.MergeConfig(dbConfigPath)//todo:refactor it
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	kec256Hash := crypto.NewKeccak256Hash("keccak256")
+	edb.InitDBForNamespace(conf, namespace, dbConfigPath, 8001)
+	suite.executor = NewExecutor(namespace, nil, conf, kec256Hash, encryption, nil)
 }
 
 // Run before each test or benchmark starts running.
@@ -76,28 +67,14 @@ func (suite *SimulateSuite) TearDownSuite(c *checker.C) {
 	Functional test
 */
 func (suite *SimulateSuite) TestSimulate(c *checker.C) {
-	var blockPool *Executor
-	stateType := []string{"rawstate", "hyperstate"}
-	for _, state := range stateType {
-		switch state {
-		case "rawstate":
-			blockPool = suite.rawPool
-			core.CreateInitBlock(genesisPath, state, "1.0", blockPool.bucketTreeConf)
-			if err := suite.simulateForTransafer(blockPool); err != nil {
-				c.Errorf("simulate transfer test failed. %s", err)
-			}
-		case "hyperstate":
-			blockPool = suite.hyperPool
-			core.CreateInitBlock(genesisPath, state, "1.0", blockPool.bucketTreeConf)
-			if err := suite.simulateForTransafer(blockPool); err != nil {
-				c.Errorf("simulate transfer test failed. %s", err)
-			}
-		}
+	core.CreateInitBlock(namespace, conf)
+	if err := suite.simulateForTransafer(suite.executor); err != nil {
+		c.Errorf("simulate transfer test failed. %s", err)
 	}
 }
 
-func (suite *SimulateSuite) simulateForTransafer(blockPool *Executor) error {
-	value := types.NewTransactionValue(defaustGasPrice, defaultGas, 4, nil)
+func (suite *SimulateSuite) simulateForTransafer(executor *Executor) error {
+	value := types.NewTransactionValue(defaustGasPrice, defaultGas, 3, nil, false)
 	data, err := proto.Marshal(value)
 	if err != nil {
 		return err
@@ -105,19 +82,19 @@ func (suite *SimulateSuite) simulateForTransafer(blockPool *Executor) error {
 	transaction := &types.Transaction{
 		Version:   []byte("1.0"),
 		From:      []byte("6201cb0448964ac597faf6fdf1f472edf2a22b89"),
-		To:        []byte("d1914e6e9845a66cae754752565786f6f52b339d"),
+		To:        []byte("d4084c9423785f3d8f69b0d236fb072d6b833142"),
 		Value:     data,
-		Timestamp: 1483081034372214455,
-		Nonce:     436124869695996140,
-		Signature: []byte("39a3c574f95c825274ea9bd78054863ba3ca70f9ca04c602f1e55219ba177b24475c920f100dd1883ad317f20ba7294fb53d4ef976c169bc790f2630fe56ccf700"),
+		Timestamp: 1489051319894944577,
+		Nonce:     5215324974019300734,
+		Signature: []byte("42eaa8b4ea5c3e4d580757458e2b7f9382597cedb61a23d5019afa17f2bc9c0019c317b60a33e2a6f5997058c9e0e73c6d787d72cea32e61de4eed21a3e1fa4500"),
 		Id:        1,
 	}
-	if err := blockPool.RunInSandBox(transaction); err != nil {
+	if err := executor.RunInSandBox(transaction); err != nil {
 		return err
 	}
 
 	// check receipt existence
-	if receipt := core.GetReceipt(transaction.GetTransactionHash()); receipt == nil {
+	if receipt := edb.GetReceipt(namespace, transaction.GetTransactionHash()); receipt == nil {
 		return errors.New("no receipt found in database")
 	}
 	return nil
@@ -137,4 +114,11 @@ func (suite *SimulateSuite) simulateForInvocation() error {
 func (suite *SimulateSuite) BenchmarkSimulate(c *checker.C) {
 	for i := 0; i < c.N; i++ {
 	}
+}
+
+/*
+	test utils
+ */
+
+func initConfig(configPath string) {
 }
