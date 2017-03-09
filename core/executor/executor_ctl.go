@@ -21,11 +21,11 @@ type ExecutorStatus struct {
 }
 
 type SyncFlag struct {
-	SyncRequireBlockNum  uint64   // the block num in sync process
-	SyncRequireBlockHash []byte   // the block hash in sync process
-	SyncTarget           uint64   // the target block number of this synchronization
-	SyncPeers            []uint64 // peers to fetch sync blocks
-	LocalId              uint64   // local node id
+	SyncDemandBlockNum  uint64   // the block num in sync process
+	SyncDemandBlockHash []byte   // the block hash in sync process
+	SyncTarget          uint64   // the target block number of this synchronization
+	SyncPeers           []uint64 // peers to fetch sync blocks
+	LocalId             uint64   // local node id
 }
 
 func initializeExecutorStatus(executor *Executor) error {
@@ -213,18 +213,18 @@ func (executor *Executor) syncDone() {
 	executor.turnOnValidationSwitch()
 }
 
-// updateSyncRequired - update required block number and related hash during the sync.
-func (executor *Executor) updateSyncRequired(num uint64, hash []byte, target uint64) error {
-	executor.status.syncFlag.SyncRequireBlockNum = num
-	executor.status.syncFlag.SyncRequireBlockHash = hash
+// updateSyncFlag - update demand block number, related hash and target during the sync.
+func (executor *Executor) updateSyncFlag(num uint64, hash []byte, target uint64) error {
+	executor.status.syncFlag.SyncDemandBlockNum = num
+	executor.status.syncFlag.SyncDemandBlockHash = hash
 	executor.status.syncFlag.SyncTarget = target
 	return nil
 }
 
 // clearSyncFlag - clear all sync flag fields.
 func (executor *Executor) clearSyncFlag() {
-	executor.status.syncFlag.SyncRequireBlockNum = 0
-	executor.status.syncFlag.SyncRequireBlockHash = nil
+	executor.status.syncFlag.SyncDemandBlockNum = 0
+	executor.status.syncFlag.SyncDemandBlockHash = nil
 	executor.status.syncFlag.SyncTarget = 0
 	executor.status.syncFlag.LocalId = 0
 	executor.status.syncFlag.SyncPeers = nil
