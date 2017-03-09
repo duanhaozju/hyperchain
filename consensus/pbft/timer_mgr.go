@@ -51,7 +51,7 @@ func (tm *timerManager) startTimer(tname string, afterfunc func()) {
 	tm.ttimers[tname].isActive = append(tm.ttimers[tname].isActive, true)
 
 	counts := len(tm.ttimers[tname].isActive)
-	logger.Errorf("Now exsits %d timer---%s", counts, tname)
+	logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].counts, tname)
 
 	send := func() {
 		if tm.ttimers[tname].isActive[counts - 1] {
@@ -122,10 +122,10 @@ func (tm *timerManager) setTimeoutValue(timerName string, d time.Duration) {
 //makeRequestTimeoutLegal if requestTimeout is not legal, make it legal
 func (tm *timerManager) makeRequestTimeoutLegal() {
 	nullRequestTimeout := tm.getTimeoutValue(NULL_REQUEST_TIMER)
-	requestTimeout := tm.getTimeoutValue(PBFT_REQUEST_TIMEOUT)
+	requestTimeout := tm.requestTimeout
 
 	if requestTimeout >= nullRequestTimeout && nullRequestTimeout != 0{
-		tm.ttimers[NULL_REQUEST_TIMER].timeout = 3 * tm.ttimers[PBFT_REQUEST_TIMEOUT].timeout / 2
+		tm.setTimeoutValue(NULL_REQUEST_TIMER, 3 * requestTimeout / 2)
 		logger.Warningf("Configured null request timeout must be greater " +
 			"than request timeout, setting to %v", tm.getTimeoutValue(NULL_REQUEST_TIMER))
 	}

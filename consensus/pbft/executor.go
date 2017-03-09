@@ -133,7 +133,7 @@ func (pbft *pbftImpl) handleCorePbftEvent(e *LocalEvent) events.Event {
 	case CORE_BATCH_TIMER_EVENT:
 		logger.Debugf("Replica %d batch timer expired", pbft.id)
 		if atomic.LoadUint32(&pbft.activeView) == 1 {
-			return pbft.batchMgr.sendBatchRequest()
+			return pbft.sendBatchRequest()
 		}
 		return nil
 

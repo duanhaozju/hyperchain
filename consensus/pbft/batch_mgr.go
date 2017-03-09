@@ -21,9 +21,7 @@ type batchManager struct{
 	batchSize        	int
 	batchStore       	[]*types.Transaction            //ordered message batch
 	batchEventsManager  	events.Manager //pbft.batchManager => batchManager
-	batchTimer       	events.Timer
 	batchTimerActive 	bool
-	batchTimeout     	time.Duration
 
 	etf                 events.TimerFactory //batch event timer factory
 	pbftId              uint64
@@ -129,15 +127,12 @@ func (bv *batchValidator) vbsSize() int {
 }
 
 
-func newBatchValidator(conf *common.Config, pbft *pbftImpl) *batchValidator {
+func newBatchValidator(pbft *pbftImpl) *batchValidator {
 
 	bv := &batchValidator{}
 	bv.validatedBatchStore = make(map[string]*TransactionBatch)
 	bv.cacheValidatedBatch = make(map[string]*cacheBatch)
 	bv.preparedCert = make(map[msgID]string)
-
-	logger.Infof("PBFT Batch size = %d", pbft.batchMgr.batchSize)
-	logger.Infof("PBFT Batch timeout = %v", pbft.batchMgr.batchTimeout)
 
 	bv.pbftId = pbft.id
 	return bv
@@ -149,27 +144,24 @@ func newBatchManager(conf *common.Config, pbft *pbftImpl) *batchManager {
 	bm.batchEventsManager = events.NewManagerImpl()
 	bm.batchEventsManager.SetReceiver(pbft)
 
-	bm.etf = events.NewTimerFactoryImpl(bm.batchEventsManager) //eft EventTimerFactory
 	pbft.reqEventQueue = events.GetQueue(bm.batchEventsManager.Queue())
 
-	bm.pbftEventQueue = pbft.pbftEventQueue
-	bm.txEventQueue = pbft.reqEventQueue
-	// initialize the batchTimeout
-
-	bm.batchTimer = bm.etf.CreateTimer()
 	bm.batchSize = conf.GetInt(PBFT_BATCH_SIZE)
 	bm.batchStore = nil
 	var err error
-	bm.batchTimeout, err = time.ParseDuration(conf.GetString(PBFT_BATCH_TIMEOUT))
+	batchTimeout, err := time.ParseDuration(conf.GetString(PBFT_BATCH_TIMEOUT))
 	if err != nil {
 		panic(fmt.Errorf("Cannot parse batch timeout: %s", err))
 	}
 
-	if bm.batchTimeout >= pbft.pbftTimerMgr.requestTimeout {//TODO: change the pbftTimerMgr to batchTimerMgr
-		pbft.pbftTimerMgr.requestTimeout = 3 * bm.batchTimeout / 2
+	if batchTimeout >= pbft.pbftTimerMgr.requestTimeout {//TODO: change the pbftTimerMgr to batchTimerMgr
+		pbft.pbftTimerMgr.requestTimeout = 3 * batchTimeout / 2
 		logger.Warningf("Configured request timeout must be greater than batch timeout, setting to %v", pbft.pbftTimerMgr.requestTimeout)
 	}
 	bm.pbftId = pbft.id
+
+	logger.Infof("PBFT Batch size = %d", bm.batchSize)
+	logger.Infof("PBFT Batch timeout = %v", batchTimeout)
 
 	return bm
 }
@@ -215,34 +207,40 @@ func (bm *batchManager) pushEvent(event interface{})  {
 }
 
 //startBatchTimer stop the batch event timer.
-func (bm *batchManager) startBatchTimer()  {
-	batchTimerEvent := &LocalEvent{
-		Service:CORE_PBFT_SERVICE,
-		EventType:CORE_BATCH_TIMER_EVENT,
+func (pbft *pbftImpl) startBatchTimer()  {
+	event := &LocalEvent{
+		Service:   CORE_PBFT_SERVICE,
+		EventType: CORE_BATCH_TIMER_EVENT,
 	}
-	bm.batchTimer.Reset(bm.batchTimeout, batchTimerEvent)
-	bm.batchTimerActive = true
-	logger.Debugf("Replica %d started the batch timer", bm.pbftId)
+
+	af := func(){
+		pbft.reqEventQueue.Push(event)
+	}
+
+	pbft.pbftTimerMgr.startTimer(BATCH_TIMER, af)
+
+	pbft.batchMgr.batchTimerActive = true
+	logger.Debugf("Replica %d started the batch timer", pbft.id)
 }
 
 //stopBatchTimer stop batch Timer.
-func (bm *batchManager) stopBatchTimer() {
-	bm.batchTimer.Stop()
-	bm.batchTimerActive = false
-	logger.Debugf("Replica %d stpbftped the batch timer", bm.pbftId)
+func (pbft *pbftImpl) stopBatchTimer() {
+	pbft.pbftTimerMgr.stopTimer(BATCH_TIMER)
+	pbft.batchMgr.batchTimerActive = false
+	logger.Debugf("Replica %d stpbftped the batch timer", pbft.id)
 }
 
 //sendBatchRequest send batch request into pbft event queue.
-func (bm *batchManager) sendBatchRequest() error {
-	bm.stopBatchTimer()
+func (pbft *pbftImpl) sendBatchRequest() error {
+	pbft.stopBatchTimer()
 
-	if bm.isBatchStoreEmpty() {
+	if pbft.batchMgr.isBatchStoreEmpty() {
 		logger.Error("Told to send an empty batch store for ordering, ignoring")
 		return nil
 	}
 
 	reqBatch := &TransactionBatch{
-		Batch:     bm.batchStore,
+		Batch:     pbft.batchMgr.batchStore,
 		Timestamp: time.Now().UnixNano(),
 	}
 	payload, err := proto.Marshal(reqBatch)
@@ -256,24 +254,24 @@ func (bm *batchManager) sendBatchRequest() error {
 		Payload: payload,
 	}
 
-	bm.setBatchStore(nil)
+	pbft.batchMgr.setBatchStore(nil)
 	logger.Infof("Creating batch with %d requests", len(reqBatch.Batch))
 
-	go bm.txEventQueue.Push(consensusMsg)
+	go pbft.reqEventQueue.Push(consensusMsg)
 
 	return nil
 }
 
 // recvTransaction receive transaction from client.
-func (bm *batchManager) recvTransaction(tx *types.Transaction) error {
-	bm.addTransaction(tx)
+func (pbft *pbftImpl) recvTransaction(tx *types.Transaction) error {
+	pbft.batchMgr.addTransaction(tx)
 
-	if !bm.isBatchTimerActive() {
-		bm.startBatchTimer()
+	if !pbft.batchMgr.isBatchTimerActive() {
+		pbft.startBatchTimer()
 	}
 
-	if bm.canSendBatch() {
-		return bm.sendBatchRequest()
+	if pbft.batchMgr.canSendBatch() {
+		return pbft.sendBatchRequest()
 	}
 
 	return nil

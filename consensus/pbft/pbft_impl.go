@@ -97,8 +97,8 @@ func newPBFT(config *common.Config, h helper.Stack) *pbftImpl {
 	// initialize state transfer
 	pbft.nodeMgr = newNodeMgr()
 	pbft.duplicator = make(map[uint64]*transactionStore)
-	pbft.batchMgr = newBatchManager(config, pbft) // init after pbftEventQueue
-	pbft.batchVdr = newBatchValidator(config, pbft)
+	pbft.batchMgr = newBatchManager(config, pbft) 		// init after pbftEventQueue
+	pbft.batchVdr = newBatchValidator(pbft)
 	pbft.reqStore = newRequestStore()
 
 	atomic.StoreUint32(&pbft.activeView, 1)
@@ -793,7 +793,7 @@ func (pbft *pbftImpl) processTxEvent(tx *types.Transaction) error {
 //primaryProcessTx primary node use this method to handle transaction
 func (pbft *pbftImpl) primaryProcessTx(tx *types.Transaction) error {
 
-	return pbft.batchMgr.recvTransaction(tx)
+	return pbft.recvTransaction(tx)
 }
 
 //processRequestsDuringViewChange process requests received during view change.
