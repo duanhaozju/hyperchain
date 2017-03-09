@@ -154,7 +154,7 @@ func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *
 		receipt, _, _, err := core.ExecTransaction(tx, env)
 		// just ignore invalid transactions
 		if err != nil {
-			log.Warning("invalid transaction found during the state update process in #%d", seqNo)
+			log.Warningf("invalid transaction found during the state update process in #%d", seqNo)
 			continue
 		}
 		executor.calculateTransactionsFingerprint(tx, false)
