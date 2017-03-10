@@ -138,3 +138,19 @@ type ReceiveVerifiedBlock struct {
 type NegoRoutersEvent struct {
 	Payload []byte
 }
+
+/*
+	Executor events
+ */
+type ExecutorToConsensusEvent struct {
+	Payload interface{}
+	Type    int
+}
+
+type ExecutorToP2PEvent struct {
+	Payload []byte
+	Type    int
+	Peers   []uint64
+}
+
+

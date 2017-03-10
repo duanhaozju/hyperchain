@@ -45,7 +45,7 @@ func (executor *Executor) Rollback(ev event.VCResetEvent) {
 	edb.UpdateChainByBlcokNum(executor.namespace, batch, ev.SeqNo - 1, false, false)
 	batch.Write()
 	executor.initDemand(ev.SeqNo)
-	executor.informConsensus(CONSENSUS_LOCAL, protos.VcResetDone{SeqNo: ev.SeqNo})
+	executor.informConsensus(NOTIFY_VC_DONE, protos.VcResetDone{SeqNo: ev.SeqNo})
 }
 
 // CutdownBlock remove a block and reset blockchain status to the last status.

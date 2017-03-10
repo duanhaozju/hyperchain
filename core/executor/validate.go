@@ -1,7 +1,6 @@
 package executor
 
 import (
-	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/types"
@@ -10,7 +9,6 @@ import (
 	"hyperchain/event"
 	"hyperchain/p2p"
 	"hyperchain/protos"
-	"hyperchain/recovery"
 	"sort"
 	"strconv"
 	"sync"
@@ -31,9 +29,6 @@ type ValidationResultRecord struct {
 
 func (executor *Executor) Validate(validationEvent event.ExeTxsEvent, peerManager p2p.PeerManager) {
 	executor.addValidationEvent(validationEvent)
-	if executor.peerManager == nil {
-		executor.peerManager = peerManager
-	}
 }
 
 // listenValidationEvent - validation backend process, use to listen new validation event and dispatch it to a processor.
@@ -171,7 +166,12 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 		executor.statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(tx, env)
 		if err != nil {
-			executor.classifyInvalid(err, tx, invalidTxs)
+			errType := executor.classifyInvalid(err)
+			invalidTxs = append(invalidTxs, &types.InvalidTransactionRecord{
+				Tx:      tx,
+				ErrType: errType,
+				ErrMsg:  []byte(err.Error()),
+			})
 			continue
 		}
 		executor.calculateTransactionsFingerprint(tx, false)
@@ -206,7 +206,7 @@ func initEnvironment(state vm.Database, seqNo uint64) vm.Environment {
 }
 
 // classifyInvalid - classify invalid transaction via error type.
-func (executor *Executor) classifyInvalid(err error, tx *types.Transaction, invalidTxs []*types.InvalidTransactionRecord) {
+func (executor *Executor) classifyInvalid(err error) types.InvalidTransactionRecord_ErrType {
 	var errType types.InvalidTransactionRecord_ErrType
 	if core.IsValueTransferErr(err) {
 		errType = types.InvalidTransactionRecord_OUTOFBALANCE
@@ -218,11 +218,7 @@ func (executor *Executor) classifyInvalid(err error, tx *types.Transaction, inva
 			errType = types.InvalidTransactionRecord_INVOKE_CONTRACT_FAILED
 		}
 	}
-	invalidTxs = append(invalidTxs, &types.InvalidTransactionRecord{
-		Tx:      tx,
-		ErrType: errType,
-		ErrMsg:  []byte(err.Error()),
-	})
+	return errType
 }
 
 // submitValidationResult - submit state changes to batch.
@@ -246,23 +242,7 @@ func (executor *Executor) submitValidationResult(batch db.Batch) (error, []byte,
 // throwInvalidTransactionBack - send all invalid transaction to its birth place.
 func (executor *Executor) throwInvalidTransactionBack(invalidtxs []*types.InvalidTransactionRecord) {
 	for _, t := range invalidtxs {
-		payload, err := proto.Marshal(t)
-		if err != nil {
-			log.Errorf("[Namespace = %s] marshal tx error", executor.namespace)
-			continue
-		}
-		// original node is local
-		// store invalid transaction directly
-		if t.Tx.Id == uint64(executor.peerManager.GetNodeId()) {
-			executor.StoreInvalidTransaction(event.RespInvalidTxsEvent{
-				Payload: payload,
-			})
-			continue
-		}
-		var peers []uint64
-		peers = append(peers, t.Tx.Id)
-		// send back to original node
-		executor.peerManager.SendMsgToPeers(payload, peers, recovery.Message_INVALIDRESP)
+		executor.informP2P(NOTIFY_UNICAST_INVALID, t)
 	}
 }
 
@@ -279,7 +259,7 @@ func (executor *Executor) saveValidationResult(res *ValidationResultRecord, ev e
 
 // sendValidationResult - send validation result to consensus module.
 func (executor *Executor) sendValidationResult(res *ValidationResultRecord, ev event.ExeTxsEvent, hash common.Hash) {
-	executor.informConsensus(CONSENSUS_LOCAL, protos.ValidatedTxs{
+	executor.informConsensus(NOTIFY_VALIDATION_RES, protos.ValidatedTxs{
 		Transactions: res.ValidTxs,
 		SeqNo:        ev.SeqNo,
 		View:         ev.View,
@@ -291,7 +271,7 @@ func (executor *Executor) sendValidationResult(res *ValidationResultRecord, ev e
 // dealEmptyBlock - deal with empty block.
 func (executor *Executor) dealEmptyBlock(res *ValidationResultRecord, ev event.ExeTxsEvent) {
 	if ev.IsPrimary {
-		executor.informConsensus(CONSENSUS_LOCAL, protos.RemoveCache{Vid: ev.SeqNo})
+		executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: ev.SeqNo})
 		executor.throwInvalidTransactionBack(res.InvalidTxs)
 	}
 }

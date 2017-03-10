@@ -86,3 +86,4 @@ global:
             consensus: "NOTICE"
             core: "NOTICE"
             hyperdb: "NOTICE"
+            executor: "NOTICE"

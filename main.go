@@ -176,7 +176,7 @@ func main() {
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
 
 		//init block pool to save block
-		executor := executor.NewExecutor(DefaultNamespace, cs, grpcPeerMgr, conf, kec256Hash, encryption, eventMux)
+		executor := executor.NewExecutor(DefaultNamespace, conf, eventMux)
 		if executor == nil {
 			return errors.New("Initialize BlockPool failed")
 		}

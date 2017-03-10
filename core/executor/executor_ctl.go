@@ -5,6 +5,7 @@ import (
 	edb "hyperchain/core/db_utils"
 	"hyperchain/common"
 	"time"
+	"hyperchain/tree/bucket"
 )
 type ExecutorStatus struct {
 	validateBehaveFlag    int32                  // validation type, normal or just ignore.
@@ -53,12 +54,12 @@ func (executor *Executor) initDemand(num uint64) {
 // Demand block number
 func (executor *Executor) incDemandNumber() {
 	executor.status.demandNumber += 1
-	log.Noticef("[Namespace = %s] increase demand number to %d", executor.namespace, executor.status.demandNumber)
+	log.Debugf("[Namespace = %s] increase demand number to %d", executor.namespace, executor.status.demandNumber)
 }
 
 func (executor *Executor) setDemandNumber(num uint64) {
 	executor.status.demandNumber = num
-	log.Noticef("[Namespace = %s] set demand number to %d", executor.namespace, executor.status.demandNumber)
+	log.Debugf("[Namespace = %s] set demand number to %d", executor.namespace, executor.status.demandNumber)
 }
 
 func (executor *Executor) getDemandNumber() uint64 {
@@ -194,6 +195,12 @@ func (executor *Executor) waitUtilRollbackAvailable() {
 	executor.turnOffValidationSwitch()
 	executor.waitUtilValidationIdle()
 	executor.wailUtilCommitIdle()
+
+	// clear all cached stuff
+	executor.statedb.Purge()
+	tree := executor.statedb.GetTree()
+	bucketTree := tree.(*bucket.BucketTree)
+	bucketTree.ClearAllCache()
 }
 
 // rollbackDone - rollback callback function to notify rollback finish.
@@ -206,6 +213,13 @@ func (executor *Executor) waitUtilSyncAvailable() {
 	executor.turnOffValidationSwitch()
 	executor.waitUtilValidationIdle()
 	executor.wailUtilCommitIdle()
+
+	// clear all cached stuff
+	executor.statedb.Purge()
+	tree := executor.statedb.GetTree()
+	bucketTree := tree.(*bucket.BucketTree)
+	bucketTree.ClearAllCache()
+
 }
 
 // syncDone - sync callback function to notify sync finish.

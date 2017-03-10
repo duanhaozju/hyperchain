@@ -17,9 +17,6 @@ import (
 
 func (executor *Executor) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerManager p2p.PeerManager) {
 	executor.addCommitEvent(ev)
-	if executor.peerManager == nil {
-		executor.peerManager = peerManager
-	}
 }
 
 func (executor *Executor) listenCommitEvent() {
@@ -88,7 +85,7 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	log.Noticef("[Namespace = %s] Block number %d", executor.namespace, block.Number)
 	log.Noticef("[Namespace = %s] Block hash %s", executor.namespace, hex.EncodeToString(block.BlockHash))
 	// remove Cached Transactions which used to check transaction duplication
-	executor.informConsensus(CONSENSUS_LOCAL, protos.RemoveCache{Vid: record.VID})
+	executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: record.VID})
 	return nil
 }
 

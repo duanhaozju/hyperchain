@@ -35,12 +35,12 @@ func initializeExecutorCache(executor *Executor) error {
 func (executor *Executor) PurgeCache() {
 	executor.cache.validationResultCache.Purge()
 	executor.clearPendingValidationEventQ()
-	log.Noticef("[Namespace = %s] purge validation result cache and validation event cache success", executor.namespace)
+	log.Debugf("[Namespace = %s] purge validation result cache and validation event cache success", executor.namespace)
 }
 
 // addPendingValidationEvent - push a validation event to pending queue.
 func (executor *Executor) addPendingValidationEvent(validationEvent event.ExeTxsEvent) {
-	log.Errorf("[Namespace = %s] receive validation event %d while %d is required, save into cache temporarily.", executor.namespace, validationEvent.SeqNo, executor.getDemandSeqNo())
+	log.Warningf("[Namespace = %s] receive validation event %d while %d is required, save into cache temporarily.", executor.namespace, validationEvent.SeqNo, executor.getDemandSeqNo())
 	executor.cache.pendingValidationEventQ.Add(validationEvent.SeqNo, validationEvent)
 }
 
@@ -84,13 +84,13 @@ func (executor *Executor) fetchValidationResult(hash string) (*ValidationResultR
 func (executor *Executor) addValidationEvent(ev event.ExeTxsEvent) {
 	executor.cache.validationEventC <- ev
 	atomic.AddInt32(&executor.status.validateQueueLen, 1)
-	log.Noticef("[Namespace = %s] receive a validation event #%d", executor.namespace, ev.SeqNo)
+	log.Debugf("[Namespace = %s] receive a validation event #%d", executor.namespace, ev.SeqNo)
 }
 
 // fetchValidationEvent - got a validation event from channel buffer.
 func (executor *Executor) fetchValidationEvent() event.ExeTxsEvent {
 	ev := <- executor.cache.validationEventC
-	log.Noticef("[Namespace = %s] fetch a validation event #%d", executor.namespace, ev.SeqNo)
+	log.Debugf("[Namespace = %s] fetch a validation event #%d", executor.namespace, ev.SeqNo)
 	return ev
 }
 

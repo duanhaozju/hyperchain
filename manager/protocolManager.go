@@ -26,7 +26,7 @@ func init() {
 }
 
 type ProtocolManager struct {
-	namespace         string
+	namespace           string
 	serverPort          int
 	executor            *executor.Executor
 	Peermanager         p2p.PeerManager
@@ -48,6 +48,9 @@ type ProtocolManager struct {
 	syncBlockSub        event.Subscription
 	syncStatusSub       event.Subscription
 	peerMaintainSub     event.Subscription
+
+	executorSub         event.Subscription
+
 	quitSync            chan struct{}
 	syncBlockCache      *common.Cache
 	replicaStatus       *common.Cache
@@ -109,8 +112,10 @@ func (pm *ProtocolManager) Start(c chan int, cm *admittance.CAManager) {
 	pm.peerMaintainSub = pm.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{},
 		event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{}, event.RecvNewPeerEvent{},
 		event.DelPeerEvent{}, event.BroadcastDelPeerEvent{}, event.RecvDelPeerEvent{})
+	pm.executorSub = pm.eventMux.Subscribe(event.ExecutorToConsensusEvent{}, event.ExecutorToP2PEvent{})
 	go pm.ConsensusLoop()
 	go pm.ListenSynchronizationEvent()
+	go pm.listenExecutorEvent()
 	go pm.respHandlerLoop()
 	go pm.viewChangeLoop()
 	go pm.peerMaintainLoop()
@@ -327,6 +332,16 @@ func (self *ProtocolManager) peerMaintainLoop() {
 	}
 }
 
+func (self *ProtocolManager) listenExecutorEvent() {
+	for obj := range self.executorSub.Chan() {
+		switch ev := obj.Data.(type) {
+		case event.ExecutorToConsensusEvent:
+			self.dispatchExecutorToConsensus(ev)
+		case event.ExecutorToP2PEvent:
+			self.dispatchExecutorToP2P(ev)
+		}
+	}
+}
 
 func (self *ProtocolManager) sendMsg(payload []byte) {
 	msg := &protos.Message{
@@ -380,4 +395,44 @@ func (self *ProtocolManager) NegotiateView() {
 	self.eventMux.Post(event.ConsensusEvent{
 		Payload: msg,
 	})
+}
+
+func (self *ProtocolManager) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {
+	switch ev.Type {
+	case executor.NOTIFY_REMOVE_CACHE:
+		log.Debugf("[Namespace = %s] message middleware: [remove cache]", self.namespace)
+		self.consenter.RecvLocal(ev.Payload)
+	case executor.NOTIFY_VC_DONE:
+		log.Debugf("[Namespace = %s] message middleware: [vc done]", self.namespace)
+		self.consenter.RecvLocal(ev.Payload)
+	case executor.NOTIFY_VALIDATION_RES:
+		log.Debugf("[Namespace = %s] message middleware: [validation result]", self.namespace)
+		self.consenter.RecvLocal(ev.Payload)
+	case executor.NOTIFY_SYNC_DONE:
+		log.Debugf("[Namespace = %s] message middleware: [sync done]", self.namespace)
+		self.consenter.RecvMsg(ev.Payload.([]byte))
+	}
+}
+func (self *ProtocolManager) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
+	switch ev.Type {
+	case executor.NOTIFY_BROADCAST_DEMAND:
+		log.Debugf("[Namespace = %s] message middleware: [broadcast demand]", self.namespace)
+		self.Peermanager.SendMsgToPeers(ev.Payload, ev.Peers, recovery.Message_SYNCCHECKPOINT)
+	case executor.NOTIFY_UNICAST_INVALID:
+		log.Debugf("[Namespace = %s] message middleware: [unicast invalid tx]", self.namespace)
+		peerId := ev.Peers[0]
+		if peerId == uint64(self.Peermanager.GetNodeId()) {
+			self.executor.StoreInvalidTransaction(event.RespInvalidTxsEvent{
+				Payload: ev.Payload,
+			})
+		} else {
+			self.Peermanager.SendMsgToPeers(ev.Payload, ev.Peers, recovery.Message_INVALIDRESP)
+		}
+	case executor.NOTIFY_BROADCAST_SINGLE:
+		log.Debugf("[Namespace = %s] message middleware: [broadcast single]", self.namespace)
+		self.Peermanager.SendMsgToPeers(ev.Payload, ev.Peers, recovery.Message_SYNCSINGLE)
+	case executor.NOTIFY_UNICAST_BLOCK:
+		log.Debugf("[Namespace = %s] message middleware: [unicast block]", self.namespace)
+		self.Peermanager.SendMsgToPeers(ev.Payload, ev.Peers, recovery.Message_SYNCBLOCK)
+	}
 }

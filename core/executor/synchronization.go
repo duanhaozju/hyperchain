@@ -4,7 +4,6 @@ import (
 	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/core/types"
-	"hyperchain/tree/bucket"
 	edb "hyperchain/core/db_utils"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/event"
@@ -49,7 +48,7 @@ func (executor *Executor) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 	executor.updateSyncFlag(target.Height, target.CurrentBlockHash, target.Height)
 	executor.recordSyncPeers(stateUpdateMsg.Replicas, stateUpdateMsg.Id)
 	log.Noticef("[Namespace = %s] state update, current height %d, target height %d", executor.namespace, edb.GetHeightOfChain(executor.namespace), target.Height)
-	if err := executor.informP2P(P2P_SEND_SYNC_REQ, nil); err != nil {
+	if err := executor.informP2P(NOTIFY_BROADCAST_DEMAND, nil); err != nil {
 		log.Errorf("[Namespace = %s] send sync req failed.", executor.namespace)
 		executor.reject()
 		return
@@ -60,26 +59,8 @@ func (executor *Executor) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 func (executor *Executor) ReceiveSyncRequest(ev event.StateUpdateEvent) {
 	syncReqMsg := &recovery.CheckPointMessage{}
 	proto.Unmarshal(ev.Payload, syncReqMsg)
-	blocks := &types.Blocks{}
 	for i := syncReqMsg.RequiredNumber; i > syncReqMsg.CurrentNumber; i -= 1 {
-		block, err := edb.GetBlockByNumber(executor.namespace, i)
-		if err != nil {
-			log.Errorf("[Namespace = %s] no demand block number: %d", executor.namespace, i)
-			continue
-		}
-		if blocks.Batch == nil {
-			blocks.Batch = append(blocks.Batch, block)
-		} else {
-			blocks.Batch[0] = block
-		}
-		payload, err := proto.Marshal(blocks)
-		if err != nil {
-			log.Errorf("[Namespace = %s] marshal block failed", executor.namespace)
-			continue
-		}
-		var peer []uint64
-		peer = append(peer, syncReqMsg.PeerId)
-		executor.peerManager.SendMsgToPeers(payload, peer, recovery.Message_SYNCBLOCK)
+		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, syncReqMsg.PeerId)
 	}
 }
 
@@ -131,18 +112,8 @@ func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *
 }
 
 func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
-	// initialize calculator
-	// for calculate fingerprint of a batch of transactions and receipts
 	executor.initTransactionHashCalculator()
 	executor.initReceiptHashCalculator()
-	// load latest state fingerprint
-	// for compatibility, doesn't remove the statement below
-	// initialize state
-	executor.statedb.Purge()
-
-	tree := executor.statedb.GetTree()
-	bucketTree := tree.(*bucket.BucketTree)
-	bucketTree.ClearAllCache()
 
 	batch := executor.statedb.FetchBatch(seqNo)
 	executor.statedb.MarkProcessStart(executor.getTempBlockNumber())
@@ -187,8 +158,6 @@ func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *
 		log.Error("submit validation result failed.", err.Error())
 		return err, nil
 	}
-	// generate new state fingerprint
-	// IMPORTANT doesn't call batch.Write util recv commit event for atomic assurance
 	log.Debugf("validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
 		executor.getTempBlockNumber(), seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	return nil, &ValidationResultRecord{
@@ -307,17 +276,7 @@ func (executor *Executor) processSyncBlocks() {
 
 // broadcastDemandBlock - send block request message to others for demand block.
 func (executor *Executor) SendSyncRequestForSingle(number uint64) {
-	syncRequest := &recovery.CheckPointMessage{
-		RequiredNumber: number,
-		CurrentNumber:  edb.GetHeightOfChain(executor.namespace),
-		PeerId:         executor.status.syncFlag.LocalId,
-	}
-	payload, err := proto.Marshal(syncRequest)
-	if err != nil {
-		log.Errorf("[Namespace = %s] broadcastDemandBlock, marshal message failed", executor.namespace)
-		return
-	}
-	executor.peerManager.SendMsgToPeers(payload, executor.status.syncFlag.SyncPeers, recovery.Message_SYNCSINGLE)
+	executor.informP2P(NOTIFY_BROADCAST_SINGLE, number)
 }
 
 // updateSyncDemand - update next demand block number and block hash.
@@ -343,7 +302,7 @@ func (executor *Executor) updateSyncDemand(block *types.Block) error {
 					log.Debugf("[Namespace = %s] process sync block(block number = %d) stored in cache", executor.namespace, blk.Number)
 					break
 				} else {
-					log.Debugf("[Namespace = %s] found invalid sync block, discard block number %d, block hash %s\n", executor.namespace, blk.Number, common.BytesToHash(blk.BlockHash).Hex())
+					log.Debugf("[Namespace = %s] found invalid sync block, discard block number %d, block hash %s", executor.namespace, blk.Number, common.BytesToHash(blk.BlockHash).Hex())
 				}
 			}
 			if flag {
@@ -364,30 +323,22 @@ func (executor *Executor) updateSyncDemand(block *types.Block) error {
 // sendStateUpdatedEvent - communicate with consensus, told it state update has finished.
 func (executor *Executor) sendStateUpdatedEvent() {
 	// state update success
+	executor.PurgeCache()
 	payload := &protos.StateUpdatedMessage{
 		SeqNo: edb.GetHeightOfChain(executor.namespace),
 	}
-	msg, err := proto.Marshal(payload)
+	ctx, err := proto.Marshal(payload)
 	if err != nil {
 		log.Errorf("[Namespace = %s] StateUpdate marshal stateupdated message failed", executor.namespace)
 		return
 	}
-	msgSend := &protos.Message{
+	msg := &protos.Message{
 		Type:      protos.Message_STATE_UPDATED,
-		Payload:   msg,
+		Payload:   ctx,
 		Timestamp: time.Now().UnixNano(),
 		Id:        1,
 	}
-	msgPayload, err := proto.Marshal(msgSend)
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	log.Debugf("[Namespace = %s] send state updated message", executor.namespace)
-	time.Sleep(2 * time.Second)
-	// IMPORTANT clear block cache of blockpool
-	executor.PurgeCache()
-	executor.consenter.RecvMsg(msgPayload)
+	executor.informConsensus(NOTIFY_SYNC_DONE, msg)
 }
 
 // accpet - accept block synchronization result.

@@ -24,19 +24,8 @@ func (executor *Executor) RunInSandBox(tx *types.Transaction) error {
 	fakeBlockNumber := edb.GetHeightOfChain(executor.namespace) + 1
 	sandBox := initEnvironment(statedb, fakeBlockNumber)
 	receipt, _, _, err := core.ExecTransaction(tx, sandBox)
-	log.Notice("DEBUG")
 	if err != nil {
-		var errType types.InvalidTransactionRecord_ErrType
-		if core.IsValueTransferErr(err) {
-			errType = types.InvalidTransactionRecord_OUTOFBALANCE
-		} else if core.IsExecContractErr(err) {
-			tmp := err.(*core.ExecContractError)
-			if tmp.GetType() == 0 {
-				errType = types.InvalidTransactionRecord_DEPLOY_CONTRACT_FAILED
-			} else if tmp.GetType() == 1 {
-				errType = types.InvalidTransactionRecord_INVOKE_CONTRACT_FAILED
-			}
-		}
+		errType := executor.classifyInvalid(err)
 		t := &types.InvalidTransactionRecord{
 			Tx:      tx,
 			ErrType: errType,
@@ -45,7 +34,7 @@ func (executor *Executor) RunInSandBox(tx *types.Transaction) error {
 		payload, err := proto.Marshal(t)
 		if err != nil {
 			log.Error("Marshal tx error")
-			return nil
+			return err
 		}
 		// persist execution result to local
 		executor.StoreInvalidTransaction(event.RespInvalidTxsEvent{

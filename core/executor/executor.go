@@ -5,12 +5,10 @@ package executor
 import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"hyperchain/consensus"
 	"hyperchain/core/hyperstate"
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
 	"hyperchain/event"
-	"hyperchain/p2p"
 	"hyperchain/crypto"
 	"errors"
 	edb "hyperchain/core/db_utils"
@@ -29,8 +27,6 @@ func init() {
 
 type Executor struct {
 	namespace   string                // namespace tag
-	consenter   consensus.Consenter // consensus module handler
-	peerManager p2p.PeerManager
 	commonHash  crypto.CommonHash
 	encryption  crypto.Encryption
 	conf        *common.Config      // block configuration
@@ -41,14 +37,14 @@ type Executor struct {
 	statedb     vm.Database
 }
 
-func NewExecutor(namespace string, consenter consensus.Consenter, peerManager p2p.PeerManager, conf *common.Config, commonHash crypto.CommonHash, encryption crypto.Encryption, eventMux *event.TypeMux) *Executor {
+func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux) *Executor {
+	kec256Hash := crypto.NewKeccak256Hash("keccak256")
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	helper := NewHelper(eventMux)
 	executor := &Executor{
 		namespace:       namespace,
-		consenter:       consenter,
-		peerManager:     peerManager,
 		conf:            conf,
-		commonHash:      commonHash,
+		commonHash:      kec256Hash,
 		encryption:      encryption,
 		helper:          helper,
 	}
