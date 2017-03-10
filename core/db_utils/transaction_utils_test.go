@@ -18,7 +18,7 @@ func TestGetTransaction(t *testing.T) {
 		logger.Fatal(err)
 	}
 	for _, trans := range transactionCases[:1] {
-		key := trans.GetTransactionHash().Bytes()
+		key := trans.GetHash().Bytes()
 		tr, err := GetTransaction(key)
 		if err != nil {
 			logger.Fatal(err)
@@ -45,14 +45,14 @@ func TestGetTransactionBLk(t *testing.T) {
 		logger.Fatal(err)
 	}
 	batch := db.NewBatch()
-	PersistTransactionMeta(batch, &transactionMeta, transactionCases[0].GetTransactionHash(), true, true)
+	PersistTransactionMeta(batch, &transactionMeta, transactionCases[0].GetHash(), true, true)
 	if len(block.Transactions) > 0 {
-		fmt.Println("tx hash", block.Transactions[0].GetTransactionHash().Bytes())
+		fmt.Println("tx hash", block.Transactions[0].GetHash().Bytes())
 		tx := block.Transactions[0]
-		bn, i := GetTxWithBlock(tx.GetTransactionHash().Bytes())
+		bn, i := GetTxWithBlock(tx.GetHash().Bytes())
 		fmt.Println("block num :", bn, "tx index:", i)
-		DeleteTransactionMeta(batch, tx.GetTransactionHash().Bytes(), true, true)
-		a, b := GetTxWithBlock(tx.GetTransactionHash().Bytes())
+		DeleteTransactionMeta(batch, tx.GetHash().Bytes(), true, true)
+		a, b := GetTxWithBlock(tx.GetHash().Bytes())
 		fmt.Println("block num :", a, "tx index:", b)
 	}
 }
@@ -91,10 +91,10 @@ func TestDeleteTransaction(t *testing.T) {
 		if err != nil {
 			logger.Fatal(err)
 		}
-		DeleteTransaction(db.NewBatch(), trans.GetTransactionHash().Bytes(), true, true)
-		_, err = GetTransaction(trans.GetTransactionHash().Bytes())
+		DeleteTransaction(db.NewBatch(), trans.GetHash().Bytes(), true, true)
+		_, err = GetTransaction(trans.GetHash().Bytes())
 		if err.Error() != "leveldb: not found" {
-			t.Errorf("the transaction key [%s] delete fail, TestDeleteTransaction fail", trans.GetTransactionHash().Bytes())
+			t.Errorf("the transaction key [%s] delete fail, TestDeleteTransaction fail", trans.GetHash().Bytes())
 		}
 	}
 }

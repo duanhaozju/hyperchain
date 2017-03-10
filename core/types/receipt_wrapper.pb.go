@@ -23,6 +23,20 @@ func (m *ReceiptWrapper) String() string            { return proto.CompactTextSt
 func (*ReceiptWrapper) ProtoMessage()               {}
 func (*ReceiptWrapper) Descriptor() ([]byte, []int) { return fileDescriptor4, []int{0} }
 
+func (m *ReceiptWrapper) GetReceiptVersion() []byte {
+	if m != nil {
+		return m.ReceiptVersion
+	}
+	return nil
+}
+
+func (m *ReceiptWrapper) GetReceipt() []byte {
+	if m != nil {
+		return m.Receipt
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterType((*ReceiptWrapper)(nil), "types.ReceiptWrapper")
 }

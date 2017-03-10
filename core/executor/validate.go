@@ -163,7 +163,7 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 	batch := executor.statedb.FetchBatch(executor.getTempBlockNumber())
 	// execute transactions one by one
 	for i, tx := range txs {
-		executor.statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
+		executor.statedb.StartRecord(tx.GetHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(tx, env)
 		if err != nil {
 			errType := executor.classifyInvalid(err)

@@ -20,7 +20,7 @@ type API struct {
 
 var Apis []API
 
-func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, cm *admittance.CAManager,config *common.Config) []API {
+func GetAPIs(eventMux *event.TypeMux, pm *manager.EventHub, cm *admittance.CAManager,config *common.Config) []API {
 
 	db, err := hyperdb.GetDBDatabase()
 

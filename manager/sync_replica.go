@@ -21,7 +21,7 @@ type ReplicaInfo struct {
 	Height          uint64 `protobuf:"varint,3,opt,name=height" json:"heightight,omitempty"`
 }
 
-func (self *ProtocolManager) SyncReplicaStatus() {
+func (self *EventHub) SyncReplicaStatus() {
 	ticker := time.NewTicker(self.syncReplicaInterval)
 	for {
 		select {
@@ -54,7 +54,7 @@ func (self *ProtocolManager) SyncReplicaStatus() {
 	}
 }
 
-func (self *ProtocolManager) RecordReplicaStatus(ev event.ReplicaStatusEvent) {
+func (self *EventHub) RecordReplicaStatus(ev event.ReplicaStatusEvent) {
 	status := &recovery.ReplicaStatus{}
 	proto.Unmarshal(ev.Payload, status)
 	addr := &peermessage.PeerAddress{}
@@ -73,7 +73,7 @@ func (self *ProtocolManager) RecordReplicaStatus(ev event.ReplicaStatusEvent) {
 	log.Debug("recv Replica Status", replicaInfo)
 	self.replicaStatus.Add(addr.ID, replicaInfo)
 }
-func (self *ProtocolManager) packReplicaStatus() ([]byte, []byte) {
+func (self *EventHub) packReplicaStatus() ([]byte, []byte) {
 	peerAddress := self.Peermanager.GetLocalNode().GetNodeAddr()
 	currentChain := edb.GetChainCopy(self.namespace)
 	// remove useless fields

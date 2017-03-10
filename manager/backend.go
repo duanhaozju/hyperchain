@@ -41,11 +41,11 @@ func New(
 	syncReplicaInterval time.Duration,
 	syncReplica bool,
 	exist chan bool,
-	expiredTime time.Time, cm *admittance.CAManager) *ProtocolManager {
+	expiredTime time.Time, cm *admittance.CAManager) *EventHub {
 
 	//add reconnect param
 
-	protocolManager := NewProtocolManager(namespace, executor, peerManager, eventMux, consenter, am, commonHash, syncReplicaInterval, syncReplica, exist, expiredTime)
+	protocolManager := NewEventHub(namespace, executor, peerManager, eventMux, consenter, am, commonHash, syncReplicaInterval, syncReplica, exist, expiredTime)
 	aliveChan := make(chan int)
 	protocolManager.Start(aliveChan, cm)
 

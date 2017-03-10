@@ -35,7 +35,7 @@ func init() {
 type PublicTransactionAPI struct {
 	namespace   string
 	eventMux    *event.TypeMux
-	pm          *manager.ProtocolManager
+	pm          *manager.EventHub
 	db          db.Database
 	tokenBucket *ratelimit.Bucket
 	config      *common.Config
@@ -78,7 +78,7 @@ type TransactionResult struct {
 	InvalidMsg  string  `json:"invalidMsg,omitempty"`
 }
 
-func NewPublicTransactionAPI(namespace string, eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb db.Database, config *common.Config) *PublicTransactionAPI {
+func NewPublicTransactionAPI(namespace string, eventMux *event.TypeMux, pm *manager.EventHub, hyperDb db.Database, config *common.Config) *PublicTransactionAPI {
 	fillrate, err := getFillRate(config, TRANSACTION)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
@@ -150,7 +150,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
 	tx.Id = uint64(tran.pm.Peermanager.GetNodeId())
 	tx.Signature = common.FromHex(realArgs.Signature)
-	tx.TransactionHash = tx.BuildHash().Bytes()
+	tx.TransactionHash = tx.Hash().Bytes()
 
 	//delete repeated tx
 	var exist, _ = edb.JudgeTransactionExist(tran.namespace, tx.TransactionHash)
@@ -198,7 +198,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 			return common.Hash{}, &CallbackError{"EventObject is nil"}
 		}
 	}
-	return tx.GetTransactionHash(), nil
+	return tx.GetHash(), nil
 }
 
 type ReceiptResult struct {
@@ -527,7 +527,7 @@ func outputTransaction(trans interface{}, namespace string) (*TransactionResult,
 			return nil, &CallbackError{err.Error()}
 		}
 
-		txHash := t.GetTransactionHash()
+		txHash := t.GetHash()
 		bn, txIndex := edb.GetTxWithBlock(namespace, txHash[:])
 
 		if blk, err := edb.GetBlockByNumber(namespace, bn); err == nil {
@@ -559,7 +559,7 @@ func outputTransaction(trans interface{}, namespace string) (*TransactionResult,
 			log.Errorf("%v", err)
 			return nil, &CallbackError{err.Error()}
 		}
-		txHash := t.Tx.GetTransactionHash()
+		txHash := t.Tx.GetHash()
 		txRes = &TransactionResult{
 			Version:     string(t.Tx.Version),
 			Hash:        txHash,

@@ -8,7 +8,6 @@ import (
 	"strconv"
 )
 
-//
 //// ReceiptTrans are used to show in web.
 type ReceiptTrans struct {
 	PostState         string         `json:"postState"`
@@ -23,7 +22,7 @@ type ReceiptTrans struct {
 }
 
 func (receipt Receipt) ToReceiptTrans() (receiptTrans *ReceiptTrans) {
-	logs, err := receipt.GetLogs()
+	logs, err := receipt.RetrieveLogs()
 	var logsValue []vm.LogTrans
 	if err != nil {
 		logsValue = nil
@@ -52,7 +51,7 @@ func NewReceipt(root []byte, cumulativeGasUsed *big.Int) *Receipt {
 	return &Receipt{PostState: common.CopyBytes(root), CumulativeGasUsed: i64}
 }
 
-func (r *Receipt) GetLogs() (vm.Logs, error) {
+func (r *Receipt) RetrieveLogs() (vm.Logs, error) {
 	return vm.DecodeLogs((*r).Logs)
 }
 

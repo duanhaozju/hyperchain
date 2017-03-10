@@ -1,5 +1,7 @@
 package executor
 
+import "time"
+
 const (
 	STATEDB               = "state"
 	stateBucketSize       = "global.configs.buckettree.state.size"
@@ -10,6 +12,9 @@ const (
 	stateObjectBucketSize       = "global.configs.buckettree.storage.size"
 	stateObjectBucketLevelGroup = "global.configs.buckettree.storage.levelGroup"
 	stateObjectBucketCacheSize  = "global.configs.buckettree.storage.cacheSize"
+
+	syncReplicaInterval         = "global.configs.replicainfo.interval"
+	syncReplicaEnable           = "global.configs.replicainfo.enable"
 )
 
 // GetBucketSize - get bucket size.
@@ -49,4 +54,14 @@ func (executor *Executor) GetBucketCacheSize(choice string) int {
 		log.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
 		return 0
 	}
+}
+
+// GetSyncReplicaInterval - sync replica information interval.
+func (executor *Executor) GetSyncReplicaInterval() time.Duration {
+	return executor.conf.GetDuration(syncReplicaInterval)
+}
+
+// GetSyncReplicaEnable - sync replica switch value.
+func (exector *Executor) GetSyncReplicaEnable() bool {
+	return exector.conf.GetBool(syncReplicaEnable)
 }

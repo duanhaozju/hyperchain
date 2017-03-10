@@ -157,7 +157,7 @@ func (executor *Executor) persistTransactions(batch db.Batch, transactions []*ty
 			BlockIndex: blockNumber,
 			Index:      int64(i),
 		}
-		if err := edb.PersistTransactionMeta(batch, meta, transaction.GetTransactionHash(), false, false); err != nil {
+		if err := edb.PersistTransactionMeta(batch, meta, transaction.GetHash(), false, false); err != nil {
 			return err
 		}
 	}
@@ -168,7 +168,7 @@ func (executor *Executor) persistTransactions(batch db.Batch, transactions []*ty
 // during the validation, block number and block hash can be incorrect
 func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) error {
 	for _, receipt := range receipts {
-		logs, err := receipt.GetLogs()
+		logs, err := receipt.RetrieveLogs()
 		if err != nil {
 			return err
 		}

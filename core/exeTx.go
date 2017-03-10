@@ -16,10 +16,10 @@ func ExecTransaction(tx *types.Transaction, env vm.Environment) (receipt *types.
 		from     = common.BytesToAddress(tx.From)
 		to       = common.BytesToAddress(tx.To)
 		tv       = tx.GetTransactionValue()
-		data     = tv.GetPayload()
+		data     = tv.RetrievePayload()
 		gas      = big.NewInt(100000000)
-		gasPrice = tv.GetGasPrice()
-		amount   = tv.GetAmount()
+		gasPrice = tv.RetrieveGasPrice()
+		amount   = tv.RetrieveAmount()
 		update   = tv.GetUpdate()
 	)
 	if tx.To == nil {
@@ -29,7 +29,7 @@ func ExecTransaction(tx *types.Transaction, env vm.Environment) (receipt *types.
 	}
 	receipt = types.NewReceipt(nil, gas)
 	receipt.ContractAddress = addr.Bytes()
-	receipt.TxHash = tx.GetTransactionHash().Bytes()
+	receipt.TxHash = tx.GetHash().Bytes()
 	receipt.GasUsed = 100000
 	receipt.Ret = ret
 	receipt.SetLogs(env.Db().GetLogs(common.BytesToHash(receipt.TxHash)))

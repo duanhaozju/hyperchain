@@ -25,7 +25,7 @@ func Test_GetAccounts1(t *testing.T) {
 	am := accounts.NewAccountManager(keydir, encryption)
 
 	//初始化pm
-	pm := &manager.ProtocolManager{
+	pm := &manager.EventHub{
 
 		AccountManager: am,
 	}
@@ -55,7 +55,7 @@ func Test_GetBalance(t *testing.T) {
 	am := accounts.NewAccountManager(keydir, encryption)
 
 	//初始化pm
-	pm := &manager.ProtocolManager{
+	pm := &manager.EventHub{
 
 		AccountManager: am,
 	}

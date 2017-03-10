@@ -5,13 +5,10 @@ import (
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
 	"hyperchain/crypto"
-	"io/ioutil"
-	"os"
-	"time"
 	"strconv"
 )
 
-func (self *Transaction) BuildHash() common.Hash {
+func (self *Transaction) Hash() common.Hash {
 	ch := crypto.NewKeccak256Hash("keccak256")
 	return ch.Hash([]interface{}{
 		self.From,
@@ -23,15 +20,11 @@ func (self *Transaction) BuildHash() common.Hash {
 	})
 }
 
-func (self *Transaction) GetTransactionHash() common.Hash {
+func (self *Transaction) GetHash() common.Hash {
 	if len(self.TransactionHash) == 0 {
-		return self.BuildHash()
+		return self.Hash()
 	}
 	return common.BytesToHash(self.TransactionHash)
-}
-
-func (self *Transaction) Hash(ch crypto.CommonHash) common.Hash {
-	return ch.Hash(self)
 }
 
 func (self *Transaction) SighHash(ch crypto.CommonHash) common.Hash {
@@ -85,12 +78,10 @@ func (self *Transaction) ValidateSign(encryption crypto.Encryption, ch crypto.Co
 // NewTransaction returns a new transaction
 //func NewTransaction(from []byte,to []byte,value []byte, signature []byte) *Transaction{
 func NewTransaction(from []byte, to []byte, value []byte, timestamp int64, nonce int64) *Transaction {
-
 	transaction := &Transaction{
 		From:  from,
 		To:    to,
 		Value: value,
-		//Timestamp: time.Now().UnixNano(),
 		Timestamp: timestamp,
 		Nonce:     nonce,
 	}
@@ -106,112 +97,6 @@ func NewTransactionValue(price, gasLimit, amount int64, payload []byte, update b
 		Payload:  payload,
 		Update:   update,
 	}
-}
-
-func ReadSourceFromFile(filePath string) string {
-
-	fi, err := os.Open(filePath)
-	if err != nil {
-		return ""
-	}
-	file_raw_source, err := ioutil.ReadAll(fi)
-	defer fi.Close()
-	return string(file_raw_source)
-}
-
-func NewTestCreateTransaction() *Transaction {
-	// it is the code of hyperchain/core/vm/tests/solidity_files/example3.solc
-	/*_,bins,_,err := compiler.CompileSourcefile(ReadSourceFromFile("hyperchain/core/vm/tests/solidity_files/test.solc"))
-	if err!=nil{
-		log.Errorf("the compiled source has error")
-		return nil
-	}*/
-
-	//var code = bins[0]
-	// it is the code of hyperchain/core/vm/tests/solidity_files/example1.solc
-	var code = "0x60606040526000805463ffffffff191681557f6162636465666768696a6b6c6d6e6f707172737475767778797a00000000000060015560cf90819061004390396000f3606060405260e060020a60003504633ad14af38114603a578063569c5f6d1460615780638da9b772146074578063d09de08a146081575b6002565b346002576000805463ffffffff8116600435016024350163ffffffff19919091161790555b005b3460025760a360005463ffffffff165b90565b3460025760bd6001546071565b34600257605f6000805463ffffffff19811663ffffffff909116600101179055565b6040805163ffffffff929092168252519081900360200190f35b60408051918252519081900360200190f3"
-	//var code = "0x60606040526000805463ffffffff191681557f6162636465666768696a6b6c6d6e6f707172737475767778797a00000000000060015560be90819061004390396000f3606060405260e060020a60003504633ad14af381146038578063569c5f6d14605c5780638da9b77214606b578063d09de08a146074575b005b6000805463ffffffff8116600435016024350163ffffffff19919091161790556036565b609260005463ffffffff165b90565b60ac6001546068565b60366000805463ffffffff19811663ffffffff909116600101179055565b6040805163ffffffff929092168252519081900360200190f35b60408051918252519081900360200190f3"
-	var tx_value1 = &TransactionValue{Price: 100000, GasLimit: 100000, Amount: 100, Payload: common.FromHex(code)}
-	value, _ := proto.Marshal(tx_value1)
-	transaction := &Transaction{
-		From:      common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec3").Bytes(),
-		To:        nil,
-		Value:     value,
-		Timestamp: time.Now().UnixNano(),
-	}
-
-	return transaction
-}
-
-func NewTestCreateTransactionSourceCode() *Transaction {
-	var sourcecode = `
-contract mortal {
-     /* Define variable owner of the type address*/
-     address owner;
-
-     /* this function is executed at initialization and sets the owner of the contract */
-     function mortal() {
-         owner = msg.sender;
-     }
-
-     /* Function to recover the funds on the contract */
-     function kill() {
-         if (msg.sender == owner)
-             selfdestruct(owner);
-     }
- }
-
-
- contract greeter is mortal {
-     /* define variable greeting of the type string */
-     string greeting;
-    uint32 sum;
-     /* this runs when the contract is executed */
-     function greeter(string _greeting) public {
-         greeting = _greeting;
-     }
-
-     /* main function */
-     function greet() constant returns (string) {
-         return greeting;
-     }
-    function add(uint32 num1,uint32 num2) {
-        sum = sum+num1+num2;
-    }
- }`
-	var tx_value1 = &TransactionValue{Price: 100000, GasLimit: 100000, Amount: 100, Payload: ([]byte)(sourcecode)}
-	value, _ := proto.Marshal(tx_value1)
-	transaction := &Transaction{
-		From:      common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec3").Bytes(),
-		To:        nil,
-		Value:     value,
-		Timestamp: time.Now().UnixNano(),
-	}
-
-	return transaction
-}
-
-func NewTestCallTransaction() *Transaction {
-	// it is the input of function add(uint32 num1,uint32 num2)
-	var input = common.FromHex("0x8da9b772")
-	//var input = common.FromHex("0x962b8398")
-
-	// it is the input of function increment()
-	//var input = common.FromHex("0xd09de08a")
-
-	// it is the input of function getHello()
-	//var input = common.FromHex("0x8da9b772")
-
-	var tx_value2 = &TransactionValue{Price: 100000, GasLimit: 100000, Amount: 100, Payload: input}
-	value, _ := proto.Marshal(tx_value2)
-	transaction := &Transaction{
-		From:      common.HexToAddress("0f572e5295c57f15886f9b263e2f6d2d6c7b5ec3").Bytes(),
-		To:        common.HexToAddress("0x945304eb96065b2a98b57a48a06ae28d285a71b5").Bytes(),
-		Value:     value,
-		Timestamp: time.Now().UnixNano(),
-	}
-
-	return transaction
 }
 
 func (tx *Transaction) GetTransactionValue() *TransactionValue {

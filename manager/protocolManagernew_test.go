@@ -57,7 +57,7 @@ func poolParameters() (crypto.CommonHash, crypto.Encryption, p2p.PeerManager) {
 	return kec256Hash, encryption, grpcPeerMgr
 }
 
-func initmanager() *ProtocolManager {
+func initmanager() *EventHub {
 	core.InitDB("G:/hyperchainDB", 8030)
 	eventMux := new(event.TypeMux)
 	consenter := new(consensus.Consenter)
@@ -71,7 +71,7 @@ func initmanager() *ProtocolManager {
 
 	syncReplica := false
 
-	return NewProtocolManager(pool, grpcPeerMgr, eventMux, *consenter, am, kec256Hash, 1, syncReplica)
+	return NewEventHub(pool, grpcPeerMgr, eventMux, *consenter, am, kec256Hash, 1, syncReplica)
 
 }
 

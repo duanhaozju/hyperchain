@@ -23,13 +23,13 @@ import (
 type PublicContractAPI struct {
 	namespace   string
 	eventMux    *event.TypeMux
-	pm          *manager.ProtocolManager
+	pm          *manager.EventHub
 	db          db.Database
 	tokenBucket *ratelimit.Bucket
 	config      *common.Config
 }
 
-func NewPublicContractAPI(namespace string, eventMux *event.TypeMux, pm *manager.ProtocolManager, hyperDb db.Database, config *common.Config) *PublicContractAPI {
+func NewPublicContractAPI(namespace string, eventMux *event.TypeMux, pm *manager.EventHub, hyperDb db.Database, config *common.Config) *PublicContractAPI {
 	fillrate, err := getFillRate(config, CONTRACT)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
@@ -81,7 +81,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 
 	tx.Id = uint64(contract.pm.Peermanager.GetNodeId())
 	tx.Signature = common.FromHex(realArgs.Signature)
-	tx.TransactionHash = tx.BuildHash().Bytes()
+	tx.TransactionHash = tx.Hash().Bytes()
 	//delete repeated tx
 	var exist, _ = edb.JudgeTransactionExist(contract.namespace, tx.TransactionHash)
 
@@ -105,7 +105,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 		log.Error("manager is Nil")
 		return common.Hash{}, &CallbackError{"eventObject is nil"}
 	}
-	return tx.GetTransactionHash(), nil
+	return tx.GetHash(), nil
 
 }
 

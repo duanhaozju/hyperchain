@@ -2,7 +2,7 @@ package manager
 
 import "time"
 
-func (self *ProtocolManager) checkExpired() {
+func (self *EventHub) checkExpired() {
 	expiredChecker := func(currentTime, expiredTime time.Time) bool {
 		return currentTime.Before(expiredTime)
 	}

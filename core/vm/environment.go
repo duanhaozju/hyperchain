@@ -105,7 +105,7 @@ type Database interface {
 	// Dump and Load
 	Snapshot() interface{}
 	RevertToSnapshot(interface{})
-	// Reset status
+	// Reset statuso
 	Purge()
 	ResetToTarget(uint64, common.Hash)
 

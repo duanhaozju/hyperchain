@@ -94,7 +94,7 @@ func (suite *SimulateSuite) simulateForTransafer(executor *Executor) error {
 	}
 
 	// check receipt existence
-	if receipt := edb.GetReceipt(namespace, transaction.GetTransactionHash()); receipt == nil {
+	if receipt := edb.GetReceipt(namespace, transaction.GetHash()); receipt == nil {
 		return errors.New("no receipt found in database")
 	}
 	return nil

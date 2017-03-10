@@ -119,7 +119,7 @@ func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *
 	env := initEnvironment(executor.statedb, executor.getTempBlockNumber())
 	// execute transaction one by one
 	for i, tx := range block.Transactions {
-		executor.statedb.StartRecord(tx.GetTransactionHash(), common.Hash{}, i)
+		executor.statedb.StartRecord(tx.GetHash(), common.Hash{}, i)
 		receipt, _, _, err := core.ExecTransaction(tx, env)
 		// just ignore invalid transactions
 		if err != nil {
@@ -140,7 +140,7 @@ func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *
 			BlockIndex: seqNo,
 			Index:      int64(i),
 		}
-		if err := edb.PersistTransactionMeta(batch, meta, tx.GetTransactionHash(), false, false); err != nil {
+		if err := edb.PersistTransactionMeta(batch, meta, tx.GetHash(), false, false); err != nil {
 			log.Errorf("persist transaction meta for index %d in #%d failed.", i, seqNo)
 			continue
 		}
@@ -355,7 +355,7 @@ func (executor *Executor) reject() {
 
 // verifyBlockIntegrity - make sure block content doesn't change.
 func (executor *Executor) verifyBlockIntegrity(block *types.Block) bool {
-	if bytes.Compare(block.BlockHash, block.HashBlock(executor.commonHash).Bytes()) == 0 {
+	if bytes.Compare(block.BlockHash, block.Hash(executor.commonHash).Bytes()) == 0 {
 		return true
 	}
 	return false

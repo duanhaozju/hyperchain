@@ -5,19 +5,19 @@ import (
 	"math/big"
 )
 
-func (tv *TransactionValue) GetPayload() []byte {
+func (tv *TransactionValue) RetrievePayload() []byte {
 	return common.CopyBytes(tv.Payload)
 }
 
-func (tv *TransactionValue) GetGas() *big.Int {
+func (tv *TransactionValue) RetrieveGas() *big.Int {
 	return new(big.Int).Set(big.NewInt(tv.GasLimit))
 }
 
-func (tv *TransactionValue) GetGasPrice() *big.Int {
+func (tv *TransactionValue) RetrieveGasPrice() *big.Int {
 	return new(big.Int).Set(big.NewInt(tv.Price))
 }
 
-func (tv *TransactionValue) GetAmount() *big.Int {
+func (tv *TransactionValue) RetrieveAmount() *big.Int {
 	return new(big.Int).Set(big.NewInt(tv.Amount))
 }
 

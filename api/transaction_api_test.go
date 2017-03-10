@@ -32,7 +32,7 @@ func Test_SendTransaction(t *testing.T) {
 	am := accounts.NewAccountManager(keydir, encryption)
 	eventMux1 := new(event.TypeMux)
 	expiredTime := time.Time{}
-	pm := manager.NewProtocolManager(nil, peermanager, eventMux1, nil, am, nil, 0, true, nil, expiredTime)
+	pm := manager.NewEventHub(nil, peermanager, eventMux1, nil, am, nil, 0, true, nil, expiredTime)
 	publicTransactionAPI := NewPublicTransactionAPI(eventMux1, pm, db, false, 1, 10000)
 	from := common.HexToAddress("0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd")
 	to := common.HexToAddress("0x0000000000000000000000000000000000000003")
@@ -85,7 +85,7 @@ func Test_SendTransaction(t *testing.T) {
 	if err != nil {
 		t.Errorf("SendTransaction fail 交易应该成功")
 	}
-	pm2 := manager.NewProtocolManager(nil, peermanager, nil, nil, am, nil, 0, true, nil, expiredTime)
+	pm2 := manager.NewEventHub(nil, peermanager, nil, nil, am, nil, 0, true, nil, expiredTime)
 	publicTransactionAPI2 := NewPublicTransactionAPI(eventMux1, pm2, db, true, 1, 10000)
 	fmt.Println("11111111111111111111111111111111")
 	ref, err = publicTransactionAPI2.SendTransaction(args)
@@ -114,7 +114,7 @@ func Test_GetTransactionReceipt(t *testing.T) {
 	am := accounts.NewAccountManager(keydir, encryption)
 	eventMux1 := new(event.TypeMux)
 	expiredTime := time.Time{}
-	pm := manager.NewProtocolManager(nil, peermanager, eventMux1, nil, am, nil, 0, true, nil, expiredTime)
+	pm := manager.NewEventHub(nil, peermanager, eventMux1, nil, am, nil, 0, true, nil, expiredTime)
 	publicTransactionAPI := NewPublicTransactionAPI(eventMux1, pm, db, false, 1, 10000)
 
 	from := common.HexToAddress("0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd")

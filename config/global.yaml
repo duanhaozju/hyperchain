@@ -87,4 +87,4 @@ global:
             core: "NOTICE"
             hyperdb: "NOTICE"
             executor: "NOTICE"
-            message_middleware : "NOTICE"
+            eventhub: "NOTICE"

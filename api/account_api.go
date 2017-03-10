@@ -11,7 +11,7 @@ import (
 )
 
 type PublicAccountAPI struct {
-	pm     *manager.ProtocolManager
+	pm     *manager.EventHub
 	namespace string
 	db     db.Database
 	config *common.Config
@@ -26,7 +26,7 @@ type UnlockParas struct {
 	Password string         `json:"password"`
 }
 
-func NewPublicAccountAPI(namespace string, pm *manager.ProtocolManager, hyperDb db.Database, config *common.Config) *PublicAccountAPI {
+func NewPublicAccountAPI(namespace string, pm *manager.EventHub, hyperDb db.Database, config *common.Config) *PublicAccountAPI {
 	return &PublicAccountAPI{
 		namespace: namespace,
 		pm:     pm,

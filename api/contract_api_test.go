@@ -73,7 +73,7 @@ func Test_DeployContract(t *testing.T) {
 
 	expiredTime := time.Time{}
 	//初始化pm
-	pm := manager.NewProtocolManager(nil, Peermanager1, eventMux1, nil, am, nil, 0, true, nil, expiredTime)
+	pm := manager.NewEventHub(nil, Peermanager1, eventMux1, nil, am, nil, 0, true, nil, expiredTime)
 
 	//获取db句柄
 	db, _ := hyperdb.GetDBDatabase()
@@ -147,7 +147,7 @@ func Test_DeployContract(t *testing.T) {
 		t.Errorf("DeployContract  fail 部署合约失败")
 	}
 
-	pm2 := manager.NewProtocolManager(nil, Peermanager1, nil, nil, am, nil, 0, true, nil, expiredTime)
+	pm2 := manager.NewEventHub(nil, Peermanager1, nil, nil, am, nil, 0, true, nil, expiredTime)
 	cAPI3 := NewPublicContractAPI(eventMux1, pm2, db, false, 1, 3000)
 	_, err = cAPI3.DeployContract(args2)
 	if err == nil {
@@ -171,7 +171,7 @@ func Test_InvokeContract(t *testing.T) {
 
 	expiredTime := time.Time{}
 	//初始化pm
-	pm := manager.NewProtocolManager(nil, Peermanager1, eventMux1, nil, am, nil, 0, true, nil, expiredTime)
+	pm := manager.NewEventHub(nil, Peermanager1, eventMux1, nil, am, nil, 0, true, nil, expiredTime)
 
 	//获取db句柄
 	db, _ := hyperdb.GetDBDatabase()
@@ -220,7 +220,7 @@ func Test_GetCode(t *testing.T) {
 
 	expiredTime := time.Time{}
 	//初始化pm
-	pm := manager.NewProtocolManager(nil, Peermanager1, eventMux1, nil, am, nil, 0, true, nil, expiredTime)
+	pm := manager.NewEventHub(nil, Peermanager1, eventMux1, nil, am, nil, 0, true, nil, expiredTime)
 
 	//获取db句柄
 	db, _ := hyperdb.GetDBDatabase()
@@ -253,7 +253,7 @@ func Test_GetContractCountByAddr(t *testing.T) {
 	expiredTime := time.Time{}
 	eventMux1 := new(event.TypeMux)
 	//初始化pm
-	pm := manager.NewProtocolManager(nil, Peermanager1, eventMux1, nil, am, nil, 0, true, nil, expiredTime)
+	pm := manager.NewEventHub(nil, Peermanager1, eventMux1, nil, am, nil, 0, true, nil, expiredTime)
 
 	//获取db句柄
 	db, _ := hyperdb.GetDBDatabase()

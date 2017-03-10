@@ -2,15 +2,6 @@
 // source: chain.proto
 // DO NOT EDIT!
 
-/*
-Package types is a generated protocol buffer package.
-
-It is generated from these files:
-	chain.proto
-
-It has these top-level messages:
-	Chain
-*/
 package types
 
 import proto "github.com/golang/protobuf/proto"
@@ -21,12 +12,6 @@ import math "math"
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the proto package it is being compiled against.
-// A compilation error at this line likely means your copy of the
-// proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type Chain struct {
 	LatestBlockHash  []byte `protobuf:"bytes,1,opt,name=latestBlockHash,proto3" json:"latestBlockHash,omitempty"`
@@ -41,7 +26,7 @@ type Chain struct {
 func (m *Chain) Reset()                    { *m = Chain{} }
 func (m *Chain) String() string            { return proto.CompactTextString(m) }
 func (*Chain) ProtoMessage()               {}
-func (*Chain) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (*Chain) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{0} }
 
 func (m *Chain) GetLatestBlockHash() []byte {
 	if m != nil {
@@ -96,7 +81,7 @@ func init() {
 	proto.RegisterType((*Chain)(nil), "types.Chain")
 }
 
-func init() { proto.RegisterFile("chain.proto", fileDescriptor0) }
+func init() { proto.RegisterFile("chain.proto", fileDescriptor2) }
 
 var fileDescriptor2 = []byte{
 	// 190 bytes of a gzipped FileDescriptorProto

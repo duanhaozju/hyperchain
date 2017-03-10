@@ -13,7 +13,7 @@ type NodeArgs struct {
 }
 
 type PublicNodeAPI struct {
-	pm *manager.ProtocolManager
+	pm *manager.EventHub
 }
 
 type NodeResult struct {
@@ -25,7 +25,7 @@ type NodeResult struct {
 	LatestBlock interface{} `json:"latestBlock"` //当前节点最新的区块
 }
 
-func NewPublicNodeAPI(pm *manager.ProtocolManager) *PublicNodeAPI {
+func NewPublicNodeAPI(pm *manager.EventHub) *PublicNodeAPI {
 	return &PublicNodeAPI{
 		pm: pm,
 	}

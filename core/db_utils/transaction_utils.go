@@ -61,7 +61,7 @@ func PersistTransaction(batch db.Batch, transaction *types.Transaction, flush bo
 		logger.Errorf("wrapper transaction failed.")
 		return err, nil
 	}
-	if err := batch.Put(append(TransactionPrefix, transaction.GetTransactionHash().Bytes()...), data); err != nil {
+	if err := batch.Put(append(TransactionPrefix, transaction.GetHash().Bytes()...), data); err != nil {
 		logger.Error("Put tx data into database failed! error msg, ", err.Error())
 		return err, nil
 	}
@@ -112,7 +112,7 @@ func PersistTransactions(batch db.Batch, transactions []*types.Transaction, vers
 			logger.Errorf("wrapper transaction failed.")
 			return err
 		}
-		if err := batch.Put(append(TransactionPrefix, transaction.GetTransactionHash().Bytes()...), data); err != nil {
+		if err := batch.Put(append(TransactionPrefix, transaction.GetHash().Bytes()...), data); err != nil {
 			logger.Error("Put tx data into database failed! error msg, ", err.Error())
 			return err
 		}

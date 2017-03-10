@@ -22,12 +22,11 @@ import (
 var log *logging.Logger // package-level logger
 
 func init() {
-	log = logging.MustGetLogger("message_middleware")
+	log = logging.MustGetLogger("eventhub")
 }
 
-type ProtocolManager struct {
+type EventHub struct {
 	namespace           string
-	serverPort          int
 	executor            *executor.Executor
 	Peermanager         p2p.PeerManager
 
@@ -66,12 +65,12 @@ type NodeManager struct {
 
 var eventMuxAll *event.TypeMux
 
-func NewProtocolManager(namespace string, executor *executor.Executor, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
+func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
 	//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
-	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, expired chan bool, expiredTime time.Time) *ProtocolManager {
+	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, expired chan bool, expiredTime time.Time) *EventHub {
 	synccache, _ := common.NewCache()
 	replicacache, _ := common.NewCache()
-	manager := &ProtocolManager{
+	manager := &EventHub{
 		namespace:          namespace,
 		executor:           executor,
 		eventMux:            eventMux,
@@ -91,7 +90,7 @@ func NewProtocolManager(namespace string, executor *executor.Executor, peerManag
 	eventMuxAll = eventMux
 	return manager
 }
-func (pm *ProtocolManager) GetEventObject() *event.TypeMux {
+func (pm *EventHub) GetEventObject() *event.TypeMux {
 	return pm.eventMux
 }
 func GetEventObject() *event.TypeMux {
@@ -99,43 +98,43 @@ func GetEventObject() *event.TypeMux {
 }
 
 // start listen new block msg and consensus msg
-func (pm *ProtocolManager) Start(c chan int, cm *admittance.CAManager) {
-	pm.consensusSub = pm.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{},
+func (hub *EventHub) Start(c chan int, cm *admittance.CAManager) {
+	hub.consensusSub = hub.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{},
 		event.NegoRoutersEvent{})
-	pm.validateSub = pm.eventMux.Subscribe(event.ExeTxsEvent{})
-	pm.commitSub = pm.eventMux.Subscribe(event.CommitOrRollbackBlockEvent{})
-	pm.chainSyncSub = pm.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{}, event.ReceiveSyncBlockEvent{})
-	pm.respSub = pm.eventMux.Subscribe(event.RespInvalidTxsEvent{})
-	pm.viewChangeSub = pm.eventMux.Subscribe(event.VCResetEvent{}, event.InformPrimaryEvent{})
-	go pm.validateLoop()
-	go pm.commitLoop()
-	pm.peerMaintainSub = pm.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{},
+	hub.validateSub = hub.eventMux.Subscribe(event.ExeTxsEvent{})
+	hub.commitSub = hub.eventMux.Subscribe(event.CommitOrRollbackBlockEvent{})
+	hub.chainSyncSub = hub.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{}, event.ReceiveSyncBlockEvent{})
+	hub.respSub = hub.eventMux.Subscribe(event.RespInvalidTxsEvent{})
+	hub.viewChangeSub = hub.eventMux.Subscribe(event.VCResetEvent{}, event.InformPrimaryEvent{})
+	go hub.validateLoop()
+	go hub.commitLoop()
+	hub.peerMaintainSub = hub.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{},
 		event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{}, event.RecvNewPeerEvent{},
 		event.DelPeerEvent{}, event.BroadcastDelPeerEvent{}, event.RecvDelPeerEvent{})
-	pm.executorSub = pm.eventMux.Subscribe(event.ExecutorToConsensusEvent{}, event.ExecutorToP2PEvent{})
-	go pm.ConsensusLoop()
-	go pm.ListenSynchronizationEvent()
-	go pm.listenExecutorEvent()
-	go pm.respHandlerLoop()
-	go pm.viewChangeLoop()
-	go pm.peerMaintainLoop()
-	go pm.checkExpired()
-	if pm.syncReplica {
-		pm.syncStatusSub = pm.eventMux.Subscribe(event.ReplicaStatusEvent{})
-		go pm.syncReplicaStatusLoop()
-		go pm.SyncReplicaStatus()
+	hub.executorSub = hub.eventMux.Subscribe(event.ExecutorToConsensusEvent{}, event.ExecutorToP2PEvent{})
+	go hub.ConsensusLoop()
+	go hub.ListenSynchronizationEvent()
+	go hub.listenExecutorEvent()
+	go hub.respHandlerLoop()
+	go hub.viewChangeLoop()
+	go hub.peerMaintainLoop()
+	go hub.checkExpired()
+	if hub.syncReplica {
+		hub.syncStatusSub = hub.eventMux.Subscribe(event.ReplicaStatusEvent{})
+		go hub.syncReplicaStatusLoop()
+		go hub.SyncReplicaStatus()
 	}
 
-	go pm.Peermanager.Start(c, pm.eventMux, cm)
-	pm.initType = <- c
-	if pm.initType == 0 {
+	go hub.Peermanager.Start(c, hub.eventMux, cm)
+	hub.initType = <- c
+	if hub.initType == 0 {
 		// start in normal mode
-		pm.PassRouters()
-		pm.NegotiateView()
+		hub.PassRouters()
+		hub.NegotiateView()
 	}
 }
 
-func (self *ProtocolManager) ListenSynchronizationEvent() {
+func (self *EventHub) ListenSynchronizationEvent() {
 	for obj := range self.chainSyncSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.SendCheckpointSyncEvent:
@@ -151,7 +150,7 @@ func (self *ProtocolManager) ListenSynchronizationEvent() {
 }
 
 // listen validate msg
-func (self *ProtocolManager) validateLoop() {
+func (self *EventHub) validateLoop() {
 
 	for obj := range self.validateSub.Chan() {
 
@@ -165,7 +164,7 @@ func (self *ProtocolManager) validateLoop() {
 }
 
 // listen commit msg
-func (self *ProtocolManager) commitLoop() {
+func (self *EventHub) commitLoop() {
 	for obj := range self.commitSub.Chan() {
 
 		switch ev := obj.Data.(type) {
@@ -177,7 +176,7 @@ func (self *ProtocolManager) commitLoop() {
 	}
 }
 
-func (self *ProtocolManager) respHandlerLoop() {
+func (self *EventHub) respHandlerLoop() {
 
 	for obj := range self.respSub.Chan() {
 		switch ev := obj.Data.(type) {
@@ -188,7 +187,7 @@ func (self *ProtocolManager) respHandlerLoop() {
 	}
 }
 
-func (self *ProtocolManager) viewChangeLoop() {
+func (self *EventHub) viewChangeLoop() {
 
 	for obj := range self.viewChangeSub.Chan() {
 		switch ev := obj.Data.(type) {
@@ -202,7 +201,7 @@ func (self *ProtocolManager) viewChangeLoop() {
 	}
 }
 
-func (self *ProtocolManager) syncReplicaStatusLoop() {
+func (self *EventHub) syncReplicaStatusLoop() {
 
 	for obj := range self.syncStatusSub.Chan() {
 		switch ev := obj.Data.(type) {
@@ -214,7 +213,7 @@ func (self *ProtocolManager) syncReplicaStatusLoop() {
 }
 
 //listen consensus msg
-func (self *ProtocolManager) ConsensusLoop() {
+func (self *EventHub) ConsensusLoop() {
 
 	// automatically stops if unsubscribe
 	for obj := range self.consensusSub.Chan() {
@@ -247,7 +246,7 @@ func (self *ProtocolManager) ConsensusLoop() {
 	}
 }
 
-func (self *ProtocolManager) peerMaintainLoop() {
+func (self *EventHub) peerMaintainLoop() {
 
 	for obj := range self.peerMaintainSub.Chan() {
 		switch ev := obj.Data.(type) {
@@ -332,7 +331,7 @@ func (self *ProtocolManager) peerMaintainLoop() {
 	}
 }
 
-func (self *ProtocolManager) listenExecutorEvent() {
+func (self *EventHub) listenExecutorEvent() {
 	for obj := range self.executorSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.ExecutorToConsensusEvent:
@@ -343,7 +342,7 @@ func (self *ProtocolManager) listenExecutorEvent() {
 	}
 }
 
-func (self *ProtocolManager) sendMsg(payload []byte) {
+func (self *EventHub) sendMsg(payload []byte) {
 	msg := &protos.Message{
 		Type:    protos.Message_TRANSACTION,
 		Payload: payload,
@@ -361,18 +360,18 @@ func (self *ProtocolManager) sendMsg(payload []byte) {
 }
 
 // Broadcast consensus msg to a batch of peers not knowing about it
-func (self *ProtocolManager) BroadcastConsensus(payload []byte) {
+func (self *EventHub) BroadcastConsensus(payload []byte) {
 	self.Peermanager.BroadcastPeers(payload)
 
 }
 
-func (self *ProtocolManager) GetNodeInfo() p2p.PeerInfos {
+func (self *EventHub) GetNodeInfo() p2p.PeerInfos {
 	self.nodeInfo = self.Peermanager.GetPeerInfo()
 	log.Info("nodeInfo is ", self.nodeInfo)
 	return self.nodeInfo
 }
 
-func (self *ProtocolManager) PassRouters() {
+func (self *EventHub) PassRouters() {
 
 	router := self.Peermanager.GetRouters()
 	msg := protos.RoutersMessage{Routers: router}
@@ -380,7 +379,7 @@ func (self *ProtocolManager) PassRouters() {
 
 }
 
-func (self *ProtocolManager) NegotiateView() {
+func (self *EventHub) NegotiateView() {
 
 	negoView := &protos.Message{
 		Type:      protos.Message_NEGOTIATE_VIEW,
@@ -397,7 +396,7 @@ func (self *ProtocolManager) NegotiateView() {
 	})
 }
 
-func (self *ProtocolManager) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {
+func (self *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {
 	switch ev.Type {
 	case executor.NOTIFY_REMOVE_CACHE:
 		log.Debugf("[Namespace = %s] message middleware: [remove cache]", self.namespace)
@@ -413,7 +412,7 @@ func (self *ProtocolManager) dispatchExecutorToConsensus(ev event.ExecutorToCons
 		self.consenter.RecvMsg(ev.Payload.([]byte))
 	}
 }
-func (self *ProtocolManager) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
+func (self *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 	switch ev.Type {
 	case executor.NOTIFY_BROADCAST_DEMAND:
 		log.Debugf("[Namespace = %s] message middleware: [broadcast demand]", self.namespace)
