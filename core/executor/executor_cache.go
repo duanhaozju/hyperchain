@@ -16,16 +16,12 @@ type ExecutorCache struct {
 }
 
 func initializeExecutorCache(executor *Executor) error {
-	validationResC, err := common.NewCache()
-	if err != nil {
-		return err
-	}
+	validationResC, _ := common.NewCache()
 	executor.cache.validationResultCache = validationResC
-	validationEventQ, err := common.NewCache()
-	if err != nil {
-		return err
-	}
+	validationEventQ, _ := common.NewCache()
 	executor.cache.pendingValidationEventQ = validationEventQ
+	syncCache, _ := common.NewCache()
+	executor.cache.syncCache = syncCache
 	executor.cache.validationEventC = make(chan event.ExeTxsEvent, VALIDATEQUEUESIZE)
 	executor.cache.commitEventC = make(chan event.CommitOrRollbackBlockEvent, COMMITQUEUESIZE)
 	return nil

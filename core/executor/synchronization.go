@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"hyperchain/recovery"
 	"hyperchain/hyperdb"
-	"time"
 )
 
 // SendSyncRequest - send synchronization request to other nodes.
@@ -47,7 +46,6 @@ func (executor *Executor) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 
 	executor.updateSyncFlag(target.Height, target.CurrentBlockHash, target.Height)
 	executor.recordSyncPeers(stateUpdateMsg.Replicas, stateUpdateMsg.Id)
-	log.Noticef("[Namespace = %s] state update, current height %d, target height %d", executor.namespace, edb.GetHeightOfChain(executor.namespace), target.Height)
 	if err := executor.informP2P(NOTIFY_BROADCAST_DEMAND, nil); err != nil {
 		log.Errorf("[Namespace = %s] send sync req failed.", executor.namespace)
 		executor.reject()
@@ -324,21 +322,7 @@ func (executor *Executor) updateSyncDemand(block *types.Block) error {
 func (executor *Executor) sendStateUpdatedEvent() {
 	// state update success
 	executor.PurgeCache()
-	payload := &protos.StateUpdatedMessage{
-		SeqNo: edb.GetHeightOfChain(executor.namespace),
-	}
-	ctx, err := proto.Marshal(payload)
-	if err != nil {
-		log.Errorf("[Namespace = %s] StateUpdate marshal stateupdated message failed", executor.namespace)
-		return
-	}
-	msg := &protos.Message{
-		Type:      protos.Message_STATE_UPDATED,
-		Payload:   ctx,
-		Timestamp: time.Now().UnixNano(),
-		Id:        1,
-	}
-	executor.informConsensus(NOTIFY_SYNC_DONE, msg)
+	executor.informConsensus(NOTIFY_SYNC_DONE, nil)
 }
 
 // accpet - accept block synchronization result.
@@ -351,6 +335,7 @@ func (executor *Executor) accpet(seqNo uint64) {
 
 // reject - reject state update result.
 func (executor *Executor) reject() {
+	executor.cache.syncCache.Purge()
 	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
 	if err != nil {
 		log.Error("get database handler failed.")

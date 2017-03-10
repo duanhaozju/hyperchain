@@ -22,7 +22,7 @@ import (
 var log *logging.Logger // package-level logger
 
 func init() {
-	log = logging.MustGetLogger("manager")
+	log = logging.MustGetLogger("message_middleware")
 }
 
 type ProtocolManager struct {

@@ -219,12 +219,12 @@ func (executor *Executor) waitUtilSyncAvailable() {
 	tree := executor.statedb.GetTree()
 	bucketTree := tree.(*bucket.BucketTree)
 	bucketTree.ClearAllCache()
-
 }
 
 // syncDone - sync callback function to notify sync finish.
 func (executor *Executor) syncDone() {
 	executor.turnOnValidationSwitch()
+	executor.cache.syncCache.Purge()
 }
 
 // updateSyncFlag - update demand block number, related hash and target during the sync.

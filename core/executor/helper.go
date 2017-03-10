@@ -6,6 +6,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
+	"time"
 )
 type Helper struct {
 	msgQ *event.TypeMux
@@ -47,11 +48,18 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 		})
 	case NOTIFY_SYNC_DONE:
 		log.Debugf("[Namespace = %s] inform consenus sync done", executor.namespace)
-		msg := message.(*protos.Message)
-		ctx, _ := proto.Marshal(msg)
+		p, _ := proto.Marshal(&protos.StateUpdatedMessage{
+			SeqNo:  edb.GetHeightOfChain(executor.namespace),
+		})
+		m, _ := proto.Marshal(&protos.Message{
+			Type:      protos.Message_STATE_UPDATED,
+			Payload:   p,
+			Timestamp: time.Now().UnixNano(),
+			Id:        1,
+		})
 		executor.helper.Post(event.ExecutorToConsensusEvent{
-			Payload: ctx,
-			Type:    NOTIFY_VC_DONE,
+			Payload: m,
+			Type:    NOTIFY_SYNC_DONE,
 		})
 	default:
 		return NoDefinedCaseErr
