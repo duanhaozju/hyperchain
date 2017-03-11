@@ -3,22 +3,25 @@
 package namespace
 
 import (
-	"hyperchain/common"
 	"hyperchain/api/jsonrpc/core"
+	"hyperchain/common"
 )
 
 //Namespace represent the namespace instance
 type Namespace interface {
 	//Start start services under this namespace.
-	Start()
+	Start() error
 	//Stop stop services under this namespace.
-	Stop()
+	Stop() error
 	//Status return current namespace status.
 	Status() *Status
 	//Info return basic information of this namespace.
 	Info() *NamespaceInfo
-	//ProcessRequest process request under this namespace
+	//ProcessRequest process request under this namespace.
 	ProcessRequest(request interface{}) interface{}
+
+	//Name of current namespace.
+	Name() string
 }
 
 const (
@@ -44,43 +47,78 @@ type NamespaceInfo struct {
 
 //namespaceImpl implementation of Namespace
 type namespaceImpl struct {
-	//TODO:
+	nsInfo *NamespaceInfo
+	status *Status
 }
 
-func newNamespaceImpl(name string, conf *common.Config) Namespace {
-	//TODO:
+func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) {
+
+	ninfo := &NamespaceInfo{
+		name: name,
+		//more info to record
+	}
+	//TODO: more to init
+	status := &Status{
+		state: STARTTING,
+		desc:  "start ting",
+	}
+
+	ns := &namespaceImpl{
+		nsInfo: ninfo,
+		status: status,
+	}
+
+	return ns, nil
+}
+
+func GetNamespace(name string, conf *common.Config) (Namespace, error) {
+	ns, err := newNamespaceImpl(name, conf)
+	if err != nil {
+		logger.Errorf("namespace %s init error", name)
+		return ns, err
+	}
+	err = ns.init()
+	return ns, err
+}
+
+func (ns *namespaceImpl) init() error {
+	//TODO: init the namespace by configuration
+	logger.Criticalf("Init namespace %s", ns.Name())
+
 	return nil
 }
 
-func GetNamespace(name string, conf *common.Config) Namespace {
-	return newNamespaceImpl(name, conf)
-}
-
 //Start start services under this namespace.
-func (ns *namespaceImpl) Start() {
+func (ns *namespaceImpl) Start() error {
 	//TODO:
+
+	ns.status.state = STARTTED
+	return nil
 }
 
 //Stop stop services under this namespace.
-func (ns *namespaceImpl) Stop() {
+func (ns *namespaceImpl) Stop() error {
+	//TODO: stop a namespace service
 
+	ns.status.state = CLOSED
 }
 
 //Status return current namespace status.
 func (ns *namespaceImpl) Status() *Status {
-	//TODO:
-	return nil
+	return ns.status
 }
 
 //Info return basic information of this namespace.
 func (ns *namespaceImpl) Info() *NamespaceInfo {
-	//TODO:
-	return nil
+	return ns.nsInfo
+}
+
+func (ns *namespaceImpl) Name() string {
+	return ns.nsInfo.name
 }
 
 //ProcessRequest process request under this namespace
-func (ns *namespaceImpl) ProcessRequest(request interface{}) interface{}{
-
+func (ns *namespaceImpl) ProcessRequest(request interface{}) interface{} {
 	switch r := request.(type) {
 	case *jsonrpc.JSONRequest:
 		return ns.handleJsonRequest(r)

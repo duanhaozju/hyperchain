@@ -8,7 +8,8 @@
 ###########################################################
 
 global:
-
+    #namespace config dir root path
+    nsConfigRootPath: "./configuration/configs"
 
     ######################################################
     # config log's level by module                       #

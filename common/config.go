@@ -3,11 +3,10 @@
 package common
 
 import (
-	"github.com/spf13/viper"
-
 	"fmt"
-	"time"
+	"github.com/spf13/viper"
 	"os"
+	"time"
 )
 
 type Config struct {
@@ -66,11 +65,10 @@ func (cf *Config) Set(key string, value interface{}) {
 // MergeConfig merge config by the config file path
 func (cf *Config) MergeConfig(configPath string) (*Config, error) {
 	f, err := os.Open(configPath)
-	if(err != nil){
+	if err != nil {
 		commonLogger.Errorf("open file: %s error, %v", configPath, err.Error())
 		return cf, err
 	}
 	cf.conf.MergeConfig(f)
 	return cf, nil
 }
-

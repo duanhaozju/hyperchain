@@ -247,12 +247,4 @@ func (cIml *configsImpl) getPaillerPublickey() *hmEncryption.PaillierPublickey {
 		Nsquare: nsquare,
 		G:       g,
 	}
-
-	//publickey := new(hmEncryption.PaillierPublickey)
-	//publickey.N = n
-	//publickey.Nsquare = nsquare
-	//publickey.G = g
-	//
-	//return publickey
-
 }

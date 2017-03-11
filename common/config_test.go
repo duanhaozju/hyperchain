@@ -10,9 +10,9 @@ import (
 	"time"
 )
 
-var conf = NewConfig(os.Getenv("GOPATH") + "/src/hyperchain/config/test/config_test.yaml")
-
 func TestGetString(t *testing.T) {
+	var conf = NewConfig(os.Getenv("GOPATH") + "/src/hyperchain/config/test/config_test.yaml")
+
 	vk := "server.version"
 	expect := "0.1"
 
@@ -23,6 +23,8 @@ func TestGetString(t *testing.T) {
 }
 
 func TestGetInt(t *testing.T) {
+	var conf = NewConfig(os.Getenv("GOPATH") + "/src/hyperchain/config/test/config_test.yaml")
+
 	key := "server.port"
 	expect := int64(50051)
 
@@ -33,6 +35,8 @@ func TestGetInt(t *testing.T) {
 }
 
 func TestGetDuration(t *testing.T) {
+	var conf = NewConfig(os.Getenv("GOPATH") + "/src/hyperchain/config/test/config_test.yaml")
+
 	key := "server.duration"
 	expect, _ := time.ParseDuration("3s")
 	rs := conf.GetDuration(key)
@@ -43,6 +47,8 @@ func TestGetDuration(t *testing.T) {
 }
 
 func TestGetFloat64(t *testing.T) {
+	var conf = NewConfig(os.Getenv("GOPATH") + "/src/hyperchain/config/test/config_test.yaml")
+
 	key := "server.tls.key.value"
 	expect := 12.34
 
@@ -53,6 +59,8 @@ func TestGetFloat64(t *testing.T) {
 }
 
 func TestGetBool(t *testing.T) {
+	var conf = NewConfig(os.Getenv("GOPATH") + "/src/hyperchain/config/test/config_test.yaml")
+
 	key := "server.tls.cert.need"
 	expect := false
 
