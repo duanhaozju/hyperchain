@@ -39,8 +39,11 @@ func (hrw *httpReadWrite) Close() error {
 	return nil
 }
 
-func Start(httpPort int, restPort int, logsPath string, eventMux *event.TypeMux, pm *manager.ProtocolManager, cm *admittance.CAManager, config *common.Config) error {
-	eventMux = eventMux
+func Start(eventMux *event.TypeMux, pm *manager.ProtocolManager, cm *admittance.CAManager, config *common.Config) error {
+
+	httpPort := config.GetInt(common.C_HTTP_PORT)
+	restPort := config.GetInt(common.C_REST_PORT)
+	logsPath := config.GetString(common.LOG_DUMP_FILE_DIR)
 
 	server := NewServer()
 
@@ -96,7 +99,6 @@ func newJSONHTTPHandler(srv *Server, cm *admittance.CAManager) http.HandlerFunc 
 				http.StatusRequestEntityTooLarge)
 			return
 		}
-
 
 		w.Header().Set("content-type", "application/json")
 

@@ -11,23 +11,8 @@ import (
 	"hyperchain/admittance"
 	"hyperchain/p2p"
 	"time"
+	"hyperchain/common"
 )
-
-/*
-	pm := manager.New(	eventMux,
-				blockPool,
-				grpcPeerMgr,
-				cs,
-				am,
-				kec256Hash,
-				config.getNodeID(),
-				syncReplicaInterval,
-				syncReplicaEnable,
-				exist,
-				expiredTime,
-				argv.IsReconnect,
-				config.getGRPCPort())
-*/
 
 // init protocol manager params and start
 func New(
@@ -36,24 +21,17 @@ func New(
 	peerManager p2p.PeerManager,
 	consenter consensus.Consenter,
 	am *accounts.AccountManager,
-	commonHash crypto.CommonHash,
-	syncReplicaInterval time.Duration,
-	syncReplica bool,
 	exist chan bool,
-	expiredTime time.Time, cm *admittance.CAManager) *ProtocolManager {
+	expiredTime time.Time, cm *admittance.CAManager, config *common.Config) *ProtocolManager {
 
-	//add reconnect param
+	syncReplicaInterval := config.GetDuration(common.SYNC_REPLICA_INFO_INTERVAL)
+	syncReplica := config.GetBool(common.SYNC_REPLICA)
 
+	//init hash object
+	commonHash := crypto.NewKeccak256Hash("keccak256")
 	protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, consenter, am, commonHash, syncReplicaInterval, syncReplica, exist, expiredTime)
 	aliveChan := make(chan int)
 	protocolManager.Start(aliveChan, cm)
 
-	//wait for all peer are connected
-	//select {
-	//case initType := <-aliveChan:
-	//	{
-	//start server
 	return protocolManager
-	//}
-	//}
 }

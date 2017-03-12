@@ -39,8 +39,10 @@ func init() {
 // InitDB initialization db
 // should be called while programming start-up
 
-func InitDB(conf *common.Config, dbConfig string, port int) {
-//func InitDB(conf *common.Config)
+func InitDB(conf *common.Config) {
+	conf.MergeConfig(conf.GetString(common.DB_CONFIG_PATH))
+	dbConfig := conf.GetString(common.DB_CONFIG_PATH)
+	port := conf.GetInt(common.C_NODE_ID)
 	hyperdb.SetDBConfig(dbConfig, strconv.Itoa(port))
 	hyperdb.InitDatabase(conf, "Global")
 	memChainMap = newMemChain()

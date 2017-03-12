@@ -21,8 +21,8 @@ type NodeResult struct {
 	CName       string      `json:"cName"`
 	IP          string      `json:"ip"`
 	Port        int         `json:"port"`
-	delayTime   string      `json:"delayTime"`   // 节点与节点的延迟时间
-	LatestBlock interface{} `json:"latestBlock"` //当前节点最新的区块
+	delayTime   string      `json:"delayTime"`   //latency between nodes
+	LatestBlock interface{} `json:"latestBlock"` //newest block of current block
 }
 
 func NewPublicNodeAPI(pm *manager.ProtocolManager) *PublicNodeAPI {
@@ -49,21 +49,10 @@ func (node *PublicNodeAPI) GetNodeHash() (string, error) {
 
 func (node *PublicNodeAPI) DelNode(args NodeArgs) (string, error) {
 	if node.pm == nil {
-		return "",&CallbackError{"protocolManager is nil"}
+		return "", &CallbackError{"protocolManager is nil"}
 	}
 	go node.pm.GetEventObject().Post(event.DelPeerEvent{
 		Payload: []byte(args.NodeHash),
 	})
 	return "successful request", nil
 }
-
-/*func outputNodeResult(node *client.PeerInfo) *NodeResult {
-
-	return &NodeResult{
-		Status: node.Status,
-		//CName: node.CName,
-		IP: node.IP,
-		Port: node.Port,
-	}
-
-}*/

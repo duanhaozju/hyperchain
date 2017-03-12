@@ -18,6 +18,7 @@ import (
 	"hyperchain/p2p"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb/db"
+	"strconv"
 )
 
 var (
@@ -85,7 +86,14 @@ type BlockPool struct {
 
 }
 
-func NewBlockPool(consenter consensus.Consenter, conf *common.Config, commonHash crypto.CommonHash, encryption crypto.Encryption, eventMux *event.TypeMux) *BlockPool {
+func NewBlockPool(consenter consensus.Consenter, conf *common.Config, eventMux *event.TypeMux) *BlockPool {
+
+	encryption := crypto.NewEcdsaEncrypto("ecdsa")
+	encryption.GenerateNodeKey(strconv.Itoa(conf.GetInt(common.C_NODE_ID)), conf.GetString(common.KEY_NODE_DIR))
+
+	//init hash object
+	commonHash := crypto.NewKeccak256Hash("keccak256")
+
 	var err error
 	blockCache, err := common.NewCache()
 	if err != nil {
