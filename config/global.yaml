@@ -40,7 +40,7 @@ global:
         license: "config/LICENSE"
         replicainfo:
             interval : 20s
-            enable   : true
+            enable   : false
         ratelimit:
             enable   : true
             txRatePeak : 100

@@ -44,7 +44,7 @@ func (node *PublicNodeAPI) GetNodeHash() (string, error) {
 	if node.pm == nil {
 		return "", &CallbackError{"protocolManager is nil"}
 	}
-	return node.pm.Peermanager.GetLocalNodeHash(), nil
+	return node.pm.PeerManager.GetLocalNodeHash(), nil
 }
 
 func (node *PublicNodeAPI) DelNode(args NodeArgs) (string, error) {
