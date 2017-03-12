@@ -6,11 +6,9 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"hyperchain/accounts"
-	"hyperchain/common"
 	"hyperchain/consensus"
 	"hyperchain/core/executor"
 	"hyperchain/core/types"
-	"hyperchain/crypto"
 	"hyperchain/event"
 	"hyperchain/p2p"
 	"hyperchain/protos"
@@ -29,32 +27,21 @@ type EventHub struct {
 	namespace           string
 	executor            *executor.Executor
 	Peermanager         p2p.PeerManager
-
 	nodeInfo            p2p.PeerInfos // node info ,store node status,ip,port
 	consenter           consensus.Consenter
-
 	AccountManager      *accounts.AccountManager
-	commonHash          crypto.CommonHash
-
 	eventMux            *event.TypeMux
-
 	validateSub         event.Subscription
 	commitSub           event.Subscription
 	consensusSub        event.Subscription
 	viewChangeSub       event.Subscription
-	respSub             event.Subscription
-	chainSyncSub        event.Subscription
+	invalidSub          event.Subscription
+	syncChainSub        event.Subscription
 	syncBlockSub        event.Subscription
-	syncStatusSub       event.Subscription
+	syncReplicaSub      event.Subscription
 	peerMaintainSub     event.Subscription
-
 	executorSub         event.Subscription
-
 	quitSync            chan struct{}
-	syncBlockCache      *common.Cache
-	replicaStatus       *common.Cache
-	syncReplicaInterval time.Duration
-	syncReplica         bool
 	expired             chan bool
 	expiredTime         time.Time
 	initType            int
@@ -67,9 +54,7 @@ var eventMuxAll *event.TypeMux
 
 func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
 	//encryption crypto.Encryption, commonHash crypto.CommonHash) (*ProtocolManager) {
-	am *accounts.AccountManager, commonHash crypto.CommonHash, interval time.Duration, syncReplica bool, expired chan bool, expiredTime time.Time) *EventHub {
-	synccache, _ := common.NewCache()
-	replicacache, _ := common.NewCache()
+	am *accounts.AccountManager, expired chan bool, expiredTime time.Time) *EventHub {
 	manager := &EventHub{
 		namespace:          namespace,
 		executor:           executor,
@@ -78,11 +63,6 @@ func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.
 		consenter:           consenter,
 		Peermanager:         peerManager,
 		AccountManager:      am,
-		commonHash:          commonHash,
-		syncBlockCache:      synccache,
-		replicaStatus:       replicacache,
-		syncReplicaInterval: interval,
-		syncReplica:         syncReplica,
 		expired:             expired,
 		expiredTime:         expiredTime,
 	}
@@ -101,29 +81,27 @@ func GetEventObject() *event.TypeMux {
 func (hub *EventHub) Start(c chan int, cm *admittance.CAManager) {
 	hub.consensusSub = hub.eventMux.Subscribe(event.ConsensusEvent{}, event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NewTxEvent{},
 		event.NegoRoutersEvent{})
-	hub.validateSub = hub.eventMux.Subscribe(event.ExeTxsEvent{})
-	hub.commitSub = hub.eventMux.Subscribe(event.CommitOrRollbackBlockEvent{})
-	hub.chainSyncSub = hub.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{}, event.ReceiveSyncBlockEvent{})
-	hub.respSub = hub.eventMux.Subscribe(event.RespInvalidTxsEvent{})
+	hub.validateSub = hub.eventMux.Subscribe(event.ValidationEvent{})
+	hub.commitSub = hub.eventMux.Subscribe(event.CommitEvent{})
+	hub.syncChainSub = hub.eventMux.Subscribe(event.StateUpdateEvent{}, event.SendCheckpointSyncEvent{}, event.ReceiveSyncBlockEvent{})
+	hub.invalidSub = hub.eventMux.Subscribe(event.InvalidTxsEvent{})
 	hub.viewChangeSub = hub.eventMux.Subscribe(event.VCResetEvent{}, event.InformPrimaryEvent{})
-	go hub.validateLoop()
-	go hub.commitLoop()
 	hub.peerMaintainSub = hub.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{},
 		event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{}, event.RecvNewPeerEvent{},
 		event.DelPeerEvent{}, event.BroadcastDelPeerEvent{}, event.RecvDelPeerEvent{})
 	hub.executorSub = hub.eventMux.Subscribe(event.ExecutorToConsensusEvent{}, event.ExecutorToP2PEvent{})
-	go hub.ConsensusLoop()
+	hub.syncReplicaSub = hub.eventMux.Subscribe(event.ReplicaInfoEvent{})
+
+	go hub.listenValidateEvent()
+	go hub.listenCommitEvent()
+	go hub.listenConsensusEvent()
 	go hub.ListenSynchronizationEvent()
 	go hub.listenExecutorEvent()
-	go hub.respHandlerLoop()
-	go hub.viewChangeLoop()
-	go hub.peerMaintainLoop()
+	go hub.listenInvalidTxEvent()
+	go hub.listenViewChangeEvent()
+	go hub.listenReplicaInfoEvent()
+	go hub.listenpeerMaintainEvent()
 	go hub.checkExpired()
-	if hub.syncReplica {
-		hub.syncStatusSub = hub.eventMux.Subscribe(event.ReplicaStatusEvent{})
-		go hub.syncReplicaStatusLoop()
-		go hub.SyncReplicaStatus()
-	}
 
 	go hub.Peermanager.Start(c, hub.eventMux, cm)
 	hub.initType = <- c
@@ -135,7 +113,7 @@ func (hub *EventHub) Start(c chan int, cm *admittance.CAManager) {
 }
 
 func (self *EventHub) ListenSynchronizationEvent() {
-	for obj := range self.chainSyncSub.Chan() {
+	for obj := range self.syncChainSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.SendCheckpointSyncEvent:
 			self.executor.SendSyncRequest(ev)
@@ -150,103 +128,91 @@ func (self *EventHub) ListenSynchronizationEvent() {
 }
 
 // listen validate msg
-func (self *EventHub) validateLoop() {
-
+func (self *EventHub) listenValidateEvent() {
 	for obj := range self.validateSub.Chan() {
-
 		switch ev := obj.Data.(type) {
-		case event.ExeTxsEvent:
-			// start validation serially
-			//self.executor.Validate(ev, self.commonHash, self.AccountManager.Encryption, self.Peermanager)
+		case event.ValidationEvent:
+			log.Debugf("[Namespace = %s] message middleware: [mit]", self.namespace)
 			self.executor.Validate(ev, self.Peermanager)
 		}
 	}
 }
 
 // listen commit msg
-func (self *EventHub) commitLoop() {
+func (self *EventHub) listenCommitEvent() {
 	for obj := range self.commitSub.Chan() {
-
 		switch ev := obj.Data.(type) {
-
-		case event.CommitOrRollbackBlockEvent:
-			// start commit block serially
+		case event.CommitEvent:
+			log.Debugf("[Namespace = %s] message middleware: [commit]", self.namespace)
 			self.executor.CommitBlock(ev, self.Peermanager)
 		}
 	}
 }
 
-func (self *EventHub) respHandlerLoop() {
-
-	for obj := range self.respSub.Chan() {
+func (self *EventHub) listenInvalidTxEvent() {
+	for obj := range self.invalidSub.Chan() {
 		switch ev := obj.Data.(type) {
-		case event.RespInvalidTxsEvent:
-			// receive invalid tx message, save to db
+		case event.InvalidTxsEvent:
+			log.Debugf("[Namespace = %s] message middleware: [invalid tx]", self.namespace)
 			self.executor.StoreInvalidTransaction(ev)
 		}
 	}
 }
 
-func (self *EventHub) viewChangeLoop() {
-
+func (self *EventHub) listenViewChangeEvent() {
 	for obj := range self.viewChangeSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.VCResetEvent:
-			// receive invalid tx message, save to db
+			log.Debugf("[Namespace = %s] message middleware: [vc reset]", self.namespace)
 			self.executor.Rollback(ev)
 		case event.InformPrimaryEvent:
-			//log.Notice("InformPrimaryEvent")
+			log.Debugf("[Namespace = %s] message middleware: [inform primary]", self.namespace)
 			self.Peermanager.SetPrimary(ev.Primary)
 		}
 	}
 }
 
-func (self *EventHub) syncReplicaStatusLoop() {
-
-	for obj := range self.syncStatusSub.Chan() {
+func (self *EventHub) listenReplicaInfoEvent() {
+	for obj := range self.syncReplicaSub.Chan() {
 		switch ev := obj.Data.(type) {
-		case event.ReplicaStatusEvent:
-			// receive replicas status event
-			self.RecordReplicaStatus(ev)
+		case event.ReplicaInfoEvent:
+			log.Debugf("[Namespace = %s] message middleware: [receive replica info]", self.namespace)
+			self.executor.ReceiveReplicaInfo(ev)
 		}
 	}
 }
 
-//listen consensus msg
-func (self *EventHub) ConsensusLoop() {
-
-	// automatically stops if unsubscribe
+func (self *EventHub) listenConsensusEvent() {
 	for obj := range self.consensusSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.BroadcastConsensusEvent:
-			log.Debug("######enter broadcast")
+			log.Debugf("[Namespace = %s] message middleware: [broadcast consensus]", self.namespace)
 			go self.BroadcastConsensus(ev.Payload)
 		case event.TxUniqueCastEvent:
+			log.Debugf("[Namespace = %s] message middleware: [tx unicast]", self.namespace)
 			var peers []uint64
 			peers = append(peers, ev.PeerId)
 			go self.Peermanager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
-
 		case event.NewTxEvent:
+			log.Debugf("[Namespace = %s] message middleware: [new tx]", self.namespace)
 			if ev.Simulate == true {
 				tx := &types.Transaction{}
 				proto.Unmarshal(ev.Payload, tx)
 				self.executor.RunInSandBox(tx)
 			} else {
-				log.Debug("###### enter NewTxEvent")
 				go self.sendMsg(ev.Payload)
 			}
-
 		case event.ConsensusEvent:
-			//log.Error("enter ConsensusEvent")
+			log.Debugf("[Namespace = %s] message middleware: [receive consensus]", self.namespace)
 			self.consenter.RecvMsg(ev.Payload)
-
 		case event.NegoRoutersEvent:
+			log.Debugf("[Namespace = %s] message middleware: [negotiate routers]", self.namespace)
 			self.Peermanager.UpdateAllRoutingTable(ev.Payload)
 		}
 	}
 }
 
-func (self *EventHub) peerMaintainLoop() {
+func (self *EventHub) listenpeerMaintainEvent() {
 
 	for obj := range self.peerMaintainSub.Chan() {
 		switch ev := obj.Data.(type) {
@@ -421,7 +387,7 @@ func (self *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 		log.Debugf("[Namespace = %s] message middleware: [unicast invalid tx]", self.namespace)
 		peerId := ev.Peers[0]
 		if peerId == uint64(self.Peermanager.GetNodeId()) {
-			self.executor.StoreInvalidTransaction(event.RespInvalidTxsEvent{
+			self.executor.StoreInvalidTransaction(event.InvalidTxsEvent{
 				Payload: ev.Payload,
 			})
 		} else {
@@ -433,5 +399,25 @@ func (self *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 	case executor.NOTIFY_UNICAST_BLOCK:
 		log.Debugf("[Namespace = %s] message middleware: [unicast block]", self.namespace)
 		self.Peermanager.SendMsgToPeers(ev.Payload, ev.Peers, recovery.Message_SYNCBLOCK)
+	case executor.NOTIFY_SYNC_REPLICA:
+		log.Debugf("[Namespace = %s] message middleware: [sync replica]", self.namespace)
+		chain := &types.Chain{}
+		proto.Unmarshal(ev.Payload, chain)
+		addr := self.Peermanager.GetLocalNode().GetNodeAddr()
+		payload, _ := proto.Marshal(&types.ReplicaInfo{
+			Chain:    chain,
+			Ip:       []byte(addr.IP),
+			Port:     int32(addr.Port),
+			Namespace:[]byte(self.namespace),
+		})
+		peers := self.Peermanager.GetVPPeers()
+		var peerIds = make([]uint64, len(peers))
+		for idx, peer := range peers {
+			peerIds[idx] = uint64(peer.PeerAddr.ID)
+		}
+		self.Peermanager.SendMsgToPeers(payload, peerIds, recovery.Message_SYNCREPLICA)
+		self.eventMux.Post(event.ReplicaInfoEvent{
+			Payload: payload,
+		})
 	}
 }

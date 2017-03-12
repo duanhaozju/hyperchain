@@ -76,7 +76,7 @@ func TestExecute(t *testing.T) {
 	h := NewHelper(mux)
 	timestamp := time.Now().Unix()
 
-	sub := mux.Subscribe(event.CommitOrRollbackBlockEvent{})
+	sub := mux.Subscribe(event.CommitEvent{})
 	go func() {
 		select {
 		case <-sub.Chan():
@@ -119,14 +119,14 @@ func TestValidateBatch(t *testing.T) {
 	mux := &event.TypeMux{}
 	h := NewHelper(mux)
 	timestamp := time.Now().Unix()
-	validateEvent := event.ExeTxsEvent{
+	validateEvent := event.ValidationEvent{
 		Transactions: nil,
 		Timestamp:    timestamp,
 		SeqNo:        123,
 		View:         123,
 		IsPrimary:    true,
 	}
-	sub := mux.Subscribe(event.ExeTxsEvent{})
+	sub := mux.Subscribe(event.ValidationEvent{})
 	go func() {
 		select {
 		case e := <-sub.Chan():

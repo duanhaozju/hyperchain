@@ -37,7 +37,7 @@ func (executor *Executor) RunInSandBox(tx *types.Transaction) error {
 			return err
 		}
 		// persist execution result to local
-		executor.StoreInvalidTransaction(event.RespInvalidTxsEvent{
+		executor.StoreInvalidTransaction(event.InvalidTxsEvent{
 			Payload: payload,
 		})
 		return nil

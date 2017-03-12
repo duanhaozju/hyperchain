@@ -1,52 +1,38 @@
 package executor
 
-func (executor *Executor) SyncReplicaInfo() {
+import (
+	"time"
+	edb "hyperchain/core/db_utils"
+	"hyperchain/event"
+	"hyperchain/core/types"
+	"github.com/golang/protobuf/proto"
+	"agile/utils/common"
+)
+
+func (executor *Executor) syncReplica() {
 	if executor.GetSyncReplicaEnable() {
 		go executor.sendReplicaInfo()
-	} else {
-		log.Debug("the switch of sync replica doesn't been turn on")
 	}
 }
 
 func (executor *Executor) sendReplicaInfo() {
-	//interval := executor.GetSyncReplicaInterval()
-	//ticker := time.NewTicker(interval)
-	//for {
-	//	select {
-	//	case <-ticker.C:
-	//		addr, chain := self.packReplicaStatus()
-	//		if addr == nil || chain == nil {
-	//			continue
-	//		}
-	//		status := &recovery.ReplicaStatus{
-	//			Addr:  addr,
-	//			Chain: chain,
-	//		}
-	//		payload, err := proto.Marshal(status)
-	//		if err != nil {
-	//			log.Error("marshal syncReplicaStatus message failed")
-	//			continue
-	//		}
-	//		peers := self.Peermanager.GetAllPeers()
-	//		var peerIds = make([]uint64, len(peers))
-	//		for idx, peer := range peers {
-	//			//TODO change id into int type
-	//			peerIds[idx] = uint64(peer.PeerAddr.ID)
-	//		}
-	//		self.Peermanager.SendMsgToPeers(payload, peerIds, recovery.Message_SYNCREPLICA)
-	//	// post to self
-	//		self.eventMux.Post(event.ReplicaStatusEvent{
-	//			Payload: payload,
-	//		})
-	//	}
-	//}
+	interval := executor.GetSyncReplicaInterval()
+	ticker := time.NewTicker(interval)
+	for {
+		select {
+		case <- ticker.C:
+			executor.informP2P(NOTIFY_SYNC_REPLICA, edb.GetChainCopy(executor.namespace))
+		}
+	}
 }
 
-func (executor *Executor) receiveReplicaInfo() {
-
-}
-
-func (executor *Executor) packingReplicaInfo() {
-	//chain := edb.GetChainCopy(executor.namespace)
-
+func (executor *Executor) ReceiveReplicaInfo(ev event.ReplicaInfoEvent) {
+	info := &types.ReplicaInfo{}
+	proto.Unmarshal(ev.Payload, info)
+	if string(info.Namespace) != executor.namespace {
+		return
+	}
+	log.Noticef("[Namespace = %s] receive replica info, ip %s, port %d, chain height %d, latest block hash %s",
+		string(info.Namespace), string(info.Ip), info.Port, info.Chain.Height, common.Bytes2Hex(info.Chain.LatestBlockHash))
+	executor.addToReplicaCache(string(info.Ip), info.Port, info.Chain)
 }

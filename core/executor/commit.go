@@ -15,7 +15,7 @@ import (
 
 )
 
-func (executor *Executor) CommitBlock(ev event.CommitOrRollbackBlockEvent, peerManager p2p.PeerManager) {
+func (executor *Executor) CommitBlock(ev event.CommitEvent, peerManager p2p.PeerManager) {
 	executor.addCommitEvent(ev)
 }
 
@@ -29,7 +29,7 @@ func (executor *Executor) listenCommitEvent() {
 }
 
 // processCommitEvent - consume commit event from channel.
-func (executor *Executor) processCommitEvent(ev event.CommitOrRollbackBlockEvent, done func()) bool {
+func (executor *Executor) processCommitEvent(ev event.CommitEvent, done func()) bool {
 	executor.markCommitBusy()
 	defer executor.markCommitIdle()
 	defer done()
@@ -101,7 +101,7 @@ func (executor *Executor) getValidateRecord(hash string) *ValidationResultRecord
 }
 
 // generateBlock - generate a block with given data.
-func (executor *Executor) constructBlock(ev event.CommitOrRollbackBlockEvent) *types.Block {
+func (executor *Executor) constructBlock(ev event.CommitEvent) *types.Block {
 	record := executor.getValidateRecord(ev.Hash)
 	if record == nil {
 		return nil
@@ -125,7 +125,7 @@ func (executor *Executor) constructBlock(ev event.CommitOrRollbackBlockEvent) *t
 }
 
 // commitValidationCheck - check whether this commit event satisfy demand.
-func (executor *Executor) commitValidationCheck(ev event.CommitOrRollbackBlockEvent) bool {
+func (executor *Executor) commitValidationCheck(ev event.CommitEvent) bool {
 	// 1. check whether this ev is the demand one
 	if !executor.isDemandNumber(ev.SeqNo){
 		log.Errorf("[Namespace = %s] receive a commit event %d which is not demand, drop it.", executor.namespace, ev.SeqNo)
@@ -185,7 +185,7 @@ func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Rece
 }
 
 // save the invalid transaction into database for client query
-func (executor *Executor) StoreInvalidTransaction(ev event.RespInvalidTxsEvent) {
+func (executor *Executor) StoreInvalidTransaction(ev event.InvalidTxsEvent) {
 	invalidTx := &types.InvalidTransactionRecord{}
 	err := proto.Unmarshal(ev.Payload, invalidTx)
 	if err != nil {

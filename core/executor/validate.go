@@ -27,7 +27,7 @@ type ValidationResultRecord struct {
 	VID         uint64                            // validation ID. may larger than SeqNo
 }
 
-func (executor *Executor) Validate(validationEvent event.ExeTxsEvent, peerManager p2p.PeerManager) {
+func (executor *Executor) Validate(validationEvent event.ValidationEvent, peerManager p2p.PeerManager) {
 	executor.addValidationEvent(validationEvent)
 }
 
@@ -46,7 +46,7 @@ func (executor *Executor) listenValidationEvent() {
 }
 
 // processValidationEvent - process validation event, return true if process success, otherwise false will be return.
-func (executor *Executor) processValidationEvent(validationEvent event.ExeTxsEvent, done func()) bool {
+func (executor *Executor) processValidationEvent(validationEvent event.ValidationEvent, done func()) bool {
 	executor.markValidationBusy()
 	defer executor.markValidationIdle()
 	if !executor.isDemandSeqNo(validationEvent.SeqNo) {
@@ -81,7 +81,7 @@ func (executor *Executor) processPendingValidationEvent(done func()) bool {
 }
 
 // dropValdiateEvent - this function do nothing but consume a validation event.
-func (executor *Executor) dropValdiateEvent(validationEvent event.ExeTxsEvent, done func()) {
+func (executor *Executor) dropValdiateEvent(validationEvent event.ValidationEvent, done func()) {
 	executor.markValidationBusy()
 	defer executor.markValidationIdle()
 	defer done()
@@ -89,7 +89,7 @@ func (executor *Executor) dropValdiateEvent(validationEvent event.ExeTxsEvent, d
 }
 
 // Process an ValidationEvent
-func (executor *Executor) process(validationEvent event.ExeTxsEvent, done func()) (error, bool) {
+func (executor *Executor) process(validationEvent event.ValidationEvent, done func()) (error, bool) {
 	defer done()
 	var validtxs []*types.Transaction
 	var invalidtxs []*types.InvalidTransactionRecord
@@ -247,7 +247,7 @@ func (executor *Executor) throwInvalidTransactionBack(invalidtxs []*types.Invali
 }
 
 // saveValidationResult - save validation result to cache.
-func (executor *Executor) saveValidationResult(res *ValidationResultRecord, ev event.ExeTxsEvent, hash common.Hash) {
+func (executor *Executor) saveValidationResult(res *ValidationResultRecord, ev event.ValidationEvent, hash common.Hash) {
 	if len(res.ValidTxs) != 0 {
 		res.VID = ev.SeqNo
 		res.SeqNo = executor.getTempBlockNumber()
@@ -258,7 +258,7 @@ func (executor *Executor) saveValidationResult(res *ValidationResultRecord, ev e
 }
 
 // sendValidationResult - send validation result to consensus module.
-func (executor *Executor) sendValidationResult(res *ValidationResultRecord, ev event.ExeTxsEvent, hash common.Hash) {
+func (executor *Executor) sendValidationResult(res *ValidationResultRecord, ev event.ValidationEvent, hash common.Hash) {
 	executor.informConsensus(NOTIFY_VALIDATION_RES, protos.ValidatedTxs{
 		Transactions: res.ValidTxs,
 		SeqNo:        ev.SeqNo,
@@ -269,7 +269,7 @@ func (executor *Executor) sendValidationResult(res *ValidationResultRecord, ev e
 }
 
 // dealEmptyBlock - deal with empty block.
-func (executor *Executor) dealEmptyBlock(res *ValidationResultRecord, ev event.ExeTxsEvent) {
+func (executor *Executor) dealEmptyBlock(res *ValidationResultRecord, ev event.ValidationEvent) {
 	if ev.IsPrimary {
 		executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: ev.SeqNo})
 		executor.throwInvalidTransactionBack(res.InvalidTxs)

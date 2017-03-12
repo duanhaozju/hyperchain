@@ -27,7 +27,7 @@ type TransactionValue struct {
 func (m *TransactionValue) Reset()                    { *m = TransactionValue{} }
 func (m *TransactionValue) String() string            { return proto.CompactTextString(m) }
 func (*TransactionValue) ProtoMessage()               {}
-func (*TransactionValue) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{0} }
+func (*TransactionValue) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{0} }
 
 func (m *TransactionValue) GetPrice() int64 {
 	if m != nil {
@@ -89,9 +89,9 @@ func init() {
 	proto.RegisterType((*TransactionValue)(nil), "types.TransactionValue")
 }
 
-func init() { proto.RegisterFile("transaction_value.proto", fileDescriptor6) }
+func init() { proto.RegisterFile("transaction_value.proto", fileDescriptor7) }
 
-var fileDescriptor6 = []byte{
+var fileDescriptor7 = []byte{
 	// 216 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x6c, 0x90, 0xcf, 0x4a, 0xc4, 0x30,
 	0x10, 0x87, 0xc9, 0xae, 0xed, 0x96, 0x41, 0x50, 0x07, 0xd1, 0xe0, 0xa9, 0x78, 0xca, 0x41, 0xf6,

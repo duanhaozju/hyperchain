@@ -11,6 +11,7 @@ It is generated from these files:
 	chain.proto
 	receipt.proto
 	receipt_wrapper.proto
+	replica.proto
 	transaction.proto
 	transaction_value.proto
 	transaction_wrapper.proto
@@ -22,6 +23,7 @@ It has these top-level messages:
 	Chain
 	Receipt
 	ReceiptWrapper
+	ReplicaInfo
 	Transaction
 	InvalidTransactionRecord
 	InvalidTransactionRecords

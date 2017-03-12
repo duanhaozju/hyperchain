@@ -77,6 +77,7 @@ func (executor *Executor) Initialize() {
 	// start to listen for process commit event or validation event
 	go executor.listenCommitEvent()
 	go executor.listenValidationEvent()
+	go executor.syncReplica()
 }
 
 // NewStateDb - create a latest state.

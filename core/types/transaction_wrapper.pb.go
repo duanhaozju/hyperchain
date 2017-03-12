@@ -21,7 +21,7 @@ type TransactionWrapper struct {
 func (m *TransactionWrapper) Reset()                    { *m = TransactionWrapper{} }
 func (m *TransactionWrapper) String() string            { return proto.CompactTextString(m) }
 func (*TransactionWrapper) ProtoMessage()               {}
-func (*TransactionWrapper) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{0} }
+func (*TransactionWrapper) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{0} }
 
 func (m *TransactionWrapper) GetTransactionVersion() []byte {
 	if m != nil {
@@ -41,9 +41,9 @@ func init() {
 	proto.RegisterType((*TransactionWrapper)(nil), "types.TransactionWrapper")
 }
 
-func init() { proto.RegisterFile("transaction_wrapper.proto", fileDescriptor7) }
+func init() { proto.RegisterFile("transaction_wrapper.proto", fileDescriptor8) }
 
-var fileDescriptor7 = []byte{
+var fileDescriptor8 = []byte{
 	// 107 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0x92, 0x2c, 0x29, 0x4a, 0xcc,
 	0x2b, 0x4e, 0x4c, 0x2e, 0xc9, 0xcc, 0xcf, 0x8b, 0x2f, 0x2f, 0x4a, 0x2c, 0x28, 0x48, 0x2d, 0xd2,

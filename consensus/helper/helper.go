@@ -72,7 +72,7 @@ func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error {
 // Execute transfers the transactions decided by consensus to outer
 func (h *helper) Execute(seqNo uint64, hash string, flag bool, isPrimary bool, timestamp int64) error {
 
-	writeEvent := event.CommitOrRollbackBlockEvent{
+	writeEvent := event.CommitEvent{
 		SeqNo:      seqNo,
 		Hash:       hash,
 		Timestamp:  timestamp,
@@ -109,7 +109,7 @@ func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
 // UpdateState transfers the UpdateStateEvent to outer
 func (h *helper) ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error {
 
-	validateEvent := event.ExeTxsEvent{
+	validateEvent := event.ValidationEvent{
 		Transactions: txs,
 		Timestamp:    timeStamp,
 		SeqNo:        seqNo,

@@ -39,7 +39,7 @@ func (x InvalidTransactionRecord_ErrType) String() string {
 	return proto.EnumName(InvalidTransactionRecord_ErrType_name, int32(x))
 }
 func (InvalidTransactionRecord_ErrType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor5, []int{1, 0}
+	return fileDescriptor6, []int{1, 0}
 }
 
 type Transaction struct {
@@ -57,7 +57,7 @@ type Transaction struct {
 func (m *Transaction) Reset()                    { *m = Transaction{} }
 func (m *Transaction) String() string            { return proto.CompactTextString(m) }
 func (*Transaction) ProtoMessage()               {}
-func (*Transaction) Descriptor() ([]byte, []int) { return fileDescriptor5, []int{0} }
+func (*Transaction) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{0} }
 
 func (m *Transaction) GetVersion() []byte {
 	if m != nil {
@@ -131,7 +131,7 @@ type InvalidTransactionRecord struct {
 func (m *InvalidTransactionRecord) Reset()                    { *m = InvalidTransactionRecord{} }
 func (m *InvalidTransactionRecord) String() string            { return proto.CompactTextString(m) }
 func (*InvalidTransactionRecord) ProtoMessage()               {}
-func (*InvalidTransactionRecord) Descriptor() ([]byte, []int) { return fileDescriptor5, []int{1} }
+func (*InvalidTransactionRecord) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{1} }
 
 func (m *InvalidTransactionRecord) GetTx() *Transaction {
 	if m != nil {
@@ -161,7 +161,7 @@ type InvalidTransactionRecords struct {
 func (m *InvalidTransactionRecords) Reset()                    { *m = InvalidTransactionRecords{} }
 func (m *InvalidTransactionRecords) String() string            { return proto.CompactTextString(m) }
 func (*InvalidTransactionRecords) ProtoMessage()               {}
-func (*InvalidTransactionRecords) Descriptor() ([]byte, []int) { return fileDescriptor5, []int{2} }
+func (*InvalidTransactionRecords) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{2} }
 
 func (m *InvalidTransactionRecords) GetRecords() []*InvalidTransactionRecord {
 	if m != nil {
@@ -178,7 +178,7 @@ type TransactionMeta struct {
 func (m *TransactionMeta) Reset()                    { *m = TransactionMeta{} }
 func (m *TransactionMeta) String() string            { return proto.CompactTextString(m) }
 func (*TransactionMeta) ProtoMessage()               {}
-func (*TransactionMeta) Descriptor() ([]byte, []int) { return fileDescriptor5, []int{3} }
+func (*TransactionMeta) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{3} }
 
 func (m *TransactionMeta) GetBlockIndex() uint64 {
 	if m != nil {
@@ -202,9 +202,9 @@ func init() {
 	proto.RegisterEnum("types.InvalidTransactionRecord_ErrType", InvalidTransactionRecord_ErrType_name, InvalidTransactionRecord_ErrType_value)
 }
 
-func init() { proto.RegisterFile("transaction.proto", fileDescriptor5) }
+func init() { proto.RegisterFile("transaction.proto", fileDescriptor6) }
 
-var fileDescriptor5 = []byte{
+var fileDescriptor6 = []byte{
 	// 402 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x84, 0x52, 0xcf, 0x6f, 0xd3, 0x30,
 	0x14, 0xc6, 0xee, 0x8f, 0xd0, 0xd7, 0xb1, 0x95, 0x27, 0x34, 0x19, 0x84, 0xa0, 0xca, 0x85, 0x9c,

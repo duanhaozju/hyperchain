@@ -150,7 +150,7 @@ func TestRecordReplicaStatus(t *testing.T) {
 	status.Addr = tempaddr
 	status.Chain = tempchain
 
-	ev := new(event.ReplicaStatusEvent)
+	ev := new(event.ReplicaInfoEvent)
 	ev.Payload, _ = proto.Marshal(status)
 	manager.RecordReplicaStatus(*ev)
 	log.Notice("manager's replicaStatus is", manager.replicaStatus)

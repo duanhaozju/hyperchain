@@ -147,6 +147,14 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			Peers:    executor.status.syncFlag.SyncPeers,
 		})
 		return nil
+	case NOTIFY_SYNC_REPLICA:
+		log.Debugf("[Namespace = %s] inform p2p sync replica", executor.namespace)
+		payload, _ := proto.Marshal(message[0].(*types.Chain))
+		executor.helper.Post(event.ExecutorToP2PEvent{
+			Payload: payload,
+			Type:    NOTIFY_SYNC_REPLICA,
+		})
+		return nil
 	default:
 		return NoDefinedCaseErr
 	}

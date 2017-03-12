@@ -39,8 +39,8 @@ global:
         pbft: "config/pbft.yaml"
         license: "config/LICENSE"
         replicainfo:
-            interval : 500s
-            enable   : false
+            interval : 20s
+            enable   : true
         ratelimit:
             enable   : true
             txRatePeak : 100

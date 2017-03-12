@@ -4,7 +4,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"github.com/mkideal/cli"
 	"github.com/terasum/viper"
 	"hyperchain/accounts"
@@ -25,6 +24,7 @@ import (
 	"strings"
 	"time"
 	"hyperchain/core/db_utils"
+	"fmt"
 )
 
 type argT struct {
@@ -51,7 +51,6 @@ func checkLicense(licensePath string) (err error, expiredTime time.Time) {
 	}
 	privateKey := string("TnrEP|N.*lAgy<Q&@lBPd@J/")
 	identificationSuffix := string("Hyperchain")
-
 	license, err := ioutil.ReadFile(licensePath)
 	if err != nil {
 		err = errors.New("No License Found")
@@ -59,9 +58,8 @@ func checkLicense(licensePath string) (err error, expiredTime time.Time) {
 	}
 	pattern, _ := regexp.Compile("Identification: (.*)")
 	identification := pattern.FindString(string(license))[16:]
-
-	str1 := GetHyperchainVersion()
-	str2, _ := GetOperationSystem()
+	str1:=GetHyperchainVersion()
+	str2,_:=GetOperationSystem()
 	fmt.Println(str1)
 	fmt.Println(str2)
 	ctx, err := transport.TripleDesDecrypt(common.Hex2Bytes(identification), []byte(privateKey))
@@ -160,20 +158,13 @@ func main() {
 
 		//init genesis
 		core.CreateInitBlock(DefaultNamespace, conf)
-
 		//init pbft consensus
 		cs := controller.NewConsenter(DefaultNamespace, uint64(config.getNodeID()), eventMux, config.getPBFTConfigPath())
-
 		//init encryption object
-
 		encryption := crypto.NewEcdsaEncrypto("ecdsa")
 		encryption.GenerateNodeKey(strconv.Itoa(config.getNodeID()), config.getKeyNodeDir())
-		//
 		am := accounts.NewAccountManager(config.getKeystoreDir(), encryption)
 		am.UnlockAllAccount(config.getKeystoreDir())
-
-		//init hash object
-		kec256Hash := crypto.NewKeccak256Hash("keccak256")
 
 		//init block pool to save block
 		executor := executor.NewExecutor(DefaultNamespace, conf, eventMux)
@@ -183,8 +174,6 @@ func main() {
 		executor.Initialize()
 		//init manager
 		exist := make(chan bool)
-		syncReplicaInterval, _ := config.getSyncReplicaInterval()
-		syncReplicaEnable := config.getSyncReplicaEnable()
 		pm := manager.New(
 			DefaultNamespace,
 			eventMux,
@@ -192,9 +181,6 @@ func main() {
 			grpcPeerMgr,
 			cs,
 			am,
-			kec256Hash,
-			syncReplicaInterval,
-			syncReplicaEnable,
 			exist,
 			expiredTime, cm)
 		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(), config.getLogDumpFileDir(), eventMux, pm, cm, conf)
