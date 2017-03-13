@@ -192,7 +192,7 @@ func (executor *Executor) StoreInvalidTransaction(ev event.InvalidTxsEvent) {
 		log.Error("unmarshal invalid transaction record payload failed")
 	}
 	// save to db
-	log.Noticef("[Namespace = %s]invalid transaction", common.BytesToHash(invalidTx.Tx.TransactionHash).Hex())
+	//log.Noticef("[Namespace = %s] invalid transaction %s", executor.namespace, invalidTx.Tx.Hash().Hex())
 	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
 	if err != nil {
 		return
