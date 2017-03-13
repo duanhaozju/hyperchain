@@ -23,4 +23,10 @@ const (
 	C_REST_PORT = "global.rest_port"
 	C_PEER_CONFIG_PATH= "global.peerconfigs.path"
 	C_GLOBAL_CONFIG_PATH="global.globalconfig.path"
+
+	//GRPC_PORT = "grpc.port"
+	//HTTP_PORT = "http.port"
+	//REST_PORT = "rest.port"
+
+	//HYPERCHAIN_ID = "hyperchain.id"
 )

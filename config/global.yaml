@@ -88,3 +88,14 @@ global:
             hyperdb: "NOTICE"
             executor: "NOTICE"
             eventhub: "NOTICE"
+
+    ######################################################
+    # configs related to the consensus                   #
+    #                                                    #
+    # 1. choose which consensus algorithm to use         #
+    # 2. define the algorithm related configurations     #
+    #                                                    #
+    ######################################################
+    consensus:
+           algo: "PBFT"
+           algo_config_path: "config/pbft.yaml"

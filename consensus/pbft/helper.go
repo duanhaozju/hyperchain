@@ -3,16 +3,14 @@
 package pbft
 
 import (
-	"fmt"
 	"time"
+	"fmt"
 
-	"hyperchain/consensus/helper/persist"
 	"hyperchain/protos"
+	"hyperchain/consensus/helper/persist"
 
-	"encoding/hex"
 	"github.com/golang/protobuf/proto"
-	"github.com/pkg/errors"
-	"hyperchain/core/types"
+	"sync/atomic"
 )
 
 // =============================================================================
@@ -31,81 +29,87 @@ func (a sortableUint64Slice) Less(i, j int) bool {
 }
 
 // =============================================================================
-// helper functions for create batch
-// =============================================================================
-
-func (pbft *pbftProtocal) postRequestEvent(event interface{}) {
-
-	pbft.muxBatch.Lock()
-	defer pbft.muxBatch.Unlock()
-	pbft.batchManager.Queue() <- event
-
-}
-
-func (pbft *pbftProtocal) postPbftEvent(event interface{}) {
-
-	pbft.muxPbft.Lock()
-	defer pbft.muxPbft.Unlock()
-	pbft.pbftManager.Queue() <- event
-
-}
-
-// =============================================================================
 // helper functions for PBFT
 // =============================================================================
 
 // Given a certain view v and replicaCount n, what is the expected primary?
-func (pbft *pbftProtocal) primary(v uint64) uint64 {
+func (pbft *pbftImpl) primary(v uint64) uint64 {
 	return (v % uint64(pbft.N)) + 1
 }
 
+//isPrimary is current PBFT node the primary?
+func (pbft *pbftImpl) isPrimary() (bool, uint64)  {
+	primary := pbft.primary(pbft.view)
+	return primary == pbft.id, primary
+}
+
 // Is the sequence number between watermarks?
-func (pbft *pbftProtocal) inW(n uint64) bool {
+func (pbft *pbftImpl) inW(n uint64) bool {
 	return n > pbft.h && n-pbft.h <= pbft.L
 }
 
 // Is the view right? And is the sequence number between watermarks?
-func (pbft *pbftProtocal) inWV(v uint64, n uint64) bool {
+func (pbft *pbftImpl) inWV(v uint64, n uint64) bool {
 	return pbft.view == v && pbft.inW(n)
 }
 
-// Given a digest/view/seq, is there an entry in the certLog?
-// If so, return it. If not, create it.
-func (pbft *pbftProtocal) getCert(v uint64, n uint64) (cert *msgCert) {
+// Given a ip/digest get the addnode Cert
+func (pbft *pbftImpl) getAddNodeCert(addHash string) (cert *addNodeCert) {
 
-	idx := msgID{v, n}
-	cert, ok := pbft.certStore[idx]
+	cert, ok := pbft.nodeMgr.addNodeCertStore[addHash]
 
 	if ok {
 		return
 	}
 
-	prepare := make(map[Prepare]bool)
-	commit := make(map[Commit]bool)
-	cert = &msgCert{
-		prepare: prepare,
-		commit:  commit,
+	adds := make(map[AddNode]bool)
+	cert = &addNodeCert{
+		addNodes: adds,
 	}
-	pbft.certStore[idx] = cert
+	pbft.nodeMgr.addNodeCertStore[addHash] = cert
 
 	return
 }
 
-// Given a seqNo/id get the checkpoint Cert
-func (pbft *pbftProtocal) getChkptCert(n uint64, id string) (cert *chkptCert) {
+// Given a ip/digest get the addnode Cert
+func (pbft *pbftImpl) getDelNodeCert(delHash string) (cert *delNodeCert) {
 
-	idx := chkptID{n, id}
-	cert, ok := pbft.chkptCertStore[idx]
+	cert, ok := pbft.nodeMgr.delNodeCertStore[delHash]
 
 	if ok {
 		return
 	}
 
-	chkpts := make(map[Checkpoint]bool)
-	cert = &chkptCert{
-		chkpts: chkpts,
+	dels := make(map[DelNode]bool)
+	cert = &delNodeCert{
+		delNodes: dels,
 	}
-	pbft.chkptCertStore[idx] = cert
+	pbft.nodeMgr.delNodeCertStore[delHash] = cert
+
+	return
+}
+
+func (pbft *pbftImpl) getAddNV() (n int64, v uint64) {
+
+	n = int64(pbft.N) + 1
+	if pbft.view < uint64(pbft.N) {
+		v = pbft.view + uint64(n)
+	} else {
+		v = pbft.view + uint64(n) + 1
+	}
+
+	return
+}
+
+func (pbft *pbftImpl) getDelNV(del uint64) (n int64, v uint64) {
+
+	n = int64(pbft.N) - 1
+	if pbft.primary(pbft.view) > del {
+		v = pbft.view % uint64(pbft.N) - 1 + (uint64(pbft.N) - 1) * (pbft.view / uint64(pbft.N) + 1)
+	} else {
+		logger.Debug("N: ", pbft.N, " view: ", pbft.view, " del: ", del)
+		v = pbft.view % uint64(pbft.N) + (uint64(pbft.N) - 1) * (pbft.view / uint64(pbft.N) + 1)
+	}
 
 	return
 }
@@ -114,26 +118,26 @@ func (pbft *pbftProtocal) getChkptCert(n uint64, id string) (cert *chkptCert) {
 // prepare/commit quorum checks helper
 // =============================================================================
 
-func (pbft *pbftProtocal) preparedReplicasQuorum() int {
+func (pbft *pbftImpl) preparedReplicasQuorum() int {
 	return (2 * pbft.f)
 }
 
-func (pbft *pbftProtocal) committedReplicasQuorum() int {
-	return (2 * pbft.f + 1)
+func (pbft *pbftImpl) committedReplicasQuorum() int {
+	return (2*pbft.f + 1)
 }
 
 // intersectionQuorum returns the number of replicas that have to
 // agree to guarantee that at least one correct replica is shared by
 // two intersection quora
-func (pbft *pbftProtocal) intersectionQuorum() int {
+func (pbft *pbftImpl) intersectionQuorum() int {
 	return (pbft.N + pbft.f + 2) / 2
 }
 
-func (pbft *pbftProtocal) allCorrectReplicasQuorum() int {
+func (pbft *pbftImpl) allCorrectReplicasQuorum() int {
 	return (pbft.N - pbft.f)
 }
 
-func (pbft *pbftProtocal) minimumCorrectQuorum() int {
+func (pbft *pbftImpl) minimumCorrectQuorum() int {
 	return pbft.f + 1
 }
 
@@ -141,19 +145,14 @@ func (pbft *pbftProtocal) minimumCorrectQuorum() int {
 // pre-prepare/prepare/commit check helper
 // =============================================================================
 
-func (pbft *pbftProtocal) prePrepared(digest string, v uint64, n uint64) bool {
+func (pbft *pbftImpl) prePrepared(digest string, v uint64, n uint64) bool {
 
-	_, mInLog := pbft.validatedBatchStore[digest]
-
-	if digest != "" && !mInLog {
+	if digest != "" && !pbft.batchVdr.containsInVBS(digest) {
 		logger.Debugf("Replica %d havan't store the reqBatch", pbft.id)
 		return false
 	}
 
-	//if q, ok := pbft.qset[qidx{digest, n}]; ok && q.View == v {
-	//	return true
-	//}
-	cert := pbft.certStore[msgID{v, n}]
+	cert := pbft.storeMgr.certStore[msgID{v, n}]
 
 	if cert != nil {
 		p := cert.prePrepare
@@ -168,21 +167,14 @@ func (pbft *pbftProtocal) prePrepared(digest string, v uint64, n uint64) bool {
 	return false
 }
 
-func (pbft *pbftProtocal) prepared(digest string, v uint64, n uint64) bool {
+//prepared judge whether collect enough prepare messages.
+func (pbft *pbftImpl) prepared(digest string, v uint64, n uint64) bool {
 
 	if !pbft.prePrepared(digest, v, n) {
 		return false
 	}
 
-	//if p, ok := pbft.pset[n]; ok && p.View == v && p.BatchDigest == digest {
-	//	return true
-	//}
-
-	cert := pbft.certStore[msgID{v, n}]
-
-	if cert == nil {
-		return false
-	}
+	cert := pbft.storeMgr.certStore[msgID{v, n}]
 
 	logger.Debugf("Replica %d prepare count for view=%d/seqNo=%d: %d",
 		pbft.id, v, n, cert.prepareCount)
@@ -190,13 +182,13 @@ func (pbft *pbftProtocal) prepared(digest string, v uint64, n uint64) bool {
 	return cert.prepareCount >= pbft.preparedReplicasQuorum()
 }
 
-func (pbft *pbftProtocal) committed(digest string, v uint64, n uint64) bool {
+func (pbft *pbftImpl) committed(digest string, v uint64, n uint64) bool {
 
 	if !pbft.prepared(digest, v, n) {
 		return false
 	}
 
-	cert := pbft.certStore[msgID{v, n}]
+	cert := pbft.storeMgr.certStore[msgID{v, n}]
 
 	if cert == nil {
 		return false
@@ -205,14 +197,14 @@ func (pbft *pbftProtocal) committed(digest string, v uint64, n uint64) bool {
 	logger.Debugf("Replica %d commit count for view=%d/seqNo=%d: %d",
 		pbft.id, v, n, cert.commitCount)
 
-	return cert.commitCount >= pbft.committedReplicasQuorum()
+	return cert.commitCount >= pbft.intersectionQuorum()
 }
 
 // =============================================================================
 // helper functions for transfer message
 // =============================================================================
 // consensusMsgHelper help convert the ConsensusMessage to pb.Message
-func consensusMsgHelper(msg *ConsensusMessage, id uint64) *protos.Message {
+func cMsgToPbMsg(msg *ConsensusMessage, id uint64) *protos.Message {
 
 	msgPayload, err := proto.Marshal(msg)
 
@@ -231,8 +223,8 @@ func consensusMsgHelper(msg *ConsensusMessage, id uint64) *protos.Message {
 	return pbMsg
 }
 
-// nullRequestMsgHelper help convert the nullRequestMessage to pb.Message
-func nullRequestMsgHelper(id uint64) *protos.Message {
+// nullRequestMsgToPbMsg help convert the nullRequestMessage to pb.Message.
+func nullRequestMsgToPbMsg(id uint64) *protos.Message {
 	pbMsg := &protos.Message{
 		Type:      protos.Message_NULL_REQUEST,
 		Payload:   nil,
@@ -255,7 +247,7 @@ func stateUpdateHelper(myId uint64, seqNo uint64, id []byte, replicaId []uint64)
 	return stateUpdateMsg
 }
 
-func (pbft *pbftProtocal) getBlockchainInfo() *protos.BlockchainInfo {
+func (pbft *pbftImpl) getBlockchainInfo() *protos.BlockchainInfo {
 
 	bcInfo := persist.GetBlockchainInfo(pbft.namespace)
 
@@ -264,13 +256,13 @@ func (pbft *pbftProtocal) getBlockchainInfo() *protos.BlockchainInfo {
 	preBlkHash := bcInfo.ParentBlockHash
 
 	return &protos.BlockchainInfo{
-		Height:            height,
+		Height:	           height,
 		CurrentBlockHash:  curBlkHash,
 		PreviousBlockHash: preBlkHash,
 	}
 }
 
-func (pbft *pbftProtocal) getCurrentBlockInfo() *protos.BlockchainInfo {
+func (pbft *pbftImpl) getCurrentBlockInfo() *protos.BlockchainInfo {
 	height, curHash, prevHash := persist.GetCurrentBlockInfo(pbft.namespace)
 	return &protos.BlockchainInfo{
 		Height:            height,
@@ -282,216 +274,156 @@ func (pbft *pbftProtocal) getCurrentBlockInfo() *protos.BlockchainInfo {
 // =============================================================================
 // helper functions for timer
 // =============================================================================
-func (pbft *pbftProtocal) startBatchTimer() {
-	pbft.batchTimer.Reset(pbft.batchTimeout, batchTimerEvent{})
-	logger.Debugf("Replica %d started the batch timer", pbft.id)
-	pbft.batchTimerActive = true
-}
 
-func (pbft *pbftProtocal) stopBatchTimer() {
-	pbft.batchTimer.Stop()
-	logger.Debugf("Replica %d stpbftped the batch timer", pbft.id)
-	pbft.batchTimerActive = false
-}
-
-func (pbft *pbftProtocal) startTimerIfOutstandingRequests() {
-	if pbft.skipInProgress || pbft.currentExec != nil {
+func (pbft *pbftImpl) startTimerIfOutstandingRequests() {
+	if pbft.status[SKIP_IN_PROGRESS] || pbft.exec.currentExec != nil {
 		// Do not start the view change timer if we are executing or state transferring, these take arbitrarilly long amounts of time
 		return
 	}
 
-	if len(pbft.outstandingReqBatches) > 0 {
+	if len(pbft.storeMgr.outstandingReqBatches) > 0 {
 		getOutstandingDigests := func() []string {
 			var digests []string
-			for digest := range pbft.outstandingReqBatches {
+			for digest := range pbft.storeMgr.outstandingReqBatches {
 				digests = append(digests, digest)
 			}
 			return digests
 		}()
-		//logger.Debug(getOutstandingDigests)
-		pbft.softStartTimer(pbft.requestTimeout, fmt.Sprintf("outstanding request batches num=%v", len(getOutstandingDigests)))
-	} else if pbft.nullRequestTimeout > 0 {
+		pbft.softStartNewViewTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("outstanding request batches num=%v", len(getOutstandingDigests)))
+	} else if pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
 		pbft.nullReqTimerReset()
 	}
 }
 
-func (pbft *pbftProtocal) nullReqTimerReset() {
-	timeout := pbft.nullRequestTimeout
+func (pbft *pbftImpl) nullReqTimerReset() {
+	timeout := pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER)
 	if pbft.primary(pbft.view) != pbft.id {
 		// we're waiting for the primary to deliver a null request - give it a bit more time
-		timeout += pbft.requestTimeout
+		timeout += pbft.pbftTimerMgr.requestTimeout
 	}
-	pbft.nullRequestTimer.Reset(timeout, nullRequestEvent{})
+
+	event := &LocalEvent{
+		Service:   CORE_PBFT_SERVICE,
+		EventType: CORE_NULL_REQUEST_TIMER_EVENT,
+	}
+
+	af := func(){
+		pbft.pbftEventQueue.Push(event)
+	}
+
+	//logger.Errorf("null request time out is %v", pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER))
+	//logger.Errorf("request time out is %v", pbft.pbftTimerMgr.requestTimeout)
+	//logger.Errorf("reset null request timeout to %v", timeout)
+
+	pbft.pbftTimerMgr.startTimerWithNewTT(NULL_REQUEST_TIMER, timeout, af)
 }
 
-func (pbft *pbftProtocal) softStartTimer(timeout time.Duration, reason string) {
-	logger.Debugf("Replica %d soft starting new view timer for %s: %s", pbft.id, timeout, reason)
-	pbft.newViewTimerReason = reason
-	pbft.timerActive = true
-	pbft.newViewTimer.SoftReset(timeout, viewChangeTimerEvent{})
-}
-
-func (pbft *pbftProtocal) startTimer(timeout time.Duration, reason string) {
-	logger.Debugf("Replica %d starting new view timer for %s: %s", pbft.id, timeout, reason)
-	pbft.timerActive = true
-	pbft.newViewTimer.Reset(timeout, viewChangeTimerEvent{})
-}
-
-func (pbft *pbftProtocal) stopTimer() {
-	logger.Debugf("Replica %d stopping a running new view timer", pbft.id)
-	pbft.timerActive = false
-	pbft.newViewTimer.Stop()
+//stopFirstRequestTimer
+func (pbft *pbftImpl) stopFirstRequestTimer()  {
+	if ok, _ := pbft.isPrimary(); !ok {
+		pbft.pbftTimerMgr.stopTimer(FIRST_REQUEST_TIMER)
+	}
 }
 
 // =============================================================================
 // helper functions for validateState
 // =============================================================================
 // invalidateState is invoked to tell us that consensus realizes the ledger is out of sync
-func (pbft *pbftProtocal) invalidateState() {
+func (pbft *pbftImpl) invalidateState() {
 	logger.Debug("Invalidating the current state")
-	pbft.valid = false
+	pbft.status.inActiveState(VALID)
 }
 
 // validateState is invoked to tell us that consensus has the ledger back in sync
-func (pbft *pbftProtocal) validateState() {
+func (pbft *pbftImpl) validateState() {
 	logger.Debug("Validating the current state")
-	pbft.valid = true
+	pbft.status.activeState(VALID)
 }
 
-// =============================================================================
-// helper functions for duplicator
-// =============================================================================
-// check if a tx is duplicate in a block
-func (pbft *pbftProtocal) checkDuplicateInBlock(tx *types.Transaction, txStore *transactionStore) bool {
-	key := hex.EncodeToString(tx.TransactionHash)
-	return txStore.has(key)
+//deleteExistedTx delete existed transaction.
+func (pbft *pbftImpl) deleteExistedTx(digest string) {
+	pbft.batchVdr.updateLCVid()
+	pbft.batchVdr.deleteCacheFromCVB(digest)
+	pbft.batchVdr.deleteTxFromVBS(digest)
+	delete(pbft.storeMgr.outstandingReqBatches, digest)
 }
 
-// check if a tx is duplicate in cache
-func (pbft *pbftProtocal) checkDuplicateInCache(tx *types.Transaction) (exist bool) {
-	exist = false
-	for _, txStore := range pbft.duplicator {
-		if txStore != nil && pbft.checkDuplicateInBlock(tx, txStore) {
-			exist = true
-			break
-		}
+//isPrePrepareLegal both PBFT state PrePrepare message are legal.
+func (pbft *pbftImpl) isPrePrepareLegal(preprep *PrePrepare) bool {
+	if pbft.status[IN_NEGO_VIEW] {
+		logger.Debugf("Replica %d try recvPrePrepare, but it's in nego-view", pbft.id)
+		return false
 	}
-	return
-}
 
-// backup put the packaged batch to transactionStore and check if primary's batch result is right
-func (pbft *pbftProtocal) checkDuplicate(txBatch *TransactionBatch) (txStore *transactionStore, err error) {
-	txStore = newTransactionStore()
-	err = nil
-	for _, tx := range txBatch.Batch {
-		key := hex.EncodeToString(tx.TransactionHash)
-		if txStore.has(key) || pbft.checkDuplicateInCache(tx) {
-			err = errors.New("Find duplicate transaction in the batch sent by primary")
-			break
+	if atomic.LoadUint32(&pbft.activeView) == 0 {
+		logger.Debugf("Replica %d ignoring pre-prepare as we are in view change", pbft.id)
+		return false
+	}
+
+	if pbft.primary(pbft.view) != preprep.ReplicaId {
+		logger.Warningf("Pre-prepare from other than primary: got %d, should be %d",
+			preprep.ReplicaId, pbft.primary(pbft.view))
+		return false
+	}
+
+	if !pbft.inWV(preprep.View, preprep.SequenceNumber) {
+		if preprep.SequenceNumber != pbft.h && !pbft.status[SKIP_IN_PROGRESS] {
+			logger.Warningf("Replica %d pre-prepare view different, or sequence number outside " +
+				"watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d",
+				pbft.id, preprep.View, pbft.view, preprep.SequenceNumber, pbft.h)
 		} else {
-			txStore.add(tx)
+			// This is perfectly normal
+			logger.Debugf("Replica %d pre-prepare view different, or sequence number outside watermarks: " +
+				"preprep.View %d, expected.View %d, seqNo %d, low-mark %d",
+				pbft.id, preprep.View, pbft.view, preprep.SequenceNumber, pbft.h)
 		}
+		return false
 	}
-	return
+	return true
 }
 
-// primary remove duplicate transaction for packaged batch
-func (pbft *pbftProtocal) removeDuplicate(txBatch *TransactionBatch) (newBatch *TransactionBatch, txStore *transactionStore) {
-	newBatch = &TransactionBatch{Timestamp: txBatch.Timestamp}
-	txStore = newTransactionStore()
-	for _, tx := range txBatch.Batch {
-		key := hex.EncodeToString(tx.TransactionHash)
-		if txStore.has(key) || pbft.checkDuplicateInCache(tx) {
-			logger.Warningf("Primary %d received duplicate transaction %v", pbft.id, tx)
+//isPrepareLegal both PBFT state Prepare message are legal.
+func (pbft *pbftImpl) isPrepareLegal(prep *Prepare) bool  {
+	if pbft.status[IN_NEGO_VIEW] {
+		logger.Debugf("Replica %d try to recvPrepare, but it's in nego-view", pbft.id)
+		return false
+	}
+	//TODO: need !pbft.status[IN_RECOVERY] ?
+	if pbft.primary(prep.View) == prep.ReplicaId && !pbft.status[IN_RECOVERY] {
+		logger.Warningf("Replica %d received prepare from primary, ignoring", pbft.id)
+		return false
+	}
+
+	if !pbft.inWV(prep.View, prep.SequenceNumber) {
+		if prep.SequenceNumber != pbft.h && !pbft.status[SKIP_IN_PROGRESS] {
+			logger.Warningf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d",
+				pbft.id, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
 		} else {
-			txStore.add(tx)
-			newBatch.Batch = append(newBatch.Batch, tx)
+			// This is perfectly normal
+			logger.Debugf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d",
+				pbft.id, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
 		}
+
+		return false
 	}
-	return
+	return true
 }
 
-// previous primary rebuild the duplicator after view change
-func (pbft *pbftProtocal) rebuildDuplicator() {
-	temp := make(map[uint64]*transactionStore)
-	dv := pbft.vid - pbft.h
-	for i, txStore := range pbft.duplicator {
-		temp[i-dv] = txStore
+//isPrepareLegal both PBFT state Commit message are legal.
+func (pbft *pbftImpl) isCommitLegal(commit *Commit) bool  {
+	if pbft.status[IN_NEGO_VIEW] {
+		logger.Debugf("Replica %d try to recvCommit, but it's in nego-view", pbft.id)
+		return false
 	}
-	pbft.duplicator = temp
-	pbft.clearDuplicator()
-}
 
-// replica clear the duplicator after view change
-func (pbft *pbftProtocal) clearDuplicator() {
-	h := pbft.h
-	for i := range pbft.duplicator {
-		if i > h {
-			delete(pbft.duplicator, i)
+	if !pbft.inWV(commit.View, commit.SequenceNumber) {
+		if commit.SequenceNumber != pbft.h && !pbft.status[SKIP_IN_PROGRESS] {
+			logger.Warningf("Replica %d ignoring commit from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
+		} else {
+			// This is perfectly normal
+			logger.Debugf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
 		}
+		return false
 	}
-}
-
-// =============================================================================
-// helper functions for node manager
-// =============================================================================
-// Given a ip/digest get the addnode Cert
-func (pbft *pbftProtocal) getAddNodeCert(addHash string) (cert *addNodeCert) {
-
-	cert, ok := pbft.addNodeCertStore[addHash]
-
-	if ok {
-		return
-	}
-
-	adds := make(map[AddNode]bool)
-	cert = &addNodeCert{
-		addNodes:	adds,
-	}
-	pbft.addNodeCertStore[addHash] = cert
-
-	return
-}
-
-// Given a ip/digest get the addnode Cert
-func (pbft *pbftProtocal) getDelNodeCert(delHash string) (cert *delNodeCert) {
-
-	cert, ok := pbft.delNodeCertStore[delHash]
-
-	if ok {
-		return
-	}
-
-	dels := make(map[DelNode]bool)
-	cert = &delNodeCert{
-		delNodes:	dels,
-	}
-	pbft.delNodeCertStore[delHash] = cert
-
-	return
-}
-
-func (pbft *pbftProtocal) getAddNV() (n int64, v uint64) {
-
-	n = int64(pbft.N) + 1
-	if pbft.view < uint64(pbft.N) {
-		v = pbft.view + uint64(n)
-	} else {
-		v = pbft.view + uint64(n) + 1
-	}
-
-	return
-}
-
-func (pbft *pbftProtocal) getDelNV(del uint64) (n int64, v uint64) {
-
-	n = int64(pbft.N) - 1
-	if pbft.primary(pbft.view) > del {
-		v = pbft.view % uint64(pbft.N) - 1 + (uint64(pbft.N) - 1) * (pbft.view / uint64(pbft.N) + 1)
-	} else {
-		logger.Debug("N: ", pbft.N, " view: ", pbft.view, " del: ", del)
-		v = pbft.view % uint64(pbft.N) + (uint64(pbft.N) - 1) * (pbft.view / uint64(pbft.N) + 1)
-	}
-
-	return
+	return true
 }

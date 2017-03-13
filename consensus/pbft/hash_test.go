@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"encoding/base64"
 	"hyperchain/core/types"
 	"strings"
+	"encoding/base64"
 )
+
 
 func TestHash(t *testing.T) {
 
@@ -18,17 +19,17 @@ func TestHash(t *testing.T) {
 	copy(b[:], "def")
 
 	req1 := &types.Transaction{
-		Timestamp: time.Now().UnixNano(),
-		Value:     a,
-		Id:        0,
-		Signature: a,
+		Timestamp:	time.Now().UnixNano(),
+		Value:		a,
+		Id:		0,
+		Signature:	a,
 	}
 
 	req2 := &types.Transaction{
-		Timestamp: time.Now().UnixNano(),
-		Value:     b,
-		Id:        1,
-		Signature: b,
+		Timestamp:	time.Now().UnixNano(),
+		Value:		b,
+		Id:		1,
+		Signature:	b,
 	}
 
 	reqBatch := &TransactionBatch{Batch: []*types.Transaction{req1, req2}}
@@ -47,7 +48,7 @@ func TestHash(t *testing.T) {
 	}
 }
 
-func TestByteToString(t *testing.T) {
+func TestByteToString(t *testing.T)  {
 	s := []byte("hello, world!")
 	re := byteToString(s)
 	if strings.Compare(base64.StdEncoding.EncodeToString(s), re) != 0 {

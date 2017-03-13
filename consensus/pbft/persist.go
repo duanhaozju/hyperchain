@@ -3,17 +3,16 @@
 package pbft
 
 import (
-	"encoding/base64"
-	"encoding/binary"
 	"fmt"
-
 	"hyperchain/consensus/helper/persist"
 
 	"github.com/golang/protobuf/proto"
+	"encoding/base64"
+	"encoding/binary"
 	"github.com/pkg/errors"
 )
 
-func (pbft *pbftProtocal) persistQSet(preprep *PrePrepare) {
+func (pbft *pbftImpl) persistQSet(preprep *PrePrepare) {
 
 	raw, err := proto.Marshal(preprep)
 	if err != nil {
@@ -24,9 +23,9 @@ func (pbft *pbftProtocal) persistQSet(preprep *PrePrepare) {
 	persist.StoreState(pbft.namespace, key, raw)
 }
 
-func (pbft *pbftProtocal) persistPSet(v uint64, n uint64) {
+func (pbft *pbftImpl) persistPSet(v uint64, n uint64) {
 
-	cert := pbft.getCert(v, n)
+	cert := pbft.storeMgr.getCert(v, n)
 	set := []*Prepare{}
 	pset := &Pset{Set: set}
 	for p := range cert.prepare {
@@ -43,9 +42,9 @@ func (pbft *pbftProtocal) persistPSet(v uint64, n uint64) {
 	persist.StoreState(pbft.namespace, key, raw)
 }
 
-func (pbft *pbftProtocal) persistCSet(v uint64, n uint64) {
+func (pbft *pbftImpl) persistCSet(v uint64, n uint64) {
 
-	cert := pbft.getCert(v, n)
+	cert := pbft.storeMgr.getCert(v, n)
 	set := []*Commit{}
 	cset := &Cset{Set: set}
 	for c := range cert.commit {
@@ -62,7 +61,7 @@ func (pbft *pbftProtocal) persistCSet(v uint64, n uint64) {
 	persist.StoreState(pbft.namespace, key, raw)
 }
 
-func (pbft *pbftProtocal) persistDelQPCSet(v uint64, n uint64) {
+func (pbft *pbftImpl) persistDelQPCSet(v uint64, n uint64) {
 	qset := fmt.Sprintf("qset.%d.%d", v, n)
 	persist.DelState(pbft.namespace, qset)
 	pset := fmt.Sprintf("pset.%d.%d", v, n)
@@ -71,7 +70,7 @@ func (pbft *pbftProtocal) persistDelQPCSet(v uint64, n uint64) {
 	persist.DelState(pbft.namespace, cset)
 }
 
-func (pbft *pbftProtocal) restoreQSet() (map[msgID]*PrePrepare, error) {
+func (pbft *pbftImpl) restoreQSet() (map[msgID]*PrePrepare, error) {
 
 	qset := make(map[msgID]*PrePrepare)
 
@@ -99,7 +98,7 @@ func (pbft *pbftProtocal) restoreQSet() (map[msgID]*PrePrepare, error) {
 	return qset, err
 }
 
-func (pbft *pbftProtocal) restorePSet() (map[msgID]*Pset, error) {
+func (pbft *pbftImpl) restorePSet() (map[msgID]*Pset, error) {
 
 	pset := make(map[msgID]*Pset)
 
@@ -127,7 +126,7 @@ func (pbft *pbftProtocal) restorePSet() (map[msgID]*Pset, error) {
 	return pset, err
 }
 
-func (pbft *pbftProtocal) restoreCSet() (map[msgID]*Cset, error) {
+func (pbft *pbftImpl) restoreCSet() (map[msgID]*Cset, error) {
 
 	cset := make(map[msgID]*Cset)
 
@@ -155,20 +154,20 @@ func (pbft *pbftProtocal) restoreCSet() (map[msgID]*Cset, error) {
 	return cset, err
 }
 
-func (pbft *pbftProtocal) restoreCert() {
+func (pbft *pbftImpl) restoreCert() {
 
 	qset, _ := pbft.restoreQSet()
 	for idx, q := range qset {
-		cert := pbft.getCert(idx.v, idx.n)
+		cert := pbft.storeMgr.getCert(idx.v, idx.n)
 		cert.prePrepare = q
 		cert.digest = q.BatchDigest
 
-		pbft.validatedBatchStore[cert.digest] = q.GetTransactionBatch()
+		pbft.batchVdr.validatedBatchStore[cert.digest] = q.GetTransactionBatch()
 	}
 
 	pset, _ := pbft.restorePSet()
 	for idx, prepares := range pset {
-		cert := pbft.getCert(idx.v, idx.n)
+		cert := pbft.storeMgr.getCert(idx.v, idx.n)
 		for _, p := range prepares.Set {
 			cert.prepare[*p] = true
 			if p.ReplicaId == pbft.id {
@@ -180,7 +179,7 @@ func (pbft *pbftProtocal) restoreCert() {
 
 	cset, _ := pbft.restoreCSet()
 	for idx, commits := range cset {
-		cert := pbft.getCert(idx.v, idx.n)
+		cert := pbft.storeMgr.getCert(idx.v, idx.n)
 		for _, c := range commits.Set {
 			cert.commit[*c] = true
 			if c.ReplicaId == pbft.id {
@@ -193,8 +192,8 @@ func (pbft *pbftProtocal) restoreCert() {
 	}
 }
 
-func (pbft *pbftProtocal) persistRequestBatch(digest string) {
-	reqBatch := pbft.validatedBatchStore[digest]
+func (pbft *pbftImpl) persistRequestBatch(digest string) {
+	reqBatch := pbft.batchVdr.getTxBatchFromVBS(digest)
 	reqBatchPacked, err := proto.Marshal(reqBatch)
 	if err != nil {
 		logger.Warningf("Replica %d could not persist request batch %s: %s", pbft.id, digest, err)
@@ -203,11 +202,11 @@ func (pbft *pbftProtocal) persistRequestBatch(digest string) {
 	persist.StoreState(pbft.namespace, "reqBatch."+digest, reqBatchPacked)
 }
 
-func (pbft *pbftProtocal) persistDelRequestBatch(digest string) {
+func (pbft *pbftImpl) persistDelRequestBatch(digest string) {
 	persist.DelState(pbft.namespace, "reqBatch." + digest)
 }
 
-func (pbft *pbftProtocal) persistDelAllRequestBatches() {
+func (pbft *pbftImpl) persistDelAllRequestBatches() {
 	reqBatches, err := persist.ReadStateSet(pbft.namespace, "reqBatch.")
 	if err != nil {
 		logger.Errorf("Read State Set Error %s", err)
@@ -219,53 +218,53 @@ func (pbft *pbftProtocal) persistDelAllRequestBatches() {
 	}
 }
 
-func (pbft *pbftProtocal) persistCheckpoint(seqNo uint64, id []byte) {
+func (pbft *pbftImpl) persistCheckpoint(seqNo uint64, id []byte) {
 	key := fmt.Sprintf("chkpt.%d", seqNo)
 	persist.StoreState(pbft.namespace, key, id)
 }
 
-func (pbft *pbftProtocal) persistDelCheckpoint(seqNo uint64) {
+func (pbft *pbftImpl) persistDelCheckpoint(seqNo uint64) {
 	key := fmt.Sprintf("chkpt.%d", seqNo)
 	persist.DelState(pbft.namespace, key)
 }
 
-func (pbft *pbftProtocal) persistView(view uint64) {
+func (pbft *pbftImpl) persistView(view uint64) {
 	key := fmt.Sprint("view")
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, view)
 	persist.StoreState(pbft.namespace, key, b)
 }
 
-func (pbft *pbftProtocal) persistDelView() {
+func (pbft *pbftImpl) persistDelView() {
 	key := fmt.Sprint("view")
 	persist.DelState(pbft.namespace, key)
 }
 
-func (pbft *pbftProtocal) persistN(n int) {
+func (pbft *pbftImpl) persistN(n int) {
 	key := fmt.Sprint("nodes")
 	res := make([]byte, 8)
 	binary.LittleEndian.PutUint64(res, uint64(n))
 	persist.StoreState(pbft.namespace, key, res)
 }
 
-func (pbft *pbftProtocal) persistNewNode(new uint64) {
+func (pbft *pbftImpl) persistNewNode(new uint64) {
 	key := fmt.Sprint("new")
 	res := make([]byte, 8)
 	binary.LittleEndian.PutUint64(res, new)
 	persist.StoreState(pbft.namespace, key, res)
 }
 
-func (pbft *pbftProtocal) persistLocalKey(hash []byte) {
+func (pbft *pbftImpl) persistLocalKey(hash []byte) {
 	key := fmt.Sprint("localkey")
 	persist.StoreState(pbft.namespace, key, hash)
 }
 
-func (pbft *pbftProtocal) persistDellLocalKey() {
+func (pbft *pbftImpl) persistDellLocalKey() {
 	key := fmt.Sprint("localkey")
 	persist.DelState(pbft.namespace, key)
 }
 
-func (pbft *pbftProtocal) restoreState() {
+func (pbft *pbftImpl) restoreState() {
 
 	pbft.restoreCert()
 
@@ -279,7 +278,7 @@ func (pbft *pbftProtocal) restoreState() {
 			} else {
 				idAsString := base64.StdEncoding.EncodeToString(id)
 				logger.Debugf("Replica %d found checkpoint %s for seqNo %d", pbft.id, idAsString, seqNo)
-				pbft.chkpts[seqNo] = idAsString
+				pbft.storeMgr.saveCheckpoint(seqNo, idAsString)
 				if seqNo > highSeq {
 					highSeq = seqNo
 				}
@@ -311,35 +310,36 @@ func (pbft *pbftProtocal) restoreState() {
 	if err == nil {
 		newNode := binary.LittleEndian.Uint64(new)
 		if newNode == 1 {
-			pbft.isNewNode = true
+			pbft.status[IS_NEW_NODE] = true
 		}
 	}
 
 	localKey, err := persist.ReadState(pbft.namespace, "localkey")
 	if err == nil {
-		pbft.localKey = string(localKey)
+		pbft.nodeMgr.localKey = string(localKey)
 	}
 
 	pbft.restoreLastSeqNo() // assign value to lastExec
-	if pbft.seqNo < pbft.lastExec {
-		pbft.seqNo = pbft.lastExec
+	if pbft.seqNo < pbft.exec.lastExec {
+		pbft.seqNo = pbft.exec.lastExec
 	}
-	pbft.vid = pbft.seqNo
-	pbft.lastVid = pbft.seqNo
+	pbft.batchVdr.setVid(pbft.seqNo)
+	pbft.batchVdr.setLastVid(pbft.seqNo)
+
 	logger.Infof("Replica %d restored state: view: %d, seqNo: %d, reqBatches: %d, chkpts: %d",
-		pbft.id, pbft.view, pbft.seqNo, len(pbft.validatedBatchStore), len(pbft.chkpts))
+		pbft.id, pbft.view, pbft.seqNo, len(pbft.batchVdr.validatedBatchStore), len(pbft.storeMgr.chkpts))
 }
 
-func (pbft *pbftProtocal) restoreLastSeqNo() {
+func (pbft *pbftImpl) restoreLastSeqNo() {
 	var err error
-	if pbft.lastExec, err = pbft.getLastSeqNo(); err != nil {
+	if pbft.exec.lastExec, err = pbft.getLastSeqNo(); err != nil {
 		logger.Warningf("Replica %d could not restore lastExec: %s", pbft.id, err)
-		pbft.lastExec = 0
+		pbft.exec.lastExec = 0
 	}
-	logger.Infof("Replica %d restored lastExec: %d", pbft.id, pbft.lastExec)
+	logger.Infof("Replica %d restored lastExec: %d", pbft.id, pbft.exec.lastExec)
 }
 
-func (pbft *pbftProtocal) getLastSeqNo() (uint64, error) {
+func (pbft *pbftImpl) getLastSeqNo() (uint64, error) {
 
 	var err error
 	h := persist.GetHeightofChain(pbft.namespace)

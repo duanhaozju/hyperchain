@@ -8,10 +8,11 @@ import (
 	"fmt"
 
 	"encoding/base64"
+	ndb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
-	edb "hyperchain/core/db_utils"
 )
+
 
 // StoreState stores a key,value pair
 func StoreState(namespace string, key string, value []byte) error {
@@ -19,12 +20,12 @@ func StoreState(namespace string, key string, value []byte) error {
 	if err != nil {
 		return err
 	}
-	return db.Put([]byte("consensus."+key), value)
+	return db.Put([]byte("consensus." + key), value)
 }
 
 //DelAllState: remove all state
 //func DelAllState() error {
-//	db, err := hyperdb.GetDBDatabase()
+//	db, err := hyperdb.GetLDBDatabase()
 //	if err == nil {
 //		db.Destroy()
 //	}
@@ -32,8 +33,8 @@ func StoreState(namespace string, key string, value []byte) error {
 //}
 
 // DelState removes a key,value pair
-func DelState(namespace string, key string) error {
-	db, err := hyperdb.GetDBConsensusByNamespcae(namespace)
+func DelState(namesapce string, key string) error {
+	db, err := hyperdb.GetDBConsensusByNamespcae(namesapce)
 	if err != nil {
 		return err
 	}
@@ -60,7 +61,7 @@ func ReadStateSet(namespace string, prefix string) (map[string][]byte, error) {
 	ret := make(map[string][]byte)
 	it := db.NewIterator(prefixRaw)
 	if it == nil {
-		err := errors.New(fmt.Sprintf("Can't get Iterator"))
+		err := errors.New(fmt.Sprint("Can't get Iterator"))
 		return nil, err
 	}
 	if !it.Seek(prefixRaw) {
@@ -77,21 +78,21 @@ func ReadStateSet(namespace string, prefix string) (map[string][]byte, error) {
 }
 
 func GetBlockchainInfo(namespace string) *types.Chain {
-	bcInfo := edb.GetChainUntil(namespace)
+	bcInfo := ndb.GetChainUntil(namespace)
 	return bcInfo
 }
 
 func GetCurrentBlockInfo(namespace string) (uint64, []byte, []byte) {
-	info := edb.GetChainCopy(namespace)
+	info := ndb.GetChainCopy(namespace)
 	return info.Height, info.LatestBlockHash, info.ParentBlockHash
 }
 
 func GetBlockHeightAndHash(namespace string) (uint64, string) {
-	bcInfo := edb.GetChainCopy(namespace)
+	bcInfo := ndb.GetChainCopy(namespace)
 	hash := base64.StdEncoding.EncodeToString(bcInfo.LatestBlockHash)
 	return bcInfo.Height, hash
 }
 
 func GetHeightofChain(namespace string) uint64 {
-	return edb.GetHeightOfChain(namespace)
+	return ndb.GetHeightOfChain(namespace)
 }

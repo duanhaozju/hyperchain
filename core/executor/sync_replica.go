@@ -6,7 +6,7 @@ import (
 	"hyperchain/event"
 	"hyperchain/core/types"
 	"github.com/golang/protobuf/proto"
-	"agile/utils/common"
+	"hyperchain/common"
 )
 
 func (executor *Executor) syncReplica() {

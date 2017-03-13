@@ -63,6 +63,11 @@ func (cf *Config) Set(key string, value interface{}) {
 	cf.conf.Set(key, value)
 }
 
+// ContainsKey judge whether the key is set in the config
+func (cf * Config) ContainsKey(key string) bool  {
+	return cf.conf.IsSet(key)
+}
+
 // MergeConfig merge config by the config file path
 func (cf *Config) MergeConfig(configPath string) (*Config, error) {
 	f, err := os.Open(configPath)

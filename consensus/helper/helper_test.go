@@ -1,13 +1,18 @@
-//Hyperchain License
-//Copyright (C) 2016 The Hyperchain Authors.
+// author: Xiaoyi Wang
+// email: wangxiaoyi@hyperchain.cn
+// date: 16/11/1
+// last modified: 16/11/1
+// last Modified Author: Xiaoyi Wang
+// change log: 1. new test for helper
+
 package helper
 
 import (
-	"github.com/golang/protobuf/proto"
-	"hyperchain/event"
-	pb "hyperchain/protos"
-	"reflect"
 	"testing"
+	pb "hyperchain/protos"
+	"hyperchain/event"
+	"reflect"
+	"github.com/golang/protobuf/proto"
 	"time"
 )
 
@@ -26,7 +31,7 @@ func TestNewHelper(t *testing.T) {
 func TestInnerBroadcast(t *testing.T) {
 	mux := &event.TypeMux{}
 	h := NewHelper(mux)
-	msg := &pb.Message{Type: pb.Message_CONSENSUS, Id: 1}
+	msg := &pb.Message{Type:pb.Message_CONSENSUS, Id:1}
 
 	tmpMsg, _ := proto.Marshal(msg)
 	broadcastEvent := event.BroadcastConsensusEvent{
@@ -38,7 +43,7 @@ func TestInnerBroadcast(t *testing.T) {
 	go func() {
 		select {
 		case e := <-sub.Chan():
-			if !reflect.DeepEqual(e.Data, broadcastEvent) {
+			if ! reflect.DeepEqual(e.Data, broadcastEvent) {
 				t.Fatal("Received wrong message from sub.Chan")
 			}
 		case <-time.After(1 * time.Second):
@@ -50,12 +55,12 @@ func TestInnerBroadcast(t *testing.T) {
 func TestInnerUnicast(t *testing.T) {
 	mux := &event.TypeMux{}
 	h := NewHelper(mux)
-	msg := &pb.Message{Type: pb.Message_CONSENSUS, Id: 2}
+	msg := &pb.Message{Type:pb.Message_CONSENSUS, Id:2}
 	tmpMsg, _ := proto.Marshal(msg)
 
 	unicastEvent := event.TxUniqueCastEvent{
-		Payload: tmpMsg,
-		PeerId:  100,
+		Payload:    tmpMsg,
+		PeerId:        100,
 	}
 	sub := mux.Subscribe(event.TxUniqueCastEvent{})
 	h.InnerUnicast(msg, 100)
@@ -76,13 +81,12 @@ func TestExecute(t *testing.T) {
 	h := NewHelper(mux)
 	timestamp := time.Now().Unix()
 
-	sub := mux.Subscribe(event.CommitEvent{})
+	sub := mux.Subscribe(event.CommitOrRollbackBlockEvent{})
 	go func() {
 		select {
-		case <-sub.Chan():
-			{
+		case <-sub.Chan(): {
 
-			}
+		}
 		case <-time.After(1 * time.Second):
 			t.Fatal("Timed out waiting for message to fire")
 		}
@@ -94,12 +98,12 @@ func TestExecute(t *testing.T) {
 func TestUpdateState(t *testing.T) {
 	mux := &event.TypeMux{}
 	h := NewHelper(mux)
-	updateState := &pb.UpdateStateMessage{Id: 12, SeqNo: 21}
+	updateState := &pb.UpdateStateMessage{Id:12, SeqNo:21}
 
 	tmpMsg, _ := proto.Marshal(updateState)
 
-	updateStateEvent := event.SendCheckpointSyncEvent{
-		Payload: tmpMsg,
+	updateStateEvent := event.SendCheckpointSyncEvent {
+		Payload:	tmpMsg,
 	}
 	sub := mux.Subscribe(event.SendCheckpointSyncEvent{})
 	go func() {
@@ -119,14 +123,14 @@ func TestValidateBatch(t *testing.T) {
 	mux := &event.TypeMux{}
 	h := NewHelper(mux)
 	timestamp := time.Now().Unix()
-	validateEvent := event.ValidationEvent{
-		Transactions: nil,
-		Timestamp:    timestamp,
-		SeqNo:        123,
-		View:         123,
-		IsPrimary:    true,
+	validateEvent := event.ExeTxsEvent {
+		Transactions:	nil,
+		Timestamp:      timestamp,
+		SeqNo:		123,
+		View:		123,
+		IsPrimary:	true,
 	}
-	sub := mux.Subscribe(event.ValidationEvent{})
+	sub := mux.Subscribe(event.ExeTxsEvent{})
 	go func() {
 		select {
 		case e := <-sub.Chan():
@@ -148,7 +152,7 @@ func TestVcReset(t *testing.T) {
 		SeqNo: 12345,
 	}
 	sub := mux.Subscribe(vcResetEvent)
-	go func() {
+	go func(){
 		select {
 		case e := <-sub.Chan():
 			if !reflect.DeepEqual(e.Data, vcResetEvent) {

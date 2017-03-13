@@ -96,7 +96,7 @@ func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
 		return err
 	}
 
-	updateStateEvent := event.SendCheckpointSyncEvent{
+	updateStateEvent := event.SendCheckpointSyncEvent {
 		Payload: tmpMsg,
 	}
 
@@ -112,8 +112,8 @@ func (h *helper) ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo 
 	validateEvent := event.ValidationEvent{
 		Transactions: txs,
 		Timestamp:    timeStamp,
-		SeqNo:        seqNo,
-		View:         view,
+		SeqNo:	      seqNo,
+		View:	      view,
 		IsPrimary:    isPrimary,
 	}
 
@@ -192,7 +192,7 @@ func (h *helper) UpdateTable(payload []byte, flag bool) error {
 
 	updateTable := event.UpdateRoutingTableEvent{
 		Payload: payload,
-		Type:    flag,
+		Type:	 flag,
 	}
 
 	h.msgQ.Post(updateTable)

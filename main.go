@@ -10,7 +10,7 @@ import (
 	"hyperchain/admittance"
 	"hyperchain/api/jsonrpc/core"
 	"hyperchain/common"
-	"hyperchain/consensus/controller"
+	"hyperchain/consensus/csmgr"
 	"hyperchain/core"
 	"hyperchain/core/executor"
 	"hyperchain/crypto"
@@ -101,7 +101,9 @@ func main() {
 		//init genesis
 		core.CreateInitBlock(DefaultNamespace, conf)
 		//init pbft consensus
-		cs := controller.NewConsenter(DefaultNamespace, uint64(config.getNodeID()), eventMux, config.getPBFTConfigPath())
+		consenter := csmgr.Consenter(DefaultNamespace, conf, eventMux)
+		consenter.Start()
+
 		//init encryption object
 		encryption := crypto.NewEcdsaEncrypto("ecdsa")
 		encryption.GenerateNodeKey(strconv.Itoa(config.getNodeID()), config.getKeyNodeDir())
@@ -116,7 +118,7 @@ func main() {
 		executor.Initialize()
 		//init manager
 		exist := make(chan bool)
-		pm := manager.New(DefaultNamespace, eventMux, executor, grpcPeerMgr, cs, am, cm)
+		pm := manager.New(DefaultNamespace, eventMux, executor, grpcPeerMgr, consenter, am, cm)
 		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(), config.getLogDumpFileDir(), eventMux, pm, cm, conf)
 		go CheckLicense(exist, conf)
 		<-exist

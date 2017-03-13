@@ -55,7 +55,7 @@ func (t *threaded) Halt() {
 // a Receiver on the other side of the queue
 type Manager interface {
 	Inject(Event)         // A temporary interface to allow the event manager thread to skip the queue
-	Queue() chan<- Event  // Get a write-only reference to the queue, to submit events
+	Queue() chan interface{}  //event Queue
 	SetReceiver(Receiver) // Set the target to route events to
 	Start()               // Starts the Manager thread TODO, these thread management things should probably go away
 	Halt()                // Stops the Manager thread
@@ -65,13 +65,13 @@ type Manager interface {
 type managerImpl struct {
 	threaded
 	receiver Receiver
-	events   chan Event
+	events   chan interface{}
 }
 
 // NewManagerImpl creates an instance of managerImpl
 func NewManagerImpl() Manager {
 	return &managerImpl{
-		events:   make(chan Event),
+		events:   make(chan interface{}),
 		threaded: threaded{make(chan struct{})},
 	}
 }
@@ -87,7 +87,7 @@ func (em *managerImpl) Start() {
 }
 
 // queue returns a write only reference to the event queue
-func (em *managerImpl) Queue() chan<- Event {
+func (em *managerImpl) Queue() chan interface{} {
 	return em.events
 }
 
@@ -216,7 +216,7 @@ func (et *timerImpl) Stop() {
 
 // loop is where the timer thread lives, looping
 func (et *timerImpl) loop() {
-	var eventDestChan chan<- Event
+	var eventDestChan chan interface{}
 	var event Event
 
 	for {
