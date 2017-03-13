@@ -7,13 +7,14 @@ import (
 )
 
 func TestGetReceipt(t *testing.T) {
-	db := InitDataBase()
+	InitDataBase()
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
 	batch := db.NewBatch()
 	err, _ := PersistReceipt(batch, &receipt, true, true)
 	if err != nil {
 		t.Errorf("PersistReceipt fail")
 	}
-	res := GetReceipt(hyperdb.DefautNameSpace+hyperdb.Blockchain, common.BytesToHash(receipt.TxHash))
+	res := GetReceipt(hyperdb.DefautNameSpace, common.BytesToHash(receipt.TxHash))
 	if res == nil {
 		t.Errorf("GetReceipt fail")
 	}
@@ -21,4 +22,5 @@ func TestGetReceipt(t *testing.T) {
 	if err != nil {
 		t.Errorf("DeleteReceipt fail")
 	}
+	deleteTestData()
 }
