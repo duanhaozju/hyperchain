@@ -70,6 +70,7 @@ func main() {
 		common.InitLog(conf)
 
 		db_utils.InitDBForNamespace(conf, DefaultNamespace)
+		eventMux := new(event.TypeMux)
 
 		cm, cmerr := admittance.GetCaManager(conf)
 		if cmerr != nil {
@@ -79,10 +80,6 @@ func main() {
 		//init peer manager to start grpc server and client
 		grpcPeerMgr := p2p.NewGrpcManager(conf)
 
-		//init genesis
-		core.CreateInitBlock(DefaultNamespace, conf)
-
-		eventMux := new(event.TypeMux)
 		//init pbft consensus
 		consenter := csmgr.Consenter(DefaultNamespace, conf, eventMux)
 		consenter.Start()
@@ -96,6 +93,7 @@ func main() {
 			return errors.New("Initialize BlockPool failed")
 		}
 
+		executor.CreateInitBlock(conf)
 		executor.Initialize()
 		//init manager
 		exist := make(chan bool)
