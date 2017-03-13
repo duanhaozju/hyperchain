@@ -16,7 +16,6 @@ import (
 	"math/big"
 	"time"
 	"strconv"
-	"hyperchain/hyperdb/db"
 	edb "hyperchain/core/db_utils"
 )
 
@@ -24,12 +23,11 @@ type PublicContractAPI struct {
 	namespace   string
 	eventMux    *event.TypeMux
 	pm          *manager.EventHub
-	db          db.Database
 	tokenBucket *ratelimit.Bucket
 	config      *common.Config
 }
 
-func NewPublicContractAPI(namespace string, eventMux *event.TypeMux, pm *manager.EventHub, hyperDb db.Database, config *common.Config) *PublicContractAPI {
+func NewPublicContractAPI(namespace string, eventMux *event.TypeMux, pm *manager.EventHub, config *common.Config) *PublicContractAPI {
 	fillrate, err := getFillRate(config, CONTRACT)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
@@ -44,7 +42,6 @@ func NewPublicContractAPI(namespace string, eventMux *event.TypeMux, pm *manager
 		namespace:   namespace,
 		eventMux:    eventMux,
 		pm:          pm,
-		db:          hyperDb,
 		tokenBucket: ratelimit.NewBucket(fillrate, peak),
 		config:      config,
 	}

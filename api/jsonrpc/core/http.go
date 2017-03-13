@@ -47,16 +47,19 @@ func Start(eventMux *event.TypeMux, pm *manager.EventHub, cm *admittance.CAManag
 
 	server := NewServer()
 
+	// todo start ========== 这段代码挪到 namespace 中 =================
 	// 得到API，注册服务
 	apis := hpc.GetAPIs(eventMux, pm, cm, config)
 
 	// api.Namespace 是API的命名空间，api.Service 是一个拥有命名空间对应对象的所有方法的对象
 	for _, api := range apis {
-		if err := server.RegisterName(api.Namespace, api.Service); err != nil {
+		// todo RegisterName() 挪到 namespace 中 ==============
+		if err := server.RegisterName(api.Srvname, api.Service); err != nil {
 			log.Errorf("registerName error: %v ", err)
 			return err
 		}
 	}
+	// todo end ========== 这段代码挪到 namespace 中 =================
 
 	startHttp(httpPort, restPort, logsPath, server, cm)
 

@@ -98,6 +98,7 @@ func main() {
 		exist := make(chan bool)
 
 		pm := manager.New(DefaultNamespace, eventMux, executor, grpcPeerMgr, consenter, am, cm)
+		// todo 1. 删除该方法参数，该方法不需要传参
 		go jsonrpc.Start(eventMux, pm, cm, conf)
 		go CheckLicense(exist, conf)
 

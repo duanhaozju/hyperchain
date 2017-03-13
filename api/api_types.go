@@ -4,7 +4,6 @@ package hpc
 
 import (
 	"hyperchain/event"
-	"hyperchain/hyperdb"
 	"hyperchain/manager"
 	"hyperchain/admittance"
 	"hyperchain/common"
@@ -12,7 +11,7 @@ import (
 
 // API describes the set of methods offered over the RPC interface
 type API struct {
-	Namespace string      // namespace under which the rpc methods of Service are exposed
+	Srvname string      // srvname under which the rpc methods of Service are exposed
 	Version   string      // api version for DApp's
 	Service   interface{} // receiver instance which holds the methods
 	Public    bool        // indication if the methods must be considered safe for public use
@@ -20,47 +19,43 @@ type API struct {
 
 var Apis []API
 
+// todo 该方法挪到 rpcmanger
 func GetAPIs(eventMux *event.TypeMux, pm *manager.EventHub, cm *admittance.CAManager,config *common.Config) []API {
 
-	db, err := hyperdb.GetDBDatabase()
-
-	if err != nil {
-		log.Errorf("Open database error: %v", err)
-	}
 
 	Apis = []API{
 		{
-			Namespace: "tx",
+			Srvname: "tx",
 			Version:   "0.4",
-			Service:   NewPublicTransactionAPI("Global", eventMux, pm, db, config),
+			Service:   NewPublicTransactionAPI("Global", eventMux, pm, config),
 			Public:    true,
 		},
 		{
-			Namespace: "node",
+			Srvname: "node",
 			Version:   "0.4",
 			Service:   NewPublicNodeAPI(pm),
 			Public:    true,
 		},
 		{
-			Namespace: "block",
+			Srvname: "block",
 			Version:   "0.4",
-			Service:   NewPublicBlockAPI("Global", db),
+			Service:   NewPublicBlockAPI("Global"),
 			Public:    true,
 		},
 		{
-			Namespace: "account",
+			Srvname: "account",
 			Version:   "0.4",
-			Service:   NewPublicAccountAPI("Global", pm, db, config),
+			Service:   NewPublicAccountAPI("Global", pm, config),
 			Public:    true,
 		},
 		{
-			Namespace: "contract",
+			Srvname: "contract",
 			Version:   "0.4",
-			Service:   NewPublicContractAPI("Global", eventMux, pm, db, config),
+			Service:   NewPublicContractAPI("Global", eventMux, pm, config),
 			Public:    true,
 		},
 		{
-			Namespace: "cert",
+			Srvname: "cert",
 			Version:   "0.4",
 			Service:   NewPublicCertAPI(cm),
 			Public:    true,
@@ -72,7 +67,7 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.EventHub, cm *admittance.CAMan
 
 func GetApiObjectByNamespace(name string) API {
 	for _, api := range Apis {
-		if api.Namespace == name {
+		if api.Srvname == name {
 			return api
 		}
 	}

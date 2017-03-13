@@ -5,6 +5,8 @@ package namespace
 import (
 	"hyperchain/api/jsonrpc/core"
 	"hyperchain/common"
+	"hyperchain/manager"
+	"hyperchain/admittance"
 )
 
 //Namespace represent the namespace instance
@@ -19,7 +21,6 @@ type Namespace interface {
 	Info() *NamespaceInfo
 	//ProcessRequest process request under this namespace.
 	ProcessRequest(request interface{}) interface{}
-
 	//Name of current namespace.
 	Name() string
 }
@@ -36,6 +37,13 @@ const (
 type Status struct {
 	state int
 	desc  string
+}
+
+type API struct {
+	Srvname string      // srvname under which the rpc methods of Service are exposed
+	Version   string      // api version for DApp's
+	Service   interface{} // receiver instance which holds the methods
+	Public    bool        // indication if the methods must be considered safe for public use
 }
 
 //NamespaceInfo basic information of this namespace.
@@ -127,4 +135,8 @@ func (ns *namespaceImpl) ProcessRequest(request interface{}) interface{} {
 		logger.Errorf("event not supportted %v", r)
 	}
 	return nil
+}
+
+func (ns *namespaceImpl) GetApis() []API{
+	return []API{}
 }

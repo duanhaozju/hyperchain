@@ -7,13 +7,11 @@ import (
 	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/manager"
-	"hyperchain/hyperdb/db"
 )
 
 type PublicAccountAPI struct {
 	pm     *manager.EventHub
 	namespace string
-	db     db.Database
 	config *common.Config
 }
 
@@ -26,11 +24,10 @@ type UnlockParas struct {
 	Password string         `json:"password"`
 }
 
-func NewPublicAccountAPI(namespace string, pm *manager.EventHub, hyperDb db.Database, config *common.Config) *PublicAccountAPI {
+func NewPublicAccountAPI(namespace string, pm *manager.EventHub, config *common.Config) *PublicAccountAPI {
 	return &PublicAccountAPI{
 		namespace: namespace,
 		pm:     pm,
-		db:     hyperDb,
 		config: config,
 	}
 }

@@ -13,7 +13,6 @@ import (
 	"hyperchain/event"
 	"hyperchain/manager"
 	"time"
-	"hyperchain/hyperdb/db"
 	edb "hyperchain/core/db_utils"
 )
 
@@ -36,7 +35,6 @@ type PublicTransactionAPI struct {
 	namespace   string
 	eventMux    *event.TypeMux
 	pm          *manager.EventHub
-	db          db.Database
 	tokenBucket *ratelimit.Bucket
 	config      *common.Config
 }
@@ -78,7 +76,7 @@ type TransactionResult struct {
 	InvalidMsg  string  `json:"invalidMsg,omitempty"`
 }
 
-func NewPublicTransactionAPI(namespace string, eventMux *event.TypeMux, pm *manager.EventHub, hyperDb db.Database, config *common.Config) *PublicTransactionAPI {
+func NewPublicTransactionAPI(namespace string, eventMux *event.TypeMux, pm *manager.EventHub, config *common.Config) *PublicTransactionAPI {
 	fillrate, err := getFillRate(config, TRANSACTION)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
@@ -93,7 +91,6 @@ func NewPublicTransactionAPI(namespace string, eventMux *event.TypeMux, pm *mana
 		namespace:   namespace,
 		eventMux:    eventMux,
 		pm:          pm,
-		db:          hyperDb,
 		config:      config,
 		tokenBucket: ratelimit.NewBucket(fillrate, peak),
 	}

@@ -6,13 +6,11 @@ import (
 	"fmt"
 	"hyperchain/common"
 	"hyperchain/core/types"
-	"hyperchain/hyperdb/db"
 	edb "hyperchain/core/db_utils"
 )
 
 type PublicBlockAPI struct {
 	namespace string
-	db db.Database
 }
 
 type BlockResult struct {
@@ -33,9 +31,8 @@ type StatisticResult struct {
 	TimeList []string `json:"TimeList"`
 }
 
-func NewPublicBlockAPI(namespace string, hyperDb db.Database) *PublicBlockAPI {
+func NewPublicBlockAPI(namespace string) *PublicBlockAPI {
 	return &PublicBlockAPI{
-		db: hyperDb,
 		namespace: namespace,
 	}
 }
@@ -88,12 +85,12 @@ func (blk *PublicBlockAPI) LatestBlock() (*BlockResult, error) {
 
 // GetBlockByHash returns the block for the given block hash.
 func (blk *PublicBlockAPI) GetBlockByHash(hash common.Hash) (*BlockResult, error) {
-	return getBlockByHash(blk.namespace, hash, blk.db, false)
+	return getBlockByHash(blk.namespace, hash, false)
 }
 
 // GetPlainBlockByHash returns the block for the given block hash.
 func (blk *PublicBlockAPI) GetPlainBlockByHash(hash common.Hash) (*BlockResult, error) {
-	return getBlockByHash(blk.namespace, hash, blk.db, true)
+	return getBlockByHash(blk.namespace, hash, true)
 }
 
 // GetBlockByNumber returns the block for the given block number.
@@ -119,7 +116,7 @@ func (blk *PublicBlockAPI) GetBlocksByTime(args IntervalTime) (*BlocksIntervalRe
 		return nil, &InvalidParamsError{"invalid params"}
 	}
 
-	sumOfBlocks, startBlock, endBlock := getBlocksByTime(blk.namespace, args.StartTime, args.Endtime, blk.db)
+	sumOfBlocks, startBlock, endBlock := getBlocksByTime(blk.namespace, args.StartTime, args.Endtime)
 
 	return &BlocksIntervalResult{
 		SumOfBlocks: NewUint64ToNumber(sumOfBlocks),
@@ -172,7 +169,7 @@ func getBlockByNumber(namespace string, n BlockNumber, isPlain bool) (*BlockResu
 }
 
 // getBlocksByTime returns the bolck for the given block time duration.
-func getBlocksByTime(namespace string, startTime, endTime int64, db db.Database) (sumOfBlocks uint64, startBlock, endBlock *BlockNumber) {
+func getBlocksByTime(namespace string, startTime, endTime int64) (sumOfBlocks uint64, startBlock, endBlock *BlockNumber) {
 	currentChain := edb.GetChainCopy(namespace)
 	height := currentChain.Height
 
@@ -243,7 +240,7 @@ func outputBlockResult(namespace string, block *types.Block, isPlain bool) (*Blo
 	}, nil
 }
 
-func getBlockByHash(namespace string, hash common.Hash, db db.Database, isPlain bool) (*BlockResult, error) {
+func getBlockByHash(namespace string, hash common.Hash, isPlain bool) (*BlockResult, error) {
 
 	if common.EmptyHash(hash) == true {
 		return nil, &InvalidParamsError{"invalid hash"}
