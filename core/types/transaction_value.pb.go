@@ -2,15 +2,6 @@
 // source: transaction_value.proto
 // DO NOT EDIT!
 
-/*
-Package types is a generated protocol buffer package.
-
-It is generated from these files:
-	transaction_value.proto
-
-It has these top-level messages:
-	TransactionValue
-*/
 package types
 
 import proto "github.com/golang/protobuf/proto"
@@ -21,12 +12,6 @@ import math "math"
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the proto package it is being compiled against.
-// A compilation error at this line likely means your copy of the
-// proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type TransactionValue struct {
 	Price              int64  `protobuf:"varint,1,opt,name=price" json:"price,omitempty"`
@@ -42,7 +27,7 @@ type TransactionValue struct {
 func (m *TransactionValue) Reset()                    { *m = TransactionValue{} }
 func (m *TransactionValue) String() string            { return proto.CompactTextString(m) }
 func (*TransactionValue) ProtoMessage()               {}
-func (*TransactionValue) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{0} }
+func (*TransactionValue) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{0} }
 
 func (m *TransactionValue) GetPrice() int64 {
 	if m != nil {
@@ -58,6 +43,19 @@ func (m *TransactionValue) GetGasLimit() int64 {
 	return 0
 }
 
+func (m *TransactionValue) GetAmount() int64 {
+	if m != nil {
+		return m.Amount
+	}
+	return 0
+}
+
+func (m *TransactionValue) GetPayload() []byte {
+	if m != nil {
+		return m.Payload
+	}
+	return nil
+}
 
 func (m *TransactionValue) GetEncryptedAmount() []byte {
 	if m != nil {
@@ -91,9 +89,9 @@ func init() {
 	proto.RegisterType((*TransactionValue)(nil), "types.TransactionValue")
 }
 
-func init() { proto.RegisterFile("transaction_value.proto", fileDescriptor6) }
+func init() { proto.RegisterFile("transaction_value.proto", fileDescriptor7) }
 
-var fileDescriptor6 = []byte{
+var fileDescriptor7 = []byte{
 	// 216 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x6c, 0x90, 0xcf, 0x4a, 0xc4, 0x30,
 	0x10, 0x87, 0xc9, 0xae, 0xed, 0x96, 0x41, 0x50, 0x07, 0xd1, 0xe0, 0xa9, 0x78, 0xca, 0x41, 0xf6,

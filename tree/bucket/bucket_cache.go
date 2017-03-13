@@ -4,6 +4,7 @@ import (
 	"sync"
 	//"time"
 	"unsafe"
+	"hyperchain/hyperdb/db"
 )
 const (
 	HASHLEN = 20
@@ -78,16 +79,16 @@ func (cache *BucketCache) putWithoutLock(key BucketKey, node *BucketNode) {
 }
 
 // TODO performance status should be done
-func (cache *BucketCache) get(key BucketKey) (*BucketNode, error) {
+func (cache *BucketCache) get(db db.Database, key BucketKey) (*BucketNode, error) {
 	//defer perfstat.UpdateTimeStat("timeSpent", time.Now())
 	if !cache.isEnabled {
-		return fetchBucketNodeFromDB(cache.TreePrefix, &key)
+		return fetchBucketNodeFromDB(db, cache.TreePrefix, &key)
 	}
 	cache.lock.RLock()
 	defer cache.lock.RUnlock()
 	bucketNode := cache.c[key]
 	if bucketNode == nil {
-		return fetchBucketNodeFromDB(cache.TreePrefix, &key)
+		return fetchBucketNodeFromDB(db, cache.TreePrefix, &key)
 	}
 	return bucketNode, nil
 }

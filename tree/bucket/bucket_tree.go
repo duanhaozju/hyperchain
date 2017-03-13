@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/hashicorp/golang-lru"
 	"github.com/op/go-logging"
-	"hyperchain/hyperdb"
 	"math/big"
 	"sync"
 	"hyperchain/hyperdb/db"
@@ -27,6 +26,7 @@ func NewKVMap() K_VMap {
 
 // StateImpl - implements the interface - 'statemgmt.HashableState'
 type BucketTree struct {
+	db                     db.Database
 	treePrefix             string
 	dataNodesDelta         *dataNodesDelta
 	bucketTreeDelta        *bucketTreeDelta
@@ -46,14 +46,17 @@ type Conf struct {
 }
 
 // NewStateImpl constructs a new StateImpl
-func NewBucketTree(tree_prefix string) *BucketTree {
-	return &BucketTree{treePrefix: tree_prefix}
+func NewBucketTree(db db.Database, tree_prefix string) *BucketTree {
+	return &BucketTree{
+		db:         db,
+		treePrefix: tree_prefix,
+	}
 }
 
 // Initialize - method implementation for interface 'statemgmt.HashableState'
 func (bucketTree *BucketTree) Initialize(configs map[string]interface{}) error {
 	initConfig(configs)
-	rootBucketNode, err := fetchBucketNodeFromDB(bucketTree.treePrefix, constructRootBucketKey())
+	rootBucketNode, err := fetchBucketNodeFromDB(bucketTree.db, bucketTree.treePrefix, constructRootBucketKey())
 	if err != nil {
 		return err
 	}
@@ -134,7 +137,7 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 			updatedDataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(bucketKey)
 
 			// thread safe
-			existingDataNodes, err := bucketTree.dataNodeCache.FetchDataNodesFromCache(*bucketKey)
+			existingDataNodes, err := bucketTree.dataNodeCache.FetchDataNodesFromCache(bucketTree.db, *bucketKey)
 			if err != nil {
 				log.Errorf("fetch datanodes failed. %s", err.Error())
 				wg.Done()
@@ -173,7 +176,7 @@ func (bucketTree *BucketTree) processBucketTreeDelta() error {
 			wg.Add(1)
 			go func(bucketNode *BucketNode) {
 				//log.Debugf("bucketNode in tree-delta [%s]", bucketNode)
-				dbBucketNode, err := bucketTree.bucketCache.get(*bucketNode.bucketKey)
+				dbBucketNode, err := bucketTree.bucketCache.get(bucketTree.db, *bucketNode.bucketKey)
 				//log.Debugf("bucket node from db [%s]", dbBucketNode)
 				if err != nil {
 					log.Errorf("get bucketnode from cache failed. %s", err.Error())
@@ -385,7 +388,6 @@ func (bucket *BucketTree) Reset() {
 // the func can make the buckettree revert to target block
 func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch db.Batch, currentBlockNum, toBlockNum *big.Int, flush, sync bool) error {
 	log.Debug("Start RevertToTargetBlock, from ", currentBlockNum)
-	db, _ := hyperdb.GetDBDatabase()
 	keyValueMap := NewKVMap()
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
@@ -397,7 +399,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch db.Batch, currentBl
 	for i := currentBlockNum.Int64() + 1; ; i++ {
 		dbKey := append([]byte(UpdatedValueSetPrefix), big.NewInt(i).Bytes()...)
 		dbKey = append(dbKey, []byte(bucketTree.treePrefix)...)
-		_, err := db.Get(dbKey)
+		_, err := bucketTree.db.Get(dbKey)
 		if err != nil {
 			if err.Error() == "leveldb: not found" {
 				currentBlockNum = big.NewInt(i - 1)
@@ -414,7 +416,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch db.Batch, currentBl
 	for i := currentBlockNum.Int64(); i > toBlockNum.Int64(); i-- {
 		dbKey := append([]byte(UpdatedValueSetPrefix), big.NewInt(i).Bytes()...)
 		dbKey = append(dbKey, []byte(bucketTree.treePrefix)...)
-		value, err := db.Get(dbKey)
+		value, err := bucketTree.db.Get(dbKey)
 
 		if err != nil {
 			if err.Error() == "leveldb: not found" {

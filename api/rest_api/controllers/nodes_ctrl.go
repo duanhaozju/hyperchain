@@ -45,11 +45,11 @@ func (n *NodesController) DelNode() {
 		return
 	}
 
-	err :=  n.PublicNodeAPI.DelNode(args)
+	isSuccess, err :=  n.PublicNodeAPI.DelNode(args)
 	if err != nil {
 		n.Data["json"] = NewJSONObject(nil, err)
 	} else {
-		n.Data["json"] = NewJSONObject(true, nil)
+		n.Data["json"] = NewJSONObject(isSuccess, nil)
 	}
 
 	n.ServeJSON()

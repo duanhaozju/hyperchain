@@ -3,6 +3,7 @@ package bucket
 import (
 	"github.com/hashicorp/golang-lru"
 	"sync"
+	"hyperchain/hyperdb/db"
 )
 
 var (
@@ -69,10 +70,10 @@ func newDataNodeCache(treePrefix string, maxSizeMBs int) *DataNodeCache {
 	return &DataNodeCache{TreePrefix: treePrefix, c: cache, maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 }
 
-func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey) (dataNodes DataNodes, err error) {
+func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(db db.Database, bucketKey BucketKey) (dataNodes DataNodes, err error) {
 	// step 0.
 	if dataNodeCache.isEnabled == false {
-		return fetchDataNodesFromDBByBucketKey(dataNodeCache.TreePrefix, &bucketKey)
+		return fetchDataNodesFromDBByBucketKey(db, dataNodeCache.TreePrefix, &bucketKey)
 	}
 
 	// step 1.
@@ -105,7 +106,7 @@ func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(bucketKey BucketKey)
 	}
 
 	// step 3.
-	dataNodes, err = fetchDataNodesFromDBByBucketKey(dataNodeCache.TreePrefix, &bucketKey)
+	dataNodes, err = fetchDataNodesFromDBByBucketKey(db, dataNodeCache.TreePrefix, &bucketKey)
 	if err != nil {
 		log.Error("fetchDataNodesFromDBByBucketKey Error")
 		return dataNodes, err

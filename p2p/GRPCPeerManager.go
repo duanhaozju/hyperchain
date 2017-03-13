@@ -329,7 +329,7 @@ func (this *GRPCPeerManager) reconnectToPeers(alive chan int) {
 			if peer, connectErr := this.reconnectToPeer(peerAddress); connectErr != nil {
 				// cannot connect to other peer
 
-				unconnected.Push(_index)
+				unconnected.UnShift(_index)
 				log.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\n", connectErr)
 			} else {
 				connected.Push(_index)

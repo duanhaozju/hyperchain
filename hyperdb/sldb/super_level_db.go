@@ -9,7 +9,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"time"
 	"fmt"
-	"path/filepath"
+	pa "path/filepath"
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/hyperdb/db"
@@ -32,16 +32,19 @@ type SuperLevelDB struct {
 	closed chan bool
 }
 
-func NewSLDB(conf *common.Config) (*SuperLevelDB, error) {
-	dbpath := conf.GetString(SLDB_PATH)
-	db, err := leveldb.OpenFile(conf.GetString(SLDB_PATH), nil)
+func NewSLDB(conf *common.Config,filepath string) (*SuperLevelDB, error) {
+	if conf!=nil{
+		filepath = pa.Join(conf.GetString(SLDB_PATH),filepath)
+	}
+
+	db, err := leveldb.OpenFile(filepath, nil)
 	if err != nil {
 		panic(err.Error())
 	}
-	index := NewKeyIndex(conf, "defaultNS", db, filepath.Join(dbpath, "index", "index.bloom.dat"))
+	index := NewKeyIndex(conf, "defaultNS", db, pa.Join(filepath, "index", "index.bloom.dat"))
 	index.conf = conf
 	sldb := &SuperLevelDB{
-		path: dbpath,
+		path: filepath,
 		db:   db,
 		index:   index,
 		closed: make(chan bool),

@@ -5,31 +5,21 @@ package main
 import (
 	"errors"
 	"github.com/mkideal/cli"
+	"github.com/terasum/viper"
 	"hyperchain/accounts"
+	"hyperchain/admittance"
 	"hyperchain/api/jsonrpc/core"
 	"hyperchain/common"
 	"hyperchain/consensus/csmgr"
 	"hyperchain/core"
-	"hyperchain/core/blockpool"
+	"hyperchain/core/executor"
 	"hyperchain/crypto"
 	"hyperchain/event"
 	"hyperchain/manager"
-	"hyperchain/admittance"
 	"hyperchain/p2p"
-	"hyperchain/p2p/transport"
-	"io/ioutil"
-	"regexp"
 	"strconv"
-	"strings"
-	"time"
-	"github.com/terasum/viper"
-	"fmt"
+	"hyperchain/core/db_utils"
 )
-
-
-
-
-
 
 type argT struct {
 	cli.Helper
@@ -40,54 +30,9 @@ type argT struct {
 	//RESTPort   int    `cli:"f,restport" useage:"restful api port" dft:"9000"`
 }
 
-func checkLicense(licensePath string) (err error, expiredTime time.Time) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = errors.New("Invalid License Cause a Panic")
-		}
-	}()
-	dateChecker := func(now, expire time.Time) bool {
-		return now.Before(expire)
-	}
-	privateKey := string("TnrEP|N.*lAgy<Q&@lBPd@J/")
-	identificationSuffix := string("Hyperchain")
-
-	license, err := ioutil.ReadFile(licensePath)
-	if err != nil {
-		err = errors.New("No License Found")
-		return
-	}
-	pattern, _ := regexp.Compile("Identification: (.*)")
-	identification := pattern.FindString(string(license))[16:]
-
-	str1:=GetHyperchainVersion()
-	str2,_:=GetOperationSystem()
-	fmt.Println(str1)
-	fmt.Println(str2)
-	ctx, err := transport.TripleDesDecrypt(common.Hex2Bytes(identification), []byte(privateKey))
-	if err != nil {
-		err = errors.New("Invalid License")
-		return
-	}
-	plainText := string(ctx)
-	suffix := plainText[len(plainText)-len(identificationSuffix):]
-	if strings.Compare(suffix, identificationSuffix) != 0 {
-		err = errors.New("Invalid Identification")
-		return
-	}
-	timestamp, err := strconv.ParseInt(plainText[:len(plainText)-len(identificationSuffix)], 10, 64)
-	if err != nil {
-		err = errors.New("Invalid License Timestamp")
-		return
-	}
-	expiredTime = time.Unix(timestamp, 0)
-	currentTime := time.Now()
-	if validation := dateChecker(currentTime, expiredTime); !validation {
-		err = errors.New("License Expired")
-		return
-	}
-	return
-}
+const (
+	DefaultNamespace = "Global"
+)
 
 func initConf(argv *argT) *common.Config {
 	conf := common.NewConfig(argv.ConfigPath)
@@ -100,20 +45,20 @@ func initConf(argv *argT) *common.Config {
 	peerViper := viper.New()
 	peerViper.SetConfigFile(peerConfigPath)
 	err := peerViper.ReadInConfig()
-	if err != nil{
+	if err != nil {
 		panic("read in the peer config failed")
 	}
-	nodeID   := peerViper.GetInt("self.node_id")
+	nodeID := peerViper.GetInt("self.node_id")
 	grpcPort := peerViper.GetInt("self.grpc_port")
 	jsonrpcPort := peerViper.GetInt("self.jsonrpc_port")
 	restfulPort := peerViper.GetInt("self.restful_port")
 
-	conf.Set(common.C_NODE_ID,nodeID)
-	conf.Set(common.C_HTTP_PORT,jsonrpcPort)
-	conf.Set(common.C_REST_PORT,restfulPort)
-	conf.Set(common.C_GRPC_PORT,grpcPort)
-	conf.Set(common.C_PEER_CONFIG_PATH,peerConfigPath)
-	conf.Set(common.C_GLOBAL_CONFIG_PATH,argv.ConfigPath)
+	conf.Set(common.C_NODE_ID, nodeID)
+	conf.Set(common.C_HTTP_PORT, jsonrpcPort)
+	conf.Set(common.C_REST_PORT, restfulPort)
+	conf.Set(common.C_GRPC_PORT, grpcPort)
+	conf.Set(common.C_PEER_CONFIG_PATH, peerConfigPath)
+	conf.Set(common.C_GLOBAL_CONFIG_PATH, argv.ConfigPath)
 
 	return conf
 }
@@ -131,22 +76,17 @@ func main() {
 
 		conf.MergeConfig(config.getDbConfig())//todo:refactor it
 
-		core.InitDB(conf, config.getDbConfig(),conf.GetInt(common.C_NODE_ID))
-
-		err, expiredTime := checkLicense(config.getLicense())
-		if err != nil {
-			return err
-		}
+		db_utils.InitDBForNamespace(conf, DefaultNamespace, config.getDbConfig(),conf.GetInt(common.C_NODE_ID))
 
 		eventMux := new(event.TypeMux)
 
 		/**
 		 *传入true则开启所有验证，false则为取消ca以及签名的所有验证
 		 */
-		globalConfig := viper.New();
+		globalConfig := viper.New()
 		globalConfig.SetConfigFile(conf.GetString(common.C_GLOBAL_CONFIG_PATH))
-		err = globalConfig.ReadInConfig()
-		if err != nil{
+		err := globalConfig.ReadInConfig()
+		if err != nil {
 			panic(err)
 		}
 		cm, cmerr := admittance.GetCaManager(globalConfig)
@@ -154,55 +94,33 @@ func main() {
 			panic("cannot initliazied the camanager")
 		}
 
-
 		//init peer manager to start grpc server and client
 		//grpcPeerMgr := p2p.NewGrpcManager(config.getPeerConfigPath())
 		grpcPeerMgr := p2p.NewGrpcManager(conf)
 
 		//init genesis
-		core.CreateInitBlock(conf)
-
+		core.CreateInitBlock(DefaultNamespace, conf)
 		//init pbft consensus
 		consenter := csmgr.Consenter(conf, eventMux)
 		consenter.Start()
 
 		//init encryption object
-
 		encryption := crypto.NewEcdsaEncrypto("ecdsa")
 		encryption.GenerateNodeKey(strconv.Itoa(config.getNodeID()), config.getKeyNodeDir())
-		//
 		am := accounts.NewAccountManager(config.getKeystoreDir(), encryption)
 		am.UnlockAllAccount(config.getKeystoreDir())
 
-		//init hash object
-		kec256Hash := crypto.NewKeccak256Hash("keccak256")
-
 		//init block pool to save block
-		blockPool := blockpool.NewBlockPool(consenter, conf, kec256Hash, encryption, eventMux)
-		if blockPool == nil {
+		executor := executor.NewExecutor(DefaultNamespace, conf, eventMux)
+		if executor == nil {
 			return errors.New("Initialize BlockPool failed")
 		}
-		blockPool.Initialize()
+		executor.Initialize()
 		//init manager
 		exist := make(chan bool)
-		syncReplicaInterval, _ := config.getSyncReplicaInterval()
-		syncReplicaEnable := config.getSyncReplicaEnable()
-		pm := manager.New(eventMux,
-			blockPool,
-			grpcPeerMgr,
-			consenter,
-			am,
-			kec256Hash,
-			syncReplicaInterval,
-			syncReplicaEnable,
-			exist,
-			expiredTime, cm)
+		pm := manager.New(DefaultNamespace, eventMux, executor, grpcPeerMgr, cs, am, cm)
 		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(), config.getLogDumpFileDir(), eventMux, pm, cm, conf)
-
-		//go func() {
-		//	log.Println(http.ListenAndServe("localhost:6064", nil))
-		//}()
-
+		go CheckLicense(exist, conf)
 		<-exist
 		return nil
 	})

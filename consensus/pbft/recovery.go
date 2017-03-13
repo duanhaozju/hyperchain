@@ -60,7 +60,7 @@ func (pbft *pbftImpl) initRecovery() events.Event {
 
 	pbft.recoveryMgr.recoveryToSeqNo = nil
 	// update watermarks
-	height := persist.GetHeightofChain()
+	height := persist.GetHeightofChain(pbft.namespace)
 	pbft.moveWatermarks(height)
 
 	pbft.recoveryMgr.rcRspStore = make(map[uint64]*RecoveryResponse)
@@ -118,7 +118,7 @@ func (pbft *pbftImpl) recvRecovery(recoveryInit *RecoveryInit) events.Event {
 		chkpts[n] = d
 	}
 
-	height, curHash := persist.GetBlockHeightAndHash()
+	height, curHash := persist.GetBlockHeightAndHash(pbft.namespace)
 
 	rc := &RecoveryResponse{
 		ReplicaId:     pbft.id,
@@ -194,7 +194,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	//blockInfo := getBlockchainInfo()
 	//id, _ := proto.Marshal(blockInfo)
 	//idAsString := byteToString(id)
-	selfLastExec, selfCurHash := persist.GetBlockHeightAndHash()
+	selfLastExec, selfCurHash := persist.GetBlockHeightAndHash(pbft.namespace)
 
 	logger.Debugf("Replica %d in recovery find quorum chkpt: %d, self: %d, "+
 		"others lastExec: %d, self: %d", pbft.id, n, pbft.h, lastExec, pbft.exec.lastExec)

@@ -5,55 +5,24 @@ package manager
 import (
 	"hyperchain/accounts"
 	"hyperchain/consensus"
-	"hyperchain/core/blockpool"
-	"hyperchain/crypto"
+	"hyperchain/core/executor"
 	"hyperchain/event"
 	"hyperchain/admittance"
 	"hyperchain/p2p"
-	"time"
 )
-
-/*
-	pm := manager.New(	eventMux,
-				blockPool,
-				grpcPeerMgr,
-				cs,
-				am,
-				kec256Hash,
-				config.getNodeID(),
-				syncReplicaInterval,
-				syncReplicaEnable,
-				exist,
-				expiredTime,
-				argv.IsReconnect,
-				config.getGRPCPort())
-*/
 
 // init protocol manager params and start
 func New(
+	namespace string,
 	eventMux *event.TypeMux,
-	blockPool *blockpool.BlockPool,
+	executor *executor.Executor,
 	peerManager p2p.PeerManager,
 	consenter consensus.Consenter,
 	am *accounts.AccountManager,
-	commonHash crypto.CommonHash,
-	syncReplicaInterval time.Duration,
-	syncReplica bool,
-	exist chan bool,
-	expiredTime time.Time, cm *admittance.CAManager) *ProtocolManager {
-
-	//add reconnect param
-
-	protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, consenter, am, commonHash, syncReplicaInterval, syncReplica, exist, expiredTime)
+	cm *admittance.CAManager) *EventHub {
+	eventHub := NewEventHub(namespace, executor, peerManager, eventMux, consenter, am)
 	aliveChan := make(chan int)
-	protocolManager.Start(aliveChan, cm)
+	eventHub.Start(aliveChan, cm)
 
-	//wait for all peer are connected
-	//select {
-	//case initType := <-aliveChan:
-	//	{
-	//start server
-	return protocolManager
-	//}
-	//}
+	return eventHub
 }

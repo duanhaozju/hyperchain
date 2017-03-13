@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"hyperchain/accounts"
 	"hyperchain/common"
-	"hyperchain/core"
 	"hyperchain/manager"
 	"hyperchain/hyperdb/db"
 )
 
 type PublicAccountAPI struct {
-	pm     *manager.ProtocolManager
+	pm     *manager.EventHub
+	namespace string
 	db     db.Database
 	config *common.Config
 }
@@ -26,8 +26,9 @@ type UnlockParas struct {
 	Password string         `json:"password"`
 }
 
-func NewPublicAccountAPI(pm *manager.ProtocolManager, hyperDb db.Database, config *common.Config) *PublicAccountAPI {
+func NewPublicAccountAPI(namespace string, pm *manager.EventHub, hyperDb db.Database, config *common.Config) *PublicAccountAPI {
 	return &PublicAccountAPI{
+		namespace: namespace,
 		pm:     pm,
 		db:     hyperDb,
 		config: config,
@@ -76,15 +77,7 @@ func (acc *PublicAccountAPI) UnlockAccount(args UnlockParas) (bool, error) {
 // GetAllBalances returns all account's balance in the db,NOT CACHE DB!
 func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 	var acts []*AccountResult
-	chain := core.GetChainCopy()
-
-	log.Debug("Current LatestBlockHash:", common.BytesToHash(chain.LatestBlockHash).Hex())
-	headBlock, err := getBlockByHash(common.BytesToHash(chain.LatestBlockHash), acc.db)
-	if err != nil {
-		log.Errorf("%v", err)
-		return nil
-	}
-	stateDB, err := GetStateInstance(headBlock.MerkleRoot, acc.db, acc.config)
+	stateDB, err := NewStateDb(acc.config, acc.namespace)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
 		return nil
@@ -103,26 +96,13 @@ func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 
 // GetBalance returns account balance for given account address.
 func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
-
-	if headBlock, err := core.GetBlock(acc.db, core.GetChainCopy().LatestBlockHash); err != nil && err.Error() == leveldb_not_found_error {
-		return "", &LeveldbNotFoundError{"latest block"}
-	} else if err != nil {
-		log.Errorf("Get Block error, %v", err)
-		return "", &CallbackError{err.Error()}
-	} else if headBlock != nil {
-
-		if stateDB, err := GetStateInstance(common.BytesToHash(headBlock.MerkleRoot), acc.db, acc.config); err == nil && stateDB != nil {
-			if stateobject := stateDB.GetAccount(addr); stateobject != nil {
-				return fmt.Sprintf(`0x%x`, stateobject.Balance()), nil
-			} else {
-				return "", &LeveldbNotFoundError{"stateobject, the account may not exist"}
-			}
-		} else if err != nil {
-			return "", &CallbackError{err.Error()}
+	if stateDB, err := NewStateDb(acc.config, acc.namespace); err != nil {
+		if stateobject := stateDB.GetAccount(addr); stateobject != nil {
+			return fmt.Sprintf(`0x%x`, stateobject.Balance()), nil
 		} else {
-			return "", &LeveldbNotFoundError{"statedb"}
+			return "", &LeveldbNotFoundError{"stateobject, the account may not exist"}
 		}
 	} else {
-		return "", nil
+		return "", &LeveldbNotFoundError{"statedb"}
 	}
 }

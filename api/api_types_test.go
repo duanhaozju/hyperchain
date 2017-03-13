@@ -17,7 +17,7 @@ func Test_apiTypes(t *testing.T) {
 	keydir := "../config/keystore/"
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	am := accounts.NewAccountManager(keydir, encryption)
-	pm := &manager.ProtocolManager{
+	pm := &manager.EventHub{
 
 		AccountManager: am,
 	}

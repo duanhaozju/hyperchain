@@ -28,7 +28,7 @@ func Test_NewAccount1(t *testing.T) {
 	am := accounts.NewAccountManager(keydir, encryption)
 
 	//初始化pm
-	pm := &manager.ProtocolManager{
+	pm := &manager.EventHub{
 
 		AccountManager: am,
 	}
@@ -59,7 +59,7 @@ func Test_UnlockAccount(t *testing.T) {
 	am := accounts.NewAccountManager(keydir, encryption)
 
 	//初始化pm
-	pm := &manager.ProtocolManager{
+	pm := &manager.EventHub{
 
 		AccountManager: am,
 	}
@@ -103,7 +103,7 @@ func Test_GetAccounts(t *testing.T) {
 	am := accounts.NewAccountManager(keydir, encryption)
 
 	//初始化pm
-	pm := &manager.ProtocolManager{
+	pm := &manager.EventHub{
 
 		AccountManager: am,
 	}
@@ -130,7 +130,7 @@ func Test_GetBalance1(t *testing.T) {
 	am := accounts.NewAccountManager(keydir, encryption)
 
 	//初始化pm
-	pm := &manager.ProtocolManager{
+	pm := &manager.EventHub{
 
 		AccountManager: am,
 	}
