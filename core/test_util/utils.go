@@ -13,7 +13,4 @@ func InitConfig(configPath string, dbConfigPath string) *common.Config {
 	return conf
 }
 
-func InitDB() {
-
-}
 

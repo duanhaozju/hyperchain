@@ -9,7 +9,7 @@ import (
 	"testing"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/common"
-	"hyperchain/core/executor/test_util"
+	"hyperchain/core/test_util"
 	"os"
 )
 
