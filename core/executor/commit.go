@@ -120,7 +120,7 @@ func (executor *Executor) constructBlock(ev event.CommitEvent) *types.Block {
 	}
 	newBlock.Transactions = make([]*types.Transaction, len(record.ValidTxs))
 	copy(newBlock.Transactions, record.ValidTxs)
-	newBlock.BlockHash = newBlock.Hash(executor.commonHash).Bytes()
+	newBlock.BlockHash = newBlock.Hash().Bytes()
 	return newBlock
 }
 

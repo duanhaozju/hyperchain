@@ -354,7 +354,7 @@ func (executor *Executor) reject() {
 
 // verifyBlockIntegrity - make sure block content doesn't change.
 func (executor *Executor) verifyBlockIntegrity(block *types.Block) bool {
-	if bytes.Compare(block.BlockHash, block.Hash(executor.commonHash).Bytes()) == 0 {
+	if bytes.Compare(block.BlockHash, block.Hash().Bytes()) == 0 {
 		return true
 	}
 	return false
