@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+	"strconv"
 )
 
 var (
@@ -25,8 +26,8 @@ var (
 // Account represents a stored key.
 // When used as an argument, it selects a unique key file to act on.
 type Account struct {
-	Address common.Address // Ethereum account address derived from the key
-
+	Address common.Address
+	//account address derived from the key
 	// File contains the key file name.
 	// When Acccount is used as an argument to select a key, File can be left blank to
 	// select just by address or set to the basename or absolute path of a file in the key
@@ -47,15 +48,20 @@ type unlocked struct {
 }
 
 // NewAccountManager creates a AccountManager for the given directory.
-func NewAccountManager(keydir string, encryp crypto.Encryption) *AccountManager {
+func NewAccountManager(conf *common.Config) *AccountManager {
+	//init encryption object
+	encryp := crypto.NewEcdsaEncrypto("ecdsa")
+	encryp.GenerateNodeKey(strconv.Itoa(conf.GetInt(common.C_NODE_ID)), conf.GetString(common.KEY_NODE_DIR))
+
+
+	keydir := conf.GetString(common.KEY_STORE_DIR)
+
 	keydir, _ = filepath.Abs(keydir)
 	am := &AccountManager{
 		KeyStore:   &keyStorePassphrase{keydir, StandardScryptN, StandardScryptP},
 		Unlocked:   make(map[common.Address]*unlocked),
 		Encryption: encryp,
 	}
-
-	//am.unlockAllAccount(keydir)
 	return am
 }
 func (am *AccountManager) UnlockAllAccount(keydir string) {
@@ -110,15 +116,6 @@ func (am *AccountManager) SignWithPassphrase(addr common.Address, hash []byte, p
 			return nil, err
 		}
 		unlockedKey = &unlocked{Key: key, abort: make(chan struct{})}
-		//switch key.PrivateKey.(type) {
-		//case *ecdsa.PrivateKey:
-		//	actualPriKey := key.PrivateKey.(*ecdsa.PrivateKey)
-		//	unlockedKey.Key = &Key{
-		//		Address:    crypto.PubkeyToAddress(actualPriKey.PublicKey),
-		//		PrivateKey: actualPriKey,
-		//	}
-		//	defer zeroKey(actualPriKey)
-		//}
 	}
 
 	return am.Encryption.Sign(hash, unlockedKey.PrivateKey)

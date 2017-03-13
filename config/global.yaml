@@ -77,7 +77,7 @@ global:
         logsdir: "./build/logs"
         # default loglevel for all modules which can be override by module level log setting
         loglevel: "NOTICE"
-        file_format: "%[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
+        file_format: "[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
         console_format: "%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
 
         module:

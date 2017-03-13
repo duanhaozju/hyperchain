@@ -1,19 +1,17 @@
-//Hyperchain License
-//Copyright (C) 2016 The Hyperchain Authors.
-package core
+package executor
 
 import (
+	"io/ioutil"
 	"github.com/buger/jsonparser"
-	"hyperchain/common"
-	"hyperchain/core/hyperstate"
-	"hyperchain/core/types"
+	"math/big"
+	"time"
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
-	"io/ioutil"
-	"math/big"
-	"strconv"
-	"time"
+	"hyperchain/core/hyperstate"
 	edb "hyperchain/core/db_utils"
+	"hyperchain/common"
+	"strconv"
+	"hyperchain/core/types"
 )
 
 const (
@@ -21,9 +19,9 @@ const (
 )
 
 // CreateInitBlock - create genesis for a specific namespace.
-func CreateInitBlock(namespace string, config *common.Config) error {
-	if edb.IsGenesisFinish(namespace) {
-		log.Infof("[Namespace = %s] already genesis", namespace)
+func (executor *Executor) CreateInitBlock(config *common.Config) error {
+	if edb.IsGenesisFinish(executor.namespace) {
+		log.Infof("[Namespace = %s] already genesis", executor.namespace)
 		return nil
 	}
 	type Genesis struct {
@@ -40,7 +38,7 @@ func CreateInitBlock(namespace string, config *common.Config) error {
 		return err
 	}
 	// create state instance with empty root hash
-	stateDb, err := NewStateDb(namespace, config)
+	stateDb, err := NewStateDb(executor.namespace, config)
 	if err != nil {
 		return err
 	}
@@ -69,7 +67,7 @@ func CreateInitBlock(namespace string, config *common.Config) error {
 		return err
 	}
 	// flush change of chain to disk immediately
-	edb.UpdateChain(namespace, batch, &block, true, false, false)
+	edb.UpdateChain(executor.namespace, batch, &block, true, false, false)
 	batch.Write()
 	stateDb.MarkProcessFinish(0)
 	return nil
@@ -94,4 +92,3 @@ func NewStateDb(namespace string, conf *common.Config) (vm.Database, error) {
 func getGenesisPath(conf *common.Config) string {
 	return conf.GetString(genesisPath)
 }
-
