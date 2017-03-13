@@ -22,12 +22,6 @@ type batchManager struct{
 	batchStore       	[]*types.Transaction            //ordered message batch
 	batchEventsManager  	events.Manager //pbft.batchManager => batchManager
 	batchTimerActive 	bool
-
-	etf                 events.TimerFactory //batch event timer factory
-	pbftId              uint64
-
-	pbftEventQueue      events.Queue
-	txEventQueue        events.Queue
 }
 
 //batchValidator used to manager batch validate issues.
@@ -158,18 +152,11 @@ func newBatchManager(conf *common.Config, pbft *pbftImpl) *batchManager {
 		pbft.pbftTimerMgr.requestTimeout = 3 * batchTimeout / 2
 		logger.Warningf("Configured request timeout must be greater than batch timeout, setting to %v", pbft.pbftTimerMgr.requestTimeout)
 	}
-	bm.pbftId = pbft.id
 
 	logger.Infof("PBFT Batch size = %d", bm.batchSize)
 	logger.Infof("PBFT Batch timeout = %v", batchTimeout)
 
 	return bm
-}
-
-
-//createTimer create batch events related timer.
-func (bm *batchManager) createTimer() events.Timer {
-	return bm.etf.CreateTimer()
 }
 
 func (bm *batchManager) start()  {

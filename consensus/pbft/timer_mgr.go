@@ -11,8 +11,8 @@ import (
 	this file provide a mechanism to manage different timers.
  */
 
-//titletimers manage timer with the same timer name
-type titletimers struct {
+//titletimer manage timer with the same timer name
+type titletimer struct {
 	timerName   string
 	timeout     time.Duration
 	alivecounts int
@@ -21,14 +21,14 @@ type titletimers struct {
 
 //timerManager manage common used timer.
 type timerManager struct {
-	ttimers        map[string]*titletimers
+	ttimers        map[string]*titletimer
 	requestTimeout time.Duration
 }
 
 //newTimerMgr init a instance of timerManager.
 func newTimerMgr(pbft *pbftImpl) *timerManager {
 	tm := &timerManager{
-		ttimers: make(map[string]*titletimers),
+		ttimers: make(map[string]*titletimer),
 		requestTimeout: pbft.config.GetDuration(PBFT_REQUEST_TIMEOUT),
 	}
 
@@ -37,7 +37,7 @@ func newTimerMgr(pbft *pbftImpl) *timerManager {
 
 //newTimer new a pbft timer by timer name and append into correspond map
 func (tm *timerManager) newTimer(tname string, d time.Duration) {
-	tm.ttimers[tname] = &titletimers{
+	tm.ttimers[tname] = &titletimer{
 		timerName:   tname,
 		timeout:     d,
 		alivecounts: 0,
@@ -172,12 +172,13 @@ func (tm *timerManager) stopOneTimer(tname string, num int) {
 
 }
 
+//containsTimer returns true if there exists a timer named timerName
 func (tm *timerManager) containsTimer(timerName string) bool {
 	_, ok := tm.ttimers[timerName]
 	return ok
 }
 
-// getTimeoutValue get event timer timeout
+//getTimeoutValue get event timer timeout
 func (tm *timerManager) getTimeoutValue(timerName string) time.Duration {
 	if !tm.containsTimer(timerName) {
 		logger.Warningf("Get tiemout failed!, timer %s not created yet! no time out", timerName)

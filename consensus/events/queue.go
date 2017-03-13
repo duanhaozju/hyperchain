@@ -63,7 +63,7 @@ func (eq *blockingQueue) Size() int {
 //NewBlockingQueue new blocking queue with fixed queue
 func NewBlockingQueue(qsize uint64) *blockingQueue {
 	if qsize < 1 {
-		logger.Errorf("Queue size is two small, size: %d", qsize)
+		logger.Errorf("Queue size is too small, size: %d", qsize)
 	}
 	bq := &blockingQueue{}
 	if qsize == 1 {
