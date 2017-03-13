@@ -41,7 +41,17 @@ type CAManager struct {
 
 var caManager *CAManager
 
-func GetCaManager(global_config *viper.Viper) (*CAManager, error) {
+func GetCaManager(conf *common.Config) (*CAManager, error) {
+	/**
+	 *传入true则开启所有验证，false则为取消ca以及签名的所有验证
+	 */
+	global_config := viper.New()
+	global_config.SetConfigFile(conf.GetString(common.C_GLOBAL_CONFIG_PATH))
+	err := global_config.ReadInConfig()
+	if err != nil {
+		panic(err)
+	}
+
 	if caManager == nil {
 		config := viper.New()
 		config.SetConfigFile(global_config.GetString("global.configs.caconfig"))
