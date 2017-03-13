@@ -1,6 +1,4 @@
-//Hyperchain License
-//Copyright (C) 2016 The Hyperchain Authors.
-package core
+package executor
 
 import (
 	"hyperchain/common"
@@ -8,7 +6,6 @@ import (
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/params"
 	"math/big"
-	//"hyperchain/core/vm/compiler"
 )
 
 // Call executes within the given contract

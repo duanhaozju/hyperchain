@@ -2,7 +2,6 @@ package executor
 
 import (
 	"hyperchain/common"
-	"hyperchain/core"
 	"hyperchain/core/types"
 	edb "hyperchain/core/db_utils"
 	"github.com/golang/protobuf/proto"
@@ -120,7 +119,7 @@ func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *
 	// execute transaction one by one
 	for i, tx := range block.Transactions {
 		executor.statedb.StartRecord(tx.GetHash(), common.Hash{}, i)
-		receipt, _, _, err := core.ExecTransaction(tx, env)
+		receipt, _, _, err := ExecTransaction(tx, env)
 		// just ignore invalid transactions
 		if err != nil {
 			log.Warningf("invalid transaction found during the state update process in #%d", seqNo)
@@ -355,7 +354,7 @@ func (executor *Executor) reject() {
 
 // verifyBlockIntegrity - make sure block content doesn't change.
 func (executor *Executor) verifyBlockIntegrity(block *types.Block) bool {
-	if bytes.Compare(block.BlockHash, block.Hash(executor.commonHash).Bytes()) == 0 {
+	if bytes.Compare(block.BlockHash, block.Hash().Bytes()) == 0 {
 		return true
 	}
 	return false

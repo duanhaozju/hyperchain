@@ -2,7 +2,6 @@ package executor
 
 import (
 	"github.com/golang/protobuf/proto"
-	"hyperchain/core"
 	"hyperchain/core/types"
 	"hyperchain/event"
 	"hyperchain/hyperdb"
@@ -23,7 +22,7 @@ func (executor *Executor) RunInSandBox(tx *types.Transaction) error {
 	// initialize execution environment
 	fakeBlockNumber := edb.GetHeightOfChain(executor.namespace) + 1
 	sandBox := initEnvironment(statedb, fakeBlockNumber)
-	receipt, _, _, err := core.ExecTransaction(tx, sandBox)
+	receipt, _, _, err := ExecTransaction(tx, sandBox)
 	if err != nil {
 		errType := executor.classifyInvalid(err)
 		t := &types.InvalidTransactionRecord{
