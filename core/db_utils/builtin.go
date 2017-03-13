@@ -34,10 +34,14 @@ func init() {
 	logger = logging.MustGetLogger("db_utils")
 }
 
-func InitDBForNamespace(conf *common.Config, namespace string) {
+func InitDBForNamespace(conf *common.Config, namespace string) error{
 	dbConfigPath := conf.GetString(common.DB_CONFIG_PATH)
 	conf.MergeConfig(dbConfigPath)
 	hyperdb.SetDBConfig(dbConfigPath, strconv.Itoa(conf.GetInt(common.C_NODE_ID)))
-	hyperdb.InitDatabase(conf, namespace)
+	err := hyperdb.InitDatabase(conf, namespace)
+	if err != nil {
+		return err
+	}
 	InitializeChain(namespace)
+	return err
 }
