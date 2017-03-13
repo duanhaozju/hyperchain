@@ -3,16 +3,15 @@
 package main
 
 import (
+	"fmt"
 	"github.com/mkideal/cli"
 	"hyperchain/common"
 	"hyperchain/namespace"
-	"fmt"
 )
 
 type argT struct {
 	cli.Helper
-	//ConfigPath string `cli:"c,conf" usage:"config file path" dft:"./config/global.yaml"`
-	ConfigPath string `cli:"c,conf" usage:"config file path" dft:"./configuration/global.yaml"`
+	ConfigPath string `cli:"c,conf" usage:"config file path" dft:"./global.yaml"`
 }
 
 func initGloableConfig(argv *argT) *common.Config {
@@ -43,6 +42,6 @@ func main() {
 	})
 }
 
-func Stop()  {
+func Stop() {
 	stopHyperchain <- true
 }

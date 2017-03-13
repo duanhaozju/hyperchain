@@ -9,20 +9,7 @@
 
 global:
     #namespace config dir root path
-    nsConfigRootPath: "./configuration/namespaces"
-
-#    license: "./LICENSE"
-#        replicainfo:
-#            interval : 500s
-#            enable   : false
-#
-#        #control rate of flow
-#        ratelimit:
-#            enable   : true
-#            txRatePeak : 100
-#            txFillRate: 0.5ms
-#            contractRatePeak : 100
-#            contractFillRate: 0.5ms
+    nsConfigRootPath: "./namespaces"
 
     ######################################################
     # config log's level by module                       #
