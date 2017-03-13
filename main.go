@@ -101,7 +101,7 @@ func main() {
 		//init genesis
 		core.CreateInitBlock(DefaultNamespace, conf)
 		//init pbft consensus
-		consenter := csmgr.Consenter(conf, eventMux)
+		consenter := csmgr.Consenter(DefaultNamespace, conf, eventMux)
 		consenter.Start()
 
 		//init encryption object
@@ -118,7 +118,7 @@ func main() {
 		executor.Initialize()
 		//init manager
 		exist := make(chan bool)
-		pm := manager.New(DefaultNamespace, eventMux, executor, grpcPeerMgr, cs, am, cm)
+		pm := manager.New(DefaultNamespace, eventMux, executor, grpcPeerMgr, consenter, am, cm)
 		go jsonrpc.Start(config.getHTTPPort(), config.getRESTPort(), config.getLogDumpFileDir(), eventMux, pm, cm, conf)
 		go CheckLicense(exist, conf)
 		<-exist

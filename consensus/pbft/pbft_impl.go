@@ -20,6 +20,7 @@ import (
 
 // batch is used to construct reqbatch, the middle layer between outer to pbft
 type pbftImpl struct {
+	namespace	string
 	activeView     uint32                       // view change happening
 	f              int                          // max. number of faults we can tolerate
 	N              int                          // max.number of validators in the network
@@ -56,8 +57,9 @@ type pbftImpl struct {
 }
 
 //newPBFT init the PBFT instance
-func newPBFT(config *common.Config, h helper.Stack) *pbftImpl {
+func newPBFT(namespace string, config *common.Config, h helper.Stack) *pbftImpl {
 	pbft := &pbftImpl{}
+	pbft.namespace = namespace
 	pbft.helper = h
 	pbft.config = config
 	if !config.ContainsKey(common.C_NODE_ID) {
@@ -733,7 +735,7 @@ func (pbft *pbftImpl) afterCommitTx(idx msgID) {
 			}
 		}
 		if pbft.exec.lastExec % pbft.K == 0 {
-			bcInfo := getBlockchainInfo()
+			bcInfo := pbft.getBlockchainInfo()
 			height := bcInfo.Height
 			if height == pbft.exec.lastExec {
 				logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", pbft.exec.lastExec, height)
@@ -859,7 +861,7 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 	pbft.exec.setLastExec(et.seqNo)
 	pbft.batchVdr.setVid(et.seqNo)
 	pbft.batchVdr.setLastVid(et.seqNo)
-	bcInfo := getCurrentBlockInfo()
+	bcInfo := pbft.getCurrentBlockInfo()
 	id, _ := proto.Marshal(bcInfo)
 	pbft.persistCheckpoint(et.seqNo, id)
 	pbft.moveWatermarks(pbft.exec.lastExec) // The watermark movement handles moving this to a checkpoint boundary

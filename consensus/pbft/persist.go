@@ -20,7 +20,7 @@ func (pbft *pbftImpl) persistQSet(preprep *PrePrepare) {
 		return
 	}
 	key := fmt.Sprintf("qset.%d.%d", preprep.View, preprep.SequenceNumber)
-	persist.StoreState(key, raw)
+	persist.StoreState(pbft.namespace, key, raw)
 }
 
 func (pbft *pbftImpl) persistPSet(v uint64, n uint64) {
@@ -39,7 +39,7 @@ func (pbft *pbftImpl) persistPSet(v uint64, n uint64) {
 		return
 	}
 	key := fmt.Sprintf("pset.%d.%d", v, n)
-	persist.StoreState(key, raw)
+	persist.StoreState(pbft.namespace, key, raw)
 }
 
 func (pbft *pbftImpl) persistCSet(v uint64, n uint64) {
@@ -58,23 +58,23 @@ func (pbft *pbftImpl) persistCSet(v uint64, n uint64) {
 		return
 	}
 	key := fmt.Sprintf("cset.%d.%d", v, n)
-	persist.StoreState(key, raw)
+	persist.StoreState(pbft.namespace, key, raw)
 }
 
 func (pbft *pbftImpl) persistDelQPCSet(v uint64, n uint64) {
 	qset := fmt.Sprintf("qset.%d.%d", v, n)
-	persist.DelState(qset)
+	persist.DelState(pbft.namespace, qset)
 	pset := fmt.Sprintf("pset.%d.%d", v, n)
-	persist.DelState(pset)
+	persist.DelState(pbft.namespace, pset)
 	cset := fmt.Sprintf("cset.%d.%d", v, n)
-	persist.DelState(cset)
+	persist.DelState(pbft.namespace, cset)
 }
 
 func (pbft *pbftImpl) restoreQSet() (map[msgID]*PrePrepare, error) {
 
 	qset := make(map[msgID]*PrePrepare)
 
-	payload, err := persist.ReadStateSet("qset.")
+	payload, err := persist.ReadStateSet(pbft.namespace, "qset.")
 	if err == nil {
 		for key, set := range payload {
 			var v, n uint64
@@ -102,7 +102,7 @@ func (pbft *pbftImpl) restorePSet() (map[msgID]*Pset, error) {
 
 	pset := make(map[msgID]*Pset)
 
-	payload, err := persist.ReadStateSet("pset.")
+	payload, err := persist.ReadStateSet(pbft.namespace, "pset.")
 	if err == nil {
 		for key, set := range payload {
 			var v, n uint64
@@ -130,7 +130,7 @@ func (pbft *pbftImpl) restoreCSet() (map[msgID]*Cset, error) {
 
 	cset := make(map[msgID]*Cset)
 
-	payload, err := persist.ReadStateSet("cset.")
+	payload, err := persist.ReadStateSet(pbft.namespace, "cset.")
 	if err == nil {
 		for key, set := range payload {
 			var v, n uint64
@@ -199,76 +199,76 @@ func (pbft *pbftImpl) persistRequestBatch(digest string) {
 		logger.Warningf("Replica %d could not persist request batch %s: %s", pbft.id, digest, err)
 		return
 	}
-	persist.StoreState("reqBatch."+digest, reqBatchPacked)
+	persist.StoreState(pbft.namespace, "reqBatch."+digest, reqBatchPacked)
 }
 
 func (pbft *pbftImpl) persistDelRequestBatch(digest string) {
-	persist.DelState("reqBatch." + digest)
+	persist.DelState(pbft.namespace, "reqBatch." + digest)
 }
 
 func (pbft *pbftImpl) persistDelAllRequestBatches() {
-	reqBatches, err := persist.ReadStateSet("reqBatch.")
+	reqBatches, err := persist.ReadStateSet(pbft.namespace, "reqBatch.")
 	if err != nil {
 		logger.Errorf("Read State Set Error %s", err)
 		return
 	} else {
 		for k := range reqBatches {
-			persist.DelState(k)
+			persist.DelState(pbft.namespace, k)
 		}
 	}
 }
 
 func (pbft *pbftImpl) persistCheckpoint(seqNo uint64, id []byte) {
 	key := fmt.Sprintf("chkpt.%d", seqNo)
-	persist.StoreState(key, id)
+	persist.StoreState(pbft.namespace, key, id)
 }
 
 func (pbft *pbftImpl) persistDelCheckpoint(seqNo uint64) {
 	key := fmt.Sprintf("chkpt.%d", seqNo)
-	persist.DelState(key)
+	persist.DelState(pbft.namespace, key)
 }
 
 func (pbft *pbftImpl) persistView(view uint64) {
 	key := fmt.Sprint("view")
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, view)
-	persist.StoreState(key, b)
+	persist.StoreState(pbft.namespace, key, b)
 }
 
 func (pbft *pbftImpl) persistDelView() {
 	key := fmt.Sprint("view")
-	persist.DelState(key)
+	persist.DelState(pbft.namespace, key)
 }
 
 func (pbft *pbftImpl) persistN(n int) {
 	key := fmt.Sprint("nodes")
 	res := make([]byte, 8)
 	binary.LittleEndian.PutUint64(res, uint64(n))
-	persist.StoreState(key, res)
+	persist.StoreState(pbft.namespace, key, res)
 }
 
 func (pbft *pbftImpl) persistNewNode(new uint64) {
 	key := fmt.Sprint("new")
 	res := make([]byte, 8)
 	binary.LittleEndian.PutUint64(res, new)
-	persist.StoreState(key, res)
+	persist.StoreState(pbft.namespace, key, res)
 }
 
 func (pbft *pbftImpl) persistLocalKey(hash []byte) {
 	key := fmt.Sprint("localkey")
-	persist.StoreState(key, hash)
+	persist.StoreState(pbft.namespace, key, hash)
 }
 
 func (pbft *pbftImpl) persistDellLocalKey() {
 	key := fmt.Sprint("localkey")
-	persist.DelState(key)
+	persist.DelState(pbft.namespace, key)
 }
 
 func (pbft *pbftImpl) restoreState() {
 
 	pbft.restoreCert()
 
-	chkpts, err := persist.ReadStateSet("chkpt.")
+	chkpts, err := persist.ReadStateSet(pbft.namespace, "chkpt.")
 	if err == nil {
 		highSeq := uint64(0)
 		for key, id := range chkpts {
@@ -289,7 +289,7 @@ func (pbft *pbftImpl) restoreState() {
 		logger.Warningf("Replica %d could not restore checkpoints: %s", pbft.id, err)
 	}
 
-	b, err := persist.ReadState("view")
+	b, err := persist.ReadState(pbft.namespace, "view")
 	if err == nil {
 		view := binary.LittleEndian.Uint64(b)
 		pbft.view = view
@@ -298,7 +298,7 @@ func (pbft *pbftImpl) restoreState() {
 		logger.Noticef("Replica %d could not restore view: %s", pbft.id, err)
 	}
 
-	n, err := persist.ReadState("nodes")
+	n, err := persist.ReadState(pbft.namespace, "nodes")
 	if err == nil {
 		nodes := binary.LittleEndian.Uint64(n)
 		pbft.N = int(nodes)
@@ -306,7 +306,7 @@ func (pbft *pbftImpl) restoreState() {
 	}
 	logger.Noticef("========= restore N=%d, f=%d =======", pbft.N, pbft.f)
 
-	new, err := persist.ReadState("new")
+	new, err := persist.ReadState(pbft.namespace, "new")
 	if err == nil {
 		newNode := binary.LittleEndian.Uint64(new)
 		if newNode == 1 {
@@ -314,7 +314,7 @@ func (pbft *pbftImpl) restoreState() {
 		}
 	}
 
-	localKey, err := persist.ReadState("localkey")
+	localKey, err := persist.ReadState(pbft.namespace, "localkey")
 	if err == nil {
 		pbft.nodeMgr.localKey = string(localKey)
 	}
@@ -342,7 +342,7 @@ func (pbft *pbftImpl) restoreLastSeqNo() {
 func (pbft *pbftImpl) getLastSeqNo() (uint64, error) {
 
 	var err error
-	h := persist.GetHeightofChain()
+	h := persist.GetHeightofChain(pbft.namespace)
 	if h == 0 {
 		err = errors.Errorf("Height of chain is 0")
 		return h, err

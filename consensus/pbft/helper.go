@@ -247,7 +247,7 @@ func stateUpdateHelper(myId uint64, seqNo uint64, id []byte, replicaId []uint64)
 	return stateUpdateMsg
 }
 
-func (pbft *pbftProtocal) getBlockchainInfo() *protos.BlockchainInfo {
+func (pbft *pbftImpl) getBlockchainInfo() *protos.BlockchainInfo {
 
 	bcInfo := persist.GetBlockchainInfo(pbft.namespace)
 
@@ -262,7 +262,7 @@ func (pbft *pbftProtocal) getBlockchainInfo() *protos.BlockchainInfo {
 	}
 }
 
-func (pbft *pbftProtocal) getCurrentBlockInfo() *protos.BlockchainInfo {
+func (pbft *pbftImpl) getCurrentBlockInfo() *protos.BlockchainInfo {
 	height, curHash, prevHash := persist.GetCurrentBlockInfo(pbft.namespace)
 	return &protos.BlockchainInfo{
 		Height:            height,
@@ -311,9 +311,9 @@ func (pbft *pbftImpl) nullReqTimerReset() {
 		pbft.pbftEventQueue.Push(event)
 	}
 
-	logger.Errorf("null request time out is %v", pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER))
-	logger.Errorf("request time out is %v", pbft.pbftTimerMgr.requestTimeout)
-	logger.Errorf("reset null request timeout to %v", timeout)
+	//logger.Errorf("null request time out is %v", pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER))
+	//logger.Errorf("request time out is %v", pbft.pbftTimerMgr.requestTimeout)
+	//logger.Errorf("reset null request timeout to %v", timeout)
 
 	pbft.pbftTimerMgr.startTimerWithNewTT(NULL_REQUEST_TIMER, timeout, af)
 }

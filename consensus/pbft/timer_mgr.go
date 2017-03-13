@@ -47,13 +47,13 @@ func (tm *timerManager) newTimer(tname string, d time.Duration) {
 //startTimer init and start a timer by name
 func (tm *timerManager) startTimer(tname string, afterfunc func()) int {
 	tm.stopTimer(tname)
-	logger.Errorf("Starting a new timer---%s", tname)
+	//logger.Errorf("Starting a new timer---%s", tname)
 
 	tm.ttimers[tname].isActive = append(tm.ttimers[tname].isActive, true)
 	tm.ttimers[tname].alivecounts ++
 
 	counts := len(tm.ttimers[tname].isActive)
-	logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].alivecounts, tname)
+	//logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].alivecounts, tname)
 
 	send := func() {
 		if tm.ttimers[tname].isActive[counts - 1] {
@@ -67,13 +67,13 @@ func (tm *timerManager) startTimer(tname string, afterfunc func()) int {
 //softStartTimer init and start a timer by name
 func (tm *timerManager) softStartTimer(tname string, afterfunc func()) int {
 	if tm.ttimers[tname].alivecounts == 0 {
-		logger.Errorf("Soft starting a new timer---%s", tname)
+		//logger.Errorf("Soft starting a new timer---%s", tname)
 
 		tm.ttimers[tname].isActive = append(tm.ttimers[tname].isActive, true)
 		tm.ttimers[tname].alivecounts ++
 
 		counts := len(tm.ttimers[tname].isActive)
-		logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].alivecounts, tname)
+		//logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].alivecounts, tname)
 
 		send := func() {
 			if tm.ttimers[tname].isActive[counts - 1] {
@@ -90,13 +90,13 @@ func (tm *timerManager) softStartTimer(tname string, afterfunc func()) int {
 //startTimerWithNewTT init and start a timer by name with new timeout
 func (tm *timerManager) startTimerWithNewTT(tname string, d time.Duration, afterfunc func()) int {
 	tm.stopTimer(tname)
-	logger.Errorf("Starting a new timer---%s with new duration %d", tname, d)
+	//logger.Errorf("Starting a new timer---%s with new duration %d", tname, d)
 
 	tm.ttimers[tname].isActive = append(tm.ttimers[tname].isActive, true)
 	tm.ttimers[tname].alivecounts ++
 
 	counts := len(tm.ttimers[tname].isActive)
-	logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].alivecounts, tname)
+	//logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].alivecounts, tname)
 
 	send := func() {
 		if tm.ttimers[tname].isActive[counts - 1] {
@@ -110,13 +110,13 @@ func (tm *timerManager) startTimerWithNewTT(tname string, d time.Duration, after
 //softStartTimerWithNewTT init and start a timer by name with new timeout
 func (tm *timerManager) softStartTimerWithNewTT(tname string, d time.Duration, afterfunc func()) int {
 	if tm.ttimers[tname].alivecounts == 0{
-		logger.Errorf("Soft starting a new timer---%s with new duration %d", tname, d)
+		//logger.Errorf("Soft starting a new timer---%s with new duration %d", tname, d)
 
 		tm.ttimers[tname].isActive = append(tm.ttimers[tname].isActive, true)
 		tm.ttimers[tname].alivecounts ++
 
 		counts := len(tm.ttimers[tname].isActive)
-		logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].alivecounts, tname)
+		//logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].alivecounts, tname)
 
 		send := func() {
 			if tm.ttimers[tname].isActive[counts - 1] {
@@ -137,10 +137,10 @@ func (tm *timerManager) stopTimer(tname string) {
 		logger.Errorf("Stop timer failed!, timer %s not created yet!", tname)
 		return
 	}
-	logger.Errorf("Stoping timer---%s", tname)
+	//logger.Errorf("Stoping timer---%s", tname)
 
-	counts := len(tm.ttimers[tname].isActive)
-	logger.Errorf("Now exsits %d timer---%s", counts, tname)
+	//counts := len(tm.ttimers[tname].isActive)
+	//logger.Errorf("Now exsits %d timer---%s", counts, tname)
 
 	for i := range tm.ttimers[tname].isActive {
 		tm.ttimers[tname].isActive[i] = false
@@ -159,12 +159,12 @@ func (tm *timerManager) stopOneTimer(tname string, num int) {
 
 	counts := len(tm.ttimers[tname].isActive)
 	if num >= counts {
-		logger.Errorf("Stop timer failed!, timer %s index out of range!", tname)
+		//logger.Errorf("Stop timer failed!, timer %s index out of range!", tname)
 		return
 	}
 
-	logger.Errorf("Stoping timer---%s", tname)
-	logger.Errorf("Now exsits %d timer---%s, to stop %d", counts, tname, num)
+	//logger.Errorf("Stoping timer---%s", tname)
+	//logger.Errorf("Now exsits %d timer---%s, to stop %d", counts, tname, num)
 
 	tm.ttimers[tname].isActive[num] = false
 

@@ -18,11 +18,11 @@ var cr cs.Consenter
 var once sync.Once
 
 //new init the consentor instance.
-func newConsenter(conf *common.Config, msgQ *event.TypeMux) cs.Consenter {
+func newConsenter(namespace string, conf *common.Config, msgQ *event.TypeMux) cs.Consenter {
 	h := helper.NewHelper(msgQ)
 	algo := conf.GetString(cs.CONSENSUS_ALGO)
 	switch algo {
-	case cs.PBFT: return pbft.New(conf, h)
+	case cs.PBFT: return pbft.New(namespace, conf, h)
 	case cs.NBFT: panic(fmt.Errorf("Not implemented yet %s", algo))
 	default:
 		panic(fmt.Errorf("Invalid consensus alorithm defined: %s", algo))
@@ -32,9 +32,9 @@ func newConsenter(conf *common.Config, msgQ *event.TypeMux) cs.Consenter {
 
 // Consenter return a Consenter instance
 // msgQ is the connection with outer services.
-func Consenter(conf *common.Config, msgQ *event.TypeMux) cs.Consenter {
+func Consenter(namespace string, conf *common.Config, msgQ *event.TypeMux) cs.Consenter {
 	once.Do(func() {
-		cr = newConsenter(conf, msgQ)
+		cr = newConsenter(namespace, conf, msgQ)
 	})
 	return cr
 }

@@ -325,7 +325,7 @@ func TestRestoreState(t *testing.T)  {
 	}
 
 	view := Int64ToBytes(1234)
-	persist.StoreState("view", view)
+	persist.StoreState(pbft.namespace, "view", view)
 	pbft.restoreState()
 
 	if !(pbft.view == binary.LittleEndian.Uint64(view)){

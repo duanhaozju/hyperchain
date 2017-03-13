@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+#set -e
 # 设置系统环境类型
 f_set_env(){
     case "$OSTYPE" in
@@ -85,7 +85,7 @@ echo "Rebuild the project..."
 if [ -s "${DUMP_PATH}/hyperchain" ]; then
     rm ${DUMP_PATH}/hyperchain
 fi
-cd ${PROJECT_PATH} && govendor build -o ${DUMP_PATH}/hyperchain
+cd ${PROJECT_PATH} && govendor build -o ${DUMP_PATH}/hyperchain -tags=embed
 }
 
 # 数据分发函数

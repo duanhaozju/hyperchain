@@ -34,7 +34,7 @@ func init() {
 }
 
 // New return a instance of pbftProtocal  TODO: rename helper.Stack ??
-func New(conf * common.Config, h helper.Stack) *pbftImpl {
+func New(namespace string, conf * common.Config, h helper.Stack) *pbftImpl {
 	pcPath := conf.GetString(consensus.CONSENSUS_ALGO_CONFIG_PATH)
 	if pcPath == "" {
 		panic(fmt.Errorf("Invalid consensus algorithm configuration path, %s: %s",
@@ -45,7 +45,7 @@ func New(conf * common.Config, h helper.Stack) *pbftImpl {
 		panic(fmt.Errorf("Load pbft config error: %v", err))
 		return nil
 	}
-	return newPBFT(conf, h)
+	return newPBFT(namespace, conf, h)
 }
 
 // RecvMsg receive messages from outer services.

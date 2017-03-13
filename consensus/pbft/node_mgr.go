@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"encoding/base64"
 	"reflect"
-	"hyperchain/core"
+	ndb "hyperchain/core/db_utils"
 )
 
 /**
@@ -335,7 +335,7 @@ func (pbft *pbftImpl) sendReadyForN() error {
 	}
 
 	for true {
-		if pbft.exec.lastExec == core.GetHeightOfChain() {
+		if pbft.exec.lastExec == ndb.GetHeightOfChain(pbft.namespace) {
 			break
 		} else {
 			time.Sleep(5 * time.Millisecond)

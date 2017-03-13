@@ -377,10 +377,20 @@ func (self *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEv
 		self.consenter.RecvLocal(ev.Payload)
 	case executor.NOTIFY_VC_DONE:
 		log.Debugf("[Namespace = %s] message middleware: [vc done]", self.namespace)
-		self.consenter.RecvLocal(ev.Payload)
+		e := &pbft.LocalEvent{
+			Service:   pbft.VIEW_CHANGE_SERVICE,
+			EventType: pbft.VIEW_CHANGE_VC_RESET_DONE_EVENT,
+			Event:     ev.Payload,
+		}
+		self.consenter.RecvLocal(e)
 	case executor.NOTIFY_VALIDATION_RES:
 		log.Debugf("[Namespace = %s] message middleware: [validation result]", self.namespace)
-		self.consenter.RecvLocal(ev.Payload)
+		e := &pbft.LocalEvent{
+			Service:   pbft.CORE_PBFT_SERVICE,
+			EventType: pbft.CORE_VALIDATED_TXS_EVENT,
+			Event:     ev.Payload,
+		}
+		self.consenter.RecvLocal(e)
 	case executor.NOTIFY_SYNC_DONE:
 		log.Debugf("[Namespace = %s] message middleware: [sync done]", self.namespace)
 		self.consenter.RecvMsg(ev.Payload.([]byte))
