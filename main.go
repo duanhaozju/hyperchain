@@ -11,7 +11,6 @@ import (
 	"hyperchain/api/jsonrpc/core"
 	"hyperchain/common"
 	"hyperchain/consensus/csmgr"
-	"hyperchain/core"
 	"hyperchain/core/executor"
 	"hyperchain/crypto"
 	"hyperchain/event"
@@ -99,7 +98,6 @@ func main() {
 		grpcPeerMgr := p2p.NewGrpcManager(conf)
 
 		//init genesis
-		core.CreateInitBlock(DefaultNamespace, conf)
 		//init pbft consensus
 		consenter := csmgr.Consenter(DefaultNamespace, conf, eventMux)
 		consenter.Start()
@@ -115,6 +113,7 @@ func main() {
 		if executor == nil {
 			return errors.New("Initialize BlockPool failed")
 		}
+		executor.CreateInitBlock(conf)
 		executor.Initialize()
 		//init manager
 		exist := make(chan bool)
