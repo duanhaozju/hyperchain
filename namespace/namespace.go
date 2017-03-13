@@ -60,7 +60,7 @@ func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) 
 	//TODO: more to init
 	status := &Status{
 		state: STARTTING,
-		desc:  "start ting",
+		desc:  "startting",
 	}
 
 	ns := &namespaceImpl{
@@ -101,6 +101,7 @@ func (ns *namespaceImpl) Stop() error {
 	//TODO: stop a namespace service
 
 	ns.status.state = CLOSED
+	return nil
 }
 
 //Status return current namespace status.

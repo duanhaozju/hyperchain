@@ -7,23 +7,55 @@
 #        |___/|_|                                         #
 ###########################################################
 
+## Data storage path config
+# Note: please DONOT add a slash `/` in the end of directory path.
+# this relative path is relative to the hyperchain binary execute file path
+
 global:
 
     ##########################
     # data storage config #
     ##########################
     account:
-        keystoredir: "data/keystore"
-        keynodesdir: "data/keynodes"
+        keystoredir: "./build/keystore"
+        keynodesdir: "./build/keynodes"
 
-    dbConfig: "db.yaml"
+    dbConfig: "./config/db.yaml"
 
+    structure:
+        state: "hyperstate" # two available options: rawstate or hyperstate
+
+    version:
+        blockversion: "1.0"
+        transactionversion: "1.0"
+
+    ###########################
+    # configs
+    ############################
     configs:
         caconfig: "config/caconfig.toml"
         peers: "config/local_peerconfig.json"
         genesis: "config/genesis.json"
         pbft: "config/pbft.yaml"
-
+        license: "config/LICENSE"
+        replicainfo:
+            interval : 500s
+            enable   : false
+        ratelimit:
+            enable   : true
+            txRatePeak : 100
+            txFillRate: 0.5ms
+            contractRatePeak : 100
+            contractFillRate: 0.5ms
+        buckettree:
+            state:
+                size: 1000003
+                levelGroup: 5
+                cacheSize: 500    # 100 MB
+            storage:
+                size: 1000003
+                levelGroup: 5
+                cacheSize: 500    # 100 MB
         hmpublickey:
             "N": "14315727801779002117"
             Nsquare: "204940062494628260128356353732290481689"
@@ -42,11 +74,11 @@ global:
         newLogFileInterval: 24h  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
                                 # such as "300ms", "2h45m".
 
-        logsdir: "data/logs"
+        logsdir: "./build/logs"
         # default loglevel for all modules which can be override by module level log setting
         loglevel: "NOTICE"
-        file_format: "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
-        console_format: "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
+        file_format: "%[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
+        console_format: "%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
 
         module:
             #set log level by module
@@ -54,4 +86,3 @@ global:
             consensus: "NOTICE"
             core: "NOTICE"
             hyperdb: "NOTICE"
-            common/hyper_logger: "DEBUG"

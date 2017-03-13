@@ -19,24 +19,24 @@ import (
 	"hyperchain/p2p"
 	"hyperchain/p2p/transport"
 	"io/ioutil"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-	"os/exec"
 )
 
-const HyperchainVersion ="Hyperchain Version:\nRelease1.2\n"
+const HyperchainVersion = "Hyperchain Version:\nRelease1.2\n"
 
-func GetOperationSystem()(string,error){
+func GetOperationSystem() (string, error) {
 	f, err := exec.Command("lsb_release", "-a").Output()
 	if err != nil {
 		return "", err
 	}
-	return string(f),nil
+	return string(f), nil
 }
 
-func GetHyperchainVersion()string{
+func GetHyperchainVersion() string {
 	return HyperchainVersion
 }
 
