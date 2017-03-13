@@ -467,13 +467,13 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 				}
 			case recovery.Message_INVALIDRESP:
 				{
-					go node.higherEventManager.Post(event.RespInvalidTxsEvent{
+					go node.higherEventManager.Post(event.InvalidTxsEvent{
 						Payload: SyncMsg.Payload,
 					})
 				}
 			case recovery.Message_SYNCREPLICA:
 				{
-					go node.higherEventManager.Post(event.ReplicaStatusEvent{
+					go node.higherEventManager.Post(event.ReplicaInfoEvent{
 						Payload: SyncMsg.Payload,
 					})
 				}

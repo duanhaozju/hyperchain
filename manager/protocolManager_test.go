@@ -19,7 +19,7 @@ import (
 )
 
 //var eventMuxAll *event.TypeMux
-func newEvent(manager *ProtocolManager) {
+func newEvent(manager *EventHub) {
 	for i := 0; i < 5; i += 1 {
 
 		go GetEventObject().Post(event.AliveEvent{true})
@@ -29,7 +29,7 @@ func newEvent(manager *ProtocolManager) {
 
 }
 
-func receive(manager *ProtocolManager) {
+func receive(manager *EventHub) {
 
 	manager.aLiveSub = manager.eventMux.Subscribe(event.AliveEvent{})
 	for obj := range manager.aLiveSub.Chan() {
@@ -42,7 +42,7 @@ func receive(manager *ProtocolManager) {
 	}
 }
 func TestAliveEvent(t *testing.T) {
-	manager := &ProtocolManager{
+	manager := &EventHub{
 		eventMux: new(event.TypeMux),
 		quitSync: make(chan struct{}),
 	}

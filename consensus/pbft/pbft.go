@@ -1,56 +1,116 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
+
+//Package pbft implement the pbft algorithm
+//The PBFT key features:
+//		1. atomic sequence transactions guarantee
+//      2. leader selection by viewchange
+//      3. dynamic delete or add new node
+//      4. support state recovery.
 package pbft
 
 import (
 	"fmt"
-	"strings"
 
-	"hyperchain/consensus"
+	"github.com/golang/protobuf/proto"
+	"github.com/op/go-logging"
+
+	"hyperchain/protos"
+	"hyperchain/common"
 	"hyperchain/consensus/helper"
-
-	"github.com/spf13/viper"
+	"hyperchain/consensus"
+	"sync/atomic"
 )
 
-const configPrefix = "CORE_PBFT"
+/**
+	This file implement the API of consensus
+	which can be invoked by outer services.
+ */
 
-var pluginInstance consensus.Consenter // singleton service
-var config *viper.Viper
+var logger *logging.Logger
 
-// GetPlugin returns the handle to the Consenter singleton
-func GetPlugin(id uint64, h helper.Stack, pbftConfigPath string) consensus.Consenter {
+func init() {
+	logger = logging.MustGetLogger("consensus")
+}
 
-	if pluginInstance == nil {
-		pluginInstance = New(id, h, pbftConfigPath)
+// New return a instance of pbftProtocal  TODO: rename helper.Stack ??
+func New(namespace string, conf * common.Config, h helper.Stack) *pbftImpl {
+	pcPath := conf.GetString(consensus.CONSENSUS_ALGO_CONFIG_PATH)
+	if pcPath == "" {
+		panic(fmt.Errorf("Invalid consensus algorithm configuration path, %s: %s",
+			consensus.CONSENSUS_ALGO_CONFIG_PATH,  pcPath))
 	}
-
-	return pluginInstance
-}
-
-// New creates a new *batch instance that provides the Consenter interface.
-// Internally, it uses an opaque pbft-core instance.
-func New(id uint64, h helper.Stack, pbftConfigPath string) consensus.Consenter {
-
-	config = loadConfig(pbftConfigPath)
-	return newPbft(id, config, h)
-
-}
-
-// loadConfig load the config in the config.yaml
-func loadConfig(pbftConfigPath string) (config *viper.Viper) {
-
-	config = viper.New()
-
-	// for environment variables
-	config.SetEnvPrefix(configPrefix)
-	config.AutomaticEnv()
-	replacer := strings.NewReplacer(".", "_")
-	config.SetEnvKeyReplacer(replacer)
-	config.SetConfigFile(pbftConfigPath)
-	err := config.ReadInConfig()
+	conf, err := conf.MergeConfig(pcPath)
 	if err != nil {
-		panic(fmt.Errorf("Error reading %s plugin config: %s", configPrefix, err))
+		panic(fmt.Errorf("Load pbft config error: %v", err))
+		return nil
 	}
-
-	return
+	return newPBFT(namespace, conf, h)
 }
+
+// RecvMsg receive messages from outer services.
+func (pbft *pbftImpl) RecvMsg(e []byte) error {
+
+	msg := &protos.Message{}
+	err := proto.Unmarshal(e, msg)
+	if err != nil {
+		logger.Errorf("Inner RecvMsg Unmarshal error: can not unmarshal pb.Message %v", err)
+		return err
+	}
+	switch msg.Type {
+	case protos.Message_TRANSACTION:// tx send to current node and current node is primary
+		return pbft.enqueueTx(msg)
+	case protos.Message_CONSENSUS:
+		return pbft.enqueueConsensusMsg(msg) //msgs from other peers
+	case protos.Message_STATE_UPDATED:
+		return pbft.enqueueStateUpdatedMsg(msg)
+	case protos.Message_NULL_REQUEST:
+		return pbft.processNullRequest(msg)
+	case protos.Message_NEGOTIATE_VIEW:
+		return pbft.processNegotiateView()
+	default:
+		logger.Errorf("Unsupport message type: %v", msg.Type)
+		return nil//TODO: define PBFT error type
+	}
+}
+
+//RecvMsg receive messages form local services
+func (pbft *pbftImpl) RecvLocal(msg interface{}) error {
+
+	switch msg.(type) {
+	case protos.RemoveCache:
+		if atomic.LoadUint32(&pbft.activeView) == 1 && pbft.primary(pbft.view) == pbft.id {
+			go pbft.reqEventQueue.Push(msg)
+		} else {
+			go pbft.pbftEventQueue.Push(msg)
+		}
+
+	default:
+		go pbft.pbftEventQueue.Push(msg)
+	}
+	return nil
+}
+
+//Start start the consensus service
+func (pbft *pbftImpl) Start()  {
+	logger.Noticef("--------PBFT starting, nodeID: %d--------", pbft.id)
+
+	//1.restore state.
+	pbft.restoreState()
+
+	pbft.vcMgr.viewChangeSeqNo = ^uint64(0) // infinity
+	pbft.vcMgr.updateViewChangeSeqNo(pbft.seqNo, pbft.K, pbft.id)
+	pbft.batchMgr.start()
+
+	pbft.recoveryMgr = newRecoveryMgr()
+
+	pbft.pbftTimerMgr.makeRequestTimeoutLegal()
+
+	logger.Noticef("======== PBFT finish start, nodeID: %d", pbft.id)
+}
+
+//Close close the consenter service
+func (*pbftImpl) Close()  {
+	//TODO: stop the PBFT service
+}
+

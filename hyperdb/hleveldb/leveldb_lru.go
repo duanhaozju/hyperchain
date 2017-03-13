@@ -7,6 +7,7 @@ import (
 	"sync"
 	"github.com/op/go-logging"
 	"hyperchain/hyperdb/db"
+	"hyperchain/common"
 )
 var log *logging.Logger // package-level logger
 func init() {
@@ -26,9 +27,10 @@ var (
 	leveldbPath          = "./build/leveldb"
 )
 
-func NewLevelLruDB() (*levelLruDatabase, error) {
+func NewLevelLruDB(conf *common.Config,filepath string) (*levelLruDatabase, error) {
 
-	leveldb, err := NewLDBDataBase(leveldbPath)
+
+	leveldb, err :=NewLDBDataBase(conf,filepath)
 	if err != nil {
 		log.Noticef("NewLDBDataBase(%v) fail. err is %v. \n", leveldbPath, err.Error())
 		return nil, err
@@ -43,26 +45,9 @@ func NewLevelLruDB() (*levelLruDatabase, error) {
 	return &levelLruDatabase{leveldb: leveldb, cache: cache, dbStatus: true}, nil
 }
 
-func NewLevelLruDBWithP(path string, size int) (*levelLruDatabase, error) {
+func NewLevelLruDBWithP(conf *common.Config,filepath string) (*levelLruDatabase, error) {
 
-	leveldb, err := NewLDBDataBase(path)
-	if err != nil {
-		log.Noticef("NewLDBDataBase(%v) fail. err is %v. \n", leveldbPath, err.Error())
-		return nil, err
-	}
-
-	cache, err := Lru.New(size)
-	if err != nil {
-		log.Noticef("Lru.New(%v) fail. err is %v. \n", lruSize, err.Error())
-		return nil, err
-	}
-
-	return &levelLruDatabase{leveldb: leveldb, cache: cache, dbStatus: true}, nil
-}
-
-func NewLevelLruDBInf() (db.Database, error) {
-
-	leveldb, err := NewLDBDataBase(leveldbPath)
+	leveldb, err :=NewLDBDataBase(conf,filepath)
 	if err != nil {
 		log.Noticef("NewLDBDataBase(%v) fail. err is %v. \n", leveldbPath, err.Error())
 		return nil, err
@@ -74,8 +59,9 @@ func NewLevelLruDBInf() (db.Database, error) {
 		return nil, err
 	}
 
-	return &levelLruDatabase{leveldb: leveldb, cache: cache}, nil
+	return &levelLruDatabase{leveldb: leveldb, cache: cache, dbStatus: true}, nil
 }
+
 
 func (lldb *levelLruDatabase) Put(key []byte, value []byte) error {
 

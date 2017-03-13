@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"hyperchain/consensus/csmgr"
 )
 
 const HyperchainVersion = "Hyperchain Version:\nRelease1.2\n"
@@ -46,54 +47,9 @@ type argT struct {
 	//ConfigPath string `cli:"c,conf" usage:"config file path" dft:"./configuration/global.yaml"`
 }
 
-func checkLicense(licensePath string) (err error, expiredTime time.Time) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = errors.New("Invalid License Cause a Panic")
-		}
-	}()
-	dateChecker := func(now, expire time.Time) bool {
-		return now.Before(expire)
-	}
-	privateKey := string("TnrEP|N.*lAgy<Q&@lBPd@J/")
-	identificationSuffix := string("Hyperchain")
-
-	license, err := ioutil.ReadFile(licensePath)
-	if err != nil {
-		err = errors.New("No License Found")
-		return
-	}
-	pattern, _ := regexp.Compile("Identification: (.*)")
-	identification := pattern.FindString(string(license))[16:]
-
-	str1 := GetHyperchainVersion()
-	str2, _ := GetOperationSystem()
-	fmt.Println(str1)
-	fmt.Println(str2)
-	ctx, err := transport.TripleDesDecrypt(common.Hex2Bytes(identification), []byte(privateKey))
-	if err != nil {
-		err = errors.New("Invalid License")
-		return
-	}
-	plainText := string(ctx)
-	suffix := plainText[len(plainText)-len(identificationSuffix):]
-	if strings.Compare(suffix, identificationSuffix) != 0 {
-		err = errors.New("Invalid Identification")
-		return
-	}
-	timestamp, err := strconv.ParseInt(plainText[:len(plainText)-len(identificationSuffix)], 10, 64)
-	if err != nil {
-		err = errors.New("Invalid License Timestamp")
-		return
-	}
-	expiredTime = time.Unix(timestamp, 0)
-	currentTime := time.Now()
-	if validation := dateChecker(currentTime, expiredTime); !validation {
-		err = errors.New("License Expired")
-		return
-	}
-	return
-}
+const (
+	DefaultNamespace = "Global"
+)
 
 func initGloableConfig(argv *argT) *common.Config {
 	//default path: ./configuration/global.yaml
@@ -131,13 +87,18 @@ func main() {
 		argv := ctx.Argv().(*argT)
 		conf := initConf(argv)
 
-		err, expiredTime := checkLicense(conf.GetString(common.LICENSE))
-		if err != nil {
-			return err
-		}
 
 		common.InitLog(conf)
+
+
+
+
 		core.InitDB(conf)
+
+
+
+		db_utils.InitDBForNamespace(conf, DefaultNamespace, conf.GetString(common.DB_CONFIG_PATH),conf.GetInt(common.C_NODE_ID))
+
 
 		cm, cmerr := admittance.GetCaManager(conf)
 		if cmerr != nil {
@@ -148,26 +109,32 @@ func main() {
 		grpcPeerMgr := p2p.NewGrpcManager(conf)
 
 		//init genesis
-		core.CreateInitBlock(conf)
+		core.CreateInitBlock(DefaultNamespace, conf)
+
 
 		eventMux := new(event.TypeMux)
 		//init pbft consensus
-		cs := controller.NewConsenter(eventMux, conf)
+		consenter := csmgr.Consenter(DefaultNamespace, conf, eventMux)
+		consenter.Start()
+
 
 		am := accounts.NewAccountManager(conf)
 		am.UnlockAllAccount(conf.GetString(common.KEY_STORE_DIR))
 
 		//init block pool to save block
-		blockPool := blockpool.NewBlockPool(cs, conf, eventMux)
-		if blockPool == nil {
+
+		//init block pool to save block
+		executor := executor.NewExecutor(DefaultNamespace, conf, eventMux)
+		if executor == nil {
 			return errors.New("Initialize BlockPool failed")
 		}
-		blockPool.Initialize()
-		exist := make(chan bool)
+		executor.Initialize()
 		//init manager
-		pm := manager.New(eventMux, blockPool, grpcPeerMgr, cs, am, exist, expiredTime, cm, conf)
+		exist := make(chan bool)
+
 
 		go jsonrpc.Start(eventMux, pm, cm, conf)
+		go CheckLicense(exist, conf)
 
 		<-exist
 		return nil

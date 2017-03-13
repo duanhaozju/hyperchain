@@ -7,7 +7,7 @@ import (
 	"hyperchain/accounts"
 	"hyperchain/consensus"
 	"hyperchain/core"
-	"hyperchain/core/blockpool"
+	"hyperchain/core/executor"
 	"hyperchain/core/types"
 	"hyperchain/crypto"
 	"hyperchain/event"
@@ -57,11 +57,11 @@ func poolParameters() (crypto.CommonHash, crypto.Encryption, p2p.PeerManager) {
 	return kec256Hash, encryption, grpcPeerMgr
 }
 
-func initmanager() *ProtocolManager {
+func initmanager() *EventHub {
 	core.InitDB("G:/hyperchainDB", 8030)
 	eventMux := new(event.TypeMux)
 	consenter := new(consensus.Consenter)
-	pool := blockpool.NewBlockPool(eventMux, *consenter)
+	pool := executor.NewBlockExecutor(eventMux, *consenter)
 
 	path := "../config/local_peerconfig.json"
 	grpcPeerMgr := p2p.NewGrpcManager(path, 1)
@@ -71,7 +71,7 @@ func initmanager() *ProtocolManager {
 
 	syncReplica := false
 
-	return NewProtocolManager(pool, grpcPeerMgr, eventMux, *consenter, am, kec256Hash, 1, syncReplica)
+	return NewEventHub(pool, grpcPeerMgr, eventMux, *consenter, am, kec256Hash, 1, syncReplica)
 
 }
 
@@ -150,7 +150,7 @@ func TestRecordReplicaStatus(t *testing.T) {
 	status.Addr = tempaddr
 	status.Chain = tempchain
 
-	ev := new(event.ReplicaStatusEvent)
+	ev := new(event.ReplicaInfoEvent)
 	ev.Payload, _ = proto.Marshal(status)
 	manager.RecordReplicaStatus(*ev)
 	log.Notice("manager's replicaStatus is", manager.replicaStatus)

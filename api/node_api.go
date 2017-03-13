@@ -13,7 +13,7 @@ type NodeArgs struct {
 }
 
 type PublicNodeAPI struct {
-	pm *manager.ProtocolManager
+	pm *manager.EventHub
 }
 
 type NodeResult struct {
@@ -25,7 +25,7 @@ type NodeResult struct {
 	LatestBlock interface{} `json:"latestBlock"` //newest block of current block
 }
 
-func NewPublicNodeAPI(pm *manager.ProtocolManager) *PublicNodeAPI {
+func NewPublicNodeAPI(pm *manager.EventHub) *PublicNodeAPI {
 	return &PublicNodeAPI{
 		pm: pm,
 	}
@@ -44,7 +44,7 @@ func (node *PublicNodeAPI) GetNodeHash() (string, error) {
 	if node.pm == nil {
 		return "", &CallbackError{"protocolManager is nil"}
 	}
-	return node.pm.Peermanager.GetLocalNodeHash(), nil
+	return node.pm.PeerManager.GetLocalNodeHash(), nil
 }
 
 func (node *PublicNodeAPI) DelNode(args NodeArgs) (string, error) {

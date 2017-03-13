@@ -41,7 +41,7 @@ type StateUpdateEvent struct{ Payload []byte }
 type ReceiveSyncBlockEvent struct{ Payload []byte }
 
 //receive new block event from node consensus event for consensus module
-type ExeTxsEvent struct {
+type ValidationEvent struct {
 	Transactions []*types.Transaction
 	SeqNo        uint64
 	View         uint64
@@ -52,7 +52,7 @@ type ExeTxsEvent struct {
 // if the CommitStatus is true, we will commit the blocks and save the statedb
 // or we will rollback the statedb
 // Flag == true, commit; Flag == false, rollback
-type CommitOrRollbackBlockEvent struct {
+type CommitEvent struct {
 	SeqNo      uint64
 	Timestamp  int64
 	CommitTime int64
@@ -62,7 +62,7 @@ type CommitOrRollbackBlockEvent struct {
 }
 
 //set invalid tx into db
-type RespInvalidTxsEvent struct {
+type InvalidTxsEvent struct {
 	Payload []byte
 }
 
@@ -77,7 +77,7 @@ type InformPrimaryEvent struct {
 }
 
 //sync all nodes status event
-type ReplicaStatusEvent struct {
+type ReplicaInfoEvent struct {
 	Payload []byte
 }
 
@@ -138,3 +138,19 @@ type ReceiveVerifiedBlock struct {
 type NegoRoutersEvent struct {
 	Payload []byte
 }
+
+/*
+	Executor events
+ */
+type ExecutorToConsensusEvent struct {
+	Payload interface{}
+	Type    int
+}
+
+type ExecutorToP2PEvent struct {
+	Payload []byte
+	Type    int
+	Peers   []uint64
+}
+
+

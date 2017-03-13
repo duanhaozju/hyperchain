@@ -5,33 +5,24 @@ package manager
 import (
 	"hyperchain/accounts"
 	"hyperchain/consensus"
-	"hyperchain/core/blockpool"
-	"hyperchain/crypto"
+	"hyperchain/core/executor"
 	"hyperchain/event"
 	"hyperchain/admittance"
 	"hyperchain/p2p"
-	"time"
-	"hyperchain/common"
 )
 
 // init protocol manager params and start
 func New(
+	namespace string,
 	eventMux *event.TypeMux,
-	blockPool *blockpool.BlockPool,
+	executor *executor.Executor,
 	peerManager p2p.PeerManager,
 	consenter consensus.Consenter,
 	am *accounts.AccountManager,
-	exist chan bool,
-	expiredTime time.Time, cm *admittance.CAManager, config *common.Config) *ProtocolManager {
-
-	syncReplicaInterval := config.GetDuration(common.SYNC_REPLICA_INFO_INTERVAL)
-	syncReplica := config.GetBool(common.SYNC_REPLICA)
-
-	//init hash object
-	commonHash := crypto.NewKeccak256Hash("keccak256")
-	protocolManager := NewProtocolManager(blockPool, peerManager, eventMux, consenter, am, commonHash, syncReplicaInterval, syncReplica, exist, expiredTime)
+	cm *admittance.CAManager) *EventHub {
+	eventHub := NewEventHub(namespace, executor, peerManager, eventMux, consenter, am)
 	aliveChan := make(chan int)
-	protocolManager.Start(aliveChan, cm)
+	eventHub.Start(aliveChan, cm)
 
-	return protocolManager
+	return eventHub
 }

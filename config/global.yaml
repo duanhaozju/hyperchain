@@ -39,7 +39,7 @@ global:
         pbft: "config/pbft.yaml"
         license: "config/LICENSE"
         replicainfo:
-            interval : 500s
+            interval : 20s
             enable   : false
         ratelimit:
             enable   : true
@@ -86,3 +86,16 @@ global:
             consensus: "NOTICE"
             core: "NOTICE"
             hyperdb: "NOTICE"
+            executor: "NOTICE"
+            eventhub: "NOTICE"
+
+    ######################################################
+    # configs related to the consensus                   #
+    #                                                    #
+    # 1. choose which consensus algorithm to use         #
+    # 2. define the algorithm related configurations     #
+    #                                                    #
+    ######################################################
+    consensus:
+           algo: "PBFT"
+           algo_config_path: "config/pbft.yaml"

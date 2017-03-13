@@ -23,6 +23,20 @@ func (m *BlockWrapper) String() string            { return proto.CompactTextStri
 func (*BlockWrapper) ProtoMessage()               {}
 func (*BlockWrapper) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{0} }
 
+func (m *BlockWrapper) GetBlockVersion() []byte {
+	if m != nil {
+		return m.BlockVersion
+	}
+	return nil
+}
+
+func (m *BlockWrapper) GetBlock() []byte {
+	if m != nil {
+		return m.Block
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterType((*BlockWrapper)(nil), "types.BlockWrapper")
 }

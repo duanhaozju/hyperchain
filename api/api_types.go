@@ -20,7 +20,7 @@ type API struct {
 
 var Apis []API
 
-func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, cm *admittance.CAManager,config *common.Config) []API {
+func GetAPIs(eventMux *event.TypeMux, pm *manager.EventHub, cm *admittance.CAManager,config *common.Config) []API {
 
 	db, err := hyperdb.GetDBDatabase()
 
@@ -32,7 +32,7 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, cm *admittanc
 		{
 			Namespace: "tx",
 			Version:   "0.4",
-			Service:   NewPublicTransactionAPI(eventMux, pm, db, config),
+			Service:   NewPublicTransactionAPI("Global", eventMux, pm, db, config),
 			Public:    true,
 		},
 		{
@@ -44,19 +44,19 @@ func GetAPIs(eventMux *event.TypeMux, pm *manager.ProtocolManager, cm *admittanc
 		{
 			Namespace: "block",
 			Version:   "0.4",
-			Service:   NewPublicBlockAPI(db),
+			Service:   NewPublicBlockAPI("Global", db),
 			Public:    true,
 		},
 		{
 			Namespace: "account",
 			Version:   "0.4",
-			Service:   NewPublicAccountAPI(pm, db, config),
+			Service:   NewPublicAccountAPI("Global", pm, db, config),
 			Public:    true,
 		},
 		{
 			Namespace: "contract",
 			Version:   "0.4",
-			Service:   NewPublicContractAPI(eventMux, pm, db, config),
+			Service:   NewPublicContractAPI("Global", eventMux, pm, db, config),
 			Public:    true,
 		},
 		{

@@ -8,23 +8,24 @@ import (
 	"fmt"
 
 	"encoding/base64"
-	"hyperchain/core"
+	ndb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
 )
 
+
 // StoreState stores a key,value pair
-func StoreState(key string, value []byte) error {
-	db, err := hyperdb.GetDBDatabaseConsensus()
+func StoreState(namespace string, key string, value []byte) error {
+	db, err := hyperdb.GetDBConsensusByNamespcae(namespace)
 	if err != nil {
 		return err
 	}
-	return db.Put([]byte("consensus."+key), value)
+	return db.Put([]byte("consensus." + key), value)
 }
 
 //DelAllState: remove all state
 //func DelAllState() error {
-//	db, err := hyperdb.GetDBDatabase()
+//	db, err := hyperdb.GetLDBDatabase()
 //	if err == nil {
 //		db.Destroy()
 //	}
@@ -32,8 +33,8 @@ func StoreState(key string, value []byte) error {
 //}
 
 // DelState removes a key,value pair
-func DelState(key string) error {
-	db, err := hyperdb.GetDBDatabaseConsensus()
+func DelState(namesapce string, key string) error {
+	db, err := hyperdb.GetDBConsensusByNamespcae(namesapce)
 	if err != nil {
 		return err
 	}
@@ -41,8 +42,8 @@ func DelState(key string) error {
 }
 
 // ReadState retrieves a value to a key
-func ReadState(key string) ([]byte, error) {
-	db, err := hyperdb.GetDBDatabaseConsensus()
+func ReadState(namespace string, key string) ([]byte, error) {
+	db, err := hyperdb.GetDBConsensusByNamespcae(namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -50,8 +51,8 @@ func ReadState(key string) ([]byte, error) {
 }
 
 // ReadStateSet retrieves all key-value pairs where the key starts with prefix
-func ReadStateSet(prefix string) (map[string][]byte, error) {
-	db, err := hyperdb.GetDBDatabaseConsensus()
+func ReadStateSet(namespace string, prefix string) (map[string][]byte, error) {
+	db, err := hyperdb.GetDBConsensusByNamespcae(namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +61,7 @@ func ReadStateSet(prefix string) (map[string][]byte, error) {
 	ret := make(map[string][]byte)
 	it := db.NewIterator(prefixRaw)
 	if it == nil {
-		err := errors.New(fmt.Sprintf("Can't get Iterator"))
+		err := errors.New(fmt.Sprint("Can't get Iterator"))
 		return nil, err
 	}
 	if !it.Seek(prefixRaw) {
@@ -76,22 +77,22 @@ func ReadStateSet(prefix string) (map[string][]byte, error) {
 	return ret, nil
 }
 
-func GetBlockchainInfo() *types.Chain {
-	bcInfo := core.GetChainUntil()
+func GetBlockchainInfo(namespace string) *types.Chain {
+	bcInfo := ndb.GetChainUntil(namespace)
 	return bcInfo
 }
 
-func GetCurrentBlockInfo() (uint64, []byte, []byte) {
-	info := core.GetChainCopy()
+func GetCurrentBlockInfo(namespace string) (uint64, []byte, []byte) {
+	info := ndb.GetChainCopy(namespace)
 	return info.Height, info.LatestBlockHash, info.ParentBlockHash
 }
 
-func GetBlockHeightAndHash() (uint64, string) {
-	bcInfo := core.GetChainCopy()
+func GetBlockHeightAndHash(namespace string) (uint64, string) {
+	bcInfo := ndb.GetChainCopy(namespace)
 	hash := base64.StdEncoding.EncodeToString(bcInfo.LatestBlockHash)
 	return bcInfo.Height, hash
 }
 
-func GetHeightofChain() uint64 {
-	return core.GetHeightOfChain()
+func GetHeightofChain(namespace string) uint64 {
+	return ndb.GetHeightOfChain(namespace)
 }

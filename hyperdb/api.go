@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/viper"
 	"strconv"
 	"sync"
-	"path/filepath"
 	"hyperchain/hyperdb/sldb"
 	"hyperchain/common"
 	"hyperchain/hyperdb/db"
@@ -100,15 +99,16 @@ func InitDatabase(conf *common.Config, nameSpace string) error {
 		return errors.New("Try to init inited db "+nameSpace)
 	}
 
-	db, err := NewDatabase(conf, filepath.Join(leveldbPath,nameSpace,"Blockchain"), dbType)
+	db, err := NewDatabase(conf, "Blockchain", dbType)
 
 
 	if err!=nil{
-		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
+		log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
+		log.Error(err.Error())
 		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
 	}
 
-	db1, err1 := NewDatabase(conf, filepath.Join(leveldbPath,nameSpace,"Consensus" ), 001)
+	db1, err1 := NewDatabase(conf, "Consensus" , 001)
 
 	if err1 != nil {
 
@@ -139,9 +139,21 @@ func GetDBDatabase() (db.Database, error) {
 	return dbMap.dbMap[DefautNameSpace+Blockchain].db, nil
 }
 
-func GetDBDatabaseByNamespcae(namespace string)(db.Database, error){
+func GetDBDatabaseConsensus() (db.Database, error) {
 	dbMap.dbSync.Lock()
 	defer dbMap.dbSync.Unlock()
+	if dbMap.dbMap[DefautNameSpace+Consensus].db == nil {
+		log.Notice("GetDBDatabaseConsensus()  fail beacause dbMap[GlobalConsensus] has not been inited \n")
+		return nil, errors.New("GetDBDatabaseConsensus()  fail beacause dbMap[GlobalConsensus] has not been inited \n")
+	}
+	return dbMap.dbMap[DefautNameSpace+Consensus].db, nil
+}
+
+func GetDBDatabaseByNamespace(namespace string)(db.Database, error){
+	dbMap.dbSync.Lock()
+	defer dbMap.dbSync.Unlock()
+
+	namespace += Blockchain
 
 	if _,ok:=dbMap.dbMap[namespace];!ok{
 		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
@@ -155,24 +167,32 @@ func GetDBDatabaseByNamespcae(namespace string)(db.Database, error){
 	return dbMap.dbMap[namespace].db, nil
 }
 
-func GetDBDatabaseConsensus() (db.Database, error) {
+func GetDBConsensusByNamespcae(namespace string)(db.Database, error){
 	dbMap.dbSync.Lock()
 	defer dbMap.dbSync.Unlock()
-	if dbMap.dbMap[DefautNameSpace+Consensus].db == nil {
-		log.Notice("GetDBDatabaseConsensus()  fail beacause dbMap[GlobalConsensus] has not been inited \n")
-		return nil, errors.New("GetDBDatabaseConsensus()  fail beacause dbMap[GlobalConsensus] has not been inited \n")
+
+	namespace+=Consensus
+
+	if _,ok:=dbMap.dbMap[namespace];!ok{
+		log.Notice(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
 	}
-	return dbMap.dbMap[DefautNameSpace+Consensus].db, nil
+
+	if dbMap.dbMap[namespace].db == nil {
+		log.Notice(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMap[%v] has not been inited \n",namespace))
+	}
+	return dbMap.dbMap[namespace].db, nil
 }
 
 func NewDatabase(conf *common.Config, path string, dbType int) (db.Database, error) {
 	switch dbType {
 	case LDB_DB:
 		log.Notice("Use level db only")
-		return hleveldb.NewLDBDataBase(path)
+		return hleveldb.NewLDBDataBase(conf,path)
 	case SUPER_LEVEL_DB:
 		log.Notice("Use SuperLevelDB")
-		return sldb.NewSLDB(conf)
+		return sldb.NewSLDB(conf,path)
 	default:
 		log.Errorf("Wrong dbType:" + strconv.Itoa(dbType))
 		return nil, errors.New("Wrong dbType:" + strconv.Itoa(dbType))
