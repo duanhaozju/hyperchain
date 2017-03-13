@@ -37,8 +37,8 @@ const (
 // NewServer will create a new server instance with no registered handlers.
 func NewServer() *Server {
 	server := &Server{
-		services:      make(serviceRegistry),
-		subscriptions: make(subscriptionRegistry),
+		//services:      make(serviceRegistry),
+		//subscriptions: make(subscriptionRegistry),
 		codecs:        set.New(),
 		run:           1,
 	}
@@ -347,15 +347,15 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, RPCErro
 		var ok bool
 		var svc *service
 
-		if svc, ok = s.services[r.service]; !ok { // rpc method isn't available
-			requests[i] = &serverRequest{id: r.id, err: &methodNotFoundError{r.service, r.method}}
+		if svc, ok = s.services[r.Service]; !ok { // rpc method isn't available
+			requests[i] = &serverRequest{id: r.Id, err: &methodNotFoundError{r.Service, r.Method}}
 			continue
 		}
 
-		if callb, ok := svc.callbacks[r.method]; ok { // lookup RPC method
-			requests[i] = &serverRequest{id: r.id, svcname: svc.name, callb: callb}
-			if r.params != nil && len(callb.argTypes) > 0 {
-				if args, err := codec.ParseRequestArguments(callb.argTypes, r.params); err == nil {
+		if callb, ok := svc.callbacks[r.Method]; ok { // lookup RPC method
+			requests[i] = &serverRequest{id: r.Id, svcname: svc.name, callb: callb}
+			if r.Params != nil && len(callb.argTypes) > 0 {
+				if args, err := codec.ParseRequestArguments(callb.argTypes, r.Params); err == nil {
 					requests[i].args = args
 				} else {
 					requests[i].err = &invalidParamsError{err.Error()}
@@ -364,7 +364,7 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, RPCErro
 			continue
 		}
 
-		requests[i] = &serverRequest{id: r.id, err: &methodNotFoundError{r.service, r.method}}
+		requests[i] = &serverRequest{id: r.Id, err: &methodNotFoundError{r.Service, r.Method}}
 	}
 	return requests, batch, nil
 }

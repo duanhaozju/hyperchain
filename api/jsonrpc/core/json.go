@@ -26,19 +26,21 @@ const (
 
 // JSON-RPC request
 type JSONRequest struct {
-	Method  string          `json:"method"`
-	Version string          `json:"jsonrpc"`
-	Id      json.RawMessage `json:"id,omitempty"`
-	Payload json.RawMessage `json:"params,omitempty"`
+	Method    string          `json:"method"`
+	Version   string          `json:"jsonrpc"`
+	Namespace string	  `json:"namespace"`
+	Id        json.RawMessage `json:"id,omitempty"`
+	Payload   json.RawMessage `json:"params,omitempty"`
 }
 
 // JSON-RPC response
 type JSONResponse struct {
-	Version string      `json:"jsonrpc"`
-	Id      interface{} `json:"id,omitempty"`
-	Code    int         `json:"code"`
-	Message string      `json:"message"`
-	Result  interface{} `json:"result,omitempty"`
+	Version   string      `json:"jsonrpc"`
+	Id        interface{} `json:"id,omitempty"`
+	Code      int         `json:"code"`
+	Message   string      `json:"message"`
+	Namespace string      `json:"namespace"`
+	Result    interface{} `json:"result,omitempty"`
 }
 
 // JSON-RPC notification payload
@@ -143,7 +145,7 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 // ReadRequestHeaders will read new requests without parsing the arguments. It will
 // return a collection of requests, an indication if these requests are in batch
 // form or an error when the incoming message could not be read/parsed.
-func (c *jsonCodec) ReadRequestHeaders() ([]rpcRequest, bool, RPCError) {
+func (c *jsonCodec) ReadRequestHeaders() ([]common.RPCRequest, bool, RPCError) {
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
 
@@ -178,7 +180,7 @@ func checkReqId(reqId json.RawMessage) error {
 // parseRequest will parse a single request from the given RawMessage. It will return
 // the parsed request, an indication if the request was a batch or an error when
 // the request could not be parsed.
-func parseRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, RPCError) {
+func parseRequest(incomingMsg json.RawMessage) ([]common.RPCRequest, bool, RPCError) {
 	var in JSONRequest
 	if err := json.Unmarshal(incomingMsg, &in); err != nil {
 		return nil, false, &invalidMessageError{err.Error()}
@@ -195,21 +197,21 @@ func parseRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, RPCError) {
 	}
 
 	if len(in.Payload) == 0 {
-		return []rpcRequest{rpcRequest{service: elems[0], method: elems[1], id: &in.Id}}, false, nil
+		return []common.RPCRequest{{Service: elems[0], Method: elems[1], Namespace: &in.Namespace, Id: &in.Id}}, false, nil
 	}
 
-	return []rpcRequest{rpcRequest{service: elems[0], method: elems[1], id: &in.Id, params: in.Payload}}, false, nil
+	return []common.RPCRequest{{Service: elems[0], Method: elems[1], Namespace: &in.Namespace, Id: &in.Id, Params: in.Payload}}, false, nil
 }
 
 // parseBatchRequest will parse a batch request into a collection of requests from the given RawMessage, an indication
 // if the request was a batch or an error when the request could not be read.
-func parseBatchRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, RPCError) {
+func parseBatchRequest(incomingMsg json.RawMessage) ([]common.RPCRequest, bool, RPCError) {
 	var in []JSONRequest
 	if err := json.Unmarshal(incomingMsg, &in); err != nil {
 		return nil, false, &invalidMessageError{err.Error()}
 	}
 
-	requests := make([]rpcRequest, len(in))
+	requests := make([]common.RPCRequest, len(in))
 	for i, r := range in {
 		if err := checkReqId(r.Id); err != nil {
 			return nil, false, &invalidMessageError{err.Error()}
@@ -223,9 +225,9 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, RPCErro
 		}
 
 		if len(r.Payload) == 0 {
-			requests[i] = rpcRequest{service: elems[0], method: elems[1], id: id, params: nil}
+			requests[i] = common.RPCRequest{Service: elems[0], Method: elems[1], Id: id, Params: nil}
 		} else {
-			requests[i] = rpcRequest{service: elems[0], method: elems[1], id: id, params: r.Payload}
+			requests[i] = common.RPCRequest{Service: elems[0], Method: elems[1], Id: id, Params: r.Payload}
 		}
 	}
 

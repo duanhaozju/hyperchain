@@ -12,7 +12,6 @@ import (
 	"hyperchain/admittance"
 	"hyperchain/api/jsonrpc/core"
 	"hyperchain/common"
-	"hyperchain/core"
 	"hyperchain/event"
 	"hyperchain/p2p"
 	"hyperchain/consensus/csmgr"
