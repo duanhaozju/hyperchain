@@ -4,42 +4,22 @@ package main
 
 import (
 	"errors"
-	"fmt"
+
 	"github.com/mkideal/cli"
 	"github.com/terasum/viper"
+
 	"hyperchain/accounts"
 	"hyperchain/admittance"
 	"hyperchain/api/jsonrpc/core"
 	"hyperchain/common"
-	"hyperchain/consensus/controller"
 	"hyperchain/core"
-	"hyperchain/core/blockpool"
 	"hyperchain/event"
-	"hyperchain/manager"
 	"hyperchain/p2p"
-	"hyperchain/p2p/transport"
-	"io/ioutil"
-	"os/exec"
-	"regexp"
-	"strconv"
-	"strings"
-	"time"
 	"hyperchain/consensus/csmgr"
+	"hyperchain/core/db_utils"
+	"hyperchain/core/executor"
+	"hyperchain/manager"
 )
-
-const HyperchainVersion = "Hyperchain Version:\nRelease1.2\n"
-
-func GetOperationSystem() (string, error) {
-	f, err := exec.Command("lsb_release", "-a").Output()
-	if err != nil {
-		return "", err
-	}
-	return string(f), nil
-}
-
-func GetHyperchainVersion() string {
-	return HyperchainVersion
-}
 
 type argT struct {
 	cli.Helper
@@ -87,18 +67,9 @@ func main() {
 		argv := ctx.Argv().(*argT)
 		conf := initConf(argv)
 
-
 		common.InitLog(conf)
 
-
-
-
-		core.InitDB(conf)
-
-
-
-		db_utils.InitDBForNamespace(conf, DefaultNamespace, conf.GetString(common.DB_CONFIG_PATH),conf.GetInt(common.C_NODE_ID))
-
+		db_utils.InitDBForNamespace(conf, DefaultNamespace)
 
 		cm, cmerr := admittance.GetCaManager(conf)
 		if cmerr != nil {
@@ -111,28 +82,25 @@ func main() {
 		//init genesis
 		core.CreateInitBlock(DefaultNamespace, conf)
 
-
 		eventMux := new(event.TypeMux)
 		//init pbft consensus
 		consenter := csmgr.Consenter(DefaultNamespace, conf, eventMux)
 		consenter.Start()
 
-
 		am := accounts.NewAccountManager(conf)
 		am.UnlockAllAccount(conf.GetString(common.KEY_STORE_DIR))
-
-		//init block pool to save block
 
 		//init block pool to save block
 		executor := executor.NewExecutor(DefaultNamespace, conf, eventMux)
 		if executor == nil {
 			return errors.New("Initialize BlockPool failed")
 		}
+
 		executor.Initialize()
 		//init manager
 		exist := make(chan bool)
 
-
+		pm := manager.New(DefaultNamespace, eventMux, executor, grpcPeerMgr, consenter, am, cm)
 		go jsonrpc.Start(eventMux, pm, cm, conf)
 		go CheckLicense(exist, conf)
 

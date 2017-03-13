@@ -32,9 +32,9 @@ type SuperLevelDB struct {
 	closed chan bool
 }
 
-func NewSLDB(conf *common.Config,filepath string) (*SuperLevelDB, error) {
+func NewSLDB(conf *common.Config, filepath string) (*SuperLevelDB, error) {
 	if conf!=nil{
-		filepath = pa.Join(conf.GetString(SLDB_PATH),filepath)
+		filepath = pa.Join(conf.GetString(SLDB_PATH), filepath)
 	}
 
 	db, err := leveldb.OpenFile(filepath, nil)
