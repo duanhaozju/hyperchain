@@ -1,6 +1,4 @@
-//Hyperchain License
-//Copyright (C) 2016 The Hyperchain Authors.
-package core
+package executor
 
 import (
 	"hyperchain/common"
@@ -47,7 +45,7 @@ func ExecTransaction(tx *types.Transaction, env vm.Environment) (receipt *types.
 }
 
 func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
-	gasPrice, value *big.Int, update bool) (ret []byte, addr common.Address, err error) {
+gasPrice, value *big.Int, update bool) (ret []byte, addr common.Address, err error) {
 	var sender vm.Account
 
 	if !(vmenv.Db().Exist(*from)) {
