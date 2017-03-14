@@ -204,6 +204,7 @@ func InitDataBase() {
 
 func deleteTestData() {
 	childPath := "/build"
+	fileName := "/db.log"
 	current_dir, _ := os.Getwd()
 	path := current_dir + childPath
 	err := os.RemoveAll(path)
@@ -211,5 +212,11 @@ func deleteTestData() {
 		fmt.Println("remove test data file fail!", err)
 	} else {
 		fmt.Println("remove test data file success!")
+	}
+	err = os.Remove(current_dir+fileName)
+	if err != nil {
+		fmt.Println("remove db.log file fail!", err)
+	} else {
+		fmt.Println("remove db.log file success!")
 	}
 }

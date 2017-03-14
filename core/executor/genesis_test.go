@@ -34,7 +34,7 @@ func (suite *GenesisSuite) SetUpSuite(c *checker.C) {
 	os.Chdir(path.Join(common.GetGoPath(), "src/hyperchain"))
 	os.RemoveAll("./build")
 	conf = tutil.InitConfig(configPath, dbConfigPath)
-	edb.InitDBForNamespace(conf, namespace, dbConfigPath, 8001)
+	edb.InitDBForNamespace(conf, namespace)
 	suite.executor = NewExecutor(namespace, conf, nil)
 }
 
