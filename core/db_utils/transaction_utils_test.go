@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"hyperchain/core/types"
 	"github.com/golang/protobuf/proto"
+	"hyperchain/core/test_util"
 )
 
 // TestGetTransaction tests for GetTransaction
@@ -13,11 +14,11 @@ func TestGetTransaction(t *testing.T) {
 	logger.Info("test =============> > > TestGetTransaction")
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	err, _ := PersistTransaction(db.NewBatch(), transactionCases[0], true, true)
+	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	for _, trans := range transactionCases[:1] {
+	for _, trans := range test_util.TransactionCases[:1] {
 		key := trans.GetHash().Bytes()
 		tr, err := GetTransaction(hyperdb.DefautNameSpace, key)
 		if err != nil {
@@ -30,14 +31,15 @@ func TestGetTransaction(t *testing.T) {
 			t.Errorf("%s not equal %s, TestGetTransaction fail", string(tr.Signature), string(trans.Signature))
 		}
 	}
+	deleteTestData()
 }
 
 func TestGetTransactionBLk(t *testing.T) {
 	logger.Info("test =============> > > TestGetTransactionBLk")
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	err, _ := PersistBlock(db.NewBatch(), &blockCases, true, true)
-	err, _ = PersistTransaction(db.NewBatch(), transactionCases[0], true, true)
+	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
+	err, _ = PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -46,7 +48,7 @@ func TestGetTransactionBLk(t *testing.T) {
 		logger.Fatal(err)
 	}
 	batch := db.NewBatch()
-	PersistTransactionMeta(batch, &transactionMeta, transactionCases[0].GetHash(), true, true)
+	PersistTransactionMeta(batch, &test_util.TransactionMeta, test_util.TransactionCases[0].GetHash(), true, true)
 	if len(block.Transactions) > 0 {
 		tx := block.Transactions[0]
 		bn, i := GetTxWithBlock(hyperdb.DefautNameSpace, tx.GetHash().Bytes())
@@ -59,6 +61,7 @@ func TestGetTransactionBLk(t *testing.T) {
 			t.Errorf("TestGetTransactionBLk fail")
 		}
 	}
+	deleteTestData()
 }
 
 // TestGetAllTransaction tests for GetAllTransaction
@@ -66,7 +69,7 @@ func TestGetAllTransactions(t *testing.T) {
 	logger.Info("test =============> > > TestGetAllTransaction")
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	err, _ := PersistTransaction(db.NewBatch(), transactionCases[0], true, true)
+	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -85,6 +88,7 @@ func TestGetAllTransactions(t *testing.T) {
 			}
 		}
 	}
+	deleteTestData()
 }
 
 // TestDeleteTransaction tests for DeleteTransaction
@@ -92,7 +96,7 @@ func TestDeleteTransaction(t *testing.T) {
 	logger.Info("test =============> > > TestDeleteTransaction")
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	for _, trans := range transactionCases[:1] {
+	for _, trans := range test_util.TransactionCases[:1] {
 		err, _ := PersistTransaction(db.NewBatch(), trans, true, true)
 		if err != nil {
 			logger.Fatal(err)
@@ -103,6 +107,7 @@ func TestDeleteTransaction(t *testing.T) {
 			t.Errorf("the transaction key [%s] delete fail, TestDeleteTransaction fail", trans.GetHash().Bytes())
 		}
 	}
+	deleteTestData()
 }
 
 // TestPutTransactions tests for PutTransactions
@@ -110,7 +115,7 @@ func TestPutTransactions(t *testing.T) {
 	logger.Info("test =============> > > TestPutTransactions")
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	err := PersistTransactions(db.NewBatch(), transactionCases, TransactionVersion, true, true)
+	err := PersistTransactions(db.NewBatch(), test_util.TransactionCases, TransactionVersion, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -121,11 +126,12 @@ func TestPutTransactions(t *testing.T) {
 	if len(trs) < 3 {
 		t.Errorf("TestPutTransactions fail")
 	}
+	deleteTestData()
 }
 
 // TestGetInvaildTx tests for GetDiscardTransaction
 func TestGetInvaildTx(t *testing.T) {
-	tx := transactionCases[0]
+	tx := test_util.TransactionCases[0]
 	record := &types.InvalidTransactionRecord{
 		Tx:      tx,
 		ErrType: types.InvalidTransactionRecord_OUTOFBALANCE,
@@ -140,11 +146,12 @@ func TestGetInvaildTx(t *testing.T) {
 	if result != types.InvalidTransactionRecord_OUTOFBALANCE {
 		t.Error("TestGetInvaildTx fail")
 	}
+	deleteTestData()
 }
 
 // TestGetDiscardTransaction tests for GetDiscardTransaction
 func TestGetDiscardTransaction(t *testing.T) {
-	tx := transactionCases[0]
+	tx := test_util.TransactionCases[0]
 	record := &types.InvalidTransactionRecord{
 		Tx:      tx,
 		ErrType: types.InvalidTransactionRecord_OUTOFBALANCE,
@@ -163,4 +170,5 @@ func TestGetDiscardTransaction(t *testing.T) {
 			t.Errorf("TestGetDiscardTransaction fail")
 		}
 	}
+	deleteTestData()
 }

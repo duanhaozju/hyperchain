@@ -4,13 +4,18 @@ import (
 	"hyperchain/hyperdb"
 	"testing"
 	"reflect"
+	"os"
+	"fmt"
+	"hyperchain/common"
+	"strconv"
+	"hyperchain/core/test_util"
 )
 
 func TestGetVersionOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetVersionOfBlock")
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	err, _ := PersistBlock(db.NewBatch(), &blockCases, true, true)
+	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -25,7 +30,7 @@ func TestGetParentHashOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetParentHashOfBlock")
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	err, _ := PersistBlock(db.NewBatch(), &blockCases, true, true)
+	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -40,7 +45,7 @@ func TestGetBlockHashOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetBlockHashOfBlock")
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	err, _ := PersistBlock(db.NewBatch(), &blockCases, true, true)
+	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -55,12 +60,12 @@ func TestGetTransactionsOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetTransactionsOfBlock")
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	err, _ := PersistBlock(db.NewBatch(), &blockCases, true, true)
+	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	block, err := GetBlockByNumber(hyperdb.DefautNameSpace, 1)
-	if !reflect.DeepEqual(block.Transactions, transactionCases) {
+	if !reflect.DeepEqual(block.Transactions, test_util.TransactionCases) {
 		t.Error("TestGetTransactionsOfBlock fail")
 	}
 	deleteTestData()
@@ -70,7 +75,7 @@ func TestGetTimestampOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetTimestampOfBlock")
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	err, _ := PersistBlock(db.NewBatch(), &blockCases, true, true)
+	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -85,7 +90,7 @@ func TestGetMerkleRootOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetMerkleRootOfBlock")
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	err, _ := PersistBlock(db.NewBatch(), &blockCases, true, true)
+	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -100,7 +105,7 @@ func TestGetTxRootOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetTxRootOfBlock")
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	err, _ := PersistBlock(db.NewBatch(), &blockCases, true, true)
+	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -115,7 +120,7 @@ func TestGetReceiptRootOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetReceiptRootOfBlock")
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	err, _ := PersistBlock(db.NewBatch(), &blockCases, true, true)
+	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -130,7 +135,7 @@ func TestGetNumberOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetNumberOfBlock")
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	err, _ := PersistBlock(db.NewBatch(), &blockCases, true, true)
+	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -145,7 +150,7 @@ func TestGetWriteTimeOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetWriteTimeOfBlock")
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	err, _ := PersistBlock(db.NewBatch(), &blockCases, true, true)
+	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -160,7 +165,7 @@ func TestGetCommitTimeOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetCommitTimeOfBlock")
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	err, _ := PersistBlock(db.NewBatch(), &blockCases, true, true)
+	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -175,7 +180,7 @@ func TestGetEvmTimeOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetEvmTimeOfBlock")
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	err, _ := PersistBlock(db.NewBatch(), &blockCases, true, true)
+	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -184,4 +189,27 @@ func TestGetEvmTimeOfBlock(t *testing.T) {
 		t.Error("TestGetEvmTimeOfBlock fail")
 	}
 	deleteTestData()
+}
+
+
+
+
+func InitDataBase() {
+	conf := common.NewConfig("../../config/global.yaml")
+	conf.MergeConfig("../../config/db.yaml")
+	hyperdb.SetDBConfig("../../config/db.yaml", strconv.Itoa(conf.GetInt(common.C_NODE_ID)))
+	hyperdb.InitDatabase(conf, hyperdb.DefautNameSpace)
+	InitializeChain(hyperdb.DefautNameSpace)
+}
+
+func deleteTestData() {
+	childPath := "/build"
+	current_dir, _ := os.Getwd()
+	path := current_dir + childPath
+	err := os.RemoveAll(path)
+	if err != nil {
+		fmt.Println("remove test data file fail!", err)
+	} else {
+		fmt.Println("remove test data file success!")
+	}
 }
