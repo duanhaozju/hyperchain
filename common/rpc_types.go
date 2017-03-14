@@ -4,6 +4,7 @@ package common
 
 import (
 	"reflect"
+	"hyperchain/namespace/rpc"
 )
 
 // rpcRequest represents a raw incoming RPC request
@@ -18,8 +19,9 @@ type RPCRequest struct {
 
 // rpcResponse represents a raw incoming RPC request
 type RPCResponse struct {
+	Id    interface{}
 	Reply []reflect.Value
-	Error RPCError
+	Error rpc.RPCError
 }
 
 //// callback is a method callback which was registered in the server

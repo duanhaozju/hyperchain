@@ -111,7 +111,15 @@ func (rpcproc *RPCProcesserImpl) registerName(name string, rcvr interface{}) RPC
 
 // todo 相当于 handle()
 func (rpcproc *RPCProcesserImpl) ProcessRequest(RPCRequest []common.RPCRequest, singleShot bool, batch bool) common.RPCResponse{
+	var response common.RPCResponse
+
 	reqs, err := rpcproc.readRequset(RPCRequest)
+	if err != nil {
+		return &common.RPCResponse {
+			Reply: nil,
+			Error: err,
+		}
+	}
 
 	// check if server is ordered to shutdown and return an error
 	// telling the client that his request failed.
@@ -132,15 +140,15 @@ func (rpcproc *RPCProcesserImpl) ProcessRequest(RPCRequest []common.RPCRequest, 
 	//}
 
 	if singleShot && batch {
-		rpcproc.execBatch(ctx, codec, reqs)
+		//rpcproc.execBatch(ctx, codec, reqs)
 		return nil
 	} else if singleShot && !batch {
-		rpcproc.exec(ctx, codec, reqs[0])
-		return nil
+		return rpcproc.exec(ctx, reqs[0])
 	} else if !singleShot && batch {
-		go rpcproc.execBatch(ctx, codec, reqs)
+		//go rpcproc.execBatch(ctx, codec, reqs)
 	} else {
-		go rpcproc.exec(ctx, codec, reqs[0])
+		//TODO how to start a go-routing?
+		go rpcproc.exec(ctx, reqs[0])
 	}
 	return nil
 }
@@ -232,16 +240,12 @@ func (rpcproc *RPCProcesserImpl) parsePositionalArguments(args json.RawMessage, 
 }
 
 // exec executes the given request and writes the result back using the codec.
-func (rpcproc *RPCProcesserImpl) exec(ctx context.Context, codec ServerCodec, req *serverRequest) {
+func (rpcproc *RPCProcesserImpl) exec(ctx context.Context, req *serverRequest) common.RPCResponse {
 	//log.Info("=============enter exec()=================")
 	var response interface{}
 	var callback func()
 
-	if req.err != nil {
-		response = codec.CreateErrorResponse(&req.id, req.err)
-	} else {
-		response, callback = rpcproc.handle(ctx, codec, req)
-	}
+	response, callback = rpcproc.handle(ctx, req)
 
 	if err := codec.Write(response); err != nil {
 		log.Errorf("%v\n", err)
@@ -252,39 +256,41 @@ func (rpcproc *RPCProcesserImpl) exec(ctx context.Context, codec ServerCodec, re
 	if callback != nil {
 		callback()
 	}
+
+	return response
 }
 
-func (rpcproc *RPCProcesserImpl) execBatch(ctx context.Context, codec ServerCodec, requests []*serverRequest) {
-	responses := make([]interface{}, len(requests))
-	var callbacks []func()
-	for i, req := range requests {
-		fmt.Println("got a request", req.svcname)
-		if req.err != nil {
-			responses[i] = codec.CreateErrorResponse(&req.id, req.err)
-		} else {
-			var callback func()
-			if responses[i], callback = rpcproc.handle(ctx, codec, req); callback != nil {
-				callbacks = append(callbacks, callback)
-			}
-		}
-	}
-
-	if err := codec.Write(responses); err != nil {
-		log.Errorf("%v\n", err)
-		codec.Close()
-	}
-
-	// when request holds one of more subscribe requests this allows these subscriptions to be actived
-	for _, c := range callbacks {
-		c()
-	}
-}
+//func (rpcproc *RPCProcesserImpl) execBatch(ctx context.Context, codec ServerCodec, requests []*serverRequest) {
+//	responses := make([]interface{}, len(requests))
+//	var callbacks []func()
+//	for i, req := range requests {
+//		fmt.Println("got a request", req.svcname)
+//		if req.err != nil {
+//			responses[i] = codec.CreateErrorResponse(&req.id, req.err)
+//		} else {
+//			var callback func()
+//			if responses[i], callback = rpcproc.handle(ctx, codec, req); callback != nil {
+//				callbacks = append(callbacks, callback)
+//			}
+//		}
+//	}
+//
+//	if err := codec.Write(responses); err != nil {
+//		log.Errorf("%v\n", err)
+//		codec.Close()
+//	}
+//
+//	// when request holds one of more subscribe requests this allows these subscriptions to be actived
+//	for _, c := range callbacks {
+//		c()
+//	}
+//}
 
 // handle executes a request and returns the response from the callback.
-func (rpcproc *RPCProcesserImpl) handle(ctx context.Context, codec ServerCodec, req *serverRequest) (interface{}, func()) {
+func (rpcproc *RPCProcesserImpl) handle(ctx context.Context, req *serverRequest) (common.RPCResponse, func()) {
 	//log.Info("=========================enter handle()============================")
 	if req.err != nil {
-		return codec.CreateErrorResponse(&req.id, req.err), nil
+		return rpcproc.CreateErrorResponse(&req.id, req.err), nil
 	}
 
 	// regular RPC call, prepare arguments
@@ -292,7 +298,7 @@ func (rpcproc *RPCProcesserImpl) handle(ctx context.Context, codec ServerCodec, 
 		rpcErr := &invalidParamsError{fmt.Sprintf("%s%s%s expects %d parameters, got %d",
 			req.svcname, serviceMethodSeparator, req.callb.method.Name,
 			len(req.callb.argTypes), len(req.args))}
-		return codec.CreateErrorResponse(&req.id, rpcErr), nil
+		return rpcproc.CreateErrorResponse(&req.id, rpcErr), nil
 	}
 
 	arguments := []reflect.Value{req.callb.rcvr}
@@ -306,7 +312,7 @@ func (rpcproc *RPCProcesserImpl) handle(ctx context.Context, codec ServerCodec, 
 	// execute RPC method and return result
 	reply := req.callb.method.Func.Call(arguments)
 	if len(reply) == 0 {
-		return codec.CreateResponse(req.id, nil), nil
+		return rpcproc.CreateResponse(req.id, nil), nil
 	}
 
 	if req.callb.errPos >= 0 { // test if method returned an error
@@ -314,9 +320,33 @@ func (rpcproc *RPCProcesserImpl) handle(ctx context.Context, codec ServerCodec, 
 			//e := reply[req.callb.errPos].Interface().(error)
 			//res := codec.CreateErrorResponse(&req.id, &callbackError{e.Error()})
 			e := reply[req.callb.errPos].Interface().(RPCError)
-			res := codec.CreateErrorResponse(&req.id, e)
+			res := rpcproc.CreateErrorResponse(&req.id, e)
 			return res, nil
 		}
 	}
-	return codec.CreateResponse(req.id, reply[0].Interface()), nil
+	return rpcproc.CreateResponse(req.id, reply[0].Interface()), nil
+}
+
+func (rpcproc *RPCProcesserImpl) CreateResponse(id interface{}, reply interface{}) common.RPCResponse {
+	return &common.RPCResponse{
+		Id:    id,
+		Reply: reply,
+		Error: nil,
+	}
+}
+
+func (rpcproc *RPCProcesserImpl) CreateErrorResponse(id interface{}, err RPCError) common.RPCResponse {
+	return &common.RPCResponse{
+		Id:    id,
+		Reply: nil,
+		Error: err,
+	}
+}
+
+func (rpcproc *RPCProcesserImpl) CreateErrorResponseWithInfo(id interface{}, err RPCError, info interface{}) common.RPCResponse {
+	return &common.RPCResponse{
+		Id:    id,
+		Reply: info,
+		Error: err,
+	}
 }
