@@ -18,8 +18,6 @@ import (
 	"hyperchain/p2p"
 )
 
-var nsLogger *logging.Logger
-
 //Namespace represent the namespace instance
 type Namespace interface {
 	//Start start services under this namespace.
@@ -34,7 +32,6 @@ type Namespace interface {
 	Info() *NamespaceInfo
 	//ProcessRequest process request under this namespace.
 	ProcessRequest(request interface{}) interface{}
-
 	//Name of current namespace.
 	Name() string
 }
@@ -62,6 +59,8 @@ type NamespaceInfo struct {
 
 //namespaceImpl implementation of Namespace
 type namespaceImpl struct {
+	logger *logging.Logger
+
 	nsInfo *NamespaceInfo
 	status *Status
 
@@ -90,17 +89,17 @@ func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) 
 		conf:     conf,
 		eventMux: new(event.TypeMux),
 	}
-	nsLogger = common.GetLogger(name, "namespace")
+	ns.logger = common.GetLogger(name, "namespace")
 	return ns, nil
 }
 
 func (ns *namespaceImpl) init() error {
-	nsLogger.Criticalf("Init namespace %s", ns.Name())
+	ns.logger.Criticalf("Init namespace %s", ns.Name())
 
 	//1.init DB
 	err := db_utils.InitDBForNamespace(ns.conf, ns.Name())
 	if err != nil {
-		nsLogger.Errorf("init db for namespace: %s error, %v", ns.Name(), err)
+		ns.logger.Errorf("init db for namespace: %s error, %v", ns.Name(), err)
 		return err
 	}
 
@@ -148,7 +147,7 @@ func (ns *namespaceImpl) init() error {
 func GetNamespace(name string, conf *common.Config) (Namespace, error) {
 	ns, err := newNamespaceImpl(name, conf)
 	if err != nil {
-		nsLogger.Errorf("namespace %s init error", name)
+		ns.logger.Errorf("namespace %s init error", name)
 		return ns, err
 	}
 	err = ns.init()
@@ -157,7 +156,7 @@ func GetNamespace(name string, conf *common.Config) (Namespace, error) {
 
 //Start start services under this namespace.
 func (ns *namespaceImpl) Start() error {
-	nsLogger.Noticef("try to start namespace: %s", ns.Name())
+	ns.logger.Noticef("try to start namespace: %s", ns.Name())
 	state := ns.status.state
 	if state < initialized {
 		err := ns.init()
@@ -178,17 +177,17 @@ func (ns *namespaceImpl) Start() error {
 
 //Stop stop services under this namespace.
 func (ns *namespaceImpl) Stop() error {
-	nsLogger.Noticef("try to stop namespace: %s", ns.Name())
+	ns.logger.Noticef("try to stop namespace: %s", ns.Name())
 	state := ns.status.state
 
 	if state != running {
-		nsLogger.Criticalf("namespace: %s not running now, need not to stop", ns.Name())
+		ns.logger.Criticalf("namespace: %s not running now, need not to stop", ns.Name())
 	}
 	//TODO: to provide Stop method for every components
 
 	ns.status.state = closed
 
-	nsLogger.Noticef("namespace: %s stopped!", ns.Name())
+	ns.logger.Noticef("namespace: %s stopped!", ns.Name())
 	return nil
 }
 
@@ -221,7 +220,7 @@ func (ns *namespaceImpl) ProcessRequest(request interface{}) interface{} {
 	case *jsonrpc.JSONRequest:
 		return ns.handleJsonRequest(r)
 	default:
-		nsLogger.Errorf("event not supportted %v", r)
+		ns.logger.Errorf("event not supportted %v", r)
 	}
 	return nil
 }

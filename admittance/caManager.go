@@ -35,7 +35,7 @@ type CAManager struct {
 	tcacertByte         []byte
 	isUsed              bool
 	checkTCert          bool
-	//
+
 	config *viper.Viper
 }
 

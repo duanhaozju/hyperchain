@@ -13,6 +13,10 @@ type argT struct {
 	ConfigPath string `cli:"c,conf" usage:"config file path" dft:"./global.yaml"`
 }
 
+func init()  {
+	//globalConfig := common.NewConfig("./global.yaml")
+	//common.InitHyperLogger(globalConfig)
+}
 var stopHyperchain chan bool
 var nsMgr namespace.NamespaceManager
 
@@ -22,7 +26,7 @@ func main() {
 		stopHyperchain = make(chan bool)
 
 		globalConfig := common.NewConfig(argv.ConfigPath)
-		common.InitLog(globalConfig)
+		common.InitHyperLogger(globalConfig)
 
 		nsMgr = namespace.GetNamespaceManager(globalConfig)
 		nsMgr.Start()

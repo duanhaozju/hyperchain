@@ -286,7 +286,6 @@ func getBlocks(args IntervalArgs, namespace string, isPlain bool) ([]*BlockResul
 	return blocks, nil
 }
 
-// 测试用
 type BatchTimeResult struct {
 	CommitTime int64
 	BatchTime  int64

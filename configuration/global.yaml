@@ -28,8 +28,8 @@ global:
 
         loglevel: "NOTICE"
         # default loglevel for all modules which can be override by module level log setting
-        file_format: "[System][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
-        console_format: "%{color}[System][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
+        file_format: "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
+        console_format: "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
 
         module:
             #set log level by module

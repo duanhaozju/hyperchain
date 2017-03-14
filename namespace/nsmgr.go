@@ -14,10 +14,6 @@ import (
 
 var logger *logging.Logger
 
-func init() {
-	logger = logging.MustGetLogger("namespace")
-}
-
 var (
 	ErrInvalidNs   = errors.New("namespace/nsmgr: invalid namespace")
 	ErrCannotNewNs = errors.New("namespace/nsmgr: can not new namespace")
@@ -43,11 +39,11 @@ type NamespaceManager interface {
 	GetNamespaceByName(name string) Namespace
 	//ProcessRequest process received request
 	ProcessRequest(request interface{}) interface{}
-	//StartNamespace start namespace by name
+	//StartNamespace start namespace by name.
 	StartNamespace(name string) error
-	//StopNamespace stop namespace by name
+	//StopNamespace stop namespace by name.
 	StopNamespace(name string) error
-	//RestartNamespace restart namespace by name
+	//RestartNamespace restart namespace by name.
 	RestartNamespace(name string) error
 }
 
@@ -74,6 +70,7 @@ func newNsRegistry(conf *common.Config) *nsManagerImpl {
 
 //GetNamespaceManager get namespace registry instance.
 func GetNamespaceManager(conf *common.Config) NamespaceManager {
+	logger = common.GetLogger("global", "nsmgr")
 	once.Do(func() {
 		nr = newNsRegistry(conf)
 	})
@@ -147,11 +144,7 @@ func (nr *nsManagerImpl) Register(name string) error {
 		return errors.New("Namespace config root dir is not valid")
 	}
 	nsConfigDir := configRootDir + "/" + name + "/config"
-	nsConfigs := make(map[string]*common.Config)
-	nsConfig := ConstructConfigFromDir(nsConfigDir)
-	nsConfigs[name] = nsConfig
-	common.InitHyperLogger(nsConfigs)
-
+	nsConfig := constructConfigFromDir(nsConfigDir)
 	ns, err := GetNamespace(name, nsConfig)
 	if err != nil {
 		logger.Errorf("Construct namespace %s error, %v", name, err)
