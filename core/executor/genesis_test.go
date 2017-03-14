@@ -7,10 +7,14 @@ import (
 	tutil "hyperchain/core/test_util"
 	edb "hyperchain/core/db_utils"
 	"bytes"
+	"testing"
+	"path"
+	"hyperchain/common"
 )
 
 type GenesisSuite struct {
 	executor *Executor
+	owd      string
 }
 
 var _ = checker.Suite(&GenesisSuite{})
@@ -20,10 +24,14 @@ func init() {
 	spew.Config.DisableMethods = true
 }
 
+func TestGenesis(t *testing.T) {
+	checker.TestingT(t)
+}
 // Run once when the suite starts running.
 func (suite *GenesisSuite) SetUpSuite(c *checker.C) {
 	// initialize block pool
-	os.Chdir("../..")
+	suite.owd, _ = os.Getwd()
+	os.Chdir(path.Join(common.GetGoPath(), "src/hyperchain"))
 	os.RemoveAll("./build")
 	conf = tutil.InitConfig(configPath, dbConfigPath)
 	edb.InitDBForNamespace(conf, namespace, dbConfigPath, 8001)
@@ -42,6 +50,7 @@ func (suite *GenesisSuite) TearDownTest(c *checker.C) {
 func (suite *GenesisSuite) TearDownSuite(c *checker.C) {
 	os.RemoveAll("./build")
 	os.RemoveAll("./db.log")
+	os.Chdir(suite.owd)
 }
 
 func (suite *GenesisSuite) TestInitGenesis(c *checker.C) {
