@@ -114,7 +114,7 @@ func main() {
 			return errors.New("Initialize BlockPool failed")
 		}
 		executor.CreateInitBlock(conf)
-		executor.Initialize()
+		executor.Start()
 		//init manager
 		exist := make(chan bool)
 		pm := manager.New(DefaultNamespace, eventMux, executor, grpcPeerMgr, consenter, am, cm)
