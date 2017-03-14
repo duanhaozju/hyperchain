@@ -149,6 +149,12 @@ func (nr *nsManagerImpl) GetNamespaceByName(name string) Namespace {
 //ProcessRequest process received request
 func (nr *nsManagerImpl) ProcessRequest(request interface{}) interface{} {
 	req := request.(*common.RPCRequest)
+	if _, ok := nr.namespaces[req.Namespace]; !ok {
+		return &common.RPCResponse{
+			Namespace: req.Namespace,
+			Error: &common.NamespaceNotFound{req.Namespace},
+		}
+	}
 	return nr.namespaces[req.Namespace].ProcessRequest(req)
 }
 

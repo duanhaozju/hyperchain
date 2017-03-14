@@ -36,10 +36,10 @@ type JSONRequest struct {
 // JSON-RPC response
 type JSONResponse struct {
 	Version   string      `json:"jsonrpc"`
+	Namespace string      `json:"namespace"`
 	Id        interface{} `json:"id,omitempty"`
 	Code      int         `json:"code"`
 	Message   string      `json:"message"`
-	Namespace string      `json:"namespace"`
 	Result    interface{} `json:"result,omitempty"`
 }
 
@@ -110,7 +110,7 @@ func (c *jsonCodec) CheckHttpHeaders() common.RPCError{
 	tcert,err := primitives.ParseCertificate(tcertPem)
 	if err != nil {
 		log.Error("fail to parse tcert.",err)
-		return &UnauthorizedError{}
+		return &common.UnauthorizedError{}
 	}
 	tcertPublicKey := tcert.PublicKey
 	pubKey := tcertPublicKey.(*(ecdsa.PublicKey))
@@ -129,14 +129,14 @@ func (c *jsonCodec) CheckHttpHeaders() common.RPCError{
 	verifySignature,err := primitives.ECDSAVerifyTransport(pubKey,[]byte(msg),signB)
 	if err != nil || !verifySignature {
 		log.Error("Fail to verify TransportSignture!",err)
-		return &UnauthorizedError{}
+		return &common.UnauthorizedError{}
 	}
 	//log.Critical("TransportSignture 验证通过")
 	verifyTcert, err := c.CM.VerifyTCert(tcertPem)
 
 	if verifyTcert == false || err != nil {
 		log.Error("Fail to verify tcert!",err)
-		return &UnauthorizedError{}
+		return &common.UnauthorizedError{}
 	}
 	//log.Critical("TCert 验证通过")
 	return nil
@@ -151,7 +151,7 @@ func (c *jsonCodec) ReadRequestHeaders() ([]common.RPCRequest, bool, common.RPCE
 
 	var incomingMsg json.RawMessage
 	if err := c.d.Decode(&incomingMsg); err != nil {
-		return nil, false, &invalidRequestError{err.Error()}
+		return nil, false, &common.InvalidRequestError{err.Error()}
 	}
 	//log.Info(string(incomingMsg))
 	if isBatch(incomingMsg) {
@@ -183,17 +183,16 @@ func checkReqId(reqId json.RawMessage) error {
 func parseRequest(incomingMsg json.RawMessage) ([]common.RPCRequest, bool, common.RPCError) {
 	var in JSONRequest
 	if err := json.Unmarshal(incomingMsg, &in); err != nil {
-		return nil, false, &invalidMessageError{err.Error()}
+		return nil, false, &common.InvalidMessageError{err.Error()}
 	}
-	//log.Info(in)
 	if err := checkReqId(in.Id); err != nil {
-		return nil, false, &invalidMessageError{err.Error()}
+		return nil, false, &common.InvalidMessageError{err.Error()}
 	}
 
 	// regular RPC call
 	elems := strings.Split(in.Method, serviceMethodSeparator)
 	if len(elems) != 2 {
-		return nil, false, &methodNotFoundError{in.Method, ""}
+		return nil, false, &common.MethodNotFoundError{in.Method, ""}
 	}
 
 	if len(in.Payload) == 0 {
@@ -208,20 +207,20 @@ func parseRequest(incomingMsg json.RawMessage) ([]common.RPCRequest, bool, commo
 func parseBatchRequest(incomingMsg json.RawMessage) ([]common.RPCRequest, bool, common.RPCError) {
 	var in []JSONRequest
 	if err := json.Unmarshal(incomingMsg, &in); err != nil {
-		return nil, false, &invalidMessageError{err.Error()}
+		return nil, false, &common.InvalidMessageError{err.Error()}
 	}
 
 	requests := make([]common.RPCRequest, len(in))
 	for i, r := range in {
 		if err := checkReqId(r.Id); err != nil {
-			return nil, false, &invalidMessageError{err.Error()}
+			return nil, false, &common.InvalidMessageError{err.Error()}
 		}
 
 		id := &in[i].Id
 
 		elems := strings.Split(r.Method, serviceMethodSeparator)
 		if len(elems) != 2 {
-			return nil, true, &methodNotFoundError{r.Method, ""}
+			return nil, true, &common.MethodNotFoundError{r.Method, ""}
 		}
 
 		if len(r.Payload) == 0 {
@@ -239,7 +238,7 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]common.RPCRequest, bool, 
 func (c *jsonCodec) ParseRequestArguments(argTypes []reflect.Type, params interface{}) ([]reflect.Value, common.RPCError) {
 	//log.Info("==================enter ParseRequestArguments()==================")
 	if args, ok := params.(json.RawMessage); !ok {
-		return nil, &invalidParamsError{"Invalid params supplied"}
+		return nil, &common.InvalidParamsError{"Invalid params supplied"}
 	} else {
 		return parsePositionalArguments(args, argTypes)
 	}
@@ -258,11 +257,11 @@ func parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type)
 	//log.Info(params)	// [0xc8201437a0]
 	if err := json.Unmarshal(args, &params); err != nil {
 		log.Info(err)
-		return nil, &invalidParamsError{err.Error()}
+		return nil, &common.InvalidParamsError{err.Error()}
 	}
 
 	if len(params) > len(callbackArgs) {
-		return nil, &invalidParamsError{fmt.Sprintf("too many params, want %d got %d", len(callbackArgs), len(params))}
+		return nil, &common.InvalidParamsError{fmt.Sprintf("too many params, want %d got %d", len(callbackArgs), len(params))}
 	}
 
 	// assume missing params are null values
@@ -274,7 +273,7 @@ func parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type)
 	for i, p := range params {
 		// verify that JSON null values are only supplied for optional arguments (ptr types)
 		if p == nil && callbackArgs[i].Kind() != reflect.Ptr {
-			return nil, &invalidParamsError{fmt.Sprintf("invalid or missing value for params[%d]", i)}
+			return nil, &common.InvalidParamsError{fmt.Sprintf("invalid or missing value for params[%d]", i)}
 		}
 		if p == nil {
 			argValues[i] = reflect.Zero(callbackArgs[i])
@@ -288,22 +287,22 @@ func parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type)
 }
 
 // CreateResponse will create a JSON-RPC success response with the given id and reply as result.
-func (c *jsonCodec) CreateResponse(id interface{}, reply interface{}) interface{} {
+func (c *jsonCodec) CreateResponse(id interface{}, name string, reply interface{}) interface{} {
 	if isHexNum(reflect.TypeOf(reply)) {
-		return &JSONResponse{Version: JSONRPCVersion, Id: id, Code: 0, Message: "SUCCESS", Result: fmt.Sprintf(`%#x`, reply)}
+		return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: 0, Message: "SUCCESS", Result: fmt.Sprintf(`%#x`, reply)}
 	}
-	return &JSONResponse{Version: JSONRPCVersion, Id: id, Code: 0, Message: "SUCCESS", Result: reply}
+	return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: 0, Message: "SUCCESS", Result: reply}
 }
 
 // CreateErrorResponse will create a JSON-RPC error response with the given id and error.
-func (c *jsonCodec) CreateErrorResponse(id interface{}, err common.RPCError) interface{} {
-	return &JSONResponse{Version: JSONRPCVersion, Id: id, Code: err.Code(), Message: err.Error()}
+func (c *jsonCodec) CreateErrorResponse(id interface{}, name string, err common.RPCError) interface{} {
+	return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: err.Code(), Message: err.Error()}
 }
 
 // CreateErrorResponseWithInfo will create a JSON-RPC error response with the given id and error.
 // info is optional and contains additional information about the error. When an empty string is passed it is ignored.
-func (c *jsonCodec) CreateErrorResponseWithInfo(id interface{}, err common.RPCError, info interface{}) interface{} {
-	return &JSONResponse{Version: JSONRPCVersion, Id: id, Code: err.Code(), Message: err.Error(), Result: info}
+func (c *jsonCodec) CreateErrorResponseWithInfo(id interface{}, name string, err common.RPCError, info interface{}) interface{} {
+	return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: err.Code(), Message: err.Error(), Result: info}
 }
 
 // CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.

@@ -60,7 +60,7 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 
 	value, err := proto.Marshal(txValue)
 	if err != nil {
-		return common.Hash{}, &CallbackError{err.Error()}
+		return common.Hash{}, &common.CallbackError{err.Error()}
 	}
 
 	if args.To == nil {
@@ -83,24 +83,24 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 	var exist, _ = edb.JudgeTransactionExist(contract.namespace, tx.TransactionHash)
 
 	if exist {
-		return common.Hash{}, &RepeadedTxError{"repeated tx"}
+		return common.Hash{}, &common.RepeadedTxError{"repeated tx"}
 	}
 
 	// Unsign Test
 	if !tx.ValidateSign(contract.pm.AccountManager.Encryption, kec256Hash) {
 		log.Error("invalid signature")
 		// ATTENTION, return invalid transactino directly
-		return common.Hash{}, &SignatureInvalidError{"invalid signature"}
+		return common.Hash{}, &common.SignatureInvalidError{"invalid signature"}
 	}
 
 	if txBytes, err := proto.Marshal(tx); err != nil {
 		log.Errorf("proto.Marshal(tx) error: %v", err)
-		return common.Hash{}, &CallbackError{"proto.Marshal(tx) happened error"}
+		return common.Hash{}, &common.CallbackError{"proto.Marshal(tx) happened error"}
 	} else if manager.GetEventObject() != nil {
 		go contract.eventMux.Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
 	} else {
 		log.Error("manager is Nil")
-		return common.Hash{}, &CallbackError{"eventObject is nil"}
+		return common.Hash{}, &common.CallbackError{"eventObject is nil"}
 	}
 	return tx.GetHash(), nil
 
@@ -117,7 +117,7 @@ func (contract *PublicContractAPI) CompileContract(ct string) (*CompileCode, err
 	abi, bin, names, err := compiler.CompileSourcefile(ct)
 
 	if err != nil {
-		return nil, &CallbackError{err.Error()}
+		return nil, &common.CallbackError{err.Error()}
 	}
 
 	return &CompileCode{
@@ -130,7 +130,7 @@ func (contract *PublicContractAPI) CompileContract(ct string) (*CompileCode, err
 // DeployContract deploys contract.
 func (contract *PublicContractAPI) DeployContract(args SendTxArgs) (common.Hash, error) {
 	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
-		return common.Hash{}, &SystemTooBusyError{"system is too busy to response "}
+		return common.Hash{}, &common.SystemTooBusyError{"system is too busy to response "}
 	}
 	return deployOrInvoke(contract, args, 1)
 }
@@ -138,7 +138,7 @@ func (contract *PublicContractAPI) DeployContract(args SendTxArgs) (common.Hash,
 // InvokeContract invokes contract.
 func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash, error) {
 	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
-		return common.Hash{}, &SystemTooBusyError{"system is too busy to response "}
+		return common.Hash{}, &common.SystemTooBusyError{"system is too busy to response "}
 	}
 	return deployOrInvoke(contract, args, 2)
 }
@@ -203,7 +203,7 @@ func (contract *PublicContractAPI) EncryptoMessage(args EncryptoArgs) (*HmResult
 	amount_hm_bigint := new(big.Int)
 
 	if !isValid {
-		return &HmResult{}, &OutofBalanceError{"out of balance"}
+		return &HmResult{}, &common.OutofBalanceError{"out of balance"}
 	}
 
 	return &HmResult{
@@ -225,7 +225,7 @@ type HmCheckResult struct {
 
 func (contract *PublicContractAPI) CheckHmValue(args ValueArgs) (*HmCheckResult, error) {
 	if len(args.RawValue) != len(args.EncryValue) {
-		return nil, &InvalidParamsError{"invalid params, the length of rawValue is "+strconv.Itoa(len(args.RawValue))+", but the length of encryValue is "+strconv.Itoa(len(args.EncryValue))}
+		return nil, &common.InvalidParamsError{"invalid params, the length of rawValue is "+strconv.Itoa(len(args.RawValue))+", but the length of encryValue is "+strconv.Itoa(len(args.EncryValue))}
 	}
 
 	result := make([]bool, len(args.RawValue))
@@ -291,7 +291,7 @@ func getBlockStateDb(namespace string, config *common.Config) (vm.Database, erro
 	stateDB, err := NewStateDb(config, namespace)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
-		return nil, &CallbackError{err.Error()}
+		return nil, &common.CallbackError{err.Error()}
 	}
 	return stateDB, nil
 }

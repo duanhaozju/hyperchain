@@ -40,7 +40,7 @@ func (acc *PublicAccountAPI) NewAccount(password string) (common.Address, error)
 	ac, err := am.NewAccount(password)
 	if err != nil {
 		log.Errorf("New Account error,%v", err)
-		return common.Address{}, &CallbackError{err.Error()}
+		return common.Address{}, &common.CallbackError{err.Error()}
 	}
 
 	/*	balanceIns, err :=types.go.GetBalanceIns()
@@ -66,7 +66,7 @@ func (acc *PublicAccountAPI) UnlockAccount(args UnlockParas) (bool, error) {
 	ac := accounts.Account{Address: args.Address, File: am.KeyStore.JoinPath(s)}
 	err := am.Unlock(ac, args.Password)
 	if err != nil {
-		return false, &InvalidParamsError{"incorrect address or password!"}
+		return false, &common.InvalidParamsError{"incorrect address or password!"}
 	}
 	return true, nil
 }
@@ -97,9 +97,9 @@ func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
 		if stateobject := stateDB.GetAccount(addr); stateobject != nil {
 			return fmt.Sprintf(`0x%x`, stateobject.Balance()), nil
 		} else {
-			return "", &LeveldbNotFoundError{"stateobject, the account may not exist"}
+			return "", &common.LeveldbNotFoundError{"stateobject, the account may not exist"}
 		}
 	} else {
-		return "", &LeveldbNotFoundError{"statedb"}
+		return "", &common.LeveldbNotFoundError{"statedb"}
 	}
 }

@@ -18,10 +18,11 @@ type RPCRequest struct {
 
 // rpcResponse represents a raw incoming RPC request
 type RPCResponse struct {
-	Id    interface{}
+	Namespace string
+	Id        interface{}
 	//Reply []reflect.Value
-	Reply interface{}
-	Error RPCError
+	Reply     interface{}
+	Error     RPCError
 }
 
 //// callback is a method callback which was registered in the server

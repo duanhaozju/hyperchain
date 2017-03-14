@@ -18,13 +18,9 @@ func init() {
 
 type RPCProcesser interface {
 	Start() error
-	RegisterAllName() error
-	registerName(name string, rcvr interface{}) error
 	//DelRegisterName()
 	//AddRegisterName()
 	ProcessRequest(request *common.RPCRequest) *common.RPCResponse
-	//CheckRequestParams(reqs []common.RPCRequest) ([]*serverRequest)
-	parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type) ([]reflect.Value, error)
 }
 
 type RPCProcesserImpl struct {
@@ -46,7 +42,7 @@ func NewRPCProcessorImpl(namespace string, apis []hpc.API) *RPCProcesserImpl {
 
 //Start starts an instance of RPCManager
 func (rpcproc *RPCProcesserImpl) Start() error {
-	err := rpcproc.RegisterAllName()
+	err := rpcproc.registerAllName()
 	if err != nil {
 		log.Errorf("Failed to start RPC Manager of namespace %s!!!", rpcproc.namespace)
 		return err
@@ -55,7 +51,7 @@ func (rpcproc *RPCProcesserImpl) Start() error {
 }
 
 //RegisterAllName registers all namespace of given RPCManager
-func (rpcproc *RPCProcesserImpl) RegisterAllName() error {
+func (rpcproc *RPCProcesserImpl) registerAllName() error {
 	for _, api := range rpcproc.apis {
 		if err := rpcproc.registerName(api.Srvname, api.Service); err != nil {
 			log.Errorf("registerName error: %v ", err)
@@ -135,7 +131,10 @@ func (rpcproc *RPCProcesserImpl) ProcessRequest(request *common.RPCRequest) *com
 	return rpcproc.exec(request.Ctx, sr)
 }
 
-
+// checkRequestParams requests the next (batch) request from the codec. It will return the collection
+// of requests, an indication if the request was a batch, the invalid request identifier and an
+// error when the request could not be read/parsed.
+// todo check multi requests, use loop check
 func (rpcproc *RPCProcesserImpl) checkRequestParams(req *common.RPCRequest) (*serverRequest) {
 
 		var sr *serverRequest
@@ -161,44 +160,6 @@ func (rpcproc *RPCProcesserImpl) checkRequestParams(req *common.RPCRequest) (*se
 		return  &serverRequest{id: req.Id, err: &common.MethodNotFoundError{req.Service, req.Method}}
 
 }
-
-
-
-
-
-
-//// readRequest requests the next (batch) request from the codec. It will return the collection
-//// of requests, an indication if the request was a batch, the invalid request identifier and an
-//// error when the request could not be read/parsed.
-//func (rpcproc *RPCProcesserImpl) CheckRequestParams(reqs []common.RPCRequest) ([]*serverRequest) {
-//
-//	requests := make([]*serverRequest, len(reqs))
-//
-//	// verify requests
-//	for i, r := range reqs {
-//		var ok bool
-//		var svc *service
-//
-//		if svc, ok = rpcproc.services[r.Service]; !ok { // rpc method isn't available
-//			requests[i] = &serverRequest{id: r.Id, err: &common.MethodNotFoundError{r.Service, r.Method}}
-//			continue
-//		}
-//
-//		if callb, ok := svc.callbacks[r.Method]; ok { // lookup RPC method
-//			requests[i] = &serverRequest{id: r.Id, svcname: svc.name, callb: callb}
-//			if r.Params != nil && len(callb.argTypes) > 0 {
-//				if args, err := rpcproc.ParseRequestArguments(callb.argTypes, r.Params); err == nil {
-//					requests[i].args = args
-//				} else {
-//					requests[i].err = &common.InvalidParamsError{err.Error()}
-//				}
-//			}
-//			continue
-//		}
-//		requests[i] = &serverRequest{id: r.Id, err: &common.MethodNotFoundError{r.Service, r.Method}}
-//	}
-//	return requests
-//}
 
 // ParseRequestArguments tries to parse the given params (json.RawMessage) with the given types. It returns the parsed
 // values or an error when the parsing failed.
@@ -246,7 +207,7 @@ func (rpcproc *RPCProcesserImpl) parsePositionalArguments(args json.RawMessage, 
 			argValues[i] = reflect.Zero(callbackArgs[i])
 		} else { // deref pointers values creates previously with reflect.New
 			argValues[i] = reflect.ValueOf(p).Elem()
-			//log.Infof("%#v",argValues[i])  // hpc.SendTxArgs{From:common.Address{0x0, 0xf, 0x1a, 0x7a, 0x8, 0xcc, 0xc4, 0x8e, 0x5d, 0x30, 0xf8, 0x8, 0x50, 0xcf, 0x1c, 0xf2, 0x83, 0xaa, 0x3a, 0xbd}, To:"0x0000000000000000000000000000000000000003", Gas:"", GasPrice:"", Value:"0x9184e72a", Payload:""}
+
 		}
 	}
 
@@ -255,9 +216,6 @@ func (rpcproc *RPCProcesserImpl) parsePositionalArguments(args json.RawMessage, 
 
 // exec executes the given request and writes the result back using the codec.
 func (rpcproc *RPCProcesserImpl) exec(ctx context.Context, req *serverRequest) *common.RPCResponse {
-	//log.Info("=============enter exec()=================")
-
-	var callback func()
 
 	response, callback := rpcproc.handle(ctx, req)
 
@@ -297,7 +255,6 @@ func (rpcproc *RPCProcesserImpl) exec(ctx context.Context, req *serverRequest) *
 
 // handle executes a request and returns the response from the callback.
 func (rpcproc *RPCProcesserImpl) handle(ctx context.Context, req *serverRequest) (*common.RPCResponse, func()) {
-	//log.Info("=========================enter handle()============================")
 	if req.err != nil {
 		return rpcproc.CreateErrorResponse(&req.id, req.err), nil
 	}
@@ -338,6 +295,7 @@ func (rpcproc *RPCProcesserImpl) handle(ctx context.Context, req *serverRequest)
 
 func (rpcproc *RPCProcesserImpl) CreateResponse(id interface{}, reply interface{}) *common.RPCResponse {
 	return &common.RPCResponse{
+		Namespace: rpcproc.namespace,
 		Id:    id,
 		Reply: reply,
 		Error: nil,
@@ -346,6 +304,7 @@ func (rpcproc *RPCProcesserImpl) CreateResponse(id interface{}, reply interface{
 
 func (rpcproc *RPCProcesserImpl) CreateErrorResponse(id interface{}, err common.RPCError) *common.RPCResponse {
 	return &common.RPCResponse{
+		Namespace: rpcproc.namespace,
 		Id:    id,
 		Reply: nil,
 		Error: err,
@@ -354,6 +313,7 @@ func (rpcproc *RPCProcesserImpl) CreateErrorResponse(id interface{}, err common.
 
 func (rpcproc *RPCProcesserImpl) CreateErrorResponseWithInfo(id interface{}, err common.RPCError, info interface{}) *common.RPCResponse {
 	return &common.RPCResponse{
+		Namespace: rpcproc.namespace,
 		Id:    id,
 		Reply: info,
 		Error: err,

@@ -94,16 +94,6 @@ func (e *ShutdownError) Error() string {
 	return "server is shutting down"
 }
 
-type UnauthorizedError struct {
-}
-
-func (e *UnauthorizedError) Code() int {
-	return -32099
-}
-
-func (e *UnauthorizedError) Error() string {
-	return "Unauthorized, Please check your cert"
-}
 
 
 
@@ -197,6 +187,18 @@ func (e *RepeadedTxError) Error() string {
 	return e.Message
 }
 
+type NamespaceNotFound struct {
+	Name    string
+}
+
+func (e *NamespaceNotFound) Code() int {
+	return -32008
+}
+
+func (e *NamespaceNotFound) Error() string {
+	return fmt.Sprintf("The namespace '%s' does not exist", e.Name)
+}
+
 //type marshalError struct {
 //	Message  string
 //}
@@ -220,6 +222,17 @@ func (e *RepeadedTxError) Error() string {
 //func (e *nullPointError) Error() string {
 //	return e.Message
 //}
+
+type UnauthorizedError struct {
+}
+
+func (e *UnauthorizedError) Code() int {
+	return -32098
+}
+
+func (e *UnauthorizedError) Error() string {
+	return "Unauthorized, Please check your cert"
+}
 
 type CertError struct {
 	Message string

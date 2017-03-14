@@ -79,6 +79,7 @@ func startHttp(httpPort int, restPort int, logsPath string, srv *Server, cm *adm
 
 func newJSONHTTPHandler(srv *Server, cm *admittance.CAManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		//log.Critical("has request")
 		if r.ContentLength > maxHTTPRequestContentLength {
 			http.Error(w,
