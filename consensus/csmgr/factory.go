@@ -16,9 +16,10 @@ import (
 
 var cr cs.Consenter
 var once sync.Once
+var err error
 
 //new init the consentor instance.
-func newConsenter(namespace string, conf *common.Config, msgQ *event.TypeMux) cs.Consenter {
+func newConsenter(namespace string, conf *common.Config, msgQ *event.TypeMux) (cs.Consenter, error) {
 	h := helper.NewHelper(msgQ)
 	algo := conf.GetString(cs.CONSENSUS_ALGO)
 	switch algo {
@@ -32,9 +33,9 @@ func newConsenter(namespace string, conf *common.Config, msgQ *event.TypeMux) cs
 
 // Consenter return a Consenter instance
 // msgQ is the connection with outer services.
-func Consenter(namespace string, conf *common.Config, msgQ *event.TypeMux) cs.Consenter {
+func Consenter(namespace string, conf *common.Config, msgQ *event.TypeMux) (cs.Consenter, error) {
 	once.Do(func() {
-		cr = newConsenter(namespace, conf, msgQ)
+		cr, err = newConsenter(namespace, conf, msgQ)
 	})
-	return cr
+	return cr, err
 }

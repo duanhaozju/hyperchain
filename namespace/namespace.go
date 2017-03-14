@@ -110,7 +110,11 @@ func (ns *namespaceImpl) init() error {
 	ns.grpcMgr = grpcPeerMgr
 
 	//4.init pbft consensus
-	consenter := csmgr.Consenter(ns.Name(), ns.conf, ns.eventMux)
+	consenter, err := csmgr.Consenter(ns.Name(), ns.conf, ns.eventMux)
+	if err != nil {
+		logger.Errorf("init Consenter for namespace %s error, %v", ns.Name(), err)
+		return err
+	}
 	consenter.Start()
 	ns.consenter = consenter
 

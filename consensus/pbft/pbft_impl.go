@@ -57,13 +57,15 @@ type pbftImpl struct {
 }
 
 //newPBFT init the PBFT instance
-func newPBFT(namespace string, config *common.Config, h helper.Stack) *pbftImpl {
+func newPBFT(namespace string, config *common.Config, h helper.Stack) (*pbftImpl, error) {
+	var err error
 	pbft := &pbftImpl{}
 	pbft.namespace = namespace
 	pbft.helper = h
 	pbft.config = config
 	if !config.ContainsKey(common.C_NODE_ID) {
-		panic(fmt.Errorf("No hyperchain id specified!, key: %s", common.C_NODE_ID))
+		err = fmt.Errorf("No hyperchain id specified!, key: %s", common.C_NODE_ID)
+		return nil, err
 	}
 	pbft.id = uint64(config.GetInt64(common.C_NODE_ID))
 	pbft.N = config.GetInt(PBFT_NODE_NUM)
@@ -72,38 +74,19 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack) *pbftImpl 
 	pbft.logMultiplier = uint64(4)
 	pbft.L = pbft.logMultiplier * pbft.K // log size
 
-	//pbftManage manage consensus events
+	// pbftManage manage consensus events
 	pbft.pbftManager = events.NewManagerImpl()
 	pbft.pbftManager.SetReceiver(pbft)
 	pbft.pbftManager.Start()
 	pbft.pbftEventQueue = events.GetQueue(pbft.pbftManager.Queue())// init pbftEventQueue
-
 	pbft.initMsgEventMap()
 
+	// new executor
 	pbft.exec = newExecutor()
+	//new timer manager
 	pbft.pbftTimerMgr = newTimerMgr(pbft)
-
 	pbft.initTimers()
 	pbft.initStatus()
-
-	if pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
-		logger.Infof("PBFT null requests timeout = %v", pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER))
-	} else {
-		logger.Infof("PBFT null requests disabled")
-	}
-
-	pbft.vcMgr = newVcManager(pbft.pbftTimerMgr, pbft, config)
-	// init the data logs
-	pbft.storeMgr = newStoreMgr()
-
-	// initialize state transfer
-	pbft.nodeMgr = newNodeMgr()
-	pbft.duplicator = make(map[uint64]*transactionStore)
-	pbft.batchMgr = newBatchManager(config, pbft) 		// init after pbftEventQueue
-	pbft.batchVdr = newBatchValidator(pbft)
-	pbft.reqStore = newRequestStore()
-
-	atomic.StoreUint32(&pbft.activeView, 1)
 
 	logger.Infof("PBFT Max number of validating peers (N) = %v", pbft.N)
 	logger.Infof("PBFT Max number of failing peers (f) = %v", pbft.f)
@@ -112,6 +95,27 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack) *pbftImpl 
 	logger.Infof("PBFT Checkpoint period (K) = %v", pbft.K)
 	logger.Infof("PBFT Log multiplier = %v", pbft.logMultiplier)
 	logger.Infof("PBFT log size (L) = %v", pbft.L)
+	if pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
+		logger.Infof("PBFT null requests timeout = %v", pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER))
+	} else {
+		logger.Infof("PBFT null requests disabled")
+	}
+
+	// init the data logs
+	pbft.storeMgr = newStoreMgr()
+	// new viewchange manager
+	pbft.vcMgr = newVcManager(pbft.pbftTimerMgr, pbft, config)
+
+	// new node manager
+	pbft.nodeMgr = newNodeMgr()
+	pbft.duplicator = make(map[uint64]*transactionStore)
+	// new batch manager
+	pbft.batchMgr = newBatchManager(config, pbft)
+	pbft.batchVdr = newBatchValidator(pbft)
+	pbft.reqStore = newRequestStore()
+	pbft.recoveryMgr = newRecoveryMgr()
+
+	atomic.StoreUint32(&pbft.activeView, 1)
 
 	return pbft
 }

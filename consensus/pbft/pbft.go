@@ -34,7 +34,7 @@ func init() {
 }
 
 // New return a instance of pbftProtocal  TODO: rename helper.Stack ??
-func New(namespace string, conf * common.Config, h helper.Stack) *pbftImpl {
+func New(namespace string, conf * common.Config, h helper.Stack) (*pbftImpl, error) {
 	pcPath := conf.GetString(consensus.CONSENSUS_ALGO_CONFIG_PATH)
 	if pcPath == "" {
 		panic(fmt.Errorf("Invalid consensus algorithm configuration path, %s: %s",
@@ -101,8 +101,6 @@ func (pbft *pbftImpl) Start()  {
 	pbft.vcMgr.viewChangeSeqNo = ^uint64(0) // infinity
 	pbft.vcMgr.updateViewChangeSeqNo(pbft.seqNo, pbft.K, pbft.id)
 	pbft.batchMgr.start()
-
-	pbft.recoveryMgr = newRecoveryMgr()
 
 	pbft.pbftTimerMgr.makeRequestTimeoutLegal()
 
