@@ -24,12 +24,12 @@ global:
         newLogFileInterval: 24h  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
                                  # such as "300ms", "2h45m".
 
-        logsdir: "../logs"
+        logsdir: "./logs"
 
         loglevel: "NOTICE"
         # default loglevel for all modules which can be override by module level log setting
-        file_format: "%[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
-        console_format: "%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
+        file_format: "[System][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
+        console_format: "%{color}[System][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
 
         module:
             #set log level by module

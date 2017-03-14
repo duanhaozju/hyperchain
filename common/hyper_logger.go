@@ -33,8 +33,11 @@ func InitHyperLogger(logConfigs map[string]*Config) {
 		panic("InitHyperLogger failed no logger configs provided")
 	}
 	for namespace, config := range logConfigs {
-		hl := newHyperLogger(namespace, config)
-		hyperLoggerMgr[namespace] = hl
+		if _, ok := hyperLoggerMgr[namespace]; !ok {
+			hl := newHyperLogger(namespace, config)
+			hyperLoggerMgr[namespace] = hl
+		}
+
 	}
 }
 

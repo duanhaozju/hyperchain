@@ -90,7 +90,6 @@ func newCAManager(ecacertPath string, ecertPath string, rcertPath string, rcacer
 	var err error
 	caManager.checkTCert = checkTCert
 	ecacert, rerr := ioutil.ReadFile(ecacertPath)
-	log.Criticalf("ecacertPath", ecacertPath)
 	if rerr != nil {
 		log.Error("ecacert read failed")
 		return nil, rerr

@@ -9,7 +9,6 @@ import (
 
 const (
 	NS_CONFIG_DIR_ROOT = "global.nsConfigRootPath"
-	NS_CONFIG_DIR      = "namespace.config.dir"
 )
 
 //ConstructConfigFromDir read all info needed by

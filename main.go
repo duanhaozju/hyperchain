@@ -3,7 +3,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/mkideal/cli"
 	"hyperchain/common"
 	"hyperchain/namespace"
@@ -14,27 +13,18 @@ type argT struct {
 	ConfigPath string `cli:"c,conf" usage:"config file path" dft:"./global.yaml"`
 }
 
-func initGloableConfig(argv *argT) *common.Config {
-	conf := common.NewConfig(argv.ConfigPath)
-	return conf
-}
-
 var stopHyperchain chan bool
+var nsMgr namespace.NamespaceManager
 
 func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*argT)
 		stopHyperchain = make(chan bool)
 
-		globalConfig := initGloableConfig(argv)
+		globalConfig := common.NewConfig(argv.ConfigPath)
 		common.InitLog(globalConfig)
 
-		nsMgr := namespace.GetNamespaceManager(globalConfig)
-
-		namespaces := nsMgr.List()
-		for _, n := range namespaces {
-			fmt.Printf("namespace: %s\n", n)
-		}
+		nsMgr = namespace.GetNamespaceManager(globalConfig)
 		nsMgr.Start()
 
 		<-stopHyperchain
@@ -43,5 +33,6 @@ func main() {
 }
 
 func Stop() {
+	nsMgr.Stop()
 	stopHyperchain <- true
 }
