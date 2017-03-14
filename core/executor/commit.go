@@ -20,10 +20,16 @@ func (executor *Executor) CommitBlock(ev event.CommitEvent, peerManager p2p.Peer
 }
 
 func (executor *Executor) listenCommitEvent() {
+	log.Notice("commit backend start")
 	for {
-		ev := executor.fetchCommitEvent()
-		if success := executor.processCommitEvent(ev, executor.processCommitDone); success == false {
-			log.Errorf("[Namespace = %s] commit block #%d failed, system crush down.", executor.namespace, ev.SeqNo)
+		select {
+		case <- executor.getExit(IDENTIFIER_COMMIT):
+			log.Notice("commit backend exit")
+			return
+		case ev := <- executor.fetchCommitEvent():
+			if success := executor.processCommitEvent(ev, executor.processCommitDone); success == false {
+				log.Errorf("[Namespace = %s] commit block #%d failed, system crush down.", executor.namespace, ev.SeqNo)
+			}
 		}
 	}
 }

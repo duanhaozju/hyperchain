@@ -32,14 +32,20 @@ func (executor *Executor) Validate(validationEvent event.ValidationEvent, peerMa
 
 // listenValidationEvent - validation backend process, use to listen new validation event and dispatch it to a processor.
 func (executor *Executor) listenValidationEvent() {
+	log.Notice("validation backend start")
 	for {
-		ev := executor.fetchValidationEvent()
-		if executor.isReadyToValidation() {
-			if success := executor.processValidationEvent(ev, executor.processValidationDone); success == false {
-				log.Errorf("validate #%d failed, system crush down.", ev.SeqNo)
+		select {
+		case <- executor.getExit(IDENTIFIER_VALIDATION):
+			log.Notice("validation backend exit")
+			return
+		case ev := <- executor.fetchValidationEvent():
+			if executor.isReadyToValidation() {
+				if success := executor.processValidationEvent(ev, executor.processValidationDone); success == false {
+					log.Errorf("validate #%d failed, system crush down.", ev.SeqNo)
+				}
+			} else {
+				executor.dropValdiateEvent(ev, executor.processValidationDone)
 			}
-		} else {
-			executor.dropValdiateEvent(ev, executor.processValidationDone)
 		}
 	}
 }

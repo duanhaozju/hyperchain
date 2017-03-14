@@ -92,10 +92,8 @@ func (executor *Executor) addValidationEvent(ev event.ValidationEvent) {
 }
 
 // fetchValidationEvent - got a validation event from channel buffer.
-func (executor *Executor) fetchValidationEvent() event.ValidationEvent {
-	ev := <- executor.cache.validationEventC
-	log.Debugf("[Namespace = %s] fetch a validation event #%d", executor.namespace, ev.SeqNo)
-	return ev
+func (executor *Executor) fetchValidationEvent() chan event.ValidationEvent {
+	return executor.cache.validationEventC
 }
 
 // processValidationDone - validation finish callback.
@@ -111,10 +109,8 @@ func (executor *Executor) addCommitEvent(ev event.CommitEvent) {
 }
 
 // fetchCommitEvent - got a commit event from channel buffer.
-func (executor *Executor) fetchCommitEvent() event.CommitEvent {
-	ev := <- executor.cache.commitEventC
-	log.Debugf("[Namespace = %s] fetch a commit event #%d", executor.namespace, ev.SeqNo)
-	return ev
+func (executor *Executor) fetchCommitEvent() chan event.CommitEvent {
+	return executor.cache.commitEventC
 }
 
 // processCommitDone - commit process finish callback.

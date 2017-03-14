@@ -28,3 +28,11 @@ func AssertBlock(block *types.Block, expect *types.Block) bool {
 func AssertTransaction(transaction *types.Transaction, expect *types.Transaction) bool {
 	return reflect.DeepEqual(transaction, expect)
 }
+
+func AssertChain(chain *types.Chain, expect *types.Chain) bool {
+	return reflect.DeepEqual(chain, expect)
+}
+
+func AssertReceipt(receipt *types.Receipt, expect *types.Receipt) bool {
+	return reflect.DeepEqual(receipt, expect)
+}

@@ -49,7 +49,7 @@ func (suite *SimulateSuite) SetUpSuite(c *checker.C) {
 	edb.InitDBForNamespace(conf, namespace, dbConfigPath, 8001)
 	suite.executor = NewExecutor(namespace, conf, nil)
 	suite.executor.CreateInitBlock(conf)
-	suite.executor.Initialize()
+	suite.executor.initialize()
 }
 
 // Run before each test or benchmark starts running.

@@ -11,7 +11,7 @@ import (
 
 func (executor *Executor) syncReplica() {
 	if executor.GetSyncReplicaEnable() {
-		go executor.sendReplicaInfo()
+		executor.sendReplicaInfo()
 	}
 }
 
@@ -20,6 +20,9 @@ func (executor *Executor) sendReplicaInfo() {
 	ticker := time.NewTicker(interval)
 	for {
 		select {
+		case <- executor.getExit(IDENTIFIER_REPLICA_SYNC):
+			log.Notice("replica sync backend exit")
+			return
 		case <- ticker.C:
 			executor.informP2P(NOTIFY_SYNC_REPLICA, edb.GetChainCopy(executor.namespace))
 		}

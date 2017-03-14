@@ -51,6 +51,40 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux)
 	return executor
 }
 
+// Start - start service.
+func (executor *Executor) Start() {
+	executor.initialize()
+	log.Noticef("[Namespace = %s] ************* executor start **************", executor.namespace)
+}
+
+// Stop - stop service.
+func (executor *Executor) Stop() {
+	executor.setExit()
+	log.Noticef("[Namespace = %s] ************* executor stop **************", executor.namespace)
+}
+
+// Status - obtain executor status.
+func (executor *Executor) Status() {
+
+}
+
+
+func (executor *Executor) initialize() {
+	if err := initializeExecutorStatus(executor); err != nil {
+		log.Errorf("executor initiailize status failed. %s", err.Error())
+	}
+	if err := initializeExecutorCache(executor); err != nil {
+		log.Errorf("executor initiailize cache failed. %s", err.Error())
+	}
+	if err := initializeExecutorStateDb(executor); err != nil {
+		log.Errorf("executor initiailize state failed. %s", err.Error())
+	}
+	// start to listen for process commit event or validation event
+	go executor.listenCommitEvent()
+	go executor.listenValidationEvent()
+	go executor.syncReplica()
+}
+
 
 // initializeExecutorStateDb - initialize statedb.
 func initializeExecutorStateDb(executor *Executor) error {
@@ -62,24 +96,6 @@ func initializeExecutorStateDb(executor *Executor) error {
 	executor.statedb = stateDb
 	return nil
 }
-
-
-func (executor *Executor) Initialize() {
-	if err := initializeExecutorStatus(executor); err != nil {
-
-	}
-	if err := initializeExecutorCache(executor); err != nil {
-
-	}
-	if err := initializeExecutorStateDb(executor); err != nil {
-
-	}
-	// start to listen for process commit event or validation event
-	go executor.listenCommitEvent()
-	go executor.listenValidationEvent()
-	go executor.syncReplica()
-}
-
 // NewStateDb - create a latest state.
 func (executor *Executor) newStateDb() (vm.Database, error) {
 	blk, err := edb.GetBlockByNumber(executor.namespace, edb.GetHeightOfChain(executor.namespace))

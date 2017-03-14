@@ -94,7 +94,7 @@ func main() {
 		}
 
 		executor.CreateInitBlock(conf)
-		executor.Initialize()
+		executor.Start()
 		//init manager
 		exist := make(chan bool)
 
