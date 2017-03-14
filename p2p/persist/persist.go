@@ -11,14 +11,14 @@ import (
 
 // StoreState stores a key,value pair
 func PutData(key string, value []byte) error {
-	db, err := hyperdb.GetDBDatabase()
+	db, err := hyperdb.GetDBDatabase() //TODO:change this to GetDBDatabaseByNamespace
 	if err != nil {
 		return err
 	}
 	return db.Put([]byte("p2p."+key), value)
 }
 
-func PutBool(key string,value bool) error {
+func PutBool(key string, value bool) error {
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return err
@@ -27,32 +27,24 @@ func PutBool(key string,value bool) error {
 
 	if value {
 		persistValue = []byte("true")
-	}else{
+	} else {
 		persistValue = []byte("false")
 	}
 
 	return db.Put([]byte("p2p."+key), persistValue)
 }
 
-func GetBool(key string) (bool,error){
+func GetBool(key string) (bool, error) {
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		return false, err
 	}
-	persistKey,err := db.Get([]byte("p2p." + key))
-	if string(persistKey) == "true"{
-		return true,err
+	persistKey, err := db.Get([]byte("p2p." + key))
+	if string(persistKey) == "true" {
+		return true, err
 	}
-	return false,err
+	return false, err
 }
-//DelAllState: remove all state
-//func DelAllState() error {
-//	db, err := hyperdb.GetDBDatabase()
-//	if err == nil {
-//		db.Destroy()
-//	}
-//	return err
-//}
 
 // DelState removes a key,value pair
 func DelData(key string) error {

@@ -3,10 +3,18 @@
 package namespace
 
 import (
+	"errors"
+	"hyperchain/accounts"
+	"hyperchain/admittance"
 	"hyperchain/api/jsonrpc/core"
 	"hyperchain/common"
+	"hyperchain/consensus"
+	"hyperchain/consensus/csmgr"
+	"hyperchain/core/db_utils"
+	"hyperchain/core/executor"
+	"hyperchain/event"
 	"hyperchain/manager"
-	"hyperchain/admittance"
+	"hyperchain/p2p"
 )
 
 //Namespace represent the namespace instance
@@ -21,6 +29,7 @@ type Namespace interface {
 	Info() *NamespaceInfo
 	//ProcessRequest process request under this namespace.
 	ProcessRequest(request interface{}) interface{}
+
 	//Name of current namespace.
 	Name() string
 }
@@ -57,26 +66,79 @@ type NamespaceInfo struct {
 type namespaceImpl struct {
 	nsInfo *NamespaceInfo
 	status *Status
+
+	conf      *common.Config
+	eventMux  *event.TypeMux
+	consenter consensus.Consenter
+	caMgr     *admittance.CAManager
+	am        *accounts.AccountManager
+	eh        *manager.EventHub
+	grpcMgr   *p2p.GRPCPeerManager
+	executor  *executor.Executor
 }
 
 func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) {
 
 	ninfo := &NamespaceInfo{
 		name: name,
-		//more info to record
 	}
-	//TODO: more to init
 	status := &Status{
 		state: STARTTING,
 		desc:  "startting",
 	}
-
 	ns := &namespaceImpl{
-		nsInfo: ninfo,
-		status: status,
+		nsInfo:   ninfo,
+		status:   status,
+		conf:     conf,
+		eventMux: new(event.TypeMux),
+	}
+	return ns, nil
+}
+
+func (ns *namespaceImpl) init() error {
+	logger.Criticalf("Init namespace %s", ns.Name())
+
+	//1.init DB
+	err := db_utils.InitDBForNamespace(ns.conf, ns.Name())
+	if err != nil {
+		logger.Errorf("init db for namespace %s error, %v", ns.Name(), err)
+		return err
 	}
 
-	return ns, nil
+	//2.init CaManager
+	cm, cmerr := admittance.GetCaManager(ns.conf)
+	if cmerr != nil {
+		panic("cannot initliazied the camanager")
+	}
+	ns.caMgr = cm
+
+	//3. init peer manager to start grpc server and client
+	grpcPeerMgr := p2p.NewGrpcManager(ns.conf)
+	ns.grpcMgr = grpcPeerMgr
+
+	//4.init pbft consensus
+	consenter := csmgr.Consenter(ns.Name(), ns.conf, ns.eventMux)
+	consenter.Start()
+	ns.consenter = consenter
+
+	//5.init account manager
+	am := accounts.NewAccountManager(ns.conf)
+	am.UnlockAllAccount(ns.conf.GetString(common.KEY_STORE_DIR))
+	ns.am = am
+
+	//6.init block pool to save block
+	executor := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux)
+	if executor == nil {
+		return errors.New("Initialize BlockPool failed")
+	}
+
+	executor.CreateInitBlock(ns.conf)
+	executor.Initialize()
+
+	//7. init peer manager
+	eh := manager.New(ns.Name(), ns.eventMux, executor, ns.grpcMgr, consenter, am, cm)
+	ns.eh = eh
+	return nil
 }
 
 func GetNamespace(name string, conf *common.Config) (Namespace, error) {
@@ -89,17 +151,11 @@ func GetNamespace(name string, conf *common.Config) (Namespace, error) {
 	return ns, err
 }
 
-func (ns *namespaceImpl) init() error {
-	//TODO: init the namespace by configuration
-	logger.Criticalf("Init namespace %s", ns.Name())
-
-	return nil
-}
-
 //Start start services under this namespace.
 func (ns *namespaceImpl) Start() error {
-	//TODO:
-
+	logger.Criticalf("namespace %s startting", ns.Name())
+	//TODO: start this namespace service
+	//TODO: provide start method for every components
 	ns.status.state = STARTTED
 	return nil
 }
@@ -107,7 +163,7 @@ func (ns *namespaceImpl) Start() error {
 //Stop stop services under this namespace.
 func (ns *namespaceImpl) Stop() error {
 	//TODO: stop a namespace service
-
+	//TODO: to provide Stop method for every components
 	ns.status.state = CLOSED
 	return nil
 }
