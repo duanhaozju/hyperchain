@@ -10,12 +10,10 @@ import (
 	"unicode/utf8"
 )
 
-
-
 // Is this an exported - upper case - name?
 func isExported(name string) bool {
-	rune, _ := utf8.DecodeRuneInString(name)
-	return unicode.IsUpper(rune)
+	decoderune, _ := utf8.DecodeRuneInString(name)
+	return unicode.IsUpper(decoderune)
 }
 
 // Is this type exported or a builtin?

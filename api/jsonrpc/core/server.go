@@ -12,6 +12,8 @@ import (
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
+	"hyperchain/common"
+	jsonrpc "hyperchain/namespace/rpc"
 )
 
 var log *logging.Logger // package-level logger
@@ -66,56 +68,6 @@ func (s *RPCService) Modules() map[string]string {
 	return modules
 }
 
-// RegisterName will create an service for the given rcvr type under the given name. When no methods on the given rcvr
-// match the criteria to be either a RPC method or a subscription an error is returned. Otherwise a new service is
-// created and added to the service collection this server instance serves.
-// 注册服务
-func (s *Server) RegisterName(name string, rcvr interface{}) error {
-	if s.services == nil {
-		s.services = make(serviceRegistry)
-	}
-
-	svc := new(service)
-	svc.typ = reflect.TypeOf(rcvr)
-	rcvrVal := reflect.ValueOf(rcvr)
-
-	if name == "" {
-		return fmt.Errorf("no service name for type %s", svc.typ.String())
-	}
-	if !isExported(reflect.Indirect(rcvrVal).Type().Name()) {
-		return fmt.Errorf("%s is not exported", reflect.Indirect(rcvrVal).Type().Name())
-	}
-
-	// already a previous service register under given sname, merge methods/subscriptions
-	// 如果给定name的服务已经注册
-	if regsvc, present := s.services[name]; present {
-		methods, subscriptions := suitableCallbacks(rcvrVal, svc.typ)
-		if len(methods) == 0 && len(subscriptions) == 0 {
-			return fmt.Errorf("Service %T doesn't have any suitable methods/subscriptions to expose", rcvr)
-		}
-
-		for _, m := range methods {
-			regsvc.callbacks[formatName(m.method.Name)] = m
-		}
-		for _, s := range subscriptions {
-			regsvc.subscriptions[formatName(s.method.Name)] = s
-		}
-
-		return nil
-	}
-
-	svc.name = name
-	svc.callbacks, svc.subscriptions = suitableCallbacks(rcvrVal, svc.typ) // 这里的callbacks就是api.go中的方法集合
-
-	if len(svc.callbacks) == 0 && len(svc.subscriptions) == 0 {
-		return fmt.Errorf("Service %T doesn't have any suitable methods/subscriptions to expose", rcvr)
-	}
-
-	s.services[svc.name] = svc
-
-	return nil
-}
-
 // hasOption returns true if option is included in options, otherwise false
 func hasOption(option CodecOption, options []CodecOption) bool {
 	for _, o := range options {
@@ -162,40 +114,15 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 
 	// test if the server is ordered to stop
 	for atomic.LoadInt32(&s.run) == 1 {
-		reqs, batch, err := s.readRequest(codec)
+		reqs, batch, err := s.readRequestHeaders(codec)
+
 		if err != nil {
 			log.Debugf("%v\n", err)
 			codec.Write(codec.CreateErrorResponse(nil, err))
 			return nil
 		}
 
-		// check if server is ordered to shutdown and return an error
-		// telling the client that his request failed.
-		if atomic.LoadInt32(&s.run) != 1 {
-			err = &shutdownError{}
-			if batch {
-				resps := make([]interface{}, len(reqs))
-				for i, r := range reqs {
-					resps[i] = codec.CreateErrorResponse(&r.id, err)
-				}
-				codec.Write(resps)
-			} else {
-				codec.Write(codec.CreateErrorResponse(&reqs[0].id, err))
-			}
-			return nil
-		}
-
-		if singleShot && batch {
-			s.execBatch(ctx, codec, reqs)
-			return nil
-		} else if singleShot && !batch {
-			s.exec(ctx, codec, reqs[0])
-			return nil
-		} else if !singleShot && batch {
-			go s.execBatch(ctx, codec, reqs)
-		} else {
-			go s.exec(ctx, codec, reqs[0])
-		}
+		jsonrpc.RPCProcesser.ProcessRequest(reqs, singleShot, batch)
 	}
 
 	return nil
@@ -327,7 +254,7 @@ func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*s
 // readRequest requests the next (batch) request from the codec. It will return the collection
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.
-func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, RPCError) {
+func (s *Server) readRequestHeaders(codec ServerCodec) ([]common.RPCRequest, bool, RPCError) {
 	log.Info("============start check the cert header=========")
 	//TODO 如果检查失败则进行相应处理，是否需要忽略数据
 	
@@ -339,32 +266,7 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, RPCErro
 	reqs, batch, err := codec.ReadRequestHeaders()
 	if err != nil {
 		return nil, batch, err
+	} else {
+		return reqs, batch, nil
 	}
-	requests := make([]*serverRequest, len(reqs))
-
-	// verify requests
-	for i, r := range reqs {
-		var ok bool
-		var svc *service
-
-		if svc, ok = s.services[r.Service]; !ok { // rpc method isn't available
-			requests[i] = &serverRequest{id: r.Id, err: &methodNotFoundError{r.Service, r.Method}}
-			continue
-		}
-
-		if callb, ok := svc.callbacks[r.Method]; ok { // lookup RPC method
-			requests[i] = &serverRequest{id: r.Id, svcname: svc.name, callb: callb}
-			if r.Params != nil && len(callb.argTypes) > 0 {
-				if args, err := codec.ParseRequestArguments(callb.argTypes, r.Params); err == nil {
-					requests[i].args = args
-				} else {
-					requests[i].err = &invalidParamsError{err.Error()}
-				}
-			}
-			continue
-		}
-
-		requests[i] = &serverRequest{id: r.Id, err: &methodNotFoundError{r.Service, r.Method}}
-	}
-	return requests, batch, nil
 }

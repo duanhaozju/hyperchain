@@ -4,8 +4,6 @@ package common
 
 import (
 	"reflect"
-	"sync"
-	"gopkg.in/fatih/set.v0"
 )
 
 // rpcRequest represents a raw incoming RPC request
@@ -43,7 +41,7 @@ type RPCResponse struct {
 //	//subscriptions subscriptions // available subscriptions/notifications
 //}
 //
-//// serverRequest is an incoming request
+// serverRequest is an incoming request
 //type serverRequest struct {
 //	id      interface{}
 //	svcname string
@@ -53,21 +51,10 @@ type RPCResponse struct {
 //	//isUnsubscribe bool
 //	err RPCError
 //}
-//
+
 //type serviceRegistry map[string]*service       // collection of services
 //type callbacks map[string]*callback            // collection of RPC callbacks
 ////type subscriptions map[string]*callback        // collection of subscription callbacks
 ////type subscriptionRegistry map[string]*callback // collection of subscription callbacks
 //
 //
-// RPCError implements RPC error, is add support for error codec over regular go errors
-type RPCError interface {
-	// RPC error code
-	Code() int
-	// Error message
-	Error() string
-}
-
-type Process interface {
-	Process()
-}

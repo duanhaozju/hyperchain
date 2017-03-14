@@ -48,13 +48,6 @@ type Status struct {
 	desc  string
 }
 
-type API struct {
-	Srvname string      // srvname under which the rpc methods of Service are exposed
-	Version   string      // api version for DApp's
-	Service   interface{} // receiver instance which holds the methods
-	Public    bool        // indication if the methods must be considered safe for public use
-}
-
 //NamespaceInfo basic information of this namespace.
 type NamespaceInfo struct {
 	name    string
@@ -75,6 +68,13 @@ type namespaceImpl struct {
 	eh        *manager.EventHub
 	grpcMgr   *p2p.GRPCPeerManager
 	executor  *executor.Executor
+}
+
+type API struct {
+	Srvname string        // srvname under which the rpc methods of Service are exposed
+	Version   string      // api version for DApp's
+	Service   interface{} // receiver instance which holds the methods
+	Public    bool        // indication if the methods must be considered safe for public use
 }
 
 func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) {
@@ -193,6 +193,45 @@ func (ns *namespaceImpl) ProcessRequest(request interface{}) interface{} {
 	return nil
 }
 
-func (ns *namespaceImpl) GetApis() []API{
-	return []API{}
+func (ns *namespaceImpl) GetApis(eventMux *event.TypeMux, pm *manager.EventHub, cm *admittance.CAManager, config *common.Config) []API {
+
+	return []API{
+		{
+			Srvname: "tx",
+			Version:   "0.4",
+			Service:   NewPublicTransactionAPI("Global", eventMux, pm, config),
+			Public:    true,
+		},
+		{
+			Srvname: "node",
+			Version:   "0.4",
+			Service:   NewPublicNodeAPI(pm),
+			Public:    true,
+		},
+		{
+			Srvname: "block",
+			Version:   "0.4",
+			Service:   NewPublicBlockAPI("Global"),
+			Public:    true,
+		},
+		{
+			Srvname: "account",
+			Version:   "0.4",
+			Service:   NewPublicAccountAPI("Global", pm, config),
+			Public:    true,
+		},
+		{
+			Srvname: "contract",
+			Version:   "0.4",
+			Service:   NewPublicContractAPI("Global", eventMux, pm, config),
+			Public:    true,
+		},
+		{
+			Srvname: "cert",
+			Version:   "0.4",
+			Service:   NewPublicCertAPI(cm),
+			Public:    true,
+		},
+	}
+
 }
