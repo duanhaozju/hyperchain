@@ -1,0 +1,22 @@
+syntax = "proto3";
+option java_package = "java.grpc.contract";
+
+service Contract {
+    rpc Execute (InvokeRequest) returns (InvokeResponse) {}
+    rpc HeartBeat(stream InvokeRequest) returns(stream InvokeResponse) {}
+}
+
+message InvokeRequest {
+    enum Type {
+        INVOKE_CONTRACT = 0;
+        HEARTBEAT       = 1;
+    }
+    Type type = 1;
+    string method = 2;
+    repeated bytes args = 3;
+}
+
+message InvokeResponse {
+    bool  ok     = 1;
+    bytes result = 2;
+}
