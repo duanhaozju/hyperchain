@@ -98,6 +98,7 @@ func (nr *nsManagerImpl) init() error {
 			logger.Errorf("Invalid folder %v", d)
 		}
 	}
+	//TODO:....
 	return nil
 }
 
@@ -142,14 +143,13 @@ func (nr *nsManagerImpl) DeRegister(name string) {
 
 //GetNamespaceByName get namespace instance by name.
 func (nr *nsManagerImpl) GetNamespaceByName(name string) Namespace {
-	//TODO:
-	return nil
+	return nr.namespaces[name]
 }
 
 //ProcessRequest process received request
 func (nr *nsManagerImpl) ProcessRequest(request interface{}) interface{} {
-	//TODO:
-	return nil
+	req := request.(*common.RPCRequest)
+	return nr.namespaces[req.Namespace].ProcessRequest(req)
 }
 
 //StartNamespace start namespace by name

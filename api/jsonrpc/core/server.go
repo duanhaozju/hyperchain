@@ -3,8 +3,6 @@
 package jsonrpc
 
 import (
-	"fmt"
-	"reflect"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -13,7 +11,7 @@ import (
 	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
 	"hyperchain/common"
-	jsonrpc "hyperchain/namespace/rpc"
+	"hyperchain/namespace"
 )
 
 var log *logging.Logger // package-level logger
@@ -37,18 +35,19 @@ const (
 )
 
 // NewServer will create a new server instance with no registered handlers.
-func NewServer() *Server {
+func NewServer(nr namespace.NamespaceManager) *Server {
 	server := &Server{
 		//services:      make(serviceRegistry),
 		//subscriptions: make(subscriptionRegistry),
 		codecs:        set.New(),
 		run:           1,
+		namespaceMgr: nr,
 	}
 
 	// register a default service which will provide meta information about the RPC service such as the services and
 	// methods it offers.
-	rpcService := &RPCService{server}
-	server.RegisterName(MetadataApi, rpcService)
+	//rpcService := &RPCService{server}
+	//server.RegisterName(MetadataApi, rpcService)
 
 	return server
 }
@@ -60,13 +59,13 @@ type RPCService struct {
 }
 
 // Modules returns the list of RPC services with their version number
-func (s *RPCService) Modules() map[string]string {
-	modules := make(map[string]string)
-	for name := range s.server.services {
-		modules[name] = "1.0"
-	}
-	return modules
-}
+//func (s *RPCService) Modules() map[string]string {
+//	modules := make(map[string]string)
+//	for name := range s.server.services {
+//		modules[name] = "1.0"
+//	}
+//	return modules
+//}
 
 // hasOption returns true if option is included in options, otherwise false
 func hasOption(option CodecOption, options []CodecOption) bool {
@@ -114,15 +113,50 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 
 	// test if the server is ordered to stop
 	for atomic.LoadInt32(&s.run) == 1 {
-		reqs, batch, err := s.readRequestHeaders(codec)
-
+		reqs, batch, err := s.readRequestHeaders(codec)// TODO: rename
 		if err != nil {
 			log.Debugf("%v\n", err)
 			codec.Write(codec.CreateErrorResponse(nil, err))
 			return nil
 		}
 
-		jsonrpc.RPCProcesser.ProcessRequest(reqs, singleShot, batch)
+		//rpcreqs := jsonrpc.RPCProcesser.CheckRequestParams(reqs)
+
+
+
+		if atomic.LoadInt32(&s.run) != 1 {
+			err := &shutdownError{}
+			if batch {
+				resps := make([]interface{}, len(reqs))
+				for i, r := range reqs {
+					resps[i] = codec.CreateErrorResponse(&r.Id, err)
+				}
+				codec.Write(resps)
+			} else {
+				codec.Write(codec.CreateErrorResponse(&reqs[0].Id, err))
+			}
+			return nil
+		}
+		reqs[0].Ctx = ctx
+		rsponse := s.namespaceMgr.ProcessRequest(&reqs[0])
+		log.Noticef("RSP: %v", rsponse)
+		//rpcrsp := jsonrpc.RPCProcesser.ProcessRequest(ctx, rpcreqs, singleShot, batch)
+
+
+
+		//if rpcrsp.Error != nil{
+		//	codec.Write(codec.CreateErrorResponse(&rpcrsp.Id, err))
+		//} else if len(rpcrsp.Reply) == 0 {
+		//	if err := codec.Write(codec.CreateResponse(&rpcrsp.Id, nil)); err != nil {
+		//		log.Errorf("%v\n", err)
+		//		codec.Close()
+		//	}
+		//} else {
+		//	if err := codec.Write(codec.CreateResponse(&rpcrsp.Id, rpcrsp.Reply)); err != nil {
+		//		log.Errorf("%v\n", err)
+		//		codec.Close()
+		//	}
+		//}
 	}
 
 	return nil
@@ -160,101 +194,101 @@ func (s *Server) Stop() {
 }
 
 // handle executes a request and returns the response from the callback.
-func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverRequest) (interface{}, func()) {
-	//log.Info("=========================enter handle()============================")
-	if req.err != nil {
-		return codec.CreateErrorResponse(&req.id, req.err), nil
-	}
-
-	// regular RPC call, prepare arguments
-	if len(req.args) != len(req.callb.argTypes) {
-		rpcErr := &invalidParamsError{fmt.Sprintf("%s%s%s expects %d parameters, got %d",
-			req.svcname, serviceMethodSeparator, req.callb.method.Name,
-			len(req.callb.argTypes), len(req.args))}
-		return codec.CreateErrorResponse(&req.id, rpcErr), nil
-	}
-
-	arguments := []reflect.Value{req.callb.rcvr}
-	if req.callb.hasCtx {
-		arguments = append(arguments, reflect.ValueOf(ctx))
-	}
-	if len(req.args) > 0 {
-		arguments = append(arguments, req.args...)
-	}
-
-	// execute RPC method and return result
-	reply := req.callb.method.Func.Call(arguments)
-	if len(reply) == 0 {
-		return codec.CreateResponse(req.id, nil), nil
-	}
-
-	if req.callb.errPos >= 0 { // test if method returned an error
-		if !reply[req.callb.errPos].IsNil() {
-			//e := reply[req.callb.errPos].Interface().(error)
-			//res := codec.CreateErrorResponse(&req.id, &callbackError{e.Error()})
-			e := reply[req.callb.errPos].Interface().(RPCError)
-			res := codec.CreateErrorResponse(&req.id, e)
-			return res, nil
-		}
-	}
-	return codec.CreateResponse(req.id, reply[0].Interface()), nil
-}
+//func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverRequest) (interface{}, func()) {
+//	//log.Info("=========================enter handle()============================")
+//	if req.err != nil {
+//		return codec.CreateErrorResponse(&req.id, req.err), nil
+//	}
+//
+//	// regular RPC call, prepare arguments
+//	if len(req.args) != len(req.callb.argTypes) {
+//		rpcErr := &invalidParamsError{fmt.Sprintf("%s%s%s expects %d parameters, got %d",
+//			req.svcname, serviceMethodSeparator, req.callb.method.Name,
+//			len(req.callb.argTypes), len(req.args))}
+//		return codec.CreateErrorResponse(&req.id, rpcErr), nil
+//	}
+//
+//	arguments := []reflect.Value{req.callb.rcvr}
+//	if req.callb.hasCtx {
+//		arguments = append(arguments, reflect.ValueOf(ctx))
+//	}
+//	if len(req.args) > 0 {
+//		arguments = append(arguments, req.args...)
+//	}
+//
+//	// execute RPC method and return result
+//	reply := req.callb.method.Func.Call(arguments)
+//	if len(reply) == 0 {
+//		return codec.CreateResponse(req.id, nil), nil
+//	}
+//
+//	if req.callb.errPos >= 0 { // test if method returned an error
+//		if !reply[req.callb.errPos].IsNil() {
+//			//e := reply[req.callb.errPos].Interface().(error)
+//			//res := codec.CreateErrorResponse(&req.id, &callbackError{e.Error()})
+//			e := reply[req.callb.errPos].Interface().(RPCError)
+//			res := codec.CreateErrorResponse(&req.id, e)
+//			return res, nil
+//		}
+//	}
+//	return codec.CreateResponse(req.id, reply[0].Interface()), nil
+//}
 
 // exec executes the given request and writes the result back using the codec.
-func (s *Server) exec(ctx context.Context, codec ServerCodec, req *serverRequest) {
-	//log.Info("=============enter exec()=================")
-	var response interface{}
-	var callback func()
-
-	if req.err != nil {
-		response = codec.CreateErrorResponse(&req.id, req.err)
-	} else {
-		response, callback = s.handle(ctx, codec, req)
-	}
-
-	if err := codec.Write(response); err != nil {
-		log.Errorf("%v\n", err)
-		codec.Close()
-	}
-
-	// when request was a subscribe request this allows these subscriptions to be actived
-	if callback != nil {
-		callback()
-	}
-}
+//func (s *Server) exec(ctx context.Context, codec ServerCodec, req *serverRequest) {
+//	//log.Info("=============enter exec()=================")
+//	var response interface{}
+//	var callback func()
+//
+//	if req.err != nil {
+//		response = codec.CreateErrorResponse(&req.id, req.err)
+//	} else {
+//		response, callback = s.handle(ctx, codec, req)
+//	}
+//
+//	if err := codec.Write(response); err != nil {
+//		log.Errorf("%v\n", err)
+//		codec.Close()
+//	}
+//
+//	// when request was a subscribe request this allows these subscriptions to be actived
+//	if callback != nil {
+//		callback()
+//	}
+//}
 
 // execBatch executes the given requests and writes the result back using the codec.
 // It will only write the response back when the last request is processed.
-func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*serverRequest) {
-	responses := make([]interface{}, len(requests))
-	var callbacks []func()
-	for i, req := range requests {
-		fmt.Println("got a request",req.svcname)
-		if req.err != nil {
-			responses[i] = codec.CreateErrorResponse(&req.id, req.err)
-		} else {
-			var callback func()
-			if responses[i], callback = s.handle(ctx, codec, req); callback != nil {
-				callbacks = append(callbacks, callback)
-			}
-		}
-	}
-
-	if err := codec.Write(responses); err != nil {
-		log.Errorf("%v\n", err)
-		codec.Close()
-	}
-
-	// when request holds one of more subscribe requests this allows these subscriptions to be actived
-	for _, c := range callbacks {
-		c()
-	}
-}
+//func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*serverRequest) {
+//	responses := make([]interface{}, len(requests))
+//	var callbacks []func()
+//	for i, req := range requests {
+//		fmt.Println("got a request",req.svcname)
+//		if req.err != nil {
+//			responses[i] = codec.CreateErrorResponse(&req.id, req.err)
+//		} else {
+//			var callback func()
+//			if responses[i], callback = s.handle(ctx, codec, req); callback != nil {
+//				callbacks = append(callbacks, callback)
+//			}
+//		}
+//	}
+//
+//	if err := codec.Write(responses); err != nil {
+//		log.Errorf("%v\n", err)
+//		codec.Close()
+//	}
+//
+//	// when request holds one of more subscribe requests this allows these subscriptions to be actived
+//	for _, c := range callbacks {
+//		c()
+//	}
+//}
 
 // readRequest requests the next (batch) request from the codec. It will return the collection
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.
-func (s *Server) readRequestHeaders(codec ServerCodec) ([]common.RPCRequest, bool, RPCError) {
+func (s *Server) readRequestHeaders(codec ServerCodec) ([]common.RPCRequest, bool, common.RPCError) {
 	log.Info("============start check the cert header=========")
 	//TODO 如果检查失败则进行相应处理，是否需要忽略数据
 	

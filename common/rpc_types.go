@@ -2,10 +2,8 @@
 //Copyright (C) 2016 The Hyperchain Authors.
 package common
 
-import (
-	"reflect"
-	"hyperchain/namespace/rpc"
-)
+import "golang.org/x/net/context"
+
 
 // rpcRequest represents a raw incoming RPC request
 type RPCRequest struct {
@@ -15,13 +13,15 @@ type RPCRequest struct {
 	Id        interface{}
 	IsPubSub  bool
 	Params    interface{}
+	Ctx context.Context
 }
 
 // rpcResponse represents a raw incoming RPC request
 type RPCResponse struct {
 	Id    interface{}
-	Reply []reflect.Value
-	Error rpc.RPCError
+	//Reply []reflect.Value
+	Reply interface{}
+	Error RPCError
 }
 
 //// callback is a method callback which was registered in the server

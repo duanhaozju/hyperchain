@@ -7,6 +7,8 @@ import (
 	"github.com/mkideal/cli"
 	"hyperchain/common"
 	"hyperchain/namespace"
+	//"hyperchain/api/jsonrpc/core"
+	"hyperchain/api/jsonrpc/core"
 )
 
 type argT struct {
@@ -36,6 +38,12 @@ func main() {
 			fmt.Printf("namespace: %s\n", n)
 		}
 		nsMgr.Start()
+
+
+
+		gns := nsMgr.GetNamespaceByName("global").(*namespace.NamespaceImpl)
+		jsonrpc.Start(gns.CaMgr, gns.Conf, nsMgr)
+
 
 		<-stopHyperchain
 		return nil

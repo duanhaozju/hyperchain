@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"sync"
 	"hyperchain/common"
+	"hyperchain/namespace"
 )
 
 //// callback is a method callback which was registered in the server
@@ -53,32 +54,33 @@ type Server struct {
 	run      int32
 	codecsMu sync.Mutex
 	codecs   *set.Set
+	namespaceMgr namespace.NamespaceManager
 }
 
 // RPCError implements RPC error, is add support for error codec over regular go errors
-type RPCError interface {
-	// RPC error code
-	Code() int
-	// Error message
-	Error() string
-}
+//type RPCError interface {
+//	// RPC error code
+//	Code() int
+//	// Error message
+//	Error() string
+//}
 
 // ServerCodec implements reading, parsing and writing RPC messages for the server side of
 // a RPC session. Implementations must be go-routine safe since the codec can be called in
 // multiple go-routines concurrently.
 type ServerCodec interface {
 	// Check http header
-	CheckHttpHeaders() RPCError
+	CheckHttpHeaders() common.RPCError
 	// Read next request
-	ReadRequestHeaders() ([]common.RPCRequest, bool, RPCError)
+	ReadRequestHeaders() ([]common.RPCRequest, bool, common.RPCError)
 	// Parse request argument to the given types
-	ParseRequestArguments([]reflect.Type, interface{}) ([]reflect.Value, RPCError)
+	ParseRequestArguments([]reflect.Type, interface{}) ([]reflect.Value, common.RPCError)
 	// Assemble success response, expects response id and payload
 	CreateResponse(interface{}, interface{}) interface{}
 	// Assemble error response, expects response id and error
-	CreateErrorResponse(interface{}, RPCError) interface{}
+	CreateErrorResponse(interface{}, common.RPCError) interface{}
 	// Assemble error response with extra information about the error through info
-	CreateErrorResponseWithInfo(id interface{}, err RPCError, info interface{}) interface{}
+	CreateErrorResponseWithInfo(id interface{}, err common.RPCError, info interface{}) interface{}
 	// Create notification response
 	//CreateNotification(string, interface{}) interface{}
 	// Write msg to client.

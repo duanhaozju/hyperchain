@@ -92,7 +92,7 @@ func isBatch(msg json.RawMessage) bool {
 
 // CheckHttpHeaders will check http header, mainly
 
-func (c *jsonCodec) CheckHttpHeaders() RPCError{
+func (c *jsonCodec) CheckHttpHeaders() common.RPCError{
 	//可能影响性能
 	if !c.CM.GetIsCheckTCert() {
 		return nil
@@ -145,7 +145,7 @@ func (c *jsonCodec) CheckHttpHeaders() RPCError{
 // ReadRequestHeaders will read new requests without parsing the arguments. It will
 // return a collection of requests, an indication if these requests are in batch
 // form or an error when the incoming message could not be read/parsed.
-func (c *jsonCodec) ReadRequestHeaders() ([]common.RPCRequest, bool, RPCError) {
+func (c *jsonCodec) ReadRequestHeaders() ([]common.RPCRequest, bool, common.RPCError) {
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
 
@@ -180,7 +180,7 @@ func checkReqId(reqId json.RawMessage) error {
 // parseRequest will parse a single request from the given RawMessage. It will return
 // the parsed request, an indication if the request was a batch or an error when
 // the request could not be parsed.
-func parseRequest(incomingMsg json.RawMessage) ([]common.RPCRequest, bool, RPCError) {
+func parseRequest(incomingMsg json.RawMessage) ([]common.RPCRequest, bool, common.RPCError) {
 	var in JSONRequest
 	if err := json.Unmarshal(incomingMsg, &in); err != nil {
 		return nil, false, &invalidMessageError{err.Error()}
@@ -197,15 +197,15 @@ func parseRequest(incomingMsg json.RawMessage) ([]common.RPCRequest, bool, RPCEr
 	}
 
 	if len(in.Payload) == 0 {
-		return []common.RPCRequest{{Service: elems[0], Method: elems[1], Namespace: &in.Namespace, Id: &in.Id}}, false, nil
+		return []common.RPCRequest{{Service: elems[0], Method: elems[1], Namespace: in.Namespace, Id: &in.Id}}, false, nil
 	}
 
-	return []common.RPCRequest{{Service: elems[0], Method: elems[1], Namespace: &in.Namespace, Id: &in.Id, Params: in.Payload}}, false, nil
+	return []common.RPCRequest{{Service: elems[0], Method: elems[1], Namespace: in.Namespace, Id: &in.Id, Params: in.Payload}}, false, nil
 }
 
 // parseBatchRequest will parse a batch request into a collection of requests from the given RawMessage, an indication
 // if the request was a batch or an error when the request could not be read.
-func parseBatchRequest(incomingMsg json.RawMessage) ([]common.RPCRequest, bool, RPCError) {
+func parseBatchRequest(incomingMsg json.RawMessage) ([]common.RPCRequest, bool, common.RPCError) {
 	var in []JSONRequest
 	if err := json.Unmarshal(incomingMsg, &in); err != nil {
 		return nil, false, &invalidMessageError{err.Error()}
@@ -236,7 +236,7 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]common.RPCRequest, bool, 
 
 // ParseRequestArguments tries to parse the given params (json.RawMessage) with the given types. It returns the parsed
 // values or an error when the parsing failed.
-func (c *jsonCodec) ParseRequestArguments(argTypes []reflect.Type, params interface{}) ([]reflect.Value, RPCError) {
+func (c *jsonCodec) ParseRequestArguments(argTypes []reflect.Type, params interface{}) ([]reflect.Value, common.RPCError) {
 	//log.Info("==================enter ParseRequestArguments()==================")
 	if args, ok := params.(json.RawMessage); !ok {
 		return nil, &invalidParamsError{"Invalid params supplied"}
@@ -248,7 +248,7 @@ func (c *jsonCodec) ParseRequestArguments(argTypes []reflect.Type, params interf
 // parsePositionalArguments tries to parse the given args to an array of values with the given types.
 // It returns the parsed values or an error when the args could not be parsed. Missing optional arguments
 // are returned as reflect.Zero values.
-func parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type) ([]reflect.Value, RPCError) {
+func parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type) ([]reflect.Value, common.RPCError) {
 	//log.Info("===================enter parsePositionalArguments()====================")
 	params := make([]interface{}, 0, len(callbackArgs))
 	for _, t := range callbackArgs {
@@ -296,13 +296,13 @@ func (c *jsonCodec) CreateResponse(id interface{}, reply interface{}) interface{
 }
 
 // CreateErrorResponse will create a JSON-RPC error response with the given id and error.
-func (c *jsonCodec) CreateErrorResponse(id interface{}, err RPCError) interface{} {
+func (c *jsonCodec) CreateErrorResponse(id interface{}, err common.RPCError) interface{} {
 	return &JSONResponse{Version: JSONRPCVersion, Id: id, Code: err.Code(), Message: err.Error()}
 }
 
 // CreateErrorResponseWithInfo will create a JSON-RPC error response with the given id and error.
 // info is optional and contains additional information about the error. When an empty string is passed it is ignored.
-func (c *jsonCodec) CreateErrorResponseWithInfo(id interface{}, err RPCError, info interface{}) interface{} {
+func (c *jsonCodec) CreateErrorResponseWithInfo(id interface{}, err common.RPCError, info interface{}) interface{} {
 	return &JSONResponse{Version: JSONRPCVersion, Id: id, Code: err.Code(), Message: err.Error(), Result: info}
 }
 

@@ -32,7 +32,7 @@ type serverRequest struct {
 	callb   *callback
 	args    []reflect.Value
 	//isUnsubscribe bool
-	err common.RPCError
+	err     common.RPCError
 }
 
 type serviceRegistry map[string]*service       	// collection of services

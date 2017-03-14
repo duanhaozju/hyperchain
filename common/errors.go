@@ -1,4 +1,4 @@
-package rpc
+package common
 
 import "fmt"
 
@@ -17,100 +17,43 @@ type RPCError interface {
 
 // CORE ERRORS
 // request is for an unknown service
-type methodNotFoundError struct {
-	service string
-	method  string
+type MethodNotFoundError struct {
+	Service string
+	Method  string
 }
 
-func (e *methodNotFoundError) Code() int {
+func (e *MethodNotFoundError) Code() int {
 	return -32601
 }
 
-func (e *methodNotFoundError) Error() string {
-	return fmt.Sprintf("The method %s%s%s does not exist/is not available", e.service, serviceMethodSeparator, e.method)
+func (e *MethodNotFoundError) Error() string {
+	return fmt.Sprintf("The method %s%s%s does not exist/is not available", e.Service, serviceMethodSeparator, e.Method)
 }
 
 // received message isn't a valid request
-type invalidRequestError struct {
-	message string
+type InvalidRequestError struct {
+	Message string
 }
 
-func (e *invalidRequestError) Code() int {
+func (e *InvalidRequestError) Code() int {
 	return -32600
 }
 
-func (e *invalidRequestError) Error() string {
-	return e.message
+func (e *InvalidRequestError) Error() string {
+	return e.Message
 }
 
 // received message is invalid
-type invalidMessageError struct {
-	message string
+type InvalidMessageError struct {
+	Message string
 }
 
-func (e *invalidMessageError) Code() int {
+func (e *InvalidMessageError) Code() int {
 	return -32700
 }
 
-func (e *invalidMessageError) Error() string {
-	return e.message
-}
-
-// unable to decode supplied params, or an invalid number of parameters
-type invalidParamsError struct {
-	message string
-}
-
-func (e *invalidParamsError) Code() int {
-	return -32602
-}
-
-func (e *invalidParamsError) Error() string {
-	return e.message
-}
-
-// logic error, callback returned an error
-type callbackError struct {
-	message string
-}
-
-func (e *callbackError) Code() int {
-	return -32000
-}
-
-func (e *callbackError) Error() string {
-	return e.message
-}
-
-// issued when a request is received after the server is issued to stop.
-type shutdownError struct {
-}
-
-func (e *shutdownError) Code() int {
-	return -32000
-}
-
-func (e *shutdownError) Error() string {
-	return "server is shutting down"
-}
-
-type UnauthorizedError struct {
-}
-
-func (e *UnauthorizedError) Code() int {
-	return -32099
-}
-
-func (e *UnauthorizedError) Error() string {
-	return "Unauthorized, Please check your cert"
-}
-
-
-
-// JSONRPC ERRORS
-type JSONRPCError interface{
-	Code() int
-	Error() string
+func (e *InvalidMessageError) Error() string {
+	return e.Message
 }
 
 // unable to decode supplied params, or an invalid number of parameters
@@ -137,6 +80,37 @@ func (e *CallbackError) Code() int {
 
 func (e *CallbackError) Error() string {
 	return e.Message
+}
+
+// issued when a request is received after the server is issued to stop.
+type ShutdownError struct {
+}
+
+func (e *ShutdownError) Code() int {
+	return -32000
+}
+
+func (e *ShutdownError) Error() string {
+	return "server is shutting down"
+}
+
+type UnauthorizedError struct {
+}
+
+func (e *UnauthorizedError) Code() int {
+	return -32099
+}
+
+func (e *UnauthorizedError) Error() string {
+	return "Unauthorized, Please check your cert"
+}
+
+
+
+// JSONRPC ERRORS
+type JSONRPCError interface{
+	Code() int
+	Error() string
 }
 
 type LeveldbNotFoundError struct {

@@ -7,16 +7,14 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 	"github.com/rs/cors"
-	"hyperchain/api"
 	"hyperchain/api/rest_api/routers"
-	"hyperchain/event"
-	"hyperchain/manager"
 	"hyperchain/admittance"
 	"io"
 	"net/http"
 	"strconv"
 	"time"
 	"hyperchain/common"
+	"hyperchain/namespace"
 )
 
 const (
@@ -39,27 +37,13 @@ func (hrw *httpReadWrite) Close() error {
 	return nil
 }
 
-func Start(eventMux *event.TypeMux, pm *manager.EventHub, cm *admittance.CAManager, config *common.Config) error {
+func Start(cm *admittance.CAManager, config *common.Config, nr namespace.NamespaceManager) error {
 
 	httpPort := config.GetInt(common.C_HTTP_PORT)
 	restPort := config.GetInt(common.C_REST_PORT)
 	logsPath := config.GetString(common.LOG_DUMP_FILE_DIR)
 
-	server := NewServer()
-
-	// todo start ========== 这段代码挪到 namespace 中 =================
-	// 得到API，注册服务
-	apis := hpc.GetAPIs(eventMux, pm, cm, config)
-
-	// api.Namespace 是API的命名空间，api.Service 是一个拥有命名空间对应对象的所有方法的对象
-	for _, api := range apis {
-		// todo RegisterName() 挪到 namespace 中 ==============
-		if err := server.RegisterName(api.Srvname, api.Service); err != nil {
-			log.Errorf("registerName error: %v ", err)
-			return err
-		}
-	}
-	// todo end ========== 这段代码挪到 namespace 中 =================
+	server := NewServer(nr)
 
 	startHttp(httpPort, restPort, logsPath, server, cm)
 
