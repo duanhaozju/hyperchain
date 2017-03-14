@@ -54,15 +54,7 @@ func (pbft *pbftImpl) initMsgEventMap()  {
 
 //initStatus configs basic status when starts up
 func (pbft *pbftImpl) initStatus(){
-	pbft.status = make(status)
-	pbft.status[BYZANTINE] = false
-	pbft.status[IS_NEW_NODE] = false
-	pbft.status[IN_ADDING_NODE] = false
-	pbft.status[IN_DELETING_NODE] = false
-	pbft.status[IN_VC_RESET] = false
-	pbft.status[VC_HANDLED] = false
-	pbft.status[NEW_NODE_READY] = false
-	pbft.status[UPDATE_HANDLED] = false
-	pbft.status[IN_NEGO_VIEW] = true
-	pbft.status[IN_RECOVERY] = true
+
+	pbft.status.activeState(&pbft.status.inNegoView)
+	pbft.status.activeState(&pbft.status.inRecovery)
 }

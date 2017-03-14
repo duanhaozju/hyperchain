@@ -2,20 +2,17 @@ package executor
 
 import (
 	"github.com/davecgh/go-spew/spew"
-	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	checker "gopkg.in/check.v1"
-	"hyperchain/core/types"
 	"testing"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/common"
-	"hyperchain/core/test_util"
+	tutil "hyperchain/core/test_util"
 	"os"
+	"path"
 )
 
 const (
-	defaultGas      int64 = 10000
-	defaustGasPrice int64 = 10000
 	namespace             = "testing"
 	configPath            = "./config/global.yaml"
 	dbConfigPath          = "./config/db.yaml"
@@ -27,9 +24,10 @@ var (
 
 type SimulateSuite struct {
 	executor *Executor
+	owd      string
 }
 
-func Test(t *testing.T) {
+func TestSimulate(t *testing.T) {
 	checker.TestingT(t)
 }
 
@@ -43,9 +41,10 @@ func init() {
 // Run once when the suite starts running.
 func (suite *SimulateSuite) SetUpSuite(c *checker.C) {
 	// initialize block pool
-	os.Chdir("../..")
+	suite.owd, _ = os.Getwd()
+	os.Chdir(path.Join(common.GetGoPath(), "src/hyperchain"))
 	os.RemoveAll("./build")
-	conf = test_util.InitConfig(configPath, dbConfigPath)
+	conf = tutil.InitConfig(configPath, dbConfigPath)
 	edb.InitDBForNamespace(conf, namespace, dbConfigPath, 8001)
 	suite.executor = NewExecutor(namespace, conf, nil)
 	suite.executor.CreateInitBlock(conf)
@@ -64,6 +63,7 @@ func (suite *SimulateSuite) TearDownTest(c *checker.C) {
 func (suite *SimulateSuite) TearDownSuite(c *checker.C) {
 	os.RemoveAll("./build")
 	os.RemoveAll("./db.log")
+	os.Chdir(suite.owd)
 }
 
 /*
@@ -76,21 +76,7 @@ func (suite *SimulateSuite) TestSimulate(c *checker.C) {
 }
 
 func (suite *SimulateSuite) simulateForTransafer(executor *Executor) error {
-	value := types.NewTransactionValue(defaustGasPrice, defaultGas, 9, nil, false)
-	data, err := proto.Marshal(value)
-	if err != nil {
-		return err
-	}
-	transaction := &types.Transaction{
-		Version:   []byte("1.0"),
-		From:      common.Hex2Bytes("0xe93b92f1da08f925bdee44e91e7768380ae83307"),
-		To:        common.Hex2Bytes("0xc8f233096e6d0b4241939593340255353460cd63"),
-		Value:     data,
-		Timestamp: 1489390658651237328,
-		Nonce:     5306948822540864594,
-		Signature: []byte("2e5ecff88359e5bb8590d2efbc609c4b3fe1ead066bc81b4153b1557d4f93fcc2d8db2abe0d3ff6e586c4f7ce7797ef85aadc85accfd5bf7c28db354738370bb00"),
-		Id:        1,
-	}
+	transaction := tutil.GenTransferTransactionRandomly()
 	transaction.TransactionHash = transaction.Hash().Bytes()
 	if err := executor.RunInSandBox(transaction); err != nil {
 		return err

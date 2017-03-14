@@ -168,6 +168,8 @@ func (executor *Executor) markCommitIdle() {
 
 // waitUtilValidationIdle - suspend thread util all validations event has been process done.
 func (executor *Executor) waitUtilValidationIdle() {
+	log.Debugf("[Namespace = %s] wait validation idle", executor.namespace)
+	defer log.Debugf("[Namespace = %s] validation idle", executor.namespace)
 	ticker := time.NewTicker(1 * time.Millisecond)
 	for {
 		select {
@@ -183,6 +185,8 @@ func (executor *Executor) waitUtilValidationIdle() {
 
 // wailUtilCommitIdle - suspend thread util all commit events has been process done.
 func (executor *Executor) wailUtilCommitIdle() {
+	log.Debugf("[Namespace = %s] wait commit idle", executor.namespace)
+	defer log.Debugf("[Namespace = %s] commit idle", executor.namespace)
 	ticker := time.NewTicker(1 * time.Millisecond)
 	for {
 		select {
@@ -198,6 +202,8 @@ func (executor *Executor) wailUtilCommitIdle() {
 
 // waitUtilRollbackAvailable - wait validation processor and commit processor become idle.
 func (executor *Executor) waitUtilRollbackAvailable() {
+	log.Debugf("[Namespace = %s] wait util rollback available", executor.namespace)
+	defer log.Debugf("[Namespace = %s] rollback available", executor.namespace)
 	executor.clearPendingValidationEventQ()
 	executor.turnOffValidationSwitch()
 	executor.waitUtilValidationIdle()
@@ -212,11 +218,14 @@ func (executor *Executor) waitUtilRollbackAvailable() {
 
 // rollbackDone - rollback callback function to notify rollback finish.
 func (executor *Executor) rollbackDone() {
+	log.Debugf("[Namespace = %s] roll back done", executor.namespace)
 	executor.turnOnValidationSwitch()
 }
 
 // waitUtilSyncAvailable - wait validation processor and commit processor become idle.
 func (executor *Executor) waitUtilSyncAvailable() {
+	log.Debugf("[Namespace = %s] wait util sync available", executor.namespace)
+	defer log.Debugf("[Namespace = %s] sync available", executor.namespace)
 	executor.turnOffValidationSwitch()
 	executor.waitUtilValidationIdle()
 	executor.wailUtilCommitIdle()
@@ -230,6 +239,7 @@ func (executor *Executor) waitUtilSyncAvailable() {
 
 // syncDone - sync callback function to notify sync finish.
 func (executor *Executor) syncDone() {
+	log.Debugf("[Namespace = %s] sync done", executor.namespace)
 	executor.turnOnValidationSwitch()
 	executor.cache.syncCache.Purge()
 }

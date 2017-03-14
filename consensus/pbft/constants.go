@@ -54,3 +54,9 @@ const (
 	PBFT = iota  // pbft timer manager
 	BATCH        // batch timer manager
 )
+
+// type for pbft status
+const (
+	ON = 1
+	OFF = 0
+)
