@@ -33,7 +33,7 @@ type pbftImpl struct {
 	view           uint64                       // current view
 	nvInitialSeqNo uint64                       // initial seqNo in a new view
 
-	status         status                       // basic status of pbft
+	status         PbftStatus                       // basic status of pbft
 
 	batchMgr       *batchManager                // manage batch related issues
 	batchVdr       *batchValidator              // manage batch validate issues
@@ -107,7 +107,7 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack) *pbftImpl 
 
 	logger.Infof("PBFT Max number of validating peers (N) = %v", pbft.N)
 	logger.Infof("PBFT Max number of failing peers (f) = %v", pbft.f)
-	logger.Infof("PBFT byzantine flag = %v", pbft.status[BYZANTINE])
+	logger.Infof("PBFT byzantine flag = %v", pbft.status.getState(&pbft.status.byzantine))
 	logger.Infof("PBFT request timeout = %v", pbft.pbftTimerMgr.requestTimeout)
 	logger.Infof("PBFT Checkpoint period (K) = %v", pbft.K)
 	logger.Infof("PBFT Log multiplier = %v", pbft.logMultiplier)
@@ -244,7 +244,7 @@ func (pbft *pbftImpl) enqueueStateUpdatedMsg(msg *protos.Message) error {
 
 // processNullRequest process when a null request come
 func (pbft *pbftImpl) processNullRequest(msg *protos.Message) error {
-	if pbft.status[IN_NEGO_VIEW] {
+	if pbft.status.getState(&pbft.status.inNegoView) {
 		return nil
 	}
 	if pbft.primary(pbft.view) != pbft.id {
@@ -259,7 +259,7 @@ func (pbft *pbftImpl) processNullRequest(msg *protos.Message) error {
 //handleNullRequestEvent triggered by null request timer
 func (pbft *pbftImpl) handleNullRequestTimerEvent() {
 
-	if pbft.status[IN_NEGO_VIEW] {
+	if pbft.status.getState(&pbft.status.inNegoView) {
 		logger.Debugf("Replica %d try to nullRequestHandler, but it's in nego-view", pbft.id)
 		return
 	}
@@ -446,7 +446,8 @@ func (pbft *pbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 		pbft.storeMgr.outstandingReqBatches[digest] = preprep.GetTransactionBatch()
 	}
 
-	if pbft.status.checkStatesAnd(!pbft.status[SKIP_IN_PROGRESS], !pbft.status[IN_RECOVERY]) {
+	if pbft.status.checkStatesAnd(pbft.status.negCurrentState(&pbft.status.skipInProgress),
+				      pbft.status.negCurrentState(&pbft.status.inRecovery)) {
 		pbft.softStartNewViewTimer(pbft.pbftTimerMgr.requestTimeout,
 			fmt.Sprintf("new pre-prepare for request batch view=%d/seqNo=%d, hash=%s", preprep.View, preprep.SequenceNumber, preprep.BatchDigest))
 	}
@@ -516,7 +517,7 @@ func (pbft *pbftImpl) maybeSendCommit(digest string, v uint64, n uint64) error {
 		return nil
 	}
 
-	if pbft.status[SKIP_IN_PROGRESS] {
+	if pbft.status.getState(&pbft.status.skipInProgress) {
 		logger.Debugf("Replica %d do not try to validate batch because it's in state update", pbft.id)
 		return nil
 	}
@@ -687,7 +688,7 @@ func (pbft *pbftImpl) findNextCommitTx() (bool, msgID, *msgCert) {
 		}
 
 		// skipInProgress == true, then this replica is in viewchange, not reply or execute
-		if pbft.status[SKIP_IN_PROGRESS] {
+		if pbft.status.getState(&pbft.status.skipInProgress) {
 			logger.Warningf("Replica %d currently picking a starting point to resume, will not execute", pbft.id)
 			//break
 			continue
@@ -719,13 +720,13 @@ func (pbft *pbftImpl) afterCommitTx(idx msgID) {
 		logger.Debugf("Replica %d finish execution %d, trying next", pbft.id, *pbft.exec.currentExec)
 		pbft.exec.lastExec = *pbft.exec.currentExec
 		delete(pbft.storeMgr.committedCert, idx)
-		if pbft.status[IN_RECOVERY] {
+		if pbft.status.getState(&pbft.status.inRecovery) {
 			if pbft.recoveryMgr.recoveryToSeqNo == nil {
 				logger.Errorf("Replica %d in recovery execDoneSync but its recoveryToSeqNo is nil", pbft.id)
 				return
 			}
 			if pbft.exec.lastExec == *pbft.recoveryMgr.recoveryToSeqNo {
-				pbft.status.inActiveState(IN_RECOVERY)
+				pbft.status.inActiveState(&pbft.status.inRecovery)
 				pbft.recoveryMgr.recoveryToSeqNo = nil
 				pbft.pbftTimerMgr.stopTimer(RECOVERY_RESTART_TIMER)
 				go pbft.pbftEventQueue.Push(&LocalEvent{
@@ -749,7 +750,7 @@ func (pbft *pbftImpl) afterCommitTx(idx msgID) {
 		}
 	} else {
 		logger.Warningf("Replica %d had execDoneSync called, flagging ourselves as out of data", pbft.id)
-		pbft.status.activeState(SKIP_IN_PROGRESS)
+		pbft.status.activeState(&pbft.status.skipInProgress)
 	}
 
 	pbft.exec.currentExec = nil
@@ -767,8 +768,9 @@ func (pbft *pbftImpl) afterCommitTx(idx msgID) {
 //processTxEvent process received transaction event
 func (pbft *pbftImpl) processTxEvent(tx *types.Transaction) error {
 
-	if atomic.LoadUint32(&pbft.activeView) == 0 || atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 ||
-		pbft.status[IN_NEGO_VIEW] || pbft.status[IN_RECOVERY]  {
+	if atomic.LoadUint32(&pbft.activeView) == 0 ||
+		atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 ||
+		pbft.status.checkStatesOr(pbft.status.getState(&pbft.status.inNegoView),pbft.status.getState(&pbft.status.inRecovery)){
 		pbft.reqStore.storeOutstanding(tx)
 		return nil
 	}
@@ -800,7 +802,9 @@ func (pbft *pbftImpl) primaryProcessTx(tx *types.Transaction) error {
 
 //processRequestsDuringViewChange process requests received during view change.
 func (pbft *pbftImpl) processRequestsDuringViewChange() error {
-	if atomic.LoadUint32(&pbft.activeView) == 1 && atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 && !pbft.status[IN_RECOVERY] {
+	if atomic.LoadUint32(&pbft.activeView) == 1 &&
+		atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 &&
+		!pbft.status.getState(&pbft.status.inRecovery) {
 		pbft.processCachedTransactions()
 	} else {
 		logger.Warningf("Replica %d try to processReqDuringViewChange but view change is not finished or it's in recovery / updaingN", pbft.id)
@@ -827,7 +831,7 @@ func (pbft *pbftImpl) processCachedTransactions() {
 
 //processRequestsDuringRecovery process requests
 func (pbft *pbftImpl) processRequestsDuringRecovery() {
-	if !pbft.status[IN_RECOVERY] && atomic.LoadUint32(&pbft.activeView) == 1 && atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 {
+	if !pbft.status.getState(&pbft.status.inRecovery) && atomic.LoadUint32(&pbft.activeView) == 1 && atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 {
 		pbft.processCachedTransactions()
 	} else {
 		logger.Warningf("Replica %d try to processRequestsDuringRecovery but recovery is not finished or it's in viewChange / updatingN", pbft.id)
@@ -836,12 +840,12 @@ func (pbft *pbftImpl) processRequestsDuringRecovery() {
 
 func (pbft *pbftImpl) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 
-	if pbft.status[IN_NEGO_VIEW] {
+	if pbft.status.getState(&pbft.status.inNegoView) {
 		logger.Debugf("Replica %d try to recvStateUpdatedEvent, but it's in nego-view", pbft.id)
 		return nil
 	}
 
-	pbft.status.inActiveState(STATE_TRANSFERRING)
+	pbft.status.inActiveState(&pbft.status.stateTransferring)
 	// If state transfer did not complete successfully, or if it did not reach our low watermark, do it again
 	if et.seqNo < pbft.h {
 		logger.Warningf("Replica %d recovered to seqNo %d but our low watermark has moved to %d", pbft.id, et.seqNo, pbft.h)
@@ -865,10 +869,10 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 	id, _ := proto.Marshal(bcInfo)
 	pbft.persistCheckpoint(et.seqNo, id)
 	pbft.moveWatermarks(pbft.exec.lastExec) // The watermark movement handles moving this to a checkpoint boundary
-	pbft.status.inActiveState(SKIP_IN_PROGRESS)
+	pbft.status.inActiveState(&pbft.status.skipInProgress)
 	pbft.validateState()
 
-	if pbft.status[IN_RECOVERY] {
+	if pbft.status.getState(&pbft.status.inRecovery) {
 		if pbft.recoveryMgr.recoveryToSeqNo == nil {
 			logger.Errorf("Replica %d in recovery recvStateUpdatedEvent but " +
 				"its recoveryToSeqNo is nil")
@@ -877,7 +881,7 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 		if pbft.exec.lastExec == *pbft.recoveryMgr.recoveryToSeqNo {
 			// This is a somewhat subtle situation, we are behind by checkpoint, but others are just on chkpt.
 			// Hence, no need to fetch preprepare, prepare, commit
-			pbft.status.inActiveState(IN_RECOVERY)
+			pbft.status.inActiveState(&pbft.status.inRecovery)
 			pbft.recoveryMgr.recoveryToSeqNo = nil
 			pbft.pbftTimerMgr.stopTimer(RECOVERY_RESTART_TIMER)
 			go pbft.pbftEventQueue.Push(&LocalEvent{
@@ -919,7 +923,7 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 //recvRequestBatch handle logic after receive request batch
 func (pbft *pbftImpl) recvRequestBatch(reqBatch *TransactionBatch) error {
 
-	if pbft.status[IN_NEGO_VIEW] {
+	if pbft.status.getState(&pbft.status.inNegoView) {
 		logger.Debugf("Replica %d try to recvRequestBatch, but it's in nego-view", pbft.id)
 		return nil
 	}
@@ -991,7 +995,7 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 	logger.Debugf("Replica %d received checkpoint from replica %d, seqNo %d, digest %s",
 		pbft.id, chkpt.ReplicaId, chkpt.SequenceNumber, chkpt.Id)
 
-	if pbft.status[IN_NEGO_VIEW] {
+	if pbft.status.getState(&pbft.status.inNegoView) {
 		logger.Debugf("Replica %d try to recvCheckpoint, but it's in nego-view", pbft.id)
 		return nil
 	}
@@ -1001,7 +1005,7 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 	}
 
 	if !pbft.inW(chkpt.SequenceNumber) {
-		if chkpt.SequenceNumber != pbft.h && !pbft.status[SKIP_IN_PROGRESS] {
+		if chkpt.SequenceNumber != pbft.h && !pbft.status.getState(&pbft.status.skipInProgress) {
 			// It is perfectly normal that we receive checkpoints for the watermark we just raised, as we raise it after 2f+1, leaving f replies left
 			logger.Warningf("Checkpoint sequence number outside watermarks: seqNo %d, low-mark %d", chkpt.SequenceNumber, pbft.h)
 		} else {
@@ -1048,7 +1052,7 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 	if !ok {
 		logger.Debugf("Replica %d found checkpoint quorum for seqNo %d, digest %s, but it has not reached this checkpoint itself yet",
 			pbft.id, chkpt.SequenceNumber, chkpt.Id)
-		if pbft.status[SKIP_IN_PROGRESS] {
+		if pbft.status.getState(&pbft.status.skipInProgress) {
 			logSafetyBound := pbft.h + pbft.L / 2
 			// As an optimization, if we are more than half way out of our log and in state transfer, move our watermarks so we don't lose track of the network
 			// if needed, state transfer will restart on completion to a more recent point in time
@@ -1133,7 +1137,7 @@ func (pbft *pbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 				pbft.batchVdr.emptyVBS()
 				pbft.moveWatermarks(m)
 				pbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
-				pbft.status.activeState(SKIP_IN_PROGRESS)
+				pbft.status.activeState(&pbft.status.skipInProgress)
 				pbft.invalidateState()
 				pbft.stopNewViewTimer()
 
@@ -1175,7 +1179,7 @@ func (pbft *pbftImpl) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 	}
 	pbft.updateHighStateTarget(target)
 
-	if pbft.status[SKIP_IN_PROGRESS] {
+	if pbft.status.getState(&pbft.status.skipInProgress) {
 		logger.Infof("Replica %d is catching up and witnessed a weak certificate for checkpoint %d, weak cert attested to by %d of %d (%v)",
 			pbft.id, chkpt.SequenceNumber, i, pbft.N, checkpointMembers)
 		// The view should not be set to active, this should be handled by the yet unimplemented SUSPECT, see https://github.com/hyperledger/fabric/issues/1120
@@ -1243,9 +1247,9 @@ func (pbft *pbftImpl) updateHighStateTarget(target *stateUpdateTarget) {
 
 func (pbft *pbftImpl) stateTransfer(optional *stateUpdateTarget) {
 
-	if !pbft.status[SKIP_IN_PROGRESS] {
+	if !pbft.status.getState(&pbft.status.skipInProgress) {
 		logger.Debugf("Replica %d is out of sync, pending state transfer", pbft.id)
-		pbft.status.activeState(SKIP_IN_PROGRESS)
+		pbft.status.activeState(&pbft.status.skipInProgress)
 		pbft.invalidateState()
 	}
 
@@ -1254,7 +1258,7 @@ func (pbft *pbftImpl) stateTransfer(optional *stateUpdateTarget) {
 
 func (pbft *pbftImpl) retryStateTransfer(optional *stateUpdateTarget) {
 
-	if pbft.status[STATE_TRANSFERRING] {
+	if pbft.status.getState(&pbft.status.stateTransferring) {
 		logger.Debugf("Replica %d is currently mid state transfer, it must wait for this state transfer to complete before initiating a new one", pbft.id)
 		return
 	}
@@ -1268,7 +1272,7 @@ func (pbft *pbftImpl) retryStateTransfer(optional *stateUpdateTarget) {
 		target = pbft.storeMgr.highStateTarget
 	}
 
-	pbft.status.activeState(STATE_TRANSFERRING)
+	pbft.status.activeState(&pbft.status.stateTransferring)
 
 	logger.Infof("Replica %d is initiating state transfer to seqNo %d", pbft.id, target.seqNo)
 
@@ -1333,7 +1337,7 @@ func (pbft *pbftImpl) updateState(seqNo uint64, targetId []byte, replicaId []uin
 }
 
 func (pbft *pbftImpl) processNegotiateView() error {
-	if !pbft.status[IN_NEGO_VIEW] {
+	if !pbft.status.getState(&pbft.status.inNegoView) {
 		logger.Debugf("Replica %d try to negotiateView, but it's not inNegoView. This indicates a bug", pbft.id)
 		return nil
 	}
@@ -1424,7 +1428,7 @@ func (pbft *pbftImpl) recvNegoView(nv *NegotiateView) events.Event {
 }
 
 func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
-	if !pbft.status[IN_NEGO_VIEW] {
+	if !pbft.status.getState(&pbft.status.inNegoView) {
 		logger.Debugf("Replica %d already finished nego-view, ignore incoming nego-view response", pbft.id)
 		return nil
 	}
@@ -1472,12 +1476,12 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 			pbft.view = result.view
 			pbft.N = int(result.n)
 			routers, _ := stringToByte(result.routers)
-			if !bytes.Equal(routers, pbft.nodeMgr.routers) && !pbft.status[IS_NEW_NODE] {
+			if !bytes.Equal(routers, pbft.nodeMgr.routers) && !pbft.status.getState(&pbft.status.isNewNode) {
 				pbft.nodeMgr.routers = routers
 				logger.Debugf("Replica %d update routing table according to nego result", pbft.id)
 				pbft.helper.NegoRouters(routers)
 			}
-			pbft.status.inActiveState(IN_NEGO_VIEW)
+			pbft.status.inActiveState(&pbft.status.inNegoView)
 			if atomic.LoadUint32(&pbft.activeView) == 0 {
 				atomic.StoreUint32(&pbft.activeView, 1)
 			}

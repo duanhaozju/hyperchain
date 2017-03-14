@@ -310,7 +310,7 @@ func (pbft *pbftImpl) restoreState() {
 	if err == nil {
 		newNode := binary.LittleEndian.Uint64(new)
 		if newNode == 1 {
-			pbft.status[IS_NEW_NODE] = true
+			pbft.status.activeState(&pbft.status.isNewNode)
 		}
 	}
 
