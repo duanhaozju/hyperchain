@@ -12,7 +12,6 @@ import (
 	"hyperchain/crypto"
 	"errors"
 	edb "hyperchain/core/db_utils"
-	"time"
 )
 
 var (
