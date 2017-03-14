@@ -68,7 +68,7 @@ func (pbft *pbftImpl) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 
 	logger.Debugf("New replica %d received local newNode message", pbft.id)
 
-	if pbft.status[IS_NEW_NODE] {
+	if pbft.status.getState(&pbft.status.isNewNode) {
 		logger.Warningf("New replica %d received duplicate local newNode message", pbft.id)
 		return nil
 	}
@@ -78,7 +78,7 @@ func (pbft *pbftImpl) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 		return nil
 	}
 
-	pbft.status.activeState(IS_NEW_NODE,IN_ADDING_NODE)
+	pbft.status.activeState(&pbft.status.isNewNode,&pbft.status.inAddingNode)
 	pbft.persistNewNode(uint64(1))
 	key := string(msg.Payload)
 	pbft.nodeMgr.localKey = key
@@ -90,7 +90,7 @@ func (pbft *pbftImpl) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 // Replica receive local message about new node and routing table
 func (pbft *pbftImpl) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 
-	if pbft.status[IS_NEW_NODE] {
+	if pbft.status.getState(&pbft.status.isNewNode) {
 		logger.Warningf("New replica received local addNode message, there may be something wrong")
 		return nil
 	}
@@ -103,7 +103,7 @@ func (pbft *pbftImpl) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 	key := string(msg.Payload)
 	logger.Debugf("Replica %d received local addNode message for new node %v", pbft.id, key)
 
-	pbft.status.activeState(IN_ADDING_NODE)
+	pbft.status.activeState(&pbft.status.inAddingNode)
 	pbft.sendAgreeAddNode(key)
 
 	return nil
@@ -125,7 +125,7 @@ func (pbft *pbftImpl) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 		return nil
 	}
 
-	pbft.status.activeState(IN_DELETING_NODE)
+	pbft.status.activeState(&pbft.status.inDeletingNode)
 	pbft.sendAgreeDelNode(key, msg.RouterHash, msg.Id, msg.Del)
 
 	return nil
@@ -144,7 +144,7 @@ func (pbft *pbftImpl) sendAgreeAddNode(key string) {
 
 	logger.Debugf("Replica %d try to send addnode message for new node", pbft.id)
 
-	if pbft.status[IS_NEW_NODE] {
+	if pbft.status.getState(&pbft.status.isNewNode) {
 		logger.Warningf("New replica try to send addnode message, there may be something wrong")
 		return
 	}
@@ -244,7 +244,7 @@ func (pbft *pbftImpl) recvAgreeDelNode(del *DelNode) error {
 // Check if replica prepared for update routing table after add node
 func (pbft *pbftImpl) maybeUpdateTableForAdd(key string) error {
 
-	if pbft.status[IS_NEW_NODE] {
+	if pbft.status.getState(&pbft.status.isNewNode) {
 		logger.Debugf("Replica %d is new node, reject update routingTable", pbft.id)
 		return nil
 	}
@@ -254,7 +254,7 @@ func (pbft *pbftImpl) maybeUpdateTableForAdd(key string) error {
 		return nil
 	}
 
-	if !pbft.status[IN_ADDING_NODE] {
+	if !pbft.status.getState(&pbft.status.inAddingNode) {
 		if cert.finishAdd {
 			if cert.addCount <= pbft.N {
 				logger.Debugf("Replica %d has already finished adding node", pbft.id)
@@ -273,7 +273,7 @@ func (pbft *pbftImpl) maybeUpdateTableForAdd(key string) error {
 	payload := []byte(key)
 	logger.Debugf("Replica %d update routingTable for %v", pbft.id, key)
 	pbft.helper.UpdateTable(payload, true)
-	pbft.status.inActiveState(IN_ADDING_NODE)
+	pbft.status.inActiveState(&pbft.status.inAddingNode)
 
 	return nil
 }
@@ -287,7 +287,7 @@ func (pbft *pbftImpl) maybeUpdateTableForDel(key string) error {
 		return nil
 	}
 
-	if !pbft.status[IN_DELETING_NODE] {
+	if !pbft.status.getState(&pbft.status.inDeletingNode) {
 		if cert.finishDel {
 			if cert.delCount < pbft.N {
 				logger.Debugf("Replica %d have already finished deleting node", pbft.id)
@@ -308,7 +308,7 @@ func (pbft *pbftImpl) maybeUpdateTableForDel(key string) error {
 	logger.Debugf("Replica %d update routingTable for %v", pbft.id, key)
 	pbft.helper.UpdateTable(payload, false)
 	time.Sleep(20 * time.Millisecond)
-	pbft.status[IN_DELETING_NODE] = false
+	pbft.status.inActiveState(&pbft.status.inDeletingNode)
 
 	atomic.StoreUint32(&pbft.nodeMgr.inUpdatingN, 1)
 	pbft.sendAgreeUpdateNforDel(key, cert.routerHash)
@@ -319,7 +319,7 @@ func (pbft *pbftImpl) maybeUpdateTableForDel(key string) error {
 // New replica send ready_for_n to all replicas after recovery
 func (pbft *pbftImpl) sendReadyForN() error {
 
-	if !pbft.status[IS_NEW_NODE] {
+	if !pbft.status.getState(&pbft.status.isNewNode) {
 		logger.Errorf("Replica %d is not new one, but try to send ready_for_n", pbft.id)
 		return nil
 	}
@@ -398,7 +398,7 @@ func (pbft *pbftImpl) recvReadyforNforAdd(ready *ReadyForN) events.Event {
 	}
 
 	if pbft.primary(pbft.view) == pbft.id {
-		pbft.status.inActiveState(NEW_NODE_READY)
+		pbft.status.inActiveState(&pbft.status.newNodeReady)
 	}
 
 	return pbft.sendAgreeUpdateNForAdd(agree)
@@ -413,7 +413,7 @@ func (pbft *pbftImpl) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) events.Event {
 	pbft.stopNewViewTimer()
 	atomic.StoreUint32(&pbft.nodeMgr.inUpdatingN, 1)
 
-	if pbft.status[IS_NEW_NODE] {
+	if pbft.status.getState(&pbft.status.isNewNode) {
 		logger.Debugf("Replica %d does not need to send agree-update-n", pbft.id)
 		return nil
 	}
@@ -498,12 +498,12 @@ func (pbft *pbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 		return nil
 	}
 
-	if pbft.status[IN_NEGO_VIEW] {
+	if pbft.status.getState(&pbft.status.inNegoView) {
 		logger.Warningf("Replica %d try to recvAgreeUpdateN, but it's in nego-view", pbft.id)
 		return nil
 	}
 
-	if pbft.status[IN_RECOVERY] {
+	if pbft.status.getState(&pbft.status.inRecovery) {
 		logger.Warningf("Replica %d try to recvAgreeUpdateN, but it's in recovery", pbft.id)
 		return nil
 	}
@@ -574,7 +574,7 @@ func (pbft *pbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 
 func (pbft *pbftImpl) sendUpdateN() events.Event {
 
-	if pbft.status[IN_NEGO_VIEW] {
+	if pbft.status.getState(&pbft.status.inNegoView) {
 		logger.Debugf("Replica %d try to sendUpdateN, but it's in nego-view", pbft.id)
 		return nil
 	}
@@ -636,12 +636,12 @@ func (pbft *pbftImpl) recvUpdateN(update *UpdateN) events.Event {
 		return nil
 	}
 
-	if pbft.status[IN_NEGO_VIEW] {
+	if pbft.status.getState(&pbft.status.inNegoView) {
 		logger.Debugf("Replica %d try to recvUpdateN, but it's in nego-view", pbft.id)
 		return nil
 	}
 
-	if pbft.status[IN_RECOVERY] {
+	if pbft.status.getState(&pbft.status.inRecovery) {
 		logger.Noticef("Replica %d try to recvUpdateN, but it's in recovery", pbft.id)
 		pbft.recoveryMgr.recvNewViewInRecovery = true
 		return nil
@@ -818,11 +818,11 @@ func (pbft *pbftImpl) processUpdateN() events.Event {
 func (pbft *pbftImpl) processReqInUpdate(update *UpdateN) events.Event {
 	logger.Debugf("Replica %d accepting update-n to target %v", pbft.id, pbft.nodeMgr.updateTarget)
 
-	if pbft.status[UPDATE_HANDLED] {
+	if pbft.status.getState(&pbft.status.updateHandled) {
 		logger.Debugf("Replica %d repeated enter processReqInUpdate, ignore it")
 		return nil
 	}
-	pbft.status.activeState(UPDATE_HANDLED)
+	pbft.status.activeState(&pbft.status.updateHandled)
 
 	pbft.stopNewViewTimer()
 	pbft.pbftTimerMgr.stopTimer(NULL_REQUEST_TIMER)
@@ -870,9 +870,10 @@ func (pbft *pbftImpl) processReqInUpdate(update *UpdateN) events.Event {
 	pbft.nodeMgr.addNodeCertStore = make(map[string]*addNodeCert)
 	pbft.nodeMgr.delNodeCertStore = make(map[string]*delNodeCert)
 
-	if !pbft.status[SKIP_IN_PROGRESS] && !pbft.status[IN_VC_RESET] {
+	if !pbft.status.getState(&pbft.status.skipInProgress)&&
+		!pbft.status.getState(&pbft.status.inVcReset) {
 		pbft.helper.VcReset(backenVid)
-		pbft.status.activeState(IN_VC_RESET)
+		pbft.status.activeState(&pbft.status.inVcReset)
 		return nil
 	}
 
@@ -923,7 +924,7 @@ func (pbft *pbftImpl) recvFinishUpdate(finish *FinishVcReset) events.Event {
 
 	logger.Debugf("Primary %d received finish update from new replica %d", pbft.id, finish.ReplicaId)
 
-	pbft.status.activeState(NEW_NODE_READY)
+	pbft.status.activeState(&pbft.status.newNodeReady)
 
 	return pbft.handleTailAfterUpdate()
 }
@@ -935,12 +936,12 @@ func (pbft *pbftImpl) handleTailAfterUpdate() events.Event {
 		return nil
 	}
 
-	if pbft.status[IN_VC_RESET] {
+	if pbft.status.getState(&pbft.status.inVcReset) {
 		logger.Warningf("Primary %d itself has not finished update", pbft.id)
 		return nil
 	}
 
-	if !pbft.status[NEW_NODE_READY] {
+	if !pbft.status.getState(&pbft.status.newNodeReady) {
 		logger.Warningf("Primary %d has not received new node's FinishUpdate", pbft.id)
 		return nil
 	}
@@ -1018,7 +1019,7 @@ func (pbft *pbftImpl) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 
 	if agree.Flag {
 		cert := pbft.getAddNodeCert(agree.Key)
-		if !pbft.status[IS_NEW_NODE] && !cert.finishAdd {
+		if !pbft.status.getState(&pbft.status.isNewNode) && !cert.finishAdd {
 			logger.Debugf("Replica %d has not complete add node", pbft.id)
 			return false
 		}
@@ -1265,7 +1266,9 @@ func (pbft *pbftImpl) sendPrePrepareForUpdate(reqBatch *TransactionBatch, digest
 }
 
 func (pbft *pbftImpl) processRequestsDuringUpdatingN() {
-	if atomic.LoadUint32(&pbft.activeView) == 1 && atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 && !pbft.status[IN_RECOVERY] {
+	if atomic.LoadUint32(&pbft.activeView) == 1 &&
+		atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 &&
+		!pbft.status.getState(&pbft.status.inRecovery) {
 		pbft.processCachedTransactions()
 	} else {
 		logger.Warningf("Replica %d try to processRequestsDuringUpdatingN but updatingN is not finished or it's in recovery / viewChange", pbft.id)
