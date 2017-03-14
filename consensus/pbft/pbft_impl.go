@@ -117,7 +117,7 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack) (*pbftImpl
 
 	atomic.StoreUint32(&pbft.activeView, 1)
 
-	return pbft
+	return pbft, nil
 }
 
 // =============================================================================

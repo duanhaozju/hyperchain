@@ -28,7 +28,6 @@ func newConsenter(namespace string, conf *common.Config, msgQ *event.TypeMux) (c
 	default:
 		panic(fmt.Errorf("Invalid consensus alorithm defined: %s", algo))
 	}
-	return nil
 }
 
 // Consenter return a Consenter instance
