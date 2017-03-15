@@ -50,7 +50,6 @@ type NamespaceManager interface {
 	StopNamespace(name string) error
 	//RestartNamespace restart namespace by name.
 	RestartNamespace(name string) error
-
 	//GlobalConfig global configuration of the system.
 	GlobalConfig() *common.Config
 }
