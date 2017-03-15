@@ -46,7 +46,6 @@ func (n *Number) UnmarshalJSON(data []byte) error {
 	_, ok := in.SetString(input, 0)
 
 	if !ok { // test if user supplied string tag
-
 		return fmt.Errorf(`invalid number %s`, data)
 	}
 
@@ -84,10 +83,8 @@ func (n Number) ToInt() int {
 type BlockNumber uint64
 
 const (
-	//latestBlockNumber  = 0
 	pendingBlockNumber  = 1
 	earliestBlockNumber = 2
-	//maxBlockNumber
 )
 
 func NewUint64ToBlockNumber(n uint64) *BlockNumber {

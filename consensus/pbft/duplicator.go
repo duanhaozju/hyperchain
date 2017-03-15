@@ -113,7 +113,7 @@ func (pbft *pbftImpl) removeDuplicate(txBatch *TransactionBatch) (newBatch *Tran
 	for _, tx := range txBatch.Batch {
 		key := hex.EncodeToString(tx.TransactionHash)
 		if txStore.has(key) || pbft.checkDuplicateInCache(tx) {
-			logger.Warningf("Primary %d received duplicate transaction %v", pbft.id, tx)
+			pbft.logger.Warningf("Primary %d received duplicate transaction %v", pbft.id, tx)
 		} else {
 			txStore.add(tx)
 			newBatch.Batch = append(newBatch.Batch, tx)

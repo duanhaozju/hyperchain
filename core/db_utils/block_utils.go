@@ -158,16 +158,16 @@ func IsGenesisFinish(namespace string) bool {
 	}
 }
 func blockTime(block *types.Block) {
-	time1 := block.WriteTime - block.Timestamp
-	f, err1 := os.OpenFile(hyperdb.GetLogPath(), os.O_WRONLY|os.O_CREATE, 0644)
-	if err1 != nil {
-		logger.Notice("db.logger file create failed. err: " + err1.Error())
+	times := block.WriteTime - block.Timestamp
+	f, err := os.OpenFile(hyperdb.GetLogPath(), os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		logger.Notice("db.logger file create failed. err: " + err.Error())
 	} else {
 		n, _ := f.Seek(0, os.SEEK_END)
 		currentTime := time.Now().Local()
 		newFormat := currentTime.Format("2006-01-02 15:04:05.000")
-		str := strconv.FormatUint(block.Number, 10) + "#" + newFormat + "#" + strconv.FormatInt(time1, 10) + "\n"
-		_, err1 = f.WriteAt([]byte(str), n)
+		str := strconv.FormatUint(block.Number, 10) + "#" + newFormat + "#" + strconv.FormatInt(times, 10) + "\n"
+		_, err = f.WriteAt([]byte(str), n)
 		f.Close()
 	}
 }

@@ -88,4 +88,4 @@ dbConfig:
 
     logStatus: true
 
-    logPath: "./namespaces/global/data/logs/db.log"
+    logPath: "./namespaces/global/data/db.log"

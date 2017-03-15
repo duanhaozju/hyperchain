@@ -67,15 +67,9 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 	}
 
 	if args.To == nil {
-
-		// 部署合约
-		//tx = types.NewTransaction(realArgs.From[:], nil, value, []byte(args.Signature))
 		tx = types.NewTransaction(realArgs.From[:], nil, value, realArgs.Timestamp, realArgs.Nonce)
 
 	} else {
-
-		// 调用合约或者普通交易(普通交易还需要加检查余额)
-		//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, []byte(args.Signature))
 		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
 	}
 
@@ -252,9 +246,6 @@ func (contract *PublicContractAPI) CheckHmValue(args ValueArgs) (*HmCheckResult,
 		illegalHmAmount = sumIllegal
 		result[i] = isvalid
 	}
-
-	//todo
-
 	return &HmCheckResult{
 		CheckResult: result,
 		SumIllegalHmAmount: new(big.Int).SetBytes(sumIllegal).String(),
@@ -290,7 +281,6 @@ func (contract *PublicContractAPI) GetStorageByAddr(addr common.Address) (map[st
 }
 
 func getBlockStateDb(namespace string, config *common.Config) (vm.Database, error) {
-	//block, err := getBlockByNumber(n, db)
 	stateDB, err := NewStateDb(config, namespace)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)

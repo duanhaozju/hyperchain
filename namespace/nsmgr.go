@@ -14,9 +14,11 @@ import (
 
 var logger *logging.Logger
 
-func init() {
-	logger = logging.MustGetLogger("namespace")
-}
+var (
+	ErrInvalidNs   = errors.New("namespace/nsmgr: invalid namespace")
+	ErrCannotNewNs = errors.New("namespace/nsmgr: can not new namespace")
+	ErrNsClosed    = errors.New("namespace/nsmgr: namespace closed")
+)
 
 var once sync.Once
 var nr NamespaceManager
@@ -30,42 +32,45 @@ type NamespaceManager interface {
 	//List list all namespace names in system.
 	List() []string
 	//Register register a new namespace.
-	Register(ns Namespace)
+	Register(name string) error
 	//DeRegister de-register namespace from system by name.
-	DeRegister(name string)
+	DeRegister(name string) error
 	//GetNamespaceByName get namespace instance by name.
 	GetNamespaceByName(name string) Namespace
 	//ProcessRequest process received request
 	ProcessRequest(request interface{}) interface{}
-	//StartNamespace start namespace by name
-	StartNamespace(name string)
-	//StopNamespace stop namespace by name
-	StopNamespace(name string)
-	//RestartNamespace restart namespace by name
-	RestartNamespace(name string)
+	//StartNamespace start namespace by name.
+	StartNamespace(name string) error
+	//StopNamespace stop namespace by name.
+	StopNamespace(name string) error
+	//RestartNamespace restart namespace by name.
+	RestartNamespace(name string) error
 }
 
 //nsManagerImpl implementation of NsRegistry.
 type nsManagerImpl struct {
+	rwLock     *sync.RWMutex
 	namespaces map[string]Namespace
 	conf       *common.Config
 }
 
 //NewNsRegistry new a namespace registry
 func newNsRegistry(conf *common.Config) *nsManagerImpl {
-	nri := &nsManagerImpl{
+	nr := &nsManagerImpl{
 		namespaces: make(map[string]Namespace),
 		conf:       conf,
 	}
-	err := nri.init()
+	nr.rwLock = new(sync.RWMutex)
+	err := nr.init()
 	if err != nil {
 		panic(err)
 	}
-	return nri
+	return nr
 }
 
 //GetNamespaceManager get namespace registry instance.
 func GetNamespaceManager(conf *common.Config) NamespaceManager {
+	logger = common.GetLogger("global", "nsmgr")
 	once.Do(func() {
 		nr = newNsRegistry(conf)
 	})
@@ -86,14 +91,7 @@ func (nr *nsManagerImpl) init() error {
 	for _, d := range dirs {
 		if d.IsDir() {
 			name := d.Name()
-			nsConfigDir := configRootDir +"/" + d.Name() + "/config"
-			nsConfig := ConstructConfigFromDir(nsConfigDir)
-			nsConfig.Set(NS_CONFIG_DIR, nsConfigDir)
-			ns, err := GetNamespace(name, nsConfig)
-			if err != nil {
-				logger.Errorf("Construct namespace %s error, %v", name, err)
-			}
-			nr.namespaces[name] = ns
+			nr.Register(name)
 		} else {
 			logger.Errorf("Invalid folder %v", d)
 		}
@@ -104,6 +102,8 @@ func (nr *nsManagerImpl) init() error {
 //Start start namespace registry service.
 //which will also start all namespace in this Namespace Registry
 func (nr *nsManagerImpl) Start() {
+	nr.rwLock.RLock()
+	defer nr.rwLock.RUnlock()
 	for name, ns := range nr.namespaces {
 		err := ns.Start()
 		if err != nil {
@@ -114,58 +114,114 @@ func (nr *nsManagerImpl) Start() {
 
 //Stop stop namespace registry.
 func (nr *nsManagerImpl) Stop() {
+	logger.Noticef("Try to stop NamespaceManager ...")
+	nr.rwLock.RLock()
+	defer nr.rwLock.RUnlock()
 	for name, ns := range nr.namespaces {
 		err := ns.Stop()
 		if err != nil {
 			logger.Errorf("namespace %s stop failed, %v", name, err)
 		}
 	}
+	logger.Noticef("NamespaceManager stopped!")
 }
 
 //List list all namespace names in system.
 func (nr *nsManagerImpl) List() (names []string) {
+	nr.rwLock.RLock()
+	defer nr.rwLock.RUnlock()
 	for name := range nr.namespaces {
 		names = append(names, name)
 	}
 	return names
 }
 
-//Register register a new namespace.
-func (nr *nsManagerImpl) Register(ns Namespace) {
-	//TODO
+//Register register a new namespace, by the new namespace config dir.
+func (nr *nsManagerImpl) Register(name string) error {
+	logger.Noticef("Register namespace: %s", name)
+	configRootDir := nr.conf.GetString(NS_CONFIG_DIR_ROOT)
+	if configRootDir == "" {
+		return errors.New("Namespace config root dir is not valid")
+	}
+	nsConfigDir := configRootDir + "/" + name + "/config"
+	nsConfig := constructConfigFromDir(nsConfigDir)
+	ns, err := GetNamespace(name, nsConfig)
+	if err != nil {
+		logger.Errorf("Construct namespace %s error, %v", name, err)
+		return ErrCannotNewNs
+	}
+	nr.rwLock.Lock()
+	nr.namespaces[name] = ns
+	nr.rwLock.Unlock()
+	return nil
 }
 
 //DeRegister de-register namespace from system by name.
-func (nr *nsManagerImpl) DeRegister(name string) {
-	//TODO:
+func (nr *nsManagerImpl) DeRegister(name string) error {
+	logger.Criticalf("Try to deregister the namespace:%s ", name)
+	if ns, ok := nr.namespaces[name]; ok {
+		if ns.Status().state == running {
+			logger.Noticef("namespace: %s is running, stop it first", name)
+			ns.Stop()
+			nr.rwLock.Lock()
+			delete(nr.namespaces, name)
+			nr.rwLock.Unlock()
+		}
+
+	} else {
+		logger.Noticef("no such namespace: %s", name)
+	}
+	logger.Criticalf("namespace: %s stopped", name)
+	//TODO: need to delete the data?
+	return nil
 }
 
 //GetNamespaceByName get namespace instance by name.
 func (nr *nsManagerImpl) GetNamespaceByName(name string) Namespace {
-	//TODO:
+	nr.rwLock.RLock()
+	defer nr.rwLock.Unlock()
+	if ns, ok := nr.namespaces[name]; ok {
+		return ns
+	}
 	return nil
 }
 
 //ProcessRequest process received request
 func (nr *nsManagerImpl) ProcessRequest(request interface{}) interface{} {
-	//TODO:
+
+	//TODO: process request per namespace
 	return nil
 }
 
 //StartNamespace start namespace by name
-func (nr *nsManagerImpl) StartNamespace(name string) {
-	//TODO: start a namespace by name
-	//1. check if the namespace instance already registered in the system
-	//2. check the namespace state
-	//3. register the namespace or init a new namespace
+func (nr *nsManagerImpl) StartNamespace(name string) error {
+	nr.rwLock.RLock()
+	defer nr.rwLock.Unlock()
+	if ns, ok := nr.namespaces[name]; ok {
+		return ns.Start()
+	}
+	logger.Errorf("No namespace instance for %s found")
+	return ErrInvalidNs
 }
 
 //StopNamespace stop namespace by name
-func (nr *nsManagerImpl) StopNamespace(name string) {
-	//TODO: stop namespace by name
+func (nr *nsManagerImpl) StopNamespace(name string) error {
+	nr.rwLock.RLock()
+	defer nr.rwLock.Unlock()
+	if ns, ok := nr.namespaces[name]; ok {
+		return ns.Stop()
+	}
+	logger.Errorf("No namespace instance for %s found")
+	return ErrInvalidNs
 }
 
 //RestartNamespace restart namespace by name
-func (nr *nsManagerImpl) RestartNamespace(name string) {
-	//TODO: restart a namespace
+func (nr *nsManagerImpl) RestartNamespace(name string) error {
+	nr.rwLock.RLock()
+	defer nr.rwLock.Unlock()
+	if ns, ok := nr.namespaces[name]; ok {
+		return ns.Restart()
+	}
+	logger.Errorf("No namespace instance for %s found")
+	return ErrInvalidNs
 }

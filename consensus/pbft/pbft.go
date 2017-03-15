@@ -13,7 +13,6 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/op/go-logging"
 
 	"hyperchain/protos"
 	"hyperchain/common"
@@ -26,12 +25,6 @@ import (
 	This file implement the API of consensus
 	which can be invoked by outer services.
  */
-
-var logger *logging.Logger
-
-func init() {
-	logger = logging.MustGetLogger("consensus")
-}
 
 // New return a instance of pbftProtocal  TODO: rename helper.Stack ??
 func New(namespace string, conf * common.Config, h helper.Stack) (*pbftImpl, error) {
@@ -56,7 +49,7 @@ func (pbft *pbftImpl) RecvMsg(e []byte) error {
 	msg := &protos.Message{}
 	err := proto.Unmarshal(e, msg)
 	if err != nil {
-		logger.Errorf("Inner RecvMsg Unmarshal error: can not unmarshal pb.Message %v", err)
+		pbft.logger.Errorf("Inner RecvMsg Unmarshal error: can not unmarshal pb.Message %v", err)
 		return err
 	}
 	switch msg.Type {
@@ -71,7 +64,7 @@ func (pbft *pbftImpl) RecvMsg(e []byte) error {
 	case protos.Message_NEGOTIATE_VIEW:
 		return pbft.processNegotiateView()
 	default:
-		logger.Errorf("Unsupport message type: %v", msg.Type)
+		pbft.logger.Errorf("Unsupport message type: %v", msg.Type)
 		return nil//TODO: define PBFT error type
 	}
 }
@@ -95,7 +88,7 @@ func (pbft *pbftImpl) RecvLocal(msg interface{}) error {
 
 //Start start the consensus service
 func (pbft *pbftImpl) Start()  {
-	logger.Noticef("--------PBFT starting, nodeID: %d--------", pbft.id)
+	pbft.logger.Noticef("--------PBFT starting, nodeID: %d--------", pbft.id)
 
 	//1.restore state.
 	pbft.restoreState()
@@ -106,7 +99,7 @@ func (pbft *pbftImpl) Start()  {
 
 	pbft.pbftTimerMgr.makeRequestTimeoutLegal()
 
-	logger.Noticef("======== PBFT finish start, nodeID: %d", pbft.id)
+	pbft.logger.Noticef("======== PBFT finish start, nodeID: %d", pbft.id)
 }
 
 //Close close the consenter service

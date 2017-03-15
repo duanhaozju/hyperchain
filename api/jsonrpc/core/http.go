@@ -75,7 +75,6 @@ func startHttp(httpPort int, restPort int, logsPath string, srv *Server, cm *adm
 
 	go http.ListenAndServe(":"+strconv.Itoa(httpPort), handler)
 
-	// ===================================== 2016.11.15 START ================================ //
 	routers.NewRouter()
 	beego.BConfig.CopyRequestBody = true
 	beego.SetLogFuncCall(true)
@@ -83,16 +82,11 @@ func startHttp(httpPort int, restPort int, logsPath string, srv *Server, cm *adm
 	logs.SetLogger(logs.AdapterFile, `{"filename": "`+logsPath+"/RESTful-API-"+strconv.Itoa(restPort)+"-"+time.Now().Format("2006-01-02 15:04:05")+`"}`)
 	beego.BeeLogger.DelLogger("console")
 
-	// todo 读取　app.conf　配置文件
-	// the first param adapterName is ini/json/xml/yaml.
-	//beego.LoadAppConfig("ini", "jsonrpc/RESTful_api/conf/app.conf")
 	beego.Run("0.0.0.0:" + strconv.Itoa(restPort))
-	// ===================================== 2016.11.15 END  ================================ //
 }
 
 func newJSONHTTPHandler(srv *Server, cm *admittance.CAManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//log.Critical("has request")
 		if r.ContentLength > maxHTTPRequestContentLength {
 			http.Error(w,
 				fmt.Sprintf("content length too large (%d>%d)", r.ContentLength, maxHTTPRequestContentLength),

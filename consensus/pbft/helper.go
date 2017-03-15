@@ -107,7 +107,7 @@ func (pbft *pbftImpl) getDelNV(del uint64) (n int64, v uint64) {
 	if pbft.primary(pbft.view) > del {
 		v = pbft.view % uint64(pbft.N) - 1 + (uint64(pbft.N) - 1) * (pbft.view / uint64(pbft.N) + 1)
 	} else {
-		logger.Debug("N: ", pbft.N, " view: ", pbft.view, " del: ", del)
+		pbft.logger.Debug("N: ", pbft.N, " view: ", pbft.view, " del: ", del)
 		v = pbft.view % uint64(pbft.N) + (uint64(pbft.N) - 1) * (pbft.view / uint64(pbft.N) + 1)
 	}
 
@@ -148,7 +148,7 @@ func (pbft *pbftImpl) minimumCorrectQuorum() int {
 func (pbft *pbftImpl) prePrepared(digest string, v uint64, n uint64) bool {
 
 	if digest != "" && !pbft.batchVdr.containsInVBS(digest) {
-		logger.Debugf("Replica %d havan't store the reqBatch", pbft.id)
+		pbft.logger.Debugf("Replica %d havan't store the reqBatch", pbft.id)
 		return false
 	}
 
@@ -161,7 +161,7 @@ func (pbft *pbftImpl) prePrepared(digest string, v uint64, n uint64) bool {
 		}
 	}
 
-	logger.Debugf("Replica %d does not have view=%d/seqNo=%d pre-prepared",
+	pbft.logger.Debugf("Replica %d does not have view=%d/seqNo=%d pre-prepared",
 		pbft.id, v, n)
 
 	return false
@@ -176,7 +176,7 @@ func (pbft *pbftImpl) prepared(digest string, v uint64, n uint64) bool {
 
 	cert := pbft.storeMgr.certStore[msgID{v, n}]
 
-	logger.Debugf("Replica %d prepare count for view=%d/seqNo=%d: %d",
+	pbft.logger.Debugf("Replica %d prepare count for view=%d/seqNo=%d: %d",
 		pbft.id, v, n, cert.prepareCount)
 
 	return cert.prepareCount >= pbft.preparedReplicasQuorum()
@@ -194,7 +194,7 @@ func (pbft *pbftImpl) committed(digest string, v uint64, n uint64) bool {
 		return false
 	}
 
-	logger.Debugf("Replica %d commit count for view=%d/seqNo=%d: %d",
+	pbft.logger.Debugf("Replica %d commit count for view=%d/seqNo=%d: %d",
 		pbft.id, v, n, cert.commitCount)
 
 	return cert.commitCount >= pbft.intersectionQuorum()
@@ -209,7 +209,7 @@ func cMsgToPbMsg(msg *ConsensusMessage, id uint64) *protos.Message {
 	msgPayload, err := proto.Marshal(msg)
 
 	if err != nil {
-		logger.Errorf("ConsensusMessage Marshal Error", err)
+		//pbft.logger.Errorf("ConsensusMessage Marshal Error", err)
 		return nil
 	}
 
@@ -311,9 +311,9 @@ func (pbft *pbftImpl) nullReqTimerReset() {
 		pbft.pbftEventQueue.Push(event)
 	}
 
-	//logger.Errorf("null request time out is %v", pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER))
-	//logger.Errorf("request time out is %v", pbft.pbftTimerMgr.requestTimeout)
-	//logger.Errorf("reset null request timeout to %v", timeout)
+	//pbft.logger.Errorf("null request time out is %v", pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER))
+	//pbft.logger.Errorf("request time out is %v", pbft.pbftTimerMgr.requestTimeout)
+	//pbft.logger.Errorf("reset null request timeout to %v", timeout)
 
 	pbft.pbftTimerMgr.startTimerWithNewTT(NULL_REQUEST_TIMER, timeout, af)
 }
@@ -330,13 +330,13 @@ func (pbft *pbftImpl) stopFirstRequestTimer()  {
 // =============================================================================
 // invalidateState is invoked to tell us that consensus realizes the ledger is out of sync
 func (pbft *pbftImpl) invalidateState() {
-	logger.Debug("Invalidating the current state")
+	pbft.logger.Debug("Invalidating the current state")
 	pbft.status.inActiveState(VALID)
 }
 
 // validateState is invoked to tell us that consensus has the ledger back in sync
 func (pbft *pbftImpl) validateState() {
-	logger.Debug("Validating the current state")
+	pbft.logger.Debug("Validating the current state")
 	pbft.status.activeState(VALID)
 }
 
@@ -351,29 +351,29 @@ func (pbft *pbftImpl) deleteExistedTx(digest string) {
 //isPrePrepareLegal both PBFT state PrePrepare message are legal.
 func (pbft *pbftImpl) isPrePrepareLegal(preprep *PrePrepare) bool {
 	if pbft.status[IN_NEGO_VIEW] {
-		logger.Debugf("Replica %d try recvPrePrepare, but it's in nego-view", pbft.id)
+		pbft.logger.Debugf("Replica %d try recvPrePrepare, but it's in nego-view", pbft.id)
 		return false
 	}
 
 	if atomic.LoadUint32(&pbft.activeView) == 0 {
-		logger.Debugf("Replica %d ignoring pre-prepare as we are in view change", pbft.id)
+		pbft.logger.Debugf("Replica %d ignoring pre-prepare as we are in view change", pbft.id)
 		return false
 	}
 
 	if pbft.primary(pbft.view) != preprep.ReplicaId {
-		logger.Warningf("Pre-prepare from other than primary: got %d, should be %d",
+		pbft.logger.Warningf("Pre-prepare from other than primary: got %d, should be %d",
 			preprep.ReplicaId, pbft.primary(pbft.view))
 		return false
 	}
 
 	if !pbft.inWV(preprep.View, preprep.SequenceNumber) {
 		if preprep.SequenceNumber != pbft.h && !pbft.status[SKIP_IN_PROGRESS] {
-			logger.Warningf("Replica %d pre-prepare view different, or sequence number outside " +
+			pbft.logger.Warningf("Replica %d pre-prepare view different, or sequence number outside " +
 				"watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d",
 				pbft.id, preprep.View, pbft.view, preprep.SequenceNumber, pbft.h)
 		} else {
 			// This is perfectly normal
-			logger.Debugf("Replica %d pre-prepare view different, or sequence number outside watermarks: " +
+			pbft.logger.Debugf("Replica %d pre-prepare view different, or sequence number outside watermarks: " +
 				"preprep.View %d, expected.View %d, seqNo %d, low-mark %d",
 				pbft.id, preprep.View, pbft.view, preprep.SequenceNumber, pbft.h)
 		}
@@ -385,22 +385,22 @@ func (pbft *pbftImpl) isPrePrepareLegal(preprep *PrePrepare) bool {
 //isPrepareLegal both PBFT state Prepare message are legal.
 func (pbft *pbftImpl) isPrepareLegal(prep *Prepare) bool  {
 	if pbft.status[IN_NEGO_VIEW] {
-		logger.Debugf("Replica %d try to recvPrepare, but it's in nego-view", pbft.id)
+		pbft.logger.Debugf("Replica %d try to recvPrepare, but it's in nego-view", pbft.id)
 		return false
 	}
 	//TODO: need !pbft.status[IN_RECOVERY] ?
 	if pbft.primary(prep.View) == prep.ReplicaId && !pbft.status[IN_RECOVERY] {
-		logger.Warningf("Replica %d received prepare from primary, ignoring", pbft.id)
+		pbft.logger.Warningf("Replica %d received prepare from primary, ignoring", pbft.id)
 		return false
 	}
 
 	if !pbft.inWV(prep.View, prep.SequenceNumber) {
 		if prep.SequenceNumber != pbft.h && !pbft.status[SKIP_IN_PROGRESS] {
-			logger.Warningf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d",
+			pbft.logger.Warningf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d",
 				pbft.id, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
 		} else {
 			// This is perfectly normal
-			logger.Debugf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d",
+			pbft.logger.Debugf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d",
 				pbft.id, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
 		}
 
@@ -412,16 +412,16 @@ func (pbft *pbftImpl) isPrepareLegal(prep *Prepare) bool  {
 //isPrepareLegal both PBFT state Commit message are legal.
 func (pbft *pbftImpl) isCommitLegal(commit *Commit) bool  {
 	if pbft.status[IN_NEGO_VIEW] {
-		logger.Debugf("Replica %d try to recvCommit, but it's in nego-view", pbft.id)
+		pbft.logger.Debugf("Replica %d try to recvCommit, but it's in nego-view", pbft.id)
 		return false
 	}
 
 	if !pbft.inWV(commit.View, commit.SequenceNumber) {
 		if commit.SequenceNumber != pbft.h && !pbft.status[SKIP_IN_PROGRESS] {
-			logger.Warningf("Replica %d ignoring commit from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
+			pbft.logger.Warningf("Replica %d ignoring commit from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
 		} else {
 			// This is perfectly normal
-			logger.Debugf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
+			pbft.logger.Debugf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
 		}
 		return false
 	}
