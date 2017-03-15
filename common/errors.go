@@ -1,9 +1,59 @@
-package hpc
+package common
 
+import "fmt"
 
-type JSONRPCError interface{
+const (
+	JSONRPCVersion         = "2.0"
+	serviceMethodSeparator = "_"
+)
+
+// RPCError implements RPC error, is add support for error codec over regular go errors
+type RPCError interface {
+	// RPC error code
 	Code() int
+	// Error message
 	Error() string
+}
+
+// CORE ERRORS
+// request is for an unknown service
+type MethodNotFoundError struct {
+	Service string
+	Method  string
+}
+
+func (e *MethodNotFoundError) Code() int {
+	return -32601
+}
+
+func (e *MethodNotFoundError) Error() string {
+	return fmt.Sprintf("The method %s%s%s does not exist/is not available", e.Service, serviceMethodSeparator, e.Method)
+}
+
+// received message isn't a valid request
+type InvalidRequestError struct {
+	Message string
+}
+
+func (e *InvalidRequestError) Code() int {
+	return -32600
+}
+
+func (e *InvalidRequestError) Error() string {
+	return e.Message
+}
+
+// received message is invalid
+type InvalidMessageError struct {
+	Message string
+}
+
+func (e *InvalidMessageError) Code() int {
+	return -32700
+}
+
+func (e *InvalidMessageError) Error() string {
+	return e.Message
 }
 
 // unable to decode supplied params, or an invalid number of parameters
@@ -30,6 +80,27 @@ func (e *CallbackError) Code() int {
 
 func (e *CallbackError) Error() string {
 	return e.Message
+}
+
+// issued when a request is received after the server is issued to stop.
+type ShutdownError struct {
+}
+
+func (e *ShutdownError) Code() int {
+	return -32000
+}
+
+func (e *ShutdownError) Error() string {
+	return "server is shutting down"
+}
+
+
+
+
+// JSONRPC ERRORS
+type JSONRPCError interface{
+	Code() int
+	Error() string
 }
 
 type LeveldbNotFoundError struct {
@@ -114,6 +185,29 @@ func (e *RepeadedTxError) Code() int {
 
 func (e *RepeadedTxError) Error() string {
 	return e.Message
+}
+
+type NamespaceNotFound struct {
+	Name    string
+}
+
+func (e *NamespaceNotFound) Code() int {
+	return -32008
+}
+
+func (e *NamespaceNotFound) Error() string {
+	return fmt.Sprintf("The namespace '%s' does not exist", e.Name)
+}
+
+type UnauthorizedError struct {
+}
+
+func (e *UnauthorizedError) Code() int {
+	return -32098
+}
+
+func (e *UnauthorizedError) Error() string {
+	return "Unauthorized, Please check your cert"
 }
 
 type CertError struct {

@@ -6,6 +6,7 @@ import (
 	"hyperchain/event"
 	"hyperchain/manager"
 	"hyperchain/p2p"
+	"hyperchain/common"
 )
 
 type NodeArgs struct {
@@ -34,7 +35,7 @@ func NewPublicNodeAPI(pm *manager.EventHub) *PublicNodeAPI {
 // GetNodes returns status of all the nodes
 func (node *PublicNodeAPI) GetNodes() (p2p.PeerInfos, error) {
 	if node.pm == nil {
-		return nil, &CallbackError{"protocolManager is nil"}
+		return nil, &common.CallbackError{"protocolManager is nil"}
 	}
 
 	return node.pm.GetNodeInfo(), nil
@@ -42,14 +43,14 @@ func (node *PublicNodeAPI) GetNodes() (p2p.PeerInfos, error) {
 
 func (node *PublicNodeAPI) GetNodeHash() (string, error) {
 	if node.pm == nil {
-		return "", &CallbackError{"protocolManager is nil"}
+		return "", &common.CallbackError{"protocolManager is nil"}
 	}
 	return node.pm.PeerManager.GetLocalNodeHash(), nil
 }
 
 func (node *PublicNodeAPI) DelNode(args NodeArgs) (string, error) {
 	if node.pm == nil {
-		return "", &CallbackError{"protocolManager is nil"}
+		return "", &common.CallbackError{"protocolManager is nil"}
 	}
 	go node.pm.GetEventObject().Post(event.DelPeerEvent{
 		Payload: []byte(args.NodeHash),

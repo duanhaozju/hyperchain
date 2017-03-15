@@ -20,6 +20,11 @@ var (
 	ErrNsClosed    = errors.New("namespace/nsmgr: namespace closed")
 )
 
+const (
+	DEFAULT_NAMESPACE  = "global"
+	NS_CONFIG_DIR_ROOT = "global.nsConfigRootPath"
+)
+
 var once sync.Once
 var nr NamespaceManager
 
@@ -38,13 +43,16 @@ type NamespaceManager interface {
 	//GetNamespaceByName get namespace instance by name.
 	GetNamespaceByName(name string) Namespace
 	//ProcessRequest process received request
-	ProcessRequest(request interface{}) interface{}
+	ProcessRequest(namespace string, request interface{}) interface{}
 	//StartNamespace start namespace by name.
 	StartNamespace(name string) error
 	//StopNamespace stop namespace by name.
 	StopNamespace(name string) error
 	//RestartNamespace restart namespace by name.
 	RestartNamespace(name string) error
+
+	//GlobalConfig global configuration of the system.
+	GlobalConfig() *common.Config
 }
 
 //nsManagerImpl implementation of NsRegistry.
@@ -54,8 +62,8 @@ type nsManagerImpl struct {
 	conf       *common.Config
 }
 
-//NewNsRegistry new a namespace registry
-func newNsRegistry(conf *common.Config) *nsManagerImpl {
+//NewNsManager new a namespace manager
+func newNsManager(conf *common.Config) *nsManagerImpl {
 	nr := &nsManagerImpl{
 		namespaces: make(map[string]Namespace),
 		conf:       conf,
@@ -70,9 +78,9 @@ func newNsRegistry(conf *common.Config) *nsManagerImpl {
 
 //GetNamespaceManager get namespace registry instance.
 func GetNamespaceManager(conf *common.Config) NamespaceManager {
-	logger = common.GetLogger("global", "nsmgr")
+	logger = common.GetLogger(DEFAULT_NAMESPACE, "nsmgr")
 	once.Do(func() {
-		nr = newNsRegistry(conf)
+		nr = newNsManager(conf)
 	})
 	return nr
 }
@@ -144,7 +152,7 @@ func (nr *nsManagerImpl) Register(name string) error {
 		return errors.New("Namespace config root dir is not valid")
 	}
 	nsConfigDir := configRootDir + "/" + name + "/config"
-	nsConfig := constructConfigFromDir(nsConfigDir)
+	nsConfig := nr.constructConfigFromDir(nsConfigDir)
 	ns, err := GetNamespace(name, nsConfig)
 	if err != nil {
 		logger.Errorf("Construct namespace %s error, %v", name, err)
@@ -179,7 +187,7 @@ func (nr *nsManagerImpl) DeRegister(name string) error {
 //GetNamespaceByName get namespace instance by name.
 func (nr *nsManagerImpl) GetNamespaceByName(name string) Namespace {
 	nr.rwLock.RLock()
-	defer nr.rwLock.Unlock()
+	defer nr.rwLock.RUnlock()
 	if ns, ok := nr.namespaces[name]; ok {
 		return ns
 	}
@@ -187,16 +195,19 @@ func (nr *nsManagerImpl) GetNamespaceByName(name string) Namespace {
 }
 
 //ProcessRequest process received request
-func (nr *nsManagerImpl) ProcessRequest(request interface{}) interface{} {
-
-	//TODO: process request per namespace
-	return nil
+func (nr *nsManagerImpl) ProcessRequest(namespace string, request interface{}) interface{} {
+	ns := nr.GetNamespaceByName(namespace)
+	if ns == nil {
+		logger.Noticef("no namespace found for name: %s", namespace)
+		return nil
+	}
+	return ns.ProcessRequest(request)
 }
 
 //StartNamespace start namespace by name
 func (nr *nsManagerImpl) StartNamespace(name string) error {
 	nr.rwLock.RLock()
-	defer nr.rwLock.Unlock()
+	defer nr.rwLock.RUnlock()
 	if ns, ok := nr.namespaces[name]; ok {
 		return ns.Start()
 	}
@@ -207,7 +218,7 @@ func (nr *nsManagerImpl) StartNamespace(name string) error {
 //StopNamespace stop namespace by name
 func (nr *nsManagerImpl) StopNamespace(name string) error {
 	nr.rwLock.RLock()
-	defer nr.rwLock.Unlock()
+	defer nr.rwLock.RUnlock()
 	if ns, ok := nr.namespaces[name]; ok {
 		return ns.Stop()
 	}
@@ -218,10 +229,15 @@ func (nr *nsManagerImpl) StopNamespace(name string) error {
 //RestartNamespace restart namespace by name
 func (nr *nsManagerImpl) RestartNamespace(name string) error {
 	nr.rwLock.RLock()
-	defer nr.rwLock.Unlock()
+	defer nr.rwLock.RUnlock()
 	if ns, ok := nr.namespaces[name]; ok {
 		return ns.Restart()
 	}
 	logger.Errorf("No namespace instance for %s found")
 	return ErrInvalidNs
+}
+
+//GlobalConfig global configuration of the system.
+func (nr *nsManagerImpl) GlobalConfig() *common.Config {
+	return nr.conf
 }

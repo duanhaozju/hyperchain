@@ -2,7 +2,7 @@
 ################################ tx 服务 ################################ （说明：value可以是十六进制字符串、八进制字符串、十进制字符串或整数）
 # 普通交易 SendTransaction
 # 无request —— 用于Hyperchain测试, 时间戳单位是纳秒
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_sendTransaction","params":[{"from":"17d806c92fa941b4b7a8ffffc58fa2f297a3bffc","to":"000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","timestamp":1481767697713000000,"nonce":6482432088169214,"value":1,"signature":"0x6dc99241793600eeeed72578e8de490894ec509bbc6c85753caf3176342c9cb85aa102f50424d508cc23d0c544763020f8136a742726a2b91bf55ff9ca45837e01"}],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","namespace":"global","method":"tx_sendTransaction","params":[{"from":"17d806c92fa941b4b7a8ffffc58fa2f297a3bffc","to":"000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","timestamp":1481767697713000000,"nonce":6482432088169214,"value":1,"signature":"0x6dc99241793600eeeed72578e8de490894ec509bbc6c85753caf3176342c9cb85aa102f50424d508cc23d0c544763020f8136a742726a2b91bf55ff9ca45837e01"}],"id":1}'
 
 # 根据交易hash查询交易信息 GetTransactionByHash
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByHash","params":["0x975a7c1df0eafeec28624eca66ea3cfb3f5f3cba942564b5fd80da58c9ec79a7"],"id":1}'
@@ -62,7 +62,7 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_checkHmValue","
 
 ################################ block 服务 ####################################
 # 得到最新区块 LastestBlock
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_latestBlock","params":[],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_latestBlock","namespace":"global","params":[],"id":1}'
 
 # 得到所有区块 GetBlocks
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params":[{"from":1, "to":1}],"id":1}'
@@ -76,7 +76,7 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocksByTime","p
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlockByHash","params":["<block hash>"],"id":1}'
 
 # 根据区块number查询区块信息 GetBlockByNumber, number可以是整数、十六进制字符串或者“latest”
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlockByNumber","params":[<block number>],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlockByNumber","namespace":"global", "params":"latest","id":1}'
 
 # 查询区块commit、batch平均时间
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_queryCommitAndBatchTime","params":[{"from":"the number of block", "to":"the number of block"}],id: 1}'
@@ -101,7 +101,7 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"account_getBalance","para
 
 ################################# node服务 ######################################
 # 得到节点信息
-curl localhost:8081 --data '{"jsonrpc":"2.0","method": "node_getNodes","id": 1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "node_getNodes", "namespace": "global", "id": 1}'
 
 # 得到所删节点信息
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "node_getNodeHash","id": 1}'

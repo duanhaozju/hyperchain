@@ -7,7 +7,7 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/accounts"
 	"hyperchain/admittance"
-	"hyperchain/api/jsonrpc/core"
+	"hyperchain/api"
 	"hyperchain/common"
 	"hyperchain/consensus"
 	"hyperchain/consensus/csmgr"
@@ -15,6 +15,7 @@ import (
 	"hyperchain/core/executor"
 	"hyperchain/event"
 	"hyperchain/manager"
+	"hyperchain/namespace/rpc"
 	"hyperchain/p2p"
 )
 
@@ -34,6 +35,8 @@ type Namespace interface {
 	ProcessRequest(request interface{}) interface{}
 	//Name of current namespace.
 	Name() string
+	//GetCAManager get CAManager by namespace name.
+	GetCAManager() *admittance.CAManager
 }
 type NsState int
 
@@ -64,14 +67,23 @@ type namespaceImpl struct {
 	nsInfo *NamespaceInfo
 	status *Status
 
-	conf      *common.Config
+	Conf      *common.Config
 	eventMux  *event.TypeMux
 	consenter consensus.Consenter
-	caMgr     *admittance.CAManager
+	CaMgr     *admittance.CAManager
 	am        *accounts.AccountManager
 	eh        *manager.EventHub
 	grpcMgr   *p2p.GRPCPeerManager
 	executor  *executor.Executor
+
+	rpcProcesser rpc.RPCProcesser
+}
+
+type API struct {
+	Srvname string      // srvname under which the rpc methods of Service are exposed
+	Version string      // api version for DApp's
+	Service interface{} // receiver instance which holds the methods
+	Public  bool        // indication if the methods must be considered safe for public use
 }
 
 func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) {
@@ -86,7 +98,7 @@ func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) 
 	ns := &namespaceImpl{
 		nsInfo:   ninfo,
 		status:   status,
-		conf:     conf,
+		Conf:     conf,
 		eventMux: new(event.TypeMux),
 	}
 	ns.logger = common.GetLogger(name, "namespace")
@@ -97,25 +109,25 @@ func (ns *namespaceImpl) init() error {
 	ns.logger.Criticalf("Init namespace %s", ns.Name())
 
 	//1.init DB
-	err := db_utils.InitDBForNamespace(ns.conf, ns.Name())
+	err := db_utils.InitDBForNamespace(ns.Conf, ns.Name())
 	if err != nil {
 		ns.logger.Errorf("init db for namespace: %s error, %v", ns.Name(), err)
 		return err
 	}
 
 	//2.init CaManager
-	cm, cmerr := admittance.GetCaManager(ns.conf)
+	cm, cmerr := admittance.GetCaManager(ns.Conf)
 	if cmerr != nil {
 		panic("cannot initliazied the camanager")
 	}
-	ns.caMgr = cm
+	ns.CaMgr = cm
 
 	//3. init peer manager to start grpc server and client
-	grpcPeerMgr := p2p.NewGrpcManager(ns.conf)
+	grpcPeerMgr := p2p.NewGrpcManager(ns.Conf)
 	ns.grpcMgr = grpcPeerMgr
 
 	//4.init pbft consensus
-	consenter, err := csmgr.Consenter(ns.Name(), ns.conf, ns.eventMux)
+	consenter, err := csmgr.Consenter(ns.Name(), ns.Conf, ns.eventMux)
 	if err != nil {
 		logger.Errorf("init Consenter for namespace %s error, %v", ns.Name(), err)
 		return err
@@ -124,23 +136,28 @@ func (ns *namespaceImpl) init() error {
 	ns.consenter = consenter
 
 	//5.init account manager
-	am := accounts.NewAccountManager(ns.conf)
-	am.UnlockAllAccount(ns.conf.GetString(common.KEY_STORE_DIR))
+	am := accounts.NewAccountManager(ns.Conf)
+	am.UnlockAllAccount(ns.Conf.GetString(common.KEY_STORE_DIR))
 	ns.am = am
 
 	//6.init block pool to save block
-	executor := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux)
+	executor := executor.NewExecutor(ns.Name(), ns.Conf, ns.eventMux)
 	if executor == nil {
 		return errors.New("Initialize Executor failed")
 	}
 
-	executor.CreateInitBlock(ns.conf)
+	executor.CreateInitBlock(ns.Conf)
 	executor.Initialize()
 
 	//7. init peer manager
 	eh := manager.New(ns.Name(), ns.eventMux, executor, ns.grpcMgr, consenter, am, cm)
 	ns.eh = eh
 	ns.status.state = initialized
+
+	// 8. init JsonRpcProcessor
+
+	ns.rpcProcesser = rpc.NewRPCProcessorImpl(ns.Name(), ns.GetApis())
+	ns.rpcProcesser.Start()
 	return nil
 }
 
@@ -214,13 +231,61 @@ func (ns *namespaceImpl) Name() string {
 	return ns.nsInfo.name
 }
 
+//GetCAManager get CAManager by namespace name.
+func (ns namespaceImpl) GetCAManager() *admittance.CAManager {
+	return ns.CaMgr
+}
+
 //ProcessRequest process request under this namespace
 func (ns *namespaceImpl) ProcessRequest(request interface{}) interface{} {
 	switch r := request.(type) {
-	case *jsonrpc.JSONRequest:
+	case *common.RPCRequest:
 		return ns.handleJsonRequest(r)
 	default:
 		ns.logger.Errorf("event not supportted %v", r)
 	}
 	return nil
+}
+
+func (ns *namespaceImpl) GetApis() []hpc.API {
+
+	return []hpc.API{
+		{
+			Srvname: "tx",
+			Version: "0.4",
+			Service: hpc.NewPublicTransactionAPI("global", ns.eventMux, ns.eh, ns.Conf),
+			Public:  true,
+		},
+		{
+			Srvname: "node",
+			Version: "0.4",
+			Service: hpc.NewPublicNodeAPI(ns.eh),
+			Public:  true,
+		},
+		{
+			Srvname: "block",
+			Version: "0.4",
+			Service: hpc.NewPublicBlockAPI("global"),
+			Public:  true,
+		},
+		{
+			Srvname: "account",
+			Version: "0.4",
+			Service: hpc.NewPublicAccountAPI("global", ns.eh, ns.Conf),
+			Public:  true,
+		},
+		{
+			Srvname: "contract",
+			Version: "0.4",
+			Service: hpc.NewPublicContractAPI("global", ns.eventMux, ns.eh, ns.Conf),
+			Public:  true,
+		},
+		{
+			Srvname: "cert",
+			Version: "0.4",
+			Service: hpc.NewPublicCertAPI(ns.CaMgr),
+			Public:  true,
+		},
+	}
+
 }

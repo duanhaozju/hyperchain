@@ -4,6 +4,7 @@ import (
 	"github.com/astaxie/beego"
 	"hyperchain/api"
 	"hyperchain/api/rest_api/utils"
+	"hyperchain/common"
 )
 
 type BlocksController struct {
@@ -22,7 +23,7 @@ func (b *BlocksController) GetBlocks() {
 	to := b.Input().Get("to")
 	args, err := utils.CheckIntervalArgs(from, to)
 	if err != nil {
-		b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+		b.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
 		b.ServeJSON()
 		return
 	}
@@ -41,7 +42,7 @@ func (b *BlocksController) GetPlainBlocks() {
 	to := b.Input().Get("to")
 	args, err := utils.CheckIntervalArgs(from, to)
 	if err != nil {
-		b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+		b.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
 		b.ServeJSON()
 		return
 	}
@@ -71,14 +72,14 @@ func (b *BlocksController) GetBlockByHashOrNumOrTime() {
 	} else if p_startTime != "" && p_endTime != "" && p_blkNum == "" && p_blkHash == ""{
 		flag = 3
 	} else {
-		b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{"The number of params or the name of params is invalid"})
+		b.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{"The number of params or the name of params is invalid"})
 		b.ServeJSON()
 		return
 	}
 
 	if flag == 1 {
 		if blkNum, err := utils.CheckBlockNumber(p_blkNum); err != nil {
-			b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+			b.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
 		} else {
 			if block, err := b.PublicBlockAPI.GetBlockByNumber(blkNum); err != nil {
 				b.Data["json"] = NewJSONObject(nil, err)
@@ -88,7 +89,7 @@ func (b *BlocksController) GetBlockByHashOrNumOrTime() {
 		}
 	} else if flag == 2 {
 		if blkHash, err := utils.CheckHash(p_blkHash); err != nil {
-			b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+			b.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
 		} else {
 			if block, err := b.PublicBlockAPI.GetBlockByHash(blkHash); err != nil {
 				b.Data["json"] = NewJSONObject(nil, err)
@@ -98,7 +99,7 @@ func (b *BlocksController) GetBlockByHashOrNumOrTime() {
 		}
 	} else if flag == 3 {
 		if args, err := utils.CheckIntervalTimeArgs(p_startTime, p_endTime); err != nil {
-			b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{"Invalid params, value may be out of range"})
+			b.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{"Invalid params, value may be out of range"})
 		} else {
 			if blks, err := b.PublicBlockAPI.GetBlocksByTime(args); err != nil {
 				b.Data["json"] = NewJSONObject(nil, err)
@@ -108,7 +109,7 @@ func (b *BlocksController) GetBlockByHashOrNumOrTime() {
 		}
 
 	} else {
-		b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{"invalid params"})
+		b.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{"invalid params"})
 	}
 
 	b.ServeJSON()
@@ -131,7 +132,7 @@ func (b *BlocksController) GetAvgGenerateTimeByBlockNumber() {
 	to := b.Input().Get("to")
 	args, err := utils.CheckIntervalArgs(from, to)
 	if err != nil {
-		b.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+		b.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
 		b.ServeJSON()
 		return
 	}

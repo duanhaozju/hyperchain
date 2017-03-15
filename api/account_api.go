@@ -6,14 +6,12 @@ import (
 	"fmt"
 	"hyperchain/accounts"
 	"hyperchain/common"
-	"hyperchain/hyperdb/db"
 	"hyperchain/manager"
 )
 
 type PublicAccountAPI struct {
 	pm        *manager.EventHub
 	namespace string
-	db        db.Database
 	config    *common.Config
 }
 
@@ -26,11 +24,10 @@ type UnlockParas struct {
 	Password string         `json:"password"`
 }
 
-func NewPublicAccountAPI(namespace string, pm *manager.EventHub, hyperDb db.Database, config *common.Config) *PublicAccountAPI {
+func NewPublicAccountAPI(namespace string, pm *manager.EventHub, config *common.Config) *PublicAccountAPI {
 	return &PublicAccountAPI{
 		namespace: namespace,
 		pm:        pm,
-		db:        hyperDb,
 		config:    config,
 	}
 }
@@ -41,7 +38,7 @@ func (acc *PublicAccountAPI) NewAccount(password string) (common.Address, error)
 	ac, err := am.NewAccount(password)
 	if err != nil {
 		log.Errorf("New Account error,%v", err)
-		return common.Address{}, &CallbackError{err.Error()}
+		return common.Address{}, &common.CallbackError{err.Error()}
 	}
 	return ac.Address, nil
 }
@@ -63,7 +60,7 @@ func (acc *PublicAccountAPI) UnlockAccount(args UnlockParas) (bool, error) {
 	ac := accounts.Account{Address: args.Address, File: am.KeyStore.JoinPath(s)}
 	err := am.Unlock(ac, args.Password)
 	if err != nil {
-		return false, &InvalidParamsError{"incorrect address or password!"}
+		return false, &common.InvalidParamsError{"incorrect address or password!"}
 	}
 	return true, nil
 }
@@ -94,9 +91,9 @@ func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
 		if stateobject := stateDB.GetAccount(addr); stateobject != nil {
 			return fmt.Sprintf(`0x%x`, stateobject.Balance()), nil
 		} else {
-			return "", &LeveldbNotFoundError{"stateobject, the account may not exist"}
+			return "", &common.LeveldbNotFoundError{"stateobject, the account may not exist"}
 		}
 	} else {
-		return "", &LeveldbNotFoundError{"statedb"}
+		return "", &common.LeveldbNotFoundError{"statedb"}
 	}
 }

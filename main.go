@@ -6,6 +6,8 @@ import (
 	"github.com/mkideal/cli"
 	"hyperchain/common"
 	"hyperchain/namespace"
+	//"hyperchain/api/jsonrpc/core"
+	"hyperchain/api/jsonrpc/core"
 )
 
 type argT struct {
@@ -13,10 +15,6 @@ type argT struct {
 	ConfigPath string `cli:"c,conf" usage:"config file path" dft:"./global.yaml"`
 }
 
-func init()  {
-	//globalConfig := common.NewConfig("./global.yaml")
-	//common.InitHyperLogger(globalConfig)
-}
 var stopHyperchain chan bool
 var nsMgr namespace.NamespaceManager
 
@@ -30,6 +28,7 @@ func main() {
 
 		nsMgr = namespace.GetNamespaceManager(globalConfig)
 		nsMgr.Start()
+		jsonrpc.Start(nsMgr)
 
 		<-stopHyperchain
 		return nil
