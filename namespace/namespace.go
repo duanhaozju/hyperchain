@@ -7,6 +7,7 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/accounts"
 	"hyperchain/admittance"
+	"hyperchain/api"
 	"hyperchain/common"
 	"hyperchain/consensus"
 	"hyperchain/consensus/csmgr"
@@ -14,9 +15,8 @@ import (
 	"hyperchain/core/executor"
 	"hyperchain/event"
 	"hyperchain/manager"
-	"hyperchain/p2p"
 	"hyperchain/namespace/rpc"
-	"hyperchain/api"
+	"hyperchain/p2p"
 )
 
 //Namespace represent the namespace instance
@@ -35,6 +35,8 @@ type Namespace interface {
 	ProcessRequest(request interface{}) interface{}
 	//Name of current namespace.
 	Name() string
+	//GetCAManager get CAManager by namespace name.
+	GetCAManager() *admittance.CAManager
 }
 type NsState int
 
@@ -59,32 +61,32 @@ type NamespaceInfo struct {
 }
 
 //namespaceImpl implementation of Namespace
-type NamespaceImpl struct {
+type namespaceImpl struct {
 	logger *logging.Logger
 
 	nsInfo *NamespaceInfo
 	status *Status
 
-	Conf         *common.Config
-	eventMux     *event.TypeMux
-	consenter    consensus.Consenter
-	CaMgr        *admittance.CAManager
-	am           *accounts.AccountManager
-	eh           *manager.EventHub
-	grpcMgr      *p2p.GRPCPeerManager
-	executor     *executor.Executor
+	Conf      *common.Config
+	eventMux  *event.TypeMux
+	consenter consensus.Consenter
+	CaMgr     *admittance.CAManager
+	am        *accounts.AccountManager
+	eh        *manager.EventHub
+	grpcMgr   *p2p.GRPCPeerManager
+	executor  *executor.Executor
 
 	rpcProcesser rpc.RPCProcesser
 }
 
 type API struct {
-	Srvname string        // srvname under which the rpc methods of Service are exposed
-	Version   string      // api version for DApp's
-	Service   interface{} // receiver instance which holds the methods
-	Public    bool        // indication if the methods must be considered safe for public use
+	Srvname string      // srvname under which the rpc methods of Service are exposed
+	Version string      // api version for DApp's
+	Service interface{} // receiver instance which holds the methods
+	Public  bool        // indication if the methods must be considered safe for public use
 }
 
-func newNamespaceImpl(name string, conf *common.Config) (*NamespaceImpl, error) {
+func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) {
 
 	ninfo := &NamespaceInfo{
 		name: name,
@@ -93,7 +95,7 @@ func newNamespaceImpl(name string, conf *common.Config) (*NamespaceImpl, error) 
 		state: initnew,
 		desc:  "startting",
 	}
-	ns := &NamespaceImpl{
+	ns := &namespaceImpl{
 		nsInfo:   ninfo,
 		status:   status,
 		Conf:     conf,
@@ -103,7 +105,7 @@ func newNamespaceImpl(name string, conf *common.Config) (*NamespaceImpl, error) 
 	return ns, nil
 }
 
-func (ns *NamespaceImpl) init() error {
+func (ns *namespaceImpl) init() error {
 	ns.logger.Criticalf("Init namespace %s", ns.Name())
 
 	//1.init DB
@@ -170,7 +172,7 @@ func GetNamespace(name string, conf *common.Config) (Namespace, error) {
 }
 
 //Start start services under this namespace.
-func (ns *NamespaceImpl) Start() error {
+func (ns *namespaceImpl) Start() error {
 	ns.logger.Noticef("try to start namespace: %s", ns.Name())
 	state := ns.status.state
 	if state < initialized {
@@ -191,7 +193,7 @@ func (ns *NamespaceImpl) Start() error {
 }
 
 //Stop stop services under this namespace.
-func (ns *NamespaceImpl) Stop() error {
+func (ns *namespaceImpl) Stop() error {
 	ns.logger.Noticef("try to stop namespace: %s", ns.Name())
 	state := ns.status.state
 
@@ -207,7 +209,7 @@ func (ns *NamespaceImpl) Stop() error {
 }
 
 //Restart restart services under this namespace.
-func (ns *NamespaceImpl) Restart() error {
+func (ns *namespaceImpl) Restart() error {
 	err := ns.Stop()
 	if err != nil {
 		return err
@@ -216,21 +218,26 @@ func (ns *NamespaceImpl) Restart() error {
 }
 
 //Status return current namespace status.
-func (ns *NamespaceImpl) Status() *Status {
+func (ns *namespaceImpl) Status() *Status {
 	return ns.status
 }
 
 //Info return basic information of this namespace.
-func (ns *NamespaceImpl) Info() *NamespaceInfo {
+func (ns *namespaceImpl) Info() *NamespaceInfo {
 	return ns.nsInfo
 }
 
-func (ns *NamespaceImpl) Name() string {
+func (ns *namespaceImpl) Name() string {
 	return ns.nsInfo.name
 }
 
+//GetCAManager get CAManager by namespace name.
+func (ns namespaceImpl) GetCAManager() *admittance.CAManager {
+	return ns.CaMgr
+}
+
 //ProcessRequest process request under this namespace
-func (ns *NamespaceImpl) ProcessRequest(request interface{}) interface{} {
+func (ns *namespaceImpl) ProcessRequest(request interface{}) interface{} {
 	switch r := request.(type) {
 	case *common.RPCRequest:
 		return ns.handleJsonRequest(r)
@@ -240,44 +247,44 @@ func (ns *NamespaceImpl) ProcessRequest(request interface{}) interface{} {
 	return nil
 }
 
-func (ns *NamespaceImpl) GetApis() []hpc.API {
+func (ns *namespaceImpl) GetApis() []hpc.API {
 
 	return []hpc.API{
 		{
 			Srvname: "tx",
-			Version:   "0.4",
-			Service:   hpc.NewPublicTransactionAPI("global", ns.eventMux, ns.eh, ns.Conf),
-			Public:    true,
+			Version: "0.4",
+			Service: hpc.NewPublicTransactionAPI("global", ns.eventMux, ns.eh, ns.Conf),
+			Public:  true,
 		},
 		{
 			Srvname: "node",
-			Version:   "0.4",
-			Service:   hpc.NewPublicNodeAPI(ns.eh),
-			Public:    true,
+			Version: "0.4",
+			Service: hpc.NewPublicNodeAPI(ns.eh),
+			Public:  true,
 		},
 		{
 			Srvname: "block",
-			Version:   "0.4",
-			Service:   hpc.NewPublicBlockAPI("global"),
-			Public:    true,
+			Version: "0.4",
+			Service: hpc.NewPublicBlockAPI("global"),
+			Public:  true,
 		},
 		{
 			Srvname: "account",
-			Version:   "0.4",
-			Service:   hpc.NewPublicAccountAPI("global", ns.eh, ns.Conf),
-			Public:    true,
+			Version: "0.4",
+			Service: hpc.NewPublicAccountAPI("global", ns.eh, ns.Conf),
+			Public:  true,
 		},
 		{
 			Srvname: "contract",
-			Version:   "0.4",
-			Service:   hpc.NewPublicContractAPI("global", ns.eventMux, ns.eh, ns.Conf),
-			Public:    true,
+			Version: "0.4",
+			Service: hpc.NewPublicContractAPI("global", ns.eventMux, ns.eh, ns.Conf),
+			Public:  true,
 		},
 		{
 			Srvname: "cert",
-			Version:   "0.4",
-			Service:   hpc.NewPublicCertAPI(ns.CaMgr),
-			Public:    true,
+			Version: "0.4",
+			Service: hpc.NewPublicCertAPI(ns.CaMgr),
+			Public:  true,
 		},
 	}
 

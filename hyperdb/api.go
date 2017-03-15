@@ -85,7 +85,7 @@ func GetLogPath() string {
 }
 
 func InitDatabase(conf *common.Config, nameSpace string) error {
-	log.Criticalf("namespace %s", nameSpace)
+	log.Criticalf("init db for namespace %s", nameSpace)
 	dbMap.dbSync.Lock()
 	defer dbMap.dbSync.Unlock()
 	_, ok := dbMap.dbMap[nameSpace+Blockchain]

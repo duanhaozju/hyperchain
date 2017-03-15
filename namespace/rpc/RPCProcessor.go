@@ -107,25 +107,6 @@ func (rpcproc *RPCProcesserImpl) registerName(name string, rcvr interface{}) err
 	return nil
 }
 
-
-//// todo 相当于 handle()
-//func (rpcproc *RPCProcesserImpl) ProcessRequest(ctx context.Context, reqs []*serverRequest, singleShot bool, batch bool) *common.RPCResponse{
-//
-//	if singleShot && batch {
-//		//rpcproc.execBatch(ctx, codec, reqs)
-//		return nil
-//	} else if singleShot && !batch {
-//		return rpcproc.exec(ctx, reqs[0])
-//	} else if !singleShot && batch {
-//		//go rpcproc.execBatch(ctx, codec, reqs)
-//	} else {
-//		//TODO how to start a go-routing?
-//		go rpcproc.exec(ctx, reqs[0])
-//	}
-//	return nil
-//}
-
-
 func (rpcproc *RPCProcesserImpl) ProcessRequest(request *common.RPCRequest) *common.RPCResponse {
 	sr := rpcproc.checkRequestParams(request)
 	return rpcproc.exec(request.Ctx, sr)
@@ -181,8 +162,7 @@ func (rpcproc *RPCProcesserImpl) parsePositionalArguments(args json.RawMessage, 
 	for _, t := range callbackArgs {
 		params = append(params, reflect.New(t).Interface()) // Interface()转换为原来的类型
 	}
-	//log.Info(string(args)) // [{"from":"0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","to":"0x0000000000000000000000000000000000000003","value":"0x9184e72a"}]
-	//log.Info(params)	// [0xc8201437a0]
+
 	if err := json.Unmarshal(args, &params); err != nil {
 		log.Info(err)
 		return nil, &common.InvalidParamsError{err.Error()}
