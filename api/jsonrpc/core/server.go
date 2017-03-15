@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/op/go-logging"
+	"github.com/syndtr/goleveldb/leveldb/errors"
 	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
 	"hyperchain/common"
@@ -37,17 +38,10 @@ const (
 // NewServer will create a new server instance with no registered handlers.
 func NewServer(nr namespace.NamespaceManager) *Server {
 	server := &Server{
-		//services:      make(serviceRegistry),
-		//subscriptions: make(subscriptionRegistry),
-		codecs:        set.New(),
-		run:           1,
+		codecs:       set.New(),
+		run:          1,
 		namespaceMgr: nr,
 	}
-
-	// register a default service which will provide meta information about the RPC service such as the services and
-	// methods it offers.
-	//rpcService := &RPCService{server}
-	//server.RegisterName(MetadataApi, rpcService)
 
 	return server
 }
@@ -57,15 +51,6 @@ func NewServer(nr namespace.NamespaceManager) *Server {
 type RPCService struct {
 	server *Server
 }
-
-// Modules returns the list of RPC services with their version number
-//func (s *RPCService) Modules() map[string]string {
-//	modules := make(map[string]string)
-//	for name := range s.server.services {
-//		modules[name] = "1.0"
-//	}
-//	return modules
-//}
 
 // hasOption returns true if option is included in options, otherwise false
 func hasOption(option CodecOption, options []CodecOption) bool {
@@ -118,8 +103,15 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 			codec.Write(codec.CreateErrorResponse(nil, "", err))
 			return nil
 		}
-
-		//rpcreqs := jsonrpc.RPCProcesser.CheckRequestParams(reqs)
+		//TODO: Warn do not support bath request now
+		if len(reqs) == 0 {
+			log.Errorf("no request found.")
+			return errors.New("no request found")
+		}
+		if rpcErr := codec.CheckHttpHeaders(reqs[0].Namespace); rpcErr != nil {
+			log.Errorf("CheckHttpHeaders error %v", rpcErr)
+			return nil
+		}
 
 		if atomic.LoadInt32(&s.run) != 1 {
 			err := &common.ShutdownError{}
@@ -134,23 +126,30 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 			}
 			return nil
 		}
+		//TODO: Warn do not support bath request now
 		reqs[0].Ctx = ctx
-		response := s.namespaceMgr.ProcessRequest(&reqs[0]).(*common.RPCResponse)
-
-		if response.Error != nil{
-			codec.Write(codec.CreateErrorResponse(&response.Id, response.Namespace, response.Error))
-		} else if response.Reply != nil{
-			if err := codec.Write(codec.CreateResponse(&response.Id, response.Namespace, response.Reply)); err != nil {
-				log.Errorf("%v\n", err)
-				codec.Close()
+		r := s.namespaceMgr.ProcessRequest(reqs[0].Namespace, &reqs[0])
+		if r == nil {
+			return errors.New("No process result")
+		}
+		if response, ok := r.(*common.RPCResponse); ok {
+			if response.Error != nil {
+				codec.Write(codec.CreateErrorResponse(&response.Id, response.Namespace, response.Error))
+			} else if response.Reply != nil {
+				if err := codec.Write(codec.CreateResponse(&response.Id, response.Namespace, response.Reply)); err != nil {
+					log.Errorf("%v\n", err)
+					codec.Close()
+				}
+			} else {
+				codec.Write(codec.CreateResponse(&response.Id, response.Namespace, nil))
 			}
 		} else {
-			codec.Write(codec.CreateResponse(&response.Id, response.Namespace, nil))
+			log.Errorf("response type invalid, resp: %v", response)
+			return errors.New(response.Error.Error())
 		}
 		return nil
 
 	}
-
 	return nil
 }
 
@@ -217,17 +216,16 @@ func (s *Server) Stop() {
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.
 func (s *Server) readRequest(codec ServerCodec) ([]common.RPCRequest, bool, common.RPCError) {
-	//log.Info("============start check the cert header=========")
-	//TODO 如果检查失败则进行相应处理，是否需要忽略数据
-	
-	if rpcErr := codec.CheckHttpHeaders();rpcErr !=nil{
-		return nil, false, rpcErr
-	}
-	
 	reqs, batch, err := codec.ReadRequestHeaders()
 	if err != nil {
 		return nil, batch, err
 	} else {
+		reqLen := len(reqs)
+		for i := 0; i < reqLen; i += 1 {
+			if reqs[i].Namespace == ""{
+				reqs[i].Namespace = namespace.DEFAULT_NAMESPACE
+			}
+		}
 		return reqs, batch, nil
 	}
 }

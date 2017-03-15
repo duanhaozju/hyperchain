@@ -107,25 +107,6 @@ func (rpcproc *RPCProcesserImpl) registerName(name string, rcvr interface{}) err
 	return nil
 }
 
-
-//// todo 相当于 handle()
-//func (rpcproc *RPCProcesserImpl) ProcessRequest(ctx context.Context, reqs []*serverRequest, singleShot bool, batch bool) *common.RPCResponse{
-//
-//	if singleShot && batch {
-//		//rpcproc.execBatch(ctx, codec, reqs)
-//		return nil
-//	} else if singleShot && !batch {
-//		return rpcproc.exec(ctx, reqs[0])
-//	} else if !singleShot && batch {
-//		//go rpcproc.execBatch(ctx, codec, reqs)
-//	} else {
-//		//TODO how to start a go-routing?
-//		go rpcproc.exec(ctx, reqs[0])
-//	}
-//	return nil
-//}
-
-
 func (rpcproc *RPCProcesserImpl) ProcessRequest(request *common.RPCRequest) *common.RPCResponse {
 	sr := rpcproc.checkRequestParams(request)
 	return rpcproc.exec(request.Ctx, sr)
@@ -134,9 +115,7 @@ func (rpcproc *RPCProcesserImpl) ProcessRequest(request *common.RPCRequest) *com
 // checkRequestParams requests the next (batch) request from the codec. It will return the collection
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.
-// todo check multi requests, use loop check
 func (rpcproc *RPCProcesserImpl) checkRequestParams(req *common.RPCRequest) (*serverRequest) {
-
 		var sr *serverRequest
 		var ok bool
 		var svc *service

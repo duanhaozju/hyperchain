@@ -3,18 +3,27 @@
 package namespace
 
 import (
-	"hyperchain/common"
 	"github.com/spf13/viper"
-)
-
-const (
-	NS_CONFIG_DIR_ROOT = "global.nsConfigRootPath"
+	"hyperchain/common"
+	"strings"
 )
 
 //constructConfigFromDir read all info needed by
-func constructConfigFromDir(path string) *common.Config {
+func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
+	var conf *common.Config
 	nsConfigPath := path + "/global.yaml"
-	conf := common.NewConfig(nsConfigPath)
+	logger.Critical(path)
+	if strings.HasSuffix(path, "/" + DEFAULT_NAMESPACE + "/config") {
+		_, err := nr.conf.MergeConfig(nsConfigPath)
+		if err != nil {
+			logger.Errorf("Merge config: %s error %v", nsConfigPath, err)
+			panic(err)
+		}
+		conf = nr.conf
+	} else {
+		conf = common.NewConfig(nsConfigPath)
+	}
+
 	// init peer configurations
 	peerConfigPath := conf.GetString("global.configs.peers")
 	peerViper := viper.New()
@@ -23,6 +32,7 @@ func constructConfigFromDir(path string) *common.Config {
 	if err != nil {
 		logger.Errorf("err %v", err)
 	}
+	//TODO: Refactor these codes later
 	nodeID := peerViper.GetInt("self.node_id")
 	grpcPort := peerViper.GetInt("self.grpc_port")
 	jsonrpcPort := peerViper.GetInt("self.jsonrpc_port")
