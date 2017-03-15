@@ -160,7 +160,7 @@ func (jrpi *JsonRpcProcessorImpl) ParseRequestArguments(argTypes []reflect.Type,
 // parsePositionalArguments tries to parse the given args to an array of values with the given types.
 // It returns the parsed values or an error when the args could not be parsed. Missing optional arguments
 // are returned as reflect.Zero values.
-func (jrpi *JsonRpcProcesserImpl) parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type) ([]reflect.Value, error) {
+func (jrpi *JsonRpcProcessorImpl) parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type) ([]reflect.Value, error) {
 	//log.Info("===================enter parsePositionalArguments()====================")
 
 	msg, msgLen, err := splitRawMessage(args)
@@ -178,7 +178,7 @@ func (jrpi *JsonRpcProcesserImpl) parsePositionalArguments(args json.RawMessage,
 
 	for i, t := range callbackArgs {
 		if (t.Name() == "BlockNumber" || t.Name() == "*BlockNumber") {
-			if chain := db_utils.GetChainCopy(rpcproc.namespace); chain != nil {
+			if chain := db_utils.GetChainCopy(jrpi.namespace); chain != nil {
 				height := chain.Height
 				in := new(big.Int)
 
