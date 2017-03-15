@@ -115,9 +115,7 @@ func (rpcproc *RPCProcesserImpl) ProcessRequest(request *common.RPCRequest) *com
 // checkRequestParams requests the next (batch) request from the codec. It will return the collection
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.
-// todo check multi requests, use loop check
 func (rpcproc *RPCProcesserImpl) checkRequestParams(req *common.RPCRequest) (*serverRequest) {
-
 		var sr *serverRequest
 		var ok bool
 		var svc *service

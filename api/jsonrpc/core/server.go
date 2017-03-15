@@ -220,6 +220,12 @@ func (s *Server) readRequest(codec ServerCodec) ([]common.RPCRequest, bool, comm
 	if err != nil {
 		return nil, batch, err
 	} else {
+		reqLen := len(reqs)
+		for i := 0; i < reqLen; i += 1 {
+			if reqs[i].Namespace == ""{
+				reqs[i].Namespace = namespace.DEFAULT_NAMESPACE
+			}
+		}
 		return reqs, batch, nil
 	}
 }
