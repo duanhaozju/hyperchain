@@ -207,7 +207,7 @@ func (ns *NamespaceImpl) Stop() error {
 }
 
 //Restart restart services under this namespace.
-func (ns *namespaceImpl) Restart() error {
+func (ns *NamespaceImpl) Restart() error {
 	err := ns.Stop()
 	if err != nil {
 		return err

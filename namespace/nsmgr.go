@@ -179,7 +179,7 @@ func (nr *nsManagerImpl) DeRegister(name string) error {
 //GetNamespaceByName get namespace instance by name.
 func (nr *nsManagerImpl) GetNamespaceByName(name string) Namespace {
 	nr.rwLock.RLock()
-	defer nr.rwLock.Unlock()
+	defer nr.rwLock.RUnlock()
 	if ns, ok := nr.namespaces[name]; ok {
 		return ns
 	}
@@ -201,7 +201,7 @@ func (nr *nsManagerImpl) ProcessRequest(request interface{}) interface{} {
 //StartNamespace start namespace by name
 func (nr *nsManagerImpl) StartNamespace(name string) error {
 	nr.rwLock.RLock()
-	defer nr.rwLock.Unlock()
+	defer nr.rwLock.RUnlock()
 	if ns, ok := nr.namespaces[name]; ok {
 		return ns.Start()
 	}
@@ -212,7 +212,7 @@ func (nr *nsManagerImpl) StartNamespace(name string) error {
 //StopNamespace stop namespace by name
 func (nr *nsManagerImpl) StopNamespace(name string) error {
 	nr.rwLock.RLock()
-	defer nr.rwLock.Unlock()
+	defer nr.rwLock.RUnlock()
 	if ns, ok := nr.namespaces[name]; ok {
 		return ns.Stop()
 	}
@@ -223,7 +223,7 @@ func (nr *nsManagerImpl) StopNamespace(name string) error {
 //RestartNamespace restart namespace by name
 func (nr *nsManagerImpl) RestartNamespace(name string) error {
 	nr.rwLock.RLock()
-	defer nr.rwLock.Unlock()
+	defer nr.rwLock.RUnlock()
 	if ns, ok := nr.namespaces[name]; ok {
 		return ns.Restart()
 	}
