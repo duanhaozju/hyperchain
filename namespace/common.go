@@ -12,7 +12,7 @@ import (
 func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 	var conf *common.Config
 	nsConfigPath := path + "/global.yaml"
-	logger.Critical(path)
+
 	if strings.HasSuffix(path, "/" + DEFAULT_NAMESPACE + "/config") {
 		_, err := nr.conf.MergeConfig(nsConfigPath)
 		if err != nil {
