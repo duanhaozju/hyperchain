@@ -10,9 +10,9 @@ import (
 )
 
 type PublicAccountAPI struct {
-	pm     *manager.EventHub
+	pm        *manager.EventHub
 	namespace string
-	config *common.Config
+	config    *common.Config
 }
 
 type AccountResult struct {
@@ -27,25 +27,19 @@ type UnlockParas struct {
 func NewPublicAccountAPI(namespace string, pm *manager.EventHub, config *common.Config) *PublicAccountAPI {
 	return &PublicAccountAPI{
 		namespace: namespace,
-		pm:     pm,
-		config: config,
+		pm:        pm,
+		config:    config,
 	}
 }
 
 //New Account according to args from html
 func (acc *PublicAccountAPI) NewAccount(password string) (common.Address, error) {
-	//keydir := "./keystore/"
-	//encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	am := acc.pm.AccountManager
 	ac, err := am.NewAccount(password)
 	if err != nil {
 		log.Errorf("New Account error,%v", err)
 		return common.Address{}, &common.CallbackError{err.Error()}
 	}
-
-	/*	balanceIns, err :=types.go.GetBalanceIns()
-		balanceIns.PutCacheBalance(ac.Address, []byte("0"))
-		balanceIns.PutDBBalance(ac.Address, []byte("0"))*/
 	return ac.Address, nil
 }
 

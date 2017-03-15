@@ -3,28 +3,30 @@
 
 package pbft
 
+import "github.com/op/go-logging"
+
 /**
-	This file provide a mechanism to manage the storage in PBFT
- */
+This file provide a mechanism to manage the storage in PBFT
+*/
 
 //storeManager manage common store data structures for PBFT.
 type storeManager struct {
+	chkpts          map[uint64]string      // state checkpoints; map lastExec to global hash
+	hChkpts         map[uint64]uint64      // map repilicaId to replica highest checkpoint num
+	checkpointStore map[Checkpoint]bool    // track checkpoints as set
+	chkptCertStore  map[chkptID]*chkptCert // track quorum certificates for checkpoints
 
-	chkpts          map[uint64]string  // state checkpoints; map lastExec to global hash
-	hChkpts         map[uint64]uint64  // map repilicaId to replica highest checkpoint num
-	checkpointStore map[Checkpoint]bool                      // track checkpoints as set
-	chkptCertStore  map[chkptID]*chkptCert                   // track quorum certificates for checkpoints
+	certStore     map[msgID]*msgCert // track quorum certificates for requests
+	committedCert map[msgID]string   // track the committed cert to help execute msgId - digest
 
-	certStore       map[msgID]*msgCert                       // track quorum certificates for requests
-	committedCert   map[msgID]string                         // track the committed cert to help execute msgId - digest
+	outstandingReqBatches map[string]*TransactionBatch // track whether we are waiting for request batches to execute
 
-	outstandingReqBatches map[string]*TransactionBatch       // track whether we are waiting for request batches to execute
-
-	missingReqBatches map[string]bool                        // for all the assigned, non-checkpointed request batches we might be missing during view-change
-	highStateTarget   *stateUpdateTarget                     // Set to the highest weak checkpoint cert we have observed
+	missingReqBatches map[string]bool    // for all the assigned, non-checkpointed request batches we might be missing during view-change
+	highStateTarget   *stateUpdateTarget // Set to the highest weak checkpoint cert we have observed
+	logger            *logging.Logger
 }
 
-func newStoreMgr() *storeManager  {
+func newStoreMgr() *storeManager {
 	sm := &storeManager{}
 
 	sm.chkpts = make(map[uint64]string)
@@ -41,7 +43,6 @@ func newStoreMgr() *storeManager  {
 	sm.missingReqBatches = make(map[string]bool)
 	return sm
 }
-
 
 //removeLowPQSet remove set in chpts, pset, qset, cset, plist, qlist which index <= h
 func (sm *storeManager) moveWatermarks(pbft *pbftImpl, h uint64) {
@@ -71,11 +72,11 @@ func (sm *storeManager) chkptsLen() int {
 }
 
 //saveCheckpoint lastExec - global hash
-func (sm *storeManager) saveCheckpoint(l uint64, gh string)  {
+func (sm *storeManager) saveCheckpoint(l uint64, gh string) {
 	sm.chkpts[l] = gh
 }
 
-func (sm *storeManager) getCheckpoint(l uint64) string  {
+func (sm *storeManager) getCheckpoint(l uint64) string {
 	return sm.chkpts[l]
 }
 
@@ -94,7 +95,7 @@ func (sm *storeManager) getCert(v uint64, n uint64) (cert *msgCert) {
 	commit := make(map[Commit]bool)
 	cert = &msgCert{
 		prepare: prepare,
-		commit:	 commit,
+		commit:  commit,
 	}
 	sm.certStore[idx] = cert
 	return
@@ -120,13 +121,13 @@ func (sm *storeManager) getChkptCert(n uint64, id string) (cert *chkptCert) {
 }
 
 // check for other PRE-PREPARE with same digest, but different seqNo
-func (sm*storeManager) existedDigest(n uint64, view uint64, digest string) bool {
+func (sm *storeManager) existedDigest(n uint64, view uint64, digest string) bool {
 	for _, cert := range sm.certStore {
 		if p := cert.prePrepare; p != nil {
 			if p.View == view && p.SequenceNumber != n && p.BatchDigest == digest && digest != "" {
 				// This will happen if primary receive same digest result of txs
 				// It may result in DDos attack
-				logger.Warningf("Other pre-prepare found with same digest but different seqNo: %d " +
+				sm.logger.Warningf("Other pre-prepare found with same digest but different seqNo: %d "+
 					"instead of %d", p.SequenceNumber, n)
 				return true
 			}

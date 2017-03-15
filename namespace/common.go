@@ -9,11 +9,10 @@ import (
 
 const (
 	NS_CONFIG_DIR_ROOT = "global.nsConfigRootPath"
-	NS_CONFIG_DIR      = "namespace.config.dir"
 )
 
-//ConstructConfigFromDir read all info needed by
-func ConstructConfigFromDir(path string) *common.Config {
+//constructConfigFromDir read all info needed by
+func constructConfigFromDir(path string) *common.Config {
 	nsConfigPath := path + "/global.yaml"
 	conf := common.NewConfig(nsConfigPath)
 	// init peer configurations

@@ -199,30 +199,6 @@ func (e *NamespaceNotFound) Error() string {
 	return fmt.Sprintf("The namespace '%s' does not exist", e.Name)
 }
 
-//type marshalError struct {
-//	Message  string
-//}
-//
-//func (e *marshalError) Code() int {
-//	return -32008
-//}
-//
-//func (e *marshalError) Error() string {
-//	return e.Message
-//}
-//
-//type nullPointError struct {
-//	Message  string
-//}
-//
-//func (e *nullPointError) Code() int {
-//	return -32009
-//}
-//
-//func (e *nullPointError) Error() string {
-//	return e.Message
-//}
-
 type UnauthorizedError struct {
 }
 

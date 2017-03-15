@@ -10,62 +10,51 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"sync"
 	"time"
 )
 
 var logger = logging.MustGetLogger("commmon")
 
-var hyperLoggerMgr = make(map[string]*HyperLogger)
-
-func GetLogger(namespace, module string) *logging.Logger {
-	if hl, ok := hyperLoggerMgr[namespace]; ok {
-		return hl.GetLogger(namespace, module)
-	} else {
-		//normally this code will not reach, unless the corespondding namespace is not init
-		logger.Errorf("logger for namespace: %s not found use common logger")
-		return logger
-	}
-}
+var hyperLogger *HyperLogger
+var once sync.Once
 
 //InitHyperLogger int the whole logging system.
-func InitHyperLogger(logConfigs map[string]*Config) {
-	if logConfigs == nil || len(logConfigs) == 0 {
-		panic("InitHyperLogger failed no logger configs provided")
-	}
-	for namespace, config := range logConfigs {
-		hl := newHyperLogger(namespace, config)
-		hyperLoggerMgr[namespace] = hl
-	}
+func InitHyperLogger(conf *Config) {
+	once.Do(func() {
+	hyperLogger = newHyperLogger(conf)
+	})
 }
 
 type HyperLogger struct {
-	namespace string
-	conf      *Config
-	close     chan bool
-	loggers   map[string]*logging.Logger
+	conf    *Config
+	close   chan bool
+	loggers map[string]*logging.Logger
 }
 
-func newHyperLogger(namespace string, conf *Config) *HyperLogger {
+func newHyperLogger(conf *Config) *HyperLogger {
 	hl := &HyperLogger{
-		namespace: namespace,
-		conf:      conf,
-		close:     make(chan bool),
-		loggers:   make(map[string]*logging.Logger),
+		conf:    conf,
+		close:   make(chan bool),
+		loggers: make(map[string]*logging.Logger),
 	}
 	hl.init()
 	return hl
 }
 
 //GetLogger getLogger with specific namespace and module.
-func (hl *HyperLogger) GetLogger(namespace, module string) *logging.Logger {
+func GetLogger(namespace, module string) *logging.Logger {
 	compositeModuleName := getCompositeModuleName(namespace, module)
 	logger.Infof("init log module:%s", compositeModuleName)
-	if _, ok := hl.loggers[compositeModuleName]; !ok {
+	if hyperLogger == nil {
+		fmt.Println("null hyperLogger")
+	}
+	if _, ok := hyperLogger.loggers[compositeModuleName]; !ok {
 		logger := logging.MustGetLogger(compositeModuleName)
-		hl.loggers[compositeModuleName] = logger
+		hyperLogger.loggers[compositeModuleName] = logger
 		return logger
 	} else {
-		return hl.loggers[compositeModuleName]
+		return hyperLogger.loggers[compositeModuleName]
 	}
 }
 
@@ -115,7 +104,7 @@ func getCompositeModuleName(namespace, module string) string {
 func (hl *HyperLogger) initLoggerLevelByConfiguration(conf *Config) {
 	mm := conf.GetStringMap(LOG_MODULE_KEY) // module to level map
 	for m, l := range mm {
-		hl.SetModuleLogLevel(getCompositeModuleName(hl.namespace, m), cast.ToString(l))
+		hl.SetModuleLogLevel(getCompositeModuleName("", m), cast.ToString(l))
 	}
 }
 
