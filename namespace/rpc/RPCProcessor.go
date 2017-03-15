@@ -9,7 +9,7 @@ import (
 	"golang.org/x/net/context"
 	"hyperchain/api"
 	"hyperchain/core/db_utils"
-	"strconv"
+	"math/big"
 )
 
 var log *logging.Logger // package-level logger
@@ -156,18 +156,38 @@ func (rpcproc *JsonRpcProcesserImpl) ParseRequestArguments(argTypes []reflect.Ty
 // are returned as reflect.Zero values.
 func (rpcproc *JsonRpcProcesserImpl) parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type) ([]reflect.Value, error) {
 	//log.Info("===================enter parsePositionalArguments()====================")
-	params := make([]interface{}, 0, len(callbackArgs))
 
-	msg, err := splitRawMessage(args)
+	msg, msgLen, err := splitRawMessage(args)
 	if err != nil {
 		return nil, err
 	}
 
+	if msgLen < len(callbackArgs) {
+		return nil, &common.InvalidParamsError{fmt.Sprintf("missing value for params")}
+	} else if msgLen > len(callbackArgs) {
+		return nil, &common.InvalidParamsError{fmt.Sprintf("too many params, want %d got %d", len(callbackArgs), msgLen)}
+	}
+
+	params := make([]interface{}, 0, len(callbackArgs))
+
 	for i, t := range callbackArgs {
-		if t.Name() == "BlockNumber" && msg[i] == "\"latest\""{
-			height := db_utils.GetChainCopy(rpcproc.namespace).Height
-			msg[i] = strconv.Itoa(int(height))
-			//log.Errorf("splitmsg[%d] is %v", i, msg[i])
+		if (t.Name() == "BlockNumber" || t.Name() == "*BlockNumber") {
+			if chain := db_utils.GetChainCopy(rpcproc.namespace); chain != nil {
+				height := chain.Height
+				in := new(big.Int)
+
+				if height == 0 {
+					return nil, &common.InvalidParamsError{fmt.Sprintf("there is no block generated")}
+				}
+
+				if msg[i] == "\"latest\""{
+					heightInt := in.SetUint64(height)
+					msg[i] = heightInt.String()
+				} else if blkNum, ok := in.SetString(msg[i], 0); ok && blkNum.Uint64() > height {
+					return nil, &common.InvalidParamsError{
+						fmt.Sprintf("block number is out of range, and now latest block number is %d", height)}
+				}
+			}
 		}
 		params = append(params, reflect.New(t).Interface()) // Interface()转换为原来的类型
 	}
