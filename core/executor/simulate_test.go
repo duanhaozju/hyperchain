@@ -74,6 +74,9 @@ func (suite *SimulateSuite) TestSimulate(c *checker.C) {
 	if err := suite.simulateForTransafer(suite.executor); err != nil {
 		c.Errorf("simulate transfer test failed. %s", err)
 	}
+	if err := suite.simulateForInvalidTransafer(suite.executor); err.Error() != "OUTOFBALANCE" {
+		c.Errorf("simulate invalid transfer test failed. %s", err)
+	}
 }
 
 func (suite *SimulateSuite) simulateForTransafer(executor *Executor) error {
@@ -104,6 +107,21 @@ func (suite *SimulateSuite) simulateForTransafer(executor *Executor) error {
 	//		return errors.New("no receipt found in database")
 	//	}
 	//}
+	return nil
+}
+
+func (suite *SimulateSuite) simulateForInvalidTransafer(executor *Executor) error {
+	transaction := tutil.GenInvalidTransferTransactionRandomly()
+	transaction.TransactionHash = transaction.Hash().Bytes()
+	if err := executor.RunInSandBox(transaction); err != nil {
+		return err
+	}
+
+	receipt := edb.GetReceipt(namespace, transaction.GetHash())
+	if receipt == nil {
+		errType, _ := edb.GetInvaildTxErrType(namespace, transaction.GetHash().Bytes())
+		return errors.New(errType.String())
+	}
 	return nil
 }
 
