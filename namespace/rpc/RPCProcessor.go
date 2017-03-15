@@ -16,22 +16,20 @@ func init() {
 	log = logging.MustGetLogger("rpc")
 }
 
-type RPCProcesser interface {
+type RequestProcesser interface {
 	Start() error
-	//DelRegisterName()
-	//AddRegisterName()
 	ProcessRequest(request *common.RPCRequest) *common.RPCResponse
 }
 
-type RPCProcesserImpl struct {
+type JsonRpcProcesserImpl struct {
 	namespace string
 	apis      []hpc.API
 	services  serviceRegistry	// map hpc to methods of hpc
 }
 
 //NewRPCProcessorImpl new an instance of RPCManager with namespace and apis
-func NewRPCProcessorImpl(namespace string, apis []hpc.API) *RPCProcesserImpl {
-	rpcproc := &RPCProcesserImpl{
+func NewRPCProcessorImpl(namespace string, apis []hpc.API) *JsonRpcProcesserImpl {
+	rpcproc := &JsonRpcProcesserImpl{
 		namespace: namespace,
 		apis:      apis,
 		services:  make(serviceRegistry),
@@ -41,7 +39,7 @@ func NewRPCProcessorImpl(namespace string, apis []hpc.API) *RPCProcesserImpl {
 }
 
 //Start starts an instance of RPCManager
-func (rpcproc *RPCProcesserImpl) Start() error {
+func (rpcproc *JsonRpcProcesserImpl) Start() error {
 	err := rpcproc.registerAllName()
 	if err != nil {
 		log.Errorf("Failed to start RPC Manager of namespace %s!!!", rpcproc.namespace)
@@ -51,7 +49,7 @@ func (rpcproc *RPCProcesserImpl) Start() error {
 }
 
 //RegisterAllName registers all namespace of given RPCManager
-func (rpcproc *RPCProcesserImpl) registerAllName() error {
+func (rpcproc *JsonRpcProcesserImpl) registerAllName() error {
 	for _, api := range rpcproc.apis {
 		if err := rpcproc.registerName(api.Srvname, api.Service); err != nil {
 			log.Errorf("registerName error: %v ", err)
@@ -65,7 +63,7 @@ func (rpcproc *RPCProcesserImpl) registerAllName() error {
 // registerName will create an service for the given rcvr type under the given name. When no methods on the given rcvr
 // match the criteria to be either a RPC method or a subscription, then an error is returned. Otherwise a new service is
 // created and added to the service collection this server instance serves.
-func (rpcproc *RPCProcesserImpl) registerName(name string, rcvr interface{}) error {
+func (rpcproc *JsonRpcProcesserImpl) registerName(name string, rcvr interface{}) error {
 	svc := new(service)
 	svc.typ = reflect.TypeOf(rcvr)
 	rcvrVal := reflect.ValueOf(rcvr)
@@ -107,7 +105,7 @@ func (rpcproc *RPCProcesserImpl) registerName(name string, rcvr interface{}) err
 	return nil
 }
 
-func (rpcproc *RPCProcesserImpl) ProcessRequest(request *common.RPCRequest) *common.RPCResponse {
+func (rpcproc *JsonRpcProcesserImpl) ProcessRequest(request *common.RPCRequest) *common.RPCResponse {
 	sr := rpcproc.checkRequestParams(request)
 	return rpcproc.exec(request.Ctx, sr)
 }
@@ -115,7 +113,7 @@ func (rpcproc *RPCProcesserImpl) ProcessRequest(request *common.RPCRequest) *com
 // checkRequestParams requests the next (batch) request from the codec. It will return the collection
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.
-func (rpcproc *RPCProcesserImpl) checkRequestParams(req *common.RPCRequest) (*serverRequest) {
+func (rpcproc *JsonRpcProcesserImpl) checkRequestParams(req *common.RPCRequest) (*serverRequest) {
 		var sr *serverRequest
 		var ok bool
 		var svc *service
@@ -142,7 +140,7 @@ func (rpcproc *RPCProcesserImpl) checkRequestParams(req *common.RPCRequest) (*se
 
 // ParseRequestArguments tries to parse the given params (json.RawMessage) with the given types. It returns the parsed
 // values or an error when the parsing failed.
-func (rpcproc *RPCProcesserImpl) ParseRequestArguments(argTypes []reflect.Type, params interface{}) ([]reflect.Value, error) {
+func (rpcproc *JsonRpcProcesserImpl) ParseRequestArguments(argTypes []reflect.Type, params interface{}) ([]reflect.Value, error) {
 	//log.Info("==================enter ParseRequestArguments()==================")
 	if args, ok := params.(json.RawMessage); !ok {
 		return nil, &common.InvalidParamsError{"Invalid params supplied"}
@@ -154,7 +152,7 @@ func (rpcproc *RPCProcesserImpl) ParseRequestArguments(argTypes []reflect.Type, 
 // parsePositionalArguments tries to parse the given args to an array of values with the given types.
 // It returns the parsed values or an error when the args could not be parsed. Missing optional arguments
 // are returned as reflect.Zero values.
-func (rpcproc *RPCProcesserImpl) parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type) ([]reflect.Value, error) {
+func (rpcproc *JsonRpcProcesserImpl) parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type) ([]reflect.Value, error) {
 	//log.Info("===================enter parsePositionalArguments()====================")
 	params := make([]interface{}, 0, len(callbackArgs))
 	for _, t := range callbackArgs {
@@ -193,7 +191,7 @@ func (rpcproc *RPCProcesserImpl) parsePositionalArguments(args json.RawMessage, 
 }
 
 // exec executes the given request and writes the result back using the codec.
-func (rpcproc *RPCProcesserImpl) exec(ctx context.Context, req *serverRequest) *common.RPCResponse {
+func (rpcproc *JsonRpcProcesserImpl) exec(ctx context.Context, req *serverRequest) *common.RPCResponse {
 
 	response, callback := rpcproc.handle(ctx, req)
 
@@ -205,7 +203,7 @@ func (rpcproc *RPCProcesserImpl) exec(ctx context.Context, req *serverRequest) *
 	return response
 }
 
-//func (rpcproc *RPCProcesserImpl) execBatch(ctx context.Context, codec ServerCodec, requests []*serverRequest) {
+//func (rpcproc *JsonRpcProcesserImpl) execBatch(ctx context.Context, codec ServerCodec, requests []*serverRequest) {
 //	responses := make([]interface{}, len(requests))
 //	var callbacks []func()
 //	for i, req := range requests {
@@ -232,7 +230,7 @@ func (rpcproc *RPCProcesserImpl) exec(ctx context.Context, req *serverRequest) *
 //}
 
 // handle executes a request and returns the response from the callback.
-func (rpcproc *RPCProcesserImpl) handle(ctx context.Context, req *serverRequest) (*common.RPCResponse, func()) {
+func (rpcproc *JsonRpcProcesserImpl) handle(ctx context.Context, req *serverRequest) (*common.RPCResponse, func()) {
 	if req.err != nil {
 		return rpcproc.CreateErrorResponse(&req.id, req.err), nil
 	}
@@ -271,7 +269,7 @@ func (rpcproc *RPCProcesserImpl) handle(ctx context.Context, req *serverRequest)
 	return rpcproc.CreateResponse(req.id, reply[0].Interface()), nil
 }
 
-func (rpcproc *RPCProcesserImpl) CreateResponse(id interface{}, reply interface{}) *common.RPCResponse {
+func (rpcproc *JsonRpcProcesserImpl) CreateResponse(id interface{}, reply interface{}) *common.RPCResponse {
 	return &common.RPCResponse{
 		Namespace: rpcproc.namespace,
 		Id:    id,
@@ -280,7 +278,7 @@ func (rpcproc *RPCProcesserImpl) CreateResponse(id interface{}, reply interface{
 	}
 }
 
-func (rpcproc *RPCProcesserImpl) CreateErrorResponse(id interface{}, err common.RPCError) *common.RPCResponse {
+func (rpcproc *JsonRpcProcesserImpl) CreateErrorResponse(id interface{}, err common.RPCError) *common.RPCResponse {
 	return &common.RPCResponse{
 		Namespace: rpcproc.namespace,
 		Id:    id,
@@ -289,7 +287,7 @@ func (rpcproc *RPCProcesserImpl) CreateErrorResponse(id interface{}, err common.
 	}
 }
 
-func (rpcproc *RPCProcesserImpl) CreateErrorResponseWithInfo(id interface{}, err common.RPCError, info interface{}) *common.RPCResponse {
+func (rpcproc *JsonRpcProcesserImpl) CreateErrorResponseWithInfo(id interface{}, err common.RPCError, info interface{}) *common.RPCResponse {
 	return &common.RPCResponse{
 		Namespace: rpcproc.namespace,
 		Id:    id,

@@ -76,7 +76,7 @@ type namespaceImpl struct {
 	grpcMgr   *p2p.GRPCPeerManager
 	executor  *executor.Executor
 
-	rpcProcesser rpc.RPCProcesser
+	rpcProcesser rpc.RequestProcesser
 }
 
 type API struct {
@@ -189,6 +189,7 @@ func (ns *namespaceImpl) Start() error {
 
 	//TODO: add start component logic here
 	ns.status.state = running
+	ns.logger.Noticef("namespace: %s start successful", ns.Name())
 	return nil
 }
 
@@ -248,7 +249,6 @@ func (ns *namespaceImpl) ProcessRequest(request interface{}) interface{} {
 }
 
 func (ns *namespaceImpl) GetApis() []hpc.API {
-
 	return []hpc.API{
 		{
 			Srvname: "tx",
