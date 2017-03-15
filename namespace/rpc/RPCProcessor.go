@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"golang.org/x/net/context"
 	"hyperchain/api"
+	"hyperchain/core/db_utils"
+	"strconv"
 )
 
 var log *logging.Logger // package-level logger
@@ -18,8 +20,6 @@ func init() {
 
 type RPCProcesser interface {
 	Start() error
-	//DelRegisterName()
-	//AddRegisterName()
 	ProcessRequest(request *common.RPCRequest) *common.RPCResponse
 }
 
@@ -40,7 +40,7 @@ func NewRPCProcessorImpl(namespace string, apis []hpc.API) *RPCProcesserImpl {
 	return rpcproc
 }
 
-//Start starts an instance of RPCManager
+//Start starts an instance of RPCProcesserImpl
 func (rpcproc *RPCProcesserImpl) Start() error {
 	err := rpcproc.registerAllName()
 	if err != nil {
@@ -50,7 +50,7 @@ func (rpcproc *RPCProcesserImpl) Start() error {
 	return nil
 }
 
-//RegisterAllName registers all namespace of given RPCManager
+//RegisterAllName registers all namespace of given RPCProcesser
 func (rpcproc *RPCProcesserImpl) registerAllName() error {
 	for _, api := range rpcproc.apis {
 		if err := rpcproc.registerName(api.Srvname, api.Service); err != nil {
@@ -178,9 +178,22 @@ func (rpcproc *RPCProcesserImpl) ParseRequestArguments(argTypes []reflect.Type, 
 func (rpcproc *RPCProcesserImpl) parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type) ([]reflect.Value, error) {
 	//log.Info("===================enter parsePositionalArguments()====================")
 	params := make([]interface{}, 0, len(callbackArgs))
-	for _, t := range callbackArgs {
+
+	msg, err := splitRawMessage(args)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, t := range callbackArgs {
+		if t.Name() == "BlockNumber" && msg[i] == "\"latest\""{
+			height := db_utils.GetChainCopy(rpcproc.namespace).Height
+			msg[i] = strconv.Itoa(int(height))
+			//log.Errorf("splitmsg[%d] is %v", i, msg[i])
+		}
 		params = append(params, reflect.New(t).Interface()) // Interface()转换为原来的类型
 	}
+
+	args = joinRawMessage(msg)
 	//log.Info(string(args)) // [{"from":"0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","to":"0x0000000000000000000000000000000000000003","value":"0x9184e72a"}]
 	//log.Info(params)	// [0xc8201437a0]
 	if err := json.Unmarshal(args, &params); err != nil {

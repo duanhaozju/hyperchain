@@ -10,7 +10,7 @@ import (
 )
 
 type PublicAccountAPI struct {
-	pm        *manager.EventHub
+	eh        *manager.EventHub
 	namespace string
 	config    *common.Config
 }
@@ -24,21 +24,21 @@ type UnlockParas struct {
 	Password string         `json:"password"`
 }
 
-func NewPublicAccountAPI(namespace string, pm *manager.EventHub, config *common.Config) *PublicAccountAPI {
+func NewPublicAccountAPI(namespace string, eh *manager.EventHub, config *common.Config) *PublicAccountAPI {
 	return &PublicAccountAPI{
 		namespace: namespace,
-		pm:        pm,
+		eh:        eh,
 		config:    config,
 	}
 }
 
 //New Account according to args from html
 func (acc *PublicAccountAPI) NewAccount(password string) (common.Address, error) {
-	am := acc.pm.AccountManager
+	am := acc.eh.AccountManager
 	ac, err := am.NewAccount(password)
 	if err != nil {
 		log.Errorf("New Account error,%v", err)
-		return common.Address{}, &common.CallbackError{err.Error()}
+		return common.Address{}, &common.CallbackError{Message:err.Error()}
 	}
 	return ac.Address, nil
 }
@@ -46,7 +46,7 @@ func (acc *PublicAccountAPI) NewAccount(password string) (common.Address, error)
 // UnlockAccount unlocks account according to args(address,password), if success, return true.
 func (acc *PublicAccountAPI) UnlockAccount(args UnlockParas) (bool, error) {
 
-	am := acc.pm.AccountManager
+	am := acc.eh.AccountManager
 
 	s := args.Address.Hex()
 	if len(s) > 1 {
@@ -60,7 +60,7 @@ func (acc *PublicAccountAPI) UnlockAccount(args UnlockParas) (bool, error) {
 	ac := accounts.Account{Address: args.Address, File: am.KeyStore.JoinPath(s)}
 	err := am.Unlock(ac, args.Password)
 	if err != nil {
-		return false, &common.InvalidParamsError{"incorrect address or password!"}
+		return false, &common.InvalidParamsError{Message:"incorrect address or password!"}
 	}
 	return true, nil
 }
@@ -91,9 +91,9 @@ func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
 		if stateobject := stateDB.GetAccount(addr); stateobject != nil {
 			return fmt.Sprintf(`0x%x`, stateobject.Balance()), nil
 		} else {
-			return "", &common.LeveldbNotFoundError{"stateobject, the account may not exist"}
+			return "", &common.LeveldbNotFoundError{Message:"stateobject, the account may not exist"}
 		}
 	} else {
-		return "", &common.LeveldbNotFoundError{"statedb"}
+		return "", &common.LeveldbNotFoundError{Message:"statedb"}
 	}
 }

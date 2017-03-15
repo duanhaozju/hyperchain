@@ -14,7 +14,7 @@ type NodeArgs struct {
 }
 
 type PublicNodeAPI struct {
-	pm *manager.EventHub
+	eh *manager.EventHub
 }
 
 type NodeResult struct {
@@ -26,33 +26,33 @@ type NodeResult struct {
 	LatestBlock interface{} `json:"latestBlock"` //newest block of current block
 }
 
-func NewPublicNodeAPI(pm *manager.EventHub) *PublicNodeAPI {
+func NewPublicNodeAPI(eh *manager.EventHub) *PublicNodeAPI {
 	return &PublicNodeAPI{
-		pm: pm,
+		eh: eh,
 	}
 }
 
 // GetNodes returns status of all the nodes
 func (node *PublicNodeAPI) GetNodes() (p2p.PeerInfos, error) {
-	if node.pm == nil {
-		return nil, &common.CallbackError{"protocolManager is nil"}
+	if node.eh == nil {
+		return nil, &common.CallbackError{Message:"protocolManager is nil"}
 	}
 
-	return node.pm.GetNodeInfo(), nil
+	return node.eh.GetNodeInfo(), nil
 }
 
 func (node *PublicNodeAPI) GetNodeHash() (string, error) {
-	if node.pm == nil {
-		return "", &common.CallbackError{"protocolManager is nil"}
+	if node.eh == nil {
+		return "", &common.CallbackError{Message:"protocolManager is nil"}
 	}
-	return node.pm.PeerManager.GetLocalNodeHash(), nil
+	return node.eh.PeerManager.GetLocalNodeHash(), nil
 }
 
 func (node *PublicNodeAPI) DelNode(args NodeArgs) (string, error) {
-	if node.pm == nil {
-		return "", &common.CallbackError{"protocolManager is nil"}
+	if node.eh == nil {
+		return "", &common.CallbackError{Message:"protocolManager is nil"}
 	}
-	go node.pm.GetEventObject().Post(event.DelPeerEvent{
+	go node.eh.GetEventObject().Post(event.DelPeerEvent{
 		Payload: []byte(args.NodeHash),
 	})
 	return "successful request", nil

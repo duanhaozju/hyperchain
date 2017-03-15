@@ -62,7 +62,7 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_checkHmValue","
 
 ################################ block 服务 ####################################
 # 得到最新区块 LastestBlock
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_latestBlock","params":[],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","namespace":"global","method":"block_latestBlock","params":[],"id":1}'
 
 # 得到所有区块 GetBlocks
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocks","params":[{"from":1, "to":1}],"id":1}'
@@ -76,7 +76,7 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlocksByTime","p
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlockByHash","params":["<block hash>"],"id":1}'
 
 # 根据区块number查询区块信息 GetBlockByNumber, number可以是整数、十六进制字符串或者“latest”
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getBlockByNumber","params":[<block number>],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","namespace":"global","method":"block_getBlockByNumber","params":[<block number>],"id":1}'
 
 # 查询区块commit、batch平均时间
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_queryCommitAndBatchTime","params":[{"from":"the number of block", "to":"the number of block"}],id: 1}'

@@ -8,6 +8,10 @@ import (
 	"reflect"
 	"unicode"
 	"unicode/utf8"
+	"encoding/json"
+	"fmt"
+	"strings"
+	"bytes"
 )
 
 // Is this an exported - upper case - name?
@@ -67,6 +71,33 @@ func isHexNum(t reflect.Type) bool {
 	}
 
 	return t == bigIntType
+}
+
+func splitRawMessage(args json.RawMessage) ([]string, error) {
+	str := string(args[:])
+	if str[0] != '[' || str[len(str) - 1] != ']' {
+		return nil, fmt.Errorf("Raw Message format error!")
+	} else {
+		str = strings.Trim(str, "[]")
+		splitstr := strings.Split(str, ",")
+		return splitstr, nil
+	}
+}
+
+func joinRawMessage(str []string) json.RawMessage{
+	var buffer bytes.Buffer
+	buffer.WriteString("[")
+	buffer.WriteString(str[0])
+
+	length := len(str)
+	if length >=2 {
+		for i := 1; i<length; i ++{
+			buffer.WriteString(",")
+			buffer.WriteString(str[i])
+		}
+	}
+	buffer.WriteString("]")
+	return []byte(buffer.String())
 }
 
 // suitableCallbacks iterates over the methods of the given type. It will determine if a method satisfies the criteria

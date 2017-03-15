@@ -34,7 +34,7 @@ func init() {
 type PublicTransactionAPI struct {
 	namespace   string
 	eventMux    *event.TypeMux
-	pm          *manager.EventHub
+	eh          *manager.EventHub
 	tokenBucket *ratelimit.Bucket
 	config      *common.Config
 }
@@ -76,7 +76,7 @@ type TransactionResult struct {
 	InvalidMsg  string  `json:"invalidMsg,omitempty"`
 }
 
-func NewPublicTransactionAPI(namespace string, eventMux *event.TypeMux, pm *manager.EventHub, config *common.Config) *PublicTransactionAPI {
+func NewPublicTransactionAPI(namespace string, eventMux *event.TypeMux, eh *manager.EventHub, config *common.Config) *PublicTransactionAPI {
 	fillrate, err := getFillRate(config, TRANSACTION)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
@@ -90,7 +90,7 @@ func NewPublicTransactionAPI(namespace string, eventMux *event.TypeMux, pm *mana
 	return &PublicTransactionAPI{
 		namespace:   namespace,
 		eventMux:    eventMux,
-		pm:          pm,
+		eh:          eh,
 		config:      config,
 		tokenBucket: ratelimit.NewBucket(fillrate, peak),
 	}
@@ -105,19 +105,19 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 		args.GasPrice = NewInt64ToNumber(defaustGasPrice)
 	}
 	if args.From.Hex() == (common.Address{}).Hex() {
-		return SendTxArgs{}, &common.InvalidParamsError{"address 'from' is invalid"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message:"address 'from' is invalid"}
 	}
 	if (txType == 0 || txType == 2) && args.To == nil {
-		return SendTxArgs{}, &common.InvalidParamsError{"address 'to' is invalid"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message:"address 'to' is invalid"}
 	}
 	if args.Timestamp <= 0 || (5*int64(time.Minute)+time.Now().UnixNano()) < args.Timestamp {
-		return SendTxArgs{}, &common.InvalidParamsError{"'timestamp' is invalid"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message:"'timestamp' is invalid"}
 	}
 	if txType != 3 && args.Signature == "" {
-		return SendTxArgs{}, &common.InvalidParamsError{"'signature' can't be empty"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message:"'signature' can't be empty"}
 	}
 	if args.Nonce <= 0 {
-		return SendTxArgs{}, &common.InvalidParamsError{"'nonce' is invalid"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message:"'nonce' is invalid"}
 	}
 	return args, nil
 }
@@ -126,7 +126,7 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 // if the sender's balance is enough, return tx hash
 func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	if getRateLimitEnable(tran.config) && tran.tokenBucket.TakeAvailable(1) <= 0 {
-		return common.Hash{}, &common.SystemTooBusyError{"system is too busy to response "}
+		return common.Hash{}, &common.SystemTooBusyError{Message:"system is too busy to response "}
 	}
 	var tx *types.Transaction
 
@@ -135,7 +135,8 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		return common.Hash{}, err
 	}
 
-	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), nil, false)
+	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(),
+		realArgs.Value.ToInt64(), nil, false)
 
 	value, err := proto.Marshal(txValue)
 
@@ -145,7 +146,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 
 	//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, common.FromHex(args.Signature))
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
-	tx.Id = uint64(tran.pm.PeerManager.GetNodeId())
+	tx.Id = uint64(tran.eh.PeerManager.GetNodeId())
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.Hash().Bytes()
 
@@ -153,7 +154,7 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 	var exist, _ = edb.JudgeTransactionExist(tran.namespace, tx.TransactionHash)
 
 	if exist {
-		return common.Hash{}, &common.RepeadedTxError{"repeated tx"}
+		return common.Hash{}, &common.RepeadedTxError{Message:"repeated tx"}
 	}
 
 	if args.Request != nil {
@@ -161,38 +162,38 @@ func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash,
 		// ** For Hyperboard **
 		for i := 0; i < (*args.Request).ToInt(); i++ {
 			// Unsign Test
-			if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
+			if !tx.ValidateSign(tran.eh.AccountManager.Encryption, kec256Hash) {
 				log.Error("invalid signature")
 				// ATTENTION, return invalid transactino directly
-				return common.Hash{}, &common.SignatureInvalidError{"invalid signature"}
+				return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
 			}
 
 			if txBytes, err := proto.Marshal(tx); err != nil {
 				log.Errorf("proto.Marshal(tx) error: %v", err)
-				return common.Hash{}, &common.CallbackError{"proto.Marshal(tx) happened error"}
+				return common.Hash{}, &common.CallbackError{Message:"proto.Marshal(tx) happened error"}
 			} else if manager.GetEventObject() != nil {
 				go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
 			} else {
 				log.Error("manager is Nil")
-				return common.Hash{}, &common.CallbackError{"EventObject is nil"}
+				return common.Hash{}, &common.CallbackError{Message:"EventObject is nil"}
 			}
 		}
 	} else {
 		// ** For Hyperchain **
-		if !tx.ValidateSign(tran.pm.AccountManager.Encryption, kec256Hash) {
+		if !tx.ValidateSign(tran.eh.AccountManager.Encryption, kec256Hash) {
 			log.Error("invalid signature")
 			// ATTENTION, return invalid transactino directly
-			return common.Hash{}, &common.SignatureInvalidError{"invalid signature"}
+			return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
 		}
 
 		if txBytes, err := proto.Marshal(tx); err != nil {
 			log.Errorf("proto.Marshal(tx) error: %v", err)
-			return common.Hash{}, &common.CallbackError{"proto.Marshal(tx) happened error"}
+			return common.Hash{}, &common.CallbackError{Message:"proto.Marshal(tx) happened error"}
 		} else if manager.GetEventObject() != nil {
 			go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
 		} else {
 			log.Error("manager is Nil")
-			return common.Hash{}, &common.CallbackError{"EventObject is nil"}
+			return common.Hash{}, &common.CallbackError{Message:"EventObject is nil"}
 		}
 	}
 	return tx.GetHash(), nil
@@ -212,7 +213,7 @@ func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*Rece
 		receipt := edb.GetReceipt(tran.namespace, hash)
 		if receipt == nil {
 			//return nil, nil
-			return nil, &common.LeveldbNotFoundError{fmt.Sprintf("receipt by %#x", hash)}
+			return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("receipt by %#x", hash)}
 		}
 		logs := make([]interface{}, len(receipt.Logs))
 		for idx := range receipt.Logs {
@@ -226,18 +227,18 @@ func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*Rece
 			Log:             logs,
 		}, nil
 	} else if err != nil {
-		return nil, &common.CallbackError{err.Error()}
+		return nil, &common.CallbackError{Message:err.Error()}
 	} else {
 		if errType == types.InvalidTransactionRecord_SIGFAILED {
-			return nil, &common.SignatureInvalidError{errType.String()}
+			return nil, &common.SignatureInvalidError{Message:errType.String()}
 		} else if errType == types.InvalidTransactionRecord_DEPLOY_CONTRACT_FAILED {
-			return nil, &common.ContractDeployError{errType.String()}
+			return nil, &common.ContractDeployError{Message:errType.String()}
 		} else if errType == types.InvalidTransactionRecord_INVOKE_CONTRACT_FAILED {
-			return nil, &common.ContractInvokeError{errType.String()}
+			return nil, &common.ContractInvokeError{Message:errType.String()}
 		} else if errType == types.InvalidTransactionRecord_OUTOFBALANCE {
-			return nil, &common.OutofBalanceError{errType.String()}
+			return nil, &common.OutofBalanceError{Message:errType.String()}
 		} else {
-			return nil, &common.CallbackError{errType.String()}
+			return nil, &common.CallbackError{Message:errType.String()}
 		}
 	}
 
@@ -269,10 +270,10 @@ func (tran *PublicTransactionAPI) GetDiscardTransactions() ([]*TransactionResult
 
 	reds, err := edb.GetAllDiscardTransaction(tran.namespace)
 	if err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &common.LeveldbNotFoundError{"discard transactions"}
+		return nil, &common.LeveldbNotFoundError{Message:"discard transactions"}
 	} else if err != nil {
 		log.Errorf("GetAllDiscardTransaction error: %v", err)
-		return nil, &common.CallbackError{err.Error()}
+		return nil, &common.CallbackError{Message:err.Error()}
 	}
 
 	var transactions []*TransactionResult
@@ -293,10 +294,10 @@ func (tran *PublicTransactionAPI) getDiscardTransactionByHash(hash common.Hash) 
 
 	red, err := edb.GetDiscardTransaction(tran.namespace, hash.Bytes())
 	if err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &common.LeveldbNotFoundError{fmt.Sprintf("discard transaction by %#x", hash)}
+		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("discard transaction by %#x", hash)}
 	} else if err != nil {
 		log.Errorf("GetDiscardTransaction error: %v", err)
-		return nil, &common.CallbackError{err.Error()}
+		return nil, &common.CallbackError{Message:err.Error()}
 	}
 
 	return outputTransaction(red, tran.namespace)
@@ -309,7 +310,7 @@ func (tran *PublicTransactionAPI) GetTransactionByHash(hash common.Hash) (*Trans
 	if err != nil && err.Error() == leveldb_not_found_error {
 		return tran.getDiscardTransactionByHash(hash)
 	} else if err != nil {
-		return nil, &common.CallbackError{err.Error()}
+		return nil, &common.CallbackError{Message:err.Error()}
 	}
 
 	return outputTransaction(tx, tran.namespace)
@@ -319,21 +320,21 @@ func (tran *PublicTransactionAPI) GetTransactionByHash(hash common.Hash) (*Trans
 func (tran *PublicTransactionAPI) GetTransactionByBlockHashAndIndex(hash common.Hash, index Number) (*TransactionResult, error) {
 	//return nil, errors.New("hahaha")
 	if common.EmptyHash(hash) == true {
-		return nil, &common.InvalidParamsError{"Invalid hash"}
+		return nil, &common.InvalidParamsError{Message:"Invalid hash"}
 	}
 
 	block, err := edb.GetBlock(tran.namespace, hash[:])
 	if err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &common.LeveldbNotFoundError{fmt.Sprintf("block by %#x", hash)}
+		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("block by %#x", hash)}
 	} else if err != nil {
 		log.Errorf("%v", err)
-		return nil, &common.CallbackError{err.Error()}
+		return nil, &common.CallbackError{Message:err.Error()}
 	}
 
 	txCount := len(block.Transactions)
 
 	if index.ToInt() >= txCount {
-		return nil, &common.LeveldbNotFoundError{fmt.Sprintf("transaction, this block contains %v transactions, but the index %v is out of range", txCount, index)}
+		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("transaction, this block contains %v transactions, but the index %v is out of range", txCount, index)}
 	}
 
 	if index.ToInt() >= 0 && index.ToInt() < txCount {
@@ -351,16 +352,16 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockNumberAndIndex(n BlockNum
 
 	block, err := edb.GetBlockByNumber(tran.namespace, n.ToUint64())
 	if err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &common.LeveldbNotFoundError{fmt.Sprintf("block by %d", n)}
+		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("block by %d", n)}
 	} else if err != nil {
 		log.Errorf("%v", err)
-		return nil, &common.CallbackError{err.Error()}
+		return nil, &common.CallbackError{Message:err.Error()}
 	}
 
 	txCount := len(block.Transactions)
 
 	if index.ToInt() >= txCount {
-		return nil, &common.LeveldbNotFoundError{fmt.Sprintf("transaction, this block contains %v transactions, but the index %v is out of range", txCount, index)}
+		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("transaction, this block contains %v transactions, but the index %v is out of range", txCount, index)}
 	}
 
 	if index.ToInt() >= 0 && index.ToInt() < txCount {
@@ -377,7 +378,7 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockNumberAndIndex(n BlockNum
 func (tran *PublicTransactionAPI) GetTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
 
 	if args.StartTime > args.Endtime || args.StartTime < 0 || args.Endtime < 0{
-		return nil, &common.InvalidParamsError{"Invalid params, both startTime and endTime must be positive, startTime is less than endTime"}
+		return nil, &common.InvalidParamsError{Message:"Invalid params, both startTime and endTime must be positive, startTime is less than endTime"}
 	}
 
 	currentChain := edb.GetChainCopy(tran.namespace)
@@ -412,15 +413,15 @@ func (tran *PublicTransactionAPI) GetTransactionsByTime(args IntervalTime) ([]*T
 func (tran *PublicTransactionAPI) GetBlockTransactionCountByHash(hash common.Hash) (*Number, error) {
 
 	if common.EmptyHash(hash) == true {
-		return nil, &common.InvalidParamsError{"Invalid hash"}
+		return nil, &common.InvalidParamsError{Message:"Invalid hash"}
 	}
 
 	block, err := edb.GetBlock(tran.namespace, hash[:])
 	if err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &common.LeveldbNotFoundError{fmt.Sprintf("block by %#x", hash)}
+		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("block by %#x", hash)}
 	} else if err != nil {
 		log.Errorf("%v", err)
-		return nil, &common.CallbackError{err.Error()}
+		return nil, &common.CallbackError{Message:err.Error()}
 	}
 
 	txCount := len(block.Transactions)
@@ -434,10 +435,10 @@ func (tran *PublicTransactionAPI) GetBlockTransactionCountByNumber(n BlockNumber
 
 	block, err := edb.GetBlockByNumber(tran.namespace, n.ToUint64())
 	if err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &common.LeveldbNotFoundError{fmt.Sprintf("block by number %#x", n)}
+		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("block by number %#x", n)}
 	} else if err != nil {
 		log.Errorf("%v", err)
-		return nil, &common.CallbackError{err.Error()}
+		return nil, &common.CallbackError{Message:err.Error()}
 	}
 
 	txCount := len(block.Transactions)
@@ -461,7 +462,7 @@ func (tran *PublicTransactionAPI) GetSignHash(args SendTxArgs) (common.Hash, err
 
 	value, err := proto.Marshal(txValue)
 	if err != nil {
-		return common.Hash{}, &common.CallbackError{err.Error()}
+		return common.Hash{}, &common.CallbackError{Message:err.Error()}
 	}
 
 	if args.To == nil {
@@ -521,7 +522,7 @@ func outputTransaction(trans interface{}, namespace string) (*TransactionResult,
 	case *types.Transaction:
 		if err := proto.Unmarshal(t.Value, &txValue); err != nil {
 			log.Errorf("%v", err)
-			return nil, &common.CallbackError{err.Error()}
+			return nil, &common.CallbackError{Message:err.Error()}
 		}
 
 		txHash := t.GetHash()
@@ -546,15 +547,15 @@ func outputTransaction(trans interface{}, namespace string) (*TransactionResult,
 				Payload:     common.ToHex(txValue.Payload),
 			}
 		} else if err != nil && err.Error() == leveldb_not_found_error {
-			return nil, &common.LeveldbNotFoundError{fmt.Sprintf("block by %d", bn)}
+			return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("block by %d", bn)}
 		} else if err != nil {
-			return nil, &common.CallbackError{err.Error()}
+			return nil, &common.CallbackError{Message:err.Error()}
 		}
 
 	case *types.InvalidTransactionRecord:
 		if err := proto.Unmarshal(t.Tx.Value, &txValue); err != nil {
 			log.Errorf("%v", err)
-			return nil, &common.CallbackError{err.Error()}
+			return nil, &common.CallbackError{Message:err.Error()}
 		}
 		txHash := t.Tx.GetHash()
 		txRes = &TransactionResult{
