@@ -9,5 +9,5 @@ import (
 
 //handleJsonRequest handle JsonRequest under current namespace.
 func (ns *namespaceImpl) handleJsonRequest(request *common.RPCRequest) *common.RPCResponse {
-	return ns.rpcProcesser.ProcessRequest(request)
+	return ns.rpc.ProcessRequest(request)
 }
