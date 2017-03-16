@@ -4,6 +4,7 @@ package namespace
 
 import (
 	"github.com/spf13/viper"
+	"hyperchain/api"
 	"hyperchain/common"
 	"strings"
 )
@@ -12,8 +13,8 @@ import (
 func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 	var conf *common.Config
 	nsConfigPath := path + "/global.yaml"
-	logger.Critical(path)
-	if strings.HasSuffix(path, "/" + DEFAULT_NAMESPACE + "/config") {
+
+	if strings.HasSuffix(path, "/"+DEFAULT_NAMESPACE+"/config") {
 		_, err := nr.conf.MergeConfig(nsConfigPath)
 		if err != nil {
 			logger.Errorf("Merge config: %s error %v", nsConfigPath, err)
@@ -46,4 +47,45 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 	conf.Set(common.C_GLOBAL_CONFIG_PATH, nsConfigPath)
 
 	return conf
+}
+
+func (ns *namespaceImpl) GetApis(namespace string) map[string]*hpc.API {
+	return map[string]*hpc.API{
+		"tx": {
+			Srvname: "tx",
+			Version: "0.4",
+			Service: hpc.NewPublicTransactionAPI(namespace, ns.eventMux, ns.eh, ns.conf),
+			Public:  true,
+		},
+		"node": {
+			Srvname: "node",
+			Version: "0.4",
+			Service: hpc.NewPublicNodeAPI(ns.eh),
+			Public:  true,
+		},
+		"block": {
+			Srvname: "block",
+			Version: "0.4",
+			Service: hpc.NewPublicBlockAPI(namespace),
+			Public:  true,
+		},
+		"account": {
+			Srvname: "account",
+			Version: "0.4",
+			Service: hpc.NewPublicAccountAPI(namespace, ns.eh, ns.conf),
+			Public:  true,
+		},
+		"contract": {
+			Srvname: "contract",
+			Version: "0.4",
+			Service: hpc.NewPublicContractAPI(namespace, ns.eventMux, ns.eh, ns.conf),
+			Public:  true,
+		},
+		"cert": {
+			Srvname: "cert",
+			Version: "0.4",
+			Service: hpc.NewCertAPI(ns.caMgr),
+			Public:  true,
+		},
+	}
 }

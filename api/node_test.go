@@ -9,7 +9,7 @@ import (
 )
 
 func Test_GetNodes(t *testing.T) {
-	publicNodeAPI := &PublicNodeAPI{}
+	publicNodeAPI := &Node{}
 	_, err := publicNodeAPI.GetNodes()
 	if err == nil {
 		t.Errorf("publicNodeAPI.GetNodes()")

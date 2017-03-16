@@ -19,15 +19,15 @@ import (
 	edb "hyperchain/core/db_utils"
 )
 
-type PublicContractAPI struct {
+type Contract struct {
 	namespace   string
 	eventMux    *event.TypeMux
-	pm          *manager.EventHub
+	eh          *manager.EventHub
 	tokenBucket *ratelimit.Bucket
 	config      *common.Config
 }
 
-func NewPublicContractAPI(namespace string, eventMux *event.TypeMux, pm *manager.EventHub, config *common.Config) *PublicContractAPI {
+func NewPublicContractAPI(namespace string, eventMux *event.TypeMux, eh *manager.EventHub, config *common.Config) *Contract {
 	fillrate, err := getFillRate(config, CONTRACT)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
@@ -38,16 +38,16 @@ func NewPublicContractAPI(namespace string, eventMux *event.TypeMux, pm *manager
 		log.Errorf("got invalid ratelimit peak parameters as 0. use default peak parameters 500")
 		peak = 500
 	}
-	return &PublicContractAPI{
+	return &Contract{
 		namespace:   namespace,
 		eventMux:    eventMux,
-		pm:          pm,
+		eh:          eh,
 		tokenBucket: ratelimit.NewBucket(fillrate, peak),
 		config:      config,
 	}
 }
 
-func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (common.Hash, error) {
+func deployOrInvoke(contract *Contract, args SendTxArgs, txType int) (common.Hash, error) {
 	var tx *types.Transaction
 	realArgs, err := prepareExcute(args, txType)
 	if err != nil {
@@ -56,11 +56,12 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 
 	payload := common.FromHex(realArgs.Payload)
 
-	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), payload, args.Update)
+	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(),
+		realArgs.Value.ToInt64(), payload, args.Update)
 
 	value, err := proto.Marshal(txValue)
 	if err != nil {
-		return common.Hash{}, &common.CallbackError{err.Error()}
+		return common.Hash{}, &common.CallbackError{Message:err.Error()}
 	}
 
 	if args.To == nil {
@@ -70,31 +71,31 @@ func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (c
 		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
 	}
 
-	tx.Id = uint64(contract.pm.PeerManager.GetNodeId())
+	tx.Id = uint64(contract.eh.PeerManager.GetNodeId())
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.Hash().Bytes()
 	//delete repeated tx
 	var exist, _ = edb.JudgeTransactionExist(contract.namespace, tx.TransactionHash)
 
 	if exist {
-		return common.Hash{}, &common.RepeadedTxError{"repeated tx"}
+		return common.Hash{}, &common.RepeadedTxError{Message:"repeated tx"}
 	}
 
 	// Unsign Test
-	if !tx.ValidateSign(contract.pm.AccountManager.Encryption, kec256Hash) {
+	if !tx.ValidateSign(contract.eh.AccountManager.Encryption, kec256Hash) {
 		log.Error("invalid signature")
 		// ATTENTION, return invalid transactino directly
-		return common.Hash{}, &common.SignatureInvalidError{"invalid signature"}
+		return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
 	}
 
 	if txBytes, err := proto.Marshal(tx); err != nil {
 		log.Errorf("proto.Marshal(tx) error: %v", err)
-		return common.Hash{}, &common.CallbackError{"proto.Marshal(tx) happened error"}
+		return common.Hash{}, &common.CallbackError{Message:"proto.Marshal(tx) happened error"}
 	} else if manager.GetEventObject() != nil {
 		go contract.eventMux.Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
 	} else {
 		log.Error("manager is Nil")
-		return common.Hash{}, &common.CallbackError{"eventObject is nil"}
+		return common.Hash{}, &common.CallbackError{Message:"eventObject is nil"}
 	}
 	return tx.GetHash(), nil
 
@@ -107,11 +108,11 @@ type CompileCode struct {
 }
 
 // ComplieContract complies contract to ABI
-func (contract *PublicContractAPI) CompileContract(ct string) (*CompileCode, error) {
+func (contract *Contract) CompileContract(ct string) (*CompileCode, error) {
 	abi, bin, names, err := compiler.CompileSourcefile(ct)
 
 	if err != nil {
-		return nil, &common.CallbackError{err.Error()}
+		return nil, &common.CallbackError{Message:err.Error()}
 	}
 
 	return &CompileCode{
@@ -122,23 +123,23 @@ func (contract *PublicContractAPI) CompileContract(ct string) (*CompileCode, err
 }
 
 // DeployContract deploys contract.
-func (contract *PublicContractAPI) DeployContract(args SendTxArgs) (common.Hash, error) {
+func (contract *Contract) DeployContract(args SendTxArgs) (common.Hash, error) {
 	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
-		return common.Hash{}, &common.SystemTooBusyError{"system is too busy to response "}
+		return common.Hash{}, &common.SystemTooBusyError{Message:"system is too busy to response "}
 	}
 	return deployOrInvoke(contract, args, 1)
 }
 
 // InvokeContract invokes contract.
-func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash, error) {
+func (contract *Contract) InvokeContract(args SendTxArgs) (common.Hash, error) {
 	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
-		return common.Hash{}, &common.SystemTooBusyError{"system is too busy to response "}
+		return common.Hash{}, &common.SystemTooBusyError{Message:"system is too busy to response "}
 	}
 	return deployOrInvoke(contract, args, 2)
 }
 
 // GetCode returns the code from the given contract address.
-func (contract *PublicContractAPI) GetCode(addr common.Address) (string, error) {
+func (contract *Contract) GetCode(addr common.Address) (string, error) {
 
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
@@ -151,7 +152,7 @@ func (contract *PublicContractAPI) GetCode(addr common.Address) (string, error) 
 
 // GetContractCountByAddr returns the number of contract that has been deployed by given account address,
 // if addr is nil, returns the number of all the contract that has been deployed.
-func (contract *PublicContractAPI) GetContractCountByAddr(addr common.Address) (*Number, error) {
+func (contract *Contract) GetContractCountByAddr(addr common.Address) (*Number, error) {
 
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 
@@ -174,7 +175,7 @@ type HmResult struct {
 	Amount_hm     string `json:"amount"`
 }
 
-func (contract *PublicContractAPI) EncryptoMessage(args EncryptoArgs) (*HmResult, error) {
+func (contract *Contract) EncryptoMessage(args EncryptoArgs) (*HmResult, error) {
 
 	balance_bigint := new(big.Int)
 	balance_bigint.SetInt64(args.Balance.ToInt64())
@@ -186,18 +187,20 @@ func (contract *PublicContractAPI) EncryptoMessage(args EncryptoArgs) (*HmResult
 	var amount_hm []byte
 
 	if args.HmBalance == "" {
-		isValid, newBalance_hm, amount_hm = hmEncryption.PreHmTransaction(balance_bigint.Bytes(), amount_bigint.Bytes(), nil, getPaillierPublickey(contract.config))
+		isValid, newBalance_hm, amount_hm = hmEncryption.PreHmTransaction(balance_bigint.Bytes(),
+			amount_bigint.Bytes(), nil, getPaillierPublickey(contract.config))
 	} else {
 		hmBalance_bigint := new(big.Int)
 		hmBalance_bigint.SetString(args.HmBalance, 10)
-		isValid, newBalance_hm, amount_hm = hmEncryption.PreHmTransaction(balance_bigint.Bytes(), amount_bigint.Bytes(), hmBalance_bigint.Bytes(), getPaillierPublickey(contract.config))
+		isValid, newBalance_hm, amount_hm = hmEncryption.PreHmTransaction(balance_bigint.Bytes(),
+			amount_bigint.Bytes(), hmBalance_bigint.Bytes(), getPaillierPublickey(contract.config))
 	}
 
 	newBalance_hm_bigint := new(big.Int)
 	amount_hm_bigint := new(big.Int)
 
 	if !isValid {
-		return &HmResult{}, &common.OutofBalanceError{"out of balance"}
+		return &HmResult{}, &common.OutofBalanceError{Message:"out of balance"}
 	}
 
 	return &HmResult{
@@ -217,9 +220,11 @@ type HmCheckResult struct {
 	SumIllegalHmAmount string `json:"illegalHmAmount"`
 }
 
-func (contract *PublicContractAPI) CheckHmValue(args ValueArgs) (*HmCheckResult, error) {
+func (contract *Contract) CheckHmValue(args ValueArgs) (*HmCheckResult, error) {
 	if len(args.RawValue) != len(args.EncryValue) {
-		return nil, &common.InvalidParamsError{"invalid params, the length of rawValue is "+strconv.Itoa(len(args.RawValue))+", but the length of encryValue is "+strconv.Itoa(len(args.EncryValue))}
+		return nil, &common.InvalidParamsError{Message:"invalid params, the length of rawValue is "+
+			strconv.Itoa(len(args.RawValue))+", but the length of encryValue is "+
+			strconv.Itoa(len(args.EncryValue))}
 	}
 
 	result := make([]bool, len(args.RawValue))
@@ -239,7 +244,8 @@ func (contract *PublicContractAPI) CheckHmValue(args ValueArgs) (*HmCheckResult,
 
 		rawValue_bigint := new(big.Int)
 		rawValue_bigint.SetInt64(v)
-		isvalid,sumIllegal = hmEncryption.DestinationVerify(illegalHmAmount,encryVlue_bigint.Bytes(), rawValue_bigint.Bytes(), getPaillierPublickey(contract.config))
+		isvalid,sumIllegal = hmEncryption.DestinationVerify(illegalHmAmount,encryVlue_bigint.Bytes(),
+			rawValue_bigint.Bytes(), getPaillierPublickey(contract.config))
 		illegalHmAmount = sumIllegal
 		result[i] = isvalid
 	}
@@ -251,7 +257,7 @@ func (contract *PublicContractAPI) CheckHmValue(args ValueArgs) (*HmCheckResult,
 
 // GetStorageByAddr returns the storage by given contract address and bock number.
 // The method is offered for hyperchain internal test.
-func (contract *PublicContractAPI) GetStorageByAddr(addr common.Address) (map[string]string, error) {
+func (contract *Contract) GetStorageByAddr(addr common.Address) (map[string]string, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 
 	if err != nil {
@@ -281,7 +287,7 @@ func getBlockStateDb(namespace string, config *common.Config) (vm.Database, erro
 	stateDB, err := NewStateDb(config, namespace)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
-		return nil, &common.CallbackError{err.Error()}
+		return nil, &common.CallbackError{Message:err.Error()}
 	}
 	return stateDB, nil
 }

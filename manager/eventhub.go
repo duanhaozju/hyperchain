@@ -64,8 +64,8 @@ func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.
 	eventMuxAll = eventMux
 	return manager
 }
-func (pm *EventHub) GetEventObject() *event.TypeMux {
-	return pm.eventMux
+func (hub *EventHub) GetEventObject() *event.TypeMux {
+	return hub.eventMux
 }
 func GetEventObject() *event.TypeMux {
 	return eventMuxAll
@@ -105,109 +105,109 @@ func (hub *EventHub) Start(c chan int, cm *admittance.CAManager) {
 	}
 }
 
-func (self *EventHub) ListenSynchronizationEvent() {
-	for obj := range self.syncChainSub.Chan() {
+func (hub *EventHub) ListenSynchronizationEvent() {
+	for obj := range hub.syncChainSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.SendCheckpointSyncEvent:
-			self.executor.SendSyncRequest(ev)
+			hub.executor.SendSyncRequest(ev)
 
 		case event.StateUpdateEvent:
-			self.executor.ReceiveSyncRequest(ev)
+			hub.executor.ReceiveSyncRequest(ev)
 
 		case event.ReceiveSyncBlockEvent:
-			self.executor.ReceiveSyncBlocks(ev)
+			hub.executor.ReceiveSyncBlocks(ev)
 		}
 	}
 }
 
 // listen validate msg
-func (self *EventHub) listenValidateEvent() {
-	for obj := range self.validateSub.Chan() {
+func (hub *EventHub) listenValidateEvent() {
+	for obj := range hub.validateSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.ValidationEvent:
-			log.Debugf("[Namespace = %s] message middleware: [mit]", self.namespace)
-			self.executor.Validate(ev, self.PeerManager)
+			log.Debugf("[Namespace = %s] message middleware: [mit]", hub.namespace)
+			hub.executor.Validate(ev, hub.PeerManager)
 		}
 	}
 }
 
 // listen commit msg
-func (self *EventHub) listenCommitEvent() {
-	for obj := range self.commitSub.Chan() {
+func (hub *EventHub) listenCommitEvent() {
+	for obj := range hub.commitSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.CommitEvent:
-			log.Debugf("[Namespace = %s] message middleware: [commit]", self.namespace)
-			self.executor.CommitBlock(ev, self.PeerManager)
+			log.Debugf("[Namespace = %s] message middleware: [commit]", hub.namespace)
+			hub.executor.CommitBlock(ev, hub.PeerManager)
 		}
 	}
 }
 
-func (self *EventHub) listenInvalidTxEvent() {
-	for obj := range self.invalidSub.Chan() {
+func (hub *EventHub) listenInvalidTxEvent() {
+	for obj := range hub.invalidSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.InvalidTxsEvent:
-			log.Debugf("[Namespace = %s] message middleware: [invalid tx]", self.namespace)
-			self.executor.StoreInvalidTransaction(ev)
+			log.Debugf("[Namespace = %s] message middleware: [invalid tx]", hub.namespace)
+			hub.executor.StoreInvalidTransaction(ev)
 		}
 	}
 }
 
-func (self *EventHub) listenViewChangeEvent() {
-	for obj := range self.viewChangeSub.Chan() {
+func (hub *EventHub) listenViewChangeEvent() {
+	for obj := range hub.viewChangeSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.VCResetEvent:
-			log.Debugf("[Namespace = %s] message middleware: [vc reset]", self.namespace)
-			self.executor.Rollback(ev)
+			log.Debugf("[Namespace = %s] message middleware: [vc reset]", hub.namespace)
+			hub.executor.Rollback(ev)
 		case event.InformPrimaryEvent:
-			log.Debugf("[Namespace = %s] message middleware: [inform primary]", self.namespace)
-			self.PeerManager.SetPrimary(ev.Primary)
+			log.Debugf("[Namespace = %s] message middleware: [inform primary]", hub.namespace)
+			hub.PeerManager.SetPrimary(ev.Primary)
 		}
 	}
 }
 
-func (self *EventHub) listenReplicaInfoEvent() {
-	for obj := range self.syncReplicaSub.Chan() {
+func (hub *EventHub) listenReplicaInfoEvent() {
+	for obj := range hub.syncReplicaSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.ReplicaInfoEvent:
-			log.Debugf("[Namespace = %s] message middleware: [receive replica info]", self.namespace)
-			self.executor.ReceiveReplicaInfo(ev)
+			log.Debugf("[Namespace = %s] message middleware: [receive replica info]", hub.namespace)
+			hub.executor.ReceiveReplicaInfo(ev)
 		}
 	}
 }
 
-func (self *EventHub) listenConsensusEvent() {
-	for obj := range self.consensusSub.Chan() {
+func (hub *EventHub) listenConsensusEvent() {
+	for obj := range hub.consensusSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.BroadcastConsensusEvent:
-			log.Debugf("[Namespace = %s] message middleware: [broadcast consensus]", self.namespace)
-			go self.BroadcastConsensus(ev.Payload)
+			log.Debugf("[Namespace = %s] message middleware: [broadcast consensus]", hub.namespace)
+			go hub.BroadcastConsensus(ev.Payload)
 		case event.TxUniqueCastEvent:
-			log.Debugf("[Namespace = %s] message middleware: [tx unicast]", self.namespace)
+			log.Debugf("[Namespace = %s] message middleware: [tx unicast]", hub.namespace)
 			var peers []uint64
 			peers = append(peers, ev.PeerId)
-			go self.PeerManager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
+			go hub.PeerManager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
 		case event.NewTxEvent:
-			log.Debugf("[Namespace = %s] message middleware: [new tx]", self.namespace)
+			log.Debugf("[Namespace = %s] message middleware: [new tx]", hub.namespace)
 			if ev.Simulate == true {
 				tx := &types.Transaction{}
 				proto.Unmarshal(ev.Payload, tx)
-				self.executor.RunInSandBox(tx)
+				hub.executor.RunInSandBox(tx)
 			} else {
-				go self.sendMsg(ev.Payload)
+				go hub.sendMsg(ev.Payload)
 			}
 		case event.ConsensusEvent:
-			log.Debugf("[Namespace = %s] message middleware: [receive consensus]", self.namespace)
-			self.consenter.RecvMsg(ev.Payload)
+			log.Debugf("[Namespace = %s] message middleware: [receive consensus]", hub.namespace)
+			hub.consenter.RecvMsg(ev.Payload)
 		case event.NegoRoutersEvent:
-			log.Debugf("[Namespace = %s] message middleware: [negotiate routers]", self.namespace)
-			self.PeerManager.UpdateAllRoutingTable(ev.Payload)
+			log.Debugf("[Namespace = %s] message middleware: [negotiate routers]", hub.namespace)
+			hub.PeerManager.UpdateAllRoutingTable(ev.Payload)
 		}
 	}
 }
 
-func (self *EventHub) listenpeerMaintainEvent() {
+func (hub *EventHub) listenpeerMaintainEvent() {
 
-	for obj := range self.peerMaintainSub.Chan() {
+	for obj := range hub.peerMaintainSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.NewPeerEvent:
 			log.Debug("NewPeerEvent")
@@ -221,27 +221,27 @@ func (self *EventHub) listenpeerMaintainEvent() {
 				EventType: pbft.NODE_MGR_ADD_NODE_EVENT,
 				Event:     msg,
 			}
-			self.consenter.RecvLocal(e)
+			hub.consenter.RecvLocal(e)
 		case event.BroadcastNewPeerEvent:
 			log.Debug("BroadcastNewPeerEvent")
 			// receive this event from consensus module
 			// broadcast the local CA validition result to other replica
-			peers := self.PeerManager.GetAllPeers()
+			peers := hub.PeerManager.GetAllPeers()
 			var peerIds []uint64
 			for _, peer := range peers {
 				peerIds = append(peerIds, uint64(peer.PeerAddr.ID))
 			}
-			self.PeerManager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_BROADCAST_NEWPEER)
+			hub.PeerManager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_BROADCAST_NEWPEER)
 		case event.RecvNewPeerEvent:
 			log.Debug("RecvNewPeerEvent")
 			// receive from replica for a new peer CA validation
 			// deliver it to consensus module
-			self.consenter.RecvMsg(ev.Payload)
+			hub.consenter.RecvMsg(ev.Payload)
 		case event.DelPeerEvent:
 			// a peer submit a request to exit the alliance
 			log.Debug("DelPeerEvent")
 			payload := ev.Payload
-			routerHash, id, del := self.PeerManager.GetRouterHashifDelete(string(payload))
+			routerHash, id, del := hub.PeerManager.GetRouterHashifDelete(string(payload))
 			msg := &protos.DelNodeMessage{
 				DelPayload: payload,
 				RouterHash: routerHash,
@@ -253,22 +253,22 @@ func (self *EventHub) listenpeerMaintainEvent() {
 				EventType: pbft.NODE_MGR_DEL_NODE_EVENT,
 				Event:     msg,
 			}
-			self.consenter.RecvLocal(e)
+			hub.consenter.RecvLocal(e)
 		case event.BroadcastDelPeerEvent:
 			log.Debug("BroadcastDelPeerEvent")
 			// receive this event from consensus module
 			// broadcast to other replica
-			peers := self.PeerManager.GetAllPeers()
+			peers := hub.PeerManager.GetAllPeers()
 			var peerIds []uint64
 			for _, peer := range peers {
 				peerIds = append(peerIds, uint64(peer.PeerAddr.ID))
 			}
-			self.PeerManager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_BROADCAST_DELPEER)
+			hub.PeerManager.SendMsgToPeers(ev.Payload, peerIds, recovery.Message_BROADCAST_DELPEER)
 		case event.RecvDelPeerEvent:
 			log.Debug("RecvNewPeerEvent")
 			// receive from replica for a peer exit request submission
 			// deliver it to consensus module
-			self.consenter.RecvMsg(ev.Payload)
+			hub.consenter.RecvMsg(ev.Payload)
 		case event.UpdateRoutingTableEvent:
 			log.Debug("UpdateRoutingTableEvent")
 			// a new peer's join chain request has been accepted
@@ -276,19 +276,19 @@ func (self *EventHub) listenpeerMaintainEvent() {
 			// TODO notify consensus module to add flag
 			if ev.Type == true {
 				// add a peer
-				self.PeerManager.UpdateRoutingTable(ev.Payload)
-				self.PassRouters()
+				hub.PeerManager.UpdateRoutingTable(ev.Payload)
+				hub.PassRouters()
 			} else {
 				// remove a peer
-				self.PeerManager.DeleteNode(string(ev.Payload))
-				self.PassRouters()
+				hub.PeerManager.DeleteNode(string(ev.Payload))
+				hub.PassRouters()
 			}
 		case event.AlreadyInChainEvent:
 			log.Debug("AlreadyInChainEvent")
 			// send negotiate event
-			if self.initType == 1 {
-				self.PeerManager.SetOnline()
-				payload :=self.PeerManager.GetLocalAddressPayload()
+			if hub.initType == 1 {
+				hub.PeerManager.SetOnline()
+				payload := hub.PeerManager.GetLocalAddressPayload()
 				msg := &protos.NewNodeMessage{
 					Payload: payload,
 				}
@@ -297,26 +297,26 @@ func (self *EventHub) listenpeerMaintainEvent() {
 					EventType: pbft.NODE_MGR_NEW_NODE_EVENT,
 					Event:     msg,
 				}
-				self.consenter.RecvLocal(e)
-				self.PassRouters()
-				self.NegotiateView()
+				hub.consenter.RecvLocal(e)
+				hub.PassRouters()
+				hub.NegotiateView()
 			}
 		}
 	}
 }
 
-func (self *EventHub) listenExecutorEvent() {
-	for obj := range self.executorSub.Chan() {
+func (hub *EventHub) listenExecutorEvent() {
+	for obj := range hub.executorSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case event.ExecutorToConsensusEvent:
-			self.dispatchExecutorToConsensus(ev)
+			hub.dispatchExecutorToConsensus(ev)
 		case event.ExecutorToP2PEvent:
-			self.dispatchExecutorToP2P(ev)
+			hub.dispatchExecutorToP2P(ev)
 		}
 	}
 }
 
-func (self *EventHub) sendMsg(payload []byte) {
+func (hub *EventHub) sendMsg(payload []byte) {
 	msg := &protos.Message{
 		Type:    protos.Message_TRANSACTION,
 		Payload: payload,
@@ -329,31 +329,31 @@ func (self *EventHub) sendMsg(payload []byte) {
 		log.Notice("sendMsg marshal message failed")
 		return
 	}
-	self.consenter.RecvMsg(msgSend)
+	hub.consenter.RecvMsg(msgSend)
 
 }
 
 // Broadcast consensus msg to a batch of peers not knowing about it
-func (self *EventHub) BroadcastConsensus(payload []byte) {
-	self.PeerManager.BroadcastPeers(payload)
+func (hub *EventHub) BroadcastConsensus(payload []byte) {
+	hub.PeerManager.BroadcastPeers(payload)
 
 }
 
-func (self *EventHub) GetNodeInfo() p2p.PeerInfos {
-	self.nodeInfo = self.PeerManager.GetPeerInfo()
-	log.Info("nodeInfo is ", self.nodeInfo)
-	return self.nodeInfo
+func (hub *EventHub) GetNodeInfo() p2p.PeerInfos {
+	hub.nodeInfo = hub.PeerManager.GetPeerInfo()
+	log.Info("nodeInfo is ", hub.nodeInfo)
+	return hub.nodeInfo
 }
 
-func (self *EventHub) PassRouters() {
+func (hub *EventHub) PassRouters() {
 
-	router := self.PeerManager.GetRouters()
+	router := hub.PeerManager.GetRouters()
 	msg := protos.RoutersMessage{Routers: router}
-	self.consenter.RecvLocal(msg)
+	hub.consenter.RecvLocal(msg)
 
 }
 
-func (self *EventHub) NegotiateView() {
+func (hub *EventHub) NegotiateView() {
 
 	negoView := &protos.Message{
 		Type:      protos.Message_NEGOTIATE_VIEW,
@@ -365,76 +365,76 @@ func (self *EventHub) NegotiateView() {
 	if err != nil {
 		log.Notice("nego view start")
 	}
-	self.eventMux.Post(event.ConsensusEvent{
+	hub.eventMux.Post(event.ConsensusEvent{
 		Payload: msg,
 	})
 }
 
-func (self *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {
+func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {
 	switch ev.Type {
 	case executor.NOTIFY_REMOVE_CACHE:
-		log.Debugf("[Namespace = %s] message middleware: [remove cache]", self.namespace)
-		self.consenter.RecvLocal(ev.Payload)
+		log.Debugf("[Namespace = %s] message middleware: [remove cache]", hub.namespace)
+		hub.consenter.RecvLocal(ev.Payload)
 	case executor.NOTIFY_VC_DONE:
-		log.Debugf("[Namespace = %s] message middleware: [vc done]", self.namespace)
+		log.Debugf("[Namespace = %s] message middleware: [vc done]", hub.namespace)
 		e := &pbft.LocalEvent{
 			Service:   pbft.VIEW_CHANGE_SERVICE,
 			EventType: pbft.VIEW_CHANGE_VC_RESET_DONE_EVENT,
 			Event:     ev.Payload,
 		}
-		self.consenter.RecvLocal(e)
+		hub.consenter.RecvLocal(e)
 	case executor.NOTIFY_VALIDATION_RES:
-		log.Debugf("[Namespace = %s] message middleware: [validation result]", self.namespace)
+		log.Debugf("[Namespace = %s] message middleware: [validation result]", hub.namespace)
 		e := &pbft.LocalEvent{
 			Service:   pbft.CORE_PBFT_SERVICE,
 			EventType: pbft.CORE_VALIDATED_TXS_EVENT,
 			Event:     ev.Payload,
 		}
-		self.consenter.RecvLocal(e)
+		hub.consenter.RecvLocal(e)
 	case executor.NOTIFY_SYNC_DONE:
-		log.Debugf("[Namespace = %s] message middleware: [sync done]", self.namespace)
-		self.consenter.RecvMsg(ev.Payload.([]byte))
+		log.Debugf("[Namespace = %s] message middleware: [sync done]", hub.namespace)
+		hub.consenter.RecvMsg(ev.Payload.([]byte))
 	}
 }
-func (self *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
+func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 	switch ev.Type {
 	case executor.NOTIFY_BROADCAST_DEMAND:
-		log.Debugf("[Namespace = %s] message middleware: [broadcast demand]", self.namespace)
-		self.PeerManager.SendMsgToPeers(ev.Payload, ev.Peers, recovery.Message_SYNCCHECKPOINT)
+		log.Debugf("[Namespace = %s] message middleware: [broadcast demand]", hub.namespace)
+		hub.PeerManager.SendMsgToPeers(ev.Payload, ev.Peers, recovery.Message_SYNCCHECKPOINT)
 	case executor.NOTIFY_UNICAST_INVALID:
-		log.Debugf("[Namespace = %s] message middleware: [unicast invalid tx]", self.namespace)
+		log.Debugf("[Namespace = %s] message middleware: [unicast invalid tx]", hub.namespace)
 		peerId := ev.Peers[0]
-		if peerId == uint64(self.PeerManager.GetNodeId()) {
-			self.executor.StoreInvalidTransaction(event.InvalidTxsEvent{
+		if peerId == uint64(hub.PeerManager.GetNodeId()) {
+			hub.executor.StoreInvalidTransaction(event.InvalidTxsEvent{
 				Payload: ev.Payload,
 			})
 		} else {
-			self.PeerManager.SendMsgToPeers(ev.Payload, ev.Peers, recovery.Message_INVALIDRESP)
+			hub.PeerManager.SendMsgToPeers(ev.Payload, ev.Peers, recovery.Message_INVALIDRESP)
 		}
 	case executor.NOTIFY_BROADCAST_SINGLE:
-		log.Debugf("[Namespace = %s] message middleware: [broadcast single]", self.namespace)
-		self.PeerManager.SendMsgToPeers(ev.Payload, ev.Peers, recovery.Message_SYNCSINGLE)
+		log.Debugf("[Namespace = %s] message middleware: [broadcast single]", hub.namespace)
+		hub.PeerManager.SendMsgToPeers(ev.Payload, ev.Peers, recovery.Message_SYNCSINGLE)
 	case executor.NOTIFY_UNICAST_BLOCK:
-		log.Debugf("[Namespace = %s] message middleware: [unicast block]", self.namespace)
-		self.PeerManager.SendMsgToPeers(ev.Payload, ev.Peers, recovery.Message_SYNCBLOCK)
+		log.Debugf("[Namespace = %s] message middleware: [unicast block]", hub.namespace)
+		hub.PeerManager.SendMsgToPeers(ev.Payload, ev.Peers, recovery.Message_SYNCBLOCK)
 	case executor.NOTIFY_SYNC_REPLICA:
-		log.Debugf("[Namespace = %s] message middleware: [sync replica]", self.namespace)
+		log.Debugf("[Namespace = %s] message middleware: [sync replica]", hub.namespace)
 		chain := &types.Chain{}
 		proto.Unmarshal(ev.Payload, chain)
-		addr := self.PeerManager.GetLocalNode().GetNodeAddr()
+		addr := hub.PeerManager.GetLocalNode().GetNodeAddr()
 		payload, _ := proto.Marshal(&types.ReplicaInfo{
 			Chain:    chain,
 			Ip:       []byte(addr.IP),
 			Port:     int32(addr.Port),
-			Namespace:[]byte(self.namespace),
+			Namespace:[]byte(hub.namespace),
 		})
-		peers := self.PeerManager.GetVPPeers()
+		peers := hub.PeerManager.GetVPPeers()
 		var peerIds = make([]uint64, len(peers))
 		for idx, peer := range peers {
 			peerIds[idx] = uint64(peer.PeerAddr.ID)
 		}
-		self.PeerManager.SendMsgToPeers(payload, peerIds, recovery.Message_SYNCREPLICA)
-		self.eventMux.Post(event.ReplicaInfoEvent{
+		hub.PeerManager.SendMsgToPeers(payload, peerIds, recovery.Message_SYNCREPLICA)
+		hub.eventMux.Post(event.ReplicaInfoEvent{
 			Payload: payload,
 		})
 	}

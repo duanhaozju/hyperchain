@@ -50,7 +50,6 @@ type NamespaceManager interface {
 	StopNamespace(name string) error
 	//RestartNamespace restart namespace by name.
 	RestartNamespace(name string) error
-
 	//GlobalConfig global configuration of the system.
 	GlobalConfig() *common.Config
 }
@@ -177,7 +176,7 @@ func (nr *nsManagerImpl) DeRegister(name string) error {
 		}
 
 	} else {
-		logger.Noticef("no such namespace: %s", name)
+		return ErrInvalidNs
 	}
 	logger.Criticalf("namespace: %s stopped", name)
 	//TODO: need to delete the data?

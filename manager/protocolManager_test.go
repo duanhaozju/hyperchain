@@ -71,22 +71,22 @@ func TestAliveEvent(t *testing.T) {
 //	keydir := "../keystore/"
 //	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 //	am := accounts.NewAccountManager(keydir,encryption)
-//	pm := &ProtocolManager{
+//	hub := &ProtocolManager{
 //		AccountManager:am,
 //		commonHash:kec256Hash,
 //	}
 //
 //	for i:=0;i<100;i++{
 //
-//		h := tx.SighHash(pm.commonHash)
+//		h := tx.SighHash(hub.commonHash)
 //		addrHex := string(tx.From)
 //		addr := common.HexToAddress(addrHex)
 //
 //		start := time.Now()
-//		_, err := pm.AccountManager.SignWithPassphrase(addr, h[:], "123")
+//		_, err := hub.AccountManager.SignWithPassphrase(addr, h[:], "123")
 //		fmt.Println(time.Since(start))
 //
-//		tx.ValidateSign(encryption,pm.commonHash)
+//		tx.ValidateSign(encryption,hub.commonHash)
 //		if err!=nil{
 //			panic(err)
 //		}

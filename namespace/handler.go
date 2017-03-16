@@ -8,6 +8,6 @@ import (
 )
 
 //handleJsonRequest handle JsonRequest under current namespace.
-func (ni *namespaceImpl) handleJsonRequest(request *common.RPCRequest) *common.RPCResponse {
-	return ni.rpcProcesser.ProcessRequest(request)
+func (ns *namespaceImpl) handleJsonRequest(request *common.RPCRequest) *common.RPCResponse {
+	return ns.rpc.ProcessRequest(request)
 }

@@ -10,12 +10,12 @@ import (
 
 type ContractsController struct {
 	beego.Controller
-	PublicContractAPI *hpc.PublicContractAPI
+	PublicContractAPI *hpc.Contract
 }
 
 func (c *ContractsController) Prepare() {
 	PublicContractAPIInterface := hpc.GetApiObjectByNamespace("contract").Service
-	PublicContractAPI := PublicContractAPIInterface.(*hpc.PublicContractAPI)
+	PublicContractAPI := PublicContractAPIInterface.(*hpc.Contract)
 	c.PublicContractAPI = PublicContractAPI
 }
 

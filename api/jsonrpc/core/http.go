@@ -49,8 +49,6 @@ func startHttp(srv *Server) {
 	restPort := config.GetInt(common.C_REST_PORT)
 	logsPath := config.GetString(common.LOG_DUMP_FILE_DIR)
 
-	log.Criticalf("httpport:%d", httpPort)
-
 	// TODO AllowedOrigins should be a parameter
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},

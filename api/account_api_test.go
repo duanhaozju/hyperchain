@@ -39,13 +39,13 @@ func Test_NewAccount1(t *testing.T) {
 	//初始化API
 	publicAccountAPI := NewPublicAccountAPI(pm, db)
 
-	ad, err := publicAccountAPI.NewAccount("123456")
+	ad, err := publicAccountAPI.NewAccountAPI("123456")
 	if err != nil {
-		t.Errorf("NewAccount(123456) fail")
+		t.Errorf("NewAccountAPI(123456) fail")
 	}
 
 	if len(ad) != 20 {
-		log.Noticef("publicAccountAPI.NewAccount fail，创建一个新账户失败")
+		log.Noticef("publicAccountAPI.NewAccountAPI fail，创建一个新账户失败")
 		log.Noticef("新账户地址：%d", len(ad))
 		fmt.Println(ad)
 	}
@@ -70,7 +70,7 @@ func Test_UnlockAccount(t *testing.T) {
 	//初始化API
 	publicAccountAPI := NewPublicAccountAPI(pm, db)
 
-	ad, _ := publicAccountAPI.NewAccount("123456")
+	ad, _ := publicAccountAPI.NewAccountAPI("123456")
 
 	unlockParas := &UnlockParas{
 		Address:  ad,
