@@ -854,6 +854,7 @@ func (s *StateDB) commit(dbw db.Batch, deleteEmptyObjects bool) (root common.Has
 				c := append(stateObject.address.Bytes(), d...)
 				set = append(set, c)
 			} else {
+				d, _ := stateObject.MarshalJSON()
 				workingSet[stateObject.address.Hex()] = d
 			}
 		}
