@@ -10,6 +10,23 @@ import (
 	"strings"
 )
 
+// API describes the set of methods offered over the RPC interface
+type API struct {
+	Srvname string      // srvname under which the rpc methods of Service are exposed
+	Version string      // api version
+	Service interface{} // receiver instance which holds the methods
+	Public  bool        // indication if the methods must be considered safe for public use
+}
+
+var Apis map[string]*API
+
+func GetApiObjectByNamespace(name string) *API {
+	if api, ok := Apis[name]; ok {
+		return api
+	}
+	return nil
+}
+
 type Number int64
 
 func NewInt64ToNumber(n int64) *Number {
@@ -46,7 +63,6 @@ func (n *Number) UnmarshalJSON(data []byte) error {
 	_, ok := in.SetString(input, 0)
 
 	if !ok { // test if user supplied string tag
-
 		return fmt.Errorf(`invalid number %s`, data)
 	}
 
@@ -84,10 +100,8 @@ func (n Number) ToInt() int {
 type BlockNumber uint64
 
 const (
-	//latestBlockNumber  = 0
 	pendingBlockNumber  = 1
 	earliestBlockNumber = 2
-	//maxBlockNumber
 )
 
 func NewUint64ToBlockNumber(n uint64) *BlockNumber {
@@ -115,16 +129,11 @@ func (n *BlockNumber) UnmarshalJSON(data []byte) error {
 	in := new(big.Int)
 	_, ok := in.SetString(input, 0)
 
-	latest_number := uint64(10)
+	//latest_number := uint64(10)
 
 	if !ok { // test if user supplied string tag
 
 		strBlockNumber := input
-		if strBlockNumber == "latest" {
-			*n = *NewUint64ToBlockNumber(latest_number)
-			//*n = BlockNumber(latestBlockNumber)
-			return nil
-		}
 
 		if strBlockNumber == "earliest" {
 			*n = BlockNumber(earliestBlockNumber)
@@ -143,8 +152,8 @@ func (n *BlockNumber) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("block number %v may be out of range", input)
 	} else if v <= 0 {
 		return fmt.Errorf("block number can't be negative or zero, but get %v", input)
-	} else if v > latest_number {
-		return fmt.Errorf("block number is out of range, and now latest block number is %d", latest_number)
+		//} else if v > latest_number {
+		//	return fmt.Errorf("block number is out of range, and now latest block number is %d", latest_number)
 	} else {
 		*n = *NewUint64ToBlockNumber(v)
 		return nil

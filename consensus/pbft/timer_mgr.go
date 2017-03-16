@@ -4,12 +4,13 @@
 package pbft
 
 import (
+	"github.com/op/go-logging"
 	"time"
 )
 
 /**
-	this file provide a mechanism to manage different timers.
- */
+this file provide a mechanism to manage different timers.
+*/
 
 //titletimer manage timer with the same timer name
 type titletimer struct {
@@ -23,12 +24,13 @@ type titletimer struct {
 type timerManager struct {
 	ttimers        map[string]*titletimer
 	requestTimeout time.Duration
+	logger         *logging.Logger
 }
 
 //newTimerMgr init a instance of timerManager.
 func newTimerMgr(pbft *pbftImpl) *timerManager {
 	tm := &timerManager{
-		ttimers: make(map[string]*titletimer),
+		ttimers:        make(map[string]*titletimer),
 		requestTimeout: pbft.config.GetDuration(PBFT_REQUEST_TIMEOUT),
 	}
 
@@ -50,13 +52,13 @@ func (tm *timerManager) startTimer(tname string, afterfunc func()) int {
 	//logger.Errorf("Starting a new timer---%s", tname)
 
 	tm.ttimers[tname].isActive = append(tm.ttimers[tname].isActive, true)
-	tm.ttimers[tname].alivecounts ++
+	tm.ttimers[tname].alivecounts++
 
 	counts := len(tm.ttimers[tname].isActive)
 	//logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].alivecounts, tname)
 
 	send := func() {
-		if tm.ttimers[tname].isActive[counts - 1] {
+		if tm.ttimers[tname].isActive[counts-1] {
 			afterfunc()
 		}
 	}
@@ -70,13 +72,13 @@ func (tm *timerManager) softStartTimer(tname string, afterfunc func()) int {
 		//logger.Errorf("Soft starting a new timer---%s", tname)
 
 		tm.ttimers[tname].isActive = append(tm.ttimers[tname].isActive, true)
-		tm.ttimers[tname].alivecounts ++
+		tm.ttimers[tname].alivecounts++
 
 		counts := len(tm.ttimers[tname].isActive)
 		//logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].alivecounts, tname)
 
 		send := func() {
-			if tm.ttimers[tname].isActive[counts - 1] {
+			if tm.ttimers[tname].isActive[counts-1] {
 				afterfunc()
 			}
 		}
@@ -93,13 +95,13 @@ func (tm *timerManager) startTimerWithNewTT(tname string, d time.Duration, after
 	//logger.Errorf("Starting a new timer---%s with new duration %d", tname, d)
 
 	tm.ttimers[tname].isActive = append(tm.ttimers[tname].isActive, true)
-	tm.ttimers[tname].alivecounts ++
+	tm.ttimers[tname].alivecounts++
 
 	counts := len(tm.ttimers[tname].isActive)
 	//logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].alivecounts, tname)
 
 	send := func() {
-		if tm.ttimers[tname].isActive[counts - 1] {
+		if tm.ttimers[tname].isActive[counts-1] {
 			afterfunc()
 		}
 	}
@@ -109,17 +111,17 @@ func (tm *timerManager) startTimerWithNewTT(tname string, d time.Duration, after
 
 //softStartTimerWithNewTT init and start a timer by name with new timeout
 func (tm *timerManager) softStartTimerWithNewTT(tname string, d time.Duration, afterfunc func()) int {
-	if tm.ttimers[tname].alivecounts == 0{
+	if tm.ttimers[tname].alivecounts == 0 {
 		//logger.Errorf("Soft starting a new timer---%s with new duration %d", tname, d)
 
 		tm.ttimers[tname].isActive = append(tm.ttimers[tname].isActive, true)
-		tm.ttimers[tname].alivecounts ++
+		tm.ttimers[tname].alivecounts++
 
 		counts := len(tm.ttimers[tname].isActive)
 		//logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].alivecounts, tname)
 
 		send := func() {
-			if tm.ttimers[tname].isActive[counts - 1] {
+			if tm.ttimers[tname].isActive[counts-1] {
 				afterfunc()
 			}
 		}
@@ -134,13 +136,13 @@ func (tm *timerManager) softStartTimerWithNewTT(tname string, d time.Duration, a
 //stopTimer stop all timers by the same timerName.
 func (tm *timerManager) stopTimer(tname string) {
 	if !tm.containsTimer(tname) {
-		logger.Errorf("Stop timer failed!, timer %s not created yet!", tname)
+		tm.logger.Errorf("Stop timer failed!, timer %s not created yet!", tname)
 		return
 	}
-	//logger.Errorf("Stoping timer---%s", tname)
+	//tm.logger.Errorf("Stoping timer---%s", tname)
 
 	//counts := len(tm.ttimers[tname].isActive)
-	//logger.Errorf("Now exsits %d timer---%s", counts, tname)
+	//tm.logger.Errorf("Now exsits %d timer---%s", counts, tname)
 
 	for i := range tm.ttimers[tname].isActive {
 		tm.ttimers[tname].isActive[i] = false
@@ -153,22 +155,22 @@ func (tm *timerManager) stopTimer(tname string) {
 //stopOneTimer stop one timer by the timerName and index.
 func (tm *timerManager) stopOneTimer(tname string, num int) {
 	if !tm.containsTimer(tname) {
-		logger.Errorf("Stop timer failed!, timer %s not created yet!", tname)
+		tm.logger.Errorf("Stop timer failed!, timer %s not created yet!", tname)
 		return
 	}
 
 	counts := len(tm.ttimers[tname].isActive)
 	if num >= counts {
-		//logger.Errorf("Stop timer failed!, timer %s index out of range!", tname)
+		//tm.logger.Errorf("Stop timer failed!, timer %s index out of range!", tname)
 		return
 	}
 
-	//logger.Errorf("Stoping timer---%s", tname)
-	//logger.Errorf("Now exsits %d timer---%s, to stop %d", counts, tname, num)
+	//tm.logger.Errorf("Stoping timer---%s", tname)
+	//tm.logger.Errorf("Now exsits %d timer---%s, to stop %d", counts, tname, num)
 
 	tm.ttimers[tname].isActive[num] = false
 
-	tm.ttimers[tname].alivecounts --
+	tm.ttimers[tname].alivecounts--
 
 }
 
@@ -181,7 +183,7 @@ func (tm *timerManager) containsTimer(timerName string) bool {
 //getTimeoutValue get event timer timeout
 func (tm *timerManager) getTimeoutValue(timerName string) time.Duration {
 	if !tm.containsTimer(timerName) {
-		logger.Warningf("Get tiemout failed!, timer %s not created yet! no time out", timerName)
+		tm.logger.Warningf("Get tiemout failed!, timer %s not created yet! no time out", timerName)
 		return 0 * time.Second
 	}
 	return tm.ttimers[timerName].timeout
@@ -189,7 +191,7 @@ func (tm *timerManager) getTimeoutValue(timerName string) time.Duration {
 
 func (tm *timerManager) setTimeoutValue(timerName string, d time.Duration) {
 	if !tm.containsTimer(timerName) {
-		logger.Warningf("Set tiemout failed!, timer %s not created yet! no time out", timerName)
+		tm.logger.Warningf("Set tiemout failed!, timer %s not created yet! no time out", timerName)
 		return
 	}
 	tm.ttimers[timerName].timeout = d
@@ -200,9 +202,9 @@ func (tm *timerManager) makeRequestTimeoutLegal() {
 	nullRequestTimeout := tm.getTimeoutValue(NULL_REQUEST_TIMER)
 	requestTimeout := tm.requestTimeout
 
-	if requestTimeout >= nullRequestTimeout && nullRequestTimeout != 0{
-		tm.setTimeoutValue(NULL_REQUEST_TIMER, 3 * requestTimeout / 2)
-		logger.Warningf("Configured null request timeout must be greater " +
+	if requestTimeout >= nullRequestTimeout && nullRequestTimeout != 0 {
+		tm.setTimeoutValue(NULL_REQUEST_TIMER, 3*requestTimeout/2)
+		tm.logger.Warningf("Configured null request timeout must be greater "+
 			"than request timeout, setting to %v", tm.getTimeoutValue(NULL_REQUEST_TIMER))
 	}
 }

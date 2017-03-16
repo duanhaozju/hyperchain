@@ -21,7 +21,7 @@ func hash(msg interface{}) string {
 	case *TransactionBatch:
 		raw, _ = proto.Marshal(converted)
 	default:
-		logger.Errorf("Asked to hash non-supported message type, ignoring")
+		//logger.Errorf("Asked to hash non-supported message type, ignoring")
 		return ""
 	}
 

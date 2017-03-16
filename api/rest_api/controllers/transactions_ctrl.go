@@ -5,11 +5,12 @@ import (
 	"github.com/astaxie/beego"
 	"hyperchain/api"
 	"hyperchain/api/rest_api/utils"
+	"hyperchain/common"
 )
 
 type TransactionsController struct {
 	beego.Controller
-	PublicTxAPI *hpc.PublicTransactionAPI
+	PublicTxAPI *hpc.Transaction
 }
 
 type requestInterval struct {
@@ -19,7 +20,7 @@ type requestInterval struct {
 
 func (t *TransactionsController) Prepare() {
 	PublicTxAPIInterface := hpc.GetApiObjectByNamespace("tx").Service
-	PublicTxAPI := PublicTxAPIInterface.(*hpc.PublicTransactionAPI)
+	PublicTxAPI := PublicTxAPIInterface.(*hpc.Transaction)
 	t.PublicTxAPI = PublicTxAPI
 }
 
@@ -27,7 +28,7 @@ func (t *TransactionsController) SendTransaction() {
 	var args hpc.SendTxArgs
 
 	if err := json.Unmarshal(t.Ctx.Input.RequestBody, &args); err != nil {
-		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
 		t.ServeJSON()
 		return
 	}
@@ -48,7 +49,7 @@ func (t *TransactionsController) GetTransactions() {
 
 	args, err := utils.CheckIntervalArgs(from, to)
 	if err != nil {
-		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
 		t.ServeJSON()
 		return
 	}
@@ -68,7 +69,7 @@ func (t *TransactionsController) GetTransactionByHash() {
 	hash, err := utils.CheckHash(t.Ctx.Input.Param(":transactionHash"))
 	//log.Error(hash.Hex())
 	if err != nil {
-		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
 		t.ServeJSON()
 		return
 	}
@@ -99,14 +100,14 @@ func (t *TransactionsController) GetTransactionByBlockNumberOrBlockHashOrTime() 
 	} else if p_startTime != "" && p_endTime != "" && p_blkNum == "" && p_blkHash == "" && p_index == ""{
 		flag = 3
 	} else {
-		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{"The number of params or the name of params is invalid"})
+		t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{"The number of params or the name of params is invalid"})
 		t.ServeJSON()
 		return
 	}
 
 	if flag == 1 {
 		if blkNum, index, err := utils.CheckBlkNumAndIndexParams(p_blkNum, p_index); err != nil {
-			t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+			t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
 		} else {
 			if tx, err := t.PublicTxAPI.GetTransactionByBlockNumberAndIndex(blkNum, index); err != nil {
 				t.Data["json"] = NewJSONObject(nil, err)
@@ -116,7 +117,7 @@ func (t *TransactionsController) GetTransactionByBlockNumberOrBlockHashOrTime() 
 		}
 	} else if flag == 2 {
 		if blkHash, index, err := utils.CheckBlkHashAndIndexParams(p_blkHash, p_index); err != nil {
-			t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+			t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
 		} else {
 			if tx, err := t.PublicTxAPI.GetTransactionByBlockHashAndIndex(blkHash, index); err != nil {
 				t.Data["json"] = NewJSONObject(nil, err)
@@ -126,7 +127,7 @@ func (t *TransactionsController) GetTransactionByBlockNumberOrBlockHashOrTime() 
 		}
 	} else if flag == 3 {
 		if args, err := utils.CheckIntervalTimeArgs(p_startTime, p_endTime); err != nil {
-			t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{"Invalid params, value may be out of range"})
+			t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{"Invalid params, value may be out of range"})
 		} else {
 			if txs, err := t.PublicTxAPI.GetTransactionsByTime(args); err != nil {
 				t.Data["json"] = NewJSONObject(nil, err)
@@ -136,7 +137,7 @@ func (t *TransactionsController) GetTransactionByBlockNumberOrBlockHashOrTime() 
 		}
 
 	} else {
-		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{"invalid params"})
+		t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{"invalid params"})
 	}
 
 	t.ServeJSON()
@@ -146,7 +147,7 @@ func (t *TransactionsController) GetTransactionByBlockNumberOrBlockHashOrTime() 
 func (t *TransactionsController) GetTransactionReceipt() {
 	hash, err := utils.CheckHash(t.Ctx.Input.Param(":transactionHash"))
 	if err != nil {
-		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
 		t.ServeJSON()
 		return
 	}
@@ -160,7 +161,7 @@ func (t *TransactionsController) GetTransactionReceipt() {
 				t.Data["json"] = NewJSONObject(nil, err)
 			} else if tx.Invalid == true {
 				// 交易非法
-				t.Data["json"] = NewJSONObject(nil, &hpc.CallbackError{tx.InvalidMsg})
+				t.Data["json"] = NewJSONObject(nil, &common.CallbackError{tx.InvalidMsg})
 			} else {
 				// 交易合法
 				t.Data["json"] = NewJSONObject(rep, nil)
@@ -177,7 +178,7 @@ func (t *TransactionsController) GetSignHash() {
 	var args hpc.SendTxArgs
 
 	if err := json.Unmarshal(t.Ctx.Input.RequestBody, &args); err != nil {
-		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
 		t.ServeJSON()
 		return
 	}
@@ -196,7 +197,7 @@ func (t *TransactionsController) GetTxAvgTimeByBlockNumber() {
 	to := t.Input().Get("to")
 	args, err := utils.CheckIntervalArgs(from, to)
 	if err != nil {
-		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+		t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
 		t.ServeJSON()
 		return
 	}
@@ -234,14 +235,14 @@ func (t *TransactionsController) GetBlockTransactionCountByHashOrNumber() {
 	}else if p_blkHash != "" && p_blkNum == "" {
 		flag = 2
 	} else {
-		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{"The number of params or the name of params is invalid"})
+		t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{"The number of params or the name of params is invalid"})
 		t.ServeJSON()
 		return
 	}
 
 	if flag == 1 {
 		if blkNum, err := utils.CheckBlockNumber(p_blkNum); err != nil {
-			t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+			t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
 		} else {
 			if count, err := t.PublicTxAPI.GetBlockTransactionCountByNumber(blkNum); err != nil {
 				t.Data["json"] = NewJSONObject(nil, err)
@@ -251,7 +252,7 @@ func (t *TransactionsController) GetBlockTransactionCountByHashOrNumber() {
 		}
 	} else if flag == 2 {
 		if blkHash, err := utils.CheckHash(p_blkHash); err != nil {
-			t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+			t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
 		} else {
 			if count, err := t.PublicTxAPI.GetBlockTransactionCountByHash(blkHash); err != nil {
 				t.Data["json"] = NewJSONObject(nil, err)
@@ -260,7 +261,7 @@ func (t *TransactionsController) GetBlockTransactionCountByHashOrNumber() {
 			}
 		}
 	} else {
-		t.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{"invalid params"})
+		t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{"invalid params"})
 	}
 
 	t.ServeJSON()

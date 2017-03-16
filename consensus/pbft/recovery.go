@@ -56,7 +56,7 @@ func (pbft *pbftImpl) dispatchRecoveryMsg(e events.Event) events.Event {
 // procativeRecovery broadcast a procative recovery message to ask others for recent blocks info
 func (pbft *pbftImpl) initRecovery() events.Event {
 
-	logger.Debugf("Replica %d now initRecovery", pbft.id)
+	pbft.logger.Debugf("Replica %d now initRecovery", pbft.id)
 
 	pbft.recoveryMgr.recoveryToSeqNo = nil
 	// update watermarks
@@ -70,7 +70,7 @@ func (pbft *pbftImpl) initRecovery() events.Event {
 	}
 	payload, err := proto.Marshal(recoveryMsg)
 	if err != nil {
-		logger.Errorf("Marshal recovery init Error!")
+		pbft.logger.Errorf("Marshal recovery init Error!")
 		return nil
 	}
 	consensusMsg := &ConsensusMessage{
@@ -107,10 +107,10 @@ func (pbft *pbftImpl) initRecovery() events.Event {
 // recvRcry process incoming proactive recovery message
 func (pbft *pbftImpl) recvRecovery(recoveryInit *RecoveryInit) events.Event {
 
-	logger.Debugf("Replica %d now recvRecovery from replica %d", pbft.id, recoveryInit.ReplicaId)
+	pbft.logger.Debugf("Replica %d now recvRecovery from replica %d", pbft.id, recoveryInit.ReplicaId)
 
 	if pbft.status.getState(&pbft.status.skipInProgress) {
-		logger.Debugf("Replica %d recvRecovery, but it's in state transfer and ignores it.", pbft.id)
+		pbft.logger.Debugf("Replica %d recvRecovery, but it's in state transfer and ignores it.", pbft.id)
 		return nil
 	}
 	chkpts := make(map[uint64]string)
@@ -129,7 +129,7 @@ func (pbft *pbftImpl) recvRecovery(recoveryInit *RecoveryInit) events.Event {
 
 	rcMsg, err := proto.Marshal(rc)
 	if err != nil {
-		logger.Errorf("recovery response marshal error")
+		pbft.logger.Errorf("recovery response marshal error")
 		return nil
 	}
 
@@ -147,43 +147,43 @@ func (pbft *pbftImpl) recvRecovery(recoveryInit *RecoveryInit) events.Event {
 // recvRcryRsp process other replicas' feedback as with initRecovery
 func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 
-	logger.Debugf("Replica %d now recvRecoveryRsp from replica %d", pbft.id, rsp.ReplicaId)
+	pbft.logger.Debugf("Replica %d now recvRecoveryRsp from replica %d", pbft.id, rsp.ReplicaId)
 
 	if !pbft.status.getState(&pbft.status.inRecovery) {
-		logger.Debugf("Replica %d finished recovery, ignore recovery response", pbft.id)
+		pbft.logger.Debugf("Replica %d finished recovery, ignore recovery response", pbft.id)
 		return nil
 	}
 	from := rsp.ReplicaId
 	if _, ok := pbft.recoveryMgr.rcRspStore[from]; ok {
-		logger.Debugf("Replica %d receive duplicate recovery response from replica %d, ignore it", pbft.id, from)
+		pbft.logger.Debugf("Replica %d receive duplicate recovery response from replica %d, ignore it", pbft.id, from)
 		return nil
 	}
 	pbft.recoveryMgr.rcRspStore[from] = rsp
 
 	if len(pbft.recoveryMgr.rcRspStore) <= 2*pbft.f+1 {
 		// Reason for not using '≤ pbft.N-pbft.f': if N==5, we are require more than we need
-		logger.Debugf("Replica %d recv recoveryRsp from replica %d, rsp count: %d, not "+
+		pbft.logger.Debugf("Replica %d recv recoveryRsp from replica %d, rsp count: %d, not "+
 			"beyond %d", pbft.id, rsp.ReplicaId, len(pbft.recoveryMgr.rcRspStore), 2*pbft.f+1)
 		return nil
 	}
 
 	// find quorum chkpt
 	n, lastid, replicas, find, chkptBehind := pbft.findHighestChkptQuorum()
-	logger.Debug("n: ", n, "lastid: ", lastid, "replicas: ", replicas, "find: ", find, "chkptBehind: ", chkptBehind)
+	pbft.logger.Debug("n: ", n, "lastid: ", lastid, "replicas: ", replicas, "find: ", find, "chkptBehind: ", chkptBehind)
 	lastExec, curHash, execFind := pbft.findLastExecQuorum()
 
 	if !find {
-		logger.Debugf("Replica %d did not find chkpt quorum", pbft.id)
+		pbft.logger.Debugf("Replica %d did not find chkpt quorum", pbft.id)
 		return nil
 	}
 
 	if !execFind {
-		logger.Debugf("Replica %d did not find lastexec quorum", pbft.id)
+		pbft.logger.Debugf("Replica %d did not find lastexec quorum", pbft.id)
 		return nil
 	}
 
 	if pbft.recoveryMgr.recoveryToSeqNo != nil {
-		logger.Debugf("Replica %d in recovery receive rcRsp from replica %d"+
+		pbft.logger.Debugf("Replica %d in recovery receive rcRsp from replica %d"+
 			"but chkpt quorum and seqNo quorum already found. "+
 			"Ignore it", pbft.id, rsp.ReplicaId)
 		return nil
@@ -196,14 +196,14 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	//idAsString := byteToString(id)
 	selfLastExec, selfCurHash := persist.GetBlockHeightAndHash(pbft.namespace)
 
-	logger.Debugf("Replica %d in recovery find quorum chkpt: %d, self: %d, "+
+	pbft.logger.Debugf("Replica %d in recovery find quorum chkpt: %d, self: %d, "+
 		"others lastExec: %d, self: %d", pbft.id, n, pbft.h, lastExec, pbft.exec.lastExec)
-	logger.Debugf("Replica %d in recovery, "+
+	pbft.logger.Debugf("Replica %d in recovery, "+
 		"others lastBlockInfo: %s, self: %s", pbft.id, rsp.LastBlockHash, selfCurHash)
 
 	// Fast catch up
 	if lastExec == selfLastExec && curHash == selfCurHash {
-		logger.Debugf("Replica %d in recovery same lastExec: %d, "+
+		pbft.logger.Debugf("Replica %d in recovery same lastExec: %d, "+
 			"same block hash: %s, fast catch up", pbft.id, selfLastExec, curHash)
 		pbft.status.inActiveState(&pbft.status.inRecovery)
 		pbft.recoveryMgr.recoveryToSeqNo = nil
@@ -214,7 +214,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		}
 	}
 
-	logger.Debugf("Replica %d in recovery self lastExec: %d, others: %d"+
+	pbft.logger.Debugf("Replica %d in recovery self lastExec: %d, others: %d"+
 		"miss match self block hash: %s, other block hash %s", pbft.id, selfLastExec, lastExec, selfCurHash, curHash)
 
 	var id []byte
@@ -222,7 +222,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	if n != 0 {
 		id, err = base64.StdEncoding.DecodeString(lastid)
 		if nil != err {
-			logger.Errorf("Replica %d cannot decode blockInfoId %s to %+v", pbft.id, lastid, id)
+			pbft.logger.Errorf("Replica %d cannot decode blockInfoId %s to %+v", pbft.id, lastid, id)
 			return nil
 		}
 	} else {
@@ -254,7 +254,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.status.activeState(&pbft.status.inVcReset)
 		return nil
 	} else {
-		logger.Debugf("Replica %d try to recovery but find itself in state update", pbft.id)
+		pbft.logger.Debugf("Replica %d try to recovery but find itself in state update", pbft.id)
 		return nil
 	}
 }
@@ -262,7 +262,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 // findHighestChkptQuorum finds highest one of chkpts which achieve quorum
 func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, replicas []uint64, find bool, chkptBehind bool) {
 
-	logger.Debugf("Replica %d now enter findHighestChkptQuorum", pbft.id)
+	pbft.logger.Debugf("Replica %d now enter findHighestChkptQuorum", pbft.id)
 
 	chkpts := make(map[cidx]map[uint64]bool)
 
@@ -344,10 +344,10 @@ func (pbft *pbftImpl) findLastExecQuorum() (lastExec uint64, hash string, find b
 // fetchRecoveryPQC fetch PQC info after receive stateUpdated event
 func (pbft *pbftImpl) fetchRecoveryPQC(peers []uint64) events.Event {
 
-	logger.Debugf("Replica %d now fetchRecoveryPQC", pbft.id)
+	pbft.logger.Debugf("Replica %d now fetchRecoveryPQC", pbft.id)
 
 	if peers == nil {
-		logger.Errorf("Replica %d try to fetchRecoveryPQC, but target peers are nil")
+		pbft.logger.Errorf("Replica %d try to fetchRecoveryPQC, but target peers are nil")
 		return nil
 	}
 
@@ -360,7 +360,7 @@ func (pbft *pbftImpl) fetchRecoveryPQC(peers []uint64) events.Event {
 
 	payload, err := proto.Marshal(fetch)
 	if err != nil {
-		logger.Errorf("recovery response marshal error")
+		pbft.logger.Errorf("recovery response marshal error")
 		return nil
 	}
 	conMsg := &ConsensusMessage{
@@ -379,12 +379,12 @@ func (pbft *pbftImpl) fetchRecoveryPQC(peers []uint64) events.Event {
 // returnRecoveryPQC return  recovery PQC to the peer behind
 func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 
-	logger.Debugf("Replica %d now returnRecoveryPQC", pbft.id)
+	pbft.logger.Debugf("Replica %d now returnRecoveryPQC", pbft.id)
 
 	dest, h := fetch.ReplicaId, fetch.H
 
 	if h >= pbft.h+pbft.L {
-		logger.Errorf("Replica %d receives fetch QPC request, but its pbft.h ≥ highwatermark", pbft.id)
+		pbft.logger.Errorf("Replica %d receives fetch QPC request, but its pbft.h ≥ highwatermark", pbft.id)
 		return nil
 	}
 	csLen := len(pbft.storeMgr.certStore) //certStore len
@@ -409,7 +409,7 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 
 	payload, err := proto.Marshal(rcReturn)
 	if err != nil {
-		logger.Errorf("recovery response marshal error")
+		pbft.logger.Errorf("recovery response marshal error")
 		return nil
 	}
 	msg := &ConsensusMessage{
@@ -425,22 +425,22 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 // recvRecoveryReturnPQC process PQC info target peers return
 func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.Event {
 
-	logger.Debugf("Replica %d now recvRecoveryReturnPQC from replica %d", pbft.id, PQCInfo.ReplicaId)
+	pbft.logger.Debugf("Replica %d now recvRecoveryReturnPQC from replica %d", pbft.id, PQCInfo.ReplicaId)
 
 	if !pbft.status.getState(&pbft.status.inRecovery) {
-		logger.Warningf("Replica %d receive recoveryReturnQPC, but it's not in recovery", pbft.id)
+		pbft.logger.Warningf("Replica %d receive recoveryReturnQPC, but it's not in recovery", pbft.id)
 		return nil
 	}
 
 	sender := PQCInfo.ReplicaId
 	if _, exist := pbft.recoveryMgr.rcPQCSenderStore[sender]; exist {
-		logger.Warningf("Replica %d receive duplicate RecoveryReturnPQC, ignore it", pbft.id)
+		pbft.logger.Warningf("Replica %d receive duplicate RecoveryReturnPQC, ignore it", pbft.id)
 		return nil
 	}
 	pbft.recoveryMgr.rcPQCSenderStore[sender] = true
 
 	if len(pbft.recoveryMgr.rcPQCSenderStore) > pbft.f+1 {
-		logger.Debugf("Replica %d already receive %d returnPQC", pbft.id, len(pbft.recoveryMgr.rcPQCSenderStore))
+		pbft.logger.Debugf("Replica %d already receive %d returnPQC", pbft.id, len(pbft.recoveryMgr.rcPQCSenderStore))
 		pbft.pbftTimerMgr.stopTimer(RECOVERY_RESTART_TIMER)
 	}
 
@@ -455,7 +455,7 @@ func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.E
 		if cert.digest != preprep.BatchDigest {
 			payload, err := proto.Marshal(preprep)
 			if err != nil {
-				logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
+				pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
 				return false
 			}
 
@@ -475,7 +475,7 @@ func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.E
 			}
 			payload, err := proto.Marshal(prep)
 			if err != nil {
-				logger.Errorf("ConsensusMessage_PREPARE Marshal Error", err)
+				pbft.logger.Errorf("ConsensusMessage_PREPARE Marshal Error", err)
 				return nil
 			}
 			redo_prep := &ConsensusMessage{
@@ -494,7 +494,7 @@ func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.E
 			}
 			payload, err := proto.Marshal(cmt)
 			if err != nil {
-				logger.Errorf("ConsensusMessage_COMMIT Marshal Error", err)
+				pbft.logger.Errorf("ConsensusMessage_COMMIT Marshal Error", err)
 				return nil
 			}
 			redo_cmt := &ConsensusMessage{
@@ -511,7 +511,7 @@ func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.E
 // restartRecovery restart recovery immediately when recoveryRestartTimer expires
 func (pbft *pbftImpl) restartRecovery() {
 
-	logger.Noticef("Replica %d now restartRecovery", pbft.id)
+	pbft.logger.Noticef("Replica %d now restartRecovery", pbft.id)
 
 	// recovery redo requires update new if need
 	pbft.status.activeState(&pbft.status.inNegoView)

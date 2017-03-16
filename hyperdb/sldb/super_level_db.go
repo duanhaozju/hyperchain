@@ -4,15 +4,15 @@ package sldb
 
 import (
 	"bytes"
+	"fmt"
+	"github.com/op/go-logging"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"time"
-	"fmt"
-	pa "path/filepath"
-	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/hyperdb/db"
+	pa "path/filepath"
+	"time"
 )
 
 var log *logging.Logger
@@ -32,9 +32,9 @@ type SuperLevelDB struct {
 	closed chan bool
 }
 
-func NewSLDB(conf *common.Config,filepath string) (*SuperLevelDB, error) {
-	if conf!=nil{
-		filepath = pa.Join(conf.GetString(SLDB_PATH),filepath)
+func NewSLDB(conf *common.Config, filepath string) (*SuperLevelDB, error) {
+	if conf != nil {
+		filepath = pa.Join(conf.GetString(SLDB_PATH), filepath)
 	}
 
 	db, err := leveldb.OpenFile(filepath, nil)
@@ -44,9 +44,9 @@ func NewSLDB(conf *common.Config,filepath string) (*SuperLevelDB, error) {
 	index := NewKeyIndex(conf, "defaultNS", db, pa.Join(filepath, "index", "index.bloom.dat"))
 	index.conf = conf
 	sldb := &SuperLevelDB{
-		path: filepath,
-		db:   db,
-		index:   index,
+		path:   filepath,
+		db:     db,
+		index:  index,
 		closed: make(chan bool),
 	}
 	go sldb.dumpIndexByInterval(conf.GetDuration(SLDB_INDEX_DUMP_INTERVAL))
@@ -54,7 +54,7 @@ func NewSLDB(conf *common.Config,filepath string) (*SuperLevelDB, error) {
 }
 
 //Put put key value data into the database.
-func (sldb  *SuperLevelDB) Put(key []byte, value []byte) error {
+func (sldb *SuperLevelDB) Put(key []byte, value []byte) error {
 	sldb.index.AddAndPersistIndexForKey(key)
 	return sldb.db.Put(key, value, nil)
 }
@@ -119,31 +119,31 @@ func (sldb *SuperLevelDB) Index() Index {
 	return sldb.index
 }
 
-func (db *SuperLevelDB) NewBatch() db.Batch {
+func (sldb *SuperLevelDB) NewBatch() db.Batch {
 	log.Debugf("new super leveldb batch")
 	slb := &superLdbBatch{
-		batch: new(leveldb.Batch),
-		sldb:db,
+		batch:      new(leveldb.Batch),
+		sldb:       sldb,
 		indexBatch: new(leveldb.Batch),
 	}
 	return slb
 }
 
 //dumpIndexByInterval dump indexes by interval and after close.
-func (db *SuperLevelDB) dumpIndexByInterval(du time.Duration) {
+func (sldb *SuperLevelDB) dumpIndexByInterval(du time.Duration) {
 	if du.Hours() == 24 {
 		tm := time.Now()
-		sec := (24 + 4 - tm.Hour()) * 3600 - tm.Minute() * 60 - tm.Second()// bloom persist at 4:00 AM
+		sec := (24+4-tm.Hour())*3600 - tm.Minute()*60 - tm.Second() // bloom persist at 4:00 AM
 		d, _ := time.ParseDuration(fmt.Sprintf("%ds", sec))
 		time.Sleep(d)
-		db.index.Persist()// first time persist
+		sldb.index.Persist() // first time persist
 	}
 	for {
 		select {
 		case <-time.After(du):
-			db.index.Persist()
-		case <-db.closed:
-			db.index.Persist()
+			sldb.index.Persist()
+		case <-sldb.closed:
+			sldb.index.Persist()
 			return
 		}
 	}
@@ -151,9 +151,9 @@ func (db *SuperLevelDB) dumpIndexByInterval(du time.Duration) {
 
 //batch related functions
 type superLdbBatch struct {
-	batch *leveldb.Batch
+	batch      *leveldb.Batch
 	indexBatch *leveldb.Batch
-	sldb  *SuperLevelDB
+	sldb       *SuperLevelDB
 }
 
 func (sb *superLdbBatch) Put(key, value []byte) error {
@@ -176,10 +176,10 @@ func (sb *superLdbBatch) Write() error {
 	return err
 }
 
-func (b *superLdbBatch) Reset() {
-	b.batch.Reset()
+func (sb *superLdbBatch) Reset() {
+	sb.batch.Reset()
 }
 
-func (b *superLdbBatch) Len() int {
-	return b.batch.Len()
+func (sb *superLdbBatch) Len() int {
+	return sb.batch.Len()
 }

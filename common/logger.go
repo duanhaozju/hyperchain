@@ -5,19 +5,19 @@ package common
 import (
 	"github.com/op/go-logging"
 
+	"fmt"
 	"github.com/spf13/cast"
 	"os"
 	"path"
 	"strconv"
 	"time"
-	"fmt"
 )
 
 // A logger for this file.
 var commonLogger = logging.MustGetLogger("commmon")
 var logDefaultLevel logging.Level
-var consoleFormat = `%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}`
-var fileFormat = `%[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}`
+var consoleFormat = `[%{module}]%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}`
+var fileFormat = `[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}`
 
 var closeLogFile chan struct{}
 
@@ -59,15 +59,15 @@ func InitLog(conf *Config) {
 //newLogFileByInterval set new log file for hyperchain
 func newLogFileByInterval(loggerDir string, conf *Config, backendStderr logging.LeveledBackend) {
 	tm := time.Now()
-	sec := (24 + 3 - tm.Hour()) * 3600 - tm.Minute() * 60 - tm.Second()
+	sec := (24+3-tm.Hour())*3600 - tm.Minute()*60 - tm.Second()
 	// first log split at 3:00 AM
 	// then split byte the interval
 	d, _ := time.ParseDuration(fmt.Sprintf("%ds", sec))
 	time.Sleep(d)
 	timestamp := time.Now().Unix()
 	tm = time.Unix(timestamp, 0)
-	fileName := path.Join(loggerDir, "hyperchain_" + strconv.Itoa(conf.GetInt(C_GRPC_PORT)) +
-		tm.Format("-2006-01-02-15:04:05PM") + ".log")
+	fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
+		tm.Format("-2006-01-02-15:04:05PM")+".log")
 	setNewLogFile(fileName, backendStderr)
 
 	for {
