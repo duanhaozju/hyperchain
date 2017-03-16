@@ -102,8 +102,9 @@ func (cache *JournalCache) Flush(batch db.Batch) error {
 				}
 			}
 			// Update the object in the main account trie.
-			data := cache.updateStateObject(batch, stateObject)
-			cache.stateWorkingSet[stateObject.address.Hex()] = data
+			cache.updateStateObject(batch, stateObject)
+			d, _ := stateObject.MarshalJSON()
+			cache.stateWorkingSet[stateObject.address.Hex()] = d
 			cache.stateObjectsWorkingSet[stateObject.address] = workingSet
 		}
 	}
@@ -137,7 +138,7 @@ func (cache *JournalCache) deleteStateObject(batch db.Batch, stateObject *StateO
 // updateStateObject - writes the given object to the database
 func (cache *JournalCache) updateStateObject(batch db.Batch, stateObject *StateObject) []byte {
 	addr := stateObject.Address()
-	data, err := stateObject.MarshalJSON()
+	data, err := stateObject.Marshal()
 	if err != nil {
 		log.Error("marshal stateobject failed", addr.Hex())
 		return nil
