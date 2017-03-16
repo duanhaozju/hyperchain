@@ -15,6 +15,7 @@ import (
 	"sync/atomic"
 	"bytes"
 	"hyperchain/hyperdb/db"
+	"hyperchain/crypto"
 )
 
 const (
@@ -509,7 +510,7 @@ func (self *StateDB) SetNonce(addr common.Address, nonce uint64) {
 func (self *StateDB) SetCode(addr common.Address, code []byte) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.SetCode(kec256Hash.Hash(stateObject.code), code)
+		stateObject.SetCode(common.BytesToHash(crypto.Keccak256(code)), code)
 	}
 }
 
