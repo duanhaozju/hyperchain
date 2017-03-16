@@ -62,6 +62,12 @@ func (cache *JournalCache) Fetch (address common.Address) *StateObject {
 	return obj
 }
 
+// Create - create a empty object.
+func (cache *JournalCache) Create(address common.Address, s *StateDB) *StateObject {
+	obj := newObject(s, address, Account{}, nil, false, nil)
+	return obj
+}
+
 // Flush - flush all modification to batch.
 func (cache *JournalCache) Flush(batch db.Batch) error {
 	for _, stateObject := range cache.stateObjects {
