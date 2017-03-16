@@ -137,7 +137,7 @@ func (cache *JournalCache) deleteStateObject(batch db.Batch, stateObject *StateO
 // updateStateObject - writes the given object to the database
 func (cache *JournalCache) updateStateObject(batch db.Batch, stateObject *StateObject) []byte {
 	addr := stateObject.Address()
-	data, err := stateObject.Marshal()
+	data, err := stateObject.MarshalJSON()
 	if err != nil {
 		log.Error("marshal stateobject failed", addr.Hex())
 		return nil
