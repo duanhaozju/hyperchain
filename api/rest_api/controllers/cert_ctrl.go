@@ -7,12 +7,12 @@ import (
 
 type CertController struct {
 	beego.Controller
-	PublicCertAPI *hpc.PublicCertAPI
+	PublicCertAPI *hpc.Cert
 }
 
 func (c *CertController) Prepare() {
 	PublicCertAPIInterface := hpc.GetApiObjectByNamespace("cert").Service
-	PublicCertAPI := PublicCertAPIInterface.(*hpc.PublicCertAPI)
+	PublicCertAPI := PublicCertAPIInterface.(*hpc.Cert)
 	c.PublicCertAPI = PublicCertAPI
 }
 

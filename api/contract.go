@@ -19,7 +19,7 @@ import (
 	edb "hyperchain/core/db_utils"
 )
 
-type PublicContractAPI struct {
+type Contract struct {
 	namespace   string
 	eventMux    *event.TypeMux
 	eh          *manager.EventHub
@@ -27,7 +27,7 @@ type PublicContractAPI struct {
 	config      *common.Config
 }
 
-func NewPublicContractAPI(namespace string, eventMux *event.TypeMux, eh *manager.EventHub, config *common.Config) *PublicContractAPI {
+func NewPublicContractAPI(namespace string, eventMux *event.TypeMux, eh *manager.EventHub, config *common.Config) *Contract {
 	fillrate, err := getFillRate(config, CONTRACT)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
@@ -38,7 +38,7 @@ func NewPublicContractAPI(namespace string, eventMux *event.TypeMux, eh *manager
 		log.Errorf("got invalid ratelimit peak parameters as 0. use default peak parameters 500")
 		peak = 500
 	}
-	return &PublicContractAPI{
+	return &Contract{
 		namespace:   namespace,
 		eventMux:    eventMux,
 		eh:          eh,
@@ -47,7 +47,7 @@ func NewPublicContractAPI(namespace string, eventMux *event.TypeMux, eh *manager
 	}
 }
 
-func deployOrInvoke(contract *PublicContractAPI, args SendTxArgs, txType int) (common.Hash, error) {
+func deployOrInvoke(contract *Contract, args SendTxArgs, txType int) (common.Hash, error) {
 	var tx *types.Transaction
 	realArgs, err := prepareExcute(args, txType)
 	if err != nil {
@@ -108,7 +108,7 @@ type CompileCode struct {
 }
 
 // ComplieContract complies contract to ABI
-func (contract *PublicContractAPI) CompileContract(ct string) (*CompileCode, error) {
+func (contract *Contract) CompileContract(ct string) (*CompileCode, error) {
 	abi, bin, names, err := compiler.CompileSourcefile(ct)
 
 	if err != nil {
@@ -123,7 +123,7 @@ func (contract *PublicContractAPI) CompileContract(ct string) (*CompileCode, err
 }
 
 // DeployContract deploys contract.
-func (contract *PublicContractAPI) DeployContract(args SendTxArgs) (common.Hash, error) {
+func (contract *Contract) DeployContract(args SendTxArgs) (common.Hash, error) {
 	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, &common.SystemTooBusyError{Message:"system is too busy to response "}
 	}
@@ -131,7 +131,7 @@ func (contract *PublicContractAPI) DeployContract(args SendTxArgs) (common.Hash,
 }
 
 // InvokeContract invokes contract.
-func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash, error) {
+func (contract *Contract) InvokeContract(args SendTxArgs) (common.Hash, error) {
 	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, &common.SystemTooBusyError{Message:"system is too busy to response "}
 	}
@@ -139,7 +139,7 @@ func (contract *PublicContractAPI) InvokeContract(args SendTxArgs) (common.Hash,
 }
 
 // GetCode returns the code from the given contract address.
-func (contract *PublicContractAPI) GetCode(addr common.Address) (string, error) {
+func (contract *Contract) GetCode(addr common.Address) (string, error) {
 
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
@@ -152,7 +152,7 @@ func (contract *PublicContractAPI) GetCode(addr common.Address) (string, error) 
 
 // GetContractCountByAddr returns the number of contract that has been deployed by given account address,
 // if addr is nil, returns the number of all the contract that has been deployed.
-func (contract *PublicContractAPI) GetContractCountByAddr(addr common.Address) (*Number, error) {
+func (contract *Contract) GetContractCountByAddr(addr common.Address) (*Number, error) {
 
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 
@@ -175,7 +175,7 @@ type HmResult struct {
 	Amount_hm     string `json:"amount"`
 }
 
-func (contract *PublicContractAPI) EncryptoMessage(args EncryptoArgs) (*HmResult, error) {
+func (contract *Contract) EncryptoMessage(args EncryptoArgs) (*HmResult, error) {
 
 	balance_bigint := new(big.Int)
 	balance_bigint.SetInt64(args.Balance.ToInt64())
@@ -220,7 +220,7 @@ type HmCheckResult struct {
 	SumIllegalHmAmount string `json:"illegalHmAmount"`
 }
 
-func (contract *PublicContractAPI) CheckHmValue(args ValueArgs) (*HmCheckResult, error) {
+func (contract *Contract) CheckHmValue(args ValueArgs) (*HmCheckResult, error) {
 	if len(args.RawValue) != len(args.EncryValue) {
 		return nil, &common.InvalidParamsError{Message:"invalid params, the length of rawValue is "+
 			strconv.Itoa(len(args.RawValue))+", but the length of encryValue is "+
@@ -257,7 +257,7 @@ func (contract *PublicContractAPI) CheckHmValue(args ValueArgs) (*HmCheckResult,
 
 // GetStorageByAddr returns the storage by given contract address and bock number.
 // The method is offered for hyperchain internal test.
-func (contract *PublicContractAPI) GetStorageByAddr(addr common.Address) (map[string]string, error) {
+func (contract *Contract) GetStorageByAddr(addr common.Address) (map[string]string, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 
 	if err != nil {

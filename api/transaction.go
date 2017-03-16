@@ -31,7 +31,7 @@ func init() {
 	log = logging.MustGetLogger("hpc")
 }
 
-type PublicTransactionAPI struct {
+type Transaction struct {
 	namespace   string
 	eventMux    *event.TypeMux
 	eh          *manager.EventHub
@@ -76,7 +76,7 @@ type TransactionResult struct {
 	InvalidMsg  string  `json:"invalidMsg,omitempty"`
 }
 
-func NewPublicTransactionAPI(namespace string, eventMux *event.TypeMux, eh *manager.EventHub, config *common.Config) *PublicTransactionAPI {
+func NewPublicTransactionAPI(namespace string, eventMux *event.TypeMux, eh *manager.EventHub, config *common.Config) *Transaction {
 	fillrate, err := getFillRate(config, TRANSACTION)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
@@ -87,7 +87,7 @@ func NewPublicTransactionAPI(namespace string, eventMux *event.TypeMux, eh *mana
 		log.Errorf("got invalid ratelimit peak parameters as 0. use default peak parameters 500")
 		peak = 500
 	}
-	return &PublicTransactionAPI{
+	return &Transaction{
 		namespace:   namespace,
 		eventMux:    eventMux,
 		eh:          eh,
@@ -124,7 +124,7 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 
 // SendTransaction is to build a transaction object,and then post event NewTxEvent,
 // if the sender's balance is enough, return tx hash
-func (tran *PublicTransactionAPI) SendTransaction(args SendTxArgs) (common.Hash, error) {
+func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	if getRateLimitEnable(tran.config) && tran.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, &common.SystemTooBusyError{Message:"system is too busy to response "}
 	}
@@ -208,7 +208,7 @@ type ReceiptResult struct {
 }
 
 // GetTransactionReceipt returns transaction's receipt for given transaction hash.
-func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*ReceiptResult, error) {
+func (tran *Transaction) GetTransactionReceipt(hash common.Hash) (*ReceiptResult, error) {
 	if errType, err := edb.GetInvaildTxErrType(tran.namespace, hash.Bytes()); errType == -1 {
 		receipt := edb.GetReceipt(tran.namespace, hash)
 		if receipt == nil {
@@ -245,7 +245,7 @@ func (tran *PublicTransactionAPI) GetTransactionReceipt(hash common.Hash) (*Rece
 }
 
 // GetTransactions return all transactions in the chain/db
-func (tran *PublicTransactionAPI) GetTransactions(args IntervalArgs) ([]*TransactionResult, error) {
+func (tran *Transaction) GetTransactions(args IntervalArgs) ([]*TransactionResult, error) {
 
 	var transactions []*TransactionResult
 
@@ -266,7 +266,7 @@ func (tran *PublicTransactionAPI) GetTransactions(args IntervalArgs) ([]*Transac
 }
 
 // GetDiscardTransactions returns all invalid transaction that dont be saved on the blockchain.
-func (tran *PublicTransactionAPI) GetDiscardTransactions() ([]*TransactionResult, error) {
+func (tran *Transaction) GetDiscardTransactions() ([]*TransactionResult, error) {
 
 	reds, err := edb.GetAllDiscardTransaction(tran.namespace)
 	if err != nil && err.Error() == leveldb_not_found_error {
@@ -290,7 +290,7 @@ func (tran *PublicTransactionAPI) GetDiscardTransactions() ([]*TransactionResult
 }
 
 // getDiscardTransactionByHash returns the invalid transaction for the given transaction hash.
-func (tran *PublicTransactionAPI) getDiscardTransactionByHash(hash common.Hash) (*TransactionResult, error) {
+func (tran *Transaction) getDiscardTransactionByHash(hash common.Hash) (*TransactionResult, error) {
 
 	red, err := edb.GetDiscardTransaction(tran.namespace, hash.Bytes())
 	if err != nil && err.Error() == leveldb_not_found_error {
@@ -304,7 +304,7 @@ func (tran *PublicTransactionAPI) getDiscardTransactionByHash(hash common.Hash) 
 }
 
 // GetTransactionByHash returns the transaction for the given transaction hash.
-func (tran *PublicTransactionAPI) GetTransactionByHash(hash common.Hash) (*TransactionResult, error) {
+func (tran *Transaction) GetTransactionByHash(hash common.Hash) (*TransactionResult, error) {
 
 	tx, err := edb.GetTransaction(tran.namespace, hash[:])
 	if err != nil && err.Error() == leveldb_not_found_error {
@@ -317,7 +317,7 @@ func (tran *PublicTransactionAPI) GetTransactionByHash(hash common.Hash) (*Trans
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
-func (tran *PublicTransactionAPI) GetTransactionByBlockHashAndIndex(hash common.Hash, index Number) (*TransactionResult, error) {
+func (tran *Transaction) GetTransactionByBlockHashAndIndex(hash common.Hash, index Number) (*TransactionResult, error) {
 	//return nil, errors.New("hahaha")
 	if common.EmptyHash(hash) == true {
 		return nil, &common.InvalidParamsError{Message:"Invalid hash"}
@@ -348,7 +348,7 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockHashAndIndex(hash common.
 }
 
 // GetTransactionsByBlockNumberAndIndex returns the transaction for the given block number and index.
-func (tran *PublicTransactionAPI) GetTransactionByBlockNumberAndIndex(n BlockNumber, index Number) (*TransactionResult, error) {
+func (tran *Transaction) GetTransactionByBlockNumberAndIndex(n BlockNumber, index Number) (*TransactionResult, error) {
 
 	block, err := edb.GetBlockByNumber(tran.namespace, n.ToUint64())
 	if err != nil && err.Error() == leveldb_not_found_error {
@@ -375,7 +375,7 @@ func (tran *PublicTransactionAPI) GetTransactionByBlockNumberAndIndex(n BlockNum
 }
 
 // GetTransactionsByTime returns the transactions for the given time duration.
-func (tran *PublicTransactionAPI) GetTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
+func (tran *Transaction) GetTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
 
 	if args.StartTime > args.Endtime || args.StartTime < 0 || args.Endtime < 0{
 		return nil, &common.InvalidParamsError{Message:"Invalid params, both startTime and endTime must be positive, startTime is less than endTime"}
@@ -410,7 +410,7 @@ func (tran *PublicTransactionAPI) GetTransactionsByTime(args IntervalTime) ([]*T
 }
 
 // GetBlockTransactionCountByHash returns the number of block transactions for given block hash.
-func (tran *PublicTransactionAPI) GetBlockTransactionCountByHash(hash common.Hash) (*Number, error) {
+func (tran *Transaction) GetBlockTransactionCountByHash(hash common.Hash) (*Number, error) {
 
 	if common.EmptyHash(hash) == true {
 		return nil, &common.InvalidParamsError{Message:"Invalid hash"}
@@ -430,7 +430,7 @@ func (tran *PublicTransactionAPI) GetBlockTransactionCountByHash(hash common.Has
 }
 
 // GetBlockTransactionCountByNumber returns the number of block transactions for given block number.
-func (tran *PublicTransactionAPI) GetBlockTransactionCountByNumber(n BlockNumber) (*Number, error) {
+func (tran *Transaction) GetBlockTransactionCountByNumber(n BlockNumber) (*Number, error) {
 
 
 	block, err := edb.GetBlockByNumber(tran.namespace, n.ToUint64())
@@ -447,7 +447,7 @@ func (tran *PublicTransactionAPI) GetBlockTransactionCountByNumber(n BlockNumber
 }
 
 // GetSignHash returns the hash for client signature.
-func (tran *PublicTransactionAPI) GetSignHash(args SendTxArgs) (common.Hash, error) {
+func (tran *Transaction) GetSignHash(args SendTxArgs) (common.Hash, error) {
 
 	var tx *types.Transaction
 
@@ -479,7 +479,7 @@ func (tran *PublicTransactionAPI) GetSignHash(args SendTxArgs) (common.Hash, err
 }
 
 // GetTransactionsCount returns the number of transaction in hyperchain.
-func (tran *PublicTransactionAPI) GetTransactionsCount() (interface{}, error) {
+func (tran *Transaction) GetTransactionsCount() (interface{}, error) {
 
 	chain := edb.GetChainCopy(tran.namespace)
 
@@ -493,7 +493,7 @@ func (tran *PublicTransactionAPI) GetTransactionsCount() (interface{}, error) {
 }
 
 // GetTxAvgTimeByBlockNumber returns tx execute avg time.
-func (tran *PublicTransactionAPI) GetTxAvgTimeByBlockNumber(args IntervalArgs) (Number, error) {
+func (tran *Transaction) GetTxAvgTimeByBlockNumber(args IntervalArgs) (Number, error) {
 
 	realArgs, err := prepareIntervalArgs(args)
 	if err != nil {

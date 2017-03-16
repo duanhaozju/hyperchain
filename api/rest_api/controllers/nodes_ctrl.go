@@ -9,12 +9,12 @@ import (
 
 type NodesController struct {
 	beego.Controller
-	PublicNodeAPI *hpc.PublicNodeAPI
+	PublicNodeAPI *hpc.Node
 }
 
 func (n *NodesController) Prepare() {
 	PublicNodeAPIInterface := hpc.GetApiObjectByNamespace("node").Service
-	PublicNodeAPI := PublicNodeAPIInterface.(*hpc.PublicNodeAPI)
+	PublicNodeAPI := PublicNodeAPIInterface.(*hpc.Node)
 	n.PublicNodeAPI = PublicNodeAPI
 }
 

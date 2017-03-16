@@ -10,7 +10,7 @@ import (
 
 type TransactionsController struct {
 	beego.Controller
-	PublicTxAPI *hpc.PublicTransactionAPI
+	PublicTxAPI *hpc.Transaction
 }
 
 type requestInterval struct {
@@ -20,7 +20,7 @@ type requestInterval struct {
 
 func (t *TransactionsController) Prepare() {
 	PublicTxAPIInterface := hpc.GetApiObjectByNamespace("tx").Service
-	PublicTxAPI := PublicTxAPIInterface.(*hpc.PublicTransactionAPI)
+	PublicTxAPI := PublicTxAPIInterface.(*hpc.Transaction)
 	t.PublicTxAPI = PublicTxAPI
 }
 

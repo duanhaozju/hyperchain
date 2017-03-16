@@ -1,7 +1,7 @@
 package rpc
 
 import (
-	"reflect"
+	"encoding/json"
 	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
@@ -25,22 +25,26 @@ type RequestProcessor interface {
 
 type JsonRpcProcessorImpl struct {
 	namespace string
-	apis      []hpc.API
+	apis      map[string]*hpc.API
 	services  serviceRegistry // map hpc to methods of hpc
 }
 
-//NewJsonRpcProcessorImpl new an instance of RPCManager with namespace and apis
-func NewJsonRpcProcessorImpl(namespace string, apis []hpc.API) *JsonRpcProcessorImpl {
-	rpcproc := &JsonRpcProcessorImpl{
+//NewJsonRpcProcessorImpl new an instance of JsonRpcProcessorImpl with namespace and apis
+func NewJsonRpcProcessorImpl(namespace string, apis map[string]*hpc.API) *JsonRpcProcessorImpl {
+	jpri := &JsonRpcProcessorImpl{
 		namespace: namespace,
 		apis:      apis,
 		services:  make(serviceRegistry),
 	}
-
-	return rpcproc
+	return jpri
 }
 
-//Start starts an instance of RPCManager
+func (jrpi *JsonRpcProcessorImpl) ProcessRequest(request *common.RPCRequest) *common.RPCResponse {
+	sr := jrpi.checkRequestParams(request)
+	return jrpi.exec(request.Ctx, sr)
+}
+
+//Start starts an instance of JsonRpcProcessorImpl.
 func (jrpi *JsonRpcProcessorImpl) Start() error {
 	err := jrpi.registerAllName()
 	if err != nil {
@@ -50,8 +54,11 @@ func (jrpi *JsonRpcProcessorImpl) Start() error {
 	return nil
 }
 
-//RegisterAllName registers all namespace of given RPCManager
+//RegisterAllName registers all namespace of given JsonRpcProcessorImpl.
 func (jrpi *JsonRpcProcessorImpl) registerAllName() error {
+	if jrpi.apis == nil || len(jrpi.apis) == 0 {
+		return errors.New("no api methods registered")
+	}
 	for _, api := range jrpi.apis {
 		if err := jrpi.registerName(api.Srvname, api.Service); err != nil {
 			log.Errorf("registerName error: %v ", err)
@@ -107,11 +114,6 @@ func (jrpi *JsonRpcProcessorImpl) registerName(name string, rcvr interface{}) er
 	return nil
 }
 
-func (jrpi *JsonRpcProcessorImpl) ProcessRequest(request *common.RPCRequest) *common.RPCResponse {
-	sr := jrpi.checkRequestParams(request)
-	return jrpi.exec(request.Ctx, sr)
-}
-
 // checkRequestParams requests the next (batch) request from the codec. It will return the collection
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.
@@ -131,7 +133,7 @@ func (jrpi *JsonRpcProcessorImpl) checkRequestParams(req *common.RPCRequest) *se
 			if args, err := jrpi.ParseRequestArguments(callb.argTypes, req.Params); err == nil {
 				sr.args = args
 			} else {
-				sr.err = &common.InvalidParamsError{Message:err.Error()}
+				sr.err = &common.InvalidParamsError{Message: err.Error()}
 			}
 		}
 		return sr
@@ -161,7 +163,6 @@ func (jrpi *JsonRpcProcessorImpl) ParseRequestArguments(argTypes []reflect.Type,
 // It returns the parsed values or an error when the args could not be parsed. Missing optional arguments
 // are returned as reflect.Zero values.
 func (jrpi *JsonRpcProcessorImpl) parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type) ([]reflect.Value, error) {
-	//log.Info("===================enter parsePositionalArguments()====================")
 
 	msg, msgLen, err := splitRawMessage(args)
 	if err != nil {
@@ -245,35 +246,8 @@ func (jrpi *JsonRpcProcessorImpl) exec(ctx context.Context, req *serverRequest) 
 	if callback != nil {
 		callback()
 	}
-
 	return response
 }
-
-//func (jrpi *JsonRpcProcessorImpl) execBatch(ctx context.Context, codec ServerCodec, requests []*serverRequest) {
-//	responses := make([]interface{}, len(requests))
-//	var callbacks []func()
-//	for i, req := range requests {
-//		fmt.Println("got a request", req.svcname)
-//		if req.err != nil {
-//			responses[i] = codec.CreateErrorResponse(&req.id, req.err)
-//		} else {
-//			var callback func()
-//			if responses[i], callback = jrpi.handle(ctx, codec, req); callback != nil {
-//				callbacks = append(callbacks, callback)
-//			}
-//		}
-//	}
-//
-//	if err := codec.Write(responses); err != nil {
-//		log.Errorf("%v\n", err)
-//		codec.Close()
-//	}
-//
-//	// when request holds one of more subscribe requests this allows these subscriptions to be actived
-//	for _, c := range callbacks {
-//		c()
-//	}
-//}
 
 // handle executes a request and returns the response from the callback.
 func (jrpi *JsonRpcProcessorImpl) handle(ctx context.Context, req *serverRequest) (*common.RPCResponse, func()) {

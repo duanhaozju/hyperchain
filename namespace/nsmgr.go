@@ -176,7 +176,7 @@ func (nr *nsManagerImpl) DeRegister(name string) error {
 		}
 
 	} else {
-		logger.Noticef("no such namespace: %s", name)
+		return ErrInvalidNs
 	}
 	logger.Criticalf("namespace: %s stopped", name)
 	//TODO: need to delete the data?

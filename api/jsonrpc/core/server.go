@@ -222,7 +222,7 @@ func (s *Server) readRequest(codec ServerCodec) ([]common.RPCRequest, bool, comm
 	} else {
 		reqLen := len(reqs)
 		for i := 0; i < reqLen; i += 1 {
-			if reqs[i].Namespace == ""{
+			if reqs[i].Namespace == "" {
 				reqs[i].Namespace = namespace.DEFAULT_NAMESPACE
 			}
 		}

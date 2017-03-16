@@ -9,7 +9,7 @@ import (
 	"hyperchain/manager"
 )
 
-type PublicAccountAPI struct {
+type Account struct {
 	eh        *manager.EventHub
 	namespace string
 	config    *common.Config
@@ -24,8 +24,8 @@ type UnlockParas struct {
 	Password string         `json:"password"`
 }
 
-func NewPublicAccountAPI(namespace string, eh *manager.EventHub, config *common.Config) *PublicAccountAPI {
-	return &PublicAccountAPI{
+func NewPublicAccountAPI(namespace string, eh *manager.EventHub, config *common.Config) *Account {
+	return &Account{
 		namespace: namespace,
 		eh:        eh,
 		config:    config,
@@ -33,7 +33,7 @@ func NewPublicAccountAPI(namespace string, eh *manager.EventHub, config *common.
 }
 
 //New Account according to args from html
-func (acc *PublicAccountAPI) NewAccount(password string) (common.Address, error) {
+func (acc *Account) NewAccountAPI(password string) (common.Address, error) {
 	am := acc.eh.AccountManager
 	ac, err := am.NewAccount(password)
 	if err != nil {
@@ -44,7 +44,7 @@ func (acc *PublicAccountAPI) NewAccount(password string) (common.Address, error)
 }
 
 // UnlockAccount unlocks account according to args(address,password), if success, return true.
-func (acc *PublicAccountAPI) UnlockAccount(args UnlockParas) (bool, error) {
+func (acc *Account) UnlockAccount(args UnlockParas) (bool, error) {
 
 	am := acc.eh.AccountManager
 
@@ -66,7 +66,7 @@ func (acc *PublicAccountAPI) UnlockAccount(args UnlockParas) (bool, error) {
 }
 
 // GetAllBalances returns all account's balance in the db,NOT CACHE DB!
-func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
+func (acc *Account) GetAccounts() []*AccountResult {
 	var acts []*AccountResult
 	stateDB, err := NewStateDb(acc.config, acc.namespace)
 	if err != nil {
@@ -86,7 +86,7 @@ func (acc *PublicAccountAPI) GetAccounts() []*AccountResult {
 }
 
 // GetBalance returns account balance for given account address.
-func (acc *PublicAccountAPI) GetBalance(addr common.Address) (string, error) {
+func (acc *Account) GetBalance(addr common.Address) (string, error) {
 	if stateDB, err := NewStateDb(acc.config, acc.namespace); err != nil {
 		if stateobject := stateDB.GetAccount(addr); stateobject != nil {
 			return fmt.Sprintf(`0x%x`, stateobject.Balance()), nil

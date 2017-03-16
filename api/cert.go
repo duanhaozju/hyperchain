@@ -10,7 +10,7 @@ type CertArgs struct {
 	Pubkey string `json:"pubkey"`
 }
 
-type PublicCertAPI struct {
+type Cert struct {
 	cm *admittance.CAManager
 }
 
@@ -18,14 +18,14 @@ type TCertReturn struct {
 	TCert string `json:"tcert"`
 }
 
-func NewPublicCertAPI(cm *admittance.CAManager) *PublicCertAPI {
-	return &PublicCertAPI{
+func NewCertAPI(cm *admittance.CAManager) *Cert {
+	return &Cert{
 		cm: cm,
 	}
 }
 
 // GetNodes returns status of all the nodes
-func (node *PublicCertAPI) GetTCert(args CertArgs) (*TCertReturn, error) {
+func (node *Cert) GetTCert(args CertArgs) (*TCertReturn, error) {
 	if node.cm == nil {
 		return nil, &common.CallbackError{Message:"CAManager is nil"}
 	}

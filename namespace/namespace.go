@@ -237,11 +237,13 @@ func (ns namespaceImpl) GetCAManager() *admittance.CAManager {
 
 //ProcessRequest process request under this namespace
 func (ns *namespaceImpl) ProcessRequest(request interface{}) interface{} {
-	switch r := request.(type) {
-	case *common.RPCRequest:
-		return ns.handleJsonRequest(r)
-	default:
-		ns.logger.Errorf("event not supportted %v", r)
+	if request != nil {
+		switch r := request.(type) {
+		case *common.RPCRequest:
+			return ns.handleJsonRequest(r)
+		default:
+			ns.logger.Errorf("event not supportted %v", r)
+		}
 	}
 	return nil
 }
