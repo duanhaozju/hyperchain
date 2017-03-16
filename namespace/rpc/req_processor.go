@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"encoding/json"
 	"golang.org/x/net/context"
 	"hyperchain/api"
 	"hyperchain/core/db_utils"
 	"math/big"
+	"reflect"
+	"errors"
 )
 
 var log *logging.Logger // package-level logger
