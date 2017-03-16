@@ -18,7 +18,10 @@ type ExecutorStatus struct {
 	demandSeqNo           uint64              // current demand seqNo for validation
 	tempBlockNumber       uint64              // temporarily block number
 	lastValidationState   atomic.Value        // latest state root hash
-	syncFlag              SyncFlag
+	syncFlag              SyncFlag            // store temp variables during chain sync
+	validationExit        chan bool           // validation exit notifier
+	commitExit            chan bool           // commit exit notifier
+	replicaSyncExit       chan bool           // replica sync exit notifier
 }
 
 type SyncFlag struct {
@@ -30,6 +33,10 @@ type SyncFlag struct {
 }
 
 func initializeExecutorStatus(executor *Executor) error {
+	executor.status.validationExit = make(chan bool)
+	executor.status.commitExit = make(chan bool)
+	executor.status.replicaSyncExit = make(chan bool)
+
 	currentChain := edb.GetChainCopy(executor.namespace)
 	executor.initDemand(currentChain.Height + 1)
 	blk, err := edb.GetBlockByNumber(executor.namespace, currentChain.Height)
@@ -161,6 +168,8 @@ func (executor *Executor) markCommitIdle() {
 
 // waitUtilValidationIdle - suspend thread util all validations event has been process done.
 func (executor *Executor) waitUtilValidationIdle() {
+	log.Debugf("[Namespace = %s] wait validation idle", executor.namespace)
+	defer log.Debugf("[Namespace = %s] validation idle", executor.namespace)
 	ticker := time.NewTicker(1 * time.Millisecond)
 	for {
 		select {
@@ -176,6 +185,8 @@ func (executor *Executor) waitUtilValidationIdle() {
 
 // wailUtilCommitIdle - suspend thread util all commit events has been process done.
 func (executor *Executor) wailUtilCommitIdle() {
+	log.Debugf("[Namespace = %s] wait commit idle", executor.namespace)
+	defer log.Debugf("[Namespace = %s] commit idle", executor.namespace)
 	ticker := time.NewTicker(1 * time.Millisecond)
 	for {
 		select {
@@ -191,6 +202,8 @@ func (executor *Executor) wailUtilCommitIdle() {
 
 // waitUtilRollbackAvailable - wait validation processor and commit processor become idle.
 func (executor *Executor) waitUtilRollbackAvailable() {
+	log.Debugf("[Namespace = %s] wait util rollback available", executor.namespace)
+	defer log.Debugf("[Namespace = %s] rollback available", executor.namespace)
 	executor.clearPendingValidationEventQ()
 	executor.turnOffValidationSwitch()
 	executor.waitUtilValidationIdle()
@@ -205,11 +218,14 @@ func (executor *Executor) waitUtilRollbackAvailable() {
 
 // rollbackDone - rollback callback function to notify rollback finish.
 func (executor *Executor) rollbackDone() {
+	log.Debugf("[Namespace = %s] roll back done", executor.namespace)
 	executor.turnOnValidationSwitch()
 }
 
 // waitUtilSyncAvailable - wait validation processor and commit processor become idle.
 func (executor *Executor) waitUtilSyncAvailable() {
+	log.Debugf("[Namespace = %s] wait util sync available", executor.namespace)
+	defer log.Debugf("[Namespace = %s] sync available", executor.namespace)
 	executor.turnOffValidationSwitch()
 	executor.waitUtilValidationIdle()
 	executor.wailUtilCommitIdle()
@@ -223,6 +239,7 @@ func (executor *Executor) waitUtilSyncAvailable() {
 
 // syncDone - sync callback function to notify sync finish.
 func (executor *Executor) syncDone() {
+	log.Debugf("[Namespace = %s] sync done", executor.namespace)
 	executor.turnOnValidationSwitch()
 	executor.cache.syncCache.Purge()
 }
@@ -250,3 +267,52 @@ func (executor *Executor) recordSyncPeers(peers []uint64, localId uint64) {
 	executor.status.syncFlag.LocalId = localId
 }
 
+// setValidationExit - notify validation backend process to exit.
+func (executor *Executor) setValidationExit() {
+	executor.status.validationExit <- true
+}
+
+// getValidationExit - get exit flag.
+func (executor *Executor) getValidationExit() chan bool {
+	return executor.status.validationExit
+}
+
+// setCommitExit - notify commit backend process to exit.
+func (executor *Executor) setCommitExit() {
+	executor.status.commitExit <- true
+}
+
+// getCommitExit - get exit flag.
+func (executor *Executor) getCommitExit() chan bool {
+	return executor.status.commitExit
+}
+
+// setReplicaSyncExit - notify replica sync backend process to exit.
+func (executor *Executor) setReplicaSyncExit() {
+	executor.status.replicaSyncExit <- true
+}
+
+// getReplicaSyncExit - get exit flag.
+func (executor *Executor) getReplicaSyncExit() chan bool {
+	return executor.status.replicaSyncExit
+}
+
+// setExit - notify all backend to exit.
+func (executor *Executor) setExit() {
+	go executor.setValidationExit()
+	go executor.setCommitExit()
+	go executor.setReplicaSyncExit()
+}
+
+// getExit - get exit status.
+func (executor *Executor) getExit(identifier int) chan bool {
+	switch identifier {
+	case IDENTIFIER_VALIDATION:
+		return executor.getValidationExit()
+	case IDENTIFIER_COMMIT:
+		return executor.getCommitExit()
+	case IDENTIFIER_REPLICA_SYNC:
+		return executor.getReplicaSyncExit()
+	}
+	return nil
+}

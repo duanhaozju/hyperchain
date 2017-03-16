@@ -172,21 +172,20 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 	switch e.EventType {
 	case VIEW_CHANGE_TIMER_EVENT:
 		pbft.logger.Warningf("Replica %d view change timer expired, sending view change: %s", pbft.id, pbft.vcMgr.newViewTimerReason)
-		pbft.status.inActiveState(NEW_VIEW_TIMER_ACTIVE)
+		pbft.status.inActiveState(&pbft.status.timerActive)
 		return pbft.sendViewChange()
 
 	case VIEW_CHANGED_EVENT:
 		pbft.vcMgr.updateViewChangeSeqNo(pbft.seqNo, pbft.K, pbft.id)
-		pbft.logger.Debugf("Replica %d updating view change sequence number to %d", pbft.id, pbft.vcMgr.viewChangeSeqNo)
 		pbft.startTimerIfOutstandingRequests()
 		pbft.vcMgr.vcResendCount = 0
 		primary := pbft.primary(pbft.view)
 		pbft.helper.InformPrimary(primary)
 		pbft.persistView(pbft.view)
 		atomic.StoreUint32(&pbft.activeView, 1)
-		pbft.status.inActiveState(VC_HANDLED)
+		pbft.status.inActiveState(&pbft.status.vcHandled)
 		pbft.logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/h=%d", pbft.id, primary, pbft.view, pbft.h)
-		if pbft.status[IS_NEW_NODE] {
+		if pbft.status.getState(&pbft.status.isNewNode){
 			pbft.sendReadyForN()
 			return nil
 		}
@@ -202,7 +201,7 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 
 	case VIEW_CHANGE_QUORUM_EVENT:
 		pbft.logger.Debugf("Replica %d received view change quorum, processing new view", pbft.id)
-		if pbft.status[IN_NEGO_VIEW] {
+		if pbft.status.getState(&pbft.status.inNegoView) {
 			pbft.logger.Debugf("Replica %d try to process viewChangeQuorumEvent, but it's in nego-view", pbft.id)
 			return nil
 		}
@@ -212,7 +211,7 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 		return pbft.processNewView()
 
 	case VIEW_CHANGE_VC_RESET_DONE_EVENT:
-		pbft.status.inActiveState(IN_VC_RESET)
+		pbft.status.inActiveState(&pbft.status.inVcReset)
 		pbft.logger.Debugf("Replica %d received local VcResetDone", pbft.id)
 		if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 {
 			if pbft.primary(pbft.view) == pbft.id {
@@ -230,7 +229,7 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 			pbft.logger.Warningf("Replica %d finds error in VcResetDone, expect=%d, but get=%d", pbft.id, pbft.h+1, e.Event.(protos.VcResetDone).SeqNo)
 			return nil
 		}
-		if pbft.status[IN_RECOVERY] {
+		if pbft.status.getState(&pbft.status.inRecovery) {
 			state := &stateUpdatedEvent{seqNo: e.Event.(protos.VcResetDone).SeqNo - 1}
 			return pbft.recvStateUpdatedEvent(state)
 		}
@@ -263,7 +262,7 @@ func (pbft *pbftImpl) handleNodeMgrEvent(e *LocalEvent) events.Event {
 		err = pbft.recvLocalDelNode(e.Event.(*protos.DelNodeMessage))
 	case NODE_MGR_AGREE_UPDATEN_QUORUM_EVENT:
 		pbft.logger.Debugf("Replica %d received agree-update-n quorum, processing update-n", pbft.id)
-		if pbft.status[IN_NEGO_VIEW] {
+		if pbft.status.getState(&pbft.status.inNegoView) {
 			pbft.logger.Debugf("Replica %d try to process agreeUpdateNQuorumEvent, but it's in nego-view", pbft.id)
 			return nil
 		}
@@ -278,9 +277,9 @@ func (pbft *pbftImpl) handleNodeMgrEvent(e *LocalEvent) events.Event {
 		pbft.persistNewNode(uint64(0))
 		pbft.persistDellLocalKey()
 		pbft.persistN(pbft.N)
-		pbft.status.inActiveState(UPDATE_HANDLED)
-		if pbft.status[IS_NEW_NODE] {
-			pbft.status.inActiveState(IS_NEW_NODE)
+		pbft.status.inActiveState(&pbft.status.updateHandled)
+		if pbft.status.getState(&pbft.status.isNewNode) {
+			pbft.status.inActiveState(&pbft.status.isNewNode)
 		}
 		atomic.StoreUint32(&pbft.nodeMgr.inUpdatingN, 0)
 		pbft.processRequestsDuringUpdatingN()
@@ -301,12 +300,12 @@ func (pbft *pbftImpl) handleRecoveryEvent(e *LocalEvent) events.Event {
 		if pbft.recoveryMgr.recvNewViewInRecovery {
 			pbft.logger.Noticef("#  Replica %d find itself received NewView during Recovery"+
 				", will restart negotiate view", pbft.id)
-			pbft.status.activeState(IN_RECOVERY,IN_NEGO_VIEW)
+			pbft.status.activeState(&pbft.status.inRecovery,&pbft.status.inNegoView)
 			pbft.recoveryMgr.recvNewViewInRecovery = false
 			pbft.restartNegoView()
 			return nil
 		}
-		if pbft.status[IS_NEW_NODE] {
+		if pbft.status.getState(&pbft.status.isNewNode) {
 			pbft.sendReadyForN()
 			return nil
 		}
@@ -336,7 +335,7 @@ func (pbft *pbftImpl) handleRecoveryEvent(e *LocalEvent) events.Event {
 		return nil
 
 	case RECOVERY_NEGO_VIEW_RSP_TIMER_EVENT:
-		if !pbft.status[IN_NEGO_VIEW] {
+		if !pbft.status.getState(&pbft.status.inNegoView) {
 			pbft.logger.Warningf("Replica %d had its nego-view response timer expire but it's not in nego-view, this is benign but may indicate a bug", pbft.id)
 		}
 		pbft.logger.Debugf("Replica %d nego-view response timer expired before N-f was reached, resending", pbft.id)

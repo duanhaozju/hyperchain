@@ -2,7 +2,6 @@ package executor
 
 import (
 	"hyperchain/common"
-	"hyperchain/core"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/params"
@@ -33,14 +32,20 @@ func (executor *Executor) Validate(validationEvent event.ValidationEvent, peerMa
 
 // listenValidationEvent - validation backend process, use to listen new validation event and dispatch it to a processor.
 func (executor *Executor) listenValidationEvent() {
+	log.Notice("validation backend start")
 	for {
-		ev := executor.fetchValidationEvent()
-		if executor.isReadyToValidation() {
-			if success := executor.processValidationEvent(ev, executor.processValidationDone); success == false {
-				log.Errorf("validate #%d failed, system crush down.", ev.SeqNo)
+		select {
+		case <- executor.getExit(IDENTIFIER_VALIDATION):
+			log.Notice("validation backend exit")
+			return
+		case ev := <- executor.fetchValidationEvent():
+			if executor.isReadyToValidation() {
+				if success := executor.processValidationEvent(ev, executor.processValidationDone); success == false {
+					log.Errorf("validate #%d failed, system crush down.", ev.SeqNo)
+				}
+			} else {
+				executor.dropValdiateEvent(ev, executor.processValidationDone)
 			}
-		} else {
-			executor.dropValdiateEvent(ev, executor.processValidationDone)
 		}
 	}
 }
@@ -164,7 +169,7 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 	// execute transactions one by one
 	for i, tx := range txs {
 		executor.statedb.StartRecord(tx.GetHash(), common.Hash{}, i)
-		receipt, _, _, err := core.ExecTransaction(tx, env)
+		receipt, _, _, err := ExecTransaction(tx, env)
 		if err != nil {
 			errType := executor.classifyInvalid(err)
 			invalidTxs = append(invalidTxs, &types.InvalidTransactionRecord{
@@ -201,17 +206,17 @@ func initEnvironment(state vm.Database, seqNo uint64) vm.Environment {
 	env := make(map[string]string)
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
 	env["currentGasLimit"] = "200000000"
-	vmenv := core.NewEnvFromMap(core.RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, state, env)
+	vmenv := NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, state, env)
 	return vmenv
 }
 
 // classifyInvalid - classify invalid transaction via error type.
 func (executor *Executor) classifyInvalid(err error) types.InvalidTransactionRecord_ErrType {
 	var errType types.InvalidTransactionRecord_ErrType
-	if core.IsValueTransferErr(err) {
+	if IsValueTransferErr(err) {
 		errType = types.InvalidTransactionRecord_OUTOFBALANCE
-	} else if core.IsExecContractErr(err) {
-		tmp := err.(*core.ExecContractError)
+	} else if IsExecContractErr(err) {
+		tmp := err.(*ExecContractError)
 		if tmp.GetType() == 0 {
 			errType = types.InvalidTransactionRecord_DEPLOY_CONTRACT_FAILED
 		} else if tmp.GetType() == 1 {

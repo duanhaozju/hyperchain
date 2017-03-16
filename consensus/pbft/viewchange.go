@@ -220,12 +220,12 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 	pbft.logger.Infof("Replica %d received view-change from replica %d, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		pbft.id, vc.ReplicaId, vc.View, vc.H, len(vc.Cset), len(vc.Pset), len(vc.Qset))
 
-	if pbft.status[IN_NEGO_VIEW] {
+	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try to recvViewChange, but it's in nego-view", pbft.id)
 		return nil
 	}
 
-	if pbft.status[IN_RECOVERY] {
+	if pbft.status.getState(&pbft.status.inRecovery) {
 		pbft.logger.Noticef("Replica %d try to recvcViewChange, but it's in recovery", pbft.id)
 		return nil
 	}
@@ -254,7 +254,7 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 			pbft.logger.Noticef("Replica %d view change resend reach upbound, try to recovery", pbft.id)
 			pbft.pbftTimerMgr.stopTimer(VC_RESEND_TIMER)
 			pbft.vcMgr.vcResendCount = 0
-			pbft.status.activeState(IN_NEGO_VIEW, IN_RECOVERY)
+			pbft.status.activeState(&pbft.status.inNegoView, &pbft.status.inRecovery)
 			atomic.StoreUint32(&pbft.activeView, 1)
 			pbft.processNegotiateView()
 		}
@@ -316,7 +316,7 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 //sendNewView
 func (pbft *pbftImpl) sendNewView() events.Event {
 
-	if pbft.status[IN_NEGO_VIEW] {
+	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try to sendNewView, but it's in nego-view", pbft.id)
 		return nil
 	}
@@ -371,12 +371,12 @@ func (pbft *pbftImpl) recvNewView(nv *NewView) events.Event {
 	pbft.logger.Infof("Replica %d received new-view %d",
 		pbft.id, nv.View)
 
-	if pbft.status[IN_NEGO_VIEW] {
+	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try to recvNewView, but it's in nego-view", pbft.id)
 		return nil
 	}
 
-	if pbft.status[IN_RECOVERY] {
+	if pbft.status.getState(&pbft.status.inRecovery) {
 		pbft.logger.Noticef("Replica %d try to recvNewView, but it's in recovery", pbft.id)
 		pbft.recoveryMgr.recvNewViewInRecovery = true
 		return nil
@@ -424,7 +424,7 @@ func (pbft *pbftImpl) processNewView() events.Event {
 			pbft.id, pbft.vcMgr.viewChangeStore)
 		return pbft.sendViewChange()
 	}
-	// primary do not execute code before
+	// 以上 primary 不必做
 	speculativeLastExec := pbft.exec.lastExec
 	if pbft.exec.currentExec != nil {
 		speculativeLastExec = *pbft.exec.currentExec
@@ -541,6 +541,7 @@ func (vcm *vcManager) updateViewChangeSeqNo(seqNo, K, id uint64) {
 	}
 	// Ensure the view change always occurs at a checkpoint boundary
 	vcm.viewChangeSeqNo = seqNo + vcm.viewChangePeriod * K - seqNo % K
+	//logger.Debugf("Replica %d updating view change sequence number to %d", id, vcm.viewChangeSeqNo)
 }
 
 func (pbft *pbftImpl) canExecuteToTarget(specLastExec uint64, initialCp ViewChange_C) bool {
@@ -620,11 +621,11 @@ func (pbft *pbftImpl) feedMissingReqBatchIfNeeded(xset Xset) (newReqBatchMissing
 func (pbft *pbftImpl) processReqInNewView(nv *NewView) events.Event {
 	pbft.logger.Debugf("Replica %d accepting new-view to view %d", pbft.id, pbft.view)
 
-	if pbft.status[VC_HANDLED] {
+	if pbft.status.getState(&pbft.status.vcHandled) {
 		pbft.logger.Debugf("Replica %d repeated enter processReqInNewView, ignore it")
 		return nil
 	}
-	pbft.status.activeState(VC_HANDLED)
+	pbft.status.activeState(&pbft.status.vcHandled)
 
 	pbft.stopNewViewTimer()
 	pbft.pbftTimerMgr.stopTimer(NULL_REQUEST_TIMER)
@@ -649,10 +650,11 @@ func (pbft *pbftImpl) processReqInNewView(nv *NewView) events.Event {
 	pbft.batchVdr.setVid(pbft.h)
 	pbft.batchVdr.setLastVid(pbft.h)
 
-	if !pbft.status[SKIP_IN_PROGRESS] && !pbft.status[IN_VC_RESET] {
+	if !pbft.status.getState(&pbft.status.skipInProgress) &&
+		!pbft.status.getState(&pbft.status.inVcReset) {
 		backendVid := uint64(pbft.batchVdr.vid + 1)
 		pbft.helper.VcReset(backendVid)
-		pbft.status.activeState(IN_VC_RESET)
+		pbft.status.activeState(&pbft.status.inVcReset)
 		return nil
 	}
 
@@ -703,7 +705,7 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 		return nil
 	}
 
-	if pbft.status[IN_VC_RESET] {
+	if pbft.status.getState(&pbft.status.inVcReset) {
 		pbft.logger.Debugf("Primary %d itself has not done with vcReset", pbft.id)
 		return nil
 	}
@@ -920,12 +922,12 @@ nLoop:
 
 func (pbft *pbftImpl) recvFetchRequestBatch(fr *FetchRequestBatch) (err error) {
 
-	if pbft.status[IN_NEGO_VIEW] {
+	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try to recvFetchRequestBatch, but it's in nego-view", pbft.id)
 		return nil
 	}
 
-	if pbft.status[IN_RECOVERY] {
+	if pbft.status.getState(&pbft.status.inRecovery) {
 		pbft.logger.Noticef("Replica %d try to recvFetchRequestBatch, but it's in recovery", pbft.id)
 		return nil
 	}
@@ -959,11 +961,11 @@ func (pbft *pbftImpl) recvFetchRequestBatch(fr *FetchRequestBatch) (err error) {
 
 func (pbft *pbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) events.Event {
 
-	if pbft.status[IN_NEGO_VIEW] {
+	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try to recvReturnRequestBatch, but it's in nego-view", pbft.id)
 		return nil
 	}
-	if pbft.status[IN_RECOVERY] {
+	if pbft.status.getState(&pbft.status.inRecovery) {
 		pbft.logger.Noticef("Replica %d try to recvReturnRequestBatch, but it's in recovery", pbft.id)
 		return nil
 	}
@@ -1005,14 +1007,14 @@ func (pbft *pbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) events.E
 //stopNewViewTimer
 func (pbft *pbftImpl) stopNewViewTimer() {
 	pbft.logger.Debugf("Replica %d stopping a running new view timer", pbft.id)
-	pbft.status.inActiveState(NEW_VIEW_TIMER_ACTIVE)
+	pbft.status.inActiveState(&pbft.status.timerActive)
 	pbft.pbftTimerMgr.stopTimer(NEW_VIEW_TIMER)
 }
 
 //startNewViewTimer stop all running new view timers and  start a new view timer
 func (pbft *pbftImpl) startNewViewTimer(timeout time.Duration, reason string) {
 	pbft.logger.Debugf("Replica %d starting new view timer for %s: %s", pbft.id, timeout, reason)
-	pbft.status.activeState(NEW_VIEW_TIMER_ACTIVE)
+	pbft.status.activeState(&pbft.status.timerActive)
 
 	event := &LocalEvent{
 		Service:   VIEW_CHANGE_SERVICE,
@@ -1030,7 +1032,7 @@ func (pbft *pbftImpl) startNewViewTimer(timeout time.Duration, reason string) {
 func (pbft *pbftImpl) softStartNewViewTimer(timeout time.Duration, reason string) {
 	pbft.logger.Debugf("Replica %d soft starting new view timer for %s: %s", pbft.id, timeout, reason)
 	pbft.vcMgr.newViewTimerReason = reason
-	pbft.status.activeState(NEW_VIEW_TIMER_ACTIVE)
+	pbft.status.activeState(&pbft.status.timerActive)
 
 	event := &LocalEvent{
 		Service:   VIEW_CHANGE_SERVICE,
@@ -1067,12 +1069,12 @@ func (pbft *pbftImpl) correctViewChange(vc *ViewChange) bool {
 
 //beforeSendVC operations before send view change
 func (pbft *pbftImpl) beforeSendVC() error{
-	if pbft.status[IN_NEGO_VIEW] {
+	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try to send view change, but it's in nego-view", pbft.id)
 		return errors.New("node is in nego view now!")
 	}
 
-	if pbft.status[IN_RECOVERY] {
+	if pbft.status.getState(&pbft.status.inRecovery) {
 		pbft.logger.Noticef("Replica %d try to send view change, but it's in recovery", pbft.id)
 		return errors.New("node is in recovery now!")
 	}

@@ -146,7 +146,7 @@ func (ns *namespaceImpl) init() error {
 	}
 
 	executor.CreateInitBlock(ns.conf)
-	executor.Initialize()
+	executor.Start()
 
 	//7. init peer manager
 	eh := manager.New(ns.Name(), ns.eventMux, executor, ns.grpcMgr, consenter, am, cm)

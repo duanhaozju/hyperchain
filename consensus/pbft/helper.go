@@ -276,7 +276,7 @@ func (pbft *pbftImpl) getCurrentBlockInfo() *protos.BlockchainInfo {
 // =============================================================================
 
 func (pbft *pbftImpl) startTimerIfOutstandingRequests() {
-	if pbft.status[SKIP_IN_PROGRESS] || pbft.exec.currentExec != nil {
+	if pbft.status.getState(&pbft.status.skipInProgress) || pbft.exec.currentExec != nil {
 		// Do not start the view change timer if we are executing or state transferring, these take arbitrarilly long amounts of time
 		return
 	}
@@ -331,13 +331,13 @@ func (pbft *pbftImpl) stopFirstRequestTimer()  {
 // invalidateState is invoked to tell us that consensus realizes the ledger is out of sync
 func (pbft *pbftImpl) invalidateState() {
 	pbft.logger.Debug("Invalidating the current state")
-	pbft.status.inActiveState(VALID)
+	pbft.status.inActiveState(&pbft.status.valid)
 }
 
 // validateState is invoked to tell us that consensus has the ledger back in sync
 func (pbft *pbftImpl) validateState() {
 	pbft.logger.Debug("Validating the current state")
-	pbft.status.activeState(VALID)
+	pbft.status.activeState(&pbft.status.valid)
 }
 
 //deleteExistedTx delete existed transaction.
@@ -350,7 +350,7 @@ func (pbft *pbftImpl) deleteExistedTx(digest string) {
 
 //isPrePrepareLegal both PBFT state PrePrepare message are legal.
 func (pbft *pbftImpl) isPrePrepareLegal(preprep *PrePrepare) bool {
-	if pbft.status[IN_NEGO_VIEW] {
+	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try recvPrePrepare, but it's in nego-view", pbft.id)
 		return false
 	}
@@ -367,7 +367,7 @@ func (pbft *pbftImpl) isPrePrepareLegal(preprep *PrePrepare) bool {
 	}
 
 	if !pbft.inWV(preprep.View, preprep.SequenceNumber) {
-		if preprep.SequenceNumber != pbft.h && !pbft.status[SKIP_IN_PROGRESS] {
+		if preprep.SequenceNumber != pbft.h && !pbft.status.getState(&pbft.status.skipInProgress) {
 			pbft.logger.Warningf("Replica %d pre-prepare view different, or sequence number outside " +
 				"watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d",
 				pbft.id, preprep.View, pbft.view, preprep.SequenceNumber, pbft.h)
@@ -384,18 +384,18 @@ func (pbft *pbftImpl) isPrePrepareLegal(preprep *PrePrepare) bool {
 
 //isPrepareLegal both PBFT state Prepare message are legal.
 func (pbft *pbftImpl) isPrepareLegal(prep *Prepare) bool  {
-	if pbft.status[IN_NEGO_VIEW] {
+	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try to recvPrepare, but it's in nego-view", pbft.id)
 		return false
 	}
 	//TODO: need !pbft.status[IN_RECOVERY] ?
-	if pbft.primary(prep.View) == prep.ReplicaId && !pbft.status[IN_RECOVERY] {
+	if pbft.primary(prep.View) == prep.ReplicaId && !pbft.status.getState(&pbft.status.inRecovery) {
 		pbft.logger.Warningf("Replica %d received prepare from primary, ignoring", pbft.id)
 		return false
 	}
 
 	if !pbft.inWV(prep.View, prep.SequenceNumber) {
-		if prep.SequenceNumber != pbft.h && !pbft.status[SKIP_IN_PROGRESS] {
+		if prep.SequenceNumber != pbft.h && !pbft.status.getState(&pbft.status.skipInProgress) {
 			pbft.logger.Warningf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d",
 				pbft.id, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
 		} else {
@@ -411,13 +411,13 @@ func (pbft *pbftImpl) isPrepareLegal(prep *Prepare) bool  {
 
 //isPrepareLegal both PBFT state Commit message are legal.
 func (pbft *pbftImpl) isCommitLegal(commit *Commit) bool  {
-	if pbft.status[IN_NEGO_VIEW] {
+	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try to recvCommit, but it's in nego-view", pbft.id)
 		return false
 	}
 
 	if !pbft.inWV(commit.View, commit.SequenceNumber) {
-		if commit.SequenceNumber != pbft.h && !pbft.status[SKIP_IN_PROGRESS] {
+		if commit.SequenceNumber != pbft.h && !pbft.status.getState(&pbft.status.skipInProgress) {
 			pbft.logger.Warningf("Replica %d ignoring commit from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
 		} else {
 			// This is perfectly normal

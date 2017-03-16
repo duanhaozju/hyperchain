@@ -20,10 +20,16 @@ func (executor *Executor) CommitBlock(ev event.CommitEvent, peerManager p2p.Peer
 }
 
 func (executor *Executor) listenCommitEvent() {
+	log.Notice("commit backend start")
 	for {
-		ev := executor.fetchCommitEvent()
-		if success := executor.processCommitEvent(ev, executor.processCommitDone); success == false {
-			log.Errorf("[Namespace = %s] commit block #%d failed, system crush down.", executor.namespace, ev.SeqNo)
+		select {
+		case <- executor.getExit(IDENTIFIER_COMMIT):
+			log.Notice("commit backend exit")
+			return
+		case ev := <- executor.fetchCommitEvent():
+			if success := executor.processCommitEvent(ev, executor.processCommitDone); success == false {
+				log.Errorf("[Namespace = %s] commit block #%d failed, system crush down.", executor.namespace, ev.SeqNo)
+			}
 		}
 	}
 }
@@ -120,7 +126,7 @@ func (executor *Executor) constructBlock(ev event.CommitEvent) *types.Block {
 	}
 	newBlock.Transactions = make([]*types.Transaction, len(record.ValidTxs))
 	copy(newBlock.Transactions, record.ValidTxs)
-	newBlock.BlockHash = newBlock.Hash(executor.commonHash).Bytes()
+	newBlock.BlockHash = newBlock.Hash().Bytes()
 	return newBlock
 }
 
@@ -192,7 +198,7 @@ func (executor *Executor) StoreInvalidTransaction(ev event.InvalidTxsEvent) {
 		log.Error("unmarshal invalid transaction record payload failed")
 	}
 	// save to db
-	log.Noticef("[Namespace = %s]invalid transaction", common.BytesToHash(invalidTx.Tx.TransactionHash).Hex())
+	//log.Noticef("[Namespace = %s] invalid transaction %s", executor.namespace, invalidTx.Tx.Hash().Hex())
 	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
 	if err != nil {
 		return

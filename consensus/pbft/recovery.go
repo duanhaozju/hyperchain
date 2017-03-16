@@ -109,7 +109,7 @@ func (pbft *pbftImpl) recvRecovery(recoveryInit *RecoveryInit) events.Event {
 
 	pbft.logger.Debugf("Replica %d now recvRecovery from replica %d", pbft.id, recoveryInit.ReplicaId)
 
-	if pbft.status[SKIP_IN_PROGRESS] {
+	if pbft.status.getState(&pbft.status.skipInProgress) {
 		pbft.logger.Debugf("Replica %d recvRecovery, but it's in state transfer and ignores it.", pbft.id)
 		return nil
 	}
@@ -149,7 +149,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 
 	pbft.logger.Debugf("Replica %d now recvRecoveryRsp from replica %d", pbft.id, rsp.ReplicaId)
 
-	if !pbft.status[IN_RECOVERY] {
+	if !pbft.status.getState(&pbft.status.inRecovery) {
 		pbft.logger.Debugf("Replica %d finished recovery, ignore recovery response", pbft.id)
 		return nil
 	}
@@ -205,7 +205,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	if lastExec == selfLastExec && curHash == selfCurHash {
 		pbft.logger.Debugf("Replica %d in recovery same lastExec: %d, "+
 			"same block hash: %s, fast catch up", pbft.id, selfLastExec, curHash)
-		pbft.status.inActiveState(IN_RECOVERY)
+		pbft.status.inActiveState(&pbft.status.inRecovery)
 		pbft.recoveryMgr.recoveryToSeqNo = nil
 
 		return &LocalEvent{
@@ -243,7 +243,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.moveWatermarks(n)
 		pbft.stateTransfer(target)
 		return nil
-	} else if !pbft.status[SKIP_IN_PROGRESS] && !pbft.status[IN_VC_RESET] {
+	} else if !pbft.status.getState(&pbft.status.skipInProgress) && !pbft.status.getState(&pbft.status.inVcReset) {
 		pbft.helper.VcReset(n+1)
 		//state := &LocalEvent{
 		//	Service:CORE_PBFT_SERVICE,
@@ -251,7 +251,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		//	Event:&stateUpdatedEvent{seqNo:n},
 		//}
 		//go pbft.pbftEventQueue.Push(state)
-		pbft.status.activeState(IN_VC_RESET)
+		pbft.status.activeState(&pbft.status.inVcReset)
 		return nil
 	} else {
 		pbft.logger.Debugf("Replica %d try to recovery but find itself in state update", pbft.id)
@@ -427,7 +427,7 @@ func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.E
 
 	pbft.logger.Debugf("Replica %d now recvRecoveryReturnPQC from replica %d", pbft.id, PQCInfo.ReplicaId)
 
-	if !pbft.status[IN_RECOVERY] {
+	if !pbft.status.getState(&pbft.status.inRecovery) {
 		pbft.logger.Warningf("Replica %d receive recoveryReturnQPC, but it's not in recovery", pbft.id)
 		return nil
 	}
@@ -514,7 +514,7 @@ func (pbft *pbftImpl) restartRecovery() {
 	pbft.logger.Noticef("Replica %d now restartRecovery", pbft.id)
 
 	// recovery redo requires update new if need
-	pbft.status.activeState(IN_NEGO_VIEW)
-	pbft.status.activeState(IN_RECOVERY)
+	pbft.status.activeState(&pbft.status.inNegoView)
+	pbft.status.activeState(&pbft.status.inRecovery)
 	pbft.processNegotiateView()
 }

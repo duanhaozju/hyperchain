@@ -5,8 +5,9 @@ import (
 	"hyperchain/crypto"
 )
 
-func (self *Block) Hash(ch crypto.CommonHash) common.Hash {
-	return ch.Hash([]interface{}{
+func (self *Block) Hash() common.Hash {
+	kec256Hash := crypto.NewKeccak256Hash("keccak256")
+	return kec256Hash.Hash([]interface{}{
 		self.ParentHash,
 		self.Number,
 		self.Timestamp,

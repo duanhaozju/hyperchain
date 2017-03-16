@@ -35,13 +35,14 @@ func newBucketCache(treePrefix string, maxSizeMBs int) *BucketCache {
 	return &BucketCache{TreePrefix: treePrefix, c: make(map[BucketKey]*BucketNode), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
 }
 
-func (cache *BucketCache) clearAllCache() {
+func (cache *BucketCache) clearAllCache() *BucketCache {
 	isEnabled := true
 	if cache.isEnabled {
 	} else {
 		log.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", cache.maxSize)
 	}
-	cache = &BucketCache{TreePrefix: cache.TreePrefix, c: make(map[BucketKey]*BucketNode), maxSize: uint64(cache.maxSize * 1024 * 1024), isEnabled: isEnabled}
+	tmp := &BucketCache{TreePrefix: cache.TreePrefix, c: make(map[BucketKey]*BucketNode), maxSize: uint64(cache.maxSize * 1024 * 1024), isEnabled: isEnabled}
+	return tmp
 }
 
 // TODO cache will be done later
