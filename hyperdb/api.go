@@ -177,7 +177,7 @@ func NewDatabase(conf *common.Config, path string, dbType int) (db.Database, err
 		return hleveldb.NewLDBDataBase(conf, path)
 	case SUPER_LEVEL_DB:
 		log.Notice("Use SuperLevelDB")
-		return sldb.NewSLDB(conf, path)
+		return sldb.NewSLDB(conf)
 	default:
 		log.Errorf("Wrong dbType:" + strconv.Itoa(dbType))
 		return nil, errors.New("Wrong dbType:" + strconv.Itoa(dbType))
