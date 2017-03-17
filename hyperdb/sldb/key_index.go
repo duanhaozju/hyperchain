@@ -3,7 +3,6 @@
 package sldb
 
 import (
-	"fmt"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"github.com/willf/bloom"
@@ -202,17 +201,50 @@ func (ki *KeyIndex) dropPreviousKey() error {
 //persistBloom persist bloom filter
 //1.persist current bloom into a tmp file
 //2.rename tmp file
+//func (ki *KeyIndex) persistBloom() error {
+//	tmpName := ki.bloomPath + ".tmp." + strconv.FormatInt(time.Now().UnixNano(), 10)
+//	inputFile, err := os.Open(tmpName)
+//	if err == nil {
+//		size, err := ki.bf.WriteTo(inputFile)
+//		fmt.Printf("persist bloom filter for namespace: %s size: %d\n", ki.Namespace(), size)
+//		return err
+//	} else {
+//		// no such file
+//		log.Criticalf("Bloom dir: %s", ki.conf.GetString(SLDB_INDEX_DIR))
+//		err = os.MkdirAll(ki.conf.GetString(SLDB_INDEX_DIR), 0777)
+//		if err != nil {
+//			log.Errorf("persist bloom error %v", err)
+//			return err
+//		}
+//		inputFile, err = os.Create(tmpName)
+//		if err == nil {
+//			size, err := ki.bf.WriteTo(inputFile)
+//			log.Debugf("persist bloom filter for namespace: %s size: %d", ki.Namespace(), size)
+//			if err == nil {
+//				err = os.Rename(tmpName, ki.bloomPath)
+//			}
+//			return err
+//		}
+//	}
+//	//warn: should reset lastStartKey only after the bloom filter has been persisted
+//	err = ki.db.Put(ki.lastStartKey(), ki.currStartKeyPrefix, nil)
+//	ki.lastStartKeyPrefix = ki.currStartKeyPrefix
+//	ki.currStartKeyPrefix = ki.checkPointKey()
+//	ki.keyPrefix = ki.currStartKeyPrefix
+//	return err
+//}
+
 func (ki *KeyIndex) persistBloom() error {
 	tmpName := ki.bloomPath + ".tmp." + strconv.FormatInt(time.Now().UnixNano(), 10)
 	inputFile, err := os.Open(tmpName)
 	if err == nil {
 		size, err := ki.bf.WriteTo(inputFile)
-		fmt.Printf("persist bloom filter for namespace: %s size: %d\n", ki.Namespace(), size)
+		log.Noticef("persist bloom filter for namespace: %s size: %d\n", ki.Namespace(), size)
 		return err
 	} else {
 		// no such file
-		log.Criticalf("Bloom dir: %s", ki.conf.GetString(SLDB_INDEX_DIR))
 		err = os.MkdirAll(ki.conf.GetString(SLDB_INDEX_DIR), 0777)
+		//err = os.MkdirAll(ki.bloomPath, 0777)
 		if err != nil {
 			log.Errorf("persist bloom error %v", err)
 			return err
@@ -220,10 +252,19 @@ func (ki *KeyIndex) persistBloom() error {
 		inputFile, err = os.Create(tmpName)
 		if err == nil {
 			size, err := ki.bf.WriteTo(inputFile)
-			log.Debugf("persist bloom filter for namespace: %s size: %d", ki.Namespace(), size)
+			log.Noticef("persist bloom filter for namespace: %s size: %d", ki.Namespace(), size)
 			if err == nil {
 				err = os.Rename(tmpName, ki.bloomPath)
+				if err != nil {
+					log.Noticef("rename file %v to %v, error: %v", tmpName, ki.bloomPath, err)
+					return err
+				}
+			} else {
+				log.Errorf("persist bloom filter for namespace: %s size: %d err %v", ki.Namespace(), size, err)
+				return err
 			}
+		} else {
+			log.Noticef("create temp file: %v, error: %v", tmpName, err)
 			return err
 		}
 	}
@@ -234,6 +275,7 @@ func (ki *KeyIndex) persistBloom() error {
 	ki.keyPrefix = ki.currStartKeyPrefix
 	return err
 }
+
 
 //BloomFilter just for test now
 func (ki *KeyIndex) Equals(otherKeyIndex *KeyIndex) bool {
