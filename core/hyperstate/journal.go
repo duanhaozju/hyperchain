@@ -284,10 +284,13 @@ func (ch *ResetObjectChange) GetType() string {
 func (ch *SuicideChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
 	if !writeThrough {
 		// undo contract account
-		obj := s.GetStateObject(*ch.Account)
-		if obj != nil {
+		if ch.Prev == true {
+			return
+		} else {
+			obj := ch.PreObject
 			obj.suicided = ch.Prev
-			obj.setBalance(ch.Prevbalance)
+			obj.data.Balance = ch.Prevbalance
+			s.setStateObject(obj)
 		}
 	} else {
 		if ch.Prev == true {

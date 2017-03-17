@@ -400,7 +400,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Has
 			existed, value := obj.GetState(b)
 			// if storage entry exist in live object's storage cache
 			if existed {
-				log.Debugf("get state for %x in live objects, key %x, value %x", a.Hex(), b.Hex(), value.Hex())
+				log.Debugf("get state for %s in live objects, key %s, value %s", a.Hex(), b.Hex(), value.Hex())
 				return true, value
 			}
 		}
@@ -420,7 +420,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Has
 				} else {
 					existed, value := obj.GetState(b)
 					if existed {
-						log.Debugf("get state for %x in content cache, key %x, value %x", a.Hex(), b.Hex(), value.Hex())
+						log.Debugf("get state for %s in content cache, key %s, value %s", a.Hex(), b.Hex(), value.Hex())
 						if liveObj == nil {
 							// save obj itself to current cache
 							self.setStateObject(obj)
@@ -439,7 +439,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Has
 	if existed {
 		// add related obj to live cache
 		if liveObj == nil {
-			log.Debugf("get state for %x in database, key %x, value %x, add to live state object's storage cache", a.Hex(), b.Hex(), value.Hex())
+			log.Debugf("get state for %s in database, key %s, value %s, add to live state object's storage cache", a.Hex(), b.Hex(), value.Hex())
 			// Load the object from the database.
 			data, err := self.db.Get(CompositeAccountKey(a.Bytes()))
 			if err != nil {
@@ -456,12 +456,12 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Has
 			self.setStateObject(obj)
 		} else {
 			// save into live obj's cache storage avoid disk cost for next fetch
-			log.Debugf("get state for %x in database, key %x, value %x, add %x to live objects", a.Hex(), b.Hex(), value.Hex(), a.Hex())
+			log.Debugf("get state for %s in database, key %s, value %s, add %s to live objects", a.Hex(), b.Hex(), value.Hex(), a.Hex())
 			liveObj.cachedStorage[b] = value
 		}
 		return true, value
 	}
-	log.Debugf("find state for %x %x failed", a.Hex(), b.Hex())
+	log.Debugf("find state for %s %s failed", a.Hex(), b.Hex())
 	return false, common.Hash{}
 }
 
@@ -484,42 +484,52 @@ func (self *StateDB) GetTree() interface{} {
  */
 // add balance to an account
 func (self *StateDB) AddBalance(addr common.Address, amount *big.Int) {
-	stateObject := self.GetOrNewStateObject(addr)
+	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
 		stateObject.AddBalance(amount)
+	} else {
+		log.Warningf("state object %s has been suicide", addr.Hex())
 	}
 }
 
 // set balance
 func (self *StateDB) SetBalance(addr common.Address, amount *big.Int) {
-	stateObject := self.GetOrNewStateObject(addr)
+	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetBalance(amount)
+	} else {
+		log.Warningf("state object %s has been suicide", addr.Hex())
 	}
 }
 
 // set nonce
 func (self *StateDB) SetNonce(addr common.Address, nonce uint64) {
-	stateObject := self.GetOrNewStateObject(addr)
+	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetNonce(nonce)
+	} else {
+		log.Warningf("state object %s has been suicide", addr.Hex())
 	}
 }
 
 // set code
 func (self *StateDB) SetCode(addr common.Address, code []byte) {
-	stateObject := self.GetOrNewStateObject(addr)
+	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetCode(common.BytesToHash(crypto.Keccak256(code)), code)
+	} else {
+		log.Warningf("state object %s has been suicide", addr.Hex())
 	}
 }
 
 // set a storage entry to a state object
 func (self *StateDB) SetState(addr common.Address, key common.Hash, value common.Hash) {
-	stateObject := self.GetOrNewStateObject(addr)
+	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
 		log.Debug("hyper statedb set state find state object in live objects")
 		stateObject.SetState(self.db, key, value)
+	} else {
+		log.Warningf("state object %s has been suicide", addr.Hex())
 	}
 }
 
@@ -732,7 +742,7 @@ func (self *StateDB) RevertToSnapshot(copy interface{}) {
 		// undo in memory
 		// parameters *stateDB, batch, writeThrough, flush, sync
 		self.journal.JournalList[i].Undo(self, nil, nil, false)
-		log.Info("undo operation: %s", self.journal.JournalList[i])
+		log.Infof("undo operation: %s", self.journal.JournalList[i])
 	}
 	self.journal.JournalList = self.journal.JournalList[:snapshot]
 
