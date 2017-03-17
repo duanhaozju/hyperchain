@@ -12,15 +12,15 @@ import (
 )
 
 const (
-	LICENSE_PATH = "global.configs.license"
+	LICENSE_PATH = "./LICENSE"
 )
 
-func CheckLicense(exit chan bool, config *common.Config) {
+func CheckLicense(exit chan bool) {
 	ticker := time.NewTicker(10 * time.Second)
 	for {
 		select {
 		case <-ticker.C:
-			if expired := isLicenseExpired(config); expired {
+			if expired := isLicenseExpired(); expired {
 				notifySystemExit(exit)
 				return
 			}
@@ -30,7 +30,7 @@ func CheckLicense(exit chan bool, config *common.Config) {
 
 
 // isLicenseExpired - check whether license is expired.
-func isLicenseExpired(config *common.Config) (expired bool) {
+func isLicenseExpired() (expired bool) {
 	var err error
 	defer func() {
 		if r := recover(); r != nil {
@@ -45,7 +45,7 @@ func isLicenseExpired(config *common.Config) (expired bool) {
 
 	privateKey := string("TnrEP|N.*lAgy<Q&@lBPd@J/")
 	identificationSuffix := string("Hyperchain")
-	license, err := ioutil.ReadFile(config.GetString(LICENSE_PATH))
+	license, err := ioutil.ReadFile(LICENSE_PATH)
 	if err != nil {
 		fmt.Println("no license found.")
 		expired = true
