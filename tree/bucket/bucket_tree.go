@@ -460,7 +460,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch db.Batch, currentBl
 
 func (bucketTree *BucketTree) ClearAllCache(){
 	bucketTree.dataNodeCache.ClearDataNodeCache()
-	bucketTree.bucketCache.clearAllCache()
+	bucketTree.bucketCache = bucketTree.bucketCache.clearAllCache()
 	globalDataNodeCache.ClearAllCache()
 }
 

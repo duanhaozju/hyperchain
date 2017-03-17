@@ -4,16 +4,17 @@ import (
 	"github.com/astaxie/beego"
 	"hyperchain/api"
 	"encoding/json"
+	"hyperchain/common"
 )
 
 type NodesController struct {
 	beego.Controller
-	PublicNodeAPI *hpc.PublicNodeAPI
+	PublicNodeAPI *hpc.Node
 }
 
 func (n *NodesController) Prepare() {
 	PublicNodeAPIInterface := hpc.GetApiObjectByNamespace("node").Service
-	PublicNodeAPI := PublicNodeAPIInterface.(*hpc.PublicNodeAPI)
+	PublicNodeAPI := PublicNodeAPIInterface.(*hpc.Node)
 	n.PublicNodeAPI = PublicNodeAPI
 }
 
@@ -40,7 +41,7 @@ func (n *NodesController) DelNode() {
 	var args hpc.NodeArgs
 
 	if err := json.Unmarshal(n.Ctx.Input.RequestBody, &args); err != nil {
-		n.Data["json"] = NewJSONObject(nil, &hpc.InvalidParamsError{err.Error()})
+		n.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
 		n.ServeJSON()
 		return
 	}

@@ -3,13 +3,11 @@
 
 package namespace
 
-import "hyperchain/api/jsonrpc/core"
+import (
+	"hyperchain/common"
+)
 
 //handleJsonRequest handle JsonRequest under current namespace.
-func (*namespaceImpl) handleJsonRequest(request *jsonrpc.JSONRequest) *jsonrpc.JSONResponse {
-	//TODO: implement JsonRequest process logic as which handled in api/jsonrpc/core
-	//1. check the invoke method params
-	//2. invoke specific method
-	//3. construct response
-	return nil
+func (ns *namespaceImpl) handleJsonRequest(request *common.RPCRequest) *common.RPCResponse {
+	return ns.rpc.ProcessRequest(request)
 }

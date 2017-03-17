@@ -9,20 +9,7 @@
 
 global:
     #namespace config dir root path
-    nsConfigRootPath: "./configuration/configs"
-    license: "config/LICENSE"
-        #TODO:add annotation
-        replicainfo:
-            interval : 500s
-            enable   : false
-
-        #control rate of flow
-        ratelimit:
-            enable   : true
-            txRatePeak : 100
-            txFillRate: 0.5ms
-            contractRatePeak : 100
-            contractFillRate: 0.5ms
+    nsConfigRootPath: "./namespaces"
 
     ######################################################
     # config log's level by module                       #
@@ -37,15 +24,20 @@ global:
         newLogFileInterval: 24h  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
                                  # such as "300ms", "2h45m".
 
-        logsdir: "./build/logs"
+        logsdir: "./logs"
 
-        loglevel: "NOTICE"  # default loglevel for all modules which can be override by module level log setting
-        file_format: "%[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
-        console_format: "%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
+        loglevel: "NOTICE"
+        # default loglevel for all modules which can be override by module level log setting
+        file_format: "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
+        console_format: "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
 
-        module:
-            #set log level by module
-            p2p: "NOTICE"
-            consensus: "NOTICE"
-            core: "NOTICE"
-            hyperdb: "NOTICE"
+    configs:
+            replicainfo:
+                interval : 500s
+                enable   : false
+            ratelimit:
+                enable   : true
+                txRatePeak : 100
+                txFillRate: 0.5ms
+                contractRatePeak : 100
+                contractFillRate: 0.5ms

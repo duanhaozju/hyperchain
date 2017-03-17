@@ -9,13 +9,14 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
+	"bytes"
+	"hyperchain/common"
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
 	"hyperchain/core/types"
 	"hyperchain/protos"
-	"hyperchain/common"
 	"sync/atomic"
-	"bytes"
+	"github.com/op/go-logging"
 )
 
 // batch is used to construct reqbatch, the middle layer between outer to pbft
@@ -53,17 +54,21 @@ type pbftImpl struct {
 	reqEventQueue  events.Queue                 // transfer request transactions
 	pbftEventQueue events.Queue                 // transfer PBFT related event
 
-	config         *common.Config
+	config *common.Config
+	logger         *logging.Logger
 }
 
 //newPBFT init the PBFT instance
-func newPBFT(namespace string, config *common.Config, h helper.Stack) *pbftImpl {
+func newPBFT(namespace string, config *common.Config, h helper.Stack) (*pbftImpl, error) {
+	var err error
 	pbft := &pbftImpl{}
+	pbft.logger = common.GetLogger(namespace, "consensus")
 	pbft.namespace = namespace
 	pbft.helper = h
 	pbft.config = config
 	if !config.ContainsKey(common.C_NODE_ID) {
-		panic(fmt.Errorf("No hyperchain id specified!, key: %s", common.C_NODE_ID))
+		err = fmt.Errorf("No hyperchain id specified!, key: %s", common.C_NODE_ID)
+		return nil, err
 	}
 	pbft.id = uint64(config.GetInt64(common.C_NODE_ID))
 	pbft.N = config.GetInt(PBFT_NODE_NUM)
@@ -78,42 +83,49 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack) *pbftImpl 
 	pbft.pbftManager.Start()
 	pbft.pbftEventQueue = events.GetQueue(pbft.pbftManager.Queue())// init pbftEventQueue
 
+	pbft.pbftEventQueue = events.GetQueue(pbft.pbftManager.Queue())// init pbftEventQueue
 	pbft.initMsgEventMap()
 
+	// new executor
 	pbft.exec = newExecutor()
+	//new timer manager
 	pbft.pbftTimerMgr = newTimerMgr(pbft)
+	pbft.pbftTimerMgr.logger = pbft.logger
 
 	pbft.initTimers()
 	pbft.initStatus()
 
 	if pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
-		logger.Infof("PBFT null requests timeout = %v", pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER))
+		pbft.logger.Infof("PBFT null requests timeout = %v", pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER))
 	} else {
-		logger.Infof("PBFT null requests disabled")
+		pbft.logger.Infof("PBFT null requests disabled")
 	}
 
 	pbft.vcMgr = newVcManager(pbft.pbftTimerMgr, pbft, config)
 	// init the data logs
 	pbft.storeMgr = newStoreMgr()
+	pbft.storeMgr.logger = pbft.logger
 
 	// initialize state transfer
 	pbft.nodeMgr = newNodeMgr()
 	pbft.duplicator = make(map[uint64]*transactionStore)
-	pbft.batchMgr = newBatchManager(config, pbft) 		// init after pbftEventQueue
+	pbft.batchMgr = newBatchManager(config, pbft) // init after pbftEventQueue
+	// new batch manager
 	pbft.batchVdr = newBatchValidator(pbft)
 	pbft.reqStore = newRequestStore()
+	pbft.recoveryMgr = newRecoveryMgr()
 
 	atomic.StoreUint32(&pbft.activeView, 1)
 
-	logger.Infof("PBFT Max number of validating peers (N) = %v", pbft.N)
-	logger.Infof("PBFT Max number of failing peers (f) = %v", pbft.f)
-	logger.Infof("PBFT byzantine flag = %v", pbft.status.getState(&pbft.status.byzantine))
-	logger.Infof("PBFT request timeout = %v", pbft.pbftTimerMgr.requestTimeout)
-	logger.Infof("PBFT Checkpoint period (K) = %v", pbft.K)
-	logger.Infof("PBFT Log multiplier = %v", pbft.logMultiplier)
-	logger.Infof("PBFT log size (L) = %v", pbft.L)
+	pbft.logger.Infof("PBFT Max number of validating peers (N) = %v", pbft.N)
+	pbft.logger.Infof("PBFT Max number of failing peers (f) = %v", pbft.f)
+	pbft.logger.Infof("PBFT byzantine flag = %v", pbft.status.getState(&pbft.status.byzantine))
+	pbft.logger.Infof("PBFT request timeout = %v", pbft.pbftTimerMgr.requestTimeout)
+	pbft.logger.Infof("PBFT Checkpoint period (K) = %v", pbft.K)
+	pbft.logger.Infof("PBFT Log multiplier = %v", pbft.logMultiplier)
+	pbft.logger.Infof("PBFT log size (L) = %v", pbft.L)
 
-	return pbft
+	return pbft, nil
 }
 
 // =============================================================================
@@ -132,16 +144,16 @@ func (pbft *pbftImpl) ProcessEvent(ee events.Event) events.Event {
 		vid := e.Vid
 		ok := pbft.recvRemoveCache(vid)
 		if !ok {
-			logger.Debugf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
+			pbft.logger.Debugf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
 		}
 		return nil
 
 	case protos.RoutersMessage:
 		if len(e.Routers) == 0 {
-			logger.Warningf("Replica %d received nil local routers", pbft.id)
+			pbft.logger.Warningf("Replica %d received nil local routers", pbft.id)
 			return nil
 		}
-		logger.Debugf("Replica %d received local routers %s", pbft.id, hashByte(e.Routers))
+		pbft.logger.Debugf("Replica %d received local routers %s", pbft.id, hashByte(e.Routers))
 		pbft.nodeMgr.routers = e.Routers
 
 	case *LocalEvent: //local event
@@ -152,7 +164,7 @@ func (pbft *pbftImpl) ProcessEvent(ee events.Event) events.Event {
 		return pbft.dispatchConsensusMsg(next)
 
 	default:
-		logger.Error("Can't recognize event type.")
+		pbft.logger.Error("Can't recognize event type.")
 		return pbft.dispatchConsensusMsg(ee) //TODO: fix this ...
 		return nil
 	}
@@ -165,7 +177,7 @@ func (pbft *pbftImpl) dispatchCorePbftMsg(e events.Event) events.Event {
 	case *TransactionBatch:
 		err := pbft.recvRequestBatch(et)
 		if err != nil {
-			logger.Warning(err.Error())
+			pbft.logger.Warning(err.Error())
 		}
 	case *PrePrepare:
 		return pbft.recvPrePrepare(et)
@@ -186,7 +198,7 @@ func (pbft *pbftImpl) enqueueTx(msg *protos.Message) error {
 	tx := &types.Transaction{}
 	err := proto.Unmarshal(msg.Payload, tx)
 	if err != nil {
-		logger.Errorf("error: %v ,can not unmarshal protos.Message", err)
+		pbft.logger.Errorf("error: %v ,can not unmarshal protos.Message", err)
 		return err
 	}
 
@@ -201,7 +213,7 @@ func (pbft *pbftImpl) enqueueConsensusMsg(msg *protos.Message) error {
 	consensus := &ConsensusMessage{}
 	err := proto.Unmarshal(msg.Payload, consensus)
 	if err != nil {
-		logger.Errorf("processConsensus, unmarshal error: can not unmarshal ConsensusMessage", err)
+		pbft.logger.Errorf("processConsensus, unmarshal error: can not unmarshal ConsensusMessage", err)
 		return err
 	}
 
@@ -209,7 +221,7 @@ func (pbft *pbftImpl) enqueueConsensusMsg(msg *protos.Message) error {
 		tx := &types.Transaction{}
 		err := proto.Unmarshal(consensus.Payload, tx)
 		if err != nil {
-			logger.Errorf("processConsensus, unmarshal error: can not unmarshal ConsensusMessage", err)
+			pbft.logger.Errorf("processConsensus, unmarshal error: can not unmarshal ConsensusMessage", err)
 			return err
 		}
 		go pbft.reqEventQueue.Push(tx)
@@ -226,7 +238,7 @@ func (pbft *pbftImpl) enqueueStateUpdatedMsg(msg *protos.Message) error {
 	err := proto.Unmarshal(msg.Payload, stateUpdatedMsg)
 
 	if err != nil {
-		logger.Errorf("processStateUpdate, unmarshal error: can not unmarshal UpdateStateMessage", err)
+		pbft.logger.Errorf("processStateUpdate, unmarshal error: can not unmarshal UpdateStateMessage", err)
 		return err
 	}
 	e := &LocalEvent{
@@ -251,7 +263,7 @@ func (pbft *pbftImpl) processNullRequest(msg *protos.Message) error {
 		pbft.pbftTimerMgr.stopTimer(FIRST_REQUEST_TIMER)
 	}
 
-	logger.Infof("Replica %d received null request from primary %d", pbft.id, pbft.primary(pbft.view))
+	pbft.logger.Infof("Replica %d received null request from primary %d", pbft.id, pbft.primary(pbft.view))
 	pbft.nullReqTimerReset()
 	return nil
 }
@@ -260,7 +272,7 @@ func (pbft *pbftImpl) processNullRequest(msg *protos.Message) error {
 func (pbft *pbftImpl) handleNullRequestTimerEvent() {
 
 	if pbft.status.getState(&pbft.status.inNegoView) {
-		logger.Debugf("Replica %d try to nullRequestHandler, but it's in nego-view", pbft.id)
+		pbft.logger.Debugf("Replica %d try to nullRequestHandler, but it's in nego-view", pbft.id)
 		return
 	}
 
@@ -270,10 +282,10 @@ func (pbft *pbftImpl) handleNullRequestTimerEvent() {
 
 	if pbft.primary(pbft.view) != pbft.id {
 		// backup expected a null request, but primary never sent one
-		logger.Warningf("Replica %d null request timer expired, sending view change", pbft.id)
+		pbft.logger.Warningf("Replica %d null request timer expired, sending view change", pbft.id)
 		pbft.sendViewChange()
 	} else {
-		logger.Infof("Primary %d null request timer expired, sending null request", pbft.id)
+		pbft.logger.Infof("Primary %d null request timer expired, sending null request", pbft.id)
 		pbft.sendNullRequest()
 	}
 }
@@ -293,11 +305,11 @@ func (pbft *pbftImpl) sendNullRequest() {
 func (pbft *pbftImpl) trySendPrePrepares() {
 
 	if pbft.batchVdr.currentVid != nil {
-		logger.Debugf("Replica %d not attempting to send pre-prepare bacause it is currently send %d, retry.", pbft.id, pbft.batchVdr.currentVid)
+		pbft.logger.Debugf("Replica %d not attempting to send pre-prepare bacause it is currently send %d, retry.", pbft.id, pbft.batchVdr.currentVid)
 		return
 	}
 
-	logger.Debugf("Replica %d attempting to call sendPrePrepare", pbft.id)
+	pbft.logger.Debugf("Replica %d attempting to call sendPrePrepare", pbft.id)
 
 	for stopTry := false; !stopTry;  {
 		if find, txBatch, digest := pbft.findNextPrePrepareBatch(); find {
@@ -317,13 +329,13 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 	for digest = range pbft.batchVdr.cacheValidatedBatch {
 		cache := pbft.batchVdr.getCacheBatchFromCVB(digest)
 		if cache == nil {
-			logger.Debugf("Primary %d already call sendPrePrepare for batch: %d",
+			pbft.logger.Debugf("Primary %d already call sendPrePrepare for batch: %d",
 				pbft.batchVdr.pbftId, digest)
 			continue
 		}
 
 		if cache.vid != pbft.batchVdr.lastVid + 1 {
-			logger.Debugf("Primary %d hasn't done with last send pre-prepare, vid=%d",
+			pbft.logger.Debugf("Primary %d hasn't done with last send pre-prepare, vid=%d",
 				pbft.batchVdr.pbftId, pbft.batchVdr.lastVid)
 			continue
 		}
@@ -332,7 +344,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 		pbft.batchVdr.setCurrentVid(&currentVid)
 
 		if len(cache.batch.Batch) == 0 {
-			logger.Warningf("Replica %d is primary, receives validated result %s that is empty",
+			pbft.logger.Warningf("Replica %d is primary, receives validated result %s that is empty",
 				pbft.id, digest)
 			pbft.deleteExistedTx(digest)
 			continue
@@ -347,7 +359,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 		}
 
 		if !pbft.inWV(pbft.view, n) {
-			logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because " +
+			pbft.logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because " +
 				"it is out of sequence numbers", pbft.id, digest)
 			continue
 		}
@@ -361,11 +373,11 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 //sendPrePrepare send prepare message.
 func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) {
 
-	logger.Debugf("Replica %d is primary, issuing pre-prepare for request batch %s", pbft.id, digest)
+	pbft.logger.Debugf("Replica %d is primary, issuing pre-prepare for request batch %s", pbft.id, digest)
 
 	n := pbft.seqNo + 1
 
-	logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
+	pbft.logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
 	pbft.pbftTimerMgr.stopTimer(NULL_REQUEST_TIMER)
 	pbft.seqNo = n
 
@@ -386,7 +398,7 @@ func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) 
 
 	payload, err := proto.Marshal(preprepare)
 	if err != nil {
-		logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
+		pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
 		return
 	}
 
@@ -398,14 +410,14 @@ func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) 
 	pbft.helper.InnerBroadcast(msg)
 	pbft.batchVdr.updateLCVid()
 
-	pbft.softStartNewViewTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
+	pbft .softStartNewViewTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
 
 }
 
 //recvPrePrepare process logic for PrePrepare msg.
 func (pbft *pbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 
-	logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest=%s ",
+	pbft.logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d, digest=%s ",
 		pbft.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
 	pbft.stopFirstRequestTimer()
@@ -418,12 +430,12 @@ func (pbft *pbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 	// add this for recovery, avoid saving batch with seqno that already executed
 	if pbft.exec.currentExec != nil {
 		if preprep.SequenceNumber <= *pbft.exec.currentExec {
-			logger.Debugf("Replica %d reject out-of-date pre-prepare for seqNo=%d/view=%d", pbft.id, preprep.SequenceNumber, preprep.View)
+			pbft.logger.Debugf("Replica %d reject out-of-date pre-prepare for seqNo=%d/view=%d", pbft.id, preprep.SequenceNumber, preprep.View)
 			return nil
 		}
 	} else {
 		if preprep.SequenceNumber <= pbft.exec.lastExec {
-			logger.Debugf("Replica %d reject out-of-date pre-prepare for seqNo=%d/view=%d", pbft.id, preprep.SequenceNumber, preprep.View)
+			pbft.logger.Debugf("Replica %d reject out-of-date pre-prepare for seqNo=%d/view=%d", pbft.id, preprep.SequenceNumber, preprep.View)
 			return nil
 		}
 	}
@@ -431,7 +443,7 @@ func (pbft *pbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 	cert := pbft.storeMgr.getCert(preprep.View, preprep.SequenceNumber)
 
 	if cert.digest != "" && cert.digest != preprep.BatchDigest {
-		logger.Warningf("Pre-prepare found for same view/seqNo but different digest: received %s, stored %s",
+		pbft.logger.Warningf("Pre-prepare found for same view/seqNo but different digest: received %s, stored %s",
 			preprep.BatchDigest, cert.digest)
 		return nil
 	}
@@ -463,7 +475,7 @@ func (pbft *pbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 
 //sendPrepare send prepare message.
 func (pbft *pbftImpl) sendPrepare(preprep *PrePrepare) error {
-	logger.Debugf("Backup %d broadcasting prepare for view=%d/seqNo=%d", pbft.id, preprep.View, preprep.SequenceNumber)
+	pbft.logger.Debugf("Backup %d broadcasting prepare for view=%d/seqNo=%d", pbft.id, preprep.View, preprep.SequenceNumber)
 	prep := &Prepare{
 		View:           preprep.View,
 		SequenceNumber: preprep.SequenceNumber,
@@ -474,7 +486,7 @@ func (pbft *pbftImpl) sendPrepare(preprep *PrePrepare) error {
 	pbft.recvPrepare(prep) // send to itself
 	payload, err := proto.Marshal(prep)
 	if err != nil {
-		logger.Errorf("ConsensusMessage_PREPARE Marshal Error", err)
+		pbft.logger.Errorf("ConsensusMessage_PREPARE Marshal Error", err)
 		return nil
 	}
 	consensusMsg := &ConsensusMessage{
@@ -487,7 +499,7 @@ func (pbft *pbftImpl) sendPrepare(preprep *PrePrepare) error {
 
 //recvPrepare process logic after receive prepare message
 func (pbft *pbftImpl) recvPrepare(prep *Prepare) error {
-	logger.Debugf("Replica %d received prepare from replica %d for view=%d/seqNo=%d",
+	pbft.logger.Debugf("Replica %d received prepare from replica %d for view=%d/seqNo=%d",
 		pbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber)
 
 	if !pbft.isPrepareLegal(prep) {
@@ -499,7 +511,7 @@ func (pbft *pbftImpl) recvPrepare(prep *Prepare) error {
 	ok := cert.prepare[*prep]
 
 	if ok {
-		logger.Warningf("Ignoring duplicate prepare from replica %d, view=%d/seqNo=%d",
+		pbft.logger.Warningf("Ignoring duplicate prepare from replica %d, view=%d/seqNo=%d",
 			prep.ReplicaId, prep.View, prep.SequenceNumber)
 		return nil
 	}
@@ -518,7 +530,7 @@ func (pbft *pbftImpl) maybeSendCommit(digest string, v uint64, n uint64) error {
 	}
 
 	if pbft.status.getState(&pbft.status.skipInProgress) {
-		logger.Debugf("Replica %d do not try to validate batch because it's in state update", pbft.id)
+		pbft.logger.Debugf("Replica %d do not try to validate batch because it's in state update", pbft.id)
 		return nil
 	}
 
@@ -551,7 +563,7 @@ func (pbft *pbftImpl) sendCommit(digest string, v uint64, n uint64) error {
 	cert := pbft.storeMgr.getCert(v, n)
 
 	if !cert.sentCommit {
-		logger.Debugf("Replica %d broadcasting commit for view=%d/seqNo=%d", pbft.id, v, n)
+		pbft.logger.Debugf("Replica %d broadcasting commit for view=%d/seqNo=%d", pbft.id, v, n)
 		commit := &Commit{
 			View:           v,
 			SequenceNumber: n,
@@ -563,7 +575,7 @@ func (pbft *pbftImpl) sendCommit(digest string, v uint64, n uint64) error {
 		pbft.persistPSet(v, n)
 		payload, err := proto.Marshal(commit)
 		if err != nil {
-			logger.Errorf("ConsensusMessage_COMMIT Marshal Error", err)
+			pbft.logger.Errorf("ConsensusMessage_COMMIT Marshal Error", err)
 			return nil
 		}
 		consensusMsg := &ConsensusMessage{
@@ -580,7 +592,7 @@ func (pbft *pbftImpl) sendCommit(digest string, v uint64, n uint64) error {
 
 //recvCommit process logic after receive commit message.
 func (pbft *pbftImpl) recvCommit(commit *Commit) error {
-	logger.Debugf("Replica %d received commit from replica %d for view=%d/seqNo=%d",
+	pbft.logger.Debugf("Replica %d received commit from replica %d for view=%d/seqNo=%d",
 		pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber)
 
 	if !pbft.isCommitLegal(commit) {
@@ -592,7 +604,7 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 	ok := cert.commit[*commit]
 
 	if ok {
-		logger.Warningf("Ignoring duplicate commit from replica %d, view=%d/seqNo=%d",
+		pbft.logger.Warningf("Ignoring duplicate commit from replica %d, view=%d/seqNo=%d",
 			commit.ReplicaId, commit.View, commit.SequenceNumber)
 		return nil
 	}
@@ -616,11 +628,11 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 			pbft.storeMgr.committedCert[idx] = cert.digest
 			pbft.commitTransactions()
 			if commit.SequenceNumber == pbft.vcMgr.viewChangeSeqNo {
-				logger.Warningf("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
+				pbft.logger.Warningf("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
 				pbft.sendViewChange()
 			}
 		} else {
-			logger.Debugf("Replica %d committed for seqNo: %d, but sentExecute: %v, validated: %v", pbft.id, commit.SequenceNumber, cert.sentExecute, cert.validated)
+			pbft.logger.Debugf("Replica %d committed for seqNo: %d, but sentExecute: %v, validated: %v", pbft.id, commit.SequenceNumber, cert.sentExecute, cert.validated)
 		}
 	}
 
@@ -634,18 +646,18 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 //commitTransactions commit all available transactions
 func (pbft *pbftImpl) commitTransactions() {
 	if pbft.exec.currentExec != nil {
-		logger.Debugf("Replica %d not attempting to commitTransactions bacause it is currently executing %d",
+		pbft.logger.Debugf("Replica %d not attempting to commitTransactions bacause it is currently executing %d",
 			pbft.id, pbft.exec.currentExec)
 	}
-	logger.Debugf("Replica %d attempting to commitTransactions", pbft.id)
+	pbft.logger.Debugf("Replica %d attempting to commitTransactions", pbft.id)
 
 	for hasTxToExec := true; hasTxToExec; {
 		if find, idx, cert := pbft.findNextCommitTx(); find{
 			digest := cert.digest
 			if digest == "" {
-				logger.Infof("Replica %d executing null request for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+				pbft.logger.Infof("Replica %d executing null request for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
 			} else {
-				logger.Noticef("======== Replica %d Call execute, view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+				pbft.logger.Noticef("======== Replica %d Call execute, view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
 				isPrimary, _ := pbft.isPrimary()
 				pbft.helper.Execute(idx.n, digest, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
 				pbft.persistCSet(idx.v, idx.n)
@@ -669,27 +681,27 @@ func (pbft *pbftImpl) findNextCommitTx() (bool, msgID, *msgCert) {
 		cert = pbft.storeMgr.certStore[idx]
 
 		if cert == nil || cert.prePrepare == nil {
-			logger.Debugf("Replica %d already checkpoint for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+			pbft.logger.Debugf("Replica %d already checkpoint for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
 			//break
 			continue
 		}
 
 		// check if already executed
 		if cert.sentExecute == true {
-			logger.Debugf("Replica %d already execute for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+			pbft.logger.Debugf("Replica %d already execute for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
 			//break
 			continue
 		}
 
 		if idx.n != pbft.exec.lastExec + 1 {
-			logger.Debugf("Replica %d hasn't done with last execute %d, seq=%d", pbft.id, pbft.exec.lastExec, idx.n)
+			pbft.logger.Debugf("Replica %d hasn't done with last execute %d, seq=%d", pbft.id, pbft.exec.lastExec, idx.n)
 			//break
 			continue
 		}
 
 		// skipInProgress == true, then this replica is in viewchange, not reply or execute
 		if pbft.status.getState(&pbft.status.skipInProgress) {
-			logger.Warningf("Replica %d currently picking a starting point to resume, will not execute", pbft.id)
+			pbft.logger.Warningf("Replica %d currently picking a starting point to resume, will not execute", pbft.id)
 			//break
 			continue
 		}
@@ -717,12 +729,12 @@ func (pbft *pbftImpl) findNextCommitTx() (bool, msgID, *msgCert) {
 func (pbft *pbftImpl) afterCommitTx(idx msgID) {
 
 	if pbft.exec.currentExec != nil {
-		logger.Debugf("Replica %d finish execution %d, trying next", pbft.id, *pbft.exec.currentExec)
+		pbft.logger.Debugf("Replica %d finish execution %d, trying next", pbft.id, *pbft.exec.currentExec)
 		pbft.exec.lastExec = *pbft.exec.currentExec
 		delete(pbft.storeMgr.committedCert, idx)
 		if pbft.status.getState(&pbft.status.inRecovery) {
 			if pbft.recoveryMgr.recoveryToSeqNo == nil {
-				logger.Errorf("Replica %d in recovery execDoneSync but its recoveryToSeqNo is nil", pbft.id)
+				pbft.logger.Errorf("Replica %d in recovery execDoneSync but its recoveryToSeqNo is nil", pbft.id)
 				return
 			}
 			if pbft.exec.lastExec == *pbft.recoveryMgr.recoveryToSeqNo {
@@ -739,17 +751,17 @@ func (pbft *pbftImpl) afterCommitTx(idx msgID) {
 			bcInfo := pbft.getBlockchainInfo()
 			height := bcInfo.Height
 			if height == pbft.exec.lastExec {
-				logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", pbft.exec.lastExec, height)
+				pbft.logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", pbft.exec.lastExec, height)
 				//time.Sleep(3*time.Millisecond)
 				pbft.checkpoint(pbft.exec.lastExec, bcInfo)
 			} else {
 				// reqBatch call execute but have not done with execute
-				logger.Errorf("Fail to call the checkpoint, seqNo=%d, block height=%d", pbft.exec.lastExec, height)
+				pbft.logger.Errorf("Fail to call the checkpoint, seqNo=%d, block height=%d", pbft.exec.lastExec, height)
 				//pbft.retryCheckpoint(pbft.lastExec)
 			}
 		}
 	} else {
-		logger.Warningf("Replica %d had execDoneSync called, flagging ourselves as out of data", pbft.id)
+		pbft.logger.Warningf("Replica %d had execDoneSync called, flagging ourselves as out of data", pbft.id)
 		pbft.status.activeState(&pbft.status.skipInProgress)
 	}
 
@@ -779,7 +791,7 @@ func (pbft *pbftImpl) processTxEvent(tx *types.Transaction) error {
 		//Broadcast request to primary
 		payload, err := proto.Marshal(tx)
 		if err != nil {
-			logger.Errorf("C  ConsensusMessage_TRANSACTION Marshal Error", err)
+			pbft.logger.Errorf("C  ConsensusMessage_TRANSACTION Marshal Error", err)
 			return nil
 		}
 		consensusMsg := &ConsensusMessage{
@@ -807,7 +819,7 @@ func (pbft *pbftImpl) processRequestsDuringViewChange() error {
 		!pbft.status.getState(&pbft.status.inRecovery) {
 		pbft.processCachedTransactions()
 	} else {
-		logger.Warningf("Replica %d try to processReqDuringViewChange but view change is not finished or it's in recovery / updaingN", pbft.id)
+		pbft.logger.Warningf("Replica %d try to processReqDuringViewChange but view change is not finished or it's in recovery / updaingN", pbft.id)
 	}
 	return nil
 }
@@ -818,7 +830,7 @@ func (pbft *pbftImpl) processCachedTransactions() {
 		temp := pbft.reqStore.outstandingRequests.order.Front().Value
 		reqc, ok := interface{}(temp).(requestContainer)
 		if !ok {
-			logger.Error("type assert error:", temp)
+			pbft.logger.Error("type assert error:", temp)
 			return
 		}
 		req := reqc.req
@@ -834,33 +846,33 @@ func (pbft *pbftImpl) processRequestsDuringRecovery() {
 	if !pbft.status.getState(&pbft.status.inRecovery) && atomic.LoadUint32(&pbft.activeView) == 1 && atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 {
 		pbft.processCachedTransactions()
 	} else {
-		logger.Warningf("Replica %d try to processRequestsDuringRecovery but recovery is not finished or it's in viewChange / updatingN", pbft.id)
+		pbft.logger.Warningf("Replica %d try to processRequestsDuringRecovery but recovery is not finished or it's in viewChange / updatingN", pbft.id)
 	}
 }
 
 func (pbft *pbftImpl) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 
 	if pbft.status.getState(&pbft.status.inNegoView) {
-		logger.Debugf("Replica %d try to recvStateUpdatedEvent, but it's in nego-view", pbft.id)
+		pbft.logger.Debugf("Replica %d try to recvStateUpdatedEvent, but it's in nego-view", pbft.id)
 		return nil
 	}
 
 	pbft.status.inActiveState(&pbft.status.stateTransferring)
 	// If state transfer did not complete successfully, or if it did not reach our low watermark, do it again
 	if et.seqNo < pbft.h {
-		logger.Warningf("Replica %d recovered to seqNo %d but our low watermark has moved to %d", pbft.id, et.seqNo, pbft.h)
+		pbft.logger.Warningf("Replica %d recovered to seqNo %d but our low watermark has moved to %d", pbft.id, et.seqNo, pbft.h)
 		if pbft.storeMgr.highStateTarget == nil {
-			logger.Debugf("Replica %d has no state targets, cannot resume state transfer yet", pbft.id)
+			pbft.logger.Debugf("Replica %d has no state targets, cannot resume state transfer yet", pbft.id)
 		} else if et.seqNo < pbft.storeMgr.highStateTarget.seqNo {
-			logger.Debugf("Replica %d has state target for %d, transferring", pbft.id, pbft.storeMgr.highStateTarget.seqNo)
+			pbft.logger.Debugf("Replica %d has state target for %d, transferring", pbft.id, pbft.storeMgr.highStateTarget.seqNo)
 			pbft.retryStateTransfer(nil)
 		} else {
-			logger.Debugf("Replica %d has no state target above %d, highest is %d", pbft.id, et.seqNo, pbft.storeMgr.highStateTarget.seqNo)
+			pbft.logger.Debugf("Replica %d has no state target above %d, highest is %d", pbft.id, et.seqNo, pbft.storeMgr.highStateTarget.seqNo)
 		}
 		return nil
 	}
 
-	logger.Infof("Replica %d application caught up via state transfer, lastExec now %d", pbft.id, et.seqNo)
+	pbft.logger.Infof("Replica %d application caught up via state transfer, lastExec now %d", pbft.id, et.seqNo)
 	// XXX create checkpoint
 	pbft.exec.setLastExec(et.seqNo)
 	pbft.batchVdr.setVid(et.seqNo)
@@ -874,7 +886,7 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 
 	if pbft.status.getState(&pbft.status.inRecovery) {
 		if pbft.recoveryMgr.recoveryToSeqNo == nil {
-			logger.Errorf("Replica %d in recovery recvStateUpdatedEvent but " +
+			pbft.logger.Errorf("Replica %d in recovery recvStateUpdatedEvent but " +
 				"its recoveryToSeqNo is nil")
 			return nil
 		}
@@ -903,7 +915,7 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 		pbft.pbftTimerMgr.startTimer(RECOVERY_RESTART_TIMER, af)
 
 		if pbft.storeMgr.highStateTarget == nil {
-			logger.Errorf("Try to fetch QPC, but highStateTarget is nil")
+			pbft.logger.Errorf("Try to fetch QPC, but highStateTarget is nil")
 			return nil
 		}
 		peers := pbft.storeMgr.highStateTarget.replicas
@@ -924,17 +936,17 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 func (pbft *pbftImpl) recvRequestBatch(reqBatch *TransactionBatch) error {
 
 	if pbft.status.getState(&pbft.status.inNegoView) {
-		logger.Debugf("Replica %d try to recvRequestBatch, but it's in nego-view", pbft.id)
+		pbft.logger.Debugf("Replica %d try to recvRequestBatch, but it's in nego-view", pbft.id)
 		return nil
 	}
 
 	digest := hash(reqBatch)
-	logger.Debugf("Replica %d received request batch %s", pbft.id, digest)
+	pbft.logger.Debugf("Replica %d received request batch %s", pbft.id, digest)
 
 	if atomic.LoadUint32(&pbft.activeView) == 1 && pbft.primary(pbft.view) == pbft.id {
 		pbft.primaryValidateBatch(reqBatch, 0)
 	} else {
-		logger.Debugf("Replica %d is backup, not sending pre-prepare for request batch %s", pbft.id, digest)
+		pbft.logger.Debugf("Replica %d is backup, not sending pre-prepare for request batch %s", pbft.id, digest)
 	}
 
 	return nil
@@ -942,11 +954,11 @@ func (pbft *pbftImpl) recvRequestBatch(reqBatch *TransactionBatch) error {
 
 func (pbft *pbftImpl) executeAfterStateUpdate() {
 
-	logger.Debugf("Replica %d try to execute after state update", pbft.id)
+	pbft.logger.Debugf("Replica %d try to execute after state update", pbft.id)
 
 	for idx, cert := range pbft.storeMgr.certStore {
 		if idx.n > pbft.seqNo && pbft.prepared(cert.digest, idx.v, idx.n) && !cert.validated {
-			logger.Debugf("Replica %d try to vaidate batch %s", pbft.id, cert.digest)
+			pbft.logger.Debugf("Replica %d try to vaidate batch %s", pbft.id, cert.digest)
 			pbft.batchVdr.preparedCert[idx] = cert.digest
 			pbft.validatePending()
 		}
@@ -957,7 +969,7 @@ func (pbft *pbftImpl) executeAfterStateUpdate() {
 func (pbft *pbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 
 	if n % pbft.K != 0 {
-		logger.Errorf("Attempted to checkpoint a sequence number (%d) which is not a multiple of the checkpoint interval (%d)", n, pbft.K)
+		pbft.logger.Errorf("Attempted to checkpoint a sequence number (%d) which is not a multiple of the checkpoint interval (%d)", n, pbft.K)
 		return
 	}
 
@@ -965,7 +977,7 @@ func (pbft *pbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 	idAsString := byteToString(id)
 	seqNo := n
 
-	logger.Infof("Replica %d preparing checkpoint for view=%d/seqNo=%d and b64 id of %s",
+	pbft.logger.Infof("Replica %d preparing checkpoint for view=%d/seqNo=%d and b64 id of %s",
 		pbft.id, pbft.view, seqNo, idAsString)
 
 	chkpt := &Checkpoint{
@@ -979,7 +991,7 @@ func (pbft *pbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 	pbft.recvCheckpoint(chkpt)
 	payload, err := proto.Marshal(chkpt)
 	if err != nil {
-		logger.Errorf("ConsensusMessage_CHECKPOINT Marshal Error", err)
+		pbft.logger.Errorf("ConsensusMessage_CHECKPOINT Marshal Error", err)
 		return
 	}
 	consensusMsg := &ConsensusMessage{
@@ -992,11 +1004,11 @@ func (pbft *pbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 
 func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 
-	logger.Debugf("Replica %d received checkpoint from replica %d, seqNo %d, digest %s",
+	pbft.logger.Debugf("Replica %d received checkpoint from replica %d, seqNo %d, digest %s",
 		pbft.id, chkpt.ReplicaId, chkpt.SequenceNumber, chkpt.Id)
 
 	if pbft.status.getState(&pbft.status.inNegoView) {
-		logger.Debugf("Replica %d try to recvCheckpoint, but it's in nego-view", pbft.id)
+		pbft.logger.Debugf("Replica %d try to recvCheckpoint, but it's in nego-view", pbft.id)
 		return nil
 	}
 
@@ -1007,9 +1019,9 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 	if !pbft.inW(chkpt.SequenceNumber) {
 		if chkpt.SequenceNumber != pbft.h && !pbft.status.getState(&pbft.status.skipInProgress) {
 			// It is perfectly normal that we receive checkpoints for the watermark we just raised, as we raise it after 2f+1, leaving f replies left
-			logger.Warningf("Checkpoint sequence number outside watermarks: seqNo %d, low-mark %d", chkpt.SequenceNumber, pbft.h)
+			pbft.logger.Warningf("Checkpoint sequence number outside watermarks: seqNo %d, low-mark %d", chkpt.SequenceNumber, pbft.h)
 		} else {
-			logger.Debugf("Checkpoint sequence number outside watermarks: seqNo %d, low-mark %d", chkpt.SequenceNumber, pbft.h)
+			pbft.logger.Debugf("Checkpoint sequence number outside watermarks: seqNo %d, low-mark %d", chkpt.SequenceNumber, pbft.h)
 		}
 		return nil
 	}
@@ -1018,7 +1030,7 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 	ok := cert.chkpts[*chkpt]
 
 	if ok {
-		logger.Warningf("Ignoring duplicate checkpoint from replica %d, seqNo=%d", chkpt.ReplicaId, chkpt.SequenceNumber)
+		pbft.logger.Warningf("Ignoring duplicate checkpoint from replica %d, seqNo=%d", chkpt.ReplicaId, chkpt.SequenceNumber)
 		return nil
 	}
 
@@ -1026,7 +1038,7 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 	cert.chkptCount++
 	pbft.storeMgr.checkpointStore[*chkpt] = true
 
-	logger.Debugf("Replica %d found %d matching checkpoints for seqNo %d, digest %s",
+	pbft.logger.Debugf("Replica %d found %d matching checkpoints for seqNo %d, digest %s",
 		pbft.id, cert.chkptCount, chkpt.SequenceNumber, chkpt.Id)
 
 	if cert.chkptCount == pbft.f + 1 {
@@ -1050,25 +1062,25 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 
 	chkptID, ok := pbft.storeMgr.chkpts[chkpt.SequenceNumber]
 	if !ok {
-		logger.Debugf("Replica %d found checkpoint quorum for seqNo %d, digest %s, but it has not reached this checkpoint itself yet",
+		pbft.logger.Debugf("Replica %d found checkpoint quorum for seqNo %d, digest %s, but it has not reached this checkpoint itself yet",
 			pbft.id, chkpt.SequenceNumber, chkpt.Id)
 		if pbft.status.getState(&pbft.status.skipInProgress) {
 			logSafetyBound := pbft.h + pbft.L / 2
 			// As an optimization, if we are more than half way out of our log and in state transfer, move our watermarks so we don't lose track of the network
 			// if needed, state transfer will restart on completion to a more recent point in time
 			if chkpt.SequenceNumber >= logSafetyBound {
-				logger.Debugf("Replica %d is in state transfer, but, the network seems to be moving on past %d, moving our watermarks to stay with it", pbft.id, logSafetyBound)
+				pbft.logger.Debugf("Replica %d is in state transfer, but, the network seems to be moving on past %d, moving our watermarks to stay with it", pbft.id, logSafetyBound)
 				pbft.moveWatermarks(chkpt.SequenceNumber)
 			}
 		}
 		return nil
 	}
 
-	logger.Infof("Replica %d found checkpoint quorum for seqNo %d, digest %s",
+	pbft.logger.Infof("Replica %d found checkpoint quorum for seqNo %d, digest %s",
 		pbft.id, chkpt.SequenceNumber, chkpt.Id)
 
 	if chkptID != chkpt.Id {
-		logger.Criticalf("Replica %d generated a checkpoint of %s, but a quorum of the network agrees on %s. This is almost definitely non-deterministic chaincode.",
+		pbft.logger.Criticalf("Replica %d generated a checkpoint of %s, but a quorum of the network agrees on %s. This is almost definitely non-deterministic chaincode.",
 			pbft.id, chkptID, chkpt.Id)
 		pbft.stateTransfer(nil)
 	}
@@ -1088,7 +1100,7 @@ func (pbft *pbftImpl) fetchRequestBatches() (error) {
 		}
 		payload, err := proto.Marshal(frb)
 		if err != nil {
-			logger.Errorf("ConsensusMessage_FRTCH_REQUEST_BATCH Marshal Error", err)
+			pbft.logger.Errorf("ConsensusMessage_FRTCH_REQUEST_BATCH Marshal Error", err)
 			return nil
 		}
 		consensusMsg := &ConsensusMessage{
@@ -1132,7 +1144,7 @@ func (pbft *pbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 			// we will never record 2f+1 checkpoints for that sequence number, we are out of date
 			// (This is because all_replicas - missed - me = 3f+1 - f - 1 = 2f)
 			if m := chkptSeqNumArray[len(chkptSeqNumArray) - (pbft.f + 1)]; m > H {
-				logger.Warningf("Replica %d is out of date, f+1 nodes agree checkpoint with seqNo %d exists but our high water mark is %d", pbft.id, chkpt.SequenceNumber, H)
+				pbft.logger.Warningf("Replica %d is out of date, f+1 nodes agree checkpoint with seqNo %d exists but our high water mark is %d", pbft.id, chkpt.SequenceNumber, H)
 				// Discard all our requests, as we will never know which were executed, to be addressed in #394
 				pbft.batchVdr.emptyVBS()
 				pbft.moveWatermarks(m)
@@ -1158,7 +1170,7 @@ func (pbft *pbftImpl) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 	for testChkpt := range pbft.storeMgr.checkpointStore {
 		if testChkpt.SequenceNumber == chkpt.SequenceNumber && testChkpt.Id == chkpt.Id {
 			checkpointMembers[i] = testChkpt.ReplicaId
-			logger.Debugf("Replica %d adding replica %d (handle %v) to weak cert", pbft.id, testChkpt.ReplicaId, checkpointMembers[i])
+			pbft.logger.Debugf("Replica %d adding replica %d (handle %v) to weak cert", pbft.id, testChkpt.ReplicaId, checkpointMembers[i])
 			i++
 		}
 	}
@@ -1166,7 +1178,7 @@ func (pbft *pbftImpl) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 	snapshotID, err := base64.StdEncoding.DecodeString(chkpt.Id)
 	if err != nil {
 		err = fmt.Errorf("Replica %d received a weak checkpoint cert which could not be decoded (%s)", pbft.id, chkpt.Id)
-		logger.Error(err.Error())
+		pbft.logger.Error(err.Error())
 		return
 	}
 
@@ -1180,7 +1192,7 @@ func (pbft *pbftImpl) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 	pbft.updateHighStateTarget(target)
 
 	if pbft.status.getState(&pbft.status.skipInProgress) {
-		logger.Infof("Replica %d is catching up and witnessed a weak certificate for checkpoint %d, weak cert attested to by %d of %d (%v)",
+		pbft.logger.Infof("Replica %d is catching up and witnessed a weak certificate for checkpoint %d, weak cert attested to by %d of %d (%v)",
 			pbft.id, chkpt.SequenceNumber, i, pbft.N, checkpointMembers)
 		// The view should not be set to active, this should be handled by the yet unimplemented SUSPECT, see https://github.com/hyperledger/fabric/issues/1120
 		pbft.retryStateTransfer(target)
@@ -1193,13 +1205,13 @@ func (pbft *pbftImpl) moveWatermarks(n uint64) {
 	h := n / pbft.K * pbft.K
 
 	if pbft.h > n {
-		logger.Critical("Replica %d movewatermark but pbft.h>n", pbft.id)
+		pbft.logger.Critical("Replica %d movewatermark but pbft.h>n", pbft.id)
 		return
 	}
 
 	for idx, cert := range pbft.storeMgr.certStore {
 		if idx.n <= h {
-			logger.Debugf("Replica %d cleaning quorum certificate for view=%d/seqNo=%d",
+			pbft.logger.Debugf("Replica %d cleaning quorum certificate for view=%d/seqNo=%d",
 				pbft.id, idx.v, idx.n)
 			pbft.batchVdr.deleteTxFromVBS(cert.digest)
 			delete(pbft.storeMgr.outstandingReqBatches, cert.digest)
@@ -1211,7 +1223,7 @@ func (pbft *pbftImpl) moveWatermarks(n uint64) {
 
 	for testChkpt := range pbft.storeMgr.checkpointStore {
 		if testChkpt.SequenceNumber <= h {
-			logger.Debugf("Replica %d cleaning checkpoint message from replica %d, seqNo %d, b64 snapshot id %s",
+			pbft.logger.Debugf("Replica %d cleaning checkpoint message from replica %d, seqNo %d, b64 snapshot id %s",
 				pbft.id, testChkpt.ReplicaId, testChkpt.SequenceNumber, testChkpt.Id)
 			delete(pbft.storeMgr.checkpointStore, testChkpt)
 		}
@@ -1219,7 +1231,7 @@ func (pbft *pbftImpl) moveWatermarks(n uint64) {
 
 	for cid := range pbft.storeMgr.chkptCertStore {
 		if cid.n <= h {
-			logger.Debugf("Replica %d cleaning checkpoint message, seqNo %d, b64 snapshot id %s",
+			pbft.logger.Debugf("Replica %d cleaning checkpoint message, seqNo %d, b64 snapshot id %s",
 				pbft.id, cid.n, cid.id)
 			delete(pbft.storeMgr.chkptCertStore, cid)
 		}
@@ -1229,7 +1241,7 @@ func (pbft *pbftImpl) moveWatermarks(n uint64) {
 
 	pbft.h = h
 
-	logger.Infof("Replica %d updated low watermark to %d",
+	pbft.logger.Infof("Replica %d updated low watermark to %d",
 		pbft.id, pbft.h)
 
 	pbft.resubmitRequestBatches()
@@ -1237,7 +1249,7 @@ func (pbft *pbftImpl) moveWatermarks(n uint64) {
 
 func (pbft *pbftImpl) updateHighStateTarget(target *stateUpdateTarget) {
 	if pbft.storeMgr.highStateTarget != nil && pbft.storeMgr.highStateTarget.seqNo >= target.seqNo {
-		logger.Infof("Replica %d not updating state target to seqNo %d, has target for seqNo %d",
+		pbft.logger.Infof("Replica %d not updating state target to seqNo %d, has target for seqNo %d",
 			pbft.id, target.seqNo, pbft.storeMgr.highStateTarget.seqNo)
 		return
 	}
@@ -1248,7 +1260,7 @@ func (pbft *pbftImpl) updateHighStateTarget(target *stateUpdateTarget) {
 func (pbft *pbftImpl) stateTransfer(optional *stateUpdateTarget) {
 
 	if !pbft.status.getState(&pbft.status.skipInProgress) {
-		logger.Debugf("Replica %d is out of sync, pending state transfer", pbft.id)
+		pbft.logger.Debugf("Replica %d is out of sync, pending state transfer", pbft.id)
 		pbft.status.activeState(&pbft.status.skipInProgress)
 		pbft.invalidateState()
 	}
@@ -1259,14 +1271,14 @@ func (pbft *pbftImpl) stateTransfer(optional *stateUpdateTarget) {
 func (pbft *pbftImpl) retryStateTransfer(optional *stateUpdateTarget) {
 
 	if pbft.status.getState(&pbft.status.stateTransferring) {
-		logger.Debugf("Replica %d is currently mid state transfer, it must wait for this state transfer to complete before initiating a new one", pbft.id)
+		pbft.logger.Debugf("Replica %d is currently mid state transfer, it must wait for this state transfer to complete before initiating a new one", pbft.id)
 		return
 	}
 
 	target := optional
 	if target == nil {
 		if pbft.storeMgr.highStateTarget == nil {
-			logger.Debugf("Replica %d has no targets to attempt state transfer to, delaying", pbft.id)
+			pbft.logger.Debugf("Replica %d has no targets to attempt state transfer to, delaying", pbft.id)
 			return
 		}
 		target = pbft.storeMgr.highStateTarget
@@ -1274,7 +1286,7 @@ func (pbft *pbftImpl) retryStateTransfer(optional *stateUpdateTarget) {
 
 	pbft.status.activeState(&pbft.status.stateTransferring)
 
-	logger.Infof("Replica %d is initiating state transfer to seqNo %d", pbft.id, target.seqNo)
+	pbft.logger.Infof("Replica %d is initiating state transfer to seqNo %d", pbft.id, target.seqNo)
 
 	//pbft.batch.pbftManager.Queue() <- stateUpdateEvent // Todo for stateupdate
 	//pbft.consumer.skipTo(target.seqNo, target.id, target.replicas)
@@ -1294,11 +1306,11 @@ func (pbft *pbftImpl) resubmitRequestBatches() {
 	for d, reqBatch := range pbft.storeMgr.outstandingReqBatches {
 		for _, cert := range pbft.storeMgr.certStore {
 			if cert.digest == d {
-				logger.Debugf("Replica %d already has certificate for request batch %s - not going to resubmit", pbft.id, d)
+				pbft.logger.Debugf("Replica %d already has certificate for request batch %s - not going to resubmit", pbft.id, d)
 				continue outer
 			}
 		}
-		logger.Infof("Replica %d has detected request batch %s must be resubmitted", pbft.id, d)
+		pbft.logger.Infof("Replica %d has detected request batch %s must be resubmitted", pbft.id, d)
 		submissionOrder = append(submissionOrder, reqBatch)
 	}
 
@@ -1317,18 +1329,18 @@ func (pbft *pbftImpl) skipTo(seqNo uint64, id []byte, replicas []uint64) {
 	info := &protos.BlockchainInfo{}
 	err := proto.Unmarshal(id, info)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Error unmarshaling: %s", err))
+		pbft.logger.Error(fmt.Sprintf("Error unmarshaling: %s", err))
 		return
 	}
 	//pbft.UpdateState(&checkpointMessage{seqNo, id}, info, replicas)
-	logger.Debug("seqNo: ", seqNo, "id: ", id, "replicas: ", replicas)
+	pbft.logger.Debug("seqNo: ", seqNo, "id: ", id, "replicas: ", replicas)
 	pbft.updateState(seqNo, id, replicas)
 }
 
 // updateState attempts to synchronize state to a particular target, implicitly calls rollback if needed
 func (pbft *pbftImpl) updateState(seqNo uint64, targetId []byte, replicaId []uint64) {
 	//if pbft.valid {
-	//	logger.Warning("State transfer is being called for, but the state has not been invalidated")
+	//	pbft.logger.Warning("State transfer is being called for, but the state has not been invalidated")
 	//}
 
 	updateStateMsg := stateUpdateHelper(pbft.id, seqNo, targetId, replicaId)
@@ -1338,11 +1350,11 @@ func (pbft *pbftImpl) updateState(seqNo uint64, targetId []byte, replicaId []uin
 
 func (pbft *pbftImpl) processNegotiateView() error {
 	if !pbft.status.getState(&pbft.status.inNegoView) {
-		logger.Debugf("Replica %d try to negotiateView, but it's not inNegoView. This indicates a bug", pbft.id)
+		pbft.logger.Debugf("Replica %d try to negotiateView, but it's not inNegoView. This indicates a bug", pbft.id)
 		return nil
 	}
 
-	logger.Debugf("Replica %d now negotiate view...", pbft.id)
+	pbft.logger.Debugf("Replica %d now negotiate view...", pbft.id)
 
 	event := &LocalEvent{
 		Service:   RECOVERY_SERVICE,
@@ -1363,7 +1375,7 @@ func (pbft *pbftImpl) processNegotiateView() error {
 	}
 	payload, err := proto.Marshal(negoViewMsg)
 	if err != nil {
-		logger.Errorf("Marshal NegotiateView Error!")
+		pbft.logger.Errorf("Marshal NegotiateView Error!")
 		return nil
 	}
 	consensusMsg := &ConsensusMessage{
@@ -1372,7 +1384,7 @@ func (pbft *pbftImpl) processNegotiateView() error {
 	}
 	msg := cMsgToPbMsg(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
-	logger.Debugf("Replica %d broadcast negociate view message", pbft.id)
+	pbft.logger.Debugf("Replica %d broadcast negociate view message", pbft.id)
 
 	// post the negotiate message event to myself
 	nvr := &NegotiateViewResponse{
@@ -1383,7 +1395,7 @@ func (pbft *pbftImpl) processNegotiateView() error {
 	}
 	consensusPayload, err := proto.Marshal(nvr)
 	if err != nil {
-		logger.Errorf("Marshal NegotiateViewResponse Error!")
+		pbft.logger.Errorf("Marshal NegotiateViewResponse Error!")
 		return nil
 	}
 	responseMsg := &ConsensusMessage{
@@ -1400,10 +1412,10 @@ func (pbft *pbftImpl) recvNegoView(nv *NegotiateView) events.Event {
 		return nil
 	}
 	sender := nv.ReplicaId
-	logger.Debugf("Replica %d receive negotiate view from %d", pbft.id, sender)
+	pbft.logger.Debugf("Replica %d receive negotiate view from %d", pbft.id, sender)
 
 	if pbft.nodeMgr.routers == nil {
-		logger.Debugf("Replica %d ignore negotiate view from %d since has not received local msg", pbft.id, sender)
+		pbft.logger.Debugf("Replica %d ignore negotiate view from %d since has not received local msg", pbft.id, sender)
 		return nil
 	}
 
@@ -1415,7 +1427,7 @@ func (pbft *pbftImpl) recvNegoView(nv *NegotiateView) events.Event {
 	}
 	payload, err := proto.Marshal(negoViewRsp)
 	if err != nil {
-		logger.Errorf("Marshal NegotiateViewResponse Error!")
+		pbft.logger.Errorf("Marshal NegotiateViewResponse Error!")
 		return nil
 	}
 	consensusMsg := &ConsensusMessage{
@@ -1429,17 +1441,17 @@ func (pbft *pbftImpl) recvNegoView(nv *NegotiateView) events.Event {
 
 func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 	if !pbft.status.getState(&pbft.status.inNegoView) {
-		logger.Debugf("Replica %d already finished nego-view, ignore incoming nego-view response", pbft.id)
+		pbft.logger.Debugf("Replica %d already finished nego-view, ignore incoming nego-view response", pbft.id)
 		return nil
 	}
 
 	//rspId, rspView := nvr.ReplicaId, nvr.View
 	if _, ok := pbft.recoveryMgr.negoViewRspStore[nvr.ReplicaId]; ok {
-		logger.Warningf("Already recv view number from %d, ignore it", nvr.ReplicaId)
+		pbft.logger.Warningf("Already recv view number from %d, ignore it", nvr.ReplicaId)
 		return nil
 	}
 
-	logger.Debugf("Replica %d receive nego-view response from %d, view: %d, N: %d", pbft.id, nvr.ReplicaId, nvr.View, nvr.N)
+	pbft.logger.Debugf("Replica %d receive nego-view response from %d, view: %d, N: %d", pbft.id, nvr.ReplicaId, nvr.View, nvr.N)
 
 	pbft.recoveryMgr.negoViewRspStore[nvr.ReplicaId] = nvr
 
@@ -1478,7 +1490,7 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 			routers, _ := stringToByte(result.routers)
 			if !bytes.Equal(routers, pbft.nodeMgr.routers) && !pbft.status.getState(&pbft.status.isNewNode) {
 				pbft.nodeMgr.routers = routers
-				logger.Debugf("Replica %d update routing table according to nego result", pbft.id)
+				pbft.logger.Debugf("Replica %d update routing table according to nego result", pbft.id)
 				pbft.helper.NegoRouters(routers)
 			}
 			pbft.status.inActiveState(&pbft.status.inNegoView)
@@ -1501,14 +1513,14 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 
 			pbft.pbftTimerMgr.startTimer(NEGO_VIEW_RSP_TIMER, af)
 
-			logger.Warningf("pbft recv at least N-f nego-view responses, but cannot find same view from 2f+1.")
+			pbft.logger.Warningf("pbft recv at least N-f nego-view responses, but cannot find same view from 2f+1.")
 		}
 	}
 	return nil
 }
 
 func (pbft *pbftImpl) restartNegoView() {
-	logger.Debugf("Replica %d restart negotiate view", pbft.id)
+	pbft.logger.Debugf("Replica %d restart negotiate view", pbft.id)
 	pbft.processNegotiateView()
 }
 
@@ -1519,20 +1531,20 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 
 	primary := pbft.primary(pbft.view)
 	if primary == pbft.id {
-		logger.Debugf("Primary %d received validated batch for view=%d/vid=%d, batch hash: %s", pbft.id, result.View, result.SeqNo, result.Hash)
+		pbft.logger.Debugf("Primary %d received validated batch for view=%d/vid=%d, batch hash: %s", pbft.id, result.View, result.SeqNo, result.Hash)
 
 		if atomic.LoadUint32(&pbft.activeView) == 0 {
-			logger.Debugf("Replica %d ignoring ValidatedResult as we sre in view change", pbft.id)
+			pbft.logger.Debugf("Replica %d ignoring ValidatedResult as we sre in view change", pbft.id)
 			return nil
 		}
 
 		if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 {
-			logger.Debugf("Replica %d ignoring ValidatedResult as we sre in updating N", pbft.id)
+			pbft.logger.Debugf("Replica %d ignoring ValidatedResult as we sre in updating N", pbft.id)
 			return nil
 		}
 
 		if !pbft.inWV(result.View, result.SeqNo) {
-			logger.Debugf("Replica %d receives validated result %s that is out of sequence numbers", pbft.id, result.Hash)
+			pbft.logger.Debugf("Replica %d receives validated result %s that is out of sequence numbers", pbft.id, result.Hash)
 			return nil
 		}
 
@@ -1551,10 +1563,10 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 		pbft.batchVdr.saveToCVB(digest, cache)
 		pbft.trySendPrePrepares()
 	} else {
-		logger.Debugf("Replica %d recived validated batch for view=%d/sqeNo=%d, batch hash: %s", pbft.id, result.View, result.SeqNo, result.Hash)
+		pbft.logger.Debugf("Replica %d recived validated batch for view=%d/sqeNo=%d, batch hash: %s", pbft.id, result.View, result.SeqNo, result.Hash)
 
 		if !pbft.inWV(result.View, result.SeqNo) {
-			logger.Debugf("Replica %d receives validated result %s that is out of sequence numbers", pbft.id, result.Hash)
+			pbft.logger.Debugf("Replica %d receives validated result %s that is out of sequence numbers", pbft.id, result.Hash)
 			return nil
 		}
 
@@ -1565,7 +1577,7 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 			cert.validated = true
 			pbft.sendCommit(digest, result.View, result.SeqNo)
 		} else {
-			logger.Warningf("Relica %d cannot agree with the validate result for view=%d/seqNo=%d sent from primary, self: %s, primary: %s", pbft.id, result.View, result.SeqNo, result.Hash, cert.digest)
+			pbft.logger.Warningf("Relica %d cannot agree with the validate result for view=%d/seqNo=%d sent from primary, self: %s, primary: %s", pbft.id, result.View, result.SeqNo, result.Hash, cert.digest)
 			pbft.sendViewChange()
 		}
 	}
@@ -1575,13 +1587,13 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 func (pbft *pbftImpl) recvRemoveCache(vid uint64) bool {
 
 	if vid <= 10 {
-		logger.Debugf("Replica %d received remove cached batch %d <= 10, retain it until 11", pbft.id, vid)
+		pbft.logger.Debugf("Replica %d received remove cached batch %d <= 10, retain it until 11", pbft.id, vid)
 		return true
 	}
 	id := vid - 10
 	_, ok := pbft.duplicator[id]
 	if ok {
-		logger.Debugf("Replica %d received remove cached batch %d, and remove batch %d", pbft.id, vid, id)
+		pbft.logger.Debugf("Replica %d received remove cached batch %d, and remove batch %d", pbft.id, vid, id)
 		delete(pbft.duplicator, id)
 	}
 

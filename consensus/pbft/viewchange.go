@@ -71,16 +71,16 @@ func newVcManager(pbftTm *timerManager, pbft *pbftImpl, conf *common.Config) *vc
 	vcm.viewChangePeriod = uint64(0)
 
 	if vcm.viewChangePeriod > 0 {
-		logger.Infof("PBFT view change period = %v", vcm.viewChangePeriod)
+		pbft.logger.Infof("PBFT view change period = %v", vcm.viewChangePeriod)
 	} else {
-		logger.Infof("PBFT automatic view change disabled")
+		pbft.logger.Infof("PBFT automatic view change disabled")
 	}
 
 	vcm.lastNewViewTimeout = pbftTm.getTimeoutValue(NEW_VIEW_TIMER)
 
 	// vcResendLimit
 	vcm.vcResendLimit = conf.GetInt(PBFT_VC_RESEND_LIMIT)
-	logger.Noticef("Replica %d set vcResendLimit %d", pbft.id, vcm.vcResendLimit)
+	pbft.logger.Noticef("Replica %d set vcResendLimit %d", pbft.id, vcm.vcResendLimit)
 	vcm.vcResendCount = 0
 
 	return vcm
@@ -156,7 +156,7 @@ func (pbft *pbftImpl) sendViewChange() events.Event {
 
 	err := pbft.beforeSendVC()
 	if err != nil {
-		logger.Error(err.Error())
+		pbft.logger.Error(err.Error())
 		return nil
 	}
 
@@ -175,24 +175,24 @@ func (pbft *pbftImpl) sendViewChange() events.Event {
 
 	for _, p := range pbft.vcMgr.plist {
 		if p.SequenceNumber < pbft.h {
-			logger.Errorf("BUG! Replica %d should not have anything in our pset less than h, found %+v", pbft.id, p)
+			pbft.logger.Errorf("BUG! Replica %d should not have anything in our pset less than h, found %+v", pbft.id, p)
 		}
 		vc.Pset = append(vc.Pset, p)
 	}
 
 	for _, q := range pbft.vcMgr.qlist {
 		if q.SequenceNumber < pbft.h {
-			logger.Errorf("BUG! Replica %d should not have anything in our qset less than h, found %+v", pbft.id, q)
+			pbft.logger.Errorf("BUG! Replica %d should not have anything in our qset less than h, found %+v", pbft.id, q)
 		}
 		vc.Qset = append(vc.Qset, q)
 	}
 
-	logger.Debugf("Replica %d sending view-change, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
+	pbft.logger.Debugf("Replica %d sending view-change, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		pbft.id, vc.View, vc.H, len(vc.Cset), len(vc.Pset), len(vc.Qset))
 
 	payload, err := proto.Marshal(vc)
 	if err != nil {
-		logger.Errorf("ConsensusMessage_VIEW_CHANGE Marshal Error", err)
+		pbft.logger.Errorf("ConsensusMessage_VIEW_CHANGE Marshal Error", err)
 		return nil
 	}
 	consensusMsg := &ConsensusMessage{
@@ -217,41 +217,41 @@ func (pbft *pbftImpl) sendViewChange() events.Event {
 
 //recvViewChange
 func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
-	logger.Infof("Replica %d received view-change from replica %d, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
+	pbft.logger.Infof("Replica %d received view-change from replica %d, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		pbft.id, vc.ReplicaId, vc.View, vc.H, len(vc.Cset), len(vc.Pset), len(vc.Qset))
 
 	if pbft.status.getState(&pbft.status.inNegoView) {
-		logger.Debugf("Replica %d try to recvViewChange, but it's in nego-view", pbft.id)
+		pbft.logger.Debugf("Replica %d try to recvViewChange, but it's in nego-view", pbft.id)
 		return nil
 	}
 
 	if pbft.status.getState(&pbft.status.inRecovery) {
-		logger.Noticef("Replica %d try to recvcViewChange, but it's in recovery", pbft.id)
+		pbft.logger.Noticef("Replica %d try to recvcViewChange, but it's in recovery", pbft.id)
 		return nil
 	}
 
 	if vc.View < pbft.view {
-		logger.Warningf("Replica %d found view-change message for old view from replica %d", pbft.id, vc.ReplicaId)
+		pbft.logger.Warningf("Replica %d found view-change message for old view from replica %d", pbft.id, vc.ReplicaId)
 		return nil
 	}
 
 	if !pbft.correctViewChange(vc) {
-		logger.Warningf("Replica %d found view-change message incorrect", pbft.id)
+		pbft.logger.Warningf("Replica %d found view-change message incorrect", pbft.id)
 		return nil
 	}
 
 	// record same vc from self times
 	if vc.ReplicaId == pbft.id {
 		pbft.vcMgr.vcResendCount++
-		logger.Warningf("======== Replica %d already recv view change from itself for %d times", pbft.id, pbft.vcMgr.vcResendCount)
+		pbft.logger.Warningf("======== Replica %d already recv view change from itself for %d times", pbft.id, pbft.vcMgr.vcResendCount)
 	}
 
 	if _, ok := pbft.vcMgr.viewChangeStore[vcidx{vc.View, vc.ReplicaId}]; ok {
-		logger.Warningf("Replica %d already has a view change message"+
+		pbft.logger.Warningf("Replica %d already has a view change message"+
 			" for view %d from replica %d", pbft.id, vc.View, vc.ReplicaId)
 
 		if pbft.vcMgr.vcResendCount >= pbft.vcMgr.vcResendLimit {
-			logger.Noticef("Replica %d view change resend reach upbound, try to recovery", pbft.id)
+			pbft.logger.Noticef("Replica %d view change resend reach upbound, try to recovery", pbft.id)
 			pbft.pbftTimerMgr.stopTimer(VC_RESEND_TIMER)
 			pbft.vcMgr.vcResendCount = 0
 			pbft.status.activeState(&pbft.status.inNegoView, &pbft.status.inRecovery)
@@ -284,7 +284,7 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 
 	// We only enter this if there are enough view change messages greater than our current view
 	if len(replicas) >= pbft.f + 1 {
-		logger.Warningf("Replica %d received f+1 view-change messages, triggering view-change to view %d",
+		pbft.logger.Warningf("Replica %d received f+1 view-change messages, triggering view-change to view %d",
 			pbft.id, minView)
 		pbft.pbftTimerMgr.stopTimer(FIRST_REQUEST_TIMER)
 		// subtract one, because sendViewChange() increments
@@ -298,7 +298,7 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 			quorum++
 		}
 	}
-	logger.Debugf("Replica %d now has %d view change requests for view %d", pbft.id, quorum, pbft.view)
+	pbft.logger.Debugf("Replica %d now has %d view change requests for view %d", pbft.id, quorum, pbft.view)
 
 	if atomic.LoadUint32(&pbft.activeView) == 0 && vc.View == pbft.view && quorum >= pbft.allCorrectReplicasQuorum() {
 		pbft.pbftTimerMgr.stopTimer(VC_RESEND_TIMER)
@@ -317,12 +317,12 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 func (pbft *pbftImpl) sendNewView() events.Event {
 
 	if pbft.status.getState(&pbft.status.inNegoView) {
-		logger.Debugf("Replica %d try to sendNewView, but it's in nego-view", pbft.id)
+		pbft.logger.Debugf("Replica %d try to sendNewView, but it's in nego-view", pbft.id)
 		return nil
 	}
 
 	if _, ok := pbft.vcMgr.newViewStore[pbft.view]; ok {
-		logger.Debugf("Replica %d already has new view in store for view %d, skipping", pbft.id, pbft.view)
+		pbft.logger.Debugf("Replica %d already has new view in store for view %d, skipping", pbft.id, pbft.view)
 		return nil
 	}
 
@@ -331,13 +331,13 @@ func (pbft *pbftImpl) sendNewView() events.Event {
 	cp, ok, replicas := pbft.selectInitialCheckpoint(vset)
 
 	if !ok {
-		logger.Infof("Replica %d could not find consistent checkpoint: %+v", pbft.id, pbft.vcMgr.viewChangeStore)
+		pbft.logger.Infof("Replica %d could not find consistent checkpoint: %+v", pbft.id, pbft.vcMgr.viewChangeStore)
 		return nil
 	}
 
 	msgList := pbft.assignSequenceNumbers(vset, cp.SequenceNumber)
 	if msgList == nil {
-		logger.Infof("Replica %d could not assign sequence numbers for new view", pbft.id)
+		pbft.logger.Infof("Replica %d could not assign sequence numbers for new view", pbft.id)
 		return nil
 	}
 
@@ -348,11 +348,11 @@ func (pbft *pbftImpl) sendNewView() events.Event {
 		ReplicaId: pbft.id,
 	}
 
-	logger.Infof("Replica %d is new primary, sending new-view, v:%d, X:%+v",
+	pbft.logger.Infof("Replica %d is new primary, sending new-view, v:%d, X:%+v",
 		pbft.id, nv.View, nv.Xset)
 	payload, err := proto.Marshal(nv)
 	if err != nil {
-		logger.Errorf("ConsensusMessage_NEW_VIEW Marshal Error", err)
+		pbft.logger.Errorf("ConsensusMessage_NEW_VIEW Marshal Error", err)
 		return nil
 	}
 	consensusMsg := &ConsensusMessage{
@@ -368,22 +368,22 @@ func (pbft *pbftImpl) sendNewView() events.Event {
 
 //recvNewView
 func (pbft *pbftImpl) recvNewView(nv *NewView) events.Event {
-	logger.Infof("Replica %d received new-view %d",
+	pbft.logger.Infof("Replica %d received new-view %d",
 		pbft.id, nv.View)
 
 	if pbft.status.getState(&pbft.status.inNegoView) {
-		logger.Debugf("Replica %d try to recvNewView, but it's in nego-view", pbft.id)
+		pbft.logger.Debugf("Replica %d try to recvNewView, but it's in nego-view", pbft.id)
 		return nil
 	}
 
 	if pbft.status.getState(&pbft.status.inRecovery) {
-		logger.Noticef("Replica %d try to recvNewView, but it's in recovery", pbft.id)
+		pbft.logger.Noticef("Replica %d try to recvNewView, but it's in recovery", pbft.id)
 		pbft.recoveryMgr.recvNewViewInRecovery = true
 		return nil
 	}
 
 	if !(nv.View > 0 && nv.View >= pbft.view && pbft.primary(nv.View) == nv.ReplicaId && pbft.vcMgr.newViewStore[nv.View] == nil) {
-		logger.Infof("Replica %d rejecting invalid new-view from %d, v:%d",
+		pbft.logger.Infof("Replica %d rejecting invalid new-view from %d, v:%d",
 			pbft.id, nv.ReplicaId, nv.View)
 		return nil
 	}
@@ -397,7 +397,7 @@ func (pbft *pbftImpl) recvNewView(nv *NewView) events.Event {
 		}
 	}
 	if quorum < pbft.allCorrectReplicasQuorum() {
-		logger.Warningf("Replica %d has not meet ViewChangedQuorum", pbft.id)
+		pbft.logger.Warningf("Replica %d has not meet ViewChangedQuorum", pbft.id)
 		return nil
 	}
 
@@ -408,19 +408,19 @@ func (pbft *pbftImpl) recvNewView(nv *NewView) events.Event {
 func (pbft *pbftImpl) processNewView() events.Event {
 	nv, ok := pbft.vcMgr.newViewStore[pbft.view]
 	if !ok {
-		logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
+		pbft.logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
 		return nil
 	}
 
 	if atomic.LoadUint32(&pbft.activeView) == 1 {
-		logger.Infof("Replica %d ignoring new-view from %d, v:%d: we are active in view %d",
+		pbft.logger.Infof("Replica %d ignoring new-view from %d, v:%d: we are active in view %d",
 			pbft.id, nv.ReplicaId, nv.View, pbft.view)
 		return nil
 	}
 
 	cp, ok, replicas := pbft.selectInitialCheckpoint(nv.Vset)
 	if !ok {
-		logger.Warningf("Replica %d could not determine initial checkpoint: %+v",
+		pbft.logger.Warningf("Replica %d could not determine initial checkpoint: %+v",
 			pbft.id, pbft.vcMgr.viewChangeStore)
 		return pbft.sendViewChange()
 	}
@@ -441,13 +441,13 @@ func (pbft *pbftImpl) processNewView() events.Event {
 	msgList := pbft.assignSequenceNumbers(nv.Vset, cp.SequenceNumber)
 
 	if msgList == nil {
-		logger.Warningf("Replica %d could not assign sequence numbers: %+v",
+		pbft.logger.Warningf("Replica %d could not assign sequence numbers: %+v",
 			pbft.id, pbft.vcMgr.viewChangeStore)
 		return pbft.sendViewChange()
 	}
 
 	if !(len(msgList) == 0 && len(nv.Xset) == 0) && !reflect.DeepEqual(msgList, nv.Xset) {
-		logger.Warningf("Replica %d failed to verify new-view Xset: computed %+v, received %+v",
+		pbft.logger.Warningf("Replica %d failed to verify new-view Xset: computed %+v, received %+v",
 			pbft.id, msgList, nv.Xset)
 		return pbft.sendViewChange()
 	}
@@ -457,12 +457,12 @@ func (pbft *pbftImpl) processNewView() events.Event {
 	}
 
 	if speculativeLastExec < cp.SequenceNumber {
-		logger.Warningf("Replica %d missing base checkpoint %d (%s), our most recent execution %d", pbft.id, cp.SequenceNumber, cp.Id, speculativeLastExec)
+		pbft.logger.Warningf("Replica %d missing base checkpoint %d (%s), our most recent execution %d", pbft.id, cp.SequenceNumber, cp.Id, speculativeLastExec)
 
 		snapshotID, err := base64.StdEncoding.DecodeString(cp.Id)
 		if nil != err {
 			err = fmt.Errorf("Replica %d received a view change whose hash could not be decoded (%s)", pbft.id, cp.Id)
-			logger.Error(err.Error())
+			pbft.logger.Error(err.Error())
 			return nil
 		}
 
@@ -503,12 +503,12 @@ func (pbft *pbftImpl) primaryProcessNewView(initialCp ViewChange_C, replicas []u
 
 	// true means we can not execToTarget need state transfer
 	if speculativeLastExec < initialCp.SequenceNumber {
-		logger.Warningf("Replica %d missing base checkpoint %d (%s), our most recent execution %d", pbft.id, initialCp.SequenceNumber, initialCp.Id, speculativeLastExec)
+		pbft.logger.Warningf("Replica %d missing base checkpoint %d (%s), our most recent execution %d", pbft.id, initialCp.SequenceNumber, initialCp.Id, speculativeLastExec)
 
 		snapshotID, err := base64.StdEncoding.DecodeString(initialCp.Id)
 		if nil != err {
 			err = fmt.Errorf("Replica %d received a view change whose hash could not be decoded (%s)", pbft.id, initialCp.Id)
-			logger.Error(err.Error())
+			pbft.logger.Error(err.Error())
 			return nil
 		}
 
@@ -541,7 +541,7 @@ func (vcm *vcManager) updateViewChangeSeqNo(seqNo, K, id uint64) {
 	}
 	// Ensure the view change always occurs at a checkpoint boundary
 	vcm.viewChangeSeqNo = seqNo + vcm.viewChangePeriod * K - seqNo % K
-	logger.Debugf("Replica %d updating view change sequence number to %d", id, vcm.viewChangeSeqNo)
+	//logger.Debugf("Replica %d updating view change sequence number to %d", id, vcm.viewChangeSeqNo)
 }
 
 func (pbft *pbftImpl) canExecuteToTarget(specLastExec uint64, initialCp ViewChange_C) bool {
@@ -564,7 +564,7 @@ outer:
 			}
 
 			if quorum < pbft.intersectionQuorum() {
-				logger.Debugf("Replica %d missing quorum of commit certificate for seqNo=%d, only has %d of %d", pbft.id, quorum, pbft.intersectionQuorum())
+				pbft.logger.Debugf("Replica %d missing quorum of commit certificate for seqNo=%d, only has %d of %d", pbft.id, quorum, pbft.intersectionQuorum())
 				continue
 			}
 
@@ -574,7 +574,7 @@ outer:
 
 		if !found {
 			canExecuteToTarget = false
-			logger.Debugf("Replica %d missing commit certificate for seqNo=%d", pbft.id, seqNo)
+			pbft.logger.Debugf("Replica %d missing commit certificate for seqNo=%d", pbft.id, seqNo)
 			break outer
 		}
 
@@ -582,10 +582,10 @@ outer:
 
 	if canExecuteToTarget {
 		pbft.nvInitialSeqNo = initialCp.SequenceNumber
-		logger.Debugf("Replica %d needs to process a new view, but can execute to the checkpoint seqNo %d, delaying processing of new view", pbft.id, initialCp.SequenceNumber)
+		pbft.logger.Debugf("Replica %d needs to process a new view, but can execute to the checkpoint seqNo %d, delaying processing of new view", pbft.id, initialCp.SequenceNumber)
 	} else {
 		pbft.nvInitialSeqNo = 0
-		logger.Infof("Replica %d cannot execute to the view change checkpoint with seqNo %d", pbft.id, initialCp.SequenceNumber)
+		pbft.logger.Infof("Replica %d cannot execute to the view change checkpoint with seqNo %d", pbft.id, initialCp.SequenceNumber)
 	}
 	return canExecuteToTarget
 }
@@ -604,10 +604,10 @@ func (pbft *pbftImpl) feedMissingReqBatchIfNeeded(xset Xset) (newReqBatchMissing
 			}
 
 			if !pbft.batchVdr.containsInVBS(d) {
-				logger.Warningf("Replica %d missing assigned, non-checkpointed request batch %s",
+				pbft.logger.Warningf("Replica %d missing assigned, non-checkpointed request batch %s",
 					pbft.id, d)
 				if _, ok := pbft.storeMgr.missingReqBatches[d]; !ok {
-					logger.Warningf("Replica %v requesting to fetch batch %s",
+					pbft.logger.Warningf("Replica %v requesting to fetch batch %s",
 						pbft.id, d)
 					newReqBatchMissing = true
 					pbft.storeMgr.missingReqBatches[d] = true
@@ -619,10 +619,10 @@ func (pbft *pbftImpl) feedMissingReqBatchIfNeeded(xset Xset) (newReqBatchMissing
 }
 
 func (pbft *pbftImpl) processReqInNewView(nv *NewView) events.Event {
-	logger.Debugf("Replica %d accepting new-view to view %d", pbft.id, pbft.view)
+	pbft.logger.Debugf("Replica %d accepting new-view to view %d", pbft.id, pbft.view)
 
 	if pbft.status.getState(&pbft.status.vcHandled) {
-		logger.Debugf("Replica %d repeated enter processReqInNewView, ignore it")
+		pbft.logger.Debugf("Replica %d repeated enter processReqInNewView, ignore it")
 		return nil
 	}
 	pbft.status.activeState(&pbft.status.vcHandled)
@@ -667,26 +667,26 @@ func (pbft *pbftImpl) processReqInNewView(nv *NewView) events.Event {
 func (pbft *pbftImpl) recvFinishVcReset(finish *FinishVcReset) events.Event {
 
 	if pbft.primary(pbft.view) != pbft.id {
-		logger.Warningf("Replica %d is not primary, but received others FinishVcReset", pbft.id)
+		pbft.logger.Warningf("Replica %d is not primary, but received others FinishVcReset", pbft.id)
 		return nil
 	}
 
 	if atomic.LoadUint32(&pbft.activeView) == 1 {
-		logger.Warningf("Replica %d is not in viewChange, but received others FinishVcReset", pbft.id)
+		pbft.logger.Warningf("Replica %d is not in viewChange, but received others FinishVcReset", pbft.id)
 		return nil
 	}
 
 	if finish.View != pbft.view || finish.LowH != pbft.h {
-		logger.Warningf("Replica %d received finishVcReset from replica %d, expect view=%d/h=%d, but get view=%d/h=%d",
+		pbft.logger.Warningf("Replica %d received finishVcReset from replica %d, expect view=%d/h=%d, but get view=%d/h=%d",
 			pbft.id, finish.ReplicaId, pbft.view, pbft.h, finish.View, finish.LowH)
 		return nil
 	}
 
-	logger.Debugf("Primary %d received FinishVcReset from replica %d, view=%d/h=%d",
+	pbft.logger.Debugf("Primary %d received FinishVcReset from replica %d, view=%d/h=%d",
 		pbft.id, finish.ReplicaId, finish.View, finish.LowH)
 	ok := pbft.vcMgr.vcResetStore[*finish]
 	if ok {
-		logger.Warningf("Replica %d ignored duplicate agree FinishVcReset from %d", pbft.id, finish.ReplicaId)
+		pbft.logger.Warningf("Replica %d ignored duplicate agree FinishVcReset from %d", pbft.id, finish.ReplicaId)
 		return nil
 	}
 	pbft.vcMgr.vcResetStore[*finish] = true
@@ -697,7 +697,7 @@ func (pbft *pbftImpl) recvFinishVcReset(finish *FinishVcReset) events.Event {
 func (pbft *pbftImpl) handleTailInNewView() events.Event {
 
 	if atomic.LoadUint32(&pbft.activeView) == 1 {
-		logger.Debugf("Replica %d in active view, ignore handleTail request", pbft.id)
+		pbft.logger.Debugf("Replica %d in active view, ignore handleTail request", pbft.id)
 		return nil
 	}
 
@@ -706,13 +706,13 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 	}
 
 	if pbft.status.getState(&pbft.status.inVcReset) {
-		logger.Debugf("Primary %d itself has not done with vcReset", pbft.id)
+		pbft.logger.Debugf("Primary %d itself has not done with vcReset", pbft.id)
 		return nil
 	}
 
 	nv, ok := pbft.vcMgr.newViewStore[pbft.view]
 	if !ok {
-		logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
+		pbft.logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
 		return nil
 	}
 
@@ -723,15 +723,15 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 	for i := pbft.h + uint64(1); i < upper; i++ {
 		d, ok := nv.Xset[i]
 		if !ok {
-			logger.Critical("view change Xset miss batch number %d", i)
+			pbft.logger.Critical("view change Xset miss batch number %d", i)
 		} else if d == "" {
 			// This should not happen
-			logger.Critical("view change Xset has null batch, kick it out")
+			pbft.logger.Critical("view change Xset has null batch, kick it out")
 		} else {
 			if !pbft.batchVdr.containsInVBS(d) {
-				logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
+				pbft.logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
 			} else {
-				logger.Critical("send validate")
+				pbft.logger.Critical("send validate")
 				pbft.primaryValidateBatch(pbft.batchVdr.getTxBatchFromVBS(d), i)
 			}
 		}
@@ -752,7 +752,7 @@ func (pbft *pbftImpl) finishViewChange() events.Event {
 	}
 	payload, err := proto.Marshal(finish)
 	if err != nil {
-		logger.Errorf("Marshal FinishVcReset Error!")
+		pbft.logger.Errorf("Marshal FinishVcReset Error!")
 		return nil
 	}
 	consensusMsg := &ConsensusMessage{
@@ -763,7 +763,7 @@ func (pbft *pbftImpl) finishViewChange() events.Event {
 	msg := cMsgToPbMsg(consensusMsg, pbft.id)
 	primary := pbft.primary(pbft.view)
 	pbft.helper.InnerUnicast(msg, primary)
-	logger.Debugf("Replica %d send FinishVcReset to primary %d", pbft.id, primary)
+	pbft.logger.Debugf("Replica %d send FinishVcReset to primary %d", pbft.id, primary)
 	return &LocalEvent{
 		Service:VIEW_CHANGE_SERVICE,
 		EventType:VIEW_CHANGED_EVENT,
@@ -783,13 +783,13 @@ func (pbft *pbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint Vi
 		for _, c := range vc.Cset {
 			// TODO, verify that we strip duplicate checkpoints from this set
 			checkpoints[*c] = append(checkpoints[*c], vc)
-			logger.Debugf("Replica %d appending checkpoint from replica %d with seqNo=%d, h=%d, and checkpoint digest %s",
+			pbft.logger.Debugf("Replica %d appending checkpoint from replica %d with seqNo=%d, h=%d, and checkpoint digest %s",
 				pbft.id, vc.ReplicaId, vc.H, c.SequenceNumber, c.Id)
 		}
 	}
 
 	if len(checkpoints) == 0 {
-		logger.Debugf("Replica %d has no checkpoints to select from: %d %s",
+		pbft.logger.Debugf("Replica %d has no checkpoints to select from: %d %s",
 			pbft.id, len(pbft.vcMgr.viewChangeStore), checkpoints)
 		return
 	}
@@ -798,7 +798,7 @@ func (pbft *pbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint Vi
 		// need weak certificate for the checkpoint
 		if len(vcList) <= pbft.f {
 			// type casting necessary to match types
-			logger.Debugf("Replica %d has no weak certificate for n:%d, vcList was %d long",
+			pbft.logger.Debugf("Replica %d has no weak certificate for n:%d, vcList was %d long",
 				pbft.id, idx.SequenceNumber, len(vcList))
 			continue
 		}
@@ -814,7 +814,7 @@ func (pbft *pbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint Vi
 		}
 
 		if quorum < pbft.intersectionQuorum() {
-			logger.Debugf("Replica %d has no quorum for n:%d", pbft.id, idx.SequenceNumber)
+			pbft.logger.Debugf("Replica %d has no quorum for n:%d", pbft.id, idx.SequenceNumber)
 			continue
 		}
 
@@ -907,7 +907,7 @@ nLoop:
 			continue nLoop
 		}
 
-		logger.Warningf("Replica %d could not assign value to contents of seqNo %d, found only %d missing P entries", pbft.id, n, quorum)
+		pbft.logger.Warningf("Replica %d could not assign value to contents of seqNo %d, found only %d missing P entries", pbft.id, n, quorum)
 		return nil
 	}
 
@@ -923,12 +923,12 @@ nLoop:
 func (pbft *pbftImpl) recvFetchRequestBatch(fr *FetchRequestBatch) (err error) {
 
 	if pbft.status.getState(&pbft.status.inNegoView) {
-		logger.Debugf("Replica %d try to recvFetchRequestBatch, but it's in nego-view", pbft.id)
+		pbft.logger.Debugf("Replica %d try to recvFetchRequestBatch, but it's in nego-view", pbft.id)
 		return nil
 	}
 
 	if pbft.status.getState(&pbft.status.inRecovery) {
-		logger.Noticef("Replica %d try to recvFetchRequestBatch, but it's in recovery", pbft.id)
+		pbft.logger.Noticef("Replica %d try to recvFetchRequestBatch, but it's in recovery", pbft.id)
 		return nil
 	}
 
@@ -944,7 +944,7 @@ func (pbft *pbftImpl) recvFetchRequestBatch(fr *FetchRequestBatch) (err error) {
 	}
 	payload, err := proto.Marshal(batch)
 	if err != nil {
-		logger.Errorf("ConsensusMessage_RETURN_REQUEST_BATCH Marshal Error", err)
+		pbft.logger.Errorf("ConsensusMessage_RETURN_REQUEST_BATCH Marshal Error", err)
 		return nil
 	}
 	consensusMsg := &ConsensusMessage{
@@ -962,11 +962,11 @@ func (pbft *pbftImpl) recvFetchRequestBatch(fr *FetchRequestBatch) (err error) {
 func (pbft *pbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) events.Event {
 
 	if pbft.status.getState(&pbft.status.inNegoView) {
-		logger.Debugf("Replica %d try to recvReturnRequestBatch, but it's in nego-view", pbft.id)
+		pbft.logger.Debugf("Replica %d try to recvReturnRequestBatch, but it's in nego-view", pbft.id)
 		return nil
 	}
 	if pbft.status.getState(&pbft.status.inRecovery) {
-		logger.Noticef("Replica %d try to recvReturnRequestBatch, but it's in recovery", pbft.id)
+		pbft.logger.Noticef("Replica %d try to recvReturnRequestBatch, but it's in recovery", pbft.id)
 		return nil
 	}
 
@@ -976,13 +976,13 @@ func (pbft *pbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) events.E
 	}
 	pbft.batchVdr.saveToVBS(digest, batch.Batch)
 	delete(pbft.storeMgr.missingReqBatches, digest)
-	logger.Warning("Primary received missing request: ", digest)
+	pbft.logger.Warning("Primary received missing request: ", digest)
 
 	if len(pbft.storeMgr.missingReqBatches) == 0 {
 		if atomic.LoadUint32(&pbft.activeView) == 0 {
 			nv, ok := pbft.vcMgr.newViewStore[pbft.view]
 			if !ok {
-				logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
+				pbft.logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
 				return nil
 			}
 			return pbft.processReqInNewView(nv)
@@ -990,7 +990,7 @@ func (pbft *pbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) events.E
 		if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 {
 			update, ok := pbft.nodeMgr.updateStore[pbft.nodeMgr.updateTarget]
 			if !ok {
-				logger.Debugf("Replica %d ignoring processUpdateN as it could not find target %v in its updateStore", pbft.id, pbft.nodeMgr.updateTarget)
+				pbft.logger.Debugf("Replica %d ignoring processUpdateN as it could not find target %v in its updateStore", pbft.id, pbft.nodeMgr.updateTarget)
 				return nil
 			}
 			return pbft.processReqInUpdate(update)
@@ -1006,14 +1006,14 @@ func (pbft *pbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) events.E
 
 //stopNewViewTimer
 func (pbft *pbftImpl) stopNewViewTimer() {
-	logger.Debugf("Replica %d stopping a running new view timer", pbft.id)
+	pbft.logger.Debugf("Replica %d stopping a running new view timer", pbft.id)
 	pbft.status.inActiveState(&pbft.status.timerActive)
 	pbft.pbftTimerMgr.stopTimer(NEW_VIEW_TIMER)
 }
 
 //startNewViewTimer stop all running new view timers and  start a new view timer
 func (pbft *pbftImpl) startNewViewTimer(timeout time.Duration, reason string) {
-	logger.Debugf("Replica %d starting new view timer for %s: %s", pbft.id, timeout, reason)
+	pbft.logger.Debugf("Replica %d starting new view timer for %s: %s", pbft.id, timeout, reason)
 	pbft.status.activeState(&pbft.status.timerActive)
 
 	event := &LocalEvent{
@@ -1030,7 +1030,7 @@ func (pbft *pbftImpl) startNewViewTimer(timeout time.Duration, reason string) {
 
 //softstartNewViewTimer start a new view timer no matter how many existed new view timer
 func (pbft *pbftImpl) softStartNewViewTimer(timeout time.Duration, reason string) {
-	logger.Debugf("Replica %d soft starting new view timer for %s: %s", pbft.id, timeout, reason)
+	pbft.logger.Debugf("Replica %d soft starting new view timer for %s: %s", pbft.id, timeout, reason)
 	pbft.vcMgr.newViewTimerReason = reason
 	pbft.status.activeState(&pbft.status.timerActive)
 
@@ -1050,7 +1050,7 @@ func (pbft *pbftImpl) softStartNewViewTimer(timeout time.Duration, reason string
 func (pbft *pbftImpl) correctViewChange(vc *ViewChange) bool {
 	for _, p := range append(vc.Pset, vc.Qset...) {
 		if !(p.View < vc.View && p.SequenceNumber > vc.H && p.SequenceNumber <= vc.H + pbft.L) {
-			logger.Debugf("Replica %d invalid p entry in view-change: vc(v:%d h:%d) p(v:%d n:%d)",
+			pbft.logger.Debugf("Replica %d invalid p entry in view-change: vc(v:%d h:%d) p(v:%d n:%d)",
 				pbft.id, vc.View, vc.H, p.View, p.SequenceNumber)
 			return false
 		}
@@ -1058,7 +1058,7 @@ func (pbft *pbftImpl) correctViewChange(vc *ViewChange) bool {
 
 	for _, c := range vc.Cset {
 		if !(c.SequenceNumber >= vc.H && c.SequenceNumber <= vc.H + pbft.L) {
-			logger.Debugf("Replica %d invalid c entry in view-change: vc(v:%d h:%d) c(n:%d)",
+			pbft.logger.Debugf("Replica %d invalid c entry in view-change: vc(v:%d h:%d) c(n:%d)",
 				pbft.id, vc.View, vc.H, c.SequenceNumber)
 			return false
 		}
@@ -1070,12 +1070,12 @@ func (pbft *pbftImpl) correctViewChange(vc *ViewChange) bool {
 //beforeSendVC operations before send view change
 func (pbft *pbftImpl) beforeSendVC() error{
 	if pbft.status.getState(&pbft.status.inNegoView) {
-		logger.Debugf("Replica %d try to send view change, but it's in nego-view", pbft.id)
+		pbft.logger.Debugf("Replica %d try to send view change, but it's in nego-view", pbft.id)
 		return errors.New("node is in nego view now!")
 	}
 
 	if pbft.status.getState(&pbft.status.inRecovery) {
-		logger.Noticef("Replica %d try to send view change, but it's in recovery", pbft.id)
+		pbft.logger.Noticef("Replica %d try to send view change, but it's in recovery", pbft.id)
 		return errors.New("node is in recovery now!")
 	}
 

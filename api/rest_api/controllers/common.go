@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"hyperchain/api"
+	"hyperchain/common"
 )
 
 type JSONObject struct {
@@ -14,7 +14,7 @@ func NewJSONObject(data interface{}, err error) *JSONObject {
 
 	if err != nil {
 
-		jsonrpcError := err.(hpc.JSONRPCError)
+		jsonrpcError := err.(common.RPCError)
 
 		return &JSONObject{
 			Code:    jsonrpcError.Code(),
