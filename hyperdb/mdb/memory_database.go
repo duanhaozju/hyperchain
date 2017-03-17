@@ -187,5 +187,5 @@ func (b *memBatch) Write() error {
 	return nil
 }
 func (b *memBatch) Len() int {
-	return 0
+	return len(b.writes)
 }
