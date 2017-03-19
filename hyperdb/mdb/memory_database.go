@@ -42,7 +42,6 @@ func (db *MemDatabase) Put(key []byte, value []byte) error {
 func (db *MemDatabase) Set(key []byte, value []byte) {
 	db.lock.Lock()
 	defer db.lock.Unlock()
-
 	db.Put(key, value)
 }
 
@@ -55,7 +54,7 @@ func (db *MemDatabase) Get(key []byte) ([]byte, error) {
 			return db.value[k], nil
 		}
 	}
-	return nil, errors.New("not found")
+	return nil, errors.New("leveldb: not found")
 }
 
 func (db *MemDatabase) Keys() [][]byte {
@@ -104,6 +103,9 @@ func (iter *Iter) Next() bool{
 		if iter.index >= len(iter.ptr.key) {
 			iter.index -= 1
 			return false
+		}
+		if len(iter.str) > len(iter.ptr.key[iter.index]) {
+			continue
 		}
 		if iter.str == iter.ptr.key[iter.index][:len(iter.str)] {
 			break;
@@ -172,13 +174,18 @@ func (b *memBatch) Write() error {
 
 	for _, kv := range b.writes {
 		if kv.v != nil {
-			b.db.key = append(b.db.key, string(kv.k))
-			b.db.value = append(b.db.value, kv.v)
+			for idx, k := range b.db.key {
+				if k == string(kv.k) {
+					b.db.value[idx] = kv.v
+					break
+				}
+			}
 		} else {
-			for k, v := range b.db.key {
-				if v == string(kv.k) {
-					b.db.key = append(b.db.key[0:k], b.db.key[k+1: len(b.db.key)]...)
-					b.db.value = append(b.db.value[0:k], b.db.value[k+1: len(b.db.value)]...)
+			for idx, k := range b.db.key {
+				if k == string(kv.k) {
+					b.db.key = append(b.db.key[0:idx], b.db.key[idx+1: len(b.db.key)]...)
+					b.db.value = append(b.db.value[0:idx], b.db.value[idx+1: len(b.db.value)]...)
+					break
 				}
 			}
 		}

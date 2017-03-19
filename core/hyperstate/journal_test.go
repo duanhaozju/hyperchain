@@ -1,25 +1,25 @@
 package hyperstate
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	checker "gopkg.in/check.v1"
 	"hyperchain/common"
-	"math/big"
-	"testing"
-	"encoding/binary"
-	"strings"
-	"math/rand"
-	"hyperchain/core/vm"
-	"reflect"
-	"math"
-	"bytes"
-	"hyperchain/hyperdb/mdb"
 	tutil "hyperchain/core/test_util"
+	"hyperchain/core/vm"
+	"hyperchain/hyperdb/mdb"
+	"math"
+	"math/big"
+	"math/rand"
+	"reflect"
+	"strings"
+	"testing"
 	"testing/quick"
 )
 
 var (
-	configPath   =  "../../configuration/namespaces/global/config/global.yaml"
+	configPath = "../../configuration/namespaces/global/config/global.yaml"
 )
 
 type JournalSuite struct {
@@ -29,8 +29,7 @@ func TestJournal(t *testing.T) {
 	checker.TestingT(t)
 }
 
-var _ = checker.Suite(&JournalSuite{
-})
+var _ = checker.Suite(&JournalSuite{})
 
 // Run once when the suite starts running.
 func (suite *JournalSuite) SetUpSuite(c *checker.C) {
@@ -48,8 +47,8 @@ func (suite *JournalSuite) TearDownTest(c *checker.C) {
 func (suite *JournalSuite) TearDownSuite(c *checker.C) {
 }
 
-
-func (suite *JournalSuite) TestSnapshotRamdom(c *checker.C) {
+func (suite *JournalSuite) TestSnapshotRandom(c *checker.C) {
+	c.Skip("@rjl required to skip")
 	config := &quick.Config{MaxCount: 1000}
 	err := quick.Check((*snapshotTest).run, config)
 	if cerr, ok := err.(*quick.CheckError); ok {
@@ -204,13 +203,13 @@ func (test *snapshotTest) String() string {
 
 func (test *snapshotTest) run() bool {
 	// Run all actions and create snapshots.
-	log.Notice(test.String())
 	var (
-		db, _        = mdb.NewMemDatabase()
-		state, _     = New(common.Hash{}, db, tutil.InitConfig(configPath), 10)
-		snapshotRevs = make([]int, len(test.snapshots))
-		sindex       = 0
+		db, _          = mdb.NewMemDatabase()
+		state, _       = New(common.Hash{}, db, tutil.InitConfig(configPath), 10)
+		snapshotRevs   = make([]int, len(test.snapshots))
+		sindex         = 0
 	)
+	// Test snapshot
 	for i, action := range test.actions {
 		if len(test.snapshots) > sindex && i == test.snapshots[sindex] {
 			snapshotRevs[sindex] = state.Snapshot().(int)
@@ -223,7 +222,7 @@ func (test *snapshotTest) run() bool {
 	// that is equivalent to fresh state with all actions up the snapshot applied.
 	for sindex--; sindex >= 0; sindex-- {
 		checkstate, _ := New(common.Hash{}, db, tutil.InitConfig(configPath), 10)
-		for idx, action := range test.actions[:test.snapshots[sindex]] {
+		for _, action := range test.actions[:test.snapshots[sindex]] {
 			action.fn(action, checkstate)
 		}
 		state.RevertToSnapshot(snapshotRevs[sindex])

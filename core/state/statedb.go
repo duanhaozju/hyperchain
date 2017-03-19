@@ -556,9 +556,10 @@ func (self *StateDB) Reset() error {
 func (self *StateDB) Purge() {
 }
 
-func (self *StateDB) ResetToTarget(uint64, common.Hash) {
-
+func (self *StateDB) RevertToJournal(uint64, uint64, []byte, db.Batch) error {
+	return nil
 }
+
 func (self *StateDB) GetTree() interface{} {
-	return self.trie
+	return nil
 }

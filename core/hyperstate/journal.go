@@ -445,7 +445,7 @@ func (ch *StorageChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, w
 		obj := cache.Fetch(*ch.Account)
 		if obj == nil {
 			// should never happen
-			log.Warningf("missing state object %s, it should happen when undo storage change", ch.Account.Hex())
+			log.Warningf("missing state object %s, it should not happen when undo storage change", ch.Account.Hex())
 			return
 		}
 		obj.cachedStorage[ch.Key] = ch.Prevalue
@@ -522,7 +522,7 @@ func (ch *StorageHashChange) Undo(s *StateDB, cache *JournalCache, batch db.Batc
 		obj := cache.Fetch(*ch.Account)
 		if obj == nil {
 			// should never happen
-			log.Warningf("missing state object %s, it should happen when undo storage hash change", ch.Account.Hex())
+			log.Warningf("missing state object %s, it should not happen when undo storage hash change", ch.Account.Hex())
 			return
 		}
 		obj.data.Root = common.BytesToHash(ch.Prev)
