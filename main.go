@@ -29,7 +29,7 @@ func main() {
 		nsMgr = namespace.GetNamespaceManager(globalConfig)
 		nsMgr.Start()
 		jsonrpc.Start(nsMgr)
-
+		go CheckLicense(stopHyperchain)
 		<-stopHyperchain
 		return nil
 	})

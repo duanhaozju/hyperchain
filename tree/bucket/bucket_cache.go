@@ -41,7 +41,7 @@ func (cache *BucketCache) clearAllCache() *BucketCache {
 	} else {
 		log.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", cache.maxSize)
 	}
-	tmp := &BucketCache{TreePrefix: cache.TreePrefix, c: make(map[BucketKey]*BucketNode), maxSize: uint64(cache.maxSize * 1024 * 1024), isEnabled: isEnabled}
+	tmp := &BucketCache{TreePrefix: cache.TreePrefix, c: make(map[BucketKey]*BucketNode), maxSize: uint64(cache.maxSize), isEnabled: isEnabled}
 	return tmp
 }
 
