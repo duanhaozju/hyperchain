@@ -20,12 +20,13 @@ var logger = logging.MustGetLogger("commmon")
 
 var hyperLoggers map[string]*HyperLogger
 
-var rwMutex *sync.RWMutex
+var rwMutex sync.RWMutex
 var once *sync.Once
 type HyperLogger struct {
 	conf    *Config
 	closeLogFile chan struct{}
 	loggers map[string]*logging.Logger
+	rwMutex sync.RWMutex
 }
 
 //InitHyperLogger int the whole logging system.
@@ -51,18 +52,24 @@ func InitHyperLogger(conf *Config) (*HyperLogger, error) {
 
 //GetLogger getLogger with specific namespace and module.
 func GetLogger(namespace, module string) *logging.Logger {
+	rwMutex.RLock()
+	hl, ok := hyperLoggers[namespace]
+	rwMutex.RUnlock()
+	if !ok {
+		logger.Errorf("GetLogger error: namespace not exist")
+		return nil
+	}
 
 	compositeModuleName := getCompositeModuleName(namespace, module)
 	logger.Infof("init log module:%s", compositeModuleName)
-	if hyperLogger == nil {
-		fmt.Println("null hyperLogger")
-	}
-	if _, ok := hyperLogger.loggers[compositeModuleName]; !ok {
+	if _, ok := hl.loggers[compositeModuleName]; !ok {
 		logger := logging.MustGetLogger(compositeModuleName)
-		hyperLogger.loggers[compositeModuleName] = logger
+		hl.rwMutex.Lock()
+		hl.loggers[compositeModuleName] = logger
+		hl.rwMutex.Unlock()
 		return logger
 	} else {
-		return hyperLogger.loggers[compositeModuleName]
+		return hl.loggers[compositeModuleName]
 	}
 }
 
@@ -72,19 +79,6 @@ func SetNamespaceModuleLogLevel(ns string, md string, lv string) (string, error)
 
 
 
-func InitHL(ns string, conf *Config) {
-	hl := newHyperLogger(conf)
-	registHl(ns, hl)
-}
-
-func registHl(namespace string, hl *HyperLogger) {
-
-	if _, ok := hyperLoggers[namespace]; ok {
-		logger.Noticef("Already has %s hyperlogger registered", namespace)
-		return
-	}
-	hyperLoggers[namespace] = hl
-}
 
 
 
