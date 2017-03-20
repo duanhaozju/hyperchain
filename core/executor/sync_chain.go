@@ -63,30 +63,28 @@ func (executor *Executor) ReceiveSyncRequest(ev event.StateUpdateEvent) {
 // ReceiveSyncBlocks - receive request synchronization blocks from others.
 func (executor *Executor) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 	if executor.status.syncFlag.SyncDemandBlockNum != 0 {
-		blocks := &types.Blocks{}
-		proto.Unmarshal(ev.Payload, blocks)
+		block := &types.Block{}
+		proto.Unmarshal(ev.Payload, block)
 		// store blocks into database only, not process them.
-		for i := len(blocks.Batch) - 1; i >= 0; i -= 1 {
-			if !executor.verifyBlockIntegrity(blocks.Batch[i]) {
-				log.Warningf("[Namespace = %s] receive a broken block %d, drop it", executor.namespace, blocks.Batch[i].Number)
-				continue
-			}
-			if blocks.Batch[i].Number <= executor.status.syncFlag.SyncDemandBlockNum {
-				log.Debugf("[Namespace = %s] receive block #%d  hash %s", executor.namespace, blocks.Batch[i].Number, common.BytesToHash(blocks.Batch[i].BlockHash).Hex())
-				// is demand
-				if executor.isDemandSyncBlock(blocks.Batch[i]) {
-					edb.PersistBlock(executor.db.NewBatch(), blocks.Batch[i], true, true)
-					if err := executor.updateSyncDemand(blocks.Batch[i]); err != nil {
-						log.Errorf("[Namespace = %s] update sync demand failed.", executor.namespace)
-						executor.reject()
-						return
-					}
-				} else {
-					// requested block with smaller number arrive earlier than expected
-					// store in cache temporarily
-					log.Debugf("[Namespace = %s] receive block #%d hash %s earily", executor.namespace, blocks.Batch[i].Number, common.BytesToHash(blocks.Batch[i].BlockHash).Hex())
-					executor.addToSyncCache(blocks.Batch[i])
+		if !executor.verifyBlockIntegrity(block) {
+			log.Warningf("[Namespace = %s] receive a broken block %d, drop it", executor.namespace, block.Number)
+			return
+		}
+		if block.Number <= executor.status.syncFlag.SyncDemandBlockNum {
+			log.Debugf("[Namespace = %s] receive block #%d  hash %s", executor.namespace, block.Number, common.BytesToHash(block.BlockHash).Hex())
+			// is demand
+			if executor.isDemandSyncBlock(block) {
+				edb.PersistBlock(executor.db.NewBatch(), block, true, true)
+				if err := executor.updateSyncDemand(block); err != nil {
+					log.Errorf("[Namespace = %s] update sync demand failed.", executor.namespace)
+					executor.reject()
+					return
 				}
+			} else {
+				// requested block with smaller number arrive earlier than expected
+				// store in cache temporarily
+				log.Debugf("[Namespace = %s] receive block #%d hash %s earily", executor.namespace, block.Number, common.BytesToHash(block.BlockHash).Hex())
+				executor.addToSyncCache(block)
 			}
 		}
 		executor.processSyncBlocks()

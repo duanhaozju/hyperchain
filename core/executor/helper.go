@@ -97,13 +97,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			log.Errorf("[Namespace = %s] no demand block number: %d", executor.namespace, id)
 			return err
 		}
-		blocks := &types.Blocks{}
-		if blocks.Batch == nil {
-			blocks.Batch = append(blocks.Batch, block)
-		} else {
-			blocks.Batch[0] = block
-		}
-		payload, err := proto.Marshal(blocks)
+		payload, err := proto.Marshal(block)
 		if err != nil {
 			log.Errorf("[Namespace = %s] marshal block failed", executor.namespace)
 			return err
