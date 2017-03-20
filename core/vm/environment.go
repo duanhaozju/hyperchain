@@ -86,6 +86,9 @@ type Database interface {
 	GetCode(common.Address) []byte
 	SetCode(common.Address, []byte)
 
+	AddDeployedContract(common.Address, common.Address)
+	SetCreator(common.Address, common.Address)
+
 	AddRefund(*big.Int)
 	GetRefund() *big.Int
 

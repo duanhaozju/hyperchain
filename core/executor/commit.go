@@ -4,14 +4,13 @@ import (
 	"encoding/hex"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
+	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
 	"hyperchain/event"
+	"hyperchain/hyperdb/db"
 	"hyperchain/p2p"
 	"hyperchain/protos"
 	"time"
-	"hyperchain/hyperdb/db"
-	edb "hyperchain/core/db_utils"
-
 )
 
 func (executor *Executor) CommitBlock(ev event.CommitEvent, peerManager p2p.PeerManager) {
@@ -22,10 +21,10 @@ func (executor *Executor) listenCommitEvent() {
 	log.Notice("commit backend start")
 	for {
 		select {
-		case <- executor.getExit(IDENTIFIER_COMMIT):
+		case <-executor.getExit(IDENTIFIER_COMMIT):
 			log.Notice("commit backend exit")
 			return
-		case ev := <- executor.fetchCommitEvent():
+		case ev := <-executor.fetchCommitEvent():
 			if success := executor.processCommitEvent(ev, executor.processCommitDone); success == false {
 				log.Errorf("[Namespace = %s] commit block #%d failed, system crush down.", executor.namespace, ev.SeqNo)
 			}
@@ -84,11 +83,12 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	batch.Write()
 	executor.statedb.MarkProcessFinish(record.SeqNo)
 
-	if block.Number % 10 == 0 && block.Number != 0 {
+	if block.Number%10 == 0 && block.Number != 0 {
 		edb.WriteChainChan(executor.namespace)
 	}
 	log.Noticef("[Namespace = %s] Block number %d", executor.namespace, block.Number)
 	log.Noticef("[Namespace = %s] Block hash %s", executor.namespace, hex.EncodeToString(block.BlockHash))
+	// log.Notice(string(executor.statedb.Dump()))
 	// remove Cached Transactions which used to check transaction duplication
 	executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: record.VID})
 	return nil
@@ -132,7 +132,7 @@ func (executor *Executor) constructBlock(ev event.CommitEvent) *types.Block {
 // commitValidationCheck - check whether this commit event satisfy demand.
 func (executor *Executor) commitValidationCheck(ev event.CommitEvent) bool {
 	// 1. check whether this ev is the demand one
-	if !executor.isDemandNumber(ev.SeqNo){
+	if !executor.isDemandNumber(ev.SeqNo) {
 		log.Errorf("[Namespace = %s] receive a commit event %d which is not demand, drop it.", executor.namespace, ev.SeqNo)
 		return false
 	}

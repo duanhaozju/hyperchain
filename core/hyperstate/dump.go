@@ -9,12 +9,15 @@ import (
 )
 
 type User struct {
-	Balance  string            `json:"balance"`
-	Nonce    uint64            `json:"nonce"`
-	Root     string            `json:"root"`
-	CodeHash string            `json:"codeHash"`
-	Code     string            `json:"code"`
-	Storage  map[string]string `json:"storage"`
+	Balance          string            `json:"balance"`
+	Nonce            uint64            `json:"nonce"`
+	Root             string            `json:"root"`
+	CodeHash         string            `json:"codeHash"`
+	Code             string            `json:"code"`
+	Storage          map[string]string `json:"storage"`
+	DeployedContract []string          `json:"contracts"`
+	Creator          string            `json:"creator"`
+	Status           string            `json:"status"`
 }
 
 type World struct {
@@ -41,18 +44,25 @@ func (self *StateDB) RawDump() World {
 		code, _ := self.db.Get(CompositeCodeHash(address, account.CodeHash))
 		// code could by empty
 		user := User{
-			Balance:  account.Balance.String(),
-			Nonce:    account.Nonce,
-			Root:     account.Root.Hex(),
-			CodeHash: common.Bytes2Hex(account.CodeHash),
-			Code:     common.Bytes2Hex(code),
-			Storage:  make(map[string]string),
+			Balance:          account.Balance.String(),
+			Nonce:            account.Nonce,
+			Root:             account.Root.Hex(),
+			CodeHash:         common.Bytes2Hex(account.CodeHash),
+			Code:             common.Bytes2Hex(code),
+			Storage:          make(map[string]string),
+			Creator:          account.Creator.Hex(),
+			DeployedContract: account.DeployedContracts,
 		}
 		storageIt := self.db.NewIterator(GetStorageKeyPrefix(address))
 		for storageIt.Next() {
 			storageKey, _ := SplitCompositeStorageKey(address, storageIt.Key())
 			log.Debugf("dump key %s value %s", common.Bytes2Hex(storageKey), common.Bytes2Hex(storageIt.Value()))
 			user.Storage[common.Bytes2Hex(storageKey)] = common.Bytes2Hex(storageIt.Value())
+		}
+		if account.Status == STATEOBJECT_STATUS_NORMAL {
+			user.Status = "normal"
+		} else if account.Status == STATEOBJECT_STATUS_FROZON {
+			user.Status = "frozen"
 		}
 		world.Users[common.Bytes2Hex(address)] = user
 	}

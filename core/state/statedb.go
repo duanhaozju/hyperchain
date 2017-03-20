@@ -8,10 +8,10 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/core/vm"
+	"hyperchain/hyperdb/db"
 	"hyperchain/tree/pmt"
 	"math/big"
 	"sync"
-	"hyperchain/hyperdb/db"
 )
 
 var (
@@ -562,4 +562,12 @@ func (self *StateDB) RevertToJournal(uint64, uint64, []byte, db.Batch) error {
 
 func (self *StateDB) GetTree() interface{} {
 	return nil
+}
+
+func (self *StateDB) SetCreator(common.Address, common.Address) {
+
+}
+
+func (self *StateDB) AddDeployedContract(common.Address, common.Address) {
+
 }

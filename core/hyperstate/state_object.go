@@ -131,10 +131,13 @@ func (c *StateObject) MarshalJSON() ([]byte, error) {
 // marshal for state object persist
 func (c *StateObject) Marshal() ([]byte, error) {
 	account := &Account{
-		Nonce:    c.data.Nonce,
-		Balance:  c.data.Balance,
-		Root:     c.data.Root,
-		CodeHash: c.data.CodeHash,
+		Nonce:             c.data.Nonce,
+		Balance:           c.data.Balance,
+		Root:              c.data.Root,
+		CodeHash:          c.data.CodeHash,
+		DeployedContracts: c.data.DeployedContracts,
+		Creator:           c.data.Creator,
+		Status:            c.data.Status,
 	}
 	return json.Marshal(account)
 }

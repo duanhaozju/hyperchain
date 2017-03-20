@@ -467,12 +467,8 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Has
 }
 
 // AddDeployedContract - add a new created contract address to the maintain list.
-func (self *StateDB) Updatexxx(contract common.Address, account common.Address, number uint64) {
-	self.AddDeployedContract(account, contract)
-	self.SetCreator(contract, account)
-}
-
 func (self *StateDB) AddDeployedContract(addr common.Address, contract common.Address) {
+	log.Debugf("state object %s add contract %s to deployed list", addr.Hex(), contract.Hex())
 	creator := self.GetStateObject(addr)
 	if creator == nil {
 		log.Errorf("no state object %s found", addr.Hex())
@@ -482,6 +478,7 @@ func (self *StateDB) AddDeployedContract(addr common.Address, contract common.Ad
 }
 
 func (self *StateDB) SetCreator(addr common.Address, creator common.Address) {
+	log.Debugf("state object %s set creator as %s", addr.Hex(), creator.Hex())
 	obj := self.GetStateObject(addr)
 	if obj == nil {
 		log.Errorf("no state object %s found", addr.Hex())

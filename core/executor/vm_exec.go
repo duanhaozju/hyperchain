@@ -104,6 +104,8 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		} else {
 			err = vm.CodeStoreOutOfGasError
 		}
+		env.Db().AddDeployedContract(caller.Address(), *address)
+		env.Db().SetCreator(*address, caller.Address())
 	}
 
 	// When an error was returned by the EVM or when setting the creation code
