@@ -87,6 +87,12 @@ type API struct {
 
 func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) {
 
+	// Init Hyperlogger
+	conf.Set(common.NAMESPACE, name)
+	if _, err := common.InitHyperLogger(conf); err != nil {
+		return nil, err
+	}
+
 	ninfo := &NamespaceInfo{
 		name: name,
 	}

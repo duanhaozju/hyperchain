@@ -14,7 +14,7 @@ import (
 )
 
 // A logger for this file.
-var commonLogger = logging.MustGetLogger("commmon")
+var commonLogger = logging.MustGetLogger("common")
 var logDefaultLevel logging.Level
 var consoleFormat = `[%{module}]%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}`
 var fileFormat = `[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}`

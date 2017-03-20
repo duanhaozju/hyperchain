@@ -13,29 +13,45 @@ import (
 	"sync"
 	"time"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 var logger = logging.MustGetLogger("commmon")
-var hyperLoggers = make(map[string]*HyperLogger)
 
-var once sync.Once
+var hyperLoggers map[string]*HyperLogger
 
+var rwMutex *sync.RWMutex
+var once *sync.Once
 type HyperLogger struct {
 	conf    *Config
-	close   chan bool
 	closeLogFile chan struct{}
 	loggers map[string]*logging.Logger
 }
 
 //InitHyperLogger int the whole logging system.
-func InitHyperLogger(conf *Config) {
+func InitHyperLogger(conf *Config) (*HyperLogger, error) {
 	once.Do(func() {
-		hyperLogger = newHyperLogger(conf)
+		hyperLoggers = make(map[string]*HyperLogger)
 	})
+	hyperLogger := newHyperLogger(conf)
+	if hyperLogger == nil {
+		return nil, errors.New("Init Hyperlogger error: nil return")
+	}
+
+	// cast it into hyperLoggers
+	name := conf.GetString(NAMESPACE)
+	if strings.EqualFold(name, "") {
+		return nil, errors.New("Init Hyperlogger error: nil namespace")
+	}
+	rwMutex.Lock()
+	hyperLoggers[name] = hyperLogger
+	rwMutex.Unlock()
+	return hyperLogger, nil
 }
 
 //GetLogger getLogger with specific namespace and module.
 func GetLogger(namespace, module string) *logging.Logger {
+
 	compositeModuleName := getCompositeModuleName(namespace, module)
 	logger.Infof("init log module:%s", compositeModuleName)
 	if hyperLogger == nil {
@@ -75,7 +91,7 @@ func registHl(namespace string, hl *HyperLogger) {
 func newHyperLogger(conf *Config) *HyperLogger {
 	hl := &HyperLogger{
 		conf:    conf,
-		close:   make(chan bool),
+		closeLogFile: make(chan struct{}),
 		loggers: make(map[string]*logging.Logger),
 	}
 	hl.init()
@@ -92,19 +108,16 @@ func (hl *HyperLogger) init() {
 	timestamp := time.Now().Unix()
 	tm := time.Unix(timestamp, 0)
 
-	loggerDir := conf.GetString(LOG_FILE_DIR) //TODO: Keep logs in different dirs by different namespace?
-	// get namespace
-	_, error := os.Stat(loggerDir)
-	if !(error == nil || os.IsExist(error)) {
-		os.MkdirAll(loggerDir, 0777)
-	}
-	lv, err := logging.LogLevel(conf.GetString(LOG_BASE_LOG_LEVEL))
+	loggerDir := conf.GetString(LOG_FILE_DIR)
+	os.MkdirAll(loggerDir, 0777)
+
+	baseLevel, err := logging.LogLevel(conf.GetString(LOG_BASE_LOG_LEVEL))
 
 	if err != nil {
 		commonLogger.Noticef("Invalid logging level: %s, using INFO as default!", conf.GetString(LOG_BASE_LOG_LEVEL))
 		logDefaultLevel = logging.INFO
 	} else {
-		logDefaultLevel = lv
+		logDefaultLevel = baseLevel
 	}
 
 	backendStderr := hl.initLogBackend()
