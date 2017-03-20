@@ -15,8 +15,8 @@ import (
 
 const (
 	namespace             = "testing"
-	configPath            = "./config/global.yaml"
-	dbConfigPath          = "./config/db.yaml"
+	configPath            = "namespaces/global/config/global.yaml"
+	dbConfigPath          = "namespaces/global/config/db.yaml"
 )
 
 var (
@@ -43,9 +43,9 @@ func init() {
 func (suite *SimulateSuite) SetUpSuite(c *checker.C) {
 	// initialize block pool
 	suite.owd, _ = os.Getwd()
-	os.Chdir(path.Join(common.GetGoPath(), "src/hyperchain"))
-	os.RemoveAll("./build")
-	conf = tutil.InitConfig(configPath, dbConfigPath)
+	os.Chdir(path.Join(common.GetGoPath(), "src/hyperchain/configuration"))
+	conf = tutil.InitConfig(configPath)
+	os.RemoveAll("./namespaces/global/data")
 	edb.InitDBForNamespace(conf, namespace)
 	suite.executor = NewExecutor(namespace, conf, nil)
 	suite.executor.CreateInitBlock(conf)
@@ -62,8 +62,7 @@ func (suite *SimulateSuite) TearDownTest(c *checker.C) {
 
 // Run once after all tests or benchmarks have finished running.
 func (suite *SimulateSuite) TearDownSuite(c *checker.C) {
-	os.RemoveAll("./build")
-	os.RemoveAll("./db.log")
+	os.RemoveAll("./namespaces/global/data")
 	os.Chdir(suite.owd)
 }
 
@@ -90,49 +89,6 @@ func (suite *SimulateSuite) simulateForTransafer(executor *Executor) error {
 	if receipt := edb.GetReceipt(namespace, transaction.GetHash()); receipt == nil {
 		return errors.New("no receipt found in database")
 	}
-
-	//value := types.NewTransactionValue(defaustGasPrice, defaultGas, 9, nil, false)
-	//data, err := proto.Marshal(value)
-	//if err != nil {
-	//	return err
-	//}
-	//transaction := &types.Transaction{
-	//	Version:   []byte("1.0"),
-	//	From:      common.Hex2Bytes("0xe93b92f1da08f925bdee44e91e7768380ae83307"),
-	//	To:        common.Hex2Bytes("0xc8f233096e6d0b4241939593340255353460cd63"),
-	//	Value:     data,
-	//	Timestamp: 1489390658651237328,
-	//	Nonce:     5306948822540864594,
-	//	Signature: []byte("2e5ecff88359e5bb8590d2efbc609c4b3fe1ead066bc81b4153b1557d4f93fcc2d8db2abe0d3ff6e586c4f7ce7797ef85aadc85accfd5bf7c28db354738370bb00"),
-	//	Id:        1,
-	//}
-	//transaction.TransactionHash = transaction.Hash().Bytes()
-	//if err := executor.RunInSandBox(transaction); err != nil {
-	//	return err
-	//}
-	//
-	//// check receipt existence
-	//if receipt := edb.GetReceipt(namespace, transaction.GetHash()); receipt == nil {
-	//	return errors.New("no receipt found in database")
-	//}
-	//return nil
-
-	//for _,v := range transactions {
-	//	intValue, _ := strconv.ParseInt(string(v.Value), 10, 0)
-	//	value := types.NewTransactionValue(10000, 10000, intValue, nil, false)
-	//	data, err := proto.Marshal(value)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	v.Value = data
-	//	v.TransactionHash = v.Hash().Bytes()
-	//	if err := executor.RunInSandBox(v); err != nil {
-	//		return err
-	//	}
-	//	if receipt := edb.GetReceipt(namespace, v.GetHash()); receipt == nil {
-	//		return errors.New("no receipt found in database")
-	//	}
-	//}
 	return nil
 }
 

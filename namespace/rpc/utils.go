@@ -9,10 +9,10 @@ import (
 	"unicode"
 	"unicode/utf8"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"bytes"
 	"regexp"
+	"github.com/pkg/errors"
 )
 
 // Is this an exported - upper case - name?
@@ -78,13 +78,14 @@ func splitRawMessage(args json.RawMessage) ([]string, int, error) {
 	str := string(args[:])
 	var length int
 	if str[0] != '[' || str[len(str) - 1] != ']' {
-		return nil, 0, fmt.Errorf("Raw Message format error!")
+		return nil, 0, errors.New("Raw Message format error!")
 	} else if (len(str) == 2){
 		return nil, 0, nil
 	} else {
 		str = strings.Trim(str, "[]")
 
-		reg := regexp.MustCompile(`\{([\w|,|:|"]+)\}`)
+		pat := `.+`
+		reg := regexp.MustCompile(pat)
 		strArr := reg.FindAllString(str, -1)
 
 		length = len(strArr)
@@ -92,7 +93,6 @@ func splitRawMessage(args json.RawMessage) ([]string, int, error) {
 		if length == 1 {
 			return strArr, length, nil
 		}
-
 
 		splitstr := strings.Split(str, ",")
 		return splitstr, len(splitstr), nil

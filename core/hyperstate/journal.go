@@ -284,10 +284,13 @@ func (ch *ResetObjectChange) GetType() string {
 func (ch *SuicideChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
 	if !writeThrough {
 		// undo contract account
-		obj := s.GetStateObject(*ch.Account)
-		if obj != nil {
+		if ch.Prev == true {
+			return
+		} else {
+			obj := ch.PreObject
 			obj.suicided = ch.Prev
-			obj.setBalance(ch.Prevbalance)
+			obj.data.Balance = ch.Prevbalance
+			s.setStateObject(obj)
 		}
 	} else {
 		if ch.Prev == true {
@@ -348,6 +351,10 @@ func (ch *BalanceChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, w
 		s.GetStateObject(*ch.Account).setBalance(ch.Prev)
 	} else {
 		obj := cache.Fetch(*ch.Account)
+		if obj == nil {
+			log.Warningf("missing state object %s, it may be a empty account or lost in database", ch.Account.Hex())
+			obj = cache.Create(*ch.Account, s)
+		}
 		obj.data.Balance = ch.Prev
 	}
 }
@@ -372,6 +379,10 @@ func (ch *NonceChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, wri
 		s.GetStateObject(*ch.Account).setNonce(ch.Prev)
 	} else {
 		obj := cache.Fetch(*ch.Account)
+		if obj == nil {
+			log.Warningf("missing state object %s, it may be a empty account or lost in database", ch.Account.Hex())
+			obj = cache.Create(*ch.Account, s)
+		}
 		obj.data.Nonce = ch.Prev
 	}
 }
@@ -398,6 +409,10 @@ func (ch *CodeChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writ
 		s.GetStateObject(*ch.Account).setCode(common.BytesToHash(ch.Prevhash), ch.Prevcode)
 	} else {
 		obj := cache.Fetch(*ch.Account)
+		if obj == nil {
+			log.Warningf("missing state object %s, it may be a empty account or lost in database", ch.Account.Hex())
+			obj = cache.Create(*ch.Account, s)
+		}
 		batch.Delete(CompositeCodeHash(ch.Account.Bytes(), obj.data.CodeHash))
 		obj.data.CodeHash = ch.Prevhash
 		batch.Put(CompositeCodeHash(ch.Account.Bytes(), ch.Prevhash), ch.Prevcode)
@@ -428,6 +443,11 @@ func (ch *StorageChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, w
 		}
 	} else {
 		obj := cache.Fetch(*ch.Account)
+		if obj == nil {
+			// should never happen
+			log.Warningf("missing state object %s, it should not happen when undo storage change", ch.Account.Hex())
+			return
+		}
 		obj.cachedStorage[ch.Key] = ch.Prevalue
 		obj.dirtyStorage[ch.Key] = ch.Prevalue
 	}
@@ -500,6 +520,11 @@ func (ch *StorageHashChange) Undo(s *StateDB, cache *JournalCache, batch db.Batc
 
 	} else {
 		obj := cache.Fetch(*ch.Account)
+		if obj == nil {
+			// should never happen
+			log.Warningf("missing state object %s, it should not happen when undo storage hash change", ch.Account.Hex())
+			return
+		}
 		obj.data.Root = common.BytesToHash(ch.Prev)
 	}
 }

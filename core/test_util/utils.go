@@ -14,9 +14,8 @@ const (
 )
 
 // initial a config handler for testing.
-func InitConfig(configPath string, dbConfigPath string) *common.Config {
+func InitConfig(configPath string) *common.Config {
 	conf := common.NewConfig(configPath)
-	conf.MergeConfig(dbConfigPath)
 	return conf
 }
 
