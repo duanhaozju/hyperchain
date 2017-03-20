@@ -4,15 +4,15 @@ package sldb
 
 import (
 	"bytes"
-	"fmt"
-	"github.com/op/go-logging"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
+	"time"
+	"fmt"
+	pa "path/filepath"
+	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/hyperdb/db"
-	pa "path/filepath"
-	"time"
 )
 
 var log *logging.Logger
@@ -32,9 +32,13 @@ type SuperLevelDB struct {
 	closed chan bool
 }
 
-func NewSLDB(conf *common.Config, filepath string) (*SuperLevelDB, error) {
-	if conf != nil {
-		filepath = pa.Join(conf.GetString(SLDB_PATH), filepath)
+func NewSLDB(conf *common.Config) (*SuperLevelDB, error) {
+	var filepath = ""
+	if conf!=nil{
+		if conf!=nil{
+			filepath = pa.Join(conf.GetString(SLDB_PATH),filepath)
+			filepath = conf.GetString(SLDB_PATH)
+		}
 	}
 
 	db, err := leveldb.OpenFile(filepath, nil)
