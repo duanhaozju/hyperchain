@@ -21,8 +21,8 @@ var (
 )
 
 const (
-	DEFAULT_NAMESPACE  = "global"
-	NS_CONFIG_DIR_ROOT = "global.nsConfigRootPath"
+	DEFAULT_NAMESPACE  = "system"
+	NS_CONFIG_DIR_ROOT = "system.nsConfigRootPath"
 )
 
 var once sync.Once
@@ -152,6 +152,7 @@ func (nr *nsManagerImpl) Register(name string) error {
 	}
 	nsConfigDir := configRootDir + "/" + name + "/config"
 	nsConfig := nr.constructConfigFromDir(nsConfigDir)
+	nsConfig.Set(common.NAMESPACE, name)
 	ns, err := GetNamespace(name, nsConfig)
 	if err != nil {
 		logger.Errorf("Construct namespace %s error, %v", name, err)

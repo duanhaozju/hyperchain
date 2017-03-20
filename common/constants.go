@@ -26,6 +26,8 @@ const (
 )
 
 const (
+
+	NAMESPACE = "namespace.name"
 	KEY_STORE_DIR = "global.account.keystoredir"
 	KEY_NODE_DIR  = "global.account.keynodesdir"
 

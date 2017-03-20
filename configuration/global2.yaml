@@ -24,9 +24,9 @@ global:
         newLogFileInterval: 24h  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
                                  # such as "300ms", "2h45m".
 
-        logsdir: "./namespaces/global/data/logs"
+        logsdir: "./namespaces/global2/data/logs"
 
-        loglevel: "DEBUG"
+        loglevel: "INFO"
         # default loglevel for all modules which can be override by module level log setting
         file_format: "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
         console_format: "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
