@@ -106,6 +106,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		}
 		env.Db().AddDeployedContract(caller.Address(), *address)
 		env.Db().SetCreator(*address, caller.Address())
+		env.Db().SetCreateTime(*address, env.BlockNumber().Uint64())
 	}
 
 	// When an error was returned by the EVM or when setting the creation code

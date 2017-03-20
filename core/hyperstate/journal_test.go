@@ -155,6 +155,13 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 			args: make([]int64, 2),
 		},
 		{
+			name: "SetCreateTime",
+			fn: func(a testAction, s *StateDB) {
+				s.SetCreateTime(addr, uint64(a.args[0]))
+			},
+			args: make([]int64, 1),
+		},
+		{
 			name: "CreateAccount",
 			fn: func(a testAction, s *StateDB) {
 				s.CreateAccount(addr)

@@ -88,7 +88,7 @@ type Database interface {
 
 	AddDeployedContract(common.Address, common.Address)
 	SetCreator(common.Address, common.Address)
-
+	SetCreateTime(common.Address, uint64)
 	AddRefund(*big.Int)
 	GetRefund() *big.Int
 

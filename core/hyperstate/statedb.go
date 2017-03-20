@@ -466,6 +466,15 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Has
 	return false, common.Hash{}
 }
 
+// GetDeployedContract return deployed contract list.
+func (self *StateDB) GetDeployedContract(addr common.Address) []string {
+	obj := self.GetStateObject(addr)
+	if obj != nil {
+		return obj.DeployedContracts()
+	}
+	return nil
+}
+
 // AddDeployedContract - add a new created contract address to the maintain list.
 func (self *StateDB) AddDeployedContract(addr common.Address, contract common.Address) {
 	log.Debugf("state object %s add contract %s to deployed list", addr.Hex(), contract.Hex())
@@ -477,6 +486,13 @@ func (self *StateDB) AddDeployedContract(addr common.Address, contract common.Ad
 	creator.AppendDeployedContract(contract)
 }
 
+func (self *StateDB) GetCreator(addr common.Address) common.Address {
+	obj := self.GetStateObject(addr)
+	if obj != nil {
+		return obj.Creator()
+	}
+	return common.Address{}
+}
 func (self *StateDB) SetCreator(addr common.Address, creator common.Address) {
 	log.Debugf("state object %s set creator as %s", addr.Hex(), creator.Hex())
 	obj := self.GetStateObject(addr)
@@ -487,6 +503,14 @@ func (self *StateDB) SetCreator(addr common.Address, creator common.Address) {
 	obj.SetCreator(creator)
 }
 
+func (self *StateDB) GetStatus(address common.Address) int {
+	obj := self.GetStateObject(address)
+	if obj != nil {
+		return obj.Status()
+	}
+	return -1
+}
+
 // SetStatus - set specific account's status with given one.
 func (self *StateDB) SetStatus(address common.Address, status int) {
 	obj := self.GetStateObject(address)
@@ -495,6 +519,24 @@ func (self *StateDB) SetStatus(address common.Address, status int) {
 		return
 	}
 	obj.SetStatus(status)
+}
+
+// GetCreateTime - return the brith block number of object.
+func (self *StateDB) GetCreateTime(address common.Address) uint64 {
+	obj := self.GetStateObject(address)
+	if obj != nil {
+		return obj.CreateTime()
+	}
+	return 0
+}
+
+func (self *StateDB) SetCreateTime(address common.Address, time uint64) {
+	obj := self.GetStateObject(address)
+	if obj == nil {
+		log.Warningf("no state object %s found", address.Hex())
+		return
+	}
+	obj.SetCreateTime(time)
 }
 
 // check whether an account has been suicide
@@ -788,7 +830,7 @@ func (self *StateDB) RevertToJournal(targetHeight uint64, currentHeight uint64, 
 
 	journalCache := NewJournalCache(self.db)
 	for i := currentHeight; i >= targetHeight+1; i -= 1 {
-		log.Debugf("undo changes for #%d", i)
+		log.Criticalf("undo changes for #%d", i)
 		j, err := self.db.Get(CompositeJournalKey(uint64(i)))
 		if err != nil {
 			log.Warningf("get journal in database for #%d failed. make sure #%d doesn't have state change",
@@ -802,7 +844,7 @@ func (self *StateDB) RevertToJournal(targetHeight uint64, currentHeight uint64, 
 		}
 		// undo journal in reverse
 		for j := len(journal.JournalList) - 1; j >= 0; j -= 1 {
-			log.Debugf("journal %s", journal.JournalList[j].String())
+			log.Errorf("journal %s", journal.JournalList[j].String())
 			journal.JournalList[j].Undo(self, journalCache, batch, true)
 			if journal.JournalList[j].GetType() == StorageHashChangeType {
 				tmp := journal.JournalList[j].(*StorageHashChange)

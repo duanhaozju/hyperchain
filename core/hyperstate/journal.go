@@ -26,6 +26,7 @@ const (
 	StatusChangeType           = "StatusChange"
 	DeployedContractChangeType = "DeployedContractChange"
 	SetCreatorChangeType       = "SetCreatorChange"
+	SetCreateTimeChangeType    = "SetCreateTimeChange"
 )
 
 type JournalEntry interface {
@@ -176,6 +177,13 @@ func UnmarshalJournal(data []byte) (*Journal, error) {
 				return nil, err
 			}
 			jos = append(jos, &tmp)
+		case "SetCreateTimeChange":
+			var tmp SetCreateTimeChange
+			err = json.Unmarshal(res, &tmp)
+			if err != nil {
+				return nil, err
+			}
+			jos = append(jos, &tmp)
 		default:
 			log.Error("unmarshal journal failed")
 			return nil, errors.New("unmarshal journal failed")
@@ -243,6 +251,11 @@ type (
 	SetCreatorChange struct {
 		Account *common.Address `json:"account,omitempty"`
 		Prev    *common.Address `json:"prev,omitempty"`
+		Type    string          `json:"type,omitempty"`
+	}
+	SetCreateTimeChange struct {
+		Account *common.Address `json:"account,omitempty"`
+		Prev    uint64          `json:"prev,omitempty"`
 		Type    string          `json:"type,omitempty"`
 	}
 
@@ -648,7 +661,11 @@ func (ch *DeployedContractChange) Undo(s *StateDB, cache *JournalCache, batch db
 			}
 			if idx := sort.SearchStrings(contracts, address.Hex()); idx < len(contracts) && contracts[idx] == address.Hex() {
 				contracts = append(contracts[:idx], contracts[idx+1:]...)
-				sort.Strings(contracts)
+				if len(contracts) == 0 {
+					contracts = nil
+				} else {
+					sort.Strings(contracts)
+				}
 			}
 			return contracts
 		}
@@ -697,5 +714,33 @@ func (ch *SetCreatorChange) SetType() {
 	ch.Type = SetCreatorChangeType
 }
 func (ch *SetCreatorChange) GetType() string {
+	return ch.Type
+}
+
+// SetCreateTimeChange
+func (ch *SetCreateTimeChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
+	if !writeThrough {
+		if obj := s.GetStateObject(*ch.Account); obj != nil {
+			obj.setCreateTime(ch.Prev)
+		}
+	} else {
+		if obj := cache.Fetch(*ch.Account); obj != nil {
+			obj.setCreateTime(ch.Prev)
+		}
+	}
+}
+
+func (ch *SetCreateTimeChange) String() string {
+	var str string
+	str = fmt.Sprintf("journal [SetCreateTimeChange] address %s prev %d\n", ch.Account.Hex(), ch.Prev)
+	return str
+}
+func (ch *SetCreateTimeChange) Marshal() ([]byte, error) {
+	return json.Marshal(ch)
+}
+func (ch *SetCreateTimeChange) SetType() {
+	ch.Type = SetCreateTimeChangeType
+}
+func (ch *SetCreateTimeChange) GetType() string {
 	return ch.Type
 }

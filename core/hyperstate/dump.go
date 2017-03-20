@@ -18,6 +18,7 @@ type User struct {
 	DeployedContract []string          `json:"contracts"`
 	Creator          string            `json:"creator"`
 	Status           string            `json:"status"`
+	CreateTime       uint64            `json:"createTime"`
 }
 
 type World struct {
@@ -52,6 +53,7 @@ func (self *StateDB) RawDump() World {
 			Storage:          make(map[string]string),
 			Creator:          account.Creator.Hex(),
 			DeployedContract: account.DeployedContracts,
+			CreateTime:       account.CreateTime,
 		}
 		storageIt := self.db.NewIterator(GetStorageKeyPrefix(address))
 		for storageIt.Next() {

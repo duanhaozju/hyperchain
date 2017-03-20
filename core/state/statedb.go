@@ -571,3 +571,7 @@ func (self *StateDB) SetCreator(common.Address, common.Address) {
 func (self *StateDB) AddDeployedContract(common.Address, common.Address) {
 
 }
+
+func (self *StateDB) SetCreateTime(common.Address, uint64) {
+
+}

@@ -87,11 +87,13 @@ func (s *StateObject) empty() bool {
 type Account struct {
 	Nonce             uint64         `json:"nonce"`
 	Balance           *big.Int       `json:"balance"`
-	Root              common.Hash    `json:"merkle root"`
-	CodeHash          []byte         `json:"code hash"`
+	Root              common.Hash    `json:"merkleRoot"`
+	CodeHash          []byte         `json:"codeHash"`
 	DeployedContracts []string       `json:"contracts"`
 	Creator           common.Address `json:"creator"`
 	Status            int            `json:"status"`
+	CreateTime        uint64         `json:"createTime"`
+	LatestUpdateTime  uint64         `json:"latestUpdateTime"`
 }
 
 // MemAccount use for state object marshal and unmarshal in journal
@@ -138,6 +140,8 @@ func (c *StateObject) Marshal() ([]byte, error) {
 		DeployedContracts: c.data.DeployedContracts,
 		Creator:           c.data.Creator,
 		Status:            c.data.Status,
+		CreateTime:        c.data.CreateTime,
+		LatestUpdateTime:  c.data.LatestUpdateTime,
 	}
 	return json.Marshal(account)
 }
@@ -480,7 +484,26 @@ func (self *StateObject) setCreator(addr common.Address) {
 		self.onDirty(self.Address())
 		self.onDirty = nil
 	}
+}
 
+func (self *StateObject) CreateTime() uint64 {
+	return self.data.CreateTime
+}
+
+func (self *StateObject) SetCreateTime(time uint64) {
+	self.db.journal.JournalList = append(self.db.journal.JournalList, &SetCreateTimeChange{
+		Account: &self.address,
+		Prev:    self.data.CreateTime,
+	})
+	self.setCreateTime(time)
+}
+
+func (self *StateObject) setCreateTime(time uint64) {
+	self.data.CreateTime = time
+	if self.onDirty != nil {
+		self.onDirty(self.Address())
+		self.onDirty = nil
+	}
 }
 
 // DeployedContracts - return a list of deployed contracts.
@@ -572,7 +595,11 @@ func (self *StateObject) appendDeployedContract(address common.Address) {
 func (self *StateObject) removeDeployedContract(address common.Address) bool {
 	if idx := sort.SearchStrings(self.data.DeployedContracts, address.Hex()); idx < len(self.data.DeployedContracts) && self.data.DeployedContracts[idx] == address.Hex() {
 		self.data.DeployedContracts = append(self.data.DeployedContracts[:idx], self.data.DeployedContracts[idx+1:]...)
-		sort.Strings(self.data.DeployedContracts)
+		if len(self.data.DeployedContracts) == 0 {
+			self.data.DeployedContracts = nil
+		} else {
+			sort.Strings(self.data.DeployedContracts)
+		}
 		if self.onDirty != nil {
 			self.onDirty(self.Address())
 			self.onDirty = nil
