@@ -11,7 +11,6 @@ import (
 	"sort"
 	"strconv"
 	"sync"
-	"hyperchain/hyperdb/db"
 )
 
 // represent a validation result
@@ -161,11 +160,9 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 	var validtxs []*types.Transaction
 	var receipts []*types.Receipt
 
-	executor.initTransactionHashCalculator()
-	executor.initReceiptHashCalculator()
-	executor.statedb.MarkProcessStart(executor.getTempBlockNumber())
 	env := initEnvironment(executor.statedb, executor.getTempBlockNumber())
-	batch := executor.statedb.FetchBatch(executor.getTempBlockNumber())
+	executor.initCalculator()
+	executor.statedb.MarkProcessStart(executor.getTempBlockNumber())
 	// execute transactions one by one
 	for i, tx := range txs {
 		executor.statedb.StartRecord(tx.GetHash(), common.Hash{}, i)
@@ -184,11 +181,12 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 		receipts = append(receipts, receipt)
 		validtxs = append(validtxs, tx)
 	}
-	err, merkleRoot, txRoot, receiptRoot := executor.submitValidationResult(batch)
+	err, merkleRoot, txRoot, receiptRoot := executor.submitValidationResult()
 	if err != nil {
 		log.Errorf("[Namespace = %s] submit validation result failed.", executor.namespace, err.Error())
 		return err, nil
 	}
+	executor.resetStateDb()
 	log.Debugf("[Namespace = %s] validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
 		executor.namespace, executor.getTempBlockNumber(), seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	return nil, &ValidationResultRecord{
@@ -227,14 +225,13 @@ func (executor *Executor) classifyInvalid(err error) types.InvalidTransactionRec
 }
 
 // submitValidationResult - submit state changes to batch.
-func (executor *Executor) submitValidationResult(batch db.Batch) (error, []byte, []byte, []byte) {
+func (executor *Executor) submitValidationResult() (error, []byte, []byte, []byte) {
 	// flush all state change
 	root, err := executor.statedb.Commit()
 	if err != nil {
 		log.Errorf("[Namespace = %s] commit state db failed! error msg, ", executor.namespace, err.Error())
 		return err, nil, nil, nil
 	}
-	executor.statedb.Reset()
 	merkleRoot := root.Bytes()
 	res, _ := executor.calculateTransactionsFingerprint(nil, true)
 	txRoot := res.Bytes()
@@ -242,6 +239,10 @@ func (executor *Executor) submitValidationResult(batch db.Batch) (error, []byte,
 	receiptRoot := res.Bytes()
 	executor.recordStateHash(root)
 	return nil, merkleRoot, txRoot, receiptRoot
+}
+
+func (executor *Executor) resetStateDb() {
+	executor.statedb.Reset()
 }
 
 // throwInvalidTransactionBack - send all invalid transaction to its birth place.

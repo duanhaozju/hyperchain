@@ -2,7 +2,6 @@ package executor
 
 import (
 	"hyperchain/event"
-	"hyperchain/hyperdb"
 	"hyperchain/protos"
 	"hyperchain/hyperdb/db"
 	edb "hyperchain/core/db_utils"
@@ -14,12 +13,7 @@ func (executor *Executor) Rollback(ev event.VCResetEvent) {
 	defer executor.rollbackDone()
 
 	log.Noticef("[Namespace = %s] receive vc reset event, required revert to %d", executor.namespace, ev.SeqNo-1)
-	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
-	if err != nil {
-		log.Errorf("[Namespace = %s] get database handler failed. error : ", executor.namespace, err.Error())
-		return
-	}
-	batch := db.NewBatch()
+	batch := executor.db.NewBatch()
 	// revert state
 	if err := executor.revertState(batch, ev.SeqNo - 1); err != nil {
 		return
@@ -48,12 +42,7 @@ func (executor *Executor) CutdownBlock(number uint64) error {
 
 	log.Noticef("[Namespace = %s] cutdown block, required revert to %d", executor.namespace, number)
 	// 2. revert state
-	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
-	if err != nil {
-		log.Error("Get Database Instance Failed! error msg,", err.Error())
-		return err
-	}
-	batch := db.NewBatch()
+	batch := executor.db.NewBatch()
 	if err := executor.revertState(batch, number - 1); err != nil {
 		return err
 	}
