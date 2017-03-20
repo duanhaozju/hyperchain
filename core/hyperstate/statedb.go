@@ -493,6 +493,8 @@ func (self *StateDB) GetCreator(addr common.Address) common.Address {
 	}
 	return common.Address{}
 }
+
+// SetCreator - set creator.
 func (self *StateDB) SetCreator(addr common.Address, creator common.Address) {
 	log.Debugf("state object %s set creator as %s", addr.Hex(), creator.Hex())
 	obj := self.GetStateObject(addr)
@@ -503,6 +505,7 @@ func (self *StateDB) SetCreator(addr common.Address, creator common.Address) {
 	obj.SetCreator(creator)
 }
 
+// GetStatus - get state object current status
 func (self *StateDB) GetStatus(address common.Address) int {
 	obj := self.GetStateObject(address)
 	if obj != nil {
@@ -530,6 +533,7 @@ func (self *StateDB) GetCreateTime(address common.Address) uint64 {
 	return 0
 }
 
+// SetCreateTime - set the brith block number of object.
 func (self *StateDB) SetCreateTime(address common.Address, time uint64) {
 	obj := self.GetStateObject(address)
 	if obj == nil {
@@ -824,6 +828,7 @@ func (self *StateDB) RevertToSnapshot(copy interface{}) {
 	self.validRevisions = self.validRevisions[:idx]
 }
 
+// RevertToJournal reverts all state changes made since the target height.
 func (self *StateDB) RevertToJournal(targetHeight uint64, currentHeight uint64, targetRoot []byte, batch db.Batch) error {
 	dirtyStateObjectSet := mapset.NewSet()
 	stateObjectStorageHashs := make(map[common.Address][]byte)

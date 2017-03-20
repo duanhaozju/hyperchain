@@ -93,7 +93,6 @@ type Account struct {
 	Creator           common.Address `json:"creator"`
 	Status            int            `json:"status"`
 	CreateTime        uint64         `json:"createTime"`
-	LatestUpdateTime  uint64         `json:"latestUpdateTime"`
 }
 
 // MemAccount use for state object marshal and unmarshal in journal
@@ -141,7 +140,6 @@ func (c *StateObject) Marshal() ([]byte, error) {
 		Creator:           c.data.Creator,
 		Status:            c.data.Status,
 		CreateTime:        c.data.CreateTime,
-		LatestUpdateTime:  c.data.LatestUpdateTime,
 	}
 	return json.Marshal(account)
 }
