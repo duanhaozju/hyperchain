@@ -10,4 +10,5 @@ message TransactionValue {
 	bytes homomorphicAmount = 6;
 	bytes homomorphicBalance = 7;
 	bool  update = 8;
+	bool  freeze = 9;
 }

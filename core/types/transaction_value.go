@@ -20,4 +20,3 @@ func (tv *TransactionValue) RetrieveGasPrice() *big.Int {
 func (tv *TransactionValue) RetrieveAmount() *big.Int {
 	return new(big.Int).Set(big.NewInt(tv.Amount))
 }
-
