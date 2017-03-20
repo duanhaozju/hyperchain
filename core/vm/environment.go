@@ -96,8 +96,6 @@ type Database interface {
 	Exist(common.Address) bool
 	IsDeleted(common.Address) bool
 
-	GetTree() interface{}
-
 	// Log
 	StartRecord(common.Hash, common.Hash, int)
 	AddLog(log *Log)
@@ -105,16 +103,16 @@ type Database interface {
 	// Dump and Load
 	Snapshot() interface{}
 	RevertToSnapshot(interface{})
+	RevertToJournal(uint64, uint64, []byte, db.Batch) error
 	// Reset statuso
 	Purge()
-	ResetToTarget(uint64, common.Hash)
 
 	Commit() (common.Hash, error)
 	Reset() error
 	// Query
 	GetAccounts() map[string]Account
 	Dump() []byte
-
+	GetTree() interface{}
 	// Atomic Related
 	MarkProcessStart(uint64)
 	MarkProcessFinish(uint64)

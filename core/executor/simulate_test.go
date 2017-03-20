@@ -14,8 +14,8 @@ import (
 
 const (
 	namespace             = "testing"
-	configPath            = "./config/global.yaml"
-	dbConfigPath          = "./config/db.yaml"
+	configPath            = "namespaces/global/config/global.yaml"
+	dbConfigPath          = "namespaces/global/config/db.yaml"
 )
 
 var (
@@ -42,10 +42,10 @@ func init() {
 func (suite *SimulateSuite) SetUpSuite(c *checker.C) {
 	// initialize block pool
 	suite.owd, _ = os.Getwd()
-	os.Chdir(path.Join(common.GetGoPath(), "src/hyperchain"))
-	os.RemoveAll("./build")
-	conf = tutil.InitConfig(configPath, dbConfigPath)
-	edb.InitDBForNamespace(conf, namespace, dbConfigPath, 8001)
+	os.Chdir(path.Join(common.GetGoPath(), "src/hyperchain/configuration"))
+	conf = tutil.InitConfig(configPath)
+	os.RemoveAll("./namespaces/global/data")
+	edb.InitDBForNamespace(conf, namespace)
 	suite.executor = NewExecutor(namespace, conf, nil)
 	suite.executor.CreateInitBlock(conf)
 	suite.executor.initialize()
@@ -61,8 +61,7 @@ func (suite *SimulateSuite) TearDownTest(c *checker.C) {
 
 // Run once after all tests or benchmarks have finished running.
 func (suite *SimulateSuite) TearDownSuite(c *checker.C) {
-	os.RemoveAll("./build")
-	os.RemoveAll("./db.log")
+	os.RemoveAll("./namespaces/global/data")
 	os.Chdir(suite.owd)
 }
 

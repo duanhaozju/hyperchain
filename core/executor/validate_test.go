@@ -32,10 +32,10 @@ func TestValidation(t *testing.T) {
 func (suite *ValidationSuite) SetUpSuite(c *checker.C) {
 	// initialize block pool
 	suite.owd, _ = os.Getwd()
-	os.Chdir(path.Join(common.GetGoPath(), "src/hyperchain"))
-	os.RemoveAll("./build")
-	conf = tutil.InitConfig(configPath, dbConfigPath)
-	edb.InitDBForNamespace(conf, namespace, dbConfigPath, 8001)
+	os.Chdir(path.Join(common.GetGoPath(), "src/hyperchain/configuration"))
+	os.RemoveAll("./namespaces/global/data")
+	conf = tutil.InitConfig(configPath)
+	edb.InitDBForNamespace(conf, namespace)
 	suite.executor = NewExecutor(namespace, conf, nil)
 	suite.executor.CreateInitBlock(conf)
 	suite.executor.initialize()
@@ -51,8 +51,7 @@ func (suite *ValidationSuite) TearDownTest(c *checker.C) {
 
 // Run once after all tests or benchmarks have finished running.
 func (suite *ValidationSuite) TearDownSuite(c *checker.C) {
-	os.RemoveAll("./build")
-	os.RemoveAll("./db.log")
+	os.RemoveAll("./namespaces/global/data")
 	os.Chdir(suite.owd)
 }
 
