@@ -6,17 +6,17 @@ import (
 	"sort"
 	"sync"
 
+	"bytes"
 	"encoding/json"
+	"github.com/deckarep/golang-set"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	"hyperchain/common"
 	"hyperchain/core/vm"
+	"hyperchain/crypto"
+	"hyperchain/hyperdb/db"
 	"hyperchain/tree/bucket"
 	"sync/atomic"
-	"bytes"
-	"hyperchain/hyperdb/db"
-	"hyperchain/crypto"
-	"github.com/deckarep/golang-set"
 )
 
 const (
@@ -466,6 +466,40 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Has
 	return false, common.Hash{}
 }
 
+// AddDeployedContract - add a new created contract address to the maintain list.
+func (self *StateDB) Updatexxx(contract common.Address, account common.Address, number uint64) {
+	self.AddDeployedContract(account, contract)
+	self.SetCreator(contract, account)
+}
+
+func (self *StateDB) AddDeployedContract(addr common.Address, contract common.Address) {
+	creator := self.GetStateObject(addr)
+	if creator == nil {
+		log.Errorf("no state object %s found", addr.Hex())
+		return
+	}
+	creator.AppendDeployedContract(contract)
+}
+
+func (self *StateDB) SetCreator(addr common.Address, creator common.Address) {
+	obj := self.GetStateObject(addr)
+	if obj == nil {
+		log.Errorf("no state object %s found", addr.Hex())
+		return
+	}
+	obj.SetCreator(creator)
+}
+
+// SetStatus - set specific account's status with given one.
+func (self *StateDB) SetStatus(address common.Address, status int) {
+	obj := self.GetStateObject(address)
+	if obj == nil {
+		log.Warningf("no state object %s found", address.Hex())
+		return
+	}
+	obj.SetStatus(status)
+}
+
 // check whether an account has been suicide
 func (self *StateDB) IsDeleted(addr common.Address) bool {
 	stateObject := self.GetStateObject(addr)
@@ -756,7 +790,7 @@ func (self *StateDB) RevertToJournal(targetHeight uint64, currentHeight uint64, 
 	stateObjectStorageHashs := make(map[common.Address][]byte)
 
 	journalCache := NewJournalCache(self.db)
-	for i := currentHeight; i >= targetHeight + 1; i -= 1 {
+	for i := currentHeight; i >= targetHeight+1; i -= 1 {
 		log.Debugf("undo changes for #%d", i)
 		j, err := self.db.Get(CompositeJournalKey(uint64(i)))
 		if err != nil {
@@ -825,7 +859,7 @@ func (self *StateDB) RevertToJournal(targetHeight uint64, currentHeight uint64, 
 		return errors.New("revert state failed")
 	}
 	// revert state instance oldest and root
-	self.ResetToTarget(uint64(targetHeight +1), common.BytesToHash(targetRoot))
+	self.ResetToTarget(uint64(targetHeight+1), common.BytesToHash(targetRoot))
 	log.Debugf("revert state from #%d to #%d success", currentHeight, targetHeight)
 	return nil
 

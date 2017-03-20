@@ -5,23 +5,27 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"hyperchain/common"
-	"math/big"
 	"hyperchain/hyperdb/db"
+	"math/big"
+	"sort"
 )
 
 // journal type name definition
 const (
-	CreateObjectChangeType = "CreateObjectChange"
-	ResetObjectChangeType  = "ResetObjectChange"
-	SuicideChangeType      = "SuicideChange"
-	BalanceChangeType      = "BalanceChange"
-	NonceChangeType        = "NonceChange"
-	StorageChangeType      = "StorageChange"
-	CodeChangeType         = "CodeChange"
-	RefundChangeType       = "RefundChange"
-	AddLogChangeType       = "AddLogChange"
-	TouchChangeType        = "TouchChange"
-	StorageHashChangeType  = "StorageHashChange"
+	CreateObjectChangeType     = "CreateObjectChange"
+	ResetObjectChangeType      = "ResetObjectChange"
+	SuicideChangeType          = "SuicideChange"
+	BalanceChangeType          = "BalanceChange"
+	NonceChangeType            = "NonceChange"
+	StorageChangeType          = "StorageChange"
+	CodeChangeType             = "CodeChange"
+	RefundChangeType           = "RefundChange"
+	AddLogChangeType           = "AddLogChange"
+	TouchChangeType            = "TouchChange"
+	StorageHashChangeType      = "StorageHashChange"
+	StatusChangeType           = "StatusChange"
+	DeployedContractChangeType = "DeployedContractChange"
+	SetCreatorChangeType       = "SetCreatorChange"
 )
 
 type JournalEntry interface {
@@ -151,6 +155,27 @@ func UnmarshalJournal(data []byte) (*Journal, error) {
 				return nil, err
 			}
 			jos = append(jos, &tmp)
+		case "StatusChange":
+			var tmp StatusChange
+			err = json.Unmarshal(res, &tmp)
+			if err != nil {
+				return nil, err
+			}
+			jos = append(jos, &tmp)
+		case "DeployedContractChange":
+			var tmp DeployedContractChange
+			err = json.Unmarshal(res, &tmp)
+			if err != nil {
+				return nil, err
+			}
+			jos = append(jos, &tmp)
+		case "SetCreatorChange":
+			var tmp SetCreatorChange
+			err = json.Unmarshal(res, &tmp)
+			if err != nil {
+				return nil, err
+			}
+			jos = append(jos, &tmp)
 		default:
 			log.Error("unmarshal journal failed")
 			return nil, errors.New("unmarshal journal failed")
@@ -204,6 +229,21 @@ type (
 		Prevcode []byte          `json:"prevcode,omitempty"`
 		Prevhash []byte          `json:"prevhash,omitempty"`
 		Type     string          `json:"type,omitempty"`
+	}
+	StatusChange struct {
+		Account *common.Address `json:"account,omitempty"`
+		Prev    int             `json:"prev,omitempty"`
+		Type    string          `json:"type,omitempty"`
+	}
+	DeployedContractChange struct {
+		Account *common.Address `json:"account,omitempty"`
+		Prev    *common.Address `json:"prev,omitempty"`
+		Type    string          `json:"type,omitempty"`
+	}
+	SetCreatorChange struct {
+		Account *common.Address `json:"account,omitempty"`
+		Prev    *common.Address `json:"prev,omitempty"`
+		Type    string          `json:"type,omitempty"`
 	}
 
 	// Changes to other state values.
@@ -348,7 +388,9 @@ func (ch *TouchChange) GetType() string {
 // balanceChange
 func (ch *BalanceChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
 	if !writeThrough {
-		s.GetStateObject(*ch.Account).setBalance(ch.Prev)
+		if obj := s.GetStateObject(*ch.Account); obj != nil {
+			obj.setBalance(ch.Prev)
+		}
 	} else {
 		obj := cache.Fetch(*ch.Account)
 		if obj == nil {
@@ -376,7 +418,9 @@ func (ch *BalanceChange) GetType() string {
 // nonceChange
 func (ch *NonceChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
 	if !writeThrough {
-		s.GetStateObject(*ch.Account).setNonce(ch.Prev)
+		if obj := s.GetStateObject(*ch.Account); obj != nil {
+			obj.setNonce(ch.Prev)
+		}
 	} else {
 		obj := cache.Fetch(*ch.Account)
 		if obj == nil {
@@ -406,7 +450,9 @@ func (ch *NonceChange) GetType() string {
 // codeChange
 func (ch *CodeChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
 	if !writeThrough {
-		s.GetStateObject(*ch.Account).setCode(common.BytesToHash(ch.Prevhash), ch.Prevcode)
+		if obj := s.GetStateObject(*ch.Account); obj != nil {
+			obj.setCode(common.BytesToHash(ch.Prevhash), ch.Prevcode)
+		}
 	} else {
 		obj := cache.Fetch(*ch.Account)
 		if obj == nil {
@@ -434,12 +480,16 @@ func (ch *CodeChange) GetType() string {
 }
 
 // storageChange
-func (ch *StorageChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool){
+func (ch *StorageChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
 	if !writeThrough {
 		if ch.Exist {
-			s.GetStateObject(*ch.Account).setState(ch.Key, ch.Prevalue)
+			if obj := s.GetStateObject(*ch.Account); obj != nil {
+				obj.setState(ch.Key, ch.Prevalue)
+			}
 		} else {
-			s.GetStateObject(*ch.Account).removeState(ch.Key)
+			if obj := s.GetStateObject(*ch.Account); obj != nil {
+				obj.removeState(ch.Key)
+			}
 		}
 	} else {
 		obj := cache.Fetch(*ch.Account)
@@ -540,5 +590,112 @@ func (ch *StorageHashChange) SetType() {
 	ch.Type = StorageHashChangeType
 }
 func (ch *StorageHashChange) GetType() string {
+	return ch.Type
+}
+
+// StatusChange
+func (ch *StatusChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
+	if !writeThrough {
+		if obj := s.GetStateObject(*ch.Account); obj != nil {
+			obj.setStatus(ch.Prev)
+		}
+	} else {
+		if obj := cache.Fetch(*ch.Account); obj != nil {
+			obj.setStatus(ch.Prev)
+		}
+	}
+}
+
+func (ch *StatusChange) String() string {
+	var str string
+	var status string
+	if ch.Prev == STATEOBJECT_STATUS_NORMAL {
+		status = "normal"
+	} else if ch.Prev == STATEOBJECT_STATUS_FROZON {
+		status = "frozen"
+	} else {
+		status = "Undefined"
+	}
+	str = fmt.Sprintf("journal [StatusChange] address %s prev %s\n", ch.Account.Hex(), status)
+	return str
+}
+
+func (ch *StatusChange) Marshal() ([]byte, error) {
+	return json.Marshal(ch)
+}
+
+func (ch *StatusChange) SetType() {
+	ch.Type = StatusChangeType
+}
+func (ch *StatusChange) GetType() string {
+	return ch.Type
+}
+
+// DeployedContractChange
+func (ch *DeployedContractChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
+	if !writeThrough {
+		if obj := s.GetStateObject(*ch.Account); obj != nil {
+			success := obj.removeDeployedContract(*ch.Prev)
+			if !success {
+				log.Errorf("miss contract %s in deployed contract list in creator %s", ch.Prev.Hex(), ch.Account.Hex())
+			}
+		}
+	} else {
+		obj := cache.Fetch(*ch.Account)
+		remove := func(contracts []string, address common.Address) []string {
+			if len(contracts) == 0 {
+				return contracts
+			}
+			if idx := sort.SearchStrings(contracts, address.Hex()); idx < len(contracts) && contracts[idx] == address.Hex() {
+				contracts = append(contracts[:idx], contracts[idx+1:]...)
+				sort.Strings(contracts)
+			}
+			return contracts
+		}
+		if obj != nil {
+			obj.data.DeployedContracts = remove(obj.data.DeployedContracts, *ch.Prev)
+		}
+	}
+}
+func (ch *DeployedContractChange) String() string {
+	var str string
+	str = fmt.Sprintf("journal [DeployedContractChange] address %s prev %s\n", ch.Account.Hex(), ch.Prev.Hex())
+	return str
+}
+func (ch *DeployedContractChange) Marshal() ([]byte, error) {
+	return json.Marshal(ch)
+}
+func (ch *DeployedContractChange) SetType() {
+	ch.Type = DeployedContractChangeType
+}
+func (ch *DeployedContractChange) GetType() string {
+	return ch.Type
+}
+
+// SetCreatorChange
+func (ch *SetCreatorChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
+	if !writeThrough {
+		if obj := s.GetStateObject(*ch.Account); obj != nil {
+			obj.setCreator(*ch.Prev)
+		}
+	} else {
+		if obj := cache.Fetch(*ch.Account); obj != nil {
+			obj.setCreator(*ch.Prev)
+		}
+	}
+}
+
+func (ch *SetCreatorChange) String() string {
+	var str string
+	str = fmt.Sprintf("journal [SetCreatorChange] address %s prev %s\n", ch.Account.Hex(), ch.Prev.Hex())
+	return str
+}
+func (ch *SetCreatorChange) Marshal() ([]byte, error) {
+	return json.Marshal(ch)
+}
+func (ch *SetCreatorChange) SetType() {
+	ch.Type = SetCreatorChangeType
+}
+func (ch *SetCreatorChange) GetType() string {
 	return ch.Type
 }
