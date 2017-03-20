@@ -404,7 +404,7 @@ func (self *StateDB) CreateAccount(addr common.Address) vm.Account {
 
 // TODO it could be better
 // 1.from the stateObjectCacheSize
-func (self *StateDB) Copy() vm.Database {
+func (self *StateDB) Copy() *StateDB {
 	state, _ := New(common.Hash{}, self.db)
 	state.trie = self.trie
 	for k, stateObject := range self.stateObjects {
@@ -420,12 +420,7 @@ func (self *StateDB) Copy() vm.Database {
 	return state
 }
 
-func (self *StateDB) Set(db vm.Database) {
-	state, ok := db.(*StateDB)
-	if ok == false {
-		log.Error("Set statedb failed!")
-		return
-	}
+func (self *StateDB) Set(state *StateDB) {
 	self.trie = state.trie
 	self.stateObjects = state.stateObjects
 
@@ -521,57 +516,11 @@ func (s *StateDB) commit(db pmt.DatabaseWriter) (common.Hash, error) {
 	return s.trie.CommitTo(db)
 }
 
-func (self *StateDB) Snapshot() interface{} {
+func (self *StateDB) Snapshot() *StateDB {
 	return self.Copy()
 }
 
-func (self *StateDB) RevertToSnapshot(copy interface{}) {
-	statedb, ok := copy.(vm.Database)
-	if ok == false {
-		return
-	}
+func (self *StateDB) RevertToSnapshot(statedb *StateDB) {
 	self.Set(statedb)
 }
 
-// For Compatibility
-func (self *StateDB) MarkProcessStart(seqNo uint64) {
-
-}
-func (self *StateDB) MarkProcessFinish(seqNo uint64) {
-
-}
-
-func (self *StateDB) FetchBatch(seqNo uint64) db.Batch {
-	return self.db.NewBatch()
-}
-
-func (self *StateDB) DeleteBatch(seqNo uint64) {
-
-}
-
-func (self *StateDB) Reset() error {
-	return nil
-}
-
-func (self *StateDB) Purge() {
-}
-
-func (self *StateDB) RevertToJournal(uint64, uint64, []byte, db.Batch) error {
-	return nil
-}
-
-func (self *StateDB) GetTree() interface{} {
-	return nil
-}
-
-func (self *StateDB) SetCreator(common.Address, common.Address) {
-
-}
-
-func (self *StateDB) AddDeployedContract(common.Address, common.Address) {
-
-}
-
-func (self *StateDB) SetCreateTime(common.Address, uint64) {
-
-}
