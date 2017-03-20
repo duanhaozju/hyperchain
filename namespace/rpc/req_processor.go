@@ -179,7 +179,7 @@ func (jrpi *JsonRpcProcessorImpl) parsePositionalArguments(args json.RawMessage,
 	params := make([]interface{}, 0, len(callbackArgs))
 
 	for i, t := range callbackArgs {
-		if (t.Name() == "BlockNumber" || t.Name() == "*BlockNumber") {
+		if t.Name() == "BlockNumber" || t.Name() == "*BlockNumber" {
 			if chain := db_utils.GetChainCopy(jrpi.namespace); chain != nil {
 				height := chain.Height
 				in := new(big.Int)
@@ -206,6 +206,8 @@ func (jrpi *JsonRpcProcessorImpl) parsePositionalArguments(args json.RawMessage,
 		log.Info(err)
 		return nil, &common.InvalidParamsError{Message: err.Error()}
 	}
+
+
 
 	if len(params) > len(callbackArgs) {
 		return nil, &common.InvalidParamsError{
