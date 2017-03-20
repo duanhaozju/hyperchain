@@ -195,16 +195,15 @@ func TestGetEvmTimeOfBlock(t *testing.T) {
 
 
 func InitDataBase() {
-	conf := common.NewConfig("../../config/global.yaml")
-	conf.MergeConfig("../../config/db.yaml")
-	hyperdb.SetDBConfig("../../config/db.yaml", strconv.Itoa(conf.GetInt(common.C_NODE_ID)))
+	conf := common.NewConfig("../../configuration/namespaces/global/config/global.yaml")
+	conf.MergeConfig("../../configuration/namespaces/global/config/db.yaml")
+	hyperdb.SetDBConfig("../../configuration/namespaces/global/config/db.yaml", strconv.Itoa(conf.GetInt(common.C_NODE_ID)))
 	hyperdb.InitDatabase(conf, hyperdb.DefautNameSpace)
 	InitializeChain(hyperdb.DefautNameSpace)
 }
 
 func deleteTestData() {
-	childPath := "/build"
-	fileName := "/db.log"
+	childPath := "/namespaces"
 	current_dir, _ := os.Getwd()
 	path := current_dir + childPath
 	err := os.RemoveAll(path)
@@ -212,11 +211,5 @@ func deleteTestData() {
 		fmt.Println("remove test data file fail!", err)
 	} else {
 		fmt.Println("remove test data file success!")
-	}
-	err = os.Remove(current_dir+fileName)
-	if err != nil {
-		fmt.Println("remove db.log file fail!", err)
-	} else {
-		fmt.Println("remove db.log file success!")
 	}
 }
