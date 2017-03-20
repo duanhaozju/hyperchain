@@ -21,6 +21,11 @@ func (executor *Executor) initReceiptHashCalculator() {
 	executor.hashUtils.receiptBuffer = nil
 }
 
+func (executor *Executor) initCalculator() {
+	executor.initTransactionHashCalculator()
+	executor.initReceiptHashCalculator()
+}
+
 // calculate a batch of transaction
 func (executor *Executor) calculateTransactionsFingerprint(transaction *types.Transaction, flush bool) (common.Hash, error) {
 	if transaction == nil && flush == false {

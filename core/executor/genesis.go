@@ -6,12 +6,12 @@ import (
 	"math/big"
 	"time"
 	"hyperchain/core/vm"
-	"hyperchain/hyperdb"
 	"hyperchain/core/hyperstate"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/common"
 	"strconv"
 	"hyperchain/core/types"
+	"hyperchain/hyperdb/db"
 )
 
 const (
@@ -38,7 +38,7 @@ func (executor *Executor) CreateInitBlock(config *common.Config) error {
 		return err
 	}
 	// create state instance with empty root hash
-	stateDb, err := NewStateDb(executor.namespace, config)
+	stateDb, err := NewStateDb(executor.namespace, config, executor.db)
 	if err != nil {
 		return err
 	}
@@ -74,12 +74,7 @@ func (executor *Executor) CreateInitBlock(config *common.Config) error {
 }
 
 // NewStateDb - create a empty stateDb handler.
-func NewStateDb(namespace string, conf *common.Config) (vm.Database, error) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
-	if err != nil {
-		log.Errorf("[Namespace = %s] get database failed", namespace)
-		return nil, err
-	}
+func NewStateDb(namespace string, conf *common.Config, db db.Database) (vm.Database, error) {
 	stateDb, err := hyperstate.New(common.Hash{}, db, conf, 0)
 	if err != nil {
 		log.Errorf("[Namespace = %s] new stateDb failed, err : %s", namespace, err.Error())

@@ -9,7 +9,6 @@ import (
 	"hyperchain/protos"
 	"bytes"
 	"hyperchain/recovery"
-	"hyperchain/hyperdb"
 )
 
 // SendSyncRequest - send synchronization request to other nodes.
@@ -64,36 +63,28 @@ func (executor *Executor) ReceiveSyncRequest(ev event.StateUpdateEvent) {
 // ReceiveSyncBlocks - receive request synchronization blocks from others.
 func (executor *Executor) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
 	if executor.status.syncFlag.SyncDemandBlockNum != 0 {
-		blocks := &types.Blocks{}
-		proto.Unmarshal(ev.Payload, blocks)
-		db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
-		if err != nil {
-			log.Errorf("[Namespace = %s] no database handler found", executor.namespace)
-			executor.reject()
+		block := &types.Block{}
+		proto.Unmarshal(ev.Payload, block)
+		// store blocks into database only, not process them.
+		if !executor.verifyBlockIntegrity(block) {
+			log.Warningf("[Namespace = %s] receive a broken block %d, drop it", executor.namespace, block.Number)
 			return
 		}
-		// store blocks into database only, not process them.
-		for i := len(blocks.Batch) - 1; i >= 0; i -= 1 {
-			if !executor.verifyBlockIntegrity(blocks.Batch[i]) {
-				log.Warningf("[Namespace = %s] receive a broken block %d, drop it", executor.namespace, blocks.Batch[i].Number)
-				continue
-			}
-			if blocks.Batch[i].Number <= executor.status.syncFlag.SyncDemandBlockNum {
-				log.Debugf("[Namespace = %s] receive block #%d  hash %s", executor.namespace, blocks.Batch[i].Number, common.BytesToHash(blocks.Batch[i].BlockHash).Hex())
-				// is demand
-				if executor.isDemandSyncBlock(blocks.Batch[i]) {
-					edb.PersistBlock(db.NewBatch(), blocks.Batch[i], true, true)
-					if err := executor.updateSyncDemand(blocks.Batch[i]); err != nil {
-						log.Errorf("[Namespace = %s] update sync demand failed.", executor.namespace)
-						executor.reject()
-						return
-					}
-				} else {
-					// requested block with smaller number arrive earlier than expected
-					// store in cache temporarily
-					log.Debugf("[Namespace = %s] receive block #%d hash %s earily", executor.namespace, blocks.Batch[i].Number, common.BytesToHash(blocks.Batch[i].BlockHash).Hex())
-					executor.addToSyncCache(blocks.Batch[i])
+		if block.Number <= executor.status.syncFlag.SyncDemandBlockNum {
+			log.Debugf("[Namespace = %s] receive block #%d  hash %s", executor.namespace, block.Number, common.BytesToHash(block.BlockHash).Hex())
+			// is demand
+			if executor.isDemandSyncBlock(block) {
+				edb.PersistBlock(executor.db.NewBatch(), block, true, true)
+				if err := executor.updateSyncDemand(block); err != nil {
+					log.Errorf("[Namespace = %s] update sync demand failed.", executor.namespace)
+					executor.reject()
+					return
 				}
+			} else {
+				// requested block with smaller number arrive earlier than expected
+				// store in cache temporarily
+				log.Debugf("[Namespace = %s] receive block #%d hash %s earily", executor.namespace, block.Number, common.BytesToHash(block.BlockHash).Hex())
+				executor.addToSyncCache(block)
 			}
 		}
 		executor.processSyncBlocks()
@@ -109,59 +100,18 @@ func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *
 }
 
 func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
-	executor.initTransactionHashCalculator()
-	executor.initReceiptHashCalculator()
-
-	batch := executor.statedb.FetchBatch(seqNo)
-	executor.statedb.MarkProcessStart(executor.getTempBlockNumber())
-	// initialize execution environment rule set
-	env := initEnvironment(executor.statedb, executor.getTempBlockNumber())
-	// execute transaction one by one
-	for i, tx := range block.Transactions {
-		executor.statedb.StartRecord(tx.GetHash(), common.Hash{}, i)
-		receipt, _, _, err := ExecTransaction(tx, env)
-		// just ignore invalid transactions
-		if err != nil {
-			log.Warningf("invalid transaction found during the state update process in #%d", seqNo)
-			continue
-		}
-		executor.calculateTransactionsFingerprint(tx, false)
-		executor.calculateReceiptFingerprint(receipt, false)
-
-		// different with normal process, because during the state update, block number and seqNo are always same
-		// persist transaction here
-		if err, _ := edb.PersistTransaction(batch, tx, false, false); err != nil {
-			log.Errorf("persist transaction for index %d in #%d failed.", i, seqNo)
-			continue
-		}
-		// persist transaction meta data
-		meta := &types.TransactionMeta{
-			BlockIndex: seqNo,
-			Index:      int64(i),
-		}
-		if err := edb.PersistTransactionMeta(batch, meta, tx.GetHash(), false, false); err != nil {
-			log.Errorf("persist transaction meta for index %d in #%d failed.", i, seqNo)
-			continue
-		}
-		// persist receipt
-		if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
-			log.Errorf("persist receipt for index %d in #%d failed.", i, seqNo)
-			continue
-		}
-	}
-	// submit validation result
-	err, merkleRoot, txRoot, receiptRoot := executor.submitValidationResult(batch)
+	err, result := executor.applyTransactions(block.Transactions, nil, seqNo)
 	if err != nil {
-		log.Error("submit validation result failed.", err.Error())
 		return err, nil
 	}
-	log.Debugf("validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
-		executor.getTempBlockNumber(), seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
-	return nil, &ValidationResultRecord{
-		TxRoot:      txRoot,
-		ReceiptRoot: receiptRoot,
-		MerkleRoot:  merkleRoot,
+	batch := executor.statedb.FetchBatch(seqNo)
+	if err := executor.persistTransactions(batch, block.Transactions, seqNo); err != nil {
+		return err, nil
 	}
+	if err := executor.persistReceipts(batch, result.Receipts, seqNo, common.BytesToHash(block.BlockHash)); err != nil {
+		return err, nil
+	}
+	return nil, result
 }
 
 // ClearStateUnCommitted - remove all cached stuff
@@ -278,11 +228,6 @@ func (executor *Executor) SendSyncRequestForSingle(number uint64) {
 
 // updateSyncDemand - update next demand block number and block hash.
 func (executor *Executor) updateSyncDemand(block *types.Block) error {
-	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
-	if err != nil {
-		log.Errorf("[Namespace = %s] get database failed", executor.namespace)
-		return err
-	}
 	var tmp = block.Number - 1
 	var tmpHash = block.ParentHash
 	flag := false
@@ -291,7 +236,7 @@ func (executor *Executor) updateSyncDemand(block *types.Block) error {
 			blks, _ := executor.fetchFromSyncCache(tmp)
 			for hash, blk := range blks {
 				if hash == common.BytesToHash(tmpHash).Hex() {
-					edb.PersistBlock(db.NewBatch(), &blk, true, true)
+					edb.PersistBlock(executor.db.NewBatch(), &blk, true, true)
 					executor.cache.syncCache.Remove(tmp)
 					tmp = tmp - 1
 					tmpHash = blk.ParentHash
@@ -335,12 +280,7 @@ func (executor *Executor) accpet(seqNo uint64) {
 // reject - reject state update result.
 func (executor *Executor) reject() {
 	executor.cache.syncCache.Purge()
-	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
-	if err != nil {
-		log.Error("get database handler failed.")
-		return
-	}
-	batch := db.NewBatch()
+	batch := executor.db.NewBatch()
 	for i := edb.GetHeightOfChain(executor.namespace) + 1; i <= executor.status.syncFlag.SyncTarget; i += 1 {
 		// delete persisted blocks number larger than chain height
 		edb.DeleteBlockByNum(executor.namespace, batch, i, false, false)

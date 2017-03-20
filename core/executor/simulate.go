@@ -4,17 +4,12 @@ import (
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"
 	"hyperchain/event"
-	"hyperchain/hyperdb"
 	edb "hyperchain/core/db_utils"
 )
 
 // run transaction in a sandbox
 // execution result will not been add to database
 func (executor *Executor) RunInSandBox(tx *types.Transaction) error {
-	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
-	if err != nil {
-		return err
-	}
 	statedb, err := executor.newStateDb()
 	if err != nil {
 		return err
@@ -42,7 +37,7 @@ func (executor *Executor) RunInSandBox(tx *types.Transaction) error {
 		return nil
 	} else {
 		// persist execution result to local
-		err, _ := edb.PersistReceipt(db.NewBatch(), receipt, true, true)
+		err, _ := edb.PersistReceipt(executor.db.NewBatch(), receipt, true, true)
 		if err != nil {
 			log.Error("Put receipt data into database failed! error msg, ", err.Error())
 			return err

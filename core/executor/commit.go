@@ -6,7 +6,6 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/types"
 	"hyperchain/event"
-	"hyperchain/hyperdb"
 	"hyperchain/p2p"
 	"hyperchain/protos"
 	"time"
@@ -199,11 +198,7 @@ func (executor *Executor) StoreInvalidTransaction(ev event.InvalidTxsEvent) {
 	}
 	// save to db
 	//log.Noticef("[Namespace = %s] invalid transaction %s", executor.namespace, invalidTx.Tx.Hash().Hex())
-	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
-	if err != nil {
-		return
-	}
-	err, _ = edb.PersistInvalidTransactionRecord(db.NewBatch(), invalidTx, true, true)
+	err, _ = edb.PersistInvalidTransactionRecord(executor.db.NewBatch(), invalidTx, true, true)
 	if err != nil {
 		log.Error("save invalid transaction record failed,", err.Error())
 		return

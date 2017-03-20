@@ -12,6 +12,7 @@ import (
 	"hyperchain/crypto"
 	"errors"
 	edb "hyperchain/core/db_utils"
+	"hyperchain/hyperdb/db"
 )
 
 var (
@@ -27,6 +28,7 @@ func init() {
 
 type Executor struct {
 	namespace   string                // namespace tag
+	db          db.Database
 	commonHash  crypto.CommonHash
 	encryption  crypto.Encryption
 	conf        *common.Config      // block configuration
@@ -41,8 +43,14 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux)
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	helper := NewHelper(eventMux)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	if err != nil {
+		log.Error("get database handler failed")
+		return nil
+	}
 	executor := &Executor{
 		namespace:       namespace,
+		db:              db,
 		conf:            conf,
 		commonHash:      kec256Hash,
 		encryption:      encryption,
@@ -103,12 +111,7 @@ func (executor *Executor) newStateDb() (vm.Database, error) {
 		log.Errorf("[Namespace = %s] can not find block #%d", executor.namespace, edb.GetHeightOfChain(executor.namespace))
 		return nil, err
 	}
-	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
-	if err != nil {
-		log.Errorf("[Namespace = %s] get database failed", executor.namespace)
-		return nil, err
-	}
-	stateDb, err := hyperstate.New(common.BytesToHash(blk.MerkleRoot), db, executor.conf, edb.GetHeightOfChain(executor.namespace))
+	stateDb, err := hyperstate.New(common.BytesToHash(blk.MerkleRoot), executor.db, executor.conf, edb.GetHeightOfChain(executor.namespace))
 	if err != nil {
 		log.Errorf("[Namespace = %s] new stateDb failed, err : %s", executor.namespace, err.Error())
 		return nil, err
