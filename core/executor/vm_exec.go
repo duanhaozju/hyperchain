@@ -6,18 +6,20 @@ import (
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/params"
 	"math/big"
+	"hyperchain/core/types"
+	"hyperchain/core/hyperstate"
 )
 
 // Call executes within the given contract
-func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int, update bool) (ret []byte, err error) {
-	ret, _, err = exec(env, caller, &addr, &addr, input, env.Db().GetCode(addr), gas, gasPrice, value, update)
+func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, err error) {
+	ret, _, err = exec(env, caller, &addr, &addr, input, env.Db().GetCode(addr), gas, gasPrice, value, op)
 	return ret, err
 }
 
 // CallCode executes the given address' code as the given contract address
 func CallCode(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int) (ret []byte, err error) {
 	callerAddr := caller.Address()
-	ret, _, err = exec(env, caller, &callerAddr, &addr, input, env.Db().GetCode(addr), gas, gasPrice, value, false)
+	ret, _, err = exec(env, caller, &callerAddr, &addr, input, env.Db().GetCode(addr), gas, gasPrice, value, 0)
 	return ret, err
 }
 
@@ -32,14 +34,14 @@ func DelegateCall(env vm.Environment, caller vm.ContractRef, addr common.Address
 
 // Create creates a new contract with the given code
 func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPrice, value *big.Int) (ret []byte, address common.Address, err error) {
-	ret, address, err = exec(env, caller, nil, nil, nil, code, gas, gasPrice, value, false)
+	ret, address, err = exec(env, caller, nil, nil, nil, code, gas, gasPrice, value, 0)
 	if err != nil {
 		return nil, address, err
 	}
 	return ret, address, err
 }
 
-func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int, update bool) (ret []byte, addr common.Address, err error) {
+func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
 	evm := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
@@ -54,6 +56,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	}
 
 	var createAccount bool
+	// create address
 	if address == nil {
 		// Create a new account on the state
 		nonce := env.Db().GetNonce(caller.Address())
@@ -71,17 +74,34 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	} else {
 		if !env.Db().Exist(*address) {
 			to = env.Db().CreateAccount(*address)
-			env.Transfer(from, to, value)
 		} else {
 			to = env.Db().GetAccount(*address)
-			env.Transfer(from, to, value)
 		}
+		if isSpecialOperation(op) && !isUpdate(op) {
+			switch {
+			case isFreeze(op):
+				log.Debugf("freeze account %s", to.Address().Hex())
+				env.Db().SetStatus(to.Address(), hyperstate.STATEOBJECT_STATUS_FROZON)
+			case isUnFreeze(op):
+				log.Debugf("unfreeze account %s", to.Address().Hex())
+				env.Db().SetStatus(to.Address(), hyperstate.STATEOBJECT_STATUS_NORMAL)
+			}
+			return nil, common.Address{}, nil
+		}
+		env.Transfer(from, to, value)
+	}
+	/*
+		RUN VM
+	 */
+	if env.Db().GetStatus(to.Address()) != hyperstate.STATEOBJECT_STATUS_NORMAL {
+		log.Debugf("account %s has been frozen", to.Address().Hex())
+		return nil, common.Address{}, ExecContractErr(1, "Try to invoke a frozen contract")
 	}
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
 	contract := vm.NewContract(caller, to, value, gas, gasPrice)
-	if update {
+	if isUpdate(op) {
 		// using the new code to execute
 		// otherwise errors could occur
 		contract.SetCallCode(codeAddr, input)
@@ -122,7 +142,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		}
 	}
 	// undo all changes during the contract code update
-	if update {
+	if isUpdate(op) {
 		env.SetSnapshot(snapshotPreTransfer)
 		// if code ran successfully and no errors were returned
 		// and this transaction is a update code operation
@@ -180,4 +200,24 @@ func execDelegateCall(env vm.Environment, caller vm.ContractRef, originAddr, toA
 func Transfer(from, to vm.Account, amount *big.Int) {
 	from.SubBalance(amount)
 	to.AddBalance(amount)
+}
+
+func isUpdate(opcode types.TransactionValue_Opcode) bool {
+	return opcode == types.TransactionValue_UPDATE
+}
+
+func isFreeze(opcode types.TransactionValue_Opcode) bool {
+	return opcode == types.TransactionValue_FREEZE
+}
+
+func isUnFreeze(opcode types.TransactionValue_Opcode) bool {
+	return opcode == types.TransactionValue_UNFREEZE
+}
+
+func isNormal(opcode types.TransactionValue_Opcode) bool {
+	return opcode == types.TransactionValue_NORMAL
+}
+
+func isSpecialOperation(op types.TransactionValue_Opcode) bool {
+	return op == types.TransactionValue_UPDATE || op == types.TransactionValue_FREEZE || op == types.TransactionValue_UNFREEZE
 }

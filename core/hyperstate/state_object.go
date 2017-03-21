@@ -477,6 +477,10 @@ func (self *StateObject) SetCreator(addr common.Address) {
 }
 
 func (self *StateObject) setCreator(addr common.Address) {
+	if bytes.Compare(self.data.Creator.Bytes(), addr.Bytes()) == 0 {
+		log.Warningf("state object %s set creator, same with the origin, ignore.", self.address.Hex())
+		return
+	}
 	self.data.Creator = addr
 	if self.onDirty != nil {
 		self.onDirty(self.Address())
@@ -497,6 +501,10 @@ func (self *StateObject) SetCreateTime(time uint64) {
 }
 
 func (self *StateObject) setCreateTime(time uint64) {
+	if self.data.CreateTime == time {
+		log.Warningf("state object %s set create time, same with the origin, ignore.", self.address.Hex())
+		return
+	}
 	self.data.CreateTime = time
 	if self.onDirty != nil {
 		self.onDirty(self.Address())
