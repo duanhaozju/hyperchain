@@ -1,9 +1,9 @@
 package db_utils
 
-import (
-	"testing"
-	"fmt"
-)
+//import (
+//	"testing"
+//	"fmt"
+//)
 
 //func TestCalcResponseCount(t *testing.T) {
 //	log.Info("test =============> > > TestInitDB")
@@ -32,11 +32,11 @@ import (
 //
 //}
 
-func TestChainHeight(t *testing.T) {
-	InitDB("../build/build/database", 8082)
-	fmt.Println(GetHeightOfChain())
-
-}
+//func TestChainHeight(t *testing.T) {
+//	InitDB("../build/build/database", 8082)
+//	fmt.Println(GetHeightOfChain())
+//
+//}
 
 /*
 func TestCalcCommitBatchAVGTime(t *testing.T) {

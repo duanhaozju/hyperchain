@@ -4,21 +4,24 @@ import (
 	"testing"
 	"hyperchain/hyperdb"
 	"hyperchain/common"
+	"hyperchain/core/test_util"
 )
 
 func TestGetReceipt(t *testing.T) {
-	db := InitDataBase()
+	InitDataBase()
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
 	batch := db.NewBatch()
-	err, _ := PersistReceipt(batch, &receipt, true, true)
+	err, _ := PersistReceipt(batch, &test_util.Receipt, true, true)
 	if err != nil {
 		t.Errorf("PersistReceipt fail")
 	}
-	res := GetReceipt(hyperdb.DefautNameSpace+hyperdb.Blockchain, common.BytesToHash(receipt.TxHash))
+	res := GetReceipt(hyperdb.DefautNameSpace, common.BytesToHash(test_util.Receipt.TxHash))
 	if res == nil {
 		t.Errorf("GetReceipt fail")
 	}
-	err = DeleteReceipt(batch, receipt.TxHash, true, true)
+	err = DeleteReceipt(batch, test_util.Receipt.TxHash, true, true)
 	if err != nil {
 		t.Errorf("DeleteReceipt fail")
 	}
+	deleteTestData()
 }

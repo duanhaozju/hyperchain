@@ -1,106 +1,193 @@
 package executor
 
 import (
-	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
-	checker "gopkg.in/check.v1"
 	"testing"
-	edb "hyperchain/core/db_utils"
 	"hyperchain/common"
-	tutil "hyperchain/core/test_util"
 	"os"
+	"github.com/davecgh/go-spew/spew"
 	"path"
+	"hyperchain/core/test_util"
+	"hyperchain/core/db_utils"
+	"hyperchain/core/types"
+	"strconv"
 )
 
 const (
 	namespace             = "testing"
-	configPath            = "namespaces/global/config/global.yaml"
-	dbConfigPath          = "namespaces/global/config/db.yaml"
+	configPath            = "configuration/namespaces/global/config/global.yaml"
+	dbConfigPath          = "configuration/namespaces/global/config/db.yaml"
 )
 
 var (
 	conf *common.Config
 )
 
-type SimulateSuite struct {
-	executor *Executor
-	owd      string
-}
-
-func TestSimulate(t *testing.T) {
-	checker.TestingT(t)
-}
-
-var _ = checker.Suite(&SimulateSuite{})
-
 func init() {
 	spew.Config.Indent = "    "
 	spew.Config.DisableMethods = true
 }
 
-// Run once when the suite starts running.
-func (suite *SimulateSuite) SetUpSuite(c *checker.C) {
-	// initialize block pool
-	suite.owd, _ = os.Getwd()
-	os.Chdir(path.Join(common.GetGoPath(), "src/hyperchain/configuration"))
-	conf = tutil.InitConfig(configPath)
-	os.RemoveAll("./namespaces/global/data")
-	edb.InitDBForNamespace(conf, namespace)
-	suite.executor = NewExecutor(namespace, conf, nil)
-	suite.executor.CreateInitBlock(conf)
-	suite.executor.initialize()
+func initialize() (string, *Executor){
+	owd, _ := os.Getwd()
+	os.Chdir(path.Join(common.GetGoPath(), "src/hyperchain"))
+	os.RemoveAll("./build")
+	conf = test_util.InitConfig(configPath)
+	db_utils.InitDBForNamespace(conf, namespace)
+	executor := NewExecutor(namespace, conf, nil)
+	executor.CreateInitBlock(conf)
+	executor.initialize()
+	return owd, executor
 }
-
-// Run before each test or benchmark starts running.
-func (suite *SimulateSuite) SetUpTest(c *checker.C) {
-}
-
-// Run after each test or benchmark runs.
-func (suite *SimulateSuite) TearDownTest(c *checker.C) {
-}
-
-// Run once after all tests or benchmarks have finished running.
-func (suite *SimulateSuite) TearDownSuite(c *checker.C) {
-	os.RemoveAll("./namespaces/global/data")
-	os.Chdir(suite.owd)
+func deleteTestData(owd string) {
+	os.RemoveAll("./build")
+	os.RemoveAll("./db.log")
+	os.Chdir(owd)
 }
 
 /*
 	Functional test
 */
-func (suite *SimulateSuite) TestSimulate(c *checker.C) {
-	if err := suite.simulateForTransafer(suite.executor); err != nil {
-		c.Errorf("simulate transfer test failed. %s", err)
+func TestSimulateForTransfer(t *testing.T) {
+	owd, executor := initialize()
+	if err := simulateForTransfer(executor); err != nil {
+		t.Error("TestSimulateForTransafer fail" + err.Error())
 	}
+	deleteTestData(owd)
 }
 
-func (suite *SimulateSuite) simulateForTransafer(executor *Executor) error {
-	transaction := tutil.GenTransferTransactionRandomly()
+func TestSimulateForInvalidTransfer(t *testing.T)  {
+	owd, executor := initialize()
+	if err := simulateForInvalidTransfer(executor); err != nil {
+		t.Error("TestSimulateForInvalidTransafer fail" + err.Error())
+	}
+	deleteTestData(owd)
+}
+
+func TestSimulateForSignatureInvalidTransfer(t *testing.T) {
+	owd, executor := initialize()
+	if err := simulateForSignatureInvalidTransfer(executor); err != nil {
+		t.Error("TestSimulateForSignatureInvalidTransafer fail" + err.Error())
+	}
+	deleteTestData(owd)
+}
+
+func TestSimulateContractTransfer(t *testing.T) {
+	owd, executor := initialize()
+	if err := simulateContractTransfer(executor); err != nil {
+		t.Error("TestSimulateContractTransfer fail. " + err.Error())
+	}
+	deleteTestData(owd)
+}
+
+func simulateForTransfer(executor *Executor) error {
+	transaction := test_util.GenTransferTransactionRandomly()
 	transaction.TransactionHash = transaction.Hash().Bytes()
 	if err := executor.RunInSandBox(transaction); err != nil {
 		return err
 	}
 
 	// check receipt existence
-	if receipt := edb.GetReceipt(namespace, transaction.GetHash()); receipt == nil {
+	if receipt := db_utils.GetReceipt(namespace, transaction.GetHash()); receipt == nil {
 		return errors.New("no receipt found in database")
 	}
 	return nil
 }
 
-func (suite *SimulateSuite) simulateForDeploy() error {
-	return nil
-}
-
-func (suite *SimulateSuite) simulateForInvocation() error {
-	return nil
-}
-
-/*
-	benchmarking
-*/
-func (suite *SimulateSuite) BenchmarkSimulate(c *checker.C) {
-	for i := 0; i < c.N; i++ {
+func simulateForInvalidTransfer(executor *Executor) error {
+	transaction := test_util.GenInvalidTransferTransactionRandomly()
+	transaction.TransactionHash = transaction.Hash().Bytes()
+	if err := executor.RunInSandBox(transaction); err != nil {
+		return err
 	}
+	// check receipt existence
+	if receipt := db_utils.GetReceipt(namespace, transaction.GetHash()); receipt == nil {
+		record, _ := db_utils.GetDiscardTransaction(namespace, transaction.GetHash().Bytes())
+		if record.ErrType.String() == "OUTOFBALANCE" {
+			return nil
+		}
+	}
+	return errors.New("simulateForInvalidTransafer fail")
 }
 
+func simulateForSignatureInvalidTransfer(executor *Executor) error {
+	transaction := test_util.GenSignatureInvalidTransferTransactionRandomly()
+	transaction.TransactionHash = transaction.Hash().Bytes()
+	invalidTransaction, _ := executor.checkSign([]*types.Transaction{transaction})
+	if invalidTransaction != nil {
+		if string(invalidTransaction[0].ErrMsg) == "Invalid signature" {
+			return nil
+		}
+	}
+	return errors.New("simulateForSignatureInvalidTransfer fail")
+}
+
+func simulateContractTransfer(executor *Executor) error {
+	//DeployContract
+	executor.initTransactionHashCalculator()
+	executor.initReceiptHashCalculator()
+	executor.statedb.MarkProcessStart(executor.getTempBlockNumber())
+	env := initEnvironment(executor.statedb, executor.getTempBlockNumber())
+	batch := executor.statedb.FetchBatch(executor.getTempBlockNumber())
+
+	transaction := test_util.DeployContract("", "0x6060604052610d3d806100126000396000f3606060405236156100c35760e060020a600035046216962781146100c8578063051d4307146101315780630ad72e271461019a57806312e86cb0146101d15780632ee6955814610208578063328592e214610257578063634b2182146102965780639a6676c6146102ed578063ae9f75e314610329578063c5cc8be81461037d578063d0b685a9146103b4578063e45fbe8514610400578063eb8586161461043e578063f044d600146104a0578063f2d2483d146104d7578063f62b17fe1461050e575b610002565b346100025761055e6004356024356044356000838152602081815260408083208584526004810183528184206001808201548652909352908320815484938493929091158061011657508054155b15610646576000955060f860020a603102945085935061063a565b346100025761055e6004356024356044356000838152602081815260408083208584526004810183528184206001808201548652909352908320815484938493929091158061017f57508054155b156106cf576000955060f860020a603102945085935061063a565b346100025761057e60043560008181526020819052604081208054829190151561079f57600060f860020a60310292509250610799565b346100025761057e6004356000818152602081905260408120805482919015156107c157600060f860020a60310292509250610799565b346100025761057e600435602435604435600083815260016020526040808220848352908220815483929190158061023f57508054155b1561083157600060fa60020a600d0293509350610827565b346100025761057e600435602435604435606435600084815260208190526040812080548291901561085157600060f860020a60310292509250610883565b346100025761057e600435602435604435606435600083815260016020908152604080832085845283835281842088855260029093529083208054849391901561099c57600060f860020a60310294509450610990565b346100025761057e60043560243560443560008381526001602052604081208054829190156109c157600060f860020a603102925092506109ec565b346100025761055e6004356024356044356000838152602081905260408082208483529082208154839283929091158061036257508054155b15610a27576000945060f860020a6031029350849250610a1c565b346100025761057e600435600081815260208190526040812080548291901515610a9357600060f860020a60310292509250610799565b34610002576105996004356000818152600160205260408120805482918291829182918291901515610ad5576000965060fa60020a600d02955086945084935083925060019150610b02565b346100025761055e60043560243560008181526020819052604081208054829182911515610b2a576000935060f860020a6031029250839150610b22565b346100025761055e60043560243560443560643560843560008581526020819052604080822085835290822081548392839290918390819081908190158061048557508454155b15610bd7576000985060f860020a6031029750889650610bc6565b346100025761057e600435600081815260208190526040812080548291901515610c8257600060f860020a60310292509250610799565b346100025761057e600435600081815260208190526040812080548291901515610cc457600060f860020a60310292509250610799565b34610002576105ce600435600081815260208190526040812080548291829182918291829182911515610cfc576000975060fa60020a600d02965087955085945084935083925060049150610d31565b604080519315158452602084019290925282820152519081900360600190f35b60408051921515835260208301919091528051918290030190f35b6040805196151587526020870195909552858501939093526060850191909152608084015260a0830152519081900360c00190f35b6040805197151588526020880196909652868601949094526060860192909252608085015260a084015260c0830152519081900360e00190f35b6003808401805489018155908301805489900390556002820180548990039055546001965060fc60020a600302955093505b50505093509350939050565b60028201548914610667576000955060f960020a601b02945085935061063a565b600583015460ff161515806106825750600381015460ff1615155b1561069d576000955060f960020a601902945085935061063a565b6002810154879010806106b4575060038201548790105b15610608576000955060f860020a603302945085935061063a565b600282015489146106f0576000955060f960020a601b02945085935061063a565b600583015460ff1615158061070b5750600381015460ff1615155b15610726576000955060f960020a601902945085935061063a565b600383015487901015610749576000955060f860020a603302945085935061063a565b60038084018054899003815590830180548901905560028201805489019055546001965060fc60020a6003029550935061063a565b60058101805460ff191690556001925060fc60020a60030291505b50915091565b600581015460ff1660011461077e57600060f960020a60190292509250610799565b600581015460ff16156107e157600060f960020a60190292509250610799565b60058101805460ff19166001908117909155925060fc60020a6003029150610799565b60028083018054879003905581018054860190556001935060fc60020a60030292505b5050935093915050565b60028201548590101561080457600060f860020a60330293509350610827565b8681556001808201879055600282018690556003820185905560058201805460ff19169055925060fc60020a60030291505b5094509492505050565b888160000160005081905550878160010160005081905550868160020160005081905550858160030160005081905550808260040160005060008b6000191681526020019081526020016000206000506000820160005054816000016000505560018201600050548160010160005055600282016000505481600201600050556003820160005054816003016000505590505080600260005060008b60001916815260200190815260200160002060005060008201600050548160000160005055600182016000505481600101600050556002820160005054816002016000505560038201600050548160030160005055905050600160fc60020a600302945094505b50505094509492505050565b825415806109a957508154155b1561088d57600060fa60020a600d0294509450610990565b85815560018082018690556002820185905560038201805460ff19169055925060fc60020a60030291505b50935093915050565b600380830180548890038155908201805488019055546001955060fc60020a600302945092505b505093509350939050565b600582015460ff16151580610a555750600581015460ff1615801590610a555750600581015460ff16600214155b15610a70576000945060f960020a6019029350849250610a1c565b6003820154869010156109f5576000945060f860020a6033029350849250610a1c565b600581015460ff1615610ab357600060f960020a60190292509250610799565b60058101805460ff191660021790556001925060fc60020a6003029150610799565b805460018281015460028401546003850154929a5060fc60020a6003029950929750955090935060ff1691505b5091939550919395565b60038101546001945060fc60020a600302935091505b509250925092565b600581015460ff1615610b4d576000935060f960020a6019029250839150610b22565b858514610b0c576000935060f960020a601b029250839150610b22565b50506001828101546000908152602082905260408082208484015483529120600380860180548d90038155600280850180548f9003905591860180548e01905590820180548d0190555492995060fc60020a6003029850919650905b505050505050955095509592505050565b60008d81526004808801602090815260408084208f8552928901909152909120815491955093501580610c0957508254155b15610c24576000985060f860020a6031029750889650610bc6565b60038401548a901015610c47576000985060f860020a6033029750889650610bc6565b600180840154908501541415610b6a57600380850180548c9003815590840180548c019055546001995060fc60020a60030298509650610bc6565b600581015460ff1615610ca257600060f960020a60190292509250610799565b60058101805460ff191660031790556001925060fc60020a6003029150610799565b600581015460ff16600214801590610ce45750600581015460ff16600314155b1561077e57600060f960020a60190292509250610799565b8054600182810154600284015460038501546005860154939c5060fc60020a6003029b50939950909750955090935060ff1691505b5091939597909294965056")
+	transaction.TransactionHash = transaction.Hash().Bytes()
+	// execute transactions one by one
+	executor.statedb.StartRecord(transaction.GetHash(), common.Hash{}, 0)
+	receiptOfDeployContract, _, _, err := ExecTransaction(transaction, env)
+	if err != nil {
+		return errors.New("deploy contract fail " + err.Error())
+	}
+	err, _, _, _ = executor.submitValidationResult(batch)
+	if err != nil {
+		return errors.New("deploy contract fail " + err.Error())
+	}
+	batch.Write()
+
+	// create user1
+	transaction = test_util.GenContractTransactionRandomly("", "0x" + common.Bytes2Hex(receiptOfDeployContract.ContractAddress), "0x328592e2696e646976696475616c5f3000000000000000000000000000000000000000006e616d650000000000000000000000000000000000000000000000000000000070686f6e654e756d62657200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000186a0")
+	transaction.TransactionHash = transaction.Hash().Bytes()
+	executor.statedb.StartRecord(transaction.GetHash(), common.Hash{}, 0)
+	receipt, _, _, err := ExecTransaction(transaction, env)
+	if err != nil {
+		return errors.New("create user1 fail " + err.Error())
+	}
+	err, _, _, _ = executor.submitValidationResult(batch)
+	if err != nil {
+		return errors.New("create user1 fail " + err.Error())
+	}
+	batch.Write()
+
+	// create user2
+	transaction = test_util.GenContractTransactionRandomly("", "0x" + common.Bytes2Hex(receiptOfDeployContract.ContractAddress), "0x328592e2696e646976696475616c5f3100000000000000000000000000000000000000006e616d650000000000000000000000000000000000000000000000000000000070686f6e654e756d62657200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000186a0")
+	transaction.TransactionHash = transaction.Hash().Bytes()
+	executor.statedb.StartRecord(transaction.GetHash(), common.Hash{}, 0)
+	receipt, _, _, err = ExecTransaction(transaction, env)
+	if err != nil {
+		return errors.New("create user2 fail " + err.Error())
+	}
+	err, _, _, _ = executor.submitValidationResult(batch)
+	if err != nil {
+		return errors.New("create user2 fail " + err.Error())
+	}
+	batch.Write()
+
+	// contract transfer
+	transaction = test_util.GenContractTransactionRandomly("", "0x" + common.Bytes2Hex(receiptOfDeployContract.ContractAddress), "0xae9f75e3696e646976696475616c5f300000000000000000000000000000000000000000696e646976696475616c5f3100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001")
+	transaction.TransactionHash = transaction.Hash().Bytes()
+	executor.statedb.StartRecord(transaction.GetHash(), common.Hash{}, 0)
+	receipt, _, _, err = ExecTransaction(transaction, env)
+	if err != nil {
+		return errors.New("contract transfer fail. " + err.Error())
+	}
+	err, _, _, _ = executor.submitValidationResult(batch)
+	if err != nil {
+		return errors.New("contract transfer fail. " + err.Error())
+	}
+	batch.Write()
+	res, _ := strconv.ParseBool(strconv.Itoa(int(receipt.Ret[31:32][0])))
+	if !res {
+		return errors.New("contract transfer fail. " + strconv.FormatBool(res))
+	}
+	return nil
+}
