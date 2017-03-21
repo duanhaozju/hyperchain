@@ -96,7 +96,7 @@ func NewPublicTransactionAPI(namespace string, eventMux *event.TypeMux, eh *mana
 	}
 }
 
-// txType 0 represents send normal tx, txType 1 represents deploy contract, txType 2 represents invoke contract, txType 3 represents signHash.
+// txType 0 represents send normal tx, txType 1 represents deploy contract, txType 2 represents invoke contract, txType 3 represents signHash, txType 4 represents maintain contract.
 func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 	if args.Gas == nil {
 		args.Gas = NewInt64ToNumber(defaultGas)
@@ -107,7 +107,7 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 	if args.From.Hex() == (common.Address{}).Hex() {
 		return SendTxArgs{}, &common.InvalidParamsError{Message:"address 'from' is invalid"}
 	}
-	if (txType == 0 || txType == 2) && args.To == nil {
+	if (txType == 0 || txType == 2 || txType == 4) && args.To == nil {
 		return SendTxArgs{}, &common.InvalidParamsError{Message:"address 'to' is invalid"}
 	}
 	if args.Timestamp <= 0 || (5*int64(time.Minute)+time.Now().UnixNano()) < args.Timestamp {
