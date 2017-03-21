@@ -53,7 +53,7 @@ type SendTxArgs struct {
 	// --- test -----
 	Request   *Number     `json:"request"`
 	Simulate  bool        `json:"simulate"`
-	Update    bool        `json:"update"`
+	Opcode    int32       `json:"opcode"`
 	Nonce     int64       `json:"nonce"`
 }
 
@@ -136,7 +136,7 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	}
 
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(),
-		realArgs.Value.ToInt64(), nil, false)
+		realArgs.Value.ToInt64(), nil, 0)
 
 	value, err := proto.Marshal(txValue)
 
@@ -458,7 +458,7 @@ func (tran *Transaction) GetSignHash(args SendTxArgs) (common.Hash, error) {
 
 	payload := common.FromHex(realArgs.Payload)
 
-	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), payload, args.Update)
+	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), payload, args.Opcode)
 
 	value, err := proto.Marshal(txValue)
 	if err != nil {

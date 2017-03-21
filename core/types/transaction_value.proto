@@ -9,6 +9,11 @@ message TransactionValue {
 	bytes encryptedAmount = 5;
 	bytes homomorphicAmount = 6;
 	bytes homomorphicBalance = 7;
-	bool  update = 8;
-	bool  freeze = 9;
+	enum Opcode {
+            NORMAL = 0;
+            UPDATE = 1;
+            FREEZE = 2;
+            UNFREEZE = 3;
+    }
+	Opcode op = 8;
 }
