@@ -21,6 +21,7 @@ message InvalidTransactionRecord {
         SIGFAILED = 1;
         INVOKE_CONTRACT_FAILED=2;
         DEPLOY_CONTRACT_FAILED=3;
+        INVALID_PERMISSION = 4;
     }
     bytes errMsg = 3;
 }
