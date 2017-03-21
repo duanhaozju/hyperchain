@@ -21,8 +21,8 @@ var (
 )
 
 const (
-	DEFAULT_NAMESPACE  = "system"
-	NS_CONFIG_DIR_ROOT = "system.nsConfigRootPath"
+	DEFAULT_NAMESPACE  = "global"
+	NS_CONFIG_DIR_ROOT = "global.nsConfigRootPath"
 )
 
 var once sync.Once

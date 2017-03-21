@@ -16,17 +16,25 @@ import (
 	"strings"
 )
 
-var logger = logging.MustGetLogger("commmon")
-
+var logger = logging.MustGetLogger("common")
 var hyperLoggers map[string]*HyperLogger
-
 var rwMutex sync.RWMutex
-var once *sync.Once
+var once sync.Once
+
+var defaultLogLevel logging.Level
+var defaultConsoleFormat = `[%{module}]%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}`
+var defaultFileFormat = `[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}`
+
 type HyperLogger struct {
-	conf    *Config
-	closeLogFile chan struct{}
-	loggers map[string]*logging.Logger
-	rwMutex sync.RWMutex
+	conf   		 *Config
+	loggers          map[string]*logging.Logger  // todo: multilogger
+	//logBackendFile 	 *logging.LeveledBackend
+	//logBackendCons   *logging.LeveledBackend
+	//fileFormat       string
+	//consoleFormat    string
+	fileBackend	 logging.LeveledBackend
+	consoleBackend   logging.LeveledBackend
+	closeLogFile 	 chan struct{}
 }
 
 //InitHyperLogger int the whole logging system.
@@ -34,6 +42,11 @@ func InitHyperLogger(conf *Config) (*HyperLogger, error) {
 	once.Do(func() {
 		hyperLoggers = make(map[string]*HyperLogger)
 	})
+	// first time init in main no namespace exist
+	// so set it
+	if !conf.ContainsKey(NAMESPACE) {
+		conf.Set(NAMESPACE, "global")
+	}
 	hyperLogger := newHyperLogger(conf)
 	if hyperLogger == nil {
 		return nil, errors.New("Init Hyperlogger error: nil return")
@@ -51,36 +64,25 @@ func InitHyperLogger(conf *Config) (*HyperLogger, error) {
 }
 
 //GetLogger getLogger with specific namespace and module.
-func GetLogger(namespace, module string) *logging.Logger {
+func GetLogger(namespace string, module string) *logging.Logger {
+
+	return getLogger(namespace, module)
+}
+
+func SetLogLevel(namespace string, module string, level string) (string, error) {
 	rwMutex.RLock()
+	if hyperLoggers == nil {
+		return "", errors.New("Error: hyperLoggers nil")
+	}
 	hl, ok := hyperLoggers[namespace]
 	rwMutex.RUnlock()
 	if !ok {
-		logger.Errorf("GetLogger error: namespace not exist")
-		return nil
+		err := errors.New("Error: " + namespace + " not exist cannot get hyperlogger")
+		return "", err
 	}
-
-	compositeModuleName := getCompositeModuleName(namespace, module)
-	logger.Infof("init log module:%s", compositeModuleName)
-	if _, ok := hl.loggers[compositeModuleName]; !ok {
-		logger := logging.MustGetLogger(compositeModuleName)
-		hl.rwMutex.Lock()
-		hl.loggers[compositeModuleName] = logger
-		hl.rwMutex.Unlock()
-		return logger
-	} else {
-		return hl.loggers[compositeModuleName]
-	}
-}
-
-func SetNamespaceModuleLogLevel(ns string, md string, lv string) (string, error) {
+	hl.setModuleLogLevel(namespace, module, level)
 	return "", nil
 }
-
-
-
-
-
 
 func newHyperLogger(conf *Config) *HyperLogger {
 	hl := &HyperLogger{
@@ -92,39 +94,37 @@ func newHyperLogger(conf *Config) *HyperLogger {
 	return hl
 }
 
-
-
 func (hl *HyperLogger) init() {
 	conf := hl.conf
-	consoleFormat = conf.GetString(LOG_CONSOLE_FORMAT)
-	fileFormat = conf.GetString(LOG_FILE_FORMAT)
 
-	timestamp := time.Now().Unix()
-	tm := time.Unix(timestamp, 0)
+	consoleFmt := conf.GetString(LOG_CONSOLE_FORMAT)
+	backendStderr := hl.initConsoleBackend(consoleFmt)
 
-	loggerDir := conf.GetString(LOG_FILE_DIR)
-	os.MkdirAll(loggerDir, 0777)
-
-	baseLevel, err := logging.LogLevel(conf.GetString(LOG_BASE_LOG_LEVEL))
-
-	if err != nil {
-		commonLogger.Noticef("Invalid logging level: %s, using INFO as default!", conf.GetString(LOG_BASE_LOG_LEVEL))
-		logDefaultLevel = logging.INFO
+	writeToFile := conf.GetBool(LOG_FUMP_FILE)
+	if !writeToFile {
+		hl.consoleBackend = backendStderr
 	} else {
-		logDefaultLevel = baseLevel
-	}
-
-	backendStderr := hl.initLogBackend()
-
-	if !conf.GetBool(LOG_FUMP_FILE) {
-		logging.SetBackend(backendStderr)
-	} else {
-		closeLogFile = make(chan struct{})
+		hl.closeLogFile = make(chan struct{})
+		fileFormat = conf.GetString(LOG_FILE_FORMAT)
+		loggerDir := conf.GetString(LOG_FILE_DIR)
+		timestamp := time.Now().Unix()
+		tm := time.Unix(timestamp, 0)
 		fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
 			tm.Format("-2006-01-02-15:04:05 PM")+".log")
-		hl.setNewLogFile(fileName, backendStderr)
+		os.MkdirAll(loggerDir, 0777)
+		fileBackend := hl.initFileBackend(fileName, fileFormat)
+		hl.fileBackend = fileBackend
 		go hl.newLogFileByInterval(loggerDir, conf, backendStderr) //split log by second
 	}
+
+	//baseLevel, err := logging.LogLevel(conf.GetString(LOG_BASE_LOG_LEVEL))
+	//var defaultLevel logging.Level
+	//if err != nil {
+	//	commonLogger.Noticef("Invalid logging level: %s, using INFO as default!", conf.GetString(LOG_BASE_LOG_LEVEL))
+	//	defaultLevel = logging.INFO
+	//} else {
+	//	defaultLevel = baseLevel
+	//}
 
 	hl.initLoggerLevelByConfiguration(conf)
 }
@@ -138,42 +138,13 @@ func (hl *HyperLogger) initLoggerLevelByConfiguration(conf *Config) {
 	ns := conf.GetString(NAMESPACE)
 	mm := conf.GetStringMap(LOG_MODULE_KEY) // module to level map
 	for m, l := range mm {
-		hl.SetModuleLogLevel(getCompositeModuleName(ns, m), cast.ToString(l))
+		hl.setModuleLogLevel(ns, m, cast.ToString(l))
 	}
 }
 
-// SetModuleLogLevel sets the logging level for the specified module
-// this his can be called from anywhere to dynamically change the log
-// level for the module.
-func (hl *HyperLogger) SetModuleLogLevel(module string, logLevel string) (string, error) {
-	level, err := logging.LogLevel(logLevel)
-	logLevelString := level.String()
-
-	if err != nil {
-		commonLogger.Warningf("Invalid logging level: %s - ignored", logLevel)
-		return logLevelString, err
-	}
-
-	logging.SetLevel(logging.Level(level), module)
-	// get logger
-	if _, ok := hl.loggers[module]; !ok {
-		commonLogger.Warningf("module %s not exist", module)
-		return module + " not exist", errors.New("not exist")
-	}
-	moduleLogger := hl.loggers[module]
-	// set logger backend
-	var leveledBackend logging.LeveledBackend
-	setNewLogFile("", leveledBackend)
-	moduleLogger.SetBackend(leveledBackend)
-
-	commonLogger.Infof("Module '%s' logger enabled for log level: %s", module, level)
-	return logLevelString, err
-}
-
-// SetModuleLogLevel sets the logging level for the specified module
-// this his can be called from anywhere to dynamically change the log
-// level for the module.
-func (hl *HyperLogger) SetNsModuleLogLevel(namespace string, module string, logLevel string) (string, error) {
+// setModuleLogLevel sets the logging level for the specified module.
+func (hl *HyperLogger) setModuleLogLevel(name string, module string, logLevel string) (string, error) {
+	compositeModuleName := getCompositeModuleName(name, module)
 	level, err := logging.LogLevel(logLevel)
 	logLevelString := level.String()
 	if err != nil {
@@ -181,32 +152,79 @@ func (hl *HyperLogger) SetNsModuleLogLevel(namespace string, module string, logL
 		return logLevelString, err
 	}
 
-	logging.SetLevel(logging.Level(level), module)
+	hl.fileBackend.SetLevel(level, compositeModuleName)
+
 	// get logger
-	logger := GetLogger(namespace, module)
+	moduleLogger := getLogger(name, module)
+	if moduleLogger == nil {
+		return "", errors.New("Error get module logger")
+	}
 	// set logger backend
-	var leveledBackend logging.LeveledBackend
-	fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
-		tm.Format("-2006-01-02-15:04:05 PM")+".log")
-	backend := logging.NewLogBackend()
-	leveledBackend.SetLevel(logging.Level(logLevel), getCompositeModuleName(namespace, module))
+	moduleLogger.SetBackend(hl.fileBackend)
 
-	logger.SetBackend(leveledBackend)
-
-	commonLogger.Infof("Module '%s' logger enabled for log level: %s", module, level)
+	commonLogger.Infof("Module '%s' logger enabled for log level: %s", compositeModuleName, level)
 	return logLevelString, err
 }
 
+// getLogger get the logger for specified module, new one if not exist
+func getLogger(namespace, module string) *logging.Logger {
+	rwMutex.RLock()
+	if hyperLoggers==nil {
+		logger.Errorf("Hyperloggers error: hyperloggers not exist")
+		return nil
+	}
+	hl, ok := hyperLoggers[namespace]
+	rwMutex.RUnlock()
+	if !ok {
+		logger.Errorf("GetLogger error: namespace not exist")
+		return nil
+	}
 
-//initLogBackend init the backend info for logging.
-func (hl *HyperLogger) initLogBackend() logging.LeveledBackend {
-	backend_stderr := logging.NewLogBackend(os.Stderr, "", 0)
-	var format_stderr = logging.MustStringFormatter(consoleFormat)
-	backendFormatter := logging.NewBackendFormatter(backend_stderr, format_stderr)
-	backendStderr := logging.AddModuleLevel(backendFormatter)
-	backendStderr.SetLevel(logDefaultLevel, "")
-	return backendStderr
+	compositeModuleName := getCompositeModuleName(namespace, module)
+	logger.Infof("init log module:%s", compositeModuleName)
+	if _, ok := hl.loggers[compositeModuleName]; !ok {
+		logger := logging.MustGetLogger(compositeModuleName)
+		hl.loggers[compositeModuleName] = logger
+		return logger
+	} else {
+		return hl.loggers[compositeModuleName]
+	}
 }
+
+//initConsoleBackend init the console backend info for logging.
+func (hl *HyperLogger) initConsoleBackend(consoleFormat string) logging.LeveledBackend {
+	var consoleFormatter logging.Formatter
+	if strings.EqualFold(consoleFormat, "") {
+		commonLogger.Notice("consoleFormat not set use default")
+		consoleFormatter = logging.MustStringFormatter(defaultConsoleFormat)
+	} else {
+		consoleFormatter = logging.MustStringFormatter(consoleFormat)
+	}
+	consoleBackend := logging.NewLogBackend(os.Stderr, "", 0)
+	backendFormatter := logging.NewBackendFormatter(consoleBackend, consoleFormatter)
+	leveledConsoleBackend := logging.AddModuleLevel(backendFormatter)
+	return leveledConsoleBackend
+}
+
+//initFileBackend init the file backend for logging.
+func (hl *HyperLogger) initFileBackend(fileName string, fileFormat string) logging.LeveledBackend {
+	var fileFormatter logging.Formatter
+	if strings.EqualFold(fileFormat, "") {
+		commonLogger.Notice("fileFormat not set use default")
+		fileFormatter = logging.MustStringFormatter(defaultFileFormat)
+	} else {
+		fileFormatter = logging.MustStringFormatter(fileFormat)
+	}
+	logFile, err := os.Create(fileName)
+	if err != nil {
+		commonLogger.Fatalf("open file: %s error !", fileName)
+	}
+	fileBackend := logging.NewLogBackend(logFile, "", 0)
+	fileBackendFormatter := logging.NewBackendFormatter(fileBackend, fileFormatter)
+	leveledFileBackend := logging.AddModuleLevel(fileBackendFormatter)
+	return leveledFileBackend
+}
+
 
 //setNewLogFile set new file on disk to store logs.
 func (hl *HyperLogger) setNewLogFile(fileName string, backendStderr logging.LeveledBackend) {
@@ -238,7 +256,9 @@ func (hl *HyperLogger) newLogFileByInterval(loggerDir string, conf *Config, back
 	tm = time.Unix(timestamp, 0)
 	fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
 		tm.Format("-2006-01-02-15:04:05PM")+".log")
-	setNewLogFile(fileName, backendStderr)
+	//setNewLogFile(fileName, backendStderr)
+	fileFormat = conf.GetString(LOG_FILE_FORMAT)
+	hl.fileBackend = hl.initFileBackend(fileName, fileFormat)
 
 	for {
 		select {
@@ -247,8 +267,8 @@ func (hl *HyperLogger) newLogFileByInterval(loggerDir string, conf *Config, back
 			tm := time.Unix(timestamp, 0)
 			fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
 				tm.Format("-2006-01-02-15:04:05 PM")+".log")
-
-			setNewLogFile(fileName, backendStderr)
+			fileFormat = conf.GetString(LOG_FILE_FORMAT)
+			hl.fileBackend = hl.initFileBackend(fileName, fileFormat)
 			commonLogger.Infof("Change log file, new log file name: %s", fileName)
 		case <-closeLogFile:
 			commonLogger.Info("Close logger service")

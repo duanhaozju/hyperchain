@@ -8,8 +8,6 @@
 ###########################################################
 
 global:
-    #namespace name
-    name: "aardvark"
     #namespace config dir root path
     nsConfigRootPath: "./namespaces"
 
