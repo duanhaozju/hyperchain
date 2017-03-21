@@ -56,3 +56,19 @@ func IsExecContractErr(e error) bool {
 	_, ok := e.(*ExecContractError)
 	return ok
 }
+
+type InvalidInvokePermissionError struct {
+	message string
+}
+
+func InvalidInvokePermissionErr(str string, v ...interface{}) *InvalidInvokePermissionError {
+	return &InvalidInvokePermissionError{fmt.Sprintf(str, v...)}
+}
+func (self *InvalidInvokePermissionError) Error() string {
+	return self.message
+}
+
+func IsInvalidInvokePermissionErr(e error) bool {
+	_, ok := e.(*InvalidInvokePermissionError)
+	return ok
+}

@@ -220,6 +220,8 @@ func (executor *Executor) classifyInvalid(err error) types.InvalidTransactionRec
 		} else if tmp.GetType() == 1 {
 			errType = types.InvalidTransactionRecord_INVOKE_CONTRACT_FAILED
 		}
+	} else if IsInvalidInvokePermissionErr(err) {
+		errType = types.InvalidTransactionRecord_INVALID_PERMISSION
 	}
 	return errType
 }

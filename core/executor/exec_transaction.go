@@ -5,6 +5,7 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"math/big"
+	"bytes"
 )
 
 type Code []byte
@@ -19,7 +20,13 @@ func ExecTransaction(tx *types.Transaction, env vm.Environment) (receipt *types.
 		gasPrice = tv.RetrieveGasPrice()
 		amount   = tv.RetrieveAmount()
 		update   = tv.GetUpdate()
+		freeze   = tv.GetFreeze()
 	)
+
+	if valid := checkPermission(env, from, to, update, freeze); !valid {
+		return nil, nil, common.Address{}, InvalidInvokePermissionErr("not enough permission to invocation")
+	}
+
 	if tx.To == nil {
 		ret, addr, err = Exec(env, &from, nil, data, gas, gasPrice, amount, update)
 	} else {
@@ -68,4 +75,20 @@ gasPrice, value *big.Int, update bool) (ret []byte, addr common.Address, err err
 		}
 	}
 	return ret, addr, err
+}
+
+func checkPermission(env vm.Environment, from, to common.Address, update bool, freeze bool) bool {
+	if update == true || freeze == true {
+		log.Debugf("caller address %s", from.Hex())
+		log.Debugf("callee address %s", from.Hex())
+		if bytes.Compare(to.Bytes(), nil) == 0 {
+			return false
+		}
+		if bytes.Compare(from.Bytes(), env.Db().GetCreator(to).Bytes()) != 0 {
+			log.Errorf("only contract owner %s has `freeze` or `update` permission. %s doesn't has enough permission",
+				env.Db().GetCreator(to).Hex(), from.Hex())
+			return false
+		}
+	}
+	return true
 }

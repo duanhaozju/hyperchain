@@ -86,14 +86,21 @@ type Database interface {
 	GetCode(common.Address) []byte
 	SetCode(common.Address, []byte)
 
+	GetStatus(common.Address) int
+	SetStatus(common.Address, int)
+
 	AddDeployedContract(common.Address, common.Address)
 	SetCreator(common.Address, common.Address)
 	SetCreateTime(common.Address, uint64)
+
+
 	AddRefund(*big.Int)
 	GetRefund() *big.Int
 
 	GetState(common.Address, common.Hash) (bool, common.Hash)
 	SetState(common.Address, common.Hash, common.Hash)
+
+	GetCreator(common.Address) common.Address
 
 	Delete(common.Address) bool
 	Exist(common.Address) bool
