@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "cn.hyperchain.protos";
+option java_outer_classname = "ContractProto";
+
+service Contract {
+    rpc Execute (stream Request) returns (stream Response) {}
+    rpc HeartBeat(Request) returns (Response) {}
+}
+
+message Request {
+    string method = 1;
+    repeated bytes args = 2;
+}
+
+message Response {
+    bool  ok     = 1;
+    bytes result = 2;
+}
