@@ -63,35 +63,35 @@ func TestConfigReader_GetPort(t *testing.T) {
 }
 
 func TestConfigReader_GetIntroducerID(t *testing.T) {
-	assert.Equal(t,conf.GetIntroducerID(),1)
+	assert.Equal(t,conf.IntroID(),1)
 }
 
 
 func TestConfigReader_GetIntroducerIP(t *testing.T) {
-	assert.Equal(t,conf.GetIntroducerIP(),"127.0.0.1")
+	assert.Equal(t,conf.IntroIP(),"127.0.0.1")
 }
 
 func TestConfigReader_GetIntroducerPort(t *testing.T) {
-	assert.Equal(t,conf.GetIntroducerPort(),8001)
+	assert.Equal(t,conf.IntroPort(),8001)
 }
 func TestConfigReader_GetIntroducerJSONRPCPort(t *testing.T) {
-	assert.Equal(t,conf.GetIntroducerJSONRPCPort(),8081)
+	assert.Equal(t,conf.IntroJSONRPCPort(),8081)
 }
 
 func TestConfigReader_GetLocalGRPCPort(t *testing.T) {
-	assert.Equal(t,conf.GetLocalGRPCPort(),8001)
+	assert.Equal(t,conf.LocalGRPCPort(),8001)
 }
 
 func TestConfigReader_GetLocalID(t *testing.T) {
-	assert.Equal(t,conf.GetLocalID(),1)
+	assert.Equal(t,conf.LocalID(),1)
 }
 
 func TestConfigReader_GetLocalIP(t *testing.T) {
-	assert.Equal(t,conf.GetLocalIP(),"127.0.0.1")
+	assert.Equal(t,conf.LocalIP(),"127.0.0.1")
 }
 
 func TestConfigReader_GetLocalJsonRPCPort(t *testing.T) {
-	assert.Equal(t,conf.GetLocalJsonRPCPort(),8081)
+	assert.Equal(t,conf.LocalJsonRPCPort(),8081)
 }
 
 func TestConfigReader_IsOrigin(t *testing.T) {
@@ -103,7 +103,7 @@ func TestConfigReader_IsVP(t *testing.T) {
 }
 
 func TestConfigReader_GetMaxPeerNumber(t *testing.T) {
-	assert.Equal(t,conf.GetMaxPeerNumber(),7)
+	assert.Equal(t,conf.MaxNum(),7)
 }
 
 func TestConfigReader_DelNodesAndPersist(t *testing.T) {
@@ -116,7 +116,7 @@ func TestConfigReader_DelNodesAndPersist(t *testing.T) {
 	peerlist[p3.Hash] = *p3
 	conf := NewConfigReader("./test/local_peerconfig.json")
 	conf.DelNodesAndPersist(peerlist)
-	assert.Equal(t,conf.GetMaxPeerNumber(),4)
+	assert.Equal(t,conf.MaxNum(),4)
 }
 
 func TestConfigReader_AddNodesAndPersist(t *testing.T) {
@@ -129,5 +129,5 @@ peerlist := make(map[string]peermessage.PeerAddr)
 	peerlist[p3.Hash] = *p3
 	conf := NewConfigReader("./test/local_peerconfig.json")
 	conf.AddNodesAndPersist(peerlist)
-	assert.Equal(t,conf.GetMaxPeerNumber(),7)
+	assert.Equal(t,conf.MaxNum(),7)
 }

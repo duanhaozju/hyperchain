@@ -101,7 +101,7 @@ func (c *jsonCodec) CheckHttpHeaders(namespace string) common.RPCError {
 		return &common.InvalidMessageError{"namespace "+ namespace + " not found!"}
 	}
 	cm := ns.GetCAManager()
-	if !cm.GetIsCheckTCert() {
+	if !cm.IsCheckTCert() {
 		return nil
 	}
 	c.decMu.Lock()
