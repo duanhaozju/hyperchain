@@ -48,7 +48,6 @@ func (suite *JournalSuite) TearDownSuite(c *checker.C) {
 }
 
 func (suite *JournalSuite) TestSnapshotRandom(c *checker.C) {
-	c.Skip("@rjl required to skip")
 	config := &quick.Config{MaxCount: 1000}
 	err := quick.Check((*snapshotTest).run, config)
 	if cerr, ok := err.(*quick.CheckError); ok {
@@ -123,6 +122,44 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 				s.SetCode(addr, code)
 			},
 			args: make([]int64, 2),
+		},
+		{
+			name: "SetCreator",
+			fn: func(a testAction, s *StateDB) {
+				creator := make([]byte, 16)
+				binary.BigEndian.PutUint64(creator, uint64(a.args[0]))
+				binary.BigEndian.PutUint64(creator[8:], uint64(a.args[1]))
+				s.SetCreator(addr, common.BytesToAddress(creator))
+			},
+			args: make([]int64, 2),
+		},
+		{
+			name: "SetStatus",
+			fn: func(a testAction, s *StateDB) {
+				if a.args[0] < 10000/2 {
+					s.SetStatus(addr, STATEOBJECT_STATUS_NORMAL)
+				} else {
+					s.SetStatus(addr, STATEOBJECT_STATUS_FROZON)
+				}
+			},
+			args: make([]int64, 1),
+		},
+		{
+			name: "DeployedContractChange",
+			fn: func(a testAction, s *StateDB) {
+				contract := make([]byte, 16)
+				binary.BigEndian.PutUint64(contract, uint64(a.args[0]))
+				binary.BigEndian.PutUint64(contract[8:], uint64(a.args[1]))
+				s.AddDeployedContract(addr, common.BytesToAddress(contract))
+			},
+			args: make([]int64, 2),
+		},
+		{
+			name: "SetCreateTime",
+			fn: func(a testAction, s *StateDB) {
+				s.SetCreateTime(addr, uint64(a.args[0]))
+			},
+			args: make([]int64, 1),
 		},
 		{
 			name: "CreateAccount",
@@ -204,10 +241,10 @@ func (test *snapshotTest) String() string {
 func (test *snapshotTest) run() bool {
 	// Run all actions and create snapshots.
 	var (
-		db, _          = mdb.NewMemDatabase()
-		state, _       = New(common.Hash{}, db, tutil.InitConfig(configPath), 10)
-		snapshotRevs   = make([]int, len(test.snapshots))
-		sindex         = 0
+		db, _        = mdb.NewMemDatabase()
+		state, _     = New(common.Hash{}, db, tutil.InitConfig(configPath), 10)
+		snapshotRevs = make([]int, len(test.snapshots))
+		sindex       = 0
 	)
 	// Test snapshot
 	for i, action := range test.actions {

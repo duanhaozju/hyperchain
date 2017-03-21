@@ -7,9 +7,10 @@ import (
 	"github.com/pkg/errors"
 	"hyperchain/common"
 	"hyperchain/crypto"
+	"hyperchain/hyperdb/db"
 	"hyperchain/tree/bucket"
 	"math/big"
-	"hyperchain/hyperdb/db"
+	"sort"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -21,6 +22,11 @@ func (self Code) String() string {
 }
 
 type Storage map[common.Hash]common.Hash
+
+const (
+	STATEOBJECT_STATUS_NORMAL = iota
+	STATEOBJECT_STATUS_FROZON
+)
 
 func (self Storage) String() (str string) {
 	for key, value := range self {
@@ -79,10 +85,14 @@ func (s *StateObject) empty() bool {
 
 // Account is the hyperchain consensus representation of accounts.
 type Account struct {
-	Nonce    uint64
-	Balance  *big.Int
-	Root     common.Hash // merkle root of the storage
-	CodeHash []byte
+	Nonce             uint64         `json:"nonce"`
+	Balance           *big.Int       `json:"balance"`
+	Root              common.Hash    `json:"merkleRoot"`
+	CodeHash          []byte         `json:"codeHash"`
+	DeployedContracts []string       `json:"contracts"`
+	Creator           common.Address `json:"creator"`
+	Status            int            `json:"status"`
+	CreateTime        uint64         `json:"createTime"`
 }
 
 // MemAccount use for state object marshal and unmarshal in journal
@@ -122,10 +132,14 @@ func (c *StateObject) MarshalJSON() ([]byte, error) {
 // marshal for state object persist
 func (c *StateObject) Marshal() ([]byte, error) {
 	account := &Account{
-		Nonce:    c.data.Nonce,
-		Balance:  c.data.Balance,
-		Root:     c.data.Root,
-		CodeHash: c.data.CodeHash,
+		Nonce:             c.data.Nonce,
+		Balance:           c.data.Balance,
+		Root:              c.data.Root,
+		CodeHash:          c.data.CodeHash,
+		DeployedContracts: c.data.DeployedContracts,
+		Creator:           c.data.Creator,
+		Status:            c.data.Status,
+		CreateTime:        c.data.CreateTime,
 	}
 	return json.Marshal(account)
 }
@@ -315,6 +329,33 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 	return common.Hash{}
 }
 
+// Return the gas back to the origin. Used by the Virtual machine or Closures
+func (c *StateObject) ReturnGas(gas, price *big.Int) {}
+
+func (self *StateObject) deepCopy(db *StateDB, onDirty func(addr common.Address)) *StateObject {
+	stateObject := newObject(db, self.address, self.data, onDirty, true, self.bucketConf)
+	stateObject.code = self.code
+	stateObject.dirtyStorage = self.dirtyStorage.Copy()
+	stateObject.cachedStorage = self.dirtyStorage.Copy()
+	stateObject.suicided = self.suicided
+	stateObject.dirtyCode = self.dirtyCode
+	stateObject.deleted = self.deleted
+	return stateObject
+}
+
+//
+// Attribute accessors
+//
+
+// Returns the address of the contract/account
+func (c *StateObject) Address() common.Address {
+	return c.address
+}
+
+func (self *StateObject) Balance() *big.Int {
+	return self.data.Balance
+}
+
 // AddBalance removes amount from c's balance.
 // It is used to add funds to the destination account of a transfer.
 func (c *StateObject) AddBalance(amount *big.Int) {
@@ -355,29 +396,6 @@ func (self *StateObject) setBalance(amount *big.Int) {
 	}
 }
 
-// Return the gas back to the origin. Used by the Virtual machine or Closures
-func (c *StateObject) ReturnGas(gas, price *big.Int) {}
-
-func (self *StateObject) deepCopy(db *StateDB, onDirty func(addr common.Address)) *StateObject {
-	stateObject := newObject(db, self.address, self.data, onDirty, true, self.bucketConf)
-	stateObject.code = self.code
-	stateObject.dirtyStorage = self.dirtyStorage.Copy()
-	stateObject.cachedStorage = self.dirtyStorage.Copy()
-	stateObject.suicided = self.suicided
-	stateObject.dirtyCode = self.dirtyCode
-	stateObject.deleted = self.deleted
-	return stateObject
-}
-
-//
-// Attribute accessors
-//
-
-// Returns the address of the contract/account
-func (c *StateObject) Address() common.Address {
-	return c.address
-}
-
 // Code returns the contract code associated with this object, if any.
 func (self *StateObject) Code(db db.Database) []byte {
 	if self.code != nil {
@@ -414,6 +432,10 @@ func (self *StateObject) setCode(codeHash common.Hash, code []byte) {
 	}
 }
 
+func (self *StateObject) Nonce() uint64 {
+	return self.data.Nonce
+}
+
 func (self *StateObject) SetNonce(nonce uint64) {
 	self.db.journal.JournalList = append(self.db.journal.JournalList, &NonceChange{
 		Account: &self.address,
@@ -434,20 +456,91 @@ func (self *StateObject) CodeHash() []byte {
 	return self.data.CodeHash
 }
 
-func (self *StateObject) Balance() *big.Int {
-	return self.data.Balance
-}
-
-func (self *StateObject) Nonce() uint64 {
-	return self.data.Nonce
-}
-
 func (self *StateObject) Root() common.Hash {
 	return self.data.Root
 }
 
 func (self *StateObject) SetRoot(root common.Hash) {
 	self.data.Root = root
+}
+
+func (self *StateObject) Creator() common.Address {
+	return self.data.Creator
+}
+
+func (self *StateObject) SetCreator(addr common.Address) {
+	self.db.journal.JournalList = append(self.db.journal.JournalList, &SetCreatorChange{
+		Account: &self.address,
+		Prev:    &self.data.Creator,
+	})
+	self.setCreator(addr)
+}
+
+func (self *StateObject) setCreator(addr common.Address) {
+	if bytes.Compare(self.data.Creator.Bytes(), addr.Bytes()) == 0 {
+		log.Warningf("state object %s set creator, same with the origin, ignore.", self.address.Hex())
+		return
+	}
+	self.data.Creator = addr
+	if self.onDirty != nil {
+		self.onDirty(self.Address())
+		self.onDirty = nil
+	}
+}
+
+func (self *StateObject) CreateTime() uint64 {
+	return self.data.CreateTime
+}
+
+func (self *StateObject) SetCreateTime(time uint64) {
+	self.db.journal.JournalList = append(self.db.journal.JournalList, &SetCreateTimeChange{
+		Account: &self.address,
+		Prev:    self.data.CreateTime,
+	})
+	self.setCreateTime(time)
+}
+
+func (self *StateObject) setCreateTime(time uint64) {
+	if self.data.CreateTime == time {
+		log.Warningf("state object %s set create time, same with the origin, ignore.", self.address.Hex())
+		return
+	}
+	self.data.CreateTime = time
+	if self.onDirty != nil {
+		self.onDirty(self.Address())
+		self.onDirty = nil
+	}
+}
+
+// DeployedContracts - return a list of deployed contracts.
+func (self *StateObject) DeployedContracts() []string {
+	return self.data.DeployedContracts
+}
+
+// Status - return the status of state object.
+func (self *StateObject) Status() int {
+	return self.data.Status
+}
+
+// SetStatus - set the status of state object.
+func (self *StateObject) SetStatus(status int) {
+	if self.data.Status == status {
+		log.Warningf("state object %s set status, same with the origin status, ignore.", self.address.Hex())
+		return
+	}
+	self.db.journal.JournalList = append(self.db.journal.JournalList, &StatusChange{
+		Account: &self.address,
+		Prev:    self.data.Status,
+	})
+	self.setStatus(status)
+}
+
+func (self *StateObject) setStatus(status int) {
+	self.data.Status = status
+	if self.onDirty != nil {
+		self.onDirty(self.Address())
+		self.onDirty = nil
+	}
 }
 
 // Never called, but must be present to allow StateObject to be used
@@ -478,4 +571,46 @@ func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) ma
 		}
 	}
 	return ret
+}
+
+// appendDeployedContract - add a contract address to maintained list.
+func (self *StateObject) AppendDeployedContract(address common.Address) {
+	self.db.journal.JournalList = append(self.db.journal.JournalList, &DeployedContractChange{
+		Account: &self.address,
+		Prev:    &address,
+	})
+	self.appendDeployedContract(address)
+}
+
+func (self *StateObject) appendDeployedContract(address common.Address) {
+	if idx := sort.SearchStrings(self.data.DeployedContracts, address.Hex()); idx < len(self.data.DeployedContracts) && self.data.DeployedContracts[idx] == address.Hex() {
+		// already exist
+		log.Warningf("smart contract %s already in creator %s's list", address.Hex(), self.address.Hex())
+		return
+	} else {
+		self.data.DeployedContracts = append(self.data.DeployedContracts, address.Hex())
+		sort.Strings(self.data.DeployedContracts)
+		if self.onDirty != nil {
+			self.onDirty(self.Address())
+			self.onDirty = nil
+		}
+	}
+}
+
+// removeDeployedContract - remove a contract address from maintained list.
+func (self *StateObject) removeDeployedContract(address common.Address) bool {
+	if idx := sort.SearchStrings(self.data.DeployedContracts, address.Hex()); idx < len(self.data.DeployedContracts) && self.data.DeployedContracts[idx] == address.Hex() {
+		self.data.DeployedContracts = append(self.data.DeployedContracts[:idx], self.data.DeployedContracts[idx+1:]...)
+		if len(self.data.DeployedContracts) == 0 {
+			self.data.DeployedContracts = nil
+		} else {
+			sort.Strings(self.data.DeployedContracts)
+		}
+		if self.onDirty != nil {
+			self.onDirty(self.Address())
+			self.onDirty = nil
+		}
+		return true
+	}
+	return false
 }

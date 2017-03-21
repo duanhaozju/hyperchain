@@ -55,7 +55,7 @@ type Environment interface {
 	// Set the current calling depth
 	SetDepth(i int)
 	// Call another contract
-	Call(me ContractRef, addr common.Address, data []byte, gas, price, value *big.Int, update bool) ([]byte, error)
+	Call(me ContractRef, addr common.Address, data []byte, gas, price, value *big.Int, op int32) ([]byte, error)
 	// Take another's contract code and execute within our own context
 	CallCode(me ContractRef, addr common.Address, data []byte, gas, price, value *big.Int) ([]byte, error)
 	// Same as CallCode except sender and value is propagated from parent to child scope
@@ -85,6 +85,18 @@ type Database interface {
 
 	GetCode(common.Address) []byte
 	SetCode(common.Address, []byte)
+
+	GetStatus(common.Address) int
+	SetStatus(common.Address, int)
+
+	AddDeployedContract(common.Address, common.Address)
+	GetDeployedContract(common.Address) []string
+
+	SetCreator(common.Address, common.Address)
+	GetCreator(common.Address) common.Address
+
+	SetCreateTime(common.Address, uint64)
+	GetCreateTime(common.Address) uint64
 
 	AddRefund(*big.Int)
 	GetRefund() *big.Int

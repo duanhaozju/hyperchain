@@ -7,6 +7,7 @@ import (
 	"hyperchain/core/vm"
 	"math/big"
 	"hyperchain/hyperdb/db"
+	"hyperchain/core/types"
 )
 
 var (
@@ -164,8 +165,8 @@ func (self *Env) Transfer(from, to vm.Account, amount *big.Int) {
 	Transfer(from, to, amount)
 }
 
-func (self *Env) Call(caller vm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int, update bool) ([]byte, error) {
-	ret, err := Call(self, caller, addr, data, gas, price, value, update)
+func (self *Env) Call(caller vm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int, op int32) ([]byte, error) {
+	ret, err := Call(self, caller, addr, data, gas, price, value, types.TransactionValue_Opcode(op))
 	self.Gas = gas
 	return ret, err
 
