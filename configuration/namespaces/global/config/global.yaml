@@ -68,10 +68,10 @@ global:
     logs:
         # dump the log file or not
         dumpfile: true
-        newLogFileInterval: 24h  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+        newLogFileInterval: 10s  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
                                 # such as "300ms", "2h45m".
 
-        logsdir: "logs"
+        logsdir: "./namespaces/global/data/logs"
         # default loglevel for all modules which can be override by module level log setting
         loglevel: "DEBUG"
         file_format: "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"

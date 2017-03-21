@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-var logger = logging.MustGetLogger("common")
+var logger = logging.MustGetLogger("commonLogger")
 var hyperLoggers map[string]*HyperLogger
 var rwMutex sync.RWMutex
 var once sync.Once
@@ -34,6 +34,7 @@ type HyperLogger struct {
 	//consoleFormat    string
 	fileBackend	 logging.LeveledBackend
 	consoleBackend   logging.LeveledBackend
+	writeToFile      bool
 	closeLogFile 	 chan struct{}
 }
 
@@ -42,6 +43,7 @@ func InitHyperLogger(conf *Config) (*HyperLogger, error) {
 	once.Do(func() {
 		hyperLoggers = make(map[string]*HyperLogger)
 	})
+
 	// first time init in main no namespace exist
 	// so set it
 	if !conf.ContainsKey(NAMESPACE) {
@@ -57,9 +59,12 @@ func InitHyperLogger(conf *Config) (*HyperLogger, error) {
 	if strings.EqualFold(name, "") {
 		return nil, errors.New("Init Hyperlogger error: nil namespace")
 	}
+
+	hyperLogger.init()
 	rwMutex.Lock()
 	hyperLoggers[name] = hyperLogger
 	rwMutex.Unlock()
+
 	return hyperLogger, nil
 }
 
@@ -90,32 +95,30 @@ func newHyperLogger(conf *Config) *HyperLogger {
 		closeLogFile: make(chan struct{}),
 		loggers: make(map[string]*logging.Logger),
 	}
-	hl.init()
 	return hl
 }
 
 func (hl *HyperLogger) init() {
 	conf := hl.conf
 
+	// whether need write to file
+	hl.writeToFile = conf.GetBool(LOG_FUMP_FILE)
+
+	// console fortmat backend
 	consoleFmt := conf.GetString(LOG_CONSOLE_FORMAT)
 	backendStderr := hl.initConsoleBackend(consoleFmt)
+	hl.consoleBackend = backendStderr
 
-	writeToFile := conf.GetBool(LOG_FUMP_FILE)
-	if !writeToFile {
-		hl.consoleBackend = backendStderr
-	} else {
-		hl.closeLogFile = make(chan struct{})
-		fileFormat = conf.GetString(LOG_FILE_FORMAT)
-		loggerDir := conf.GetString(LOG_FILE_DIR)
-		timestamp := time.Now().Unix()
-		tm := time.Unix(timestamp, 0)
-		fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
-			tm.Format("-2006-01-02-15:04:05 PM")+".log")
-		os.MkdirAll(loggerDir, 0777)
-		fileBackend := hl.initFileBackend(fileName, fileFormat)
-		hl.fileBackend = fileBackend
-		go hl.newLogFileByInterval(loggerDir, conf, backendStderr) //split log by second
-	}
+	// file format backend
+	fileFormat = conf.GetString(LOG_FILE_FORMAT)
+	loggerDir := conf.GetString(LOG_FILE_DIR)
+	timestamp := time.Now().Unix()
+	tm := time.Unix(timestamp, 0)
+	fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
+		tm.Format("-2006-01-02-15:04:05 PM")+".log")
+	os.MkdirAll(loggerDir, 0777)
+	fileBackend := hl.initFileBackend(fileName, fileFormat)
+	hl.fileBackend = fileBackend
 
 	//baseLevel, err := logging.LogLevel(conf.GetString(LOG_BASE_LOG_LEVEL))
 	//var defaultLevel logging.Level
@@ -125,8 +128,11 @@ func (hl *HyperLogger) init() {
 	//} else {
 	//	defaultLevel = baseLevel
 	//}
-
 	hl.initLoggerLevelByConfiguration(conf)
+
+	if hl.writeToFile {
+		go hl.newLogFileByInterval(loggerDir, conf, backendStderr) //split log by second
+	}
 }
 
 func getCompositeModuleName(namespace, module string) string {
@@ -144,6 +150,7 @@ func (hl *HyperLogger) initLoggerLevelByConfiguration(conf *Config) {
 
 // setModuleLogLevel sets the logging level for the specified module.
 func (hl *HyperLogger) setModuleLogLevel(name string, module string, logLevel string) (string, error) {
+
 	compositeModuleName := getCompositeModuleName(name, module)
 	level, err := logging.LogLevel(logLevel)
 	logLevelString := level.String()
@@ -152,15 +159,22 @@ func (hl *HyperLogger) setModuleLogLevel(name string, module string, logLevel st
 		return logLevelString, err
 	}
 
+	hl.consoleBackend.SetLevel(level, compositeModuleName)
 	hl.fileBackend.SetLevel(level, compositeModuleName)
 
-	// get logger
-	moduleLogger := getLogger(name, module)
-	if moduleLogger == nil {
-		return "", errors.New("Error get module logger")
+	// get logger register if not exist
+	_, ok := hl.loggers[compositeModuleName]
+	if !ok {
+		newLogger := logging.MustGetLogger(compositeModuleName)
+		hl.loggers[compositeModuleName] = newLogger
 	}
-	// set logger backend
-	moduleLogger.SetBackend(hl.fileBackend)
+	logger := hl.loggers[compositeModuleName]
+
+	if hl.writeToFile {
+		logger.SetBackend(hl.fileBackend)
+	} else {
+		logger.SetBackend(hl.consoleBackend)
+	}
 
 	commonLogger.Infof("Module '%s' logger enabled for log level: %s", compositeModuleName, level)
 	return logLevelString, err
@@ -189,6 +203,7 @@ func getLogger(namespace, module string) *logging.Logger {
 	} else {
 		return hl.loggers[compositeModuleName]
 	}
+
 }
 
 //initConsoleBackend init the console backend info for logging.
@@ -247,10 +262,11 @@ func (hl *HyperLogger) setNewLogFile(fileName string, backendStderr logging.Leve
 //newLogFileByInterval set new log file for hyperchain
 func (hl *HyperLogger) newLogFileByInterval(loggerDir string, conf *Config, backendStderr logging.LeveledBackend) {
 	tm := time.Now()
-	sec := (24+3-tm.Hour())*3600 - tm.Minute()*60 - tm.Second()
+	hour, min, sec := 3, 0, 0
+	duration := (24+hour)*3600+min*60+sec - (tm.Hour()*3600+tm.Minute()*60+tm.Second())
 	// first log split at 3:00 AM
 	// then split byte the interval
-	d, _ := time.ParseDuration(fmt.Sprintf("%ds", sec))
+	d, _ := time.ParseDuration(fmt.Sprintf("%ds", duration))
 	time.Sleep(d)
 	timestamp := time.Now().Unix()
 	tm = time.Unix(timestamp, 0)
@@ -259,6 +275,7 @@ func (hl *HyperLogger) newLogFileByInterval(loggerDir string, conf *Config, back
 	//setNewLogFile(fileName, backendStderr)
 	fileFormat = conf.GetString(LOG_FILE_FORMAT)
 	hl.fileBackend = hl.initFileBackend(fileName, fileFormat)
+	hl.initLoggerLevelByConfiguration(conf)
 
 	for {
 		select {
@@ -269,8 +286,9 @@ func (hl *HyperLogger) newLogFileByInterval(loggerDir string, conf *Config, back
 				tm.Format("-2006-01-02-15:04:05 PM")+".log")
 			fileFormat = conf.GetString(LOG_FILE_FORMAT)
 			hl.fileBackend = hl.initFileBackend(fileName, fileFormat)
+			hl.initLoggerLevelByConfiguration(conf)
 			commonLogger.Infof("Change log file, new log file name: %s", fileName)
-		case <-closeLogFile:
+		case <-hl.closeLogFile:
 			commonLogger.Info("Close logger service")
 			commonLogger.SetBackend(backendStderr)
 		}
