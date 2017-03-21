@@ -138,6 +138,13 @@ func (contract *Contract) InvokeContract(args SendTxArgs) (common.Hash, error) {
 	return deployOrInvoke(contract, args, 2)
 }
 
+func (contract *Contract) MaintainContract(args SendTxArgs) (common.Hash, error) {
+	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
+		return common.Hash{}, &common.SystemTooBusyError{Message:"system is too busy to response "}
+	}
+	return deployOrInvoke(contract, args, 4)
+}
+
 // GetCode returns the code from the given contract address.
 func (contract *Contract) GetCode(addr common.Address) (string, error) {
 
