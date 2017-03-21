@@ -11,19 +11,18 @@ func NewContractCMD() []cli.Command {
 	return []cli.Command{
 		{
 			Name:    "invoke",
-			Aliases: []string{"i"},
+			Aliases: []string{"-i"},
 			Usage:   "Invoke a contract method",
 			Action:  invoke,
 		},
 		{
 			Name:    "deploy",
-			Aliases: []string{"d"},
+			Aliases: []string{"-d"},
 			Usage:   "Deploy a contract",
 			Action:  deploy,
 		},
 		{
 			Name:    "destroy",
-			Aliases: []string{"des"},
 			Usage:   "Destroy a contract",
 			Action:  destroy,
 		},

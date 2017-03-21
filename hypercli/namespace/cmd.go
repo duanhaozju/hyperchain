@@ -9,43 +9,37 @@ func NewNamespaceCMD() []cli.Command {
 	return []cli.Command{
 		{
 			Name:    "start",
-			Aliases: []string{"st"},
+			Aliases: []string{"-s"},
 			Usage:   "start the namespace manager",
 			Action:  start,
 		},
 		{
 			Name:    "stop",
-			Aliases: []string{"sp"},
 			Usage:   "stop the namespace manager",
 			Action:  stop,
 		},
 		{
 			Name:    "startNamespace",
-			Aliases: []string{"stn"},
 			Usage:   "start namespace",
 			Action:  startNamespace,
 		},
 		{
 			Name:    "stopNamespace",
-			Aliases: []string{"spn"},
 			Usage:   "start namespace",
 			Action:  stopNamespace,
 		},
 		{
 			Name:    "restartNamespace",
-			Aliases: []string{"rsn"},
 			Usage:   "restart namespace",
 			Action:  restartNamespace,
 		},
 		{
 			Name:    "registerNamespace",
-			Aliases: []string{"rrn"},
 			Usage:   "register namespace",
 			Action:  registerNamespace,
 		},
 		{
 			Name:    "deregisterNamespace",
-			Aliases: []string{"drn"},
 			Usage:   "deregister namespace",
 			Action:  deregisterNamespace,
 		},

@@ -3,9 +3,17 @@
 package server
 
 import (
+	"github.com/op/go-logging"
 	"github.com/urfave/cli"
-	"fmt"
+	"hyperchain/api"
+	"hyperchain/hypercli/common"
 )
+
+var logger *logging.Logger
+
+func init() {
+	logger = logging.MustGetLogger("hypercli/server")
+}
 
 //NewServerCMD new server related commands.
 func NewServerCMD() []cli.Command {
@@ -32,8 +40,14 @@ func NewServerCMD() []cli.Command {
 }
 
 func start(c *cli.Context) error {
-	//todo: impl start method
-	fmt.Println("server start...")
+	logger.Info("server start...")
+	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
+	cmd := &hpc.Command{
+		MethodName: "admin_stopServer",
+		Args:       []string{},
+	}
+	rs := client.InvokeCmd(cmd)
+	logger.Critical(rs)
 	return nil
 }
 

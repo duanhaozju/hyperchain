@@ -185,34 +185,6 @@ func (s *Server) Stop() {
 	}
 }
 
-// execBatch executes the given requests and writes the result back using the codec.
-// It will only write the response back when the last request is processed.
-//func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*serverRequest) {
-//	responses := make([]interface{}, len(requests))
-//	var callbacks []func()
-//	for i, req := range requests {
-//		fmt.Println("got a request",req.svcname)
-//		if req.err != nil {
-//			responses[i] = codec.CreateErrorResponse(&req.id, req.err)
-//		} else {
-//			var callback func()
-//			if responses[i], callback = s.handle(ctx, codec, req); callback != nil {
-//				callbacks = append(callbacks, callback)
-//			}
-//		}
-//	}
-//
-//	if err := codec.Write(responses); err != nil {
-//		log.Errorf("%v\n", err)
-//		codec.Close()
-//	}
-//
-//	// when request holds one of more subscribe requests this allows these subscriptions to be actived
-//	for _, c := range callbacks {
-//		c()
-//	}
-//}
-
 // readRequest requests the next (batch) request from the codec. It will return the collection
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.

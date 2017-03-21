@@ -92,5 +92,11 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*hpc.API {
 			Service: hpc.NewCertAPI(ns.caMgr),
 			Public:  true,
 		},
+		"admin": {
+			Srvname: "admin",
+			Version: "0.4",
+			Service: hpc.NewAdminAPI(),
+			Public:  true,
+		},
 	}
 }

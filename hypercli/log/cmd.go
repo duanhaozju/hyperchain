@@ -9,13 +9,13 @@ func NewLogCMD() []cli.Command {
 	return []cli.Command{
 		{
 			Name:    "getLevel",
-			Aliases: []string{"gl"},
+			Aliases: []string{"-g"},
 			Usage:   "getLevel get a logger's level",
 			Action:  getLevel,
 		},
 		{
 			Name:    "setLevel",
-			Aliases: []string{"sl"},
+			Aliases: []string{"-s"},
 			Usage:   "setLevel set a logger's level",
 			Action:  setLevel,
 		},
