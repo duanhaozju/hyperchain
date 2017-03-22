@@ -21,13 +21,12 @@ import (
 
 type Contract struct {
 	namespace   string
-	eventMux    *event.TypeMux
 	eh          *manager.EventHub
 	tokenBucket *ratelimit.Bucket
 	config      *common.Config
 }
 
-func NewPublicContractAPI(namespace string, eventMux *event.TypeMux, eh *manager.EventHub, config *common.Config) *Contract {
+func NewPublicContractAPI(namespace string, eh *manager.EventHub, config *common.Config) *Contract {
 	fillrate, err := getFillRate(config, CONTRACT)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
@@ -40,7 +39,6 @@ func NewPublicContractAPI(namespace string, eventMux *event.TypeMux, eh *manager
 	}
 	return &Contract{
 		namespace:   namespace,
-		eventMux:    eventMux,
 		eh:          eh,
 		tokenBucket: ratelimit.NewBucket(fillrate, peak),
 		config:      config,
@@ -71,7 +69,7 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int) (common.Has
 		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
 	}
 
-	tx.Id = uint64(contract.eh.PeerManager.GetNodeId())
+	tx.Id = uint64(contract.eh.GetPeerManager().GetNodeId())
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.Hash().Bytes()
 	//delete repeated tx
@@ -82,7 +80,7 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int) (common.Has
 	}
 
 	// Unsign Test
-	if !tx.ValidateSign(contract.eh.AccountManager.Encryption, kec256Hash) {
+	if !tx.ValidateSign(contract.eh.GetAccountManager().Encryption, kec256Hash) {
 		log.Error("invalid signature")
 		// ATTENTION, return invalid transactino directly
 		return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
@@ -91,11 +89,8 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int) (common.Has
 	if txBytes, err := proto.Marshal(tx); err != nil {
 		log.Errorf("proto.Marshal(tx) error: %v", err)
 		return common.Hash{}, &common.CallbackError{Message:"proto.Marshal(tx) happened error"}
-	} else if manager.GetEventObject() != nil {
-		go contract.eventMux.Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
 	} else {
-		log.Error("manager is Nil")
-		return common.Hash{}, &common.CallbackError{Message:"eventObject is nil"}
+		go contract.eh.GetEventObject().Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
 	}
 	return tx.GetHash(), nil
 

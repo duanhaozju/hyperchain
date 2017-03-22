@@ -440,21 +440,21 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			case recovery.Message_SYNCBLOCK:
 				{
 
-					go node.higherEventManager.Post(event.ReceiveSyncBlockEvent{
+					go node.higherEventManager.Post(event.SyncBlockReceiveEvent{
 						Payload: SyncMsg.Payload,
 					})
 
 				}
 			case recovery.Message_SYNCCHECKPOINT:
 				{
-					go node.higherEventManager.Post(event.StateUpdateEvent{
+					go node.higherEventManager.Post(event.SyncBlockReqEvent{
 						Payload: SyncMsg.Payload,
 					})
 
 				}
 			case recovery.Message_SYNCSINGLE:
 				{
-					go node.higherEventManager.Post(event.StateUpdateEvent{
+					go node.higherEventManager.Post(event.SyncBlockReqEvent{
 						Payload: SyncMsg.Payload,
 					})
 				}

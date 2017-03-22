@@ -96,7 +96,7 @@ func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
 		return err
 	}
 
-	updateStateEvent := event.SendCheckpointSyncEvent {
+	updateStateEvent := event.ChainSyncReqEvent{
 		Payload: tmpMsg,
 	}
 

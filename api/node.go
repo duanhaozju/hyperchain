@@ -45,7 +45,7 @@ func (node *Node) GetNodeHash() (string, error) {
 	if node.eh == nil {
 		return "", &common.CallbackError{Message:"protocolManager is nil"}
 	}
-	return node.eh.PeerManager.GetLocalNodeHash(), nil
+	return node.eh.GetPeerManager().GetLocalNodeHash(), nil
 }
 
 func (node *Node) DelNode(args NodeArgs) (string, error) {

@@ -33,7 +33,6 @@ func init() {
 
 type Transaction struct {
 	namespace   string
-	eventMux    *event.TypeMux
 	eh          *manager.EventHub
 	tokenBucket *ratelimit.Bucket
 	config      *common.Config
@@ -76,7 +75,7 @@ type TransactionResult struct {
 	InvalidMsg  string  `json:"invalidMsg,omitempty"`
 }
 
-func NewPublicTransactionAPI(namespace string, eventMux *event.TypeMux, eh *manager.EventHub, config *common.Config) *Transaction {
+func NewPublicTransactionAPI(namespace string, eh *manager.EventHub, config *common.Config) *Transaction {
 	fillrate, err := getFillRate(config, TRANSACTION)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
@@ -89,7 +88,6 @@ func NewPublicTransactionAPI(namespace string, eventMux *event.TypeMux, eh *mana
 	}
 	return &Transaction{
 		namespace:   namespace,
-		eventMux:    eventMux,
 		eh:          eh,
 		config:      config,
 		tokenBucket: ratelimit.NewBucket(fillrate, peak),
@@ -146,7 +144,7 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 
 	//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, common.FromHex(args.Signature))
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
-	tx.Id = uint64(tran.eh.PeerManager.GetNodeId())
+	tx.Id = uint64(tran.eh.GetPeerManager().GetNodeId())
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.Hash().Bytes()
 
@@ -162,7 +160,7 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 		// ** For Hyperboard **
 		for i := 0; i < (*args.Request).ToInt(); i++ {
 			// Unsign Test
-			if !tx.ValidateSign(tran.eh.AccountManager.Encryption, kec256Hash) {
+			if !tx.ValidateSign(tran.eh.GetAccountManager().Encryption, kec256Hash) {
 				log.Error("invalid signature")
 				// ATTENTION, return invalid transactino directly
 				return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
@@ -171,16 +169,13 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 			if txBytes, err := proto.Marshal(tx); err != nil {
 				log.Errorf("proto.Marshal(tx) error: %v", err)
 				return common.Hash{}, &common.CallbackError{Message:"proto.Marshal(tx) happened error"}
-			} else if manager.GetEventObject() != nil {
-				go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
 			} else {
-				log.Error("manager is Nil")
-				return common.Hash{}, &common.CallbackError{Message:"EventObject is nil"}
+				go tran.eh.GetEventObject().Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
 			}
 		}
 	} else {
 		// ** For Hyperchain **
-		if !tx.ValidateSign(tran.eh.AccountManager.Encryption, kec256Hash) {
+		if !tx.ValidateSign(tran.eh.GetAccountManager().Encryption, kec256Hash) {
 			log.Error("invalid signature")
 			// ATTENTION, return invalid transactino directly
 			return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
@@ -189,11 +184,8 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 		if txBytes, err := proto.Marshal(tx); err != nil {
 			log.Errorf("proto.Marshal(tx) error: %v", err)
 			return common.Hash{}, &common.CallbackError{Message:"proto.Marshal(tx) happened error"}
-		} else if manager.GetEventObject() != nil {
-			go tran.eventMux.Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
 		} else {
-			log.Error("manager is Nil")
-			return common.Hash{}, &common.CallbackError{Message:"EventObject is nil"}
+			go tran.eh.GetEventObject().Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
 		}
 	}
 	return tx.GetHash(), nil
@@ -237,6 +229,8 @@ func (tran *Transaction) GetTransactionReceipt(hash common.Hash) (*ReceiptResult
 			return nil, &common.ContractInvokeError{Message:errType.String()}
 		} else if errType == types.InvalidTransactionRecord_OUTOFBALANCE {
 			return nil, &common.OutofBalanceError{Message:errType.String()}
+		} else if errType == types.InvalidTransactionRecord_INVALID_PERMISSION {
+			return nil, &common.ContractPermissionError{Message:errType.String()}
 		} else {
 			return nil, &common.CallbackError{Message:errType.String()}
 		}

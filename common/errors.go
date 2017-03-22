@@ -199,6 +199,18 @@ func (e *NamespaceNotFound) Error() string {
 	return fmt.Sprintf("The namespace '%s' does not exist", e.Name)
 }
 
+type ContractPermissionError struct {
+	Message    string
+}
+
+func (e *ContractPermissionError) Code() int {
+	return -32008
+}
+
+func (e *ContractPermissionError) Error() string {
+	return fmt.Sprintf("The contract invocation permission not enough '%s'", e.Message)
+}
+
 type UnauthorizedError struct {
 }
 
