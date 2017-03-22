@@ -28,11 +28,16 @@ const (
 	SUB_VALIDATION = iota
 	SUB_COMMIT
 	SUB_CONSENSUS
-	SUB_VIEWCHANGE
 	SUB_SYNCCHAIN
 	SUB_PEERMAINTAIN
 	SUB_MISCELLANEOUS
 	SUB_EXEC
+)
+
+const (
+	BROADCAST_VP = iota
+	BROADCAST_NVP
+	BROADCAST_ALL
 )
 
 type EventHub struct {
@@ -92,7 +97,6 @@ func (hub *EventHub) Start(c chan int, cm *admittance.CAManager) {
 	go hub.listenSynchronizationEvent()
 	go hub.listenExecutorEvent()
 	go hub.listenMiscellaneousEvent()
-	go hub.listenViewChangeEvent()
 	go hub.listenPeerMaintainEvent()
 
 	go hub.peerManager.Start(c, hub.eventMux, cm)
@@ -110,11 +114,10 @@ func (hub *EventHub) Subscribe() {
 	hub.subscriptions[SUB_VALIDATION] = hub.eventMux.Subscribe(event.ValidationEvent{})
 	hub.subscriptions[SUB_COMMIT] = hub.eventMux.Subscribe(event.CommitEvent{})
 	hub.subscriptions[SUB_SYNCCHAIN] = hub.eventMux.Subscribe(event.SyncBlockReqEvent{}, event.ChainSyncReqEvent{}, event.SyncBlockReceiveEvent{})
-	hub.subscriptions[SUB_VIEWCHANGE] = hub.eventMux.Subscribe(event.VCResetEvent{})
 	hub.subscriptions[SUB_PEERMAINTAIN] = hub.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{},
 		event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{}, event.RecvNewPeerEvent{},
 		event.DelPeerEvent{}, event.BroadcastDelPeerEvent{}, event.RecvDelPeerEvent{})
-	hub.subscriptions[SUB_MISCELLANEOUS] = hub.eventMux.Subscribe(event.InvalidTxsEvent{}, event.ReplicaInfoEvent{}, event.InformPrimaryEvent{})
+	hub.subscriptions[SUB_MISCELLANEOUS] = hub.eventMux.Subscribe(event.InvalidTxsEvent{}, event.ReplicaInfoEvent{}, event.InformPrimaryEvent{}, event.VCResetEvent{})
 	hub.subscriptions[SUB_EXEC] = hub.eventMux.Subscribe(event.ExecutorToConsensusEvent{}, event.ExecutorToP2PEvent{})
 }
 
@@ -174,13 +177,6 @@ func (hub *EventHub) listenMiscellaneousEvent() {
 		case event.ReplicaInfoEvent:
 			log.Debugf("[Namespace = %s] message middleware: [sync replica receive]", hub.namespace)
 			hub.executor.ReceiveReplicaInfo(ev)
-		}
-	}
-}
-
-func (hub *EventHub) listenViewChangeEvent() {
-	for obj := range hub.GetSubscription(SUB_VIEWCHANGE).Chan() {
-		switch ev := obj.Data.(type) {
 		case event.VCResetEvent:
 			log.Debugf("[Namespace = %s] message middleware: [vc reset]", hub.namespace)
 			hub.executor.Rollback(ev)

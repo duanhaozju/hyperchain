@@ -7,6 +7,7 @@ import (
 	"hyperchain/core/executor"
 	"hyperchain/core/types"
 	"github.com/golang/protobuf/proto"
+	m "hyperchain/manager/message"
 )
 
 func (hub *EventHub) invokePbftLocal(serviceType, eventType int, content interface{}) {
@@ -16,6 +17,25 @@ func (hub *EventHub) invokePbftLocal(serviceType, eventType int, content interfa
 		Event:     content,
 	}
 	hub.consenter.RecvLocal(e)
+}
+
+func (hub *EventHub) broadcast(bType int, t m.Package_Type, message []byte) {
+	if ctx, err := proto.Marshal(&m.Package{
+		Type:    t,
+		Payload: message,
+	}); err != nil {
+		log.Errorf("marshal message %d failed.", t)
+		return
+	} else {
+		switch bType {
+		case BROADCAST_VP:
+			hub.peerManager.BroadcastVPPeers(ctx)
+		case BROADCAST_NVP:
+			hub.peerManager.BroadcastNVPPeers(ctx)
+		case BROADCAST_ALL:
+			hub.peerManager.BroadcastPeers(ctx)
+		}
+	}
 }
 
 
@@ -76,5 +96,6 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 		hub.eventMux.Post(event.ReplicaInfoEvent{
 			Payload: payload,
 		})
+		// hub.broadcastVP(BROADCAST_SYNC_REPLICA, payload)
 	}
 }
