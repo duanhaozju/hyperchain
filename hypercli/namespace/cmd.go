@@ -2,81 +2,164 @@
 //Copyright (C) 2016 The Hyperchain Authors.
 package namespace
 
-import "github.com/urfave/cli"
+import (
+	"fmt"
+	"github.com/urfave/cli"
+	"hyperchain/api/admin"
+	"hyperchain/hypercli/common"
+)
 
 //NewNamespaceCMD new namespace related
 func NewNamespaceCMD() []cli.Command {
 	return []cli.Command{
 		{
-			Name:    "start",
+			Name:    "startNsMgr",
 			Aliases: []string{"-s"},
 			Usage:   "start the namespace manager",
 			Action:  start,
 		},
 		{
-			Name:    "stop",
-			Usage:   "stop the namespace manager",
-			Action:  stop,
+			Name:   "stopNsMgr",
+			Usage:  "stop the namespace manager",
+			Action: stop,
 		},
 		{
-			Name:    "startNamespace",
-			Usage:   "start namespace",
-			Action:  startNamespace,
+			Name:   "start",
+			Usage:  "start namespace",
+			Action: startNamespace,
 		},
 		{
-			Name:    "stopNamespace",
-			Usage:   "start namespace",
-			Action:  stopNamespace,
+			Name:   "stop",
+			Usage:  "start namespace",
+			Action: stopNamespace,
 		},
 		{
-			Name:    "restartNamespace",
-			Usage:   "restart namespace",
-			Action:  restartNamespace,
+			Name:   "restart",
+			Usage:  "restart namespace",
+			Action: restartNamespace,
 		},
 		{
-			Name:    "registerNamespace",
-			Usage:   "register namespace",
-			Action:  registerNamespace,
+			Name:   "register",
+			Usage:  "register namespace",
+			Action: registerNamespace,
 		},
 		{
-			Name:    "deregisterNamespace",
-			Usage:   "deregister namespace",
-			Action:  deregisterNamespace,
+			Name:   "deregister",
+			Usage:  "deregister namespace",
+			Action: deregisterNamespace,
+		},
+		{
+			Name:   "list",
+			Usage:  "list current registered namespaces",
+			Action: listNamespaces,
 		},
 	}
 }
 
 func start(c *cli.Context) error {
-	//TODO: impl start namespace manager
+	client := common.GetCmdClient(c)
+	cmd := &admin.Command{
+		MethodName: "admin_startNsMgr",
+		Args:       c.Args(),
+	}
+	rs := client.InvokeCmd(cmd)
+	fmt.Println(rs)
 	return nil
 }
 
 func stop(c *cli.Context) error {
-	//TODO: impl stop namespace manager
+	client := common.GetCmdClient(c)
+	cmd := &admin.Command{
+		MethodName: "admin_stopNsMgr",
+		Args:       c.Args(),
+	}
+	rs := client.InvokeCmd(cmd)
+	fmt.Println(rs)
 	return nil
 }
 
 func startNamespace(c *cli.Context) error {
-	//TODO: impl start namespace
+	client := common.GetCmdClient(c)
+	cmd := &admin.Command{
+		MethodName: "admin_startNamespace",
+		Args:       c.Args(),
+	}
+	if len(cmd.Args) != 1 {
+		fmt.Println(common.ErrInvalidArgsNum)
+		return common.ErrInvalidArgsNum
+	}
+	rs := client.InvokeCmd(cmd)
+	fmt.Println(rs)
 	return nil
 }
 
 func stopNamespace(c *cli.Context) error {
-	//TODO: impl stop namespace
+	client := common.GetCmdClient(c)
+	cmd := &admin.Command{
+		MethodName: "admin_stopNamespace",
+		Args:       c.Args(),
+	}
+	if len(cmd.Args) != 1 {
+		fmt.Println(common.ErrInvalidArgsNum)
+		return common.ErrInvalidArgsNum
+	}
+	rs := client.InvokeCmd(cmd)
+	fmt.Println(rs)
 	return nil
 }
 
 func restartNamespace(c *cli.Context) error {
-	//TODO: impl restart namespace
+	client := common.GetCmdClient(c)
+	cmd := &admin.Command{
+		MethodName: "admin_restartNamespace",
+		Args:       c.Args(),
+	}
+	if len(cmd.Args) != 1 {
+		fmt.Println(common.ErrInvalidArgsNum)
+		return common.ErrInvalidArgsNum
+	}
+	rs := client.InvokeCmd(cmd)
+	fmt.Println(rs)
 	return nil
 }
 
 func registerNamespace(c *cli.Context) error {
-	//TODO: impl register namespace
+	client := common.GetCmdClient(c)
+	cmd := &admin.Command{
+		MethodName: "admin_registerNamespace",
+		Args:       c.Args(),
+	}
+	if len(cmd.Args) != 1 {
+		fmt.Println(common.ErrInvalidArgsNum)
+		return common.ErrInvalidArgsNum
+	}
+	rs := client.InvokeCmd(cmd)
+	fmt.Println(rs)
 	return nil
 }
 
 func deregisterNamespace(c *cli.Context) error {
-	//TODO: impl deregister namespace
+	client := common.GetCmdClient(c)
+	cmd := &admin.Command{
+		MethodName: "admin_deregisterNamespace",
+		Args:       c.Args(),
+	}
+	if len(cmd.Args) != 1 {
+		fmt.Println(common.ErrInvalidArgsNum)
+		return common.ErrInvalidArgsNum
+	}
+	rs := client.InvokeCmd(cmd)
+	fmt.Println(rs)
+	return nil
+}
+
+func listNamespaces(c *cli.Context) error {
+	client := common.GetCmdClient(c)
+	cmd := &admin.Command{
+		MethodName: "admin_listNamespaces",
+		Args:       c.Args(),
+	}
+	rs := client.InvokeCmd(cmd)
+	fmt.Println(rs)
 	return nil
 }

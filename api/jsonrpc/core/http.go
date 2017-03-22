@@ -7,7 +7,7 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 	"github.com/rs/cors"
-	"hyperchain/api/rest_api/routers"
+	"hyperchain/api/rest/routers"
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"io"
@@ -19,6 +19,8 @@ import (
 const (
 	maxHTTPRequestContentLength = 1024 * 256
 )
+
+var server *Server
 
 type RateLimitConfig struct {
 	Enable           bool
@@ -36,10 +38,14 @@ func (hrw *httpReadWrite) Close() error {
 	return nil
 }
 
-func Start(nr namespace.NamespaceManager) error {
-	server := NewServer(nr)
+func Start(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) error {
+	server = NewServer(nr, stopHp, restartHp)
 	startHttp(server)
 	return nil
+}
+
+func Stop() {
+	server.Stop()
 }
 
 func startHttp(srv *Server) {
@@ -61,6 +67,7 @@ func startHttp(srv *Server) {
 	log.Debugf("start to listen http port: %d", httpPort)
 	go http.ListenAndServe(":"+strconv.Itoa(httpPort), handler)
 
+	// rest service
 	routers.NewRouter()
 	beego.BConfig.CopyRequestBody = true
 	beego.SetLogFuncCall(true)
@@ -69,6 +76,7 @@ func startHttp(srv *Server) {
 	beego.BeeLogger.DelLogger("console")
 
 	beego.Run("0.0.0.0:" + strconv.Itoa(restPort))
+
 }
 
 func newJSONHTTPHandler(srv *Server) http.HandlerFunc {

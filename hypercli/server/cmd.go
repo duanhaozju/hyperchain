@@ -3,9 +3,10 @@
 package server
 
 import (
+	"fmt"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli"
-	"hyperchain/api"
+	"hyperchain/api/admin"
 	"hyperchain/hypercli/common"
 )
 
@@ -20,19 +21,19 @@ func NewServerCMD() []cli.Command {
 	return []cli.Command{
 		{
 			Name:    "start",
-			Aliases: []string{"s"},
+			Aliases: []string{"-s"},
 			Usage:   "start hyperchain server",
 			Action:  start,
 		},
 		{
 			Name:    "stop",
-			Aliases: []string{"sp"},
+			Aliases: []string{"-sp"},
 			Usage:   "stop hyperchain server",
 			Action:  stop,
 		},
 		{
 			Name:    "restart",
-			Aliases: []string{"r"},
+			Aliases: []string{"-r"},
 			Usage:   "restart hyperchain server",
 			Action:  restart,
 		},
@@ -40,23 +41,28 @@ func NewServerCMD() []cli.Command {
 }
 
 func start(c *cli.Context) error {
-	logger.Info("server start...")
-	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
-	cmd := &hpc.Command{
-		MethodName: "admin_stopServer",
-		Args:       []string{},
-	}
-	rs := client.InvokeCmd(cmd)
-	logger.Critical(rs)
+	fmt.Println("Not Support Yet!")
 	return nil
 }
 
 func stop(c *cli.Context) error {
-	//todo: impl stop method
+	client := common.GetCmdClient(c)
+	cmd := &admin.Command{
+		MethodName: "admin_stopServer",
+		Args:       c.Args(),
+	}
+	rs := client.InvokeCmd(cmd)
+	fmt.Println(rs)
 	return nil
 }
 
 func restart(c *cli.Context) error {
-	//todo: impl restart method
+	client := common.GetCmdClient(c)
+	cmd := &admin.Command{
+		MethodName: "admin_restartServer",
+		Args:       c.Args(),
+	}
+	rs := client.InvokeCmd(cmd)
+	fmt.Println(rs)
 	return nil
 }

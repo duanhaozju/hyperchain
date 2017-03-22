@@ -6,15 +6,21 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/op/go-logging"
-	"hyperchain/api"
+	"hyperchain/api/admin"
 	"net/http"
 	"io/ioutil"
+	"github.com/urfave/cli"
 )
 
 var logger *logging.Logger
 
 func init() {
 	logger = logging.MustGetLogger("hypercli/common")
+}
+
+func GetCmdClient(c *cli.Context) *CmdClient {
+	client := NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
+	return client
 }
 
 type CmdClient struct {
@@ -38,16 +44,17 @@ func NewRpcClient(host, port string) *CmdClient {
 }
 
 //InvokeCmd invoke a command using json rpc client and wait for the response.
-func (cc *CmdClient) InvokeCmd(cmd *hpc.Command) *hpc.CommandResult {
+func (cc *CmdClient) InvokeCmd(cmd *admin.Command) *admin.CommandResult {
+	logger.Critical(cmd.ToJson())
 	rs, err := cc.Call(cmd.ToJson())
 	if err != nil {
-		logger.Error(err.Error())
+		fmt.Println(err.Error())
 		return nil
 	}
 	return rs
 }
 
-func (cc *CmdClient) Call(cmd string) (*hpc.CommandResult, error) {
+func (cc *CmdClient) Call(cmd string) (*admin.CommandResult, error) {
 	reqJson := []byte(cmd)
 	urlStr := fmt.Sprintf("http://%s:%s", cc.host, cc.port)
 	req, err := http.NewRequest("POST", urlStr, bytes.NewBuffer(reqJson))
@@ -67,6 +74,5 @@ func (cc *CmdClient) Call(cmd string) (*hpc.CommandResult, error) {
 	result := string(body)
 	logger.Info(result)
 	fmt.Printf(result)
-	//TODO: handle rs
 	return nil, nil
 }

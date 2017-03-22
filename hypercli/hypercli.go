@@ -57,27 +57,6 @@ func initApp() {
 			Usage:       "log specific commands",
 			Subcommands: log.NewLogCMD(),
 		},
-		//{
-		//	Name:  "connect",
-		//	Usage: "connect to hyperchain server",
-		//	Action: func(c *cli.Context) {
-		//		for {
-		//			reader := bufio.NewReader(os.Stdin)
-		//			fmt.Print("hypercli>")
-		//			input, err := reader.ReadString('\n')
-		//
-		//			input = strings.Trim(input, "\n")
-		//			input = strings.Trim(input, " ")
-		//			fmt.Println(input)
-		//			args := strings.Split("hypercli "+input, " ")
-		//			if err == nil {
-		//				fmt.Printf("The input was: %s######", input)
-		//			}
-		//			os.Args = args
-		//			app.Run(os.Args)
-		//		}
-		//	},
-		//},
 	}
 
 }

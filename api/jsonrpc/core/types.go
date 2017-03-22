@@ -4,22 +4,24 @@ package jsonrpc
 
 import (
 	"gopkg.in/fatih/set.v0"
-	"reflect"
-	"sync"
+	"hyperchain/api/admin"
 	"hyperchain/common"
 	"hyperchain/namespace"
+	"reflect"
+	"sync"
 )
 
 // Server represents a RPC server
 type Server struct {
 	//services       serviceRegistry // 这是一个map，key为hpc，value为hpc的所有方法
-	muSubcriptions sync.Mutex      // protects subscriptions
+	muSubcriptions sync.Mutex // protects subscriptions
 	//subscriptions  subscriptionRegistry
 
-	run      int32
-	codecsMu sync.Mutex
-	codecs   *set.Set
+	run          int32
+	codecsMu     sync.Mutex
+	codecs       *set.Set
 	namespaceMgr namespace.NamespaceManager
+	admin        *admin.Administrator
 }
 
 // ServerCodec implements reading, parsing and writing RPC messages for the server side of
