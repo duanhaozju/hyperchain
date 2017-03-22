@@ -60,7 +60,7 @@ func (node *fakeNode) StartServer(wg *sync.WaitGroup) {
 		log.Fatal("PLEASE RESTART THE SERVER NODE!")
 	}
 	//opts := membersrvc.GetGrpcServerOpts()
-	opts := node.cm.GetGrpcServerOpts()
+	opts := node.cm.GetGrpcServerOpts2()
 	node.gRPCServer = grpc.NewServer(opts...)
 	//this.gRPCServer = grpc.NewServer()
 	pb.RegisterChatServer(node.gRPCServer, node)
@@ -96,7 +96,6 @@ func (node *fakeNode) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, e
 			e := ecdh.NewEllipticECDH(elliptic.P256())
 			pubkey := e.Marshal((*privateKey).PublicKey)
 			response.MessageType = pb.Message_HELLO_RESPONSE
-			SignCert(&response,node.cm)
 			response.Payload = pubkey
 		}
 	case pb.Message_HELLO_RESPONSE:
@@ -152,13 +151,13 @@ func TestNewGrpcManager(t *testing.T) {
 	assert.True(t,grpcManager.IsOriginal)
 	assert.True(t,grpcManager.IsVP)
 	assert.NotNil(t,grpcManager.LocalAddr)
-	assert.Nil(t,grpcManager.peersPool)
+	assert.Nil(t,grpcManager.pool)
 
 
 	assert.Equal(t,grpcManager.configs.IsVP(),true)
-	assert.Equal(t,grpcManager.configs.GetIntroducerID(),1)
-	assert.Equal(t,grpcManager.configs.GetIntroducerIP(),"127.0.0.1")
-	assert.Equal(t,grpcManager.configs.GetLocalGRPCPort(),8001)
+	assert.Equal(t,grpcManager.configs.IntroID(),1)
+	assert.Equal(t,grpcManager.configs.IntroIP(),"127.0.0.1")
+	assert.Equal(t,grpcManager.configs.LocalGRPCPort(),8001)
 
 	assert.Equal(t,grpcManager.configs.GetID(1),1)
 	assert.Equal(t,grpcManager.configs.GetPort(1),20001)
@@ -210,7 +209,7 @@ func channelCostomer(alive chan int){
 func TestGRPCPeerManager_Start(t *testing.T) {
 	grpcm = NewGrpcManager(config)
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
-	assert.NotNil(t,grpcm.peersPool)
+	assert.NotNil(t,grpcm.pool)
 	assert.NotNil(t,grpcm.CM)
 	assert.True(t,grpcm.IsOnline)
 	assert.True(t,grpcm.IsVP)
@@ -327,12 +326,6 @@ func TestGRPCPeerManager_SetPrimary(t *testing.T) {
 	grpcm.LocalNode.StopServer()
 }
 
-func TestGRPCPeerManager_ConnectToOthers(t *testing.T) {
-	grpcm = NewGrpcManager(config)
-	grpcm.LocalAddr.Port = 8813
-	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
-	grpcm.ConnectToOthers()
-}
 
 
 func TestGRPCPeerManager_GetAllPeersWithTemp(t *testing.T) {

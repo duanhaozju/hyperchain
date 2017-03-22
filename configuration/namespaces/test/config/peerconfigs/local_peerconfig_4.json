@@ -1,0 +1,45 @@
+{
+  "self":{
+  "is_origin":true,
+  "is_vp":true,
+  "node_id":4,
+  "grpc_port":8008,
+  "local_ip":"127.0.0.1",
+  "jsonrpc_port":8088,
+  "restful_port":9008,
+  "introducer_ip":"127.0.0.1",
+  "untroducer_port":8005,
+  "introducer_id":1
+ },
+  "maxpeernode":4,
+  "nodes":[
+    {
+    "id":1,
+    "address":"127.0.0.1",
+    "external_address":"127.0.0.1",
+    "port":8005,
+    "rpc_port":8085
+  },
+    {
+    "id":2,
+    "address":"127.0.0.1",
+    "external_address":"127.0.0.1",
+    "port":8006,
+    "rpc_port":8086
+  },
+    {
+    "id":3,
+    "address":"127.0.0.1",
+    "external_address":"127.0.0.1",
+    "port":8007,
+    "rpc_port":8087
+  },
+    {
+    "id":4,
+    "address":"127.0.0.1",
+    "external_address":"127.0.0.1",
+    "port":8008,
+    "rpc_port":8088
+  }
+]
+}
