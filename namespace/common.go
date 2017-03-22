@@ -46,6 +46,11 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 	conf.Set(common.C_PEER_CONFIG_PATH, peerConfigPath)
 	conf.Set(common.C_GLOBAL_CONFIG_PATH, nsConfigPath)
 
+	if strings.HasSuffix(path, "/"+DEFAULT_NAMESPACE+"/config") {
+		nr.conf.Set(common.C_HTTP_PORT, jsonrpcPort)
+		nr.conf.Set(common.C_REST_PORT, restfulPort)
+	}
+
 	return conf
 }
 

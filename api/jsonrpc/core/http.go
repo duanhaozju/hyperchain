@@ -58,6 +58,7 @@ func startHttp(srv *Server) {
 	// Insert the middleware
 	handler := c.Handler(newJSONHTTPHandler(srv))
 
+	log.Debugf("start to listen http port: %d", httpPort)
 	go http.ListenAndServe(":"+strconv.Itoa(httpPort), handler)
 
 	routers.NewRouter()

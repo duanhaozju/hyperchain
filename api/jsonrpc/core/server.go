@@ -110,6 +110,7 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 		}
 		if rpcErr := codec.CheckHttpHeaders(reqs[0].Namespace); rpcErr != nil {
 			log.Errorf("CheckHttpHeaders error %v", rpcErr)
+			codec.Write(codec.CreateErrorResponse(nil, "", rpcErr))
 			return nil
 		}
 
