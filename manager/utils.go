@@ -32,7 +32,7 @@ func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEve
 		hub.invokePbftLocal(pbft.CORE_PBFT_SERVICE, pbft.CORE_VALIDATED_TXS_EVENT, ev.Payload)
 	case executor.NOTIFY_SYNC_DONE:
 		log.Debugf("[Namespace = %s] message middleware: [sync done]", hub.namespace)
-		hub.consenter.RecvMsg(ev.Payload.([]byte))
+		hub.invokePbftLocal(pbft.CORE_PBFT_SERVICE, pbft.CORE_STATE_UPDATE_EVENT, ev.Payload)
 	}
 }
 func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {

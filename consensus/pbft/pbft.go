@@ -57,8 +57,6 @@ func (pbft *pbftImpl) RecvMsg(e []byte) error {
 		return pbft.enqueueTx(msg)
 	case protos.Message_CONSENSUS:
 		return pbft.enqueueConsensusMsg(msg) //msgs from other peers
-	case protos.Message_STATE_UPDATED:
-		return pbft.enqueueStateUpdatedMsg(msg)
 	case protos.Message_NULL_REQUEST:
 		return pbft.processNullRequest(msg)
 	case protos.Message_NEGOTIATE_VIEW:
