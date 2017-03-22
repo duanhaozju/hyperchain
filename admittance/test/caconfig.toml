@@ -25,8 +25,9 @@ priv = "test/cert/tlscert/tls_peer1.priv"
 serverhostoverride = "hyperchain.cn"
 
 [check]
-# check the ecert and rcert during the connect progress
-checkercert = true
-
+# check the ecert and rcert signature during the connect progress
+certsign = true
 # check the tcert during the request process
-checktcert  = true
+tcert  = true
+# check the ercert and rcert
+ercert = true

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-#set -e
-# 设置系统环境类型
+set -e
+# set environment
 f_set_env(){
     case "$OSTYPE" in
       darwin*)
@@ -18,7 +18,7 @@ f_set_env(){
     esac
 }
 
-# 帮助函数
+# help prompt message
 f_help(){
     echo "local.sh helper:"
     echo "  -h, --help:     show the help for this bash script"
@@ -31,7 +31,7 @@ f_help(){
     echo "./local -m -r"
 }
 
-# 检查本地运行环境
+# check local run environment
 f_check_local_env(){
     if ! type go > /dev/null; then
         echo -e "Please install the go env correctly!"
@@ -55,30 +55,24 @@ f_check_local_env(){
     fi
 }
 
-
-# 杀进程函数
+# kill hyperchain process
 f_kill_process(){
     echo "kill the bind port process"
     ps -ax | grep hyperchain | grep -v grep | awk '{print $1}' |  xargs  kill -9
 }
 
-# 删除数据函数
+# clear data
 f_delete_data(){
 for (( j=1; j<=$MAXPEERNUM; j++ ))
 do
     # Clear the old data
-    if [ -d "${DUMP_PATH}/node${j}/build" ];then
-        rm -rf "${DUMP_PATH}/node${j}/build"
-    fi
-
-    # Creat the build dir
-    if [ ! -d "${DUMP_PATH}/node${j}/build" ];then
-        mkdir -p "${DUMP_PATH}/node${j}/build"
+    if [ -d "${DUMP_PATH}/node${j}" ];then
+        rm -rf "${DUMP_PATH}/node${j}"
     fi
 done
 }
 
-# 重新编译函数
+# rebuild the function
 f_rebuild(){
 # Build the project
 echo "Rebuild the project..."
@@ -88,7 +82,7 @@ fi
 cd ${PROJECT_PATH} && govendor build -o ${DUMP_PATH}/hyperchain -tags=embed
 }
 
-# 数据分发函数
+# distribute node package
 f_distribute(){
 # cp the config files into nodes
 for (( j=1; j<=$1; j++ ))
@@ -96,17 +90,18 @@ do
     if [ ! -d "${DUMP_PATH}/node${j}" ];then
         mkdir -p ${DUMP_PATH}/node${j}
     fi
-    if [ -d "${DUMP_PATH}/node${j}/config" ];then
-        rm -rf ${DUMP_PATH}/node${j}/config
+    if [ -d "${DUMP_PATH}/node${j}/namespaces" ];then
+        rm -rf ${DUMP_PATH}/node${j}/namespaces
     fi
-    cp -rf  ${CONF_PATH} ${DUMP_PATH}/node${j}/
-    cp -rf  ${CONF_PATH}/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/config/local_peerconfig.json
-    cp -rf  ${CONF_PATH}/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/config/cert/
+    cp -rf  ${CONF_PATH}/* ${DUMP_PATH}/node${j}/
+    cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/global/config/local_peerconfig.json
+    cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/cert/
+    cp -rf  ${CONF_PATH}/namespaces/test/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/test/config/local_peerconfig.json
+    cp -rf  ${CONF_PATH}/namespaces/test/config/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/test/config/cert/
     cp -rf ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
 done
 }
 
-# 运行命令
 f_all_in_one_cmd(){
     cd $DUMP_PATH/node${1} && ./hyperchain -o ${1} -l 800${1} -t 808${1} -f 900${1} &
 }
@@ -120,7 +115,7 @@ f_x_in_mac_cmd(){
 }
 
 
-# 组织运行命令函数
+# run process by os type
 f_run_process(){
     for((j=1;j<=$MAXPEERNUM;j++))
     do
@@ -148,50 +143,50 @@ f_sleep(){
 
 #####################################
 #                                   #
-#  MAIN INVOKE AREA  主要调用区域   #
+#  MAIN INVOKE AREA                 #
 #                                   #
 #####################################
 
 
-# 系统类型
+# system type
 _SYSTYPE="MAC"
 
-# 项目路径
 PROJECT_PATH="${GOPATH}/src/hyperchain"
-# 当前脚本路径
 
+# work path
 CURRENT_PATH=`pwd`
 
-# 输出基本路径
+# output root dir
 DUMP_PATH="${PROJECT_PATH}/build"
 
-# 配置文件路径
-CONF_PATH="${PROJECT_PATH}/config"
+# config file path
+CONF_PATH="${PROJECT_PATH}/configuration"
 
-# 全局配置文件路径
-GLOBAL_CONFIG="${CONF_PATH}/global.yaml"
+# global config path
+GLOBAL_CONFIG="${CONF_PATH}/namespaces/global/config/global.yaml"
 
-# peerconfig 配置文件路径
+# peerconfig
 PEER_CONFIG_FILE_NAME=`confer read ${GLOBAL_CONFIG} global.configs.peers |sed 's/"//g'`
-
+PEER_CONFIG_FILE_NAME="configuration/"$PEER_CONFIG_FILE_NAME
 PEER_CONFIG_FILE=${PROJECT_PATH}/${PEER_CONFIG_FILE_NAME}
 
-# 节点数目
+# node num
 MAXPEERNUM=`cat ${PEER_CONFIG_FILE} | jq ".maxpeernode"`
 echo "Node number is: ${MAXPEERNUM}"
-# 是否删除数据（注意，默认为true）
+
+# delete data? default = true
 DELETEDATA=true
 
-# 是否重新编译
+# rebuild
 REBUILD=true
 
-# 检查本地环境
+# 1.check local env
 f_check_local_env
 
-# 设置操作系统类型
+# 2.set system type
 f_set_env
 
-# 解析输出参数
+# exe by extra input params
 while [ $# -gt 0 ]
 do
     case "$1" in
@@ -211,24 +206,22 @@ do
     esac
 done
 
-# 杀进程
+# kill existing process
 f_kill_process
 
-# 判断是否删除数据
+# handle data delete
 if  $DELETEDATA ; then
     f_delete_data
 fi
 
-# 判断是否重新编译
+# handle rebuild issues
 
 if  $REBUILD ; then
     f_rebuild
 fi
 
-# 分发配置文件
+# distribute files
 f_distribute $MAXPEERNUM
 
-# 运行hyperchain 进程
+# run hyperchain node
 f_run_process
-
-

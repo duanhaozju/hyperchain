@@ -20,7 +20,7 @@ func NewPeerAddr(IP string, Port int, JSONRPCPort int, ID int) *PeerAddr {
 	peerAddr.Port = Port
 	peerAddr.RPCPort = JSONRPCPort
 	peerAddr.ID = ID
-	peerAddr.Hash = GetHash(IP + ":" + strconv.Itoa(Port) + ":" + strconv.Itoa(ID))
+	peerAddr.Hash = GetHash(strconv.Itoa(ID))
 	return &peerAddr
 }
 
