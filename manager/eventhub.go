@@ -6,7 +6,9 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"hyperchain/accounts"
+	"hyperchain/admittance"
 	"hyperchain/consensus"
+	"hyperchain/consensus/pbft"
 	"hyperchain/core/executor"
 	"hyperchain/core/types"
 	"hyperchain/event"
@@ -14,8 +16,6 @@ import (
 	"hyperchain/protos"
 	"hyperchain/recovery"
 	"time"
-	"hyperchain/admittance"
-	"hyperchain/consensus/pbft"
 )
 
 var log *logging.Logger // package-level logger
@@ -36,28 +36,28 @@ const (
 )
 
 type EventHub struct {
-	namespace       string
+	namespace string
 	// module services
-	executor        *executor.Executor
-	peerManager     p2p.PeerManager
-	consenter       consensus.Consenter
-	accountManager  *accounts.AccountManager
-	eventMux        *event.TypeMux
+	executor       *executor.Executor
+	peerManager    p2p.PeerManager
+	consenter      consensus.Consenter
+	accountManager *accounts.AccountManager
+	eventMux       *event.TypeMux
 	// subscription
-	subscriptions   map[int]event.Subscription
-	initType        int
+	subscriptions map[int]event.Subscription
+	initType      int
 }
 
 func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
 	am *accounts.AccountManager) *EventHub {
 	manager := &EventHub{
-		namespace:          namespace,
-		executor:           executor,
-		eventMux:            eventMux,
-		consenter:           consenter,
-		peerManager:         peerManager,
-		accountManager:      am,
-		subscriptions:       make(map[int]event.Subscription),
+		namespace:      namespace,
+		executor:       executor,
+		eventMux:       eventMux,
+		consenter:      consenter,
+		peerManager:    peerManager,
+		accountManager: am,
+		subscriptions:  make(map[int]event.Subscription),
 	}
 	return manager
 }
@@ -96,7 +96,7 @@ func (hub *EventHub) Start(c chan int, cm *admittance.CAManager) {
 	go hub.listenPeerMaintainEvent()
 
 	go hub.peerManager.Start(c, hub.eventMux, cm)
-	hub.initType = <- c
+	hub.initType = <-c
 	if hub.initType == 0 {
 		// start in normal mode
 		hub.PassRouters()
@@ -114,14 +114,13 @@ func (hub *EventHub) Subscribe() {
 	hub.subscriptions[SUB_PEERMAINTAIN] = hub.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{},
 		event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{}, event.RecvNewPeerEvent{},
 		event.DelPeerEvent{}, event.BroadcastDelPeerEvent{}, event.RecvDelPeerEvent{})
-	hub.subscriptions[SUB_MISCELLANEOUS] = hub.eventMux.Subscribe(event.InvalidTxsEvent{}, event.ReplicaInfoEvent{},  event.InformPrimaryEvent{})
+	hub.subscriptions[SUB_MISCELLANEOUS] = hub.eventMux.Subscribe(event.InvalidTxsEvent{}, event.ReplicaInfoEvent{}, event.InformPrimaryEvent{})
 	hub.subscriptions[SUB_EXEC] = hub.eventMux.Subscribe(event.ExecutorToConsensusEvent{}, event.ExecutorToP2PEvent{})
 }
 
 func (hub *EventHub) GetSubscription(t int) event.Subscription {
 	return hub.subscriptions[t]
 }
-
 
 func (hub *EventHub) listenSynchronizationEvent() {
 	for obj := range hub.GetSubscription(SUB_SYNCCHAIN).Chan() {
@@ -252,7 +251,7 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 				DelPayload: payload,
 				RouterHash: routerHash,
 				Id:         id,
-				Del:		del,
+				Del:        del,
 			}
 			e := &pbft.LocalEvent{
 				Service:   pbft.NODE_MGR_SERVICE,
@@ -418,10 +417,10 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 		proto.Unmarshal(ev.Payload, chain)
 		addr := hub.peerManager.GetLocalNode().GetNodeAddr()
 		payload, _ := proto.Marshal(&types.ReplicaInfo{
-			Chain:    chain,
-			Ip:       []byte(addr.IP),
-			Port:     int32(addr.Port),
-			Namespace:[]byte(hub.namespace),
+			Chain:     chain,
+			Ip:        []byte(addr.IP),
+			Port:      int32(addr.Port),
+			Namespace: []byte(hub.namespace),
 		})
 		peers := hub.peerManager.GetVPPeers()
 		var peerIds = make([]uint64, len(peers))
