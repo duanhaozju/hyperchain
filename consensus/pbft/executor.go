@@ -222,7 +222,7 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 			return nil
 		}
 		if pbft.status.getState(&pbft.status.inRecovery) {
-			state := &stateUpdatedEvent{seqNo: e.Event.(protos.VcResetDone).SeqNo - 1}
+			state := protos.StateUpdatedMessage{SeqNo: e.Event.(protos.VcResetDone).SeqNo - 1}
 			return pbft.recvStateUpdatedEvent(state)
 		}
 		if atomic.LoadUint32(&pbft.activeView) == 1 {

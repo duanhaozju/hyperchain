@@ -47,7 +47,7 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 		})
 	case NOTIFY_SYNC_DONE:
 		log.Debugf("[Namespace = %s] inform consenus sync done", executor.namespace)
-		msg := protos.StateUpdatedMessage{SeqNo: edb.GetHeightOfChain(executor.namespace)}
+		msg := message.(protos.StateUpdatedMessage)
 		executor.helper.Post(event.ExecutorToConsensusEvent{
 			Payload: msg,
 			Type:    NOTIFY_SYNC_DONE,

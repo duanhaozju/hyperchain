@@ -38,7 +38,6 @@ func (hub *EventHub) broadcast(bType int, t m.Package_Type, message []byte) {
 	}
 }
 
-
 func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {
 	switch ev.Type {
 	case executor.NOTIFY_REMOVE_CACHE:
@@ -55,6 +54,7 @@ func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEve
 		hub.invokePbftLocal(pbft.CORE_PBFT_SERVICE, pbft.CORE_STATE_UPDATE_EVENT, ev.Payload)
 	}
 }
+
 func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 	switch ev.Type {
 	case executor.NOTIFY_BROADCAST_DEMAND:
@@ -96,6 +96,5 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 		hub.eventMux.Post(event.ReplicaInfoEvent{
 			Payload: payload,
 		})
-		// hub.broadcastVP(BROADCAST_SYNC_REPLICA, payload)
 	}
 }

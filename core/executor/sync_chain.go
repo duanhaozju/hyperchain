@@ -266,7 +266,7 @@ func (executor *Executor) updateSyncDemand(block *types.Block) error {
 func (executor *Executor) sendStateUpdatedEvent() {
 	// state update success
 	executor.PurgeCache()
-	executor.informConsensus(NOTIFY_SYNC_DONE, nil)
+	executor.informConsensus(NOTIFY_SYNC_DONE, protos.StateUpdatedMessage{edb.GetHeightOfChain(executor.namespace)})
 }
 
 // accpet - accept block synchronization result.
