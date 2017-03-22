@@ -8,6 +8,7 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/api"
 	"net/http"
+	"io/ioutil"
 )
 
 var logger *logging.Logger
@@ -57,7 +58,15 @@ func (cc *CmdClient) Call(cmd string) (*hpc.CommandResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	logger.Info(rs)
+	defer rs.Body.Close()
+
+	body, err := ioutil.ReadAll(rs.Body)
+	if err != nil {
+		return nil, err
+	}
+	result := string(body)
+	logger.Info(result)
+	fmt.Printf(result)
 	//TODO: handle rs
 	return nil, nil
 }
