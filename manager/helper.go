@@ -28,10 +28,6 @@ func (hub *EventHub) broadcast(bType int, t m.Package_Type, message []byte) {
 		return
 	} else {
 		switch bType {
-		case BROADCAST_VP:
-			hub.peerManager.BroadcastVPPeers(ctx)
-		case BROADCAST_NVP:
-			hub.peerManager.BroadcastNVPPeers(ctx)
 		case BROADCAST_ALL:
 			hub.peerManager.BroadcastPeers(ctx)
 		}
