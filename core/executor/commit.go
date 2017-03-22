@@ -8,12 +8,11 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/event"
 	"hyperchain/hyperdb/db"
-	"hyperchain/p2p"
 	"hyperchain/protos"
 	"time"
 )
 
-func (executor *Executor) CommitBlock(ev event.CommitEvent, peerManager p2p.PeerManager) {
+func (executor *Executor) CommitBlock(ev event.CommitEvent) {
 	executor.addCommitEvent(ev)
 }
 

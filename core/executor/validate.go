@@ -6,7 +6,6 @@ import (
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/params"
 	"hyperchain/event"
-	"hyperchain/p2p"
 	"hyperchain/protos"
 	"sort"
 	"strconv"
@@ -25,7 +24,7 @@ type ValidationResultRecord struct {
 	VID         uint64                            // validation ID. may larger than SeqNo
 }
 
-func (executor *Executor) Validate(validationEvent event.ValidationEvent, peerManager p2p.PeerManager) {
+func (executor *Executor) Validate(validationEvent event.ValidationEvent) {
 	executor.addValidationEvent(validationEvent)
 }
 

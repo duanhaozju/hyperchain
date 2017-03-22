@@ -46,7 +46,7 @@ func (pbft *pbftImpl) msgToEvent (msg *ConsensusMessage) (interface{}, error) {
 
 //dispatchMsgToService dispatch messgae to the related services.
 //TODO: refactor consensus message format
-func (pbft *pbftImpl) dispatchMsgToService(e events.Event) serviceType  {
+func (pbft *pbftImpl) dispatchMsgToService(e events.Event) int  {
 	switch e.(type) {
 	//core PBFT service
 	case *TransactionBatch:
@@ -145,16 +145,8 @@ func (pbft *pbftImpl) handleCorePbftEvent(e *LocalEvent) events.Event {
 		pbft.logger.Noticef("Replica %d first request timer expires", pbft.id)
 		return pbft.sendViewChange()
 
-	//case CORE_REMOVE_CACHE_EVENT:
-	//	vid := e.Event.(protos.RemoveCache).Vid
-	//	ok := pbft.recvRemoveCache(vid)
-	//	if !ok {
-	//		pbft.logger.Warningf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
-	//	}
-	//	return nil
-
 	case CORE_STATE_UPDATE_EVENT:
-		pbft.recvStateUpdatedEvent(e.Event.(*stateUpdatedEvent))
+		pbft.recvStateUpdatedEvent(e.Event.(protos.StateUpdatedMessage))
 		return nil
 
 	case CORE_VALIDATED_TXS_EVENT:
@@ -230,7 +222,7 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 			return nil
 		}
 		if pbft.status.getState(&pbft.status.inRecovery) {
-			state := &stateUpdatedEvent{seqNo: e.Event.(protos.VcResetDone).SeqNo - 1}
+			state := protos.StateUpdatedMessage{SeqNo: e.Event.(protos.VcResetDone).SeqNo - 1}
 			return pbft.recvStateUpdatedEvent(state)
 		}
 		if atomic.LoadUint32(&pbft.activeView) == 1 {

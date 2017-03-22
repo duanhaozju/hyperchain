@@ -59,7 +59,7 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*hpc.API {
 		"tx": {
 			Srvname: "tx",
 			Version: "0.4",
-			Service: hpc.NewPublicTransactionAPI(namespace, ns.eventMux, ns.eh, ns.conf),
+			Service: hpc.NewPublicTransactionAPI(namespace, ns.eh, ns.conf),
 			Public:  true,
 		},
 		"node": {
@@ -83,7 +83,7 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*hpc.API {
 		"contract": {
 			Srvname: "contract",
 			Version: "0.4",
-			Service: hpc.NewPublicContractAPI(namespace, ns.eventMux, ns.eh, ns.conf),
+			Service: hpc.NewPublicContractAPI(namespace, ns.eh, ns.conf),
 			Public:  true,
 		},
 		"cert": {

@@ -323,21 +323,21 @@ func (node *Node)handleSyncMsg(msg *pb.Message) error {
 	case recovery.Message_SYNCBLOCK:
 		{
 
-			go node.higherEventManager.Post(event.ReceiveSyncBlockEvent{
+			go node.higherEventManager.Post(event.SyncBlockReceiveEvent{
 				Payload: syncMsg.Payload,
 			})
 
 		}
 	case recovery.Message_SYNCCHECKPOINT:
 		{
-			go node.higherEventManager.Post(event.StateUpdateEvent{
+			go node.higherEventManager.Post(event.SyncBlockReqEvent{
 				Payload: syncMsg.Payload,
 			})
 
 		}
 	case recovery.Message_SYNCSINGLE:
 		{
-			go node.higherEventManager.Post(event.StateUpdateEvent{
+			go node.higherEventManager.Post(event.SyncBlockReqEvent{
 				Payload: syncMsg.Payload,
 			})
 		}

@@ -12,7 +12,7 @@ import (
 )
 
 // SendSyncRequest - send synchronization request to other nodes.
-func (executor *Executor) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
+func (executor *Executor) SendSyncRequest(ev event.ChainSyncReqEvent) {
 	err, stateUpdateMsg, target := executor.unmarshalStateUpdateMessage(ev)
 	if err != nil {
 		log.Errorf("[Namespace = %s] invalid state update message.", executor.namespace)
@@ -52,7 +52,7 @@ func (executor *Executor) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
 }
 
 // ReceiveSyncRequest - receive synchronization request from some nodes, and send back request blocks.
-func (executor *Executor) ReceiveSyncRequest(ev event.StateUpdateEvent) {
+func (executor *Executor) ReceiveSyncRequest(ev event.SyncBlockReqEvent) {
 	syncReqMsg := &recovery.CheckPointMessage{}
 	proto.Unmarshal(ev.Payload, syncReqMsg)
 	for i := syncReqMsg.RequiredNumber; i > syncReqMsg.CurrentNumber; i -= 1 {
@@ -61,7 +61,7 @@ func (executor *Executor) ReceiveSyncRequest(ev event.StateUpdateEvent) {
 }
 
 // ReceiveSyncBlocks - receive request synchronization blocks from others.
-func (executor *Executor) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
+func (executor *Executor) ReceiveSyncBlocks(ev event.SyncBlockReceiveEvent) {
 	if executor.status.syncFlag.SyncDemandBlockNum != 0 {
 		block := &types.Block{}
 		proto.Unmarshal(ev.Payload, block)
@@ -120,7 +120,7 @@ func (executor *Executor) clearStatedb() {
 }
 
 // unmarshalStateUpdateMessage - unmarshal block synchronization message sent from consensus module and return a block synchronization target.
-func (executor *Executor) unmarshalStateUpdateMessage(ev event.SendCheckpointSyncEvent) (error, *protos.UpdateStateMessage, *protos.BlockchainInfo) {
+func (executor *Executor) unmarshalStateUpdateMessage(ev event.ChainSyncReqEvent) (error, *protos.UpdateStateMessage, *protos.BlockchainInfo) {
 	updateStateMessage := &protos.UpdateStateMessage{}
 	err := proto.Unmarshal(ev.Payload, updateStateMessage)
 	if err != nil {
@@ -266,7 +266,7 @@ func (executor *Executor) updateSyncDemand(block *types.Block) error {
 func (executor *Executor) sendStateUpdatedEvent() {
 	// state update success
 	executor.PurgeCache()
-	executor.informConsensus(NOTIFY_SYNC_DONE, nil)
+	executor.informConsensus(NOTIFY_SYNC_DONE, protos.StateUpdatedMessage{edb.GetHeightOfChain(executor.namespace)})
 }
 
 // accpet - accept block synchronization result.

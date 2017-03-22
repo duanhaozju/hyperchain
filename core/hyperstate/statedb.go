@@ -835,7 +835,7 @@ func (self *StateDB) RevertToJournal(targetHeight uint64, currentHeight uint64, 
 
 	journalCache := NewJournalCache(self.db)
 	for i := currentHeight; i >= targetHeight+1; i -= 1 {
-		log.Criticalf("undo changes for #%d", i)
+		log.Debugf("undo changes for #%d", i)
 		j, err := self.db.Get(CompositeJournalKey(uint64(i)))
 		if err != nil {
 			log.Warningf("get journal in database for #%d failed. make sure #%d doesn't have state change",
