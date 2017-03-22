@@ -68,7 +68,7 @@ global:
     logs:
         # dump the log file or not
         dumpfile: true
-        newLogFileInterval: 10s  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+        newLogFileInterval: 30s  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
                                 # such as "300ms", "2h45m".
 
         logsdir: "./namespaces/global/data/logs"

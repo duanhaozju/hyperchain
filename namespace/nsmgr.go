@@ -21,7 +21,7 @@ var (
 )
 
 const (
-	DEFAULT_NAMESPACE  = "global"
+	DEFAULT_NAMESPACE  = "system"
 	NS_CONFIG_DIR_ROOT = "global.nsConfigRootPath"
 )
 
