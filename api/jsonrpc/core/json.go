@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"crypto/ecdsa"
-	"hyperchain/core/crypto/primitives"
+	//"crypto/ecdsa"
+	//"hyperchain/core/crypto/primitives"
 	"hyperchain/namespace"
 )
 
@@ -106,29 +106,29 @@ func (c *jsonCodec) CheckHttpHeaders(namespace string) common.RPCError {
 	}
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
-	signature := c.req.Header.Get("signature")
-	msg := common.TransportDecode(c.req.Header.Get("msg"))
-	tcertPem := common.TransportDecode(c.req.Header.Get("tcert"))
-	tcert, err := primitives.ParseCertificate(tcertPem)
-	if err != nil {
-		log.Error("fail to parse tcert.", err)
-		return &common.UnauthorizedError{}
-	}
-	tcertPublicKey := tcert.PublicKey
-	pubKey := tcertPublicKey.(*(ecdsa.PublicKey))
+	//signature := c.req.Header.Get("signature")
+	//msg := common.TransportDecode(c.req.Header.Get("msg"))
+	//tcertPem := common.TransportDecode(c.req.Header.Get("tcert"))
+	//tcert, err := primitives.ParseCertificate(tcertPem)
+	//if err != nil {
+	//	log.Error("fail to parse tcert.", err)
+	//	return &common.UnauthorizedError{}
+	//}
+	//tcertPublicKey := tcert.PublicKey
+	//pubKey := tcertPublicKey.(*(ecdsa.PublicKey))
 
-	signB := common.Hex2Bytes(signature)
-	verifySignature, err := primitives.ECDSAVerifyTransport(pubKey, []byte(msg), signB)
-	if err != nil || !verifySignature {
-		log.Error("Fail to verify TransportSignture!", err)
-		return &common.UnauthorizedError{}
-	}
-	verifyTcert, err := cm.VerifyTCert(tcertPem)
-
-	if verifyTcert == false || err != nil {
-		log.Error("Fail to verify tcert!", err)
-		return &common.UnauthorizedError{}
-	}
+	//signB := common.Hex2Bytes(signature)
+	//verifySignature, err := primitives.ECDSAVerifyTransport(pubKey, []byte(msg), signB)
+	//if err != nil || !verifySignature {
+	//	log.Error("Fail to verify TransportSignture!", err)
+	//	return &common.UnauthorizedError{}
+	//}
+	//verifyTcert, err := cm.VerifyTCert(tcertPem)
+	//
+	//if verifyTcert == false || err != nil {
+	//	log.Error("Fail to verify tcert!", err)
+	//	return &common.UnauthorizedError{}
+	//}
 	return nil
 }
 

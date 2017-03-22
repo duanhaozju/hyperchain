@@ -9,7 +9,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"bytes"
 	"hyperchain/common"
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
@@ -1443,14 +1442,14 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 		type resp struct {
 			n uint64
 			view uint64
-			routers string
+			//routers string
 		}
 		viewCount := make(map[resp]uint64)
 		var result resp
 		canFind := false
 		for _, rs := range pbft.recoveryMgr.negoViewRspStore {
-			r := byteToString(rs.Routers)
-			ret := resp{rs.N, rs.View, r}
+			//r := byteToString(rs.Routers)
+			ret := resp{rs.N, rs.View}
 			if _, ok := viewCount[ret]; ok {
 				viewCount[ret]++
 			} else {
@@ -1468,12 +1467,12 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 			pbft.pbftTimerMgr.stopTimer(NEGO_VIEW_RSP_TIMER)
 			pbft.view = result.view
 			pbft.N = int(result.n)
-			routers, _ := stringToByte(result.routers)
-			if !bytes.Equal(routers, pbft.nodeMgr.routers) && !pbft.status.getState(&pbft.status.isNewNode) {
-				pbft.nodeMgr.routers = routers
-				pbft.logger.Debugf("Replica %d update routing table according to nego result", pbft.id)
-				pbft.helper.NegoRouters(routers)
-			}
+			//routers, _ := stringToByte(result.routers)
+			//if !bytes.Equal(routers, pbft.nodeMgr.routers) && !pbft.status.getState(&pbft.status.isNewNode) {
+			//	pbft.nodeMgr.routers = routers
+			//	pbft.logger.Debugf("Replica %d update routing table according to nego result", pbft.id)
+			//	pbft.helper.NegoRouters(routers)
+			//}
 			pbft.status.inActiveState(&pbft.status.inNegoView)
 			if atomic.LoadUint32(&pbft.activeView) == 0 {
 				atomic.StoreUint32(&pbft.activeView, 1)

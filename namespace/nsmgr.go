@@ -23,6 +23,7 @@ var (
 const (
 	DEFAULT_NAMESPACE  = "global"
 	NS_CONFIG_DIR_ROOT = "global.nsConfigRootPath"
+	DEFAULT_LOG = "system"
 )
 
 var once sync.Once
@@ -77,7 +78,7 @@ func newNsManager(conf *common.Config) *nsManagerImpl {
 
 //GetNamespaceManager get namespace registry instance.
 func GetNamespaceManager(conf *common.Config) NamespaceManager {
-	logger = common.GetLogger(DEFAULT_NAMESPACE, "nsmgr")
+	logger = common.GetLogger(DEFAULT_LOG, "nsmgr")
 	once.Do(func() {
 		nr = newNsManager(conf)
 	})
@@ -152,6 +153,7 @@ func (nr *nsManagerImpl) Register(name string) error {
 	}
 	nsConfigDir := configRootDir + "/" + name + "/config"
 	nsConfig := nr.constructConfigFromDir(nsConfigDir)
+	nsConfig.Set(common.NAMESPACE, name)
 	ns, err := GetNamespace(name, nsConfig)
 	if err != nil {
 		logger.Errorf("Construct namespace %s error, %v", name, err)

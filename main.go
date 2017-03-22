@@ -26,6 +26,8 @@ func main() {
 		globalConfig := common.NewConfig(argv.ConfigPath)
 		common.InitHyperLogger(globalConfig)
 
+		common.InitLog(globalConfig)
+
 		nsMgr = namespace.GetNamespaceManager(globalConfig)
 		nsMgr.Start()
 		jsonrpc.Start(nsMgr)
