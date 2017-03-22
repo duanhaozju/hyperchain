@@ -193,7 +193,7 @@ func (hub *EventHub) listenConsensusEvent() {
 		switch ev := obj.Data.(type) {
 		case event.BroadcastConsensusEvent:
 			log.Debugf("[Namespace = %s] message middleware: [broadcast consensus]", hub.namespace)
-			go hub.BroadcastConsensus(ev.Payload)
+			hub.peerManager.BroadcastPeers(ev.Payload)
 		case event.TxUniqueCastEvent:
 			log.Debugf("[Namespace = %s] message middleware: [tx unicast]", hub.namespace)
 			var peers []uint64
@@ -206,7 +206,16 @@ func (hub *EventHub) listenConsensusEvent() {
 				proto.Unmarshal(ev.Payload, tx)
 				hub.executor.RunInSandBox(tx)
 			} else {
-				go hub.sendMsg(ev.Payload)
+				msg, err :=  proto.Marshal(&protos.Message{
+					Type:    protos.Message_TRANSACTION,
+					Payload: ev.Payload,
+					Timestamp: time.Now().UnixNano(),
+					Id:        0,
+				})
+				if err != nil {
+					return
+				}
+				hub.consenter.RecvMsg(msg)
 			}
 		case event.ConsensusEvent:
 			log.Debugf("[Namespace = %s] message middleware: [receive consensus]", hub.namespace)
@@ -313,33 +322,6 @@ func (hub *EventHub) listenExecutorEvent() {
 	}
 }
 
-func (hub *EventHub) sendMsg(payload []byte) {
-	msg := &protos.Message{
-		Type:    protos.Message_TRANSACTION,
-		Payload: payload,
-		//Payload: payLoad,
-		Timestamp: time.Now().UnixNano(),
-		Id:        0,
-	}
-	msgSend, err := proto.Marshal(msg)
-	if err != nil {
-		log.Notice("sendMsg marshal message failed")
-		return
-	}
-	hub.consenter.RecvMsg(msgSend)
-
-}
-
-// Broadcast consensus msg to a batch of peers not knowing about it
-func (hub *EventHub) BroadcastConsensus(payload []byte) {
-	hub.peerManager.BroadcastPeers(payload)
-
-}
-
-func (hub *EventHub) GetNodeInfo() p2p.PeerInfos {
-	return hub.peerManager.GetPeerInfo()
-}
-
 func (hub *EventHub) PassRouters() {
 	router := hub.peerManager.GetRouters()
 	msg := protos.RoutersMessage{Routers: router}
@@ -348,7 +330,6 @@ func (hub *EventHub) PassRouters() {
 }
 
 func (hub *EventHub) NegotiateView() {
-
 	negoView := &protos.Message{
 		Type:      protos.Message_NEGOTIATE_VIEW,
 		Timestamp: time.Now().UnixNano(),
@@ -357,11 +338,10 @@ func (hub *EventHub) NegotiateView() {
 	}
 	msg, err := proto.Marshal(negoView)
 	if err != nil {
-		log.Notice("nego view start")
+		log.Error("marshal nego view failed")
+		return
 	}
-	hub.eventMux.Post(event.ConsensusEvent{
-		Payload: msg,
-	})
+	hub.consenter.RecvMsg(msg)
 }
 
 func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {

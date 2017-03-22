@@ -38,7 +38,7 @@ func (node *Node) GetNodes() (p2p.PeerInfos, error) {
 		return nil, &common.CallbackError{Message:"protocolManager is nil"}
 	}
 
-	return node.eh.GetNodeInfo(), nil
+	return node.eh.GetPeerManager().GetPeerInfo(), nil
 }
 
 func (node *Node) GetNodeHash() (string, error) {
