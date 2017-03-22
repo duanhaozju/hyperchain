@@ -10,7 +10,7 @@ import (
 
 type Code []byte
 
-func ExecTransaction(tx *types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
+func (executor *Executor) ExecTransaction(tx *types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
 	var (
 		from     = common.BytesToAddress(tx.From)
 		to       = common.BytesToAddress(tx.To)
@@ -22,21 +22,21 @@ func ExecTransaction(tx *types.Transaction, env vm.Environment) (receipt *types.
 		op       = tv.GetOp()
 	)
 
-	if valid := checkPermission(env, from, to, op); !valid {
+	if valid := executor.checkPermission(env, from, to, op); !valid {
 		return nil, nil, common.Address{}, InvalidInvokePermissionErr("not enough permission to invocation")
 	}
 
 	if tx.To == nil {
-		ret, addr, err = Exec(env, &from, nil, data, gas, gasPrice, amount, op)
+		ret, addr, err = executor.Exec(env, &from, nil, data, gas, gasPrice, amount, op)
 	} else {
-		ret, _, err = Exec(env, &from, &to, data, gas, gasPrice, amount, op)
+		ret, _, err = executor.Exec(env, &from, &to, data, gas, gasPrice, amount, op)
 	}
 
 	receipt = makeReceipt(env, addr, tx.GetHash(), gas, ret, err)
 	return receipt, ret, addr, err
 }
 
-func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
+func (executor *Executor) Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
 	var sender vm.Account
 
@@ -52,26 +52,26 @@ gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr co
 		ret, addr, err = vmenv.Create(sender, data, gas, gasPrice, value)
 		if err != nil {
 			ret = nil
-			log.Error("VM create err:", err)
+			executor.logger.Error("VM create err:", err)
 		}
 	} else {
 		ret, err = vmenv.Call(sender, *to, data, gas, gasPrice, value, int32(op))
 		if err != nil {
-			log.Error("VM call err:", err)
+			executor.logger.Error("VM call err:", err)
 		}
 	}
 	return ret, addr, err
 }
 
-func checkPermission(env vm.Environment, from, to common.Address, op types.TransactionValue_Opcode) bool {
+func (executor *Executor) checkPermission(env vm.Environment, from, to common.Address, op types.TransactionValue_Opcode) bool {
 	if op == types.TransactionValue_UPDATE || op == types.TransactionValue_FREEZE || op == types.TransactionValue_UNFREEZE {
-		log.Debugf("caller address %s", from.Hex())
-		log.Debugf("callee address %s", from.Hex())
+		executor.logger.Debugf("caller address %s", from.Hex())
+		executor.logger.Debugf("callee address %s", from.Hex())
 		if bytes.Compare(to.Bytes(), nil) == 0 {
 			return false
 		}
 		if bytes.Compare(from.Bytes(), env.Db().GetCreator(to).Bytes()) != 0 {
-			log.Errorf("only contract owner %s can do `update`, `freeze` or `unfreeze` operations. %s doesn't has enough permission",
+			executor.logger.Errorf("only contract owner %s can do `update`, `freeze` or `unfreeze` operations. %s doesn't has enough permission",
 				env.Db().GetCreator(to).Hex(), from.Hex())
 			return false
 		}

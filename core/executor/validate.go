@@ -30,16 +30,16 @@ func (executor *Executor) Validate(validationEvent event.ValidationEvent) {
 
 // listenValidationEvent - validation backend process, use to listen new validation event and dispatch it to a processor.
 func (executor *Executor) listenValidationEvent() {
-	log.Notice("validation backend start")
+	executor.logger.Notice("validation backend start")
 	for {
 		select {
 		case <- executor.getExit(IDENTIFIER_VALIDATION):
-			log.Notice("validation backend exit")
+			executor.logger.Notice("validation backend exit")
 			return
 		case ev := <- executor.fetchValidationEvent():
 			if executor.isReadyToValidation() {
 				if success := executor.processValidationEvent(ev, executor.processValidationDone); success == false {
-					log.Errorf("validate #%d failed, system crush down.", ev.SeqNo)
+					executor.logger.Errorf("validate #%d failed, system crush down.", ev.SeqNo)
 				}
 			} else {
 				executor.dropValdiateEvent(ev, executor.processValidationDone)
@@ -88,7 +88,7 @@ func (executor *Executor) dropValdiateEvent(validationEvent event.ValidationEven
 	executor.markValidationBusy()
 	defer executor.markValidationIdle()
 	defer done()
-	log.Noticef("[Namespace = %s] drop validation event %d", executor.namespace, validationEvent.SeqNo)
+	executor.logger.Noticef("[Namespace = %s] drop validation event %d", executor.namespace, validationEvent.SeqNo)
 }
 
 // Process an ValidationEvent
@@ -100,13 +100,13 @@ func (executor *Executor) process(validationEvent event.ValidationEvent, done fu
 	invalidtxs, validtxs = executor.checkSign(validationEvent.Transactions)
 	err, validateResult := executor.applyTransactions(validtxs, invalidtxs, validationEvent.SeqNo)
 	if err != nil {
-		log.Errorf("[Namespace = %s] process transaction batch #%d failed.", executor.namespace, validationEvent.SeqNo)
+		executor.logger.Errorf("[Namespace = %s] process transaction batch #%d failed.", executor.namespace, validationEvent.SeqNo)
 		return err, false
 	}
 	// calculate validation result hash for comparison
 	hash := executor.calculateValidationResultHash(validateResult.MerkleRoot, validateResult.TxRoot, validateResult.ReceiptRoot)
-	log.Debugf("[Namespace = %s] invalid transaction number %d", executor.namespace, len(validateResult.InvalidTxs))
-	log.Debugf("[Namespace = %s] valid transaction number %d", executor.namespace, len(validateResult.ValidTxs))
+	executor.logger.Debugf("[Namespace = %s] invalid transaction number %d", executor.namespace, len(validateResult.InvalidTxs))
+	executor.logger.Debugf("[Namespace = %s] valid transaction number %d", executor.namespace, len(validateResult.ValidTxs))
 	executor.saveValidationResult(validateResult, validationEvent, hash)
 	executor.sendValidationResult(validateResult, validationEvent, hash)
 	if len(validateResult.ValidTxs) == 0 {
@@ -127,7 +127,7 @@ func (executor *Executor) checkSign(txs []*types.Transaction) ([]*types.InvalidT
 		go func(i int) {
 			tx := txs[i]
 			if !tx.ValidateSign(executor.encryption, executor.commonHash) {
-				log.Warningf("[Namespace = %s] found invalid signature, send from : %d", executor.namespace, tx.Id)
+				executor.logger.Warningf("[Namespace = %s] found invalid signature, send from : %d", executor.namespace, tx.Id)
 				mu.Lock()
 				invalidtxs = append(invalidtxs, &types.InvalidTransactionRecord{
 					Tx:      tx,
@@ -159,13 +159,13 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 	var validtxs []*types.Transaction
 	var receipts []*types.Receipt
 
-	env := initEnvironment(executor.statedb, executor.getTempBlockNumber())
+	env := executor.initEnvironment(executor.statedb, executor.getTempBlockNumber())
 	executor.initCalculator()
 	executor.statedb.MarkProcessStart(executor.getTempBlockNumber())
 	// execute transactions one by one
 	for i, tx := range txs {
 		executor.statedb.StartRecord(tx.GetHash(), common.Hash{}, i)
-		receipt, _, _, err := ExecTransaction(tx, env)
+		receipt, _, _, err := executor.ExecTransaction(tx, env)
 		if err != nil {
 			errType := executor.classifyInvalid(err)
 			invalidTxs = append(invalidTxs, &types.InvalidTransactionRecord{
@@ -182,11 +182,11 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 	}
 	err, merkleRoot, txRoot, receiptRoot := executor.submitValidationResult()
 	if err != nil {
-		log.Errorf("[Namespace = %s] submit validation result failed.", executor.namespace, err.Error())
+		executor.logger.Errorf("[Namespace = %s] submit validation result failed.", executor.namespace, err.Error())
 		return err, nil
 	}
 	executor.resetStateDb()
-	log.Debugf("[Namespace = %s] validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
+	executor.logger.Debugf("[Namespace = %s] validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
 		executor.namespace, executor.getTempBlockNumber(), seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	return nil, &ValidationResultRecord{
 		TxRoot:      txRoot,
@@ -199,11 +199,11 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 }
 
 // initialize transaction execution environment
-func initEnvironment(state vm.Database, seqNo uint64) vm.Environment {
+func (executor *Executor) initEnvironment(state vm.Database, seqNo uint64) vm.Environment {
 	env := make(map[string]string)
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
 	env["currentGasLimit"] = "200000000"
-	vmenv := NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, state, env)
+	vmenv := NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, state, env, executor.logger)
 	return vmenv
 }
 
@@ -230,7 +230,7 @@ func (executor *Executor) submitValidationResult() (error, []byte, []byte, []byt
 	// flush all state change
 	root, err := executor.statedb.Commit()
 	if err != nil {
-		log.Errorf("[Namespace = %s] commit state db failed! error msg, ", executor.namespace, err.Error())
+		executor.logger.Errorf("[Namespace = %s] commit state db failed! error msg, ", executor.namespace, err.Error())
 		return err, nil, nil, nil
 	}
 	merkleRoot := root.Bytes()

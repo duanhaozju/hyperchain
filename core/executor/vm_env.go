@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"hyperchain/hyperdb/db"
 	"hyperchain/core/types"
+	"github.com/op/go-logging"
 )
 
 var (
@@ -105,6 +106,7 @@ type Env struct {
 	gasLimit   *big.Int
 
 	logs []vm.StructLog
+	logger     *logging.Logger
 
 	vmTest bool
 
@@ -119,7 +121,7 @@ func NewEnv(ruleSet RuleSet, state vm.Database) *Env {
 	return env
 }
 
-func NewEnvFromMap(ruleSet RuleSet, state vm.Database, envValues map[string]string) *Env {
+func NewEnvFromMap(ruleSet RuleSet, state vm.Database, envValues map[string]string, logger *logging.Logger) *Env {
 	env := NewEnv(ruleSet, state)
 	env.time = common.Big(envValues["currentTimestamp"])
 	env.gasLimit = common.Big(envValues["currentGasLimit"])
@@ -129,6 +131,7 @@ func NewEnvFromMap(ruleSet RuleSet, state vm.Database, envValues map[string]stri
 		EnableJit: EnableJit,
 		ForceJit:  ForceJit,
 	})
+	env.logger = logger
 
 	return env
 }
@@ -143,6 +146,7 @@ func (self *Env) Difficulty() *big.Int     { return self.difficulty }
 func (self *Env) Db() vm.Database          { return self.state }
 func (self *Env) GasLimit() *big.Int       { return self.gasLimit }
 func (self *Env) VmType() vm.Type          { return vm.StdVmTy }
+func (self *Env) Logger() *logging.Logger  { return self.logger}
 func (self *Env) GetHash(n uint64) common.Hash {
 	return common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(n)).String())))
 }

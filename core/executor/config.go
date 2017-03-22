@@ -25,7 +25,7 @@ func (executor *Executor) GetBucketSize(choice string) int {
 	case STATEOBJECT:
 		return executor.conf.GetInt(stateObjectBucketSize)
 	default:
-		log.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
+		executor.logger.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
 		return 0
 	}
 }
@@ -38,7 +38,7 @@ func (executor *Executor) GetBucketLevelGroup(choice string) int {
 	case STATEOBJECT:
 		return executor.conf.GetInt(stateObjectBucketLevelGroup)
 	default:
-		log.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
+		executor.logger.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
 		return 0
 	}
 }
@@ -51,7 +51,7 @@ func (executor *Executor) GetBucketCacheSize(choice string) int {
 	case STATEOBJECT:
 		return executor.conf.GetInt(stateObjectBucketCacheSize)
 	default:
-		log.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
+		executor.logger.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
 		return 0
 	}
 }

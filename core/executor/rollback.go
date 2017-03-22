@@ -12,7 +12,7 @@ func (executor *Executor) Rollback(ev event.VCResetEvent) {
 	executor.waitUtilRollbackAvailable()
 	defer executor.rollbackDone()
 
-	log.Noticef("[Namespace = %s] receive vc reset event, required revert to %d", executor.namespace, ev.SeqNo-1)
+	executor.logger.Noticef("[Namespace = %s] receive vc reset event, required revert to %d", executor.namespace, ev.SeqNo-1)
 	batch := executor.db.NewBatch()
 	// revert state
 	if err := executor.revertState(batch, ev.SeqNo - 1); err != nil {
@@ -20,12 +20,12 @@ func (executor *Executor) Rollback(ev event.VCResetEvent) {
 	}
 	// Delete related transaction, receipt, txmeta, and block itself in a specific range
 	if err := executor.cutdownChain(batch, ev.SeqNo - 1); err != nil {
-		log.Errorf("[Namespace = %s] remove block && transaction in range %d to %d failed.", ev.SeqNo, edb.GetHeightOfChain(executor.namespace))
+		executor.logger.Errorf("[Namespace = %s] remove block && transaction in range %d to %d failed.", ev.SeqNo, edb.GetHeightOfChain(executor.namespace))
 		return
 	}
 	// remove uncommitted data
 	if err := executor.clearUncommittedData(batch); err != nil {
-		log.Errorf("[Namespace = %s] remove uncommitted data failed", executor.namespace)
+		executor.logger.Errorf("[Namespace = %s] remove uncommitted data failed", executor.namespace)
 		return
 	}
 	// Reset chain
@@ -40,7 +40,7 @@ func (executor *Executor) CutdownBlock(number uint64) error {
 	executor.waitUtilRollbackAvailable()
 	defer executor.rollbackDone()
 
-	log.Noticef("[Namespace = %s] cutdown block, required revert to %d", executor.namespace, number)
+	executor.logger.Noticef("[Namespace = %s] cutdown block, required revert to %d", executor.namespace, number)
 	// 2. revert state
 	batch := executor.db.NewBatch()
 	if err := executor.revertState(batch, number - 1); err != nil {
@@ -48,19 +48,19 @@ func (executor *Executor) CutdownBlock(number uint64) error {
 	}
 	// 3. remove block releted data
 	if err := executor.cutdownChainByRange(batch, number, number); err != nil {
-		log.Errorf("remove block && transaction %d", number)
+		executor.logger.Errorf("remove block && transaction %d", number)
 		return err
 	}
 	// 4. remove uncommitted data
 	if err := executor.clearUncommittedData(batch); err != nil {
-		log.Errorf("remove uncommitted of %d failed", number)
+		executor.logger.Errorf("remove uncommitted of %d failed", number)
 		return err
 	}
 	// 5. reset chain data
 	edb.UpdateChainByBlcokNum(executor.namespace, batch, number - 1, false, false)
 	// flush all modified to disk
 	batch.Write()
-	log.Noticef("[Namespace = %s] cut down block #%d success. remove all related transactions, receipts, state changes and block together.", executor.namespace, number)
+	executor.logger.Noticef("[Namespace = %s] cut down block #%d success. remove all related transactions, receipts, state changes and block together.", executor.namespace, number)
 	executor.initDemand(edb.GetHeightOfChain(executor.namespace))
 	return nil
 }
@@ -74,22 +74,22 @@ func (executor *Executor) cutdownChainByRange(batch db.Batch, from, to uint64) e
 	for i := from; i <= to; i += 1 {
 		block, err := edb.GetBlockByNumber(executor.namespace, i)
 		if err != nil {
-			log.Errorf("miss block %d ,error msg %s", i, err.Error())
+			executor.logger.Errorf("miss block %d ,error msg %s", i, err.Error())
 			continue
 		}
 
 		for _, tx := range block.Transactions {
 			if err := edb.DeleteTransaction(batch, tx.GetHash().Bytes(), false, false); err != nil {
-				log.Errorf("[Namespace = %s] delete useless tx in block %d failed, error msg %s", executor.namespace, i, err.Error())
+				executor.logger.Errorf("[Namespace = %s] delete useless tx in block %d failed, error msg %s", executor.namespace, i, err.Error())
 			}
 			if err := edb.DeleteReceipt(batch, tx.GetHash().Bytes(), false, false); err != nil {
-				log.Errorf("[Namespace = %s] delete useless receipt in block %d failed, error msg %s", executor.namespace, i, err.Error())
+				executor.logger.Errorf("[Namespace = %s] delete useless receipt in block %d failed, error msg %s", executor.namespace, i, err.Error())
 			}
 		}
 		edb.SetTxDeltaOfMemChain(executor.namespace, uint64(len(block.Transactions)))
 		// delete block
 		if err := edb.DeleteBlockByNum(executor.namespace, batch, i, false, false); err != nil {
-			log.Errorf("[Namespace = %s] delete useless block %d failed, error msg %s", executor.namespace, i, err.Error())
+			executor.logger.Errorf("[Namespace = %s] delete useless block %d failed, error msg %s", executor.namespace, i, err.Error())
 		}
 	}
 	return nil

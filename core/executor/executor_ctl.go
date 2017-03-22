@@ -41,12 +41,12 @@ func initializeExecutorStatus(executor *Executor) error {
 	executor.initDemand(currentChain.Height + 1)
 	blk, err := edb.GetBlockByNumber(executor.namespace, currentChain.Height)
 	if err != nil {
-		log.Errorf("[Namespace = %s] get block #%d failed.", executor.namespace, currentChain.Height)
+		executor.logger.Errorf("[Namespace = %s] get block #%d failed.", executor.namespace, currentChain.Height)
 		executor.status.lastValidationState.Store(common.Hash{})
 		return err
 	} else {
 		executor.status.lastValidationState.Store(common.BytesToHash(blk.MerkleRoot))
-		log.Noticef("[Namespace = %s] initialize executor status success. demand block number %d, demand seqNo %d, latest state hash %s",
+		executor.logger.Noticef("[Namespace = %s] initialize executor status success. demand block number %d, demand seqNo %d, latest state hash %s",
 			executor.namespace, executor.status.demandNumber, executor.status.demandSeqNo, common.Bytes2Hex(blk.MerkleRoot))
 		return nil
 	}
@@ -61,12 +61,12 @@ func (executor *Executor) initDemand(num uint64) {
 // Demand block number
 func (executor *Executor) incDemandNumber() {
 	executor.status.demandNumber += 1
-	log.Debugf("[Namespace = %s] increase demand number to %d", executor.namespace, executor.status.demandNumber)
+	executor.logger.Debugf("[Namespace = %s] increase demand number to %d", executor.namespace, executor.status.demandNumber)
 }
 
 func (executor *Executor) setDemandNumber(num uint64) {
 	executor.status.demandNumber = num
-	log.Debugf("[Namespace = %s] set demand number to %d", executor.namespace, executor.status.demandNumber)
+	executor.logger.Debugf("[Namespace = %s] set demand number to %d", executor.namespace, executor.status.demandNumber)
 }
 
 func (executor *Executor) getDemandNumber() uint64 {
@@ -80,12 +80,12 @@ func (executor *Executor) isDemandNumber(num uint64) bool {
 // Demand seqNo
 func (executor *Executor) incDemandSeqNo() {
 	executor.status.demandSeqNo += 1
-	log.Debugf("[Namespace = %s] increase demand seqNo to %d", executor.namespace, executor.status.demandSeqNo)
+	executor.logger.Debugf("[Namespace = %s] increase demand seqNo to %d", executor.namespace, executor.status.demandSeqNo)
 }
 
 func (executor *Executor) setDemandSeqNo(num uint64) {
 	executor.status.demandSeqNo = num
-	log.Debugf("[Namespace = %s] set demand seqNo to %d", executor.namespace, executor.status.demandSeqNo)
+	executor.logger.Debugf("[Namespace = %s] set demand seqNo to %d", executor.namespace, executor.status.demandSeqNo)
 }
 
 func (executor *Executor) getDemandSeqNo() uint64 {
@@ -99,12 +99,12 @@ func (executor *Executor) isDemandSeqNo(num uint64) bool {
 // Temp block number
 func (executor *Executor) incTempBlockNumber() {
 	executor.status.tempBlockNumber += 1
-	log.Debugf("[Namespace = %s] increase temp block number to %d", executor.namespace, executor.status.tempBlockNumber)
+	executor.logger.Debugf("[Namespace = %s] increase temp block number to %d", executor.namespace, executor.status.tempBlockNumber)
 }
 
 func (executor *Executor) setTempBlockNumber(num uint64) {
 	executor.status.tempBlockNumber = num
-	log.Debugf("[Namespace = %s] set temp block number to %d", executor.namespace, executor.status.tempBlockNumber)
+	executor.logger.Debugf("[Namespace = %s] set temp block number to %d", executor.namespace, executor.status.tempBlockNumber)
 }
 
 func (executor *Executor) getTempBlockNumber() uint64 {
@@ -124,13 +124,13 @@ func (executor *Executor) retrieveStateHash() common.Hash {
 
 // turnOffValidationSwitch - turn on validation switch, executor will process received event.
 func (executor *Executor) turnOnValidationSwitch() {
-	log.Debugf("[Namespace = %s] turn on validation switch", executor.namespace)
+	executor.logger.Debugf("[Namespace = %s] turn on validation switch", executor.namespace)
 	atomic.StoreInt32(&executor.status.validateBehaveFlag, VALIDATION_NORMAL)
 }
 
 // turnOffValidationSwitch - turn off validation switch, executor will drop all received event when the switch turn off.
 func (executor *Executor) turnOffValidationSwitch() {
-	log.Debugf("[Namespace = %s] turn off validation switch", executor.namespace)
+	executor.logger.Debugf("[Namespace = %s] turn off validation switch", executor.namespace)
 	atomic.StoreInt32(&executor.status.validateBehaveFlag, VALIDATION_IGNORE)
 }
 
@@ -144,32 +144,32 @@ func (executor *Executor) isReadyToValidation() bool {
 
 // markValidationBusy - mark executor is in validation.
 func (executor *Executor) markValidationBusy() {
-	log.Debugf("[Namespace = %s] mark validation busy", executor.namespace)
+	executor.logger.Debugf("[Namespace = %s] mark validation busy", executor.namespace)
 	atomic.StoreInt32(&executor.status.validateInProgress, BUSY)
 }
 
 // markValidationBusy - mark executor is idle.
 func (executor *Executor) markValidationIdle() {
-	log.Debugf("[Namespace = %s] mark validation idle", executor.namespace)
+	executor.logger.Debugf("[Namespace = %s] mark validation idle", executor.namespace)
 	atomic.StoreInt32(&executor.status.validateInProgress, IDLE)
 }
 
 // markCommitBusy - mark executor is in commit.
 func (executor *Executor) markCommitBusy() {
-	log.Debugf("[Namespace = %s] mark commit busy", executor.namespace)
+	executor.logger.Debugf("[Namespace = %s] mark commit busy", executor.namespace)
 	atomic.StoreInt32(&executor.status.commitInProgress, BUSY)
 }
 
 // markCommitIdle - mark executor is idle.
 func (executor *Executor) markCommitIdle() {
-	log.Debugf("[Namespace = %s] mark commit idle", executor.namespace)
+	executor.logger.Debugf("[Namespace = %s] mark commit idle", executor.namespace)
 	atomic.StoreInt32(&executor.status.commitInProgress, IDLE)
 }
 
 // waitUtilValidationIdle - suspend thread util all validations event has been process done.
 func (executor *Executor) waitUtilValidationIdle() {
-	log.Debugf("[Namespace = %s] wait validation idle", executor.namespace)
-	defer log.Debugf("[Namespace = %s] validation idle", executor.namespace)
+	executor.logger.Debugf("[Namespace = %s] wait validation idle", executor.namespace)
+	defer executor.logger.Debugf("[Namespace = %s] validation idle", executor.namespace)
 	ticker := time.NewTicker(1 * time.Millisecond)
 	for {
 		select {
@@ -185,8 +185,8 @@ func (executor *Executor) waitUtilValidationIdle() {
 
 // wailUtilCommitIdle - suspend thread util all commit events has been process done.
 func (executor *Executor) wailUtilCommitIdle() {
-	log.Debugf("[Namespace = %s] wait commit idle", executor.namespace)
-	defer log.Debugf("[Namespace = %s] commit idle", executor.namespace)
+	executor.logger.Debugf("[Namespace = %s] wait commit idle", executor.namespace)
+	defer executor.logger.Debugf("[Namespace = %s] commit idle", executor.namespace)
 	ticker := time.NewTicker(1 * time.Millisecond)
 	for {
 		select {
@@ -202,8 +202,8 @@ func (executor *Executor) wailUtilCommitIdle() {
 
 // waitUtilRollbackAvailable - wait validation processor and commit processor become idle.
 func (executor *Executor) waitUtilRollbackAvailable() {
-	log.Debugf("[Namespace = %s] wait util rollback available", executor.namespace)
-	defer log.Debugf("[Namespace = %s] rollback available", executor.namespace)
+	executor.logger.Debugf("[Namespace = %s] wait util rollback available", executor.namespace)
+	defer executor.logger.Debugf("[Namespace = %s] rollback available", executor.namespace)
 	executor.clearPendingValidationEventQ()
 	executor.turnOffValidationSwitch()
 	executor.waitUtilValidationIdle()
@@ -218,14 +218,14 @@ func (executor *Executor) waitUtilRollbackAvailable() {
 
 // rollbackDone - rollback callback function to notify rollback finish.
 func (executor *Executor) rollbackDone() {
-	log.Debugf("[Namespace = %s] roll back done", executor.namespace)
+	executor.logger.Debugf("[Namespace = %s] roll back done", executor.namespace)
 	executor.turnOnValidationSwitch()
 }
 
 // waitUtilSyncAvailable - wait validation processor and commit processor become idle.
 func (executor *Executor) waitUtilSyncAvailable() {
-	log.Debugf("[Namespace = %s] wait util sync available", executor.namespace)
-	defer log.Debugf("[Namespace = %s] sync available", executor.namespace)
+	executor.logger.Debugf("[Namespace = %s] wait util sync available", executor.namespace)
+	defer executor.logger.Debugf("[Namespace = %s] sync available", executor.namespace)
 	executor.turnOffValidationSwitch()
 	executor.waitUtilValidationIdle()
 	executor.wailUtilCommitIdle()
@@ -239,7 +239,7 @@ func (executor *Executor) waitUtilSyncAvailable() {
 
 // syncDone - sync callback function to notify sync finish.
 func (executor *Executor) syncDone() {
-	log.Debugf("[Namespace = %s] sync done", executor.namespace)
+	executor.logger.Debugf("[Namespace = %s] sync done", executor.namespace)
 	executor.turnOnValidationSwitch()
 	executor.cache.syncCache.Purge()
 }
