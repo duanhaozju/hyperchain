@@ -232,15 +232,7 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 		switch ev := obj.Data.(type) {
 		case event.NewPeerEvent:
 			log.Debugf("[Namespace = %s] message middleware: [new peer]", hub.namespace)
-			msg := &protos.AddNodeMessage{
-				Payload: ev.Payload,
-			}
-			e := &pbft.LocalEvent{
-				Service:   pbft.NODE_MGR_SERVICE,
-				EventType: pbft.NODE_MGR_ADD_NODE_EVENT,
-				Event:     msg,
-			}
-			hub.consenter.RecvLocal(e)
+			hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_ADD_NODE_EVENT, &protos.AddNodeMessage{ev.Payload})
 		case event.BroadcastNewPeerEvent:
 			log.Debugf("[Namespace = %s] message middleware: [broadcast new peer]", hub.namespace)
 			peers := hub.peerManager.GetAllPeers()
@@ -262,12 +254,7 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 				Id:         id,
 				Del:        del,
 			}
-			e := &pbft.LocalEvent{
-				Service:   pbft.NODE_MGR_SERVICE,
-				EventType: pbft.NODE_MGR_DEL_NODE_EVENT,
-				Event:     msg,
-			}
-			hub.consenter.RecvLocal(e)
+			hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_DEL_NODE_EVENT, msg)
 		case event.BroadcastDelPeerEvent:
 			log.Debugf("[Namespace = %s] message middleware: [broadcast delete peer]", hub.namespace)
 			peers := hub.peerManager.GetAllPeers()
@@ -295,15 +282,7 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 			if hub.initType == 1 {
 				hub.peerManager.SetOnline()
 				payload := hub.peerManager.GetLocalAddressPayload()
-				msg := &protos.NewNodeMessage{
-					Payload: payload,
-				}
-				e := &pbft.LocalEvent{
-					Service:   pbft.NODE_MGR_SERVICE,
-					EventType: pbft.NODE_MGR_NEW_NODE_EVENT,
-					Event:     msg,
-				}
-				hub.consenter.RecvLocal(e)
+				hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_NEW_NODE_EVENT, &protos.NewNodeMessage{payload})
 				hub.PassRouters()
 				hub.NegotiateView()
 			}
@@ -344,72 +323,3 @@ func (hub *EventHub) NegotiateView() {
 	hub.consenter.RecvMsg(msg)
 }
 
-func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {
-	switch ev.Type {
-	case executor.NOTIFY_REMOVE_CACHE:
-		log.Debugf("[Namespace = %s] message middleware: [remove cache]", hub.namespace)
-		hub.consenter.RecvLocal(ev.Payload)
-	case executor.NOTIFY_VC_DONE:
-		log.Debugf("[Namespace = %s] message middleware: [vc done]", hub.namespace)
-		e := &pbft.LocalEvent{
-			Service:   pbft.VIEW_CHANGE_SERVICE,
-			EventType: pbft.VIEW_CHANGE_VC_RESET_DONE_EVENT,
-			Event:     ev.Payload,
-		}
-		hub.consenter.RecvLocal(e)
-	case executor.NOTIFY_VALIDATION_RES:
-		log.Debugf("[Namespace = %s] message middleware: [validation result]", hub.namespace)
-		e := &pbft.LocalEvent{
-			Service:   pbft.CORE_PBFT_SERVICE,
-			EventType: pbft.CORE_VALIDATED_TXS_EVENT,
-			Event:     ev.Payload,
-		}
-		hub.consenter.RecvLocal(e)
-	case executor.NOTIFY_SYNC_DONE:
-		log.Debugf("[Namespace = %s] message middleware: [sync done]", hub.namespace)
-		hub.consenter.RecvMsg(ev.Payload.([]byte))
-	}
-}
-func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
-	switch ev.Type {
-	case executor.NOTIFY_BROADCAST_DEMAND:
-		log.Debugf("[Namespace = %s] message middleware: [broadcast demand]", hub.namespace)
-		hub.peerManager.SendMsgToPeers(ev.Payload, ev.Peers, recovery.Message_SYNCCHECKPOINT)
-	case executor.NOTIFY_UNICAST_INVALID:
-		log.Debugf("[Namespace = %s] message middleware: [unicast invalid tx]", hub.namespace)
-		peerId := ev.Peers[0]
-		if peerId == uint64(hub.peerManager.GetNodeId()) {
-			hub.executor.StoreInvalidTransaction(event.InvalidTxsEvent{
-				Payload: ev.Payload,
-			})
-		} else {
-			hub.peerManager.SendMsgToPeers(ev.Payload, ev.Peers, recovery.Message_INVALIDRESP)
-		}
-	case executor.NOTIFY_BROADCAST_SINGLE:
-		log.Debugf("[Namespace = %s] message middleware: [broadcast single]", hub.namespace)
-		hub.peerManager.SendMsgToPeers(ev.Payload, ev.Peers, recovery.Message_SYNCSINGLE)
-	case executor.NOTIFY_UNICAST_BLOCK:
-		log.Debugf("[Namespace = %s] message middleware: [unicast block]", hub.namespace)
-		hub.peerManager.SendMsgToPeers(ev.Payload, ev.Peers, recovery.Message_SYNCBLOCK)
-	case executor.NOTIFY_SYNC_REPLICA:
-		log.Debugf("[Namespace = %s] message middleware: [sync replica]", hub.namespace)
-		chain := &types.Chain{}
-		proto.Unmarshal(ev.Payload, chain)
-		addr := hub.peerManager.GetLocalNode().GetNodeAddr()
-		payload, _ := proto.Marshal(&types.ReplicaInfo{
-			Chain:     chain,
-			Ip:        []byte(addr.IP),
-			Port:      int32(addr.Port),
-			Namespace: []byte(hub.namespace),
-		})
-		peers := hub.peerManager.GetVPPeers()
-		var peerIds = make([]uint64, len(peers))
-		for idx, peer := range peers {
-			peerIds[idx] = uint64(peer.PeerAddr.ID)
-		}
-		hub.peerManager.SendMsgToPeers(payload, peerIds, recovery.Message_SYNCREPLICA)
-		hub.eventMux.Post(event.ReplicaInfoEvent{
-			Payload: payload,
-		})
-	}
-}

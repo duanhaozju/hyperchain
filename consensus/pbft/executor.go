@@ -46,7 +46,7 @@ func (pbft *pbftImpl) msgToEvent (msg *ConsensusMessage) (interface{}, error) {
 
 //dispatchMsgToService dispatch messgae to the related services.
 //TODO: refactor consensus message format
-func (pbft *pbftImpl) dispatchMsgToService(e events.Event) serviceType  {
+func (pbft *pbftImpl) dispatchMsgToService(e events.Event) int  {
 	switch e.(type) {
 	//core PBFT service
 	case *TransactionBatch:
