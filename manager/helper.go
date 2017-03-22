@@ -38,6 +38,18 @@ func (hub *EventHub) broadcast(bType int, t m.Package_Type, message []byte) {
 	}
 }
 
+func (hub *EventHub) send(t m.Package_Type, message []byte, peers []uint64) {
+	if ctx, err := proto.Marshal(&m.Package{
+		Type:    t,
+		Payload: message,
+	}); err != nil {
+		log.Errorf("marshal message %d failed.", t)
+		return
+	} else {
+		hub.peerManager.SendMsgToPeers(ctx, peers, 0)
+	}
+}
+
 func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {
 	switch ev.Type {
 	case executor.NOTIFY_REMOVE_CACHE:
