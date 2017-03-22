@@ -145,16 +145,8 @@ func (pbft *pbftImpl) handleCorePbftEvent(e *LocalEvent) events.Event {
 		pbft.logger.Noticef("Replica %d first request timer expires", pbft.id)
 		return pbft.sendViewChange()
 
-	//case CORE_REMOVE_CACHE_EVENT:
-	//	vid := e.Event.(protos.RemoveCache).Vid
-	//	ok := pbft.recvRemoveCache(vid)
-	//	if !ok {
-	//		pbft.logger.Warningf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
-	//	}
-	//	return nil
-
 	case CORE_STATE_UPDATE_EVENT:
-		pbft.recvStateUpdatedEvent(e.Event.(*stateUpdatedEvent))
+		pbft.recvStateUpdatedEvent(e.Event.(protos.StateUpdatedMessage))
 		return nil
 
 	case CORE_VALIDATED_TXS_EVENT:
