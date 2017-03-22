@@ -21,7 +21,7 @@ const (
 // CreateInitBlock - create genesis for a specific namespace.
 func (executor *Executor) CreateInitBlock(config *common.Config) error {
 	if edb.IsGenesisFinish(executor.namespace) {
-		log.Infof("[Namespace = %s] already genesis", executor.namespace)
+		executor.logger.Infof("[Namespace = %s] already genesis", executor.namespace)
 		return nil
 	}
 	type Genesis struct {
@@ -38,7 +38,7 @@ func (executor *Executor) CreateInitBlock(config *common.Config) error {
 		return err
 	}
 	// create state instance with empty root hash
-	stateDb, err := NewStateDb(executor.namespace, config, executor.db)
+	stateDb, err := NewStateDb(config, executor.db)
 	if err != nil {
 		return err
 	}
@@ -74,10 +74,9 @@ func (executor *Executor) CreateInitBlock(config *common.Config) error {
 }
 
 // NewStateDb - create a empty stateDb handler.
-func NewStateDb(namespace string, conf *common.Config, db db.Database) (vm.Database, error) {
+func NewStateDb(conf *common.Config, db db.Database) (vm.Database, error) {
 	stateDb, err := hyperstate.New(common.Hash{}, db, conf, 0)
 	if err != nil {
-		log.Errorf("[Namespace = %s] new stateDb failed, err : %s", namespace, err.Error())
 		return nil, err
 	}
 	return stateDb, nil
