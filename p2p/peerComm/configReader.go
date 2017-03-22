@@ -13,6 +13,7 @@ import (
 type ConfigReader struct {
 	Config    PeerConfig
 	nodes     map[int]Address
+	cNodes    []PeerConfigNodes
 	maxNode   int
 	path      string
 	writeLock sync.Mutex
@@ -24,18 +25,21 @@ func NewConfigReader(configpath string) *ConfigReader {
 
 	if err != nil {
 		log.Error(err)
+		return nil
 	}
 	config := PeerConfig{}
 	err = json.Unmarshal(content, &config)
 	if err != nil {
 		log.Error(err)
+		return nil
+
 	}
 	var configReader ConfigReader
 	configReader.Config = config
 	configReader.maxNode = config.Maxpeernode
 	configReader.nodes = make(map[int]Address)
 	configReader.path = configpath
-
+	configReader.cNodes =config.PeerNodes
 	slice := config.PeerNodes
 	for _, node := range slice {
 		temp_addr := Address{
@@ -52,35 +56,39 @@ func NewConfigReader(configpath string) *ConfigReader {
 	return &configReader
 }
 
-func (conf *ConfigReader) GetLocalID() int {
+func (conf *ConfigReader)Peers()[]PeerConfigNodes{
+	return conf.cNodes
+}
+
+func (conf *ConfigReader) LocalID() int {
 	return conf.Config.SelfConfig.NodeID
 }
 
-func (conf *ConfigReader) GetLocalIP() string {
+func (conf *ConfigReader) LocalIP() string {
 	return conf.Config.SelfConfig.LocalIP
 }
 
-func (conf *ConfigReader) GetLocalGRPCPort() int {
+func (conf *ConfigReader) LocalGRPCPort() int {
 	return conf.Config.SelfConfig.GrpcPort
 }
 
-func (conf *ConfigReader) GetLocalJsonRPCPort() int {
+func (conf *ConfigReader) LocalJsonRPCPort() int {
 	return conf.Config.SelfConfig.JsonrpcPort
 }
 
-func (conf *ConfigReader) GetIntroducerIP() string {
+func (conf *ConfigReader) IntroIP() string {
 	return conf.Config.SelfConfig.IntroducerIP
 }
 
-func (conf *ConfigReader) GetIntroducerID() int {
+func (conf *ConfigReader) IntroID() int {
 	return conf.Config.SelfConfig.IntroducerID
 }
 
-func (conf *ConfigReader) GetIntroducerJSONRPCPort() int {
+func (conf *ConfigReader) IntroJSONRPCPort() int {
 	return conf.Config.SelfConfig.IntroducerJSONRPCPort
 }
 
-func (conf *ConfigReader) GetIntroducerPort() int {
+func (conf *ConfigReader) IntroPort() int {
 	return conf.Config.SelfConfig.IntroducerPort
 }
 
@@ -108,7 +116,7 @@ func (conf *ConfigReader) GetIP(nodeID int) string {
 	return conf.nodes[nodeID].IP
 }
 
-func (conf *ConfigReader) GetMaxPeerNumber() int {
+func (conf *ConfigReader) MaxNum() int {
 	return conf.maxNode
 }
 

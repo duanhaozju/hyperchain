@@ -115,14 +115,15 @@ func (ns *namespaceImpl) init() error {
 	}
 
 	//2.init CaManager
-	cm, cmerr := admittance.GetCaManager(ns.conf)
+	cm, cmerr := admittance.NewCAManager(ns.conf,ns.Name())
 	if cmerr != nil {
+		logger.Error(cmerr)
 		panic("cannot initliazied the camanager")
 	}
 	ns.caMgr = cm
 
 	//3. init peer manager to start grpc server and client
-	grpcPeerMgr := p2p.NewGrpcManager(ns.conf)
+	grpcPeerMgr := p2p.NewGrpcManager(ns.conf,ns.Name())
 	ns.grpcMgr = grpcPeerMgr
 
 	//4.init pbft consensus

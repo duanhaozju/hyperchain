@@ -3,23 +3,21 @@
 package p2p
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"errors"
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"hyperchain/core/crypto/primitives"
 	"hyperchain/event"
 	"hyperchain/admittance"
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/transport"
-	"hyperchain/p2p/transport/ecdh"
 	"hyperchain/recovery"
 	"net"
 	"strconv"
 	"sync"
 	"time"
+	"hyperchain/p2p/peerComm"
+	"fmt"
 )
 
 type Node struct {
@@ -27,16 +25,17 @@ type Node struct {
 	gRPCServer         *grpc.Server
 	higherEventManager *event.TypeMux
 	//common information
-	IsPrimary       bool
-	delayTable      map[int]int64
-	delayTableMutex sync.RWMutex
-	DelayChan       chan UpdateTable
-	attendChan      chan int
-	PeersPool       PeersPool
-	N               int
-	DelayTableMutex sync.Mutex
-	TEM             transport.TransportEncryptManager
-	CM              *admittance.CAManager
+	IsPrimary          bool
+	delayTable         map[int]int64
+	delayTableMutex    sync.RWMutex
+	DelayChan          chan UpdateTable
+	attendChan         chan int
+	PeersPool          *PeersPool
+	N                  int
+	DelayTableMutex    sync.Mutex
+	TM                 *transport.TransportManager
+	CM                 *admittance.CAManager
+	config             peerComm.Config
 }
 
 type UpdateTable struct {
@@ -45,21 +44,22 @@ type UpdateTable struct {
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
-func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TEM transport.TransportEncryptManager, peersPool PeersPool, cm *admittance.CAManager) *Node {
+func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TM *transport.TransportManager, peersPool *PeersPool, cm *admittance.CAManager, config peerComm.Config) *Node {
 	var newNode Node
 	newNode.localAddr = localAddr
-	newNode.TEM = TEM
+	newNode.TM = TM
 	newNode.CM = cm
 	newNode.higherEventManager = hEventManager
 	newNode.PeersPool = peersPool
-	newNode.attendChan = make(chan int,1000)
+	newNode.attendChan = make(chan int, 1000)
 	newNode.delayTable = make(map[int]int64)
 	newNode.DelayChan = make(chan UpdateTable)
+	newNode.config = config
 	//listen the update
 	go newNode.UpdateDelayTableThread()
 
 	log.Debug("NODE START...")
-	log.Debugf("LOCAL NODE INFO:\nID: %d\nIP: %s\nPORT: %d\nHASH: %s", localAddr.ID,localAddr.IP,localAddr.Port,localAddr.Hash)
+	log.Debugf("LOCAL NODE INFO:\nID: %d\nIP: %s\nPORT: %d\nHASH: %s", localAddr.ID, localAddr.IP, localAddr.Port, localAddr.Hash)
 	return &newNode
 }
 
@@ -77,10 +77,10 @@ func (node *Node) UpdateDelayTableThread() {
 
 //新节点需要监听相应的attend类型
 func (n *Node) attendNoticeProcess(N int) {
-	log.Critical("AttendProcess N:",N)
+	log.Critical("AttendProcess N:", N)
 	// fix the N as N-1
 	// temp
-	//isPrimaryConnectFlag := false
+	// isPrimaryConnectFlag := false
 	f := (N - 1) / 3
 	num := 0
 	for {
@@ -89,13 +89,13 @@ func (n *Node) attendNoticeProcess(N int) {
 		switch flag {
 		case 1: {
 			num++
-			}
+		}
 		case 2:{
 			//isPrimaryConnectFlag =true
 			num++
-			}
 		}
-		if num >= (N-f) {
+		}
+		if num >= (N - f) {
 			log.Debug("new node has online ,post already in chain event")
 			go n.higherEventManager.Post(event.AlreadyInChainEvent{})
 		}
@@ -120,428 +120,279 @@ func (node *Node) GetNodeID() int {
 	return node.localAddr.ID
 }
 
-// Chat Implements the ServerSide Function
-func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error) {
-	if msg.MessageType != pb.Message_CONSUS {
-		log.Debugf("\n--------------------------\nSTART OF NEW MESSAGE")
-		//log.Debugf("LOCAL=> ID:%d IP:%s PORT:%d", node.localAddr.ID, node.localAddr.IP, node.localAddr.Port)
-		//log.Debugf("MSG FORM=> ID: %d IP: %s PORT: %d", msg.From.ID, msg.From.IP, msg.From.Port)
-		log.Debugf("MSG TYPE: %v, %d => %d,", msg.MessageType,msg.From.ID,node.localAddr.ID)
-		defer log.Debugf("END OF NEW MESSAGE\n----------------------------\n")
-	}
-	response := new(pb.Message)
-	response.MessageType = pb.Message_RESPONSE
-	response.MsgTimeStamp = time.Now().UnixNano()
-	response.From = node.localAddr.ToPeerAddress()
-
-	if (msg.MessageType != pb.Message_HELLO && msg.MessageType != pb.Message_INTRODUCE && msg.MessageType != pb.Message_ATTEND && msg.MessageType != pb.Message_ATTEND_NOTIFY && msg.MessageType == pb.Message_RECONNECT && msg.MessageType == pb.Message_RECONNECT_RESPONSE) && node.CM.GetIsUsed() == true {
-		/**
-		 * 这里的验证存在问题，首先是通过from取得公钥，这里的from是可以随意伪造的，存在风险
-		 * 在 != hello 的时候，没有对证书进行验证，是出于效率的考虑，但这存在安全隐患
-		 */
-		//验签
-		signPubByte := node.TEM.GetSignPublicKey(msg.From.Hash)
-		if signPubByte == nil {
-
-			log.Error("cannot get signPublicKey message type is ",msg.MessageType,msg.From.ID)
-			return response, errors.New("SignPublickey is missing")
-		}
-		ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
-		signPub, _ := ecdh256.Unmarshal(signPubByte)
-		ecdsaEncrypto := primitives.NewEcdsaEncrypto("ecdsa")
-		if signPub == nil {
-			log.Warning("signPub is nil")
-		}
-		if msg.Payload == nil {
-			log.Warning("msg.payload is nil")
-		}
-		if msg.Signature == nil {
-			return response, errors.New("signature is nil!!")
-		}
-		bol, err := ecdsaEncrypto.VerifySign(signPub, msg.Payload, msg.Signature.Signature)
-		if !bol || err != nil {
-			log.Error("cannot verified the ecert signature", bol)
-			return response, errors.New("signature is wrong!!")
-		}
-		log.Debug("CERT SIGNATURE VERIFY PASS")
-		// review 用CM对验证进行管理(此处的必要性需要考虑)
-		// TODO 1. 验证ECERT的合法性
-		//bol1,err := node.CM.VerifyECert()
-
-		// review 2. 验证传输消息签名的合法性
-		// 参数1. PEM 证书 string
-		// 参数2. signature
-		// 参数3. 原始数据
-		//bol2,err := node.CM.VerifySignature(certPEM,signature,signed)
-
-	}
-
-	//handle the message
+func (node *Node)printMsg(msg *pb.Message) {
 	switch msg.MessageType {
 	case pb.Message_HELLO:
-		{
-			ecertByte := msg.Signature.ECert
-			bol, err := node.CM.VerifyCertSignature(string(ecertByte), msg.Payload, msg.Signature.Signature)
-			if !bol || err != nil {
-				log.Error("Verify the cert signature failed!",err)
-				return response, errors.New("Verify the cert signature failed!")
-			}
-			log.Debug("CERT SIGNATURE VERIFY PASS")
-			// TODO 这里不需要parse,修改VErycERTSignature方法
-			ecert, err := primitives.ParseCertificate(string(ecertByte))
-			if err != nil {
-				log.Error("cannot parse certificate", bol)
-				return response, errors.New("signature is wrong!!")
-			}
-			//再验证证书合法性
-			verifyEcert, ecertErr := node.CM.VerifyECert(string(ecertByte))
-			if !verifyEcert || ecertErr != nil {
-				log.Error(ecertErr)
-				return response, ecertErr
-			}
-			log.Debug("ECERT VERIFY PASS")
-
-			response.MessageType = pb.Message_HELLO_RESPONSE
-			//review 协商密钥
-			signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
-			ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
-			signpubbyte := ecdh256.Marshal(*signpub)
-			genErr := node.TEM.GenerateSecret(signpubbyte, msg.From.Hash)
-			if genErr != nil {
-				log.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID,genErr)
-			}
-
-			//every times get the public key is same
-			response.Payload = node.TEM.GetLocalPublicKey()
-			SignCert(response,node.CM)
-			return response, nil
-		}
 	case pb.Message_HELLO_RESPONSE:
-		{
-			log.Warning("Invalidate HELLO_RESPONSE message")
-		}
-
+	case pb.Message_ATTEND_NOTIFY:
+	case pb.Message_ATTEND_NOTIFY_RESPONSE:
+	case pb.Message_ATTEND_RESPONSE:
 	case pb.Message_HELLOREVERSE:
-		{
-			ecertByte := msg.Signature.ECert
-			bol, err := node.CM.VerifyCertSignature(string(ecertByte), msg.Payload, msg.Signature.Signature)
-			if !bol || err != nil {
-				log.Error("Verify the cert signature failed!",err)
-				return response, errors.New("Verify the cert signature failed!")
-			}
-			// TODO 这里不需要parse,修改VErycERTSignature方法
-			ecert, err := primitives.ParseCertificate(string(ecertByte))
-			if err != nil {
-				log.Error("cannot parse certificate", bol)
-				return response, errors.New("signature is wrong!!")
-			}
-			//再验证证书合法性
-			verifyEcert, ecertErr := node.CM.VerifyECert(string(ecertByte))
-			if !verifyEcert || ecertErr != nil {
-				log.Error(ecertErr)
-				return response, ecertErr
-			}
-
-			response.MessageType = pb.Message_HELLOREVERSE_RESPONSE
-			//review 协商密钥
-			signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
-			ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
-			signpubbyte := ecdh256.Marshal(*signpub)
-			if node.TEM.GetSecret(msg.From.Hash) == ""{
-				genErr := node.TEM.GenerateSecret(signpubbyte, msg.From.Hash)
-				if genErr != nil {
-					log.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID,genErr)
-				}
-			}
-			//every times get the public key is same
-			response.Payload = node.TEM.GetLocalPublicKey()
-			SignCert(response,node.CM)
-			return response, nil
-		}
 	case pb.Message_HELLOREVERSE_RESPONSE:
-		{
-			log.Warning(" Message REVERSE")
-
-		}
-	case pb.Message_RECONNECT:
-		{
-			ecertByte := msg.Signature.ECert
-			bol, err := node.CM.VerifyCertSignature(string(ecertByte), msg.Payload, msg.Signature.Signature)
-			if !bol || err != nil {
-				log.Error("Verify the cert signature failed!",err)
-				return response, errors.New("Verify the cert signature failed!")
-			}
-			ecert, err := primitives.ParseCertificate(string(ecertByte))
-			if err != nil {
-				log.Error("cannot parse certificate", bol)
-				return response, errors.New("signature is wrong!!")
-			}
-			//再验证证书合法性
-			verifyEcert, ecertErr := node.CM.VerifyECert(string(ecertByte))
-			if !verifyEcert || ecertErr != nil {
-				log.Error(ecertErr)
-				return response, ecertErr
-			}
-
-			response.MessageType = pb.Message_RECONNECT_RESPONSE
-			//review 协商密钥
-			signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
-			ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
-			signpubbyte := ecdh256.Marshal(*signpub)
-			genErr := node.TEM.GenerateSecret(signpubbyte, msg.From.Hash)
-			if genErr != nil {
-				log.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID,genErr)
-			}
-			// judge if reconnect TODO judge the idenfication
-			go node.reverseConnect(msg)
-			//every times get the public key is same
-			response.Payload = node.TEM.GetLocalPublicKey()
-			SignCert(response,node.CM)
-			return response, nil
-			log.Warning(" Message RECONNECT")
-
-		}
-	case pb.Message_RECONNECT_RESPONSE:
-		{
-			log.Warning(" Message RECONNECT")
-		}
 	case pb.Message_INTRODUCE:
-		{
-			//TODO 验证签名
-			//返回路由表信息
-			response.MessageType = pb.Message_INTRODUCE_RESPONSE
-			routers := node.PeersPool.ToRoutingTable()
-			response.Payload, _ = proto.Marshal(&routers)
-		}
 	case pb.Message_INTRODUCE_RESPONSE:
-		{
-			log.Warning("节点已经接受请求", msg.From)
-			//this.higherEventManager.Post(event.)
+	case pb.Message_KEEPALIVE:
+	case pb.Message_CONSUS:
+	case pb.Message_PENDING:
+	case pb.Message_RECONNECT:
+	case pb.Message_RECONNECT_RESPONSE:
+	case pb.Message_SYNCMSG:
+	case pb.Message_RESPONSE:
+	}
+}
 
+// Chat Implements the ServerSide Function
+func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error) {
+	response := &pb.Message{
+		MessageType:pb.Message_RESPONSE,
+		MsgTimeStamp:time.Now().UnixNano(),
+		From:node.localAddr.ToPeerAddress(),
+		Payload:[]byte("empty"),
+	}
+	//verify the msg cert first
+	if f, e := node.TM.VerifyMsg(msg); !f || e != nil {
+		return response, errors.New(fmt.Sprintf("cannot verify ecert or cert signture (verify node %d, err :%v)", node.localAddr.ID,e))
+	}
+	// TODO pre handle
+	//handle the message
+	switch msg.MessageType {
+	case pb.Message_HELLO:{
+		response.MessageType = pb.Message_HELLO_RESPONSE
+		// hello msg will not accept the nvp peer connect
+		// so if a nvp peer connect to node, here will return a error
+		if f, e := node.TM.VerifyRCert(msg); !f || e != nil {
+			return response, errors.New(fmt.Sprintf("NVP Peer is not allow to send a hello message,peer id: %d", msg.From.ID))
 		}
-	case pb.Message_ATTEND:
+		err := node.TM.NegoShareSecret(msg.Payload, pb.RecoverPeerAddr(msg.From))
+		if err != nil {
+			return response, errors.New(fmt.Sprintf("Cannot complate nego share secret (peer %d)", msg.From.ID))
+		}
+		response.Payload = node.TM.GetLocalPublicKey()
+
+	}
+	case pb.Message_HELLOREVERSE:{
+		response.MessageType = pb.Message_HELLOREVERSE_RESPONSE
+		// hello reverse msg  accept the nvp peer connect
+		// so if a nvp peer connect to node, this should set the nvp peer into nvp peers pool
+		if f, e := node.TM.VerifyRCert(msg); !f || e != nil {
+			//TODO set the peer into nvo peers pool
+			return response, errors.New(fmt.Sprintf("NVP Peer is not allow to send a hello message,peer id: %d", msg.From.ID))
+		}
+		err := node.TM.NegoShareSecret(msg.Payload, pb.RecoverPeerAddr(msg.From))
+		if err != nil {
+			return response, errors.New(fmt.Sprintf("Cannot complate nego share secret (peer %d)", msg.From.ID))
+		}
+		//every times get the public key is same
+		response.Payload = node.TM.GetLocalPublicKey()
+	}
+	case pb.Message_RECONNECT:{
+		response.MessageType = pb.Message_RECONNECT_RESPONSE
+		// hello reverse msg  accept the nvp peer connect
+		// so if a nvp peer connect to node, this should set the nvp peer into nvp peers pool
+		if f, e := node.TM.VerifyRCert(msg); !f || e != nil {
+			//TODO set the peer into nvo peers pool
+			return response, errors.New(fmt.Sprintf("NVP Peer is not allow to send a hello message,peer id: %d", msg.From.ID))
+		}
+		err := node.TM.NegoShareSecret(msg.Payload, pb.RecoverPeerAddr(msg.From))
+		if err != nil {
+			return response, errors.New(fmt.Sprintf("Cannot complate nego share secret (peer %d)", msg.From.ID))
+		}
+		//every times get the public key is same
+		response.Payload = node.TM.GetLocalPublicKey()
+		go node.reverseConnect(msg)
+
+	}
+	case pb.Message_INTRODUCE:{
+		//TODO 验证签名
+		//返回路由表信息
+		response.MessageType = pb.Message_INTRODUCE_RESPONSE
+		routers := node.PeersPool.ToRoutingTable()
+		response.Payload, _ = proto.Marshal(&routers)
+	}
+	case pb.Message_ATTEND:{
+		//新节点全部连接上之后通知
+		go node.higherEventManager.Post(event.NewPeerEvent{
+			Payload: msg.Payload,
+		})
+		response.MessageType = pb.Message_ATTEND_RESPONSE
+		// hello reverse msg  accept the nvp peer connect
+		// so if a nvp peer connect to node, this should set the nvp peer into nvp peers pool
+		if f, e := node.TM.VerifyRCert(msg); !f || e != nil {
+			//TODO set the peer into nvo peers pool
+			return response, errors.New(fmt.Sprintf("NVP Peer is not allow to send a hello message,peer id: %d", msg.From.ID))
+		}
+		err := node.TM.NegoShareSecret(msg.Payload, pb.RecoverPeerAddr(msg.From))
+		if err != nil {
+			return response, errors.New(fmt.Sprintf("Cannot complate nego share secret (peer %d)", msg.From.ID))
+		}
+		//every times get the public key is same
+		response.Payload = node.TM.GetLocalPublicKey()
+
+	}
+	case pb.Message_ATTEND_NOTIFY:{
+		// here need to judge if update
+		//if primary
+		if string(msg.Payload) == "true" {
+			node.attendChan <- 2
+		} else {
+			node.attendChan <- 1
+		}
+		response.MessageType = pb.Message_ATTEND_NOTIFY_RESPONSE
+		// hello reverse msg  accept the nvp peer connect
+		// so if a nvp peer connect to node, this should set the nvp peer into nvp peers pool
+		if f, e := node.TM.VerifyRCert(msg); !f || e != nil {
+			//TODO set the peer into nvo peers pool
+			return response, errors.New(fmt.Sprintf("NVP Peer is not allow to send a hello message,peer id: %d", msg.From.ID))
+		}
+		err := node.TM.NegoShareSecret(msg.Payload, pb.RecoverPeerAddr(msg.From))
+		if err != nil {
+			return response, errors.New(fmt.Sprintf("Cannot complate nego share secret (peer %d)", msg.From.ID))
+		}
+		//every times get the public key is same
+		response.Payload = node.TM.GetLocalPublicKey()
+
+	}
+	case pb.Message_CONSUS:{
+		log.Infof("Get a consus msg from %d (ip: %s, port: %d) ",msg.From.ID,msg.From.IP,msg.From.Port)
+		transferData, err := node.TM.Decrypt(msg.Payload, pb.RecoverPeerAddr(msg.From))
+		if err != nil {
+			log.Errorf("cannot decrypt the message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err)
+			return response, errors.New(fmt.Sprintf("cannot decrypt the message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err))
+		}
+		go node.higherEventManager.Post(event.ConsensusEvent{
+			Payload: transferData,
+		})
+		payload := []byte("GOT_A_CONSENSUS_MESSAGE")
+		rpayload,err := node.TM.Encrypt(payload,pb.RecoverPeerAddr(msg.From))
+		if err != nil{
+			return nil, errors.New(fmt.Sprintf("Sync message encrypt error message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err))
+		}
+		response.Payload = rpayload
+	}
+	case pb.Message_SYNCMSG:{
+		// package the response msg
+		if err := node.handleSyncMsg(msg); err != nil {
+			response.Payload = []byte("Sync message Unmarshal error")
+			return nil, errors.New(fmt.Sprintf("Sync message Unmarshal error message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err))
+		}
+		payload := []byte("GOT_A_SYNC_MESSAGE")
+		rpayload,err := node.TM.Encrypt(payload,pb.RecoverPeerAddr(msg.From))
+		if err != nil{
+			return nil, errors.New(fmt.Sprintf("Sync message encrypt error message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err))
+		}
+		response.Payload = rpayload
+
+	}
+	case pb.Message_KEEPALIVE:{
+		log.Debugf("Get a keep alive msg from %d (ip: %s, port: %d) ",msg.From.ID,msg.From.IP,msg.From.Port)
+		//客户端会发来keepAlive请求,返回response即可
+		// client may send a keep alive request, just response A response type message,if node is not ready, send a pending status message
+		response.MessageType = pb.Message_RESPONSE
+		response.Payload = []byte("RESPONSE FROM SERVER")
+	}
+	case pb.Message_PENDING:{
+		log.Warning("Got a PADDING Message")
+	}
+	default:
+		log.Warningf("ignore a unknown message : %v, content", msg.MessageType, string(msg.Payload))
+		return response, errors.New(fmt.Sprintf("ignore a unknown message : %v, content: %s", msg.MessageType, string(msg.Payload)))
+	}
+
+	signMsg, err := node.TM.SignMsg(response)
+	if err != nil {
+		return response, errors.New(fmt.Sprintf("Cannot complate sign the response (peer %d)", msg.From.ID))
+	}
+	return &signMsg, nil
+}
+
+func (node *Node)handleSyncMsg(msg *pb.Message) error {
+	log.Infof("Get async msg from %d (ip: %s, port: %d) ",msg.From.ID,msg.From.IP,msg.From.Port)
+	//todo should handle in pre handle method
+	transferData, err := node.TM.Decrypt(msg.Payload, pb.RecoverPeerAddr(msg.From))
+	if err != nil {
+		log.Errorf("cannot decrypt the message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err)
+		return  errors.New(fmt.Sprintf("cannot decrypt the message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err))
+	}
+	var syncMsg recovery.Message
+	unMarshalErr := proto.Unmarshal(transferData, &syncMsg)
+	if unMarshalErr != nil {
+		log.Error("sync UnMarshal error!")
+		return unMarshalErr
+	}
+	switch syncMsg.MessageType {
+	case recovery.Message_SYNCBLOCK:
 		{
-			//新节点全部连接上之后通知
-			go node.higherEventManager.Post(event.NewPeerEvent{
-				Payload: msg.Payload,
+
+			go node.higherEventManager.Post(event.SyncBlockReceiveEvent{
+				Payload: syncMsg.Payload,
 			})
 
-			ecertByte := msg.Signature.ECert
-			bol, err := node.CM.VerifyCertSignature(string(ecertByte), msg.Payload, msg.Signature.Signature)
-			if !bol || err != nil {
-				log.Error("Verify the cert signature failed!",err)
-				return response, errors.New("Verify the cert signature failed!")
-			}
-			log.Debug("CERT SIGNATURE VERIFY PASS")
-			// TODO 这里不需要parse,修改VErycERTSignature方法
-			ecert, err := primitives.ParseCertificate(string(ecertByte))
-			if err != nil {
-				log.Error("cannot parse certificate", bol)
-				return response, errors.New("signature is wrong!!")
-			}
-			//再验证证书合法性
-			verifyEcert, ecertErr := node.CM.VerifyECert(string(ecertByte))
-			if !verifyEcert || ecertErr != nil {
-				log.Error(ecertErr)
-				return response, ecertErr
-			}
-			log.Debug("ECERT VERIFY PASS")
-			response.MessageType = pb.Message_ATTEND_RESPONSE
-			//review 协商密钥
-			signpub := ecert.PublicKey.(*(ecdsa.PublicKey))
-			ecdh256 := ecdh.NewEllipticECDH(elliptic.P256())
-			signpubbyte := ecdh256.Marshal(*signpub)
-			genErr := node.TEM.GenerateSecret(signpubbyte, msg.From.Hash)
-			if genErr != nil {
-				log.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID,genErr)
-			}
-			// judge if reconnect TODO judge the idenfication
-			response.Payload = node.TEM.GetLocalPublicKey()
-			SignCert(response,node.CM)
-			return response, nil
-
 		}
-	case pb.Message_ATTEND_RESPONSE:
+	case recovery.Message_SYNCCHECKPOINT:
 		{
+			go node.higherEventManager.Post(event.SyncBlockReqEvent{
+				Payload: syncMsg.Payload,
+			})
+
 		}
-	case pb.Message_ATTEND_NOTIFY:
+	case recovery.Message_SYNCSINGLE:
 		{
-		// here need to judge if update
-			//if primary
-			if string(msg.Payload) == "true" {
-				node.attendChan <- 2
-			} else {
-				node.attendChan <- 1
-			}
-			ecertByte := msg.Signature.ECert
-			bol, err := node.CM.VerifyCertSignature(string(ecertByte), msg.Payload, msg.Signature.Signature)
-			if !bol || err != nil {
-				log.Error("Verify the cert signature failed!",err)
-				return response, errors.New("Verify the cert signature failed!")
-			}
-			log.Debug("CERT SIGNATURE VERIFY PASS")
-			// TODO 这里不需要parse,修改VErycERTSignature方法
-			//再验证证书合法性
-			verifyEcert, ecertErr := node.CM.VerifyECert(string(ecertByte))
-			if !verifyEcert || ecertErr != nil {
-				log.Error(ecertErr)
-				return response, ecertErr
-			}
-			log.Debug("ECERT VERIFY PASS")
-			response.MessageType = pb.Message_ATTEND_NOTIFY_RESPONSE
-			//review 协商密钥
-			// judge if reconnect TODO judge the idenfication
-			response.Payload = node.TEM.GetLocalPublicKey()
-			SignCert(response,node.CM)
-			return response, nil
-
+			go node.higherEventManager.Post(event.SyncBlockReqEvent{
+				Payload: syncMsg.Payload,
+			})
 		}
-	case pb.Message_ATTEND_NOTIFY_RESPONSE:
+	case recovery.Message_RELAYTX:
 		{
-			log.Warning("get a message ATTEND NOTIFI RESPONSE MESSAGE")
+			//log.Warning("Message_RELAYTX: ")
+			go node.higherEventManager.Post(event.ConsensusEvent{
+				Payload: syncMsg.Payload,
+			})
 		}
-	case pb.Message_CONSUS:
+	case recovery.Message_INVALIDRESP:
 		{
-
-			transferData, err := node.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
-
-			if err != nil {
-				log.Error("cannot decode the message", err)
-				return nil, err
-			}
-			response.Payload = []byte("GOT_A_CONSENSUS_MESSAGE")
-			if string(transferData) == "TEST" {
-				response.Payload = []byte("GOT_A_TEST_CONSENSUS_MESSAGE")
-			}
-
-			go node.higherEventManager.Post(
-				event.ConsensusEvent{
-					Payload: transferData,
-				})
+			go node.higherEventManager.Post(event.InvalidTxsEvent{
+				Payload: syncMsg.Payload,
+			})
 		}
-	case pb.Message_SYNCMSG:
+	case recovery.Message_SYNCREPLICA:
 		{
-			// package the response msg
-			response.MessageType = pb.Message_RESPONSE
-			transferData, err := node.TEM.DecWithSecret(msg.Payload, msg.From.Hash)
-			if err != nil {
-				log.Error("cannot decode the message", err)
-				return nil, err
-			}
-			response.Payload = []byte("got a sync msg")
-			log.Debug("<<<< GOT A Unicast MESSAGE >>>>")
-			var SyncMsg recovery.Message
-			unMarshalErr := proto.Unmarshal(transferData, &SyncMsg)
-			if unMarshalErr != nil {
-				response.Payload = []byte("Sync message Unmarshal error")
-				log.Error("sync UnMarshal error!")
-			}
-			switch SyncMsg.MessageType {
-			case recovery.Message_SYNCBLOCK:
-				{
-
-					go node.higherEventManager.Post(event.SyncBlockReceiveEvent{
-						Payload: SyncMsg.Payload,
-					})
-
-				}
-			case recovery.Message_SYNCCHECKPOINT:
-				{
-					go node.higherEventManager.Post(event.SyncBlockReqEvent{
-						Payload: SyncMsg.Payload,
-					})
-
-				}
-			case recovery.Message_SYNCSINGLE:
-				{
-					go node.higherEventManager.Post(event.SyncBlockReqEvent{
-						Payload: SyncMsg.Payload,
-					})
-				}
-			case recovery.Message_RELAYTX:
-				{
-					//log.Warning("Message_RELAYTX: ")
-					go node.higherEventManager.Post(event.ConsensusEvent{
-						Payload: SyncMsg.Payload,
-					})
-				}
-			case recovery.Message_INVALIDRESP:
-				{
-					go node.higherEventManager.Post(event.InvalidTxsEvent{
-						Payload: SyncMsg.Payload,
-					})
-				}
-			case recovery.Message_SYNCREPLICA:
-				{
-					go node.higherEventManager.Post(event.ReplicaInfoEvent{
-						Payload: SyncMsg.Payload,
-					})
-				}
-			case recovery.Message_BROADCAST_NEWPEER:
-				{
-					log.Debug("receive Message_BROADCAST_NEWPEER")
-					go node.higherEventManager.Post(event.RecvNewPeerEvent{
-						Payload: SyncMsg.Payload,
-					})
-				}
-			case recovery.Message_BROADCAST_DELPEER:
-				{
-					log.Debug("receive Message_BROADCAST_DELPEER")
-					go node.higherEventManager.Post(event.RecvDelPeerEvent{
-						Payload: SyncMsg.Payload,
-					})
-				}
-			case recovery.Message_VERIFIED_BLOCK:
-				{
-					log.Debug("receive Message_BROADCAST_DELPEER")
-					go node.higherEventManager.Post(event.ReceiveVerifiedBlock{
-						Payload: SyncMsg.Payload,
-					})
-				}
-			}
+			go node.higherEventManager.Post(event.ReplicaInfoEvent{
+				Payload: syncMsg.Payload,
+			})
 		}
-	case pb.Message_KEEPALIVE:
+	case recovery.Message_BROADCAST_NEWPEER:
 		{
-			//客户端会发来keepAlive请求,返回response即可
-			// client may send a keep alive request, just response A response type message,if node is not ready, send a pending status message
-			response.MessageType = pb.Message_RESPONSE
-			response.Payload = []byte("RESPONSE FROM SERVER")
+			log.Debug("receive Message_BROADCAST_NEWPEER")
+			go node.higherEventManager.Post(event.RecvNewPeerEvent{
+				Payload: syncMsg.Payload,
+			})
 		}
-	case pb.Message_RESPONSE:
+	case recovery.Message_BROADCAST_DELPEER:
 		{
-			// client couldn't send a response message to server, so server should never receive a response type message
-			log.Warning("Client Send a Response Message to Server, this is not allowed!")
-
+			log.Debug("receive Message_BROADCAST_DELPEER")
+			go node.higherEventManager.Post(event.RecvDelPeerEvent{
+				Payload: syncMsg.Payload,
+			})
 		}
-	case pb.Message_PENDING:
+	case recovery.Message_VERIFIED_BLOCK:
 		{
-			log.Warning("Got a PADDING Message")
+			log.Debug("receive Message_BROADCAST_DELPEER")
+			go node.higherEventManager.Post(event.ReceiveVerifiedBlock{
+				Payload: syncMsg.Payload,
+			})
 		}
-	default:
-		log.Warning(msg.MessageType)
-		log.Warning("Unkown Message type!")
 	}
-	if msg.MessageType != pb.Message_HELLO && msg.MessageType != pb.Message_HELLO_RESPONSE && msg.MessageType != pb.Message_RECONNECT_RESPONSE && msg.MessageType != pb.Message_RECONNECT && msg.MessageType != pb.Message_ATTEND && msg.MessageType != pb.Message_ATTEND_NOTIFY && msg.MessageType != pb.Message_INTRODUCE {
-		var err error
-
-		response.Payload, err = node.TEM.EncWithSecret(response.Payload, msg.From.Hash)
-		if err != nil {
-			log.Error("encode error", err)
-		}
-
-	}
-	return response, nil
+	return nil
 }
 
 // StartServer start the gRPC server
 func (node *Node) StartServer() {
 	log.Info("Starting the grpc listening server...")
-	lis, err := net.Listen("tcp", ":"+strconv.Itoa(node.localAddr.Port))
+	lis, err := net.Listen("tcp", ":" + strconv.Itoa(node.localAddr.Port))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 		log.Fatal("PLEASE RESTART THE SERVER NODE!")
 	}
-	//opts := membersrvc.GetGrpcServerOpts()
 	opts := node.CM.GetGrpcServerOpts()
 	node.gRPCServer = grpc.NewServer(opts...)
 	//this.gRPCServer = grpc.NewServer()
@@ -558,12 +409,23 @@ func (node *Node) StopServer() {
 }
 
 func (node *Node) reverseConnect(msg *pb.Message) error {
-	peer, err := NewPeerReverse(pb.RecoverPeerAddr(msg.From), node.localAddr, node.TEM,node.CM)
+	//REVIEW FIX get local config reverse connect address
+	reNodeID := int(msg.From.ID)
+	reAddr := pb.NewPeerAddr(node.config.GetIP(reNodeID), node.config.GetPort(reNodeID), node.config.GetRPCPort(reNodeID), reNodeID)
+	peer, err := node.PeersPool.GetPeerByHash(msg.From.Hash)
 	if err != nil {
-		log.Critical("new peer failed")
-		return err
+		log.Criticalf("cannot get the old peer ID: %d",msg.From.ID)
+		peer := NewPeer(reAddr,node.localAddr,node.TM,node.CM)
+		_,err := peer.Connect(node.TM.GetLocalPublicKey(),pb.Message_RECONNECT,true,peer.ReconnectHandler)
+		if err != nil{
+			log.Criticalf("cannot create a new peer again, please chekc the peer (id: %d)",msg.From.ID)
+		}
 	} else {
-		node.PeersPool.PutPeer(*pb.RecoverPeerAddr(msg.From), peer)
-		return nil
+		go peer.eventMux.Post(RecoveryEvent{
+			addr:reAddr,
+			recoveryTimeout:node.CM.RecoveryTimeout,
+			recoveryTimes:0,
+		})
 	}
+	return nil
 }
