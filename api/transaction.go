@@ -240,10 +240,14 @@ func (tran *Transaction) GetTransactionReceipt(hash common.Hash) (*ReceiptResult
 
 // GetTransactions return all transactions in the chain/db
 func (tran *Transaction) GetTransactions(args IntervalArgs) ([]*TransactionResult, error) {
+	trueArgs, err := prepareIntervalArgs(args, tran.namespace)
+	if err != nil {
+		return nil, err
+	}
 
 	var transactions []*TransactionResult
 
-	if blocks, err := getBlocks(args, tran.namespace, false); err != nil {
+	if blocks, err := getBlocks(trueArgs, tran.namespace, false); err != nil {
 		return nil, err
 	} else {
 		for _, block := range blocks {
@@ -343,8 +347,13 @@ func (tran *Transaction) GetTransactionByBlockHashAndIndex(hash common.Hash, ind
 
 // GetTransactionsByBlockNumberAndIndex returns the transaction for the given block number and index.
 func (tran *Transaction) GetTransactionByBlockNumberAndIndex(n BlockNumber, index Number) (*TransactionResult, error) {
+	latest := edb.GetChainCopy(tran.namespace).Height
+	blknumber, err := n.BlockNumberToUint64(latest)
+	if err != nil {
+		return nil, err
+	}
 
-	block, err := edb.GetBlockByNumber(tran.namespace, n.ToUint64())
+	block, err := edb.GetBlockByNumber(tran.namespace, blknumber)
 	if err != nil && err.Error() == leveldb_not_found_error {
 		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("block by %d", n)}
 	} else if err != nil {
@@ -425,9 +434,13 @@ func (tran *Transaction) GetBlockTransactionCountByHash(hash common.Hash) (*Numb
 
 // GetBlockTransactionCountByNumber returns the number of block transactions for given block number.
 func (tran *Transaction) GetBlockTransactionCountByNumber(n BlockNumber) (*Number, error) {
+	latest := edb.GetChainCopy(tran.namespace).Height
+	blknumber, err := n.BlockNumberToUint64(latest)
+	if err != nil {
+		return nil, err
+	}
 
-
-	block, err := edb.GetBlockByNumber(tran.namespace, n.ToUint64())
+	block, err := edb.GetBlockByNumber(tran.namespace, blknumber)
 	if err != nil && err.Error() == leveldb_not_found_error {
 		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("block by number %#x", n)}
 	} else if err != nil {
@@ -488,16 +501,12 @@ func (tran *Transaction) GetTransactionsCount() (interface{}, error) {
 
 // GetTxAvgTimeByBlockNumber returns tx execute avg time.
 func (tran *Transaction) GetTxAvgTimeByBlockNumber(args IntervalArgs) (Number, error) {
-
-	realArgs, err := prepareIntervalArgs(args)
+	intargs, err := prepareIntervalArgs(args, tran.namespace)
 	if err != nil {
 		return 0, err
 	}
 
-	from := realArgs.From.ToUint64()
-	to := realArgs.To.ToUint64()
-
-	exeTime := edb.CalcResponseAVGTime(tran.namespace, from, to)
+	exeTime := edb.CalcResponseAVGTime(tran.namespace, intargs.from, intargs.to)
 
 	if exeTime <= 0 {
 		return 0, nil
@@ -527,7 +536,7 @@ func outputTransaction(trans interface{}, namespace string) (*TransactionResult,
 			txRes = &TransactionResult{
 				Version:     string(t.Version),
 				Hash:        txHash,
-				BlockNumber: NewUint64ToBlockNumber(bn),
+				BlockNumber: Uint64ToBlockNumber(bn),
 				BlockHash:   &bHash,
 				TxIndex:     NewInt64ToNumber(txIndex),
 				From:        common.BytesToAddress(t.From),

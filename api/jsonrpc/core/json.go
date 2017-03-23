@@ -4,17 +4,16 @@ package jsonrpc
 
 import (
 	"encoding/json"
-	"fmt"
 	"hyperchain/common"
 	"io"
 	"net/http"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	//"crypto/ecdsa"
 	//"hyperchain/core/crypto/primitives"
 	"hyperchain/namespace"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -98,7 +97,7 @@ func isBatch(msg json.RawMessage) bool {
 func (c *jsonCodec) CheckHttpHeaders(namespace string) common.RPCError {
 	ns := c.nr.GetNamespaceByName(namespace)
 	if ns == nil {
-		return &common.InvalidMessageError{"namespace "+ namespace + " not found!"}
+		return &common.NamespaceNotFound{Name: namespace}
 	}
 	cm := ns.GetCAManager()
 	if !cm.IsCheckTCert() {
@@ -106,6 +105,7 @@ func (c *jsonCodec) CheckHttpHeaders(namespace string) common.RPCError {
 	}
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
+	//TODO fix cert problem
 	//signature := c.req.Header.Get("signature")
 	//msg := common.TransportDecode(c.req.Header.Get("msg"))
 	//tcertPem := common.TransportDecode(c.req.Header.Get("tcert"))
@@ -135,15 +135,15 @@ func (c *jsonCodec) CheckHttpHeaders(namespace string) common.RPCError {
 // ReadRequestHeaders will read new requests without parsing the arguments. It will
 // return a collection of requests, an indication if these requests are in batch
 // form or an error when the incoming message could not be read/parsed.
-func (c *jsonCodec) ReadRequestHeaders() ([]common.RPCRequest, bool, common.RPCError) {
+func (c *jsonCodec) ReadRequestHeaders() ([]*common.RPCRequest, bool, common.RPCError) {
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
 
 	var incomingMsg json.RawMessage
 	if err := c.d.Decode(&incomingMsg); err != nil {
-		return nil, false, &common.InvalidRequestError{err.Error()}
+		log.Error(err)
+		return nil, false, &common.InvalidRequestError{Message: err.Error()}
 	}
-	//log.Info(string(incomingMsg))
 	if isBatch(incomingMsg) {
 		return parseBatchRequest(incomingMsg)
 	}
@@ -155,7 +155,7 @@ func (c *jsonCodec) ReadRequestHeaders() ([]common.RPCRequest, bool, common.RPCE
 // valid id's are strings, numbers or null
 func checkReqId(reqId json.RawMessage) error {
 	if len(reqId) == 0 {
-		return fmt.Errorf("missing request id")
+		return errors.New("missing request id")
 	}
 	if _, err := strconv.ParseFloat(string(reqId), 64); err == nil {
 		return nil
@@ -164,135 +164,63 @@ func checkReqId(reqId json.RawMessage) error {
 	if err := json.Unmarshal(reqId, &str); err == nil {
 		return nil
 	}
-	return fmt.Errorf("invalid request id")
+	return errors.New("invalid request id")
 }
 
 // parseRequest will parse a single request from the given RawMessage. It will return
 // the parsed request, an indication if the request was a batch or an error when
 // the request could not be parsed.
-func parseRequest(incomingMsg json.RawMessage) ([]common.RPCRequest, bool, common.RPCError) {
+func parseRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool, common.RPCError) {
 	var in JSONRequest
 	if err := json.Unmarshal(incomingMsg, &in); err != nil {
-		return nil, false, &common.InvalidMessageError{err.Error()}
+		return nil, false, &common.InvalidMessageError{Message:err.Error()}
 	}
 	if err := checkReqId(in.Id); err != nil {
-		return nil, false, &common.InvalidMessageError{err.Error()}
+		return nil, false, &common.InvalidMessageError{Message:err.Error()}
 	}
 
 	// regular RPC call
 	elems := strings.Split(in.Method, serviceMethodSeparator)
 	if len(elems) != 2 {
-		return nil, false, &common.MethodNotFoundError{in.Method, ""}
+		return nil, false, &common.MethodNotFoundError{Service:in.Method, Method:""}
 	}
 
 	if len(in.Payload) == 0 {
-		return []common.RPCRequest{{Service: elems[0], Method: elems[1], Namespace: in.Namespace, Id: &in.Id}}, false, nil
+		return []*common.RPCRequest{{Service: elems[0], Method: elems[1], Namespace: in.Namespace, Id: &in.Id}}, false, nil
 	}
 
-	return []common.RPCRequest{{Service: elems[0], Method: elems[1], Namespace: in.Namespace, Id: &in.Id, Params: in.Payload}}, false, nil
+	return []*common.RPCRequest{{Service: elems[0], Method: elems[1], Namespace: in.Namespace, Id: &in.Id, Params: in.Payload}}, false, nil
 }
 
 // parseBatchRequest will parse a batch request into a collection of requests from the given RawMessage, an indication
 // if the request was a batch or an error when the request could not be read.
-func parseBatchRequest(incomingMsg json.RawMessage) ([]common.RPCRequest, bool, common.RPCError) {
+func parseBatchRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool, common.RPCError) {
 	var in []JSONRequest
 	if err := json.Unmarshal(incomingMsg, &in); err != nil {
-		return nil, false, &common.InvalidMessageError{err.Error()}
+		return nil, false, &common.InvalidMessageError{Message:err.Error()}
 	}
 
-	requests := make([]common.RPCRequest, len(in))
+	requests := make([]*common.RPCRequest, len(in))
 	for i, r := range in {
 		if err := checkReqId(r.Id); err != nil {
-			return nil, false, &common.InvalidMessageError{err.Error()}
+			return nil, false, &common.InvalidMessageError{Message:err.Error()}
 		}
 
 		id := &in[i].Id
 
 		elems := strings.Split(r.Method, serviceMethodSeparator)
 		if len(elems) != 2 {
-			return nil, true, &common.MethodNotFoundError{r.Method, ""}
+			return nil, true, &common.MethodNotFoundError{Service: r.Method, Method: ""}
 		}
 
 		if len(r.Payload) == 0 {
-			requests[i] = common.RPCRequest{Service: elems[0], Method: elems[1], Id: id, Params: nil}
+			requests[i] = &common.RPCRequest{Service: elems[0], Method: elems[1], Id: id, Params: nil}
 		} else {
-			requests[i] = common.RPCRequest{Service: elems[0], Method: elems[1], Id: id, Params: r.Payload}
+			requests[i] = &common.RPCRequest{Service: elems[0], Method: elems[1], Id: id, Params: r.Payload}
 		}
 	}
 
 	return requests, true, nil
-}
-
-// ParseRequestArguments tries to parse the given params (json.RawMessage) with the given types. It returns the parsed
-// values or an error when the parsing failed.
-func (c *jsonCodec) ParseRequestArguments(argTypes []reflect.Type, params interface{}) ([]reflect.Value, common.RPCError) {
-	//log.Info("==================enter ParseRequestArguments()==================")
-	if args, ok := params.(json.RawMessage); !ok {
-		return nil, &common.InvalidParamsError{"Invalid params supplied"}
-	} else {
-		return parsePositionalArguments(args, argTypes)
-	}
-}
-
-// parsePositionalArguments tries to parse the given args to an array of values with the given types.
-// It returns the parsed values or an error when the args could not be parsed. Missing optional arguments
-// are returned as reflect.Zero values.
-func parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type) ([]reflect.Value, common.RPCError) {
-	//log.Info("===================enter parsePositionalArguments()====================")
-	params := make([]interface{}, 0, len(callbackArgs))
-	for _, t := range callbackArgs {
-		params = append(params, reflect.New(t).Interface()) // Interface()转换为原来的类型
-	}
-	//log.Info(string(args)) // [{"from":"0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","to":"0x0000000000000000000000000000000000000003","value":"0x9184e72a"}]
-	//log.Info(params)	// [0xc8201437a0]
-	if err := json.Unmarshal(args, &params); err != nil {
-		log.Info(err)
-		return nil, &common.InvalidParamsError{err.Error()}
-	}
-
-	if len(params) > len(callbackArgs) {
-		return nil, &common.InvalidParamsError{fmt.Sprintf("too many params, want %d got %d", len(callbackArgs), len(params))}
-	}
-
-	// assume missing params are null values
-	for i := len(params); i < len(callbackArgs); i++ {
-		params = append(params, nil)
-	}
-
-	argValues := make([]reflect.Value, len(params))
-	for i, p := range params {
-		// verify that JSON null values are only supplied for optional arguments (ptr types)
-		if p == nil && callbackArgs[i].Kind() != reflect.Ptr {
-			return nil, &common.InvalidParamsError{fmt.Sprintf("invalid or missing value for params[%d]", i)}
-		}
-		if p == nil {
-			argValues[i] = reflect.Zero(callbackArgs[i])
-		} else { // deref pointers values creates previously with reflect.New
-			argValues[i] = reflect.ValueOf(p).Elem()
-			//log.Infof("%#v",argValues[i])  // hpc.SendTxArgs{From:common.Address{0x0, 0xf, 0x1a, 0x7a, 0x8, 0xcc, 0xc4, 0x8e, 0x5d, 0x30, 0xf8, 0x8, 0x50, 0xcf, 0x1c, 0xf2, 0x83, 0xaa, 0x3a, 0xbd}, To:"0x0000000000000000000000000000000000000003", Gas:"", GasPrice:"", Value:"0x9184e72a", Payload:""}
-		}
-	}
-
-	return argValues, nil
-}
-
-// CreateResponse will create a JSON-RPC success response with the given id and reply as result.
-func (c *jsonCodec) CreateResponse(id interface{}, name string, reply interface{}) interface{} {
-	if isHexNum(reflect.TypeOf(reply)) {
-		return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: 0, Message: "SUCCESS", Result: fmt.Sprintf(`%#x`, reply)}
-	}
-	return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: 0, Message: "SUCCESS", Result: reply}
-}
-
-// CreateErrorResponse will create a JSON-RPC error response with the given id and error.
-func (c *jsonCodec) CreateErrorResponse(id interface{}, name string, err common.RPCError) interface{} {
-	return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: err.Code(), Message: err.Error()}
-}
-
-// CreateErrorResponseWithInfo will create a JSON-RPC error response with the given id and error.
-// info is optional and contains additional information about the error. When an empty string is passed it is ignored.
-func (c *jsonCodec) CreateErrorResponseWithInfo(id interface{}, name string, err common.RPCError, info interface{}) interface{} {
-	return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: err.Code(), Message: err.Error(), Result: info}
 }
 
 // Write message to client

@@ -8,6 +8,8 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
+	"math"
+	"hyperchain/common"
 )
 
 // API describes the set of methods offered over the RPC interface
@@ -97,23 +99,63 @@ func (n Number) ToInt() int {
 	return int(n)
 }
 
-type BlockNumber uint64
+type BlockNumber string
 
-const (
-	pendingBlockNumber  = 1
-	earliestBlockNumber = 2
-)
-
-func NewUint64ToBlockNumber(n uint64) *BlockNumber {
-	num := BlockNumber(n)
-	return &num
+func Uint64ToBlockNumber(n uint64) *BlockNumber {
+	number := BlockNumber(strconv.FormatUint(n, 10))
+	return &number
 }
 
-func (n BlockNumber) Hex() string { return "0x" + strconv.FormatInt(int64(n), 16) }
+func (n BlockNumber) BlockNumberToUint64(latest uint64) (uint64, error) {
+	input := string(n)
+	in := new(big.Int)
+	_, ok := in.SetString(input, 0)
+
+	if !ok {
+		if input == "latest" {
+			if latest == 0 {
+				return 0, &common.InvalidParamsError{Message: "There is no block generated!"}
+			}else {
+				return latest, nil
+			}
+		} else if input == "earliest" {
+			//TODO
+			return 0, &common.InvalidParamsError{Message: "Support later..."}
+		} else if input == "pending" {
+			//TODO
+			return 0, &common.InvalidParamsError{Message: "Support later..."}
+		} else {
+			return 0, fmt.Errorf("invalid block number %s", input)
+		}
+	}
+
+	if num, err := strconv.ParseUint(input, 0, 64); err != nil {
+		return 0, &common.InvalidParamsError{Message: fmt.Sprintf("block number %v may be out of range", input)}
+	} else if num <= 0 {
+		return 0, &common.InvalidParamsError{Message: fmt.Sprintf("block number can't be negative or zero, but get %v", input)}
+	} else if num > latest {
+		return 0, &common.InvalidParamsError{Message: fmt.Sprintf("block number is out of range, and now latest block number is %d", latest)}
+	} else {
+		return num, nil
+	}
+}
+
+func (n BlockNumber) Hex() (string, error) {
+	uint64Num, err := n.BlockNumberToUint64(math.MaxUint64)
+	if err != nil {
+		return "", err
+	}
+
+	return "0x" + strconv.FormatUint(uint64Num, 16), nil
+}
 
 // MarshalJSON serialize given number to JSON
 func (n BlockNumber) MarshalJSON() ([]byte, error) {
-	return json.Marshal(n.Hex())
+	hexNum, err := n.Hex()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(hexNum)
 }
 
 // UnmarshalJSON parses a hash in its hex from to a number. It supports:
@@ -129,40 +171,11 @@ func (n *BlockNumber) UnmarshalJSON(data []byte) error {
 	in := new(big.Int)
 	_, ok := in.SetString(input, 0)
 
-	//latest_number := uint64(10)
-
-	if !ok { // test if user supplied string tag
-
-		strBlockNumber := input
-
-		if strBlockNumber == "earliest" {
-			*n = BlockNumber(earliestBlockNumber)
-			return nil
-		}
-
-		if strBlockNumber == "pending" {
-			*n = BlockNumber(pendingBlockNumber)
-			return nil
-		}
-
-		return fmt.Errorf(`invalid block number %s`, data)
-	}
-
-	if v, err := strconv.ParseUint(input, 0, 0); err != nil {
-		return fmt.Errorf("block number %v may be out of range", input)
-	} else if v <= 0 {
-		return fmt.Errorf("block number can't be negative or zero, but get %v", input)
-		//} else if v > latest_number {
-		//	return fmt.Errorf("block number is out of range, and now latest block number is %d", latest_number)
+	if !ok && input != "latest" && input != "earliest" && input != "pending" {
+		return fmt.Errorf("invalid block number %s", data)
 	} else {
-		*n = *NewUint64ToBlockNumber(v)
+		*n = BlockNumber(input)
 		return nil
 	}
 }
 
-func (n BlockNumber) ToUint64() uint64 {
-	if n <= 0 {
-		return 0
-	}
-	return uint64(n)
-}
