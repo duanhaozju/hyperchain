@@ -292,7 +292,7 @@ func (hl *HyperLogger) setNewLogFile(fileName string, backendStderr logging.Leve
 //newLogFileByInterval set new log file for hyperchain
 func (hl *HyperLogger) newLogFileByInterval(loggerDir string, conf *Config) {
 	tm := time.Now()
-	hour, min, sec := -22, 37, 50
+	hour, min, sec := 3, 0, 0
 	duration := (24+hour)*3600+min*60+sec - (tm.Hour()*3600+tm.Minute()*60+tm.Second())
 	// first log split at 3:00 AM
 	// then split byte the interval

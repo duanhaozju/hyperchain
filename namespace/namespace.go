@@ -108,11 +108,6 @@ func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) 
 		eventMux: new(event.TypeMux),
 	}
 	ns.logger = common.GetLogger(name, "namespace")
-	fmt.Println("newnsImpl and ouput 3 times every 5 seconds")
-	for i := 0; i < 3; i++ {
-		time.Sleep(5 * time.Second)
-		ns.logger.Criticalf("TikaDiDa")
-	}
 	return ns, nil
 }
 
