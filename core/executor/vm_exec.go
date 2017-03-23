@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"hyperchain/core/types"
 	"hyperchain/core/hyperstate"
+	"github.com/ethereum/go-ethereum/whisper/whisperv2"
 )
 
 // Call executes within the given contract
@@ -95,6 +96,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	 */
 	if env.Db().GetStatus(to.Address()) != hyperstate.STATEOBJECT_STATUS_NORMAL {
 		env.Logger().Debugf("account %s has been frozen", to.Address().Hex())
+		env.SetSnapshot(snapshotPreTransfer)
 		return nil, common.Address{}, ExecContractErr(1, "Try to invoke a frozen contract")
 	}
 	// initialise a new contract and set the code that is to be used by the
