@@ -328,10 +328,10 @@ func (contract *Contract) GetStatus(addr common.Address) (int, error) {
 func (contract *Contract) GetCreateTime(addr common.Address) (uint64, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return -1, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+		return 0, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
 	} else {
 		return stateDb.GetCreateTime(addr), nil
 	}
