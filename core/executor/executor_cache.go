@@ -1,7 +1,7 @@
 package executor
 
 import (
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/common"
 	"sync/atomic"
 	"hyperchain/core/types"

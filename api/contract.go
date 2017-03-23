@@ -11,7 +11,7 @@ import (
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/compiler"
 	"hyperchain/crypto/hmEncryption"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/manager"
 	"math/big"
 	"time"

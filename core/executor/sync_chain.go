@@ -5,7 +5,7 @@ import (
 	"hyperchain/core/types"
 	edb "hyperchain/core/db_utils"
 	"github.com/golang/protobuf/proto"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/protos"
 	"bytes"
 )

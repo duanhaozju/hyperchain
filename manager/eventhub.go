@@ -10,7 +10,7 @@ import (
 	"hyperchain/consensus"
 	"hyperchain/consensus/pbft"
 	"hyperchain/core/executor"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/p2p"
 	"hyperchain/protos"
 	"time"

@@ -3,7 +3,7 @@ package executor
 import (
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	edb "hyperchain/core/db_utils"
 )
 

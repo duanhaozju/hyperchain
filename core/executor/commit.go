@@ -6,7 +6,7 @@ import (
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/hyperdb/db"
 	"hyperchain/protos"
 	"time"

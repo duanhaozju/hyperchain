@@ -5,7 +5,7 @@ package helper
 import (
 	"time"
 
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	pb "hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"

@@ -9,7 +9,7 @@ import (
 	"hyperchain/admittance"
 	"hyperchain/common"
 	"hyperchain/crypto"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/p2p/peerComm"
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/persist"

@@ -15,7 +15,7 @@ import (
 	"time"
 	//"fmt"
 	"github.com/golang/protobuf/proto"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"fmt"
 )
 

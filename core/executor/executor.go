@@ -7,7 +7,7 @@ import (
 	"hyperchain/core/hyperstate"
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/crypto"
 	"errors"
 	edb "hyperchain/core/db_utils"

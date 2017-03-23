@@ -9,7 +9,7 @@ package p2p
 
 import (
 	"github.com/op/go-logging"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/admittance"
 )
 

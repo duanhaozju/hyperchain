@@ -1,6 +1,6 @@
 package executor
 import (
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/protos"
 	"github.com/golang/protobuf/proto"
 	edb "hyperchain/core/db_utils"

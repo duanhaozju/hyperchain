@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"hyperchain/consensus/pbft"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"sync"
 	cs "hyperchain/consensus"
 	"hyperchain/consensus/helper"

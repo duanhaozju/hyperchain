@@ -10,7 +10,7 @@ package helper
 import (
 	"testing"
 	pb "hyperchain/protos"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"reflect"
 	"github.com/golang/protobuf/proto"
 	"time"

@@ -5,7 +5,7 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/params"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/protos"
 	"sort"
 	"strconv"
