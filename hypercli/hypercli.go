@@ -53,6 +53,11 @@ func initApp() {
 			Subcommands: contract.NewContractCMD(),
 		},
 		{
+			Name:        "http",
+			Usage:       "http specific commands",
+			Subcommands: server.NewHttpCMD(),
+		},
+		{
 			Name:        "log",
 			Usage:       "log specific commands",
 			Subcommands: log.NewLogCMD(),

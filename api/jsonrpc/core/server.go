@@ -12,7 +12,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
-	"hyperchain/api/admin"
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"strings"
@@ -24,17 +23,13 @@ func init() {
 }
 
 const (
-	stopPendingRequestTimeout = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
-	adminService              = "admin"
+	stopPendingRequestTimeout             = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
+	OptionMethodInvocation    CodecOption = 1 << iota       // OptionMethodInvocation is an indication that the codec supports RPC method calls
+	adminService                          = "admin"
 )
 
 // CodecOption specifies which type of messages this codec supports
 type CodecOption int
-
-const (
-	// OptionMethodInvocation is an indication that the codec supports RPC method calls
-	OptionMethodInvocation CodecOption = 1 << iota
-)
 
 // NewServer will create a new server instance with no registered handlers.
 func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartHp chan bool) *Server {
@@ -43,7 +38,7 @@ func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartH
 		run:          1,
 		namespaceMgr: nr,
 	}
-	server.admin = &admin.Administrator{
+	server.admin = &Administrator{
 		NsMgr:         server.namespaceMgr,
 		StopServer:    stopHyperchain,
 		RestartServer: restartHp,
@@ -176,7 +171,6 @@ func splitRawMessage(args json.RawMessage) ([]string, error) {
 	str = str[2 : len(str)-2]
 	splitstr := strings.Split(str, ",")
 	return splitstr, nil
-
 }
 
 func (s *Server) handleCMD(req *common.RPCRequest) *common.RPCResponse {
@@ -188,7 +182,7 @@ func (s *Server) handleCMD(req *common.RPCRequest) *common.RPCResponse {
 		if err != nil {
 			return &common.RPCResponse{Reply: "invalid cmd"}
 		}
-		cmd := &admin.Command{
+		cmd := &Command{
 			MethodName: req.Method,
 			Args:       args,
 		}
@@ -217,7 +211,7 @@ func (s *Server) ServeSingleRequest(codec ServerCodec, options CodecOption) {
 // close all codecs which will cancels pending requests/subscriptions.
 func (s *Server) Stop() {
 	if atomic.CompareAndSwapInt32(&s.run, 1, 0) {
-		log.Debug("RPC Server shutdown initiatied")
+		log.Notice("RPC Server shutdown initiatied")
 		time.AfterFunc(stopPendingRequestTimeout, func() {
 			s.codecsMu.Lock()
 			defer s.codecsMu.Unlock()
@@ -225,7 +219,14 @@ func (s *Server) Stop() {
 				c.(ServerCodec).Close()
 				return true
 			})
+			log.Notice("RPC Server shutdown")
 		})
+	}
+}
+
+func (s *Server) Start() {
+	if atomic.CompareAndSwapInt32(&s.run, 0, 1) {
+		log.Notice("RPC Server start initiatied")
 	}
 }
 

@@ -6,10 +6,10 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/op/go-logging"
-	"hyperchain/api/admin"
 	"net/http"
 	"io/ioutil"
 	"github.com/urfave/cli"
+	admin "hyperchain/api/jsonrpc/core"
 )
 
 var logger *logging.Logger
@@ -43,7 +43,7 @@ func NewRpcClient(host, port string) *CmdClient {
 	return client
 }
 
-//InvokeCmd invoke a command using json rpc client and wait for the response.
+//InvokeCmd invoke a command using json admin client and wait for the response.
 func (cc *CmdClient) InvokeCmd(cmd *admin.Command) *admin.CommandResult {
 	logger.Critical(cmd.ToJson())
 	rs, err := cc.Call(cmd.ToJson())

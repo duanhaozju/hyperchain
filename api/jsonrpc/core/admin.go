@@ -1,18 +1,11 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package admin
+package jsonrpc
 
 import (
 	"fmt"
-	"github.com/op/go-logging"
 	"hyperchain/namespace"
 )
-
-var log *logging.Logger
-
-func init() {
-	log = logging.MustGetLogger("admin")
-}
 
 //Command command send from client.
 type Command struct {
@@ -57,30 +50,35 @@ type Administrator struct {
 
 //StopServer stop hyperchain server.
 func (adm *Administrator) stopServer(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd)
 	adm.StopServer <- true
 	return &CommandResult{Ok: true, Result: "stop server success!"}
 }
 
 //RestartServer start hyperchain server.
 func (adm *Administrator) restartServer(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd)
 	adm.RestartServer <- true
 	return &CommandResult{Ok: true, Result: "restart server success!"}
 }
 
 //StartMgr start namespace manager.
 func (adm *Administrator) startNsMgr(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd)
 	adm.NsMgr.Start()
 	return nil
 }
 
 //StopNsMgr stop namespace manager.
 func (adm *Administrator) stopNsMgr(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd)
 	adm.NsMgr.Stop()
 	return nil
 }
 
 //StartNamespace start namespace by name.
 func (adm *Administrator) startNamespace(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd)
 	if len(cmd.Args) != 1 {
 		return &CommandResult{Ok: false, Result: "invalid params"}
 	}
@@ -95,6 +93,7 @@ func (adm *Administrator) startNamespace(cmd *Command) *CommandResult {
 
 //StartNamespace stop namespace by name.
 func (adm *Administrator) stopNamespace(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd)
 	if len(cmd.Args) != 1 {
 		return &CommandResult{Ok: false, Result: "invalid params"}
 	}
@@ -109,6 +108,7 @@ func (adm *Administrator) stopNamespace(cmd *Command) *CommandResult {
 
 //RestartNamespace restart namespace by name.
 func (adm *Administrator) restartNamespace(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd)
 	if len(cmd.Args) != 1 {
 		return &CommandResult{Ok: false, Result: "invalid params"}
 	}
@@ -123,6 +123,7 @@ func (adm *Administrator) restartNamespace(cmd *Command) *CommandResult {
 
 //RegisterNamespace register a new namespace.
 func (adm *Administrator) registerNamespace(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd)
 	if len(cmd.Args) != 1 {
 		return &CommandResult{Ok: false, Result: "invalid params"}
 	}
@@ -137,6 +138,7 @@ func (adm *Administrator) registerNamespace(cmd *Command) *CommandResult {
 
 //DeregisterNamespace deregister a namespace
 func (adm *Administrator) deregisterNamespace(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd)
 	if len(cmd.Args) != 1 {
 		return &CommandResult{Ok: false, Result: "invalid params"}
 	}
@@ -148,6 +150,7 @@ func (adm *Administrator) deregisterNamespace(cmd *Command) *CommandResult {
 }
 
 func (adm *Administrator) listNamespaces(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd)
 	names := adm.NsMgr.List()
 	//TODO:
 	return &CommandResult{Ok: true, Result: names[0]}
@@ -155,20 +158,41 @@ func (adm *Administrator) listNamespaces(cmd *Command) *CommandResult {
 
 //GetLevel get a log level.
 func (adm *Administrator) getLevel(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd)
 	//TODO: impl get log level method
 	return nil
 }
 
 //SetLevel set a module log level.
 func (adm *Administrator) setLevel(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd)
 	//TODO: impl set log level method
 	return nil
+}
+
+func (adm *Administrator) startHttpServer(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd)
+	go hs.Start()
+	return &CommandResult{Ok: true, Result: "start http successful."}
+}
+
+func (adm *Administrator) stopHttpServer(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd)
+	hs.Stop()
+	return &CommandResult{Ok: true, Result: "stop http successful."}
+}
+
+func (adm *Administrator) restartHttpServer(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd)
+	go hs.Restart()
+	return &CommandResult{Ok: true, Result: "restart http successful."}
 }
 
 func (adm *Administrator) Init() {
 	adm.CmdExecutor = make(map[string]func(command *Command) *CommandResult)
 	adm.CmdExecutor["stopServer"] = adm.stopServer
 	adm.CmdExecutor["restartServer"] = adm.restartServer
+
 	adm.CmdExecutor["startNsMgr"] = adm.startNsMgr
 	adm.CmdExecutor["stopNsMgr"] = adm.stopNsMgr
 	adm.CmdExecutor["startNamespace"] = adm.startNamespace
@@ -176,7 +200,12 @@ func (adm *Administrator) Init() {
 	adm.CmdExecutor["restartNamespace"] = adm.restartNamespace
 	adm.CmdExecutor["registerNamespace"] = adm.registerNamespace
 	adm.CmdExecutor["deregisterNamespace"] = adm.deregisterNamespace
+	adm.CmdExecutor["listNamespaces"] = adm.listNamespaces
+
 	adm.CmdExecutor["getLevel"] = adm.getLevel
 	adm.CmdExecutor["setLevel"] = adm.getLevel
-	adm.CmdExecutor["listNamespaces"] = adm.listNamespaces
+
+	adm.CmdExecutor["startHttpServer"] = adm.startHttpServer
+	adm.CmdExecutor["stopHttpServer"] = adm.stopHttpServer
+	adm.CmdExecutor["restartHttpServer"] = adm.restartHttpServer
 }

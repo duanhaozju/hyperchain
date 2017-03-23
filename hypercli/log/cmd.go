@@ -5,8 +5,8 @@ package log
 import (
 	"fmt"
 	"github.com/urfave/cli"
-	"hyperchain/api/admin"
 	"hyperchain/hypercli/common"
+	admin "hyperchain/api/jsonrpc/core"
 )
 
 //NewLogCMD new log related commands.

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli"
-	"hyperchain/api/admin"
+	admin "hyperchain/api/jsonrpc/core"
 	"hyperchain/hypercli/common"
 )
 
@@ -20,22 +20,19 @@ func init() {
 func NewServerCMD() []cli.Command {
 	return []cli.Command{
 		{
-			Name:    "start",
-			Aliases: []string{"-s"},
-			Usage:   "start hyperchain server",
-			Action:  start,
+			Name:   "start",
+			Usage:  "start hyperchain server",
+			Action: start,
 		},
 		{
-			Name:    "stop",
-			Aliases: []string{"-sp"},
-			Usage:   "stop hyperchain server",
-			Action:  stop,
+			Name:   "stop",
+			Usage:  "stop hyperchain server",
+			Action: stop,
 		},
 		{
-			Name:    "restart",
-			Aliases: []string{"-r"},
-			Usage:   "restart hyperchain server",
-			Action:  restart,
+			Name:   "restart",
+			Usage:  "restart hyperchain server",
+			Action: restart,
 		},
 	}
 }
