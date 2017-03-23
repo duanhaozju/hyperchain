@@ -99,6 +99,7 @@ func (hub *EventHub) Start(c chan int, cm *admittance.CAManager) {
 	go hub.listenMiscellaneousEvent()
 	go hub.listenPeerMaintainEvent()
 	go hub.listenSessionEvent()
+	go hub.listenTransactionEvent()
 
 	go hub.peerManager.Start(c, hub.eventMux, cm)
 	hub.initType = <-c
