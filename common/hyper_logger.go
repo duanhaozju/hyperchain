@@ -82,13 +82,17 @@ func SetLogLevel(namespace string, module string, level string) (string, error) 
 	return "", nil
 }
 
-func Close(namespace string) error {
+func CloseHyperlogger(namespace string) error {
 	hl, err := getHyperlogger(namespace)
 	if err != nil {
 		logger.Errorf("Close Namespace Error: %s", err.Error())
 		return err
 	}
 	hl.closeLogFile <- struct {}{}
+	rwMutex.Lock()
+	delete(hyperLoggers, namespace)
+	rwMutex.Unlock()
+
 	return nil
 }
 
