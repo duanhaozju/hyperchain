@@ -8,7 +8,6 @@ import (
 	"math/big"
 	"hyperchain/core/types"
 	"hyperchain/core/hyperstate"
-	"github.com/ethereum/go-ethereum/whisper/whisperv2"
 )
 
 // Call executes within the given contract

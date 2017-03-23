@@ -285,6 +285,45 @@ func (contract *Contract) GetStorageByAddr(addr common.Address) (map[string]stri
 	return mp, nil
 }
 
+// GetDeployedList return all deployed contracts list (include suicided)
+func (contract *Contract) GetDeployedList(addr common.Address) ([]string, error) {
+	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
+	if err != nil {
+		return nil, err
+	}
+	if obj := stateDb.GetAccount(addr); obj == nil {
+		return nil, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+	} else {
+		return stateDb.GetDeployedContract(addr), nil
+	}
+}
+
+// GetDeployedList return creator address
+func (contract *Contract) GetCreator(addr common.Address) (common.Address, error) {
+	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
+	if err != nil {
+		return common.Address{}, err
+	}
+	if obj := stateDb.GetAccount(addr); obj == nil {
+		return common.Address{}, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+	} else {
+		return stateDb.GetCreator(addr), nil
+	}
+}
+
+// GetDeployedList return contract status
+func (contract *Contract) GetStatus(addr common.Address) (int, error) {
+	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
+	if err != nil {
+		return -1, err
+	}
+	if obj := stateDb.GetAccount(addr); obj == nil {
+		return -1, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+	} else {
+		return stateDb.GetStatus(addr), nil
+	}
+}
+
 func getBlockStateDb(namespace string, config *common.Config) (vm.Database, error) {
 	stateDB, err := NewStateDb(config, namespace)
 	if err != nil {
