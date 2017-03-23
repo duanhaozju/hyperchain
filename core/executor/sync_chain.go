@@ -8,7 +8,6 @@ import (
 	"hyperchain/event"
 	"hyperchain/protos"
 	"bytes"
-	"hyperchain/recovery"
 )
 
 // SendSyncRequest - send synchronization request to other nodes.
@@ -53,10 +52,10 @@ func (executor *Executor) SendSyncRequest(ev event.ChainSyncReqEvent) {
 
 // ReceiveSyncRequest - receive synchronization request from some nodes, and send back request blocks.
 func (executor *Executor) ReceiveSyncRequest(payload []byte) {
-	syncReqMsg := &recovery.CheckPointMessage{}
-	proto.Unmarshal(payload, syncReqMsg)
-	for i := syncReqMsg.RequiredNumber; i > syncReqMsg.CurrentNumber; i -= 1 {
-		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, syncReqMsg.PeerId)
+	var request ChainSyncRequest
+	proto.Unmarshal(payload, &request)
+	for i := request.RequiredNumber; i > request.CurrentNumber; i -= 1 {
+		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, request.PeerId)
 	}
 }
 
