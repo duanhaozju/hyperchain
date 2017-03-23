@@ -10,7 +10,6 @@ import (
 	"hyperchain/consensus"
 	"hyperchain/consensus/pbft"
 	"hyperchain/core/executor"
-	"hyperchain/core/types"
 	"hyperchain/event"
 	"hyperchain/p2p"
 	"hyperchain/protos"
@@ -192,15 +191,11 @@ func (hub *EventHub) listenConsensusEvent() {
 			hub.peerManager.BroadcastPeers(ev.Payload)
 		case event.TxUniqueCastEvent:
 			log.Debugf("[Namespace = %s] message middleware: [tx unicast]", hub.namespace)
-			var peers []uint64
-			peers = append(peers, ev.PeerId)
-			go hub.peerManager.SendMsgToPeers(ev.Payload, peers, recovery.Message_RELAYTX)
+			go hub.peerManager.SendMsgToPeers(ev.Payload, []uint64{ev.PeerId}, recovery.Message_RELAYTX)
 		case event.NewTxEvent:
 			log.Debugf("[Namespace = %s] message middleware: [new tx]", hub.namespace)
 			if ev.Simulate == true {
-				tx := &types.Transaction{}
-				proto.Unmarshal(ev.Payload, tx)
-				hub.executor.RunInSandBox(tx)
+				hub.executor.RunInSandBox(ev)
 			} else {
 				msg, err :=  proto.Marshal(&protos.Message{
 					Type:    protos.Message_TRANSACTION,

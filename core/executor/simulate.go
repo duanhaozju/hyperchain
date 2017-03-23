@@ -9,7 +9,9 @@ import (
 
 // run transaction in a sandbox
 // execution result will not been add to database
-func (executor *Executor) RunInSandBox(tx *types.Transaction) error {
+func (executor *Executor) RunInSandBox(ev event.NewTxEvent) error {
+	tx := &types.Transaction{}
+	proto.Unmarshal(ev.Payload, tx)
 	statedb, err := executor.newStateDb()
 	if err != nil {
 		return err
