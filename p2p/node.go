@@ -17,7 +17,6 @@ import (
 	"time"
 	"hyperchain/p2p/peerComm"
 	"fmt"
-	m "hyperchain/manager/message"
 )
 
 type Node struct {
@@ -258,14 +257,8 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 			log.Errorf("cannot decrypt the message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err)
 			return response, errors.New(fmt.Sprintf("cannot decrypt the message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err))
 		}
-		var ctx m.SessionMessage
-		unMarshalErr := proto.Unmarshal(transferData, &ctx)
-		if unMarshalErr != nil {
-			log.Error("sync UnMarshal error!")
-			return response, errors.New(fmt.Sprintf("unmarshal session message failed. send from: %d", msg.From.ID))
-		}
 		go node.higherEventManager.Post(event.SessionEvent{
-			Message: ctx,
+			Message:  transferData,
 		})
 		payload := []byte("GOT_A_SESSION_MESSAGE")
 		rpayload,err := node.TM.Encrypt(payload,pb.RecoverPeerAddr(msg.From))

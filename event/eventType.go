@@ -4,7 +4,6 @@ package event
 
 import (
 	"hyperchain/core/types"
-	m "hyperchain/manager/message"
 )
 
 type AliveEvent struct{ Payload bool }
@@ -27,7 +26,7 @@ type TxUniqueCastEvent struct {
 type ChainSyncReqEvent struct{ Payload []byte }
 
 type SessionEvent struct {
-	Message m.SessionMessage
+	Message []byte
 }
 
 //receive new block event from node consensus event for consensus module

@@ -347,7 +347,14 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 }
 
 func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
-	switch ev.Message.Type {
+	var message m.SessionMessage
+	err := proto.Unmarshal(ev.Message, &message)
+	if err != nil {
+		log.Error("unmarshal session message failed")
+		return
+	}
+
+	switch message.Type {
 	case m.SessionMessage_CONSENSUS:
 		fallthrough
 	case m.SessionMessage_FOWARD_TX:
@@ -355,17 +362,17 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 	case m.SessionMessage_ADD_PEER:
 		fallthrough
 	case m.SessionMessage_DEL_PEER:
-		hub.consenter.RecvMsg(ev.Message.Payload)
+		hub.consenter.RecvMsg(message.Payload)
 	case m.SessionMessage_UNICAST_BLK:
-		hub.executor.ReceiveSyncBlocks(ev.Message.Payload)
+		hub.executor.ReceiveSyncBlocks(message.Payload)
 	case m.SessionMessage_UNICAST_INVALID:
-		hub.executor.StoreInvalidTransaction(ev.Message.Payload)
+		hub.executor.StoreInvalidTransaction(message.Payload)
 	case m.SessionMessage_SYNC_REPLICA:
-		hub.executor.ReceiveReplicaInfo(ev.Message.Payload)
+		hub.executor.ReceiveReplicaInfo(message.Payload)
 	case m.SessionMessage_BROADCAST_SINGLE_BLK:
 		fallthrough
 	case m.SessionMessage_SYNC_REQ:
-		hub.executor.ReceiveSyncRequest(ev.Message.Payload)
+		hub.executor.ReceiveSyncRequest(message.Payload)
 	default:
 		log.Error("receive a undefined session event")
 	}
