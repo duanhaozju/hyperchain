@@ -16,6 +16,10 @@ import (
 	"strings"
 )
 
+// Usage:
+// Use GetLogger to get a logger
+// Use SetLogLevel to set the logger's level
+
 var logger = logging.MustGetLogger("commonLogger")
 var hyperLoggers map[string]*HyperLogger
 var rwMutex sync.RWMutex
@@ -36,7 +40,7 @@ type HyperLogger struct {
 	baseLevel		 logging.Level
 }
 
-//InitHyperLogger int the whole logging system.
+//InitHyperLogger init the whole logging system.
 func InitHyperLogger(conf *Config) (*HyperLogger, error) {
 	once.Do(func() {
 		hyperLoggers = make(map[string]*HyperLogger)
