@@ -76,14 +76,23 @@ func GetLogger(namespace string, module string) *logging.Logger {
 	return getLogger(namespace, module)
 }
 
-func SetLogLevel(namespace string, module string, level string) (string, error) {
+func SetLogLevel(namespace string, module string, level string) error {
 	hl, err := getHyperlogger(namespace)
 	if err != nil {
 		err := errors.New("Error: " + namespace + " not exist cannot get hyperlogger")
-		return "", err
+		return  err
 	}
 	hl.setModuleLogLevel(namespace, module, level)
-	return "", nil
+	return nil
+}
+
+func GetLogLevel(namespace, module string) string  {
+	hl, err := getHyperlogger(namespace)
+	if err != nil{
+		logger.Errorf("getHyperlogger error %v", err)
+		return ""
+	}
+	return hl.consoleBackend.GetLevel(getCompositeModuleName(namespace, module)).String()
 }
 
 func CloseHyperlogger(namespace string) error {

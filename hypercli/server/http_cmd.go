@@ -3,7 +3,6 @@
 package server
 
 import (
-	"fmt"
 	"github.com/urfave/cli"
 	admin "hyperchain/api/jsonrpc/core"
 	"hyperchain/hypercli/common"
@@ -35,8 +34,7 @@ func startHttp(c *cli.Context) error {
 		MethodName: "admin_startHttpServer",
 		Args:       c.Args(),
 	}
-	rs := client.InvokeCmd(cmd)
-	fmt.Println(rs)
+	client.InvokeCmd(cmd)
 	return nil
 }
 
@@ -46,8 +44,7 @@ func stopHttp(c *cli.Context) error {
 		MethodName: "admin_stopHttpServer",
 		Args:       c.Args(),
 	}
-	rs := client.InvokeCmd(cmd)
-	fmt.Println(rs)
+	client.InvokeCmd(cmd)
 	return nil
 }
 
@@ -57,7 +54,6 @@ func restartHttp(c *cli.Context) error {
 		MethodName: "admin_restartHttpServer",
 		Args:       c.Args(),
 	}
-	rs := client.InvokeCmd(cmd)
-	fmt.Println(rs)
+	client.InvokeCmd(cmd)
 	return nil
 }

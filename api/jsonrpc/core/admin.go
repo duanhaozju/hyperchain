@@ -4,7 +4,9 @@ package jsonrpc
 
 import (
 	"fmt"
+	"hyperchain/common"
 	"hyperchain/namespace"
+	"strings"
 )
 
 //Command command send from client.
@@ -37,8 +39,8 @@ func (cmd *Command) ToJson() string {
 
 //CommandResult command execute result send back to the user.
 type CommandResult struct {
-	Ok     bool   `json:"ok"`
-	Result string `json:"result"`
+	Ok     bool        `json:"ok"`
+	Result interface{} `json:"result"`
 }
 
 type Administrator struct {
@@ -152,22 +154,31 @@ func (adm *Administrator) deregisterNamespace(cmd *Command) *CommandResult {
 func (adm *Administrator) listNamespaces(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd)
 	names := adm.NsMgr.List()
-	//TODO:
-	return &CommandResult{Ok: true, Result: names[0]}
+	return &CommandResult{Ok: true, Result: names}
 }
 
 //GetLevel get a log level.
 func (adm *Administrator) getLevel(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd)
-	//TODO: impl get log level method
-	return nil
+	argLen := len(cmd.Args)
+	if argLen != 2 {
+		log.Errorf("Invalid cmd nums %d", argLen)
+	}
+	level := common.GetLogLevel(cmd.Args[0], cmd.Args[1])
+	return &CommandResult{Ok: true, Result: level}
 }
 
 //SetLevel set a module log level.
 func (adm *Administrator) setLevel(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd)
-	//TODO: impl set log level method
-	return nil
+	argLen := len(cmd.Args)
+	if argLen != 3 {
+		log.Errorf("Invalid cmd nums %d", argLen)
+	}
+
+	common.SetLogLevel(cmd.Args[0], cmd.Args[1], cmd.Args[2])
+	rs := strings.Join(cmd.Args, "_")
+	return &CommandResult{Ok: true, Result: rs}
 }
 
 func (adm *Administrator) startHttpServer(cmd *Command) *CommandResult {
@@ -203,7 +214,7 @@ func (adm *Administrator) Init() {
 	adm.CmdExecutor["listNamespaces"] = adm.listNamespaces
 
 	adm.CmdExecutor["getLevel"] = adm.getLevel
-	adm.CmdExecutor["setLevel"] = adm.getLevel
+	adm.CmdExecutor["setLevel"] = adm.setLevel
 
 	adm.CmdExecutor["startHttpServer"] = adm.startHttpServer
 	adm.CmdExecutor["stopHttpServer"] = adm.stopHttpServer
