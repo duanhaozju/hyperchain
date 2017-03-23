@@ -23,7 +23,12 @@ type TxUniqueCastEvent struct {
 }
 
 //node receive checkpoint sync event and then,check db and send block require request to peers
-type ChainSyncReqEvent struct{ Payload []byte }
+type ChainSyncReqEvent struct{
+	Id              uint64
+	TargetHeight    uint64
+	TargetBlockHash []byte
+	Replicas        []uint64
+}
 
 type SessionEvent struct {
 	Message []byte

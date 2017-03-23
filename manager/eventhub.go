@@ -145,16 +145,13 @@ func (hub *EventHub) listenTransactionEvent() {
 			if ev.Simulate == true {
 				hub.executor.RunInSandBox(ev)
 			} else {
-				msg, err :=  proto.Marshal(&protos.Message{
-					Type:    protos.Message_TRANSACTION,
-					Payload: ev.Payload,
-					Timestamp: time.Now().UnixNano(),
-					Id:        0,
-				})
+				// Parse the transaction payload to transaction
+				tx := &types.Transaction{}
+				err := proto.Unmarshal(ev.Payload, tx)
 				if err != nil {
 					return
 				}
-				hub.consenter.RecvMsg(msg)
+				hub.consenter.RecvLocal(tx)
 			}
 		}
 	}
@@ -287,12 +284,7 @@ func (hub *EventHub) NegotiateView() {
 		Payload:   nil,
 		Id:        0,
 	}
-	msg, err := proto.Marshal(negoView)
-	if err != nil {
-		log.Error("marshal nego view failed")
-		return
-	}
-	hub.consenter.RecvMsg(msg)
+	hub.consenter.RecvLocal(negoView)
 }
 
 func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {
