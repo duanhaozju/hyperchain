@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc"
 	pb "hyperchain/p2p/peermessage"
 	"strconv"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/core/crypto/primitives"
 	"crypto/ecdsa"
 	"hyperchain/p2p/transport/ecdh"

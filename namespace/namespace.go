@@ -12,7 +12,7 @@ import (
 	"hyperchain/consensus/csmgr"
 	"hyperchain/core/db_utils"
 	"hyperchain/core/executor"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/manager"
 	"hyperchain/namespace/rpc"
 	"hyperchain/p2p"

@@ -10,7 +10,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/types"
 	"hyperchain/crypto"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/manager"
 	"time"
 	edb "hyperchain/core/db_utils"

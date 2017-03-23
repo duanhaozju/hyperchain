@@ -11,7 +11,7 @@ import (
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/compiler"
 	"hyperchain/crypto/hmEncryption"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/manager"
 	"math/big"
 	"time"
@@ -283,6 +283,58 @@ func (contract *Contract) GetStorageByAddr(addr common.Address) (map[string]stri
 		}
 	}
 	return mp, nil
+}
+
+// GetDeployedList return all deployed contracts list (include suicided)
+func (contract *Contract) GetDeployedList(addr common.Address) ([]string, error) {
+	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
+	if err != nil {
+		return nil, err
+	}
+	if obj := stateDb.GetAccount(addr); obj == nil {
+		return nil, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+	} else {
+		return stateDb.GetDeployedContract(addr), nil
+	}
+}
+
+// GetCreator return creator address
+func (contract *Contract) GetCreator(addr common.Address) (common.Address, error) {
+	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
+	if err != nil {
+		return common.Address{}, err
+	}
+	if obj := stateDb.GetAccount(addr); obj == nil {
+		return common.Address{}, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+	} else {
+		return stateDb.GetCreator(addr), nil
+	}
+}
+
+// GetStatus return contract status
+func (contract *Contract) GetStatus(addr common.Address) (int, error) {
+	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
+	if err != nil {
+		return -1, err
+	}
+	if obj := stateDb.GetAccount(addr); obj == nil {
+		return -1, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+	} else {
+		return stateDb.GetStatus(addr), nil
+	}
+}
+
+// GetCreateTime return contract status
+func (contract *Contract) GetCreateTime(addr common.Address) (uint64, error) {
+	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
+	if err != nil {
+		return 0, err
+	}
+	if obj := stateDb.GetAccount(addr); obj == nil {
+		return 0, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+	} else {
+		return stateDb.GetCreateTime(addr), nil
+	}
 }
 
 func getBlockStateDb(namespace string, config *common.Config) (vm.Database, error) {

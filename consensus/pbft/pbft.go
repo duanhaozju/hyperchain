@@ -19,6 +19,7 @@ import (
 	"hyperchain/consensus/helper"
 	"hyperchain/consensus"
 	"sync/atomic"
+	"hyperchain/core/types"
 )
 
 /**
@@ -53,14 +54,11 @@ func (pbft *pbftImpl) RecvMsg(e []byte) error {
 		return err
 	}
 	switch msg.Type {
-	case protos.Message_TRANSACTION:// tx send to current node and current node is primary
-		return pbft.enqueueTx(msg)
 	case protos.Message_CONSENSUS:
 		return pbft.enqueueConsensusMsg(msg) //msgs from other peers
 	case protos.Message_NULL_REQUEST:
 		return pbft.processNullRequest(msg)
-	case protos.Message_NEGOTIATE_VIEW:
-		return pbft.processNegotiateView()
+
 	default:
 		pbft.logger.Errorf("Unsupport message type: %v", msg.Type)
 		return nil//TODO: define PBFT error type
@@ -69,19 +67,27 @@ func (pbft *pbftImpl) RecvMsg(e []byte) error {
 
 //RecvMsg receive messages form local services
 func (pbft *pbftImpl) RecvLocal(msg interface{}) error {
-
-	switch msg.(type) {
-	case protos.RemoveCache:
-		if atomic.LoadUint32(&pbft.activeView) == 1 && pbft.primary(pbft.view) == pbft.id {
+	if negoView, ok := msg.(*protos.Message); ok {
+		if negoView.Type == protos.Message_NEGOTIATE_VIEW {
+			return pbft.processNegotiateView()
+		}
+		return nil
+	} else {
+		switch msg.(type) {
+		case protos.RemoveCache:
+			if atomic.LoadUint32(&pbft.activeView) == 1 && pbft.primary(pbft.view) == pbft.id {
+				go pbft.reqEventQueue.Push(msg)
+			} else {
+				go pbft.pbftEventQueue.Push(msg)
+			}
+		case *types.Transaction: //local transaction
 			go pbft.reqEventQueue.Push(msg)
-		} else {
+
+		default:
 			go pbft.pbftEventQueue.Push(msg)
 		}
-
-	default:
-		go pbft.pbftEventQueue.Push(msg)
+		return nil
 	}
-	return nil
 }
 
 //Start start the consensus service

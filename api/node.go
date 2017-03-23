@@ -3,7 +3,7 @@
 package hpc
 
 import (
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/manager"
 	"hyperchain/p2p"
 	"hyperchain/common"

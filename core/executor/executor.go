@@ -7,7 +7,7 @@ import (
 	"hyperchain/core/hyperstate"
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/crypto"
 	"errors"
 	edb "hyperchain/core/db_utils"
@@ -57,13 +57,13 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux)
 // Start - start service.
 func (executor *Executor) Start() {
 	executor.initialize()
-	executor.logger.Noticef("[Namespace = %s] ************* executor start **************", executor.namespace)
+	executor.logger.Noticef("[Namespace = %s]  executor start", executor.namespace)
 }
 
 // Stop - stop service.
 func (executor *Executor) Stop() {
 	executor.setExit()
-	executor.logger.Noticef("[Namespace = %s] ************* executor stop **************", executor.namespace)
+	executor.logger.Noticef("[Namespace = %s] executor stop", executor.namespace)
 }
 
 // Status - obtain executor status.

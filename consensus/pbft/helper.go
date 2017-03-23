@@ -209,7 +209,6 @@ func cMsgToPbMsg(msg *ConsensusMessage, id uint64) *protos.Message {
 	msgPayload, err := proto.Marshal(msg)
 
 	if err != nil {
-		//pbft.logger.Errorf("ConsensusMessage Marshal Error", err)
 		return nil
 	}
 
@@ -233,18 +232,6 @@ func nullRequestMsgToPbMsg(id uint64) *protos.Message {
 	}
 
 	return pbMsg
-}
-
-// StateUpdateHelper help convert checkPointInfo, blockchainInfo, replicas to pb.UpdateStateMessage
-func stateUpdateHelper(myId uint64, seqNo uint64, id []byte, replicaId []uint64) *protos.UpdateStateMessage {
-
-	stateUpdateMsg := &protos.UpdateStateMessage{
-		Id:       myId,
-		SeqNo:    seqNo,
-		TargetId: id,
-		Replicas: replicaId,
-	}
-	return stateUpdateMsg
 }
 
 func (pbft *pbftImpl) getBlockchainInfo() *protos.BlockchainInfo {

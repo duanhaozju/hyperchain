@@ -5,31 +5,25 @@ import (
 	"hyperchain/core/types"
 	edb "hyperchain/core/db_utils"
 	"github.com/golang/protobuf/proto"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/protos"
 	"bytes"
-	"hyperchain/recovery"
 )
 
 // SendSyncRequest - send synchronization request to other nodes.
 func (executor *Executor) SendSyncRequest(ev event.ChainSyncReqEvent) {
-	err, stateUpdateMsg, target := executor.unmarshalStateUpdateMessage(ev)
-	if err != nil {
-		executor.logger.Errorf("[Namespace = %s] invalid state update message.", executor.namespace)
-		executor.reject()
-		return
-	}
-	executor.logger.Noticef("[Namespace = %s] send sync block request to fetch missing block, current height %d, target height %d", executor.namespace, edb.GetHeightOfChain(executor.namespace), target.Height)
 
-	if executor.status.syncFlag.SyncTarget >= target.Height || edb.GetHeightOfChain(executor.namespace) > target.Height {
+	executor.logger.Noticef("[Namespace = %s] send sync block request to fetch missing block, current height %d, target height %d", executor.namespace, edb.GetHeightOfChain(executor.namespace), ev.TargetHeight)
+
+	if executor.status.syncFlag.SyncTarget >= ev.TargetHeight || edb.GetHeightOfChain(executor.namespace) > ev.TargetHeight {
 		executor.logger.Errorf("[Namespace = %s] receive invalid state update request, just ignore it", executor.namespace)
 		executor.reject()
 		return
 	}
 
-	if edb.GetHeightOfChain(executor.namespace) == target.Height {
+	if edb.GetHeightOfChain(executor.namespace) == ev.TargetHeight {
 		executor.logger.Debugf("[Namespace = %s] recv target height same with current chain height", executor.namespace)
-		if executor.isBlockHashEqual(target.CurrentBlockHash) == true {
+		if executor.isBlockHashEqual(ev.TargetBlockHash) == true {
 			executor.logger.Infof("[Namespace = %s] current chain latest block hash equal with target hash, send state updated event", executor.namespace)
 			executor.sendStateUpdatedEvent()
 		} else {
@@ -42,8 +36,8 @@ func (executor *Executor) SendSyncRequest(ev event.ChainSyncReqEvent) {
 		}
 	}
 
-	executor.updateSyncFlag(target.Height, target.CurrentBlockHash, target.Height)
-	executor.recordSyncPeers(stateUpdateMsg.Replicas, stateUpdateMsg.Id)
+	executor.updateSyncFlag(ev.TargetHeight, ev.TargetBlockHash, ev.TargetHeight)
+	executor.recordSyncPeers(ev.Replicas, ev.Id)
 	if err := executor.informP2P(NOTIFY_BROADCAST_DEMAND, nil); err != nil {
 		executor.logger.Errorf("[Namespace = %s] send sync req failed.", executor.namespace)
 		executor.reject()
@@ -52,19 +46,19 @@ func (executor *Executor) SendSyncRequest(ev event.ChainSyncReqEvent) {
 }
 
 // ReceiveSyncRequest - receive synchronization request from some nodes, and send back request blocks.
-func (executor *Executor) ReceiveSyncRequest(ev event.SyncBlockReqEvent) {
-	syncReqMsg := &recovery.CheckPointMessage{}
-	proto.Unmarshal(ev.Payload, syncReqMsg)
-	for i := syncReqMsg.RequiredNumber; i > syncReqMsg.CurrentNumber; i -= 1 {
-		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, syncReqMsg.PeerId)
+func (executor *Executor) ReceiveSyncRequest(payload []byte) {
+	var request ChainSyncRequest
+	proto.Unmarshal(payload, &request)
+	for i := request.RequiredNumber; i > request.CurrentNumber; i -= 1 {
+		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, request.PeerId)
 	}
 }
 
 // ReceiveSyncBlocks - receive request synchronization blocks from others.
-func (executor *Executor) ReceiveSyncBlocks(ev event.SyncBlockReceiveEvent) {
+func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 	if executor.status.syncFlag.SyncDemandBlockNum != 0 {
 		block := &types.Block{}
-		proto.Unmarshal(ev.Payload, block)
+		proto.Unmarshal(payload, block)
 		// store blocks into database only, not process them.
 		if !executor.verifyBlockIntegrity(block) {
 			executor.logger.Warningf("[Namespace = %s] receive a broken block %d, drop it", executor.namespace, block.Number)
@@ -117,23 +111,6 @@ func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *
 // ClearStateUnCommitted - remove all cached stuff
 func (executor *Executor) clearStatedb() {
 	executor.statedb.Purge()
-}
-
-// unmarshalStateUpdateMessage - unmarshal block synchronization message sent from consensus module and return a block synchronization target.
-func (executor *Executor) unmarshalStateUpdateMessage(ev event.ChainSyncReqEvent) (error, *protos.UpdateStateMessage, *protos.BlockchainInfo) {
-	updateStateMessage := &protos.UpdateStateMessage{}
-	err := proto.Unmarshal(ev.Payload, updateStateMessage)
-	if err != nil {
-		executor.logger.Errorf("[Namespace = %s] unmarshal state update message failed. %s", executor.namespace, err)
-		return err, nil, nil
-	}
-	blockChainInfo := &protos.BlockchainInfo{}
-	err = proto.Unmarshal(updateStateMessage.TargetId, blockChainInfo)
-	if err != nil {
-		executor.logger.Errorf("[Namespace = %s] unmarshal block chain info failed. %s", executor.namespace, err)
-		return err, nil, nil
-	}
-	return nil, updateStateMessage, blockChainInfo
 }
 
 // assertApplyResult - check apply result whether equal with other's.

@@ -1314,17 +1314,13 @@ func (pbft *pbftImpl) skipTo(seqNo uint64, id []byte, replicas []uint64) {
 	}
 	//pbft.UpdateState(&checkpointMessage{seqNo, id}, info, replicas)
 	pbft.logger.Debug("seqNo: ", seqNo, "id: ", id, "replicas: ", replicas)
-	pbft.updateState(seqNo, id, replicas)
+	pbft.updateState(seqNo, info, replicas)
 }
 
 // updateState attempts to synchronize state to a particular target, implicitly calls rollback if needed
-func (pbft *pbftImpl) updateState(seqNo uint64, targetId []byte, replicaId []uint64) {
-	//if pbft.valid {
-	//	pbft.logger.Warning("State transfer is being called for, but the state has not been invalidated")
-	//}
+func (pbft *pbftImpl) updateState(seqNo uint64, info *protos.BlockchainInfo, replicaId []uint64) {
 
-	updateStateMsg := stateUpdateHelper(pbft.id, seqNo, targetId, replicaId)
-	pbft.helper.UpdateState(updateStateMsg) // TODO: stateUpdateEvent
+	pbft.helper.UpdateState(pbft.id, info.Height, info.CurrentBlockHash, replicaId) // TODO: stateUpdateEvent
 
 }
 

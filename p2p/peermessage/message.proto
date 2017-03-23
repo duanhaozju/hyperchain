@@ -32,12 +32,11 @@ message Message{
         ATTEND_NOTIFY       = 8;
         ATTEND_NOTIFY_RESPONSE = 9;
         RESPONSE            = 10;
-        CONSUS              = 11;
-        KEEPALIVE           = 12;
-        SYNCMSG             = 13;
-        PENDING             = 14;
-        RECONNECT           = 15;
-        RECONNECT_RESPONSE  = 16;
+        KEEPALIVE           = 11;
+        PENDING             = 12;
+        RECONNECT           = 13;
+        RECONNECT_RESPONSE  = 14;
+        SESSION             = 15;
     }
 }
 

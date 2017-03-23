@@ -5,7 +5,7 @@ package helper
 import (
 	"time"
 
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	pb "hyperchain/protos"
 
 	"github.com/golang/protobuf/proto"
@@ -20,7 +20,7 @@ type Stack interface {
 	InnerBroadcast(msg *pb.Message) error
 	InnerUnicast(msg *pb.Message, to uint64) error
 	Execute(seqNo uint64, hash string, flag bool, isPrimary bool, time int64) error
-	UpdateState(updateState *pb.UpdateStateMessage) error
+	UpdateState(myId uint64, height uint64, blockHash []byte, replicaId []uint64) error
 	ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
 	VcReset(seqNo uint64) error
 	InformPrimary(primary uint64) error
@@ -89,15 +89,13 @@ func (h *helper) Execute(seqNo uint64, hash string, flag bool, isPrimary bool, t
 }
 
 // UpdateState transfers the UpdateStateEvent to outer
-func (h *helper) UpdateState(updateState *pb.UpdateStateMessage) error {
-	tmpMsg, err := proto.Marshal(updateState)
-
-	if err != nil {
-		return err
-	}
+func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, replicaId []uint64) error {
 
 	updateStateEvent := event.ChainSyncReqEvent{
-		Payload: tmpMsg,
+		Id:              myId,
+		TargetHeight:    height,
+		TargetBlockHash: blockHash,
+		Replicas:        replicaId,
 	}
 
 	// Post the event to outer

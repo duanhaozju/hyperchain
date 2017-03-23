@@ -9,7 +9,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/core"
 	"hyperchain/crypto"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
 	"hyperchain/p2p"

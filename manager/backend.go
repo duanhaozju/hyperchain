@@ -7,7 +7,7 @@ import (
 	"hyperchain/admittance"
 	"hyperchain/consensus"
 	"hyperchain/core/executor"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/p2p"
 )
 

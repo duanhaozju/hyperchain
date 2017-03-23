@@ -3,7 +3,6 @@ package executor
 import (
 	"time"
 	edb "hyperchain/core/db_utils"
-	"hyperchain/event"
 	"hyperchain/core/types"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
@@ -29,9 +28,9 @@ func (executor *Executor) sendReplicaInfo() {
 	}
 }
 
-func (executor *Executor) ReceiveReplicaInfo(ev event.ReplicaInfoEvent) {
+func (executor *Executor) ReceiveReplicaInfo(payload []byte) {
 	info := &types.ReplicaInfo{}
-	proto.Unmarshal(ev.Payload, info)
+	proto.Unmarshal(payload, info)
 	if string(info.Namespace) != executor.namespace {
 		return
 	}
