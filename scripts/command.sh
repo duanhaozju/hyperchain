@@ -66,6 +66,9 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getDeployedList
 # 查询合约部署者
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getCreator","params": ["<contract address>"],"id": 1}'
 
+# 查询合约部署时间
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getCreateTime","params": ["<contract address>"],"id": 1}'
+
 # 获取合约code GetCode
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getCode","params": ["<contract address>","<block number>"],"id": 1}'
 

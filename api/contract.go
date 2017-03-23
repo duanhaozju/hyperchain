@@ -298,7 +298,7 @@ func (contract *Contract) GetDeployedList(addr common.Address) ([]string, error)
 	}
 }
 
-// GetDeployedList return creator address
+// GetCreator return creator address
 func (contract *Contract) GetCreator(addr common.Address) (common.Address, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
@@ -311,7 +311,7 @@ func (contract *Contract) GetCreator(addr common.Address) (common.Address, error
 	}
 }
 
-// GetDeployedList return contract status
+// GetStatus return contract status
 func (contract *Contract) GetStatus(addr common.Address) (int, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
@@ -321,6 +321,19 @@ func (contract *Contract) GetStatus(addr common.Address) (int, error) {
 		return -1, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
 	} else {
 		return stateDb.GetStatus(addr), nil
+	}
+}
+
+// GetCreateTime return contract status
+func (contract *Contract) GetCreateTime(addr common.Address) (uint64, error) {
+	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
+	if err != nil {
+		return -1, err
+	}
+	if obj := stateDb.GetAccount(addr); obj == nil {
+		return -1, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+	} else {
+		return stateDb.GetCreateTime(addr), nil
 	}
 }
 
