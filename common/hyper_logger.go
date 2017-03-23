@@ -307,7 +307,7 @@ func (hl *HyperLogger) newLogFileByInterval(loggerDir string, conf *Config) {
 	hl.fileBackend = hl.initFileBackend(fileName, fileFormat)
 	hl.initLoggerLevelByConfiguration(conf)
 
-	loop: for {
+	for {
 		select {
 		case <-time.After(conf.GetDuration(LOG_NEW_FILE_INTERVAL)):
 			timestamp := time.Now().Unix()
@@ -320,7 +320,7 @@ func (hl *HyperLogger) newLogFileByInterval(loggerDir string, conf *Config) {
 			logger.Infof("Change log file, new log file name: %s", fileName)
 		case <-hl.closeLogFile:
 			logger.Info("Close logger service")
-			break loop
+			return
 		}
 	}
 }
