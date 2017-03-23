@@ -3,7 +3,7 @@ package controllers
 import (
 	"github.com/astaxie/beego"
 	"hyperchain/api"
-	"hyperchain/api/rest_api/utils"
+	"hyperchain/api/rest/utils"
 	"hyperchain/common"
 )
 
@@ -63,13 +63,13 @@ func (b *BlocksController) GetBlockByHashOrNumOrTime() {
 	p_startTime := b.Input().Get("startTime")
 	p_endTime := b.Input().Get("endTime")
 
-	flag := 0	// "1" means query by blockNumber, "2" means query by blockHash, "3" means query by startTime and endTime.
+	flag := 0 // "1" means query by blockNumber, "2" means query by blockHash, "3" means query by startTime and endTime.
 
 	if p_blkNum != "" && p_blkHash == "" && p_startTime == "" && p_endTime == "" {
 		flag = 1
-	}else if p_blkHash != "" && p_blkNum == "" && p_startTime == "" && p_endTime == "" {
+	} else if p_blkHash != "" && p_blkNum == "" && p_startTime == "" && p_endTime == "" {
 		flag = 2
-	} else if p_startTime != "" && p_endTime != "" && p_blkNum == "" && p_blkHash == ""{
+	} else if p_startTime != "" && p_endTime != "" && p_blkNum == "" && p_blkHash == "" {
 		flag = 3
 	} else {
 		b.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{"The number of params or the name of params is invalid"})

@@ -16,6 +16,8 @@ import (
 	"hyperchain/manager"
 	"hyperchain/namespace/rpc"
 	"hyperchain/p2p"
+	"fmt"
+	"time"
 )
 
 //Namespace represent the namespace instance

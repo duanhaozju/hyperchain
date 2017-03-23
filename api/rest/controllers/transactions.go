@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"github.com/astaxie/beego"
 	"hyperchain/api"
-	"hyperchain/api/rest_api/utils"
+	"hyperchain/api/rest/utils"
 	"hyperchain/common"
 )
 
@@ -91,13 +91,13 @@ func (t *TransactionsController) GetTransactionByBlockNumberOrBlockHashOrTime() 
 	p_startTime := t.Input().Get("startTime")
 	p_endTime := t.Input().Get("endTime")
 
-	flag := 0	// "1" means query by blockNumber and index, "2" means query by blockHash and index, "3" means query by startTime and endTime.
+	flag := 0 // "1" means query by blockNumber and index, "2" means query by blockHash and index, "3" means query by startTime and endTime.
 
 	if p_blkNum != "" && p_index != "" && p_blkHash == "" {
 		flag = 1
-	}else if p_blkHash != "" && p_index != "" && p_blkNum == "" {
+	} else if p_blkHash != "" && p_index != "" && p_blkNum == "" {
 		flag = 2
-	} else if p_startTime != "" && p_endTime != "" && p_blkNum == "" && p_blkHash == "" && p_index == ""{
+	} else if p_startTime != "" && p_endTime != "" && p_blkNum == "" && p_blkHash == "" && p_index == "" {
 		flag = 3
 	} else {
 		t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{"The number of params or the name of params is invalid"})
@@ -228,11 +228,11 @@ func (t *TransactionsController) GetBlockTransactionCountByHashOrNumber() {
 	p_blkNum := t.Input().Get("blockNumber")
 	p_blkHash := t.Input().Get("blockHash")
 
-	flag := 0	// "1" means query by blockNumber, "2" means query by blockHash
+	flag := 0 // "1" means query by blockNumber, "2" means query by blockHash
 
 	if p_blkNum != "" && p_blkHash == "" {
 		flag = 1
-	}else if p_blkHash != "" && p_blkNum == "" {
+	} else if p_blkHash != "" && p_blkNum == "" {
 		flag = 2
 	} else {
 		t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{"The number of params or the name of params is invalid"})

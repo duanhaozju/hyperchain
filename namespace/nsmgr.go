@@ -99,6 +99,10 @@ func (nr *nsManagerImpl) init() error {
 	for _, d := range dirs {
 		if d.IsDir() {
 			name := d.Name()
+			start := nr.conf.GetBool(common.START_NAMESPACE + name)
+			if !start {
+				continue
+			}
 			nr.Register(name)
 		} else {
 			logger.Errorf("Invalid folder %v", d)

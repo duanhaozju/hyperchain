@@ -7,12 +7,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"encoding/json"
 	"github.com/op/go-logging"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
 	"hyperchain/common"
 	"hyperchain/namespace"
+	"strings"
 )
 
 var log *logging.Logger // package-level logger
@@ -21,28 +23,27 @@ func init() {
 }
 
 const (
-	stopPendingRequestTimeout = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
-
-	MetadataApi     = "rpc"
-	DefaultHTTPApis = "tx,node,block,account"
+	stopPendingRequestTimeout             = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
+	OptionMethodInvocation    CodecOption = 1 << iota       // OptionMethodInvocation is an indication that the codec supports RPC method calls
+	adminService                          = "admin"
 )
 
 // CodecOption specifies which type of messages this codec supports
 type CodecOption int
 
-const (
-	// OptionMethodInvocation is an indication that the codec supports RPC method calls
-	OptionMethodInvocation CodecOption = 1 << iota
-)
-
 // NewServer will create a new server instance with no registered handlers.
-func NewServer(nr namespace.NamespaceManager) *Server {
+func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartHp chan bool) *Server {
 	server := &Server{
 		codecs:       set.New(),
 		run:          1,
 		namespaceMgr: nr,
 	}
-
+	server.admin = &Administrator{
+		NsMgr:         server.namespaceMgr,
+		StopServer:    stopHyperchain,
+		RestartServer: restartHp,
+	}
+	server.admin.Init()
 	return server
 }
 
@@ -103,7 +104,6 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 			codec.Write(codec.CreateErrorResponse(nil, "", err))
 			return nil
 		}
-		//TODO: Warn do not support bath request now
 		if len(reqs) == 0 {
 			log.Errorf("no request found.")
 			return errors.New("no request found")
@@ -127,31 +127,69 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 			}
 			return nil
 		}
-		//TODO: Warn do not support bath request now
-		reqs[0].Ctx = ctx
-		r := s.namespaceMgr.ProcessRequest(reqs[0].Namespace, &reqs[0])
-		if r == nil {
-			return errors.New("No process result")
-		}
-		if response, ok := r.(*common.RPCResponse); ok {
-			if response.Error != nil {
-				codec.Write(codec.CreateErrorResponse(&response.Id, response.Namespace, response.Error))
-			} else if response.Reply != nil {
-				if err := codec.Write(codec.CreateResponse(&response.Id, response.Namespace, response.Reply)); err != nil {
-					log.Errorf("%v\n", err)
-					codec.Close()
-				}
-			} else {
-				codec.Write(codec.CreateResponse(&response.Id, response.Namespace, nil))
-			}
-		} else {
-			log.Errorf("response type invalid, resp: %v", response)
-			return errors.New(response.Error.Error())
-		}
-		return nil
-
+		return s.processRequest(reqs, ctx, codec)
 	}
 	return nil
+}
+
+func (s *Server) processRequest(reqs []common.RPCRequest, ctx context.Context, codec ServerCodec) error {
+	//TODO: Warn do not support bath request now
+	req := reqs[0]
+	req.Ctx = ctx
+	var r interface{}
+	if req.Service == adminService {
+		r = s.handleCMD(&req)
+	} else {
+		r = s.namespaceMgr.ProcessRequest(req.Namespace, &req)
+	}
+	if r == nil {
+		return errors.New("No process result")
+	}
+	if response, ok := r.(*common.RPCResponse); ok {
+		if response.Error != nil {
+			codec.Write(codec.CreateErrorResponse(&response.Id, response.Namespace, response.Error))
+		} else if response.Reply != nil {
+			if err := codec.Write(codec.CreateResponse(&response.Id, response.Namespace, response.Reply)); err != nil {
+				log.Errorf("%v\n", err)
+				codec.Close()
+			}
+		} else {
+			codec.Write(codec.CreateResponse(&response.Id, response.Namespace, nil))
+		}
+	} else {
+		log.Errorf("response type invalid, resp: %v", response)
+		return errors.New(response.Error.Error())
+	}
+	return nil
+}
+
+func splitRawMessage(args json.RawMessage) ([]string, error) {
+	str := string(args[:])
+	if len(str) < 4 {
+		return nil, errors.New("invalid args")
+	}
+	str = str[2 : len(str)-2]
+	splitstr := strings.Split(str, ",")
+	return splitstr, nil
+}
+
+func (s *Server) handleCMD(req *common.RPCRequest) *common.RPCResponse {
+	if args, ok := req.Params.(json.RawMessage); !ok {
+		log.Critical("wrong type not json type")
+		return &common.RPCResponse{Reply: "invalid args"}
+	} else {
+		args, err := splitRawMessage(args)
+		if err != nil {
+			return &common.RPCResponse{Reply: "invalid cmd"}
+		}
+		cmd := &Command{
+			MethodName: req.Method,
+			Args:       args,
+		}
+		rs := s.admin.CmdExecutor[req.Method](cmd)
+		return &common.RPCResponse{Reply: rs}
+	}
+
 }
 
 // ServeCodec reads incoming requests from codec, calls the appropriate callback and writes the
@@ -173,7 +211,7 @@ func (s *Server) ServeSingleRequest(codec ServerCodec, options CodecOption) {
 // close all codecs which will cancels pending requests/subscriptions.
 func (s *Server) Stop() {
 	if atomic.CompareAndSwapInt32(&s.run, 1, 0) {
-		log.Debug("RPC Server shutdown initiatied")
+		log.Notice("RPC Server shutdown initiatied")
 		time.AfterFunc(stopPendingRequestTimeout, func() {
 			s.codecsMu.Lock()
 			defer s.codecsMu.Unlock()
@@ -181,37 +219,16 @@ func (s *Server) Stop() {
 				c.(ServerCodec).Close()
 				return true
 			})
+			log.Notice("RPC Server shutdown")
 		})
 	}
 }
 
-// execBatch executes the given requests and writes the result back using the codec.
-// It will only write the response back when the last request is processed.
-//func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*serverRequest) {
-//	responses := make([]interface{}, len(requests))
-//	var callbacks []func()
-//	for i, req := range requests {
-//		fmt.Println("got a request",req.svcname)
-//		if req.err != nil {
-//			responses[i] = codec.CreateErrorResponse(&req.id, req.err)
-//		} else {
-//			var callback func()
-//			if responses[i], callback = s.handle(ctx, codec, req); callback != nil {
-//				callbacks = append(callbacks, callback)
-//			}
-//		}
-//	}
-//
-//	if err := codec.Write(responses); err != nil {
-//		log.Errorf("%v\n", err)
-//		codec.Close()
-//	}
-//
-//	// when request holds one of more subscribe requests this allows these subscriptions to be actived
-//	for _, c := range callbacks {
-//		c()
-//	}
-//}
+func (s *Server) Start() {
+	if atomic.CompareAndSwapInt32(&s.run, 0, 1) {
+		log.Notice("RPC Server start initiatied")
+	}
+}
 
 // readRequest requests the next (batch) request from the codec. It will return the collection
 // of requests, an indication if the request was a batch, the invalid request identifier and an

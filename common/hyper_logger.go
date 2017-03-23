@@ -20,23 +20,20 @@ var logger = logging.MustGetLogger("commonLogger")
 var hyperLoggers map[string]*HyperLogger
 var rwMutex sync.RWMutex
 var once sync.Once
-
 var defaultLogLevel = "INFO"
 var defaultConsoleFormat = `[%{module}]%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}`
 var defaultFileFormat = `[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}`
 
 type HyperLogger struct {
-	conf   		 *Config
-	loggers          map[string]*logging.Logger  // todo: multilogger
-	//logBackendFile 	 *logging.LeveledBackend
-	//logBackendCons   *logging.LeveledBackend
-	//fileFormat       string
-	//consoleFormat    string
-	fileBackend	 logging.LeveledBackend
-	consoleBackend   logging.LeveledBackend
-	writeToFile      bool
-	closeLogFile 	 chan struct{}
-	baseLevel	 logging.Level
+	conf   		 	 *Config
+	loggers          	 map[string]*logging.Logger
+	// register module dynamically loaded, eg. "consensus":"DEBUG"
+	dynamicLoadedModules  	 map[string]string
+	fileBackend		 logging.LeveledBackend
+	consoleBackend  	 logging.LeveledBackend
+	writeToFile     	 bool
+	closeLogFile 		 chan struct{}
+	baseLevel		 logging.Level
 }
 
 //InitHyperLogger int the whole logging system.
@@ -85,13 +82,17 @@ func SetLogLevel(namespace string, module string, level string) (string, error) 
 	return "", nil
 }
 
-func Close(namespace string) error {
+func CloseHyperlogger(namespace string) error {
 	hl, err := getHyperlogger(namespace)
 	if err != nil {
 		logger.Errorf("Close Namespace Error: %s", err.Error())
 		return err
 	}
 	hl.closeLogFile <- struct {}{}
+	rwMutex.Lock()
+	delete(hyperLoggers, namespace)
+	rwMutex.Unlock()
+
 	return nil
 }
 
@@ -162,16 +163,23 @@ func getHyperlogger(namespace string) (*HyperLogger, error) {
 	rwMutex.RUnlock()
 	return hl, err
 }
-// init logger level by configuration
+// init log level for modules from configuration and dynamically loaded modules
 func (hl *HyperLogger) initLoggerLevelByConfiguration(conf *Config) {
 	ns := conf.GetString(NAMESPACE)
 	mm := conf.GetStringMap(LOG_MODULE_KEY) // module to level map
+
 	for m, l := range mm {
 		hl.setModuleLogLevel(ns, m, cast.ToString(l))
 	}
+	if hl.dynamicLoadedModules != nil {
+		for module, levelString := range hl.dynamicLoadedModules {
+			hl.setModuleLogLevel(ns, module, levelString)
+		}
+	}
+
 }
 
-// setModuleLogLevel sets the logging level for the specified module.
+// setModuleLogLevel sets the logging level for the specified module, eg global::consensus
 func (hl *HyperLogger) setModuleLogLevel(name string, module string, logLevel string) (string, error) {
 
 	compositeModuleName := getCompositeModuleName(name, module)
@@ -217,6 +225,13 @@ func getLogger(namespace, module string) *logging.Logger {
 	if _, ok := hl.loggers[compositeModuleName]; !ok {
 		logger := logging.MustGetLogger(compositeModuleName)
 		hl.loggers[compositeModuleName] = logger
+		if hl.dynamicLoadedModules != nil {
+			hl.dynamicLoadedModules[module] = hl.baseLevel.String()
+		} else {
+			dynamicModules := make(map[string]string)
+			dynamicModules[module] = hl.baseLevel.String()
+			hl.dynamicLoadedModules = dynamicModules
+		}
 		hl.setModuleLogLevel(namespace, module, hl.baseLevel.String())
 		return logger
 	} else {
@@ -296,7 +311,7 @@ func (hl *HyperLogger) newLogFileByInterval(loggerDir string, conf *Config) {
 	hl.fileBackend = hl.initFileBackend(fileName, fileFormat)
 	hl.initLoggerLevelByConfiguration(conf)
 
-	loop: for {
+	for {
 		select {
 		case <-time.After(conf.GetDuration(LOG_NEW_FILE_INTERVAL)):
 			timestamp := time.Now().Unix()
@@ -309,7 +324,7 @@ func (hl *HyperLogger) newLogFileByInterval(loggerDir string, conf *Config) {
 			logger.Infof("Change log file, new log file name: %s", fileName)
 		case <-hl.closeLogFile:
 			logger.Info("Close logger service")
-			break loop
+			return
 		}
 	}
 }

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"github.com/astaxie/beego"
 	"hyperchain/api"
-	"hyperchain/api/rest_api/utils"
+	"hyperchain/api/rest/utils"
 	"hyperchain/common"
 )
 

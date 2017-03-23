@@ -94,6 +94,7 @@ func (blk *Block) GetPlainBlockByHash(hash common.Hash) (*BlockResult, error) {
 
 // GetBlockByNumber returns the block for the given block number.
 func (blk *Block) GetBlockByNumber(number BlockNumber) (*BlockResult, error) {
+
 	return getBlockByNumber(blk.namespace, number, false)
 }
 
