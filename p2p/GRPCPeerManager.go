@@ -38,6 +38,7 @@ type GRPCPeerManager struct {
 	CM         *admittance.CAManager
 	//isValidate peer
 	IsVP       bool
+	namespace  string
 }
 
 func NewGrpcManager(conf *common.Config,namespace string) *GRPCPeerManager {
@@ -64,6 +65,7 @@ func NewGrpcManager(conf *common.Config,namespace string) *GRPCPeerManager {
 		MaxPeerNum:config.MaxNum(),
 		IsOriginal:config.IsOrigin(),
 		IsVP:config.IsVP(),
+		namespace: namespace,
 	}
 
 	return &grpcmgr
@@ -80,13 +82,13 @@ func (grpcmgr *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeM
 		panic(err)
 	}
 	grpcmgr.TM = tm
-	grpcmgr.peersPool = NewPeersPool(grpcmgr.TM, grpcmgr.LocalAddr, grpcmgr.CM)
+	grpcmgr.peersPool = NewPeersPool(grpcmgr.TM, grpcmgr.LocalAddr, grpcmgr.CM, grpcmgr.namespace)
 	grpcmgr.LocalNode = NewNode(grpcmgr.LocalAddr, eventMux, grpcmgr.TM, grpcmgr.peersPool, grpcmgr.CM, grpcmgr.configs)
 	grpcmgr.LocalNode.StartServer()
 	grpcmgr.LocalNode.N = grpcmgr.configs.MaxNum()
 
 	// connect to peer
-	rec, _ := persist.GetBool("onceOnline")
+	rec, _ := persist.GetBool("onceOnline", grpcmgr.namespace)
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
 	if !rec && grpcmgr.IsOriginal {
@@ -111,7 +113,7 @@ func (grpcmgr *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeM
 	log.Notice("┌────────────────────────────┐")
 	log.Notice("│  All NODES WERE CONNECTED  |")
 	log.Notice("└────────────────────────────┘")
-	persist.PutBool("onceOnline", true)
+	persist.PutBool("onceOnline", true, grpcmgr.namespace)
 }
 
 // create other peers

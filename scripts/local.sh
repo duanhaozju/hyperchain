@@ -58,7 +58,7 @@ f_check_local_env(){
 # kill hyperchain process
 f_kill_process(){
     echo "kill the bind port process"
-    ps -ax | grep hyperchain | grep -v grep | awk '{print $1}' |  xargs  kill -9
+#    ps -ax | grep hyperchain | grep -v grep | awk '{print $1}' |  xargs  kill -9
 }
 
 # clear data

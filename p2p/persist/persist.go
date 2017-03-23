@@ -10,16 +10,16 @@ import (
 )
 
 // StoreState stores a key,value pair
-func PutData(key string, value []byte) error {
-	db, err := hyperdb.GetDBDatabase()
+func PutData(key string, value []byte, namespace string) error {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return err
 	}
 	return db.Put([]byte("p2p."+key), value)
 }
 
-func PutBool(key string,value bool) error {
-	db, err := hyperdb.GetDBDatabase()
+func PutBool(key string,value bool, namespace string) error {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return err
 	}
@@ -34,8 +34,8 @@ func PutBool(key string,value bool) error {
 	return db.Put([]byte("p2p."+key), persistValue)
 }
 
-func GetBool(key string) (bool,error){
-	db, err := hyperdb.GetDBDatabase()
+func GetBool(key string, namespace string) (bool,error){
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return false, err
 	}
