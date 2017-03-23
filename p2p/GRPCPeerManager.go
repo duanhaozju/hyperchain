@@ -14,7 +14,6 @@ import (
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/persist"
 	"hyperchain/p2p/transport"
-	"hyperchain/recovery"
 	"math"
 	"strconv"
 	"time"
@@ -317,7 +316,7 @@ func (grpcmgr *GRPCPeerManager) BroadcastPeers(payLoad []byte) {
 		return
 	}
 	var broadCastMessage = pb.Message{
-		MessageType:  pb.Message_CONSUS,
+		MessageType:  pb.Message_SESSION,
 		From:         grpcmgr.LocalNode.GetNodeAddr().ToPeerAddress(),
 		Payload:      payLoad,
 		MsgTimeStamp: time.Now().UnixNano(),
@@ -361,18 +360,9 @@ func (grpcmgr *GRPCPeerManager) GetLocalAddressPayload() (payload []byte) {
 }
 
 // SendMsgToPeers Send msg to specific peer peerlist
-func (grpcmgr *GRPCPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, MessageType recovery.Message_MsgType) {
+func (grpcmgr *GRPCPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64) {
 	log.Debug("need send message to ", peerList)
-	var mpPaylod = &recovery.Message{
-		MessageType:  MessageType,
-		MsgTimeStamp: time.Now().UnixNano(),
-		Payload:      payLoad,
-	}
-	realPayload, err := proto.Marshal(mpPaylod)
-	if err != nil {
-		log.Error("marshal failed")
-	}
-	syncMessage := grpcmgr.newMsg(realPayload,pb.Message_SYNCMSG)
+	syncMessage := grpcmgr.newMsg(payLoad, pb.Message_SESSION)
 
 	// broadcast to special peers
 	for _, NodeID := range peerList {

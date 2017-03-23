@@ -37,6 +37,7 @@ global:
             consensus: "NOTICE"
             core: "NOTICE"
             hyperdb: "NOTICE"
+            eventhub: "NOTICE"
 
     namespace:
         # start which namespaces when node starts

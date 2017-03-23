@@ -2,9 +2,17 @@ syntax = "proto3";
 package protos;
 
 // This message type is used between consensus and outside
-message Package {
+message SessionMessage {
     enum Type {
-        SYNC_REPLICA = 0;
+        CONSENSUS = 0;
+        FOWARD_TX = 1;
+        SYNC_REPLICA = 2;
+        UNICAST_INVALID = 3;
+        BROADCAST_SINGLE_BLK = 4;
+        UNICAST_BLK = 5;
+        SYNC_REQ = 6;
+        ADD_PEER = 7;
+        DEL_PEER = 8;
     }
     Type type = 1;
     bytes payload = 2;

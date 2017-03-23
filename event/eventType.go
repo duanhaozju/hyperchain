@@ -2,10 +2,10 @@
 //Copyright (C) 2016 The Hyperchain Authors.
 package event
 
-import "hyperchain/core/types"
-
-//consensus event incoming from outer,peers post
-type ConsensusEvent struct{ Payload []byte }
+import (
+	"hyperchain/core/types"
+	m "hyperchain/manager/message"
+)
 
 type AliveEvent struct{ Payload bool }
 
@@ -26,11 +26,9 @@ type TxUniqueCastEvent struct {
 //node receive checkpoint sync event and then,check db and send block require request to peers
 type ChainSyncReqEvent struct{ Payload []byte }
 
-//receive event from consensus module
-type SyncBlockReqEvent struct{ Payload []byte }
-
-// after get all required block,send this block to node
-type SyncBlockReceiveEvent struct{ Payload []byte }
+type SessionEvent struct {
+	Message m.SessionMessage
+}
 
 //receive new block event from node consensus event for consensus module
 type ValidationEvent struct {
@@ -53,11 +51,6 @@ type CommitEvent struct {
 	IsPrimary  bool
 }
 
-//set invalid tx into db
-type InvalidTxsEvent struct {
-	Payload []byte
-}
-
 // reset blockchain to a stable checkpoint status when `viewchange` occur
 type VCResetEvent struct {
 	SeqNo uint64
@@ -66,11 +59,6 @@ type VCResetEvent struct {
 //set primary in peerManager when new view and primary
 type InformPrimaryEvent struct {
 	Primary uint64
-}
-
-//sync all nodes status event
-type ReplicaInfoEvent struct {
-	Payload []byte
 }
 
 /* Peer Maintain Event */
@@ -82,12 +70,6 @@ type NewPeerEvent struct {
 //broadcast local ca validation result for new peer to all replicas
 //payload is a consenus message after encoding
 type BroadcastNewPeerEvent struct {
-	Payload []byte
-}
-
-//recv remote replica CA validation result for a new peer
-//payload is a consenus message after encoding
-type RecvNewPeerEvent struct {
 	Payload []byte
 }
 
@@ -111,9 +93,6 @@ type BroadcastDelPeerEvent struct {
 	Payload []byte
 }
 
-type RecvDelPeerEvent struct {
-	Payload []byte
-}
 
 /*
 	Non verified peer events definition

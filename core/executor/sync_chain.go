@@ -52,19 +52,19 @@ func (executor *Executor) SendSyncRequest(ev event.ChainSyncReqEvent) {
 }
 
 // ReceiveSyncRequest - receive synchronization request from some nodes, and send back request blocks.
-func (executor *Executor) ReceiveSyncRequest(ev event.SyncBlockReqEvent) {
+func (executor *Executor) ReceiveSyncRequest(payload []byte) {
 	syncReqMsg := &recovery.CheckPointMessage{}
-	proto.Unmarshal(ev.Payload, syncReqMsg)
+	proto.Unmarshal(payload, syncReqMsg)
 	for i := syncReqMsg.RequiredNumber; i > syncReqMsg.CurrentNumber; i -= 1 {
 		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, syncReqMsg.PeerId)
 	}
 }
 
 // ReceiveSyncBlocks - receive request synchronization blocks from others.
-func (executor *Executor) ReceiveSyncBlocks(ev event.SyncBlockReceiveEvent) {
+func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 	if executor.status.syncFlag.SyncDemandBlockNum != 0 {
 		block := &types.Block{}
-		proto.Unmarshal(ev.Payload, block)
+		proto.Unmarshal(payload, block)
 		// store blocks into database only, not process them.
 		if !executor.verifyBlockIntegrity(block) {
 			executor.logger.Warningf("[Namespace = %s] receive a broken block %d, drop it", executor.namespace, block.Number)

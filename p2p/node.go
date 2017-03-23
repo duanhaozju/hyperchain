@@ -11,13 +11,13 @@ import (
 	"hyperchain/admittance"
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/transport"
-	"hyperchain/recovery"
 	"net"
 	"strconv"
 	"sync"
 	"time"
 	"hyperchain/p2p/peerComm"
 	"fmt"
+	m "hyperchain/manager/message"
 )
 
 type Node struct {
@@ -132,12 +132,11 @@ func (node *Node)printMsg(msg *pb.Message) {
 	case pb.Message_INTRODUCE:
 	case pb.Message_INTRODUCE_RESPONSE:
 	case pb.Message_KEEPALIVE:
-	case pb.Message_CONSUS:
 	case pb.Message_PENDING:
 	case pb.Message_RECONNECT:
 	case pb.Message_RECONNECT_RESPONSE:
-	case pb.Message_SYNCMSG:
 	case pb.Message_RESPONSE:
+	case pb.Message_SESSION:
 	}
 }
 
@@ -252,36 +251,28 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		response.Payload = node.TM.GetLocalPublicKey()
 
 	}
-	case pb.Message_CONSUS:{
-		log.Infof("Get a consus msg from %d (ip: %s, port: %d) ",msg.From.ID,msg.From.IP,msg.From.Port)
+	case pb.Message_SESSION:{
+		log.Infof("Get a session msg from %d (ip: %s, port: %d) ",msg.From.ID,msg.From.IP,msg.From.Port)
 		transferData, err := node.TM.Decrypt(msg.Payload, pb.RecoverPeerAddr(msg.From))
 		if err != nil {
 			log.Errorf("cannot decrypt the message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err)
 			return response, errors.New(fmt.Sprintf("cannot decrypt the message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err))
 		}
-		go node.higherEventManager.Post(event.ConsensusEvent{
-			Payload: transferData,
+		var ctx m.SessionMessage
+		unMarshalErr := proto.Unmarshal(transferData, &ctx)
+		if unMarshalErr != nil {
+			log.Error("sync UnMarshal error!")
+			return response, errors.New(fmt.Sprintf("unmarshal session message failed. send from: %d", msg.From.ID))
+		}
+		go node.higherEventManager.Post(event.SessionEvent{
+			Message: ctx,
 		})
-		payload := []byte("GOT_A_CONSENSUS_MESSAGE")
+		payload := []byte("GOT_A_SESSION_MESSAGE")
 		rpayload,err := node.TM.Encrypt(payload,pb.RecoverPeerAddr(msg.From))
 		if err != nil{
 			return nil, errors.New(fmt.Sprintf("Sync message encrypt error message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err))
 		}
 		response.Payload = rpayload
-	}
-	case pb.Message_SYNCMSG:{
-		// package the response msg
-		if err := node.handleSyncMsg(msg); err != nil {
-			response.Payload = []byte("Sync message Unmarshal error")
-			return nil, errors.New(fmt.Sprintf("Sync message Unmarshal error message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err))
-		}
-		payload := []byte("GOT_A_SYNC_MESSAGE")
-		rpayload,err := node.TM.Encrypt(payload,pb.RecoverPeerAddr(msg.From))
-		if err != nil{
-			return nil, errors.New(fmt.Sprintf("Sync message encrypt error message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err))
-		}
-		response.Payload = rpayload
-
 	}
 	case pb.Message_KEEPALIVE:{
 		log.Debugf("Get a keep alive msg from %d (ip: %s, port: %d) ",msg.From.ID,msg.From.IP,msg.From.Port)
@@ -303,86 +294,6 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		return response, errors.New(fmt.Sprintf("Cannot complate sign the response (peer %d)", msg.From.ID))
 	}
 	return &signMsg, nil
-}
-
-func (node *Node)handleSyncMsg(msg *pb.Message) error {
-	log.Infof("Get async msg from %d (ip: %s, port: %d) ",msg.From.ID,msg.From.IP,msg.From.Port)
-	//todo should handle in pre handle method
-	transferData, err := node.TM.Decrypt(msg.Payload, pb.RecoverPeerAddr(msg.From))
-	if err != nil {
-		log.Errorf("cannot decrypt the message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err)
-		return  errors.New(fmt.Sprintf("cannot decrypt the message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err))
-	}
-	var syncMsg recovery.Message
-	unMarshalErr := proto.Unmarshal(transferData, &syncMsg)
-	if unMarshalErr != nil {
-		log.Error("sync UnMarshal error!")
-		return unMarshalErr
-	}
-	switch syncMsg.MessageType {
-	case recovery.Message_SYNCBLOCK:
-		{
-
-			go node.higherEventManager.Post(event.SyncBlockReceiveEvent{
-				Payload: syncMsg.Payload,
-			})
-
-		}
-	case recovery.Message_SYNCCHECKPOINT:
-		{
-			go node.higherEventManager.Post(event.SyncBlockReqEvent{
-				Payload: syncMsg.Payload,
-			})
-
-		}
-	case recovery.Message_SYNCSINGLE:
-		{
-			go node.higherEventManager.Post(event.SyncBlockReqEvent{
-				Payload: syncMsg.Payload,
-			})
-		}
-	case recovery.Message_RELAYTX:
-		{
-			//log.Warning("Message_RELAYTX: ")
-			go node.higherEventManager.Post(event.ConsensusEvent{
-				Payload: syncMsg.Payload,
-			})
-		}
-	case recovery.Message_INVALIDRESP:
-		{
-			go node.higherEventManager.Post(event.InvalidTxsEvent{
-				Payload: syncMsg.Payload,
-			})
-		}
-	case recovery.Message_SYNCREPLICA:
-		{
-			go node.higherEventManager.Post(event.ReplicaInfoEvent{
-				Payload: syncMsg.Payload,
-			})
-		}
-	case recovery.Message_BROADCAST_NEWPEER:
-		{
-			log.Debug("receive Message_BROADCAST_NEWPEER")
-			go node.higherEventManager.Post(event.RecvNewPeerEvent{
-				Payload: syncMsg.Payload,
-			})
-		}
-	case recovery.Message_BROADCAST_DELPEER:
-		{
-			log.Debug("receive Message_BROADCAST_DELPEER")
-			go node.higherEventManager.Post(event.RecvDelPeerEvent{
-				Payload: syncMsg.Payload,
-			})
-		}
-	case recovery.Message_VERIFIED_BLOCK:
-		{
-			log.Debug("receive Message_BROADCAST_DELPEER")
-			go node.higherEventManager.Post(event.ReceiveVerifiedBlock{
-				Payload: syncMsg.Payload,
-			})
-		}
-	}
-	return nil
 }
 
 // StartServer start the gRPC server
