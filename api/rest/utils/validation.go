@@ -36,7 +36,7 @@ func CheckIntervalTimeArgs(start, end string) (hpc.IntervalTime, error) {
 
 	return hpc.IntervalTime{
 		StartTime: startTime,
-		Endtime: endTime,
+		Endtime:   endTime,
 	}, nil
 }
 
