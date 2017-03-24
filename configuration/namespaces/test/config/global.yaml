@@ -73,7 +73,7 @@ global:
 
         logsdir: "./namespaces/test/data/logs"
         # default loglevel for all modules which can be override by module level log setting
-        loglevel: "DEBUG"
+        loglevel: "NOTICE"
         file_format: "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
         console_format: "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
 

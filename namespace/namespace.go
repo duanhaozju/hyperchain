@@ -110,6 +110,7 @@ func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) 
 }
 
 func (ns *namespaceImpl) init() error {
+	//TODO: separate init and start functions
 	ns.logger.Criticalf("Init namespace %s", ns.Name())
 
 	//1.init DB
@@ -120,7 +121,7 @@ func (ns *namespaceImpl) init() error {
 	}
 
 	//2.init CaManager
-	cm, cmerr := admittance.NewCAManager(ns.conf,ns.Name())
+	cm, cmerr := admittance.NewCAManager(ns.conf, ns.Name())
 	if cmerr != nil {
 		logger.Error(cmerr)
 		panic("cannot initliazied the camanager")
@@ -128,7 +129,7 @@ func (ns *namespaceImpl) init() error {
 	ns.caMgr = cm
 
 	//3. init peer manager to start grpc server and client
-	grpcPeerMgr := p2p.NewGrpcManager(ns.conf,ns.Name())
+	grpcPeerMgr := p2p.NewGrpcManager(ns.conf, ns.Name())
 	ns.grpcMgr = grpcPeerMgr
 
 	//4.init pbft consensus
@@ -243,13 +244,16 @@ func (ns namespaceImpl) GetCAManager() *admittance.CAManager {
 
 //ProcessRequest process request under this namespace
 func (ns *namespaceImpl) ProcessRequest(request interface{}) interface{} {
-	if request != nil {
-		switch r := request.(type) {
-		case *common.RPCRequest:
-			return ns.handleJsonRequest(r)
-		default:
-			ns.logger.Errorf("event not supportted %v", r)
+	if ns.status.state != running {
+		if request != nil {
+			switch r := request.(type) {
+			case *common.RPCRequest:
+				return ns.handleJsonRequest(r)
+			default:
+				ns.logger.Errorf("event not supportted %v", r)
+			}
 		}
 	}
+	logger.Errorf("Process request error, namespace %s is not running now!", ns.Name())
 	return nil
 }

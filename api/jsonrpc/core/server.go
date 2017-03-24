@@ -15,6 +15,8 @@ import (
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"strings"
+	"reflect"
+	"fmt"
 )
 
 var log *logging.Logger // package-level logger
@@ -37,6 +39,7 @@ func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartH
 		codecs:       set.New(),
 		run:          1,
 		namespaceMgr: nr,
+		requestMgr:   make(map[string]*requestManager),
 	}
 	server.admin = &Administrator{
 		NsMgr:         server.namespaceMgr,
@@ -51,16 +54,6 @@ func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartH
 // e.g. gives information about the loaded modules.
 type RPCService struct {
 	server *Server
-}
-
-// hasOption returns true if option is included in options, otherwise false
-func hasOption(option CodecOption, options []CodecOption) bool {
-	for _, o := range options {
-		if option == o {
-			return true
-		}
-	}
-	return false
 }
 
 // serveRequest will reads requests from the codec, calls the RPC callback and
@@ -101,64 +94,41 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 		reqs, batch, err := s.readRequest(codec)
 		if err != nil {
 			log.Debugf("%v\n", err)
-			codec.Write(codec.CreateErrorResponse(nil, "", err))
-			return nil
-		}
-		if len(reqs) == 0 {
-			log.Errorf("no request found.")
-			return errors.New("no request found")
-		}
-		if rpcErr := codec.CheckHttpHeaders(reqs[0].Namespace); rpcErr != nil {
-			log.Errorf("CheckHttpHeaders error %v", rpcErr)
-			codec.Write(codec.CreateErrorResponse(nil, "", rpcErr))
+			codec.Write(s.CreateErrorResponse(nil, "", err))
 			return nil
 		}
 
+		// check if server is ordered to shutdown and return an error
+		// telling the client that his request failed.
 		if atomic.LoadInt32(&s.run) != 1 {
 			err := &common.ShutdownError{}
 			if batch {
 				resps := make([]interface{}, len(reqs))
 				for i, r := range reqs {
-					resps[i] = codec.CreateErrorResponse(&r.Id, r.Namespace, err)
+					resps[i] = s.CreateErrorResponse(r.Id, r.Namespace, err)
 				}
 				codec.Write(resps)
 			} else {
-				codec.Write(codec.CreateErrorResponse(&reqs[0].Id, reqs[0].Namespace, err))
+				codec.Write(s.CreateErrorResponse(reqs[0].Id, reqs[0].Namespace, err))
 			}
 			return nil
 		}
-		return s.processRequest(reqs, ctx, codec)
-	}
-	return nil
-}
-
-func (s *Server) processRequest(reqs []common.RPCRequest, ctx context.Context, codec ServerCodec) error {
-	//TODO: Warn do not support bath request now
-	req := reqs[0]
-	req.Ctx = ctx
-	var r interface{}
-	if req.Service == adminService {
-		r = s.handleCMD(&req)
-	} else {
-		r = s.namespaceMgr.ProcessRequest(req.Namespace, &req)
-	}
-	if r == nil {
-		return errors.New("No process result")
-	}
-	if response, ok := r.(*common.RPCResponse); ok {
-		if response.Error != nil {
-			codec.Write(codec.CreateErrorResponse(&response.Id, response.Namespace, response.Error))
-		} else if response.Reply != nil {
-			if err := codec.Write(codec.CreateResponse(&response.Id, response.Namespace, response.Reply)); err != nil {
-				log.Errorf("%v\n", err)
-				codec.Close()
+		if reqs[0].Service == adminService {
+			response := s.handleCMD(reqs[0])
+			if response.Error != nil {
+				codec.Write(s.CreateErrorResponse(response.Id, response.Namespace, response.Error))
+			} else if response.Reply != nil {
+				if err := codec.Write(s.CreateResponse(response.Id, response.Namespace, response.Reply)); err != nil {
+					log.Errorf("%v\n", err)
+					codec.Close()
+				}
+			} else {
+				codec.Write(s.CreateResponse(response.Id, response.Namespace, nil))
 			}
-		} else {
-			codec.Write(codec.CreateResponse(&response.Id, response.Namespace, nil))
+			return nil
 		}
-	} else {
-		log.Errorf("response type invalid, resp: %v", response)
-		return errors.New(response.Error.Error())
+		s.handleReqs(ctx, codec, reqs)
+		return nil
 	}
 	return nil
 }
@@ -233,17 +203,110 @@ func (s *Server) Start() {
 // readRequest requests the next (batch) request from the codec. It will return the collection
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.
-func (s *Server) readRequest(codec ServerCodec) ([]common.RPCRequest, bool, common.RPCError) {
+func (s *Server) readRequest(codec ServerCodec) ([]*common.RPCRequest, bool, common.RPCError) {
 	reqs, batch, err := codec.ReadRequestHeaders()
 	if err != nil {
 		return nil, batch, err
-	} else {
-		reqLen := len(reqs)
-		for i := 0; i < reqLen; i += 1 {
-			if reqs[i].Namespace == "" {
-				reqs[i].Namespace = namespace.DEFAULT_NAMESPACE
-			}
-		}
-		return reqs, batch, nil
 	}
+
+	if len(reqs) == 0 {
+		log.Errorf("no request found.")
+		return nil, false, &common.InvalidRequestError{Message: "no request found"}
+	}
+	reqLen := len(reqs)
+	for i := 0; i < reqLen; i += 1 {
+		if reqs[i].Namespace == "" {
+			reqs[i].Namespace = namespace.DEFAULT_NAMESPACE
+		}
+	}
+
+	return reqs, batch, nil
+}
+
+// handleReqs will handle RPC request array and write result then send to client
+func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*common.RPCRequest) {
+	//log.Error("-----------enter handle batch req---------------")
+	number := len(reqs)
+	response := make([]interface{}, number)
+	result := make(chan interface{}, number)
+
+	for _, req := range reqs {
+		req.Ctx = ctx
+
+		go func(s *Server, request *common.RPCRequest, codec ServerCodec, result chan interface{}){
+			name := request.Namespace
+			if err := codec.CheckHttpHeaders(name); err != nil {
+				log.Errorf("CheckHttpHeaders error: %v", err)
+				result <- s.CreateErrorResponse(request.Id, request.Namespace, &common.CertError{Message: err.Error()})
+				return
+			}
+			var rm *requestManager
+			if _, ok := s.requestMgr[name]; !ok {
+				rm = NewRequestManager(name, s)
+				rm.Start()
+			}else {
+				rm = s.requestMgr[name]
+			}
+			rm.requests <- request
+			result <- (<- rm.response)
+			return
+		}(s, req, codec, result)
+	}
+
+	for i := 0; i < number; i++ {
+		response[i] = <- result
+	}
+
+	if number == 1 {
+		if err := codec.Write(response[0]); err != nil {
+			log.Errorf("%v\n", err)
+			codec.Close()
+		}
+	} else {
+		if err := codec.Write(response); err != nil {
+			log.Errorf("%v\n", err)
+			codec.Close()
+		}
+	}
+}
+
+// handleChannelReq will implement an interface to handle request in channel and return jsonrpc response
+func (s *Server) handleChannelReq(req *common.RPCRequest) interface{} {
+	r := s.namespaceMgr.ProcessRequest(req.Namespace, req)
+	if r == nil {
+		log.Debug("No process result")
+		return s.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message:"no process result"})
+	}
+
+	if response, ok := r.(*common.RPCResponse); ok {
+		if response.Error != nil {
+			return s.CreateErrorResponse(response.Id, response.Namespace, response.Error)
+		} else if response.Reply != nil {
+			return s.CreateResponse(response.Id, response.Namespace, response.Reply)
+		} else {
+			return s.CreateResponse(response.Id, response.Namespace, nil)
+		}
+	} else {
+		log.Errorf("response type invalid, resp: %v\n")
+		return s.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message:"response type invalid!"})
+	}
+}
+
+// CreateResponse will create a JSON-RPC success response with the given id and reply as result.
+func (s *Server) CreateResponse(id interface{}, name string, reply interface{}) interface{} {
+	if isHexNum(reflect.TypeOf(reply)) {
+		return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: 0, Message: "SUCCESS", Result: fmt.Sprintf(`%#x`, reply)}
+	}
+	return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: 0, Message: "SUCCESS", Result: reply}
+}
+
+// CreateErrorResponse will create a JSON-RPC error response with the given id and error.
+func (s *Server) CreateErrorResponse(id interface{}, name string, err common.RPCError) interface{} {
+	return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: err.Code(), Message: err.Error()}
+}
+
+// CreateErrorResponseWithInfo will create a JSON-RPC error response with the given id and error.
+// info is optional and contains additional information about the error. When an empty string is passed it is ignored.
+func (s *Server) CreateErrorResponseWithInfo(id interface{}, name string, err common.RPCError, info interface{}) interface{} {
+	return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: err.Code(), Message: err.Error(), Result: info}
 }

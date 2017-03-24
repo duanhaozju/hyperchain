@@ -5,8 +5,8 @@ package log
 import (
 	"fmt"
 	"github.com/urfave/cli"
-	"hyperchain/hypercli/common"
 	admin "hyperchain/api/jsonrpc/core"
+	"hyperchain/hypercli/common"
 )
 
 //NewLogCMD new log related commands.
@@ -27,7 +27,7 @@ func NewLogCMD() []cli.Command {
 	}
 }
 
-func getLevel(c *cli.Context) error {
+func setLevel(c *cli.Context) error {
 	client := common.GetCmdClient(c)
 	cmd := &admin.Command{
 		MethodName: "admin_setLevel",
@@ -38,23 +38,20 @@ func getLevel(c *cli.Context) error {
 		return common.ErrInvalidArgsNum
 	}
 
-	rs := client.InvokeCmd(cmd)
-	fmt.Println(rs)
+	client.InvokeCmd(cmd)
 	return nil
 }
 
-func setLevel(c *cli.Context) error {
+func getLevel(c *cli.Context) error {
 	client := common.GetCmdClient(c)
 	cmd := &admin.Command{
 		MethodName: "admin_getLevel",
 		Args:       c.Args(),
 	}
-	fmt.Println(cmd.Args)
 	if len(cmd.Args) != 2 {
 		fmt.Println(common.ErrInvalidArgsNum)
 		return common.ErrInvalidArgsNum
 	}
-	rs := client.InvokeCmd(cmd)
-	fmt.Println(rs)
+	client.InvokeCmd(cmd)
 	return nil
 }

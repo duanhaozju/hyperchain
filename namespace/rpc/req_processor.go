@@ -7,8 +7,6 @@ import (
 	"hyperchain/common"
 	"golang.org/x/net/context"
 	"hyperchain/api"
-	"hyperchain/core/db_utils"
-	"math/big"
 	"reflect"
 	"errors"
 )
@@ -124,7 +122,7 @@ func (jrpi *JsonRpcProcessorImpl) checkRequestParams(req *common.RPCRequest) *se
 	var svc *service
 
 	if svc, ok = jrpi.services[req.Service]; !ok { // rpc method isn't available
-		sr = &serverRequest{id: req.Id, err: &common.MethodNotFoundError{req.Service, req.Method}}
+		sr = &serverRequest{id: req.Id, err: &common.MethodNotFoundError{Service: req.Service, Method: req.Method}}
 		return sr
 	}
 
@@ -164,50 +162,16 @@ func (jrpi *JsonRpcProcessorImpl) ParseRequestArguments(argTypes []reflect.Type,
 // It returns the parsed values or an error when the args could not be parsed. Missing optional arguments
 // are returned as reflect.Zero values.
 func (jrpi *JsonRpcProcessorImpl) parsePositionalArguments(args json.RawMessage, callbackArgs []reflect.Type) ([]reflect.Value, error) {
-
-	msg, msgLen, err := splitRawMessage(args)
-	if err != nil {
-		return nil, err
-	}
-
-	if msgLen < len(callbackArgs) {
-		return nil, &common.InvalidParamsError{fmt.Sprintf("missing value for params")}
-	} else if msgLen > len(callbackArgs) {
-		return nil, &common.InvalidParamsError{fmt.Sprintf("too many params, want %d got %d", len(callbackArgs), msgLen)}
-	}
-
 	params := make([]interface{}, 0, len(callbackArgs))
 
-	for i, t := range callbackArgs {
-		if t.Name() == "BlockNumber" || t.Name() == "*BlockNumber" {
-			if chain := db_utils.GetChainCopy(jrpi.namespace); chain != nil {
-				height := chain.Height
-				in := new(big.Int)
-
-				if height == 0 {
-					return nil, &common.InvalidParamsError{fmt.Sprintf("there is no block generated")}
-				}
-
-				if msg[i] == "\"latest\""{
-					heightInt := in.SetUint64(height)
-					msg[i] = heightInt.String()
-				} else if blkNum, ok := in.SetString(msg[i], 0); ok && blkNum.Uint64() > height {
-					return nil, &common.InvalidParamsError{
-						fmt.Sprintf("block number is out of range, and now latest block number is %d", height)}
-				}
-			}
-		}
+	for _, t := range callbackArgs {
 		params = append(params, reflect.New(t).Interface()) // Interface()转换为原来的类型
 	}
-
-	args = joinRawMessage(msg)
 
 	if err := json.Unmarshal(args, &params); err != nil {
 		log.Info(err)
 		return nil, &common.InvalidParamsError{Message: err.Error()}
 	}
-
-
 
 	if len(params) > len(callbackArgs) {
 		return nil, &common.InvalidParamsError{
@@ -233,10 +197,8 @@ func (jrpi *JsonRpcProcessorImpl) parsePositionalArguments(args json.RawMessage,
 		} else {
 			// deref pointers values creates previously with reflect.New
 			argValues[i] = reflect.ValueOf(p).Elem()
-
 		}
 	}
-
 	return argValues, nil
 }
 

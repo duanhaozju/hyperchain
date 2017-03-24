@@ -62,8 +62,7 @@ func start(c *cli.Context) error {
 		MethodName: "admin_startNsMgr",
 		Args:       c.Args(),
 	}
-	rs := client.InvokeCmd(cmd)
-	fmt.Println(rs)
+	client.InvokeCmd(cmd)
 	return nil
 }
 
@@ -73,8 +72,7 @@ func stop(c *cli.Context) error {
 		MethodName: "admin_stopNsMgr",
 		Args:       c.Args(),
 	}
-	rs := client.InvokeCmd(cmd)
-	fmt.Println(rs)
+	client.InvokeCmd(cmd)
 	return nil
 }
 
@@ -88,8 +86,7 @@ func startNamespace(c *cli.Context) error {
 		fmt.Println(common.ErrInvalidArgsNum)
 		return common.ErrInvalidArgsNum
 	}
-	rs := client.InvokeCmd(cmd)
-	fmt.Println(rs)
+	client.InvokeCmd(cmd)
 	return nil
 }
 
@@ -103,8 +100,7 @@ func stopNamespace(c *cli.Context) error {
 		fmt.Println(common.ErrInvalidArgsNum)
 		return common.ErrInvalidArgsNum
 	}
-	rs := client.InvokeCmd(cmd)
-	fmt.Println(rs)
+	client.InvokeCmd(cmd)
 	return nil
 }
 
@@ -118,8 +114,7 @@ func restartNamespace(c *cli.Context) error {
 		fmt.Println(common.ErrInvalidArgsNum)
 		return common.ErrInvalidArgsNum
 	}
-	rs := client.InvokeCmd(cmd)
-	fmt.Println(rs)
+	client.InvokeCmd(cmd)
 	return nil
 }
 
@@ -133,8 +128,7 @@ func registerNamespace(c *cli.Context) error {
 		fmt.Println(common.ErrInvalidArgsNum)
 		return common.ErrInvalidArgsNum
 	}
-	rs := client.InvokeCmd(cmd)
-	fmt.Println(rs)
+	client.InvokeCmd(cmd)
 	return nil
 }
 
@@ -148,8 +142,7 @@ func deregisterNamespace(c *cli.Context) error {
 		fmt.Println(common.ErrInvalidArgsNum)
 		return common.ErrInvalidArgsNum
 	}
-	rs := client.InvokeCmd(cmd)
-	fmt.Println(rs)
+	client.InvokeCmd(cmd)
 	return nil
 }
 
@@ -159,7 +152,6 @@ func listNamespaces(c *cli.Context) error {
 		MethodName: "admin_listNamespaces",
 		Args:       c.Args(),
 	}
-	rs := client.InvokeCmd(cmd)
-	fmt.Println(rs)
+	client.InvokeCmd(cmd)
 	return nil
 }
