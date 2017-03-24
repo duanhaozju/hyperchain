@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"golang.org/x/net/context"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -201,4 +202,24 @@ func PP(value []byte) string {
 	}
 
 	return fmt.Sprintf("%x...%x", value[:4], value[len(value)-4])
+}
+
+// rpcRequest represents a raw incoming RPC request
+type RPCRequest struct {
+	Service   string
+	Method    string
+	Namespace string
+	Id        interface{}
+	IsPubSub  bool
+	Params    interface{}
+	Ctx       context.Context
+}
+
+// rpcResponse represents a raw incoming RPC request
+type RPCResponse struct {
+	Namespace string
+	Id        interface{}
+	//Reply []reflect.Value
+	Reply interface{}
+	Error RPCError
 }

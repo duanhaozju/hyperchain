@@ -20,7 +20,7 @@ import (
 // Use GetLogger to get a logger
 // Use SetLogLevel to set the logger's level
 
-var logger = logging.MustGetLogger("commonLogger")
+var logger = logging.MustGetLogger("common")
 var hyperLoggers map[string]*HyperLogger
 var rwMutex sync.RWMutex
 var once sync.Once
@@ -102,7 +102,7 @@ func CloseHyperlogger(namespace string) error {
 		logger.Errorf("Close Namespace Error: %s", err.Error())
 		return err
 	}
-	hl.closeLogFile <- struct {}{}
+	hl.closeLogFile <- struct{}{}
 	rwMutex.Lock()
 	delete(hyperLoggers, namespace)
 	rwMutex.Unlock()
@@ -303,7 +303,6 @@ func (hl *HyperLogger) setNewLogFile(fileName string, backendStderr logging.Leve
 	lb := logging.AddModuleLevel(backendFileFormatter)
 	lb.SetLevel(logDefaultLevel, "")
 	// todo: can set dump file log level here...
-
 	logging.SetBackend(backendStderr, lb)
 }
 
