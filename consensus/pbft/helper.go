@@ -6,7 +6,7 @@ import (
 	"time"
 	"fmt"
 
-	"hyperchain/protos"
+	"hyperchain/manager/protos"
 	"hyperchain/consensus/helper/persist"
 
 	"github.com/golang/protobuf/proto"

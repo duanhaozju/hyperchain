@@ -13,7 +13,7 @@ import (
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
 	"hyperchain/core/types"
-	"hyperchain/protos"
+	"hyperchain/manager/protos"
 	"sync/atomic"
 	"github.com/op/go-logging"
 )

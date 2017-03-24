@@ -8,7 +8,7 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
 	"hyperchain/hyperdb/db"
-	"hyperchain/protos"
+	"hyperchain/manager/protos"
 	"time"
 )
 

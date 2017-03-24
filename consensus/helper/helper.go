@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"hyperchain/manager/event"
-	pb "hyperchain/protos"
+	pb "hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"

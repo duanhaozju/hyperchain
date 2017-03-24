@@ -12,7 +12,7 @@ import (
 	"hyperchain/core/executor"
 	"hyperchain/manager/event"
 	"hyperchain/p2p"
-	"hyperchain/protos"
+	"hyperchain/manager/protos"
 	"time"
 	m "hyperchain/manager/message"
 	"hyperchain/core/types"
