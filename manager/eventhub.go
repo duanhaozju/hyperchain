@@ -143,15 +143,9 @@ func (hub *EventHub) listenTransactionEvent() {
 		case event.NewTxEvent:
 			log.Debugf("message middleware: [new tx]")
 			if ev.Simulate == true {
-				hub.executor.RunInSandBox(ev)
+				hub.executor.RunInSandBox(ev.Transaction)
 			} else {
-				// Parse the transaction payload to transaction
-				tx := &types.Transaction{}
-				err := proto.Unmarshal(ev.Payload, tx)
-				if err != nil {
-					return
-				}
-				hub.consenter.RecvLocal(tx)
+				hub.consenter.RecvLocal(ev.Transaction)
 			}
 		}
 	}

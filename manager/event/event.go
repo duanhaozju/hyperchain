@@ -13,7 +13,7 @@ type BroadcastConsensusEvent struct{ Payload []byte }
 
 //general tx local
 type NewTxEvent struct {
-	Payload  []byte
+	Transaction *types.Transaction
 	Simulate bool
 }
 

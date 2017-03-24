@@ -3,15 +3,12 @@ package executor
 import (
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"
-	"hyperchain/manager/event"
 	edb "hyperchain/core/db_utils"
 )
 
 // run transaction in a sandbox
 // execution result will not been add to database
-func (executor *Executor) RunInSandBox(ev event.NewTxEvent) error {
-	tx := &types.Transaction{}
-	proto.Unmarshal(ev.Payload, tx)
+func (executor *Executor) RunInSandBox(tx *types.Transaction) error {
 	statedb, err := executor.newStateDb()
 	if err != nil {
 		return err
