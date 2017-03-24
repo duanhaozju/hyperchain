@@ -76,6 +76,7 @@ func (hi *httpServerImpl) Start() error {
 	})
 	hi.rpcServer.Start()
 	handler := c.Handler(newJsonHttpHandler(hi.rpcServer))
+
 	t1 := time.Now()
 	var err error
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", httpPort))
@@ -90,7 +91,7 @@ func (hi *httpServerImpl) Start() error {
 	err = http.Serve(hi.stopListener, handler)
 
 	t2 := time.Now()
-	if err != nil && t2.Sub(t1) < 5*time.Second {
+	if err != nil && t2.Sub(t1) < 2*time.Second {
 		log.Errorf("start http service error %v", err)
 		return err
 	}
@@ -101,11 +102,13 @@ func (hi *httpServerImpl) Start() error {
 
 //Stop stop the http service, this method will wait for 3 seconds before stop.
 func (hi *httpServerImpl) Stop() error {
+	//TODO:Fix it, this stop method will not stop...
 	log.Notice("stop http service ...")
-	hi.rpcServer.Stop()
 	if hi.stopListener != nil {
+		hi.stopListener.Stop()
 		hi.stopListener.Close()
 	}
+	hi.rpcServer.Stop()
 	time.Sleep(4 * time.Second)
 	log.Notice("stopped http service")
 	return nil
@@ -125,7 +128,7 @@ func (hi *httpServerImpl) Restart() error {
 			if err != nil {
 				afterStart := time.Now()
 				if afterStart.Sub(beforeStart) < 2*time.Second {
-					log.Noticef("Restart http error %v", err)
+					log.Errorf("Restart http error %v", err)
 					time.Sleep((1 << i) * time.Second)
 				} else {
 					return
@@ -133,7 +136,7 @@ func (hi *httpServerImpl) Restart() error {
 			}
 		}
 		if i > maxRetry {
-			log.Errorf("Exist max retry start times")
+			log.Errorf("Restart times overflow!")
 		}
 	}()
 	return nil
@@ -170,24 +173,10 @@ func newJsonHttpHandler(srv *Server) http.HandlerFunc {
 	}
 }
 
-func startHttp(srv *Server) {
+func startRestService(srv *Server) {
 	config := srv.namespaceMgr.GlobalConfig()
-
-	httpPort := config.GetInt(common.C_HTTP_PORT)
 	restPort := config.GetInt(common.C_REST_PORT)
 	logsPath := config.GetString(common.LOG_DUMP_FILE_DIR)
-
-	// TODO AllowedOrigins should be a parameter
-	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},
-		AllowedMethods: []string{"POST", "GET"},
-	})
-
-	// Insert the middleware
-	handler := c.Handler(newJsonHttpHandler(srv))
-
-	log.Debugf("start to listen http port: %d", httpPort)
-	go http.ListenAndServe(":"+strconv.Itoa(httpPort), handler)
 
 	// rest service
 	routers.NewRouter()
@@ -219,7 +208,6 @@ func NewListener(l net.Listener) (*StoppableListener, error) {
 }
 
 func (sl *StoppableListener) Accept() (net.Conn, error) {
-
 	for {
 		//Wait up to one second for a new connection
 		sl.SetDeadline(time.Now().Add(time.Second))
@@ -228,8 +216,11 @@ func (sl *StoppableListener) Accept() (net.Conn, error) {
 		//Check for the channel being closed
 		select {
 		case <-sl.stop:
+			log.Errorf("try close %v", err)
 			if err == nil {
-				newConn.Close()
+				log.Errorf("close")
+				err = newConn.Close()
+				log.Errorf("closed %v", err)
 			}
 			return nil, StoppedError
 		default:

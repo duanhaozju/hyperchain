@@ -23,7 +23,7 @@ var (
 const (
 	DEFAULT_NAMESPACE  = "global"
 	NS_CONFIG_DIR_ROOT = "global.nsConfigRootPath"
-	DEFAULT_LOG = "system"
+	DEFAULT_LOG        = "system"
 )
 
 var once sync.Once
@@ -32,9 +32,9 @@ var nr NamespaceManager
 //NamespaceManager namespace manager.
 type NamespaceManager interface {
 	//Start start namespace manager service.
-	Start()
+	Start() error
 	//Stop stop namespace manager.
-	Stop()
+	Stop() error
 	//List list all namespace names in system.
 	List() []string
 	//Register register a new namespace.
@@ -113,19 +113,21 @@ func (nr *nsManagerImpl) init() error {
 
 //Start start namespace registry service.
 //which will also start all namespace in this Namespace Registry
-func (nr *nsManagerImpl) Start() {
+func (nr *nsManagerImpl) Start() error {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
 	for name, ns := range nr.namespaces {
 		err := ns.Start()
 		if err != nil {
 			logger.Errorf("namespace %s start failed, %v", name, err)
+			return err
 		}
 	}
+	return nil
 }
 
 //Stop stop namespace registry.
-func (nr *nsManagerImpl) Stop() {
+func (nr *nsManagerImpl) Stop() error {
 	logger.Noticef("Try to stop NamespaceManager ...")
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
@@ -133,9 +135,11 @@ func (nr *nsManagerImpl) Stop() {
 		err := ns.Stop()
 		if err != nil {
 			logger.Errorf("namespace %s stop failed, %v", name, err)
+			return err
 		}
 	}
 	logger.Noticef("NamespaceManager stopped!")
+	return nil
 }
 
 //List list all namespace names in system.

@@ -4,16 +4,16 @@ package common
 
 import (
 	"github.com/op/go-logging"
+	"github.com/pkg/errors"
+	"github.com/spf13/cast"
 
 	"fmt"
-	"github.com/spf13/cast"
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
-	"github.com/pkg/errors"
-	"strings"
 )
 
 // Usage:
@@ -29,15 +29,15 @@ var defaultConsoleFormat = `[%{module}]%{color}[%{level:.5s}] %{time:15:04:05.00
 var defaultFileFormat = `[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}`
 
 type HyperLogger struct {
-	conf   		 	 *Config
-	loggers          	 map[string]*logging.Logger
+	conf    *Config
+	loggers map[string]*logging.Logger
 	// register module dynamically loaded, eg. "consensus":"DEBUG"
-	dynamicLoadedModules  	 map[string]string
-	fileBackend		 logging.LeveledBackend
-	consoleBackend  	 logging.LeveledBackend
-	writeToFile     	 bool
-	closeLogFile 		 chan struct{}
-	baseLevel		 logging.Level
+	dynamicLoadedModules map[string]string
+	fileBackend          logging.LeveledBackend
+	consoleBackend       logging.LeveledBackend
+	writeToFile          bool
+	closeLogFile         chan struct{}
+	baseLevel            logging.Level
 }
 
 //InitHyperLogger init the whole logging system.
@@ -72,18 +72,28 @@ func InitHyperLogger(conf *Config) (*HyperLogger, error) {
 
 //GetLogger getLogger with specific namespace and module.
 func GetLogger(namespace string, module string) *logging.Logger {
-
 	return getLogger(namespace, module)
 }
 
-func SetLogLevel(namespace string, module string, level string) (string, error) {
+//SetLogLevel set log level by specific namespace module and the level provided by user.
+func SetLogLevel(namespace string, module string, level string) error {
 	hl, err := getHyperlogger(namespace)
 	if err != nil {
 		err := errors.New("Error: " + namespace + " not exist cannot get hyperlogger")
-		return "", err
+		return err
 	}
 	hl.setModuleLogLevel(namespace, module, level)
-	return "", nil
+	return nil
+}
+
+//GetLogLevel get log level info by namespace and module.
+func GetLogLevel(namespace, module string) (string, error) {
+	hl, err := getHyperlogger(namespace)
+	if err != nil {
+		logger.Errorf("getHyperlogger error %v", err)
+		return "", err
+	}
+	return hl.consoleBackend.GetLevel(getCompositeModuleName(namespace, module)).String(), nil
 }
 
 func CloseHyperlogger(namespace string) error {
@@ -102,9 +112,9 @@ func CloseHyperlogger(namespace string) error {
 
 func newHyperLogger(conf *Config) *HyperLogger {
 	hl := &HyperLogger{
-		conf:    conf,
+		conf:         conf,
 		closeLogFile: make(chan struct{}),
-		loggers: make(map[string]*logging.Logger),
+		loggers:      make(map[string]*logging.Logger),
 	}
 	return hl
 }
@@ -167,6 +177,7 @@ func getHyperlogger(namespace string) (*HyperLogger, error) {
 	rwMutex.RUnlock()
 	return hl, err
 }
+
 // init log level for modules from configuration and dynamically loaded modules
 func (hl *HyperLogger) initLoggerLevelByConfiguration(conf *Config) {
 	ns := conf.GetString(NAMESPACE)
@@ -278,7 +289,6 @@ func (hl *HyperLogger) initFileBackend(fileName string, fileFormat string) loggi
 	return leveledFileBackend
 }
 
-
 //setNewLogFile set new file on disk to store logs.
 func (hl *HyperLogger) setNewLogFile(fileName string, backendStderr logging.LeveledBackend) {
 	logFile, err := os.Create(fileName)
@@ -301,7 +311,7 @@ func (hl *HyperLogger) setNewLogFile(fileName string, backendStderr logging.Leve
 func (hl *HyperLogger) newLogFileByInterval(loggerDir string, conf *Config) {
 	tm := time.Now()
 	hour, min, sec := 3, 0, 0
-	duration := (24+hour)*3600+min*60+sec - (tm.Hour()*3600+tm.Minute()*60+tm.Second())
+	duration := (24+hour)*3600 + min*60 + sec - (tm.Hour()*3600 + tm.Minute()*60 + tm.Second())
 	// first log split at 3:00 AM
 	// then split byte the interval
 	d, _ := time.ParseDuration(fmt.Sprintf("%ds", duration))
