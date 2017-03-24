@@ -11,6 +11,7 @@ import (
 	"hyperchain/tree/bucket"
 	"math/big"
 	"sort"
+	"github.com/op/go-logging"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -76,6 +77,7 @@ type StateObject struct {
 	touched   bool
 	deleted   bool
 	onDirty   func(addr common.Address) // Callback method to mark a state object newly dirty
+	logger    *logging.Logger
 }
 
 // empty returns whether the account is considered empty.
@@ -102,14 +104,14 @@ type MemAccount struct {
 }
 
 // newObject creates a state object.
-func newObject(db *StateDB, address common.Address, data Account, onDirty func(addr common.Address), setup bool, bktConf map[string]interface{}) *StateObject {
+func newObject(db *StateDB, address common.Address, data Account, onDirty func(addr common.Address), setup bool, bktConf map[string]interface{}, logger *logging.Logger) *StateObject {
 	if data.Balance == nil {
 		data.Balance = new(big.Int)
 	}
 	if data.CodeHash == nil {
 		data.CodeHash = emptyCodeHash
 	}
-	obj := &StateObject{db: db, address: address, data: data, cachedStorage: make(Storage), dirtyStorage: make(Storage), onDirty: onDirty}
+	obj := &StateObject{db: db, address: address, data: data, cachedStorage: make(Storage), dirtyStorage: make(Storage), onDirty: onDirty, logger: logger}
 	// initialize bucket tree
 	if setup {
 		prefix, _ := CompositeStorageBucketPrefix(address.Bytes())
@@ -183,7 +185,7 @@ func (self *StateObject) markSuicided() {
 		self.onDirty(self.Address())
 		self.onDirty = nil
 	}
-	log.Infof("%x: #%d %v X\n", self.Address(), self.Nonce(), self.Balance())
+	self.logger.Infof("%x: #%d %v X\n", self.Address(), self.Nonce(), self.Balance())
 }
 
 func (c *StateObject) touch() {
@@ -229,13 +231,13 @@ func (self *StateObject) SetState(db db.Database, key, value common.Hash) {
 		Prevalue: previous,
 		Exist:    exist,
 	})
-	log.Debugf("set state key %s value %s existed %v", key.Hex(), value.Hex(), exist)
+	self.logger.Debugf("set state key %s value %s existed %v", key.Hex(), value.Hex(), exist)
 	self.setState(key, value)
 }
 
 func (self *StateObject) setState(key, value common.Hash) {
 	// Write both cache
-	log.Debugf("put storage item key %s value %s to storage cache and dirty cache", key.Hex(), value.Hex())
+	self.logger.Debugf("put storage item key %s value %s to storage cache and dirty cache", key.Hex(), value.Hex())
 	self.cachedStorage[key] = value
 	self.dirtyStorage[key] = value
 
@@ -261,12 +263,12 @@ func (self *StateObject) Flush(db db.Batch) error {
 		delete(self.dirtyStorage, key)
 		if (value == common.Hash{}) {
 			// delete
-			log.Debugf("flush dirty storage address [%s] delete item key: [%s]", self.address.Hex(), key.Hex())
+			self.logger.Debugf("flush dirty storage address [%s] delete item key: [%s]", self.address.Hex(), key.Hex())
 			if err := db.Delete(CompositeStorageKey(self.address.Bytes(), key.Bytes())); err != nil {
 				return err
 			}
 		} else {
-			log.Debugf("flush dirty storage address [%s] put item key: [%s], value [%s]", self.address.Hex(), key.Hex(), value.Hex())
+			self.logger.Debugf("flush dirty storage address [%s] put item key: [%s], value [%s]", self.address.Hex(), key.Hex(), value.Hex())
 			if err := db.Put(CompositeStorageKey(self.address.Bytes(), key.Bytes()), value.Bytes()); err != nil {
 				return err
 			}
@@ -298,24 +300,24 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 		prev := self.Root()
 		workingSet := bucket.NewKVMap()
 		for k, v := range self.dirtyStorage {
-			log.Debugf("calculate state object %s storage hash, dirty entry key %s value %s", self.address.Hex(), k.Hex(), v.Hex())
+			self.logger.Debugf("calculate state object %s storage hash, dirty entry key %s value %s", self.address.Hex(), k.Hex(), v.Hex())
 			if (v == common.Hash{}) {
 				workingSet[k.Hex()] = nil
 			} else {
 				workingSet[k.Hex()] = v.Bytes()
-				log.Debugf("working set key %s value %s", k.Hex(), common.Bytes2Hex(v.Bytes()))
+				self.logger.Debugf("working set key %s value %s", k.Hex(), common.Bytes2Hex(v.Bytes()))
 			}
 		}
 		self.bucketTree.PrepareWorkingSet(workingSet, big.NewInt(int64(self.db.curSeqNo)))
 		// 2. calculate hash
 		hash, err := self.bucketTree.ComputeCryptoHash()
 		if err != nil {
-			log.Errorf("calculate storage hash for stateObject [%s] failed", self.address.Hex())
+			self.logger.Errorf("calculate storage hash for stateObject [%s] failed", self.address.Hex())
 			return common.Hash{}
 		}
 		// 3. assign to self.ROOT
 		self.SetRoot(common.BytesToHash(hash))
-		log.Debugf("state object %s storage root hash %s after #%d", self.address.Hex(), self.Root().Hex(), self.db.curSeqNo)
+		self.logger.Debugf("state object %s storage root hash %s after #%d", self.address.Hex(), self.Root().Hex(), self.db.curSeqNo)
 		if (self.Root() != common.Hash{} || prev != common.Hash{}) {
 			// storage hash changed
 			self.db.journal.JournalList = append(self.db.journal.JournalList, &StorageHashChange{
@@ -333,7 +335,7 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 func (c *StateObject) ReturnGas(gas, price *big.Int) {}
 
 func (self *StateObject) deepCopy(db *StateDB, onDirty func(addr common.Address)) *StateObject {
-	stateObject := newObject(db, self.address, self.data, onDirty, true, self.bucketConf)
+	stateObject := newObject(db, self.address, self.data, onDirty, true, self.bucketConf, self.logger)
 	stateObject.code = self.code
 	stateObject.dirtyStorage = self.dirtyStorage.Copy()
 	stateObject.cachedStorage = self.dirtyStorage.Copy()
@@ -366,7 +368,7 @@ func (c *StateObject) AddBalance(amount *big.Int) {
 	}
 	c.SetBalance(new(big.Int).Add(c.Balance(), amount))
 
-	log.Infof("%x: #%d %v (+ %v)\n", c.Address(), c.Nonce(), c.Balance(), amount)
+	c.logger.Infof("%x: #%d %v (+ %v)\n", c.Address(), c.Nonce(), c.Balance(), amount)
 }
 
 // SubBalance removes amount from c's balance.
@@ -377,7 +379,7 @@ func (c *StateObject) SubBalance(amount *big.Int) {
 	}
 	c.SetBalance(new(big.Int).Sub(c.Balance(), amount))
 
-	log.Infof("%x: #%d %v (- %v)\n", c.Address(), c.Nonce(), c.Balance(), amount)
+	c.logger.Infof("%x: #%d %v (- %v)\n", c.Address(), c.Nonce(), c.Balance(), amount)
 }
 
 func (self *StateObject) SetBalance(amount *big.Int) {
@@ -478,7 +480,7 @@ func (self *StateObject) SetCreator(addr common.Address) {
 
 func (self *StateObject) setCreator(addr common.Address) {
 	if bytes.Compare(self.data.Creator.Bytes(), addr.Bytes()) == 0 {
-		log.Warningf("state object %s set creator, same with the origin, ignore.", self.address.Hex())
+		self.logger.Warningf("state object %s set creator, same with the origin, ignore.", self.address.Hex())
 		return
 	}
 	self.data.Creator = addr
@@ -502,7 +504,7 @@ func (self *StateObject) SetCreateTime(time uint64) {
 
 func (self *StateObject) setCreateTime(time uint64) {
 	if self.data.CreateTime == time {
-		log.Warningf("state object %s set create time, same with the origin, ignore.", self.address.Hex())
+		self.logger.Warningf("state object %s set create time, same with the origin, ignore.", self.address.Hex())
 		return
 	}
 	self.data.CreateTime = time
@@ -525,7 +527,7 @@ func (self *StateObject) Status() int {
 // SetStatus - set the status of state object.
 func (self *StateObject) SetStatus(status int) {
 	if self.data.Status == status {
-		log.Warningf("state object %s set status, same with the origin status, ignore.", self.address.Hex())
+		self.logger.Warningf("state object %s set status, same with the origin status, ignore.", self.address.Hex())
 		return
 	}
 	self.db.journal.JournalList = append(self.db.journal.JournalList, &StatusChange{
@@ -585,7 +587,7 @@ func (self *StateObject) AppendDeployedContract(address common.Address) {
 func (self *StateObject) appendDeployedContract(address common.Address) {
 	if idx := sort.SearchStrings(self.data.DeployedContracts, address.Hex()); idx < len(self.data.DeployedContracts) && self.data.DeployedContracts[idx] == address.Hex() {
 		// already exist
-		log.Warningf("smart contract %s already in creator %s's list", address.Hex(), self.address.Hex())
+		self.logger.Warningf("smart contract %s already in creator %s's list", address.Hex(), self.address.Hex())
 		return
 	} else {
 		self.data.DeployedContracts = append(self.data.DeployedContracts, address.Hex())

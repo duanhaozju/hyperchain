@@ -102,19 +102,15 @@ func (test *revertTest) run() bool {
 	// Run all actions and create snapshots.
 	var (
 		db, _         = mdb.NewMemDatabase()
-		state, _      = New(common.Hash{}, db, tutil.InitConfig(configPath), 10)
+		state, _      = New(common.Hash{}, db, tutil.InitConfig(configPath), 10, logger)
 		checkDb, _    = mdb.NewMemDatabase()
-		checkState, _ = New(common.Hash{}, checkDb, tutil.InitConfig(configPath), 10)
+		checkState, _ = New(common.Hash{}, checkDb, tutil.InitConfig(configPath), 10, logger)
 		immediateRoot []byte
 	)
-	log.Notice("testcase %s", test.String())
 
-
-	log.Notice("============= Apply ==============")
 	immediateRoot = applyActions(state, test.actions, 11)
 	applyActions(state, test.actionsAfter, 12)
 
-	log.Notice("============= Revert ==============")
 	batch := db.NewBatch()
 	state.RevertToJournal(11, 12, immediateRoot, batch)
 	batch.Write()
@@ -180,13 +176,6 @@ func applyActions(s *StateDB, actions []testAction, seqNo uint64) []byte {
 	batch := s.FetchBatch(seqNo)
 	batch.Write()
 	s.MarkProcessFinish(seqNo)
-	for obj := range s.stateObjectsDirty {
-		log.Noticef("============[OBJ]=============, %s", obj.Hex())
-		_, err := s.db.Get(CompositeAccountKey(obj.Bytes()))
-		if err != nil {
-			log.Debugf("no state object been find")
-		}
-	}
 	s.Purge()
 	return hash.Bytes()
 }

@@ -16,12 +16,12 @@ func (hub *EventHub) invokePbftLocal(serviceType, eventType int, content interfa
 }
 
 func (hub *EventHub) broadcast(bType int, t m.SessionMessage_Type, message []byte) {
-	log.Debugf("broadcast session message %s", t.String())
+	hub.logger.Debugf("broadcast session message %s", t.String())
 	if ctx, err := proto.Marshal(&m.SessionMessage{
 		Type:    t,
 		Payload: message,
 	}); err != nil {
-		log.Errorf("marshal message %d failed.", t)
+		hub.logger.Errorf("marshal message %d failed.", t)
 		return
 	} else {
 		switch bType {
@@ -36,12 +36,12 @@ func (hub *EventHub) broadcast(bType int, t m.SessionMessage_Type, message []byt
 }
 
 func (hub *EventHub) send(t m.SessionMessage_Type, message []byte, peers []uint64) {
-	log.Debugf("send session message %s", t.String())
+	hub.logger.Debugf("send session message %s", t.String())
 	if ctx, err := proto.Marshal(&m.SessionMessage{
 		Type:    t,
 		Payload: message,
 	}); err != nil {
-		log.Errorf("marshal message %d failed.", t)
+		hub.logger.Errorf("marshal message %d failed.", t)
 		return
 	} else {
 		hub.peerManager.SendMsgToPeers(ctx, peers)

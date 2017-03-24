@@ -58,7 +58,7 @@ func (self *StateDB) RawDump() World {
 		storageIt := self.db.NewIterator(GetStorageKeyPrefix(address))
 		for storageIt.Next() {
 			storageKey, _ := SplitCompositeStorageKey(address, storageIt.Key())
-			log.Debugf("dump key %s value %s", common.Bytes2Hex(storageKey), common.Bytes2Hex(storageIt.Value()))
+			self.logger.Debugf("dump key %s value %s", common.Bytes2Hex(storageKey), common.Bytes2Hex(storageIt.Value()))
 			user.Storage[common.Bytes2Hex(storageKey)] = common.Bytes2Hex(storageIt.Value())
 		}
 		if account.Status == STATEOBJECT_STATUS_NORMAL {

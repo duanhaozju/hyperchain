@@ -84,5 +84,5 @@ func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
 	if err != nil {
 		return nil, err
 	}
-	return hyperstate.New(common.BytesToHash(latestBlk.MerkleRoot), db, conf, height)
+	return hyperstate.New(common.BytesToHash(latestBlk.MerkleRoot), db, conf, height, log)
 }
