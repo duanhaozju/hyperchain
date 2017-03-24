@@ -17,6 +17,8 @@ import (
 	"time"
 	"hyperchain/p2p/peerComm"
 	"fmt"
+	"github.com/op/go-logging"
+	"hyperchain/common"
 )
 
 type Node struct {
@@ -35,6 +37,8 @@ type Node struct {
 	TM                 *transport.TransportManager
 	CM                 *admittance.CAManager
 	config             peerComm.Config
+	namespace 	   string
+	logger *logging.Logger
 }
 
 type UpdateTable struct {
@@ -43,22 +47,27 @@ type UpdateTable struct {
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
-func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TM *transport.TransportManager, peersPool *PeersPool, cm *admittance.CAManager, config peerComm.Config) *Node {
-	var newNode Node
-	newNode.localAddr = localAddr
-	newNode.TM = TM
-	newNode.CM = cm
-	newNode.higherEventManager = hEventManager
-	newNode.PeersPool = peersPool
-	newNode.attendChan = make(chan int, 1000)
-	newNode.delayTable = make(map[int]int64)
-	newNode.DelayChan = make(chan UpdateTable)
-	newNode.config = config
+func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TM *transport.TransportManager, peersPool *PeersPool, cm *admittance.CAManager, config peerComm.Config,namespace string) *Node {
+	logger := common.GetLogger(namespace,"node");
+	newNode := Node{
+		localAddr : localAddr,
+		TM : TM,
+		CM : cm,
+		higherEventManager : hEventManager,
+		PeersPool : peersPool,
+		attendChan : make(chan int, 1000),
+		delayTable : make(map[int]int64),
+		DelayChan : make(chan UpdateTable),
+		config : config,
+		namespace:namespace,
+		logger:logger,
+	}
+
 	//listen the update
 	go newNode.UpdateDelayTableThread()
 
-	log.Debug("NODE START...")
-	log.Debugf("LOCAL NODE INFO:\nID: %d\nIP: %s\nPORT: %d\nHASH: %s", localAddr.ID, localAddr.IP, localAddr.Port, localAddr.Hash)
+	logger.Debug("NODE START...")
+	logger.Debugf("LOCAL NODE INFO:\nID: %d\nIP: %s\nPORT: %d\nHASH: %s", localAddr.ID, localAddr.IP, localAddr.Port, localAddr.Hash)
 	return &newNode
 }
 
@@ -76,7 +85,7 @@ func (node *Node) UpdateDelayTableThread() {
 
 //新节点需要监听相应的attend类型
 func (n *Node) attendNoticeProcess(N int) {
-	log.Critical("AttendProcess N:", N)
+	n.logger.Critical("AttendProcess N:", N)
 	// fix the N as N-1
 	// temp
 	// isPrimaryConnectFlag := false
@@ -84,7 +93,7 @@ func (n *Node) attendNoticeProcess(N int) {
 	num := 0
 	for {
 		flag := <-n.attendChan
-		log.Debug("attend flag: ", flag, " num: ", num)
+		n.logger.Debug("attend flag: ", flag, " num: ", num)
 		switch flag {
 		case 1: {
 			num++
@@ -95,7 +104,7 @@ func (n *Node) attendNoticeProcess(N int) {
 		}
 		}
 		if num >= (N - f) {
-			log.Debug("new node has online ,post already in chain event")
+			n.logger.Debug("new node has online ,post already in chain event")
 			go n.higherEventManager.Post(event.AlreadyInChainEvent{})
 		}
 
@@ -251,10 +260,10 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 
 	}
 	case pb.Message_SESSION:{
-		log.Infof("Get a session msg from %d (ip: %s, port: %d) ",msg.From.ID,msg.From.IP,msg.From.Port)
+		node.logger.Infof("Get a session msg from %d (ip: %s, port: %d) ",msg.From.ID,msg.From.IP,msg.From.Port)
 		transferData, err := node.TM.Decrypt(msg.Payload, pb.RecoverPeerAddr(msg.From))
 		if err != nil {
-			log.Errorf("cannot decrypt the message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err)
+			node.logger.Errorf("cannot decrypt the message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err)
 			return response, errors.New(fmt.Sprintf("cannot decrypt the message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err))
 		}
 		go node.higherEventManager.Post(event.SessionEvent{
@@ -268,17 +277,17 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 		response.Payload = rpayload
 	}
 	case pb.Message_KEEPALIVE:{
-		log.Debugf("Get a keep alive msg from %d (ip: %s, port: %d) ",msg.From.ID,msg.From.IP,msg.From.Port)
+		node.logger.Debugf("Get a keep alive msg from %d (ip: %s, port: %d) ",msg.From.ID,msg.From.IP,msg.From.Port)
 		//客户端会发来keepAlive请求,返回response即可
 		// client may send a keep alive request, just response A response type message,if node is not ready, send a pending status message
 		response.MessageType = pb.Message_RESPONSE
 		response.Payload = []byte("RESPONSE FROM SERVER")
 	}
 	case pb.Message_PENDING:{
-		log.Warning("Got a PADDING Message")
+		node.logger.Warning("Got a PADDING Message")
 	}
 	default:
-		log.Warningf("ignore a unknown message : %v, content", msg.MessageType, string(msg.Payload))
+		node.logger.Warningf("ignore a unknown message : %v, content", msg.MessageType, string(msg.Payload))
 		return response, errors.New(fmt.Sprintf("ignore a unknown message : %v, content: %s", msg.MessageType, string(msg.Payload)))
 	}
 
@@ -291,17 +300,17 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 
 // StartServer start the gRPC server
 func (node *Node) StartServer() {
-	log.Info("Starting the grpc listening server...")
+	node.logger.Info("Starting the grpc listening server...")
 	lis, err := net.Listen("tcp", ":" + strconv.Itoa(node.localAddr.Port))
 	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
-		log.Fatal("PLEASE RESTART THE SERVER NODE!")
+		node.logger.Fatalf("Failed to listen: %v", err)
+		node.logger.Fatal("PLEASE RESTART THE SERVER NODE!")
 	}
 	opts := node.CM.GetGrpcServerOpts()
 	node.gRPCServer = grpc.NewServer(opts...)
 	//this.gRPCServer = grpc.NewServer()
 	pb.RegisterChatServer(node.gRPCServer, node)
-	log.Info("Listening gRPC request...")
+	node.logger.Info("Listening gRPC request...")
 	go node.gRPCServer.Serve(lis)
 }
 
@@ -318,11 +327,11 @@ func (node *Node) reverseConnect(msg *pb.Message) error {
 	reAddr := pb.NewPeerAddr(node.config.GetIP(reNodeID), node.config.GetPort(reNodeID), node.config.GetRPCPort(reNodeID), reNodeID)
 	peer, err := node.PeersPool.GetPeerByHash(msg.From.Hash)
 	if err != nil {
-		log.Criticalf("cannot get the old peer ID: %d",msg.From.ID)
-		peer := NewPeer(reAddr,node.localAddr,node.TM,node.CM)
+		node.logger.Criticalf("cannot get the old peer ID: %d",msg.From.ID)
+		peer := NewPeer(reAddr,node.localAddr,node.TM,node.CM,node.namespace)
 		_,err := peer.Connect(node.TM.GetLocalPublicKey(),pb.Message_RECONNECT,true,peer.ReconnectHandler)
 		if err != nil{
-			log.Criticalf("cannot create a new peer again, please chekc the peer (id: %d)",msg.From.ID)
+			node.logger.Criticalf("cannot create a new peer again, please chekc the peer (id: %d)",msg.From.ID)
 		}
 	} else {
 		go peer.eventMux.Post(RecoveryEvent{

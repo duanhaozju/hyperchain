@@ -15,13 +15,14 @@ import (
 	"crypto/cipher"
 	"github.com/op/go-logging"
 	"bytes"
+	"hyperchain/common"
 )
 
 // Init the log setting
-var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("p2p")
-}
+//var log *logging.Logger // package-level logger
+//func init() {
+//	log = logging.MustGetLogger("p2p")
+//}
 
 type sharedSecret struct {
 	shareSec         []byte
@@ -46,10 +47,12 @@ type TransportManager struct {
 
 	//CAManager
 	cm            *admittance.CAManager
+	logger *logging.Logger
 }
 
 //NewTransportManager return a initialized transport manager
-func NewTransportManager(cm *admittance.CAManager) (*TransportManager, error) {
+func NewTransportManager(cm *admittance.CAManager,namespace string) (*TransportManager, error) {
+	logger := common.GetLogger(namespace,"p2p")
 	contentPri := cm.GetECertPrivateKeyByte()
 	pri, err := primitives.ParseKey(string(contentPri))
 	if err != nil {
@@ -63,7 +66,7 @@ func NewTransportManager(cm *admittance.CAManager) (*TransportManager, error) {
 		encAlgo = TripleDesEnc
 		decAlgo = TripleDesDec
 	}else{
-		log.Warning("disable the Symmetrical Encryption.")
+		logger.Warning("disable the Symmetrical Encryption.")
 		encAlgo = pureEnc
 		decAlgo = pureDec
 	}
@@ -75,6 +78,7 @@ func NewTransportManager(cm *admittance.CAManager) (*TransportManager, error) {
 		encAlgo:encAlgo,
 		decAlgo:decAlgo,
 		cm:cm,
+		logger:logger,
 	}, nil
 }
 
@@ -87,14 +91,14 @@ func (tm *TransportManager) GetLocalPublicKey() []byte {
 func (tm *TransportManager) NegoShareSecret(remotePub []byte, addr *pb.PeerAddr) error {
 	remotePubKey, success := tm.ecdh.Unmarshal(remotePub)
 	if !success {
-		log.Error("unmarshal the remote share public key failed")
+		tm.logger.Error("unmarshal the remote share public key failed")
 		return errors.New("unmarshal remote share publc fey failed")
 	}
 	tm.shareSecMux.Lock()
 	defer tm.shareSecMux.Unlock()
 	shareSec, err := tm.ecdh.GenerateSharedSecret(tm.privateKey, remotePubKey)
 	if err != nil {
-		log.Error("generate the share secret failed.")
+		tm.logger.Error("generate the share secret failed.")
 		return errors.New("generate the share secret failed.")
 	}
 	tm.shareSecTable[addr.Hash] = &sharedSecret{
@@ -141,7 +145,7 @@ func (tm *TransportManager)SignMsg(msg *pb.Message) (pb.Message,error) {
 	signa, err := ecdsaEncrypto.Sign(msg.Payload, tm.cm.GetECertPrivKey())
 	// stupid bug 20170321!
 	if err != nil {
-		log.Critical(err)
+		tm.logger.Critical(err)
 		return retmsg,err
 	}
 	retmsg.Signature.Signature = signa
@@ -154,7 +158,7 @@ func (tm *TransportManager)VerifyMsg(msg *pb.Message) (bool, error) {
 		return true, nil
 	}
 	if msg.Signature == nil {
-		log.Warning("The msg Signature is nil, msg from", msg.From.ID)
+		tm.logger.Warning("The msg Signature is nil, msg from", msg.From.ID)
 		return false,errors.New("invalid signature")
 	}
 	//1. check the ECert is valid or not
@@ -168,7 +172,7 @@ func (tm *TransportManager)VerifyMsg(msg *pb.Message) (bool, error) {
 
 func (tm *TransportManager)VerifyRCert(msg *pb.Message) (bool, error) {
 	if msg.Signature == nil || msg.Signature.RCert == nil {
-		log.Warning("The msg Signature is nil, msg from", msg.From.ID)
+		tm.logger.Warning("The msg Signature is nil, msg from", msg.From.ID)
 		return false,errors.New("invalid msg, signature is nil,or signature.rcert is nil")
 	}
 	rcertb := msg.Signature.RCert

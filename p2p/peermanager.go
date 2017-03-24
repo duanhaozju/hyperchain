@@ -8,16 +8,15 @@
 package p2p
 
 import (
-	"github.com/op/go-logging"
 	"hyperchain/manager/event"
 	"hyperchain/admittance"
 )
 
 // Init the log setting
-var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("p2p")
-}
+//var log *logging.Logger // package-level logger
+//func init() {
+//	log = logging.MustGetLogger("p2p")
+//}
 
 // PeerManager provides the basic functions which supports the peer to peer
 // data transfer. Those should be invoked by the higher layer.
