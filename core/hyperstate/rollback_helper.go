@@ -4,6 +4,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/tree/bucket"
 	"hyperchain/hyperdb/db"
+	"github.com/op/go-logging"
 )
 
 const (
@@ -12,19 +13,21 @@ const (
 )
 
 type JournalCache struct {
-	stateObjects      map[common.Address]*StateObject
-	db                db.Database
-	stateWorkingSet   bucket.K_VMap
+	stateObjects           map[common.Address]*StateObject
+	db                     db.Database
+	stateWorkingSet        bucket.K_VMap
 	stateObjectsWorkingSet map[common.Address]bucket.K_VMap
+	logger                 *logging.Logger
 }
 
 
-func NewJournalCache(db db.Database) *JournalCache {
+func NewJournalCache(db db.Database, logger *logging.Logger) *JournalCache {
 	return &JournalCache{
-		db: db,
-		stateObjects: make(map[common.Address]*StateObject),
-		stateWorkingSet: bucket.NewKVMap(),
-		stateObjectsWorkingSet: make(map[common.Address]bucket.K_VMap),
+		db:                       db,
+		logger:                   logger,
+		stateObjects:             make(map[common.Address]*StateObject),
+		stateWorkingSet:          bucket.NewKVMap(),
+		stateObjectsWorkingSet:   make(map[common.Address]bucket.K_VMap),
 	}
 }
 
@@ -42,7 +45,7 @@ func (cache *JournalCache) Fetch (address common.Address) *StateObject {
 	// Load the object from the database.
 	data, err := cache.db.Get(CompositeAccountKey(address.Bytes()))
 	if err != nil {
-		log.Debugf("no state object been find")
+		cache.logger.Debugf("no state object been find")
 		return nil
 	}
 	var account Account
@@ -51,7 +54,7 @@ func (cache *JournalCache) Fetch (address common.Address) *StateObject {
 		return nil
 	}
 	// Insert into the live set.
-	log.Debugf("find state object %s in database, add it to live objects", address.Hex())
+	cache.logger.Debugf("find state object %s in database, add it to live objects", address.Hex())
 	obj := &StateObject{
 		address: address,
 		data:	  account,
@@ -64,7 +67,7 @@ func (cache *JournalCache) Fetch (address common.Address) *StateObject {
 
 // Create - create a empty object.
 func (cache *JournalCache) Create(address common.Address, s *StateDB) *StateObject {
-	obj := newObject(s, address, Account{}, nil, false, nil)
+	obj := newObject(s, address, Account{}, nil, false, nil, s.logger)
 	return obj
 }
 
@@ -72,7 +75,7 @@ func (cache *JournalCache) Create(address common.Address, s *StateDB) *StateObje
 func (cache *JournalCache) Flush(batch db.Batch) error {
 	for _, stateObject := range cache.stateObjects {
 		if stateObject.suicided || (deleteEmptyObjects && stateObject.empty()) {
-			log.Debugf("state object %s been suicide or clearing out for empty", stateObject.address.Hex())
+			cache.logger.Debugf("state object %s been suicide or clearing out for empty", stateObject.address.Hex())
 			workingSet := bucket.NewKVMap()
 			for key, value := range stateObject.dirtyStorage {
 				delete(stateObject.dirtyStorage, key)
@@ -87,20 +90,20 @@ func (cache *JournalCache) Flush(batch db.Batch) error {
 			cache.stateWorkingSet[stateObject.address.Hex()] = nil
 			cache.stateObjectsWorkingSet[stateObject.address] = workingSet
 		} else {
-			log.Debugf("state object %s been updated", stateObject.address.Hex())
+			cache.logger.Debugf("state object %s been updated", stateObject.address.Hex())
 			// Write any storage changes in the state object to its storage trie.
 			workingSet := bucket.NewKVMap()
 			for key, value := range stateObject.dirtyStorage {
 				delete(stateObject.dirtyStorage, key)
 				if (value == common.Hash{}) {
 					// delete
-					log.Debugf("flush dirty storage address [%s] delete item key: [%s]", stateObject.address.Hex(), key.Hex())
+					cache.logger.Debugf("flush dirty storage address [%s] delete item key: [%s]", stateObject.address.Hex(), key.Hex())
 					if err := batch.Delete(CompositeStorageKey(stateObject.address.Bytes(), key.Bytes())); err != nil {
 						return err
 					}
 					workingSet[key.Hex()] = nil
 				} else {
-					log.Debugf("flush dirty storage address [%s] put item key: [%s], value [%s]", stateObject.address.Hex(), key.Hex(), value.Hex())
+					cache.logger.Debugf("flush dirty storage address [%s] put item key: [%s], value [%s]", stateObject.address.Hex(), key.Hex(), value.Hex())
 					if err := batch.Put(CompositeStorageKey(stateObject.address.Bytes(), key.Bytes()), value.Bytes()); err != nil {
 						return err
 					}
@@ -146,7 +149,7 @@ func (cache *JournalCache) updateStateObject(batch db.Batch, stateObject *StateO
 	addr := stateObject.Address()
 	data, err := stateObject.Marshal()
 	if err != nil {
-		log.Error("marshal stateobject failed", addr.Hex())
+		cache.logger.Error("marshal stateobject failed", addr.Hex())
 		return nil
 	}
 	batch.Put(CompositeAccountKey(addr.Bytes()), data)

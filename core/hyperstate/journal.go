@@ -66,7 +66,6 @@ func UnmarshalJournal(data []byte) (*Journal, error) {
 	memJournal := &MemJournal{}
 	err := json.Unmarshal(data, memJournal)
 	if err != nil {
-		log.Error("unmarshal memjournal failed")
 		return nil, err
 	}
 	list := memJournal.JournalList
@@ -185,7 +184,6 @@ func UnmarshalJournal(data []byte) (*Journal, error) {
 			}
 			jos = append(jos, &tmp)
 		default:
-			log.Error("unmarshal journal failed")
 			return nil, errors.New("unmarshal journal failed")
 		}
 	}
@@ -288,7 +286,7 @@ func (ch *CreateObjectChange) Undo(s *StateDB, cache *JournalCache, batch db.Bat
 	} else {
 		obj := cache.Fetch(*ch.Account)
 		if obj == nil {
-			log.Warningf("missing state object %s, it may be a empty account or lost in database", ch.Account.Hex())
+			s.logger.Warningf("missing state object %s, it may be a empty account or lost in database", ch.Account.Hex())
 			return
 		}
 		obj.suicided = true
@@ -407,7 +405,7 @@ func (ch *BalanceChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, w
 	} else {
 		obj := cache.Fetch(*ch.Account)
 		if obj == nil {
-			log.Warningf("missing state object %s, it may be a empty account or lost in database", ch.Account.Hex())
+			s.logger.Warningf("missing state object %s, it may be a empty account or lost in database", ch.Account.Hex())
 			obj = cache.Create(*ch.Account, s)
 		}
 		obj.data.Balance = ch.Prev
@@ -437,7 +435,7 @@ func (ch *NonceChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, wri
 	} else {
 		obj := cache.Fetch(*ch.Account)
 		if obj == nil {
-			log.Warningf("missing state object %s, it may be a empty account or lost in database", ch.Account.Hex())
+			s.logger.Warningf("missing state object %s, it may be a empty account or lost in database", ch.Account.Hex())
 			obj = cache.Create(*ch.Account, s)
 		}
 		obj.data.Nonce = ch.Prev
@@ -469,7 +467,7 @@ func (ch *CodeChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writ
 	} else {
 		obj := cache.Fetch(*ch.Account)
 		if obj == nil {
-			log.Warningf("missing state object %s, it may be a empty account or lost in database", ch.Account.Hex())
+			s.logger.Warningf("missing state object %s, it may be a empty account or lost in database", ch.Account.Hex())
 			obj = cache.Create(*ch.Account, s)
 		}
 		batch.Delete(CompositeCodeHash(ch.Account.Bytes(), obj.data.CodeHash))
@@ -508,7 +506,7 @@ func (ch *StorageChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, w
 		obj := cache.Fetch(*ch.Account)
 		if obj == nil {
 			// should never happen
-			log.Warningf("missing state object %s, it should not happen when undo storage change", ch.Account.Hex())
+			s.logger.Warningf("missing state object %s, it should not happen when undo storage change", ch.Account.Hex())
 			return
 		}
 		obj.cachedStorage[ch.Key] = ch.Prevalue
@@ -585,7 +583,7 @@ func (ch *StorageHashChange) Undo(s *StateDB, cache *JournalCache, batch db.Batc
 		obj := cache.Fetch(*ch.Account)
 		if obj == nil {
 			// should never happen
-			log.Warningf("missing state object %s, it should not happen when undo storage hash change", ch.Account.Hex())
+			s.logger.Warningf("missing state object %s, it should not happen when undo storage hash change", ch.Account.Hex())
 			return
 		}
 		obj.data.Root = common.BytesToHash(ch.Prev)
@@ -650,7 +648,7 @@ func (ch *DeployedContractChange) Undo(s *StateDB, cache *JournalCache, batch db
 		if obj := s.GetStateObject(*ch.Account); obj != nil {
 			success := obj.removeDeployedContract(*ch.Prev)
 			if !success {
-				log.Errorf("miss contract %s in deployed contract list in creator %s", ch.Prev.Hex(), ch.Account.Hex())
+				s.logger.Errorf("miss contract %s in deployed contract list in creator %s", ch.Prev.Hex(), ch.Account.Hex())
 			}
 		}
 	} else {

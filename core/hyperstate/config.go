@@ -20,7 +20,7 @@ func (stateDB *StateDB) GetBucketSize(choice string) int {
 	case STATEOBJECT:
 		return stateDB.bktConf.GetInt(stateObjectBucketSize)
 	default:
-		log.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
+		stateDB.logger.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
 		return 0
 	}
 }
@@ -33,7 +33,7 @@ func (stateDB *StateDB) GetBucketLevelGroup(choice string) int {
 	case STATEOBJECT:
 		return stateDB.bktConf.GetInt(stateObjectBucketLevelGroup)
 	default:
-		log.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
+		stateDB.logger.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
 		return 0
 	}
 }
@@ -46,7 +46,7 @@ func (stateDB *StateDB) GetBucketCacheSize(choice string) int {
 	case STATEOBJECT:
 		return stateDB.bktConf.GetInt(stateObjectBucketCacheSize)
 	default:
-		log.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
+		stateDB.logger.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
 		return 0
 	}
 }
