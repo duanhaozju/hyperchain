@@ -36,23 +36,23 @@ func newHyperchain(argV *argT) *hyperchain {
 }
 
 func (h *hyperchain) start() {
-	logger.Critical("Hyperchan server start...")
+	logger.Critical("Hyperchain server start...")
 	h.nsMgr.Start()
 	go h.hs.Start()
 	go CheckLicense(h.stopFlag)
-	logger.Critical("Hyperchan server started")
+	logger.Critical("Hyperchain server started")
 }
 
 func (h *hyperchain) stop() {
-	logger.Critical("Hyperchan server stop...")
+	logger.Critical("Hyperchain server stop...")
 	h.nsMgr.Stop()
 	time.Sleep(3 * time.Second)
 	h.hs.Stop()
-	logger.Critical("Hyperchan server stopped")
+	logger.Critical("Hyperchain server stopped")
 }
 
 func (h *hyperchain) restart() {
-	logger.Critical("Hyperchan server restart...")
+	logger.Critical("Hyperchain server restart...")
 	h.stop()
 	h.start()
 }

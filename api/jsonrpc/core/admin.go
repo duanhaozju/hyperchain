@@ -15,6 +15,7 @@ type Command struct {
 	Args       []string `json:"args"`
 }
 
+//ToJson transform command into jsonrpc format string
 func (cmd *Command) ToJson() string {
 	var args = ""
 	len := len(cmd.Args)
@@ -67,15 +68,23 @@ func (adm *Administrator) restartServer(cmd *Command) *CommandResult {
 //StartMgr start namespace manager.
 func (adm *Administrator) startNsMgr(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd)
-	adm.NsMgr.Start()
-	return nil
+	err := adm.NsMgr.Start()
+	if err != nil {
+		log.Errorf("start namespace manager error %v", err)
+		return &CommandResult{Ok: false, Result: err}
+	}
+	return &CommandResult{Ok: true, Result: "start namespace manager successful"}
 }
 
 //StopNsMgr stop namespace manager.
 func (adm *Administrator) stopNsMgr(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd)
-	adm.NsMgr.Stop()
-	return nil
+	err := adm.NsMgr.Stop()
+	if err != nil {
+		log.Errorf("stop namespace manager error %v", err)
+		return &CommandResult{Ok: false, Result: err}
+	}
+	return &CommandResult{Ok: true, Result: "stop namespace manager successful"}
 }
 
 //StartNamespace start namespace by name.
@@ -164,7 +173,10 @@ func (adm *Administrator) getLevel(cmd *Command) *CommandResult {
 	if argLen != 2 {
 		log.Errorf("Invalid cmd nums %d", argLen)
 	}
-	level := common.GetLogLevel(cmd.Args[0], cmd.Args[1])
+	level, err := common.GetLogLevel(cmd.Args[0], cmd.Args[1])
+	if err != nil {
+		return &CommandResult{Ok: true, Result: err}
+	}
 	return &CommandResult{Ok: true, Result: level}
 }
 
@@ -176,7 +188,10 @@ func (adm *Administrator) setLevel(cmd *Command) *CommandResult {
 		log.Errorf("Invalid cmd nums %d", argLen)
 	}
 
-	common.SetLogLevel(cmd.Args[0], cmd.Args[1], cmd.Args[2])
+	err := common.SetLogLevel(cmd.Args[0], cmd.Args[1], cmd.Args[2])
+	if err != nil {
+		return &CommandResult{Ok:true, Result:err}
+	}
 	rs := strings.Join(cmd.Args, "_")
 	return &CommandResult{Ok: true, Result: rs}
 }
