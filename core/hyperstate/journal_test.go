@@ -16,12 +16,16 @@ import (
 	"strings"
 	"testing"
 	"testing/quick"
+	"github.com/op/go-logging"
 )
 
 var (
 	configPath = "../../configuration/namespaces/global/config/global.yaml"
+	logger     *logging.Logger
 )
-
+func init() {
+	logger = logging.MustGetLogger("test")
+}
 type JournalSuite struct {
 }
 
@@ -242,7 +246,7 @@ func (test *snapshotTest) run() bool {
 	// Run all actions and create snapshots.
 	var (
 		db, _        = mdb.NewMemDatabase()
-		state, _     = New(common.Hash{}, db, tutil.InitConfig(configPath), 10)
+		state, _     = New(common.Hash{}, db, tutil.InitConfig(configPath), 10, logger)
 		snapshotRevs = make([]int, len(test.snapshots))
 		sindex       = 0
 	)
@@ -258,7 +262,7 @@ func (test *snapshotTest) run() bool {
 	// Revert all snapshots in reverse order. Each revert must yield a state
 	// that is equivalent to fresh state with all actions up the snapshot applied.
 	for sindex--; sindex >= 0; sindex-- {
-		checkstate, _ := New(common.Hash{}, db, tutil.InitConfig(configPath), 10)
+		checkstate, _ := New(common.Hash{}, db, tutil.InitConfig(configPath), 10, logger)
 		for _, action := range test.actions[:test.snapshots[sindex]] {
 			action.fn(action, checkstate)
 		}
