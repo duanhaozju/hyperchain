@@ -61,12 +61,9 @@ const (
 	NOT_SUPPORT_SERVICE
 )
 
-type serviceType int
-type eventType int
-
 //LocalEvent represent event send by local modules
 type LocalEvent struct {
-	Service   serviceType
-	EventType eventType
+	Service   int
+	EventType int
 	Event     interface{}
 }

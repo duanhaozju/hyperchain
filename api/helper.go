@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	stateType       = "global.structure.state"
 	rateLimitEnable = "global.configs.ratelimit.enable"
 
 	TRANSACTION         = "transaction"
@@ -28,11 +27,6 @@ const (
 	paillpublickeynsquare = "global.configs.hmpublickey.Nsquare"
 	paillpublickeyG       = "global.configs.hmpublickey.G"
 )
-
-// getStateType - get state type
-func getStateType(conf *common.Config) string {
-	return conf.GetString(stateType)
-}
 
 // getRateLimitEnable - get rate limit switch value
 func getRateLimitEnable(conf *common.Config) bool {

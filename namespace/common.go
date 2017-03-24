@@ -46,6 +46,11 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 	conf.Set(common.C_PEER_CONFIG_PATH, peerConfigPath)
 	conf.Set(common.C_GLOBAL_CONFIG_PATH, nsConfigPath)
 
+	if strings.HasSuffix(path, "/"+DEFAULT_NAMESPACE+"/config") {
+		nr.conf.Set(common.C_HTTP_PORT, jsonrpcPort)
+		nr.conf.Set(common.C_REST_PORT, restfulPort)
+	}
+
 	return conf
 }
 
@@ -54,7 +59,7 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*hpc.API {
 		"tx": {
 			Srvname: "tx",
 			Version: "0.4",
-			Service: hpc.NewPublicTransactionAPI(namespace, ns.eventMux, ns.eh, ns.conf),
+			Service: hpc.NewPublicTransactionAPI(namespace, ns.eh, ns.conf),
 			Public:  true,
 		},
 		"node": {
@@ -78,7 +83,7 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*hpc.API {
 		"contract": {
 			Srvname: "contract",
 			Version: "0.4",
-			Service: hpc.NewPublicContractAPI(namespace, ns.eventMux, ns.eh, ns.conf),
+			Service: hpc.NewPublicContractAPI(namespace, ns.eh, ns.conf),
 			Public:  true,
 		},
 		"cert": {

@@ -3,7 +3,7 @@
 package hpc
 
 import (
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/manager"
 	"hyperchain/p2p"
 	"hyperchain/common"
@@ -38,14 +38,14 @@ func (node *Node) GetNodes() (p2p.PeerInfos, error) {
 		return nil, &common.CallbackError{Message:"protocolManager is nil"}
 	}
 
-	return node.eh.GetNodeInfo(), nil
+	return node.eh.GetPeerManager().GetPeerInfo(), nil
 }
 
 func (node *Node) GetNodeHash() (string, error) {
 	if node.eh == nil {
 		return "", &common.CallbackError{Message:"protocolManager is nil"}
 	}
-	return node.eh.PeerManager.GetLocalNodeHash(), nil
+	return node.eh.GetPeerManager().GetLocalNodeHash(), nil
 }
 
 func (node *Node) DelNode(args NodeArgs) (string, error) {

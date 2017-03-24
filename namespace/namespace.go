@@ -12,7 +12,7 @@ import (
 	"hyperchain/consensus/csmgr"
 	"hyperchain/core/db_utils"
 	"hyperchain/core/executor"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/manager"
 	"hyperchain/namespace/rpc"
 	"hyperchain/p2p"
@@ -86,6 +86,11 @@ type API struct {
 }
 
 func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) {
+
+	// Init Hyperlogger
+	if _, err := common.InitHyperLogger(conf); err != nil {
+		return nil, err
+	}
 
 	ninfo := &NamespaceInfo{
 		name: name,

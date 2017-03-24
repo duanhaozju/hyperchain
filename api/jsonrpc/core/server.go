@@ -7,12 +7,16 @@ import (
 	"sync/atomic"
 	"time"
 
+	"encoding/json"
 	"github.com/op/go-logging"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
 	"hyperchain/common"
 	"hyperchain/namespace"
+	"strings"
+	"reflect"
+	"fmt"
 )
 
 var log *logging.Logger // package-level logger
@@ -21,28 +25,28 @@ func init() {
 }
 
 const (
-	stopPendingRequestTimeout = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
-
-	MetadataApi     = "rpc"
-	DefaultHTTPApis = "tx,node,block,account"
+	stopPendingRequestTimeout             = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
+	OptionMethodInvocation    CodecOption = 1 << iota       // OptionMethodInvocation is an indication that the codec supports RPC method calls
+	adminService                          = "admin"
 )
 
 // CodecOption specifies which type of messages this codec supports
 type CodecOption int
 
-const (
-	// OptionMethodInvocation is an indication that the codec supports RPC method calls
-	OptionMethodInvocation CodecOption = 1 << iota
-)
-
 // NewServer will create a new server instance with no registered handlers.
-func NewServer(nr namespace.NamespaceManager) *Server {
+func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartHp chan bool) *Server {
 	server := &Server{
 		codecs:       set.New(),
 		run:          1,
 		namespaceMgr: nr,
+		requestMgr:   make(map[string]*requestManager),
 	}
-
+	server.admin = &Administrator{
+		NsMgr:         server.namespaceMgr,
+		StopServer:    stopHyperchain,
+		RestartServer: restartHp,
+	}
+	server.admin.Init()
 	return server
 }
 
@@ -50,16 +54,6 @@ func NewServer(nr namespace.NamespaceManager) *Server {
 // e.g. gives information about the loaded modules.
 type RPCService struct {
 	server *Server
-}
-
-// hasOption returns true if option is included in options, otherwise false
-func hasOption(option CodecOption, options []CodecOption) bool {
-	for _, o := range options {
-		if option == o {
-			return true
-		}
-	}
-	return false
 }
 
 // serveRequest will reads requests from the codec, calls the RPC callback and
@@ -100,57 +94,72 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 		reqs, batch, err := s.readRequest(codec)
 		if err != nil {
 			log.Debugf("%v\n", err)
-			codec.Write(codec.CreateErrorResponse(nil, "", err))
-			return nil
-		}
-		//TODO: Warn do not support bath request now
-		if len(reqs) == 0 {
-			log.Errorf("no request found.")
-			return errors.New("no request found")
-		}
-		if rpcErr := codec.CheckHttpHeaders(reqs[0].Namespace); rpcErr != nil {
-			log.Errorf("CheckHttpHeaders error %v", rpcErr)
+			codec.Write(s.CreateErrorResponse(nil, "", err))
 			return nil
 		}
 
+		// check if server is ordered to shutdown and return an error
+		// telling the client that his request failed.
 		if atomic.LoadInt32(&s.run) != 1 {
 			err := &common.ShutdownError{}
 			if batch {
 				resps := make([]interface{}, len(reqs))
 				for i, r := range reqs {
-					resps[i] = codec.CreateErrorResponse(&r.Id, r.Namespace, err)
+					resps[i] = s.CreateErrorResponse(r.Id, r.Namespace, err)
 				}
 				codec.Write(resps)
 			} else {
-				codec.Write(codec.CreateErrorResponse(&reqs[0].Id, reqs[0].Namespace, err))
+				codec.Write(s.CreateErrorResponse(reqs[0].Id, reqs[0].Namespace, err))
 			}
 			return nil
 		}
-		//TODO: Warn do not support bath request now
-		reqs[0].Ctx = ctx
-		r := s.namespaceMgr.ProcessRequest(reqs[0].Namespace, &reqs[0])
-		if r == nil {
-			return errors.New("No process result")
-		}
-		if response, ok := r.(*common.RPCResponse); ok {
+		if reqs[0].Service == adminService {
+			response := s.handleCMD(reqs[0])
 			if response.Error != nil {
-				codec.Write(codec.CreateErrorResponse(&response.Id, response.Namespace, response.Error))
+				codec.Write(s.CreateErrorResponse(response.Id, response.Namespace, response.Error))
 			} else if response.Reply != nil {
-				if err := codec.Write(codec.CreateResponse(&response.Id, response.Namespace, response.Reply)); err != nil {
+				if err := codec.Write(s.CreateResponse(response.Id, response.Namespace, response.Reply)); err != nil {
 					log.Errorf("%v\n", err)
 					codec.Close()
 				}
 			} else {
-				codec.Write(codec.CreateResponse(&response.Id, response.Namespace, nil))
+				codec.Write(s.CreateResponse(response.Id, response.Namespace, nil))
 			}
-		} else {
-			log.Errorf("response type invalid, resp: %v", response)
-			return errors.New(response.Error.Error())
+			return nil
 		}
+		s.handleReqs(ctx, codec, reqs)
 		return nil
-
 	}
 	return nil
+}
+
+func splitRawMessage(args json.RawMessage) ([]string, error) {
+	str := string(args[:])
+	if len(str) < 4 {
+		return nil, errors.New("invalid args")
+	}
+	str = str[2 : len(str)-2]
+	splitstr := strings.Split(str, ",")
+	return splitstr, nil
+}
+
+func (s *Server) handleCMD(req *common.RPCRequest) *common.RPCResponse {
+	if args, ok := req.Params.(json.RawMessage); !ok {
+		log.Critical("wrong type not json type")
+		return &common.RPCResponse{Reply: "invalid args"}
+	} else {
+		args, err := splitRawMessage(args)
+		if err != nil {
+			return &common.RPCResponse{Reply: "invalid cmd"}
+		}
+		cmd := &Command{
+			MethodName: req.Method,
+			Args:       args,
+		}
+		rs := s.admin.CmdExecutor[req.Method](cmd)
+		return &common.RPCResponse{Reply: rs}
+	}
+
 }
 
 // ServeCodec reads incoming requests from codec, calls the appropriate callback and writes the
@@ -172,7 +181,7 @@ func (s *Server) ServeSingleRequest(codec ServerCodec, options CodecOption) {
 // close all codecs which will cancels pending requests/subscriptions.
 func (s *Server) Stop() {
 	if atomic.CompareAndSwapInt32(&s.run, 1, 0) {
-		log.Debug("RPC Server shutdown initiatied")
+		log.Notice("RPC Server shutdown initiatied")
 		time.AfterFunc(stopPendingRequestTimeout, func() {
 			s.codecsMu.Lock()
 			defer s.codecsMu.Unlock()
@@ -180,52 +189,124 @@ func (s *Server) Stop() {
 				c.(ServerCodec).Close()
 				return true
 			})
+			log.Notice("RPC Server shutdown")
 		})
 	}
 }
 
-// execBatch executes the given requests and writes the result back using the codec.
-// It will only write the response back when the last request is processed.
-//func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*serverRequest) {
-//	responses := make([]interface{}, len(requests))
-//	var callbacks []func()
-//	for i, req := range requests {
-//		fmt.Println("got a request",req.svcname)
-//		if req.err != nil {
-//			responses[i] = codec.CreateErrorResponse(&req.id, req.err)
-//		} else {
-//			var callback func()
-//			if responses[i], callback = s.handle(ctx, codec, req); callback != nil {
-//				callbacks = append(callbacks, callback)
-//			}
-//		}
-//	}
-//
-//	if err := codec.Write(responses); err != nil {
-//		log.Errorf("%v\n", err)
-//		codec.Close()
-//	}
-//
-//	// when request holds one of more subscribe requests this allows these subscriptions to be actived
-//	for _, c := range callbacks {
-//		c()
-//	}
-//}
+func (s *Server) Start() {
+	if atomic.CompareAndSwapInt32(&s.run, 0, 1) {
+		log.Notice("RPC Server start initiatied")
+	}
+}
 
 // readRequest requests the next (batch) request from the codec. It will return the collection
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.
-func (s *Server) readRequest(codec ServerCodec) ([]common.RPCRequest, bool, common.RPCError) {
+func (s *Server) readRequest(codec ServerCodec) ([]*common.RPCRequest, bool, common.RPCError) {
 	reqs, batch, err := codec.ReadRequestHeaders()
 	if err != nil {
 		return nil, batch, err
-	} else {
-		reqLen := len(reqs)
-		for i := 0; i < reqLen; i += 1 {
-			if reqs[i].Namespace == "" {
-				reqs[i].Namespace = namespace.DEFAULT_NAMESPACE
-			}
-		}
-		return reqs, batch, nil
 	}
+
+	if len(reqs) == 0 {
+		log.Errorf("no request found.")
+		return nil, false, &common.InvalidRequestError{Message: "no request found"}
+	}
+	reqLen := len(reqs)
+	for i := 0; i < reqLen; i += 1 {
+		if reqs[i].Namespace == "" {
+			reqs[i].Namespace = namespace.DEFAULT_NAMESPACE
+		}
+	}
+
+	return reqs, batch, nil
+}
+
+// handleReqs will handle RPC request array and write result then send to client
+func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*common.RPCRequest) {
+	//log.Error("-----------enter handle batch req---------------")
+	number := len(reqs)
+	response := make([]interface{}, number)
+	result := make(chan interface{}, number)
+
+	for _, req := range reqs {
+		req.Ctx = ctx
+
+		go func(s *Server, request *common.RPCRequest, codec ServerCodec, result chan interface{}){
+			name := request.Namespace
+			if err := codec.CheckHttpHeaders(name); err != nil {
+				log.Errorf("CheckHttpHeaders error: %v", err)
+				result <- s.CreateErrorResponse(request.Id, request.Namespace, &common.CertError{Message: err.Error()})
+				return
+			}
+			var rm *requestManager
+			if _, ok := s.requestMgr[name]; !ok {
+				rm = NewRequestManager(name, s)
+				rm.Start()
+			}else {
+				rm = s.requestMgr[name]
+			}
+			rm.requests <- request
+			result <- (<- rm.response)
+			return
+		}(s, req, codec, result)
+	}
+
+	for i := 0; i < number; i++ {
+		response[i] = <- result
+	}
+
+	if number == 1 {
+		if err := codec.Write(response[0]); err != nil {
+			log.Errorf("%v\n", err)
+			codec.Close()
+		}
+	} else {
+		if err := codec.Write(response); err != nil {
+			log.Errorf("%v\n", err)
+			codec.Close()
+		}
+	}
+}
+
+// handleChannelReq will implement an interface to handle request in channel and return jsonrpc response
+func (s *Server) handleChannelReq(req *common.RPCRequest) interface{} {
+	r := s.namespaceMgr.ProcessRequest(req.Namespace, req)
+	if r == nil {
+		log.Debug("No process result")
+		return s.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message:"no process result"})
+	}
+
+	if response, ok := r.(*common.RPCResponse); ok {
+		if response.Error != nil {
+			return s.CreateErrorResponse(response.Id, response.Namespace, response.Error)
+		} else if response.Reply != nil {
+			return s.CreateResponse(response.Id, response.Namespace, response.Reply)
+		} else {
+			return s.CreateResponse(response.Id, response.Namespace, nil)
+		}
+	} else {
+		log.Errorf("response type invalid, resp: %v\n")
+		return s.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message:"response type invalid!"})
+	}
+}
+
+// CreateResponse will create a JSON-RPC success response with the given id and reply as result.
+func (s *Server) CreateResponse(id interface{}, name string, reply interface{}) interface{} {
+	if isHexNum(reflect.TypeOf(reply)) {
+		return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: 0, Message: "SUCCESS", Result: fmt.Sprintf(`%#x`, reply)}
+	}
+	return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: 0, Message: "SUCCESS", Result: reply}
+}
+
+// CreateErrorResponse will create a JSON-RPC error response with the given id and error.
+func (s *Server) CreateErrorResponse(id interface{}, name string, err common.RPCError) interface{} {
+	return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: err.Code(), Message: err.Error()}
+}
+
+// CreateErrorResponseWithInfo will create a JSON-RPC error response with the given id and error.
+// info is optional and contains additional information about the error. When an empty string is passed it is ignored.
+func (s *Server) CreateErrorResponseWithInfo(id interface{}, name string, err common.RPCError, info interface{}) interface{} {
+	return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: err.Code(), Message: err.Error(), Result: info}
 }

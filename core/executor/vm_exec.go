@@ -80,10 +80,10 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		if isSpecialOperation(op) && !isUpdate(op) {
 			switch {
 			case isFreeze(op):
-				log.Debugf("freeze account %s", to.Address().Hex())
+				env.Logger().Debugf("freeze account %s", to.Address().Hex())
 				env.Db().SetStatus(to.Address(), hyperstate.STATEOBJECT_STATUS_FROZON)
 			case isUnFreeze(op):
-				log.Debugf("unfreeze account %s", to.Address().Hex())
+				env.Logger().Debugf("unfreeze account %s", to.Address().Hex())
 				env.Db().SetStatus(to.Address(), hyperstate.STATEOBJECT_STATUS_NORMAL)
 			}
 			return nil, common.Address{}, nil
@@ -94,7 +94,8 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		RUN VM
 	 */
 	if env.Db().GetStatus(to.Address()) != hyperstate.STATEOBJECT_STATUS_NORMAL {
-		log.Debugf("account %s has been frozen", to.Address().Hex())
+		env.Logger().Debugf("account %s has been frozen", to.Address().Hex())
+		env.SetSnapshot(snapshotPreTransfer)
 		return nil, common.Address{}, ExecContractErr(1, "Try to invoke a frozen contract")
 	}
 	// initialise a new contract and set the code that is to be used by the

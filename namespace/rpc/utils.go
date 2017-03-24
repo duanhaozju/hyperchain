@@ -8,11 +8,6 @@ import (
 	"reflect"
 	"unicode"
 	"unicode/utf8"
-	"encoding/json"
-	"strings"
-	"bytes"
-	"regexp"
-	"github.com/pkg/errors"
 )
 
 // Is this an exported - upper case - name?
@@ -72,54 +67,6 @@ func isHexNum(t reflect.Type) bool {
 	}
 
 	return t == bigIntType
-}
-
-func splitRawMessage(args json.RawMessage) ([]string, int, error) {
-	str := string(args[:])
-	var length int
-	if str[0] != '[' || str[len(str) - 1] != ']' {
-		return nil, 0, errors.New("Raw Message format error!")
-	} else if (len(str) == 2){
-		return nil, 0, nil
-	} else {
-		str = strings.Trim(str, "[]")
-
-		pat := `.+`
-		reg := regexp.MustCompile(pat)
-		strArr := reg.FindAllString(str, -1)
-
-		length = len(strArr)
-		// TODO multiple object params, length may be more than 1
-		if length == 1 {
-			return strArr, length, nil
-		}
-
-		splitstr := strings.Split(str, ",")
-		return splitstr, len(splitstr), nil
-	}
-}
-
-func joinRawMessage(str []string) json.RawMessage{
-	var buffer bytes.Buffer
-
-	length := len(str)
-
-	if length == 0 {
-		return []byte("[]")
-	}
-
-	buffer.WriteString("[")
-	buffer.WriteString(str[0])
-
-
-	if length >=2 {
-		for i := 1; i<length; i ++{
-			buffer.WriteString(",")
-			buffer.WriteString(str[i])
-		}
-	}
-	buffer.WriteString("]")
-	return []byte(buffer.String())
 }
 
 // suitableCallbacks iterates over the methods of the given type. It will determine if a method satisfies the criteria

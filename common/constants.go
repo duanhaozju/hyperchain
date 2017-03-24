@@ -26,8 +26,11 @@ const (
 )
 
 const (
+
+	NAMESPACE = "namespace.name"
 	KEY_STORE_DIR = "global.account.keystoredir"
 	KEY_NODE_DIR  = "global.account.keynodesdir"
+	START_NAMESPACE = "global.namespace.start."
 
 	LOG_DUMP_FILE_FLAG = "global.logs.dumpfile"
 	LOG_DUMP_FILE_DIR  = "global.logs.logsdir"

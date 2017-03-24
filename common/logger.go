@@ -14,7 +14,7 @@ import (
 )
 
 // A logger for this file.
-var commonLogger = logging.MustGetLogger("commmon")
+var commonLogger = logging.MustGetLogger("common")
 var logDefaultLevel logging.Level
 var consoleFormat = `[%{module}]%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}`
 var fileFormat = `[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}`
@@ -42,7 +42,6 @@ func InitLog(conf *Config) {
 	}
 
 	backendStderr := initLogBackend()
-
 	if !conf.GetBool(LOG_FUMP_FILE) {
 		logging.SetBackend(backendStderr)
 	} else {
@@ -69,7 +68,6 @@ func newLogFileByInterval(loggerDir string, conf *Config, backendStderr logging.
 	fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
 		tm.Format("-2006-01-02-15:04:05PM")+".log")
 	setNewLogFile(fileName, backendStderr)
-
 	for {
 		select {
 		case <-time.After(conf.GetDuration(LOG_NEW_FILE_INTERVAL)):

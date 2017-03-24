@@ -9,9 +9,8 @@ package p2p
 
 import (
 	"github.com/op/go-logging"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/admittance"
-	"hyperchain/recovery"
 )
 
 // Init the log setting
@@ -36,7 +35,7 @@ type MsgSender interface {
 	// broadcast information to peers
 	BroadcastPeers(payLoad []byte)
 	// send a message to specific peer  UNICAST
-	SendMsgToPeers(payLoad []byte, peerList []uint64, MessageType recovery.Message_MsgType)
+	SendMsgToPeers(payLoad []byte, peerList []uint64)
 }
 
 // AddNode

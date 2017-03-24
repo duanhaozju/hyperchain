@@ -5,85 +5,79 @@ import (
 	"hyperchain/core/types"
 	edb "hyperchain/core/db_utils"
 	"github.com/golang/protobuf/proto"
-	"hyperchain/event"
-	"hyperchain/protos"
+	"hyperchain/manager/event"
+	"hyperchain/manager/protos"
 	"bytes"
-	"hyperchain/recovery"
 )
 
 // SendSyncRequest - send synchronization request to other nodes.
-func (executor *Executor) SendSyncRequest(ev event.SendCheckpointSyncEvent) {
-	err, stateUpdateMsg, target := executor.unmarshalStateUpdateMessage(ev)
-	if err != nil {
-		log.Errorf("[Namespace = %s] invalid state update message.", executor.namespace)
-		executor.reject()
-		return
-	}
-	log.Noticef("[Namespace = %s] send sync block request to fetch missing block, current height %d, target height %d", executor.namespace, edb.GetHeightOfChain(executor.namespace), target.Height)
+func (executor *Executor) SendSyncRequest(ev event.ChainSyncReqEvent) {
 
-	if executor.status.syncFlag.SyncTarget >= target.Height || edb.GetHeightOfChain(executor.namespace) > target.Height {
-		log.Errorf("[Namespace = %s] receive invalid state update request, just ignore it", executor.namespace)
+	executor.logger.Noticef("[Namespace = %s] send sync block request to fetch missing block, current height %d, target height %d", executor.namespace, edb.GetHeightOfChain(executor.namespace), ev.TargetHeight)
+
+	if executor.status.syncFlag.SyncTarget >= ev.TargetHeight || edb.GetHeightOfChain(executor.namespace) > ev.TargetHeight {
+		executor.logger.Errorf("[Namespace = %s] receive invalid state update request, just ignore it", executor.namespace)
 		executor.reject()
 		return
 	}
 
-	if edb.GetHeightOfChain(executor.namespace) == target.Height {
-		log.Debugf("[Namespace = %s] recv target height same with current chain height", executor.namespace)
-		if executor.isBlockHashEqual(target.CurrentBlockHash) == true {
-			log.Infof("[Namespace = %s] current chain latest block hash equal with target hash, send state updated event", executor.namespace)
+	if edb.GetHeightOfChain(executor.namespace) == ev.TargetHeight {
+		executor.logger.Debugf("[Namespace = %s] recv target height same with current chain height", executor.namespace)
+		if executor.isBlockHashEqual(ev.TargetBlockHash) == true {
+			executor.logger.Infof("[Namespace = %s] current chain latest block hash equal with target hash, send state updated event", executor.namespace)
 			executor.sendStateUpdatedEvent()
 		} else {
-			log.Warningf("[Namespace = %s] current chain latest block hash not equal with target hash, cut down local block %d", executor.namespace, edb.GetHeightOfChain(executor.namespace))
+			executor.logger.Warningf("[Namespace = %s] current chain latest block hash not equal with target hash, cut down local block %d", executor.namespace, edb.GetHeightOfChain(executor.namespace))
 			if err := executor.CutdownBlock(edb.GetHeightOfChain(executor.namespace)); err != nil {
-				log.Errorf("[Namespace = %s] cut down block %d failed.", executor.namespace, edb.GetHeightOfChain(executor.namespace))
+				executor.logger.Errorf("[Namespace = %s] cut down block %d failed.", executor.namespace, edb.GetHeightOfChain(executor.namespace))
 				executor.reject()
 				return
 			}
 		}
 	}
 
-	executor.updateSyncFlag(target.Height, target.CurrentBlockHash, target.Height)
-	executor.recordSyncPeers(stateUpdateMsg.Replicas, stateUpdateMsg.Id)
+	executor.updateSyncFlag(ev.TargetHeight, ev.TargetBlockHash, ev.TargetHeight)
+	executor.recordSyncPeers(ev.Replicas, ev.Id)
 	if err := executor.informP2P(NOTIFY_BROADCAST_DEMAND, nil); err != nil {
-		log.Errorf("[Namespace = %s] send sync req failed.", executor.namespace)
+		executor.logger.Errorf("[Namespace = %s] send sync req failed.", executor.namespace)
 		executor.reject()
 		return
 	}
 }
 
 // ReceiveSyncRequest - receive synchronization request from some nodes, and send back request blocks.
-func (executor *Executor) ReceiveSyncRequest(ev event.StateUpdateEvent) {
-	syncReqMsg := &recovery.CheckPointMessage{}
-	proto.Unmarshal(ev.Payload, syncReqMsg)
-	for i := syncReqMsg.RequiredNumber; i > syncReqMsg.CurrentNumber; i -= 1 {
-		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, syncReqMsg.PeerId)
+func (executor *Executor) ReceiveSyncRequest(payload []byte) {
+	var request ChainSyncRequest
+	proto.Unmarshal(payload, &request)
+	for i := request.RequiredNumber; i > request.CurrentNumber; i -= 1 {
+		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, request.PeerId)
 	}
 }
 
 // ReceiveSyncBlocks - receive request synchronization blocks from others.
-func (executor *Executor) ReceiveSyncBlocks(ev event.ReceiveSyncBlockEvent) {
+func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 	if executor.status.syncFlag.SyncDemandBlockNum != 0 {
 		block := &types.Block{}
-		proto.Unmarshal(ev.Payload, block)
+		proto.Unmarshal(payload, block)
 		// store blocks into database only, not process them.
 		if !executor.verifyBlockIntegrity(block) {
-			log.Warningf("[Namespace = %s] receive a broken block %d, drop it", executor.namespace, block.Number)
+			executor.logger.Warningf("[Namespace = %s] receive a broken block %d, drop it", executor.namespace, block.Number)
 			return
 		}
 		if block.Number <= executor.status.syncFlag.SyncDemandBlockNum {
-			log.Debugf("[Namespace = %s] receive block #%d  hash %s", executor.namespace, block.Number, common.BytesToHash(block.BlockHash).Hex())
+			executor.logger.Debugf("[Namespace = %s] receive block #%d  hash %s", executor.namespace, block.Number, common.BytesToHash(block.BlockHash).Hex())
 			// is demand
 			if executor.isDemandSyncBlock(block) {
 				edb.PersistBlock(executor.db.NewBatch(), block, true, true)
 				if err := executor.updateSyncDemand(block); err != nil {
-					log.Errorf("[Namespace = %s] update sync demand failed.", executor.namespace)
+					executor.logger.Errorf("[Namespace = %s] update sync demand failed.", executor.namespace)
 					executor.reject()
 					return
 				}
 			} else {
 				// requested block with smaller number arrive earlier than expected
 				// store in cache temporarily
-				log.Debugf("[Namespace = %s] receive block #%d hash %s earily", executor.namespace, block.Number, common.BytesToHash(block.BlockHash).Hex())
+				executor.logger.Debugf("[Namespace = %s] receive block #%d hash %s earily", executor.namespace, block.Number, common.BytesToHash(block.BlockHash).Hex())
 				executor.addToSyncCache(block)
 			}
 		}
@@ -119,38 +113,21 @@ func (executor *Executor) clearStatedb() {
 	executor.statedb.Purge()
 }
 
-// unmarshalStateUpdateMessage - unmarshal block synchronization message sent from consensus module and return a block synchronization target.
-func (executor *Executor) unmarshalStateUpdateMessage(ev event.SendCheckpointSyncEvent) (error, *protos.UpdateStateMessage, *protos.BlockchainInfo) {
-	updateStateMessage := &protos.UpdateStateMessage{}
-	err := proto.Unmarshal(ev.Payload, updateStateMessage)
-	if err != nil {
-		log.Errorf("[Namespace = %s] unmarshal state update message failed. %s", executor.namespace, err)
-		return err, nil, nil
-	}
-	blockChainInfo := &protos.BlockchainInfo{}
-	err = proto.Unmarshal(updateStateMessage.TargetId, blockChainInfo)
-	if err != nil {
-		log.Errorf("[Namespace = %s] unmarshal block chain info failed. %s", executor.namespace, err)
-		return err, nil, nil
-	}
-	return nil, updateStateMessage, blockChainInfo
-}
-
 // assertApplyResult - check apply result whether equal with other's.
 func (executor *Executor) assertApplyResult(block *types.Block, result *ValidationResultRecord) bool {
 	if bytes.Compare(block.MerkleRoot, result.MerkleRoot) != 0 {
-		log.Warningf("[Namespace = %s] mismatch in block merkle root  of #%d, demand %s, got %s",
+		executor.logger.Warningf("[Namespace = %s] mismatch in block merkle root  of #%d, demand %s, got %s",
 			executor.namespace, block.Number, common.Bytes2Hex(block.MerkleRoot), common.Bytes2Hex(result.MerkleRoot))
 		return false
 	}
 	if bytes.Compare(block.TxRoot, result.TxRoot) != 0 {
-		log.Warningf("[Namespace = %s] mismatch in block transaction root  of #%d, demand %s, got %s",
+		executor.logger.Warningf("[Namespace = %s] mismatch in block transaction root  of #%d, demand %s, got %s",
 			block.Number, common.Bytes2Hex(block.TxRoot), common.Bytes2Hex(result.TxRoot))
 		return false
 
 	}
 	if bytes.Compare(block.ReceiptRoot, result.ReceiptRoot) != 0 {
-		log.Warningf("[Namespace = %s] mismatch in block receipt root  of #%d, demand %s, got %s",
+		executor.logger.Warningf("[Namespace = %s] mismatch in block receipt root  of #%d, demand %s, got %s",
 			executor.namespace, block.Number, common.Bytes2Hex(block.ReceiptRoot), common.Bytes2Hex(result.ReceiptRoot))
 		return false
 	}
@@ -162,7 +139,7 @@ func (executor *Executor) isBlockHashEqual(targetHash []byte) bool {
 	// compare current latest block and peer's block hash
 	latestBlock, err := edb.GetBlockByNumber(executor.namespace, edb.GetHeightOfChain(executor.namespace))
 	if err != nil || latestBlock == nil || bytes.Compare(targetHash, latestBlock.BlockHash) != 0 {
-		log.Warningf("[Namespace = %s] missing match target blockhash and latest block's hash, target block hash %s, latest block hash %s",
+		executor.logger.Warningf("[Namespace = %s] missing match target blockhash and latest block's hash, target block hash %s, latest block hash %s",
 			executor.namespace, common.Bytes2Hex(targetHash), common.Bytes2Hex(latestBlock.BlockHash))
 		return false
 	}
@@ -175,7 +152,7 @@ func (executor *Executor) processSyncBlocks() {
 		// get the first of SyncBlocks
 		lastBlk, err := edb.GetBlockByNumber(executor.namespace, executor.status.syncFlag.SyncDemandBlockNum +1)
 		if err != nil {
-			log.Errorf("[Namespace = %s] StateUpdate Failed!", executor.namespace)
+			executor.logger.Errorf("[Namespace = %s] StateUpdate Failed!", executor.namespace)
 			executor.reject()
 			return
 		}
@@ -187,7 +164,7 @@ func (executor *Executor) processSyncBlocks() {
 			for i := executor.status.syncFlag.SyncDemandBlockNum + 1; i <= executor.status.syncFlag.SyncTarget; i += 1 {
 				blk, err := edb.GetBlockByNumber(executor.namespace, i)
 				if err != nil {
-					log.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
+					executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
 						executor.namespace, executor.status.syncFlag.SyncDemandBlockNum +1, executor.status.syncFlag.SyncTarget, edb.GetHeightOfChain(executor.namespace))
 					executor.reject()
 					return
@@ -196,7 +173,7 @@ func (executor *Executor) processSyncBlocks() {
 					executor.initDemand(blk.Number)
 					err, result := executor.ApplyBlock(blk, blk.Number)
 					if err != nil || executor.assertApplyResult(blk, result) == false {
-						log.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
+						executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
 							executor.namespace, executor.status.syncFlag.SyncDemandBlockNum +1, executor.status.syncFlag.SyncTarget, edb.GetHeightOfChain(executor.namespace))
 						executor.reject()
 						return
@@ -212,7 +189,7 @@ func (executor *Executor) processSyncBlocks() {
 		} else {
 			// the highest block in local is invalid, request the block
 			if err := executor.CutdownBlock(lastBlk.Number - 1); err != nil {
-				log.Errorf("[Namespace = %s] cut down block %d failed.", executor.namespace, lastBlk.Number - 1)
+				executor.logger.Errorf("[Namespace = %s] cut down block %d failed.", executor.namespace, lastBlk.Number - 1)
 				executor.reject()
 				return
 			}
@@ -241,10 +218,10 @@ func (executor *Executor) updateSyncDemand(block *types.Block) error {
 					tmp = tmp - 1
 					tmpHash = blk.ParentHash
 					flag = true
-					log.Debugf("[Namespace = %s] process sync block(block number = %d) stored in cache", executor.namespace, blk.Number)
+					executor.logger.Debugf("[Namespace = %s] process sync block(block number = %d) stored in cache", executor.namespace, blk.Number)
 					break
 				} else {
-					log.Debugf("[Namespace = %s] found invalid sync block, discard block number %d, block hash %s", executor.namespace, blk.Number, common.BytesToHash(blk.BlockHash).Hex())
+					executor.logger.Debugf("[Namespace = %s] found invalid sync block, discard block number %d, block hash %s", executor.namespace, blk.Number, common.BytesToHash(blk.BlockHash).Hex())
 				}
 			}
 			if flag {
@@ -258,7 +235,7 @@ func (executor *Executor) updateSyncDemand(block *types.Block) error {
 		}
 	}
 	executor.updateSyncFlag(tmp, tmpHash, executor.status.syncFlag.SyncTarget)
-	log.Debugf("[Namespace = %s] Next Demand %d %s", executor.namespace, executor.status.syncFlag.SyncDemandBlockNum, common.BytesToHash(executor.status.syncFlag.SyncDemandBlockHash).Hex())
+	executor.logger.Debugf("[Namespace = %s] Next Demand %d %s", executor.namespace, executor.status.syncFlag.SyncDemandBlockNum, common.BytesToHash(executor.status.syncFlag.SyncDemandBlockHash).Hex())
 	return nil
 }
 
@@ -266,7 +243,7 @@ func (executor *Executor) updateSyncDemand(block *types.Block) error {
 func (executor *Executor) sendStateUpdatedEvent() {
 	// state update success
 	executor.PurgeCache()
-	executor.informConsensus(NOTIFY_SYNC_DONE, nil)
+	executor.informConsensus(NOTIFY_SYNC_DONE, protos.StateUpdatedMessage{edb.GetHeightOfChain(executor.namespace)})
 }
 
 // accpet - accept block synchronization result.

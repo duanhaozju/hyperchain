@@ -3,7 +3,6 @@ package executor
 import (
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"
-	"hyperchain/event"
 	edb "hyperchain/core/db_utils"
 )
 
@@ -16,8 +15,8 @@ func (executor *Executor) RunInSandBox(tx *types.Transaction) error {
 	}
 	// initialize execution environment
 	fakeBlockNumber := edb.GetHeightOfChain(executor.namespace) + 1
-	sandBox := initEnvironment(statedb, fakeBlockNumber)
-	receipt, _, _, err := ExecTransaction(tx, sandBox)
+	sandBox := executor.initEnvironment(statedb, fakeBlockNumber)
+	receipt, _, _, err := executor.ExecTransaction(tx, sandBox)
 	if err != nil {
 		errType := executor.classifyInvalid(err)
 		t := &types.InvalidTransactionRecord{
@@ -27,19 +26,17 @@ func (executor *Executor) RunInSandBox(tx *types.Transaction) error {
 		}
 		payload, err := proto.Marshal(t)
 		if err != nil {
-			log.Error("Marshal tx error")
+			executor.logger.Error("Marshal tx error")
 			return err
 		}
 		// persist execution result to local
-		executor.StoreInvalidTransaction(event.InvalidTxsEvent{
-			Payload: payload,
-		})
+		executor.StoreInvalidTransaction(payload)
 		return nil
 	} else {
 		// persist execution result to local
 		err, _ := edb.PersistReceipt(executor.db.NewBatch(), receipt, true, true)
 		if err != nil {
-			log.Error("Put receipt data into database failed! error msg, ", err.Error())
+			executor.logger.Error("Put receipt data into database failed! error msg, ", err.Error())
 			return err
 		}
 		return nil

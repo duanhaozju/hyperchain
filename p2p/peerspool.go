@@ -20,13 +20,14 @@ type PeersPool struct {
 	CM         *admittance.CAManager
 	idHashMap  map[int]string
 	hashIDMap  map[string]int
+	namespace  string
 }
 
 // the peers pool instance
 //var prPoolIns PeersPool
 
 // NewPeerPool get a new peer pool instance
-func NewPeersPool(TM *transport.TransportManager, localAddr *pb.PeerAddr, cm *admittance.CAManager) *PeersPool {
+func NewPeersPool(TM *transport.TransportManager, localAddr *pb.PeerAddr, cm *admittance.CAManager, namespace string) *PeersPool {
 	var pPool PeersPool
 	pPool.peers = make(map[string]*Peer)
 	//newPrPoolIns.peerAddr = make(map[string]pb.PeerAddr)
@@ -38,6 +39,7 @@ func NewPeersPool(TM *transport.TransportManager, localAddr *pb.PeerAddr, cm *ad
 	pPool.TM = TM
 	pPool.CM = cm
 	pPool.alivePeers = 0
+	pPool.namespace = namespace
 	return &pPool
 }
 
@@ -76,7 +78,7 @@ func (this *PeersPool) PutPeer(addr pb.PeerAddr, client *Peer) error {
 		if err != nil {
 			log.Errorf("cannot marshal the marshal Addreass for %v", addr)
 		}
-		persist.PutData(addr.Hash, persistAddr)
+		persist.PutData(addr.Hash, persistAddr, this.namespace)
 		return errors.New("The client already in, updated the peer info")
 
 	} else {
@@ -88,7 +90,7 @@ func (this *PeersPool) PutPeer(addr pb.PeerAddr, client *Peer) error {
 		if err != nil {
 			log.Errorf("cannot marshal the marshal Addreass for %v", addr)
 		}
-		persist.PutData(addr.Hash, persistAddr)
+		persist.PutData(addr.Hash, persistAddr, this.namespace)
 		return nil
 	}
 
@@ -242,7 +244,7 @@ func (this *PeersPool) MergeTempPeers(peer *Peer) {
 	if err != nil {
 		log.Errorf("cannot marshal the marshal Addreass for %v", peer.PeerAddr)
 	}
-	persist.PutData(peer.PeerAddr.Hash, persistAddr)
+	persist.PutData(peer.PeerAddr.Hash, persistAddr, this.namespace)
 	delete(this.tempPeers, peer.PeerAddr.Hash)
 	//}
 	//}

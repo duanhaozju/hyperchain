@@ -11,6 +11,7 @@ import (
 
 type Block struct {
 	namespace string
+	height    uint64
 }
 
 type BlockResult struct {
@@ -41,40 +42,66 @@ type IntervalArgs struct {
 	To   *BlockNumber `json:"to"`
 }
 
+type intArgs struct {
+	from uint64
+	to   uint64
+}
+
 type IntervalTime struct {
 	StartTime int64 `json:"startTime"`
 	Endtime   int64 `json:"endTime"`
 }
 
 // If the client send BlockNumber "",it will convert to 0.If client send BlockNumber 0,it will return error
-func prepareIntervalArgs(args IntervalArgs) (IntervalArgs, error) {
-	var from, to *BlockNumber
-
+func prepareIntervalArgs(args IntervalArgs, namespace string) (*intArgs, error) {
 	if args.From == nil || args.To == nil {
-		return IntervalArgs{}, &common.InvalidParamsError{Message: "missing params 'from' or 'to'"}
+		return nil, &common.InvalidParamsError{Message: "missing params 'from' or 'to'"}
 	} else {
-		from = args.From
-		to = args.To
-	}
+		latest := edb.GetChainCopy(namespace).Height
+		from, err := args.From.BlockNumberToUint64(latest)
+		if err != nil {
+			return nil, err
+		}
+		to, err := args.To.BlockNumberToUint64(latest)
+		if err != nil {
+			return nil, err
+		}
 
-	if *from > *to || *from < 1 || *to < 1 {
-		return IntervalArgs{}, &common.InvalidParamsError{Message: "invalid params"}
+		if from > to || from < 1 || to < 1 {
+			return nil, &common.InvalidParamsError{Message: "invalid params from or to"}
+		} else {
+			return &intArgs{from: from, to: to}, nil
+		}
 	}
+}
 
-	return IntervalArgs{
-		From: from,
-		To:   to,
-	}, nil
+func prepareBlockNumber(n BlockNumber, namespace string) (uint64, error) {
+	latest := edb.GetChainCopy(namespace).Height
+	number, err := n.BlockNumberToUint64(latest)
+	if err != nil {
+		return 0, err
+	}
+	return number, nil
 }
 
 // GetBlocks returns all the block for given block number.
 func (blk *Block) GetBlocks(args IntervalArgs) ([]*BlockResult, error) {
-	return getBlocks(args, blk.namespace, false)
+	trueArgs, err := prepareIntervalArgs(args, blk.namespace)
+	if err != nil {
+		return nil, err
+	} else {
+		return getBlocks(trueArgs, blk.namespace, false)
+	}
 }
 
 // GetPlainBlocks returns all the block for given block number.
 func (blk *Block) GetPlainBlocks(args IntervalArgs) ([]*BlockResult, error) {
-	return getBlocks(args, blk.namespace, true)
+	trueArgs, err := prepareIntervalArgs(args, blk.namespace)
+	if err != nil {
+		return nil, err
+	} else {
+		return getBlocks(trueArgs, blk.namespace, true)
+	}
 }
 
 // LatestBlock returns the number and hash of the lastest block.
@@ -93,13 +120,23 @@ func (blk *Block) GetPlainBlockByHash(hash common.Hash) (*BlockResult, error) {
 }
 
 // GetBlockByNumber returns the block for the given block number.
-func (blk *Block) GetBlockByNumber(number BlockNumber) (*BlockResult, error) {
-	return getBlockByNumber(blk.namespace, number, false)
+func (blk *Block) GetBlockByNumber(n BlockNumber) (*BlockResult, error) {
+	number, err := prepareBlockNumber(n, blk.namespace)
+	if err != nil {
+		return nil, err
+	} else {
+		return getBlockByNumber(blk.namespace, number, false)
+	}
 }
 
 // GetPlainBlockByNumber returns the block for the given block number.
-func (blk *Block) GetPlainBlockByNumber(number BlockNumber) (*BlockResult, error) {
-	return getBlockByNumber(blk.namespace, number, true)
+func (blk *Block) GetPlainBlockByNumber(n BlockNumber) (*BlockResult, error) {
+	number, err := prepareBlockNumber(n, blk.namespace)
+	if err != nil {
+		return nil, err
+	} else {
+		return getBlockByNumber(blk.namespace, number, true)
+	}
 }
 
 type BlocksIntervalResult struct {
@@ -125,12 +162,12 @@ func (blk *Block) GetBlocksByTime(args IntervalTime) (*BlocksIntervalResult, err
 }
 
 func (blk *Block) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (Number, error) {
-	realArgs, err := prepareIntervalArgs(args)
+	intargs, err := prepareIntervalArgs(args, blk.namespace)
 	if err != nil {
 		return 0, err
 	}
 
-	if t, err := edb.CalBlockGenerateAvgTime(blk.namespace, realArgs.From.ToUint64(), realArgs.To.ToUint64()); err != nil && err.Error() == leveldb_not_found_error {
+	if t, err := edb.CalBlockGenerateAvgTime(blk.namespace, intargs.from, intargs.to); err != nil && err.Error() == leveldb_not_found_error {
 		return 0, &common.LeveldbNotFoundError{Message: "block"}
 	} else if err != nil {
 		return 0, &common.CallbackError{Message: err.Error()}
@@ -140,23 +177,19 @@ func (blk *Block) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (Number, er
 }
 
 func latestBlock(namespace string) (*BlockResult, error) {
-	currentChain := edb.GetChainCopy(namespace)
-
-	lastestBlkHeight := currentChain.Height
+	lastestBlkHeight := edb.GetChainCopy(namespace).Height
 
 	if lastestBlkHeight == 0 {
-		return nil, nil
+		return nil, &common.InvalidParamsError{Message: "There is no block generated!"}
 	}
 
-	return getBlockByNumber(namespace, *NewUint64ToBlockNumber(lastestBlkHeight), false)
+	return getBlockByNumber(namespace, lastestBlkHeight, false)
 }
 
 // getBlockByNumber convert type Block to type BlockResult for the given block number.
-func getBlockByNumber(namespace string, n BlockNumber, isPlain bool) (*BlockResult, error) {
-
-	m := n.ToUint64()
-	if blk, err := edb.GetBlockByNumber(namespace, m); err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &common.LeveldbNotFoundError{Message: fmt.Sprintf("block by %d", n)}
+func getBlockByNumber(namespace string, number uint64, isPlain bool) (*BlockResult, error) {
+	if blk, err := edb.GetBlockByNumber(namespace, number); err != nil && err.Error() == leveldb_not_found_error {
+		return nil, &common.LeveldbNotFoundError{Message: fmt.Sprintf("block by %d", number)}
 	} else if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
 	} else {
@@ -174,25 +207,25 @@ func getBlocksByTime(namespace string, startTime, endTime int64) (sumOfBlocks ui
 
 	var i uint64
 	for i := height; i >= uint64(1); i-- {
-		block, _ := getBlockByNumber(namespace, *NewUint64ToBlockNumber(i), false)
+		block, _ := getBlockByNumber(namespace, i, false)
 		if block.WriteTime > endTime {
 			continue
 		}
 		if block.WriteTime < startTime {
 			if i != height {
-				startBlock = NewUint64ToBlockNumber(i + 1)
+				startBlock = Uint64ToBlockNumber(i + 1)
 			}
 			return sumOfBlocks, startBlock, endBlock
 		}
 		if block.WriteTime >= startTime && block.WriteTime <= endTime {
 			sumOfBlocks += 1
 			if sumOfBlocks == 1 {
-				endBlock = NewUint64ToBlockNumber(i)
+				endBlock = Uint64ToBlockNumber(i)
 			}
 		}
 	}
 	if i != height {
-		startBlock = NewUint64ToBlockNumber(i + 1)
+		startBlock = Uint64ToBlockNumber(i + 1)
 	}
 	return sumOfBlocks, startBlock, endBlock
 }
@@ -213,7 +246,7 @@ func outputBlockResult(namespace string, block *types.Block, isPlain bool) (*Blo
 	if isPlain {
 		return &BlockResult{
 			Version:    string(block.Version),
-			Number:     NewUint64ToBlockNumber(block.Number),
+			Number:     Uint64ToBlockNumber(block.Number),
 			Hash:       common.BytesToHash(block.BlockHash),
 			ParentHash: common.BytesToHash(block.ParentHash),
 			WriteTime:  block.WriteTime,
@@ -225,7 +258,7 @@ func outputBlockResult(namespace string, block *types.Block, isPlain bool) (*Blo
 
 	return &BlockResult{
 		Version:    string(block.Version),
-		Number:     NewUint64ToBlockNumber(block.Number),
+		Number:     Uint64ToBlockNumber(block.Number),
 		Hash:       common.BytesToHash(block.BlockHash),
 		ParentHash: common.BytesToHash(block.ParentHash),
 		//WriteTime:    time.Unix(block.WriteTime/int64(time.Second), 0).Format("2006-01-02 15:04:05"),
@@ -255,16 +288,11 @@ func getBlockByHash(namespace string, hash common.Hash, isPlain bool) (*BlockRes
 	return outputBlockResult(namespace, block, isPlain)
 }
 
-func getBlocks(args IntervalArgs, namespace string, isPlain bool) ([]*BlockResult, error) {
+func getBlocks(args *intArgs, namespace string, isPlain bool) ([]*BlockResult, error) {
 	var blocks []*BlockResult
 
-	realArgs, err := prepareIntervalArgs(args)
-	if err != nil {
-		return nil, err
-	}
-
-	from := *realArgs.From
-	to := *realArgs.To
+	from := args.from
+	to := args.to
 
 	for from <= to {
 		b, err := getBlockByNumber(namespace, to, isPlain)
@@ -289,8 +317,12 @@ type BatchTimeResult struct {
 
 // QueryCommitAndBatchTime returns commit time and batch time between from block and to block
 func (blk *Block) QueryCommitAndBatchTime(args IntervalArgs) (*BatchTimeResult, error) {
+	trueArgs, err := prepareIntervalArgs(args, blk.namespace)
+	if err != nil {
+		return nil, err
+	}
 
-	commitTime, batchTime := edb.CalcCommitBatchAVGTime(blk.namespace, args.From.ToUint64(), args.To.ToUint64())
+	commitTime, batchTime := edb.CalcCommitBatchAVGTime(blk.namespace, trueArgs.from, trueArgs.to)
 
 	return &BatchTimeResult{
 		CommitTime: commitTime,
@@ -300,8 +332,12 @@ func (blk *Block) QueryCommitAndBatchTime(args IntervalArgs) (*BatchTimeResult, 
 
 // QueryEvmAvgTime returns EVM average time between from block and to block
 func (blk *Block) QueryEvmAvgTime(args IntervalArgs) (int64, error) {
+	trueArgs, err := prepareIntervalArgs(args, blk.namespace)
+	if err != nil {
+		return 0, err
+	}
 
-	evmTime := edb.CalcEvmAVGTime(blk.namespace, args.From.ToUint64(), args.To.ToUint64())
+	evmTime := edb.CalcEvmAVGTime(blk.namespace, trueArgs.from, trueArgs.to)
 	log.Info("-----evmTime----", evmTime)
 
 	return evmTime, nil
@@ -316,7 +352,11 @@ func (blk *Block) QueryTPS(args IntervalTime) (string, error) {
 }
 
 func (blk *Block) QueryWriteTime(args IntervalArgs) (*StatisticResult, error) {
-	err, ret := edb.GetBlockWriteTime(blk.namespace, int64(args.From.ToUint64()), int64(args.To.ToUint64()))
+	trueArgs, err := prepareIntervalArgs(args, blk.namespace)
+	if err != nil {
+		return nil, err
+	}
+	err, ret := edb.GetBlockWriteTime(blk.namespace, int64(trueArgs.from), int64(trueArgs.to))
 	if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
 	}

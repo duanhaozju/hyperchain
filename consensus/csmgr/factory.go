@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"hyperchain/consensus/pbft"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"sync"
 	cs "hyperchain/consensus"
 	"hyperchain/consensus/helper"
@@ -33,8 +33,8 @@ func newConsenter(namespace string, conf *common.Config, msgQ *event.TypeMux) (c
 // Consenter return a Consenter instance
 // msgQ is the connection with outer services.
 func Consenter(namespace string, conf *common.Config, msgQ *event.TypeMux) (cs.Consenter, error) {
-	once.Do(func() {
+	//once.Do(func() {
 		cr, err = newConsenter(namespace, conf, msgQ)
-	})
+	//})
 	return cr, err
 }

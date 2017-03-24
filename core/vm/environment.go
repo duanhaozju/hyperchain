@@ -7,6 +7,7 @@ import (
 
 	"hyperchain/common"
 	"hyperchain/hyperdb/db"
+	"github.com/op/go-logging"
 )
 
 // RuleSet is an interface that defines the current rule set during the
@@ -42,6 +43,8 @@ type Environment interface {
 	GasLimit() *big.Int
 	// Determines vm type
 	VmType() Type
+	// Env logger
+	Logger() *logging.Logger
 	// Determines whether it's possible to transact
 	CanTransfer(from common.Address, balance *big.Int) bool
 	// Transfers amount from one account to the other

@@ -34,7 +34,7 @@ func NewPublicAccountAPI(namespace string, eh *manager.EventHub, config *common.
 
 //New Account according to args from html
 func (acc *Account) NewAccountAPI(password string) (common.Address, error) {
-	am := acc.eh.AccountManager
+	am := acc.eh.GetAccountManager()
 	ac, err := am.NewAccount(password)
 	if err != nil {
 		log.Errorf("New Account error,%v", err)
@@ -46,7 +46,7 @@ func (acc *Account) NewAccountAPI(password string) (common.Address, error) {
 // UnlockAccount unlocks account according to args(address,password), if success, return true.
 func (acc *Account) UnlockAccount(args UnlockParas) (bool, error) {
 
-	am := acc.eh.AccountManager
+	am := acc.eh.GetAccountManager()
 
 	s := args.Address.Hex()
 	if len(s) > 1 {

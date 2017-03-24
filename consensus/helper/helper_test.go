@@ -9,8 +9,8 @@ package helper
 
 import (
 	"testing"
-	pb "hyperchain/protos"
-	"hyperchain/event"
+	pb "hyperchain/manager/protos"
+	"hyperchain/manager/event"
 	"reflect"
 	"github.com/golang/protobuf/proto"
 	"time"
@@ -102,10 +102,10 @@ func TestUpdateState(t *testing.T) {
 
 	tmpMsg, _ := proto.Marshal(updateState)
 
-	updateStateEvent := event.SendCheckpointSyncEvent {
+	updateStateEvent := event.ChainSyncReqEvent{
 		Payload:	tmpMsg,
 	}
-	sub := mux.Subscribe(event.SendCheckpointSyncEvent{})
+	sub := mux.Subscribe(event.ChainSyncReqEvent{})
 	go func() {
 		select {
 		case e := <-sub.Chan():

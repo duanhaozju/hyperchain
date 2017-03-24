@@ -3,28 +3,22 @@
 package executor
 
 import (
-	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/core/hyperstate"
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/crypto"
 	"errors"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/hyperdb/db"
+	"github.com/op/go-logging"
 )
 
 var (
-	log   *logging.Logger // package-level logger
 	EmptyPointerErr = errors.New("nil pointer")
 	NoDefinedCaseErr= errors.New("no defined case")
 )
-
-func init() {
-	log = logging.MustGetLogger("executor")
-}
-
 
 type Executor struct {
 	namespace   string                // namespace tag
@@ -37,6 +31,7 @@ type Executor struct {
 	cache       ExecutorCache
 	helper      *Helper
 	statedb     vm.Database
+	logger      *logging.Logger
 }
 
 func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux) *Executor {
@@ -45,7 +40,6 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux)
 	helper := NewHelper(eventMux)
 	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
-		log.Error("get database handler failed")
 		return nil
 	}
 	executor := &Executor{
@@ -56,19 +50,20 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux)
 		encryption:      encryption,
 		helper:          helper,
 	}
+	executor.logger = common.GetLogger(namespace, "executor")
 	return executor
 }
 
 // Start - start service.
 func (executor *Executor) Start() {
 	executor.initialize()
-	log.Noticef("[Namespace = %s] ************* executor start **************", executor.namespace)
+	executor.logger.Noticef("[Namespace = %s]  executor start", executor.namespace)
 }
 
 // Stop - stop service.
 func (executor *Executor) Stop() {
 	executor.setExit()
-	log.Noticef("[Namespace = %s] ************* executor stop **************", executor.namespace)
+	executor.logger.Noticef("[Namespace = %s] executor stop", executor.namespace)
 }
 
 // Status - obtain executor status.
@@ -79,13 +74,13 @@ func (executor *Executor) Status() {
 
 func (executor *Executor) initialize() {
 	if err := initializeExecutorStatus(executor); err != nil {
-		log.Errorf("executor initiailize status failed. %s", err.Error())
+		executor.logger.Errorf("executor initiailize status failed. %s", err.Error())
 	}
 	if err := initializeExecutorCache(executor); err != nil {
-		log.Errorf("executor initiailize cache failed. %s", err.Error())
+		executor.logger.Errorf("executor initiailize cache failed. %s", err.Error())
 	}
 	if err := initializeExecutorStateDb(executor); err != nil {
-		log.Errorf("executor initiailize state failed. %s", err.Error())
+		executor.logger.Errorf("executor initiailize state failed. %s", err.Error())
 	}
 	// start to listen for process commit event or validation event
 	go executor.listenCommitEvent()
@@ -98,7 +93,7 @@ func (executor *Executor) initialize() {
 func initializeExecutorStateDb(executor *Executor) error {
 	stateDb, err := executor.newStateDb()
 	if err != nil {
-		log.Errorf("[Namespace = %s] executor init stateDb failed, err : %s", executor.namespace, err.Error())
+		executor.logger.Errorf("[Namespace = %s] executor init stateDb failed, err : %s", executor.namespace, err.Error())
 		return err
 	}
 	executor.statedb = stateDb
@@ -108,12 +103,12 @@ func initializeExecutorStateDb(executor *Executor) error {
 func (executor *Executor) newStateDb() (vm.Database, error) {
 	blk, err := edb.GetBlockByNumber(executor.namespace, edb.GetHeightOfChain(executor.namespace))
 	if err != nil {
-		log.Errorf("[Namespace = %s] can not find block #%d", executor.namespace, edb.GetHeightOfChain(executor.namespace))
+		executor.logger.Errorf("[Namespace = %s] can not find block #%d", executor.namespace, edb.GetHeightOfChain(executor.namespace))
 		return nil, err
 	}
 	stateDb, err := hyperstate.New(common.BytesToHash(blk.MerkleRoot), executor.db, executor.conf, edb.GetHeightOfChain(executor.namespace))
 	if err != nil {
-		log.Errorf("[Namespace = %s] new stateDb failed, err : %s", executor.namespace, err.Error())
+		executor.logger.Errorf("[Namespace = %s] new stateDb failed, err : %s", executor.namespace, err.Error())
 		return nil, err
 	}
 	return stateDb, nil

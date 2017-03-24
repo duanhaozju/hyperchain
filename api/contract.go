@@ -11,7 +11,7 @@ import (
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/compiler"
 	"hyperchain/crypto/hmEncryption"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/manager"
 	"math/big"
 	"time"
@@ -21,13 +21,12 @@ import (
 
 type Contract struct {
 	namespace   string
-	eventMux    *event.TypeMux
 	eh          *manager.EventHub
 	tokenBucket *ratelimit.Bucket
 	config      *common.Config
 }
 
-func NewPublicContractAPI(namespace string, eventMux *event.TypeMux, eh *manager.EventHub, config *common.Config) *Contract {
+func NewPublicContractAPI(namespace string, eh *manager.EventHub, config *common.Config) *Contract {
 	fillrate, err := getFillRate(config, CONTRACT)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
@@ -40,7 +39,6 @@ func NewPublicContractAPI(namespace string, eventMux *event.TypeMux, eh *manager
 	}
 	return &Contract{
 		namespace:   namespace,
-		eventMux:    eventMux,
 		eh:          eh,
 		tokenBucket: ratelimit.NewBucket(fillrate, peak),
 		config:      config,
@@ -71,7 +69,7 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int) (common.Has
 		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
 	}
 
-	tx.Id = uint64(contract.eh.PeerManager.GetNodeId())
+	tx.Id = uint64(contract.eh.GetPeerManager().GetNodeId())
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.Hash().Bytes()
 	//delete repeated tx
@@ -82,21 +80,16 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int) (common.Has
 	}
 
 	// Unsign Test
-	if !tx.ValidateSign(contract.eh.AccountManager.Encryption, kec256Hash) {
+	if !tx.ValidateSign(contract.eh.GetAccountManager().Encryption, kec256Hash) {
 		log.Error("invalid signature")
 		// ATTENTION, return invalid transactino directly
 		return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
 	}
 
-	if txBytes, err := proto.Marshal(tx); err != nil {
-		log.Errorf("proto.Marshal(tx) error: %v", err)
-		return common.Hash{}, &common.CallbackError{Message:"proto.Marshal(tx) happened error"}
-	} else if manager.GetEventObject() != nil {
-		go contract.eventMux.Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
-	} else {
-		log.Error("manager is Nil")
-		return common.Hash{}, &common.CallbackError{Message:"eventObject is nil"}
-	}
+	go contract.eh.GetEventObject().Post(event.NewTxEvent{
+		Transaction: tx,
+		Simulate:    args.Simulate,
+	})
 	return tx.GetHash(), nil
 
 }
@@ -288,6 +281,58 @@ func (contract *Contract) GetStorageByAddr(addr common.Address) (map[string]stri
 		}
 	}
 	return mp, nil
+}
+
+// GetDeployedList return all deployed contracts list (include suicided)
+func (contract *Contract) GetDeployedList(addr common.Address) ([]string, error) {
+	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
+	if err != nil {
+		return nil, err
+	}
+	if obj := stateDb.GetAccount(addr); obj == nil {
+		return nil, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+	} else {
+		return stateDb.GetDeployedContract(addr), nil
+	}
+}
+
+// GetCreator return creator address
+func (contract *Contract) GetCreator(addr common.Address) (common.Address, error) {
+	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
+	if err != nil {
+		return common.Address{}, err
+	}
+	if obj := stateDb.GetAccount(addr); obj == nil {
+		return common.Address{}, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+	} else {
+		return stateDb.GetCreator(addr), nil
+	}
+}
+
+// GetStatus return contract status
+func (contract *Contract) GetStatus(addr common.Address) (int, error) {
+	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
+	if err != nil {
+		return -1, err
+	}
+	if obj := stateDb.GetAccount(addr); obj == nil {
+		return -1, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+	} else {
+		return stateDb.GetStatus(addr), nil
+	}
+}
+
+// GetCreateTime return contract status
+func (contract *Contract) GetCreateTime(addr common.Address) (uint64, error) {
+	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
+	if err != nil {
+		return 0, err
+	}
+	if obj := stateDb.GetAccount(addr); obj == nil {
+		return 0, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+	} else {
+		return stateDb.GetCreateTime(addr), nil
+	}
 }
 
 func getBlockStateDb(namespace string, config *common.Config) (vm.Database, error) {

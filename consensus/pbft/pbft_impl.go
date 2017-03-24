@@ -9,12 +9,11 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"bytes"
 	"hyperchain/common"
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
 	"hyperchain/core/types"
-	"hyperchain/protos"
+	"hyperchain/manager/protos"
 	"sync/atomic"
 	"github.com/op/go-logging"
 )
@@ -228,25 +227,6 @@ func (pbft *pbftImpl) enqueueConsensusMsg(msg *protos.Message) error {
 	} else {
 		go pbft.pbftEventQueue.Push(consensus)
 	}
-	return nil
-}
-
-//processStateUpdated process the state updated message.
-func (pbft *pbftImpl) enqueueStateUpdatedMsg(msg *protos.Message) error {
-
-	stateUpdatedMsg := &protos.StateUpdatedMessage{}
-	err := proto.Unmarshal(msg.Payload, stateUpdatedMsg)
-
-	if err != nil {
-		pbft.logger.Errorf("processStateUpdate, unmarshal error: can not unmarshal UpdateStateMessage", err)
-		return err
-	}
-	e := &LocalEvent{
-		Service:CORE_PBFT_SERVICE,
-		EventType:CORE_STATE_UPDATE_EVENT,
-		Event:&stateUpdatedEvent{seqNo:stateUpdatedMsg.SeqNo},
-	}
-	go pbft.pbftEventQueue.Push(e)
 	return nil
 }
 
@@ -850,7 +830,7 @@ func (pbft *pbftImpl) processRequestsDuringRecovery() {
 	}
 }
 
-func (pbft *pbftImpl) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
+func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error {
 
 	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try to recvStateUpdatedEvent, but it's in nego-view", pbft.id)
@@ -859,27 +839,27 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 
 	pbft.status.inActiveState(&pbft.status.stateTransferring)
 	// If state transfer did not complete successfully, or if it did not reach our low watermark, do it again
-	if et.seqNo < pbft.h {
-		pbft.logger.Warningf("Replica %d recovered to seqNo %d but our low watermark has moved to %d", pbft.id, et.seqNo, pbft.h)
+	if et.SeqNo < pbft.h {
+		pbft.logger.Warningf("Replica %d recovered to seqNo %d but our low watermark has moved to %d", pbft.id, et.SeqNo, pbft.h)
 		if pbft.storeMgr.highStateTarget == nil {
 			pbft.logger.Debugf("Replica %d has no state targets, cannot resume state transfer yet", pbft.id)
-		} else if et.seqNo < pbft.storeMgr.highStateTarget.seqNo {
+		} else if et.SeqNo < pbft.storeMgr.highStateTarget.seqNo {
 			pbft.logger.Debugf("Replica %d has state target for %d, transferring", pbft.id, pbft.storeMgr.highStateTarget.seqNo)
 			pbft.retryStateTransfer(nil)
 		} else {
-			pbft.logger.Debugf("Replica %d has no state target above %d, highest is %d", pbft.id, et.seqNo, pbft.storeMgr.highStateTarget.seqNo)
+			pbft.logger.Debugf("Replica %d has no state target above %d, highest is %d", pbft.id, et.SeqNo, pbft.storeMgr.highStateTarget.seqNo)
 		}
 		return nil
 	}
 
-	pbft.logger.Infof("Replica %d application caught up via state transfer, lastExec now %d", pbft.id, et.seqNo)
+	pbft.logger.Infof("Replica %d application caught up via state transfer, lastExec now %d", pbft.id, et.SeqNo)
 	// XXX create checkpoint
-	pbft.exec.setLastExec(et.seqNo)
-	pbft.batchVdr.setVid(et.seqNo)
-	pbft.batchVdr.setLastVid(et.seqNo)
+	pbft.exec.setLastExec(et.SeqNo)
+	pbft.batchVdr.setVid(et.SeqNo)
+	pbft.batchVdr.setLastVid(et.SeqNo)
 	bcInfo := pbft.getCurrentBlockInfo()
 	id, _ := proto.Marshal(bcInfo)
-	pbft.persistCheckpoint(et.seqNo, id)
+	pbft.persistCheckpoint(et.SeqNo, id)
 	pbft.moveWatermarks(pbft.exec.lastExec) // The watermark movement handles moving this to a checkpoint boundary
 	pbft.status.inActiveState(&pbft.status.skipInProgress)
 	pbft.validateState()
@@ -1334,17 +1314,13 @@ func (pbft *pbftImpl) skipTo(seqNo uint64, id []byte, replicas []uint64) {
 	}
 	//pbft.UpdateState(&checkpointMessage{seqNo, id}, info, replicas)
 	pbft.logger.Debug("seqNo: ", seqNo, "id: ", id, "replicas: ", replicas)
-	pbft.updateState(seqNo, id, replicas)
+	pbft.updateState(seqNo, info, replicas)
 }
 
 // updateState attempts to synchronize state to a particular target, implicitly calls rollback if needed
-func (pbft *pbftImpl) updateState(seqNo uint64, targetId []byte, replicaId []uint64) {
-	//if pbft.valid {
-	//	pbft.logger.Warning("State transfer is being called for, but the state has not been invalidated")
-	//}
+func (pbft *pbftImpl) updateState(seqNo uint64, info *protos.BlockchainInfo, replicaId []uint64) {
 
-	updateStateMsg := stateUpdateHelper(pbft.id, seqNo, targetId, replicaId)
-	pbft.helper.UpdateState(updateStateMsg) // TODO: stateUpdateEvent
+	pbft.helper.UpdateState(pbft.id, info.Height, info.CurrentBlockHash, replicaId) // TODO: stateUpdateEvent
 
 }
 
@@ -1462,14 +1438,14 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 		type resp struct {
 			n uint64
 			view uint64
-			routers string
+			//routers string
 		}
 		viewCount := make(map[resp]uint64)
 		var result resp
 		canFind := false
 		for _, rs := range pbft.recoveryMgr.negoViewRspStore {
-			r := byteToString(rs.Routers)
-			ret := resp{rs.N, rs.View, r}
+			//r := byteToString(rs.Routers)
+			ret := resp{rs.N, rs.View}
 			if _, ok := viewCount[ret]; ok {
 				viewCount[ret]++
 			} else {
@@ -1487,12 +1463,12 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 			pbft.pbftTimerMgr.stopTimer(NEGO_VIEW_RSP_TIMER)
 			pbft.view = result.view
 			pbft.N = int(result.n)
-			routers, _ := stringToByte(result.routers)
-			if !bytes.Equal(routers, pbft.nodeMgr.routers) && !pbft.status.getState(&pbft.status.isNewNode) {
-				pbft.nodeMgr.routers = routers
-				pbft.logger.Debugf("Replica %d update routing table according to nego result", pbft.id)
-				pbft.helper.NegoRouters(routers)
-			}
+			//routers, _ := stringToByte(result.routers)
+			//if !bytes.Equal(routers, pbft.nodeMgr.routers) && !pbft.status.getState(&pbft.status.isNewNode) {
+			//	pbft.nodeMgr.routers = routers
+			//	pbft.logger.Debugf("Replica %d update routing table according to nego result", pbft.id)
+			//	pbft.helper.NegoRouters(routers)
+			//}
 			pbft.status.inActiveState(&pbft.status.inNegoView)
 			if atomic.LoadUint32(&pbft.activeView) == 0 {
 				atomic.StoreUint32(&pbft.activeView, 1)

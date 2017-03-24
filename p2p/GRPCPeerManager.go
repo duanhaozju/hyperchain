@@ -9,12 +9,11 @@ import (
 	"hyperchain/admittance"
 	"hyperchain/common"
 	"hyperchain/crypto"
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/p2p/peerComm"
 	pb "hyperchain/p2p/peermessage"
 	"hyperchain/p2p/persist"
 	"hyperchain/p2p/transport"
-	"hyperchain/recovery"
 	"math"
 	"strconv"
 	"time"
@@ -38,6 +37,7 @@ type GRPCPeerManager struct {
 	CM         *admittance.CAManager
 	//isValidate peer
 	IsVP       bool
+	namespace  string
 }
 
 func NewGrpcManager(conf *common.Config,namespace string) *GRPCPeerManager {
@@ -64,6 +64,7 @@ func NewGrpcManager(conf *common.Config,namespace string) *GRPCPeerManager {
 		MaxPeerNum:config.MaxNum(),
 		IsOriginal:config.IsOrigin(),
 		IsVP:config.IsVP(),
+		namespace: namespace,
 	}
 
 	return &grpcmgr
@@ -80,13 +81,13 @@ func (grpcmgr *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeM
 		panic(err)
 	}
 	grpcmgr.TM = tm
-	grpcmgr.peersPool = NewPeersPool(grpcmgr.TM, grpcmgr.LocalAddr, grpcmgr.CM)
+	grpcmgr.peersPool = NewPeersPool(grpcmgr.TM, grpcmgr.LocalAddr, grpcmgr.CM, grpcmgr.namespace)
 	grpcmgr.LocalNode = NewNode(grpcmgr.LocalAddr, eventMux, grpcmgr.TM, grpcmgr.peersPool, grpcmgr.CM, grpcmgr.configs)
 	grpcmgr.LocalNode.StartServer()
 	grpcmgr.LocalNode.N = grpcmgr.configs.MaxNum()
 
 	// connect to peer
-	rec, _ := persist.GetBool("onceOnline")
+	rec, _ := persist.GetBool("onceOnline", grpcmgr.namespace)
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
 	if !rec && grpcmgr.IsOriginal {
@@ -111,7 +112,7 @@ func (grpcmgr *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeM
 	log.Notice("┌────────────────────────────┐")
 	log.Notice("│  All NODES WERE CONNECTED  |")
 	log.Notice("└────────────────────────────┘")
-	persist.PutBool("onceOnline", true)
+	persist.PutBool("onceOnline", true, grpcmgr.namespace)
 }
 
 // create other peers
@@ -315,7 +316,7 @@ func (grpcmgr *GRPCPeerManager) BroadcastPeers(payLoad []byte) {
 		return
 	}
 	var broadCastMessage = pb.Message{
-		MessageType:  pb.Message_CONSUS,
+		MessageType:  pb.Message_SESSION,
 		From:         grpcmgr.LocalNode.GetNodeAddr().ToPeerAddress(),
 		Payload:      payLoad,
 		MsgTimeStamp: time.Now().UnixNano(),
@@ -359,18 +360,9 @@ func (grpcmgr *GRPCPeerManager) GetLocalAddressPayload() (payload []byte) {
 }
 
 // SendMsgToPeers Send msg to specific peer peerlist
-func (grpcmgr *GRPCPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64, MessageType recovery.Message_MsgType) {
+func (grpcmgr *GRPCPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64) {
 	log.Debug("need send message to ", peerList)
-	var mpPaylod = &recovery.Message{
-		MessageType:  MessageType,
-		MsgTimeStamp: time.Now().UnixNano(),
-		Payload:      payLoad,
-	}
-	realPayload, err := proto.Marshal(mpPaylod)
-	if err != nil {
-		log.Error("marshal failed")
-	}
-	syncMessage := grpcmgr.newMsg(realPayload,pb.Message_SYNCMSG)
+	syncMessage := grpcmgr.newMsg(payLoad, pb.Message_SESSION)
 
 	// broadcast to special peers
 	for _, NodeID := range peerList {

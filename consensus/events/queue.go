@@ -3,7 +3,7 @@
 
 package events
 
-import "hyperchain/event"
+import "hyperchain/manager/event"
 
 //writeOnlyQueue only allow write
 type writeOnlyQueue interface {

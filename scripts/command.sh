@@ -57,6 +57,18 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_maintainContrac
 # 解冻合约 UnfreeezeContract
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_maintainContract","params": [{"from": "17d806c92fa941b4b7a8ffffc58fa2f297a3bffc", "to": "0x3a3cae27d1b9fa931458b5b2a5247c5d67c75d61", "timestamp":1481767474717000000, "nonce": 8054165127693853,"payload": "0x6fd7cc16000000000000000000000000000000000000000000000000000000000000007b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", "signature":"0x19c0655d05b9c24f5567846528b81a25c48458a05f69f05cf8d6c46894b9f12a02af471031ba11f155e41adf42fca639b67fb7148ddec90e7628ec8af60c872c00", "opcode": 3}],"id": 1}'
 
+# 查询合约状态
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getStatus","params": ["<contract address>"],"id": 1}'
+
+# 查询部署的合约列表
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getDeployedList","params": ["<contract address>"],"id": 1}'
+
+# 查询合约部署者
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getCreator","params": ["<contract address>"],"id": 1}'
+
+# 查询合约部署时间
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getCreateTime","params": ["<contract address>"],"id": 1}'
+
 # 获取合约code GetCode
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getCode","params": ["<contract address>","<block number>"],"id": 1}'
 

@@ -1,12 +1,10 @@
 package executor
 import (
-	"hyperchain/event"
-	"hyperchain/protos"
-	"hyperchain/recovery"
+	"hyperchain/manager/event"
+	"hyperchain/manager/protos"
 	"github.com/golang/protobuf/proto"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
-	"time"
 )
 type Helper struct {
 	msgQ *event.TypeMux
@@ -26,39 +24,31 @@ func (helper *Helper) Post(ev interface{}) {
 func (executor *Executor) informConsensus(informType int, message interface{}) error {
 	switch informType {
 	case NOTIFY_REMOVE_CACHE:
-		log.Debugf("[Namespace = %s] inform consenus remove cache", executor.namespace)
+		executor.logger.Debug("inform consenus remove cache")
 		msg := message.(protos.RemoveCache)
 		executor.helper.Post(event.ExecutorToConsensusEvent{
 			Payload: msg,
 			Type:    NOTIFY_REMOVE_CACHE,
 		})
 	case NOTIFY_VALIDATION_RES:
-		log.Debugf("[Namespace = %s] inform consenus validation result", executor.namespace)
+		executor.logger.Debugf("[Namespace = %s] inform consenus validation result", executor.namespace)
 		msg := message.(protos.ValidatedTxs)
 		executor.helper.Post(event.ExecutorToConsensusEvent{
 			Payload: msg,
 			Type:    NOTIFY_VALIDATION_RES,
 		})
 	case NOTIFY_VC_DONE:
-		log.Debugf("[Namespace = %s] inform consenus vc done", executor.namespace)
+		executor.logger.Debug("inform consenus vc done")
 		msg := message.(protos.VcResetDone)
 		executor.helper.Post(event.ExecutorToConsensusEvent{
 			Payload: msg,
 			Type:    NOTIFY_VC_DONE,
 		})
 	case NOTIFY_SYNC_DONE:
-		log.Debugf("[Namespace = %s] inform consenus sync done", executor.namespace)
-		p, _ := proto.Marshal(&protos.StateUpdatedMessage{
-			SeqNo:  edb.GetHeightOfChain(executor.namespace),
-		})
-		m, _ := proto.Marshal(&protos.Message{
-			Type:      protos.Message_STATE_UPDATED,
-			Payload:   p,
-			Timestamp: time.Now().UnixNano(),
-			Id:        1,
-		})
+		executor.logger.Debug("inform consenus sync done")
+		msg := message.(protos.StateUpdatedMessage)
 		executor.helper.Post(event.ExecutorToConsensusEvent{
-			Payload: m,
+			Payload: msg,
 			Type:    NOTIFY_SYNC_DONE,
 		})
 	default:
@@ -71,15 +61,15 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 func (executor *Executor) informP2P(informType int, message ...interface{}) error {
 	switch informType {
 	case NOTIFY_BROADCAST_DEMAND:
-		log.Debugf("[Namespace = %s] inform p2p broadcast demand", executor.namespace)
-		required := &recovery.CheckPointMessage{
+		executor.logger.Debug("inform p2p broadcast demand")
+		required := ChainSyncRequest{
 			RequiredNumber: executor.status.syncFlag.SyncTarget,
 			CurrentNumber:  edb.GetHeightOfChain(executor.namespace),
 			PeerId:         executor.status.syncFlag.LocalId,
 		}
-		payload, err := proto.Marshal(required)
+		payload, err := proto.Marshal(&required)
 		if err != nil {
-			log.Errorf("[Namespace = %s] SendSyncRequest marshal message failed", executor.namespace)
+			executor.logger.Errorf("sync chain request marshal message failed")
 			return err
 		}
 		executor.helper.Post(event.ExecutorToP2PEvent{
@@ -89,17 +79,17 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		})
 		return nil
 	case NOTIFY_UNICAST_BLOCK:
-		log.Debugf("[Namespace = %s] inform p2p unicast block", executor.namespace)
+		executor.logger.Debug("inform p2p unicast block")
 		id := message[0].(uint64)
 		peerId := message[1].(uint64)
 		block, err := edb.GetBlockByNumber(executor.namespace, id)
 		if err != nil {
-			log.Errorf("[Namespace = %s] no demand block number: %d", executor.namespace, id)
+			executor.logger.Errorf("no demand block number: %d", id)
 			return err
 		}
 		payload, err := proto.Marshal(block)
 		if err != nil {
-			log.Errorf("[Namespace = %s] marshal block failed", executor.namespace)
+			executor.logger.Error("marshal block failed")
 			return err
 		}
 		executor.helper.Post(event.ExecutorToP2PEvent{
@@ -109,11 +99,11 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		})
 		return nil
 	case NOTIFY_UNICAST_INVALID:
-		log.Debugf("[Namespace = %s] inform p2p unicast invalid tx", executor.namespace)
+		executor.logger.Debug("inform p2p unicast invalid tx")
 		r := message[0].(*types.InvalidTransactionRecord)
 		payload, err := proto.Marshal(r)
 		if err != nil {
-			log.Errorf("[Namespace = %s] marshal invalid record error", executor.namespace)
+			executor.logger.Error("marshal invalid record error")
 			return err
 		}
 		executor.helper.Post(event.ExecutorToP2PEvent{
@@ -123,16 +113,16 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		})
 		return nil
 	case NOTIFY_BROADCAST_SINGLE:
-		log.Debugf("[Namespace = %s] inform p2p broadcast single demand", executor.namespace)
+		executor.logger.Debug("inform p2p broadcast single demand")
 		id := message[0].(uint64)
-		syncRequest := &recovery.CheckPointMessage{
+		request := ChainSyncRequest{
 			RequiredNumber: id,
 			CurrentNumber:  edb.GetHeightOfChain(executor.namespace),
 			PeerId:         executor.status.syncFlag.LocalId,
 		}
-		payload, err := proto.Marshal(syncRequest)
+		payload, err := proto.Marshal(&request)
 		if err != nil {
-			log.Errorf("[Namespace = %s] broadcastDemandBlock, marshal message failed", executor.namespace)
+			executor.logger.Error("broadcast demand block, marshal message failed")
 			return err
 		}
 		executor.helper.Post(event.ExecutorToP2PEvent{
@@ -142,7 +132,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		})
 		return nil
 	case NOTIFY_SYNC_REPLICA:
-		log.Debugf("[Namespace = %s] inform p2p sync replica", executor.namespace)
+		executor.logger.Debug("inform p2p sync replica")
 		payload, _ := proto.Marshal(message[0].(*types.Chain))
 		executor.helper.Post(event.ExecutorToP2PEvent{
 			Payload: payload,

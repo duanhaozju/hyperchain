@@ -1,7 +1,7 @@
 package executor
 
 import (
-	"hyperchain/event"
+	"hyperchain/manager/event"
 	"hyperchain/common"
 	"sync/atomic"
 	"hyperchain/core/types"
@@ -39,12 +39,12 @@ func initializeExecutorCache(executor *Executor) error {
 func (executor *Executor) PurgeCache() {
 	executor.cache.validationResultCache.Purge()
 	executor.clearPendingValidationEventQ()
-	log.Debugf("[Namespace = %s] purge validation result cache and validation event cache success", executor.namespace)
+	executor.logger.Debugf("[Namespace = %s] purge validation result cache and validation event cache success", executor.namespace)
 }
 
 // addPendingValidationEvent - push a validation event to pending queue.
 func (executor *Executor) addPendingValidationEvent(validationEvent event.ValidationEvent) {
-	log.Warningf("[Namespace = %s] receive validation event %d while %d is required, save into cache temporarily.", executor.namespace, validationEvent.SeqNo, executor.getDemandSeqNo())
+	executor.logger.Warningf("[Namespace = %s] receive validation event %d while %d is required, save into cache temporarily.", executor.namespace, validationEvent.SeqNo, executor.getDemandSeqNo())
 	executor.cache.pendingValidationEventQ.Add(validationEvent.SeqNo, validationEvent)
 }
 
@@ -88,7 +88,7 @@ func (executor *Executor) fetchValidationResult(hash string) (*ValidationResultR
 func (executor *Executor) addValidationEvent(ev event.ValidationEvent) {
 	executor.cache.validationEventC <- ev
 	atomic.AddInt32(&executor.status.validateQueueLen, 1)
-	log.Debugf("[Namespace = %s] receive a validation event #%d", executor.namespace, ev.SeqNo)
+	executor.logger.Debugf("[Namespace = %s] receive a validation event #%d", executor.namespace, ev.SeqNo)
 }
 
 // fetchValidationEvent - got a validation event from channel buffer.
@@ -105,7 +105,7 @@ func (executor *Executor) processValidationDone() {
 func (executor *Executor) addCommitEvent(ev event.CommitEvent) {
 	executor.cache.commitEventC <- ev
 	atomic.AddInt32(&executor.status.commitQueueLen, 1)
-	log.Debugf("[Namespace = %s] receive a commit event #%d", executor.namespace, ev.SeqNo)
+	executor.logger.Debugf("[Namespace = %s] receive a commit event #%d", executor.namespace, ev.SeqNo)
 }
 
 // fetchCommitEvent - got a commit event from channel buffer.
@@ -123,9 +123,9 @@ func (executor *Executor) addToSyncCache(block *types.Block) {
 	blks, existed := executor.fetchFromSyncCache(block.Number)
 	if existed {
 		if _, ok := blks[common.Bytes2Hex(block.BlockHash)]; ok {
-			log.Debugf("[Namespace = %s] receive duplicate block: %d %s", executor.namespace, block.Number, common.Bytes2Hex(block.BlockHash))
+			executor.logger.Debugf("[Namespace = %s] receive duplicate block: %d %s", executor.namespace, block.Number, common.Bytes2Hex(block.BlockHash))
 		} else {
-			log.Debugf("[Namespace = %s] receive  block with different hash: %d %s", executor.namespace, block.Number, common.Bytes2Hex(block.BlockHash))
+			executor.logger.Debugf("[Namespace = %s] receive  block with different hash: %d %s", executor.namespace, block.Number, common.Bytes2Hex(block.BlockHash))
 			blks[common.Bytes2Hex(block.BlockHash)] = *block
 			executor.cache.syncCache.Add(block.Number, blks)
 		}
