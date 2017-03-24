@@ -1,6 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package hpc
+package api
 
 import (
 	"fmt"
@@ -34,6 +34,7 @@ func NewPublicAccountAPI(namespace string, eh *manager.EventHub, config *common.
 
 //New Account according to args from html
 func (acc *Account) NewAccountAPI(password string) (common.Address, error) {
+	log := common.GetLogger(acc.namespace, "api")
 	am := acc.eh.GetAccountManager()
 	ac, err := am.NewAccount(password)
 	if err != nil {
@@ -67,6 +68,7 @@ func (acc *Account) UnlockAccount(args UnlockParas) (bool, error) {
 
 // GetAllBalances returns all account's balance in the db,NOT CACHE DB!
 func (acc *Account) GetAccounts() []*AccountResult {
+	log := common.GetLogger(acc.namespace, "api")
 	var acts []*AccountResult
 	stateDB, err := NewStateDb(acc.config, acc.namespace)
 	if err != nil {

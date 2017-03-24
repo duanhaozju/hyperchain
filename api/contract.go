@@ -1,6 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package hpc
+package api
 
 import (
 	"fmt"
@@ -27,12 +27,13 @@ type Contract struct {
 }
 
 func NewPublicContractAPI(namespace string, eh *manager.EventHub, config *common.Config) *Contract {
-	fillrate, err := getFillRate(config, CONTRACT)
+	log := common.GetLogger(namespace, "api")
+	fillrate, err := getFillRate(namespace, config, CONTRACT)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
 		fillrate = 10 * time.Millisecond
 	}
-	peak := getRateLimitPeak(config, CONTRACT)
+	peak := getRateLimitPeak(namespace, config, CONTRACT)
 	if peak == 0 {
 		log.Errorf("got invalid ratelimit peak parameters as 0. use default peak parameters 500")
 		peak = 500
@@ -45,7 +46,9 @@ func NewPublicContractAPI(namespace string, eh *manager.EventHub, config *common
 	}
 }
 
-func deployOrInvoke(contract *Contract, args SendTxArgs, txType int) (common.Hash, error) {
+func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace string) (common.Hash, error) {
+	log := common.GetLogger(namespace, "api")
+
 	var tx *types.Transaction
 	realArgs, err := prepareExcute(args, txType)
 	if err != nil {
@@ -120,7 +123,7 @@ func (contract *Contract) DeployContract(args SendTxArgs) (common.Hash, error) {
 	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, &common.SystemTooBusyError{Message:"system is too busy to response "}
 	}
-	return deployOrInvoke(contract, args, 1)
+	return deployOrInvoke(contract, args, 1, contract.namespace)
 }
 
 // InvokeContract invokes contract.
@@ -128,18 +131,19 @@ func (contract *Contract) InvokeContract(args SendTxArgs) (common.Hash, error) {
 	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, &common.SystemTooBusyError{Message:"system is too busy to response "}
 	}
-	return deployOrInvoke(contract, args, 2)
+	return deployOrInvoke(contract, args, 2, contract.namespace)
 }
 
 func (contract *Contract) MaintainContract(args SendTxArgs) (common.Hash, error) {
 	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, &common.SystemTooBusyError{Message:"system is too busy to response "}
 	}
-	return deployOrInvoke(contract, args, 4)
+	return deployOrInvoke(contract, args, 4, contract.namespace)
 }
 
 // GetCode returns the code from the given contract address.
 func (contract *Contract) GetCode(addr common.Address) (string, error) {
+	log := common.GetLogger(contract.namespace, "api")
 
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
@@ -336,6 +340,7 @@ func (contract *Contract) GetCreateTime(addr common.Address) (uint64, error) {
 }
 
 func getBlockStateDb(namespace string, config *common.Config) (vm.Database, error) {
+	log := common.GetLogger(namespace, "api")
 	stateDB, err := NewStateDb(config, namespace)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)

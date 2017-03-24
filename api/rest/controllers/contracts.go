@@ -10,12 +10,12 @@ import (
 
 type ContractsController struct {
 	beego.Controller
-	PublicContractAPI *hpc.Contract
+	PublicContractAPI *api.Contract
 }
 
 func (c *ContractsController) Prepare() {
-	PublicContractAPIInterface := hpc.GetApiObjectByNamespace("contract").Service
-	PublicContractAPI := PublicContractAPIInterface.(*hpc.Contract)
+	PublicContractAPIInterface := api.GetApiObjectByNamespace("contract").Service
+	PublicContractAPI := PublicContractAPIInterface.(*api.Contract)
 	c.PublicContractAPI = PublicContractAPI
 }
 
@@ -42,7 +42,7 @@ func (c *ContractsController) CompileContract() {
 }
 
 func (c *ContractsController) DeployContract() {
-	var args hpc.SendTxArgs
+	var args api.SendTxArgs
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &args); err != nil {
 		c.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
@@ -61,7 +61,7 @@ func (c *ContractsController) DeployContract() {
 }
 
 func (c *ContractsController) InvokeContract() {
-	var args hpc.SendTxArgs
+	var args api.SendTxArgs
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &args); err != nil {
 		c.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
@@ -127,7 +127,7 @@ func (c *ContractsController) GetContractCountByAddr() {
 }
 
 func (c *ContractsController) CheckHmValue() {
-	var args hpc.ValueArgs
+	var args api.ValueArgs
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &args); err != nil {
 		c.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
@@ -146,7 +146,7 @@ func (c *ContractsController) CheckHmValue() {
 }
 
 func (c *ContractsController) EncryptoMessage() {
-	var args hpc.EncryptoArgs
+	var args api.EncryptoArgs
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &args); err != nil {
 		c.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})

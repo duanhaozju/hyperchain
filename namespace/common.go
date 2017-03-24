@@ -54,42 +54,42 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 	return conf
 }
 
-func (ns *namespaceImpl) GetApis(namespace string) map[string]*hpc.API {
-	return map[string]*hpc.API{
+func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
+	return map[string]*api.API{
 		"tx": {
 			Srvname: "tx",
 			Version: "0.4",
-			Service: hpc.NewPublicTransactionAPI(namespace, ns.eh, ns.conf),
+			Service: api.NewPublicTransactionAPI(namespace, ns.eh, ns.conf),
 			Public:  true,
 		},
 		"node": {
 			Srvname: "node",
 			Version: "0.4",
-			Service: hpc.NewPublicNodeAPI(ns.eh),
+			Service: api.NewPublicNodeAPI(ns.eh),
 			Public:  true,
 		},
 		"block": {
 			Srvname: "block",
 			Version: "0.4",
-			Service: hpc.NewPublicBlockAPI(namespace),
+			Service: api.NewPublicBlockAPI(namespace),
 			Public:  true,
 		},
 		"account": {
 			Srvname: "account",
 			Version: "0.4",
-			Service: hpc.NewPublicAccountAPI(namespace, ns.eh, ns.conf),
+			Service: api.NewPublicAccountAPI(namespace, ns.eh, ns.conf),
 			Public:  true,
 		},
 		"contract": {
 			Srvname: "contract",
 			Version: "0.4",
-			Service: hpc.NewPublicContractAPI(namespace, ns.eh, ns.conf),
+			Service: api.NewPublicContractAPI(namespace, ns.eh, ns.conf),
 			Public:  true,
 		},
 		"cert": {
 			Srvname: "cert",
 			Version: "0.4",
-			Service: hpc.NewCertAPI(ns.caMgr),
+			Service: api.NewCertAPI(namespace, ns.caMgr),
 			Public:  true,
 		},
 	}

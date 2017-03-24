@@ -1,17 +1,19 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package hpc
+package api
 
 import (
 	"fmt"
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
+	"github.com/op/go-logging"
 )
 
 type Block struct {
 	namespace string
 	height    uint64
+	log       *logging.Logger
 }
 
 type BlockResult struct {
@@ -34,6 +36,7 @@ type StatisticResult struct {
 func NewPublicBlockAPI(namespace string) *Block {
 	return &Block{
 		namespace: namespace,
+		log:       common.GetLogger(namespace, "api"),
 	}
 }
 
@@ -231,6 +234,7 @@ func getBlocksByTime(namespace string, startTime, endTime int64) (sumOfBlocks ui
 }
 
 func outputBlockResult(namespace string, block *types.Block, isPlain bool) (*BlockResult, error) {
+	log := common.GetLogger(namespace, "api")
 
 	txCounts := int64(len(block.Transactions))
 	//count, percent :=types.go.CalcResponseCount(block.Number, int64(200))
@@ -238,7 +242,7 @@ func outputBlockResult(namespace string, block *types.Block, isPlain bool) (*Blo
 	transactions := make([]interface{}, txCounts)
 	var err error
 	for i, tx := range block.Transactions {
-		if transactions[i], err = outputTransaction(tx, namespace); err != nil {
+		if transactions[i], err = outputTransaction(tx, namespace, log); err != nil {
 			return nil, err
 		}
 	}
@@ -289,6 +293,7 @@ func getBlockByHash(namespace string, hash common.Hash, isPlain bool) (*BlockRes
 }
 
 func getBlocks(args *intArgs, namespace string, isPlain bool) ([]*BlockResult, error) {
+	log := common.GetLogger(namespace, "api")
 	var blocks []*BlockResult
 
 	from := args.from
@@ -338,7 +343,7 @@ func (blk *Block) QueryEvmAvgTime(args IntervalArgs) (int64, error) {
 	}
 
 	evmTime := edb.CalcEvmAVGTime(blk.namespace, trueArgs.from, trueArgs.to)
-	log.Info("-----evmTime----", evmTime)
+	blk.log.Info("-----evmTime----", evmTime)
 
 	return evmTime, nil
 }

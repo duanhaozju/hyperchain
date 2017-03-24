@@ -1,6 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package hpc
+package api
 
 import (
 	"fmt"
@@ -23,19 +23,16 @@ const (
 )
 
 var (
-	log        *logging.Logger // package-level logger
 	kec256Hash = crypto.NewKeccak256Hash("keccak256")
 )
 
-func init() {
-	log = logging.MustGetLogger("hpc")
-}
 
 type Transaction struct {
 	namespace   string
 	eh          *manager.EventHub
 	tokenBucket *ratelimit.Bucket
 	config      *common.Config
+	log         *logging.Logger
 }
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
@@ -76,12 +73,13 @@ type TransactionResult struct {
 }
 
 func NewPublicTransactionAPI(namespace string, eh *manager.EventHub, config *common.Config) *Transaction {
-	fillrate, err := getFillRate(config, TRANSACTION)
+	log := common.GetLogger(namespace, "api")
+	fillrate, err := getFillRate(namespace, config, TRANSACTION)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
 		fillrate = 10 * time.Millisecond
 	}
-	peak := getRateLimitPeak(config, TRANSACTION)
+	peak := getRateLimitPeak(namespace, config, TRANSACTION)
 	if peak == 0 {
 		log.Errorf("got invalid ratelimit peak parameters as 0. use default peak parameters 500")
 		peak = 500
@@ -91,6 +89,7 @@ func NewPublicTransactionAPI(namespace string, eh *manager.EventHub, config *com
 		eh:          eh,
 		config:      config,
 		tokenBucket: ratelimit.NewBucket(fillrate, peak),
+		log:         log,
 	}
 }
 
@@ -161,7 +160,7 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 		for i := 0; i < (*args.Request).ToInt(); i++ {
 			// Unsign Test
 			if !tx.ValidateSign(tran.eh.GetAccountManager().Encryption, kec256Hash) {
-				log.Error("invalid signature")
+				tran.log.Error("invalid signature")
 				// ATTENTION, return invalid transactino directly
 				return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
 			}
@@ -173,7 +172,7 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	} else {
 		// ** For Hyperchain **
 		if !tx.ValidateSign(tran.eh.GetAccountManager().Encryption, kec256Hash) {
-			log.Error("invalid signature")
+			tran.log.Error("invalid signature")
 			// ATTENTION, return invalid transactino directly
 			return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
 		}
@@ -265,14 +264,14 @@ func (tran *Transaction) GetDiscardTransactions() ([]*TransactionResult, error) 
 	if err != nil && err.Error() == leveldb_not_found_error {
 		return nil, &common.LeveldbNotFoundError{Message:"discard transactions"}
 	} else if err != nil {
-		log.Errorf("GetAllDiscardTransaction error: %v", err)
+		tran.log.Errorf("GetAllDiscardTransaction error: %v", err)
 		return nil, &common.CallbackError{Message:err.Error()}
 	}
 
 	var transactions []*TransactionResult
 
 	for _, red := range reds {
-		if ts, err := outputTransaction(red, tran.namespace); err != nil {
+		if ts, err := outputTransaction(red, tran.namespace, tran.log); err != nil {
 			return nil, err
 		} else {
 			transactions = append(transactions, ts)
@@ -289,11 +288,11 @@ func (tran *Transaction) getDiscardTransactionByHash(hash common.Hash) (*Transac
 	if err != nil && err.Error() == leveldb_not_found_error {
 		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("discard transaction by %#x", hash)}
 	} else if err != nil {
-		log.Errorf("GetDiscardTransaction error: %v", err)
+		tran.log.Errorf("GetDiscardTransaction error: %v", err)
 		return nil, &common.CallbackError{Message:err.Error()}
 	}
 
-	return outputTransaction(red, tran.namespace)
+	return outputTransaction(red, tran.namespace, tran.log)
 }
 
 // GetTransactionByHash returns the transaction for the given transaction hash.
@@ -306,7 +305,7 @@ func (tran *Transaction) GetTransactionByHash(hash common.Hash) (*TransactionRes
 		return nil, &common.CallbackError{Message:err.Error()}
 	}
 
-	return outputTransaction(tx, tran.namespace)
+	return outputTransaction(tx, tran.namespace, tran.log)
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
@@ -320,7 +319,7 @@ func (tran *Transaction) GetTransactionByBlockHashAndIndex(hash common.Hash, ind
 	if err != nil && err.Error() == leveldb_not_found_error {
 		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("block by %#x", hash)}
 	} else if err != nil {
-		log.Errorf("%v", err)
+		tran.log.Errorf("%v", err)
 		return nil, &common.CallbackError{Message:err.Error()}
 	}
 
@@ -334,7 +333,7 @@ func (tran *Transaction) GetTransactionByBlockHashAndIndex(hash common.Hash, ind
 
 		tx := block.Transactions[index]
 
-		return outputTransaction(tx, tran.namespace)
+		return outputTransaction(tx, tran.namespace, tran.log)
 	}
 
 	return nil, nil
@@ -352,7 +351,7 @@ func (tran *Transaction) GetTransactionByBlockNumberAndIndex(n BlockNumber, inde
 	if err != nil && err.Error() == leveldb_not_found_error {
 		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("block by %d", n)}
 	} else if err != nil {
-		log.Errorf("%v", err)
+		tran.log.Errorf("%v", err)
 		return nil, &common.CallbackError{Message:err.Error()}
 	}
 
@@ -366,7 +365,7 @@ func (tran *Transaction) GetTransactionByBlockNumberAndIndex(n BlockNumber, inde
 
 		tx := block.Transactions[index]
 
-		return outputTransaction(tx, tran.namespace)
+		return outputTransaction(tx, tran.namespace, tran.log)
 	}
 
 	return nil, nil
@@ -396,7 +395,7 @@ func (tran *Transaction) GetTransactionsByTime(args IntervalTime) ([]*Transactio
 			trans := block.GetTransactions()
 
 			for _, t := range trans {
-				tx, err := outputTransaction(t, tran.namespace)
+				tx, err := outputTransaction(t, tran.namespace, tran.log)
 				if err != nil {
 					return nil, err
 				}
@@ -418,7 +417,7 @@ func (tran *Transaction) GetBlockTransactionCountByHash(hash common.Hash) (*Numb
 	if err != nil && err.Error() == leveldb_not_found_error {
 		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("block by %#x", hash)}
 	} else if err != nil {
-		log.Errorf("%v", err)
+		tran.log.Errorf("%v", err)
 		return nil, &common.CallbackError{Message:err.Error()}
 	}
 
@@ -439,7 +438,7 @@ func (tran *Transaction) GetBlockTransactionCountByNumber(n BlockNumber) (*Numbe
 	if err != nil && err.Error() == leveldb_not_found_error {
 		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("block by number %#x", n)}
 	} else if err != nil {
-		log.Errorf("%v", err)
+		tran.log.Errorf("%v", err)
 		return nil, &common.CallbackError{Message:err.Error()}
 	}
 
@@ -510,7 +509,7 @@ func (tran *Transaction) GetTxAvgTimeByBlockNumber(args IntervalArgs) (Number, e
 	return *NewInt64ToNumber(exeTime), nil
 }
 
-func outputTransaction(trans interface{}, namespace string) (*TransactionResult, error) {
+func outputTransaction(trans interface{}, namespace string, log *logging.Logger) (*TransactionResult, error) {
 
 	var txValue types.TransactionValue
 

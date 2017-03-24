@@ -8,33 +8,33 @@ import (
 )
 
 // CheckIntervalArgs
-func CheckIntervalArgs(from, to string) (hpc.IntervalArgs, error) {
+func CheckIntervalArgs(from, to string) (api.IntervalArgs, error) {
 
-	var intervalArgs hpc.IntervalArgs
+	var intervalArgs api.IntervalArgs
 
 	jsonStr := "{\"from\":\"" + from + "\",\"to\":\"" + to + "\"}"
 
 	err := json.Unmarshal([]byte(jsonStr), &intervalArgs)
 
 	if err != nil {
-		return hpc.IntervalArgs{}, err
+		return api.IntervalArgs{}, err
 	}
 
 	return intervalArgs, nil
 }
 
-func CheckIntervalTimeArgs(start, end string) (hpc.IntervalTime, error) {
+func CheckIntervalTimeArgs(start, end string) (api.IntervalTime, error) {
 	startTime, err := strconv.ParseInt(start, 10, 64)
 	if err != nil {
-		return hpc.IntervalTime{}, err
+		return api.IntervalTime{}, err
 	}
 
 	endTime, err := strconv.ParseInt(end, 10, 64)
 	if err != nil {
-		return hpc.IntervalTime{}, err
+		return api.IntervalTime{}, err
 	}
 
-	return hpc.IntervalTime{
+	return api.IntervalTime{
 		StartTime: startTime,
 		Endtime:   endTime,
 	}, nil
@@ -73,63 +73,63 @@ func CheckAddress(address string) (common.Address, error) {
 	return jsonObj.Address, nil
 }
 
-func CheckBlockNumber(number string) (hpc.BlockNumber, error) {
+func CheckBlockNumber(number string) (api.BlockNumber, error) {
 	jsonObj := struct {
-		BlkNum hpc.BlockNumber
+		BlkNum api.BlockNumber
 	}{}
 
 	jsonStr := "{\"blkNum\":\"" + number + "\"}"
 
 	err := json.Unmarshal([]byte(jsonStr), &jsonObj)
 	if err != nil {
-		return hpc.BlockNumber(0), err
+		return api.BlockNumber(0), err
 	}
 
 	return jsonObj.BlkNum, nil
 }
 
-func CheckNumber(number string) (hpc.Number, error) {
+func CheckNumber(number string) (api.Number, error) {
 	jsonObj := struct {
-		Num hpc.Number
+		Num api.Number
 	}{}
 
 	jsonStr := "{\"num\":\"" + number + "\"}"
 
 	err := json.Unmarshal([]byte(jsonStr), &jsonObj)
 	if err != nil {
-		return hpc.Number(0), err
+		return api.Number(0), err
 	}
 
 	return jsonObj.Num, nil
 }
 
-func CheckBlkNumAndIndexParams(blkNum, index string) (hpc.BlockNumber, hpc.Number, error) {
+func CheckBlkNumAndIndexParams(blkNum, index string) (api.BlockNumber, api.Number, error) {
 	jsonObj := struct {
-		BlkNum hpc.BlockNumber
-		Index  hpc.Number
+		BlkNum api.BlockNumber
+		Index  api.Number
 	}{}
 
 	jsonStr := "{\"blkNum\":\"" + blkNum + "\",\"index\":\"" + index + "\"}"
 
 	err := json.Unmarshal([]byte(jsonStr), &jsonObj)
 	if err != nil {
-		return hpc.BlockNumber(0), hpc.Number(0), err
+		return api.BlockNumber(0), api.Number(0), err
 	}
 
 	return jsonObj.BlkNum, jsonObj.Index, nil
 }
 
-func CheckBlkHashAndIndexParams(blkHash, index string) (common.Hash, hpc.Number, error) {
+func CheckBlkHashAndIndexParams(blkHash, index string) (common.Hash, api.Number, error) {
 	jsonObj := struct {
 		BlkHash common.Hash
-		Index   hpc.Number
+		Index   api.Number
 	}{}
 
 	jsonStr := "{\"blkHash\":\"" + blkHash + "\",\"index\":\"" + index + "\"}"
 
 	err := json.Unmarshal([]byte(jsonStr), &jsonObj)
 	if err != nil {
-		return common.Hash{}, hpc.Number(0), err
+		return common.Hash{}, api.Number(0), err
 	}
 
 	return jsonObj.BlkHash, jsonObj.Index, nil

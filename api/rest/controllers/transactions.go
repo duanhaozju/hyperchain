@@ -10,22 +10,22 @@ import (
 
 type TransactionsController struct {
 	beego.Controller
-	PublicTxAPI *hpc.Transaction
+	PublicTxAPI *api.Transaction
 }
 
 type requestInterval struct {
-	From *hpc.BlockNumber `form:"from"`
-	To   *hpc.BlockNumber `form:"to"`
+	From *api.BlockNumber `form:"from"`
+	To   *api.BlockNumber `form:"to"`
 }
 
 func (t *TransactionsController) Prepare() {
-	PublicTxAPIInterface := hpc.GetApiObjectByNamespace("tx").Service
-	PublicTxAPI := PublicTxAPIInterface.(*hpc.Transaction)
+	PublicTxAPIInterface := api.GetApiObjectByNamespace("tx").Service
+	PublicTxAPI := PublicTxAPIInterface.(*api.Transaction)
 	t.PublicTxAPI = PublicTxAPI
 }
 
 func (t *TransactionsController) SendTransaction() {
-	var args hpc.SendTxArgs
+	var args api.SendTxArgs
 
 	if err := json.Unmarshal(t.Ctx.Input.RequestBody, &args); err != nil {
 		t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
@@ -175,7 +175,7 @@ func (t *TransactionsController) GetTransactionReceipt() {
 }
 
 func (t *TransactionsController) GetSignHash() {
-	var args hpc.SendTxArgs
+	var args api.SendTxArgs
 
 	if err := json.Unmarshal(t.Ctx.Input.RequestBody, &args); err != nil {
 		t.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})

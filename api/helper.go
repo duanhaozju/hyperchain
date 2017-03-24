@@ -1,4 +1,4 @@
-package hpc
+package api
 
 import (
 	"errors"
@@ -34,7 +34,8 @@ func getRateLimitEnable(conf *common.Config) bool {
 }
 
 // getRateLimitPeak - get rate limit peak value
-func getRateLimitPeak(conf *common.Config, choice string) int64 {
+func getRateLimitPeak(namespace string, conf *common.Config, choice string) int64 {
+	log := common.GetLogger(namespace, "api")
 	switch choice {
 	case TRANSACTION:
 		return conf.GetInt64(transactionPeak)
@@ -47,7 +48,8 @@ func getRateLimitPeak(conf *common.Config, choice string) int64 {
 }
 
 // getFillRate - get rate limit fill speed
-func getFillRate(conf *common.Config, choice string) (time.Duration, error) {
+func getFillRate(namespace string, conf *common.Config, choice string) (time.Duration, error) {
+	log := common.GetLogger(namespace, "api")
 	switch choice {
 	case TRANSACTION:
 		return time.ParseDuration(conf.GetString(transactionFillRate))

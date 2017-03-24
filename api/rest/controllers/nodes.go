@@ -9,12 +9,12 @@ import (
 
 type NodesController struct {
 	beego.Controller
-	PublicNodeAPI *hpc.Node
+	PublicNodeAPI *api.Node
 }
 
 func (n *NodesController) Prepare() {
-	PublicNodeAPIInterface := hpc.GetApiObjectByNamespace("node").Service
-	PublicNodeAPI := PublicNodeAPIInterface.(*hpc.Node)
+	PublicNodeAPIInterface := api.GetApiObjectByNamespace("node").Service
+	PublicNodeAPI := PublicNodeAPIInterface.(*api.Node)
 	n.PublicNodeAPI = PublicNodeAPI
 }
 
@@ -38,7 +38,7 @@ func (n *NodesController) GetNodeHash() {
 }
 
 func (n *NodesController) DelNode() {
-	var args hpc.NodeArgs
+	var args api.NodeArgs
 
 	if err := json.Unmarshal(n.Ctx.Input.RequestBody, &args); err != nil {
 		n.Data["json"] = NewJSONObject(nil, &common.InvalidParamsError{err.Error()})
