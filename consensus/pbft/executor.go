@@ -6,7 +6,7 @@ package pbft
 import (
 	"github.com/golang/protobuf/proto"
 	"hyperchain/consensus/events"
-	"hyperchain/protos"
+	"hyperchain/manager/protos"
 	"sync/atomic"
 )
 

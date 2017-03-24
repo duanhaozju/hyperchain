@@ -2,7 +2,7 @@ package executor
 
 import (
 	"hyperchain/manager/event"
-	"hyperchain/protos"
+	"hyperchain/manager/protos"
 	"hyperchain/hyperdb/db"
 	edb "hyperchain/core/db_utils"
 )

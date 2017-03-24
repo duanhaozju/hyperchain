@@ -14,7 +14,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"hyperchain/protos"
+	"hyperchain/manager/protos"
 	"hyperchain/common"
 	"hyperchain/consensus/helper"
 	"hyperchain/consensus"

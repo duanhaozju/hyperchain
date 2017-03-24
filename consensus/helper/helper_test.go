@@ -9,7 +9,7 @@ package helper
 
 import (
 	"testing"
-	pb "hyperchain/protos"
+	pb "hyperchain/manager/protos"
 	"hyperchain/manager/event"
 	"reflect"
 	"github.com/golang/protobuf/proto"
