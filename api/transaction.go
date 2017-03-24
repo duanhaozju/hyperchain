@@ -165,13 +165,10 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 				// ATTENTION, return invalid transactino directly
 				return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
 			}
-
-			if txBytes, err := proto.Marshal(tx); err != nil {
-				log.Errorf("proto.Marshal(tx) error: %v", err)
-				return common.Hash{}, &common.CallbackError{Message:"proto.Marshal(tx) happened error"}
-			} else {
-				go tran.eh.GetEventObject().Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
-			}
+			go tran.eh.GetEventObject().Post(event.NewTxEvent{
+				Transaction: tx,
+				Simulate:    args.Simulate,
+			})
 		}
 	} else {
 		// ** For Hyperchain **
@@ -181,12 +178,10 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 			return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
 		}
 
-		if txBytes, err := proto.Marshal(tx); err != nil {
-			log.Errorf("proto.Marshal(tx) error: %v", err)
-			return common.Hash{}, &common.CallbackError{Message:"proto.Marshal(tx) happened error"}
-		} else {
-			go tran.eh.GetEventObject().Post(event.NewTxEvent{Payload: txBytes, Simulate: args.Simulate})
-		}
+		go tran.eh.GetEventObject().Post(event.NewTxEvent{
+			Transaction: tx,
+			Simulate:    args.Simulate,
+		})
 	}
 	return tx.GetHash(), nil
 }
