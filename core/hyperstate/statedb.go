@@ -74,7 +74,7 @@ type StateDB struct {
 }
 
 // New - Create a new state from a given root
-func New(root common.Hash, db db.Database, bktConf *common.Config, height uint64, logger *logging.Logger) (*StateDB, error) {
+func New(root common.Hash, db db.Database, bktConf *common.Config, height uint64, namespace string) (*StateDB, error) {
 	csc, _ := lru.New(codeSizeCacheSize)
 	// initialize bucket tree
 	bucketPrefix, _ := CompositeStateBucketPrefix()
@@ -82,6 +82,7 @@ func New(root common.Hash, db db.Database, bktConf *common.Config, height uint64
 	// initialize cache
 	batchCache, _ := common.NewCache()
 	contentCache, _ := common.NewCache()
+	logger := common.GetLogger(namespace, "state")
 	state := &StateDB{
 		db:                db,
 		root:              root,

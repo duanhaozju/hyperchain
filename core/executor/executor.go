@@ -106,7 +106,7 @@ func (executor *Executor) newStateDb() (vm.Database, error) {
 		executor.logger.Errorf("[Namespace = %s] can not find block #%d", executor.namespace, edb.GetHeightOfChain(executor.namespace))
 		return nil, err
 	}
-	stateDb, err := hyperstate.New(common.BytesToHash(blk.MerkleRoot), executor.db, executor.conf, edb.GetHeightOfChain(executor.namespace), executor.logger)
+	stateDb, err := hyperstate.New(common.BytesToHash(blk.MerkleRoot), executor.db, executor.conf, edb.GetHeightOfChain(executor.namespace), executor.namespace)
 	if err != nil {
 		executor.logger.Errorf("[Namespace = %s] new stateDb failed, err : %s", executor.namespace, err.Error())
 		return nil, err
