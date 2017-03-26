@@ -20,9 +20,6 @@ import (
 )
 
 var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("jsonrpc")
-}
 
 const (
 	stopPendingRequestTimeout             = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped

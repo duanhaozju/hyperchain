@@ -9,12 +9,12 @@ import (
 
 type BlocksController struct {
 	beego.Controller
-	PublicBlockAPI *hpc.Block
+	PublicBlockAPI *api.Block
 }
 
 func (b *BlocksController) Prepare() {
-	PublicBlockAPIInterface := hpc.GetApiObjectByNamespace("block").Service
-	PublicBlockAPI := PublicBlockAPIInterface.(*hpc.Block)
+	PublicBlockAPIInterface := api.GetApiObjectByNamespace("block").Service
+	PublicBlockAPI := PublicBlockAPIInterface.(*api.Block)
 	b.PublicBlockAPI = PublicBlockAPI
 }
 

@@ -2,7 +2,7 @@
 //data: 2016-11-3
 
 //publicNodeAPI.GetNodes()要获取节点信息，要启动的模块太多，放在集成测试中测试
-package hpc
+package api
 
 import (
 	"testing"

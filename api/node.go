@@ -1,6 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package hpc
+package api
 
 import (
 	"hyperchain/manager/event"

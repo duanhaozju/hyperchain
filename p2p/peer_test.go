@@ -10,13 +10,13 @@ import (
 func TestHandShake(t *testing.T) {
 	eca, getErr1 := primitives.GetConfig("../config/cert/server/eca.cert")
 	if getErr1 != nil {
-		log.Error("cannot read ecert.", getErr1)
+		t.Error("cannot read ecert.", getErr1)
 	}
 	ecertBtye := []byte(eca)
 
 	rca, getErr2 := primitives.GetConfig("../config/cert/server/rca.cert")
 	if getErr2 != nil {
-		log.Error("cannot read ecert.", getErr2)
+		t.Error("cannot read ecert.", getErr2)
 	}
 	rcertByte := []byte(rca)
 

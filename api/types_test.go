@@ -1,6 +1,6 @@
 //author:zsx
 //data:2016-11-2
-package hpc
+package api
 
 import (
 	"encoding/json"

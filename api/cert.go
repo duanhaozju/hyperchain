@@ -1,4 +1,4 @@
-package hpc
+package api
 
 import (
 	"hyperchain/admittance"
@@ -11,21 +11,24 @@ type CertArgs struct {
 }
 
 type Cert struct {
-	cm *admittance.CAManager
+	cm        *admittance.CAManager
+	namespace string
 }
 
 type TCertReturn struct {
 	TCert string `json:"tcert"`
 }
 
-func NewCertAPI(cm *admittance.CAManager) *Cert {
+func NewCertAPI(namespace string, cm *admittance.CAManager) *Cert {
 	return &Cert{
-		cm: cm,
+		cm:        cm,
+		namespace: namespace,
 	}
 }
 
 // GetNodes returns status of all the nodes
 func (node *Cert) GetTCert(args CertArgs) (*TCertReturn, error) {
+	log := common.GetLogger(node.namespace, "api")
 	if node.cm == nil {
 		return nil, &common.CallbackError{Message:"CAManager is nil"}
 	}

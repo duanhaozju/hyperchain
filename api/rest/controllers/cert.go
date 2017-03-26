@@ -7,18 +7,18 @@ import (
 
 type CertController struct {
 	beego.Controller
-	PublicCertAPI *hpc.Cert
+	PublicCertAPI *api.Cert
 }
 
 func (c *CertController) Prepare() {
-	PublicCertAPIInterface := hpc.GetApiObjectByNamespace("cert").Service
-	PublicCertAPI := PublicCertAPIInterface.(*hpc.Cert)
+	PublicCertAPIInterface := api.GetApiObjectByNamespace("cert").Service
+	PublicCertAPI := PublicCertAPIInterface.(*api.Cert)
 	c.PublicCertAPI = PublicCertAPI
 }
 
 func (c *CertController) GetTCert() {
 
-	var args hpc.CertArgs
+	var args api.CertArgs
 	args.Pubkey = c.Input().Get("pubkey")
 
 	tcertReturn, err := c.PublicCertAPI.GetTCert(args)

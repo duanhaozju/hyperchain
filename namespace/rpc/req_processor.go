@@ -11,12 +11,6 @@ import (
 	"errors"
 )
 
-var log *logging.Logger // package-level logger
-
-func init() {
-	log = logging.MustGetLogger("rpc")
-}
-
 type RequestProcessor interface {
 	Start() error
 	ProcessRequest(request *common.RPCRequest) *common.RPCResponse
@@ -24,16 +18,18 @@ type RequestProcessor interface {
 
 type JsonRpcProcessorImpl struct {
 	namespace string
-	apis      map[string]*hpc.API
+	apis      map[string]*api.API
 	services  serviceRegistry // map hpc to methods of hpc
+	log       *logging.Logger
 }
 
 //NewJsonRpcProcessorImpl new an instance of JsonRpcProcessorImpl with namespace and apis
-func NewJsonRpcProcessorImpl(namespace string, apis map[string]*hpc.API) *JsonRpcProcessorImpl {
+func NewJsonRpcProcessorImpl(namespace string, apis map[string]*api.API) *JsonRpcProcessorImpl {
 	jpri := &JsonRpcProcessorImpl{
 		namespace: namespace,
 		apis:      apis,
 		services:  make(serviceRegistry),
+		log:       common.GetLogger(namespace, "rpc"),
 	}
 	return jpri
 }
@@ -47,7 +43,7 @@ func (jrpi *JsonRpcProcessorImpl) ProcessRequest(request *common.RPCRequest) *co
 func (jrpi *JsonRpcProcessorImpl) Start() error {
 	err := jrpi.registerAllName()
 	if err != nil {
-		log.Errorf("Failed to start RPC Manager of namespace %s!!!", jrpi.namespace)
+		jrpi.log.Errorf("Failed to start RPC Manager of namespace %s!!!", jrpi.namespace)
 		return err
 	}
 	return nil
@@ -60,7 +56,7 @@ func (jrpi *JsonRpcProcessorImpl) registerAllName() error {
 	}
 	for _, api := range jrpi.apis {
 		if err := jrpi.registerName(api.Srvname, api.Service); err != nil {
-			log.Errorf("registerName error: %v ", err)
+			jrpi.log.Errorf("registerName error: %v ", err)
 			return err
 		}
 	}
@@ -169,7 +165,7 @@ func (jrpi *JsonRpcProcessorImpl) parsePositionalArguments(args json.RawMessage,
 	}
 
 	if err := json.Unmarshal(args, &params); err != nil {
-		log.Info(err)
+		jrpi.log.Info(err)
 		return nil, &common.InvalidParamsError{Message: err.Error()}
 	}
 

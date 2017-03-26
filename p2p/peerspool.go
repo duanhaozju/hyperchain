@@ -9,6 +9,8 @@ import (
 	"sort"
 	"hyperchain/p2p/persist"
 	"github.com/golang/protobuf/proto"
+	"github.com/op/go-logging"
+	"hyperchain/common"
 )
 
 type PeersPool struct {
@@ -21,6 +23,7 @@ type PeersPool struct {
 	idHashMap  map[int]string
 	hashIDMap  map[string]int
 	namespace  string
+	logger *logging.Logger
 }
 
 // the peers pool instance
@@ -40,6 +43,7 @@ func NewPeersPool(TM *transport.TransportManager, localAddr *pb.PeerAddr, cm *ad
 	pPool.CM = cm
 	pPool.alivePeers = 0
 	pPool.namespace = namespace
+	pPool.logger = common.GetLogger(namespace,"peerspool")
 	return &pPool
 }
 
@@ -69,26 +73,26 @@ func (this *PeersPool) PutPeer(addr pb.PeerAddr, client *Peer) error {
 	//log.Println("Add a peer:",addrString)
 	if _, ok := this.peers[addr.Hash]; ok {
 		// the pool already has this client
-		log.Critical("Node ", addr.ID, ":", addr.IP, addr.Port, "The client already in")
+		this.logger.Critical("Node ", addr.ID, ":", addr.IP, addr.Port, "The client already in")
 		this.peers[addr.Hash].Close()
 		this.peers[addr.Hash] = client
 		this.peers[addr.Hash].Alive = true
 
 		persistAddr, err := proto.Marshal(addr.ToPeerAddress())
 		if err != nil {
-			log.Errorf("cannot marshal the marshal Addreass for %v", addr)
+			this.logger.Errorf("cannot marshal the marshal Addreass for %v", addr)
 		}
 		persist.PutData(addr.Hash, persistAddr, this.namespace)
 		return errors.New("The client already in, updated the peer info")
 
 	} else {
-		log.Debug("alive peers number is:", this.alivePeers)
+		this.logger.Debug("alive peers number is:", this.alivePeers)
 		this.alivePeers += 1
 		this.peers[addr.Hash] = client
 		//persist the peer hash into data base
 		persistAddr, err := proto.Marshal(addr.ToPeerAddress())
 		if err != nil {
-			log.Errorf("cannot marshal the marshal Addreass for %v", addr)
+			this.logger.Errorf("cannot marshal the marshal Addreass for %v", addr)
 		}
 		persist.PutData(addr.Hash, persistAddr, this.namespace)
 		return nil
@@ -102,7 +106,7 @@ func (this *PeersPool) PutPeerToTemp(addr pb.PeerAddr, client *Peer) error {
 	//log.Println("Add a peer:",addrString)
 	if _, ok := this.tempPeers[addr.Hash]; ok {
 		// the pool already has this client
-		log.Error(addr.IP, addr.Port, "The client already in temp")
+		this.logger.Error(addr.IP, addr.Port, "The client already in temp")
 		this.tempPeers[addr.Hash].Close()
 		return errors.New("The client already in")
 
@@ -126,7 +130,7 @@ func (this *PeersPool) GetPeerByHash(hash string) (*Peer, error) {
 
 // GetPeer get a peer point by the peer address
 func (this *PeersPool) GetPeer(addr pb.PeerAddr) *Peer {
-	log.Critical("inner get peer")
+	this.logger.Critical("inner get peer")
 	if client, ok := this.peers[addr.Hash]; ok {
 		return client
 	} else {
@@ -210,7 +214,7 @@ func (this *PeersPool) ToRoutingTableWithout(hash string) pb.Routers {
 func (this *PeersPool) MergeFromRoutersToTemp(routers pb.Routers, introducer *pb.PeerAddr) {
 	payload, err := proto.Marshal(this.localAddr.ToPeerAddress())
 	if err != nil {
-		log.Error("merge from routers error ", err)
+		this.logger.Error("merge from routers error ", err)
 		return
 	}
 	for _, peerAddress := range routers.Routers {
@@ -219,10 +223,10 @@ func (this *PeersPool) MergeFromRoutersToTemp(routers pb.Routers, introducer *pb
 		}
 		peerAddr := pb.RecoverPeerAddr(peerAddress)
 
-		newpeer := NewPeer(peerAddr, this.localAddr, this.TM, this.CM)
+		newpeer := NewPeer(peerAddr, this.localAddr, this.TM, this.CM,this.namespace)
 		_, err := newpeer.Connect(payload, pb.Message_ATTEND, false, newpeer.AttendHandler)
 		if err != nil {
-			log.Error("merge from routers error ", err)
+			this.logger.Error("merge from routers error ", err)
 			continue
 		}
 		this.PutPeerToTemp(*newpeer.PeerAddr, newpeer)
@@ -236,13 +240,13 @@ func (this *PeersPool) MergeTempPeers(peer *Peer) {
 	//for _, tempPeer := range this.tempPeers {
 	//	if tempPeer.RemoteAddr.Hash == address.Hash {
 	if peer == nil {
-		log.Error("the peer to merge is nil");
+		this.logger.Error("the peer to merge is nil");
 		return
 	}
 	this.peers[peer.PeerAddr.Hash] = peer
 	persistAddr, err := proto.Marshal(peer.PeerAddr.ToPeerAddress())
 	if err != nil {
-		log.Errorf("cannot marshal the marshal Addreass for %v", peer.PeerAddr)
+		this.logger.Errorf("cannot marshal the marshal Addreass for %v", peer.PeerAddr)
 	}
 	persist.PutData(peer.PeerAddr.Hash, persistAddr, this.namespace)
 	delete(this.tempPeers, peer.PeerAddr.Hash)
