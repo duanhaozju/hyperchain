@@ -244,7 +244,7 @@ func (ns namespaceImpl) GetCAManager() *admittance.CAManager {
 
 //ProcessRequest process request under this namespace
 func (ns *namespaceImpl) ProcessRequest(request interface{}) interface{} {
-	if ns.status.state != running {
+	if ns.status.state == running {
 		if request != nil {
 			switch r := request.(type) {
 			case *common.RPCRequest:
