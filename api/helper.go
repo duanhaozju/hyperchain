@@ -77,7 +77,6 @@ func getPaillierPublickey(config *common.Config) hmEncryption.PaillierPublickey 
 }
 
 func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
-	log := common.GetLogger(namespace, "api")
 	height := edb.GetHeightOfChain(namespace)
 	latestBlk, err := edb.GetBlockByNumber(namespace, height)
 	if err != nil {
