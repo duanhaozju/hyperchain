@@ -33,7 +33,6 @@ func fetchDataNodesFromDBByBucketKey(db db.Database, treePrefix string, bucketKe
 		if err.Error() == ErrNotFound.Error() {
 			return dataNodes, nil
 		}
-		log.Errorf("DB get bucketKey ", bucketKey, "error is", err)
 		panic("Get bucketKey error from db error ")
 	}
 	if dataNodesValue == nil || len(dataNodesValue) <= len(DataNodesPrefix)+1 {
@@ -48,7 +47,6 @@ func fetchDataNodesFromDBByBucketKey(db db.Database, treePrefix string, bucketKe
 	//}
 
 	if err != nil {
-		log.Errorf("Marshal dataNodesValue error", err)
 		panic("Get bucketKey error from db error ")
 	}
 	return dataNodes, nil

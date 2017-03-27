@@ -4,6 +4,7 @@ import (
 	"github.com/hashicorp/golang-lru"
 	"sync"
 	"hyperchain/hyperdb/db"
+	"github.com/op/go-logging"
 )
 
 var (
@@ -48,26 +49,27 @@ type DataNodeCache struct {
 	lock       sync.RWMutex
 	size       uint64
 	maxSize    uint64
+	logger     *logging.Logger
 }
 
-func newDataNodeCache(treePrefix string, maxSizeMBs int) *DataNodeCache {
+func newDataNodeCache(treePrefix string, maxSizeMBs int, logger *logging.Logger) *DataNodeCache {
 	isEnabled := true
 	if maxSizeMBs <= 0 {
 		isEnabled = false
 	} else {
-		log.Infof("Constructing datanode-cache with max bucket cache size = [%d] MBs", maxSizeMBs)
+		logger.Infof("Constructing datanode-cache with max bucket cache size = [%d] MBs", maxSizeMBs)
 	}
 	if globalDataNodeCache.isEnable {
 		if globalDataNodeCache.cacheMap[treePrefix] == nil {
 			globalDataNodeCache.cacheMap[treePrefix], _ = lru.New(GlobalDataNodeCacheSize)
 		} else {
-			dataNodeCache := &DataNodeCache{TreePrefix: treePrefix, c: globalDataNodeCache.cacheMap[treePrefix], maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
+			dataNodeCache := &DataNodeCache{TreePrefix: treePrefix, c: globalDataNodeCache.cacheMap[treePrefix], maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled, logger: logger}
 			globalDataNodeCache.cacheMap[treePrefix] = nil
 			return dataNodeCache
 		}
 	}
 	cache, _ := lru.New(DefaultDataNodeCacheMaxSize)
-	return &DataNodeCache{TreePrefix: treePrefix, c: cache, maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
+	return &DataNodeCache{TreePrefix: treePrefix, c: cache, maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled, logger: logger}
 }
 
 func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(db db.Database, bucketKey BucketKey) (dataNodes DataNodes, err error) {
@@ -108,7 +110,7 @@ func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(db db.Database, buck
 	// step 3.
 	dataNodes, err = fetchDataNodesFromDBByBucketKey(db, dataNodeCache.TreePrefix, &bucketKey)
 	if err != nil {
-		log.Error("fetchDataNodesFromDBByBucketKey Error")
+		dataNodeCache.logger.Error("fetchDataNodesFromDBByBucketKey Error")
 		return dataNodes, err
 	}
 	if dataNodes == nil || len(dataNodes) == 0 {

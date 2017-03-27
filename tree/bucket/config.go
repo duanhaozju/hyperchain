@@ -3,6 +3,7 @@ package bucket
 import (
 	"fmt"
 	"hash/fnv"
+	"github.com/op/go-logging"
 )
 
 // ConfigNumBuckets - config name 'numBuckets' as it appears in yaml file
@@ -30,8 +31,8 @@ type config struct {
 	hashFunc               hashFunc
 }
 
-func initConfig(configs map[string]interface{}) {
-	log.Infof("configs passed during initialization = %#v", configs)
+func initConfig(configs map[string]interface{}, logger *logging.Logger) {
+	logger.Infof("configs passed during initialization = %#v", configs)
 
 	numBuckets, ok := configs[ConfigNumBuckets].(int)
 	if !ok {
@@ -48,7 +49,7 @@ func initConfig(configs map[string]interface{}) {
 		hashFunction = fnvHash
 	}
 	conf = newConfig(numBuckets, maxGroupingAtEachLevel, hashFunction)
-	log.Infof("Initializing bucket tree state implemetation with configurations %+v", conf)
+	logger.Infof("Initializing bucket tree state implemetation with configurations %+v", conf)
 }
 
 func newConfig(numBuckets int, maxGroupingAtEachLevel int, hashFunc hashFunc) *config {
@@ -99,7 +100,6 @@ func (config *config) getNumBucketsAtLowestLevel() int {
 }
 
 func (config *config) computeParentBucketNumber(bucketNumber int) int {
-	log.Debugf("Computing parent bucket number for bucketNumber [%d]", bucketNumber)
 	parentBucketNumber := bucketNumber / config.getMaxGroupingAtEachLevel()
 	if bucketNumber%config.getMaxGroupingAtEachLevel() != 0 {
 		parentBucketNumber++

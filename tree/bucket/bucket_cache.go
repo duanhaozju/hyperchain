@@ -5,6 +5,7 @@ import (
 	//"time"
 	"unsafe"
 	"hyperchain/hyperdb/db"
+	"github.com/op/go-logging"
 )
 const (
 	HASHLEN = 20
@@ -23,23 +24,24 @@ type BucketCache struct {
 	lock       sync.RWMutex
 	size       uint64
 	maxSize    uint64
+	logger     *logging.Logger
 }
 
-func newBucketCache(treePrefix string, maxSizeMBs int) *BucketCache {
+func newBucketCache(treePrefix string, maxSizeMBs int, logger *logging.Logger) *BucketCache {
 	isEnabled := true
 	if maxSizeMBs <= 0 {
 		isEnabled = false
 	} else {
-		log.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", maxSizeMBs)
+		logger.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", maxSizeMBs)
 	}
-	return &BucketCache{TreePrefix: treePrefix, c: make(map[BucketKey]*BucketNode), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled}
+	return &BucketCache{TreePrefix: treePrefix, c: make(map[BucketKey]*BucketNode), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled, logger: logger}
 }
 
 func (cache *BucketCache) clearAllCache() *BucketCache {
 	isEnabled := true
 	if cache.isEnabled {
 	} else {
-		log.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", cache.maxSize)
+		cache.logger.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", cache.maxSize)
 	}
 	tmp := &BucketCache{TreePrefix: cache.TreePrefix, c: make(map[BucketKey]*BucketNode), maxSize: uint64(cache.maxSize), isEnabled: isEnabled}
 	return tmp
