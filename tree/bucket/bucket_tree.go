@@ -11,7 +11,6 @@ import (
 )
 
 var (
-	log                   = logging.MustGetLogger("buckettree")
 	DataNodesPrefix       = "DataNodes"
 	BucketNodePrefix      = "BucketNode"
 	UpdatedValueSetPrefix = "UpdatedValueSet"
@@ -36,6 +35,7 @@ type BucketTree struct {
 	bucketCache            *BucketCache
 	dataNodeCache          *DataNodeCache
 	treeHashMap            map[*big.Int][]byte
+	logger                 *logging.Logger
 }
 
 type Conf struct {
@@ -46,22 +46,23 @@ type Conf struct {
 }
 
 // NewStateImpl constructs a new StateImpl
-func NewBucketTree(db db.Database, tree_prefix string) *BucketTree {
+func NewBucketTree(db db.Database, tree_prefix string, logger *logging.Logger) *BucketTree {
 	return &BucketTree{
 		db:         db,
 		treePrefix: tree_prefix,
+		logger:     logger,
 	}
 }
 
 // Initialize - method implementation for interface 'statemgmt.HashableState'
 func (bucketTree *BucketTree) Initialize(configs map[string]interface{}) error {
-	initConfig(configs)
+	initConfig(configs, bucketTree.logger)
 	rootBucketNode, err := fetchBucketNodeFromDB(bucketTree.db, bucketTree.treePrefix, constructRootBucketKey())
 	if err != nil {
 		return err
 	}
 	if rootBucketNode != nil {
-		bucketTree.persistedStateHash = rootBucketNode.computeCryptoHash()
+		bucketTree.persistedStateHash = rootBucketNode.computeCryptoHash(bucketTree.logger)
 		bucketTree.lastComputedCryptoHash = bucketTree.persistedStateHash
 	}
 
@@ -69,9 +70,9 @@ func (bucketTree *BucketTree) Initialize(configs map[string]interface{}) error {
 	if !ok {
 		bucketCacheMaxSize = defaultBucketCacheMaxSize
 	}
-	bucketTree.bucketCache = newBucketCache(bucketTree.treePrefix, bucketCacheMaxSize)
+	bucketTree.bucketCache = newBucketCache(bucketTree.treePrefix, bucketCacheMaxSize, bucketTree.logger)
 	bucketTree.bucketCache.loadAllBucketNodesFromDB()
-	bucketTree.dataNodeCache = newDataNodeCache(bucketTree.treePrefix, bucketCacheMaxSize)
+	bucketTree.dataNodeCache = newDataNodeCache(bucketTree.treePrefix, bucketCacheMaxSize, bucketTree.logger)
 	bucketTree.treeHashMap = make(map[*big.Int][]byte)
 	return nil
 }
@@ -107,10 +108,9 @@ func (bucketTree *BucketTree) ClearWorkingSet(changesPersisted bool) {
 
 // ComputeCryptoHash - method implementation for interface 'statemgmt.HashableState'
 func (bucketTree *BucketTree) ComputeCryptoHash() ([]byte, error) {
-	log.Debug("Enter - ComputeCryptoHash()")
-	// TODO there maybe have concurrent error
+	bucketTree.logger.Debug("Enter - ComputeCryptoHash()")
 	if bucketTree.recomputeCryptoHash {
-		log.Debug("Recomputing crypto-hash...")
+		bucketTree.logger.Debug("Recomputing crypto-hash...")
 		err := bucketTree.processDataNodeDelta()
 		if err != nil {
 			return nil, err
@@ -122,7 +122,7 @@ func (bucketTree *BucketTree) ComputeCryptoHash() ([]byte, error) {
 		bucketTree.lastComputedCryptoHash = bucketTree.computeRootNodeCryptoHash()
 		bucketTree.recomputeCryptoHash = false
 	} else {
-		log.Debug("Returing existing crypto-hash as recomputation not required")
+		bucketTree.logger.Debug("Returing existing crypto-hash as recomputation not required")
 	}
 	return bucketTree.lastComputedCryptoHash, nil
 }
@@ -139,7 +139,6 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 			// thread safe
 			existingDataNodes, err := bucketTree.dataNodeCache.FetchDataNodesFromCache(bucketTree.db, *bucketKey)
 			if err != nil {
-				log.Errorf("fetch datanodes failed. %s", err.Error())
 				wg.Done()
 				return
 			}
@@ -179,7 +178,6 @@ func (bucketTree *BucketTree) processBucketTreeDelta() error {
 				dbBucketNode, err := bucketTree.bucketCache.get(bucketTree.db, *bucketNode.bucketKey)
 				//log.Debugf("bucket node from db [%s]", dbBucketNode)
 				if err != nil {
-					log.Errorf("get bucketnode from cache failed. %s", err.Error())
 					wg.Done()
 					return
 				}
@@ -192,7 +190,7 @@ func (bucketTree *BucketTree) processBucketTreeDelta() error {
 					return
 				}
 				//log.Debugf("Computing cryptoHash for bucket [%s]", bucketNode)
-				cryptoHash := bucketNode.computeCryptoHash()
+				cryptoHash := bucketNode.computeCryptoHash(bucketTree.logger)
 				//log.Debugf("cryptoHash for bucket [%s] is [%x]", bucketNode, cryptoHash)
 				parentBucket := bucketTree.bucketTreeDelta.getOrCreateBucketNode(bucketNode.bucketKey.getParentKey())
 				parentBucket.setChildCryptoHash(bucketNode.bucketKey, cryptoHash)
@@ -205,7 +203,7 @@ func (bucketTree *BucketTree) processBucketTreeDelta() error {
 }
 
 func (bucketTree *BucketTree) computeRootNodeCryptoHash() []byte {
-	return bucketTree.bucketTreeDelta.getRootNode().computeCryptoHash()
+	return bucketTree.bucketTreeDelta.getRootNode().computeCryptoHash(bucketTree.logger)
 }
 
 // TODO test
@@ -321,9 +319,9 @@ func (bucketTree *BucketTree) addBucketNodeChangesForPersistence(writeBatch db.B
 func (bucketTree *BucketTree) updateCacheWithoutPersist(currentBlockNum *big.Int) {
 	value, ok := bucketTree.treeHashMap[currentBlockNum]
 	if ok {
-		log.Debug("the map has the block tree hash ", currentBlockNum)
+		bucketTree.logger.Debug("the map has the block tree hash ", currentBlockNum)
 		if bytes.Compare(value, bucketTree.lastComputedCryptoHash) == 0 {
-			log.Debug("the key hash is same as before ", value)
+			bucketTree.logger.Debug("the key hash is same as before ", value)
 		}
 	}
 	bucketTree.treeHashMap[currentBlockNum] = bucketTree.lastComputedCryptoHash
@@ -387,7 +385,7 @@ func (bucket *BucketTree) Reset() {
 // TODO test important
 // the func can make the buckettree revert to target block
 func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch db.Batch, currentBlockNum, toBlockNum *big.Int, flush, sync bool) error {
-	log.Debug("Start RevertToTargetBlock, from ", currentBlockNum)
+	bucketTree.logger.Debug("Start RevertToTargetBlock, from ", currentBlockNum)
 	keyValueMap := NewKVMap()
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
@@ -420,16 +418,16 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch db.Batch, currentBl
 
 		if err != nil {
 			if err.Error() == "leveldb: not found" {
-				log.Debug("current block has no change", i)
+				bucketTree.logger.Debug("current block has no change", i)
 				continue
 			} else {
-				log.Debug("Current BlockNum is", i, "Test RevertToTargetBlock Error", err.Error())
+				bucketTree.logger.Debug("Current BlockNum is", i, "Test RevertToTargetBlock Error", err.Error())
 				return err
 			}
 			continue
 		}
 		if value == nil || len(value) == 0 {
-			log.Debugf("There is no value update")
+			bucketTree.logger.Debugf("There is no value update")
 			continue
 		}
 

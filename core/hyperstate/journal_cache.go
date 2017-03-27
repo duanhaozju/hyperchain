@@ -68,6 +68,7 @@ func (cache *JournalCache) Fetch (address common.Address) *StateObject {
 // Create - create a empty object.
 func (cache *JournalCache) Create(address common.Address, s *StateDB) *StateObject {
 	obj := newObject(s, address, Account{}, nil, false, nil, s.logger)
+	cache.stateObjects[address] = obj
 	return obj
 }
 

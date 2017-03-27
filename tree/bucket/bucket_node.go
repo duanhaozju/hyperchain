@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 	"github.com/golang/protobuf/proto"
+	"github.com/op/go-logging"
 )
 
 type BucketNode struct {
@@ -77,7 +78,7 @@ func (bucketNode *BucketNode) mergeBucketNode(anotherBucketNode *BucketNode) {
 	}
 }
 
-func (bucketNode *BucketNode) computeCryptoHash() []byte {
+func (bucketNode *BucketNode) computeCryptoHash(logger *logging.Logger) []byte {
 	bucketNode.lock.RLock()
 	defer bucketNode.lock.RUnlock()
 	cryptoHashContent := []byte{}
@@ -85,20 +86,20 @@ func (bucketNode *BucketNode) computeCryptoHash() []byte {
 	for i, childCryptoHash := range bucketNode.childrenCryptoHash {
 		if childCryptoHash != nil {
 			numChildren++
-			log.Debugf("Appending crypto-hash for child bucket = [%s]", bucketNode.bucketKey.getChildKey(i))
+			logger.Debugf("Appending crypto-hash for child bucket = [%s]", bucketNode.bucketKey.getChildKey(i))
 			cryptoHashContent = append(cryptoHashContent, childCryptoHash...)
 		}
 	}
 	if numChildren == 0 {
-		log.Debugf("Returning <nil> crypto-hash of bucket = [%s] - because, it has not children", bucketNode.bucketKey)
+		logger.Debugf("Returning <nil> crypto-hash of bucket = [%s] - because, it has not children", bucketNode.bucketKey)
 		bucketNode.markedForDeletion = true
 		return nil
 	}
 	if numChildren == 1 {
-		log.Debugf("Propagating crypto-hash of single child node for bucket = [%s]", bucketNode.bucketKey)
+		logger.Debugf("Propagating crypto-hash of single child node for bucket = [%s]", bucketNode.bucketKey)
 		return cryptoHashContent
 	}
-	log.Debugf("Computing crypto-hash for bucket [%s] by merging [%d] children", bucketNode.bucketKey, numChildren)
+	logger.Debugf("Computing crypto-hash for bucket [%s] by merging [%d] children", bucketNode.bucketKey, numChildren)
 	if bucketNode.bucketKey.level <= 2 {
 		return ComputeCryptoHash(cryptoHashContent)
 	} else {

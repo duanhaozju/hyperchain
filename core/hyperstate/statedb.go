@@ -74,11 +74,12 @@ type StateDB struct {
 }
 
 // New - Create a new state from a given root
-func New(root common.Hash, db db.Database, bktConf *common.Config, height uint64, logger *logging.Logger) (*StateDB, error) {
+func New(root common.Hash, db db.Database, bktConf *common.Config, height uint64, namespace string) (*StateDB, error) {
+	logger := common.GetLogger(namespace, "state")
 	csc, _ := lru.New(codeSizeCacheSize)
 	// initialize bucket tree
 	bucketPrefix, _ := CompositeStateBucketPrefix()
-	bucketTree := bucket.NewBucketTree(db, string(bucketPrefix))
+	bucketTree := bucket.NewBucketTree(db, string(bucketPrefix), logger)
 	// initialize cache
 	batchCache, _ := common.NewCache()
 	contentCache, _ := common.NewCache()
@@ -120,7 +121,7 @@ func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	bucketPrefix, _ := CompositeStateBucketPrefix()
-	bucketTree := bucket.NewBucketTree(self.db, string(bucketPrefix))
+	bucketTree := bucket.NewBucketTree(self.db, string(bucketPrefix), self.logger)
 	state := &StateDB{
 		db:                self.db,
 		codeSizeCache:     self.codeSizeCache,
@@ -872,7 +873,7 @@ func (self *StateDB) RevertToJournal(targetHeight uint64, currentHeight uint64, 
 	for addr := range dirtyStateObjectSet.Iter() {
 		address := addr.(common.Address)
 		prefix, _ := CompositeStorageBucketPrefix(address.Bytes())
-		bucketTree := bucket.NewBucketTree(self.db, string(prefix))
+		bucketTree := bucket.NewBucketTree(self.db, string(prefix), self.logger)
 		bucketTree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT)))
 		bucketTree.ClearAllCache()
 		// don't flush into disk util all operations finish
