@@ -197,6 +197,8 @@ func (hl *HyperLogger) initLoggerLevelByConfiguration(conf *Config) {
 // setModuleLogLevel sets the logging level for the specified module, eg global::consensus
 func (hl *HyperLogger) setModuleLogLevel(name string, module string, logLevel string) (string, error) {
 
+	fmt.Println("===== setModuleLogLevel name: ", name, " ", module)
+
 	compositeModuleName := getCompositeModuleName(name, module)
 	level, err := logging.LogLevel(logLevel)
 	logLevelString := level.String()
