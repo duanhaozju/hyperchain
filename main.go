@@ -32,6 +32,8 @@ func newHyperchain(argV *argT) *hyperchain {
 
 	hp.nsMgr = namespace.GetNamespaceManager(globalConfig)
 	hp.hs = jsonrpc.GetHttpServer(hp.nsMgr, hp.stopFlag, hp.restartFlag)
+
+	logger = common.GetLogger(namespace.DEFAULT_LOG, "main")
 	return hp
 }
 
@@ -65,10 +67,6 @@ type argT struct {
 var (
 	logger *logging.Logger
 )
-
-func init() {
-	logger = logging.MustGetLogger("main")
-}
 
 func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
