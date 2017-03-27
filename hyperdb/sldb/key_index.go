@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -39,6 +40,7 @@ type KeyIndex struct {
 	bf                 *bloom.BloomFilter
 	db                 *leveldb.DB
 	keyPrefix          []byte
+	keyPrefixLock      *sync.RWMutex
 	lastStartKeyPrefix []byte
 	currStartKeyPrefix []byte
 	bloomPath          string
@@ -51,11 +53,12 @@ func NewKeyIndex(conf *common.Config, ns string, db *leveldb.DB, path string) *K
 		uint(conf.GetInt(SLDB_INDEX_HASH_NUM)))
 
 	index := &KeyIndex{
-		namespace: ns,
-		bf:        filter,
-		db:        db,
-		keyPrefix: []byte(ns + "_bloom_key."),
-		bloomPath: path,
+		namespace:     ns,
+		bf:            filter,
+		db:            db,
+		keyPrefix:     []byte(ns + "_bloom_key."),
+		bloomPath:     path,
+		keyPrefixLock: new(sync.RWMutex),
 	}
 	index.Init()
 	return index
@@ -174,6 +177,8 @@ func (ki *KeyIndex) addKeyIndexIntoBatch(key []byte, keyBatch *leveldb.Batch) er
 
 //persistKey add key into the db
 func (ki *KeyIndex) persistKey(key []byte) error {
+	ki.keyPrefixLock.RLock()
+	defer ki.keyPrefixLock.RUnlock()
 	nkey := []byte(string(ki.keyPrefix) + string(key))
 	return ki.db.Put(nkey, key, nil)
 }
@@ -182,12 +187,11 @@ func (ki *KeyIndex) persistKey(key []byte) error {
 //drop keys which is generated a day ago
 //invoked after persistBloom
 func (ki *KeyIndex) dropPreviousKey() error {
-
-	start := ki.newCheckPointKey(time.Now().UnixNano() - 24*time.Hour.Nanoseconds())
+	limit := ki.newCheckPointKey(time.Now().UnixNano() - ki.conf.GetDuration(SLDB_INDEX_DUMP_INTERVAL).Nanoseconds())
 
 	r := &util.Range{
-		Start: start,
-		Limit: ki.checkPointKey(),
+		Start: ki.lastStartKeyPrefix,
+		Limit: limit,
 	}
 	it := ki.db.NewIterator(r, nil)
 	for it.Next() {
@@ -198,84 +202,42 @@ func (ki *KeyIndex) dropPreviousKey() error {
 	return nil
 }
 
-//persistBloom persist bloom filter
-//1.persist current bloom into a tmp file
-//2.rename tmp file
-//func (ki *KeyIndex) persistBloom() error {
-//	tmpName := ki.bloomPath + ".tmp." + strconv.FormatInt(time.Now().UnixNano(), 10)
-//	inputFile, err := os.Open(tmpName)
-//	if err == nil {
-//		size, err := ki.bf.WriteTo(inputFile)
-//		fmt.Printf("persist bloom filter for namespace: %s size: %d\n", ki.Namespace(), size)
-//		return err
-//	} else {
-//		// no such file
-//		log.Criticalf("Bloom dir: %s", ki.conf.GetString(SLDB_INDEX_DIR))
-//		err = os.MkdirAll(ki.conf.GetString(SLDB_INDEX_DIR), 0777)
-//		if err != nil {
-//			log.Errorf("persist bloom error %v", err)
-//			return err
-//		}
-//		inputFile, err = os.Create(tmpName)
-//		if err == nil {
-//			size, err := ki.bf.WriteTo(inputFile)
-//			log.Debugf("persist bloom filter for namespace: %s size: %d", ki.Namespace(), size)
-//			if err == nil {
-//				err = os.Rename(tmpName, ki.bloomPath)
-//			}
-//			return err
-//		}
-//	}
-//	//warn: should reset lastStartKey only after the bloom filter has been persisted
-//	err = ki.db.Put(ki.lastStartKey(), ki.currStartKeyPrefix, nil)
-//	ki.lastStartKeyPrefix = ki.currStartKeyPrefix
-//	ki.currStartKeyPrefix = ki.checkPointKey()
-//	ki.keyPrefix = ki.currStartKeyPrefix
-//	return err
-//}
-
 func (ki *KeyIndex) persistBloom() error {
-	tmpName := ki.bloomPath + ".tmp." + strconv.FormatInt(time.Now().UnixNano(), 10)
-	inputFile, err := os.Open(tmpName)
-	if err == nil {
-		size, err := ki.bf.WriteTo(inputFile)
-		log.Noticef("persist bloom filter for namespace: %s size: %d\n", ki.Namespace(), size)
-		return err
-	} else {
-		// no such file
-		err = os.MkdirAll(ki.conf.GetString(SLDB_INDEX_DIR), 0777)
-		//err = os.MkdirAll(ki.bloomPath, 0777)
+	bloomDir := ki.conf.GetString(SLDB_INDEX_DIR)
+	_, error := os.Stat(bloomDir)
+	if !(error == nil || os.IsExist(error)) {
+		err := os.MkdirAll(bloomDir, 0777)
 		if err != nil {
-			log.Errorf("persist bloom error %v", err)
-			return err
-		}
-		inputFile, err = os.Create(tmpName)
-		if err == nil {
-			size, err := ki.bf.WriteTo(inputFile)
-			log.Noticef("persist bloom filter for namespace: %s size: %d", ki.Namespace(), size)
-			if err == nil {
-				err = os.Rename(tmpName, ki.bloomPath)
-				if err != nil {
-					log.Noticef("rename file %v to %v, error: %v", tmpName, ki.bloomPath, err)
-					return err
-				}
-			} else {
-				log.Errorf("persist bloom filter for namespace: %s size: %d err %v", ki.Namespace(), size, err)
-				return err
-			}
-		} else {
-			log.Noticef("create temp file: %v, error: %v", tmpName, err)
-			return err
+			log.Errorf("make bloom file dir error %v", err)
 		}
 	}
+	tmpName := ki.bloomPath + ".tmp." + strconv.FormatInt(time.Now().UnixNano(), 10)
+	inputFile, err := os.Create(tmpName)
+	if err != nil {
+		log.Errorf("persist bloom filter error %v", err)
+		return err
+	}
+	size, err := ki.bf.WriteTo(inputFile)
+	log.Noticef("persist bloom filter for namespace: %s size: %d", ki.Namespace(), size)
+	if err == nil {
+		err = os.Rename(tmpName, ki.bloomPath)
+		if err != nil {
+			log.Noticef("rename file %v to %v, error: %v", tmpName, ki.bloomPath, err)
+			return err
+		}
+	} else {
+		log.Errorf("persist bloom filter for namespace: %s size: %d err %v", ki.Namespace(), size, err)
+		return err
+	}
 	//warn: should reset lastStartKey only after the bloom filter has been persisted
+	ki.keyPrefixLock.Lock()
+	defer ki.keyPrefixLock.Unlock()
 	err = ki.db.Put(ki.lastStartKey(), ki.currStartKeyPrefix, nil)
 	ki.lastStartKeyPrefix = ki.currStartKeyPrefix
 	ki.currStartKeyPrefix = ki.checkPointKey()
 	ki.keyPrefix = ki.currStartKeyPrefix
 	return err
 }
-
 
 //BloomFilter just for test now
 func (ki *KeyIndex) Equals(otherKeyIndex *KeyIndex) bool {
