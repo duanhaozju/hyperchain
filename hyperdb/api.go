@@ -46,7 +46,6 @@ const (
 	opened
 )
 
-var log *logging.Logger // package-level logger
 type DbManager struct {
 	dbMap  map[string]*DBInstance
 	dbSync sync.Mutex
@@ -55,7 +54,6 @@ type DbManager struct {
 var dbMgr *DbManager
 
 func init() {
-	log = logging.MustGetLogger("hyperdb")
 	dbMgr = &DbManager{
 		dbMap: make(map[string]*DBInstance),
 	}
@@ -77,6 +75,7 @@ func SetDBConfig(dbConfig string, port string) {
 }
 
 func InitDatabase(conf *common.Config, namespace string) error {
+	log := getLogger(namespace)
 	log.Criticalf("init db for namespace %s", namespace)
 	dbMgr.dbSync.Lock()
 	defer dbMgr.dbSync.Unlock()
@@ -138,6 +137,7 @@ func GetDBDatabase() (db.Database, error) {
 	dbMgr.dbSync.Lock()
 	defer dbMgr.dbSync.Unlock()
 	if dbMgr.dbMap[getDbName(default_namespace)].db == nil {
+		log := getLogger(default_namespace)
 		log.Notice("GetDBDatabase() fail beacause dbMgr[GlobalBlockchain] has not been inited \n")
 		return nil, errors.New("GetDBDatabase() fail beacause dbMgr[GlobalBlockchain] has not been inited \n")
 	}
@@ -145,6 +145,7 @@ func GetDBDatabase() (db.Database, error) {
 }
 
 func GetDBDatabaseByNamespace(namespace string) (db.Database, error) {
+	log := getLogger(namespace)
 	dbMgr.dbSync.Lock()
 	defer dbMgr.dbSync.Unlock()
 	name := getDbName(namespace)
@@ -161,6 +162,7 @@ func GetDBDatabaseByNamespace(namespace string) (db.Database, error) {
 }
 
 func GetDBConsensusByNamespcae(namespace string) (db.Database, error) {
+	log := getLogger(namespace)
 	dbMgr.dbSync.Lock()
 	defer dbMgr.dbSync.Unlock()
 	name := getConsensusDbName(namespace)
@@ -179,13 +181,10 @@ func GetDBConsensusByNamespcae(namespace string) (db.Database, error) {
 func NewDatabase(conf *common.Config, path string, dbType int) (db.Database, error) {
 	switch dbType {
 	case ldb_db:
-		log.Notice("Use level db only")
 		return hleveldb.NewLDBDataBase(conf, path)
 	case super_level_db:
-		log.Notice("Use SuperLevelDB")
 		return sldb.NewSLDB(conf)
 	default:
-		log.Errorf("Wrong dbType:" + strconv.Itoa(dbType))
 		return nil, errors.New("Wrong dbType:" + strconv.Itoa(dbType))
 	}
 }
@@ -206,4 +205,8 @@ func getConsensusDbName(namespace string) string {
 //getDbName get ordinary db composite name by namespace.
 func getDbName(namespace string) string {
 	return namespace + blockchain
+}
+
+func getLogger(namespace string) *logging.Logger {
+	return common.GetLogger(namespace, "hyperdb")
 }

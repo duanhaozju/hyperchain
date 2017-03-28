@@ -4,28 +4,27 @@ package mdb
 
 import (
 	"errors"
-	"sync"
 	"hyperchain/hyperdb/db"
+	"sync"
 )
 
-//-- 拷贝并返回一个[]byte
+//CopyBytes Copy and return []byte.
 func CopyBytes(b []byte) (copiedBytes []byte) {
 	copiedBytes = make([]byte, len(b))
 	copy(copiedBytes, b)
 	return
 }
 
-//-- 用内存模拟实现一个mem db
-//-- 实现了DataBase接口
+//MemDatabase a type of in-memory db implementation of DataBase.
 type MemDatabase struct {
-	key []string
+	key   []string
 	value [][]byte
-	lock sync.RWMutex
+	lock  sync.RWMutex
 }
 
 func NewMemDatabase() (*MemDatabase, error) {
 	return &MemDatabase{
-		key: nil,
+		key:   nil,
 		value: nil,
 	}, nil
 }
@@ -74,8 +73,8 @@ func (db *MemDatabase) Delete(key []byte) error {
 
 	for k, v := range db.key {
 		if v == string(key) {
-			db.key = append(db.key[0:k], db.key[k+1: len(db.key)]...)
-			db.value = append(db.value[0:k], db.value[k+1: len(db.value)]...)
+			db.key = append(db.key[0:k], db.key[k+1:len(db.key)]...)
+			db.value = append(db.value[0:k], db.value[k+1:len(db.value)]...)
 		}
 	}
 	return nil
@@ -85,8 +84,8 @@ func (db *MemDatabase) Close() {}
 
 type Iter struct {
 	index int
-	ptr *MemDatabase
-	str string
+	ptr   *MemDatabase
+	str   string
 }
 
 func (db *MemDatabase) NewIterator(str []byte) db.Iterator {
@@ -97,7 +96,7 @@ func (db *MemDatabase) NewIterator(str []byte) db.Iterator {
 	return &iter
 }
 
-func (iter *Iter) Next() bool{
+func (iter *Iter) Next() bool {
 	for {
 		iter.index += 1
 		if iter.index >= len(iter.ptr.key) {
@@ -108,7 +107,7 @@ func (iter *Iter) Next() bool{
 			continue
 		}
 		if iter.str == iter.ptr.key[iter.index][:len(iter.str)] {
-			break;
+			break
 		}
 	}
 	return true
@@ -183,8 +182,8 @@ func (b *memBatch) Write() error {
 		} else {
 			for idx, k := range b.db.key {
 				if k == string(kv.k) {
-					b.db.key = append(b.db.key[0:idx], b.db.key[idx+1: len(b.db.key)]...)
-					b.db.value = append(b.db.value[0:idx], b.db.value[idx+1: len(b.db.value)]...)
+					b.db.key = append(b.db.key[0:idx], b.db.key[idx+1:len(b.db.key)]...)
+					b.db.value = append(b.db.value[0:idx], b.db.value[idx+1:len(b.db.value)]...)
 					break
 				}
 			}
