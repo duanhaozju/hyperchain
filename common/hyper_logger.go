@@ -265,8 +265,8 @@ ml *moduleLogger, err error) {
 //newLogFileByInterval set new log file for hyperchain
 func (hl *HyperLogger) newLogFileByInterval(loggerDir string, conf *Config) {
 	tm := time.Now()
-	hour, min, sec := 20, 50, 0
-	duration := (hour)*3600 + min*60 + sec - (tm.Hour()*3600 + tm.Minute()*60 + tm.Second())
+	hour, min, sec := 3, 0, 0
+	duration := (24+hour)*3600 + min*60 + sec - (tm.Hour()*3600 + tm.Minute()*60 + tm.Second())
 	// first log split at 3:00 AM
 	// then split byte the interval
 	d, _ := time.ParseDuration(fmt.Sprintf("%ds", duration))
