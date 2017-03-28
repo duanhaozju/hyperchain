@@ -74,7 +74,6 @@ func InitHyperLogger(conf *Config) (*HyperLogger, error) {
 	if !conf.ContainsKey(NAMESPACE) {
 		conf.Set(NAMESPACE, DEFAULT_NAMESPACE)
 	}
-
 	hyperLogger := newHyperLogger(conf)
 	if hyperLogger == nil {
 		return nil, errors.New("Init Hyperlogger error: nil return")
@@ -207,9 +206,6 @@ func (hl *HyperLogger) init() {
 	loggerDir := conf.GetString(LOG_FILE_DIR)
 	hl.logDir = loggerDir
 
-	// debug
-	fmt.Println("=======", loggerDir)
-
 	fileName := path.Join(loggerDir,
 		"hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
 			time.Now().Format("-2006-01-02-15:04:05 PM")+".log")
@@ -239,9 +235,6 @@ func (hl *HyperLogger) init() {
 func (hl *HyperLogger) addNewLogger(compositeName string, file *os.File,
 fileFormat string, consoleFormat string, logLevel string, writeFile bool) (
 ml *moduleLogger, err error) {
-	// debug
-	fmt.Println("=========", compositeName)
-	fmt.Println("=========", file)
 	if hl.moduleLoggers == nil {
 		err = errors.New("addNewLogger error: moduleLoggers nil")
 		return nil, err
