@@ -9,13 +9,13 @@ import (
 
 func TestGetReceipt(t *testing.T) {
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	batch := db.NewBatch()
 	err, _ := PersistReceipt(batch, &test_util.Receipt, true, true)
 	if err != nil {
 		t.Errorf("PersistReceipt fail")
 	}
-	res := GetReceipt(hyperdb.DefautNameSpace, common.BytesToHash(test_util.Receipt.TxHash))
+	res := GetReceipt(hyperdb.defaut_namespace, common.BytesToHash(test_util.Receipt.TxHash))
 	if res == nil {
 		t.Errorf("GetReceipt fail")
 	}

@@ -9,7 +9,7 @@ import (
 )
 
 type Log struct {
-	// Consensus fields
+	// consensus fields
 	Address common.Address `json:"Address"`
 	Topics  []common.Hash  `json:"Topics"`
 	Data    []byte         `json:"Data"`

@@ -10,13 +10,13 @@ import (
 func TestGetPostStateOfReceipt(t *testing.T) {
 	logger.Info("test =============> > > TestGetPostStateOfReceipt")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	batch := db.NewBatch()
 	err, _ := PersistReceipt(batch, &test_util.Receipt, true, true)
 	if err != nil {
 		t.Errorf("PersistReceipt fail")
 	}
-	res := GetReceipt(hyperdb.DefautNameSpace, common.BytesToHash(test_util.Receipt.TxHash))
+	res := GetReceipt(hyperdb.defaut_namespace, common.BytesToHash(test_util.Receipt.TxHash))
 	if res == nil {
 		t.Errorf("GetReceipt fail")
 	}
@@ -29,13 +29,13 @@ func TestGetPostStateOfReceipt(t *testing.T) {
 func TestGetCumulativeGasUsedOfReceipt(t *testing.T) {
 	logger.Info("test =============> > > TestGetCumulativeGasUsedOfReceipt")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	batch := db.NewBatch()
 	err, _ := PersistReceipt(batch, &test_util.Receipt, true, true)
 	if err != nil {
 		t.Errorf("PersistReceipt fail")
 	}
-	res := GetReceipt(hyperdb.DefautNameSpace, common.BytesToHash(test_util.Receipt.TxHash))
+	res := GetReceipt(hyperdb.defaut_namespace, common.BytesToHash(test_util.Receipt.TxHash))
 	if res == nil {
 		t.Errorf("GetReceipt fail")
 	}
@@ -48,13 +48,13 @@ func TestGetCumulativeGasUsedOfReceipt(t *testing.T) {
 func TestGetTxHashOfReceipt(t *testing.T) {
 	logger.Info("test =============> > > TestGetTxHashOfReceipt")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	batch := db.NewBatch()
 	err, _ := PersistReceipt(batch, &test_util.Receipt, true, true)
 	if err != nil {
 		t.Errorf("PersistReceipt fail")
 	}
-	res := GetReceipt(hyperdb.DefautNameSpace, common.BytesToHash(test_util.Receipt.TxHash))
+	res := GetReceipt(hyperdb.defaut_namespace, common.BytesToHash(test_util.Receipt.TxHash))
 	if res == nil {
 		t.Errorf("GetReceipt fail")
 	}
@@ -67,13 +67,13 @@ func TestGetTxHashOfReceipt(t *testing.T) {
 func TestGetContractAddressOfReceipt(t *testing.T) {
 	logger.Info("test =============> > > TestGetContractAddressOfReceipt")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	batch := db.NewBatch()
 	err, _ := PersistReceipt(batch, &test_util.Receipt, true, true)
 	if err != nil {
 		t.Errorf("PersistReceipt fail")
 	}
-	res := GetReceipt(hyperdb.DefautNameSpace, common.BytesToHash(test_util.Receipt.TxHash))
+	res := GetReceipt(hyperdb.defaut_namespace, common.BytesToHash(test_util.Receipt.TxHash))
 	if res == nil {
 		t.Errorf("GetReceipt fail")
 	}
@@ -86,13 +86,13 @@ func TestGetContractAddressOfReceipt(t *testing.T) {
 func TestGetGasUsedOfReceipt(t *testing.T) {
 	logger.Info("test =============> > > TestGetGasUsedOfReceipt")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	batch := db.NewBatch()
 	err, _ := PersistReceipt(batch, &test_util.Receipt, true, true)
 	if err != nil {
 		t.Errorf("PersistReceipt fail")
 	}
-	res := GetReceipt(hyperdb.DefautNameSpace, common.BytesToHash(test_util.Receipt.TxHash))
+	res := GetReceipt(hyperdb.defaut_namespace, common.BytesToHash(test_util.Receipt.TxHash))
 	if res == nil {
 		t.Errorf("GetReceipt fail")
 	}
@@ -105,13 +105,13 @@ func TestGetGasUsedOfReceipt(t *testing.T) {
 func TestGetRetOfReceipt(t *testing.T) {
 	logger.Info("test =============> > > TestGetRetOfReceipt")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	batch := db.NewBatch()
 	err, _ := PersistReceipt(batch, &test_util.Receipt, true, true)
 	if err != nil {
 		t.Errorf("PersistReceipt fail")
 	}
-	res := GetReceipt(hyperdb.DefautNameSpace, common.BytesToHash(test_util.Receipt.TxHash))
+	res := GetReceipt(hyperdb.defaut_namespace, common.BytesToHash(test_util.Receipt.TxHash))
 	if res == nil {
 		t.Errorf("GetReceipt fail")
 	}
@@ -124,13 +124,13 @@ func TestGetRetOfReceipt(t *testing.T) {
 func TestGetStatusOfReceipt(t *testing.T) {
 	logger.Info("test =============> > > TestGetStatusOfReceipt")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	batch := db.NewBatch()
 	err, _ := PersistReceipt(batch, &test_util.Receipt, true, true)
 	if err != nil {
 		t.Errorf("PersistReceipt fail")
 	}
-	res := GetReceipt(hyperdb.DefautNameSpace, common.BytesToHash(test_util.Receipt.TxHash))
+	res := GetReceipt(hyperdb.defaut_namespace, common.BytesToHash(test_util.Receipt.TxHash))
 	if res == nil {
 		t.Errorf("GetReceipt fail")
 	}
@@ -143,13 +143,13 @@ func TestGetStatusOfReceipt(t *testing.T) {
 func TestGetMessageOfReceipt(t *testing.T) {
 	logger.Info("test =============> > > TestGetMessageOfReceipt")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	batch := db.NewBatch()
 	err, _ := PersistReceipt(batch, &test_util.Receipt, true, true)
 	if err != nil {
 		t.Errorf("PersistReceipt fail")
 	}
-	res := GetReceipt(hyperdb.DefautNameSpace, common.BytesToHash(test_util.Receipt.TxHash))
+	res := GetReceipt(hyperdb.defaut_namespace, common.BytesToHash(test_util.Receipt.TxHash))
 	if res == nil {
 		t.Errorf("GetReceipt fail")
 	}

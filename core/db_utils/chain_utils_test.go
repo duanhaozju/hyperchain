@@ -32,25 +32,25 @@ var mCs = memChains {
 func TestInitializeChain(t *testing.T) {
 	logger.Info("test =============> > > TestInitializeChain")
 	InitDataBase()
-	InitializeChain(hyperdb.DefautNameSpace)
+	InitializeChain(hyperdb.defaut_namespace)
 
-	SetHeightOfChain(hyperdb.DefautNameSpace, 10)
-	if GetHeightOfChain(hyperdb.DefautNameSpace) != 10 {
+	SetHeightOfChain(hyperdb.defaut_namespace, 10)
+	if GetHeightOfChain(hyperdb.defaut_namespace) != 10 {
 		t.Errorf("SetHeightOfChain and GetHeightOfChain fail")
 	}
 
-	SetTxSumOfChain(hyperdb.DefautNameSpace, 10)
-	if GetTxSumOfChain(hyperdb.DefautNameSpace) != 10 {
+	SetTxSumOfChain(hyperdb.defaut_namespace, 10)
+	if GetTxSumOfChain(hyperdb.defaut_namespace) != 10 {
 		t.Errorf("SetTxSumOfChain and GetTxSumOfChain fail")
 	}
 
-	SetLatestBlockHash(hyperdb.DefautNameSpace, []byte("00000 00000 00000 00000 00000 00000 04"))
-	if string(GetLatestBlockHash(hyperdb.DefautNameSpace)) != "00000 00000 00000 00000 00000 00000 04"{
+	SetLatestBlockHash(hyperdb.defaut_namespace, []byte("00000 00000 00000 00000 00000 00000 04"))
+	if string(GetLatestBlockHash(hyperdb.defaut_namespace)) != "00000 00000 00000 00000 00000 00000 04"{
 		t.Errorf("SetLatestBlockHash and GetLatestBlockHash fail")
 	}
 
-	SetParentBlockHash(hyperdb.DefautNameSpace, []byte("00000 00000 00000 00000 00000 00000 05"))
-	if string(GetParentBlockHash(hyperdb.DefautNameSpace)) != "00000 00000 00000 00000 00000 00000 05" {
+	SetParentBlockHash(hyperdb.defaut_namespace, []byte("00000 00000 00000 00000 00000 00000 05"))
+	if string(GetParentBlockHash(hyperdb.defaut_namespace)) != "00000 00000 00000 00000 00000 00000 05" {
 		t.Errorf("SetParentBlockHash and GetParentBlockHash fail")
 	}
 	deleteTestData()
@@ -60,10 +60,10 @@ func TestInitializeChain(t *testing.T) {
 func TestGetChainCopy(t *testing.T) {
 	logger.Info("test =============> > > TestGetChainCopy")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	UpdateChainByBlcokNum(hyperdb.DefautNameSpace, db.NewBatch(), 1, true, true)
-	ch := GetChainCopy(hyperdb.DefautNameSpace)
+	UpdateChainByBlcokNum(hyperdb.defaut_namespace, db.NewBatch(), 1, true, true)
+	ch := GetChainCopy(hyperdb.defaut_namespace)
 	if ch.Height != 1 || !reflect.DeepEqual(ch.ParentBlockHash, []byte("parentHash")) {
 		t.Errorf("GetChainCopy fail")
 	}
@@ -74,7 +74,7 @@ func TestGetChainCopy(t *testing.T) {
 func TestGetChainUntil(t *testing.T) {
 	logger.Info("test =============> > > TestGetChainUntil")
 	InitDataBase()
-	go WriteChainChan(hyperdb.DefautNameSpace)
-	GetChainUntil(hyperdb.DefautNameSpace)
+	go WriteChainChan(hyperdb.defaut_namespace)
+	GetChainUntil(hyperdb.defaut_namespace)
 	deleteTestData()
 }

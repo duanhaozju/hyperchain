@@ -10,11 +10,11 @@ import (
 func TestGetLatestBlockHashOfChain(t *testing.T) {
 	logger.Info("test =============> > > TestGetLatestBlockHashOfChain")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	InitializeChain(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
+	InitializeChain(hyperdb.defaut_namespace)
 	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	UpdateChainByBlcokNum(hyperdb.DefautNameSpace, db.NewBatch(), 1, true, true)
-	ch := chains.GetChain(hyperdb.DefautNameSpace)
+	UpdateChainByBlcokNum(hyperdb.defaut_namespace, db.NewBatch(), 1, true, true)
+	ch := chains.GetChain(hyperdb.defaut_namespace)
 	if !reflect.DeepEqual(ch.data.LatestBlockHash, []byte("blockHash")) {
 		t.Errorf("TestGetLatestBlockHashOfChain fail")
 	}
@@ -24,11 +24,11 @@ func TestGetLatestBlockHashOfChain(t *testing.T) {
 func TestGetParentBlockHashOfChain(t *testing.T) {
 	logger.Info("test =============> > > TestGetParentBlockHashOfChain")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	InitializeChain(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
+	InitializeChain(hyperdb.defaut_namespace)
 	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	UpdateChainByBlcokNum(hyperdb.DefautNameSpace, db.NewBatch(), 1, true, true)
-	ch := chains.GetChain(hyperdb.DefautNameSpace)
+	UpdateChainByBlcokNum(hyperdb.defaut_namespace, db.NewBatch(), 1, true, true)
+	ch := chains.GetChain(hyperdb.defaut_namespace)
 	if !reflect.DeepEqual(ch.data.ParentBlockHash, []byte("parentHash")) {
 		t.Errorf("TestGetParentBlockHashOfChain fail")
 	}
@@ -38,11 +38,11 @@ func TestGetParentBlockHashOfChain(t *testing.T) {
 func TestGetHeightOfChain(t *testing.T) {
 	logger.Info("test =============> > > TestGetHeightOfChain")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
-	InitializeChain(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
+	InitializeChain(hyperdb.defaut_namespace)
 	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	UpdateChainByBlcokNum(hyperdb.DefautNameSpace, db.NewBatch(), 1, true, true)
-	ch := chains.GetChain(hyperdb.DefautNameSpace)
+	UpdateChainByBlcokNum(hyperdb.defaut_namespace, db.NewBatch(), 1, true, true)
+	ch := chains.GetChain(hyperdb.defaut_namespace)
 	if ch.data.Height != 1 {
 		t.Errorf("TestGetHeightOfChain fail")
 	}
@@ -52,9 +52,9 @@ func TestGetHeightOfChain(t *testing.T) {
 func TestGetRequiredBlockNumOfChain(t *testing.T) {
 	logger.Info("test =============> > > TestGetRequiredBlockNumOfChain")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	putChain(db.NewBatch(), &chain, true, true)
-	chain, _ := getChain(hyperdb.DefautNameSpace)
+	chain, _ := getChain(hyperdb.defaut_namespace)
 	if chain.RequiredBlockNum != 3 {
 		t.Errorf("TestGetRequiredBlockNumOfChain fail")
 	}
@@ -64,9 +64,9 @@ func TestGetRequiredBlockNumOfChain(t *testing.T) {
 func TestGetRequireBlockHashOfChain(t *testing.T) {
 	logger.Info("test =============> > > TestGetRequireBlockHashOfChain")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	putChain(db.NewBatch(), &chain, true, true)
-	chain, _ := getChain(hyperdb.DefautNameSpace)
+	chain, _ := getChain(hyperdb.defaut_namespace)
 	if !reflect.DeepEqual(chain.RequireBlockHash, []byte("00000000000000000000000000000003")) {
 		t.Errorf("TestGetRequireBlockHashOfChain fail")
 	}
@@ -76,9 +76,9 @@ func TestGetRequireBlockHashOfChain(t *testing.T) {
 func TestGetRecoveryNumOfChain(t *testing.T) {
 	logger.Info("test =============> > > TestGetRecoveryNumOfChain")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	putChain(db.NewBatch(), &chain, true, true)
-	chain, _ := getChain(hyperdb.DefautNameSpace)
+	chain, _ := getChain(hyperdb.defaut_namespace)
 	if chain.RecoveryNum != 2 {
 		t.Errorf("TestGetRecoveryNumOfChain fail")
 	}
@@ -88,9 +88,9 @@ func TestGetRecoveryNumOfChain(t *testing.T) {
 func TestGetCurrentTxSumOfChain(t *testing.T) {
 	logger.Info("test =============> > > TestGetCurrentTxSumOfChain")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	putChain(db.NewBatch(), &chain, true, true)
-	chain, _ := getChain(hyperdb.DefautNameSpace)
+	chain, _ := getChain(hyperdb.defaut_namespace)
 	if chain.CurrentTxSum != 100 {
 		t.Errorf("TestGetCurrentTxSumOfChain fail")
 	}

@@ -9,13 +9,13 @@ import (
 func TestGetVersionOfTransaction(t *testing.T) {
 	logger.Info("test =============> > > TestGetVersionOfTransaction")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	key := test_util.TransactionCases[0].GetHash().Bytes()
-	tr, err := GetTransaction(hyperdb.DefautNameSpace, key)
+	tr, err := GetTransaction(hyperdb.defaut_namespace, key)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -28,13 +28,13 @@ func TestGetVersionOfTransaction(t *testing.T) {
 func TestGetFromOfTransaction(t *testing.T) {
 	logger.Info("test =============> > > TestGetFromOfTransaction")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	key := test_util.TransactionCases[0].GetHash().Bytes()
-	tr, err := GetTransaction(hyperdb.DefautNameSpace, key)
+	tr, err := GetTransaction(hyperdb.defaut_namespace, key)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -47,13 +47,13 @@ func TestGetFromOfTransaction(t *testing.T) {
 func TestGetToOfTransaction(t *testing.T) {
 	logger.Info("test =============> > > TestGetToOfTransaction")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	key := test_util.TransactionCases[0].GetHash().Bytes()
-	tr, err := GetTransaction(hyperdb.DefautNameSpace, key)
+	tr, err := GetTransaction(hyperdb.defaut_namespace, key)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -66,13 +66,13 @@ func TestGetToOfTransaction(t *testing.T) {
 func TestGetValueOfTransaction(t *testing.T) {
 	logger.Info("test =============> > > TestGetValueOfTransaction")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	key := test_util.TransactionCases[0].GetHash().Bytes()
-	tr, err := GetTransaction(hyperdb.DefautNameSpace, key)
+	tr, err := GetTransaction(hyperdb.defaut_namespace, key)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -85,13 +85,13 @@ func TestGetValueOfTransaction(t *testing.T) {
 func TestGetTimestampOfTransaction(t *testing.T) {
 	logger.Info("test =============> > > TestGetTimestampOfTransaction")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	key := test_util.TransactionCases[0].GetHash().Bytes()
-	tr, err := GetTransaction(hyperdb.DefautNameSpace, key)
+	tr, err := GetTransaction(hyperdb.defaut_namespace, key)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -104,13 +104,13 @@ func TestGetTimestampOfTransaction(t *testing.T) {
 func TestGetSignatureOfTransaction(t *testing.T) {
 	logger.Info("test =============> > > TestGetSignatureOfTransaction")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	key := test_util.TransactionCases[0].GetHash().Bytes()
-	tr, err := GetTransaction(hyperdb.DefautNameSpace, key)
+	tr, err := GetTransaction(hyperdb.defaut_namespace, key)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -123,13 +123,13 @@ func TestGetSignatureOfTransaction(t *testing.T) {
 func TestGetIdOfTransaction(t *testing.T) {
 	logger.Info("test =============> > > TestGetIdOfTransaction")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	key := test_util.TransactionCases[0].GetHash().Bytes()
-	tr, err := GetTransaction(hyperdb.DefautNameSpace, key)
+	tr, err := GetTransaction(hyperdb.defaut_namespace, key)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -142,13 +142,13 @@ func TestGetIdOfTransaction(t *testing.T) {
 func TestGetTransactionHashOfTransaction(t *testing.T) {
 	logger.Info("test =============> > > TestGetTransactionHashOfTransaction")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	key := test_util.TransactionCases[0].GetHash().Bytes()
-	tr, err := GetTransaction(hyperdb.DefautNameSpace, key)
+	tr, err := GetTransaction(hyperdb.defaut_namespace, key)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -161,13 +161,13 @@ func TestGetTransactionHashOfTransaction(t *testing.T) {
 func TestGetNonceOfTransaction(t *testing.T) {
 	logger.Info("test =============> > > TestGetNonceOfTransaction")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	key := test_util.TransactionCases[0].GetHash().Bytes()
-	tr, err := GetTransaction(hyperdb.DefautNameSpace, key)
+	tr, err := GetTransaction(hyperdb.defaut_namespace, key)
 	if err != nil {
 		logger.Fatal(err)
 	}

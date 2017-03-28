@@ -12,8 +12,9 @@ import (
 	"hyperchain/consensus/csmgr"
 	"hyperchain/core/db_utils"
 	"hyperchain/core/executor"
-	"hyperchain/manager/event"
+	"hyperchain/hyperdb"
 	"hyperchain/manager"
+	"hyperchain/manager/event"
 	"hyperchain/namespace/rpc"
 	"hyperchain/p2p"
 )
@@ -209,6 +210,9 @@ func (ns *namespaceImpl) Stop() error {
 	//TODO: to provide Stop method for every components
 
 	ns.status.state = closed
+
+	//close related database
+	hyperdb.CloseDatabase(ns.Name())
 
 	ns.logger.Noticef("namespace: %s stopped!", ns.Name())
 	return nil
