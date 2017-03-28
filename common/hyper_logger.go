@@ -280,11 +280,11 @@ func (hl *HyperLogger) newLogFileByInterval(loggerDir string, conf *Config) {
 		logger.Critical("moduleLoggers nil")
 		return
 	}
-	hl.moduleLoggersMutex.Lock()
+	hl.moduleLoggersMutex.RLock()
 	for _, ml := range hl.moduleLoggers {
 		ml.setNewLogFile(file, hl.fileFormat)
 	}
-	hl.moduleLoggersMutex.Unlock()
+	hl.moduleLoggersMutex.RUnlock()
 
 	hl.currentFile.Close()
 	hl.currentFile = file
@@ -295,11 +295,11 @@ func (hl *HyperLogger) newLogFileByInterval(loggerDir string, conf *Config) {
 			fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
 				time.Now().Format("-2006-01-02-15:04:05 PM")+".log")
 			file, _ := os.Create(fileName)
-			hl.moduleLoggersMutex.Lock()
+			hl.moduleLoggersMutex.RLock()
 			for _, ml := range hl.moduleLoggers {
 				ml.setNewLogFile(file, hl.fileFormat)
 			}
-			hl.moduleLoggersMutex.Unlock()
+			hl.moduleLoggersMutex.RUnlock()
 			logger.Infof("Change log file, new log file name: %s", fileName)
 			hl.currentFile.Close()
 			hl.currentFile = file
