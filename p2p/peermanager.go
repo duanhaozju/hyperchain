@@ -7,11 +7,6 @@
 // 2016-12-23: change the interface definition (Chen Quan)
 package p2p
 
-import (
-	"hyperchain/manager/event"
-	"hyperchain/admittance"
-)
-
 // Init the log setting
 //var log *logging.Logger // package-level logger
 //func init() {
@@ -26,7 +21,9 @@ type PeerManager interface {
 	MsgSender
 	InfoGetter
 	// initialize the peerManager which is for init the local node
-	Start(aliveChain chan int, eventMux *event.TypeMux, cm *admittance.CAManager)
+	Start()
+	Stop()
+	GetInitType() <- chan int
 }
 
 // MsgSender Send msg to others peer

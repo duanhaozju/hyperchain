@@ -40,9 +40,13 @@ type GRPCPeerManager struct {
 	IsVP       bool
 	namespace  string
 	logger *logging.Logger
+	// to ensure the init type
+	aliveChain chan int
+	//eventMux
+	eventMux event.TypeMux
 }
 
-func NewGrpcManager(conf *common.Config,namespace string) *GRPCPeerManager {
+func NewGrpcManager(conf *common.Config,namespace string,eventMux *event.TypeMux, cm *admittance.CAManager) *GRPCPeerManager {
 	logger := common.GetLogger(namespace,"grpcmgr");
 	logger.Critical("GRPC: new instance for namespace:",namespace)
 	var grpcmgr GRPCPeerManager
@@ -69,15 +73,18 @@ func NewGrpcManager(conf *common.Config,namespace string) *GRPCPeerManager {
 		IsVP:config.IsVP(),
 		namespace: namespace,
 		logger:logger,
+		aliveChain:make(chan int,1),
+		CM:cm,
+		eventMux:eventMux,
+
 	}
 
 	return &grpcmgr
 }
 
 // Start start the Normal local listen server
-func (grpcmgr *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeMux, cm *admittance.CAManager) {
+func (grpcmgr *GRPCPeerManager) Start() {
 	//cert manager
-	grpcmgr.CM = cm
 	//handshakemanager
 	//HSM only instanced once, so peersPool and Node Hsm are same instance
 	tm,err := transport.NewTransportManager(grpcmgr.CM,grpcmgr.namespace)
@@ -86,7 +93,7 @@ func (grpcmgr *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeM
 	}
 	grpcmgr.TM = tm
 	grpcmgr.peersPool = NewPeersPool(grpcmgr.TM, grpcmgr.LocalAddr, grpcmgr.CM, grpcmgr.namespace)
-	grpcmgr.LocalNode = NewNode(grpcmgr.LocalAddr, eventMux, grpcmgr.TM, grpcmgr.peersPool, grpcmgr.CM, grpcmgr.configs,grpcmgr.namespace)
+	grpcmgr.LocalNode = NewNode(grpcmgr.LocalAddr, grpcmgr.eventMux, grpcmgr.TM, grpcmgr.peersPool, grpcmgr.CM, grpcmgr.configs,grpcmgr.namespace)
 	grpcmgr.LocalNode.StartServer()
 	grpcmgr.LocalNode.N = grpcmgr.configs.MaxNum()
 
@@ -97,19 +104,19 @@ func (grpcmgr *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeM
 	if !rec && grpcmgr.IsOriginal {
 		//creator
 		grpcmgr.logger.Debug("start node as oirgin mode")
-		grpcmgr.create(aliveChain, wg)
+		grpcmgr.create(wg)
 		grpcmgr.IsOnline = true
 	} else if !rec && !grpcmgr.IsOriginal {
 		//newnode
 		grpcmgr.logger.Debug("connect to introducer")
 		// IMPORT should aliveChain <- 1 frist
-		aliveChain <- 1
+		grpcmgr.aliveChain <- 1
 		go grpcmgr.LocalNode.attendNoticeProcess(grpcmgr.LocalNode.N)
 		grpcmgr.connectIntro(*grpcmgr.Introducer)
 	} else {
 		//reconnect
 		grpcmgr.logger.Debug("reconnect to peers")
-		grpcmgr.reconnect(aliveChain, wg)
+		grpcmgr.reconnect(wg)
 		grpcmgr.IsOnline = true
 	}
 	wg.Wait()
@@ -119,10 +126,14 @@ func (grpcmgr *GRPCPeerManager) Start(aliveChain chan int, eventMux *event.TypeM
 	persist.PutBool("onceOnline", true, grpcmgr.namespace)
 }
 
+
+func (grpcmgr GRPCPeerManager)GetInitType() <- chan int{
+	return <-grpcmgr.aliveChain
+}
 // create other peers
 // Hyperchain creator create the origin block chain
 // who use create method create others
-func (grpcmgr *GRPCPeerManager) create(alive chan int, owg *sync.WaitGroup) {
+func (grpcmgr *GRPCPeerManager) create(owg *sync.WaitGroup) {
 	N := grpcmgr.configs.MaxNum()
 	F := int(math.Floor(float64(N - 1) / 3.0))
 	MaxNum := N - F - 1
@@ -154,7 +165,7 @@ func (grpcmgr *GRPCPeerManager) create(alive chan int, owg *sync.WaitGroup) {
 			flag = true
 			go func(alive chan int) {
 				alive <- 0
-			}(alive)
+			}(grpcmgr.aliveChain)
 			owg.Done()
 		}
 		if unconnected.Length() == 0 {
@@ -169,7 +180,7 @@ func (grpcmgr *GRPCPeerManager) create(alive chan int, owg *sync.WaitGroup) {
 }
 
 //reconnect to already exist peer
-func (grpcmgr *GRPCPeerManager) reconnect(alive chan int, owg *sync.WaitGroup) {
+func (grpcmgr *GRPCPeerManager) reconnect(owg *sync.WaitGroup) {
 	N := grpcmgr.configs.MaxNum()
 	F := int(math.Floor(float64(N - 1) / 3.0))
 	MaxNum := N - F
@@ -193,7 +204,7 @@ func (grpcmgr *GRPCPeerManager) reconnect(alive chan int, owg *sync.WaitGroup) {
 			flag = true
 			go func(alive chan int) {
 				alive <- 0
-			}(alive)
+			}(grpcmgr.aliveChain)
 			owg.Done()
 		}
 		if unconnected.Length() == 0 {
