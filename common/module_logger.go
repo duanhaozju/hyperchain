@@ -46,8 +46,8 @@ fileFormat string, consoleFormat string, logLevel string, writeFile bool) *modul
 	}
 	level, _ := logging.LogLevel(logLevel)
 	ml.backend.SetLevel(level, compositeName)
-
 	ml.logger.SetBackend(ml.backend)
+
 	return ml
 }
 

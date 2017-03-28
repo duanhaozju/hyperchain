@@ -27,7 +27,7 @@ func newHyperchain(argV *argT) *hyperchain {
 	}
 
 	globalConfig := common.NewConfig(hp.args.ConfigPath)
-	common.InitHyperLogger(globalConfig)
+	common.InitHyperLoggerManager(globalConfig)
 	//
 	//common.InitLog(globalConfig)
 

@@ -42,25 +42,40 @@ type HyperLogger struct {
 }
 
 // InitSystemLogger init the very first hyperlogger
-func InitSystemLogger(conf *Config) {
+func InitHyperLoggerManager(conf *Config) {
 	once.Do(func() {
 		hyperLoggers = make(map[string]*HyperLogger)
 	})
+
 	conf.Set(NAMESPACE, DEFAULT_NAMESPACE)
-	hyperLogger := newHyperLogger(conf)
-	if hyperLogger == nil {
-		return
+	hl := newHyperLogger(conf)
+	// read all configs needed
+	hl.writeToFile = conf.GetBool(LOG_DUMP_FILE)
+
+	baseLevel := conf.GetString(LOG_BASE_LOG_LEVEL)
+	if baseLevel == "" {
+		hl.baseLevel = defaultLogLevel
+	} else {
+		hl.baseLevel = baseLevel
 	}
 
-	// cast it into hyperLoggers
+	fileFormat := conf.GetString(LOG_FILE_FORMAT)
+	hl.fileFormat = fileFormat
+	consoleFormat := conf.GetString(LOG_CONSOLE_FORMAT)
+	hl.consoleFormat = consoleFormat
+	loggerDir := conf.GetString(LOG_FILE_DIR)
+	hl.logDir = loggerDir
+
+	fileName := path.Join(loggerDir,
+		"hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
+			time.Now().Format("-2006-01-02-15:04:05 PM")+".log")
+	os.MkdirAll(loggerDir, 0777)
+	file, _ := os.Create(fileName)
+	hl.currentFile = file
+
 	name := conf.GetString(NAMESPACE)
-	if strings.EqualFold(name, "") {
-		return
-	}
-
-	hyperLogger.init()
 	rwMutex.Lock()
-	hyperLoggers[name] = hyperLogger
+	hyperLoggers[name] = hl
 	rwMutex.Unlock()
 
 	logger = GetLogger(DEFAULT_NAMESPACE, "common")
@@ -68,12 +83,12 @@ func InitSystemLogger(conf *Config) {
 
 //InitHyperLogger init the whole logging system.
 func InitHyperLogger(conf *Config) (*HyperLogger, error) {
-	once.Do(func() {
-		hyperLoggers = make(map[string]*HyperLogger)
-	})
-	if !conf.ContainsKey(NAMESPACE) {
-		conf.Set(NAMESPACE, DEFAULT_NAMESPACE)
-	}
+	//once.Do(func() {
+	//	hyperLoggers = make(map[string]*HyperLogger)
+	//})
+	//if !conf.ContainsKey(NAMESPACE) {
+	//	conf.Set(NAMESPACE, DEFAULT_NAMESPACE)
+	//}
 	hyperLogger := newHyperLogger(conf)
 	if hyperLogger == nil {
 		return nil, errors.New("Init Hyperlogger error: nil return")
