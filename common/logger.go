@@ -42,7 +42,7 @@ func InitLog(conf *Config) {
 	}
 
 	backendStderr := initLogBackend()
-	if !conf.GetBool(LOG_FUMP_FILE) {
+	if !conf.GetBool(LOG_DUMP_FILE) {
 		logging.SetBackend(backendStderr)
 	} else {
 		closeLogFile = make(chan struct{})
