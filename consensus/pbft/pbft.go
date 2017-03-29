@@ -3,7 +3,7 @@
 
 //Package pbft implement the pbft algorithm
 //The PBFT key features:
-//		1. atomic sequence transactions guarantee
+//	1. atomic sequence transactions guarantee
 //      2. leader selection by viewchange
 //      3. dynamic delete or add new node
 //      4. support state recovery.
@@ -14,26 +14,26 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"hyperchain/manager/protos"
 	"hyperchain/common"
-	"hyperchain/consensus/helper"
 	"hyperchain/consensus"
-	"sync/atomic"
+	"hyperchain/consensus/helper"
 	"hyperchain/core/types"
+	"hyperchain/manager/protos"
+	"sync/atomic"
 )
 
 /**
-	This file implement the API of consensus
-	which can be invoked by outer services.
- */
+This file implement the API of consensus
+which can be invoked by outer services.
+*/
 
 // New return a instance of pbftProtocal  TODO: rename helper.Stack ??
-func New(namespace string, conf * common.Config, h helper.Stack) (*pbftImpl, error) {
+func New(namespace string, conf *common.Config, h helper.Stack) (*pbftImpl, error) {
 	var err error
 	pcPath := conf.GetString(consensus.CONSENSUS_ALGO_CONFIG_PATH)
 	if pcPath == "" {
 		err = fmt.Errorf("Invalid consensus algorithm configuration path, %s: %s",
-			consensus.CONSENSUS_ALGO_CONFIG_PATH,  pcPath)
+			consensus.CONSENSUS_ALGO_CONFIG_PATH, pcPath)
 		return nil, err
 	}
 	conf, err = conf.MergeConfig(pcPath)
@@ -61,7 +61,7 @@ func (pbft *pbftImpl) RecvMsg(e []byte) error {
 
 	default:
 		pbft.logger.Errorf("Unsupport message type: %v", msg.Type)
-		return nil//TODO: define PBFT error type
+		return nil //TODO: define PBFT error type
 	}
 }
 
@@ -91,7 +91,7 @@ func (pbft *pbftImpl) RecvLocal(msg interface{}) error {
 }
 
 //Start start the consensus service
-func (pbft *pbftImpl) Start()  {
+func (pbft *pbftImpl) Start() {
 	pbft.logger.Noticef("--------PBFT starting, nodeID: %d--------", pbft.id)
 
 	//1.restore state.
@@ -107,7 +107,6 @@ func (pbft *pbftImpl) Start()  {
 }
 
 //Close close the consenter service
-func (*pbftImpl) Close()  {
+func (*pbftImpl) Close() {
 	//TODO: stop the PBFT service
 }
-

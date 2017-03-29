@@ -2,17 +2,18 @@ package rpc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/op/go-logging"
-	"hyperchain/common"
 	"golang.org/x/net/context"
 	"hyperchain/api"
+	"hyperchain/common"
 	"reflect"
-	"errors"
 )
 
 type RequestProcessor interface {
 	Start() error
+	Stop() error
 	ProcessRequest(request *common.RPCRequest) *common.RPCResponse
 }
 
@@ -46,6 +47,10 @@ func (jrpi *JsonRpcProcessorImpl) Start() error {
 		jrpi.log.Errorf("Failed to start RPC Manager of namespace %s!!!", jrpi.namespace)
 		return err
 	}
+	return nil
+}
+
+func (jrpi *JsonRpcProcessorImpl) Stop() error {
 	return nil
 }
 
