@@ -3,6 +3,7 @@ package hyperstate
 import (
 	"bytes"
 	"strconv"
+	"time"
 )
 
 const (
@@ -44,6 +45,46 @@ func SplitCompositeStorageKey(address []byte, key []byte) ([]byte, bool) {
 	} else {
 		return nil, false
 	}
+}
+
+func CompositeArchieveStorageKey(address []byte, key []byte) []byte {
+	date := time.Now().Format("20060102")
+	ret := append([]byte(storageIdentifier), address...)
+	ret = append(ret, []byte(date)...)
+	ret = append(ret, key...)
+	return ret
+}
+
+func GetArchieveStorageKeyPrefix(address []byte) []byte {
+	ret := append([]byte(storageIdentifier), address...)
+	return ret
+}
+
+func GetArchieveStorageKeyWithDatePrefix(address []byte, date []byte) []byte {
+	ret := append([]byte(storageIdentifier), address...)
+	ret = append(ret, date...)
+	return ret
+}
+
+func SplitCompositeArchieveStorageKey(address []byte, key []byte) ([]byte, bool) {
+	prefix := append([]byte(storageIdentifier), address...)
+	prefixLen := len(prefix) + 8
+	if bytes.HasPrefix(key, prefix) && len(key) >= prefixLen {
+		return key[prefixLen:], true
+	} else {
+		return nil, false
+	}
+}
+
+func GetArchieveDate(address []byte, key []byte) ([]byte, bool) {
+	prefix := append([]byte(storageIdentifier), address...)
+	prefixLen := len(prefix) + 8
+	if bytes.HasPrefix(key, prefix) && len(key) >= prefixLen {
+		return key[len(prefix): prefixLen], true
+	} else {
+		return nil, false
+	}
+
 }
 
 /*

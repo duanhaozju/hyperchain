@@ -267,7 +267,7 @@ func (self *StateDB) FetchArchieveBatch(seqNo uint64) db.Batch {
 func (self *StateDB) MakeArchieve(seqNo uint64) {
 	batch := self.FetchArchieveBatch(seqNo)
 	self.archieveCache.Remove(seqNo)
-	self.logger.Noticef("make archieve seqNo %d, totally %d elements contained.", seqNo, batch.Len())
+	self.logger.Debugf("make archieve seqNo %d, totally %d elements contained.", seqNo, batch.Len())
 	go batch.Write()
 }
 
@@ -1103,18 +1103,25 @@ func isPrecompiledAccount(address common.Address) bool {
 }
 
 
-func (self *StateDB) ShowArchieve(address common.Address) map[string]string {
-	storages := make(map[string]string)
-	iterator := self.archieveDb.NewIterator(GetStorageKeyPrefix(address.Bytes()))
-	defer iterator.Release()
-	for iterator.Next() {
-		self.logger.Notice("key", common.Bytes2Hex(iterator.Key()))
-		k, ok := SplitCompositeStorageKey(address.Bytes(), iterator.Key())
+func (self *StateDB) ShowArchieve(address common.Address, date string) map[string]map[string]string {
+	storages := make(map[string]map[string]string)
+	iter := self.archieveDb.NewIterator(GetArchieveStorageKeyWithDatePrefix(address.Bytes(), []byte(date)))
+	defer iter.Release()
+	for iter.Next() {
+		d, ok := GetArchieveDate(address.Bytes(), iter.Key())
 		if ok == false {
 			continue
 		}
-		storages[common.Bytes2Hex(k)] = common.Bytes2Hex(iterator.Value())
+		k, ok := SplitCompositeArchieveStorageKey(address.Bytes(), iter.Key())
+		if ok == false {
+			continue
+		}
+		m, existed := storages[string(d)]
+		if existed ==  false {
+			m = make(map[string]string)
+			storages[string(d)] = m
+		}
+		m[common.Bytes2Hex(k)] = common.Bytes2Hex(iter.Value())
 	}
 	return storages
 }
-

@@ -271,15 +271,15 @@ func (self *StateObject) Flush(db db.Batch, archieveDb db.Batch) error {
 		delete(self.dirtyStorage, key)
 		if (value == common.Hash{}) {
 			// delete
-			self.logger.Noticef("flush dirty storage address [%s] delete item key: [%s]", self.address.Hex(), key.Hex())
+			self.logger.Debugf("flush dirty storage address [%s] delete item key: [%s]", self.address.Hex(), key.Hex())
 			if err := db.Delete(CompositeStorageKey(self.address.Bytes(), key.Bytes())); err != nil {
 				return err
 			}
 			// put into archieve db
 			previous := self.archieveStorage[key]
 			if (previous != common.Hash{}) {
-				self.logger.Noticef("flush dirty storage address [%s] add key: [%s] to archieve db, value [%s]", self.address.Hex(), key.Hex(), previous.Hex())
-				if err := archieveDb.Put(CompositeStorageKey(self.address.Bytes(), key.Bytes()), previous.Bytes()); err != nil {
+				self.logger.Debugf("flush dirty storage address [%s] add key: [%s] to archieve db, value [%s]", self.address.Hex(), key.Hex(), previous.Hex())
+				if err := archieveDb.Put(CompositeArchieveStorageKey(self.address.Bytes(), key.Bytes()), previous.Bytes()); err != nil {
 					return err
 				}
 			}
