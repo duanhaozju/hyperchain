@@ -71,12 +71,7 @@ var tt256m1 = new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(
 var tt255 = new(big.Int).Lsh(big.NewInt(1), 255)
 
 func U256(x *big.Int) *big.Int {
-	//if x.Cmp(Big0) < 0 {
-	//		return new(big.Int).Add(tt256, x)
-	//	}
-
 	x.And(x, tt256m1)
-
 	return x
 }
 
@@ -99,9 +94,7 @@ func FirstBitSet(v *big.Int) int {
 	return v.BitLen()
 }
 
-// Big to bytes
-//
-// Returns the bytes of a big integer with the size specified by **base**
+// BigToBytes Returns the bytes of a big integer with the size specified by **base**.
 // Attempts to pad the byte array with zeros.
 func BigToBytes(num *big.Int, base int) []byte {
 	ret := make([]byte, base/8)
@@ -113,16 +106,12 @@ func BigToBytes(num *big.Int, base int) []byte {
 	return append(ret[:len(ret)-len(num.Bytes())], num.Bytes()...)
 }
 
-// Big copy
-//
-// Creates a copy of the given big integer
+// BigCopy Creates a copy of the given big integer.
 func BigCopy(src *big.Int) *big.Int {
 	return new(big.Int).Set(src)
 }
 
-// Big max
-//
-// Returns the maximum size big integer
+//BigMax returns the maximum size big integer.
 func BigMax(x, y *big.Int) *big.Int {
 	if x.Cmp(y) < 0 {
 		return y
@@ -131,9 +120,7 @@ func BigMax(x, y *big.Int) *big.Int {
 	return x
 }
 
-// Big min
-//
-// Returns the minimum size big integer
+//BigMin Returns the minimum size big integer.
 func BigMin(x, y *big.Int) *big.Int {
 	if x.Cmp(y) > 0 {
 		return y

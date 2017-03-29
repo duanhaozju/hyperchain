@@ -1351,7 +1351,7 @@ func (pbft *pbftImpl) processNegotiateView() error {
 	}
 	payload, err := proto.Marshal(negoViewMsg)
 	if err != nil {
-		pbft.logger.Errorf("Marshal NegotiateView Error!")
+		pbft.logger.Errorf("Marshal negotiateView Error!")
 		return nil
 	}
 	consensusMsg := &ConsensusMessage{

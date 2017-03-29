@@ -21,7 +21,7 @@ It has these top-level messages:
 	NewView
 	FinishVcReset
 	FetchRequestBatch
-	NegotiateView
+	negotiateView
 	NegotiateViewResponse
 	RecoveryInit
 	RecoveryResponse

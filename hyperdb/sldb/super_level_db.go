@@ -4,25 +4,20 @@ package sldb
 
 import (
 	"bytes"
+	"fmt"
+	"github.com/op/go-logging"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"time"
-	"fmt"
-	pa "path/filepath"
-	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/hyperdb/db"
+	pa "path/filepath"
+	"time"
 )
 
-var log *logging.Logger
-
-func init() {
-	log = logging.MustGetLogger("hyperdb/sldb")
-}
-
 const (
-	SLDB_PATH = "dbConfig.sldb.dbpath"
+	sldb_path = "dbConfig.sldb.dbpath"
+	module    = "hyperdb/sldb"
 )
 
 type SuperLevelDB struct {
@@ -30,14 +25,15 @@ type SuperLevelDB struct {
 	db     *leveldb.DB
 	index  Index
 	closed chan bool
+	logger *logging.Logger
 }
 
 func NewSLDB(conf *common.Config) (*SuperLevelDB, error) {
 	var filepath = ""
-	if conf!=nil{
-		if conf!=nil{
-			filepath = pa.Join(conf.GetString(SLDB_PATH),filepath)
-			filepath = conf.GetString(SLDB_PATH)
+	if conf != nil {
+		if conf != nil {
+			filepath = pa.Join(conf.GetString(sldb_path), filepath)
+			filepath = conf.GetString(sldb_path)
 		}
 	}
 
@@ -45,15 +41,19 @@ func NewSLDB(conf *common.Config) (*SuperLevelDB, error) {
 	if err != nil {
 		panic(err.Error())
 	}
+	log := common.GetLogger(conf.GetString(common.NAMESPACE), module)
 	index := NewKeyIndex(conf, "defaultNS", db, pa.Join(filepath, "index", "index.bloom.dat"))
+	index.logger = log
+	index.Init()
 	index.conf = conf
 	sldb := &SuperLevelDB{
 		path:   filepath,
 		db:     db,
 		index:  index,
 		closed: make(chan bool),
+		logger: log,
 	}
-	go sldb.dumpIndexByInterval(conf.GetDuration(SLDB_INDEX_DUMP_INTERVAL))
+	go sldb.dumpIndexByInterval(conf.GetDuration(sldb_index_dump_interval))
 	return sldb, err
 }
 
@@ -124,7 +124,7 @@ func (sldb *SuperLevelDB) Index() Index {
 }
 
 func (sldb *SuperLevelDB) NewBatch() db.Batch {
-	log.Debugf("new super leveldb batch")
+	sldb.logger.Debugf("new super leveldb batch")
 	slb := &superLdbBatch{
 		batch:      new(leveldb.Batch),
 		sldb:       sldb,
@@ -174,7 +174,7 @@ func (sb *superLdbBatch) Delete(key []byte) error {
 func (sb *superLdbBatch) Write() error {
 	err := sb.sldb.db.Write(sb.indexBatch, nil)
 	if err != nil {
-		log.Errorf("PersistKeyBatch error, %v", err)
+		sb.sldb.logger.Errorf("PersistKeyBatch error, %v", err)
 	}
 	err = sb.sldb.db.Write(sb.batch, nil)
 	return err

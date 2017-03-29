@@ -33,7 +33,7 @@ func newHyperchain(argV *argT) *hyperchain {
 	hp.nsMgr = namespace.GetNamespaceManager(globalConfig)
 	hp.hs = jsonrpc.GetHttpServer(hp.nsMgr, hp.stopFlag, hp.restartFlag)
 
-	logger = common.GetLogger(namespace.DEFAULT_LOG, "main")
+	logger = common.GetLogger(common.DEFAULT_LOG, "main")
 	return hp
 }
 
