@@ -339,6 +339,14 @@ func (contract *Contract) GetCreateTime(addr common.Address) (uint64, error) {
 	}
 }
 
+func (contract *Contract) GetArchive(addr common.Address, date string) (map[string]map[string]string, error) {
+	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
+	if err != nil {
+		return nil, err
+	}
+	return stateDb.ShowArchive(addr, date), nil
+}
+
 func getBlockStateDb(namespace string, config *common.Config) (vm.Database, error) {
 	log := common.GetLogger(namespace, "api")
 	stateDB, err := NewStateDb(config, namespace)

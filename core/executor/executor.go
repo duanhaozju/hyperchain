@@ -23,6 +23,7 @@ var (
 type Executor struct {
 	namespace   string                // namespace tag
 	db          db.Database
+	archieveDb  db.Database
 	commonHash  crypto.CommonHash
 	encryption  crypto.Encryption
 	conf        *common.Config      // block configuration
@@ -42,15 +43,21 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux)
 	if err != nil {
 		return nil
 	}
+	archieveDb, err := hyperdb.GetArchieveDbByNamespace(namespace)
+	if err != nil {
+		return nil
+	}
 	executor := &Executor{
 		namespace:       namespace,
 		db:              db,
+		archieveDb:      archieveDb,
 		conf:            conf,
 		commonHash:      kec256Hash,
 		encryption:      encryption,
 		helper:          helper,
 	}
 	executor.logger = common.GetLogger(namespace, "executor")
+	executor.logger.Notice("archieve db", archieveDb)
 	return executor
 }
 
@@ -100,12 +107,13 @@ func initializeExecutorStateDb(executor *Executor) error {
 }
 // NewStateDb - create a latest state.
 func (executor *Executor) newStateDb() (vm.Database, error) {
+	executor.logger.Notice("new state db", executor.archieveDb)
 	blk, err := edb.GetBlockByNumber(executor.namespace, edb.GetHeightOfChain(executor.namespace))
 	if err != nil {
 		executor.logger.Errorf("[Namespace = %s] can not find block #%d", executor.namespace, edb.GetHeightOfChain(executor.namespace))
 		return nil, err
 	}
-	stateDb, err := hyperstate.New(common.BytesToHash(blk.MerkleRoot), executor.db, executor.conf, edb.GetHeightOfChain(executor.namespace), executor.namespace)
+	stateDb, err := hyperstate.New(common.BytesToHash(blk.MerkleRoot), executor.db, executor.archieveDb, executor.conf, edb.GetHeightOfChain(executor.namespace), executor.namespace)
 	if err != nil {
 		executor.logger.Errorf("[Namespace = %s] new stateDb failed, err : %s", executor.namespace, err.Error())
 		return nil, err

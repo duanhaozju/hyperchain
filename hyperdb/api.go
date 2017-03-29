@@ -40,6 +40,7 @@ const (
 	default_namespace = "global"
 	blockchain        = "blockchain"
 	consensus         = "consensus"
+	archieve          = "Archieve"
 
 	// state
 	closed stateDb = iota
@@ -94,7 +95,15 @@ func InitDatabase(conf *common.Config, namespace string) error {
 		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
 	}
 
-	db1, err1 := NewDatabase(conf, "consensus", 001)
+	archieveDb, err := NewDatabase(conf, "Archieve", 001)
+
+	if err != nil {
+		log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+		log.Error(err.Error())
+		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+	}
+
+	db1, err1 := NewDatabase(conf, "Consensus", 001)
 
 	if err1 != nil {
 
@@ -110,6 +119,11 @@ func InitDatabase(conf *common.Config, namespace string) error {
 	dbMgr.dbMap[getConsensusDbName(namespace)] = &DBInstance{
 		state: opened,
 		db:    db1,
+	}
+
+	dbMgr.dbMap[getArchieveDbName(namespace)] = &DBInstance{
+		state: opened,
+		db:    archieveDb,
 	}
 
 	return err
@@ -161,6 +175,23 @@ func GetDBDatabaseByNamespace(namespace string) (db.Database, error) {
 	return dbMgr.dbMap[name].db, nil
 }
 
+func GetArchieveDbByNamespace(namespace string) (db.Database, error) {
+	log := getLogger(namespace)
+	dbMgr.dbSync.Lock()
+	defer dbMgr.dbSync.Unlock()
+	name := getArchieveDbName(namespace)
+	if _, ok := dbMgr.dbMap[name]; !ok {
+		log.Notice(fmt.Sprintf("GetDBArchiveByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
+	}
+
+	if dbMgr.dbMap[name].db == nil {
+		log.Notice(fmt.Sprintf("GetDBArchiveByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
+	}
+	return dbMgr.dbMap[name].db, nil
+}
+
 func GetDBConsensusByNamespcae(namespace string) (db.Database, error) {
 	log := getLogger(namespace)
 	dbMgr.dbSync.Lock()
@@ -205,6 +236,11 @@ func getConsensusDbName(namespace string) string {
 //getDbName get ordinary db composite name by namespace.
 func getDbName(namespace string) string {
 	return namespace + blockchain
+}
+
+//getDbName get ordinary db composite name by namespace.
+func getArchieveDbName(namespace string) string {
+	return namespace + archieve
 }
 
 func getLogger(namespace string) *logging.Logger {

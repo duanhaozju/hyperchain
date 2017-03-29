@@ -14,6 +14,7 @@ message TransactionValue {
             UPDATE = 1;
             FREEZE = 2;
             UNFREEZE = 3;
+            ARCHIVE = 100;
     }
 	Opcode op = 8;
 }

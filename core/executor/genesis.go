@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb/db"
+	"hyperchain/hyperdb"
 )
 
 const (
@@ -75,7 +76,11 @@ func (executor *Executor) CreateInitBlock(config *common.Config) error {
 
 // NewStateDb - create a empty stateDb handler.
 func NewStateDb(conf *common.Config, db db.Database, namespace string) (vm.Database, error) {
-	stateDb, err := hyperstate.New(common.Hash{}, db, conf, 0, namespace)
+	archieveDb, err := hyperdb.GetArchieveDbByNamespace(namespace)
+	if err != nil {
+		return nil, err
+	}
+	stateDb, err := hyperstate.New(common.Hash{}, db, archieveDb, conf, 0, namespace)
 	if err != nil {
 		return nil, err
 	}
