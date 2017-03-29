@@ -1,27 +1,28 @@
 package executor
 
 import (
-	"sync/atomic"
-	edb "hyperchain/core/db_utils"
 	"hyperchain/common"
-	"time"
+	edb "hyperchain/core/db_utils"
 	"hyperchain/tree/bucket"
+	"sync/atomic"
+	"time"
 )
-type ExecutorStatus struct {
-	validateBehaveFlag    int32                  // validation type, normal or just ignore.
-	validateInProgress    int32                  // validation operation flag, validating or idle
-	commitInProgress      int32                  // commit operation flag, committing or idle
-	validateQueueLen      int32                  // validation buffer size
-	commitQueueLen        int32                  // commit buffer size
 
-	demandNumber          uint64              // current demand number for commit
-	demandSeqNo           uint64              // current demand seqNo for validation
-	tempBlockNumber       uint64              // temporarily block number
-	lastValidationState   atomic.Value        // latest state root hash
-	syncFlag              SyncFlag            // store temp variables during chain sync
-	validationExit        chan bool           // validation exit notifier
-	commitExit            chan bool           // commit exit notifier
-	replicaSyncExit       chan bool           // replica sync exit notifier
+type ExecutorStatus struct {
+	validateBehaveFlag int32 // validation type, normal or just ignore.
+	validateInProgress int32 // validation operation flag, validating or idle
+	commitInProgress   int32 // commit operation flag, committing or idle
+	validateQueueLen   int32 // validation buffer size
+	commitQueueLen     int32 // commit buffer size
+
+	demandNumber        uint64       // current demand number for commit
+	demandSeqNo         uint64       // current demand seqNo for validation
+	tempBlockNumber     uint64       // temporarily block number
+	lastValidationState atomic.Value // latest state root hash
+	syncFlag            SyncFlag     // store temp variables during chain sync
+	validationExit      chan bool    // validation exit notifier
+	commitExit          chan bool    // commit exit notifier
+	replicaSyncExit     chan bool    // replica sync exit notifier
 }
 
 type SyncFlag struct {

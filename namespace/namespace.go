@@ -15,8 +15,10 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
 	"hyperchain/manager/event"
+	"hyperchain/manager/protos"
 	"hyperchain/namespace/rpc"
 	"hyperchain/p2p"
+	"time"
 )
 
 //Namespace represent the namespace instance
@@ -87,7 +89,6 @@ type API struct {
 }
 
 func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) {
-
 	// Init Hyperlogger
 	if _, err := common.InitHyperLogger(conf); err != nil {
 		return nil, err
@@ -111,7 +112,6 @@ func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) 
 }
 
 func (ns *namespaceImpl) init() error {
-	//TODO: separate init and start functions
 	ns.logger.Criticalf("Init namespace %s", ns.Name())
 
 	//1.init DB
@@ -130,7 +130,7 @@ func (ns *namespaceImpl) init() error {
 	ns.caMgr = cm
 
 	//3. init peer manager to start grpc server and client
-	grpcPeerMgr := p2p.NewGrpcManager(ns.conf, ns.Name())
+	grpcPeerMgr := p2p.NewGrpcManager(ns.conf, ns.eventMux, cm)
 	ns.grpcMgr = grpcPeerMgr
 
 	//4.init pbft consensus
@@ -139,7 +139,6 @@ func (ns *namespaceImpl) init() error {
 		logger.Errorf("init Consenter for namespace %s error, %v", ns.Name(), err)
 		return err
 	}
-	consenter.Start()
 	ns.consenter = consenter
 
 	//5.init account manager
@@ -154,9 +153,9 @@ func (ns *namespaceImpl) init() error {
 	}
 
 	executor.CreateInitBlock(ns.conf)
-	executor.Start()
+	ns.executor = executor
 
-	//7. init peer manager
+	//7. init eventhub
 	eh := manager.New(ns.Name(), ns.eventMux, executor, ns.grpcMgr, consenter, am, cm)
 	ns.eh = eh
 	ns.status.state = initialized
@@ -191,12 +190,47 @@ func (ns *namespaceImpl) Start() error {
 		logger.Criticalf("namespace: %s is already running", ns.Name())
 		return nil
 	}
+	//1.start consenter
+	ns.consenter.Start()
+	//2.start executor
+	ns.executor.Start()
+	//3.start event hub
+	ns.eh.Start()
+	//4.start grpc manager
+	go ns.grpcMgr.Start()
 
-	//TODO: add start component logic here
+	initType := <-ns.grpcMgr.GetInitType()
+	switch initType {
+	case 0:
+		{
+			ns.passRouters()
+			ns.negotiateView()
+		} // TODO: add other init type
+	default:
+		ns.logger.Errorf("invalid initType %v", initType)
+	}
+	//5.start request processor
 	ns.rpc.Start()
 	ns.status.state = running
 	ns.logger.Noticef("namespace: %s start successful", ns.Name())
 	return nil
+}
+
+func (ns *namespaceImpl) negotiateView() {
+	ns.logger.Debug("negotiate view")
+	negoView := &protos.Message{
+		Type:      protos.Message_NEGOTIATE_VIEW,
+		Timestamp: time.Now().UnixNano(),
+		Payload:   nil,
+		Id:        0,
+	}
+	ns.consenter.RecvLocal(negoView)
+}
+
+func (ns *namespaceImpl) passRouters() {
+	router := ns.grpcMgr.GetRouters()
+	msg := protos.RoutersMessage{Routers: router}
+	ns.consenter.RecvLocal(msg)
 }
 
 //Stop stop services under this namespace.
