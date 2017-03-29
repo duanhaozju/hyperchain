@@ -40,6 +40,7 @@ const (
 	DefautNameSpace = "global"
 	Blockchain      = "Blockchain"
 	Consensus       = "Consensus"
+	Archieve        = "Archieve"
 
 	// state
 	closed stateDb = iota
@@ -103,6 +104,14 @@ func InitDatabase(conf *common.Config, nameSpace string) error {
 		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
 	}
 
+	archieveDb, err := NewDatabase(conf, "Archieve", 001)
+
+	if err != nil {
+		log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
+		log.Error(err.Error())
+		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
+	}
+
 	db1, err1 := NewDatabase(conf, "Consensus", 001)
 
 	if err1 != nil {
@@ -119,6 +128,11 @@ func InitDatabase(conf *common.Config, nameSpace string) error {
 	dbMap.dbMap[nameSpace+Consensus] = &DBInstance{
 		state: opened,
 		db:    db1,
+	}
+
+	dbMap.dbMap[nameSpace+Archieve] = &DBInstance{
+		state: opened,
+		db:    archieveDb,
 	}
 
 	return err
@@ -139,6 +153,24 @@ func GetDBDatabaseByNamespace(namespace string) (db.Database, error) {
 	defer dbMap.dbSync.Unlock()
 
 	namespace += Blockchain
+
+	if _, ok := dbMap.dbMap[namespace]; !ok {
+		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n", namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n", namespace))
+	}
+
+	if dbMap.dbMap[namespace].db == nil {
+		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n", namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n", namespace))
+	}
+	return dbMap.dbMap[namespace].db, nil
+}
+
+func GetArchieveDbByNamespace(namespace string) (db.Database, error) {
+	dbMap.dbSync.Lock()
+	defer dbMap.dbSync.Unlock()
+
+	namespace += Archieve
 
 	if _, ok := dbMap.dbMap[namespace]; !ok {
 		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n", namespace))

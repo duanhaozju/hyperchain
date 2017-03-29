@@ -39,6 +39,7 @@ type revision struct {
 // * Accounts
 type StateDB struct {
 	db            db.Database
+	archieveDb    db.Database
 	root          common.Hash
 	codeSizeCache *lru.Cache
 
@@ -67,14 +68,15 @@ type StateDB struct {
 	curSeqNo    uint64 // current seqNo in process
 	oldestSeqNo uint64 // oldest seqNo in content cache cache
 	// atomic related
-	batchCache   *common.Cache // use to store batch handler for different block process
-	contentCache *common.Cache // use to store modification set for different block process
+	batchCache      *common.Cache // use to store batch handler for different block process
+	archieveCache   *common.Cache // use to store batch handler for different block process
+	contentCache    *common.Cache // use to store modification set for different block process
 
 	logger      *logging.Logger
 }
 
 // New - Create a new state from a given root
-func New(root common.Hash, db db.Database, bktConf *common.Config, height uint64, namespace string) (*StateDB, error) {
+func New(root common.Hash, db db.Database,  archieveDb db.Database, bktConf *common.Config, height uint64, namespace string) (*StateDB, error) {
 	logger := common.GetLogger(namespace, "state")
 	csc, _ := lru.New(codeSizeCacheSize)
 	// initialize bucket tree
@@ -83,8 +85,10 @@ func New(root common.Hash, db db.Database, bktConf *common.Config, height uint64
 	// initialize cache
 	batchCache, _ := common.NewCache()
 	contentCache, _ := common.NewCache()
+	archieveCache, _ := common.NewCache()
 	state := &StateDB{
 		db:                db,
+		archieveDb:        archieveDb,
 		root:              root,
 		codeSizeCache:     csc,
 		stateObjects:      make(map[common.Address]*StateObject),
@@ -95,6 +99,7 @@ func New(root common.Hash, db db.Database, bktConf *common.Config, height uint64
 		bucketTree:        bucketTree,
 		batchCache:        batchCache,
 		contentCache:      contentCache,
+		archieveCache:     archieveCache,
 		logger:            logger,
 	}
 	bucketTree.Initialize(SetupBucketConfig(state.GetBucketSize(STATEDB), state.GetBucketLevelGroup(STATEDB), state.GetBucketCacheSize(STATEDB)))
@@ -209,6 +214,7 @@ func (self *StateDB) setLatest(seqNo uint64) {
 func (self *StateDB) Purge() {
 	self.batchCache.Purge()
 	self.contentCache.Purge()
+	self.archieveCache.Purge()
 
 	self.stateObjects = make(map[common.Address]*StateObject)
 	self.stateObjectsDirty = make(map[common.Address]struct{})
@@ -241,6 +247,28 @@ func (self *StateDB) FetchBatch(seqNo uint64) db.Batch {
 		self.batchCache.Add(seqNo, batch)
 		return batch
 	}
+}
+
+func (self *StateDB) FetchArchieveBatch(seqNo uint64) db.Batch {
+	if self.archieveCache.Contains(seqNo) {
+		// already exist
+		self.logger.Debugf("fetch archieve batch for #%d exist in batch cache", seqNo)
+		batch, _ := self.archieveCache.Get(seqNo)
+		return batch.(db.Batch)
+	} else {
+		// not exist right now
+		self.logger.Debugf("create one archieve batch for #%d", seqNo)
+		batch := self.archieveDb.NewBatch()
+		self.archieveCache.Add(seqNo, batch)
+		return batch
+	}
+}
+
+func (self *StateDB) MakeArchieve(seqNo uint64) {
+	batch := self.FetchArchieveBatch(seqNo)
+	self.archieveCache.Remove(seqNo)
+	self.logger.Noticef("make archieve seqNo %d, totally %d elements contained.", seqNo, batch.Len())
+	go batch.Write()
 }
 
 // DeleteBatch - delete a batch handler in cache with correspondent seqNo
@@ -606,11 +634,11 @@ func (self *StateDB) SetCode(addr common.Address, code []byte) {
 }
 
 // set a storage entry to a state object
-func (self *StateDB) SetState(addr common.Address, key common.Hash, value common.Hash) {
+func (self *StateDB) SetState(addr common.Address, key common.Hash, value common.Hash, opcode int32) {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
 		self.logger.Debug("hyper statedb set state find state object in live objects")
-		stateObject.SetState(self.db, key, value)
+		stateObject.SetState(self.db, key, value, opcode)
 	} else {
 		self.logger.Warningf("state object %s doesn't exist or has been suicide", addr.Hex())
 	}
@@ -964,7 +992,8 @@ func (s *StateDB) Commit() (common.Hash, error) {
 func (s *StateDB) CommitBatch(deleteEmptyObjects bool) (root common.Hash, batch db.Batch) {
 	curSeqNo := atomic.LoadUint64(&s.curSeqNo)
 	batch = s.FetchBatch(curSeqNo)
-	root, _ = s.commit(batch, deleteEmptyObjects)
+	archieveBatch := s.FetchArchieveBatch(curSeqNo)
+	root, _ = s.commit(batch, archieveBatch, deleteEmptyObjects)
 	return root, batch
 }
 
@@ -990,7 +1019,7 @@ func (s *StateDB) clearJournalAndRefund() {
 	batch.Write()
 }
 
-func (s *StateDB) commit(dbw db.Batch, deleteEmptyObjects bool) (root common.Hash, err error) {
+func (s *StateDB) commit(dbw db.Batch, archieveDb db.Batch, deleteEmptyObjects bool) (root common.Hash, err error) {
 	defer s.clearJournalAndRefund()
 	var set ChangeSet
 	workingSet := bucket.NewKVMap()
@@ -1019,7 +1048,7 @@ func (s *StateDB) commit(dbw db.Batch, deleteEmptyObjects bool) (root common.Has
 				stateObject.dirtyCode = false
 			}
 			// Write any storage changes in the state object to its storage trie.
-			if err := stateObject.Flush(dbw); err != nil {
+			if err := stateObject.Flush(dbw, archieveDb); err != nil {
 				return common.Hash{}, err
 			}
 			// Update the object in the main account trie.
@@ -1072,3 +1101,20 @@ func isPrecompiledAccount(address common.Address) bool {
 		return false
 	}
 }
+
+
+func (self *StateDB) ShowArchieve(address common.Address) map[string]string {
+	storages := make(map[string]string)
+	iterator := self.archieveDb.NewIterator(GetStorageKeyPrefix(address.Bytes()))
+	defer iterator.Release()
+	for iterator.Next() {
+		self.logger.Notice("key", common.Bytes2Hex(iterator.Key()))
+		k, ok := SplitCompositeStorageKey(address.Bytes(), iterator.Key())
+		if ok == false {
+			continue
+		}
+		storages[common.Bytes2Hex(k)] = common.Bytes2Hex(iterator.Value())
+	}
+	return storages
+}
+

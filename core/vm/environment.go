@@ -105,7 +105,7 @@ type Database interface {
 	GetRefund() *big.Int
 
 	GetState(common.Address, common.Hash) (bool, common.Hash)
-	SetState(common.Address, common.Hash, common.Hash)
+	SetState(common.Address, common.Hash, common.Hash, int32)
 
 	Delete(common.Address) bool
 	Exist(common.Address) bool
@@ -134,6 +134,8 @@ type Database interface {
 
 	FetchBatch(seqNo uint64) db.Batch
 	DeleteBatch(seqNo uint64)
+	MakeArchieve(uint64)
+	ShowArchieve(common.Address) map[string]string
 }
 
 // Account represents a contract or basic ethereum account.

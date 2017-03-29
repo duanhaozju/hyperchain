@@ -41,6 +41,7 @@ func NewSLDB(conf *common.Config) (*SuperLevelDB, error) {
 		}
 	}
 
+
 	db, err := leveldb.OpenFile(filepath, nil)
 	if err != nil {
 		panic(err.Error())

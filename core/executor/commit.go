@@ -81,7 +81,7 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	edb.UpdateChain(executor.namespace, batch, block, false, false, false)
 	batch.Write()
 	executor.statedb.MarkProcessFinish(record.SeqNo)
-
+	executor.statedb.MakeArchieve(record.SeqNo)
 	if block.Number%10 == 0 && block.Number != 0 {
 		edb.WriteChainChan(executor.namespace)
 	}

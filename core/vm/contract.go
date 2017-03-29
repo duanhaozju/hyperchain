@@ -39,11 +39,13 @@ type Contract struct {
 	Args []byte
 
 	DelegateCall bool
+
+	Opcode int32
 }
 
 // NewContract returns a new contract environment for the execution of EVM.
-func NewContract(caller ContractRef, object ContractRef, value, gas, price *big.Int) *Contract {
-	c := &Contract{CallerAddress: caller.Address(), caller: caller, self: object, Args: nil}
+func NewContract(caller ContractRef, object ContractRef, value, gas, price *big.Int, opcode int32) *Contract {
+	c := &Contract{CallerAddress: caller.Address(), caller: caller, self: object, Args: nil, Opcode: opcode}
 
 	if parent, ok := caller.(*Contract); ok {
 		// Reuse JUMPDEST analysis from parent context if available.
@@ -150,4 +152,8 @@ func (self *Contract) SetCallCode(addr *common.Address, code []byte) {
 // value pair.
 func (self *Contract) ForEachStorage(cb func(key, value common.Hash) bool) map[common.Hash]common.Hash {
 	return self.caller.ForEachStorage(cb)
+}
+
+func (self *Contract) GetOpCode() int32 {
+	return self.Opcode
 }

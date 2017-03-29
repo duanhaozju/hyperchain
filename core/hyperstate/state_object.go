@@ -29,6 +29,10 @@ const (
 	STATEOBJECT_STATUS_FROZON
 )
 
+const (
+	OPCODE_ARCHIEVE = 100
+)
+
 func (self Storage) String() (str string) {
 	for key, value := range self {
 		str += fmt.Sprintf("%X : %X\n", key, value)
@@ -63,9 +67,10 @@ type StateObject struct {
 	// by StateDB.Commit.
 	dbErr error
 
-	code          Code    // contract bytecode, which gets set when code is loaded
-	cachedStorage Storage // Storage entry cache to avoid duplicate reads
-	dirtyStorage  Storage // Storage entries that need to be flushed to disk
+	code             Code    // contract bytecode, which gets set when code is loaded
+	cachedStorage    Storage // Storage entry cache to avoid duplicate reads
+	dirtyStorage     Storage // Storage entries that need to be flushed to disk
+	archieveStorage  Storage // Storage entries that need to be flushed to disk
 
 	bucketTree *bucket.BucketTree     // a bucket tree use to calculate fingerprint of storage efficiency
 	bucketConf map[string]interface{} // bucket tree config
@@ -111,7 +116,7 @@ func newObject(db *StateDB, address common.Address, data Account, onDirty func(a
 	if data.CodeHash == nil {
 		data.CodeHash = emptyCodeHash
 	}
-	obj := &StateObject{db: db, address: address, data: data, cachedStorage: make(Storage), dirtyStorage: make(Storage), onDirty: onDirty, logger: logger}
+	obj := &StateObject{db: db, address: address, data: data, cachedStorage: make(Storage), dirtyStorage: make(Storage), archieveStorage: make(Storage), onDirty: onDirty, logger: logger}
 	// initialize bucket tree
 	if setup {
 		prefix, _ := CompositeStorageBucketPrefix(address.Bytes())
@@ -223,7 +228,7 @@ func GetStateFromDB(db db.Database, address common.Address, key common.Hash) (bo
 }
 
 // SetState updates a value in account storage.
-func (self *StateObject) SetState(db db.Database, key, value common.Hash) {
+func (self *StateObject) SetState(db db.Database, key, value common.Hash, opcode int32) {
 	exist, previous := self.db.GetState(self.address, key)
 	self.db.journal.JournalList = append(self.db.journal.JournalList, &StorageChange{
 		Account:  &self.address,
@@ -233,6 +238,9 @@ func (self *StateObject) SetState(db db.Database, key, value common.Hash) {
 	})
 	self.logger.Debugf("set state key %s value %s existed %v", key.Hex(), value.Hex(), exist)
 	self.setState(key, value)
+	if self.isArchieve(opcode) {
+		self.archieve(key, previous, value)
+	}
 }
 
 func (self *StateObject) setState(key, value common.Hash) {
@@ -255,18 +263,27 @@ func (self *StateObject) removeState(key common.Hash) {
 	delete(self.dirtyStorage, key)
 }
 
-func (self *StateObject) Flush(db db.Batch) error {
-	// IMPORTANT root should calculate first
+func (self *StateObject) Flush(db db.Batch, archieveDb db.Batch) error {
+	// IMPORTANT root should calculate firsNoticeft
 	// otherwise dirty storage will be removed in persist phase
 	self.GenerateFingerPrintOfStorage()
 	for key, value := range self.dirtyStorage {
 		delete(self.dirtyStorage, key)
 		if (value == common.Hash{}) {
 			// delete
-			self.logger.Debugf("flush dirty storage address [%s] delete item key: [%s]", self.address.Hex(), key.Hex())
+			self.logger.Noticef("flush dirty storage address [%s] delete item key: [%s]", self.address.Hex(), key.Hex())
 			if err := db.Delete(CompositeStorageKey(self.address.Bytes(), key.Bytes())); err != nil {
 				return err
 			}
+			// put into archieve db
+			previous := self.archieveStorage[key]
+			if (previous != common.Hash{}) {
+				self.logger.Noticef("flush dirty storage address [%s] add key: [%s] to archieve db, value [%s]", self.address.Hex(), key.Hex(), previous.Hex())
+				if err := archieveDb.Put(CompositeStorageKey(self.address.Bytes(), key.Bytes()), previous.Bytes()); err != nil {
+					return err
+				}
+			}
+
 		} else {
 			self.logger.Debugf("flush dirty storage address [%s] put item key: [%s], value [%s]", self.address.Hex(), key.Hex(), value.Hex())
 			if err := db.Put(CompositeStorageKey(self.address.Bytes(), key.Bytes()), value.Bytes()); err != nil {
@@ -276,6 +293,7 @@ func (self *StateObject) Flush(db db.Batch) error {
 	}
 	// flush all bucket tree modified to batch
 	self.bucketTree.AddChangesForPersistence(db, big.NewInt(int64(self.db.curSeqNo)))
+	self.archieveStorage = make(Storage)
 	return nil
 }
 
@@ -560,6 +578,7 @@ func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) ma
 		ret[h] = value
 	}
 	iter := self.db.db.NewIterator(GetStorageKeyPrefix(self.address.Bytes()))
+	defer iter.Release()
 	for iter.Next() {
 		k, ok := SplitCompositeStorageKey(self.address.Bytes(), iter.Key())
 		if ok == false {
@@ -615,4 +634,13 @@ func (self *StateObject) removeDeployedContract(address common.Address) bool {
 		return true
 	}
 	return false
+}
+
+func (self *StateObject) archieve(key common.Hash, originValue, value common.Hash) {
+	if (value == common.Hash{}) {
+		self.archieveStorage[key] = originValue
+	}
+}
+func (self *StateObject) isArchieve(opcode int32) bool {
+	return opcode == OPCODE_ARCHIEVE
 }
