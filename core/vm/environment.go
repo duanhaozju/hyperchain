@@ -134,8 +134,8 @@ type Database interface {
 
 	FetchBatch(seqNo uint64) db.Batch
 	DeleteBatch(seqNo uint64)
-	MakeArchieve(uint64)
-	ShowArchieve(common.Address, string) map[string]map[string]string
+	MakeArchive(uint64)
+	ShowArchive(common.Address, string) map[string]map[string]string
 }
 
 // Account represents a contract or basic ethereum account.

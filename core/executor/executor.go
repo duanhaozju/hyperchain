@@ -78,7 +78,6 @@ func (executor *Executor) Status() {
 
 }
 
-
 func (executor *Executor) initialize() {
 	if err := initializeExecutorStatus(executor); err != nil {
 		executor.logger.Errorf("executor initiailize status failed. %s", err.Error())

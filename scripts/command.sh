@@ -70,8 +70,7 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getCreator","pa
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getCreateTime","params": ["<contract address>"],"id": 1}'
 
 # 显示档案数据 ShowArchieve
-curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getArchieve","params": ["<contract address>"],"id": 1}'
-
+curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getArchive","params": ["<contract address>", "20170329"],"id": 1}'
 
 # 获取合约code GetCode
 curl localhost:8081 --data '{"jsonrpc":"2.0","method": "contract_getCode","params": ["<contract address>","<block number>"],"id": 1}'

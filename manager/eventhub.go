@@ -52,8 +52,6 @@ type EventHub struct {
 
 func New(namespace string, eventMux *event.TypeMux, executor *executor.Executor, peerManager p2p.PeerManager, consenter consensus.Consenter, am *accounts.AccountManager, cm *admittance.CAManager) *EventHub {
 	eventHub := NewEventHub(namespace, executor, peerManager, eventMux, consenter, am)
-	aliveChan := make(chan int)
-	eventHub.Start(aliveChan, cm)
 	return eventHub
 }
 
@@ -73,7 +71,7 @@ func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.
 	return hub
 }
 
-func (hub *EventHub) Start(c chan int, cm *admittance.CAManager) {
+func (hub *EventHub) Start() {
 	go hub.listenValidateEvent()
 	go hub.listenCommitEvent()
 	go hub.listenConsensusEvent()
@@ -82,14 +80,6 @@ func (hub *EventHub) Start(c chan int, cm *admittance.CAManager) {
 	go hub.listenPeerMaintainEvent()
 	go hub.listenSessionEvent()
 	go hub.listenTransactionEvent()
-
-	go hub.peerManager.Start(c, hub.eventMux, cm)
-	hub.initType = <-c
-	if hub.initType == 0 {
-		// start in normal mode
-		hub.PassRouters()
-		hub.NegotiateView()
-	}
 }
 
 // Properties

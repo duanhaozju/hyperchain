@@ -264,7 +264,7 @@ func (self *StateDB) FetchArchieveBatch(seqNo uint64) db.Batch {
 	}
 }
 
-func (self *StateDB) MakeArchieve(seqNo uint64) {
+func (self *StateDB) MakeArchive(seqNo uint64) {
 	batch := self.FetchArchieveBatch(seqNo)
 	self.archieveCache.Remove(seqNo)
 	self.logger.Debugf("make archieve seqNo %d, totally %d elements contained.", seqNo, batch.Len())
@@ -1103,7 +1103,7 @@ func isPrecompiledAccount(address common.Address) bool {
 }
 
 
-func (self *StateDB) ShowArchieve(address common.Address, date string) map[string]map[string]string {
+func (self *StateDB) ShowArchive(address common.Address, date string) map[string]map[string]string {
 	storages := make(map[string]map[string]string)
 	iter := self.archieveDb.NewIterator(GetArchieveStorageKeyWithDatePrefix(address.Bytes(), []byte(date)))
 	defer iter.Release()

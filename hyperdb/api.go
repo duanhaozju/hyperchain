@@ -30,34 +30,32 @@ type DBInstance struct {
 }
 
 const (
-	DB_TYPE = "dbConfig.dbType"
+	db_type = "dbConfig.dbType"
 
 	// database type
-	LDB_DB         = 0001
-	SUPER_LEVEL_DB = 0010
+	ldb_db         = 0001
+	super_level_db = 0010
 
 	// namespace
-	DefautNameSpace = "global"
-	Blockchain      = "Blockchain"
-	Consensus       = "Consensus"
-	Archieve        = "Archieve"
+	default_namespace = "global"
+	blockchain        = "blockchain"
+	consensus         = "consensus"
+	archieve          = "Archieve"
 
 	// state
 	closed stateDb = iota
 	opened
 )
 
-var log *logging.Logger // package-level logger
-type DbMap struct {
+type DbManager struct {
 	dbMap  map[string]*DBInstance
 	dbSync sync.Mutex
 }
 
-var dbMap *DbMap
+var dbMgr *DbManager
 
 func init() {
-	log = logging.MustGetLogger("hyperdb")
-	dbMap = &DbMap{
+	dbMgr = &DbManager{
 		dbMap: make(map[string]*DBInstance),
 	}
 }
@@ -70,11 +68,156 @@ func SetDBConfig(dbConfig string, port string) {
 	if err != nil {
 		panic(fmt.Errorf("Error envPre %s reading %s", "dbConfig", err))
 	}
-	dbType = config.GetInt(DB_TYPE)
+	dbType = config.GetInt(db_type)
 
 	logStatus = config.GetBool("dbConfig.logStatus")
 	logPath = config.GetString("dbConfig.logPath")
 
+}
+
+func InitDatabase(conf *common.Config, namespace string) error {
+	log := getLogger(namespace)
+	log.Criticalf("init db for namespace %s", namespace)
+	dbMgr.dbSync.Lock()
+	defer dbMgr.dbSync.Unlock()
+	_, ok := dbMgr.dbMap[getDbName(namespace)]
+
+	if ok {
+		log.Notice("Try to init inited db " + namespace)
+		return errors.New("Try to init inited db " + namespace)
+	}
+
+	db, err := NewDatabase(conf, "blockchain", dbType)
+
+	if err != nil {
+		log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+		log.Error(err.Error())
+		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+	}
+
+	archieveDb, err := NewDatabase(conf, "Archieve", 001)
+
+	if err != nil {
+		log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+		log.Error(err.Error())
+		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+	}
+
+	db1, err1 := NewDatabase(conf, "Consensus", 001)
+
+	if err1 != nil {
+
+		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+	}
+
+	dbMgr.dbMap[getDbName(namespace)] = &DBInstance{
+		state: opened,
+		db:    db,
+	}
+
+	dbMgr.dbMap[getConsensusDbName(namespace)] = &DBInstance{
+		state: opened,
+		db:    db1,
+	}
+
+	dbMgr.dbMap[getArchieveDbName(namespace)] = &DBInstance{
+		state: opened,
+		db:    archieveDb,
+	}
+
+	return err
+}
+
+//CloseDatabase close the database name by namespace.
+func CloseDatabase(namespace string) error {
+	dbMgr.dbSync.Lock()
+	defer dbMgr.dbSync.Unlock()
+
+	if db, ok := dbMgr.dbMap[getDbName(namespace)]; ok {
+		db.db.Close()
+		delete(dbMgr.dbMap, getDbName(namespace))
+	}
+
+	if db, ok := dbMgr.dbMap[getConsensusDbName(namespace)]; ok {
+		db.db.Close()
+		delete(dbMgr.dbMap, getConsensusDbName(namespace))
+	}
+
+	return nil
+}
+
+func GetDBDatabase() (db.Database, error) {
+	dbMgr.dbSync.Lock()
+	defer dbMgr.dbSync.Unlock()
+	if dbMgr.dbMap[getDbName(default_namespace)].db == nil {
+		log := getLogger(default_namespace)
+		log.Notice("GetDBDatabase() fail beacause dbMgr[GlobalBlockchain] has not been inited \n")
+		return nil, errors.New("GetDBDatabase() fail beacause dbMgr[GlobalBlockchain] has not been inited \n")
+	}
+	return dbMgr.dbMap[getDbName(default_namespace)].db, nil
+}
+
+func GetDBDatabaseByNamespace(namespace string) (db.Database, error) {
+	log := getLogger(namespace)
+	dbMgr.dbSync.Lock()
+	defer dbMgr.dbSync.Unlock()
+	name := getDbName(namespace)
+	if _, ok := dbMgr.dbMap[name]; !ok {
+		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
+	}
+
+	if dbMgr.dbMap[name].db == nil {
+		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
+	}
+	return dbMgr.dbMap[name].db, nil
+}
+
+func GetArchieveDbByNamespace(namespace string) (db.Database, error) {
+	log := getLogger(namespace)
+	dbMgr.dbSync.Lock()
+	defer dbMgr.dbSync.Unlock()
+	name := getArchieveDbName(namespace)
+	if _, ok := dbMgr.dbMap[name]; !ok {
+		log.Notice(fmt.Sprintf("GetDBArchiveByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
+	}
+
+	if dbMgr.dbMap[name].db == nil {
+		log.Notice(fmt.Sprintf("GetDBArchiveByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
+	}
+	return dbMgr.dbMap[name].db, nil
+}
+
+func GetDBConsensusByNamespcae(namespace string) (db.Database, error) {
+	log := getLogger(namespace)
+	dbMgr.dbSync.Lock()
+	defer dbMgr.dbSync.Unlock()
+	name := getConsensusDbName(namespace)
+	if _, ok := dbMgr.dbMap[name]; !ok {
+		log.Notice(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
+	}
+
+	if dbMgr.dbMap[name].db == nil {
+		log.Notice(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
+	}
+	return dbMgr.dbMap[name].db, nil
+}
+
+func NewDatabase(conf *common.Config, path string, dbType int) (db.Database, error) {
+	switch dbType {
+	case ldb_db:
+		return hleveldb.NewLDBDataBase(conf, path)
+	case super_level_db:
+		return sldb.NewSLDB(conf)
+	default:
+		return nil, errors.New("Wrong dbType:" + strconv.Itoa(dbType))
+	}
 }
 
 func IfLogStatus() bool {
@@ -85,133 +228,21 @@ func GetLogPath() string {
 	return logPath
 }
 
-func InitDatabase(conf *common.Config, nameSpace string) error {
-	log.Criticalf("init db for namespace %s", nameSpace)
-	dbMap.dbSync.Lock()
-	defer dbMap.dbSync.Unlock()
-	_, ok := dbMap.dbMap[nameSpace+Blockchain]
-
-	if ok {
-		log.Notice("Try to init inited db " + nameSpace)
-		return errors.New("Try to init inited db " + nameSpace)
-	}
-
-	db, err := NewDatabase(conf, "Blockchain", dbType)
-
-	if err != nil {
-		log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
-		log.Error(err.Error())
-		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
-	}
-
-	archieveDb, err := NewDatabase(conf, "Archieve", 001)
-
-	if err != nil {
-		log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
-		log.Error(err.Error())
-		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
-	}
-
-	db1, err1 := NewDatabase(conf, "Consensus", 001)
-
-	if err1 != nil {
-
-		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
-		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", nameSpace))
-	}
-
-	dbMap.dbMap[nameSpace+Blockchain] = &DBInstance{
-		state: opened,
-		db:    db,
-	}
-
-	dbMap.dbMap[nameSpace+Consensus] = &DBInstance{
-		state: opened,
-		db:    db1,
-	}
-
-	dbMap.dbMap[nameSpace+Archieve] = &DBInstance{
-		state: opened,
-		db:    archieveDb,
-	}
-
-	return err
+//getConsensusDbName get consensus db composite name by namespace.
+func getConsensusDbName(namespace string) string {
+	return namespace + consensus
 }
 
-func GetDBDatabase() (db.Database, error) {
-	dbMap.dbSync.Lock()
-	defer dbMap.dbSync.Unlock()
-	if dbMap.dbMap[DefautNameSpace+Blockchain].db == nil {
-		log.Notice("GetDBDatabase() fail beacause dbMap[GlobalBlockchain] has not been inited \n")
-		return nil, errors.New("GetDBDatabase() fail beacause dbMap[GlobalBlockchain] has not been inited \n")
-	}
-	return dbMap.dbMap[DefautNameSpace+Blockchain].db, nil
+//getDbName get ordinary db composite name by namespace.
+func getDbName(namespace string) string {
+	return namespace + blockchain
 }
 
-func GetDBDatabaseByNamespace(namespace string) (db.Database, error) {
-	dbMap.dbSync.Lock()
-	defer dbMap.dbSync.Unlock()
-
-	namespace += Blockchain
-
-	if _, ok := dbMap.dbMap[namespace]; !ok {
-		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n", namespace))
-		return nil, errors.New(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n", namespace))
-	}
-
-	if dbMap.dbMap[namespace].db == nil {
-		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n", namespace))
-		return nil, errors.New(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n", namespace))
-	}
-	return dbMap.dbMap[namespace].db, nil
+//getDbName get ordinary db composite name by namespace.
+func getArchieveDbName(namespace string) string {
+	return namespace + archieve
 }
 
-func GetArchieveDbByNamespace(namespace string) (db.Database, error) {
-	dbMap.dbSync.Lock()
-	defer dbMap.dbSync.Unlock()
-
-	namespace += Archieve
-
-	if _, ok := dbMap.dbMap[namespace]; !ok {
-		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n", namespace))
-		return nil, errors.New(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n", namespace))
-	}
-
-	if dbMap.dbMap[namespace].db == nil {
-		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n", namespace))
-		return nil, errors.New(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMap[%v] has not been inited \n", namespace))
-	}
-	return dbMap.dbMap[namespace].db, nil
-}
-
-func GetDBConsensusByNamespcae(namespace string) (db.Database, error) {
-	dbMap.dbSync.Lock()
-	defer dbMap.dbSync.Unlock()
-
-	namespace += Consensus
-
-	if _, ok := dbMap.dbMap[namespace]; !ok {
-		log.Notice(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMap[%v] has not been inited \n", namespace))
-		return nil, errors.New(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMap[%v] has not been inited \n", namespace))
-	}
-
-	if dbMap.dbMap[namespace].db == nil {
-		log.Notice(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMap[%v] has not been inited \n", namespace))
-		return nil, errors.New(fmt.Sprintf("GetDBConsensusByNamespcae fail beacause dbMap[%v] has not been inited \n", namespace))
-	}
-	return dbMap.dbMap[namespace].db, nil
-}
-
-func NewDatabase(conf *common.Config, path string, dbType int) (db.Database, error) {
-	switch dbType {
-	case LDB_DB:
-		log.Notice("Use level db only")
-		return hleveldb.NewLDBDataBase(conf, path)
-	case SUPER_LEVEL_DB:
-		log.Notice("Use SuperLevelDB")
-		return sldb.NewSLDB(conf)
-	default:
-		log.Errorf("Wrong dbType:" + strconv.Itoa(dbType))
-		return nil, errors.New("Wrong dbType:" + strconv.Itoa(dbType))
-	}
+func getLogger(namespace string) *logging.Logger {
+	return common.GetLogger(namespace, "hyperdb")
 }

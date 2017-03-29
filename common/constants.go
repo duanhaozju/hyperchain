@@ -12,6 +12,7 @@ const (
 	LOG_FILE_FORMAT       = "global.logs.file_format"
 	LOG_CONSOLE_FORMAT    = "global.logs.console_format"
 	LOG_MODULE_KEY        = "global.logs.module"
+	DEFAULT_LOG        = "system"
 )
 
 //constants for input args

@@ -55,7 +55,7 @@ func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp ch
 }
 
 func newHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) *httpServerImpl {
-	log = common.GetLogger(namespace.DEFAULT_LOG, "jsonrpc")
+	log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc")
 
 	hi := &httpServerImpl{
 		nsMgr: nr,

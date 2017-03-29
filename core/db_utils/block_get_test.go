@@ -14,12 +14,12 @@ import (
 func TestGetVersionOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetVersionOfBlock")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	block, err := GetBlockByNumber(hyperdb.DefautNameSpace, 1)
+	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
 	if string(block.Version) != BlockVersion {
 		t.Error("TestGetVersionOfBlock fail")
 	}
@@ -29,12 +29,12 @@ func TestGetVersionOfBlock(t *testing.T) {
 func TestGetParentHashOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetParentHashOfBlock")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	block, err := GetBlockByNumber(hyperdb.DefautNameSpace, 1)
+	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
 	if string(block.ParentHash) != "parentHash" {
 		t.Error("TestGetParentHashOfBlock fail")
 	}
@@ -44,12 +44,12 @@ func TestGetParentHashOfBlock(t *testing.T) {
 func TestGetBlockHashOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetBlockHashOfBlock")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	block, err := GetBlockByNumber(hyperdb.DefautNameSpace, 1)
+	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
 	if string(block.BlockHash) != "blockHash" {
 		t.Error("TestGetBlockHashOfBlock fail")
 	}
@@ -59,12 +59,12 @@ func TestGetBlockHashOfBlock(t *testing.T) {
 func TestGetTransactionsOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetTransactionsOfBlock")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	block, err := GetBlockByNumber(hyperdb.DefautNameSpace, 1)
+	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
 	if !reflect.DeepEqual(block.Transactions, test_util.TransactionCases) {
 		t.Error("TestGetTransactionsOfBlock fail")
 	}
@@ -74,12 +74,12 @@ func TestGetTransactionsOfBlock(t *testing.T) {
 func TestGetTimestampOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetTimestampOfBlock")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	block, err := GetBlockByNumber(hyperdb.DefautNameSpace, 1)
+	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
 	if block.Timestamp != 1489387222 {
 		t.Error("TestGetTimestampOfBlock fail")
 	}
@@ -89,12 +89,12 @@ func TestGetTimestampOfBlock(t *testing.T) {
 func TestGetMerkleRootOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetMerkleRootOfBlock")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	block, err := GetBlockByNumber(hyperdb.DefautNameSpace, 1)
+	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
 	if string(block.MerkleRoot) != "merkleRoot" {
 		t.Error("TestGetMerkleRootOfBlock fail")
 	}
@@ -104,12 +104,12 @@ func TestGetMerkleRootOfBlock(t *testing.T) {
 func TestGetTxRootOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetTxRootOfBlock")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	block, err := GetBlockByNumber(hyperdb.DefautNameSpace, 1)
+	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
 	if string(block.TxRoot) != "txRoot" {
 		t.Error("TestGetTxRootOfBlock fail")
 	}
@@ -119,12 +119,12 @@ func TestGetTxRootOfBlock(t *testing.T) {
 func TestGetReceiptRootOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetReceiptRootOfBlock")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	block, err := GetBlockByNumber(hyperdb.DefautNameSpace, 1)
+	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
 	if string(block.ReceiptRoot) != "receiptRoot" {
 		t.Error("TestGetReceiptRootOfBlock fail")
 	}
@@ -134,12 +134,12 @@ func TestGetReceiptRootOfBlock(t *testing.T) {
 func TestGetNumberOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetNumberOfBlock")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	block, err := GetBlockByNumber(hyperdb.DefautNameSpace, 1)
+	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
 	if block.Number != 1 {
 		t.Error("TestGetNumberOfBlock fail")
 	}
@@ -149,12 +149,12 @@ func TestGetNumberOfBlock(t *testing.T) {
 func TestGetWriteTimeOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetWriteTimeOfBlock")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	block, err := GetBlockByNumber(hyperdb.DefautNameSpace, 1)
+	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
 	if block.WriteTime != 1489387223 {
 		t.Error("TestGetWriteTimeOfBlock fail")
 	}
@@ -164,12 +164,12 @@ func TestGetWriteTimeOfBlock(t *testing.T) {
 func TestGetCommitTimeOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetCommitTimeOfBlock")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	block, err := GetBlockByNumber(hyperdb.DefautNameSpace, 1)
+	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
 	if block.CommitTime != 1489387224 {
 		t.Error("TestGetCommitTimeOfBlock fail")
 	}
@@ -179,12 +179,12 @@ func TestGetCommitTimeOfBlock(t *testing.T) {
 func TestGetEvmTimeOfBlock(t *testing.T) {
 	logger.Info("test =============> > > TestGetEvmTimeOfBlock")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.DefautNameSpace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
 	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	block, err := GetBlockByNumber(hyperdb.DefautNameSpace, 1)
+	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
 	if block.EvmTime != 1489387225 {
 		t.Error("TestGetEvmTimeOfBlock fail")
 	}
@@ -198,8 +198,8 @@ func InitDataBase() {
 	conf := common.NewConfig("../../configuration/namespaces/global/config/global.yaml")
 	conf.MergeConfig("../../configuration/namespaces/global/config/db.yaml")
 	hyperdb.SetDBConfig("../../configuration/namespaces/global/config/db.yaml", strconv.Itoa(conf.GetInt(common.C_NODE_ID)))
-	hyperdb.InitDatabase(conf, hyperdb.DefautNameSpace)
-	InitializeChain(hyperdb.DefautNameSpace)
+	hyperdb.InitDatabase(conf, hyperdb.defaut_namespace)
+	InitializeChain(hyperdb.defaut_namespace)
 }
 
 func deleteTestData() {
