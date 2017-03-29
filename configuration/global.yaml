@@ -26,7 +26,7 @@ global:
 
         logsdir: "./logs"
 
-        loglevel: "INFO"
+        loglevel: "NOTICE"
         # default loglevel for all modules which can be override by module level log setting
         file_format: "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
         console_format: "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
@@ -43,4 +43,5 @@ global:
         # start which namespaces when node starts
         start:
             global: true
-            test: false
+            ns1: false
+            ns2: false
