@@ -18,6 +18,7 @@ import (
 	"hyperchain/manager/protos"
 	"hyperchain/namespace/rpc"
 	"hyperchain/p2p"
+	"sync"
 	"time"
 )
 
@@ -51,8 +52,22 @@ const (
 
 //Status dynamic state of current namespace.
 type Status struct {
+	lock  *sync.RWMutex
 	state NsState
 	desc  string
+}
+
+func (s *Status) setState(state NsState) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.state = state
+}
+
+func (s *Status) getState() NsState {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	state := s.state
+	return state
 }
 
 //NamespaceInfo basic information of this namespace.
@@ -100,6 +115,7 @@ func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) 
 	status := &Status{
 		state: initnew,
 		desc:  "startting",
+		lock:  new(sync.RWMutex),
 	}
 	ns := &namespaceImpl{
 		nsInfo:   ninfo,
@@ -158,7 +174,7 @@ func (ns *namespaceImpl) init() error {
 	//7. init eventhub
 	eh := manager.New(ns.Name(), ns.eventMux, executor, ns.grpcMgr, consenter, am, cm)
 	ns.eh = eh
-	ns.status.state = initialized
+	ns.status.setState(initialized)
 
 	// 8. init JsonRpcProcessor
 	ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()))
@@ -178,7 +194,7 @@ func GetNamespace(name string, conf *common.Config) (Namespace, error) {
 //Start start services under this namespace.
 func (ns *namespaceImpl) Start() error {
 	ns.logger.Noticef("try to start namespace: %s", ns.Name())
-	state := ns.status.state
+	state := ns.status.getState()
 	if state < initialized {
 		err := ns.init()
 		if err != nil {
@@ -186,7 +202,7 @@ func (ns *namespaceImpl) Start() error {
 		}
 	}
 
-	if state == running {
+	if ns.status.getState() == running {
 		logger.Criticalf("namespace: %s is already running", ns.Name())
 		return nil
 	}
@@ -211,7 +227,7 @@ func (ns *namespaceImpl) Start() error {
 	}
 	//5.start request processor
 	ns.rpc.Start()
-	ns.status.state = running
+	ns.status.setState(running)
 	ns.logger.Noticef("namespace: %s start successful", ns.Name())
 	return nil
 }
@@ -236,15 +252,18 @@ func (ns *namespaceImpl) passRouters() {
 //Stop stop services under this namespace.
 func (ns *namespaceImpl) Stop() error {
 	ns.logger.Noticef("try to stop namespace: %s", ns.Name())
-	state := ns.status.state
-
+	state := ns.status.getState()
 	if state != running {
 		ns.logger.Criticalf("namespace: %s not running now, need not to stop", ns.Name())
 	}
-	//TODO: to provide Stop method for every components
 
-	ns.status.state = closed
+	ns.consenter.Close()
+	ns.grpcMgr.Stop()
+	ns.executor.Stop()
+	//TODO: stop eventhub
+	//TODO: ns.rpc.Stop
 
+	ns.status.setState(closed)
 	//close related database
 	hyperdb.CloseDatabase(ns.Name())
 
@@ -282,7 +301,7 @@ func (ns namespaceImpl) GetCAManager() *admittance.CAManager {
 
 //ProcessRequest process request under this namespace
 func (ns *namespaceImpl) ProcessRequest(request interface{}) interface{} {
-	if ns.status.state == running {
+	if ns.status.getState() == running {
 		if request != nil {
 			switch r := request.(type) {
 			case *common.RPCRequest:
