@@ -75,38 +75,15 @@ node6:
     introducer_port: 8001
     introducer_id: 1
 
-#node7:
-#    ip: 127.0.0.1
-#    node_id: 7
-#    is_origin: true
-#    is_vp: true
-#    grpc_port: 8007
-#    jsonrpc_port: 8087
-#    restful_port: 9007
-#    introducer_ip: 127.0.0.1
-#    introducer_port: 8001
-#    introducer_id: 1
-#
-#node8:
-#    ip: 127.0.0.1
-#    node_id: 8
-#    is_origin: true
-#    is_vp: true
-#    grpc_port: 8008
-#    jsonrpc_port: 8088
-#    restful_port: 9008
-#    introducer_ip: 127.0.0.1
-#    introducer_port: 8001
-#    introducer_id: 1
-#
-#node9:
-#    ip: 127.0.0.1
-#    node_id: 9
-#    is_origin: true
-#    is_vp: true
-#    grpc_port: 8009
-#    jsonrpc_port: 8089
-#    restful_port: 9009
-#    introducer_ip: 127.0.0.1
-#    introducer_port: 8001
-#    introducer_id: 1
+node7:
+    ip: 127.0.0.1
+    node_id: 7
+    is_origin: true
+    is_vp: true
+    grpc_port: 8007
+    jsonrpc_port: 8087
+    restful_port: 9007
+    introducer_ip: 127.0.0.1
+    introducer_port: 8001
+    introducer_id: 1
+

@@ -55,16 +55,6 @@ f_check_local_env(){
     fi
 }
 
-# get namespaces from script params
-f_get_ns(){
-    if [ $# -gt 1 ]; then
-        for ((i=2;i<=$#;i++))
-        do
-            NS="$NS $$i"
-        done
-    fi
-}
-
 # kill hyperchain process
 f_kill_process(){
     echo "kill the bind port process"
@@ -182,23 +172,20 @@ while [ $# -gt 0 ]
 do
     case "$1" in
     -h|--help)
-        help; exit 0;;
+        f_help; exit 0;;
     -k|--kill)
         f_kill_process; exit 1;;
     -d|--delete)
         DELETEDATA=false;
-        f_get_ns;
         shift;;
     -r|--rebuild)
         REBUILD=false;
-        f_get_ns;
         shift;;
     -m|--mode)
         MODE=true;
-        f_get_ns;
         shift;;
     --) shift; break;;
-    -*) help; exit 1;;
+    -*) f_help; exit 1;;
     *) NS="$NS $@"; break;;
     esac
 done
@@ -219,7 +206,7 @@ fi
 # distribute files
 for ns in $NS
 do
-    ~/go/src/hyperchain/scripts/namespace/gen_config.sh ${ns}
+    ${PROJECT_PATH}/scripts/namespace/gen_config.sh ${ns}
 done
 
 # run hyperchain node

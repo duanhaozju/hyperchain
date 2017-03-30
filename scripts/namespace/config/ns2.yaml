@@ -3,61 +3,61 @@
 namespace: ns2
 maxpeernode: 5
 
-node2:
+node3:
     ip: 127.0.0.1
     node_id: 1
     is_origin: true
     is_vp: true
     grpc_port: 8021
-    jsonrpc_port: 8082
-    restful_port: 9021
-    introducer_ip: 127.0.0.1
-    introducer_port: 8021
-    introducer_id: 1
-
-node3:
-    ip: 127.0.0.1
-    node_id: 2
-    is_origin: true
-    is_vp: true
-    grpc_port: 8022
     jsonrpc_port: 8083
-    restful_port: 9022
+    restful_port: 9021
     introducer_ip: 127.0.0.1
     introducer_port: 8021
     introducer_id: 1
 
 node4:
     ip: 127.0.0.1
-    node_id: 3
+    node_id: 2
     is_origin: true
     is_vp: true
-    grpc_port: 8023
+    grpc_port: 8022
     jsonrpc_port: 8084
-    restful_port: 9023
+    restful_port: 9022
     introducer_ip: 127.0.0.1
     introducer_port: 8021
     introducer_id: 1
 
 node5:
     ip: 127.0.0.1
-    node_id: 4
+    node_id: 3
     is_origin: true
     is_vp: true
-    grpc_port: 8024
+    grpc_port: 8023
     jsonrpc_port: 8085
-    restful_port: 9024
+    restful_port: 9023
     introducer_ip: 127.0.0.1
     introducer_port: 8021
     introducer_id: 1
 
 node6:
     ip: 127.0.0.1
+    node_id: 4
+    is_origin: true
+    is_vp: true
+    grpc_port: 8024
+    jsonrpc_port: 8086
+    restful_port: 9024
+    introducer_ip: 127.0.0.1
+    introducer_port: 8021
+    introducer_id: 1
+
+node7:
+    ip: 127.0.0.1
     node_id: 5
     is_origin: true
     is_vp: true
     grpc_port: 8025
-    jsonrpc_port: 8086
+    jsonrpc_port: 8087
     restful_port: 9025
     introducer_ip: 127.0.0.1
     introducer_port: 8021

@@ -53,6 +53,8 @@ f_get_nodes(){
 f_help(){
     echo "gen_config.sh helper:"
     echo "specify namespace config file name to generate and distribute nodes dirs"
+    echo "---------------------------------------------------"
+    echo "Example for generate and distribute a namespace:"
     echo "./gen_config ns1"
 }
 
@@ -190,7 +192,7 @@ DUMP_PATH="${PROJECT_PATH}/build"
 TMP_PATH="${PROJECT_PATH}/scripts/namespace/config/template"
 
 # namespace config file name
-NS_CONFIG_FORMAT=".yaml"
+NS_CONFIG_SUFFIX=".yaml"
 NS_CONFIG_FILE=""
 
 NS_CONFIG_PATH="${GOPATH}/src/hyperchain/configuration"
@@ -203,12 +205,11 @@ if [ $# -gt 0 ]; then
     case "$1" in
     -h|--help)
         f_help; exit 0;;
-    --) shift; break;;
-    -*) help; exit 1;;
-    *) NS_CONFIG_FILE="${PROJECT_PATH}/scripts/namespace/config/$1${NS_CONFIG_FORMAT}"; shift;;
+    -*) f_help; exit 1;;
+    *) NS_CONFIG_FILE="${PROJECT_PATH}/scripts/namespace/config/$1${NS_CONFIG_SUFFIX}";;
     esac
 else
-    echo "not enough params"
+    echo "not enough params, at least one param"
     exit 1
 fi
 
