@@ -54,11 +54,12 @@ func (t *threaded) Halt() {
 // Manager provides a serialized interface for submitting events to
 // a Receiver on the other side of the queue
 type Manager interface {
-	Inject(Event)         // A temporary interface to allow the event manager thread to skip the queue
-	Queue() chan interface{}  //event Queue
-	SetReceiver(Receiver) // Set the target to route events to
-	Start()               // Starts the Manager thread TODO, these thread management things should probably go away
-	Halt()                // Stops the Manager thread
+	Inject(Event)            // A temporary interface to allow the event manager thread to skip the queue
+	Queue() chan interface{} //event Queue
+	SetReceiver(Receiver)    // Set the target to route events to
+	Start()                  // Starts the Manager thread TODO, these thread management things should probably go away
+	Halt()                   // Stops the Manager thread
+	Stop()
 }
 
 // managerImpl is an implementation of Manger
@@ -84,6 +85,10 @@ func (em *managerImpl) SetReceiver(receiver Receiver) {
 // Start creates the go routine necessary to deliver events
 func (em *managerImpl) Start() {
 	go em.eventLoop()
+}
+
+func (em *managerImpl) Stop() {
+	em.exit <- struct{}{}
 }
 
 // queue returns a write only reference to the event queue

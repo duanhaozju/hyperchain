@@ -20,6 +20,7 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/manager/protos"
 	"sync/atomic"
+	"hyperchain/consensus/events"
 )
 
 /**
@@ -94,6 +95,10 @@ func (pbft *pbftImpl) RecvLocal(msg interface{}) error {
 func (pbft *pbftImpl) Start() {
 	pbft.logger.Noticef("--------PBFT starting, nodeID: %d--------", pbft.id)
 
+	pbft.pbftManager.Start()
+	pbft.pbftEventQueue = events.GetQueue(pbft.pbftManager.Queue())// init pbftEventQueue
+	pbft.reqEventQueue = events.GetQueue(pbft.batchMgr.batchEventsManager.Queue())
+
 	//1.restore state.
 	pbft.restoreState()
 
@@ -107,6 +112,8 @@ func (pbft *pbftImpl) Start() {
 }
 
 //Close close the consenter service
-func (*pbftImpl) Close() {
-	//TODO: stop the PBFT service
+func (pbft *pbftImpl) Close() {
+	pbft.pbftTimerMgr.Stop()
+	pbft.batchMgr.stop()
+	pbft.pbftManager.Stop()
 }

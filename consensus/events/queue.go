@@ -22,28 +22,28 @@ type msgQueue struct {
 	tm *event.TypeMux
 }
 
-func (q *msgQueue) Push(event interface{})  {
+func (q *msgQueue) Push(event interface{}) {
 	q.tm.Post(event)
 }
 
 type blockingQueue struct {
 	queue chan interface{}
-	exit chan bool
+	exit  chan bool
 }
 
 //Push push element into the blocking queue, this
 //method will block until the blocking queue is ready.
-func (eq *blockingQueue) Push(ele interface{})  {
+func (eq *blockingQueue) Push(ele interface{}) {
 	eq.queue <- ele
 }
 
 //Pop pop element form the blocking queue, this method
 //will block until blocking queue has element.
-func (eq *blockingQueue) Pop() interface {}{
+func (eq *blockingQueue) Pop() interface{} {
 	select {
-	case ele := <- eq.queue:
+	case ele := <-eq.queue:
 		return ele
-	case <- eq.exit:
+	case <-eq.exit:
 		logger.Infof("Queue is closed!")
 		return nil
 	}
@@ -68,7 +68,7 @@ func NewBlockingQueue(qsize uint64) *blockingQueue {
 	bq := &blockingQueue{}
 	if qsize == 1 {
 		bq.queue = make(chan interface{})
-	}else {
+	} else {
 		bq.queue = make(chan interface{}, qsize)
 	}
 	bq.exit = make(chan bool)
@@ -78,15 +78,15 @@ func NewBlockingQueue(qsize uint64) *blockingQueue {
 //NewSingleEleQueue new a queue just contains one element one time
 func NewSingleEleQueue() *blockingQueue {
 	return &blockingQueue{
-		queue:make(chan interface{}),
-		exit:make(chan bool),
+		queue: make(chan interface{}),
+		exit:  make(chan bool),
 	}
 }
 
 //GetQueue new a queue using exiting channel.
 func GetQueue(existedQueue chan interface{}) *blockingQueue {
 	return &blockingQueue{
-		queue:existedQueue,
-		exit:make(chan bool),
+		queue: existedQueue,
+		exit:  make(chan bool),
 	}
 }

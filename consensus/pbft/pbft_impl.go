@@ -36,7 +36,7 @@ type pbftImpl struct {
 	status         PbftStatus                       // basic status of pbft
 
 	batchMgr       *batchManager                // manage batch related issues
-	batchVdr       *batchValidator              // manage batch validate issues
+	batchVdr       *batchValidator             // manage batch validate issues
 	pbftTimerMgr   *timerManager                // manage pbft event timers
 	storeMgr       *storeManager                // manage storage
 	nodeMgr        *nodeManager                 // manage node delete or add
@@ -79,10 +79,7 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack) (*pbftImpl
 	//pbftManage manage consensus events
 	pbft.pbftManager = events.NewManagerImpl()
 	pbft.pbftManager.SetReceiver(pbft)
-	pbft.pbftManager.Start()
-	pbft.pbftEventQueue = events.GetQueue(pbft.pbftManager.Queue())// init pbftEventQueue
 
-	pbft.pbftEventQueue = events.GetQueue(pbft.pbftManager.Queue())// init pbftEventQueue
 	pbft.initMsgEventMap()
 
 	// new executor
