@@ -119,7 +119,7 @@ func newObject(db *StateDB, address common.Address, data Account, onDirty func(a
 	obj := &StateObject{db: db, address: address, data: data, cachedStorage: make(Storage), dirtyStorage: make(Storage), archieveStorage: make(Storage), onDirty: onDirty, logger: logger}
 	// initialize bucket tree
 	if setup {
-		prefix, _ := CompositeStorageBucketPrefix(address.Bytes())
+		prefix, _ := CompositeStorageBucketPrefix(address.Hex())
 		obj.bucketTree = bucket.NewBucketTree(db.db, string(prefix), logger)
 		obj.bucketTree.Initialize(bktConf)
 		obj.bucketConf = bktConf
