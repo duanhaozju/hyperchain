@@ -572,7 +572,7 @@ func (self *StateObject) Value() *big.Int {
 
 func (self *StateObject) ForEachStorage(cb func(key, value common.Hash) bool) map[common.Hash]common.Hash {
 	// When iterating over the storage check the cache first
-	var ret map[common.Hash]common.Hash
+	ret := make(map[common.Hash]common.Hash)
 	for h, value := range self.cachedStorage {
 		cb(h, value)
 		ret[h] = value
