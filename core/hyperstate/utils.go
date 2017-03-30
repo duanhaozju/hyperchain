@@ -117,8 +117,8 @@ func SplitCompositeAccountKey(key []byte) ([]byte, bool) {
 func CompositeStateBucketPrefix() ([]byte, bool) {
 	return append([]byte(bucketTreeIdentifier), []byte("-state")...), true
 }
-func CompositeStorageBucketPrefix(address []byte) ([]byte, bool) {
-	return append([]byte(bucketTreeIdentifier), address...), true
+func CompositeStorageBucketPrefix(address string) ([]byte, bool) {
+	return []byte(bucketTreeIdentifier + address), true
 }
 
 // construct bucket tree configuration

@@ -900,7 +900,7 @@ func (self *StateDB) RevertToJournal(targetHeight uint64, currentHeight uint64, 
 	// revert related stateObject storage bucket tree
 	for addr := range dirtyStateObjectSet.Iter() {
 		address := addr.(common.Address)
-		prefix, _ := CompositeStorageBucketPrefix(address.Bytes())
+		prefix, _ := CompositeStorageBucketPrefix(address.Hex())
 		bucketTree := bucket.NewBucketTree(self.db, string(prefix), self.logger)
 		bucketTree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT)))
 		bucketTree.ClearAllCache()
