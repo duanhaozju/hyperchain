@@ -40,17 +40,22 @@ f_check_local_env(){
 
     if ! type govendor > /dev/null; then
         # install foobar here
-        echo -e "Please install the `govendor`, just type:\ngo get -u github.com/kardianos/govendor"
+        echo -e "Please install the 'govendor', just type:\ngo get -u github.com/kardianos/govendor"
         exit 1
     fi
 
     if ! type jq > /dev/null; then
-        echo -e "Please install the `jq` to parse the json file \n just type: \n sudo apt-get install jq / sudo yum -y install jq / brew install jq "
+        echo -e "Please install the 'jq' to parse the json file \n just type: \n sudo apt-get install jq / sudo yum -y install jq / brew install jq "
         exit 1
     fi
     # confer
     if ! type confer > /dev/null; then
-        echo -e "Please install `confer` to read global.yaml config"
+        echo -e "Please install 'confer' to read global.yaml config"
+        exit 1
+    fi
+    # shyaml
+    if ! type shyaml > /dev/null; then
+        echo -e "Please install 'shyaml', just type:\nsudo pip install shyaml"
         exit 1
     fi
 }
@@ -151,10 +156,6 @@ GLOBAL_CONFIG="${CONF_PATH}/namespaces/global/config/global.yaml"
 # peerconfig
 PEER_CONFIG_FILE=${PROJECT_PATH}/scripts/namespace/config/global.yaml
 
-# node num
-MAXPEERNUM=`cat ${PEER_CONFIG_FILE} | shyaml get-value maxpeernode`
-echo "Node number is: ${MAXPEERNUM}"
-
 # delete data? default = true
 DELETEDATA=true
 
@@ -163,6 +164,10 @@ REBUILD=true
 
 # 1.check local env
 f_check_local_env
+
+# node num
+MAXPEERNUM=`cat ${PEER_CONFIG_FILE} | shyaml get-value maxpeernode`
+echo "Node number is: ${MAXPEERNUM}"
 
 # 2.set system type
 f_set_env
