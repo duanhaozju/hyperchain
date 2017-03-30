@@ -118,7 +118,7 @@ f_gen_config(){
         echo "  \"jsonrpc_port\":$jsonrpc_port,"        >>${peerconfig}
         echo "  \"restful_port\":$restful_port,"        >>${peerconfig}
         echo "  \"introducer_ip\":\"$introducer_ip\","  >>${peerconfig}
-        echo "  \"untroducer_port\":$introducer_port,"  >>${peerconfig}
+        echo "  \"introducer_port\":$introducer_port,"  >>${peerconfig}
         echo "  \"introducer_id\":$introducer_id"       >>${peerconfig}
         echo " },"                                      >>${peerconfig}
         echo "  \"maxpeernode\":$NS_MAXNODE,"           >>${peerconfig}
@@ -198,7 +198,7 @@ NS_CONFIG_FILE=""
 NS_CONFIG_PATH="${GOPATH}/src/hyperchain/configuration"
 
 # config ns path
-NS_PATH="${NS_CONFIG_PATH}/namespaces"
+NS_PATH="${PROJECT_PATH}/build/tmp"
 
 # exe by extra input params
 if [ $# -gt 0 ]; then
