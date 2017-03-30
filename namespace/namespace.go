@@ -256,12 +256,20 @@ func (ns *namespaceImpl) Stop() error {
 	if state != running {
 		ns.logger.Criticalf("namespace: %s not running now, need not to stop", ns.Name())
 	}
+	//1.stop request processor
+	ns.rpc.Stop()
 
-	ns.consenter.Close()
-	ns.grpcMgr.Stop()
+	//2.stop eventhub
+	ns.eh.Stop()
+
+	//3.stop executor
 	ns.executor.Stop()
-	//TODO: stop eventhub
-	//TODO: ns.rpc.Stop
+
+	//4.stop consensus service
+	ns.consenter.Close()
+
+	//5.stop peer manager
+	ns.grpcMgr.Stop()
 
 	ns.status.setState(closed)
 	//close related database

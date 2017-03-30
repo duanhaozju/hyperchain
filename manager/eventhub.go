@@ -7,16 +7,16 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/accounts"
 	"hyperchain/admittance"
+	"hyperchain/common"
 	"hyperchain/consensus"
 	"hyperchain/consensus/pbft"
 	"hyperchain/core/executor"
-	"hyperchain/manager/event"
-	"hyperchain/p2p"
-	"hyperchain/manager/protos"
-	"time"
-	m "hyperchain/manager/message"
 	"hyperchain/core/types"
-	"hyperchain/common"
+	"hyperchain/manager/event"
+	m "hyperchain/manager/message"
+	"hyperchain/manager/protos"
+	"hyperchain/p2p"
+	"time"
 )
 
 const (
@@ -48,6 +48,7 @@ type EventHub struct {
 	subscriptions map[int]event.Subscription
 	initType      int
 	logger        *logging.Logger
+	close         chan bool
 }
 
 func New(namespace string, eventMux *event.TypeMux, executor *executor.Executor, peerManager p2p.PeerManager, consenter consensus.Consenter, am *accounts.AccountManager, cm *admittance.CAManager) *EventHub {
@@ -65,6 +66,7 @@ func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.
 		peerManager:    peerManager,
 		accountManager: am,
 		subscriptions:  make(map[int]event.Subscription),
+		close:          make(chan bool),
 	}
 	hub.logger = common.GetLogger(namespace, "eventhub")
 	hub.Subscribe()
@@ -80,6 +82,11 @@ func (hub *EventHub) Start() {
 	go hub.listenPeerMaintainEvent()
 	go hub.listenSessionEvent()
 	go hub.listenTransactionEvent()
+}
+
+func (hub *EventHub) Stop() {
+	hub.close <- true
+	hub.logger.Noticef("event hub stopped!")
 }
 
 // Properties
@@ -103,7 +110,6 @@ func (hub *EventHub) GetAccountManager() *accounts.AccountManager {
 	return hub.accountManager
 }
 
-
 func (hub *EventHub) Subscribe() {
 	// Session stuff
 	hub.subscriptions[SUB_SESSION] = hub.eventMux.Subscribe(event.SessionEvent{})
@@ -123,136 +129,188 @@ func (hub *EventHub) GetSubscription(t int) event.Subscription {
 }
 
 func (hub *EventHub) listenSessionEvent() {
-	for obj := range hub.GetSubscription(SUB_SESSION).Chan() {
-		switch ev := obj.Data.(type) {
-		case event.SessionEvent:
-			hub.parseAndDispatch(ev)
+	for {
+		select {
+		case <-hub.close:
+			return
+		case obj := <-hub.GetSubscription(SUB_SESSION).Chan():
+			switch ev := obj.Data.(type) {
+			case event.SessionEvent:
+				hub.parseAndDispatch(ev)
+			}
+
 		}
 	}
 }
 
 func (hub *EventHub) listenTransactionEvent() {
-	for obj := range hub.GetSubscription(SUB_TRANSACTION).Chan() {
-		switch ev := obj.Data.(type) {
-		case event.NewTxEvent:
-			hub.logger.Debugf("message middleware: [new tx]")
-			if ev.Simulate == true {
-				hub.executor.RunInSandBox(ev.Transaction)
-			} else {
-				hub.consenter.RecvLocal(ev.Transaction)
+	for {
+		select {
+		case <-hub.close:
+			return
+		case obj := <-hub.GetSubscription(SUB_TRANSACTION).Chan():
+			switch ev := obj.Data.(type) {
+			case event.NewTxEvent:
+				hub.logger.Debugf("message middleware: [new tx]")
+				if ev.Simulate == true {
+					hub.executor.RunInSandBox(ev.Transaction)
+				} else {
+					hub.consenter.RecvLocal(ev.Transaction)
+				}
 			}
+
 		}
 	}
 }
 
 // listen validate msg
 func (hub *EventHub) listenValidateEvent() {
-	for obj := range hub.GetSubscription(SUB_VALIDATION).Chan() {
-		switch ev := obj.Data.(type) {
-		case event.ValidationEvent:
-			hub.logger.Debugf("message middleware: [validation]")
-			hub.executor.Validate(ev)
+	for {
+		select {
+		case <-hub.close:
+			return
+		case obj := <-hub.GetSubscription(SUB_VALIDATION).Chan():
+			switch ev := obj.Data.(type) {
+			case event.ValidationEvent:
+				hub.logger.Debugf("message middleware: [validation]")
+				hub.executor.Validate(ev)
+			}
+
 		}
 	}
+
 }
 
 // listen commit msg
 func (hub *EventHub) listenCommitEvent() {
-	for obj := range hub.GetSubscription(SUB_COMMIT).Chan() {
-		switch ev := obj.Data.(type) {
-		case event.CommitEvent:
-			hub.logger.Debugf("message middleware: [commit]")
-			hub.executor.CommitBlock(ev)
+	for {
+		select {
+		case <-hub.close:
+			return
+		case obj := <-hub.GetSubscription(SUB_COMMIT).Chan():
+			switch ev := obj.Data.(type) {
+			case event.CommitEvent:
+				hub.logger.Debugf("message middleware: [commit]")
+				hub.executor.CommitBlock(ev)
+			}
+
 		}
 	}
+
 }
 
 func (hub *EventHub) listenMiscellaneousEvent() {
-	for obj := range hub.GetSubscription(SUB_MISCELLANEOUS).Chan() {
-		switch ev := obj.Data.(type) {
-		case event.InformPrimaryEvent:
-			hub.logger.Debugf("message middleware: [inform primary]")
-			hub.peerManager.SetPrimary(ev.Primary)
-		case event.VCResetEvent:
-			hub.logger.Debugf("message middleware: [vc reset]")
-			hub.executor.Rollback(ev)
-		case event.ChainSyncReqEvent:
-			hub.logger.Debugf("message middleware: [chain sync request]")
-			hub.executor.SendSyncRequest(ev)
+
+	for {
+		select {
+		case <-hub.close:
+			return
+		case obj := <-hub.GetSubscription(SUB_MISCELLANEOUS).Chan():
+			switch ev := obj.Data.(type) {
+			case event.InformPrimaryEvent:
+				hub.logger.Debugf("message middleware: [inform primary]")
+				hub.peerManager.SetPrimary(ev.Primary)
+			case event.VCResetEvent:
+				hub.logger.Debugf("message middleware: [vc reset]")
+				hub.executor.Rollback(ev)
+			case event.ChainSyncReqEvent:
+				hub.logger.Debugf("message middleware: [chain sync request]")
+				hub.executor.SendSyncRequest(ev)
+			}
+
 		}
 	}
 }
 
 func (hub *EventHub) listenConsensusEvent() {
-	for obj := range hub.GetSubscription(SUB_CONSENSUS).Chan() {
-		switch ev := obj.Data.(type) {
-		case event.BroadcastConsensusEvent:
-			hub.logger.Debugf("message middleware: [broadcast consensus]")
-			hub.broadcast(BROADCAST_VP, m.SessionMessage_CONSENSUS, ev.Payload)
-		case event.TxUniqueCastEvent:
-			hub.logger.Debugf("message middleware: [tx unicast]")
-			hub.send(m.SessionMessage_FOWARD_TX, ev.Payload, []uint64{ev.PeerId})
-		case event.NegoRoutersEvent:
-			hub.logger.Debugf("message middleware: [negotiate routers]")
-			hub.peerManager.UpdateAllRoutingTable(ev.Payload)
+	for {
+		select {
+		case <-hub.close:
+			return
+		case obj := <-hub.GetSubscription(SUB_CONSENSUS).Chan():
+			switch ev := obj.Data.(type) {
+			case event.BroadcastConsensusEvent:
+				hub.logger.Debugf("message middleware: [broadcast consensus]")
+				hub.broadcast(BROADCAST_VP, m.SessionMessage_CONSENSUS, ev.Payload)
+			case event.TxUniqueCastEvent:
+				hub.logger.Debugf("message middleware: [tx unicast]")
+				hub.send(m.SessionMessage_FOWARD_TX, ev.Payload, []uint64{ev.PeerId})
+			case event.NegoRoutersEvent:
+				hub.logger.Debugf("message middleware: [negotiate routers]")
+				hub.peerManager.UpdateAllRoutingTable(ev.Payload)
+			}
+
 		}
 	}
 }
 
 func (hub *EventHub) listenPeerMaintainEvent() {
-	for obj := range hub.GetSubscription(SUB_PEERMAINTAIN).Chan() {
-		switch ev := obj.Data.(type) {
-		case event.NewPeerEvent:
-			hub.logger.Debugf("message middleware: [new peer]")
-			hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_ADD_NODE_EVENT, &protos.AddNodeMessage{ev.Payload})
-		case event.BroadcastNewPeerEvent:
-			hub.logger.Debugf("message middleware: [broadcast new peer]")
-			hub.broadcast(BROADCAST_VP, m.SessionMessage_ADD_PEER, ev.Payload)
-		case event.DelPeerEvent:
-			hub.logger.Debugf("message middleware: [delete peer]")
-			payload := ev.Payload
-			routerHash, id, del := hub.peerManager.GetRouterHashifDelete(string(payload))
-			msg := &protos.DelNodeMessage{
-				DelPayload: payload,
-				RouterHash: routerHash,
-				Id:         id,
-				Del:        del,
+
+	for {
+		select {
+		case <-hub.close:
+			return
+		case obj := <-hub.GetSubscription(SUB_PEERMAINTAIN).Chan():
+			switch ev := obj.Data.(type) {
+			case event.NewPeerEvent:
+				hub.logger.Debugf("message middleware: [new peer]")
+				hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_ADD_NODE_EVENT, &protos.AddNodeMessage{ev.Payload})
+			case event.BroadcastNewPeerEvent:
+				hub.logger.Debugf("message middleware: [broadcast new peer]")
+				hub.broadcast(BROADCAST_VP, m.SessionMessage_ADD_PEER, ev.Payload)
+			case event.DelPeerEvent:
+				hub.logger.Debugf("message middleware: [delete peer]")
+				payload := ev.Payload
+				routerHash, id, del := hub.peerManager.GetRouterHashifDelete(string(payload))
+				msg := &protos.DelNodeMessage{
+					DelPayload: payload,
+					RouterHash: routerHash,
+					Id:         id,
+					Del:        del,
+				}
+				hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_DEL_NODE_EVENT, msg)
+			case event.BroadcastDelPeerEvent:
+				hub.logger.Debugf("message middleware: [broadcast delete peer]")
+				hub.broadcast(BROADCAST_VP, m.SessionMessage_DEL_PEER, ev.Payload)
+			case event.UpdateRoutingTableEvent:
+				hub.logger.Debugf("message middleware: [update routing table]")
+				if ev.Type == true {
+					// add a peer
+					hub.peerManager.UpdateRoutingTable(ev.Payload)
+					hub.PassRouters()
+				} else {
+					// remove a peer
+					hub.peerManager.DeleteNode(string(ev.Payload))
+					hub.PassRouters()
+				}
+			case event.AlreadyInChainEvent:
+				hub.logger.Debugf("message middleware: [already in chain]")
+				if hub.initType == 1 {
+					hub.peerManager.SetOnline()
+					payload := hub.peerManager.GetLocalAddressPayload()
+					hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_NEW_NODE_EVENT, &protos.NewNodeMessage{payload})
+					hub.PassRouters()
+					hub.NegotiateView()
+				}
 			}
-			hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_DEL_NODE_EVENT, msg)
-		case event.BroadcastDelPeerEvent:
-			hub.logger.Debugf("message middleware: [broadcast delete peer]")
-			hub.broadcast(BROADCAST_VP, m.SessionMessage_DEL_PEER, ev.Payload)
-		case event.UpdateRoutingTableEvent:
-			hub.logger.Debugf("message middleware: [update routing table]")
-			if ev.Type == true {
-				// add a peer
-				hub.peerManager.UpdateRoutingTable(ev.Payload)
-				hub.PassRouters()
-			} else {
-				// remove a peer
-				hub.peerManager.DeleteNode(string(ev.Payload))
-				hub.PassRouters()
-			}
-		case event.AlreadyInChainEvent:
-			hub.logger.Debugf("message middleware: [already in chain]")
-			if hub.initType == 1 {
-				hub.peerManager.SetOnline()
-				payload := hub.peerManager.GetLocalAddressPayload()
-				hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_NEW_NODE_EVENT, &protos.NewNodeMessage{payload})
-				hub.PassRouters()
-				hub.NegotiateView()
-			}
+
 		}
 	}
 }
 
 func (hub *EventHub) listenExecutorEvent() {
-	for obj := range hub.GetSubscription(SUB_EXEC).Chan() {
-		switch ev := obj.Data.(type) {
-		case event.ExecutorToConsensusEvent:
-			hub.dispatchExecutorToConsensus(ev)
-		case event.ExecutorToP2PEvent:
-			hub.dispatchExecutorToP2P(ev)
+	for {
+		select {
+		case <-hub.close:
+			return
+		case obj := <-hub.GetSubscription(SUB_EXEC).Chan():
+			switch ev := obj.Data.(type) {
+			case event.ExecutorToConsensusEvent:
+				hub.dispatchExecutorToConsensus(ev)
+			case event.ExecutorToP2PEvent:
+				hub.dispatchExecutorToP2P(ev)
+			}
+
 		}
 	}
 }

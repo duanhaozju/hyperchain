@@ -7,12 +7,6 @@
 // 2016-12-23: change the interface definition (Chen Quan)
 package p2p
 
-// Init the log setting
-//var log *logging.Logger // package-level logger
-//func init() {
-//	log = logging.MustGetLogger("p2p")
-//}
-
 // PeerManager provides the basic functions which supports the peer to peer
 // data transfer. Those should be invoked by the higher layer.
 type PeerManager interface {
