@@ -1,7 +1,7 @@
 #used to generate namespace config files
 
 namespace: global
-maxpeernode: 6
+maxpeernode: 7
 
 node1:
     ip: 127.0.0.1

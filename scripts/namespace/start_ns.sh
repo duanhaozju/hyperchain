@@ -46,7 +46,8 @@ f_get_ip_nodes(){
     for node in ${NODES}
     do
         IPS[$i]=`cat ${NS_CONFIG_FILE} | shyaml get-value ${node}.ip`
-        PORTS[$i]=`cat ${NS_CONFIG_FILE} | shyaml get-value ${node}.jsonrpc_port`
+        GRPC_PORTS[$i]=`cat ${NS_CONFIG_FILE} | shyaml get-value ${node}.grpc_port`
+        JSONRPC_PORTS[$i]=`cat ${NS_CONFIG_FILE} | shyaml get-value ${node}.jsonrpc_port`
         ((i+=1))
     done
 }
@@ -60,8 +61,8 @@ f_start_ns(){
     for i in `seq 0 $[${NS_MAXNODE}-1]`
     do
         if [ $? -eq 0 ]; then
-            echo "register ${IPS[$i]}:${PORTS[$i]} to namespace: $1"
-            ${CLI_PATH}/hypercli -H ${IPS[$i]} -P ${PORTS[$i]} namespace register $1
+            echo "register ${IPS[$i]}:${GRPC_PORTS[$i]} to namespace: $1 from jsonrpc port: ${JSONRPC_PORTS[$i]}"
+            ${CLI_PATH}/hypercli -H ${IPS[$i]} -P ${JSONRPC_PORTS[$i]} namespace register $1
         else
             echo "register failed!!!"
             exit 1
@@ -72,8 +73,8 @@ f_start_ns(){
     for i in `seq 0 $[${NS_MAXNODE}-1]`
     do
         if [ $? -eq 0 ] ; then
-            echo "start ${IPS[$i]}:${PORTS[$i]} in namespace: $1"
-            ${CLI_PATH}/hypercli -H ${IPS[$i]} -P ${PORTS[$i]} namespace start $1
+            echo "start ${IPS[$i]}:${GRPC_PORTS[$i]} in namespace: $1 from jsonrpc port: ${JSONRPC_PORTS[$i]}"
+            ${CLI_PATH}/hypercli -H ${IPS[$i]} -P ${JSONRPC_PORTS[$i]} namespace start $1
         else
             echo "start failed!!!"
             exit 1
