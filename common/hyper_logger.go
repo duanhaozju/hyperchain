@@ -29,19 +29,19 @@ var defaultConsoleFormat = `[%{module}]%{color}[%{level:.5s}] %{time:15:04:05.00
 var defaultFileFormat = `[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}`
 
 type HyperLogger struct {
-	conf   			 *Config
-	moduleLoggers 	    	 map[string]*moduleLogger
-	closeLogFile        	 chan struct{}
-	moduleLoggersMutex  	 sync.RWMutex
-	writeToFile         	 bool
-	currentFile		 *os.File
-	baseLevel		 string
-	fileFormat		 string
-	consoleFormat		 string
-	logDir			 string
+	conf               *Config
+	moduleLoggers      map[string]*moduleLogger
+	closeLogFile       chan struct{}
+	moduleLoggersMutex sync.RWMutex
+	writeToFile        bool
+	currentFile        *os.File
+	baseLevel          string
+	fileFormat         string
+	consoleFormat      string
+	logDir             string
 }
 
-// InitSystemLogger init the very first hyperlogger
+// InitHyperLoggerManager init the very first hyperlogger
 func InitHyperLoggerManager(conf *Config) {
 	once.Do(func() {
 		hyperLoggers = make(map[string]*HyperLogger)
@@ -142,7 +142,7 @@ func GetLogger(namespace string, module string) *logging.Logger {
 func SetLogLevel(namespace string, module string, level string) error {
 	ml := getModuleLogger(namespace, module)
 	if ml == nil {
-		err := errors.New("SetLogLevel Error: "+namespace+"::"+module+" not exist")
+		err := errors.New("SetLogLevel Error: " + namespace + "::" + module + " not exist")
 		return err
 	}
 	ml.setLogLevel(level)
@@ -153,7 +153,7 @@ func SetLogLevel(namespace string, module string, level string) error {
 func GetLogLevel(namespace, module string) (string, error) {
 	ml := getModuleLogger(namespace, module)
 	if ml == nil {
-		err := errors.New("GetLogLevel Error: "+namespace+"::"+module+" not exist")
+		err := errors.New("GetLogLevel Error: " + namespace + "::" + module + " not exist")
 		return "", err
 	}
 	return ml.level, nil
@@ -165,7 +165,7 @@ func CloseHyperlogger(namespace string) error {
 		logger.Errorf("Close Namespace Error: %s", err.Error())
 		return err
 	}
-	hl.closeLogFile <- struct {}{}
+	hl.closeLogFile <- struct{}{}
 	rwMutex.Lock()
 	delete(hyperLoggers, namespace)
 	rwMutex.Unlock()
@@ -175,9 +175,9 @@ func CloseHyperlogger(namespace string) error {
 
 func newHyperLogger(conf *Config) *HyperLogger {
 	hl := &HyperLogger{
-		conf:         		conf,
-		closeLogFile: 		make(chan struct{}),
-		moduleLoggers:		make(map[string]*moduleLogger),
+		conf:          conf,
+		closeLogFile:  make(chan struct{}),
+		moduleLoggers: make(map[string]*moduleLogger),
 	}
 	return hl
 }
@@ -248,8 +248,8 @@ func (hl *HyperLogger) init() {
 }
 
 func (hl *HyperLogger) addNewLogger(compositeName string, file *os.File,
-fileFormat string, consoleFormat string, logLevel string, writeFile bool) (
-ml *moduleLogger, err error) {
+	fileFormat string, consoleFormat string, logLevel string, writeFile bool) (
+	ml *moduleLogger, err error) {
 	if hl.moduleLoggers == nil {
 		err = errors.New("addNewLogger error: moduleLoggers nil")
 		return nil, err
@@ -328,7 +328,7 @@ func getModuleLogger(namespace, module string) *moduleLogger {
 	hl.moduleLoggersMutex.RLock()
 	ml, ok := hl.moduleLoggers[compositeName]
 	if !ok {
-		logger.Criticalf("getLogger error: module %s not exist", compositeName)
+		logger.Debugf("module %s not exist", compositeName)
 	}
 	hl.moduleLoggersMutex.RUnlock()
 	return ml
