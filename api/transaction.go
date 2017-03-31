@@ -116,6 +116,13 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 	if args.Nonce <= 0 {
 		return SendTxArgs{}, &common.InvalidParamsError{Message:"'nonce' is invalid"}
 	}
+	if txType == 4 && args.Opcode == 1 && (args.Payload == "" || args.Payload == "0x") {
+		return SendTxArgs{}, &common.InvalidParamsError{Message:"contract code is empty"}
+	}
+	if txType == 1 && (args.Payload == "" || args.Payload == "0x"){
+		return SendTxArgs{}, &common.InvalidParamsError{Message:"contract code is empty"}
+
+	}
 	return args, nil
 }
 
