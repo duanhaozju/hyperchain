@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
+	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	"hyperchain/admittance"
 	"hyperchain/common"
@@ -19,32 +20,34 @@ import (
 	"strconv"
 	"sync"
 	"time"
-	"github.com/pkg/errors"
 )
 
 // gRPC peer manager struct, which to manage the gRPC peers
 type GRPCPeerManager struct {
-	MaxPeerNum int
-	LocalAddr  *pb.PeerAddr
-	LocalNode  *Node
-	peersPool  *PeersPool
-	nvpPool    *PeersPool
-	TM         *transport.TransportManager
-	configs    pc.Config
-	IsOriginal bool
-	IsOnline   bool
-	//interducer information
-	Introducer *pb.PeerAddr
-	//CERT Manager
-	cm *admittance.CAManager
-	//isValidate peer
-	IsVP      bool
+	maxPeerNum int
+	isOriginal bool
+	isOnline   bool
+
+	localAddr *pb.PeerAddr
+	localNode *Node
+
+	peersPool *PeersPool
+	nvpPool   *PeersPool
+
+	tm      *transport.TransportManager
+	configs pc.Config
+
+	introducer *pb.PeerAddr //interducer information
+
+	cm *admittance.CAManager //CERT Manager
+
+	isVP      bool //isValidate peer
 	namespace string
 	logger    *logging.Logger
-	// to ensure the init type
-	aliveChain chan int
-	//eventMux
-	eventMux *event.TypeMux
+
+	aliveChain chan int // to ensure the init type
+
+	eventMux *event.TypeMux //eventMux
 }
 
 func NewGrpcManager(conf *common.Config, eventMux *event.TypeMux, cm *admittance.CAManager) (*GRPCPeerManager, error) {
@@ -52,7 +55,7 @@ func NewGrpcManager(conf *common.Config, eventMux *event.TypeMux, cm *admittance
 	logger := common.GetLogger(namespace, "grpcmgr")
 	logger.Noticef("new instance for namespace: %s", namespace)
 
-	config := pc.NewConfigReader(conf.GetString("global.configs.peers"))
+	config := pc.NewConfigReader(conf.GetString("global.configs.peers"), namespace)
 	if config == nil {
 		return nil, errors.New("new grpc config failed")
 	}
@@ -64,70 +67,72 @@ func NewGrpcManager(conf *common.Config, eventMux *event.TypeMux, cm *admittance
 	}
 
 	if config.IsOrigin() && config.LocalID() > config.MaxNum() {
-		return nil, errors.Errorf("origin LocalAddr.ID: %d shouldn't large than the max peer num: %d", config.MaxNum())
+		return nil, errors.Errorf("origin localAddr.ID: %d shouldn't large than the max peer num: %d", config.MaxNum())
 
 	} else if !config.IsOrigin() && config.LocalID()-1 > config.MaxNum() {
-		return nil, errors.Errorf("non-origin LocalAddr.ID: %d shouldn't large than the max peer num: %d", config.MaxNum())
+		return nil, errors.Errorf("non-origin localAddr.ID: %d shouldn't large than the max peer num: %d", config.MaxNum())
 
 	}
 
 	return &GRPCPeerManager{
 		configs:    config,
-		LocalAddr:  localAddr,
-		MaxPeerNum: config.MaxNum(),
-		IsOriginal: config.IsOrigin(),
-		IsVP:       config.IsVP(),
+		localAddr:  localAddr,
+		maxPeerNum: config.MaxNum(),
+		isOriginal: config.IsOrigin(),
+		isVP:       config.IsVP(),
 		namespace:  namespace,
 		logger:     logger,
 		aliveChain: make(chan int, 1),
 		cm:         cm,
 		eventMux:   eventMux,
-		Introducer: introducer,
+		introducer: introducer,
 	}, nil
 }
 
 //Start start the Normal local listen server.
-func (grpcmgr *GRPCPeerManager) Start() {
+func (grpcmgr *GRPCPeerManager) Start() error {
 	//cert manager
 	//handshake manager
 	//HSM only instanced once, so peersPool and Node Hsm are same instance
 	tm, err := transport.NewTransportManager(grpcmgr.cm, grpcmgr.namespace)
 	if err != nil {
-		panic(err)
+		grpcmgr.logger.Error(err)
+		return err
 	}
-	grpcmgr.TM = tm
-	grpcmgr.peersPool = NewPeersPool(grpcmgr.TM, grpcmgr.LocalAddr, grpcmgr.cm, grpcmgr.namespace)
-	grpcmgr.LocalNode = NewNode(grpcmgr.LocalAddr, grpcmgr.eventMux, grpcmgr.TM, grpcmgr.peersPool, grpcmgr.cm, grpcmgr.configs, grpcmgr.namespace)
-	grpcmgr.LocalNode.StartServer()
-	grpcmgr.LocalNode.N = grpcmgr.configs.MaxNum()
+	grpcmgr.tm = tm
+	grpcmgr.peersPool = NewPeersPool(grpcmgr.tm, grpcmgr.localAddr, grpcmgr.cm, grpcmgr.namespace)
+	grpcmgr.localNode = NewNode(grpcmgr.localAddr, grpcmgr.eventMux, grpcmgr.tm, grpcmgr.peersPool, grpcmgr.cm, grpcmgr.configs, grpcmgr.namespace)
+	grpcmgr.localNode.StartServer()
+	grpcmgr.localNode.N = grpcmgr.configs.MaxNum()
 
 	// connect to peer
 	rec, _ := persist.GetBool("onceOnline", grpcmgr.namespace)
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
-	if !rec && grpcmgr.IsOriginal {
+	if !rec && grpcmgr.isOriginal {
 		//creator
 		grpcmgr.logger.Debug("start node as oirgin mode")
 		grpcmgr.create(wg)
-		grpcmgr.IsOnline = true
-	} else if !rec && !grpcmgr.IsOriginal {
+		grpcmgr.isOnline = true
+	} else if !rec && !grpcmgr.isOriginal {
 		//newnode
 		grpcmgr.logger.Debug("connect to introducer")
 		// IMPORT should aliveChain <- 1 frist
 		grpcmgr.aliveChain <- 1
-		go grpcmgr.LocalNode.attendNoticeProcess(grpcmgr.LocalNode.N)
-		grpcmgr.connectIntro(*grpcmgr.Introducer)
+		go grpcmgr.localNode.attendNoticeProcess(grpcmgr.localNode.N)
+		grpcmgr.connectIntro(*grpcmgr.introducer)
 	} else {
 		//reconnect
 		grpcmgr.logger.Debug("reconnect to peers")
 		grpcmgr.reconnect(wg)
-		grpcmgr.IsOnline = true
+		grpcmgr.isOnline = true
 	}
 	wg.Wait()
 	grpcmgr.logger.Notice("┌────────────────────────────┐")
 	grpcmgr.logger.Notice("│  All NODES WERE CONNECTED  |")
 	grpcmgr.logger.Notice("└────────────────────────────┘")
 	persist.PutBool("onceOnline", true, grpcmgr.namespace)
+	return nil
 }
 
 func (grpcmgr GRPCPeerManager) GetInitType() <-chan int {
@@ -226,7 +231,7 @@ func (grpcmgr *GRPCPeerManager) allPeerAddr() []*pb.PeerAddr {
 	peers := grpcmgr.configs.Peers()
 	plist := make([]*pb.PeerAddr, 0)
 	for _, p := range peers {
-		if p.ID == grpcmgr.LocalNode.GetNodeID() {
+		if p.ID == grpcmgr.localNode.GetNodeID() {
 			continue
 		}
 		addr := pb.NewPeerAddr(p.Address, p.Port, p.Port, p.ID)
@@ -242,9 +247,9 @@ func (grpcmgr *GRPCPeerManager) newMsg(payload []byte, msgType pb.Message_MsgTyp
 		MessageType:  msgType,
 		Payload:      payload,
 		MsgTimeStamp: time.Now().UnixNano(),
-		From:         grpcmgr.LocalAddr.ToPeerAddress(),
+		From:         grpcmgr.localAddr.ToPeerAddress(),
 	}
-	signMsg, err := grpcmgr.TM.SignMsg(msg)
+	signMsg, err := grpcmgr.tm.SignMsg(msg)
 	if err != nil {
 		grpcmgr.logger.Warningf("sign msg failed, err : %v", err)
 	}
@@ -253,8 +258,8 @@ func (grpcmgr *GRPCPeerManager) newMsg(payload []byte, msgType pb.Message_MsgTyp
 
 func (grpcmgr *GRPCPeerManager) connectIntro(introAddr pb.PeerAddr) {
 	//连接介绍人,并且将其路由表取回,然后进行存储
-	introPeer := NewPeer(&introAddr, grpcmgr.LocalAddr, grpcmgr.TM, grpcmgr.cm, grpcmgr.namespace)
-	payload, err := proto.Marshal(grpcmgr.LocalAddr.ToPeerAddress())
+	introPeer := NewPeer(&introAddr, grpcmgr.localAddr, grpcmgr.tm, grpcmgr.cm, grpcmgr.namespace)
+	payload, err := proto.Marshal(grpcmgr.localAddr.ToPeerAddress())
 	if err != nil {
 		grpcmgr.logger.Errorf("cannot connect to intro peer,err %v", err)
 		return
@@ -271,14 +276,14 @@ func (grpcmgr *GRPCPeerManager) connectIntro(introAddr pb.PeerAddr) {
 
 	grpcmgr.peersPool.MergeFromRoutersToTemp(routers, introPeer.PeerAddr)
 
-	grpcmgr.LocalNode.N = len(grpcmgr.GetAllPeersWithTemp())
+	grpcmgr.localNode.N = len(grpcmgr.GetAllPeersWithTemp())
 }
 
 //connect to peer by ip address and port (why int32? because of protobuf limit)
 func (grpcmgr *GRPCPeerManager) connect(peerAddress *pb.PeerAddr) (*Peer, error) {
 	//if this node is not online, connect it
-	peer := NewPeer(peerAddress, grpcmgr.LocalAddr, grpcmgr.TM, grpcmgr.cm, grpcmgr.namespace)
-	_, err := peer.Connect(grpcmgr.TM.GetLocalPublicKey(), pb.Message_HELLO, true, peer.HelloHandler)
+	peer := NewPeer(peerAddress, grpcmgr.localAddr, grpcmgr.tm, grpcmgr.cm, grpcmgr.namespace)
+	_, err := peer.Connect(grpcmgr.tm.GetLocalPublicKey(), pb.Message_HELLO, true, peer.HelloHandler)
 	if err != nil {
 		// cannot connect to other peer
 		grpcmgr.logger.Error("Node ", peerAddress.ID, ":", peerAddress.IP, ":", peerAddress.Port, " can not connect!\nerr: ", err)
@@ -291,8 +296,8 @@ func (grpcmgr *GRPCPeerManager) connect(peerAddress *pb.PeerAddr) (*Peer, error)
 
 //connect to peer by ip address and port (why int32? because of protobuf limit)
 func (grpcmgr *GRPCPeerManager) reconnectToPeer(peerAddress *pb.PeerAddr) (*Peer, error) {
-	peer := NewPeer(peerAddress, grpcmgr.LocalAddr, grpcmgr.TM, grpcmgr.cm, grpcmgr.namespace)
-	_, err := peer.Connect(grpcmgr.TM.GetLocalPublicKey(), pb.Message_RECONNECT, true, peer.ReconnectHandler)
+	peer := NewPeer(peerAddress, grpcmgr.localAddr, grpcmgr.tm, grpcmgr.cm, grpcmgr.namespace)
+	_, err := peer.Connect(grpcmgr.tm.GetLocalPublicKey(), pb.Message_RECONNECT, true, peer.ReconnectHandler)
 	if err != nil {
 		// cannot connect to other peer
 		grpcmgr.logger.Error("Node: ", peerAddress.IP, ":", peerAddress.Port, " can not connect!\nerr: ", err)
@@ -329,13 +334,13 @@ func (grpcmgr *GRPCPeerManager) GetAllPeersWithTemp() []*Peer {
 // BroadcastPeers Broadcast Massage to connected peers
 func (grpcmgr *GRPCPeerManager) BroadcastPeers(payLoad []byte) {
 	//log.Warning("P2P broadcast")
-	if !grpcmgr.IsOnline {
-		grpcmgr.logger.Warningf("this node IS NOT Online ID: %d", grpcmgr.LocalAddr.ID)
+	if !grpcmgr.isOnline {
+		grpcmgr.logger.Warningf("this node IS NOT Online ID: %d", grpcmgr.localAddr.ID)
 		return
 	}
 	var broadCastMessage = pb.Message{
 		MessageType:  pb.Message_SESSION,
-		From:         grpcmgr.LocalNode.GetNodeAddr().ToPeerAddress(),
+		From:         grpcmgr.localNode.GetNodeAddr().ToPeerAddress(),
 		Payload:      payLoad,
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
@@ -355,9 +360,9 @@ func broadcast(grpcmgr *GRPCPeerManager, broadCastMessage pb.Message, peers []*P
 			start := time.Now().UnixNano()
 			_, err := p2.Chat(broadCastMessage)
 			if err == nil {
-				grpcmgr.LocalNode.DelayChan <- UpdateTable{updateID: p2.LocalAddr.ID, updateTime: time.Now().UnixNano() - start}
+				grpcmgr.localNode.DelayChan <- UpdateTable{updateID: p2.LocalAddr.ID, updateTime: time.Now().UnixNano() - start}
 			} else {
-				grpcmgr.logger.Warning(grpcmgr.LocalNode.localAddr.ID, ">>", p2.PeerAddr.ID, ": chat failed", err)
+				grpcmgr.logger.Warning(grpcmgr.localNode.localAddr.ID, ">>", p2.PeerAddr.ID, ": chat failed", err)
 			}
 		}(peer)
 
@@ -365,7 +370,7 @@ func broadcast(grpcmgr *GRPCPeerManager, broadCastMessage pb.Message, peers []*P
 }
 
 func (grpcmgr *GRPCPeerManager) GetLocalAddressPayload() (payload []byte) {
-	payload, err := proto.Marshal(grpcmgr.LocalAddr.ToPeerAddress())
+	payload, err := proto.Marshal(grpcmgr.localAddr.ToPeerAddress())
 	if err != nil {
 		grpcmgr.logger.Error("cannot marshal the payload", err)
 	}
@@ -394,7 +399,7 @@ func (grpcmgr *GRPCPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64
 				if err != nil {
 					grpcmgr.logger.Debug("Broadcast failed,Node", p.LocalAddr.ID)
 				} else {
-					grpcmgr.LocalNode.DelayChan <- UpdateTable{updateID: p.LocalAddr.ID, updateTime: time.Now().UnixNano() - start}
+					grpcmgr.localNode.DelayChan <- UpdateTable{updateID: p.LocalAddr.ID, updateTime: time.Now().UnixNano() - start}
 
 					//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
 				}
@@ -407,7 +412,7 @@ func (grpcmgr *GRPCPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64
 
 func (grpcmgr *GRPCPeerManager) GetPeerInfo() PeerInfos {
 	peers := grpcmgr.peersPool.GetPeers()
-	localNodeAddr := grpcmgr.LocalNode.GetNodeAddr()
+	localNodeAddr := grpcmgr.localNode.GetNodeAddr()
 
 	var keepAliveMessage = pb.Message{
 		MessageType:  pb.Message_KEEPALIVE,
@@ -415,7 +420,7 @@ func (grpcmgr *GRPCPeerManager) GetPeerInfo() PeerInfos {
 		Payload:      []byte("Query Status"),
 		MsgTimeStamp: time.Now().UnixNano(),
 	}
-	signMsg, err := grpcmgr.TM.SignMsg(&keepAliveMessage)
+	signMsg, err := grpcmgr.tm.SignMsg(&keepAliveMessage)
 	if err != nil {
 		grpcmgr.logger.Warning("sign the keep alive msg failed, please check the cert file and priv file.")
 	}
@@ -436,20 +441,20 @@ func (grpcmgr *GRPCPeerManager) GetPeerInfo() PeerInfos {
 			perinfo.Status = PENDING
 		}
 		perinfo.IsPrimary = per.IsPrimary
-		grpcmgr.LocalNode.delayTableMutex.RLock()
-		perinfo.Delay = grpcmgr.LocalNode.delayTable[per.PeerAddr.ID]
-		grpcmgr.LocalNode.delayTableMutex.RUnlock()
+		grpcmgr.localNode.delayTableMutex.RLock()
+		perinfo.Delay = grpcmgr.localNode.delayTable[per.PeerAddr.ID]
+		grpcmgr.localNode.delayTableMutex.RUnlock()
 		perinfo.ID = per.PeerAddr.ID
 		perinfos = append(perinfos, perinfo)
 	}
 	var self_info = PeerInfo{
-		IP:        grpcmgr.LocalAddr.IP,
-		Port:      grpcmgr.LocalAddr.Port,
-		ID:        grpcmgr.LocalAddr.ID,
-		RPCPort:   grpcmgr.LocalAddr.RPCPort,
+		IP:        grpcmgr.localAddr.IP,
+		Port:      grpcmgr.localAddr.Port,
+		ID:        grpcmgr.localAddr.ID,
+		RPCPort:   grpcmgr.localAddr.RPCPort,
 		Status:    ALIVE,
-		IsPrimary: grpcmgr.LocalNode.IsPrimary,
-		Delay:     grpcmgr.LocalNode.delayTable[grpcmgr.LocalAddr.ID],
+		IsPrimary: grpcmgr.localNode.IsPrimary,
+		Delay:     grpcmgr.localNode.delayTable[grpcmgr.localAddr.ID],
 	}
 	perinfos = append(perinfos, self_info)
 	return perinfos
@@ -457,7 +462,7 @@ func (grpcmgr *GRPCPeerManager) GetPeerInfo() PeerInfos {
 
 // GetNodeId GetLocalNodeIdHash string
 func (grpcmgr *GRPCPeerManager) GetNodeId() int {
-	return grpcmgr.LocalAddr.ID
+	return grpcmgr.localAddr.ID
 }
 
 func (grpcmgr *GRPCPeerManager) SetPrimary(_id uint64) error {
@@ -467,7 +472,7 @@ func (grpcmgr *GRPCPeerManager) SetPrimary(_id uint64) error {
 		grpcmgr.logger.Error("convert err", _err)
 	}
 	peers := grpcmgr.peersPool.GetPeers()
-	grpcmgr.LocalNode.IsPrimary = false
+	grpcmgr.localNode.IsPrimary = false
 	for _, per := range peers {
 		per.IsPrimary = false
 	}
@@ -476,15 +481,15 @@ func (grpcmgr *GRPCPeerManager) SetPrimary(_id uint64) error {
 		if per.PeerAddr.ID == id {
 			per.IsPrimary = true
 		}
-		if grpcmgr.LocalAddr.ID == id {
-			grpcmgr.LocalNode.IsPrimary = true
+		if grpcmgr.localAddr.ID == id {
+			grpcmgr.localNode.IsPrimary = true
 		}
 	}
 	return nil
 }
 
 func (grpcmgr *GRPCPeerManager) GetLocalNode() *Node {
-	return grpcmgr.LocalNode
+	return grpcmgr.localNode
 }
 
 func (grpcmgr *GRPCPeerManager) UpdateAllRoutingTable(routerPayload []byte) {
@@ -498,7 +503,7 @@ func (grpcmgr *GRPCPeerManager) UpdateAllRoutingTable(routerPayload []byte) {
 
 	for _, r := range toUpdateRouter.Routers {
 
-		if r.Hash == grpcmgr.LocalAddr.Hash {
+		if r.Hash == grpcmgr.localAddr.Hash {
 			continue
 		}
 
@@ -545,7 +550,7 @@ func (grpcmgr *GRPCPeerManager) UpdateAllRoutingTable(routerPayload []byte) {
 }
 func (grpcmgr *GRPCPeerManager) UpdateRoutingTable(payload []byte) {
 
-	if !grpcmgr.IsOnline {
+	if !grpcmgr.isOnline {
 		grpcmgr.logger.Warning(" new node shouldn't call update routing table")
 		return
 	}
@@ -557,8 +562,8 @@ func (grpcmgr *GRPCPeerManager) UpdateRoutingTable(payload []byte) {
 	}
 	grpcmgr.logger.Debugf("Attend Notify address", toUpdateAddress.ID, toUpdateAddress.IP, toUpdateAddress.Port)
 	grpcmgr.logger.Debug("updateRoutingTable")
-	newPeer := NewPeer(pb.RecoverPeerAddr(toUpdateAddress), grpcmgr.LocalAddr, grpcmgr.TM, grpcmgr.cm, grpcmgr.namespace)
-	if grpcmgr.LocalNode.IsPrimary {
+	newPeer := NewPeer(pb.RecoverPeerAddr(toUpdateAddress), grpcmgr.localAddr, grpcmgr.tm, grpcmgr.cm, grpcmgr.namespace)
+	if grpcmgr.localNode.IsPrimary {
 		payload = []byte("true")
 	} else {
 		payload = []byte("false")
@@ -568,7 +573,7 @@ func (grpcmgr *GRPCPeerManager) UpdateRoutingTable(payload []byte) {
 	} else {
 		grpcmgr.peersPool.MergeTempPeers(newPeer)
 		grpcmgr.logger.Debug("add new peer into peerspool, new peer id", newPeer.PeerAddr.ID)
-		grpcmgr.LocalNode.N += 1
+		grpcmgr.localNode.N += 1
 		grpcmgr.configs.AddNodesAndPersist(grpcmgr.peersPool.GetPeersAddrMap())
 	}
 
@@ -579,18 +584,18 @@ func (grpcmgr *GRPCPeerManager) SetOnline() {
 	//新节点
 	//新节点在一开始的时候就已经将介绍人的节点列表加入了所以这里不需要处理
 	//the new attend node
-	grpcmgr.IsOnline = true
+	grpcmgr.isOnline = true
 	grpcmgr.peersPool.MergeTempPeersForNewNode()
-	grpcmgr.logger.Debugf(" NEW PEER SET ONLINE", grpcmgr.LocalNode.localAddr.ID)
-	grpcmgr.LocalNode.N = grpcmgr.peersPool.GetAliveNodeNum()
+	grpcmgr.logger.Debugf(" NEW PEER SET ONLINE", grpcmgr.localNode.localAddr.ID)
+	grpcmgr.localNode.N = grpcmgr.peersPool.GetAliveNodeNum()
 	grpcmgr.configs.AddNodesAndPersist(grpcmgr.peersPool.GetPeersAddrMap())
 }
 
 /*********************************
- * delete LocalNode part
+ * delete localNode part
  ********************************/
 func (grpcmgr *GRPCPeerManager) GetLocalNodeHash() string {
-	return grpcmgr.LocalAddr.Hash
+	return grpcmgr.localAddr.Hash
 }
 
 func (grpcmgr *GRPCPeerManager) GetRouterHashifDelete(hash string) (string, uint64, uint64) {
@@ -603,20 +608,20 @@ func (grpcmgr *GRPCPeerManager) GetRouterHashifDelete(hash string) (string, uint
 			DeleteID = uint64(peer.PeerAddr.ID)
 		}
 	}
-	if uint64(DeleteID) < uint64(grpcmgr.LocalAddr.ID) {
-		return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(grpcmgr.LocalAddr.ID - 1), uint64(DeleteID)
+	if uint64(DeleteID) < uint64(grpcmgr.localAddr.ID) {
+		return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(grpcmgr.localAddr.ID - 1), uint64(DeleteID)
 	}
 
-	return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(grpcmgr.LocalAddr.ID), uint64(DeleteID)
+	return hex.EncodeToString(hasher.Hash(routers).Bytes()), uint64(grpcmgr.localAddr.ID), uint64(DeleteID)
 
 }
 
 func (grpcmgr *GRPCPeerManager) DeleteNode(hash string) error {
 
-	if grpcmgr.LocalAddr.Hash == hash {
+	if grpcmgr.localAddr.Hash == hash {
 		// delete local node and stop all server
 		grpcmgr.logger.Critical("Stop Server")
-		grpcmgr.LocalNode.StopServer()
+		grpcmgr.localNode.StopServer()
 		grpcmgr.peersPool.Clear()
 		panic("THIS NODE HAS BEEN QUITTED")
 	} else {
@@ -638,8 +643,8 @@ func (grpcmgr *GRPCPeerManager) DeleteNode(hash string) error {
 			}
 
 		}
-		if grpcmgr.LocalAddr.ID > deleteID {
-			grpcmgr.LocalAddr.ID--
+		if grpcmgr.localAddr.ID > deleteID {
+			grpcmgr.localAddr.ID--
 		}
 		return nil
 

@@ -4,12 +4,8 @@ package common
 
 import (
 	"hyperchain/p2p/message"
-	"github.com/op/go-logging"
 )
-var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("p2p/peerComm")
-}
+
 type Config interface {
 	LocalID() int
 	LocalIP() string

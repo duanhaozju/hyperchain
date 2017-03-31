@@ -138,9 +138,9 @@ func (ns *namespaceImpl) init() error {
 	}
 
 	//2.init CaManager
-	cm, cmerr := admittance.NewCAManager(ns.conf, ns.Name())
-	if cmerr != nil {
-		logger.Error(cmerr)
+	cm, err := admittance.NewCAManager(ns.conf)
+	if err != nil {
+		logger.Error(err)
 		panic("cannot initliazied the camanager")
 	}
 	ns.caMgr = cm

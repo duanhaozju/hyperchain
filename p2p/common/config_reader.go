@@ -8,6 +8,8 @@ import (
 	pb "hyperchain/p2p/message"
 	"io/ioutil"
 	"sync"
+	"github.com/op/go-logging"
+	"hyperchain/common"
 )
 
 type ConfigReader struct {
@@ -17,20 +19,21 @@ type ConfigReader struct {
 	maxNode   int
 	path      string
 	writeLock sync.Mutex
+	logger *logging.Logger
 }
 
 // TODO return a error next to the configReader or throw a panic
-func NewConfigReader(configpath string) *ConfigReader {
+func NewConfigReader(configpath, namespace string) *ConfigReader {
 	content, err := ioutil.ReadFile(configpath)
-
+	logger := common.GetLogger(namespace, "p2p/common")
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 		return nil
 	}
 	config := PeerConfig{}
 	err = json.Unmarshal(content, &config)
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 		return nil
 
 	}
@@ -41,6 +44,7 @@ func NewConfigReader(configpath string) *ConfigReader {
 	configReader.path = configpath
 	configReader.cNodes = config.PeerNodes
 	slice := config.PeerNodes
+	configReader.logger = logger
 	for _, node := range slice {
 		temp_addr := Address{
 			ID:      node.ID,
@@ -125,12 +129,12 @@ func (conf *ConfigReader) persist() error {
 	defer conf.writeLock.Unlock()
 	content, err := json.Marshal(conf.Config)
 	if err != nil {
-		log.Error("persist the peerconfig failed, json marshal failed!")
+		conf.logger.Error("persist the peerconfig failed, json marshal failed!")
 		return err
 	}
 	err = ioutil.WriteFile(conf.path, content, 655)
 	if err != nil {
-		log.Error("persist the peerconfig failed, write file failed!")
+		conf.logger.Error("persist the peerconfig failed, write file failed!")
 		return err
 	}
 	return nil
@@ -163,7 +167,7 @@ func (conf *ConfigReader) AddNodesAndPersist(addrs map[string]pb.PeerAddr) {
 	idx := 0
 	for _, value := range addrs {
 		if _, ok := conf.nodes[value.ID]; !ok {
-			log.Debug("add a node", value.ID)
+			conf.logger.Debug("add a node", value.ID)
 			conf.addNode(value)
 		} //}else {
 		//	conf.updateNode(value)
