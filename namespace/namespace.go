@@ -146,7 +146,11 @@ func (ns *namespaceImpl) init() error {
 	ns.caMgr = cm
 
 	//3. init peer manager to start grpc server and client
-	grpcPeerMgr := p2p.NewGrpcManager(ns.conf, ns.eventMux, cm)
+	grpcPeerMgr, err := p2p.NewGrpcManager(ns.conf, ns.eventMux, cm)
+	if err != nil {
+		ns.logger.Error(err)
+		return err
+	}
 	ns.grpcMgr = grpcPeerMgr
 
 	//4.init pbft consensus

@@ -145,7 +145,7 @@ func TestNewGrpcManager(t *testing.T) {
 	config := common.NewConfig("test/global.yaml")
 	grpcManager := NewGrpcManager(config)
 	assert.True(t,!grpcManager.IsOnline)
-	assert.Nil(t,grpcManager.CM)
+	assert.Nil(t,grpcManager.cm)
 	assert.NotNil(t,grpcManager.configs)
 	assert.NotNil(t,grpcManager.Introducer)
 	assert.True(t,grpcManager.IsOriginal)
@@ -210,7 +210,7 @@ func TestGRPCPeerManager_Start(t *testing.T) {
 	grpcm = NewGrpcManager(config)
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
 	assert.NotNil(t,grpcm.pool)
-	assert.NotNil(t,grpcm.CM)
+	assert.NotNil(t,grpcm.cm)
 	assert.True(t,grpcm.IsOnline)
 	assert.True(t,grpcm.IsVP)
 }
