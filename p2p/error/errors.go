@@ -1,4 +1,4 @@
-package p2pErr
+package error
 
 import "reflect"
 

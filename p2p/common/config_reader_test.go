@@ -1,4 +1,4 @@
-package peerComm
+package common
 
 import (
 	"hyperchain/p2p/peermessage"
@@ -107,10 +107,10 @@ func TestConfigReader_GetMaxPeerNumber(t *testing.T) {
 }
 
 func TestConfigReader_DelNodesAndPersist(t *testing.T) {
-	peerlist := make(map[string]peermessage.PeerAddr)
-	p1 := peermessage.NewPeerAddr("127.0.0.1", 8005, 8085, 5)
-	p2 := peermessage.NewPeerAddr("127.0.0.1", 8006, 8086, 6)
-	p3 := peermessage.NewPeerAddr("127.0.0.1", 8007, 8087, 7)
+	peerlist := make(map[string]message.PeerAddr)
+	p1 := message.NewPeerAddr("127.0.0.1", 8005, 8085, 5)
+	p2 := message.NewPeerAddr("127.0.0.1", 8006, 8086, 6)
+	p3 := message.NewPeerAddr("127.0.0.1", 8007, 8087, 7)
 	peerlist[p1.Hash] = *p1
 	peerlist[p2.Hash] = *p2
 	peerlist[p3.Hash] = *p3
@@ -120,10 +120,10 @@ func TestConfigReader_DelNodesAndPersist(t *testing.T) {
 }
 
 func TestConfigReader_AddNodesAndPersist(t *testing.T) {
-peerlist := make(map[string]peermessage.PeerAddr)
-	p1 := peermessage.NewPeerAddr("127.0.0.1", 8005, 8085, 5)
-	p2 := peermessage.NewPeerAddr("127.0.0.1", 8006, 8086, 6)
-	p3 := peermessage.NewPeerAddr("127.0.0.1", 8007, 8087, 7)
+peerlist := make(map[string]message.PeerAddr)
+	p1 := message.NewPeerAddr("127.0.0.1", 8005, 8085, 5)
+	p2 := message.NewPeerAddr("127.0.0.1", 8006, 8086, 6)
+	p3 := message.NewPeerAddr("127.0.0.1", 8007, 8087, 7)
 	peerlist[p1.Hash] = *p1
 	peerlist[p2.Hash] = *p2
 	peerlist[p3.Hash] = *p3

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"google.golang.org/grpc"
 	"hyperchain/admittance"
-	pb "hyperchain/p2p/peermessage"
+	pb "hyperchain/p2p/message"
 	"hyperchain/p2p/transport"
 	"sort"
 	"hyperchain/p2p/persist"

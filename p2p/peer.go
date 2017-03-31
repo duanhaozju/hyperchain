@@ -6,7 +6,7 @@ package p2p
 import (
 	"errors"
 	"hyperchain/admittance"
-	pb "hyperchain/p2p/peermessage"
+	pb "hyperchain/p2p/message"
 	"hyperchain/p2p/transport"
 	"strconv"
 	"sync"

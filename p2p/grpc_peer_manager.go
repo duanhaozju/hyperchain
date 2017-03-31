@@ -11,8 +11,8 @@ import (
 	"hyperchain/common"
 	"hyperchain/crypto"
 	"hyperchain/manager/event"
-	"hyperchain/p2p/peerComm"
-	pb "hyperchain/p2p/peermessage"
+	pc "hyperchain/p2p/common"
+	pb "hyperchain/p2p/message"
 	"hyperchain/p2p/persist"
 	"hyperchain/p2p/transport"
 	"math"
@@ -29,7 +29,7 @@ type GRPCPeerManager struct {
 	peersPool  *PeersPool
 	nvpPool    *PeersPool
 	TM         *transport.TransportManager
-	configs    peerComm.Config
+	configs    pc.Config
 	IsOriginal bool
 	IsOnline   bool
 	//interducer information
@@ -51,7 +51,7 @@ func NewGrpcManager(conf *common.Config, eventMux *event.TypeMux, cm *admittance
 	logger := common.GetLogger(namespace, "grpcmgr")
 	logger.Critical("GRPC: new instance for namespace:", namespace)
 	var grpcmgr GRPCPeerManager
-	config := peerComm.NewConfigReader(conf.GetString("global.configs.peers"))
+	config := pc.NewConfigReader(conf.GetString("global.configs.peers"))
 	if config == nil || config.LocalID() == 0 {
 		logger.Errorf("ID %d", config.LocalID())
 		panic("the PeerManager hasn't initlized")

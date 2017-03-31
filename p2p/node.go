@@ -9,13 +9,13 @@ import (
 	"google.golang.org/grpc"
 	"hyperchain/manager/event"
 	"hyperchain/admittance"
-	pb "hyperchain/p2p/peermessage"
+	pb "hyperchain/p2p/message"
 	"hyperchain/p2p/transport"
 	"net"
 	"strconv"
 	"sync"
 	"time"
-	"hyperchain/p2p/peerComm"
+	pc "hyperchain/p2p/common"
 	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
@@ -26,19 +26,19 @@ type Node struct {
 	gRPCServer         *grpc.Server
 	higherEventManager *event.TypeMux
 	//common information
-	IsPrimary          bool
-	delayTable         map[int]int64
-	delayTableMutex    sync.RWMutex
-	DelayChan          chan UpdateTable
-	attendChan         chan int
-	PeersPool          *PeersPool
-	N                  int
-	DelayTableMutex    sync.Mutex
-	TM                 *transport.TransportManager
-	CM                 *admittance.CAManager
-	config             peerComm.Config
-	namespace 	   string
-	logger *logging.Logger
+	IsPrimary       bool
+	delayTable      map[int]int64
+	delayTableMutex sync.RWMutex
+	DelayChan       chan UpdateTable
+	attendChan      chan int
+	PeersPool       *PeersPool
+	N               int
+	DelayTableMutex sync.Mutex
+	TM              *transport.TransportManager
+	CM              *admittance.CAManager
+	config          pc.Config
+	namespace       string
+	logger          *logging.Logger
 }
 
 type UpdateTable struct {
@@ -47,7 +47,7 @@ type UpdateTable struct {
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
-func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TM *transport.TransportManager, peersPool *PeersPool, cm *admittance.CAManager, config peerComm.Config,namespace string) *Node {
+func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TM *transport.TransportManager, peersPool *PeersPool, cm *admittance.CAManager, config pc.Config,namespace string) *Node {
 	logger := common.GetLogger(namespace,"node");
 	newNode := Node{
 		localAddr : localAddr,

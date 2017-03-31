@@ -1,21 +1,21 @@
 package transport
 
 import (
-	"hyperchain/p2p/transport/ecdh"
-	"crypto"
-	"crypto/elliptic"
-	"crypto/ecdsa"
-	"hyperchain/admittance"
-	"hyperchain/core/crypto/primitives"
-	"errors"
-	pb "hyperchain/p2p/peermessage"
-	"sync"
-	"fmt"
-	"crypto/des"
-	"crypto/cipher"
-	"github.com/op/go-logging"
 	"bytes"
+	"crypto"
+	"crypto/cipher"
+	"crypto/des"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"errors"
+	"fmt"
+	"github.com/op/go-logging"
+	"hyperchain/admittance"
 	"hyperchain/common"
+	"hyperchain/core/crypto/primitives"
+	pb "hyperchain/p2p/message"
+	"hyperchain/p2p/transport/ecdh"
+	"sync"
 )
 
 // Init the log setting
@@ -33,26 +33,26 @@ type sharedSecret struct {
 //Transport Manager to manage the p2p transport encrypt
 type TransportManager struct {
 	// ecdh elliptic curve Diffie-Hellman share secret exchange algorithm
-	ecdh          ecdh.ECDH
-	privateKey    crypto.PrivateKey
-	publicKey     crypto.PublicKey
+	ecdh       ecdh.ECDH
+	privateKey crypto.PrivateKey
+	publicKey  crypto.PublicKey
 
 	// share secret hash table
 	shareSecTable map[string]*sharedSecret
 	shareSecMux   sync.Mutex
 
 	//symmetrical encryption algorithm callback
-	encAlgo       func(secret []byte, msg []byte) ([]byte, error)
-	decAlgo       func(secret []byte, msg []byte) ([]byte, error)
+	encAlgo func(secret []byte, msg []byte) ([]byte, error)
+	decAlgo func(secret []byte, msg []byte) ([]byte, error)
 
 	//CAManager
-	cm            *admittance.CAManager
+	cm     *admittance.CAManager
 	logger *logging.Logger
 }
 
 //NewTransportManager return a initialized transport manager
-func NewTransportManager(cm *admittance.CAManager,namespace string) (*TransportManager, error) {
-	logger := common.GetLogger(namespace,"p2p")
+func NewTransportManager(cm *admittance.CAManager, namespace string) (*TransportManager, error) {
+	logger := common.GetLogger(namespace, "p2p")
 	contentPri := cm.GetECertPrivateKeyByte()
 	pri, err := primitives.ParseKey(string(contentPri))
 	if err != nil {
@@ -62,23 +62,23 @@ func NewTransportManager(cm *admittance.CAManager,namespace string) (*TransportM
 	publicKey := (*privateKey).PublicKey
 	var encAlgo func(key, src []byte) ([]byte, error)
 	var decAlgo func(key, src []byte) ([]byte, error)
-	if cm.EnableSymmetrical{
+	if cm.EnableSymmetrical {
 		encAlgo = TripleDesEnc
 		decAlgo = TripleDesDec
-	}else{
+	} else {
 		logger.Warning("disable the Symmetrical Encryption.")
 		encAlgo = pureEnc
 		decAlgo = pureDec
 	}
 	return &TransportManager{
-		ecdh:ecdh.NewEllipticECDH(elliptic.P256()),
-		privateKey:privateKey,
-		publicKey:publicKey,
-		shareSecTable:make(map[string]*sharedSecret),
-		encAlgo:encAlgo,
-		decAlgo:decAlgo,
-		cm:cm,
-		logger:logger,
+		ecdh:          ecdh.NewEllipticECDH(elliptic.P256()),
+		privateKey:    privateKey,
+		publicKey:     publicKey,
+		shareSecTable: make(map[string]*sharedSecret),
+		encAlgo:       encAlgo,
+		decAlgo:       decAlgo,
+		cm:            cm,
+		logger:        logger,
 	}, nil
 }
 
@@ -102,9 +102,9 @@ func (tm *TransportManager) NegoShareSecret(remotePub []byte, addr *pb.PeerAddr)
 		return errors.New("generate the share secret failed.")
 	}
 	tm.shareSecTable[addr.Hash] = &sharedSecret{
-		shareSec:shareSec,
-		remotePubkey:remotePubKey,
-		remotePubkeyByte:remotePub,
+		shareSec:         shareSec,
+		remotePubkey:     remotePubKey,
+		remotePubkeyByte: remotePub,
 	}
 	return nil
 }
@@ -125,41 +125,40 @@ func (tm *TransportManager) Decrypt(message []byte, addr *pb.PeerAddr) ([]byte, 
 	return nil, errors.New(fmt.Sprintf("can not get a shared secret for peer %d", addr.ID))
 }
 
-
 //SignMsg use the certificate's public sign the msg
-func (tm *TransportManager)SignMsg(msg *pb.Message) (pb.Message,error) {
+func (tm *TransportManager) SignMsg(msg *pb.Message) (pb.Message, error) {
 	sign := &pb.Signature{}
 	retmsg := pb.Message{
-		From:msg.From,
-		Payload:msg.Payload,
-		MsgTimeStamp:msg.MsgTimeStamp,
-		MessageType:msg.MessageType,
-		Signature:sign,
+		From:         msg.From,
+		Payload:      msg.Payload,
+		MsgTimeStamp: msg.MsgTimeStamp,
+		MessageType:  msg.MessageType,
+		Signature:    sign,
 	}
 	retmsg.Signature.ECert = tm.cm.GetECertByte()
 	retmsg.Signature.RCert = tm.cm.GetRCertByte()
 	if !tm.cm.IsCheckSign() {
-		return retmsg,nil
+		return retmsg, nil
 	}
 	ecdsaEncrypto := primitives.NewEcdsaEncrypto("ecdsa")
 	signa, err := ecdsaEncrypto.Sign(msg.Payload, tm.cm.GetECertPrivKey())
 	// stupid bug 20170321!
 	if err != nil {
 		tm.logger.Critical(err)
-		return retmsg,err
+		return retmsg, err
 	}
 	retmsg.Signature.Signature = signa
-	return retmsg,nil
+	return retmsg, nil
 }
 
 // verify the msg is valid or not
-func (tm *TransportManager)VerifyMsg(msg *pb.Message) (bool, error) {
-	if !tm.cm.IsCheckSign(){
+func (tm *TransportManager) VerifyMsg(msg *pb.Message) (bool, error) {
+	if !tm.cm.IsCheckSign() {
 		return true, nil
 	}
 	if msg.Signature == nil {
 		tm.logger.Warning("The msg Signature is nil, msg from", msg.From.ID)
-		return false,errors.New("invalid signature")
+		return false, errors.New("invalid signature")
 	}
 	//1. check the ECert is valid or not
 	f, e := tm.cm.VerifyECert(string(msg.Signature.ECert))
@@ -170,10 +169,10 @@ func (tm *TransportManager)VerifyMsg(msg *pb.Message) (bool, error) {
 	return tm.cm.VerifyCertSign(string(msg.Signature.ECert), msg.Payload, msg.Signature.Signature)
 }
 
-func (tm *TransportManager)VerifyRCert(msg *pb.Message) (bool, error) {
+func (tm *TransportManager) VerifyRCert(msg *pb.Message) (bool, error) {
 	if msg.Signature == nil || msg.Signature.RCert == nil {
 		tm.logger.Warning("The msg Signature is nil, msg from", msg.From.ID)
-		return false,errors.New("invalid msg, signature is nil,or signature.rcert is nil")
+		return false, errors.New("invalid msg, signature is nil,or signature.rcert is nil")
 	}
 	rcertb := msg.Signature.RCert
 	//再验证证书合法性
@@ -197,6 +196,7 @@ func TripleDesEnc(key, src []byte) ([]byte, error) {
 	//log.Criticalf("after encrypt msg is : %s",common.ToHex(crypted))
 	return crypted, nil
 }
+
 // 3DES decryption algorithm implements
 func TripleDesDec(key, src []byte) ([]byte, error) {
 	//log.Criticalf("to descrypt msg is : %s",common.ToHex(src))
@@ -214,10 +214,12 @@ func TripleDesDec(key, src []byte) ([]byte, error) {
 	origData = PKCS5UnPadding(origData)
 	return origData, nil
 }
+
 // pure enc will not encrypt the message
 func pureEnc(sec, msg []byte) ([]byte, error) {
 	return msg, nil
 }
+
 // pure dec will return origin message
 func pureDec(sec, msg []byte) ([]byte, error) {
 	return msg, nil
@@ -229,6 +231,7 @@ func PKCS5Padding(ciphertext []byte, blockSize int) []byte {
 	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
 	return append(ciphertext, padtext...)
 }
+
 //PKCS5UnPadding unpadding with pkcs5
 func PKCS5UnPadding(origData []byte) []byte {
 	length := len(origData)

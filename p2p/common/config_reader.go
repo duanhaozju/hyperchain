@@ -1,11 +1,11 @@
-package peerComm
+package common
 
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
 
 import (
 	"encoding/json"
-	pb "hyperchain/p2p/peermessage"
+	pb "hyperchain/p2p/message"
 	"io/ioutil"
 	"sync"
 )
@@ -39,7 +39,7 @@ func NewConfigReader(configpath string) *ConfigReader {
 	configReader.maxNode = config.Maxpeernode
 	configReader.nodes = make(map[int]Address)
 	configReader.path = configpath
-	configReader.cNodes =config.PeerNodes
+	configReader.cNodes = config.PeerNodes
 	slice := config.PeerNodes
 	for _, node := range slice {
 		temp_addr := Address{
@@ -56,7 +56,7 @@ func NewConfigReader(configpath string) *ConfigReader {
 	return &configReader
 }
 
-func (conf *ConfigReader)Peers()[]PeerConfigNodes{
+func (conf *ConfigReader) Peers() []PeerConfigNodes {
 	return conf.cNodes
 }
 
@@ -96,7 +96,7 @@ func (conf *ConfigReader) IsOrigin() bool {
 	return conf.Config.SelfConfig.IsOrigin
 }
 
-func (conf *ConfigReader)IsVP()bool{
+func (conf *ConfigReader) IsVP() bool {
 	return conf.Config.SelfConfig.IsVP
 }
 
@@ -104,11 +104,11 @@ func (conf *ConfigReader) GetPort(nodeID int) int {
 	return conf.nodes[nodeID].Port
 }
 
-func (conf *ConfigReader) GetID(nodeID int) int{
+func (conf *ConfigReader) GetID(nodeID int) int {
 	return conf.nodes[nodeID].ID
 }
 
-func (conf *ConfigReader) GetRPCPort(nodeID int) int{
+func (conf *ConfigReader) GetRPCPort(nodeID int) int {
 	return conf.nodes[nodeID].RPCPort
 }
 
@@ -119,7 +119,6 @@ func (conf *ConfigReader) GetIP(nodeID int) string {
 func (conf *ConfigReader) MaxNum() int {
 	return conf.maxNode
 }
-
 
 func (conf *ConfigReader) persist() error {
 	conf.writeLock.Lock()
@@ -145,7 +144,7 @@ func (conf *ConfigReader) addNode(addr pb.PeerAddr) {
 
 }
 func (conf *ConfigReader) updateNode(addr pb.PeerAddr) {
-	if addr.ID < len(conf.Config.PeerNodes){
+	if addr.ID < len(conf.Config.PeerNodes) {
 		conf.Config.PeerNodes[addr.ID].ID = addr.ID
 		conf.Config.PeerNodes[addr.ID].Address = addr.IP
 		conf.Config.PeerNodes[addr.ID].Port = addr.Port
@@ -166,11 +165,11 @@ func (conf *ConfigReader) AddNodesAndPersist(addrs map[string]pb.PeerAddr) {
 		if _, ok := conf.nodes[value.ID]; !ok {
 			log.Debug("add a node", value.ID)
 			conf.addNode(value)
-		}//}else {
+		} //}else {
 		//	conf.updateNode(value)
 		//}
 		idx++
-		if idx == 1{
+		if idx == 1 {
 			conf.Config.SelfConfig.IntroducerID = value.ID
 			conf.Config.SelfConfig.IntroducerIP = value.IP
 			conf.Config.SelfConfig.IntroducerPort = value.Port
@@ -184,7 +183,7 @@ func (conf *ConfigReader) AddNodesAndPersist(addrs map[string]pb.PeerAddr) {
 func (conf *ConfigReader) DelNodesAndPersist(addrs map[string]pb.PeerAddr) {
 	for _, value := range addrs {
 		if _, ok := conf.nodes[value.ID]; ok {
-			if value.ID < conf.Config.SelfConfig.NodeID{
+			if value.ID < conf.Config.SelfConfig.NodeID {
 				conf.Config.SelfConfig.NodeID--
 			}
 			conf.delNode(value)
