@@ -309,6 +309,9 @@ func (contract *Contract) GetCreator(addr common.Address) (common.Address, error
 	if obj := stateDb.GetAccount(addr); obj == nil {
 		return common.Address{}, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
 	} else {
+		if !isContractAccount(stateDb, addr) {
+			return common.Address{}, nil
+		}
 		return stateDb.GetCreator(addr), nil
 	}
 }
