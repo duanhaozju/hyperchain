@@ -309,33 +309,55 @@ func (contract *Contract) GetCreator(addr common.Address) (common.Address, error
 	if obj := stateDb.GetAccount(addr); obj == nil {
 		return common.Address{}, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
 	} else {
+		if !isContractAccount(stateDb, addr) {
+			return common.Address{}, nil
+		}
 		return stateDb.GetCreator(addr), nil
 	}
 }
 
 // GetStatus return contract status
-func (contract *Contract) GetStatus(addr common.Address) (int, error) {
+func (contract *Contract) GetStatus(addr common.Address) (string, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
-		return -1, err
+		return "", err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return -1, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+		return "", &common.LeveldbNotFoundError{Message:"account doesn't exist"}
 	} else {
-		return stateDb.GetStatus(addr), nil
+		status :=  stateDb.GetStatus(addr)
+		if !isContractAccount(stateDb, addr) {
+			return "non-contract", nil
+		}
+		switch status {
+		case 0:
+			return "normal", nil
+		case 1:
+			return "frozen", nil
+		default:
+			return "undefined", nil
+		}
 	}
 }
 
 // GetCreateTime return contract status
-func (contract *Contract) GetCreateTime(addr common.Address) (uint64, error) {
+func (contract *Contract) GetCreateTime(addr common.Address) (string, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return 0, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+		return "", &common.LeveldbNotFoundError{Message:"account doesn't exist"}
 	} else {
-		return stateDb.GetCreateTime(addr), nil
+		if !isContractAccount(stateDb, addr) {
+			return "", nil
+		}
+		blkNum :=  stateDb.GetCreateTime(addr)
+		blk, err := edb.GetBlockByNumber(contract.namespace, blkNum)
+		if err != nil {
+			return "", &common.LeveldbNotFoundError{Message:"create block doesn't exist"}
+		}
+		return time.Unix(blk.Timestamp / 1e9, blk.Timestamp % 1e9).String(), nil
 	}
 }
 
@@ -355,4 +377,9 @@ func getBlockStateDb(namespace string, config *common.Config) (vm.Database, erro
 		return nil, &common.CallbackError{Message:err.Error()}
 	}
 	return stateDB, nil
+}
+
+func isContractAccount(stateDb vm.Database, addr common.Address) bool {
+	code := stateDb.GetCode(addr)
+	return code != nil
 }
