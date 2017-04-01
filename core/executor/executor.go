@@ -57,7 +57,6 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux)
 		helper:          helper,
 	}
 	executor.logger = common.GetLogger(namespace, "executor")
-	executor.logger.Notice("archieve db", archieveDb)
 	return executor
 }
 

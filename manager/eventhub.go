@@ -178,7 +178,7 @@ func (hub *EventHub) listenMiscellaneousEvent() {
 			hub.executor.Rollback(ev)
 		case event.ChainSyncReqEvent:
 			hub.logger.Debugf("message middleware: [chain sync request]")
-			hub.executor.SendSyncRequest(ev)
+			hub.executor.SyncChain(ev)
 		}
 	}
 }
