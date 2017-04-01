@@ -4,17 +4,21 @@ import "time"
 
 const (
 	STATEDB               = "state"
-	stateBucketSize       = "global.configs.buckettree.state.size"
-	stateBucketLevelGroup = "global.configs.buckettree.state.levelGroup"
-	stateBucketCacheSize  = "global.configs.buckettree.state.cacheSize"
+	stateBucketSize       = "global.executor.buckettree.state.size"
+	stateBucketLevelGroup = "global.executor.buckettree.state.levelGroup"
+	stateBucketCacheSize  = "global.executor.buckettree.state.cacheSize"
 
 	STATEOBJECT                 = "stateObject"
-	stateObjectBucketSize       = "global.configs.buckettree.storage.size"
-	stateObjectBucketLevelGroup = "global.configs.buckettree.storage.levelGroup"
-	stateObjectBucketCacheSize  = "global.configs.buckettree.storage.cacheSize"
+	stateObjectBucketSize       = "global.executor.buckettree.storage.size"
+	stateObjectBucketLevelGroup = "global.executor.buckettree.storage.levelGroup"
+	stateObjectBucketCacheSize  = "global.executor.buckettree.storage.cacheSize"
 
-	syncReplicaInterval         = "global.configs.replicainfo.interval"
-	syncReplicaEnable           = "global.configs.replicainfo.enable"
+	syncReplicaInterval         = "global.executor.sync_replica.interval"
+	syncReplicaEnable           = "global.executor.sync_replica.enable"
+
+	syncChainBatchSize          = "global.executor.sync_chain.sync_batch_size"
+	syncChainResendInterval     = "global.executor.sync_chain.sync_resend_interval"
+
 )
 
 // GetBucketSize - get bucket size.
@@ -64,4 +68,12 @@ func (executor *Executor) GetSyncReplicaInterval() time.Duration {
 // GetSyncReplicaEnable - sync replica switch value.
 func (exector *Executor) GetSyncReplicaEnable() bool {
 	return exector.conf.GetBool(syncReplicaEnable)
+}
+
+func (executor *Executor) GetSyncMaxBatchSize() uint64 {
+	return uint64(executor.conf.GetInt64(syncChainBatchSize))
+}
+
+func (executor *Executor) GetSyncResendInterval() time.Duration {
+	return executor.conf.GetDuration(syncChainResendInterval)
 }
