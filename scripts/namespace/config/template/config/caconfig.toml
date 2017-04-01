@@ -7,21 +7,21 @@
 #
 
 [ecert]
-ca = "namespaces/test/config/cert/eca.ca"
-cert = "namespaces/test/config/cert/ecert.cert"
-priv = "namespaces/test/config/cert/ecert.priv"
+ca = "namespaces/template/config/cert/eca.ca"
+cert = "namespaces/template/config/cert/ecert.cert"
+priv = "namespaces/template/config/cert/ecert.priv"
 
 [rcert]
 # if you do not have rcert, leave this item blank
-ca = "namespaces/test/config/cert/rca.ca"
-cert = "namespaces/test/config/cert/rcert.cert"
-priv = "namespaces/test/config/cert/rcert.priv"
+ca = "namespaces/template/config/cert/rca.ca"
+cert = "namespaces/template/config/cert/rcert.cert"
+priv = "namespaces/template/config/cert/rcert.priv"
 
 # the tls cert supply the transport layer security
 [tlscert]
-ca = "namespaces/test/config/cert/tlscert/tlsca.ca"
-cert = "namespaces/test/config/cert/tlscert/tls_peer1.cert"
-priv = "namespaces/test/config/cert/tlscert/tls_peer1.priv"
+ca = "namespaces/template/config/cert/tlscert/tlsca.ca"
+cert = "namespaces/template/config/cert/tlscert/tls_peer1.cert"
+priv = "namespaces/template/config/cert/tlscert/tls_peer1.priv"
 serverhostoverride = "hyperchain.cn"
 
 [check]

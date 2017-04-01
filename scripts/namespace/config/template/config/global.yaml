@@ -14,15 +14,15 @@ global:
     ##########################
 
     account:
-        keystoredir: "namespaces/test/config/keystore"
-        keynodesdir: "namespaces/test/config/keynodes"
+        keystoredir: "namespaces/template/config/keystore"
+        keynodesdir: "namespaces/template/config/keynodes"
 
-    dbConfig: "namespaces/test/config/db.yaml"
+    dbConfig: "namespaces/template/config/db.yaml"
 
     configs:
-        caconfig: "namespaces/test/config/caconfig.toml"
-        peers: "namespaces/test/config/local_peerconfig.json"
-        genesis: "namespaces/test/config/genesis.json"
+        caconfig: "namespaces/template/config/caconfig.toml"
+        peers: "namespaces/template/config/local_peerconfig.json"
+        genesis: "namespaces/template/config/genesis.json"
 
         buckettree:
             state:
@@ -68,10 +68,10 @@ global:
     logs:
         # dump the log file or not
         dumpfile: true
-        newLogFileInterval: 24h  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+        newLogFileInterval: 10s  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
                                 # such as "300ms", "2h45m".
 
-        logsdir: "./namespaces/test/data/logs"
+        logsdir: "./namespaces/template/data/logs"
         # default loglevel for all modules which can be override by module level log setting
         loglevel: "NOTICE"
         file_format: "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
@@ -80,10 +80,10 @@ global:
         module:
             #set log level by module
             p2p: "NOTICE"
-            consensus: "DEBUG"
+            consensus: "NOTICE"
             core: "NOTICE"
             hyperdb: "NOTICE"
-            common/hyper_logger: "DEBUG"
+            common/hyper_logger: "NOTICE"
 
     ######################################################
     # configs related to the consensus                   #
@@ -94,4 +94,4 @@ global:
     ######################################################
     consensus:
            algo: "PBFT"
-           algo_config_path: "namespaces/test/config/pbft.yaml"
+           algo_config_path: "namespaces/template/config/pbft.yaml"

@@ -93,13 +93,15 @@ func (adm *Administrator) startNamespace(cmd *Command) *CommandResult {
 	if len(cmd.Args) != 1 {
 		return &CommandResult{Ok: false, Result: "invalid params"}
 	}
+	//TODO: and synchronized start command
+	go func() {
+		err := adm.NsMgr.StartNamespace(cmd.Args[0])
+		if err != nil {
+			log.Error(&CommandResult{Ok: false, Result: err.Error()})
+		}
+	}()
 
-	err := adm.NsMgr.StartNamespace(cmd.Args[0])
-	if err != nil {
-		return &CommandResult{Ok: false, Result: err.Error()}
-	}
-
-	return &CommandResult{Ok: true, Result: "start namespace successful"}
+	return &CommandResult{Ok: true, Result: "start namespace cmd executed!"}
 }
 
 //StartNamespace stop namespace by name.
@@ -108,13 +110,14 @@ func (adm *Administrator) stopNamespace(cmd *Command) *CommandResult {
 	if len(cmd.Args) != 1 {
 		return &CommandResult{Ok: false, Result: "invalid params"}
 	}
+	go func() {
+		err := adm.NsMgr.StopNamespace(cmd.Args[0])
+		if err != nil {
+			log.Error(&CommandResult{Ok: false, Result: err.Error()})
+		}
+	}()
 
-	err := adm.NsMgr.StopNamespace(cmd.Args[0])
-	if err != nil {
-		return &CommandResult{Ok: false, Result: err.Error()}
-	}
-
-	return &CommandResult{Ok: true, Result: "stop namespace successful"}
+	return &CommandResult{Ok: true, Result: "stop namespace cmd executed!"}
 }
 
 //RestartNamespace restart namespace by name.
@@ -190,7 +193,7 @@ func (adm *Administrator) setLevel(cmd *Command) *CommandResult {
 
 	err := common.SetLogLevel(cmd.Args[0], cmd.Args[1], cmd.Args[2])
 	if err != nil {
-		return &CommandResult{Ok:true, Result:err}
+		return &CommandResult{Ok: true, Result: err}
 	}
 	rs := strings.Join(cmd.Args, "_")
 	return &CommandResult{Ok: true, Result: rs}

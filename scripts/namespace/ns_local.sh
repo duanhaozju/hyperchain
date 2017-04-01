@@ -40,17 +40,22 @@ f_check_local_env(){
 
     if ! type govendor > /dev/null; then
         # install foobar here
-        echo -e "Please install the `govendor`, just type:\ngo get -u github.com/kardianos/govendor"
+        echo -e "Please install the 'govendor', just type:\ngo get -u github.com/kardianos/govendor"
         exit 1
     fi
 
     if ! type jq > /dev/null; then
-        echo -e "Please install the `jq` to parse the json file \n just type: \n sudo apt-get install jq / sudo yum -y install jq / brew install jq "
+        echo -e "Please install the 'jq' to parse the json file \n just type: \n sudo apt-get install jq / sudo yum -y install jq / brew install jq "
         exit 1
     fi
     # confer
     if ! type confer > /dev/null; then
-        echo -e "Please install `confer` to read global.yaml config"
+        echo -e "Please install 'confer' to read global.yaml config"
+        exit 1
+    fi
+    # shyaml
+    if ! type shyaml > /dev/null; then
+        echo -e "Please install 'shyaml', just type:\nsudo pip install shyaml"
         exit 1
     fi
 }
@@ -67,43 +72,23 @@ f_kill_process(){
 
 # clear data
 f_delete_data(){
-for (( j=1; j<=$MAXPEERNUM; j++ ))
-do
-    # Clear the old data
-    if [ -d "${DUMP_PATH}/node${j}" ];then
-        rm -rf "${DUMP_PATH}/node${j}"
-    fi
-done
+    for (( j=1; j<=$MAXPEERNUM; j++ ))
+    do
+        # Clear the old data
+        if [ -d "${DUMP_PATH}/node${j}" ];then
+            rm -rf "${DUMP_PATH}/node${j}"
+        fi
+    done
 }
 
 # rebuild the function
 f_rebuild(){
 # Build the project
-echo "Rebuild the project..."
-if [ -s "${DUMP_PATH}/hyperchain" ]; then
-    rm ${DUMP_PATH}/hyperchain
-fi
-cd ${PROJECT_PATH} && govendor build -o ${DUMP_PATH}/hyperchain -tags=embed
-}
-
-# distribute node package
-f_distribute(){
-# cp the config files into nodes
-for (( j=1; j<=$1; j++ ))
-do
-    if [ ! -d "${DUMP_PATH}/node${j}" ];then
-        mkdir -p ${DUMP_PATH}/node${j}
+    echo "Rebuild the project..."
+    if [ -s "${DUMP_PATH}/hyperchain" ]; then
+        rm ${DUMP_PATH}/hyperchain
     fi
-    if [ -d "${DUMP_PATH}/node${j}/namespaces" ];then
-        rm -rf ${DUMP_PATH}/node${j}/namespaces
-    fi
-    cp -rf  ${CONF_PATH}/* ${DUMP_PATH}/node${j}/
-    cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/global/config/local_peerconfig.json
-    cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/cert/
-#    cp -rf  ${CONF_PATH}/namespaces/test/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/test/config/local_peerconfig.json
-#    cp -rf  ${CONF_PATH}/namespaces/test/config/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/test/config/cert/
-    cp -rf ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
-done
+    cd ${PROJECT_PATH} && govendor build -o ${DUMP_PATH}/hyperchain -tags=embed
 }
 
 f_all_in_one_cmd(){
@@ -117,6 +102,7 @@ f_x_in_linux_cmd(){
 f_x_in_mac_cmd(){
     osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}' && ./hyperchain "'
 }
+
 
 # run process by os type
 f_run_process(){
@@ -154,6 +140,9 @@ f_sleep(){
 # system type
 _SYSTYPE="MAC"
 
+# namespaces name, default is global
+NS="global"
+
 PROJECT_PATH="${GOPATH}/src/hyperchain"
 
 # work path
@@ -169,13 +158,7 @@ CONF_PATH="${PROJECT_PATH}/configuration"
 GLOBAL_CONFIG="${CONF_PATH}/namespaces/global/config/global.yaml"
 
 # peerconfig
-PEER_CONFIG_FILE_NAME=`confer read ${GLOBAL_CONFIG} global.configs.peers |sed 's/"//g'`
-PEER_CONFIG_FILE_NAME="configuration/"$PEER_CONFIG_FILE_NAME
-PEER_CONFIG_FILE=${PROJECT_PATH}/${PEER_CONFIG_FILE_NAME}
-
-# node num
-MAXPEERNUM=`cat ${PEER_CONFIG_FILE} | jq ".maxpeernode"`
-echo "Node number is: ${MAXPEERNUM}"
+PEER_CONFIG_FILE=${PROJECT_PATH}/scripts/namespace/config/global.yaml
 
 # delete data? default = true
 DELETEDATA=true
@@ -186,6 +169,10 @@ REBUILD=true
 # 1.check local env
 f_check_local_env
 
+# node num
+MAXPEERNUM=`cat ${PEER_CONFIG_FILE} | shyaml get-value maxpeernode`
+echo "Node number is: ${MAXPEERNUM}"
+
 # 2.set system type
 f_set_env
 
@@ -194,18 +181,21 @@ while [ $# -gt 0 ]
 do
     case "$1" in
     -h|--help)
-        help; exit 0;;
+        f_help; exit 0;;
     -k|--kill)
         f_kill_process; exit 1;;
     -d|--delete)
-        DELETEDATA=false; shift;;
+        DELETEDATA=false;
+        shift;;
     -r|--rebuild)
-        REBUILD=false; shift;;
+        REBUILD=false;
+        shift;;
     -m|--mode)
-        MODE=true; shift;;
+        MODE=true;
+        shift;;
     --) shift; break;;
-    -*) help; exit 1;;
-    *) break;;
+    -*) f_help; exit 1;;
+    *) NS="$NS $@"; break;;
     esac
 done
 
@@ -218,13 +208,15 @@ if  $DELETEDATA ; then
 fi
 
 # handle rebuild issues
-
 if  $REBUILD ; then
     f_rebuild
 fi
 
 # distribute files
-f_distribute $MAXPEERNUM
+for ns in $NS
+do
+    ${PROJECT_PATH}/scripts/namespace/gen_config.sh ${ns}
+done
 
 # run hyperchain node
 f_run_process

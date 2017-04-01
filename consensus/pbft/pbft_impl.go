@@ -89,7 +89,6 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack) (*pbftImpl
 	pbft.exec = newExecutor()
 	//new timer manager
 	pbft.pbftTimerMgr = newTimerMgr(pbft)
-	pbft.pbftTimerMgr.logger = pbft.logger
 
 	pbft.initTimers()
 	pbft.initStatus()

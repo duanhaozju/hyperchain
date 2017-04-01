@@ -20,9 +20,9 @@ dbConfig:
     #                                                                               #
     #################################################################################
     sldb:
-        dbpath: "./namespaces/test/data/sldb"
+        dbpath: "./namespaces/template/data/sldb"
         index:
-            dir: "./namespaces/test/data/sldb/index"
+            dir: "./namespaces/template/data/sldb/index"
             bloombit: 100000000
             hashnum: 3
             dumpinterval: 24h
@@ -84,8 +84,8 @@ dbConfig:
 
 
     #db path of hyperchain. it's the parent dir of namespace dir
-    leveldbPath: "./namespaces/test/data/leveldb"
+    leveldbPath: "./namespaces/template/data/leveldb"
 
     logStatus: true
 
-    logPath: "./namespaces/test/data/db.log"
+    logPath: "./namespaces/template/data/db.log"
