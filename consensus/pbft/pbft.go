@@ -16,11 +16,11 @@ import (
 
 	"hyperchain/common"
 	"hyperchain/consensus"
+	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
 	"hyperchain/core/types"
 	"hyperchain/manager/protos"
 	"sync/atomic"
-	"hyperchain/consensus/events"
 )
 
 /**
@@ -94,9 +94,13 @@ func (pbft *pbftImpl) RecvLocal(msg interface{}) error {
 //Start start the consensus service
 func (pbft *pbftImpl) Start() {
 	pbft.logger.Noticef("--------PBFT starting, nodeID: %d--------", pbft.id)
+	pbft.pbftTimerMgr = newTimerMgr(pbft)
+	pbft.initTimers()
+	pbft.initStatus()
 
+	atomic.StoreUint32(&pbft.activeView, 1)
 	pbft.pbftManager.Start()
-	pbft.pbftEventQueue = events.GetQueue(pbft.pbftManager.Queue())// init pbftEventQueue
+	pbft.pbftEventQueue = events.GetQueue(pbft.pbftManager.Queue()) // init pbftEventQueue
 	pbft.reqEventQueue = events.GetQueue(pbft.batchMgr.batchEventsManager.Queue())
 
 	//1.restore state.
@@ -113,7 +117,24 @@ func (pbft *pbftImpl) Start() {
 
 //Close close the consenter service
 func (pbft *pbftImpl) Close() {
+	pbft.logger.Notice("PBFT stop event process service")
 	pbft.pbftTimerMgr.Stop()
 	pbft.batchMgr.stop()
 	pbft.pbftManager.Stop()
+
+	pbft.logger.Notice("PBFT clear some resources")
+
+	pbft.vcMgr = newVcManager(pbft.pbftTimerMgr, pbft, pbft.config)
+	pbft.storeMgr = newStoreMgr()
+	pbft.nodeMgr = newNodeMgr()
+
+	pbft.duplicator = make(map[uint64]*transactionStore)
+	pbft.batchMgr = newBatchManager(pbft.config, pbft) // init after pbftEventQueue
+	// new batch manager
+	pbft.batchVdr = newBatchValidator(pbft)
+	pbft.reqStore = newRequestStore()
+	pbft.recoveryMgr = newRecoveryMgr()
+
+	pbft.logger.Noticef("PBFT stopped!")
+
 }

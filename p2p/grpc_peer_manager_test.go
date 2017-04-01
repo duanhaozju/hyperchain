@@ -62,7 +62,7 @@ func (node *fakeNode) StartServer(wg *sync.WaitGroup) {
 	//opts := membersrvc.GetGrpcServerOpts()
 	opts := node.cm.GetGrpcServerOpts2()
 	node.gRPCServer = grpc.NewServer(opts...)
-	//this.gRPCServer = grpc.NewServer()
+	//pp.gRPCServer = grpc.NewServer()
 	pb.RegisterChatServer(node.gRPCServer, node)
 	go node.gRPCServer.Serve(lis)
 

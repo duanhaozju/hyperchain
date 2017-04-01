@@ -102,7 +102,7 @@ func New(root common.Hash, db db.Database,  archieveDb db.Database, bktConf *com
 		archieveCache:     archieveCache,
 		logger:            logger,
 	}
-	bucketTree.Initialize(SetupBucketConfig(state.GetBucketSize(STATEDB), state.GetBucketLevelGroup(STATEDB), state.GetBucketCacheSize(STATEDB)))
+	err := bucketTree.Initialize(SetupBucketConfig(state.GetBucketSize(STATEDB), state.GetBucketLevelGroup(STATEDB), state.GetBucketCacheSize(STATEDB)))
 	curHash, err := bucketTree.ComputeCryptoHash()
 	logger.Debugf("latest state root %s", common.Bytes2Hex(curHash))
 	if err != nil {

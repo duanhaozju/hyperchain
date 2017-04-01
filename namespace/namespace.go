@@ -10,6 +10,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/consensus"
 	"hyperchain/consensus/csmgr"
+	//"hyperchain/core/db_utils"
 	"hyperchain/core/db_utils"
 	"hyperchain/core/executor"
 	"hyperchain/hyperdb"
@@ -93,7 +94,8 @@ type namespaceImpl struct {
 	grpcMgr   *p2p.GRPCPeerManager
 	executor  *executor.Executor
 
-	rpc rpc.RequestProcessor
+	rpc     rpc.RequestProcessor
+	restart bool
 }
 
 type API struct {
@@ -122,6 +124,7 @@ func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) 
 		status:   status,
 		conf:     conf,
 		eventMux: new(event.TypeMux),
+		restart:  false,
 	}
 	ns.logger = common.GetLogger(name, "namespace")
 	return ns, nil
@@ -210,6 +213,16 @@ func (ns *namespaceImpl) Start() error {
 		logger.Criticalf("namespace: %s is already running", ns.Name())
 		return nil
 	}
+	//0.init db
+	if ns.restart {
+		err := hyperdb.StartDatabase(ns.conf, ns.Name())
+		if err != nil {
+			ns.logger.Error(err)
+			return err
+		}
+		ns.logger.Noticef("start db for namespace: %s successful", ns.Name())
+	}
+
 	//1.start consenter
 	ns.consenter.Start()
 	//2.start executor
@@ -223,6 +236,7 @@ func (ns *namespaceImpl) Start() error {
 	switch initType {
 	case 0:
 		{
+
 			ns.passRouters()
 			ns.negotiateView()
 		} // TODO: add other init type
@@ -233,6 +247,7 @@ func (ns *namespaceImpl) Start() error {
 	ns.rpc.Start()
 	ns.status.setState(running)
 	ns.logger.Noticef("namespace: %s start successful", ns.Name())
+	ns.restart = true
 	return nil
 }
 
@@ -273,11 +288,12 @@ func (ns *namespaceImpl) Stop() error {
 	ns.consenter.Close()
 
 	//5.stop peer manager
-	ns.grpcMgr.Stop()
+	go ns.grpcMgr.Stop()
 
 	ns.status.setState(closed)
+	ns.logger.Notice()
 	//close related database
-	hyperdb.CloseDatabase(ns.Name())
+	hyperdb.StopDatabase(ns.Name())
 
 	ns.logger.Noticef("namespace: %s stopped!", ns.Name())
 	return nil

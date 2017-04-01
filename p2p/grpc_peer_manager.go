@@ -102,7 +102,10 @@ func (grpcmgr *GRPCPeerManager) Start() error {
 	grpcmgr.tm = tm
 	grpcmgr.peersPool = NewPeersPool(grpcmgr.tm, grpcmgr.localAddr, grpcmgr.cm, grpcmgr.namespace)
 	grpcmgr.localNode = NewNode(grpcmgr.localAddr, grpcmgr.eventMux, grpcmgr.tm, grpcmgr.peersPool, grpcmgr.cm, grpcmgr.configs, grpcmgr.namespace)
-	grpcmgr.localNode.StartServer()
+	err = grpcmgr.localNode.StartServer()
+	if err != nil {
+		return err
+	}
 	grpcmgr.localNode.N = grpcmgr.configs.MaxNum()
 
 	// connect to peer
@@ -154,7 +157,7 @@ func (grpcmgr *GRPCPeerManager) create(owg *sync.WaitGroup) {
 	for _, p := range grpcmgr.allPeerAddr() {
 		unconnected.Push(p)
 	}
-	// this flag is prepare for the outer wg done ahead
+	// pp flag is prepare for the outer wg done ahead
 	flag := false
 	for range time.Tick(200 * time.Millisecond) {
 		addr := unconnected.Pop().(*pb.PeerAddr)
@@ -170,7 +173,7 @@ func (grpcmgr *GRPCPeerManager) create(owg *sync.WaitGroup) {
 		}
 		if grpcmgr.peersPool.GetAliveNodeNum() >= MaxNum && !flag {
 			// notify the higer layer to start up the consensus module.
-			// this channel may block so go it
+			// pp channel may block so go it
 			flag = true
 			go func(alive chan int) {
 				alive <- 0
@@ -281,7 +284,7 @@ func (grpcmgr *GRPCPeerManager) connectIntro(introAddr pb.PeerAddr) {
 
 //connect to peer by ip address and port (why int32? because of protobuf limit)
 func (grpcmgr *GRPCPeerManager) connect(peerAddress *pb.PeerAddr) (*Peer, error) {
-	//if this node is not online, connect it
+	//if pp node is not online, connect it
 	peer := NewPeer(peerAddress, grpcmgr.localAddr, grpcmgr.tm, grpcmgr.cm, grpcmgr.namespace)
 	_, err := peer.Connect(grpcmgr.tm.GetLocalPublicKey(), pb.Message_HELLO, true, peer.HelloHandler)
 	if err != nil {
@@ -335,7 +338,7 @@ func (grpcmgr *GRPCPeerManager) GetAllPeersWithTemp() []*Peer {
 func (grpcmgr *GRPCPeerManager) BroadcastPeers(payLoad []byte) {
 	//log.Warning("P2P broadcast")
 	if !grpcmgr.isOnline {
-		grpcmgr.logger.Warningf("this node IS NOT Online ID: %d", grpcmgr.localAddr.ID)
+		grpcmgr.logger.Warningf("pp node IS NOT Online ID: %d", grpcmgr.localAddr.ID)
 		return
 	}
 	var broadCastMessage = pb.Message{
@@ -401,7 +404,7 @@ func (grpcmgr *GRPCPeerManager) SendMsgToPeers(payLoad []byte, peerList []uint64
 				} else {
 					grpcmgr.localNode.DelayChan <- UpdateTable{updateID: p.LocalAddr.ID, updateTime: time.Now().UnixNano() - start}
 
-					//this.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
+					//pp.eventManager.PostEvent(pb.Message_RESPONSE,*resMsg)
 				}
 			}
 		}
@@ -653,5 +656,12 @@ func (grpcmgr *GRPCPeerManager) DeleteNode(hash string) error {
 }
 
 func (grpcmgr *GRPCPeerManager) Stop() {
+	if grpcmgr.peersPool != nil {
+		grpcmgr.peersPool.Clear()
+	}
+	if grpcmgr.nvpPool != nil {
+		grpcmgr.nvpPool.Clear()
+	}
 
+	grpcmgr.localNode.StopServer()
 }

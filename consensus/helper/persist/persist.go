@@ -16,7 +16,7 @@ import (
 
 // StoreState stores a key,value pair
 func StoreState(namespace string, key string, value []byte) error {
-	db, err := hyperdb.GetDBConsensusByNamespcae(namespace)
+	db, err := hyperdb.GetDBConsensusByNamespace(namespace)
 	if err != nil {
 		return err
 	}
@@ -34,7 +34,7 @@ func StoreState(namespace string, key string, value []byte) error {
 
 // DelState removes a key,value pair
 func DelState(namesapce string, key string) error {
-	db, err := hyperdb.GetDBConsensusByNamespcae(namesapce)
+	db, err := hyperdb.GetDBConsensusByNamespace(namesapce)
 	if err != nil {
 		return err
 	}
@@ -43,7 +43,7 @@ func DelState(namesapce string, key string) error {
 
 // ReadState retrieves a value to a key
 func ReadState(namespace string, key string) ([]byte, error) {
-	db, err := hyperdb.GetDBConsensusByNamespcae(namespace)
+	db, err := hyperdb.GetDBConsensusByNamespace(namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func ReadState(namespace string, key string) ([]byte, error) {
 
 // ReadStateSet retrieves all key-value pairs where the key starts with prefix
 func ReadStateSet(namespace string, prefix string) (map[string][]byte, error) {
-	db, err := hyperdb.GetDBConsensusByNamespcae(namespace)
+	db, err := hyperdb.GetDBConsensusByNamespace(namespace)
 	if err != nil {
 		return nil, err
 	}
