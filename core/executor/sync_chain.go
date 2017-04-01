@@ -39,10 +39,10 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 	executor.recordSyncPeers(ev.Replicas, ev.Id)
 
 	executor.SendSyncRequest(ev.TargetHeight, executor.calcuDownstream())
-	go executor.resend()
+	go executor.syncChainResendBackend()
 }
 
-func (executor *Executor) resend() {
+func (executor *Executor) syncChainResendBackend() {
 	executor.status.syncFlag.ResendExit = make(chan bool)
 	ticker := time.NewTicker(executor.GetSyncResendInterval())
 	up, down := executor.getSyncReqArgs()
