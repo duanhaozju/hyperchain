@@ -33,7 +33,7 @@ fileFormat string, consoleFormat string, logLevel string, writeFile bool) *modul
 	fileFormatterBackend := logging.NewBackendFormatter(fileBackend, fileFormatter)
 	ml.fileBackend = fileFormatterBackend
 
-	consoleBackend := logging.NewLogBackend(os.Stderr, "", 0)
+	consoleBackend := logging.NewLogBackend(os.Stdout, "", 0)
 	consoleFormatter := logging.MustStringFormatter(consoleFormat)
 	consoleFormatterBackend := logging.NewBackendFormatter(consoleBackend, consoleFormatter)
 	ml.consoleBackend = consoleFormatterBackend

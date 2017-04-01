@@ -111,11 +111,11 @@ f_all_in_one_cmd(){
 }
 
 f_x_in_linux_cmd(){
-    gnome-terminal -x bash -c "cd ${DUMP_PATH}/node${1} && ./hyperchain"
+    gnome-terminal -x bash -c "cd ${DUMP_PATH}/node${1} && ./hyperchain 2>error.log"
 }
 
 f_x_in_mac_cmd(){
-    osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}' && ./hyperchain "'
+    osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}' && ./hyperchain 2>error.log"'
 }
 
 # run process by os type
