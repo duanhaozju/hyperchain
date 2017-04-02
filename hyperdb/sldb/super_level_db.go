@@ -37,7 +37,6 @@ func NewSLDB(conf *common.Config) (*SuperLevelDB, error) {
 		}
 	}
 
-
 	db, err := leveldb.OpenFile(filepath, nil)
 	if err != nil {
 		panic(err.Error())
@@ -113,7 +112,6 @@ func (sldb *SuperLevelDB) DestroyByRange(start, end []byte) error {
 
 func (sldb *SuperLevelDB) Close() {
 	sldb.closed <- true
-	sldb.db.Close()
 }
 
 func (sldb *SuperLevelDB) LevelDB() *leveldb.DB {
@@ -140,8 +138,14 @@ func (sldb *SuperLevelDB) dumpIndexByInterval(du time.Duration) {
 		tm := time.Now()
 		sec := (24+4-tm.Hour())*3600 - tm.Minute()*60 - tm.Second() // bloom persist at 4:00 AM
 		d, _ := time.ParseDuration(fmt.Sprintf("%ds", sec))
-		time.Sleep(d)
-		sldb.index.Persist() // first time persist
+		select {
+		case <-time.After(d):
+			sldb.index.Persist()
+		case <-sldb.closed:
+			sldb.index.Persist()
+			sldb.db.Close()
+			return
+		}
 	}
 	for {
 		select {
@@ -149,6 +153,7 @@ func (sldb *SuperLevelDB) dumpIndexByInterval(du time.Duration) {
 			sldb.index.Persist()
 		case <-sldb.closed:
 			sldb.index.Persist()
+			sldb.db.Close()
 			return
 		}
 	}

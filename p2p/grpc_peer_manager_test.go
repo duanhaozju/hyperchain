@@ -62,7 +62,7 @@ func (node *fakeNode) StartServer(wg *sync.WaitGroup) {
 	//opts := membersrvc.GetGrpcServerOpts()
 	opts := node.cm.GetGrpcServerOpts2()
 	node.gRPCServer = grpc.NewServer(opts...)
-	//this.gRPCServer = grpc.NewServer()
+	//pp.gRPCServer = grpc.NewServer()
 	pb.RegisterChatServer(node.gRPCServer, node)
 	go node.gRPCServer.Serve(lis)
 
@@ -144,13 +144,13 @@ func (node *fakeNode) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, e
 func TestNewGrpcManager(t *testing.T) {
 	config := common.NewConfig("test/global.yaml")
 	grpcManager := NewGrpcManager(config)
-	assert.True(t,!grpcManager.IsOnline)
-	assert.Nil(t,grpcManager.CM)
+	assert.True(t,!grpcManager.isOnline)
+	assert.Nil(t,grpcManager.cm)
 	assert.NotNil(t,grpcManager.configs)
-	assert.NotNil(t,grpcManager.Introducer)
-	assert.True(t,grpcManager.IsOriginal)
-	assert.True(t,grpcManager.IsVP)
-	assert.NotNil(t,grpcManager.LocalAddr)
+	assert.NotNil(t,grpcManager.introducer)
+	assert.True(t,grpcManager.isOriginal)
+	assert.True(t,grpcManager.isVP)
+	assert.NotNil(t,grpcManager.localAddr)
 	assert.Nil(t,grpcManager.pool)
 
 
@@ -210,14 +210,14 @@ func TestGRPCPeerManager_Start(t *testing.T) {
 	grpcm = NewGrpcManager(config)
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
 	assert.NotNil(t,grpcm.pool)
-	assert.NotNil(t,grpcm.CM)
-	assert.True(t,grpcm.IsOnline)
-	assert.True(t,grpcm.IsVP)
+	assert.NotNil(t,grpcm.cm)
+	assert.True(t,grpcm.isOnline)
+	assert.True(t,grpcm.isVP)
 }
 
 func TestGRPCPeerManager_GetAllPeers(t *testing.T) {
 	grpcm = NewGrpcManager(config)
-	grpcm.LocalAddr.Port = 8801
+	grpcm.localAddr.Port = 8801
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
 
 	allPeers := grpcm.GetAllPeers()
@@ -235,7 +235,7 @@ func TestGRPCPeerManager_GetAllPeers(t *testing.T) {
 
 func TestGRPCPeerManager_GetLocalNode(t *testing.T) {
 	grpcm = NewGrpcManager(config)
-	grpcm.LocalAddr.Port = 8802
+	grpcm.localAddr.Port = 8802
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
 	localNode := grpcm.GetLocalNode()
 	assert.Equal(t,localNode.GetNodeAddr().ID,1)
@@ -246,7 +246,7 @@ func TestGRPCPeerManager_GetLocalNode(t *testing.T) {
 
 func TestGRPCPeerManager_BroadcastPeers(t *testing.T) {
 	grpcm = NewGrpcManager(config)
-	grpcm.LocalAddr.Port = 8803
+	grpcm.localAddr.Port = 8803
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
 	payload := []byte("NVPPeers")
 	grpcm.BroadcastPeers(payload)
@@ -255,7 +255,7 @@ func TestGRPCPeerManager_BroadcastPeers(t *testing.T) {
 
 func TestGRPCPeerManager_BroadcastNVPPeers(t *testing.T) {
 	grpcm = NewGrpcManager(config)
-	grpcm.LocalAddr.Port = 8804
+	grpcm.localAddr.Port = 8804
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
 	payload := []byte("NVPPeers")
 	grpcm.BroadcastNVPPeers(payload)
@@ -263,7 +263,7 @@ func TestGRPCPeerManager_BroadcastNVPPeers(t *testing.T) {
 
 func TestGRPCPeerManager_BroadcastVPPeers(t *testing.T) {
 	grpcm = NewGrpcManager(config)
-	grpcm.LocalAddr.Port = 8805
+	grpcm.localAddr.Port = 8805
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
 	payload := []byte("VPPeers")
 	grpcm.BroadcastVPPeers(payload)
@@ -271,7 +271,7 @@ func TestGRPCPeerManager_BroadcastVPPeers(t *testing.T) {
 
 func TestGRPCPeerManager_GetLocalNodeHash(t *testing.T) {
 	grpcm = NewGrpcManager(config)
-	grpcm.LocalAddr.Port = 8806
+	grpcm.localAddr.Port = 8806
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
 	hash := grpcm.GetLocalNodeHash()
 	assert.Equal(t,len("d4a4e3ad24ce52eac10497846f8d97e86f7bd2fc8119631b6cde09fa75a2dd3c"),len(hash))
@@ -280,14 +280,14 @@ func TestGRPCPeerManager_GetLocalNodeHash(t *testing.T) {
 
 func TestGRPCPeerManager_GetNodeId(t *testing.T) {
 	grpcm = NewGrpcManager(config)
-	grpcm.LocalAddr.Port = 8807
+	grpcm.localAddr.Port = 8807
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
 	assert.Equal(t,grpcm.GetNodeId(),1)
 }
 
 func TestGRPCPeerManager_GetPeerInfo(t *testing.T) {
 	grpcm = NewGrpcManager(config)
-	grpcm.LocalAddr.Port = 8808
+	grpcm.localAddr.Port = 8808
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
 	peerinfo := grpcm.GetPeerInfo()
 	assert.Equal(t,4,peerinfo.GetNumber())
@@ -295,16 +295,16 @@ func TestGRPCPeerManager_GetPeerInfo(t *testing.T) {
 
 func TestGRPCPeerManager_GetVPPeers(t *testing.T) {
 	grpcm = NewGrpcManager(config)
-	grpcm.LocalAddr.Port = 8809
+	grpcm.localAddr.Port = 8809
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
 	vp := grpcm.GetVPPeers()
 	assert.Equal(t,0,len(vp))
-	grpcm.LocalNode.StopServer()
+	grpcm.localNode.StopServer()
 }
 
 func TestGRPCPeerManager_GetNVPPeers(t *testing.T) {
 	grpcm = NewGrpcManager(config)
-	grpcm.LocalAddr.Port = 8810
+	grpcm.localAddr.Port = 8810
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
 	nvp := grpcm.GetVPPeers()
 	assert.Equal(t,0,len(nvp))
@@ -312,7 +312,7 @@ func TestGRPCPeerManager_GetNVPPeers(t *testing.T) {
 
 func TestGRPCPeerManager_SendMsgToPeers(t *testing.T) {
 	grpcm = NewGrpcManager(config)
-	grpcm.LocalAddr.Port = 8811
+	grpcm.localAddr.Port = 8811
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
 	payload := []byte("VPPeers")
 	grpcm.SendMsgToPeers(payload,[]uint64{uint64(2),uint64(3),uint64(4)},recovery.Message_SYNCSINGLE)
@@ -320,17 +320,17 @@ func TestGRPCPeerManager_SendMsgToPeers(t *testing.T) {
 
 func TestGRPCPeerManager_SetPrimary(t *testing.T) {
 	grpcm = NewGrpcManager(config)
-	grpcm.LocalAddr.Port = 8812
+	grpcm.localAddr.Port = 8812
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
 	assert.NoError(t,grpcm.SetPrimary(uint64(2)))
-	grpcm.LocalNode.StopServer()
+	grpcm.localNode.StopServer()
 }
 
 
 
 func TestGRPCPeerManager_GetAllPeersWithTemp(t *testing.T) {
 	grpcm = NewGrpcManager(config)
-	grpcm.LocalAddr.Port = 8814
+	grpcm.localAddr.Port = 8814
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
 	peersWithTemp := grpcm.GetAllPeersWithTemp()
 	assert.Equal(t,3,len(peersWithTemp))
@@ -338,7 +338,7 @@ func TestGRPCPeerManager_GetAllPeersWithTemp(t *testing.T) {
 
 func TestGRPCPeerManager_DeleteNode(t *testing.T) {
 	grpcm = NewGrpcManager(config)
-	grpcm.LocalAddr.Port = 8815
+	grpcm.localAddr.Port = 8815
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
 	assert.NoError(t,grpcm.DeleteNode("d4a4e3ad24ce52eac10497846f8d97e86f7bd2fc8119631b6cde09fa75a2dd3c"))
 	assert.Equal(t,2,len(grpcm.GetAllPeers()))
@@ -346,7 +346,7 @@ func TestGRPCPeerManager_DeleteNode(t *testing.T) {
 
 func TestGRPCPeerManager_GetLocalAddressPayload(t *testing.T) {
 	grpcm = NewGrpcManager(config)
-	grpcm.LocalAddr.Port = 8816
+	grpcm.localAddr.Port = 8816
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
 	payload := grpcm.GetLocalAddressPayload()
 	assert.NotEmpty(t,payload,"local peer address payload should not be empty")
@@ -354,7 +354,7 @@ func TestGRPCPeerManager_GetLocalAddressPayload(t *testing.T) {
 
 func TestGRPCPeerManager_GetRouterHashifDelete(t *testing.T) {
 	grpcm = NewGrpcManager(config)
-	grpcm.LocalAddr.Port = 8817
+	grpcm.localAddr.Port = 8817
 	grpcm.Start(fakeAliveChain,fakeEventMux,testCaManager)
 	hash,id,_ := grpcm.GetRouterHashifDelete("d4a4e3ad24ce52eac10497846f8d97e86f7bd2fc8119631b6cde09fa75a2dd3c")
 	assert.NotEmpty(t,hash)

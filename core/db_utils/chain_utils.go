@@ -275,7 +275,7 @@ func UpdateChain(namespace string, batch db.Batch, block *types.Block, genesis b
 func UpdateChainByBlcokNum(namespace string, batch db.Batch, blockNumber uint64, flush bool, sync bool) error {
 	block, err := GetBlockByNumber(namespace, blockNumber)
 	if err != nil {
-		logger.Warning("no required block number")
+		logger(namespace).Warning("no required block number")
 		return err
 	}
 	return UpdateChain(namespace, batch, block, block.Number == 0, flush, sync)

@@ -1,6 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package peerComm
+package common
 
 type Address struct {
 	ID      int

@@ -1,15 +1,11 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package peerComm
+package common
 
 import (
-	"hyperchain/p2p/peermessage"
-	"github.com/op/go-logging"
+	"hyperchain/p2p/message"
 )
-var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("p2p/peerComm")
-}
+
 type Config interface {
 	LocalID() int
 	LocalIP() string
@@ -26,8 +22,8 @@ type Config interface {
 	GetRPCPort(nodeID int) int
 	GetIP(nodeID int) string
 	MaxNum() int
-	AddNodesAndPersist(addrs map[string]peermessage.PeerAddr)
-	DelNodesAndPersist(addrs map[string]peermessage.PeerAddr)
+	AddNodesAndPersist(addrs map[string]message.PeerAddr)
+	DelNodesAndPersist(addrs map[string]message.PeerAddr)
 	Peers() []PeerConfigNodes
 }
 

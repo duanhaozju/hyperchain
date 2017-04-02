@@ -10,6 +10,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/consensus"
 	"hyperchain/consensus/csmgr"
+	//"hyperchain/core/db_utils"
 	"hyperchain/core/db_utils"
 	"hyperchain/core/executor"
 	"hyperchain/hyperdb"
@@ -93,7 +94,8 @@ type namespaceImpl struct {
 	grpcMgr   *p2p.GRPCPeerManager
 	executor  *executor.Executor
 
-	rpc rpc.RequestProcessor
+	rpc     rpc.RequestProcessor
+	restart bool
 }
 
 type API struct {
@@ -122,6 +124,7 @@ func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) 
 		status:   status,
 		conf:     conf,
 		eventMux: new(event.TypeMux),
+		restart:  false,
 	}
 	ns.logger = common.GetLogger(name, "namespace")
 	return ns, nil
@@ -138,15 +141,19 @@ func (ns *namespaceImpl) init() error {
 	}
 
 	//2.init CaManager
-	cm, cmerr := admittance.NewCAManager(ns.conf, ns.Name())
-	if cmerr != nil {
-		logger.Error(cmerr)
+	cm, err := admittance.NewCAManager(ns.conf)
+	if err != nil {
+		logger.Error(err)
 		panic("cannot initliazied the camanager")
 	}
 	ns.caMgr = cm
 
 	//3. init peer manager to start grpc server and client
-	grpcPeerMgr := p2p.NewGrpcManager(ns.conf, ns.eventMux, cm)
+	grpcPeerMgr, err := p2p.NewGrpcManager(ns.conf, ns.eventMux, cm)
+	if err != nil {
+		ns.logger.Error(err)
+		return err
+	}
 	ns.grpcMgr = grpcPeerMgr
 
 	//4.init pbft consensus
@@ -206,6 +213,16 @@ func (ns *namespaceImpl) Start() error {
 		logger.Criticalf("namespace: %s is already running", ns.Name())
 		return nil
 	}
+	//0.init db
+	if ns.restart {
+		err := hyperdb.StartDatabase(ns.conf, ns.Name())
+		if err != nil {
+			ns.logger.Error(err)
+			return err
+		}
+		ns.logger.Noticef("start db for namespace: %s successful", ns.Name())
+	}
+
 	//1.start consenter
 	ns.consenter.Start()
 	//2.start executor
@@ -219,6 +236,7 @@ func (ns *namespaceImpl) Start() error {
 	switch initType {
 	case 0:
 		{
+
 			ns.passRouters()
 			ns.negotiateView()
 		} // TODO: add other init type
@@ -229,6 +247,7 @@ func (ns *namespaceImpl) Start() error {
 	ns.rpc.Start()
 	ns.status.setState(running)
 	ns.logger.Noticef("namespace: %s start successful", ns.Name())
+	ns.restart = true
 	return nil
 }
 
@@ -256,16 +275,25 @@ func (ns *namespaceImpl) Stop() error {
 	if state != running {
 		ns.logger.Criticalf("namespace: %s not running now, need not to stop", ns.Name())
 	}
+	//1.stop request processor
+	ns.rpc.Stop()
 
-	ns.consenter.Close()
-	ns.grpcMgr.Stop()
+	//2.stop eventhub
+	ns.eh.Stop()
+
+	//3.stop executor
 	ns.executor.Stop()
-	//TODO: stop eventhub
-	//TODO: ns.rpc.Stop
+
+	//4.stop consensus service
+	ns.consenter.Close()
+
+	//5.stop peer manager
+	go ns.grpcMgr.Stop()
 
 	ns.status.setState(closed)
+	ns.logger.Notice()
 	//close related database
-	hyperdb.CloseDatabase(ns.Name())
+	hyperdb.StopDatabase(ns.Name())
 
 	ns.logger.Noticef("namespace: %s stopped!", ns.Name())
 	return nil

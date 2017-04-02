@@ -14,11 +14,6 @@ import (
 	"github.com/spf13/viper"
 	"fmt"
 )
-// Init the log setting
-var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("admittance")
-}
 
 var (
 	errDecPubKey = errors.New("cannot decode the public string,please encode the public string as right hex string")
@@ -66,14 +61,16 @@ type CAManager struct {
 	KeepAliveInterval time.Duration
 	RetryTimeout time.Duration
 	RecoveryTimeout time.Duration
+	logger     *logging.Logger
 }
 
 var caManager *CAManager
 
 //NewCAManager get a new ca manager instance
-func NewCAManager(conf *common.Config,namespace string) (*CAManager, error) {
+func NewCAManager(conf *common.Config) (*CAManager, error) {
+	logger := common.GetLogger(conf.GetString(common.NAMESPACE), "ca")
 	caconfPath := conf.GetString("global.configs.caconfig")
-	log.Critical(caconfPath)
+	logger.Debug(caconfPath)
 	enableTLS := conf.GetBool("global.security.enabletls")
 	enableSymmetrical := conf.GetBool("global.security.enablesymmetrical")
 
@@ -150,6 +147,7 @@ func NewCAManager(conf *common.Config,namespace string) (*CAManager, error) {
 		KeepAliveInterval:keepAliveInterval,
 		RetryTimeout:retryTimeout,
 		RecoveryTimeout:recoveryTimeout,
+		logger:logger,
 
 	},nil
 
@@ -158,22 +156,22 @@ func NewCAManager(conf *common.Config,namespace string) (*CAManager, error) {
 func (cm *CAManager) GenTCert(publicKey string) (string, error) {
 	pubpem := common.TransportDecode(publicKey)
 	if pubpem == "" {
-		log.Error(errDecPubKey.Error())
+		cm.logger.Error(errDecPubKey.Error())
 		return "", errDecPubKey
 	}
 	pubKey, err := primitives.ParsePubKey(pubpem)
 	if err != nil {
-		log.Error(errParsePubKey.Error())
+		cm.logger.Error(errParsePubKey.Error())
 		return "", errParsePubKey
 	}
 	tcert, err := primitives.GenTCert(cm.eCert.x509cert, cm.eCertPri.priKey, pubKey)
 	if err != nil {
-		log.Error(errGenTCert.Error())
+		cm.logger.Error(errGenTCert.Error())
 		return "", errGenTCert
 	}
 	tcertPem := primitives.DERCertToPEM(tcert)
 	if err != nil {
-		log.Error(errDERToPEM.Error())
+		cm.logger.Error(errDERToPEM.Error())
 		return "", errDERToPEM
 	}
 	return string(tcertPem), nil
@@ -190,7 +188,7 @@ func (cm *CAManager)VerifyTCert(tcertPEM string) (bool, error) {
 	}
 	tcert, err := primitives.ParseCertificate(tcertPEM)
 	if err != nil {
-		log.Error(errParseCert.Error())
+		cm.logger.Error(errParseCert.Error())
 		return false, errParseCert
 	}
 	if tcert.IsCA == true {
@@ -210,7 +208,7 @@ func (cm *CAManager) VerifyECert(ecertPEM string) (bool, error) {
 	// but if the switch is off, this will not check the ecert is valid or not.
 	ecertToVerify, err := primitives.ParseCertificate(ecertPEM)
 	if err != nil {
-		log.Error(errParseCert.Error())
+		cm.logger.Error(errParseCert.Error())
 		return false, errParseCert
 	}
 	return primitives.VerifyCert(ecertToVerify, cm.eCaCert.x509cert)
@@ -231,7 +229,7 @@ func (cm *CAManager) VerifyCertSign(certPEM string, msg, sign []byte) (bool, err
 	}
 	ecert, err := primitives.ParseCertificate(certPEM)
 	if err != nil {
-		log.Error(errParseCert.Error())
+		cm.logger.Error(errParseCert.Error())
 		return false, errParseCert
 	}
 	ecdsaEncrypto := primitives.NewEcdsaEncrypto("ecdsa")
@@ -239,8 +237,8 @@ func (cm *CAManager) VerifyCertSign(certPEM string, msg, sign []byte) (bool, err
 	key := ecert.PublicKey.(*(ecdsa.PublicKey))
 	result, err := ecdsaEncrypto.VerifySign(*key, msg, sign)
 	if err != nil {
-		log.Critical(err)
-		log.Error(errFailedVerifySign.Error())
+		cm.logger.Critical(err)
+		cm.logger.Error(errFailedVerifySign.Error())
 		return false, errFailedVerifySign
 	}
 	return result, nil
@@ -252,7 +250,7 @@ func (cm *CAManager) VerifyRCert(rcertPEM string) (bool, error) {
 	}
 	rcert, err := primitives.ParseCertificate(rcertPEM)
 	if err != nil {
-		log.Error(errParseCert)
+		cm.logger.Error(errParseCert)
 		return false, errParseCert
 	}
 	return primitives.VerifyCert(rcert, cm.rCaCert.x509cert)
@@ -266,7 +264,7 @@ func (cm *CAManager) VerifyRCert(rcertPEM string) (bool, error) {
 func (cm *CAManager) GetGrpcClientOpts() []grpc.DialOption {
 	var opts []grpc.DialOption
 	if !cm.enableTls{
-		log.Warning("disable Client TLS")
+		cm.logger.Warning("disable Client TLS")
 		opts = append(opts,grpc.WithInsecure())
 		return opts
 	}
@@ -282,7 +280,7 @@ func (cm *CAManager) GetGrpcClientOpts() []grpc.DialOption {
 func (cm *CAManager) GetGrpcServerOpts() []grpc.ServerOption {
 	var opts []grpc.ServerOption
 	if !cm.enableTls{
-		log.Warning("disable Server TLS")
+		cm.logger.Warning("disable Server TLS")
 		return opts
 	}
 	creds, err := credentials.NewServerTLSFromFile(cm.tlsCert, cm.tlsCertPriv)
@@ -326,13 +324,10 @@ func (caManager *CAManager) IsCheckTCert() bool {
 func readCert(path string) (*cert, error) {
 	certb, err := ioutil.ReadFile(path)
 	if err != nil {
-		log.Errorf("cannot read the cert file %s", path)
 		return nil, err
 	}
 	certs, err := primitives.ParseCertificate(string(certb))
 	if err != nil {
-		log.Errorf("cannot parse the cert %s", path)
-		//panic(fmt.Sprintf("parse the certificate failed, %s",path))
 		return nil, err
 	}
 	return &cert{
@@ -345,12 +340,10 @@ func readCert(path string) (*cert, error) {
 func readKey(path string) (*key, error) {
 	keyb, err := ioutil.ReadFile(path)
 	if err != nil {
-		log.Errorf("cannot read the cert file %s", path)
 		return nil, err
 	}
 	priKey, err := primitives.ParseKey(string(keyb))
 	if err != nil {
-		log.Error("cannot parse the caprivatekey")
 		return nil, errors.New("cannot parse the caprivatekey")
 	}
 	return &key{

@@ -43,7 +43,7 @@ func GetTransaction(namespace string, key []byte) (*types.Transaction, error) {
 	}
 	err = proto.Unmarshal(data, &wrapper)
 	if err != nil {
-		logger.Errorf("GetTransaction err:", err)
+		logger(namespace).Errorf("GetTransaction err:", err)
 		return &transaction, err
 	}
 	err = proto.Unmarshal(wrapper.Transaction, &transaction)
@@ -58,11 +58,9 @@ func PersistTransaction(batch db.Batch, transaction *types.Transaction, flush bo
 	}
 	err, data := encapsulateTransaction(transaction)
 	if err != nil {
-		logger.Errorf("wrapper transaction failed.")
 		return err, nil
 	}
 	if err := batch.Put(append(TransactionPrefix, transaction.GetHash().Bytes()...), data); err != nil {
-		logger.Error("Put tx data into database failed! error msg, ", err.Error())
 		return err, nil
 	}
 	// flush to disk immediately
@@ -84,7 +82,6 @@ func encapsulateTransaction(transaction *types.Transaction) (error, []byte) {
 	transaction.Version = []byte(TransactionVersion)
 	data, err := proto.Marshal(transaction)
 	if err != nil {
-		logger.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
 		return err, nil
 	}
 	wrapper := &types.TransactionWrapper{
@@ -93,7 +90,6 @@ func encapsulateTransaction(transaction *types.Transaction) (error, []byte) {
 	}
 	data, err = proto.Marshal(wrapper)
 	if err != nil {
-		logger.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
 		return err, nil
 	}
 	return nil, data
@@ -109,11 +105,9 @@ func PersistTransactions(batch db.Batch, transactions []*types.Transaction, vers
 	for _, transaction := range transactions {
 		err, data := encapsulateTransaction(transaction)
 		if err != nil {
-			logger.Errorf("wrapper transaction failed.")
 			return err
 		}
 		if err := batch.Put(append(TransactionPrefix, transaction.GetHash().Bytes()...), data); err != nil {
-			logger.Error("Put tx data into database failed! error msg, ", err.Error())
 			return err
 		}
 	}
@@ -196,11 +190,11 @@ func PersistTransactionMeta(batch db.Batch, transactionMeta *types.TransactionMe
 	}
 	data, err := proto.Marshal(transactionMeta)
 	if err != nil {
-		logger.Error("Invalid txmeta struct to marshal! error msg, ", err.Error())
+		//logger.Error("Invalid txmeta struct to marshal! error msg, ", err.Error())
 		return err
 	}
 	if err := batch.Put(append(txHash.Bytes(), TxMetaSuffix...), data); err != nil {
-		logger.Error("Put txmeta into database failed! error msg, ", err.Error())
+		//logger.Error("Put txmeta into database failed! error msg, ", err.Error())
 		return err
 	}
 	// flush to disk immediately
@@ -242,7 +236,7 @@ func GetTxWithBlock(namespace string, key []byte) (uint64, int64) {
 	}
 	meta := &types.TransactionMeta{}
 	if err := proto.Unmarshal(dataMeta, meta); err != nil {
-		logger.Error(err)
+		logger(namespace).Error(err)
 		return 0, 0
 	}
 	return meta.BlockIndex, meta.Index
@@ -263,7 +257,7 @@ func PersistInvalidTransactionRecord(batch db.Batch, invalidTx *types.InvalidTra
 		return err, nil
 	}
 	if err := batch.Put(append(InvalidTransactionPrefix, invalidTx.Tx.TransactionHash...), data); err != nil {
-		logger.Error("Put invalid tx into database failed! error msg, ", err.Error())
+		//logger.Error("Put invalid tx into database failed! error msg, ", err.Error())
 		return err, nil
 	}
 	// flush to disk immediately
@@ -318,7 +312,7 @@ func GetMarshalTransaction(transaction *types.Transaction) (error, []byte) {
 	transaction.Version = []byte(TransactionVersion)
 	data, err := proto.Marshal(transaction)
 	if err != nil {
-		logger.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
+		//logger.Error("Invalid Transaction struct to marshal! error msg, ", err.Error())
 		return err, nil
 	}
 	return nil, data
