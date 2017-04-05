@@ -4,6 +4,7 @@
  */
 package cn.hyperchain.server;
 
-public class ContractManager {
-
+public interface IServer {
+    void Start();
+    void Stop();
 }
