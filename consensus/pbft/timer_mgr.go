@@ -56,7 +56,7 @@ func (tm *timerManager) Stop() {
 }
 
 //startTimer init and start a timer by name
-func (tm *timerManager) startTimer(tname string, afterfunc func()) int {
+func (tm *timerManager) startTimer(tname string, event *LocalEvent, queue events.Queue) int {
 	tm.stopTimer(tname)
 	//logger.Errorf("Starting a new timer---%s", tname)
 
